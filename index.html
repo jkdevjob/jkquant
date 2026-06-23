@@ -693,9 +693,11 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
       <div class="card"><h3><span class="dot"></span>한 줄 요약</h3><p class="lead">TQQQ를 사놓고 2주마다 한 번 확인해, 너무 오르면 팔고 떨어지면 사는 반자동 투자.</p></div>
       <div class="card"><h3><span class="dot"></span>핵심 용어</h3>
         <ul class="clean"><li><b>V</b> 기준선. 2주마다 자동 상승</li><li><b>Pool</b> 매수 재원. 매도 시 쌓임</li><li><b>밴드</b> 상단 V×1.15(매도)·하단 V×0.85(매수)</li><li><b>G값</b> V 상승 속도. 처음 G=10</li></ul></div>
-      <div class="card"><h3><span class="dot"></span>V 갱신 (실력공식)</h3>
-        <div class="formula"><span class="lbl">다음 V</span>V₁ + Pool/G + (E−V₁)/(2√G) ± 적립금</div>
-        <p class="note">평가금 E가 V에서 멀어질 때 그 차이를 일부 반영해 V를 보정합니다. 기본공식은 (E−V) 보정항이 없는 단순형입니다.</p></div>
+      <div class="card"><h3><span class="dot"></span>V 갱신 (기본공식 · 오피셜)</h3>
+        <div class="formula"><span class="lbl">다음 V</span>V₁ + Pool/G ± 적립금</div>
+        <p class="note">라오어 VR 5.0 오피셜 공식입니다. 2주마다 Pool/G만큼 V가 상승하고, 적립식은 +적립금 / 인출식은 −인출금이 반영됩니다.</p>
+        <div class="formula" style="margin-top:10px;opacity:.75"><span class="lbl">실력공식(옵션)</span>V₁ + Pool/G + (E−V₁)/(2√G) ± 적립금</div>
+        <p class="note">평가금 E가 V에서 멀어질 때 차이를 일부 반영하는 변형입니다. 오피셜이 아니며, 설정에서 선택할 수 있습니다.</p></div>
       <div class="card"><h3><span class="dot"></span>유형별 Pool 한도</h3>
         <div class="rowline"><span class="k">적립식</span><span class="val">Pool 75%</span></div>
         <div class="rowline"><span class="k">거치식</span><span class="val">Pool 50%</span></div>
@@ -755,7 +757,7 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
     <div class="seclabel">종목 (티커)</div><div class="field"><input id="set_vticker" type="text" value="TQQQ"></div>
     <div class="seclabel">통화 <span class="hint" style="color:var(--faint);font-weight:500">국내상장 ETF는 원화</span></div><div class="seg" id="set_vcur"><button data-v="usd">달러 ($)</button><button data-v="krw">원화 (₩)</button></div>
     <div class="seclabel">운용 모드</div><div class="seg" id="set_vmode"><button data-v="0.75">적립식</button><button data-v="0.5">거치식</button><button data-v="0.25">인출식</button></div>
-    <div class="seclabel">V 갱신 공식</div><div class="seg" id="set_vformula"><button data-v="skill">실력공식</button><button data-v="basic">기본공식</button></div>
+    <div class="seclabel">V 갱신 공식</div><div class="seg" id="set_vformula"><button data-v="basic">기본공식</button><button data-v="skill">실력공식</button></div>
     <div class="seclabel">파라미터</div>
     <div class="field"><label>G (Gradient) <span class="hint">1~50, 클수록 보수</span></label><input id="set_g" type="number" inputmode="numeric" value="10"></div>
     <div class="field"><label id="set_add_lbl">매 사이클 적립금 ($)</label><input id="set_add" type="number" inputmode="decimal" value="100"></div>
@@ -811,6 +813,14 @@ function wn(v){
 }
 /* 가격(체결단가 등)도 통화 맞춤. 원화는 정수, 달러는 소수2자리 */
 function wp(v){return wn(v)}
+/* ── 천 단위 콤마 숫자 포맷터 (모든 숫자 공통) ── */
+// 달러: $ + 콤마 + 소수2자리.  예: 1234.5 → "$1,234.50"
+// 달러 고정 포맷 (참고용)
+function usd(v){return '$'+(+v||0).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});}
+// 통화 자동: krw면 ₩정수, 아니면 $소수2. cs 인자로 '₩'/'$' 강제 가능
+function px(v,cs){v=+v||0; const s=cs||(curCurrency()==='krw'?'₩':'$'); return s==='₩'?'₩'+Math.round(v).toLocaleString('en-US'):'$'+v.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});}
+// 콤마만 (기호 없음). 소수 자릿수 지정. 예: nfix(1234.5,2) → "1,234.50"
+function nfix(v,d){d=d==null?2:d; return (+v||0).toLocaleString('en-US',{minimumFractionDigits:d,maximumFractionDigits:d});}
 const FX=1520.21; // USD/KRW (참고용, 환산 표시에만)
 const won=v=>'₩'+Math.round((+v||0)*FX).toLocaleString('en-US');
 
@@ -826,7 +836,7 @@ let S=null;
 
 function defInfSettings(){return{ticker:'SOXL',div:20,target:20,big:12,rowsOn:false,rows:8,gap:2.5,rowqty:1,principal:10000,cur:'usd'}}
 function toggleRowsField(){const on=$('set_rows_on')&&$('set_rows_on').checked;const f=$('rows_fields');if(f){f.style.opacity=on?'1':'0.4';f.style.pointerEvents=on?'auto':'none';}}
-function defVrSettings(){return{ticker:'TQQQ',mode:0.75,formula:'skill',g:10,add:100,band:15,startv:0,startpool:0,cur:'usd'}}
+function defVrSettings(){return{ticker:'TQQQ',mode:0.75,formula:'basic',g:10,add:100,band:15,startv:0,startpool:0,cur:'usd'}}
 function uid(){return 's'+Date.now()+Math.floor(Math.random()*9999)}
 function newInfSession(name){return{id:uid(),name:name||'세션 1',settings:defInfSettings(),hist:[]}}
 function newVrSession(name){return{id:uid(),name:name||'세션 1',settings:defVrSettings(),hist:[]}}
@@ -992,7 +1002,7 @@ function renderOrder(){
     rh+=`<div class="calc" style="margin-bottom:10px"><div class="field" style="margin:0">
       <label>별지점 (직전 5거래일 종가 평균) <span class="hint">비우면 자동 계산</span></label>
       <input id="o_star5man" type="number" inputmode="decimal" placeholder="${star5?star5.toFixed(2):'예: 12.34'}" value="${($('o_star5man')&&$('o_star5man').value)||''}" oninput="renderOrder()">
-      <div class="note" style="margin-top:6px">현재 적용: ${star5?('<b>$'+star5.toFixed(2)+'</b> ('+sp.src+')'):'<b style=\"color:var(--gold)\">계산 불가</b> — 종가 입력 필요'}</div>
+      <div class="note" style="margin-top:6px">현재 적용: ${star5?('<b>'+px(star5)+'</b> ('+sp.src+')'):'<b style=\"color:var(--gold)\">계산 불가</b> — 종가 입력 필요'}</div>
     </div></div>`;
     rh+='<div class="order-grp sell"><div class="gt"><span class="gd"></span>리버스 무한매도</div>';
     rh+=oitem('s',`무한매도 (보유÷${sellDiv})`, star5?'LOC':'MOC', star5||c.avg, Math.max(1,sellQty));
@@ -1068,9 +1078,9 @@ function render5day(){
   five.forEach((d,i)=>{
     const prev=i>0?five[i-1].close:d.close;
     const ch=prev?((d.close-prev)/prev*100):0;
-    cells+=`<div class="fivecell"><div class="fd">${d.date.slice(5)}</div><div class="fp">$${d.close.toFixed(2)}</div><div class="fc ${ch>=0?'up':'dn'}">${ch>=0?'+':''}${ch.toFixed(1)}%</div></div>`;
+    cells+=`<div class="fivecell"><div class="fd">${d.date.slice(5)}</div><div class="fp">${px(d.close)}</div><div class="fc ${ch>=0?'up':'dn'}">${ch>=0?'+':''}${ch.toFixed(1)}%</div></div>`;
   });
-  $('o_5day').innerHTML=`<div class="fivebox"><h4><span>${q.symbol} 최근 5일 종가</span><span class="avg">5일 평균 $${avg.toFixed(2)}</span></h4><div class="fivegrid">${cells}</div><div class="note">리버스모드 별지점 = 5일 평균 $${avg.toFixed(2)}</div></div>`;
+  $('o_5day').innerHTML=`<div class="fivebox"><h4><span>${q.symbol} 최근 5일 종가</span><span class="avg">5일 평균 ${px(avg)}</span></h4><div class="fivegrid">${cells}</div><div class="note">리버스모드 별지점 = 5일 평균 ${px(avg)}</div></div>`;
 }
 
 /* ── 외부 종가 자동 불러오기 (CORS 프록시 경유, 실패 시 수동) ── */
@@ -1266,7 +1276,7 @@ async function fetchQuote(which){
     const ms=q.marketState; // PRE/REGULAR/POST/CLOSED
     const msLabel = ms==='REGULAR'?'장중 실시간':ms==='PRE'?'프리장':ms==='POST'?'애프터장':ms==='CLOSED'?'장마감':'';
     const cs=(q.currency==='KRW')?'₩':'$';                 // 통화 기호
-    const fmtP=(v)=> cs==='₩' ? '₩'+Math.round(v).toLocaleString('en-US') : '$'+v.toFixed(2);
+    const fmtP=(v)=> px(v, cs);
     const srcTag = (q.src==='naver')?' (네이버)':(q.src==='yahoo'||q.src==='api'||(q.src||'').startsWith('yahoo'))?'':' (프록시)';
     if(which==='inf'){
       // 무한매수법은 LOC 기준 → 전일 종가 사용
@@ -1768,7 +1778,7 @@ async function loadVrChart(force){
     vrChartData=q.days;
     lastQuote.vr={symbol:q.symbol,last:q.last.close,days:q.days.slice(-5)};
     $('chart_note').className='fetchnote ok';
-    $('chart_note').textContent=`✓ ${q.symbol} ${q.last.date} 종가 $${q.last.close.toFixed(2)}${q.src==='api'?'':' (프록시)'}`;
+    $('chart_note').textContent=`✓ ${q.symbol} ${q.last.date} 종가 ${px(q.last.close)}${q.src==='api'?'':' (프록시)'}`;
     drawVrChart(); renderVrNow(); renderVrTable();
     return;
   }
@@ -1784,9 +1794,9 @@ function drawVrChart(){
   const lo=Math.min(...closes), hi=Math.max(...closes), cur=closes[closes.length-1];
   const first=closes[0];
   const chg=(cur-first)/first*100;
-  $('chart_lo').textContent='$'+lo.toFixed(2);
-  $('chart_hi').textContent='$'+hi.toFixed(2);
-  $('chart_cur').textContent='$'+cur.toFixed(2);
+  $('chart_lo').textContent=px(lo);
+  $('chart_hi').textContent=px(hi);
+  $('chart_cur').textContent=px(cur);
   const ce=$('chart_chg'); ce.textContent=(chg>=0?'+':'')+chg.toFixed(1)+'%'; ce.className=chg>=0?'chgpos':'chgneg';
   const W=320,H=150,pad=4;
   const xs=i=>pad+(i/(data.length-1))*(W-pad*2);
@@ -1801,7 +1811,7 @@ function drawVrChart(){
   if(c.qty>0 && c.avgEff>=lo && c.avgEff<=hi){
     const y=ys(c.avgEff).toFixed(1);
     avgLine=`<line x1="${pad}" y1="${y}" x2="${W-pad}" y2="${y}" stroke="#f5c451" stroke-width="1" stroke-dasharray="4 3" opacity="0.8"/>
-      <text x="${W-pad}" y="${(+y-4)}" text-anchor="end" fill="#f5c451" font-size="9">실효평단 $${c.avgEff.toFixed(2)}</text>`;
+      <text x="${W-pad}" y="${(+y-4)}" text-anchor="end" fill="#f5c451" font-size="9">실효평단 ${px(c.avgEff)}</text>`;
   }
   $('vr_chart').innerHTML=`
     <defs><linearGradient id="vrg" x1="0" y1="0" x2="0" y2="1">
@@ -1833,7 +1843,7 @@ async function loadInfData(force){
     renderInfRecent(); renderInfDay(); drawInfChart(); renderInfFx();
     const srcTag=(q.src==='yahoo-query1'||q.src==='yahoo-query2'||q.src==='api')?'':' (프록시)';
     $('inf_chart_note').className='fetchnote ok';
-    $('inf_chart_note').textContent=`✓ ${q.symbol} ${q.last.date} 종가 $${q.last.close.toFixed(2)}${live!==q.last.close?` · 현재가 $${live.toFixed(2)}`:''}${srcTag}`;
+    $('inf_chart_note').textContent=`✓ ${q.symbol} ${q.last.date} 종가 ${px(q.last.close)}${live!==q.last.close?` · 현재가 ${px(live)}`:''}${srcTag}`;
   }else{
     $('inf_chart_note').className='fetchnote err';
     $('inf_chart_note').textContent='⚠ 시세 불러오기 실패 — 잠시 후 다시 시도하세요.';
@@ -1848,7 +1858,7 @@ function renderInfRecent(){
   const recent=rows.slice().reverse(); // 최신 먼저
   const five=rows.slice(-5);
   const avg5=five.reduce((s,d)=>s+d.close,0)/five.length;
-  $('inf_ten_avg').textContent=`5일 평균 $${avg5.toFixed(2)}`;
+  $('inf_ten_avg').textContent=`5일 평균 ${px(avg5)}`;
   // 직전 종가 대비 등락 위해 한 칸 더 필요 → rows 기준 인덱스로 계산
   const closes=rows.map(d=>d.close);
   function cell(d,idxInRows){
@@ -1856,9 +1866,9 @@ function renderInfRecent(){
     const ch=prevClose? (d.close-prevClose)/prevClose*100 : 0;
     const isHi = d.high && d.close && d.high>d.close*1.005; // 고가가 종가보다 의미있게 높으면 강조
     return `<div class="tencell"><div class="td">${d.date.slice(5)}</div>
-      <div class="tp">$${d.close.toFixed(2)}</div>
+      <div class="tp">${px(d.close)}</div>
       <div class="tc ${ch>=0?'up':'dn'}">${ch>=0?'+':''}${ch.toFixed(1)}%</div>
-      <div class="th ${isHi?'hi':''}">${isHi?'H ':''}$${(d.high||d.close).toFixed(2)}</div></div>`;
+      <div class="th ${isHi?'hi':''}">${isHi?'H ':''}${px((d.high||d.close))}</div></div>`;
   }
   // recent(최신순) 렌더하되 등락 계산은 rows 인덱스 역추적
   const n=rows.length;
@@ -1883,10 +1893,10 @@ function renderInfDay(){
   // 전체 H/L
   const segs=[id.pre,id.regular,id.post].filter(Boolean);
   const allH=Math.max(...segs.map(s=>s.h)), allL=Math.min(...segs.map(s=>s.l));
-  $('inf_day_h').textContent='$'+allH.toFixed(2);
-  $('inf_day_l').textContent='$'+allL.toFixed(2);
-  $('inf_day_close').textContent= id.regular? '$'+id.regular.c.toFixed(2) : (segs.length?'$'+segs[segs.length-1].c.toFixed(2):'—');
-  $('inf_day_open').textContent= id.regular? '$'+id.regular.o.toFixed(2) : (segs.length?'$'+segs[0].o.toFixed(2):'—');
+  $('inf_day_h').textContent=px(allH);
+  $('inf_day_l').textContent=px(allL);
+  $('inf_day_close').textContent= id.regular? px(id.regular.c) : (segs.length?px(segs[segs.length-1].c):'—');
+  $('inf_day_open').textContent= id.regular? px(id.regular.o) : (segs.length?px(segs[0].o):'—');
   // y범위: 평단 포함
   let lo=allL, hi=allH;
   if(avg){ lo=Math.min(lo,avg); hi=Math.max(hi,avg); }
@@ -1907,12 +1917,12 @@ function renderInfDay(){
         <line x1="12" y1="${oY.toFixed(1)}" x2="30" y2="${oY.toFixed(1)}" stroke="${col}" stroke-width="3.5"/>
         <line x1="70" y1="${cY.toFixed(1)}" x2="88" y2="${cY.toFixed(1)}" stroke="${col}" stroke-width="3.5"/>
         <circle cx="50" cy="${cY.toFixed(1)}" r="7" fill="#0f1320" stroke="${col}" stroke-width="3.5"/>
-        <text x="50" y="${(topY-10).toFixed(1)}" text-anchor="middle" fill="${col}" font-size="13" font-weight="800">$${seg.h.toFixed(2)}</text>
-        <text x="50" y="${(botY+20).toFixed(1)}" text-anchor="middle" fill="${col}" font-size="13" font-weight="800">$${seg.l.toFixed(2)}</text>`;
+        <text x="50" y="${(topY-10).toFixed(1)}" text-anchor="middle" fill="${col}" font-size="13" font-weight="800">${px(seg.h)}</text>
+        <text x="50" y="${(botY+20).toFixed(1)}" text-anchor="middle" fill="${col}" font-size="13" font-weight="800">${px(seg.l)}</text>`;
     }else{
       inner=`<rect x="32" y="${topY.toFixed(1)}" width="36" height="${barH.toFixed(1)}" rx="7" fill="${fill}" opacity="0.45"/>
-        <text x="50" y="${(topY-10).toFixed(1)}" text-anchor="middle" fill="${fill}" font-size="12" font-weight="800">$${seg.h.toFixed(2)}</text>
-        <text x="50" y="${(botY+20).toFixed(1)}" text-anchor="middle" fill="${fill}" font-size="12" font-weight="800">$${seg.l.toFixed(2)}</text>`;
+        <text x="50" y="${(topY-10).toFixed(1)}" text-anchor="middle" fill="${fill}" font-size="12" font-weight="800">${px(seg.h)}</text>
+        <text x="50" y="${(botY+20).toFixed(1)}" text-anchor="middle" fill="${fill}" font-size="12" font-weight="800">${px(seg.l)}</text>`;
     }
     return `<div class="candle-col"><svg class="candle-svg" viewBox="0 0 100 ${H}" preserveAspectRatio="xMidYMid meet">${inner}</svg></div>`;
   }
@@ -1920,7 +1930,7 @@ function renderInfDay(){
   if(avg){
     const ayPct=(yy(avg)/H*100);
     avgLine=`<div style="position:absolute;left:0;right:0;top:${ayPct.toFixed(1)}%;border-top:2px dashed #8b8cf0;opacity:.8;pointer-events:none"></div>
-      <div style="position:absolute;right:6px;top:calc(${ayPct.toFixed(1)}% + 3px);color:#8b8cf0;font-size:11px;font-weight:700;pointer-events:none">평단 $${avg.toFixed(2)}</div>`;
+      <div style="position:absolute;right:6px;top:calc(${ayPct.toFixed(1)}% + 3px);color:#8b8cf0;font-size:11px;font-weight:700;pointer-events:none">평단 ${px(avg)}</div>`;
   }
   $('inf_candles').innerHTML=colSvg(id.pre,'pre')+colSvg(id.regular,'regular')+colSvg(id.post,'after')+avgLine;
   // KST 거래시간 서머타임 표시 + 현재 세션 하이라이트
@@ -2010,7 +2020,7 @@ async function loadInfChart(force){
     const live=(q.price!=null&&q.price>0)?q.price:q.last.close;
     lastQuote.inf={symbol:q.symbol,last:q.last.close,price:live,days:q.days};
     $('inf_chart_note').className='fetchnote ok';
-    $('inf_chart_note').textContent=`✓ ${q.symbol} ${q.last.date} 종가 $${q.last.close.toFixed(2)}${live!==q.last.close?` · 현재가 $${live.toFixed(2)}`:''}${q.src==='yahoo-query1'||q.src==='yahoo-query2'||q.src==='api'?'':' (프록시)'}`;
+    $('inf_chart_note').textContent=`✓ ${q.symbol} ${q.last.date} 종가 ${px(q.last.close)}${live!==q.last.close?` · 현재가 ${px(live)}`:''}${q.src==='yahoo-query1'||q.src==='yahoo-query2'||q.src==='api'?'':' (프록시)'}`;
     drawInfChart();
     return;
   }
@@ -2024,9 +2034,9 @@ function drawInfChart(){
   const closes=data.map(d=>d.close);
   const lo=Math.min(...closes), hi=Math.max(...closes), cur=closes[closes.length-1];
   const first=closes[0], chg=(cur-first)/first*100;
-  $('inf_chart_lo').textContent='$'+lo.toFixed(2);
-  $('inf_chart_hi').textContent='$'+hi.toFixed(2);
-  $('inf_chart_cur').textContent='$'+cur.toFixed(2);
+  $('inf_chart_lo').textContent=px(lo);
+  $('inf_chart_hi').textContent=px(hi);
+  $('inf_chart_cur').textContent=px(cur);
   const ce=$('inf_chart_chg'); ce.textContent=(chg>=0?'+':'')+chg.toFixed(1)+'%'; ce.className=chg>=0?'chgpos':'chgneg';
   const W=320,H=150,pad=4;
   const xs=i=>pad+(i/(data.length-1))*(W-pad*2);
@@ -2040,7 +2050,7 @@ function drawInfChart(){
   if(c.qty>0 && c.avg>=lo && c.avg<=hi){
     const y=ys(c.avg).toFixed(1);
     avgLine=`<line x1="${pad}" y1="${y}" x2="${W-pad}" y2="${y}" stroke="#f5c451" stroke-width="1" stroke-dasharray="4 3" opacity="0.8"/>
-      <text x="${W-pad}" y="${(+y-4)}" text-anchor="end" fill="#f5c451" font-size="9">평단 $${c.avg.toFixed(2)}</text>`;
+      <text x="${W-pad}" y="${(+y-4)}" text-anchor="end" fill="#f5c451" font-size="9">평단 ${px(c.avg)}</text>`;
   }
   $('inf_chart').innerHTML=`
     <defs><linearGradient id="infg" x1="0" y1="0" x2="0" y2="1">
@@ -2499,7 +2509,7 @@ function saveSettings(){
       rowqty:1,principal:+$('set_principal').value||10000,cur:segGet('set_cur')||'usd'};
   }else{
     s.settings={ticker:$('set_vticker').value||'TQQQ',mode:+segGet('set_vmode')||0.75,
-      formula:segGet('set_vformula')||'skill',g:+$('set_g').value||10,add:+$('set_add').value||100,
+      formula:segGet('set_vformula')||'basic',g:+$('set_g').value||10,add:+$('set_add').value||100,
       band:+$('set_band').value||15,startv:+$('set_startv').value||0,startpool:+$('set_startpool').value||0,cur:segGet('set_vcur')||'usd'};
   }
   save();closeSettings();refreshAll();pushRemote();
