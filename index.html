@@ -285,8 +285,9 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
 .minichart{width:100%;height:150px;display:block;margin-top:6px}
 .minichart .grid{stroke:var(--line);stroke-width:1}
 .minichart .axislbl{font-size:9px;fill:var(--faint)}
-.chart-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
-.chart-head .ch-sel{display:flex;gap:5px}
+.chart-head{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap}
+.chart-head h3{min-width:0;flex:1 1 auto}
+.chart-head .ch-sel{display:flex;gap:5px;flex-shrink:0}
 .chart-head .ch-sel button{padding:5px 10px;border-radius:8px;border:1px solid var(--line);background:var(--panel2);color:var(--dim);font-size:11px;font-weight:700;cursor:pointer}
 .chart-head .ch-sel button.on{background:var(--vio-bg);color:var(--vio);border-color:var(--vio)}
 .chgpos{color:var(--buy);font-weight:800;font-variant-numeric:tabular-nums}
@@ -300,14 +301,15 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
 .fg-scale{display:flex;justify-content:space-between;font-size:9.5px;color:var(--faint)}
 
 /* 사이클 히스토리 테이블 */
-.cyctbl{width:100%;border-collapse:collapse;font-size:11.5px}
-.cyctbl th{color:var(--faint);font-weight:700;text-align:right;padding:8px 5px;border-bottom:1px solid var(--line);font-size:10px;text-transform:uppercase}
+.cyc-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch;margin:0 -4px}
+.cyctbl{width:100%;border-collapse:collapse;font-size:11.5px;min-width:440px}
+.cyctbl th{color:var(--faint);font-weight:700;text-align:right;padding:8px 7px;border-bottom:1px solid var(--line);font-size:10px;text-transform:uppercase;white-space:nowrap}
 .cyctbl th:first-child{text-align:left}
-.cyctbl td{padding:9px 5px;border-bottom:1px solid var(--line);text-align:right;font-variant-numeric:tabular-nums}
+.cyctbl td{padding:9px 7px;border-bottom:1px solid var(--line);text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
 .cyctbl td:first-child{text-align:left}
 .cyctbl tr:last-child td{border-bottom:none}
 .cyctbl .cmin{color:var(--vio)}.cyctbl .cmax{color:var(--gold)}.cyctbl .cneg{color:var(--sell)}
-.cyctbl .cw{color:var(--faint);font-size:10px;display:block;font-weight:500}
+.cyctbl .cw{color:var(--faint);font-size:10px;display:block;font-weight:500;white-space:nowrap}
 
 /* 진입 버튼 (다음 V) */
 .enterbtn{width:100%;padding:15px;border:none;border-radius:13px;background:linear-gradient(135deg,var(--vio),var(--vio2));color:#fff;font-size:15px;font-weight:800;cursor:pointer;margin-top:12px;-webkit-tap-highlight-color:transparent}
@@ -322,7 +324,7 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
 .nv-bignext{background:var(--panel2);border-radius:13px;padding:14px;text-align:center;margin-bottom:4px}
 .nv-bignext .bl{font-size:11px;color:var(--faint);font-weight:600}
 .nv-bignext .bv{font-size:30px;font-weight:800;color:var(--vio);font-variant-numeric:tabular-nums;line-height:1.1;margin-top:3px}
-.dateinput{width:100%;padding:11px 12px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--ink);font-size:14px;font-variant-numeric:tabular-nums;margin-top:6px}
+.dateinput{width:100%;box-sizing:border-box;padding:11px 12px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--ink);font-size:14px;font-variant-numeric:tabular-nums;margin-top:6px;-webkit-appearance:none;appearance:none;text-align:center}
 
 /* ── 무한매수법: 최근 종가 10일 그리드 (2행) ── */
 .tengrid{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}
@@ -334,13 +336,16 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
 .tencell .tc.up{color:var(--buy)}.tencell .tc.dn{color:var(--sell)}
 .tencell .th{font-size:9px;margin-top:2px;color:var(--faint)}
 .tencell .th.hi{color:var(--gold);font-weight:700}
+.tencell .th.lo{color:var(--vio);font-weight:700}
 
 /* ── USD/KRW 라인 ── */
 .fxline{text-align:right;font-size:12px;color:var(--faint);margin:2px 2px 12px;font-variant-numeric:tabular-nums}
 .fxline b{color:var(--dim);font-weight:700}
 
 /* ── 당일 프리/정규/애프터 캔들 ── */
-.daycard .dc-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:4px}
+.daycard .dc-head{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:4px;flex-wrap:wrap}
+.daycard .dc-head h3{min-width:0;white-space:nowrap}
+.daycard .dc-head .dc-hl{flex-shrink:0;white-space:nowrap}
 .daycard .dc-hl{font-size:13px;font-variant-numeric:tabular-nums}
 .daycard .dc-hl .hi{color:var(--buy);font-weight:800}.daycard .dc-hl .lo{color:var(--sell);font-weight:800}
 .candle-wrap{position:relative;height:240px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:0;margin:14px 0 0}
@@ -447,7 +452,7 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
 
       <!-- 당일 거래일 변동 (프리/정규/애프터 캔들) -->
       <div class="card daycard" id="inf_day_card" style="display:none">
-        <div class="dc-head"><h3 style="margin:0"><span class="dot"></span><span id="inf_day_date">당일</span> 거래일 변동 <span id="inf_day_sess" style="font-size:11px;color:var(--faint);font-weight:600"></span></h3>
+        <div class="dc-head"><div style="min-width:0"><h3 style="margin:0;white-space:nowrap"><span class="dot"></span><span id="inf_day_date">당일</span> 거래일 변동</h3><div id="inf_day_sess" style="font-size:11px;color:var(--faint);font-weight:600;margin-top:2px"></div></div>
           <span class="dc-hl">H <span class="hi" id="inf_day_h">—</span> · L <span class="lo" id="inf_day_l">—</span></span></div>
         <div class="candle-wrap" id="inf_candles"></div>
         <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:0"><div class="candle-lbl">프리</div><div class="candle-lbl">정규</div><div class="candle-lbl">애프터</div></div>
@@ -463,7 +468,7 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
       </div>
 
       <!-- 종가 추이 (1년 차트) -->
-      <div class="card"><div class="chart-head" style="flex-wrap:wrap;gap:8px"><h3 style="margin:0;display:flex;align-items:center;gap:6px;white-space:nowrap;flex-shrink:0"><span class="dot"></span><span><span id="inf_chart_sym">SOXL</span> 종가 추이</span><span id="inf_chart_chg" class="chgpos">—</span></h3>
+      <div class="card"><div class="chart-head"><h3 style="margin:0;display:flex;align-items:center;gap:6px;min-width:0"><span class="dot" style="flex-shrink:0"></span><span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis"><span id="inf_chart_sym">SOXL</span> 종가 추이</span><span id="inf_chart_chg" class="chgpos" style="flex-shrink:0">—</span></h3>
         <div class="ch-sel" id="inf_chart_sel"><button data-r="60">3개월</button><button data-r="120">6개월</button><button class="on" data-r="260">1년</button></div></div>
         <div class="statgrid" style="margin-bottom:4px"><div class="stat"><div class="sl">1년 최저</div><div class="sv sm mono" id="inf_chart_lo">—</div></div>
           <div class="stat"><div class="sl">현재</div><div class="sv sm mono" id="inf_chart_cur" style="color:var(--vio)">—</div></div>
@@ -666,8 +671,8 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
         <div class="rowline"><span class="k">실효평단 <span class="hint" style="color:var(--faint)">(매수−매도−배당)/수량</span></span><span class="val mono" id="vc_avgeff">—</span></div></div>
 
       <!-- 종가 추이 차트 -->
-      <div class="card"><div class="chart-head"><h3 style="margin:0"><span class="dot"></span><span id="chart_sym">TQQQ</span> 종가 추이</h3>
-        <div style="display:flex;align-items:center;gap:8px"><span id="chart_chg" class="chgpos">—</span><div class="ch-sel" id="chart_sel"><button data-r="60">3개월</button><button data-r="120">6개월</button><button class="on" data-r="260">1년</button></div></div></div>
+      <div class="card"><div class="chart-head"><h3 style="margin:0;display:flex;align-items:center;gap:6px;min-width:0"><span class="dot" style="flex-shrink:0"></span><span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis"><span id="chart_sym">TQQQ</span> 종가 추이</span><span id="chart_chg" class="chgpos" style="flex-shrink:0">—</span></h3>
+        <div class="ch-sel" id="chart_sel" style="flex-shrink:0"><button data-r="60">3개월</button><button data-r="120">6개월</button><button class="on" data-r="260">1년</button></div></div>
         <div class="statgrid" style="margin-bottom:4px"><div class="stat"><div class="sl">최저</div><div class="sv sm mono" id="chart_lo">—</div></div>
           <div class="stat"><div class="sl">현재</div><div class="sv sm mono" id="chart_cur" style="color:var(--vio)">—</div></div>
           <div class="stat"><div class="sl">최고</div><div class="sv sm mono" id="chart_hi">—</div></div></div>
@@ -686,7 +691,7 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
 
       <!-- 사이클 히스토리 -->
       <div class="card"><h3 style="justify-content:space-between"><span style="display:flex;align-items:center;gap:8px"><span class="dot"></span>사이클 히스토리</span><span class="lh-stage" id="cyc_count">최근 0개</span></h3>
-        <table class="cyctbl" id="cyc_tbl"></table>
+        <div class="cyc-scroll"><table class="cyctbl" id="cyc_tbl"></table></div>
         <p class="note" style="margin-top:8px">진입할 때마다 직전 사이클의 V·밴드·거래액이 기록됩니다.</p></div>
     </div>
     <div class="block" id="vr-guide">
@@ -1887,7 +1892,8 @@ function renderInfRecent(){
     return `<div class="tencell"><div class="td">${d.date.slice(5)}</div>
       <div class="tp">${px(d.close)}</div>
       <div class="tc ${ch>=0?'up':'dn'}">${ch>=0?'+':''}${ch.toFixed(1)}%</div>
-      <div class="th ${isHi?'hi':''}">${isHi?'H ':''}${px((d.high||d.close))}</div></div>`;
+      <div class="th ${isHi?'hi':''}">H ${px((d.high||d.close))}</div>
+      <div class="th lo">L ${px((d.low||d.close))}</div></div>`;
   }
   // recent(최신순) 렌더하되 등락 계산은 rows 인덱스 역추적
   const n=rows.length;
