@@ -717,7 +717,7 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
   <footer>
     <strong>JK 퀀트</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v21.1</b> · 2026-06-23</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v21.2</b> · 2026-06-23</div>
   </footer>
 </div>
 
@@ -1888,11 +1888,10 @@ function renderInfRecent(){
   function cell(d,idxInRows){
     const prevClose= idxInRows>0 ? closes[idxInRows-1] : d.close;
     const ch=prevClose? (d.close-prevClose)/prevClose*100 : 0;
-    const isHi = d.high && d.close && d.high>d.close*1.005; // 고가가 종가보다 의미있게 높으면 강조
     return `<div class="tencell"><div class="td">${d.date.slice(5)}</div>
       <div class="tp">${px(d.close)}</div>
       <div class="tc ${ch>=0?'up':'dn'}">${ch>=0?'+':''}${ch.toFixed(1)}%</div>
-      <div class="th ${isHi?'hi':''}">H ${px((d.high||d.close))}</div>
+      <div class="th hi">H ${px((d.high||d.close))}</div>
       <div class="th lo">L ${px((d.low||d.close))}</div></div>`;
   }
   // recent(최신순) 렌더하되 등락 계산은 rows 인덱스 역추적
