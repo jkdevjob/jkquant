@@ -343,10 +343,10 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
 .daycard .dc-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:4px}
 .daycard .dc-hl{font-size:13px;font-variant-numeric:tabular-nums}
 .daycard .dc-hl .hi{color:var(--buy);font-weight:800}.daycard .dc-hl .lo{color:var(--sell);font-weight:800}
-.candle-wrap{position:relative;height:230px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:0;margin:8px 0 0}
+.candle-wrap{position:relative;height:240px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:0;margin:14px 0 0}
 .candle-col{position:relative;border-left:1px solid var(--line)}
 .candle-col:first-child{border-left:none}
-.candle-svg{width:100%;height:200px;display:block}
+.candle-svg{width:100%;height:240px;display:block}
 .candle-lbl{text-align:center;font-size:12px;color:var(--dim);padding-top:6px;font-weight:600}
 .daycard .dc-foot{display:flex;justify-content:space-between;font-size:13px;margin-top:10px;font-variant-numeric:tabular-nums}
 .daycard .dc-foot b{font-weight:800}
@@ -397,7 +397,7 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
 </div>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Leveraged ETF Quant</div><h1>JK <span class="v">퀀트</span></h1></div>
+    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span></h1></div>
     <div style="display:flex;align-items:center;gap:10px">
       <button class="gear" onclick="openSettings()">⚙️</button>
     </div>
@@ -463,8 +463,8 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
       </div>
 
       <!-- 종가 추이 (1년 차트) -->
-      <div class="card"><div class="chart-head"><h3 style="margin:0"><span class="dot"></span><span id="inf_chart_sym">SOXL</span> 종가 추이</h3>
-        <div style="display:flex;align-items:center;gap:8px"><span id="inf_chart_chg" class="chgpos">—</span><div class="ch-sel" id="inf_chart_sel"><button data-r="60">3개월</button><button data-r="120">6개월</button><button class="on" data-r="260">1년</button></div></div></div>
+      <div class="card"><div class="chart-head" style="flex-wrap:wrap;gap:8px"><h3 style="margin:0;display:flex;align-items:center;gap:6px;white-space:nowrap;flex-shrink:0"><span class="dot"></span><span><span id="inf_chart_sym">SOXL</span> 종가 추이</span><span id="inf_chart_chg" class="chgpos">—</span></h3>
+        <div class="ch-sel" id="inf_chart_sel"><button data-r="60">3개월</button><button data-r="120">6개월</button><button class="on" data-r="260">1년</button></div></div>
         <div class="statgrid" style="margin-bottom:4px"><div class="stat"><div class="sl">1년 최저</div><div class="sv sm mono" id="inf_chart_lo">—</div></div>
           <div class="stat"><div class="sl">현재</div><div class="sv sm mono" id="inf_chart_cur" style="color:var(--vio)">—</div></div>
           <div class="stat"><div class="sl">1년 최고</div><div class="sv sm mono" id="inf_chart_hi">—</div></div></div>
@@ -484,9 +484,9 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
         <p class="lead" id="d_todo">설정(⚙️)에서 종목·분할·원금을 정하고, 주문표 탭에서 전일 종가를 입력하세요.</p>
         <button class="bigbtn" onclick="openOrderSheet()">주문표 보기 →</button></div>
 
-      <!-- 시세 연결 진단 -->
-      <div class="card" style="margin-top:13px"><h3><span class="dot"></span>시세 연결 진단</h3>
-        <p class="note" style="margin-bottom:10px">시세가 안 뜨면 눌러서 어떤 경로가 막혔는지 확인하세요.</p>
+      <!-- 시세 연결 진단 (관리자 모드 전용) -->
+      <div class="card admin-only" id="diag_card" style="margin-top:13px;display:none"><h3><span class="dot"></span>시세 연결 진단 <span style="font-size:11px;color:var(--faint);font-weight:600">관리자</span></h3>
+        <p class="note" style="margin-bottom:10px">각 데이터 경로의 연결 상태를 점검합니다.</p>
         <button class="ghostbtn" onclick="runDiag()">🔍 진단 실행</button>
         <div id="diag_out" style="margin-top:10px;font-size:12px;font-variant-numeric:tabular-nums"></div>
       </div>
@@ -553,7 +553,7 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
       <div class="card" style="margin-bottom:13px">
         <div class="field" style="margin-bottom:8px"><label id="vn_price_lbl">현재가 ($) <span class="hint">보유수량 × 현재가 = 평가금</span></label>
           <div style="display:flex;gap:8px"><input id="vn_price" type="number" inputmode="decimal" placeholder="77.54" oninput="onVnPrice()" style="flex:1">
-          <button class="fetchbtn" onclick="fetchQuote('vr')">🔄 자동</button></div></div>
+          <button class="fetchbtn" id="vn_autobtn" onclick="fetchQuote('vr')">🔄 자동</button></div></div>
         <div class="fetchnote" id="vn_fetchnote" style="margin:0"></div>
         <div class="field" style="margin:8px 0 0"><label id="vn_eval_lbl">현재 평가금 ($) <span class="hint">수동 수정 가능</span></label>
           <input id="vn_eval" type="number" inputmode="decimal" placeholder="평가금" oninput="renderVrNow()"></div>
@@ -784,6 +784,10 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
 const $=id=>document.getElementById(id);
 /* 통화 포맷: 현재 세션 통화(usd/krw)에 맞춰 표시. 원화는 정수, 달러는 소수2자리 */
 function curCurrency(){try{return curStrat().settings.cur||'usd'}catch(e){return 'usd'}}
+// 국내상장 ETF 종목코드(6자리 숫자) 여부 — 네이버 자동시세 가능
+function isKrCode(t){return /^\d{6}$/.test(String(t||'').trim());}
+// 원화 세션인데 종목코드가 없어 자동시세 불가한 경우만 true
+function krwNoAuto(st){return (st.cur||'usd')==='krw' && !isKrCode(st.ticker);}
 function wn(v){
   v=+v||0;
   if(curCurrency()==='krw') return '₩'+Math.round(v).toLocaleString('en-US');
@@ -1232,9 +1236,9 @@ async function fetchQuote(which){
   const st=curStrat().settings;
   const noteId=which==='inf'?'o_fetchnote':'vn_fetchnote';
   const note=$(noteId);
-  if((st.cur||'usd')==='krw'){
+  if(krwNoAuto(st)){
     note.className='fetchnote err';
-    note.textContent='ⓘ 원화(국내상장) 세션은 자동 종가를 지원하지 않습니다. 종가를 직접 입력하세요.';
+    note.textContent='ⓘ 국내상장 ETF는 설정에서 종목코드(6자리)를 입력하면 자동 시세가 됩니다. 예: 423920';
     return;
   }
   const symbol=st.ticker||'SOXL';
@@ -1245,18 +1249,21 @@ async function fetchQuote(which){
     lastQuote[which]={symbol:q.symbol,last:q.last.close,price:live,days:q.days};
     const ms=q.marketState; // PRE/REGULAR/POST/CLOSED
     const msLabel = ms==='REGULAR'?'장중 실시간':ms==='PRE'?'프리장':ms==='POST'?'애프터장':ms==='CLOSED'?'장마감':'';
+    const cs=(q.currency==='KRW')?'₩':'$';                 // 통화 기호
+    const fmtP=(v)=> cs==='₩' ? '₩'+Math.round(v).toLocaleString('en-US') : '$'+v.toFixed(2);
+    const srcTag = (q.src==='naver')?' (네이버)':(q.src==='yahoo'||q.src==='api'||(q.src||'').startsWith('yahoo'))?'':' (프록시)';
     if(which==='inf'){
       // 무한매수법은 LOC 기준 → 전일 종가 사용
       $('o_close').value=q.last.close.toFixed(2); renderOrder();
       note.className='fetchnote ok';
-      note.textContent=`✓ ${q.symbol} ${q.last.date} 종가 $${q.last.close.toFixed(2)}${live!==q.last.close?` · 현재가 $${live.toFixed(2)}`:''}${q.src==='yahoo'||q.src==='api'?'':' (프록시)'}`;
+      note.textContent=`✓ ${q.symbol} ${q.last.date} 종가 ${fmtP(q.last.close)}${live!==q.last.close?` · 현재가 ${fmtP(live)}`:''}${srcTag}`;
     }else{
       // VR은 평가금 기준 → 실시간 현재가 사용
       vrChartData=q.days;
-      const vp=$('vn_price'); if(vp){vp.value=live.toFixed(2);}
+      const vp=$('vn_price'); if(vp){vp.value = (q.currency==='KRW')? String(Math.round(live)) : live.toFixed(2);}
       onVnPrice(); refreshVr(); if(typeof drawVrChart==='function')drawVrChart();
       note.className='fetchnote ok';
-      note.textContent=`✓ ${q.symbol} 현재가 $${live.toFixed(2)}${msLabel?` (${msLabel})`:''}${q.src==='yahoo'||q.src==='api'?'':' (프록시)'}`;
+      note.textContent=`✓ ${q.symbol} 현재가 ${fmtP(live)}${msLabel?` (${msLabel})`:''}${srcTag}`;
     }
     return;
   }
@@ -1733,9 +1740,9 @@ let vrChartRange=260, vrChartData=null, fgLoaded=false;
 async function loadVrChart(force){
   const st=curStrat().settings;
   $('chart_sym').textContent=st.ticker||'TQQQ';
-  if((st.cur||'usd')==='krw'){
+  if(krwNoAuto(st)){
     $('chart_note').className='fetchnote err';
-    $('chart_note').textContent='ⓘ 원화(국내상장) 세션은 자동 차트를 지원하지 않습니다.';
+    $('chart_note').textContent='ⓘ 국내상장 ETF는 종목코드(6자리)를 입력하면 자동 차트가 됩니다.';
     return;
   }
   if(vrChartData && !force){ drawVrChart(); return; }
@@ -1795,8 +1802,8 @@ async function loadInfData(force){
   const st=curStrat().settings;
   $('inf_ten_sym').textContent=st.ticker||'SOXL';
   $('inf_chart_sym').textContent=st.ticker||'SOXL';
-  if((st.cur||'usd')==='krw'){
-    $('inf_ten_grid').innerHTML='<div class="note">ⓘ 원화(국내상장) 세션은 자동 시세를 지원하지 않습니다.</div>';
+  if(krwNoAuto(st)){
+    $('inf_ten_grid').innerHTML='<div class="note">ⓘ 국내상장 ETF는 종목코드(6자리)를 입력하면 자동 시세가 됩니다.</div>';
     $('inf_chart_note').className='fetchnote err'; $('inf_chart_note').textContent='ⓘ 원화 세션은 자동 차트 미지원.';
     return;
   }
@@ -1868,37 +1875,36 @@ function renderInfDay(){
   let lo=allL, hi=allH;
   if(avg){ lo=Math.min(lo,avg); hi=Math.max(hi,avg); }
   const pad=(hi-lo)*0.08||1; lo-=pad; hi+=pad;
-  const H=200;
-  const yy=v=>H-((v-lo)/(hi-lo))*H;
+  const H=240, PAD=34;          // 위아래 여백(가격 텍스트 공간)
+  const yy=v=>PAD+(1-((v-lo)/(hi-lo)))*(H-PAD*2);
   function colSvg(seg,label){
-    if(!seg) return `<div class="candle-col"><svg class="candle-svg" viewBox="0 0 80 ${H}" preserveAspectRatio="none"></svg></div>`;
+    if(!seg) return `<div class="candle-col"><svg class="candle-svg" viewBox="0 0 100 ${H}" preserveAspectRatio="xMidYMid meet"></svg></div>`;
     const up=seg.c>=seg.o;
     const col=up?'#36d399':(label==='after'?'#f5a451':'#f87b8c');
     const fill=label==='pre'?'#8b8cf0':(label==='after'?'#f5a451':col);
     const topY=yy(seg.h), botY=yy(seg.l);
-    const barH=Math.max(2,botY-topY);
+    const barH=Math.max(3,botY-topY);
     let inner='';
     if(label==='regular'){
-      // 정규장: 시가(좌 눈금)·종가(우 눈금+●)
       const oY=yy(seg.o), cY=yy(seg.c);
-      inner=`<rect x="22" y="${topY.toFixed(1)}" width="36" height="${barH.toFixed(1)}" rx="6" fill="${col}" opacity="0.92"/>
-        <line x1="6" y1="${oY.toFixed(1)}" x2="22" y2="${oY.toFixed(1)}" stroke="${col}" stroke-width="3"/>
-        <line x1="58" y1="${cY.toFixed(1)}" x2="74" y2="${cY.toFixed(1)}" stroke="${col}" stroke-width="3"/>
-        <circle cx="40" cy="${cY.toFixed(1)}" r="6" fill="#0f1320" stroke="${col}" stroke-width="3"/>
-        <text x="40" y="${Math.max(11,topY-6).toFixed(1)}" text-anchor="middle" fill="${col}" font-size="12" font-weight="700">$${seg.h.toFixed(2)}</text>
-        <text x="40" y="${Math.min(H-4,botY+14).toFixed(1)}" text-anchor="middle" fill="${col}" font-size="12" font-weight="700">$${seg.l.toFixed(2)}</text>`;
+      inner=`<rect x="30" y="${topY.toFixed(1)}" width="40" height="${barH.toFixed(1)}" rx="7" fill="${col}" opacity="0.9"/>
+        <line x1="12" y1="${oY.toFixed(1)}" x2="30" y2="${oY.toFixed(1)}" stroke="${col}" stroke-width="3.5"/>
+        <line x1="70" y1="${cY.toFixed(1)}" x2="88" y2="${cY.toFixed(1)}" stroke="${col}" stroke-width="3.5"/>
+        <circle cx="50" cy="${cY.toFixed(1)}" r="7" fill="#0f1320" stroke="${col}" stroke-width="3.5"/>
+        <text x="50" y="${(topY-10).toFixed(1)}" text-anchor="middle" fill="${col}" font-size="13" font-weight="800">$${seg.h.toFixed(2)}</text>
+        <text x="50" y="${(botY+20).toFixed(1)}" text-anchor="middle" fill="${col}" font-size="13" font-weight="800">$${seg.l.toFixed(2)}</text>`;
     }else{
-      inner=`<rect x="24" y="${topY.toFixed(1)}" width="32" height="${barH.toFixed(1)}" rx="6" fill="${fill}" opacity="0.5"/>
-        <text x="40" y="${Math.max(11,topY-6).toFixed(1)}" text-anchor="middle" fill="${fill}" font-size="11" font-weight="700">$${seg.h.toFixed(2)}</text>
-        <text x="40" y="${Math.min(H-4,botY+14).toFixed(1)}" text-anchor="middle" fill="${fill}" font-size="11" font-weight="700">$${seg.l.toFixed(2)}</text>`;
+      inner=`<rect x="32" y="${topY.toFixed(1)}" width="36" height="${barH.toFixed(1)}" rx="7" fill="${fill}" opacity="0.45"/>
+        <text x="50" y="${(topY-10).toFixed(1)}" text-anchor="middle" fill="${fill}" font-size="12" font-weight="800">$${seg.h.toFixed(2)}</text>
+        <text x="50" y="${(botY+20).toFixed(1)}" text-anchor="middle" fill="${fill}" font-size="12" font-weight="800">$${seg.l.toFixed(2)}</text>`;
     }
-    return `<div class="candle-col"><svg class="candle-svg" viewBox="0 0 80 ${H}" preserveAspectRatio="none">${inner}</svg></div>`;
+    return `<div class="candle-col"><svg class="candle-svg" viewBox="0 0 100 ${H}" preserveAspectRatio="xMidYMid meet">${inner}</svg></div>`;
   }
   let avgLine='';
   if(avg){
-    const ay=yy(avg).toFixed(1);
-    avgLine=`<div style="position:absolute;left:0;right:0;top:${(ay/H*200).toFixed(1)}px;border-top:2px dashed #8b8cf0;opacity:.85"></div>
-      <div style="position:absolute;left:4px;top:${(ay/H*200-16).toFixed(1)}px;color:#8b8cf0;font-size:11px;font-weight:700">평단 $${avg.toFixed(2)}</div>`;
+    const ayPct=(yy(avg)/H*100);
+    avgLine=`<div style="position:absolute;left:0;right:0;top:${ayPct.toFixed(1)}%;border-top:2px dashed #8b8cf0;opacity:.8;pointer-events:none"></div>
+      <div style="position:absolute;right:6px;top:calc(${ayPct.toFixed(1)}% + 3px);color:#8b8cf0;font-size:11px;font-weight:700;pointer-events:none">평단 $${avg.toFixed(2)}</div>`;
   }
   $('inf_candles').innerHTML=colSvg(id.pre,'pre')+colSvg(id.regular,'regular')+colSvg(id.post,'after')+avgLine;
   // KST 거래시간 서머타임 표시 + 현재 세션 하이라이트
@@ -1975,9 +1981,9 @@ async function loadInfFG(force){
 async function loadInfChart(force){
   const st=curStrat().settings;
   $('inf_chart_sym').textContent=st.ticker||'SOXL';
-  if((st.cur||'usd')==='krw'){
+  if(krwNoAuto(st)){
     $('inf_chart_note').className='fetchnote err';
-    $('inf_chart_note').textContent='ⓘ 원화(국내상장) 세션은 자동 차트를 지원하지 않습니다.';
+    $('inf_chart_note').textContent='ⓘ 국내상장 ETF는 종목코드(6자리)를 입력하면 자동 차트가 됩니다.';
     return;
   }
   if(infChartData && !force){ drawInfChart(); return; }
@@ -2306,13 +2312,24 @@ function openOrderSheet(){
 }
 function closeOrderSheet(){$('ordsheetbg').classList.remove('on');$('ordsheet').classList.remove('on')}
 function updateCurLabels(which){
-  const sym=(curStrat().settings.cur||'usd')==='krw'?'₩':'$';
+  const isKrw=(curStrat().settings.cur||'usd')==='krw';
+  const sym=isKrw?'₩':'$';
   if(which==='inf'){
     const a=$('o_close_lbl');if(a)a.innerHTML=`전일 종가 (${sym}) <span class="hint">LOC 기준가</span>`;
     const b=$('ih_price_lbl');if(b)b.textContent=`체결가 (${sym})`;
+    // 원화 세션이면 무한매수법 자동 시세/차트/캔들 영역 정리
+    const fn=$('o_fetchnote'); if(fn&&isKrw){fn.className='fetchnote';fn.textContent='';}
   }else{
     const a=$('vn_price_lbl');if(a)a.innerHTML=`현재가 (${sym}) <span class="hint">보유수량 × 현재가 = 평가금</span>`;
     const b=$('vn_eval_lbl');if(b)b.innerHTML=`현재 평가금 (${sym}) <span class="hint">수동 수정 가능</span>`;
+    // 원화(국내상장) 세션: 종목코드 있으면 자동 허용, 없으면 버튼 숨김
+    const noAuto=krwNoAuto(curStrat().settings);
+    const btn=$('vn_autobtn'); if(btn) btn.style.display = noAuto ? 'none' : '';
+    const note=$('vn_fetchnote');
+    if(note){
+      if(noAuto){ note.className='fetchnote'; note.textContent='국내상장 ETF는 설정에서 종목코드(6자리)를 입력하면 자동 시세가 됩니다.'; }
+      else { if(note.textContent.includes('국내상장')) note.textContent=''; }
+    }
   }
 }
 
@@ -2483,7 +2500,7 @@ function setupTabs(){
       t.classList.add('on');$(t.dataset.t).classList.add('on');
       S.activeTab=t.dataset.t;save();renderSessbar();renderStatusline();
       if(t.dataset.t==='inf'){ refreshInf(); try{loadInfData();loadInfFG();loadFX();}catch(e){console.error(e)} }
-      else { refreshVr(); try{ if((curStrat().settings.cur||'usd')!=='krw'){ fetchQuote('vr'); } loadVrChart(); loadFearGreed(); }catch(e){console.error(e)} }
+      else { refreshVr(); try{ if(!krwNoAuto(curStrat().settings)){ fetchQuote('vr'); } loadVrChart(); loadFearGreed(); }catch(e){console.error(e)} }
       window.scrollTo({top:0,behavior:'smooth'});
     };
   });
@@ -2606,9 +2623,37 @@ function renderUserBadge(user){
 }
 
 let appStarted=false;
+/* ── 관리자 모드 (진단 등 숨김 기능) ── */
+let _adminTaps=0, _adminTapTimer=null;
+function isAdmin(){
+  try{
+    const u=new URL(location.href);
+    if(u.searchParams.get('admin')==='1'){ localStorage.setItem('jk_admin','1'); }
+    return localStorage.getItem('jk_admin')==='1';
+  }catch(e){ return false; }
+}
+function applyAdminMode(){
+  const on=isAdmin();
+  document.querySelectorAll('.admin-only').forEach(el=>{ el.style.display = on ? '' : 'none'; });
+}
+function adminTap(){
+  // 제목 7번 연속 탭하면 관리자 모드 토글
+  _adminTaps++;
+  clearTimeout(_adminTapTimer);
+  _adminTapTimer=setTimeout(()=>{_adminTaps=0;},1500);
+  if(_adminTaps>=7){
+    _adminTaps=0;
+    const now=localStorage.getItem('jk_admin')==='1';
+    if(now){ localStorage.removeItem('jk_admin'); alert('관리자 모드 해제'); }
+    else { localStorage.setItem('jk_admin','1'); alert('관리자 모드 켜짐 — 무한매수법 화면 맨 아래 진단 카드'); }
+    applyAdminMode();
+  }
+}
+
 function startApp(){
   if(appStarted){refreshAll();return;}
   appStarted=true;
+  applyAdminMode();
   setupTabs();setupSegs();setupVrTypeSeg();setupSessbar();toggleVrFields();
   if(S.activeTab==='vr'){document.querySelector('.tab[data-t="vr"]').click()}
   refreshAll();
