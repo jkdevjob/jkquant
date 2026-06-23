@@ -447,7 +447,7 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
 
       <!-- 당일 거래일 변동 (프리/정규/애프터 캔들) -->
       <div class="card daycard" id="inf_day_card" style="display:none">
-        <div class="dc-head"><h3 style="margin:0"><span class="dot"></span><span id="inf_day_date">당일</span> 거래일 변동</h3>
+        <div class="dc-head"><h3 style="margin:0"><span class="dot"></span><span id="inf_day_date">당일</span> 거래일 변동 <span id="inf_day_sess" style="font-size:11px;color:var(--faint);font-weight:600"></span></h3>
           <span class="dc-hl">H <span class="hi" id="inf_day_h">—</span> · L <span class="lo" id="inf_day_l">—</span></span></div>
         <div class="candle-wrap" id="inf_candles"></div>
         <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:0"><div class="candle-lbl">프리</div><div class="candle-lbl">정규</div><div class="candle-lbl">애프터</div></div>
@@ -552,11 +552,11 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
       <!-- 평가금 입력 + 자동조회 -->
       <div class="card" style="margin-bottom:13px">
         <div class="field" style="margin-bottom:8px"><label id="vn_price_lbl">현재가 ($) <span class="hint">보유수량 × 현재가 = 평가금</span></label>
-          <div style="display:flex;gap:8px"><input id="vn_price" type="number" inputmode="decimal" placeholder="77.54" oninput="onVnPrice()" style="flex:1">
+          <div style="display:flex;gap:8px"><input id="vn_price" type="text" inputmode="decimal" placeholder="77.54" oninput="commaInput(this);onVnPrice()" style="flex:1">
           <button class="fetchbtn" id="vn_autobtn" onclick="fetchQuote('vr')">🔄 자동</button></div></div>
         <div class="fetchnote" id="vn_fetchnote" style="margin:0"></div>
         <div class="field" style="margin:8px 0 0"><label id="vn_eval_lbl">현재 평가금 ($) <span class="hint">수동 수정 가능</span></label>
-          <input id="vn_eval" type="number" inputmode="decimal" placeholder="평가금" oninput="renderVrNow()"></div>
+          <input id="vn_eval" type="text" inputmode="decimal" placeholder="평가금" oninput="commaInput(this);renderVrNow()"></div>
       </div>
 
       <!-- CURRENT V 히어로 + 포지션 바 -->
@@ -745,7 +745,7 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
     <div class="seclabel">파라미터</div>
     <div class="field"><label>목표 수익률 (%) <span class="hint">별%·지정가매도</span></label><input id="set_target" type="number" inputmode="decimal" value="20"></div>
     <div class="field"><label>큰수 % <span class="hint">처음매수 LOC 상한 회피 0~40</span></label><input id="set_big" type="number" inputmode="decimal" value="12"></div>
-    <div class="field"><label id="set_principal_lbl">원금 ($)</label><input id="set_principal" type="number" inputmode="decimal" value="10000"></div>
+    <div class="field"><label id="set_principal_lbl">원금 ($)</label><input id="set_principal" type="text" inputmode="decimal" value="10000" oninput="commaInput(this)"></div>
     <div class="rowline" style="border:none;padding:10px 0 6px"><span class="k" style="font-weight:700">하방 LOC 매수 <span style="color:var(--faint);font-weight:400;font-size:11px">급락 대비 추가매수</span></span>
       <label class="switch"><input type="checkbox" id="set_rows_on" onchange="toggleRowsField()"><span class="sl2"></span></label></div>
     <div class="grid2" id="rows_fields">
@@ -760,10 +760,10 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
     <div class="seclabel">V 갱신 공식</div><div class="seg" id="set_vformula"><button data-v="basic">기본공식</button><button data-v="skill">실력공식</button></div>
     <div class="seclabel">파라미터</div>
     <div class="field"><label>G (Gradient) <span class="hint">1~50, 클수록 보수</span></label><input id="set_g" type="number" inputmode="numeric" value="10"></div>
-    <div class="field"><label id="set_add_lbl">매 사이클 적립금 ($)</label><input id="set_add" type="number" inputmode="decimal" value="100"></div>
+    <div class="field"><label id="set_add_lbl">매 사이클 적립금 ($)</label><input id="set_add" type="text" inputmode="decimal" value="100" oninput="commaInput(this)"></div>
     <div class="field"><label>밴드 폭 (%) <span class="hint">±, 좁을수록 매매↑</span></label><input id="set_band" type="number" inputmode="decimal" value="15"></div>
-    <div class="field"><label id="set_startv_lbl">시작 V ($) <span class="hint">0이면 첫 매수가 V</span></label><input id="set_startv" type="number" inputmode="decimal" value="0"></div>
-    <div class="field"><label id="set_startpool_lbl">시작 Pool ($)</label><input id="set_startpool" type="number" inputmode="decimal" value="0"></div>
+    <div class="field"><label id="set_startv_lbl">시작 V ($) <span class="hint">0이면 첫 매수가 V</span></label><input id="set_startv" type="text" inputmode="decimal" value="0" oninput="commaInput(this)"></div>
+    <div class="field"><label id="set_startpool_lbl">시작 Pool ($)</label><input id="set_startpool" type="text" inputmode="decimal" value="0" oninput="commaInput(this)"></div>
   </div>
   <div class="seclabel">데이터 백업 · 동기화</div>
   <button class="addbtn" style="margin-bottom:8px;background:var(--panel2);color:var(--ink);border:1px solid var(--line)" onclick="exportJSON()">⬇ JSON 파일로 내보내기</button>
@@ -821,6 +821,25 @@ function usd(v){return '$'+(+v||0).toLocaleString('en-US',{minimumFractionDigits
 function px(v,cs){v=+v||0; const s=cs||(curCurrency()==='krw'?'₩':'$'); return s==='₩'?'₩'+Math.round(v).toLocaleString('en-US'):'$'+v.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});}
 // 콤마만 (기호 없음). 소수 자릿수 지정. 예: nfix(1234.5,2) → "1,234.50"
 function nfix(v,d){d=d==null?2:d; return (+v||0).toLocaleString('en-US',{minimumFractionDigits:d,maximumFractionDigits:d});}
+/* ── 입력칸 천 단위 콤마 자동 ── */
+// 입력값에서 숫자만 추출 (콤마 제거, 소수점 1개 유지)
+function unComma(s){ if(s==null)return ''; return String(s).replace(/,/g,'').replace(/[^0-9.]/g,'').replace(/(\..*)\./g,'$1'); }
+// input 이벤트에서 콤마 자동 삽입 (커서 위치 보정)
+function commaInput(el){
+  if(!el)return;
+  const raw=el.value;
+  const clean=unComma(raw);
+  if(clean===''||clean==='.'){el.value=clean;return;}
+  // 소수부 분리
+  let [intp,decp]=clean.split('.');
+  intp=intp.replace(/^0+(?=\d)/,''); // 앞 0 제거
+  const formattedInt = intp===''?'':(+intp).toLocaleString('en-US');
+  let out = decp!==undefined ? formattedInt+'.'+decp : formattedInt;
+  // 커서: 끝에 입력하는 일반적 경우 끝으로
+  el.value=out;
+}
+// input의 숫자값 읽기 (콤마 무시)
+function inputNum(id){ const el=$(id); if(!el)return 0; return +unComma(el.value)||0; }
 const FX=1520.21; // USD/KRW (참고용, 환산 표시에만)
 const won=v=>'₩'+Math.round((+v||0)*FX).toLocaleString('en-US');
 
@@ -969,7 +988,7 @@ function calcStarPoint(c){
   const prices=c.rows.filter(r=>r.price>0).slice(-5).map(r=>r.price);
   if(prices.length){const a=prices.reduce((s,p)=>s+p,0)/prices.length; return {val:a, src:`최근 거래 ${prices.length}건 평균`};}
   // ④ 전일종가 입력칸
-  const close=+($('o_close')&&$('o_close').value);
+  const close=inputNum('o_close');
   if(close>0) return {val:close, src:'전일 종가'};
   // ⑤ 평단
   if(c.avg>0) return {val:c.avg, src:'평단 대체'};
@@ -978,7 +997,7 @@ function calcStarPoint(c){
 
 function renderOrder(){
   if(!$('o_close'))return; // 주문표 시트가 열려있을 때만
-  const c=computeInf(), st=c.st, close=+$('o_close').value||0;
+  const c=computeInf(), st=c.st, close=inputNum('o_close')||0;
   const slot=st.div-c.T, buy1=slot>0?c.bal/slot:0;
   const pct=starPct(st.ticker,st.div,c.T);
   const star=c.avg>0?c.avg*(1+pct/100):close;
@@ -1280,13 +1299,13 @@ async function fetchQuote(which){
     const srcTag = (q.src==='naver')?' (네이버)':(q.src==='yahoo'||q.src==='api'||(q.src||'').startsWith('yahoo'))?'':' (프록시)';
     if(which==='inf'){
       // 무한매수법은 LOC 기준 → 전일 종가 사용
-      $('o_close').value=q.last.close.toFixed(2); renderOrder();
+      $('o_close').value=nfix(q.last.close,2); renderOrder();
       note.className='fetchnote ok';
       note.textContent=`✓ ${q.symbol} ${q.last.date} 종가 ${fmtP(q.last.close)}${live!==q.last.close?` · 현재가 ${fmtP(live)}`:''}${srcTag}`;
     }else{
       // VR은 평가금 기준 → 실시간 현재가 사용
       vrChartData=q.days;
-      const vp=$('vn_price'); if(vp){vp.value = (q.currency==='KRW')? String(Math.round(live)) : live.toFixed(2);}
+      const vp=$('vn_price'); if(vp){vp.value = (q.currency==='KRW')? nfix(Math.round(live),0) : nfix(live,2);}
       onVnPrice(); refreshVr(); if(typeof drawVrChart==='function')drawVrChart();
       note.className='fetchnote ok';
       note.textContent=`✓ ${q.symbol} 현재가 ${fmtP(live)}${msLabel?` (${msLabel})`:''}${srcTag}`;
@@ -1358,7 +1377,7 @@ function infKindHint(){ const el=$('ih_kind'); if(!el)return; const c=computeInf
 function sortHist(arr){arr.sort((a,b)=>{const d=(a.date||'').localeCompare(b.date||'');return d!==0?d:((a.ts||0)-(b.ts||0))})}
 let editInfIdx=-1;
 function addInf(){ const el=$('ih_kind'); if(!el)return;
-  const date=$('ih_date').value,kind=el.value,price=+$('ih_price').value,qty=+$('ih_qty').value;
+  const date=$('ih_date').value,kind=el.value,price=inputNum('ih_price'),qty=inputNum('ih_qty');
   if(!price||!qty){alert('체결가와 수량을 입력하세요');return}
   const h=curStrat().hist; h.push({date,kind,price,qty,ts:Date.now()});
   sortHist(h); save(); refreshInf();
@@ -1436,7 +1455,7 @@ function vrEval(c){
 
 /* 현재가(종가) 추정 */
 function vrLastPrice(c){
-  const p=+( $('vn_price')&&$('vn_price').value );
+  const p=inputNum('vn_price');
   if(p>0) return p;
   if(lastQuote.vr&&lastQuote.vr.last) return lastQuote.vr.last;
   if(c.qty>0 && c.avgNom>0) return c.avgNom; // 폴백
@@ -1445,8 +1464,8 @@ function vrLastPrice(c){
 
 /* ── 현재가 입력 → 평가금 자동 계산 ── */
 function onVnPrice(){
-  const c=computeVr(), p=+($('vn_price').value)||0;
-  if(p>0 && c.qty>0) $('vn_eval').value=(p*c.qty).toFixed(2);
+  const c=computeVr(), p=inputNum('vn_price')||0;
+  if(p>0 && c.qty>0) $('vn_eval').value=nfix(p*c.qty,2);
   else if(p>0 && c.qty===0) $('vn_eval').value='';
   renderVrNow();
 }
@@ -1890,6 +1909,14 @@ function renderInfDay(){
   const c=computeInf();
   const avg=c.avg>0?c.avg:null;
   $('inf_day_date').textContent=id.date?id.date.slice(5):'당일';
+  // 현재 어떤 세션이 거래 중인지 표시 (정규장 전이면 안내)
+  const sessNote=$('inf_day_sess');
+  if(sessNote){
+    if(!id.regular && id.pre && !id.post) sessNote.textContent='· 프리장 진행 중 (정규장 시작 전)';
+    else if(!id.regular && id.post) sessNote.textContent='· 애프터장';
+    else if(id.regular && !id.post) sessNote.textContent='· 정규장';
+    else sessNote.textContent='';
+  }
   // 전체 H/L
   const segs=[id.pre,id.regular,id.post].filter(Boolean);
   const allH=Math.max(...segs.map(s=>s.h)), allL=Math.min(...segs.map(s=>s.l));
@@ -2105,10 +2132,10 @@ let editVrIdx=-1;
 function addVr(){ if(!$('vh_date'))return;
   const date=$('vh_date').value; let rec;
   if(vhType==='buy'||vhType==='sell'){
-    const price=+$('vh_price').value,qty=+$('vh_qty').value;
+    const price=inputNum('vh_price'),qty=inputNum('vh_qty');
     if(!price||!qty){alert('단가와 수량을 입력하세요');return}
     rec={type:vhType,date,price,qty};
-  }else{ const amt=+$('vh_amt').value; if(!amt){alert('금액을 입력하세요');return} rec={type:vhType,date,amt}; }
+  }else{ const amt=inputNum('vh_amt'); if(!amt){alert('금액을 입력하세요');return} rec={type:vhType,date,amt}; }
   const h=curStrat().hist; rec.ts=Date.now(); h.push(rec);
   sortHist(h); save();refreshVr();
 }
@@ -2137,7 +2164,7 @@ function isCx(k){return CX_KINDS.includes(k)}
 function sheetInfHTML(today){
   const c=computeInf(),st=c.st,half=c.T<st.div/2;
   let recoKind='1회매수', recoQty=1, recoPrice=0;
-  const lastClose = (lastQuote.inf&&lastQuote.inf.last)|| (+($('o_close')&&$('o_close').value)||0);
+  const lastClose = (lastQuote.inf&&lastQuote.inf.last)|| (inputNum('o_close')||0);
   recoPrice = c.avg>0 ? (c.avg*(1+starPct(st.ticker,st.div,c.T)/100)-0.01) : lastClose;
   const slot=st.div-c.T, buy1=slot>0?c.bal/slot:0;
   if(recoPrice>0)recoQty=Math.max(1,Math.floor((half&&c.avg>0?buy1/2:buy1)/recoPrice))||1;
@@ -2178,7 +2205,7 @@ function bindSheetInf(){}
 function fieldPriceQty(prefix,colorLabel,sym){
   return `<div class="sheetseclbl" style="color:${colorLabel.c}">● ${colorLabel.t}</div>
    <div class="grid2">
-     <div class="field"><label>체결가 (${sym})</label><input id="${prefix}_price" type="number" inputmode="decimal" oninput="sheetTprev()"></div>
+     <div class="field"><label>체결가 (${sym})</label><input id="${prefix}_price" type="text" inputmode="decimal" oninput="commaInput(this);sheetTprev()"></div>
      <div class="field"><label>수량 (주)</label><input id="${prefix}_qty" type="number" inputmode="numeric" oninput="sheetTprev()"></div>
    </div>`;
 }
@@ -2226,7 +2253,7 @@ function sheetTprev(){
 function sheetPickInf(kind,price,qty){
   sheetSelInf(kind);
   if(isCx(kind))return; // 복합은 자동입력 생략(직접 입력)
-  if(price>0&&$('sh_price'))$('sh_price').value=(+price).toFixed(2);
+  if(price>0&&$('sh_price'))$('sh_price').value=nfix(price,2);
   if(qty>0&&$('sh_qty'))$('sh_qty').value=qty;
   sheetTprev();
 }
@@ -2240,11 +2267,11 @@ function sheetSaveInf(){
   let rec={date,kind:shKind,ts:Date.now()};
   if(tmanOn)rec.tManual=tManual;
   if(isCx(shKind)){
-    const sp=+$('sh_s_price').value,sq=+$('sh_s_qty').value,bp=+$('sh_b_price').value,bq=+$('sh_b_qty').value;
+    const sp=+unComma($('sh_s_price').value),sq=+$('sh_s_qty').value,bp=+unComma($('sh_b_price').value),bq=+$('sh_b_qty').value;
     if(!sp||!sq||!bp||!bq){alert('매도·매수 가격과 수량을 모두 입력하세요');return}
     rec.sellPrice=sp;rec.sellQty=sq;rec.buyPrice=bp;rec.buyQty=bq;
   }else{
-    const price=+$('sh_price').value,qty=+$('sh_qty').value;
+    const price=+unComma($('sh_price').value),qty=+$('sh_qty').value;
     if(!price||!qty){alert('체결가와 수량을 입력하세요');return}
     rec.price=price;rec.qty=qty;
   }
@@ -2263,11 +2290,11 @@ function sheetVrHTML(today){
     <div class="field"><label>날짜</label><input id="shv_date" type="date" value="${today}"></div>
     <div id="shv_stock">
       <div class="grid2">
-        <div class="field"><label>단가 (${sym})</label><input id="shv_price" type="number" inputmode="decimal"></div>
+        <div class="field"><label>단가 (${sym})</label><input id="shv_price" type="text" inputmode="decimal" oninput="commaInput(this)"></div>
         <div class="field"><label>수량 (주)</label><input id="shv_qty" type="number" inputmode="numeric"></div>
       </div>
     </div>
-    <div id="shv_amtwrap" class="field" style="display:none"><label>금액 (${sym})</label><input id="shv_amt" type="number" inputmode="decimal"></div>
+    <div id="shv_amtwrap" class="field" style="display:none"><label>금액 (${sym})</label><input id="shv_amt" type="text" inputmode="decimal" oninput="commaInput(this)"></div>
     <button class="bigbtn" onclick="sheetSaveVr()">기록하기</button>
   </div>`;
   return h;
@@ -2287,11 +2314,11 @@ function sheetSaveVr(){
   const curCyc=computeVr().curCyc;
   let rec;
   if(shVrType==='buy'||shVrType==='sell'){
-    const price=+$('shv_price').value,qty=+$('shv_qty').value;
+    const price=+unComma($('shv_price').value),qty=+$('shv_qty').value;
     if(!price||!qty){alert('단가와 수량을 입력하세요');return}
     rec={type:shVrType,date,price,qty,cyc:curCyc,ts:Date.now()};
   }else{
-    const amt=+$('shv_amt').value;
+    const amt=+unComma($('shv_amt').value);
     if(!amt){alert('금액을 입력하세요');return}
     rec={type:shVrType,date,amt,cyc:curCyc,ts:Date.now()};
   }
@@ -2313,7 +2340,7 @@ function openOrderSheet(){
     h+=`<div class="calc"><h3 style="font-size:15px;font-weight:800;margin-bottom:13px">📋 LOC 주문 계산</h3>`;
     if(needClose){
       h+=`<div class="field"><label id="o_close_lbl">전일 종가 ($) <span class="hint">LOC 기준가</span></label>
-        <div style="display:flex;gap:8px"><input id="o_close" type="number" inputmode="decimal" placeholder="234.68" oninput="onCloseInput()" style="flex:1">
+        <div style="display:flex;gap:8px"><input id="o_close" type="text" inputmode="decimal" placeholder="234.68" oninput="commaInput(this);onCloseInput()" style="flex:1">
         <button class="fetchbtn" onclick="fetchQuote('inf')">🔄 자동</button></div></div>
         <div class="fetchnote" id="o_fetchnote"></div>`;
     }else{
@@ -2466,7 +2493,7 @@ function openSettings(){
     $('set_inf').style.display='';$('set_vr').style.display='none';
     const st=s.settings, sym=(st.cur||'usd')==='krw'?'₩':'$';
     segSet('set_ticker',st.ticker);segSet('set_div',String(st.div));segSet('set_cur',st.cur||'usd');
-    $('set_target').value=st.target;$('set_big').value=st.big;$('set_principal').value=st.principal;
+    $('set_target').value=st.target;$('set_big').value=st.big;$('set_principal').value=nfix(st.principal,0);
     if($('set_rows'))$('set_rows').value=st.rows!=null?st.rows:8;
     if($('set_gap'))$('set_gap').value=st.gap!=null?st.gap:2.5;
     if($('set_rows_on')){$('set_rows_on').checked=!!st.rowsOn;toggleRowsField();}
@@ -2475,7 +2502,7 @@ function openSettings(){
     $('set_inf').style.display='none';$('set_vr').style.display='';
     const st=s.settings, sym=(st.cur||'usd')==='krw'?'₩':'$';
     $('set_vticker').value=st.ticker;segSet('set_vmode',String(st.mode));segSet('set_vformula',st.formula);segSet('set_vcur',st.cur||'usd');
-    $('set_g').value=st.g;$('set_add').value=st.add;$('set_band').value=st.band;$('set_startv').value=st.startv;$('set_startpool').value=st.startpool;
+    $('set_g').value=st.g;$('set_add').value=nfix(st.add,0);$('set_band').value=st.band;$('set_startv').value=nfix(st.startv,0);$('set_startpool').value=nfix(st.startpool,0);
     $('set_add_lbl').textContent=`매 사이클 적립금 (${sym})`;
     $('set_startv_lbl').innerHTML=`시작 V (${sym}) <span class="hint">0이면 첫 매수가 V</span>`;
     $('set_startpool_lbl').textContent=`시작 Pool (${sym})`;
@@ -2503,14 +2530,14 @@ function saveSettings(){
   const s=sess();
   if(S.activeTab==='inf'){
     s.settings={ticker:segGet('set_ticker')||'SOXL',div:+segGet('set_div')||20,
-      target:+$('set_target').value||20,big:+$('set_big').value||12,
+      target:inputNum('set_target')||20,big:inputNum('set_big')||12,
       rowsOn:$('set_rows_on')?$('set_rows_on').checked:false,
       rows:Math.max(0,Math.min(20,+$('set_rows').value||0)),gap:+$('set_gap').value||2.5,
-      rowqty:1,principal:+$('set_principal').value||10000,cur:segGet('set_cur')||'usd'};
+      rowqty:1,principal:inputNum('set_principal')||10000,cur:segGet('set_cur')||'usd'};
   }else{
     s.settings={ticker:$('set_vticker').value||'TQQQ',mode:+segGet('set_vmode')||0.75,
-      formula:segGet('set_vformula')||'basic',g:+$('set_g').value||10,add:+$('set_add').value||100,
-      band:+$('set_band').value||15,startv:+$('set_startv').value||0,startpool:+$('set_startpool').value||0,cur:segGet('set_vcur')||'usd'};
+      formula:segGet('set_vformula')||'basic',g:inputNum('set_g')||10,add:inputNum('set_add')||100,
+      band:inputNum('set_band')||15,startv:inputNum('set_startv')||0,startpool:inputNum('set_startpool')||0,cur:segGet('set_vcur')||'usd'};
   }
   save();closeSettings();refreshAll();pushRemote();
 }
