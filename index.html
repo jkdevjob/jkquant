@@ -24,6 +24,9 @@ header{padding:20px 0 12px;border-bottom:1px solid var(--line);background:linear
 h1{font-size:22px;font-weight:800;letter-spacing:-.02em;margin-top:4px}
 h1 .v{color:var(--gold)}
 .gear{background:var(--panel2);border:1px solid var(--line);color:var(--dim);width:40px;height:40px;border-radius:11px;font-size:18px;cursor:pointer;flex-shrink:0}
+.btbtn{display:inline-flex;align-items:center;gap:5px;height:40px;padding:0 14px;background:var(--panel2);border:1px solid var(--line);color:var(--dim);border-radius:11px;font-size:13px;font-weight:600;cursor:pointer;flex-shrink:0;text-decoration:none;white-space:nowrap;transition:border-color .15s,color .15s}
+.btbtn:hover{border-color:var(--vio);color:var(--vio)}
+@media(max-width:380px){.btbtn .bt-txt{display:none}.btbtn{padding:0 12px}}
 .statusline{display:flex;gap:6px;align-items:center;margin-top:8px;flex-wrap:wrap;font-size:11.5px}
 .badge{padding:2px 8px;border-radius:6px;font-weight:700;font-size:10.5px}
 .badge.set{background:var(--vio-bg);color:var(--vio)}.badge.warn{background:#3a3320;color:var(--gold)}.badge.ok{background:var(--buy-bg);color:var(--buy)}
@@ -403,7 +406,8 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
 <header><div class="wrap">
   <div class="htop">
     <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span></h1></div>
-    <div style="display:flex;align-items:center;gap:10px">
+    <div style="display:flex;align-items:center;gap:8px">
+      <a class="btbtn" href="/backtest">📊<span class="bt-txt"> 백테스트</span></a>
       <button class="gear" onclick="openSettings()">⚙️</button>
     </div>
   </div>
