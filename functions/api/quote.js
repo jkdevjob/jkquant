@@ -216,7 +216,7 @@ async function stooqDaily(symbol, dbg) {
 // 응답은 엄격한 JSON이 아니라 JS 배열 리터럴 텍스트라서 정규화 후 파싱.
 async function naverDaily(code, range, dbg) {
   // 기간 → 시작일 계산
-  const days = range === "3mo" ? 90 : range === "6mo" ? 180 : range === "5d" ? 10 : 400;
+  const days = range === "3mo" ? 90 : range === "6mo" ? 180 : range === "5d" ? 10 : range === "max" ? 3000 : 400;
   const end = new Date();
   const start = new Date(end.getTime() - days * 86400000);
   const fmt = (d) => d.toISOString().slice(0, 10).replace(/-/g, "");
