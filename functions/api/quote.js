@@ -22,6 +22,8 @@ export async function onRequestGet({ request, env }) {
   const url = new URL(request.url);
   const symbol = (url.searchParams.get("symbol") || "TQQQ").toUpperCase().trim();
   const range = url.searchParams.get("range") || "1y";
+  const period1 = url.searchParams.get("period1");  // 유닉스 타임스탬프 (초)
+  const period2 = url.searchParams.get("period2");  // 유닉스 타임스탬프 (초)
   const debug = url.searchParams.get("debug") === "1";
   const wantIntraday = url.searchParams.get("intraday") !== "0";
 
@@ -68,7 +70,7 @@ export async function onRequestGet({ request, env }) {
   if (!series.length) for (const host of ["query1", "query2", "query1-fc"]) {
     const realHost = host === "query1-fc" ? "query1" : host;
     try {
-      const y = await yahooDaily(realHost, symbol, range, dbg);
+      const y = await yahooDaily(realHost, symbol, range, dbg, period1, period2);
       if (y && y.series.length) {
         series = y.series; ohlc = y.ohlc; if (price == null) price = y.price; marketState = y.marketState; currency = y.currency;
         if (!src) src = "yahoo-" + realHost;
@@ -117,11 +119,13 @@ export async function onRequestOptions() {
   }});
 }
 
-async function yahooDaily(host, symbol, range, dbg) {
-  // range=max면 period1=0 방식 사용 (range=max는 Yahoo가 월간으로 다운샘플하는 문제 우회)
-  const rangeParam = range === "max"
-    ? `period1=0&period2=${Math.floor(Date.now()/1000)+86400}`
-    : `range=${encodeURIComponent(range)}`;
+async function yahooDaily(host, symbol, range, dbg, period1=null, period2=null) {
+  // period1/period2가 있으면 우선 사용, 없으면 range 사용 (max는 period 방식으로 우회)
+  const rangeParam = (period1 && period2)
+    ? `period1=${period1}&period2=${period2}`
+    : range === "max"
+      ? `period1=0&period2=${Math.floor(Date.now()/1000)+86400}`
+      : `range=${encodeURIComponent(range)}`;
   const u = `https://${host}.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?interval=1d&${rangeParam}&includePrePost=false`;
   const r = await fetch(u, { headers: { "User-Agent": UA, "Accept": "application/json", "Referer": "https://finance.yahoo.com/", "Origin": "https://finance.yahoo.com" }, cf: { cacheTtl: 60 } });
   dbg && dbg.push(`yahooDaily ${host}: HTTP ${r.status}`);
