@@ -132,12 +132,9 @@ td:first-child{text-align:left;}
       <h1>JK 퀀트 백테스트</h1>
     </div>
   </div>
-  <div style="display:flex;align-items:center;gap:10px">
-    <button id="refreshBtn" onclick="loadData()" style="font-size:12px;font-weight:600;color:#fff;background:var(--accent);border:none;border-radius:7px;padding:8px 14px;cursor:pointer;white-space:nowrap">↻ 데이터 새로고침</button>
-    <a href="/" class="home">← 운용 도구로</a>
-  </div>
+  <a href="/" class="home">← 운용 도구로</a>
 </div>
-<div id="dataStat" style="font-size:11.5px;color:var(--dim);margin:-12px 0 16px;font-variant-numeric:tabular-nums">데이터 없음 — 새로고침을 눌러 시세를 받아주세요</div>
+<div id="dataStat" style="font-size:11.5px;color:var(--dim);margin:-12px 0 16px;font-variant-numeric:tabular-nums;display:none"></div>
 
 <!-- 전략 탭 -->
 <div class="stabs">
@@ -279,27 +276,22 @@ let loadedTickers=[];          // 실제 로딩된 종목
 })();
 
 // 데이터 새로고침: 버튼 클릭 시 호출
+// 데이터 로딩 (실행 시 자동 호출). 성공하면 true.
 async function loadData(){
-  const btn=document.getElementById('refreshBtn');
   const stat=document.getElementById('dataStat');
-  if(btn){ btn.disabled=true; btn.textContent='불러오는 중…'; }
-  if(stat){ stat.textContent='데이터 받는 중…'; stat.style.color='var(--dim)'; }
+  if(stat){ stat.style.display=''; stat.textContent='시세 받는 중…'; stat.style.color='var(--dim)'; }
   try{
     const {data, loaded, failed}=await fetchPrices();
     if(loaded.length===0){
-      if(stat){ stat.textContent='⚠ 모든 종목 로딩 실패 — 잠시 후 다시 시도'; stat.style.color='var(--red)'; }
-      return;
+      if(stat){ stat.textContent='⚠ 시세 로딩 실패 — 잠시 후 다시 실행해 주세요'; stat.style.color='var(--red)'; }
+      return false;
     }
-    // M 채우기 (로딩된 종목만)
     M={}; loaded.forEach(t=>{ M[t]={}; data[t].forEach(r=>{M[t][r[0]]=[r[1],r[2],r[3],r[4]];}); });
     dataLoaded=true; loadedTickers=loaded;
-    // dcaActive를 로딩된 종목으로 재설정
     dcaActive=new Set(loaded);
-    // 막힌 종목 처리: 단일선택(무매/VR) pick이 막혔으면 가능한 종목으로 변경
     if(!loaded.includes(imPick)) imPick = loaded.includes('SOXL')?'SOXL':loaded[0];
     if(!loaded.includes(vrPick)) vrPick = loaded.includes('TQQQ')?'TQQQ':loaded[0];
     buildTickerPick();
-    // 데이터 최신 날짜 표시
     let maxDate=''; loaded.forEach(t=>{ const ds=Object.keys(M[t]); const last=ds[ds.length-1]; if(last>maxDate)maxDate=last; });
     if(stat){
       let msg=`✓ ${loaded.length}개 종목 · ~${maxDate} 기준`;
@@ -307,11 +299,10 @@ async function loadData(){
       stat.textContent=msg; stat.style.color = failed.length?'var(--gold)':'var(--green)';
     }
     hideEmptyState();
-    run();
+    return true;
   }catch(e){
-    if(stat){ stat.textContent='⚠ 로딩 오류: '+e.message; stat.style.color='var(--red)'; }
-  }finally{
-    if(btn){ btn.disabled=false; btn.textContent='↻ 데이터 새로고침'; }
+    if(stat){ stat.style.display=''; stat.textContent='⚠ 로딩 오류: '+e.message; stat.style.color='var(--red)'; }
+    return false;
   }
 }
 
@@ -324,7 +315,7 @@ function showEmptyState(){
   const ov=document.createElement('div');
   ov.id='emptyState';
   ov.style.cssText='text-align:center;padding:48px 20px;color:var(--dim);line-height:1.7';
-  ov.innerHTML='<div style="font-size:32px;margin-bottom:8px">📊</div><b style="color:var(--text);font-size:16px">데이터를 먼저 받아주세요</b><br>상단의 <b style="color:var(--accent)">↻ 데이터 새로고침</b> 버튼을 누르면<br>실시간 시세를 불러와 백테스트를 실행합니다.';
+  ov.innerHTML='<div style="font-size:32px;margin-bottom:8px">📊</div><b style="color:var(--text);font-size:16px">▶ 실행을 눌러주세요</b><br>실행하면 실시간 시세를 받아와<br>백테스트 결과를 보여줍니다.';
   r.parentNode.insertBefore(ov, r);
 }
 // 데이터 로딩 성공 시: 오버레이 제거 + 결과 영역 복원
@@ -372,7 +363,7 @@ function setStrat(s){
   // s-im s-vr 공용 요소 처리
   document.querySelectorAll('.s-im.s-vr').forEach(e=>e.classList.toggle('hide',s==='dca'));
   if(document.getElementById('tickerSingle')._render) document.getElementById('tickerSingle')._render();
-  run();
+  if(dataLoaded) run();      // 데이터 있을 때만 재계산 (탭 전환만으로 로딩 안 함)
 }
 
 // seg 버튼들
@@ -460,8 +451,12 @@ function runVR(days,tkr,contrib,G,bandPct){
 }
 
 // ──── RUN ────
-function run(){
-  if(!Object.keys(M).length)return;
+async function run(){
+  // 데이터 없으면 자동으로 시세 받아오기
+  if(!Object.keys(M).length){
+    const ok=await loadData();
+    if(!ok) return;          // 로딩 실패 시 중단 (안내는 loadData가 표시)
+  }
   const start=document.getElementById('dStart').value;
   const end=document.getElementById('dEnd').value;
   if(start>=end){alert('날짜를 확인하세요.');return;}
