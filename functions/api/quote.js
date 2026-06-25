@@ -118,7 +118,9 @@ async function yahooDaily(host, symbol, range, dbg) {
   if (!res) throw new Error("empty result");
   const ts = res.timestamp || [];
   const q = (res.indicators && res.indicators.quote && res.indicators.quote[0]) || {};
-  const closeA = q.close || [], openA = q.open || [], highA = q.high || [], lowA = q.low || [];
+  const adjA = (res.indicators && res.indicators.adjclose && res.indicators.adjclose[0] && res.indicators.adjclose[0].adjclose) || [];
+  const closeA = adjA.length ? adjA : (q.close || []);  // adjclose 우선 (DRIP 반영), 없으면 raw close
+  const openA = q.open || [], highA = q.high || [], lowA = q.low || [];
   const series = [], ohlc = [];
   for (let i = 0; i < ts.length; i++) {
     const c = closeA[i]; if (c == null) continue;
