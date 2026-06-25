@@ -165,9 +165,7 @@ td:first-child{text-align:left;}
     <div class="ctrl s-dca"><label>1회 금액 ($)</label><input type="number" id="dcaAmt" value="10" min="1"></div>
     <div class="ctrl s-dca"><label>주기</label>
       <div class="seg" id="dcaFreq">
-        <button data-f="daily" class="active">매일</button>
-        <button data-f="weekly">매주</button>
-        <button data-f="monthly">매월</button>
+        <button data-f="monthly" class="active">매월</button>
       </div>
     </div>
     <div class="ctrl s-dca"><label>기간</label>
@@ -254,7 +252,7 @@ td:first-child{text-align:left;}
 // ════════ 데이터 (실시간 로딩 — '데이터 새로고침' 버튼으로 받아옵니다) ════════
 // 종목별 /api/quote?range=max 호출. 막힌 종목은 건너뜁니다.
 const C=0,O=1,HI=2,LO=3;
-const TICKERS=['SSO','UPRO','QLD','TQQQ','USD','SOXL','TECL','KORU','QQQ','QYLD','JEPQ','QQQI','GPIQ'];
+const TICKERS=['SOXL','TQQQ','TECL','KORU','QLD','USD','SSO','UPRO','QQQ','QYLD','JEPQ','QQQI','GPIQ'];
 
 // 실시간 가격 로딩: 5개 종목 병렬 호출, 실패 종목은 빼고 진행
 async function fetchPrices(){
@@ -303,12 +301,12 @@ const META={
   '418660':{name:'TIGER 나스닥100 2×', lev:2, color:'#42a5f5'},
   '423920':{name:'TIGER 반도체 2×',   lev:2, color:'#ff5252'},
 };
-const IM_TICKERS=['SOXL','TQQQ'];  // 무매는 LOC 종목만
-const VR_TICKERS=['SOXL','TQQQ','418660','423920'];  // VR: 레버리지 4종
+const IM_TICKERS=['SOXL','TQQQ','TECL','KORU'];
+const VR_TICKERS=['SOXL','TQQQ','TECL','KORU'];
 
 let M={};
 let strat='dca';
-let dcaFreq='daily', dcaPeriodMode='common', imDiv=20;
+let dcaFreq='monthly', dcaPeriodMode='common', imDiv=20;
 let imActive=new Set(IM_TICKERS);   // 무매 다중선택
 let vrActive=new Set(VR_TICKERS);   // VR 다중선택
 let dcaActive=new Set(TICKERS);
