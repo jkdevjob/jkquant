@@ -295,11 +295,11 @@ const META={
   JEPQ:{name:'나스닥CC JEPQ',lev:1, color:'#ec407a'},
   QQQI:{name:'나스닥CC QQQI',lev:1, color:'#ff7043'},
   GPIQ:{name:'나스닥CC GPIQ',lev:1, color:'#66bb6a'},
-  '133690':{name:'TIGER 나스닥100 2×', lev:2, color:'#42a5f5'},
-  '381180':{name:'TIGER 반도체 2×',   lev:2, color:'#ff5252'},
+  '418660':{name:'TIGER 나스닥100 2×', lev:2, color:'#42a5f5'},
+  '423920':{name:'TIGER 반도체 2×',   lev:2, color:'#ff5252'},
 };
 const IM_TICKERS=['SOXL','TQQQ'];  // 무매는 LOC 종목만
-const VR_TICKERS=['SOXL','TQQQ','133690','381180'];  // VR: 레버리지 4종
+const VR_TICKERS=['SOXL','TQQQ','418660','423920'];  // VR: 레버리지 4종
 
 let M={};
 let strat='dca';
@@ -313,7 +313,7 @@ let chart=null, logY=false, lastRender=null;
 let dataLoaded=false;          // 데이터를 받았는지
 let loadedTickers=[];          // 실제 로딩된 종목
 
-(function(){
+(async function(){
   // 날짜 기본값: 종료일=오늘, 시작일=10년 전
   const iso=d=>d.toISOString().slice(0,10);
   const today=new Date();
@@ -321,7 +321,9 @@ let loadedTickers=[];          // 실제 로딩된 종목
   document.getElementById('dEnd').value=iso(today);
   document.getElementById('dStart').value=iso(tenYrAgo);
   buildTickerPick();
-  showEmptyState();            // 데이터 없을 때 안내 표시
+  showEmptyState();
+  // 접속 즉시 데이터 로딩
+  await loadData();
 })();
 
 // 데이터 새로고침: 버튼 클릭 시 호출
@@ -563,11 +565,7 @@ function cagrOf(final, invested, yrs){ return invested>0&&yrs>0 ? (Math.pow(fina
 
 // ──── RUN ────
 async function run(){
-  // 데이터 없으면 자동으로 시세 받아오기
-  if(!Object.keys(M).length){
-    const ok=await loadData();
-    if(!ok) return;          // 로딩 실패 시 중단 (안내는 loadData가 표시)
-  }
+  if(!Object.keys(M).length){ await loadData(); if(!Object.keys(M).length) return; }
   const start=document.getElementById('dStart').value;
   const end=document.getElementById('dEnd').value;
   if(start>=end){alert('날짜를 확인하세요.');return;}
@@ -592,19 +590,7 @@ async function run(){
     }else{
       // 공통기간: 전 종목 교집합
       const days=commonDays(start,end,[...dcaActive]);
-      if(days.length<10){
-        const shortest=[...dcaActive].sort((a,b)=>Object.keys(M[a]||{}).length-Object.keys(M[b]||{}).length)[0];
-        alert(`공통 거래일이 부족합니다.\n원인: ${shortest} 등 상장일이 짧은 종목 포함\n→ 해당 종목을 제외하거나 [개별기간] 모드를 사용하세요.`);
-        return;
-      }
-      const calYrs=(new Date(days[days.length-1])-new Date(days[0]))/(365.25*864e5);
-      const reqYrs=(new Date(end)-new Date(start))/(365.25*864e5);
-      if(calYrs < reqYrs*0.7){
-        const stat=document.getElementById('dataStat');
-        if(stat){ stat.style.display=''; stat.style.color='var(--gold)';
-          const short=[...dcaActive].filter(t=>Object.keys(M[t]||{}).length<calYrs*200);
-          stat.textContent=`⚠ 공통기간 ${calYrs.toFixed(1)}년 (요청 ${reqYrs.toFixed(0)}년보다 짧음) — ${short.join(', ')} 때문. 개별기간 모드 또는 해당 종목 제외 권장`; }
-      }
+      if(days.length<10){alert('공통 거래일이 부족합니다. 개별기간 모드를 사용하세요.');return;}
       const res=runDCA(days,amt,dcaFreq);
       renderDCA(res,[...dcaActive],{amt,freq:dcaFreq,days,mode:'common'});
     }
