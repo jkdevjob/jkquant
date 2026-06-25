@@ -243,7 +243,7 @@ td:first-child{text-align:left;}
 // ════════ 데이터 (실시간 로딩 — '데이터 새로고침' 버튼으로 받아옵니다) ════════
 // 종목별 /api/quote?range=max 호출. 막힌 종목은 건너뜁니다.
 const C=0,O=1,HI=2,LO=3;
-const TICKERS=['QLD','TQQQ','SOXL','USD','TECL'];
+const TICKERS=['SSO','UPRO','QLD','TQQQ','USD','SOXL','TECL','KORU'];
 
 // 실시간 가격 로딩: 5개 종목 병렬 호출, 실패 종목은 빼고 진행
 async function fetchPrices(){
@@ -263,14 +263,17 @@ async function fetchPrices(){
 }
 
 const META={
-  QLD:{name:'나스닥100 2×',lev:2,color:'#5b8dee'},
-  TQQQ:{name:'나스닥100 3×',lev:3,color:'#00d4b4'},
-  USD:{name:'반도체 2×',lev:2,color:'#b088f8'},
-  SOXL:{name:'반도체 3×',lev:3,color:'#ff6b6b'},
-  TECL:{name:'테크 3×',lev:3,color:'#ffc844'},
+  SSO: {name:'S&P500 2×',  lev:2, color:'#4fc3f7'},
+  UPRO:{name:'S&P500 3×',  lev:3, color:'#29b6f6'},
+  QLD: {name:'나스닥100 2×',lev:2, color:'#5b8dee'},
+  TQQQ:{name:'나스닥100 3×',lev:3, color:'#00d4b4'},
+  USD: {name:'반도체 2×',  lev:2, color:'#b088f8'},
+  SOXL:{name:'반도체 3×',  lev:3, color:'#ff6b6b'},
+  TECL:{name:'테크 3×',    lev:3, color:'#ffc844'},
+  KORU:{name:'한국 3×',    lev:3, color:'#ef5350'},
 };
 const IM_TICKERS=['SOXL','TQQQ'];  // 무매는 LOC 종목만
-const VR_TICKERS=['TQQQ','SOXL','QLD','USD','TECL'];
+const VR_TICKERS=['TQQQ','SOXL','QLD','USD','TECL','SSO','UPRO','KORU'];
 
 let M={};
 let strat='dca';
@@ -401,17 +404,26 @@ function commonDays(start,end,tickers){
 function runDCA(days,amt,freq){
   const step={daily:1,weekly:5,monthly:21}[freq]||1;
   const res={};
-  [...dcaActive].forEach(t=>{
-    let sh=0,inv=0;const snap=[];
-    days.forEach((d,i)=>{
-      const p=M[t][d][C];
-      if(i%step===0){sh+=amt/p;inv+=amt;}
-      if(i%10===0)snap.push([d,sh*p]);
-    });
-    const fin=sh*M[t][days[days.length-1]][C];
-    res[t]={invested:inv,final:fin,ret:(fin/inv-1)*100,snap};
-  });
+  [...dcaActive].forEach(t=>{ res[t]=_dcaOne(t,days,amt,step); });
   return res;
+}
+// 단일 종목 DCA (renderSingle2 비교용)
+function runDCA1(tkr,days,totalAmt){
+  // totalAmt를 거래일 수로 균등 분할 (매일 적립)
+  const amt=totalAmt/days.length;
+  return _dcaOne(tkr,days,amt,1);
+}
+function _dcaOne(t,days,amt,step){
+  if(!M[t]) return {invested:0,final:0,ret:0,snap:[]};
+  let sh=0,inv=0;const snap=[];
+  days.forEach((d,i)=>{
+    const p=M[t][d]?.[C]??0;
+    if(p>0&&i%step===0){sh+=amt/p;inv+=amt;}
+    if(i%10===0)snap.push([d,p>0?sh*p:0]);
+  });
+  const last=M[t][days[days.length-1]]?.[C]??0;
+  const fin=sh*last;
+  return {invested:inv,final:fin,ret:inv>0?(fin/inv-1)*100:0,snap};
 }
 
 // ──── 전략 2: 무한매수법 V4.0 ────
@@ -419,6 +431,7 @@ function runIM(days,tkr,cap,divs,targetPct){
   const starBase=tkr==='SOXL'?20:15;
   const starSlope=tkr==='SOXL'?(divs===20?2:1):(divs===20?1.5:0.75);
   let cash=cap,base=cap,shares=0,avg=0,T=0,realized=0,cycles=0;const snap=[];
+  let peakInvested=0;  // 실제 투입 최고점 (거치식 공정비교 기준)
   days.forEach((d,i)=>{
     const [c,o,hi,lo]=M[tkr][d];
     if(shares>0&&avg>0){
@@ -443,9 +456,10 @@ function runIM(days,tkr,cap,divs,targetPct){
       }
     }
     if(i%10===0)snap.push([d,cash+shares*c]);
+    peakInvested=Math.max(peakInvested, cap-cash);  // 실제 투입 피크 추적
   });
   const fin=cash+shares*M[tkr][days[days.length-1]][C];
-  return {invested:cap,final:fin,realized,cycles,endCash:cash,endShares:shares,ret:(fin/cap-1)*100,snap,tkr};
+  return {invested:cap,peakInvested,final:fin,realized,cycles,endCash:cash,endShares:shares,ret:(fin/cap-1)*100,snap,tkr};
 }
 
 // ──── 전략 3: VR 5.0 ────
@@ -540,13 +554,26 @@ function alignSnap(snap,labels){const m=Object.fromEntries(snap.map(s=>[s[0],Mat
 
 function makeChart(datasets,labels){
   if(chart)chart.destroy();
+  const fmtY=v=>v>=1e6?'$'+(v/1e6).toFixed(1)+'M':v>=1e3?'$'+(v/1e3).toFixed(0)+'k':'$'+Math.round(v);
+  const labelStep=Math.max(1,Math.floor(labels.length/8));
   chart=new Chart(document.getElementById('chart').getContext('2d'),{
     type:'line',data:{labels,datasets},
     options:{responsive:true,interaction:{mode:'index',intersect:false},
-      plugins:{legend:{display:datasets.length>1,labels:{color:'#8a96c0',font:{family:'IBM Plex Mono',size:11},boxWidth:11,usePointStyle:true,pointStyle:'line'}},
-        tooltip:{backgroundColor:'#1c2238',borderColor:'#2e3754',borderWidth:1,titleColor:'#6b7599',bodyColor:'#c8d0ec',callbacks:{label:c=>` ${c.dataset.label}: $${c.parsed.y?.toLocaleString()}`}}},
-      scales:{x:{ticks:{color:'#4a5478',maxTicksLimit:12,font:{family:'IBM Plex Mono',size:10}},grid:{color:'#1a2036'}},
-        y:{type:logY?'logarithmic':'linear',ticks:{color:'#4a5478',font:{family:'IBM Plex Mono',size:10},callback:v=>v>=1e6?'$'+(v/1e6).toFixed(1)+'M':v>=1e3?'$'+(v/1e3).toFixed(0)+'k':'$'+v},grid:{color:'#1a2036'}}}}
+      animation:{duration:300},
+      plugins:{
+        legend:{display:datasets.length>1,labels:{color:'#8a96c0',font:{family:'IBM Plex Mono',size:11},boxWidth:10,usePointStyle:true,pointStyle:'line',padding:12}},
+        tooltip:{backgroundColor:'#1c2238',borderColor:'#2e3754',borderWidth:1,titleColor:'#8a96c0',bodyColor:'#c8d0ec',padding:10,
+          callbacks:{title:items=>items[0].label, label:c=>` ${c.dataset.label}: ${fmtY(c.parsed.y)}`}}
+      },
+      scales:{
+        x:{ticks:{color:'#4a5478',maxTicksLimit:8,font:{family:'IBM Plex Mono',size:10},
+            callback:(v,i)=>i%labelStep===0?labels[i]?.slice(0,7):null},
+          grid:{color:'#1a2036'}},
+        y:{type:logY?'logarithmic':'linear',
+          ticks:{color:'#4a5478',font:{family:'IBM Plex Mono',size:10},callback:fmtY},
+          grid:{color:'#1a2036'}}
+      }
+    }
   });
 }
 
@@ -582,82 +609,121 @@ function renderSingle2(type,r,days){
   document.querySelector('.cards').classList.add('hide');
   document.querySelector('.tbl-wrap').classList.add('hide');
   document.getElementById('detail').classList.remove('hide');
+  // 전략 vs 거치식 비교 시 로그 스케일 기본값 (스케일 차이가 클 때 두 선이 다 보이게)
+  logY=true;
+  const logBtns=document.querySelectorAll('.log-seg button');
+  logBtns.forEach(b=>b.classList.remove('active'));
+  if(logBtns[1]) logBtns[1].classList.add('active');  // '로그' 버튼 활성화
   const m=META[r.tkr];
-  const yrs=days.length/252;
   const stratName = type==='im' ? '무한매수법 V4.0' : 'VR 5.0';
   const stratShort = type==='im' ? '무한매수법' : 'VR 5.0';
 
-  // ── 거치식(Buy&Hold): 동일 원금을 시작일에 전액 매수, 전략 스냅 날짜에 맞춰 평가 ──
+  // ── yrs: CAGR 방어 (최소 0.1년)
+  const yrs = Math.max(days.length/252, 0.1);
+  const dateRange = `${days[0]}~${days[days.length-1]}`;
+
+  // ── 거치식(B&H): 무매는 실제 투입 피크 기준, VR은 총 투입액 기준
+  const bhBase = type==='im' ? (r.peakInvested||r.invested) : r.invested;
   const snapDates = r.snap.map(s=>s[0]);
-  const bhSnap = buyHoldSeries(r.tkr, days, r.invested, snapDates);
-  const bhFinal = bhSnap[bhSnap.length-1][1];
-  const bhRet = (bhFinal/r.invested-1)*100;
+  const bhSnap = buyHoldSeries(r.tkr, days, bhBase, snapDates);
+  const bhFinal = bhSnap[bhSnap.length-1]?.[1] ?? bhBase;
+  const bhRet = (bhFinal/bhBase-1)*100;
 
-  // ── 지표 ──
-  const sCagr=cagrOf(r.final, r.invested, yrs), bCagr=cagrOf(bhFinal, r.invested, yrs);
-  const sMDD=calcMDD(r.snap), bMDD=calcMDD(bhSnap);
-  const sVol=calcVol(r.snap,10), bVol=calcVol(bhSnap,10);
-  const diff=(r.final/bhFinal-1)*100;
-  const better = r.final>=bhFinal;
+  // ── 단순 DCA: 같은 기간, 같은 총액을 매일 균등 적립
+  const dcaR   = runDCA1(r.tkr, days, bhBase);
+  const dcaFinal = dcaR.final;
+  const dcaInv   = dcaR.invested;
+  const dcaRet   = dcaR.ret;
+  const dcaSnap  = dcaR.snap;
+  const dcaAmt   = bhBase / days.length;
 
-  document.getElementById('winner').innerHTML=`📊 <strong style="color:${m.color}">${r.tkr}</strong> ${stratName} <span style="color:var(--dim)">vs 거치식</span> · ${days[0]}~${days[days.length-1]} · ${yrs.toFixed(1)}년`;
+  // ── 지표 계산
+  const sCagr=cagrOf(r.final, r.invested, yrs);
+  const bCagr=cagrOf(bhFinal, bhBase, yrs);
+  const dCagr=cagrOf(dcaFinal, dcaInv, yrs);
+  const sMDD=calcMDD(r.snap), bMDD=calcMDD(bhSnap), dMDD=calcMDD(dcaSnap);
+  const sVol=calcVol(r.snap,10), bVol=calcVol(bhSnap,10), dVol=calcVol(dcaSnap,10);
+  const nDays = days.length;
+
+  document.getElementById('winner').innerHTML=
+    `📊 <strong style="color:${m.color}">${r.tkr}</strong> ${stratName} <span style="color:var(--dim)">vs 거치식 vs 단순DCA</span> · ${dateRange} · ${yrs.toFixed(1)}년 <span style="color:var(--dim);font-size:11px">(${nDays}거래일)</span>`;
 
   const money=x=>'$'+fmt(x);
   const pct=x=>(x>=0?'+':'')+x.toFixed(1)+'%';
   const pctP=x=>x.toFixed(1)+'%';
-  const row=(label, sTxt, bTxt, sWin)=>`<tr><td>${label}</td><td class="v col-strat ${sWin===true?'win':''}">${sTxt}</td><td class="v ${sWin===false?'win':''}">${bTxt}</td></tr>`;
+
+  // 이긴 쪽(최댓값) 인덱스: 0=전략,1=거치식,2=DCA
+  function wins(arr){ const mx=Math.max(...arr); return arr.map(v=>v===mx); }
+  function winsMDD(arr){ const mn=Math.min(...arr); return arr.map(v=>v===mn); }
+
+  const finalWin=wins([r.final, bhFinal, dcaFinal]);
+  const retWin=wins([r.ret, bhRet, dcaRet]);
+  const cagrWin=wins([sCagr, bCagr, dCagr]);
+  const mddWin=winsMDD([sMDD, bMDD, dMDD]);
+  const volWin=winsMDD([sVol, bVol, dVol]);
+
+  const td=(v,w)=>`<td class="v ${w?'win':''}">${v}</td>`;
 
   let stratExtra='';
   if(type==='im'){
     stratExtra=`
+      <div class="metric"><span class="k">한도 원금</span><span class="v">$${fmt(r.invested)}</span></div>
+      <div class="metric"><span class="k">실제 투입 피크</span><span class="v" style="color:var(--accent)">$${fmt(r.peakInvested||0)}</span></div>
+      <div class="metric"><span class="k">최종 평가액</span><span class="v" style="color:${r.ret>=0?'var(--green)':'var(--red)'}">$${fmt(r.final)}</span></div>
+      <div class="metric"><span class="k">총 수익률</span><span class="v" style="color:${r.ret>=0?'var(--green)':'var(--red)'}">${pct(r.ret)}</span></div>
+      <div class="metric"><span class="k">CAGR</span><span class="v">${pct(sCagr)}</span></div>
       <div class="metric"><span class="k">누적 실현익</span><span class="v">$${fmt(r.realized)}</span></div>
       <div class="metric"><span class="k">익절 사이클</span><span class="v">${r.cycles}회</span></div>
       <div class="metric"><span class="k">종료 현금 / 주식</span><span class="v" style="font-size:11px">$${fmt(r.endCash)} / ${r.endShares.toFixed(1)}주</span></div>`;
   }else{
     stratExtra=`
+      <div class="metric"><span class="k">총 투입 원금</span><span class="v">$${fmt(r.invested)}</span></div>
+      <div class="metric"><span class="k">최종 평가액</span><span class="v" style="color:${r.ret>=0?'var(--green)':'var(--red)'}">$${fmt(r.final)}</span></div>
+      <div class="metric"><span class="k">총 수익률</span><span class="v" style="color:${r.ret>=0?'var(--green)':'var(--red)'}">${pct(r.ret)}</span></div>
+      <div class="metric"><span class="k">CAGR</span><span class="v">${pct(sCagr)}</span></div>
       <div class="metric"><span class="k">현금 Pool</span><span class="v">$${fmt(r.pool)}</span></div>
       <div class="metric"><span class="k">최종 기준값 V</span><span class="v">$${fmt(r.V)}</span></div>
       <div class="metric"><span class="k">리밸런싱</span><span class="v">${r.rebal}회 (매수${r.buys}/매도${r.sells})</span></div>`;
   }
 
+  // 비교 기준 안내
+  const baseNote = type==='im'
+    ? `거치식·DCA 기준: 무매 실제 투입 피크 <b>$${fmt(bhBase)}</b>`
+    : `거치식·DCA 기준: VR 총 투입액 <b>$${fmt(bhBase)}</b>`;
+
   document.getElementById('detail').innerHTML=`
     <div class="cmp-wrap" style="grid-column:1/-1">
-      <h4>⚖️ ${stratName} vs ${r.tkr} 거치식 — 동일 원금 $${fmt(r.invested)} 기준</h4>
+      <h4>⚖️ ${stratName} vs 거치식(B&H) vs 단순DCA — <span style="font-weight:400;color:var(--dim)">${baseNote}</span></h4>
       <table class="cmp">
-        <thead><tr><th>지표</th><th class="col-strat">${stratShort}</th><th>거치식(B&H)</th></tr></thead>
+        <thead><tr><th>지표</th><th class="col-strat">${stratShort}</th><th>거치식(B&H)</th><th>단순 DCA</th></tr></thead>
         <tbody>
-          ${row('최종 평가액', money(r.final), money(bhFinal), better)}
-          ${row('총 수익률', pct(r.ret), pct(bhRet), r.ret>=bhRet)}
-          ${row('CAGR (연복리)', pct(sCagr), pct(bCagr), sCagr>=bCagr)}
-          ${row('최대 낙폭 (MDD)', '-'+pctP(sMDD), '-'+pctP(bMDD), sMDD<=bMDD)}
-          ${row('연환산 변동성', pctP(sVol), pctP(bVol), sVol<=bVol)}
+          <tr><td>최종 평가액</td>${td(money(r.final),finalWin[0])}${td(money(bhFinal),finalWin[1])}${td(money(dcaFinal),finalWin[2])}</tr>
+          <tr><td>총 수익률</td>${td(pct(r.ret),retWin[0])}${td(pct(bhRet),retWin[1])}${td(pct(dcaRet),retWin[2])}</tr>
+          <tr><td>CAGR (연복리)</td>${td(pct(sCagr),cagrWin[0])}${td(pct(bCagr),cagrWin[1])}${td(pct(dCagr),cagrWin[2])}</tr>
+          <tr><td>최대 낙폭 (MDD)</td>${td('-'+pctP(sMDD),mddWin[0])}${td('-'+pctP(bMDD),mddWin[1])}${td('-'+pctP(dMDD),mddWin[2])}</tr>
+          <tr><td>연환산 변동성</td>${td(pctP(sVol),volWin[0])}${td(pctP(bVol),volWin[1])}${td(pctP(dVol),volWin[2])}</tr>
         </tbody>
       </table>
-      <div style="margin-top:10px;padding:9px 12px;border-radius:7px;background:${better?'rgba(0,212,180,.1)':'rgba(255,107,107,.1)'};font-size:12.5px;color:var(--text);line-height:1.6">
-        ${better?'▲':'▼'} <b>${stratShort}</b>가 거치식 대비 최종 평가액 <b style="color:${better?'var(--green)':'var(--red)'}">${better?'+':''}${diff.toFixed(1)}%</b>${sMDD<bMDD?` · 낙폭 <b>${(bMDD-sMDD).toFixed(0)}%p</b> 더 작아 안정적`:` · 단 낙폭은 <b>${(sMDD-bMDD).toFixed(0)}%p</b> 더 큼`}
-      </div>
     </div>
-    <div class="dbox"><h4>📈 ${stratName} 상세</h4>
-      <div class="metric"><span class="k">투입 원금</span><span class="v">$${fmt(r.invested)}</span></div>
-      <div class="metric"><span class="k">최종 평가액</span><span class="v" style="color:${r.ret>=0?'var(--green)':'var(--red)'}">$${fmt(r.final)}</span></div>
-      <div class="metric"><span class="k">총 수익률</span><span class="v" style="color:${r.ret>=0?'var(--green)':'var(--red)'}">${pct(r.ret)}</span></div>
-      <div class="metric"><span class="k">CAGR</span><span class="v">${pct(sCagr)}</span></div>
-      ${stratExtra}
-    </div>
-    <div class="dbox"><h4>🏦 ${r.tkr} 거치식(Buy&Hold)</h4>
-      <div class="metric"><span class="k">투입 원금</span><span class="v">$${fmt(r.invested)}</span></div>
-      <div class="metric"><span class="k">최종 평가액</span><span class="v" style="color:${bhRet>=0?'var(--green)':'var(--red)'}">$${fmt(bhFinal)}</span></div>
-      <div class="metric"><span class="k">총 수익률</span><span class="v" style="color:${bhRet>=0?'var(--green)':'var(--red)'}">${pct(bhRet)}</span></div>
-      <div class="metric"><span class="k">CAGR</span><span class="v">${pct(bCagr)}</span></div>
-      <div class="metric"><span class="k">최대 낙폭</span><span class="v" style="color:var(--red)">-${pctP(bMDD)}</span></div>
-      <div class="metric"><span class="k">연환산 변동성</span><span class="v">${pctP(bVol)}</span></div>
+    <div class="dbox"><h4>📈 ${stratName} 상세</h4>${stratExtra}</div>
+    <div class="dbox"><h4>🏦 ${r.tkr} 거치식(B&H) · 🔵 단순DCA 상세</h4>
+      <div class="metric"><span class="k">투입 기준</span><span class="v" style="color:var(--accent)">$${fmt(bhBase)}</span></div>
+      <div class="metric" style="padding-top:10px;padding-bottom:4px"><span class="k" style="font-weight:600">거치식</span><span class="v"></span></div>
+      <div class="metric"><span class="k">└ 최종 평가액</span><span class="v" style="color:${bhRet>=0?'var(--green)':'var(--red)'}">$${fmt(bhFinal)}</span></div>
+      <div class="metric"><span class="k">└ CAGR</span><span class="v">${pct(bCagr)}</span></div>
+      <div class="metric"><span class="k">└ 최대 낙폭</span><span class="v" style="color:var(--red)">-${pctP(bMDD)}</span></div>
+      <div class="metric" style="padding-top:10px;padding-bottom:4px"><span class="k" style="font-weight:600">단순 DCA</span><span class="v">($${fmt(Math.round(dcaAmt))}/일)</span></div>
+      <div class="metric"><span class="k">└ 최종 평가액</span><span class="v" style="color:${dcaRet>=0?'var(--green)':'var(--red)'}">$${fmt(dcaFinal)}</span></div>
+      <div class="metric"><span class="k">└ CAGR</span><span class="v">${pct(dCagr)}</span></div>
+      <div class="metric"><span class="k">└ 최대 낙폭</span><span class="v" style="color:var(--red)">-${pctP(dMDD)}</span></div>
     </div>`;
 
-  // ── 그래프: 전략 + 거치식 두 선 겹침 ──
-  document.getElementById('chartTitle').textContent=`${r.tkr} 누적 평가액 — ${stratShort} vs 거치식`;
+  // ── 그래프: 3선 겹침 (전략·거치식·DCA)
+  document.getElementById('chartTitle').textContent=`${r.tkr} 누적 평가액 — ${stratShort} / 거치식 / DCA`;
   lastRender=()=>makeChart([
-    {label:`${r.tkr} ${stratShort}`, data:r.snap.map(s=>s[1]==null?null:Math.round(s[1])), borderColor:m.color, backgroundColor:'transparent', borderWidth:2, pointRadius:0, tension:.1},
-    {label:`${r.tkr} 거치식`, data:bhSnap.map(s=>s[1]==null?null:Math.round(s[1])), borderColor:'#8a96c0', backgroundColor:'transparent', borderWidth:1.5, borderDash:[5,4], pointRadius:0, tension:.1}
+    {label:`${r.tkr} ${stratShort}`,  data:r.snap.map(s=>s[1]==null?null:Math.round(s[1])), borderColor:m.color,   backgroundColor:'transparent', borderWidth:2,   pointRadius:0, tension:.1},
+    {label:`${r.tkr} 거치식`,          data:bhSnap.map(s=>s[1]==null?null:Math.round(s[1])),borderColor:'#8a96c0', backgroundColor:'transparent', borderWidth:1.5, pointRadius:0, tension:.1, borderDash:[5,4]},
+    {label:`${r.tkr} DCA`,             data:dcaSnap.map(s=>s[1]==null?null:Math.round(s[1])),borderColor:'#69db7c',backgroundColor:'transparent', borderWidth:1.5, pointRadius:0, tension:.1, borderDash:[2,3]}
   ], snapDates);
   lastRender();
 }
