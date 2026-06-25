@@ -188,7 +188,8 @@ td:first-child{text-align:left;}
     <div class="ctrl s-im hide"><label>익절 %</label><input type="number" id="imTarget" value="20" min="5" max="50"></div>
 
     <!-- VR 전용 -->
-    <div class="ctrl s-vr hide"><label>적립금 ($/2주)</label><input type="number" id="vrContrib" value="100" min="10"></div>
+    <div class="ctrl s-vr hide"><label>적립금 USD ($/2주)</label><input type="number" id="vrContrib" value="100" min="10"></div>
+    <div class="ctrl s-vr hide"><label>적립금 KRW (₩/2주)</label><input type="number" id="vrContribKRW" value="150000" min="10000" step="10000"></div>
     <div class="ctrl s-vr hide"><label>G값</label><input type="number" id="vrG" value="10" min="1" max="50"></div>
     <div class="ctrl s-vr hide"><label>밴드 ±%</label><input type="number" id="vrBand" value="15" min="5" max="30"></div>
 
@@ -608,21 +609,25 @@ async function run(){
     renderMultiStrat('im',results,{cap,tgt});
   }else{
     if(!vrActive.size){alert('종목을 선택하세요.');return;}
-    const contrib=+document.getElementById('vrContrib').value||100;
+    const contribUSD=+document.getElementById('vrContrib').value||100;
+    const contribKRW=+document.getElementById('vrContribKRW').value||150000;
     const G=+document.getElementById('vrG').value||10;
     const band=+document.getElementById('vrBand').value||15;
     const results={};
     [...vrActive].forEach(t=>{
       const days=commonDays(start,end,[t]);
       if(days.length<10) return;
+      const contrib=isKRW(t)?contribKRW:contribUSD;  // 종목별 통화 자동 선택
       results[t]={res:runVR(days,t,contrib,G,band), days};
     });
     if(!Object.keys(results).length){alert('데이터 부족');return;}
-    renderMultiStrat('vr',results,{contrib,G,band});
+    renderMultiStrat('vr',results,{contribUSD,contribKRW,G,band});
   }
 }
 
 const fmt=n=>Math.round(n).toLocaleString();
+const isKRW=t=>/^\d{6}$/.test(t);          // 6자리 = 국내 ETF = KRW
+const fmtV=(v,t)=>(isKRW(t)?'₩':'$')+fmt(v); // 통화 표시
 
 function alignSnap(snap,labels){const m=Object.fromEntries(snap.map(s=>[s[0],Math.round(s[1])]));return labels.map(l=>m[l]??null);}
 
@@ -711,7 +716,7 @@ function renderMultiStrat(type, results, params){
   document.querySelector('.tbl-wrap').classList.remove('hide');
   const stratName=type==='im'?'무한매수법 V4.0':'VR 5.0';
   const pct=x=>(x>=0?'+':'')+x.toFixed(1)+'%';
-  const money=x=>'$'+fmt(x);
+  const money=(x,t)=>fmtV(x,t||tickers[0]);  // 종목별 통화 적용
 
   // CAGR 계산
   tickers.forEach(t=>{
@@ -735,18 +740,18 @@ function renderMultiStrat(type, results, params){
       <div class="card-rk ${i===0?'g':''}">#${i+1}</div>
       <div class="card-body">
         <div class="card-tkr">${t}<span class="tk-nm">${m.name}</span></div>
-        <div class="card-val">${money(r.final)}</div>
-        <div class="card-sub">CAGR ${pct(r.cagr)} · 원금 ${money(r.invested)}</div>
+        <div class="card-val">${money(r.final,t)}</div>
+        <div class="card-sub">CAGR ${pct(r.cagr)} · 원금 ${money(r.invested,t)}</div>
       </div>`;
     cc.appendChild(d);
   });
 
   // 비교표
   const rows=[
-    ['투입 원금',   t=>money(results[t].res.invested), false],
-    ['최종 평가액', t=>money(results[t].res.final),    true],
-    ['총 수익률',   t=>pct(results[t].res.ret),        true],
-    ['CAGR',        t=>pct(results[t].res.cagr),       true],
+    ['투입 원금',   t=>money(results[t].res.invested,t), false],
+    ['최종 평가액', t=>money(results[t].res.final,t),    true],
+    ['총 수익률',   t=>pct(results[t].res.ret),          true],
+    ['CAGR',        t=>pct(results[t].res.cagr),         true],
     ['기간(년)',    t=>results[t].res.yrs.toFixed(1)+'년', false],
   ];
   const best=(vals,higher)=>{ const arr=vals.map(Number); const m=higher?Math.max(...arr):Math.min(...arr); return arr.map(v=>v===m); };
@@ -822,7 +827,7 @@ function renderSingle2(type,r,days){
   document.getElementById('winner').innerHTML=
     `📊 <strong style="color:${m.color}">${r.tkr}</strong> ${stratName} <span style="color:var(--dim)">vs 거치식 vs 단순DCA</span> · ${dateRange} · ${yrs.toFixed(1)}년 <span style="color:var(--dim);font-size:11px">(${nDays}거래일${isMonthly?" · ⚠월간데이터":""})` + (isMonthly?` <span style="color:var(--gold);font-size:11px">전략결과 부정확 — 데이터 재로딩 필요</span>`:"") + `</span>`;
 
-  const money=x=>'$'+fmt(x);
+  const money=x=>fmtV(x,r.tkr);  // 종목 통화 자동 (KRW/USD)
   const pct=x=>(x>=0?'+':'')+x.toFixed(1)+'%';
   const pctP=x=>x.toFixed(1)+'%';
 
