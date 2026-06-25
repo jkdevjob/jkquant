@@ -141,7 +141,7 @@ td:first-child{text-align:left;}
   <div class="brand">
     <div>
       <div class="logo">Backtest</div>
-      <h1>JK 퀀트 백테스트</h1>
+      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v1.4</span></h1>
     </div>
   </div>
   <a href="/" class="home">← 운용 도구로</a>
@@ -385,8 +385,10 @@ function buildTickerPick(){
   const pick=document.getElementById('tickerPick');
   pick.innerHTML='';
   TICKERS.forEach(t=>{
+    if(Object.keys(M).length>0&&!M[t]) return;  // 로딩 안 된 종목 스킵
     const c=document.createElement('div');
-    c.className='tk-chip on';c.style.setProperty('--c',META[t].color);c.id='tp_'+t;
+    const isOn=dcaActive.has(t);
+    c.className='tk-chip'+(isOn?' on':'');c.style.setProperty('--c',META[t].color);c.id='tp_'+t;
     c.innerHTML=`<div class="d"></div>${t}`;
     c.onclick=()=>{c.classList.toggle('on');const on=c.classList.contains('on');if(on)dcaActive.add(t);else dcaActive.delete(t);};
     pick.appendChild(c);
