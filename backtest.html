@@ -87,6 +87,18 @@ body{background:var(--bg);color:var(--text);font-family:'Pretendard',sans-serif;
 .metric:last-child{border-bottom:none;}
 .metric .k{color:var(--dim);}
 .metric .v{font-family:'IBM Plex Mono',monospace;font-weight:500;}
+/* 전략 vs 거치식 비교표 */
+.cmp-wrap{background:var(--surf);border:1px solid var(--border);border-radius:9px;padding:14px 16px;margin-bottom:18px;overflow-x:auto;}
+.cmp-wrap h4{font-size:13px;color:var(--dim2);font-family:'IBM Plex Mono',monospace;margin-bottom:12px;font-weight:500;}
+table.cmp{width:100%;border-collapse:collapse;font-size:13px;min-width:380px;}
+table.cmp th,table.cmp td{padding:9px 10px;text-align:right;white-space:nowrap;border-bottom:1px solid var(--border);font-variant-numeric:tabular-nums;}
+table.cmp th{color:var(--dim);font-weight:600;font-size:11px;text-transform:uppercase;font-family:'IBM Plex Mono',monospace;}
+table.cmp th:first-child,table.cmp td:first-child{text-align:left;color:var(--dim);}
+table.cmp td.v{font-family:'IBM Plex Mono',monospace;font-weight:600;color:var(--text);}
+table.cmp tr:last-child td{border-bottom:none;}
+table.cmp .pos{color:var(--green);}table.cmp .neg{color:var(--red);}
+table.cmp .win{background:rgba(0,212,180,.08);}
+table.cmp .col-strat{color:var(--accent);}
 
 /* CHART */
 .chart-box{background:var(--surf);border:1px solid var(--border);border-radius:9px;padding:16px 20px;margin-bottom:18px;}
@@ -146,8 +158,8 @@ td:first-child{text-align:left;}
 <!-- 공통 컨트롤 -->
 <div class="ctrl-card">
   <div class="ctrl-grid">
-    <div class="ctrl"><label>시작일</label><input type="date" id="dStart" value="2015-01-02"></div>
-    <div class="ctrl"><label>종료일</label><input type="date" id="dEnd" value="2026-04-22"></div>
+    <div class="ctrl"><label>시작일</label><input type="date" id="dStart"></div>
+    <div class="ctrl"><label>종료일</label><input type="date" id="dEnd"></div>
 
     <!-- DCA 전용 -->
     <div class="ctrl s-dca"><label>1회 금액 ($)</label><input type="number" id="dcaAmt" value="10" min="1"></div>
@@ -271,6 +283,12 @@ let dataLoaded=false;          // 데이터를 받았는지
 let loadedTickers=[];          // 실제 로딩된 종목
 
 (function(){
+  // 날짜 기본값: 종료일=오늘, 시작일=10년 전
+  const iso=d=>d.toISOString().slice(0,10);
+  const today=new Date();
+  const tenYrAgo=new Date(); tenYrAgo.setFullYear(today.getFullYear()-10);
+  document.getElementById('dEnd').value=iso(today);
+  document.getElementById('dStart').value=iso(tenYrAgo);
   buildTickerPick();
   showEmptyState();            // 데이터 없을 때 안내 표시
 })();
@@ -450,6 +468,36 @@ function runVR(days,tkr,contrib,G,bandPct){
   return {invested:inv,final:fin,pool,shares,sharesVal:shares*M[tkr][days[days.length-1]][C],rebal,buys,sells,ret:(fin/inv-1)*100,snap,V,tkr};
 }
 
+// ──── 비교/지표 헬퍼 ────
+// 거치식(Buy&Hold): 시작일에 invested 전액 매수 후 보유. 전략 snap 날짜에 맞춰 평가액 시계열 반환
+function buyHoldSeries(tkr, days, invested, snapDates){
+  const sh = invested / M[tkr][days[0]][C];
+  // snapDates(전략 스냅 날짜)와 동일 시점의 거치식 평가액
+  return snapDates.map(d=>{
+    const row = M[tkr][d];
+    const px = row ? row[C] : null;
+    return [d, px!=null ? sh*px : null];
+  });
+}
+// 최대낙폭 MDD (%): 평가액 시계열에서 고점 대비 최대 하락
+function calcMDD(snap){
+  let peak=-Infinity, mdd=0;
+  snap.forEach(s=>{ const v=s[1]; if(v==null)return; if(v>peak)peak=v; const dd=(peak-v)/peak; if(dd>mdd)mdd=dd; });
+  return mdd*100;
+}
+// 연환산 변동성 (%): 스냅 간 수익률의 표준편차 × √(연간 스냅수). 스냅은 약 10거래일 간격
+function calcVol(snap, stepDays){
+  const rets=[];
+  for(let i=1;i<snap.length;i++){ const a=snap[i-1][1], b=snap[i][1]; if(a>0&&b>0) rets.push(b/a-1); }
+  if(rets.length<2) return 0;
+  const mean=rets.reduce((x,y)=>x+y,0)/rets.length;
+  const varc=rets.reduce((x,y)=>x+(y-mean)**2,0)/(rets.length-1);
+  const perYear=252/(stepDays||10);             // 연간 스냅 횟수
+  return Math.sqrt(varc)*Math.sqrt(perYear)*100;
+}
+function cagrOf(final, invested, yrs){ return invested>0&&yrs>0 ? (Math.pow(final/invested,1/yrs)-1)*100 : 0; }
+
+
 // ──── RUN ────
 async function run(){
   // 데이터 없으면 자동으로 시세 받아오기
@@ -536,45 +584,81 @@ function renderSingle2(type,r,days){
   document.getElementById('detail').classList.remove('hide');
   const m=META[r.tkr];
   const yrs=days.length/252;
-  const cagr=(Math.pow(r.final/r.invested,1/yrs)-1)*100;
-  document.getElementById('winner').innerHTML=`📊 <strong style="color:${m.color}">${r.tkr}</strong> ${type==='im'?'무한매수법':'VR 5.0'} · ${days[0]}~${days[days.length-1]} (${yrs.toFixed(1)}년)`;
-  const dt=document.getElementById('detail');
+  const stratName = type==='im' ? '무한매수법 V4.0' : 'VR 5.0';
+  const stratShort = type==='im' ? '무한매수법' : 'VR 5.0';
+
+  // ── 거치식(Buy&Hold): 동일 원금을 시작일에 전액 매수, 전략 스냅 날짜에 맞춰 평가 ──
+  const snapDates = r.snap.map(s=>s[0]);
+  const bhSnap = buyHoldSeries(r.tkr, days, r.invested, snapDates);
+  const bhFinal = bhSnap[bhSnap.length-1][1];
+  const bhRet = (bhFinal/r.invested-1)*100;
+
+  // ── 지표 ──
+  const sCagr=cagrOf(r.final, r.invested, yrs), bCagr=cagrOf(bhFinal, r.invested, yrs);
+  const sMDD=calcMDD(r.snap), bMDD=calcMDD(bhSnap);
+  const sVol=calcVol(r.snap,10), bVol=calcVol(bhSnap,10);
+  const diff=(r.final/bhFinal-1)*100;
+  const better = r.final>=bhFinal;
+
+  document.getElementById('winner').innerHTML=`📊 <strong style="color:${m.color}">${r.tkr}</strong> ${stratName} <span style="color:var(--dim)">vs 거치식</span> · ${days[0]}~${days[days.length-1]} · ${yrs.toFixed(1)}년`;
+
+  const money=x=>'$'+fmt(x);
+  const pct=x=>(x>=0?'+':'')+x.toFixed(1)+'%';
+  const pctP=x=>x.toFixed(1)+'%';
+  const row=(label, sTxt, bTxt, sWin)=>`<tr><td>${label}</td><td class="v col-strat ${sWin===true?'win':''}">${sTxt}</td><td class="v ${sWin===false?'win':''}">${bTxt}</td></tr>`;
+
+  let stratExtra='';
   if(type==='im'){
-    const lumpSh=r.invested/M[r.tkr][days[0]][C];
-    const lumpFin=lumpSh*M[r.tkr][days[days.length-1]][C];
-    dt.innerHTML=`
-      <div class="dbox"><h4>📈 무한매수법 결과</h4>
-        <div class="metric"><span class="k">투입 원금</span><span class="v">$${fmt(r.invested)}</span></div>
-        <div class="metric"><span class="k">최종 평가액</span><span class="v pos">$${fmt(r.final)}</span></div>
-        <div class="metric"><span class="k">총 수익률</span><span class="v pos">+${r.ret.toFixed(0)}%</span></div>
-        <div class="metric"><span class="k">CAGR</span><span class="v">${cagr.toFixed(1)}%</span></div>
-        <div class="metric"><span class="k">누적 실현익</span><span class="v">$${fmt(r.realized)}</span></div>
-        <div class="metric"><span class="k">익절 사이클</span><span class="v">${r.cycles}회</span></div></div>
-      <div class="dbox"><h4>⚖️ 거치식 단순 비교</h4>
-        <div class="metric"><span class="k">${r.tkr} 거치식 $${fmt(r.invested)}</span><span class="v">$${fmt(lumpFin)}</span></div>
-        <div class="metric"><span class="k">└ 수익률</span><span class="v ${lumpFin>=r.invested?'pos':'neg'}">${lumpFin>=r.invested?'+':''}${((lumpFin/r.invested-1)*100).toFixed(0)}%</span></div>
-        <div class="metric"><span class="k">무매 vs 거치식</span><span class="v ${r.final>=lumpFin?'pos':'neg'}">${r.final>=lumpFin?'▲':'▼'} ${(Math.abs(r.final/lumpFin-1)*100).toFixed(0)}%</span></div>
-        <div class="metric"><span class="k">종료 현금/주식</span><span class="v" style="font-size:11px">$${fmt(r.endCash)} / ${r.endShares.toFixed(1)}주</span></div></div>`;
+    stratExtra=`
+      <div class="metric"><span class="k">누적 실현익</span><span class="v">$${fmt(r.realized)}</span></div>
+      <div class="metric"><span class="k">익절 사이클</span><span class="v">${r.cycles}회</span></div>
+      <div class="metric"><span class="k">종료 현금 / 주식</span><span class="v" style="font-size:11px">$${fmt(r.endCash)} / ${r.endShares.toFixed(1)}주</span></div>`;
   }else{
-    const lumpSh=r.invested/M[r.tkr][days[0]][C];
-    const lumpFin=lumpSh*M[r.tkr][days[days.length-1]][C];
-    dt.innerHTML=`
-      <div class="dbox"><h4>📊 VR 5.0 결과</h4>
-        <div class="metric"><span class="k">순투입 원금</span><span class="v">$${fmt(r.invested)}</span></div>
-        <div class="metric"><span class="k">최종 평가액</span><span class="v pos">$${fmt(r.final)}</span></div>
-        <div class="metric"><span class="k">총 수익률</span><span class="v pos">+${r.ret.toFixed(0)}%</span></div>
-        <div class="metric"><span class="k">CAGR</span><span class="v">${cagr.toFixed(1)}%</span></div>
-        <div class="metric"><span class="k">현금 Pool</span><span class="v">$${fmt(r.pool)}</span></div>
-        <div class="metric"><span class="k">리밸런싱</span><span class="v">${r.rebal}회 (매수${r.buys}/매도${r.sells})</span></div></div>
-      <div class="dbox"><h4>⚖️ 거치식 단순 비교</h4>
-        <div class="metric"><span class="k">${r.tkr} 거치식 $${fmt(r.invested)}</span><span class="v">$${fmt(lumpFin)}</span></div>
-        <div class="metric"><span class="k">└ 수익률</span><span class="v ${lumpFin>=r.invested?'pos':'neg'}">${lumpFin>=r.invested?'+':''}${((lumpFin/r.invested-1)*100).toFixed(0)}%</span></div>
-        <div class="metric"><span class="k">VR vs 거치식</span><span class="v ${r.final>=lumpFin?'pos':'neg'}">${r.final>=lumpFin?'▲':'▼'} ${(Math.abs(r.final/lumpFin-1)*100).toFixed(0)}%</span></div>
-        <div class="metric"><span class="k">최종 V</span><span class="v">$${fmt(r.V)}</span></div></div>`;
+    stratExtra=`
+      <div class="metric"><span class="k">현금 Pool</span><span class="v">$${fmt(r.pool)}</span></div>
+      <div class="metric"><span class="k">최종 기준값 V</span><span class="v">$${fmt(r.V)}</span></div>
+      <div class="metric"><span class="k">리밸런싱</span><span class="v">${r.rebal}회 (매수${r.buys}/매도${r.sells})</span></div>`;
   }
-  const labels=r.snap.map(s=>s[0]);
-  document.getElementById('chartTitle').textContent=`${r.tkr} 누적 평가액`;
-  lastRender=()=>makeChart([{label:r.tkr+(type==='im'?' 무한매수법':' VR'),data:r.snap.map(s=>Math.round(s[1])),borderColor:m.color,backgroundColor:'transparent',borderWidth:2,pointRadius:0,tension:.3}],labels);
+
+  document.getElementById('detail').innerHTML=`
+    <div class="cmp-wrap" style="grid-column:1/-1">
+      <h4>⚖️ ${stratName} vs ${r.tkr} 거치식 — 동일 원금 $${fmt(r.invested)} 기준</h4>
+      <table class="cmp">
+        <thead><tr><th>지표</th><th class="col-strat">${stratShort}</th><th>거치식(B&H)</th></tr></thead>
+        <tbody>
+          ${row('최종 평가액', money(r.final), money(bhFinal), better)}
+          ${row('총 수익률', pct(r.ret), pct(bhRet), r.ret>=bhRet)}
+          ${row('CAGR (연복리)', pct(sCagr), pct(bCagr), sCagr>=bCagr)}
+          ${row('최대 낙폭 (MDD)', '-'+pctP(sMDD), '-'+pctP(bMDD), sMDD<=bMDD)}
+          ${row('연환산 변동성', pctP(sVol), pctP(bVol), sVol<=bVol)}
+        </tbody>
+      </table>
+      <div style="margin-top:10px;padding:9px 12px;border-radius:7px;background:${better?'rgba(0,212,180,.1)':'rgba(255,107,107,.1)'};font-size:12.5px;color:var(--text);line-height:1.6">
+        ${better?'▲':'▼'} <b>${stratShort}</b>가 거치식 대비 최종 평가액 <b style="color:${better?'var(--green)':'var(--red)'}">${better?'+':''}${diff.toFixed(1)}%</b>${sMDD<bMDD?` · 낙폭 <b>${(bMDD-sMDD).toFixed(0)}%p</b> 더 작아 안정적`:` · 단 낙폭은 <b>${(sMDD-bMDD).toFixed(0)}%p</b> 더 큼`}
+      </div>
+    </div>
+    <div class="dbox"><h4>📈 ${stratName} 상세</h4>
+      <div class="metric"><span class="k">투입 원금</span><span class="v">$${fmt(r.invested)}</span></div>
+      <div class="metric"><span class="k">최종 평가액</span><span class="v" style="color:${r.ret>=0?'var(--green)':'var(--red)'}">$${fmt(r.final)}</span></div>
+      <div class="metric"><span class="k">총 수익률</span><span class="v" style="color:${r.ret>=0?'var(--green)':'var(--red)'}">${pct(r.ret)}</span></div>
+      <div class="metric"><span class="k">CAGR</span><span class="v">${pct(sCagr)}</span></div>
+      ${stratExtra}
+    </div>
+    <div class="dbox"><h4>🏦 ${r.tkr} 거치식(Buy&Hold)</h4>
+      <div class="metric"><span class="k">투입 원금</span><span class="v">$${fmt(r.invested)}</span></div>
+      <div class="metric"><span class="k">최종 평가액</span><span class="v" style="color:${bhRet>=0?'var(--green)':'var(--red)'}">$${fmt(bhFinal)}</span></div>
+      <div class="metric"><span class="k">총 수익률</span><span class="v" style="color:${bhRet>=0?'var(--green)':'var(--red)'}">${pct(bhRet)}</span></div>
+      <div class="metric"><span class="k">CAGR</span><span class="v">${pct(bCagr)}</span></div>
+      <div class="metric"><span class="k">최대 낙폭</span><span class="v" style="color:var(--red)">-${pctP(bMDD)}</span></div>
+      <div class="metric"><span class="k">연환산 변동성</span><span class="v">${pctP(bVol)}</span></div>
+    </div>`;
+
+  // ── 그래프: 전략 + 거치식 두 선 겹침 ──
+  document.getElementById('chartTitle').textContent=`${r.tkr} 누적 평가액 — ${stratShort} vs 거치식`;
+  lastRender=()=>makeChart([
+    {label:`${r.tkr} ${stratShort}`, data:r.snap.map(s=>s[1]==null?null:Math.round(s[1])), borderColor:m.color, backgroundColor:'transparent', borderWidth:2, pointRadius:0, tension:.1},
+    {label:`${r.tkr} 거치식`, data:bhSnap.map(s=>s[1]==null?null:Math.round(s[1])), borderColor:'#8a96c0', backgroundColor:'transparent', borderWidth:1.5, borderDash:[5,4], pointRadius:0, tension:.1}
+  ], snapDates);
   lastRender();
 }
 </script>
