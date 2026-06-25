@@ -37,7 +37,7 @@ export async function onRequestGet({ request, env }) {
       const kr = await naverDaily(symbol, range, dbg);
       if (kr && kr.series.length) {
         const last = kr.series[kr.series.length - 1];
-        const out = { symbol, currency: "KRW", src: "naver", price: kr.price != null ? kr.price : last.close, marketState: null, last, series: kr.series, ohlc: kr.ohlc.slice(-20), intraday: null };
+        const out = { symbol, currency: "KRW", src: "naver", price: kr.price != null ? kr.price : last.close, marketState: null, last, series: kr.series, ohlc: kr.ohlc, intraday: null };
         if (debug) out.debug = dbg;
         return new Response(JSON.stringify(out), { headers: JH });
       }
@@ -97,7 +97,7 @@ export async function onRequestGet({ request, env }) {
   const last = series[series.length - 1];
   if (price == null) price = last.close;
 
-  const out = { symbol, currency, src, price: +(+price).toFixed(4), marketState, last, series, ohlc: ohlc.slice(-20), intraday };
+  const out = { symbol, currency, src, price: +(+price).toFixed(4), marketState, last, series, ohlc, intraday };
   if (debug) out.debug = dbg;
   return new Response(JSON.stringify(out), { headers: JH });
 }
