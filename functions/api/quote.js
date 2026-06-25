@@ -54,8 +54,18 @@ export async function onRequestGet({ request, env }) {
     } catch (e) { dbg.push(`finnhub: ${e.message}`); }
   }
 
-  // 1) Yahoo daily — 여러 호스트 시도 (일봉 + 실시간가)
-  for (const host of ["query1", "query2", "query1-fc"]) {
+  // 1) range=max → Stooq 먼저 (전체 상장 이후 일간 데이터 확보)
+  if (range === "max") {
+    try {
+      const s = await stooqDaily(symbol, dbg);
+      if (s && s.ohlc && s.ohlc.length > 200) {
+        series = s.series; ohlc = s.ohlc; if (!src) src = "stooq";
+      }
+    } catch (e) { dbg.push(`stooq-max: ${e.message}`); }
+  }
+
+  // 2) Yahoo daily — Stooq 미확보 시 또는 range≠max
+  if (!series.length) for (const host of ["query1", "query2", "query1-fc"]) {
     const realHost = host === "query1-fc" ? "query1" : host;
     try {
       const y = await yahooDaily(realHost, symbol, range, dbg);
@@ -67,14 +77,13 @@ export async function onRequestGet({ request, env }) {
     } catch (e) { dbg.push(`yahooDaily ${host}: ${e.message}`); }
   }
 
-  // 2) Stooq 폴백
+  // 3) Stooq 폴백 (Yahoo도 실패한 경우)
   if (!series.length) {
     try {
       const s = await stooqDaily(symbol, dbg);
-      if (s.series.length) {
-        series = s.series;
-        ohlc = s.series.map(d => ({ date: d.date, open: d.close, high: d.close, low: d.close, close: d.close }));
-        if (price == null) price = s.series[s.series.length - 1].close;
+      if (s && s.ohlc && s.ohlc.length) {
+        series = s.series; ohlc = s.ohlc;
+        if (price == null && s.series.length) price = s.series[s.series.length - 1].close;
         src = "stooq";
       }
     } catch (e) { dbg.push(`stooq: ${e.message}`); }
@@ -172,25 +181,37 @@ async function yahooQuote(symbol, dbg) {
 }
 
 async function stooqDaily(symbol, dbg) {
-  // stooq.com 과 stooq.pl 둘 다 시도
   for (const host of ["stooq.com", "stooq.pl"]) {
     try {
       const u = `https://${host}/q/d/l/?s=${symbol.toLowerCase()}.us&i=d`;
-      const r = await fetch(u, { headers: { "User-Agent": UA }, cf: { cacheTtl: 60 } });
+      const r = await fetch(u, { headers: { "User-Agent": UA }, cf: { cacheTtl: 3600 } });
       dbg && dbg.push(`stooq ${host}: HTTP ${r.status}`);
       if (!r.ok) continue;
       const txt = await r.text();
-      const lines = txt.trim().split("\n");
-      if (lines.length < 2 || !/date/i.test(lines[0])) { dbg && dbg.push(`stooq ${host}: bad format (${txt.slice(0,40)})`); continue; }
-      const hdr = lines[0].split(","), di = hdr.indexOf("Date"), ci = hdr.indexOf("Close");
-      const series = [];
-      for (let i = 1; i < lines.length; i++) { const a = lines[i].split(","), c = +a[ci]; if (c > 0) series.push({ date: a[di], close: +c.toFixed(4) }); }
-      if (series.length) return { series };
+      const rows = txt.trim().split("\n");
+      if (rows.length < 2 || !/date/i.test(rows[0])) { dbg && dbg.push(`stooq ${host}: bad format`); continue; }
+      const hdr = rows[0].split(",");
+      const di=hdr.findIndex(h=>/date/i.test(h)), oi=hdr.findIndex(h=>/open/i.test(h));
+      const hi=hdr.findIndex(h=>/high/i.test(h)), li=hdr.findIndex(h=>/low/i.test(h));
+      const ci=hdr.findIndex(h=>/close/i.test(h));
+      const series = [], ohlc = [];
+      for (let i = 1; i < rows.length; i++) {
+        const a = rows[i].split(",");
+        const c = +a[ci]; if (!(c > 0)) continue;
+        const d = a[di];
+        series.push({ date: d, close: +c.toFixed(4) });
+        ohlc.push({ date: d,
+          open:  oi>=0 && +a[oi]>0 ? +a[oi] : c,
+          high:  hi>=0 && +a[hi]>0 ? +a[hi] : c,
+          low:   li>=0 && +a[li]>0 ? +a[li] : c,
+          close: +c.toFixed(4) });
+      }
+      series.reverse(); ohlc.reverse();  // Stooq는 최신순 → 오래된 것부터
+      if (series.length) return { series, ohlc };
     } catch (e) { dbg && dbg.push(`stooq ${host}: ${e.message}`); }
   }
-  return { series: [] };
+  return { series: [], ohlc: [] };
 }
-
 // 국내상장 종목/ETF 일봉 — 네이버 금융 (fchart siseJson)
 // 응답은 엄격한 JSON이 아니라 JS 배열 리터럴 텍스트라서 정규화 후 파싱.
 async function naverDaily(code, range, dbg) {
