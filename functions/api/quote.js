@@ -118,7 +118,11 @@ export async function onRequestOptions() {
 }
 
 async function yahooDaily(host, symbol, range, dbg) {
-  const u = `https://${host}.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?interval=1d&range=${encodeURIComponent(range)}&includePrePost=false`;
+  // range=max면 period1=0 방식 사용 (range=max는 Yahoo가 월간으로 다운샘플하는 문제 우회)
+  const rangeParam = range === "max"
+    ? `period1=0&period2=${Math.floor(Date.now()/1000)+86400}`
+    : `range=${encodeURIComponent(range)}`;
+  const u = `https://${host}.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?interval=1d&${rangeParam}&includePrePost=false`;
   const r = await fetch(u, { headers: { "User-Agent": UA, "Accept": "application/json", "Referer": "https://finance.yahoo.com/", "Origin": "https://finance.yahoo.com" }, cf: { cacheTtl: 60 } });
   dbg && dbg.push(`yahooDaily ${host}: HTTP ${r.status}`);
   if (!r.ok) throw new Error("HTTP " + r.status);
