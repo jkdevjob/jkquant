@@ -489,9 +489,14 @@ function runIM(days,tkr,cap,divs,targetPct){
     if(shares>0&&avg>0){
       const starP=avg*(1+(starBase-starSlope*T)/100);
       const tgt=avg*(1+targetPct/100);
-      const qL=shares*0.75;
-      if(hi>=tgt&&qL>0){const pr=qL*tgt;realized+=pr-qL*avg;cash+=pr;shares-=qL;}
-      if(shares>0&&c>=starP){const qQ=shares*0.25;const pr=qQ*c;realized+=pr-qQ*avg;cash+=pr;shares-=qQ;T*=0.75;}
+      const orig=shares;              // 하루 시작 시 보유량 기준
+      const q3=orig*0.75;            // 익절 지정가: 3/4
+      const q1=orig*0.25;            // 별지점 LOC: 1/4
+      // ① 익절 지정가매도 (intraday): 고가 >= 익절가
+      if(hi>=tgt&&q3>0){realized+=q3*(tgt-avg);cash+=q3*tgt;shares-=q3;}
+      // ② 별지점 LOC매도 (at close): 종가 >= 별지점. 원래 1/4 기준 (이미 팔린 것 차감)
+      if(c>=starP&&orig>0){const sell=Math.min(q1,shares);if(sell>1e-9){realized+=sell*(c-avg);cash+=sell*c;shares-=sell;T*=0.75;}}
+      // 전량 매도 → 사이클 리셋 (복리 포함)
       if(shares<1e-9){shares=0;avg=0;cycles++;base=cash;T=0;snap.push([d,cash]);return;}
     }
     if(T<=divs-1&&cash>1){
