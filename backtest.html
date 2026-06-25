@@ -333,7 +333,9 @@ async function loadData(){
     }
     M={}; loaded.forEach(t=>{ M[t]={}; data[t].forEach(r=>{M[t][r[0]]=[r[1],r[2],r[3],r[4]];}); });
     dataLoaded=true; loadedTickers=loaded;
-    dcaActive=new Set(loaded);
+    // 신규 ETF(상장 짧은 것)와 커버드콜은 기본 미선택 — 레버리지 ETF만 기본 선택
+    const DEFAULT_ACTIVE=new Set(['SSO','UPRO','QLD','TQQQ','USD','SOXL','TECL','KORU','QQQ','QYLD']);
+    dcaActive=new Set(loaded.filter(t=>DEFAULT_ACTIVE.has(t)));
     if(!loaded.includes(imPick)) imPick = loaded.includes('SOXL')?'SOXL':loaded[0];
     if(!loaded.includes(vrPick)) vrPick = loaded.includes('TQQQ')?'TQQQ':loaded[0];
     buildTickerPick();
