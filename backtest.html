@@ -170,6 +170,12 @@ td:first-child{text-align:left;}
         <button data-f="monthly">매월</button>
       </div>
     </div>
+    <div class="ctrl s-dca"><label>기간</label>
+      <div class="seg" id="dcaPeriod">
+        <button data-p="common" class="active" title="선택 종목 공통 기간으로 통일 (공정 비교)">공통기간</button>
+        <button data-p="individual" title="각 종목 가용 전체 기간 / CAGR 순위">개별기간</button>
+      </div>
+    </div>
 
     <!-- 무매 전용 -->
     <div class="ctrl s-im hide"><label>원금 ($)</label><input type="number" id="imCap" value="10000" min="100"></div>
@@ -295,7 +301,7 @@ const VR_TICKERS=['TQQQ','SOXL','QLD','USD','TECL','SSO','UPRO','KORU','QQQ','QY
 
 let M={};
 let strat='dca';
-let dcaFreq='daily', imDiv=20, vrPick='TQQQ', imPick='SOXL';
+let dcaFreq='daily', dcaPeriodMode='common', imDiv=20, vrPick='TQQQ', imPick='SOXL';
 let dcaActive=new Set(TICKERS);
 let chart=null, logY=false, lastRender=null;
 
@@ -416,6 +422,7 @@ function setStrat(s){
 
 // seg 버튼들
 document.getElementById('dcaFreq').onclick=e=>{if(e.target.dataset.f){document.querySelectorAll('#dcaFreq button').forEach(b=>b.classList.remove('active'));e.target.classList.add('active');dcaFreq=e.target.dataset.f;}};
+document.getElementById('dcaPeriod').onclick=e=>{if(e.target.dataset.p){document.querySelectorAll('#dcaPeriod button').forEach(b=>b.classList.remove('active'));e.target.classList.add('active');dcaPeriodMode=e.target.dataset.p;}};
 document.getElementById('imDiv').onclick=e=>{if(e.target.dataset.d){document.querySelectorAll('#imDiv button').forEach(b=>b.classList.remove('active'));e.target.classList.add('active');imDiv=+e.target.dataset.d;}};
 
 function commonDays(start,end,tickers){
@@ -552,11 +559,28 @@ async function run(){
 
   if(strat==='dca'){
     if(!dcaActive.size){alert('종목을 선택하세요.');return;}
-    const days=commonDays(start,end,[...dcaActive]);
-    if(days.length<10){alert('공통 거래일이 부족합니다.');return;}
     const amt=+document.getElementById('dcaAmt').value||10;
-    const res=runDCA(days,amt,dcaFreq);
-    renderDCA(res,[...dcaActive],{amt,freq:dcaFreq,days});
+    if(dcaPeriodMode==='individual'){
+      // 개별기간: 각 종목 자기 가용 기간으로 독립 실행
+      const res={}, meta={};
+      [...dcaActive].forEach(t=>{
+        const tdays=commonDays(start,end,[t]);
+        if(tdays.length<10){ res[t]={invested:0,final:0,ret:0,snap:[],skip:true}; return; }
+        res[t]=_dcaOne(t,tdays,amt,{daily:1,weekly:5,monthly:21}[dcaFreq]||1);
+        const calYrs=(new Date(tdays[tdays.length-1])-new Date(tdays[0]))/(365.25*864e5);
+        res[t].cagr=cagrOf(res[t].final,res[t].invested,Math.max(calYrs,0.1));
+        res[t].period=`${tdays[0].slice(0,7)}~${tdays[tdays.length-1].slice(0,7)}`;
+        res[t].yrs=Math.max(calYrs,0.1);
+        meta[t]={days:tdays};
+      });
+      renderDCA(res,[...dcaActive],{amt,freq:dcaFreq,days:null,mode:'individual'});
+    }else{
+      // 공통기간: 전 종목 교집합
+      const days=commonDays(start,end,[...dcaActive]);
+      if(days.length<10){alert('공통 거래일이 부족합니다.\n기간이 짧거나 상장일이 다른 종목이 섞인 경우 개별기간 모드를 써보세요.');return;}
+      const res=runDCA(days,amt,dcaFreq);
+      renderDCA(res,[...dcaActive],{amt,freq:dcaFreq,days,mode:'common'});
+    }
   }else if(strat==='im'){
     const days=commonDays(start,end,[imPick]);
     if(days.length<10){alert('데이터 부족');return;}
@@ -611,23 +635,41 @@ function renderDCA(res,tickers,opts){
   document.getElementById('detail').classList.add('hide');
   document.querySelector('.cards').classList.remove('hide');
   document.querySelector('.tbl-wrap').classList.remove('hide');
-  const ranked=[...tickers].sort((a,b)=>res[b].final-res[a].final);
+  const mode=opts.mode||'common';
+  const isInd=mode==='individual';
+  // 정렬: 개별기간=CAGR순, 공통기간=최종액순
+  const valid=tickers.filter(t=>res[t]&&!res[t].skip&&res[t].final>0);
+  const ranked=[...valid].sort((a,b)=>isInd?(res[b].cagr-res[a].cagr):(res[b].final-res[a].final));
   const freqL={daily:'매일',weekly:'매주',monthly:'매월'}[opts.freq];
-  document.getElementById('winner').innerHTML=`🏆 <strong>${ranked[0]}</strong> 1위 · ${opts.days[0]}~${opts.days[opts.days.length-1]} · $${opts.amt}/${freqL} · 원금 $${fmt(res[ranked[0]].invested)} → <strong>$${fmt(res[ranked[0]].final)}</strong> (+${res[ranked[0]].ret.toFixed(0)}%)`;
+  const pctStr=x=>(x>=0?'+':'')+x.toFixed(1)+'%';
+  if(isInd){
+    const top=ranked[0],r0=res[top];
+    document.getElementById('winner').innerHTML=`🏆 <strong>${top}</strong> CAGR ${pctStr(r0.cagr||0)} 1위 · 개별기간 · $${fmt(Math.round(+document.getElementById('dcaAmt').value||10))}/${freqL}`;
+  }else{
+    const top=ranked[0],r0=res[top];
+    document.getElementById('winner').innerHTML=`🏆 <strong>${top}</strong> 1위 · ${opts.days[0]}~${opts.days[opts.days.length-1]} · $${fmt(+document.getElementById('dcaAmt').value||10)}/${freqL} · 원금 $${fmt(r0.invested)} → <strong>$${fmt(r0.final)}</strong> (+${r0.ret.toFixed(0)}%)`;
+  }
   const cc=document.getElementById('cards');cc.innerHTML='';
   ranked.forEach((t,i)=>{
     const r=res[t],m=META[t];
     const d=document.createElement('div');d.className='card';d.id='c_'+t;
-    d.onclick=()=>{d.classList.toggle('off');const ds=chart.data.datasets.find(x=>x.label===t);if(ds){ds.hidden=!ds.hidden;chart.update();}};
-    d.innerHTML=`<div class="card-bar" style="background:${m.color}"></div><div class="card-rk ${i===0?'g':''}">#${i+1}</div><div class="card-tk" style="color:${m.color}">${t}</div><div class="card-nm">${m.name}</div><div class="card-vl">$${fmt(r.final)}</div><div class="card-sb">원금 $${fmt(r.invested)}</div><div class="card-rt pos">+${r.ret.toFixed(0)}%</div>`;
+    d.onclick=()=>{d.classList.toggle('off');const ds=chart&&chart.data.datasets.find(x=>x.label===t);if(ds){ds.hidden=!ds.hidden;chart.update();}}
+    const sub=isInd?`CAGR ${pctStr(r.cagr||0)} · ${r.period||''}`:`원금 $${fmt(r.invested)}`;
+    d.innerHTML=`<div class="card-bar" style="background:${m.color}"></div><div class="card-rk ${i===0?'g':''}">#${i+1}</div><div class="card-body"><div class="card-tkr">${t}<span class="tk-nm">${m.name}</span></div><div class="card-val">$${fmt(r.final)}</div><div class="card-sub">${sub}</div></div>`;
     cc.appendChild(d);
   });
-  const labels=[...new Set(tickers.flatMap(t=>res[t].snap.map(s=>s[0])))].sort();
-  document.getElementById('chartTitle').textContent='누적 가치 추이 (카드 클릭=토글)';
-  lastRender=()=>makeChart(tickers.map(t=>({label:t,data:alignSnap(res[t].snap,labels),borderColor:META[t].color,backgroundColor:'transparent',borderWidth:2,pointRadius:0,tension:.3,spanGaps:true})),labels);
+  const labels=[...new Set(valid.flatMap(t=>res[t].snap.map(s=>s[0])))].sort();
+  document.getElementById('chartTitle').textContent='누적 가치 추이'+(isInd?' (개별기간 — 시작점 다를 수 있음)':' (카드 클릭=토글)');
+  lastRender=()=>makeChart(ranked.map(t=>({label:t,data:alignSnap(res[t].snap,labels),borderColor:META[t].color,backgroundColor:'transparent',borderWidth:2,pointRadius:0,tension:.3,spanGaps:true})),labels);
   lastRender();
-  let h=`<thead><tr><th>ETF</th><th>레버리지</th><th>최종</th><th>원금</th><th>수익률</th></tr></thead><tbody>`;
-  ranked.forEach((t,i)=>{const r=res[t],m=META[t];h+=`<tr><td><span class="dot" style="background:${m.color}"></span>${t}<span class="tk-nm">${m.name}</span></td><td style="color:var(--dim)">${m.lev}×</td><td class="${i===0?'gld':''}">$${fmt(r.final)}</td><td style="color:var(--dim)">$${fmt(r.invested)}</td><td class="pos ${i===0?'gld':''}">+${r.ret.toFixed(0)}%</td></tr>`;});
+  // 테이블
+  if(isInd){
+    let h=`<thead><tr><th>ETF</th><th>레버리지</th><th>기간</th><th>CAGR</th><th>최종</th><th>수익률</th></tr></thead><tbody>`;
+    ranked.forEach((t,i)=>{const r=res[t],m=META[t];h+=`<tr><td><span class="dot" style="background:${m.color}"></span>${t}<span class="tk-nm">${m.name}</span></td><td>${m.lev}×</td><td style="font-size:11px;color:var(--dim)">${r.period||''}</td><td style="color:${(r.cagr||0)>=0?'var(--green)':'var(--red)'}"><b>${pctStr(r.cagr||0)}</b></td><td style="color:var(--accent)">$${fmt(r.final)}</td><td style="color:${r.ret>=0?'var(--green)':'var(--red)'}">${pctStr(r.ret)}</td></tr>`;});
+  }else{
+    let h=`<thead><tr><th>ETF</th><th>레버리지</th><th>최종</th><th>원금</th><th>수익률</th></tr></thead><tbody>`;
+    ranked.forEach((t,i)=>{const r=res[t],m=META[t];h+=`<tr><td><span class="dot" style="background:${m.color}"></span>${t}<span class="tk-nm">${m.name}</span></td><td>${m.lev}×</td><td style="color:${i===0?'var(--gold)':'var(--accent)'}"><b>$${fmt(r.final)}</b></td><td>$${fmt(r.invested)}</td><td style="color:${r.ret>=0?'var(--green)':'var(--red)'}">${pctStr(r.ret)}</td></tr>`;});
+  }
   h+='</tbody>';document.getElementById('tbl').innerHTML=h;
 }
 
