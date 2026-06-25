@@ -198,8 +198,12 @@ td:first-child{text-align:left;}
 
   <!-- 종목 선택 (DCA만 다중) -->
   <div class="ctrl s-dca" style="margin-top:14px">
-    <label>종목 (복수 선택)</label>
+    <label>종목 (복수 선택) <span style="color:var(--dim);font-size:11px">길게 눌러 제거</span></label>
     <div class="ticker-pick" id="tickerPick"></div>
+    <div style="display:flex;gap:8px;margin-top:8px">
+      <input id="addTicker" type="text" placeholder="티커 입력 (예: NVDA)" style="flex:1;font-size:13px;padding:7px 10px;border-radius:7px;border:1px solid var(--border2);background:var(--surf);color:var(--text)" maxlength="10">
+      <button onclick="addCustomTicker()" style="padding:7px 14px;border-radius:7px;border:none;background:var(--accent);color:#fff;font-size:13px;cursor:pointer">+ 추가</button>
+    </div>
   </div>
   <!-- 무매·VR 단일 종목 -->
   <div class="ctrl s-im s-vr hide" style="margin-top:14px">
@@ -393,32 +397,61 @@ function buildTickerPick(){
   const pick=document.getElementById('tickerPick');
   pick.innerHTML='';
   TICKERS.forEach(t=>{
-    if(Object.keys(M).length>0&&!M[t]) return;  // 로딩 안 된 종목 스킵
-    const c=document.createElement('div');
+    if(Object.keys(M).length>0&&!M[t]) return;
     const isOn=dcaActive.has(t);
-    c.className='tk-chip'+(isOn?' on':'');c.style.setProperty('--c',META[t].color);c.id='tp_'+t;
+    const c=document.createElement('div');
+    c.className='tk-chip'+(isOn?' on':'');
+    c.style.setProperty('--c',(META[t]&&META[t].color)||'#888');c.id='tp_'+t;
     c.innerHTML=`<div class="d"></div>${t}`;
-    c.onclick=()=>{c.classList.toggle('on');const on=c.classList.contains('on');if(on)dcaActive.add(t);else dcaActive.delete(t);};
+    let pt=null;
+    c.addEventListener('pointerdown',()=>{pt=setTimeout(()=>{pt=null;removeTicker(t);},600);});
+    c.addEventListener('pointerup',()=>{if(pt){clearTimeout(pt);pt=null;c.classList.toggle('on');const on=c.classList.contains('on');if(on)dcaActive.add(t);else dcaActive.delete(t);}});
+    c.addEventListener('pointercancel',()=>{if(pt){clearTimeout(pt);pt=null;}});
     pick.appendChild(c);
   });
+}
+function addCustomTicker(){
+  const inp=document.getElementById('addTicker');
+  const t=inp.value.trim().toUpperCase(); if(!t)return;
+  if(TICKERS.includes(t)){inp.value='';return;}
+  const colors=['#4fc3f7','#81c784','#ffb74d','#f06292','#9575cd','#4db6ac','#e57373'];
+  if(!META[t]) META[t]={name:t,lev:1,color:colors[TICKERS.length%colors.length]};
+  TICKERS.push(t); dcaActive.add(t); inp.value='';
+  if(dataLoaded){
+    const stat=document.getElementById('dataStat');
+    if(stat){stat.style.display='';stat.textContent=`${t} 데이터 받는 중…`;stat.style.color='var(--dim)';}
+    fetch(`/api/quote?symbol=${t}&range=max`).then(r=>r.json()).then(j=>{
+      const arr=j&&j.ohlc; if(!Array.isArray(arr)||arr.length<10){if(stat)stat.textContent=`${t} 로딩 실패`;return;}
+      M[t]={};arr.filter(d=>d&&d.close!=null).forEach(d=>{M[t][d.date]=[d.close,d.open,d.high,d.low];});
+      const yrs=(Object.keys(M[t]).length/252).toFixed(0);
+      if(stat){stat.textContent=`✓ ${t} 추가 (${yrs}년)`;stat.style.color='var(--green)';}
+      buildTickerPick();
+    }).catch(e=>{if(stat)stat.textContent=`${t} 실패: `+e.message;});
+  }
+  buildTickerPick();
+}
+function removeTicker(t){
+  if(!confirm(`${t} 제거할까요?`))return;
+  const idx=TICKERS.indexOf(t);if(idx>=0)TICKERS.splice(idx,1);
+  dcaActive.delete(t);imActive.delete(t);vrActive.delete(t);
+  delete M[t];if(META[t]&&!['SSO','UPRO','QLD','TQQQ','USD','SOXL','TECL','KORU','QQQ','QYLD','JEPQ','QQQI','GPIQ','418660','423920'].includes(t))delete META[t];
+  buildTickerPick();
+}
+function buildPickSingle(){
   const single=document.getElementById('tickerSingle');
+  if(!single) return;
   single.innerHTML='';
-  // 무매/VR 다중선택 — 각자 active Set 사용
   function renderMultiPick(){
     single.innerHTML='';
-    const list = strat==='im'? IM_TICKERS : VR_TICKERS;
-    const active = strat==='im'? imActive : vrActive;
+    const list = strat==="im"? IM_TICKERS : VR_TICKERS;
+    const active = strat==="im"? imActive : vrActive;
     list.forEach(t=>{
       if(!META[t]) return;
-      const c=document.createElement('div');
-      c.className='tk-chip'+(active.has(t)?' on':'');
-      c.style.setProperty('--c',META[t].color);c.id='tps_'+t;
-      c.innerHTML=`<div class="d"></div>${t}`;
-      c.onclick=()=>{
-        c.classList.toggle('on');
-        const on=c.classList.contains('on');
-        if(on) active.add(t); else active.delete(t);
-      };
+      const c=document.createElement("div");
+      c.className="tk-chip"+(active.has(t)?" on":"");
+      c.style.setProperty("--c",META[t].color);c.id="tps_"+t;
+      c.innerHTML="<div class=\"d\"></div>"+t;
+      c.onclick=()=>{ c.classList.toggle("on"); const on=c.classList.contains("on"); if(on) active.add(t); else active.delete(t); };
       single.appendChild(c);
     });
   }
@@ -434,6 +467,7 @@ function setStrat(s){
   document.querySelectorAll('.s-vr').forEach(e=>e.classList.toggle('hide',s!=='vr'));
   // s-im s-vr 공용 요소 처리
   document.querySelectorAll('.s-im.s-vr').forEach(e=>e.classList.toggle('hide',s==='dca'));
+  buildPickSingle();
   if(document.getElementById('tickerSingle')._render) document.getElementById('tickerSingle')._render();
   if(dataLoaded) run();      // 데이터 있을 때만 재계산 (탭 전환만으로 로딩 안 함)
 }
