@@ -295,13 +295,17 @@ const META={
   JEPQ:{name:'나스닥CC JEPQ',lev:1, color:'#ec407a'},
   QQQI:{name:'나스닥CC QQQI',lev:1, color:'#ff7043'},
   GPIQ:{name:'나스닥CC GPIQ',lev:1, color:'#66bb6a'},
+  '133690':{name:'TIGER 나스닥100 2×', lev:2, color:'#42a5f5'},
+  '381180':{name:'TIGER 반도체 2×',   lev:2, color:'#ff5252'},
 };
 const IM_TICKERS=['SOXL','TQQQ'];  // 무매는 LOC 종목만
-const VR_TICKERS=['TQQQ','SOXL','QLD','USD','TECL','SSO','UPRO','KORU','QQQ','QYLD','JEPQ','QQQI','GPIQ'];
+const VR_TICKERS=['SOXL','TQQQ','133690','381180'];  // VR: 레버리지 4종
 
 let M={};
 let strat='dca';
-let dcaFreq='daily', dcaPeriodMode='common', imDiv=20, vrPick='TQQQ', imPick='SOXL';
+let dcaFreq='daily', dcaPeriodMode='common', imDiv=20;
+let imActive=new Set(IM_TICKERS);   // 무매 다중선택
+let vrActive=new Set(VR_TICKERS);   // VR 다중선택
 let dcaActive=new Set(TICKERS);
 let chart=null, logY=false, lastRender=null;
 
@@ -333,11 +337,12 @@ async function loadData(){
     }
     M={}; loaded.forEach(t=>{ M[t]={}; data[t].forEach(r=>{M[t][r[0]]=[r[1],r[2],r[3],r[4]];}); });
     dataLoaded=true; loadedTickers=loaded;
-    // 신규 ETF(상장 짧은 것)와 커버드콜은 기본 미선택 — 레버리지 ETF만 기본 선택
-    const DEFAULT_ACTIVE=new Set(['SSO','UPRO','QLD','TQQQ','USD','SOXL','TECL','KORU','QQQ','QYLD']);
-    dcaActive=new Set(loaded.filter(t=>DEFAULT_ACTIVE.has(t)));
-    if(!loaded.includes(imPick)) imPick = loaded.includes('SOXL')?'SOXL':loaded[0];
-    if(!loaded.includes(vrPick)) vrPick = loaded.includes('TQQQ')?'TQQQ':loaded[0];
+    dcaActive=new Set(loaded);
+    // 로딩된 종목만 활성화
+    imActive=new Set([...imActive].filter(t=>loaded.includes(t)||M[t]));
+    vrActive=new Set([...vrActive].filter(t=>loaded.includes(t)||M[t]));
+    if(!imActive.size) imActive=new Set(IM_TICKERS.filter(t=>loaded.includes(t)));
+    if(!vrActive.size) vrActive=new Set(VR_TICKERS.filter(t=>loaded.includes(t)));
     buildTickerPick();
     let maxDate=''; loaded.forEach(t=>{ const ds=Object.keys(M[t]); const last=ds[ds.length-1]; if(last>maxDate)maxDate=last; });
     if(stat){
@@ -395,21 +400,27 @@ function buildTickerPick(){
   });
   const single=document.getElementById('tickerSingle');
   single.innerHTML='';
-  // 무매/VR용 단일 선택 — 전략에 따라 목록 다름
-  function renderSingle(){
+  // 무매/VR 다중선택 — 각자 active Set 사용
+  function renderMultiPick(){
     single.innerHTML='';
     const list = strat==='im'? IM_TICKERS : VR_TICKERS;
-    const cur = strat==='im'? imPick : vrPick;
+    const active = strat==='im'? imActive : vrActive;
     list.forEach(t=>{
+      if(!META[t]) return;
       const c=document.createElement('div');
-      c.className='tk-chip'+(t===cur?' on':'');c.style.setProperty('--c',META[t].color);
+      c.className='tk-chip'+(active.has(t)?' on':'');
+      c.style.setProperty('--c',META[t].color);c.id='tps_'+t;
       c.innerHTML=`<div class="d"></div>${t}`;
-      c.onclick=()=>{ if(strat==='im')imPick=t; else vrPick=t; renderSingle(); };
+      c.onclick=()=>{
+        c.classList.toggle('on');
+        const on=c.classList.contains('on');
+        if(on) active.add(t); else active.delete(t);
+      };
       single.appendChild(c);
     });
   }
-  single._render=renderSingle;
-  renderSingle();
+  single._render=renderMultiPick;
+  renderMultiPick();
 }
 
 function setStrat(s){
@@ -581,25 +592,47 @@ async function run(){
     }else{
       // 공통기간: 전 종목 교집합
       const days=commonDays(start,end,[...dcaActive]);
-      if(days.length<10){alert('공통 거래일이 부족합니다.\n기간이 짧거나 상장일이 다른 종목이 섞인 경우 개별기간 모드를 써보세요.');return;}
+      if(days.length<10){
+        const shortest=[...dcaActive].sort((a,b)=>Object.keys(M[a]||{}).length-Object.keys(M[b]||{}).length)[0];
+        alert(`공통 거래일이 부족합니다.\n원인: ${shortest} 등 상장일이 짧은 종목 포함\n→ 해당 종목을 제외하거나 [개별기간] 모드를 사용하세요.`);
+        return;
+      }
+      const calYrs=(new Date(days[days.length-1])-new Date(days[0]))/(365.25*864e5);
+      const reqYrs=(new Date(end)-new Date(start))/(365.25*864e5);
+      if(calYrs < reqYrs*0.7){
+        const stat=document.getElementById('dataStat');
+        if(stat){ stat.style.display=''; stat.style.color='var(--gold)';
+          const short=[...dcaActive].filter(t=>Object.keys(M[t]||{}).length<calYrs*200);
+          stat.textContent=`⚠ 공통기간 ${calYrs.toFixed(1)}년 (요청 ${reqYrs.toFixed(0)}년보다 짧음) — ${short.join(', ')} 때문. 개별기간 모드 또는 해당 종목 제외 권장`; }
+      }
       const res=runDCA(days,amt,dcaFreq);
       renderDCA(res,[...dcaActive],{amt,freq:dcaFreq,days,mode:'common'});
     }
   }else if(strat==='im'){
-    const days=commonDays(start,end,[imPick]);
-    if(days.length<10){alert('데이터 부족');return;}
+    if(!imActive.size){alert('종목을 선택하세요.');return;}
     const cap=+document.getElementById('imCap').value||10000;
     const tgt=+document.getElementById('imTarget').value||20;
-    const res=runIM(days,imPick,cap,imDiv,tgt);
-    renderSingle2('im',res,days);
+    const results={};
+    [...imActive].forEach(t=>{
+      const days=commonDays(start,end,[t]);
+      if(days.length<10) return;
+      results[t]={res:runIM(days,t,cap,imDiv,tgt), days};
+    });
+    if(!Object.keys(results).length){alert('데이터 부족');return;}
+    renderMultiStrat('im',results,{cap,tgt});
   }else{
-    const days=commonDays(start,end,[vrPick]);
-    if(days.length<10){alert('데이터 부족');return;}
+    if(!vrActive.size){alert('종목을 선택하세요.');return;}
     const contrib=+document.getElementById('vrContrib').value||100;
     const G=+document.getElementById('vrG').value||10;
     const band=+document.getElementById('vrBand').value||15;
-    const res=runVR(days,vrPick,contrib,G,band);
-    renderSingle2('vr',res,days);
+    const results={};
+    [...vrActive].forEach(t=>{
+      const days=commonDays(start,end,[t]);
+      if(days.length<10) return;
+      results[t]={res:runVR(days,t,contrib,G,band), days};
+    });
+    if(!Object.keys(results).length){alert('데이터 부족');return;}
+    renderMultiStrat('vr',results,{contrib,G,band});
   }
 }
 
@@ -678,6 +711,82 @@ function renderDCA(res,tickers,opts){
 }
 
 // 무매/VR 렌더
+// 무매/VR 다중 종목 비교 렌더
+function renderMultiStrat(type, results, params){
+  const tickers=Object.keys(results);
+  // 단일 종목이면 바로 상세뷰
+  if(tickers.length===1){
+    const t=tickers[0];
+    renderSingle2(type, results[t].res, results[t].days);
+    return;
+  }
+  document.getElementById('detail').classList.add('hide');
+  document.querySelector('.cards').classList.remove('hide');
+  document.querySelector('.tbl-wrap').classList.remove('hide');
+  const stratName=type==='im'?'무한매수법 V4.0':'VR 5.0';
+  const pct=x=>(x>=0?'+':'')+x.toFixed(1)+'%';
+  const money=x=>'$'+fmt(x);
+
+  // CAGR 계산
+  tickers.forEach(t=>{
+    const {res,days}=results[t];
+    const calYrs=days.length>1?(new Date(days[days.length-1])-new Date(days[0]))/(365.25*864e5):0.1;
+    res.yrs=Math.max(calYrs,0.1);
+    res.cagr=cagrOf(res.final,res.invested,res.yrs);
+  });
+  const ranked=[...tickers].sort((a,b)=>results[b].res.final-results[a].res.final);
+  const top=ranked[0], r0=results[top].res;
+  document.getElementById('winner').innerHTML=
+    `📊 <strong>${stratName}</strong> 종목별 비교 · <span style="color:var(--dim)">${ranked.map(t=>`<strong style="color:${META[t]?.color||'#fff'}">${t}</strong>`).join(' vs ')}</span>`;
+
+  // 카드
+  const cc=document.getElementById('cards'); cc.innerHTML='';
+  ranked.forEach((t,i)=>{
+    const r=results[t].res, m=META[t]||{color:'#888',name:t};
+    const d=document.createElement('div'); d.className='card'; d.id='cs_'+t;
+    d.onclick=()=>renderSingle2(type,r,results[t].days);
+    d.innerHTML=`<div class="card-bar" style="background:${m.color}"></div>
+      <div class="card-rk ${i===0?'g':''}">#${i+1}</div>
+      <div class="card-body">
+        <div class="card-tkr">${t}<span class="tk-nm">${m.name}</span></div>
+        <div class="card-val">${money(r.final)}</div>
+        <div class="card-sub">CAGR ${pct(r.cagr)} · 원금 ${money(r.invested)}</div>
+      </div>`;
+    cc.appendChild(d);
+  });
+
+  // 비교표
+  const rows=[
+    ['투입 원금',   t=>money(results[t].res.invested), false],
+    ['최종 평가액', t=>money(results[t].res.final),    true],
+    ['총 수익률',   t=>pct(results[t].res.ret),        true],
+    ['CAGR',        t=>pct(results[t].res.cagr),       true],
+    ['기간(년)',    t=>results[t].res.yrs.toFixed(1)+'년', false],
+  ];
+  const best=(vals,higher)=>{ const arr=vals.map(Number); const m=higher?Math.max(...arr):Math.min(...arr); return arr.map(v=>v===m); };
+  let h=`<thead><tr><th>지표</th>${ranked.map(t=>`<th style="color:${META[t]?.color||'#fff'}">${t}</th>`).join('')}</tr></thead><tbody>`;
+  rows.forEach(([label,fn,higher])=>{
+    const vals=ranked.map(fn);
+    const nums=vals.map(v=>parseFloat(v.replace(/[^0-9.\-]/g,'')));
+    const wins=higher!==false?best(nums,higher!==false):[];
+    h+=`<tr><td>${label}</td>${ranked.map((t,i)=>`<td class="v ${wins[i]?'win':''}">${vals[i]}</td>`).join('')}</tr>`;
+  });
+  h+='</tbody>'; document.getElementById('tbl').innerHTML=h;
+
+  // 차트
+  const labels=[...new Set(tickers.flatMap(t=>results[t].res.snap.map(s=>s[0])))].sort();
+  document.getElementById('chartTitle').textContent=`${stratName} 누적 평가액 비교`;
+  logY=true;
+  const logBtns=document.querySelectorAll('.log-seg button');
+  logBtns.forEach(b=>b.classList.remove('active')); if(logBtns[1]) logBtns[1].classList.add('active');
+  lastRender=()=>makeChart(ranked.map(t=>({
+    label:t, data:alignSnap(results[t].res.snap,labels),
+    borderColor:META[t]?.color||'#888', backgroundColor:'transparent',
+    borderWidth:2, pointRadius:0, tension:.1
+  })),labels);
+  lastRender();
+}
+
 function renderSingle2(type,r,days){
   document.querySelector('.cards').classList.add('hide');
   document.querySelector('.tbl-wrap').classList.add('hide');
@@ -776,6 +885,7 @@ function renderSingle2(type,r,days){
       <table class="cmp">
         <thead><tr><th>지표</th><th class="col-strat">${stratShort}</th><th>거치식(B&H)</th><th>단순 DCA</th></tr></thead>
         <tbody>
+          <tr><td>투입 원금</td><td class="v">${money(r.invested)}</td><td class="v">${money(bhBase)}</td><td class="v">${money(dcaInv)}</td></tr>
           <tr><td>최종 평가액</td>${td(money(r.final),finalWin[0])}${td(money(bhFinal),finalWin[1])}${td(money(dcaFinal),finalWin[2])}</tr>
           <tr><td>총 수익률</td>${td(pct(r.ret),retWin[0])}${td(pct(bhRet),retWin[1])}${td(pct(dcaRet),retWin[2])}</tr>
           <tr><td>CAGR (연복리)</td>${td(pct(sCagr),cagrWin[0])}${td(pct(bCagr),cagrWin[1])}${td(pct(dCagr),cagrWin[2])}</tr>
