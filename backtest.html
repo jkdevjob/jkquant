@@ -6,6 +6,66 @@
 <meta name="theme-color" content="#0f1320">
 <title>JK 퀀트 — 백테스트</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-app.js";
+import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-auth.js";
+import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyBzBe9pAttnbDgTlNThWZzNqtAAKxX7Ksw",
+  authDomain: "jk-invest.firebaseapp.com",
+  projectId: "jk-invest",
+  storageBucket: "jk-invest.firebasestorage.app",
+  messagingSenderId: "517831043964",
+  appId: "1:517831043964:web:1a2b3c4d"
+};
+const fbApp = initializeApp(firebaseConfig);
+const auth = getAuth(fbApp);
+const db = getFirestore(fbApp);
+const DEFAULT_TICKERS = ['SOXL','TQQQ','TECL','KORU','QLD','USD','SSO','UPRO','QQQ','QYLD','JEPQ','QQQI','GPIQ'];
+
+// 커스텀 종목 Firestore 저장
+window.saveCustomTickers = async function() {
+  if (!auth.currentUser) return;
+  const custom = TICKERS.filter(t => !DEFAULT_TICKERS.includes(t))
+    .map(t => ({ t, name: META[t]?.name||t, lev: META[t]?.lev||1, color: META[t]?.color||'#888' }));
+  try {
+    await setDoc(doc(db, 'users', auth.currentUser.uid), { backtestTickers: custom }, { merge: true });
+  } catch(e) { console.warn('저장 실패', e); }
+};
+
+// Firestore에서 커스텀 종목 불러오기
+async function loadCustomTickers(uid) {
+  try {
+    const snap = await getDoc(doc(db, 'users', uid));
+    const custom = snap.data()?.backtestTickers || [];
+    custom.forEach(({t, name, lev, color}) => {
+      if (!TICKERS.includes(t)) {
+        TICKERS.push(t);
+        META[t] = { name, lev, color };
+      }
+    });
+    if (custom.length) { buildTickerPick(); dcaActive = new Set(TICKERS.filter(t=>!loadedTickers.length||loadedTickers.includes(t))); buildTickerPick(); }
+  } catch(e) { console.warn('불러오기 실패', e); }
+}
+
+// 로그인 상태 감지
+onAuthStateChanged(auth, async user => {
+  const btn = document.getElementById('btAuthBtn');
+  if (user) {
+    if (btn) btn.textContent = '로그아웃';
+    await loadCustomTickers(user.uid);
+  } else {
+    if (btn) btn.textContent = '로그인';
+  }
+});
+
+window.btLogin = async () => {
+  const user = auth.currentUser;
+  if (user) { await signOut(auth); }
+  else { try { await signInWithPopup(auth, new GoogleAuthProvider()); } catch(e){} }
+};
+</script>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Pretendard:wght@300;400;500;600;700&display=swap');
 :root{
@@ -145,6 +205,7 @@ td:first-child{text-align:left;}
     </div>
   </div>
   <a href="/" class="home">← 운용 도구로</a>
+  <button id="btAuthBtn" onclick="btLogin()" style="font-size:11px;padding:6px 12px;border-radius:7px;border:1px solid var(--border2);background:transparent;color:var(--dim);cursor:pointer">로그인</button>
 </div>
 <div id="dataStat" style="font-size:11.5px;color:var(--dim);margin:-12px 0 16px;font-variant-numeric:tabular-nums;display:none"></div>
 
@@ -430,6 +491,7 @@ function addCustomTicker(){
   const colors=['#4fc3f7','#81c784','#ffb74d','#f06292','#9575cd','#4db6ac','#e57373'];
   if(!META[t]) META[t]={name:t,lev:1,color:colors[TICKERS.length%colors.length]};
   TICKERS.push(t); dcaActive.add(t); inp.value='';
+  if (window.saveCustomTickers) window.saveCustomTickers();
   if(dataLoaded){
     const stat=document.getElementById('dataStat');
     if(stat){stat.style.display='';stat.textContent=`${t} 데이터 받는 중…`;stat.style.color='var(--dim)';}
@@ -448,6 +510,7 @@ function removeTicker(t){
   const idx=TICKERS.indexOf(t);if(idx>=0)TICKERS.splice(idx,1);
   dcaActive.delete(t);imActive.delete(t);vrActive.delete(t);
   delete M[t];if(META[t]&&!['SSO','UPRO','QLD','TQQQ','USD','SOXL','TECL','KORU','QQQ','QYLD','JEPQ','QQQI','GPIQ','418660','423920'].includes(t))delete META[t];
+  if (window.saveCustomTickers) window.saveCustomTickers();
   buildTickerPick();
 }
 function buildPickSingle(){
