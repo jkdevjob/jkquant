@@ -201,7 +201,7 @@ td:first-child{text-align:left;}
   <div class="brand">
     <div>
       <div class="logo">Backtest</div>
-      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v1.52</span></h1>
+      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v1.54</span></h1>
     </div>
   </div>
   <a href="/" class="home">← 운용 도구로</a>
@@ -606,8 +606,8 @@ function _dcaOne(t,days,amt,step){
 function runIM(days,tkr,cap,divs,targetPct,compound=true){
   const starBase=tkr==='SOXL'?20:15;
   const starSlope=tkr==='SOXL'?(divs===20?2:1):(divs===20?1.5:0.75);
-  let cash=cap,base=cap,shares=0,avg=0,T=0,realized=0,cycles=0;const snap=[];
-  let peakInvested=0;  // 실제 투입 최고점 (거치식 공정비교 기준)
+  let cash=cap,shares=0,avg=0,T=0,realized=0,cycles=0,savedProfit=0;const snap=[];
+  let peakInvested=0;
   days.forEach((d,i)=>{
     const [c,o,hi,lo]=M[tkr][d];
     if(shares>0&&avg>0){
@@ -622,8 +622,9 @@ function runIM(days,tkr,cap,divs,targetPct,compound=true){
       if(c>=starP&&orig>0){const sell=Math.min(q1,shares);if(sell>1e-9){realized+=sell*(c-avg);cash+=sell*c;shares-=sell;T*=0.75;}}
       // 전량 매도 → 사이클 리셋 (복리 포함)
       if(shares<1e-9){shares=0;avg=0;cycles++;
-        base=compound?cash:cap;  // 복리: 익절금 포함해 재투자 / 단리: 초기 원금 유지
-        T=0;snap.push([d,cash]);return;}
+        if(compound){ /* 복리: 익절금 포함 현금 그대로 다음 사이클 사용 */ }
+        else { savedProfit+=cash-cap; cash=cap; }  // 단리: 초과분 별도 보관, 원금 리셋
+        T=0;snap.push([d,cash+savedProfit]);return;}
     }
     if(T<=divs-1&&cash>1){
       let one=Math.min(cash/(divs-T),cash);
@@ -638,11 +639,11 @@ function runIM(days,tkr,cap,divs,targetPct,compound=true){
         }else{ if(c<=buyP){const q=one/c;avg=(shares*avg+one)/(shares+q);shares+=q;cash-=one;T+=1;} }
       }
     }
-    if(i%10===0)snap.push([d,cash+shares*c]);
-    peakInvested=Math.max(peakInvested, cap-cash);  // 실제 투입 피크 추적
+    if(i%10===0)snap.push([d,cash+shares*c+savedProfit]);
+    peakInvested=Math.max(peakInvested, cap-cash);
   });
-  const fin=cash+shares*M[tkr][days[days.length-1]][C];
-  return {invested:cap,peakInvested,final:fin,realized,cycles,endCash:cash,endShares:shares,ret:(fin/cap-1)*100,snap,tkr};
+  const fin=cash+shares*M[tkr][days[days.length-1]][C]+savedProfit;
+  return {invested:cap,peakInvested,final:fin,realized,cycles,endCash:cash+savedProfit,endShares:shares,ret:(fin/cap-1)*100,snap,tkr};
 }
 
 // ──── 전략 3: VR 5.0 ────
@@ -738,11 +739,11 @@ async function run(){
     const cap=+document.getElementById('imCap').value||10000;
     const tgt=+document.getElementById('imTarget').value||20;
     const compound=document.querySelector('#imCompound button.active')?.dataset.c!=='0';
+    const commonD=commonDays(start,end,[...imActive]);
+    if(commonD.length<10){alert('공통 거래일이 부족합니다.');return;}
     const results={};
     [...imActive].forEach(t=>{
-      const days=commonDays(start,end,[t]);
-      if(days.length<10) return;
-      results[t]={res:runIM(days,t,cap,imDiv,tgt,compound), days};
+      results[t]={res:runIM(commonD,t,cap,imDiv,tgt,compound), days:commonD};
     });
     if(!Object.keys(results).length){alert('데이터 부족');return;}
     renderMultiStrat('im',results,{cap,tgt});
@@ -752,12 +753,12 @@ async function run(){
     const contribKRW=+document.getElementById('vrContribKRW').value||150000;
     const G=+document.getElementById('vrG').value||10;
     const band=+document.getElementById('vrBand').value||15;
+    const commonD=commonDays(start,end,[...vrActive]);
+    if(commonD.length<10){alert('공통 거래일이 부족합니다.');return;}
     const results={};
     [...vrActive].forEach(t=>{
-      const days=commonDays(start,end,[t]);
-      if(days.length<10) return;
-      const contrib=isKRW(t)?contribKRW:contribUSD;  // 종목별 통화 자동 선택
-      results[t]={res:runVR(days,t,contrib,G,band), days};
+      const contrib=isKRW(t)?contribKRW:contribUSD;
+      results[t]={res:runVR(commonD,t,contrib,G,band), days:commonD};
     });
     if(!Object.keys(results).length){alert('데이터 부족');return;}
     renderMultiStrat('vr',results,{contribUSD,contribKRW,G,band});
@@ -866,8 +867,12 @@ function renderMultiStrat(type, results, params){
   });
   const ranked=[...tickers].sort((a,b)=>results[b].res.final-results[a].res.final);
   const top=ranked[0], r0=results[top].res;
+  // 기간 차이 체크
+  const yrsArr=ranked.map(t=>results[t].res.yrs);
+  const yrsSpread=Math.max(...yrsArr)-Math.min(...yrsArr);
+  const periodWarn=yrsSpread>0.5?` <span style="color:var(--gold);font-size:11px">⚠ 종목별 기간 상이 (${Math.min(...yrsArr).toFixed(0)}~${Math.max(...yrsArr).toFixed(0)}년) — CAGR로 비교 권장</span>`:'';
   document.getElementById('winner').innerHTML=
-    `📊 <strong>${stratName}</strong> 종목별 비교 · <span style="color:var(--dim)">${ranked.map(t=>`<strong style="color:${META[t]?.color||'#fff'}">${t}</strong>`).join(' vs ')}</span>`;
+    `📊 <strong>${stratName}</strong> 종목별 비교 · <span style="color:var(--dim)">${ranked.map(t=>`<strong style="color:${META[t]?.color||'#fff'}">${t}</strong>`).join(' vs ')}</span>${periodWarn}`;
 
   // 카드
   const cc=document.getElementById('cards'); cc.innerHTML='';
@@ -880,7 +885,7 @@ function renderMultiStrat(type, results, params){
       <div class="card-body">
         <div class="card-tkr">${t}<span class="tk-nm">${m.name}</span></div>
         <div class="card-val">${money(r.final,t)}</div>
-        <div class="card-sub">CAGR ${pct(r.cagr)} · 원금 ${money(r.invested,t)}</div>
+        <div class="card-sub">CAGR ${pct(r.cagr)} · ${r.yrs.toFixed(1)}년 · 원금 ${money(r.invested,t)}</div>
       </div>`;
     cc.appendChild(d);
   });
