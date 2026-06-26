@@ -201,7 +201,7 @@ td:first-child{text-align:left;}
   <div class="brand">
     <div>
       <div class="logo">Backtest</div>
-      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v1.51</span></h1>
+      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v1.52</span></h1>
     </div>
   </div>
   <a href="/" class="home">← 운용 도구로</a>
@@ -247,6 +247,12 @@ td:first-child{text-align:left;}
       </div>
     </div>
     <div class="ctrl s-im hide"><label>익절 %</label><input type="number" id="imTarget" value="20" min="5" max="50"></div>
+    <div class="ctrl s-im hide"><label>재투자</label>
+      <div class="seg" id="imCompound">
+        <button data-c="1" class="active" title="익절금을 다음 사이클 원금에 합산">복리</button>
+        <button data-c="0" title="초기 원금으로만 운용, 익절금은 현금 보관">단리</button>
+      </div>
+    </div>
 
     <!-- VR 전용 -->
     <div class="ctrl s-vr hide"><label>적립금 USD ($/2주)</label><input type="number" id="vrContrib" value="100" min="10"></div>
@@ -527,7 +533,14 @@ function buildPickSingle(){
       c.className="tk-chip"+(active.has(t)?" on":"");
       c.style.setProperty("--c",META[t].color);c.id="tps_"+t;
       c.innerHTML="<div class=\"d\"></div>"+t;
-      c.onclick=()=>{ c.classList.toggle("on"); const on=c.classList.contains("on"); if(on) active.add(t); else active.delete(t); };
+      c.onclick=()=>{ c.classList.toggle("on"); const on=c.classList.contains("on"); if(on) active.add(t); else active.delete(t);
+        // 무매 탭: 종목별 익절% 자동 세팅
+        if(strat==="im"){
+          const allSelected=[...imActive];
+          const tgt=document.getElementById('imTarget');
+          if(tgt){ tgt.value = allSelected.includes('TQQQ')&&!allSelected.some(x=>x!=='TQQQ') ? 15 : 20; }
+        }
+      };
       single.appendChild(c);
     });
   }
@@ -551,6 +564,7 @@ function setStrat(s){
 // seg 버튼들
 document.getElementById('dcaFreq').onclick=e=>{if(e.target.dataset.f){document.querySelectorAll('#dcaFreq button').forEach(b=>b.classList.remove('active'));e.target.classList.add('active');dcaFreq=e.target.dataset.f;}};
 document.getElementById('dcaPeriod').onclick=e=>{if(e.target.dataset.p){document.querySelectorAll('#dcaPeriod button').forEach(b=>b.classList.remove('active'));e.target.classList.add('active');dcaPeriodMode=e.target.dataset.p;}};
+document.getElementById('imCompound').onclick=e=>{if(e.target.dataset.c){document.querySelectorAll('#imCompound button').forEach(b=>b.classList.remove('active'));e.target.classList.add('active');}};
 document.getElementById('imDiv').onclick=e=>{if(e.target.dataset.d){document.querySelectorAll('#imDiv button').forEach(b=>b.classList.remove('active'));e.target.classList.add('active');imDiv=+e.target.dataset.d;}};
 
 function commonDays(start,end,tickers){
@@ -589,7 +603,7 @@ function _dcaOne(t,days,amt,step){
 }
 
 // ──── 전략 2: 무한매수법 V4.0 ────
-function runIM(days,tkr,cap,divs,targetPct){
+function runIM(days,tkr,cap,divs,targetPct,compound=true){
   const starBase=tkr==='SOXL'?20:15;
   const starSlope=tkr==='SOXL'?(divs===20?2:1):(divs===20?1.5:0.75);
   let cash=cap,base=cap,shares=0,avg=0,T=0,realized=0,cycles=0;const snap=[];
@@ -607,10 +621,12 @@ function runIM(days,tkr,cap,divs,targetPct){
       // ② 별지점 LOC매도 (at close): 종가 >= 별지점. 원래 1/4 기준 (이미 팔린 것 차감)
       if(c>=starP&&orig>0){const sell=Math.min(q1,shares);if(sell>1e-9){realized+=sell*(c-avg);cash+=sell*c;shares-=sell;T*=0.75;}}
       // 전량 매도 → 사이클 리셋 (복리 포함)
-      if(shares<1e-9){shares=0;avg=0;cycles++;base=cash;T=0;snap.push([d,cash]);return;}
+      if(shares<1e-9){shares=0;avg=0;cycles++;
+        base=compound?cash:cap;  // 복리: 익절금 포함해 재투자 / 단리: 초기 원금 유지
+        T=0;snap.push([d,cash]);return;}
     }
     if(T<=divs-1&&cash>1){
-      let one=Math.min(base/(divs-T),cash);
+      let one=Math.min(cash/(divs-T),cash);
       if(shares===0&&T===0){shares+=one/c;avg=c;cash-=one;T+=1;}
       else{
         const starP=avg*(1+(starBase-starSlope*T)/100);const buyP=starP-0.01;
@@ -637,7 +653,7 @@ function runVR(days,tkr,contrib,G,bandPct){
     const c=M[tkr][d][C];
     if(i%interval===0){
       if(first){pool+=contrib;inv+=contrib;shares+=pool/c;pool=0;V=shares*c;first=false;buys++;rebal++;snap.push([d,shares*c]);return;}
-      pool+=contrib;inv+=contrib;V=V+pool/G+contrib;
+      inv+=contrib;V=V+pool/G+contrib;pool+=contrib;
       const up=V*(1+band),lo=V*(1-band),cv=shares*c;
       if(cv>up){const ex=cv-V;shares-=ex/c;pool+=ex;sells++;}
       else if(cv<lo){const need=V-cv;const use=Math.min(need,pool*poolLimit);shares+=use/c;pool-=use;buys++;}
@@ -721,11 +737,12 @@ async function run(){
     if(!imActive.size){alert('종목을 선택하세요.');return;}
     const cap=+document.getElementById('imCap').value||10000;
     const tgt=+document.getElementById('imTarget').value||20;
+    const compound=document.querySelector('#imCompound button.active')?.dataset.c!=='0';
     const results={};
     [...imActive].forEach(t=>{
       const days=commonDays(start,end,[t]);
       if(days.length<10) return;
-      results[t]={res:runIM(days,t,cap,imDiv,tgt), days};
+      results[t]={res:runIM(days,t,cap,imDiv,tgt,compound), days};
     });
     if(!Object.keys(results).length){alert('데이터 부족');return;}
     renderMultiStrat('im',results,{cap,tgt});
