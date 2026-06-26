@@ -221,6 +221,7 @@ async function yahooDownload(symbol, dbg) {
 }
 
 // Stooq fallback
+async function stooqDaily(symbol, dbg) {
   for (const host of ["stooq.com", "stooq.pl"]) {
     try {
       const u = `https://${host}/q/d/l/?s=${symbol.toLowerCase()}.us&i=d`;
