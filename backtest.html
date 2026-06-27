@@ -201,7 +201,7 @@ td:first-child{text-align:left;}
   <div class="brand">
     <div>
       <div class="logo">Backtest</div>
-      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v1.55</span></h1>
+      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v1.56</span></h1>
     </div>
   </div>
   <a href="/" class="home">← 운용 도구로</a>
@@ -477,15 +477,16 @@ function buildTickerPick(){
   const pick=document.getElementById('tickerPick');
   pick.innerHTML='';
   TICKERS.forEach(t=>{
-    if(Object.keys(M).length>0&&!M[t]) return;
+    const hasData=!Object.keys(M).length||!!M[t];
     const isOn=dcaActive.has(t);
     const c=document.createElement('div');
-    c.className='tk-chip'+(isOn?' on':'');
+    c.className='tk-chip'+(isOn?' on':'')+(hasData?'':' off');
     c.style.setProperty('--c',(META[t]&&META[t].color)||'#888');c.id='tp_'+t;
     c.innerHTML=`<div class="d"></div>${t}`;
+    c.title=hasData?t:`${t} (데이터 없음 — 실행 후 로딩)`;
     let pt=null;
     c.addEventListener('pointerdown',()=>{pt=setTimeout(()=>{pt=null;removeTicker(t);},600);});
-    c.addEventListener('pointerup',()=>{if(pt){clearTimeout(pt);pt=null;c.classList.toggle('on');const on=c.classList.contains('on');if(on)dcaActive.add(t);else dcaActive.delete(t);}});
+    c.addEventListener('pointerup',()=>{if(pt){clearTimeout(pt);pt=null;if(hasData){c.classList.toggle('on');const on=c.classList.contains('on');if(on)dcaActive.add(t);else dcaActive.delete(t);}}});
     c.addEventListener('pointercancel',()=>{if(pt){clearTimeout(pt);pt=null;}});
     pick.appendChild(c);
   });
@@ -497,19 +498,36 @@ function addCustomTicker(){
   const colors=['#4fc3f7','#81c784','#ffb74d','#f06292','#9575cd','#4db6ac','#e57373'];
   if(!META[t]) META[t]={name:t,lev:1,color:colors[TICKERS.length%colors.length]};
   TICKERS.push(t); dcaActive.add(t); inp.value='';
-  if (window.saveCustomTickers) window.saveCustomTickers();
-  if(dataLoaded){
-    const stat=document.getElementById('dataStat');
-    if(stat){stat.style.display='';stat.textContent=`${t} 데이터 받는 중…`;stat.style.color='var(--dim)';}
-    fetch(`/api/quote?symbol=${t}&range=max`).then(r=>r.json()).then(j=>{
-      const arr=j&&j.ohlc; if(!Array.isArray(arr)||arr.length<10){if(stat)stat.textContent=`${t} 로딩 실패`;return;}
-      M[t]={};arr.filter(d=>d&&d.close!=null).forEach(d=>{M[t][d.date]=[d.close,d.open,d.high,d.low];});
-      const yrs=(Object.keys(M[t]).length/252).toFixed(0);
-      if(stat){stat.textContent=`✓ ${t} 추가 (${yrs}년)`;stat.style.color='var(--green)';}
-      buildTickerPick();
-    }).catch(e=>{if(stat)stat.textContent=`${t} 실패: `+e.message;});
-  }
+  if(window.saveCustomTickers) window.saveCustomTickers();
   buildTickerPick();
+  if(!dataLoaded) return;
+  // 이미 로딩 상태면 해당 종목 청크 로딩
+  const stat=document.getElementById('dataStat');
+  if(stat){stat.style.display='';stat.textContent=`${t} 로딩 중…`;stat.style.color='var(--dim)';}
+  const now=Math.floor(Date.now()/1000);
+  const p1=Math.floor(new Date(loadedStart||'2010-01-01').getTime()/1000);
+  const chunkSec=5*365.25*86400|0;
+  const chunks=[];let cur=now+86400;
+  while(cur>p1){const from=Math.max(p1,cur-chunkSec);chunks.push([from,cur]);cur=from;if(cur<=p1)break;}
+  const allData={};
+  Promise.all(chunks.map(([c1,c2])=>
+    fetch(`/api/quote?symbol=${t}&range=5y&period1=${c1}&period2=${c2}`)
+      .then(r=>r.json()).then(j=>{
+        (j&&j.ohlc||[]).filter(d=>d&&d.close).forEach(d=>{
+          if(!allData[d.date])allData[d.date]=[d.date,d.close,d.open||d.close,d.high||d.close,d.low||d.close];
+        });
+      }).catch(()=>{})
+  )).then(()=>{
+    if(Object.keys(allData).length>5){
+      M[t]={};
+      Object.values(allData).sort((a,b)=>a[0]<b[0]?-1:1).forEach(r=>{M[t][r[0]]=[r[1],r[2],r[3],r[4]];});
+      if(stat){stat.textContent=`✓ ${t} 추가 (${(Object.keys(M[t]).length/252).toFixed(0)}년)`;stat.style.color='var(--green)';}
+    }else{
+      TICKERS.splice(TICKERS.indexOf(t),1);dcaActive.delete(t);delete META[t];
+      if(stat){stat.textContent=`${t}: 데이터 없음`;stat.style.color='var(--red)';}
+    }
+    buildTickerPick();
+  });
 }
 function removeTicker(t){
   if(!confirm(`${t} 제거할까요?`))return;
