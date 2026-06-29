@@ -16,22 +16,32 @@ const firebaseConfig = {
   authDomain: "jk-invest.firebaseapp.com",
   projectId: "jk-invest",
   storageBucket: "jk-invest.firebasestorage.app",
-  messagingSenderId: "517831043964",
-  appId: "1:517831043964:web:1a2b3c4d"
+  messagingSenderId: "1024066323251",
+  appId: "1:1024066323251:web:23d557527866205f01f446"
 };
 const fbApp = initializeApp(firebaseConfig);
 const auth = getAuth(fbApp);
 const db = getFirestore(fbApp);
 const DEFAULT_TICKERS = ['SOXL','TQQQ','TECL','KORU','QLD','USD','SSO','UPRO','QQQ','QYLD','JEPQ','QQQI','GPIQ'];
 
-// 커스텀 종목 Firestore 저장
-window.saveCustomTickers = async function() {
-  if (!auth.currentUser) return;
-  const custom = TICKERS.filter(t => !DEFAULT_TICKERS.includes(t))
-    .map(t => ({ t, name: META[t]?.name||t, lev: META[t]?.lev||1, color: META[t]?.color||'#888' }));
-  try {
-    await setDoc(doc(db, 'users', auth.currentUser.uid), { backtestTickers: custom }, { merge: true });
-  } catch(e) { console.warn('저장 실패', e); }
+function getCustomList(){
+  return TICKERS.filter(t=>!DEFAULT_TICKERS.includes(t))
+    .map(t=>({t,name:META[t]?.name||t,lev:META[t]?.lev||1,color:META[t]?.color||'#888'}));
+}
+function applyCustomList(custom){
+  custom.forEach(({t,name,lev,color})=>{
+    if(!TICKERS.includes(t)){ TICKERS.push(t); META[t]={name,lev,color}; }
+  });
+  if(custom.length) buildTickerPick();
+}
+
+// 저장: Firestore(로그인 시) + localStorage(항상)
+window.saveCustomTickers = async function(){
+  const custom = getCustomList();
+  try { localStorage.setItem('jkq_bt_tickers', JSON.stringify(custom)); } catch(e){}
+  if(!auth.currentUser) return;
+  try { await setDoc(doc(db,'users',auth.currentUser.uid),{backtestTickers:custom},{merge:true}); }
+  catch(e){ console.warn('Firestore 저장 실패',e); }
 };
 
 // Firestore에서 커스텀 종목 불러오기
@@ -39,14 +49,16 @@ async function loadCustomTickers(uid) {
   try {
     const snap = await getDoc(doc(db, 'users', uid));
     const custom = snap.data()?.backtestTickers || [];
-    custom.forEach(({t, name, lev, color}) => {
-      if (!TICKERS.includes(t)) {
-        TICKERS.push(t);
-        META[t] = { name, lev, color };
-      }
-    });
-    if (custom.length) { buildTickerPick(); dcaActive = new Set(TICKERS.filter(t=>!loadedTickers.length||loadedTickers.includes(t))); buildTickerPick(); }
-  } catch(e) { console.warn('불러오기 실패', e); }
+    if(custom.length){ applyCustomList(custom); return; }
+  } catch(e) { console.warn('Firestore 불러오기 실패', e); }
+  // Firestore 실패 시 localStorage 폴백
+  loadFromLocalStorage();
+}
+function loadFromLocalStorage(){
+  try{
+    const saved = JSON.parse(localStorage.getItem('jkq_bt_tickers')||'[]');
+    if(saved.length) applyCustomList(saved);
+  }catch(e){}
 }
 
 // 로그인 상태 감지
@@ -201,7 +213,7 @@ td:first-child{text-align:left;}
   <div class="brand">
     <div>
       <div class="logo">Backtest</div>
-      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v1.56</span></h1>
+      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v1.57</span></h1>
     </div>
   </div>
   <a href="/" class="home">← 운용 도구로</a>
@@ -407,6 +419,7 @@ let loadedStart='', loadedEnd='';  // 로딩된 기간
   document.getElementById('dStart').value=iso(tenYrAgo);
   buildTickerPick();
   showEmptyState();
+  loadFromLocalStorage();  // 로그인 여부 무관하게 즉시 복원
   // 데이터는 실행 버튼 누를 때 로딩 (기간에 맞춰)
 })();
 
