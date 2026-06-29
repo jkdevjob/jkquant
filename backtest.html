@@ -213,7 +213,7 @@ td:first-child{text-align:left;}
   <div class="brand">
     <div>
       <div class="logo">Backtest</div>
-      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v1.57</span></h1>
+      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v1.6</span></h1>
     </div>
   </div>
   <a href="/" class="home">← 운용 도구로</a>
@@ -267,8 +267,23 @@ td:first-child{text-align:left;}
     </div>
 
     <!-- VR 전용 -->
-    <div class="ctrl s-vr hide"><label>적립금 USD ($/2주)</label><input type="number" id="vrContrib" value="100" min="10"></div>
-    <div class="ctrl s-vr hide"><label>적립금 KRW (₩/2주)</label><input type="number" id="vrContribKRW" value="150000" min="10000" step="10000"></div>
+    <div class="ctrl s-vr hide"><label>운용 모드</label>
+      <div class="seg" id="vrMode">
+        <button data-m="0.75" class="active">적립식</button>
+        <button data-m="0.5">거치식</button>
+        <button data-m="0.25">인출식</button>
+      </div>
+    </div>
+    <div class="ctrl s-vr hide"><label>V갱신 공식</label>
+      <div class="seg" id="vrFormula">
+        <button data-f="basic" class="active">기본</button>
+        <button data-f="skill">실력</button>
+      </div>
+    </div>
+    <div class="ctrl s-vr hide vr-accum"><label>적립금 USD ($/2주)</label><input type="number" id="vrContrib" value="100" min="10"></div>
+    <div class="ctrl s-vr hide vr-accum"><label>적립금 KRW (₩/2주)</label><input type="number" id="vrContribKRW" value="150000" min="10000" step="10000"></div>
+    <div class="ctrl s-vr hide vr-lump" style="display:none"><label>초기 투자금 ($)</label><input type="number" id="vrInitAmt" value="10000" min="100"></div>
+    <div class="ctrl s-vr hide vr-wd" style="display:none"><label>2주 인출액 ($)</label><input type="number" id="vrWithdraw" value="100" min="10"></div>
     <div class="ctrl s-vr hide"><label>G값</label><input type="number" id="vrG" value="10" min="1" max="50"></div>
     <div class="ctrl s-vr hide"><label>밴드 ±%</label><input type="number" id="vrBand" value="15" min="5" max="30"></div>
 
@@ -596,6 +611,15 @@ function setStrat(s){
 document.getElementById('dcaFreq').onclick=e=>{if(e.target.dataset.f){document.querySelectorAll('#dcaFreq button').forEach(b=>b.classList.remove('active'));e.target.classList.add('active');dcaFreq=e.target.dataset.f;}};
 document.getElementById('dcaPeriod').onclick=e=>{if(e.target.dataset.p){document.querySelectorAll('#dcaPeriod button').forEach(b=>b.classList.remove('active'));e.target.classList.add('active');dcaPeriodMode=e.target.dataset.p;}};
 document.getElementById('imCompound').onclick=e=>{if(e.target.dataset.c){document.querySelectorAll('#imCompound button').forEach(b=>b.classList.remove('active'));e.target.classList.add('active');}};
+document.getElementById('vrMode').onclick=e=>{
+  if(!e.target.dataset.m)return;
+  document.querySelectorAll('#vrMode button').forEach(b=>b.classList.remove('active'));e.target.classList.add('active');
+  const m=e.target.dataset.m;
+  document.querySelectorAll('.vr-accum').forEach(el=>el.style.display=m==='0.75'?'':'none');
+  document.querySelectorAll('.vr-lump').forEach(el=>el.style.display=m!=='0.75'?'':'none');
+  document.querySelectorAll('.vr-wd').forEach(el=>el.style.display=m==='0.25'?'':'none');
+};
+document.getElementById('vrFormula').onclick=e=>{if(e.target.dataset.f){document.querySelectorAll('#vrFormula button').forEach(b=>b.classList.remove('active'));e.target.classList.add('active');}};
 document.getElementById('imDiv').onclick=e=>{if(e.target.dataset.d){document.querySelectorAll('#imDiv button').forEach(b=>b.classList.remove('active'));e.target.classList.add('active');imDiv=+e.target.dataset.d;}};
 
 function commonDays(start,end,tickers){
@@ -678,23 +702,39 @@ function runIM(days,tkr,cap,divs,targetPct,compound=true){
 }
 
 // ──── 전략 3: VR 5.0 ────
-function runVR(days,tkr,contrib,G,bandPct){
-  const band=bandPct/100,interval=10,poolLimit=0.75;
-  let shares=0,pool=0,V=0,inv=0,rebal=0,buys=0,sells=0,first=true;const snap=[];
+function runVR(days,tkr,params){
+  const {contrib=100,G=10,bandPct=15,mode=0.75,formula='basic',initAmt=0,withdraw=0}=params||{};
+  const band=bandPct/100,interval=10,poolLimit=mode;
+  const isAccum=mode===0.75, isWd=mode===0.25, isLump=!isAccum;
+  let shares=0,pool=0,V=0,inv=0,totalWd=0,rebal=0,buys=0,sells=0,first=true;
+  const snap=[];
   days.forEach((d,i)=>{
     const c=M[tkr][d][C];
     if(i%interval===0){
-      if(first){pool+=contrib;inv+=contrib;shares+=pool/c;pool=0;V=shares*c;first=false;buys++;rebal++;snap.push([d,shares*c]);return;}
-      inv+=contrib;V=V+pool/G+contrib;pool+=contrib;
-      const up=V*(1+band),lo=V*(1-band),cv=shares*c;
-      if(cv>up){const ex=cv-V;shares-=ex/c;pool+=ex;sells++;}
-      else if(cv<lo){const need=V-cv;const use=Math.min(need,pool*poolLimit);shares+=use/c;pool-=use;buys++;}
+      if(first){
+        if(isLump){const s=initAmt||10000;inv+=s;shares=s/c;V=shares*c;pool=0;}
+        else{pool+=contrib;inv+=contrib;shares=pool/c;pool=0;V=shares*c;}
+        first=false;buys++;rebal++;snap.push([d,shares*c+pool]);return;
+      }
+      const cv=shares*c;
+      const addCycle=isAccum?contrib:isWd?-withdraw:0;
+      if(formula==='skill'&&V>0) V=V+pool/G+(cv-V)/(2*Math.sqrt(G))+addCycle;
+      else V=V+pool/G+addCycle;
+      V=Math.max(V,0);
+      if(isAccum){pool+=contrib;inv+=contrib;}
+      else if(isWd){const wd=Math.min(withdraw,pool);pool-=wd;totalWd+=wd;}
+      const up=V*(1+band),lo=V*(1-band),cv2=shares*c;
+      if(cv2>up){const ex=cv2-V;shares-=ex/c;pool+=ex;sells++;}
+      else if(cv2<lo){const need=V-cv2;const use=Math.min(need,pool*poolLimit);shares+=use/c;pool-=use;buys++;}
       rebal++;
     }
     if(i%interval===0||i===days.length-1)snap.push([d,shares*c+pool]);
   });
-  const fin=shares*M[tkr][days[days.length-1]][C]+pool;
-  return {invested:inv,final:fin,pool,shares,sharesVal:shares*M[tkr][days[days.length-1]][C],rebal,buys,sells,ret:(fin/inv-1)*100,snap,V,tkr};
+  const lc=M[tkr][days[days.length-1]][C];
+  const fin=shares*lc+pool;
+  const calYrs=(new Date(days[days.length-1])-new Date(days[0]))/(365.25*864e5);
+  return {invested:inv,final:fin,pool,shares,sharesVal:shares*lc,rebal,buys,sells,totalWd,
+    ret:inv>0?(fin/inv-1)*100:0,yrs:Math.max(calYrs,0.1),snap,tkr};
 }
 
 // ──── 비교/지표 헬퍼 ────
@@ -784,15 +824,19 @@ async function run(){
     const contribKRW=+document.getElementById('vrContribKRW').value||150000;
     const G=+document.getElementById('vrG').value||10;
     const band=+document.getElementById('vrBand').value||15;
+    const mode=+(document.querySelector('#vrMode button.active')?.dataset.m)||0.75;
+    const formula=document.querySelector('#vrFormula button.active')?.dataset.f||'basic';
+    const initAmt=+document.getElementById('vrInitAmt')?.value||10000;
+    const withdraw=+document.getElementById('vrWithdraw')?.value||100;
     const commonD=commonDays(start,end,[...vrActive]);
     if(commonD.length<10){alert('공통 거래일이 부족합니다.');return;}
     const results={};
     [...vrActive].forEach(t=>{
       const contrib=isKRW(t)?contribKRW:contribUSD;
-      results[t]={res:runVR(commonD,t,contrib,G,band), days:commonD};
+      results[t]={res:runVR(commonD,t,{contrib,G,bandPct:band,mode,formula,initAmt,withdraw}), days:commonD};
     });
     if(!Object.keys(results).length){alert('데이터 부족');return;}
-    renderMultiStrat('vr',results,{contribUSD,contribKRW,G,band});
+    renderMultiStrat('vr',results,{contribUSD,contribKRW,G,band,mode,formula,initAmt,withdraw});
   }
 }
 
@@ -917,9 +961,22 @@ function renderMultiStrat(type, results, params){
         <div class="card-tkr">${t}<span class="tk-nm">${m.name}</span></div>
         <div class="card-val">${money(r.final,t)}</div>
         <div class="card-sub">CAGR ${pct(r.cagr)} · ${r.yrs.toFixed(1)}년 · 원금 ${money(r.invested,t)}</div>
+        <div class="card-sub" style="margin-top:3px;font-size:10px;color:var(--dim)" id="dca_cmp_${t}">vs DCA 계산 중…</div>
       </div>`;
     cc.appendChild(d);
   });
+  // 카드 DCA 비교 비동기 채우기
+  ranked.forEach(t=>{
+    const r=results[t].res, days=results[t].days;
+    const step=10;
+    const dcaAmt=r.invested/Math.max(1,Math.floor(days.length/step));
+    const dc=_dcaOne(t,days,dcaAmt,step);
+    dc.cagr=cagrOf(dc.final,dc.invested,r.yrs);
+    const diff=r.cagr-dc.cagr;
+    const el=document.getElementById('dca_cmp_'+t);
+    if(el) el.innerHTML='vs DCA '+pct(dc.cagr)+' <span style="color:'+(diff>=0?'var(--green)':'var(--red)')+'">'+(diff>=0?'↑+':'↓')+Math.abs(diff).toFixed(1)+'%p</span>';
+  });
+
 
   // 비교표
   const rows=[
