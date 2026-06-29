@@ -213,7 +213,7 @@ td:first-child{text-align:left;}
   <div class="brand">
     <div>
       <div class="logo">Backtest</div>
-      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v1.6</span></h1>
+      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v1.61</span></h1>
     </div>
   </div>
   <a href="/" class="home">← 운용 도구로</a>
@@ -281,11 +281,12 @@ td:first-child{text-align:left;}
       </div>
     </div>
     <div class="ctrl s-vr hide vr-accum"><label>적립금 USD ($/2주)</label><input type="number" id="vrContrib" value="100" min="10"></div>
-    <div class="ctrl s-vr hide vr-accum"><label>적립금 KRW (₩/2주)</label><input type="number" id="vrContribKRW" value="150000" min="10000" step="10000"></div>
     <div class="ctrl s-vr hide vr-lump" style="display:none"><label>초기 투자금 ($)</label><input type="number" id="vrInitAmt" value="10000" min="100"></div>
     <div class="ctrl s-vr hide vr-wd" style="display:none"><label>2주 인출액 ($)</label><input type="number" id="vrWithdraw" value="100" min="10"></div>
     <div class="ctrl s-vr hide"><label>G값</label><input type="number" id="vrG" value="10" min="1" max="50"></div>
     <div class="ctrl s-vr hide"><label>밴드 ±%</label><input type="number" id="vrBand" value="15" min="5" max="30"></div>
+    <div class="ctrl s-vr hide"><label>시작 V ($)</label><input type="number" id="vrStartV" value="0" min="0" placeholder="0=첫매수가 V"></div>
+    <div class="ctrl s-vr hide"><label>시작 Pool ($)</label><input type="number" id="vrStartPool" value="0" min="0"></div>
 
     <button class="run" onclick="run()">▶ 실행</button>
   </div>
@@ -703,16 +704,16 @@ function runIM(days,tkr,cap,divs,targetPct,compound=true){
 
 // ──── 전략 3: VR 5.0 ────
 function runVR(days,tkr,params){
-  const {contrib=100,G=10,bandPct=15,mode=0.75,formula='basic',initAmt=0,withdraw=0}=params||{};
+  const {contrib=100,G=10,bandPct=15,mode=0.75,formula='basic',initAmt=0,withdraw=0,startV=0,startPool=0}=params||{};
   const band=bandPct/100,interval=10,poolLimit=mode;
   const isAccum=mode===0.75, isWd=mode===0.25, isLump=!isAccum;
-  let shares=0,pool=0,V=0,inv=0,totalWd=0,rebal=0,buys=0,sells=0,first=true;
+  let shares=0,pool=startPool||0,V=startV||0,inv=startPool||0,totalWd=0,rebal=0,buys=0,sells=0,first=(V<=0&&shares===0);
   const snap=[];
   days.forEach((d,i)=>{
     const c=M[tkr][d][C];
     if(i%interval===0){
       if(first){
-        if(isLump){const s=initAmt||10000;inv+=s;shares=s/c;V=shares*c;pool=0;}
+        if(isLump){const s=initAmt||10000;inv+=s;shares=s/c;V=shares*c+pool/G;}
         else{pool+=contrib;inv+=contrib;shares=pool/c;pool=0;V=shares*c;}
         first=false;buys++;rebal++;snap.push([d,shares*c+pool]);return;
       }
@@ -821,22 +822,22 @@ async function run(){
   }else{
     if(!vrActive.size){alert('종목을 선택하세요.');return;}
     const contribUSD=+document.getElementById('vrContrib').value||100;
-    const contribKRW=+document.getElementById('vrContribKRW').value||150000;
     const G=+document.getElementById('vrG').value||10;
     const band=+document.getElementById('vrBand').value||15;
     const mode=+(document.querySelector('#vrMode button.active')?.dataset.m)||0.75;
     const formula=document.querySelector('#vrFormula button.active')?.dataset.f||'basic';
     const initAmt=+document.getElementById('vrInitAmt')?.value||10000;
     const withdraw=+document.getElementById('vrWithdraw')?.value||100;
+    const startV=+document.getElementById('vrStartV')?.value||0;
+    const startPool=+document.getElementById('vrStartPool')?.value||0;
     const commonD=commonDays(start,end,[...vrActive]);
     if(commonD.length<10){alert('공통 거래일이 부족합니다.');return;}
     const results={};
     [...vrActive].forEach(t=>{
-      const contrib=isKRW(t)?contribKRW:contribUSD;
-      results[t]={res:runVR(commonD,t,{contrib,G,bandPct:band,mode,formula,initAmt,withdraw}), days:commonD};
+      results[t]={res:runVR(commonD,t,{contrib:contribUSD,G,bandPct:band,mode,formula,initAmt,withdraw,startV,startPool}), days:commonD};
     });
     if(!Object.keys(results).length){alert('데이터 부족');return;}
-    renderMultiStrat('vr',results,{contribUSD,contribKRW,G,band,mode,formula,initAmt,withdraw});
+    renderMultiStrat('vr',results,{contribUSD,G,band,mode,formula,initAmt,withdraw,startV,startPool});
   }
 }
 
