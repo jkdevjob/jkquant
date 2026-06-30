@@ -213,7 +213,7 @@ td:first-child{text-align:left;}
   <div class="brand">
     <div>
       <div class="logo">Backtest</div>
-      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v1.62</span></h1>
+      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v1.63</span></h1>
     </div>
   </div>
   <a href="/" class="home">← 운용 도구로</a>
@@ -707,14 +707,21 @@ function runVR(days,tkr,params){
   const {contrib=100,G=10,bandPct=15,mode=0.75,formula='basic',initAmt=0,withdraw=0,startV=0,startPool=0}=params||{};
   const band=bandPct/100,interval=10,poolLimit=mode;
   const isAccum=mode===0.75, isWd=mode===0.25, isLump=!isAccum;
-  let shares=0,pool=startPool||0,V=startV||0,inv=startPool||0,totalWd=0,rebal=0,buys=0,sells=0,first=(V<=0&&shares===0);
+  let shares=0,pool=startPool||0,V=startV||0,inv=startPool||0,totalWd=0,rebal=0,buys=0,sells=0;
+  // 시작V 지정 시: 이미 V만큼 보유 중인 상태로 간주 (운용도구와 동일 — "이어서 시작" 시나리오)
+  let first;
+  if(V>0){
+    shares=V/M[tkr][days[0]][C]; inv+=V; first=false;
+  } else {
+    first=true;
+  }
   const snap=[];
   days.forEach((d,i)=>{
     const c=M[tkr][d][C];
     if(i%interval===0){
       if(first){
-        if(isLump){const s=initAmt||10000;inv+=s;shares=s/c;V=shares*c+pool/G;}
-        else{pool+=contrib;inv+=contrib;shares=pool/c;pool=0;V=shares*c;}
+        if(isLump){const s=initAmt||10000;inv+=s;shares=s/c;V=shares*c;}  // 거치식/인출식: 첫매수가=V (pool 무관)
+        else{pool+=contrib;inv+=contrib;shares=pool/c;pool=0;V=shares*c;} // 적립식: 첫매수가=V
         first=false;buys++;rebal++;snap.push([d,shares*c+pool]);return;
       }
       const cv=shares*c;
@@ -732,7 +739,8 @@ function runVR(days,tkr,params){
     if(i%interval===0||i===days.length-1)snap.push([d,shares*c+pool]);
   });
   const lc=M[tkr][days[days.length-1]][C];
-  const fin=shares*lc+pool;
+  // 인출식: 누적 인출액도 회수가치에 포함해야 정확한 수익률 (인출한 돈은 사라진 게 아님)
+  const fin=shares*lc+pool+totalWd;
   const calYrs=(new Date(days[days.length-1])-new Date(days[0]))/(365.25*864e5);
   return {invested:inv,final:fin,pool,shares,sharesVal:shares*lc,rebal,buys,sells,totalWd,
     ret:inv>0?(fin/inv-1)*100:0,yrs:Math.max(calYrs,0.1),snap,tkr};
