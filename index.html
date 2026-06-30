@@ -293,6 +293,7 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
 .chart-head .ch-sel{display:flex;gap:5px;flex-shrink:0}
 .chart-head .ch-sel button{padding:5px 10px;border-radius:8px;border:1px solid var(--line);background:var(--panel2);color:var(--dim);font-size:11px;font-weight:700;cursor:pointer}
 .chart-head .ch-sel button.on{background:var(--vio-bg);color:var(--vio);border-color:var(--vio)}
+.chart-select{flex-shrink:0;padding:7px 28px 7px 12px;border-radius:8px;border:1px solid var(--line);background:var(--panel2);color:var(--ink);font-size:12px;font-weight:700;-webkit-appearance:none;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='7'%3E%3Cpath fill='%239aa6c9' d='M5 7L0 0h10z'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center}
 .chgpos{color:var(--buy);font-weight:800;font-variant-numeric:tabular-nums}
 .chgneg{color:var(--sell);font-weight:800;font-variant-numeric:tabular-nums}
 
@@ -405,7 +406,7 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
 </div>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span></h1></div>
+    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v21.3</span></h1></div>
     <div style="display:flex;align-items:center;gap:8px">
       <a class="btbtn" href="/backtest">📊<span class="bt-txt"> 백테스트</span></a>
       <button class="gear" onclick="openSettings()">⚙️</button>
@@ -473,7 +474,16 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
 
       <!-- 종가 추이 (1년 차트) -->
       <div class="card"><div class="chart-head"><h3 style="margin:0;display:flex;align-items:center;gap:6px;min-width:0"><span class="dot" style="flex-shrink:0"></span><span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis"><span id="inf_chart_sym">SOXL</span> 종가 추이</span><span id="inf_chart_chg" class="chgpos" style="flex-shrink:0">—</span></h3>
-        <div class="ch-sel" id="inf_chart_sel"><button data-r="60">3개월</button><button data-r="120">6개월</button><button class="on" data-r="260">1년</button></div></div>
+        <select class="chart-select" id="inf_chart_sel">
+          <option value="21">1달</option><option value="42">2달</option><option value="63">3달</option>
+          <option value="84">4달</option><option value="105">5달</option><option value="126">6달</option>
+          <option value="147">7달</option><option value="168">8달</option><option value="189">9달</option>
+          <option value="210">10달</option><option value="231">11달</option>
+          <option value="252" selected>1년</option><option value="504">2년</option><option value="756">3년</option>
+          <option value="1008">4년</option><option value="1260">5년</option><option value="1512">6년</option>
+          <option value="1764">7년</option><option value="2016">8년</option><option value="2268">9년</option>
+          <option value="2520">10년</option><option value="99999">전체</option>
+        </select></div>
         <div class="statgrid" style="margin-bottom:4px"><div class="stat"><div class="sl">1년 최저</div><div class="sv sm mono" id="inf_chart_lo">—</div></div>
           <div class="stat"><div class="sl">현재</div><div class="sv sm mono" id="inf_chart_cur" style="color:var(--vio)">—</div></div>
           <div class="stat"><div class="sl">1년 최고</div><div class="sv sm mono" id="inf_chart_hi">—</div></div></div>
@@ -489,9 +499,11 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
         <p class="note" id="inf_fg_note" style="margin-top:10px">참고 지표일 뿐, 무한매수법은 분할 규칙대로 진행합니다.</p>
       </div>
 
+      <!-- 오늘의 주문표 (항상 표시, 공포지수 바로 아래) -->
+      <div class="card calc" style="margin-top:13px"><div id="inf_order_body"></div></div>
+
       <div class="card" style="margin-top:13px"><h3><span class="dot"></span>오늘 할 일</h3>
-        <p class="lead" id="d_todo">설정(⚙️)에서 종목·분할·원금을 정하고, 주문표 탭에서 전일 종가를 입력하세요.</p>
-        <button class="bigbtn" onclick="openOrderSheet()">주문표 보기 →</button></div>
+        <p class="lead" id="d_todo" style="margin-bottom:0">설정(⚙️)에서 종목·분할·원금을 정하고, 위 주문표에서 전일 종가를 입력하세요.</p></div>
 
       <!-- 시세 연결 진단 (관리자 모드 전용) -->
       <div class="card admin-only" id="diag_card" style="margin-top:13px;display:none"><h3><span class="dot"></span>시세 연결 진단 <span style="font-size:11px;color:var(--faint);font-weight:600">관리자</span></h3>
@@ -676,7 +688,16 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
 
       <!-- 종가 추이 차트 -->
       <div class="card"><div class="chart-head"><h3 style="margin:0;display:flex;align-items:center;gap:6px;min-width:0"><span class="dot" style="flex-shrink:0"></span><span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis"><span id="chart_sym">TQQQ</span> 종가 추이</span><span id="chart_chg" class="chgpos" style="flex-shrink:0">—</span></h3>
-        <div class="ch-sel" id="chart_sel" style="flex-shrink:0"><button data-r="60">3개월</button><button data-r="120">6개월</button><button class="on" data-r="260">1년</button></div></div>
+        <select class="chart-select" id="chart_sel">
+          <option value="21">1달</option><option value="42">2달</option><option value="63">3달</option>
+          <option value="84">4달</option><option value="105">5달</option><option value="126">6달</option>
+          <option value="147">7달</option><option value="168">8달</option><option value="189">9달</option>
+          <option value="210">10달</option><option value="231">11달</option>
+          <option value="252" selected>1년</option><option value="504">2년</option><option value="756">3년</option>
+          <option value="1008">4년</option><option value="1260">5년</option><option value="1512">6년</option>
+          <option value="1764">7년</option><option value="2016">8년</option><option value="2268">9년</option>
+          <option value="2520">10년</option><option value="99999">전체</option>
+        </select></div>
         <div class="statgrid" style="margin-bottom:4px"><div class="stat"><div class="sl">최저</div><div class="sv sm mono" id="chart_lo">—</div></div>
           <div class="stat"><div class="sl">현재</div><div class="sv sm mono" id="chart_cur" style="color:var(--vio)">—</div></div>
           <div class="stat"><div class="sl">최고</div><div class="sv sm mono" id="chart_hi">—</div></div></div>
@@ -721,20 +742,11 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
   <footer>
     <strong>JK 퀀트</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v21.2</b> · 2026-06-23</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v21.3</b> · 2026-07-01</div>
   </footer>
 </div>
 
 <!-- 설정 모달 -->
-<!-- 주문표 전용 바텀시트 -->
-<div id="ordsheetbg" onclick="closeOrderSheet()"></div>
-<div id="ordsheet">
-  <div class="grip"></div>
-  <div class="shead"><h3 id="ordsheet_title">오늘의 주문표</h3><button class="x" onclick="closeOrderSheet()">✕</button></div>
-  <div class="sdate" id="ordsheet_date"></div>
-  <div id="ordsheet_body"></div>
-</div>
-
 <!-- 하단 플로팅 버튼 + 거래기록 바텀시트 -->
 <button id="fab" onclick="openSheet()">＋ 오늘 기록하기</button>
 <div id="sheetbg" onclick="closeSheet()"></div>
@@ -753,7 +765,7 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
     <div class="seclabel">분할 수</div><div class="seg" id="set_div"><button data-v="20">20분할</button><button data-v="30">30분할</button><button data-v="40">40분할</button></div>
     <div class="seclabel">파라미터</div>
     <div class="field"><label>목표 수익률 (%) <span class="hint">별%·지정가매도</span></label><input id="set_target" type="number" inputmode="decimal" value="20"></div>
-    <div class="field"><label>큰수 % <span class="hint">처음매수 LOC 상한 회피 0~40</span></label><input id="set_big" type="number" inputmode="decimal" value="12"></div>
+    <div class="field"><label>큰수 % <span class="hint">처음매수 LOC 상한 회피 0~40</span></label><input id="set_big" type="number" inputmode="decimal" value="12" min="0" max="40"></div>
     <div class="field"><label id="set_principal_lbl">원금 ($)</label><input id="set_principal" type="text" inputmode="decimal" value="10000" oninput="commaInput(this)"></div>
     <div class="rowline" style="border:none;padding:10px 0 6px"><span class="k" style="font-weight:700">하방 LOC 매수 <span style="color:var(--faint);font-weight:400;font-size:11px">급락 대비 추가매수</span></span>
       <label class="switch"><input type="checkbox" id="set_rows_on" onchange="toggleRowsField()"><span class="sl2"></span></label></div>
@@ -892,7 +904,9 @@ function curStrat(){const b=tabBox();return b.sessions.find(x=>x.id===b.active)|
 function sess(){return curStrat()}
 
 /* ── T값 계산 ── */
-const KIND_T={'1회매수':t=>t+1,'절반매수':t=>t+0.5,'쿼터매도':t=>t*0.75,'지정가매도':t=>t*0.25,
+// '지정가매도' 단독(같은날 매수 없이 3/4만 체결)은 문서에 별도 T공식이 없어 변경 없음으로 처리
+// (backtest.html의 처리 방식과 통일 — 두 도구 간 동일 거래의 T 계산 불일치 해소)
+const KIND_T={'1회매수':t=>t+1,'절반매수':t=>t+0.5,'쿼터매도':t=>t*0.75,'지정가매도':t=>t,
   '지정가매도+1회매수':t=>t*0.25+1,'지정가매도+절반매수':t=>t*0.25+0.5,
   '1회매수+지정가매도(애프터)':t=>t*0.25+1,'절반매수+지정가매도(애프터)':t=>t*0.25+0.5};
 // 리버스모드 T규칙은 분할수에 따라 달라 함수로 별도 처리 (computeInf에서 적용)
@@ -908,27 +922,34 @@ function isSell(k){return k.includes('매도')}
 function computeInf(){
   const st=curStrat().settings, hist=curStrat().hist;
   let avg=0,qty=0,inv=0,realized=0,T=0,totbuy=0,totsell=0,cycleSeq=1;
+  let reverseTraded=false; // 현재 리버스 스트릭에서 이미 리버스매도/매수가 있었는지 (1일차 MOC 판정용)
   const rows=hist.map(h=>{
     let profit=0;
+    const Tbefore=T;
     if(h.kind==='지정가매도'||h.kind==='쿼터매도'||h.kind==='리버스매도'){
       profit=(h.price-avg)*h.qty; realized+=profit; qty-=h.qty; inv-=avg*h.qty; totsell+=h.price*h.qty;
     }else if(h.kind==='1회매수'||h.kind==='절반매수'||h.kind==='리버스매수'){
       const nq=qty+h.qty; avg=nq>0?(avg*qty+h.price*h.qty)/nq:h.price; qty=nq; inv+=h.price*h.qty; totbuy+=h.price*h.qty;
     }else if(h.kind.startsWith('지정가매도+')||h.kind.includes('+지정가매도')){
-      // 복합: 매도분(sell*) 먼저, 매수분(buy*) 나중
+      // 복합: 이름 순서대로 처리 — "지정가매도+..."는 매도가 먼저(같은날 매도 후 LOC매수),
+      // "...+지정가매도(애프터)"는 매수가 먼저(아침 LOC매수 후 전날 건 애프터지정가 체결)
       const sp=+h.sellPrice||0, sq=+h.sellQty||0, bp=+h.buyPrice||0, bq=+h.buyQty||0;
-      if(sq>0){ profit+=(sp-avg)*sq; realized+=(sp-avg)*sq; qty-=sq; inv-=avg*sq; totsell+=sp*sq; }
-      if(bq>0){ const nq=qty+bq; avg=nq>0?(avg*qty+bp*bq)/nq:bp; qty=nq; inv+=bp*bq; totbuy+=bp*bq; }
+      const sellFirst=h.kind.startsWith('지정가매도+');
+      const doSell=()=>{ if(sq>0){ profit+=(sp-avg)*sq; realized+=(sp-avg)*sq; qty-=sq; inv-=avg*sq; totsell+=sp*sq; } };
+      const doBuy=()=>{ if(bq>0){ const nq=qty+bq; avg=nq>0?(avg*qty+bp*bq)/nq:bp; qty=nq; inv+=bp*bq; totbuy+=bp*bq; } };
+      if(sellFirst){ doSell(); doBuy(); } else { doBuy(); doSell(); }
     }
     // T값: 직접입력 우선 → 리버스 거래 → 일반 규칙
     if(typeof h.tManual==='number' && !isNaN(h.tManual)){ T=h.tManual; }
-    else if(h.kind==='리버스매도'||h.kind==='리버스매수'){ T=reverseT(h.kind,T,st.div); }
+    else if(h.kind==='리버스매도'||h.kind==='리버스매수'){ T=reverseT(h.kind,T,st.div); reverseTraded=true; }
     else { T=KIND_T[h.kind]?KIND_T[h.kind](T):T; }
+    // 새로 리버스모드에 진입한 시점이면 스트릭 리셋 (1일차 MOC 판정 다시 시작)
+    if(Tbefore<=st.div-1 && T>st.div-1){ reverseTraded=false; }
     // ── 사이클 자동 전환: 매도로 보유 0이 되면 T·평단 리셋 (이력·잔금은 유지) ──
     let cycleEnd=false;
     if(qty<=0 && isSell(h.kind) && !isBuy(h.kind)){
       qty=0; avg=0; T=0; inv=0; // 보유·평단·T·투입원가 리셋 (realized 누적은 유지 → 잔금에 반영)
-      cycleEnd=true;
+      cycleEnd=true; reverseTraded=false;
     }
     // 이 거래 직후 시점의 잔금·별%·별지점
     const balAfter=st.principal+realized-inv;
@@ -939,7 +960,7 @@ function computeInf(){
     return row;
   });
   const bal=st.principal+realized-inv; // 가용 잔금 = 원금 + 실현손익 − 현재 보유분 투입원가
-  return {avg,qty,inv,realized,T,totbuy,totsell,bal,rows,st,cycleSeq};
+  return {avg,qty,inv,realized,T,totbuy,totsell,bal,rows,st,cycleSeq,reverseTraded};
 }
 
 /* 별% 계산 */
@@ -952,7 +973,7 @@ function starPct(ticker,div,T){
     const k=K[div]!==undefined?K[div]:(1.5*20/div);
     return 15-k*T;
   }else{ // SOXL 및 기타 3배
-    const K={15:4/3,20:2.0,30:4/3,40:1.0};
+    const K={20:2.0,30:4/3,40:1.0};
     const k=K[div]!==undefined?K[div]:(2*20/div);
     return 20-k*T;
   }
@@ -1019,33 +1040,52 @@ function renderOrder(){
 
   // ── 리버스모드 (원금 소진: T > 분할-1) ──
   if(c.T>st.div-1 && c.qty>0){
-    const sp=calcStarPoint(c);          // 다중 소스 별지점
-    const star5=sp.val;
     const sellDiv=st.div>=40?20:10;
     const sellQty=Math.floor(c.qty/sellDiv);
     const quarterBuy=c.bal/4;
     const gap=st.gap||2.5;
+    const isDay1 = !c.reverseTraded; // 이 리버스 스트릭에서 아직 리버스매도/매수 기록이 없으면 1일차
     let rh='';
-    // 별지점 수동 입력 칸 (항상 노출)
-    rh+=`<div class="calc" style="margin-bottom:10px"><div class="field" style="margin:0">
-      <label>별지점 (직전 5거래일 종가 평균) <span class="hint">비우면 자동 계산</span></label>
-      <input id="o_star5man" type="number" inputmode="decimal" placeholder="${star5?star5.toFixed(2):'예: 12.34'}" value="${($('o_star5man')&&$('o_star5man').value)||''}" oninput="renderOrder()">
-      <div class="note" style="margin-top:6px">현재 적용: ${star5?('<b>'+px(star5)+'</b> ('+sp.src+')'):'<b style=\\"color:var(--gold)\\">계산 불가</b> — 종가 입력 필요'}</div>
-    </div></div>`;
-    rh+='<div class="order-grp sell"><div class="gt"><span class="gd"></span>리버스 무한매도</div>';
-    rh+=oitem('s',`무한매도 (보유÷${sellDiv})`, star5?'LOC':'MOC', star5||c.avg, Math.max(1,sellQty));
-    rh+=`<div class="note">첫날은 MOC 무조건매도(별지점 무관). 둘째날부터 별지점 위에서 매도.</div>`;
-    rh+='</div>';
-    rh+='<div class="order-grp buy"><div class="gt"><span class="gd"></span>리버스 쿼터매수</div>';
-    if(star5){
-      const bp=star5*(1-gap/100);
-      rh+=oitem('b','쿼터매수 (잔금÷4)','LOC',bp,Math.max(1,Math.floor(quarterBuy/bp)));
-      rh+=`<div class="note">매수금 = 잔금÷4 = ${wn(quarterBuy)} · 별지점 −${gap}% LOC. 첫날은 매도만.</div>`;
+
+    if(isDay1){
+      // ── 1일차: 별지점 계산 불필요, 무조건 MOC매도. 매수 없음 ──
+      rh+='<div class="order-grp sell"><div class="gt"><span class="gd"></span>리버스 무한매도 · 1일차</div>';
+      rh+=oitem('s',`무한매도 (보유÷${sellDiv})`,'MOC',c.avg,Math.max(1,sellQty));
+      rh+=`<div class="note">리버스모드 진입 1일차 — 별지점 무관, <b>무조건 MOC매도</b>. 매수는 없습니다.</div>`;
+      rh+='</div>';
     }else{
-      rh+=`<div class="note">매수금 = 잔금÷4 = ${wn(quarterBuy)} (별지점 아래 LOC). 별지점을 입력하면 단가가 계산됩니다. 첫날은 매도만.</div>`;
+      const sp=calcStarPoint(c);          // 다중 소스 별지점 (둘째날부터만 사용)
+      const star5=sp.val;
+      // 별지점 수동 입력 칸 (항상 노출)
+      rh+=`<div class="calc" style="margin-bottom:10px"><div class="field" style="margin:0">
+        <label>별지점 (직전 5거래일 종가 평균) <span class="hint">비우면 자동 계산</span></label>
+        <input id="o_star5man" type="number" inputmode="decimal" placeholder="${star5?star5.toFixed(2):'예: 12.34'}" value="${($('o_star5man')&&$('o_star5man').value)||''}" oninput="renderOrder()">
+        <div class="note" style="margin-top:6px">현재 적용: ${star5?('<b>'+px(star5)+'</b> ('+sp.src+')'):'<b style=\\"color:var(--gold)\\">계산 불가</b> — 종가 입력 필요'}</div>
+      </div></div>`;
+      rh+='<div class="order-grp sell"><div class="gt"><span class="gd"></span>리버스 무한매도</div>';
+      rh+=oitem('s',`무한매도 (보유÷${sellDiv})`, star5?'LOC':'MOC', star5||c.avg, Math.max(1,sellQty));
+      rh+=`<div class="note">별지점 위에서 매도. 별지점 계산 불가 시에만 잠정 MOC.</div>`;
+      rh+='</div>';
+      rh+='<div class="order-grp buy"><div class="gt"><span class="gd"></span>리버스 쿼터매수</div>';
+      if(star5){
+        const bp=star5*(1-gap/100);
+        rh+=oitem('b','쿼터매수 (잔금÷4)','LOC',bp,Math.max(1,Math.floor(quarterBuy/bp)));
+        rh+=`<div class="note">매수금 = 잔금÷4 = ${wn(quarterBuy)} · 별지점 −${gap}% LOC.</div>`;
+      }else{
+        rh+=`<div class="note">매수금 = 잔금÷4 = ${wn(quarterBuy)} (별지점 아래 LOC). 별지점을 입력하면 단가가 계산됩니다.</div>`;
+      }
+      rh+='</div>';
     }
-    rh+='</div>';
-    rh+=`<div class="warn">리버스모드 진행 중 (T=${c.T.toFixed(2)} > ${st.div-1}). 종가가 평단의 ${st.ticker==='TQQQ'?'−15%':'−20%'}(${wn(c.avg*(st.ticker==='TQQQ'?0.85:0.8))}) 위로 회복하면 다음날 일반모드 복귀.</div>`;
+
+    // 가격 기반 일반모드 복귀 조건 안내 (자동 전환은 아님 — 확인용 배너)
+    const exitMul = st.ticker==='TQQQ'?0.85:0.8;
+    const exitPrice = c.avg*exitMul;
+    const lastClose = (lastQuote.inf&&lastQuote.inf.last) || close || 0;
+    if(lastClose>0 && lastClose>exitPrice){
+      rh+=`<div class="warn" style="border-color:var(--buy-dim);background:rgba(54,211,153,.08);color:#bfe9d3">✅ 최근 종가(${wn(lastClose)})가 복귀 기준(${wn(exitPrice)}) 위로 회복했습니다. 라오어님 기준 <b>내일부터 일반모드 복귀</b> 시점입니다. (T값이 여전히 ${st.div-1}을 초과하면 복귀 즉시 다시 리버스모드 조건이 될 수 있어요 — 그때는 무한매도 흐름이 자연스럽게 이어집니다.)</div>`;
+    }else{
+      rh+=`<div class="warn">리버스모드 진행 중 (T=${c.T.toFixed(2)} &gt; ${st.div-1}). 종가가 평단의 ${st.ticker==='TQQQ'?'−15%':'−20%'}(${wn(exitPrice)}) 위로 회복하면 다음날 일반모드 복귀 검토 대상입니다.</div>`;
+    }
     $('o_orders').innerHTML=rh; render5day(); return;
   }
 
@@ -1396,7 +1436,7 @@ function editInf(i){ /* 입력 폼 제거됨: 삭제 후 시트로 재기록 유
 }
 function delInf(i){if(!confirm('이 기록을 삭제할까요?'))return;curStrat().hist.splice(i,1);save();refreshInf()}
 
-function refreshInf(){updateCurLabels('inf');renderInfNow();renderOrder();renderInfHist();renderInfAnal();renderInfFx();renderStatusline();
+function refreshInf(){updateCurLabels('inf');renderInfNow();renderOrderInline();renderInfHist();renderInfAnal();renderInfFx();renderStatusline();
   // 현재 탭이 활성이면 시세·캔들·차트·지수 자동 로드 (버튼 없이)
   if(S.activeTab==='inf'){ try{loadInfData();loadInfFG();loadFX();}catch(e){console.error(e)} }
 }
@@ -1618,8 +1658,10 @@ function quickLadder(type,price){
 
 /* ════════ 다음 V 미리보기 ════════ */
 function computeNextV(c,ev){
-  const st=c.st, V=c.V, Pool=c.pool, G=st.g, add=st.add||0;
-  const sign=(st.mode===0.25)?-1:1; // 인출식이면 적립금 자리를 인출(−)로
+  const st=c.st, V=c.V, Pool=c.pool, G=st.g;
+  const isAccum=st.mode===0.75, isWd=st.mode===0.25; // 거치식(0.5)은 적립금 항상 0
+  const add = (isAccum||isWd) ? (st.add||0) : 0;
+  const sign=isWd?-1:1; // 인출식이면 적립금 자리를 인출(−)로
   let nextV, calcStr;
   if(st.formula==='skill' && V>0){
     const corr=(ev-V)/(2*Math.sqrt(G));
@@ -1664,7 +1706,8 @@ function enterNextCycle(){
   const ev=vrEval(c)||c.V;
   const r=computeNextV(c,ev);
   const startDate=$('nv_date').value || new Date().toISOString().slice(0,10);
-  const sign=r.sign, add=st.add||0;
+  const isAccum=st.mode===0.75, isWd=st.mode===0.25; // 거치식(0.5)은 적립금 항상 0
+  const sign=r.sign, add=(isAccum||isWd)?(st.add||0):0;
   if(!confirm(`${c.curCyc+1}주차로 진입합니다.\n· 다음 V = ${wn(r.nextV)}\n· ${sign<0?'인출':'적립'} ${wn(add)} ${sign<0?'Pool 차감':'Pool 추가'}\n· 시작일 ${startDate}\n진행할까요?`))return;
 
   // 사이클 히스토리 적재 (직전 사이클 요약)
@@ -1789,7 +1832,7 @@ function renderVrHist(){
 function renderVrOrder(){}
 
 /* ════════ 차트 + 공포탐욕 ════════ */
-let vrChartRange=260, vrChartData=null, fgLoaded=false;
+let vrChartRange=252, vrChartData=null, fgLoaded=false;
 
 async function loadVrChart(force){
   const st=curStrat().settings;
@@ -1850,7 +1893,7 @@ function drawVrChart(){
 }
 
 /* ── 무한매수법 현재 탭: 통합 데이터 로드 (종가표·캔들·차트·환율) ── */
-let infChartRange=260, infChartData=null;
+let infChartRange=252, infChartData=null;
 let infQuoteCache=null;
 async function loadInfData(force){
   const st=curStrat().settings;
@@ -2336,17 +2379,16 @@ function sheetSaveVr(){
 }
 function showFab(){const f=$('fab');if(f)f.classList.add('on')}
 
-/* ════════ 주문표 바텀시트 ════════ */
-function openOrderSheet(){
-  const today=new Date().toISOString().slice(0,10);
-  if(S.activeTab==='inf'){
-    $('ordsheet_title').textContent='오늘의 주문표';
-    const c=computeInf();
-    $('ordsheet_date').textContent=fmtDateK(today)+` · ${c.T<c.st.div/2?'전반전':'후반전'}`;
-    // 전일 종가 입력칸: 평단 없을때(첫매수) 또는 리버스모드일 때만 필요
-    const needClose = (c.qty<=0) || (c.T>=c.st.div); // 첫매수 또는 리버스 진입
-    let h='';
-    h+=`<div class="calc"><h3 style="font-size:15px;font-weight:800;margin-bottom:13px">📋 LOC 주문 계산</h3>`;
+/* ════════ 오늘의 주문표 (인라인, 항상 표시) ════════ */
+let _lastNeedClose=null;
+function renderOrderInline(){
+  if(!$('inf_order_body'))return; // 다른 탭이면 스킵
+  const c=computeInf();
+  // 전일 종가 입력칸: 평단 없을때(첫매수) 또는 리버스모드일 때만 필요
+  const needClose = (c.qty<=0) || (c.T>=c.st.div);
+  if(needClose!==_lastNeedClose){
+    _lastNeedClose=needClose;
+    let h=`<h3 style="font-size:15px;font-weight:800;margin-bottom:13px"><span class="dot"></span>📋 오늘의 주문표</h3>`;
     if(needClose){
       h+=`<div class="field"><label id="o_close_lbl">전일 종가 ($) <span class="hint">LOC 기준가</span></label>
         <div style="display:flex;gap:8px"><input id="o_close" type="text" inputmode="decimal" placeholder="234.68" oninput="commaInput(this);onCloseInput()" style="flex:1">
@@ -2359,20 +2401,12 @@ function openOrderSheet(){
     h+=`<div class="rowline"><span class="k">1회 매수금</span><span class="val mono" id="o_buy1">—</span></div>
         <div class="rowline"><span class="k">별% / 별지점</span><span class="val mono" id="o_star">—</span></div>
         <div class="rowline"><span class="k">LOC 매수 상한 (×큰수)</span><span class="val mono" id="o_limit" style="color:var(--gold)">—</span></div>
-      </div>
       <div id="o_5day"></div><div id="o_orders"></div>
       <div class="warn">프리장 시작 직후(서머 17시·겨울 18시) LOC로 거십니다. 상한가 초과 주문은 증권사가 거부할 수 있습니다.</div>`;
-    $('ordsheet_body').innerHTML=h;
-    renderOrder();
-  }else{
-    // VR은 콕핏(현재/매수표/다음V)이 메인 — 주문시트 대신 매수표 탭으로 이동
-    $('ordsheetbg').classList.remove('on');$('ordsheet').classList.remove('on');
-    const chip=document.querySelector('#vr .chip[data-b="vr-table"]'); if(chip)chip.click();
-    return;
+    $('inf_order_body').innerHTML=h;
   }
-  $('ordsheetbg').classList.add('on');$('ordsheet').classList.add('on');
+  renderOrder();
 }
-function closeOrderSheet(){$('ordsheetbg').classList.remove('on');$('ordsheet').classList.remove('on')}
 function updateCurLabels(which){
   const isKrw=(curStrat().settings.cur||'usd')==='krw';
   const sym=isKrw?'₩':'$';
@@ -2515,12 +2549,19 @@ function openSettings(){
     $('set_add_lbl').textContent=`매 사이클 적립금 (${sym})`;
     $('set_startv_lbl').innerHTML=`시작 V (${sym}) <span class="hint">0이면 첫 매수가 V</span>`;
     $('set_startpool_lbl').textContent=`시작 Pool (${sym})`;
+    applyVrModeUI(st.mode);
   }
   $('setModal').classList.add('on');
 }
 function closeSettings(){$('setModal').classList.remove('on')}
 function segSet(id,val){$(id).querySelectorAll('button').forEach(b=>b.classList.toggle('on',b.dataset.v===val))}
 function segGet(id){const b=$(id).querySelector('button.on');return b?b.dataset.v:null}
+// 거치식(mode=0.5)은 적립금이 항상 0이므로 입력칸을 비활성화해 혼동 방지
+function applyVrModeUI(mode){
+  const isLump=String(mode)==='0.5';
+  const inp=$('set_add'); if(inp) inp.disabled=isLump;
+  const lbl=$('set_add_lbl'); if(lbl) lbl.style.opacity=isLump?'0.4':'1';
+}
 function setupSegs(){
   ['set_ticker','set_div','set_vmode','set_vformula','set_cur','set_vcur'].forEach(id=>{
     const el=$(id);if(!el)return;
@@ -2531,6 +2572,8 @@ function setupSegs(){
         if(id==='set_vcur'){const sym=b.dataset.v==='krw'?'₩':'$';$('set_add_lbl').textContent=`매 사이클 적립금 (${sym})`;$('set_startv_lbl').innerHTML=`시작 V (${sym}) <span class="hint">0이면 첫 매수가 V</span>`;$('set_startpool_lbl').textContent=`시작 Pool (${sym})`;}
         // 종목 변경 시 익절배율(별%) 오피셜 기본값 자동 세팅 — TQQQ 15% / SOXL 20%
         if(id==='set_ticker'){const t=$('set_target'); if(t)t.value=(b.dataset.v==='TQQQ'?15:20);}
+        // 운용모드 변경 시 거치식이면 적립금 입력 비활성화
+        if(id==='set_vmode'){ applyVrModeUI(b.dataset.v); }
       };
     });
   });
@@ -2590,14 +2633,10 @@ function setupTabs(){
   });
   // VR 차트 기간 선택
   const csel=$('chart_sel');
-  if(csel) csel.querySelectorAll('button').forEach(b=>{ b.onclick=()=>{
-    csel.querySelectorAll('button').forEach(x=>x.classList.remove('on')); b.classList.add('on');
-    vrChartRange=+b.dataset.r; drawVrChart(); }; });
+  if(csel) csel.addEventListener('change',()=>{ vrChartRange=+csel.value; drawVrChart(); });
   // 무한매수법 차트 기간 선택
   const isel=$('inf_chart_sel');
-  if(isel) isel.querySelectorAll('button').forEach(b=>{ b.onclick=()=>{
-    isel.querySelectorAll('button').forEach(x=>x.classList.remove('on')); b.classList.add('on');
-    infChartRange=+b.dataset.r; drawInfChart(); }; });
+  if(isel) isel.addEventListener('change',()=>{ infChartRange=+isel.value; drawInfChart(); });
 }
 
 /* ── Firebase Firestore 동기화 (사용자별) ── */

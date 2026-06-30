@@ -213,10 +213,10 @@ td:first-child{text-align:left;}
   <div class="brand">
     <div>
       <div class="logo">Backtest</div>
-      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v1.63</span></h1>
+      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v1.64</span></h1>
     </div>
   </div>
-  <a href="/" class="home">← 운용 도구로</a>
+  <a href="/" class="home">← JK 퀀트</a>
   <button id="btAuthBtn" onclick="btLogin()" style="font-size:11px;padding:6px 12px;border-radius:7px;border:1px solid var(--border2);background:transparent;color:var(--dim);cursor:pointer">로그인</button>
 </div>
 <div id="dataStat" style="font-size:11.5px;color:var(--dim);margin:-12px 0 16px;font-variant-numeric:tabular-nums;display:none"></div>
@@ -258,7 +258,7 @@ td:first-child{text-align:left;}
         <button data-d="40">40</button>
       </div>
     </div>
-    <div class="ctrl s-im hide"><label>익절 %</label><input type="number" id="imTarget" value="20" min="5" max="50"></div>
+    <div class="ctrl s-im hide"><label>익절 % <span style="font-size:9px;color:var(--dim)">미변경시 종목별 공식값</span></label><input type="number" id="imTarget" value="20" min="5" max="50" oninput="this.dataset.touched='1'"></div>
     <div class="ctrl s-im hide"><label>재투자</label>
       <div class="seg" id="imCompound">
         <button data-c="1" class="active" title="익절금을 다음 사이클 원금에 합산">복리</button>
@@ -311,7 +311,8 @@ td:first-child{text-align:left;}
 <div class="rules s-im hide">
   <span class="bd">매수</span> 1회매수금 = <b>잔금 ÷ (분할−T)</b> · 전반전 절반 별지점·절반 평단 LOC, 후반전 전체 별지점 LOC<br>
   <span class="bd">별%</span> 20분할 SOXL <b>(20−2T)%</b> / TQQQ (15−1.5T)% · 별지점 = 평단×(1+별%)<br>
-  <span class="bd">매도</span> 보유 1/4 별지점 쿼터매도(T×0.75) + 3/4 <b>평단+익절% 지정가</b> · 보유 0 시 복리 재시작
+  <span class="bd">매도</span> 보유 1/4 별지점 쿼터매도(T×0.75) + 3/4 <b>평단+익절% 지정가</b> · 보유 0 시 복리 재시작<br>
+  <span class="bd">리버스</span> T&gt;분할−1(원금소진) 시 무한매도(보유÷10·÷20)+쿼터매수(잔금÷4) · 종가&gt;평단×(1−15%/20%) 회복 시 다음날 일반모드 복귀
 </div>
 <div class="rules s-vr hide">
   <span class="bd">V 갱신</span> 다음 V = 현재 V + <b>Pool/G</b> + 적립금 · 2주(10거래일) 사이클<br>
@@ -580,14 +581,7 @@ function buildPickSingle(){
       c.className="tk-chip"+(active.has(t)?" on":"");
       c.style.setProperty("--c",META[t].color);c.id="tps_"+t;
       c.innerHTML="<div class=\"d\"></div>"+t;
-      c.onclick=()=>{ c.classList.toggle("on"); const on=c.classList.contains("on"); if(on) active.add(t); else active.delete(t);
-        // 무매 탭: 종목별 익절% 자동 세팅
-        if(strat==="im"){
-          const allSelected=[...imActive];
-          const tgt=document.getElementById('imTarget');
-          if(tgt){ tgt.value = allSelected.includes('TQQQ')&&!allSelected.some(x=>x!=='TQQQ') ? 15 : 20; }
-        }
-      };
+      c.onclick=()=>{ c.classList.toggle("on"); const on=c.classList.contains("on"); if(on) active.add(t); else active.delete(t); };
       single.appendChild(c);
     });
   }
@@ -662,10 +656,55 @@ function _dcaOne(t,days,amt,step){
 function runIM(days,tkr,cap,divs,targetPct,compound=true){
   const starBase=tkr==='SOXL'?20:15;
   const starSlope=tkr==='SOXL'?(divs===20?2:1):(divs===20?1.5:0.75);
+  const exitMul = tkr==='TQQQ'?0.85:0.80;   // 리버스 종료(가격회복) 조건: 종가 > 평단×(1-15%/20%)
+  const sellDiv = divs>=40?20:10;            // 리버스 무한매도 분모 (20분할→10, 40분할→20)
   let cash=cap,shares=0,avg=0,T=0,realized=0,cycles=0,savedProfit=0;const snap=[];
   let peakInvested=0;
+  let inReverse=false, reverseDay1=false;    // 리버스모드 상태 추적
+  const closeHist=[];                        // 직전 5거래일 종가 (리버스 별지점용, 모드 무관하게 항상 갱신)
   days.forEach((d,i)=>{
     const [c,o,hi,lo]=M[tkr][d];
+    closeHist.push(c); if(closeHist.length>5) closeHist.shift();
+
+    // 오늘 리버스모드로 처리할지 판정 (전날까지 누적된 T 기준 — 원금 소진)
+    if(!inReverse && T>divs-1 && shares>0){ inReverse=true; reverseDay1=true; }
+
+    if(inReverse && shares>0 && avg>0){
+      // ── 리버스모드: 무한매도(보유÷10·÷20) + 쿼터매수(잔금÷4) ──
+      if(reverseDay1){
+        // 1일차: 별지점 계산 불필요, 무조건 매도. 매수 없음.
+        const sellQty=Math.floor(shares/sellDiv);
+        if(sellQty>0){ realized+=sellQty*(c-avg); cash+=sellQty*c; shares-=sellQty; T=divs>=40?T*0.95:T*0.9; }
+        reverseDay1=false;
+      }else{
+        const star5=closeHist.reduce((s,x)=>s+x,0)/closeHist.length;
+        // 매도: 종가>=별지점 → 직전 보유÷10(or÷20)
+        if(c>=star5){
+          const sellQty=Math.floor(shares/sellDiv);
+          if(sellQty>0){ realized+=sellQty*(c-avg); cash+=sellQty*c; shares-=sellQty; T=divs>=40?T*0.95:T*0.9; }
+        }
+        // 매수: 잔금÷4, 별지점 −2.5% LOC (운용도구 기본 gap%와 동일)
+        if(shares>1e-9){
+          const buyP=star5*0.975;
+          if(c<=buyP && cash>1){
+            const amt=cash/4; const q=amt/c;
+            avg=(shares*avg+amt)/(shares+q); shares+=q; cash-=amt;
+            T=T+(divs-T)*0.25;
+          }
+        }
+      }
+      // 전량 매도 → 사이클 리셋 (복리/단리 동일 처리)
+      if(shares<1e-9){ shares=0;avg=0;cycles++; inReverse=false;
+        if(compound){} else { savedProfit+=cash-cap; cash=cap; }
+        T=0; snap.push([d,cash+savedProfit]); peakInvested=Math.max(peakInvested,cap-cash); return; }
+      // 가격 회복(종가>평단×exitMul) → 내일부터 일반모드 (T는 그대로 승계, T가 여전히 분할-1 초과면 내일 다시 리버스 진입)
+      if(c>avg*exitMul){ inReverse=false; }
+      if(i%10===0)snap.push([d,cash+shares*c+savedProfit]);
+      peakInvested=Math.max(peakInvested, cap-cash);
+      return;
+    }
+
+    // ── 일반모드 ──
     if(shares>0&&avg>0){
       const starP=avg*(1+(starBase-starSlope*T)/100);
       const tgt=avg*(1+targetPct/100);
@@ -817,16 +856,21 @@ async function run(){
   }else if(strat==='im'){
     if(!imActive.size){alert('종목을 선택하세요.');return;}
     const cap=+document.getElementById('imCap').value||10000;
-    const tgt=+document.getElementById('imTarget').value||20;
+    const tgtEl=document.getElementById('imTarget');
+    const tgtOverride=+tgtEl.value||20;
+    const tgtTouched=tgtEl.dataset.touched==='1';
     const compound=document.querySelector('#imCompound button.active')?.dataset.c!=='0';
     const commonD=commonDays(start,end,[...imActive]);
     if(commonD.length<10){alert('공통 거래일이 부족합니다.');return;}
     const results={};
     [...imActive].forEach(t=>{
+      // 공식 기본값: TQQQ 15% / SOXL·그외 3배 20% — 사용자가 직접 익절%를 건드린 경우에만 전 종목에 그 값을 강제 적용
+      const defTgt = t==='TQQQ'?15:20;
+      const tgt = tgtTouched ? tgtOverride : defTgt;
       results[t]={res:runIM(commonD,t,cap,imDiv,tgt,compound), days:commonD};
     });
     if(!Object.keys(results).length){alert('데이터 부족');return;}
-    renderMultiStrat('im',results,{cap,tgt});
+    renderMultiStrat('im',results,{cap,tgt:tgtTouched?tgtOverride:null});
   }else{
     if(!vrActive.size){alert('종목을 선택하세요.');return;}
     const contribUSD=+document.getElementById('vrContrib').value||100;
