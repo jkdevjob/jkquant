@@ -406,7 +406,7 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
 </div>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v21.3</span></h1></div>
+    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v21.4</span></h1></div>
     <div style="display:flex;align-items:center;gap:8px">
       <a class="btbtn" href="/backtest">📊<span class="bt-txt"> 백테스트</span></a>
       <button class="gear" onclick="openSettings()">⚙️</button>
@@ -742,7 +742,7 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
   <footer>
     <strong>JK 퀀트</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v21.3</b> · 2026-07-01</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v21.4</b> · 2026-07-01</div>
   </footer>
 </div>
 
@@ -904,9 +904,9 @@ function curStrat(){const b=tabBox();return b.sessions.find(x=>x.id===b.active)|
 function sess(){return curStrat()}
 
 /* ── T값 계산 ── */
-// '지정가매도' 단독(같은날 매수 없이 3/4만 체결)은 문서에 별도 T공식이 없어 변경 없음으로 처리
-// (backtest.html의 처리 방식과 통일 — 두 도구 간 동일 거래의 T 계산 불일치 해소)
-const KIND_T={'1회매수':t=>t+1,'절반매수':t=>t+0.5,'쿼터매도':t=>t*0.75,'지정가매도':t=>t,
+// 단독 '지정가매도'(익절 3/4만 부분체결되고 사이클이 안 끝난 엣지 케이스)는 T×0.25.
+// 복합거래 '지정가매도+매수'가 ×0.25+n인 것과 정합. (보통은 전량매도→사이클 종료로 T가 리셋됨)
+const KIND_T={'1회매수':t=>t+1,'절반매수':t=>t+0.5,'쿼터매도':t=>t*0.75,'지정가매도':t=>t*0.25,
   '지정가매도+1회매수':t=>t*0.25+1,'지정가매도+절반매수':t=>t*0.25+0.5,
   '1회매수+지정가매도(애프터)':t=>t*0.25+1,'절반매수+지정가매도(애프터)':t=>t*0.25+0.5};
 // 리버스모드 T규칙은 분할수에 따라 달라 함수로 별도 처리 (computeInf에서 적용)
@@ -923,9 +923,13 @@ function computeInf(){
   const st=curStrat().settings, hist=curStrat().hist;
   let avg=0,qty=0,inv=0,realized=0,T=0,totbuy=0,totsell=0,cycleSeq=1;
   let reverseTraded=false; // 현재 리버스 스트릭에서 이미 리버스매도/매수가 있었는지 (1일차 MOC 판정용)
+  let inReverseNow=false;  // 지금 리버스 진행 중인지 (state). T로 매번 재판정하면 첫 MOC매도에 T가
+                           // 분할−1 밑으로 떨어져 리버스가 즉시 풀리므로, state로 들고 간다.
+                           // 진입=T>분할−1, 유지=리버스거래 계속, 종료=일반거래 기록 또는 전량매도.
   const rows=hist.map(h=>{
     let profit=0;
     const Tbefore=T;
+    const isRev = (h.kind==='리버스매도'||h.kind==='리버스매수');
     if(h.kind==='지정가매도'||h.kind==='쿼터매도'||h.kind==='리버스매도'){
       profit=(h.price-avg)*h.qty; realized+=profit; qty-=h.qty; inv-=avg*h.qty; totsell+=h.price*h.qty;
     }else if(h.kind==='1회매수'||h.kind==='절반매수'||h.kind==='리버스매수'){
@@ -941,15 +945,18 @@ function computeInf(){
     }
     // T값: 직접입력 우선 → 리버스 거래 → 일반 규칙
     if(typeof h.tManual==='number' && !isNaN(h.tManual)){ T=h.tManual; }
-    else if(h.kind==='리버스매도'||h.kind==='리버스매수'){ T=reverseT(h.kind,T,st.div); reverseTraded=true; }
+    else if(isRev){ T=reverseT(h.kind,T,st.div); reverseTraded=true; }
     else { T=KIND_T[h.kind]?KIND_T[h.kind](T):T; }
-    // 새로 리버스모드에 진입한 시점이면 스트릭 리셋 (1일차 MOC 판정 다시 시작)
-    if(Tbefore<=st.div-1 && T>st.div-1){ reverseTraded=false; }
+    // 리버스 state 갱신: 리버스 거래면 유지/진입, 일반거래(매수·일반매도)면 리버스 종료(가격회복으로 복귀한 것)
+    if(isRev) inReverseNow=true;
+    else inReverseNow=false;
+    // 새로 리버스모드에 진입한 시점이면 스트릭 리셋 (1일차 MOC 판정 다시 시작). 소진 기준 T≥분할.
+    if(Tbefore<st.div && T>=st.div){ reverseTraded=false; }
     // ── 사이클 자동 전환: 매도로 보유 0이 되면 T·평단 리셋 (이력·잔금은 유지) ──
     let cycleEnd=false;
     if(qty<=0 && isSell(h.kind) && !isBuy(h.kind)){
       qty=0; avg=0; T=0; inv=0; // 보유·평단·T·투입원가 리셋 (realized 누적은 유지 → 잔금에 반영)
-      cycleEnd=true; reverseTraded=false;
+      cycleEnd=true; reverseTraded=false; inReverseNow=false;
     }
     // 이 거래 직후 시점의 잔금·별%·별지점
     const balAfter=st.principal+realized-inv;
@@ -959,8 +966,12 @@ function computeInf(){
     if(cycleEnd)cycleSeq++;
     return row;
   });
+  // 리버스 표시 여부: 이미 리버스 거래로 진행 중이거나(state), 아직 리버스 거래는 없지만 원금이 소진돼
+  // 일반모드 1회매수금 = 잔금/(분할−T)의 분모가 0 이하(T≥분할)가 된 경우(최초 진입 직전).
+  // 문서의 "T>분할−1"은 정수 T 기준 표현이며, 소수 T가 가능한 V4.0에선 분모≤0(T≥분할)이 정확한 소진 기준.
+  const reverseActive = (inReverseNow || (T>=st.div)) && qty>0;
   const bal=st.principal+realized-inv; // 가용 잔금 = 원금 + 실현손익 − 현재 보유분 투입원가
-  return {avg,qty,inv,realized,T,totbuy,totsell,bal,rows,st,cycleSeq,reverseTraded};
+  return {avg,qty,inv,realized,T,totbuy,totsell,bal,rows,st,cycleSeq,reverseTraded,inReverseNow,reverseActive};
 }
 
 /* 별% 계산 */
@@ -1038,8 +1049,8 @@ function renderOrder(){
   $('o_limit').textContent=close>0?wn(limit):'—';
   if(!close&&c.avg<=0){$('o_orders').innerHTML='<div class="note">🔄 자동 버튼을 누르거나 전일 종가를 입력하면 주문표가 나옵니다.</div>';render5day();return}
 
-  // ── 리버스모드 (원금 소진: T > 분할-1) ──
-  if(c.T>st.div-1 && c.qty>0){
+  // ── 리버스모드 (원금 소진 후 진행 중: state 기반) ──
+  if(c.reverseActive){
     const sellDiv=st.div>=40?20:10;
     const sellQty=Math.floor(c.qty/sellDiv);
     const quarterBuy=c.bal/4;
@@ -1082,9 +1093,9 @@ function renderOrder(){
     const exitPrice = c.avg*exitMul;
     const lastClose = (lastQuote.inf&&lastQuote.inf.last) || close || 0;
     if(lastClose>0 && lastClose>exitPrice){
-      rh+=`<div class="warn" style="border-color:var(--buy-dim);background:rgba(54,211,153,.08);color:#bfe9d3">✅ 최근 종가(${wn(lastClose)})가 복귀 기준(${wn(exitPrice)}) 위로 회복했습니다. 라오어님 기준 <b>내일부터 일반모드 복귀</b> 시점입니다. (T값이 여전히 ${st.div-1}을 초과하면 복귀 즉시 다시 리버스모드 조건이 될 수 있어요 — 그때는 무한매도 흐름이 자연스럽게 이어집니다.)</div>`;
+      rh+=`<div class="warn" style="border-color:var(--buy-dim);background:rgba(54,211,153,.08);color:#bfe9d3">✅ 최근 종가(${wn(lastClose)})가 복귀 기준(${wn(exitPrice)}) 위로 회복했습니다. 라오어님 기준 <b>내일부터 일반모드 복귀</b>이며, T값(${c.T.toFixed(2)})은 그대로 이어집니다. 복귀 후 일반모드 1회매수금 = 잔금 ÷ (분할−T)이 가능하면 정상 진행하고, 그래도 1회분조차 안 되면(T가 분할에 도달) 다시 리버스로 들어갑니다.</div>`;
     }else{
-      rh+=`<div class="warn">리버스모드 진행 중 (T=${c.T.toFixed(2)} &gt; ${st.div-1}). 종가가 평단의 ${st.ticker==='TQQQ'?'−15%':'−20%'}(${wn(exitPrice)}) 위로 회복하면 다음날 일반모드 복귀 검토 대상입니다.</div>`;
+      rh+=`<div class="warn">리버스모드 진행 중 (T=${c.T.toFixed(2)} &gt; ${st.div-1}). 종가가 평단의 ${st.ticker==='TQQQ'?'−15%':'−20%'}(${wn(exitPrice)}) 위로 회복하면 다음날 일반모드 복귀입니다. 리버스 매도가 누적되면 T가 ×${st.div>=40?'0.95':'0.9'}씩 줄어 자연히 분할−1 밑으로 내려갑니다.</div>`;
     }
     $('o_orders').innerHTML=rh; render5day(); return;
   }
@@ -1105,7 +1116,7 @@ function renderOrder(){
       if(p>0)html+=oitem('b',`하방 ${i} (-${(gap*i).toFixed(1)}%)`,'LOC',p,rq);
     }
   }else{
-    const baseP = half ? buyPt : buyPt; // 하방 기준점 = 별지점-0.01
+    const baseP = buyPt; // 하방 LOC 기준점 = 별지점-0.01
     if(half){
       html+=oitem('b','별지점 매수','LOC',buyPt,Math.max(1,Math.floor((buy1/2)/buyPt)));
       html+=oitem('b','평단 매수','LOC',c.avg,Math.max(1,Math.floor((buy1/2)/c.avg)));
@@ -2384,8 +2395,8 @@ let _lastNeedClose=null;
 function renderOrderInline(){
   if(!$('inf_order_body'))return; // 다른 탭이면 스킵
   const c=computeInf();
-  // 전일 종가 입력칸: 평단 없을때(첫매수) 또는 리버스모드일 때만 필요
-  const needClose = (c.qty<=0) || (c.T>=c.st.div);
+  // 전일 종가 입력칸: 첫 매수(평단 없음) 또는 리버스 진행 중(별지점 자동계산 보조용)일 때 노출
+  const needClose = (c.qty<=0) || c.reverseActive;
   if(needClose!==_lastNeedClose){
     _lastNeedClose=needClose;
     let h=`<h3 style="font-size:15px;font-weight:800;margin-bottom:13px"><span class="dot"></span>📋 오늘의 주문표</h3>`;

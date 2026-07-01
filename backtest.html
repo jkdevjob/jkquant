@@ -213,7 +213,7 @@ td:first-child{text-align:left;}
   <div class="brand">
     <div>
       <div class="logo">Backtest</div>
-      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v1.64</span></h1>
+      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v1.65</span></h1>
     </div>
   </div>
   <a href="/" class="home">← JK 퀀트</a>
@@ -666,8 +666,10 @@ function runIM(days,tkr,cap,divs,targetPct,compound=true){
     const [c,o,hi,lo]=M[tkr][d];
     closeHist.push(c); if(closeHist.length>5) closeHist.shift();
 
-    // 오늘 리버스모드로 처리할지 판정 (전날까지 누적된 T 기준 — 원금 소진)
-    if(!inReverse && T>divs-1 && shares>0){ inReverse=true; reverseDay1=true; }
+    // 리버스 진입: 원금 소진 = 일반모드 1회매수금 잔금/(분할−T)의 분모가 0 이하(T≥분할).
+    // (문서 "T>분할−1"은 정수 T 표현. 소수 T 가능한 V4.0에선 분모≤0인 T≥분할이 정확한 소진 기준.)
+    // 일단 들어가면 T가 매도로 줄어도 리버스 유지, 종료는 오직 '가격 회복' 또는 '전량 매도'로만 판정.
+    if(!inReverse && T>=divs && shares>0){ inReverse=true; reverseDay1=true; }
 
     if(inReverse && shares>0 && avg>0){
       // ── 리버스모드: 무한매도(보유÷10·÷20) + 쿼터매수(잔금÷4) ──
@@ -697,7 +699,8 @@ function runIM(days,tkr,cap,divs,targetPct,compound=true){
       if(shares<1e-9){ shares=0;avg=0;cycles++; inReverse=false;
         if(compound){} else { savedProfit+=cash-cap; cash=cap; }
         T=0; snap.push([d,cash+savedProfit]); peakInvested=Math.max(peakInvested,cap-cash); return; }
-      // 가격 회복(종가>평단×exitMul) → 내일부터 일반모드 (T는 그대로 승계, T가 여전히 분할-1 초과면 내일 다시 리버스 진입)
+      // 가격 회복(종가>평단×exitMul) → 내일부터 일반모드 복귀. T는 그대로 승계.
+      // (복귀 후 일반모드에서 1회분도 못 사는 상태가 되면 T>분할−1이라 자동으로 다시 리버스 진입)
       if(c>avg*exitMul){ inReverse=false; }
       if(i%10===0)snap.push([d,cash+shares*c+savedProfit]);
       peakInvested=Math.max(peakInvested, cap-cash);
@@ -711,17 +714,22 @@ function runIM(days,tkr,cap,divs,targetPct,compound=true){
       const orig=shares;              // 하루 시작 시 보유량 기준
       const q3=orig*0.75;            // 익절 지정가: 3/4
       const q1=orig*0.25;            // 별지점 LOC: 1/4
+      let tpHit=false, qtHit=false;
       // ① 익절 지정가매도 (intraday): 고가 >= 익절가
-      if(hi>=tgt&&q3>0){realized+=q3*(tgt-avg);cash+=q3*tgt;shares-=q3;}
+      if(hi>=tgt&&q3>0){realized+=q3*(tgt-avg);cash+=q3*tgt;shares-=q3;tpHit=true;}
       // ② 별지점 LOC매도 (at close): 종가 >= 별지점. 원래 1/4 기준 (이미 팔린 것 차감)
-      if(c>=starP&&orig>0){const sell=Math.min(q1,shares);if(sell>1e-9){realized+=sell*(c-avg);cash+=sell*c;shares-=sell;T*=0.75;}}
+      if(c>=starP&&orig>0){const sell=Math.min(q1,shares);if(sell>1e-9){realized+=sell*(c-avg);cash+=sell*c;shares-=sell;qtHit=true;}}
+      // T값 갱신: 익절(지정가매도)=×0.25, 쿼터매도=×0.75. 둘 다면 전량매도로 아래에서 리셋.
+      // (index.html KIND_T와 정합: 지정가매도 ×0.25 / 쿼터매도 ×0.75)
+      if(tpHit) T*=0.25;
+      if(qtHit) T*=0.75;
       // 전량 매도 → 사이클 리셋 (복리 포함)
       if(shares<1e-9){shares=0;avg=0;cycles++;
         if(compound){ /* 복리: 익절금 포함 현금 그대로 다음 사이클 사용 */ }
         else { savedProfit+=cash-cap; cash=cap; }  // 단리: 초과분 별도 보관, 원금 리셋
         T=0;snap.push([d,cash+savedProfit]);return;}
     }
-    if(T<=divs-1&&cash>1){
+    if(T<divs&&cash>1){
       let one=Math.min(cash/(divs-T),cash);
       if(shares===0&&T===0){shares+=one/c;avg=c;cash-=one;T+=1;}
       else{
