@@ -406,7 +406,7 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
 </div>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v21.4</span></h1></div>
+    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v21.5</span></h1></div>
     <div style="display:flex;align-items:center;gap:8px">
       <a class="btbtn" href="/backtest">📊<span class="bt-txt"> 백테스트</span></a>
       <button class="gear" onclick="openSettings()">⚙️</button>
@@ -742,7 +742,7 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
   <footer>
     <strong>JK 퀀트</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v21.4</b> · 2026-07-01</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v21.5</b> · 2026-07-01</div>
   </footer>
 </div>
 
@@ -1474,7 +1474,16 @@ function computeVr(){
   hist.forEach(h=>{
     const hc=(h.cyc!=null?h.cyc:0);
     if(hc!==curCyc){ curCyc=hc; cycStartPool=pool; cycTrade=0; cycDiv=0; }
-    if(h.type==='buy'){const amt=h.price*h.qty;qty+=h.qty;totbuy+=amt;buyShares+=h.qty;pool-=amt;cycTrade-=amt;if(!firstBuyDone){V=amt;firstBuyDone=true;cycStartPool=pool+amt;}}
+    if(h.type==='buy'){
+      const amt=h.price*h.qty; qty+=h.qty; totbuy+=amt; buyShares+=h.qty;
+      if(!firstBuyDone){
+        // 첫 매수 = V를 형성하는 초기 투입. Pool(여유현금)에서 꺼낸 게 아니므로 Pool 차감 안 함.
+        // (startPool 없이 "0원부터 시작" 시 Pool이 음수가 되던 버그 수정)
+        V=amt; firstBuyDone=true; cycStartPool=pool;
+      }else{
+        pool-=amt; cycTrade-=amt;
+      }
+    }
     else if(h.type==='sell'){const amt=h.price*h.qty;qty-=h.qty;totsell+=amt;pool+=amt;cycTrade+=amt;}
     else if(h.type==='add'){pool+=h.amt;totadd+=h.amt;}
     else if(h.type==='wd'){pool-=h.amt;totwd+=h.amt;}
