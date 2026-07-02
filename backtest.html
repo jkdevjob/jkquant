@@ -213,7 +213,7 @@ td:first-child{text-align:left;}
   <div class="brand">
     <div>
       <div class="logo">Backtest</div>
-      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v1.66</span></h1>
+      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v1.68</span></h1>
     </div>
   </div>
   <a href="/" class="home">← JK 퀀트</a>
@@ -388,7 +388,11 @@ async function fetchPrices(startDate, endDate){
       const data=Object.values(allData).sort((a,b)=>a[0]<b[0]?-1:1);
       if(data.length<10){ failed.push(t); return; }
       const calDays=(new Date(data[data.length-1][0])-new Date(data[0][0]))/864e5;
-      qual[t]={n:data.length, daily:true, calYrs:calDays/365.25};
+      // 일봉 여부 실제 감지: 연속 날짜 간격의 중앙값이 4일 이하면 일봉, 아니면 주간/월간 다운샘플 의심
+      const gaps=[]; for(let gi=1;gi<data.length;gi++) gaps.push((new Date(data[gi][0])-new Date(data[gi-1][0]))/864e5);
+      gaps.sort((a,b)=>a-b);
+      const medGap=gaps.length?gaps[Math.floor(gaps.length/2)]:1;
+      qual[t]={n:data.length, daily:medGap<=4, calYrs:calDays/365.25};
       out[t]=data;
     }catch(e){ console.warn('로딩 실패:',t,e.message); failed.push(t); }
   }));
@@ -474,6 +478,8 @@ async function loadData(startDate, endDate){
       let msg=`✓ ~${maxDate} · ${qSummary}`;
       if(failed.length) msg+=` | 실패: ${failed.join(',')}`;
       const hasMonthly=loaded.some(t=>qual[t]&&!qual[t].daily);
+      const monthlyList=loaded.filter(t=>qual[t]&&!qual[t].daily);
+      if(hasMonthly) msg+=` | ⚠ ${monthlyList.join(',')} 일봉 아님(주·월간 다운샘플) — 무매 백테스트 부정확`;
       stat.textContent=msg;
       stat.style.color=hasMonthly?'var(--gold)':failed.length?'var(--gold)':'var(--green)';
     }
@@ -655,8 +661,10 @@ function _dcaOne(t,days,amt,step){
 
 // ──── 전략 2: 무한매수법 V4.0 ────
 function runIM(days,tkr,cap,divs,targetPct,compound=true){
-  const starBase=tkr==='SOXL'?20:15;
-  const starSlope=tkr==='SOXL'?(divs===20?2:1):(divs===20?1.5:0.75);
+  // 종목 계열: TQQQ만 TQQQ식(base15/복귀−15%), 그 외 전부 SOXL식(base20/복귀−20%) — index.html과 동일 규약
+  // (문서상 TQQQ/SOXL만 오피셜. 복귀 기준은 "T 마지막 쿼터매도 기준과 동일"이므로 base와 반드시 짝이어야 함)
+  const starBase=tkr==='TQQQ'?15:20;
+  const starSlope=tkr==='TQQQ'?(divs===20?1.5:0.75):(divs===20?2:1);
   const exitMul = tkr==='TQQQ'?0.85:0.80;   // 리버스 종료(가격회복) 조건: 종가 > 평단×(1-15%/20%)
   const sellDiv = divs>=40?20:10;            // 리버스 무한매도 분모 (20분할→10, 40분할→20)
   let cash=cap,shares=0,avg=0,T=0,realized=0,cycles=0,savedProfit=0;const snap=[];

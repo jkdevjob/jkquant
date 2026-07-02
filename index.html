@@ -406,7 +406,7 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
 </div>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v21.5</span></h1></div>
+    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v21.6</span></h1></div>
     <div style="display:flex;align-items:center;gap:8px">
       <a class="btbtn" href="/backtest">📊<span class="bt-txt"> 백테스트</span></a>
       <button class="gear" onclick="openSettings()">⚙️</button>
@@ -742,7 +742,7 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
   <footer>
     <strong>JK 퀀트</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v21.5</b> · 2026-07-01</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v21.6</b> · 2026-07-01</div>
   </footer>
 </div>
 
@@ -954,7 +954,7 @@ function computeInf(){
     if(Tbefore<st.div && T>=st.div){ reverseTraded=false; }
     // ── 사이클 자동 전환: 매도로 보유 0이 되면 T·평단 리셋 (이력·잔금은 유지) ──
     let cycleEnd=false;
-    if(qty<=0 && isSell(h.kind) && !isBuy(h.kind)){
+    if(qty<=1e-9 && isSell(h.kind) && !isBuy(h.kind)){ // 1e-9 톨러런스: 소수 수량 매도 시 부동소수점 잔여로 전량매도(사이클 종료)를 놓치지 않도록 (backtest와 동일 기준)
       qty=0; avg=0; T=0; inv=0; // 보유·평단·T·투입원가 리셋 (realized 누적은 유지 → 잔금에 반영)
       cycleEnd=true; reverseTraded=false; inReverseNow=false;
     }
@@ -1107,8 +1107,9 @@ function renderOrder(){
   const rows=st.rowsOn?Math.max(0,st.rows||0):0, gap=st.gap||2.5, rq=st.rowqty||1;
   if(c.avg<=0){
     // 첫 매수: 1회매수금 전액을 종가×큰수에 LOC매수
+    // 수량은 예상 체결가(≈전일종가) 기준. LOC는 종가에 체결되므로 큰수가로 나누면 ~큰수%만큼 과소매수됨.
     const firstPrice=close*bigMul;
-    const fq=close>0?Math.max(1,Math.floor(buy1/firstPrice)):rq;
+    const fq=close>0?Math.max(1,Math.floor(buy1/close)):rq;
     html+=oitem('b','★ 처음매수','LOC',firstPrice,fq);
     // 하방 LOC: 종가 기준으로 gap%씩 내려가며 추가
     for(let i=1;i<=rows;i++){
