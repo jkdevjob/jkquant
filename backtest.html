@@ -213,7 +213,7 @@ td:first-child{text-align:left;}
   <div class="brand">
     <div>
       <div class="logo">Backtest</div>
-      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v1.68</span></h1>
+      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v1.71</span></h1>
     </div>
   </div>
   <a href="/" class="home">← JK 퀀트</a>
@@ -262,9 +262,8 @@ td:first-child{text-align:left;}
     <div class="ctrl s-im hide"><label>재투자</label>
       <div class="seg" id="imCompound">
         <button data-c="1" class="active" title="익절금을 다음 사이클 원금에 합산">복리</button>
-        <button data-c="0" title="초기 원금으로만 운용, 익절금은 현금 보관">단리</button>
+        <button data-c="0" title="초과익만 인출, 손실은 잔고 그대로 이월">단리</button>
       </div>
-      <div style="font-size:9px;color:var(--dim);margin-top:3px;line-height:1.4">복리+초장기(5년↑)는 수익률이 기하급수로 폭주해 비현실적일 수 있습니다. 라오어님은 1년 단위 복리 재설정 — 장기 비교는 단리 권장.</div>
     </div>
 
     <!-- VR 전용 -->
@@ -313,7 +312,8 @@ td:first-child{text-align:left;}
   <span class="bd">매수</span> 1회매수금 = <b>잔금 ÷ (분할−T)</b> · 전반전 절반 별지점·절반 평단 LOC, 후반전 전체 별지점 LOC<br>
   <span class="bd">별%</span> 20분할 SOXL <b>(20−2T)%</b> / TQQQ (15−1.5T)% · 별지점 = 평단×(1+별%)<br>
   <span class="bd">매도</span> 보유 1/4 별지점 쿼터매도(T×0.75) + 3/4 <b>평단+익절% 지정가</b> · 보유 0 시 복리 재시작<br>
-  <span class="bd">리버스</span> T&gt;분할−1(원금소진) 시 무한매도(보유÷10·÷20)+쿼터매수(잔금÷4) · 종가&gt;평단×(1−15%/20%) 회복 시 다음날 일반모드 복귀
+  <span class="bd">리버스</span> T&gt;분할−1(원금소진) 시 무한매도(보유÷10·÷20)+쿼터매수(잔금÷4) · 종가&gt;평단×(1−15%/20%) 회복 시 다음날 일반모드 복귀<br>
+  <span class="bd">재투자</span> 복리=익절금 원금 합산 / 단리=초과익만 인출(손실은 잔고 이월) · <b>장기(5년↑) 비교는 단리 권장</b> — 복리 초장기는 기하급수 폭주
 </div>
 <div class="rules s-vr hide">
   <span class="bd">V 갱신</span> 다음 V = 현재 V + <b>Pool/G</b> + 적립금 · 2주(10거래일) 사이클<br>
@@ -610,9 +610,9 @@ function setStrat(s){
 }
 
 // seg 버튼들
-document.getElementById('dcaFreq').onclick=e=>{if(e.target.dataset.f){document.querySelectorAll('#dcaFreq button').forEach(b=>b.classList.remove('active'));e.target.classList.add('active');dcaFreq=e.target.dataset.f;}};
-document.getElementById('dcaPeriod').onclick=e=>{if(e.target.dataset.p){document.querySelectorAll('#dcaPeriod button').forEach(b=>b.classList.remove('active'));e.target.classList.add('active');dcaPeriodMode=e.target.dataset.p;}};
-document.getElementById('imCompound').onclick=e=>{if(e.target.dataset.c){document.querySelectorAll('#imCompound button').forEach(b=>b.classList.remove('active'));e.target.classList.add('active');}};
+document.getElementById('dcaFreq').onclick=e=>{if(e.target.dataset.f){document.querySelectorAll('#dcaFreq button').forEach(b=>b.classList.remove('active'));e.target.classList.add('active');dcaFreq=e.target.dataset.f;if(dataLoaded)run();}};
+document.getElementById('dcaPeriod').onclick=e=>{if(e.target.dataset.p){document.querySelectorAll('#dcaPeriod button').forEach(b=>b.classList.remove('active'));e.target.classList.add('active');dcaPeriodMode=e.target.dataset.p;if(dataLoaded)run();}};
+document.getElementById('imCompound').onclick=e=>{if(e.target.dataset.c){document.querySelectorAll('#imCompound button').forEach(b=>b.classList.remove('active'));e.target.classList.add('active');if(dataLoaded)run();}};
 document.getElementById('vrMode').onclick=e=>{
   if(!e.target.dataset.m)return;
   document.querySelectorAll('#vrMode button').forEach(b=>b.classList.remove('active'));e.target.classList.add('active');
@@ -620,9 +620,10 @@ document.getElementById('vrMode').onclick=e=>{
   document.querySelectorAll('.vr-accum').forEach(el=>el.style.display=m==='0.75'?'':'none');
   document.querySelectorAll('.vr-lump').forEach(el=>el.style.display=m!=='0.75'?'':'none');
   document.querySelectorAll('.vr-wd').forEach(el=>el.style.display=m==='0.25'?'':'none');
+  if(dataLoaded)run();
 };
-document.getElementById('vrFormula').onclick=e=>{if(e.target.dataset.f){document.querySelectorAll('#vrFormula button').forEach(b=>b.classList.remove('active'));e.target.classList.add('active');}};
-document.getElementById('imDiv').onclick=e=>{if(e.target.dataset.d){document.querySelectorAll('#imDiv button').forEach(b=>b.classList.remove('active'));e.target.classList.add('active');imDiv=+e.target.dataset.d;}};
+document.getElementById('vrFormula').onclick=e=>{if(e.target.dataset.f){document.querySelectorAll('#vrFormula button').forEach(b=>b.classList.remove('active'));e.target.classList.add('active');if(dataLoaded)run();}};
+document.getElementById('imDiv').onclick=e=>{if(e.target.dataset.d){document.querySelectorAll('#imDiv button').forEach(b=>b.classList.remove('active'));e.target.classList.add('active');imDiv=+e.target.dataset.d;if(dataLoaded)run();}};
 
 function commonDays(start,end,tickers){
   let s=null;
@@ -647,16 +648,17 @@ function runDCA1(tkr,days,totalAmt){
   return _dcaOne(tkr,days,amt,1);
 }
 function _dcaOne(t,days,amt,step){
-  if(!M[t]) return {invested:0,final:0,ret:0,snap:[]};
-  let sh=0,inv=0;const snap=[];
+  if(!M[t]) return {invested:0,final:0,ret:0,snap:[],mdd:0};
+  let sh=0,inv=0,mddPeak=-Infinity,mdd=0;const snap=[];
   days.forEach((d,i)=>{
     const p=M[t][d]?.[C]??0;
     if(p>0&&i%step===0){sh+=amt/p;inv+=amt;}
-    if(i%10===0)snap.push([d,p>0?sh*p:0]);
+    if(p>0){ const eq=sh*p; if(eq>mddPeak)mddPeak=eq; else if(mddPeak>0){ const dd=(mddPeak-eq)/mddPeak; if(dd>mdd)mdd=dd; } }
+    if(i%10===0)snap.push([d,p>0?sh*p:null]);
   });
   const last=M[t][days[days.length-1]]?.[C]??0;
   const fin=sh*last;
-  return {invested:inv,final:fin,ret:inv>0?(fin/inv-1)*100:0,snap};
+  return {invested:inv,final:fin,ret:inv>0?(fin/inv-1)*100:0,snap,mdd:mdd*100};
 }
 
 // ──── 전략 2: 무한매수법 V4.0 ────
@@ -670,9 +672,11 @@ function runIM(days,tkr,cap,divs,targetPct,compound=true){
   let cash=cap,shares=0,avg=0,T=0,realized=0,cycles=0,savedProfit=0;const snap=[];
   let peakInvested=0;
   let inReverse=false, reverseDay1=false;    // 리버스모드 상태 추적
+  let mddPeak=cap, mdd=0;                    // 일별 MDD 추적 (10일 스냅 기반 계산은 급락 저점을 놓쳐 과소평가됨)
   const closeHist=[];                        // 직전 5거래일 종가 (리버스 별지점용, 모드 무관하게 항상 갱신)
   days.forEach((d,i)=>{
     const [c,o,hi,lo]=M[tkr][d];
+    { const eq=cash+shares*c+savedProfit; if(eq>mddPeak)mddPeak=eq; else { const dd=(mddPeak-eq)/mddPeak; if(dd>mdd)mdd=dd; } }
     closeHist.push(c); if(closeHist.length>5) closeHist.shift();
 
     // 리버스 진입: 원금 소진 = 일반모드 1회매수금 잔금/(분할−T)의 분모가 0 이하(T≥분할).
@@ -706,7 +710,7 @@ function runIM(days,tkr,cap,divs,targetPct,compound=true){
       }
       // 전량 매도 → 사이클 리셋 (복리/단리 동일 처리)
       if(shares<1e-9){ shares=0;avg=0;cycles++; inReverse=false;
-        if(compound){} else { savedProfit+=cash-cap; cash=cap; }
+        if(compound){} else if(cash>cap){ savedProfit+=cash-cap; cash=cap; } // 단리: 초과익만 인출, 손실은 잔고 그대로 이월
         T=0; snap.push([d,cash+savedProfit]); peakInvested=Math.max(peakInvested,cap-cash); return; }
       // 가격 회복(종가>평단×exitMul) → 내일부터 일반모드 복귀. T는 그대로 승계.
       // (복귀 후 일반모드에서 1회분도 못 사는 상태가 되면 T>분할−1이라 자동으로 다시 리버스 진입)
@@ -735,7 +739,7 @@ function runIM(days,tkr,cap,divs,targetPct,compound=true){
       // 전량 매도 → 사이클 리셋 (복리 포함)
       if(shares<1e-9){shares=0;avg=0;cycles++;
         if(compound){ /* 복리: 익절금 포함 현금 그대로 다음 사이클 사용 */ }
-        else { savedProfit+=cash-cap; cash=cap; }  // 단리: 초과분 별도 보관, 원금 리셋
+        else if(cash>cap){ savedProfit+=cash-cap; cash=cap; }  // 단리: 초과익만 인출, 손실 사이클은 잔고 이월(외부수혈 없음)
         T=0;snap.push([d,cash+savedProfit]);return;}
     }
     if(T<divs&&cash>1){
@@ -755,7 +759,8 @@ function runIM(days,tkr,cap,divs,targetPct,compound=true){
     peakInvested=Math.max(peakInvested, cap-cash);
   });
   const fin=cash+shares*M[tkr][days[days.length-1]][C]+savedProfit;
-  return {invested:cap,peakInvested,final:fin,realized,cycles,endCash:cash+savedProfit,endShares:shares,ret:(fin/cap-1)*100,snap,tkr};
+  if(fin>mddPeak)mddPeak=fin; else { const dd=(mddPeak-fin)/mddPeak; if(dd>mdd)mdd=dd; }
+  return {invested:cap,peakInvested,final:fin,realized,cycles,endCash:cash+savedProfit,endShares:shares,ret:(fin/cap-1)*100,snap,tkr,mdd:mdd*100};
 }
 
 // ──── 전략 3: VR 5.0 ────
@@ -772,13 +777,15 @@ function runVR(days,tkr,params){
     first=true;
   }
   const snap=[];
+  let mddPeak=-Infinity, mdd=0;  // 일별 MDD (총자산 = 주식+Pool+누적인출 기준 — fin과 동일 철학)
   days.forEach((d,i)=>{
     const c=M[tkr][d][C];
+    { const eq=shares*c+pool+totalWd; if(eq>mddPeak)mddPeak=eq; else if(mddPeak>0){ const dd=(mddPeak-eq)/mddPeak; if(dd>mdd)mdd=dd; } }
     if(i%interval===0){
       if(first){
         if(isLump){const s=initAmt||10000;inv+=s;shares=s/c;V=shares*c;}  // 거치식/인출식: 첫매수가=V (pool 무관)
         else{pool+=contrib;inv+=contrib;shares=pool/c;pool=0;V=shares*c;} // 적립식: 첫매수가=V
-        first=false;buys++;rebal++;snap.push([d,shares*c+pool]);return;
+        first=false;buys++;rebal++;snap.push([d,shares*c+pool+totalWd]);return;
       }
       const cv=shares*c;
       const addCycle=isAccum?contrib:isWd?-withdraw:0;
@@ -792,14 +799,14 @@ function runVR(days,tkr,params){
       else if(cv2<lo){const need=V-cv2;const use=Math.min(need,pool*poolLimit);shares+=use/c;pool-=use;buys++;}
       rebal++;
     }
-    if(i%interval===0||i===days.length-1)snap.push([d,shares*c+pool]);
+    if(i%interval===0||i===days.length-1)snap.push([d,shares*c+pool+totalWd]);
   });
   const lc=M[tkr][days[days.length-1]][C];
   // 인출식: 누적 인출액도 회수가치에 포함해야 정확한 수익률 (인출한 돈은 사라진 게 아님)
   const fin=shares*lc+pool+totalWd;
   const calYrs=(new Date(days[days.length-1])-new Date(days[0]))/(365.25*864e5);
   return {invested:inv,final:fin,pool,shares,sharesVal:shares*lc,rebal,buys,sells,totalWd,
-    ret:inv>0?(fin/inv-1)*100:0,yrs:Math.max(calYrs,0.1),snap,tkr};
+    ret:inv>0?(fin/inv-1)*100:0,yrs:Math.max(calYrs,0.1),snap,tkr,mdd:mdd*100};
 }
 
 // ──── 비교/지표 헬퍼 ────
@@ -817,6 +824,12 @@ function buyHoldSeries(tkr, days, invested, snapDates){
 function calcMDD(snap){
   let peak=-Infinity, mdd=0;
   snap.forEach(s=>{ const v=s[1]; if(v==null)return; if(v>peak)peak=v; const dd=(peak-v)/peak; if(dd>mdd)mdd=dd; });
+  return mdd*100;
+}
+// 거치식(B&H)의 일별 MDD — 가격 곡선 자체의 MDD (투입액 무관, 스냅 샘플링 과소평가 없음)
+function bhMDDDaily(tkr,days){
+  let peak=-Infinity, mdd=0;
+  days.forEach(d=>{ const p=M[tkr][d]?.[C]; if(p==null||p<=0)return; if(p>peak)peak=p; else { const dd=(peak-p)/peak; if(dd>mdd)mdd=dd; } });
   return mdd*100;
 }
 // 연환산 변동성 (%): 스냅 간 수익률의 표준편차 × √(연간 스냅수). 스냅은 약 10거래일 간격
@@ -1121,7 +1134,7 @@ function renderSingle2(type,r,days){
   const sCagr=cagrOf(r.final, r.invested, yrs);
   const bCagr=cagrOf(bhFinal, bhBase, yrs);
   const dCagr=cagrOf(dcaFinal, dcaInv, yrs);
-  const sMDD=calcMDD(r.snap), bMDD=calcMDD(bhSnap), dMDD=calcMDD(dcaSnap);
+  const sMDD=(r.mdd!=null?r.mdd:calcMDD(r.snap)), bMDD=bhMDDDaily(r.tkr,days), dMDD=(dcaR.mdd!=null?dcaR.mdd:calcMDD(dcaSnap));
   const sVol=calcVol(r.snap,10), bVol=calcVol(bhSnap,10), dVol=calcVol(dcaSnap,10);
   const nDays = days.length;
 

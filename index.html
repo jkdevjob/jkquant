@@ -406,7 +406,7 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
 </div>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v21.6</span></h1></div>
+    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v21.8</span></h1></div>
     <div style="display:flex;align-items:center;gap:8px">
       <a class="btbtn" href="/backtest">📊<span class="bt-txt"> 백테스트</span></a>
       <button class="gear" onclick="openSettings()">⚙️</button>
@@ -742,7 +742,7 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
   <footer>
     <strong>JK 퀀트</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v21.6</b> · 2026-07-01</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v21.8</b> · 2026-07-01</div>
   </footer>
 </div>
 
@@ -861,8 +861,8 @@ function commaInput(el){
 }
 // input의 숫자값 읽기 (콤마 무시)
 function inputNum(id){ const el=$(id); if(!el)return 0; return +unComma(el.value)||0; }
-const FX=1520.21; // USD/KRW (참고용, 환산 표시에만)
-const won=v=>'₩'+Math.round((+v||0)*FX).toLocaleString('en-US');
+const FX=1520.21; // USD/KRW 폴백 상수 (loadFX 실패 시에만 사용)
+const won=v=>'₩'+Math.round((+v||0)*((typeof liveFX!=='undefined'&&liveFX)?liveFX:FX)).toLocaleString('en-US');
 
 /* ── 저장 구조 (v2: 무매/VR 세션 완전 분리) ──
  state = {
@@ -897,7 +897,7 @@ function load(){
   if(!validState(S)){S=freshState();saveLocal();}
   if(!S.activeTab)S.activeTab='inf';
 }
-function saveLocal(){localStorage.setItem(lsKey(),JSON.stringify(S))}
+function saveLocal(){S._updated=Date.now();localStorage.setItem(lsKey(),JSON.stringify(S))}
 function save(){saveLocal();pushRemote();}
 function tabBox(){return S[S.activeTab]}
 function curStrat(){const b=tabBox();return b.sessions.find(x=>x.id===b.active)||b.sessions[0]}
@@ -1070,7 +1070,7 @@ function renderOrder(){
       // 별지점 수동 입력 칸 (항상 노출)
       rh+=`<div class="calc" style="margin-bottom:10px"><div class="field" style="margin:0">
         <label>별지점 (직전 5거래일 종가 평균) <span class="hint">비우면 자동 계산</span></label>
-        <input id="o_star5man" type="number" inputmode="decimal" placeholder="${star5?star5.toFixed(2):'예: 12.34'}" value="${($('o_star5man')&&$('o_star5man').value)||''}" oninput="renderOrder()">
+        <input id="o_star5man" type="number" inputmode="decimal" placeholder="${star5?star5.toFixed(2):'예: 12.34'}" value="${($('o_star5man')&&$('o_star5man').value)||''}" onchange="renderOrder()">
         <div class="note" style="margin-top:6px">현재 적용: ${star5?('<b>'+px(star5)+'</b> ('+sp.src+')'):'<b style=\\"color:var(--gold)\\">계산 불가</b> — 종가 입력 필요'}</div>
       </div></div>`;
       rh+='<div class="order-grp sell"><div class="gt"><span class="gd"></span>리버스 무한매도</div>';
@@ -1469,7 +1469,9 @@ function computeVr(){
   const st=curStrat().settings, hist=curStrat().hist;
   let qty=0,totbuy=0,totsell=0,totdiv=0,totadd=0,totwd=0,buyShares=0;
   let pool=st.startpool||0, V=st.startv||0;
-  let firstBuyDone=V>0;
+  let vSet=V>0;                                  // V 확정 여부 (startv>0이면 이미 확정)
+  let sawBuy=false;                              // 이력상 첫 buy 만났는지
+  const carriedIn=V>0 && !(st.startCyc>0);       // "이어받기 시작"(설정 startv 직접입력, 사이클 진입 이력 없음) — 이 경우만 첫 buy도 추가매수(pool 차감)
   // 사이클 시작 시점 Pool 추적 (현재 진행 사이클의 '처음 Pool')
   let curCyc=0, cycStartPool=pool, cycTrade=0, cycDiv=0;
   hist.forEach(h=>{
@@ -1477,10 +1479,12 @@ function computeVr(){
     if(hc!==curCyc){ curCyc=hc; cycStartPool=pool; cycTrade=0; cycDiv=0; }
     if(h.type==='buy'){
       const amt=h.price*h.qty; qty+=h.qty; totbuy+=amt; buyShares+=h.qty;
-      if(!firstBuyDone){
-        // 첫 매수 = V를 형성하는 초기 투입. Pool(여유현금)에서 꺼낸 게 아니므로 Pool 차감 안 함.
-        // (startPool 없이 "0원부터 시작" 시 Pool이 음수가 되던 버그 수정)
-        V=amt; firstBuyDone=true; cycStartPool=pool;
+      const isInit=!sawBuy && !carriedIn; sawBuy=true;   // 초기투입 = 이력 첫 buy (이어받기 시작 제외)
+      if(!vSet){ V=amt; vSet=true; }                     // 0원 시작: 첫 매수가 곧 V
+      if(isInit){
+        // 초기 투입은 Pool(여유현금)에서 꺼낸 게 아니므로 차감 안 함.
+        // startv가 사이클 진입으로 갱신돼도(startCyc>0) 이 판정은 유지되어 Pool이 음수로 회귀하지 않음.
+        cycStartPool=pool;
       }else{
         pool-=amt; cycTrade-=amt;
       }
@@ -1516,7 +1520,7 @@ function cycDates(c){
 
 /* 현재 평가금: 입력칸 우선, 없으면 보유×최근가, 없으면 0 */
 function vrEval(c){
-  const man=+( $('vn_eval')&&$('vn_eval').value );
+  const man=inputNum('vn_eval'); // 콤마 포함 입력 안전 파싱 (+value는 콤마에서 NaN)
   if(man>0) return man;
   const last=(lastQuote.vr&&lastQuote.vr.last)||0;
   if(last>0 && c.qty>0) return last*c.qty;
@@ -1628,10 +1632,8 @@ function renderVrTable(){
   // ── 매도표 ── 매도가(n) = V_high / n  (1차 = 상단)
   // 첫날은 무조건 1주, 이후 각 차수 도달 시 1주씩 (간단화: 차수당 1주, 누적 표시)
   let srows='';
-  let cumQtyS=c.qty;
   for(let n=1;n<=N;n++){
     const p=c.up/n;
-    cumQtyS=Math.max(0,c.qty-(n)); // 매도는 보유에서 줄어듦
     const reached = price>=p;
     srows+=`<div class="lxr ${reached?'hit':''}" onclick="quickLadder('sell',${p.toFixed(2)})">
       <span class="lx-n">${n}${reached?'':' <span class="warn">▲</span>'}</span>
@@ -2489,7 +2491,7 @@ function switchSess(id){
   if(box.active===id)return; // 같은 세션이면 무시
   box.active=id;save();
   // 이전 세션 시세 캐시/노트 완전 초기화 (잔상 방지)
-  lastQuote={inf:null,vr:null}; infQuoteCache=null;
+  lastQuote={inf:null,vr:null}; infQuoteCache=null; _lastNeedClose=null;
   clearInputs();
   ['vn_fetchnote','chart_note','inf_chart_note','inf_ten_grid','diag_out'].forEach(id=>{const el=$(id);if(el){el.textContent='';el.className=el.className.replace(/\b(ok|err|load)\b/g,'');}});
   // 현재 탭의 서브탭을 "현재"로 리셋
@@ -2502,7 +2504,7 @@ function switchSess(id){
   }catch(e){console.error(e)}
 }
 function clearInputs(){
-  ['o_close','ih_price','ih_qty','vn_price','vn_eval','vh_price','vh_qty','vh_amt'].forEach(id=>{const el=$(id);if(el)el.value=''});
+  ['o_close','o_star5man','sh_price','sh_qty','shv_price','shv_qty','shv_amt','vn_price','vn_eval'].forEach(id=>{const el=$(id);if(el)el.value=''});
   const fn1=$('o_fetchnote'),fn2=$('ve_fetchnote');if(fn1){fn1.textContent='';fn1.className='fetchnote'}if(fn2){fn2.textContent='';fn2.className='fetchnote'}
   lastQuote={inf:null,vr:null};
 }
@@ -2673,7 +2675,7 @@ async function pushRemote(){
     try{
       const json=JSON.stringify(S);
       if(json===lastPushedJSON){setSync('ok');return;}
-      await window.fb.setDoc(window.fb.doc(window.fb.db,'users',curUid),{state:S,updated:Date.now()});
+      await window.fb.setDoc(window.fb.doc(window.fb.db,'users',curUid),{state:S,updated:(S._updated||Date.now())});
       lastPushedJSON=json; setSync('ok');
     }catch(e){console.error('push',e);setSync('err');}
   },800); // 입력 직후 잦은 저장 방지(디바운스)
@@ -2684,7 +2686,16 @@ async function pullRemote(){
     const snap=await window.fb.getDoc(window.fb.doc(window.fb.db,'users',curUid));
     if(snap.exists()){
       const d=snap.data();
-      if(d&&validState(d.state)){S=d.state;if(!S.activeTab)S.activeTab='inf';saveLocal();lastPushedJSON=JSON.stringify(S);return true;}
+      if(d&&validState(d.state)){
+        // 신선도 가드: 이 기기의 로컬 저장본이 서버보다 최신이면(오프라인 수정 등) 낡은 서버로 덮지 않고 로컬을 밀어올림
+        let local=null; try{local=JSON.parse(localStorage.getItem(lsKey()))}catch(e){}
+        if(local&&validState(local)&&(local._updated||0)>(d.updated||0)){
+          S=local; if(!S.activeTab)S.activeTab='inf';
+          lastPushedJSON=null; pushRemote();
+          return true;
+        }
+        S=d.state;if(!S.activeTab)S.activeTab='inf';saveLocal();lastPushedJSON=JSON.stringify(S);return true;
+      }
     }
   }catch(e){console.error('pull',e);}
   return false;
