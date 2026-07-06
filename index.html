@@ -406,7 +406,7 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
 </div>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v21.8</span></h1></div>
+    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v21.9</span></h1></div>
     <div style="display:flex;align-items:center;gap:8px">
       <a class="btbtn" href="/backtest">📊<span class="bt-txt"> 백테스트</span></a>
       <button class="gear" onclick="openSettings()">⚙️</button>
@@ -742,7 +742,7 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
   <footer>
     <strong>JK 퀀트</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v21.8</b> · 2026-07-01</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v21.9</b> · 2026-07-01</div>
   </footer>
 </div>
 
@@ -2828,6 +2828,29 @@ function initAuth(){
 /* ── 시작: Firebase 준비되면 인증 시작 ── */
 if(window.fb){initAuth();}
 else{window.addEventListener('fb-ready',initAuth);}
+
+/* ── 셀프테스트 (?selftest=1) — 앱 실함수를 브라우저에서 직접 검증 ── */
+(function(){
+  try{
+    if(!/[?&]selftest=1/.test(location.search)) return;
+    const s=document.createElement('script'); s.src='/strategy-check.js';
+    s.onload=function(){
+      // 앱 실함수를 sandbox 세션에 주입해 대조 (실사용 데이터 불변)
+      let _sandbox=null; const _origCur=curStrat;
+      const adapter={
+        starPct: (t,d,T)=>starPct(t,d,T),
+        setHist:(st,hist)=>{ _sandbox={id:'__test',settings:{...st},hist}; window.curStrat=()=>_sandbox; },
+        computeInf:()=>computeInf(),
+        setVr:(st,hist)=>{ _sandbox={id:'__test',settings:{...st},hist,vr:true}; window.curStrat=()=>_sandbox; },
+        computeVr:()=>computeVr(),
+      };
+      try{ window.StrategyCheck.badge(adapter); }
+      finally{ window.curStrat=_origCur; } // 원상복구 — 실사용 세션 보호
+    };
+    s.onerror=function(){ console.warn('strategy-check.js 로드 실패 — 배포에 함께 올렸는지 확인'); };
+    document.head.appendChild(s);
+  }catch(e){ console.error('selftest',e); }
+})();
 </script>
 </body>
 </html>
