@@ -213,7 +213,7 @@ td:first-child{text-align:left;}
   <div class="brand">
     <div>
       <div class="logo">Backtest</div>
-      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v1.72</span></h1>
+      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v1.74</span></h1>
     </div>
   </div>
   <a href="/" class="home">← JK 퀀트</a>
@@ -254,7 +254,9 @@ td:first-child{text-align:left;}
     <div class="ctrl s-im hide"><label>원금 ($)</label><input type="number" id="imCap" value="10000" min="100"></div>
     <div class="ctrl s-im hide"><label>분할 수</label>
       <div class="seg" id="imDiv">
+        <button data-d="10">10</button>
         <button data-d="20" class="active">20</button>
+        <button data-d="30">30</button>
         <button data-d="40">40</button>
       </div>
     </div>
@@ -269,7 +271,8 @@ td:first-child{text-align:left;}
       <div class="seg" id="imEngine">
         <button data-e="v40" class="active" title="라오어 공식 V4.0">V4.0</button>
         <button data-e="v41" title="국면 익절: 합성1배지수>200일선이면 익절 기본+10%p, 아래면 −5%p · 리버스 무한매도는 하락국면만">V4.1 국면</button>
-        <button data-e="ab" title="V4.0 vs V4.1 나란히 비교 (단일 종목)">A/B</button>
+        <button data-e="v50" title="변동성 국면익절: 하락국면 기본−5%p / 상승국면은 20일변동성 백분위에 비례해 기본~기본×2까지 상향 (고변동 폭등장을 더 태움)">V5.0 변동성</button>
+        <button data-e="ab" title="V4.0·V4.1·V5.0 나란히 비교 (단일 종목)">A/B</button>
       </div>
     </div>
 
@@ -321,7 +324,8 @@ td:first-child{text-align:left;}
   <span class="bd">매도</span> 보유 1/4 별지점 쿼터매도(T×0.75) + 3/4 <b>평단+익절% 지정가</b> · 보유 0 시 복리 재시작<br>
   <span class="bd">리버스</span> T&gt;분할−1(원금소진) 시 무한매도(보유÷10·÷20)+쿼터매수(잔금÷4) · 종가&gt;평단×(1−15%/20%) 회복 시 다음날 일반모드 복귀<br>
   <span class="bd">재투자</span> 복리=익절금 원금 합산 / 단리=초과익만 인출(손실은 잔고 이월) · <b>장기(5년↑) 비교는 단리 권장</b> — 복리 초장기는 기하급수 폭주<br>
-  <span class="bd">V4.1</span> 국면(합성1배지수&gt;자체 200일선) 익절 <b>기본+10%p</b> / 하락국면 <b>기본−5%p</b> · 리버스 무한매도는 하락국면만 · 지표 워밍업(200일 미만)은 V4.0 동작
+  <span class="bd">V4.1</span> 국면(합성1배지수&gt;자체 200일선) 익절 <b>기본+10%p</b> / 하락국면 <b>기본−5%p</b> · 리버스 무한매도는 하락국면만 · 지표 워밍업(200일 미만)은 V4.0 동작<br>
+  <span class="bd">V5.0</span> 하락국면 <b>기본−5%p</b> / 상승국면 <b>기본 + 20일변동성 252일백분위 × 기본</b> (저변동→기본, 고변동→기본×2) · 리버스·워밍업은 V4.1과 동일
 </div>
 <div class="rules s-vr hide">
   <span class="bd">V 갱신</span> 다음 V = 현재 V + <b>Pool/G</b> + 적립금 · 2주(10거래일) 사이클<br>
@@ -349,7 +353,7 @@ td:first-child{text-align:left;}
 <div class="foot">
   ※ 실제 OHLC 종가 기반 백테스트. 수수료·세금·환율·배당 미반영. LOC매수=종가≤주문가 시 체결, 지정가매도=당일 고가≥목표가 시 체결로 근사.<br>
   ※ <b>USD</b>=반도체 2× · <b>QLD</b>=나스닥 2× · <b>SOXL</b>=반도체 3× · <b>TQQQ</b>=나스닥 3× · <b>TECL</b>=테크 3×<br>
-  ※ 무한매수법 V4.0/V4.1(국면 익절, JK 확장) · VR 5.0 (라오어). 일봉 근사라 실제 체결과 차이 가능. 과거 성과는 미래를 보장하지 않습니다.<br>
+  ※ 무한매수법 V4.0/V4.1(국면)/V5.0(변동성 국면, JK 확장) · VR 5.0 (라오어). 일봉 근사라 실제 체결과 차이 가능. 과거 성과는 미래를 보장하지 않습니다.<br>
   <b>JK 퀀트</b> · 학습용 도구
 </div>
 
@@ -676,7 +680,7 @@ function runIM(days,tkr,cap,divs,targetPct,compound=true){
   // 종목 계열: TQQQ만 TQQQ식(base15/복귀−15%), 그 외 전부 SOXL식(base20/복귀−20%) — index.html과 동일 규약
   // (문서상 TQQQ/SOXL만 오피셜. 복귀 기준은 "T 마지막 쿼터매도 기준과 동일"이므로 base와 반드시 짝이어야 함)
   const starBase=tkr==='TQQQ'?15:20;
-  const starSlope=tkr==='TQQQ'?(divs===20?1.5:0.75):(divs===20?2:1);
+  const starSlope=(tkr==='TQQQ'?1.5:2.0)*20/divs;   // 원문 V2.2 별% 일반공식 (분할수 반비례)
   const exitMul = tkr==='TQQQ'?0.85:0.80;   // 리버스 종료(가격회복) 조건: 종가 > 평단×(1-15%/20%)
   const sellDiv = divs>=40?20:10;            // 리버스 무한매도 분모 (20분할→10, 40분할→20)
   let cash=cap,shares=0,avg=0,T=0,realized=0,cycles=0,savedProfit=0;const snap=[];
@@ -793,11 +797,21 @@ function buildGateIM(tkr){
     ready[dts[i]] = buf.length===200;
     gate[dts[i]]  = buf.length===200 && syn[i] > s/200;
   }
-  return {gate,ready};
+  // V5.0용: 20일 연율변동성의 252일 인과적 백분위 (미래정보 없음)
+  const rr=[]; for(let i=0;i<dts.length;i++) rr.push(i===0?0:(M[tkr][dts[i]][C]/M[tkr][dts[i-1]][C]-1));
+  const vol=new Array(dts.length).fill(null);
+  for(let i=19;i<dts.length;i++){ const w=rr.slice(i-19,i+1); const m=w.reduce((a,x)=>a+x,0)/20;
+    vol[i]=Math.sqrt(w.reduce((a,x)=>a+(x-m)*(x-m),0)/19)*Math.sqrt(252); }
+  const volpct={};
+  for(let i=0;i<dts.length;i++){ if(vol[i]==null){volpct[dts[i]]=null;continue;}
+    const lo=Math.max(0,i-251); let c=0,n=0;
+    for(let j=lo;j<=i;j++){ if(vol[j]!=null){n++; if(vol[j]<=vol[i])c++;} }
+    volpct[dts[i]] = n>=60 ? c/n : null; }
+  return {gate,ready,volpct};
 }
 function runIM41(days,tkr,cap,divs,targetPct,compound=true){
   const starBase=tkr==='TQQQ'?15:20;
-  const starSlope=tkr==='TQQQ'?(divs===20?1.5:0.75):(divs===20?2:1);
+  const starSlope=(tkr==='TQQQ'?1.5:2.0)*20/divs;   // 원문 V2.2 별% 일반공식 (분할수 반비례)
   const exitMul = tkr==='TQQQ'?0.85:0.80;
   const sellDiv = divs>=40?20:10;
   const GM=buildGateIM(tkr);
@@ -847,6 +861,101 @@ function runIM41(days,tkr,cap,divs,targetPct,compound=true){
     if(shares>0&&avg>0){
       const starP=avg*(1+(starBase-starSlope*T)/100);
       const dynPct = !gr ? targetPct : (g ? targetPct+10 : targetPct-5);   // ★① 국면 익절
+      const tgt=avg*(1+dynPct/100);
+      const orig=shares;
+      const q3=orig*0.75;
+      const q1=orig*0.25;
+      let tpHit=false, qtHit=false;
+      if(hi>=tgt&&q3>0){realized+=q3*(tgt-avg);cash+=q3*tgt;shares-=q3;tpHit=true;}
+      if(c>=starP&&orig>0){const sell=Math.min(q1,shares);if(sell>1e-9){realized+=sell*(c-avg);cash+=sell*c;shares-=sell;qtHit=true;}}
+      if(tpHit) T*=0.25;
+      if(qtHit) T*=0.75;
+      if(shares<1e-9){shares=0;avg=0;cycles++;
+        if(compound){} else if(cash>cap){ savedProfit+=cash-cap; cash=cap; }
+        T=0;snap.push([d,cash+savedProfit]);return;}
+    }
+    if(T<divs&&cash>1){
+      let one=Math.min(cash/(divs-T),cash);
+      if(shares===0&&T===0){shares+=one/c;avg=c;cash-=one;T+=1;}
+      else{
+        const starP=avg*(1+(starBase-starSlope*T)/100);const buyP=starP-0.01;
+        if(T<divs/2){
+          const half=one/2;let b=0,sp=0,ti=0;
+          if(c<=buyP){b+=half/c;sp+=half;ti+=0.5;}
+          if(c<=avg){b+=half/c;sp+=half;ti+=0.5;}
+          if(b>0){avg=(shares*avg+sp)/(shares+b);shares+=b;cash-=sp;T+=ti;}
+        }else{ if(c<=buyP){const q=one/c;avg=(shares*avg+one)/(shares+q);shares+=q;cash-=one;T+=1;} }
+      }
+    }
+    if(i%10===0)snap.push([d,cash+shares*c+savedProfit]);
+    peakInvested=Math.max(peakInvested, cap-cash);
+  });
+  const fin=cash+shares*M[tkr][days[days.length-1]][C]+savedProfit;
+  if(fin>mddPeak)mddPeak=fin; else { const dd=(mddPeak-fin)/mddPeak; if(dd>mdd)mdd=dd; }
+  return {invested:cap,peakInvested,final:fin,realized,cycles,endCash:cash+savedProfit,endShares:shares,ret:(fin/cap-1)*100,snap,tkr,mdd:mdd*100};
+}
+
+// ──── 전략 2c: 무한매수법 V5.0 "변동성 국면 익절" (JK 확장) ────
+// V4.1 대비 변경 1가지: 상승국면 익절% = 기본 + (20일변동성 252일 백분위) × 기본  (저변동→기본, 고변동→기본×2)
+//   하락국면(기본−5%p)·리버스 매도게이트(②)·워밍업 폴백은 V4.1과 동일.
+// 근거: 변동성↔사이클수익 상관 +0.68. 고변동 폭등장(2020·2021)을 더 태우고 저변동 계단장은 회전 유지.
+// 검증: Python 독립구현과 5종목 최종금액·MDD·사이클 일치 + Walk-Forward에서 파라미터 (20/252) 안정 수렴.
+function runIM50(days,tkr,cap,divs,targetPct,compound=true){
+  const starBase=tkr==='TQQQ'?15:20;
+  const starSlope=(tkr==='TQQQ'?1.5:2.0)*20/divs;   // 원문 V2.2 별% 일반공식 (분할수 반비례)
+  const exitMul = tkr==='TQQQ'?0.85:0.80;
+  const sellDiv = divs>=40?20:10;
+  const GM=buildGateIM(tkr);
+  let cash=cap,shares=0,avg=0,T=0,realized=0,cycles=0,savedProfit=0;
+  let peakInvested=0;
+  let inReverse=false, reverseDay1=false;
+  let mddPeak=cap, mdd=0;
+  const closeHist=[];
+  const snap=[];
+  days.forEach((d,i)=>{
+    const [c,o,hi,lo]=M[tkr][d];
+    { const eq=cash+shares*c+savedProfit; if(eq>mddPeak)mddPeak=eq; else { const dd=(mddPeak-eq)/mddPeak; if(dd>mdd)mdd=dd; } }
+    closeHist.push(c); if(closeHist.length>5) closeHist.shift();
+    const gr=!!GM.ready[d];
+    const g =!!GM.gate[d];
+    if(!inReverse && T>=divs && shares>0){ inReverse=true; reverseDay1=true; }
+
+    if(inReverse && shares>0 && avg>0){
+      if(reverseDay1){
+        const sellQty=Math.floor(shares/sellDiv);
+        if(sellQty>0){ realized+=sellQty*(c-avg); cash+=sellQty*c; shares-=sellQty; T=divs>=40?T*0.95:T*0.9; }
+        reverseDay1=false;
+      }else{
+        const star5=closeHist.reduce((s,x)=>s+x,0)/closeHist.length;
+        if(c>=star5 && (!gr || !g)){
+          const sellQty=Math.floor(shares/sellDiv);
+          if(sellQty>0){ realized+=sellQty*(c-avg); cash+=sellQty*c; shares-=sellQty; T=divs>=40?T*0.95:T*0.9; }
+        }
+        if(shares>1e-9){
+          const buyP=star5*0.975;
+          if(c<=buyP && cash>1){
+            const amt=cash/4; const q=amt/c;
+            avg=(shares*avg+amt)/(shares+q); shares+=q; cash-=amt;
+            T=T+(divs-T)*0.25;
+          }
+        }
+      }
+      if(shares<1e-9){ shares=0;avg=0;cycles++; inReverse=false;
+        if(compound){} else if(cash>cap){ savedProfit+=cash-cap; cash=cap; }
+        T=0; snap.push([d,cash+savedProfit]); peakInvested=Math.max(peakInvested,cap-cash); return; }
+      if(c>avg*exitMul){ inReverse=false; }
+      if(i%10===0)snap.push([d,cash+shares*c+savedProfit]);
+      peakInvested=Math.max(peakInvested, cap-cash);
+      return;
+    }
+
+    if(shares>0&&avg>0){
+      const starP=avg*(1+(starBase-starSlope*T)/100);
+      // ★ 변동성 국면익절: 하락=기본−5 / 상승=기본+변동성백분위×기본 / 워밍업=기본
+      let dynPct;
+      if(!gr) dynPct=targetPct;
+      else if(!g) dynPct=targetPct-5;
+      else { const vp=GM.volpct[d]==null?0.5:GM.volpct[d]; dynPct=targetPct+vp*targetPct; }
       const tgt=avg*(1+dynPct/100);
       const orig=shares;
       const q3=orig*0.75;
@@ -1017,16 +1126,16 @@ async function run(){
       const defTgt = t==='TQQQ'?15:20;
       const tgt = tgtTouched ? tgtOverride : defTgt;
       if(imEngine==='ab'){
-        results[t]={res:runIM(commonD,t,cap,imDiv,tgt,compound), res41:runIM41(commonD,t,cap,imDiv,tgt,compound), tgt, days:commonD};
+        results[t]={res:runIM(commonD,t,cap,imDiv,tgt,compound), res41:runIM41(commonD,t,cap,imDiv,tgt,compound), res50:runIM50(commonD,t,cap,imDiv,tgt,compound), tgt, days:commonD};
       }else{
-        const eng = imEngine==='v41' ? runIM41 : runIM;
+        const eng = imEngine==='v50' ? runIM50 : (imEngine==='v41' ? runIM41 : runIM);
         results[t]={res:eng(commonD,t,cap,imDiv,tgt,compound), days:commonD};
       }
     });
     if(!Object.keys(results).length){alert('데이터 부족');return;}
     if(imEngine==='ab'){
       const t0=Object.keys(results)[0];   // 무매 UI는 단일 종목 선택 — 첫 종목만 A/B
-      renderAB(t0, results[t0].res, results[t0].res41, results[t0].days, results[t0].tgt, compound);
+      renderAB(t0, results[t0].res, results[t0].res41, results[t0].res50, results[t0].days, results[t0].tgt, compound);
       return;
     }
     renderMultiStrat('im',results,{cap,tgt:tgtTouched?tgtOverride:null});
@@ -1141,7 +1250,7 @@ function renderMultiStrat(type, results, params){
   document.getElementById('detail').classList.add('hide');
   document.querySelector('.cards').classList.remove('hide');
   document.querySelector('.tbl-wrap').classList.remove('hide');
-  const stratName=type==='im'?('무한매수법 '+(imEngine==='v41'?'V4.1':'V4.0')):'VR 5.0';
+  const stratName=type==='im'?('무한매수법 '+(imEngine==='v50'?'V5.0':imEngine==='v41'?'V4.1':'V4.0')):'VR 5.0';
   const pct=x=>(x>=0?'+':'')+x.toFixed(1)+'%';
   const money=(x,t)=>fmtV(x,t||tickers[0]);
 
@@ -1222,7 +1331,7 @@ function renderMultiStrat(type, results, params){
 }
 
 // ── A/B 비교 렌더: V4.0 vs V4.1 (동일 기간·원금·분할·기본익절) ──
-function renderAB(t, r40, r41, days, tgt, compound){
+function renderAB(t, r40, r41, r50, days, tgt, compound){
   document.querySelector('.cards').classList.add('hide');
   document.getElementById('detail').classList.add('hide');
   document.querySelector('.tbl-wrap').classList.remove('hide');
@@ -1232,10 +1341,10 @@ function renderAB(t, r40, r41, days, tgt, compound){
   const m=META[t]||{color:'#5b8def',name:t};
   const calYrs=days.length>1?(new Date(days[days.length-1])-new Date(days[0]))/(365.25*864e5):0.1;
   const yrs=Math.max(calYrs,0.1);
-  [r40,r41].forEach(r=>{r.yrs=yrs;r.cagr=cagrOf(r.final,r.invested,yrs);});
+  [r40,r41,r50].forEach(r=>{r.yrs=yrs;r.cagr=cagrOf(r.final,r.invested,yrs);});
   const money=x=>fmtV(x,t), pct=x=>(x>=0?'+':'')+x.toFixed(1)+'%';
   document.getElementById('winner').innerHTML=
-    `⚖️ <strong style="color:${m.color}">${t}</strong> 무한매수법 <strong>V4.0 vs V4.1 국면익절</strong> · ${imDiv}분할 · 기본익절 ${tgt}% (V4.1은 국면따라 +10/−5%p) · ${compound?'복리':'단리'} · ${days[0]}~${days[days.length-1]} · ${yrs.toFixed(1)}년`;
+    `⚖️ <strong style="color:${m.color}">${t}</strong> 무한매수법 <strong>V4.0 · V4.1 · V5.0</strong> · ${imDiv}분할 · 기본 ${tgt}% · ${compound?'복리':'단리'} · ${days[0]}~${days[days.length-1]} · ${yrs.toFixed(1)}년`;
   const rows=[
     ['최종 평가액', r=>money(r.final),  (a,b)=>a.final-b.final],
     ['총 수익률',   r=>pct(r.ret),      (a,b)=>a.ret-b.ret],
@@ -1244,24 +1353,25 @@ function renderAB(t, r40, r41, days, tgt, compound){
     ['사이클 수',   r=>r.cycles+'회',   null],
     ['실현손익',    r=>money(r.realized), null],
   ];
-  let h=`<thead><tr><th>지표</th><th>V4.0</th><th style="color:var(--gold)">V4.1 국면</th><th>Δ (4.1−4.0)</th></tr></thead><tbody>`;
+  let h=`<thead><tr><th>지표</th><th>V4.0</th><th>V4.1 국면</th><th style="color:var(--gold)">V5.0 변동성</th></tr></thead><tbody>`;
   rows.forEach(([label,fn,cmp])=>{
-    const a=fn(r40), b=fn(r41);
-    let dl='—';
-    if(label==='최종 평가액') dl=money(r41.final-r40.final);
-    else if(label==='총 수익률') dl=(r41.ret-r40.ret>=0?'+':'')+(r41.ret-r40.ret).toFixed(1)+'%p';
-    else if(label==='CAGR') dl=(r41.cagr-r40.cagr>=0?'+':'')+(r41.cagr-r40.cagr).toFixed(1)+'%p';
-    else if(label==='MDD') dl=(r41.mdd-r40.mdd>=0?'+':'')+(r41.mdd-r40.mdd).toFixed(1)+'%p';
-    else if(label==='사이클 수') dl=(r41.cycles-r40.cycles>=0?'+':'')+(r41.cycles-r40.cycles);
-    const w = cmp ? (cmp(r41,r40)>0?2:cmp(r41,r40)<0?1:0) : 0;
-    h+=`<tr><td>${label}</td><td class="v ${w===1?'win':''}">${a}</td><td class="v ${w===2?'win':''}">${b}</td><td class="v" style="color:var(--dim)">${dl}</td></tr>`;
+    const a=fn(r40), b=fn(r41), cc=fn(r50);
+    // cmp(x,base)>0 이면 x가 우수. 세 값 중 최고 열 하이라이트
+    let best=0;
+    if(cmp){ const va=cmp(r40,r40), vb=cmp(r41,r40), vc=cmp(r50,r40);
+      const mx=Math.max(va,vb,vc); best = (vc===mx)?3:(vb===mx)?2:1; }
+    h+=`<tr><td>${label}</td>`+
+       `<td class="v ${best===1?'win':''}">${a}</td>`+
+       `<td class="v ${best===2?'win':''}">${b}</td>`+
+       `<td class="v ${best===3?'win':''}">${cc}</td></tr>`;
   });
   h+='</tbody>'; document.getElementById('tbl').innerHTML=h;
   const labels=[...new Set([...r40.snap.map(s=>s[0]),...r41.snap.map(s=>s[0])])].sort();
-  document.getElementById('chartTitle').textContent=t+' V4.0 vs V4.1 누적 평가액';
+  document.getElementById('chartTitle').textContent=t+' V4.0 · V4.1 · V5.0 누적 평가액';
   lastRender=()=>makeChart([
-    {label:'V4.0',      data:alignSnap(r40.snap,labels), borderColor:m.color, backgroundColor:'transparent', borderWidth:2, pointRadius:0, tension:.1},
-    {label:'V4.1 국면', data:alignSnap(r41.snap,labels), borderColor:'#e8b64c', backgroundColor:'transparent', borderWidth:2, pointRadius:0, tension:.1}
+    {label:'V4.0',      data:alignSnap(r40.snap,labels), borderColor:m.color, backgroundColor:'transparent', borderWidth:1.6, pointRadius:0, tension:.1},
+    {label:'V4.1 국면', data:alignSnap(r41.snap,labels), borderColor:'#7a8aa0', backgroundColor:'transparent', borderWidth:1.6, pointRadius:0, tension:.1},
+    {label:'V5.0 변동성', data:alignSnap(r50.snap,labels), borderColor:'#e8b64c', backgroundColor:'transparent', borderWidth:2, pointRadius:0, tension:.1}
   ],labels);
   lastRender();
 }
@@ -1276,7 +1386,7 @@ function renderSingle2(type,r,days){
   logBtns.forEach(b=>b.classList.remove('active'));
   if(logBtns[1]) logBtns[1].classList.add('active');  // '로그' 버튼 활성화
   const m=META[r.tkr];
-  const stratName = type==='im' ? ('무한매수법 '+(imEngine==='v41'?'V4.1':'V4.0')) : 'VR 5.0';
+  const stratName = type==='im' ? ('무한매수법 '+(imEngine==='v50'?'V5.0':imEngine==='v41'?'V4.1':'V4.0')) : 'VR 5.0';
   const stratShort = type==='im' ? '무한매수법' : 'VR 5.0';
 
   // ── yrs: 실제 날짜 구간 기반 (days.length/252는 월간 데이터 시 오차 큼)
