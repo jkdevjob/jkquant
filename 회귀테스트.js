@@ -152,12 +152,17 @@ ok('이어받기 시작: 첫 buy는 Pool 차감 (200→46)', near(computeVr().po
 
 /* ════ 4. 차분 테스트 (5차·6차) — 실데이터, 두 엔진 회계 항등 ════ */
 console.log('[4] 차분 테스트 (runIM 거래로그 → computeInf 재생)');
+let __bogusFiltered=0;
+function __isBogusDate(d){ const w=new Date(d+'T12:00:00Z').getUTCDay();
+  return w===0||w===6||['12-25','01-01','07-04'].includes(d.slice(5)); }   // 주말·고정 휴장일 가짜 봉
 function parseCSV(p){
   const L=fs.readFileSync(p,'utf8').split('\n').filter(l=>l.trim());const rows=[];
   for(let i=1;i<L.length;i++){const cel=L[i].match(/("[^"]*"|[^,]+)/g);if(!cel||cel.length<5)continue;
     const cl=s=>s.replace(/"/g,'').replace(/\s/g,'').replace(/,/g,'');
     const d=cl(cel[0]);const c=+cl(cel[1]),o=+cl(cel[2]),h=+cl(cel[3]),lo=+cl(cel[4]);
-    if(!c||!d.match(/^\d{4}-\d{2}-\d{2}$/))continue;rows.push([d,c,o,h,lo]);}
+    if(!c||!d.match(/^\d{4}-\d{2}-\d{2}$/))continue;
+    if(__isBogusDate(d)){__bogusFiltered++;continue;}                       // 인베스팅 CSV 오염 방어 (2026-07 발견: 93개)
+    rows.push([d,c,o,h,lo]);}
   rows.reverse();return rows;
 }
 const csvFiles=fs.readdirSync(CSVDIR).filter(f=>f.endsWith('.csv'));
@@ -168,6 +173,9 @@ for(const tk of ['SOXL','TQQQ','TECL']){
   const rows=parseCSV(path.join(CSVDIR,f)); M[tk]={}; DAYS[tk]=[];
   rows.forEach(r=>{M[tk][r[0]]=[r[1],r[2],r[3],r[4]]; DAYS[tk].push(r[0]);});
 }
+ok('CSV 캘린더 필터 동작 (주말·휴장 가짜 봉 제거)',
+   Object.keys(DAYS).every(t=>DAYS[t].every(d=>!__isBogusDate(d))),
+   '필터됨 '+__bogusFiltered+'개');
 const CONFIGS=[
   ['SOXL',20,20,true],['SOXL',40,20,true],['SOXL',20,20,false],['SOXL',40,10,false],
   ['TQQQ',20,15,true],['TQQQ',40,15,true],['TQQQ',20,15,false],
@@ -198,9 +206,10 @@ console.log('[4b] runIM41 V4.1 국면익절');
        `final ${a.final}/${b.final}`);
   }
   // (b) 앵커: 전체 이력·복리·원금 1만$ (2026-06-12자 CSV 기준 — CSV 갱신 시 앵커 재산출 필요)
-  const A=[['SOXL',20,20,97944844067.50,74.29,70],
-           ['TQQQ',40,10,1251904.85,72.03,46],
-           ['TECL',20,20,3258167777.77,68.86,42]];
+  // 클린 파싱(가짜 봉 필터) 기준 · 2026-06-12자 CSV — CSV 갱신 시 앵커 재산출 필요
+  const A=[['SOXL',20,20,2297516.19,83.59,56],
+           ['TQQQ',40,10,169759.34,48.76,46],
+           ['TECL',20,20,1065117.57,77.49,26]];
   for(const [tkr,div,tgt,fexp,mexp,cexp] of A){
     if(!DAYS[tkr]){ console.log('  (CSV 없음, 스킵: '+tkr+')'); continue; }
     const r=runIM41(DAYS[tkr],tkr,10000,div,tgt,true);
