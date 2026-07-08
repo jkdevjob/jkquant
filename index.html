@@ -409,7 +409,7 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
 </div>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v22.3</span></h1></div>
+    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v22.4</span></h1></div>
     <div style="display:flex;align-items:center;gap:8px">
       <a class="btbtn" href="/backtest">📊<span class="bt-txt"> 백테스트</span></a>
       <button class="gear" onclick="openSettings()">⚙️</button>
@@ -769,7 +769,7 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
   <footer>
     <strong>JK 퀀트</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v22.3</b> · 2026-07-01</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v22.4</b> · 2026-07-01</div>
   </footer>
 </div>
 
@@ -1227,19 +1227,7 @@ function onCloseInput(){ renderOrder(); }
 
 /* ── 5일 종가 표시 (리버스 별지점 = 5일 평균) ── */
 let lastQuote={inf:null,vr:null}; // {symbol, last, days:[{date,close}]}
-function render5day(){
-  const q=lastQuote.inf;
-  if(!q||!q.days||!q.days.length){$('o_5day').innerHTML='';return}
-  const five=q.days.slice(-5);
-  const avg=five.reduce((s,d)=>s+d.close,0)/five.length;
-  let cells='';
-  five.forEach((d,i)=>{
-    const prev=i>0?five[i-1].close:d.close;
-    const ch=prev?((d.close-prev)/prev*100):0;
-    cells+=`<div class="fivecell"><div class="fd">${d.date.slice(5)}</div><div class="fp">${px(d.close)}</div><div class="fc ${ch>=0?'up':'dn'}">${ch>=0?'+':''}${ch.toFixed(1)}%</div></div>`;
-  });
-  $('o_5day').innerHTML=`<div class="fivebox"><h4><span>${q.symbol} 최근 5일 종가</span><span class="avg">5일 평균 ${px(avg)}</span></h4><div class="fivegrid">${cells}</div><div class="note">리버스모드 별지점 = 5일 평균 ${px(avg)}</div></div>`;
-}
+function render5day(){ /* 최근 5일 종가 박스는 주문표에서 제거됨 — no-op */ }
 
 /* ── 외부 종가 자동 불러오기 (CORS 프록시 경유, 실패 시 수동) ── */
 /* ════════ 외부 데이터 페처 (자체 /api 우선 → 공개 프록시 폴백) ════════
@@ -2600,7 +2588,7 @@ function renderOrderInline(){
     h+=`<div class="rowline"><span class="k">1회 매수금</span><span class="val mono" id="o_buy1">—</span></div>
         <div class="rowline"><span class="k">별% / 별지점</span><span class="val mono" id="o_star">—</span></div>
         <div class="rowline"><span class="k">LOC 매수 상한 (×큰수)</span><span class="val mono" id="o_limit" style="color:var(--gold)">—</span></div>
-      <div id="o_5day"></div><div id="o_orders"></div>
+      <div id="o_orders"></div>
       <div class="warn">프리장 시작 직후(서머 17시·겨울 18시) LOC로 거십니다. 상한가 초과 주문은 증권사가 거부할 수 있습니다.</div>`;
     $('inf_order_body').innerHTML=h;
   }
