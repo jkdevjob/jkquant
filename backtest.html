@@ -129,7 +129,7 @@ body{background:var(--bg);color:var(--text);font-family:'Pretendard',sans-serif;
 .tk-chip .d{width:8px;height:8px;border-radius:50%;background:var(--c);}
 
 /* RULES */
-.rules{background:var(--surf2);border:1px solid var(--border);border-radius:9px;padding:14px 18px;margin-bottom:18px;font-size:12px;color:var(--dim2);line-height:1.85;}
+.rules{background:var(--surf2);border:1px solid var(--border);border-radius:9px;padding:14px 18px;margin:6px 0 18px;font-size:12px;color:var(--dim2);line-height:1.85;}
 .rules b{color:var(--text);}
 .rules .bd{display:inline-block;background:rgba(91,141,238,.14);color:var(--accent);border-radius:4px;padding:1px 7px;font-family:'IBM Plex Mono',monospace;font-size:11px;margin-right:3px;}
 
@@ -214,7 +214,7 @@ td:first-child{text-align:left;}
   <div class="brand">
     <div>
       <div class="logo">Backtest</div>
-      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v1.79</span></h1>
+      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v1.81</span></h1>
     </div>
   </div>
   <a href="/" class="home">← JK 퀀트</a>
@@ -272,7 +272,7 @@ td:first-child{text-align:left;}
       <div class="seg" id="imEngine">
         <button data-e="v40" class="active" title="라오어 공식 V4.0">V4.0</button>
         <button data-e="v50" title="국면 익절: 국면=합성1배지수>200일선 AND >단기이평. 상승국면 익절=기본 / 하락국면 익절=6% 고정(조기탈출) · 리버스 무한매도는 하락국면만">V5.0</button>
-        <button data-e="ab" title="V4.0 vs V5.0 나란히 비교 (단일 종목)">A/B</button>
+        <button data-e="ab" title="V4.0 vs V5.0 나란히 비교 · 1종목=상세 / 여러 종목=요약 표">A/B</button>
       </div>
     </div>
     <div class="ctrl s-im hide" id="imMaCtrl"><label>국면선 (V5.0)</label>
@@ -325,20 +325,6 @@ td:first-child{text-align:left;}
   </div>
 </div>
 
-<!-- 규칙 설명 -->
-<div class="rules s-im hide">
-  <span class="bd">매수</span> 1회매수금 = <b>잔금 ÷ (분할−T)</b> · 전반전 절반 별지점·절반 평단 LOC, 후반전 전체 별지점 LOC<br>
-  <span class="bd">별%</span> 20분할 SOXL <b>(20−2T)%</b> / TQQQ (15−1.5T)% · 별지점 = 평단×(1+별%)<br>
-  <span class="bd">매도</span> 보유 1/4 별지점 쿼터매도(T×0.75) + 3/4 <b>평단+익절% 지정가</b> · 보유 0 시 복리 재시작<br>
-  <span class="bd">리버스</span> T&gt;분할−1(원금소진) 시 무한매도(보유÷10·÷20)+쿼터매수(잔금÷4) · 종가&gt;평단×(1−15%/20%) 회복 시 다음날 일반모드 복귀<br>
-  <span class="bd">재투자</span> 복리=익절금 원금 합산 / 단리=초과익만 인출(손실은 잔고 이월) · <b>장기(5년↑) 비교는 단리 권장</b> — 복리 초장기는 기하급수 폭주<br>
-  <span class="bd">V5.0</span> 국면(합성1배지수 &gt; 자체 200일선 <b>AND</b> 단기이평 20/30/50일 선택) · 상승국면 익절 <b>기본</b> / 하락국면 익절 <b>6% 고정</b>(조기탈출) · 리버스 무한매도는 하락국면만 · 지표 워밍업(200일 미만)은 V4.0 동작
-</div>
-<div class="rules s-vr hide">
-  <span class="bd">V 갱신</span> 다음 V = 현재 V + <b>Pool/G</b> + 적립금 · 2주(10거래일) 사이클<br>
-  <span class="bd">밴드</span> 상단 V×(1+밴드) / 하단 V×(1−밴드)<br>
-  <span class="bd">매도</span> 평가금>상단 → V 복귀분 매도 → Pool · <span class="bd">매수</span> 평가금<하단 → V까지, 적립후 <b>Pool 75%</b> 한도
-</div>
 
 <div id="loading" class="loading hide">백테스트 계산 중...</div>
 
@@ -355,6 +341,21 @@ td:first-child{text-align:left;}
     <canvas id="chart" height="300"></canvas>
   </div>
   <div class="tbl-wrap s-dca"><table id="tbl"></table></div>
+</div>
+
+<!-- 규칙 설명 (결과 아래) -->
+<div class="rules s-im hide">
+  <span class="bd">매수</span> 1회매수금 = <b>잔금 ÷ (분할−T)</b> · 전반전 절반 별지점·절반 평단 LOC, 후반전 전체 별지점 LOC<br>
+  <span class="bd">별%</span> 20분할 SOXL <b>(20−2T)%</b> / TQQQ (15−1.5T)% · 별지점 = 평단×(1+별%)<br>
+  <span class="bd">매도</span> 보유 1/4 별지점 쿼터매도(T×0.75) + 3/4 <b>평단+익절% 지정가</b> · 보유 0 시 복리 재시작<br>
+  <span class="bd">리버스</span> T&gt;분할−1(원금소진) 시 무한매도(보유÷10·÷20)+쿼터매수(잔금÷4) · 종가&gt;평단×(1−15%/20%) 회복 시 다음날 일반모드 복귀<br>
+  <span class="bd">재투자</span> 복리=익절금 원금 합산 / 단리=초과익만 인출(손실은 잔고 이월) · <b>장기(5년↑) 비교는 단리 권장</b> — 복리 초장기는 기하급수 폭주<br>
+  <span class="bd">V5.0</span> 국면(합성1배지수 &gt; 자체 200일선 <b>AND</b> 단기이평 20/30/50일 선택) · 상승국면 익절 <b>기본</b> / 하락국면 익절 <b>6% 고정</b>(조기탈출) · 리버스 무한매도는 하락국면만 · 지표 워밍업(200일 미만)은 V4.0 동작
+</div>
+<div class="rules s-vr hide">
+  <span class="bd">V 갱신</span> 다음 V = 현재 V + <b>Pool/G</b> + 적립금 · 2주(10거래일) 사이클<br>
+  <span class="bd">밴드</span> 상단 V×(1+밴드) / 하단 V×(1−밴드)<br>
+  <span class="bd">매도</span> 평가금>상단 → V 복귀분 매도 → Pool · <span class="bd">매수</span> 평가금<하단 → V까지, 적립후 <b>Pool 75%</b> 한도
 </div>
 
 <div class="foot">
@@ -1112,8 +1113,13 @@ async function run(){
     });
     if(!Object.keys(results).length){alert('데이터 부족');return;}
     if(imEngine==='ab'){
-      const t0=Object.keys(results)[0];   // 무매 UI는 단일 종목 선택 — 첫 종목만 A/B
-      renderAB(t0, results[t0].res, results[t0].res50, results[t0].days, results[t0].tgt, compound);
+      const tks=Object.keys(results);
+      if(tks.length===1){
+        const t0=tks[0];
+        renderAB(t0, results[t0].res, results[t0].res50, results[t0].days, results[t0].tgt, compound);
+      }else{
+        renderABMulti(results, compound);   // 여러 종목 선택 시 종목별 요약 비교
+      }
       return;
     }
     renderMultiStrat('im',results,{cap,tgt:tgtTouched?tgtOverride:null});
@@ -1352,6 +1358,49 @@ function renderAB(t, r40, r50, days, tgt, compound){
     {label:'V4.0',      data:alignSnap(r40.snap,labels), borderColor:'#7a8aa0', backgroundColor:'transparent', borderWidth:1.6, pointRadius:0, tension:.1},
     {label:'V5.0('+imShortMA+'일)', data:alignSnap(r50.snap,labels), borderColor:'#e8b64c', backgroundColor:'transparent', borderWidth:2, pointRadius:0, tension:.1}
   ],labels);
+  lastRender();
+}
+
+// ── A/B 다중 종목: 종목별 V4.0 vs V5.0 요약 비교 ──
+function renderABMulti(results, compound){
+  document.querySelector('.cards').classList.add('hide');
+  document.getElementById('detail').classList.add('hide');
+  document.querySelector('.tbl-wrap').classList.remove('hide');
+  logY=true;
+  const logBtns=document.querySelectorAll('.log-seg button');
+  logBtns.forEach(b=>b.classList.remove('active')); if(logBtns[1]) logBtns[1].classList.add('active');
+  const tks=Object.keys(results);
+  const anyDays=results[tks[0]].days;
+  const calYrs=anyDays.length>1?(new Date(anyDays[anyDays.length-1])-new Date(anyDays[0]))/(365.25*864e5):0.1;
+  const yrs=Math.max(calYrs,0.1);
+  tks.forEach(t=>{ [results[t].res,results[t].res50].forEach(r=>{r.yrs=yrs;r.cagr=cagrOf(r.final,r.invested,yrs);}); });
+  document.getElementById('winner').innerHTML=
+    `⚖️ <strong>${tks.length}종목</strong> 무한매수법 <strong>V4.0 vs V5.0(${imShortMA}일)</strong> · ${imDiv}분할 · ${compound?'복리':'단리'} · ${anyDays[0]}~${anyDays[anyDays.length-1]} · ${yrs.toFixed(1)}년`;
+  const pct=x=>(x>=0?'+':'')+x.toFixed(1)+'%';
+  let h=`<thead><tr><th>종목</th><th>V4.0<br><span style="font-size:9px;color:var(--dim)">CAGR/MDD</span></th>`
+       +`<th style="color:var(--gold)">V5.0(${imShortMA}일)<br><span style="font-size:9px;color:var(--dim)">CAGR/MDD</span></th>`
+       +`<th>ΔCAGR</th><th>ΔMDD</th><th>최종액 배수</th></tr></thead><tbody>`;
+  // 최종액 배수 큰 순 정렬
+  tks.sort((a,b)=>(results[b].res50.final/results[b].res.final)-(results[a].res50.final/results[a].res.final));
+  tks.forEach(t=>{
+    const m=META[t]||{color:'#5b8def'};
+    const a=results[t].res, b=results[t].res50;
+    const dc=b.cagr-a.cagr, dm=b.mdd-a.mdd, mult=a.final>0?(b.final/a.final):0;
+    h+=`<tr><td><span style="color:${m.color};font-weight:600">${t}</span></td>`
+      +`<td class="v">${pct(a.cagr)}<span style="color:var(--dim)"> / ${a.mdd.toFixed(0)}%</span></td>`
+      +`<td class="v ${dc>0?'win':''}">${pct(b.cagr)}<span style="color:var(--dim)"> / ${b.mdd.toFixed(0)}%</span></td>`
+      +`<td class="v" style="color:${dc>=0?'var(--green)':'var(--red)'}">${dc>=0?'+':''}${dc.toFixed(1)}p</td>`
+      +`<td class="v" style="color:${dm<=0?'var(--green)':'var(--red)'}">${dm>=0?'+':''}${dm.toFixed(0)}p</td>`
+      +`<td class="v mono" style="font-weight:600">${mult.toFixed(2)}배</td></tr>`;
+  });
+  h+='</tbody>'; document.getElementById('tbl').innerHTML=h;
+  // 차트: 종목별 V5.0 누적 평가액
+  const labels=[...new Set(tks.flatMap(t=>results[t].res50.snap.map(s=>s[0])))].sort();
+  document.getElementById('chartTitle').textContent=`V5.0(${imShortMA}일) 누적 평가액 — 종목 비교`;
+  lastRender=()=>makeChart(tks.map(t=>{
+    const m=META[t]||{color:'#5b8def'};
+    return {label:t, data:alignSnap(results[t].res50.snap,labels), borderColor:m.color, backgroundColor:'transparent', borderWidth:1.8, pointRadius:0, tension:.1};
+  }),labels);
   lastRender();
 }
 

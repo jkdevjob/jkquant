@@ -409,7 +409,7 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
 </div>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v22.6</span></h1></div>
+    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v22.7</span></h1></div>
     <div style="display:flex;align-items:center;gap:8px">
       <a class="btbtn" href="/backtest">📊<span class="bt-txt"> 백테스트</span></a>
       <button class="gear" onclick="openSettings()">⚙️</button>
@@ -508,7 +508,7 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
           <span id="rg_summary" style="font-size:13px;color:var(--dim)">시세 로딩 후 표시됩니다</span>
           <span id="rg_dist" style="font-size:12px;color:var(--faint)"></span>
         </div>
-        <svg id="rg_chart" viewBox="0 0 360 130" style="width:100%;height:auto;display:block"></svg>
+        <svg id="rg_chart" viewBox="0 0 360 130" preserveAspectRatio="none" style="width:100%;height:130px;display:block"></svg>
         <div style="display:flex;gap:14px;margin-top:6px;font-size:11px;color:var(--faint)">
           <span><span style="display:inline-block;width:14px;height:2px;background:#6f7bff;vertical-align:middle;margin-right:4px"></span>합성 1배지수</span>
           <span><span style="display:inline-block;width:14px;height:2px;background:var(--gold);vertical-align:middle;margin-right:4px"></span>200일선</span>
@@ -518,7 +518,7 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
           <span>RSI (14) <span style="color:var(--faint2,#888)">· 1배지수 기준</span></span>
           <span id="inf_rsi_val" class="mono" style="font-size:12px;color:var(--faint)">—</span>
         </div>
-        <svg id="inf_rsi_chart" viewBox="0 0 360 72" style="width:100%;height:auto;display:block"></svg>
+        <svg id="inf_rsi_chart" viewBox="0 0 360 72" preserveAspectRatio="none" style="width:100%;height:72px;display:block"></svg>
         <div style="display:flex;gap:14px;margin-top:3px;font-size:10px;color:var(--faint)">
           <span><span style="display:inline-block;width:12px;height:0;border-top:1px dashed #f87b8c;vertical-align:middle;margin-right:3px"></span>과매수 70</span>
           <span><span style="display:inline-block;width:12px;height:0;border-top:1px dashed #36d399;vertical-align:middle;margin-right:3px"></span>과매도 30</span>
@@ -769,7 +769,7 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
   <footer>
     <strong>JK 퀀트</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v22.6</b> · 2026-07-01</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v22.7</b> · 2026-07-01</div>
   </footer>
 </div>
 
@@ -2220,8 +2220,12 @@ function drawInfChart(){
   let avgLine='';
   if(c.qty>0 && c.avg>=lo && c.avg<=hi){
     const y=ys(c.avg).toFixed(1);
+    // 라벨은 왼쪽에 (오른쪽 끝은 최근 종가선과 겹침). 배경 박스로 가독성 확보.
+    const txt=`평단 ${px(c.avg)}`;
+    const tw=txt.length*4.6+6;
     avgLine=`<line x1="${pad}" y1="${y}" x2="${W-pad}" y2="${y}" stroke="#f5c451" stroke-width="1" stroke-dasharray="4 3" opacity="0.8"/>
-      <text x="${W-pad}" y="${(+y-4)}" text-anchor="end" fill="#f5c451" font-size="9">평단 ${px(c.avg)}</text>`;
+      <rect x="${pad+1}" y="${(+y-9.5)}" width="${tw.toFixed(0)}" height="11" rx="2" fill="var(--surf)" opacity="0.82"/>
+      <text x="${pad+4}" y="${(+y-1.5)}" text-anchor="start" fill="#f5c451" font-size="9">${txt}</text>`;
   }
   $('inf_chart').innerHTML=`
     <defs><linearGradient id="infg" x1="0" y1="0" x2="0" y2="1">
