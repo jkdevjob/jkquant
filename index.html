@@ -491,17 +491,16 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
           <div class="stat"><div class="sl">현재</div><div class="sv sm mono" id="inf_chart_cur" style="color:var(--vio)">—</div></div>
           <div class="stat"><div class="sl">1년 최고</div><div class="sv sm mono" id="inf_chart_hi">—</div></div></div>
         <svg class="minichart" id="inf_chart" viewBox="0 0 320 150" preserveAspectRatio="none"></svg>
-        <div class="fetchnote" id="inf_chart_note" style="margin-top:6px"></div>
-      </div>
-
-      <!-- RSI (14) -->
-      <div class="card"><div class="chart-head"><h3 style="margin:0;display:flex;align-items:center;gap:6px;min-width:0"><span class="dot" style="flex-shrink:0"></span><span style="white-space:nowrap"><span id="inf_rsi_sym">SOXL</span> RSI (14)</span><span id="inf_rsi_val" class="mono" style="flex-shrink:0;font-size:13px;color:var(--faint)">—</span></h3></div>
-        <svg id="inf_rsi_chart" viewBox="0 0 320 96" preserveAspectRatio="none" style="width:100%;height:auto;display:block"></svg>
-        <div style="display:flex;gap:14px;margin-top:4px;font-size:11px;color:var(--faint)">
-          <span><span style="display:inline-block;width:14px;height:0;border-top:1px dashed #f87b8c;vertical-align:middle;margin-right:4px"></span>과매수 70</span>
-          <span><span style="display:inline-block;width:14px;height:0;border-top:1px dashed #36d399;vertical-align:middle;margin-right:4px"></span>과매도 30</span>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin:8px 0 2px;font-size:11px;color:var(--faint)">
+          <span>RSI (14)</span>
+          <span id="inf_rsi_val" class="mono" style="font-size:12px;color:var(--faint)">—</span>
         </div>
-        <p class="note" style="margin-top:8px">RSI 70↑ 과매수(단기 과열) · 30↓ 과매도(단기 침체). 무한매수법은 분할 규칙대로 진행하며, RSI는 참고 지표입니다.</p>
+        <svg id="inf_rsi_chart" viewBox="0 0 320 72" preserveAspectRatio="none" style="width:100%;height:auto;display:block"></svg>
+        <div style="display:flex;gap:14px;margin-top:3px;font-size:10px;color:var(--faint)">
+          <span><span style="display:inline-block;width:12px;height:0;border-top:1px dashed #f87b8c;vertical-align:middle;margin-right:3px"></span>과매수 70</span>
+          <span><span style="display:inline-block;width:12px;height:0;border-top:1px dashed #36d399;vertical-align:middle;margin-right:3px"></span>과매도 30</span>
+        </div>
+        <div class="fetchnote" id="inf_chart_note" style="margin-top:6px"></div>
       </div>
 
       <!-- 공포·탐욕 지수 -->
@@ -793,7 +792,7 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
     <div class="seclabel">통화 <span class="hint" style="color:var(--faint);font-weight:500">국내상장 ETF는 원화</span></div><div class="seg" id="set_cur"><button data-v="usd">달러 ($)</button><button data-v="krw">원화 (₩)</button></div>
     <div class="seclabel">분할 수</div><div class="seg" id="set_div"><button data-v="20">20분할</button><button data-v="30">30분할</button><button data-v="40">40분할</button></div>
     <div class="seclabel">파라미터</div>
-    <div class="seclabel">엔진 버전</div><div class="seg" id="set_engine"><button data-v="v40">V4.0 고정</button><button data-v="v50">V5.0 국면</button></div>
+    <div class="seclabel">엔진 버전</div><div class="seg" id="set_engine"><button data-v="v40">V4.0</button><button data-v="v50">V5.0</button></div>
     <div class="field"><label>목표 수익률 (%) <span class="hint" id="target_hint">별%·지정가매도</span></label><input id="set_target" type="number" inputmode="decimal" value="20"></div>
     <div class="field"><label>큰수 % <span class="hint">처음매수 LOC 상한 회피 0~40</span></label><input id="set_big" type="number" inputmode="decimal" value="12" min="0" max="40"></div>
     <div class="field"><label id="set_principal_lbl">원금 ($)</label><input id="set_principal" type="text" inputmode="decimal" value="10000" oninput="commaInput(this)"></div>
@@ -2255,7 +2254,7 @@ function drawInfRSI(){
   const start=Math.max(P, n-(infChartRange||252));
   const idx=[]; for(let i=start;i<n;i++) idx.push(i);
   const vals=idx.map(i=>rsi[i]);
-  const W=320,H=96,padL=2,padR=2,padT=4,padB=4;
+  const W=320,H=72,padL=2,padR=2,padT=3,padB=3;
   const xs=i=>padL+(i/(idx.length-1||1))*(W-padL-padR);
   const ys=v=>padT+(1-v/100)*(H-padT-padB);   // 0=하단,100=상단
   let d=''; vals.forEach((v,i)=>{ if(v==null)return; d+=(d?'L':'M')+xs(i).toFixed(1)+','+ys(v).toFixed(1)+' '; });
@@ -2271,7 +2270,6 @@ function drawInfRSI(){
     +`<line x1="0" y1="${y30.toFixed(1)}" x2="${W}" y2="${y30.toFixed(1)}" stroke="#36d399" stroke-width="0.7" stroke-dasharray="3,2" opacity="0.6"/>`
     +`<path d="${d}" fill="none" stroke="${col}" stroke-width="1.6"/>`;
   if($('inf_rsi_val')){ $('inf_rsi_val').textContent=last!=null?last.toFixed(1):'—'; $('inf_rsi_val').style.color=col; }
-  if($('inf_rsi_sym')) $('inf_rsi_sym').textContent=(curStrat().settings.ticker||'SOXL');
 }
 
 // ── 국면 판정 차트: 합성 1배지수 vs 200일선 (최근 1년) ──

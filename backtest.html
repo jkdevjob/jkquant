@@ -271,8 +271,8 @@ td:first-child{text-align:left;}
     <div class="ctrl s-im hide"><label>엔진</label>
       <div class="seg" id="imEngine">
         <button data-e="v40" class="active" title="라오어 공식 V4.0">V4.0</button>
-        <button data-e="v50" title="국면 익절: 국면=합성1배지수>200일선 AND >50일선. 상승국면 익절=기본 / 하락국면 익절=6% 고정(조기탈출) · 리버스 무한매도는 하락국면만">V5.0 국면</button>
-        <button data-e="ab" title="V4.0·V4.1·V5.0 나란히 비교 (단일 종목)">A/B</button>
+        <button data-e="v50" title="국면 익절: 국면=합성1배지수>200일선 AND >50일선. 상승국면 익절=기본 / 하락국면 익절=6% 고정(조기탈출) · 리버스 무한매도는 하락국면만">V5.0</button>
+        <button data-e="ab" title="V4.0 vs V5.0 나란히 비교 (단일 종목)">A/B</button>
       </div>
     </div>
 
@@ -325,8 +325,7 @@ td:first-child{text-align:left;}
   <span class="bd">매도</span> 보유 1/4 별지점 쿼터매도(T×0.75) + 3/4 <b>평단+익절% 지정가</b> · 보유 0 시 복리 재시작<br>
   <span class="bd">리버스</span> T&gt;분할−1(원금소진) 시 무한매도(보유÷10·÷20)+쿼터매수(잔금÷4) · 종가&gt;평단×(1−15%/20%) 회복 시 다음날 일반모드 복귀<br>
   <span class="bd">재투자</span> 복리=익절금 원금 합산 / 단리=초과익만 인출(손실은 잔고 이월) · <b>장기(5년↑) 비교는 단리 권장</b> — 복리 초장기는 기하급수 폭주<br>
-  <span class="bd">V4.1</span> 국면(합성1배지수&gt;자체 200일선) 익절 <b>기본+10%p</b> / 하락국면 <b>기본−5%p</b> · 리버스 무한매도는 하락국면만 · 지표 워밍업(200일 미만)은 V4.0 동작<br>
-  <span class="bd">V5.0</span> 하락국면 <b>기본−5%p</b> / 상승국면 <b>기본 + 20일변동성 252일백분위 × 기본</b> (저변동→기본, 고변동→기본×2) · 리버스·워밍업은 V4.1과 동일
+  <span class="bd">V5.0</span> 국면(합성1배지수 &gt; 자체 200일선 <b>AND</b> 50일선) · 상승국면 익절 <b>기본</b> / 하락국면 익절 <b>6% 고정</b>(조기탈출) · 리버스 무한매도는 하락국면만 · 지표 워밍업(200일 미만)은 V4.0 동작
 </div>
 <div class="rules s-vr hide">
   <span class="bd">V 갱신</span> 다음 V = 현재 V + <b>Pool/G</b> + 적립금 · 2주(10거래일) 사이클<br>
@@ -354,7 +353,7 @@ td:first-child{text-align:left;}
 <div class="foot">
   ※ 실제 OHLC 종가 기반 백테스트. 수수료·세금·환율·배당 미반영. LOC매수=종가≤주문가 시 체결, 지정가매도=당일 고가≥목표가 시 체결로 근사.<br>
   ※ <b>USD</b>=반도체 2× · <b>QLD</b>=나스닥 2× · <b>SOXL</b>=반도체 3× · <b>TQQQ</b>=나스닥 3× · <b>TECL</b>=테크 3×<br>
-  ※ 무한매수법 V4.0/V4.1(국면)/V5.0(변동성 국면, JK 확장) · VR 5.0 (라오어). 일봉 근사라 실제 체결과 차이 가능. 과거 성과는 미래를 보장하지 않습니다.<br>
+  ※ 무한매수법 V4.0 / V5.0(국면 익절, JK 확장) · VR 5.0 (라오어). 일봉 근사라 실제 체결과 차이 가능. 과거 성과는 미래를 보장하지 않습니다.<br>
   <b>JK 퀀트</b> · 학습용 도구
 </div>
 
@@ -836,7 +835,7 @@ function runIM(days,tkr,cap,divs,targetPct,compound=true){
 // 국면 = 합성 1배지수(레버리지 ETF 일수익률÷배수 누적) > 200일 SMA AND > 50일 SMA.
 // 해당 티커 데이터만으로 계산 (외부 지수 불필요). syn 시계열도 반환 (국면 차트용).
 // 게이트는 M[tkr]의 로딩된 전체 이력으로 계산 (선택 기간보다 앞 데이터가 있으면 워밍업에 활용).
-// 이력 200일 미만(워밍업) 구간은 V4.0과 동일하게 동작 — 짧은 기간 백테스트에서 V4.1이 부당히 불리해지지 않도록.
+// 이력 200일 미만(워밍업) 구간은 V4.0과 동일하게 동작 — 짧은 기간 백테스트에서 V5.0이 부당히 불리해지지 않도록.
 // 검증: Python 독립 구현과 5종목(2006~2026, GFC 포함) 최종금액·MDD·사이클 완전 일치 (2026-07-07).
 function buildGateIM(tkr){
   // V5.0 국면: 합성 1배지수 > 200일선 AND > 50일선 (둘 다 위여야 상승국면)
@@ -1295,7 +1294,7 @@ function renderMultiStrat(type, results, params){
   lastRender();
 }
 
-// ── A/B 비교 렌더: V4.0 vs V4.1 (동일 기간·원금·분할·기본익절) ──
+// ── A/B 비교 렌더: V4.0 vs V5.0 (동일 기간·원금·분할·기본익절) ──
 function renderAB(t, r40, r50, days, tgt, compound){
   document.querySelector('.cards').classList.add('hide');
   document.getElementById('detail').classList.add('hide');
@@ -1309,7 +1308,7 @@ function renderAB(t, r40, r50, days, tgt, compound){
   [r40,r50].forEach(r=>{r.yrs=yrs;r.cagr=cagrOf(r.final,r.invested,yrs);});
   const money=x=>fmtV(x,t), pct=x=>(x>=0?'+':'')+x.toFixed(1)+'%';
   document.getElementById('winner').innerHTML=
-    `⚖️ <strong style="color:${m.color}">${t}</strong> 무한매수법 <strong>V4.0 vs V5.0 국면</strong> · ${imDiv}분할 · 기본 ${tgt}% · ${compound?'복리':'단리'} · ${days[0]}~${days[days.length-1]} · ${yrs.toFixed(1)}년`;
+    `⚖️ <strong style="color:${m.color}">${t}</strong> 무한매수법 <strong>V4.0 vs V5.0</strong> · ${imDiv}분할 · 기본 ${tgt}% · ${compound?'복리':'단리'} · ${days[0]}~${days[days.length-1]} · ${yrs.toFixed(1)}년`;
   const rows=[
     ['최종 평가액', r=>money(r.final),  (a,b)=>a.final-b.final, 'money'],
     ['총 수익률',   r=>pct(r.ret),      (a,b)=>a.ret-b.ret, 'pp'],
@@ -1318,7 +1317,7 @@ function renderAB(t, r40, r50, days, tgt, compound){
     ['사이클 수',   r=>r.cycles+'회',   null, null],
     ['실현손익',    r=>money(r.realized), null, null],
   ];
-  let h=`<thead><tr><th>지표</th><th>V4.0</th><th style="color:var(--gold)">V5.0 국면</th><th>Δ</th></tr></thead><tbody>`;
+  let h=`<thead><tr><th>지표</th><th>V4.0</th><th style="color:var(--gold)">V5.0</th><th>Δ</th></tr></thead><tbody>`;
   rows.forEach(([label,fn,cmp,dtype])=>{
     const a=fn(r40), b=fn(r50);
     let dl='—', win=0;
@@ -1337,7 +1336,7 @@ function renderAB(t, r40, r50, days, tgt, compound){
   document.getElementById('chartTitle').textContent=t+' V4.0 vs V5.0 누적 평가액';
   lastRender=()=>makeChart([
     {label:'V4.0',      data:alignSnap(r40.snap,labels), borderColor:'#7a8aa0', backgroundColor:'transparent', borderWidth:1.6, pointRadius:0, tension:.1},
-    {label:'V5.0 국면', data:alignSnap(r50.snap,labels), borderColor:'#e8b64c', backgroundColor:'transparent', borderWidth:2, pointRadius:0, tension:.1}
+    {label:'V5.0', data:alignSnap(r50.snap,labels), borderColor:'#e8b64c', backgroundColor:'transparent', borderWidth:2, pointRadius:0, tension:.1}
   ],labels);
   lastRender();
 }
