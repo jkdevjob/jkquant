@@ -213,7 +213,7 @@ td:first-child{text-align:left;}
   <div class="brand">
     <div>
       <div class="logo">Backtest</div>
-      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v1.75</span></h1>
+      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v1.76</span></h1>
     </div>
   </div>
   <a href="/" class="home">← JK 퀀트</a>
@@ -299,7 +299,6 @@ td:first-child{text-align:left;}
     <div class="ctrl s-vr hide"><label>시작 Pool ($)</label><input type="number" id="vrStartPool" value="0" min="0"></div>
 
     <button class="run" onclick="run()">▶ 실행</button>
-    <button class="run" onclick="downloadCSV()" style="background:var(--panel2);border:1px solid var(--line);color:var(--text);margin-left:8px" title="현재 로드된 시세를 인베스팅닷컴 형식 CSV로 저장 (실행 후 사용)">⬇ CSV</button>
   </div>
 
   <!-- 종목 선택 (DCA만 다중) -->
@@ -309,6 +308,7 @@ td:first-child{text-align:left;}
     <div style="display:flex;gap:8px;margin-top:8px">
       <input id="addTicker" type="text" placeholder="티커 입력 (예: NVDA)" style="flex:1;font-size:13px;padding:7px 10px;border-radius:7px;border:1px solid var(--border2);background:var(--surf);color:var(--text)" maxlength="10">
       <button onclick="addCustomTicker()" style="padding:7px 14px;border-radius:7px;border:none;background:var(--accent);color:#fff;font-size:13px;cursor:pointer">+ 추가</button>
+      <button onclick="downloadCSV()" style="padding:7px 14px;border-radius:7px;border:none;background:var(--accent);color:#fff;font-size:13px;cursor:pointer;white-space:nowrap" title="선택된 종목 시세를 인베스팅닷컴 형식 CSV로 저장 (실행 후)">⬇ CSV</button>
     </div>
   </div>
   <!-- 무매·VR 단일 종목 -->
@@ -591,8 +591,10 @@ function removeTicker(t){
 // 형식: 헤더 "날짜,종가,시가,고가,저가,거래량,변동 %" · 최신순 · 날짜 공백(YYYY- MM- DD) · 값 따옴표
 // 백테스트 재업로드 시 그대로 파싱됨. 거래량은 시세에 없으므로 0.
 function downloadCSV(){
-  const tickers=Object.keys(M).filter(t=>M[t]&&Object.keys(M[t]).length>0);
-  if(!tickers.length){ alert('먼저 ▶ 실행을 눌러 시세를 로딩해 주세요.'); return; }
+  // DCA에서 선택된 종목(dcaActive) 중 로드된 것만. 선택이 없으면 로드된 전체.
+  let tickers=[...dcaActive].filter(t=>M[t]&&Object.keys(M[t]).length>0);
+  if(!tickers.length) tickers=Object.keys(M).filter(t=>M[t]&&Object.keys(M[t]).length>0);
+  if(!tickers.length){ alert('먼저 종목을 선택하고 ▶ 실행을 눌러 시세를 로딩해 주세요.'); return; }
   const s=document.getElementById('dStart').value, e=document.getElementById('dEnd').value;
   let done=0;
   tickers.forEach(t=>{
