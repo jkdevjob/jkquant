@@ -213,7 +213,7 @@ td:first-child{text-align:left;}
   <div class="brand">
     <div>
       <div class="logo">Backtest</div>
-      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v1.74</span></h1>
+      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v1.75</span></h1>
     </div>
   </div>
   <a href="/" class="home">← JK 퀀트</a>
@@ -299,6 +299,7 @@ td:first-child{text-align:left;}
     <div class="ctrl s-vr hide"><label>시작 Pool ($)</label><input type="number" id="vrStartPool" value="0" min="0"></div>
 
     <button class="run" onclick="run()">▶ 실행</button>
+    <button class="run" onclick="downloadCSV()" style="background:var(--panel2);border:1px solid var(--line);color:var(--text);margin-left:8px" title="현재 로드된 시세를 인베스팅닷컴 형식 CSV로 저장 (실행 후 사용)">⬇ CSV</button>
   </div>
 
   <!-- 종목 선택 (DCA만 다중) -->
@@ -586,6 +587,41 @@ function removeTicker(t){
   if (window.saveCustomTickers) window.saveCustomTickers();
   buildTickerPick();
 }
+// ── 현재 로드된 시세를 인베스팅닷컴 형식 CSV로 다운로드 ──
+// 형식: 헤더 "날짜,종가,시가,고가,저가,거래량,변동 %" · 최신순 · 날짜 공백(YYYY- MM- DD) · 값 따옴표
+// 백테스트 재업로드 시 그대로 파싱됨. 거래량은 시세에 없으므로 0.
+function downloadCSV(){
+  const tickers=Object.keys(M).filter(t=>M[t]&&Object.keys(M[t]).length>0);
+  if(!tickers.length){ alert('먼저 ▶ 실행을 눌러 시세를 로딩해 주세요.'); return; }
+  const s=document.getElementById('dStart').value, e=document.getElementById('dEnd').value;
+  let done=0;
+  tickers.forEach(t=>{
+    const dates=Object.keys(M[t]).sort();                 // 과거→미래
+    // 기간 필터 (입력값 있으면 적용)
+    const filt=dates.filter(d=>(!s||d>=s)&&(!e||d<=e));
+    if(!filt.length) return;
+    const q=x=>'"'+x+'"';
+    const spaceDate=d=>{ const [y,m,dd]=d.split('-'); return y+'- '+m+'- '+dd; };  // 2026- 06- 12
+    const fmt=v=>{ const n=+v; return n>=1000? n.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}) : n.toFixed(n<10?4:2); };
+    let rows=['"날짜","종가","시가","고가","저가","거래량","변동 %"'];
+    // 최신순(내림차순)으로 출력 — 변동%는 전일 대비
+    for(let i=filt.length-1;i>=0;i--){
+      const d=filt[i]; const [c,o,h,l]=M[t][d];
+      let chg='0.00%';
+      if(i>0){ const pc=M[t][filt[i-1]][0]; if(pc>0) chg=(((c-pc)/pc*100)>=0?'':'')+((c-pc)/pc*100).toFixed(2)+'%'; }
+      rows.push([q(spaceDate(d)),q(fmt(c)),q(fmt(o)),q(fmt(h)),q(fmt(l)),q('0'),q(chg)].join(','));
+    }
+    const blob=new Blob([rows.join('\n')],{type:'text/csv;charset=utf-8'});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement('a');
+    a.href=url; a.download=`${t}_과거_데이터.csv`;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setTimeout(()=>URL.revokeObjectURL(url), 1000);
+    done++;
+  });
+  if(done===0) alert('선택한 기간에 데이터가 없습니다.');
+}
+
 function buildPickSingle(){
   const single=document.getElementById('tickerSingle');
   if(!single) return;
