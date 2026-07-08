@@ -409,7 +409,7 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
 </div>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v22.2</span></h1></div>
+    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v22.3</span></h1></div>
     <div style="display:flex;align-items:center;gap:8px">
       <a class="btbtn" href="/backtest">📊<span class="bt-txt"> 백테스트</span></a>
       <button class="gear" onclick="openSettings()">⚙️</button>
@@ -494,6 +494,16 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
         <div class="fetchnote" id="inf_chart_note" style="margin-top:6px"></div>
       </div>
 
+      <!-- RSI (14) -->
+      <div class="card"><div class="chart-head"><h3 style="margin:0;display:flex;align-items:center;gap:6px;min-width:0"><span class="dot" style="flex-shrink:0"></span><span style="white-space:nowrap"><span id="inf_rsi_sym">SOXL</span> RSI (14)</span><span id="inf_rsi_val" class="mono" style="flex-shrink:0;font-size:13px;color:var(--faint)">—</span></h3></div>
+        <svg id="inf_rsi_chart" viewBox="0 0 320 96" preserveAspectRatio="none" style="width:100%;height:auto;display:block"></svg>
+        <div style="display:flex;gap:14px;margin-top:4px;font-size:11px;color:var(--faint)">
+          <span><span style="display:inline-block;width:14px;height:0;border-top:1px dashed #f87b8c;vertical-align:middle;margin-right:4px"></span>과매수 70</span>
+          <span><span style="display:inline-block;width:14px;height:0;border-top:1px dashed #36d399;vertical-align:middle;margin-right:4px"></span>과매도 30</span>
+        </div>
+        <p class="note" style="margin-top:8px">RSI 70↑ 과매수(단기 과열) · 30↓ 과매도(단기 침체). 무한매수법은 분할 규칙대로 진행하며, RSI는 참고 지표입니다.</p>
+      </div>
+
       <!-- 공포·탐욕 지수 -->
       <div class="card"><h3 style="justify-content:space-between"><span style="display:flex;align-items:center;gap:8px"><span class="dot"></span>공포 &amp; 탐욕 지수</span><span class="lh-stage">CNN</span></h3>
         <div style="display:flex;align-items:baseline"><span class="fg-val" id="inf_fg_val" style="color:var(--gold)">—</span><span class="fg-lbl" id="inf_fg_lbl" style="color:var(--gold)">—</span></div>
@@ -503,7 +513,7 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
       </div>
 
       <!-- 국면 판정 차트 (합성 1배지수 vs 200일선) -->
-      <div class="card"><h3 style="justify-content:space-between"><span style="display:flex;align-items:center;gap:8px"><span class="dot"></span>국면 판정 <span style="font-size:11px;color:var(--faint)">합성 1배지수 · 200일선</span></span><span class="lh-stage" id="rg_state">—</span></h3>
+      <div class="card"><h3 style="justify-content:space-between"><span style="display:flex;align-items:center;gap:8px"><span class="dot"></span>국면 판정 <span style="font-size:11px;color:var(--faint)">합성 1배지수 · 200/50일선</span></span><span class="lh-stage" id="rg_state">—</span></h3>
         <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px">
           <span id="rg_summary" style="font-size:13px;color:var(--dim)">시세 로딩 후 표시됩니다</span>
           <span id="rg_dist" style="font-size:12px;color:var(--faint)"></span>
@@ -512,8 +522,9 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
         <div style="display:flex;gap:14px;margin-top:6px;font-size:11px;color:var(--faint)">
           <span><span style="display:inline-block;width:14px;height:2px;background:#6f7bff;vertical-align:middle;margin-right:4px"></span>합성 1배지수</span>
           <span><span style="display:inline-block;width:14px;height:2px;background:var(--gold);vertical-align:middle;margin-right:4px"></span>200일선</span>
+          <span><span style="display:inline-block;width:14px;height:0;border-top:2px dashed #e08a4c;vertical-align:middle;margin-right:4px"></span>50일선</span>
         </div>
-        <p class="note" style="margin-top:8px">지수가 200일선 <b>위</b>면 상승국면(V5.0 익절↑) · <b>아래</b>면 하락국면(익절↓). SOXL 자체 등락률을 배수로 나눠 만든 값이라 외부 지수가 필요 없습니다.</p>
+        <p class="note" style="margin-top:8px">지수가 200일선·50일선 <b>둘 다 위</b>면 상승국면(V5.0 익절=기본) · 하나라도 <b>아래</b>면 하락국면(익절 6% 조기탈출). SOXL 자체 등락률을 배수로 나눠 만든 값이라 외부 지수가 필요 없습니다.</p>
       </div>
 
       <!-- 오늘의 주문표 (항상 표시, 공포지수 바로 아래) -->
@@ -759,7 +770,7 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
   <footer>
     <strong>JK 퀀트</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v22.2</b> · 2026-07-01</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v22.3</b> · 2026-07-01</div>
   </footer>
 </div>
 
@@ -782,7 +793,7 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
     <div class="seclabel">통화 <span class="hint" style="color:var(--faint);font-weight:500">국내상장 ETF는 원화</span></div><div class="seg" id="set_cur"><button data-v="usd">달러 ($)</button><button data-v="krw">원화 (₩)</button></div>
     <div class="seclabel">분할 수</div><div class="seg" id="set_div"><button data-v="20">20분할</button><button data-v="30">30분할</button><button data-v="40">40분할</button></div>
     <div class="seclabel">파라미터</div>
-    <div class="seclabel">엔진 버전</div><div class="seg" id="set_engine"><button data-v="v40">V4.0 고정</button><button data-v="v50">V5.0 변동성</button></div>
+    <div class="seclabel">엔진 버전</div><div class="seg" id="set_engine"><button data-v="v40">V4.0 고정</button><button data-v="v50">V5.0 국면</button></div>
     <div class="field"><label>목표 수익률 (%) <span class="hint" id="target_hint">별%·지정가매도</span></label><input id="set_target" type="number" inputmode="decimal" value="20"></div>
     <div class="field"><label>큰수 % <span class="hint">처음매수 LOC 상한 회피 0~40</span></label><input id="set_big" type="number" inputmode="decimal" value="12" min="0" max="40"></div>
     <div class="field"><label id="set_principal_lbl">원금 ($)</label><input id="set_principal" type="text" inputmode="decimal" value="10000" oninput="commaInput(this)"></div>
@@ -995,40 +1006,33 @@ function computeInf(){
 }
 
 /* 별% 계산 */
-// ══════ V5.0 국면·변동성 계산 (backtest buildGateIM과 동일 알고리즘) ══════
-// 입력: 종가 배열(과거→미래). 출력: 마지막 시점의 국면(상승/하락)·변동성백분위·오늘 익절%.
+// ══════ V5.0 국면 판정 (backtest buildGateIM과 동일 알고리즘) ══════
+// 입력: 종가 배열(과거→미래). 출력: 마지막 시점의 국면(상승/하락)·오늘 익절%. 변동성 계산 불필요.
 // 레버리지: SOXL/TQQQ/TECL=3, QLD/USD/SSO=2. 외부지수 불필요(자체 종가로 합성 1배지수).
 function imRegime(closes, ticker){
+  // V5.0 국면: 합성 1배지수 > 200일선 AND > 50일선 (둘 다 위여야 상승국면). 변동성 계산 불필요.
   const n=closes.length;
   const lev=(ticker==='QLD'||ticker==='USD'||ticker==='SSO')?2:3;
-  if(n<200) return {ready:false, up:null, volpct:null, syn:null, synMa:null};
-  // 합성 1배지수 > 200일 SMA
+  if(n<200) return {ready:false, up:null, syn:null, synMa:null, synMa50:null};
   const syn=[100]; for(let i=1;i<n;i++){ const r=closes[i]/closes[i-1]-1; syn.push(syn[i-1]*(1+r/lev)); }
-  let s=0; const buf=[];
-  for(let i=0;i<n;i++){ s+=syn[i]; buf.push(syn[i]); if(buf.length>200) s-=buf.shift(); }
-  const synMa=s/200;                          // 마지막 200일 평균
-  const up = syn[n-1] > synMa;
-  // 20일 연율변동성의 252일 인과적 백분위
-  const rr=[0]; for(let i=1;i<n;i++) rr.push(closes[i]/closes[i-1]-1);
-  const vol=new Array(n).fill(null);
-  for(let i=19;i<n;i++){ const w=rr.slice(i-19,i+1); const m=w.reduce((a,x)=>a+x,0)/20;
-    vol[i]=Math.sqrt(w.reduce((a,x)=>a+(x-m)*(x-m),0)/19)*Math.sqrt(252); }
-  let volpct=null;
-  if(vol[n-1]!=null){ const lo=Math.max(0,n-1-251); let c=0,cnt=0;
-    for(let j=lo;j<n;j++){ if(vol[j]!=null){cnt++; if(vol[j]<=vol[n-1])c++;} }
-    volpct = cnt>=60 ? c/cnt : null; }
-  // 차트용 200일 SMA 시계열 (i>=199부터 유효)
-  const maSeries=new Array(n).fill(null); let ss=0; const bb=[];
-  for(let i=0;i<n;i++){ ss+=syn[i]; bb.push(syn[i]); if(bb.length>200) ss-=bb.shift();
-    if(bb.length===200) maSeries[i]=ss/200; }
-  return {ready:true, up, volpct, syn:syn[n-1], synMa, synSeries:syn, maSeries};
+  // 200일·50일 SMA 시계열 (차트용)
+  const maSeries=new Array(n).fill(null), ma50Series=new Array(n).fill(null);
+  let s=0; const buf=[]; let s50=0; const buf50=[];
+  for(let i=0;i<n;i++){
+    s+=syn[i]; buf.push(syn[i]); if(buf.length>200) s-=buf.shift();
+    s50+=syn[i]; buf50.push(syn[i]); if(buf50.length>50) s50-=buf50.shift();
+    if(buf.length===200) maSeries[i]=s/200;
+    if(buf50.length===50) ma50Series[i]=s50/50;
+  }
+  const synMa=maSeries[n-1], synMa50=ma50Series[n-1];
+  const up = synMa!=null && synMa50!=null && syn[n-1]>synMa && syn[n-1]>synMa50;
+  return {ready:true, up, syn:syn[n-1], synMa, synMa50, synSeries:syn, maSeries, ma50Series};
 }
-// 오늘의 익절% (V5.0). base=목표수익률. 워밍업/데이터부족이면 base 그대로.
+// 오늘의 익절% (V5.0). base=목표수익률. 상승국면=기본 / 하락국면=6% 고정 / 워밍업=기본.
 function imTargetV5(base, reg){
-  if(!reg || !reg.ready) return base;
-  if(!reg.up) return Math.max(0, base-5);                 // 하락국면: base-5
-  const vp = (reg.volpct==null)?0.5:reg.volpct;           // 상승국면: base + vp×base
-  return base + vp*base;
+  if(!reg || !reg.ready) return base;   // 워밍업(200일 미만)
+  if(reg.up) return base;               // 상승국면: 기본 그대로
+  return 6;                             // 하락국면: 6% 고정 (조기탈출)
 }
 
 function starPct(ticker,div,T){
@@ -1188,7 +1192,7 @@ function renderOrder(){
   }
   html+='</div>';
   // 매도 그룹: 쿼터매도 ¼ = 별지점 LOC / 나머지 ¾ = 평단×익절배율 지정가
-  // V5.0이면 익절%를 국면·변동성으로 동적 산출 (별%=매수기준은 V4.0 규칙 그대로)
+  // V5.0이면 익절%를 국면으로 산출 (상승=기본/하락=6%, 별%=매수기준은 V4.0 규칙 그대로)
   let effTarget=st.target;                    // 실제 적용 익절%
   let regBadge='';
   if(st.engine==='v50' && infChartData && infChartData.length>=200){
@@ -1196,9 +1200,9 @@ function renderOrder(){
     const reg=imRegime(closes, st.ticker);
     if(reg.ready){
       effTarget=imTargetV5(st.target, reg);
-      const vpTxt=reg.volpct==null?'—':(reg.volpct*100).toFixed(0)+'%';
+      const distTxt=reg.synMa?((reg.syn/reg.synMa-1)*100>=0?'+':'')+((reg.syn/reg.synMa-1)*100).toFixed(0)+'%':'';
       regBadge=`<div style="margin:2px 0 8px;padding:7px 10px;border-radius:8px;font-size:12px;background:${reg.up?'rgba(54,211,153,.12)':'rgba(248,123,140,.12)'};border:1px solid ${reg.up?'rgba(54,211,153,.3)':'rgba(248,123,140,.3)'}">`
-        +`<b style="color:${reg.up?'#36d399':'#f87b8c'}">${reg.up?'▲ 상승국면':'▼ 하락국면'}</b> · 변동성 ${vpTxt} · <b>오늘 익절 ${effTarget.toFixed(1)}%</b>`
+        +`<b style="color:${reg.up?'#36d399':'#f87b8c'}">${reg.up?'▲ 상승국면':'▼ 하락국면'}</b> · 200일선 ${distTxt} · <b>오늘 익절 ${effTarget.toFixed(1)}%</b>`
         +`<span style="color:var(--faint)"> (기본 ${st.target}%)</span></div>`;
     }
   }
@@ -1997,14 +2001,14 @@ async function loadInfData(force){
     $('inf_chart_note').className='fetchnote err'; $('inf_chart_note').textContent='ⓘ 원화 세션은 자동 차트 미지원.';
     return;
   }
-  if(infQuoteCache && !force){ renderInfRecent(); renderInfDay(); drawInfChart(); drawRegimeChart(); renderInfFx(); return; }
+  if(infQuoteCache && !force){ renderInfRecent(); renderInfDay(); drawInfChart(); drawInfRSI(); drawRegimeChart(); renderInfFx(); return; }
   $('inf_chart_note').className='fetchnote load'; $('inf_chart_note').textContent='시세 불러오는 중…';
   const q=await fetchDaily(st.ticker||'SOXL');
   if(q){
     infQuoteCache=q; infChartData=q.days;
     const live=(q.price!=null&&q.price>0)?q.price:q.last.close;
     lastQuote.inf={symbol:q.symbol,last:q.last.close,price:live,days:q.days};
-    renderInfRecent(); renderInfDay(); drawInfChart(); drawRegimeChart(); renderInfFx();
+    renderInfRecent(); renderInfDay(); drawInfChart(); drawInfRSI(); drawRegimeChart(); renderInfFx();
     const srcTag=(q.src==='yahoo-query1'||q.src==='yahoo-query2'||q.src==='api')?'':' (프록시)';
     $('inf_chart_note').className='fetchnote ok';
     $('inf_chart_note').textContent=`✓ ${q.symbol} ${q.last.date} 종가 ${px(q.last.close)}${live!==q.last.close?` · 현재가 ${px(live)}`:''}${srcTag}`;
@@ -2184,7 +2188,7 @@ async function loadInfChart(force){
     $('inf_chart_note').textContent='ⓘ 국내상장 ETF는 종목코드(6자리)를 입력하면 자동 차트가 됩니다.';
     return;
   }
-  if(infChartData && !force){ drawInfChart(); return; }
+  if(infChartData && !force){ drawInfChart(); drawInfRSI(); return; }
   $('inf_chart_note').className='fetchnote load'; $('inf_chart_note').textContent='차트 불러오는 중…';
   const q=await fetchDaily(st.ticker||'SOXL');
   if(q){
@@ -2193,7 +2197,7 @@ async function loadInfChart(force){
     lastQuote.inf={symbol:q.symbol,last:q.last.close,price:live,days:q.days};
     $('inf_chart_note').className='fetchnote ok';
     $('inf_chart_note').textContent=`✓ ${q.symbol} ${q.last.date} 종가 ${px(q.last.close)}${live!==q.last.close?` · 현재가 ${px(live)}`:''}${q.src==='yahoo-query1'||q.src==='yahoo-query2'||q.src==='api'?'':' (프록시)'}`;
-    drawInfChart();
+    drawInfChart(); drawInfRSI();
     return;
   }
   $('inf_chart_note').className='fetchnote err';
@@ -2232,6 +2236,44 @@ function drawInfChart(){
     ${avgLine}`;
 }
 
+// ── RSI(14) 계산 + 그래프 (운영 종가추이 아래) ──
+function drawInfRSI(){
+  const svg=$('inf_rsi_chart'); if(!svg) return;
+  if(!infChartData || infChartData.length<15){ svg.innerHTML=''; if($('inf_rsi_val'))$('inf_rsi_val').textContent='—'; return; }
+  const closes=infChartData.map(d=>d.close).filter(v=>v>0);
+  // Wilder RSI(14)
+  const P=14, n=closes.length;
+  const rsi=new Array(n).fill(null);
+  let ag=0, al=0;
+  for(let i=1;i<=P;i++){ const ch=closes[i]-closes[i-1]; if(ch>=0)ag+=ch; else al-=ch; }
+  ag/=P; al/=P;
+  rsi[P]= al===0?100:100-100/(1+ag/al);
+  for(let i=P+1;i<n;i++){ const ch=closes[i]-closes[i-1]; const g=ch>0?ch:0, l=ch<0?-ch:0;
+    ag=(ag*(P-1)+g)/P; al=(al*(P-1)+l)/P;
+    rsi[i]= al===0?100:100-100/(1+ag/al); }
+  // 차트 구간: 종가추이와 동일 범위 (infChartRange)
+  const start=Math.max(P, n-(infChartRange||252));
+  const idx=[]; for(let i=start;i<n;i++) idx.push(i);
+  const vals=idx.map(i=>rsi[i]);
+  const W=320,H=96,padL=2,padR=2,padT=4,padB=4;
+  const xs=i=>padL+(i/(idx.length-1||1))*(W-padL-padR);
+  const ys=v=>padT+(1-v/100)*(H-padT-padB);   // 0=하단,100=상단
+  let d=''; vals.forEach((v,i)=>{ if(v==null)return; d+=(d?'L':'M')+xs(i).toFixed(1)+','+ys(v).toFixed(1)+' '; });
+  const y70=ys(70), y30=ys(30), y50=ys(50);
+  // 최근값 색상
+  const last=vals[vals.length-1];
+  const col = last>=70?'#f87b8c':(last<=30?'#36d399':'#6f7bff');
+  svg.innerHTML=
+     `<rect x="0" y="${ys(100).toFixed(1)}" width="${W}" height="${(y70-ys(100)).toFixed(1)}" fill="rgba(248,123,140,.05)"/>`
+    +`<rect x="0" y="${y30.toFixed(1)}" width="${W}" height="${(ys(0)-y30).toFixed(1)}" fill="rgba(54,211,153,.05)"/>`
+    +`<line x1="0" y1="${y70.toFixed(1)}" x2="${W}" y2="${y70.toFixed(1)}" stroke="#f87b8c" stroke-width="0.7" stroke-dasharray="3,2" opacity="0.6"/>`
+    +`<line x1="0" y1="${y50.toFixed(1)}" x2="${W}" y2="${y50.toFixed(1)}" stroke="var(--border2)" stroke-width="0.5" stroke-dasharray="2,3" opacity="0.5"/>`
+    +`<line x1="0" y1="${y30.toFixed(1)}" x2="${W}" y2="${y30.toFixed(1)}" stroke="#36d399" stroke-width="0.7" stroke-dasharray="3,2" opacity="0.6"/>`
+    +`<path d="${d}" fill="none" stroke="${col}" stroke-width="1.6"/>`;
+  if($('inf_rsi_val')){ $('inf_rsi_val').textContent=last!=null?last.toFixed(1):'—'; $('inf_rsi_val').style.color=col; }
+  if($('inf_rsi_sym')) $('inf_rsi_sym').textContent=(curStrat().settings.ticker||'SOXL');
+}
+
 // ── 국면 판정 차트: 합성 1배지수 vs 200일선 (최근 1년) ──
 function drawRegimeChart(){
   const svg=$('rg_chart'); if(!svg) return;
@@ -2250,28 +2292,29 @@ function drawRegimeChart(){
   const idx=[]; for(let i=start;i<n;i++) idx.push(i);
   const syn=idx.map(i=>reg.synSeries[i]);
   const ma=idx.map(i=>reg.maSeries[i]);
-  const all=syn.concat(ma).filter(v=>v!=null);
+  const ma50=idx.map(i=>reg.ma50Series[i]);
+  const all=syn.concat(ma,ma50).filter(v=>v!=null);
   const lo=Math.min(...all), hi=Math.max(...all);
   const W=320,H=130,pad=4;
   const xs=i=>pad+(i/(idx.length-1))*(W-pad*2);
   const ys=v=>H-pad-((v-lo)/(hi-lo||1))*(H-pad*2);
   const path=(arr)=>{ let d=''; arr.forEach((v,i)=>{ if(v==null)return; d+=(d?'L':'M')+xs(i).toFixed(1)+','+ys(v).toFixed(1)+' '; }); return d; };
-  // 상승/하락 구간 배경 (지수>MA=녹색, 아래=적색) — 세그먼트로
+  // 상승/하락 구간 배경 (지수>200일선 AND >50일선=상승=녹색, 아니면 적색) — 세그먼트로
   let bg='';
   for(let i=0;i<idx.length-1;i++){
     if(syn[i]==null||ma[i]==null) continue;
-    const up=syn[i]>ma[i];
+    const up = syn[i]>ma[i] && (ma50[i]==null || syn[i]>ma50[i]);
     bg+=`<rect x="${xs(i).toFixed(1)}" y="0" width="${(xs(i+1)-xs(i)).toFixed(1)}" height="${H}" fill="${up?'rgba(54,211,153,.06)':'rgba(248,123,140,.07)'}"/>`;
   }
   svg.innerHTML=bg
     +`<path d="${path(ma)}" fill="none" stroke="#e8b64c" stroke-width="1.4"/>`
+    +`<path d="${path(ma50)}" fill="none" stroke="#e08a4c" stroke-width="1.2" stroke-dasharray="3,2"/>`
     +`<path d="${path(syn)}" fill="none" stroke="#6f7bff" stroke-width="1.8"/>`;
   // 요약 텍스트
   const dist=((reg.syn/reg.synMa-1)*100);
   $('rg_state').textContent = reg.up?'▲ 상승':'▼ 하락';
   $('rg_state').style.color = reg.up?'#36d399':'#f87b8c';
-  const vpTxt=reg.volpct==null?'—':(reg.volpct*100).toFixed(0)+'%';
-  $('rg_summary').innerHTML = `<b style="color:${reg.up?'#36d399':'#f87b8c'}">${reg.up?'상승국면':'하락국면'}</b> · 변동성 ${vpTxt}`
+  $('rg_summary').innerHTML = `<b style="color:${reg.up?'#36d399':'#f87b8c'}">${reg.up?'상승국면':'하락국면'}</b>`
     + (st.engine==='v50'?` · 오늘 익절 <b>${imTargetV5(st.target,reg).toFixed(1)}%</b>`:'');
   $('rg_dist').textContent = `200일선 대비 ${dist>=0?'+':''}${dist.toFixed(1)}%`;
 }
@@ -2775,7 +2818,7 @@ function setupTabs(){
   if(csel) csel.addEventListener('change',()=>{ vrChartRange=+csel.value; drawVrChart(); });
   // 무한매수법 차트 기간 선택
   const isel=$('inf_chart_sel');
-  if(isel) isel.addEventListener('change',()=>{ infChartRange=+isel.value; drawInfChart(); });
+  if(isel) isel.addEventListener('change',()=>{ infChartRange=+isel.value; drawInfChart(); drawInfRSI(); });
 }
 
 /* ── Firebase Firestore 동기화 (사용자별) ── */

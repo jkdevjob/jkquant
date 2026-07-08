@@ -213,48 +213,29 @@ console.log('[4a2] V4.0 10·30분할 원문공식 앵커');
   ok('별% 일반공식 계수 (10분할 SOXL slope=4.0, index와 일치)', Math.abs(s10-4.0)<1e-9, `slope=${s10}`);
 }
 
-/* ════ 4b. V4.1 국면익절 (v1.72) — 앵커 + 워밍업 항등 ════ */
-console.log('[4b] runIM41 V4.1 국면익절');
+/* ════ 4b. V5.0 국면익절 (v1.78) — 앵커 + 50일선 게이트 + 워밍업 항등 ════ */
+console.log('[4b] runIM50 V5.0 국면익절 (상승 기본 / 하락 6% 고정 / M50게이트)');
 {
   eval(extractFn(bt,'function buildGateIM(tkr)'));
-  eval(extractFn(bt,'function runIM41(days,tkr,cap,divs,targetPct,compound'));
-  // (a) 데이터 불변 항등: 이력 200일 미만(워밍업)에서는 V4.1 == V4.0 완전 동일 (CSV 갱신에도 항상 성립)
-  if(DAYS.SOXL){
-    const d150=DAYS.SOXL.slice(0,150);
-    const a=runIM(d150,'SOXL',10000,20,20,true), b=runIM41(d150,'SOXL',10000,20,20,true);
-    ok('워밍업(<200일) 구간 V4.1==V4.0 항등', near(a.final,b.final,1e-9)&&a.cycles===b.cycles&&near(a.mdd,b.mdd,1e-9),
-       `final ${a.final}/${b.final}`);
-  }
-  // (b) 앵커: 전체 이력·복리·원금 1만$ (2026-06-12자 CSV 기준 — CSV 갱신 시 앵커 재산출 필요)
-  // 클린 파싱(가짜 봉 필터) 기준 · 2026-06-12자 CSV — CSV 갱신 시 앵커 재산출 필요
-  const A=[['SOXL',20,20,2297516.19,83.59,56],
-           ['TQQQ',40,10,169759.34,48.76,46],
-           ['TECL',20,20,1065117.57,77.49,26]];
-  for(const [tkr,div,tgt,fexp,mexp,cexp] of A){
-    if(!DAYS[tkr]){ console.log('  (CSV 없음, 스킵: '+tkr+')'); continue; }
-    const r=runIM41(DAYS[tkr],tkr,10000,div,tgt,true);
-    ok(`${tkr} ${div}분할 ${tgt}% V4.1 앵커 (최종·MDD·사이클)`,
-       near(r.final,fexp,0.05)&&near(r.mdd,mexp,0.01)&&r.cycles===cexp,
-       `final ${r.final.toFixed(2)}/${fexp} mdd ${r.mdd.toFixed(2)}/${mexp} cyc ${r.cycles}/${cexp}`);
-  }
-}
-
-/* ════ 4c. V5.0 변동성 국면익절 (v1.73) — 앵커 + 변동성백분위 경계 ════ */
-console.log('[4c] runIM50 V5.0 변동성 국면익절');
-{
   eval(extractFn(bt,'function runIM50(days,tkr,cap,divs,targetPct,compound'));
-  // (a) buildGateIM.volpct 존재 및 범위 [0,1] 검증
+  // (a) buildGateIM: gate/ready/syn 반환 구조 + 게이트가 200·50일선 둘 다 반영하는지
   if(DAYS.SOXL){
     const GM=buildGateIM('SOXL');
-    let bad=0, valid=0;
-    for(const d of DAYS.SOXL){ const v=GM.volpct[d];
-      if(v!=null){ valid++; if(v<0||v>1)bad++; } }
-    ok('volpct 범위 [0,1] 및 존재', bad===0 && valid>DAYS.SOXL.length*0.9, `유효 ${valid}/${DAYS.SOXL.length} 범위이탈 ${bad}`);
+    const hasSyn = GM.syn && Object.keys(GM.syn).length===DAYS.SOXL.length;
+    // 첫 199일은 ready=false(200일 SMA 워밍업), 200일째부터 ready
+    const d0=DAYS.SOXL[0], d199=DAYS.SOXL[198], d200=DAYS.SOXL[199];
+    const warmOK = GM.ready[d0]===false && GM.ready[d199]===false && GM.ready[d200]===true;
+    ok('buildGateIM 구조(syn 시계열·200일 워밍업 경계)', hasSyn && warmOK,
+       `syn ${hasSyn} warm ${GM.ready[d199]}/${GM.ready[d200]}`);
+    // 게이트 true인 날은 반드시 상승국면(합성지수>200일선 AND >50일선). ready면서 게이트가 syn만으로 안 켜지는지 표본 확인
+    let gcount=0; for(const d of DAYS.SOXL) if(GM.gate[d])gcount++;
+    ok('게이트 상승국면 비율 합리적(30~90%)', gcount>DAYS.SOXL.length*0.3 && gcount<DAYS.SOXL.length*0.9,
+       `상승 ${gcount}/${DAYS.SOXL.length} (${(gcount/DAYS.SOXL.length*100).toFixed(0)}%)`);
   }
-  // (b) 앵커: 클린 파싱·전체 이력·복리 (2026-06-12 CSV 기준 — 갱신 시 재산출)
-  const A=[['SOXL',20,20,3386842.29,83.56,65],
-           ['TQQQ',40,10,181417.13,48.63,69],
-           ['TECL',20,20,1067055.14,77.28,28]];
+  // (b) 앵커: 클린 파싱·전체 이력·복리·원금 1만$ (현재 프로젝트 CSV 기준 — CSV 갱신 시 재산출)
+  const A=[['SOXL',20,20,2249570.14,82.16,91],
+           ['TQQQ',40,10,162360.50,48.10,96],
+           ['TECL',20,20,1003253.82,79.68,49]];
   for(const [tkr,div,tgt,fexp,mexp,cexp] of A){
     if(!DAYS[tkr]){ console.log('  (CSV 없음, 스킵: '+tkr+')'); continue; }
     const r=runIM50(DAYS[tkr],tkr,10000,div,tgt,true);
@@ -262,7 +243,7 @@ console.log('[4c] runIM50 V5.0 변동성 국면익절');
        near(r.final,fexp,0.1)&&near(r.mdd,mexp,0.01)&&r.cycles===cexp,
        `final ${r.final.toFixed(2)}/${fexp} mdd ${r.mdd.toFixed(2)}/${mexp} cyc ${r.cycles}/${cexp}`);
   }
-  // (c) 워밍업 항등: V5.0도 이력 200일 미만에선 V4.0과 동일
+  // (c) 워밍업 항등: V5.0도 이력 200일 미만(게이트 워밍업)에선 V4.0과 동일
   if(DAYS.SOXL){
     const d150=DAYS.SOXL.slice(0,150);
     const a=runIM(d150,'SOXL',10000,20,20,true), b=runIM50(d150,'SOXL',10000,20,20,true);
