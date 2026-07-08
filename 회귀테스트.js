@@ -214,10 +214,10 @@ console.log('[4a2] V4.0 10·30분할 원문공식 앵커');
 }
 
 /* ════ 4b. V5.0 국면익절 (v1.78) — 앵커 + 50일선 게이트 + 워밍업 항등 ════ */
-console.log('[4b] runIM50 V5.0 국면익절 (상승 기본 / 하락 6% 고정 / M50게이트)');
+console.log('[4b] runIM50 V5.0 국면익절 (상승 기본 / 하락 6% 고정 / 200일선 AND 30일선 기본)');
 {
-  eval(extractFn(bt,'function buildGateIM(tkr)'));
-  eval(extractFn(bt,'function runIM50(days,tkr,cap,divs,targetPct,compound'));
+  var imShortMA=30;   // V5.0 국면선 기본값 (앱 기본과 동일)
+  eval(extractFn(bt,'function buildGateIM(')+'\n'+extractFn(bt,'function runIM50(days,tkr,cap,divs,targetPct,compound'));
   // (a) buildGateIM: gate/ready/syn 반환 구조 + 게이트가 200·50일선 둘 다 반영하는지
   if(DAYS.SOXL){
     const GM=buildGateIM('SOXL');
@@ -233,9 +233,9 @@ console.log('[4b] runIM50 V5.0 국면익절 (상승 기본 / 하락 6% 고정 / 
        `상승 ${gcount}/${DAYS.SOXL.length} (${(gcount/DAYS.SOXL.length*100).toFixed(0)}%)`);
   }
   // (b) 앵커: 클린 파싱·전체 이력·복리·원금 1만$ (현재 프로젝트 CSV 기준 — CSV 갱신 시 재산출)
-  const A=[['SOXL',20,20,2249570.14,82.16,91],
-           ['TQQQ',40,10,162360.50,48.10,96],
-           ['TECL',20,20,1003253.82,79.68,49]];
+  const A=[['SOXL',20,20,1766988.25,82.16,88],
+           ['TQQQ',40,10,164189.72,48.10,95],
+           ['TECL',20,20,967414.28,79.68,49]];
   for(const [tkr,div,tgt,fexp,mexp,cexp] of A){
     if(!DAYS[tkr]){ console.log('  (CSV 없음, 스킵: '+tkr+')'); continue; }
     const r=runIM50(DAYS[tkr],tkr,10000,div,tgt,true);

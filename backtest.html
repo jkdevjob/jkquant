@@ -214,7 +214,7 @@ td:first-child{text-align:left;}
   <div class="brand">
     <div>
       <div class="logo">Backtest</div>
-      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v1.78</span></h1>
+      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v1.79</span></h1>
     </div>
   </div>
   <a href="/" class="home">← JK 퀀트</a>
@@ -271,8 +271,15 @@ td:first-child{text-align:left;}
     <div class="ctrl s-im hide"><label>엔진</label>
       <div class="seg" id="imEngine">
         <button data-e="v40" class="active" title="라오어 공식 V4.0">V4.0</button>
-        <button data-e="v50" title="국면 익절: 국면=합성1배지수>200일선 AND >50일선. 상승국면 익절=기본 / 하락국면 익절=6% 고정(조기탈출) · 리버스 무한매도는 하락국면만">V5.0</button>
+        <button data-e="v50" title="국면 익절: 국면=합성1배지수>200일선 AND >단기이평. 상승국면 익절=기본 / 하락국면 익절=6% 고정(조기탈출) · 리버스 무한매도는 하락국면만">V5.0</button>
         <button data-e="ab" title="V4.0 vs V5.0 나란히 비교 (단일 종목)">A/B</button>
+      </div>
+    </div>
+    <div class="ctrl s-im hide" id="imMaCtrl"><label>국면선 (V5.0)</label>
+      <div class="seg" id="imShortMASeg">
+        <button data-m="20" title="가장 민감 — TECL·KORU에서 OOS 최적">20일</button>
+        <button data-m="30" class="active" title="권장 — SOXL·TQQQ에서 OOS 최적, 전체 균형">30일</button>
+        <button data-m="50" title="가장 둔감 — 거래 빈도 낮음">50일</button>
       </div>
     </div>
 
@@ -325,7 +332,7 @@ td:first-child{text-align:left;}
   <span class="bd">매도</span> 보유 1/4 별지점 쿼터매도(T×0.75) + 3/4 <b>평단+익절% 지정가</b> · 보유 0 시 복리 재시작<br>
   <span class="bd">리버스</span> T&gt;분할−1(원금소진) 시 무한매도(보유÷10·÷20)+쿼터매수(잔금÷4) · 종가&gt;평단×(1−15%/20%) 회복 시 다음날 일반모드 복귀<br>
   <span class="bd">재투자</span> 복리=익절금 원금 합산 / 단리=초과익만 인출(손실은 잔고 이월) · <b>장기(5년↑) 비교는 단리 권장</b> — 복리 초장기는 기하급수 폭주<br>
-  <span class="bd">V5.0</span> 국면(합성1배지수 &gt; 자체 200일선 <b>AND</b> 50일선) · 상승국면 익절 <b>기본</b> / 하락국면 익절 <b>6% 고정</b>(조기탈출) · 리버스 무한매도는 하락국면만 · 지표 워밍업(200일 미만)은 V4.0 동작
+  <span class="bd">V5.0</span> 국면(합성1배지수 &gt; 자체 200일선 <b>AND</b> 단기이평 20/30/50일 선택) · 상승국면 익절 <b>기본</b> / 하락국면 익절 <b>6% 고정</b>(조기탈출) · 리버스 무한매도는 하락국면만 · 지표 워밍업(200일 미만)은 V4.0 동작
 </div>
 <div class="rules s-vr hide">
   <span class="bd">V 갱신</span> 다음 V = 현재 V + <b>Pool/G</b> + 적립금 · 2주(10거래일) 사이클<br>
@@ -691,7 +698,13 @@ document.getElementById('vrMode').onclick=e=>{
 document.getElementById('vrFormula').onclick=e=>{if(e.target.dataset.f){document.querySelectorAll('#vrFormula button').forEach(b=>b.classList.remove('active'));e.target.classList.add('active');if(dataLoaded)run();}};
 document.getElementById('imDiv').onclick=e=>{if(e.target.dataset.d){document.querySelectorAll('#imDiv button').forEach(b=>b.classList.remove('active'));e.target.classList.add('active');imDiv=+e.target.dataset.d;if(dataLoaded)run();}};
 let imEngine='v40';
-document.getElementById('imEngine').onclick=e=>{if(e.target.dataset.e){document.querySelectorAll('#imEngine button').forEach(b=>b.classList.remove('active'));e.target.classList.add('active');imEngine=e.target.dataset.e;if(dataLoaded)run();}};
+let imShortMA=30;   // V5.0 국면 단기이평 (20/30/50) — 기본 30일 (Walk-Forward 권장)
+function syncMaCtrl(){ const el=document.getElementById('imMaCtrl'); if(!el)return;
+  const on=(imEngine==='v50'||imEngine==='ab');
+  el.style.opacity=on?'1':'0.35'; el.style.pointerEvents=on?'':'none'; }
+document.getElementById('imEngine').onclick=e=>{if(e.target.dataset.e){document.querySelectorAll('#imEngine button').forEach(b=>b.classList.remove('active'));e.target.classList.add('active');imEngine=e.target.dataset.e;syncMaCtrl();if(dataLoaded)run();}};
+document.getElementById('imShortMASeg').onclick=e=>{if(e.target.dataset.m){document.querySelectorAll('#imShortMASeg button').forEach(b=>b.classList.remove('active'));e.target.classList.add('active');imShortMA=+e.target.dataset.m;if(dataLoaded)run();}};
+syncMaCtrl();   // 초기: V4.0이므로 국면선 비활성 표시
 
 function commonDays(start,end,tickers){
   let s=null;
@@ -837,22 +850,23 @@ function runIM(days,tkr,cap,divs,targetPct,compound=true){
 // 게이트는 M[tkr]의 로딩된 전체 이력으로 계산 (선택 기간보다 앞 데이터가 있으면 워밍업에 활용).
 // 이력 200일 미만(워밍업) 구간은 V4.0과 동일하게 동작 — 짧은 기간 백테스트에서 V5.0이 부당히 불리해지지 않도록.
 // 검증: Python 독립 구현과 5종목(2006~2026, GFC 포함) 최종금액·MDD·사이클 완전 일치 (2026-07-07).
-function buildGateIM(tkr){
-  // V5.0 국면: 합성 1배지수 > 200일선 AND > 50일선 (둘 다 위여야 상승국면)
+function buildGateIM(tkr, shortMA){
+  // V5.0 국면: 합성 1배지수 > 200일선 AND > 단기이평(20/30/50일) — 둘 다 위여야 상승국면
+  const SM = shortMA || (typeof imShortMA!=='undefined' ? imShortMA : 30);
   const dts=Object.keys(M[tkr]).sort();
   const lev=(typeof META!=='undefined'&&META[tkr]&&META[tkr].lev)?META[tkr].lev:((tkr==='QLD'||tkr==='USD')?2:3);
   const gate={}, ready={}, synMap={};
   const syn=[]; let s=0; const buf=[];      // 200일 합
-  let s50=0; const buf50=[];                  // 50일 합
+  let sS=0; const bufS=[];                    // 단기 합
   for(let i=0;i<dts.length;i++){
     if(i===0) syn.push(100);
     else{ const r=M[tkr][dts[i]][C]/M[tkr][dts[i-1]][C]-1; syn.push(syn[i-1]*(1+r/lev)); }
     s+=syn[i]; buf.push(syn[i]); if(buf.length>200) s-=buf.shift();
-    s50+=syn[i]; buf50.push(syn[i]); if(buf50.length>50) s50-=buf50.shift();
+    sS+=syn[i]; bufS.push(syn[i]); if(bufS.length>SM) sS-=bufS.shift();
     const ma200=buf.length===200 ? s/200 : null;
-    const ma50 =buf50.length===50 ? s50/50 : null;
+    const maS  =bufS.length===SM ? sS/SM : null;
     ready[dts[i]] = ma200!==null;
-    gate[dts[i]]  = ma200!==null && ma50!==null && syn[i]>ma200 && syn[i]>ma50;
+    gate[dts[i]]  = ma200!==null && maS!==null && syn[i]>ma200 && syn[i]>maS;
     synMap[dts[i]]= syn[i];
   }
   return {gate,ready,syn:synMap};
@@ -1214,7 +1228,7 @@ function renderMultiStrat(type, results, params){
   document.getElementById('detail').classList.add('hide');
   document.querySelector('.cards').classList.remove('hide');
   document.querySelector('.tbl-wrap').classList.remove('hide');
-  const stratName=type==='im'?('무한매수법 '+(imEngine==='v50'?'V5.0':'V4.0')):'VR 5.0';
+  const stratName=type==='im'?('무한매수법 '+(imEngine==='v50'?('V5.0('+imShortMA+'일)'):'V4.0')):'VR 5.0';
   const pct=x=>(x>=0?'+':'')+x.toFixed(1)+'%';
   const money=(x,t)=>fmtV(x,t||tickers[0]);
 
@@ -1308,7 +1322,7 @@ function renderAB(t, r40, r50, days, tgt, compound){
   [r40,r50].forEach(r=>{r.yrs=yrs;r.cagr=cagrOf(r.final,r.invested,yrs);});
   const money=x=>fmtV(x,t), pct=x=>(x>=0?'+':'')+x.toFixed(1)+'%';
   document.getElementById('winner').innerHTML=
-    `⚖️ <strong style="color:${m.color}">${t}</strong> 무한매수법 <strong>V4.0 vs V5.0</strong> · ${imDiv}분할 · 기본 ${tgt}% · ${compound?'복리':'단리'} · ${days[0]}~${days[days.length-1]} · ${yrs.toFixed(1)}년`;
+    `⚖️ <strong style="color:${m.color}">${t}</strong> 무한매수법 <strong>V4.0 vs V5.0(${imShortMA}일)</strong> · ${imDiv}분할 · 기본 ${tgt}% · ${compound?'복리':'단리'} · ${days[0]}~${days[days.length-1]} · ${yrs.toFixed(1)}년`;
   const rows=[
     ['최종 평가액', r=>money(r.final),  (a,b)=>a.final-b.final, 'money'],
     ['총 수익률',   r=>pct(r.ret),      (a,b)=>a.ret-b.ret, 'pp'],
@@ -1317,7 +1331,7 @@ function renderAB(t, r40, r50, days, tgt, compound){
     ['사이클 수',   r=>r.cycles+'회',   null, null],
     ['실현손익',    r=>money(r.realized), null, null],
   ];
-  let h=`<thead><tr><th>지표</th><th>V4.0</th><th style="color:var(--gold)">V5.0</th><th>Δ</th></tr></thead><tbody>`;
+  let h=`<thead><tr><th>지표</th><th>V4.0</th><th style="color:var(--gold)">V5.0(${imShortMA}일)</th><th>Δ</th></tr></thead><tbody>`;
   rows.forEach(([label,fn,cmp,dtype])=>{
     const a=fn(r40), b=fn(r50);
     let dl='—', win=0;
@@ -1336,7 +1350,7 @@ function renderAB(t, r40, r50, days, tgt, compound){
   document.getElementById('chartTitle').textContent=t+' V4.0 vs V5.0 누적 평가액';
   lastRender=()=>makeChart([
     {label:'V4.0',      data:alignSnap(r40.snap,labels), borderColor:'#7a8aa0', backgroundColor:'transparent', borderWidth:1.6, pointRadius:0, tension:.1},
-    {label:'V5.0', data:alignSnap(r50.snap,labels), borderColor:'#e8b64c', backgroundColor:'transparent', borderWidth:2, pointRadius:0, tension:.1}
+    {label:'V5.0('+imShortMA+'일)', data:alignSnap(r50.snap,labels), borderColor:'#e8b64c', backgroundColor:'transparent', borderWidth:2, pointRadius:0, tension:.1}
   ],labels);
   lastRender();
 }
@@ -1351,7 +1365,7 @@ function renderSingle2(type,r,days){
   logBtns.forEach(b=>b.classList.remove('active'));
   if(logBtns[1]) logBtns[1].classList.add('active');  // '로그' 버튼 활성화
   const m=META[r.tkr];
-  const stratName = type==='im' ? ('무한매수법 '+(imEngine==='v50'?'V5.0':'V4.0')) : 'VR 5.0';
+  const stratName = type==='im' ? ('무한매수법 '+(imEngine==='v50'?('V5.0('+imShortMA+'일)'):'V4.0')) : 'VR 5.0';
   const stratShort = type==='im' ? '무한매수법' : 'VR 5.0';
 
   // ── yrs: 실제 날짜 구간 기반 (days.length/252는 월간 데이터 시 오차 큼)
