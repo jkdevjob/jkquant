@@ -491,15 +491,6 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
           <div class="stat"><div class="sl">현재</div><div class="sv sm mono" id="inf_chart_cur" style="color:var(--vio)">—</div></div>
           <div class="stat"><div class="sl">1년 최고</div><div class="sv sm mono" id="inf_chart_hi">—</div></div></div>
         <svg class="minichart" id="inf_chart" viewBox="0 0 320 150" preserveAspectRatio="none"></svg>
-        <div style="display:flex;justify-content:space-between;align-items:center;margin:8px 0 2px;font-size:11px;color:var(--faint)">
-          <span>RSI (14)</span>
-          <span id="inf_rsi_val" class="mono" style="font-size:12px;color:var(--faint)">—</span>
-        </div>
-        <svg id="inf_rsi_chart" viewBox="0 0 320 72" preserveAspectRatio="none" style="width:100%;height:auto;display:block"></svg>
-        <div style="display:flex;gap:14px;margin-top:3px;font-size:10px;color:var(--faint)">
-          <span><span style="display:inline-block;width:12px;height:0;border-top:1px dashed #f87b8c;vertical-align:middle;margin-right:3px"></span>과매수 70</span>
-          <span><span style="display:inline-block;width:12px;height:0;border-top:1px dashed #36d399;vertical-align:middle;margin-right:3px"></span>과매도 30</span>
-        </div>
         <div class="fetchnote" id="inf_chart_note" style="margin-top:6px"></div>
       </div>
 
@@ -517,13 +508,22 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
           <span id="rg_summary" style="font-size:13px;color:var(--dim)">시세 로딩 후 표시됩니다</span>
           <span id="rg_dist" style="font-size:12px;color:var(--faint)"></span>
         </div>
-        <svg id="rg_chart" viewBox="0 0 320 130" style="width:100%;height:auto;display:block"></svg>
+        <svg id="rg_chart" viewBox="0 0 360 130" style="width:100%;height:auto;display:block"></svg>
         <div style="display:flex;gap:14px;margin-top:6px;font-size:11px;color:var(--faint)">
           <span><span style="display:inline-block;width:14px;height:2px;background:#6f7bff;vertical-align:middle;margin-right:4px"></span>합성 1배지수</span>
           <span><span style="display:inline-block;width:14px;height:2px;background:var(--gold);vertical-align:middle;margin-right:4px"></span>200일선</span>
           <span><span style="display:inline-block;width:14px;height:0;border-top:2px dashed #e08a4c;vertical-align:middle;margin-right:4px"></span>50일선</span>
         </div>
-        <p class="note" style="margin-top:8px">지수가 200일선·50일선 <b>둘 다 위</b>면 상승국면(V5.0 익절=기본) · 하나라도 <b>아래</b>면 하락국면(익절 6% 조기탈출). SOXL 자체 등락률을 배수로 나눠 만든 값이라 외부 지수가 필요 없습니다.</p>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin:10px 0 2px;font-size:11px;color:var(--faint)">
+          <span>RSI (14) <span style="color:var(--faint2,#888)">· 1배지수 기준</span></span>
+          <span id="inf_rsi_val" class="mono" style="font-size:12px;color:var(--faint)">—</span>
+        </div>
+        <svg id="inf_rsi_chart" viewBox="0 0 360 72" style="width:100%;height:auto;display:block"></svg>
+        <div style="display:flex;gap:14px;margin-top:3px;font-size:10px;color:var(--faint)">
+          <span><span style="display:inline-block;width:12px;height:0;border-top:1px dashed #f87b8c;vertical-align:middle;margin-right:3px"></span>과매수 70</span>
+          <span><span style="display:inline-block;width:12px;height:0;border-top:1px dashed #36d399;vertical-align:middle;margin-right:3px"></span>과매도 30</span>
+        </div>
+        <p class="note" style="margin-top:8px">지수가 200일선·50일선 <b>둘 다 위</b>면 상승국면(V5.0 익절=기본) · 하나라도 <b>아래</b>면 하락국면(익절 6% 조기탈출). RSI도 레버리지가 아닌 <b>1배지수 기준</b>이라 국면과 같은 축에서 과열/침체를 봅니다.</p>
       </div>
 
       <!-- 오늘의 주문표 (항상 표시, 공포지수 바로 아래) -->
@@ -1194,15 +1194,20 @@ function renderOrder(){
   // V5.0이면 익절%를 국면으로 산출 (상승=기본/하락=6%, 별%=매수기준은 V4.0 규칙 그대로)
   let effTarget=st.target;                    // 실제 적용 익절%
   let regBadge='';
-  if(st.engine==='v50' && infChartData && infChartData.length>=200){
-    const closes=infChartData.map(d=>d.close).filter(v=>v>0);
-    const reg=imRegime(closes, st.ticker);
-    if(reg.ready){
-      effTarget=imTargetV5(st.target, reg);
-      const distTxt=reg.synMa?((reg.syn/reg.synMa-1)*100>=0?'+':'')+((reg.syn/reg.synMa-1)*100).toFixed(0)+'%':'';
-      regBadge=`<div style="margin:2px 0 8px;padding:7px 10px;border-radius:8px;font-size:12px;background:${reg.up?'rgba(54,211,153,.12)':'rgba(248,123,140,.12)'};border:1px solid ${reg.up?'rgba(54,211,153,.3)':'rgba(248,123,140,.3)'}">`
-        +`<b style="color:${reg.up?'#36d399':'#f87b8c'}">${reg.up?'▲ 상승국면':'▼ 하락국면'}</b> · 200일선 ${distTxt} · <b>오늘 익절 ${effTarget.toFixed(1)}%</b>`
-        +`<span style="color:var(--faint)"> (기본 ${st.target}%)</span></div>`;
+  if(st.engine==='v50'){
+    if(infChartData && infChartData.length>=200){
+      const closes=infChartData.map(d=>d.close).filter(v=>v>0);
+      const reg=imRegime(closes, st.ticker);
+      if(reg.ready){
+        effTarget=imTargetV5(st.target, reg);
+        const distTxt=reg.synMa?((reg.syn/reg.synMa-1)*100>=0?'+':'')+((reg.syn/reg.synMa-1)*100).toFixed(0)+'%':'';
+        regBadge=`<div style="margin:2px 0 8px;padding:7px 10px;border-radius:8px;font-size:12px;background:${reg.up?'rgba(54,211,153,.12)':'rgba(248,123,140,.12)'};border:1px solid ${reg.up?'rgba(54,211,153,.3)':'rgba(248,123,140,.3)'}">`
+          +`<b style="color:${reg.up?'#36d399':'#f87b8c'}">${reg.up?'▲ 상승국면':'▼ 하락국면'}</b> · 200일선 ${distTxt} · <b>오늘 익절 ${effTarget.toFixed(1)}%</b>`
+          +`<span style="color:var(--faint)"> (기본 ${st.target}%)</span></div>`;
+      }
+    } else {
+      // 데이터 로딩 전 — 국면 미확정. 잘못된 기본값을 확정처럼 보이지 않게 대기 표시.
+      regBadge=`<div style="margin:2px 0 8px;padding:7px 10px;border-radius:8px;font-size:12px;background:rgba(180,180,190,.10);border:1px solid rgba(180,180,190,.25);color:var(--faint)">⏳ 국면 계산 중… (시세 로딩 후 익절% 확정)</div>`;
     }
   }
   if(c.qty>0){
@@ -1328,7 +1333,7 @@ async function fetchDaily(symbol){
   }catch(e){/* 함수 없음 → 폴백 */}
 
   // 2) 브라우저에서 Yahoo 직접 (프록시 경유) — 실시간가 + 인트라데이까지
-  const yUrl=`https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(SYM)}?interval=1d&range=1y&includePrePost=false`;
+  const yUrl=`https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(SYM)}?interval=1d&range=max&includePrePost=false`;
   for(const px of PUBLIC_PROXIES){
     try{
       const txt=await proxyText(px,yUrl);
@@ -2000,14 +2005,14 @@ async function loadInfData(force){
     $('inf_chart_note').className='fetchnote err'; $('inf_chart_note').textContent='ⓘ 원화 세션은 자동 차트 미지원.';
     return;
   }
-  if(infQuoteCache && !force){ renderInfRecent(); renderInfDay(); drawInfChart(); drawInfRSI(); drawRegimeChart(); renderInfFx(); return; }
+  if(infQuoteCache && !force){ renderInfRecent(); renderInfDay(); drawInfChart(); drawInfRSI(); drawRegimeChart(); renderInfFx(); renderOrderInline(); return; }
   $('inf_chart_note').className='fetchnote load'; $('inf_chart_note').textContent='시세 불러오는 중…';
   const q=await fetchDaily(st.ticker||'SOXL');
   if(q){
     infQuoteCache=q; infChartData=q.days;
     const live=(q.price!=null&&q.price>0)?q.price:q.last.close;
     lastQuote.inf={symbol:q.symbol,last:q.last.close,price:live,days:q.days};
-    renderInfRecent(); renderInfDay(); drawInfChart(); drawInfRSI(); drawRegimeChart(); renderInfFx();
+    renderInfRecent(); renderInfDay(); drawInfChart(); drawInfRSI(); drawRegimeChart(); renderInfFx(); renderOrderInline();
     const srcTag=(q.src==='yahoo-query1'||q.src==='yahoo-query2'||q.src==='api')?'':' (프록시)';
     $('inf_chart_note').className='fetchnote ok';
     $('inf_chart_note').textContent=`✓ ${q.symbol} ${q.last.date} 종가 ${px(q.last.close)}${live!==q.last.close?` · 현재가 ${px(live)}`:''}${srcTag}`;
@@ -2238,37 +2243,44 @@ function drawInfChart(){
 // ── RSI(14) 계산 + 그래프 (운영 종가추이 아래) ──
 function drawInfRSI(){
   const svg=$('inf_rsi_chart'); if(!svg) return;
-  if(!infChartData || infChartData.length<15){ svg.innerHTML=''; if($('inf_rsi_val'))$('inf_rsi_val').textContent='—'; return; }
-  const closes=infChartData.map(d=>d.close).filter(v=>v>0);
-  // Wilder RSI(14)
-  const P=14, n=closes.length;
+  if(!infChartData || infChartData.length<200){ svg.innerHTML=''; if($('inf_rsi_val'))$('inf_rsi_val').textContent='—'; return; }
+  const st=curStrat().settings;
+  const rawCloses=infChartData.map(d=>d.close).filter(v=>v>0);
+  const reg=imRegime(rawCloses, st.ticker);
+  if(!reg || !reg.ready){ svg.innerHTML=''; return; }
+  const syn=reg.synSeries;              // 합성 1배지수 시계열 (국면과 동일 축)
+  // Wilder RSI(14) — 1배지수 기준
+  const P=14, n=syn.length;
   const rsi=new Array(n).fill(null);
   let ag=0, al=0;
-  for(let i=1;i<=P;i++){ const ch=closes[i]-closes[i-1]; if(ch>=0)ag+=ch; else al-=ch; }
+  for(let i=1;i<=P;i++){ const ch=syn[i]-syn[i-1]; if(ch>=0)ag+=ch; else al-=ch; }
   ag/=P; al/=P;
   rsi[P]= al===0?100:100-100/(1+ag/al);
-  for(let i=P+1;i<n;i++){ const ch=closes[i]-closes[i-1]; const g=ch>0?ch:0, l=ch<0?-ch:0;
+  for(let i=P+1;i<n;i++){ const ch=syn[i]-syn[i-1]; const g=ch>0?ch:0, l=ch<0?-ch:0;
     ag=(ag*(P-1)+g)/P; al=(al*(P-1)+l)/P;
     rsi[i]= al===0?100:100-100/(1+ag/al); }
-  // 차트 구간: 종가추이와 동일 범위 (infChartRange)
-  const start=Math.max(P, n-(infChartRange||252));
+  // 국면 차트와 동일 구간 (최근 252일)
+  const start=Math.max(P, n-252);
   const idx=[]; for(let i=start;i<n;i++) idx.push(i);
   const vals=idx.map(i=>rsi[i]);
-  const W=320,H=72,padL=2,padR=2,padT=3,padB=3;
+  const W=360,H=72,padL=2,padR=44,padT=3,padB=3;   // 우측 라벨 공간
   const xs=i=>padL+(i/(idx.length-1||1))*(W-padL-padR);
-  const ys=v=>padT+(1-v/100)*(H-padT-padB);   // 0=하단,100=상단
+  const ys=v=>padT+(1-v/100)*(H-padT-padB);
   let d=''; vals.forEach((v,i)=>{ if(v==null)return; d+=(d?'L':'M')+xs(i).toFixed(1)+','+ys(v).toFixed(1)+' '; });
+  const plotR=W-padR;
   const y70=ys(70), y30=ys(30), y50=ys(50);
-  // 최근값 색상
   const last=vals[vals.length-1];
   const col = last>=70?'#f87b8c':(last<=30?'#36d399':'#6f7bff');
   svg.innerHTML=
-     `<rect x="0" y="${ys(100).toFixed(1)}" width="${W}" height="${(y70-ys(100)).toFixed(1)}" fill="rgba(248,123,140,.05)"/>`
-    +`<rect x="0" y="${y30.toFixed(1)}" width="${W}" height="${(ys(0)-y30).toFixed(1)}" fill="rgba(54,211,153,.05)"/>`
-    +`<line x1="0" y1="${y70.toFixed(1)}" x2="${W}" y2="${y70.toFixed(1)}" stroke="#f87b8c" stroke-width="0.7" stroke-dasharray="3,2" opacity="0.6"/>`
-    +`<line x1="0" y1="${y50.toFixed(1)}" x2="${W}" y2="${y50.toFixed(1)}" stroke="var(--border2)" stroke-width="0.5" stroke-dasharray="2,3" opacity="0.5"/>`
-    +`<line x1="0" y1="${y30.toFixed(1)}" x2="${W}" y2="${y30.toFixed(1)}" stroke="#36d399" stroke-width="0.7" stroke-dasharray="3,2" opacity="0.6"/>`
-    +`<path d="${d}" fill="none" stroke="${col}" stroke-width="1.6"/>`;
+     `<rect x="0" y="${ys(100).toFixed(1)}" width="${plotR}" height="${(y70-ys(100)).toFixed(1)}" fill="rgba(248,123,140,.05)"/>`
+    +`<rect x="0" y="${y30.toFixed(1)}" width="${plotR}" height="${(ys(0)-y30).toFixed(1)}" fill="rgba(54,211,153,.05)"/>`
+    +`<line x1="0" y1="${y70.toFixed(1)}" x2="${plotR}" y2="${y70.toFixed(1)}" stroke="#f87b8c" stroke-width="0.7" stroke-dasharray="3,2" opacity="0.6"/>`
+    +`<line x1="0" y1="${y50.toFixed(1)}" x2="${plotR}" y2="${y50.toFixed(1)}" stroke="var(--border2)" stroke-width="0.5" stroke-dasharray="2,3" opacity="0.5"/>`
+    +`<line x1="0" y1="${y30.toFixed(1)}" x2="${plotR}" y2="${y30.toFixed(1)}" stroke="#36d399" stroke-width="0.7" stroke-dasharray="3,2" opacity="0.6"/>`
+    +`<path d="${d}" fill="none" stroke="${col}" stroke-width="1.6"/>`
+    // 그래프 끝 최종 RSI 값 라벨
+    +(last!=null?`<circle cx="${plotR.toFixed(1)}" cy="${ys(last).toFixed(1)}" r="2" fill="${col}"/>`
+      +`<text x="${(plotR+3).toFixed(1)}" y="${(ys(last)+3).toFixed(1)}" font-size="10" fill="${col}" font-family="monospace">${last.toFixed(0)}</text>`:'');
   if($('inf_rsi_val')){ $('inf_rsi_val').textContent=last!=null?last.toFixed(1):'—'; $('inf_rsi_val').style.color=col; }
 }
 
@@ -2293,8 +2305,9 @@ function drawRegimeChart(){
   const ma50=idx.map(i=>reg.ma50Series[i]);
   const all=syn.concat(ma,ma50).filter(v=>v!=null);
   const lo=Math.min(...all), hi=Math.max(...all);
-  const W=320,H=130,pad=4;
-  const xs=i=>pad+(i/(idx.length-1))*(W-pad*2);
+  const W=360,H=130,pad=4,padR=46;   // 우측 라벨 공간
+  const plotR=W-padR;
+  const xs=i=>pad+(i/(idx.length-1))*(plotR-pad);
   const ys=v=>H-pad-((v-lo)/(hi-lo||1))*(H-pad*2);
   const path=(arr)=>{ let d=''; arr.forEach((v,i)=>{ if(v==null)return; d+=(d?'L':'M')+xs(i).toFixed(1)+','+ys(v).toFixed(1)+' '; }); return d; };
   // 상승/하락 구간 배경 (지수>200일선 AND >50일선=상승=녹색, 아니면 적색) — 세그먼트로
@@ -2304,17 +2317,25 @@ function drawRegimeChart(){
     const up = syn[i]>ma[i] && (ma50[i]==null || syn[i]>ma50[i]);
     bg+=`<rect x="${xs(i).toFixed(1)}" y="0" width="${(xs(i+1)-xs(i)).toFixed(1)}" height="${H}" fill="${up?'rgba(54,211,153,.06)':'rgba(248,123,140,.07)'}"/>`;
   }
+  // 마지막 값들 (그래프 끝 라벨용)
+  const lastSyn=syn[syn.length-1], lastMa=ma[ma.length-1], lastMa50=ma50[ma50.length-1];
+  const lbl=(v,color,dy)=>v==null?'':`<circle cx="${plotR.toFixed(1)}" cy="${ys(v).toFixed(1)}" r="2" fill="${color}"/>`
+    +`<text x="${(plotR+3).toFixed(1)}" y="${(ys(v)+dy).toFixed(1)}" font-size="9.5" fill="${color}" font-family="monospace">${v>=1000?(v/1000).toFixed(1)+'k':v.toFixed(0)}</text>`;
   svg.innerHTML=bg
     +`<path d="${path(ma)}" fill="none" stroke="#e8b64c" stroke-width="1.4"/>`
     +`<path d="${path(ma50)}" fill="none" stroke="#e08a4c" stroke-width="1.2" stroke-dasharray="3,2"/>`
-    +`<path d="${path(syn)}" fill="none" stroke="#6f7bff" stroke-width="1.8"/>`;
-  // 요약 텍스트
-  const dist=((reg.syn/reg.synMa-1)*100);
+    +`<path d="${path(syn)}" fill="none" stroke="#6f7bff" stroke-width="1.8"/>`
+    +lbl(lastMa50,'#e08a4c',3)+lbl(lastMa,'#e8b64c',3)+lbl(lastSyn,'#6f7bff',3);
+  // 요약 텍스트 — 200일선·50일선 대비 둘 다
+  const dist200=((reg.syn/reg.synMa-1)*100);
+  const dist50 = reg.synMa50 ? ((reg.syn/reg.synMa50-1)*100) : null;
   $('rg_state').textContent = reg.up?'▲ 상승':'▼ 하락';
   $('rg_state').style.color = reg.up?'#36d399':'#f87b8c';
   $('rg_summary').innerHTML = `<b style="color:${reg.up?'#36d399':'#f87b8c'}">${reg.up?'상승국면':'하락국면'}</b>`
     + (st.engine==='v50'?` · 오늘 익절 <b>${imTargetV5(st.target,reg).toFixed(1)}%</b>`:'');
-  $('rg_dist').textContent = `200일선 대비 ${dist>=0?'+':''}${dist.toFixed(1)}%`;
+  const c200=dist200>=0?'#36d399':'#f87b8c', c50=(dist50!=null&&dist50>=0)?'#36d399':'#f87b8c';
+  $('rg_dist').innerHTML = `200일 <b style="color:${c200}">${dist200>=0?'+':''}${dist200.toFixed(1)}%</b>`
+    + (dist50!=null?` · 50일 <b style="color:${c50}">${dist50>=0?'+':''}${dist50.toFixed(1)}%</b>`:'');
 }
 
 async function loadFearGreed(force){
