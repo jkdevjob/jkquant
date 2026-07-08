@@ -153,7 +153,10 @@ table.cmp td:first-child,table.cmp th:first-child{text-align:left}
 .syncbar .st{color:var(--dim);flex:1}.syncbar .cfg{color:var(--vio);font-weight:700;cursor:pointer;background:none;border:none;font-size:12px}
 .modal{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center;z-index:100;padding:18px}
 .modal.on{display:flex}
-.modal .box{background:var(--panel);border:1px solid var(--vio2);border-radius:16px;padding:20px;max-width:460px;width:100%;max-height:88vh;overflow-y:auto}
+.modal .box{position:relative;background:var(--panel);border:1px solid var(--vio2);border-radius:16px;padding:20px;max-width:460px;width:100%;max-height:88vh;overflow-y:auto}
+.modal .box .mx{position:absolute;top:14px;right:14px;background:none;border:none;color:var(--dim);font-size:22px;line-height:1;cursor:pointer;padding:2px 6px;z-index:2}
+.modal .box .mx:hover{color:var(--fg)}
+.modal .box>h3:first-of-type{padding-right:32px}
 .modal h3{font-size:16px;font-weight:800;margin-bottom:6px}
 .modal .sub{font-size:12px;color:var(--faint);margin-bottom:14px}
 .modal p{font-size:12.5px;color:var(--dim);margin-bottom:12px;line-height:1.6}
@@ -538,7 +541,7 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
     </div>
     <div class="block" id="inf-guide">
       <div class="card"><h3><span class="dot"></span>한 줄 요약</h3><p class="lead">TQQQ/SOXL을 매일 조금씩 사면서, 오를 때 팔고 또 사는 것을 반복해 수익을 쌓는 전략.</p>
-        <ul class="clean"><li>종목 <b>TQQQ / SOXL</b>만 · 주문은 무조건 <b>LOC</b></li><li>분할 10(초공격)/20(공격)/30/40(안정) — 낮을수록 CAGR·MDD 동시 상승</li><li>주간장 사용 금지</li></ul></div>
+        <ul class="clean"><li>종목 <b>TQQQ / SOXL</b>만 · 주문은 무조건 <b>LOC</b></li><li>분할 20(공격)/30/40(안정)</li><li>주간장 사용 금지</li></ul></div>
       <div class="card"><h3><span class="dot"></span>T값 (회차)</h3>
         <div class="rowline"><span class="k">1회 매수</span><span class="val mono">T+1</span></div>
         <div class="rowline"><span class="k">절반 매수</span><span class="val mono">T+0.5</span></div>
@@ -758,11 +761,12 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
 </div>
 
 <div class="modal" id="setModal"><div class="box">
+  <button class="mx" onclick="closeSettings()" aria-label="닫기">✕</button>
   <h3>설정</h3><div class="sub" id="set_sessname"></div>
   <div id="set_inf">
     <div class="seclabel">종목</div><div class="seg" id="set_ticker"><button data-v="TQQQ">TQQQ</button><button data-v="SOXL">SOXL</button></div>
     <div class="seclabel">통화 <span class="hint" style="color:var(--faint);font-weight:500">국내상장 ETF는 원화</span></div><div class="seg" id="set_cur"><button data-v="usd">달러 ($)</button><button data-v="krw">원화 (₩)</button></div>
-    <div class="seclabel">분할 수</div><div class="seg" id="set_div"><button data-v="10">10분할</button><button data-v="20">20분할</button><button data-v="30">30분할</button><button data-v="40">40분할</button></div>
+    <div class="seclabel">분할 수</div><div class="seg" id="set_div"><button data-v="20">20분할</button><button data-v="30">30분할</button><button data-v="40">40분할</button></div>
     <div class="seclabel">파라미터</div>
     <div class="field"><label>목표 수익률 (%) <span class="hint">별%·지정가매도</span></label><input id="set_target" type="number" inputmode="decimal" value="20"></div>
     <div class="field"><label>큰수 % <span class="hint">처음매수 LOC 상한 회피 0~40</span></label><input id="set_big" type="number" inputmode="decimal" value="12" min="0" max="40"></div>
@@ -798,6 +802,7 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
 <!-- 구글시트 모달 -->
 <!-- 세션 모달 -->
 <div class="modal" id="sessModal"><div class="box">
+  <button class="mx" onclick="closeSess()" aria-label="닫기">✕</button>
   <h3>세션(계좌) 추가</h3><p>증권사·전략별로 따로 관리할 수 있습니다. 예: 키움 SOXL, 토스 TQQQ</p>
   <div class="field"><label>세션 이름</label><input id="sess_name" type="text" placeholder="키움 SOXL"></div>
   <div class="mbtns"><button class="close" onclick="closeSess()">닫기</button><button class="save" onclick="createSess()">만들기</button></div>
@@ -2577,6 +2582,8 @@ function openSettings(){
   $('setModal').classList.add('on');
 }
 function closeSettings(){$('setModal').classList.remove('on')}
+// 모달 배경(어두운 영역) 클릭 시 닫기 — box 내부 클릭은 무시
+['setModal','sessModal'].forEach(id=>{ const m=$(id); if(m) m.addEventListener('click',e=>{ if(e.target===m) m.classList.remove('on'); }); });
 function segSet(id,val){$(id).querySelectorAll('button').forEach(b=>b.classList.toggle('on',b.dataset.v===val))}
 function segGet(id){const b=$(id).querySelector('button.on');return b?b.dataset.v:null}
 // 거치식(mode=0.5)은 적립금이 항상 0이므로 입력칸을 비활성화해 혼동 방지
