@@ -6,6 +6,7 @@
 <meta name="theme-color" content="#0f1320">
 <title>JK 퀀트 — 백테스트</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-app.js";
 import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-auth.js";
@@ -213,7 +214,7 @@ td:first-child{text-align:left;}
   <div class="brand">
     <div>
       <div class="logo">Backtest</div>
-      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v1.76</span></h1>
+      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v1.77</span></h1>
     </div>
   </div>
   <a href="/" class="home">← JK 퀀트</a>
@@ -307,9 +308,9 @@ td:first-child{text-align:left;}
     <div class="ticker-pick" id="tickerPick"></div>
     <div style="display:flex;gap:8px;margin-top:8px">
       <input id="addTicker" type="text" placeholder="티커 입력 (예: NVDA)" style="flex:1;font-size:13px;padding:7px 10px;border-radius:7px;border:1px solid var(--border2);background:var(--surf);color:var(--text)" maxlength="10">
-      <button onclick="addCustomTicker()" style="padding:7px 14px;border-radius:7px;border:none;background:var(--accent);color:#fff;font-size:13px;cursor:pointer">+ 추가</button>
-      <button onclick="downloadCSV()" style="padding:7px 14px;border-radius:7px;border:none;background:var(--accent);color:#fff;font-size:13px;cursor:pointer;white-space:nowrap" title="선택된 종목 시세를 인베스팅닷컴 형식 CSV로 저장 (실행 후)">⬇ CSV</button>
+      <button onclick="addCustomTicker()" style="padding:7px 16px;border-radius:7px;border:none;background:var(--accent);color:#fff;font-size:13px;cursor:pointer;white-space:nowrap">+ 추가</button>
     </div>
+    <button onclick="downloadXLSX()" style="width:100%;margin-top:8px;padding:9px;border-radius:7px;border:none;background:var(--accent);color:#fff;font-size:13px;font-weight:600;cursor:pointer" title="선택된 종목들을 엑셀 1파일(종목별 시트)로 저장 (실행 후)">⬇ 엑셀 다운로드 (선택 종목 · 시트별)</button>
   </div>
   <!-- 무매·VR 단일 종목 -->
   <div class="ctrl s-im s-vr hide" style="margin-top:14px">
@@ -590,38 +591,37 @@ function removeTicker(t){
 // ── 현재 로드된 시세를 인베스팅닷컴 형식 CSV로 다운로드 ──
 // 형식: 헤더 "날짜,종가,시가,고가,저가,거래량,변동 %" · 최신순 · 날짜 공백(YYYY- MM- DD) · 값 따옴표
 // 백테스트 재업로드 시 그대로 파싱됨. 거래량은 시세에 없으므로 0.
-function downloadCSV(){
-  // DCA에서 선택된 종목(dcaActive) 중 로드된 것만. 선택이 없으면 로드된 전체.
+// ── 선택 종목들을 엑셀 1파일(종목별 시트)로 다운로드 ──
+// 각 시트 형식: 인베스팅닷컴과 동일 (헤더 날짜/종가/시가/고가/저가/거래량/변동%, 최신순, 날짜 공백).
+// 모바일은 다중 파일 다운로드가 막히므로 단일 xlsx로 통합. 백테스트가 시트별로 파싱.
+function downloadXLSX(){
+  if(typeof XLSX==='undefined'){ alert('엑셀 라이브러리 로딩 중입니다. 잠시 후 다시 시도해 주세요.'); return; }
   let tickers=[...dcaActive].filter(t=>M[t]&&Object.keys(M[t]).length>0);
   if(!tickers.length) tickers=Object.keys(M).filter(t=>M[t]&&Object.keys(M[t]).length>0);
   if(!tickers.length){ alert('먼저 종목을 선택하고 ▶ 실행을 눌러 시세를 로딩해 주세요.'); return; }
   const s=document.getElementById('dStart').value, e=document.getElementById('dEnd').value;
-  let done=0;
+  const wb=XLSX.utils.book_new();
+  const spaceDate=d=>{ const [y,m,dd]=d.split('-'); return y+'- '+m+'- '+dd; };
+  const fmt=v=>{ const n=+v; return n>=1000? n.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}) : n.toFixed(n<10?4:2); };
+  let sheetCount=0;
   tickers.forEach(t=>{
-    const dates=Object.keys(M[t]).sort();                 // 과거→미래
-    // 기간 필터 (입력값 있으면 적용)
+    const dates=Object.keys(M[t]).sort();
     const filt=dates.filter(d=>(!s||d>=s)&&(!e||d<=e));
     if(!filt.length) return;
-    const q=x=>'"'+x+'"';
-    const spaceDate=d=>{ const [y,m,dd]=d.split('-'); return y+'- '+m+'- '+dd; };  // 2026- 06- 12
-    const fmt=v=>{ const n=+v; return n>=1000? n.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}) : n.toFixed(n<10?4:2); };
-    let rows=['"날짜","종가","시가","고가","저가","거래량","변동 %"'];
-    // 최신순(내림차순)으로 출력 — 변동%는 전일 대비
-    for(let i=filt.length-1;i>=0;i--){
+    const aoa=[['날짜','종가','시가','고가','저가','거래량','변동 %']];
+    for(let i=filt.length-1;i>=0;i--){   // 최신순
       const d=filt[i]; const [c,o,h,l]=M[t][d];
       let chg='0.00%';
-      if(i>0){ const pc=M[t][filt[i-1]][0]; if(pc>0) chg=(((c-pc)/pc*100)>=0?'':'')+((c-pc)/pc*100).toFixed(2)+'%'; }
-      rows.push([q(spaceDate(d)),q(fmt(c)),q(fmt(o)),q(fmt(h)),q(fmt(l)),q('0'),q(chg)].join(','));
+      if(i>0){ const pc=M[t][filt[i-1]][0]; if(pc>0) chg=((c-pc)/pc*100).toFixed(2)+'%'; }
+      aoa.push([spaceDate(d),fmt(c),fmt(o),fmt(h),fmt(l),'0',chg]);
     }
-    const blob=new Blob([rows.join('\n')],{type:'text/csv;charset=utf-8'});
-    const url=URL.createObjectURL(blob);
-    const a=document.createElement('a');
-    a.href=url; a.download=`${t}_과거_데이터.csv`;
-    document.body.appendChild(a); a.click(); document.body.removeChild(a);
-    setTimeout(()=>URL.revokeObjectURL(url), 1000);
-    done++;
+    const ws=XLSX.utils.aoa_to_sheet(aoa);
+    XLSX.utils.book_append_sheet(wb, ws, t.slice(0,31));   // 시트명=종목 (엑셀 31자 제한)
+    sheetCount++;
   });
-  if(done===0) alert('선택한 기간에 데이터가 없습니다.');
+  if(sheetCount===0){ alert('선택한 기간에 데이터가 없습니다.'); return; }
+  const today=new Date().toISOString().slice(0,10);
+  XLSX.writeFile(wb, `JK퀀트_시세_${today}.xlsx`);
 }
 
 function buildPickSingle(){
