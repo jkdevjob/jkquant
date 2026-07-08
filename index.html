@@ -409,7 +409,7 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
 </div>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v22.0</span></h1></div>
+    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v22.2</span></h1></div>
     <div style="display:flex;align-items:center;gap:8px">
       <a class="btbtn" href="/backtest">📊<span class="bt-txt"> 백테스트</span></a>
       <button class="gear" onclick="openSettings()">⚙️</button>
@@ -500,6 +500,20 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
         <div class="fg-bar"><div class="fg-mark" id="inf_fg_mark" style="left:50%"></div></div>
         <div class="fg-scale"><span>극단적 공포</span><span>공포</span><span>중립</span><span>탐욕</span><span>극단적 탐욕</span></div>
         <p class="note" id="inf_fg_note" style="margin-top:10px">참고 지표일 뿐, 무한매수법은 분할 규칙대로 진행합니다.</p>
+      </div>
+
+      <!-- 국면 판정 차트 (합성 1배지수 vs 200일선) -->
+      <div class="card"><h3 style="justify-content:space-between"><span style="display:flex;align-items:center;gap:8px"><span class="dot"></span>국면 판정 <span style="font-size:11px;color:var(--faint)">합성 1배지수 · 200일선</span></span><span class="lh-stage" id="rg_state">—</span></h3>
+        <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px">
+          <span id="rg_summary" style="font-size:13px;color:var(--dim)">시세 로딩 후 표시됩니다</span>
+          <span id="rg_dist" style="font-size:12px;color:var(--faint)"></span>
+        </div>
+        <svg id="rg_chart" viewBox="0 0 320 130" style="width:100%;height:auto;display:block"></svg>
+        <div style="display:flex;gap:14px;margin-top:6px;font-size:11px;color:var(--faint)">
+          <span><span style="display:inline-block;width:14px;height:2px;background:#6f7bff;vertical-align:middle;margin-right:4px"></span>합성 1배지수</span>
+          <span><span style="display:inline-block;width:14px;height:2px;background:var(--gold);vertical-align:middle;margin-right:4px"></span>200일선</span>
+        </div>
+        <p class="note" style="margin-top:8px">지수가 200일선 <b>위</b>면 상승국면(V5.0 익절↑) · <b>아래</b>면 하락국면(익절↓). SOXL 자체 등락률을 배수로 나눠 만든 값이라 외부 지수가 필요 없습니다.</p>
       </div>
 
       <!-- 오늘의 주문표 (항상 표시, 공포지수 바로 아래) -->
@@ -745,7 +759,7 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
   <footer>
     <strong>JK 퀀트</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v22.0</b> · 2026-07-01</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v22.2</b> · 2026-07-01</div>
   </footer>
 </div>
 
@@ -768,7 +782,8 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
     <div class="seclabel">통화 <span class="hint" style="color:var(--faint);font-weight:500">국내상장 ETF는 원화</span></div><div class="seg" id="set_cur"><button data-v="usd">달러 ($)</button><button data-v="krw">원화 (₩)</button></div>
     <div class="seclabel">분할 수</div><div class="seg" id="set_div"><button data-v="20">20분할</button><button data-v="30">30분할</button><button data-v="40">40분할</button></div>
     <div class="seclabel">파라미터</div>
-    <div class="field"><label>목표 수익률 (%) <span class="hint">별%·지정가매도</span></label><input id="set_target" type="number" inputmode="decimal" value="20"></div>
+    <div class="seclabel">엔진 버전</div><div class="seg" id="set_engine"><button data-v="v40">V4.0 고정</button><button data-v="v50">V5.0 변동성</button></div>
+    <div class="field"><label>목표 수익률 (%) <span class="hint" id="target_hint">별%·지정가매도</span></label><input id="set_target" type="number" inputmode="decimal" value="20"></div>
     <div class="field"><label>큰수 % <span class="hint">처음매수 LOC 상한 회피 0~40</span></label><input id="set_big" type="number" inputmode="decimal" value="12" min="0" max="40"></div>
     <div class="field"><label id="set_principal_lbl">원금 ($)</label><input id="set_principal" type="text" inputmode="decimal" value="10000" oninput="commaInput(this)"></div>
     <div class="rowline" style="border:none;padding:10px 0 6px"><span class="k" style="font-weight:700">하방 LOC 매수 <span style="color:var(--faint);font-weight:400;font-size:11px">급락 대비 추가매수</span></span>
@@ -879,7 +894,7 @@ const won=v=>'₩'+Math.round((+v||0)*((typeof liveFX!=='undefined'&&liveFX)?liv
 const LS='qcockpit_v2', LS_URL='qcockpit_gsheet';
 let S=null;
 
-function defInfSettings(){return{ticker:'SOXL',div:20,target:20,big:12,rowsOn:false,rows:8,gap:2.5,rowqty:1,principal:10000,cur:'usd'}}
+function defInfSettings(){return{ticker:'SOXL',div:20,target:20,big:12,rowsOn:false,rows:8,gap:2.5,rowqty:1,principal:10000,cur:'usd',engine:'v40'}}
 function toggleRowsField(){const on=$('set_rows_on')&&$('set_rows_on').checked;const f=$('rows_fields');if(f){f.style.opacity=on?'1':'0.4';f.style.pointerEvents=on?'auto':'none';}}
 function defVrSettings(){return{ticker:'TQQQ',mode:0.75,formula:'basic',g:10,add:100,band:15,startv:0,startpool:0,cur:'usd'}}
 function uid(){return 's'+Date.now()+Math.floor(Math.random()*9999)}
@@ -980,6 +995,42 @@ function computeInf(){
 }
 
 /* 별% 계산 */
+// ══════ V5.0 국면·변동성 계산 (backtest buildGateIM과 동일 알고리즘) ══════
+// 입력: 종가 배열(과거→미래). 출력: 마지막 시점의 국면(상승/하락)·변동성백분위·오늘 익절%.
+// 레버리지: SOXL/TQQQ/TECL=3, QLD/USD/SSO=2. 외부지수 불필요(자체 종가로 합성 1배지수).
+function imRegime(closes, ticker){
+  const n=closes.length;
+  const lev=(ticker==='QLD'||ticker==='USD'||ticker==='SSO')?2:3;
+  if(n<200) return {ready:false, up:null, volpct:null, syn:null, synMa:null};
+  // 합성 1배지수 > 200일 SMA
+  const syn=[100]; for(let i=1;i<n;i++){ const r=closes[i]/closes[i-1]-1; syn.push(syn[i-1]*(1+r/lev)); }
+  let s=0; const buf=[];
+  for(let i=0;i<n;i++){ s+=syn[i]; buf.push(syn[i]); if(buf.length>200) s-=buf.shift(); }
+  const synMa=s/200;                          // 마지막 200일 평균
+  const up = syn[n-1] > synMa;
+  // 20일 연율변동성의 252일 인과적 백분위
+  const rr=[0]; for(let i=1;i<n;i++) rr.push(closes[i]/closes[i-1]-1);
+  const vol=new Array(n).fill(null);
+  for(let i=19;i<n;i++){ const w=rr.slice(i-19,i+1); const m=w.reduce((a,x)=>a+x,0)/20;
+    vol[i]=Math.sqrt(w.reduce((a,x)=>a+(x-m)*(x-m),0)/19)*Math.sqrt(252); }
+  let volpct=null;
+  if(vol[n-1]!=null){ const lo=Math.max(0,n-1-251); let c=0,cnt=0;
+    for(let j=lo;j<n;j++){ if(vol[j]!=null){cnt++; if(vol[j]<=vol[n-1])c++;} }
+    volpct = cnt>=60 ? c/cnt : null; }
+  // 차트용 200일 SMA 시계열 (i>=199부터 유효)
+  const maSeries=new Array(n).fill(null); let ss=0; const bb=[];
+  for(let i=0;i<n;i++){ ss+=syn[i]; bb.push(syn[i]); if(bb.length>200) ss-=bb.shift();
+    if(bb.length===200) maSeries[i]=ss/200; }
+  return {ready:true, up, volpct, syn:syn[n-1], synMa, synSeries:syn, maSeries};
+}
+// 오늘의 익절% (V5.0). base=목표수익률. 워밍업/데이터부족이면 base 그대로.
+function imTargetV5(base, reg){
+  if(!reg || !reg.ready) return base;
+  if(!reg.up) return Math.max(0, base-5);                 // 하락국면: base-5
+  const vp = (reg.volpct==null)?0.5:reg.volpct;           // 상승국면: base + vp×base
+  return base + vp*base;
+}
+
 function starPct(ticker,div,T){
   // 라오어 V4.0 검증 계수. 별% = base − k×T
   // TQQQ: base 15 / SOXL: base 20
@@ -1136,16 +1187,30 @@ function renderOrder(){
     }
   }
   html+='</div>';
-  // 매도 그룹 (정통 V4.0): 쿼터매도 ¼ = 별지점 LOC / 나머지 ¾ = 평단×익절배율 지정가
+  // 매도 그룹: 쿼터매도 ¼ = 별지점 LOC / 나머지 ¾ = 평단×익절배율 지정가
+  // V5.0이면 익절%를 국면·변동성으로 동적 산출 (별%=매수기준은 V4.0 규칙 그대로)
+  let effTarget=st.target;                    // 실제 적용 익절%
+  let regBadge='';
+  if(st.engine==='v50' && infChartData && infChartData.length>=200){
+    const closes=infChartData.map(d=>d.close).filter(v=>v>0);
+    const reg=imRegime(closes, st.ticker);
+    if(reg.ready){
+      effTarget=imTargetV5(st.target, reg);
+      const vpTxt=reg.volpct==null?'—':(reg.volpct*100).toFixed(0)+'%';
+      regBadge=`<div style="margin:2px 0 8px;padding:7px 10px;border-radius:8px;font-size:12px;background:${reg.up?'rgba(54,211,153,.12)':'rgba(248,123,140,.12)'};border:1px solid ${reg.up?'rgba(54,211,153,.3)':'rgba(248,123,140,.3)'}">`
+        +`<b style="color:${reg.up?'#36d399':'#f87b8c'}">${reg.up?'▲ 상승국면':'▼ 하락국면'}</b> · 변동성 ${vpTxt} · <b>오늘 익절 ${effTarget.toFixed(1)}%</b>`
+        +`<span style="color:var(--faint)"> (기본 ${st.target}%)</span></div>`;
+    }
+  }
   if(c.qty>0){
     html+='<div class="order-grp sell"><div class="gt"><span class="gd"></span>매도</div>';
     const qSell=Math.floor(c.qty/4);
     if(qSell>0)html+=oitem('s','쿼터매도 (¼·별지점)','LOC',star,qSell);
-    const tpMul=1+st.target/100;
+    const tpMul=1+effTarget/100;
     html+=oitem('s','지정가매도 (나머지)','지정가',c.avg*tpMul,c.qty-qSell);
     html+='</div>';
   }
-  $('o_orders').innerHTML=html;
+  $('o_orders').innerHTML=regBadge+html;
   render5day();
 }
 
@@ -1453,7 +1518,7 @@ function editInf(i){ /* 입력 폼 제거됨: 삭제 후 시트로 재기록 유
 }
 function delInf(i){if(!confirm('이 기록을 삭제할까요?'))return;curStrat().hist.splice(i,1);save();refreshInf()}
 
-function refreshInf(){updateCurLabels('inf');renderInfNow();renderOrderInline();renderInfHist();renderInfAnal();renderInfFx();renderStatusline();
+function refreshInf(){updateCurLabels('inf');renderInfNow();renderOrderInline();renderInfHist();renderInfAnal();renderInfFx();renderStatusline();drawRegimeChart();
   // 현재 탭이 활성이면 시세·캔들·차트·지수 자동 로드 (버튼 없이)
   if(S.activeTab==='inf'){ try{loadInfData();loadInfFG();loadFX();}catch(e){console.error(e)} }
 }
@@ -1932,14 +1997,14 @@ async function loadInfData(force){
     $('inf_chart_note').className='fetchnote err'; $('inf_chart_note').textContent='ⓘ 원화 세션은 자동 차트 미지원.';
     return;
   }
-  if(infQuoteCache && !force){ renderInfRecent(); renderInfDay(); drawInfChart(); renderInfFx(); return; }
+  if(infQuoteCache && !force){ renderInfRecent(); renderInfDay(); drawInfChart(); drawRegimeChart(); renderInfFx(); return; }
   $('inf_chart_note').className='fetchnote load'; $('inf_chart_note').textContent='시세 불러오는 중…';
   const q=await fetchDaily(st.ticker||'SOXL');
   if(q){
     infQuoteCache=q; infChartData=q.days;
     const live=(q.price!=null&&q.price>0)?q.price:q.last.close;
     lastQuote.inf={symbol:q.symbol,last:q.last.close,price:live,days:q.days};
-    renderInfRecent(); renderInfDay(); drawInfChart(); renderInfFx();
+    renderInfRecent(); renderInfDay(); drawInfChart(); drawRegimeChart(); renderInfFx();
     const srcTag=(q.src==='yahoo-query1'||q.src==='yahoo-query2'||q.src==='api')?'':' (프록시)';
     $('inf_chart_note').className='fetchnote ok';
     $('inf_chart_note').textContent=`✓ ${q.symbol} ${q.last.date} 종가 ${px(q.last.close)}${live!==q.last.close?` · 현재가 ${px(live)}`:''}${srcTag}`;
@@ -2165,6 +2230,50 @@ function drawInfChart(){
     <path d="${area}" fill="url(#infg)"/>
     <path d="${d}" fill="none" stroke="${col}" stroke-width="1.6" stroke-linejoin="round"/>
     ${avgLine}`;
+}
+
+// ── 국면 판정 차트: 합성 1배지수 vs 200일선 (최근 1년) ──
+function drawRegimeChart(){
+  const svg=$('rg_chart'); if(!svg) return;
+  if(!infChartData || infChartData.length<200){
+    $('rg_summary').textContent='데이터 200일 미만 — 판정 대기';
+    $('rg_state').textContent='—'; svg.innerHTML=''; return;
+  }
+  const st=curStrat().settings;
+  const closes=infChartData.map(d=>d.close).filter(v=>v>0);
+  const dates=infChartData.filter(d=>d.close>0).map(d=>d.date);
+  const reg=imRegime(closes, st.ticker);
+  if(!reg.ready){ $('rg_summary').textContent='판정 대기'; return; }
+  // 최근 252일 구간 (SMA 유효 구간만)
+  const n=closes.length;
+  const start=Math.max(199, n-252);
+  const idx=[]; for(let i=start;i<n;i++) idx.push(i);
+  const syn=idx.map(i=>reg.synSeries[i]);
+  const ma=idx.map(i=>reg.maSeries[i]);
+  const all=syn.concat(ma).filter(v=>v!=null);
+  const lo=Math.min(...all), hi=Math.max(...all);
+  const W=320,H=130,pad=4;
+  const xs=i=>pad+(i/(idx.length-1))*(W-pad*2);
+  const ys=v=>H-pad-((v-lo)/(hi-lo||1))*(H-pad*2);
+  const path=(arr)=>{ let d=''; arr.forEach((v,i)=>{ if(v==null)return; d+=(d?'L':'M')+xs(i).toFixed(1)+','+ys(v).toFixed(1)+' '; }); return d; };
+  // 상승/하락 구간 배경 (지수>MA=녹색, 아래=적색) — 세그먼트로
+  let bg='';
+  for(let i=0;i<idx.length-1;i++){
+    if(syn[i]==null||ma[i]==null) continue;
+    const up=syn[i]>ma[i];
+    bg+=`<rect x="${xs(i).toFixed(1)}" y="0" width="${(xs(i+1)-xs(i)).toFixed(1)}" height="${H}" fill="${up?'rgba(54,211,153,.06)':'rgba(248,123,140,.07)'}"/>`;
+  }
+  svg.innerHTML=bg
+    +`<path d="${path(ma)}" fill="none" stroke="#e8b64c" stroke-width="1.4"/>`
+    +`<path d="${path(syn)}" fill="none" stroke="#6f7bff" stroke-width="1.8"/>`;
+  // 요약 텍스트
+  const dist=((reg.syn/reg.synMa-1)*100);
+  $('rg_state').textContent = reg.up?'▲ 상승':'▼ 하락';
+  $('rg_state').style.color = reg.up?'#36d399':'#f87b8c';
+  const vpTxt=reg.volpct==null?'—':(reg.volpct*100).toFixed(0)+'%';
+  $('rg_summary').innerHTML = `<b style="color:${reg.up?'#36d399':'#f87b8c'}">${reg.up?'상승국면':'하락국면'}</b> · 변동성 ${vpTxt}`
+    + (st.engine==='v50'?` · 오늘 익절 <b>${imTargetV5(st.target,reg).toFixed(1)}%</b>`:'');
+  $('rg_dist').textContent = `200일선 대비 ${dist>=0?'+':''}${dist.toFixed(1)}%`;
 }
 
 async function loadFearGreed(force){
@@ -2563,7 +2672,7 @@ function openSettings(){
   if(S.activeTab==='inf'){
     $('set_inf').style.display='';$('set_vr').style.display='none';
     const st=s.settings, sym=(st.cur||'usd')==='krw'?'₩':'$';
-    segSet('set_ticker',st.ticker);segSet('set_div',String(st.div));segSet('set_cur',st.cur||'usd');
+    segSet('set_ticker',st.ticker);segSet('set_div',String(st.div));segSet('set_cur',st.cur||'usd');segSet('set_engine',st.engine||'v40');
     $('set_target').value=st.target;$('set_big').value=st.big;$('set_principal').value=nfix(st.principal,0);
     if($('set_rows'))$('set_rows').value=st.rows!=null?st.rows:8;
     if($('set_gap'))$('set_gap').value=st.gap!=null?st.gap:2.5;
@@ -2593,7 +2702,7 @@ function applyVrModeUI(mode){
   const lbl=$('set_add_lbl'); if(lbl) lbl.style.opacity=isLump?'0.4':'1';
 }
 function setupSegs(){
-  ['set_ticker','set_div','set_vmode','set_vformula','set_cur','set_vcur'].forEach(id=>{
+  ['set_ticker','set_div','set_vmode','set_vformula','set_cur','set_vcur','set_engine'].forEach(id=>{
     const el=$(id);if(!el)return;
     el.querySelectorAll('button').forEach(b=>{
       b.onclick=()=>{el.querySelectorAll('button').forEach(x=>x.classList.remove('on'));b.classList.add('on');
@@ -2611,7 +2720,7 @@ function setupSegs(){
 function saveSettings(){
   const s=sess();
   if(S.activeTab==='inf'){
-    s.settings={ticker:segGet('set_ticker')||'SOXL',div:+segGet('set_div')||20,
+    s.settings={ticker:segGet('set_ticker')||'SOXL',div:+segGet('set_div')||20,engine:segGet('set_engine')||'v40',
       target:inputNum('set_target')||20,big:inputNum('set_big')||12,
       rowsOn:$('set_rows_on')?$('set_rows_on').checked:false,
       rows:Math.max(0,Math.min(20,+$('set_rows').value||0)),gap:+$('set_gap').value||2.5,
