@@ -410,7 +410,7 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
 </div>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v2.20</span></h1></div>
+    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v2.22</span></h1></div>
     <div style="display:flex;align-items:center;gap:8px">
       <a class="btbtn" href="/backtest">📊<span class="bt-txt"> 백테스트</span></a>
       <button class="gear" onclick="openSettings()">⚙️</button>
@@ -773,7 +773,7 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
   <footer>
     <strong>JK 퀀트</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v2.20</b> · 2026-07-01</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v2.22</b> · 2026-07-01</div>
   </footer>
 </div>
 
@@ -793,14 +793,14 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
   <h3>설정</h3><div class="sub" id="set_sessname"></div>
   <div id="set_inf">
     <div class="seclabel">종목</div><div class="seg" id="set_ticker"><button data-v="TQQQ">TQQQ</button><button data-v="SOXL">SOXL</button><button data-v="TECL">TECL</button><button data-v="KORU">KORU</button></div>
-    <p class="note" style="margin:-2px 0 8px">TQQQ·SOXL만 라오어 공식. <b>TECL·KORU는 비공식</b>(자체 백테스트 기준)이며 익절%를 바꾸면 별지점·리버스 복귀조건이 함께 바뀝니다.</p>
+    <p class="note" style="margin:-2px 0 8px">TQQQ·SOXL만 라오어 공식. <b>TECL·KORU는 비공식</b>(자체 백테스트). 종목을 고르면 <b>검정으로 확인된 권장 엔진·파라미터가 자동 적용</b>됩니다. 익절%를 바꾸면 별지점·리버스 복귀조건도 함께 바뀝니다.</p>
     <div class="seclabel">통화 <span class="hint" style="color:var(--faint);font-weight:500">국내상장 ETF는 원화</span></div><div class="seg" id="set_cur"><button data-v="usd">달러 ($)</button><button data-v="krw">원화 (₩)</button></div>
     <div class="seclabel">분할 수</div><div class="seg" id="set_div"><button data-v="20">20분할</button><button data-v="30">30분할</button><button data-v="40">40분할</button></div>
     <div class="seclabel">파라미터</div>
     <div class="seclabel">엔진 버전</div><div class="seg" id="set_engine"><button data-v="v40">V4.0</button><button data-v="v50">V5.0</button></div>
     <div class="seclabel">국면선 (V5.0)</div><div class="seg" id="set_shortma"><button data-v="20">20일</button><button data-v="30">30일</button><button data-v="50">50일</button></div>
     <div class="seclabel">하락국면 익절 % (V5.0)</div><div class="seg" id="set_lopct"><button data-v="4">4%</button><button data-v="6">6%</button><button data-v="8">8%</button><button data-v="10">10%</button></div>
-    <p class="note" style="margin:-2px 0 8px">하락국면엔 익절 목표를 낮춰 반등에 빨리 턴다. 단기이평이 짧을수록 하락을 빨리 감지. 검증상 <b>20일·8%</b>와 <b>30일·6%</b>가 비슷하게 우수하며, 측정 기준(단리/복리)에 따라 순위가 바뀝니다.</p>
+    <p class="note" style="margin:-2px 0 8px">하락국면엔 익절 목표를 낮춰 반등에 빨리 턴다. <b>무작위 대조 검정</b> 결과 국면 판정이 실제 정보를 담는 종목은 <b>KORU(20일)·TECL(30일)</b>뿐이며, <b>SOXL·TQQQ에선 무의미</b>(V4.0 + 낮은 익절% 권장)합니다. 50일선은 전 종목에서 무작위보다 나빴습니다.</p>
     <div class="field"><label>목표 수익률 (%) <span class="hint" id="target_hint">별%·지정가매도</span></label><input id="set_target" type="number" inputmode="decimal" value="20"></div>
     <div class="field"><label>큰수 % <span class="hint">처음매수 LOC 상한 회피 0~40</span></label><input id="set_big" type="number" inputmode="decimal" value="12" min="0" max="40"></div>
     <div class="field"><label id="set_principal_lbl">원금 ($)</label><input id="set_principal" type="text" inputmode="decimal" value="10000" oninput="commaInput(this)"></div>
@@ -1053,10 +1053,15 @@ function starPct(ticker,div,T,base){
 // 리버스 복귀 배율 = 1 − base/100 (문서: 복귀 기준 = T 마지막 쿼터매도 기준)
 function exitMulOf(base){ return 1-((base!=null&&base>0)?base:20)/100; }
 
-// ★ 종목·엔진별 권장 익절%(=별%base). 비용(수수료·세금) 반영 단리 Walk-Forward 최적값.
-//   TQQQ·SOXL의 라오어 공식값은 15/20이나, 실전 비용을 넣으면 아래가 우수했다.
-//   TECL·KORU는 비공식(자체 검증). 종목·버전 변경 시 자동 적용된다.
-const IM_BEST={ v40:{TQQQ:8,SOXL:10,TECL:10,KORU:8}, v50:{TQQQ:8,SOXL:20,TECL:12,KORU:15} };
+// ★ 종목별 기본 익절%(=별%base). 통합 규약이라 별지점·리버스 복귀조건이 함께 결정된다.
+//   TQQQ 15 / SOXL 20 은 라오어 문서 공식값. 이 값은 '최적화 결과'가 아니라 설계 철학이다:
+//     · 별% = (20−2T)% 이므로 T=0에서 별지점 = 평단+20% → 초기 매수 밴드가 넓어 물타기 여유 확보
+//     · 사이클 연 8회 수준 → 실전 운영 가능한 빈도 (익절 5%면 연 34회로 비현실적)
+//     · 3년 이동 최소수익 +45~52%(세전)로 어느 시점에 시작해도 방어
+//   백테스트상 익절 5~10%가 총수익은 높지만, 그건 별지점까지 좁아진 '다른 전략'이며
+//   회전이 3~4배라 미체결·슬리피지·세금신고·심리 부담이 백테스트에 반영되지 않는다.
+//   TECL·KORU는 문서 미수록(비공식) — 자체 검증값.
+const IM_BEST={ v40:{TQQQ:15,SOXL:20,TECL:12,KORU:15}, v50:{TQQQ:15,SOXL:20,TECL:12,KORU:15} };
 const IM_OFFICIAL={TQQQ:15, SOXL:20};
 function bestTgt(tkr, eng){
   const tbl=IM_BEST[eng==='v40'?'v40':'v50'];
@@ -1068,8 +1073,9 @@ function syncTgtNote(){
   const tk=(typeof segGet==='function' ? segGet('set_ticker') : null)||'SOXL';
   const eng=(typeof segGet==='function' ? segGet('set_engine') : null)||'v40';
   const b=bestTgt(tk,eng), off=IM_OFFICIAL[tk];
-  el.innerHTML=`별%·복귀조건 동반 · <b>${tk} ${eng==='v40'?'V4.0':'V5.0'} 권장 ${b}%</b>`
-    + (off&&off!==b?` <span style="color:var(--faint)">(공식 ${off}%)</span>`:'');
+  let h=`별%·복귀조건 동반 · <b>${tk} 기본 ${b}%</b>`;
+  h += off ? ` <span style="color:var(--faint)">(라오어 공식)</span>` : ` <span style="color:var(--gold)">(비공식)</span>`;
+  el.innerHTML=h;
 }
 
 /* ── 무한매수법 현재 대시보드 ── */
@@ -2827,10 +2833,12 @@ function setupSegs(){
         if(id==='set_cur'){const sym=b.dataset.v==='krw'?'₩':'$';$('set_principal_lbl').textContent=`원금 (${sym})`;}
         if(id==='set_vcur'){const sym=b.dataset.v==='krw'?'₩':'$';$('set_add_lbl').textContent=`매 사이클 적립금 (${sym})`;$('set_startv_lbl').innerHTML=`시작 V (${sym}) <span class="hint">0이면 첫 매수가 V</span>`;$('set_startpool_lbl').textContent=`시작 Pool (${sym})`;}
         // 종목 변경 시 익절배율(별%) 오피셜 기본값 자동 세팅 — TQQQ 15% / SOXL 20%
-        // 종목·엔진별 권장 익절%(=별%base) 자동 세팅 (IM_BEST)
-        if(id==='set_ticker'){const t=$('set_target'); if(t){ t.value=bestTgt(b.dataset.v, segGet('set_engine')||'v40'); syncTgtNote(); }}
-        // 엔진 변경 시에도 그 버전의 권장값으로 갱신
-        if(id==='set_engine'){const t=$('set_target'); if(t){ t.value=bestTgt(segGet('set_ticker')||'SOXL', b.dataset.v); syncTgtNote(); }}
+        // 종목 변경 → 그 종목의 기본 익절%만 세팅 (엔진은 사용자 선택 유지)
+        if(id==='set_ticker'){
+          const t=$('set_target'); if(t) t.value=bestTgt(b.dataset.v, segGet('set_engine')||'v40');
+          syncTgtNote();
+        }
+        if(id==='set_engine'){ syncShortMaUI(b.dataset.v); syncTgtNote(); }
         // 운용모드 변경 시 거치식이면 적립금 입력 비활성화
         if(id==='set_vmode'){ applyVrModeUI(b.dataset.v); }
       };

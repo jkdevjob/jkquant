@@ -214,7 +214,7 @@ td:first-child{text-align:left;}
   <div class="brand">
     <div>
       <div class="logo">Backtest</div>
-      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v1.84</span></h1>
+      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v1.86</span></h1>
     </div>
   </div>
   <a href="/" class="home">← JK 퀀트</a>
@@ -725,14 +725,19 @@ let imShortMA=30;   // V5.0 국면 단기이평 (20/30/50)
 let imLoPct=6;      // V5.0 하락국면 익절% (조기탈출)
 let imCostOn=true;   // 세금·수수료·슬리피지 반영 (기본 ON)
 
-// ★ 종목·엔진별 권장 익절%(=별%base). 통합 규약이므로 별지점·복귀조건도 함께 결정된다.
-//   비용(수수료·세금) 반영 단리 Walk-Forward 최적값. TECL·KORU는 비공식(자체 검증).
-//   사용자가 익절%를 직접 입력하면 그 값이 전 종목에 강제 적용된다.
+// ★ 종목별 기본 익절%(=별%base). 통합 규약이라 별지점·리버스 복귀조건이 함께 결정된다.
+//   TQQQ 15 / SOXL 20 은 라오어 공식값. 최적화 결과가 아니라 설계 철학이다:
+//     · 별%=(20−2T)% → T=0에서 별지점 평단+20%. 초기 매수 밴드가 넓어 물타기 여유 확보
+//     · 사이클 연 8회 → 실전 가능한 빈도 (익절 5%면 연 34회로 비현실적)
+//     · 3년 이동 최소수익 +45~52%(세전) — 어느 시점에 시작해도 방어
+//   백테스트상 익절 5~10%가 총수익은 높으나, 별지점까지 좁아진 '다른 전략'이며
+//   회전 3~4배라 미체결·슬리피지·세금신고·심리 부담이 백테스트에 미반영이다.
+//   TECL·KORU는 문서 미수록(비공식) — 자체 검증값.
 const IM_BEST={
-  v40:{TQQQ:8, SOXL:10, TECL:10, KORU:8},
-  v50:{TQQQ:8, SOXL:20, TECL:12, KORU:15}
+  v40:{TQQQ:15, SOXL:20, TECL:12, KORU:15},
+  v50:{TQQQ:15, SOXL:20, TECL:12, KORU:15}
 };
-const IM_OFFICIAL={TQQQ:15, SOXL:20};   // 라오어 문서 공식값 (참고 표시)
+const IM_OFFICIAL={TQQQ:15, SOXL:20};   // 라오어 문서 공식값
 function bestTgt(tkr, eng){
   const tbl=IM_BEST[eng==='v40'?'v40':'v50'];
   return tbl[tkr]!==undefined ? tbl[tkr] : (IM_OFFICIAL[tkr]||20);
@@ -744,10 +749,10 @@ function syncTgtHint(){
   const tks=[...imActive];
   const eng=(imEngine==='ab')?'v50':imEngine;
   if(tks.length===1){
-    const b=bestTgt(tks[0],eng), off=IM_OFFICIAL[tks[0]];
-    el.textContent=`${tks[0]} ${eng==='v40'?'V4.0':'V5.0'} 권장 ${b}%`+(off&&off!==b?` · 공식 ${off}%`:'');
+    const t=tks[0], v=bestTgt(t,eng), off=IM_OFFICIAL[t];
+    el.textContent=`${t} 기본 ${v}%` + (off?' (라오어 공식)':' (비공식)');
   }else{
-    el.textContent=`종목별 권장값 자동 (${tks.length}종목)`;
+    el.textContent=`종목별 기본값 자동 (${tks.length}종목)`;
   }
   el.style.color='var(--dim)';
 }
