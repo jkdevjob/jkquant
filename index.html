@@ -410,7 +410,7 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
 </div>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v2.13</span></h1></div>
+    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v2.15</span></h1></div>
     <div style="display:flex;align-items:center;gap:8px">
       <a class="btbtn" href="/backtest">📊<span class="bt-txt"> 백테스트</span></a>
       <button class="gear" onclick="openSettings()">⚙️</button>
@@ -503,10 +503,10 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
         </div>
         <div style="position:relative">
           <svg id="rg_chart" viewBox="0 0 360 130" preserveAspectRatio="none" style="width:100%;height:130px;display:block"></svg>
-          <div id="rg_labels" style="position:absolute;top:0;right:2px;height:130px;pointer-events:none"></div>
+          <div id="rg_labels" style="position:absolute;top:0;left:2px;height:130px;pointer-events:none"></div>
         </div>
         <div style="display:flex;gap:14px;margin-top:6px;font-size:11px;color:var(--faint)">
-          <span><span style="display:inline-block;width:14px;height:2px;background:#6f7bff;vertical-align:middle;margin-right:4px"></span>합성 1배지수</span>
+          <span><span style="display:inline-block;width:14px;height:2px;background:#6f7bff;vertical-align:middle;margin-right:4px"></span>합성 1배지수 <span style="color:var(--faint2,#7c85a3)">(구간 첫날=100)</span></span>
           <span><span style="display:inline-block;width:14px;height:2px;background:var(--gold);vertical-align:middle;margin-right:4px"></span>200일선</span>
           <span><span style="display:inline-block;width:14px;height:0;border-top:2px dashed #e08a4c;vertical-align:middle;margin-right:4px"></span><span id="rg_ma_leg">30일선</span></span>
         </div>
@@ -516,7 +516,7 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
         </div>
         <div style="position:relative">
           <svg id="inf_rsi_chart" viewBox="0 0 360 72" preserveAspectRatio="none" style="width:100%;height:72px;display:block"></svg>
-          <div id="rsi_labels" style="position:absolute;top:0;right:2px;height:72px;pointer-events:none"></div>
+          <div id="rsi_labels" style="position:absolute;top:0;left:2px;height:72px;pointer-events:none"></div>
         </div>
         <div style="display:flex;gap:14px;margin-top:3px;font-size:10px;color:var(--faint)">
           <span><span style="display:inline-block;width:12px;height:0;border-top:1px dashed #f87b8c;vertical-align:middle;margin-right:3px"></span>과매수 70</span>
@@ -776,7 +776,7 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
   <footer>
     <strong>JK 퀀트</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v2.13</b> · 2026-07-01</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v2.15</b> · 2026-07-01</div>
   </footer>
 </div>
 
@@ -2285,7 +2285,7 @@ function drawInfRSI(){
   const rl=$('rsi_labels');
   if(rl){
     rl.innerHTML = last==null?'' :
-      `<div style="position:absolute;top:${(ys(last)/H*100).toFixed(1)}%;right:0;transform:translateY(-50%);font-size:10px;font-family:monospace;color:${col};line-height:1;background:rgba(13,17,32,.72);padding:1px 3px;border-radius:3px">`
+      `<div style="position:absolute;top:${(ys(last)/H*100).toFixed(1)}%;left:0;transform:translateY(-50%);font-size:10px;font-family:monospace;color:${col};line-height:1;background:rgba(13,17,32,.72);padding:1px 3px;border-radius:3px">`
       +`<span style="display:inline-block;width:4px;height:4px;border-radius:50%;background:${col};margin-right:2px;vertical-align:middle"></span>${last.toFixed(0)}</div>`;
   }
   if($('inf_rsi_val')){ $('inf_rsi_val').textContent=last!=null?last.toFixed(1):'—'; $('inf_rsi_val').style.color=col; }
@@ -2312,9 +2312,12 @@ function drawRegimeChart(){
   const want=Math.max(200, infChartRange||252);
   const start=Math.max(199, n-want);
   const idx=[]; for(let i=start;i<n;i++) idx.push(i);
-  const syn=idx.map(i=>reg.synSeries[i]);
-  const ma=idx.map(i=>reg.maSeries[i]);
-  const ma50=idx.map(i=>reg.ma50Series[i]);
+  // 표시용 재정규화: 화면 구간 첫날 = 100 (판정은 원본값으로 이미 끝났으므로 표시만 스케일)
+  const base=reg.synSeries[start];
+  const K = (base && base>0) ? (100/base) : 1;
+  const syn=idx.map(i=>reg.synSeries[i]*K);
+  const ma=idx.map(i=>reg.maSeries[i]==null?null:reg.maSeries[i]*K);
+  const ma50=idx.map(i=>reg.ma50Series[i]==null?null:reg.ma50Series[i]*K);
   const all=syn.concat(ma,ma50).filter(v=>v!=null);
   const lo=Math.min(...all), hi=Math.max(...all);
   const W=360,H=130,pad=2;           // 라벨은 HTML 오버레이 — SVG는 폭 전부 사용
@@ -2337,12 +2340,17 @@ function drawRegimeChart(){
   // 마지막 값 라벨 — HTML 오버레이 (SVG 밖이라 그래프가 폭을 100% 사용)
   const lbox=$('rg_labels');
   if(lbox){
-    const fmtv=v=>v>=1000?(v/1000).toFixed(1)+'k':v.toFixed(0);
+    const fmtv=v=>v>=10000?(v/1000).toFixed(1)+'k':v.toFixed(v>=100?0:1);   // 첫날=100 기준. 1만 넘으면만 k
     const items=[[lastSyn,'#6f7bff'],[lastMa,'#e8b64c'],[lastMa50,'#e08a4c']].filter(x=>x[0]!=null);
-    lbox.innerHTML=items.map(([v,c])=>{
-      const topPct=(ys(v)/H*100);
-      return `<div style="position:absolute;top:${topPct.toFixed(1)}%;right:0;transform:translateY(-50%);font-size:9.5px;font-family:monospace;color:${c};white-space:nowrap;line-height:1;background:rgba(13,17,32,.72);padding:1px 3px;border-radius:3px">`
-        +`<span style="display:inline-block;width:4px;height:4px;border-radius:50%;background:${c};margin-right:2px;vertical-align:middle"></span>${fmtv(v)}</div>`;
+    // 라벨이 겹치지 않게 y좌표 최소 간격(12px) 확보 — 값이 가까우면 밀어냄
+    const placed=items.map(([v,c])=>({v,c,y:ys(v)})).sort((a,b)=>a.y-b.y);
+    for(let i=1;i<placed.length;i++){ if(placed[i].y-placed[i-1].y<12) placed[i].y=placed[i-1].y+12; }
+    const over=placed.length?placed[placed.length-1].y-(H-6):0;
+    if(over>0) placed.forEach(p=>p.y-=over);   // 아래로 밀렸으면 전체 위로
+    lbox.innerHTML=placed.map(p=>{
+      const topPct=(Math.max(6,Math.min(H-6,p.y))/H*100);
+      return `<div style="position:absolute;top:${topPct.toFixed(1)}%;left:0;transform:translateY(-50%);font-size:9.5px;font-family:monospace;color:${p.c};white-space:nowrap;line-height:1;background:rgba(13,17,32,.72);padding:1px 3px;border-radius:3px">`
+        +`<span style="display:inline-block;width:4px;height:4px;border-radius:50%;background:${p.c};margin-right:2px;vertical-align:middle"></span>${fmtv(p.v)}</div>`;
     }).join('');
   }
   // 요약 텍스트 — 200일선·단기이평 대비 둘 다
