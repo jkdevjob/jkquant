@@ -43,6 +43,7 @@ h1 .v{color:var(--gold)}
 .fetchbtn{padding:0 14px;border-radius:10px;border:1px solid var(--vio);background:var(--vio-bg);color:var(--vio);font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;-webkit-tap-highlight-color:transparent}
 .fetchbtn:active{opacity:.7}
 .fetchnote{font-size:11.5px;margin:6px 0 10px;min-height:14px}
+.fetchnote:empty{margin:0;min-height:0;display:none}
 .fetchnote.ok{color:var(--buy)}.fetchnote.err{color:var(--gold)}.fetchnote.load{color:var(--dim)}
 .fivebox{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:14px;margin-bottom:13px}
 .fivebox h4{font-size:13px;font-weight:700;margin-bottom:10px;display:flex;justify-content:space-between}
@@ -409,7 +410,7 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
 </div>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v22.9</span></h1></div>
+    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v2.13</span></h1></div>
     <div style="display:flex;align-items:center;gap:8px">
       <a class="btbtn" href="/backtest">📊<span class="bt-txt"> 백테스트</span></a>
       <button class="gear" onclick="openSettings()">⚙️</button>
@@ -494,23 +495,15 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
         <div class="fetchnote" id="inf_chart_note" style="margin-top:6px"></div>
       </div>
 
-      <!-- 공포·탐욕 지수 -->
-      <div class="card"><h3 style="justify-content:space-between"><span style="display:flex;align-items:center;gap:8px"><span class="dot"></span>공포 &amp; 탐욕 지수</span><span class="lh-stage">CNN</span></h3>
-        <div style="display:flex;align-items:baseline"><span class="fg-val" id="inf_fg_val" style="color:var(--gold)">—</span><span class="fg-lbl" id="inf_fg_lbl" style="color:var(--gold)">—</span></div>
-        <div class="fg-bar"><div class="fg-mark" id="inf_fg_mark" style="left:50%"></div></div>
-        <div class="fg-scale"><span>극단적 공포</span><span>공포</span><span>중립</span><span>탐욕</span><span>극단적 탐욕</span></div>
-        <p class="note" id="inf_fg_note" style="margin-top:10px">참고 지표일 뿐, 무한매수법은 분할 규칙대로 진행합니다.</p>
-      </div>
-
       <!-- 국면 판정 차트 (합성 1배지수 vs 200일선) -->
       <div class="card" id="rg_card"><h3 style="justify-content:space-between"><span style="display:flex;align-items:center;gap:8px"><span class="dot"></span>국면 판정 <span style="font-size:11px;color:var(--faint)">합성 1배지수 · <span id="rg_ma_sub">200/30일선</span></span></span><span class="lh-stage" id="rg_state">—</span></h3>
         <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px">
           <span id="rg_summary" style="font-size:13px;color:var(--dim)">시세 로딩 후 표시됩니다</span>
           <span id="rg_dist" style="font-size:12px;color:var(--faint)"></span>
         </div>
-        <div style="position:relative;padding-right:38px">
+        <div style="position:relative">
           <svg id="rg_chart" viewBox="0 0 360 130" preserveAspectRatio="none" style="width:100%;height:130px;display:block"></svg>
-          <div id="rg_labels" style="position:absolute;top:0;right:0;width:38px;height:130px;pointer-events:none"></div>
+          <div id="rg_labels" style="position:absolute;top:0;right:2px;height:130px;pointer-events:none"></div>
         </div>
         <div style="display:flex;gap:14px;margin-top:6px;font-size:11px;color:var(--faint)">
           <span><span style="display:inline-block;width:14px;height:2px;background:#6f7bff;vertical-align:middle;margin-right:4px"></span>합성 1배지수</span>
@@ -521,9 +514,9 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
           <span>RSI (14) <span style="color:var(--faint2,#888)">· 1배지수 기준</span></span>
           <span id="inf_rsi_val" class="mono" style="font-size:12px;color:var(--faint)">—</span>
         </div>
-        <div style="position:relative;padding-right:30px">
+        <div style="position:relative">
           <svg id="inf_rsi_chart" viewBox="0 0 360 72" preserveAspectRatio="none" style="width:100%;height:72px;display:block"></svg>
-          <div id="rsi_labels" style="position:absolute;top:0;right:0;width:30px;height:72px;pointer-events:none"></div>
+          <div id="rsi_labels" style="position:absolute;top:0;right:2px;height:72px;pointer-events:none"></div>
         </div>
         <div style="display:flex;gap:14px;margin-top:3px;font-size:10px;color:var(--faint)">
           <span><span style="display:inline-block;width:12px;height:0;border-top:1px dashed #f87b8c;vertical-align:middle;margin-right:3px"></span>과매수 70</span>
@@ -532,7 +525,15 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
         <p class="note" style="margin-top:8px">지수가 200일선·단기이평(20/30/50일 선택) <b>둘 다 위</b>면 상승국면(V5.0 익절=기본) · 하나라도 <b>아래</b>면 하락국면(익절 6% 조기탈출). RSI도 레버리지가 아닌 <b>1배지수 기준</b>이라 국면과 같은 축에서 과열/침체를 봅니다.</p>
       </div>
 
-      <!-- 오늘의 주문표 (항상 표시, 공포지수 바로 아래) -->
+      <!-- 공포·탐욕 지수 -->
+      <div class="card"><h3 style="justify-content:space-between"><span style="display:flex;align-items:center;gap:8px"><span class="dot"></span>공포 &amp; 탐욕 지수</span><span class="lh-stage">CNN</span></h3>
+        <div style="display:flex;align-items:baseline"><span class="fg-val" id="inf_fg_val" style="color:var(--gold)">—</span><span class="fg-lbl" id="inf_fg_lbl" style="color:var(--gold)">—</span></div>
+        <div class="fg-bar"><div class="fg-mark" id="inf_fg_mark" style="left:50%"></div></div>
+        <div class="fg-scale"><span>극단적 공포</span><span>공포</span><span>중립</span><span>탐욕</span><span>극단적 탐욕</span></div>
+        <p class="note" id="inf_fg_note" style="margin-top:10px">참고 지표일 뿐, 무한매수법은 분할 규칙대로 진행합니다.</p>
+      </div>
+
+      <!-- 오늘의 주문표 -->
       <div class="card calc" style="margin-top:13px"><div id="inf_order_body"></div></div>
 
       <div class="card" style="margin-top:13px"><h3><span class="dot"></span>오늘 할 일</h3>
@@ -775,7 +776,7 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
   <footer>
     <strong>JK 퀀트</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v22.9</b> · 2026-07-01</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v2.13</b> · 2026-07-01</div>
   </footer>
 </div>
 
@@ -1209,9 +1210,8 @@ function renderOrder(){
       const reg=imRegime(closes, st.ticker, st.shortMA);
       if(reg.ready){
         effTarget=imTargetV5(st.target, reg);
-        const distTxt=reg.synMa?((reg.syn/reg.synMa-1)*100>=0?'+':'')+((reg.syn/reg.synMa-1)*100).toFixed(0)+'%':'';
         regBadge=`<div style="margin:2px 0 8px;padding:7px 10px;border-radius:8px;font-size:12px;background:${reg.up?'rgba(54,211,153,.12)':'rgba(248,123,140,.12)'};border:1px solid ${reg.up?'rgba(54,211,153,.3)':'rgba(248,123,140,.3)'}">`
-          +`<b style="color:${reg.up?'#36d399':'#f87b8c'}">${reg.up?'▲ 상승국면':'▼ 하락국면'}</b> · 200일선 ${distTxt} · <b>오늘 익절 ${effTarget.toFixed(1)}%</b>`
+          +`<b style="color:${reg.up?'#36d399':'#f87b8c'}">${reg.up?'▲ 상승국면':'▼ 하락국면'}</b> · <b>오늘 익절 ${effTarget.toFixed(1)}%</b>`
           +`<span style="color:var(--faint)"> (기본 ${st.target}%)</span></div>`;
       }
     } else {
@@ -2262,8 +2262,9 @@ function drawInfRSI(){
   for(let i=P+1;i<n;i++){ const ch=syn[i]-syn[i-1]; const g=ch>0?ch:0, l=ch<0?-ch:0;
     ag=(ag*(P-1)+g)/P; al=(al*(P-1)+l)/P;
     rsi[i]= al===0?100:100-100/(1+ag/al); }
-  // 국면 차트와 동일 구간 (최근 252일)
-  const start=Math.max(P, n-252);
+  // 국면 차트와 동일 구간 (종가추이 기간 연동, 최소 200일)
+  const want=Math.max(200, infChartRange||252);
+  const start=Math.max(P, n-want);
   const idx=[]; for(let i=start;i<n;i++) idx.push(i);
   const vals=idx.map(i=>rsi[i]);
   const W=360,H=72,padL=2,padT=3,padB=3;   // 라벨은 HTML 오버레이 — SVG는 폭 전부 사용
@@ -2284,7 +2285,7 @@ function drawInfRSI(){
   const rl=$('rsi_labels');
   if(rl){
     rl.innerHTML = last==null?'' :
-      `<div style="position:absolute;top:${(ys(last)/H*100).toFixed(1)}%;left:0;transform:translateY(-50%);font-size:10px;font-family:monospace;color:${col};line-height:1">`
+      `<div style="position:absolute;top:${(ys(last)/H*100).toFixed(1)}%;right:0;transform:translateY(-50%);font-size:10px;font-family:monospace;color:${col};line-height:1;background:rgba(13,17,32,.72);padding:1px 3px;border-radius:3px">`
       +`<span style="display:inline-block;width:4px;height:4px;border-radius:50%;background:${col};margin-right:2px;vertical-align:middle"></span>${last.toFixed(0)}</div>`;
   }
   if($('inf_rsi_val')){ $('inf_rsi_val').textContent=last!=null?last.toFixed(1):'—'; $('inf_rsi_val').style.color=col; }
@@ -2306,9 +2307,10 @@ function drawRegimeChart(){
   const dates=infChartData.filter(d=>d.close>0).map(d=>d.date);
   const reg=imRegime(closes, st.ticker, st.shortMA);
   if(!reg.ready){ $('rg_summary').textContent='판정 대기'; return; }
-  // 최근 252일 구간 (SMA 유효 구간만)
+  // 종가추이 기간과 연동 (200일선을 그리려면 최소 200일 필요 — 짧게 골라도 200일 확보)
   const n=closes.length;
-  const start=Math.max(199, n-252);
+  const want=Math.max(200, infChartRange||252);
+  const start=Math.max(199, n-want);
   const idx=[]; for(let i=start;i<n;i++) idx.push(i);
   const syn=idx.map(i=>reg.synSeries[i]);
   const ma=idx.map(i=>reg.maSeries[i]);
@@ -2339,13 +2341,15 @@ function drawRegimeChart(){
     const items=[[lastSyn,'#6f7bff'],[lastMa,'#e8b64c'],[lastMa50,'#e08a4c']].filter(x=>x[0]!=null);
     lbox.innerHTML=items.map(([v,c])=>{
       const topPct=(ys(v)/H*100);
-      return `<div style="position:absolute;top:${topPct.toFixed(1)}%;left:0;transform:translateY(-50%);font-size:9.5px;font-family:monospace;color:${c};white-space:nowrap;line-height:1">`
+      return `<div style="position:absolute;top:${topPct.toFixed(1)}%;right:0;transform:translateY(-50%);font-size:9.5px;font-family:monospace;color:${c};white-space:nowrap;line-height:1;background:rgba(13,17,32,.72);padding:1px 3px;border-radius:3px">`
         +`<span style="display:inline-block;width:4px;height:4px;border-radius:50%;background:${c};margin-right:2px;vertical-align:middle"></span>${fmtv(v)}</div>`;
     }).join('');
   }
   // 요약 텍스트 — 200일선·단기이평 대비 둘 다
   const SM=reg.shortMA||30;
-  if($('rg_ma_sub')) $('rg_ma_sub').textContent=`200/${SM}일선`;
+  const shownDays=idx.length;
+  const perTxt = shownDays>=2520?'10년+' : shownDays>=1260?(Math.round(shownDays/252)+'년') : shownDays>=504?(Math.round(shownDays/252)+'년') : shownDays>=252?'1년' : (Math.round(shownDays/21)+'달');
+  if($('rg_ma_sub')) $('rg_ma_sub').textContent=`200/${SM}일선 · ${perTxt}`;
   if($('rg_ma_leg')) $('rg_ma_leg').textContent=`${SM}일선`;
   const dist200=((reg.syn/reg.synMa-1)*100);
   const dist50 = reg.synMa50 ? ((reg.syn/reg.synMa50-1)*100) : null;
@@ -2867,7 +2871,7 @@ function setupTabs(){
   if(csel) csel.addEventListener('change',()=>{ vrChartRange=+csel.value; drawVrChart(); });
   // 무한매수법 차트 기간 선택
   const isel=$('inf_chart_sel');
-  if(isel) isel.addEventListener('change',()=>{ infChartRange=+isel.value; drawInfChart(); drawInfRSI(); });
+  if(isel) isel.addEventListener('change',()=>{ infChartRange=+isel.value; drawInfChart(); drawInfRSI(); drawRegimeChart(); });
 }
 
 /* ── Firebase Firestore 동기화 (사용자별) ── */
