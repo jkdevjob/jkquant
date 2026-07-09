@@ -410,7 +410,7 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
 </div>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v2.18</span></h1></div>
+    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v2.19</span></h1></div>
     <div style="display:flex;align-items:center;gap:8px">
       <a class="btbtn" href="/backtest">📊<span class="bt-txt"> 백테스트</span></a>
       <button class="gear" onclick="openSettings()">⚙️</button>
@@ -773,7 +773,7 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
   <footer>
     <strong>JK 퀀트</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v2.18</b> · 2026-07-01</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v2.19</b> · 2026-07-01</div>
   </footer>
 </div>
 
@@ -1051,6 +1051,25 @@ function starPct(ticker,div,T,base){
 }
 // 리버스 복귀 배율 = 1 − base/100 (문서: 복귀 기준 = T 마지막 쿼터매도 기준)
 function exitMulOf(base){ return 1-((base!=null&&base>0)?base:20)/100; }
+
+// ★ 종목·엔진별 권장 익절%(=별%base). 비용(수수료·세금) 반영 단리 Walk-Forward 최적값.
+//   TQQQ·SOXL의 라오어 공식값은 15/20이나, 실전 비용을 넣으면 아래가 우수했다.
+//   TECL·KORU는 비공식(자체 검증). 종목·버전 변경 시 자동 적용된다.
+const IM_BEST={ v40:{TQQQ:8,SOXL:10,TECL:10,KORU:8}, v50:{TQQQ:8,SOXL:20,TECL:12,KORU:15} };
+const IM_OFFICIAL={TQQQ:15, SOXL:20};
+function bestTgt(tkr, eng){
+  const tbl=IM_BEST[eng==='v40'?'v40':'v50'];
+  return tbl[tkr]!==undefined ? tbl[tkr] : (IM_OFFICIAL[tkr]||20);
+}
+// 설정창 익절% 옆 힌트: 현재 종목·엔진의 권장값(+공식값 병기)
+function syncTgtNote(){
+  const el=$('target_hint'); if(!el) return;
+  const tk=(typeof segGet==='function' ? segGet('set_ticker') : null)||'SOXL';
+  const eng=(typeof segGet==='function' ? segGet('set_engine') : null)||'v40';
+  const b=bestTgt(tk,eng), off=IM_OFFICIAL[tk];
+  el.innerHTML=`별%·복귀조건 동반 · <b>${tk} ${eng==='v40'?'V4.0':'V5.0'} 권장 ${b}%</b>`
+    + (off&&off!==b?` <span style="color:var(--faint)">(공식 ${off}%)</span>`:'');
+}
 
 /* ── 무한매수법 현재 대시보드 ── */
 function renderInfNow(){
@@ -2756,7 +2775,7 @@ function openSettings(){
   if(S.activeTab==='inf'){
     $('set_inf').style.display='';$('set_vr').style.display='none';
     const st=s.settings, sym=(st.cur||'usd')==='krw'?'₩':'$';
-    segSet('set_ticker',st.ticker);segSet('set_div',String(st.div));segSet('set_cur',st.cur||'usd');segSet('set_engine',st.engine||'v40');segSet('set_shortma',String(st.shortMA||30));syncShortMaUI(st.engine||'v40');
+    segSet('set_ticker',st.ticker);segSet('set_div',String(st.div));segSet('set_cur',st.cur||'usd');segSet('set_engine',st.engine||'v40');segSet('set_shortma',String(st.shortMA||30));syncShortMaUI(st.engine||'v40');syncTgtNote();
     $('set_target').value=st.target;$('set_big').value=st.big;$('set_principal').value=nfix(st.principal,0);
     if($('set_rows'))$('set_rows').value=st.rows!=null?st.rows:8;
     if($('set_gap'))$('set_gap').value=st.gap!=null?st.gap:2.5;
@@ -2804,8 +2823,10 @@ function setupSegs(){
         if(id==='set_cur'){const sym=b.dataset.v==='krw'?'₩':'$';$('set_principal_lbl').textContent=`원금 (${sym})`;}
         if(id==='set_vcur'){const sym=b.dataset.v==='krw'?'₩':'$';$('set_add_lbl').textContent=`매 사이클 적립금 (${sym})`;$('set_startv_lbl').innerHTML=`시작 V (${sym}) <span class="hint">0이면 첫 매수가 V</span>`;$('set_startpool_lbl').textContent=`시작 Pool (${sym})`;}
         // 종목 변경 시 익절배율(별%) 오피셜 기본값 자동 세팅 — TQQQ 15% / SOXL 20%
-        // 종목별 권장 익절%(=별%base) 자동 세팅. TQQQ15/SOXL20 공식 · TECL12/KORU20 자체검증(OOS)
-        if(id==='set_ticker'){const t=$('set_target'); if(t){const D={TQQQ:15,SOXL:20,TECL:12,KORU:20}; t.value=D[b.dataset.v]||20;}}
+        // 종목·엔진별 권장 익절%(=별%base) 자동 세팅 (IM_BEST)
+        if(id==='set_ticker'){const t=$('set_target'); if(t){ t.value=bestTgt(b.dataset.v, segGet('set_engine')||'v40'); syncTgtNote(); }}
+        // 엔진 변경 시에도 그 버전의 권장값으로 갱신
+        if(id==='set_engine'){const t=$('set_target'); if(t){ t.value=bestTgt(segGet('set_ticker')||'SOXL', b.dataset.v); syncTgtNote(); }}
         // 운용모드 변경 시 거치식이면 적립금 입력 비활성화
         if(id==='set_vmode'){ applyVrModeUI(b.dataset.v); }
       };

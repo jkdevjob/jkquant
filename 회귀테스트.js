@@ -57,36 +57,41 @@ function inject(before, after, label){
   if(p.length!==2) throw new Error(`주입 실패(${label}): ${p.length-1}회 매치 — 코드가 바뀌었으면 이 스크립트의 주입 문자열을 갱신할 것`);
   btSrc=p[0]+after+p[1];
 }
-inject(`if(sellQty>0){ realized+=sellQty*(c-avg); cash+=sellQty*c; shares-=sellQty; T=divs>=40?T*0.95:T*0.9; }
+// ★ v1.83~: 거래가 _buy/_sell 헬퍼로 통일됨. 헬퍼 진입점에 로그 훅을 심는다.
+inject(`if(sellQty>0){ _sell(c,sellQty,0); T=divs>=40?T*0.95:T*0.9; }   // MOC=종가
         reverseDay1=false;`,
-`if(sellQty>0){ __LOG('리버스매도',c,sellQty); realized+=sellQty*(c-avg); cash+=sellQty*c; shares-=sellQty; T=divs>=40?T*0.95:T*0.9; }
+`if(sellQty>0){ __LOG('리버스매도',c,sellQty); _sell(c,sellQty,0); T=divs>=40?T*0.95:T*0.9; }
         reverseDay1=false;`,'r1');
 inject(`if(c>=star5){
           const sellQty=Math.floor(shares/sellDiv);
-          if(sellQty>0){ realized+=sellQty*(c-avg); cash+=sellQty*c; shares-=sellQty; T=divs>=40?T*0.95:T*0.9; }`,
+          if(sellQty>0){ _sell(c,sellQty,0); T=divs>=40?T*0.95:T*0.9; }   // LOC=종가`,
 `if(c>=star5){
           const sellQty=Math.floor(shares/sellDiv);
-          if(sellQty>0){ __LOG('리버스매도',c,sellQty); realized+=sellQty*(c-avg); cash+=sellQty*c; shares-=sellQty; T=divs>=40?T*0.95:T*0.9; }`,'r2');
-inject(`avg=(shares*avg+amt)/(shares+q); shares+=q; cash-=amt;
+          if(sellQty>0){ __LOG('리버스매도',c,sellQty); _sell(c,sellQty,0); T=divs>=40?T*0.95:T*0.9; }`,'r2');
+inject(`            _buy(c, cash/4);   // LOC=종가
             T=T+(divs-T)*0.25;`,
-`__LOG('리버스매수',c,q); avg=(shares*avg+amt)/(shares+q); shares+=q; cash-=amt;
+`            __LOG('리버스매수',c,(cash/4)/c); _buy(c, cash/4);
             T=T+(divs-T)*0.25;`,'r3');
-inject(`{realized+=q3*(tgt-avg);cash+=q3*tgt;shares-=q3;tpHit=true;}`,
-`{__LOG('지정가매도',tgt,q3); realized+=q3*(tgt-avg);cash+=q3*tgt;shares-=q3;tpHit=true;}`,'tp');
-inject(`{realized+=sell*(c-avg);cash+=sell*c;shares-=sell;qtHit=true;}`,
-`{__LOG('쿼터매도',c,sell); realized+=sell*(c-avg);cash+=sell*c;shares-=sell;qtHit=true;}`,'qt');
-inject(`if(shares===0&&T===0){shares+=one/c;avg=c;cash-=one;T+=1;}`,
-`if(shares===0&&T===0){__LOG('1회매수',c,one/c); shares+=one/c;avg=c;cash-=one;T+=1;}`,'fb');
-inject(`if(b>0){avg=(shares*avg+sp)/(shares+b);shares+=b;cash-=sp;T+=ti;}`,
-`if(b>0){__LOG(ti===1?'1회매수':'절반매수',c,b); avg=(shares*avg+sp)/(shares+b);shares+=b;cash-=sp;T+=ti;}`,'hb');
-inject(`if(c<=buyP){const q=one/c;avg=(shares*avg+one)/(shares+q);shares+=q;cash-=one;T+=1;}`,
-`if(c<=buyP){const q=one/c;__LOG('1회매수',c,q); avg=(shares*avg+one)/(shares+q);shares+=q;cash-=one;T+=1;}`,'bb');
-inject(`const fin=cash+shares*M[tkr][days[days.length-1]][C]+savedProfit;`,
-`__FINAL({T,avg,shares,cash,realized,savedProfit});
+inject(`if(hi>=tgt&&q3>0){_sell(tgt,q3,SLIP);tpHit=true;}`,
+`if(hi>=tgt&&q3>0){__LOG('지정가매도',tgt,q3); _sell(tgt,q3,SLIP);tpHit=true;}`,'tp');
+inject(`if(sq>1e-9){_sell(c,sq,0);qtHit=true;}`,
+`if(sq>1e-9){__LOG('쿼터매도',c,sq); _sell(c,sq,0);qtHit=true;}`,'qt');
+inject(`if(shares===0&&T===0){_buy(c,one);T+=1;}`,
+`if(shares===0&&T===0){__LOG('1회매수',c,one/c); _buy(c,one);T+=1;}`,'fb');
+inject(`          if(sp>0){_buy(c,sp);T+=ti;}`,
+`          if(sp>0){__LOG(ti===1?'1회매수':'절반매수',c,sp/c); _buy(c,sp);T+=ti;}`,'hb');
+inject(`        }else{ if(c<=buyP){_buy(c,one);T+=1;} }`,
+`        }else{ if(c<=buyP){__LOG('1회매수',c,one/c); _buy(c,one);T+=1;} }`,'bb');
+inject(`  _settleTax();   // 마지막 해 정산
+  const fin=cash+shares*M[tkr][days[days.length-1]][C]+savedProfit;`,
+`  _settleTax();
+  __FINAL({T,avg,shares,cash,realized,savedProfit});
   const fin=cash+shares*M[tkr][days[days.length-1]][C]+savedProfit;`,'fin');
 let tradeLog=[], finalState=null;
 global.__LOG=(k,p,q)=>tradeLog.push({kind:k,price:p,qty:q});
 global.__FINAL=s=>finalState=s;
+global.imCostOn=false;   // 회귀는 비용 미적용 상태로 검증 (기존 앵커와 비교)
+global.COST_FEE=0.0025; global.COST_SLIP=0.0005; global.COST_TAXRATE=0.22; global.COST_KRW=1350; global.COST_DEDUCT=250e4;
 global.M={}; global.C=0;
 eval(btSrc);
 // ★ 통합 규약 (v1.82~): base=익절%, slope=base×0.1×(20/div), exitMul=1−base/100
