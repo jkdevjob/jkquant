@@ -410,7 +410,7 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
 </div>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v2.22</span></h1></div>
+    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v2.23</span></h1></div>
     <div style="display:flex;align-items:center;gap:8px">
       <a class="btbtn" href="/backtest">📊<span class="bt-txt"> 백테스트</span></a>
       <button class="gear" onclick="openSettings()">⚙️</button>
@@ -773,7 +773,7 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
   <footer>
     <strong>JK 퀀트</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v2.22</b> · 2026-07-01</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v2.23</b> · 2026-07-01</div>
   </footer>
 </div>
 
@@ -1043,6 +1043,14 @@ function imTargetV5(base, reg, loPct){
   return (loPct!=null && loPct>0) ? loPct : 6;   // 하락국면: 조기탈출 익절%
 }
 
+// T 표시: 소수 3자리까지 (별% = base − slope×T 검산이 맞아떨어지게).
+//   T가 9.875인데 9.88로 보이면 사용자가 20−2×9.88=0.24로 검산해 별% 0.3%와 안 맞아 보인다.
+function fmtT(t){
+  if(t==null||!isFinite(t)) return '0';
+  const s=(+t).toFixed(3);
+  return s.replace(/0+$/,'').replace(/\.$/,'');   // 9.875 → "9.875", 8.000 → "8"
+}
+
 // ★ 통합 규약: 별%base = 익절%(설정값). slope = base×0.1×(20/div).
 //   문서 4케이스 재현: TQQQ 15%→20분할 1.5·40분할 0.75 / SOXL 20%→2.0·1.0
 //   30분할도 표값 일치 (TQQQ 1.0 / SOXL 1.333). 익절% 변경 시 별지점·복귀조건 동반 이동.
@@ -1081,7 +1089,7 @@ function syncTgtNote(){
 /* ── 무한매수법 현재 대시보드 ── */
 function renderInfNow(){
   const c=computeInf(), st=c.st;
-  $('d_t').textContent=c.T.toFixed(2).replace(/\.00$/,'');
+  $('d_t').textContent=fmtT(c.T);
   $('d_div').textContent='/ '+st.div;
   $('d_max').textContent=st.div; $('d_half').textContent=(st.div/2);
   $('d_bar').style.width=Math.min(100,c.T/st.div*100)+'%';
@@ -1097,7 +1105,7 @@ function renderInfNow(){
   $('d_star').textContent=c.avg>0?wn(star):'—';
   $('d_buy1').textContent=slot>0?wn(buy1):'소진';
   $('d_todo').textContent=slot<=0?'원금 소진 — 리버스모드 진입 대상입니다.':
-    `${tickerLabel(st.ticker)} ${st.div}분할 · T=${c.T.toFixed(2)} · ${half?'전반전':'후반전'}. 주문표 탭에서 전일 종가를 넣어 LOC 주문을 확인하세요.`;
+    `${tickerLabel(st.ticker)} ${st.div}분할 · T=${fmtT(c.T)} · ${half?'전반전':'후반전'}. 주문표 탭에서 전일 종가를 넣어 LOC 주문을 확인하세요.`;
 }
 
 /* ── 무한매수법 주문표 (하방 LOC 전체) ── */
@@ -1181,9 +1189,9 @@ function renderOrder(){
     const exitPrice = c.avg*exitMul;
     const lastClose = (lastQuote.inf&&lastQuote.inf.last) || close || 0;
     if(lastClose>0 && lastClose>exitPrice){
-      rh+=`<div class="warn" style="border-color:var(--buy-dim);background:rgba(54,211,153,.08);color:#bfe9d3">✅ 최근 종가(${wn(lastClose)})가 복귀 기준(${wn(exitPrice)}) 위로 회복했습니다. 라오어님 기준 <b>내일부터 일반모드 복귀</b>이며, T값(${c.T.toFixed(2)})은 그대로 이어집니다. 복귀 후 일반모드 1회매수금 = 잔금 ÷ (분할−T)이 가능하면 정상 진행하고, 그래도 1회분조차 안 되면(T가 분할에 도달) 다시 리버스로 들어갑니다.</div>`;
+      rh+=`<div class="warn" style="border-color:var(--buy-dim);background:rgba(54,211,153,.08);color:#bfe9d3">✅ 최근 종가(${wn(lastClose)})가 복귀 기준(${wn(exitPrice)}) 위로 회복했습니다. 라오어님 기준 <b>내일부터 일반모드 복귀</b>이며, T값(${fmtT(c.T)})은 그대로 이어집니다. 복귀 후 일반모드 1회매수금 = 잔금 ÷ (분할−T)이 가능하면 정상 진행하고, 그래도 1회분조차 안 되면(T가 분할에 도달) 다시 리버스로 들어갑니다.</div>`;
     }else{
-      rh+=`<div class="warn">리버스모드 진행 중 (T=${c.T.toFixed(2)} &gt; ${st.div-1}). 종가가 평단의 −${st.target}%(${wn(exitPrice)}) 위로 회복하면 다음날 일반모드 복귀입니다. 리버스 매도가 누적되면 T가 ×${st.div>=40?'0.95':'0.9'}씩 줄어 자연히 분할−1 밑으로 내려갑니다.</div>`;
+      rh+=`<div class="warn">리버스모드 진행 중 (T=${fmtT(c.T)} &gt; ${st.div-1}). 종가가 평단의 −${st.target}%(${wn(exitPrice)}) 위로 회복하면 다음날 일반모드 복귀입니다. 리버스 매도가 누적되면 T가 ×${st.div>=40?'0.95':'0.9'}씩 줄어 자연히 분할−1 밑으로 내려갑니다.</div>`;
     }
     $('o_orders').innerHTML=rh; render5day(); return;
   }
@@ -1517,16 +1525,16 @@ function renderInfHist(){
       cls=sell?'sell':'buy';
     }
     const tflag=(typeof h.tManual==='number')?' <span style="color:var(--gold);font-size:9px">수동</span>':'';
-    const pctCell=h.qtyAfter>0?`${h.pctAfter.toFixed(1)}%`:'—';
+    const pctCell=h.qtyAfter>0?`${(+h.pctAfter.toFixed(2))}%`:'—';   // 0.25% 그대로 (T 3자리와 검산 일치)
     const starCell=h.qtyAfter>0?wn(h.starAfter):'—';
     const endFlag=h.cycleEnd?' <span style="color:var(--gold);font-size:9px;background:rgba(245,196,81,.15);padding:1px 5px;border-radius:4px">사이클 종료</span>':'';
     const rowStyle=h.cycleEnd?' style="border-top:2px solid var(--gold)"':'';
-    rows=`<tr class="${cls}"${rowStyle}><td>${h.date||'-'}</td><td>${h.kind}${tflag}${endFlag}</td><td>${priceCell}</td><td>${qtyCell}</td><td>${wn(h.balAfter)}</td><td>${profitCell}</td><td>${h.Tafter.toFixed(2)}</td><td>${pctCell}</td><td>${starCell}</td><td><span class="del" onclick="delInf(${i})">✕</span></td></tr>`+rows;
+    rows=`<tr class="${cls}"${rowStyle}><td>${h.date||'-'}</td><td>${h.kind}${tflag}${endFlag}</td><td>${priceCell}</td><td>${qtyCell}</td><td>${wn(h.balAfter)}</td><td>${profitCell}</td><td>${fmtT(h.Tafter)}</td><td>${pctCell}</td><td>${starCell}</td><td><span class="del" onclick="delInf(${i})">✕</span></td></tr>`+rows;
   });
   $('inf_table').innerHTML=`<tr><th>날짜</th><th>구분</th><th>체결가</th><th>수량</th><th>잔금</th><th>손익</th><th>T</th><th>별%</th><th>별지점</th><th></th></tr>`+(hist.length?rows:`<tr><td class="empty" colspan="10">아직 기록이 없습니다</td></tr>`);
 }
 function infKindHint(){ const el=$('ih_kind'); if(!el)return; const c=computeInf(), k=el.value;
-  const nt=KIND_T[k]?KIND_T[k](c.T):c.T; if($('ih_tprev'))$('ih_tprev').textContent=`${c.T.toFixed(2)} → ${nt.toFixed(2)}`;
+  const nt=KIND_T[k]?KIND_T[k](c.T):c.T; if($('ih_tprev'))$('ih_tprev').textContent=`${fmtT(c.T)} → ${fmtT(nt)}`;
 }
 /* 날짜 → 입력순(ts) 정렬: 같은 날짜는 입력한 순서 유지 */
 function sortHist(arr){arr.sort((a,b)=>{const d=(a.date||'').localeCompare(b.date||'');return d!==0?d:((a.ts||0)-(b.ts||0))})}
@@ -2544,7 +2552,7 @@ function sheetTprev(){
   if($('sh_tman_on')&&$('sh_tman_on').checked){ const v=parseFloat($('sh_tman').value); nt=isNaN(v)?c.T:v; }
   else if(shKind==='리버스매도'||shKind==='리버스매수'){ nt=reverseT(shKind,c.T,c.st.div); }
   else nt=KIND_T[shKind]?KIND_T[shKind](c.T):c.T;
-  const el=$('sh_tprev'); if(el)el.textContent=`${c.T.toFixed(2)} → ${nt.toFixed(2)}`;
+  const el=$('sh_tprev'); if(el)el.textContent=`${fmtT(c.T)} → ${fmtT(nt)}`;
 }
 function sheetPickInf(kind,price,qty){
   sheetSelInf(kind);
