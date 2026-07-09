@@ -214,7 +214,7 @@ td:first-child{text-align:left;}
   <div class="brand">
     <div>
       <div class="logo">Backtest</div>
-      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v1.83</span></h1>
+      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v1.84</span></h1>
     </div>
   </div>
   <a href="/" class="home">← JK 퀀트</a>
@@ -264,14 +264,14 @@ td:first-child{text-align:left;}
     <div class="ctrl s-im hide"><label>익절 % <span style="font-size:9px;color:var(--dim)" id="imTgtHint">미변경시 종목·버전별 권장값</span></label><input type="number" id="imTarget" value="20" min="5" max="50" oninput="this.dataset.touched='1';syncTgtHint()"></div>
     <div class="ctrl s-im hide"><label>세금·비용</label>
       <div class="seg" id="imCost">
-        <button data-x="0" class="active" title="비용 없이 순수 전략 성과">미적용</button>
-        <button data-x="1" title="수수료 0.25%×2 · 슬리피지 0.05%(지정가매도) · 양도세 22%(연 250만원 공제)">적용</button>
+        <button data-x="0" title="비용 없이 순수 전략 성과">미적용</button>
+        <button data-x="1" class="active" title="수수료 0.25%×2 · 슬리피지 0.05%(지정가매도) · 양도세 22%(연 250만원 공제)">적용</button>
       </div>
     </div>
     <div class="ctrl s-im hide"><label>재투자</label>
       <div class="seg" id="imCompound">
-        <button data-c="1" class="active" title="익절금을 다음 사이클 원금에 합산">복리</button>
-        <button data-c="0" title="초과익만 인출, 손실은 잔고 그대로 이월">단리</button>
+        <button data-c="1" title="익절금을 다음 사이클 원금에 합산 — 초장기는 기하급수 폭주">복리</button>
+        <button data-c="0" class="active" title="초과익만 인출, 손실은 잔고 이월 — 장기 비교 권장">단리</button>
       </div>
     </div>
     <div class="ctrl s-im hide"><label>엔진</label>
@@ -283,9 +283,17 @@ td:first-child{text-align:left;}
     </div>
     <div class="ctrl s-im hide" id="imMaCtrl"><label>국면선 (V5.0)</label>
       <div class="seg" id="imShortMASeg">
-        <button data-m="20" title="가장 민감 — TECL·KORU에서 OOS 최적">20일</button>
-        <button data-m="30" class="active" title="권장 — SOXL·TQQQ에서 OOS 최적, 전체 균형">30일</button>
+        <button data-m="20" title="가장 민감 — 하락을 빨리 감지, 노이즈도 많음">20일</button>
+        <button data-m="30" class="active" title="중간 — 전체 균형">30일</button>
         <button data-m="50" title="가장 둔감 — 거래 빈도 낮음">50일</button>
+      </div>
+    </div>
+    <div class="ctrl s-im hide" id="imLoCtrl"><label>하락국면 익절 % (V5.0)</label>
+      <div class="seg" id="imLoSeg">
+        <button data-l="4" title="가장 공격적 조기탈출">4%</button>
+        <button data-l="6" class="active" title="기존 기본값">6%</button>
+        <button data-l="8" title="Walk-Forward 최다 선택">8%</button>
+        <button data-l="10" title="가장 보수적">10%</button>
       </div>
     </div>
 
@@ -713,8 +721,9 @@ let imEngine='v40';
    Python 독립구현(cost_engine.py)과 소수점 일치 검증됨. */
 const COST_FEE=0.0025, COST_SLIP=0.0005, COST_TAXRATE=0.22, COST_KRW=1350, COST_DEDUCT=250e4;
 
-let imShortMA=30;   // V5.0 국면 단기이평 (20/30/50) — 기본 30일 (Walk-Forward 권장)
-let imCostOn=false;  // 세금·수수료·슬리피지 반영 여부
+let imShortMA=30;   // V5.0 국면 단기이평 (20/30/50)
+let imLoPct=6;      // V5.0 하락국면 익절% (조기탈출)
+let imCostOn=true;   // 세금·수수료·슬리피지 반영 (기본 ON)
 
 // ★ 종목·엔진별 권장 익절%(=별%base). 통합 규약이므로 별지점·복귀조건도 함께 결정된다.
 //   비용(수수료·세금) 반영 단리 Walk-Forward 최적값. TECL·KORU는 비공식(자체 검증).
@@ -742,12 +751,15 @@ function syncTgtHint(){
   }
   el.style.color='var(--dim)';
 }
-function syncMaCtrl(){ const el=document.getElementById('imMaCtrl'); if(!el)return;
+function syncMaCtrl(){
   const on=(imEngine==='v50'||imEngine==='ab');
-  el.style.opacity=on?'1':'0.35'; el.style.pointerEvents=on?'':'none'; }
+  ['imMaCtrl','imLoCtrl'].forEach(id=>{ const el=document.getElementById(id); if(!el)return;
+    el.style.opacity=on?'1':'0.35'; el.style.pointerEvents=on?'':'none'; });
+}
 document.getElementById('imEngine').onclick=e=>{if(e.target.dataset.e){document.querySelectorAll('#imEngine button').forEach(b=>b.classList.remove('active'));e.target.classList.add('active');imEngine=e.target.dataset.e;syncMaCtrl();syncTgtHint();if(dataLoaded)run();}};
 document.getElementById('imShortMASeg').onclick=e=>{if(e.target.dataset.m){document.querySelectorAll('#imShortMASeg button').forEach(b=>b.classList.remove('active'));e.target.classList.add('active');imShortMA=+e.target.dataset.m;if(dataLoaded)run();}};
 document.getElementById('imCost').onclick=e=>{if(e.target.dataset.x){document.querySelectorAll('#imCost button').forEach(b=>b.classList.remove('active'));e.target.classList.add('active');imCostOn=e.target.dataset.x==='1';if(dataLoaded)run();}};
+document.getElementById('imLoSeg').onclick=e=>{if(e.target.dataset.l){document.querySelectorAll('#imLoSeg button').forEach(b=>b.classList.remove('active'));e.target.classList.add('active');imLoPct=+e.target.dataset.l;if(dataLoaded)run();}};
 syncMaCtrl();   // 초기: V4.0이므로 국면선 비활성 표시
 
 function commonDays(start,end,tickers){
@@ -1032,7 +1044,7 @@ function runIM50(days,tkr,cap,divs,targetPct,compound=true){
       let dynPct;
       if(!gr) dynPct=targetPct;      // 워밍업(200일 미만)
       else if(g) dynPct=targetPct;   // 상승국면: 기본 그대로
-      else dynPct=6;                 // 하락국면: 6% 고정
+      else dynPct=(typeof imLoPct!=='undefined'?imLoPct:6);   // 하락국면: 조기탈출 익절%
       const tgt=avg*(1+dynPct/100);
       const orig=shares;
       const q3=orig*0.75;
@@ -1334,7 +1346,7 @@ function renderMultiStrat(type, results, params){
   document.getElementById('detail').classList.add('hide');
   document.querySelector('.cards').classList.remove('hide');
   document.querySelector('.tbl-wrap').classList.remove('hide');
-  const stratName=type==='im'?('무한매수법 '+(imEngine==='v50'?('V5.0('+imShortMA+'일)'):'V4.0')+(imCostOn?' · 비용반영':'')):'VR 5.0';
+  const stratName=type==='im'?('무한매수법 '+(imEngine==='v50'?('V5.0('+imShortMA+'일·하락'+imLoPct+'%)'):'V4.0')+(imCostOn?' · 비용반영':'')):'VR 5.0';
   const pct=x=>(x>=0?'+':'')+x.toFixed(1)+'%';
   const money=(x,t)=>fmtV(x,t||tickers[0]);
 
@@ -1428,7 +1440,7 @@ function renderAB(t, r40, r50, days, tgt, compound){
   [r40,r50].forEach(r=>{r.yrs=yrs;r.cagr=cagrOf(r.final,r.invested,yrs);});
   const money=x=>fmtV(x,t), pct=x=>(x>=0?'+':'')+x.toFixed(1)+'%';
   document.getElementById('winner').innerHTML=
-    `⚖️ <strong style="color:${m.color}">${t}</strong> 무한매수법 <strong>V4.0 vs V5.0(${imShortMA}일)</strong> · ${imDiv}분할 · 기본 ${tgt}% · ${compound?'복리':'단리'} · ${days[0]}~${days[days.length-1]} · ${yrs.toFixed(1)}년`;
+    `⚖️ <strong style="color:${m.color}">${t}</strong> 무한매수법 <strong>V4.0 vs V5.0(${imShortMA}일·하락${imLoPct}%)</strong> · ${imDiv}분할 · 기본 ${tgt}% · ${compound?'복리':'단리'} · ${days[0]}~${days[days.length-1]} · ${yrs.toFixed(1)}년`;
   const rows=[
     ['최종 평가액', r=>money(r.final),  (a,b)=>a.final-b.final, 'money'],
     ['총 수익률',   r=>pct(r.ret),      (a,b)=>a.ret-b.ret, 'pp'],
@@ -1479,7 +1491,7 @@ function renderABMulti(results, compound){
   const yrs=Math.max(calYrs,0.1);
   tks.forEach(t=>{ [results[t].res,results[t].res50].forEach(r=>{r.yrs=yrs;r.cagr=cagrOf(r.final,r.invested,yrs);}); });
   document.getElementById('winner').innerHTML=
-    `⚖️ <strong>${tks.length}종목</strong> 무한매수법 <strong>V4.0 vs V5.0(${imShortMA}일)</strong> · ${imDiv}분할 · ${compound?'복리':'단리'} · ${anyDays[0]}~${anyDays[anyDays.length-1]} · ${yrs.toFixed(1)}년`;
+    `⚖️ <strong>${tks.length}종목</strong> 무한매수법 <strong>V4.0 vs V5.0(${imShortMA}일·하락${imLoPct}%)</strong> · ${imDiv}분할 · ${compound?'복리':'단리'} · ${anyDays[0]}~${anyDays[anyDays.length-1]} · ${yrs.toFixed(1)}년`;
   const pct=x=>(x>=0?'+':'')+x.toFixed(1)+'%';
   let h=`<thead><tr><th>종목</th><th>V4.0<br><span style="font-size:9px;color:var(--dim)">CAGR/MDD</span></th>`
        +`<th style="color:var(--gold)">V5.0(${imShortMA}일)<br><span style="font-size:9px;color:var(--dim)">CAGR/MDD</span></th>`
