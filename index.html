@@ -410,7 +410,7 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
 </div>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v2.15</span></h1></div>
+    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v2.17</span></h1></div>
     <div style="display:flex;align-items:center;gap:8px">
       <a class="btbtn" href="/backtest">📊<span class="bt-txt"> 백테스트</span></a>
       <button class="gear" onclick="openSettings()">⚙️</button>
@@ -514,10 +514,7 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
           <span>RSI (14) <span style="color:var(--faint2,#888)">· 1배지수 기준</span></span>
           <span id="inf_rsi_val" class="mono" style="font-size:12px;color:var(--faint)">—</span>
         </div>
-        <div style="position:relative">
-          <svg id="inf_rsi_chart" viewBox="0 0 360 72" preserveAspectRatio="none" style="width:100%;height:72px;display:block"></svg>
-          <div id="rsi_labels" style="position:absolute;top:0;left:2px;height:72px;pointer-events:none"></div>
-        </div>
+        <svg id="inf_rsi_chart" viewBox="0 0 360 72" preserveAspectRatio="none" style="width:100%;height:72px;display:block"></svg>
         <div style="display:flex;gap:14px;margin-top:3px;font-size:10px;color:var(--faint)">
           <span><span style="display:inline-block;width:12px;height:0;border-top:1px dashed #f87b8c;vertical-align:middle;margin-right:3px"></span>과매수 70</span>
           <span><span style="display:inline-block;width:12px;height:0;border-top:1px dashed #36d399;vertical-align:middle;margin-right:3px"></span>과매도 30</span>
@@ -776,7 +773,7 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
   <footer>
     <strong>JK 퀀트</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v2.15</b> · 2026-07-01</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v2.17</b> · 2026-07-01</div>
   </footer>
 </div>
 
@@ -1115,7 +1112,7 @@ function renderOrder(){
   $('o_buy1').textContent=slot>0?wn(buy1):'소진';
   $('o_star').textContent=c.avg>0?`${pct.toFixed(2)}% / ${wn(star)}`:'평단 없음(첫 매수)';
   const bigMul=1+(st.big/100), limit=close>0?close*bigMul:0;
-  $('o_limit').textContent=close>0?wn(limit):'—';
+  if($('o_limit')) $('o_limit').textContent=close>0?wn(limit):'—';   // 첫 매수 때만 존재
   if(!close&&c.avg<=0){$('o_orders').innerHTML='<div class="note">🔄 자동 버튼을 누르거나 전일 종가를 입력하면 주문표가 나옵니다.</div>';render5day();return}
 
   // ── 리버스모드 (원금 소진 후 진행 중: state 기반) ──
@@ -2281,13 +2278,7 @@ function drawInfRSI(){
     +`<line x1="0" y1="${y50.toFixed(1)}" x2="${W}" y2="${y50.toFixed(1)}" stroke="var(--border2)" stroke-width="0.5" stroke-dasharray="2,3" opacity="0.5"/>`
     +`<line x1="0" y1="${y30.toFixed(1)}" x2="${W}" y2="${y30.toFixed(1)}" stroke="#36d399" stroke-width="0.7" stroke-dasharray="3,2" opacity="0.6"/>`
     +`<path d="${d}" fill="none" stroke="${col}" stroke-width="1.6"/>`;
-  // 최종값 라벨 — HTML 오버레이
-  const rl=$('rsi_labels');
-  if(rl){
-    rl.innerHTML = last==null?'' :
-      `<div style="position:absolute;top:${(ys(last)/H*100).toFixed(1)}%;left:0;transform:translateY(-50%);font-size:10px;font-family:monospace;color:${col};line-height:1;background:rgba(13,17,32,.72);padding:1px 3px;border-radius:3px">`
-      +`<span style="display:inline-block;width:4px;height:4px;border-radius:50%;background:${col};margin-right:2px;vertical-align:middle"></span>${last.toFixed(0)}</div>`;
-  }
+  // 현재값은 카드 상단 inf_rsi_val에만 표시 (그래프 안 라벨은 중복이라 제거)
   if($('inf_rsi_val')){ $('inf_rsi_val').textContent=last!=null?last.toFixed(1):'—'; $('inf_rsi_val').style.color=col; }
 }
 
@@ -2630,9 +2621,12 @@ function renderOrderInline(){
       h+=`<input id="o_close" type="hidden"><div class="fetchnote" id="o_fetchnote"></div>`;
     }
     h+=`<div class="rowline"><span class="k">1회 매수금</span><span class="val mono" id="o_buy1">—</span></div>
-        <div class="rowline"><span class="k">별% / 별지점</span><span class="val mono" id="o_star">—</span></div>
-        <div class="rowline"><span class="k">LOC 매수 상한 (×큰수)</span><span class="val mono" id="o_limit" style="color:var(--gold)">—</span></div>
-      <div id="o_orders"></div>
+        <div class="rowline"><span class="k">별% / 별지점</span><span class="val mono" id="o_star">—</span></div>`;
+    // LOC 매수 상한(×큰수)은 '처음매수' 주문에만 쓰이는 값 → 첫 매수·리버스일 때만 표시
+    if(needClose){
+      h+=`<div class="rowline"><span class="k">LOC 매수 상한 (×큰수)</span><span class="val mono" id="o_limit" style="color:var(--gold)">—</span></div>`;
+    }
+    h+=`<div id="o_orders"></div>
       <div class="warn">프리장 시작 직후(서머 17시·겨울 18시) LOC로 거십니다. 상한가 초과 주문은 증권사가 거부할 수 있습니다.</div>`;
     $('inf_order_body').innerHTML=h;
   }
