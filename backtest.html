@@ -214,7 +214,7 @@ td:first-child{text-align:left;}
   <div class="brand">
     <div>
       <div class="logo">Backtest</div>
-      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v1.81</span></h1>
+      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v1.82</span></h1>
     </div>
   </div>
   <a href="/" class="home">← JK 퀀트</a>
@@ -346,7 +346,8 @@ td:first-child{text-align:left;}
 <!-- 규칙 설명 (결과 아래) -->
 <div class="rules s-im hide">
   <span class="bd">매수</span> 1회매수금 = <b>잔금 ÷ (분할−T)</b> · 전반전 절반 별지점·절반 평단 LOC, 후반전 전체 별지점 LOC<br>
-  <span class="bd">별%</span> 20분할 SOXL <b>(20−2T)%</b> / TQQQ (15−1.5T)% · 별지점 = 평단×(1+별%)<br>
+  <span class="bd">별%</span> base = <b>익절%</b> · slope = base×0.1×(20/분할) · 별지점 = 평단×(1+별%)<br>
+  <span class="bd">규약</span> 익절% 하나로 <b>별지점·리버스 복귀(−익절%)</b>가 함께 결정 · 문서값 재현(TQQQ 15 / SOXL 20)<br>
   <span class="bd">매도</span> 보유 1/4 별지점 쿼터매도(T×0.75) + 3/4 <b>평단+익절% 지정가</b> · 보유 0 시 복리 재시작<br>
   <span class="bd">리버스</span> T&gt;분할−1(원금소진) 시 무한매도(보유÷10·÷20)+쿼터매수(잔금÷4) · 종가&gt;평단×(1−15%/20%) 회복 시 다음날 일반모드 복귀<br>
   <span class="bd">재투자</span> 복리=익절금 원금 합산 / 단리=초과익만 인출(손실은 잔고 이월) · <b>장기(5년↑) 비교는 단리 권장</b> — 복리 초장기는 기하급수 폭주<br>
@@ -747,9 +748,13 @@ function _dcaOne(t,days,amt,step){
 function runIM(days,tkr,cap,divs,targetPct,compound=true){
   // 종목 계열: TQQQ만 TQQQ식(base15/복귀−15%), 그 외 전부 SOXL식(base20/복귀−20%) — index.html과 동일 규약
   // (문서상 TQQQ/SOXL만 오피셜. 복귀 기준은 "T 마지막 쿼터매도 기준과 동일"이므로 base와 반드시 짝이어야 함)
-  const starBase=tkr==='TQQQ'?15:20;
-  const starSlope=(tkr==='TQQQ'?1.5:2.0)*20/divs;   // 원문 V2.2 별% 일반공식 (분할수 반비례)
-  const exitMul = tkr==='TQQQ'?0.85:0.80;   // 리버스 종료(가격회복) 조건: 종가 > 평단×(1-15%/20%)
+  // ★ 통합 규약: 익절% = 별%base (문서: TQQQ 15/15, SOXL 20/20)
+  //   slope = base×0.1×(20/divs)  ← 문서 4케이스(TQQQ 20/40, SOXL 20/40) 전부 재현
+  //   exitMul = 1 − base/100      ← 문서 "복귀 기준 = T 마지막 쿼터매도 기준"
+  // 익절%를 바꾸면 별지점·복귀조건이 함께 따라가 규칙 정합성이 유지된다.
+  const starBase=targetPct;
+  const starSlope=starBase*0.1*20/divs;
+  const exitMul=1-starBase/100;
   const sellDiv = divs>=40?20:10;            // 리버스 무한매도 분모 (20분할→10, 40분할→20)
   let cash=cap,shares=0,avg=0,T=0,realized=0,cycles=0,savedProfit=0;const snap=[];
   let peakInvested=0;
@@ -880,9 +885,10 @@ function buildGateIM(tkr, shortMA){
 // 검증: Walk-Forward OOS에서 하락익절 6%가 전 종목 최적 근접 + 변동성 상향은 무효(제거) 확인.
 //   SOXL 전구간 CAGR 49→62%, MDD 66→66%(불변), 최종액 3.6배. 하락익절 6은 5·7 대비 섭동 20전20승.
 function runIM50(days,tkr,cap,divs,targetPct,compound=true){
-  const starBase=tkr==='TQQQ'?15:20;
-  const starSlope=(tkr==='TQQQ'?1.5:2.0)*20/divs;   // 원문 V2.2 별% 일반공식 (분할수 반비례)
-  const exitMul = tkr==='TQQQ'?0.85:0.80;
+  // ★ 통합 규약 (runIM과 동일): base=익절% / slope=base×0.1×20/divs / exitMul=1−base/100
+  const starBase=targetPct;
+  const starSlope=starBase*0.1*20/divs;
+  const exitMul=1-starBase/100;
   const sellDiv = divs>=40?20:10;
   const GM=buildGateIM(tkr);
   let cash=cap,shares=0,avg=0,T=0,realized=0,cycles=0,savedProfit=0;

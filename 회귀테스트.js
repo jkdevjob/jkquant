@@ -42,7 +42,7 @@ const idxParts=[
   extractFn(idx,'function reverseT(kind,t,div)'),
   idx.slice(idx.indexOf('function isBuy(k)'), idx.indexOf('\n', idx.indexOf('function isBuy(k)'))),
   idx.slice(idx.indexOf('function isSell(k)'), idx.indexOf('\n', idx.indexOf('function isSell(k)'))),
-  extractFn(idx,'function starPct(ticker,div,T)'),
+  extractFn(idx,'function starPct(')+'\n'+extractFn(idx,'function exitMulOf('),
   extractFn(idx,'function computeInf()'),
   extractFn(idx,'function computeNextV(c,ev)'),
   extractFn(idx,'function computeVr()'),
@@ -89,11 +89,15 @@ global.__LOG=(k,p,q)=>tradeLog.push({kind:k,price:p,qty:q});
 global.__FINAL=s=>finalState=s;
 global.M={}; global.C=0;
 eval(btSrc);
-// backtest 상수(starBase/starSlope/exitMul)를 함수화 — 계열 규약 검사용
-const mBase=btSrc.match(/const starBase=([^;]+);/), mSlope=btSrc.match(/const starSlope=([^;]+);/), mExit=btSrc.match(/const exitMul ?= ?([^;]+);/);
-const btBase=new Function('tkr','return '+mBase[1]);
-const btSlope=new Function('tkr','divs','return '+mSlope[1]);
-const btExit=new Function('tkr','return '+mExit[1].replace(/\/\/.*$/,''));
+// ★ 통합 규약 (v1.82~): base=익절%, slope=base×0.1×(20/div), exitMul=1−base/100
+// backtest 코드가 이 공식을 쓰는지 소스에서 직접 확인
+const usesUnified = /const starBase=targetPct;/.test(btSrc)
+  && /const starSlope=starBase\*0\.1\*20\/divs;/.test(btSrc)
+  && /const exitMul=1-starBase\/100;/.test(btSrc);
+const btBase=(tkr,tp)=>tp;
+const btSlope=(tkr,divs,tp)=>tp*0.1*20/divs;
+const btExit=(tkr,tp)=>1-tp/100;
+const DEF={TQQQ:15,SOXL:20,TECL:12,KORU:20};
 
 /* ════ 1. 문서 수치 재현 (3차) ════ */
 console.log('[1] 문서 수치 재현');
@@ -117,15 +121,16 @@ ok('쿼터매수 (400+300)/4 = 175', (400+300)/4===175);
   ok('VR 다음V 인출식 8850', near(computeNextV(c(0.25),9000).nextV,8850));
 }
 
-/* ════ 2. 종목 계열 규약 (6차) — 두 도구 동일 + base↔복귀 짝 ════ */
-console.log('[2] 종목 계열 규약 (index ↔ backtest)');
+/* ════ 2. 통합 규약 (익절% → 별지점·복귀조건 동반) ════ */
+console.log('[2] 통합 규약 (익절% = 별%base, index ↔ backtest)');
+ok('backtest가 통합 공식 사용', usesUnified, 'starBase=targetPct / slope=base×0.1×20/divs / exitMul=1−base/100');
 for(const tkr of ['TQQQ','SOXL','TECL','KORU']){
+  const tp=DEF[tkr];
   for(const div of [20,40]){
-    const iPct=starPct(tkr,div,3), bPct=btBase(tkr)-btSlope(tkr,div)*3;
-    ok(`별% 일치: ${tkr} ${div}분할`, near(iPct,bPct), `index=${iPct} bt=${bPct}`);
+    const iPct=starPct(tkr,div,3,tp), bPct=btBase(tkr,tp)-btSlope(tkr,div,tp)*3;
+    ok(`별% 일치: ${tkr} ${div}분할 (익절${tp}%)`, near(iPct,bPct), `index=${iPct} bt=${bPct}`);
   }
-  const wantExit = btBase(tkr)===20?0.80:0.85;
-  ok(`복귀기준↔base 짝: ${tkr}`, near(btExit(tkr),wantExit), `base=${btBase(tkr)} exit=${btExit(tkr)}`);
+  ok(`복귀기준↔base 짝: ${tkr}`, near(exitMulOf(tp), 1-tp/100), `base=${tp} exit=${exitMulOf(tp)}`);
 }
 
 /* ════ 3. VR 엣지 (4차) — 0원 시작 첫매수 Pool 미차감 ════ */
@@ -233,9 +238,10 @@ console.log('[4b] runIM50 V5.0 국면익절 (상승 기본 / 하락 6% 고정 / 
        `상승 ${gcount}/${DAYS.SOXL.length} (${(gcount/DAYS.SOXL.length*100).toFixed(0)}%)`);
   }
   // (b) 앵커: 클린 파싱·전체 이력·복리·원금 1만$ (현재 프로젝트 CSV 기준 — CSV 갱신 시 재산출)
+  // ★ 통합 규약(v1.82~): base=익절%. TQQQ는 공식 15%, TECL은 권장 12%로 앵커.
   const A=[['SOXL',20,20,1766988.25,82.16,88],
-           ['TQQQ',40,10,164189.72,48.10,95],
-           ['TECL',20,20,967414.28,79.68,49]];
+           ['TQQQ',40,15,188980.12,48.50,60],
+           ['TECL',20,12,660874.06,78.51,122]];
   for(const [tkr,div,tgt,fexp,mexp,cexp] of A){
     if(!DAYS[tkr]){ console.log('  (CSV 없음, 스킵: '+tkr+')'); continue; }
     const r=runIM50(DAYS[tkr],tkr,10000,div,tgt,true);
