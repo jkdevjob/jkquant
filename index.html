@@ -412,7 +412,7 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
 </div>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v2.26</span></h1></div>
+    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v2.27</span></h1></div>
     <div style="display:flex;align-items:center;gap:8px">
       <a class="btbtn" href="/backtest">📊<span class="bt-txt"> 백테스트</span></a>
       <button class="gear" onclick="openSettings()">⚙️</button>
@@ -781,7 +781,7 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
   <footer>
     <strong>JK 퀀트</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v2.26</b> · 2026-07-01</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v2.27</b> · 2026-07-01</div>
   </footer>
 </div>
 
@@ -1479,10 +1479,10 @@ async function fetchFearGreed(){
     }catch(e){}
     return {score:Math.round(j.fear_and_greed.score), rating:j.fear_and_greed.rating, hist};
   };
-  // 1) 자체 함수 (히스토리를 주면 바로 사용. score만 주면 폴백으로 보관)
+  // 1) 자체 함수 (functions/api/feargreed.js — 엣지에서 CNN 직접 호출, CORS 없음)
   let partial=null;
   try{
-    const r=await fetch('/api/feargreed',{headers:{'Accept':'application/json'}});
+    const r=await fetch('/api/feargreed?days=800',{headers:{'Accept':'application/json'}});
     if(r.ok){const j=await r.json();
       if(j&&Array.isArray(j.hist)&&j.hist.length) return {score:j.score,rating:j.rating,hist:j.hist,src:'api'};
       if(j&&typeof j.score==='number') partial={score:j.score,rating:j.rating,hist:[],src:'api'};}
@@ -2279,7 +2279,7 @@ function drawFgChart(){
     svg.innerHTML='';
     svg.style.height='0';                       // 빈 공간 제거
     if($('fg_x0')) $('fg_x0').textContent='';
-    if($('fg_x1')) $('fg_x1').textContent='';
+    if($('fg_x1')) $('fg_x1').textContent='ⓘ 히스토리 미제공 (functions/api/feargreed.js 배포 필요)';
     return;
   }
   svg.style.height='110px';
