@@ -216,7 +216,7 @@ td:first-child{text-align:left;}
   <div class="brand">
     <div>
       <div class="logo">Backtest</div>
-      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v1.88</span></h1>
+      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v1.90</span></h1>
     </div>
   </div>
   <a href="/" class="home">← JK 퀀트</a>
@@ -1217,7 +1217,7 @@ async function run(){
       }
       return;
     }
-    renderMultiStrat('im',results,{cap,tgt:tgtTouched?tgtOverride:null});
+    renderMultiStrat('im',results,{cap,tgt:tgtOverride});
   }else{
     if(!vrActive.size){alert('종목을 선택하세요.');return;}
     const contribUSD=+document.getElementById('vrContrib').value||100;
@@ -1294,12 +1294,19 @@ function renderDCA(res,tickers,opts){
     document.getElementById('winner').style.display='';
     document.getElementById('winner').innerHTML=`🏆 <strong>${top}</strong> 1위 · ${opts.days[0]}~${opts.days[opts.days.length-1]} · $${fmt(+document.getElementById('dcaAmt').value||10)}/${freqL} · 원금 $${fmt(r0.invested)} → <strong>$${fmt(r0.final)}</strong> (+${r0.ret.toFixed(0)}%)`;
   }
+  // 공통기간 모드는 yrs/cagr이 없으므로 여기서 보강 (개별기간은 run()에서 이미 세팅)
+  if(!isInd && opts.days && opts.days.length>1){
+    const _y=Math.max((new Date(opts.days[opts.days.length-1])-new Date(opts.days[0]))/(365.25*864e5),0.1);
+    tickers.forEach(t=>{ if(res[t]){ res[t].yrs=_y; if(res[t].cagr==null) res[t].cagr=cagrOf(res[t].final,res[t].invested,_y); } });
+  }
   const cc=document.getElementById('cards');cc.innerHTML='';
   ranked.forEach((t,i)=>{
     const r=res[t],m=META[t];
     const d=document.createElement('div');d.className='card';d.id='c_'+t;
     d.onclick=()=>{d.classList.toggle('off');const ds=chart&&chart.data.datasets.find(x=>x.label===t);if(ds){ds.hidden=!ds.hidden;chart.update();}}
-    const sub=isInd?`CAGR ${pctStr(r.cagr||0)} · ${r.period||''}`:`원금 $${fmt(r.invested)}`;
+    const _mdd=(r.mdd!=null?r.mdd*100:0), _mar=(_mdd>0?(r.cagr||0)/_mdd:0);
+    const sub=isInd?`CAGR ${pctStr(r.cagr||0)} · MDD ${_mdd.toFixed(0)}% · MAR ${_mar.toFixed(2)}`
+                   :`원금 $${fmt(r.invested)} · MDD ${_mdd.toFixed(0)}% · MAR ${_mar.toFixed(2)}`;
     d.innerHTML=`<div class="card-bar" style="background:${m.color}"></div><div class="card-rk ${i===0?'g':''}">#${i+1}</div><div class="card-body"><div class="card-tkr">${t}<span class="tk-nm">${m.name}</span></div><div class="card-val">$${fmt(r.final)}</div><div class="card-sub">${sub}</div></div>`;
     cc.appendChild(d);
   });
@@ -1309,11 +1316,15 @@ function renderDCA(res,tickers,opts){
   lastRender();
   // 테이블
   if(isInd){
-    let h=`<thead><tr><th>ETF</th><th>레버리지</th><th>기간</th><th>CAGR</th><th>최종</th><th>수익률</th></tr></thead><tbody>`;
-    ranked.forEach((t,i)=>{const r=res[t],m=META[t];h+=`<tr><td><span class="dot" style="background:${m.color}"></span>${t}<span class="tk-nm">${m.name}</span></td><td>${m.lev}×</td><td style="font-size:11px;color:var(--dim)">${r.period||''}</td><td style="color:${(r.cagr||0)>=0?'var(--green)':'var(--red)'}"><b>${pctStr(r.cagr||0)}</b></td><td style="color:var(--accent)">$${fmt(r.final)}</td><td style="color:${r.ret>=0?'var(--green)':'var(--red)'}">${pctStr(r.ret)}</td></tr>`;});
+    let h=`<thead><tr><th>ETF</th><th>레버리지</th><th>기간</th><th>원금</th><th>최종</th><th>수익률</th><th>CAGR</th><th>MDD</th><th>MAR</th></tr></thead><tbody>`;
+    ranked.forEach((t,i)=>{const r=res[t],m=META[t];
+      const _mdd=(r.mdd!=null?r.mdd*100:0), _cagr=(r.cagr||0), _mar=(_mdd>0?_cagr/_mdd:0);
+      h+=`<tr><td><span class="dot" style="background:${m.color}"></span>${t}<span class="tk-nm">${m.name}</span></td><td>${m.lev}×</td><td style="font-size:11px;color:var(--dim)">${r.period||''} <span style="opacity:.7">(${(r.yrs||0).toFixed(1)}년)</span></td><td>$${fmt(r.invested)}</td><td style="color:var(--accent)">$${fmt(r.final)}</td><td style="color:${r.ret>=0?'var(--green)':'var(--red)'}">${pctStr(r.ret)}</td><td style="color:${_cagr>=0?'var(--green)':'var(--red)'}"><b>${pctStr(_cagr)}</b></td><td>${_mdd.toFixed(1)}%</td><td style="color:var(--gold)">${_mar.toFixed(2)}</td></tr>`;});
   }else{
-    let h=`<thead><tr><th>ETF</th><th>레버리지</th><th>최종</th><th>원금</th><th>수익률</th></tr></thead><tbody>`;
-    ranked.forEach((t,i)=>{const r=res[t],m=META[t];h+=`<tr><td><span class="dot" style="background:${m.color}"></span>${t}<span class="tk-nm">${m.name}</span></td><td>${m.lev}×</td><td style="color:${i===0?'var(--gold)':'var(--accent)'}"><b>$${fmt(r.final)}</b></td><td>$${fmt(r.invested)}</td><td style="color:${r.ret>=0?'var(--green)':'var(--red)'}">${pctStr(r.ret)}</td></tr>`;});
+    let h=`<thead><tr><th>ETF</th><th>레버리지</th><th>원금</th><th>최종</th><th>수익률</th><th>CAGR</th><th>MDD</th><th>MAR</th><th>기간</th></tr></thead><tbody>`;
+    ranked.forEach((t,i)=>{const r=res[t],m=META[t];
+      const _mdd=(r.mdd!=null?r.mdd*100:0), _cagr=(r.cagr||0), _mar=(_mdd>0?_cagr/_mdd:0), _yrs=(r.yrs||0);
+      h+=`<tr><td><span class="dot" style="background:${m.color}"></span>${t}<span class="tk-nm">${m.name}</span></td><td>${m.lev}×</td><td>$${fmt(r.invested)}</td><td style="color:${i===0?'var(--gold)':'var(--accent)'}"><b>$${fmt(r.final)}</b></td><td style="color:${r.ret>=0?'var(--green)':'var(--red)'}">${pctStr(r.ret)}</td><td>${pctStr(_cagr)}</td><td>${_mdd.toFixed(1)}%</td><td style="color:var(--gold)">${_mar.toFixed(2)}</td><td style="font-size:11px;color:var(--dim)">${_yrs.toFixed(1)}년</td></tr>`;});
   }
   h+='</tbody>';document.getElementById('tbl').innerHTML=h;
 }
@@ -1437,6 +1448,9 @@ function renderAB(t, r40, r50, days, tgt, compound){
     ['총 수익률',   r=>pct(r.ret),      (a,b)=>a.ret-b.ret, 'pp'],
     ['CAGR',        r=>pct(r.cagr),     (a,b)=>a.cagr-b.cagr, 'pp'],
     ['MDD',         r=>r.mdd.toFixed(1)+'%', (a,b)=>b.mdd-a.mdd, 'mdd'],
+    ['MAR (CAGR/MDD)', r=>(r.mdd>0?r.cagr/r.mdd:0).toFixed(2), (a,b)=>(a.mdd>0?a.cagr/a.mdd:0)-(b.mdd>0?b.cagr/b.mdd:0), 'mar'],
+    ['투입 원금',   r=>money(r.invested), null, null],
+    ['기간(년)',    r=>r.yrs.toFixed(1)+'년', null, null],
     ['사이클 수',   r=>r.cycles+'회',   null, null],
     ['실현손익',    r=>money(r.realized), null, null],
   ];
@@ -1452,6 +1466,7 @@ function renderAB(t, r40, r50, days, tgt, compound){
       if(dtype==='money') dl=(r50.final-r40.final>=0?'+':'')+money(r50.final-r40.final);
       else if(dtype==='mdd') dl=(r50.mdd-r40.mdd>=0?'+':'')+(r50.mdd-r40.mdd).toFixed(1)+'%p';
       else if(dtype==='pp'){ const dv=(label==='CAGR')?(r50.cagr-r40.cagr):(r50.ret-r40.ret); dl=(dv>=0?'+':'')+dv.toFixed(1)+'%p'; }
+      else if(dtype==='mar'){ const m4=(r40.mdd>0?r40.cagr/r40.mdd:0), m5=(r50.mdd>0?r50.cagr/r50.mdd:0); dl=(m5-m4>=0?'+':'')+(m5-m4).toFixed(2); }
     }
     h+=`<tr><td>${label}</td>`+
        `<td class="v ${win===1?'win':''}">${a}</td>`+
@@ -1485,18 +1500,27 @@ function renderABMulti(results, compound){
   document.getElementById('winner').innerHTML=
     `⚖️ <strong>${tks.length}종목</strong> 무한매수법 <strong>V4.0 vs V5.0(${imShortMA}일·하락${imLoPct}%)</strong> · ${imDiv}분할 · ${compound?'복리':'단리'} · ${anyDays[0]}~${anyDays[anyDays.length-1]} · ${yrs.toFixed(1)}년`;
   const pct=x=>(x>=0?'+':'')+x.toFixed(1)+'%';
-  let h=`<thead><tr><th>종목</th><th>V4.0<br><span style="font-size:9px;color:var(--dim)">CAGR/MDD</span></th>`
-       +`<th style="color:var(--gold)">V5.0(${imShortMA}일)<br><span style="font-size:9px;color:var(--dim)">CAGR/MDD</span></th>`
-       +`<th>ΔCAGR</th><th>ΔMDD</th><th>최종액 배수</th></tr></thead><tbody>`;
+  const money=(x,t)=>fmtV(x,t);
+  const marOf=r=>(r.mdd>0? r.cagr/r.mdd : 0);
+  let h=`<thead><tr><th>종목</th><th>원금</th>`
+       +`<th>V4.0<br><span style="font-size:9px;color:var(--dim)">최종 / 수익률</span></th>`
+       +`<th>V4.0<br><span style="font-size:9px;color:var(--dim)">CAGR/MDD/MAR</span></th>`
+       +`<th style="color:var(--gold)">V5.0<br><span style="font-size:9px;color:var(--dim)">최종 / 수익률</span></th>`
+       +`<th style="color:var(--gold)">V5.0<br><span style="font-size:9px;color:var(--dim)">CAGR/MDD/MAR</span></th>`
+       +`<th>ΔCAGR</th><th>ΔMDD</th><th>배수</th></tr></thead><tbody>`;
   // 최종액 배수 큰 순 정렬
   tks.sort((a,b)=>(results[b].res50.final/results[b].res.final)-(results[a].res50.final/results[a].res.final));
   tks.forEach(t=>{
     const m=META[t]||{color:'#5b8def'};
     const a=results[t].res, b=results[t].res50;
     const dc=b.cagr-a.cagr, dm=b.mdd-a.mdd, mult=a.final>0?(b.final/a.final):0;
+    const ma=marOf(a), mb=marOf(b);
     h+=`<tr><td><span style="color:${m.color};font-weight:600">${t}</span></td>`
-      +`<td class="v">${pct(a.cagr)}<span style="color:var(--dim)"> / ${a.mdd.toFixed(0)}%</span></td>`
-      +`<td class="v ${dc>0?'win':''}">${pct(b.cagr)}<span style="color:var(--dim)"> / ${b.mdd.toFixed(0)}%</span></td>`
+      +`<td class="v mono">${money(a.invested,t)}</td>`
+      +`<td class="v mono">${money(a.final,t)}<br><span style="font-size:10px;color:var(--dim)">${pct(a.ret)}</span></td>`
+      +`<td class="v" style="font-size:11px">${pct(a.cagr)} / ${a.mdd.toFixed(0)}% / <b>${ma.toFixed(2)}</b></td>`
+      +`<td class="v mono ${b.final>a.final?'win':''}">${money(b.final,t)}<br><span style="font-size:10px;color:var(--dim)">${pct(b.ret)}</span></td>`
+      +`<td class="v" style="font-size:11px">${pct(b.cagr)} / ${b.mdd.toFixed(0)}% / <b style="color:var(--gold)">${mb.toFixed(2)}</b></td>`
       +`<td class="v" style="color:${dc>=0?'var(--green)':'var(--red)'}">${dc>=0?'+':''}${dc.toFixed(1)}p</td>`
       +`<td class="v" style="color:${dm<=0?'var(--green)':'var(--red)'}">${dm>=0?'+':''}${dm.toFixed(0)}p</td>`
       +`<td class="v mono" style="font-weight:600">${mult.toFixed(2)}배</td></tr>`;
