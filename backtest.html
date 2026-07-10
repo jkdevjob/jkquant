@@ -130,6 +130,8 @@ body{background:var(--bg);color:var(--text);font-family:'Pretendard',sans-serif;
 
 /* RULES */
 .rules{background:var(--surf2);border:1px solid var(--border);border-radius:9px;padding:14px 18px;margin:6px 0 18px;font-size:12px;color:var(--dim2);line-height:1.85;}
+/* ══ V5.0(국면 익절) 검증 미완료로 UI 숨김. 복원하려면 아래 한 줄만 삭제 ══ */
+.v5-hidden{display:none !important}
 .rules b{color:var(--text);}
 .rules .bd{display:inline-block;background:rgba(91,141,238,.14);color:var(--accent);border-radius:4px;padding:1px 7px;font-family:'IBM Plex Mono',monospace;font-size:11px;margin-right:3px;}
 
@@ -214,7 +216,7 @@ td:first-child{text-align:left;}
   <div class="brand">
     <div>
       <div class="logo">Backtest</div>
-      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v1.86</span></h1>
+      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v1.87</span></h1>
     </div>
   </div>
   <a href="/" class="home">← JK 퀀트</a>
@@ -277,18 +279,18 @@ td:first-child{text-align:left;}
     <div class="ctrl s-im hide"><label>엔진</label>
       <div class="seg" id="imEngine">
         <button data-e="v40" class="active" title="라오어 공식 V4.0">V4.0</button>
-        <button data-e="v50" title="국면 익절: 국면=합성1배지수>200일선 AND >단기이평. 상승국면 익절=기본 / 하락국면 익절=6% 고정(조기탈출) · 리버스 무한매도는 하락국면만">V5.0</button>
-        <button data-e="ab" title="V4.0 vs V5.0 나란히 비교 · 1종목=상세 / 여러 종목=요약 표">A/B</button>
+        <button data-e="v50" class="v5-hidden" title="V5.0 (검증 미완료)">V5.0</button>
+        <button data-e="ab" class="v5-hidden" title="V4.0 vs V5.0 비교">A/B</button>
       </div>
     </div>
-    <div class="ctrl s-im hide" id="imMaCtrl"><label>국면선 (V5.0)</label>
+    <div class="ctrl s-im hide v5-hidden" id="imMaCtrl"><label>국면선 (V5.0)</label>
       <div class="seg" id="imShortMASeg">
         <button data-m="20" title="가장 민감 — 하락을 빨리 감지, 노이즈도 많음">20일</button>
         <button data-m="30" class="active" title="중간 — 전체 균형">30일</button>
         <button data-m="50" title="가장 둔감 — 거래 빈도 낮음">50일</button>
       </div>
     </div>
-    <div class="ctrl s-im hide" id="imLoCtrl"><label>하락국면 익절 % (V5.0)</label>
+    <div class="ctrl s-im hide v5-hidden" id="imLoCtrl"><label>하락국면 익절 % (V5.0)</label>
       <div class="seg" id="imLoSeg">
         <button data-l="4" title="가장 공격적 조기탈출">4%</button>
         <button data-l="6" class="active" title="기존 기본값">6%</button>
@@ -365,7 +367,7 @@ td:first-child{text-align:left;}
   <span class="bd">매도</span> 보유 1/4 별지점 쿼터매도(T×0.75) + 3/4 <b>평단+익절% 지정가</b> · 보유 0 시 복리 재시작<br>
   <span class="bd">리버스</span> T&gt;분할−1(원금소진) 시 무한매도(보유÷10·÷20)+쿼터매수(잔금÷4) · 종가&gt;평단×(1−15%/20%) 회복 시 다음날 일반모드 복귀<br>
   <span class="bd">재투자</span> 복리=익절금 원금 합산 / 단리=초과익만 인출(손실은 잔고 이월) · <b>장기(5년↑) 비교는 단리 권장</b> — 복리 초장기는 기하급수 폭주<br>
-  <span class="bd">V5.0</span> 국면(합성1배지수 &gt; 자체 200일선 <b>AND</b> 단기이평 20/30/50일 선택) · 상승국면 익절 <b>기본</b> / 하락국면 익절 <b>6% 고정</b>(조기탈출) · 리버스 무한매도는 하락국면만 · 지표 워밍업(200일 미만)은 V4.0 동작
+  <span class="bd v5-hidden">V5.0</span><span class="v5-hidden"> 국면 익절 (검증 미완료 · 비활성)</span>
 </div>
 <div class="rules s-vr hide">
   <span class="bd">V 갱신</span> 다음 V = 현재 V + <b>Pool/G</b> + 적립금 · 2주(10거래일) 사이클<br>
@@ -376,7 +378,7 @@ td:first-child{text-align:left;}
 <div class="foot">
   ※ 실제 OHLC 종가 기반 백테스트. 수수료·세금·환율·배당 미반영. LOC매수=종가≤주문가 시 체결, 지정가매도=당일 고가≥목표가 시 체결로 근사.<br>
   ※ <b>USD</b>=반도체 2× · <b>QLD</b>=나스닥 2× · <b>SOXL</b>=반도체 3× · <b>TQQQ</b>=나스닥 3× · <b>TECL</b>=테크 3×<br>
-  ※ 무한매수법 V4.0 / V5.0(국면 익절, JK 확장) · VR 5.0 (라오어). 일봉 근사라 실제 체결과 차이 가능. 과거 성과는 미래를 보장하지 않습니다.<br>
+  ※ 무한매수법 V4.0 · VR 5.0 (라오어). 일봉 근사라 실제 체결과 차이 가능. 과거 성과는 미래를 보장하지 않습니다.<br>
   <b>JK 퀀트</b> · 학습용 도구
 </div>
 
@@ -713,7 +715,7 @@ document.getElementById('vrMode').onclick=e=>{
 };
 document.getElementById('vrFormula').onclick=e=>{if(e.target.dataset.f){document.querySelectorAll('#vrFormula button').forEach(b=>b.classList.remove('active'));e.target.classList.add('active');if(dataLoaded)run();}};
 document.getElementById('imDiv').onclick=e=>{if(e.target.dataset.d){document.querySelectorAll('#imDiv button').forEach(b=>b.classList.remove('active'));e.target.classList.add('active');imDiv=+e.target.dataset.d;if(dataLoaded)run();}};
-let imEngine='v40';
+let imEngine='v40';   // V5.0 숨김 기간: v40 고정
 
 /* ════ 실전 비용 모델 (imCostOn=true일 때만 적용) ════
    수수료 0.25%(매수·매도 각) · 슬리피지 0.05%(지정가매도만, LOC는 종가체결이라 없음)

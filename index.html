@@ -44,6 +44,8 @@ h1 .v{color:var(--gold)}
 .fetchbtn:active{opacity:.7}
 .fetchnote{font-size:11.5px;margin:6px 0 10px;min-height:14px}
 .fetchnote:empty{margin:0;min-height:0;display:none}
+/* ══ V5.0(국면 익절) 검증 미완료로 UI 숨김. 복원하려면 아래 한 줄만 삭제 ══ */
+.v5-hidden{display:none !important}
 .fetchnote.ok{color:var(--buy)}.fetchnote.err{color:var(--gold)}.fetchnote.load{color:var(--dim)}
 .fivebox{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:14px;margin-bottom:13px}
 .fivebox h4{font-size:13px;font-weight:700;margin-bottom:10px;display:flex;justify-content:space-between}
@@ -410,7 +412,7 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
 </div>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v2.23</span></h1></div>
+    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v2.24</span></h1></div>
     <div style="display:flex;align-items:center;gap:8px">
       <a class="btbtn" href="/backtest">📊<span class="bt-txt"> 백테스트</span></a>
       <button class="gear" onclick="openSettings()">⚙️</button>
@@ -496,7 +498,7 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
       </div>
 
       <!-- 국면 판정 차트 (합성 1배지수 vs 200일선) -->
-      <div class="card" id="rg_card"><h3 style="justify-content:space-between"><span style="display:flex;align-items:center;gap:8px"><span class="dot"></span>국면 판정 <span style="font-size:11px;color:var(--faint)">합성 1배지수 · <span id="rg_ma_sub">200/30일선</span></span></span><span class="lh-stage" id="rg_state">—</span></h3>
+      <div class="card v5-hidden" id="rg_card"><h3 style="justify-content:space-between"><span style="display:flex;align-items:center;gap:8px"><span class="dot"></span>국면 판정 <span style="font-size:11px;color:var(--faint)">합성 1배지수 · <span id="rg_ma_sub">200/30일선</span></span></span><span class="lh-stage" id="rg_state">—</span></h3>
         <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px">
           <span id="rg_summary" style="font-size:13px;color:var(--dim)">시세 로딩 후 표시됩니다</span>
           <span id="rg_dist" style="font-size:12px;color:var(--faint)"></span>
@@ -773,7 +775,7 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
   <footer>
     <strong>JK 퀀트</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v2.23</b> · 2026-07-01</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v2.24</b> · 2026-07-01</div>
   </footer>
 </div>
 
@@ -797,10 +799,11 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
     <div class="seclabel">통화 <span class="hint" style="color:var(--faint);font-weight:500">국내상장 ETF는 원화</span></div><div class="seg" id="set_cur"><button data-v="usd">달러 ($)</button><button data-v="krw">원화 (₩)</button></div>
     <div class="seclabel">분할 수</div><div class="seg" id="set_div"><button data-v="20">20분할</button><button data-v="30">30분할</button><button data-v="40">40분할</button></div>
     <div class="seclabel">파라미터</div>
-    <div class="seclabel">엔진 버전</div><div class="seg" id="set_engine"><button data-v="v40">V4.0</button><button data-v="v50">V5.0</button></div>
-    <div class="seclabel">국면선 (V5.0)</div><div class="seg" id="set_shortma"><button data-v="20">20일</button><button data-v="30">30일</button><button data-v="50">50일</button></div>
-    <div class="seclabel">하락국면 익절 % (V5.0)</div><div class="seg" id="set_lopct"><button data-v="4">4%</button><button data-v="6">6%</button><button data-v="8">8%</button><button data-v="10">10%</button></div>
-    <p class="note" style="margin:-2px 0 8px">하락국면엔 익절 목표를 낮춰 반등에 빨리 턴다. <b>무작위 대조 검정</b> 결과 국면 판정이 실제 정보를 담는 종목은 <b>KORU(20일)·TECL(30일)</b>뿐이며, <b>SOXL·TQQQ에선 무의미</b>(V4.0 + 낮은 익절% 권장)합니다. 50일선은 전 종목에서 무작위보다 나빴습니다.</p>
+    <!-- V5.0 검증 미완료 — 엔진 선택 숨김 (V4.0 고정). 복원 시 v5-hidden 클래스 제거 -->
+    <div class="seclabel v5-hidden">엔진 버전</div><div class="seg v5-hidden" id="set_engine"><button data-v="v40" class="on">V4.0</button><button data-v="v50">V5.0</button></div>
+    <div class="seclabel v5-hidden">국면선 (V5.0)</div><div class="seg v5-hidden" id="set_shortma"><button data-v="20">20일</button><button data-v="30">30일</button><button data-v="50">50일</button></div>
+    <div class="seclabel v5-hidden">하락국면 익절 % (V5.0)</div><div class="seg v5-hidden" id="set_lopct"><button data-v="4">4%</button><button data-v="6">6%</button><button data-v="8">8%</button><button data-v="10">10%</button></div>
+    <p class="note v5-hidden" style="margin:-2px 0 8px">하락국면엔 익절 목표를 낮춰 반등에 빨리 턴다.</p>
     <div class="field"><label>목표 수익률 (%) <span class="hint" id="target_hint">별%·지정가매도</span></label><input id="set_target" type="number" inputmode="decimal" value="20"></div>
     <div class="field"><label>큰수 % <span class="hint">처음매수 LOC 상한 회피 0~40</span></label><input id="set_big" type="number" inputmode="decimal" value="12" min="0" max="40"></div>
     <div class="field"><label id="set_principal_lbl">원금 ($)</label><input id="set_principal" type="text" inputmode="decimal" value="10000" oninput="commaInput(this)"></div>
@@ -913,6 +916,18 @@ const LS='qcockpit_v2', LS_URL='qcockpit_gsheet';
 let S=null;
 
 function defInfSettings(){return{ticker:'SOXL',div:20,target:20,big:12,rowsOn:false,rows:8,gap:2.5,rowqty:1,principal:10000,cur:'usd',engine:'v40',shortMA:30,loPct:6}}
+// V5.0 숨김 기간: 저장된 세션이 v50이어도 v40으로 강제 (UI가 없어 되돌릴 수 없으므로)
+// 복원 시 이 함수와 load() 안의 호출만 제거하면 된다.
+function forceV40(){
+  if(typeof S==='undefined'||!S) return;
+  try{
+    JSON.parse(JSON.stringify(S));   // 순환참조 방어
+    const walk=(o)=>{ if(!o||typeof o!=='object') return;
+      if(o.settings && o.settings.engine==='v50') o.settings.engine='v40';
+      Object.values(o).forEach(walk); };
+    walk(S);
+  }catch(e){}
+}
 function toggleRowsField(){const on=$('set_rows_on')&&$('set_rows_on').checked;const f=$('rows_fields');if(f){f.style.opacity=on?'1':'0.4';f.style.pointerEvents=on?'auto':'none';}}
 function defVrSettings(){return{ticker:'TQQQ',mode:0.75,formula:'basic',g:10,add:100,band:15,startv:0,startpool:0,cur:'usd'}}
 function uid(){return 's'+Date.now()+Math.floor(Math.random()*9999)}
@@ -934,6 +949,7 @@ function load(){
   try{S=JSON.parse(localStorage.getItem(lsKey()))}catch(e){S=null}
   if(!validState(S)){S=freshState();saveLocal();}
   if(!S.activeTab)S.activeTab='inf';
+  forceV40();   // V5.0 숨김 기간: 저장된 v50 세션을 v40으로 되돌림
 }
 function saveLocal(){S._updated=Date.now();localStorage.setItem(lsKey(),JSON.stringify(S))}
 function save(){saveLocal();pushRemote();}
