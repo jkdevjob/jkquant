@@ -216,7 +216,7 @@ td:first-child{text-align:left;}
   <div class="brand">
     <div>
       <div class="logo">Backtest</div>
-      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v1.87</span></h1>
+      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v1.88</span></h1>
     </div>
   </div>
   <a href="/" class="home">← JK 퀀트</a>
@@ -263,7 +263,13 @@ td:first-child{text-align:left;}
         <button data-d="40">40</button>
       </div>
     </div>
-    <div class="ctrl s-im hide"><label>익절 % <span style="font-size:9px;color:var(--dim)" id="imTgtHint">미변경시 종목·버전별 권장값</span></label><input type="number" id="imTarget" value="20" min="5" max="50" oninput="this.dataset.touched='1';syncTgtHint()"></div>
+    <div class="ctrl s-im hide"><label>익절 % <span style="font-size:9px;color:var(--dim)">전 종목 일괄 적용</span></label>
+      <div class="seg" id="imTgtSeg">
+        <button data-t="10" class="active" title="Walk-Forward OOS 최적">10%</button>
+        <button data-t="15">15%</button>
+        <button data-t="20" title="라오어 문서 공식(SOXL)">20%</button>
+      </div>
+    </div>
     <div class="ctrl s-im hide"><label>세금·비용</label>
       <div class="seg" id="imCost">
         <button data-x="0" title="비용 없이 순수 전략 성과">미적용</button>
@@ -476,7 +482,7 @@ let loadedStart='', loadedEnd='';  // 로딩된 기간
   document.getElementById('dEnd').value=iso(today);
   document.getElementById('dStart').value='2000-01-01';   // 전 구간 기본 (데이터 있는 만큼 사용)
   buildTickerPick();
-  if(typeof syncTgtHint==='function') syncTgtHint();
+  
   showEmptyState();
   loadFromLocalStorage();  // 로그인 여부 무관하게 즉시 복원
   // 데이터는 실행 버튼 누를 때 로딩 (기간에 맞춰)
@@ -679,7 +685,7 @@ function buildPickSingle(){
       c.className="tk-chip"+(active.has(t)?" on":"");
       c.style.setProperty("--c",META[t].color);c.id="tps_"+t;
       c.innerHTML="<div class=\"d\"></div>"+t;
-      c.onclick=()=>{ c.classList.toggle("on"); const on=c.classList.contains("on"); if(on) active.add(t); else active.delete(t); if(typeof syncTgtHint==="function") syncTgtHint(); };
+      c.onclick=()=>{ c.classList.toggle("on"); const on=c.classList.contains("on"); if(on) active.add(t); else active.delete(t);  };
       single.appendChild(c);
     });
   }
@@ -727,46 +733,17 @@ let imShortMA=30;   // V5.0 국면 단기이평 (20/30/50)
 let imLoPct=6;      // V5.0 하락국면 익절% (조기탈출)
 let imCostOn=true;   // 세금·수수료·슬리피지 반영 (기본 ON)
 
-// ★ 종목별 기본 익절%(=별%base). 통합 규약이라 별지점·리버스 복귀조건이 함께 결정된다.
-//   TQQQ 15 / SOXL 20 은 라오어 공식값. 최적화 결과가 아니라 설계 철학이다:
-//     · 별%=(20−2T)% → T=0에서 별지점 평단+20%. 초기 매수 밴드가 넓어 물타기 여유 확보
-//     · 사이클 연 8회 → 실전 가능한 빈도 (익절 5%면 연 34회로 비현실적)
-//     · 3년 이동 최소수익 +45~52%(세전) — 어느 시점에 시작해도 방어
-//   백테스트상 익절 5~10%가 총수익은 높으나, 별지점까지 좁아진 '다른 전략'이며
-//   회전 3~4배라 미체결·슬리피지·세금신고·심리 부담이 백테스트에 미반영이다.
-//   TECL·KORU는 문서 미수록(비공식) — 자체 검증값.
-const IM_BEST={
-  v40:{TQQQ:15, SOXL:20, TECL:12, KORU:15},
-  v50:{TQQQ:15, SOXL:20, TECL:12, KORU:15}
-};
-const IM_OFFICIAL={TQQQ:15, SOXL:20};   // 라오어 문서 공식값
-function bestTgt(tkr, eng){
-  const tbl=IM_BEST[eng==='v40'?'v40':'v50'];
-  return tbl[tkr]!==undefined ? tbl[tkr] : (IM_OFFICIAL[tkr]||20);
-}
-function syncTgtHint(){
-  const el=document.getElementById('imTgtHint'); if(!el) return;
-  const t=document.getElementById('imTarget');
-  if(t&&t.dataset.touched==='1'){ el.textContent='직접 입력 — 전 종목 일괄 적용'; el.style.color='var(--gold)'; return; }
-  const tks=[...imActive];
-  const eng=(imEngine==='ab')?'v50':imEngine;
-  if(tks.length===1){
-    const t=tks[0], v=bestTgt(t,eng), off=IM_OFFICIAL[t];
-    el.textContent=`${t} 기본 ${v}%` + (off?' (라오어 공식)':' (비공식)');
-  }else{
-    el.textContent=`종목별 기본값 자동 (${tks.length}종목)`;
-  }
-  el.style.color='var(--dim)';
-}
+let imTarget=10;   // 익절%(전 종목 일괄). 별%base·리버스 복귀조건도 함께 결정 (통합 규약)
 function syncMaCtrl(){
   const on=(imEngine==='v50'||imEngine==='ab');
   ['imMaCtrl','imLoCtrl'].forEach(id=>{ const el=document.getElementById(id); if(!el)return;
     el.style.opacity=on?'1':'0.35'; el.style.pointerEvents=on?'':'none'; });
 }
-document.getElementById('imEngine').onclick=e=>{if(e.target.dataset.e){document.querySelectorAll('#imEngine button').forEach(b=>b.classList.remove('active'));e.target.classList.add('active');imEngine=e.target.dataset.e;syncMaCtrl();syncTgtHint();if(dataLoaded)run();}};
+document.getElementById('imEngine').onclick=e=>{if(e.target.dataset.e){document.querySelectorAll('#imEngine button').forEach(b=>b.classList.remove('active'));e.target.classList.add('active');imEngine=e.target.dataset.e;syncMaCtrl();if(dataLoaded)run();}};
 document.getElementById('imShortMASeg').onclick=e=>{if(e.target.dataset.m){document.querySelectorAll('#imShortMASeg button').forEach(b=>b.classList.remove('active'));e.target.classList.add('active');imShortMA=+e.target.dataset.m;if(dataLoaded)run();}};
 document.getElementById('imCost').onclick=e=>{if(e.target.dataset.x){document.querySelectorAll('#imCost button').forEach(b=>b.classList.remove('active'));e.target.classList.add('active');imCostOn=e.target.dataset.x==='1';if(dataLoaded)run();}};
 document.getElementById('imLoSeg').onclick=e=>{if(e.target.dataset.l){document.querySelectorAll('#imLoSeg button').forEach(b=>b.classList.remove('active'));e.target.classList.add('active');imLoPct=+e.target.dataset.l;if(dataLoaded)run();}};
+document.getElementById('imTgtSeg').onclick=e=>{if(e.target.dataset.t){document.querySelectorAll('#imTgtSeg button').forEach(b=>b.classList.remove('active'));e.target.classList.add('active');imTarget=+e.target.dataset.t;if(dataLoaded)run();}};
 syncMaCtrl();   // 초기: V4.0이므로 국면선 비활성 표시
 
 function commonDays(start,end,tickers){
@@ -1176,10 +1153,13 @@ async function run(){
   const start=document.getElementById('dStart').value;
   const end=document.getElementById('dEnd').value;
   if(!start||!end||start>=end){alert('날짜를 확인하세요.');return;}
-  // 데이터 없거나 요청 기간이 더 넓으면 재로딩
+  // 데이터 없거나 · 요청 기간이 더 넓거나 · 선택 종목 중 미로딩분이 있으면 재로딩
+  const wanted = strat==='dca' ? [...dcaActive] : (strat==='im' ? [...imActive] : [...vrActive]);
+  const missing = wanted.filter(t=>!M[t] || !Object.keys(M[t]||{}).length);
   const needReload=!Object.keys(M).length
     || (loadedStart && start<loadedStart)
-    || (loadedEnd   && end>loadedEnd);
+    || (loadedEnd   && end>loadedEnd)
+    || missing.length>0;
   if(needReload){
     const ok=await loadData(start,end);
     if(!ok) return;
@@ -1212,17 +1192,13 @@ async function run(){
   }else if(strat==='im'){
     if(!imActive.size){alert('종목을 선택하세요.');return;}
     const cap=+document.getElementById('imCap').value||10000;
-    const tgtEl=document.getElementById('imTarget');
-    const tgtOverride=+tgtEl.value||20;
-    const tgtTouched=tgtEl.dataset.touched==='1';
+    const tgtOverride=imTarget;   // 세그에서 선택한 익절% (전 종목 동일)
     const compound=document.querySelector('#imCompound button.active')?.dataset.c!=='0';
     const commonD=commonDays(start,end,[...imActive]);
     if(commonD.length<10){alert('공통 거래일이 부족합니다.');return;}
     const results={};
     [...imActive].forEach(t=>{
-      // 종목·엔진별 권장 익절%(IM_BEST). 사용자가 직접 입력한 경우에만 전 종목 일괄 적용.
-      const engKey = (imEngine==='ab') ? 'v50' : imEngine;
-      const tgt = tgtTouched ? tgtOverride : bestTgt(t, engKey);
+      const tgt = tgtOverride;   // 전 종목 동일 익절%
       if(imEngine==='ab'){
         results[t]={res:runIM(commonD,t,cap,imDiv,tgt,compound), res50:runIM50(commonD,t,cap,imDiv,tgt,compound), tgt, days:commonD};
       }else{
@@ -1311,9 +1287,11 @@ function renderDCA(res,tickers,opts){
   const pctStr=x=>(x>=0?'+':'')+x.toFixed(1)+'%';
   if(isInd){
     const top=ranked[0],r0=res[top];
+    document.getElementById('winner').style.display='';
     document.getElementById('winner').innerHTML=`🏆 <strong>${top}</strong> CAGR ${pctStr(r0.cagr||0)} 1위 · 개별기간 · $${fmt(Math.round(+document.getElementById('dcaAmt').value||10))}/${freqL}`;
   }else{
     const top=ranked[0],r0=res[top];
+    document.getElementById('winner').style.display='';
     document.getElementById('winner').innerHTML=`🏆 <strong>${top}</strong> 1위 · ${opts.days[0]}~${opts.days[opts.days.length-1]} · $${fmt(+document.getElementById('dcaAmt').value||10)}/${freqL} · 원금 $${fmt(r0.invested)} → <strong>$${fmt(r0.final)}</strong> (+${r0.ret.toFixed(0)}%)`;
   }
   const cc=document.getElementById('cards');cc.innerHTML='';
@@ -1380,8 +1358,9 @@ function renderMultiStrat(type, results, params){
   const yrsArr=tickers.map(t=>results[t].res.yrs);
   const yrsSpread=Math.max(...yrsArr)-Math.min(...yrsArr);
   const periodWarn=yrsSpread>0.5?` <span style="color:var(--gold);font-size:11px">⚠ 종목별 기간 상이 (${Math.min(...yrsArr).toFixed(0)}~${Math.max(...yrsArr).toFixed(0)}년) — CAGR로 비교 권장</span>`:'';
-  document.getElementById('winner').innerHTML=
-    `📊 <strong>${stratName}</strong> vs 종목별 단순DCA · <span style="color:var(--dim)">${tickers.map(t=>`<strong style="color:${META[t]?.color||'#fff'}">${t}</strong>`).join(' · ')}</span>${periodWarn}`;
+  // 옵션·결과 사이 배너 숨김 (요청) — 기간 경고만 필요 시 표시
+  document.getElementById('winner').innerHTML = periodWarn ? `<span style="font-size:12px">${periodWarn}</span>` : '';
+  document.getElementById('winner').style.display = periodWarn ? '' : 'none';
 
   // 카드 (전략 카드 + DCA 카드, 종목별로 인접 배치)
   const cc=document.getElementById('cards'); cc.innerHTML='';
@@ -1395,17 +1374,21 @@ function renderMultiStrat(type, results, params){
       <div class="card-body">
         <div class="card-tkr">${e.label}${e.isDCA?'<span class="tk-nm" style="color:var(--dim)"> 단순적립</span>':`<span class="tk-nm">${e.sub}</span>`}</div>
         <div class="card-val">${money(r.final,e.t)}</div>
-        <div class="card-sub">CAGR ${pct(r.cagr)} · ${r.yrs.toFixed(1)}년 · 원금 ${money(r.invested,e.t)}</div>
+        <div class="card-sub">CAGR ${pct(r.cagr)} · MDD ${r.mdd.toFixed(0)}% · MAR ${(r.mdd>0?r.cagr/r.mdd:0).toFixed(2)}</div>
+        <div class="card-sub" style="opacity:.7">${r.yrs.toFixed(1)}년 · 원금 ${money(r.invested,e.t)}</div>
       </div>`;
     cc.appendChild(d);
   });
 
   // 비교표 (열 = entries, 종목별 전략|DCA 인접)
+  const marOf=r=>(r.mdd>0? r.cagr/r.mdd : 0);
   const rows=[
     ['투입 원금',   e=>money(e.res.invested,e.t), false],
     ['최종 평가액', e=>money(e.res.final,e.t),    true],
     ['총 수익률',   e=>pct(e.res.ret),            true],
     ['CAGR',        e=>pct(e.res.cagr),           true],
+    ['MDD',         e=>e.res.mdd.toFixed(1)+'%',  false],
+    ['MAR (CAGR/MDD)', e=>marOf(e.res).toFixed(2), true],
     ['기간(년)',    e=>e.res.yrs.toFixed(1)+'년', false],
   ];
   const best=(vals,higher)=>{ const arr=vals.map(Number); const m=higher?Math.max(...arr):Math.min(...arr); return arr.map(v=>v===m); };
@@ -1446,6 +1429,7 @@ function renderAB(t, r40, r50, days, tgt, compound){
   const yrs=Math.max(calYrs,0.1);
   [r40,r50].forEach(r=>{r.yrs=yrs;r.cagr=cagrOf(r.final,r.invested,yrs);});
   const money=x=>fmtV(x,t), pct=x=>(x>=0?'+':'')+x.toFixed(1)+'%';
+  document.getElementById('winner').style.display='';
   document.getElementById('winner').innerHTML=
     `⚖️ <strong style="color:${m.color}">${t}</strong> 무한매수법 <strong>V4.0 vs V5.0(${imShortMA}일·하락${imLoPct}%)</strong> · ${imDiv}분할 · 기본 ${tgt}% · ${compound?'복리':'단리'} · ${days[0]}~${days[days.length-1]} · ${yrs.toFixed(1)}년`;
   const rows=[
@@ -1497,6 +1481,7 @@ function renderABMulti(results, compound){
   const calYrs=anyDays.length>1?(new Date(anyDays[anyDays.length-1])-new Date(anyDays[0]))/(365.25*864e5):0.1;
   const yrs=Math.max(calYrs,0.1);
   tks.forEach(t=>{ [results[t].res,results[t].res50].forEach(r=>{r.yrs=yrs;r.cagr=cagrOf(r.final,r.invested,yrs);}); });
+  document.getElementById('winner').style.display='';
   document.getElementById('winner').innerHTML=
     `⚖️ <strong>${tks.length}종목</strong> 무한매수법 <strong>V4.0 vs V5.0(${imShortMA}일·하락${imLoPct}%)</strong> · ${imDiv}분할 · ${compound?'복리':'단리'} · ${anyDays[0]}~${anyDays[anyDays.length-1]} · ${yrs.toFixed(1)}년`;
   const pct=x=>(x>=0?'+':'')+x.toFixed(1)+'%';
@@ -1573,6 +1558,7 @@ function renderSingle2(type,r,days){
   const sVol=calcVol(r.snap,10), bVol=calcVol(bhSnap,10), dVol=calcVol(dcaSnap,10);
   const nDays = days.length;
 
+  document.getElementById('winner').style.display='';
   document.getElementById('winner').innerHTML=
     `📊 <strong style="color:${m.color}">${r.tkr}</strong> ${stratName} <span style="color:var(--dim)">vs 거치식 vs 단순DCA</span> · ${dateRange} · ${yrs.toFixed(1)}년 <span style="color:var(--dim);font-size:11px">(${nDays}거래일${isMonthly?" · ⚠월간데이터":""})` + (isMonthly?` <span style="color:var(--gold);font-size:11px">전략결과 부정확 — 데이터 재로딩 필요</span>`:"") + `</span>`;
 
@@ -1600,6 +1586,9 @@ function renderSingle2(type,r,days){
       <div class="metric"><span class="k">최종 평가액</span><span class="v" style="color:${r.ret>=0?'var(--green)':'var(--red)'}">$${fmt(r.final)}</span></div>
       <div class="metric"><span class="k">총 수익률</span><span class="v" style="color:${r.ret>=0?'var(--green)':'var(--red)'}">${pct(r.ret)}</span></div>
       <div class="metric"><span class="k">CAGR</span><span class="v">${pct(sCagr)}</span></div>
+      <div class="metric"><span class="k">MDD</span><span class="v">${pctP(sMDD)}</span></div>
+      <div class="metric"><span class="k">MAR (CAGR/MDD)</span><span class="v" style="color:var(--gold)">${(sMDD>0?sCagr/sMDD:0).toFixed(2)}</span></div>
+      <div class="metric"><span class="k">기간</span><span class="v">${yrs.toFixed(1)}년</span></div>
       <div class="metric"><span class="k">누적 실현익</span><span class="v">$${fmt(r.realized)}</span></div>
       <div class="metric"><span class="k">익절 사이클</span><span class="v">${r.cycles}회</span></div>
       <div class="metric"><span class="k">종료 현금 / 주식</span><span class="v" style="font-size:11px">$${fmt(r.endCash)} / ${r.endShares.toFixed(1)}주</span></div>`;
@@ -1609,6 +1598,9 @@ function renderSingle2(type,r,days){
       <div class="metric"><span class="k">최종 평가액</span><span class="v" style="color:${r.ret>=0?'var(--green)':'var(--red)'}">$${fmt(r.final)}</span></div>
       <div class="metric"><span class="k">총 수익률</span><span class="v" style="color:${r.ret>=0?'var(--green)':'var(--red)'}">${pct(r.ret)}</span></div>
       <div class="metric"><span class="k">CAGR</span><span class="v">${pct(sCagr)}</span></div>
+      <div class="metric"><span class="k">MDD</span><span class="v">${pctP(sMDD)}</span></div>
+      <div class="metric"><span class="k">MAR (CAGR/MDD)</span><span class="v" style="color:var(--gold)">${(sMDD>0?sCagr/sMDD:0).toFixed(2)}</span></div>
+      <div class="metric"><span class="k">기간</span><span class="v">${yrs.toFixed(1)}년</span></div>
       <div class="metric"><span class="k">현금 Pool</span><span class="v">$${fmt(r.pool)}</span></div>
       <div class="metric"><span class="k">최종 기준값 V</span><span class="v">$${fmt(r.V)}</span></div>
       <div class="metric"><span class="k">리밸런싱</span><span class="v">${r.rebal}회 (매수${r.buys}/매도${r.sells})</span></div>`;

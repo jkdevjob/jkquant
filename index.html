@@ -412,7 +412,7 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
 </div>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v2.24</span></h1></div>
+    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v2.25</span></h1></div>
     <div style="display:flex;align-items:center;gap:8px">
       <a class="btbtn" href="/backtest">📊<span class="bt-txt"> 백테스트</span></a>
       <button class="gear" onclick="openSettings()">⚙️</button>
@@ -456,9 +456,11 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
 
       <div class="fxline" id="inf_fx"></div>
 
-      <!-- 최근 종가 (10일) -->
-      <div class="fivebox"><h4><span><span id="inf_ten_sym">SOXL</span> 최근 종가</span><span class="avg" id="inf_ten_avg"></span></h4>
-        <div id="inf_ten_grid"><div class="note">🔄 자동 버튼을 누르면 최근 종가가 표시됩니다.</div></div>
+      <!-- 최근 종가 (10일) — 기본 접힘, 버튼으로 펼침 -->
+      <div class="fivebox"><h4 style="cursor:pointer" onclick="toggleTen()"><span><span id="ten_caret">▸</span> <span id="inf_ten_sym">SOXL</span> 최근 종가</span><span class="avg" id="inf_ten_avg"></span></h4>
+        <div id="inf_ten_wrap" style="display:none">
+          <div id="inf_ten_grid"><div class="note">🔄 자동 버튼을 누르면 최근 종가가 표시됩니다.</div></div>
+        </div>
       </div>
 
       <!-- 당일 거래일 변동 (프리/정규/애프터 캔들) -->
@@ -482,10 +484,10 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
       <div class="card"><div class="chart-head"><h3 style="margin:0;display:flex;align-items:center;gap:6px;min-width:0"><span class="dot" style="flex-shrink:0"></span><span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis"><span id="inf_chart_sym">SOXL</span> 종가 추이</span><span id="inf_chart_chg" class="chgpos" style="flex-shrink:0">—</span></h3>
         <select class="chart-select" id="inf_chart_sel">
           <option value="21">1달</option><option value="42">2달</option><option value="63">3달</option>
-          <option value="84">4달</option><option value="105">5달</option><option value="126">6달</option>
+          <option value="84">4달</option><option value="105">5달</option><option value="126" selected>6달</option>
           <option value="147">7달</option><option value="168">8달</option><option value="189">9달</option>
           <option value="210">10달</option><option value="231">11달</option>
-          <option value="252" selected>1년</option><option value="504">2년</option><option value="756">3년</option>
+          <option value="252">1년</option><option value="504">2년</option><option value="756">3년</option>
           <option value="1008">4년</option><option value="1260">5년</option><option value="1512">6년</option>
           <option value="1764">7년</option><option value="2016">8년</option><option value="2268">9년</option>
           <option value="2520">10년</option><option value="99999">전체</option>
@@ -529,6 +531,10 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
         <div style="display:flex;align-items:baseline"><span class="fg-val" id="inf_fg_val" style="color:var(--gold)">—</span><span class="fg-lbl" id="inf_fg_lbl" style="color:var(--gold)">—</span></div>
         <div class="fg-bar"><div class="fg-mark" id="inf_fg_mark" style="left:50%"></div></div>
         <div class="fg-scale"><span>극단적 공포</span><span>공포</span><span>중립</span><span>탐욕</span><span>극단적 탐욕</span></div>
+        <svg id="inf_fg_chart" viewBox="0 0 360 110" preserveAspectRatio="none" style="width:100%;height:110px;display:block;margin-top:12px"></svg>
+        <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--faint);margin-top:3px">
+          <span id="fg_x0">—</span><span id="fg_x1">—</span>
+        </div>
         <p class="note" id="inf_fg_note" style="margin-top:10px">참고 지표일 뿐, 무한매수법은 분할 규칙대로 진행합니다.</p>
       </div>
 
@@ -775,7 +781,7 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
   <footer>
     <strong>JK 퀀트</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v2.24</b> · 2026-07-01</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v2.25</b> · 2026-07-01</div>
   </footer>
 </div>
 
@@ -797,7 +803,7 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
     <div class="seclabel">종목</div><div class="seg" id="set_ticker"><button data-v="TQQQ">TQQQ</button><button data-v="SOXL">SOXL</button><button data-v="TECL">TECL</button><button data-v="KORU">KORU</button></div>
     <p class="note" style="margin:-2px 0 8px">TQQQ·SOXL만 라오어 공식. <b>TECL·KORU는 비공식</b>(자체 백테스트). 종목을 고르면 <b>검정으로 확인된 권장 엔진·파라미터가 자동 적용</b>됩니다. 익절%를 바꾸면 별지점·리버스 복귀조건도 함께 바뀝니다.</p>
     <div class="seclabel">통화 <span class="hint" style="color:var(--faint);font-weight:500">국내상장 ETF는 원화</span></div><div class="seg" id="set_cur"><button data-v="usd">달러 ($)</button><button data-v="krw">원화 (₩)</button></div>
-    <div class="seclabel">분할 수</div><div class="seg" id="set_div"><button data-v="20">20분할</button><button data-v="30">30분할</button><button data-v="40">40분할</button></div>
+    <div class="seclabel">분할 수</div><div class="seg" id="set_div"><button data-v="10">10분할</button><button data-v="20">20분할</button><button data-v="30">30분할</button><button data-v="40">40분할</button></div>
     <div class="seclabel">파라미터</div>
     <!-- V5.0 검증 미완료 — 엔진 선택 숨김 (V4.0 고정). 복원 시 v5-hidden 클래스 제거 -->
     <div class="seclabel v5-hidden">엔진 버전</div><div class="seg v5-hidden" id="set_engine"><button data-v="v40" class="on">V4.0</button><button data-v="v50">V5.0</button></div>
@@ -805,7 +811,7 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
     <div class="seclabel v5-hidden">하락국면 익절 % (V5.0)</div><div class="seg v5-hidden" id="set_lopct"><button data-v="4">4%</button><button data-v="6">6%</button><button data-v="8">8%</button><button data-v="10">10%</button></div>
     <p class="note v5-hidden" style="margin:-2px 0 8px">하락국면엔 익절 목표를 낮춰 반등에 빨리 턴다.</p>
     <div class="field"><label>목표 수익률 (%) <span class="hint" id="target_hint">별%·지정가매도</span></label><input id="set_target" type="number" inputmode="decimal" value="20"></div>
-    <div class="field"><label>큰수 % <span class="hint">처음매수 LOC 상한 회피 0~40</span></label><input id="set_big" type="number" inputmode="decimal" value="12" min="0" max="40"></div>
+    <div class="field"><label>큰수 % <span class="hint">처음매수 LOC 상한 회피 0~40</span></label><input id="set_big" type="number" inputmode="decimal" value="15" min="0" max="40"></div>
     <div class="field"><label id="set_principal_lbl">원금 ($)</label><input id="set_principal" type="text" inputmode="decimal" value="10000" oninput="commaInput(this)"></div>
     <div class="rowline" style="border:none;padding:10px 0 6px"><span class="k" style="font-weight:700">하방 LOC 매수 <span style="color:var(--faint);font-weight:400;font-size:11px">급락 대비 추가매수</span></span>
       <label class="switch"><input type="checkbox" id="set_rows_on" onchange="toggleRowsField()"><span class="sl2"></span></label></div>
@@ -915,7 +921,7 @@ const won=v=>'₩'+Math.round((+v||0)*((typeof liveFX!=='undefined'&&liveFX)?liv
 const LS='qcockpit_v2', LS_URL='qcockpit_gsheet';
 let S=null;
 
-function defInfSettings(){return{ticker:'SOXL',div:20,target:20,big:12,rowsOn:false,rows:8,gap:2.5,rowqty:1,principal:10000,cur:'usd',engine:'v40',shortMA:30,loPct:6}}
+function defInfSettings(){return{ticker:'SOXL',div:20,target:20,big:15,rowsOn:false,rows:8,gap:2.5,rowqty:1,principal:10000,cur:'usd',engine:'v40',shortMA:30,loPct:6}}
 // V5.0 숨김 기간: 저장된 세션이 v50이어도 v40으로 강제 (UI가 없어 되돌릴 수 없으므로)
 // 복원 시 이 함수와 load() 안의 호출만 제거하면 된다.
 function forceV40(){
@@ -1061,6 +1067,13 @@ function imTargetV5(base, reg, loPct){
 
 // T 표시: 소수 3자리까지 (별% = base − slope×T 검산이 맞아떨어지게).
 //   T가 9.875인데 9.88로 보이면 사용자가 20−2×9.88=0.24로 검산해 별% 0.3%와 안 맞아 보인다.
+function toggleTen(){
+  const w=$('inf_ten_wrap'), c=$('ten_caret');
+  if(!w) return;
+  const open = w.style.display==='none';
+  w.style.display = open ? '' : 'none';
+  if(c) c.textContent = open ? '▾' : '▸';
+}
 function fmtT(t){
   if(t==null||!isFinite(t)) return '0';
   const s=(+t).toFixed(3);
@@ -1157,6 +1170,7 @@ function renderOrder(){
   const buyPt=star-0.01;
   $('o_buy1').textContent=slot>0?wn(buy1):'소진';
   $('o_star').textContent=c.avg>0?`${pct.toFixed(2)}% / ${wn(star)}`:'평단 없음(첫 매수)';
+  if($('o_avg')) $('o_avg').textContent = c.avg>0 ? `${wn(c.avg)} · ${c.qty}주` : '—';
   const bigMul=1+(st.big/100), limit=close>0?close*bigMul:0;
   if($('o_limit')) $('o_limit').textContent=close>0?wn(limit):'—';   // 첫 매수 때만 존재
   if(!close&&c.avg<=0){$('o_orders').innerHTML='<div class="note">🔄 자동 버튼을 누르거나 전일 종가를 입력하면 주문표가 나옵니다.</div>';render5day();return}
@@ -1246,14 +1260,30 @@ function renderOrder(){
   // 매도 그룹: 쿼터매도 ¼ = 별지점 LOC / 나머지 ¾ = 평단×익절배율 지정가
   // V5.0이면 익절%를 국면으로 산출 (상승=기본/하락=6%, 별%=매수기준은 V4.0 규칙 그대로)
   let effTarget=st.target;                    // 실제 적용 익절%
+  // ── 국면 배지: 전반전 / 후반전(별지점이 평단 아래 → 쿼터매도는 손실 확정) / 리버스모드 ──
   let regBadge='';
-  if(st.engine==='v50'){
+  if(c.qty>0){
+    const half = c.T < st.div/2;
+    if(c.reverseActive){
+      regBadge=`<div style="margin:2px 0 8px;padding:7px 10px;border-radius:8px;font-size:12px;background:rgba(248,123,140,.14);border:1px solid rgba(248,123,140,.35)">`
+        +`<b style="color:#f87b8c">🔄 리버스모드</b> <span style="color:var(--dim)">· T=${fmtT(c.T)} · 무한매도 + 쿼터매수</span></div>`;
+    }else if(!half){
+      regBadge=`<div style="margin:2px 0 8px;padding:7px 10px;border-radius:8px;font-size:12px;background:rgba(245,196,81,.12);border:1px solid rgba(245,196,81,.32)">`
+        +`<b style="color:var(--gold)">후반전</b> <span style="color:var(--dim)">· T=${fmtT(c.T)} ≥ ${st.div/2} · 1회분 전액 별지점 LOC · 별지점 ≤ 평단</span></div>`;
+    }else{
+      regBadge=`<div style="margin:2px 0 8px;padding:7px 10px;border-radius:8px;font-size:12px;background:rgba(54,211,153,.10);border:1px solid rgba(54,211,153,.28)">`
+        +`<b style="color:#36d399">전반전</b> <span style="color:var(--dim)">· T=${fmtT(c.T)} &lt; ${st.div/2} · 절반 별지점 · 절반 평단 LOC</span></div>`;
+    }
+  }
+  let _v5badge='';
+  // V5.0 숨김 기간: 국면 배지 미표시 (복원 시 'false &&' 제거)
+  if(false && st.engine==='v50'){
     if(infChartData && infChartData.length>=200){
       const closes=infChartData.map(d=>d.close).filter(v=>v>0);
       const reg=imRegime(closes, st.ticker, st.shortMA);
       if(reg.ready){
         effTarget=imTargetV5(st.target, reg, st.loPct);
-        regBadge=`<div style="margin:2px 0 8px;padding:7px 10px;border-radius:8px;font-size:12px;background:${reg.up?'rgba(54,211,153,.12)':'rgba(248,123,140,.12)'};border:1px solid ${reg.up?'rgba(54,211,153,.3)':'rgba(248,123,140,.3)'}">`
+        _v5badge=`<div style="margin:2px 0 8px;padding:7px 10px;border-radius:8px;font-size:12px;background:${reg.up?'rgba(54,211,153,.12)':'rgba(248,123,140,.12)'};border:1px solid ${reg.up?'rgba(54,211,153,.3)':'rgba(248,123,140,.3)'}">`
           +`<b style="color:${reg.up?'#36d399':'#f87b8c'}">${reg.up?'▲ 상승국면':'▼ 하락국면'}</b> · <b>오늘 익절 ${effTarget.toFixed(1)}%</b>`
           +`<span style="color:var(--faint)"> (기본 ${st.target}%)</span></div>`;
       }
@@ -1439,18 +1469,30 @@ function parseIntraday(j){
 
 /* 공포·탐욕 지수 {score,rating} 반환, 실패 시 null */
 async function fetchFearGreed(){
-  // 1) 자체 함수
+  // CNN graphdata: fear_and_greed(현재) + fear_and_greed_historical.data([{x:ms,y:score}])
+  const pick=(j)=>{
+    if(!j||!j.fear_and_greed) return null;
+    let hist=[];
+    try{
+      const h=j.fear_and_greed_historical && j.fear_and_greed_historical.data;
+      if(Array.isArray(h)) hist=h.map(p=>({t:p.x, v:p.y})).filter(p=>p.t&&isFinite(p.v));
+    }catch(e){}
+    return {score:Math.round(j.fear_and_greed.score), rating:j.fear_and_greed.rating, hist};
+  };
+  // 1) 자체 함수 (score만 줄 수도 있음)
   try{
     const r=await fetch('/api/feargreed',{headers:{'Accept':'application/json'}});
-    if(r.ok){const j=await r.json(); if(j&&typeof j.score==='number')return {score:j.score,rating:j.rating,src:'api'};}
+    if(r.ok){const j=await r.json();
+      if(j&&Array.isArray(j.hist)) return {score:j.score,rating:j.rating,hist:j.hist,src:'api'};
+      if(j&&typeof j.score==='number') return {score:j.score,rating:j.rating,hist:[],src:'api'};}
   }catch(e){}
-  // 2) 공개 프록시로 CNN 직접
+  // 2) 공개 프록시로 CNN 직접 (히스토리 포함)
   const url='https://production.dataviz.cnn.io/index/fearandgreed/graphdata';
   for(const px of PUBLIC_PROXIES){
     try{
       const txt=await proxyText(px,url);
-      const j=JSON.parse(txt);
-      if(j&&j.fear_and_greed)return {score:Math.round(j.fear_and_greed.score),rating:j.fear_and_greed.rating,src:'proxy'};
+      const g=pick(JSON.parse(txt));
+      if(g){ g.src='proxy'; return g; }
     }catch(e){}
   }
   return null;
@@ -2034,7 +2076,7 @@ function drawVrChart(){
 }
 
 /* ── 무한매수법 현재 탭: 통합 데이터 로드 (종가표·캔들·차트·환율) ── */
-let infChartRange=252, infChartData=null;
+let infChartRange=126, infChartData=null;   // 기본 6개월
 let infQuoteCache=null;
 async function loadInfData(force){
   const st=curStrat().settings;
@@ -2213,16 +2255,51 @@ async function loadFX(){
 
 /* 무한매수법 공포·탐욕 */
 let infFgLoaded=false;
+let fgHist=[];   // [{t:ms, v:score}] 최신순 아님(과거→미래)
 async function loadInfFG(force){
-  if(infFgLoaded && !force)return;
+  if(infFgLoaded && !force){ drawFgChart(); return; }
   const fg=await fetchFearGreed();
   if(fg){
     const v=fg.score, label=fgLabel(v);
     $('inf_fg_val').textContent=v; $('inf_fg_lbl').textContent=label.txt;
     $('inf_fg_val').style.color=label.col; $('inf_fg_lbl').style.color=label.col;
     $('inf_fg_mark').style.left=v+'%';
+    fgHist=(fg.hist||[]).slice().sort((a,b)=>a.t-b.t);
     infFgLoaded=true;
+    drawFgChart();
   }else{ $('inf_fg_note').textContent='ⓘ 공포·탐욕 지수를 불러오지 못했습니다 (네트워크).'; }
+}
+
+// 공포·탐욕 히스토리 차트 — 종가추이 기간(infChartRange, 거래일)과 연동
+function drawFgChart(){
+  const svg=$('inf_fg_chart'); if(!svg) return;
+  if(!fgHist.length){ svg.innerHTML=''; return; }
+  // 거래일 → 달력일 근사 (252거래일 ≈ 365일)
+  const calDays = Math.round((infChartRange||126) * 365/252);
+  const cutoff = Date.now() - calDays*864e5;
+  let d = fgHist.filter(p=>p.t>=cutoff);
+  if(d.length<2) d = fgHist.slice(-Math.max(30, Math.min(fgHist.length, calDays)));
+  if(d.length<2){ svg.innerHTML=''; return; }
+  const W=360,H=110,pad=2;
+  const xs=i=>pad+(i/(d.length-1))*(W-pad*2);
+  const ys=v=>pad+(1-v/100)*(H-pad*2);
+  const seg=(a,b)=>`M${xs(a).toFixed(1)},${ys(d[a].v).toFixed(1)} L${xs(b).toFixed(1)},${ys(d[b].v).toFixed(1)}`;
+  const colOf=v=> v<25?'#e5483c' : v<45?'#ef8a3c' : v<55?'#e8b64c' : v<75?'#8fd14f' : '#36d399';
+  let paths='';
+  for(let i=1;i<d.length;i++){
+    paths+=`<path d="${seg(i-1,i)}" stroke="${colOf(d[i].v)}" stroke-width="1.6" fill="none" stroke-linecap="round"/>`;
+  }
+  const band=(lo,hi,c)=>`<rect x="0" y="${ys(hi).toFixed(1)}" width="${W}" height="${(ys(lo)-ys(hi)).toFixed(1)}" fill="${c}"/>`;
+  svg.innerHTML =
+      band(75,100,'rgba(54,211,153,.07)') + band(55,75,'rgba(143,209,79,.05)')
+    + band(45,55,'rgba(232,182,76,.05)') + band(25,45,'rgba(239,138,60,.05)')
+    + band(0,25,'rgba(229,72,60,.07)')
+    + `<line x1="0" y1="${ys(75).toFixed(1)}" x2="${W}" y2="${ys(75).toFixed(1)}" stroke="var(--border2)" stroke-width="0.5" stroke-dasharray="2,3" opacity=".5"/>`
+    + `<line x1="0" y1="${ys(25).toFixed(1)}" x2="${W}" y2="${ys(25).toFixed(1)}" stroke="var(--border2)" stroke-width="0.5" stroke-dasharray="2,3" opacity=".5"/>`
+    + paths;
+  const f=(t)=>{const x=new Date(t); return `${x.getFullYear()}.${x.getMonth()+1}.${x.getDate()}`;};
+  if($('fg_x0')) $('fg_x0').textContent=f(d[0].t);
+  if($('fg_x1')) $('fg_x1').textContent=f(d[d.length-1].t);
 }
 
 
@@ -2667,7 +2744,8 @@ function renderOrderInline(){
       h+=`<input id="o_close" type="hidden"><div class="fetchnote" id="o_fetchnote"></div>`;
     }
     h+=`<div class="rowline"><span class="k">1회 매수금</span><span class="val mono" id="o_buy1">—</span></div>
-        <div class="rowline"><span class="k">별% / 별지점</span><span class="val mono" id="o_star">—</span></div>`;
+        <div class="rowline"><span class="k">별% / 별지점</span><span class="val mono" id="o_star">—</span></div>
+        <div class="rowline"><span class="k">평단가</span><span class="val mono" id="o_avg">—</span></div>`;
     // LOC 매수 상한(×큰수)은 '처음매수' 주문에만 쓰이는 값 → 첫 매수·리버스일 때만 표시
     if(needClose){
       h+=`<div class="rowline"><span class="k">LOC 매수 상한 (×큰수)</span><span class="val mono" id="o_limit" style="color:var(--gold)">—</span></div>`;
@@ -2927,7 +3005,11 @@ function setupTabs(){
   if(csel) csel.addEventListener('change',()=>{ vrChartRange=+csel.value; drawVrChart(); });
   // 무한매수법 차트 기간 선택
   const isel=$('inf_chart_sel');
-  if(isel) isel.addEventListener('change',()=>{ infChartRange=+isel.value; drawInfChart(); drawInfRSI(); drawRegimeChart(); });
+  if(isel) isel.addEventListener('change',()=>{
+    infChartRange=+isel.value || 126;
+    // 하나가 실패해도 나머지는 그려지도록 각각 독립 실행
+    [drawInfChart, drawInfRSI, drawRegimeChart, drawFgChart].forEach(fn=>{ try{ fn(); }catch(e){ console.error(e); } });
+  });
 }
 
 /* ── Firebase Firestore 동기화 (사용자별) ── */
