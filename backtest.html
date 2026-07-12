@@ -216,7 +216,7 @@ td:first-child{text-align:left;}
   <div class="brand">
     <div>
       <div class="logo">Backtest</div>
-      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v1.90</span></h1>
+      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v1.91</span></h1>
     </div>
   </div>
   <a href="/" class="home">← JK 퀀트</a>
@@ -878,7 +878,7 @@ function runIM(days,tkr,cap,divs,targetPct,compound=true){
       const q1=orig*0.25;            // 별지점 LOC: 1/4
       let tpHit=false, qtHit=false;
       // ① 익절 지정가매도 (intraday): 고가 >= 익절가
-      if(hi>=tgt&&q3>0){_sell(tgt,q3,SLIP);tpHit=true;}   // 지정가매도: 장중 체결 → 슬리피지
+      if(c>=tgt&&q3>0){_sell(tgt,q3,SLIP);tpHit=true;}   // 지정가매도: 종가 도달 시 체결 인정(CSV 고저가 미조정 결함 회피), 체결가 tgt
       // ② 별지점 LOC매도 (at close): 종가 >= 별지점. 원래 1/4 기준 (이미 팔린 것 차감)
       if(c>=starP&&orig>0){const sq=Math.min(q1,shares);if(sq>1e-9){_sell(c,sq,0);qtHit=true;}}   // 쿼터매도 LOC=종가
       // T값 갱신: 익절(지정가매도)=×0.25, 쿼터매도=×0.75. 둘 다면 전량매도로 아래에서 리셋.
@@ -1034,7 +1034,7 @@ function runIM50(days,tkr,cap,divs,targetPct,compound=true){
       const q3=orig*0.75;
       const q1=orig*0.25;
       let tpHit=false, qtHit=false;
-      if(hi>=tgt&&q3>0){_sell(tgt,q3,SLIP);tpHit=true;}   // 지정가매도: 장중 체결 → 슬리피지
+      if(c>=tgt&&q3>0){_sell(tgt,q3,SLIP);tpHit=true;}   // 지정가매도: 종가 도달 시 체결 인정(CSV 고저가 미조정 결함 회피), 체결가 tgt
       if(c>=starP&&orig>0){const sq=Math.min(q1,shares);if(sq>1e-9){_sell(c,sq,0);qtHit=true;}}   // 쿼터매도 LOC=종가
       if(tpHit) T*=0.25;
       if(qtHit) T*=0.75;

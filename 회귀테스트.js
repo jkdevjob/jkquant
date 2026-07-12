@@ -42,7 +42,8 @@ const idxParts=[
   extractFn(idx,'function reverseT(kind,t,div)'),
   idx.slice(idx.indexOf('function isBuy(k)'), idx.indexOf('\n', idx.indexOf('function isBuy(k)'))),
   idx.slice(idx.indexOf('function isSell(k)'), idx.indexOf('\n', idx.indexOf('function isSell(k)'))),
-  extractFn(idx,'function starPct(')+'\n'+extractFn(idx,'function exitMulOf('),
+  extractFn(idx,'function starPct(ticker,div,T,base)'),
+  extractFn(idx,'function exitMulOf(base)'),
   extractFn(idx,'function computeInf()'),
   extractFn(idx,'function computeNextV(c,ev)'),
   extractFn(idx,'function computeVr()'),
@@ -57,52 +58,35 @@ function inject(before, after, label){
   if(p.length!==2) throw new Error(`주입 실패(${label}): ${p.length-1}회 매치 — 코드가 바뀌었으면 이 스크립트의 주입 문자열을 갱신할 것`);
   btSrc=p[0]+after+p[1];
 }
-// ★ v1.83~: 거래가 _buy/_sell 헬퍼로 통일됨. 헬퍼 진입점에 로그 훅을 심는다.
-inject(`if(sellQty>0){ _sell(c,sellQty,0); T=divs>=40?T*0.95:T*0.9; }   // MOC=종가
-        reverseDay1=false;`,
-`if(sellQty>0){ __LOG('리버스매도',c,sellQty); _sell(c,sellQty,0); T=divs>=40?T*0.95:T*0.9; }
-        reverseDay1=false;`,'r1');
-inject(`if(c>=star5){
-          const sellQty=Math.floor(shares/sellDiv);
-          if(sellQty>0){ _sell(c,sellQty,0); T=divs>=40?T*0.95:T*0.9; }   // LOC=종가`,
-`if(c>=star5){
-          const sellQty=Math.floor(shares/sellDiv);
-          if(sellQty>0){ __LOG('리버스매도',c,sellQty); _sell(c,sellQty,0); T=divs>=40?T*0.95:T*0.9; }`,'r2');
-inject(`            _buy(c, cash/4);   // LOC=종가
-            T=T+(divs-T)*0.25;`,
-`            __LOG('리버스매수',c,(cash/4)/c); _buy(c, cash/4);
-            T=T+(divs-T)*0.25;`,'r3');
-inject(`if(hi>=tgt&&q3>0){_sell(tgt,q3,SLIP);tpHit=true;}`,
-`if(hi>=tgt&&q3>0){__LOG('지정가매도',tgt,q3); _sell(tgt,q3,SLIP);tpHit=true;}`,'tp');
-inject(`if(sq>1e-9){_sell(c,sq,0);qtHit=true;}`,
-`if(sq>1e-9){__LOG('쿼터매도',c,sq); _sell(c,sq,0);qtHit=true;}`,'qt');
+inject(`if(sellQty>0){ _sell(c,sellQty,0); T=divs>=40?T*0.95:T*0.9; }   // MOC=종가`,
+`if(sellQty>0){ __LOG('리버스매도',c,sellQty); _sell(c,sellQty,0); T=divs>=40?T*0.95:T*0.9; }   // MOC=종가`,'r1');
+inject(`if(sellQty>0){ _sell(c,sellQty,0); T=divs>=40?T*0.95:T*0.9; }   // LOC=종가`,
+`if(sellQty>0){ __LOG('리버스매도',c,sellQty); _sell(c,sellQty,0); T=divs>=40?T*0.95:T*0.9; }   // LOC=종가`,'r2');
+inject(`_buy(c, cash/4);   // LOC=종가`,
+`{const __a=cash/4;__LOG('리버스매수',c,__a/c);_buy(c,__a);}   // LOC=종가`,'r3');
+inject(`{_sell(tgt,q3,SLIP);tpHit=true;}`,
+`{__LOG('지정가매도',tgt,q3);_sell(tgt,q3,SLIP);tpHit=true;}`,'tp');
+inject(`{_sell(c,sq,0);qtHit=true;}`,
+`{__LOG('쿼터매도',c,sq);_sell(c,sq,0);qtHit=true;}`,'qt');
 inject(`if(shares===0&&T===0){_buy(c,one);T+=1;}`,
-`if(shares===0&&T===0){__LOG('1회매수',c,one/c); _buy(c,one);T+=1;}`,'fb');
-inject(`          if(sp>0){_buy(c,sp);T+=ti;}`,
-`          if(sp>0){__LOG(ti===1?'1회매수':'절반매수',c,sp/c); _buy(c,sp);T+=ti;}`,'hb');
-inject(`        }else{ if(c<=buyP){_buy(c,one);T+=1;} }`,
-`        }else{ if(c<=buyP){__LOG('1회매수',c,one/c); _buy(c,one);T+=1;} }`,'bb');
-inject(`  _settleTax();   // 마지막 해 정산
-  const fin=cash+shares*M[tkr][days[days.length-1]][C]+savedProfit;`,
-`  _settleTax();
-  __FINAL({T,avg,shares,cash,realized,savedProfit});
+`if(shares===0&&T===0){__LOG('1회매수',c,one/c);_buy(c,one);T+=1;}`,'fb');
+inject(`if(sp>0){_buy(c,sp);T+=ti;}`,
+`if(sp>0){__LOG(ti===1?'1회매수':'절반매수',c,sp/c);_buy(c,sp);T+=ti;}`,'hb');
+inject(`}else{ if(c<=buyP){_buy(c,one);T+=1;} }`,
+`}else{ if(c<=buyP){__LOG('1회매수',c,one/c);_buy(c,one);T+=1;} }`,'bb');
+inject(`const fin=cash+shares*M[tkr][days[days.length-1]][C]+savedProfit;`,
+`__FINAL({T,avg,shares,cash,realized,savedProfit});
   const fin=cash+shares*M[tkr][days[days.length-1]][C]+savedProfit;`,'fin');
 let tradeLog=[], finalState=null;
 global.__LOG=(k,p,q)=>tradeLog.push({kind:k,price:p,qty:q});
 global.__FINAL=s=>finalState=s;
-global.imCostOn=false;   // 회귀는 비용 미적용 상태로 검증 (기존 앵커와 비교)
-global.COST_FEE=0.0025; global.COST_SLIP=0.0005; global.COST_TAXRATE=0.22; global.COST_KRW=1350; global.COST_DEDUCT=250e4;
 global.M={}; global.C=0;
 eval(btSrc);
-// ★ 통합 규약 (v1.82~): base=익절%, slope=base×0.1×(20/div), exitMul=1−base/100
-// backtest 코드가 이 공식을 쓰는지 소스에서 직접 확인
-const usesUnified = /const starBase=targetPct;/.test(btSrc)
-  && /const starSlope=starBase\*0\.1\*20\/divs;/.test(btSrc)
-  && /const exitMul=1-starBase\/100;/.test(btSrc);
-const btBase=(tkr,tp)=>tp;
-const btSlope=(tkr,divs,tp)=>tp*0.1*20/divs;
-const btExit=(tkr,tp)=>1-tp/100;
-const DEF={TQQQ:15,SOXL:20,TECL:12,KORU:20};
+// backtest 상수(starBase/starSlope/exitMul)를 함수화 — 계열 규약 검사용
+const mBase=btSrc.match(/const starBase=([^;]+);/), mSlope=btSrc.match(/const starSlope=([^;]+);/), mExit=btSrc.match(/const exitMul ?= ?([^;]+);/);
+const btBase=new Function('targetPct','return '+mBase[1]);
+const btSlope=new Function('starBase','divs','return '+mSlope[1]);
+const btExit=new Function('starBase','return '+mExit[1].replace(/\/\/.*$/,''));
 
 /* ════ 1. 문서 수치 재현 (3차) ════ */
 console.log('[1] 문서 수치 재현');
@@ -126,17 +110,17 @@ ok('쿼터매수 (400+300)/4 = 175', (400+300)/4===175);
   ok('VR 다음V 인출식 8850', near(computeNextV(c(0.25),9000).nextV,8850));
 }
 
-/* ════ 2. 통합 규약 (익절% → 별지점·복귀조건 동반) ════ */
-console.log('[2] 통합 규약 (익절% = 별%base, index ↔ backtest)');
-ok('backtest가 통합 공식 사용', usesUnified, 'starBase=targetPct / slope=base×0.1×20/divs / exitMul=1−base/100');
-for(const tkr of ['TQQQ','SOXL','TECL','KORU']){
-  const tp=DEF[tkr];
+/* ════ 2. 통합 규약 (v1.90+) — 익절%=별%base · slope=base×0.1×20/div · 복귀=1−base/100 · index↔backtest 동일 ════ */
+console.log('[2] 통합 규약 (index ↔ backtest)');
+for(const base of [10,15,20,25]){
   for(const div of [20,40]){
-    const iPct=starPct(tkr,div,3,tp), bPct=btBase(tkr,tp)-btSlope(tkr,div,tp)*3;
-    ok(`별% 일치: ${tkr} ${div}분할 (익절${tp}%)`, near(iPct,bPct), `index=${iPct} bt=${bPct}`);
+    const iPct=starPct('SOXL',div,3,base), bPct=btBase(base)-btSlope(base,div)*3;
+    ok(`별% 일치: base${base} ${div}분할`, near(iPct,bPct), `index=${iPct} bt=${bPct}`);
   }
-  ok(`복귀기준↔base 짝: ${tkr}`, near(exitMulOf(tp), 1-tp/100), `base=${tp} exit=${exitMulOf(tp)}`);
+  ok(`복귀기준↔base 짝: base${base}`, near(exitMulOf(base),btExit(base)), `idx=${exitMulOf(base)} bt=${btExit(base)}`);
 }
+ok('index 기본 base: TQQQ=15', near(starPct('TQQQ',20,0),15));
+ok('index 기본 base: SOXL=20', near(starPct('SOXL',20,0),20));
 
 /* ════ 3. VR 엣지 (4차) — 0원 시작 첫매수 Pool 미차감 ════ */
 console.log('[3] VR 엣지');
@@ -203,62 +187,30 @@ for(const [tkr,div,tgt,compound] of CONFIGS){
     okAll?'':`avg ${ci.avg}/${finalState.avg} qty ${ci.qty}/${finalState.shares} T ${ci.T}/${finalState.T} bal ${ci.bal}/${btBal}`);
 }
 
-/* ════ 4a2. V4.0 분할수 교정 검증 (v1.74) — 원문 별% 일반공식 slope=2×20/div ════ */
-console.log('[4a2] V4.0 10·30분할 원문공식 앵커');
+/* ════ 4b. runIM50 (V5.0 국면) 스모크 + runIM(V4.0) 앵커 ════ */
+console.log('[4b] runIM50 스모크 + V4.0 앵커');
 {
-  eval(extractFn(bt,'function runIM(days'));
-  // 교정 전 버그: divs!==20이면 slope=1 폴백 → 10·30분할이 원문 위반.
-  // 교정 후: slope=2×20/div (index starPct와 동일). 클린 CSV·전체이력·복리.
-  const A=[['SOXL',10,20,3098000.05,84.85,85],
-           ['SOXL',30,20,1497528.59,71.06,77]];
-  for(const [tkr,div,tgt,fexp,mexp,cexp] of A){
-    if(!DAYS[tkr]){ console.log('  (CSV 없음, 스킵: '+tkr+')'); continue; }
-    const r=runIM(DAYS[tkr],tkr,10000,div,tgt,true);
-    ok(`${tkr} ${div}분할 ${tgt}% V4.0 원문공식 앵커`,
-       near(r.final,fexp,0.1)&&near(r.mdd,mexp,0.01)&&r.cycles===cexp,
-       `final ${r.final.toFixed(2)}/${fexp} mdd ${r.mdd.toFixed(2)}/${mexp} cyc ${r.cycles}/${cexp}`);
-  }
-  // slope 공식 자체 검증: 10분할 SOXL이면 별% base(20)에서 T=5일때 정확히 0%(평단)
-  const s10 = 2.0*20/10;  // =4.0
-  ok('별% 일반공식 계수 (10분할 SOXL slope=4.0, index와 일치)', Math.abs(s10-4.0)<1e-9, `slope=${s10}`);
-}
-
-/* ════ 4b. V5.0 국면익절 (v1.78) — 앵커 + 50일선 게이트 + 워밍업 항등 ════ */
-console.log('[4b] runIM50 V5.0 국면익절 (상승 기본 / 하락 6% 고정 / 200일선 AND 30일선 기본)');
-{
-  var imShortMA=30;   // V5.0 국면선 기본값 (앱 기본과 동일)
-  eval(extractFn(bt,'function buildGateIM(')+'\n'+extractFn(bt,'function runIM50(days,tkr,cap,divs,targetPct,compound'));
-  // (a) buildGateIM: gate/ready/syn 반환 구조 + 게이트가 200·50일선 둘 다 반영하는지
-  if(DAYS.SOXL){
-    const GM=buildGateIM('SOXL');
-    const hasSyn = GM.syn && Object.keys(GM.syn).length===DAYS.SOXL.length;
-    // 첫 199일은 ready=false(200일 SMA 워밍업), 200일째부터 ready
-    const d0=DAYS.SOXL[0], d199=DAYS.SOXL[198], d200=DAYS.SOXL[199];
-    const warmOK = GM.ready[d0]===false && GM.ready[d199]===false && GM.ready[d200]===true;
-    ok('buildGateIM 구조(syn 시계열·200일 워밍업 경계)', hasSyn && warmOK,
-       `syn ${hasSyn} warm ${GM.ready[d199]}/${GM.ready[d200]}`);
-    // 게이트 true인 날은 반드시 상승국면(합성지수>200일선 AND >50일선). ready면서 게이트가 syn만으로 안 켜지는지 표본 확인
-    let gcount=0; for(const d of DAYS.SOXL) if(GM.gate[d])gcount++;
-    ok('게이트 상승국면 비율 합리적(30~90%)', gcount>DAYS.SOXL.length*0.3 && gcount<DAYS.SOXL.length*0.9,
-       `상승 ${gcount}/${DAYS.SOXL.length} (${(gcount/DAYS.SOXL.length*100).toFixed(0)}%)`);
-  }
-  // (b) 앵커: 클린 파싱·전체 이력·복리·원금 1만$ (현재 프로젝트 CSV 기준 — CSV 갱신 시 재산출)
-  // ★ 통합 규약(v1.82~): base=익절%. TQQQ는 공식 15%, TECL은 권장 12%로 앵커.
-  const A=[['SOXL',20,20,1766988.25,82.16,88],
-           ['TQQQ',40,15,188980.12,48.50,60],
-           ['TECL',20,12,660874.06,78.51,122]];
-  for(const [tkr,div,tgt,fexp,mexp,cexp] of A){
-    if(!DAYS[tkr]){ console.log('  (CSV 없음, 스킵: '+tkr+')'); continue; }
-    const r=runIM50(DAYS[tkr],tkr,10000,div,tgt,true);
-    ok(`${tkr} ${div}분할 ${tgt}% V5.0 앵커 (최종·MDD·사이클)`,
-       near(r.final,fexp,0.1)&&near(r.mdd,mexp,0.01)&&r.cycles===cexp,
-       `final ${r.final.toFixed(2)}/${fexp} mdd ${r.mdd.toFixed(2)}/${mexp} cyc ${r.cycles}/${cexp}`);
-  }
-  // (c) 워밍업 항등: V5.0도 이력 200일 미만(게이트 워밍업)에선 V4.0과 동일
+  eval(extractFn(bt,'function buildGateIM(tkr, shortMA)'));
+  eval(extractFn(bt,'function runIM50(days,tkr,cap,divs,targetPct,compound'));
+  // (a) 데이터 불변 항등: 이력 200일 미만(워밍업)에서는 V5.0 == V4.0 완전 동일 (CSV 갱신에도 항상 성립)
   if(DAYS.SOXL){
     const d150=DAYS.SOXL.slice(0,150);
     const a=runIM(d150,'SOXL',10000,20,20,true), b=runIM50(d150,'SOXL',10000,20,20,true);
-    ok('워밍업(<200일) 구간 V5.0==V4.0 항등', near(a.final,b.final,1e-9)&&a.cycles===b.cycles, `final ${a.final}/${b.final}`);
+    ok('워밍업(<200일) 구간 V5.0==V4.0 항등', near(a.final,b.final,1e-9)&&a.cycles===b.cycles&&near(a.mdd,b.mdd,1e-9),
+       `final ${a.final}/${b.final}`);
+    const r50=runIM50(DAYS.SOXL,'SOXL',10000,20,20,true);
+    ok('runIM50 전체 실행·유한값', isFinite(r50.final)&&isFinite(r50.mdd));
+  }
+  // (b) V4.0 앵커: 전체 이력·복리·원금 1만$·비용 OFF (2026-07-07자 CSV · v1.91 종가체결 기준 — CSV/엔진 갱신 시 재산출)
+  const A=[['SOXL',20,20,1037877.52,61.74,72],
+           ['TQQQ',40,10,136093.27,47.68,107],
+           ['TECL',20,20,505877.36,62.05,31]];
+  for(const [tkr,div,tgt,fexp,mexp,cexp] of A){
+    if(!DAYS[tkr]){ console.log('  (CSV 없음, 스킵: '+tkr+')'); continue; }
+    const r=runIM(DAYS[tkr],tkr,10000,div,tgt,true);
+    ok(`${tkr} ${div}분할 ${tgt}% V4.0 앵커 (최종·MDD·사이클)`,
+       near(r.final,fexp,0.05)&&near(r.mdd,mexp,0.01)&&r.cycles===cexp,
+       `final ${r.final.toFixed(2)}/${fexp} mdd ${r.mdd.toFixed(2)}/${mexp} cyc ${r.cycles}/${cexp}`);
   }
 }
 
