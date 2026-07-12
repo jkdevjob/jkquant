@@ -335,6 +335,8 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
 .nv-bignext .bl{font-size:11px;color:var(--faint);font-weight:600}
 .nv-bignext .bv{font-size:30px;font-weight:800;color:var(--vio);font-variant-numeric:tabular-nums;line-height:1.1;margin-top:3px}
 .dateinput{width:100%;box-sizing:border-box;padding:11px 12px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--ink);font-size:14px;font-variant-numeric:tabular-nums;margin-top:6px;-webkit-appearance:none;appearance:none;text-align:center}
+/* 운영 화면 섹션 접기 캐럿 (기본 펼침 ▾ / 접힘 ▸) */
+.sec-caret{font-size:.82em;color:var(--faint);font-weight:700;flex-shrink:0}
 
 /* ── 무한매수법: 최근 종가 10일 그리드 (2행) ── */
 .tengrid{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}
@@ -465,8 +467,9 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
 
       <!-- 당일 거래일 변동 (프리/정규/애프터 캔들) -->
       <div class="card daycard" id="inf_day_card" style="display:none">
-        <div class="dc-head"><div style="min-width:0"><h3 style="margin:0;white-space:nowrap"><span class="dot"></span><span id="inf_day_date">당일</span> 거래일 변동</h3><div id="inf_day_sess" style="font-size:11px;color:var(--faint);font-weight:600;margin-top:2px"></div></div>
+        <div class="dc-head" style="cursor:pointer" onclick="toggleSec('inf_day_body',this)"><div style="min-width:0"><h3 style="margin:0;white-space:nowrap"><span class="dot"></span><span class="sec-caret">▾</span> <span id="inf_day_date">당일</span> 거래일 변동</h3><div id="inf_day_sess" style="font-size:11px;color:var(--faint);font-weight:600;margin-top:2px"></div></div>
           <span class="dc-hl">H <span class="hi" id="inf_day_h">—</span> · L <span class="lo" id="inf_day_l">—</span></span></div>
+        <div id="inf_day_body">
         <div class="candle-wrap" id="inf_candles"></div>
         <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:0"><div class="candle-lbl">프리</div><div class="candle-lbl">정규</div><div class="candle-lbl">애프터</div></div>
         <div class="dc-foot"><span>종가 <b id="inf_day_close">—</b></span><span>시가 <b id="inf_day_open">—</b></span></div>
@@ -478,10 +481,11 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
             <div class="kst-cell" id="kst_aft"><div class="kl">애프터</div><div class="kv">05:00–07:00</div></div>
           </div>
         </div>
+        </div>
       </div>
 
       <!-- 종가 추이 (1년 차트) -->
-      <div class="card"><div class="chart-head"><h3 style="margin:0;display:flex;align-items:center;gap:6px;min-width:0"><span class="dot" style="flex-shrink:0"></span><span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis"><span id="inf_chart_sym">SOXL</span> 종가 추이</span><span id="inf_chart_chg" class="chgpos" style="flex-shrink:0">—</span></h3>
+      <div class="card"><div class="chart-head"><h3 style="margin:0;display:flex;align-items:center;gap:6px;min-width:0;cursor:pointer" onclick="toggleSec('inf_chart_body',this)"><span class="dot" style="flex-shrink:0"></span><span class="sec-caret">▾</span><span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis"><span id="inf_chart_sym">SOXL</span> 종가 추이</span><span id="inf_chart_chg" class="chgpos" style="flex-shrink:0">—</span></h3>
         <select class="chart-select" id="inf_chart_sel">
           <option value="21">1달</option><option value="42">2달</option><option value="63">3달</option>
           <option value="84">4달</option><option value="105">5달</option><option value="126" selected>6달</option>
@@ -492,11 +496,13 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
           <option value="1764">7년</option><option value="2016">8년</option><option value="2268">9년</option>
           <option value="2520">10년</option><option value="99999">전체</option>
         </select></div>
+        <div id="inf_chart_body">
         <div class="statgrid" style="margin-bottom:4px"><div class="stat"><div class="sl">1년 최저</div><div class="sv sm mono" id="inf_chart_lo">—</div></div>
           <div class="stat"><div class="sl">현재</div><div class="sv sm mono" id="inf_chart_cur" style="color:var(--vio)">—</div></div>
           <div class="stat"><div class="sl">1년 최고</div><div class="sv sm mono" id="inf_chart_hi">—</div></div></div>
         <svg class="minichart" id="inf_chart" viewBox="0 0 320 150" preserveAspectRatio="none"></svg>
         <div class="fetchnote" id="inf_chart_note" style="margin-top:6px"></div>
+        </div>
       </div>
 
       <!-- 국면 판정 차트 (합성 1배지수 vs 200일선) -->
@@ -527,7 +533,8 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
       </div>
 
       <!-- 공포·탐욕 지수 -->
-      <div class="card"><h3 style="justify-content:space-between"><span style="display:flex;align-items:center;gap:8px"><span class="dot"></span>공포 &amp; 탐욕 지수</span><span class="lh-stage">CNN</span></h3>
+      <div class="card"><h3 style="justify-content:space-between;cursor:pointer" onclick="toggleSec('inf_fg_body',this)"><span style="display:flex;align-items:center;gap:8px"><span class="dot"></span><span class="sec-caret">▾</span> 공포 &amp; 탐욕 지수</span><span class="lh-stage">CNN</span></h3>
+        <div id="inf_fg_body">
         <div style="display:flex;align-items:baseline"><span class="fg-val" id="inf_fg_val" style="color:var(--gold)">—</span><span class="fg-lbl" id="inf_fg_lbl" style="color:var(--gold)">—</span></div>
         <div class="fg-bar"><div class="fg-mark" id="inf_fg_mark" style="left:50%"></div></div>
         <div class="fg-scale"><span>극단적 공포</span><span>공포</span><span>중립</span><span>탐욕</span><span>극단적 탐욕</span></div>
@@ -536,13 +543,15 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
           <span id="fg_x0">—</span><span id="fg_x1">—</span>
         </div>
         <p class="note" id="inf_fg_note" style="margin-top:10px">참고 지표일 뿐, 무한매수법은 분할 규칙대로 진행합니다.</p>
+        </div>
       </div>
 
       <!-- 오늘의 주문표 -->
-      <div class="card calc" style="margin-top:13px"><div id="inf_order_body"></div></div>
+      <div class="card calc" style="margin-top:13px"><h3 style="font-size:15px;font-weight:800;margin-bottom:13px;cursor:pointer" onclick="toggleSec('inf_order_wrap',this)"><span class="dot"></span>📋 오늘의 주문표 <span class="sec-caret">▾</span></h3>
+        <div id="inf_order_wrap"><div id="inf_order_body"></div></div></div>
 
-      <div class="card" style="margin-top:13px"><h3><span class="dot"></span>오늘 할 일</h3>
-        <p class="lead" id="d_todo" style="margin-bottom:0">설정(⚙️)에서 종목·분할·원금을 정하고, 위 주문표에서 전일 종가를 입력하세요.</p></div>
+      <div class="card" style="margin-top:13px"><h3 style="cursor:pointer" onclick="toggleSec('inf_todo_body',this)"><span class="dot"></span>오늘 할 일 <span class="sec-caret">▾</span></h3>
+        <div id="inf_todo_body"><p class="lead" id="d_todo" style="margin-bottom:0">설정(⚙️)에서 종목·분할·원금을 정하고, 위 주문표에서 전일 종가를 입력하세요.</p></div></div>
 
       <!-- 시세 연결 진단 (관리자 모드 전용) -->
       <div class="card admin-only" id="diag_card" style="margin-top:13px;display:none"><h3><span class="dot"></span>시세 연결 진단 <span style="font-size:11px;color:var(--faint);font-weight:600">관리자</span></h3>
@@ -1072,6 +1081,15 @@ function toggleTen(){
   if(!w) return;
   const open = w.style.display==='none';
   w.style.display = open ? '' : 'none';
+  if(c) c.textContent = open ? '▾' : '▸';
+}
+// 운영 화면 섹션(거래일변동·종가추이·공포탐욕·오늘의주문·오늘할일) 접기/펴기.
+//   기본은 펼침(▾). 헤더를 누르면 본문만 숨겨진다(▸). 최근 종가(toggleTen)와 동일 UX.
+function toggleSec(wrapId, headEl){
+  const w=$(wrapId); if(!w) return;
+  const open = w.style.display==='none';
+  w.style.display = open ? '' : 'none';
+  const c = headEl && headEl.querySelector('.sec-caret');
   if(c) c.textContent = open ? '▾' : '▸';
 }
 function fmtT(t){
@@ -2742,7 +2760,7 @@ function renderOrderInline(){
   const needClose = (c.qty<=0) || c.reverseActive;
   if(needClose!==_lastNeedClose){
     _lastNeedClose=needClose;
-    let h=`<h3 style="font-size:15px;font-weight:800;margin-bottom:13px"><span class="dot"></span>📋 오늘의 주문표</h3>`;
+    let h='';   // 헤더(📋 오늘의 주문표)는 접기 가능한 정적 h3로 이동 — 본문만 렌더
     if(needClose){
       h+=`<div class="field"><label id="o_close_lbl">전일 종가 ($) <span class="hint">LOC 기준가</span></label>
         <div style="display:flex;gap:8px"><input id="o_close" type="text" inputmode="decimal" placeholder="234.68" oninput="commaInput(this);onCloseInput()" style="flex:1">
