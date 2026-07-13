@@ -136,14 +136,18 @@ async function yahooDaily(host, symbol, range, dbg, period1=null, period2=null) 
   const ts = res.timestamp || [];
   const q = (res.indicators && res.indicators.quote && res.indicators.quote[0]) || {};
   const adjA = (res.indicators && res.indicators.adjclose && res.indicators.adjclose[0] && res.indicators.adjclose[0].adjclose) || [];
-  const closeA = adjA.length ? adjA : (q.close || []);  // adjclose 우선 (DRIP 반영), 없으면 raw close
+  const rawA = q.close || [];
+  const closeA = adjA.length ? adjA : rawA;  // adjclose 우선 (DRIP 반영), 없으면 raw close
   const openA = q.open || [], highA = q.high || [], lowA = q.low || [];
   const series = [], ohlc = [];
   for (let i = 0; i < ts.length; i++) {
     const c = closeA[i]; if (c == null) continue;
     const d = new Date(ts[i] * 1000).toISOString().slice(0, 10);
     series.push({ date: d, close: +(+c).toFixed(4) });
-    ohlc.push({ date: d, open: openA[i] != null ? +(+openA[i]).toFixed(4) : +c, high: highA[i] != null ? +(+highA[i]).toFixed(4) : +c, low: lowA[i] != null ? +(+lowA[i]).toFixed(4) : +c, close: +(+c).toFixed(4) });
+    // O/H/L을 종가와 같은 조정 기준으로 통일: f = adjClose/rawClose (배당·분할 정합).
+    // 이전엔 raw O/H/L + adj종가 혼합 → '종가가 고저 밖' 결함, 고가 기준 익절이 과대 체결됐음.
+    const f = (adjA.length && rawA[i] > 0) ? c / rawA[i] : 1;
+    ohlc.push({ date: d, open: openA[i] != null ? +(openA[i] * f).toFixed(4) : +(+c).toFixed(4), high: highA[i] != null ? +(highA[i] * f).toFixed(4) : +(+c).toFixed(4), low: lowA[i] != null ? +(lowA[i] * f).toFixed(4) : +(+c).toFixed(4), close: +(+c).toFixed(4) });
   }
   const meta = res.meta || {};
   return { series, ohlc, price: meta.regularMarketPrice != null ? +meta.regularMarketPrice : null, marketState: meta.marketState || null, currency: meta.currency || "USD" };

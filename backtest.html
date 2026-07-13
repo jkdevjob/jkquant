@@ -216,7 +216,7 @@ td:first-child{text-align:left;}
   <div class="brand">
     <div>
       <div class="logo">Backtest</div>
-      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v1.91</span></h1>
+      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v1.92</span></h1>
     </div>
   </div>
   <a href="/" class="home">← JK 퀀트</a>
@@ -500,6 +500,8 @@ async function loadData(startDate, endDate){
       return false;
     }
     M={}; loaded.forEach(t=>{ M[t]={}; data[t].forEach(r=>{M[t][r[0]]=[r[1],r[2],r[3],r[4]];}); });
+    // 데이터 정합: 종가∉[저가,고가] 비율 — 고저가 미조정(구버전 quote.js·구CSV) 감지
+    const ohlcBad=loaded.map(t=>{let n=0,b=0;data[t].forEach(r=>{if(r[3]>0&&r[4]>0){n++;if(r[1]>r[3]*1.001||r[1]<r[4]*0.999)b++;}});return [t,n?b/n:0];}).filter(x=>x[1]>0.01).map(x=>`${x[0]} ${(x[1]*100).toFixed(0)}%`);
     dataLoaded=true; loadedTickers=loaded;
     loadedStart=startDate; loadedEnd=endDate;
     dcaActive=new Set(loaded);
@@ -523,8 +525,9 @@ async function loadData(startDate, endDate){
       const hasMonthly=loaded.some(t=>qual[t]&&!qual[t].daily);
       const monthlyList=loaded.filter(t=>qual[t]&&!qual[t].daily);
       if(hasMonthly) msg+=` | ⚠ ${monthlyList.join(',')} 일봉 아님(주·월간 다운샘플) — 무매 백테스트 부정확`;
+      if(ohlcBad.length) msg+=` | ⚠ 고저가 미조정 감지: ${ohlcBad.join(', ')} — 시세 재수신 권장 (익절은 종가 체결이라 결과는 유효)`;
       stat.textContent=msg;
-      stat.style.color=hasMonthly?'var(--gold)':failed.length?'var(--gold)':'var(--green)';
+      stat.style.color=(hasMonthly||ohlcBad.length)?'var(--gold)':failed.length?'var(--gold)':'var(--green)';
     }
     hideEmptyState();
     return true;
