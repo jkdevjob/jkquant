@@ -414,7 +414,7 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
 </div>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v2.28</span></h1></div>
+    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v2.29</span></h1></div>
     <div style="display:flex;align-items:center;gap:8px">
       <a class="btbtn" href="/backtest">📊<span class="bt-txt"> 백테스트</span></a>
       <button class="gear" onclick="openSettings()">⚙️</button>
@@ -790,7 +790,7 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
   <footer>
     <strong>JK 퀀트</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v2.28</b> · 2026-07-01</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v2.29</b> · 2026-07-01</div>
   </footer>
 </div>
 
@@ -1115,8 +1115,9 @@ function exitMulOf(base){ return 1-((base!=null&&base>0)?base:20)/100; }
 //     · 3년 이동 최소수익 +45~52%(세전)로 어느 시점에 시작해도 방어
 //   백테스트상 익절 5~10%가 총수익은 높지만, 그건 별지점까지 좁아진 '다른 전략'이며
 //   회전이 3~4배라 미체결·슬리피지·세금신고·심리 부담이 백테스트에 반영되지 않는다.
-//   TECL·KORU는 문서 미수록(비공식) — 자체 검증값.
-const IM_BEST={ v40:{TQQQ:15,SOXL:20,TECL:12,KORU:15}, v50:{TQQQ:15,SOXL:20,TECL:12,KORU:15} };
+//   TECL·KORU는 문서 미수록(비공식) — 2026-07 종가체결(v1.91) 재검증: 둘 다 t20 최적 (t12·t15는 섭동 0/40 완패).
+//   KORU는 비용 반영 시 전 구간 세후 마이너스 — 무매 종목으로 부적합 주의.
+const IM_BEST={ v40:{TQQQ:15,SOXL:20,TECL:20,KORU:20}, v50:{TQQQ:15,SOXL:20,TECL:20,KORU:20} };
 const IM_OFFICIAL={TQQQ:15, SOXL:20};
 function bestTgt(tkr, eng){
   const tbl=IM_BEST[eng==='v40'?'v40':'v50'];
