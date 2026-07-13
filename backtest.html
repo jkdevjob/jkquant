@@ -84,7 +84,7 @@ window.btLogin = async () => {
 :root{
   --bg:#0f1320;--surf:#171c2e;--surf2:#1e2540;--border:#2a3354;--border2:#34406a;
   --text:#e8ecf7;--dim:#9aa6c9;--dim2:#b3bce0;--accent:#8b8cf0;--green:#36d399;--red:#f87b8c;--gold:#f5c451;
-  --c-dca:#8b8cf0;--c-im:#ff6b6b;--c-vr:#00d4b4;
+  --c-dca:#8b8cf0;--c-im:#ff6b6b;--c-vr:#00d4b4;--c-ma:#ffa94d;
   --qld:#5b8dee;--tqqq:#00d4b4;--usd:#b088f8;--soxl:#ff6b6b;--tecl:#ffc844;
 }
 *{box-sizing:border-box;margin:0;padding:0;}
@@ -100,12 +100,13 @@ body{background:var(--bg);color:var(--text);font-family:'Pretendard',sans-serif;
 .top .home:hover{border-color:var(--accent);color:var(--accent);}
 
 /* STRATEGY TABS */
-.stabs{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;background:var(--surf);border:1px solid var(--border);border-radius:10px;padding:5px;margin-bottom:20px;}
+.stabs{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;background:var(--surf);border:1px solid var(--border);border-radius:10px;padding:5px;margin-bottom:20px;}
 .stab{padding:11px 8px;border-radius:7px;border:none;background:transparent;color:var(--dim);font-family:'Pretendard';font-size:13.5px;font-weight:600;cursor:pointer;transition:all .15s;text-align:center;}
 .stab.active{color:#fff;}
 .stab[data-s="dca"].active{background:var(--c-dca);}
 .stab[data-s="im"].active{background:var(--c-im);}
 .stab[data-s="vr"].active{background:var(--c-vr);}
+.stab[data-s="ma"].active{background:var(--c-ma);}
 .stab .sub{display:block;font-size:10px;font-weight:400;opacity:.7;margin-top:2px;}
 
 /* CONTROLS */
@@ -216,7 +217,7 @@ td:first-child{text-align:left;}
   <div class="brand">
     <div>
       <div class="logo">Backtest</div>
-      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v1.92</span></h1>
+      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v1.93</span></h1>
     </div>
   </div>
   <a href="/" class="home">← JK 퀀트</a>
@@ -229,6 +230,7 @@ td:first-child{text-align:left;}
   <button class="stab active" data-s="dca" onclick="setStrat('dca')">단순 DCA<span class="sub">정액 적립</span></button>
   <button class="stab" data-s="im" onclick="setStrat('im')">무한매수법<span class="sub">V4.0</span></button>
   <button class="stab" data-s="vr" onclick="setStrat('vr')">밸류리밸런싱<span class="sub">VR 5.0</span></button>
+  <button class="stab" data-s="ma" onclick="setStrat('ma')">200일선 로테이션<span class="sub">이평선↔현금</span></button>
 </div>
 
 <!-- 공통 컨트롤 -->
@@ -327,6 +329,23 @@ td:first-child{text-align:left;}
     <div class="ctrl s-vr hide"><label>시작 V ($)</label><input type="number" id="vrStartV" value="0" min="0" placeholder="0=첫매수가 V"></div>
     <div class="ctrl s-vr hide"><label>시작 Pool ($)</label><input type="number" id="vrStartPool" value="0" min="0"></div>
 
+    <!-- 200일선 로테이션 전용 -->
+    <div class="ctrl s-ma hide"><label>원금 ($)</label><input type="number" id="maCap" value="10000" min="100"></div>
+    <div class="ctrl s-ma hide"><label>이동평균 기간 <span style="font-size:9px;color:var(--dim)">합성 1배지수 기준</span></label>
+      <div class="seg" id="maLenSeg">
+        <button data-n="100" title="민감 — 빠른 탈출, 휩쏘 많음">100일</button>
+        <button data-n="150">150일</button>
+        <button data-n="200" class="active" title="Gayed·Bilello 논문 기본 (2016 다우상)">200일</button>
+        <button data-n="300" title="둔감 — 거래 최소, 탈출 느림">300일</button>
+      </div>
+    </div>
+    <div class="ctrl s-ma hide"><label>세금·비용</label>
+      <div class="seg" id="maCost">
+        <button data-x="0" title="비용 없이 순수 전략 성과">미적용</button>
+        <button data-x="1" class="active" title="수수료 0.25%(매수·매도 각) · 양도세 22%(연 250만원 공제) — MOC 체결이라 슬리피지 없음">적용</button>
+      </div>
+    </div>
+
     <button class="run" onclick="run()">▶ 실행</button>
   </div>
 
@@ -340,8 +359,8 @@ td:first-child{text-align:left;}
     </div>
     <button onclick="downloadXLSX()" style="width:100%;margin-top:8px;padding:9px;border-radius:7px;border:none;background:var(--accent);color:#fff;font-size:13px;font-weight:600;cursor:pointer" title="선택된 종목들을 엑셀 1파일(종목별 시트)로 저장 (실행 후)">⬇ 시세 다운로드 (1종목=CSV · 여러개=엑셀)</button>
   </div>
-  <!-- 무매·VR 단일 종목 -->
-  <div class="ctrl s-im s-vr hide" style="margin-top:14px">
+  <!-- 무매·VR·200일선 단일 종목 -->
+  <div class="ctrl s-im s-vr s-ma hide" style="margin-top:14px">
     <label>종목</label>
     <div class="ticker-pick" id="tickerSingle"></div>
   </div>
@@ -379,6 +398,13 @@ td:first-child{text-align:left;}
   <span class="bd">V 갱신</span> 다음 V = 현재 V + <b>Pool/G</b> + 적립금 · 2주(10거래일) 사이클<br>
   <span class="bd">밴드</span> 상단 V×(1+밴드) / 하단 V×(1−밴드)<br>
   <span class="bd">매도</span> 평가금>상단 → V 복귀분 매도 → Pool · <span class="bd">매수</span> 평가금<하단 → V까지, 적립후 <b>Pool 75%</b> 한도
+</div>
+<div class="rules s-ma hide">
+  <span class="bd">출처</span> Gayed·Bilello <b>"Leverage for the Long Run"</b> (2016 CMT 다우상) — 역사적으로 3× 조합 연 26.7%<br>
+  <span class="bd">신호</span> 합성 1배지수(레버리지 일수익률÷배수 누적)가 <b>N일 이동평균 위</b>면 레버리지 100% 보유, 아래면 <b>전액 현금</b><br>
+  <span class="bd">체결</span> 전일 종가로 판정(룩어헤드 없음) → 당일 종가(MOC) 매매 · 이평 이력 부족(워밍업)은 보유로 간주<br>
+  <span class="bd">원리</span> 200일선 아래 = 고변동성 구간 → 변동성 낙폭(volatility decay)이 레버리지를 갉아먹는 구간만 회피<br>
+  <span class="bd">주의</span> 횡보장에선 신호가 자주 뒤집혀(휩쏘) 잔손실 누적 · SOXL처럼 변동성 큰 종목은 효과 약함 — TQQQ·QLD에 적합
 </div>
 
 <div class="foot">
@@ -461,12 +487,15 @@ const META={
 };
 const IM_TICKERS=['SOXL','TQQQ','TECL','KORU'];
 const VR_TICKERS=['USD','SOXL','QLD','TQQQ'];
+const MA_TICKERS=['TQQQ','QLD','SOXL','TECL','USD'];   // 200일선 로테이션 — 논문 스위트스팟(나스닥 계열) 우선
 
 let M={};
 let strat='dca';
 let dcaFreq='daily', dcaPeriodMode='common', imDiv=20;
 let imActive=new Set(IM_TICKERS);   // 무매 다중선택
 let vrActive=new Set(VR_TICKERS);   // VR 다중선택
+let maActive=new Set(['TQQQ']);     // 200일선 다중선택 (기본: 논문 스위트스팟)
+let maLen=200, maCostOn=true;       // 200일선: 이평 기간 · 비용 반영
 let dcaActive=new Set(TICKERS);
 let chart=null, logY=false, lastRender=null;
 
@@ -508,8 +537,10 @@ async function loadData(startDate, endDate){
     // 로딩된 종목만 활성화
     imActive=new Set([...imActive].filter(t=>loaded.includes(t)||M[t]));
     vrActive=new Set([...vrActive].filter(t=>loaded.includes(t)||M[t]));
+    maActive=new Set([...maActive].filter(t=>loaded.includes(t)||M[t]));
     if(!imActive.size) imActive=new Set(IM_TICKERS.filter(t=>loaded.includes(t)));
     if(!vrActive.size) vrActive=new Set(VR_TICKERS.filter(t=>loaded.includes(t)));
+    if(!maActive.size) maActive=new Set(MA_TICKERS.filter(t=>loaded.includes(t)).slice(0,1));
     buildTickerPick();
     let maxDate=''; loaded.forEach(t=>{ const ds=Object.keys(M[t]); const last=ds[ds.length-1]; if(last>maxDate)maxDate=last; });
     if(stat){
@@ -680,8 +711,8 @@ function buildPickSingle(){
   single.innerHTML='';
   function renderMultiPick(){
     single.innerHTML='';
-    const list = strat==="im"? IM_TICKERS : VR_TICKERS;
-    const active = strat==="im"? imActive : vrActive;
+    const list = strat==="im"? IM_TICKERS : strat==="ma"? MA_TICKERS : VR_TICKERS;
+    const active = strat==="im"? imActive : strat==="ma"? maActive : vrActive;
     list.forEach(t=>{
       if(!META[t]) return;
       const c=document.createElement("div");
@@ -702,7 +733,8 @@ function setStrat(s){
   document.querySelectorAll('.s-dca').forEach(e=>e.classList.toggle('hide',s!=='dca'));
   document.querySelectorAll('.s-im').forEach(e=>e.classList.toggle('hide',s!=='im'));
   document.querySelectorAll('.s-vr').forEach(e=>e.classList.toggle('hide',s!=='vr'));
-  // s-im s-vr 공용 요소 처리
+  document.querySelectorAll('.s-ma').forEach(e=>e.classList.toggle('hide',s!=='ma'));
+  // s-im s-vr(s-ma) 공용 요소 처리 — 단일 종목 피커는 dca 외 전부 표시
   document.querySelectorAll('.s-im.s-vr').forEach(e=>e.classList.toggle('hide',s==='dca'));
   buildPickSingle();
   if(document.getElementById('tickerSingle')._render) document.getElementById('tickerSingle')._render();
@@ -723,6 +755,8 @@ document.getElementById('vrMode').onclick=e=>{
   if(dataLoaded)run();
 };
 document.getElementById('vrFormula').onclick=e=>{if(e.target.dataset.f){document.querySelectorAll('#vrFormula button').forEach(b=>b.classList.remove('active'));e.target.classList.add('active');if(dataLoaded)run();}};
+document.getElementById('maLenSeg').onclick=e=>{if(e.target.dataset.n){document.querySelectorAll('#maLenSeg button').forEach(b=>b.classList.remove('active'));e.target.classList.add('active');maLen=+e.target.dataset.n;if(dataLoaded)run();}};
+document.getElementById('maCost').onclick=e=>{if(e.target.dataset.x){document.querySelectorAll('#maCost button').forEach(b=>b.classList.remove('active'));e.target.classList.add('active');maCostOn=e.target.dataset.x==='1';if(dataLoaded)run();}};
 document.getElementById('imDiv').onclick=e=>{if(e.target.dataset.d){document.querySelectorAll('#imDiv button').forEach(b=>b.classList.remove('active'));e.target.classList.add('active');imDiv=+e.target.dataset.d;if(dataLoaded)run();}};
 let imEngine='v40';   // V5.0 숨김 기간: v40 고정
 
@@ -1148,6 +1182,56 @@ function calcVol(snap, stepDays){
   const perYear=252/(stepDays||10);             // 연간 스냅 횟수
   return Math.sqrt(varc)*Math.sqrt(perYear)*100;
 }
+// ──── 전략 4: 200일선 로테이션 (Gayed·Bilello "Leverage for the Long Run", 2016 CMT 다우상) ────
+// 규칙: 합성 1배지수(레버리지 일수익률÷배수 누적)가 N일 SMA 위면 레버리지 100% 보유, 아래면 전액 현금.
+//   · 판정 = 전일 종가 기준 (룩어헤드 없음) · 체결 = 당일 종가 MOC (슬리피지 없음, 수수료만)
+//   · SMA는 로딩된 전체 이력으로 계산 (buildGateIM과 동일 — 선택 기간 앞 데이터를 워밍업에 활용)
+//   · 워밍업(이력<N일)은 '보유'로 간주 — V5.0 국면 워밍업과 동일 규약 (짧은 기간에서 부당히 불리해지지 않게)
+// 비용 모델은 무매와 동일 규약: 수수료 0.25% 매수·매도 각 · 양도세 22%(연 250만원 공제) · 실현손익만 과세.
+function runMA200(days,tkr,cap,N,costOn){
+  const dts=Object.keys(M[tkr]).sort();
+  const lev=(META[tkr]&&META[tkr].lev)||3;
+  const above={};                              // date → 전일까지 반영된 '지수>SMA' 여부 (당일 종가 포함 계산)
+  { const buf=[]; let s=0, syn=100, prev=null;
+    for(let i=0;i<dts.length;i++){
+      if(prev!==null){ const r=M[tkr][dts[i]][C]/M[tkr][prev][C]-1; syn=syn*(1+r/lev); }
+      buf.push(syn); s+=syn; if(buf.length>N) s-=buf.shift();
+      above[dts[i]] = buf.length===N ? syn>s/N : true;   // 워밍업: 보유
+      prev=dts[i];
+    } }
+  const gIdx={}; dts.forEach((d,i)=>gIdx[d]=i);
+  const FEE=costOn?COST_FEE:0;
+  let cash=cap, shares=0, avg=0, realized=0, feesTotal=0, taxTotal=0, yearPnl=0, curYear=null;
+  let trades=0, daysIn=0, mddPeak=cap, mdd=0; const snap=[];
+  function _settle(){ if(!costOn){yearPnl=0;return;}
+    const taxable=Math.max(0, yearPnl*COST_KRW-COST_DEDUCT);
+    const taxUsd=taxable*COST_TAXRATE/COST_KRW; cash-=taxUsd; taxTotal+=taxUsd; yearPnl=0; }
+  days.forEach((d,i)=>{
+    const c=M[tkr][d][C];
+    { const y=d.slice(0,4); if(curYear===null)curYear=y; else if(y!==curYear){_settle();curYear=y;} }
+    const g=gIdx[d];
+    const want = g>0 ? above[dts[g-1]] : true;             // 전일 신호 (기간 앞 이력 사용, 첫날은 보유 시작)
+    if(want && shares===0 && cash>0){
+      const fee=cash*FEE, net=cash-fee; shares=net/c; avg=c; cash=0; feesTotal+=fee; trades++;
+    }else if(!want && shares>0){
+      const gross=shares*c, fee=gross*FEE; cash+=gross-fee;
+      const pnl=shares*(c-avg)-fee; realized+=pnl; yearPnl+=pnl;
+      shares=0; feesTotal+=fee; trades++;
+    }
+    if(shares>0) daysIn++;
+    const eq=cash+shares*c;
+    if(eq>mddPeak)mddPeak=eq; else { const dd=(mddPeak-eq)/mddPeak; if(dd>mdd)mdd=dd; }
+    if(i%10===0)snap.push([d,eq]);
+  });
+  _settle();   // 마지막 해 정산
+  const fin=cash+shares*M[tkr][days[days.length-1]][C];
+  if(fin>mddPeak)mddPeak=fin; else { const dd=(mddPeak-fin)/mddPeak; if(dd>mdd)mdd=dd; }
+  snap.push([days[days.length-1],fin]);
+  return {invested:cap,final:fin,ret:(fin/cap-1)*100,realized,snap,tkr,mdd:mdd*100,
+          trades,timeIn:days.length?daysIn/days.length*100:0,fees:feesTotal,tax:taxTotal,maLen:N,
+          endCash:cash,endShares:shares};
+}
+
 function cagrOf(final, invested, yrs){ return invested>0&&yrs>0 ? (Math.pow(final/invested,1/yrs)-1)*100 : 0; }
 
 
@@ -1157,7 +1241,7 @@ async function run(){
   const end=document.getElementById('dEnd').value;
   if(!start||!end||start>=end){alert('날짜를 확인하세요.');return;}
   // 데이터 없거나 · 요청 기간이 더 넓거나 · 선택 종목 중 미로딩분이 있으면 재로딩
-  const wanted = strat==='dca' ? [...dcaActive] : (strat==='im' ? [...imActive] : [...vrActive]);
+  const wanted = strat==='dca' ? [...dcaActive] : strat==='im' ? [...imActive] : strat==='ma' ? [...maActive] : [...vrActive];
   const missing = wanted.filter(t=>!M[t] || !Object.keys(M[t]||{}).length);
   const needReload=!Object.keys(M).length
     || (loadedStart && start<loadedStart)
@@ -1221,6 +1305,15 @@ async function run(){
       return;
     }
     renderMultiStrat('im',results,{cap,tgt:tgtOverride});
+  }else if(strat==='ma'){
+    if(!maActive.size){alert('종목을 선택하세요.');return;}
+    const cap=+document.getElementById('maCap').value||10000;
+    const commonD=commonDays(start,end,[...maActive]);
+    if(commonD.length<10){alert('공통 거래일이 부족합니다.');return;}
+    const results={};
+    [...maActive].forEach(t=>{ results[t]={res:runMA200(commonD,t,cap,maLen,maCostOn), days:commonD}; });
+    if(!Object.keys(results).length){alert('데이터 부족');return;}
+    renderMultiStrat('ma',results,{cap,maLen});
   }else{
     if(!vrActive.size){alert('종목을 선택하세요.');return;}
     const contribUSD=+document.getElementById('vrContrib').value||100;
@@ -1345,7 +1438,9 @@ function renderMultiStrat(type, results, params){
   document.getElementById('detail').classList.add('hide');
   document.querySelector('.cards').classList.remove('hide');
   document.querySelector('.tbl-wrap').classList.remove('hide');
-  const stratName=type==='im'?('무한매수법 '+(imEngine==='v50'?('V5.0('+imShortMA+'일·하락'+imLoPct+'%)'):'V4.0')+(imCostOn?' · 비용반영':'')):'VR 5.0';
+  const stratName=type==='im'?('무한매수법 '+(imEngine==='v50'?('V5.0('+imShortMA+'일·하락'+imLoPct+'%)'):'V4.0')+(imCostOn?' · 비용반영':''))
+    :type==='ma'?(maLen+'일선 로테이션'+(maCostOn?' · 비용반영':''))
+    :'VR 5.0';
   const pct=x=>(x>=0?'+':'')+x.toFixed(1)+'%';
   const money=(x,t)=>fmtV(x,t||tickers[0]);
 
@@ -1549,8 +1644,8 @@ function renderSingle2(type,r,days){
   logBtns.forEach(b=>b.classList.remove('active'));
   if(logBtns[1]) logBtns[1].classList.add('active');  // '로그' 버튼 활성화
   const m=META[r.tkr];
-  const stratName = type==='im' ? ('무한매수법 '+(imEngine==='v50'?('V5.0('+imShortMA+'일)'):'V4.0')) : 'VR 5.0';
-  const stratShort = type==='im' ? '무한매수법' : 'VR 5.0';
+  const stratName = type==='im' ? ('무한매수법 '+(imEngine==='v50'?('V5.0('+imShortMA+'일)'):'V4.0')) : type==='ma' ? ((r.maLen||200)+'일선 로테이션') : 'VR 5.0';
+  const stratShort = type==='im' ? '무한매수법' : type==='ma' ? ((r.maLen||200)+'일선') : 'VR 5.0';
 
   // ── yrs: 실제 날짜 구간 기반 (days.length/252는 월간 데이터 시 오차 큼)
   const calYrs = days.length>1
@@ -1619,6 +1714,19 @@ function renderSingle2(type,r,days){
       <div class="metric"><span class="k">누적 실현익</span><span class="v">$${fmt(r.realized)}</span></div>
       <div class="metric"><span class="k">익절 사이클</span><span class="v">${r.cycles}회</span></div>
       <div class="metric"><span class="k">종료 현금 / 주식</span><span class="v" style="font-size:11px">$${fmt(r.endCash)} / ${r.endShares.toFixed(1)}주</span></div>`;
+  }else if(type==='ma'){
+    stratExtra=`
+      <div class="metric"><span class="k">투입 원금</span><span class="v">$${fmt(r.invested)}</span></div>
+      <div class="metric"><span class="k">최종 평가액</span><span class="v" style="color:${r.ret>=0?'var(--green)':'var(--red)'}">$${fmt(r.final)}</span></div>
+      <div class="metric"><span class="k">총 수익률</span><span class="v" style="color:${r.ret>=0?'var(--green)':'var(--red)'}">${pct(r.ret)}</span></div>
+      <div class="metric"><span class="k">CAGR</span><span class="v">${pct(sCagr)}</span></div>
+      <div class="metric"><span class="k">MDD</span><span class="v">${pctP(sMDD)}</span></div>
+      <div class="metric"><span class="k">MAR (CAGR/MDD)</span><span class="v" style="color:var(--gold)">${(sMDD>0?sCagr/sMDD:0).toFixed(2)}</span></div>
+      <div class="metric"><span class="k">기간</span><span class="v">${yrs.toFixed(1)}년</span></div>
+      <div class="metric"><span class="k">매매 (보유↔현금 전환)</span><span class="v">${r.trades}회</span></div>
+      <div class="metric"><span class="k">투자중 비율</span><span class="v" style="color:var(--accent)">${r.timeIn.toFixed(0)}%</span></div>
+      <div class="metric"><span class="k">누적 실현익</span><span class="v">$${fmt(r.realized)}</span></div>
+      <div class="metric"><span class="k">수수료 / 세금</span><span class="v" style="font-size:11px">$${fmt(r.fees)} / $${fmt(r.tax)}</span></div>`;
   }else{
     stratExtra=`
       <div class="metric"><span class="k">총 투입 원금</span><span class="v">$${fmt(r.invested)}</span></div>
@@ -1636,6 +1744,8 @@ function renderSingle2(type,r,days){
   // 비교 기준 안내
   const baseNote = type==='im'
     ? `거치식·DCA 기준: 무매 실제 투입 피크 <b>$${fmt(bhBase)}</b>`
+    : type==='ma'
+    ? `거치식·DCA 기준: 동일 원금 <b>$${fmt(bhBase)}</b>`
     : `거치식·DCA 기준: VR 총 투입액 <b>$${fmt(bhBase)}</b>`;
 
   document.getElementById('detail').innerHTML=`
