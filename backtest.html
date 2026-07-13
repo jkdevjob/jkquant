@@ -217,7 +217,7 @@ td:first-child{text-align:left;}
   <div class="brand">
     <div>
       <div class="logo">Backtest</div>
-      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v1.93</span></h1>
+      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v1.94</span></h1>
     </div>
   </div>
   <a href="/" class="home">← JK 퀀트</a>
@@ -328,6 +328,12 @@ td:first-child{text-align:left;}
     <div class="ctrl s-vr hide"><label>밴드 ±%</label><input type="number" id="vrBand" value="15" min="5" max="30"></div>
     <div class="ctrl s-vr hide"><label>시작 V ($)</label><input type="number" id="vrStartV" value="0" min="0" placeholder="0=첫매수가 V"></div>
     <div class="ctrl s-vr hide"><label>시작 Pool ($)</label><input type="number" id="vrStartPool" value="0" min="0"></div>
+    <div class="ctrl s-vr hide"><label>세금·비용</label>
+      <div class="seg" id="vrCost">
+        <button data-x="0" title="비용 없이 순수 전략 성과">미적용</button>
+        <button data-x="1" class="active" title="수수료 0.25%(매수·매도 각) · 양도세 22%(연 250만원 공제) — 리밸런싱은 종가 체결이라 슬리피지 없음">적용</button>
+      </div>
+    </div>
 
     <!-- 200일선 로테이션 전용 -->
     <div class="ctrl s-ma hide"><label>원금 ($)</label><input type="number" id="maCap" value="10000" min="100"></div>
@@ -485,8 +491,8 @@ const META={
   '418660':{name:'TIGER 나스닥100 2×', lev:2, color:'#42a5f5'},
   '423920':{name:'TIGER 반도체 2×',   lev:2, color:'#ff5252'},
 };
-const IM_TICKERS=['SOXL','TQQQ','TECL','KORU'];
-const VR_TICKERS=['USD','SOXL','QLD','TQQQ'];
+const IM_TICKERS=['SOXL','TQQQ','TECL','KORU','USD'];
+const VR_TICKERS=['USD','SOXL','QLD','TQQQ','TECL'];
 const MA_TICKERS=['TQQQ','QLD','SOXL','TECL','USD'];   // 200일선 로테이션 — 논문 스위트스팟(나스닥 계열) 우선
 
 let M={};
@@ -496,6 +502,7 @@ let imActive=new Set(IM_TICKERS);   // 무매 다중선택
 let vrActive=new Set(VR_TICKERS);   // VR 다중선택
 let maActive=new Set(['TQQQ']);     // 200일선 다중선택 (기본: 논문 스위트스팟)
 let maLen=200, maCostOn=true;       // 200일선: 이평 기간 · 비용 반영
+let vrCostOn=true;                  // VR: 세금·비용 반영 (무매·200일선과 동일 규약)
 let dcaActive=new Set(TICKERS);
 let chart=null, logY=false, lastRender=null;
 
@@ -757,6 +764,7 @@ document.getElementById('vrMode').onclick=e=>{
 document.getElementById('vrFormula').onclick=e=>{if(e.target.dataset.f){document.querySelectorAll('#vrFormula button').forEach(b=>b.classList.remove('active'));e.target.classList.add('active');if(dataLoaded)run();}};
 document.getElementById('maLenSeg').onclick=e=>{if(e.target.dataset.n){document.querySelectorAll('#maLenSeg button').forEach(b=>b.classList.remove('active'));e.target.classList.add('active');maLen=+e.target.dataset.n;if(dataLoaded)run();}};
 document.getElementById('maCost').onclick=e=>{if(e.target.dataset.x){document.querySelectorAll('#maCost button').forEach(b=>b.classList.remove('active'));e.target.classList.add('active');maCostOn=e.target.dataset.x==='1';if(dataLoaded)run();}};
+document.getElementById('vrCost').onclick=e=>{if(e.target.dataset.x){document.querySelectorAll('#vrCost button').forEach(b=>b.classList.remove('active'));e.target.classList.add('active');vrCostOn=e.target.dataset.x==='1';if(dataLoaded)run();}};
 document.getElementById('imDiv').onclick=e=>{if(e.target.dataset.d){document.querySelectorAll('#imDiv button').forEach(b=>b.classList.remove('active'));e.target.classList.add('active');imDiv=+e.target.dataset.d;if(dataLoaded)run();}};
 let imEngine='v40';   // V5.0 숨김 기간: v40 고정
 
@@ -1105,14 +1113,25 @@ function runIM50(days,tkr,cap,divs,targetPct,compound=true){
 
 // ──── 전략 3: VR 5.0 ────
 function runVR(days,tkr,params){
-  const {contrib=100,G=10,bandPct=15,mode=0.75,formula='basic',initAmt=0,withdraw=0,startV=0,startPool=0}=params||{};
+  const {contrib=100,G=10,bandPct=15,mode=0.75,formula='basic',initAmt=0,withdraw=0,startV=0,startPool=0,costOn=false}=params||{};
   const band=bandPct/100,interval=10,poolLimit=mode;
   const isAccum=mode===0.75, isWd=mode===0.25, isLump=!isAccum;
   let shares=0,pool=startPool||0,V=startV||0,inv=startPool||0,totalWd=0,rebal=0,buys=0,sells=0;
+  // ── 비용·세금 (costOn=false면 전부 0 — 기존 산술과 완전 동일) · 규약은 무매·200일선과 같음 ──
+  //   수수료 0.25% 매수·매도 각 · 양도세 22%(연 250만원 공제, 실현손익만) · 리밸런싱=종가 체결이라 슬리피지 없음
+  const FEE=costOn?COST_FEE:0;
+  let avg=0, feesTotal=0, taxTotal=0, yearPnl=0, curYear=null;
+  function _vbuy(amt,c){ const fee=amt*FEE, net=amt-fee, q=net/c;
+    avg=(shares<=0)?c:(shares*avg+net)/(shares+q); shares+=q; feesTotal+=fee; }
+  function _vsell(gross,c){ const qty=gross/c, fee=gross*FEE;   // 금액 기준 매도 (비용 0이면 기존 산술과 비트 동일)
+    yearPnl+=qty*(c-avg)-fee; feesTotal+=fee; shares-=qty; return gross-fee; }
+  function _settle(){ if(!costOn){yearPnl=0;return;}
+    const taxable=Math.max(0, yearPnl*COST_KRW-COST_DEDUCT);
+    const taxUsd=taxable*COST_TAXRATE/COST_KRW; pool-=taxUsd; taxTotal+=taxUsd; yearPnl=0; }
   // 시작V 지정 시: 이미 V만큼 보유 중인 상태로 간주 (운용도구와 동일 — "이어서 시작" 시나리오)
   let first;
   if(V>0){
-    shares=V/M[tkr][days[0]][C]; inv+=V; first=false;
+    shares=V/M[tkr][days[0]][C]; avg=M[tkr][days[0]][C]; inv+=V; first=false;
   } else {
     first=true;
   }
@@ -1120,11 +1139,12 @@ function runVR(days,tkr,params){
   let mddPeak=-Infinity, mdd=0;  // 일별 MDD (총자산 = 주식+Pool+누적인출 기준 — fin과 동일 철학)
   days.forEach((d,i)=>{
     const c=M[tkr][d][C];
+    { const y=d.slice(0,4); if(curYear===null)curYear=y; else if(y!==curYear){_settle();curYear=y;} }
     { const eq=shares*c+pool+totalWd; if(eq>mddPeak)mddPeak=eq; else if(mddPeak>0){ const dd=(mddPeak-eq)/mddPeak; if(dd>mdd)mdd=dd; } }
     if(i%interval===0){
       if(first){
-        if(isLump){const s=initAmt||10000;inv+=s;shares=s/c;V=shares*c;}  // 거치식/인출식: 첫매수가=V (pool 무관)
-        else{pool+=contrib;inv+=contrib;shares=pool/c;pool=0;V=shares*c;} // 적립식: 첫매수가=V
+        if(isLump){const s=initAmt||10000;inv+=s;_vbuy(s,c);V=shares*c;}  // 거치식/인출식: 첫매수가=V (pool 무관)
+        else{pool+=contrib;inv+=contrib;_vbuy(pool,c);pool=0;V=shares*c;} // 적립식: 첫매수가=V
         first=false;buys++;rebal++;snap.push([d,shares*c+pool+totalWd]);return;
       }
       const cv=shares*c;
@@ -1135,18 +1155,19 @@ function runVR(days,tkr,params){
       if(isAccum){pool+=contrib;inv+=contrib;}
       else if(isWd){const wd=Math.min(withdraw,pool);pool-=wd;totalWd+=wd;}
       const up=V*(1+band),lo=V*(1-band),cv2=shares*c;
-      if(cv2>up){const ex=cv2-V;shares-=ex/c;pool+=ex;sells++;}
-      else if(cv2<lo){const need=V-cv2;const use=Math.min(need,pool*poolLimit);shares+=use/c;pool-=use;buys++;}
+      if(cv2>up){const ex=cv2-V;pool+=_vsell(ex,c);sells++;}
+      else if(cv2<lo){const need=V-cv2;const use=Math.min(need,pool*poolLimit);_vbuy(use,c);pool-=use;buys++;}
       rebal++;
     }
     if(i%interval===0||i===days.length-1)snap.push([d,shares*c+pool+totalWd]);
   });
+  _settle();   // 마지막 해 정산
   const lc=M[tkr][days[days.length-1]][C];
   // 인출식: 누적 인출액도 회수가치에 포함해야 정확한 수익률 (인출한 돈은 사라진 게 아님)
   const fin=shares*lc+pool+totalWd;
   const calYrs=(new Date(days[days.length-1])-new Date(days[0]))/(365.25*864e5);
   return {invested:inv,final:fin,pool,shares,sharesVal:shares*lc,rebal,buys,sells,totalWd,
-    ret:inv>0?(fin/inv-1)*100:0,yrs:Math.max(calYrs,0.1),snap,tkr,mdd:mdd*100};
+    ret:inv>0?(fin/inv-1)*100:0,yrs:Math.max(calYrs,0.1),snap,tkr,mdd:mdd*100,fees:feesTotal,tax:taxTotal};
 }
 
 // ──── 비교/지표 헬퍼 ────
@@ -1329,7 +1350,7 @@ async function run(){
     if(commonD.length<10){alert('공통 거래일이 부족합니다.');return;}
     const results={};
     [...vrActive].forEach(t=>{
-      results[t]={res:runVR(commonD,t,{contrib:contribUSD,G,bandPct:band,mode,formula,initAmt,withdraw,startV,startPool}), days:commonD};
+      results[t]={res:runVR(commonD,t,{contrib:contribUSD,G,bandPct:band,mode,formula,initAmt,withdraw,startV,startPool,costOn:vrCostOn}), days:commonD};
     });
     if(!Object.keys(results).length){alert('데이터 부족');return;}
     renderMultiStrat('vr',results,{contribUSD,G,band,mode,formula,initAmt,withdraw,startV,startPool});
@@ -1440,7 +1461,7 @@ function renderMultiStrat(type, results, params){
   document.querySelector('.tbl-wrap').classList.remove('hide');
   const stratName=type==='im'?('무한매수법 '+(imEngine==='v50'?('V5.0('+imShortMA+'일·하락'+imLoPct+'%)'):'V4.0')+(imCostOn?' · 비용반영':''))
     :type==='ma'?(maLen+'일선 로테이션'+(maCostOn?' · 비용반영':''))
-    :'VR 5.0';
+    :('VR 5.0'+(vrCostOn?' · 비용반영':''));
   const pct=x=>(x>=0?'+':'')+x.toFixed(1)+'%';
   const money=(x,t)=>fmtV(x,t||tickers[0]);
 
@@ -1738,7 +1759,8 @@ function renderSingle2(type,r,days){
       <div class="metric"><span class="k">기간</span><span class="v">${yrs.toFixed(1)}년</span></div>
       <div class="metric"><span class="k">현금 Pool</span><span class="v">$${fmt(r.pool)}</span></div>
       <div class="metric"><span class="k">최종 기준값 V</span><span class="v">$${fmt(r.V)}</span></div>
-      <div class="metric"><span class="k">리밸런싱</span><span class="v">${r.rebal}회 (매수${r.buys}/매도${r.sells})</span></div>`;
+      <div class="metric"><span class="k">리밸런싱</span><span class="v">${r.rebal}회 (매수${r.buys}/매도${r.sells})</span></div>
+      <div class="metric"><span class="k">수수료 / 세금</span><span class="v" style="font-size:11px">$${fmt(r.fees||0)} / $${fmt(r.tax||0)}</span></div>`;
   }
 
   // 비교 기준 안내
