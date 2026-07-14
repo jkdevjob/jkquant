@@ -217,7 +217,7 @@ td:first-child{text-align:left;}
   <div class="brand">
     <div>
       <div class="logo">Backtest</div>
-      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v1.99</span></h1>
+      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v1.100</span></h1>
     </div>
   </div>
   <a href="/" class="home">← JK 퀀트</a>
@@ -491,9 +491,11 @@ const META={
   '418660':{name:'TIGER 나스닥100 2×', lev:2, color:'#42a5f5'},
   '423920':{name:'TIGER 반도체 2×',   lev:2, color:'#ff5252'},
 };
-const IM_TICKERS=['SOXL','TQQQ','TECL','KORU','USD'];
-const VR_TICKERS=['USD','SOXL','QLD','TQQQ','TECL'];
-const MA_TICKERS=['TQQQ','QLD','SOXL','TECL','USD'];   // 200일선 로테이션 — 논문 스위트스팟(나스닥 계열) 우선
+// 무매·VR·로테 공통 종목 목록 — 세 탭 동일 순서·전체 기본선택 (KORU 포함: 상장(2013-04) 전 기간은 자동 제외+배너 표시)
+const STRAT_TICKERS=['SOXL','USD','TECL','TQQQ','QLD','KORU'];
+const IM_TICKERS=STRAT_TICKERS;
+const VR_TICKERS=STRAT_TICKERS;
+const MA_TICKERS=STRAT_TICKERS;
 
 let M={};
 let strat='dca';
