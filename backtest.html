@@ -217,7 +217,7 @@ td:first-child{text-align:left;}
   <div class="brand">
     <div>
       <div class="logo">Backtest</div>
-      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v1.95</span></h1>
+      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v1.96</span></h1>
     </div>
   </div>
   <a href="/" class="home">← JK 퀀트</a>
@@ -1428,26 +1428,26 @@ function renderDCA(res,tickers,opts){
     const r=res[t],m=META[t];
     const d=document.createElement('div');d.className='card';d.id='c_'+t;
     d.onclick=()=>{d.classList.toggle('off');const ds=chart&&chart.data.datasets.find(x=>x.label===t);if(ds){ds.hidden=!ds.hidden;chart.update();}}
-    const _mdd=(r.mdd!=null?r.mdd*100:0), _mar=(_mdd>0?(r.cagr||0)/_mdd:0);
-    const sub=isInd?`CAGR ${pctStr(r.cagr||0)} · MDD ${_mdd.toFixed(0)}% · MAR ${_mar.toFixed(2)}`
-                   :`원금 $${fmt(r.invested)} · MDD ${_mdd.toFixed(0)}% · MAR ${_mar.toFixed(2)}`;
-    d.innerHTML=`<div class="card-bar" style="background:${m.color}"></div><div class="card-rk ${i===0?'g':''}">#${i+1}</div><div class="card-body"><div class="card-tkr">${t}<span class="tk-nm">${m.name}</span></div><div class="card-val">$${fmt(r.final)}</div><div class="card-sub">${sub}</div></div>`;
+    // 무매 카드와 동일 항목: CAGR · MDD · MAR + 기간 · 원금 (_dcaOne의 mdd는 이미 %단위 — ×100 이중곱 버그 수정)
+    const _mdd=(r.mdd!=null?r.mdd:0), _mar=(_mdd>0?(r.cagr||0)/_mdd:0);
+    d.innerHTML=`<div class="card-bar" style="background:${m.color}"></div><div class="card-rk ${i===0?'g':''}">#${i+1}</div><div class="card-body"><div class="card-tkr">${t}<span class="tk-nm">${m.name}</span></div><div class="card-val">$${fmt(r.final)}</div><div class="card-sub">CAGR ${pctStr(r.cagr||0)} · MDD ${_mdd.toFixed(0)}% · MAR ${_mar.toFixed(2)}</div><div class="card-sub" style="opacity:.7">${(r.yrs||0).toFixed(1)}년 · 원금 $${fmt(r.invested)}</div></div>`;
     cc.appendChild(d);
   });
   const labels=[...new Set(valid.flatMap(t=>res[t].snap.map(s=>s[0])))].sort();
   document.getElementById('chartTitle').textContent='누적 가치 추이'+(isInd?' (개별기간 — 시작점 다를 수 있음)':' (카드 클릭=토글)');
   lastRender=()=>makeChart(ranked.map(t=>({label:t,data:alignSnap(res[t].snap,labels),borderColor:META[t].color,backgroundColor:'transparent',borderWidth:2,pointRadius:0,tension:.3,spanGaps:true})),labels);
   lastRender();
-  // 테이블
+  // 테이블 (h는 if/else 밖에서 선언 — 블록 let이라 마지막 h+= 에서 ReferenceError로 표가 안 그려지던 버그)
+  let h;
   if(isInd){
-    let h=`<thead><tr><th>ETF</th><th>레버리지</th><th>기간</th><th>원금</th><th>최종</th><th>수익률</th><th>CAGR</th><th>MDD</th><th>MAR</th></tr></thead><tbody>`;
+    h=`<thead><tr><th>ETF</th><th>레버리지</th><th>기간</th><th>원금</th><th>최종</th><th>수익률</th><th>CAGR</th><th>MDD</th><th>MAR</th></tr></thead><tbody>`;
     ranked.forEach((t,i)=>{const r=res[t],m=META[t];
-      const _mdd=(r.mdd!=null?r.mdd*100:0), _cagr=(r.cagr||0), _mar=(_mdd>0?_cagr/_mdd:0);
+      const _mdd=(r.mdd!=null?r.mdd:0), _cagr=(r.cagr||0), _mar=(_mdd>0?_cagr/_mdd:0);
       h+=`<tr><td><span class="dot" style="background:${m.color}"></span>${t}<span class="tk-nm">${m.name}</span></td><td>${m.lev}×</td><td style="font-size:11px;color:var(--dim)">${r.period||''} <span style="opacity:.7">(${(r.yrs||0).toFixed(1)}년)</span></td><td>$${fmt(r.invested)}</td><td style="color:var(--accent)">$${fmt(r.final)}</td><td style="color:${r.ret>=0?'var(--green)':'var(--red)'}">${pctStr(r.ret)}</td><td style="color:${_cagr>=0?'var(--green)':'var(--red)'}"><b>${pctStr(_cagr)}</b></td><td>${_mdd.toFixed(1)}%</td><td style="color:var(--gold)">${_mar.toFixed(2)}</td></tr>`;});
   }else{
-    let h=`<thead><tr><th>ETF</th><th>레버리지</th><th>원금</th><th>최종</th><th>수익률</th><th>CAGR</th><th>MDD</th><th>MAR</th><th>기간</th></tr></thead><tbody>`;
+    h=`<thead><tr><th>ETF</th><th>레버리지</th><th>원금</th><th>최종</th><th>수익률</th><th>CAGR</th><th>MDD</th><th>MAR</th><th>기간</th></tr></thead><tbody>`;
     ranked.forEach((t,i)=>{const r=res[t],m=META[t];
-      const _mdd=(r.mdd!=null?r.mdd*100:0), _cagr=(r.cagr||0), _mar=(_mdd>0?_cagr/_mdd:0), _yrs=(r.yrs||0);
+      const _mdd=(r.mdd!=null?r.mdd:0), _cagr=(r.cagr||0), _mar=(_mdd>0?_cagr/_mdd:0), _yrs=(r.yrs||0);
       h+=`<tr><td><span class="dot" style="background:${m.color}"></span>${t}<span class="tk-nm">${m.name}</span></td><td>${m.lev}×</td><td>$${fmt(r.invested)}</td><td style="color:${i===0?'var(--gold)':'var(--accent)'}"><b>$${fmt(r.final)}</b></td><td style="color:${r.ret>=0?'var(--green)':'var(--red)'}">${pctStr(r.ret)}</td><td>${pctStr(_cagr)}</td><td>${_mdd.toFixed(1)}%</td><td style="color:var(--gold)">${_mar.toFixed(2)}</td><td style="font-size:11px;color:var(--dim)">${_yrs.toFixed(1)}년</td></tr>`;});
   }
   h+='</tbody>';document.getElementById('tbl').innerHTML=h;
