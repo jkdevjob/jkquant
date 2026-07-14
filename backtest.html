@@ -217,7 +217,7 @@ td:first-child{text-align:left;}
   <div class="brand">
     <div>
       <div class="logo">Backtest</div>
-      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v1.94</span></h1>
+      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v1.95</span></h1>
     </div>
   </div>
   <a href="/" class="home">← JK 퀀트</a>
@@ -267,9 +267,9 @@ td:first-child{text-align:left;}
     </div>
     <div class="ctrl s-im hide"><label>익절 % <span style="font-size:9px;color:var(--dim)">전 종목 일괄 적용</span></label>
       <div class="seg" id="imTgtSeg">
-        <button data-t="10" class="active" title="Walk-Forward OOS 최적">10%</button>
+        <button data-t="10" title="Walk-Forward OOS 최적">10%</button>
         <button data-t="15">15%</button>
-        <button data-t="20" title="라오어 문서 공식(SOXL)">20%</button>
+        <button data-t="20" class="active" title="라오어 문서 공식(SOXL)">20%</button>
       </div>
     </div>
     <div class="ctrl s-im hide"><label>세금·비용</label>
@@ -500,7 +500,7 @@ let strat='dca';
 let dcaFreq='daily', dcaPeriodMode='common', imDiv=20;
 let imActive=new Set(IM_TICKERS);   // 무매 다중선택
 let vrActive=new Set(VR_TICKERS);   // VR 다중선택
-let maActive=new Set(['TQQQ']);     // 200일선 다중선택 (기본: 논문 스위트스팟)
+let maActive=new Set(MA_TICKERS);   // 200일선 다중선택 (기본: 전체 — 카드 비교로 시작)
 let maLen=200, maCostOn=true;       // 200일선: 이평 기간 · 비용 반영
 let vrCostOn=true;                  // VR: 세금·비용 반영 (무매·200일선과 동일 규약)
 let dcaActive=new Set(TICKERS);
@@ -547,7 +547,9 @@ async function loadData(startDate, endDate){
     maActive=new Set([...maActive].filter(t=>loaded.includes(t)||M[t]));
     if(!imActive.size) imActive=new Set(IM_TICKERS.filter(t=>loaded.includes(t)));
     if(!vrActive.size) vrActive=new Set(VR_TICKERS.filter(t=>loaded.includes(t)));
-    if(!maActive.size) maActive=new Set(MA_TICKERS.filter(t=>loaded.includes(t)).slice(0,1));
+    if(!maActive.size) maActive=new Set(MA_TICKERS.filter(t=>loaded.includes(t)));
+    // 로딩 후 세트 객체가 교체됐으므로 단일 종목 칩을 다시 그림 (구 세트를 잡고 있는 stale 칩 방지)
+    { const ts=document.getElementById('tickerSingle'); if(ts&&ts._render) ts._render(); }
     buildTickerPick();
     let maxDate=''; loaded.forEach(t=>{ const ds=Object.keys(M[t]); const last=ds[ds.length-1]; if(last>maxDate)maxDate=last; });
     if(stat){
@@ -726,7 +728,10 @@ function buildPickSingle(){
       c.className="tk-chip"+(active.has(t)?" on":"");
       c.style.setProperty("--c",META[t].color);c.id="tps_"+t;
       c.innerHTML="<div class=\"d\"></div>"+t;
-      c.onclick=()=>{ c.classList.toggle("on"); const on=c.classList.contains("on"); if(on) active.add(t); else active.delete(t);  };
+      // ★ 클릭 시점의 '현재' 전역 세트를 참조 — loadData가 세트를 새로 만들면(교체)
+      //   렌더 시점 캡처본은 버려진 세트가 되어 클릭이 실행에 반영 안 되는 버그가 있었음
+      c.onclick=()=>{ const act = strat==="im"? imActive : strat==="ma"? maActive : vrActive;
+        c.classList.toggle("on"); const on=c.classList.contains("on"); if(on) act.add(t); else act.delete(t); };
       single.appendChild(c);
     });
   }
@@ -778,7 +783,7 @@ let imShortMA=30;   // V5.0 국면 단기이평 (20/30/50)
 let imLoPct=6;      // V5.0 하락국면 익절% (조기탈출)
 let imCostOn=true;   // 세금·수수료·슬리피지 반영 (기본 ON)
 
-let imTarget=10;   // 익절%(전 종목 일괄). 별%base·리버스 복귀조건도 함께 결정 (통합 규약)
+let imTarget=20;   // 익절%(전 종목 일괄, 기본 20=라오어 공식). 별%base·리버스 복귀조건도 함께 결정 (통합 규약)
 function syncMaCtrl(){
   const on=(imEngine==='v50'||imEngine==='ab');
   ['imMaCtrl','imLoCtrl'].forEach(id=>{ const el=document.getElementById(id); if(!el)return;
@@ -814,17 +819,19 @@ function runDCA1(tkr,days,totalAmt){
   return _dcaOne(tkr,days,amt,1);
 }
 function _dcaOne(t,days,amt,step){
-  if(!M[t]) return {invested:0,final:0,ret:0,snap:[],mdd:0};
-  let sh=0,inv=0,mddPeak=-Infinity,mdd=0;const snap=[];
+  if(!M[t]) return {invested:0,final:0,ret:0,snap:[],mdd:0,uvSnap:[]};
+  // MDD·변동성은 단위가치(평가액÷누적투입) 기준 — 적립금 유입이 '수익률'로 잡히는 왜곡 제거.
+  //   (평가액 기준이면 초기 $3→$30 적립 구간이 +900% 수익처럼 계산돼 변동성 수천% 버그)
+  let sh=0,inv=0,uvPeak=-Infinity,mdd=0;const snap=[],uvSnap=[];
   days.forEach((d,i)=>{
     const p=M[t][d]?.[C]??0;
     if(p>0&&i%step===0){sh+=amt/p;inv+=amt;}
-    if(p>0){ const eq=sh*p; if(eq>mddPeak)mddPeak=eq; else if(mddPeak>0){ const dd=(mddPeak-eq)/mddPeak; if(dd>mdd)mdd=dd; } }
-    if(i%10===0)snap.push([d,p>0?sh*p:null]);
+    if(p>0&&inv>0){ const uv=sh*p/inv; if(uv>uvPeak)uvPeak=uv; else if(uvPeak>0){ const dd=(uvPeak-uv)/uvPeak; if(dd>mdd)mdd=dd; } }
+    if(i%10===0){ snap.push([d,p>0?sh*p:null]); uvSnap.push([d,(p>0&&inv>0)?sh*p/inv:null]); }
   });
   const last=M[t][days[days.length-1]]?.[C]??0;
   const fin=sh*last;
-  return {invested:inv,final:fin,ret:inv>0?(fin/inv-1)*100:0,snap,mdd:mdd*100};
+  return {invested:inv,final:fin,ret:inv>0?(fin/inv-1)*100:0,snap,mdd:mdd*100,uvSnap};
 }
 
 // ──── 전략 2: 무한매수법 V4.0 ────
@@ -1474,13 +1481,12 @@ function renderMultiStrat(type, results, params){
     r.cagr=cagrOf(r.final,r.invested,r.yrs);
     entries.push({key:t, label:t, sub:m.name, color:m.color, res:r, isDCA:false, t});
 
-    // 동일 종목·동일 기간·동일 총투입액 기준 DCA (10거래일=2주 간격 적립)
-    const step=10;
-    const dcaAmt=r.invested/Math.max(1,Math.floor(days.length/step));
-    const dc=_dcaOne(t,days,dcaAmt,step);
+    // 동일 종목·동일 기간·동일 총투입액 기준 DCA — 단일 상세뷰(renderSingle2)와 동일 규약(매일 균등 적립)
+    const dcaBase = type==='im' ? (r.peakInvested||r.invested) : r.invested;
+    const dc=runDCA1(t,days,dcaBase);
     dc.cagr=cagrOf(dc.final,dc.invested,r.yrs);
-    dc.yrs=r.yrs; dc.invested=dc.invested||r.invested;
-    entries.push({key:t+'_DCA', label:t+' DCA', sub:'단순적립', color:m.color, res:dc, isDCA:true, t});
+    dc.yrs=r.yrs; dc.invested=dc.invested||dcaBase;
+    entries.push({key:t+'_DCA', label:t+' DCA', sub:'단순적립(매일)', color:m.color, res:dc, isDCA:true, t});
   });
 
   const ranked=[...entries].sort((a,b)=>b.res.final-a.res.final);
@@ -1502,7 +1508,7 @@ function renderMultiStrat(type, results, params){
     d.innerHTML=`<div class="card-bar" style="background:${e.color};${e.isDCA?'opacity:.45':''}"></div>
       <div class="card-rk ${i===0?'g':''}">#${i+1}</div>
       <div class="card-body">
-        <div class="card-tkr">${e.label}${e.isDCA?'<span class="tk-nm" style="color:var(--dim)"> 단순적립</span>':`<span class="tk-nm">${e.sub}</span>`}</div>
+        <div class="card-tkr">${e.label}${e.isDCA?`<span class="tk-nm" style="color:var(--dim)"> ${e.sub}</span>`:`<span class="tk-nm">${e.sub}</span>`}</div>
         <div class="card-val">${money(r.final,e.t)}</div>
         <div class="card-sub">CAGR ${pct(r.cagr)} · MDD ${r.mdd.toFixed(0)}% · MAR ${(r.mdd>0?r.cagr/r.mdd:0).toFixed(2)}</div>
         <div class="card-sub" style="opacity:.7">${r.yrs.toFixed(1)}년 · 원금 ${money(r.invested,e.t)}</div>
@@ -1698,7 +1704,7 @@ function renderSingle2(type,r,days){
   const bCagr=cagrOf(bhFinal, bhBase, yrs);
   const dCagr=cagrOf(dcaFinal, dcaInv, yrs);
   const sMDD=(r.mdd!=null?r.mdd:calcMDD(r.snap)), bMDD=bhMDDDaily(r.tkr,days), dMDD=(dcaR.mdd!=null?dcaR.mdd:calcMDD(dcaSnap));
-  const sVol=calcVol(r.snap,10), bVol=calcVol(bhSnap,10), dVol=calcVol(dcaSnap,10);
+  const sVol=calcVol(r.snap,10), bVol=calcVol(bhSnap,10), dVol=calcVol(dcaR.uvSnap||dcaSnap,10);   // DCA는 단위가치 기준 (적립 유입 왜곡 제거)
   const nDays = days.length;
 
   document.getElementById('winner').style.display='';
