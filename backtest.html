@@ -217,7 +217,7 @@ td:first-child{text-align:left;}
   <div class="brand">
     <div>
       <div class="logo">Backtest</div>
-      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v1.97</span></h1>
+      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v1.98</span></h1>
     </div>
   </div>
   <a href="/" class="home">← JK 퀀트</a>
@@ -804,6 +804,21 @@ function commonDays(start,end,tickers){
   });
   return [...s].sort();
 }
+// 해당 기간에 데이터가 있는(10거래일 이상) 종목만 추림.
+//   KORU(2013 상장)·USD처럼 늦게 상장한 종목이 선택돼 있으면, 그 이전 구간으로 날짜를 바꿨을 때
+//   전체 교집합이 0이 되어 "공통 거래일 부족" alert만 뜨고 아무것도 안 그려지던 문제 방지 —
+//   가능한 종목만 돌리고 제외 목록은 결과 배너에 표시.
+function usableTickers(start,end,tickers){
+  const use=[],skip=[];
+  tickers.forEach(t=>{ const n=M[t]?Object.keys(M[t]).filter(d=>d>=start&&d<=end).length:0;
+    (n>=10?use:skip).push(t); });
+  return {use,skip};
+}
+function noteSkipped(skip){
+  if(!skip.length) return;
+  const w=document.getElementById('winner'); w.style.display='';
+  w.innerHTML=(w.innerHTML?w.innerHTML+' ':'')+`<span style="color:var(--gold);font-size:12px">⚠ 해당 기간 데이터 없어 제외: ${skip.join(', ')}</span>`;
+}
 
 // ──── 전략 1: DCA ────
 function runDCA(days,amt,freq){
@@ -1309,20 +1324,25 @@ async function run(){
       renderDCA(res,[...dcaActive],{amt,freq:dcaFreq,days:null,mode:'individual'});
     }else{
       // 공통기간: 전 종목 교집합
-      const days=commonDays(start,end,[...dcaActive]);
+      const {use:dcaUse,skip:dcaSkip}=usableTickers(start,end,[...dcaActive]);
+      if(!dcaUse.length){alert('선택 종목 모두 해당 기간 데이터가 없습니다. 날짜를 확인하세요.');return;}
+      const days=commonDays(start,end,dcaUse);
       if(days.length<10){alert('공통 거래일이 부족합니다. 개별기간 모드를 사용하세요.');return;}
       const res=runDCA(days,amt,dcaFreq);
       renderDCA(res,[...dcaActive],{amt,freq:dcaFreq,days,mode:'common'});
+      noteSkipped(dcaSkip);
     }
   }else if(strat==='im'){
     if(!imActive.size){alert('종목을 선택하세요.');return;}
     const cap=+document.getElementById('imCap').value||10000;
     const tgtOverride=imTarget;   // 세그에서 선택한 익절% (전 종목 동일)
     const compound=document.querySelector('#imCompound button.active')?.dataset.c!=='0';
-    const commonD=commonDays(start,end,[...imActive]);
+    const {use:imUse,skip:imSkip}=usableTickers(start,end,[...imActive]);
+    if(!imUse.length){alert('선택 종목 모두 해당 기간 데이터가 없습니다. 날짜를 확인하세요.');return;}
+    const commonD=commonDays(start,end,imUse);
     if(commonD.length<10){alert('공통 거래일이 부족합니다.');return;}
     const results={};
-    [...imActive].forEach(t=>{
+    imUse.forEach(t=>{
       const tgt = tgtOverride;   // 전 종목 동일 익절%
       if(imEngine==='ab'){
         results[t]={res:runIM(commonD,t,cap,imDiv,tgt,compound), res50:runIM50(commonD,t,cap,imDiv,tgt,compound), tgt, days:commonD};
@@ -1340,18 +1360,23 @@ async function run(){
       }else{
         renderABMulti(results, compound);   // 여러 종목 선택 시 종목별 요약 비교
       }
+      noteSkipped(imSkip);
       return;
     }
     renderMultiStrat('im',results,{cap,tgt:tgtOverride});
+    noteSkipped(imSkip);
   }else if(strat==='ma'){
     if(!maActive.size){alert('종목을 선택하세요.');return;}
     const cap=+document.getElementById('maCap').value||10000;
-    const commonD=commonDays(start,end,[...maActive]);
+    const {use:maUse,skip:maSkip}=usableTickers(start,end,[...maActive]);
+    if(!maUse.length){alert('선택 종목 모두 해당 기간 데이터가 없습니다. 날짜를 확인하세요.');return;}
+    const commonD=commonDays(start,end,maUse);
     if(commonD.length<10){alert('공통 거래일이 부족합니다.');return;}
     const results={};
-    [...maActive].forEach(t=>{ results[t]={res:runMA200(commonD,t,cap,maLen,maCostOn), days:commonD}; });
+    maUse.forEach(t=>{ results[t]={res:runMA200(commonD,t,cap,maLen,maCostOn), days:commonD}; });
     if(!Object.keys(results).length){alert('데이터 부족');return;}
     renderMultiStrat('ma',results,{cap,maLen});
+    noteSkipped(maSkip);
   }else{
     if(!vrActive.size){alert('종목을 선택하세요.');return;}
     const contribUSD=+document.getElementById('vrContrib').value||100;
@@ -1363,14 +1388,17 @@ async function run(){
     const withdraw=+document.getElementById('vrWithdraw')?.value||100;
     const startV=+document.getElementById('vrStartV')?.value||0;
     const startPool=+document.getElementById('vrStartPool')?.value||0;
-    const commonD=commonDays(start,end,[...vrActive]);
+    const {use:vrUse,skip:vrSkip}=usableTickers(start,end,[...vrActive]);
+    if(!vrUse.length){alert('선택 종목 모두 해당 기간 데이터가 없습니다. 날짜를 확인하세요.');return;}
+    const commonD=commonDays(start,end,vrUse);
     if(commonD.length<10){alert('공통 거래일이 부족합니다.');return;}
     const results={};
-    [...vrActive].forEach(t=>{
+    vrUse.forEach(t=>{
       results[t]={res:runVR(commonD,t,{contrib:contribUSD,G,bandPct:band,mode,formula,initAmt,withdraw,startV,startPool,costOn:vrCostOn}), days:commonD};
     });
     if(!Object.keys(results).length){alert('데이터 부족');return;}
     renderMultiStrat('vr',results,{contribUSD,G,band,mode,formula,initAmt,withdraw,startV,startPool});
+    noteSkipped(vrSkip);
   }
 }
 
