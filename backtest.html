@@ -217,7 +217,7 @@ td:first-child{text-align:left;}
   <div class="brand">
     <div>
       <div class="logo">Backtest</div>
-      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v1.98</span></h1>
+      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v1.99</span></h1>
     </div>
   </div>
   <a href="/" class="home">← JK 퀀트</a>
@@ -1522,7 +1522,7 @@ function renderMultiStrat(type, results, params){
     // 동일 종목·동일 기간·동일 총투입액 기준 DCA — 단일 상세뷰(renderSingle2)와 동일 규약(매일 균등 적립)
     // 비용반영 시 DCA도 수수료+기말 전량매도 세후 (전략과 같은 기준선)
     const cOn = type==='im' ? (typeof imCostOn!=='undefined'&&imCostOn) : type==='ma' ? maCostOn : vrCostOn;
-    const dcaBase = type==='im' ? (r.peakInvested||r.invested) : r.invested;
+    const dcaBase = r.invested;   // 전 전략 공통 '원금 전액' 기준 (무매도 한도 원금 — 탭 간 통일)
     const dc=runDCA1(t,days,dcaBase,cOn);
     dc.final=saleNet(dc.final,dc.invested,cOn);
     dc.ret=dc.invested>0?(dc.final/dc.invested-1)*100:0;
@@ -1728,8 +1728,8 @@ function renderSingle2(type,r,days){
 
   // ── 비용 반영 여부 (탭별 토글): ON이면 거치식·DCA도 수수료+기말 전량매도 세후로 비교
   const cOn = type==='im' ? (typeof imCostOn!=='undefined'&&imCostOn) : type==='ma' ? maCostOn : vrCostOn;
-  // ── 거치식(B&H): 무매는 실제 투입 피크 기준, VR은 총 투입액 기준
-  const bhBase = type==='im' ? (r.peakInvested||r.invested) : r.invested;
+  // ── 거치식(B&H)·DCA 기준: 전 전략 공통 '원금 전액' (무매도 한도 원금 기준 — 실투입 피크 아님, 탭 간 통일)
+  const bhBase = r.invested;
   const snapDates = r.snap.map(s=>s[0]);
   const bhSnap = buyHoldSeries(r.tkr, days, bhBase, snapDates, cOn?COST_FEE:0);
   const bhGross = bhSnap[bhSnap.length-1]?.[1] ?? bhBase;
@@ -1815,11 +1815,9 @@ function renderSingle2(type,r,days){
   }
 
   // 비교 기준 안내
-  const baseNote = (type==='im'
-    ? `거치식·DCA 기준: 무매 실제 투입 피크 <b>$${fmt(bhBase)}</b>`
-    : type==='ma'
-    ? `거치식·DCA 기준: 동일 원금 <b>$${fmt(bhBase)}</b>`
-    : `거치식·DCA 기준: VR 총 투입액 <b>$${fmt(bhBase)}</b>`)
+  const baseNote = (type==='vr'
+    ? `거치식·DCA 기준: VR 총 투입액 <b>$${fmt(bhBase)}</b>`
+    : `거치식·DCA 기준: 동일 원금 <b>$${fmt(bhBase)}</b>`)
     + (cOn?` · <span style="color:var(--gold)">거치식·DCA도 수수료+기말매도 세후</span>`:'');
 
   document.getElementById('detail').innerHTML=`
