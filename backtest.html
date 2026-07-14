@@ -217,7 +217,7 @@ td:first-child{text-align:left;}
   <div class="brand">
     <div>
       <div class="logo">Backtest</div>
-      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v1.96</span></h1>
+      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v1.97</span></h1>
     </div>
   </div>
   <a href="/" class="home">← JK 퀀트</a>
@@ -813,19 +813,20 @@ function runDCA(days,amt,freq){
   return res;
 }
 // 단일 종목 DCA (renderSingle2 비교용)
-function runDCA1(tkr,days,totalAmt){
+function runDCA1(tkr,days,totalAmt,costOn){
   // totalAmt를 거래일 수로 균등 분할 (매일 적립)
   const amt=totalAmt/days.length;
-  return _dcaOne(tkr,days,amt,1);
+  return _dcaOne(tkr,days,amt,1,costOn);
 }
-function _dcaOne(t,days,amt,step){
+function _dcaOne(t,days,amt,step,costOn){
   if(!M[t]) return {invested:0,final:0,ret:0,snap:[],mdd:0,uvSnap:[]};
   // MDD·변동성은 단위가치(평가액÷누적투입) 기준 — 적립금 유입이 '수익률'로 잡히는 왜곡 제거.
   //   (평가액 기준이면 초기 $3→$30 적립 구간이 +900% 수익처럼 계산돼 변동성 수천% 버그)
+  const FEE=costOn?COST_FEE:0;   // 비용반영 시 매회 매수 수수료 (costOn 미지정=기존과 동일)
   let sh=0,inv=0,uvPeak=-Infinity,mdd=0;const snap=[],uvSnap=[];
   days.forEach((d,i)=>{
     const p=M[t][d]?.[C]??0;
-    if(p>0&&i%step===0){sh+=amt/p;inv+=amt;}
+    if(p>0&&i%step===0){const fee=amt*FEE;sh+=(amt-fee)/p;inv+=amt;}
     if(p>0&&inv>0){ const uv=sh*p/inv; if(uv>uvPeak)uvPeak=uv; else if(uvPeak>0){ const dd=(uvPeak-uv)/uvPeak; if(dd>mdd)mdd=dd; } }
     if(i%10===0){ snap.push([d,p>0?sh*p:null]); uvSnap.push([d,(p>0&&inv>0)?sh*p/inv:null]); }
   });
@@ -1178,9 +1179,18 @@ function runVR(days,tkr,params){
 }
 
 // ──── 비교/지표 헬퍼 ────
+// 기말 전량 매도 가정(비용반영 시): 매도 수수료 0.25% + 양도세 22%(연 250만원 공제 1회).
+//   거치식·DCA는 보유 중 실현이익이 없어 과세이연 — 팔 때 한 번에 과세되는 현실을 근사.
+function saleNet(gross, invested, costOn){
+  if(!costOn) return gross;
+  const fee=gross*COST_FEE;
+  const pnl=gross-fee-invested;
+  const tax=Math.max(0, pnl*COST_KRW-COST_DEDUCT)*COST_TAXRATE/COST_KRW;
+  return gross-fee-tax;
+}
 // 거치식(Buy&Hold): 시작일에 invested 전액 매수 후 보유. 전략 snap 날짜에 맞춰 평가액 시계열 반환
-function buyHoldSeries(tkr, days, invested, snapDates){
-  const sh = invested / M[tkr][days[0]][C];
+function buyHoldSeries(tkr, days, invested, snapDates, feeRate){
+  const sh = invested*(1-(feeRate||0)) / M[tkr][days[0]][C];
   // snapDates(전략 스냅 날짜)와 동일 시점의 거치식 평가액
   return snapDates.map(d=>{
     const row = M[tkr][d];
@@ -1482,8 +1492,12 @@ function renderMultiStrat(type, results, params){
     entries.push({key:t, label:t, sub:m.name, color:m.color, res:r, isDCA:false, t});
 
     // 동일 종목·동일 기간·동일 총투입액 기준 DCA — 단일 상세뷰(renderSingle2)와 동일 규약(매일 균등 적립)
+    // 비용반영 시 DCA도 수수료+기말 전량매도 세후 (전략과 같은 기준선)
+    const cOn = type==='im' ? (typeof imCostOn!=='undefined'&&imCostOn) : type==='ma' ? maCostOn : vrCostOn;
     const dcaBase = type==='im' ? (r.peakInvested||r.invested) : r.invested;
-    const dc=runDCA1(t,days,dcaBase);
+    const dc=runDCA1(t,days,dcaBase,cOn);
+    dc.final=saleNet(dc.final,dc.invested,cOn);
+    dc.ret=dc.invested>0?(dc.final/dc.invested-1)*100:0;
     dc.cagr=cagrOf(dc.final,dc.invested,r.yrs);
     dc.yrs=r.yrs; dc.invested=dc.invested||dcaBase;
     entries.push({key:t+'_DCA', label:t+' DCA', sub:'단순적립(매일)', color:m.color, res:dc, isDCA:true, t});
@@ -1684,18 +1698,21 @@ function renderSingle2(type,r,days){
   const isMonthly = density < 0.15;
   const dateRange = `${days[0]}~${days[days.length-1]}`;
 
+  // ── 비용 반영 여부 (탭별 토글): ON이면 거치식·DCA도 수수료+기말 전량매도 세후로 비교
+  const cOn = type==='im' ? (typeof imCostOn!=='undefined'&&imCostOn) : type==='ma' ? maCostOn : vrCostOn;
   // ── 거치식(B&H): 무매는 실제 투입 피크 기준, VR은 총 투입액 기준
   const bhBase = type==='im' ? (r.peakInvested||r.invested) : r.invested;
   const snapDates = r.snap.map(s=>s[0]);
-  const bhSnap = buyHoldSeries(r.tkr, days, bhBase, snapDates);
-  const bhFinal = bhSnap[bhSnap.length-1]?.[1] ?? bhBase;
+  const bhSnap = buyHoldSeries(r.tkr, days, bhBase, snapDates, cOn?COST_FEE:0);
+  const bhGross = bhSnap[bhSnap.length-1]?.[1] ?? bhBase;
+  const bhFinal = saleNet(bhGross, bhBase, cOn);
   const bhRet = (bhFinal/bhBase-1)*100;
 
   // ── 단순 DCA: 같은 기간, 같은 총액을 매일 균등 적립
-  const dcaR   = runDCA1(r.tkr, days, bhBase);
-  const dcaFinal = dcaR.final;
+  const dcaR   = runDCA1(r.tkr, days, bhBase, cOn);
+  const dcaFinal = saleNet(dcaR.final, dcaR.invested, cOn);
   const dcaInv   = dcaR.invested;
-  const dcaRet   = dcaR.ret;
+  const dcaRet   = dcaInv>0?(dcaFinal/dcaInv-1)*100:0;
   const dcaSnap  = dcaR.snap;
   const dcaAmt   = bhBase / days.length;
 
@@ -1770,11 +1787,12 @@ function renderSingle2(type,r,days){
   }
 
   // 비교 기준 안내
-  const baseNote = type==='im'
+  const baseNote = (type==='im'
     ? `거치식·DCA 기준: 무매 실제 투입 피크 <b>$${fmt(bhBase)}</b>`
     : type==='ma'
     ? `거치식·DCA 기준: 동일 원금 <b>$${fmt(bhBase)}</b>`
-    : `거치식·DCA 기준: VR 총 투입액 <b>$${fmt(bhBase)}</b>`;
+    : `거치식·DCA 기준: VR 총 투입액 <b>$${fmt(bhBase)}</b>`)
+    + (cOn?` · <span style="color:var(--gold)">거치식·DCA도 수수료+기말매도 세후</span>`:'');
 
   document.getElementById('detail').innerHTML=`
     <div class="cmp-wrap" style="grid-column:1/-1">
