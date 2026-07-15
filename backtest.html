@@ -217,7 +217,7 @@ td:first-child{text-align:left;}
   <div class="brand">
     <div>
       <div class="logo">Backtest</div>
-      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v1.101</span></h1>
+      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v1.102</span></h1>
     </div>
   </div>
   <a href="/" class="home">← JK 퀀트</a>
@@ -524,7 +524,8 @@ let loadedStart='', loadedEnd='';  // 로딩된 기간
   const iso=d=>d.toISOString().slice(0,10);
   const today=new Date();
   document.getElementById('dEnd').value=iso(today);
-  document.getElementById('dStart').value='2000-01-01';   // 전 구간 기본 (데이터 있는 만큼 사용)
+  const s10=new Date(today); s10.setFullYear(s10.getFullYear()-10);
+  document.getElementById('dStart').value=iso(s10);   // 기본: 10년 전 (필요하면 더 과거로 바꿔 실행)
   buildTickerPick();
   
   showEmptyState();
