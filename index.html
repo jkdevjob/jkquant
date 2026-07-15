@@ -35,6 +35,7 @@ h1 .v{color:var(--gold)}
 .tab.on{color:#fff;border-color:transparent}
 .tab[data-t="inf"].on{background:linear-gradient(135deg,#1f7a5a,#0f4d39)}
 .tab[data-t="vr"].on{background:linear-gradient(135deg,#4b4ec9,#2d2f86)}
+.tab[data-t="ma"].on{background:linear-gradient(135deg,#b06a1f,#7a4611)}
 .sessbar{display:flex;gap:7px;align-items:center;margin:13px 0;overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:2px}
 .sesschip{padding:8px 13px;border-radius:10px;background:var(--panel);border:1px solid var(--line);color:var(--dim);font-size:12.5px;font-weight:700;cursor:pointer;white-space:nowrap;flex-shrink:0}
 .sesschip.on{background:var(--vio-bg);color:var(--vio);border-color:var(--vio)}
@@ -427,6 +428,7 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
   <div class="tabs">
     <button class="tab on" data-t="inf">무한매수법</button>
     <button class="tab" data-t="vr">밸류리밸런싱</button>
+    <button class="tab" data-t="ma">로테이션</button>
   </div>
   <div class="sessbar" id="sessbar"></div>
 
@@ -787,10 +789,88 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
     </div>
   </section>
 
+  <!-- 200일선 로테이션 -->
+  <section id="ma">
+    <div class="subnav">
+      <button class="chip on" data-b="ma-now">현재</button>
+      <button class="chip" data-b="ma-hist">신호이력</button>
+      <button class="chip" data-b="ma-guide">설명</button>
+    </div>
+
+    <!-- ── 현재: 신호 콕핏 ── -->
+    <div class="block on" id="ma-now">
+      <!-- 현재가 입력 + 자동조회 -->
+      <div class="card" style="margin-bottom:13px">
+        <div class="field" style="margin:0"><label id="ma_price_lbl">현재가 ($) <span class="hint">신호는 종가(전체 이력) 기준으로 계산</span></label>
+          <div style="display:flex;gap:8px"><input id="ma_price" type="text" inputmode="decimal" placeholder="자동 조회" oninput="commaInput(this);onMaPrice()" style="flex:1">
+          <button class="fetchbtn" id="ma_autobtn" onclick="fetchMaQuote()">🔄 자동</button></div></div>
+        <div class="fetchnote" id="ma_fetchnote" style="margin:6px 0 0"></div>
+      </div>
+
+      <!-- 신호 히어로 -->
+      <div class="vhero" style="background:linear-gradient(165deg,#2a1c0e,var(--panel));border-color:#7a4611">
+        <div class="vh-top">
+          <span class="vh-kick">SIGNAL · <span id="ma_ticker">SOXL</span> <span id="ma_len_lbl" style="color:var(--faint);font-weight:500">200일선</span></span>
+          <span class="bandpill wait" id="ma_pill">대기</span>
+        </div>
+        <div class="vh-big" id="ma_sig_txt" style="font-size:30px">—</div>
+        <div class="vh-band" id="ma_gap_lbl">합성 1배지수 — · 200일선 —</div>
+        <div class="posbar">
+          <div class="pb-track" style="background:linear-gradient(90deg,#f5a45133,#8fd14f33)"><div class="pb-mark" id="mg_mark" style="left:50%"></div></div>
+          <div class="pb-scale"><span>−15%</span><span class="mid">200일선</span><span>+15%</span></div>
+        </div>
+      </div>
+
+      <!-- 판단 -->
+      <div class="card" style="margin-bottom:13px">
+        <h3><span class="dot"></span>오늘 할 일</h3>
+        <div id="ma_verdict"><p class="lead">위 🔄 자동 버튼을 누르면 종가 이력을 불러와 보유·현금 신호를 계산합니다.</p></div>
+        <div style="display:flex;gap:8px;margin-top:12px">
+          <button class="fetchbtn" id="ma_in_btn" style="flex:1;background:var(--buy-bg);color:var(--buy);border-color:var(--buy-dim)" onclick="maRecord('in')">🟢 진입(매수) 기록</button>
+          <button class="fetchbtn" id="ma_out_btn" style="flex:1;background:var(--sell-bg);color:var(--sell);border-color:var(--sell-dim)" onclick="maRecord('out')">🔴 청산(현금) 기록</button>
+        </div>
+      </div>
+
+      <!-- 계좌 상황 -->
+      <div class="card acct">
+        <h3 style="justify-content:space-between"><span style="display:flex;align-items:center;gap:8px"><span class="dot"></span>내 포지션</span><span class="bandpill in" id="macct_ret" style="font-size:12px">—</span></h3>
+        <div class="ar"><span class="ak">현재 상태</span><span class="av vio" id="macct_pos">현금</span></div>
+        <div class="ar"><span class="ak" id="macct_close_k">종가</span><span class="av" id="macct_close">—</span></div>
+        <div class="ar"><span class="ak">보유 개수</span><span class="av" id="macct_qty">0주</span></div>
+        <div class="ar"><span class="ak">보유 평가금</span><span class="av" id="macct_eval">$0</span></div>
+        <div class="ar"><span class="ak">진입가 <span class="sub">마지막 진입 기록</span></span><span class="av" id="macct_entry">—</span></div>
+        <div class="ar"><span class="ak">현재 국면 지속 <span class="sub">신호 전환 이후</span></span><span class="av buy" id="ma_regime">—</span></div>
+      </div>
+    </div>
+
+    <!-- ── 신호이력 ── -->
+    <div class="block" id="ma-hist">
+      <div class="card"><h3 style="justify-content:space-between"><span style="display:flex;align-items:center;gap:8px"><span class="dot"></span>신호 전환 이력</span><span class="lh-stage" id="ma_flip_count">—</span></h3>
+        <div class="cyc-scroll"><table class="cyctbl" id="ma_flip_tbl"></table></div>
+        <p class="note" style="margin-top:8px">합성 1배지수가 200일선을 위로/아래로 교차한 날들입니다. 실제 로테이션은 <b>전일 신호 → 당일 종가 체결</b>이 원칙.</p></div>
+      <div class="card"><h3><span class="dot"></span>내 진입·청산 기록 <span id="ma_rec_count" class="cnt"></span></h3>
+        <div class="htable-wrap"><table class="htable" id="ma_rec_tbl"></table></div>
+        <button class="ghostbtn" onclick="clearHist('ma')">기록 전체 삭제</button></div>
+    </div>
+
+    <!-- ── 설명 ── -->
+    <div class="block" id="ma-guide">
+      <div class="card"><h3><span class="dot"></span>한 줄 요약</h3><p class="lead">레버리지 ETF의 <b>합성 1배지수</b>가 200일 이동평균선 <b>위면 100% 보유</b>, <b>아래면 전액 현금</b>. 2016년 CMT 다우상 논문 "Leverage for the Long Run".</p></div>
+      <div class="card"><h3><span class="dot"></span>왜 합성 1배지수인가</h3>
+        <p class="note">SOXL(3배) 자체의 200일선이 아니라, 그 기초가 되는 <b>1배 지수</b>(레버리지 일수익률÷배수를 누적 복원)의 200일선을 봅니다. 변동성 낙폭(volatility decay)이 레버리지를 갉아먹는 구간만 피하는 것이 핵심.</p></div>
+      <div class="card"><h3><span class="dot"></span>규칙</h3>
+        <ul class="clean"><li><b>신호</b> 합성지수 &gt; 200일선 → 보유 / 아래 → 현금</li><li><b>판정</b> 전일 종가 기준 (룩어헤드 없음)</li><li><b>체결</b> 당일 종가(MOC)</li><li><b>워밍업</b> 이력 200일 미만은 보유로 간주</li></ul></div>
+      <div class="card"><h3><span class="dot"></span>운영 방법</h3>
+        <ol class="steps"><li>설정(⚙️)에서 종목·이평기간·원금 지정</li><li>매일(또는 며칠에 한 번) 🔄 자동으로 신호 확인</li><li>신호=보유인데 현금이면 → 진입 기록</li><li>신호=현금인데 보유면 → 청산 기록</li><li>같으면 그대로 유지 (거래 없음)</li></ol></div>
+      <div class="card"><h3><span class="dot"></span>참고</h3>
+        <p class="note">거래가 드물어(연 2~6회) 세금·수수료 부담이 적고 MDD가 크게 낮아집니다. 다만 급반등 초입에 하루이틀 늦게 재진입하는 구조적 지연이 있습니다.</p></div>
+    </div>
+  </section>
+
   <footer>
     <strong>JK 퀀트</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v2.30</b> · 2026-07-01</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v2.31</b> · 2026-07-01</div>
   </footer>
 </div>
 
@@ -840,6 +920,17 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
     <div class="field"><label>밴드 폭 (%) <span class="hint">±, 좁을수록 매매↑</span></label><input id="set_band" type="number" inputmode="decimal" value="15"></div>
     <div class="field"><label id="set_startv_lbl">시작 V ($) <span class="hint">0이면 첫 매수가 V</span></label><input id="set_startv" type="text" inputmode="decimal" value="0" oninput="commaInput(this)"></div>
     <div class="field"><label id="set_startpool_lbl">시작 Pool ($)</label><input id="set_startpool" type="text" inputmode="decimal" value="0" oninput="commaInput(this)"></div>
+  </div>
+  <div id="set_ma" style="display:none">
+    <div class="seclabel">종목 (티커)</div>
+    <div class="seg" id="set_maticker" style="flex-wrap:wrap">
+      <button data-v="SOXL">SOXL</button><button data-v="USD">USD</button><button data-v="TECL">TECL</button>
+      <button data-v="TQQQ">TQQQ</button><button data-v="QLD">QLD</button><button data-v="KORU">KORU</button></div>
+    <p class="note" style="margin:4px 0 8px">합성 1배지수는 종목 배수로 자동 복원됩니다 (SOXL·TECL·TQQQ·KORU=3배, USD·QLD=2배).</p>
+    <div class="seclabel">이동평균 기간 <span class="hint" style="color:var(--faint);font-weight:500">합성 1배지수 기준</span></div>
+    <div class="seg" id="set_malen"><button data-v="100">100일</button><button data-v="150">150일</button><button data-v="200" class="on">200일</button></div>
+    <p class="note" style="margin:4px 0 8px">200일선이 논문 기본값(Gayed·Bilello). 짧을수록 신호가 자주 바뀝니다.</p>
+    <div class="field"><label id="set_maprincipal_lbl">원금 ($)</label><input id="set_maprincipal" type="text" inputmode="decimal" value="10000" oninput="commaInput(this)"></div>
   </div>
   <div class="seclabel">데이터 백업 · 동기화</div>
   <button class="addbtn" style="margin-bottom:8px;background:var(--panel2);color:var(--ink);border:1px solid var(--line)" onclick="exportJSON()">⬇ JSON 파일로 내보내기</button>
@@ -948,22 +1039,28 @@ function defVrSettings(){return{ticker:'TQQQ',mode:0.75,formula:'basic',g:10,add
 function uid(){return 's'+Date.now()+Math.floor(Math.random()*9999)}
 function newInfSession(name){return{id:uid(),name:name||'세션 1',settings:defInfSettings(),hist:[]}}
 function newVrSession(name){return{id:uid(),name:name||'세션 1',settings:defVrSettings(),hist:[]}}
+function defMaSettings(){return{ticker:'SOXL',maLen:200,principal:10000,cur:'usd'}}
+function newMaSession(name){return{id:uid(),name:name||'세션 1',settings:defMaSettings(),hist:[]}}
 
 /* 신규 사용자 기본 상태 (빈 세션 1개씩) */
 function freshState(){
   const infS=newInfSession('내 계좌');
   const vrS=newVrSession('내 계좌');
-  return {activeTab:'inf',inf:{sessions:[infS],active:infS.id},vr:{sessions:[vrS],active:vrS.id}};
+  const maS=newMaSession('내 계좌');
+  return {activeTab:'inf',inf:{sessions:[infS],active:infS.id},vr:{sessions:[vrS],active:vrS.id},ma:{sessions:[maS],active:maS.id}};
 }
 let curUid=null;           // 로그인한 사용자 uid
 function lsKey(){return curUid?('qcockpit_v2_'+curUid):'qcockpit_v2_guest'}
 
 function validState(o){return o&&o.inf&&o.vr&&o.inf.sessions&&o.vr.sessions&&o.inf.sessions.length&&o.vr.sessions.length}
+// 로테이션 탭 마이그레이션: 기존 상태(inf/vr만)에 ma 박스를 추가 (기존 데이터 보존). 모든 S 로드 경로에서 호출.
+function ensureMaBox(){ if(S&&(!S.ma||!S.ma.sessions||!S.ma.sessions.length)){ const m=newMaSession('내 계좌'); S.ma={sessions:[m],active:m.id}; } }
 
 function load(){
   try{S=JSON.parse(localStorage.getItem(lsKey()))}catch(e){S=null}
   if(!validState(S)){S=freshState();saveLocal();}
   if(!S.activeTab)S.activeTab='inf';
+  ensureMaBox();
   forceV40();   // V5.0 숨김 기간: 저장된 v50 세션을 v40으로 되돌림
 }
 function saveLocal(){S._updated=Date.now();localStorage.setItem(lsKey(),JSON.stringify(S))}
@@ -2032,6 +2129,160 @@ function renderVrHist(){
   $('vr_table').innerHTML=`<tr><th>날짜</th><th>유형</th><th>단가×수량</th><th>금액</th><th></th></tr>`+(hist.length?rows:`<tr><td class="empty" colspan="5">아직 기록이 없습니다</td></tr>`);
 }
 
+/* ══════════ 200일선 로테이션 (LRS) 운영 ══════════ */
+/* 합성 1배지수(레버리지 일수익률÷배수 누적)의 N일 SMA로 보유/현금 신호.
+   백테스트 runMA200과 동일 규약 · 레버리지 규약은 무매 국면(imRegime)과 동일(USD·QLD·SSO=2배, 그 외 3배). */
+let maQuoteData=null;   // {symbol, days:[{date,close}], last, price, currency, src}
+function maLevOf(t){ const s=String(t||'').toUpperCase(); return (s==='QLD'||s==='USD'||s==='SSO')?2:3; }
+
+function computeMa(){
+  const st=curStrat().settings, hist=curStrat().hist;
+  const N=st.maLen||200;
+  // 내 포지션: 이력의 마지막 진입/청산으로 결정
+  let pos='cash', entry=null;
+  hist.forEach(h=>{ if(h.type==='in'){pos='hold';entry=h;} else if(h.type==='out'){pos='cash';entry=null;} });
+  const sym=String(st.ticker||'SOXL').toUpperCase();
+  const days=(maQuoteData && String(maQuoteData.symbol||'').toUpperCase()===sym && maQuoteData.days) ? maQuoteData.days : null;
+  if(!days || days.length<2) return {st,N,pos,entry,ready:false};
+  const lev=maLevOf(sym);
+  const closes=days.map(d=>d.close), dates=days.map(d=>d.date);
+  const n=closes.length;
+  const syn=new Array(n), sma=new Array(n);
+  let s=0; const buf=[]; let cur=100;
+  for(let i=0;i<n;i++){
+    if(i>0){ const r=closes[i]/closes[i-1]-1; cur=cur*(1+r/lev); }
+    syn[i]=cur; buf.push(cur); s+=cur; if(buf.length>N)s-=buf.shift();
+    sma[i]= buf.length===N ? s/N : null;
+  }
+  const last=n-1, idxNow=syn[last], smaNow=sma[last];
+  const warming = smaNow==null;
+  const signal = warming ? 'hold' : (idxNow>smaNow ? 'hold':'cash');   // 워밍업=보유
+  const gapPct = smaNow ? (idxNow/smaNow-1)*100 : null;
+  // 신호 전환 이력
+  const flips=[]; let prev=null;
+  for(let i=0;i<n;i++){ if(sma[i]==null)continue; const sig=syn[i]>sma[i]?'hold':'cash';
+    if(prev!==null && sig!==prev) flips.push({date:dates[i], to:sig, gap:(syn[i]/sma[i]-1)*100}); prev=sig; }
+  // 현재 국면 지속일 (마지막 전환 이후 거래일 수)
+  let regimeStart=dates[last], regimeDays=1;
+  for(let i=last-1;i>=0;i--){ if(sma[i]==null){ regimeStart=dates[i+1]||dates[i]; break; }
+    const sig=syn[i]>sma[i]?'hold':'cash'; if(sig!==signal){ regimeStart=dates[i+1]; break; } regimeDays++; if(i===0)regimeStart=dates[0]; }
+  return {st,N,pos,entry,ready:true,lev,idxNow,smaNow,warming,signal,gapPct,flips,regimeStart,regimeDays,
+          lastDate:dates[last], lastClose:closes[last], price:(maQuoteData.price>0?maQuoteData.price:closes[last])};
+}
+
+function fetchMaQuote(){ loadMaData(true); }
+async function loadMaData(force){
+  const st=curStrat().settings, note=$('ma_fetchnote');
+  if(krwNoAuto(st)){ if(note){note.className='fetchnote err';note.textContent='ⓘ 원화 종목은 설정에서 종목코드(6자리) 입력 시 자동 시세가 됩니다.';} return; }
+  const sym=String(st.ticker||'SOXL').toUpperCase();
+  if(!force && maQuoteData && String(maQuoteData.symbol||'').toUpperCase()===sym){ renderMaNow(); renderMaHist(); return; }
+  if(note){note.className='fetchnote load';note.textContent='종가 이력 불러오는 중…';}
+  const q=await fetchDaily(sym);
+  if(q && q.days && q.days.length){
+    maQuoteData={symbol:q.symbol,days:q.days,last:q.last,price:(q.price!=null&&+q.price>0)?+q.price:q.last.close,currency:q.currency||'USD',src:q.src};
+    const live=maQuoteData.price;
+    if($('ma_price')) $('ma_price').value = nfix(live,2);
+    if(note){note.className='fetchnote ok';note.textContent=`✓ ${q.symbol} ${q.last.date} 종가 ${px(q.last.close)} · ${q.days.length}일 이력`;}
+    renderMaNow(); renderMaHist();
+  }else if(note){ note.className='fetchnote err'; note.textContent='⚠ 불러오기 실패 — 잠시 후 다시 시도하세요.'; }
+}
+function onMaPrice(){ const p=inputNum('ma_price')||0; if(maQuoteData && p>0) maQuoteData.price=p; renderMaNow(); }
+
+function renderMaNow(){
+  const c=computeMa(), st=c.st;
+  $('ma_ticker').textContent=tickerLabel(st.ticker||'SOXL');
+  $('ma_len_lbl').textContent=(c.N||200)+'일선';
+  $('macct_close_k').textContent=tickerLabel(st.ticker||'SOXL')+' 종가';
+  if(!c.ready){
+    $('ma_pill').className='bandpill wait'; $('ma_pill').textContent='대기';
+    $('ma_sig_txt').textContent='—'; $('ma_sig_txt').style.color='';
+    $('ma_gap_lbl').textContent='🔄 자동을 눌러 종가 이력을 불러오세요';
+    $('mg_mark').style.left='50%';
+    $('ma_verdict').innerHTML='<p class="lead">위 🔄 자동 버튼을 누르면 종가 이력을 불러와 보유·현금 신호를 계산합니다.</p>';
+    $('macct_pos').textContent=c.pos==='hold'?'보유중':'현금';
+    $('macct_close').textContent='—'; $('macct_qty').textContent='0주'; $('macct_eval').textContent=px(0);
+    $('macct_entry').textContent=c.entry?px(c.entry.price):'—';
+    $('ma_regime').textContent='—'; $('macct_ret').textContent='—'; $('macct_ret').className='bandpill in';
+    return;
+  }
+  const hold=c.signal==='hold', gp=c.gapPct, price=c.price||c.lastClose;
+  $('ma_pill').className='bandpill '+(hold?'in':'under');
+  $('ma_pill').textContent=hold?'보유 신호':'현금 신호';
+  $('ma_sig_txt').textContent=hold?'🟢 보유 (100%)':'⚪ 현금 (0%)';
+  $('ma_sig_txt').style.color=hold?'var(--buy)':'var(--faint)';
+  $('ma_gap_lbl').innerHTML=`합성지수 ${c.idxNow.toFixed(1)} · ${c.N}일선 ${c.smaNow.toFixed(1)} · <b style="color:${gp>=0?'var(--buy)':'var(--sell)'}">${gp>=0?'+':''}${gp.toFixed(2)}%</b>`;
+  let pct=(gp+15)/30*100; pct=Math.max(0,Math.min(100,pct)); $('mg_mark').style.left=pct+'%';
+  // 판단 (신호 vs 내 포지션)
+  let v='';
+  if(hold && c.pos!=='hold'){
+    const qty=price>0?Math.floor((st.principal||0)/price):0;
+    v=`<div class="oitem b"><span class="tag">진입</span><span class="nm">현금 → 100% 매수 전환</span><span class="pr">${px(price)}</span></div>
+       <p class="note" style="margin-top:8px">약 ${qty}주 매수 (원금 ${wn(st.principal)} 기준). 아래 <b>🟢 진입 기록</b>으로 남기세요.</p>`;
+  }else if(!hold && c.pos==='hold'){
+    v=`<div class="oitem s"><span class="tag">청산</span><span class="nm">보유 → 전액 현금 전환</span><span class="pr">${px(price)}</span></div>
+       <p class="note" style="margin-top:8px">보유분 전량 매도 후 현금 보유. 아래 <b>🔴 청산 기록</b>으로 남기세요.</p>`;
+  }else if(hold && c.pos==='hold'){
+    v=`<div class="oitem" style="background:var(--buy-bg);justify-content:center"><span class="nm" style="flex:none;color:var(--buy)">✅ 보유 유지 — 신호·포지션 일치 (거래 없음)</span></div>`;
+  }else{
+    v=`<div class="oitem" style="background:rgba(245,196,81,.1);justify-content:center"><span class="nm" style="flex:none;color:var(--gold)">⏸ 현금 유지 — 신호·포지션 일치 (거래 없음)</span></div>`;
+  }
+  if(c.warming) v=`<p class="note" style="color:var(--gold)">ⓘ 이력이 ${c.N}일 미만이라 워밍업(보유)으로 간주합니다.</p>`+v;
+  $('ma_verdict').innerHTML=v;
+  // 계좌
+  $('macct_pos').textContent=c.pos==='hold'?'보유중':'현금';
+  $('macct_pos').style.color=c.pos==='hold'?'var(--buy)':'var(--vio)';
+  $('macct_close').textContent=px(c.lastClose);
+  const qtyHold=(c.pos==='hold'&&c.entry)?(c.entry.qty||0):0;
+  $('macct_qty').textContent=qtyHold+'주';
+  $('macct_eval').textContent=px(qtyHold*price);
+  $('macct_entry').textContent=c.entry?px(c.entry.price):'—';
+  if(c.pos==='hold'&&c.entry&&c.entry.price>0){ const hr=(price/c.entry.price-1)*100;
+    $('macct_ret').textContent=`${hr>=0?'+':''}${hr.toFixed(2)}%`; $('macct_ret').className='bandpill '+(hr>=0?'in':'over');
+  }else{ $('macct_ret').textContent='현금'; $('macct_ret').className='bandpill'; }
+  $('ma_regime').textContent=`${c.regimeDays}거래일`;
+}
+
+function renderMaHist(){
+  const c=computeMa();
+  const ft=$('ma_flip_tbl');
+  if(!c.ready){ $('ma_flip_count').textContent='—'; if(ft)ft.innerHTML=`<tr><td class="empty" colspan="3" style="text-align:center;color:var(--faint);padding:14px">🔄 자동으로 이력을 불러오세요</td></tr>`; }
+  else if(ft){
+    const flips=(c.flips||[]).slice(-30).reverse();
+    $('ma_flip_count').textContent=`총 ${(c.flips||[]).length}회`;
+    let h=`<tr><th>전환일</th><th>신호</th><th>지수−${c.N}일선</th></tr>`;
+    flips.forEach(f=>{ h+=`<tr><td>${f.date}</td><td style="color:${f.to==='hold'?'var(--buy)':'var(--sell)'}">${f.to==='hold'?'▲ 보유 전환':'▼ 현금 전환'}</td><td>${f.gap>=0?'+':''}${f.gap.toFixed(2)}%</td></tr>`; });
+    if(!flips.length) h+=`<tr><td class="empty" colspan="3" style="text-align:center;color:var(--faint);padding:14px">전환 이력 없음</td></tr>`;
+    ft.innerHTML=h;
+  }
+  const hist=curStrat().hist;
+  $('ma_rec_count').textContent=hist.length?`(${hist.length}건)`:'';
+  const LBL={in:'진입(매수)',out:'청산(현금)'}, CLS={in:'buy',out:'sell'};
+  let rows='';
+  hist.forEach((h,i)=>{
+    const detail=h.type==='in'?`${px(h.price)}${h.qty?' × '+h.qty+'주':''}`:px(h.price);
+    rows=`<tr class="${CLS[h.type]||''}"><td>${h.date||'-'}</td><td>${LBL[h.type]||h.type}</td><td>${detail}</td><td><span class="del" onclick="delMa(${i})">✕</span></td></tr>`+rows;
+  });
+  $('ma_rec_tbl').innerHTML=`<tr><th>날짜</th><th>유형</th><th>단가</th><th></th></tr>`+(hist.length?rows:`<tr><td class="empty" colspan="4">아직 기록이 없습니다</td></tr>`);
+}
+
+function maRecord(type){
+  const c=computeMa(), st=curStrat().settings;
+  const price=c.ready?(c.price||c.lastClose):inputNum('ma_price');
+  if(!price||price<=0){ alert('먼저 🔄 자동으로 현재가를 불러오거나 직접 입력하세요.'); return; }
+  let rec; const date=new Date().toISOString().slice(0,10);
+  if(type==='in'){ const qty=Math.floor((st.principal||0)/price)||0; rec={type:'in',date,price:+price,qty,ts:Date.now()}; }
+  else{ rec={type:'out',date,price:+price,ts:Date.now()}; }
+  if(!confirm(`${type==='in'?'진입(매수)':'청산(현금)'} ${px(price)}${rec.qty?' × '+rec.qty+'주':''}\n오늘(${date}) 기록할까요?`))return;
+  const h=curStrat().hist; h.push(rec); sortHist(h); save(); refreshMa();
+  alert('기록됨 ✓');
+}
+function delMa(i){ if(!confirm('이 기록을 삭제할까요?'))return; curStrat().hist.splice(i,1); save(); refreshMa(); }
+
+function refreshMa(){
+  renderMaNow(); renderMaHist(); renderStatusline();
+  if(S.activeTab==='ma'){ try{ if(!krwNoAuto(curStrat().settings)) loadMaData(); }catch(e){console.error(e)} }
+}
+
 /* 구버전 주문시트 호환용 (더 이상 사용 안 함) */
 function renderVrOrder(){}
 
@@ -2751,6 +3002,7 @@ function sheetSaveVr(){
   closeSheet();
 }
 function showFab(){const f=$('fab');if(f)f.classList.add('on')}
+function hideFab(){const f=$('fab');if(f)f.classList.remove('on')}
 
 /* ════════ 오늘의 주문표 (인라인, 항상 표시) ════════ */
 let _lastNeedClose=null;
@@ -2810,7 +3062,7 @@ function updateCurLabels(which){
 function clearHist(strat){
   if(!confirm('이 세션의 기록을 전부 삭제할까요? 되돌릴 수 없습니다'))return;
   curStrat().hist=[];save();
-  strat==='inf'?refreshInf():refreshVr();pushRemote();
+  strat==='inf'?refreshInf():strat==='ma'?refreshMa():refreshVr();pushRemote();
 }
 
 /* ── 세션 바 (현재 탭 전용, 이벤트 위임) ── */
@@ -2845,20 +3097,21 @@ function switchSess(id){
   if(box.active===id)return; // 같은 세션이면 무시
   box.active=id;save();
   // 이전 세션 시세 캐시/노트 완전 초기화 (잔상 방지)
-  lastQuote={inf:null,vr:null}; infQuoteCache=null; _lastNeedClose=null;
+  lastQuote={inf:null,vr:null}; infQuoteCache=null; _lastNeedClose=null; maQuoteData=null;
   clearInputs();
-  ['vn_fetchnote','chart_note','inf_chart_note','inf_ten_grid','diag_out'].forEach(id=>{const el=$(id);if(el){el.textContent='';el.className=el.className.replace(/\b(ok|err|load)\b/g,'');}});
+  ['vn_fetchnote','chart_note','inf_chart_note','inf_ten_grid','diag_out','ma_fetchnote'].forEach(id=>{const el=$(id);if(el){el.textContent='';el.className=el.className.replace(/\b(ok|err|load)\b/g,'');}});
   // 현재 탭의 서브탭을 "현재"로 리셋
   resetSubnav(S.activeTab);
   refreshAll();
   // 새 세션 자동 로딩
   try{
     if(S.activeTab==='inf'){ loadInfData(true); loadInfFG(); loadFX(); }
+    else if(S.activeTab==='ma'){ if(!krwNoAuto(curStrat().settings)) loadMaData(true); }
     else { if(!krwNoAuto(curStrat().settings)) fetchQuote('vr'); loadVrChart(true); loadFearGreed(); }
   }catch(e){console.error(e)}
 }
 function clearInputs(){
-  ['o_close','o_star5man','sh_price','sh_qty','shv_price','shv_qty','shv_amt','vn_price','vn_eval'].forEach(id=>{const el=$(id);if(el)el.value=''});
+  ['o_close','o_star5man','sh_price','sh_qty','shv_price','shv_qty','shv_amt','vn_price','vn_eval','ma_price'].forEach(id=>{const el=$(id);if(el)el.value=''});
   const fn1=$('o_fetchnote'),fn2=$('ve_fetchnote');if(fn1){fn1.textContent='';fn1.className='fetchnote'}if(fn2){fn2.textContent='';fn2.className='fetchnote'}
   lastQuote={inf:null,vr:null};
 }
@@ -2898,6 +3151,10 @@ function renderStatusline(){
     const st=s.settings,c=computeInf();
     html+=`<span>${tickerLabel(st.ticker)} · ${st.div}분할 · 익절${st.target}% · ${wn(st.principal)}</span>`;
     html+=`<span class="badge ${c.T>0?'ok':'warn'}">T ${c.T.toFixed(1)}</span>`;
+  }else if(strat==='ma'){
+    const st=s.settings,c=computeMa();
+    html+=`<span>${tickerLabel(st.ticker)} · ${st.maLen||200}일선 · 원금 ${wn(st.principal)}</span>`;
+    if(c.ready) html+=`<span class="badge ${c.signal==='hold'?'ok':'warn'}">${c.signal==='hold'?'보유':'현금'}</span>`;
   }else{
     const st=s.settings;
     const mode=st.mode===0.75?'적립식':st.mode===0.5?'거치식':'인출식';
@@ -2908,7 +3165,8 @@ function renderStatusline(){
 
 /* ── 설정 ── */
 function openSettings(){
-  const s=sess();$('set_sessname').textContent=s.name+' · '+(S.activeTab==='inf'?'무한매수법':'밸류리밸런싱');
+  const s=sess();$('set_sessname').textContent=s.name+' · '+(S.activeTab==='inf'?'무한매수법':S.activeTab==='ma'?'200일선 로테이션':'밸류리밸런싱');
+  const setMa=$('set_ma'); if(setMa) setMa.style.display='none';
   if(S.activeTab==='inf'){
     $('set_inf').style.display='';$('set_vr').style.display='none';
     const st=s.settings, sym=(st.cur||'usd')==='krw'?'₩':'$';
@@ -2918,6 +3176,11 @@ function openSettings(){
     if($('set_gap'))$('set_gap').value=st.gap!=null?st.gap:2.5;
     if($('set_rows_on')){$('set_rows_on').checked=!!st.rowsOn;toggleRowsField();}
     $('set_principal_lbl').textContent=`원금 (${sym})`;
+  }else if(S.activeTab==='ma'){
+    $('set_inf').style.display='none';$('set_vr').style.display='none';if(setMa)setMa.style.display='';
+    const st=s.settings;
+    segSet('set_maticker',st.ticker||'SOXL');segSet('set_malen',String(st.maLen||200));
+    $('set_maprincipal').value=nfix(st.principal,0);
   }else{
     $('set_inf').style.display='none';$('set_vr').style.display='';
     const st=s.settings, sym=(st.cur||'usd')==='krw'?'₩':'$';
@@ -2955,7 +3218,7 @@ function syncShortMaUI(eng){
   if(note&&note.classList.contains('note')) note.style.opacity=on?'1':'0.4';
 }
 function setupSegs(){
-  ['set_ticker','set_div','set_vmode','set_vformula','set_cur','set_vcur','set_engine','set_shortma','set_lopct'].forEach(id=>{
+  ['set_ticker','set_div','set_vmode','set_vformula','set_cur','set_vcur','set_engine','set_shortma','set_lopct','set_maticker','set_malen'].forEach(id=>{
     const el=$(id);if(!el)return;
     el.querySelectorAll('button').forEach(b=>{
       b.onclick=()=>{el.querySelectorAll('button').forEach(x=>x.classList.remove('on'));b.classList.add('on');
@@ -2984,6 +3247,8 @@ function saveSettings(){
       rowsOn:$('set_rows_on')?$('set_rows_on').checked:false,
       rows:Math.max(0,Math.min(20,+$('set_rows').value||0)),gap:+$('set_gap').value||2.5,
       rowqty:1,principal:inputNum('set_principal')||10000,cur:segGet('set_cur')||'usd'};
+  }else if(S.activeTab==='ma'){
+    s.settings={ticker:segGet('set_maticker')||'SOXL',maLen:+segGet('set_malen')||200,principal:inputNum('set_maprincipal')||10000,cur:'usd'};
   }else{
     s.settings={ticker:$('set_vticker').value||'TQQQ',mode:+segGet('set_vmode')||0.75,
       formula:segGet('set_vformula')||'basic',g:inputNum('set_g')||10,add:inputNum('set_add')||100,
@@ -2997,6 +3262,7 @@ function refreshAll(){
   renderSessbar();renderStatusline();
   try{refreshInf()}catch(e){console.error('refreshInf',e)}
   try{refreshVr()}catch(e){console.error('refreshVr',e)}
+  try{refreshMa()}catch(e){console.error('refreshMa',e)}
 }
 function goBlk(sec,blk){
   document.querySelectorAll(`#${sec} .chip`).forEach(x=>x.classList.toggle('on',x.dataset.b===blk));
@@ -3010,8 +3276,9 @@ function setupTabs(){
       document.querySelectorAll('section').forEach(x=>x.classList.remove('on'));
       t.classList.add('on');$(t.dataset.t).classList.add('on');
       S.activeTab=t.dataset.t;save();renderSessbar();renderStatusline();
-      if(t.dataset.t==='inf'){ refreshInf(); try{loadInfData();loadInfFG();loadFX();}catch(e){console.error(e)} }
-      else { refreshVr(); try{ if(!krwNoAuto(curStrat().settings)){ fetchQuote('vr'); } loadVrChart(); loadFearGreed(); }catch(e){console.error(e)} }
+      if(t.dataset.t==='inf'){ refreshInf(); try{loadInfData();loadInfFG();loadFX();}catch(e){console.error(e)} showFab(); }
+      else if(t.dataset.t==='ma'){ refreshMa(); try{ if(!krwNoAuto(curStrat().settings)) loadMaData(); }catch(e){console.error(e)} hideFab(); }
+      else { refreshVr(); try{ if(!krwNoAuto(curStrat().settings)){ fetchQuote('vr'); } loadVrChart(); loadFearGreed(); }catch(e){console.error(e)} showFab(); }
       window.scrollTo({top:0,behavior:'smooth'});
     };
   });
@@ -3069,11 +3336,11 @@ async function pullRemote(){
         // 신선도 가드: 이 기기의 로컬 저장본이 서버보다 최신이면(오프라인 수정 등) 낡은 서버로 덮지 않고 로컬을 밀어올림
         let local=null; try{local=JSON.parse(localStorage.getItem(lsKey()))}catch(e){}
         if(local&&validState(local)&&(local._updated||0)>(d.updated||0)){
-          S=local; if(!S.activeTab)S.activeTab='inf';
+          S=local; if(!S.activeTab)S.activeTab='inf'; ensureMaBox();
           lastPushedJSON=null; pushRemote();
           return true;
         }
-        S=d.state;if(!S.activeTab)S.activeTab='inf';saveLocal();lastPushedJSON=JSON.stringify(S);return true;
+        S=d.state;if(!S.activeTab)S.activeTab='inf';ensureMaBox();saveLocal();lastPushedJSON=JSON.stringify(S);return true;
       }
     }
   }catch(e){console.error('pull',e);}
@@ -3105,7 +3372,7 @@ function importJSON(e){
       const obj=JSON.parse(ev.target.result);
       if(!obj.inf||!obj.vr||!obj.inf.sessions||!obj.vr.sessions)throw new Error('형식이 올바르지 않습니다');
       if(!confirm('현재 데이터를 불러온 파일로 교체할까요? 지금 데이터는 사라집니다.'))return;
-      S=obj;save();
+      S=obj;ensureMaBox();save();
       closeSettings();resetSubnav('inf');resetSubnav('vr');refreshAll();pushRemote();
       alert('불러오기 완료');
     }catch(err){alert('불러오기 실패: '+err.message)}
@@ -3175,9 +3442,9 @@ function startApp(){
   appStarted=true;
   applyAdminMode();
   setupTabs();setupSegs();setupVrTypeSeg();setupSessbar();toggleVrFields();
-  if(S.activeTab==='vr'){document.querySelector('.tab[data-t="vr"]').click()}
+  if(S.activeTab!=='inf'){ const tb=document.querySelector(`.tab[data-t="${S.activeTab}"]`); if(tb)tb.click(); }
   refreshAll();
-  showFab();
+  if(S.activeTab==='ma')hideFab(); else showFab();
 }
 
 function initAuth(){
