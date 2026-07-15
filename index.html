@@ -414,7 +414,7 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
 </div>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v2.29</span></h1></div>
+    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v2.30</span></h1></div>
     <div style="display:flex;align-items:center;gap:8px">
       <a class="btbtn" href="/backtest">📊<span class="bt-txt"> 백테스트</span></a>
       <button class="gear" onclick="openSettings()">⚙️</button>
@@ -790,7 +790,7 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
   <footer>
     <strong>JK 퀀트</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v2.29</b> · 2026-07-01</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v2.30</b> · 2026-07-01</div>
   </footer>
 </div>
 
@@ -2937,9 +2937,10 @@ function segSet(id,val){$(id).querySelectorAll('button').forEach(b=>b.classList.
 function segGet(id){const b=$(id).querySelector('button.on');return b?b.dataset.v:null}
 // 거치식(mode=0.5)은 적립금이 항상 0이므로 입력칸을 비활성화해 혼동 방지
 function applyVrModeUI(mode){
-  const isLump=String(mode)==='0.5';
+  const isLump=String(mode)==='0.5', isWd=String(mode)==='0.25';
   const inp=$('set_add'); if(inp) inp.disabled=isLump;
-  const lbl=$('set_add_lbl'); if(lbl) lbl.style.opacity=isLump?'0.4':'1';
+  const lbl=$('set_add_lbl'); if(lbl){ lbl.style.opacity=isLump?'0.4':'1';
+    lbl.textContent = isWd ? '매 사이클 인출금 ($)' : '매 사이클 적립금 ($)'; }   // 인출식이면 '인출금'으로 (백테와 라벨 일치)
 }
 // V4.0이면 국면선 선택 비활성화 (국면 개념 없음)
 function syncShortMaUI(eng){
