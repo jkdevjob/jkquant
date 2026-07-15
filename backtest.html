@@ -217,7 +217,7 @@ td:first-child{text-align:left;}
   <div class="brand">
     <div>
       <div class="logo">Backtest</div>
-      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v1.100</span></h1>
+      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v1.101</span></h1>
     </div>
   </div>
   <a href="/" class="home">← JK 퀀트</a>
@@ -270,6 +270,12 @@ td:first-child{text-align:left;}
         <button data-t="10" title="Walk-Forward OOS 최적">10%</button>
         <button data-t="15">15%</button>
         <button data-t="20" class="active" title="라오어 문서 공식(SOXL)">20%</button>
+      </div>
+    </div>
+    <div class="ctrl s-im hide"><label>익절 체결 <span style="font-size:9px;color:var(--dim)">지정가 판정</span></label>
+      <div class="seg" id="imFillSeg">
+        <button data-f="high" class="active" title="장중 고가가 목표가를 터치하면 체결 — 지정가 주문의 정석 (조정 OHLC 기준, 낙관 상한)">고가</button>
+        <button data-f="close" title="종가가 목표가 이상일 때만 체결 — 보수적 하한">종가</button>
       </div>
     </div>
     <div class="ctrl s-im hide"><label>세금·비용</label>
@@ -786,6 +792,7 @@ let imLoPct=6;      // V5.0 하락국면 익절% (조기탈출)
 let imCostOn=true;   // 세금·수수료·슬리피지 반영 (기본 ON)
 
 let imTarget=20;   // 익절%(전 종목 일괄, 기본 20=라오어 공식). 별%base·리버스 복귀조건도 함께 결정 (통합 규약)
+let imFill='high';   // 익절 체결 판정: 'high'=고가 터치(기본·지정가 정석) / 'close'=종가 도달(보수적 하한)
 function syncMaCtrl(){
   const on=(imEngine==='v50'||imEngine==='ab');
   ['imMaCtrl','imLoCtrl'].forEach(id=>{ const el=document.getElementById(id); if(!el)return;
@@ -796,6 +803,7 @@ document.getElementById('imShortMASeg').onclick=e=>{if(e.target.dataset.m){docum
 document.getElementById('imCost').onclick=e=>{if(e.target.dataset.x){document.querySelectorAll('#imCost button').forEach(b=>b.classList.remove('active'));e.target.classList.add('active');imCostOn=e.target.dataset.x==='1';if(dataLoaded)run();}};
 document.getElementById('imLoSeg').onclick=e=>{if(e.target.dataset.l){document.querySelectorAll('#imLoSeg button').forEach(b=>b.classList.remove('active'));e.target.classList.add('active');imLoPct=+e.target.dataset.l;if(dataLoaded)run();}};
 document.getElementById('imTgtSeg').onclick=e=>{if(e.target.dataset.t){document.querySelectorAll('#imTgtSeg button').forEach(b=>b.classList.remove('active'));e.target.classList.add('active');imTarget=+e.target.dataset.t;if(dataLoaded)run();}};
+document.getElementById('imFillSeg').onclick=e=>{if(e.target.dataset.f){document.querySelectorAll('#imFillSeg button').forEach(b=>b.classList.remove('active'));e.target.classList.add('active');imFill=e.target.dataset.f;if(dataLoaded)run();}};
 syncMaCtrl();   // 초기: V4.0이므로 국면선 비활성 표시
 
 function commonDays(start,end,tickers){
@@ -948,7 +956,8 @@ function runIM(days,tkr,cap,divs,targetPct,compound=true){
       const q1=orig*0.25;            // 별지점 LOC: 1/4
       let tpHit=false, qtHit=false;
       // ① 익절 지정가매도 (intraday): 고가 >= 익절가
-      if(c>=tgt&&q3>0){_sell(tgt,q3,SLIP);tpHit=true;}   // 지정가매도: 종가 도달 시 체결 인정(CSV 고저가 미조정 결함 회피), 체결가 tgt
+      const _fillHit=(typeof imFill!=='undefined'&&imFill==='high')?hi:c;   // 익절 판정: '고가'=장중 고가 목표가 터치 시 체결(지정가 정석), '종가'=보수적 하한. imFill 미정의=종가(회귀 앵커 유지)
+      if(_fillHit>=tgt&&q3>0){_sell(tgt,q3,SLIP);tpHit=true;}   // 지정가매도, 체결가 tgt
       // ② 별지점 LOC매도 (at close): 종가 >= 별지점. 원래 1/4 기준 (이미 팔린 것 차감)
       if(c>=starP&&orig>0){const sq=Math.min(q1,shares);if(sq>1e-9){_sell(c,sq,0);qtHit=true;}}   // 쿼터매도 LOC=종가
       // T값 갱신: 익절(지정가매도)=×0.25, 쿼터매도=×0.75. 둘 다면 전량매도로 아래에서 리셋.
@@ -1104,7 +1113,8 @@ function runIM50(days,tkr,cap,divs,targetPct,compound=true){
       const q3=orig*0.75;
       const q1=orig*0.25;
       let tpHit=false, qtHit=false;
-      if(c>=tgt&&q3>0){_sell(tgt,q3,SLIP);tpHit=true;}   // 지정가매도: 종가 도달 시 체결 인정(CSV 고저가 미조정 결함 회피), 체결가 tgt
+      const _fillHit=(typeof imFill!=='undefined'&&imFill==='high')?hi:c;   // 익절 판정: '고가'=장중 고가 목표가 터치 시 체결(지정가 정석), '종가'=보수적 하한. imFill 미정의=종가(회귀 앵커 유지)
+      if(_fillHit>=tgt&&q3>0){_sell(tgt,q3,SLIP);tpHit=true;}   // 지정가매도, 체결가 tgt
       if(c>=starP&&orig>0){const sq=Math.min(q1,shares);if(sq>1e-9){_sell(c,sq,0);qtHit=true;}}   // 쿼터매도 LOC=종가
       if(tpHit) T*=0.25;
       if(qtHit) T*=0.75;
