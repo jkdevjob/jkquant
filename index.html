@@ -857,6 +857,26 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
         </div>
       </div>
 
+      <!-- 합성 1배지수 vs 200일선 차트 -->
+      <div class="card" style="margin-bottom:13px">
+        <div class="chart-head" style="display:flex;justify-content:space-between;align-items:center">
+          <h3 style="margin:0;display:flex;align-items:center;gap:6px"><span class="dot"></span>합성 1배지수 · <span id="ma_chart_leg2">200일선</span></h3>
+          <select class="chart-select" id="ma_chart_sel" onchange="drawMaChart()">
+            <option value="252">1년</option><option value="378" selected>1.5년</option><option value="504">2년</option>
+            <option value="756">3년</option><option value="1260">5년</option><option value="99999">전체</option>
+          </select>
+        </div>
+        <div style="position:relative;margin-top:6px">
+          <svg id="ma_chart" viewBox="0 0 360 130" preserveAspectRatio="none" style="width:100%;height:130px;display:block"></svg>
+          <div id="ma_chart_labels" style="position:absolute;top:0;left:2px;height:130px;pointer-events:none"></div>
+        </div>
+        <div style="display:flex;gap:14px;margin-top:6px;font-size:11px;color:var(--faint)">
+          <span><span style="display:inline-block;width:14px;height:2px;background:#f5a451;vertical-align:middle;margin-right:4px"></span>합성 1배지수 <span style="color:var(--faint2,#7c85a3)">(구간 첫날=100)</span></span>
+          <span><span style="display:inline-block;width:14px;height:2px;background:var(--gold);vertical-align:middle;margin-right:4px"></span><span id="ma_chart_leg">200일선</span></span>
+        </div>
+        <p class="fetchnote" id="ma_chart_note" style="margin-top:8px;color:var(--faint)">🔄 자동을 눌러 이력을 불러오면 그래프가 표시됩니다.</p>
+      </div>
+
       <!-- 계좌 상황 -->
       <div class="card acct">
         <h3 style="justify-content:space-between"><span style="display:flex;align-items:center;gap:8px"><span class="dot"></span>내 포지션</span><span class="bandpill in" id="macct_ret" style="font-size:12px">—</span></h3>
@@ -896,7 +916,7 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
   <footer>
     <strong>JK 퀀트</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v2.32</b> · 2026-07-01</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v2.33</b> · 2026-07-01</div>
   </footer>
 </div>
 
@@ -2193,6 +2213,7 @@ function computeMa(){
   for(let i=last-1;i>=0;i--){ if(sma[i]==null){ regimeStart=dates[i+1]||dates[i]; break; }
     const sig=syn[i]>sma[i]?'hold':'cash'; if(sig!==signal){ regimeStart=dates[i+1]; break; } regimeDays++; if(i===0)regimeStart=dates[0]; }
   return {st,N,pos,entry,ready:true,lev,idxNow,smaNow,warming,signal,gapPct,flips,regimeStart,regimeDays,
+          dates,syn,sma,
           lastDate:dates[last], lastClose:closes[last], price:(maQuoteData.price>0?maQuoteData.price:closes[last])};
 }
 
@@ -2229,6 +2250,7 @@ function renderMaNow(){
     $('macct_close').textContent='—'; $('macct_qty').textContent='0주'; $('macct_eval').textContent=px(0);
     $('macct_entry').textContent=c.entry?px(c.entry.price):'—';
     $('ma_regime').textContent='—'; $('macct_ret').textContent='—'; $('macct_ret').className='bandpill in';
+    drawMaChart(c);
     return;
   }
   const hold=c.signal==='hold', gp=c.gapPct, price=c.price||c.lastClose;
@@ -2266,6 +2288,56 @@ function renderMaNow(){
     $('macct_ret').textContent=`${hr>=0?'+':''}${hr.toFixed(2)}%`; $('macct_ret').className='bandpill '+(hr>=0?'in':'over');
   }else{ $('macct_ret').textContent='현금'; $('macct_ret').className='bandpill'; }
   $('ma_regime').textContent=`${c.regimeDays}거래일`;
+  drawMaChart(c);
+}
+
+/* 합성 1배지수 + N일선 그래프 (배수는 종목별 자동: USD·QLD 2배, 그 외 3배) */
+let maChartRange=378;   // 기본 ~1.5년 (200일선 여유 확보)
+function drawMaChart(c){
+  const svg=$('ma_chart'); if(!svg) return;
+  c=c||computeMa();
+  const note=$('ma_chart_note'), lbox=$('ma_chart_labels');
+  if($('ma_chart_leg')) $('ma_chart_leg').textContent=(c.N||200)+'일선';
+  if($('ma_chart_leg2')) $('ma_chart_leg2').textContent=(c.N||200)+'일선';
+  if(!c.ready || !c.syn){ svg.innerHTML=''; if(lbox)lbox.innerHTML=''; if(note)note.textContent='🔄 자동을 눌러 이력을 불러오면 그래프가 표시됩니다.'; return; }
+  const sel=$('ma_chart_sel'); if(sel) maChartRange=+sel.value||378;
+  const syn=c.syn, sma=c.sma, N=c.N, n=syn.length;
+  const want = maChartRange>=99999 ? n : Math.max(N, maChartRange);
+  const start=Math.max(0, n-want);
+  const idx=[]; for(let i=start;i<n;i++) idx.push(i);
+  const base=syn[start]||1, K=100/base;
+  const S=idx.map(i=>syn[i]*K);
+  const M=idx.map(i=>sma[i]==null?null:sma[i]*K);
+  const all=S.concat(M.filter(v=>v!=null));
+  const lo=Math.min(...all), hi=Math.max(...all);
+  const W=360,H=130,pad=2;
+  const xs=i=>pad+(i/(idx.length-1||1))*(W-pad*2);
+  const ys=v=>H-pad-((v-lo)/(hi-lo||1))*(H-pad*2);
+  const path=arr=>{let d='';arr.forEach((v,i)=>{if(v==null)return;d+=(d?'L':'M')+xs(i).toFixed(1)+','+ys(v).toFixed(1)+' ';});return d;};
+  // 배경: 합성지수>N일선=보유(초록) / 아래=현금(빨강)
+  let bg='';
+  for(let i=0;i<idx.length;i++){ if(S[i]==null||M[i]==null)continue;
+    const up=S[i]>M[i], x0=xs(i), x1=(i<idx.length-1)?xs(i+1):W;
+    bg+=`<rect x="${x0.toFixed(1)}" y="0" width="${Math.max(0.5,x1-x0).toFixed(1)}" height="${H}" fill="${up?'rgba(54,211,153,.07)':'rgba(248,123,140,.08)'}"/>`; }
+  svg.innerHTML=bg
+    +`<path d="${path(M)}" fill="none" stroke="#e8b64c" stroke-width="1.4"/>`
+    +`<path d="${path(S)}" fill="none" stroke="#f5a451" stroke-width="1.8"/>`;
+  // 마지막 값 라벨 (겹침 방지)
+  if(lbox){
+    const fmtv=v=>v>=10000?(v/1000).toFixed(1)+'k':v.toFixed(v>=100?0:1);
+    const lastM=M.filter(v=>v!=null).slice(-1)[0];
+    const items=[[S[S.length-1],'#f5a451'],[lastM,'#e8b64c']].filter(x=>x[0]!=null);
+    const placed=items.map(([v,col])=>({v,c:col,y:ys(v)})).sort((a,b)=>a.y-b.y);
+    for(let i=1;i<placed.length;i++){ if(placed[i].y-placed[i-1].y<12) placed[i].y=placed[i-1].y+12; }
+    const over=placed.length?placed[placed.length-1].y-(H-6):0; if(over>0)placed.forEach(p=>p.y-=over);
+    lbox.innerHTML=placed.map(p=>{ const topPct=(Math.max(6,Math.min(H-6,p.y))/H*100);
+      return `<div style="position:absolute;top:${topPct.toFixed(1)}%;left:0;transform:translateY(-50%);font-size:9.5px;font-family:monospace;color:${p.c};white-space:nowrap;line-height:1;background:rgba(13,17,32,.72);padding:1px 3px;border-radius:3px"><span style="display:inline-block;width:4px;height:4px;border-radius:50%;background:${p.c};margin-right:2px;vertical-align:middle"></span>${fmtv(p.v)}</div>`;
+    }).join('');
+  }
+  const shown=idx.length;
+  const perMap={252:'1년',378:'1.5년',504:'2년',756:'3년',1260:'5년'};
+  const per = maChartRange>=99999 ? (shown>=2520?'전체(10년+)':'전체') : (perMap[maChartRange]||(shown>=252?(Math.round(shown/252)+'년'):(Math.round(shown/21)+'달')));
+  if(note) note.textContent=`${tickerLabel(c.st.ticker)} 합성 1배지수(${c.lev}배 역산) vs ${N}일선 · ${per} · 초록=보유·빨강=현금 구간`;
 }
 
 function renderMaHist(){
