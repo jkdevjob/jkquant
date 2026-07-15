@@ -778,10 +778,36 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
         <p class="note">라오어 VR 5.0 오피셜 공식입니다. 2주마다 Pool/G만큼 V가 상승하고, 적립식은 +적립금 / 인출식은 −인출금이 반영됩니다.</p>
         <div class="formula" style="margin-top:10px;opacity:.75"><span class="lbl">실력공식(옵션)</span>V₁ + Pool/G + (E−V₁)/(2√G) ± 적립금</div>
         <p class="note">평가금 E가 V에서 멀어질 때 차이를 일부 반영하는 변형입니다. 오피셜이 아니며, 설정에서 선택할 수 있습니다.</p></div>
-      <div class="card"><h3><span class="dot"></span>유형별 Pool 한도</h3>
-        <div class="rowline"><span class="k">적립식</span><span class="val">Pool 75%</span></div>
-        <div class="rowline"><span class="k">거치식</span><span class="val">Pool 50%</span></div>
-        <div class="rowline"><span class="k">인출식</span><span class="val">Pool 25%</span></div></div>
+      <div class="card"><h3><span class="dot"></span>적립식·거치식·인출식, 뭐가 다른가</h3>
+        <p class="note" style="margin-top:0">밴드·사다리·V갱신은 셋 다 똑같고, 아래 <b>3가지만</b> 모드에 따라 바뀝니다.</p>
+        <div class="cyc-scroll"><table class="cyctbl">
+          <tr><th>구분</th><th>🟢적립식</th><th>🔵거치식</th><th>🟠인출식</th></tr>
+          <tr><td>매 사이클 현금</td><td>+적립금</td><td>없음</td><td>−인출금</td></tr>
+          <tr><td>다음 V</td><td>+Pool/G <b>+적립</b></td><td>+Pool/G</td><td>+Pool/G <b>−인출</b></td></tr>
+          <tr><td>Pool 매수한도</td><td>×0.75</td><td>×0.5</td><td>×0.25</td></tr>
+          <tr><td>용도</td><td>자산 형성</td><td>목돈 굴리기</td><td>생활비 인출</td></tr>
+        </table></div>
+        <p class="note">계속 새 현금을 넣는 적립식은 하락 시 Pool의 75%까지 공격적으로 사고, 인출식은 현금을 지켜야 하니 25%만 씁니다.</p></div>
+      <div class="card"><h3><span class="dot"></span>매 사이클 운영 (공통 5단계)</h3>
+        <ol class="steps"><li><b>첫 진입</b> ＋버튼 → 매수 기록 (첫 매수가 = 0주차 V)</li>
+          <li><b>현재 탭</b> 현재가/평가금 입력 → 매도·매수·대기 판단</li>
+          <li><b>매수·매도표</b> 20차수 예약을 첫날 걸고 2주 방치</li>
+          <li><b>체결 기록</b> 실제 체결분을 ＋버튼으로 기록</li>
+          <li><b>다음 V</b> 2주 후 "이대로 다음 사이클 진입" → V갱신·적립/인출 자동기록</li></ol></div>
+      <div class="card"><h3><span class="dot"></span>🟢 적립식 — 매달 넣으며 불리기</h3>
+        <p class="note" style="margin-top:0">자산 형성기. 매 사이클 새 현금을 넣어 하락장을 가장 공격적으로 매수(Pool 75%).</p>
+        <div class="formula"><span class="lbl">예시</span>V 10,000 · Pool 2,000 · G10 · 적립 100<br>다음 V = 10,000 + 200 + 100 = <b>10,300</b> · Pool 2,100</div>
+        <p class="note">하락으로 한도가 소진돼도 다음 사이클 적립금이 새 실탄이 됩니다 → 물타기에 가장 강함.</p></div>
+      <div class="card"><h3><span class="dot"></span>🔵 거치식 — 목돈 한 번에 굴리기</h3>
+        <p class="note" style="margin-top:0">추가 입금 없이, 매도로 쌓은 Pool로만 재매수(Pool 50%). 적립금 칸 자동 비활성.</p>
+        <div class="formula"><span class="lbl">예시</span>V 10,000 · Pool 2,000 · G10<br>다음 V = 10,000 + 200 = <b>10,200</b> · Pool 2,000</div>
+        <p class="note">외부 현금이 없으니 Pool이 마르면 그 사이클은 매수 불가 → 시작 Pool을 넉넉히.</p></div>
+      <div class="card"><h3><span class="dot"></span>🟠 인출식 — 굴리며 생활비 빼기</h3>
+        <p class="note" style="margin-top:0">은퇴·연금기. 매 사이클 Pool에서 인출, 원금 보존 위해 가장 보수적 매수(Pool 25%).</p>
+        <div class="formula"><span class="lbl">예시</span>V 10,000 · Pool 2,000 · G10 · 인출 100<br>다음 V = 10,000 + 200 − 100 = <b>10,100</b> · Pool 1,900</div>
+        <p class="note">인출액이 수익을 넘으면 원금이 줄어듭니다 → 보통 월 0.3~0.5% 이하로.</p></div>
+      <div class="card"><h3><span class="dot"></span>실전 팁</h3>
+        <ul class="clean"><li>모드는 언제든 전환 — 다음 사이클 계산부터 적용</li><li>거치식+적립식 동시 운용은 세션(계좌) 2개로 각각</li><li>적립·인출은 진입 버튼이 자동 기록 — ＋버튼으로 또 넣지 말 것</li></ul></div>
       <div class="card"><h3><span class="dot"></span>거래 유형 5가지</h3>
         <ul class="clean"><li><b>매수/매도</b> 주식 수량 변동</li><li><b>적립</b> Pool 추가 (현금 투입)</li><li><b>인출</b> Pool 차감 (현금 회수)</li><li><b>배당</b> Pool 입금 (평단 차감 효과)</li></ul></div>
       <div class="card"><h3><span class="dot"></span>시작하기</h3>
@@ -870,7 +896,7 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
   <footer>
     <strong>JK 퀀트</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v2.31</b> · 2026-07-01</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v2.32</b> · 2026-07-01</div>
   </footer>
 </div>
 
