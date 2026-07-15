@@ -217,7 +217,7 @@ td:first-child{text-align:left;}
   <div class="brand">
     <div>
       <div class="logo">Backtest</div>
-      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v1.102</span></h1>
+      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v1.103</span></h1>
     </div>
   </div>
   <a href="/" class="home">← JK 퀀트</a>
@@ -231,6 +231,7 @@ td:first-child{text-align:left;}
   <button class="stab" data-s="im" onclick="setStrat('im')">무한매수법<span class="sub">V4.0</span></button>
   <button class="stab" data-s="vr" onclick="setStrat('vr')">밸류리밸런싱<span class="sub">VR 5.0</span></button>
   <button class="stab" data-s="ma" onclick="setStrat('ma')">200일선 로테이션<span class="sub">이평선↔현금</span></button>
+  <button class="stab" data-s="mom" onclick="setStrat('mom')">모멘텀 로테이션<span class="sub">1위 갈아타기</span></button>
 </div>
 
 <!-- 공통 컨트롤 -->
@@ -358,6 +359,34 @@ td:first-child{text-align:left;}
       </div>
     </div>
 
+    <!-- 모멘텀 로테이션 전용 -->
+    <div class="ctrl s-mom hide"><label id="momCapLbl">원금 ($)</label><input type="number" id="momCap" value="10000" min="100"></div>
+    <div class="ctrl s-mom hide"><label>후보군 <span style="font-size:9px;color:var(--dim)">1위를 가릴 바스켓</span></label>
+      <div class="seg" id="momUniv">
+        <button data-u="us" class="active" title="TQQQ·SOXL·TECL·QQQ·SPY·TLT(미국채)·GLD(금)">🇺🇸 미국</button>
+        <button data-u="kr" title="KODEX 레버리지·코스닥150레버·TIGER 나스닥100·KODEX200·국고채10년·골드">🇰🇷 국내</button>
+      </div>
+    </div>
+    <div class="ctrl s-mom hide"><label>룩백 <span style="font-size:9px;color:var(--dim)">직전 N개월 수익률로 순위</span></label>
+      <div class="seg" id="momLookback">
+        <button data-l="1" class="active" title="반응 빠름 — MAR 최고 경향">1개월</button>
+        <button data-l="3" title="중간">3개월</button>
+        <button data-l="6" title="느림 — 추세 강할 때 수익 큼">6개월</button>
+      </div>
+    </div>
+    <div class="ctrl s-mom hide"><label>200일선 필터 <span style="font-size:9px;color:var(--dim)">절대모멘텀</span></label>
+      <div class="seg" id="momFilter">
+        <button data-f="1" class="active" title="1위여도 자기 200일선 아래면 현금 — 급락 방어(MDD 크게 감소)">사용</button>
+        <button data-f="0" title="순수 상대모멘텀 — 항상 1위 보유">미사용</button>
+      </div>
+    </div>
+    <div class="ctrl s-mom hide"><label>세금·비용</label>
+      <div class="seg" id="momCost">
+        <button data-x="0" title="비용 없이 순수 전략 성과">미적용</button>
+        <button data-x="1" class="active" title="미국: 수수료·슬립 0.30%/편도 + 양도세 22%(연 250만공제) · 국내: 수수료 0.015%/편도 + 해외·채권·금 ETF 15.4%(국내주식형 비과세)">적용</button>
+      </div>
+    </div>
+
     <button class="run" onclick="run()">▶ 실행</button>
   </div>
 
@@ -386,6 +415,7 @@ td:first-child{text-align:left;}
   <div class="winner" id="winner"></div>
   <div class="cards s-dca" id="cards"></div>
   <div class="detail s-im s-vr hide" id="detail"></div>
+  <div class="s-mom hide" id="momResult"></div>
   <div class="chart-box">
     <div class="chart-head">
       <span class="t" id="chartTitle">누적 가치 추이</span>
@@ -755,8 +785,9 @@ function setStrat(s){
   document.querySelectorAll('.s-im').forEach(e=>e.classList.toggle('hide',s!=='im'));
   document.querySelectorAll('.s-vr').forEach(e=>e.classList.toggle('hide',s!=='vr'));
   document.querySelectorAll('.s-ma').forEach(e=>e.classList.toggle('hide',s!=='ma'));
-  // s-im s-vr(s-ma) 공용 요소 처리 — 단일 종목 피커는 dca 외 전부 표시
-  document.querySelectorAll('.s-im.s-vr').forEach(e=>e.classList.toggle('hide',s==='dca'));
+  document.querySelectorAll('.s-mom').forEach(e=>e.classList.toggle('hide',s!=='mom'));
+  // s-im s-vr(s-ma) 공용 요소 처리 — 단일 종목 피커는 dca·mom 외 표시 (mom은 후보군 프리셋)
+  document.querySelectorAll('.s-im.s-vr').forEach(e=>e.classList.toggle('hide',s==='dca'||s==='mom'));
   buildPickSingle();
   if(document.getElementById('tickerSingle')._render) document.getElementById('tickerSingle')._render();
   if(dataLoaded) run();      // 데이터 있을 때만 재계산 (탭 전환만으로 로딩 안 함)
@@ -806,6 +837,185 @@ document.getElementById('imLoSeg').onclick=e=>{if(e.target.dataset.l){document.q
 document.getElementById('imTgtSeg').onclick=e=>{if(e.target.dataset.t){document.querySelectorAll('#imTgtSeg button').forEach(b=>b.classList.remove('active'));e.target.classList.add('active');imTarget=+e.target.dataset.t;if(dataLoaded)run();}};
 document.getElementById('imFillSeg').onclick=e=>{if(e.target.dataset.f){document.querySelectorAll('#imFillSeg button').forEach(b=>b.classList.remove('active'));e.target.classList.add('active');imFill=e.target.dataset.f;if(dataLoaded)run();}};
 syncMaCtrl();   // 초기: V4.0이므로 국면선 비활성 표시
+
+/* ════════ 모멘텀 로테이션 (상대모멘텀 + 200일선 절대모멘텀 필터) ════════
+   매월 첫 거래일에 직전 N개월 수익률 1위 매수, 1위 유지면 홀드/바뀌면 갈아타기.
+   필터 ON: 1위여도 자기 200일 SMA 아래면 현금. 독립 데이터 캐시(MOMDATA) 사용. */
+const MOM_UNIV={
+  us:{ label:'🇺🇸 미국', cur:'$', cap:10000, fee:0.0030, taxRate:0.22, annual:true, tickers:[
+    {sym:'TQQQ',name:'나스닥100 3×',taxable:true,color:'#00d4b4'},
+    {sym:'SOXL',name:'반도체 3×',taxable:true,color:'#ff6b6b'},
+    {sym:'TECL',name:'테크 3×',taxable:true,color:'#ffc844'},
+    {sym:'QQQ',name:'나스닥100 1×',taxable:true,color:'#26a69a'},
+    {sym:'SPY',name:'S&P500 1×',taxable:true,color:'#4fc3f7'},
+    {sym:'TLT',name:'미국채 20y',taxable:true,color:'#9575cd'},
+    {sym:'GLD',name:'금',taxable:true,color:'#f5c451'} ]},
+  kr:{ label:'🇰🇷 국내', cur:'₩', cap:10000000, fee:0.00015, taxRate:0.154, annual:false, tickers:[
+    {sym:'122630.KS',name:'KODEX 레버리지',taxable:false,color:'#ff6b6b'},
+    {sym:'233740.KS',name:'코스닥150 레버',taxable:false,color:'#ff9e6b'},
+    {sym:'133690.KS',name:'TIGER 나스닥100',taxable:true,color:'#00d4b4'},
+    {sym:'069500.KS',name:'KODEX 200',taxable:false,color:'#4fc3f7'},
+    {sym:'148070.KS',name:'국고채 10년',taxable:true,color:'#9575cd'},
+    {sym:'132030.KS',name:'골드',taxable:true,color:'#f5c451'} ]},
+};
+let momUniv='us', momLookback=1, momFilter=true, momCostOn=true;
+let MOMDATA={};   // { univKey: {range:'s_e', data:{sym:{date:close}}} }
+
+document.getElementById('momUniv').onclick=e=>{ if(!e.target.dataset.u)return;
+  document.querySelectorAll('#momUniv button').forEach(b=>b.classList.remove('active')); e.target.classList.add('active');
+  momUniv=e.target.dataset.u;
+  const U=MOM_UNIV[momUniv]; document.getElementById('momCapLbl').textContent=`원금 (${U.cur})`;
+  const capEl=document.getElementById('momCap'); if(capEl&&(+capEl.value===10000||+capEl.value===10000000)) capEl.value=U.cap;
+  if(dataLoaded||MOMDATA[momUniv]) run(); };
+document.getElementById('momLookback').onclick=e=>{ if(!e.target.dataset.l)return;
+  document.querySelectorAll('#momLookback button').forEach(b=>b.classList.remove('active')); e.target.classList.add('active');
+  momLookback=+e.target.dataset.l; run(); };
+document.getElementById('momFilter').onclick=e=>{ if(!e.target.dataset.f)return;
+  document.querySelectorAll('#momFilter button').forEach(b=>b.classList.remove('active')); e.target.classList.add('active');
+  momFilter=e.target.dataset.f==='1'; run(); };
+document.getElementById('momCost').onclick=e=>{ if(!e.target.dataset.x)return;
+  document.querySelectorAll('#momCost button').forEach(b=>b.classList.remove('active')); e.target.classList.add('active');
+  momCostOn=e.target.dataset.x==='1'; run(); };
+
+async function loadMomData(univKey, start, end, stat){
+  const range=start+'_'+end;
+  if(MOMDATA[univKey] && MOMDATA[univKey].range===range) return MOMDATA[univKey].data;
+  const U=MOM_UNIV[univKey];
+  const p1=Math.floor(new Date(start).getTime()/1000), p2=Math.floor(new Date(end).getTime()/1000)+86400;
+  if(stat){ stat.style.display=''; stat.style.color='var(--dim)'; stat.textContent=`${U.label} 후보군 시세 받는 중…`; }
+  const data={};
+  await Promise.all(U.tickers.map(async t=>{
+    try{
+      const r=await fetch(`/api/quote?symbol=${encodeURIComponent(t.sym)}&period1=${p1}&period2=${p2}`);
+      if(!r.ok) return; const j=await r.json();
+      if(j&&Array.isArray(j.series)){ const m={}; j.series.forEach(d=>{ if(+d.close>0) m[d.date]=+d.close; }); if(Object.keys(m).length>50) data[t.sym]=m; }
+    }catch(e){ console.warn('mom load fail',t.sym,e.message); }
+  }));
+  MOMDATA[univKey]={range,data};
+  if(stat) stat.style.display='none';
+  return data;
+}
+
+function momSMA(series){ const dts=Object.keys(series).sort(); const out={}; const buf=[]; let s=0;
+  for(const d of dts){ buf.push(series[d]); s+=series[d]; if(buf.length>200)s-=buf.shift(); out[d]=buf.length===200?s/200:null; } return out; }
+
+function momentumBacktest(data, tickers, U, cap, lb, filter, costOn){
+  const syms=tickers.map(t=>t.sym);
+  const taxable={}; tickers.forEach(t=>taxable[t.sym]=t.taxable);
+  const SMA={}; syms.forEach(s=>SMA[s]=momSMA(data[s]));
+  // 공통 거래일
+  let dates=Object.keys(data[syms[0]]); syms.forEach(s=>{const set=new Set(Object.keys(data[s])); dates=dates.filter(d=>set.has(d));}); dates.sort();
+  const mf={}; dates.forEach(d=>{const ym=d.slice(0,7); if(!mf[ym])mf[ym]=d;});
+  const months=Object.keys(mf).sort(); const dIdx={}; dates.forEach((d,i)=>dIdx[d]=i);
+  const px=(s,d)=>data[s][d];
+  const FEE=costOn?U.fee:0;
+  let held=null, shares=0, cash=cap, basis=0, started=false, startDate=null;
+  const eq={}; let sw=0, cashMonths=0; const holdCount={}; let yrRealUSD=0, curYear=null, taxPaid=0;
+  function sellAll(d){ if(!held)return; const p=px(held,d), gross=shares*p, fee=gross*FEE, proceeds=gross-fee, realized=proceeds-basis;
+    cash=proceeds; if(costOn){ if(U.annual){ yrRealUSD+=realized; } else if(taxable[held]&&realized>0){ const tx=realized*U.taxRate; cash-=tx; taxPaid+=tx; } }
+    shares=0; held=null; }
+  function buy(s,d){ const p=px(s,d), fee=cash*FEE; basis=cash; shares=(cash-fee)/p; cash=0; held=s; }
+  function settleAnnual(priceForPay){ if(!costOn||!U.annual)return; const taxable=Math.max(0,yrRealUSD*COST_KRW-COST_DEDUCT), tx=taxable*U.taxRate/COST_KRW;
+    if(tx>0){ if(cash>=tx)cash-=tx; else{ const need=tx-cash; cash=0; if(held&&priceForPay>0)shares-=need/priceForPay; } taxPaid+=tx; } yrRealUSD=0; }
+  for(let i=lb;i<months.length;i++){
+    const d=mf[months[i]], pd=mf[months[i-lb]];
+    const y=d.slice(0,4); if(curYear===null)curYear=y; else if(y!==curYear){ settleAnnual(held?px(held,d):0); curYear=y; }
+    let best=null,bs=-1e9; syms.forEach(s=>{ const r=px(s,d)/px(s,pd)-1; if(r>bs){bs=r;best=s;} });
+    let target=best; if(filter){ const sm=SMA[best][d]; if(sm!=null && px(best,d)<sm) target=null; }
+    if(target)holdCount[target]=(holdCount[target]||0)+1; else cashMonths++;
+    if(!started){ started=true; startDate=d; if(target)buy(target,d); }
+    else if(target!==held){ sellAll(d); if(target)buy(target,d); sw++; }
+    const nextD=(i+1<months.length)?mf[months[i+1]]:null, from=dIdx[d], to=nextD?dIdx[nextD]:dates.length;
+    for(let k=from;k<to;k++){ eq[dates[k]]= held? shares*px(held,dates[k]) : cash; }
+  }
+  const ed=Object.keys(eq).sort(); const lastD=ed[ed.length-1];
+  settleAnnual(held?px(held,lastD):0); const fin= held? shares*px(held,lastD) : cash; eq[lastD]=fin;
+  let peak=0,mdd=0; ed.forEach(d=>{const e=eq[d];if(e>peak)peak=e;else{const dd=(peak-e)/peak;if(dd>mdd)mdd=dd;}});
+  const yrs=(new Date(lastD)-new Date(startDate))/(365.25*864e5);
+  const cagr=(Math.pow(fin/cap,1/yrs)-1)*100, mddP=mdd*100;
+  // 스냅샷(차트용, ~10일 간격)
+  const snap=[]; for(let k=0;k<ed.length;k+=Math.max(1,Math.floor(ed.length/180))) snap.push([ed[k],eq[ed[k]]]); snap.push([lastD,fin]);
+  // 벤치마크: 가장 공격적 종목(1번) 바이앤홀드
+  const bt0=syms[0]; const bds=ed.filter(d=>data[bt0][d]);
+  const bsh=cap/px(bt0,startDate); let bpeak=0,bmdd=0; bds.forEach(d=>{const e=bsh*px(bt0,d);if(e>bpeak)bpeak=e;else{const dd=(bpeak-e)/bpeak;if(dd>bmdd)bmdd=dd;}});
+  const bfin=bsh*px(bt0,lastD), bcagr=(Math.pow(bfin/cap,1/yrs)-1)*100;
+  const bsnap=snap.map(([d])=>[d, data[bt0][d]?bsh*data[bt0][d]:null]);
+  return {cagr,mdd:mddP,mar:mddP>0?cagr/mddP:0,tot:(fin/cap-1)*100,fin,cap,sw,cashMonths,startDate,endDate:lastD,yrs,months:months.length-lb,
+    holdCount,snap,taxPaid, bench:{sym:bt0,cagr:bcagr,mdd:bmdd*100,mar:bmdd>0?bcagr/(bmdd*100):0,tot:(bfin/cap-1)*100,fin:bfin,snap:bsnap} };
+}
+
+async function runMomentum(start,end){
+  const loading=document.getElementById('loading'), stat=document.getElementById('dataStat');
+  if(loading)loading.classList.remove('hide');
+  try{
+    const U=MOM_UNIV[momUniv];
+    const data=await loadMomData(momUniv,start,end,stat);
+    const tickers=U.tickers.filter(t=>data[t.sym]&&Object.keys(data[t.sym]).length>50);
+    if(tickers.length<2){ if(stat){stat.style.display='';stat.textContent='⚠ 후보군 시세 로딩 실패 — 잠시 후 다시 실행해 주세요';stat.style.color='var(--red)';} return; }
+    const cap=+document.getElementById('momCap').value||U.cap;
+    const res=momentumBacktest(data,tickers,U,cap,momLookback,momFilter,momCostOn);
+    dataLoaded=true;   // 이후 탭 전환 시 자동 재계산 허용
+    renderMomentum(res,U,tickers);
+  }catch(e){ console.error('runMomentum',e); if(stat){stat.style.display='';stat.textContent='⚠ 계산 오류: '+e.message;stat.style.color='var(--red)';} }
+  finally{ if(loading)loading.classList.add('hide'); }
+}
+
+function renderMomentum(res,U,tickers){
+  document.querySelector('.cards')?.classList.add('hide');
+  document.getElementById('detail')?.classList.add('hide');
+  document.querySelector('.tbl-wrap')?.classList.add('hide');
+  document.getElementById('momResult').classList.remove('hide');
+  const cur=U.cur, money=v=>cur+fmt(Math.round(v)), pct=x=>(x>=0?'+':'')+x.toFixed(1)+'%';
+  const nameOf=s=>{const t=tickers.find(x=>x.sym===s);return t?t.name:s;}, shortSym=s=>s.replace('.KS','');
+  const cfg=`${U.label} · ${momLookback}개월 룩백${momFilter?' + 200일선 필터':''}${momCostOn?' · 세후':' · 세전'}`;
+  document.getElementById('winner').style.display='';
+  document.getElementById('winner').innerHTML=`🏆 <strong>모멘텀 로테이션</strong> · ${cfg} · ${res.startDate}~${res.endDate} · 원금 ${money(res.cap)} → <strong>${money(res.fin)}</strong> (${pct(res.tot)})`;
+  // 선택빈도 바
+  const total=res.months, maxc=Math.max(1,...Object.values(res.holdCount));
+  const freq=Object.entries(res.holdCount).sort((a,b)=>b[1]-a[1]).map(([s,c])=>{
+    const t=tickers.find(x=>x.sym===s), def=t&&!/3×|2×|레버|나스닥100 3|반도체|테크/.test(t.name)&&/금|국고채|채|골드|Gold/i.test(t.name);
+    const col=def?'#9575cd':(t?t.color:'#888');
+    return `<div style="display:grid;grid-template-columns:120px 1fr 30px;gap:8px;align-items:center;font-size:12px;margin:5px 0">
+      <span style="color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${shortSym(s)} <span style="color:var(--faint2,#7c85a3);font-size:10px">${nameOf(s)}</span></span>
+      <span style="height:14px;background:var(--surf,#151a2e);border-radius:4px;overflow:hidden"><span style="display:block;height:100%;width:${(c/maxc*100).toFixed(0)}%;background:${col};border-radius:4px"></span></span>
+      <span style="text-align:right;color:var(--faint2,#8a96c0);font-weight:700">${c}</span></div>`;
+  }).join('');
+  const cashRow=res.cashMonths>0?`<div style="font-size:12px;color:var(--dim);margin-top:6px">💵 현금(필터 회피) <b style="color:var(--text)">${res.cashMonths}개월</b> · 스위치 ${res.sw}회${res.taxPaid>0?` · 세금 ${money(res.taxPaid)}`:''}</div>`:`<div style="font-size:12px;color:var(--dim);margin-top:6px">스위치 ${res.sw}회${res.taxPaid>0?` · 세금 ${money(res.taxPaid)}`:''}</div>`;
+  const b=res.bench;
+  document.getElementById('momResult').innerHTML=`
+    <div style="overflow-x:auto;border:1px solid var(--border,#242b45);border-radius:12px;margin-bottom:14px">
+      <table style="width:100%;border-collapse:collapse;font-size:13.5px;min-width:520px">
+        <thead><tr style="color:var(--dim);font-size:11px;text-align:right">
+          <th style="text-align:left;padding:10px 12px">전략</th><th style="padding:10px 12px">CAGR</th><th style="padding:10px 12px">MDD</th><th style="padding:10px 12px">MAR</th><th style="padding:10px 12px">총수익</th><th style="padding:10px 12px">최종금액</th></tr></thead>
+        <tbody>
+          <tr style="border-top:1px solid var(--border,#242b45)">
+            <td style="padding:11px 12px;font-weight:700">★ 모멘텀 로테이션</td>
+            <td style="padding:11px 12px;text-align:right;color:${res.cagr>=0?'var(--green)':'var(--red)'};font-weight:700">${pct(res.cagr)}</td>
+            <td style="padding:11px 12px;text-align:right">${res.mdd.toFixed(1)}%</td>
+            <td style="padding:11px 12px;text-align:right;color:var(--gold)">${res.mar.toFixed(2)}</td>
+            <td style="padding:11px 12px;text-align:right">${pct(res.tot)}</td>
+            <td style="padding:11px 12px;text-align:right;color:var(--gold);font-weight:700">${money(res.fin)}</td></tr>
+          <tr style="border-top:1px solid var(--border,#242b45);color:var(--dim)">
+            <td style="padding:11px 12px">${shortSym(b.sym)} 단순보유 <span style="font-size:11px">(최공격 벤치)</span></td>
+            <td style="padding:11px 12px;text-align:right">${pct(b.cagr)}</td>
+            <td style="padding:11px 12px;text-align:right">${b.mdd.toFixed(1)}%</td>
+            <td style="padding:11px 12px;text-align:right">${b.mar.toFixed(2)}</td>
+            <td style="padding:11px 12px;text-align:right">${pct(b.tot)}</td>
+            <td style="padding:11px 12px;text-align:right">${money(b.fin)}</td></tr>
+        </tbody></table></div>
+    <div style="background:var(--card,#141a2e);border:1px solid var(--border,#242b45);border-radius:12px;padding:14px 16px">
+      <div style="font-size:12px;color:var(--dim);font-weight:700;margin-bottom:8px">모멘텀이 고른 종목 (${total}개월 중)</div>
+      ${freq}${cashRow}
+    </div>`;
+  // 차트 (전략 vs 벤치, 네이티브 통화)
+  const labels=res.snap.map(s=>s[0]);
+  document.getElementById('chartTitle').textContent=`누적 가치 추이 — ${cfg}`;
+  lastRender=()=>makeChart([
+    {label:'모멘텀 로테이션',data:res.snap.map(s=>Math.round(s[1])),borderColor:'#f5c451',backgroundColor:'transparent',borderWidth:2.2,pointRadius:0,tension:.25,spanGaps:true},
+    {label:shortSym(b.sym)+' 보유',data:b.snap.map(s=>s[1]==null?null:Math.round(s[1])),borderColor:'#4a5478',borderWidth:1.6,borderDash:[4,3],pointRadius:0,tension:.25,spanGaps:true}
+  ],labels,cur);
+  lastRender();
+}
 
 function commonDays(start,end,tickers){
   let s=null;
@@ -1306,6 +1516,7 @@ async function run(){
   const start=document.getElementById('dStart').value;
   const end=document.getElementById('dEnd').value;
   if(!start||!end||start>=end){alert('날짜를 확인하세요.');return;}
+  if(strat==='mom'){ await runMomentum(start,end); return; }   // 모멘텀은 독립 데이터 캐시 사용
   // 데이터 없거나 · 요청 기간이 더 넓거나 · 선택 종목 중 미로딩분이 있으면 재로딩
   const wanted = strat==='dca' ? [...dcaActive] : strat==='im' ? [...imActive] : strat==='ma' ? [...maActive] : [...vrActive];
   const missing = wanted.filter(t=>!M[t] || !Object.keys(M[t]||{}).length);
@@ -1421,9 +1632,10 @@ const fmtV=(v,t)=>(isKRW(t)?'₩':'$')+fmt(v); // 통화 표시
 
 function alignSnap(snap,labels){const m=Object.fromEntries(snap.map(s=>[s[0],Math.round(s[1])]));return labels.map(l=>m[l]??null);}
 
-function makeChart(datasets,labels){
+function makeChart(datasets,labels,curSym){
   if(chart)chart.destroy();
-  const fmtY=v=>v>=1e6?'$'+(v/1e6).toFixed(1)+'M':v>=1e3?'$'+(v/1e3).toFixed(0)+'k':'$'+Math.round(v);
+  const cs=curSym||'$';
+  const fmtY=v=>v>=1e6?cs+(v/1e6).toFixed(1)+'M':v>=1e3?cs+(v/1e3).toFixed(0)+'k':cs+Math.round(v);
   const labelStep=Math.max(1,Math.floor(labels.length/8));
   chart=new Chart(document.getElementById('chart').getContext('2d'),{
     type:'line',data:{labels,datasets},
