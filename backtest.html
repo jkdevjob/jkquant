@@ -221,7 +221,7 @@ td:first-child{text-align:left;}
   <div class="brand">
     <div>
       <div class="logo">Backtest</div>
-      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v1.106</span></h1>
+      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v1.107</span></h1>
     </div>
   </div>
   <a href="/" class="home">← JK 퀀트</a>
@@ -367,7 +367,7 @@ td:first-child{text-align:left;}
     <div class="ctrl s-mom hide"><label id="momCapLbl">원금 ($)</label><input type="number" id="momCap" value="10000" min="100"></div>
     <div class="ctrl s-mom hide"><label>후보군 <span style="font-size:9px;color:var(--dim)">1위를 가릴 바스켓</span></label>
       <div class="seg" id="momUniv">
-        <button data-u="us" class="active" title="TQQQ·SOXL·TECL·QQQ·SPY·TLT(미국채)·GLD(금)">🇺🇸 미국</button>
+        <button data-u="us" class="active" title="미국 상장 ETF 100종 (지수·11섹터·테마·레버리지·채권·원자재·국가·인컴·리츠)">🇺🇸 미국</button>
         <button data-u="kr" title="KODEX 레버리지·코스닥150레버·TIGER 나스닥100·KODEX200·국고채10년·골드">🇰🇷 국내</button>
       </div>
     </div>
@@ -846,15 +846,39 @@ syncMaCtrl();   // 초기: V4.0이므로 국면선 비활성 표시
 /* ════════ 모멘텀 로테이션 (상대모멘텀 + 200일선 절대모멘텀 필터) ════════
    매월 첫 거래일에 직전 N개월 수익률 1위 매수, 1위 유지면 홀드/바뀌면 갈아타기.
    필터 ON: 1위여도 자기 200일 SMA 아래면 현금. 독립 데이터 캐시(MOMDATA) 사용. */
+// [sym,name] 목록 → {sym,name,taxable,color} (색은 골든앵글 HSL 자동배정)
+function _mkUniv(list){ return list.map((x,i)=>({sym:x[0],name:x[1],taxable:true,color:`hsl(${Math.round((i*137.508)%360)},62%,62%)`})); }
 const MOM_UNIV={
-  us:{ label:'🇺🇸 미국', cur:'$', cap:10000, fee:0.0030, taxRate:0.22, annual:true, tickers:[
-    {sym:'TQQQ',name:'나스닥100 3×',taxable:true,color:'#00d4b4'},
-    {sym:'SOXL',name:'반도체 3×',taxable:true,color:'#ff6b6b'},
-    {sym:'TECL',name:'테크 3×',taxable:true,color:'#ffc844'},
-    {sym:'QQQ',name:'나스닥100 1×',taxable:true,color:'#26a69a'},
-    {sym:'SPY',name:'S&P500 1×',taxable:true,color:'#4fc3f7'},
-    {sym:'TLT',name:'미국채 20y',taxable:true,color:'#9575cd'},
-    {sym:'GLD',name:'금',taxable:true,color:'#f5c451'} ],
+  us:{ label:'🇺🇸 미국', cur:'$', cap:10000, fee:0.0030, taxRate:0.22, annual:true, tickers:_mkUniv([
+    // 레버리지 15
+    ['TQQQ','나스닥100 3×'],['SOXL','반도체 3×'],['TECL','테크 3×'],['UPRO','S&P500 3×'],['SSO','S&P500 2×'],
+    ['QLD','나스닥100 2×'],['USD','반도체 2×'],['KORU','한국 3×'],['SPXL','S&P500 3×(D)'],['FAS','금융 3×'],
+    ['TNA','소형주 3×'],['LABU','바이오 3×'],['TMF','미국채 3×'],['UDOW','다우 3×'],['FNGU','FANG+ 3×'],
+    // 지수/브로드 10
+    ['SPY','S&P500'],['QQQ','나스닥100'],['DIA','다우30'],['IWM','러셀2000'],['VTI','미국전체'],
+    ['RSP','S&P500 동일가중'],['VEA','선진국'],['VWO','신흥국'],['EFA','선진국 EAFE'],['EEM','신흥국'],
+    // SPDR 섹터 11
+    ['XLK','기술 섹터'],['XLF','금융 섹터'],['XLE','에너지 섹터'],['XLV','헬스케어 섹터'],['XLI','산업재 섹터'],
+    ['XLY','임의소비 섹터'],['XLP','필수소비 섹터'],['XLU','유틸리티 섹터'],['XLB','소재 섹터'],['XLRE','리츠 섹터'],['XLC','커뮤니케이션 섹터'],
+    // 테마/산업 20
+    ['SMH','반도체(SMH)'],['SOXX','반도체(SOXX)'],['IGV','소프트웨어'],['XBI','바이오'],['IBB','바이오테크'],
+    ['ARKK','혁신 ARKK'],['ARKG','유전체'],['ICLN','청정에너지'],['TAN','태양광'],['LIT','리튬·배터리'],
+    ['HACK','사이버보안'],['BOTZ','로봇·AI'],['SKYY','클라우드'],['XHB','주택건설'],['ITB','주택'],
+    ['XRT','소매'],['KRE','지역은행'],['XOP','원유·가스 탐사'],['JETS','항공'],['PAVE','인프라'],
+    // 스타일/팩터 11
+    ['VUG','대형 성장'],['VTV','대형 가치'],['IWF','러셀 성장'],['IWD','러셀 가치'],['MTUM','모멘텀'],
+    ['QUAL','퀄리티'],['USMV','최소변동성'],['SCHG','대형 성장(S)'],['SCHD','배당성장'],['VYM','고배당'],['DVY','배당'],
+    // 채권 10
+    ['TLT','미국채 20y'],['IEF','미국채 7-10y'],['SHY','단기 국채'],['LQD','투자등급 회사채'],['HYG','하이일드'],
+    ['AGG','종합채권'],['BND','종합채권(V)'],['TIP','물가채'],['EMB','신흥국채'],['MBB','모기지채'],
+    // 원자재/금 6
+    ['GLD','금'],['SLV','은'],['GDX','금광주'],['GDXJ','주니어 금광'],['USO','원유'],['DBC','원자재 바스켓'],
+    // 국가 8
+    ['EWJ','일본'],['EWZ','브라질'],['EWY','한국'],['INDA','인도'],['FXI','중국 대형'],['MCHI','중국'],['EWG','독일'],['EWT','대만'],
+    // 인컴/커버드콜 7
+    ['QYLD','나스닥 커버드콜'],['JEPQ','나스닥 프리미엄'],['JEPI','S&P 프리미엄'],['RYLD','러셀 커버드콜'],['XYLD','S&P 커버드콜'],['QQQI','나스닥 커버드콜(I)'],['GPIQ','나스닥 프리미엄(G)'],
+    // 리츠 2
+    ['VNQ','미국 부동산'],['IYR','부동산'] ]),
     bench:[  // 단순보유 비교군 (무매 탭 종목 전체)
       {sym:'SOXL',name:'반도체 3×',color:'#ff6b6b'},{sym:'USD',name:'반도체 2×',color:'#b088f8'},
       {sym:'TECL',name:'테크 3×',color:'#ffc844'},{sym:'TQQQ',name:'나스닥100 3×',color:'#00d4b4'},
@@ -898,13 +922,18 @@ async function loadMomData(univKey, start, end, stat){
   if(stat){ stat.style.display=''; stat.style.color='var(--dim)'; stat.textContent=`${U.label} 후보군·비교군 시세 받는 중…`; }
   const data={};
   const fetchSyms=[...new Set([...U.tickers.map(t=>t.sym), ...(U.bench||[]).map(t=>t.sym)])];   // 후보군 + 비교군(무매 종목)
-  await Promise.all(fetchSyms.map(async sym=>{
-    try{
+  const one=async sym=>{ try{
       const r=await fetch(`/api/quote?symbol=${encodeURIComponent(sym)}&period1=${p1}&period2=${p2}`);
       if(!r.ok) return; const j=await r.json();
       if(j&&Array.isArray(j.series)){ const m={}; j.series.forEach(d=>{ if(+d.close>0) m[d.date]=+d.close; }); if(Object.keys(m).length>50) data[sym]=m; }
-    }catch(e){ console.warn('mom load fail',sym,e.message); }
-  }));
+    }catch(e){ console.warn('mom load fail',sym,e.message); } };
+  // 100종은 한꺼번에 던지면 과부하 → 14개씩 배치 + 진행표시
+  const BATCH=14;
+  for(let i=0;i<fetchSyms.length;i+=BATCH){
+    await Promise.all(fetchSyms.slice(i,i+BATCH).map(one));
+    const done=Math.min(i+BATCH,fetchSyms.length), msg=`${U.label} 후보군 시세 받는 중… ${done}/${fetchSyms.length}`;
+    if(typeof setRunBusy==='function') setRunBusy(true,msg); else if(stat) stat.textContent=msg;
+  }
   MOMDATA[univKey]={range,data};
   if(stat) stat.style.display='none';
   return data;
@@ -917,8 +946,8 @@ function momentumBacktest(data, tickers, U, cap, lb, filter, costOn){
   const syms=tickers.map(t=>t.sym);
   const taxable={}; tickers.forEach(t=>taxable[t.sym]=t.taxable);
   const SMA={}; syms.forEach(s=>SMA[s]=momSMA(data[s]));
-  // 공통 거래일
-  let dates=Object.keys(data[syms[0]]); syms.forEach(s=>{const set=new Set(Object.keys(data[s])); dates=dates.filter(d=>set.has(d));}); dates.sort();
+  // 전 종목 거래일 합집합 — 상장시점이 달라도 각 달 '가용 종목'만 순위매김(없는 종목은 수익률 NaN으로 자동 제외)
+  const _dset=new Set(); syms.forEach(s=>Object.keys(data[s]).forEach(d=>_dset.add(d))); const dates=[..._dset].sort();
   const mf={}; dates.forEach(d=>{const ym=d.slice(0,7); if(!mf[ym])mf[ym]=d;});
   const months=Object.keys(mf).sort(); const dIdx={}; dates.forEach((d,i)=>dIdx[d]=i);
   const px=(s,d)=>data[s][d];
@@ -941,7 +970,8 @@ function momentumBacktest(data, tickers, U, cap, lb, filter, costOn){
     if(!started){ started=true; startDate=d; if(target)buy(target,d); }
     else if(target!==held){ sellAll(d); if(target)buy(target,d); sw++; }
     const nextD=(i+1<months.length)?mf[months[i+1]]:null, from=dIdx[d], to=nextD?dIdx[nextD]:dates.length;
-    for(let k=from;k<to;k++){ eq[dates[k]]= held? shares*px(held,dates[k]) : cash; }
+    let lp=held?px(held,d):0;   // 보유종목 마지막 유효가 (거래일 누락 방어)
+    for(let k=from;k<to;k++){ if(held){ const p=data[held][dates[k]]; if(p>0)lp=p; eq[dates[k]]=shares*lp; } else eq[dates[k]]=cash; }
   }
   const ed=Object.keys(eq).sort(); const lastD=ed[ed.length-1];
   settleAnnual(held?px(held,lastD):0); const fin= held? shares*px(held,lastD) : cash; eq[lastD]=fin;
