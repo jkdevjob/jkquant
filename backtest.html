@@ -221,7 +221,7 @@ td:first-child{text-align:left;}
   <div class="brand">
     <div>
       <div class="logo">Backtest</div>
-      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v1.107</span></h1>
+      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v1.108</span></h1>
     </div>
   </div>
   <a href="/" class="home">← JK 퀀트</a>
@@ -367,7 +367,7 @@ td:first-child{text-align:left;}
     <div class="ctrl s-mom hide"><label id="momCapLbl">원금 ($)</label><input type="number" id="momCap" value="10000" min="100"></div>
     <div class="ctrl s-mom hide"><label>후보군 <span style="font-size:9px;color:var(--dim)">1위를 가릴 바스켓</span></label>
       <div class="seg" id="momUniv">
-        <button data-u="us" class="active" title="미국 상장 ETF 100종 (지수·11섹터·테마·레버리지·채권·원자재·국가·인컴·리츠)">🇺🇸 미국</button>
+        <button data-u="us" class="active" title="정예 10종: SOXL·TECL·TQQQ(레버) · QQQ·SPY·DIA(지수) · TLT·IEF·SHY(채권) · GLD(금)">🇺🇸 미국</button>
         <button data-u="kr" title="KODEX 레버리지·코스닥150레버·TIGER 나스닥100·KODEX200·국고채10년·골드">🇰🇷 국내</button>
       </div>
     </div>
@@ -850,35 +850,10 @@ syncMaCtrl();   // 초기: V4.0이므로 국면선 비활성 표시
 function _mkUniv(list){ return list.map((x,i)=>({sym:x[0],name:x[1],taxable:true,color:`hsl(${Math.round((i*137.508)%360)},62%,62%)`})); }
 const MOM_UNIV={
   us:{ label:'🇺🇸 미국', cur:'$', cap:10000, fee:0.0030, taxRate:0.22, annual:true, tickers:_mkUniv([
-    // 레버리지 15
-    ['TQQQ','나스닥100 3×'],['SOXL','반도체 3×'],['TECL','테크 3×'],['UPRO','S&P500 3×'],['SSO','S&P500 2×'],
-    ['QLD','나스닥100 2×'],['USD','반도체 2×'],['KORU','한국 3×'],['SPXL','S&P500 3×(D)'],['FAS','금융 3×'],
-    ['TNA','소형주 3×'],['LABU','바이오 3×'],['TMF','미국채 3×'],['UDOW','다우 3×'],['FNGU','FANG+ 3×'],
-    // 지수/브로드 10
-    ['SPY','S&P500'],['QQQ','나스닥100'],['DIA','다우30'],['IWM','러셀2000'],['VTI','미국전체'],
-    ['RSP','S&P500 동일가중'],['VEA','선진국'],['VWO','신흥국'],['EFA','선진국 EAFE'],['EEM','신흥국'],
-    // SPDR 섹터 11
-    ['XLK','기술 섹터'],['XLF','금융 섹터'],['XLE','에너지 섹터'],['XLV','헬스케어 섹터'],['XLI','산업재 섹터'],
-    ['XLY','임의소비 섹터'],['XLP','필수소비 섹터'],['XLU','유틸리티 섹터'],['XLB','소재 섹터'],['XLRE','리츠 섹터'],['XLC','커뮤니케이션 섹터'],
-    // 테마/산업 20
-    ['SMH','반도체(SMH)'],['SOXX','반도체(SOXX)'],['IGV','소프트웨어'],['XBI','바이오'],['IBB','바이오테크'],
-    ['ARKK','혁신 ARKK'],['ARKG','유전체'],['ICLN','청정에너지'],['TAN','태양광'],['LIT','리튬·배터리'],
-    ['HACK','사이버보안'],['BOTZ','로봇·AI'],['SKYY','클라우드'],['XHB','주택건설'],['ITB','주택'],
-    ['XRT','소매'],['KRE','지역은행'],['XOP','원유·가스 탐사'],['JETS','항공'],['PAVE','인프라'],
-    // 스타일/팩터 11
-    ['VUG','대형 성장'],['VTV','대형 가치'],['IWF','러셀 성장'],['IWD','러셀 가치'],['MTUM','모멘텀'],
-    ['QUAL','퀄리티'],['USMV','최소변동성'],['SCHG','대형 성장(S)'],['SCHD','배당성장'],['VYM','고배당'],['DVY','배당'],
-    // 채권 10
-    ['TLT','미국채 20y'],['IEF','미국채 7-10y'],['SHY','단기 국채'],['LQD','투자등급 회사채'],['HYG','하이일드'],
-    ['AGG','종합채권'],['BND','종합채권(V)'],['TIP','물가채'],['EMB','신흥국채'],['MBB','모기지채'],
-    // 원자재/금 6
-    ['GLD','금'],['SLV','은'],['GDX','금광주'],['GDXJ','주니어 금광'],['USO','원유'],['DBC','원자재 바스켓'],
-    // 국가 8
-    ['EWJ','일본'],['EWZ','브라질'],['EWY','한국'],['INDA','인도'],['FXI','중국 대형'],['MCHI','중국'],['EWG','독일'],['EWT','대만'],
-    // 인컴/커버드콜 7
-    ['QYLD','나스닥 커버드콜'],['JEPQ','나스닥 프리미엄'],['JEPI','S&P 프리미엄'],['RYLD','러셀 커버드콜'],['XYLD','S&P 커버드콜'],['QQQI','나스닥 커버드콜(I)'],['GPIQ','나스닥 프리미엄(G)'],
-    // 리츠 2
-    ['VNQ','미국 부동산'],['IYR','부동산'] ]),
+    // 정예 10종 — 레버리지 3(테크·반도체) + 지수 3 + 채권 3 + 금 (모멘텀 로테이션 최적, MAR≈1.0)
+    ['SOXL','반도체 3×'],['TECL','테크 3×'],['TQQQ','나스닥100 3×'],
+    ['QQQ','나스닥100'],['SPY','S&P500'],['DIA','다우30'],
+    ['TLT','미국채 20y'],['IEF','미국채 7-10y'],['SHY','단기 국채'],['GLD','금'] ]),
     bench:[  // 단순보유 비교군 (무매 탭 종목 전체)
       {sym:'SOXL',name:'반도체 3×',color:'#ff6b6b'},{sym:'USD',name:'반도체 2×',color:'#b088f8'},
       {sym:'TECL',name:'테크 3×',color:'#ffc844'},{sym:'TQQQ',name:'나스닥100 3×',color:'#00d4b4'},
