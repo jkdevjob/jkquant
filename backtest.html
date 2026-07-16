@@ -100,6 +100,7 @@ body{background:var(--bg);color:var(--text);font-family:'Pretendard',sans-serif;
 .top .home:hover{border-color:var(--accent);color:var(--accent);}
 
 /* STRATEGY TABS */
+.stabs-sticky{position:sticky;top:0;z-index:20;background:var(--bg);padding-top:12px;}
 .stabs{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;background:var(--surf);border:1px solid var(--border);border-radius:10px;padding:5px;margin-bottom:20px;}
 .stab{padding:11px 8px;border-radius:7px;border:none;background:transparent;color:var(--dim);font-family:'Pretendard';font-size:13.5px;font-weight:600;cursor:pointer;transition:all .15s;text-align:center;}
 .stab.active{color:#fff;}
@@ -221,7 +222,7 @@ td:first-child{text-align:left;}
   <div class="brand">
     <div>
       <div class="logo">Backtest</div>
-      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v1.109</span></h1>
+      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v1.110</span></h1>
     </div>
   </div>
   <a href="/" class="home">← JK 퀀트</a>
@@ -229,13 +230,15 @@ td:first-child{text-align:left;}
 </div>
 <div id="dataStat" style="font-size:11.5px;color:var(--dim);margin:-12px 0 16px;font-variant-numeric:tabular-nums;display:none"></div>
 
-<!-- 전략 탭 -->
+<!-- 전략 탭 (스크롤 시 상단 고정) -->
+<div class="stabs-sticky">
 <div class="stabs">
   <button class="stab active" data-s="dca" onclick="setStrat('dca')">단순 DCA<span class="sub">정액 적립</span></button>
   <button class="stab" data-s="im" onclick="setStrat('im')">무한매수법<span class="sub">V4.0</span></button>
   <button class="stab" data-s="vr" onclick="setStrat('vr')">밸류리밸런싱<span class="sub">VR 5.0</span></button>
   <button class="stab" data-s="ma" onclick="setStrat('ma')">200일선 로테이션<span class="sub">이평선↔현금</span></button>
   <button class="stab" data-s="mom" onclick="setStrat('mom')">모멘텀 로테이션<span class="sub">1위 갈아타기</span></button>
+</div>
 </div>
 
 <!-- 공통 컨트롤 -->
@@ -1093,7 +1096,7 @@ function renderMomentum(res,U,tickers){
 /* ════════ 옵션 저장/복원 — 새로고침해도 모든 설정 유지 (localStorage) ════════ */
 const BT_STATE_KEY='jkq_bt_state';
 function saveBtState(){ if(_restoring)return; try{
-  const inputs={}; document.querySelectorAll('.ctrl-card input[id]').forEach(el=>{ if(el.id!=='addTicker') inputs[el.id]=el.value; });
+  const inputs={}; document.querySelectorAll('.ctrl-card input[id]').forEach(el=>{ if(el.id!=='addTicker'&&el.id!=='dEnd') inputs[el.id]=el.value; });  // 종료일(dEnd)은 저장 안 함 — 항상 오늘 날짜 유지
   const segs={}; document.querySelectorAll('.ctrl-card .seg[id]').forEach(seg=>{ const b=seg.querySelector('button.active'); if(b){ const v=Object.values(b.dataset)[0]; if(v!=null) segs[seg.id]=v; } });
   const st={ v:1, strat, inputs, segs, sets:{dca:[...dcaActive],im:[...imActive],vr:[...vrActive],ma:[...maActive]} };
   localStorage.setItem(BT_STATE_KEY, JSON.stringify(st));
@@ -1107,7 +1110,7 @@ function restoreBtState(){ try{
     if(st.segs) Object.entries(st.segs).forEach(([id,val])=>{ const seg=document.getElementById(id); if(!seg)return;
       const btn=[...seg.querySelectorAll('button')].find(b=>String(Object.values(b.dataset)[0])===String(val)); if(btn) btn.click(); });
     // 입력값: 세그 클릭 이후에 덮어써 저장값 우선 (예: 후보군 변경이 원금을 초기화해도 저장값 복원)
-    if(st.inputs) Object.entries(st.inputs).forEach(([id,v])=>{ const el=document.getElementById(id); if(el&&v!=null&&v!=='') el.value=v; });
+    if(st.inputs) Object.entries(st.inputs).forEach(([id,v])=>{ if(id==='dEnd')return; const el=document.getElementById(id); if(el&&v!=null&&v!=='') el.value=v; });  // 종료일은 복원하지 않음 (오늘 날짜 고정)
     if(st.strat) setStrat(st.strat);
   }finally{ _restoring=false; }
   return true;
