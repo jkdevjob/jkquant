@@ -295,6 +295,9 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
 .minichart{width:100%;height:150px;display:block;margin-top:6px}
 .minichart .grid{stroke:var(--line);stroke-width:1}
 .minichart .axislbl{font-size:9px;fill:var(--faint)}
+.vcc-lbl{font-size:12px;color:var(--faint);font-weight:600;display:flex;justify-content:space-between;align-items:center;margin-bottom:2px;gap:8px;flex-wrap:wrap}
+.vcc-leg{font-weight:500;font-size:10px;color:var(--faint);display:flex;gap:8px;align-items:center}
+.vcc-leg i{display:inline-block;width:9px;height:9px;border-radius:2px;vertical-align:middle;margin-right:2px}
 .chart-head{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap}
 .chart-head h3{min-width:0;flex:1 1 auto}
 .chart-head .ch-sel{display:flex;gap:5px;flex-shrink:0}
@@ -764,6 +767,16 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
         <p class="note" id="fg_note" style="margin-top:10px">참고 지표일 뿐, VR 매매는 밴드 규칙대로 진행합니다.</p>
       </div>
 
+      <!-- 사이클 분석 차트 -->
+      <div class="card" id="vr_cyc_charts"><h3 style="justify-content:space-between"><span style="display:flex;align-items:center;gap:8px"><span class="dot"></span>사이클 분석</span><span class="lh-stage" id="vcc_count">0 사이클</span></h3>
+        <div class="vcc-lbl">평가금 vs 밴드<span class="vcc-leg"><span><i style="background:#8b8cf0"></i>V</span><span><i style="background:#f5c451"></i>평가금</span><span><i style="background:rgba(139,140,240,.35)"></i>밴드</span></span></div>
+        <svg class="minichart" id="vcc_band" style="height:132px" viewBox="0 0 320 132" preserveAspectRatio="none"></svg>
+        <div class="vcc-lbl" style="margin-top:12px">Pool 추이<span class="vcc-leg"><span><i style="background:#4fb0f5"></i>Pool(현금 재원)</span></span></div>
+        <svg class="minichart" id="vcc_pool" style="height:82px" viewBox="0 0 320 82" preserveAspectRatio="none"></svg>
+        <div class="vcc-lbl" style="margin-top:12px">사이클별 거래액<span class="vcc-leg"><span><i style="background:#3fb950"></i>매도(+)</span><span><i style="background:#f24b5f"></i>매수(−)</span></span></div>
+        <svg class="minichart" id="vcc_trade" style="height:82px" viewBox="0 0 320 82" preserveAspectRatio="none"></svg>
+        <p class="note" id="vcc_note" style="margin-top:8px">진입할 때마다 사이클 데이터가 쌓여 그래프가 그려집니다.</p></div>
+
       <!-- 사이클 히스토리 -->
       <div class="card"><h3 style="justify-content:space-between"><span style="display:flex;align-items:center;gap:8px"><span class="dot"></span>사이클 히스토리</span><span class="lh-stage" id="cyc_count">최근 0개</span></h3>
         <div class="cyc-scroll"><table class="cyctbl" id="cyc_tbl"></table></div>
@@ -916,7 +929,7 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
   <footer>
     <strong>JK 퀀트</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v2.35</b> · 2026-07-01</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v2.36</b> · 2026-07-01</div>
   </footer>
 </div>
 
@@ -2059,8 +2072,10 @@ function enterNextCycle(){
 
   // 사이클 히스토리 적재 (직전 사이클 요약)
   if(!st.cycLog) st.cycLog=[];
+  const _cycClose=vrLastPrice(c);
   st.cycLog.push({cyc:c.curCyc, dates:cycDates(c)||'-', V:+c.V.toFixed(2),
-    lo:+c.lo.toFixed(2), up:+c.up.toFixed(2), trade:+c.cycTrade.toFixed(2), startPool:+c.cycStartPool.toFixed(2)});
+    lo:+c.lo.toFixed(2), up:+c.up.toFixed(2), trade:+c.cycTrade.toFixed(2), startPool:+c.cycStartPool.toFixed(2),
+    E:ev>0?+ev.toFixed(2):null, close:_cycClose>0?+_cycClose.toFixed(4):null});   // 평가금·종가 (사이클 분석 차트용)
 
   // 적립/인출 자동 기록 (Pool은 이력에서 재계산되므로 이 거래로만 반영)
   const newCyc=c.curCyc+1;
@@ -2120,6 +2135,7 @@ function renderVrAnal(){
 
   // 사이클 히스토리
   renderCycLog();
+  renderVrCycCharts();
 }
 
 /* 도넛: 평가금 vs Pool 비중 */
@@ -2157,6 +2173,62 @@ function renderCycLog(){
   });
   if(rows.length===0) html+=`<tr><td colspan="6" class="empty" style="text-align:center;color:var(--faint);padding:14px">아직 사이클 기록이 없습니다</td></tr>`;
   $('cyc_tbl').innerHTML=html;
+}
+
+/* ════════ 사이클 분석 차트 (평가금 vs 밴드 · Pool · 거래액) ════════ */
+// SVG viewBox 좌표계(고정 320×H)로 그리므로 탭 숨김/크기와 무관하게 동작.
+function _vccScale(vals, H, padT, padB){
+  const g=vals.filter(v=>v!=null&&isFinite(v)); let mn=Math.min(...g), mx=Math.max(...g);
+  if(!isFinite(mn)||!isFinite(mx)){mn=0;mx=1;} if(mn===mx){mn-=1;mx+=1;}
+  return v=>padT + (H-padT-padB)*(1-(v-mn)/(mx-mn));
+}
+function _vccX(i,n){ const pad=8,W=320; return pad + (W-2*pad)*(n<=1?0.5:i/(n-1)); }
+function _vccLine(pts,n,Y,key){   // null 구간은 끊어 그림(spanGaps)
+  let d='',pen=false;
+  pts.forEach((p,i)=>{ const v=p[key]; if(v==null||!isFinite(v)){pen=false;return;}
+    d+=(pen?'L':'M')+_vccX(i,n).toFixed(1)+' '+Y(v).toFixed(1)+' '; pen=true; });
+  return d.trim();
+}
+function renderVrCycCharts(){
+  const st=curStrat().settings, c=computeVr();
+  const log=(st.cycLog||[]).slice();
+  const liveE=vrEval(c), liveClose=vrLastPrice(c);
+  const pts=[...log, {cyc:c.curCyc, V:c.V, lo:c.lo, up:c.up, trade:c.cycTrade, startPool:c.cycStartPool,
+    E:liveE>0?liveE:null, close:liveClose>0?liveClose:null, live:true}];
+  const n=pts.length;
+  const cnt=$('vcc_count'); if(cnt)cnt.textContent=`${n} 사이클`;
+  const note=$('vcc_note');
+  const clear=()=>['vcc_band','vcc_pool','vcc_trade'].forEach(id=>{const s=$(id);if(s)s.innerHTML='';});
+  if(n<2){ clear(); if(note)note.textContent='사이클을 1회 이상 진입하면 그래프가 그려집니다.'; return; }
+  if(note)note.textContent='● 현재(진행 중) 사이클 포함. 평가금 선은 기록이 있는 사이클부터 표시됩니다.';
+  // ── 평가금 vs 밴드 ──
+  const band=$('vcc_band');
+  if(band){ const H=132;
+    const all=[]; pts.forEach(p=>{all.push(p.lo,p.up,p.V); if(p.E!=null)all.push(p.E);});
+    const Y=_vccScale(all,H,8,10);
+    let area='';
+    pts.forEach((p,i)=>{ area+=(i===0?'M':'L')+_vccX(i,n).toFixed(1)+' '+Y(p.up).toFixed(1)+' '; });
+    for(let i=n-1;i>=0;i--){ area+='L'+_vccX(i,n).toFixed(1)+' '+Y(pts[i].lo).toFixed(1)+' '; }
+    area+='Z';
+    band.innerHTML=`<path d="${area}" fill="rgba(139,140,240,.16)" stroke="none"/>`
+      +`<path d="${_vccLine(pts,n,Y,'V')}" fill="none" stroke="#8b8cf0" stroke-width="1.8"/>`
+      +(_vccLine(pts,n,Y,'E')?`<path d="${_vccLine(pts,n,Y,'E')}" fill="none" stroke="#f5c451" stroke-width="1.8"/>`:'');
+  }
+  // ── Pool 추이 ──
+  const poolC=$('vcc_pool');
+  if(poolC){ const H=82; const Y=_vccScale(pts.map(p=>p.startPool),H,8,10);
+    poolC.innerHTML=`<path d="${_vccLine(pts,n,Y,'startPool')}" fill="none" stroke="#4fb0f5" stroke-width="1.8"/>`; }
+  // ── 사이클별 거래액 (막대, 중앙 0선) ──
+  const trC=$('vcc_trade');
+  if(trC){ const H=82,padT=8,padB=10; const zeroY=padT+(H-padT-padB)*0.5, half=(H-padT-padB)*0.5;
+    const mx=Math.max(1,...pts.map(p=>Math.abs(p.trade||0)));
+    const w=Math.max(2,Math.min(14,(320-16)/n*0.6));
+    let bars='';
+    pts.forEach((p,i)=>{ const t=p.trade||0; const h=Math.abs(t)/mx*half;
+      const x=_vccX(i,n), y=t>=0?zeroY-h:zeroY, col=t>=0?'#3fb950':'#f24b5f';
+      bars+=`<rect x="${(x-w/2).toFixed(1)}" y="${y.toFixed(1)}" width="${w.toFixed(1)}" height="${Math.max(0.6,h).toFixed(1)}" rx="1" fill="${col}"/>`; });
+    trC.innerHTML=`<line x1="8" y1="${zeroY.toFixed(1)}" x2="312" y2="${zeroY.toFixed(1)}" stroke="var(--line)" stroke-width="1"/>`+bars;
+  }
 }
 
 /* ════════ 거래 이력 (cyc 표시 추가) ════════ */
