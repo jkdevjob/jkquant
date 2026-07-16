@@ -220,7 +220,7 @@ td:first-child{text-align:left;}
   <div class="brand">
     <div>
       <div class="logo">Backtest</div>
-      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v1.104</span></h1>
+      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v1.105</span></h1>
     </div>
   </div>
   <a href="/" class="home">← JK 퀀트</a>
@@ -793,6 +793,7 @@ function setStrat(s){
   document.querySelectorAll('.s-im.s-vr').forEach(e=>e.classList.toggle('hide',s==='dca'||s==='mom'));
   buildPickSingle();
   if(document.getElementById('tickerSingle')._render) document.getElementById('tickerSingle')._render();
+  if(typeof saveBtState==='function'&&!_restoring) saveBtState();   // 전략 탭 변경 저장
   if(dataLoaded) run();      // 데이터 있을 때만 재계산 (탭 전환만으로 로딩 안 함)
 }
 
@@ -863,22 +864,23 @@ const MOM_UNIV={
 };
 let momUniv='us', momLookback=1, momFilter=true, momCostOn=true;
 let MOMDATA={};   // { univKey: {range:'s_e', data:{sym:{date:close}}} }
+let _restoring=false;   // 옵션 복원 중이면 자동 재실행 억제
 
 document.getElementById('momUniv').onclick=e=>{ if(!e.target.dataset.u)return;
   document.querySelectorAll('#momUniv button').forEach(b=>b.classList.remove('active')); e.target.classList.add('active');
   momUniv=e.target.dataset.u;
   const U=MOM_UNIV[momUniv]; document.getElementById('momCapLbl').textContent=`원금 (${U.cur})`;
   const capEl=document.getElementById('momCap'); if(capEl&&(+capEl.value===10000||+capEl.value===10000000)) capEl.value=U.cap;
-  if(dataLoaded||MOMDATA[momUniv]) run(); };
+  if(!_restoring&&(dataLoaded||MOMDATA[momUniv])) run(); };
 document.getElementById('momLookback').onclick=e=>{ if(!e.target.dataset.l)return;
   document.querySelectorAll('#momLookback button').forEach(b=>b.classList.remove('active')); e.target.classList.add('active');
-  momLookback=+e.target.dataset.l; run(); };
+  momLookback=+e.target.dataset.l; if(!_restoring)run(); };
 document.getElementById('momFilter').onclick=e=>{ if(!e.target.dataset.f)return;
   document.querySelectorAll('#momFilter button').forEach(b=>b.classList.remove('active')); e.target.classList.add('active');
-  momFilter=e.target.dataset.f==='1'; run(); };
+  momFilter=e.target.dataset.f==='1'; if(!_restoring)run(); };
 document.getElementById('momCost').onclick=e=>{ if(!e.target.dataset.x)return;
   document.querySelectorAll('#momCost button').forEach(b=>b.classList.remove('active')); e.target.classList.add('active');
-  momCostOn=e.target.dataset.x==='1'; run(); };
+  momCostOn=e.target.dataset.x==='1'; if(!_restoring)run(); };
 
 async function loadMomData(univKey, start, end, stat){
   const range=start+'_'+end;
@@ -913,7 +915,7 @@ function momentumBacktest(data, tickers, U, cap, lb, filter, costOn){
   const px=(s,d)=>data[s][d];
   const FEE=costOn?U.fee:0;
   let held=null, shares=0, cash=cap, basis=0, started=false, startDate=null;
-  const eq={}; let sw=0, cashMonths=0; const holdCount={}; let yrRealUSD=0, curYear=null, taxPaid=0;
+  const eq={}; let sw=0, cashMonths=0; const holdCount={}; const seq=[]; let yrRealUSD=0, curYear=null, taxPaid=0;
   function sellAll(d){ if(!held)return; const p=px(held,d), gross=shares*p, fee=gross*FEE, proceeds=gross-fee, realized=proceeds-basis;
     cash=proceeds; if(costOn){ if(U.annual){ yrRealUSD+=realized; } else if(taxable[held]&&realized>0){ const tx=realized*U.taxRate; cash-=tx; taxPaid+=tx; } }
     shares=0; held=null; }
@@ -926,6 +928,7 @@ function momentumBacktest(data, tickers, U, cap, lb, filter, costOn){
     let best=null,bs=-1e9; syms.forEach(s=>{ const r=px(s,d)/px(s,pd)-1; if(r>bs){bs=r;best=s;} });
     let target=best; if(filter){ const sm=SMA[best][d]; if(sm!=null && px(best,d)<sm) target=null; }
     if(target)holdCount[target]=(holdCount[target]||0)+1; else cashMonths++;
+    seq.push({month:months[i], sym:target, ret:bs});   // 월별 선택 (sym=null이면 현금)
     if(!started){ started=true; startDate=d; if(target)buy(target,d); }
     else if(target!==held){ sellAll(d); if(target)buy(target,d); sw++; }
     const nextD=(i+1<months.length)?mf[months[i+1]]:null, from=dIdx[d], to=nextD?dIdx[nextD]:dates.length;
@@ -944,7 +947,7 @@ function momentumBacktest(data, tickers, U, cap, lb, filter, costOn){
   const bfin=bsh*px(bt0,lastD), bcagr=(Math.pow(bfin/cap,1/yrs)-1)*100;
   const bsnap=snap.map(([d])=>[d, data[bt0][d]?bsh*data[bt0][d]:null]);
   return {cagr,mdd:mddP,mar:mddP>0?cagr/mddP:0,tot:(fin/cap-1)*100,fin,cap,sw,cashMonths,startDate,endDate:lastD,yrs,months:months.length-lb,
-    holdCount,snap,taxPaid, bench:{sym:bt0,cagr:bcagr,mdd:bmdd*100,mar:bmdd>0?bcagr/(bmdd*100):0,tot:(bfin/cap-1)*100,fin:bfin,snap:bsnap} };
+    holdCount,seq,snap,taxPaid, bench:{sym:bt0,cagr:bcagr,mdd:bmdd*100,mar:bmdd>0?bcagr/(bmdd*100):0,tot:(bfin/cap-1)*100,fin:bfin,snap:bsnap} };
 }
 
 // 실행 중 표시: 버튼 비활성+'계산 중', 중앙 스피너 로딩 배너
@@ -973,6 +976,7 @@ async function runMomentum(start,end){
 }
 
 function renderMomentum(res,U,tickers){
+  hideEmptyState();   // 결과 영역(#result) 복원 — 이게 없어 첫 실행 시 결과가 안 보이던 버그 수정
   document.querySelector('.cards')?.classList.add('hide');
   document.getElementById('detail')?.classList.add('hide');
   document.querySelector('.tbl-wrap')?.classList.add('hide');
@@ -993,6 +997,21 @@ function renderMomentum(res,U,tickers){
       <span style="text-align:right;color:var(--faint2,#8a96c0);font-weight:700">${c}</span></div>`;
   }).join('');
   const cashRow=res.cashMonths>0?`<div style="font-size:12px;color:var(--dim);margin-top:6px">💵 현금(필터 회피) <b style="color:var(--text)">${res.cashMonths}개월</b> · 스위치 ${res.sw}회${res.taxPaid>0?` · 세금 ${money(res.taxPaid)}`:''}</div>`:`<div style="font-size:12px;color:var(--dim);margin-top:6px">스위치 ${res.sw}회${res.taxPaid>0?` · 세금 ${money(res.taxPaid)}`:''}</div>`;
+  // 매달 선택 종목 세로 나열 (연도 구분 · sticky 헤더)
+  let seqHtml='', lastYr=null;
+  res.seq.forEach(x=>{
+    const yr=x.month.slice(0,4);
+    if(yr!==lastYr){ seqHtml+=`<div style="font-size:10px;letter-spacing:.12em;color:var(--faint2,#7c85a3);font-weight:800;padding:9px 0 3px;position:sticky;top:0;background:var(--card,#141a2e)">${yr}</div>`; lastYr=yr; }
+    const t=x.sym?tickers.find(y=>y.sym===x.sym):null;
+    const def=t&&/금|국고채|채권|골드/.test(t.name);
+    const col=x.sym?(def?'#9575cd':(t?t.color:'#888')):'#5a6478';
+    const nm=x.sym?`${shortSym(x.sym)} <span style="color:var(--faint2,#7c85a3);font-size:10px;font-weight:400">${nameOf(x.sym)}</span>`:`<span style="color:#8f95ad">현금 (필터 회피)</span>`;
+    seqHtml+=`<div style="display:flex;align-items:center;gap:9px;padding:5px 2px;border-bottom:1px solid var(--border,#242b45)">
+      <span style="font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:var(--dim);width:54px;flex-shrink:0">${x.month}</span>
+      <span style="width:9px;height:9px;border-radius:2px;background:${col};flex-shrink:0"></span>
+      <span style="font-weight:600;font-size:12.5px;min-width:0">${nm}</span>
+      <span style="margin-left:auto;font-family:'IBM Plex Mono',monospace;font-size:11px;color:${x.ret>=0?'var(--green)':'var(--red)'};flex-shrink:0">${(x.ret>=0?'+':'')+(x.ret*100).toFixed(1)}%</span></div>`;
+  });
   const b=res.bench;
   document.getElementById('momResult').innerHTML=`
     <div style="overflow-x:auto;border:1px solid var(--border,#242b45);border-radius:12px;margin-bottom:14px">
@@ -1018,6 +1037,12 @@ function renderMomentum(res,U,tickers){
     <div style="background:var(--card,#141a2e);border:1px solid var(--border,#242b45);border-radius:12px;padding:14px 16px">
       <div style="font-size:12px;color:var(--dim);font-weight:700;margin-bottom:8px">모멘텀이 고른 종목 (${total}개월 중)</div>
       ${freq}${cashRow}
+    </div>
+    <div style="background:var(--card,#141a2e);border:1px solid var(--border,#242b45);border-radius:12px;padding:14px 16px;margin-top:14px">
+      <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px;gap:8px">
+        <span style="font-size:12px;color:var(--dim);font-weight:700">📅 매달 선택한 종목 (${res.seq.length}개월)</span>
+        <span style="font-size:10px;color:var(--faint2,#7c85a3);text-align:right">월 · 종목 · 직전 ${momLookback}개월 수익률</span></div>
+      <div style="max-height:360px;overflow-y:auto;padding-right:4px">${seqHtml}</div>
     </div>`;
   // 차트 (전략 vs 벤치, 네이티브 통화)
   const labels=res.snap.map(s=>s[0]);
@@ -1028,6 +1053,34 @@ function renderMomentum(res,U,tickers){
   ],labels,cur);
   lastRender();
 }
+
+/* ════════ 옵션 저장/복원 — 새로고침해도 모든 설정 유지 (localStorage) ════════ */
+const BT_STATE_KEY='jkq_bt_state';
+function saveBtState(){ if(_restoring)return; try{
+  const inputs={}; document.querySelectorAll('.ctrl-card input[id]').forEach(el=>{ if(el.id!=='addTicker') inputs[el.id]=el.value; });
+  const segs={}; document.querySelectorAll('.ctrl-card .seg[id]').forEach(seg=>{ const b=seg.querySelector('button.active'); if(b){ const v=Object.values(b.dataset)[0]; if(v!=null) segs[seg.id]=v; } });
+  const st={ v:1, strat, inputs, segs, sets:{dca:[...dcaActive],im:[...imActive],vr:[...vrActive],ma:[...maActive]} };
+  localStorage.setItem(BT_STATE_KEY, JSON.stringify(st));
+}catch(e){} }
+function restoreBtState(){ try{
+  const st=JSON.parse(localStorage.getItem(BT_STATE_KEY)||'null'); if(!st) return false;
+  _restoring=true;
+  try{
+    if(st.sets){ if(st.sets.dca)dcaActive=new Set(st.sets.dca); if(st.sets.im)imActive=new Set(st.sets.im); if(st.sets.vr)vrActive=new Set(st.sets.vr); if(st.sets.ma)maActive=new Set(st.sets.ma); }
+    // 세그: 저장된 값의 버튼을 클릭해 active 클래스 + JS 변수 동기화 (핸들러가 단일 진실원). _restoring이라 재실행은 억제됨.
+    if(st.segs) Object.entries(st.segs).forEach(([id,val])=>{ const seg=document.getElementById(id); if(!seg)return;
+      const btn=[...seg.querySelectorAll('button')].find(b=>String(Object.values(b.dataset)[0])===String(val)); if(btn) btn.click(); });
+    // 입력값: 세그 클릭 이후에 덮어써 저장값 우선 (예: 후보군 변경이 원금을 초기화해도 저장값 복원)
+    if(st.inputs) Object.entries(st.inputs).forEach(([id,v])=>{ const el=document.getElementById(id); if(el&&v!=null&&v!=='') el.value=v; });
+    if(st.strat) setStrat(st.strat);
+  }finally{ _restoring=false; }
+  return true;
+}catch(e){ _restoring=false; return false; } }
+// 변경 시 자동 저장 (세그 클릭·셀렉트 변경은 즉시, 텍스트 입력은 디바운스)
+['click','change'].forEach(ev=>document.querySelector('.ctrl-card')?.addEventListener(ev,()=>{ if(!_restoring) setTimeout(saveBtState,0); }));
+document.querySelector('.ctrl-card')?.addEventListener('input',()=>{ if(_restoring)return; clearTimeout(window._btSaveT); window._btSaveT=setTimeout(saveBtState,450); });
+// 초기 복원 (기본값·빈 상태 세팅 뒤, 모든 세그 배선 완료 후 실행)
+restoreBtState();
 
 function commonDays(start,end,tickers){
   let s=null;
