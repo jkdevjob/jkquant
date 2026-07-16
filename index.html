@@ -871,8 +871,8 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
           <div id="ma_chart_labels" style="position:absolute;top:0;left:2px;height:130px;pointer-events:none"></div>
         </div>
         <div style="display:flex;gap:14px;margin-top:6px;font-size:11px;color:var(--faint)">
-          <span><span style="display:inline-block;width:14px;height:2px;background:#f5a451;vertical-align:middle;margin-right:4px"></span>합성 1배지수 <span style="color:var(--faint2,#7c85a3)">(구간 첫날=100)</span></span>
-          <span><span style="display:inline-block;width:14px;height:2px;background:var(--gold);vertical-align:middle;margin-right:4px"></span><span id="ma_chart_leg">200일선</span></span>
+          <span><span style="display:inline-block;width:14px;height:2px;background:#4fb0f5;vertical-align:middle;margin-right:4px"></span>합성 1배지수 <span style="color:var(--faint2,#7c85a3)">(구간 첫날=100)</span></span>
+          <span><span style="display:inline-block;width:14px;height:2px;background:#f24b5f;vertical-align:middle;margin-right:4px"></span><span id="ma_chart_leg">200일선</span></span>
         </div>
         <p class="fetchnote" id="ma_chart_note" style="margin-top:8px;color:var(--faint)">🔄 자동을 눌러 이력을 불러오면 그래프가 표시됩니다.</p>
       </div>
@@ -916,7 +916,7 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
   <footer>
     <strong>JK 퀀트</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v2.33</b> · 2026-07-01</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v2.34</b> · 2026-07-01</div>
   </footer>
 </div>
 
@@ -2320,13 +2320,13 @@ function drawMaChart(c){
     const up=S[i]>M[i], x0=xs(i), x1=(i<idx.length-1)?xs(i+1):W;
     bg+=`<rect x="${x0.toFixed(1)}" y="0" width="${Math.max(0.5,x1-x0).toFixed(1)}" height="${H}" fill="${up?'rgba(54,211,153,.07)':'rgba(248,123,140,.08)'}"/>`; }
   svg.innerHTML=bg
-    +`<path d="${path(M)}" fill="none" stroke="#e8b64c" stroke-width="1.4"/>`
-    +`<path d="${path(S)}" fill="none" stroke="#f5a451" stroke-width="1.8"/>`;
+    +`<path d="${path(M)}" fill="none" stroke="#f24b5f" stroke-width="1.6"/>`
+    +`<path d="${path(S)}" fill="none" stroke="#4fb0f5" stroke-width="1.8"/>`;
   // 마지막 값 라벨 (겹침 방지)
   if(lbox){
     const fmtv=v=>v>=10000?(v/1000).toFixed(1)+'k':v.toFixed(v>=100?0:1);
     const lastM=M.filter(v=>v!=null).slice(-1)[0];
-    const items=[[S[S.length-1],'#f5a451'],[lastM,'#e8b64c']].filter(x=>x[0]!=null);
+    const items=[[S[S.length-1],'#4fb0f5'],[lastM,'#f24b5f']].filter(x=>x[0]!=null);
     const placed=items.map(([v,col])=>({v,c:col,y:ys(v)})).sort((a,b)=>a.y-b.y);
     for(let i=1;i<placed.length;i++){ if(placed[i].y-placed[i-1].y<12) placed[i].y=placed[i-1].y+12; }
     const over=placed.length?placed[placed.length-1].y-(H-6):0; if(over>0)placed.forEach(p=>p.y-=over);
