@@ -221,7 +221,7 @@ td:first-child{text-align:left;}
   <div class="brand">
     <div>
       <div class="logo">Backtest</div>
-      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v1.108</span></h1>
+      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v1.109</span></h1>
     </div>
   </div>
   <a href="/" class="home">← JK 퀀트</a>
@@ -929,9 +929,11 @@ function momentumBacktest(data, tickers, U, cap, lb, filter, costOn){
   const FEE=costOn?U.fee:0;
   let held=null, shares=0, cash=cap, basis=0, started=false, startDate=null;
   const eq={}; let sw=0, cashMonths=0; const holdCount={}; const seq=[]; let yrRealUSD=0, curYear=null, taxPaid=0;
-  function sellAll(d){ if(!held)return; const p=px(held,d), gross=shares*p, fee=gross*FEE, proceeds=gross-fee, realized=proceeds-basis;
+  // 매도 시 실현수익률(순수익, 수수료만 반영·세전) 반환. 팔 포지션이 없으면 null(=매도 없음).
+  function sellAll(d){ if(!held)return null; const p=px(held,d), gross=shares*p, fee=gross*FEE, proceeds=gross-fee, realized=proceeds-basis;
+    const soldRet = basis>0 ? realized/basis : 0;
     cash=proceeds; if(costOn){ if(U.annual){ yrRealUSD+=realized; } else if(taxable[held]&&realized>0){ const tx=realized*U.taxRate; cash-=tx; taxPaid+=tx; } }
-    shares=0; held=null; }
+    shares=0; held=null; return soldRet; }
   function buy(s,d){ const p=px(s,d), fee=cash*FEE; basis=cash; shares=(cash-fee)/p; cash=0; held=s; }
   function settleAnnual(priceForPay){ if(!costOn||!U.annual)return; const taxable=Math.max(0,yrRealUSD*COST_KRW-COST_DEDUCT), tx=taxable*U.taxRate/COST_KRW;
     if(tx>0){ if(cash>=tx)cash-=tx; else{ const need=tx-cash; cash=0; if(held&&priceForPay>0)shares-=need/priceForPay; } taxPaid+=tx; } yrRealUSD=0; }
@@ -941,9 +943,10 @@ function momentumBacktest(data, tickers, U, cap, lb, filter, costOn){
     let best=null,bs=-1e9; syms.forEach(s=>{ const r=px(s,d)/px(s,pd)-1; if(r>bs){bs=r;best=s;} });
     let target=best; if(filter){ const sm=SMA[best][d]; if(sm!=null && px(best,d)<sm) target=null; }
     if(target)holdCount[target]=(holdCount[target]||0)+1; else cashMonths++;
-    seq.push({month:months[i], sym:target, ret:bs});   // 월별 선택 (sym=null이면 현금)
+    let soldRet=null;   // 이번 달 진입 시 직전 포지션을 매도했다면 그 실현수익률 · 첫 달·홀드 유지면 null(매도 없음)
     if(!started){ started=true; startDate=d; if(target)buy(target,d); }
-    else if(target!==held){ sellAll(d); if(target)buy(target,d); sw++; }
+    else if(target!==held){ soldRet=sellAll(d); if(target)buy(target,d); sw++; }
+    seq.push({month:months[i], sym:target, ret:bs, soldRet});   // 월별 선택 (sym=null이면 현금) · ret=선정점수(신규픽 직전 N개월 수익률) · soldRet=직전 포지션 매도 실현수익률
     const nextD=(i+1<months.length)?mf[months[i+1]]:null, from=dIdx[d], to=nextD?dIdx[nextD]:dates.length;
     let lp=held?px(held,d):0;   // 보유종목 마지막 유효가 (거래일 누락 방어)
     for(let k=from;k<to;k++){ if(held){ const p=data[held][dates[k]]; if(p>0)lp=p; eq[dates[k]]=shares*lp; } else eq[dates[k]]=cash; }
@@ -1029,11 +1032,16 @@ function renderMomentum(res,U,tickers){
     const def=t&&/금|국고채|채권|골드/.test(t.name);
     const col=x.sym?(def?'#9575cd':(t?t.color:'#888')):'#5a6478';
     const nm=x.sym?`${shortSym(x.sym)} <span style="color:var(--faint2,#7c85a3);font-size:10px;font-weight:400">${nameOf(x.sym)}</span>`:`<span style="color:#8f95ad">현금 (필터 회피)</span>`;
-    seqHtml+=`<div style="display:flex;align-items:center;gap:9px;padding:5px 2px;border-bottom:1px solid var(--border,#242b45)">
-      <span style="font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:var(--dim);width:54px;flex-shrink:0">${x.month}</span>
-      <span style="width:9px;height:9px;border-radius:2px;background:${col};flex-shrink:0"></span>
-      <span style="font-weight:600;font-size:12.5px;min-width:0">${nm}</span>
-      <span style="margin-left:auto;font-family:'IBM Plex Mono',monospace;font-size:11px;color:${x.ret>=0?'var(--green)':'var(--red)'};flex-shrink:0">${(x.ret>=0?'+':'')+(x.ret*100).toFixed(1)}%</span></div>`;
+    // 매도손익 서브라인: 이번 달 진입 시 직전 포지션을 실제로 매도했을 때만 표시(첫 달·홀드 유지=soldRet null → 표시 없음)
+    const soldLine = x.soldRet==null ? '' :
+      `<div style="font-size:10px;color:${x.soldRet>=0?'var(--green)':'var(--red)'};opacity:.8;margin:1px 0 0 63px">↩ 직전 포지션 매도 ${(x.soldRet>=0?'+':'')+(x.soldRet*100).toFixed(1)}%</div>`;
+    seqHtml+=`<div style="padding:5px 2px;border-bottom:1px solid var(--border,#242b45)">
+      <div style="display:flex;align-items:center;gap:9px">
+        <span style="font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:var(--dim);width:54px;flex-shrink:0">${x.month}</span>
+        <span style="width:9px;height:9px;border-radius:2px;background:${col};flex-shrink:0"></span>
+        <span style="font-weight:600;font-size:12.5px;min-width:0">${nm}</span>
+        <span style="margin-left:auto;font-family:'IBM Plex Mono',monospace;font-size:11px;color:${x.ret>=0?'var(--green)':'var(--red)'};flex-shrink:0">${(x.ret>=0?'+':'')+(x.ret*100).toFixed(1)}%</span>
+      </div>${soldLine}</div>`;
   });
   const b=res.bench;
   // 무매 종목 단순보유 비교행 (최종액 내림차순, 모멘텀보다 낮으면 흐리게)
@@ -1069,7 +1077,7 @@ function renderMomentum(res,U,tickers){
     <div style="background:var(--card,#141a2e);border:1px solid var(--border,#242b45);border-radius:12px;padding:14px 16px;margin-top:14px">
       <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px;gap:8px">
         <span style="font-size:12px;color:var(--dim);font-weight:700">📅 매달 선택한 종목 (${res.seq.length}개월)</span>
-        <span style="font-size:10px;color:var(--faint2,#7c85a3);text-align:right">월 · 종목 · 직전 ${momLookback}개월 수익률</span></div>
+        <span style="font-size:10px;color:var(--faint2,#7c85a3);text-align:right">우측=선정점수(직전 ${momLookback}개월) · ↩=갈아탈 때 직전 포지션 매도손익</span></div>
       <div style="max-height:360px;overflow-y:auto;padding-right:4px">${seqHtml}</div>
     </div>`;
   // 차트 (전략 vs 벤치, 네이티브 통화)
