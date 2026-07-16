@@ -84,7 +84,7 @@ window.btLogin = async () => {
 :root{
   --bg:#0f1320;--surf:#171c2e;--surf2:#1e2540;--border:#2a3354;--border2:#34406a;
   --text:#e8ecf7;--dim:#9aa6c9;--dim2:#b3bce0;--accent:#8b8cf0;--green:#36d399;--red:#f87b8c;--gold:#f5c451;
-  --c-dca:#8b8cf0;--c-im:#ff6b6b;--c-vr:#00d4b4;--c-ma:#ffa94d;
+  --c-dca:#8b8cf0;--c-im:#ff6b6b;--c-vr:#00d4b4;--c-ma:#ffa94d;--c-mom:#4dabf7;
   --qld:#5b8dee;--tqqq:#00d4b4;--usd:#b088f8;--soxl:#ff6b6b;--tecl:#ffc844;
 }
 *{box-sizing:border-box;margin:0;padding:0;}
@@ -100,13 +100,14 @@ body{background:var(--bg);color:var(--text);font-family:'Pretendard',sans-serif;
 .top .home:hover{border-color:var(--accent);color:var(--accent);}
 
 /* STRATEGY TABS */
-.stabs{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;background:var(--surf);border:1px solid var(--border);border-radius:10px;padding:5px;margin-bottom:20px;}
+.stabs{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;background:var(--surf);border:1px solid var(--border);border-radius:10px;padding:5px;margin-bottom:20px;}
 .stab{padding:11px 8px;border-radius:7px;border:none;background:transparent;color:var(--dim);font-family:'Pretendard';font-size:13.5px;font-weight:600;cursor:pointer;transition:all .15s;text-align:center;}
 .stab.active{color:#fff;}
 .stab[data-s="dca"].active{background:var(--c-dca);}
 .stab[data-s="im"].active{background:var(--c-im);}
 .stab[data-s="vr"].active{background:var(--c-vr);}
 .stab[data-s="ma"].active{background:var(--c-ma);}
+.stab[data-s="mom"].active{background:var(--c-mom);}
 .stab .sub{display:block;font-size:10px;font-weight:400;opacity:.7;margin-top:2px;}
 
 /* CONTROLS */
@@ -220,7 +221,7 @@ td:first-child{text-align:left;}
   <div class="brand">
     <div>
       <div class="logo">Backtest</div>
-      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v1.105</span></h1>
+      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v1.106</span></h1>
     </div>
   </div>
   <a href="/" class="home">← JK 퀀트</a>
@@ -853,14 +854,21 @@ const MOM_UNIV={
     {sym:'QQQ',name:'나스닥100 1×',taxable:true,color:'#26a69a'},
     {sym:'SPY',name:'S&P500 1×',taxable:true,color:'#4fc3f7'},
     {sym:'TLT',name:'미국채 20y',taxable:true,color:'#9575cd'},
-    {sym:'GLD',name:'금',taxable:true,color:'#f5c451'} ]},
+    {sym:'GLD',name:'금',taxable:true,color:'#f5c451'} ],
+    bench:[  // 단순보유 비교군 (무매 탭 종목 전체)
+      {sym:'SOXL',name:'반도체 3×',color:'#ff6b6b'},{sym:'USD',name:'반도체 2×',color:'#b088f8'},
+      {sym:'TECL',name:'테크 3×',color:'#ffc844'},{sym:'TQQQ',name:'나스닥100 3×',color:'#00d4b4'},
+      {sym:'QLD',name:'나스닥100 2×',color:'#5b8dee'},{sym:'KORU',name:'한국 3×',color:'#ef5350'} ]},
   kr:{ label:'🇰🇷 국내', cur:'₩', cap:10000000, fee:0.00015, taxRate:0.154, annual:false, tickers:[
     {sym:'122630.KS',name:'KODEX 레버리지',taxable:false,color:'#ff6b6b'},
     {sym:'233740.KS',name:'코스닥150 레버',taxable:false,color:'#ff9e6b'},
     {sym:'133690.KS',name:'TIGER 나스닥100',taxable:true,color:'#00d4b4'},
     {sym:'069500.KS',name:'KODEX 200',taxable:false,color:'#4fc3f7'},
     {sym:'148070.KS',name:'국고채 10년',taxable:true,color:'#9575cd'},
-    {sym:'132030.KS',name:'골드',taxable:true,color:'#f5c451'} ]},
+    {sym:'132030.KS',name:'골드',taxable:true,color:'#f5c451'} ],
+    bench:[
+      {sym:'122630.KS',name:'KODEX 레버리지',color:'#ff6b6b'},{sym:'233740.KS',name:'코스닥150 레버',color:'#ff9e6b'},
+      {sym:'133690.KS',name:'TIGER 나스닥100',color:'#00d4b4'},{sym:'069500.KS',name:'KODEX 200',color:'#4fc3f7'} ]},
 };
 let momUniv='us', momLookback=1, momFilter=true, momCostOn=true;
 let MOMDATA={};   // { univKey: {range:'s_e', data:{sym:{date:close}}} }
@@ -887,14 +895,15 @@ async function loadMomData(univKey, start, end, stat){
   if(MOMDATA[univKey] && MOMDATA[univKey].range===range) return MOMDATA[univKey].data;
   const U=MOM_UNIV[univKey];
   const p1=Math.floor(new Date(start).getTime()/1000), p2=Math.floor(new Date(end).getTime()/1000)+86400;
-  if(stat){ stat.style.display=''; stat.style.color='var(--dim)'; stat.textContent=`${U.label} 후보군 시세 받는 중…`; }
+  if(stat){ stat.style.display=''; stat.style.color='var(--dim)'; stat.textContent=`${U.label} 후보군·비교군 시세 받는 중…`; }
   const data={};
-  await Promise.all(U.tickers.map(async t=>{
+  const fetchSyms=[...new Set([...U.tickers.map(t=>t.sym), ...(U.bench||[]).map(t=>t.sym)])];   // 후보군 + 비교군(무매 종목)
+  await Promise.all(fetchSyms.map(async sym=>{
     try{
-      const r=await fetch(`/api/quote?symbol=${encodeURIComponent(t.sym)}&period1=${p1}&period2=${p2}`);
+      const r=await fetch(`/api/quote?symbol=${encodeURIComponent(sym)}&period1=${p1}&period2=${p2}`);
       if(!r.ok) return; const j=await r.json();
-      if(j&&Array.isArray(j.series)){ const m={}; j.series.forEach(d=>{ if(+d.close>0) m[d.date]=+d.close; }); if(Object.keys(m).length>50) data[t.sym]=m; }
-    }catch(e){ console.warn('mom load fail',t.sym,e.message); }
+      if(j&&Array.isArray(j.series)){ const m={}; j.series.forEach(d=>{ if(+d.close>0) m[d.date]=+d.close; }); if(Object.keys(m).length>50) data[sym]=m; }
+    }catch(e){ console.warn('mom load fail',sym,e.message); }
   }));
   MOMDATA[univKey]={range,data};
   if(stat) stat.style.display='none';
@@ -946,8 +955,17 @@ function momentumBacktest(data, tickers, U, cap, lb, filter, costOn){
   const bsh=cap/px(bt0,startDate); let bpeak=0,bmdd=0; bds.forEach(d=>{const e=bsh*px(bt0,d);if(e>bpeak)bpeak=e;else{const dd=(bpeak-e)/bpeak;if(dd>bmdd)bmdd=dd;}});
   const bfin=bsh*px(bt0,lastD), bcagr=(Math.pow(bfin/cap,1/yrs)-1)*100;
   const bsnap=snap.map(([d])=>[d, data[bt0][d]?bsh*data[bt0][d]:null]);
+  // 비교군: 무매 종목 단순보유 (동일 기간·통화, 최종액 내림차순)
+  const benches=(U.bench||[]).map(bt=>{
+    const P=data[bt.sym]; if(!P) return null;
+    const bd=ed.filter(d=>P[d]!=null); if(bd.length<20) return null;
+    const startP=P[startDate]!=null?P[startDate]:P[bd[0]], full=P[startDate]!=null;
+    const sh=cap/startP; let pk=0,md=0; bd.forEach(d=>{const e=sh*P[d];if(e>pk)pk=e;else{const dd=(pk-e)/pk;if(dd>md)md=dd;}});
+    const f=sh*P[bd[bd.length-1]], yy=(new Date(bd[bd.length-1])-new Date(bd[0]))/(365.25*864e5), cg=(Math.pow(f/cap,1/yy)-1)*100;
+    return {sym:bt.sym,name:bt.name,color:bt.color,cagr:cg,mdd:md*100,mar:md>0?cg/(md*100):0,tot:(f/cap-1)*100,fin:f,full};
+  }).filter(Boolean).sort((a,b)=>b.fin-a.fin);
   return {cagr,mdd:mddP,mar:mddP>0?cagr/mddP:0,tot:(fin/cap-1)*100,fin,cap,sw,cashMonths,startDate,endDate:lastD,yrs,months:months.length-lb,
-    holdCount,seq,snap,taxPaid, bench:{sym:bt0,cagr:bcagr,mdd:bmdd*100,mar:bmdd>0?bcagr/(bmdd*100):0,tot:(bfin/cap-1)*100,fin:bfin,snap:bsnap} };
+    holdCount,seq,snap,taxPaid,benches, bench:{sym:bt0,cagr:bcagr,mdd:bmdd*100,mar:bmdd>0?bcagr/(bmdd*100):0,tot:(bfin/cap-1)*100,fin:bfin,snap:bsnap} };
 }
 
 // 실행 중 표시: 버튼 비활성+'계산 중', 중앙 스피너 로딩 배너
@@ -1013,27 +1031,32 @@ function renderMomentum(res,U,tickers){
       <span style="margin-left:auto;font-family:'IBM Plex Mono',monospace;font-size:11px;color:${x.ret>=0?'var(--green)':'var(--red)'};flex-shrink:0">${(x.ret>=0?'+':'')+(x.ret*100).toFixed(1)}%</span></div>`;
   });
   const b=res.bench;
+  // 무매 종목 단순보유 비교행 (최종액 내림차순, 모멘텀보다 낮으면 흐리게)
+  const benchRows=(res.benches||[]).map(x=>`
+          <tr style="border-top:1px solid var(--border,#242b45);color:var(--dim)">
+            <td style="padding:10px 12px"><span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:${x.color||'#888'};margin-right:7px;vertical-align:middle"></span>${shortSym(x.sym)} 단순보유 <span style="font-size:10.5px;color:var(--faint2,#7c85a3)">${x.name}</span>${x.full?'':' <span style="font-size:9.5px;color:var(--red)">*상장후</span>'}</td>
+            <td style="padding:10px 12px;text-align:right;color:${x.cagr>=0?'#7cc9a8':'#d98a94'}">${pct(x.cagr)}</td>
+            <td style="padding:10px 12px;text-align:right">${x.mdd.toFixed(1)}%</td>
+            <td style="padding:10px 12px;text-align:right">${x.mar.toFixed(2)}</td>
+            <td style="padding:10px 12px;text-align:right">${pct(x.tot)}</td>
+            <td style="padding:10px 12px;text-align:right">${money(x.fin)}</td></tr>`).join('');
+  const benchPartial=(res.benches||[]).some(x=>!x.full);
   document.getElementById('momResult').innerHTML=`
-    <div style="overflow-x:auto;border:1px solid var(--border,#242b45);border-radius:12px;margin-bottom:14px">
+    <div style="overflow-x:auto;border:1px solid var(--border,#242b45);border-radius:12px;margin-bottom:4px">
       <table style="width:100%;border-collapse:collapse;font-size:13.5px;min-width:520px">
         <thead><tr style="color:var(--dim);font-size:11px;text-align:right">
-          <th style="text-align:left;padding:10px 12px">전략</th><th style="padding:10px 12px">CAGR</th><th style="padding:10px 12px">MDD</th><th style="padding:10px 12px">MAR</th><th style="padding:10px 12px">총수익</th><th style="padding:10px 12px">최종금액</th></tr></thead>
+          <th style="text-align:left;padding:10px 12px">전략 · 단순보유 비교</th><th style="padding:10px 12px">CAGR</th><th style="padding:10px 12px">MDD</th><th style="padding:10px 12px">MAR</th><th style="padding:10px 12px">총수익</th><th style="padding:10px 12px">최종금액</th></tr></thead>
         <tbody>
-          <tr style="border-top:1px solid var(--border,#242b45)">
+          <tr style="border-top:2px solid var(--gold)">
             <td style="padding:11px 12px;font-weight:700">★ 모멘텀 로테이션</td>
             <td style="padding:11px 12px;text-align:right;color:${res.cagr>=0?'var(--green)':'var(--red)'};font-weight:700">${pct(res.cagr)}</td>
             <td style="padding:11px 12px;text-align:right">${res.mdd.toFixed(1)}%</td>
             <td style="padding:11px 12px;text-align:right;color:var(--gold)">${res.mar.toFixed(2)}</td>
             <td style="padding:11px 12px;text-align:right">${pct(res.tot)}</td>
             <td style="padding:11px 12px;text-align:right;color:var(--gold);font-weight:700">${money(res.fin)}</td></tr>
-          <tr style="border-top:1px solid var(--border,#242b45);color:var(--dim)">
-            <td style="padding:11px 12px">${shortSym(b.sym)} 단순보유 <span style="font-size:11px">(최공격 벤치)</span></td>
-            <td style="padding:11px 12px;text-align:right">${pct(b.cagr)}</td>
-            <td style="padding:11px 12px;text-align:right">${b.mdd.toFixed(1)}%</td>
-            <td style="padding:11px 12px;text-align:right">${b.mar.toFixed(2)}</td>
-            <td style="padding:11px 12px;text-align:right">${pct(b.tot)}</td>
-            <td style="padding:11px 12px;text-align:right">${money(b.fin)}</td></tr>
+          ${benchRows}
         </tbody></table></div>
+    <div style="font-size:10.5px;color:var(--faint2,#7c85a3);margin:0 2px 14px">비교군 = 무매 탭 종목 단순보유 (동일 기간·통화)${benchPartial?' · <span style="color:var(--red)">*상장후</span>=해당 종목 상장 이후 구간만 계산':''}</div>
     <div style="background:var(--card,#141a2e);border:1px solid var(--border,#242b45);border-radius:12px;padding:14px 16px">
       <div style="font-size:12px;color:var(--dim);font-weight:700;margin-bottom:8px">모멘텀이 고른 종목 (${total}개월 중)</div>
       ${freq}${cashRow}
