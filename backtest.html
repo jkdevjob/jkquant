@@ -201,7 +201,10 @@ td:first-child{text-align:left;}
 .foot{font-size:11px;color:var(--dim);line-height:1.8;border-top:1px solid var(--border);padding-top:18px;}
 .foot b{color:var(--dim2);}
 .hide{display:none;}
-.loading{text-align:center;padding:50px;color:var(--dim);}
+.loading{text-align:center;padding:34px 20px;color:var(--text);font-size:15px;font-weight:600;background:var(--card,#141a2e);border:1px solid var(--border2,#2e3754);border-radius:12px;margin:14px 0}
+.spin{display:inline-block;width:17px;height:17px;border:2.5px solid var(--border2,#2e3754);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite;vertical-align:-3px;margin-right:9px}
+@keyframes spin{to{transform:rotate(360deg)}}
+.run.busy{opacity:.65;cursor:progress}
 
 @media(max-width:720px){
   .detail{grid-template-columns:1fr;}
@@ -217,7 +220,7 @@ td:first-child{text-align:left;}
   <div class="brand">
     <div>
       <div class="logo">Backtest</div>
-      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v1.103</span></h1>
+      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v1.104</span></h1>
     </div>
   </div>
   <a href="/" class="home">← JK 퀀트</a>
@@ -944,20 +947,29 @@ function momentumBacktest(data, tickers, U, cap, lb, filter, costOn){
     holdCount,snap,taxPaid, bench:{sym:bt0,cagr:bcagr,mdd:bmdd*100,mar:bmdd>0?bcagr/(bmdd*100):0,tot:(bfin/cap-1)*100,fin:bfin,snap:bsnap} };
 }
 
+// 실행 중 표시: 버튼 비활성+'계산 중', 중앙 스피너 로딩 배너
+function setRunBusy(on, msg){
+  const btn=document.querySelector('.run'), ld=document.getElementById('loading');
+  if(btn){ btn.disabled=on; btn.classList.toggle('busy',on); btn.textContent=on?'⏳ 계산 중…':'▶ 실행'; }
+  if(ld){ if(on){ ld.classList.remove('hide'); ld.innerHTML=`<span class="spin"></span>${msg||'계산 중…'}`; } else ld.classList.add('hide'); }
+}
 async function runMomentum(start,end){
-  const loading=document.getElementById('loading'), stat=document.getElementById('dataStat');
-  if(loading)loading.classList.remove('hide');
+  const stat=document.getElementById('dataStat');
+  const U=MOM_UNIV[momUniv];
+  setRunBusy(true, `${U.label} 후보군 시세 받는 중…`);
+  await new Promise(r=>requestAnimationFrame(()=>r()));   // 로딩 UI가 먼저 그려지도록 한 프레임 양보(캐시 적중 시에도 표시)
   try{
-    const U=MOM_UNIV[momUniv];
     const data=await loadMomData(momUniv,start,end,stat);
     const tickers=U.tickers.filter(t=>data[t.sym]&&Object.keys(data[t.sym]).length>50);
-    if(tickers.length<2){ if(stat){stat.style.display='';stat.textContent='⚠ 후보군 시세 로딩 실패 — 잠시 후 다시 실행해 주세요';stat.style.color='var(--red)';} return; }
+    if(tickers.length<2){ setRunBusy(false); if(stat){stat.style.display='';stat.textContent='⚠ 후보군 시세 로딩 실패 — 잠시 후 다시 실행해 주세요';stat.style.color='var(--red)';} return; }
+    setRunBusy(true, '백테스트 계산 중…');
     const cap=+document.getElementById('momCap').value||U.cap;
     const res=momentumBacktest(data,tickers,U,cap,momLookback,momFilter,momCostOn);
     dataLoaded=true;   // 이후 탭 전환 시 자동 재계산 허용
     renderMomentum(res,U,tickers);
+    document.getElementById('result')?.scrollIntoView({behavior:'smooth',block:'start'});
   }catch(e){ console.error('runMomentum',e); if(stat){stat.style.display='';stat.textContent='⚠ 계산 오류: '+e.message;stat.style.color='var(--red)';} }
-  finally{ if(loading)loading.classList.add('hide'); }
+  finally{ setRunBusy(false); }
 }
 
 function renderMomentum(res,U,tickers){
