@@ -265,7 +265,7 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
 .waitbox .wb-now{color:var(--faint);font-size:11.5px;margin-top:3px;font-variant-numeric:tabular-nums}
 .resv-row{display:flex;justify-content:space-between;padding:9px 13px;border-radius:10px;background:var(--vio-bg);margin-bottom:8px;font-size:12.5px;font-weight:700;color:var(--vio)}
 .ladx{font-size:12.5px;border:1px solid var(--line);border-radius:12px;overflow:hidden}
-.ladx .lxh,.ladx .lxr{display:grid;grid-template-columns:46px 1fr 64px 70px;gap:6px;align-items:center;padding:9px 11px}
+.ladx .lxh,.ladx .lxr{display:grid;grid-template-columns:46px 1fr 64px 70px;gap:6px;align-items:center;padding:4.5px 11px;line-height:1.25;min-height:0}
 .ladx .lxh{background:var(--panel2);color:var(--faint);font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.04em}
 .ladx .lxr{border-top:1px solid var(--line);cursor:pointer;-webkit-tap-highlight-color:transparent;transition:background .12s}
 .ladx .lxr:active{background:var(--panel2)}
@@ -274,7 +274,7 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
 .firebanner b{font-size:14.5px}
 .firebanner .fb-sub{display:block;font-weight:600;font-size:11px;opacity:.82;margin-top:2px}
 .ladx .lxr .lx-n{color:var(--faint);font-weight:700;display:flex;align-items:center;gap:3px}
-.ladx .lxr .lx-n .warn{color:var(--gold);font-size:11px}
+.ladx .lxr .lx-n .warn{color:var(--gold);font-weight:800;font-size:12px;line-height:1}
 .ladx .lxr .lx-p{font-weight:800;font-variant-numeric:tabular-nums}
 .ladx.buy .lxr .lx-p{color:var(--buy)}.ladx.sell .lxr .lx-p{color:var(--sell)}
 .ladx .lxr .lx-q{color:var(--dim);text-align:right;font-variant-numeric:tabular-nums}
@@ -675,14 +675,14 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
         <div class="lad-head"><div class="lh-l"><h3 style="margin:0"><span class="dot"></span>매도표</h3><span class="badge ok" id="lad_state_s">예약 매매</span></div><span class="lh-stage" id="lad_stage_s">1단계</span></div>
         <div class="waitbox" id="sell_wait"></div>
         <div class="ladx sell" id="sell_lad"></div>
-        <p class="ladnote">사이클 첫 영업일에 위 차수 매도 예약을 한 번에 걸어두고 2주 동안 가만히. 가격 도달한 차수만 자동 체결. 행 탭 = 즉시 1주 기록.</p>
+        <p class="ladnote">매도가 = 상단가치 ÷ 남은 보유수량 (주가가 오를수록 1주씩 매도). 보유 주식수만큼 차수 생성. 첫날 한 번에 걸어두고 도달한 차수만 자동 체결. 행 탭 = 즉시 1주 기록.</p>
       </div>
       <div class="card">
         <div class="lad-head"><div class="lh-l"><h3 style="margin:0"><span class="dot"></span>매수표</h3><span class="badge ok" id="lad_state_b">예약 매매</span></div><span class="lh-stage" id="lad_limit_b">한도 —</span></div>
         <div class="waitbox" id="buy_wait"></div>
         <div id="buy_warn"></div>
         <div class="ladx buy" id="buy_lad"></div>
-        <p class="ladnote">매수가 = 밴드하단 ÷ 차수 (V<sub>low</sub>/n). 한 번에 다 걸어두면 떨어지는 만큼만 자동 체결. Pool 한도 초과 차수는 ⚠ 표시.</p>
+        <p class="ladnote">매수가 = 하단가치 ÷ 보유수량 (주가가 떨어질수록 1주씩 매수). 첫날 한 번에 걸어두면 도달하는 만큼만 자동 체결. Pool 한도 초과 차수는 <b style="color:var(--gold)">!</b> 표시.</p>
       </div>
     </div>
 
@@ -932,7 +932,7 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
   <footer>
     <strong>JK 퀀트</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v2.37</b> · 2026-07-01</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v2.38</b> · 2026-07-01</div>
   </footer>
 </div>
 
@@ -1969,44 +1969,58 @@ function renderVrTable(){
   const N=20; // 차수 20
   const limit=poolLimit(c);
   const ev=(price>0&&c.qty>0)?price*c.qty:vrEval(c);   // 현재 평가금 (즉시 체결 판단용)
+  const S=Math.floor(c.qty);           // 보유 주식수 (사다리 차수의 기준)
+  if(S<=0){                            // 보유 없음(시작 V만 입력 등) — per-share 차수 계산 불가
+    const setup='<div class="lxr" style="justify-content:center;color:var(--faint)">첫 매수를 기록하면 보유수량 기준으로 차수가 계산됩니다</div>';
+    $('sell_lad').innerHTML=setup; $('buy_lad').innerHTML=setup;
+    $('sell_wait').innerHTML=''; $('buy_wait').innerHTML=''; $('buy_warn').innerHTML='';
+    $('lad_state_s').textContent='—'; $('lad_state_b').textContent='—';
+    $('lad_stage_s').textContent=c.curCyc+'주차'; $('lad_limit_b').textContent=`한도 ${wn(limit)} / ${wn(c.pool)}`;
+    return;
+  }
 
-  // ── 매도표 ── 매도가(n) = V_high / n  (1차 = 상단)
-  // 첫날은 무조건 1주, 이후 각 차수 도달 시 1주씩 (간단화: 차수당 1주, 누적 표시)
-  let srows='';
-  for(let n=1;n<=N;n++){
-    const p=c.up/n;
-    const reached = price>=p;
+  // ── 매도표 ── 매도가(k) = 상단가치(up) ÷ 매도 전 남은 보유수량 (per-share)
+  //   (S−k+1)주가 up 가치가 되는 주가에서 1주 매도 → 남은 S−k주. 보유 S주 → 최대 S차수.
+  let srows=''; let sPool=c.pool; const sTiers=Math.min(S,N);
+  for(let k=1;k<=sTiers;k++){
+    const remain=S-k+1;                // 매도 전 보유
+    const p=c.up/remain;               // 이 주가에서 remain주 = 상단가치
+    sPool+=p;                          // 1주 매도 → Pool 누적
+    const reached=price>=p;
     srows+=`<div class="lxr ${reached?'hit':''}" onclick="quickLadder('sell',${p.toFixed(2)})">
-      <span class="lx-n">${n}${reached?'':' <span class="warn">▲</span>'}</span>
+      <span class="lx-n">${k}${reached?' 🔥':''}</span>
       <span class="lx-p">${wn(p)}</span>
-      <span class="lx-q">${Math.max(0,c.qty-n)}주</span>
-      <span class="lx-pool pos">+${(p).toFixed(0)}</span></div>`;
+      <span class="lx-q">${S-k}주</span>
+      <span class="lx-pool pos">${wn(sPool)}</span></div>`;
   }
   $('sell_lad').innerHTML=`<div class="lxh"><span>차수</span><span>매도가</span><span>잔여수량</span><span>Pool</span></div>`+srows;
+  const sell1=c.up/S;                  // 1차 매도가 (가장 먼저 체결)
   if(ev>c.up && price>0){ const ss=Math.max(0,Math.round((ev-c.V)/price));
     $('sell_wait').innerHTML=`<div class="firebanner">🔥 이번 사이클 <b>즉시 매도 ${ss}주</b><span class="fb-sub">평가금 ${wn(ev)} > 상단 ${wn(c.up)} — 초과분을 V까지 매도 (시장가). 아래 차수는 더 올라야 체결되는 예약이에요.</span></div>`;
-  } else $('sell_wait').innerHTML=`⌛ 매도 대기 — 가격이 1차 ${wn(c.up)} 이상으로 오르면 체결<div class="wb-now">현재가 ${wn(price)}</div>`;
+  } else $('sell_wait').innerHTML=`⌛ 매도 대기 — 가격이 1차 ${wn(sell1)} 이상으로 오르면 체결<div class="wb-now">현재가 ${wn(price)}</div>`;
   $('lad_state_s').textContent=price>=c.up?'체결 가능':'예약 매매';
   $('lad_stage_s').textContent=c.curCyc+'주차';
 
-  // ── 매수표 ── 매수가(n) = V_low / n  (1차 = 하단)
-  let brows=''; let runningPool=c.pool; let cumQtyB=c.qty;
-  for(let n=1;n<=N;n++){
-    const p=c.lo/n;
-    const buyQty=1; // 차수당 1주 (사다리 표준)
-    runningPool-=p*buyQty; cumQtyB+=buyQty;
-    const overLimit = (c.pool-runningPool) > limit+1e-6; // 누적 사용액이 한도 초과
-    const reached = price<=p;
-    brows+=`<div class="lxr ${reached?'hit':''}" onclick="quickLadder('buy',${p.toFixed(2)})">
-      <span class="lx-n">${n}${overLimit?' <span class="warn">⚠</span>':(reached?'':' <span class="warn">▲</span>')}</span>
+  // ── 매수표 ── 매수가(k) = 하단가치(lo) ÷ 매수 전 보유수량 (per-share)
+  //   (S+k−1)주가 lo 가치가 되는 주가에서 1주 매수 → S+k주. Pool 한도까지.
+  let brows=''; let bPool=c.pool;
+  for(let k=1;k<=N;k++){
+    const before=S+k-1;                // 매수 전 보유 (S≥1이라 항상 ≥1)
+    const p=c.lo/before;               // 이 주가에서 before주 = 하단가치
+    bPool-=p;                          // 1주 매수 → Pool 차감
+    const overLimit=(c.pool-bPool) > limit+1e-6;   // 누적 사용액이 한도 초과
+    const reached=price<=p;
+    brows+=`<div class="lxr ${reached&&!overLimit?'hit':''}" onclick="quickLadder('buy',${p.toFixed(2)})">
+      <span class="lx-n">${k}${overLimit?' <b style="color:var(--gold);font-weight:800">!</b>':(reached?' 🔥':'')}</span>
       <span class="lx-p">${wn(p)}</span>
-      <span class="lx-q">${cumQtyB}주</span>
-      <span class="lx-pool">${runningPool.toFixed(0)}</span></div>`;
+      <span class="lx-q">${S+k}주</span>
+      <span class="lx-pool">${wn(bPool)}</span></div>`;
   }
   $('buy_lad').innerHTML=`<div class="lxh"><span>차수</span><span>매수가</span><span>총수량</span><span>Pool</span></div>`+brows;
+  const buy1=c.lo/S;                   // 1차 매수가 (가장 먼저 체결)
   if(ev>0 && ev<c.lo && price>0){ const need=c.V-ev, real=Math.min(need,Math.max(0,limit)), bs=Math.max(0,Math.round(real/price)), capped=need>limit+1e-6;
     $('buy_wait').innerHTML=`<div class="firebanner">🔥 이번 사이클 <b>즉시 매수 ${bs}주</b><span class="fb-sub">평가금 ${wn(ev)} < 하단 ${wn(c.lo)} — 부족분을 V까지 매수${capped?' (Pool 한도까지만)':''} (시장가). 아래 차수는 더 내려야 체결되는 예약이라 지금 다 살 필요 없어요.</span></div>`;
-  } else $('buy_wait').innerHTML=`⌛ 매수 대기 — 가격이 1차 ${wn(c.lo)} 이하로 떨어지면 체결<div class="wb-now">현재가 ${wn(price)}</div>`;
+  } else $('buy_wait').innerHTML=`⌛ 매수 대기 — 가격이 1차 ${wn(buy1)} 이하로 떨어지면 체결<div class="wb-now">현재가 ${wn(price)}</div>`;
   $('lad_state_b').textContent=price<=c.lo?'체결 가능':'예약 매매';
   $('lad_limit_b').textContent=`한도 ${wn(limit)} / ${wn(c.pool)}`;
   if(limit<=0){
