@@ -953,7 +953,7 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
   <footer>
     <strong>JK 퀀트</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v2.41</b> · 2026-07-01</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v2.42</b> · 2026-07-01</div>
   </footer>
 </div>
 
@@ -1051,6 +1051,53 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
   <div id="ev_amtwrap" class="field" style="display:none"><label>금액 ($)</label><input id="ev_amt" type="text" inputmode="decimal" oninput="commaInput(this)"></div>
   <p class="note" id="ev_autonote" style="display:none;color:var(--gold)">⚠ 진입 버튼이 자동 기록한 적립/인출입니다. 금액을 바꾸면 사이클 계산도 함께 바뀝니다.</p>
   <div class="mbtns"><button class="close" onclick="delVrFromEdit()" style="background:var(--sell-bg);color:var(--sell)">삭제</button><button class="save" onclick="saveVrEdit()">저장</button></div>
+</div></div>
+
+<!-- 거래 수정 모달 (무한매수법) -->
+<div class="modal" id="editInfModal"><div class="box">
+  <button class="mx" onclick="closeEditInf()" aria-label="닫기">✕</button>
+  <h3>거래 수정 (무한매수법)</h3>
+  <div class="field"><label>날짜</label><input id="ei_date" type="date" class="dateinput"></div>
+  <div class="field"><label>구분</label>
+    <select id="ei_kind" onchange="eiKindUI(this.value)" style="width:100%;padding:11px;border-radius:10px;border:1px solid var(--line);background:var(--panel2);color:var(--ink);font-size:14px;font-weight:600">
+      <option value="1회매수">1회매수</option><option value="절반매수">절반매수</option>
+      <option value="쿼터매도">쿼터매도</option><option value="지정가매도">지정가매도</option>
+      <option value="리버스매수">리버스매수</option><option value="리버스매도">리버스매도</option>
+      <option value="지정가매도+1회매수">지정가매도+1회매수</option><option value="지정가매도+절반매수">지정가매도+절반매수</option>
+      <option value="1회매수+지정가매도(애프터)">1회매수+지정가매도(애프터)</option><option value="절반매수+지정가매도(애프터)">절반매수+지정가매도(애프터)</option>
+    </select></div>
+  <div id="ei_simple">
+    <div class="grid2">
+      <div class="field"><label>체결가 ($)</label><input id="ei_price" type="text" inputmode="decimal" oninput="commaInput(this)"></div>
+      <div class="field"><label>수량 (주)</label><input id="ei_qty" type="number" inputmode="numeric"></div>
+    </div></div>
+  <div id="ei_cx" style="display:none">
+    <div class="grid2">
+      <div class="field"><label style="color:var(--sell)">매도가 ($)</label><input id="ei_sprice" type="text" inputmode="decimal" oninput="commaInput(this)"></div>
+      <div class="field"><label style="color:var(--sell)">매도수량</label><input id="ei_sqty" type="number" inputmode="numeric"></div>
+    </div>
+    <div class="grid2">
+      <div class="field"><label style="color:var(--buy)">매수가 ($)</label><input id="ei_bprice" type="text" inputmode="decimal" oninput="commaInput(this)"></div>
+      <div class="field"><label style="color:var(--buy)">매수수량</label><input id="ei_bqty" type="number" inputmode="numeric"></div>
+    </div></div>
+  <div class="field"><label>T값 직접입력 <span class="hint">비우면 자동</span></label><input id="ei_tman" type="number" step="0.01" inputmode="decimal" placeholder="자동"></div>
+  <div class="mbtns"><button class="close" onclick="delInfFromEdit()" style="background:var(--sell-bg);color:var(--sell)">삭제</button><button class="save" onclick="saveInfEdit()">저장</button></div>
+</div></div>
+
+<!-- 거래 수정 모달 (200일선 로테이션) -->
+<div class="modal" id="editMaModal"><div class="box">
+  <button class="mx" onclick="closeEditMa()" aria-label="닫기">✕</button>
+  <h3>거래 수정 (로테이션)</h3>
+  <div class="field"><label>날짜</label><input id="em_date" type="date" class="dateinput"></div>
+  <div class="field"><label>유형</label>
+    <select id="em_type" onchange="emTypeUI(this.value)" style="width:100%;padding:11px;border-radius:10px;border:1px solid var(--line);background:var(--panel2);color:var(--ink);font-size:14px;font-weight:600">
+      <option value="in">진입 (매수)</option><option value="out">청산 (현금)</option>
+    </select></div>
+  <div class="grid2">
+    <div class="field"><label>단가 ($)</label><input id="em_price" type="text" inputmode="decimal" oninput="commaInput(this)"></div>
+    <div class="field" id="em_qtywrap"><label>수량 (주)</label><input id="em_qty" type="number" inputmode="numeric"></div>
+  </div>
+  <div class="mbtns"><button class="close" onclick="delMaFromEdit()" style="background:var(--sell-bg);color:var(--sell)">삭제</button><button class="save" onclick="saveMaEdit()">저장</button></div>
 </div></div>
 
 <script>
@@ -1808,7 +1855,7 @@ function renderInfHist(){
     const starCell=h.qtyAfter>0?wn(h.starAfter):'—';
     const endFlag=h.cycleEnd?' <span style="color:var(--gold);font-size:9px;background:rgba(245,196,81,.15);padding:1px 5px;border-radius:4px">사이클 종료</span>':'';
     const rowStyle=h.cycleEnd?' style="border-top:2px solid var(--gold)"':'';
-    rows=`<tr class="${cls}"${rowStyle}><td>${h.date||'-'}</td><td>${h.kind}${tflag}${endFlag}</td><td>${priceCell}</td><td>${qtyCell}</td><td>${wn(h.balAfter)}</td><td>${profitCell}</td><td>${fmtT(h.Tafter)}</td><td>${pctCell}</td><td>${starCell}</td><td><span class="del" onclick="delInf(${i})">✕</span></td></tr>`+rows;
+    rows=`<tr class="${cls}"${rowStyle}><td>${h.date||'-'}</td><td>${h.kind}${tflag}${endFlag}</td><td>${priceCell}</td><td>${qtyCell}</td><td>${wn(h.balAfter)}</td><td>${profitCell}</td><td>${fmtT(h.Tafter)}</td><td>${pctCell}</td><td>${starCell}</td><td style="white-space:nowrap"><span class="edit" onclick="editInf(${i})">✎</span> <span class="del" onclick="delInf(${i})">✕</span></td></tr>`+rows;
   });
   $('inf_table').innerHTML=`<tr><th>날짜</th><th>구분</th><th>체결가</th><th>수량</th><th>잔금</th><th>손익</th><th>T</th><th>별%</th><th>별지점</th><th></th></tr>`+(hist.length?rows:`<tr><td class="empty" colspan="10">아직 기록이 없습니다</td></tr>`);
 }
@@ -1824,9 +1871,36 @@ function addInf(){ const el=$('ih_kind'); if(!el)return;
   const h=curStrat().hist; h.push({date,kind,price,qty,ts:Date.now()});
   sortHist(h); save(); refreshInf();
 }
-function editInf(i){ /* 입력 폼 제거됨: 삭제 후 시트로 재기록 유도 */
-  if(confirm('이 기록을 삭제할까요? (수정은 삭제 후 + 버튼으로 다시 기록)')){delInf(i);}
+function eiKindUI(k){ const cx=isCx(k); const s=$('ei_simple'), x=$('ei_cx'); if(s)s.style.display=cx?'none':''; if(x)x.style.display=cx?'':'none'; }
+function editInf(i){
+  const h=curStrat().hist[i]; if(!h)return;
+  editInfIdx=i;
+  $('ei_date').value=h.date||new Date().toISOString().slice(0,10);
+  $('ei_kind').value=h.kind; eiKindUI(h.kind);
+  if(isCx(h.kind)){ $('ei_sprice').value=h.sellPrice!=null?h.sellPrice:''; $('ei_sqty').value=h.sellQty!=null?h.sellQty:''; $('ei_bprice').value=h.buyPrice!=null?h.buyPrice:''; $('ei_bqty').value=h.buyQty!=null?h.buyQty:''; }
+  else { $('ei_price').value=h.price!=null?h.price:''; $('ei_qty').value=h.qty!=null?h.qty:''; }
+  $('ei_tman').value=(typeof h.tManual==='number')?h.tManual:'';
+  $('editInfModal').classList.add('on');
 }
+function closeEditInf(){ $('editInfModal').classList.remove('on'); editInfIdx=-1; }
+function saveInfEdit(){
+  if(editInfIdx<0)return; const hist=curStrat().hist, h=hist[editInfIdx]; if(!h){closeEditInf();return;}
+  const kind=$('ei_kind').value, date=$('ei_date').value||h.date;
+  const rec={ts:h.ts||Date.now(), date, kind};
+  if(isCx(kind)){
+    const sp=+unComma($('ei_sprice').value),sq=+$('ei_sqty').value,bp=+unComma($('ei_bprice').value),bq=+$('ei_bqty').value;
+    if(!sp||!sq||!bp||!bq){alert('매도·매수 가격과 수량을 모두 입력하세요');return}
+    rec.sellPrice=sp;rec.sellQty=sq;rec.buyPrice=bp;rec.buyQty=bq;
+  } else {
+    const price=+unComma($('ei_price').value), qty=+$('ei_qty').value;
+    if(!price||!qty){alert('체결가와 수량을 입력하세요');return}
+    rec.price=price; rec.qty=qty;
+  }
+  const tman=($('ei_tman').value||'').trim();
+  if(tman!=='' && !isNaN(+tman)) rec.tManual=+tman;
+  hist[editInfIdx]=rec; sortHist(hist); save(); refreshInf(); closeEditInf();
+}
+function delInfFromEdit(){ if(editInfIdx<0){closeEditInf();return;} const i=editInfIdx; closeEditInf(); delInf(i); }
 function delInf(i){if(!confirm('이 기록을 삭제할까요?'))return;curStrat().hist.splice(i,1);save();refreshInf()}
 
 function refreshInf(){updateCurLabels('inf');renderInfNow();renderOrderInline();renderInfHist();renderInfAnal();renderInfFx();renderStatusline();drawRegimeChart();
@@ -2518,7 +2592,7 @@ function renderMaHist(){
   let rows='';
   hist.forEach((h,i)=>{
     const detail=h.type==='in'?`${px(h.price)}${h.qty?' × '+h.qty+'주':''}`:px(h.price);
-    rows=`<tr class="${CLS[h.type]||''}"><td>${h.date||'-'}</td><td>${LBL[h.type]||h.type}</td><td>${detail}</td><td><span class="del" onclick="delMa(${i})">✕</span></td></tr>`+rows;
+    rows=`<tr class="${CLS[h.type]||''}"><td>${h.date||'-'}</td><td>${LBL[h.type]||h.type}</td><td>${detail}</td><td style="white-space:nowrap"><span class="edit" onclick="editMa(${i})">✎</span> <span class="del" onclick="delMa(${i})">✕</span></td></tr>`+rows;
   });
   $('ma_rec_tbl').innerHTML=`<tr><th>날짜</th><th>유형</th><th>단가</th><th></th></tr>`+(hist.length?rows:`<tr><td class="empty" colspan="4">아직 기록이 없습니다</td></tr>`);
 }
@@ -2535,6 +2609,28 @@ function maRecord(type){
   alert('기록됨 ✓');
 }
 function delMa(i){ if(!confirm('이 기록을 삭제할까요?'))return; curStrat().hist.splice(i,1); save(); refreshMa(); }
+let editMaIdx=-1;
+function emTypeUI(t){ const w=$('em_qtywrap'); if(w)w.style.display=(t==='in')?'':'none'; }
+function editMa(i){
+  const h=curStrat().hist[i]; if(!h)return;
+  editMaIdx=i;
+  $('em_date').value=h.date||new Date().toISOString().slice(0,10);
+  $('em_type').value=h.type; emTypeUI(h.type);
+  $('em_price').value=h.price!=null?h.price:'';
+  $('em_qty').value=h.qty!=null?h.qty:'';
+  $('editMaModal').classList.add('on');
+}
+function closeEditMa(){ $('editMaModal').classList.remove('on'); editMaIdx=-1; }
+function saveMaEdit(){
+  if(editMaIdx<0)return; const hist=curStrat().hist, h=hist[editMaIdx]; if(!h){closeEditMa();return;}
+  const type=$('em_type').value, date=$('em_date').value||h.date;
+  const price=+unComma($('em_price').value);
+  if(!price){alert('단가를 입력하세요');return}
+  const rec={ts:h.ts||Date.now(), type, date, price};
+  if(type==='in'){ const qty=+$('em_qty').value; if(qty)rec.qty=qty; }
+  hist[editMaIdx]=rec; sortHist(hist); save(); refreshMa(); closeEditMa();
+}
+function delMaFromEdit(){ if(editMaIdx<0){closeEditMa();return;} const i=editMaIdx; closeEditMa(); delMa(i); }
 
 function refreshMa(){
   renderMaNow(); renderMaHist(); renderStatusline();
