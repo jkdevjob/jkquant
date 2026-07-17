@@ -1,0 +1,315 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<style>
+  :root { color-scheme: dark; }
+  html, body { margin: 0; padding: 0; background: #05070d; }
+  /* 9:16 스테이지. 캔버스는 2배 해상도로 그려 다운샘플(선명). */
+  #stage { width: 1080px; height: 1920px; }
+  #c { width: 1080px; height: 1920px; display: block; }
+  @font-face { font-family: 'NanumReel'; font-weight: 400; font-display: block; src: url('fonts/nanum-400.woff2') format('woff2'); }
+  @font-face { font-family: 'NanumReel'; font-weight: 700; font-display: block; src: url('fonts/nanum-700.woff2') format('woff2'); }
+  @font-face { font-family: 'NanumReel'; font-weight: 800; font-display: block; src: url('fonts/nanum-800.woff2') format('woff2'); }
+</style>
+</head>
+<body>
+  <div id="stage"><canvas id="c" width="2160" height="3840"></canvas></div>
+<script>
+(() => {
+  const W = 1080, H = 1920, DPR = 2;
+  const cv = document.getElementById('c');
+  const ctx = cv.getContext('2d');
+  ctx.scale(DPR, DPR);
+
+  // 데이터는 make-reel.mjs 가 주입한다. 미주입 시 데모값.
+  const D = window.__DATA__ || {
+    ticker: '035720', name: '카카오', currency: 'KRW',
+    amount: 10000, intervalLabel: '매일',
+    startLabel: '2021.07', endLabel: '2026.07',
+    invested: 13030000, finalValue: 19430000, profit: 6400000, returnPct: 49.1,
+    priceLine: Array.from({length: 120}, (_, i) => 50 + 40*Math.sin(i/10) - i*0.2),
+    valueLine: null, investedLine: null,
+    hook: '카카오에 매일 1만원씩 샀다면?', punch: '결과는 직접 확인하세요',
+    durationSec: 16, accent: null,
+  };
+  const FONT = "'NanumReel', system-ui, sans-serif";
+
+  const DUR = D.durationSec || 16;
+  const S = DUR / 16; // 16초 기준 타임라인 스케일
+
+  // 색: 한국 관례 — 수익(+) 빨강, 손실(−) 파랑
+  const gain = (D.profit ?? 0) >= 0;
+  const ACC = D.accent || (gain ? '#ff4d4d' : '#3d7bff');
+  const ACC_DIM = gain ? 'rgba(255,77,77,0.16)' : 'rgba(61,123,255,0.16)';
+
+  // ── 이징/보간 ──
+  const clamp = (x, a=0, b=1) => Math.max(a, Math.min(b, x));
+  const easeOutCubic = x => 1 - Math.pow(1 - x, 3);
+  const easeInOutCubic = x => x < 0.5 ? 4*x*x*x : 1 - Math.pow(-2*x + 2, 3)/2;
+  const easeOutBack = x => { const c1=1.70158, c3=c1+1; return 1 + c3*Math.pow(x-1,3) + c1*Math.pow(x-1,2); };
+  // 구간 [s,e] 진행도(초 단위, 스케일 반영)
+  const seg = (t, s, e) => clamp((t - s*S) / ((e - s)*S));
+  // 페이드 인/유지/아웃
+  function fade(t, inS, outS, inD=0.4, outD=0.4) {
+    const a = clamp((t - inS*S)/(inD*S));
+    const b = outS == null ? 1 : 1 - clamp((t - outS*S)/(outD*S));
+    return Math.min(a, b);
+  }
+
+  // ── 금액 포맷 ──
+  function fmtMoney(v, withUnit=true) {
+    if (D.currency === 'KRW') {
+      const man = Math.round(v / 10000);
+      if (Math.abs(man) >= 10000) {
+        const eok = Math.trunc(man / 10000);
+        const rest = Math.abs(man % 10000);
+        return `${eok.toLocaleString()}억 ${rest ? rest.toLocaleString()+'만' : ''}원`.replace(' 원','원');
+      }
+      return man.toLocaleString() + (withUnit ? '만원' : '만');
+    }
+    return '$' + Math.round(v).toLocaleString('en-US');
+  }
+  function fmtPct(v) {
+    const s = v >= 0 ? '+' : '−';
+    const a = Math.abs(v);
+    return s + (a >= 10 ? Math.round(a) : a.toFixed(1)) + '%';
+  }
+
+  // ── 텍스트 헬퍼 ──
+  function text(str, x, y, size, opts={}) {
+    ctx.save();
+    ctx.font = `${opts.weight||700} ${size}px ${FONT}`;
+    ctx.textAlign = opts.align || 'left';
+    ctx.textBaseline = opts.baseline || 'alphabetic';
+    if (opts.letter) ctx.letterSpacing = opts.letter + 'px';
+    ctx.globalAlpha = opts.alpha ?? 1;
+    if (opts.shadow) { ctx.shadowColor = opts.shadow; ctx.shadowBlur = opts.shadowBlur||24; }
+    ctx.fillStyle = opts.color || '#fff';
+    ctx.fillText(str, x, y);
+    ctx.restore();
+  }
+  function roundRect(x, y, w, h, r) {
+    ctx.beginPath();
+    ctx.moveTo(x+r, y);
+    ctx.arcTo(x+w, y, x+w, y+h, r);
+    ctx.arcTo(x+w, y+h, x, y+h, r);
+    ctx.arcTo(x, y+h, x, y, r);
+    ctx.arcTo(x, y, x+w, y, r);
+    ctx.closePath();
+  }
+
+  // ── 배경(정적, 결정론적) ──
+  function drawBg(t) {
+    const g = ctx.createLinearGradient(0, 0, 0, H);
+    g.addColorStop(0, '#0a1020');
+    g.addColorStop(0.55, '#070b16');
+    g.addColorStop(1, '#04060c');
+    ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+    // 상단 컬러 글로우
+    const rg = ctx.createRadialGradient(W*0.5, 260, 40, W*0.5, 260, 720);
+    rg.addColorStop(0, ACC_DIM); rg.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = rg; ctx.fillRect(0, 0, W, 900);
+    // 미세 그리드
+    ctx.save(); ctx.globalAlpha = 0.05; ctx.strokeStyle = '#8fa6d8'; ctx.lineWidth = 1;
+    for (let x = 0; x <= W; x += 90) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke(); }
+    for (let y = 0; y <= H; y += 90) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke(); }
+    ctx.restore();
+    // 비네트
+    const vg = ctx.createRadialGradient(W/2, H/2, 500, W/2, H/2, 1200);
+    vg.addColorStop(0, 'rgba(0,0,0,0)'); vg.addColorStop(1, 'rgba(0,0,0,0.55)');
+    ctx.fillStyle = vg; ctx.fillRect(0, 0, W, H);
+  }
+
+  // ── 헤더(종목 칩 + 규칙) ──
+  function drawHeader(t) {
+    const a = fade(t, 2.6, null, 0.5);
+    if (a <= 0) return;
+    ctx.save(); ctx.globalAlpha = a;
+    const cx = 90, cy = 150, r = 44;
+    // 종목 원형 배지
+    ctx.beginPath(); ctx.arc(cx + r, cy, r, 0, Math.PI*2);
+    ctx.fillStyle = ACC; ctx.fill();
+    text((D.name || D.ticker).slice(0,1), cx + r, cy + 2, 46, {align:'center', baseline:'middle', color:'#fff', weight:800});
+    // 이름 + 티커
+    text(D.name || D.ticker, cx + r*2 + 26, cy - 8, 40, {color:'#fff', weight:800, baseline:'middle'});
+    text(D.ticker, cx + r*2 + 26, cy + 34, 26, {color:'#8ea3c8', weight:600, baseline:'middle'});
+    // 규칙 pill (우측)
+    const rule = `${D.intervalLabel} ${fmtMoney(D.amount)}`;
+    ctx.font = `700 26px ${FONT}`;
+    const pw = ctx.measureText(rule).width + 44;
+    roundRect(W - 60 - pw, cy - 30, pw, 60, 30);
+    ctx.fillStyle = 'rgba(255,255,255,0.08)'; ctx.fill();
+    ctx.strokeStyle = 'rgba(255,255,255,0.16)'; ctx.lineWidth = 1.5; ctx.stroke();
+    text(rule, W - 60 - pw/2, cy + 1, 26, {align:'center', baseline:'middle', color:'#dfe7f7', weight:700});
+    // 기간
+    text(`${D.startLabel} → ${D.endLabel}`, 90, 240, 28, {color:'#7f93b8', weight:600});
+    ctx.restore();
+  }
+
+  // ── 오프닝 후킹 문구(중앙 → 사라짐) ──
+  function drawHook(t) {
+    const a = fade(t, 0.15, 2.7, 0.5, 0.5);
+    if (a <= 0) return;
+    ctx.save(); ctx.globalAlpha = a;
+    const pop = easeOutBack(seg(t, 0.15, 1.1));
+    const cx = W/2, cy = 760;
+    ctx.translate(cx, cy);
+    ctx.scale(0.9 + 0.1*clamp(pop), 0.9 + 0.1*clamp(pop));
+    // 종목 배지 크게
+    ctx.beginPath(); ctx.arc(0, -220, 92, 0, Math.PI*2); ctx.fillStyle = ACC; ctx.fill();
+    text((D.name||D.ticker).slice(0,1), 0, -216, 96, {align:'center', baseline:'middle', weight:800});
+    // 후킹 문구(줄바꿈)
+    const lines = wrap(D.hook || '', 15);
+    ctx.font = `800 66px ${FONT}`;
+    lines.forEach((ln, i) => {
+      text(ln, 0, -40 + i*84, 66, {align:'center', color:'#fff', weight:800, shadow:'rgba(0,0,0,0.5)', shadowBlur:18});
+    });
+    // 힌트
+    text('결과가 궁금하다면 👀', 0, -40 + lines.length*84 + 40, 34, {align:'center', color:ACC, weight:700});
+    ctx.restore();
+  }
+
+  function wrap(str, maxChars) {
+    const words = str.split(' ');
+    const lines = []; let cur = '';
+    for (const w of words) {
+      if ((cur + ' ' + w).trim().length > maxChars && cur) { lines.push(cur); cur = w; }
+      else cur = (cur + ' ' + w).trim();
+    }
+    if (cur) lines.push(cur);
+    return lines.length ? lines : [str];
+  }
+
+  // ── 배경 차트(가격/자산 곡선) ──
+  function drawChart(t) {
+    const p = seg(t, 3.2, 13.2);          // 그리는 진행도
+    const a = fade(t, 3.0, null, 0.6);
+    if (a <= 0) return;
+    const line = D.valueLine && D.valueLine.length ? D.valueLine : D.priceLine || [];
+    if (line.length < 2) return;
+    const x0 = 70, x1 = W - 70, yTop = 1140, yBot = 1560;
+    const lo = Math.min(...line), hi = Math.max(...line);
+    const nx = i => x0 + (x1 - x0) * (i / (line.length - 1));
+    const ny = v => yBot - (yBot - yTop) * ((v - lo) / (hi - lo || 1));
+    const n = Math.max(2, Math.floor(line.length * p));
+
+    ctx.save(); ctx.globalAlpha = a;
+    // 면적
+    ctx.beginPath(); ctx.moveTo(nx(0), yBot);
+    for (let i = 0; i < n; i++) ctx.lineTo(nx(i), ny(line[i]));
+    ctx.lineTo(nx(n-1), yBot); ctx.closePath();
+    const fg = ctx.createLinearGradient(0, yTop, 0, yBot);
+    fg.addColorStop(0, gain ? 'rgba(255,77,77,0.30)' : 'rgba(61,123,255,0.30)');
+    fg.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = fg; ctx.fill();
+    // 원금선(점선, 있으면)
+    if (D.investedLine && D.investedLine.length === line.length) {
+      ctx.beginPath();
+      for (let i = 0; i < n; i++) { const x = nx(i), y = ny(D.investedLine[i]); i?ctx.lineTo(x,y):ctx.moveTo(x,y); }
+      ctx.setLineDash([6, 10]); ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(200,214,240,0.55)'; ctx.stroke();
+      ctx.setLineDash([]);
+    }
+    // 값선
+    ctx.beginPath();
+    for (let i = 0; i < n; i++) { const x = nx(i), y = ny(line[i]); i?ctx.lineTo(x,y):ctx.moveTo(x,y); }
+    ctx.lineWidth = 5; ctx.strokeStyle = ACC; ctx.lineJoin = 'round';
+    ctx.shadowColor = ACC; ctx.shadowBlur = 18; ctx.stroke(); ctx.shadowBlur = 0;
+    // 진행 점
+    const lx = nx(n-1), lyv = ny(line[n-1]);
+    ctx.beginPath(); ctx.arc(lx, lyv, 9, 0, Math.PI*2); ctx.fillStyle = '#fff'; ctx.fill();
+    ctx.beginPath(); ctx.arc(lx, lyv, 16, 0, Math.PI*2); ctx.strokeStyle = ACC; ctx.lineWidth = 3; ctx.stroke();
+    // 범례
+    if (D.investedLine) {
+      text('평가금액', x0, yTop - 22, 24, {color:ACC, weight:700, alpha:a});
+      text('· · 투자원금', x0 + 150, yTop - 22, 24, {color:'#c8d6f0', weight:600, alpha:a});
+    }
+    ctx.restore();
+  }
+
+  // ── 스탯 행(순차 등장, 카운트업) ──
+  function statRow(t, label, target, y, startS, opts={}) {
+    const a = fade(t, startS, null, 0.5);
+    if (a <= 0) return;
+    const prog = easeOutCubic(seg(t, startS + 0.1, startS + 2.0));
+    const val = target * prog;
+    ctx.save(); ctx.globalAlpha = a;
+    const slide = (1 - a) * 30;
+    text(label, 90, y + slide, 34, {color:'#8ea3c8', weight:600, alpha:a});
+    const str = opts.pct ? fmtPct(val) : fmtMoney(val);
+    text(str, W - 90, y + slide, opts.size || 66, {align:'right', color: opts.color || '#fff', weight:800, alpha:a});
+    ctx.restore();
+  }
+
+  // ── 최종 수익률 대형 리빌 ──
+  function drawReveal(t) {
+    const a = fade(t, 10.6, null, 0.5);
+    if (a <= 0) return;
+    const prog = easeOutCubic(seg(t, 10.7, 12.4));
+    const pop = easeOutBack(clamp(seg(t, 10.6, 11.3)));
+    ctx.save(); ctx.globalAlpha = a;
+    const cx = W/2, cy = 850;
+    text('최종 수익률', cx, cy - 150, 40, {align:'center', color:'#9fb2d6', weight:700});
+    ctx.save();
+    ctx.translate(cx, cy);
+    const sc = 0.7 + 0.3*clamp(pop);
+    ctx.scale(sc, sc);
+    text(fmtPct(D.returnPct * prog), 0, 0, 210, {align:'center', baseline:'middle', color:ACC, weight:900, shadow:ACC, shadowBlur:40});
+    ctx.restore();
+    // 원금→평가 요약
+    text(`${fmtMoney(D.invested)}  →  ${fmtMoney(D.finalValue)}`, cx, cy + 140, 40, {align:'center', color:'#e6edfb', weight:700});
+    ctx.restore();
+  }
+
+  // ── 펀치라인 ──
+  function drawPunch(t) {
+    const a = fade(t, 13.6, null, 0.5);
+    if (a <= 0 || !D.punch) return;
+    ctx.save(); ctx.globalAlpha = a;
+    const y = 1700;
+    ctx.font = `800 42px ${FONT}`;
+    const lines = wrap(D.punch, 18);
+    const bh = lines.length * 60 + 40;
+    roundRect(70, y - 30, W - 140, bh, 24);
+    ctx.fillStyle = 'rgba(255,255,255,0.06)'; ctx.fill();
+    ctx.strokeStyle = ACC; ctx.lineWidth = 2; ctx.globalAlpha = a*0.6; ctx.stroke(); ctx.globalAlpha = a;
+    lines.forEach((ln, i) => text(ln, W/2, y + 30 + i*60, 42, {align:'center', color:'#fff', weight:800}));
+    ctx.restore();
+  }
+
+  // ── 워터마크/CTA ──
+  function drawFooter(t) {
+    const a = fade(t, 3.2, null, 0.6);
+    if (D.handle) text(D.handle, W/2, 1860, 30, {align:'center', color:'rgba(200,214,240,0.5)', weight:600, alpha:a});
+  }
+
+  // ── 메인 렌더 ──
+  window.renderAt = function (t) {
+    ctx.clearRect(0, 0, W, H);
+    drawBg(t);
+    drawChart(t);
+    drawHeader(t);
+    // 스탯 행: 원금 → 평가 → 수익 (차트 위쪽 영역)
+    statRow(t, '투자원금', D.invested, 400, 3.0);
+    statRow(t, '평가금액', D.finalValue, 500, 5.4);
+    statRow(t, '수익', D.profit, 600, 8.0, {color: ACC});
+    drawReveal(t);
+    drawPunch(t);
+    drawFooter(t);
+    drawHook(t); // 오프닝(맨 위에 그려 다른 요소 덮음)
+  };
+
+  // 폰트가 로드된 뒤에 렌더 준비 완료 신호. (캔버스 텍스트는 폰트 로드 전 그리면 폴백됨)
+  const q = new URLSearchParams(location.search);
+  Promise.all([
+    document.fonts.load('400 40px NanumReel', '가나다'),
+    document.fonts.load('700 40px NanumReel', '가나다'),
+    document.fonts.load('800 40px NanumReel', '가나다'),
+  ]).catch(()=>{}).finally(() => document.fonts.ready.then(() => {
+    window.renderAt(q.has('t') ? parseFloat(q.get('t')) : 0);
+    window.__READY__ = true;
+  }));
+})();
+</script>
+</body>
+</html>
