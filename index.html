@@ -149,6 +149,7 @@ table.cmp td:first-child,table.cmp th:first-child{text-align:left}
 .htable tr.buy td:nth-child(2){color:var(--buy)}.htable tr.sell td:nth-child(2){color:var(--sell)}
 .htable tr.add td:nth-child(2){color:var(--vio)}.htable tr.wd td:nth-child(2){color:var(--gold)}
 .htable .del{color:var(--sell-dim);cursor:pointer;font-weight:700;padding:0 4px}
+.htable .edit{color:var(--vio);cursor:pointer;font-weight:700;padding:0 4px}
 .htable .edit{color:var(--vio);cursor:pointer;font-weight:700;padding:0 2px}
 .htable .empty{text-align:center;color:var(--faint);padding:18px 0}
 .syncbar{display:flex;align-items:center;gap:8px;background:var(--panel);border:1px solid var(--line);border-radius:11px;padding:10px 13px;margin-bottom:13px;font-size:12px}
@@ -952,7 +953,7 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
   <footer>
     <strong>JK 퀀트</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v2.40</b> · 2026-07-01</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v2.41</b> · 2026-07-01</div>
   </footer>
 </div>
 
@@ -1030,6 +1031,26 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
   <h3>세션(계좌) 추가</h3><p>증권사·전략별로 따로 관리할 수 있습니다. 예: 키움 SOXL, 토스 TQQQ</p>
   <div class="field"><label>세션 이름</label><input id="sess_name" type="text" placeholder="키움 SOXL"></div>
   <div class="mbtns"><button class="close" onclick="closeSess()">닫기</button><button class="save" onclick="createSess()">만들기</button></div>
+</div></div>
+
+<!-- 거래 수정 모달 (VR) -->
+<div class="modal" id="editVrModal"><div class="box">
+  <button class="mx" onclick="closeEditVr()" aria-label="닫기">✕</button>
+  <h3>거래 수정</h3>
+  <div class="field"><label>날짜</label><input id="ev_date" type="date" class="dateinput"></div>
+  <div class="field"><label>유형</label>
+    <select id="ev_type" onchange="evTypeUI(this.value)" style="width:100%;padding:11px;border-radius:10px;border:1px solid var(--line);background:var(--panel2);color:var(--ink);font-size:14px;font-weight:600">
+      <option value="buy">매수 (주식)</option><option value="sell">매도 (주식)</option>
+      <option value="add">적립 (Pool 추가)</option><option value="wd">인출 (Pool 차감)</option><option value="div">배당 (Pool 입금)</option>
+    </select></div>
+  <div id="ev_stock">
+    <div class="grid2">
+      <div class="field"><label>단가 ($)</label><input id="ev_price" type="text" inputmode="decimal" oninput="commaInput(this)"></div>
+      <div class="field"><label>수량 (주)</label><input id="ev_qty" type="number" inputmode="numeric"></div>
+    </div></div>
+  <div id="ev_amtwrap" class="field" style="display:none"><label>금액 ($)</label><input id="ev_amt" type="text" inputmode="decimal" oninput="commaInput(this)"></div>
+  <p class="note" id="ev_autonote" style="display:none;color:var(--gold)">⚠ 진입 버튼이 자동 기록한 적립/인출입니다. 금액을 바꾸면 사이클 계산도 함께 바뀝니다.</p>
+  <div class="mbtns"><button class="close" onclick="delVrFromEdit()" style="background:var(--sell-bg);color:var(--sell)">삭제</button><button class="save" onclick="saveVrEdit()">저장</button></div>
 </div></div>
 
 <script>
@@ -2309,7 +2330,7 @@ function renderVrHist(){
     const amt=h.type==='buy'||h.type==='sell'?h.price*h.qty:h.amt;
     const detail=h.type==='buy'||h.type==='sell'?`${wn(h.price)}×${h.qty}`:'-';
     const cyc=h.cyc!=null?`<span style="color:var(--faint);font-size:10px">${h.cyc}주차</span>`:'';
-    rows=`<tr class="${CLS[h.type]}"><td>${h.date||'-'} ${cyc}</td><td>${LBL[h.type]}${h.auto?' <span style="color:var(--faint);font-size:9px">자동</span>':''}</td><td>${detail}</td><td>${wn(amt)}</td><td><span class="del" onclick="delVr(${i})">✕</span></td></tr>`+rows;
+    rows=`<tr class="${CLS[h.type]}"><td>${h.date||'-'} ${cyc}</td><td>${LBL[h.type]}${h.auto?' <span style="color:var(--faint);font-size:9px">자동</span>':''}</td><td>${detail}</td><td>${wn(amt)}</td><td style="white-space:nowrap"><span class="edit" onclick="editVr(${i})">✎</span> <span class="del" onclick="delVr(${i})">✕</span></td></tr>`+rows;
   });
   $('vr_table').innerHTML=`<tr><th>날짜</th><th>유형</th><th>단가×수량</th><th>금액</th><th></th></tr>`+(hist.length?rows:`<tr><td class="empty" colspan="5">아직 기록이 없습니다</td></tr>`);
 }
@@ -3052,9 +3073,36 @@ function addVr(){ if(!$('vh_date'))return;
   const h=curStrat().hist; rec.ts=Date.now(); h.push(rec);
   sortHist(h); save();refreshVr();
 }
-function editVr(i){ /* 입력 폼 제거됨: 삭제 후 시트로 재기록 */
-  if(confirm('이 거래를 삭제할까요? (수정은 삭제 후 + 버튼으로 다시 기록)')){delVr(i);}
+function evTypeUI(t){ const stock=(t==='buy'||t==='sell');
+  const s=$('ev_stock'), a=$('ev_amtwrap'); if(s)s.style.display=stock?'':'none'; if(a)a.style.display=stock?'none':''; }
+function editVr(i){
+  const h=curStrat().hist[i]; if(!h)return;
+  editVrIdx=i;
+  $('ev_date').value=h.date||new Date().toISOString().slice(0,10);
+  $('ev_type').value=h.type;
+  evTypeUI(h.type);
+  if(h.type==='buy'||h.type==='sell'){ $('ev_price').value=h.price!=null?h.price:''; $('ev_qty').value=h.qty!=null?h.qty:''; }
+  else { $('ev_amt').value=h.amt!=null?h.amt:''; }
+  const an=$('ev_autonote'); if(an)an.style.display=h.auto?'':'none';
+  $('editVrModal').classList.add('on');
 }
+function closeEditVr(){ $('editVrModal').classList.remove('on'); editVrIdx=-1; }
+function saveVrEdit(){
+  if(editVrIdx<0)return; const hist=curStrat().hist; const h=hist[editVrIdx]; if(!h){closeEditVr();return;}
+  const type=$('ev_type').value, date=$('ev_date').value||h.date;
+  const rec={...h, type, date};   // cyc·ts·auto 등 나머지 필드 보존
+  if(type==='buy'||type==='sell'){
+    const price=+unComma($('ev_price').value), qty=+$('ev_qty').value;
+    if(!price||!qty){alert('단가와 수량을 입력하세요');return}
+    rec.price=price; rec.qty=qty; delete rec.amt;
+  } else {
+    const amt=+unComma($('ev_amt').value);
+    if(!amt){alert('금액을 입력하세요');return}
+    rec.amt=amt; delete rec.price; delete rec.qty;
+  }
+  hist[editVrIdx]=rec; sortHist(hist); save(); refreshVr(); closeEditVr();
+}
+function delVrFromEdit(){ if(editVrIdx<0){closeEditVr();return;} const i=editVrIdx; closeEditVr(); delVr(i); }
 function delVr(i){if(!confirm('이 거래를 삭제할까요?'))return;curStrat().hist.splice(i,1);save();refreshVr()}
 
 
