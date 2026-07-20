@@ -240,7 +240,7 @@ td:first-child{text-align:left;}
   <div class="brand">
     <div>
       <div class="logo">Backtest</div>
-      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v1.114</span></h1>
+      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v1.115</span></h1>
     </div>
   </div>
   <a href="/" class="home">← JK 퀀트</a>
@@ -414,18 +414,7 @@ td:first-child{text-align:left;}
       </div>
     </div>
 
-    <!-- ASAP 전용 종목 선택 -->
-    <div class="ctrl s-asap hide"><label>종목</label>
-      <select id="cmpTkr" style="font-size:13px;padding:8px 10px;border-radius:7px;border:1px solid var(--border2);background:var(--surf);color:var(--text)">
-        <option value="SOXL" selected>SOXL · 반도체 3×</option>
-        <option value="USD">USD · 반도체 2×</option>
-        <option value="TECL">TECL · 테크 3×</option>
-        <option value="TQQQ">TQQQ · 나스닥100 3×</option>
-        <option value="QLD">QLD · 나스닥 2×</option>
-        <option value="KORU">KORU · 한국 3×</option>
-      </select>
-    </div>
-    <!-- ASAP (SOXL 커스텀) — 원금 없음: 매일 적립금이 엔진, 총투입은 결과값 -->
+    <!-- ASAP (SOXL 커스텀) — 원금 없음: 매일 적립금이 엔진, 총투입은 결과값. 종목은 아래 공용 다중 피커에서 선택(기본 전체) -->
     <div class="ctrl s-asap hide"><label>매일 적립금 base ($) <span style="font-size:9px;color:var(--dim)">하락장 SGOV</span></label><input type="number" id="asapBase" value="10" min="1"></div>
     <div class="ctrl s-asap hide"><label>−10%·RSI35 매수 <span style="font-size:9px;color:var(--dim)">mid</span></label><input type="number" id="asapMid" value="50" min="1"></div>
     <div class="ctrl s-asap hide"><label>−15%·RSI30 매수 <span style="font-size:9px;color:var(--dim)">deep</span></label><input type="number" id="asapDeep" value="100" min="1"></div>
@@ -592,6 +581,7 @@ let dcaFreq='daily', dcaPeriodMode='common', imDiv=20;
 let imActive=new Set(IM_TICKERS);   // 무매 다중선택
 let vrActive=new Set(VR_TICKERS);   // VR 다중선택
 let maActive=new Set(MA_TICKERS);   // 200일선 다중선택 (기본: 전체 — 카드 비교로 시작)
+let asapActive=new Set(STRAT_TICKERS);   // ASAP 다중선택 (기본: 전체)
 let maLen=200, maCostOn=true;       // 200일선: 이평 기간 · 비용 반영
 let vrCostOn=true;                  // VR: 세금·비용 반영 (무매·200일선과 동일 규약)
 let dcaActive=new Set(TICKERS);
@@ -637,9 +627,11 @@ async function loadData(startDate, endDate){
     imActive=new Set([...imActive].filter(t=>loaded.includes(t)||M[t]));
     vrActive=new Set([...vrActive].filter(t=>loaded.includes(t)||M[t]));
     maActive=new Set([...maActive].filter(t=>loaded.includes(t)||M[t]));
+    asapActive=new Set([...asapActive].filter(t=>loaded.includes(t)||M[t]));
     if(!imActive.size) imActive=new Set(IM_TICKERS.filter(t=>loaded.includes(t)));
     if(!vrActive.size) vrActive=new Set(VR_TICKERS.filter(t=>loaded.includes(t)));
     if(!maActive.size) maActive=new Set(MA_TICKERS.filter(t=>loaded.includes(t)));
+    if(!asapActive.size) asapActive=new Set(STRAT_TICKERS.filter(t=>loaded.includes(t)));
     // 로딩 후 세트 객체가 교체됐으므로 단일 종목 칩을 다시 그림 (구 세트를 잡고 있는 stale 칩 방지)
     { const ts=document.getElementById('tickerSingle'); if(ts&&ts._render) ts._render(); }
     buildTickerPick();
@@ -812,8 +804,8 @@ function buildPickSingle(){
   single.innerHTML='';
   function renderMultiPick(){
     single.innerHTML='';
-    const list = strat==="im"? IM_TICKERS : strat==="ma"? MA_TICKERS : VR_TICKERS;
-    const active = strat==="im"? imActive : strat==="ma"? maActive : vrActive;
+    const list = strat==="im"? IM_TICKERS : strat==="ma"? MA_TICKERS : strat==="asap"? STRAT_TICKERS : VR_TICKERS;
+    const active = strat==="im"? imActive : strat==="ma"? maActive : strat==="asap"? asapActive : vrActive;
     list.forEach(t=>{
       if(!META[t]) return;
       const c=document.createElement("div");
@@ -822,7 +814,7 @@ function buildPickSingle(){
       c.innerHTML="<div class=\"d\"></div>"+t;
       // ★ 클릭 시점의 '현재' 전역 세트를 참조 — loadData가 세트를 새로 만들면(교체)
       //   렌더 시점 캡처본은 버려진 세트가 되어 클릭이 실행에 반영 안 되는 버그가 있었음
-      c.onclick=()=>{ const act = strat==="im"? imActive : strat==="ma"? maActive : vrActive;
+      c.onclick=()=>{ const act = strat==="im"? imActive : strat==="ma"? maActive : strat==="asap"? asapActive : vrActive;
         c.classList.toggle("on"); const on=c.classList.contains("on"); if(on) act.add(t); else act.delete(t); };
       single.appendChild(c);
     });
@@ -841,8 +833,8 @@ function setStrat(s){
   document.querySelectorAll('.s-mom').forEach(e=>e.classList.toggle('hide',s!=='mom'));
   document.querySelectorAll('.s-asap').forEach(e=>e.classList.toggle('hide',s!=='asap'));
   document.querySelectorAll('.s-all').forEach(e=>e.classList.toggle('hide',s!=='all'));
-  // s-im s-vr(s-ma) 공용 단일 종목 피커 — im·vr·ma에서만 표시 (asap는 cmpTkr 셀렉트, all은 전 종목 자동)
-  document.querySelectorAll('.s-im.s-vr').forEach(e=>e.classList.toggle('hide',!(s==='im'||s==='vr'||s==='ma')));
+  // 공용 다중 종목 피커 — im·vr·ma·asap에서 표시 (all은 전 종목 자동)
+  document.querySelectorAll('.s-im.s-vr').forEach(e=>e.classList.toggle('hide',!(s==='im'||s==='vr'||s==='ma'||s==='asap')));
   buildPickSingle();
   if(document.getElementById('tickerSingle')._render) document.getElementById('tickerSingle')._render();
   if(typeof saveBtState==='function'&&!_restoring) saveBtState();   // 전략 탭 변경 저장
@@ -1148,14 +1140,14 @@ const BT_STATE_KEY='jkq_bt_state';
 function saveBtState(){ if(_restoring)return; try{
   const inputs={}; document.querySelectorAll('.ctrl-card input[id]').forEach(el=>{ if(el.id!=='addTicker'&&el.id!=='dEnd') inputs[el.id]=el.value; });  // 종료일(dEnd)은 저장 안 함 — 항상 오늘 날짜 유지
   const segs={}; document.querySelectorAll('.ctrl-card .seg[id]').forEach(seg=>{ const b=seg.querySelector('button.active'); if(b){ const v=Object.values(b.dataset)[0]; if(v!=null) segs[seg.id]=v; } });
-  const st={ v:1, strat, inputs, segs, sets:{dca:[...dcaActive],im:[...imActive],vr:[...vrActive],ma:[...maActive]} };
+  const st={ v:1, strat, inputs, segs, sets:{dca:[...dcaActive],im:[...imActive],vr:[...vrActive],ma:[...maActive],asap:[...asapActive]} };
   localStorage.setItem(BT_STATE_KEY, JSON.stringify(st));
 }catch(e){} }
 function restoreBtState(){ try{
   const st=JSON.parse(localStorage.getItem(BT_STATE_KEY)||'null'); if(!st) return false;
   _restoring=true;
   try{
-    if(st.sets){ if(st.sets.dca)dcaActive=new Set(st.sets.dca); if(st.sets.im)imActive=new Set(st.sets.im); if(st.sets.vr)vrActive=new Set(st.sets.vr); if(st.sets.ma)maActive=new Set(st.sets.ma); }
+    if(st.sets){ if(st.sets.dca)dcaActive=new Set(st.sets.dca); if(st.sets.im)imActive=new Set(st.sets.im); if(st.sets.vr)vrActive=new Set(st.sets.vr); if(st.sets.ma)maActive=new Set(st.sets.ma); if(st.sets.asap)asapActive=new Set(st.sets.asap); }
     // 세그: 저장된 값의 버튼을 클릭해 active 클래스 + JS 변수 동기화 (핸들러가 단일 진실원). _restoring이라 재실행은 억제됨.
     if(st.segs) Object.entries(st.segs).forEach(([id,val])=>{ const seg=document.getElementById(id); if(!seg)return;
       const btn=[...seg.querySelectorAll('button')].find(b=>String(Object.values(b.dataset)[0])===String(val)); if(btn) btn.click(); });
@@ -1863,24 +1855,31 @@ function renderCompare(res, tkr, cap, days){
   document.getElementById('allResult').innerHTML=h;
   if(days) cmpDrawChart(R,days,tkr,isTkr?`${res.stratLabel} · 종목별 누적 총자산`:undefined);
 }
-function renderASAP(a, tkr, days, opt){
+function renderASAP(results, days, opt){
   hideEmptyState();
   const o=opt||{}, yrs=Math.max((new Date(days[days.length-1])-new Date(days[0]))/(365.25*864e5),0.1);
-  // 원금 개념 없음 — 매일 적립금(base)이 엔진, 총투입(inv)은 결과값. 스케일링 안 함.
-  const inv=a.invested, final=a.final, ret=a.ret, cg=cagrOf(final,inv,yrs), mar=a.mdd>0?cg/a.mdd:0;
-  const nDays=days.length, contribDays=Math.round(nDays);
-  const money=x=>(isKRW(tkr)?'₩':'$')+fmt(Math.round(x)), pct=x=>(x>=0?'+':'')+x.toFixed(1)+'%';
-  let h=`<div class="cmp-card"><h3>ASAP · ${tkr} · ${yrs.toFixed(1)}년 · 매일 적립금 ${money(o.base||10)} <span style="font-size:11px;color:var(--dim)">(원금 없음 · 총투입은 결과값)</span></h3>`;
-  h+=`<div style="overflow-x:auto"><table class="cmp-tbl"><thead><tr><th>총투입</th><th>최종금액</th><th>총수익률</th><th>CAGR</th><th>MDD</th><th>MAR</th></tr></thead><tbody>`;
-  h+=`<tr class="win"><td>${money(inv)}</td><td class="cacc">${money(final)}</td><td class="${ret>=0?'cg':'cr'}">${pct(ret)}</td><td class="${cg>=0?'cg':'cr'}"><b>${pct(cg)}</b></td><td>${a.mdd.toFixed(0)}%</td><td class="cgold">${mar.toFixed(2)}</td></tr>`;
+  const money=x=>'$'+fmt(Math.round(x)), pct=x=>(x>=0?'+':'')+x.toFixed(1)+'%';
+  const rows=Object.keys(results).map(t=>{ const a=results[t], cg=cagrOf(a.final,a.invested,yrs);
+    return {ticker:t, color:(META[t]&&META[t].color)||'#888', invested:a.invested, final:a.final, ret:a.ret, cagr:cg, mdd:a.mdd, mar:a.mdd>0?cg/a.mdd:0, snap:a.snap}; });
+  rows.sort((x,y)=>y.ret-x.ret);
+  let h=`<div class="cmp-card"><h3>ASAP · ${yrs.toFixed(1)}년 · 매일 적립금 ${money(o.base||10)} <span style="font-size:11px;color:var(--dim)">(원금 없음 · 총투입은 결과값 · 수익률순)</span></h3>`;
+  h+=`<div style="overflow-x:auto"><table class="cmp-tbl"><thead><tr><th>#</th><th>종목</th><th>총투입</th><th>최종금액</th><th>총수익률</th><th>CAGR</th><th>MDD</th><th>MAR</th></tr></thead><tbody>`;
+  rows.forEach((r,i)=>{ const dot=`<span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:${r.color};margin-right:5px"></span>`;
+    h+=`<tr${i===0?' class="win"':''}><td class="cdim">${i+1}</td><td>${dot}<b>${r.ticker}</b>${i===0?' 🥇':''}</td><td>${money(r.invested)}</td><td class="cacc">${money(r.final)}</td><td class="${r.ret>=0?'cg':'cr'}"><b>${pct(r.ret)}</b></td><td class="${r.cagr>=0?'cg':'cr'}">${pct(r.cagr)}</td><td>${r.mdd.toFixed(0)}%</td><td class="cgold">${r.mar.toFixed(2)}</td></tr>`; });
   h+=`</tbody></table></div>`;
-  // 연말 총자산 (매해) — 스케일 없이 실제 값
-  const yEnd={}; a.snap.forEach(s=>{ if(s[1]!=null) yEnd[s[0].slice(0,4)]=s[1]; });
-  const yrsK=Object.keys(yEnd).sort();
-  if(yrsK.length){ h+=`<div style="overflow-x:auto;margin-top:6px"><table class="cmp-tbl"><thead><tr><th>연도</th>${yrsK.map(y=>`<th>${y}</th>`).join('')}</tr></thead><tbody><tr><td>총자산</td>${yrsK.map(y=>`<td class="cacc">${money(yEnd[y])}</td>`).join('')}</tr></tbody></table></div>`; }
-  h+=`<p class="note" style="font-size:11px;color:var(--dim);margin-top:10px;line-height:1.7">하락장(가&lt;200일선): SGOV <b>매일 ${money(o.base||10)}</b> 적립 · RSI≤35 &amp; −10% → ${money(o.mid||50)} · RSI≤30 &amp; −15% → ${money(o.deep||100)} 딥가중 매수<br>상승장: 5&gt;20(SGOV 20%)→20&gt;50(30%)→200돌파(전액) 3단 재진입, 완료 익일부터 적립 재개 · 재하락 시 카운터 리셋<br>총투입 ${money(inv)} = 매일 적립(${contribDays}거래일) + 딥·재진입 매수의 <b>누적 결과</b>. SGOV=현금성(단기국채 이자 반영).</p></div>`;
+  // 연말 총자산 (매해 · 종목 컬럼)
+  const yEndVal={}, yset=new Set();
+  rows.forEach(r=>{ yEndVal[r.ticker]={}; r.snap.forEach(s=>{ if(s[1]!=null){ const y=s[0].slice(0,4); yEndVal[r.ticker][y]=s[1]; yset.add(y); } }); });
+  const years=[...yset].sort();
+  if(years.length){
+    h+=`<div style="overflow-x:auto;margin-top:8px"><table class="cmp-tbl"><thead><tr><th>연도</th>${rows.map(r=>`<th>${r.ticker}</th>`).join('')}</tr></thead><tbody>`;
+    years.forEach(y=>{ let best=-1e18,bi=-1; rows.forEach((r,i)=>{const v=yEndVal[r.ticker][y];if(v!=null&&v>best){best=v;bi=i;}});
+      h+=`<tr><td>${y}</td>${rows.map((r,i)=>{const v=yEndVal[r.ticker][y];return `<td class="${i===bi?'win':''}">${v!=null?money(v):'—'}${i===bi?' 🥇':''}</td>`;}).join('')}</tr>`; });
+    h+=`</tbody></table></div>`;
+  }
+  h+=`<p class="note" style="font-size:11px;color:var(--dim);margin-top:10px;line-height:1.7">하락장: SGOV 매일 ${money(o.base||10)} 적립 · −10%&amp;RSI≤35→${money(o.mid||50)} · −15%&amp;RSI≤30→${money(o.deep||100)} 딥매수. 상승 3단 재진입. 200일선은 <b>종목 자체 종가</b> 기준. 총투입은 매일 적립+딥·재진입의 누적 결과라 종목마다 다름. 전 종목 미국상장 USD · 비용 미반영.</p></div>`;
   document.getElementById('asapResult').innerHTML=h;
-  cmpDrawChart([{name:'ASAP',snap:a.snap}],days,tkr,`${tkr} · ASAP 누적 총자산`);
+  cmpDrawChart(rows.map(r=>({name:r.ticker,snap:r.snap,color:r.color})),days,rows[0]?rows[0].ticker:'SOXL','ASAP · 종목별 누적 총자산');
 }
 
 
@@ -1890,10 +1889,9 @@ async function run(){
   const end=document.getElementById('dEnd').value;
   if(!start||!end||start>=end){alert('날짜를 확인하세요.');return;}
   if(strat==='mom'){ await runMomentum(start,end); return; }   // 모멘텀은 독립 데이터 캐시 사용
-  const cmpT=document.getElementById('cmpTkr')?.value||'SOXL';   // asap 전용 종목
   // 데이터 없거나 · 요청 기간이 더 넓거나 · 선택 종목 중 미로딩분이 있으면 재로딩
   const wanted = strat==='dca' ? [...dcaActive] : strat==='im' ? [...imActive] : strat==='ma' ? [...maActive]
-    : strat==='asap' ? [cmpT]
+    : strat==='asap' ? [...asapActive]
     : strat==='all' ? STRAT_TICKERS.slice()   // 전 종목 로드 (전략×종목 통합 비교)
     : [...vrActive];
   const missing = wanted.filter(t=>!M[t] || !Object.keys(M[t]||{}).length);
@@ -1907,12 +1905,16 @@ async function run(){
   }
 
   if(strat==='asap'){
-    const tkr=cmpT;
-    if(!M[tkr]||!Object.keys(M[tkr]).length){alert(tkr+' 데이터를 불러오지 못했습니다.');return;}
-    const days=commonDays(start,end,[tkr]);
-    if(days.length<250){alert('비교하려면 최소 1년 이상 기간이 필요합니다.');return;}
+    if(!asapActive.size){alert('종목을 선택하세요.');return;}
     const opt={base:+document.getElementById('asapBase').value||10,mid:+document.getElementById('asapMid').value||50,deep:+document.getElementById('asapDeep').value||100};
-    renderASAP(runASAP(days,tkr,opt),tkr,days,opt);
+    const {use,skip}=usableTickers(start,end,[...asapActive]);
+    if(!use.length){alert('선택 종목 모두 해당 기간 데이터가 없습니다. 날짜를 확인하세요.');return;}
+    const commonD=commonDays(start,end,use);
+    if(commonD.length<250){alert('공통 거래일이 1년 미만입니다. 기간을 넓히거나 늦은 상장 종목을 감안하세요.');return;}
+    const results={};
+    use.forEach(t=>{ results[t]=runASAP(commonD,t,opt); });
+    renderASAP(results,commonD,opt);
+    noteSkipped(skip);
     return;
   }
   if(strat==='all'){
