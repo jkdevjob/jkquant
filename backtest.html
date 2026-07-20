@@ -240,7 +240,7 @@ td:first-child{text-align:left;}
   <div class="brand">
     <div>
       <div class="logo">Backtest</div>
-      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v1.115</span></h1>
+      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v1.116</span></h1>
     </div>
   </div>
   <a href="/" class="home">← JK 퀀트</a>
@@ -2064,7 +2064,7 @@ function setLog(v,btn){logY=v;btn.parentElement.querySelectorAll('button').forEa
 // DCA 렌더
 function renderDCA(res,tickers,opts){
   document.getElementById('detail').classList.add('hide');
-  document.querySelector('.cards').classList.remove('hide');
+  document.querySelector('.cards').classList.add('hide');   // 카드 대신 목록(아래 표)
   document.querySelector('.tbl-wrap').classList.remove('hide');
   const mode=opts.mode||'common';
   const isInd=mode==='individual';
@@ -2166,44 +2166,21 @@ function renderMultiStrat(type, results, params){
   document.getElementById('winner').innerHTML = periodWarn ? `<span style="font-size:12px">${periodWarn}</span>` : '';
   document.getElementById('winner').style.display = periodWarn ? '' : 'none';
 
-  // 카드 (전략 카드 + DCA 카드, 종목별로 인접 배치)
-  const cc=document.getElementById('cards'); cc.innerHTML='';
-  ranked.forEach((e,i)=>{
-    const r=e.res;
-    const d=document.createElement('div'); d.className='card'+(e.isDCA?' card-dca':''); d.id='cs_'+e.key;
-    d.style.opacity=e.isDCA?'.82':'1';
-    d.onclick=()=>renderSingle2(type,results[e.t].res,results[e.t].days);
-    d.innerHTML=`<div class="card-bar" style="background:${e.color};${e.isDCA?'opacity:.45':''}"></div>
-      <div class="card-rk ${i===0?'g':''}">#${i+1}</div>
-      <div class="card-body">
-        <div class="card-tkr">${e.label}${e.isDCA?`<span class="tk-nm" style="color:var(--dim)"> ${e.sub}</span>`:`<span class="tk-nm">${e.sub}</span>`}</div>
-        <div class="card-val">${money(r.final,e.t)}</div>
-        <div class="card-sub">CAGR ${pct(r.cagr)} · MDD ${r.mdd.toFixed(0)}% · MAR ${(r.mdd>0?r.cagr/r.mdd:0).toFixed(2)}</div>
-        <div class="card-sub" style="opacity:.7">${r.yrs.toFixed(1)}년 · 원금 ${money(r.invested,e.t)}</div>
-      </div>`;
-    cc.appendChild(d);
-  });
-
-  // 비교표 (열 = entries, 종목별 전략|DCA 인접)
-  const marOf=r=>(r.mdd>0? r.cagr/r.mdd : 0);
-  const rows=[
-    ['투입 원금',   e=>money(e.res.invested,e.t), false],
-    ['최종 평가액', e=>money(e.res.final,e.t),    true],
-    ['총 수익률',   e=>pct(e.res.ret),            true],
-    ['CAGR',        e=>pct(e.res.cagr),           true],
-    ['MDD',         e=>e.res.mdd.toFixed(1)+'%',  false],
-    ['MAR (CAGR/MDD)', e=>marOf(e.res).toFixed(2), true],
-    ['기간(년)',    e=>e.res.yrs.toFixed(1)+'년', false],
-  ];
-  const best=(vals,higher)=>{ const arr=vals.map(Number); const m=higher?Math.max(...arr):Math.min(...arr); return arr.map(v=>v===m); };
-  let h=`<thead><tr><th>지표</th>${ranked.map(e=>`<th style="color:${e.color};${e.isDCA?'opacity:.6;font-size:11px':''}">${e.label}</th>`).join('')}</tr></thead><tbody>`;
-  rows.forEach(([label,fn,higher])=>{
-    const vals=ranked.map(fn);
-    const nums=vals.map(v=>parseFloat(String(v).replace(/[^0-9.\-]/g,'')));
-    const wins=higher!==false?best(nums,higher!==false):[];
-    h+=`<tr><td>${label}</td>${ranked.map((e,i)=>`<td class="v ${wins[i]?'win':''}">${vals[i]}</td>`).join('')}</tr>`;
-  });
-  h+='</tbody>'; document.getElementById('tbl').innerHTML=h;
+  // 목록 (카드 대신 순위 표 — 전략 + DCA 기준선, 최종액순). 행 클릭 시 단일 상세.
+  document.querySelector('.cards').classList.add('hide');
+  let h=`<thead><tr><th>#</th><th>종목</th><th>원금</th><th>최종</th><th>수익률</th><th>CAGR</th><th>MDD</th><th>MAR</th></tr></thead><tbody>`;
+  ranked.forEach((e,i)=>{ const r=e.res, mar=r.mdd>0?r.cagr/r.mdd:0;
+    h+=`<tr class="lrow" data-t="${e.t}" style="cursor:pointer${e.isDCA?';opacity:.7':''}${i===0?';background:rgba(245,196,81,.08)':''}">`
+      +`<td style="color:var(--dim)">${i+1}</td>`
+      +`<td><span class="dot" style="background:${e.color}${e.isDCA?';opacity:.45':''}"></span>${e.label}<span class="tk-nm"${e.isDCA?' style="color:var(--dim)"':''}> ${e.sub}</span>${i===0?' 🥇':''}</td>`
+      +`<td>${money(r.invested,e.t)}</td>`
+      +`<td style="color:${i===0?'var(--gold)':'var(--accent)'}"><b>${money(r.final,e.t)}</b></td>`
+      +`<td style="color:${r.ret>=0?'var(--green)':'var(--red)'}"><b>${pct(r.ret)}</b></td>`
+      +`<td style="color:${r.cagr>=0?'var(--green)':'var(--red)'}">${pct(r.cagr)}</td>`
+      +`<td>${r.mdd.toFixed(0)}%</td>`
+      +`<td style="color:var(--gold)">${mar.toFixed(2)}</td></tr>`; });
+  h+='</tbody>'; const _tbl=document.getElementById('tbl'); _tbl.innerHTML=h;
+  _tbl.querySelectorAll('tr.lrow').forEach(tr=>{ const t=tr.dataset.t; tr.onclick=()=>renderSingle2(type,results[t].res,results[t].days); });
 
   // 차트: 전략=실선, DCA=점선 (같은 종목 같은 색)
   const labels=[...new Set(entries.flatMap(e=>e.res.snap.map(s=>s[0])))].sort();
