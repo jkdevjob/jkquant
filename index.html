@@ -1040,7 +1040,7 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
       <div class="card"><h3><span class="dot"></span>하락장 (종가 &lt; 200일선)</h3>
         <ul class="clean"><li><b>SGOV base</b> 매일 소액 적립 (기본 $10)</li><li><b>−10% & RSI≤35</b> → SOXL <b>mid</b> 매수 (기본 $50)</li><li><b>−15% & RSI≤30</b> → SOXL <b>deep</b> 매수 (기본 $100, mid 대체)</li></ul></div>
       <div class="card"><h3><span class="dot"></span>상승 전환 3단 재진입</h3>
-        <ul class="clean"><li><b>1차</b> MA5 &gt; MA20 교차 → 리저브 <b>20%</b> 매수</li><li><b>2차</b> MA20 &gt; MA50 교차 → 남은 리저브 <b>30%</b></li><li><b>3차</b> 종가가 200일선 <b>돌파</b> → 리저브 <b>전액</b></li><li>3차 완료 익일부터 <b>base 재개</b> · 재하락 시 카운터 리셋(1차부터)</li></ul></div>
+        <ul class="clean"><li><b>1차</b> MA5 &gt; MA20 교차 → 리저브 <b>20%</b> 매수</li><li><b>2차</b> MA20 &gt; MA50 교차 → 남은 리저브 <b>30%</b></li><li><b>3차</b> 종가가 200일선 <b>돌파</b> → 리저브 <b>전액</b></li><li>3차 완료 익일부터 <b>SOXL에 base/일 매수 재개</b>(상승장 적립) · 재하락 시 카운터 리셋(1차부터)</li></ul></div>
       <div class="card"><h3><span class="dot"></span>운영 방법</h3>
         <ol class="steps"><li>매일(또는 며칠에 한 번) 🔄 자동으로 오늘 할 일 확인</li><li>하락장이면 SGOV 적립(딥이면 매수) 기록</li><li>상승 재진입 신호가 뜨면 안내된 비율만큼 SOXL 매수 기록</li><li>단계·국면은 <b>종가 이력에서 자동 판정</b>되니 직접 셀 필요 없음</li></ol></div>
       <div class="card"><h3><span class="dot"></span>참고</h3>
@@ -1051,7 +1051,7 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
   <footer>
     <strong>JK 퀀트</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v2.45</b> · 2026-07-01</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v2.46</b> · 2026-07-01</div>
   </footer>
 </div>
 
@@ -1120,7 +1120,7 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
       <button data-v="TQQQ">TQQQ</button><button data-v="QLD">QLD</button><button data-v="KORU">KORU</button></div>
     <p class="note" style="margin:4px 0 8px">ASAP는 SOXL 기준으로 설계됐지만 어떤 레버리지든 200일선·RSI 규칙으로 동작합니다.</p>
     <div class="seclabel">매수 금액 <span class="hint" style="color:var(--faint);font-weight:500">하락장 적립·딥가중</span></div>
-    <div class="field"><label>하락장 일적립 base ($) <span class="hint">SGOV로 매일 소액</span></label><input id="set_asapbase" type="text" inputmode="decimal" value="10" oninput="commaInput(this)"></div>
+    <div class="field"><label>매일 적립금 base ($) <span class="hint">하락장→SGOV · 상승완료→SOXL</span></label><input id="set_asapbase" type="text" inputmode="decimal" value="10" oninput="commaInput(this)"></div>
     <div class="field"><label>−10% · RSI≤35 매수 mid ($)</label><input id="set_asapmid" type="text" inputmode="decimal" value="50" oninput="commaInput(this)"></div>
     <div class="field"><label>−15% · RSI≤30 매수 deep ($) <span class="hint">mid 대체</span></label><input id="set_asapdeep" type="text" inputmode="decimal" value="100" oninput="commaInput(this)"></div>
   </div>
@@ -2894,7 +2894,7 @@ function renderAsapNow(){
     else if(c.stage===2){ if(c.ev.crossUp){ recAmt=pos.reserve; v+=oi('b','재진입 3차','종가 200일선 돌파 → 리저브 <b>전액</b>',px(price)); }
       else if(c.gapPct>0){ recAmt=0; v+=`<div class="oitem" style="background:var(--buy-bg);justify-content:center"><span class="nm" style="flex:none;color:var(--buy)">✅ 2차 완료 · 종가 이미 200일선 위(+${c.gapPct.toFixed(0)}%) — 보유 지속. 3차(리저브 전액)는 <b>재하락 후 재돌파</b> 때 발동, 그때까지 리저브 유지.</span></div>`; }
       else v+=`<div class="oitem" style="background:rgba(245,196,81,.1);justify-content:center"><span class="nm" style="flex:none;color:var(--gold)">⏳ 2차 완료 · 3차 트리거: 종가 > 200일선(${c.m200Now?nfix(c.m200Now,1):'—'})</span></div>`; }
-    else { recAmt=base; v+=`<div class="oitem" style="background:var(--buy-bg);justify-content:center"><span class="nm" style="flex:none;color:var(--buy)">✅ 재진입 완료 — 보유 유지 · SGOV ${px(base)}/일 적립 재개</span></div>`; }
+    else { recAmt=base; v+=oi('b','적립 재개',`SOXL <b>${px(base)}</b>/일 매수 — 재진입 완료, 상승장 적립 지속`,px(price)); }
   }
   $('asap_verdict').innerHTML=v;
   // 금액칸이 비어있을 때만 권장액 자동 입력 (사용자가 입력하면 유지)
