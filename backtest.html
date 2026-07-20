@@ -84,7 +84,7 @@ window.btLogin = async () => {
 :root{
   --bg:#0f1320;--surf:#171c2e;--surf2:#1e2540;--border:#2a3354;--border2:#34406a;
   --text:#e8ecf7;--dim:#9aa6c9;--dim2:#b3bce0;--accent:#8b8cf0;--green:#36d399;--red:#f87b8c;--gold:#f5c451;
-  --c-dca:#8b8cf0;--c-im:#ff6b6b;--c-vr:#00d4b4;--c-ma:#ffa94d;--c-mom:#4dabf7;
+  --c-dca:#8b8cf0;--c-im:#ff6b6b;--c-vr:#00d4b4;--c-ma:#ffa94d;--c-mom:#4dabf7;--c-asap:#f6c453;--c-all:#a78bfa;
   --qld:#5b8dee;--tqqq:#00d4b4;--usd:#b088f8;--soxl:#ff6b6b;--tecl:#ffc844;
 }
 *{box-sizing:border-box;margin:0;padding:0;}
@@ -101,7 +101,7 @@ body{background:var(--bg);color:var(--text);font-family:'Pretendard',sans-serif;
 
 /* STRATEGY TABS */
 .stabs-sticky{position:sticky;top:0;z-index:20;background:var(--bg);padding-top:12px;}
-.stabs{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;background:var(--surf);border:1px solid var(--border);border-radius:10px;padding:5px;margin-bottom:20px;}
+.stabs{display:grid;grid-template-columns:repeat(6,1fr);gap:6px;background:var(--surf);border:1px solid var(--border);border-radius:10px;padding:5px;margin-bottom:20px;}
 .stab{padding:11px 8px;border-radius:7px;border:none;background:transparent;color:var(--dim);font-family:'Pretendard';font-size:13.5px;font-weight:600;cursor:pointer;transition:all .15s;text-align:center;}
 .stab.active{color:#fff;}
 .stab[data-s="dca"].active{background:var(--c-dca);}
@@ -109,7 +109,24 @@ body{background:var(--bg);color:var(--text);font-family:'Pretendard',sans-serif;
 .stab[data-s="vr"].active{background:var(--c-vr);}
 .stab[data-s="ma"].active{background:var(--c-ma);}
 .stab[data-s="mom"].active{background:var(--c-mom);}
+.stab[data-s="asap"].active{background:var(--c-asap);color:#1a1400;}
+.stab[data-s="all"].active{background:var(--c-all);}
 .stab .sub{display:block;font-size:10px;font-weight:400;opacity:.7;margin-top:2px;}
+/* 전체 비교·ASAP 결과 테이블 */
+.cmp-card{background:var(--surf);border:1px solid var(--border);border-radius:12px;padding:16px 18px;margin-bottom:16px;}
+.cmp-card h3{font-size:14px;font-weight:700;color:var(--text);margin:0 0 12px;}
+.cmp-tbl{width:100%;border-collapse:collapse;font-size:12.5px;font-variant-numeric:tabular-nums;white-space:nowrap;}
+.cmp-tbl th{color:var(--dim);font-weight:600;text-align:right;padding:7px 10px;border-bottom:1px solid var(--border2);font-size:11px;}
+.cmp-tbl th:first-child,.cmp-tbl td:first-child{text-align:left;}
+.cmp-tbl td{padding:8px 10px;text-align:right;border-bottom:1px solid rgba(255,255,255,.04);color:var(--text);}
+.cmp-tbl tr.win{background:rgba(245,196,81,.09);}
+.cmp-tbl tr.win td{font-weight:600;}
+.cmp-tbl td.win{background:rgba(245,196,81,.14);color:var(--gold);font-weight:700;}
+.cmp-tbl .cdim{color:var(--dim);font-size:11px;}
+.cmp-tbl .cacc{color:var(--accent);font-weight:600;}
+.cmp-tbl .cg{color:var(--green);}
+.cmp-tbl .cr{color:var(--red);}
+.cmp-tbl .cgold{color:var(--gold);}
 
 /* CONTROLS */
 .ctrl-card{background:var(--surf);border:1px solid var(--border);border-radius:10px;padding:16px 18px;margin-bottom:20px;}
@@ -211,7 +228,8 @@ td:first-child{text-align:left;}
 @media(max-width:720px){
   .detail{grid-template-columns:1fr;}
   .ctrl input[type=date]{width:140px;}
-  .stab{font-size:12px;}
+  .stab{font-size:12px;padding:9px 4px;}
+  .stabs{grid-template-columns:repeat(3,1fr);}
 }
 </style>
 </head>
@@ -222,7 +240,7 @@ td:first-child{text-align:left;}
   <div class="brand">
     <div>
       <div class="logo">Backtest</div>
-      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v1.110</span></h1>
+      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v1.111</span></h1>
     </div>
   </div>
   <a href="/" class="home">← JK 퀀트</a>
@@ -237,7 +255,9 @@ td:first-child{text-align:left;}
   <button class="stab" data-s="im" onclick="setStrat('im')">무한매수법<span class="sub">V4.0</span></button>
   <button class="stab" data-s="vr" onclick="setStrat('vr')">밸류리밸런싱<span class="sub">VR 5.0</span></button>
   <button class="stab" data-s="ma" onclick="setStrat('ma')">200일선 로테이션<span class="sub">이평선↔현금</span></button>
-  <button class="stab" data-s="mom" onclick="setStrat('mom')">모멘텀 로테이션<span class="sub">1위 갈아타기</span></button>
+  <button class="stab" data-s="mom" onclick="setStrat('mom')" style="display:none">모멘텀 로테이션<span class="sub">1위 갈아타기</span></button>
+  <button class="stab" data-s="asap" onclick="setStrat('asap')">ASAP<span class="sub">SGOV 리저브</span></button>
+  <button class="stab" data-s="all" onclick="setStrat('all')">전체 비교<span class="sub">한눈에</span></button>
 </div>
 </div>
 
@@ -394,6 +414,25 @@ td:first-child{text-align:left;}
       </div>
     </div>
 
+    <!-- ASAP · 전체 비교 공용 종목 선택 -->
+    <div class="ctrl s-asap s-all hide"><label>종목</label>
+      <select id="cmpTkr" style="font-size:13px;padding:8px 10px;border-radius:7px;border:1px solid var(--border2);background:var(--surf);color:var(--text)">
+        <option value="SOXL" selected>SOXL · 반도체 3×</option>
+        <option value="USD">USD · 반도체 2×</option>
+        <option value="TECL">TECL · 테크 3×</option>
+        <option value="TQQQ">TQQQ · 나스닥100 3×</option>
+        <option value="QLD">QLD · 나스닥 2×</option>
+        <option value="KORU">KORU · 한국 3×</option>
+      </select>
+    </div>
+    <!-- ASAP (SOXL 커스텀) 전용 -->
+    <div class="ctrl s-asap hide"><label>원금 ($)</label><input type="number" id="asapCap" value="10000" min="100"></div>
+    <div class="ctrl s-asap hide"><label>하락장 일적립 <span style="font-size:9px;color:var(--dim)">SGOV base</span></label><input type="number" id="asapBase" value="10" min="1"></div>
+    <div class="ctrl s-asap hide"><label>−10%·RSI35 매수 <span style="font-size:9px;color:var(--dim)">mid</span></label><input type="number" id="asapMid" value="50" min="1"></div>
+    <div class="ctrl s-asap hide"><label>−15%·RSI30 매수 <span style="font-size:9px;color:var(--dim)">deep</span></label><input type="number" id="asapDeep" value="100" min="1"></div>
+    <!-- 전체 비교 전용 -->
+    <div class="ctrl s-all hide"><label>원금 ($) <span style="font-size:9px;color:var(--dim)">전 전략 동일</span></label><input type="number" id="allCap" value="10000" min="100"></div>
+
     <button class="run" onclick="run()">▶ 실행</button>
   </div>
 
@@ -423,6 +462,8 @@ td:first-child{text-align:left;}
   <div class="cards s-dca" id="cards"></div>
   <div class="detail s-im s-vr hide" id="detail"></div>
   <div class="s-mom hide" id="momResult"></div>
+  <div class="s-asap hide" id="asapResult"></div>
+  <div class="s-all hide" id="allResult"></div>
   <div class="chart-box">
     <div class="chart-head">
       <span class="t" id="chartTitle">누적 가치 추이</span>
@@ -793,8 +834,10 @@ function setStrat(s){
   document.querySelectorAll('.s-vr').forEach(e=>e.classList.toggle('hide',s!=='vr'));
   document.querySelectorAll('.s-ma').forEach(e=>e.classList.toggle('hide',s!=='ma'));
   document.querySelectorAll('.s-mom').forEach(e=>e.classList.toggle('hide',s!=='mom'));
-  // s-im s-vr(s-ma) 공용 요소 처리 — 단일 종목 피커는 dca·mom 외 표시 (mom은 후보군 프리셋)
-  document.querySelectorAll('.s-im.s-vr').forEach(e=>e.classList.toggle('hide',s==='dca'||s==='mom'));
+  document.querySelectorAll('.s-asap').forEach(e=>e.classList.toggle('hide',s!=='asap'));
+  document.querySelectorAll('.s-all').forEach(e=>e.classList.toggle('hide',s!=='all'));
+  // s-im s-vr(s-ma) 공용 단일 종목 피커 — im·vr·ma에서만 표시 (asap·all은 cmpTkr 셀렉트 사용)
+  document.querySelectorAll('.s-im.s-vr').forEach(e=>e.classList.toggle('hide',!(s==='im'||s==='vr'||s==='ma')));
   buildPickSingle();
   if(document.getElementById('tickerSingle')._render) document.getElementById('tickerSingle')._render();
   if(typeof saveBtState==='function'&&!_restoring) saveBtState();   // 전략 탭 변경 저장
@@ -1614,6 +1657,114 @@ function runMA200(days,tkr,cap,N,costOn){
 
 function cagrOf(final, invested, yrs){ return invested>0&&yrs>0 ? (Math.pow(final/invested,1/yrs)-1)*100 : 0; }
 
+// ──── 전략 6: ASAP (SOXL 커스텀 — SGOV 리저브 + 딥 가중매수 + 재진입) ────
+// 하락장(가격<200일선): SGOV base 적립 + RSI≤35&−10% → mid, RSI≤30&−15% → deep (대체)
+// 상승장: 재진입 3차 완료 익일부터 base/일. 재진입 5>20(20%)→20>50(30%)→200돌파(전액). 재하락 시 카운터 리셋.
+// SGOV = 현금성(미 단기국채 연이자 근사 반영). 판정·체결은 당일 종가.
+const SGOV_RATE={2010:.001,2011:.001,2012:.001,2013:.001,2014:.001,2015:.002,2016:.004,2017:.010,2018:.019,2019:.022,2020:.004,2021:.001,2022:.017,2023:.050,2024:.052,2025:.045,2026:.043};
+function _asapInd(tkr){
+  const dts=Object.keys(M[tkr]).sort(), cl=dts.map(d=>M[tkr][d][C]), N=cl.length;
+  const sma=k=>{const o=Array(N).fill(null);let s=0;for(let i=0;i<N;i++){s+=cl[i];if(i>=k)s-=cl[i-k];if(i>=k-1)o[i]=s/k;}return o;};
+  const RSI=Array(N).fill(null);{let ag=0,al=0;for(let i=1;i<N;i++){const d=cl[i]-cl[i-1],g=d>0?d:0,l=d<0?-d:0;
+    if(i<=14){ag+=g;al+=l;if(i===14){ag/=14;al/=14;RSI[i]=100-100/(1+(al===0?100:ag/al));}}
+    else{ag=(ag*13+g)/14;al=(al*13+l)/14;RSI[i]=100-100/(1+(al===0?100:ag/al));}}}
+  const gi={};dts.forEach((d,i)=>gi[d]=i);
+  return {cl,MA5:sma(5),MA20:sma(20),MA50:sma(50),MA200:sma(200),RSI,gi};
+}
+function runASAP(days,tkr,opt){
+  const o=opt||{}, base=o.base||10, mid=o.mid||50, deep=o.deep||100;
+  const {cl,MA5,MA20,MA50,MA200,RSI,gi}=_asapInd(tkr);
+  let sgov=0,sh=0,stage=0,up3=-1,inv=0,mddPeak=-Infinity,mdd=0; const snap=[];
+  days.forEach((d,di)=>{
+    const g=gi[d]; const c=cl[g], m200=MA200[g], rsi=RSI[g]!=null?RSI[g]:50;
+    sgov*=(1+(SGOV_RATE[+d.slice(0,4)]||0.04)/252);   // SGOV 이자
+    if(m200==null){ if(di%10===0)snap.push([d,sh*c+sgov]); return; }
+    const p=g-1, down=c<m200;
+    const crossDn=p>=0&&cl[p]>=MA200[p]&&c<m200;
+    const cross5=p>=0&&MA5[p]<=MA20[p]&&MA5[g]>MA20[g];
+    const cross20=p>=0&&MA20[p]<=MA50[p]&&MA20[g]>MA50[g];
+    const crossUp=p>=0&&cl[p]<MA200[p]&&c>=m200;
+    if(crossDn&&stage>0){stage=0;up3=-1;}
+    if(down){ sgov+=base; inv+=base;
+      if(rsi<=30&&c<=m200*0.85){sh+=deep/c;inv+=deep;}
+      else if(rsi<=35&&c<=m200*0.90){sh+=mid/c;inv+=mid;} }
+    if(stage===0&&cross5){sh+=sgov*0.2/c;sgov*=0.8;stage=1;}
+    if(stage===1&&cross20){sh+=sgov*0.3/c;sgov*=0.7;stage=2;}
+    if(stage===2&&crossUp){sh+=sgov/c;sgov=0;stage=3;up3=di;}
+    if(!down&&stage===3&&up3>=0&&di>up3){sh+=base/c;inv+=base;}
+    const eq=sh*c+sgov; if(eq>mddPeak)mddPeak=eq; else if(mddPeak>0){const dd=(mddPeak-eq)/mddPeak;if(dd>mdd)mdd=dd;}
+    if(di%10===0)snap.push([d,eq]);
+  });
+  const lc=cl[gi[days[days.length-1]]], fin=sh*lc+sgov;
+  snap.push([days[days.length-1],fin]);
+  return {invested:inv,final:fin,ret:inv>0?(fin/inv-1)*100:0,mdd:mdd*100,snap};
+}
+
+// 전략별 고정 색 · 비교 차트(누적 총자산)
+const CMP_COLORS={ASAP:'#f6c453',DCA:'#5b9bff','무한매수법':'#3ecf8e','밸류리밸런싱':'#a78bfa','200일선로테':'#e0872a'};
+function cmpDrawChart(rows,days,tkr,title){
+  const labels=days.filter((_,i)=>i%10===0); if(labels[labels.length-1]!==days[days.length-1])labels.push(days[days.length-1]);
+  const datasets=rows.map(r=>({label:r.name,data:alignSnap(r.snap,labels),borderColor:CMP_COLORS[r.name]||'#8a96c0',backgroundColor:'transparent',borderWidth:1.7,pointRadius:0,tension:.12,spanGaps:true}));
+  document.getElementById('winner').style.display='none';
+  document.getElementById('chartTitle').textContent=title||(tkr+' · 전략별 누적 총자산');
+  lastRender=()=>makeChart(datasets,labels,isKRW(tkr)?'₩':'$');
+  lastRender();
+}
+
+// ──── 전체 비교: 한 종목·기간·원금으로 5개 전략 동시 실행 ────
+function runAllCompare(tkr, cap, days){
+  const yrs=Math.max((new Date(days[days.length-1])-new Date(days[0]))/(365.25*864e5),0.1);
+  const out=[];
+  const push=(name,mode,r,invOverride)=>{ const inv=invOverride!=null?invOverride:r.invested; const cg=cagrOf(r.final,inv,yrs);
+    out.push({name,mode,invested:inv,final:r.final,ret:inv>0?(r.final/inv-1)*100:0,cagr:cg,mdd:r.mdd,mar:r.mdd>0?cg/r.mdd:0,snap:r.snap}); };
+  // ASAP — 자체 스케줄로 실행 후 원금=cap에 비례 스케일(총수익률·MDD 불변)
+  const a=runASAP(days,tkr,{base:10,mid:50,deep:100});
+  const sc=a.invested>0?cap/a.invested:1;
+  push('ASAP','적립·딥가중',{invested:cap,final:a.final*sc,mdd:a.mdd,snap:a.snap.map(s=>[s[0],s[1]==null?null:s[1]*sc])},cap);
+  push('DCA','적립(매일)',runDCA1(tkr,days,cap,false),cap);
+  push('무한매수법','적립형(V4.0)',runIM(days,tkr,cap,40,20,true));
+  push('밸류리밸런싱','적립식(밴드20)',runVR(days,tkr,{contrib:cap/Math.max(1,Math.floor(days.length/10)),G:10,bandPct:20,mode:0.75,formula:'basic',startV:0,startPool:0,costOn:false}));
+  push('200일선로테','일시금(200일)',runMA200(days,tkr,cap,200,false));
+  out.sort((x,y)=>y.final-x.final);
+  return {rows:out,yrs};
+}
+function renderCompare(res, tkr, cap, days){
+  hideEmptyState();
+  const R=res.rows, money=x=>(isKRW(tkr)?'₩':'$')+fmt(x), pct=x=>(x>=0?'+':'')+x.toFixed(1)+'%';
+  let h=`<div class="cmp-card"><h3>${tkr} · ${res.yrs.toFixed(1)}년 · 원금 ${money(cap)} <span style="font-size:11px;color:var(--dim)">(전 전략 동일)</span></h3>`;
+  h+=`<div style="overflow-x:auto"><table class="cmp-tbl"><thead><tr><th>전략</th><th>모드</th><th>원금</th><th>최종금액</th><th>총수익률</th><th>CAGR</th><th>MDD</th><th>MAR</th></tr></thead><tbody>`;
+  R.forEach((r,i)=>{ h+=`<tr${i===0?' class="win"':''}><td><b>${r.name}</b>${i===0?' 🥇':''}</td><td class="cdim">${r.mode}</td><td>${money(Math.round(r.invested))}</td><td class="cacc">${money(Math.round(r.final))}</td><td class="${r.ret>=0?'cg':'cr'}">${pct(r.ret)}</td><td class="${r.cagr>=0?'cg':'cr'}"><b>${pct(r.cagr)}</b></td><td>${r.mdd.toFixed(0)}%</td><td class="cgold">${r.mar.toFixed(2)}</td></tr>`; });
+  h+=`</tbody></table></div></div>`;
+  // 연말 총자산 (매해)
+  const yEndVal={}; const yset=new Set();
+  R.forEach(r=>{ yEndVal[r.name]={}; r.snap.forEach(s=>{ if(s[1]!=null){ const y=s[0].slice(0,4); yEndVal[r.name][y]=s[1]; yset.add(y); } }); });
+  const years=[...yset].sort();
+  h+=`<div class="cmp-card"><h3>연말 총자산 (매해 · 🥇=그해 최고)</h3><div style="overflow-x:auto"><table class="cmp-tbl"><thead><tr><th>연도</th>${R.map(r=>`<th>${r.name}</th>`).join('')}</tr></thead><tbody>`;
+  years.forEach(y=>{ let best=-1e18,bi=-1; R.forEach((r,i)=>{const v=yEndVal[r.name][y];if(v!=null&&v>best){best=v;bi=i;}});
+    h+=`<tr><td>${y}</td>${R.map((r,i)=>{const v=yEndVal[r.name][y];return `<td class="${i===bi?'win':''}">${v!=null?money(Math.round(v)):'—'}${i===bi?' 🥇':''}</td>`;}).join('')}</tr>`; });
+  h+=`</tbody></table></div><p class="note" style="font-size:11px;color:var(--dim);margin-top:8px">모드: 적립=매일/매싸이클 균등 투입(총투입=원금) · 일시금=목돈 일시투입(상승장 타이밍 유리) · ASAP은 자체 스케줄을 총투입=원금에 비례 스케일 · VR·200로테·무매는 비용 미반영(순수 성과). SGOV=현금성(단기국채 이자 반영).</p></div>`;
+  document.getElementById('allResult').innerHTML=h;
+  if(days) cmpDrawChart(R,days,tkr);
+}
+function renderASAP(a, tkr, cap, days, opt){
+  hideEmptyState();
+  const o=opt||{}, yrs=Math.max((new Date(days[days.length-1])-new Date(days[0]))/(365.25*864e5),0.1);
+  const sc=a.invested>0?cap/a.invested:1;
+  const final=a.final*sc, inv=cap, ret=a.invested>0?(a.final/a.invested-1)*100:0, cg=cagrOf(final,inv,yrs), mar=a.mdd>0?cg/a.mdd:0;
+  const money=x=>(isKRW(tkr)?'₩':'$')+fmt(Math.round(x)), pct=x=>(x>=0?'+':'')+x.toFixed(1)+'%';
+  let h=`<div class="cmp-card"><h3>ASAP · ${tkr} · ${yrs.toFixed(1)}년 · 원금 ${money(cap)}</h3>`;
+  h+=`<div style="overflow-x:auto"><table class="cmp-tbl"><thead><tr><th>원금</th><th>최종금액</th><th>총수익률</th><th>CAGR</th><th>MDD</th><th>MAR</th></tr></thead><tbody>`;
+  h+=`<tr class="win"><td>${money(inv)}</td><td class="cacc">${money(final)}</td><td class="${ret>=0?'cg':'cr'}">${pct(ret)}</td><td class="${cg>=0?'cg':'cr'}"><b>${pct(cg)}</b></td><td>${a.mdd.toFixed(0)}%</td><td class="cgold">${mar.toFixed(2)}</td></tr>`;
+  h+=`</tbody></table></div>`;
+  // 연말 총자산 (매해)
+  const yEnd={}; a.snap.forEach(s=>{ if(s[1]!=null) yEnd[s[0].slice(0,4)]=s[1]*sc; });
+  const yrsK=Object.keys(yEnd).sort();
+  if(yrsK.length){ h+=`<div style="overflow-x:auto;margin-top:6px"><table class="cmp-tbl"><thead><tr><th>연도</th>${yrsK.map(y=>`<th>${y}</th>`).join('')}</tr></thead><tbody><tr><td>총자산</td>${yrsK.map(y=>`<td class="cacc">${money(yEnd[y])}</td>`).join('')}</tr></tbody></table></div>`; }
+  h+=`<p class="note" style="font-size:11px;color:var(--dim);margin-top:10px;line-height:1.7">하락장(가&lt;200일선): SGOV ${money(o.base||10)}/일 적립 · RSI≤35 &amp; −10% → ${money(o.mid||50)} · RSI≤30 &amp; −15% → ${money(o.deep||100)} 딥가중 매수<br>상승장: 5&gt;20(SGOV 20%)→20&gt;50(30%)→200돌파(전액) 3단 재진입, 완료 익일부터 base/일 재개 · 재하락 시 카운터 리셋<br>SGOV=현금성(단기국채 이자 반영) · 원금=총 투입액 기준 스케일(총수익률·MDD 불변).</p></div>`;
+  document.getElementById('asapResult').innerHTML=h;
+  cmpDrawChart([{name:'ASAP',snap:a.snap.map(s=>[s[0],s[1]==null?null:s[1]*sc])}],days,tkr,`${tkr} · ASAP 누적 총자산`);
+}
+
 
 // ──── RUN ────
 async function run(){
@@ -1621,8 +1772,10 @@ async function run(){
   const end=document.getElementById('dEnd').value;
   if(!start||!end||start>=end){alert('날짜를 확인하세요.');return;}
   if(strat==='mom'){ await runMomentum(start,end); return; }   // 모멘텀은 독립 데이터 캐시 사용
+  const cmpT=document.getElementById('cmpTkr')?.value||'SOXL';   // asap·all 공용 종목
   // 데이터 없거나 · 요청 기간이 더 넓거나 · 선택 종목 중 미로딩분이 있으면 재로딩
-  const wanted = strat==='dca' ? [...dcaActive] : strat==='im' ? [...imActive] : strat==='ma' ? [...maActive] : [...vrActive];
+  const wanted = strat==='dca' ? [...dcaActive] : strat==='im' ? [...imActive] : strat==='ma' ? [...maActive]
+    : (strat==='asap'||strat==='all') ? [cmpT] : [...vrActive];
   const missing = wanted.filter(t=>!M[t] || !Object.keys(M[t]||{}).length);
   const needReload=!Object.keys(M).length
     || (loadedStart && start<loadedStart)
@@ -1631,6 +1784,22 @@ async function run(){
   if(needReload){
     const ok=await loadData(start,end);
     if(!ok) return;
+  }
+
+  if(strat==='asap'||strat==='all'){
+    const tkr=cmpT;
+    if(!M[tkr]||!Object.keys(M[tkr]).length){alert(tkr+' 데이터를 불러오지 못했습니다.');return;}
+    const days=commonDays(start,end,[tkr]);
+    if(days.length<250){alert('비교하려면 최소 1년 이상 기간이 필요합니다.');return;}
+    if(strat==='asap'){
+      const cap=+document.getElementById('asapCap').value||10000;
+      const opt={base:+document.getElementById('asapBase').value||10,mid:+document.getElementById('asapMid').value||50,deep:+document.getElementById('asapDeep').value||100};
+      renderASAP(runASAP(days,tkr,opt),tkr,cap,days,opt);
+    }else{
+      const cap=+document.getElementById('allCap').value||10000;
+      renderCompare(runAllCompare(tkr,cap,days),tkr,cap,days);
+    }
+    return;
   }
 
   if(strat==='dca'){
