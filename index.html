@@ -112,10 +112,10 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
 .order-grp .gt .gd{width:7px;height:7px;border-radius:50%}
 .order-grp.buy .gd{background:var(--buy)}.order-grp.buy .gt{color:var(--buy)}
 .order-grp.sell .gd{background:var(--sell)}.order-grp.sell .gt{color:var(--sell)}
-.oitem{display:flex;align-items:center;gap:10px;padding:11px 13px;border-radius:11px;margin-bottom:6px;font-size:14px}
+.oitem{display:flex;align-items:center;gap:10px;padding:11px 13px;border-radius:11px;margin-bottom:6px;font-size:14px;flex-wrap:wrap}
 .oitem.b{background:var(--buy-bg)}.oitem.s{background:var(--sell-bg)}
-.oitem .tag{font-size:10px;font-weight:800;padding:2px 6px;border-radius:5px;background:rgba(139,140,240,.2);color:var(--vio)}
-.oitem .nm{flex:1;font-weight:600}.oitem .star{color:var(--gold)}
+.oitem .tag{font-size:10px;font-weight:800;padding:2px 6px;border-radius:5px;background:rgba(139,140,240,.2);color:var(--vio);flex:none}
+.oitem .nm{flex:1;font-weight:600;min-width:0;overflow-wrap:anywhere;word-break:break-word}.oitem .star{color:var(--gold)}
 .oitem .pr{font-weight:800;font-variant-numeric:tabular-nums}
 .oitem.b .pr{color:var(--buy)}.oitem.s .pr{color:var(--sell)}
 .oitem .qt{font-size:12px;color:var(--dim);min-width:34px;text-align:right}
@@ -1036,11 +1036,13 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
 
     <!-- ── 설명 ── -->
     <div class="block" id="asap-guide">
-      <div class="card"><h3><span class="dot"></span>한 줄 요약</h3><p class="lead">평소엔 <b>SGOV(현금성)</b>에 소액 적립하며 실탄을 모으고, <b>하락장</b>엔 낙폭·RSI가 깊을수록 크게 SOXL을 담고, <b>상승 전환</b>엔 이동평균 교차를 따라 <b>3단계</b>로 리저브를 태워 재진입합니다.</p></div>
-      <div class="card"><h3><span class="dot"></span>하락장 (종가 &lt; 200일선)</h3>
-        <ul class="clean"><li><b>SGOV base</b> 매일 소액 적립 (기본 $10)</li><li><b>−10% & RSI≤35</b> → SOXL <b>mid</b> 매수 (기본 $50)</li><li><b>−15% & RSI≤30</b> → SOXL <b>deep</b> 매수 (기본 $100, mid 대체)</li></ul></div>
-      <div class="card"><h3><span class="dot"></span>상승 전환 3단 재진입</h3>
-        <ul class="clean"><li><b>1차</b> MA5 &gt; MA20 교차 → 리저브 <b>20%</b> 매수</li><li><b>2차</b> MA20 &gt; MA50 교차 → 남은 리저브 <b>30%</b></li><li><b>3차</b> 종가가 200일선 <b>돌파</b> → 리저브 <b>전액</b></li><li>3차 완료 익일부터 <b>SOXL에 base/일 매수 재개</b>(상승장 적립) · 재하락 시 카운터 리셋(1차부터)</li></ul></div>
+      <div class="card"><h3><span class="dot"></span>한 줄 요약</h3><p class="lead"><b>매일 base 적립</b>을 기본으로 — 하락장엔 SGOV(현금성)로 실탄을 모으고, 상승장엔 SOXL에 그대로 담습니다. 하락 깊을수록(낙폭·RSI) SOXL을 크게 담고(딥), 상승 전환엔 모아둔 리저브를 이동평균 교차 따라 단계로 태워 재진입합니다.</p></div>
+      <div class="card"><h3><span class="dot"></span>매일 적립금 base (기본 $10)</h3>
+        <ul class="clean"><li><b>하락장</b>(종가&lt;200일선) → base를 <b>SGOV</b>에 적립(실탄 축적)</li><li><b>상승장</b>(종가≥200일선) → base로 <b>SOXL 매수</b>(DCA 지속)</li></ul></div>
+      <div class="card"><h3><span class="dot"></span>하락장 딥 가중 매수</h3>
+        <ul class="clean"><li><b>−10% & RSI≤35</b> → SOXL <b>mid</b> 매수 (기본 $50)</li><li><b>−15% & RSI≤30</b> → SOXL <b>deep</b> 매수 (기본 $100, mid 대체)</li></ul></div>
+      <div class="card"><h3><span class="dot"></span>상승 전환 리저브 재진입</h3>
+        <ul class="clean"><li><b>1차</b> MA5 &gt; MA20 교차 → 리저브 <b>20%</b> SOXL 매수</li><li><b>2차</b> MA20 &gt; MA50 교차 → 남은 리저브 <b>30%</b></li><li><b>3차</b> <b>상승장 재확인</b>(종가≥200일선) → 남은 리저브 <b>전액</b> — 리저브가 묶이지 않게 레벨식</li><li>재하락(종가&lt;200일선) 시 카운터 리셋(1차부터)</li></ul></div>
       <div class="card"><h3><span class="dot"></span>운영 방법</h3>
         <ol class="steps"><li>매일(또는 며칠에 한 번) 🔄 자동으로 오늘 할 일 확인</li><li>하락장이면 SGOV 적립(딥이면 매수) 기록</li><li>상승 재진입 신호가 뜨면 안내된 비율만큼 SOXL 매수 기록</li><li>단계·국면은 <b>종가 이력에서 자동 판정</b>되니 직접 셀 필요 없음</li></ol></div>
       <div class="card"><h3><span class="dot"></span>참고</h3>
@@ -1051,7 +1053,7 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
   <footer>
     <strong>JK 퀀트</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v2.46</b> · 2026-07-01</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v2.47</b> · 2026-07-01</div>
   </footer>
 </div>
 
@@ -2801,18 +2803,17 @@ function computeAsap(){
   const cl=days.map(d=>d.close), dates=days.map(d=>d.date), n=cl.length;
   const ma5=_asapMA(cl,5),ma20=_asapMA(cl,20),ma50=_asapMA(cl,50),ma200=_asapMA(cl,200),rsi=_asapRSI(cl);
   const warming = ma200[n-1]==null;
-  // 단계 머신 재생 (백테 runASAP와 동일)
+  // 단계 머신 재생 (백테 runASAP와 동일) — 3차는 레벨식(상승장 재확인)이라 리저브가 안 묶임
   let stage=0;
   for(let i=1;i<n;i++){
     if(ma200[i]==null) continue;
     const crossDn=ma200[i-1]!=null&&cl[i-1]>=ma200[i-1]&&cl[i]<ma200[i];
     const cross5 =ma5[i-1]!=null&&ma20[i-1]!=null&&ma5[i-1]<=ma20[i-1]&&ma5[i]>ma20[i];
     const cross20=ma20[i-1]!=null&&ma50[i-1]!=null&&ma20[i-1]<=ma50[i-1]&&ma20[i]>ma50[i];
-    const crossUp=ma200[i-1]!=null&&cl[i-1]<ma200[i-1]&&cl[i]>=ma200[i];
     if(crossDn&&stage>0)stage=0;
     if(stage===0&&cross5)stage=1;
     if(stage===1&&cross20)stage=2;
-    if(stage===2&&crossUp)stage=3;
+    if(stage===2&&cl[i]>=ma200[i])stage=3;   // 상승장(종가≥200선)이면 3차 완료
   }
   const last=n-1, c=cl[last], m200=ma200[last], rsiNow=rsi[last]!=null?rsi[last]:50;
   const phase = warming?'up':(c<m200?'down':'up');
@@ -2883,18 +2884,25 @@ function renderAsapNow(){
   const oi=(cls,tag,nm,pr)=>`<div class="oitem ${cls}"><span class="tag">${tag}</span><span class="nm">${nm}</span>${pr?`<span class="pr">${pr}</span>`:''}</div>`;
   if(c.warming){ v=`<p class="note" style="color:var(--gold)">ⓘ 이력이 200일 미만이라 워밍업입니다. 종가가 200일선 위면 보유를 시작하세요.</p>`; }
   else if(down){
-    if(c.ev.crossDn) v+=`<div class="oitem" style="background:var(--sell-bg);justify-content:center"><span class="nm" style="flex:none;color:var(--sell)">⚠ 하락 전환 — 재진입 카운터 리셋 (다음 상승 시 1차부터)</span></div>`;
+    if(c.ev.crossDn) v+=`<p class="note" style="color:var(--sell);margin-bottom:8px">⚠ 하락 전환 — 재진입 카운터 리셋 (다음 상승 시 1차부터)</p>`;
     v+=oi('','SGOV',`매일 <b>${px(base)}</b> 리저브 적립`,px(base));
     if(c.dip==='deep'){ recAmt=deep; v+=oi('b','딥·deep',`SOXL <b>${px(deep)}</b> 매수 — RSI ${c.rsiNow.toFixed(0)} · 200선 ${c.gapPct.toFixed(0)}%`,px(price)); }
     else if(c.dip==='mid'){ recAmt=mid; v+=oi('b','딥·mid',`SOXL <b>${px(mid)}</b> 매수 — RSI ${c.rsiNow.toFixed(0)} · 200선 ${c.gapPct.toFixed(0)}%`,px(price)); }
     else v+=`<p class="note" style="margin-top:8px">딥 조건 미충족 (mid: −10%&RSI≤35 / deep: −15%&RSI≤30) — 오늘은 <b>적립만</b>. 현재 200선 ${c.gapPct.toFixed(0)}% · RSI ${c.rsiNow.toFixed(0)}.</p>`;
-  } else { // 상승장
-    if(c.stage===0){ if(c.ev.cross5){ recAmt=pos.reserve*0.2; v+=oi('b','재진입 1차','MA5>MA20 교차 → 리저브 <b>20%</b> 매수',px(price)); } else v+=`<div class="oitem" style="background:rgba(245,196,81,.1);justify-content:center"><span class="nm" style="flex:none;color:var(--gold)">⏳ 재진입 대기 — 1차 트리거: MA5(${c.ma5Now?nfix(c.ma5Now,1):'—'}) > MA20(${c.ma20Now?nfix(c.ma20Now,1):'—'})</span></div>`; }
-    else if(c.stage===1){ if(c.ev.cross20){ recAmt=pos.reserve*0.3; v+=oi('b','재진입 2차','MA20>MA50 교차 → 남은 리저브 <b>30%</b>',px(price)); } else v+=`<div class="oitem" style="background:rgba(245,196,81,.1);justify-content:center"><span class="nm" style="flex:none;color:var(--gold)">⏳ 1차 완료 · 2차 트리거: MA20(${c.ma20Now?nfix(c.ma20Now,1):'—'}) > MA50(${c.ma50Now?nfix(c.ma50Now,1):'—'})</span></div>`; }
-    else if(c.stage===2){ if(c.ev.crossUp){ recAmt=pos.reserve; v+=oi('b','재진입 3차','종가 200일선 돌파 → 리저브 <b>전액</b>',px(price)); }
-      else if(c.gapPct>0){ recAmt=0; v+=`<div class="oitem" style="background:var(--buy-bg);justify-content:center"><span class="nm" style="flex:none;color:var(--buy)">✅ 2차 완료 · 종가 이미 200일선 위(+${c.gapPct.toFixed(0)}%) — 보유 지속. 3차(리저브 전액)는 <b>재하락 후 재돌파</b> 때 발동, 그때까지 리저브 유지.</span></div>`; }
-      else v+=`<div class="oitem" style="background:rgba(245,196,81,.1);justify-content:center"><span class="nm" style="flex:none;color:var(--gold)">⏳ 2차 완료 · 3차 트리거: 종가 > 200일선(${c.m200Now?nfix(c.m200Now,1):'—'})</span></div>`; }
-    else { recAmt=base; v+=oi('b','적립 재개',`SOXL <b>${px(base)}</b>/일 매수 — 재진입 완료, 상승장 적립 지속`,px(price)); }
+  } else { // 상승장 — 매일 base로 SOXL 적립(DCA)이 기본 행동 + 리저브는 재진입 단계로 소진
+    recAmt=base;
+    v+=oi('b','매일 적립',`SOXL <b>${px(base)}</b>/일 매수 — 상승장 일일 적립(DCA)`,px(price));
+    if(pos.reserve>0.5){
+      if(c.stage<3){
+        const trig=c.stage===0?`MA5(${c.ma5Now?nfix(c.ma5Now,1):'—'}) > MA20(${c.ma20Now?nfix(c.ma20Now,1):'—'})`:`MA20(${c.ma20Now?nfix(c.ma20Now,1):'—'}) > MA50(${c.ma50Now?nfix(c.ma50Now,1):'—'})`;
+        const pctg=c.stage===0?'20%':'30%', amt=c.stage===0?pos.reserve*0.2:pos.reserve*0.3;
+        v+=`<p class="note" style="margin-top:8px">💰 리저브 <b>${px(pos.reserve)}</b> 대기 — 재진입 <b>${c.stage+1}차</b> 트리거 <b>${trig}</b> 충족 시 <b>${pctg}(${px(amt)})</b> SOXL 추가 매수</p>`;
+      } else {
+        v+=oi('b','재진입 완료',`상승장 재확인 — 남은 리저브 <b>${px(pos.reserve)}</b> 전액 SOXL 매수로 소진`,px(price));
+      }
+    } else {
+      v+=`<p class="note" style="margin-top:8px;color:var(--dim)">리저브 소진 완료 — 상승장 base 적립만 지속</p>`;
+    }
   }
   $('asap_verdict').innerHTML=v;
   // 금액칸이 비어있을 때만 권장액 자동 입력 (사용자가 입력하면 유지)
