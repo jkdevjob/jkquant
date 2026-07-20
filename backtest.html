@@ -240,7 +240,7 @@ td:first-child{text-align:left;}
   <div class="brand">
     <div>
       <div class="logo">Backtest</div>
-      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v1.116</span></h1>
+      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v1.117</span></h1>
     </div>
   </div>
   <a href="/" class="home">← JK 퀀트</a>
@@ -1691,8 +1691,8 @@ function runASAP(days,tkr,opt){
       else if(rsi<=35&&c<=m200*0.90){const amt=lump?Math.min(mid,sgov):mid;sh+=amt/c;if(lump)sgov-=amt;else inv+=amt;} }
     if(stage===0&&cross5){sh+=sgov*0.2/c;sgov*=0.8;stage=1;}
     if(stage===1&&cross20){sh+=sgov*0.3/c;sgov*=0.7;stage=2;}
-    if(stage===2&&crossUp){sh+=sgov/c;sgov=0;stage=3;up3=di;}
-    if(!down&&stage===3&&up3>=0&&di>up3&&!lump){sh+=base/c;inv+=base;}
+    if(stage===2&&!down){sh+=sgov/c;sgov=0;stage=3;up3=di;}   // 3차: 상승장 재확인(종가≥200선) — 리저브 안 묶임
+    if(!down&&!lump){sh+=base/c;inv+=base;}                   // 상승장: 매일 base로 SOXL 적립(DCA)
     const eq=sh*c+sgov; if(eq>mddPeak)mddPeak=eq; else if(mddPeak>0){const dd=(mddPeak-eq)/mddPeak;if(dd>mdd)mdd=dd;}
     if(di%10===0)snap.push([d,eq]);
   });
