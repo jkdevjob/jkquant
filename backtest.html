@@ -425,9 +425,8 @@ td:first-child{text-align:left;}
         <option value="KORU">KORU · 한국 3×</option>
       </select>
     </div>
-    <!-- ASAP (SOXL 커스텀) 전용 -->
-    <div class="ctrl s-asap hide"><label>원금 ($)</label><input type="number" id="asapCap" value="10000" min="100"></div>
-    <div class="ctrl s-asap hide"><label>하락장 일적립 <span style="font-size:9px;color:var(--dim)">SGOV base</span></label><input type="number" id="asapBase" value="10" min="1"></div>
+    <!-- ASAP (SOXL 커스텀) — 원금 없음: 매일 적립금이 엔진, 총투입은 결과값 -->
+    <div class="ctrl s-asap hide"><label>매일 적립금 base ($) <span style="font-size:9px;color:var(--dim)">하락장 SGOV</span></label><input type="number" id="asapBase" value="10" min="1"></div>
     <div class="ctrl s-asap hide"><label>−10%·RSI35 매수 <span style="font-size:9px;color:var(--dim)">mid</span></label><input type="number" id="asapMid" value="50" min="1"></div>
     <div class="ctrl s-asap hide"><label>−15%·RSI30 매수 <span style="font-size:9px;color:var(--dim)">deep</span></label><input type="number" id="asapDeep" value="100" min="1"></div>
     <!-- 전체 비교 전용 -->
@@ -1860,23 +1859,24 @@ function renderCompare(res, tkr, cap, days){
   document.getElementById('allResult').innerHTML=h;
   if(days) cmpDrawChart(R,days,tkr,isTkr?`${res.stratLabel} · 종목별 누적 총자산`:undefined);
 }
-function renderASAP(a, tkr, cap, days, opt){
+function renderASAP(a, tkr, days, opt){
   hideEmptyState();
   const o=opt||{}, yrs=Math.max((new Date(days[days.length-1])-new Date(days[0]))/(365.25*864e5),0.1);
-  const sc=a.invested>0?cap/a.invested:1;
-  const final=a.final*sc, inv=cap, ret=a.invested>0?(a.final/a.invested-1)*100:0, cg=cagrOf(final,inv,yrs), mar=a.mdd>0?cg/a.mdd:0;
+  // 원금 개념 없음 — 매일 적립금(base)이 엔진, 총투입(inv)은 결과값. 스케일링 안 함.
+  const inv=a.invested, final=a.final, ret=a.ret, cg=cagrOf(final,inv,yrs), mar=a.mdd>0?cg/a.mdd:0;
+  const nDays=days.length, contribDays=Math.round(nDays);
   const money=x=>(isKRW(tkr)?'₩':'$')+fmt(Math.round(x)), pct=x=>(x>=0?'+':'')+x.toFixed(1)+'%';
-  let h=`<div class="cmp-card"><h3>ASAP · ${tkr} · ${yrs.toFixed(1)}년 · 원금 ${money(cap)}</h3>`;
-  h+=`<div style="overflow-x:auto"><table class="cmp-tbl"><thead><tr><th>원금</th><th>최종금액</th><th>총수익률</th><th>CAGR</th><th>MDD</th><th>MAR</th></tr></thead><tbody>`;
+  let h=`<div class="cmp-card"><h3>ASAP · ${tkr} · ${yrs.toFixed(1)}년 · 매일 적립금 ${money(o.base||10)} <span style="font-size:11px;color:var(--dim)">(원금 없음 · 총투입은 결과값)</span></h3>`;
+  h+=`<div style="overflow-x:auto"><table class="cmp-tbl"><thead><tr><th>총투입</th><th>최종금액</th><th>총수익률</th><th>CAGR</th><th>MDD</th><th>MAR</th></tr></thead><tbody>`;
   h+=`<tr class="win"><td>${money(inv)}</td><td class="cacc">${money(final)}</td><td class="${ret>=0?'cg':'cr'}">${pct(ret)}</td><td class="${cg>=0?'cg':'cr'}"><b>${pct(cg)}</b></td><td>${a.mdd.toFixed(0)}%</td><td class="cgold">${mar.toFixed(2)}</td></tr>`;
   h+=`</tbody></table></div>`;
-  // 연말 총자산 (매해)
-  const yEnd={}; a.snap.forEach(s=>{ if(s[1]!=null) yEnd[s[0].slice(0,4)]=s[1]*sc; });
+  // 연말 총자산 (매해) — 스케일 없이 실제 값
+  const yEnd={}; a.snap.forEach(s=>{ if(s[1]!=null) yEnd[s[0].slice(0,4)]=s[1]; });
   const yrsK=Object.keys(yEnd).sort();
   if(yrsK.length){ h+=`<div style="overflow-x:auto;margin-top:6px"><table class="cmp-tbl"><thead><tr><th>연도</th>${yrsK.map(y=>`<th>${y}</th>`).join('')}</tr></thead><tbody><tr><td>총자산</td>${yrsK.map(y=>`<td class="cacc">${money(yEnd[y])}</td>`).join('')}</tr></tbody></table></div>`; }
-  h+=`<p class="note" style="font-size:11px;color:var(--dim);margin-top:10px;line-height:1.7">하락장(가&lt;200일선): SGOV ${money(o.base||10)}/일 적립 · RSI≤35 &amp; −10% → ${money(o.mid||50)} · RSI≤30 &amp; −15% → ${money(o.deep||100)} 딥가중 매수<br>상승장: 5&gt;20(SGOV 20%)→20&gt;50(30%)→200돌파(전액) 3단 재진입, 완료 익일부터 base/일 재개 · 재하락 시 카운터 리셋<br>SGOV=현금성(단기국채 이자 반영) · 원금=총 투입액 기준 스케일(총수익률·MDD 불변).</p></div>`;
+  h+=`<p class="note" style="font-size:11px;color:var(--dim);margin-top:10px;line-height:1.7">하락장(가&lt;200일선): SGOV <b>매일 ${money(o.base||10)}</b> 적립 · RSI≤35 &amp; −10% → ${money(o.mid||50)} · RSI≤30 &amp; −15% → ${money(o.deep||100)} 딥가중 매수<br>상승장: 5&gt;20(SGOV 20%)→20&gt;50(30%)→200돌파(전액) 3단 재진입, 완료 익일부터 적립 재개 · 재하락 시 카운터 리셋<br>총투입 ${money(inv)} = 매일 적립(${contribDays}거래일) + 딥·재진입 매수의 <b>누적 결과</b>. SGOV=현금성(단기국채 이자 반영).</p></div>`;
   document.getElementById('asapResult').innerHTML=h;
-  cmpDrawChart([{name:'ASAP',snap:a.snap.map(s=>[s[0],s[1]==null?null:s[1]*sc])}],days,tkr,`${tkr} · ASAP 누적 총자산`);
+  cmpDrawChart([{name:'ASAP',snap:a.snap}],days,tkr,`${tkr} · ASAP 누적 총자산`);
 }
 
 
@@ -1908,9 +1908,8 @@ async function run(){
     if(!M[tkr]||!Object.keys(M[tkr]).length){alert(tkr+' 데이터를 불러오지 못했습니다.');return;}
     const days=commonDays(start,end,[tkr]);
     if(days.length<250){alert('비교하려면 최소 1년 이상 기간이 필요합니다.');return;}
-    const cap=+document.getElementById('asapCap').value||10000;
     const opt={base:+document.getElementById('asapBase').value||10,mid:+document.getElementById('asapMid').value||50,deep:+document.getElementById('asapDeep').value||100};
-    renderASAP(runASAP(days,tkr,opt),tkr,cap,days,opt);
+    renderASAP(runASAP(days,tkr,opt),tkr,days,opt);
     return;
   }
   if(strat==='all'){
