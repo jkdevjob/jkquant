@@ -446,7 +446,7 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
     <button class="tab on" data-t="inf">무한매수법</button>
     <button class="tab" data-t="vr">밸류리밸런싱</button>
     <button class="tab" data-t="ma">로테이션</button>
-    <button class="tab" data-t="asap">ASAP</button>
+    <button class="tab" data-t="asap" style="display:none">ASAP</button>
   </div>
   <div class="sessbar" id="sessbar"></div>
   <div class="statusline" id="statusline"></div>
@@ -1051,7 +1051,7 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
   <footer>
     <strong>JK 퀀트</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v2.43</b> · 2026-07-01</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v2.44</b> · 2026-07-01</div>
   </footer>
 </div>
 
@@ -1347,6 +1347,7 @@ function load(){
   if(!S.activeTab)S.activeTab='inf';
   ensureMaBox();
   ensureAsapBox();
+  if(S.activeTab==='asap')S.activeTab='inf';   // ASAP 운영탭 숨김 기간: 저장된 활성탭이 asap면 무한매수법으로
   forceV40();   // V5.0 숨김 기간: 저장된 v50 세션을 v40으로 되돌림
 }
 function saveLocal(){S._updated=Date.now();localStorage.setItem(lsKey(),JSON.stringify(S))}
