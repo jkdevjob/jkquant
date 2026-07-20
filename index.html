@@ -36,6 +36,7 @@ h1 .v{color:var(--gold)}
 .tab[data-t="inf"].on{background:linear-gradient(135deg,#1f7a5a,#0f4d39)}
 .tab[data-t="vr"].on{background:linear-gradient(135deg,#4b4ec9,#2d2f86)}
 .tab[data-t="ma"].on{background:linear-gradient(135deg,#b06a1f,#7a4611)}
+.tab[data-t="asap"].on{background:linear-gradient(135deg,#c99a2e,#8a6410)}
 .sessbar{position:sticky;top:var(--h1,54px);z-index:31;background:var(--bg);display:flex;gap:7px;align-items:center;margin:0;padding:11px 0 8px;overflow-x:auto;-webkit-overflow-scrolling:touch}
 .sesschip{padding:8px 13px;border-radius:10px;background:var(--panel);border:1px solid var(--line);color:var(--dim);font-size:12.5px;font-weight:700;cursor:pointer;white-space:nowrap;flex-shrink:0}
 .sesschip.on{background:var(--vio-bg);color:var(--vio);border-color:var(--vio)}
@@ -445,6 +446,7 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
     <button class="tab on" data-t="inf">무한매수법</button>
     <button class="tab" data-t="vr">밸류리밸런싱</button>
     <button class="tab" data-t="ma">로테이션</button>
+    <button class="tab" data-t="asap">ASAP</button>
   </div>
   <div class="sessbar" id="sessbar"></div>
   <div class="statusline" id="statusline"></div>
@@ -950,10 +952,106 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
     </div>
   </section>
 
+  <!-- ASAP (SGOV 리저브 + 딥가중 + 단계 재진입) -->
+  <section id="asap">
+    <div class="subnav">
+      <button class="chip on" data-b="asap-now">현재</button>
+      <button class="chip" data-b="asap-hist">기록</button>
+      <button class="chip" data-b="asap-guide">설명</button>
+    </div>
+
+    <!-- ── 현재: 오늘 할 일 콕핏 ── -->
+    <div class="block on" id="asap-now">
+      <div class="card" style="margin-bottom:13px">
+        <div class="field" style="margin:0"><label id="asap_price_lbl">현재가 ($) <span class="hint">신호는 종가(전체 이력)로 계산</span></label>
+          <div style="display:flex;gap:8px"><input id="asap_price" type="text" inputmode="decimal" placeholder="자동 조회" oninput="commaInput(this);onAsapPrice()" style="flex:1">
+          <button class="fetchbtn" id="asap_autobtn" onclick="fetchAsapQuote()">🔄 자동</button></div></div>
+        <div class="fetchnote" id="asap_fetchnote" style="margin:6px 0 0"></div>
+      </div>
+
+      <!-- 신호 히어로 -->
+      <div class="vhero" style="background:linear-gradient(165deg,#2b220c,var(--panel));border-color:#8a6410">
+        <div class="vh-top">
+          <span class="vh-kick">ASAP · <span id="asap_ticker">SOXL</span></span>
+          <span class="bandpill wait" id="asap_pill">대기</span>
+        </div>
+        <div class="vh-big" id="asap_phase_txt" style="font-size:26px">—</div>
+        <div class="vh-band" id="asap_ind_lbl">종가 — · 200일선 — · RSI —</div>
+        <div class="posbar">
+          <div class="pb-track" style="background:linear-gradient(90deg,#f5a45133,#8fd14f33)"><div class="pb-mark" id="asap_mark" style="left:50%"></div></div>
+          <div class="pb-scale"><span>−20%</span><span class="mid">200일선</span><span>+20%</span></div>
+        </div>
+      </div>
+
+      <!-- 오늘 할 일 -->
+      <div class="card" style="margin-bottom:13px">
+        <h3><span class="dot"></span>오늘 할 일</h3>
+        <div id="asap_verdict"><p class="lead">🔄 자동을 누르면 종가 이력으로 국면·단계·오늘 매수/적립을 계산합니다.</p></div>
+        <div class="field" style="margin:12px 0 8px"><label>금액 (<span id="asap_amt_cur">$</span>) <span class="hint" id="asap_amt_hint">권장액 자동 입력</span></label><input id="asap_amt" type="text" inputmode="decimal" placeholder="0" oninput="commaInput(this)"></div>
+        <div style="display:flex;gap:7px;flex-wrap:wrap">
+          <button class="fetchbtn" id="asap_sgov_btn" style="flex:1;min-width:96px;background:rgba(245,196,81,.12);color:var(--gold);border-color:rgba(245,196,81,.4)" onclick="asapRecord('sgov')">🟡 SGOV 적립</button>
+          <button class="fetchbtn" id="asap_buy_btn" style="flex:1;min-width:96px;background:var(--buy-bg);color:var(--buy);border-color:var(--buy-dim)" onclick="asapRecord('buy')">🟢 SOXL 매수</button>
+          <button class="fetchbtn" id="asap_sell_btn" style="flex:1;min-width:96px;background:var(--sell-bg);color:var(--sell);border-color:var(--sell-dim)" onclick="asapRecord('sell')">🔴 SOXL 매도</button>
+        </div>
+      </div>
+
+      <!-- 종가 + 200일선 차트 -->
+      <div class="card" style="margin-bottom:13px">
+        <div class="chart-head" style="display:flex;justify-content:space-between;align-items:center">
+          <h3 style="margin:0;display:flex;align-items:center;gap:6px"><span class="dot"></span><span id="asap_chart_sym">SOXL</span> 종가 · 200일선</h3>
+          <select class="chart-select" id="asap_chart_sel" onchange="drawAsapChart()">
+            <option value="252">1년</option><option value="378" selected>1.5년</option><option value="504">2년</option>
+            <option value="756">3년</option><option value="1260">5년</option><option value="99999">전체</option>
+          </select>
+        </div>
+        <div style="position:relative;margin-top:6px">
+          <svg id="asap_chart" viewBox="0 0 360 130" preserveAspectRatio="none" style="width:100%;height:130px;display:block"></svg>
+        </div>
+        <div style="display:flex;gap:14px;margin-top:6px;font-size:11px;color:var(--faint)">
+          <span><span style="display:inline-block;width:14px;height:2px;background:#f5c451;vertical-align:middle;margin-right:4px"></span>종가</span>
+          <span><span style="display:inline-block;width:14px;height:2px;background:#f24b5f;vertical-align:middle;margin-right:4px"></span>200일선</span>
+        </div>
+        <p class="fetchnote" id="asap_chart_note" style="margin-top:8px;color:var(--faint)">🔄 자동을 눌러 이력을 불러오면 그래프가 표시됩니다.</p>
+      </div>
+
+      <!-- 내 포지션 -->
+      <div class="card acct">
+        <h3 style="justify-content:space-between"><span style="display:flex;align-items:center;gap:8px"><span class="dot"></span>내 포지션</span><span class="bandpill in" id="asap_ret" style="font-size:12px">—</span></h3>
+        <div class="ar"><span class="ak" id="asap_close_k">SOXL 종가</span><span class="av" id="asap_close">—</span></div>
+        <div class="ar"><span class="ak">SOXL 보유</span><span class="av buy" id="asap_qty">0주</span></div>
+        <div class="ar"><span class="ak">평단가</span><span class="av" id="asap_avg">—</span></div>
+        <div class="ar"><span class="ak">평가금</span><span class="av" id="asap_eval">$0</span></div>
+        <div class="ar"><span class="ak">SGOV 리저브 <span class="sub">현금성 대기자금</span></span><span class="av vio" id="asap_reserve">$0</span></div>
+        <div class="ar"><span class="ak">총자산 <span class="sub">SOXL + 리저브</span></span><span class="av" id="asap_total">$0</span></div>
+        <div class="ar"><span class="ak">현재 국면 · 단계</span><span class="av gold" id="asap_stage">—</span></div>
+      </div>
+    </div>
+
+    <!-- ── 기록 ── -->
+    <div class="block" id="asap-hist">
+      <div class="card"><h3><span class="dot"></span>내 거래·적립 기록 <span id="asap_rec_count" class="cnt"></span></h3>
+        <div class="htable-wrap"><table class="htable" id="asap_rec_tbl"></table></div>
+        <button class="ghostbtn" onclick="clearHist('asap')">기록 전체 삭제</button></div>
+    </div>
+
+    <!-- ── 설명 ── -->
+    <div class="block" id="asap-guide">
+      <div class="card"><h3><span class="dot"></span>한 줄 요약</h3><p class="lead">평소엔 <b>SGOV(현금성)</b>에 소액 적립하며 실탄을 모으고, <b>하락장</b>엔 낙폭·RSI가 깊을수록 크게 SOXL을 담고, <b>상승 전환</b>엔 이동평균 교차를 따라 <b>3단계</b>로 리저브를 태워 재진입합니다.</p></div>
+      <div class="card"><h3><span class="dot"></span>하락장 (종가 &lt; 200일선)</h3>
+        <ul class="clean"><li><b>SGOV base</b> 매일 소액 적립 (기본 $10)</li><li><b>−10% & RSI≤35</b> → SOXL <b>mid</b> 매수 (기본 $50)</li><li><b>−15% & RSI≤30</b> → SOXL <b>deep</b> 매수 (기본 $100, mid 대체)</li></ul></div>
+      <div class="card"><h3><span class="dot"></span>상승 전환 3단 재진입</h3>
+        <ul class="clean"><li><b>1차</b> MA5 &gt; MA20 교차 → 리저브 <b>20%</b> 매수</li><li><b>2차</b> MA20 &gt; MA50 교차 → 남은 리저브 <b>30%</b></li><li><b>3차</b> 종가가 200일선 <b>돌파</b> → 리저브 <b>전액</b></li><li>3차 완료 익일부터 <b>base 재개</b> · 재하락 시 카운터 리셋(1차부터)</li></ul></div>
+      <div class="card"><h3><span class="dot"></span>운영 방법</h3>
+        <ol class="steps"><li>매일(또는 며칠에 한 번) 🔄 자동으로 오늘 할 일 확인</li><li>하락장이면 SGOV 적립(딥이면 매수) 기록</li><li>상승 재진입 신호가 뜨면 안내된 비율만큼 SOXL 매수 기록</li><li>단계·국면은 <b>종가 이력에서 자동 판정</b>되니 직접 셀 필요 없음</li></ol></div>
+      <div class="card"><h3><span class="dot"></span>참고</h3>
+        <p class="note">SGOV는 미 단기국채 현금성 ETF로 대기자금이 이자를 법니다. base/mid/deep 금액은 설정(⚙️)에서 조절하세요. 백테스트 탭의 ASAP와 동일 규칙입니다.</p></div>
+    </div>
+  </section>
+
   <footer>
     <strong>JK 퀀트</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v2.42</b> · 2026-07-01</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v2.43</b> · 2026-07-01</div>
   </footer>
 </div>
 
@@ -1014,6 +1112,17 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
     <div class="seg" id="set_malen"><button data-v="100">100일</button><button data-v="150">150일</button><button data-v="200" class="on">200일</button></div>
     <p class="note" style="margin:4px 0 8px">200일선이 논문 기본값(Gayed·Bilello). 짧을수록 신호가 자주 바뀝니다.</p>
     <div class="field"><label id="set_maprincipal_lbl">원금 ($)</label><input id="set_maprincipal" type="text" inputmode="decimal" value="10000" oninput="commaInput(this)"></div>
+  </div>
+  <div id="set_asap" style="display:none">
+    <div class="seclabel">종목 (티커)</div>
+    <div class="seg" id="set_asapticker" style="flex-wrap:wrap">
+      <button data-v="SOXL">SOXL</button><button data-v="USD">USD</button><button data-v="TECL">TECL</button>
+      <button data-v="TQQQ">TQQQ</button><button data-v="QLD">QLD</button><button data-v="KORU">KORU</button></div>
+    <p class="note" style="margin:4px 0 8px">ASAP는 SOXL 기준으로 설계됐지만 어떤 레버리지든 200일선·RSI 규칙으로 동작합니다.</p>
+    <div class="seclabel">매수 금액 <span class="hint" style="color:var(--faint);font-weight:500">하락장 적립·딥가중</span></div>
+    <div class="field"><label>하락장 일적립 base ($) <span class="hint">SGOV로 매일 소액</span></label><input id="set_asapbase" type="text" inputmode="decimal" value="10" oninput="commaInput(this)"></div>
+    <div class="field"><label>−10% · RSI≤35 매수 mid ($)</label><input id="set_asapmid" type="text" inputmode="decimal" value="50" oninput="commaInput(this)"></div>
+    <div class="field"><label>−15% · RSI≤30 매수 deep ($) <span class="hint">mid 대체</span></label><input id="set_asapdeep" type="text" inputmode="decimal" value="100" oninput="commaInput(this)"></div>
   </div>
   <div class="seclabel">데이터 백업 · 동기화</div>
   <button class="addbtn" style="margin-bottom:8px;background:var(--panel2);color:var(--ink);border:1px solid var(--line)" onclick="exportJSON()">⬇ JSON 파일로 내보내기</button>
@@ -1098,6 +1207,27 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
     <div class="field" id="em_qtywrap"><label>수량 (주)</label><input id="em_qty" type="number" inputmode="numeric"></div>
   </div>
   <div class="mbtns"><button class="close" onclick="delMaFromEdit()" style="background:var(--sell-bg);color:var(--sell)">삭제</button><button class="save" onclick="saveMaEdit()">저장</button></div>
+</div></div>
+
+<!-- 거래 수정 모달 (ASAP) -->
+<div class="modal" id="editAsapModal"><div class="box">
+  <button class="mx" onclick="closeEditAsap()" aria-label="닫기">✕</button>
+  <h3>거래 수정 (ASAP)</h3>
+  <div class="field"><label>날짜</label><input id="ea_date" type="date" class="dateinput"></div>
+  <div class="field"><label>유형</label>
+    <select id="ea_type" onchange="eaTypeUI(this.value)" style="width:100%;padding:11px;border-radius:10px;border:1px solid var(--line);background:var(--panel2);color:var(--ink);font-size:14px;font-weight:600">
+      <option value="sgov">SGOV 적립</option><option value="buy">SOXL 매수</option><option value="sell">SOXL 매도</option>
+    </select></div>
+  <div class="field" id="ea_amtwrap"><label>적립 금액 ($)</label><input id="ea_amt" type="text" inputmode="decimal" oninput="commaInput(this)"></div>
+  <div class="grid2" id="ea_pqwrap">
+    <div class="field"><label>단가 ($)</label><input id="ea_price" type="text" inputmode="decimal" oninput="commaInput(this)"></div>
+    <div class="field"><label>수량 (주)</label><input id="ea_qty" type="text" inputmode="decimal" oninput="commaInput(this)"></div>
+  </div>
+  <div class="field" id="ea_fromwrap"><label>매수 자금 출처</label>
+    <select id="ea_from" style="width:100%;padding:11px;border-radius:10px;border:1px solid var(--line);background:var(--panel2);color:var(--ink);font-size:14px;font-weight:600">
+      <option value="reserve">리저브에서 (SGOV 차감)</option><option value="new">신규 자금</option>
+    </select></div>
+  <div class="mbtns"><button class="close" onclick="delAsapFromEdit()" style="background:var(--sell-bg);color:var(--sell)">삭제</button><button class="save" onclick="saveAsapEdit()">저장</button></div>
 </div></div>
 
 <script>
@@ -1191,13 +1321,16 @@ function newInfSession(name){return{id:uid(),name:name||'세션 1',settings:defI
 function newVrSession(name){return{id:uid(),name:name||'세션 1',settings:defVrSettings(),hist:[]}}
 function defMaSettings(){return{ticker:'SOXL',maLen:200,principal:10000,cur:'usd'}}
 function newMaSession(name){return{id:uid(),name:name||'세션 1',settings:defMaSettings(),hist:[]}}
+function defAsapSettings(){return{ticker:'SOXL',base:10,mid:50,deep:100,cur:'usd'}}
+function newAsapSession(name){return{id:uid(),name:name||'내 계좌',settings:defAsapSettings(),hist:[]}}
 
 /* 신규 사용자 기본 상태 (빈 세션 1개씩) */
 function freshState(){
   const infS=newInfSession('내 계좌');
   const vrS=newVrSession('내 계좌');
   const maS=newMaSession('내 계좌');
-  return {activeTab:'inf',inf:{sessions:[infS],active:infS.id},vr:{sessions:[vrS],active:vrS.id},ma:{sessions:[maS],active:maS.id}};
+  const asapS=newAsapSession('내 계좌');
+  return {activeTab:'inf',inf:{sessions:[infS],active:infS.id},vr:{sessions:[vrS],active:vrS.id},ma:{sessions:[maS],active:maS.id},asap:{sessions:[asapS],active:asapS.id}};
 }
 let curUid=null;           // 로그인한 사용자 uid
 function lsKey(){return curUid?('qcockpit_v2_'+curUid):'qcockpit_v2_guest'}
@@ -1205,12 +1338,15 @@ function lsKey(){return curUid?('qcockpit_v2_'+curUid):'qcockpit_v2_guest'}
 function validState(o){return o&&o.inf&&o.vr&&o.inf.sessions&&o.vr.sessions&&o.inf.sessions.length&&o.vr.sessions.length}
 // 로테이션 탭 마이그레이션: 기존 상태(inf/vr만)에 ma 박스를 추가 (기존 데이터 보존). 모든 S 로드 경로에서 호출.
 function ensureMaBox(){ if(S&&(!S.ma||!S.ma.sessions||!S.ma.sessions.length)){ const m=newMaSession('내 계좌'); S.ma={sessions:[m],active:m.id}; } }
+// ASAP 탭 마이그레이션: 기존 상태에 asap 박스 추가 (기존 데이터 보존).
+function ensureAsapBox(){ if(S&&(!S.asap||!S.asap.sessions||!S.asap.sessions.length)){ const a=newAsapSession('내 계좌'); S.asap={sessions:[a],active:a.id}; } }
 
 function load(){
   try{S=JSON.parse(localStorage.getItem(lsKey()))}catch(e){S=null}
   if(!validState(S)){S=freshState();saveLocal();}
   if(!S.activeTab)S.activeTab='inf';
   ensureMaBox();
+  ensureAsapBox();
   forceV40();   // V5.0 숨김 기간: 저장된 v50 세션을 v40으로 되돌림
 }
 function saveLocal(){S._updated=Date.now();localStorage.setItem(lsKey(),JSON.stringify(S))}
@@ -2637,6 +2773,230 @@ function refreshMa(){
   if(S.activeTab==='ma'){ try{ if(!krwNoAuto(curStrat().settings)) loadMaData(); }catch(e){console.error(e)} }
 }
 
+/* ══════════ ASAP 운영 (SGOV 리저브 + 딥가중 + 단계 재진입) ══════════ */
+/* 원금 없음 — 매일 적립금(base)이 엔진. 국면·단계는 종가 이력에서 자동 판정. 백테 runASAP와 동일 규칙. */
+let asapQuoteData=null;   // {symbol, days:[{date,close}], last, price, currency, src}
+function _asapMA(a,k){ const n=a.length,o=new Array(n).fill(null); let s=0; for(let i=0;i<n;i++){ s+=a[i]; if(i>=k)s-=a[i-k]; if(i>=k-1)o[i]=s/k; } return o; }
+function _asapRSI(a){ const n=a.length,o=new Array(n).fill(null); let ag=0,al=0;
+  for(let i=1;i<n;i++){ const d=a[i]-a[i-1],g=d>0?d:0,l=d<0?-d:0;
+    if(i<=14){ ag+=g;al+=l; if(i===14){ ag/=14;al/=14; o[i]=100-100/(1+(al===0?100:ag/al)); } }
+    else{ ag=(ag*13+g)/14; al=(al*13+l)/14; o[i]=100-100/(1+(al===0?100:ag/al)); } }
+  return o; }
+// 내 포지션: SOXL 보유·평단 + SGOV 리저브 (적립 +, 리저브매수 −)
+function asapPos(hist){
+  let shares=0,cost=0,reserve=0;
+  (hist||[]).forEach(h=>{
+    if(h.type==='sgov'){ reserve+=(+h.amt||0); }
+    else if(h.type==='buy'){ const q=+h.qty||0, amt=(h.amt!=null?+h.amt:q*(+h.price||0)); shares+=q; cost+=amt; if(h.from==='reserve')reserve-=amt; }
+    else if(h.type==='sell'){ const q=+h.qty||0, avg=shares>0?cost/shares:0; shares-=q; cost-=avg*q; if(shares<1e-9){shares=0;cost=0;} }
+  });
+  return {shares,cost,avg:shares>0?cost/shares:0,reserve};
+}
+function computeAsap(){
+  const st=curStrat().settings, hist=curStrat().hist;
+  const sym=String(st.ticker||'SOXL').toUpperCase();
+  const pos=asapPos(hist);
+  const days=(asapQuoteData && String(asapQuoteData.symbol||'').toUpperCase()===sym && asapQuoteData.days) ? asapQuoteData.days : null;
+  if(!days || days.length<2) return {st,sym,pos,ready:false};
+  const cl=days.map(d=>d.close), dates=days.map(d=>d.date), n=cl.length;
+  const ma5=_asapMA(cl,5),ma20=_asapMA(cl,20),ma50=_asapMA(cl,50),ma200=_asapMA(cl,200),rsi=_asapRSI(cl);
+  const warming = ma200[n-1]==null;
+  // 단계 머신 재생 (백테 runASAP와 동일)
+  let stage=0;
+  for(let i=1;i<n;i++){
+    if(ma200[i]==null) continue;
+    const crossDn=ma200[i-1]!=null&&cl[i-1]>=ma200[i-1]&&cl[i]<ma200[i];
+    const cross5 =ma5[i-1]!=null&&ma20[i-1]!=null&&ma5[i-1]<=ma20[i-1]&&ma5[i]>ma20[i];
+    const cross20=ma20[i-1]!=null&&ma50[i-1]!=null&&ma20[i-1]<=ma50[i-1]&&ma20[i]>ma50[i];
+    const crossUp=ma200[i-1]!=null&&cl[i-1]<ma200[i-1]&&cl[i]>=ma200[i];
+    if(crossDn&&stage>0)stage=0;
+    if(stage===0&&cross5)stage=1;
+    if(stage===1&&cross20)stage=2;
+    if(stage===2&&crossUp)stage=3;
+  }
+  const last=n-1, c=cl[last], m200=ma200[last], rsiNow=rsi[last]!=null?rsi[last]:50;
+  const phase = warming?'up':(c<m200?'down':'up');
+  const gapPct = m200?(c/m200-1)*100:0;
+  const ev={crossDn:false,cross5:false,cross20:false,crossUp:false};
+  if(!warming){ const i=last;
+    ev.crossDn=ma200[i-1]!=null&&cl[i-1]>=ma200[i-1]&&cl[i]<m200;
+    ev.cross5 =ma5[i-1]!=null&&ma20[i-1]!=null&&ma5[i-1]<=ma20[i-1]&&ma5[i]>ma20[i];
+    ev.cross20=ma20[i-1]!=null&&ma50[i-1]!=null&&ma20[i-1]<=ma50[i-1]&&ma20[i]>ma50[i];
+    ev.crossUp=ma200[i-1]!=null&&cl[i-1]<ma200[i-1]&&cl[i]>=m200; }
+  let dip=null;
+  if(phase==='down'&&!warming){ if(rsiNow<=30&&c<=m200*0.85)dip='deep'; else if(rsiNow<=35&&c<=m200*0.90)dip='mid'; }
+  let regimeDays=1; for(let i=last-1;i>=0;i--){ if(ma200[i]==null){regimeDays++;continue;} const dn=cl[i]<ma200[i]; if((dn?'down':'up')!==phase)break; regimeDays++; }
+  return {st,sym,pos,ready:true,warming,cl,dates,ma5,ma20,ma50,ma200,rsi,
+    lastClose:c,lastDate:dates[last],m200Now:m200,ma5Now:ma5[last],ma20Now:ma20[last],ma50Now:ma50[last],rsiNow,
+    phase,stage,gapPct,ev,dip,regimeDays, price:(asapQuoteData.price>0?asapQuoteData.price:c)};
+}
+function fetchAsapQuote(){ loadAsapData(true); }
+async function loadAsapData(force){
+  const st=curStrat().settings, note=$('asap_fetchnote');
+  if(krwNoAuto(st)){ if(note){note.className='fetchnote err';note.textContent='ⓘ 원화 종목은 설정에서 종목코드(6자리) 입력 시 자동 시세가 됩니다.';} return; }
+  const sym=String(st.ticker||'SOXL').toUpperCase();
+  if(!force && asapQuoteData && String(asapQuoteData.symbol||'').toUpperCase()===sym){ renderAsapNow(); renderAsapHist(); return; }
+  if(note){note.className='fetchnote load';note.textContent='종가 이력 불러오는 중…';}
+  const q=await fetchDaily(sym);
+  if(q && q.days && q.days.length){
+    asapQuoteData={symbol:q.symbol,days:q.days,last:q.last,price:(q.price!=null&&+q.price>0)?+q.price:q.last.close,currency:q.currency||'USD',src:q.src};
+    if($('asap_price')) $('asap_price').value=nfix(asapQuoteData.price,2);
+    if(note){note.className='fetchnote ok';note.textContent=`✓ ${q.symbol} ${q.last.date} 종가 ${px(q.last.close)} · ${q.days.length}일 이력`;}
+    renderAsapNow(); renderAsapHist();
+  }else if(note){ note.className='fetchnote err'; note.textContent='⚠ 불러오기 실패 — 잠시 후 다시 시도하세요.'; }
+}
+function onAsapPrice(){ const p=inputNum('asap_price')||0; if(asapQuoteData && p>0) asapQuoteData.price=p; renderAsapNow(); }
+
+function renderAsapNow(){
+  const c=computeAsap(), st=c.st, sym=tickerLabel(st.ticker||'SOXL');
+  $('asap_ticker').textContent=sym; $('asap_chart_sym').textContent=sym; $('asap_close_k').textContent=sym+' 종가';
+  const pos=c.pos, price=c.ready?(c.price||c.lastClose):(inputNum('asap_price')||0);
+  // 포지션 카드
+  $('asap_qty').textContent=nfix(pos.shares,4)+'주';
+  $('asap_avg').textContent=pos.avg>0?px(pos.avg):'—';
+  $('asap_eval').textContent=px(pos.shares*price);
+  $('asap_reserve').textContent=px(pos.reserve);
+  $('asap_total').textContent=px(pos.shares*price+pos.reserve);
+  if(pos.shares>0&&pos.avg>0){ const hr=(price/pos.avg-1)*100; $('asap_ret').textContent=`${hr>=0?'+':''}${hr.toFixed(2)}%`; $('asap_ret').className='bandpill '+(hr>=0?'in':'over'); }
+  else{ $('asap_ret').textContent='—'; $('asap_ret').className='bandpill'; }
+  if(!c.ready){
+    $('asap_pill').className='bandpill wait'; $('asap_pill').textContent='대기';
+    $('asap_phase_txt').textContent='—'; $('asap_phase_txt').style.color='';
+    $('asap_ind_lbl').textContent='🔄 자동을 눌러 종가 이력을 불러오세요';
+    $('asap_mark').style.left='50%';
+    $('asap_verdict').innerHTML='<p class="lead">🔄 자동을 누르면 종가 이력으로 국면·단계·오늘 매수/적립을 계산합니다.</p>';
+    $('asap_close').textContent='—'; $('asap_stage').textContent='—';
+    drawAsapChart(c); return;
+  }
+  $('asap_close').textContent=px(c.lastClose);
+  const down=c.phase==='down';
+  const base=+st.base||10, mid=+st.mid||50, deep=+st.deep||100;
+  // 히어로
+  $('asap_pill').className='bandpill '+(down?'under':'in');
+  $('asap_pill').textContent=down?'하락장':'상승장';
+  const stageTxt = down ? '🔻 하락장' : (c.stage>=3?'🔺 상승 · 재진입 완료':'🔺 상승 · 재진입 '+c.stage+'/3');
+  $('asap_phase_txt').textContent=stageTxt; $('asap_phase_txt').style.color=down?'var(--sell)':'var(--buy)';
+  $('asap_ind_lbl').innerHTML=`종가 ${nfix(c.lastClose,2)} · 200일선 ${c.m200Now?nfix(c.m200Now,2):'—'} · <b style="color:${c.gapPct>=0?'var(--buy)':'var(--sell)'}">${c.gapPct>=0?'+':''}${c.gapPct.toFixed(1)}%</b> · RSI ${c.rsiNow.toFixed(0)}`;
+  let pct=(c.gapPct+20)/40*100; pct=Math.max(0,Math.min(100,pct)); $('asap_mark').style.left=pct+'%';
+  // 오늘 할 일 + 권장 금액/동작
+  let v='', recAmt=base;
+  const oi=(cls,tag,nm,pr)=>`<div class="oitem ${cls}"><span class="tag">${tag}</span><span class="nm">${nm}</span>${pr?`<span class="pr">${pr}</span>`:''}</div>`;
+  if(c.warming){ v=`<p class="note" style="color:var(--gold)">ⓘ 이력이 200일 미만이라 워밍업입니다. 종가가 200일선 위면 보유를 시작하세요.</p>`; }
+  else if(down){
+    if(c.ev.crossDn) v+=`<div class="oitem" style="background:var(--sell-bg);justify-content:center"><span class="nm" style="flex:none;color:var(--sell)">⚠ 하락 전환 — 재진입 카운터 리셋 (다음 상승 시 1차부터)</span></div>`;
+    v+=oi('','SGOV',`매일 <b>${px(base)}</b> 리저브 적립`,px(base));
+    if(c.dip==='deep'){ recAmt=deep; v+=oi('b','딥·deep',`SOXL <b>${px(deep)}</b> 매수 — RSI ${c.rsiNow.toFixed(0)} · 200선 ${c.gapPct.toFixed(0)}%`,px(price)); }
+    else if(c.dip==='mid'){ recAmt=mid; v+=oi('b','딥·mid',`SOXL <b>${px(mid)}</b> 매수 — RSI ${c.rsiNow.toFixed(0)} · 200선 ${c.gapPct.toFixed(0)}%`,px(price)); }
+    else v+=`<p class="note" style="margin-top:8px">딥 조건 미충족 (mid: −10%&RSI≤35 / deep: −15%&RSI≤30) — 오늘은 <b>적립만</b>. 현재 200선 ${c.gapPct.toFixed(0)}% · RSI ${c.rsiNow.toFixed(0)}.</p>`;
+  } else { // 상승장
+    if(c.stage===0){ if(c.ev.cross5){ recAmt=pos.reserve*0.2; v+=oi('b','재진입 1차','MA5>MA20 교차 → 리저브 <b>20%</b> 매수',px(price)); } else v+=`<div class="oitem" style="background:rgba(245,196,81,.1);justify-content:center"><span class="nm" style="flex:none;color:var(--gold)">⏳ 재진입 대기 — 1차 트리거: MA5(${c.ma5Now?nfix(c.ma5Now,1):'—'}) > MA20(${c.ma20Now?nfix(c.ma20Now,1):'—'})</span></div>`; }
+    else if(c.stage===1){ if(c.ev.cross20){ recAmt=pos.reserve*0.3; v+=oi('b','재진입 2차','MA20>MA50 교차 → 남은 리저브 <b>30%</b>',px(price)); } else v+=`<div class="oitem" style="background:rgba(245,196,81,.1);justify-content:center"><span class="nm" style="flex:none;color:var(--gold)">⏳ 1차 완료 · 2차 트리거: MA20(${c.ma20Now?nfix(c.ma20Now,1):'—'}) > MA50(${c.ma50Now?nfix(c.ma50Now,1):'—'})</span></div>`; }
+    else if(c.stage===2){ if(c.ev.crossUp){ recAmt=pos.reserve; v+=oi('b','재진입 3차','종가 200일선 돌파 → 리저브 <b>전액</b>',px(price)); }
+      else if(c.gapPct>0){ recAmt=0; v+=`<div class="oitem" style="background:var(--buy-bg);justify-content:center"><span class="nm" style="flex:none;color:var(--buy)">✅ 2차 완료 · 종가 이미 200일선 위(+${c.gapPct.toFixed(0)}%) — 보유 지속. 3차(리저브 전액)는 <b>재하락 후 재돌파</b> 때 발동, 그때까지 리저브 유지.</span></div>`; }
+      else v+=`<div class="oitem" style="background:rgba(245,196,81,.1);justify-content:center"><span class="nm" style="flex:none;color:var(--gold)">⏳ 2차 완료 · 3차 트리거: 종가 > 200일선(${c.m200Now?nfix(c.m200Now,1):'—'})</span></div>`; }
+    else { recAmt=base; v+=`<div class="oitem" style="background:var(--buy-bg);justify-content:center"><span class="nm" style="flex:none;color:var(--buy)">✅ 재진입 완료 — 보유 유지 · SGOV ${px(base)}/일 적립 재개</span></div>`; }
+  }
+  $('asap_verdict').innerHTML=v;
+  // 금액칸이 비어있을 때만 권장액 자동 입력 (사용자가 입력하면 유지)
+  if($('asap_amt') && (!$('asap_amt').value || +unComma($('asap_amt').value)===0) && recAmt>0){ $('asap_amt').value=nfix(recAmt,recAmt>=100?0:2); }
+  $('asap_stage').textContent = down ? `하락장 · ${c.regimeDays}거래일` : (c.stage>=3?`상승 · 완료 · ${c.regimeDays}일`:`상승 · 재진입 ${c.stage}/3`);
+  drawAsapChart(c);
+}
+let asapChartRange=378;
+function drawAsapChart(c){
+  const svg=$('asap_chart'); if(!svg) return;
+  c=c||computeAsap();
+  const note=$('asap_chart_note');
+  if(!c.ready || !c.cl){ svg.innerHTML=''; if(note)note.textContent='🔄 자동을 눌러 이력을 불러오면 그래프가 표시됩니다.'; return; }
+  const sel=$('asap_chart_sel'); if(sel) asapChartRange=+sel.value||378;
+  const n=c.cl.length, want=asapChartRange>=99999?n:Math.max(200,asapChartRange), start=Math.max(0,n-want);
+  const idx=[]; for(let i=start;i<n;i++) idx.push(i);
+  const C=idx.map(i=>c.cl[i]), M=idx.map(i=>c.ma200[i]);
+  const all=C.concat(M.filter(v=>v!=null)); const lo=Math.min(...all), hi=Math.max(...all);
+  const W=360,H=130,pad=2;
+  const xs=i=>pad+(i/(idx.length-1||1))*(W-pad*2), ys=v=>H-pad-((v-lo)/(hi-lo||1))*(H-pad*2);
+  const path=arr=>{let d='';arr.forEach((v,i)=>{if(v==null)return;d+=(d?'L':'M')+xs(i).toFixed(1)+','+ys(v).toFixed(1)+' ';});return d;};
+  let bg='';
+  for(let i=0;i<idx.length;i++){ if(M[i]==null)continue; const up=C[i]>=M[i], x0=xs(i), x1=(i<idx.length-1)?xs(i+1):W;
+    bg+=`<rect x="${x0.toFixed(1)}" y="0" width="${Math.max(0.5,x1-x0).toFixed(1)}" height="${H}" fill="${up?'rgba(54,211,153,.06)':'rgba(248,123,140,.09)'}"/>`; }
+  svg.innerHTML=bg+`<path d="${path(M)}" fill="none" stroke="#f24b5f" stroke-width="1.5"/>`+`<path d="${path(C)}" fill="none" stroke="#f5c451" stroke-width="1.6"/>`;
+  const perMap={252:'1년',378:'1.5년',504:'2년',756:'3년',1260:'5년'};
+  const per=asapChartRange>=99999?'전체':(perMap[asapChartRange]||Math.round(idx.length/21)+'달');
+  if(note) note.textContent=`${tickerLabel(c.st.ticker)} 종가 vs 200일선 · ${per} · 초록=상승장·빨강=하락장 구간`;
+}
+function renderAsapHist(){
+  const hist=curStrat().hist;
+  $('asap_rec_count').textContent=hist.length?`(${hist.length}건)`:'';
+  const LBL={sgov:'SGOV 적립',buy:'SOXL 매수',sell:'SOXL 매도'}, CLS={sgov:'',buy:'buy',sell:'sell'};
+  let rows='';
+  hist.forEach((h,i)=>{
+    let detail;
+    if(h.type==='sgov') detail=px(h.amt);
+    else if(h.type==='buy') detail=`${px(h.price)} × ${nfix(h.qty,3)}주${h.from==='reserve'?' <span style="color:var(--vio);font-size:10px">리저브</span>':''}`;
+    else detail=`${px(h.price)} × ${nfix(h.qty,3)}주`;
+    rows=`<tr class="${CLS[h.type]||''}"><td>${h.date||'-'}</td><td>${LBL[h.type]||h.type}</td><td>${detail}</td><td style="white-space:nowrap"><span class="edit" onclick="editAsap(${i})">✎</span> <span class="del" onclick="delAsap(${i})">✕</span></td></tr>`+rows;
+  });
+  $('asap_rec_tbl').innerHTML=`<tr><th>날짜</th><th>유형</th><th>내역</th><th></th></tr>`+(hist.length?rows:`<tr><td class="empty" colspan="4">아직 기록이 없습니다</td></tr>`);
+}
+function asapRecord(kind){
+  const c=computeAsap(), st=curStrat().settings;
+  const price=c.ready?(c.price||c.lastClose):inputNum('asap_price');
+  const amt=inputNum('asap_amt'), date=new Date().toISOString().slice(0,10);
+  const pos=c.ready?c.pos:asapPos(curStrat().hist);
+  let rec;
+  if(kind==='sgov'){
+    if(!amt||amt<=0){alert('적립 금액을 입력하세요.');return;}
+    rec={type:'sgov',date,amt:+amt,ts:Date.now()};
+    if(!confirm(`SGOV 리저브에 ${px(amt)} 적립\n오늘(${date}) 기록할까요?`))return;
+  }else if(kind==='buy'){
+    if(!price||price<=0){alert('먼저 🔄 자동으로 현재가를 불러오거나 입력하세요.');return;}
+    if(!amt||amt<=0){alert('매수 금액을 입력하세요.');return;}
+    const qty=amt/price, from=(pos.reserve>=amt-1e-6)?'reserve':'new';
+    rec={type:'buy',date,price:+price,qty:+qty.toFixed(6),amt:+amt,from,ts:Date.now()};
+    if(!confirm(`SOXL ${px(amt)} 매수 (≈${nfix(qty,4)}주 @ ${px(price)})\n자금: ${from==='reserve'?'리저브 차감':'신규 자금'}\n오늘(${date}) 기록할까요?`))return;
+  }else{
+    if(!price||price<=0){alert('먼저 현재가를 불러오세요.');return;}
+    if(pos.shares<=0){alert('보유 수량이 없습니다.');return;}
+    const qty=amt>0?Math.min(pos.shares,amt/price):pos.shares;
+    rec={type:'sell',date,price:+price,qty:+qty.toFixed(6),amt:+(qty*price).toFixed(2),ts:Date.now()};
+    if(!confirm(`SOXL ${nfix(qty,4)}주 매도 (≈${px(qty*price)} @ ${px(price)})\n오늘(${date}) 기록할까요?`))return;
+  }
+  const h=curStrat().hist; h.push(rec); sortHist(h);
+  if($('asap_amt')) $('asap_amt').value='';   // 다음 렌더에서 권장액 재입력
+  save(); refreshAsap(); alert('기록됨 ✓');
+}
+function delAsap(i){ if(!confirm('이 기록을 삭제할까요?'))return; curStrat().hist.splice(i,1); save(); refreshAsap(); }
+let editAsapIdx=-1;
+function eaTypeUI(t){ const isSgov=t==='sgov', isBuy=t==='buy';
+  if($('ea_amtwrap'))$('ea_amtwrap').style.display=isSgov?'':'none';
+  if($('ea_pqwrap'))$('ea_pqwrap').style.display=isSgov?'none':'';
+  if($('ea_fromwrap'))$('ea_fromwrap').style.display=isBuy?'':'none'; }
+function editAsap(i){
+  const h=curStrat().hist[i]; if(!h)return; editAsapIdx=i;
+  $('ea_date').value=h.date||new Date().toISOString().slice(0,10);
+  $('ea_type').value=h.type; eaTypeUI(h.type);
+  $('ea_amt').value=h.amt!=null?h.amt:'';
+  $('ea_price').value=h.price!=null?h.price:'';
+  $('ea_qty').value=h.qty!=null?h.qty:'';
+  $('ea_from').value=h.from||'reserve';
+  $('editAsapModal').classList.add('on');
+}
+function closeEditAsap(){ $('editAsapModal').classList.remove('on'); editAsapIdx=-1; }
+function saveAsapEdit(){
+  if(editAsapIdx<0)return; const hist=curStrat().hist, h=hist[editAsapIdx]; if(!h){closeEditAsap();return;}
+  const type=$('ea_type').value, date=$('ea_date').value||h.date; const rec={ts:h.ts||Date.now(),type,date};
+  if(type==='sgov'){ const amt=+unComma($('ea_amt').value); if(!amt){alert('적립 금액을 입력하세요');return;} rec.amt=amt; }
+  else{ const price=+unComma($('ea_price').value), qty=+unComma($('ea_qty').value);
+    if(!price||!qty){alert('단가·수량을 입력하세요');return;} rec.price=price; rec.qty=qty; rec.amt=+(price*qty).toFixed(2);
+    if(type==='buy') rec.from=$('ea_from').value||'reserve'; }
+  hist[editAsapIdx]=rec; sortHist(hist); save(); refreshAsap(); closeEditAsap();
+}
+function delAsapFromEdit(){ if(editAsapIdx<0){closeEditAsap();return;} const i=editAsapIdx; closeEditAsap(); delAsap(i); }
+function refreshAsap(){
+  renderAsapNow(); renderAsapHist(); renderStatusline();
+  if(S.activeTab==='asap'){ try{ if(!krwNoAuto(curStrat().settings)) loadAsapData(); }catch(e){console.error(e)} }
+}
+
 /* 구버전 주문시트 호환용 (더 이상 사용 안 함) */
 function renderVrOrder(){}
 
@@ -3443,7 +3803,7 @@ function updateCurLabels(which){
 function clearHist(strat){
   if(!confirm('이 세션의 기록을 전부 삭제할까요? 되돌릴 수 없습니다'))return;
   curStrat().hist=[];save();
-  strat==='inf'?refreshInf():strat==='ma'?refreshMa():refreshVr();pushRemote();
+  strat==='inf'?refreshInf():strat==='ma'?refreshMa():strat==='asap'?refreshAsap():refreshVr();pushRemote();
 }
 
 /* ── 세션 바 (현재 탭 전용, 이벤트 위임) ── */
@@ -3530,7 +3890,7 @@ function closeSess(){$('sessModal').classList.remove('on')}
 function createSess(){
   const box=tabBox();
   const n=$('sess_name').value.trim()||('세션 '+(box.sessions.length+1));
-  const s=S.activeTab==='inf'?newInfSession(n):newVrSession(n);
+  const s=S.activeTab==='inf'?newInfSession(n):S.activeTab==='ma'?newMaSession(n):S.activeTab==='asap'?newAsapSession(n):newVrSession(n);
   box.sessions.push(s);box.active=s.id;save();closeSess();resetSubnav(S.activeTab);refreshAll();pushRemote();
 }
 
@@ -3546,6 +3906,10 @@ function renderStatusline(){
     const st=s.settings,c=computeMa();
     html+=`<span>${tickerLabel(st.ticker)} · ${st.maLen||200}일선 · 원금 ${wn(st.principal)}</span>`;
     if(c.ready) html+=`<span class="badge ${c.signal==='hold'?'ok':'warn'}">${c.signal==='hold'?'보유':'현금'}</span>`;
+  }else if(strat==='asap'){
+    const st=s.settings,c=computeAsap();
+    html+=`<span>${tickerLabel(st.ticker)} · 적립 ${wn(st.base)}/일 · 딥 ${wn(st.mid)}/${wn(st.deep)}</span>`;
+    if(c.ready) html+=`<span class="badge ${c.phase==='down'?'warn':'ok'}">${c.phase==='down'?'하락장':(c.stage>=3?'상승·완료':'상승·재진입'+c.stage)}</span>`;
   }else{
     const st=s.settings;
     const mode=st.mode===0.75?'적립식':st.mode===0.5?'거치식':'인출식';
@@ -3557,9 +3921,15 @@ function renderStatusline(){
 
 /* ── 설정 ── */
 function openSettings(){
-  const s=sess();$('set_sessname').textContent=s.name+' · '+(S.activeTab==='inf'?'무한매수법':S.activeTab==='ma'?'200일선 로테이션':'밸류리밸런싱');
+  const s=sess();$('set_sessname').textContent=s.name+' · '+(S.activeTab==='inf'?'무한매수법':S.activeTab==='ma'?'200일선 로테이션':S.activeTab==='asap'?'ASAP':'밸류리밸런싱');
   const setMa=$('set_ma'); if(setMa) setMa.style.display='none';
-  if(S.activeTab==='inf'){
+  const setAsap=$('set_asap'); if(setAsap) setAsap.style.display='none';
+  if(S.activeTab==='asap'){
+    $('set_inf').style.display='none';$('set_vr').style.display='none';if(setAsap)setAsap.style.display='';
+    const st=s.settings;
+    segSet('set_asapticker',st.ticker||'SOXL');
+    $('set_asapbase').value=nfix(st.base||10,0); $('set_asapmid').value=nfix(st.mid||50,0); $('set_asapdeep').value=nfix(st.deep||100,0);
+  }else if(S.activeTab==='inf'){
     $('set_inf').style.display='';$('set_vr').style.display='none';
     const st=s.settings, sym=(st.cur||'usd')==='krw'?'₩':'$';
     segSet('set_ticker',st.ticker);segSet('set_div',String(st.div));segSet('set_cur',st.cur||'usd');segSet('set_engine',st.engine||'v40');segSet('set_shortma',String(st.shortMA||30));segSet('set_lopct',String(st.loPct||6));syncShortMaUI(st.engine||'v40');syncTgtNote();
@@ -3610,7 +3980,7 @@ function syncShortMaUI(eng){
   if(note&&note.classList.contains('note')) note.style.opacity=on?'1':'0.4';
 }
 function setupSegs(){
-  ['set_ticker','set_div','set_vmode','set_vformula','set_cur','set_vcur','set_engine','set_shortma','set_lopct','set_maticker','set_malen'].forEach(id=>{
+  ['set_ticker','set_div','set_vmode','set_vformula','set_cur','set_vcur','set_engine','set_shortma','set_lopct','set_maticker','set_malen','set_asapticker'].forEach(id=>{
     const el=$(id);if(!el)return;
     el.querySelectorAll('button').forEach(b=>{
       b.onclick=()=>{el.querySelectorAll('button').forEach(x=>x.classList.remove('on'));b.classList.add('on');
@@ -3641,6 +4011,8 @@ function saveSettings(){
       rowqty:1,principal:inputNum('set_principal')||10000,cur:segGet('set_cur')||'usd'};
   }else if(S.activeTab==='ma'){
     s.settings={ticker:segGet('set_maticker')||'SOXL',maLen:+segGet('set_malen')||200,principal:inputNum('set_maprincipal')||10000,cur:'usd'};
+  }else if(S.activeTab==='asap'){
+    s.settings={ticker:segGet('set_asapticker')||'SOXL',base:inputNum('set_asapbase')||10,mid:inputNum('set_asapmid')||50,deep:inputNum('set_asapdeep')||100,cur:'usd'};
   }else{
     s.settings={ticker:$('set_vticker').value||'TQQQ',mode:+segGet('set_vmode')||0.75,
       formula:segGet('set_vformula')||'basic',g:inputNum('set_g')||10,add:inputNum('set_add')||100,
@@ -3655,6 +4027,7 @@ function refreshAll(){
   try{refreshInf()}catch(e){console.error('refreshInf',e)}
   try{refreshVr()}catch(e){console.error('refreshVr',e)}
   try{refreshMa()}catch(e){console.error('refreshMa',e)}
+  try{refreshAsap()}catch(e){console.error('refreshAsap',e)}
 }
 function goBlk(sec,blk){
   document.querySelectorAll(`#${sec} .chip`).forEach(x=>x.classList.toggle('on',x.dataset.b===blk));
@@ -3670,6 +4043,7 @@ function setupTabs(){
       S.activeTab=t.dataset.t;save();renderSessbar();renderStatusline();
       if(t.dataset.t==='inf'){ refreshInf(); try{loadInfData();loadInfFG();loadFX();}catch(e){console.error(e)} showFab(); }
       else if(t.dataset.t==='ma'){ refreshMa(); try{ if(!krwNoAuto(curStrat().settings)) loadMaData(); }catch(e){console.error(e)} hideFab(); }
+      else if(t.dataset.t==='asap'){ refreshAsap(); try{ if(!krwNoAuto(curStrat().settings)) loadAsapData(); }catch(e){console.error(e)} hideFab(); }
       else { refreshVr(); try{ if(!krwNoAuto(curStrat().settings)){ fetchQuote('vr'); } loadVrChart(); loadFearGreed(); }catch(e){console.error(e)} showFab(); }
       window.scrollTo({top:0,behavior:'smooth'});
     };
@@ -3728,11 +4102,11 @@ async function pullRemote(){
         // 신선도 가드: 이 기기의 로컬 저장본이 서버보다 최신이면(오프라인 수정 등) 낡은 서버로 덮지 않고 로컬을 밀어올림
         let local=null; try{local=JSON.parse(localStorage.getItem(lsKey()))}catch(e){}
         if(local&&validState(local)&&(local._updated||0)>(d.updated||0)){
-          S=local; if(!S.activeTab)S.activeTab='inf'; ensureMaBox();
+          S=local; if(!S.activeTab)S.activeTab='inf'; ensureMaBox(); ensureAsapBox();
           lastPushedJSON=null; pushRemote();
           return true;
         }
-        S=d.state;if(!S.activeTab)S.activeTab='inf';ensureMaBox();saveLocal();lastPushedJSON=JSON.stringify(S);return true;
+        S=d.state;if(!S.activeTab)S.activeTab='inf';ensureMaBox();ensureAsapBox();saveLocal();lastPushedJSON=JSON.stringify(S);return true;
       }
     }
   }catch(e){console.error('pull',e);}
@@ -3764,7 +4138,7 @@ function importJSON(e){
       const obj=JSON.parse(ev.target.result);
       if(!obj.inf||!obj.vr||!obj.inf.sessions||!obj.vr.sessions)throw new Error('형식이 올바르지 않습니다');
       if(!confirm('현재 데이터를 불러온 파일로 교체할까요? 지금 데이터는 사라집니다.'))return;
-      S=obj;ensureMaBox();save();
+      S=obj;ensureMaBox();ensureAsapBox();save();
       closeSettings();resetSubnav('inf');resetSubnav('vr');refreshAll();pushRemote();
       alert('불러오기 완료');
     }catch(err){alert('불러오기 실패: '+err.message)}
@@ -3836,7 +4210,7 @@ function startApp(){
   setupTabs();setupSegs();setupVrTypeSeg();setupSessbar();toggleVrFields();
   if(S.activeTab!=='inf'){ const tb=document.querySelector(`.tab[data-t="${S.activeTab}"]`); if(tb)tb.click(); }
   refreshAll();
-  if(S.activeTab==='ma')hideFab(); else showFab();
+  if(S.activeTab==='ma'||S.activeTab==='asap')hideFab(); else showFab();
   updateStickyOffsets();
   window.addEventListener('resize', updateStickyOffsets);
   window.addEventListener('load', updateStickyOffsets);
