@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#0f1320">
+<title>JK 가족 수영 영양 — 아빠 · 첫째 · 둘째</title>
+<style>
+:root{
+  --bg:#0f1320;--panel:#171c2e;--panel2:#1e2540;--line:#2a3354;
+  --ink:#e8ecf7;--dim:#9aa6c9;--faint:#646e93;
+  --buy:#36d399;--buy-bg:#13321f;--buy-dim:#1f7a5a;
+  --sell:#f87b8c;--sell-bg:#3a1c22;--sell-dim:#8a3543;
+  --gold:#f5c451;--vio:#8b8cf0;--vio2:#6366d9;--vio-bg:#262a52;--r:14px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{-webkit-text-size-adjust:100%}
+body{background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Apple SD Gothic Neo","Noto Sans KR",sans-serif;line-height:1.55;padding-bottom:env(safe-area-inset-bottom);word-break:keep-all;overflow-wrap:break-word}
+.wrap{max-width:760px;margin:0 auto;padding:0 16px}
+.mono{font-variant-numeric:tabular-nums}
+header{padding:20px 0 12px;border-bottom:1px solid var(--line);background:linear-gradient(180deg,#141a2e,var(--bg))}
+.htop{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+.kicker{font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--faint);font-weight:700}
+h1{font-size:22px;font-weight:800;letter-spacing:-.02em;margin-top:4px}
+h1 .v{color:var(--gold)}
+.btbtn{display:inline-flex;align-items:center;gap:5px;height:40px;padding:0 14px;background:var(--panel2);border:1px solid var(--line);color:var(--dim);border-radius:11px;font-size:13px;font-weight:600;cursor:pointer;flex-shrink:0;text-decoration:none;white-space:nowrap;transition:border-color .15s,color .15s}
+.btbtn:hover{border-color:var(--vio);color:var(--vio)}
+.tabs{position:sticky;top:0;z-index:32;display:flex;gap:8px;padding:11px 0;background:var(--bg);border-bottom:1px solid var(--line)}
+.tab{flex:1;padding:11px 6px;border-radius:11px;border:1px solid var(--line);background:var(--panel);color:var(--dim);font-size:13px;font-weight:700;cursor:pointer;transition:.18s;text-align:center;-webkit-tap-highlight-color:transparent}
+.tab.on{color:#fff;border-color:transparent}
+.tab[data-t="all"].on{background:linear-gradient(135deg,#4b4ec9,#2d2f86)}
+.tab[data-t="dad"].on{background:linear-gradient(135deg,#1f7a5a,#0f4d39)}
+.tab[data-t="s1"].on{background:linear-gradient(135deg,#b06a1f,#7a4611)}
+.tab[data-t="s2"].on{background:linear-gradient(135deg,#c99a2e,#8a6410)}
+section{display:none;padding:10px 0 90px}
+section.on{display:block;animation:fade .25s ease}
+@keyframes fade{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:17px;margin-bottom:13px}
+.card h3{font-size:15px;font-weight:800;margin-bottom:12px;display:flex;align-items:center;gap:8px}
+.card h3 .dot{width:7px;height:7px;border-radius:50%;background:var(--gold)}
+.lead{color:var(--dim);font-size:13px;margin-bottom:13px}
+.rowline{display:flex;justify-content:space-between;gap:12px;padding:9px 0;border-bottom:1px solid var(--line);font-size:13.5px}
+.rowline:last-child{border-bottom:none}
+.rowline .k{color:var(--dim);flex-shrink:0}.rowline .val{text-align:right;font-weight:600}
+.formula{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:11px 13px;font-size:13px;margin:8px 0;font-variant-numeric:tabular-nums}
+.formula .lbl{color:var(--gold);font-weight:700;font-size:11px;display:block;margin-bottom:3px;letter-spacing:.03em}
+ul.clean{list-style:none}
+ul.clean li{padding:7px 0 7px 20px;position:relative;font-size:13.5px;border-bottom:1px solid var(--line)}
+ul.clean li:last-child{border-bottom:none}
+ul.clean li::before{content:"";position:absolute;left:2px;top:14px;width:6px;height:6px;border-radius:50%;background:var(--vio)}
+ul.clean li b{color:var(--gold)}
+ul.pro li::before{background:var(--buy)}
+ul.con li::before{background:var(--sell)}
+ul.avoid li::before{background:var(--sell)}
+.steps{counter-reset:s;list-style:none}
+.steps li{padding:11px 0 11px 38px;position:relative;border-bottom:1px solid var(--line);font-size:13.5px}
+.steps li:last-child{border-bottom:none}
+.steps li::before{counter-increment:s;content:counter(s);position:absolute;left:0;top:9px;width:25px;height:25px;border-radius:8px;background:var(--panel2);border:1px solid var(--vio);color:var(--vio);font-weight:800;font-size:12px;display:flex;align-items:center;justify-content:center}
+.field{margin-bottom:12px}
+.field label{display:flex;justify-content:space-between;font-size:12px;color:var(--dim);margin-bottom:5px;font-weight:600}
+.field label .hint{color:var(--faint);font-weight:500}
+.field input{width:100%;padding:11px 12px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--ink);font-size:15px;font-variant-numeric:tabular-nums;-webkit-appearance:none;appearance:none}
+.field input:focus{outline:none;border-color:var(--vio)}
+.calc{background:linear-gradient(160deg,var(--panel2),var(--panel));border:1px solid var(--vio2);border-radius:var(--r);padding:17px;margin-bottom:13px}
+.statgrid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:9px;margin:4px 0 4px}
+.stat{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px 11px}
+.stat .sl{font-size:10.5px;color:var(--faint);font-weight:600}
+.stat .sv{font-size:16px;font-weight:800;margin-top:3px;font-variant-numeric:tabular-nums}
+.stat .sv small{font-size:11px;color:var(--dim);font-weight:600}
+.warn{background:rgba(245,196,81,.08);border:1px solid #5a4d20;border-radius:10px;padding:11px 13px;font-size:12.5px;color:#e8d9a8;margin:11px 0}
+.danger{background:rgba(248,123,140,.08);border:1px solid var(--sell-dim);border-radius:10px;padding:11px 13px;font-size:12.5px;color:#f2c0c8;margin:11px 0}
+.note{font-size:11.5px;color:var(--faint);margin-top:9px;line-height:1.5}
+table.cmp{width:100%;border-collapse:collapse;font-size:12.5px;margin-top:8px}
+table.cmp th,table.cmp td{padding:8px 6px;text-align:center;border-bottom:1px solid var(--line);vertical-align:top}
+table.cmp th{color:var(--dim);font-weight:700;font-size:11px}
+table.cmp td{font-variant-numeric:tabular-nums}
+table.cmp td:first-child,table.cmp th:first-child{text-align:left;color:var(--ink);font-weight:700}
+.pill{display:inline-block;font-size:10.5px;font-weight:800;padding:2px 8px;border-radius:20px;letter-spacing:.02em}
+.pill.go{background:var(--buy-bg);color:var(--buy)}
+.pill.care{background:#3a3320;color:var(--gold)}
+.pill.no{background:var(--sell-bg);color:var(--sell)}
+.seclabel{font-size:11px;color:var(--faint);font-weight:700;letter-spacing:.05em;margin:18px 0 8px;text-transform:uppercase}
+.disc{background:var(--panel);border:1px solid #5a4d20;border-radius:10px;padding:13px 15px;margin:14px 0;font-size:12px;color:#e8d9a8;line-height:1.6}
+.disc b{color:var(--gold)}
+.mealgrid{display:grid;gap:8px}
+.meal{background:var(--panel2);border:1px solid var(--line);border-radius:11px;padding:11px 13px}
+.meal .mt{font-size:11px;color:var(--vio);font-weight:800;letter-spacing:.04em;margin-bottom:4px}
+.meal .md{font-size:13px;color:var(--dim)}
+footer{border-top:1px solid var(--line);padding:18px 0 30px;text-align:center;color:var(--faint);font-size:11px;line-height:1.7}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <div class="htop">
+    <div>
+      <div class="kicker">JK Family · Swim Nutrition</div>
+      <h1>가족 수영 영양 <span class="v">v1.0</span></h1>
+    </div>
+    <a class="btbtn" href="index.html">← 퀀트</a>
+  </div>
+</header>
+
+<nav class="tabs">
+  <button class="tab on" data-t="all">공통</button>
+  <button class="tab" data-t="dad">아빠</button>
+  <button class="tab" data-t="s1">첫째·중3</button>
+  <button class="tab" data-t="s2">둘째·초5</button>
+</nav>
+
+<!-- ══════════════ 공통 ══════════════ -->
+<section class="on" id="sec-all">
+  <div class="card">
+    <h3><span class="dot"></span>세 사람, 한 원칙</h3>
+    <p class="lead">모두 수영 선수지만 몸 상태·나이·종목이 달라 "같은 것을 더/덜"이 아니라 <b>서로 다른 우선순위</b>를 가진다. 아래 한 줄 요약을 기준으로 각 탭에서 세부 계획을 본다.</p>
+    <div class="rowline"><span class="k">아빠 (마스터즈)</span><span class="val">🛡️ 신장 보호 · 보충제 신중 · 정기 혈액검사</span></div>
+    <div class="rowline"><span class="k">첫째 (중3·지구)</span><span class="val">🍚 총칼로리·탄수화물 · 철분 관리</span></div>
+    <div class="rowline"><span class="k">둘째 (초5·단거리)</span><span class="val">🥛 자연식 · 칼슘/비타민D · 수면</span></div>
+  </div>
+
+  <div class="card">
+    <h3><span class="dot"></span>가족 공통 기본기 (보충제보다 먼저)</h3>
+    <ul class="clean">
+      <li><b>수분</b> — 훈련 전후 체중 변화로 손실 확인. 소변이 옅은 노란색이면 대체로 충분.</li>
+      <li><b>훈련 후 30~60분</b> — 탄수화물+단백질이 든 식사/간식으로 회복 창구 활용(예: 밥+생선, 우유+바나나).</li>
+      <li><b>수면</b> — 성장기 아들은 <b>9~11시간</b>, 아빠는 회복을 위해 <b>7시간 이상</b>.</li>
+      <li><b>자연식 우선</b> — 밥·생선·달걀·두부·채소·과일·유제품으로 기본을 채우고, 보충제는 "빈틈 메우기"로만.</li>
+      <li><b>철분·칼슘 흡수</b> — 철분은 비타민C(과일·채소)와 함께, 커피/차와는 시간 간격. 칼슘은 비타민D와 함께.</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <h3><span class="dot"></span>보충제 신호등 (가족 기준)</h3>
+    <table class="cmp">
+      <tr><th>항목</th><th>아빠</th><th>첫째·중3</th><th>둘째·초5</th></tr>
+      <tr><td>크레아틴</td><td><span class="pill no">신중/의사상담</span></td><td><span class="pill no">비권장</span></td><td><span class="pill no">비권장</span></td></tr>
+      <tr><td>아르기닌·NO부스터</td><td><span class="pill no">신중/의사상담</span></td><td><span class="pill no">비권장</span></td><td><span class="pill no">비권장</span></td></tr>
+      <tr><td>고단백 파우더</td><td><span class="pill care">양 제한</span></td><td><span class="pill care">식사 우선</span></td><td><span class="pill no">불필요</span></td></tr>
+      <tr><td>카페인·자극제</td><td><span class="pill care">과다 주의</span></td><td><span class="pill no">비권장</span></td><td><span class="pill no">비권장</span></td></tr>
+      <tr><td>비타민D</td><td><span class="pill go">가능</span></td><td><span class="pill go">가능</span></td><td><span class="pill go">권장 검토</span></td></tr>
+      <tr><td>철분</td><td><span class="pill care">검사 기반</span></td><td><span class="pill care">검사 기반</span></td><td><span class="pill care">검사 기반</span></td></tr>
+      <tr><td>오메가3</td><td><span class="pill go">가능</span></td><td><span class="pill go">가능</span></td><td><span class="pill go">가능</span></td></tr>
+    </table>
+    <p class="note">신호등은 일반적 가이드이며 개인 상태에 따라 달라진다. 특히 크레아틴·철분·고단백은 <b>검사 결과와 담당의 상담</b> 후 결정.</p>
+  </div>
+
+  <div class="disc">
+    ⚕️ <b>의료 고지</b> — 이 페이지는 교육용 일반 정보이며 의학적 조언이 아닙니다. 아빠의 신장 상태, 아이들의 성장·검사 수치에 대한 실제 결정은 반드시 <b>신장내과·소아청소년과·스포츠영양 전문가</b>와 상의하세요. 보충제는 도핑 성분이 섞일 수 있으니, 선수 등록 아동은 특히 검증된 제품인지 확인이 필요합니다.
+  </div>
+</section>
+
+<!-- ══════════════ 아빠 ══════════════ -->
+<section id="sec-dad">
+  <div class="card">
+    <h3><span class="dot"></span>아빠 — 프로필 & 우선순위</h3>
+    <p class="lead">82년생 마스터즈 수영 선수. 9년 전 신장암으로 한쪽 신장 ~30%만 남기고 절제, 현재 신장기능 약 60%. <b>퍼포먼스보다 신장 보호가 상위 목표</b>. 마스터즈 훈련은 즐기되, 고단백·크레아틴 같은 "선수용 최적화"는 신장 부담·검사 해석 관점에서 신중하게.</p>
+    <div class="rowline"><span class="k">최우선</span><span class="val">신장 기능 유지 · 혈압 관리</span></div>
+    <div class="rowline"><span class="k">핵심 리스크</span><span class="val">과단백·탈수·NSAID·검사 미모니터링</span></div>
+    <div class="rowline"><span class="k">모니터링</span><span class="val">BUN·크레아티닌·eGFR·인·칼륨</span></div>
+  </div>
+
+  <div class="calc">
+    <h3 style="font-size:15px;font-weight:800;margin-bottom:12px;display:flex;align-items:center;gap:8px"><span class="dot" style="width:7px;height:7px;border-radius:50%;background:var(--gold)"></span>보수적 기준 추정기</h3>
+    <div class="field">
+      <label>체중 <span class="hint">kg</span></label>
+      <input id="dadW" type="number" inputmode="decimal" placeholder="예: 72" value="72">
+    </div>
+    <div class="statgrid">
+      <div class="stat"><div class="sl">단백질/일(보수)</div><div class="sv" id="dadP">—</div></div>
+      <div class="stat"><div class="sl">수분/일(가이드)</div><div class="sv" id="dadWa">—</div></div>
+      <div class="stat"><div class="sl">끼당 단백 분산</div><div class="sv" id="dadPm">—</div></div>
+    </div>
+    <div class="formula"><span class="lbl">단백질 목표</span>0.8~1.0 g/kg — 신장기능 감소 시 보수적 기본값. 마스터즈 훈련량이 많다면 상향 여부는 <b>신장내과와 상의 후</b> 결정(무조건 고단백 ✕).</div>
+    <p class="note">추정치는 출발점일 뿐이며 실제 목표는 최근 eGFR·단백뇨(알부민)·활동량에 따라 담당의가 조정한다.</p>
+  </div>
+
+  <div class="card">
+    <h3><span class="dot"></span>단백질 — "충분히, 그러나 과하지 않게"</h3>
+    <ul class="clean">
+      <li>목표는 <b>0.8~1.0 g/kg</b> 근처에서 시작. 마스터즈라고 1.6~2.0 g/kg 고단백으로 밀지 않는다.</li>
+      <li>한 끼에 몰지 말고 <b>3끼로 분산</b>(끼당 20~30g) — 신장 부하와 흡수 모두 유리.</li>
+      <li>질 좋은 단백질 위주: 생선·달걀·닭가슴살·두부·콩. 가공육·과한 붉은고기는 절제.</li>
+      <li>단백질 파우더는 "식사로 못 채운 날"만 소량. <b>인(phosphate) 첨가물</b> 많은 제품 주의.</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <h3><span class="dot"></span>미네랄 — 인 · 칼륨 · 나트륨</h3>
+    <ul class="clean">
+      <li><b>인</b> — 가공식품·콜라·인 첨가물(인산염) 절제. 검사에서 인 상승 시 특히 관리.</li>
+      <li><b>칼륨</b> — 검사 정상이면 과일·채소 정상 섭취. 칼륨이 오르면 담당의 지도로 조절(무작정 제한 ✕).</li>
+      <li><b>나트륨</b> — 혈압·신장 보호를 위해 짜게 먹지 않기. 라면·국물·가공식품 빈도 낮추기.</li>
+    </ul>
+    <div class="warn">검사 수치가 정상 범위인지에 따라 인·칼륨 "제한"이 필요할 수도, 불필요할 수도 있다. <b>수치 없이 스스로 강하게 제한하지 말 것</b> — 오히려 영양 불균형 위험.</div>
+  </div>
+
+  <div class="card">
+    <h3><span class="dot"></span>보충제 — 신중 목록</h3>
+    <div class="seclabel">신중 / 상담 후에만</div>
+    <ul class="clean avoid">
+      <li><b>크레아틴</b> — 혈중 크레아티닌을 올려 <b>신기능 검사 해석을 교란</b>하고 신장 부하 논란이 있어, 감소된 신장에서는 기본 비권장. 굳이 쓸 경우 반드시 담당의 상담+모니터링.</li>
+      <li><b>아르기닌·시트룰린·NO 부스터</b> — 신장 대사 부담·근거 부족으로 신중.</li>
+      <li><b>고용량 단백질/BCAA 파우더</b> — 질소·인 부하 관점에서 양 제한.</li>
+      <li><b>카페인 과다·부스터</b> — 혈압·탈수 관점에서 과다 주의(적당한 커피 1~2잔은 대개 무방).</li>
+    </ul>
+    <div class="seclabel">대체로 가능(그래도 상담 권장)</div>
+    <ul class="clean pro">
+      <li><b>비타민D</b> — 결핍 시 보충. 뼈·근육에 도움.</li>
+      <li><b>오메가3</b> — 심혈관·항염. 신장에도 대체로 우호적.</li>
+      <li><b>철분</b> — <b>검사로 결핍 확인된 경우에만</b>. 임의 보충 ✕.</li>
+    </ul>
+    <div class="danger">🚫 <b>NSAID 진통제(이부프로펜 등) 상습 복용 금지</b> — 신독성. 근육통에 습관적으로 쓰지 말고 필요 시 담당의와 안전한 대안 확인.</div>
+  </div>
+
+  <div class="card">
+    <h3><span class="dot"></span>정기 모니터링 체크리스트</h3>
+    <ul class="clean">
+      <li><b>혈액</b> — BUN · 크레아티닌 · eGFR · 인 · 칼륨 · 나트륨</li>
+      <li><b>소변</b> — 단백뇨/알부민(신장 손상 조기 신호)</li>
+      <li><b>혈압</b> — 가정 측정 습관화(신장 보호 핵심 지표)</li>
+      <li><b>주기</b> — 신장내과 권고 간격 준수. 훈련량·보충제 변경 시엔 재검 앞당김 고려.</li>
+    </ul>
+    <p class="note">새 보충제나 고강도 프로그램을 시작하기 전/후로 검사를 비교하면, 신장에 미치는 영향을 데이터로 확인할 수 있다.</p>
+  </div>
+</section>
+
+<!-- ══════════════ 첫째 ══════════════ -->
+<section id="sec-s1">
+  <div class="card">
+    <h3><span class="dot"></span>첫째 — 프로필 & 우선순위</h3>
+    <p class="lead">중3, 자유형 400·800m 지구 종목. 성장기 + 장거리 훈련이 겹쳐 <b>에너지(칼로리)와 탄수화물이 부족해지기 쉽고, 철분 결핍 위험</b>이 크다. 보충제보다 "충분히 먹고, 잘 회복하고, 철분 상태를 확인"하는 게 경기력의 90%.</p>
+    <div class="rowline"><span class="k">최우선</span><span class="val">총칼로리·탄수화물 충족(성장+지구력)</span></div>
+    <div class="rowline"><span class="k">핵심 리스크</span><span class="val">에너지 부족(RED-S)·철분 결핍</span></div>
+    <div class="rowline"><span class="k">비권장</span><span class="val">크레아틴·자극제·성인용 보충제</span></div>
+  </div>
+
+  <div class="calc">
+    <h3 style="font-size:15px;font-weight:800;margin-bottom:12px;display:flex;align-items:center;gap:8px"><span class="dot" style="width:7px;height:7px;border-radius:50%;background:var(--gold)"></span>지구 훈련일 연료 추정기</h3>
+    <div class="field">
+      <label>체중 <span class="hint">kg</span></label>
+      <input id="s1W" type="number" inputmode="decimal" placeholder="예: 55" value="55">
+    </div>
+    <div class="statgrid">
+      <div class="stat"><div class="sl">탄수화물/일</div><div class="sv" id="s1C">—</div></div>
+      <div class="stat"><div class="sl">단백질/일</div><div class="sv" id="s1P">—</div></div>
+      <div class="stat"><div class="sl">수분/일(가이드)</div><div class="sv" id="s1Wa">—</div></div>
+    </div>
+    <div class="formula"><span class="lbl">기준</span>탄수 6~10 g/kg(훈련량 많은 날↑) · 단백 1.2~1.6 g/kg · 성장기라 <b>총칼로리 부족이 가장 큰 적</b>.</div>
+    <p class="note">키 크는 시기+장거리 훈련은 성인보다 상대적으로 더 먹어야 한다. 체중이 안 늘거나 기록이 정체되면 에너지 부족을 먼저 의심.</p>
+  </div>
+
+  <div class="card">
+    <h3><span class="dot"></span>에너지 & 탄수화물 — 지구력의 연료</h3>
+    <ul class="clean">
+      <li>훈련 전(1~3시간): <b>탄수 위주 식사</b>(밥·빵·시리얼·과일)로 글리코겐 채우기.</li>
+      <li>긴 훈련/이부제(오전+오후) 사이: 간식으로 <b>탄수+약간의 단백</b>(주먹밥, 바나나+우유).</li>
+      <li>훈련 후 30~60분: 밥+단백질 반찬으로 회복. "안 배고파도 조금은" 먹는 습관.</li>
+      <li>하루 세 끼로 부족하면 <b>간식 2~3회</b> 추가 — 성장기엔 정상이다.</li>
+    </ul>
+    <div class="warn">체중 감소·잦은 피로·기록 정체·잦은 감기는 <b>상대적 에너지 부족(RED-S)</b> 신호일 수 있다. 무리한 체중 감량 금지, 필요 시 전문가 상담.</div>
+  </div>
+
+  <div class="card">
+    <h3><span class="dot"></span>철분 — 지구 선수의 약점</h3>
+    <ul class="clean">
+      <li>지구 종목+성장+(사춘기) 요인으로 <b>철분/페리틴 저하</b>가 흔하다 → 쉽게 지치고 기록 하락.</li>
+      <li>음식: 붉은고기·간·달걀노른자·시금치·콩·철분강화 시리얼. <b>비타민C(과일)와 함께</b> 흡수↑.</li>
+      <li>흡수 방해: 식사 직후 커피·홍차·녹차 → 시간 간격 두기.</li>
+      <li>보충제 철분은 <b>혈액검사(페리틴 포함)로 결핍 확인 후, 소아과/스포츠의학 지도하에</b>만. 과잉철은 해롭다.</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <h3><span class="dot"></span>단백질 & 뼈</h3>
+    <ul class="clean">
+      <li>단백질 <b>1.2~1.6 g/kg</b>를 자연식으로 충분히 — 파우더 없이 식사로 대부분 달성 가능.</li>
+      <li>끼니마다 단백질 한 손바닥(생선·닭·달걀·두부·콩·유제품).</li>
+      <li>성장기 <b>칼슘·비타민D</b>도 함께 — 우유/유제품, 생선, 햇빛.</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <h3><span class="dot"></span>비권장 — 지금은 아니다</h3>
+    <ul class="clean avoid">
+      <li><b>크레아틴</b> — 청소년 장기 안전성 근거 부족 + 지구 종목 이득 적음. 비권장.</li>
+      <li><b>카페인·에너지드링크·프리워크아웃</b> — 성장기 자극제 비권장, 수면·심박에 악영향.</li>
+      <li><b>성인용 대용량 단백/부스터</b> — 불필요. 식사로 충분.</li>
+    </ul>
+    <p class="note">지금 투자할 곳은 보충제가 아니라 <b>충분한 식사·수면·꾸준한 회복</b>. 그게 성장기 최고의 "합법 부스터".</p>
+  </div>
+
+  <div class="card">
+    <h3><span class="dot"></span>이부제(하루 2회) 훈련일 예시</h3>
+    <div class="mealgrid">
+      <div class="meal"><div class="mt">오전 훈련 전</div><div class="md">밥/시리얼+우유+바나나 (탄수 위주)</div></div>
+      <div class="meal"><div class="mt">오전 훈련 후</div><div class="md">주먹밥·샌드위치+우유 (탄수+단백)</div></div>
+      <div class="meal"><div class="mt">점심</div><div class="md">밥+생선/고기+채소+과일 (철분+비타민C)</div></div>
+      <div class="meal"><div class="mt">오후 훈련 전/중</div><div class="md">바나나·에너지바·주스로 연료 보충</div></div>
+      <div class="meal"><div class="mt">저녁(회복)</div><div class="md">밥+단백질 반찬+채소, 유제품 추가</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════ 둘째 ══════════════ -->
+<section id="sec-s2">
+  <div class="card">
+    <h3><span class="dot"></span>둘째 — 프로필 & 우선순위</h3>
+    <p class="lead">초5, 배영 50·100m 단거리. 성장 초기 단계라 <b>보충제는 필요 없고, 균형 잡힌 자연식·충분한 수면·즐거운 운동 습관</b>이 전부다. 이 시기의 목표는 "기록"이 아니라 <b>건강한 성장과 물에 대한 좋은 관계</b>.</p>
+    <div class="rowline"><span class="k">최우선</span><span class="val">균형 자연식 · 칼슘/비타민D · 수면</span></div>
+    <div class="rowline"><span class="k">핵심</span><span class="val">다양하게 먹기 · 아침 챙기기 · 9~11h 수면</span></div>
+    <div class="rowline"><span class="k">불필요</span><span class="val">단백질 파우더·크레아틴·자극제</span></div>
+  </div>
+
+  <div class="card">
+    <h3><span class="dot"></span>접시 원칙 — 복잡할 것 없다</h3>
+    <ul class="clean">
+      <li><b>½ 채소·과일</b>, <b>¼ 탄수(밥·면·빵)</b>, <b>¼ 단백질(생선·고기·달걀·두부·콩)</b>.</li>
+      <li>매일 <b>유제품</b>(우유·요구르트·치즈)로 칼슘 채우기.</li>
+      <li>아침을 거르지 않기 — 성장·집중·오전 훈련의 연료.</li>
+      <li>물 자주. 단 음료·에너지드링크·탄산은 최소화.</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <h3><span class="dot"></span>성장의 3대 축</h3>
+    <ul class="clean">
+      <li><b>칼슘</b> — 우유/유제품·멸치·두부·녹색채소. 뼈가 자라는 시기.</li>
+      <li><b>비타민D</b> — 햇빛 + 생선/달걀. 부족 지역·계절엔 소아과 상담 후 보충 검토.</li>
+      <li><b>수면</b> — <b>9~11시간</b>. 성장호르몬은 잘 때 나온다. 훈련보다 우선.</li>
+    </ul>
+    <div class="warn">보충제로 성장을 "당길" 수 없다. 편식으로 특정 영양이 크게 빠지지 않는 한, <b>다양한 음식 > 알약</b>.</div>
+  </div>
+
+  <div class="card">
+    <h3><span class="dot"></span>단거리 선수의 회복 & 간식</h3>
+    <ul class="clean">
+      <li>단거리라도 성장기엔 훈련 후 <b>탄수+단백 간식</b>이 회복에 좋다(우유+바나나, 치즈+크래커).</li>
+      <li>간식은 "정크"가 아니라 <b>과일·유제품·견과·통곡물</b> 중심으로.</li>
+      <li>훈련이 즐겁도록 — 지나친 식단 통제·체중 언급은 이 나이엔 역효과.</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <h3><span class="dot"></span>하루 예시(훈련일)</h3>
+    <div class="mealgrid">
+      <div class="meal"><div class="mt">아침</div><div class="md">밥/토스트+달걀+우유+과일</div></div>
+      <div class="meal"><div class="mt">점심</div><div class="md">밥+생선/고기+채소, 물</div></div>
+      <div class="meal"><div class="mt">훈련 후 간식</div><div class="md">우유+바나나 또는 요구르트+과일</div></div>
+      <div class="meal"><div class="mt">저녁</div><div class="md">균형 접시(½채소 ¼탄수 ¼단백)+유제품</div></div>
+      <div class="meal"><div class="mt">밤</div><div class="md">일찍 자기 — 9~11시간 확보</div></div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  JK 가족 수영 영양 · 교육용 일반 정보<br>
+  실제 결정은 신장내과·소아청소년과·스포츠영양 전문가와 상의하세요.
+</footer>
+</div>
+
+<script>
+// ── 탭 전환 ──
+document.querySelectorAll('.tab').forEach(function(t){
+  t.addEventListener('click', function(){
+    document.querySelectorAll('.tab').forEach(function(x){x.classList.remove('on')});
+    document.querySelectorAll('section').forEach(function(x){x.classList.remove('on')});
+    t.classList.add('on');
+    var id = 'sec-' + t.dataset.t;
+    document.getElementById(id).classList.add('on');
+    window.scrollTo(0,0);
+  });
+});
+
+// ── 추정기 유틸 ──
+function num(id){ var v=parseFloat(document.getElementById(id).value); return (isFinite(v)&&v>0)?v:0; }
+function rng(a,b,unit){ return Math.round(a)+'<small>~'+Math.round(b)+' '+unit+'</small>'; }
+function set(id,html){ document.getElementById(id).innerHTML = html; }
+
+// 아빠 (보수적 신장 배려)
+function calcDad(){
+  var w = num('dadW');
+  if(!w){ ['dadP','dadWa','dadPm'].forEach(function(i){set(i,'—')}); return; }
+  set('dadP',  rng(w*0.8, w*1.0, 'g'));
+  set('dadWa', rng(w*30, w*35, 'ml'));           // 일반 가이드(개인차·의사지도)
+  set('dadPm', rng(w*0.8/3, w*1.0/3, 'g'));       // 끼당 분산
+}
+// 첫째 (지구·성장)
+function calcS1(){
+  var w = num('s1W');
+  if(!w){ ['s1C','s1P','s1Wa'].forEach(function(i){set(i,'—')}); return; }
+  set('s1C',  rng(w*6, w*10, 'g'));
+  set('s1P',  rng(w*1.2, w*1.6, 'g'));
+  set('s1Wa', rng(w*40, w*60, 'ml'));            // 성장기 훈련일 대략
+}
+['dadW'].forEach(function(id){ document.getElementById(id).addEventListener('input', calcDad); });
+['s1W'].forEach(function(id){ document.getElementById(id).addEventListener('input', calcS1); });
+calcDad(); calcS1();
+</script>
+</body>
+</html>
