@@ -240,7 +240,7 @@ td:first-child{text-align:left;}
   <div class="brand">
     <div>
       <div class="logo">Backtest</div>
-      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v1.118</span></h1>
+      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v1.119</span></h1>
     </div>
   </div>
   <a href="/" class="home">← JK 퀀트</a>
@@ -280,6 +280,12 @@ td:first-child{text-align:left;}
       <div class="seg" id="dcaPeriod">
         <button data-p="common" class="active" title="선택 종목 공통 기간으로 통일 (공정 비교)">공통기간</button>
         <button data-p="individual" title="각 종목 가용 전체 기간 / CAGR 순위">개별기간</button>
+      </div>
+    </div>
+    <div class="ctrl s-dca"><label>레버리지 기간 확장 <span style="font-size:9px;color:var(--dim)">상장 전=1배×배수</span></label>
+      <div class="seg" id="dcaLevExt">
+        <button data-x="1" class="active" title="레버리지 ETF 상장 전 기간을 1배 기초지수(SOXX·QQQ·XLK·EWY·SPY)의 일수익률×배수로 합성해 백테 기간을 늘림 (상장 후는 실제 데이터)">확장</button>
+        <button data-x="0" title="실제 상장 이후 데이터만 사용">실데이터</button>
       </div>
     </div>
 
@@ -844,6 +850,7 @@ function setStrat(s){
 // seg 버튼들
 document.getElementById('dcaFreq').onclick=e=>{if(e.target.dataset.f){document.querySelectorAll('#dcaFreq button').forEach(b=>b.classList.remove('active'));e.target.classList.add('active');dcaFreq=e.target.dataset.f;if(dataLoaded)run();}};
 document.getElementById('dcaPeriod').onclick=e=>{if(e.target.dataset.p){document.querySelectorAll('#dcaPeriod button').forEach(b=>b.classList.remove('active'));e.target.classList.add('active');dcaPeriodMode=e.target.dataset.p;if(dataLoaded)run();}};
+document.getElementById('dcaLevExt').onclick=e=>{if(e.target.dataset.x){document.querySelectorAll('#dcaLevExt button').forEach(b=>b.classList.remove('active'));e.target.classList.add('active');dcaLevExt=e.target.dataset.x==='1';if(dataLoaded)run();}};
 document.getElementById('imCompound').onclick=e=>{if(e.target.dataset.c){document.querySelectorAll('#imCompound button').forEach(b=>b.classList.remove('active'));e.target.classList.add('active');if(dataLoaded)run();}};
 document.getElementById('vrMode').onclick=e=>{
   if(!e.target.dataset.m)return;
@@ -1201,21 +1208,73 @@ function runDCA1(tkr,days,totalAmt,costOn){
   return _dcaOne(tkr,days,amt,1,costOn);
 }
 function _dcaOne(t,days,amt,step,costOn){
-  if(!M[t]) return {invested:0,final:0,ret:0,snap:[],mdd:0,uvSnap:[]};
+  const D=srcOf(t);
+  if(!D) return {invested:0,final:0,ret:0,snap:[],mdd:0,uvSnap:[]};
   // MDD·변동성은 단위가치(평가액÷누적투입) 기준 — 적립금 유입이 '수익률'로 잡히는 왜곡 제거.
   //   (평가액 기준이면 초기 $3→$30 적립 구간이 +900% 수익처럼 계산돼 변동성 수천% 버그)
   const FEE=costOn?COST_FEE:0;   // 비용반영 시 매회 매수 수수료 (costOn 미지정=기존과 동일)
   let sh=0,inv=0,uvPeak=-Infinity,mdd=0;const snap=[],uvSnap=[];
   days.forEach((d,i)=>{
-    const p=M[t][d]?.[C]??0;
+    const p=D[d]?.[C]??0;
     if(p>0&&i%step===0){const fee=amt*FEE;sh+=(amt-fee)/p;inv+=amt;}
     if(p>0&&inv>0){ const uv=sh*p/inv; if(uv>uvPeak)uvPeak=uv; else if(uvPeak>0){ const dd=(uvPeak-uv)/uvPeak; if(dd>mdd)mdd=dd; } }
     if(i%10===0){ snap.push([d,p>0?sh*p:null]); uvSnap.push([d,(p>0&&inv>0)?sh*p/inv:null]); }
   });
-  const last=M[t][days[days.length-1]]?.[C]??0;
+  const last=D[days[days.length-1]]?.[C]??0;
   const fin=sh*last;
   return {invested:inv,final:fin,ret:inv>0?(fin/inv-1)*100:0,snap,mdd:mdd*100,uvSnap};
 }
+
+/* ──── 레버리지 ETF 기간 확장 (DCA 전용) ────
+   레버리지 ETF의 상장 전 기간을 1배 기초지수 ETF의 일수익률×배수로 합성해 접합. 상장 이후는 실제 데이터. */
+const LEV_UNDERLYING={SOXL:'SOXX',USD:'SOXX',TQQQ:'QQQ',QLD:'QQQ',TECL:'XLK',KORU:'EWY',SSO:'SPY',UPRO:'SPY'};
+let dcaLevExt=true;     // 확장 on/off (DCA 세그)
+let EXTM={};            // 확장 데이터: t → {date:[C,O,H,L]} (합성 전인셉션 + 실제)
+function srcOf(t){ return (dcaLevExt && EXTM[t]) ? EXTM[t] : M[t]; }
+// 단일 종목 시세를 M[sym]에 로드 (기초지수 확보용)
+async function fetchTickerInto(sym, fromDate){
+  const now=Math.floor(Date.now()/1000), p1=Math.floor(new Date(fromDate||'1998-01-01').getTime()/1000);
+  const chunkSec=5*365.25*86400|0, chunks=[]; let cur=now+86400;
+  while(cur>p1){ const from=Math.max(p1,cur-chunkSec); chunks.push([from,cur]); cur=from; if(cur<=p1)break; }
+  const allData={};
+  await Promise.all(chunks.map(([c1,c2])=>
+    fetch(`/api/quote?symbol=${sym}&range=5y&period1=${c1}&period2=${c2}`).then(r=>r.ok?r.json():null).then(j=>{
+      (j&&j.ohlc||[]).filter(d=>d&&d.close!=null).forEach(d=>{ if(!allData[d.date])allData[d.date]=[d.date,d.close,d.open||d.close,d.high||d.close,d.low||d.close]; });
+    }).catch(()=>{})));
+  const rows=Object.values(allData).sort((a,b)=>a[0]<b[0]?-1:1);
+  if(rows.length>5){ M[sym]={}; rows.forEach(r=>{M[sym][r[0]]=[r[1],r[2],r[3],r[4]];}); return true; }
+  return false;
+}
+// 활성 레버리지 종목들의 확장 데이터 구축 (필요 시 기초지수 fetch). extInfo: t → {under,from,to}
+async function buildDcaExt(tickers, start){
+  EXTM={}; const info={};
+  if(!dcaLevExt) return info;
+  for(const t of tickers){
+    const under=LEV_UNDERLYING[t], lev=(META[t]&&META[t].lev)||0;
+    if(!under||lev<2||!M[t]||!Object.keys(M[t]).length) continue;
+    const realDates=Object.keys(M[t]).sort(), realStart=realDates[0];
+    if(realStart<=start) continue;                       // 이미 요청 시작 이전부터 실데이터 있음
+    if(!M[under]||!Object.keys(M[under]).length){ await fetchTickerInto(under, start); }
+    const U=M[under]; if(!U||!Object.keys(U).length) continue;
+    const upTo=Object.keys(U).sort().filter(d=>d<=realStart);
+    const preDates=upTo.filter(d=>d<realStart);
+    if(preDates.length<10) continue;
+    // 합성 지수: 기초 일수익률×lev 복리 (일간 리셋 = 레버리지 감쇠 반영)
+    const synMap={}; let syn=1; synMap[upTo[0]]=1;
+    for(let i=1;i<upTo.length;i++){ const r=U[upTo[i]][C]/U[upTo[i-1]][C]-1; syn*=(1+r*lev); synMap[upTo[i]]=syn; }
+    const synAtStart=synMap[realStart]!=null?synMap[realStart]:synMap[upTo[upTo.length-1]];
+    const k=M[t][realStart][C]/synAtStart;               // realStart에서 실제가에 접합
+    const merged={};
+    preDates.forEach(d=>{ const s=synMap[d]; if(s!=null){ const px=+(s*k); merged[d]=[px,px,px,px]; } });
+    realDates.forEach(d=>{ merged[d]=M[t][d]; });
+    EXTM[t]=merged; info[t]={under,from:preDates[0],to:realStart,lev};
+  }
+  return info;
+}
+// DCA 확장 반영 날짜 헬퍼 (srcOf 기준)
+function _daysOf(t,start,end){ const D=srcOf(t); return D?Object.keys(D).filter(d=>d>=start&&d<=end):[]; }
+function commonDaysDca(start,end,tickers){ let s=null; tickers.forEach(t=>{ const ds=new Set(_daysOf(t,start,end)); s=s===null?ds:new Set([...s].filter(x=>ds.has(x))); }); return [...(s||new Set())].sort(); }
+function usableTickersDca(start,end,tickers){ const use=[],skip=[]; tickers.forEach(t=>{ (_daysOf(t,start,end).length>=10?use:skip).push(t); }); return {use,skip}; }
 
 // ──── 전략 2: 무한매수법 V4.0 ────
 function runIM(days,tkr,cap,divs,targetPct,compound=true){
@@ -1933,28 +1992,33 @@ async function run(){
   if(strat==='dca'){
     if(!dcaActive.size){alert('종목을 선택하세요.');return;}
     const amt=+document.getElementById('dcaAmt').value||10;
+    // 레버리지 기간 확장: 상장 전 기간을 1배 기초×배수로 합성 (기초지수 fetch 포함)
+    dcaLevExt=document.querySelector('#dcaLevExt button.active')?.dataset.x!=='0';
+    let extInfo={};
+    if(dcaLevExt){ const stat=document.getElementById('dataStat'); if(stat){stat.style.display='';stat.textContent='레버리지 기초지수 로딩·합성 중…';stat.style.color='var(--dim)';}
+      extInfo=await buildDcaExt([...dcaActive], start); }
+    else EXTM={};
     if(dcaPeriodMode==='individual'){
       // 개별기간: 각 종목 자기 가용 기간으로 독립 실행
-      const res={}, meta={};
+      const res={};
       [...dcaActive].forEach(t=>{
-        const tdays=commonDays(start,end,[t]);
+        const tdays=commonDaysDca(start,end,[t]);
         if(tdays.length<10){ res[t]={invested:0,final:0,ret:0,snap:[],skip:true}; return; }
         res[t]=_dcaOne(t,tdays,amt,{daily:1,weekly:5,monthly:21}[dcaFreq]||1);
         const calYrs=(new Date(tdays[tdays.length-1])-new Date(tdays[0]))/(365.25*864e5);
         res[t].cagr=cagrOf(res[t].final,res[t].invested,Math.max(calYrs,0.1));
         res[t].period=`${tdays[0].slice(0,7)}~${tdays[tdays.length-1].slice(0,7)}`;
         res[t].yrs=Math.max(calYrs,0.1);
-        meta[t]={days:tdays};
       });
-      renderDCA(res,[...dcaActive],{amt,freq:dcaFreq,days:null,mode:'individual'});
+      renderDCA(res,[...dcaActive],{amt,freq:dcaFreq,days:null,mode:'individual',ext:extInfo});
     }else{
       // 공통기간: 전 종목 교집합
-      const {use:dcaUse,skip:dcaSkip}=usableTickers(start,end,[...dcaActive]);
+      const {use:dcaUse,skip:dcaSkip}=usableTickersDca(start,end,[...dcaActive]);
       if(!dcaUse.length){alert('선택 종목 모두 해당 기간 데이터가 없습니다. 날짜를 확인하세요.');return;}
-      const days=commonDays(start,end,dcaUse);
+      const days=commonDaysDca(start,end,dcaUse);
       if(days.length<10){alert('공통 거래일이 부족합니다. 개별기간 모드를 사용하세요.');return;}
       const res=runDCA(days,amt,dcaFreq);
-      renderDCA(res,[...dcaActive],{amt,freq:dcaFreq,days,mode:'common'});
+      renderDCA(res,[...dcaActive],{amt,freq:dcaFreq,days,mode:'common',ext:extInfo});
       noteSkipped(dcaSkip);
     }
   }else if(strat==='im'){
@@ -2082,6 +2146,10 @@ function renderDCA(res,tickers,opts){
     document.getElementById('winner').style.display='';
     document.getElementById('winner').innerHTML=`🏆 <strong>${top}</strong> 1위 · ${opts.days[0]}~${opts.days[opts.days.length-1]} · $${fmt(+document.getElementById('dcaAmt').value||10)}/${freqL} · 원금 $${fmt(r0.invested)} → <strong>$${fmt(r0.final)}</strong> (+${r0.ret.toFixed(0)}%)`;
   }
+  // 레버리지 기간 확장 안내
+  { const ext=opts.ext||{}, extList=Object.keys(ext);
+    if(extList.length){ const parts=extList.map(t=>`${t}<span style="color:var(--dim)">(${ext[t].under}×${ext[t].lev}, ${ext[t].from.slice(0,7)}~${ext[t].to.slice(0,7)} 합성)</span>`);
+      document.getElementById('winner').innerHTML+=`<div style="font-size:11px;color:var(--gold);margin-top:6px">🔗 레버리지 기간 확장: ${parts.join(' · ')} — 상장 전은 기초지수 일수익률×배수로 합성</div>`; } }
   // 공통기간 모드는 yrs/cagr이 없으므로 여기서 보강 (개별기간은 run()에서 이미 세팅)
   if(!isInd && opts.days && opts.days.length>1){
     const _y=Math.max((new Date(opts.days[opts.days.length-1])-new Date(opts.days[0]))/(365.25*864e5),0.1);
