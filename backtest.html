@@ -243,7 +243,7 @@ td:first-child{text-align:left;}
   <div class="brand">
     <div>
       <div class="logo">Backtest</div>
-      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v1.121</span></h1>
+      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v1.122</span></h1>
     </div>
   </div>
   <a href="/" class="home">← JK 퀀트</a>
@@ -1876,9 +1876,9 @@ function renderCombo(res, cap, days, mode){
   const isDca=res.cmode==='dca', modeLbl=isDca?'적립(기간 분할)':'일시금(목돈 거치)';
   const nStrat=new Set(R.map(r=>r.key)).size, nTkr=new Set(R.map(r=>r.ticker)).size;
   let h=`<div class="cmp-card"><h3>${res.yrs.toFixed(1)}년 · 원금 ${money(cap)} · <span style="color:var(--${isDca?'accent':'gold'})">${modeLbl}</span> <span style="font-size:11px;color:var(--dim)">전략 ${nStrat} × 종목 ${nTkr} = ${R.length}개 · 수익률순</span></h3>`;
-  h+=`<div style="overflow-x:auto"><table class="cmp-tbl"><thead><tr><th>종목</th><th>전략</th><th>원금</th><th>최종금액</th><th>총수익률</th><th>CAGR</th><th>MDD</th><th>MAR</th></tr></thead><tbody>`;
+  h+=`<div style="overflow-x:auto"><table class="cmp-tbl"><thead><tr><th>종목 · 전략</th><th>원금</th><th>최종금액</th><th>총수익률</th><th>CAGR</th><th>MDD</th><th>MAR</th></tr></thead><tbody>`;
   R.forEach((r,i)=>{ const dot=r.color?`<span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:${r.color};margin-right:5px"></span>`:'';
-    h+=`<tr${i===0?' class="win"':''}><td><span class="cdim" style="margin-right:6px">${i+1}</span>${dot}<b>${r.ticker}</b>${i===0?' 🥇':''}</td><td class="cdim">${r.strat}</td><td>${money(r.invested)}</td><td class="cacc">${money(r.final)}</td><td class="${r.ret>=0?'cg':'cr'}"><b>${pct(r.ret)}</b></td><td class="${r.cagr>=0?'cg':'cr'}">${pct(r.cagr)}</td><td>${r.mdd.toFixed(0)}%</td><td class="cgold">${r.mar.toFixed(2)}</td></tr>`; });
+    h+=`<tr${i===0?' class="win"':''}><td><span class="cdim" style="margin-right:6px">${i+1}</span>${dot}<b>${r.ticker}</b> <span class="cdim">${r.strat}</span>${i===0?' 🥇':''}</td><td>${money(r.invested)}</td><td class="cacc">${money(r.final)}</td><td class="${r.ret>=0?'cg':'cr'}"><b>${pct(r.ret)}</b></td><td class="${r.cagr>=0?'cg':'cr'}">${pct(r.cagr)}</td><td>${r.mdd.toFixed(0)}%</td><td class="cgold">${r.mar.toFixed(2)}</td></tr>`; });
   h+=`</tbody></table></div>`;
   const note=isDca
     ? `적립 모드: 원금을 매일 균등 투입(총투입=원금). 무매는 목돈 분할이 본질이라 적립 목록엔 없음.`
