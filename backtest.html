@@ -240,7 +240,7 @@ td:first-child{text-align:left;}
   <div class="brand">
     <div>
       <div class="logo">Backtest</div>
-      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v1.119</span></h1>
+      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v1.120</span></h1>
     </div>
   </div>
   <a href="/" class="home">← JK 퀀트</a>
@@ -282,10 +282,10 @@ td:first-child{text-align:left;}
         <button data-p="individual" title="각 종목 가용 전체 기간 / CAGR 순위">개별기간</button>
       </div>
     </div>
-    <div class="ctrl s-dca"><label>레버리지 기간 확장 <span style="font-size:9px;color:var(--dim)">상장 전=1배×배수</span></label>
-      <div class="seg" id="dcaLevExt">
+    <div class="ctrl s-dca"><label>레버리지 확장 <span style="font-size:9px;color:var(--dim)">상장전 1배×배수 합성</span></label>
+      <div class="seg" id="dcaLevExt" style="align-self:flex-start">
         <button data-x="1" class="active" title="레버리지 ETF 상장 전 기간을 1배 기초지수(SOXX·QQQ·XLK·EWY·SPY)의 일수익률×배수로 합성해 백테 기간을 늘림 (상장 후는 실제 데이터)">확장</button>
-        <button data-x="0" title="실제 상장 이후 데이터만 사용">실데이터</button>
+        <button data-x="0" title="실제 상장 이후 데이터만 사용">실제</button>
       </div>
     </div>
 
