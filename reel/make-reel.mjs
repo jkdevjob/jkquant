@@ -18,6 +18,7 @@ import pw from "playwright";
 import ffmpeg from "@ffmpeg-installer/ffmpeg";
 import { fetchSeries, sliceByDate } from "./lib/data.mjs";
 import { runDCA } from "./lib/dca.mjs";
+import { writeCopy } from "./lib/ai-plan.mjs";
 
 const { chromium } = pw;
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -110,6 +111,26 @@ async function makeOne(spec, browser) {
     accent: spec.accent || null,
   };
 
+  // AI 카피(옵션): 실제 백테스트 숫자로 후킹/펀치/캡션/해시태그 생성
+  let caption = null;
+  if (spec.aiCopy) {
+    try {
+      process.stdout.write("\n  Claude 카피 생성…");
+      const copy = await writeCopy({
+        name, currency, amountLabel, intervalLabel,
+        startLabel: DATA.startLabel, endLabel: DATA.endLabel,
+        invested: dca.invested, finalValue: dca.finalValue,
+        profit: dca.profit, returnPct: dca.returnPct, handle: spec.handle || "",
+      });
+      DATA.hook = copy.hook || DATA.hook;
+      DATA.punch = copy.punch || DATA.punch;
+      caption = `${copy.caption}\n\n${(copy.hashtags || []).join(" ")}`;
+      process.stdout.write(" ✔");
+    } catch (e) {
+      process.stdout.write(` (건너뜀: ${e.message})`);
+    }
+  }
+
   // 템플릿 HTML에 데이터 주입 → reel/ 디렉토리에 임시 저장(폰트 상대경로 유지)
   const tpl = fs.readFileSync(path.join(__dirname, "template.html"), "utf8");
   const injected = tpl.replace(
@@ -165,9 +186,16 @@ async function makeOne(spec, browser) {
   fs.rmSync(framesDir, { recursive: true, force: true });
   if (!spec.keepHtml) fs.rmSync(htmlPath, { force: true });
 
+  // AI 캡션을 mp4 옆에 .txt로 저장(업로드 시 복붙용)
+  if (caption) {
+    const capPath = outPath.replace(/\.mp4$/, ".caption.txt");
+    fs.writeFileSync(capPath, caption);
+    console.log(`  캡션: ${capPath}`);
+  }
+
   const kb = (fs.statSync(outPath).size / 1024).toFixed(0);
   console.log(`✔ ${outPath}  (${kb} KB)`);
-  return { outPath, dca, DATA };
+  return { outPath, dca, DATA, caption };
 }
 
 function runFF(args) {
@@ -191,6 +219,7 @@ async function main() {
       console.error("사용법: node make-reel.mjs --symbol <종목> [--name 이름] [--amount 10000] [--interval daily|weekly|monthly] [--start YYYY-MM-DD] [--duration 16]\n또는:   node make-reel.mjs --config reels.config.json");
       process.exit(1);
     }
+    a.aiCopy = a.aiCopy || a["ai-copy"] || false; // --ai-copy 플래그
     specs = [a];
   }
 

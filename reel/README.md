@@ -67,15 +67,39 @@ node make-reel.mjs --config reels.config.json
 > 음악을 넣으려면 저작권 걱정 없는 트랙(YouTube 오디오 보관함, Pixabay 등)을
 > `--music path/to/bgm.mp3` 로 지정하세요. 없으면 무음 오디오 트랙만 넣습니다.
 
+## AI 기획·카피 (Claude API)
+
+Claude가 **"오늘 뭘 만들지"(종목·앵글)** 를 뽑고, **실제 백테스트 숫자 기반으로
+캡션·해시태그·후킹/펀치 문구**를 자동 생성합니다. `exitantai` 특유의 자극적·풍자적 톤.
+
+```bash
+export ANTHROPIC_API_KEY=sk-ant-...        # 최초 1회
+
+# 1) 기획: Claude가 종목 5개 뽑아 reels.config.json 생성
+node plan.mjs --count 5 --market KR --handle "@jkquant"
+#   --market  KR | US | MIX
+#   --note "반도체 위주"   (선택: 주제 힌트)
+
+# 2) 생성: 각 영상에 실제 숫자로 카피 재생성 + <종목>.caption.txt 저장
+node make-reel.mjs --config reels.config.json
+```
+
+- 단건에도 붙일 수 있습니다: `node make-reel.mjs --symbol 035720 --ai-copy`
+- 생성된 `out/<종목>_<날짜>.caption.txt` 를 인스타 업로드 시 그대로 복붙
+- 사용 모델: `claude-opus-4-8` (적응형 사고 + 구조화 출력). **주어진 실제 수치만 사용**하도록 지시 — 허위 숫자 생성 방지
+- 키가 없으면 카피 단계만 건너뛰고 영상은 정상 생성됩니다
+
 ## 구조
 
 ```
 reel/
-├── make-reel.mjs      # 오케스트레이터: 데이터→계산→프레임캡처→ffmpeg mp4
+├── make-reel.mjs      # 오케스트레이터: 데이터→계산→(AI카피)→프레임캡처→ffmpeg mp4
+├── plan.mjs           # AI 기획 CLI: Claude가 종목/앵글 → reels.config.json
 ├── template.html      # 9:16 캔버스 애니메이션(시간 함수 기반, 결정론적 렌더)
 ├── lib/
 │   ├── data.mjs       # Yahoo 일간 시세 수집
-│   └── dca.mjs        # 적립식 백테스트 계산
+│   ├── dca.mjs        # 적립식 백테스트 계산
+│   └── ai-plan.mjs    # Claude API: 기획(planReels) + 카피(writeCopy)
 ├── fonts/             # 나눔고딕(한글) — 헤드리스 렌더용 임베드
 └── reels.config.json  # 일괄 생성 목록
 ```
