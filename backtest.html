@@ -247,7 +247,7 @@ td:first-child{text-align:left;}
   <div class="brand">
     <div>
       <div class="logo">Backtest</div>
-      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v1.124</span></h1>
+      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v1.125</span></h1>
     </div>
   </div>
   <a href="/" class="home">← JK 퀀트</a>
@@ -1854,21 +1854,18 @@ function runAllCompare(tkr, cap, days, mode){
     push('200일선로테','일시금(200일)',runMA200(days,tkr,cap,200,false));
     push('무한매수법','목돈분할(V4.0)',runIM(days,tkr,cap,40,20,true));
     push('밸류리밸런싱','거치식(밴드20)',runVR(days,tkr,{initAmt:cap,G:10,bandPct:20,mode:0.5,formula:'basic',startV:0,startPool:0,costOn:false}));
-    const a=runASAP(days,tkr,{base:10,mid:50,deep:100,startCash:cap});
-    push('ASAP','거치·리저브',a,cap);
   }
   out.sort((x,y)=>y.final-x.final);
   return {rows:out,yrs,cmode:md,kind:'strat'};
 }
 
 // ──── 종목 비교: 한 전략·모드로 레버리지 종목끼리 동시 실행 (전부 USD 표기 → 최종액 직접 비교 가능) ────
-const STRAT_LABEL={bh:'매수후보유 · 일시금',ma:'200일선로테 · 일시금',im:'무한매수법 · 일시금',vrl:'밸류리밸런싱 · 거치',asapl:'ASAP · 거치',dca:'매수적립 · 적립',vra:'밸류리밸런싱 · 적립',asapa:'ASAP · 적립',maa:'200일선로테 · 적립'};
+const STRAT_LABEL={bh:'매수후보유 · 일시금',ma:'200일선로테 · 일시금',im:'무한매수법 · 일시금',vrl:'밸류리밸런싱 · 거치',dca:'매수적립 · 적립',vra:'밸류리밸런싱 · 적립',asapa:'ASAP · 적립',maa:'200일선로테 · 적립'};
 function _runOneStrat(key,tkr,cap,days){
   switch(key){
     case 'ma':   return runMA200(days,tkr,cap,200,false);
-    case 'im':   return runIM(days,tkr,cap,40,20,true);
+    case 'im':   {const _c=imCostOn; imCostOn=false; try{ return runIM(days,tkr,cap,40,20,true); } finally{ imCostOn=_c; }}   // 전체비교는 전부 세전 통일(무매만 전역 비용 새던 것 차단)
     case 'vrl':  return runVR(days,tkr,{initAmt:cap,G:10,bandPct:20,mode:0.5,formula:'basic',startV:0,startPool:0,costOn:false});
-    case 'asapl':return runASAP(days,tkr,{base:10,mid:50,deep:100,startCash:cap});
     case 'dca':  return runDCA1(tkr,days,cap,false);
     case 'vra':  return runVR(days,tkr,{contrib:cap/Math.max(1,Math.floor(days.length/10)),G:10,bandPct:20,mode:0.75,formula:'basic',startV:0,startPool:0,costOn:false});
     case 'asapa':{const a=runASAP(days,tkr,{base:10,mid:50,deep:100}); const sc=a.invested>0?cap/a.invested:1; return {invested:cap,final:a.final*sc,mdd:a.mdd,snap:a.snap.map(s=>[s[0],s[1]==null?null:s[1]*sc])};}
@@ -1887,10 +1884,10 @@ function runTickerCompare(stratKey, cap, days, tickers){
 }
 
 // ──── 통합 비교: 전 전략 × 전 종목을 한 표로 (수익률순) ────
-const STRAT_SHORT={bh:'매수후보유',ma:'200로테',im:'무매',vrl:'VR거치',asapl:'ASAP거치',dca:'매수적립',vra:'VR적립',asapa:'ASAP',maa:'200로테적립'};
+const STRAT_SHORT={bh:'매수후보유',ma:'200로테',im:'무매',vrl:'VR거치',dca:'매수적립',vra:'VR적립',asapa:'ASAP',maa:'200로테적립'};
 function runComboCompare(cap, days, tickers, mode){
   const md=mode==='dca'?'dca':'lump';
-  const keys = md==='dca' ? ['dca','vra','asapa','maa'] : ['bh','ma','im','vrl','asapl'];
+  const keys = md==='dca' ? ['dca','vra','asapa','maa'] : ['bh','ma','im','vrl'];
   const yrs=Math.max((new Date(days[days.length-1])-new Date(days[0]))/(365.25*864e5),0.1);
   const out=[];
   keys.forEach(k=>tickers.forEach(t=>{ const r=_runOneStrat(k,t,cap,days), inv=cap, cg=cagrOf(r.final,inv,yrs);
@@ -1925,7 +1922,7 @@ function renderCombo(res, cap, days, mode){
   const note=isDca
     ? `적립 모드: 원금을 매일 균등 투입(총투입=원금). 무매는 목돈 분할이 본질이라 적립 목록엔 없음.`
     : `일시금 모드: 목돈을 지금 전액 넣고 각 전략 규칙대로. 우상향장선 방치(매수후보유)가 강력.`;
-  h+=`<p class="note" style="font-size:11px;color:var(--dim);margin-top:8px;line-height:1.7">${note} 전 종목 미국상장 USD → 최종액 직접 비교 가능 · 비용 미반영. 아래 연도별·차트는 상위 8개.</p></div>`;
+  h+=`<p class="note" style="font-size:11px;color:var(--dim);margin-top:8px;line-height:1.7">${note} 전 종목 미국상장 USD → 최종액 직접 비교 가능 · <b>전부 세전</b>(세금·수수료 미반영). 아래 연도별·차트는 상위 8개.</p></div>`;
   const top=R.slice(0,8).map((r,i)=>({name:r.name, snap:r.snap, color:COMBO_PAL[i%8]}));
   h+=yearCompareCard(top.map(t=>({label:t.name,snap:t.snap,color:t.color})), money);
   document.getElementById('allResult').innerHTML=h;
@@ -1969,7 +1966,7 @@ function renderASAP(results, days, opt){
   h+=`</tbody></table></div>`;
   // 연도별 총자산 비교 (공용 카드)
   h+=yearCompareCard(rows.map(r=>({label:r.ticker,snap:r.snap,color:r.color})), money);
-  h+=`<p class="note" style="font-size:11px;color:var(--dim);margin-top:10px;line-height:1.7">하락장: SGOV 매일 ${money(o.base||10)} 적립 · −10%&amp;RSI≤35→${money(o.mid||50)} · −15%&amp;RSI≤30→${money(o.deep||100)} 딥매수. 상승 3단 재진입. 200일선은 <b>종목 자체 종가</b> 기준. 총투입은 매일 적립+딥·재진입의 누적 결과라 종목마다 다름. 전 종목 미국상장 USD · 비용 미반영.</p></div>`;
+  h+=`<p class="note" style="font-size:11px;color:var(--dim);margin-top:10px;line-height:1.7">하락장: SGOV 매일 ${money(o.base||10)} 적립 · −10%&amp;RSI≤35→${money(o.mid||50)} · −15%&amp;RSI≤30→${money(o.deep||100)} 딥매수. 상승 3단 재진입. 200일선은 <b>종목 자체 종가</b> 기준. 총투입은 매일 적립+딥·재진입의 누적 결과라 종목마다 다름. 전 종목 미국상장 USD · <b>세전</b>(세금·수수료 미반영).</p></div>`;
   document.getElementById('asapResult').innerHTML=h;
   cmpDrawChart(rows.map(r=>({name:r.ticker,snap:r.snap,color:r.color})),days,rows[0]?rows[0].ticker:'SOXL','ASAP · 종목별 누적 총자산');
 }
