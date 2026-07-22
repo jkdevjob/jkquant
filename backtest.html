@@ -247,7 +247,7 @@ td:first-child{text-align:left;}
   <div class="brand">
     <div>
       <div class="logo">Backtest</div>
-      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v1.123</span></h1>
+      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v1.124</span></h1>
     </div>
   </div>
   <a href="/" class="home">← JK 퀀트</a>
@@ -471,6 +471,7 @@ td:first-child{text-align:left;}
   <div class="s-mom hide" id="momResult"></div>
   <div class="s-asap hide" id="asapResult"></div>
   <div class="s-all hide" id="allResult"></div>
+  <div class="tbl-wrap s-dca"><table id="tbl"></table><div id="tblYear"></div></div>
   <div class="chart-box">
     <div class="chart-head">
       <span class="t" id="chartTitle">누적 가치 추이</span>
@@ -478,7 +479,6 @@ td:first-child{text-align:left;}
     </div>
     <canvas id="chart" height="300"></canvas>
   </div>
-  <div class="tbl-wrap s-dca"><table id="tbl"></table></div>
 </div>
 
 <!-- 규칙 설명 (결과 아래) -->
@@ -1900,6 +1900,18 @@ function runComboCompare(cap, days, tickers, mode){
   return {rows:out, yrs, cmode:md};
 }
 const COMBO_PAL=['#f6c453','#5b9bff','#3ecf8e','#a78bfa','#e0872a','#f24b5f','#4fb0f5','#e879b9'];
+// ──── 연도별 총자산 비교 카드 (모든 백테 공통 · ASAP 포맷) — entries:[{label,snap,color}] ────
+function yearCompareCard(entries, money){
+  money=money||(x=>'$'+fmt(Math.round(x)));
+  const yEnd={}, yset=new Set();
+  entries.forEach(e=>{ yEnd[e.label]={}; (e.snap||[]).forEach(s=>{ if(s[1]!=null){ const y=s[0].slice(0,4); yEnd[e.label][y]=s[1]; yset.add(y); } }); });
+  const years=[...yset].sort(); if(!years.length) return '';
+  const dot=c=>c?`<span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:${c};margin-right:4px"></span>`:'';
+  let h=`<div class="cmp-card"><h3>연도별 총자산 비교 <span style="font-size:11px;color:var(--dim);font-weight:400">매해 말 · 🥇=그해 최고</span></h3><div style="overflow-x:auto"><table class="cmp-tbl"><thead><tr><th>연도</th>${entries.map(e=>`<th>${dot(e.color)}${e.label}</th>`).join('')}</tr></thead><tbody>`;
+  years.forEach(y=>{ let best=-1e18,bi=-1; entries.forEach((e,i)=>{const v=yEnd[e.label][y];if(v!=null&&v>best){best=v;bi=i;}});
+    h+=`<tr><td><b>${y}</b></td>${entries.map((e,i)=>{const v=yEnd[e.label][y];return `<td class="${i===bi?'win':''}">${v!=null?money(Math.round(v)):'—'}${i===bi?' 🥇':''}</td>`;}).join('')}</tr>`; });
+  return h+'</tbody></table></div></div>';
+}
 function renderCombo(res, cap, days, mode){
   hideEmptyState();
   const R=res.rows, money=x=>'$'+fmt(Math.round(x)), pct=x=>(x>=0?'+':'')+x.toFixed(1)+'%';
@@ -1913,9 +1925,10 @@ function renderCombo(res, cap, days, mode){
   const note=isDca
     ? `적립 모드: 원금을 매일 균등 투입(총투입=원금). 무매는 목돈 분할이 본질이라 적립 목록엔 없음.`
     : `일시금 모드: 목돈을 지금 전액 넣고 각 전략 규칙대로. 우상향장선 방치(매수후보유)가 강력.`;
-  h+=`<p class="note" style="font-size:11px;color:var(--dim);margin-top:8px;line-height:1.7">${note} 전 종목 미국상장 USD → 최종액 직접 비교 가능 · 비용 미반영. 아래 차트는 상위 8개.</p></div>`;
-  document.getElementById('allResult').innerHTML=h;
+  h+=`<p class="note" style="font-size:11px;color:var(--dim);margin-top:8px;line-height:1.7">${note} 전 종목 미국상장 USD → 최종액 직접 비교 가능 · 비용 미반영. 아래 연도별·차트는 상위 8개.</p></div>`;
   const top=R.slice(0,8).map((r,i)=>({name:r.name, snap:r.snap, color:COMBO_PAL[i%8]}));
+  h+=yearCompareCard(top.map(t=>({label:t.name,snap:t.snap,color:t.color})), money);
+  document.getElementById('allResult').innerHTML=h;
   cmpDrawChart(top, days, 'SOXL', '상위 8 · 전략×종목 누적 총자산');
 }
 function renderCompare(res, tkr, cap, days){
@@ -1931,19 +1944,14 @@ function renderCompare(res, tkr, cap, days){
   h+=`<div style="overflow-x:auto"><table class="cmp-tbl sortable"><thead><tr><th>${col1}</th><th>${col2}</th><th>원금</th><th>최종금액</th><th>총수익률</th><th>CAGR</th><th>MDD</th><th>MAR</th></tr></thead><tbody>`;
   R.forEach((r,i)=>{ const nm=isTkr&&r.color?`<span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:${r.color};margin-right:5px"></span>`:''; h+=`<tr${i===0?' class="win"':''}><td>${nm}<b>${r.name}</b>${i===0?' 🥇':''}</td><td class="cdim">${r.mode}</td><td>${money(Math.round(r.invested))}</td><td class="cacc">${money(Math.round(r.final))}</td><td class="${r.ret>=0?'cg':'cr'}">${pct(r.ret)}</td><td class="${r.cagr>=0?'cg':'cr'}"><b>${pct(r.cagr)}</b></td><td>${r.mdd.toFixed(0)}%</td><td class="cgold">${r.mar.toFixed(2)}</td></tr>`; });
   h+=`</tbody></table></div></div>`;
-  // 연말 총자산 (매해)
-  const yEndVal={}; const yset=new Set();
-  R.forEach(r=>{ yEndVal[r.name]={}; r.snap.forEach(s=>{ if(s[1]!=null){ const y=s[0].slice(0,4); yEndVal[r.name][y]=s[1]; yset.add(y); } }); });
-  const years=[...yset].sort();
-  h+=`<div class="cmp-card"><h3>연말 총자산 (매해 · 🥇=그해 최고)</h3><div style="overflow-x:auto"><table class="cmp-tbl"><thead><tr><th>연도</th>${R.map(r=>`<th>${r.name}</th>`).join('')}</tr></thead><tbody>`;
-  years.forEach(y=>{ let best=-1e18,bi=-1; R.forEach((r,i)=>{const v=yEndVal[r.name][y];if(v!=null&&v>best){best=v;bi=i;}});
-    h+=`<tr><td>${y}</td>${R.map((r,i)=>{const v=yEndVal[r.name][y];return `<td class="${i===bi?'win':''}">${v!=null?money(Math.round(v)):'—'}${i===bi?' 🥇':''}</td>`;}).join('')}</tr>`; });
+  // 연도별 총자산 비교 (공용 카드)
+  h+=yearCompareCard(R.map(r=>({label:r.name,snap:r.snap,color:r.color})), money);
   const note=isTkr
     ? `종목끼리 비교: <b>매수후보유(방치)·동일 기간·동일 원금</b>으로 레버리지 종목의 순수 강도만 겨룸(전부 미국 상장 USD → 최종액 직접 비교 가능). 전략을 무엇으로 바꿔도 종목 순위는 거의 안 변해서(그 종목 지수·레버가 강했나가 지배) 기준선인 방치로 고정. 전략별 비교는 '비교 축'을 전략끼리로.`
     : (isDca
       ? `적립 모드: 원금을 기간에 걸쳐 <b>매일 균등 투입</b>(총투입=원금) — '언제 넣었나' 변수를 제거해 전략 자체 실력을 비교. 기준선 <b>매수적립</b>보다 못하면 그 전략은 헛수고. 무한매수법은 목돈 예수금 분할이 본질이라 일시금 탭에서 비교. MDD는 단위가치(평가액÷투입) 기준.`
       : `일시금 모드: 목돈을 <b>지금 전액</b> 넣고 각 전략 규칙대로 운용. 우상향장에선 '초기 노출'이 커서 기준선 <b>매수후보유(방치)</b>가 매우 강력 — 이걸 못 이기면 그 전략은 무의미. ASAP·VR은 거치식, 무매는 예수금 분할.`);
-  h+=`</tbody></table></div><p class="note" style="font-size:11px;color:var(--dim);margin-top:8px;line-height:1.7">${note} SGOV=현금성(단기국채 이자) · 비용 미반영(순수 성과).</p></div>`;
+  h+=`<p class="note" style="font-size:11px;color:var(--dim);margin-top:8px;line-height:1.7">${note} SGOV=현금성(단기국채 이자) · 비용 미반영(순수 성과).</p>`;
   document.getElementById('allResult').innerHTML=h;
   if(days) cmpDrawChart(R,days,tkr,isTkr?`${res.stratLabel} · 종목별 누적 총자산`:undefined);
 }
@@ -1959,16 +1967,8 @@ function renderASAP(results, days, opt){
   rows.forEach((r,i)=>{ const dot=`<span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:${r.color};margin-right:5px"></span>`;
     h+=`<tr${i===0?' class="win"':''}><td><span class="cdim" style="margin-right:6px">${i+1}</span>${dot}<b>${r.ticker}</b>${i===0?' 🥇':''}</td><td>${money(r.invested)}</td><td class="cacc">${money(r.final)}</td><td class="${r.ret>=0?'cg':'cr'}"><b>${pct(r.ret)}</b></td><td class="${r.cagr>=0?'cg':'cr'}">${pct(r.cagr)}</td><td>${r.mdd.toFixed(0)}%</td><td class="cgold">${r.mar.toFixed(2)}</td></tr>`; });
   h+=`</tbody></table></div>`;
-  // 연말 총자산 (매해 · 종목 컬럼)
-  const yEndVal={}, yset=new Set();
-  rows.forEach(r=>{ yEndVal[r.ticker]={}; r.snap.forEach(s=>{ if(s[1]!=null){ const y=s[0].slice(0,4); yEndVal[r.ticker][y]=s[1]; yset.add(y); } }); });
-  const years=[...yset].sort();
-  if(years.length){
-    h+=`<div style="overflow-x:auto;margin-top:8px"><table class="cmp-tbl"><thead><tr><th>연도</th>${rows.map(r=>`<th>${r.ticker}</th>`).join('')}</tr></thead><tbody>`;
-    years.forEach(y=>{ let best=-1e18,bi=-1; rows.forEach((r,i)=>{const v=yEndVal[r.ticker][y];if(v!=null&&v>best){best=v;bi=i;}});
-      h+=`<tr><td>${y}</td>${rows.map((r,i)=>{const v=yEndVal[r.ticker][y];return `<td class="${i===bi?'win':''}">${v!=null?money(v):'—'}${i===bi?' 🥇':''}</td>`;}).join('')}</tr>`; });
-    h+=`</tbody></table></div>`;
-  }
+  // 연도별 총자산 비교 (공용 카드)
+  h+=yearCompareCard(rows.map(r=>({label:r.ticker,snap:r.snap,color:r.color})), money);
   h+=`<p class="note" style="font-size:11px;color:var(--dim);margin-top:10px;line-height:1.7">하락장: SGOV 매일 ${money(o.base||10)} 적립 · −10%&amp;RSI≤35→${money(o.mid||50)} · −15%&amp;RSI≤30→${money(o.deep||100)} 딥매수. 상승 3단 재진입. 200일선은 <b>종목 자체 종가</b> 기준. 총투입은 매일 적립+딥·재진입의 누적 결과라 종목마다 다름. 전 종목 미국상장 USD · 비용 미반영.</p></div>`;
   document.getElementById('asapResult').innerHTML=h;
   cmpDrawChart(rows.map(r=>({name:r.ticker,snap:r.snap,color:r.color})),days,rows[0]?rows[0].ticker:'SOXL','ASAP · 종목별 누적 총자산');
@@ -2216,6 +2216,7 @@ function renderDCA(res,tickers,opts){
       h+=`<tr><td><span class="dot" style="background:${m.color}"></span>${t}<span class="tk-nm">${m.name}</span></td><td>${m.lev}×</td><td>$${fmt(r.invested)}</td><td style="color:${i===0?'var(--gold)':'var(--accent)'}"><b>$${fmt(r.final)}</b></td><td style="color:${r.ret>=0?'var(--green)':'var(--red)'}">${pctStr(r.ret)}</td><td>${pctStr(_cagr)}</td><td>${_mdd.toFixed(1)}%</td><td style="color:var(--gold)">${_mar.toFixed(2)}</td><td style="font-size:11px;color:var(--dim)">${_yrs.toFixed(1)}년</td></tr>`;});
   }
   h+='</tbody>';document.getElementById('tbl').innerHTML=h;
+  document.getElementById('tblYear').innerHTML=yearCompareCard(ranked.map(t=>({label:t,snap:res[t].snap,color:(META[t]||{}).color})));
 }
 
 // 무매/VR 렌더
@@ -2281,6 +2282,7 @@ function renderMultiStrat(type, results, params){
       +`<td style="color:var(--gold)">${mar.toFixed(2)}</td></tr>`; });
   h+='</tbody>'; const _tbl=document.getElementById('tbl'); _tbl.innerHTML=h;
   _tbl.querySelectorAll('tr.lrow').forEach(tr=>{ const t=tr.dataset.t; tr.onclick=()=>renderSingle2(type,results[t].res,results[t].days); });
+  document.getElementById('tblYear').innerHTML=yearCompareCard(ranked.map(e=>({label:e.label,snap:e.res.snap,color:e.color})), x=>fmtV(x,tickers[0]));
 
   // 차트: 전략=실선, DCA=점선 (같은 종목 같은 색)
   const labels=[...new Set(entries.flatMap(e=>e.res.snap.map(s=>s[0])))].sort();
@@ -2343,7 +2345,7 @@ function renderAB(t, r40, r50, days, tgt, compound){
        `<td class="v ${win===2?'win':''}">${b}</td>`+
        `<td class="v" style="color:var(--dim)">${dl}</td></tr>`;
   });
-  h+='</tbody>'; document.getElementById('tbl').innerHTML=h;
+  h+='</tbody>'; document.getElementById('tbl').innerHTML=h; document.getElementById('tblYear').innerHTML='';
   const labels=[...new Set([...r40.snap.map(s=>s[0]),...r50.snap.map(s=>s[0])])].sort();
   document.getElementById('chartTitle').textContent=t+' V4.0 vs V5.0 누적 평가액';
   lastRender=()=>makeChart([
@@ -2395,7 +2397,7 @@ function renderABMulti(results, compound){
       +`<td class="v" style="color:${dm<=0?'var(--green)':'var(--red)'}">${dm>=0?'+':''}${dm.toFixed(0)}p</td>`
       +`<td class="v mono" style="font-weight:600">${mult.toFixed(2)}배</td></tr>`;
   });
-  h+='</tbody>'; document.getElementById('tbl').innerHTML=h;
+  h+='</tbody>'; document.getElementById('tbl').innerHTML=h; document.getElementById('tblYear').innerHTML='';
   // 차트: 종목별 V5.0 누적 평가액
   const labels=[...new Set(tks.flatMap(t=>results[t].res50.snap.map(s=>s[0])))].sort();
   document.getElementById('chartTitle').textContent=`V5.0(${imShortMA}일) 누적 평가액 — 종목 비교`;
@@ -2549,7 +2551,8 @@ function renderSingle2(type,r,days){
       <div class="metric"><span class="k">└ 최종 평가액</span><span class="v" style="color:${dcaRet>=0?'var(--green)':'var(--red)'}">$${fmt(dcaFinal)}</span></div>
       <div class="metric"><span class="k">└ CAGR</span><span class="v">${pct(dCagr)}</span></div>
       <div class="metric"><span class="k">└ 최대 낙폭</span><span class="v" style="color:var(--red)">-${pctP(dMDD)}</span></div>
-    </div>`;
+    </div>
+    <div style="grid-column:1/-1">${yearCompareCard([{label:stratShort,snap:r.snap,color:m.color},{label:'거치식',snap:bhSnap,color:'#8a96c0'},{label:'DCA',snap:dcaSnap,color:'#69db7c'}], money)}</div>`;
 
   // ── 그래프: 3선 겹침 (전략·거치식·DCA)
   document.getElementById('chartTitle').textContent=`${r.tkr} 누적 평가액 — ${stratShort} / 거치식 / DCA`;
