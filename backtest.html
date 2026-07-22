@@ -130,6 +130,10 @@ body{background:var(--bg);color:var(--text);font-family:'Pretendard',sans-serif;
 /* 결과 표: 좌측 식별(종목/ETF) 컬럼 고정 — 좌우 스크롤 시 항상 표시 */
 .cmp-tbl th:first-child,.cmp-tbl td:first-child,#tbl th:first-child,#tbl td:first-child{position:sticky;left:0;z-index:2;background:var(--surf);}
 .cmp-tbl tr.win td:first-child{background:#2b2b31;}
+/* 결과 목록: 헤더(타이틀) 클릭 정렬 — 클릭마다 오름/내림 토글 */
+.cmp-tbl.sortable thead th,#tbl thead th{cursor:pointer;-webkit-user-select:none;user-select:none;}
+.cmp-tbl.sortable thead th:hover,#tbl thead th:hover{color:var(--gold);}
+.sarr{font-size:9px;color:var(--gold);}
 
 /* CONTROLS */
 .ctrl-card{background:var(--surf);border:1px solid var(--border);border-radius:10px;padding:16px 18px;margin-bottom:20px;}
@@ -243,7 +247,7 @@ td:first-child{text-align:left;}
   <div class="brand">
     <div>
       <div class="logo">Backtest</div>
-      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v1.122</span></h1>
+      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v1.123</span></h1>
     </div>
   </div>
   <a href="/" class="home">← JK 퀀트</a>
@@ -871,6 +875,32 @@ document.getElementById('vrCost').onclick=e=>{if(e.target.dataset.x){document.qu
 document.getElementById('imDiv').onclick=e=>{if(e.target.dataset.d){document.querySelectorAll('#imDiv button').forEach(b=>b.classList.remove('active'));e.target.classList.add('active');imDiv=+e.target.dataset.d;if(dataLoaded)run();}};
 // 전체 비교: 투입 모드(일시금/적립)
 document.getElementById('allMode').onclick=e=>{if(e.target.dataset.m){document.querySelectorAll('#allMode button').forEach(b=>b.classList.remove('active'));e.target.classList.add('active');if(dataLoaded&&strat==='all')run();}};
+// ──── 결과 목록: 헤더(타이틀) 클릭 정렬 · 클릭마다 오름/내림 토글 ────
+function sortResultTable(th){
+  const table=th.closest('table'), tb=table&&table.querySelector('tbody'); if(!tb) return;
+  const ths=[...th.parentElement.children], ci=ths.indexOf(th);
+  const dir = th.dataset.sdir==='desc' ? 'asc' : (th.dataset.sdir==='asc' ? 'desc' : (ci===0?'asc':'desc'));
+  ths.forEach(h=>{ const a=h.querySelector('.sarr'); if(a)a.remove(); if(h!==th) delete h.dataset.sdir; });
+  th.dataset.sdir=dir;
+  const keyOf=tr=>{ const td=tr.children[ci]; if(!td) return {s:''};
+    if(ci===0){ const b=td.querySelector('b'); return {s:((b?b.textContent:td.textContent)||'').trim()}; }
+    const num=parseFloat((td.textContent||'').replace(/[^0-9.\-]/g,'')); return isNaN(num)?{s:(td.textContent||'').trim()}:{n:num}; };
+  const rows=[...tb.querySelectorAll('tr')];
+  rows.sort((ra,rb)=>{ const a=keyOf(ra),b=keyOf(rb); let c;
+    if(a.n!=null&&b.n!=null) c=a.n-b.n; else c=String(a.s!=null?a.s:a.n).localeCompare(String(b.s!=null?b.s:b.n),'ko');
+    return dir==='asc'?c:-c; });
+  rows.forEach(r=>tb.appendChild(r));
+  rows.forEach((r,i)=>{ const rk=r.querySelector('td:first-child .cdim'); if(rk&&/^\d+$/.test((rk.textContent||'').trim())) rk.textContent=i+1; });
+  const arr=document.createElement('span'); arr.className='sarr'; arr.textContent=dir==='asc'?' ▲':' ▼'; th.appendChild(arr);
+}
+document.getElementById('result').addEventListener('click',e=>{
+  const th=e.target.closest('th'); if(!th||!th.closest('thead')) return;
+  const table=th.closest('table'); if(!table) return;
+  if(!(table.classList.contains('sortable')||table.id==='tbl')) return;
+  const first=((table.querySelector('thead th')||{}).textContent||'').trim();
+  if(first==='지표'||first==='연도') return;   // 지표·연말자산 표는 정렬 제외
+  sortResultTable(th);
+});
 let imEngine='v40';   // V5.0 숨김 기간: v40 고정
 
 /* ════ 실전 비용 모델 (imCostOn=true일 때만 적용) ════
@@ -1876,7 +1906,7 @@ function renderCombo(res, cap, days, mode){
   const isDca=res.cmode==='dca', modeLbl=isDca?'적립(기간 분할)':'일시금(목돈 거치)';
   const nStrat=new Set(R.map(r=>r.key)).size, nTkr=new Set(R.map(r=>r.ticker)).size;
   let h=`<div class="cmp-card"><h3>${res.yrs.toFixed(1)}년 · 원금 ${money(cap)} · <span style="color:var(--${isDca?'accent':'gold'})">${modeLbl}</span> <span style="font-size:11px;color:var(--dim)">전략 ${nStrat} × 종목 ${nTkr} = ${R.length}개 · 수익률순</span></h3>`;
-  h+=`<div style="overflow-x:auto"><table class="cmp-tbl"><thead><tr><th>종목 · 전략</th><th>원금</th><th>최종금액</th><th>총수익률</th><th>CAGR</th><th>MDD</th><th>MAR</th></tr></thead><tbody>`;
+  h+=`<div style="overflow-x:auto"><table class="cmp-tbl sortable"><thead><tr><th>종목 · 전략</th><th>원금</th><th>최종금액</th><th>총수익률</th><th>CAGR</th><th>MDD</th><th>MAR</th></tr></thead><tbody>`;
   R.forEach((r,i)=>{ const dot=r.color?`<span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:${r.color};margin-right:5px"></span>`:'';
     h+=`<tr${i===0?' class="win"':''}><td><span class="cdim" style="margin-right:6px">${i+1}</span>${dot}<b>${r.ticker}</b> <span class="cdim">${r.strat}</span>${i===0?' 🥇':''}</td><td>${money(r.invested)}</td><td class="cacc">${money(r.final)}</td><td class="${r.ret>=0?'cg':'cr'}"><b>${pct(r.ret)}</b></td><td class="${r.cagr>=0?'cg':'cr'}">${pct(r.cagr)}</td><td>${r.mdd.toFixed(0)}%</td><td class="cgold">${r.mar.toFixed(2)}</td></tr>`; });
   h+=`</tbody></table></div>`;
@@ -1898,7 +1928,7 @@ function renderCompare(res, tkr, cap, days){
     ? `${res.stratLabel} · ${res.yrs.toFixed(1)}년 · 원금 ${money(cap)} · <span style="color:var(--gold)">종목끼리</span> <span style="font-size:11px;color:var(--dim)">(전 종목 동일 전략·조건)</span>`
     : `${tkr} · ${res.yrs.toFixed(1)}년 · 원금 ${money(cap)} · <span style="color:var(--${isDca?'accent':'gold'})">${modeLbl}</span> <span style="font-size:11px;color:var(--dim)">(전 전략 동일 조건)</span>`;
   let h=`<div class="cmp-card"><h3>${head}</h3>`;
-  h+=`<div style="overflow-x:auto"><table class="cmp-tbl"><thead><tr><th>${col1}</th><th>${col2}</th><th>원금</th><th>최종금액</th><th>총수익률</th><th>CAGR</th><th>MDD</th><th>MAR</th></tr></thead><tbody>`;
+  h+=`<div style="overflow-x:auto"><table class="cmp-tbl sortable"><thead><tr><th>${col1}</th><th>${col2}</th><th>원금</th><th>최종금액</th><th>총수익률</th><th>CAGR</th><th>MDD</th><th>MAR</th></tr></thead><tbody>`;
   R.forEach((r,i)=>{ const nm=isTkr&&r.color?`<span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:${r.color};margin-right:5px"></span>`:''; h+=`<tr${i===0?' class="win"':''}><td>${nm}<b>${r.name}</b>${i===0?' 🥇':''}</td><td class="cdim">${r.mode}</td><td>${money(Math.round(r.invested))}</td><td class="cacc">${money(Math.round(r.final))}</td><td class="${r.ret>=0?'cg':'cr'}">${pct(r.ret)}</td><td class="${r.cagr>=0?'cg':'cr'}"><b>${pct(r.cagr)}</b></td><td>${r.mdd.toFixed(0)}%</td><td class="cgold">${r.mar.toFixed(2)}</td></tr>`; });
   h+=`</tbody></table></div></div>`;
   // 연말 총자산 (매해)
@@ -1925,7 +1955,7 @@ function renderASAP(results, days, opt){
     return {ticker:t, color:(META[t]&&META[t].color)||'#888', invested:a.invested, final:a.final, ret:a.ret, cagr:cg, mdd:a.mdd, mar:a.mdd>0?cg/a.mdd:0, snap:a.snap}; });
   rows.sort((x,y)=>y.ret-x.ret);
   let h=`<div class="cmp-card"><h3>ASAP · ${yrs.toFixed(1)}년 · 매일 적립금 ${money(o.base||10)} <span style="font-size:11px;color:var(--dim)">(원금 없음 · 총투입은 결과값 · 수익률순)</span></h3>`;
-  h+=`<div style="overflow-x:auto"><table class="cmp-tbl"><thead><tr><th>종목</th><th>총투입</th><th>최종금액</th><th>총수익률</th><th>CAGR</th><th>MDD</th><th>MAR</th></tr></thead><tbody>`;
+  h+=`<div style="overflow-x:auto"><table class="cmp-tbl sortable"><thead><tr><th>종목</th><th>총투입</th><th>최종금액</th><th>총수익률</th><th>CAGR</th><th>MDD</th><th>MAR</th></tr></thead><tbody>`;
   rows.forEach((r,i)=>{ const dot=`<span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:${r.color};margin-right:5px"></span>`;
     h+=`<tr${i===0?' class="win"':''}><td><span class="cdim" style="margin-right:6px">${i+1}</span>${dot}<b>${r.ticker}</b>${i===0?' 🥇':''}</td><td>${money(r.invested)}</td><td class="cacc">${money(r.final)}</td><td class="${r.ret>=0?'cg':'cr'}"><b>${pct(r.ret)}</b></td><td class="${r.cagr>=0?'cg':'cr'}">${pct(r.cagr)}</td><td>${r.mdd.toFixed(0)}%</td><td class="cgold">${r.mar.toFixed(2)}</td></tr>`; });
   h+=`</tbody></table></div>`;
