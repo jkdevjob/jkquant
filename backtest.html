@@ -247,7 +247,7 @@ td:first-child{text-align:left;}
   <div class="brand">
     <div>
       <div class="logo">Backtest</div>
-      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v1.128</span></h1>
+      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v1.129</span></h1>
     </div>
   </div>
   <a href="/" class="home">← JK 퀀트</a>
@@ -263,7 +263,8 @@ td:first-child{text-align:left;}
   <button class="stab" data-s="vr" onclick="setStrat('vr')">밸류리밸런싱<span class="sub">VR 5.0</span></button>
   <button class="stab" data-s="ma" onclick="setStrat('ma')">200일선 로테이션<span class="sub">이평선↔현금</span></button>
   <button class="stab" data-s="mom" onclick="setStrat('mom')" style="display:none">모멘텀 로테이션<span class="sub">1위 갈아타기</span></button>
-  <button class="stab" data-s="asap" onclick="setStrat('asap')">ASAP<span class="sub">SGOV 리저브</span></button>
+  <button class="stab" data-s="asap" onclick="setStrat('asap')" style="display:none">ASAP<span class="sub">SGOV 리저브</span></button>
+  <button class="stab" data-s="std" onclick="setStrat('std')">표준편차<span class="sub">σ밴드 매매</span></button>
   <button class="stab" data-s="all" onclick="setStrat('all')">전체 비교<span class="sub">한눈에</span></button>
 </div>
 </div>
@@ -445,11 +446,41 @@ td:first-child{text-align:left;}
         <button data-x="1" class="active" title="매수 수수료 0.25% · ASAP은 스톡을 안 팔아 실현 양도세 없음(이연)">적용</button>
       </div>
     </div>
+    <!-- 표준편차 매매법 (볼린저 σ밴드) -->
+    <div class="ctrl s-std hide"><label>원금 ($)</label><input type="number" id="stdCap" value="10000" min="100"></div>
+    <div class="ctrl s-std hide"><label>이평·표준편차 기간</label>
+      <div class="seg" id="stdN">
+        <button data-n="20" title="민감(밴드 빠르게 반응)">20일</button>
+        <button data-n="40" class="active" title="SOXL 최적">40일</button>
+        <button data-n="60">60일</button>
+        <button data-n="120" title="둔감(추세형)">120일</button>
+      </div>
+    </div>
+    <div class="ctrl s-std hide"><label>공격도 <span style="font-size:9px;color:var(--dim)">밴드별 투자비중 계수</span></label>
+      <div class="seg" id="stdG">
+        <button data-g="1.5" title="보수(−2σ서 풀투자)">1.5</button>
+        <button data-g="2" title="중간">2.0</button>
+        <button data-g="2.5" class="active" title="공격(+1σ 밑이면 풀투자) · SOXL 최적">2.5</button>
+      </div>
+    </div>
+    <div class="ctrl s-std hide"><label>200일선 필터 <span style="font-size:9px;color:var(--dim)">하락장 대응</span></label>
+      <div class="seg" id="stdFilter">
+        <button data-f="none" class="active" title="필터 없음(기본) — 밴드 그대로 매매">없음</button>
+        <button data-f="nobuy" title="200일선 아래선 추가매수 금지(물타기 차단) — MDD↓">물타기금지</button>
+        <button data-f="exit" title="200일선 아래선 전량 현금 — 과방어(수익↓)">현금이탈</button>
+      </div>
+    </div>
+    <div class="ctrl s-std hide"><label>세금·비용</label>
+      <div class="seg" id="stdCost">
+        <button data-x="0" title="비용 없이 순수 전략 성과">미적용</button>
+        <button data-x="1" class="active" title="수수료 0.25%(매수·매도) · 밴드 매도 시 실현이익 양도세 22%(연 250만 공제)">적용</button>
+      </div>
+    </div>
     <!-- 전체 비교: 전 전략 × 전 종목 한 표로 -->
     <div class="ctrl s-all hide"><label>원금 ($) <span style="font-size:9px;color:var(--dim)">전 대상 동일</span></label><input type="number" id="allCap" value="10000" min="100"></div>
     <div class="ctrl s-all hide"><label>투입 모드 <span style="font-size:9px;color:var(--dim)">공정 비교</span></label>
       <div class="seg" id="allMode">
-        <button data-m="lump" class="active" title="목돈을 지금 전액 투입 — 매수후보유·200로테·무매·VR거치 × 6종목">일시금</button>
+        <button data-m="lump" class="active" title="목돈을 지금 전액 투입 — 매수후보유·200로테·무매·VR거치·표준편차 × 종목">일시금</button>
         <button data-m="dca" title="원금을 기간에 걸쳐 매일 균등 적립 — 매수적립·VR적립·ASAP·200로테적립 × 6종목">적립</button>
       </div>
     </div>
@@ -616,6 +647,8 @@ let vrActive=new Set(VR_TICKERS);   // VR 다중선택
 let maActive=new Set(MA_TICKERS);   // 200일선 다중선택 (기본: 전체 — 카드 비교로 시작)
 let asapActive=new Set(STRAT_TICKERS);   // ASAP 다중선택 (기본: 전체)
 let allActive=new Set(STRAT_TICKERS);    // 전체비교 다중선택 (기본: 전체)
+let stdActive=new Set(STRAT_TICKERS);    // 표준편차 다중선택 (기본: 전체)
+let stdN=40, stdG=2.5, stdFilter='none', stdCostOn=true;   // 표준편차: 이평기간·공격도·200필터·비용
 let dcaLevExt=true, EXTM={};             // DCA 레버리지 확장 on/off · 확장데이터(복원 시 세그 클릭이 TDZ 안 타게 restoreBtState보다 먼저 선언)
 let maLen=200, maCostOn=true;       // 200일선: 이평 기간 · 비용 반영
 let vrCostOn=true;                  // VR: 세금·비용 반영 (무매·200일선과 동일 규약)
@@ -665,11 +698,13 @@ async function loadData(startDate, endDate){
     maActive=new Set([...maActive].filter(t=>loaded.includes(t)||M[t]));
     asapActive=new Set([...asapActive].filter(t=>loaded.includes(t)||M[t]));
     allActive=new Set([...allActive].filter(t=>loaded.includes(t)||M[t]));
+    stdActive=new Set([...stdActive].filter(t=>loaded.includes(t)||M[t]));
     if(!imActive.size) imActive=new Set(IM_TICKERS.filter(t=>loaded.includes(t)));
     if(!vrActive.size) vrActive=new Set(VR_TICKERS.filter(t=>loaded.includes(t)));
     if(!maActive.size) maActive=new Set(MA_TICKERS.filter(t=>loaded.includes(t)));
     if(!asapActive.size) asapActive=new Set(STRAT_TICKERS.filter(t=>loaded.includes(t)));
     if(!allActive.size) allActive=new Set(STRAT_TICKERS.filter(t=>loaded.includes(t)));
+    if(!stdActive.size) stdActive=new Set(STRAT_TICKERS.filter(t=>loaded.includes(t)));
     // 로딩 후 세트 객체가 교체됐으므로 단일 종목 칩을 다시 그림 (구 세트를 잡고 있는 stale 칩 방지)
     { const ts=document.getElementById('tickerSingle'); if(ts&&ts._render) ts._render(); }
     buildTickerPick();
@@ -842,8 +877,8 @@ function buildPickSingle(){
   single.innerHTML='';
   function renderMultiPick(){
     single.innerHTML='';
-    const list = strat==="im"? IM_TICKERS : strat==="ma"? MA_TICKERS : strat==="asap"? STRAT_TICKERS : strat==="all"? STRAT_TICKERS : VR_TICKERS;
-    const active = strat==="im"? imActive : strat==="ma"? maActive : strat==="asap"? asapActive : strat==="all"? allActive : vrActive;
+    const list = strat==="im"? IM_TICKERS : strat==="ma"? MA_TICKERS : strat==="asap"? STRAT_TICKERS : strat==="all"? STRAT_TICKERS : strat==="std"? STRAT_TICKERS : VR_TICKERS;
+    const active = strat==="im"? imActive : strat==="ma"? maActive : strat==="asap"? asapActive : strat==="all"? allActive : strat==="std"? stdActive : vrActive;
     list.forEach(t=>{
       if(!META[t]) return;
       const c=document.createElement("div");
@@ -852,7 +887,7 @@ function buildPickSingle(){
       c.innerHTML="<div class=\"d\"></div>"+t;
       // ★ 클릭 시점의 '현재' 전역 세트를 참조 — loadData가 세트를 새로 만들면(교체)
       //   렌더 시점 캡처본은 버려진 세트가 되어 클릭이 실행에 반영 안 되는 버그가 있었음
-      c.onclick=()=>{ const act = strat==="im"? imActive : strat==="ma"? maActive : strat==="asap"? asapActive : strat==="all"? allActive : vrActive;
+      c.onclick=()=>{ const act = strat==="im"? imActive : strat==="ma"? maActive : strat==="asap"? asapActive : strat==="all"? allActive : strat==="std"? stdActive : vrActive;
         c.classList.toggle("on"); const on=c.classList.contains("on"); if(on) act.add(t); else act.delete(t); };
       single.appendChild(c);
     });
@@ -870,9 +905,10 @@ function setStrat(s){
   document.querySelectorAll('.s-ma').forEach(e=>e.classList.toggle('hide',s!=='ma'));
   document.querySelectorAll('.s-mom').forEach(e=>e.classList.toggle('hide',s!=='mom'));
   document.querySelectorAll('.s-asap').forEach(e=>e.classList.toggle('hide',s!=='asap'));
+  document.querySelectorAll('.s-std').forEach(e=>e.classList.toggle('hide',s!=='std'));
   document.querySelectorAll('.s-all').forEach(e=>e.classList.toggle('hide',s!=='all'));
-  // 공용 다중 종목 피커 — im·vr·ma·asap·all에서 표시
-  document.querySelectorAll('.s-im.s-vr').forEach(e=>e.classList.toggle('hide',!(s==='im'||s==='vr'||s==='ma'||s==='asap'||s==='all')));
+  // 공용 다중 종목 피커 — im·vr·ma·asap·all·std에서 표시
+  document.querySelectorAll('.s-im.s-vr').forEach(e=>e.classList.toggle('hide',!(s==='im'||s==='vr'||s==='ma'||s==='asap'||s==='all'||s==='std')));
   buildPickSingle();
   if(document.getElementById('tickerSingle')._render) document.getElementById('tickerSingle')._render();
   if(typeof saveBtState==='function'&&!_restoring) saveBtState();   // 전략 탭 변경 저장
@@ -899,6 +935,10 @@ document.getElementById('maCost').onclick=e=>{if(e.target.dataset.x){document.qu
 document.getElementById('dcaCost').onclick=e=>{if(e.target.dataset.x){document.querySelectorAll('#dcaCost button').forEach(b=>b.classList.remove('active'));e.target.classList.add('active');dcaCostOn=e.target.dataset.x==='1';if(dataLoaded)run();}};
 document.getElementById('allCost').onclick=e=>{if(e.target.dataset.x){document.querySelectorAll('#allCost button').forEach(b=>b.classList.remove('active'));e.target.classList.add('active');allCostOn=e.target.dataset.x==='1';if(dataLoaded&&strat==='all')run();}};
 document.getElementById('asapCost').onclick=e=>{if(e.target.dataset.x){document.querySelectorAll('#asapCost button').forEach(b=>b.classList.remove('active'));e.target.classList.add('active');asapCostOn=e.target.dataset.x==='1';if(dataLoaded&&strat==='asap')run();}};
+document.getElementById('stdN').onclick=e=>{if(e.target.dataset.n){document.querySelectorAll('#stdN button').forEach(b=>b.classList.remove('active'));e.target.classList.add('active');stdN=+e.target.dataset.n;if(dataLoaded&&strat==='std')run();}};
+document.getElementById('stdG').onclick=e=>{if(e.target.dataset.g){document.querySelectorAll('#stdG button').forEach(b=>b.classList.remove('active'));e.target.classList.add('active');stdG=+e.target.dataset.g;if(dataLoaded&&strat==='std')run();}};
+document.getElementById('stdFilter').onclick=e=>{if(e.target.dataset.f){document.querySelectorAll('#stdFilter button').forEach(b=>b.classList.remove('active'));e.target.classList.add('active');stdFilter=e.target.dataset.f;if(dataLoaded&&strat==='std')run();}};
+document.getElementById('stdCost').onclick=e=>{if(e.target.dataset.x){document.querySelectorAll('#stdCost button').forEach(b=>b.classList.remove('active'));e.target.classList.add('active');stdCostOn=e.target.dataset.x==='1';if(dataLoaded&&strat==='std')run();}};
 document.getElementById('vrCost').onclick=e=>{if(e.target.dataset.x){document.querySelectorAll('#vrCost button').forEach(b=>b.classList.remove('active'));e.target.classList.add('active');vrCostOn=e.target.dataset.x==='1';if(dataLoaded)run();}};
 document.getElementById('imDiv').onclick=e=>{if(e.target.dataset.d){document.querySelectorAll('#imDiv button').forEach(b=>b.classList.remove('active'));e.target.classList.add('active');imDiv=+e.target.dataset.d;if(dataLoaded)run();}};
 // 전체 비교: 투입 모드(일시금/적립)
@@ -1208,14 +1248,14 @@ const BT_STATE_KEY='jkq_bt_state';
 function saveBtState(){ if(_restoring)return; try{
   const inputs={}; document.querySelectorAll('.ctrl-card input[id]').forEach(el=>{ if(el.id!=='addTicker'&&el.id!=='dEnd') inputs[el.id]=el.value; });  // 종료일(dEnd)은 저장 안 함 — 항상 오늘 날짜 유지
   const segs={}; document.querySelectorAll('.ctrl-card .seg[id]').forEach(seg=>{ const b=seg.querySelector('button.active'); if(b){ const v=Object.values(b.dataset)[0]; if(v!=null) segs[seg.id]=v; } });
-  const st={ v:1, strat, inputs, segs, sets:{dca:[...dcaActive],im:[...imActive],vr:[...vrActive],ma:[...maActive],asap:[...asapActive],all:[...allActive]} };
+  const st={ v:1, strat, inputs, segs, sets:{dca:[...dcaActive],im:[...imActive],vr:[...vrActive],ma:[...maActive],asap:[...asapActive],all:[...allActive],std:[...stdActive]} };
   localStorage.setItem(BT_STATE_KEY, JSON.stringify(st));
 }catch(e){} }
 function restoreBtState(){ try{
   const st=JSON.parse(localStorage.getItem(BT_STATE_KEY)||'null'); if(!st) return false;
   _restoring=true;
   try{
-    if(st.sets){ if(st.sets.dca)dcaActive=new Set(st.sets.dca); if(st.sets.im)imActive=new Set(st.sets.im); if(st.sets.vr)vrActive=new Set(st.sets.vr); if(st.sets.ma)maActive=new Set(st.sets.ma); if(st.sets.asap)asapActive=new Set(st.sets.asap); if(st.sets.all)allActive=new Set(st.sets.all); }
+    if(st.sets){ if(st.sets.dca)dcaActive=new Set(st.sets.dca); if(st.sets.im)imActive=new Set(st.sets.im); if(st.sets.vr)vrActive=new Set(st.sets.vr); if(st.sets.ma)maActive=new Set(st.sets.ma); if(st.sets.asap)asapActive=new Set(st.sets.asap); if(st.sets.all)allActive=new Set(st.sets.all); if(st.sets.std)stdActive=new Set(st.sets.std); }
     // 세그: 저장된 값의 버튼을 클릭해 active 클래스 + JS 변수 동기화 (핸들러가 단일 진실원). _restoring이라 재실행은 억제됨.
     if(st.segs) Object.entries(st.segs).forEach(([id,val])=>{ const seg=document.getElementById(id); if(!seg)return;
       const btn=[...seg.querySelectorAll('button')].find(b=>String(Object.values(b.dataset)[0])===String(val)); if(btn) btn.click(); });
@@ -1533,6 +1573,38 @@ function runIM30(days,tkr,cap,divs,targetPct,compound=true){
   _settle();
   const lc=M[tkr][days[days.length-1]][C], fin=cash+sh*lc; snap.push([days[days.length-1],fin]);
   return {invested:cap, final:fin, ret:(fin/cap-1)*100, mdd:mdd*100, snap, tkr, endCash:cash, endShares:sh};
+}
+
+// ──── 표준편차 매매법 (볼린저 5마디 σ밴드 · 200일선 필터) ────
+// 5마디(MA·±1σ·±2σ) 목표 투자비중 = min(100%, g×마디레벨/5). 밴드 돌파 시 리밸런싱(하향=분할매수, 상향=분할매도, 평단관리).
+// 필터: 'nobuy'=200일선 아래선 추가매수 금지(물타기 차단·기본) · 'exit'=200선 아래 전량 현금 · 'none'=무필터.
+function runStdev(days,tkr,cap,N,g,filter,costOn){
+  const CO=costOn, FEE=CO?COST_FEE:0;
+  const dts=Object.keys(M[tkr]).sort(), gi={}; dts.forEach((d,i)=>gi[d]=i);
+  const cl=dts.map(d=>M[tkr][d][C]);
+  const ma200=Array(cl.length).fill(null); { let s=0; for(let i=0;i<cl.length;i++){ s+=cl[i]; if(i>=200)s-=cl[i-200]; if(i>=199)ma200[i]=s/200; } }
+  const ma=Array(cl.length).fill(null), sd=Array(cl.length).fill(null);
+  { let s=0,s2=0; for(let i=0;i<cl.length;i++){ s+=cl[i]; s2+=cl[i]*cl[i]; if(i>=N){s-=cl[i-N];s2-=cl[i-N]*cl[i-N];} if(i>=N-1){ const m=s/N; ma[i]=m; sd[i]=Math.sqrt(Math.max(0,s2/N-m*m)); } } }
+  const lvOf=gx=>{ if(ma[gx]==null)return null; const c=cl[gx],m=ma[gx],v=sd[gx]; let lv=0; for(const L of [m+2*v,m+v,m,m-v,m-2*v]) if(c<L)lv++; return lv; };
+  let cash=cap,sh=0,avg=0,prevLv=null,yearPnl=0,cy=null,mp=cap,mdd=0; const snap=[];
+  const _buy=(px,amt)=>{ if(amt>cash)amt=cash; if(amt<=1e-6)return; const fee=amt*FEE,net=amt-fee,q=net/px; avg=sh<=0?px:(sh*avg+net)/(sh+q); sh+=q; cash-=amt; };
+  const _sell=(px,q)=>{ if(q<=0)return; if(q>sh)q=sh; const gg=q*px,fee=gg*FEE; cash+=gg-fee; yearPnl+=q*(px-avg)-fee; sh-=q; };
+  const _settle=()=>{ if(!CO){yearPnl=0;return;} cash-=Math.max(0,yearPnl*COST_KRW-COST_DEDUCT)*COST_TAXRATE/COST_KRW; yearPnl=0; };
+  days.forEach((d,i)=>{ const gx=gi[d], c=cl[gx];
+    { const y=d.slice(0,4); if(cy===null)cy=y; else if(y!==cy){_settle();cy=y;} }
+    { const eq=cash+sh*c; if(eq>mp)mp=eq; else if(mp>0){const dd=(mp-eq)/mp; if(dd>mdd)mdd=dd;} }
+    const lv=lvOf(gx), bear = ma200[gx]!=null && c<ma200[gx];
+    if(lv!=null){
+      if(filter==='exit' && bear){ if(sh>1e-9)_sell(c,sh); prevLv=lv; }
+      else if(lv!==prevLv){ const eq=cash+sh*c, frac=Math.min(1,g*lv/5), target=eq*frac, cur=sh*c;
+        if(target>cur+1e-6){ if(!(filter==='nobuy'&&bear))_buy(c,Math.min(target-cur,cash)); }   // nobuy: 하락장 추가매수 차단
+        else if(cur>target+1e-6)_sell(c,(cur-target)/c);
+        prevLv=lv; }
+    }
+    if(i%10===0)snap.push([d,cash+sh*c]);
+  });
+  _settle(); const lc=cl[gi[days[days.length-1]]], fin=cash+sh*lc; snap.push([days[days.length-1],fin]);
+  return {invested:cap, final:fin, ret:(fin/cap-1)*100, mdd:mdd*100, snap, tkr};
 }
 
 // ──── 국면 판정 (V5.0 공용) ────
@@ -1960,13 +2032,14 @@ function runAllCompare(tkr, cap, days, mode){
 }
 
 // ──── 종목 비교: 한 전략·모드로 레버리지 종목끼리 동시 실행 (전부 USD 표기 → 최종액 직접 비교 가능) ────
-const STRAT_LABEL={bh:'매수후보유 · 일시금',ma:'200일선로테 · 일시금',im:'무한매수법 · 일시금',vrl:'밸류리밸런싱 · 거치',dca:'매수적립 · 적립',vra:'밸류리밸런싱 · 적립',asapa:'ASAP · 적립',maa:'200일선로테 · 적립'};
+const STRAT_LABEL={bh:'매수후보유 · 일시금',ma:'200일선로테 · 일시금',im:'무한매수법 · 일시금',vrl:'밸류리밸런싱 · 거치',std:'표준편차 · 거치',dca:'매수적립 · 적립',vra:'밸류리밸런싱 · 적립',asapa:'ASAP · 적립',maa:'200일선로테 · 적립'};
 function _runOneStrat(key,tkr,cap,days,costOn){
   if(costOn===undefined)costOn=true;   // 기본 세후(비용 반영)
   switch(key){
     case 'ma':   return runMA200(days,tkr,cap,200,costOn);
     case 'im':   {const _c=imCostOn; imCostOn=costOn; try{ return runIM(days,tkr,cap,40,20,true); } finally{ imCostOn=_c; }}   // 무매는 전역 imCostOn을 combo 비용값으로 강제
     case 'vrl':  return runVR(days,tkr,{initAmt:cap,G:10,bandPct:20,mode:0.5,formula:'basic',startV:0,startPool:0,costOn});
+    case 'std':  return runStdev(days,tkr,cap,40,2.5,'none',costOn);   // 전체비교: 표준편차 기본(필터 없음·N40·g2.5)
     case 'dca':  return runDCA1(tkr,days,cap,costOn);
     case 'vra':  return runVR(days,tkr,{contrib:cap/Math.max(1,Math.floor(days.length/10)),G:10,bandPct:20,mode:0.75,formula:'basic',startV:0,startPool:0,costOn});
     case 'asapa':{const a=runASAP(days,tkr,{base:10,mid:50,deep:100,costOn}); const sc=a.invested>0?cap/a.invested:1; return {invested:cap,final:a.final*sc,mdd:a.mdd,snap:a.snap.map(s=>[s[0],s[1]==null?null:s[1]*sc])};}
@@ -1985,10 +2058,10 @@ function runTickerCompare(stratKey, cap, days, tickers){
 }
 
 // ──── 통합 비교: 전 전략 × 전 종목을 한 표로 (수익률순) ────
-const STRAT_SHORT={bh:'매수후보유',ma:'200로테',im:'무매',vrl:'VR거치',dca:'매수적립',vra:'VR적립',asapa:'ASAP',maa:'200로테적립'};
+const STRAT_SHORT={bh:'매수후보유',ma:'200로테',im:'무매',vrl:'VR거치',std:'표준편차',dca:'매수적립',vra:'VR적립',asapa:'ASAP',maa:'200로테적립'};
 function runComboCompare(cap, days, tickers, mode, costOn){
   const md=mode==='dca'?'dca':'lump';
-  const keys = md==='dca' ? ['dca','vra','asapa','maa'] : ['bh','ma','im','vrl'];
+  const keys = md==='dca' ? ['dca','vra','asapa','maa'] : ['bh','ma','im','vrl','std'];
   const yrs=Math.max((new Date(days[days.length-1])-new Date(days[0]))/(365.25*864e5),0.1);
   const out=[];
   keys.forEach(k=>tickers.forEach(t=>{ const r=_runOneStrat(k,t,cap,days,costOn), inv=cap, cg=cagrOf(r.final,inv,yrs);
@@ -2029,6 +2102,36 @@ function renderCombo(res, cap, days, mode, costOn){
   h+=yearCompareCard(top.map(t=>({label:t.name,snap:t.snap,color:t.color})), money);
   document.getElementById('allResult').innerHTML=h;
   cmpDrawChart(top, days, 'SOXL', '상위 8 · 전략×종목 누적 총자산');
+}
+// ──── 표준편차 매매법 렌더 (종목별 목록 + 연도별 + 차트) ────
+function renderStdev(results, days){
+  hideEmptyState();
+  document.getElementById('detail').classList.add('hide');
+  document.querySelector('.cards').classList.add('hide');
+  document.querySelector('.tbl-wrap').classList.remove('hide');
+  const yrs=Math.max((new Date(days[days.length-1])-new Date(days[0]))/(365.25*864e5),0.1);
+  const money=x=>'$'+fmt(Math.round(x)), pct=x=>(x>=0?'+':'')+x.toFixed(1)+'%';
+  const rows=Object.keys(results).map(t=>{ const r=results[t], cg=cagrOf(r.final,r.invested,yrs);
+    return {t, color:(META[t]&&META[t].color)||'#888', invested:r.invested, final:r.final, ret:r.ret, cagr:cg, mdd:r.mdd, mar:r.mdd>0?cg/r.mdd:0, snap:r.snap}; });
+  rows.sort((a,b)=>b.final-a.final);
+  const filtLbl={none:'없음',nobuy:'물타기금지',exit:'현금이탈'}[stdFilter]||stdFilter;
+  document.getElementById('winner').style.display='';
+  document.getElementById('winner').innerHTML=`📐 <strong>표준편차 매매법</strong> · ${stdN}일 σ밴드(±1σ·±2σ) · 공격도 ${stdG} · 200필터 <b>${filtLbl}</b> · ${stdCostOn?'세후':'세전'} · ${days[0]}~${days[days.length-1]} (${yrs.toFixed(1)}년) · 목돈거치`;
+  let h=`<thead><tr><th>종목</th><th>원금</th><th>최종</th><th>수익률</th><th>CAGR</th><th>MDD</th><th>MAR</th></tr></thead><tbody>`;
+  rows.forEach((r,i)=>{
+    h+=`<tr><td style="background:${i===0?'#2b2b31':'var(--surf)'}"><span style="color:var(--dim);margin-right:6px">${i+1}</span><span class="dot" style="background:${r.color}"></span>${r.t}<span class="tk-nm">${(META[r.t]||{}).name||''}</span>${i===0?' 🥇':''}</td>`
+      +`<td>${money(r.invested)}</td>`
+      +`<td style="color:${i===0?'var(--gold)':'var(--accent)'}"><b>${money(r.final)}</b></td>`
+      +`<td style="color:${r.ret>=0?'var(--green)':'var(--red)'}"><b>${pct(r.ret)}</b></td>`
+      +`<td style="color:${r.cagr>=0?'var(--green)':'var(--red)'}">${pct(r.cagr)}</td>`
+      +`<td>${r.mdd.toFixed(0)}%</td>`
+      +`<td style="color:var(--gold)">${r.mar.toFixed(2)}</td></tr>`; });
+  h+='</tbody>'; document.getElementById('tbl').innerHTML=h;
+  document.getElementById('tblYear').innerHTML=yearCompareCard(rows.map(r=>({label:r.t,snap:r.snap,color:r.color})));
+  const labels=[...new Set(rows.flatMap(r=>r.snap.map(s=>s[0])))].sort();
+  document.getElementById('chartTitle').textContent='표준편차 매매법 · 종목별 누적 총자산';
+  lastRender=()=>makeChart(rows.map(r=>({label:r.t,data:alignSnap(r.snap,labels),borderColor:r.color,backgroundColor:'transparent',borderWidth:2,pointRadius:0,tension:.3,spanGaps:true})),labels);
+  lastRender();
 }
 function renderCompare(res, tkr, cap, days){
   hideEmptyState();
@@ -2083,6 +2186,7 @@ async function run(){
   // 데이터 없거나 · 요청 기간이 더 넓거나 · 선택 종목 중 미로딩분이 있으면 재로딩
   const wanted = strat==='dca' ? [...dcaActive] : strat==='im' ? [...imActive] : strat==='ma' ? [...maActive]
     : strat==='asap' ? [...asapActive]
+    : strat==='std' ? [...stdActive]
     : strat==='all' ? [...allActive]   // 선택 종목만 로드 (전략×종목 통합 비교)
     : [...vrActive];
   const missing = wanted.filter(t=>!M[t] || !Object.keys(M[t]||{}).length);
@@ -2105,6 +2209,19 @@ async function run(){
     const results={};
     use.forEach(t=>{ results[t]=runASAP(commonD,t,opt); });
     renderASAP(results,commonD,opt);
+    noteSkipped(skip);
+    return;
+  }
+  if(strat==='std'){
+    if(!stdActive.size){alert('종목을 선택하세요.');return;}
+    const cap=+document.getElementById('stdCap').value||10000;
+    const {use,skip}=usableTickers(start,end,[...stdActive]);
+    if(!use.length){alert('선택 종목 모두 해당 기간 데이터가 없습니다. 날짜를 확인하세요.');return;}
+    const days=commonDays(start,end,use);
+    if(days.length<250){alert('공통 거래일이 1년 미만입니다. 기간을 넓히거나 늦은 상장 종목을 감안하세요.');return;}
+    const results={};
+    use.forEach(t=>{ results[t]=runStdev(days,t,cap,stdN,stdG,stdFilter,stdCostOn); });
+    renderStdev(results,days);
     noteSkipped(skip);
     return;
   }
