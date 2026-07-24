@@ -212,7 +212,8 @@ table.cmp .col-strat{color:var(--accent);}
 .log-seg button.active{border-color:var(--accent);color:var(--accent);background:rgba(91,141,238,.1);}
 
 /* TABLE */
-.tbl-wrap{background:var(--surf);border:1px solid var(--border);border-radius:9px;overflow:auto;margin-bottom:18px;}
+.tbl-wrap{background:var(--surf);border:1px solid var(--border);border-radius:9px;overflow:hidden;margin-bottom:18px;}
+.tblscroll{overflow-x:auto;}   /* 종목 테이블만 독립 가로 스크롤 — 연도별(#tblYear)이 함께 밀리지 않도록 */
 table{width:100%;border-collapse:collapse;}
 thead th{font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:var(--dim);padding:11px 13px;text-align:right;border-bottom:1px solid var(--border);white-space:nowrap;}
 thead th:first-child{text-align:left;}
@@ -247,7 +248,7 @@ td:first-child{text-align:left;}
   <div class="brand">
     <div>
       <div class="logo">Backtest</div>
-      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v1.132</span></h1>
+      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v1.133</span></h1>
     </div>
   </div>
   <a href="/" class="home">← JK 퀀트</a>
@@ -528,7 +529,7 @@ td:first-child{text-align:left;}
   <div class="s-mom hide" id="momResult"></div>
   <div class="s-asap hide" id="asapResult"></div>
   <div class="s-all hide" id="allResult"></div>
-  <div class="tbl-wrap s-dca"><table id="tbl"></table><div id="tblYear"></div></div>
+  <div class="tbl-wrap s-dca"><div class="tblscroll"><table id="tbl"></table></div><div id="tblYear"></div></div>
   <div class="chart-box">
     <div class="chart-head">
       <span class="t" id="chartTitle">누적 가치 추이</span>
