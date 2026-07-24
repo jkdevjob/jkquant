@@ -247,7 +247,7 @@ td:first-child{text-align:left;}
   <div class="brand">
     <div>
       <div class="logo">Backtest</div>
-      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v1.131</span></h1>
+      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v1.132</span></h1>
     </div>
   </div>
   <a href="/" class="home">← JK 퀀트</a>
@@ -2043,19 +2043,48 @@ function runAllCompare(tkr, cap, days, mode){
 
 // ──── 종목 비교: 한 전략·모드로 레버리지 종목끼리 동시 실행 (전부 USD 표기 → 최종액 직접 비교 가능) ────
 const STRAT_LABEL={bh:'매수후보유 · 일시금',ma:'200일선로테 · 일시금',im:'무한매수법 · 일시금',vrl:'밸류리밸런싱 · 거치',std:'표준편차 · 거치',dca:'매수적립 · 적립',vra:'밸류리밸런싱 · 적립',asapa:'ASAP · 적립',maa:'200일선로테 · 적립'};
+// 종목비교·전체비교 공용: 각 전략 '탭에서 설정한 옵션값'을 그대로 읽어 실행 (DOM 없으면 기본값 폴백).
+// 원금은 항상 cap($1만)으로 정규화 — 전략별 절대 적립금·거치금은 비교 위해 cap 기준으로 환산.
+function _stratSeg(id,def){ if(typeof document==='undefined')return def; const b=document.querySelector('#'+id+' button.active'); return b?String(Object.values(b.dataset)[0]):def; }
+function _stratNum(id,def){ if(typeof document==='undefined')return def; const el=document.getElementById(id); const v=el?+el.value:NaN; return isFinite(v)&&v>0?v:def; }
 function _runOneStrat(key,tkr,cap,days,costOn){
   if(costOn===undefined)costOn=true;   // 기본 세후(비용 반영)
+  const ml=(typeof maLen!=='undefined'?maLen:200);
+  const vG=_stratNum('vrG',10), vB=_stratNum('vrBand',15), vF=_stratSeg('vrFormula','basic');
   switch(key){
-    case 'ma':   return runMA200(days,tkr,cap,200,costOn);
-    case 'im':   {const _c=imCostOn; imCostOn=costOn; try{ return runIM(days,tkr,cap,40,20,true); } finally{ imCostOn=_c; }}   // 무매는 전역 imCostOn을 combo 비용값으로 강제
-    case 'vrl':  return runVR(days,tkr,{initAmt:cap,G:10,bandPct:20,mode:0.5,formula:'basic',startV:0,startPool:0,costOn});
-    case 'std':  return runStdev(days,tkr,cap,40,2.5,'none',costOn);   // 전체비교: 표준편차 기본(필터 없음·N40·g2.5)
-    case 'dca':  return runDCA1(tkr,days,cap,costOn);
-    case 'vra':  return runVR(days,tkr,{contrib:cap/Math.max(1,Math.floor(days.length/10)),G:10,bandPct:20,mode:0.75,formula:'basic',startV:0,startPool:0,costOn});
-    case 'asapa':{const a=runASAP(days,tkr,{base:10,mid:50,deep:100,costOn}); const sc=a.invested>0?cap/a.invested:1; return {invested:cap,final:a.final*sc,mdd:a.mdd,snap:a.snap.map(s=>[s[0],s[1]==null?null:s[1]*sc])};}
-    case 'maa':  return runMA200Accum(days,tkr,cap,200,costOn);
+    case 'ma':   return runMA200(days,tkr,cap,ml,costOn);                                   // 이평기간: maLen 탭
+    case 'maa':  return runMA200Accum(days,tkr,cap,ml,costOn);
+    case 'im':   {                                                                          // 분할·익절·복리단리·엔진·리버스(전역) 탭
+      const divs=(typeof imDiv!=='undefined'?imDiv:20), tgt=(typeof imTarget!=='undefined'?imTarget:20);
+      const comp=_stratSeg('imCompound','0')!=='0';                                         // 기본 단리
+      const eng=(typeof imEngine!=='undefined'?imEngine:'v40');
+      const fn = eng==='v22'?runIM22 : eng==='v30'?runIM30 : runIM;                          // v40/v50/ab→runIM (리버스·imFill은 전역)
+      const _c=imCostOn; imCostOn=costOn; try{ return fn(days,tkr,cap,divs,tgt,comp); } finally{ imCostOn=_c; }
+    }
+    case 'std':  return runStdev(days,tkr,cap,(typeof stdN!=='undefined'?stdN:40),(typeof stdG!=='undefined'?stdG:2.5),(typeof stdFilter!=='undefined'?stdFilter:'none'),costOn);  // N·g·필터 탭
+    case 'vrl':  return runVR(days,tkr,{initAmt:cap,G:vG,bandPct:vB,mode:0.5,formula:vF,startV:0,startPool:0,costOn});                                    // 거치(mode0.5)·G·밴드·공식 탭
+    case 'vra':  return runVR(days,tkr,{contrib:cap/Math.max(1,Math.floor(days.length/10)),G:vG,bandPct:vB,mode:0.75,formula:vF,startV:0,startPool:0,costOn});  // 적립(mode0.75)
+    case 'dca':  { const step={daily:1,weekly:5,monthly:21}[(typeof dcaFreq!=='undefined'?dcaFreq:'daily')]||1;   // 적립주기 탭
+      const nb=Math.floor((days.length-1)/step)+1, amt=cap/nb; return _dcaOne(tkr,days,amt,step,costOn); }
+    case 'asapa':{const a=runASAP(days,tkr,{base:_stratNum('asapBase',10),mid:_stratNum('asapMid',50),deep:_stratNum('asapDeep',100),costOn}); const sc=a.invested>0?cap/a.invested:1; return {invested:cap,final:a.final*sc,mdd:a.mdd,snap:a.snap.map(s=>[s[0],s[1]==null?null:s[1]*sc])};}
     default:     return runBH(days,tkr,cap,costOn);   // 'bh'
   }
+}
+// 전체비교 헤더용: 현재 각 탭 옵션 요약 문자열
+function comboOpts(mode){
+  const ml=(typeof maLen!=='undefined'?maLen:200);
+  const vG=_stratNum('vrG',10), vB=_stratNum('vrBand',15), vF={basic:'기본공식',skill:'실력공식'}[_stratSeg('vrFormula','basic')]||'기본공식';
+  if(mode==='dca'){
+    const freq={daily:'매일',weekly:'매주',monthly:'매월'}[(typeof dcaFreq!=='undefined'?dcaFreq:'daily')]||'매일';
+    return `매수적립: ${freq} · VR적립: G${vG}·밴드±${vB}·${vF} · ASAP: base${_stratNum('asapBase',10)}/mid${_stratNum('asapMid',50)}/deep${_stratNum('asapDeep',100)} · 200로테적립: ${ml}일선`;
+  }
+  const eng={v22:'V2.2',v30:'V3.0',v40:'V4.0',v50:'V5.0',ab:'A/B'}[(typeof imEngine!=='undefined'?imEngine:'v40')]||'V4.0';
+  const comp=_stratSeg('imCompound','0')!=='0'?'복리':'단리';
+  const rev=(typeof imReverse!=='undefined'&&imReverse)?'리버스켬':'리버스끔';
+  const div=(typeof imDiv!=='undefined'?imDiv:20), tgt=(typeof imTarget!=='undefined'?imTarget:20);
+  const filt={none:'필터없음',nobuy:'물타기금지',exit:'현금이탈'}[(typeof stdFilter!=='undefined'?stdFilter:'none')]||'필터없음';
+  const sN=(typeof stdN!=='undefined'?stdN:40), sG=(typeof stdG!=='undefined'?stdG:2.5);
+  return `무매(${eng}): ${div}분할·익절${tgt}%·${comp}·${rev} · 200로테: ${ml}일선 · VR거치: G${vG}·밴드±${vB}·${vF} · 표준편차: N${sN}·g${sG}·${filt}`;
 }
 function runTickerCompare(stratKey, cap, days, tickers){
   const yrs=Math.max((new Date(days[days.length-1])-new Date(days[0]))/(365.25*864e5),0.1);
@@ -2107,7 +2136,8 @@ function renderCombo(res, cap, days, mode, costOn){
   const note=isDca
     ? `적립 모드: 원금을 매일 균등 투입(총투입=원금). 무매는 목돈 분할이 본질이라 적립 목록엔 없음.`
     : `일시금 모드: 목돈을 지금 전액 넣고 각 전략 규칙대로. 우상향장선 방치(매수후보유)가 강력.`;
-  h+=`<p class="note" style="font-size:11px;color:var(--dim);margin-top:8px;line-height:1.7">${note} 전 종목 미국상장 USD → 최종액 직접 비교 가능 · <b>${costOn?'세후':'세전'}</b>(${costOn?'수수료 0.25%·회전형 실현 양도세 22% 반영':'세금·수수료 미반영'}). 아래 연도별·차트는 상위 8개.</p></div>`;
+  h+=`<p class="note" style="font-size:11px;color:var(--dim);margin-top:8px;line-height:1.7">${note} 전 종목 미국상장 USD → 최종액 직접 비교 가능 · <b>${costOn?'세후':'세전'}</b>(${costOn?'수수료 0.25%·회전형 실현 양도세 22% 반영':'세금·수수료 미반영'}). 아래 연도별·차트는 상위 8개.</p>`;
+  h+=`<p class="note" style="font-size:11px;color:var(--dim2);margin-top:2px;line-height:1.7;padding:7px 10px;background:var(--surf2);border-radius:7px">⚙️ <b>각 전략 탭 설정 반영</b> — ${comboOpts(res.cmode)}</p></div>`;
   const top=R.slice(0,8).map((r,i)=>({name:r.name, snap:r.snap, color:COMBO_PAL[i%8]}));
   h+=yearCompareCard(top.map(t=>({label:t.name,snap:t.snap,color:t.color})), money);
   document.getElementById('allResult').innerHTML=h;
