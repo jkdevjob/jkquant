@@ -247,7 +247,7 @@ td:first-child{text-align:left;}
   <div class="brand">
     <div>
       <div class="logo">Backtest</div>
-      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v1.129</span></h1>
+      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v1.130</span></h1>
     </div>
   </div>
   <a href="/" class="home">← JK 퀀트</a>
@@ -330,6 +330,12 @@ td:first-child{text-align:left;}
       <div class="seg" id="imCost">
         <button data-x="0" title="비용 없이 순수 전략 성과">미적용</button>
         <button data-x="1" class="active" title="수수료 0.25%×2 · 슬리피지 0.05%(지정가매도) · 양도세 22%(연 250만원 공제)">적용</button>
+      </div>
+    </div>
+    <div class="ctrl s-im hide"><label>리버스 <span style="font-size:9px;color:var(--dim)">V4.0 원금소진 후</span></label>
+      <div class="seg" id="imRev">
+        <button data-r="0" class="active" title="원금 소진(T≥분할) 후 리버스 무한매도 안 함 — 후반전 별지점 손절 쿼터매도로만 방어. 백테스트상 20분할·저점 V반등에서 리버스보다 유리(기본)">끔</button>
+        <button data-r="1" title="원금 소진(T≥분할) 후 리버스 무한매도 모드 진입 — 라오어 공식 V4.0. 급락 저점에서 분할 매도 후 반등 시 재매수">켬</button>
       </div>
     </div>
     <div class="ctrl s-im hide"><label>재투자</label>
@@ -642,6 +648,7 @@ const MA_TICKERS=STRAT_TICKERS;
 let M={};
 let strat='dca';
 let dcaFreq='daily', dcaPeriodMode='common', imDiv=20;
+let imReverse=false;   // V4.0 리버스 무한매도 (원금소진 후) — 기본 OFF (20분할 백테 상 리버스가 저점 손절 후 V반등을 놓쳐 불리)
 let imActive=new Set(IM_TICKERS);   // 무매 다중선택
 let vrActive=new Set(VR_TICKERS);   // VR 다중선택
 let maActive=new Set(MA_TICKERS);   // 200일선 다중선택 (기본: 전체 — 카드 비교로 시작)
@@ -991,6 +998,7 @@ function syncMaCtrl(){
 document.getElementById('imEngine').onclick=e=>{if(e.target.dataset.e){document.querySelectorAll('#imEngine button').forEach(b=>b.classList.remove('active'));e.target.classList.add('active');imEngine=e.target.dataset.e;syncMaCtrl();if(dataLoaded)run();}};
 document.getElementById('imShortMASeg').onclick=e=>{if(e.target.dataset.m){document.querySelectorAll('#imShortMASeg button').forEach(b=>b.classList.remove('active'));e.target.classList.add('active');imShortMA=+e.target.dataset.m;if(dataLoaded)run();}};
 document.getElementById('imCost').onclick=e=>{if(e.target.dataset.x){document.querySelectorAll('#imCost button').forEach(b=>b.classList.remove('active'));e.target.classList.add('active');imCostOn=e.target.dataset.x==='1';if(dataLoaded)run();}};
+document.getElementById('imRev').onclick=e=>{if(e.target.dataset.r){document.querySelectorAll('#imRev button').forEach(b=>b.classList.remove('active'));e.target.classList.add('active');imReverse=e.target.dataset.r==='1';if(dataLoaded)run();}};
 document.getElementById('imLoSeg').onclick=e=>{if(e.target.dataset.l){document.querySelectorAll('#imLoSeg button').forEach(b=>b.classList.remove('active'));e.target.classList.add('active');imLoPct=+e.target.dataset.l;if(dataLoaded)run();}};
 document.getElementById('imTgtSeg').onclick=e=>{if(e.target.dataset.t){document.querySelectorAll('#imTgtSeg button').forEach(b=>b.classList.remove('active'));e.target.classList.add('active');imTarget=+e.target.dataset.t;if(dataLoaded)run();}};
 document.getElementById('imFillSeg').onclick=e=>{if(e.target.dataset.f){document.querySelectorAll('#imFillSeg button').forEach(b=>b.classList.remove('active'));e.target.classList.add('active');imFill=e.target.dataset.f;if(dataLoaded)run();}};
@@ -1426,7 +1434,9 @@ function runIM(days,tkr,cap,divs,targetPct,compound=true){
     // 리버스 진입: 원금 소진 = 일반모드 1회매수금 잔금/(분할−T)의 분모가 0 이하(T≥분할).
     // (문서 "T>분할−1"은 정수 T 표현. 소수 T 가능한 V4.0에선 분모≤0인 T≥분할이 정확한 소진 기준.)
     // 일단 들어가면 T가 매도로 줄어도 리버스 유지, 종료는 오직 '가격 회복' 또는 '전량 매도'로만 판정.
-    if(!inReverse && T>=divs && shares>0){ inReverse=true; reverseDay1=true; }
+    // 리버스 OFF(기본): 진입선을 무력화 → 원금 소진 후엔 일반모드의 후반전 별지점 손절 쿼터매도로만 방어(홀드).
+    const _revOn=(typeof imReverse!=='undefined')&&imReverse;
+    if(_revOn && !inReverse && T>=divs && shares>0){ inReverse=true; reverseDay1=true; }
 
     if(inReverse && shares>0 && avg>0){
       // ── 리버스모드: 무한매도(보유÷10·÷20) + 쿼터매수(잔금÷4) ──
@@ -2450,7 +2460,7 @@ function renderMultiStrat(type, results, params){
   document.getElementById('detail').classList.add('hide');
   document.querySelector('.cards').classList.remove('hide');
   document.querySelector('.tbl-wrap').classList.remove('hide');
-  const stratName=type==='im'?('무한매수법 '+(imEngine==='v22'?'V2.2':imEngine==='v30'?'V3.0':imEngine==='v50'?('V5.0('+imShortMA+'일·하락'+imLoPct+'%)'):'V4.0')+(imCostOn?' · 비용반영':''))
+  const stratName=type==='im'?('무한매수법 '+(imEngine==='v22'?'V2.2':imEngine==='v30'?'V3.0':imEngine==='v50'?('V5.0('+imShortMA+'일·하락'+imLoPct+'%)'):'V4.0')+(imEngine==='v40'&&imReverse?' · 리버스ON':'')+(imCostOn?' · 비용반영':''))
     :type==='ma'?(maLen+'일선 로테이션'+(maCostOn?' · 비용반영':''))
     :('VR 5.0'+(vrCostOn?' · 비용반영':''));
   const pct=x=>(x>=0?'+':'')+x.toFixed(1)+'%';

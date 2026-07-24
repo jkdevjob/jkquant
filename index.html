@@ -620,8 +620,8 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
         <table class="cmp"><tr><th>분할</th><th>TQQQ</th><th>SOXL</th></tr><tr><td>20분할</td><td>15−1.5T</td><td>20−2T</td></tr><tr><td>40분할</td><td>15−0.75T</td><td>20−T</td></tr></table></div>
       <div class="card"><h3><span class="dot"></span>매수 / 매도</h3>
         <ul class="clean"><li><b>전반전</b> 1회매수금 절반은 별지점-$0.01, 절반은 평단에 LOC매수</li><li><b>후반전</b> 전액 별지점-$0.01에 LOC매수</li><li><b>쿼터매도</b> 보유÷4(내림) 별지점 LOC매도</li><li><b>지정가매도</b> 나머지 전부 평단×익절배율</li></ul></div>
-      <div class="card" style="border-color:var(--sell-dim)"><h3><span class="dot" style="background:var(--sell)"></span>리버스모드</h3>
-        <p class="lead">원금 소진 시(20분할 T&gt;19 · 40분할 T&gt;39) 진입. 별지점=직전 5거래일 종가 평균.</p>
+      <div class="card" style="border-color:var(--sell-dim)"><h3><span class="dot" style="background:var(--sell)"></span>리버스모드 <span style="font-size:11px;color:var(--faint);font-weight:500">· 설정에서 켬/끔 (기본 끔)</span></h3>
+        <p class="lead">원금 소진 시(20분할 T&gt;19 · 40분할 T&gt;39) 진입. 별지점=직전 5거래일 종가 평균. <b>기본은 끔</b> — 소진 후엔 후반전 별지점 손절 쿼터매도로만 방어(홀드).</p>
         <ul class="clean"><li>첫날 무조건매도 — 20분할 보유÷10 / 40분할 보유÷20 (내림) MOC, 매수 없음</li><li>이후 매도 직전보유÷10(÷20) 별지점 위 / 매수 잔금÷4 별지점 아래</li><li>T갱신 — 20분할 매도 T×0.9·매수 T+(20−T)×0.25 / 40분할 매도 T×0.95·매수 T+(40−T)×0.25</li><li>복귀 TQQQ 종가&gt;평단×0.85 · SOXL&gt;평단×0.80</li></ul></div>
     </div>
   </section>
@@ -1053,7 +1053,7 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
   <footer>
     <strong>JK 퀀트</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v2.48</b> · 2026-07-01</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v2.49</b> · 2026-07-24</div>
   </footer>
 </div>
 
@@ -1076,6 +1076,8 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
     <p class="note" style="margin:-2px 0 8px">TQQQ·SOXL만 라오어 공식. <b>TECL·KORU는 비공식</b>(자체 백테스트). 종목을 고르면 <b>검정으로 확인된 권장 엔진·파라미터가 자동 적용</b>됩니다. 익절%를 바꾸면 별지점·리버스 복귀조건도 함께 바뀝니다.</p>
     <div class="seclabel">통화 <span class="hint" style="color:var(--faint);font-weight:500">국내상장 ETF는 원화</span></div><div class="seg" id="set_cur"><button data-v="usd">달러 ($)</button><button data-v="krw">원화 (₩)</button></div>
     <div class="seclabel">분할 수</div><div class="seg" id="set_div"><button data-v="10">10분할</button><button data-v="20">20분할</button><button data-v="30">30분할</button><button data-v="40">40분할</button></div>
+    <div class="seclabel">리버스 <span class="hint" style="color:var(--faint);font-weight:500">원금 소진 후 무한매도 · V4.0</span></div><div class="seg" id="set_reverse"><button data-v="0" class="on">끔</button><button data-v="1">켬</button></div>
+    <p class="note" style="margin:-2px 0 8px">끔(기본): 원금 소진 후 <b>후반전 별지점 손절 쿼터매도</b>로만 방어(홀드). 켬: 소진 후 <b>리버스 무한매도</b> 모드 진입. 백테스트상 20분할·급락 후 V반등에서는 끔이 유리했습니다.</p>
     <div class="seclabel">파라미터</div>
     <!-- V5.0 검증 미완료 — 엔진 선택 숨김 (V4.0 고정). 복원 시 v5-hidden 클래스 제거 -->
     <div class="seclabel v5-hidden">엔진 버전</div><div class="seg v5-hidden" id="set_engine"><button data-v="v40" class="on">V4.0</button><button data-v="v50">V5.0</button></div>
@@ -1423,7 +1425,8 @@ function computeInf(){
   // 리버스 표시 여부: 이미 리버스 거래로 진행 중이거나(state), 아직 리버스 거래는 없지만 원금이 소진돼
   // 일반모드 1회매수금 = 잔금/(분할−T)의 분모가 0 이하(T≥분할)가 된 경우(최초 진입 직전).
   // 문서의 "T>분할−1"은 정수 T 기준 표현이며, 소수 T가 가능한 V4.0에선 분모≤0(T≥분할)이 정확한 소진 기준.
-  const reverseActive = (inReverseNow || (T>=st.div)) && qty>0;
+  // 리버스 OFF(기본): 원금 소진 후에도 리버스모드로 넘어가지 않고 일반모드(후반전 별지점 손절 쿼터매도)로 방어.
+  const reverseActive = (st.reverse===true) && (inReverseNow || (T>=st.div)) && qty>0;
   const bal=st.principal+realized-inv; // 가용 잔금 = 원금 + 실현손익 − 현재 보유분 투입원가
   return {avg,qty,inv,realized,T,totbuy,totsell,bal,rows,st,cycleSeq,reverseTraded,inReverseNow,reverseActive};
 }
@@ -1537,7 +1540,7 @@ function renderInfNow(){
   $('d_pct').textContent=c.avg>0?((pct>=0?'+':'')+pct.toFixed(2)+'%'):'—';
   $('d_star').textContent=c.avg>0?wn(star):'—';
   $('d_buy1').textContent=slot>0?wn(buy1):'소진';
-  $('d_todo').textContent=slot<=0?'원금 소진 — 리버스모드 진입 대상입니다.':
+  $('d_todo').textContent=slot<=0?(st.reverse===true?'원금 소진 — 리버스모드 진입 대상입니다.':'원금 소진 — 후반전 별지점 손절 쿼터매도로만 방어(홀드). 매수 없음.'):
     `${tickerLabel(st.ticker)} ${st.div}분할 · T=${fmtT(c.T)} · ${half?'전반전':'후반전'}. 주문표 탭에서 전일 종가를 넣어 LOC 주문을 확인하세요.`;
 }
 
@@ -3598,7 +3601,7 @@ function sheetInfHTML(today){
   let h='';
   h+=`<div class="reco"><div class="rl"><div class="rt">📌 오늘의 추천</div><div class="rmain">${recoKind}</div><div class="rsub">${recoLine} · 아래에서 직접 선택 · T값 자동 계산</div></div>
       <button class="rgo" onclick="sheetPickInf('${recoKind}',${recoPrice||0},${recoQty})">이대로 기록</button></div>`;
-  const reverse = c.T>st.div-1 && c.qty>0;
+  const reverse = (st.reverse===true) && c.T>st.div-1 && c.qty>0;
   if(reverse){
     const sellDiv=st.div>=40?20:10;
     h+=`<div class="sheetseclbl" style="color:var(--sell)">리버스모드 (원금 소진 · T>${st.div-1})</div>`;
@@ -3940,7 +3943,7 @@ function openSettings(){
   }else if(S.activeTab==='inf'){
     $('set_inf').style.display='';$('set_vr').style.display='none';
     const st=s.settings, sym=(st.cur||'usd')==='krw'?'₩':'$';
-    segSet('set_ticker',st.ticker);segSet('set_div',String(st.div));segSet('set_cur',st.cur||'usd');segSet('set_engine',st.engine||'v40');segSet('set_shortma',String(st.shortMA||30));segSet('set_lopct',String(st.loPct||6));syncShortMaUI(st.engine||'v40');syncTgtNote();
+    segSet('set_ticker',st.ticker);segSet('set_div',String(st.div));segSet('set_cur',st.cur||'usd');segSet('set_engine',st.engine||'v40');segSet('set_shortma',String(st.shortMA||30));segSet('set_lopct',String(st.loPct||6));segSet('set_reverse',st.reverse===true?'1':'0');syncShortMaUI(st.engine||'v40');syncTgtNote();
     $('set_target').value=st.target;$('set_big').value=st.big;$('set_principal').value=nfix(st.principal,0);
     if($('set_rows'))$('set_rows').value=st.rows!=null?st.rows:8;
     if($('set_gap'))$('set_gap').value=st.gap!=null?st.gap:2.5;
@@ -3988,7 +3991,7 @@ function syncShortMaUI(eng){
   if(note&&note.classList.contains('note')) note.style.opacity=on?'1':'0.4';
 }
 function setupSegs(){
-  ['set_ticker','set_div','set_vmode','set_vformula','set_cur','set_vcur','set_engine','set_shortma','set_lopct','set_maticker','set_malen','set_asapticker'].forEach(id=>{
+  ['set_ticker','set_div','set_reverse','set_vmode','set_vformula','set_cur','set_vcur','set_engine','set_shortma','set_lopct','set_maticker','set_malen','set_asapticker'].forEach(id=>{
     const el=$(id);if(!el)return;
     el.querySelectorAll('button').forEach(b=>{
       b.onclick=()=>{el.querySelectorAll('button').forEach(x=>x.classList.remove('on'));b.classList.add('on');
@@ -4014,6 +4017,7 @@ function saveSettings(){
   if(S.activeTab==='inf'){
     s.settings={ticker:segGet('set_ticker')||'SOXL',div:+segGet('set_div')||20,engine:segGet('set_engine')||'v40',shortMA:+segGet('set_shortma')||30,loPct:+segGet('set_lopct')||6,
       target:inputNum('set_target')||20,big:inputNum('set_big')||12,
+      reverse:segGet('set_reverse')==='1',
       rowsOn:$('set_rows_on')?$('set_rows_on').checked:false,
       rows:Math.max(0,Math.min(20,+$('set_rows').value||0)),gap:+$('set_gap').value||2.5,
       rowqty:1,principal:inputNum('set_principal')||10000,cur:segGet('set_cur')||'usd'};
