@@ -211,6 +211,17 @@ table.cmp .col-strat{color:var(--accent);}
 .log-seg button{padding:4px 11px;border-radius:13px;border:1px solid var(--border2);background:transparent;color:var(--dim);font-family:'IBM Plex Mono',monospace;font-size:11px;cursor:pointer;}
 .log-seg button.active{border-color:var(--accent);color:var(--accent);background:rgba(91,141,238,.1);}
 
+/* MODAL — 레버리지 확장 진행/결과 (완료 후 확인 눌러야 닫힘) */
+.modal-bg{position:fixed;inset:0;background:rgba(6,9,18,.74);backdrop-filter:blur(3px);display:none;align-items:center;justify-content:center;z-index:999;padding:20px;}
+.modal-bg.on{display:flex;}
+.modal-card{background:var(--surf);border:1px solid var(--border2);border-radius:14px;max-width:560px;width:100%;max-height:80vh;overflow-y:auto;padding:20px 22px;box-shadow:0 20px 60px rgba(0,0,0,.55);}
+.modal-card h3{margin:0 0 12px;font-size:15px;display:flex;align-items:center;gap:8px;color:var(--text);}
+.mrow{font-size:12.5px;color:var(--dim2);padding:8px 0;border-bottom:1px solid var(--border);font-variant-numeric:tabular-nums;line-height:1.6;}
+.mrow:last-of-type{border-bottom:none;}
+.modal-btn{margin-top:16px;width:100%;padding:11px;border-radius:9px;border:none;background:var(--accent);color:#fff;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit;}
+.modal-btn:disabled{opacity:.45;cursor:progress;}
+.spin{width:14px;height:14px;border:2px solid var(--border2);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite;display:inline-block;flex:0 0 auto;}
+@keyframes spin{to{transform:rotate(360deg)}}
 /* TABLE */
 .tbl-wrap{background:var(--surf);border:1px solid var(--border);border-radius:9px;overflow:hidden;margin-bottom:18px;}
 .tblscroll{overflow-x:auto;}   /* 종목 테이블만 독립 가로 스크롤 — 연도별(#tblYear)이 함께 밀리지 않도록 */
@@ -248,13 +259,19 @@ td:first-child{text-align:left;}
   <div class="brand">
     <div>
       <div class="logo">Backtest</div>
-      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v1.136</span></h1>
+      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v1.137</span></h1>
     </div>
   </div>
   <a href="/" class="home">← JK 퀀트</a>
   <button id="btAuthBtn" onclick="btLogin()" style="font-size:11px;padding:6px 12px;border-radius:7px;border:1px solid var(--border2);background:transparent;color:var(--dim);cursor:pointer">로그인</button>
 </div>
 <div id="dataStat" style="font-size:11.5px;color:var(--dim);margin:-12px 0 16px;font-variant-numeric:tabular-nums;display:none"></div>
+<!-- 레버리지 확장 진행·결과 모달: 합성이 끝나야 확인 버튼이 활성화된다 -->
+<div class="modal-bg" id="levModal"><div class="modal-card">
+  <h3 id="levModalTitle"></h3>
+  <div id="levModalBody"></div>
+  <button class="modal-btn" id="levModalBtn" onclick="closeLevModal()">확인</button>
+</div></div>
 
 <!-- 전략 탭 (스크롤 시 상단 고정) -->
 <div class="stabs-sticky">
@@ -1375,6 +1392,39 @@ function srcOf(t){ return (levExt && EXTM[t]) ? EXTM[t] : M[t]; }
 // ── 전 탭 공통 적용/해제 ──
 // 모든 전략 엔진이 M[tkr]을 직접 읽으므로, 확장 시계열을 M에 '갈아끼우는' 방식으로 전 탭에 일괄 적용한다.
 // (엔진 35곳을 srcOf로 바꾸는 것보다 안전 — 원본은 RAWM에 보관해 언제든 되돌린다.)
+// ── 확장 진행/결과 모달 ──
+// 기초지수를 새로 받아야 할 때만 '차단 모달'을 띄운다 (이미 받아둔 뒤 재실행에는 안 띄움).
+function levNeedsFetch(tickers){
+  for(const t of tickers||[]){
+    const u=LEV_UNDERLYING[t]; if(!u) continue;
+    if(((META[t]&&META[t].lev)||0)<2) continue;
+    if(!M[t]||!Object.keys(M[t]).length) continue;
+    if(!M[u]||!Object.keys(M[u]).length) return true;
+    const ex=IDX_EXTEND[u];
+    if(ex && (!M[ex.idx]||!Object.keys(M[ex.idx]).length)) return true;
+  }
+  return false;
+}
+function openLevModalLoading(){
+  const m=document.getElementById('levModal'); if(!m) return;
+  document.getElementById('levModalTitle').innerHTML='<span class="spin"></span> 레버리지 기초지수 로딩·합성 중';
+  document.getElementById('levModalBody').innerHTML='<div class="mrow">상장 전 구간을 1배 기초지수·가격지수로 합성하고 있습니다.<br>완료되면 확인 버튼이 활성화됩니다.</div>';
+  const btn=document.getElementById('levModalBtn'); btn.disabled=true; btn.textContent='처리 중…';
+  m.classList.add('on');
+}
+function fillLevModal(info){
+  const ks=Object.keys(info||{});
+  document.getElementById('levModalTitle').innerHTML='🧬 레버리지 확장 적용됨';
+  document.getElementById('levModalBody').innerHTML = ks.length
+    ? ks.map(t=>{const e=info[t];
+        return `<div class="mrow"><b style="color:var(--text)">${t}</b> <span style="color:var(--dim)">${e.lev}배</span> ← ${e.idx?`<b>${e.idx}</b> + `:''}${e.under}`
+          +`<br><span style="color:var(--dim)">${e.from} ~ ${e.to} 합성 · 이후 실제 데이터</span></div>`;}).join('')
+      +'<div style="margin-top:12px;font-size:11.5px;color:var(--dim);line-height:1.7">가격지수 구간은 배당 보정 (^SOX +1.29%p · ^NDX +0.57%p · ^GSPC +1.95%p/년)<br>합성 구간은 보유비용 차감 (운용보수 0.95% + 차입 (배수−1)×2.5%/년)</div>'
+    : '<div class="mrow">확장된 종목이 없습니다 — 선택 종목이 이미 요청 기간 전체의 실제 데이터를 가지고 있습니다.</div>';
+  const btn=document.getElementById('levModalBtn'); btn.disabled=false; btn.textContent='확인';
+}
+function showLevDetail(){ const m=document.getElementById('levModal'); if(!m) return; fillLevModal(LAST_EXT); m.classList.add('on'); }
+function closeLevModal(){ document.getElementById('levModal')?.classList.remove('on'); }
 function clearLevExt(){ for(const t in RAWM){ if(RAWM[t]) M[t]=RAWM[t]; } RAWM={}; EXTM={}; }
 function applyLevExt(){ for(const t in EXTM){ if(!RAWM[t]) RAWM[t]=M[t]; M[t]=EXTM[t]; } }
 // 단일 종목 시세를 M[sym]에 로드 (기초지수 확보용)
@@ -2312,16 +2362,19 @@ async function run(){
   // 상장 전 구간을 1배 기초지수×배수로 합성해 M에 갈아끼운다 → 이후 모든 전략이 확장 기간으로 실행된다.
   levExt = document.querySelector('#levExt button.active')?.dataset.x!=='0';
   { const stat=document.getElementById('dataStat');
-    if(levExt){ if(stat){stat.style.display='';stat.textContent='레버리지 기초지수 로딩·합성 중…';stat.style.color='var(--dim)';}
-      LAST_EXT = await buildLevExt(wanted, start); applyLevExt(); }
-    else { clearLevExt(); LAST_EXT={}; }
+    if(levExt){
+      const blocking=levNeedsFetch(wanted);      // 새로 받아야 할 때만 차단 모달
+      if(blocking) openLevModalLoading();
+      LAST_EXT = await buildLevExt(wanted, start); applyLevExt();
+      if(blocking) fillLevModal(LAST_EXT);       // 확인 눌러야 닫힘
+    }
+    else { clearLevExt(); LAST_EXT={}; closeLevModal(); }
     const ks=Object.keys(LAST_EXT);
-    if(stat){
+    if(stat){   // 배너는 한 줄 요약만 — 상세는 모달로
       if(ks.length){ stat.style.display=''; stat.style.color='var(--dim)';
-        stat.innerHTML='🧬 레버리지 확장 적용: '+ks.map(t=>{const e=LAST_EXT[t];
-            return `<b>${t}</b>←${e.idx?e.idx+'+':''}${e.under}(${e.from.slice(0,7)}~${e.to.slice(0,7)} 합성)`;}).join(' · ')
-          +' <span style="color:var(--dim2)">· 상장 후는 실제 데이터 · 가격지수 구간은 배당 보정</span>';
-      } else if(stat.textContent==='레버리지 기초지수 로딩·합성 중…'){ stat.style.display='none'; }
+        stat.innerHTML=`🧬 레버리지 확장 <b>${ks.length}종목</b> 적용 · 상장 전 구간 합성 `
+          +`<a href="#" onclick="showLevDetail();return false" style="color:var(--accent);text-decoration:none;border-bottom:1px dotted var(--accent)">상세 보기</a>`;
+      } else stat.style.display='none';
     }
   }
 
