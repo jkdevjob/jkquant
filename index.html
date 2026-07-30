@@ -916,6 +916,14 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
         <p class="fetchnote" id="ma_chart_note" style="margin-top:8px;color:var(--faint)">🔄 자동을 눌러 이력을 불러오면 그래프가 표시됩니다.</p>
       </div>
 
+      <!-- 적립(DCA) 배수 신호 — 로테이션과 별개 규칙: ETF 자신의 200일선 기준 -->
+      <div class="card" id="dcaSigCard" style="display:none">
+        <h3><span class="dot"></span>오늘 적립 배수 <span style="font-size:11px;color:var(--faint);font-weight:500">단순 DCA · 종목 자신의 200일선 기준</span></h3>
+        <div class="vh-big" id="dcaSig_mul" style="font-size:26px">—</div>
+        <div class="vh-band" id="dcaSig_lbl">종가 — · 200일선 —</div>
+        <p class="note" style="margin-top:8px">200일선 <b>아래</b>면 2배, <b>위</b>면 1배로 적립합니다. 백테스트(32~40년) 기준 이 규칙이 전고점 대비 방식보다 일관되게 우수했습니다(효율 +7~12%).</p>
+      </div>
+
       <!-- 계좌 상황 -->
       <div class="card acct">
         <h3 style="justify-content:space-between"><span style="display:flex;align-items:center;gap:8px"><span class="dot"></span>내 포지션</span><span class="bandpill in" id="macct_ret" style="font-size:12px">—</span></h3>
@@ -1066,7 +1074,7 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
   <footer>
     <strong>JK 퀀트</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v2.51</b> · 2026-07-24</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v2.52</b> · 2026-07-24</div>
   </footer>
 </div>
 
@@ -2601,8 +2609,16 @@ function computeMa(){
   let regimeStart=dates[last], regimeDays=1;
   for(let i=last-1;i>=0;i--){ if(sma[i]==null){ regimeStart=dates[i+1]||dates[i]; break; }
     const sig=syn[i]>sma[i]?'hold':'cash'; if(sig!==signal){ regimeStart=dates[i+1]; break; } regimeDays++; if(i===0)regimeStart=dates[0]; }
+  // ── 적립(DCA) 배수 신호 ──
+  // 로테이션 신호는 '합성 1배지수' 기준이지만, DCA 배수 규칙은 'ETF 자신의 종가 200일선' 기준이다
+  // (백테스트 _dcaOne과 동일 정의 — 사용자가 차트에서 그대로 확인·실행할 수 있는 형태).
+  const own={ma:null,below:null};
+  { let s2=0; const b2=[];
+    for(let i=0;i<n;i++){ b2.push(closes[i]); s2+=closes[i]; if(b2.length>200)s2-=b2.shift();
+      own.ma = b2.length===200 ? s2/200 : null; }
+    if(own.ma!=null) own.below = closes[last]<=own.ma; }
   return {st,N,pos,entry,ready:true,lev,idxNow,smaNow,warming,signal,gapPct,flips,regimeStart,regimeDays,
-          dates,syn,sma,
+          dates,syn,sma, own200:own.ma, ownBelow:own.below,
           lastDate:dates[last], lastClose:closes[last], price:(maQuoteData.price>0?maQuoteData.price:closes[last])};
 }
 
@@ -2642,6 +2658,19 @@ function renderMaNow(){
     drawMaChart(c);
     return;
   }
+  // 적립 배수 신호 (ETF 자신의 200일선 기준 — 로테이션 신호와 별개)
+  { const card=$('dcaSigCard');
+    if(card){
+      if(c.own200==null){ card.style.display='none'; }
+      else{ card.style.display='';
+        const dn=!!c.ownBelow, gapOwn=(c.lastClose/c.own200-1)*100;
+        $('dcaSig_mul').textContent = dn?'🟢 2배 적립':'⚪ 1배 적립';
+        $('dcaSig_mul').style.color = dn?'var(--buy)':'var(--faint)';
+        $('dcaSig_lbl').innerHTML = `${tickerLabel(c.st.ticker)} 종가 ${nfix(c.lastClose,2)} · 200일선 ${nfix(c.own200,2)} · `
+          +`<b style="color:${gapOwn>=0?'var(--buy)':'var(--sell)'}">${gapOwn>=0?'+':''}${gapOwn.toFixed(2)}%</b>`
+          +` <span style="color:var(--faint)">(${dn?'아래 → 2배':'위 → 1배'})</span>`;
+      }
+    } }
   const hold=c.signal==='hold', gp=c.gapPct, price=c.price||c.lastClose;
   $('ma_pill').className='bandpill '+(hold?'in':'under');
   $('ma_pill').textContent=hold?'보유 신호':'현금 신호';
