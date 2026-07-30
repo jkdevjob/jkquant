@@ -31,12 +31,14 @@ h1 .v{color:var(--gold)}
 .badge{padding:2px 8px;border-radius:6px;font-weight:700;font-size:10.5px}
 .badge.set{background:var(--vio-bg);color:var(--vio)}.badge.warn{background:#3a3320;color:var(--gold)}.badge.ok{background:var(--buy-bg);color:var(--buy)}
 .tabs{position:sticky;top:0;z-index:32;display:flex;gap:8px;padding:11px 0;background:var(--bg);border-bottom:1px solid var(--line)}
-.tab{flex:1;padding:11px 8px;border-radius:11px;border:1px solid var(--line);background:var(--panel);color:var(--dim);font-size:14px;font-weight:700;cursor:pointer;transition:.18s;text-align:center;-webkit-tap-highlight-color:transparent}
+.tab{flex:1;padding:11px 4px;border-radius:11px;border:1px solid var(--line);background:var(--panel);color:var(--dim);font-size:13px;font-weight:700;cursor:pointer;transition:.18s;text-align:center;-webkit-tap-highlight-color:transparent;white-space:nowrap;letter-spacing:-.4px}
 .tab.on{color:#fff;border-color:transparent}
 .tab[data-t="inf"].on{background:linear-gradient(135deg,#1f7a5a,#0f4d39)}
 .tab[data-t="vr"].on{background:linear-gradient(135deg,#4b4ec9,#2d2f86)}
 .tab[data-t="ma"].on{background:linear-gradient(135deg,#b06a1f,#7a4611)}
+.tab[data-t="dca"].on{background:linear-gradient(135deg,#1d7f8c,#0e4d56)}
 .tab[data-t="asap"].on{background:linear-gradient(135deg,#c99a2e,#8a6410)}
+@media(max-width:380px){.tabs{gap:5px}.tab{font-size:12px;padding:11px 2px}}
 .sessbar{position:sticky;top:var(--h1,54px);z-index:31;background:var(--bg);display:flex;gap:7px;align-items:center;margin:0;padding:11px 0 8px;overflow-x:auto;-webkit-overflow-scrolling:touch}
 .sesschip{padding:8px 13px;border-radius:10px;background:var(--panel);border:1px solid var(--line);color:var(--dim);font-size:12.5px;font-weight:700;cursor:pointer;white-space:nowrap;flex-shrink:0}
 .sesschip.on{background:var(--vio-bg);color:var(--vio);border-color:var(--vio)}
@@ -446,6 +448,7 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
     <button class="tab on" data-t="inf">무한매수법</button>
     <button class="tab" data-t="vr">밸류리밸런싱</button>
     <button class="tab" data-t="ma">로테이션</button>
+    <button class="tab" data-t="dca">적립</button>
     <button class="tab" data-t="asap" style="display:none">ASAP</button>
   </div>
   <div class="sessbar" id="sessbar"></div>
@@ -909,19 +912,12 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
           <svg id="ma_chart" viewBox="0 0 360 130" preserveAspectRatio="none" style="width:100%;height:130px;display:block"></svg>
           <div id="ma_chart_labels" style="position:absolute;top:0;left:2px;height:130px;pointer-events:none"></div>
         </div>
-        <div style="display:flex;gap:14px;margin-top:6px;font-size:11px;color:var(--faint)">
+        <div style="display:flex;gap:14px;margin-top:6px;font-size:11px;color:var(--faint);flex-wrap:wrap">
           <span><span style="display:inline-block;width:14px;height:2px;background:#4fb0f5;vertical-align:middle;margin-right:4px"></span>합성 1배지수 <span style="color:var(--faint2,#7c85a3)">(구간 첫날=100)</span></span>
+          <span id="ma_chart_legS" style="display:none"><span style="display:inline-block;width:14px;height:2px;background:#ffb84d;vertical-align:middle;margin-right:4px"></span><span id="ma_chart_legS_t">50일선</span></span>
           <span><span style="display:inline-block;width:14px;height:2px;background:#f24b5f;vertical-align:middle;margin-right:4px"></span><span id="ma_chart_leg">200일선</span></span>
         </div>
         <p class="fetchnote" id="ma_chart_note" style="margin-top:8px;color:var(--faint)">🔄 자동을 눌러 이력을 불러오면 그래프가 표시됩니다.</p>
-      </div>
-
-      <!-- 적립(DCA) 배수 신호 — 로테이션과 별개 규칙: ETF 자신의 200일선 기준 -->
-      <div class="card" id="dcaSigCard" style="display:none">
-        <h3><span class="dot"></span>오늘 적립 배수 <span style="font-size:11px;color:var(--faint);font-weight:500">단순 DCA · 종목 자신의 200일선 기준</span></h3>
-        <div class="vh-big" id="dcaSig_mul" style="font-size:26px">—</div>
-        <div class="vh-band" id="dcaSig_lbl">종가 — · 200일선 —</div>
-        <p class="note" style="margin-top:8px">200일선 <b>아래</b>면 2배, <b>위</b>면 1배로 적립합니다. 백테스트(32~40년) 기준 이 규칙이 전고점 대비 방식보다 일관되게 우수했습니다(효율 +7~12%).</p>
       </div>
 
       <!-- 계좌 상황 -->
@@ -961,6 +957,100 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
   </section>
 
   <!-- ASAP (SGOV 리저브 + 딥가중 + 단계 재진입) -->
+  <!-- 적립 (단순 DCA + 200일선 배수) -->
+  <section id="dca">
+    <div class="subnav">
+      <button class="chip on" data-b="dca-now">현재</button>
+      <button class="chip" data-b="dca-hist">적립이력</button>
+      <button class="chip" data-b="dca-guide">설명</button>
+    </div>
+
+    <!-- ── 현재 ── -->
+    <div class="block on" id="dca-now">
+      <div class="card" style="margin-bottom:13px">
+        <div class="field" style="margin:0"><label id="dca_price_lbl">현재가 ($) <span class="hint">배수 판정은 종가 200일선 기준</span></label>
+          <div style="display:flex;gap:8px"><input id="dca_price" type="text" inputmode="decimal" placeholder="자동 조회" oninput="commaInput(this);onDcaPrice()" style="flex:1">
+          <button class="fetchbtn" id="dca_autobtn" onclick="fetchDcaQuote()">🔄 자동</button></div></div>
+        <div class="fetchnote" id="dca_fetchnote" style="margin:6px 0 0"></div>
+      </div>
+
+      <!-- 배수 히어로 -->
+      <div class="vhero" style="background:linear-gradient(165deg,#0e2a2e,var(--panel));border-color:#0e4d56">
+        <div class="vh-top">
+          <span class="vh-kick">DCA · <span id="dca_ticker">USD</span> <span id="dca_rule_lbl" style="color:var(--faint);font-weight:500">200일선 2배</span></span>
+          <span class="bandpill wait" id="dca_pill">대기</span>
+        </div>
+        <div class="vh-big" id="dca_mul_txt" style="font-size:30px">—</div>
+        <div class="vh-band" id="dca_gap_lbl">종가 — · 200일선 —</div>
+        <div class="posbar">
+          <div class="pb-track" style="background:linear-gradient(90deg,#8fd14f33,#f5a45133)"><div class="pb-mark" id="dg_mark" style="left:50%"></div></div>
+          <div class="pb-scale"><span>−30%</span><span class="mid">200일선</span><span>+30%</span></div>
+        </div>
+      </div>
+
+      <!-- 오늘 할 일 -->
+      <div class="card" style="margin-bottom:13px">
+        <h3><span class="dot"></span>오늘 적립</h3>
+        <div id="dca_verdict"><p class="lead">위 🔄 자동 버튼을 누르면 종가 이력을 불러와 오늘 적립 배수를 계산합니다.</p></div>
+        <button class="fetchbtn" id="dca_buy_btn" style="width:100%;margin-top:12px;background:var(--buy-bg);color:var(--buy);border-color:var(--buy-dim)" onclick="dcaRecord()">🟢 적립(매수) 기록</button>
+      </div>
+
+      <!-- 종가 vs 200일선 차트 -->
+      <div class="card" style="margin-bottom:13px">
+        <div class="chart-head" style="display:flex;justify-content:space-between;align-items:center">
+          <h3 style="margin:0;display:flex;align-items:center;gap:6px"><span class="dot"></span>종가 · 200일선</h3>
+          <select class="chart-select" id="dca_chart_sel" onchange="drawDcaChart()">
+            <option value="252">1년</option><option value="378" selected>1.5년</option><option value="504">2년</option>
+            <option value="756">3년</option><option value="1260">5년</option><option value="99999">전체</option>
+          </select>
+        </div>
+        <div style="position:relative;margin-top:6px">
+          <svg id="dca_chart" viewBox="0 0 360 130" preserveAspectRatio="none" style="width:100%;height:130px;display:block"></svg>
+          <div id="dca_chart_labels" style="position:absolute;top:0;left:2px;height:130px;pointer-events:none"></div>
+        </div>
+        <div style="display:flex;gap:14px;margin-top:6px;font-size:11px;color:var(--faint);flex-wrap:wrap">
+          <span><span style="display:inline-block;width:14px;height:2px;background:#4fb0f5;vertical-align:middle;margin-right:4px"></span>종가 <span style="color:var(--faint2,#7c85a3)">(구간 첫날=100)</span></span>
+          <span><span style="display:inline-block;width:14px;height:2px;background:#f24b5f;vertical-align:middle;margin-right:4px"></span>200일선</span>
+        </div>
+        <p class="fetchnote" id="dca_chart_note" style="margin-top:8px;color:var(--faint)">🔄 자동을 눌러 이력을 불러오면 그래프가 표시됩니다.</p>
+      </div>
+
+      <!-- 적립 현황 -->
+      <div class="card acct">
+        <h3 style="justify-content:space-between"><span style="display:flex;align-items:center;gap:8px"><span class="dot"></span>내 적립 현황</span><span class="bandpill in" id="dcacct_ret" style="font-size:12px">—</span></h3>
+        <div class="ar"><span class="ak">누적 투입금 <span class="sub">기록 합계</span></span><span class="av vio" id="dcacct_inv">$0</span></div>
+        <div class="ar"><span class="ak">보유 개수</span><span class="av" id="dcacct_qty">0주</span></div>
+        <div class="ar"><span class="ak">평균 단가</span><span class="av" id="dcacct_avg">—</span></div>
+        <div class="ar"><span class="ak" id="dcacct_close_k">종가</span><span class="av" id="dcacct_close">—</span></div>
+        <div class="ar"><span class="ak">평가금</span><span class="av" id="dcacct_eval">$0</span></div>
+        <div class="ar"><span class="ak">적립 횟수 <span class="sub">2배 적립 포함</span></span><span class="av buy" id="dcacct_n">0회</span></div>
+      </div>
+    </div>
+
+    <!-- ── 적립이력 ── -->
+    <div class="block" id="dca-hist">
+      <div class="card"><h3><span class="dot"></span>내 적립 기록 <span id="dca_rec_count" class="cnt"></span></h3>
+        <div class="htable-wrap"><table class="htable" id="dca_rec_tbl"></table></div>
+        <button class="ghostbtn" onclick="clearHist('dca')">기록 전체 삭제</button></div>
+      <div class="card"><h3 style="justify-content:space-between"><span style="display:flex;align-items:center;gap:8px"><span class="dot"></span>배수 전환 이력</span><span class="lh-stage" id="dca_flip_count">—</span></h3>
+        <div class="cyc-scroll"><table class="cyctbl" id="dca_flip_tbl"></table></div>
+        <p class="note" style="margin-top:8px">종가가 200일선을 위로/아래로 교차해 적립 배수가 바뀐 날들입니다.</p></div>
+    </div>
+
+    <!-- ── 설명 ── -->
+    <div class="block" id="dca-guide">
+      <div class="card"><h3><span class="dot"></span>한 줄 요약</h3><p class="lead">정해진 금액을 정기적으로 사되, <b>종가가 200일선 아래면 배수만큼 더 삽니다.</b> 위면 1배 그대로.</p></div>
+      <div class="card"><h3><span class="dot"></span>왜 200일선 기준인가</h3>
+        <p class="note">백테스트(32~40년)에서 <b>전고점 대비 −10%마다 2배</b> 방식과 비교했을 때 200일선 기준이 일관되게 우수했습니다(효율 +7~12%). 전고점 방식은 레버리지 ETF가 전체 기간의 78~96%를 전고점 아래에서 보내기 때문에 "싸다"는 신호로 작동하지 않습니다. 200일선은 절대적 가격 수준을 반영해 실제 저가 구간에만 배수가 걸립니다.</p></div>
+      <div class="card"><h3><span class="dot"></span>규칙</h3>
+        <ul class="clean"><li><b>기본</b> 1회 적립액을 정해진 주기마다 매수</li><li><b>배수</b> 종가 ≤ 200일선 → 설정 배수(기본 2배)</li><li><b>판정</b> 종목 자신의 종가 200일선 (로테이션의 합성 1배지수와 다름)</li><li><b>워밍업</b> 이력 200일 미만이면 1배</li><li><b>매도</b> 없음 — 계속 모읍니다</li></ul></div>
+      <div class="card"><h3><span class="dot"></span>운영 방법</h3>
+        <ol class="steps"><li>설정(⚙️)에서 종목·1회 적립액·배수 지정</li><li>적립일에 🔄 자동으로 오늘 배수 확인</li><li>표시된 금액만큼 매수</li><li>적립(매수) 기록 버튼으로 기록</li></ol></div>
+      <div class="card"><h3><span class="dot"></span>참고</h3>
+        <p class="note">고정 예산 안에서 배수를 조절하는 것은 효과가 거의 없습니다(변형 간 차이 2% 이내). <b>여윳돈을 추가로 넣을 때</b> 의미가 있는 규칙입니다. 배수를 3배로 키우면 하락장에 현금이 빨리 소진되니 감당 가능한 범위에서 정하세요.</p></div>
+    </div>
+  </section>
+
   <section id="asap">
     <div class="subnav">
       <button class="chip on" data-b="asap-now">현재</button>
@@ -1074,7 +1164,7 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
   <footer>
     <strong>JK 퀀트</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v2.53</b> · 2026-07-24</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v2.55</b> · 2026-07-30</div>
   </footer>
 </div>
 
@@ -1143,6 +1233,18 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
     <div class="seg" id="set_mapark"><button data-v="cash" class="on">현금</button><button data-v="bill">단기국채</button></div>
     <p class="note" style="margin:4px 0 8px">현금 신호일 때 <b>단기국채</b>(SGOV·BIL 등)로 대기하면 이자를 받습니다 — 백테상 CAGR +0.9~1.2%p, MDD는 오히려 개선. 배당주(SCHD·VYM)는 폭락장에 같이 빠져(2008년 −32%) 대피처로 부적합합니다.</p>
     <div class="field"><label id="set_maprincipal_lbl">원금 ($)</label><input id="set_maprincipal" type="text" inputmode="decimal" value="10000" oninput="commaInput(this)"></div>
+  </div>
+  <div id="set_dca" style="display:none">
+    <div class="seclabel">종목 (티커)</div>
+    <div class="seg" id="set_dcaticker" style="flex-wrap:wrap">
+      <button data-v="USD">USD</button><button data-v="TQQQ">TQQQ</button><button data-v="SOXL">SOXL</button>
+      <button data-v="TECL">TECL</button><button data-v="QLD">QLD</button><button data-v="SCHD">SCHD</button></div>
+    <div class="seclabel">적립 주기 <span class="hint" style="color:var(--faint);font-weight:500">알림용 · 계산에는 영향 없음</span></div>
+    <div class="seg" id="set_dcafreq"><button data-v="day">매일</button><button data-v="week">매주</button><button data-v="month" class="on">매월</button></div>
+    <div class="field"><label id="set_dcaamt_lbl">1회 적립액 ($) <span class="hint">배수 1배일 때 금액</span></label><input id="set_dcaamt" type="text" inputmode="decimal" value="500" oninput="commaInput(this)"></div>
+    <div class="seclabel">하락 시 배수 <span class="hint" style="color:var(--faint);font-weight:500">종가 ≤ 200일선</span></div>
+    <div class="seg" id="set_dcamul"><button data-v="1">없음(1배)</button><button data-v="1.5">1.5배</button><button data-v="2" class="on">2배</button><button data-v="3">3배</button></div>
+    <p class="note" style="margin:4px 0 8px">종목 자신의 <b>종가 200일선</b> 아래에서만 배수가 걸립니다. 백테(32~40년) 기준 전고점 대비 방식보다 효율 +7~12% 우수. 고정 예산 안에서는 효과가 거의 없고, <b>추가 여윳돈</b>을 넣을 때 의미가 있습니다.</p>
   </div>
   <div id="set_asap" style="display:none">
     <div class="seclabel">종목 (티커)</div>
@@ -1238,6 +1340,19 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
     <div class="field" id="em_qtywrap"><label>수량 (주)</label><input id="em_qty" type="number" inputmode="numeric"></div>
   </div>
   <div class="mbtns"><button class="close" onclick="delMaFromEdit()" style="background:var(--sell-bg);color:var(--sell)">삭제</button><button class="save" onclick="saveMaEdit()">저장</button></div>
+</div></div>
+
+<!-- 거래 수정 모달 (적립) -->
+<div class="modal" id="editDcaModal"><div class="box">
+  <button class="mx" onclick="closeEditDca()" aria-label="닫기">✕</button>
+  <h3>적립 수정</h3>
+  <div class="field"><label>날짜</label><input id="ed_date" type="date" class="dateinput"></div>
+  <div class="grid2">
+    <div class="field"><label>단가 ($)</label><input id="ed_price" type="text" inputmode="decimal" oninput="commaInput(this)"></div>
+    <div class="field"><label>금액 ($)</label><input id="ed_amt" type="text" inputmode="decimal" oninput="commaInput(this)"></div>
+  </div>
+  <div class="field"><label>배수 <span class="hint">기록용</span></label><input id="ed_mul" type="text" inputmode="decimal" oninput="commaInput(this)"></div>
+  <div class="mbtns"><button class="close" onclick="delDcaFromEdit()" style="background:var(--sell-bg);color:var(--sell)">삭제</button><button class="save" onclick="saveDcaEdit()">저장</button></div>
 </div></div>
 
 <!-- 거래 수정 모달 (ASAP) -->
@@ -1354,6 +1469,8 @@ function defMaSettings(){return{ticker:'SOXL',maLen:200,sig:'close',park:'cash',
 function newMaSession(name){return{id:uid(),name:name||'세션 1',settings:defMaSettings(),hist:[]}}
 function defAsapSettings(){return{ticker:'SOXL',base:10,mid:50,deep:100,cur:'usd'}}
 function newAsapSession(name){return{id:uid(),name:name||'내 계좌',settings:defAsapSettings(),hist:[]}}
+function defDcaSettings(){return{ticker:'USD',amount:500,freq:'month',dipMul:2,cur:'usd'}}
+function newDcaSession(name){return{id:uid(),name:name||'내 계좌',settings:defDcaSettings(),hist:[]}}
 
 /* 신규 사용자 기본 상태 (빈 세션 1개씩) */
 function freshState(){
@@ -1361,7 +1478,8 @@ function freshState(){
   const vrS=newVrSession('내 계좌');
   const maS=newMaSession('내 계좌');
   const asapS=newAsapSession('내 계좌');
-  return {activeTab:'inf',inf:{sessions:[infS],active:infS.id},vr:{sessions:[vrS],active:vrS.id},ma:{sessions:[maS],active:maS.id},asap:{sessions:[asapS],active:asapS.id}};
+  const dcaS=newDcaSession('내 계좌');
+  return {activeTab:'inf',inf:{sessions:[infS],active:infS.id},vr:{sessions:[vrS],active:vrS.id},ma:{sessions:[maS],active:maS.id},dca:{sessions:[dcaS],active:dcaS.id},asap:{sessions:[asapS],active:asapS.id}};
 }
 let curUid=null;           // 로그인한 사용자 uid
 function lsKey(){return curUid?('qcockpit_v2_'+curUid):'qcockpit_v2_guest'}
@@ -1371,6 +1489,8 @@ function validState(o){return o&&o.inf&&o.vr&&o.inf.sessions&&o.vr.sessions&&o.i
 function ensureMaBox(){ if(S&&(!S.ma||!S.ma.sessions||!S.ma.sessions.length)){ const m=newMaSession('내 계좌'); S.ma={sessions:[m],active:m.id}; } }
 // ASAP 탭 마이그레이션: 기존 상태에 asap 박스 추가 (기존 데이터 보존).
 function ensureAsapBox(){ if(S&&(!S.asap||!S.asap.sessions||!S.asap.sessions.length)){ const a=newAsapSession('내 계좌'); S.asap={sessions:[a],active:a.id}; } }
+// 적립(DCA) 탭 마이그레이션: 기존 상태에 dca 박스 추가 (기존 데이터 보존).
+function ensureDcaBox(){ if(S&&(!S.dca||!S.dca.sessions||!S.dca.sessions.length)){ const d=newDcaSession('내 계좌'); S.dca={sessions:[d],active:d.id}; } }
 
 function load(){
   try{S=JSON.parse(localStorage.getItem(lsKey()))}catch(e){S=null}
@@ -1379,6 +1499,7 @@ function load(){
   if(S.activeTab==='asap')S.activeTab='inf';   // ASAP 숨김 기간: 저장된 활성탭이 asap이면 무한매수법으로 (탭이 없어 갇히는 것 방지)
   ensureMaBox();
   ensureAsapBox();
+  ensureDcaBox();
   forceV40();   // V5.0 숨김 기간: 저장된 v50 세션을 v40으로 되돌림
 }
 function saveLocal(){S._updated=Date.now();localStorage.setItem(lsKey(),JSON.stringify(S))}
@@ -2624,16 +2745,8 @@ function computeMa(){
   let regimeStart=dates[last], regimeDays=1;
   for(let i=last-1;i>=0;i--){ if(sma[i]==null){ regimeStart=dates[i+1]||dates[i]; break; }
     const sig=sigAt(i); if(sig!==signal){ regimeStart=dates[i+1]; break; } regimeDays++; if(i===0)regimeStart=dates[0]; }
-  // ── 적립(DCA) 배수 신호 ──
-  // 로테이션 신호는 '합성 1배지수' 기준이지만, DCA 배수 규칙은 'ETF 자신의 종가 200일선' 기준이다
-  // (백테스트 _dcaOne과 동일 정의 — 사용자가 차트에서 그대로 확인·실행할 수 있는 형태).
-  const own={ma:null,below:null};
-  { let s2=0; const b2=[];
-    for(let i=0;i<n;i++){ b2.push(closes[i]); s2+=closes[i]; if(b2.length>200)s2-=b2.shift();
-      own.ma = b2.length===200 ? s2/200 : null; }
-    if(own.ma!=null) own.below = closes[last]<=own.ma; }
   return {st,N,pos,entry,ready:true,lev,idxNow,smaNow,warming,signal,gapPct,flips,regimeStart,regimeDays,
-          dates,syn,sma,smaS, sig:SIG, shortLen:SHORT, park:PARK, smaSNow:smaS[last], own200:own.ma, ownBelow:own.below,
+          dates,syn,sma,smaS, sig:SIG, shortLen:SHORT, park:PARK, smaSNow:smaS[last],
           lastDate:dates[last], lastClose:closes[last], price:(maQuoteData.price>0?maQuoteData.price:closes[last])};
 }
 
@@ -2673,19 +2786,6 @@ function renderMaNow(){
     drawMaChart(c);
     return;
   }
-  // 적립 배수 신호 (ETF 자신의 200일선 기준 — 로테이션 신호와 별개)
-  { const card=$('dcaSigCard');
-    if(card){
-      if(c.own200==null){ card.style.display='none'; }
-      else{ card.style.display='';
-        const dn=!!c.ownBelow, gapOwn=(c.lastClose/c.own200-1)*100;
-        $('dcaSig_mul').textContent = dn?'🟢 2배 적립':'⚪ 1배 적립';
-        $('dcaSig_mul').style.color = dn?'var(--buy)':'var(--faint)';
-        $('dcaSig_lbl').innerHTML = `${tickerLabel(c.st.ticker)} 종가 ${nfix(c.lastClose,2)} · 200일선 ${nfix(c.own200,2)} · `
-          +`<b style="color:${gapOwn>=0?'var(--buy)':'var(--sell)'}">${gapOwn>=0?'+':''}${gapOwn.toFixed(2)}%</b>`
-          +` <span style="color:var(--faint)">(${dn?'아래 → 2배':'위 → 1배'})</span>`;
-      }
-    } }
   const hold=c.signal==='hold', gp=c.gapPct, price=c.price||c.lastClose;
   $('ma_pill').className='bandpill '+(hold?'in':'under');
   $('ma_pill').textContent=hold?'보유 신호':'현금 신호';
@@ -2732,8 +2832,11 @@ function drawMaChart(c){
   const svg=$('ma_chart'); if(!svg) return;
   c=c||computeMa();
   const note=$('ma_chart_note'), lbox=$('ma_chart_labels');
+  const GC=(c.sig==='gc'), SH=c.shortLen||50;                       // 골든크로스면 단기선도 함께 표시
   if($('ma_chart_leg')) $('ma_chart_leg').textContent=(c.N||200)+'일선';
-  if($('ma_chart_leg2')) $('ma_chart_leg2').textContent=(c.N||200)+'일선';
+  if($('ma_chart_leg2')) $('ma_chart_leg2').textContent=GC?`${SH}/${c.N||200}일선`:(c.N||200)+'일선';
+  if($('ma_chart_legS')) $('ma_chart_legS').style.display=GC?'':'none';
+  if($('ma_chart_legS_t')) $('ma_chart_legS_t').textContent=SH+'일선';
   if(!c.ready || !c.syn){ svg.innerHTML=''; if(lbox)lbox.innerHTML=''; if(note)note.textContent='🔄 자동을 눌러 이력을 불러오면 그래프가 표시됩니다.'; return; }
   const sel=$('ma_chart_sel'); if(sel) maChartRange=+sel.value||378;
   const syn=c.syn, sma=c.sma, N=c.N, n=syn.length;
@@ -2743,25 +2846,29 @@ function drawMaChart(c){
   const base=syn[start]||1, K=100/base;
   const S=idx.map(i=>syn[i]*K);
   const M=idx.map(i=>sma[i]==null?null:sma[i]*K);
-  const all=S.concat(M.filter(v=>v!=null));
+  const SS=GC&&c.smaS ? idx.map(i=>c.smaS[i]==null?null:c.smaS[i]*K) : null;
+  const all=S.concat(M.filter(v=>v!=null), SS?SS.filter(v=>v!=null):[]);
   const lo=Math.min(...all), hi=Math.max(...all);
   const W=360,H=130,pad=2;
   const xs=i=>pad+(i/(idx.length-1||1))*(W-pad*2);
   const ys=v=>H-pad-((v-lo)/(hi-lo||1))*(H-pad*2);
   const path=arr=>{let d='';arr.forEach((v,i)=>{if(v==null)return;d+=(d?'L':'M')+xs(i).toFixed(1)+','+ys(v).toFixed(1)+' ';});return d;};
-  // 배경: 합성지수>N일선=보유(초록) / 아래=현금(빨강)
+  // 배경: 보유 조건 충족=초록 / 미충족=빨강 (종가기준=지수>N일선 · 골든크로스=단기선>N일선)
   let bg='';
-  for(let i=0;i<idx.length;i++){ if(S[i]==null||M[i]==null)continue;
-    const up=S[i]>M[i], x0=xs(i), x1=(i<idx.length-1)?xs(i+1):W;
+  for(let i=0;i<idx.length;i++){ if(M[i]==null)continue;
+    const ref = GC ? (SS?SS[i]:null) : S[i]; if(ref==null)continue;
+    const up=ref>M[i], x0=xs(i), x1=(i<idx.length-1)?xs(i+1):W;
     bg+=`<rect x="${x0.toFixed(1)}" y="0" width="${Math.max(0.5,x1-x0).toFixed(1)}" height="${H}" fill="${up?'rgba(54,211,153,.07)':'rgba(248,123,140,.08)'}"/>`; }
   svg.innerHTML=bg
     +`<path d="${path(M)}" fill="none" stroke="#f24b5f" stroke-width="1.6"/>`
-    +`<path d="${path(S)}" fill="none" stroke="#4fb0f5" stroke-width="1.8"/>`;
+    +(SS?`<path d="${path(SS)}" fill="none" stroke="#ffb84d" stroke-width="1.6"/>`:'')
+    +`<path d="${path(S)}" fill="none" stroke="#4fb0f5" stroke-width="${GC?1.3:1.8}" ${GC?'opacity=".62"':''}/>`;
   // 마지막 값 라벨 (겹침 방지)
   if(lbox){
     const fmtv=v=>v>=10000?(v/1000).toFixed(1)+'k':v.toFixed(v>=100?0:1);
     const lastM=M.filter(v=>v!=null).slice(-1)[0];
-    const items=[[S[S.length-1],'#4fb0f5'],[lastM,'#f24b5f']].filter(x=>x[0]!=null);
+    const lastSS=SS?SS.filter(v=>v!=null).slice(-1)[0]:null;
+    const items=[[S[S.length-1],'#4fb0f5'],[lastSS,'#ffb84d'],[lastM,'#f24b5f']].filter(x=>x[0]!=null);
     const placed=items.map(([v,col])=>({v,c:col,y:ys(v)})).sort((a,b)=>a.y-b.y);
     for(let i=1;i<placed.length;i++){ if(placed[i].y-placed[i-1].y<12) placed[i].y=placed[i-1].y+12; }
     const over=placed.length?placed[placed.length-1].y-(H-6):0; if(over>0)placed.forEach(p=>p.y-=over);
@@ -2772,7 +2879,7 @@ function drawMaChart(c){
   const shown=idx.length;
   const perMap={252:'1년',378:'1.5년',504:'2년',756:'3년',1260:'5년'};
   const per = maChartRange>=99999 ? (shown>=2520?'전체(10년+)':'전체') : (perMap[maChartRange]||(shown>=252?(Math.round(shown/252)+'년'):(Math.round(shown/21)+'달')));
-  if(note) note.textContent=`${tickerLabel(c.st.ticker)} 합성 1배지수(${c.lev}배 역산) vs ${N}일선 · ${per} · 초록=보유·빨강=현금 구간`;
+  if(note) note.textContent=`${tickerLabel(c.st.ticker)} 합성 1배지수(${c.lev}배 역산) vs ${GC?`${SH}/${N}일선 골든크로스`:`${N}일선`} · ${per} · 초록=보유·빨강=${c.park==='bill'?'국채':'현금'} 구간`;
 }
 
 function renderMaHist(){
@@ -2836,6 +2943,222 @@ function delMaFromEdit(){ if(editMaIdx<0){closeEditMa();return;} const i=editMaI
 function refreshMa(){
   renderMaNow(); renderMaHist(); renderStatusline();
   if(S.activeTab==='ma'){ try{ if(!krwNoAuto(curStrat().settings)) loadMaData(); }catch(e){console.error(e)} }
+}
+
+/* ══════════ 적립(DCA) 운영 — 단순 적립 + 200일선 하락 배수 ══════════ */
+/* 판정 기준은 '종목 자신의 종가 200일선' (로테이션의 합성 1배지수와 다름).
+   백테스트 _dcaOne + _dcaMA(t,200)와 동일 정의 — 종가 ≤ 200일선이면 배수 적립. */
+let dcaQuoteData=null;   // {symbol, days:[{date,close}], last, price, currency, src}
+const DCA_N=200;
+
+function computeDca(){
+  const st=curStrat().settings, hist=curStrat().hist||[];
+  const sym=String(st.ticker||'USD').toUpperCase();
+  const mul=+st.dipMul||1, amt=+st.amount||0;
+  // 내 적립 현황 (기록 합계)
+  let inv=0, shares=0, nBuy=0, nDip=0;
+  hist.forEach(h=>{ const a=+h.amt||0, p=+h.price||0;
+    if(p>0&&a>0){ inv+=a; shares+=a/p; nBuy++; if((+h.mul||1)>1) nDip++; } });
+  const avg = shares>0 ? inv/shares : 0;
+  const pos={inv,shares,avg,nBuy,nDip};
+
+  const days=(dcaQuoteData && String(dcaQuoteData.symbol||'').toUpperCase()===sym && dcaQuoteData.days) ? dcaQuoteData.days : null;
+  if(!days || days.length<2) return {st,sym,mul,amt,pos,ready:false};
+  const closes=days.map(d=>d.close), dates=days.map(d=>d.date), n=closes.length;
+  const sma=new Array(n); { let s=0; const buf=[];
+    for(let i=0;i<n;i++){ buf.push(closes[i]); s+=closes[i]; if(buf.length>DCA_N)s-=buf.shift();
+      sma[i]= buf.length===DCA_N ? s/DCA_N : null; } }
+  const last=n-1, smaNow=sma[last], lastClose=closes[last];
+  const price=(dcaQuoteData.price>0?dcaQuoteData.price:lastClose);
+  const warming = smaNow==null;
+  // 오늘 배수: 현재가(장중이면 실시간)가 200일선 이하면 배수, 아니면 1배
+  const below = warming ? false : (price<=smaNow);
+  const todayMul = (warming||mul<=1) ? 1 : (below?mul:1);
+  const gapPct = smaNow ? (price/smaNow-1)*100 : null;
+  // 배수 전환 이력 (종가 기준)
+  const flips=[]; let prev=null;
+  for(let i=0;i<n;i++){ if(sma[i]==null)continue; const b=closes[i]<=sma[i];
+    if(prev!==null && b!==prev) flips.push({date:dates[i], to:b?'dip':'base', gap:(closes[i]/sma[i]-1)*100}); prev=b; }
+  return {st,sym,mul,amt,pos,ready:true,warming,below,todayMul,gapPct,flips,
+          dates,closes,sma,smaNow,lastClose,lastDate:dates[last],price,
+          eval:pos.shares*price, ret: pos.inv>0 ? (pos.shares*price/pos.inv-1)*100 : null};
+}
+
+function fetchDcaQuote(){ loadDcaData(true); }
+async function loadDcaData(force){
+  const st=curStrat().settings, note=$('dca_fetchnote');
+  const sym=String(st.ticker||'USD').toUpperCase();
+  if(!force && dcaQuoteData && String(dcaQuoteData.symbol||'').toUpperCase()===sym){ renderDcaNow(); renderDcaHist(); return; }
+  if(note){note.className='fetchnote load';note.textContent='종가 이력 불러오는 중…';}
+  const q=await fetchDaily(sym);
+  if(q && q.days && q.days.length){
+    dcaQuoteData={symbol:q.symbol,days:q.days,last:q.last,price:(q.price!=null&&+q.price>0)?+q.price:q.last.close,currency:q.currency||'USD',src:q.src};
+    if($('dca_price')) $('dca_price').value = nfix(dcaQuoteData.price,2);
+    if(note){note.className='fetchnote ok';note.textContent=`✓ ${q.symbol} ${q.last.date} 종가 ${px(q.last.close)} · ${q.days.length}일 이력`;}
+    renderDcaNow(); renderDcaHist();
+  }else if(note){ note.className='fetchnote err'; note.textContent='⚠ 불러오기 실패 — 잠시 후 다시 시도하세요.'; }
+}
+function onDcaPrice(){ const p=inputNum('dca_price')||0; if(dcaQuoteData && p>0) dcaQuoteData.price=p; renderDcaNow(); }
+
+const DCA_FREQ={day:'매일',week:'매주',month:'매월'};
+function renderDcaNow(){
+  const c=computeDca(), st=c.st;
+  $('dca_ticker').textContent=tickerLabel(st.ticker||'USD');
+  $('dca_rule_lbl').textContent = (+st.dipMul||1)>1 ? `200일선 ${st.dipMul}배` : '배수 없음';
+  $('dcacct_close_k').textContent=tickerLabel(st.ticker||'USD')+' 종가';
+  // 적립 현황은 시세 없어도 표시
+  const p=c.pos;
+  $('dcacct_inv').textContent=px(p.inv);
+  $('dcacct_qty').textContent=nfix(p.shares,4)+'주';
+  $('dcacct_avg').textContent=p.avg>0?px(p.avg):'—';
+  $('dcacct_n').textContent=`${p.nBuy}회`+(p.nDip?` (배수 ${p.nDip}회)`:'');
+  if(!c.ready){
+    $('dca_pill').className='bandpill wait'; $('dca_pill').textContent='대기';
+    $('dca_mul_txt').textContent='—'; $('dca_mul_txt').style.color='';
+    $('dca_gap_lbl').textContent='🔄 자동을 눌러 종가 이력을 불러오세요';
+    $('dg_mark').style.left='50%';
+    $('dca_verdict').innerHTML='<p class="lead">위 🔄 자동 버튼을 누르면 종가 이력을 불러와 오늘 적립 배수를 계산합니다.</p>';
+    $('dcacct_close').textContent='—'; $('dcacct_eval').textContent=px(0);
+    $('dcacct_ret').textContent='—'; $('dcacct_ret').className='bandpill in';
+    drawDcaChart(c);
+    return;
+  }
+  const dip=c.todayMul>1, price=c.price;
+  $('dca_pill').className='bandpill '+(dip?'under':'in');
+  $('dca_pill').textContent=dip?'하락 구간':'정상 구간';
+  $('dca_mul_txt').textContent=c.warming?'⚪ 1배 적립 (워밍업)':(dip?`🟢 ${c.todayMul}배 적립`:'⚪ 1배 적립');
+  $('dca_mul_txt').style.color=dip?'var(--buy)':'var(--faint)';
+  const gp=c.gapPct;
+  $('dca_gap_lbl').innerHTML = c.warming
+    ? `이력 ${c.closes.length}일 · 200일선 계산에 ${DCA_N-c.closes.length}일 더 필요`
+    : `종가 ${nfix(price,2)} · 200일선 ${nfix(c.smaNow,2)} · <b style="color:${gp>=0?'var(--buy)':'var(--sell)'}">${gp>=0?'+':''}${gp.toFixed(2)}%</b>`;
+  let pct=(gp+30)/60*100; pct=Math.max(0,Math.min(100,pct)); $('dg_mark').style.left=pct+'%';
+  // 오늘 적립 안내
+  const buyAmt=(+st.amount||0)*c.todayMul;
+  const qty=price>0?buyAmt/price:0;
+  const freq=DCA_FREQ[st.freq||'month']||'매월';
+  $('dca_verdict').innerHTML=
+    `<div class="oitem ${dip?'b':''}"${dip?'':' style="background:var(--panel2)"'}>`
+    +`<span class="tag"${dip?'':' style="background:var(--panel);color:var(--dim)"'}>${c.todayMul}배</span>`
+    +`<span class="nm">${freq} 적립 · 1회 ${px(+st.amount||0)}</span><span class="pr">${px(buyAmt)}</span></div>`
+    +`<p class="note" style="margin-top:8px">현재가 ${nfix(price,2)} 기준 <b>약 ${Math.floor(qty)}주</b> (${nfix(qty,3)}주). `
+    +(c.warming?`이력이 200일 미만이라 배수 없이 1배로 적립합니다.`
+      :dip?`종가가 200일선 <b>아래</b> → ${c.todayMul}배 적립 구간입니다.`
+          :`종가가 200일선 <b>위</b> → 평소대로 1배 적립합니다.`)
+    +` 매수 후 아래 <b>🟢 적립 기록</b>으로 남기세요.</p>`;
+  $('dcacct_close').textContent=px(c.lastClose);
+  $('dcacct_eval').textContent=px(c.eval);
+  if(c.ret==null){ $('dcacct_ret').textContent='—'; $('dcacct_ret').className='bandpill in'; }
+  else{ $('dcacct_ret').textContent=(c.ret>=0?'+':'')+c.ret.toFixed(2)+'%';
+        $('dcacct_ret').className='bandpill '+(c.ret>=0?'in':'under'); }
+  drawDcaChart(c);
+}
+
+/* 종가 + 200일선 그래프 (배수 구간 음영) */
+let dcaChartRange=378;
+function drawDcaChart(c){
+  const svg=$('dca_chart'); if(!svg) return;
+  c=c||computeDca();
+  const note=$('dca_chart_note'), lbox=$('dca_chart_labels');
+  if(!c.ready || !c.closes){ svg.innerHTML=''; if(lbox)lbox.innerHTML=''; if(note)note.textContent='🔄 자동을 눌러 이력을 불러오면 그래프가 표시됩니다.'; return; }
+  const sel=$('dca_chart_sel'); if(sel) dcaChartRange=+sel.value||378;
+  const cl=c.closes, sma=c.sma, n=cl.length;
+  const want = dcaChartRange>=99999 ? n : Math.max(DCA_N, dcaChartRange);
+  const start=Math.max(0, n-want);
+  const idx=[]; for(let i=start;i<n;i++) idx.push(i);
+  const base=cl[start]||1, K=100/base;
+  const S2=idx.map(i=>cl[i]*K);
+  const M2=idx.map(i=>sma[i]==null?null:sma[i]*K);
+  const all=S2.concat(M2.filter(v=>v!=null));
+  const lo=Math.min(...all), hi=Math.max(...all);
+  const W=360,H=130,pad=2;
+  const xs=i=>pad+(i/(idx.length-1||1))*(W-pad*2);
+  const ys=v=>H-pad-((v-lo)/(hi-lo||1))*(H-pad*2);
+  const path=arr=>{let d='';arr.forEach((v,i)=>{if(v==null)return;d+=(d?'L':'M')+xs(i).toFixed(1)+','+ys(v).toFixed(1)+' ';});return d;};
+  // 배경: 종가 ≤ 200일선 = 배수 구간(초록)
+  let bg='';
+  for(let i=0;i<idx.length;i++){ if(M2[i]==null)continue;
+    const dip=S2[i]<=M2[i], x0=xs(i), x1=(i<idx.length-1)?xs(i+1):W;
+    if(dip) bg+=`<rect x="${x0.toFixed(1)}" y="0" width="${Math.max(0.5,x1-x0).toFixed(1)}" height="${H}" fill="rgba(54,211,153,.10)"/>`; }
+  svg.innerHTML=bg
+    +`<path d="${path(M2)}" fill="none" stroke="#f24b5f" stroke-width="1.6"/>`
+    +`<path d="${path(S2)}" fill="none" stroke="#4fb0f5" stroke-width="1.8"/>`;
+  if(lbox){
+    const fmtv=v=>v>=10000?(v/1000).toFixed(1)+'k':v.toFixed(v>=100?0:1);
+    const lastM=M2.filter(v=>v!=null).slice(-1)[0];
+    const items=[[S2[S2.length-1],'#4fb0f5'],[lastM,'#f24b5f']].filter(x=>x[0]!=null);
+    const placed=items.map(([v,col])=>({v,c:col,y:ys(v)})).sort((a,b)=>a.y-b.y);
+    for(let i=1;i<placed.length;i++){ if(placed[i].y-placed[i-1].y<12) placed[i].y=placed[i-1].y+12; }
+    const over=placed.length?placed[placed.length-1].y-(H-6):0; if(over>0)placed.forEach(p=>p.y-=over);
+    lbox.innerHTML=placed.map(p=>{ const topPct=(Math.max(6,Math.min(H-6,p.y))/H*100);
+      return `<div style="position:absolute;top:${topPct.toFixed(1)}%;left:0;transform:translateY(-50%);font-size:9.5px;font-family:monospace;color:${p.c};white-space:nowrap;line-height:1;background:rgba(13,17,32,.72);padding:1px 3px;border-radius:3px"><span style="display:inline-block;width:4px;height:4px;border-radius:50%;background:${p.c};margin-right:2px;vertical-align:middle"></span>${fmtv(p.v)}</div>`;
+    }).join('');
+  }
+  const shown=idx.length;
+  const perMap={252:'1년',378:'1.5년',504:'2년',756:'3년',1260:'5년'};
+  const per = dcaChartRange>=99999 ? (shown>=2520?'전체(10년+)':'전체') : (perMap[dcaChartRange]||(shown>=252?(Math.round(shown/252)+'년'):(Math.round(shown/21)+'달')));
+  if(note) note.textContent=`${tickerLabel(c.st.ticker)} 종가 vs 200일선 · ${per} · 초록=배수 적립 구간`;
+}
+
+function renderDcaHist(){
+  const c=computeDca();
+  const ft=$('dca_flip_tbl');
+  if(!c.ready){ $('dca_flip_count').textContent='—'; if(ft)ft.innerHTML=`<tr><td class="empty" colspan="3" style="text-align:center;color:var(--faint);padding:14px">🔄 자동으로 이력을 불러오세요</td></tr>`; }
+  else if(ft){
+    const flips=(c.flips||[]).slice(-30).reverse();
+    $('dca_flip_count').textContent=`총 ${(c.flips||[]).length}회`;
+    let h=`<tr><th>전환일</th><th>배수</th><th>종가−200일선</th></tr>`;
+    flips.forEach(f=>{ h+=`<tr><td>${f.date}</td><td style="color:${f.to==='dip'?'var(--buy)':'var(--faint)'}">${f.to==='dip'?'▼ 배수 적립 시작':'▲ 1배 복귀'}</td><td>${f.gap>=0?'+':''}${f.gap.toFixed(2)}%</td></tr>`; });
+    if(!flips.length) h+=`<tr><td class="empty" colspan="3" style="text-align:center;color:var(--faint);padding:14px">전환 이력 없음</td></tr>`;
+    ft.innerHTML=h;
+  }
+  const hist=curStrat().hist;
+  $('dca_rec_count').textContent=hist.length?`(${hist.length}건)`:'';
+  let rows='';
+  hist.forEach((h,i)=>{
+    const m=+h.mul||1, q=(+h.price>0)?(+h.amt||0)/(+h.price):0;
+    rows=`<tr class="buy"><td>${h.date||'-'}</td><td>${px(h.amt)}${m>1?` <span style="color:var(--buy)">×${m}</span>`:''}</td><td>${px(h.price)} · ${nfix(q,3)}주</td><td style="white-space:nowrap"><span class="edit" onclick="editDca(${i})">✎</span> <span class="del" onclick="delDca(${i})">✕</span></td></tr>`+rows;
+  });
+  $('dca_rec_tbl').innerHTML=`<tr><th>날짜</th><th>금액</th><th>단가·수량</th><th></th></tr>`+(hist.length?rows:`<tr><td class="empty" colspan="4">아직 기록이 없습니다</td></tr>`);
+}
+
+function dcaRecord(){
+  const c=computeDca(), st=curStrat().settings;
+  const price=c.ready?(c.price||c.lastClose):inputNum('dca_price');
+  if(!price||price<=0){ alert('먼저 🔄 자동으로 현재가를 불러오거나 직접 입력하세요.'); return; }
+  const mul=c.ready?c.todayMul:1;
+  const amt=(+st.amount||0)*mul;
+  if(amt<=0){ alert('설정에서 1회 적립액을 입력하세요.'); return; }
+  const date=new Date().toISOString().slice(0,10);
+  if(!confirm(`적립 ${px(amt)} (1회 ${px(+st.amount||0)} × ${mul}배)\n단가 ${px(price)} · ${nfix(amt/price,4)}주\n오늘(${date}) 기록할까요?`))return;
+  const h=curStrat().hist; h.push({type:'buy',date,price:+price,amt:+amt,mul:+mul,ts:Date.now()}); sortHist(h); save(); refreshDca();
+  alert('기록됨 ✓');
+}
+function delDca(i){ if(!confirm('이 기록을 삭제할까요?'))return; curStrat().hist.splice(i,1); save(); refreshDca(); }
+let editDcaIdx=-1;
+function editDca(i){
+  const h=curStrat().hist[i]; if(!h)return;
+  editDcaIdx=i;
+  $('ed_date').value=h.date||new Date().toISOString().slice(0,10);
+  $('ed_price').value=h.price!=null?h.price:'';
+  $('ed_amt').value=h.amt!=null?h.amt:'';
+  $('ed_mul').value=h.mul!=null?h.mul:1;
+  $('editDcaModal').classList.add('on');
+}
+function closeEditDca(){ $('editDcaModal').classList.remove('on'); editDcaIdx=-1; }
+function saveDcaEdit(){
+  if(editDcaIdx<0)return; const hist=curStrat().hist, h=hist[editDcaIdx]; if(!h){closeEditDca();return;}
+  const price=+unComma($('ed_price').value), amt=+unComma($('ed_amt').value), mul=+unComma($('ed_mul').value)||1;
+  if(!price){alert('단가를 입력하세요');return}
+  if(!amt){alert('금액을 입력하세요');return}
+  hist[editDcaIdx]={ts:h.ts||Date.now(), type:'buy', date:$('ed_date').value||h.date, price, amt, mul};
+  sortHist(hist); save(); refreshDca(); closeEditDca();
+}
+function delDcaFromEdit(){ if(editDcaIdx<0){closeEditDca();return;} const i=editDcaIdx; closeEditDca(); delDca(i); }
+
+function refreshDca(){
+  renderDcaNow(); renderDcaHist(); renderStatusline();
+  if(S.activeTab==='dca'){ try{ loadDcaData(); }catch(e){console.error(e)} }
 }
 
 /* ══════════ ASAP 운영 (SGOV 리저브 + 딥가중 + 단계 재진입) ══════════ */
@@ -3895,7 +4218,7 @@ function updateCurLabels(which){
 function clearHist(strat){
   if(!confirm('이 세션의 기록을 전부 삭제할까요? 되돌릴 수 없습니다'))return;
   curStrat().hist=[];save();
-  strat==='inf'?refreshInf():strat==='ma'?refreshMa():strat==='asap'?refreshAsap():refreshVr();pushRemote();
+  strat==='inf'?refreshInf():strat==='ma'?refreshMa():strat==='dca'?refreshDca():strat==='asap'?refreshAsap():refreshVr();pushRemote();
 }
 
 /* ── 세션 바 (현재 탭 전용, 이벤트 위임) ── */
@@ -3940,9 +4263,9 @@ function switchSess(id){
   if(box.active===id)return; // 같은 세션이면 무시
   box.active=id;save();
   // 이전 세션 시세 캐시/노트 완전 초기화 (잔상 방지)
-  lastQuote={inf:null,vr:null}; infQuoteCache=null; _lastNeedClose=null; maQuoteData=null;
+  lastQuote={inf:null,vr:null}; infQuoteCache=null; _lastNeedClose=null; maQuoteData=null; dcaQuoteData=null;
   clearInputs();
-  ['vn_fetchnote','chart_note','inf_chart_note','inf_ten_grid','diag_out','ma_fetchnote'].forEach(id=>{const el=$(id);if(el){el.textContent='';el.className=el.className.replace(/\b(ok|err|load)\b/g,'');}});
+  ['vn_fetchnote','chart_note','inf_chart_note','inf_ten_grid','diag_out','ma_fetchnote','dca_fetchnote'].forEach(id=>{const el=$(id);if(el){el.textContent='';el.className=el.className.replace(/\b(ok|err|load)\b/g,'');}});
   // 현재 탭의 서브탭을 "현재"로 리셋
   resetSubnav(S.activeTab);
   refreshAll();
@@ -3950,11 +4273,12 @@ function switchSess(id){
   try{
     if(S.activeTab==='inf'){ loadInfData(true); loadInfFG(); loadFX(); }
     else if(S.activeTab==='ma'){ if(!krwNoAuto(curStrat().settings)) loadMaData(true); }
+    else if(S.activeTab==='dca'){ loadDcaData(true); }
     else { if(!krwNoAuto(curStrat().settings)) fetchQuote('vr'); loadVrChart(true); loadFearGreed(); }
   }catch(e){console.error(e)}
 }
 function clearInputs(){
-  ['o_close','o_star5man','sh_price','sh_qty','shv_price','shv_qty','shv_amt','vn_price','vn_eval','ma_price'].forEach(id=>{const el=$(id);if(el)el.value=''});
+  ['o_close','o_star5man','sh_price','sh_qty','shv_price','shv_qty','shv_amt','vn_price','vn_eval','ma_price','dca_price'].forEach(id=>{const el=$(id);if(el)el.value=''});
   const fn1=$('o_fetchnote'),fn2=$('ve_fetchnote');if(fn1){fn1.textContent='';fn1.className='fetchnote'}if(fn2){fn2.textContent='';fn2.className='fetchnote'}
   lastQuote={inf:null,vr:null};
 }
@@ -3998,6 +4322,10 @@ function renderStatusline(){
     const st=s.settings,c=computeMa();
     html+=`<span>${tickerLabel(st.ticker)} · ${st.maLen||200}일선 · 원금 ${wn(st.principal)}</span>`;
     if(c.ready) html+=`<span class="badge ${c.signal==='hold'?'ok':'warn'}">${c.signal==='hold'?'보유':'현금'}</span>`;
+  }else if(strat==='dca'){
+    const st=s.settings,c=computeDca();
+    html+=`<span>${tickerLabel(st.ticker)} · ${DCA_FREQ[st.freq||'month']||'매월'} ${wn(st.amount)}${(+st.dipMul||1)>1?` · 하락 ${st.dipMul}배`:''}</span>`;
+    if(c.ready) html+=`<span class="badge ${c.todayMul>1?'ok':'set'}">${c.todayMul}배</span>`;
   }else if(strat==='asap'){
     const st=s.settings,c=computeAsap();
     html+=`<span>${tickerLabel(st.ticker)} · 적립 ${wn(st.base)}/일 · 딥 ${wn(st.mid)}/${wn(st.deep)}</span>`;
@@ -4013,10 +4341,16 @@ function renderStatusline(){
 
 /* ── 설정 ── */
 function openSettings(){
-  const s=sess();$('set_sessname').textContent=s.name+' · '+(S.activeTab==='inf'?'무한매수법':S.activeTab==='ma'?'200일선 로테이션':S.activeTab==='asap'?'ASAP':'밸류리밸런싱');
+  const s=sess();$('set_sessname').textContent=s.name+' · '+(S.activeTab==='inf'?'무한매수법':S.activeTab==='ma'?'200일선 로테이션':S.activeTab==='dca'?'적립(DCA)':S.activeTab==='asap'?'ASAP':'밸류리밸런싱');
   const setMa=$('set_ma'); if(setMa) setMa.style.display='none';
   const setAsap=$('set_asap'); if(setAsap) setAsap.style.display='none';
-  if(S.activeTab==='asap'){
+  const setDca=$('set_dca'); if(setDca) setDca.style.display='none';
+  if(S.activeTab==='dca'){
+    $('set_inf').style.display='none';$('set_vr').style.display='none';if(setDca)setDca.style.display='';
+    const st=s.settings;
+    segSet('set_dcaticker',st.ticker||'USD'); segSet('set_dcafreq',st.freq||'month'); segSet('set_dcamul',String(st.dipMul||2));
+    $('set_dcaamt').value=nfix(st.amount||0,0);
+  }else if(S.activeTab==='asap'){
     $('set_inf').style.display='none';$('set_vr').style.display='none';if(setAsap)setAsap.style.display='';
     const st=s.settings;
     segSet('set_asapticker',st.ticker||'SOXL');
@@ -4072,7 +4406,7 @@ function syncShortMaUI(eng){
   if(note&&note.classList.contains('note')) note.style.opacity=on?'1':'0.4';
 }
 function setupSegs(){
-  ['set_ticker','set_div','set_reverse','set_vmode','set_vformula','set_cur','set_vcur','set_engine','set_shortma','set_lopct','set_maticker','set_malen','set_masig','set_mapark','set_asapticker'].forEach(id=>{
+  ['set_ticker','set_div','set_reverse','set_vmode','set_vformula','set_cur','set_vcur','set_engine','set_shortma','set_lopct','set_maticker','set_malen','set_masig','set_mapark','set_dcaticker','set_dcafreq','set_dcamul','set_asapticker'].forEach(id=>{
     const el=$(id);if(!el)return;
     el.querySelectorAll('button').forEach(b=>{
       b.onclick=()=>{el.querySelectorAll('button').forEach(x=>x.classList.remove('on'));b.classList.add('on');
@@ -4104,6 +4438,9 @@ function saveSettings(){
       rowqty:1,principal:inputNum('set_principal')||10000,cur:segGet('set_cur')||'usd'};
   }else if(S.activeTab==='ma'){
     s.settings={ticker:segGet('set_maticker')||'SOXL',maLen:+segGet('set_malen')||200,sig:segGet('set_masig')||'close',park:segGet('set_mapark')||'cash',principal:inputNum('set_maprincipal')||10000,cur:'usd'};
+  }else if(S.activeTab==='dca'){
+    s.settings={ticker:segGet('set_dcaticker')||'USD',freq:segGet('set_dcafreq')||'month',
+      amount:inputNum('set_dcaamt')||0,dipMul:+segGet('set_dcamul')||1,cur:'usd'};
   }else if(S.activeTab==='asap'){
     s.settings={ticker:segGet('set_asapticker')||'SOXL',base:inputNum('set_asapbase')||10,mid:inputNum('set_asapmid')||50,deep:inputNum('set_asapdeep')||100,cur:'usd'};
   }else{
@@ -4115,12 +4452,15 @@ function saveSettings(){
 }
 
 /* ── 탭/서브탭 ── */
+/* 활성 탭만 갱신한다. compute*()는 모두 curStrat()(=활성 탭의 세션)을 읽으므로,
+   비활성 탭까지 갱신하면 남의 탭 기록을 자기 형식으로 해석해 예외가 난다
+   (예: 로테이션 기록 {type:'in'}에는 kind가 없어 computeInf가 터짐).
+   비활성 탭은 탭 전환 시 setupTabs가 각자 refresh를 호출하므로 갱신이 보장된다. */
 function refreshAll(){
   renderSessbar();renderStatusline();
-  try{refreshInf()}catch(e){console.error('refreshInf',e)}
-  try{refreshVr()}catch(e){console.error('refreshVr',e)}
-  try{refreshMa()}catch(e){console.error('refreshMa',e)}
-  try{refreshAsap()}catch(e){console.error('refreshAsap',e)}
+  const t=S&&S.activeTab;
+  const fn = t==='inf'?refreshInf : t==='ma'?refreshMa : t==='dca'?refreshDca : t==='asap'?refreshAsap : refreshVr;
+  try{ fn(); }catch(e){ console.error('refresh:'+t,e); }
 }
 function goBlk(sec,blk){
   document.querySelectorAll(`#${sec} .chip`).forEach(x=>x.classList.toggle('on',x.dataset.b===blk));
@@ -4136,6 +4476,7 @@ function setupTabs(){
       S.activeTab=t.dataset.t;save();renderSessbar();renderStatusline();
       if(t.dataset.t==='inf'){ refreshInf(); try{loadInfData();loadInfFG();loadFX();}catch(e){console.error(e)} showFab(); }
       else if(t.dataset.t==='ma'){ refreshMa(); try{ if(!krwNoAuto(curStrat().settings)) loadMaData(); }catch(e){console.error(e)} hideFab(); }
+      else if(t.dataset.t==='dca'){ refreshDca(); try{ loadDcaData(); }catch(e){console.error(e)} hideFab(); }
       else if(t.dataset.t==='asap'){ refreshAsap(); try{ if(!krwNoAuto(curStrat().settings)) loadAsapData(); }catch(e){console.error(e)} hideFab(); }
       else { refreshVr(); try{ if(!krwNoAuto(curStrat().settings)){ fetchQuote('vr'); } loadVrChart(); loadFearGreed(); }catch(e){console.error(e)} showFab(); }
       window.scrollTo({top:0,behavior:'smooth'});
@@ -4195,11 +4536,11 @@ async function pullRemote(){
         // 신선도 가드: 이 기기의 로컬 저장본이 서버보다 최신이면(오프라인 수정 등) 낡은 서버로 덮지 않고 로컬을 밀어올림
         let local=null; try{local=JSON.parse(localStorage.getItem(lsKey()))}catch(e){}
         if(local&&validState(local)&&(local._updated||0)>(d.updated||0)){
-          S=local; if(!S.activeTab)S.activeTab='inf'; ensureMaBox(); ensureAsapBox();
+          S=local; if(!S.activeTab)S.activeTab='inf'; ensureMaBox(); ensureAsapBox(); ensureDcaBox();
           lastPushedJSON=null; pushRemote();
           return true;
         }
-        S=d.state;if(!S.activeTab)S.activeTab='inf';ensureMaBox();ensureAsapBox();saveLocal();lastPushedJSON=JSON.stringify(S);return true;
+        S=d.state;if(!S.activeTab)S.activeTab='inf';ensureMaBox();ensureAsapBox();ensureDcaBox();saveLocal();lastPushedJSON=JSON.stringify(S);return true;
       }
     }
   }catch(e){console.error('pull',e);}
@@ -4231,7 +4572,7 @@ function importJSON(e){
       const obj=JSON.parse(ev.target.result);
       if(!obj.inf||!obj.vr||!obj.inf.sessions||!obj.vr.sessions)throw new Error('형식이 올바르지 않습니다');
       if(!confirm('현재 데이터를 불러온 파일로 교체할까요? 지금 데이터는 사라집니다.'))return;
-      S=obj;ensureMaBox();ensureAsapBox();save();
+      S=obj;ensureMaBox();ensureAsapBox();ensureDcaBox();save();
       closeSettings();resetSubnav('inf');resetSubnav('vr');refreshAll();pushRemote();
       alert('불러오기 완료');
     }catch(err){alert('불러오기 실패: '+err.message)}
