@@ -1074,7 +1074,7 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
   <footer>
     <strong>JK 퀀트</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v2.52</b> · 2026-07-24</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v2.53</b> · 2026-07-24</div>
   </footer>
 </div>
 
@@ -1134,8 +1134,14 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
       <button data-v="TQQQ">TQQQ</button><button data-v="QLD">QLD</button><button data-v="KORU">KORU</button></div>
     <p class="note" style="margin:4px 0 8px">합성 1배지수는 종목 배수로 자동 복원됩니다 (SOXL·TECL·TQQQ·KORU=3배, USD·QLD=2배).</p>
     <div class="seclabel">이동평균 기간 <span class="hint" style="color:var(--faint);font-weight:500">합성 1배지수 기준</span></div>
-    <div class="seg" id="set_malen"><button data-v="100">100일</button><button data-v="150">150일</button><button data-v="200" class="on">200일</button></div>
+    <div class="seg" id="set_malen"><button data-v="100">100일</button><button data-v="150">150일</button><button data-v="200" class="on">200일</button><button data-v="300">300일</button></div>
     <p class="note" style="margin:4px 0 8px">200일선이 논문 기본값(Gayed·Bilello). 짧을수록 신호가 자주 바뀝니다.</p>
+    <div class="seclabel">신호 기준</div>
+    <div class="seg" id="set_masig"><button data-v="close" class="on">종가 기준</button><button data-v="gc">골든크로스</button></div>
+    <p class="note" style="margin:4px 0 8px"><b>종가 기준</b>: 합성 1배지수가 이동평균 위면 보유(논문 방식). <b>골든크로스</b>: 50일선이 이동평균 위면 보유 — 신호가 늦지만 휩쏘가 줄어 매매가 1/5~1/6로 감소. 백테(32~41년)에서 레버리지 반도체·나스닥은 골든크로스가 CAGR +3~5%p 우세, S&P는 종가 기준이 나았습니다.</p>
+    <div class="seclabel">대피처 <span class="hint" style="color:var(--faint);font-weight:500">현금 신호 구간</span></div>
+    <div class="seg" id="set_mapark"><button data-v="cash" class="on">현금</button><button data-v="bill">단기국채</button></div>
+    <p class="note" style="margin:4px 0 8px">현금 신호일 때 <b>단기국채</b>(SGOV·BIL 등)로 대기하면 이자를 받습니다 — 백테상 CAGR +0.9~1.2%p, MDD는 오히려 개선. 배당주(SCHD·VYM)는 폭락장에 같이 빠져(2008년 −32%) 대피처로 부적합합니다.</p>
     <div class="field"><label id="set_maprincipal_lbl">원금 ($)</label><input id="set_maprincipal" type="text" inputmode="decimal" value="10000" oninput="commaInput(this)"></div>
   </div>
   <div id="set_asap" style="display:none">
@@ -1344,7 +1350,7 @@ function defVrSettings(){return{ticker:'TQQQ',mode:0.75,formula:'basic',g:10,add
 function uid(){return 's'+Date.now()+Math.floor(Math.random()*9999)}
 function newInfSession(name){return{id:uid(),name:name||'세션 1',settings:defInfSettings(),hist:[]}}
 function newVrSession(name){return{id:uid(),name:name||'세션 1',settings:defVrSettings(),hist:[]}}
-function defMaSettings(){return{ticker:'SOXL',maLen:200,principal:10000,cur:'usd'}}
+function defMaSettings(){return{ticker:'SOXL',maLen:200,sig:'close',park:'cash',principal:10000,cur:'usd'}}
 function newMaSession(name){return{id:uid(),name:name||'세션 1',settings:defMaSettings(),hist:[]}}
 function defAsapSettings(){return{ticker:'SOXL',base:10,mid:50,deep:100,cur:'usd'}}
 function newAsapSession(name){return{id:uid(),name:name||'내 계좌',settings:defAsapSettings(),hist:[]}}
@@ -2590,25 +2596,34 @@ function computeMa(){
   const lev=maLevOf(sym);
   const closes=days.map(d=>d.close), dates=days.map(d=>d.date);
   const n=closes.length;
-  const syn=new Array(n), sma=new Array(n);
-  let s=0; const buf=[]; let cur=100;
+  const SIG=st.sig||'close', SHORT=50, PARK=st.park||'cash';
+  const syn=new Array(n), sma=new Array(n), smaS=new Array(n);
+  let s=0; const buf=[]; let cur=100; let ss=0; const sbuf=[];
   for(let i=0;i<n;i++){
     if(i>0){ const r=closes[i]/closes[i-1]-1; cur=cur*(1+r/lev); }
     syn[i]=cur; buf.push(cur); s+=cur; if(buf.length>N)s-=buf.shift();
     sma[i]= buf.length===N ? s/N : null;
+    sbuf.push(cur); ss+=cur; if(sbuf.length>SHORT)ss-=sbuf.shift();
+    smaS[i]= sbuf.length===SHORT ? ss/SHORT : null;   // 골든크로스용 단기선
   }
+  // 신호 판정 함수 (종가 기준 / 골든크로스) — 백테 runMA200과 동일 정의
+  const sigAt=(i)=> SIG==='gc'
+    ? ((sma[i]!=null&&smaS[i]!=null) ? (smaS[i]>sma[i]?'hold':'cash') : 'hold')
+    : ((sma[i]!=null) ? (syn[i]>sma[i]?'hold':'cash') : 'hold');
   const last=n-1, idxNow=syn[last], smaNow=sma[last];
   const warming = smaNow==null;
-  const signal = warming ? 'hold' : (idxNow>smaNow ? 'hold':'cash');   // 워밍업=보유
-  const gapPct = smaNow ? (idxNow/smaNow-1)*100 : null;
+  const signal = warming ? 'hold' : sigAt(last);
+  // 이격도: 종가기준=지수/장기선 · 골든크로스=단기선/장기선
+  const gapPct = smaNow ? ((SIG==='gc'&&smaS[last]!=null?smaS[last]:idxNow)/smaNow-1)*100 : null;
   // 신호 전환 이력
   const flips=[]; let prev=null;
-  for(let i=0;i<n;i++){ if(sma[i]==null)continue; const sig=syn[i]>sma[i]?'hold':'cash';
-    if(prev!==null && sig!==prev) flips.push({date:dates[i], to:sig, gap:(syn[i]/sma[i]-1)*100}); prev=sig; }
+  for(let i=0;i<n;i++){ if(sma[i]==null)continue; if(SIG==='gc'&&smaS[i]==null)continue;
+    const sig=sigAt(i);
+    if(prev!==null && sig!==prev) flips.push({date:dates[i], to:sig, gap:((SIG==='gc'?smaS[i]:syn[i])/sma[i]-1)*100}); prev=sig; }
   // 현재 국면 지속일 (마지막 전환 이후 거래일 수)
   let regimeStart=dates[last], regimeDays=1;
   for(let i=last-1;i>=0;i--){ if(sma[i]==null){ regimeStart=dates[i+1]||dates[i]; break; }
-    const sig=syn[i]>sma[i]?'hold':'cash'; if(sig!==signal){ regimeStart=dates[i+1]; break; } regimeDays++; if(i===0)regimeStart=dates[0]; }
+    const sig=sigAt(i); if(sig!==signal){ regimeStart=dates[i+1]; break; } regimeDays++; if(i===0)regimeStart=dates[0]; }
   // ── 적립(DCA) 배수 신호 ──
   // 로테이션 신호는 '합성 1배지수' 기준이지만, DCA 배수 규칙은 'ETF 자신의 종가 200일선' 기준이다
   // (백테스트 _dcaOne과 동일 정의 — 사용자가 차트에서 그대로 확인·실행할 수 있는 형태).
@@ -2618,7 +2633,7 @@ function computeMa(){
       own.ma = b2.length===200 ? s2/200 : null; }
     if(own.ma!=null) own.below = closes[last]<=own.ma; }
   return {st,N,pos,entry,ready:true,lev,idxNow,smaNow,warming,signal,gapPct,flips,regimeStart,regimeDays,
-          dates,syn,sma, own200:own.ma, ownBelow:own.below,
+          dates,syn,sma,smaS, sig:SIG, shortLen:SHORT, park:PARK, smaSNow:smaS[last], own200:own.ma, ownBelow:own.below,
           lastDate:dates[last], lastClose:closes[last], price:(maQuoteData.price>0?maQuoteData.price:closes[last])};
 }
 
@@ -2643,7 +2658,7 @@ function onMaPrice(){ const p=inputNum('ma_price')||0; if(maQuoteData && p>0) ma
 function renderMaNow(){
   const c=computeMa(), st=c.st;
   $('ma_ticker').textContent=tickerLabel(st.ticker||'SOXL');
-  $('ma_len_lbl').textContent=(c.N||200)+'일선';
+  $('ma_len_lbl').textContent=(c.sig==='gc'?`골든크로스 ${c.shortLen||50}/${c.N||200}`:`${c.N||200}일선`)+((c.park==='bill')?' · 국채대피':'');
   $('macct_close_k').textContent=tickerLabel(st.ticker||'SOXL')+' 종가';
   if(!c.ready){
     $('ma_pill').className='bandpill wait'; $('ma_pill').textContent='대기';
@@ -2674,9 +2689,11 @@ function renderMaNow(){
   const hold=c.signal==='hold', gp=c.gapPct, price=c.price||c.lastClose;
   $('ma_pill').className='bandpill '+(hold?'in':'under');
   $('ma_pill').textContent=hold?'보유 신호':'현금 신호';
-  $('ma_sig_txt').textContent=hold?'🟢 보유 (100%)':'⚪ 현금 (0%)';
+  $('ma_sig_txt').textContent=hold?'🟢 보유 (100%)':(c.park==='bill'?'🟡 단기국채 (0%)':'⚪ 현금 (0%)');
   $('ma_sig_txt').style.color=hold?'var(--buy)':'var(--faint)';
-  $('ma_gap_lbl').innerHTML=`합성지수 ${c.idxNow.toFixed(1)} · ${c.N}일선 ${c.smaNow.toFixed(1)} · <b style="color:${gp>=0?'var(--buy)':'var(--sell)'}">${gp>=0?'+':''}${gp.toFixed(2)}%</b>`;
+  $('ma_gap_lbl').innerHTML = (c.sig==='gc'&&c.smaSNow!=null)
+    ? `${c.shortLen}일선 ${c.smaSNow.toFixed(1)} · ${c.N}일선 ${c.smaNow.toFixed(1)} · <b style="color:${gp>=0?'var(--buy)':'var(--sell)'}">${gp>=0?'+':''}${gp.toFixed(2)}%</b>`
+    : `합성지수 ${c.idxNow.toFixed(1)} · ${c.N}일선 ${c.smaNow.toFixed(1)} · <b style="color:${gp>=0?'var(--buy)':'var(--sell)'}">${gp>=0?'+':''}${gp.toFixed(2)}%</b>`;
   let pct=(gp+15)/30*100; pct=Math.max(0,Math.min(100,pct)); $('mg_mark').style.left=pct+'%';
   // 판단 (신호 vs 내 포지션)
   let v='';
@@ -4016,7 +4033,7 @@ function openSettings(){
   }else if(S.activeTab==='ma'){
     $('set_inf').style.display='none';$('set_vr').style.display='none';if(setMa)setMa.style.display='';
     const st=s.settings;
-    segSet('set_maticker',st.ticker||'SOXL');segSet('set_malen',String(st.maLen||200));
+    segSet('set_maticker',st.ticker||'SOXL');segSet('set_malen',String(st.maLen||200));segSet('set_masig',st.sig||'close');segSet('set_mapark',st.park||'cash');
     $('set_maprincipal').value=nfix(st.principal,0);
   }else{
     $('set_inf').style.display='none';$('set_vr').style.display='';
@@ -4055,7 +4072,7 @@ function syncShortMaUI(eng){
   if(note&&note.classList.contains('note')) note.style.opacity=on?'1':'0.4';
 }
 function setupSegs(){
-  ['set_ticker','set_div','set_reverse','set_vmode','set_vformula','set_cur','set_vcur','set_engine','set_shortma','set_lopct','set_maticker','set_malen','set_asapticker'].forEach(id=>{
+  ['set_ticker','set_div','set_reverse','set_vmode','set_vformula','set_cur','set_vcur','set_engine','set_shortma','set_lopct','set_maticker','set_malen','set_masig','set_mapark','set_asapticker'].forEach(id=>{
     const el=$(id);if(!el)return;
     el.querySelectorAll('button').forEach(b=>{
       b.onclick=()=>{el.querySelectorAll('button').forEach(x=>x.classList.remove('on'));b.classList.add('on');
@@ -4086,7 +4103,7 @@ function saveSettings(){
       rows:Math.max(0,Math.min(20,+$('set_rows').value||0)),gap:+$('set_gap').value||2.5,
       rowqty:1,principal:inputNum('set_principal')||10000,cur:segGet('set_cur')||'usd'};
   }else if(S.activeTab==='ma'){
-    s.settings={ticker:segGet('set_maticker')||'SOXL',maLen:+segGet('set_malen')||200,principal:inputNum('set_maprincipal')||10000,cur:'usd'};
+    s.settings={ticker:segGet('set_maticker')||'SOXL',maLen:+segGet('set_malen')||200,sig:segGet('set_masig')||'close',park:segGet('set_mapark')||'cash',principal:inputNum('set_maprincipal')||10000,cur:'usd'};
   }else if(S.activeTab==='asap'){
     s.settings={ticker:segGet('set_asapticker')||'SOXL',base:inputNum('set_asapbase')||10,mid:inputNum('set_asapmid')||50,deep:inputNum('set_asapdeep')||100,cur:'usd'};
   }else{
