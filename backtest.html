@@ -259,7 +259,7 @@ td:first-child{text-align:left;}
   <div class="brand">
     <div>
       <div class="logo">Backtest</div>
-      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v1.140</span></h1>
+      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v1.141</span></h1>
     </div>
   </div>
   <a href="/" class="home">← JK 퀀트</a>
@@ -730,7 +730,8 @@ async function loadData(startDate, endDate){
     const ohlcBad=loaded.map(t=>{let n=0,b=0;data[t].forEach(r=>{if(r[3]>0&&r[4]>0){n++;if(r[1]>r[3]*1.001||r[1]<r[4]*0.999)b++;}});return [t,n?b/n:0];}).filter(x=>x[1]>0.01).map(x=>`${x[0]} ${(x[1]*100).toFixed(0)}%`);
     dataLoaded=true; loadedTickers=loaded;
     loadedStart=startDate; loadedEnd=endDate;
-    dcaActive=new Set(loaded);
+    // DCA도 다른 탭과 동일하게 사용자 선택을 보존 (로딩 후 전체로 리셋되던 버그 수정)
+    dcaActive=new Set([...dcaActive].filter(t=>loaded.includes(t)||M[t]));
     // 로딩된 종목만 활성화
     imActive=new Set([...imActive].filter(t=>loaded.includes(t)||M[t]));
     vrActive=new Set([...vrActive].filter(t=>loaded.includes(t)||M[t]));
@@ -738,6 +739,7 @@ async function loadData(startDate, endDate){
     asapActive=new Set([...asapActive].filter(t=>loaded.includes(t)||M[t]));
     allActive=new Set([...allActive].filter(t=>loaded.includes(t)||M[t]));
     stdActive=new Set([...stdActive].filter(t=>loaded.includes(t)||M[t]));
+    if(!dcaActive.size) dcaActive=new Set(loaded);   // 선택이 비면 전체로 폴백
     if(!imActive.size) imActive=new Set(IM_TICKERS.filter(t=>loaded.includes(t)));
     if(!vrActive.size) vrActive=new Set(VR_TICKERS.filter(t=>loaded.includes(t)));
     if(!maActive.size) maActive=new Set(MA_TICKERS.filter(t=>loaded.includes(t)));
