@@ -259,7 +259,7 @@ td:first-child{text-align:left;}
   <div class="brand">
     <div>
       <div class="logo">Backtest</div>
-      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v1.142</span></h1>
+      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v1.143</span></h1>
     </div>
   </div>
   <a href="/" class="home">← JK 퀀트</a>
@@ -524,7 +524,7 @@ td:first-child{text-align:left;}
     <div class="ctrl s-all hide"><label>투입 모드 <span style="font-size:9px;color:var(--dim)">공정 비교</span></label>
       <div class="seg" id="allMode">
         <button data-m="lump" class="active" title="목돈을 지금 전액 투입 — 매수후보유·200로테·무매·VR거치·표준편차 × 종목">일시금</button>
-        <button data-m="dca" title="원금을 기간에 걸쳐 매일 균등 적립 — 매수적립·VR적립·200로테적립 × 6종목">적립</button>
+        <button data-m="dca" title="원금을 기간에 걸쳐 매일 균등 적립 — 매수적립·VR적립·ASAP·200로테적립 × 6종목">적립</button>
       </div>
     </div>
     <div class="ctrl s-all hide"><label>세금·비용</label>
@@ -2265,8 +2265,9 @@ function comboOpts(mode){
   const ml=(typeof maLen!=='undefined'?maLen:200);
   const vG=_stratNum('vrG',10), vB=_stratNum('vrBand',15), vF={basic:'기본공식',skill:'실력공식'}[_stratSeg('vrFormula','basic')]||'기본공식';
   if(mode==='dca'){
+    const dipTxt=(typeof dcaDipMul!=='undefined'&&dcaDipMul>1)?`·하락시${dcaDipMul}배`:'';
     const freq={daily:'매일',weekly:'매주',monthly:'매월'}[(typeof dcaFreq!=='undefined'?dcaFreq:'daily')]||'매일';
-    return `매수적립: ${freq} · VR적립: G${vG}·밴드±${vB}·${vF} · 200로테적립: ${ml}일선`;
+    return `매수적립: ${freq}${dipTxt} · VR적립: G${vG}·밴드±${vB}·${vF} · ASAP: base${_stratNum('asapBase',10)}/mid${_stratNum('asapMid',50)}/deep${_stratNum('asapDeep',100)} · 200로테적립: ${ml}일선`;
   }
   const eng={v22:'V2.2',v30:'V3.0',v40:'V4.0',v50:'V5.0',ab:'A/B'}[(typeof imEngine!=='undefined'?imEngine:'v40')]||'V4.0';
   const comp=_stratSeg('imCompound','0')!=='0'?'복리':'단리';
@@ -2290,8 +2291,8 @@ function runTickerCompare(stratKey, cap, days, tickers){
 const STRAT_SHORT={bh:'매수후보유',ma:'200로테',im:'무매',vrl:'VR거치',std:'표준편차',dca:'매수적립',vra:'VR적립',asapa:'ASAP',maa:'200로테적립'};
 function runComboCompare(cap, days, tickers, mode, costOn){
   const md=mode==='dca'?'dca':'lump';
-  // ASAP(asapa)은 숨김 — 전체비교 적립 목록에서도 제외
-  const keys = md==='dca' ? ['dca','vra','maa'] : ['bh','ma','im','vrl','std'];
+  // ASAP 탭은 숨김이지만 전체비교 적립 목록에는 포함 (엔진·설정은 그대로 살아있음)
+  const keys = md==='dca' ? ['dca','vra','asapa','maa'] : ['bh','ma','im','vrl','std'];
   const yrs=Math.max((new Date(days[days.length-1])-new Date(days[0]))/(365.25*864e5),0.1);
   const out=[];
   keys.forEach(k=>tickers.forEach(t=>{ const r=_runOneStrat(k,t,cap,days,costOn), inv=cap, cg=cagrOf(r.final,inv,yrs);
