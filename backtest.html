@@ -259,7 +259,7 @@ td:first-child{text-align:left;}
   <div class="brand">
     <div>
       <div class="logo">Backtest</div>
-      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v1.139</span></h1>
+      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v1.140</span></h1>
     </div>
   </div>
   <a href="/" class="home">← JK 퀀트</a>
@@ -311,6 +311,14 @@ td:first-child{text-align:left;}
       <div class="seg" id="levExt" style="align-self:flex-start">
         <button data-x="1" class="active" title="레버리지 ETF 상장 전 기간을 1배 기초지수(SOXX·QQQ·XLK·EWY·SPY)의 일수익률×배수로 합성해 백테 기간을 늘림 (상장 후는 실제 데이터). 전 탭 공통 적용 — 닷컴버블·금융위기까지 포함해 검증할 수 있음">확장</button>
         <button data-x="0" title="실제 상장 이후 데이터만 사용">실제</button>
+      </div>
+    </div>
+    <div class="ctrl s-dca"><label>하락 시 배수 <span style="font-size:9px;color:var(--dim)">200일선 아래</span></label>
+      <div class="seg" id="dcaDip" style="align-self:flex-start">
+        <button data-m="1" class="active" title="배수 없음 — 순수 정액 적립">1배</button>
+        <button data-m="1.5" title="종가가 자기 200일선 아래인 회차만 1.5배 매수">1.5배</button>
+        <button data-m="2" title="종가가 자기 200일선 아래인 회차만 2배 매수 — 32~40년 검증상 효율 +7~12% (총투입 30~40% 증가)">2배</button>
+        <button data-m="3" title="종가가 자기 200일선 아래인 회차만 3배 매수 — 자금 부담 큼">3배</button>
       </div>
     </div>
     <div class="ctrl s-dca"><label>세금·비용</label>
@@ -675,6 +683,7 @@ let asapActive=new Set(STRAT_TICKERS);   // ASAP 다중선택 (기본: 전체)
 let allActive=new Set(STRAT_TICKERS);    // 전체비교 다중선택 (기본: 전체)
 let stdActive=new Set(STRAT_TICKERS);    // 표준편차 다중선택 (기본: 전체)
 let stdN=40, stdG=2.5, stdFilter='none', stdCostOn=true;   // 표준편차: 이평기간·공격도·200필터·비용
+let dcaDipMul=1;    // DCA 하락 시 배수 (종가 ≤ 200일선일 때 매수금 × 배수). 1 = 기존 단순 DCA
 let levExt=true, EXTM={}, RAWM={};        // 레버리지 확장 on/off · 확장데이터 · 원본 M 백업 (복원 시 세그 클릭이 TDZ 안 타게 restoreBtState보다 먼저 선언)
 let LAST_EXT={};                          // 직전 실행에서 실제로 확장된 종목 정보 (배너용)
 let maLen=200, maCostOn=true;       // 200일선: 이평 기간 · 비용 반영
@@ -951,6 +960,7 @@ function setStrat(s){
 
 // seg 버튼들
 document.getElementById('dcaFreq').onclick=e=>{if(e.target.dataset.f){document.querySelectorAll('#dcaFreq button').forEach(b=>b.classList.remove('active'));e.target.classList.add('active');dcaFreq=e.target.dataset.f;if(dataLoaded)run();}};
+document.getElementById('dcaDip').onclick=e=>{if(e.target.dataset.m){document.querySelectorAll('#dcaDip button').forEach(b=>b.classList.remove('active'));e.target.classList.add('active');dcaDipMul=+e.target.dataset.m;if(dataLoaded)run();}};
 document.getElementById('dcaPeriod').onclick=e=>{if(e.target.dataset.p){document.querySelectorAll('#dcaPeriod button').forEach(b=>b.classList.remove('active'));e.target.classList.add('active');dcaPeriodMode=e.target.dataset.p;if(dataLoaded)run();}};
 document.getElementById('levExt').onclick=e=>{if(e.target.dataset.x){document.querySelectorAll('#levExt button').forEach(b=>b.classList.remove('active'));e.target.classList.add('active');levExt=e.target.dataset.x==='1';if(dataLoaded)run();}};
 document.getElementById('imCompound').onclick=e=>{if(e.target.dataset.c){document.querySelectorAll('#imCompound button').forEach(b=>b.classList.remove('active'));e.target.classList.add('active');if(dataLoaded)run();}};
@@ -1343,22 +1353,41 @@ function runDCA1(tkr,days,totalAmt,costOn){
   const amt=totalAmt/days.length;
   return _dcaOne(tkr,days,amt,1,costOn);
 }
-function _dcaOne(t,days,amt,step,costOn){
+// 하락 시 배수: 종가 ≤ 자기 200일선이면 그 회차 매수금을 dcaDipMul배로.
+//   기준선은 '해당 ETF 자신의 종가 200일 이동평균' — 사용자가 차트에서 그대로 확인·실행할 수 있는 형태.
+//   워밍업은 로딩된 전체 이력을 사용 (선택 기간 앞 데이터 활용, 룩어헤드 없음)
+function _dcaMA(t,N){
+  const D=srcOf(t); if(!D) return {};
+  const ds=Object.keys(D).sort(), out={}; let s=0; const buf=[];
+  for(let i=0;i<ds.length;i++){ const p=D[ds[i]]?.[C]??0; buf.push(p); s+=p;
+    if(buf.length>N) s-=buf.shift();
+    out[ds[i]] = buf.length===N ? s/N : null; }
+  return out;
+}
+function _dcaOne(t,days,amt,step,costOn,dipMul){
   const D=srcOf(t);
   if(!D) return {invested:0,final:0,ret:0,snap:[],mdd:0,uvSnap:[]};
   // MDD·변동성은 단위가치(평가액÷누적투입) 기준 — 적립금 유입이 '수익률'로 잡히는 왜곡 제거.
   //   (평가액 기준이면 초기 $3→$30 적립 구간이 +900% 수익처럼 계산돼 변동성 수천% 버그)
   const FEE=costOn?COST_FEE:0;   // 비용반영 시 매회 매수 수수료 (costOn 미지정=기존과 동일)
-  let sh=0,inv=0,uvPeak=-Infinity,mdd=0;const snap=[],uvSnap=[];
+  const MUL=(dipMul!=null?dipMul:(typeof dcaDipMul!=='undefined'?dcaDipMul:1));
+  const MA=MUL>1?_dcaMA(t,200):null;      // 배수 1이면 계산 생략 (기존과 완전 동일)
+  let sh=0,inv=0,uvPeak=-Infinity,mdd=0,nDip=0,nBuy=0;const snap=[],uvSnap=[];
   days.forEach((d,i)=>{
     const p=D[d]?.[C]??0;
-    if(p>0&&i%step===0){const fee=amt*FEE;sh+=(amt-fee)/p;inv+=amt;}
+    if(p>0&&i%step===0){
+      const ma=MA?MA[d]:null;
+      const dip=(ma!=null&&p<=ma);            // 200일선 워밍업 전(null)은 1배
+      const a=dip?amt*MUL:amt;
+      const fee=a*FEE;sh+=(a-fee)/p;inv+=a; nBuy++; if(dip)nDip++;
+    }
     if(p>0&&inv>0){ const uv=sh*p/inv; if(uv>uvPeak)uvPeak=uv; else if(uvPeak>0){ const dd=(uvPeak-uv)/uvPeak; if(dd>mdd)mdd=dd; } }
     if(i%10===0){ snap.push([d,p>0?sh*p:null]); uvSnap.push([d,(p>0&&inv>0)?sh*p/inv:null]); }
   });
   const last=D[days[days.length-1]]?.[C]??0;
   const fin=sh*last;
-  return {invested:inv,final:fin,ret:inv>0?(fin/inv-1)*100:0,snap,mdd:mdd*100,uvSnap};
+  return {invested:inv,final:fin,ret:inv>0?(fin/inv-1)*100:0,snap,mdd:mdd*100,uvSnap,
+    dipMul:MUL, dipPct:nBuy?+(nDip/nBuy*100).toFixed(0):0};
 }
 
 /* ──── 레버리지 ETF 기간 확장 (DCA 전용) ────
@@ -2563,15 +2592,19 @@ function renderDCA(res,tickers,opts){
   const valid=tickers.filter(t=>res[t]&&!res[t].skip&&res[t].final>0);
   const ranked=[...valid].sort((a,b)=>isInd?(res[b].cagr-res[a].cagr):(res[b].final-res[a].final));
   const freqL={daily:'매일',weekly:'매주',monthly:'매월'}[opts.freq];
+  // 하락 시 배수 배지 (200일선 아래 회차 비율 포함)
+  const _dm=(typeof dcaDipMul!=='undefined'?dcaDipMul:1);
+  const _dp=(()=>{ for(const t of tickers){ const r=res[t]; if(r&&r.dipPct!=null) return r.dipPct; } return null; })();
+  const dipBadge = _dm>1 ? ` · <span style="color:var(--gold)">하락 시 ${_dm}배</span><span style="color:var(--dim);font-size:11px">(200일선 아래${_dp!=null?' '+_dp+'% 회차':''})</span>` : '';
   const pctStr=x=>(x>=0?'+':'')+x.toFixed(1)+'%';
   if(isInd){
     const top=ranked[0],r0=res[top];
     document.getElementById('winner').style.display='';
-    document.getElementById('winner').innerHTML=`🏆 <strong>${top}</strong> CAGR ${pctStr(r0.cagr||0)} 1위 · 개별기간 · $${fmt(Math.round(+document.getElementById('dcaAmt').value||10))}/${freqL}`;
+    document.getElementById('winner').innerHTML=`🏆 <strong>${top}</strong> CAGR ${pctStr(r0.cagr||0)} 1위 · 개별기간 · $${fmt(Math.round(+document.getElementById('dcaAmt').value||10))}/${freqL}${dipBadge}`;
   }else{
     const top=ranked[0],r0=res[top];
     document.getElementById('winner').style.display='';
-    document.getElementById('winner').innerHTML=`🏆 <strong>${top}</strong> 1위 · ${opts.days[0]}~${opts.days[opts.days.length-1]} · $${fmt(+document.getElementById('dcaAmt').value||10)}/${freqL} · 원금 $${fmt(r0.invested)} → <strong>$${fmt(r0.final)}</strong> (+${r0.ret.toFixed(0)}%)`;
+    document.getElementById('winner').innerHTML=`🏆 <strong>${top}</strong> 1위 · ${opts.days[0]}~${opts.days[opts.days.length-1]} · $${fmt(+document.getElementById('dcaAmt').value||10)}/${freqL} · 원금 $${fmt(r0.invested)} → <strong>$${fmt(r0.final)}</strong> (+${r0.ret.toFixed(0)}%)${dipBadge}`;
   }
   // 레버리지 기간 확장 안내
   { const ext=opts.ext||{}, extList=Object.keys(ext);
