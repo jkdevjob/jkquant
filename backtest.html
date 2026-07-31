@@ -259,7 +259,7 @@ td:first-child{text-align:left;}
   <div class="brand">
     <div>
       <div class="logo">Backtest</div>
-      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v1.145</span></h1>
+      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v1.146</span></h1>
     </div>
   </div>
   <a href="/" class="home">← JK 퀀트</a>
@@ -1399,7 +1399,7 @@ function _dcaOne(t,days,amt,step,costOn,dipMul){
   const FEE=costOn?COST_FEE:0;   // 비용반영 시 매회 매수 수수료 (costOn 미지정=기존과 동일)
   const MUL=(dipMul!=null?dipMul:(typeof dcaDipMul!=='undefined'?dcaDipMul:1));
   const MA=MUL>1?_dcaMA(t,200):null;      // 배수 1이면 계산 생략 (기존과 완전 동일)
-  let sh=0,inv=0,uvPeak=-Infinity,mdd=0,nDip=0,nBuy=0;const snap=[],uvSnap=[];
+  let sh=0,inv=0,uvPeak=-Infinity,mdd=0,nDip=0,nBuy=0;const snap=[],uvSnap=[],cf=[];
   days.forEach((d,i)=>{
     const p=D[d]?.[C]??0;
     if(p>0&&i%step===0){
@@ -1407,13 +1407,14 @@ function _dcaOne(t,days,amt,step,costOn,dipMul){
       const dip=(ma!=null&&p<=ma);            // 200일선 워밍업 전(null)은 1배
       const a=dip?amt*MUL:amt;
       const fee=a*FEE;sh+=(a-fee)/p;inv+=a; nBuy++; if(dip)nDip++;
+      cf.push([d,a]);                          // 현금흐름(투입 시점·금액) — IRR·평균투입자본용
     }
     if(p>0&&inv>0){ const uv=sh*p/inv; if(uv>uvPeak)uvPeak=uv; else if(uvPeak>0){ const dd=(uvPeak-uv)/uvPeak; if(dd>mdd)mdd=dd; } }
     if(i%10===0){ snap.push([d,p>0?sh*p:null]); uvSnap.push([d,(p>0&&inv>0)?sh*p/inv:null]); }
   });
   const last=D[days[days.length-1]]?.[C]??0;
   const fin=sh*last;
-  return {invested:inv,final:fin,ret:inv>0?(fin/inv-1)*100:0,snap,mdd:mdd*100,uvSnap,
+  return {invested:inv,final:fin,ret:inv>0?(fin/inv-1)*100:0,snap,mdd:mdd*100,uvSnap,cf,
     dipMul:MUL, dipPct:nBuy?+(nDip/nBuy*100).toFixed(0):0};
 }
 
@@ -1976,7 +1977,7 @@ function runVR(days,tkr,params){
   } else {
     first=true;
   }
-  const snap=[];
+  const snap=[], cf=[];          // cf = 현금흐름(투입 시점·금액) — IRR·평균투입자본용
   let mddPeak=-Infinity, mdd=0;  // 일별 MDD (총자산 = 주식+Pool+누적인출 기준 — fin과 동일 철학)
   days.forEach((d,i)=>{
     const c=M[tkr][d][C];
@@ -1984,8 +1985,8 @@ function runVR(days,tkr,params){
     { const eq=shares*c+pool+totalWd; if(eq>mddPeak)mddPeak=eq; else if(mddPeak>0){ const dd=(mddPeak-eq)/mddPeak; if(dd>mdd)mdd=dd; } }
     if(i%interval===0){
       if(first){
-        if(isLump){const s=initAmt||10000;inv+=s;_vbuy(s,c);V=shares*c;}  // 거치식/인출식: 첫매수가=V (pool 무관)
-        else{pool+=contrib;inv+=contrib;_vbuy(pool,c);pool=0;V=shares*c;} // 적립식: 첫매수가=V
+        if(isLump){const s=initAmt||10000;inv+=s;cf.push([d,s]);_vbuy(s,c);V=shares*c;}  // 거치식/인출식: 첫매수가=V (pool 무관)
+        else{pool+=contrib;inv+=contrib;cf.push([d,contrib]);_vbuy(pool,c);pool=0;V=shares*c;} // 적립식: 첫매수가=V
         first=false;buys++;rebal++;snap.push([d,shares*c+pool+totalWd]);return;
       }
       const cv=shares*c;
@@ -1993,7 +1994,7 @@ function runVR(days,tkr,params){
       if(formula==='skill'&&V>0) V=V+pool/G+(cv-V)/(2*Math.sqrt(G))+addCycle;
       else V=V+pool/G+addCycle;
       V=Math.max(V,0);
-      if(isAccum){pool+=contrib;inv+=contrib;}
+      if(isAccum){pool+=contrib;inv+=contrib;cf.push([d,contrib]);}
       else if(isWd){const wd=Math.min(withdraw,pool);pool-=wd;totalWd+=wd;}
       const up=V*(1+band),lo=V*(1-band),cv2=shares*c;
       if(cv2>up){const ex=cv2-V;pool+=_vsell(ex,c);sells++;}
@@ -2008,7 +2009,7 @@ function runVR(days,tkr,params){
   const fin=shares*lc+pool+totalWd;
   const calYrs=(new Date(days[days.length-1])-new Date(days[0]))/(365.25*864e5);
   return {invested:inv,final:fin,pool,shares,sharesVal:shares*lc,rebal,buys,sells,totalWd,
-    ret:inv>0?(fin/inv-1)*100:0,yrs:Math.max(calYrs,0.1),snap,tkr,mdd:mdd*100,fees:feesTotal,tax:taxTotal};
+    ret:inv>0?(fin/inv-1)*100:0,yrs:Math.max(calYrs,0.1),snap,cf,tkr,mdd:mdd*100,fees:feesTotal,tax:taxTotal};
 }
 
 // ──── 비교/지표 헬퍼 ────
@@ -2164,6 +2165,8 @@ function runASAP(days,tkr,opt){
   const FEE=o.costOn?COST_FEE:0, F=1-FEE;   // 비용: 매수 수수료(스톡은 안 팔아 실현 양도세 없음)
   const {cl,MA5,MA20,MA50,MA200,RSI,gi}=_asapInd(tkr);
   let sgov=lump?o.startCash:0,sh=0,stage=0,up3=-1,inv=lump?o.startCash:0,mddPeak=-Infinity,mdd=0; const snap=[];
+  const cf=lump?[[days[0],o.startCash]]:[];   // 현금흐름(신규 투입 시점·금액) — IRR·평균투입자본용. 거치는 첫날 전액.
+  const _cf=(d,a)=>{ if(a>0){ const L=cf[cf.length-1]; if(L&&L[0]===d)L[1]+=a; else cf.push([d,a]); } };
   days.forEach((d,di)=>{
     const g=gi[d]; const c=cl[g], m200=MA200[g], rsi=RSI[g]!=null?RSI[g]:50;
     sgov*=(1+(SGOV_RATE[+d.slice(0,4)]||0.04)/252);   // SGOV 이자
@@ -2174,20 +2177,20 @@ function runASAP(days,tkr,opt){
     const cross20=p>=0&&MA20[p]<=MA50[p]&&MA20[g]>MA50[g];
     const crossUp=p>=0&&cl[p]<MA200[p]&&c>=m200;
     if(crossDn&&stage>0){stage=0;up3=-1;}
-    if(down){ if(!lump){sgov+=base;inv+=base;}
+    if(down){ if(!lump){sgov+=base;inv+=base;_cf(d,base);}
       // 적립: 신규자금 투입 / 거치: 리저브(sgov)에서 차감
-      if(rsi<=30&&c<=m200*0.85){const amt=lump?Math.min(deep,sgov):deep;sh+=amt*F/c;if(lump)sgov-=amt;else inv+=amt;}
-      else if(rsi<=35&&c<=m200*0.90){const amt=lump?Math.min(mid,sgov):mid;sh+=amt*F/c;if(lump)sgov-=amt;else inv+=amt;} }
+      if(rsi<=30&&c<=m200*0.85){const amt=lump?Math.min(deep,sgov):deep;sh+=amt*F/c;if(lump)sgov-=amt;else {inv+=amt;_cf(d,amt);}}
+      else if(rsi<=35&&c<=m200*0.90){const amt=lump?Math.min(mid,sgov):mid;sh+=amt*F/c;if(lump)sgov-=amt;else {inv+=amt;_cf(d,amt);}} }
     if(stage===0&&cross5){sh+=sgov*0.2*F/c;sgov*=0.8;stage=1;}
     if(stage===1&&cross20){sh+=sgov*0.3*F/c;sgov*=0.7;stage=2;}
     if(stage===2&&!down){sh+=sgov*F/c;sgov=0;stage=3;up3=di;}   // 3차: 상승장 재확인(종가≥200선) — 리저브 안 묶임
-    if(!down&&!lump){sh+=base*F/c;inv+=base;}                   // 상승장: 매일 base로 SOXL 적립(DCA)
+    if(!down&&!lump){sh+=base*F/c;inv+=base;_cf(d,base);}       // 상승장: 매일 base로 SOXL 적립(DCA)
     const eq=sh*c+sgov; if(eq>mddPeak)mddPeak=eq; else if(mddPeak>0){const dd=(mddPeak-eq)/mddPeak;if(dd>mdd)mdd=dd;}
     if(di%10===0)snap.push([d,eq]);
   });
   const lc=cl[gi[days[days.length-1]]], fin=sh*lc+sgov;
   snap.push([days[days.length-1],fin]);
-  return {invested:inv,final:fin,ret:inv>0?(fin/inv-1)*100:0,mdd:mdd*100,snap};
+  return {invested:inv,final:fin,ret:inv>0?(fin/inv-1)*100:0,mdd:mdd*100,snap,cf};
 }
 
 // 전략별 고정 색 · 비교 차트(누적 총자산)
@@ -2235,6 +2238,7 @@ function runMA200Accum(days,tkr,contribTotal,N,costOn,opt){
   _settle();
   const fin=cash+shares*M[tkr][days[days.length-1]][C]; snap.push([days[days.length-1],fin]);
   return {invested:contribTotal,final:fin,ret:contribTotal>0?(fin/contribTotal-1)*100:0,mdd:mdd*100,snap,
+          cf:days.map(d=>[d,add]),   // 현금흐름(매일 균등 투입) — IRR·평균투입자본용
           maLen:N, buy:O.buy, sell:O.sell, shortLen:SHORT, park:PARK, tax:taxTotal, interest:interestTotal};
 }
 
@@ -2261,7 +2265,9 @@ function _runOneStrat(key,tkr,cap,days,costOn){
     case 'vra':  return runVR(days,tkr,{contrib:cap/Math.max(1,Math.floor(days.length/10)),G:vG,bandPct:vB,mode:0.75,formula:vF,startV:0,startPool:0,costOn});  // 적립(mode0.75)
     case 'dca':  { const step={daily:1,weekly:5,monthly:21}[(typeof dcaFreq!=='undefined'?dcaFreq:'daily')]||1;   // 적립주기 탭
       const nb=Math.floor((days.length-1)/step)+1, amt=cap/nb; return _dcaOne(tkr,days,amt,step,costOn); }
-    case 'asapa':{const a=runASAP(days,tkr,{base:_stratNum('asapBase',10),mid:_stratNum('asapMid',50),deep:_stratNum('asapDeep',100),costOn}); const sc=a.invested>0?cap/a.invested:1; return {invested:cap,final:a.final*sc,mdd:a.mdd,snap:a.snap.map(s=>[s[0],s[1]==null?null:s[1]*sc])};}
+    case 'asapa':{const a=runASAP(days,tkr,{base:_stratNum('asapBase',10),mid:_stratNum('asapMid',50),deep:_stratNum('asapDeep',100),costOn}); const sc=a.invested>0?cap/a.invested:1;
+      return {invested:cap,final:a.final*sc,mdd:a.mdd,snap:a.snap.map(s=>[s[0],s[1]==null?null:s[1]*sc]),
+              cf:(a.cf||[]).map(x=>[x[0],x[1]*sc])};}   // 총투입을 cap으로 정규화했으니 현금흐름도 같은 배율로
     default:     return runBH(days,tkr,cap,costOn);   // 'bh'
   }
 }
@@ -2286,6 +2292,31 @@ function comboOpts(mode){
   return `무매(${eng}): ${div}분할·익절${tgt}%·${comp}·${rev} · 200로테: ${maTxt} · VR거치: G${vG}·밴드±${vB}·${vF} · 표준편차: N${sN}·g${sG}·${filt}`;
 }
 
+/* ──── 자본-시간 지표: 적립식은 돈이 천천히 들어가 '평균 투입자본'이 거치식의 절반 수준이다.
+   최종금액·CAGR만 보면 적립식이 구조적으로 불리하게 보이므로, 투입 시점을 반영한 지표를 함께 낸다.
+     자본-연(money-years) = Σ(그날의 투입누계) ÷ 252     · 평균투입자본 = 자본-연 ÷ 연수
+     IRR(XIRR) = 모든 현금흐름을 r로 할인한 합이 0이 되는 r — "내 돈이 실제로 연 몇 %였나"
+   거치식은 첫날 전액이라 IRR ≡ CAGR, 평균투입자본 ≡ 원금이 되어 자동으로 정합한다.                    */
+function xirrOf(flows, endDate, endValue){
+  if(!flows||!flows.length||!(endValue>0)) return null;
+  const t0=new Date(flows[0][0]).getTime(), TY=365.25*864e5;
+  const pts=flows.map(([d,a])=>[(new Date(d).getTime()-t0)/TY, -a]);
+  pts.push([(new Date(endDate).getTime()-t0)/TY, endValue]);
+  const f=r=>pts.reduce((s,[t,a])=>s+a/Math.pow(1+r,t),0);
+  let lo=-0.9999, hi=50, flo=f(lo), fhi=f(hi);
+  if(!isFinite(flo)||!isFinite(fhi)||flo*fhi>0) return null;
+  for(let i=0;i<200;i++){ const m=(lo+hi)/2, fm=f(m); if(flo*fm<=0){hi=m;fhi=fm;} else {lo=m;flo=fm;} }
+  const r=(lo+hi)/2*100;
+  return isFinite(r)?r:null;
+}
+function capYearsOf(flows, days){
+  if(!flows||!flows.length||!days||!days.length) return 0;
+  const amtAt={}; flows.forEach(([d,a])=>{ amtAt[d]=(amtAt[d]||0)+a; });
+  let inv=0, my=0;
+  for(const d of days){ inv+=(amtAt[d]||0); my+=inv/252; }
+  return my;
+}
+
 // ──── 통합 비교: 전 전략 × 전 종목을 한 표로 (수익률순) ────
 const STRAT_SHORT={bh:'매수후보유',ma:'200로테',im:'무매',vrl:'VR거치',std:'표준편차',dca:'매수적립',vra:'VR적립',asapa:'ASAP',maa:'200로테적립'};
 function runComboCompare(cap, days, tickers, mode, costOn){
@@ -2295,8 +2326,12 @@ function runComboCompare(cap, days, tickers, mode, costOn){
   const yrs=Math.max((new Date(days[days.length-1])-new Date(days[0]))/(365.25*864e5),0.1);
   const out=[];
   keys.forEach(k=>tickers.forEach(t=>{ const r=_runOneStrat(k,t,cap,days,costOn), inv=cap, cg=cagrOf(r.final,inv,yrs);
+    // 현금흐름이 없는 전략(거치 계열)은 첫날 전액 투입으로 간주 — IRR=CAGR·평균투입자본=원금이 된다.
+    const cf=(r.cf&&r.cf.length)?r.cf:[[days[0],cap]];
+    const my=capYearsOf(cf,days), avgCap=yrs>0?my/yrs:0;
     out.push({key:k, strat:STRAT_SHORT[k]||k, ticker:t, name:`${STRAT_SHORT[k]||k} · ${t}`, color:META[t]&&META[t].color,
-      invested:inv, final:r.final, ret:inv>0?(r.final/inv-1)*100:0, cagr:cg, mdd:r.mdd, mar:r.mdd>0?cg/r.mdd:0, snap:r.snap}); }));
+      invested:inv, final:r.final, ret:inv>0?(r.final/inv-1)*100:0, cagr:cg, mdd:r.mdd, mar:r.mdd>0?cg/r.mdd:0, snap:r.snap,
+      avgCap, moneyYears:my, irr:xirrOf(cf, days[days.length-1], r.final)}); }));
   out.sort((a,b)=>b.ret-a.ret);   // 수익률순
   return {rows:out, yrs, cmode:md};
 }
@@ -2320,14 +2355,15 @@ function renderCombo(res, cap, days, mode, costOn){
   const nStrat=new Set(R.map(r=>r.key)).size, nTkr=new Set(R.map(r=>r.ticker)).size;
   const costBadge=`<span style="font-size:11px;color:var(--${costOn?'gold':'dim'})">· ${costOn?'세후':'세전'}</span>`;
   let h=`<div class="cmp-card"><h3>${res.yrs.toFixed(1)}년 · 원금 ${money(cap)} · <span style="color:var(--${isDca?'accent':'gold'})">${modeLbl}</span> ${costBadge} <span style="font-size:11px;color:var(--dim)">전략 ${nStrat} × 종목 ${nTkr} = ${R.length}개 · 수익률순</span></h3>`;
-  h+=`<div style="overflow-x:auto"><table class="cmp-tbl sortable"><thead><tr><th>종목 · 전략</th><th>원금</th><th>최종금액</th><th>총수익률</th><th>CAGR</th><th>MDD</th><th>MAR</th></tr></thead><tbody>`;
+  h+=`<div style="overflow-x:auto"><table class="cmp-tbl sortable"><thead><tr><th>종목 · 전략</th><th>원금</th><th>최종금액</th><th>총수익률</th><th>CAGR</th><th>MDD</th><th>MAR</th><th title="투입 시점을 반영한 실질 연수익률(XIRR) — 적립식은 돈이 늦게 들어간 만큼 CAGR보다 높게 나온다">IRR</th><th title="Σ(그날의 투입누계)÷연수 — 실제로 시장에 머문 평균 자본. 거치=원금, 적립≈원금의 절반">평균투입자본</th></tr></thead><tbody>`;
   R.forEach((r,i)=>{ const dot=r.color?`<span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:${r.color};margin-right:5px"></span>`:'';
-    h+=`<tr${i===0?' class="win"':''}><td><span class="cdim" style="margin-right:6px">${i+1}</span>${dot}<b>${r.ticker}</b> <span class="cdim">${r.strat}</span>${i===0?' 🥇':''}</td><td>${money(r.invested)}</td><td class="cacc">${money(r.final)}</td><td class="${r.ret>=0?'cg':'cr'}"><b>${pct(r.ret)}</b></td><td class="${r.cagr>=0?'cg':'cr'}">${pct(r.cagr)}</td><td>${r.mdd.toFixed(0)}%</td><td class="cgold">${r.mar.toFixed(2)}</td></tr>`; });
+    h+=`<tr${i===0?' class="win"':''}><td><span class="cdim" style="margin-right:6px">${i+1}</span>${dot}<b>${r.ticker}</b> <span class="cdim">${r.strat}</span>${i===0?' 🥇':''}</td><td>${money(r.invested)}</td><td class="cacc">${money(r.final)}</td><td class="${r.ret>=0?'cg':'cr'}"><b>${pct(r.ret)}</b></td><td class="${r.cagr>=0?'cg':'cr'}">${pct(r.cagr)}</td><td>${r.mdd.toFixed(0)}%</td><td class="cgold">${r.mar.toFixed(2)}</td><td class="${(r.irr==null?0:r.irr)>=0?'cg':'cr'}">${r.irr==null?'—':pct(r.irr)}</td><td class="cdim">${money(r.avgCap)}</td></tr>`; });
   h+=`</tbody></table></div>`;
   const note=isDca
-    ? `적립 모드: 원금을 매일 균등 투입(총투입=원금). 무매는 목돈 분할이 본질이라 적립 목록엔 없음.`
+    ? `적립 모드: 원금을 기간에 걸쳐 나눠 투입(총투입=원금). 무매는 목돈 분할이 본질이라 적립 목록엔 없음.`
     : `일시금 모드: 목돈을 지금 전액 넣고 각 전략 규칙대로. 우상향장선 방치(매수후보유)가 강력.`;
   h+=`<p class="note" style="font-size:11px;color:var(--dim);margin-top:8px;line-height:1.7">${note} 전 종목 미국상장 USD → 최종액 직접 비교 가능 · <b>${costOn?'세후':'세전'}</b>(${costOn?'수수료 0.25%·회전형 실현 양도세 22% 반영':'세금·수수료 미반영'}). 아래 연도별·차트는 상위 8개.</p>`;
+  h+=`<p class="note" style="font-size:11px;color:var(--dim2);margin-top:6px;line-height:1.7;padding:7px 10px;background:var(--surf2);border-radius:7px">💡 <b>IRR·평균투입자본</b> — 총투입이 같아도 <b>돈이 시장에 머문 시간</b>은 다릅니다. 거치는 첫날 전액이 끝까지 일하지만, 적립은 마지막에 넣은 돈이 0일 일하고 끝나 <b>평균투입자본이 원금의 절반</b> 수준입니다. 최종금액·CAGR은 그 차이를 무시해 적립식을 구조적으로 불리하게 보이게 하므로, 투입 시점을 반영한 <b>IRR</b>(=XIRR, "내 돈이 실제로 연 몇 %였나")을 함께 보세요. 거치식은 IRR ≡ CAGR입니다.</p>`;
   h+=`<p class="note" style="font-size:11px;color:var(--dim2);margin-top:2px;line-height:1.7;padding:7px 10px;background:var(--surf2);border-radius:7px">⚙️ <b>각 전략 탭 설정 반영</b> — ${comboOpts(res.cmode)}</p></div>`;
   const top=R.slice(0,8).map((r,i)=>({name:r.name, snap:r.snap, color:COMBO_PAL[i%8]}));
   h+=yearCompareCard(top.map(t=>({label:t.name,snap:t.snap,color:t.color})), money);
