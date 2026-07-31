@@ -435,7 +435,7 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
 </div>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v2.56</span></h1></div>
+    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v2.57</span></h1></div>
     <div style="display:flex;align-items:center;gap:8px">
       <a class="btbtn" href="/backtest">📊<span class="bt-txt"> 백테스트</span></a>
       <button class="gear" onclick="openSettings()">⚙️</button>
@@ -1169,7 +1169,7 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
   <footer>
     <strong>JK 퀀트</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v2.56</b> · 2026-07-31</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v2.57</b> · 2026-07-31</div>
   </footer>
 </div>
 
@@ -1589,6 +1589,17 @@ function computeInf(){
   return {avg,qty,inv,realized,T,totbuy,totsell,bal,rows,st,cycleSeq,reverseTraded,inReverseNow,reverseActive};
 }
 
+/* 1회 매수금 = 잔금 ÷ (분할−T), 단 잔금을 넘을 수 없다.
+   T가 분할에 근접하면 남은 회차(분할−T)가 1 미만이 되어 잔금÷slot > 잔금이 되므로 반드시 상한이 필요하다.
+   (예: 잔금 $366.77 · T=19.844/20분할 → slot=0.156 → 무제한이면 $2,347 = 잔금의 6.3배를 주문)
+   백테 runIM의 `Math.min(cash/(divs-T), cash)`와 동일 규약. capped=true면 잔금 한도에 걸린 상태. */
+function imBuy1(c){
+  const slot=(c.st.div||20)-c.T;
+  if(!(slot>0)) return {amt:0, slot, spent:true, capped:false};
+  const raw=c.bal/slot, amt=Math.min(raw, c.bal);
+  return {amt, slot, spent:false, capped:raw>c.bal+1e-9, raw};
+}
+
 /* 별% 계산 */
 // ══════ V5.0 국면 판정 (backtest buildGateIM과 동일 알고리즘) ══════
 // 입력: 종가 배열(과거→미래). 출력: 마지막 시점의 국면(상승/하락)·오늘 익절%. 변동성 계산 불필요.
@@ -1694,10 +1705,10 @@ function renderInfNow(){
   $('d_bal').textContent=wn(c.bal);
   const pct=starPct(st.ticker,st.div,c.T,st.target);
   const star=c.avg>0?c.avg*(1+pct/100):0;
-  const slot=st.div-c.T, buy1=slot>0?c.bal/slot:0;
+  const B1=imBuy1(c), slot=B1.slot, buy1=B1.amt;
   $('d_pct').textContent=c.avg>0?((pct>=0?'+':'')+pct.toFixed(2)+'%'):'—';
   $('d_star').textContent=c.avg>0?wn(star):'—';
-  $('d_buy1').textContent=slot>0?wn(buy1):'소진';
+  $('d_buy1').textContent=B1.spent?'소진':(wn(buy1)+(B1.capped?' (잔금 전액)':''));
   $('d_todo').textContent=slot<=0?(st.reverse===true?'원금 소진 — 리버스모드 진입 대상입니다.':'원금 소진 — 후반전 별지점 손절 쿼터매도로만 방어(홀드). 매수 없음.'):
     `${tickerLabel(st.ticker)} ${st.div}분할 · T=${fmtT(c.T)} · ${half?'전반전':'후반전'}. 주문표 탭에서 전일 종가를 넣어 LOC 주문을 확인하세요.`;
 }
@@ -1729,11 +1740,11 @@ function calcStarPoint(c){
 function renderOrder(){
   if(!$('o_close'))return; // 주문표 시트가 열려있을 때만
   const c=computeInf(), st=c.st, close=inputNum('o_close')||0;
-  const slot=st.div-c.T, buy1=slot>0?c.bal/slot:0;
+  const B1=imBuy1(c), slot=B1.slot, buy1=B1.amt;
   const pct=starPct(st.ticker,st.div,c.T,st.target);
   const star=c.avg>0?c.avg*(1+pct/100):close;
   const buyPt=star-0.01;
-  $('o_buy1').textContent=slot>0?wn(buy1):'소진';
+  $('o_buy1').textContent=B1.spent?'소진':(wn(buy1)+(B1.capped?' (잔금 전액)':''));
   $('o_star').textContent=c.avg>0?`${pct.toFixed(2)}% / ${wn(star)}`:'평단 없음(첫 매수)';
   if($('o_avg')) $('o_avg').textContent = c.avg>0 ? `${wn(c.avg)} · ${c.qty}주` : '—';
   const bigMul=1+(st.big/100), limit=close>0?close*bigMul:0;
@@ -1815,6 +1826,8 @@ function renderOrder(){
     }else{
       html+=oitem('b','별지점 매수 (전액)','LOC',buyPt,Math.max(1,Math.floor(buy1/buyPt)));
     }
+    // 남은 회차가 1회 미만이면 1회분(잔금÷남은회차)이 잔금을 넘으므로 잔금 전액으로 잘라 주문한다.
+    if(B1.capped) html+=`<div class="note" style="color:var(--gold)">ⓘ 남은 회차 ${B1.slot.toFixed(3)}회(&lt;1) — 1회분 계산액 ${wn(B1.raw)}이 잔금을 넘어 <b>잔금 전액 ${wn(c.bal)}</b>으로 주문합니다. 체결되면 원금 소진이라 다음날부터 매수 없이 방어 구간입니다.</div>`;
     // 하방 LOC: 별지점 아래로 gap%씩 내려가며 추가 (큰 하락 대비)
     for(let i=1;i<=rows;i++){
       const p=baseP*(1-gap*i/100);
@@ -4033,7 +4046,7 @@ function sheetInfHTML(today){
   let recoKind='1회매수', recoQty=1, recoPrice=0;
   const lastClose = (lastQuote.inf&&lastQuote.inf.last)|| (inputNum('o_close')||0);
   recoPrice = c.avg>0 ? (c.avg*(1+starPct(st.ticker,st.div,c.T,st.target)/100)-0.01) : lastClose;
-  const slot=st.div-c.T, buy1=slot>0?c.bal/slot:0;
+  const B1=imBuy1(c), slot=B1.slot, buy1=B1.amt;
   if(recoPrice>0)recoQty=Math.max(1,Math.floor((half&&c.avg>0?buy1/2:buy1)/recoPrice))||1;
   const recoLine = c.avg>0 ? `매수 ${wn(recoPrice)} × ${recoQty}주`
     : (lastClose>0?`첫 매수 ${wn(lastClose)} 근처 × ${recoQty}주`:'첫 매수');
