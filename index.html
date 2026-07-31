@@ -435,7 +435,7 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
 </div>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v2.57</span></h1></div>
+    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v2.58</span></h1></div>
     <div style="display:flex;align-items:center;gap:8px">
       <a class="btbtn" href="/backtest">📊<span class="bt-txt"> 백테스트</span></a>
       <button class="gear" onclick="openSettings()">⚙️</button>
@@ -1169,7 +1169,7 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
   <footer>
     <strong>JK 퀀트</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v2.57</b> · 2026-07-31</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v2.58</b> · 2026-07-31</div>
   </footer>
 </div>
 
@@ -1708,8 +1708,9 @@ function renderInfNow(){
   const B1=imBuy1(c), slot=B1.slot, buy1=B1.amt;
   $('d_pct').textContent=c.avg>0?((pct>=0?'+':'')+pct.toFixed(2)+'%'):'—';
   $('d_star').textContent=c.avg>0?wn(star):'—';
-  $('d_buy1').textContent=B1.spent?'소진':(wn(buy1)+(B1.capped?' (잔금 전액)':''));
-  $('d_todo').textContent=slot<=0?(st.reverse===true?'원금 소진 — 리버스모드 진입 대상입니다.':'원금 소진 — 후반전 별지점 손절 쿼터매도로만 방어(홀드). 매수 없음.'):
+  $('d_buy1').textContent=B1.spent?`소진 (T≥${st.div})`:(wn(buy1)+(B1.capped?' (잔금 전액)':''));
+  // '소진'은 잔금 0이 아니라 T가 분할에 도달했다는 뜻 — 잔금이 남아도 1회분에 못 미쳐 새 회차를 못 산다.
+  $('d_todo').textContent=slot<=0?(`원금 소진 (T=${fmtT(c.T)} ≥ ${st.div}분할). 잔금 ${wn(c.bal)}은 1회분에 못 미쳐 다음 사이클까지 대기. `+(st.reverse===true?'리버스모드 진입 대상입니다.':'매수 없이 후반전 별지점 쿼터매도로만 방어합니다.')):
     `${tickerLabel(st.ticker)} ${st.div}분할 · T=${fmtT(c.T)} · ${half?'전반전':'후반전'}. 주문표 탭에서 전일 종가를 넣어 LOC 주문을 확인하세요.`;
 }
 
@@ -1744,7 +1745,7 @@ function renderOrder(){
   const pct=starPct(st.ticker,st.div,c.T,st.target);
   const star=c.avg>0?c.avg*(1+pct/100):close;
   const buyPt=star-0.01;
-  $('o_buy1').textContent=B1.spent?'소진':(wn(buy1)+(B1.capped?' (잔금 전액)':''));
+  $('o_buy1').textContent=B1.spent?`소진 (T≥${st.div})`:(wn(buy1)+(B1.capped?' (잔금 전액)':''));
   $('o_star').textContent=c.avg>0?`${pct.toFixed(2)}% / ${wn(star)}`:'평단 없음(첫 매수)';
   if($('o_avg')) $('o_avg').textContent = c.avg>0 ? `${wn(c.avg)} · ${c.qty}주` : '—';
   const bigMul=1+(st.big/100), limit=close>0?close*bigMul:0;
@@ -1782,7 +1783,9 @@ function renderOrder(){
       rh+='<div class="order-grp buy"><div class="gt"><span class="gd"></span>리버스 쿼터매수</div>';
       if(star5){
         const bp=star5*(1-gap/100);
-        rh+=oitem('b','쿼터매수 (잔금÷4)','LOC',bp,Math.max(1,Math.floor(quarterBuy/bp)));
+        { const qq=bp>0?Math.floor(quarterBuy/bp):0;   // 잔금÷4로 살 수 있는 정수 주수 (0주면 매수 없음)
+          rh+= qq>=1 ? oitem('b','쿼터매수 (잔금÷4)','LOC',bp,qq)
+                     : `<div class="note" style="color:var(--gold)">🚫 쿼터매수 없음 — 잔금÷4 = ${wn(quarterBuy)}이 1주 값(${wn(bp)})에 못 미칩니다.</div>`; }
         rh+=`<div class="note">매수금 = 잔금÷4 = ${wn(quarterBuy)} · 별지점 −${gap}% LOC.</div>`;
       }else{
         rh+=`<div class="note">매수금 = 잔금÷4 = ${wn(quarterBuy)} (별지점 아래 LOC). 별지점을 입력하면 단가가 계산됩니다.</div>`;
@@ -1807,27 +1810,38 @@ function renderOrder(){
   html+='<div class="order-grp buy"><div class="gt"><span class="gd"></span>매수</div>';
   const half=c.T<st.div/2;
   const rows=st.rowsOn?Math.max(0,st.rows||0):0, gap=st.gap||2.5, rq=st.rowqty||1;
-  if(c.avg<=0){
+  // 배정금액으로 살 수 있는 정수 주수(내림)만 주문한다. 0주면 행 자체를 만들지 않는다.
+  // (예전엔 Math.max(1,…)로 최소 1주를 강제해, 원금 소진 상태나 잔금 부족일 때도 매수 주문이 나갔다.)
+  let nBuyRow=0;
+  // qtyPrice: 수량 산출에 쓸 가격(생략 시 주문가). 첫 매수는 LOC가 종가에 체결되므로 종가로 나눈다.
+  const _brow=(lbl,price,alloc,qtyPrice)=>{ const dp=qtyPrice||price, q=dp>0?Math.floor(alloc/dp):0; if(q<1)return ''; nBuyRow++; return oitem('b',lbl,'LOC',price,q); };
+  if(B1.spent){
+    // T ≥ 분할 → 무한매수법 규칙상 '원금 소진'. 잔금이 남아 있어도 1회분에 못 미치므로 새 회차 매수는 없다.
+    html+=`<div class="note" style="color:var(--gold)">🚫 <b>매수 없음 — 원금 소진</b> (T=${fmtT(c.T)} ≥ ${st.div}분할)<br>`
+      +`남은 잔금 <b>${wn(c.bal)}</b>은 1회분에 못 미쳐 다음 사이클까지 대기합니다. `
+      +`${st.reverse===true?'리버스모드 진입 대상입니다.':'아래 <b>쿼터매도</b>로만 방어합니다 (리버스 꺼짐).'}</div>`;
+  }else if(c.avg<=0){
     // 첫 매수: 1회매수금 전액을 종가×큰수에 LOC매수
     // 수량은 예상 체결가(≈전일종가) 기준. LOC는 종가에 체결되므로 큰수가로 나누면 ~큰수%만큼 과소매수됨.
     const firstPrice=close*bigMul;
-    const fq=close>0?Math.max(1,Math.floor(buy1/close)):rq;
-    html+=oitem('b','★ 처음매수','LOC',firstPrice,fq);
+    html+=_brow('★ 처음매수',firstPrice,buy1,close);
     // 하방 LOC: 종가 기준으로 gap%씩 내려가며 추가
     for(let i=1;i<=rows;i++){
       const p=close*(1-gap*i/100);
-      if(p>0)html+=oitem('b',`하방 ${i} (-${(gap*i).toFixed(1)}%)`,'LOC',p,rq);
+      if(p>0){html+=oitem('b',`하방 ${i} (-${(gap*i).toFixed(1)}%)`,'LOC',p,rq);nBuyRow++;}
     }
   }else{
     const baseP = buyPt; // 하방 LOC 기준점 = 별지점-0.01
     if(half){
-      html+=oitem('b','별지점 매수','LOC',buyPt,Math.max(1,Math.floor((buy1/2)/buyPt)));
-      html+=oitem('b','평단 매수','LOC',c.avg,Math.max(1,Math.floor((buy1/2)/c.avg)));
+      html+=_brow('별지점 매수',buyPt,buy1/2);
+      html+=_brow('평단 매수',c.avg,buy1/2);
     }else{
-      html+=oitem('b','별지점 매수 (전액)','LOC',buyPt,Math.max(1,Math.floor(buy1/buyPt)));
+      html+=_brow('별지점 매수 (전액)',buyPt,buy1);
     }
     // 남은 회차가 1회 미만이면 1회분(잔금÷남은회차)이 잔금을 넘으므로 잔금 전액으로 잘라 주문한다.
-    if(B1.capped) html+=`<div class="note" style="color:var(--gold)">ⓘ 남은 회차 ${B1.slot.toFixed(3)}회(&lt;1) — 1회분 계산액 ${wn(B1.raw)}이 잔금을 넘어 <b>잔금 전액 ${wn(c.bal)}</b>으로 주문합니다. 체결되면 원금 소진이라 다음날부터 매수 없이 방어 구간입니다.</div>`;
+    if(B1.capped&&nBuyRow) html+=`<div class="note" style="color:var(--gold)">ⓘ 남은 회차 ${B1.slot.toFixed(3)}회(&lt;1) — 1회분 계산액 ${wn(B1.raw)}이 잔금을 넘어 <b>잔금 전액 ${wn(c.bal)}</b>으로 주문합니다. 체결되면 원금 소진이라 다음날부터 매수 없이 방어 구간입니다.</div>`;
+    // 배정금액이 1주 값에 못 미쳐 주문이 하나도 안 나온 경우
+    if(!nBuyRow) html+=`<div class="note" style="color:var(--gold)">🚫 <b>매수 없음</b> — 오늘 배정액 ${wn(half?buy1/2:buy1)}이 1주 값(${wn(half?Math.min(buyPt,c.avg):buyPt)})에 못 미칩니다. 잔금 ${wn(c.bal)}은 다음 회차까지 대기합니다.</div>`;
     // 하방 LOC: 별지점 아래로 gap%씩 내려가며 추가 (큰 하락 대비)
     for(let i=1;i<=rows;i++){
       const p=baseP*(1-gap*i/100);
@@ -4047,12 +4061,26 @@ function sheetInfHTML(today){
   const lastClose = (lastQuote.inf&&lastQuote.inf.last)|| (inputNum('o_close')||0);
   recoPrice = c.avg>0 ? (c.avg*(1+starPct(st.ticker,st.div,c.T,st.target)/100)-0.01) : lastClose;
   const B1=imBuy1(c), slot=B1.slot, buy1=B1.amt;
-  if(recoPrice>0)recoQty=Math.max(1,Math.floor((half&&c.avg>0?buy1/2:buy1)/recoPrice))||1;
-  const recoLine = c.avg>0 ? `매수 ${wn(recoPrice)} × ${recoQty}주`
-    : (lastClose>0?`첫 매수 ${wn(lastClose)} 근처 × ${recoQty}주`:'첫 매수');
+  // 원금 소진(T≥분할)이거나 배정액이 1주 값에 못 미치면 매수를 추천하지 않는다 — 소진 상태에서
+  // 최소 1주를 강제하면 있지도 않은 회차를 사라고 권하게 된다. 소진이면 방어(쿼터매도)를 권한다.
+  const recoBuyQty = (!B1.spent && recoPrice>0) ? Math.floor((half&&c.avg>0?buy1/2:buy1)/recoPrice) : 0;
+  let recoLine;
+  if(B1.spent && c.qty>0){
+    // 쿼터매도는 별지점 그대로(매수만 −0.01) — 주문표의 '쿼터매도 (¼·별지점)'과 같은 가격이어야 한다.
+    recoKind='쿼터매도'; recoQty=Math.max(1,Math.floor(c.qty/4)); recoPrice=c.avg*(1+starPct(st.ticker,st.div,c.T,st.target)/100);
+    recoLine=`원금 소진(T=${fmtT(c.T)}≥${st.div}) · 별지점 ${wn(recoPrice)} × ${recoQty}주 방어`;
+  }else if(recoBuyQty>=1){
+    recoQty=recoBuyQty;
+    recoLine = c.avg>0 ? `매수 ${wn(recoPrice)} × ${recoQty}주` : `첫 매수 ${wn(lastClose)} 근처 × ${recoQty}주`;
+  }else{
+    recoKind='매수 없음'; recoQty=0;
+    recoLine = B1.spent ? `원금 소진 (T=${fmtT(c.T)} ≥ ${st.div}) · 잔금 ${wn(c.bal)} 대기`
+                        : `배정액이 1주 값에 못 미침 · 잔금 ${wn(c.bal)} 대기`;
+  }
   let h='';
-  h+=`<div class="reco"><div class="rl"><div class="rt">📌 오늘의 추천</div><div class="rmain">${recoKind}</div><div class="rsub">${recoLine} · 아래에서 직접 선택 · T값 자동 계산</div></div>
-      <button class="rgo" onclick="sheetPickInf('${recoKind}',${recoPrice||0},${recoQty})">이대로 기록</button></div>`;
+  // 추천이 '매수 없음'이면 기록할 거래가 없으므로 '이대로 기록' 버튼을 내린다 (유효한 거래종류가 아님).
+  h+=`<div class="reco"><div class="rl"><div class="rt">📌 오늘의 추천</div><div class="rmain">${recoKind}</div><div class="rsub">${recoLine}${recoQty>0?' · 아래에서 직접 선택 · T값 자동 계산':' · 필요하면 아래에서 직접 선택'}</div></div>`
+    +(recoQty>0?`<button class="rgo" onclick="sheetPickInf('${recoKind}',${recoPrice||0},${recoQty})">이대로 기록</button>`:'')+`</div>`;
   const reverse = (st.reverse===true) && c.T>st.div-1 && c.qty>0;
   if(reverse){
     const sellDiv=st.div>=40?20:10;
