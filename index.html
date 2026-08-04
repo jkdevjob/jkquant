@@ -435,7 +435,7 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
 </div>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v2.58</span></h1></div>
+    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v2.59</span></h1></div>
     <div style="display:flex;align-items:center;gap:8px">
       <a class="btbtn" href="/backtest">📊<span class="bt-txt"> 백테스트</span></a>
       <button class="gear" onclick="openSettings()">⚙️</button>
@@ -626,6 +626,10 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
       <div class="card" style="border-color:var(--sell-dim)"><h3><span class="dot" style="background:var(--sell)"></span>리버스모드 <span style="font-size:11px;color:var(--faint);font-weight:500">· 설정에서 켬/끔 (기본 끔)</span></h3>
         <p class="lead">원금 소진 시(20분할 T&gt;19 · 40분할 T&gt;39) 진입. 별지점=직전 5거래일 종가 평균. <b>기본은 끔</b> — 소진 후엔 후반전 별지점 손절 쿼터매도로만 방어(홀드).</p>
         <ul class="clean"><li>첫날 무조건매도 — 20분할 보유÷10 / 40분할 보유÷20 (내림) MOC, 매수 없음</li><li>이후 매도 직전보유÷10(÷20) 별지점 위 / 매수 잔금÷4 별지점 아래</li><li>T갱신 — 20분할 매도 T×0.9·매수 T+(20−T)×0.25 / 40분할 매도 T×0.95·매수 T+(40−T)×0.25</li><li>복귀 TQQQ 종가&gt;평단×0.85 · SOXL&gt;평단×0.80</li></ul></div>
+      <div class="card"><h3><span class="dot"></span>원금 소진 기준</h3>
+        <ul class="clean"><li><b>일반모드</b> — <b>1회 매수가 불가능</b>해지는 시점. 1회분 = 잔금÷(분할−T)이므로 남은 회차가 1회 미만(<b>T &gt; 분할−1</b>)이면 1회분이 잔금을 넘어 매수 불가. 잔금이 남아 있어도 부분 매수는 하지 않습니다.</li>
+        <li><b>리버스모드</b> — <b>1개(1주) 매수가 불가능</b>해지는 시점. T가 분할−1을 넘어도 <b>1주를 살 수 있으면 별지점 아래에서 매수를 지속</b>합니다.</li></ul>
+        <p class="note">즉 '소진'은 잔금이 0이라는 뜻이 아니라 <b>다음 회차를 살 수 없다</b>는 뜻입니다. 소진 후 일반모드는 매수 없이 별지점 쿼터매도(T×0.75)로만 움직이고, 쿼터매도가 체결되면 T가 내려가 매수 여력이 되살아납니다.</p></div>
     </div>
   </section>
 
@@ -1169,7 +1173,7 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
   <footer>
     <strong>JK 퀀트</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v2.58</b> · 2026-07-31</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v2.59</b> · 2026-07-31</div>
   </footer>
 </div>
 
@@ -1580,24 +1584,27 @@ function computeInf(){
     if(cycleEnd)cycleSeq++;
     return row;
   });
-  // 리버스 표시 여부: 이미 리버스 거래로 진행 중이거나(state), 아직 리버스 거래는 없지만 원금이 소진돼
-  // 일반모드 1회매수금 = 잔금/(분할−T)의 분모가 0 이하(T≥분할)가 된 경우(최초 진입 직전).
-  // 문서의 "T>분할−1"은 정수 T 기준 표현이며, 소수 T가 가능한 V4.0에선 분모≤0(T≥분할)이 정확한 소진 기준.
+  // 리버스 표시 여부: 이미 리버스 거래로 진행 중이거나(state), 아직 리버스 거래는 없지만 원금이 소진된 경우.
+  // 소진 기준(라오어 공지) = '1회 매수가 불가능해지는 시점' = 잔금 < 잔금/(분할−T) ⟺ T > 분할−1.
   // 리버스 OFF(기본): 원금 소진 후에도 리버스모드로 넘어가지 않고 일반모드(후반전 별지점 손절 쿼터매도)로 방어.
-  const reverseActive = (st.reverse===true) && (inReverseNow || (T>=st.div)) && qty>0;
+  const reverseActive = (st.reverse===true) && (inReverseNow || (st.div-T<1)) && qty>0;   // 소진 = T>분할−1
   const bal=st.principal+realized-inv; // 가용 잔금 = 원금 + 실현손익 − 현재 보유분 투입원가
   return {avg,qty,inv,realized,T,totbuy,totsell,bal,rows,st,cycleSeq,reverseTraded,inReverseNow,reverseActive};
 }
 
-/* 1회 매수금 = 잔금 ÷ (분할−T), 단 잔금을 넘을 수 없다.
-   T가 분할에 근접하면 남은 회차(분할−T)가 1 미만이 되어 잔금÷slot > 잔금이 되므로 반드시 상한이 필요하다.
-   (예: 잔금 $366.77 · T=19.844/20분할 → slot=0.156 → 무제한이면 $2,347 = 잔금의 6.3배를 주문)
-   백테 runIM의 `Math.min(cash/(divs-T), cash)`와 동일 규약. capped=true면 잔금 한도에 걸린 상태. */
+/* 1회 매수금 = 잔금 ÷ (분할−T).
+   ── 소진 기준 (라오어 공지) ──
+   (1) 일반모드: '1회 매수가 불가능해지는 시점' = T > 분할−1 (남은 회차 < 1회)
+       남은 회차가 1회 미만이면 1회분이 잔금을 넘으므로 부분 매수 없이 소진 처리한다.
+       (예: 잔금 $366.77 · T=19.844/20분할 → slot=0.156 → 1회분 $2,347 = 잔금의 6.3배 → 소진)
+   (2) 리버스모드: '1개(1주) 매수가 불가능해지는 시점' — T가 분할−1을 넘어도
+       1주를 살 수 있으면 별지점 아래에서 매수를 계속한다. (리버스 쿼터매수 참조)                     */
 function imBuy1(c){
   const slot=(c.st.div||20)-c.T;
-  if(!(slot>0)) return {amt:0, slot, spent:true, capped:false};
-  const raw=c.bal/slot, amt=Math.min(raw, c.bal);
-  return {amt, slot, spent:false, capped:raw>c.bal+1e-9, raw};
+  // 소진 = '1회 매수가 불가능해지는 시점'. 1회분 = 잔금÷(분할−T)이므로
+  //   1회분 > 잔금 ⟺ (분할−T) < 1 ⟺ T > 분할−1  → 남은 회차가 1회 미만이면 소진.
+  if(!(slot>=1)) return {amt:0, slot, spent:true};
+  return {amt:c.bal/slot, slot, spent:false};
 }
 
 /* 별% 계산 */
@@ -1708,9 +1715,9 @@ function renderInfNow(){
   const B1=imBuy1(c), slot=B1.slot, buy1=B1.amt;
   $('d_pct').textContent=c.avg>0?((pct>=0?'+':'')+pct.toFixed(2)+'%'):'—';
   $('d_star').textContent=c.avg>0?wn(star):'—';
-  $('d_buy1').textContent=B1.spent?`소진 (T≥${st.div})`:(wn(buy1)+(B1.capped?' (잔금 전액)':''));
-  // '소진'은 잔금 0이 아니라 T가 분할에 도달했다는 뜻 — 잔금이 남아도 1회분에 못 미쳐 새 회차를 못 산다.
-  $('d_todo').textContent=slot<=0?(`원금 소진 (T=${fmtT(c.T)} ≥ ${st.div}분할). 잔금 ${wn(c.bal)}은 1회분에 못 미쳐 다음 사이클까지 대기. `+(st.reverse===true?'리버스모드 진입 대상입니다.':'매수 없이 후반전 별지점 쿼터매도로만 방어합니다.')):
+  $('d_buy1').textContent=B1.spent?`소진 (T>${st.div-1})`:wn(buy1);
+  // '소진'은 잔금 0이 아니라 1회 매수가 불가능해졌다는 뜻 — 잔금이 남아도 1회분에 못 미치면 못 산다.
+  $('d_todo').textContent=B1.spent?(`원금 소진 (T=${fmtT(c.T)} > ${st.div-1}). 잔금 ${wn(c.bal)}이 1회분에 못 미쳐 다음 사이클까지 대기. `+(st.reverse===true?'리버스모드 진입 대상입니다.':'매수 없이 후반전 별지점 쿼터매도로만 방어합니다.')):
     `${tickerLabel(st.ticker)} ${st.div}분할 · T=${fmtT(c.T)} · ${half?'전반전':'후반전'}. 주문표 탭에서 전일 종가를 넣어 LOC 주문을 확인하세요.`;
 }
 
@@ -1745,7 +1752,7 @@ function renderOrder(){
   const pct=starPct(st.ticker,st.div,c.T,st.target);
   const star=c.avg>0?c.avg*(1+pct/100):close;
   const buyPt=star-0.01;
-  $('o_buy1').textContent=B1.spent?`소진 (T≥${st.div})`:(wn(buy1)+(B1.capped?' (잔금 전액)':''));
+  $('o_buy1').textContent=B1.spent?`소진 (T>${st.div-1})`:wn(buy1);
   $('o_star').textContent=c.avg>0?`${pct.toFixed(2)}% / ${wn(star)}`:'평단 없음(첫 매수)';
   if($('o_avg')) $('o_avg').textContent = c.avg>0 ? `${wn(c.avg)} · ${c.qty}주` : '—';
   const bigMul=1+(st.big/100), limit=close>0?close*bigMul:0;
@@ -1783,9 +1790,12 @@ function renderOrder(){
       rh+='<div class="order-grp buy"><div class="gt"><span class="gd"></span>리버스 쿼터매수</div>';
       if(star5){
         const bp=star5*(1-gap/100);
-        { const qq=bp>0?Math.floor(quarterBuy/bp):0;   // 잔금÷4로 살 수 있는 정수 주수 (0주면 매수 없음)
+        // 리버스 소진 기준(라오어 공지) = '1개 매수가 불가능해지는 시점'. T가 분할−1을 넘어도
+        // 1주를 살 수 있으면 계속 매수한다 → 잔금÷4가 1주에 못 미쳐도 잔금으로 1주는 산다.
+        { const qq=bp>0?Math.max(Math.floor(quarterBuy/bp), (c.bal>=bp?1:0)):0;
           rh+= qq>=1 ? oitem('b','쿼터매수 (잔금÷4)','LOC',bp,qq)
-                     : `<div class="note" style="color:var(--gold)">🚫 쿼터매수 없음 — 잔금÷4 = ${wn(quarterBuy)}이 1주 값(${wn(bp)})에 못 미칩니다.</div>`; }
+                     : `<div class="note" style="color:var(--gold)">🚫 쿼터매수 없음 — 잔금 ${wn(c.bal)}으로 1주(${wn(bp)})도 살 수 없습니다. 리버스 기준으로도 소진입니다.</div>`;
+          if(qq===1 && quarterBuy<bp) rh+=`<div class="note" style="color:var(--gold)">ⓘ 잔금÷4(${wn(quarterBuy)})가 1주 값에 못 미치지만, 리버스는 <b>1개 매수가 가능할 때까지 지속</b>이라 1주를 주문합니다.</div>`; }
         rh+=`<div class="note">매수금 = 잔금÷4 = ${wn(quarterBuy)} · 별지점 −${gap}% LOC.</div>`;
       }else{
         rh+=`<div class="note">매수금 = 잔금÷4 = ${wn(quarterBuy)} (별지점 아래 LOC). 별지점을 입력하면 단가가 계산됩니다.</div>`;
@@ -1816,9 +1826,11 @@ function renderOrder(){
   // qtyPrice: 수량 산출에 쓸 가격(생략 시 주문가). 첫 매수는 LOC가 종가에 체결되므로 종가로 나눈다.
   const _brow=(lbl,price,alloc,qtyPrice)=>{ const dp=qtyPrice||price, q=dp>0?Math.floor(alloc/dp):0; if(q<1)return ''; nBuyRow++; return oitem('b',lbl,'LOC',price,q); };
   if(B1.spent){
-    // T ≥ 분할 → 무한매수법 규칙상 '원금 소진'. 잔금이 남아 있어도 1회분에 못 미치므로 새 회차 매수는 없다.
-    html+=`<div class="note" style="color:var(--gold)">🚫 <b>매수 없음 — 원금 소진</b> (T=${fmtT(c.T)} ≥ ${st.div}분할)<br>`
-      +`남은 잔금 <b>${wn(c.bal)}</b>은 1회분에 못 미쳐 다음 사이클까지 대기합니다. `
+    // T > 분할−1 → '1회 매수가 불가능' = 원금 소진. 잔금이 남아 있어도 부분 매수 없이 새 회차는 없다.
+    html+=`<div class="note" style="color:var(--gold)">🚫 <b>매수 없음 — 원금 소진</b> (T=${fmtT(c.T)} > ${st.div-1}, 남은 회차 ${B1.slot.toFixed(3)}회 &lt; 1)<br>`
+      +(B1.slot>0 ? `1회분 ${wn(c.bal/B1.slot)}이 잔금 <b>${wn(c.bal)}</b>을 넘어 매수할 수 없습니다. `
+                  : `${st.div}회차를 모두 썼습니다. `)
+      +`잔금 <b>${wn(c.bal)}</b>은 다음 사이클까지 대기합니다. `
       +`${st.reverse===true?'리버스모드 진입 대상입니다.':'아래 <b>쿼터매도</b>로만 방어합니다 (리버스 꺼짐).'}</div>`;
   }else if(c.avg<=0){
     // 첫 매수: 1회매수금 전액을 종가×큰수에 LOC매수
@@ -1839,7 +1851,6 @@ function renderOrder(){
       html+=_brow('별지점 매수 (전액)',buyPt,buy1);
     }
     // 남은 회차가 1회 미만이면 1회분(잔금÷남은회차)이 잔금을 넘으므로 잔금 전액으로 잘라 주문한다.
-    if(B1.capped&&nBuyRow) html+=`<div class="note" style="color:var(--gold)">ⓘ 남은 회차 ${B1.slot.toFixed(3)}회(&lt;1) — 1회분 계산액 ${wn(B1.raw)}이 잔금을 넘어 <b>잔금 전액 ${wn(c.bal)}</b>으로 주문합니다. 체결되면 원금 소진이라 다음날부터 매수 없이 방어 구간입니다.</div>`;
     // 배정금액이 1주 값에 못 미쳐 주문이 하나도 안 나온 경우
     if(!nBuyRow) html+=`<div class="note" style="color:var(--gold)">🚫 <b>매수 없음</b> — 오늘 배정액 ${wn(half?buy1/2:buy1)}이 1주 값(${wn(half?Math.min(buyPt,c.avg):buyPt)})에 못 미칩니다. 잔금 ${wn(c.bal)}은 다음 회차까지 대기합니다.</div>`;
     // 하방 LOC: 별지점 아래로 gap%씩 내려가며 추가 (큰 하락 대비)
@@ -4074,7 +4085,7 @@ function sheetInfHTML(today){
     recoLine = c.avg>0 ? `매수 ${wn(recoPrice)} × ${recoQty}주` : `첫 매수 ${wn(lastClose)} 근처 × ${recoQty}주`;
   }else{
     recoKind='매수 없음'; recoQty=0;
-    recoLine = B1.spent ? `원금 소진 (T=${fmtT(c.T)} ≥ ${st.div}) · 잔금 ${wn(c.bal)} 대기`
+    recoLine = B1.spent ? `원금 소진 (T=${fmtT(c.T)} > ${st.div-1}) · 잔금 ${wn(c.bal)} 대기`
                         : `배정액이 1주 값에 못 미침 · 잔금 ${wn(c.bal)} 대기`;
   }
   let h='';

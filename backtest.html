@@ -259,7 +259,7 @@ td:first-child{text-align:left;}
   <div class="brand">
     <div>
       <div class="logo">Backtest</div>
-      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v1.146</span></h1>
+      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v1.147</span></h1>
     </div>
   </div>
   <a href="/" class="home">← JK 퀀트</a>
@@ -359,8 +359,8 @@ td:first-child{text-align:left;}
     </div>
     <div class="ctrl s-im hide"><label>리버스 <span style="font-size:9px;color:var(--dim)">V4.0 원금소진 후</span></label>
       <div class="seg" id="imRev" style="align-self:flex-start">
-        <button data-r="0" class="active" title="원금 소진(T≥분할) 후 리버스 무한매도 안 함 — 후반전 별지점 손절 쿼터매도로만 방어. 백테스트상 20분할·저점 V반등에서 리버스보다 유리(기본)">끔</button>
-        <button data-r="1" title="원금 소진(T≥분할) 후 리버스 무한매도 모드 진입 — 라오어 공식 V4.0. 급락 저점에서 분할 매도 후 반등 시 재매수">켬</button>
+        <button data-r="0" class="active" title="원금 소진(T&gt;분할−1) 후 리버스 무한매도 안 함 — 후반전 별지점 손절 쿼터매도로만 방어. 백테스트상 20분할·저점 V반등에서 리버스보다 유리(기본)">끔</button>
+        <button data-r="1" title="원금 소진(T&gt;분할−1) 후 리버스 무한매도 모드 진입 — 라오어 공식 V4.0. 급락 저점에서 분할 매도 후 반등 시 재매수">켬</button>
       </div>
     </div>
     <div class="ctrl s-im hide"><label>재투자</label>
@@ -591,7 +591,8 @@ td:first-child{text-align:left;}
   <span class="bd">별%</span> base = <b>익절%</b> · slope = base×0.1×(20/분할) · 별지점 = 평단×(1+별%)<br>
   <span class="bd">규약</span> 익절% 하나로 <b>별지점·리버스 복귀(−익절%)</b>가 함께 결정 · 문서값 재현(TQQQ 15 / SOXL 20)<br>
   <span class="bd">매도</span> 보유 1/4 별지점 쿼터매도(T×0.75) + 3/4 <b>평단+익절% 지정가</b> · 보유 0 시 복리 재시작<br>
-  <span class="bd">리버스</span> T&gt;분할−1(원금소진) 시 무한매도(보유÷10·÷20)+쿼터매수(잔금÷4) · 종가&gt;평단×(1−15%/20%) 회복 시 다음날 일반모드 복귀<br>
+  <span class="bd">소진</span> 일반모드=<b>1회 매수가 불가능</b>해지는 시점(T&gt;분할−1) · 리버스모드=<b>1개(1주) 매수가 불가능</b>해지는 시점 — 리버스는 T가 분할−1을 넘어도 1주를 살 수 있으면 별지점 아래 매수를 지속<br>
+  <span class="bd">리버스</span> 원금소진 시 무한매도(보유÷10·÷20)+쿼터매수(잔금÷4) · 종가&gt;평단×(1−15%/20%) 회복 시 다음날 일반모드 복귀<br>
   <span class="bd">재투자</span> 복리=익절금 원금 합산 / 단리=초과익만 인출(손실은 잔고 이월) · <b>장기(5년↑) 비교는 단리 권장</b> — 복리 초장기는 기하급수 폭주<br>
   <span class="bd v5-hidden">V5.0</span><span class="v5-hidden"> 국면 익절 (검증 미완료 · 비활성)</span>
 </div>
@@ -1602,12 +1603,12 @@ function runIM(days,tkr,cap,divs,targetPct,compound=true){
     { const eq=cash+shares*c+savedProfit; if(eq>mddPeak)mddPeak=eq; else { const dd=(mddPeak-eq)/mddPeak; if(dd>mdd)mdd=dd; } }
     closeHist.push(c); if(closeHist.length>5) closeHist.shift();
 
-    // 리버스 진입: 원금 소진 = 일반모드 1회매수금 잔금/(분할−T)의 분모가 0 이하(T≥분할).
-    // (문서 "T>분할−1"은 정수 T 표현. 소수 T 가능한 V4.0에선 분모≤0인 T≥분할이 정확한 소진 기준.)
+    // 리버스 진입: 원금 소진 = '1회 매수가 불가능해지는 시점'(라오어 공지).
+    //   1회분 = 잔금/(분할−T) 이므로  1회분 > 잔금 ⟺ (분할−T) < 1 ⟺ T > 분할−1.
     // 일단 들어가면 T가 매도로 줄어도 리버스 유지, 종료는 오직 '가격 회복' 또는 '전량 매도'로만 판정.
     // 리버스 OFF(기본): 진입선을 무력화 → 원금 소진 후엔 일반모드의 후반전 별지점 손절 쿼터매도로만 방어(홀드).
     const _revOn=(typeof imReverse!=='undefined')&&imReverse;
-    if(_revOn && !inReverse && T>=divs && shares>0){ inReverse=true; reverseDay1=true; }
+    if(_revOn && !inReverse && (divs-T)<1 && shares>0){ inReverse=true; reverseDay1=true; }
 
     if(inReverse && shares>0 && avg>0){
       // ── 리버스모드: 무한매도(보유÷10·÷20) + 쿼터매수(잔금÷4) ──
@@ -1626,8 +1627,9 @@ function runIM(days,tkr,cap,divs,targetPct,compound=true){
         // 매수: 잔금÷4, 별지점 −2.5% LOC (운용도구 기본 gap%와 동일)
         if(shares>1e-9){
           const buyP=star5*0.975;
-          if(c<=buyP && cash>1){
-            _buy(c, cash/4);   // LOC=종가
+          // 리버스 소진 = '1개(1주) 매수 불가' 시점 — 1주라도 살 수 있으면 계속 매수
+          if(c<=buyP && cash>=c){
+            _buy(c, Math.min(cash, Math.max(cash/4, c)));   // LOC=종가 (잔금÷4가 1주에 못 미치면 1주)
             T=T+(divs-T)*0.25;
           }
         }
@@ -1667,8 +1669,8 @@ function runIM(days,tkr,cap,divs,targetPct,compound=true){
         else if(cash>cap){ savedProfit+=cash-cap; cash=cap; }  // 단리: 초과익만 인출, 손실 사이클은 잔고 이월(외부수혈 없음)
         T=0;snap.push([d,cash+savedProfit]);return;}
     }
-    if(T<divs&&cash>1){
-      let one=Math.min(cash/(divs-T),cash);
+    if(divs-T>=1&&cash>1){          // 소진 = T>분할−1 → 남은 회차가 1회 이상일 때만 매수
+      let one=cash/(divs-T);        // 남은 회차 ≥1 이므로 1회분 ≤ 잔금 (별도 상한 불필요)
       if(shares===0&&T===0){_buy(c,one);T+=1;}
       else{
         const starP=avg*(1+(starBase-starSlope*T)/100);const buyP=starP-0.01;
@@ -1878,7 +1880,7 @@ function runIM50(days,tkr,cap,divs,targetPct,compound=true){
     closeHist.push(c); if(closeHist.length>5) closeHist.shift();
     const gr=!!GM.ready[d];
     const g =!!GM.gate[d];
-    if(!inReverse && T>=divs && shares>0){ inReverse=true; reverseDay1=true; }
+    if(!inReverse && (divs-T)<1 && shares>0){ inReverse=true; reverseDay1=true; }
 
     if(inReverse && shares>0 && avg>0){
       if(reverseDay1){
@@ -1893,8 +1895,8 @@ function runIM50(days,tkr,cap,divs,targetPct,compound=true){
         }
         if(shares>1e-9){
           const buyP=star5*0.975;
-          if(c<=buyP && cash>1){
-            _buy(c, cash/4);   // LOC=종가
+          if(c<=buyP && cash>=c){   // 리버스 소진 = 1주도 못 사는 시점 (V4.0과 동일 규약)
+            _buy(c, Math.min(cash, Math.max(cash/4, c)));   // LOC=종가
             T=T+(divs-T)*0.25;
           }
         }
@@ -1929,8 +1931,8 @@ function runIM50(days,tkr,cap,divs,targetPct,compound=true){
         if(compound){} else if(cash>cap){ savedProfit+=cash-cap; cash=cap; }
         T=0;snap.push([d,cash+savedProfit]);return;}
     }
-    if(T<divs&&cash>1){
-      let one=Math.min(cash/(divs-T),cash);
+    if(divs-T>=1&&cash>1){          // 소진 = T>분할−1 (V4.0과 동일 규약)
+      let one=cash/(divs-T);
       if(shares===0&&T===0){_buy(c,one);T+=1;}
       else{
         const starP=avg*(1+(starBase-starSlope*T)/100);const buyP=starP-0.01;
