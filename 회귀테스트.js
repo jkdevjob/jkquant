@@ -62,8 +62,8 @@ inject(`if(sellQty>0){ _sell(c,sellQty,0); T=divs>=40?T*0.95:T*0.9; }   // MOC=�
 `if(sellQty>0){ __LOG('리버스매도',c,sellQty); _sell(c,sellQty,0); T=divs>=40?T*0.95:T*0.9; }   // MOC=종가`,'r1');
 inject(`if(sellQty>0){ _sell(c,sellQty,0); T=divs>=40?T*0.95:T*0.9; }   // LOC=종가`,
 `if(sellQty>0){ __LOG('리버스매도',c,sellQty); _sell(c,sellQty,0); T=divs>=40?T*0.95:T*0.9; }   // LOC=종가`,'r2');
-inject(`_buy(c, cash/4);   // LOC=종가`,
-`{const __a=cash/4;__LOG('리버스매수',c,__a/c);_buy(c,__a);}   // LOC=종가`,'r3');
+inject(`_buy(c, Math.min(cash, Math.max(cash/4, c)));   // LOC=종가`,
+`{const __a=Math.min(cash, Math.max(cash/4, c));__LOG('리버스매수',c,__a/c);_buy(c,__a);}   // LOC=종가`,'r3');
 inject(`{_sell(tgt,q3,SLIP);tpHit=true;}`,
 `{__LOG('지정가매도',tgt,q3);_sell(tgt,q3,SLIP);tpHit=true;}`,'tp');
 inject(`{_sell(c,sq,0);qtHit=true;}`,
@@ -201,7 +201,9 @@ console.log('[4b] runIM50 스모크 + V4.0 앵커');
     const r50=runIM50(DAYS.SOXL,'SOXL',10000,20,20,true);
     ok('runIM50 전체 실행·유한값', isFinite(r50.final)&&isFinite(r50.mdd));
   }
-  // (b) V4.0 앵커: 전체 이력·복리·원금 1만$·비용 OFF (2026-07-07자 CSV · v1.91 종가체결 기준 — CSV/엔진 갱신 시 재산출)
+  // (b) V4.0 앵커: 전체 이력·복리·원금 1만$·비용 OFF
+  // ⚠ 아래 기대값은 2026-07-07자 CSV · v1.91 종가체결 기준. v1.147에서 소진 기준을
+  //   T≥분할 → T>분할−1(1회 매수 불가 시점)로 바꿨으므로 CSV 보유 환경에서 재산출 필요.
   const A=[['SOXL',20,20,1037877.52,61.74,72],
            ['TQQQ',40,10,136093.27,47.68,107],
            ['TECL',20,20,505877.36,62.05,31]];
