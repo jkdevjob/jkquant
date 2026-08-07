@@ -188,6 +188,11 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
 #gbtn svg{width:20px;height:20px}
 #authgate .gnote{color:var(--faint);font-size:11px;margin-top:20px;line-height:1.6}
 #authgate .gerr{color:var(--sell);font-size:12px;margin-top:14px;min-height:16px}
+#inappwarn{margin-top:16px;text-align:left;background:rgba(245,196,81,.1);border:1px solid rgba(245,196,81,.35);border-radius:10px;padding:12px 13px;font-size:12.5px;line-height:1.65;color:#f6dfa6}
+#inappwarn b{color:var(--gold)}
+#inappwarn .iw-btns{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
+#inappwarn .iw-btn{flex:1;min-width:120px;padding:9px 10px;border-radius:8px;border:1px solid rgba(245,196,81,.45);background:rgba(245,196,81,.14);color:var(--gold);font-size:12.5px;font-weight:700;cursor:pointer;text-align:center;text-decoration:none}
+#inappwarn .iw-ok{color:#8fe3b8;font-weight:700}
 .userbadge{display:flex;align-items:center;gap:7px;font-size:11.5px;color:var(--dim)}
 .userbadge img{width:22px;height:22px;border-radius:50%}
 .userbadge .lo{color:var(--vio);cursor:pointer;font-weight:700;background:none;border:none;font-size:11.5px;padding:0}
@@ -429,13 +434,14 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
       <svg viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
       Google로 시작하기
     </button>
+    <div id="inappwarn"></div>
     <div class="gerr" id="gerr"></div>
     <div class="gnote">개인 학습·기록용 도구입니다. 투자 권유가 아니며, 레버리지 ETF는 원금 손실 위험이 큽니다.</div>
   </div>
 </div>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v2.60</span></h1></div>
+    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v2.61</span></h1></div>
     <div style="display:flex;align-items:center;gap:8px">
       <a class="btbtn" href="/backtest">📊<span class="bt-txt"> 백테스트</span></a>
       <button class="gear" onclick="openSettings()">⚙️</button>
@@ -1180,7 +1186,7 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
   <footer>
     <strong>JK 퀀트</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v2.60</b> · 2026-07-31</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v2.61</b> · 2026-07-31</div>
   </footer>
 </div>
 
@@ -4716,7 +4722,10 @@ function googleLogin(){
     if(code==='auth/popup-closed-by-user'||code==='auth/cancelled-popup-request'){
       $('gerr').textContent='로그인 창이 닫혔어요. 다시 눌러주세요.';
     }else if(code==='auth/popup-blocked'){
-      $('gerr').textContent='팝업이 차단됐어요. 브라우저 주소창의 팝업 차단을 허용하거나, Safari/Chrome 기본 브라우저로 열어 다시 시도하세요.';
+      const nm=(typeof inAppName==='function')&&inAppName();
+      $('gerr').textContent = nm
+        ? (nm+' 안에서는 로그인 팝업이 차단됩니다. 위 안내대로 기본 브라우저로 열어주세요.')
+        : '팝업이 차단됐어요. 브라우저 주소창의 팝업 차단을 허용하거나, Safari/Chrome 기본 브라우저로 열어 다시 시도하세요.';
     }else{
       $('gerr').textContent='로그인 실패: '+code;
     }
@@ -4798,6 +4807,44 @@ function initAuth(){
     }
   });
 }
+
+/* ── 인앱 브라우저 감지 ──────────────────────────────────────────────
+   인앱 브라우저(네이버·카카오톡 등)는 window.open 팝업을 같은 탭 이동으로 바꾼다.
+   그러면 signInWithPopup 이 사실상 redirect 가 되고, 돌아올 때 인증 핸들러
+   (jk-invest.firebaseapp.com)가 storage-partitioned 환경에서 sessionStorage 를
+   읽지 못해 'missing initial state' 로 실패한다.
+   그 에러 화면은 firebaseapp.com 에서 뜨므로 우리 코드로는 catch 도 못 한다
+   → 누르기 전에 안내해서 기본 브라우저로 유도하는 것이 유일한 방어.
+   (근본 해결은 authDomain 을 우리 도메인으로 옮기고 /__/auth/* 를 프록시하는 것) */
+const INAPP_UA=[[/NAVER\(/i,'네이버 앱'],[/KAKAOTALK/i,'카카오톡'],[/Instagram/i,'인스타그램'],
+  [/FBAN|FBAV|FB_IAB/i,'페이스북'],[/\bLine\//i,'라인'],[/DaumApps/i,'다음 앱'],
+  [/\bBand\//i,'밴드'],[/everytimeApp/i,'에브리타임'],[/Snapchat/i,'스냅챗'],[/TwitterAndroid|Twitter for/i,'X(트위터)']];
+function inAppName(){ const ua=navigator.userAgent||''; for(const [re,nm] of INAPP_UA) if(re.test(ua)) return nm; return null; }
+function copyAppUrl(){
+  const u=location.origin+location.pathname;
+  const done=()=>{ const e=document.getElementById('iw_copied'); if(e){e.textContent='✓ 복사됨 — 브라우저 주소창에 붙여넣으세요';} };
+  if(navigator.clipboard&&navigator.clipboard.writeText) navigator.clipboard.writeText(u).then(done,done);
+  else { const t=document.createElement('textarea'); t.value=u; document.body.appendChild(t); t.select();
+         try{document.execCommand('copy');}catch(e){} t.remove(); done(); }
+}
+function renderInAppWarn(){
+  const box=document.getElementById('inappwarn'); if(!box) return;
+  const nm=inAppName(); if(!nm){ box.style.display='none'; return; }
+  const ua=navigator.userAgent||'', android=/Android/i.test(ua);
+  const url=location.origin+location.pathname;
+  const intent='intent://'+location.host+location.pathname+'#Intent;scheme=https;package=com.android.chrome;end';
+  box.innerHTML='⚠️ <b>'+nm+' 안에서는 구글 로그인이 되지 않습니다.</b><br>'
+    +'앱 내장 브라우저는 로그인 창을 팝업으로 못 띄워서, 구글 인증이 <b>missing initial state</b> 오류로 끊깁니다.<br>'
+    +'<b>Safari·Chrome 같은 기본 브라우저로 열어주세요.</b> '
+    +(android?'아래 버튼을 누르거나, ':'')+'브라우저 메뉴(⋯ 또는 ≡) → <b>“기본 브라우저로 열기”</b>를 선택하면 됩니다.'
+    +'<div class="iw-btns">'
+    +(android?'<a class="iw-btn" href="'+intent+'">Chrome으로 열기</a>':'')
+    +'<button class="iw-btn" type="button" onclick="copyAppUrl()">주소 복사</button>'
+    +'</div><div id="iw_copied" style="margin-top:7px;font-size:11.5px;color:#8fe3b8"></div>'
+    +'<div style="margin-top:7px;font-size:11px;color:var(--faint);word-break:break-all">'+url+'</div>';
+  box.style.display='';
+}
+try{ renderInAppWarn(); }catch(e){}
 
 /* ── 시작: Firebase 준비되면 인증 시작 ── */
 if(window.fb){initAuth();}
