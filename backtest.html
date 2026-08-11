@@ -259,7 +259,7 @@ td:first-child{text-align:left;}
   <div class="brand">
     <div>
       <div class="logo">Backtest</div>
-      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v1.150</span></h1>
+      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v1.151</span></h1>
     </div>
   </div>
   <a href="/" class="home">← JK 퀀트</a>
@@ -1431,7 +1431,7 @@ function _dcaOne(t,days,amt,step,costOn,dipMul){
 
 /* ──── 레버리지 ETF 기간 확장 (DCA 전용) ────
    레버리지 ETF의 상장 전 기간을 1배 기초지수 ETF의 일수익률×배수로 합성해 접합. 상장 이후는 실제 데이터. */
-const LEV_UNDERLYING={SOXL:'SOXX',USD:'SOXX',TQQQ:'QQQ',QLD:'QQQ',TECL:'XLK',KORU:'EWY',SSO:'SPY',UPRO:'SPY',SPYU:'SPY'};
+const LEV_UNDERLYING={SOXL:'SOXX',USD:'SMH',TQQQ:'QQQ',QLD:'QQQ',TECL:'XLK',KORU:'EWY',SSO:'SPY',UPRO:'SPY',SPYU:'SPY'};
 /* ──── 합성 구간 보유비용 모형 (실측 기반) ────
    보유비용(연) = 운용보수 + (배수−1)×(그 해 3개월 T-Bill + 차입 스프레드) + 배수×배당보정
    추정 방법: 상장 이후 실제로 겹치는 구간에서 종목×연도별 '실현 보유비용'을 역산
@@ -1450,14 +1450,18 @@ const LEV_SPREAD=0.0077;        // 차입 스프레드 — T-Bill 위에 붙는 
      SPYU 4배        → SPY(총수익) 기준 +5.61%p 인데 ^GSPC(가격) 기준이면 +1.34%p
    즉 2·3배 ETF는 총수익을 그대로 주고, SPYU만 가격지수 상품이다.                          */
 const LEV_PRICEIDX={SPYU:true};
-/* ⚠ 남아 있는 한계 — USD(2배)는 기초를 SOXX로 잡았으나 실제로는 다른 반도체 지수를 추종한다.
-     실현 배수 β가 해마다 1.45~2.13 로 흔들리고 20년 중 15년이 R²<0.97 (SOXL은 전 연도 2.92~3.03).
-     모형 잔차도 +4.6%p 로 유일하게 크다. 대체할 만한 1배 ETF가 없어 SOXX를 유지하되,
-     USD 확장 구간 수치는 다른 종목보다 신뢰도가 낮다고 봐야 한다.                            */
+/* ※ USD 의 기초는 SOXX 가 아니라 SMH 다 — 같은 '반도체 2배/3배'라도 추종 지수가 다르다.
+   후보 1배(SOXX·SMH·^SOX·XSD·PSI)로 각각 합성해 19.5년 실제 경로와 대조한 결과:
+     USD (2배)   SMH −0.61%p │ SOXX −4.38 │ ^SOX −7.14 │ PSI −7.44 │ XSD −9.07
+     SOXL(3배)   SOXX −0.09%p │ ^SOX −4.93 │ PSI −8.33 │ SMH +9.65 │ XSD −15.91
+   실현 배수도 USD↔SMH β=1.99(정확히 2배), USD↔SOXX β=1.91 로 갈린다.
+   두 상품이 서로 다른 반도체 지수를 쓰기 때문이고, 1배끼리도 SMH가 SOXX보다 연 +1.37%p 앞선다. */
 // 기초 ETF보다 더 이전 구간을 가진 '가격지수'로 1배 기초를 한 번 더 소급 연장한다.
 // 가격지수는 배당 미포함이라 실측 배당격차(ETF CAGR − 지수 CAGR)를 일할 가산해 총수익으로 근사.
 //   실측(겹치는 구간): ^SOX vs SOXX +1.29%p/년(상관 .984) · ^NDX vs QQQ +0.57%p(.980) · ^GSPC vs SPY +1.95%p(.985)
+//                     ^SOX vs SMH  +1.12%p/년(R² .959, 2000-06~ 26.2년)
 const IDX_EXTEND={ SOXX:{idx:'^SOX', div:0.0129, from:'1994-05'},
+                   SMH :{idx:'^SOX', div:0.0112, from:'1994-05'},
                    QQQ :{idx:'^NDX', div:0.0057, from:'1985-10'},
                    SPY :{idx:'^GSPC',div:0.0195, from:'1980-01'} };
 // 기초 1배 시계열을 최대한 길게 구성: [가격지수(배당보정) → 기초 ETF 실데이터] 접합
@@ -1520,8 +1524,8 @@ function renderLevNote(info){
     +ks.map(t=>{const e=info[t];
       return `<tr><td><b>${t}</b></td><td>${e.lev}배</td><td>${e.idx?`<b>${e.idx}</b> + ${e.under}`:e.under}</td><td>${e.from} ~ ${e.to}</td><td>${e.cost!=null?(e.cost*100).toFixed(1)+'%':'-'}</td></tr>`;}).join('')
     +`</tbody></table></div>`
-    +`<p class="note" style="font-size:11px;color:var(--dim);margin-top:8px;line-height:1.7">합성 구간 이후는 실제 ETF 데이터 · 가격지수(^SOX·^NDX·^GSPC) 구간은 배당 보정(+1.29%p·+0.57%p·+1.95%p/년) · 합성 구간 보유비용 = <b>운용보수(종목별 0.75~1.08%) + (배수−1)×(그 해 3개월 국채금리 + 0.77%)</b>. 상장 이후 실데이터와 대조해 추정했습니다(7종목 16년, 잔차 RMSE 2.4%p).</p>`
-    +`<p class="note" style="font-size:11px;margin-top:6px;line-height:1.7;padding:8px 10px;border-radius:7px;background:rgba(245,196,81,.12);border:1px solid rgba(245,196,81,.32);color:#f6dfa6">⚠️ <b>차입비용은 그 시대 금리를 따릅니다.</b> 1980~2000년대는 단기금리가 5~14%여서 3배 상품이면 차입비용만 연 12~24%였습니다. 제로금리기(2010~2021)에 익숙한 감각으로 보면 <b>옛 구간 성과가 뜻밖에 나쁘게 나오는 게 정상</b>입니다.${ks.some(t=>t==='USD')?` 또한 <b>USD</b>는 SOXX와 다른 반도체 지수를 추종해(실현 배수 1.45~2.13 변동) 확장 구간 신뢰도가 낮습니다.`:''}</p>`
+    +`<p class="note" style="font-size:11px;color:var(--dim);margin-top:8px;line-height:1.7">합성 구간 이후는 실제 ETF 데이터 · 가격지수(^SOX·^NDX·^GSPC) 구간은 배당 보정(+0.57~1.95%p/년, 기초별 실측) · 합성 구간 보유비용 = <b>운용보수(종목별 0.75~1.08%) + (배수−1)×(그 해 3개월 국채금리 + 0.77%)</b>. 상장 이후 실데이터와 대조해 추정했습니다(7종목 16년, 잔차 RMSE 2.4%p).</p>`
+    +`<p class="note" style="font-size:11px;margin-top:6px;line-height:1.7;padding:8px 10px;border-radius:7px;background:rgba(245,196,81,.12);border:1px solid rgba(245,196,81,.32);color:#f6dfa6">⚠️ <b>차입비용은 그 시대 금리를 따릅니다.</b> 1980~2000년대는 단기금리가 5~14%여서 3배 상품이면 차입비용만 연 12~24%였습니다. 제로금리기(2010~2021)에 익숙한 감각으로 보면 <b>옛 구간 성과가 뜻밖에 나쁘게 나오는 게 정상</b>입니다.</p>`
     +`</div>`;
 }
 function clearLevExt(){ for(const t in RAWM){ if(RAWM[t]) M[t]=RAWM[t]; } RAWM={}; EXTM={}; }
