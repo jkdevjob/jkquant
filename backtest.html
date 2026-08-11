@@ -23,7 +23,7 @@ const firebaseConfig = {
 const fbApp = initializeApp(firebaseConfig);
 const auth = getAuth(fbApp);
 const db = getFirestore(fbApp);
-const DEFAULT_TICKERS = ['SOXL','TQQQ','TECL','KORU','QLD','USD','SSO','UPRO','QQQ','QYLD','JEPQ','QQQI','GPIQ'];
+const DEFAULT_TICKERS = ['SOXL','TQQQ','TECL','KORU','QLD','USD','SSO','UPRO','SPYU','QQQ','QYLD','JEPQ','QQQI','GPIQ'];
 
 function getCustomList(){
   return TICKERS.filter(t=>!DEFAULT_TICKERS.includes(t))
@@ -259,7 +259,7 @@ td:first-child{text-align:left;}
   <div class="brand">
     <div>
       <div class="logo">Backtest</div>
-      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v1.148</span></h1>
+      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v1.149</span></h1>
     </div>
   </div>
   <a href="/" class="home">← JK 퀀트</a>
@@ -631,7 +631,7 @@ td:first-child{text-align:left;}
 // ════════ 데이터 (실시간 로딩 — '데이터 새로고침' 버튼으로 받아옵니다) ════════
 // 종목별 /api/quote?range=max 호출. 막힌 종목은 건너뜁니다.
 const C=0,O=1,HI=2,LO=3;
-const TICKERS=['SOXL','TQQQ','TECL','KORU','QLD','USD','SSO','UPRO','QQQ','QYLD','JEPQ','QQQI','GPIQ'];
+const TICKERS=['SOXL','TQQQ','TECL','KORU','QLD','USD','SSO','UPRO','SPYU','QQQ','QYLD','JEPQ','QQQI','GPIQ'];
 
 // 실시간 가격 로딩: 설정 기간을 5년 단위 청크로 분할 요청
 async function fetchPrices(startDate, endDate){
@@ -682,6 +682,7 @@ async function fetchPrices(startDate, endDate){
 const META={
   SSO: {name:'S&P500 2×',  lev:2, color:'#4fc3f7'},
   UPRO:{name:'S&P500 3×',  lev:3, color:'#29b6f6'},
+  SPYU:{name:'S&P500 4×',  lev:4, color:'#0277bd'},   // 2023-12 상장 · 배수는 SPY 대비 일간수익률 회귀로 확인(β=3.86, 연도별 3.78~3.97)
   QLD: {name:'나스닥100 2×',lev:2, color:'#5b8dee'},
   TQQQ:{name:'나스닥100 3×',lev:3, color:'#00d4b4'},
   USD: {name:'반도체 2×',  lev:2, color:'#b088f8'},
@@ -1430,8 +1431,18 @@ function _dcaOne(t,days,amt,step,costOn,dipMul){
 
 /* ──── 레버리지 ETF 기간 확장 (DCA 전용) ────
    레버리지 ETF의 상장 전 기간을 1배 기초지수 ETF의 일수익률×배수로 합성해 접합. 상장 이후는 실제 데이터. */
-const LEV_UNDERLYING={SOXL:'SOXX',USD:'SOXX',TQQQ:'QQQ',QLD:'QQQ',TECL:'XLK',KORU:'EWY',SSO:'SPY',UPRO:'SPY'};
+const LEV_UNDERLYING={SOXL:'SOXX',USD:'SOXX',TQQQ:'QQQ',QLD:'QQQ',TECL:'XLK',KORU:'EWY',SSO:'SPY',UPRO:'SPY',SPYU:'SPY'};
 const LEV_EXPENSE=0.0095, LEV_FINANCE=0.025;   // 합성 구간 보유비용: 운용보수 0.95%/년 + 차입 (배수−1)×2.5%/년
+/* ⚠ 합성 정확도 실측 (상장 이후 겹치는 구간에서 '합성 vs 실제' 연환산 괴리, 2026-08 기준)
+     TQQQ 3배 +1.19%p · UPRO 3배 +1.29%p · SOXL 3배 +1.82%p   (겹침 10년 — 허용 범위)
+     SPYU 4배 +15.61%p                                        (겹침 2.7년 — 과대평가 심함)
+   원인 ① 차입비용을 연 2.5% 고정으로 두는데 SPYU 겹침구간(2023~2026)은 단기금리 4~5%대라
+          3배 차입이면 실제 15%인데 7.5%만 차감된다. 3배 종목은 겹침 10년에 저금리기가 섞여 오차가 작았다.
+        ② 기초 시계열이 배당 재투자(총수익) 기준이라, 가격만 추종하는 레버리지 상품 대비
+          배당수익률×배수만큼 과대평가된다 (SPY 약 1.2% × 4 ≈ 5%p).
+   → 근본 해결은 차입비용을 연도별 실제 금리(TBILL_RATE)로 바꾸는 것이나,
+     전 종목의 기존 백테 수치가 모두 달라지므로 별도 결정 사항으로 남겨둔다.
+   → 그때까지 배수 4 이상 종목의 '합성 구간' 성과는 낙관 편향임을 UI에 경고한다.            */
 // 기초 ETF보다 더 이전 구간을 가진 '가격지수'로 1배 기초를 한 번 더 소급 연장한다.
 // 가격지수는 배당 미포함이라 실측 배당격차(ETF CAGR − 지수 CAGR)를 일할 가산해 총수익으로 근사.
 //   실측(겹치는 구간): ^SOX vs SOXX +1.29%p/년(상관 .984) · ^NDX vs QQQ +0.57%p(.980) · ^GSPC vs SPY +1.95%p(.985)
@@ -1498,7 +1509,11 @@ function renderLevNote(info){
     +ks.map(t=>{const e=info[t];
       return `<tr><td><b>${t}</b></td><td>${e.lev}배</td><td>${e.idx?`<b>${e.idx}</b> + ${e.under}`:e.under}</td><td>${e.from} ~ ${e.to}</td></tr>`;}).join('')
     +`</tbody></table></div>`
-    +`<p class="note" style="font-size:11px;color:var(--dim);margin-top:8px;line-height:1.7">합성 구간 이후는 실제 ETF 데이터 · 가격지수(^SOX·^NDX·^GSPC) 구간은 배당 보정(+1.29%p·+0.57%p·+1.95%p/년) · 합성 구간은 보유비용 차감(운용보수 0.95% + 차입 (배수−1)×2.5%/년)</p></div>`;
+    +`<p class="note" style="font-size:11px;color:var(--dim);margin-top:8px;line-height:1.7">합성 구간 이후는 실제 ETF 데이터 · 가격지수(^SOX·^NDX·^GSPC) 구간은 배당 보정(+1.29%p·+0.57%p·+1.95%p/년) · 합성 구간은 보유비용 차감(운용보수 0.95% + 차입 (배수−1)×2.5%/년)</p>`
+    +(ks.some(t=>(info[t].lev||0)>=4)
+      ? `<p class="note" style="font-size:11px;margin-top:6px;line-height:1.7;padding:8px 10px;border-radius:7px;background:rgba(245,196,81,.12);border:1px solid rgba(245,196,81,.32);color:#f6dfa6">⚠️ <b>배수 4 이상은 합성 구간 성과가 낙관 편향입니다.</b> 상장 이후 실데이터와 대조하면 3배 종목은 연 +1.2~1.8%p 오차인데 <b>4배는 +15.6%p</b>로 큽니다(SPYU 2.7년 겹침 실측). 차입비용을 연 2.5% 고정으로 두는데 겹침 구간 실제 단기금리가 4~5%대였고, 기초 시계열이 배당 포함이라 배수만큼 과대평가되기 때문입니다. <b>확장 구간 수치는 상한선으로 보세요.</b></p>`
+      : '')
+    +`</div>`;
 }
 function clearLevExt(){ for(const t in RAWM){ if(RAWM[t]) M[t]=RAWM[t]; } RAWM={}; EXTM={}; }
 function applyLevExt(){ for(const t in EXTM){ if(!RAWM[t]) RAWM[t]=M[t]; M[t]=EXTM[t]; } }
