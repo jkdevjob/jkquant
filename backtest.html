@@ -259,7 +259,7 @@ td:first-child{text-align:left;}
   <div class="brand">
     <div>
       <div class="logo">Backtest</div>
-      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v1.149</span></h1>
+      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v1.150</span></h1>
     </div>
   </div>
   <a href="/" class="home">← JK 퀀트</a>
@@ -1432,17 +1432,28 @@ function _dcaOne(t,days,amt,step,costOn,dipMul){
 /* ──── 레버리지 ETF 기간 확장 (DCA 전용) ────
    레버리지 ETF의 상장 전 기간을 1배 기초지수 ETF의 일수익률×배수로 합성해 접합. 상장 이후는 실제 데이터. */
 const LEV_UNDERLYING={SOXL:'SOXX',USD:'SOXX',TQQQ:'QQQ',QLD:'QQQ',TECL:'XLK',KORU:'EWY',SSO:'SPY',UPRO:'SPY',SPYU:'SPY'};
-const LEV_EXPENSE=0.0095, LEV_FINANCE=0.025;   // 합성 구간 보유비용: 운용보수 0.95%/년 + 차입 (배수−1)×2.5%/년
-/* ⚠ 합성 정확도 실측 (상장 이후 겹치는 구간에서 '합성 vs 실제' 연환산 괴리, 2026-08 기준)
-     TQQQ 3배 +1.19%p · UPRO 3배 +1.29%p · SOXL 3배 +1.82%p   (겹침 10년 — 허용 범위)
-     SPYU 4배 +15.61%p                                        (겹침 2.7년 — 과대평가 심함)
-   원인 ① 차입비용을 연 2.5% 고정으로 두는데 SPYU 겹침구간(2023~2026)은 단기금리 4~5%대라
-          3배 차입이면 실제 15%인데 7.5%만 차감된다. 3배 종목은 겹침 10년에 저금리기가 섞여 오차가 작았다.
-        ② 기초 시계열이 배당 재투자(총수익) 기준이라, 가격만 추종하는 레버리지 상품 대비
-          배당수익률×배수만큼 과대평가된다 (SPY 약 1.2% × 4 ≈ 5%p).
-   → 근본 해결은 차입비용을 연도별 실제 금리(TBILL_RATE)로 바꾸는 것이나,
-     전 종목의 기존 백테 수치가 모두 달라지므로 별도 결정 사항으로 남겨둔다.
-   → 그때까지 배수 4 이상 종목의 '합성 구간' 성과는 낙관 편향임을 UI에 경고한다.            */
+/* ──── 합성 구간 보유비용 모형 (실측 기반) ────
+   보유비용(연) = 운용보수 + (배수−1)×(그 해 3개월 T-Bill + 차입 스프레드) + 배수×배당보정
+   추정 방법: 상장 이후 실제로 겹치는 구간에서 종목×연도별 '실현 보유비용'을 역산
+     (Σlog(1+배수×기초일수익 − x) = Σlog(1+실제일수익) 를 만족하는 x)
+     → 패널 회귀. 금리 계수를 자유롭게 두고 추정해도 1.03 이 나와 T-Bill 전가 가정이 확인됨.
+     → 표본 100개(7종목×16년, 기초 추종 R²≥0.97 인 해만) 에서 스프레드 0.771%, RMSE 2.35%p.
+     → 금리 구간별 잔차 −0.09%p(제로금리) / +0.49%p(저금리) / −0.20%p(고금리) 로 편향 없음.
+   ※ 이전 버전은 차입을 연 2.5% 고정으로 뒀다. 2010~2021 제로금리기엔 과다, 1980~2000년대와
+     2023년 이후 고금리기엔 과소였다 (1980년 실제 차입비용은 3배 기준 연 24%대).                 */
+const LEV_EXPENSE={SOXL:.0075,USD:.0095,TQQQ:.0084,QLD:.0095,TECL:.0087,KORU:.0108,SSO:.0089,UPRO:.0091,SPYU:.0095};
+const LEV_EXPENSE_DEF=0.0095;   // 표에 없는 종목 기본값
+const LEV_SPREAD=0.0077;        // 차입 스프레드 — T-Bill 위에 붙는 실측 가산금리
+/* 가격지수(배당 제외)를 추종하면서 분배금도 주지 않는 상품. 기초 시계열은 배당 재투자 기준이라
+   배수×배당수익률만큼 과대평가되므로 되돌려 뺀다. 같은 구간(2023-12~2026-08) 실측으로 확인:
+     SSO 2배·UPRO 3배 → SPY(총수익) 기준 모형오차 −0.28 / −0.54%p  (^GSPC 기준이면 −2.56 / −3.84%p)
+     SPYU 4배        → SPY(총수익) 기준 +5.61%p 인데 ^GSPC(가격) 기준이면 +1.34%p
+   즉 2·3배 ETF는 총수익을 그대로 주고, SPYU만 가격지수 상품이다.                          */
+const LEV_PRICEIDX={SPYU:true};
+/* ⚠ 남아 있는 한계 — USD(2배)는 기초를 SOXX로 잡았으나 실제로는 다른 반도체 지수를 추종한다.
+     실현 배수 β가 해마다 1.45~2.13 로 흔들리고 20년 중 15년이 R²<0.97 (SOXL은 전 연도 2.92~3.03).
+     모형 잔차도 +4.6%p 로 유일하게 크다. 대체할 만한 1배 ETF가 없어 SOXX를 유지하되,
+     USD 확장 구간 수치는 다른 종목보다 신뢰도가 낮다고 봐야 한다.                            */
 // 기초 ETF보다 더 이전 구간을 가진 '가격지수'로 1배 기초를 한 번 더 소급 연장한다.
 // 가격지수는 배당 미포함이라 실측 배당격차(ETF CAGR − 지수 CAGR)를 일할 가산해 총수익으로 근사.
 //   실측(겹치는 구간): ^SOX vs SOXX +1.29%p/년(상관 .984) · ^NDX vs QQQ +0.57%p(.980) · ^GSPC vs SPY +1.95%p(.985)
@@ -1505,14 +1516,12 @@ function renderLevNote(info){
   if(!ks.length){ el.style.display='none'; el.innerHTML=''; return; }
   el.style.display='';
   el.innerHTML=`<div class="cmp-card"><h3>🧬 레버리지 확장 적용 <span style="font-size:11px;color:var(--dim);font-weight:400">${ks.length}종목 · 상장 전 구간 합성</span></h3>`
-    +`<div style="overflow-x:auto"><table class="cmp-tbl"><thead><tr><th>종목</th><th>배수</th><th>합성 소스</th><th>합성 구간</th></tr></thead><tbody>`
+    +`<div style="overflow-x:auto"><table class="cmp-tbl"><thead><tr><th>종목</th><th>배수</th><th>합성 소스</th><th>합성 구간</th><th>보유비용<br><span style="font-weight:400;font-size:10px">연평균</span></th></tr></thead><tbody>`
     +ks.map(t=>{const e=info[t];
-      return `<tr><td><b>${t}</b></td><td>${e.lev}배</td><td>${e.idx?`<b>${e.idx}</b> + ${e.under}`:e.under}</td><td>${e.from} ~ ${e.to}</td></tr>`;}).join('')
+      return `<tr><td><b>${t}</b></td><td>${e.lev}배</td><td>${e.idx?`<b>${e.idx}</b> + ${e.under}`:e.under}</td><td>${e.from} ~ ${e.to}</td><td>${e.cost!=null?(e.cost*100).toFixed(1)+'%':'-'}</td></tr>`;}).join('')
     +`</tbody></table></div>`
-    +`<p class="note" style="font-size:11px;color:var(--dim);margin-top:8px;line-height:1.7">합성 구간 이후는 실제 ETF 데이터 · 가격지수(^SOX·^NDX·^GSPC) 구간은 배당 보정(+1.29%p·+0.57%p·+1.95%p/년) · 합성 구간은 보유비용 차감(운용보수 0.95% + 차입 (배수−1)×2.5%/년)</p>`
-    +(ks.some(t=>(info[t].lev||0)>=4)
-      ? `<p class="note" style="font-size:11px;margin-top:6px;line-height:1.7;padding:8px 10px;border-radius:7px;background:rgba(245,196,81,.12);border:1px solid rgba(245,196,81,.32);color:#f6dfa6">⚠️ <b>배수 4 이상은 합성 구간 성과가 낙관 편향입니다.</b> 상장 이후 실데이터와 대조하면 3배 종목은 연 +1.2~1.8%p 오차인데 <b>4배는 +15.6%p</b>로 큽니다(SPYU 2.7년 겹침 실측). 차입비용을 연 2.5% 고정으로 두는데 겹침 구간 실제 단기금리가 4~5%대였고, 기초 시계열이 배당 포함이라 배수만큼 과대평가되기 때문입니다. <b>확장 구간 수치는 상한선으로 보세요.</b></p>`
-      : '')
+    +`<p class="note" style="font-size:11px;color:var(--dim);margin-top:8px;line-height:1.7">합성 구간 이후는 실제 ETF 데이터 · 가격지수(^SOX·^NDX·^GSPC) 구간은 배당 보정(+1.29%p·+0.57%p·+1.95%p/년) · 합성 구간 보유비용 = <b>운용보수(종목별 0.75~1.08%) + (배수−1)×(그 해 3개월 국채금리 + 0.77%)</b>. 상장 이후 실데이터와 대조해 추정했습니다(7종목 16년, 잔차 RMSE 2.4%p).</p>`
+    +`<p class="note" style="font-size:11px;margin-top:6px;line-height:1.7;padding:8px 10px;border-radius:7px;background:rgba(245,196,81,.12);border:1px solid rgba(245,196,81,.32);color:#f6dfa6">⚠️ <b>차입비용은 그 시대 금리를 따릅니다.</b> 1980~2000년대는 단기금리가 5~14%여서 3배 상품이면 차입비용만 연 12~24%였습니다. 제로금리기(2010~2021)에 익숙한 감각으로 보면 <b>옛 구간 성과가 뜻밖에 나쁘게 나오는 게 정상</b>입니다.${ks.some(t=>t==='USD')?` 또한 <b>USD</b>는 SOXX와 다른 반도체 지수를 추종해(실현 배수 1.45~2.13 변동) 확장 구간 신뢰도가 낮습니다.`:''}</p>`
     +`</div>`;
 }
 function clearLevExt(){ for(const t in RAWM){ if(RAWM[t]) M[t]=RAWM[t]; } RAWM={}; EXTM={}; }
@@ -1547,18 +1556,21 @@ async function buildLevExt(tickers, start){
     const preDates=upTo.filter(d=>d<realStart);
     if(preDates.length<10) continue;
     // 합성 지수: 기초 일수익률×lev 복리 (일간 리셋 = 레버리지 감쇠 반영) − 보유비용
-    //  보유비용 = 운용보수 0.95% + 차입비용 (lev−1)×2.5% (연율). 실제 ETF와 검증한 값:
-    //  이 모델 적용 시 실제 대비 오차 QLD −0.3%p · SSO −0.3%p · SOXL −0.9%p · TQQQ −1.4%p (약간 보수적)
+    //  보유비용은 '그 해 금리'에 연동된다 (위 LEV_EXPENSE/LEV_SPREAD 주석 참고).
     //  ※ 비용을 빼지 않으면 3배는 연 7%p 이상 과대평가된다 (SOXL 실제 37.4% vs 무비용합성 44.9%).
-    const dailyDrag=(LEV_EXPENSE+Math.max(0,lev-1)*LEV_FINANCE)/252;
+    const _exp=LEV_EXPENSE[t]??LEV_EXPENSE_DEF, _bor=Math.max(0,lev-1);
+    const _div=LEV_PRICEIDX[t] ? ((IDX_EXTEND[under]||{}).div||0) : 0;   // 가격지수 상품만 배당 되돌림
+    const dragOf=y=>(_exp + _bor*((TBILL_RATE[y]??0.04)+LEV_SPREAD) + lev*_div)/252;
     const synMap={}; let syn=1; synMap[upTo[0]]=1;
-    for(let i=1;i<upTo.length;i++){ const r=U[upTo[i]][C]/U[upTo[i-1]][C]-1; syn*=(1+r*lev-dailyDrag); synMap[upTo[i]]=syn; }
+    for(let i=1;i<upTo.length;i++){ const r=U[upTo[i]][C]/U[upTo[i-1]][C]-1;
+      syn*=(1+r*lev-dragOf(+upTo[i].slice(0,4))); synMap[upTo[i]]=syn; }
     const synAtStart=synMap[realStart]!=null?synMap[realStart]:synMap[upTo[upTo.length-1]];
     const k=M[t][realStart][C]/synAtStart;               // realStart에서 실제가에 접합
     const merged={};
     preDates.forEach(d=>{ const s=synMap[d]; if(s!=null){ const px=+(s*k); merged[d]=[px,px,px,px]; } });
     realDates.forEach(d=>{ merged[d]=M[t][d]; });
-    EXTM[t]=merged; info[t]={under,from:preDates[0],to:realStart,lev,idx:bs.idx||null};
+    const avgDrag=preDates.reduce((s,d)=>s+dragOf(+d.slice(0,4))*252,0)/preDates.length;
+    EXTM[t]=merged; info[t]={under,from:preDates[0],to:realStart,lev,idx:bs.idx||null,cost:avgDrag};
   }
   return info;
 }
