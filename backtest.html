@@ -259,7 +259,7 @@ td:first-child{text-align:left;}
   <div class="brand">
     <div>
       <div class="logo">Backtest</div>
-      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v1.151</span></h1>
+      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v1.152</span></h1>
     </div>
   </div>
   <a href="/" class="home">← JK 퀀트</a>
@@ -1661,7 +1661,7 @@ function runIM(days,tkr,cap,divs,targetPct,compound=true){
   days.forEach((d,i)=>{
     const [c,o,hi,lo]=M[tkr][d];
     { const _y=d.slice(0,4); if(curYear===null) curYear=_y; else if(_y!==curYear){ _settleTax(c); curYear=_y; } }
-    { const eq=cash+shares*c+savedProfit; if(eq>mddPeak)mddPeak=eq; else { const dd=(mddPeak-eq)/mddPeak; if(dd>mdd)mdd=dd; } }
+    { const eq=cash+shares*c+savedProfit; if(eq>mddPeak)mddPeak=eq; else { const dd=Math.min((mddPeak-eq)/mddPeak,1); if(dd>mdd)mdd=dd; } }
     closeHist.push(c); if(closeHist.length>5) closeHist.shift();
 
     // 리버스 진입: 원금 소진 = '1회 매수가 불가능해지는 시점'(라오어 공지).
@@ -1749,7 +1749,7 @@ function runIM(days,tkr,cap,divs,targetPct,compound=true){
   });
   _settleTax(M[tkr][days[days.length-1]][C]);   // 마지막 해 정산
   const fin=cash+shares*M[tkr][days[days.length-1]][C]+savedProfit;
-  if(fin>mddPeak)mddPeak=fin; else { const dd=(mddPeak-fin)/mddPeak; if(dd>mdd)mdd=dd; }
+  if(fin>mddPeak)mddPeak=fin; else { const dd=Math.min((mddPeak-fin)/mddPeak,1); if(dd>mdd)mdd=dd; }
   return {invested:cap,peakInvested,final:fin,realized,cycles,endCash:cash+savedProfit,endShares:shares,ret:(fin/cap-1)*100,snap,tkr,mdd:mdd*100,fees:feesTotal,tax:taxTotal};
 }
 
@@ -1921,13 +1921,21 @@ function runIM50(days,tkr,cap,divs,targetPct,compound=true){
     yearPnl += qty*(eff-avg) - fee;             // 실현손익(수수료=필요경비)
     realized += qty*(eff-avg) - fee;
   }
-  function _settleTax(){                        // 연말 정산
+  function _settleTax(px){                      // 연말 정산 (px: 정산 시점 종가 — 잔고 부족 시 매도용)
     if(!CO){ yearPnl=0; return; }
     const taxable=Math.max(0, yearPnl*COST_KRW - COST_DEDUCT);
     const taxUsd=taxable*COST_TAXRATE/COST_KRW;
     if(compound){ cash-=taxUsd; }
     else { const take=Math.min(savedProfit,taxUsd); savedProfit-=take; cash-=(taxUsd-take); }
     taxTotal+=taxUsd; yearPnl=0;
+    // 잔고 하한 처리 — runIM(V4.0)과 동일 규약. 없으면 자산이 음수가 되어 MDD>100%가 난다.
+    const EPS=0.01;
+    if(cash<-EPS && shares>1e-9 && px>0){
+      const need=-cash, q=Math.min(shares, need/(px*(1-FEE)));
+      if(q>1e-12){ const gross=q*px, fee=gross*FEE; cash+=gross-fee; shares-=q; feesTotal+=fee; }
+    }
+    if(cash<-EPS){ cash=0; shares=0; avg=0; T=0; }   // 주식 다 팔아도 모자람 = 파산
+    else if(cash<0){ cash=0; }
   }
   let peakInvested=0;
   let inReverse=false, reverseDay1=false;
@@ -1936,8 +1944,8 @@ function runIM50(days,tkr,cap,divs,targetPct,compound=true){
   const snap=[];
   days.forEach((d,i)=>{
     const [c,o,hi,lo]=M[tkr][d];
-    { const _y=d.slice(0,4); if(curYear===null) curYear=_y; else if(_y!==curYear){ _settleTax(); curYear=_y; } }
-    { const eq=cash+shares*c+savedProfit; if(eq>mddPeak)mddPeak=eq; else { const dd=(mddPeak-eq)/mddPeak; if(dd>mdd)mdd=dd; } }
+    { const _y=d.slice(0,4); if(curYear===null) curYear=_y; else if(_y!==curYear){ _settleTax(c); curYear=_y; } }
+    { const eq=cash+shares*c+savedProfit; if(eq>mddPeak)mddPeak=eq; else { const dd=Math.min((mddPeak-eq)/mddPeak,1); if(dd>mdd)mdd=dd; } }
     closeHist.push(c); if(closeHist.length>5) closeHist.shift();
     const gr=!!GM.ready[d];
     const g =!!GM.gate[d];
@@ -2009,9 +2017,9 @@ function runIM50(days,tkr,cap,divs,targetPct,compound=true){
     if(i%10===0)snap.push([d,cash+shares*c+savedProfit]);
     peakInvested=Math.max(peakInvested, cap-cash);
   });
-  _settleTax();   // 마지막 해 정산
+  _settleTax(M[tkr][days[days.length-1]][C]);   // 마지막 해 정산
   const fin=cash+shares*M[tkr][days[days.length-1]][C]+savedProfit;
-  if(fin>mddPeak)mddPeak=fin; else { const dd=(mddPeak-fin)/mddPeak; if(dd>mdd)mdd=dd; }
+  if(fin>mddPeak)mddPeak=fin; else { const dd=Math.min((mddPeak-fin)/mddPeak,1); if(dd>mdd)mdd=dd; }
   return {invested:cap,peakInvested,final:fin,realized,cycles,endCash:cash+savedProfit,endShares:shares,ret:(fin/cap-1)*100,snap,tkr,mdd:mdd*100,fees:feesTotal,tax:taxTotal};
 }
 
@@ -2030,9 +2038,16 @@ function runVR(days,tkr,params){
     avg=(shares<=0)?c:(shares*avg+net)/(shares+q); shares+=q; feesTotal+=fee; }
   function _vsell(gross,c){ const qty=gross/c, fee=gross*FEE;   // 금액 기준 매도 (비용 0이면 기존 산술과 비트 동일)
     yearPnl+=qty*(c-avg)-fee; feesTotal+=fee; shares-=qty; return gross-fee; }
-  function _settle(){ if(!costOn){yearPnl=0;return;}
+  // 연말 양도세 정산. Pool에서 먼저 빼되, 모자라면 보유 주식을 팔아 납부한다.
+  // (예전엔 pool을 그냥 음수로 만들어 총자산이 마이너스가 되고 MDD가 100%를 넘었다 —
+  //  SOXL 2000~ 거치식이 최종 −$18 · MDD 102%로 나오던 원인.)
+  function _settle(c){ if(!costOn){yearPnl=0;return;}
     const taxable=Math.max(0, yearPnl*COST_KRW-COST_DEDUCT);
-    const taxUsd=taxable*COST_TAXRATE/COST_KRW; pool-=taxUsd; taxTotal+=taxUsd; yearPnl=0; }
+    const owed=taxable*COST_TAXRATE/COST_KRW; let due=owed; yearPnl=0;
+    const fromPool=Math.min(Math.max(pool,0), due); pool-=fromPool; due-=fromPool;
+    if(due>1e-9 && shares>0 && c>0){                 // 납부용 매도 — 실현손익은 다음 해로 이월
+      const q=Math.min(shares, due/c); yearPnl+=q*(c-avg); shares-=q; due-=q*c; }
+    taxTotal+=owed-due; }                            // 실제로 낸 만큼만 집계 (자산이 0이면 더 못 냄)
   // 시작V 지정 시: 이미 V만큼 보유 중인 상태로 간주 (운용도구와 동일 — "이어서 시작" 시나리오)
   let first;
   if(V>0){
@@ -2044,8 +2059,8 @@ function runVR(days,tkr,params){
   let mddPeak=-Infinity, mdd=0;  // 일별 MDD (총자산 = 주식+Pool+누적인출 기준 — fin과 동일 철학)
   days.forEach((d,i)=>{
     const c=M[tkr][d][C];
-    { const y=d.slice(0,4); if(curYear===null)curYear=y; else if(y!==curYear){_settle();curYear=y;} }
-    { const eq=shares*c+pool+totalWd; if(eq>mddPeak)mddPeak=eq; else if(mddPeak>0){ const dd=(mddPeak-eq)/mddPeak; if(dd>mdd)mdd=dd; } }
+    { const y=d.slice(0,4); if(curYear===null)curYear=y; else if(y!==curYear){_settle(c);curYear=y;} }
+    { const eq=shares*c+pool+totalWd; if(eq>mddPeak)mddPeak=eq; else if(mddPeak>0){ const dd=Math.min((mddPeak-eq)/mddPeak,1); if(dd>mdd)mdd=dd; } }
     if(i%interval===0){
       if(first){
         if(isLump){const s=initAmt||10000;inv+=s;cf.push([d,s]);_vbuy(s,c);V=shares*c;}  // 거치식/인출식: 첫매수가=V (pool 무관)
@@ -2066,8 +2081,8 @@ function runVR(days,tkr,params){
     }
     if(i%interval===0||i===days.length-1)snap.push([d,shares*c+pool+totalWd]);
   });
-  _settle();   // 마지막 해 정산
   const lc=M[tkr][days[days.length-1]][C];
+  _settle(lc);   // 마지막 해 정산
   // 인출식: 누적 인출액도 회수가치에 포함해야 정확한 수익률 (인출한 돈은 사라진 게 아님)
   const fin=shares*lc+pool+totalWd;
   const calYrs=(new Date(days[days.length-1])-new Date(days[0]))/(365.25*864e5);
@@ -2192,7 +2207,7 @@ function runMA200(days,tkr,cap,N,costOn,opt){
   });
   _settle();   // 마지막 해 정산
   const fin=cash+shares*M[tkr][days[days.length-1]][C];
-  if(fin>mddPeak)mddPeak=fin; else { const dd=(mddPeak-fin)/mddPeak; if(dd>mdd)mdd=dd; }
+  if(fin>mddPeak)mddPeak=fin; else { const dd=Math.min((mddPeak-fin)/mddPeak,1); if(dd>mdd)mdd=dd; }
   snap.push([days[days.length-1],fin]);
   return {invested:cap,final:fin,ret:(fin/cap-1)*100,realized,snap,tkr,mdd:mdd*100,
           trades,timeIn:days.length?daysIn/days.length*100:0,fees:feesTotal,tax:taxTotal,maLen:N,
