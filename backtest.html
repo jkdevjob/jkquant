@@ -263,7 +263,7 @@ td:first-child{text-align:left;}
   <div class="brand">
     <div>
       <div class="logo">Backtest</div>
-      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v1.153</span></h1>
+      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v1.154</span></h1>
     </div>
   </div>
   <a href="/" class="home">← JK 퀀트</a>
@@ -2155,6 +2155,16 @@ function _maEntry(buy,a,b){ return buy==='cross'?b : buy==='both'?(a&&b) : buy==
 const MA_COND_LBL={ma:'200선',cross:'크로스',both:'둘다',either:'하나만'};
 /* 결과 헤더용 요약 — '매수 X / 매도 Y'. 둘 다 200선이면 기존 표기(종가기준)를 유지해 회귀 비교가 쉽게 */
 function maCondTxt(buy,sell){ return `매수 ${MA_COND_LBL[buy]||'200선'}·매도 ${MA_COND_LBL[sell]||'200선'}`; }
+/* 결과 헤더에 쓰는 로테이션 전략명 — 현재 매수·매도 조건까지 붙인다.
+   ※ 예전엔 다종목 화면과 단일종목 상세가 각자 문자열을 만들어, 상세 쪽에만 조건이 빠져 있었다.
+     조건을 바꿔도 헤더가 그대로라 "값이 안 바뀐다"고 오해하기 쉬웠다(비교 기준선인 거치식·DCA는
+     원래 조건과 무관해 안 바뀌므로, 헤더가 유일한 확인 수단이었다). 한 곳에서 만들어 어긋나지 않게 한다. */
+function maStratName(len){
+  const L=len||(typeof maLen!=='undefined'?maLen:200), O=_maOpt(null);
+  return `${L}일선 로테이션 · ${maCondTxt(O.buy,O.sell)}`
+    + ((O.buy!=='ma'||O.sell!=='ma')?`(${O.short}/${L})`:'')
+    + (O.park==='bill'?' · 국채대피':'');
+}
 function _maOpt(opt){
   let buy =(opt&&opt.buy) ||(typeof maBuy !=='undefined'?maBuy :'ma');
   let sell=(opt&&opt.sell)||(typeof maSell!=='undefined'?maSell:'ma');
@@ -2798,7 +2808,7 @@ function renderMultiStrat(type, results, params){
   document.querySelector('.cards').classList.remove('hide');
   document.querySelector('.tbl-wrap').classList.remove('hide');
   const stratName=type==='im'?('무한매수법 '+(imEngine==='v22'?'V2.2':imEngine==='v30'?'V3.0':imEngine==='v50'?('V5.0('+imShortMA+'일·하락'+imLoPct+'%)'):'V4.0')+(imEngine==='v40'&&imReverse?' · 리버스ON':'')+(imTgtDyn?' · 익절조절(20일상승률)':'')+(imCostOn?' · 비용반영':''))
-    :type==='ma'?(maLen+'일선 로테이션 · '+maCondTxt(maBuy,maSell)+((maBuy!=='ma'||maSell!=='ma')?`(${maShort}/${maLen})`:'')+(maPark==='bill'?' · 국채대피':'')+(maCostOn?' · 비용반영':''))
+    :type==='ma'?(maStratName(maLen)+(maCostOn?' · 비용반영':''))
     :('VR 5.0'+(vrCostOn?' · 비용반영':''));
   const pct=x=>(x>=0?'+':'')+x.toFixed(1)+'%';
   const money=(x,t)=>fmtV(x,t||tickers[0]);
@@ -2983,7 +2993,7 @@ function renderSingle2(type,r,days){
   logBtns.forEach(b=>b.classList.remove('active'));
   if(logBtns[1]) logBtns[1].classList.add('active');  // '로그' 버튼 활성화
   const m=META[r.tkr];
-  const stratName = type==='im' ? ('무한매수법 '+(imEngine==='v22'?'V2.2':imEngine==='v30'?'V3.0':imEngine==='v50'?('V5.0('+imShortMA+'일)'):'V4.0')) : type==='ma' ? ((r.maLen||200)+'일선 로테이션') : 'VR 5.0';
+  const stratName = type==='im' ? ('무한매수법 '+(imEngine==='v22'?'V2.2':imEngine==='v30'?'V3.0':imEngine==='v50'?('V5.0('+imShortMA+'일)'):'V4.0')) : type==='ma' ? maStratName(r.maLen) : 'VR 5.0';
   const stratShort = type==='im' ? '무한매수법' : type==='ma' ? ((r.maLen||200)+'일선') : 'VR 5.0';
 
   // ── yrs: 실제 날짜 구간 기반 (days.length/252는 월간 데이터 시 오차 큼)
