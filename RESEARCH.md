@@ -205,17 +205,22 @@ TQQQ 기준안(s0=45% · 60일σ · 밴드10%p) = 중앙 CAGR +22.0% / MAR 0.439
 
 ---
 
-## 7. 구현 (백테 v1.155)
+## 7. 구현 (백테 v1.156)
 
-**일시금(목돈 거치) 전체비교에 `역분산`으로 추가.** 적립 모드에는 없다 —
+**독립 탭 `역분산 비중` + 전체비교 일시금 목록**에 들어가 있다. 적립 모드에는 없다 —
 목돈을 위험/현금으로 나눠 굴리는 구조라 적립 버전은 별개 설계가 필요하다.
 
 | 항목 | 위치 |
 |---|---|
 | 가중치 사전계산 | `_ivsWeights(tkr, N, s0)` |
 | 엔진 | `runIVS(days, tkr, cap, s0, N, band, costOn)` |
-| 기본 파라미터 | `ivsS0=45`, `ivsN=60`, `ivsBand=10` |
+| 렌더 | `renderIVS(results, days, cap)` → `#ivsResult` |
+| 기본 파라미터 | `ivsS0=45`, `ivsN=60`, `ivsBand=10`, `ivsCostOn=true` |
+| 탭 배선 | `.stab[data-s="ivs"]` · `.s-ivs` 컨트롤 · `setStrat` · `run()` 분기 · `ivsActive` |
 | 전체비교 배선 | `STRAT_SHORT.ivs` · `runComboCompare` keys · `_runOneStrat` case `'ivs'` · `comboOpts` |
+
+탭 UI에서 **s0(35~55%) · 룩백(20~120일) · 밴드(5~20%p) · 세금비용**을 직접 돌릴 수 있고,
+설정은 localStorage에 저장된다. 같은 작업에서 숨겨져 있던 **ASAP 탭도 함께 노출**했다.
 
 규약은 기존 전략과 통일했다.
 
