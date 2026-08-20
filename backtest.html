@@ -111,6 +111,12 @@ body{background:var(--bg);color:var(--text);font-family:'Pretendard',sans-serif;
 .stab[data-s="mom"].active{background:var(--c-mom);}
 .stab[data-s="asap"].active{background:var(--c-asap);color:#1a1400;}
 .stab[data-s="ivs"].active{background:var(--c-ivs);}
+/* 고정 5:5에서는 비중이 50%로 못박히므로 s0·룩백이 계산에 안 들어간다.
+   컨트롤이 멀쩡해 보이면 '눌러도 안 바뀐다'는 오해를 사므로 눌리지 않게 하고 이유를 붙인다. */
+.offtag{display:none;font-size:9px;color:var(--gold);margin-left:6px;}
+.ctrl.inert{opacity:.42;}
+.ctrl.inert .seg{pointer-events:none;}
+.ctrl.inert .offtag{display:inline;}
 .stab[data-s="all"].active{background:var(--c-all);}
 .stab .sub{display:block;font-size:10px;font-weight:400;opacity:.7;margin-top:2px;}
 /* 전체 비교·ASAP 결과 테이블 */
@@ -264,7 +270,7 @@ td:first-child{text-align:left;}
   <div class="brand">
     <div>
       <div class="logo">Backtest</div>
-      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v1.157</span></h1>
+      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v1.158</span></h1>
     </div>
   </div>
   <a href="/" class="home">← JK 퀀트</a>
@@ -524,20 +530,20 @@ td:first-child{text-align:left;}
         <button data-p="x1" title="남은 비중은 같은 지수의 1배수. 상관이 1에 가까워 보너스는 줄지만 드리프트를 더 먹는다">1배수</button>
       </div>
     </div>
-    <div class="ctrl s-ivs hide"><label>위험 다이얼 s0 <span style="font-size:9px;color:var(--dim)">비중 = (s0/σ)²</span></label>
+    <div class="ctrl s-ivs hide" id="ctlIvsS0"><label>위험 다이얼 s0 <span style="font-size:9px;color:var(--dim)">비중 = (s0/σ)²</span><span class="offtag">고정 5:5에선 미사용</span></label>
       <div class="seg" id="ivsS0">
-        <button data-v="35" title="가장 보수적 — 노출↓ MDD↓ 수익↓. TQQQ 10년창 MDD중앙 35%">35%</button>
+        <button data-v="35" title="가장 보수적 — 노출↓ MDD↓. SOXL·UPRO·KORU는 이쪽이 MAR도 더 높다">35%</button>
         <button data-v="40">40%</button>
-        <button data-v="45" class="active" title="기준안. TQQQ 10년창 중앙CAGR +22.0% · MDD 50% · MAR 0.44">45%</button>
+        <button data-v="45" class="active" title="기준안(여러 종목을 함께 볼 때의 타협점). TQQQ 10년창 중앙CAGR +22.0% · MDD 50% · MAR 0.44">45%</button>
         <button data-v="50">50%</button>
-        <button data-v="55" title="가장 공격적 — 노출↑ MDD↑ 수익↑. MAR은 거의 그대로(위험 다이얼)">55%</button>
+        <button data-v="55" title="가장 공격적. TQQQ는 수익이 따라온다(10년창 승률 98%)지만 SOXL·UPRO는 MDD만 늘고 수익은 제자리">55%</button>
       </div>
     </div>
-    <div class="ctrl s-ivs hide"><label>변동성 룩백 <span style="font-size:9px;color:var(--dim)">실현변동성 계산 기간</span></label>
+    <div class="ctrl s-ivs hide" id="ctlIvsN"><label>변동성 룩백 <span style="font-size:9px;color:var(--dim)">실현변동성 계산 기간</span><span class="offtag">고정 5:5에선 미사용</span></label>
       <div class="seg" id="ivsN">
-        <button data-v="20" title="민감 — 회전율이 크게 오르고 수수료를 더 먹는다">20일</button>
+        <button data-v="20" title="민감 — 1등도 자주 하지만 꼴찌도 자주 한다(하위25% 진입 29~35%). 거래도 폭증">20일</button>
         <button data-v="40">40일</button>
-        <button data-v="60" class="active" title="기준안. 40~120일 사이는 성적이 거의 같다">60일</button>
+        <button data-v="60" class="active" title="기준안. 종목·시대를 바꿔가며 84칸을 재봤을 때 하위25%에 드는 빈도가 가장 낮다(8~15%). 최적이라서가 아니라 어디서도 나쁘지 않아서">60일</button>
         <button data-v="90">90일</button>
         <button data-v="120" title="둔감 — 거래는 가장 적다">120일</button>
       </div>
@@ -1042,6 +1048,7 @@ function setStrat(s){
   document.querySelectorAll('.s-asap').forEach(e=>e.classList.toggle('hide',s!=='asap'));
   document.querySelectorAll('.s-std').forEach(e=>e.classList.toggle('hide',s!=='std'));
   document.querySelectorAll('.s-ivs').forEach(e=>e.classList.toggle('hide',s!=='ivs'));
+  if(typeof _ivsSync==='function') _ivsSync();
   document.querySelectorAll('.s-all').forEach(e=>e.classList.toggle('hide',s!=='all'));
   // 레버리지 확장은 전 탭 공통 (모멘텀만 자체 데이터 캐시라 제외)
   document.querySelectorAll('.s-lev').forEach(e=>e.classList.toggle('hide',s==='mom'));
@@ -1089,7 +1096,10 @@ document.getElementById('ivsS0').onclick=e=>_ivsSeg(e,'ivsS0',v=>ivsS0=v);
 document.getElementById('ivsN').onclick=e=>_ivsSeg(e,'ivsN',v=>ivsN=v);
 document.getElementById('ivsBand').onclick=e=>_ivsSeg(e,'ivsBand',v=>ivsBand=v);
 document.getElementById('ivsCost').onclick=e=>{if(e.target.dataset.x){document.querySelectorAll('#ivsCost button').forEach(b=>b.classList.remove('active'));e.target.classList.add('active');ivsCostOn=e.target.dataset.x==='1';if(dataLoaded&&strat==='ivs')run();}};
-document.getElementById('ivsMode').onclick=e=>{if(e.target.dataset.m){document.querySelectorAll('#ivsMode button').forEach(b=>b.classList.remove('active'));e.target.classList.add('active');ivsMode=e.target.dataset.m;if(dataLoaded&&(strat==='ivs'||strat==='all'))run();}};
+// 고정 5:5는 비중을 50%로 못박으므로 s0·룩백이 계산에 안 들어간다 → 컨트롤을 비활성으로 보이게 한다
+function _ivsSync(){ const off=(typeof ivsMode!=='undefined'&&ivsMode==='fix');
+  ['ctlIvsS0','ctlIvsN'].forEach(id=>{ const el=document.getElementById(id); if(el) el.classList.toggle('inert',off); }); }
+document.getElementById('ivsMode').onclick=e=>{if(e.target.dataset.m){document.querySelectorAll('#ivsMode button').forEach(b=>b.classList.remove('active'));e.target.classList.add('active');ivsMode=e.target.dataset.m;_ivsSync();if(dataLoaded&&(strat==='ivs'||strat==='all'))run();}};
 document.getElementById('ivsPair').onclick=e=>{if(e.target.dataset.p){document.querySelectorAll('#ivsPair button').forEach(b=>b.classList.remove('active'));e.target.classList.add('active');ivsPair=e.target.dataset.p;if(dataLoaded&&(strat==='ivs'||strat==='all'))run();}};
 document.getElementById('vrCost').onclick=e=>{if(e.target.dataset.x){document.querySelectorAll('#vrCost button').forEach(b=>b.classList.remove('active'));e.target.classList.add('active');vrCostOn=e.target.dataset.x==='1';if(dataLoaded)run();}};
 document.getElementById('imDiv').onclick=e=>{if(e.target.dataset.d){document.querySelectorAll('#imDiv button').forEach(b=>b.classList.remove('active'));e.target.classList.add('active');imDiv=+e.target.dataset.d;if(dataLoaded)run();}};
