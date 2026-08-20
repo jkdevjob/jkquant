@@ -264,7 +264,7 @@ td:first-child{text-align:left;}
   <div class="brand">
     <div>
       <div class="logo">Backtest</div>
-      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v1.156</span></h1>
+      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v1.157</span></h1>
     </div>
   </div>
   <a href="/" class="home">← JK 퀀트</a>
@@ -512,6 +512,18 @@ td:first-child{text-align:left;}
     <!-- 표준편차 매매법 (볼린저 σ밴드) -->
     <!-- 역분산 비중 (섀넌의 도깨비 최적비중형) -->
     <div class="ctrl s-ivs hide"><label>원금 ($)</label><input type="number" id="ivsCap" value="10000" min="100"></div>
+    <div class="ctrl s-ivs hide"><label>비중 방식 <span style="font-size:9px;color:var(--dim)">얼마를 레버리지에</span></label>
+      <div class="seg" id="ivsMode">
+        <button data-m="iv" class="active" title="w = (s0/σ)² — 변동성의 제곱에 반비례. 최적비중형">역분산 1/σ²</button>
+        <button data-m="fix" title="w = 50% 고정 — 섀넌의 도깨비 원본. s0·룩백은 무시된다">고정 5:5</button>
+      </div>
+    </div>
+    <div class="ctrl s-ivs hide"><label>나머지의 짝 <span style="font-size:9px;color:var(--dim)">레버리지 아닌 쪽</span></label>
+      <div class="seg" id="ivsPair">
+        <button data-p="cash" class="active" title="남은 비중은 단기국채(T-Bill). σ=0이라 리밸런싱 보너스가 최대">현금·국채</button>
+        <button data-p="x1" title="남은 비중은 같은 지수의 1배수. 상관이 1에 가까워 보너스는 줄지만 드리프트를 더 먹는다">1배수</button>
+      </div>
+    </div>
     <div class="ctrl s-ivs hide"><label>위험 다이얼 s0 <span style="font-size:9px;color:var(--dim)">비중 = (s0/σ)²</span></label>
       <div class="seg" id="ivsS0">
         <button data-v="35" title="가장 보수적 — 노출↓ MDD↓ 수익↓. TQQQ 10년창 MDD중앙 35%">35%</button>
@@ -756,6 +768,7 @@ let allActive=new Set(STRAT_TICKERS);    // 전체비교 다중선택 (기본: �
 let stdActive=new Set(STRAT_TICKERS);    // 표준편차 다중선택 (기본: 전체)
 let stdN=40, stdG=2.5, stdFilter='none', stdCostOn=true;   // 표준편차: 이평기간·공격도·200필터·비용
 let ivsS0=45, ivsN=60, ivsBand=10, ivsCostOn=true;   // 역분산 비중: 위험 다이얼 s0(%)·변동성 룩백(일)·리밸런싱 밴드(%p)·비용
+let ivsMode='iv', ivsPair='cash';    // 비중 방식(역분산/고정5:5) · 나머지의 짝(현금/1배수)
 let ivsActive=new Set(STRAT_TICKERS);    // 역분산 다중선택 (기본: 전체)
 let dcaDipMul=1;    // DCA 하락 시 배수 (종가 ≤ 200일선일 때 매수금 × 배수). 1 = 기존 단순 DCA
 let levExt=true, EXTM={}, RAWM={};        // 레버리지 확장 on/off · 확장데이터 · 원본 M 백업 (복원 시 세그 클릭이 TDZ 안 타게 restoreBtState보다 먼저 선언)
@@ -1076,6 +1089,8 @@ document.getElementById('ivsS0').onclick=e=>_ivsSeg(e,'ivsS0',v=>ivsS0=v);
 document.getElementById('ivsN').onclick=e=>_ivsSeg(e,'ivsN',v=>ivsN=v);
 document.getElementById('ivsBand').onclick=e=>_ivsSeg(e,'ivsBand',v=>ivsBand=v);
 document.getElementById('ivsCost').onclick=e=>{if(e.target.dataset.x){document.querySelectorAll('#ivsCost button').forEach(b=>b.classList.remove('active'));e.target.classList.add('active');ivsCostOn=e.target.dataset.x==='1';if(dataLoaded&&strat==='ivs')run();}};
+document.getElementById('ivsMode').onclick=e=>{if(e.target.dataset.m){document.querySelectorAll('#ivsMode button').forEach(b=>b.classList.remove('active'));e.target.classList.add('active');ivsMode=e.target.dataset.m;if(dataLoaded&&(strat==='ivs'||strat==='all'))run();}};
+document.getElementById('ivsPair').onclick=e=>{if(e.target.dataset.p){document.querySelectorAll('#ivsPair button').forEach(b=>b.classList.remove('active'));e.target.classList.add('active');ivsPair=e.target.dataset.p;if(dataLoaded&&(strat==='ivs'||strat==='all'))run();}};
 document.getElementById('vrCost').onclick=e=>{if(e.target.dataset.x){document.querySelectorAll('#vrCost button').forEach(b=>b.classList.remove('active'));e.target.classList.add('active');vrCostOn=e.target.dataset.x==='1';if(dataLoaded)run();}};
 document.getElementById('imDiv').onclick=e=>{if(e.target.dataset.d){document.querySelectorAll('#imDiv button').forEach(b=>b.classList.remove('active'));e.target.classList.add('active');imDiv=+e.target.dataset.d;if(dataLoaded)run();}};
 // 전체 비교: 투입 모드(일시금/적립)
@@ -2405,6 +2420,25 @@ function runMA200Accum(days,tkr,contribTotal,N,costOn,opt){
      |w − 현재비중| > 밴드 일 때만 리밸런싱            (수수료·양도세 방어 — 연 4~8회)
    신호는 전일 종가까지의 정보만, 체결은 당일 종가 — 200로테와 같은 규약.
    ※ 기초자산에 상승 드리프트가 있어야 성립한다. 드리프트가 없는 종목(KORU)에선 실패한다. */
+/* ──── 짝(pair) = 1배수: 레버리지 ETF에서 기초자산 1배 총수익 계열을 역산한다 ────
+   합성(buildLevExt)  r_lev = r_1배 × lev − drag
+   역산               r_1배 = (r_lev + drag) / lev  − 1배 ETF 보수
+   실측 대조: TQQQ→QQQ 복원 16.5년 CAGR +19.34% vs 실제 QQQ +19.25% (차 0.09%p/년,
+   일간 추적오차 0.98%). 1배 보수를 빼면 약간 보수적으로 맞는다. */
+const X1_EXPENSE={SOXX:.0035,SMH:.0035,QQQ:.0020,XLK:.0009,SPY:.0009,EWY:.0059};
+const X1_EXPENSE_DEF=0.0020;
+function _ivsX1(tkr){
+  const dts=Object.keys(M[tkr]).sort(), lev=(META[tkr]&&META[tkr].lev)||3, u=LEV_UNDERLYING[tkr];
+  const _exp=LEV_EXPENSE[tkr]??LEV_EXPENSE_DEF, _bor=Math.max(0,lev-1);
+  const _div=LEV_PRICEIDX[tkr] ? ((IDX_EXTEND[u]||{}).div||0) : 0;
+  const _x1=(X1_EXPENSE[u]??X1_EXPENSE_DEF)/252;
+  const dragOf=y=>(_exp + _bor*((TBILL_RATE[y]??0.04)+LEV_SPREAD) + lev*_div)/252;
+  const px={}; let v=100; px[dts[0]]=v;
+  for(let i=1;i<dts.length;i++){
+    const rl=M[tkr][dts[i]][C]/M[tkr][dts[i-1]][C]-1;
+    v*=(1+(rl+dragOf(+dts[i].slice(0,4)))/lev-_x1); px[dts[i]]=v; }
+  return px;
+}
 // 워밍업: 표본이 10일 미만이면 비중을 내지 않는다(=현금). 10~N일 구간은 있는 만큼으로 추정.
 // 로드된 이력 전체를 쓰므로 백테 구간 앞에 데이터가 있으면 자동으로 예열된다.
 function _ivsWeights(tkr,N,s0){
@@ -2420,54 +2454,59 @@ function _ivsWeights(tkr,N,s0){
   }
   return {w,dts};
 }
-function runIVS(days,tkr,cap,s0,N,band,costOn){
-  const {w:WM,dts}=_ivsWeights(tkr,N,s0);
-  const gIdx={}; dts.forEach((d,i)=>gIdx[d]=i);
+function runIVS(days,tkr,cap,s0,N,band,costOn,mode,pair){
+  const FIX=(mode==='fix'), X1=(pair==='x1');          // 고정 5:5 · 짝을 1배수로
+  const WM = FIX?null:_ivsWeights(tkr,N,s0).w;
+  const dts=Object.keys(M[tkr]).sort(); const gIdx={}; dts.forEach((d,i)=>gIdx[d]=i);
+  const P1 = X1?_ivsX1(tkr):null;
   const FEE=costOn?COST_FEE:0;
-  let cash=cap, shares=0, avg=0, yearPnl=0, curYear=null;
+  const A={sh:0,avg:0}, B={sh:0,avg:0};                // A=레버리지(비중 w) · B=1배수(1−w)
+  let cash=cap, yearPnl=0, curYear=null;
   let feesTotal=0, taxTotal=0, interestTotal=0, trades=0, daysIn=0, expoSum=0;
   let mddPeak=cap, mdd=0; const snap=[];
-  function _settle(c){ if(!costOn){yearPnl=0;return;}
+  function _buy(P,px,spend){ const fee=spend*FEE, q=(spend-fee)/px;
+    P.avg=(P.sh*P.avg+q*px)/(P.sh+q); P.sh+=q; cash-=spend; feesTotal+=fee; trades++; }
+  function _sell(P,px,q){ const gross=q*px, fee=gross*FEE; cash+=gross-fee;
+    yearPnl+=q*(px-P.avg)-fee; P.sh-=q; feesTotal+=fee; trades++;
+    if(P.sh<1e-9){P.sh=0;P.avg=0;} }
+  function _settle(c,c1){ if(!costOn){yearPnl=0;return;}
     const taxable=Math.max(0, yearPnl*COST_KRW-COST_DEDUCT);
     const owed=taxable*COST_TAXRATE/COST_KRW; let due=owed; yearPnl=0;
     const fromCash=Math.min(Math.max(cash,0), due); cash-=fromCash; due-=fromCash;
-    if(due>1e-9 && shares>0 && c>0){          // 납부용 매도 — 실현손익은 다음 해로 이월
-      const q=Math.min(shares, due/c); yearPnl+=q*(c-avg); shares-=q; due-=q*c; }
+    // 현금이 모자라면 보유분을 판다 — 실현손익은 다음 해로 이월 (총자산 음수 방지)
+    for(const [P,px] of [[A,c],[B,c1]]){
+      if(due<=1e-9 || !(P.sh>0) || !(px>0)) continue;
+      const q=Math.min(P.sh, due/px); yearPnl+=q*(px-P.avg); P.sh-=q; due-=q*px; }
     taxTotal+=owed-due; }
   days.forEach((d,i)=>{
-    const c=M[tkr][d][C];
-    { const y=d.slice(0,4); if(curYear===null)curYear=y; else if(y!==curYear){_settle(c);curYear=y;} }
+    const c=M[tkr][d][C], c1=X1?P1[d]:0;
+    { const y=d.slice(0,4); if(curYear===null)curYear=y; else if(y!==curYear){_settle(c,c1);curYear=y;} }
     if(cash>0){ const it=cash*(TBILL_RATE[+d.slice(0,4)]??0.04)/252; cash+=it; interestTotal+=it; }
-    const eq0=cash+shares*c; if(eq0<=0) return;
+    const eq0=cash+A.sh*c+B.sh*c1; if(eq0<=0) return;
     const g=gIdx[d];
-    const w = g>0 ? (WM[dts[g-1]]??0) : 0;    // 전일 신호 (기간 앞 이력 사용 — 변동성 워밍업)
-    if(Math.abs(w-shares*c/eq0)>band){
-      const tgt=w*eq0;
-      if(tgt>shares*c){                        // 목표까지 매수
-        const spend=Math.min(cash, tgt-shares*c);
-        if(spend>1){ const fee=spend*FEE, nq=(spend-fee)/c;
-          avg=(shares*avg+nq*c)/(shares+nq); shares+=nq; cash-=spend; feesTotal+=fee; trades++; }
-      }else{                                   // 목표까지 매도
-        const q=Math.min(shares,(shares*c-tgt)/c);
-        if(q*c>1){ const gross=q*c, fee=gross*FEE; cash+=gross-fee;
-          yearPnl+=q*(c-avg)-fee; shares-=q; feesTotal+=fee; trades++;
-          if(shares<1e-9){shares=0;avg=0;} }
-      }
+    const w = FIX ? 0.5 : (g>0 ? (WM[dts[g-1]]??0) : 0);   // 전일 신호 (고정 5:5는 신호 없음)
+    if(Math.abs(w-A.sh*c/eq0)>band){
+      const tA=w*eq0, tB=X1?(1-w)*eq0:0;
+      // 매도 먼저 → 매수 (현금 확보 순서)
+      if(A.sh*c>tA){ const q=Math.min(A.sh,(A.sh*c-tA)/c); if(q*c>1) _sell(A,c,q); }
+      if(X1&&B.sh*c1>tB){ const q=Math.min(B.sh,(B.sh*c1-tB)/c1); if(q*c1>1) _sell(B,c1,q); }
+      if(A.sh*c<tA){ const sp=Math.min(cash,tA-A.sh*c); if(sp>1) _buy(A,c,sp); }
+      if(X1&&B.sh*c1<tB){ const sp=Math.min(cash,tB-B.sh*c1); if(sp>1) _buy(B,c1,sp); }
     }
-    const eq=cash+shares*c;
-    if(shares>0)daysIn++; expoSum+=shares*c/Math.max(eq,1e-9);
+    const eq=cash+A.sh*c+B.sh*c1;
+    if(A.sh>0)daysIn++; expoSum+=A.sh*c/Math.max(eq,1e-9);
     if(eq>mddPeak)mddPeak=eq; else { const dd=Math.min((mddPeak-eq)/mddPeak,1); if(dd>mdd)mdd=dd; }
     if(i%10===0)snap.push([d,eq]);
   });
-  const lc=M[tkr][days[days.length-1]][C];
-  _settle(lc);   // 마지막 해 정산
-  const fin=Math.max(0, cash+shares*lc);
+  const ld=days[days.length-1], lc=M[tkr][ld][C], lc1=X1?P1[ld]:0;
+  _settle(lc,lc1);   // 마지막 해 정산
+  const fin=Math.max(0, cash+A.sh*lc+B.sh*lc1);
   if(fin>mddPeak)mddPeak=fin; else { const dd=Math.min((mddPeak-fin)/mddPeak,1); if(dd>mdd)mdd=dd; }
-  snap.push([days[days.length-1],fin]);
+  snap.push([ld,fin]);
   return {invested:cap,final:fin,ret:(fin/cap-1)*100,snap,tkr,mdd:mdd*100,trades,
           timeIn:days.length?daysIn/days.length*100:0, expo:days.length?expoSum/days.length*100:0,
-          fees:feesTotal,tax:taxTotal,interest:interestTotal,endCash:cash,endShares:shares,
-          s0:s0*100,volLen:N,band:band*100};
+          fees:feesTotal,tax:taxTotal,interest:interestTotal,endCash:cash,endShares:A.sh,
+          s0:s0*100,volLen:N,band:band*100,mode:FIX?'fix':'iv',pair:X1?'x1':'cash'};
 }
 
 // 종목비교·전체비교 공용: 각 전략 '탭에서 설정한 옵션값'을 그대로 읽어 실행 (DOM 없으면 기본값 폴백).
@@ -2489,7 +2528,8 @@ function _runOneStrat(key,tkr,cap,days,costOn){
       const _c=imCostOn; imCostOn=costOn; try{ return fn(days,tkr,cap,divs,tgt,comp); } finally{ imCostOn=_c; }
     }
     case 'std':  return runStdev(days,tkr,cap,(typeof stdN!=='undefined'?stdN:40),(typeof stdG!=='undefined'?stdG:2.5),(typeof stdFilter!=='undefined'?stdFilter:'none'),costOn);  // N·g·필터 탭
-    case 'ivs':  return runIVS(days,tkr,cap,(typeof ivsS0!=='undefined'?ivsS0:45)/100,(typeof ivsN!=='undefined'?ivsN:60),(typeof ivsBand!=='undefined'?ivsBand:10)/100,costOn);   // s0·룩백·밴드
+    case 'ivs':  return runIVS(days,tkr,cap,(typeof ivsS0!=='undefined'?ivsS0:45)/100,(typeof ivsN!=='undefined'?ivsN:60),(typeof ivsBand!=='undefined'?ivsBand:10)/100,costOn,
+                   (typeof ivsMode!=='undefined'?ivsMode:'iv'),(typeof ivsPair!=='undefined'?ivsPair:'cash'));   // s0·룩백·밴드·방식·짝
     case 'vrl':  return runVR(days,tkr,{initAmt:cap,G:vG,bandPct:vB,mode:0.5,formula:vF,startV:0,startPool:0,costOn});                                    // 거치(mode0.5)·G·밴드·공식 탭
     case 'vra':  return runVR(days,tkr,{contrib:cap/Math.max(1,Math.floor(days.length/10)),G:vG,bandPct:vB,mode:0.75,formula:vF,startV:0,startPool:0,costOn});  // 적립(mode0.75)
     case 'dca':  { const step={daily:1,weekly:5,monthly:21}[(typeof dcaFreq!=='undefined'?dcaFreq:'daily')]||1;   // 적립주기 탭
@@ -2520,7 +2560,9 @@ function comboOpts(mode){
   const filt={none:'필터없음',nobuy:'물타기금지',exit:'현금이탈'}[(typeof stdFilter!=='undefined'?stdFilter:'none')]||'필터없음';
   const sN=(typeof stdN!=='undefined'?stdN:40), sG=(typeof stdG!=='undefined'?stdG:2.5);
   const iS=(typeof ivsS0!=='undefined'?ivsS0:45), iN=(typeof ivsN!=='undefined'?ivsN:60), iB=(typeof ivsBand!=='undefined'?ivsBand:10);
-  return `무매(${eng}): ${div}분할·익절${tgt}%${tdy}·${comp}·${rev} · 200로테: ${maTxt} · VR거치: G${vG}·밴드±${vB}·${vF} · 표준편차: N${sN}·g${sG}·${filt} · 역분산: s0${iS}%·${iN}일σ·밴드${iB}%p`;
+  const iM=(typeof ivsMode!=='undefined'&&ivsMode==='fix')?'고정5:5':`역분산 s0${iS}%·${iN}일σ`;
+  const iP=(typeof ivsPair!=='undefined'&&ivsPair==='x1')?'1배수':'현금';
+  return `무매(${eng}): ${div}분할·익절${tgt}%${tdy}·${comp}·${rev} · 200로테: ${maTxt} · VR거치: G${vG}·밴드±${vB}·${vF} · 표준편차: N${sN}·g${sG}·${filt} · 역분산: ${iM}·짝${iP}·밴드${iB}%p`;
 }
 
 /* ──── 자본-시간 지표: 적립식은 돈이 천천히 들어가 '평균 투입자본'이 거치식의 절반 수준이다.
@@ -2645,13 +2687,21 @@ function renderIVS(results, days, cap){
             expo:r.expo, trades:r.trades, interest:r.interest, tax:r.tax}; });
   rows.sort((a,b)=>b.ret-a.ret);
   const costBadge=`<span style="font-size:11px;color:var(--${ivsCostOn?'gold':'dim'})">· ${ivsCostOn?'세후':'세전'}</span>`;
-  let h=`<div class="cmp-card"><h3>🎲 역분산 비중 · ${yrs.toFixed(1)}년 · 원금 ${money(cap)} ${costBadge} <span style="font-size:11px;color:var(--dim)">s0 ${ivsS0}% · ${ivsN}일 σ · 밴드 ${ivsBand}%p · 목돈거치 · 수익률순</span></h3>`;
-  h+=`<div style="overflow-x:auto"><table class="cmp-tbl sortable"><thead><tr><th>종목</th><th>원금</th><th>최종금액</th><th>총수익률</th><th>CAGR</th><th>MDD</th><th>MAR</th><th title="위험자산에 들어가 있던 자산 비중의 기간 평균. 나머지는 단기국채">평균노출</th><th title="밴드를 벗어나 실제로 리밸런싱한 횟수">거래</th></tr></thead><tbody>`;
+  const FIX=ivsMode==='fix', X1=ivsPair==='x1';
+  const modeTxt=FIX?'고정 5:5 (섀넌 원본)':`역분산 1/σ² · s0 ${ivsS0}% · ${ivsN}일 σ`;
+  const pairTxt=X1?'짝: 1배수':'짝: 현금·국채';
+  let h=`<div class="cmp-card"><h3>🎲 ${FIX?'섀넌의 도깨비':'역분산 비중'} · ${yrs.toFixed(1)}년 · 원금 ${money(cap)} ${costBadge} <span style="font-size:11px;color:var(--dim)">${modeTxt} · ${pairTxt} · 밴드 ${ivsBand}%p · 목돈거치 · 수익률순</span></h3>`;
+  h+=`<div style="overflow-x:auto"><table class="cmp-tbl sortable"><thead><tr><th>종목</th><th>원금</th><th>최종금액</th><th>총수익률</th><th>CAGR</th><th>MDD</th><th>MAR</th><th title="${X1?'레버리지 쪽에 들어가 있던 비중의 기간 평균. 나머지는 같은 지수의 1배수':'위험자산에 들어가 있던 자산 비중의 기간 평균. 나머지는 단기국채'}">${X1?'레버비중':'평균노출'}</th><th title="밴드를 벗어나 실제로 리밸런싱한 횟수">거래</th></tr></thead><tbody>`;
   rows.forEach((r,i)=>{ const dot=`<span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:${r.color};margin-right:5px"></span>`;
     h+=`<tr${i===0?' class="win"':''}><td><span class="cdim" style="margin-right:6px">${i+1}</span>${dot}<b>${r.ticker}</b><span class="tk-nm">${(META[r.ticker]||{}).name||''}</span>${i===0?' 🥇':''}</td><td>${money(r.invested)}</td><td class="cacc">${money(r.final)}</td><td class="${r.ret>=0?'cg':'cr'}" title="${r.ret.toFixed(1)}%"><b>${retTxt(r.ret)}</b></td><td class="${r.cagr>=0?'cg':'cr'}">${pct(r.cagr)}</td><td>${r.mdd.toFixed(0)}%</td><td class="cgold">${r.mar.toFixed(2)}</td><td class="cdim">${r.expo.toFixed(0)}%</td><td class="cdim">${r.trades}회 <span style="font-size:10px">(${(r.trades/yrs).toFixed(1)}/년)</span></td></tr>`; });
   h+=`</tbody></table></div>`;
   h+=yearCompareCard(rows.map(r=>({label:r.ticker,snap:r.snap,color:r.color})), money);
-  h+=`<p class="note" style="font-size:11px;color:var(--dim2);margin-top:10px;line-height:1.7;padding:7px 10px;background:var(--surf2);border-radius:7px">🎲 <b>섀넌의 도깨비 최적비중형</b> — 클로드 섀넌은 "매 기간 두 배가 되거나 반토막 나는" <b>장기 성장률 0짜리</b> 주식이라도, 현금과 <b>50:50으로 맞춰두고 리밸런싱만</b> 하면 매 기간 <b>+6.07%</b>씩 복리로 불어난다는 걸 보였습니다. 변동성 자체가 수익원이 되는 것(<b>리밸런싱 보너스 = ½·w(1−w)·σ²</b>)이죠. 역분산은 그 <b>고정 50%</b>를 시간가변 최적비중으로 바꿉니다 — 기하성장 <b>g(w) ≈ w·μ − ½·w²σ²</b>를 최대화하면 <b>w* ∝ 1/σ²</b>이므로, 최근 ${ivsN}일 실현변동성의 <b>제곱에 반비례</b>해 비중을 잡고 남은 돈은 단기국채에 둡니다.</p>`;
+  h+=`<p class="note" style="font-size:11px;color:var(--dim2);margin-top:10px;line-height:1.7;padding:7px 10px;background:var(--surf2);border-radius:7px">🎲 <b>섀넌의 도깨비</b> — 클로드 섀넌은 "매 기간 두 배가 되거나 반토막 나는" <b>장기 성장률 0짜리</b> 주식이라도, 현금과 <b>50:50으로 맞춰두고 리밸런싱만</b> 하면 매 기간 <b>+6.07%</b>씩 복리로 불어난다는 걸 보였습니다. 변동성 자체가 수익원이 되는 것(<b>리밸런싱 보너스 = ½·w₁w₂·(σ₁²+σ₂²−2ρσ₁σ₂)</b>)이죠. `
+    +(FIX?`지금은 <b>그 원본 그대로</b> 비중을 50%에 고정해 돌리고 있습니다 — s0와 룩백은 쓰이지 않습니다.`
+         :`<b>역분산</b>은 그 고정 50%를 시간가변 최적비중으로 바꿉니다 — 기하성장 <b>g(w) ≈ w·μ − ½·w²σ²</b>를 최대화하면 <b>w* ∝ 1/σ²</b>이므로, 최근 ${ivsN}일 실현변동성의 <b>제곱에 반비례</b>해 비중을 잡습니다.`)+`</p>`;
+  h+=`<p class="note" style="font-size:11px;color:var(--dim2);margin-top:6px;line-height:1.7;padding:7px 10px;background:var(--surf2);border-radius:7px">`
+    +(X1?`⚖️ <b>짝 = 1배수</b> — 남은 비중을 같은 지수의 <b>1배수</b>로 둡니다(레버리지 ETF에서 기초 총수익을 역산하고 1배 ETF 보수를 뺀 계열 · TQQQ→QQQ 복원 16.5년 CAGR 오차 0.1%p). 3배와 상관이 <b>1에 가까워</b> 리밸런싱 보너스는 현금 짝의 절반 이하로 줄지만, 노는 돈이 없어 <b>드리프트를 더 먹습니다.</b> 대신 최소 노출이 1배라 <b>MDD는 크게 올라갑니다.</b>`
+        :`⚖️ <b>짝 = 현금·국채</b> — 남은 비중은 단기국채입니다. σ=0이라 위 식의 상관항이 사라져 <b>리밸런싱 보너스가 최대</b>가 되지만, 그만큼 돈이 놀아 드리프트는 덜 먹습니다.`)+`</p>`;
   h+=`<p class="note" style="font-size:11px;color:var(--dim);margin-top:6px;line-height:1.7">신호는 <b>전일 종가</b>까지의 정보만, 체결은 당일 종가(200로테와 같은 규약) · 예수금은 연도별 T-Bill 실측금리로 일할 이자 · <b>${ivsCostOn?'세후':'세전'}</b>(${ivsCostOn?'수수료 0.25%(매수·매도) · 리밸런싱 매도 시 실현이익 양도세 22%, 연 250만 공제':'세금·수수료 미반영'}).</p>`;
   h+=`<p class="note" style="font-size:11px;color:var(--dim2);margin-top:6px;line-height:1.7;padding:7px 10px;background:var(--surf2);border-radius:7px">⚠️ <b>수익을 맞히는 전략이 아닙니다.</b> 같은 평균노출의 고정비중과 붙이면 3·5년 승률이 33~51%로 동전던지기입니다. 값어치는 전부 <b>MDD(분모)</b>에 있어서, 같은 MDD로 맞추면 TQQQ +7~13%p·SOXL +2%p의 초과 CAGR이 나옵니다. 또 <b>기초자산에 상승 드리프트가 있어야</b> 성립합니다 — KORU처럼 없으면 10년창 손실확률 68%로 실패합니다. <b>s0</b>는 최적화된 값이 아니라 <b>위험 다이얼</b>이라 35~55% 어디로 돌려도 MAR은 거의 그대로이고 수익·MDD만 함께 움직입니다.</p></div>`;
   document.getElementById('ivsResult').innerHTML=h;
@@ -2749,7 +2799,7 @@ async function run(){
     const days=commonDays(start,end,use);
     if(days.length<250){alert('공통 거래일이 1년 미만입니다. 기간을 넓히거나 늦은 상장 종목을 감안하세요.');return;}
     const results={};
-    use.forEach(t=>{ results[t]=runIVS(days,t,cap,ivsS0/100,ivsN,ivsBand/100,ivsCostOn); });
+    use.forEach(t=>{ results[t]=runIVS(days,t,cap,ivsS0/100,ivsN,ivsBand/100,ivsCostOn,ivsMode,ivsPair); });
     renderIVS(results,days,cap);
     noteSkipped(skip);
     return;
