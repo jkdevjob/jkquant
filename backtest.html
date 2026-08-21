@@ -270,7 +270,7 @@ td:first-child{text-align:left;}
   <div class="brand">
     <div>
       <div class="logo">Backtest</div>
-      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v1.158</span></h1>
+      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v1.159</span></h1>
     </div>
   </div>
   <a href="/" class="home">← JK 퀀트</a>
@@ -559,7 +559,7 @@ td:first-child{text-align:left;}
     <div class="ctrl s-ivs hide"><label>세금·비용</label>
       <div class="seg" id="ivsCost">
         <button data-x="0" title="비용 없이 순수 전략 성과">미적용</button>
-        <button data-x="1" class="active" title="수수료 0.25%(매수·매도) · 리밸런싱 매도 시 실현이익 양도세 22%(연 250만 공제) · 예수금은 연도별 T-Bill 이자">적용</button>
+        <button data-x="1" class="active" title="레버리지: 수수료 0.25%(매수·매도) + 실현이익 양도세 22%(연 250만 공제) · 예수금: T-Bill 이자에서 배당소득세 15.4%와 국채ETF 보수 0.10%를 빼고, 리밸런싱 때 국채 쪽 매매 수수료도 부과">적용</button>
       </div>
     </div>
     <div class="ctrl s-std hide"><label>원금 ($)</label><input type="number" id="stdCap" value="10000" min="100"></div>
@@ -2470,14 +2470,21 @@ function runIVS(days,tkr,cap,s0,N,band,costOn,mode,pair){
   const dts=Object.keys(M[tkr]).sort(); const gIdx={}; dts.forEach((d,i)=>gIdx[d]=i);
   const P1 = X1?_ivsX1(tkr):null;
   const FEE=costOn?COST_FEE:0;
+  /* 예수금도 공짜가 아니다. '비용 적용'이면 국채 쪽 현실 비용을 같이 문다:
+       이자에 배당소득세 15.4% · 국채 ETF 보수 0.10%/년 · 리밸런싱 때 국채 매매 수수료도 부과
+     (짝=1배수는 양쪽 다 실물이라 이미 각자 수수료를 물므로 추가 부과 없음)
+     체감: 10년창 중앙 CAGR이 TQQQ −0.4%p · SOXL −0.8%p. 노출이 낮아 현금이 오래 놀수록 커진다. */
+  const CASH_DIVTAX=costOn?0.154:0, CASH_EXP=costOn?0.0010:0;
+  const LEGFEE=(costOn&&!X1)?COST_FEE:0;   // 국채 반대편 매매 수수료
   const A={sh:0,avg:0}, B={sh:0,avg:0};                // A=레버리지(비중 w) · B=1배수(1−w)
   let cash=cap, yearPnl=0, curYear=null;
   let feesTotal=0, taxTotal=0, interestTotal=0, trades=0, daysIn=0, expoSum=0;
   let mddPeak=cap, mdd=0; const snap=[];
-  function _buy(P,px,spend){ const fee=spend*FEE, q=(spend-fee)/px;
-    P.avg=(P.sh*P.avg+q*px)/(P.sh+q); P.sh+=q; cash-=spend; feesTotal+=fee; trades++; }
-  function _sell(P,px,q){ const gross=q*px, fee=gross*FEE; cash+=gross-fee;
-    yearPnl+=q*(px-P.avg)-fee; P.sh-=q; feesTotal+=fee; trades++;
+  // 국채 반대편 수수료(lf)는 현금에서만 빠진다 — 국채 ETF는 가격이 거의 평평해 양도손익이 없다
+  function _buy(P,px,spend){ const fee=spend*FEE, lf=spend*LEGFEE, q=(spend-fee)/px;
+    P.avg=(P.sh*P.avg+q*px)/(P.sh+q); P.sh+=q; cash-=spend+lf; feesTotal+=fee+lf; trades++; }
+  function _sell(P,px,q){ const gross=q*px, fee=gross*FEE, lf=gross*LEGFEE; cash+=gross-fee-lf;
+    yearPnl+=q*(px-P.avg)-fee; P.sh-=q; feesTotal+=fee+lf; trades++;
     if(P.sh<1e-9){P.sh=0;P.avg=0;} }
   function _settle(c,c1){ if(!costOn){yearPnl=0;return;}
     const taxable=Math.max(0, yearPnl*COST_KRW-COST_DEDUCT);
@@ -2491,7 +2498,8 @@ function runIVS(days,tkr,cap,s0,N,band,costOn,mode,pair){
   days.forEach((d,i)=>{
     const c=M[tkr][d][C], c1=X1?P1[d]:0;
     { const y=d.slice(0,4); if(curYear===null)curYear=y; else if(y!==curYear){_settle(c,c1);curYear=y;} }
-    if(cash>0){ const it=cash*(TBILL_RATE[+d.slice(0,4)]??0.04)/252; cash+=it; interestTotal+=it; }
+    if(cash>0){ const gross=cash*(TBILL_RATE[+d.slice(0,4)]??0.04)/252;
+      const it=gross*(1-CASH_DIVTAX) - cash*CASH_EXP/252; cash+=it; interestTotal+=it; }
     const eq0=cash+A.sh*c+B.sh*c1; if(eq0<=0) return;
     const g=gIdx[d];
     const w = FIX ? 0.5 : (g>0 ? (WM[dts[g-1]]??0) : 0);   // 전일 신호 (고정 5:5는 신호 없음)
@@ -2712,7 +2720,7 @@ function renderIVS(results, days, cap){
   h+=`<p class="note" style="font-size:11px;color:var(--dim2);margin-top:6px;line-height:1.7;padding:7px 10px;background:var(--surf2);border-radius:7px">`
     +(X1?`⚖️ <b>짝 = 1배수</b> — 남은 비중을 같은 지수의 <b>1배수</b>로 둡니다(레버리지 ETF에서 기초 총수익을 역산하고 1배 ETF 보수를 뺀 계열 · TQQQ→QQQ 복원 16.5년 CAGR 오차 0.1%p). 3배와 상관이 <b>1에 가까워</b> 리밸런싱 보너스는 현금 짝의 절반 이하로 줄지만, 노는 돈이 없어 <b>드리프트를 더 먹습니다.</b> 대신 최소 노출이 1배라 <b>MDD는 크게 올라갑니다.</b>`
         :`⚖️ <b>짝 = 현금·국채</b> — 남은 비중은 단기국채입니다. σ=0이라 위 식의 상관항이 사라져 <b>리밸런싱 보너스가 최대</b>가 되지만, 그만큼 돈이 놀아 드리프트는 덜 먹습니다.`)+`</p>`;
-  h+=`<p class="note" style="font-size:11px;color:var(--dim);margin-top:6px;line-height:1.7">신호는 <b>전일 종가</b>까지의 정보만, 체결은 당일 종가(200로테와 같은 규약) · 예수금은 연도별 T-Bill 실측금리로 일할 이자 · <b>${ivsCostOn?'세후':'세전'}</b>(${ivsCostOn?'수수료 0.25%(매수·매도) · 리밸런싱 매도 시 실현이익 양도세 22%, 연 250만 공제':'세금·수수료 미반영'}).</p>`;
+  h+=`<p class="note" style="font-size:11px;color:var(--dim);margin-top:6px;line-height:1.7">신호는 <b>전일 종가</b>까지의 정보만, 체결은 당일 종가(200로테와 같은 규약) · 예수금은 연도별 T-Bill 실측금리로 일할 이자 · <b>${ivsCostOn?'세후':'세전'}</b> — ${ivsCostOn?'레버리지는 수수료 0.25%(매수·매도)와 실현이익 양도세 22%(연 250만 공제), <b>예수금도 공짜가 아닙니다</b>: 이자에서 배당소득세 15.4%와 국채ETF 보수 0.10%를 빼고 리밸런싱 때 국채 쪽 매매 수수료도 뭅니다(10년창 중앙 CAGR 기준 TQQQ −0.4%p·SOXL −0.8%p)':'세금·수수료 미반영'}.</p>`;
   h+=`<p class="note" style="font-size:11px;color:var(--dim2);margin-top:6px;line-height:1.7;padding:7px 10px;background:var(--surf2);border-radius:7px">⚠️ <b>수익을 맞히는 전략이 아닙니다.</b> 같은 평균노출의 고정비중과 붙이면 3·5년 승률이 33~51%로 동전던지기입니다. 값어치는 전부 <b>MDD(분모)</b>에 있어서, 같은 MDD로 맞추면 TQQQ +7~13%p·SOXL +2%p의 초과 CAGR이 나옵니다. 또 <b>기초자산에 상승 드리프트가 있어야</b> 성립합니다 — KORU처럼 없으면 10년창 손실확률 68%로 실패합니다. <b>s0</b>는 최적화된 값이 아니라 <b>위험 다이얼</b>이라 35~55% 어디로 돌려도 MAR은 거의 그대로이고 수익·MDD만 함께 움직입니다.</p></div>`;
   document.getElementById('ivsResult').innerHTML=h;
   cmpDrawChart(rows.map(r=>({name:r.ticker,snap:r.snap,color:r.color})),days,rows[0]?rows[0].ticker:'SOXL','역분산 비중 · 종목별 누적 총자산');
