@@ -4945,8 +4945,8 @@ function setupTabs(){
       S.activeTab=t.dataset.t;save();renderSessbar();renderStatusline();
       if(t.dataset.t==='inf'){ refreshInf(); try{loadInfData();loadInfFG();loadFX();}catch(e){console.error(e)} showFab(); }
       else if(t.dataset.t==='ma'){ refreshMa(); try{ if(!krwNoAuto(curStrat().settings)) loadMaData(); }catch(e){console.error(e)} hideFab(); }
-        else if(t.dataset.t==='ivs'){ refreshIvs(); try{ loadIvsData(); }catch(e){console.error(e)} hideFab(); }
-    else if(t.dataset.t==='dca'){ refreshDca(); try{ loadDcaData(); }catch(e){console.error(e)} hideFab(); }
+      else if(t.dataset.t==='ivs'){ refreshIvs(); try{ loadIvsData(); }catch(e){console.error(e)} hideFab(); }
+      else if(t.dataset.t==='dca'){ refreshDca(); try{ loadDcaData(); }catch(e){console.error(e)} hideFab(); }
       else if(t.dataset.t==='asap'){ refreshAsap(); try{ if(!krwNoAuto(curStrat().settings)) loadAsapData(); }catch(e){console.error(e)} hideFab(); }
       else { refreshVr(); try{ if(!krwNoAuto(curStrat().settings)){ fetchQuote('vr'); } loadVrChart(); loadFearGreed(); }catch(e){console.error(e)} showFab(); }
       window.scrollTo({top:0,behavior:'smooth'});
