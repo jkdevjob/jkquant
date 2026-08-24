@@ -442,7 +442,7 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
 </div>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v2.63</span></h1></div>
+    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v2.64</span></h1></div>
     <div style="display:flex;align-items:center;gap:8px">
       <a class="btbtn" href="/backtest">📊<span class="bt-txt"> 백테스트</span></a>
       <button class="gear" onclick="openSettings()">⚙️</button>
@@ -1294,7 +1294,7 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
   <footer>
     <strong>JK 퀀트</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v2.63</b> · 2026-08-24</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v2.64</b> · 2026-08-24</div>
   </footer>
 </div>
 
@@ -3318,6 +3318,8 @@ function computeIvs(){
   return out;
 }
 
+// 트리거가 이미 지나간 가격일 수 있어 부호를 박아두면 안 된다 (+-17% 같은 표시가 난다)
+function pctFrom(target,now){ const d=(target/now-1)*100; return (d>=0?'+':'')+d.toFixed(0)+'%'; }
 function renderIvsNow(){
   const c=computeIvs(), st=c.st, pc=v=>(v*100).toFixed(0)+'%';
   $('ivs_ticker').textContent=tickerLabel(st.ticker||'TQQQ');
@@ -3379,8 +3381,8 @@ function renderIvsNow(){
     const up=c.trigUp, dn=c.trigDn, p=c.price;
     $('ivs_trigger').innerHTML=
       `<div class="ar"><span class="ak">지금 가격</span><span class="av">${px(p)}</span></div>
-       <div class="ar"><span class="ak">이 위로 오르면 <span class="sub">비중↑ → 매도</span></span><span class="av sell">${up>0?px(up):'—'}${up>0?` <span class="sub">(+${((up/p-1)*100).toFixed(0)}%)</span>`:''}</span></div>
-       <div class="ar"><span class="ak">이 아래로 내리면 <span class="sub">비중↓ → 매수</span></span><span class="av buy">${dn>0?px(dn):'—'}${dn>0?` <span class="sub">(${((dn/p-1)*100).toFixed(0)}%)</span>`:''}</span></div>
+       <div class="ar"><span class="ak">이 위로 오르면 <span class="sub">비중↑ → 매도</span></span><span class="av sell">${up>0?px(up):'—'}${up>0?` <span class="sub">(${pctFrom(up,p)})</span>`:''}</span></div>
+       <div class="ar"><span class="ak">이 아래로 내리면 <span class="sub">비중↓ → 매수</span></span><span class="av buy">${dn>0?px(dn):'—'}${dn>0?` <span class="sub">(${pctFrom(dn,p)})</span>`:''}</span></div>
        <p class="note" style="margin-top:8px">이 범위 안이면 <b>볼 필요가 없습니다.</b> 다만 σ가 변하면 목표 비중도 움직이므로 정확한 값은 아닙니다 — <b>주 1회</b> 정도 확인을 권합니다.</p>`;
   }else{
     $('ivs_trigger').innerHTML='<p class="note">보유 또는 예수금 한쪽이 0이라 트리거 가격을 계산할 수 없습니다. 설정에서 현재 계좌 상태를 입력하세요.</p>';
@@ -3397,7 +3399,11 @@ function renderIvsHist(){
   }).join('');
   $('ivs_rec_tbl').innerHTML=`<thead><tr><th>날짜</th><th>구분</th><th>수량</th><th>단가</th><th>금액</th><th>실현손익</th></tr></thead><tbody>${rows||'<tr><td colspan="6" style="color:var(--faint)">기록 없음</td></tr>'}</tbody>`;
 }
-function refreshIvs(){ renderIvsNow(); renderIvsHist(); }
+function refreshIvs(){
+  renderIvsNow(); renderIvsHist(); renderStatusline();
+  // 설정에서 종목을 바꾸면 그 종목 시세를 받아와야 한다 — 없으면 computeIvs가 ready:false라 '대기'에서 멈춘다
+  if(S.activeTab==='ivs'){ try{ loadIvsData(); }catch(e){console.error(e)} }
+}
 
 function ivsRecord(){
   const c=computeIvs(), st=curStrat().settings;
@@ -4713,9 +4719,9 @@ function switchSess(id){
   if(box.active===id)return; // 같은 세션이면 무시
   box.active=id;save();
   // 이전 세션 시세 캐시/노트 완전 초기화 (잔상 방지)
-  lastQuote={inf:null,vr:null}; infQuoteCache=null; _lastNeedClose=null; maQuoteData=null; dcaQuoteData=null;
+  lastQuote={inf:null,vr:null}; infQuoteCache=null; _lastNeedClose=null; maQuoteData=null; dcaQuoteData=null; ivsQuoteData=null;
   clearInputs();
-  ['vn_fetchnote','chart_note','inf_chart_note','inf_ten_grid','diag_out','ma_fetchnote','dca_fetchnote'].forEach(id=>{const el=$(id);if(el){el.textContent='';el.className=el.className.replace(/\b(ok|err|load)\b/g,'');}});
+  ['vn_fetchnote','chart_note','inf_chart_note','inf_ten_grid','diag_out','ma_fetchnote','dca_fetchnote','ivs_fetchnote'].forEach(id=>{const el=$(id);if(el){el.textContent='';el.className=el.className.replace(/\b(ok|err|load)\b/g,'');}});
   // 현재 탭의 서브탭을 "현재"로 리셋
   resetSubnav(S.activeTab);
   refreshAll();
@@ -4723,6 +4729,7 @@ function switchSess(id){
   try{
     if(S.activeTab==='inf'){ loadInfData(true); loadInfFG(); loadFX(); }
     else if(S.activeTab==='ma'){ if(!krwNoAuto(curStrat().settings)) loadMaData(true); }
+    else if(S.activeTab==='ivs'){ loadIvsData(true); }
     else if(S.activeTab==='dca'){ loadDcaData(true); }
     else { if(!krwNoAuto(curStrat().settings)) fetchQuote('vr'); loadVrChart(true); loadFearGreed(); }
   }catch(e){console.error(e)}
