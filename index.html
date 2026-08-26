@@ -443,7 +443,7 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
 </div>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v2.82</span></h1></div>
+    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v2.83</span></h1></div>
     <div style="display:flex;align-items:center;gap:8px">
       <a class="btbtn" href="/backtest">📊<span class="bt-txt"> 백테스트</span></a>
       <button class="gear" onclick="openSettings()">⚙️</button>
@@ -457,8 +457,8 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
     <button class="tab" data-t="vr">밸류리밸런싱</button>
     <button class="tab" data-t="ma">로테이션</button>
     <button class="tab" data-t="ivs">섀넌</button>
-    <button class="tab" data-t="dca" style="display:none">적립</button>
-    <button class="tab" data-t="asap" style="display:none">ASAP</button>
+    <button class="tab" data-t="dca">적립</button>
+    <button class="tab" data-t="asap">ASAP</button>
   </div>
   <div class="sessbar" id="sessbar"></div>
   <div class="statusline" id="statusline"></div>
@@ -1232,12 +1232,6 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
 
     <!-- ── 현재 ── -->
     <div class="block on" id="dca-now">
-      <div class="card" style="margin-bottom:13px">
-        <div class="field" style="margin:0"><label id="dca_price_lbl">현재가 ($) <span class="hint">배수 판정은 종가 200일선 기준</span></label>
-          <div style="display:flex;gap:8px"><input id="dca_price" type="text" inputmode="decimal" placeholder="자동 조회" oninput="commaInput(this);onDcaPrice()" style="flex:1">
-          <button class="fetchbtn" id="dca_autobtn" onclick="fetchDcaQuote()">🔄 자동</button></div></div>
-        <div class="fetchnote" id="dca_fetchnote" style="margin:6px 0 0"></div>
-      </div>
 
       <!-- 배수 히어로 -->
       <div class="vhero" style="background:linear-gradient(165deg,#0e2a2e,var(--panel));border-color:#0e4d56">
@@ -1290,6 +1284,14 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
         <div class="ar"><span class="ak">평가금</span><span class="av" id="dcacct_eval">$0</span></div>
         <div class="ar"><span class="ak">적립 횟수 <span class="sub">2배 적립 포함</span></span><span class="av buy" id="dcacct_n">0회</span></div>
       </div>
+      <!-- 현재가 입력 — 맨 아래 (판단을 먼저 보고, 값 고칠 때만 내려온다) -->
+      <div class="card" style="margin-bottom:13px">
+        <div class="field" style="margin:0"><label id="dca_price_lbl">현재가 ($) <span class="hint">배수 판정은 종가 200일선 기준</span></label>
+          <div style="display:flex;gap:8px"><input id="dca_price" type="text" inputmode="decimal" placeholder="자동 조회" oninput="commaInput(this);onDcaPrice()" style="flex:1">
+          <button class="fetchbtn" id="dca_autobtn" onclick="fetchDcaQuote()">🔄 자동</button></div></div>
+        <div class="fetchnote" id="dca_fetchnote" style="margin:6px 0 0"></div>
+      </div>
+
     </div>
 
     <!-- ── 적립이력 ── -->
@@ -1348,12 +1350,6 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
 
     <!-- ── 현재: 오늘 할 일 콕핏 ── -->
     <div class="block on" id="asap-now">
-      <div class="card" style="margin-bottom:13px">
-        <div class="field" style="margin:0"><label id="asap_price_lbl">현재가 ($) <span class="hint">신호는 종가(전체 이력)로 계산</span></label>
-          <div style="display:flex;gap:8px"><input id="asap_price" type="text" inputmode="decimal" placeholder="자동 조회" oninput="commaInput(this);onAsapPrice()" style="flex:1">
-          <button class="fetchbtn" id="asap_autobtn" onclick="fetchAsapQuote()">🔄 자동</button></div></div>
-        <div class="fetchnote" id="asap_fetchnote" style="margin:6px 0 0"></div>
-      </div>
 
       <!-- 신호 히어로 -->
       <div class="vhero" style="background:linear-gradient(165deg,#2b220c,var(--panel));border-color:#8a6410">
@@ -1424,6 +1420,14 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
         <div class="ar"><span class="ak">총자산 <span class="sub">SOXL + 리저브</span></span><span class="av" id="asap_total">$0</span></div>
         <div class="ar"><span class="ak">현재 국면 · 단계</span><span class="av gold" id="asap_stage">—</span></div>
       </div>
+      <!-- 현재가 입력 — 맨 아래 (판단을 먼저 보고, 값 고칠 때만 내려온다) -->
+      <div class="card" style="margin-bottom:13px">
+        <div class="field" style="margin:0"><label id="asap_price_lbl">현재가 ($) <span class="hint">신호는 종가(전체 이력)로 계산</span></label>
+          <div style="display:flex;gap:8px"><input id="asap_price" type="text" inputmode="decimal" placeholder="자동 조회" oninput="commaInput(this);onAsapPrice()" style="flex:1">
+          <button class="fetchbtn" id="asap_autobtn" onclick="fetchAsapQuote()">🔄 자동</button></div></div>
+        <div class="fetchnote" id="asap_fetchnote" style="margin:6px 0 0"></div>
+      </div>
+
     </div>
 
     <!-- ── 기록 ── -->
@@ -1474,7 +1478,7 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
   <footer>
     <strong>JK 퀀트</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v2.82</b> · 2026-08-26</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v2.83</b> · 2026-08-26</div>
   </footer>
 </div>
 
@@ -1922,8 +1926,6 @@ function load(){
   try{S=JSON.parse(localStorage.getItem(lsKey()))}catch(e){S=null}
   if(!validState(S)){S=freshState();saveLocal();}
   if(!S.activeTab)S.activeTab='inf';
-  if(S.activeTab==='asap')S.activeTab='inf';   // ASAP 숨김 기간: 저장된 활성탭이 asap이면 무한매수법으로 (탭이 없어 갇히는 것 방지)
-  if(S.activeTab==='dca')S.activeTab='inf';    // 적립 숨김 기간: 같은 이유
   ensureBoxes();
   forceV40();   // V5.0 숨김 기간: 저장된 v50 세션을 v40으로 되돌림
 }
