@@ -443,7 +443,7 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
 </div>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v2.79</span></h1></div>
+    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v2.80</span></h1></div>
     <div style="display:flex;align-items:center;gap:8px">
       <a class="btbtn" href="/backtest">📊<span class="bt-txt"> 백테스트</span></a>
       <button class="gear" onclick="openSettings()">⚙️</button>
@@ -472,18 +472,22 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
       <button class="chip" data-b="inf-guide">설명</button>
     </div>
     <div class="block on" id="inf-now">
-      <div class="dash">
+      <!-- 오늘의 주문표 -->
+      <div class="card calc" style="margin-bottom:13px"><h3 style="font-size:15px;font-weight:800;margin-bottom:13px;cursor:pointer" onclick="toggleSec('inf_order_wrap',this)"><span class="dot"></span>📋 오늘의 주문표 <span class="sec-caret">▾</span></h3>
+        <div id="inf_order_wrap"><div id="inf_order_body"></div></div></div>
+      <!-- T-VALUE 대시보드·스탯은 주문표로 옮겨 숨긴다. DOM은 renderInfNow가 참조하므로 남겨둔다. -->
+      <div class="dash" style="display:none">
         <div class="rowline" style="border:none;padding:0 0 10px"><span class="tlabel">T-VALUE</span><span class="badge set" id="inf_phase">전반전</span></div>
         <div class="tval"><span class="big mono" id="d_t">0</span><span class="of mono" id="d_div">/ 20</span></div>
         <div class="progress"><div class="bar" id="d_bar" style="width:0%"></div></div>
         <div class="pscale"><span>0</span><span id="d_half">10</span><span id="d_max">20</span></div>
       </div>
-      <div class="statgrid">
+      <div class="statgrid" style="display:none">
         <div class="stat"><div class="sl">평단가</div><div class="sv mono" id="d_avg">—</div></div>
         <div class="stat"><div class="sl">보유수량</div><div class="sv mono" id="d_qty">0주</div></div>
         <div class="stat"><div class="sl">잔금</div><div class="sv sm mono" id="d_bal">$0</div></div>
       </div>
-      <div class="statgrid">
+      <div class="statgrid" style="display:none">
         <div class="stat"><div class="sl">별%</div><div class="sv sm mono" id="d_pct" style="color:var(--buy)">—</div></div>
         <div class="stat"><div class="sl">별지점</div><div class="sv sm mono" id="d_star">—</div></div>
         <div class="stat"><div class="sl">1회매수금</div><div class="sv sm mono" id="d_buy1" style="color:var(--vio)">—</div></div>
@@ -579,9 +583,6 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
         </div>
       </div>
 
-      <!-- 오늘의 주문표 -->
-      <div class="card calc" style="margin-top:13px"><h3 style="font-size:15px;font-weight:800;margin-bottom:13px;cursor:pointer" onclick="toggleSec('inf_order_wrap',this)"><span class="dot"></span>📋 오늘의 주문표 <span class="sec-caret">▾</span></h3>
-        <div id="inf_order_wrap"><div id="inf_order_body"></div></div></div>
 
       <div class="card" style="margin-top:13px"><h3 style="cursor:pointer" onclick="toggleSec('inf_todo_body',this)"><span class="dot"></span>오늘 할 일 <span class="sec-caret">▾</span></h3>
         <div id="inf_todo_body"><p class="lead" id="d_todo" style="margin-bottom:0">설정(⚙️)에서 종목·분할·원금을 정하고, 위 주문표에서 전일 종가를 입력하세요.</p></div></div>
@@ -674,15 +675,6 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
 
     <!-- ── 현재: CURRENT V 콕핏 ── -->
     <div class="block on" id="vr-now">
-      <!-- 평가금 입력 + 자동조회 -->
-      <div class="card" style="margin-bottom:13px">
-        <div class="field" style="margin-bottom:8px"><label id="vn_price_lbl">현재가 ($) <span class="hint">보유수량 × 현재가 = 평가금</span></label>
-          <div style="display:flex;gap:8px"><input id="vn_price" type="text" inputmode="decimal" placeholder="77.54" oninput="commaInput(this);onVnPrice()" style="flex:1">
-          <button class="fetchbtn" id="vn_autobtn" onclick="fetchQuote('vr')">🔄 자동</button></div></div>
-        <div class="fetchnote" id="vn_fetchnote" style="margin:0"></div>
-        <div class="field" style="margin:8px 0 0"><label id="vn_eval_lbl">현재 평가금 ($) <span class="hint">수동 수정 가능</span></label>
-          <input id="vn_eval" type="text" inputmode="decimal" placeholder="평가금" oninput="commaInput(this);renderVrNow()"></div>
-      </div>
 
       <!-- CURRENT V 히어로 + 포지션 바 -->
       <div class="vhero">
@@ -752,6 +744,16 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
         <button class="enterbtn" id="nv_enter" onclick="enterNextCycle()">이대로 다음 사이클 진입</button>
         <p class="note" style="margin-top:9px" id="nv_note">진입 시 적립금이 Pool에 자동 적립되고 V가 갱신됩니다. 기본은 사이클 길이(14일) 후. 짧게 가려면 가까운 영업일로 변경.</p>
       </div>
+      <!-- 현재가 입력 — 맨 아래 (판단을 먼저 보고, 값 고칠 때만 내려온다) -->
+      <div class="card" style="margin-bottom:13px">
+        <div class="field" style="margin-bottom:8px"><label id="vn_price_lbl">현재가 ($) <span class="hint">보유수량 × 현재가 = 평가금</span></label>
+          <div style="display:flex;gap:8px"><input id="vn_price" type="text" inputmode="decimal" placeholder="77.54" oninput="commaInput(this);onVnPrice()" style="flex:1">
+          <button class="fetchbtn" id="vn_autobtn" onclick="fetchQuote('vr')">🔄 자동</button></div></div>
+        <div class="fetchnote" id="vn_fetchnote" style="margin:0"></div>
+        <div class="field" style="margin:8px 0 0"><label id="vn_eval_lbl">현재 평가금 ($) <span class="hint">수동 수정 가능</span></label>
+          <input id="vn_eval" type="text" inputmode="decimal" placeholder="평가금" oninput="commaInput(this);renderVrNow()"></div>
+      </div>
+
     </div>
 
     <!-- ── 매수·매도표 ── -->
@@ -919,18 +921,12 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
     <div class="subnav">
       <button class="chip on" data-b="ma-now">현재</button>
       <button class="chip" data-b="ma-hist">신호이력</button>
+      <button class="chip" data-b="ma-anal">분석</button>
       <button class="chip" data-b="ma-guide">설명</button>
     </div>
 
     <!-- ── 현재: 신호 콕핏 ── -->
     <div class="block on" id="ma-now">
-      <!-- 현재가 입력 + 자동조회 -->
-      <div class="card" style="margin-bottom:13px">
-        <div class="field" style="margin:0"><label id="ma_price_lbl">현재가 ($) <span class="hint">신호는 종가(전체 이력) 기준으로 계산</span></label>
-          <div style="display:flex;gap:8px"><input id="ma_price" type="text" inputmode="decimal" placeholder="자동 조회" oninput="commaInput(this);onMaPrice()" style="flex:1">
-          <button class="fetchbtn" id="ma_autobtn" onclick="fetchMaQuote()">🔄 자동</button></div></div>
-        <div class="fetchnote" id="ma_fetchnote" style="margin:6px 0 0"></div>
-      </div>
 
       <!-- 신호 히어로 -->
       <div class="vhero" style="background:linear-gradient(165deg,#2a1c0e,var(--panel));border-color:#7a4611">
@@ -987,6 +983,14 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
         <div class="ar"><span class="ak">진입가 <span class="sub">마지막 진입 기록</span></span><span class="av" id="macct_entry">—</span></div>
         <div class="ar"><span class="ak">현재 국면 지속 <span class="sub">신호 전환 이후</span></span><span class="av buy" id="ma_regime">—</span></div>
       </div>
+      <!-- 현재가 입력 — 맨 아래 (판단을 먼저 보고, 값 고칠 때만 내려온다) -->
+      <div class="card" style="margin-bottom:13px">
+        <div class="field" style="margin:0"><label id="ma_price_lbl">현재가 ($) <span class="hint">신호는 종가(전체 이력) 기준으로 계산</span></label>
+          <div style="display:flex;gap:8px"><input id="ma_price" type="text" inputmode="decimal" placeholder="자동 조회" oninput="commaInput(this);onMaPrice()" style="flex:1">
+          <button class="fetchbtn" id="ma_autobtn" onclick="fetchMaQuote()">🔄 자동</button></div></div>
+        <div class="fetchnote" id="ma_fetchnote" style="margin:6px 0 0"></div>
+      </div>
+
     </div>
 
     <!-- ── 신호이력 ── -->
@@ -1006,6 +1010,29 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
         <p class="note" style="margin-top:8px">그날부터 오늘까지 <b>규칙대로</b> 진입·청산을 만들어 기록에 채웁니다(전일 신호 → 당일 종가 전량 체결, 백테와 같은 규약).<br>
           <b>기존 기록은 지워집니다.</b> 수수료 0.25%는 물지만 양도세·국채 이자는 넣지 않습니다.</p>
       </div>
+    </div>
+
+    <!-- ── 분석 ── -->
+    <div class="block" id="ma-anal">
+      <div class="dash" style="background:linear-gradient(160deg,var(--buy-bg),var(--panel));border-color:var(--buy-dim)">
+        <div class="rowline" style="border:none;padding:0 0 6px"><span class="tlabel">총 실현손익</span><span class="cnt" id="ana_cnt">0 매도</span></div>
+        <div class="tval"><span class="big mono" id="ana_realized" style="font-size:32px;color:var(--buy)">+$0.00</span></div>
+        <div class="note" id="ana_realized_krw">≈ ₩0</div>
+      </div>
+      <div class="card"><h3><span class="dot"></span>자산 현황</h3>
+        <div class="statgrid"><div class="stat"><div class="sl">총 원금</div><div class="sv sm mono" id="ana_principal">$0</div></div>
+          <div class="stat"><div class="sl">투자 중</div><div class="sv sm mono" id="ana_invested" style="color:var(--vio)">$0</div></div>
+          <div class="stat"><div class="sl">현금</div><div class="sv sm mono" id="ana_cash">$0</div></div></div>
+        <div class="progress"><div class="bar" id="ana_bar" style="width:0%"></div></div>
+        <div class="pscale"><span>투자 비중</span><span id="ana_ratio">0%</span></div></div>
+      <div class="card"><h3><span class="dot"></span>요약</h3>
+        <div class="rowline"><span class="k">총 자산 <span class="sub">투자중 + 현금</span></span><span class="val mono" id="ana_total">$0</span></div>
+        <div class="rowline"><span class="k">누적 수익률</span><span class="val mono" id="ana_ret">—</span></div>
+        <div class="rowline"><span class="k">총 매수금</span><span class="val mono" id="ana_totbuy">$0</span></div>
+        <div class="rowline"><span class="k">총 매도금</span><span class="val mono" id="ana_totsell">$0</span></div>
+        <div class="rowline"><span class="k">현재 평단</span><span class="val mono" id="ana_avg">—</span></div>
+        <div class="rowline"><span class="k">보유수량</span><span class="val mono" id="ana_qty">0주</span></div>
+        <div class="rowline" id="ana_extra_row"><span class="k" id="ana_extra_k">—</span><span class="val mono" id="ana_extra">—</span></div></div>
     </div>
 
     <!-- ── 설명 ── -->
@@ -1032,19 +1059,12 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
     <div class="subnav">
       <button class="chip on" data-b="ivs-now">현재</button>
       <button class="chip" data-b="ivs-hist">기록</button>
+      <button class="chip" data-b="ivs-anal">분석</button>
       <button class="chip" data-b="ivs-guide">설명</button>
     </div>
 
     <!-- ── 현재 ── -->
     <div class="block on" id="ivs-now">
-      <div class="card" style="margin-bottom:13px">
-        <div class="field" style="margin:0"><label>현재가 ($) <span class="hint">주문은 당일 종가(MOC) 기준</span></label>
-          <div style="display:flex;gap:8px"><input id="ivs_price" type="text" inputmode="decimal" placeholder="자동 조회" oninput="commaInput(this);onIvsPrice()" style="flex:1">
-          <button class="fetchbtn" id="ivs_autobtn" onclick="fetchIvsQuote()">🔄 자동</button></div></div>
-        <div class="field" id="ivs_price1row" style="margin:10px 0 0;display:none"><label>1배수 현재가 ($) <span class="hint" id="ivs_price1lbl">QQQ</span></label>
-          <input id="ivs_price1" type="text" inputmode="decimal" placeholder="자동 조회" oninput="commaInput(this);onIvsPrice1()"></div>
-        <div class="fetchnote" id="ivs_fetchnote" style="margin:6px 0 0"></div>
-      </div>
 
       <div class="vhero" style="background:linear-gradient(165deg,#2a0f20,var(--panel));border-color:#7a2453">
         <div class="vh-top">
@@ -1095,14 +1115,25 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
         <div class="ar"><span class="ak">현재 비중 <span class="sub">주식 ÷ 총자산</span></span><span class="av" id="ivs_wnow">—</span></div>
       </div>
 
-      <!-- 세금 -->
-      <div class="card acct">
+      <!-- 세금 — 숨김. 운영은 실계좌를 따라가는 원장이고 세금은 연말에 실제로 낸 금액을 출금으로 남긴다.
+           DOM은 renderIvsNow가 참조하므로 지우지 않고 감춘다. -->
+      <div class="card acct" style="display:none">
         <h3><span style="display:flex;align-items:center;gap:8px"><span class="dot"></span>올해 양도세</h3>
         <div class="ar"><span class="ak">실현손익 <span class="sub" id="ivs_tax_year">—</span></span><span class="av" id="ivs_pnl">$0</span></div>
         <div class="ar"><span class="ak">기본공제 잔여 <span class="sub">연 250만원</span></span><span class="av buy" id="ivs_ded">₩2,500,000</span></div>
         <div class="ar"><span class="ak">예상 세금 <span class="sub">22%</span></span><span class="av" id="ivs_tax">₩0</span></div>
         <p class="note" style="margin-top:8px" id="ivs_tax_note">공제 잔여가 남아 있으면 그만큼은 세금이 없습니다. 연말에 이익이 공제를 넘길 것 같으면 손실 종목 매도로 상계하는 것을 고려하세요.</p>
       </div>
+      <!-- 현재가 입력 — 맨 아래 (판단을 먼저 보고, 값 고칠 때만 내려온다) -->
+      <div class="card" style="margin-bottom:13px">
+        <div class="field" style="margin:0"><label>현재가 ($) <span class="hint">주문은 당일 종가(MOC) 기준</span></label>
+          <div style="display:flex;gap:8px"><input id="ivs_price" type="text" inputmode="decimal" placeholder="자동 조회" oninput="commaInput(this);onIvsPrice()" style="flex:1">
+          <button class="fetchbtn" id="ivs_autobtn" onclick="fetchIvsQuote()">🔄 자동</button></div></div>
+        <div class="field" id="ivs_price1row" style="margin:10px 0 0;display:none"><label>1배수 현재가 ($) <span class="hint" id="ivs_price1lbl">QQQ</span></label>
+          <input id="ivs_price1" type="text" inputmode="decimal" placeholder="자동 조회" oninput="commaInput(this);onIvsPrice1()"></div>
+        <div class="fetchnote" id="ivs_fetchnote" style="margin:6px 0 0"></div>
+      </div>
+
     </div>
 
     <!-- ── 기록 ── -->
@@ -1134,6 +1165,29 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
     </div>
 
     <!-- ── 설명 ── -->
+    <!-- ── 분석 ── -->
+    <div class="block" id="ivs-anal">
+      <div class="dash" style="background:linear-gradient(160deg,var(--buy-bg),var(--panel));border-color:var(--buy-dim)">
+        <div class="rowline" style="border:none;padding:0 0 6px"><span class="tlabel">총 실현손익</span><span class="cnt" id="anaI_cnt">0 매도</span></div>
+        <div class="tval"><span class="big mono" id="anaI_realized" style="font-size:32px;color:var(--buy)">+$0.00</span></div>
+        <div class="note" id="anaI_realized_krw">≈ ₩0</div>
+      </div>
+      <div class="card"><h3><span class="dot"></span>자산 현황</h3>
+        <div class="statgrid"><div class="stat"><div class="sl">총 원금</div><div class="sv sm mono" id="anaI_principal">$0</div></div>
+          <div class="stat"><div class="sl">투자 중</div><div class="sv sm mono" id="anaI_invested" style="color:var(--vio)">$0</div></div>
+          <div class="stat"><div class="sl">현금</div><div class="sv sm mono" id="anaI_cash">$0</div></div></div>
+        <div class="progress"><div class="bar" id="anaI_bar" style="width:0%"></div></div>
+        <div class="pscale"><span>투자 비중</span><span id="anaI_ratio">0%</span></div></div>
+      <div class="card"><h3><span class="dot"></span>요약</h3>
+        <div class="rowline"><span class="k">총 자산 <span class="sub">투자중 + 현금</span></span><span class="val mono" id="anaI_total">$0</span></div>
+        <div class="rowline"><span class="k">누적 수익률</span><span class="val mono" id="anaI_ret">—</span></div>
+        <div class="rowline"><span class="k">총 매수금</span><span class="val mono" id="anaI_totbuy">$0</span></div>
+        <div class="rowline"><span class="k">총 매도금</span><span class="val mono" id="anaI_totsell">$0</span></div>
+        <div class="rowline"><span class="k">현재 평단</span><span class="val mono" id="anaI_avg">—</span></div>
+        <div class="rowline"><span class="k">보유수량</span><span class="val mono" id="anaI_qty">0주</span></div>
+        <div class="rowline" id="anaI_extra_row"><span class="k" id="anaI_extra_k">—</span><span class="val mono" id="anaI_extra">—</span></div></div>
+    </div>
+
     <div class="block" id="ivs-guide">
       <div class="card"><h3><span class="dot"></span>한 줄 요약</h3><p class="lead">변동성이 <b>클수록 비중을 제곱으로 줄이고</b>, 작을수록 늘립니다. 남은 돈은 단기국채. 목표와 현재가 <b>밴드보다 벌어졌을 때만</b> 손댑니다 — 연 4~8회.</p></div>
       <div class="card"><h3><span class="dot"></span>규칙</h3>
@@ -1372,7 +1426,7 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
   <footer>
     <strong>JK 퀀트</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v2.79</b> · 2026-08-26</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v2.80</b> · 2026-08-26</div>
   </footer>
 </div>
 
@@ -2076,6 +2130,10 @@ function renderOrder(){
   const pct=starPct(st.ticker,st.div,c.T,st.target);
   const star=c.avg>0?c.avg*(1+pct/100):close;
   const buyPt=star-0.01;
+  if($('o_t')){ $('o_t').textContent=`${fmtT(c.T)} / ${st.div}`;
+    const half=c.T<st.div/2;
+    $('o_tsub').textContent = c.reverseActive?'· 리버스' : (half?'· 전반전':'· 후반전'); }
+  if($('o_bal')) $('o_bal').textContent=wn(c.bal);
   $('o_buy1').textContent=B1.spent?`소진 (T>${st.div-1})`:wn(buy1);
   $('o_star').textContent=c.avg>0?`${pct.toFixed(2)}% / ${wn(star)}`:'평단 없음(첫 매수)';
   if($('o_avg')) $('o_avg').textContent = c.avg>0 ? `${wn(c.avg)} · ${c.qty}주` : '—';
@@ -3344,7 +3402,7 @@ async function loadMaData(force){
   const st=curStrat().settings, note=$('ma_fetchnote');
   if(krwNoAuto(st)){ if(note){note.className='fetchnote err';note.textContent='ⓘ 원화 종목은 설정에서 종목코드(6자리) 입력 시 자동 시세가 됩니다.';} return; }
   const sym=String(st.ticker||'SOXL').toUpperCase();
-  if(!force && maQuoteData && String(maQuoteData.symbol||'').toUpperCase()===sym){ renderMaNow(); renderMaHist(); return; }
+  if(!force && maQuoteData && String(maQuoteData.symbol||'').toUpperCase()===sym){ renderMaNow(); renderMaHist(); renderMaAnal(); return; }
   if(note){note.className='fetchnote load';note.textContent='종가 이력 불러오는 중…';}
   const q=await fetchDaily(sym);
   if(S.activeTab!=='ma') return;   // await 사이 탭 전환 가드
@@ -3354,10 +3412,10 @@ async function loadMaData(force){
     const live=maQuoteData.price;
     if($('ma_price')) $('ma_price').value = nfix(live,2);
     if(note){note.className='fetchnote ok';note.textContent=`✓ ${q.symbol} ${q.last.date} 종가 ${px(q.last.close)} · ${q.days.length}일 이력`;}
-    renderMaNow(); renderMaHist();
+    renderMaNow(); renderMaHist(); renderMaAnal();
   }else if(note){ note.className='fetchnote err'; note.textContent='⚠ 불러오기 실패 — 잠시 후 다시 시도하세요.'; }
 }
-function onMaPrice(){ const p=inputNum('ma_price')||0; if(maQuoteData && p>0) maQuoteData.price=p; renderMaNow(); }
+function onMaPrice(){ const p=inputNum('ma_price')||0; if(maQuoteData && p>0) maQuoteData.price=p; renderMaNow(); renderMaAnal(); }
 
 function renderMaNow(){
   const c=computeMa(), st=c.st;
@@ -3572,9 +3630,83 @@ function saveMaEdit(){
 }
 function delMaFromEdit(){ if(editMaIdx<0){closeEditMa();return;} const i=editMaIdx; closeEditMa(); delMa(i); }
 
+/* ── 로테이션 분석 (무매 분석과 같은 구성) ──
+   기록은 {type:'in'|'out'}뿐이라 진입가·청산가를 짝지어 실현손익을 낸다. */
+function renderMaAnal(){
+  if(!$('ana_realized')) return;
+  const c=computeMa(), st=c.st, h=curStrat().hist||[];
+  const price=c.ready?(c.price||c.lastClose):(inputNum('ma_price')||0);
+  let qty=0, avg=0, realized=0, totbuy=0, totsell=0, nOut=0, nWin=0;
+  h.forEach(x=>{
+    const q=+x.qty||0, pr=+x.price||0;
+    if(x.type==='in'){ const nq=qty+q; avg=nq>0?(avg*qty+pr*q)/nq:pr; qty=nq; totbuy+=pr*q; }
+    else if(x.type==='out'){ const sq=q>0?Math.min(q,qty):qty;
+      const pnl=(pr-avg)*sq; realized+=pnl; totsell+=pr*sq; qty-=sq; nOut++; if(pnl>0)nWin++;
+      if(qty<=1e-9){qty=0;avg=0;} }
+  });
+  const principal=+st.principal||0;
+  const invested=price>0?price*qty:0;
+  const cash=Math.max(0, principal+realized-avg*qty);
+  const total=invested+cash;
+  const ratio=total>0?invested/total*100:0;
+  $('ana_cnt').textContent=`${nOut} 청산${nOut?` · 승 ${nWin}`:''}`;
+  $('ana_realized').textContent=(realized>=0?'+':'')+wn(realized);
+  $('ana_realized').style.color=realized>=0?'var(--buy)':'var(--sell)';
+  $('ana_realized_krw').textContent=(st.cur==='krw')?'':'≈ '+(realized>=0?'+':'')+won(realized);
+  $('ana_principal').textContent=wn(principal);
+  $('ana_invested').textContent=wn(invested);
+  $('ana_cash').textContent=wn(cash);
+  $('ana_bar').style.width=Math.min(100,ratio)+'%';
+  $('ana_ratio').textContent=ratio.toFixed(0)+'%';
+  $('ana_total').textContent=wn(total);
+  $('ana_ret').textContent=principal>0?((total/principal-1)*100>=0?'+':'')+((total/principal-1)*100).toFixed(2)+'%':'—';
+  $('ana_ret').style.color=total>=principal?'var(--buy)':'var(--sell)';
+  $('ana_totbuy').textContent=wn(totbuy);
+  $('ana_totsell').textContent=wn(totsell);
+  $('ana_avg').textContent=qty>0?wn(avg):'—';
+  $('ana_qty').textContent=nfix(qty,0)+'주';
+  $('ana_extra_k').textContent='승률';
+  $('ana_extra').textContent=nOut?`${(nWin/nOut*100).toFixed(0)}% (${nWin}/${nOut})`:'—';
+}
+/* ── 섀넌 분석 (무매 분석과 같은 구성) ── */
+function renderIvsAnal(){
+  if(!$('anaI_realized')) return;
+  const c=computeIvs(), st=c.st, h=curStrat().hist||[];
+  const price=(c.ready&&c.price>0)?c.price:(inputNum('ivs_price')||0);
+  let totbuy=0, totsell=0, nT=0;
+  h.forEach(x=>{ const q=+x.qty||0, pr=+x.price||0;
+    const amt=(x.amt!=null?+x.amt:q*pr);
+    if(x.type==='buy'){ totbuy+=amt; nT++; } else if(x.type==='sell'){ totsell+=amt; nT++; } });
+  const principal=(+st.principal||0)+(c.added||0)-(c.withdrawn||0);
+  let invested=price>0?price*c.qty:0;
+  if(c.X1){ const p1=(ivsQuote1&&(ivsQuote1.price>0?ivsQuote1.price:(ivsQuote1.last&&ivsQuote1.last.close)))||c.avg1||0;
+    invested+=p1*(c.qty1||0); }
+  const cash=Math.max(0,c.cash||0), total=invested+cash;
+  const ratio=total>0?invested/total*100:0;
+  const rz=c.realized||0;
+  $('anaI_cnt').textContent=`${nT} 리밸런싱`;
+  $('anaI_realized').textContent=(rz>=0?'+':'')+wn(rz);
+  $('anaI_realized').style.color=rz>=0?'var(--buy)':'var(--sell)';
+  $('anaI_realized_krw').textContent=(st.cur==='krw')?'':'≈ '+(rz>=0?'+':'')+won(rz);
+  $('anaI_principal').textContent=wn(principal);
+  $('anaI_invested').textContent=wn(invested);
+  $('anaI_cash').textContent=wn(cash);
+  $('anaI_bar').style.width=Math.min(100,ratio)+'%';
+  $('anaI_ratio').textContent=ratio.toFixed(0)+'%';
+  $('anaI_total').textContent=wn(total);
+  const rp=principal>0?(total/principal-1)*100:0;
+  $('anaI_ret').textContent=principal>0?((rp>=0?'+':'')+rp.toFixed(2)+'%'):'—';
+  $('anaI_ret').style.color=rp>=0?'var(--buy)':'var(--sell)';
+  $('anaI_totbuy').textContent=wn(totbuy);
+  $('anaI_totsell').textContent=wn(totsell);
+  $('anaI_avg').textContent=c.qty>0?wn(c.avg):'—';
+  $('anaI_qty').textContent=nfix(c.qty,0)+'주';
+  $('anaI_extra_k').innerHTML= c.X1 ? `짝(1배) 보유 <span class="sub">${c.sym1}</span>` : '목표 비중';
+  $('anaI_extra').textContent= c.X1 ? `${nfix(c.qty1||0,0)}주` : (c.ready?`${(c.w*100).toFixed(1)}%`:'—');
+}
 function refreshMa(){
   paperAuto();   // 모의 세션이면 오늘까지 자동으로 굴린다
-  renderMaNow(); renderMaHist(); renderStatusline();
+  renderMaNow(); renderMaHist(); renderMaAnal(); renderStatusline();
   if(S.activeTab==='ma'){ try{ if(!krwNoAuto(curStrat().settings)) loadMaData(); }catch(e){console.error(e)} }
 }
 
@@ -3636,7 +3768,7 @@ async function loadIvsData(force){
   // 짝=1배수면 1배 시세까지 갖춰져야 캐시 적중으로 볼 수 있다 — 아니면 조기 반환이 1배 조회를 건너뛴다
   const needX1=(st.park||'bill')==='x1', x1sym=ivsX1Of(sym);
   const haveX1=!needX1 || (ivsQuote1 && String(ivsQuote1.symbol||'').toUpperCase()===x1sym);
-  if(!force && ivsQuoteData && String(ivsQuoteData.symbol||'').toUpperCase()===sym && haveX1){ renderIvsNow(); return; }
+  if(!force && ivsQuoteData && String(ivsQuoteData.symbol||'').toUpperCase()===sym && haveX1){ renderIvsNow(); renderIvsAnal(); return; }
   if(note){note.className='fetchnote load';note.textContent='종가 이력 불러오는 중…';}
   const q=await fetchDaily(sym);
   if(S.activeTab!=='ivs') return;   // await 사이 탭 전환 가드
@@ -3658,7 +3790,7 @@ async function loadIvsData(force){
       if($('ivs_price1')&&ivsQuote1) $('ivs_price1').value=nfix(ivsQuote1.price,2);
     } else ivsQuote1=null;
     if(note){note.className='fetchnote ok';note.textContent=`✓ ${q.symbol} ${q.last.date} 종가 ${px(q.last.close)} · ${q.days.length}일 이력${extra}`;}
-    renderIvsNow();
+    renderIvsNow(); renderIvsAnal();
   }else if(note){ note.className='fetchnote err'; note.textContent='⚠ 불러오기 실패 — 잠시 후 다시 시도하세요.'; }
 }
 function fetchIvsQuote(){ loadIvsData(true); }
@@ -4022,7 +4154,7 @@ function ivsCash(kind){
 }
 function refreshIvs(){
   paperAuto();   // 모의 세션이면 오늘까지 자동으로 굴린다
-  renderIvsNow(); renderIvsHist(); renderStatusline();
+  renderIvsNow(); renderIvsHist(); renderIvsAnal(); renderStatusline();
   // 설정에서 종목을 바꾸면 그 종목 시세를 받아와야 한다 — 없으면 computeIvs가 ready:false라 '대기'에서 멈춘다
   if(S.activeTab==='ivs'){ try{ loadIvsData(); }catch(e){console.error(e)} }
 }
@@ -5783,9 +5915,11 @@ function renderOrderInline(){
       // 평단 있을 땐 종가 입력 숨김 (별지점·평단 기반으로 충분). 자동조회만 작게 제공.
       h+=`<input id="o_close" type="hidden"><div class="fetchnote" id="o_fetchnote"></div>`;
     }
-    h+=`<div class="rowline"><span class="k">1회 매수금</span><span class="val mono" id="o_buy1">—</span></div>
+    h+=`<div class="rowline"><span class="k">T값 <span class="sub" id="o_tsub"></span></span><span class="val mono" id="o_t">—</span></div>
+        <div class="rowline"><span class="k">잔금</span><span class="val mono" id="o_bal" style="color:var(--vio)">—</span></div>
+        <div class="rowline"><span class="k">1회 매수금</span><span class="val mono" id="o_buy1">—</span></div>
         <div class="rowline"><span class="k">별% / 별지점</span><span class="val mono" id="o_star">—</span></div>
-        <div class="rowline"><span class="k">평단가</span><span class="val mono" id="o_avg">—</span></div>`;
+        <div class="rowline"><span class="k">평단가 <span class="sub">· 보유수량</span></span><span class="val mono" id="o_avg">—</span></div>`;
     // LOC 매수 상한(×큰수)은 '처음매수' 주문에만 쓰이는 값 → 첫 매수·리버스일 때만 표시
     if(needClose){
       h+=`<div class="rowline"><span class="k">LOC 매수 상한 (×큰수)</span><span class="val mono" id="o_limit" style="color:var(--gold)">—</span></div>`;
