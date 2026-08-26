@@ -443,7 +443,7 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
 </div>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v2.73</span></h1></div>
+    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v2.74</span></h1></div>
     <div style="display:flex;align-items:center;gap:8px">
       <a class="btbtn" href="/backtest">📊<span class="bt-txt"> 백테스트</span></a>
       <button class="gear" onclick="openSettings()">⚙️</button>
@@ -674,7 +674,7 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
       <!-- CURRENT V 히어로 + 포지션 바 -->
       <div class="vhero">
         <div class="vh-top">
-          <span class="vh-kick">CURRENT V · <span class="vh-cyc" id="vh_cyc">0주차</span> <span id="vh_dates" style="color:var(--faint);font-weight:500"></span></span>
+          <span class="vh-kick">CURRENT V · <span class="vh-cyc" id="vh_cyc">0주차</span> <span id="vh_dates" style="color:var(--faint);font-weight:500"></span> <span id="vh_dday" style="font-weight:700"></span></span>
           <span class="bandpill wait" id="vh_pill">대기</span>
         </div>
         <div class="vh-big" id="vh_v">$0.00</div>
@@ -872,7 +872,7 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
           <li><b>현재 탭</b> 현재가/평가금 입력 → 매도·매수·대기 판단</li>
           <li><b>매수·매도표</b> 20차수 예약을 첫날 걸고 2주 방치</li>
           <li><b>체결 기록</b> 실제 체결분을 ＋버튼으로 기록</li>
-          <li><b>다음 V</b> 2주 후 "이대로 다음 사이클 진입" → V갱신·적립/인출 자동기록</li></ol></div>
+          <li><b>다음 V</b> 2주 후 "다음 사이클 진입" → V갱신·적립/인출 자동기록. 진입일은 상단 <b>D-day</b>로 알려줍니다</li></ol></div>
       <div class="card"><h3><span class="dot"></span>🟢 적립식 — 매달 넣으며 불리기</h3>
         <p class="note" style="margin-top:0">자산 형성기. 매 사이클 새 현금을 넣어 하락장을 가장 공격적으로 매수(Pool 75%).</p>
         <div class="formula"><span class="lbl">예시</span>V 10,000 · Pool 2,000 · G10 · 적립 100<br>다음 V = 10,000 + 200 + 100 = <b>10,300</b> · Pool 2,100</div>
@@ -1352,7 +1352,7 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
   <footer>
     <strong>JK 퀀트</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v2.73</b> · 2026-08-26</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v2.74</b> · 2026-08-26</div>
   </footer>
 </div>
 
@@ -2608,11 +2608,33 @@ function computeVr(){
           netInvested,recov,curCyc,cycStartPool,cycTrade,cycTradeNet,cycDiv,hist};
 }
 
-/* 사이클 날짜 라벨 (시작일 + 14일) */
+const CYC_DAYS=14;   // 한 사이클 = 2주(달력 14일 ≒ 거래일 10일, 백테 INTERVAL과 같음)
+/* 이번 사이클이 언제 시작됐나.
+   설정 cycStart가 우선이고, 없으면 이력에서 되찾는다 —
+   첫 매수만 하고 아직 한 번도 '다음 사이클 진입'을 안 누른 계좌도 D-day가 나와야 한다. */
+function vrCycStart(c){
+  if(c.st.cycStart) return c.st.cycStart;
+  const h=c.hist||[];
+  for(let i=h.length-1;i>=0;i--){ const x=h[i];
+    if(x.auto && (x.type==='add'||x.type==='wd')) return x.date; }   // 마지막 진입이 남긴 자동 적립
+  const f=h.find(x=>x.type==='buy'); return f?f.date:null;           // 없으면 첫 매수일
+}
+/* 다음 사이클 진입일까지 며칠 남았나 (주말이면 다음 영업일로 미룬다) */
+function vrDue(c){
+  const s=vrCycStart(c); if(!s) return null;
+  const due=new Date(s+'T00:00:00'); due.setDate(due.getDate()+CYC_DAYS);
+  while(due.getDay()===0||due.getDay()===6) due.setDate(due.getDate()+1);
+  const t=new Date(); t.setHours(0,0,0,0);
+  const d=Math.round((due-t)/864e5);
+  return {start:s, dueStr:due.toISOString().slice(0,10), d,
+    label: d>0?`D-${d}`:(d===0?'오늘 진입일':`D+${-d}`),
+    state: d>0?'wait':(d===0?'due':'late')};
+}
+/* 사이클 날짜 라벨 (시작일 ~ 진입 전날) */
 function cycDates(c){
-  const base=c.st.cycStart? new Date(c.st.cycStart+'T00:00:00') : null;
-  if(!base) return '';
-  const end=new Date(base); end.setDate(end.getDate()+11); // 영업일 근사 2주
+  const s=vrCycStart(c); if(!s) return '';
+  const base=new Date(s+'T00:00:00');
+  const end=new Date(base); end.setDate(end.getDate()+CYC_DAYS-1);
   const f=d=>`${d.getMonth()+1}/${d.getDate()}`;
   return `${f(base)}~${f(end)}`;
 }
@@ -2651,6 +2673,10 @@ function renderVrNow(){
   // 히어로
   $('vh_cyc').textContent=c.curCyc+'주차';
   $('vh_dates').textContent=cycDates(c);
+  { const du=vrDue(c), e=$('vh_dday');
+    if(e){ if(!du||c.V<=0){ e.textContent=''; }
+      else { e.textContent='· '+du.label;
+        e.style.color = du.state==='wait'?'var(--faint)':(du.state==='due'?'var(--buy)':'var(--gold)'); } } }
   $('vh_v').textContent=wn(c.V);
   $('vh_band').textContent=`밴드 ${wn(c.lo)} ~ ${wn(c.up)}`;
 
@@ -2703,6 +2729,12 @@ function renderVrNow(){
     pillCls='in';pillTxt='밴드 안';
     verdict=`<div class="oitem" style="background:rgba(245,196,81,.1);justify-content:center"><span class="nm" style="flex:none;color:var(--gold)">⚪ 대기 — 밴드 안 (거래 없는 사이클)</span></div>`;
   }
+  // 사이클 안내 — "2주 지난 걸 어떻게 아나"에 답하는 줄. 판단 밑에 항상 붙인다.
+  if(c.V>0){ const du=vrDue(c);
+    if(du){ const md=x=>{const t=x.split('-');return `${+t[1]}/${+t[2]}`;};
+      verdict += du.state==='wait'
+        ? `<p class="note" style="margin-top:10px">📅 ${c.curCyc}주차 진행 중 · 다음 사이클 진입 <b>${md(du.dueStr)}</b> (${du.d}일 뒤). 그때까지는 밴드를 벗어날 때만 매매합니다.</p>`
+        : `<p class="note" style="margin-top:10px;color:var(--buy)">📅 <b>${du.state==='due'?'오늘이 진입일입니다':`진입일이 ${-du.d}일 지났습니다`}</b> (${md(du.dueStr)}) — 아래 <b>다음 V 미리보기</b>에서 "다음 사이클 진입"을 누르세요.</p>`; } }
   const pill=$('vh_pill'); pill.className='bandpill '+pillCls; pill.textContent=pillTxt;
   $('vh_verdict').innerHTML=verdict;
 
@@ -2872,12 +2904,19 @@ function renderVrNext(){
   $('nv_pool').textContent=wn(r.nextPool);
   $('nv_min').textContent=wn(r.nextV*(1-st.band/100));
   $('nv_max').textContent=wn(r.nextV*(1+st.band/100));
-  // 기본 진입일 = 사이클 시작 +14일
+  // 기본 진입일 = 사이클 시작 +14일 (주말이면 다음 영업일)
+  const du=vrDue(c);
   if($('nv_date') && !$('nv_date').value){
-    const base=st.cycStart? new Date(st.cycStart+'T00:00:00'):new Date();
-    base.setDate(base.getDate()+14);
-    $('nv_date').value=base.toISOString().slice(0,10);
+    if(du) $('nv_date').value=du.dueStr;
+    else { const t=new Date(); t.setDate(t.getDate()+CYC_DAYS); $('nv_date').value=t.toISOString().slice(0,10); }
   }
+  // 진입일이 됐으면 버튼으로 알려준다 — 날짜를 세고 있지 않아도 눈에 띄게
+  { const btn=$('nv_enter');
+    if(btn){ const on = du && du.state!=='wait';
+      btn.textContent = on ? (du.state==='due'?'오늘이 진입일 — 다음 사이클 진입':`${-du.d}일 지남 — 다음 사이클 진입`)
+                           : '이대로 다음 사이클 진입';
+      btn.style.opacity = on?'1':'';
+      btn.style.boxShadow = on?'0 0 0 2px var(--buy-dim)':''; } }
 }
 
 /* 다음 사이클 진입: 사이클 +1, 적립 자동 기록, 시작일 갱신, 사이클히스토리 적재 */
@@ -4950,8 +4989,10 @@ function vrFirstBuy(){
   const h=curStrat().hist;
   h.push({type:'buy',date,price:+pr,qty:+qty,ts:Date.now()});
   if(left>0) h.push({type:'add',date,amt:+left,ts:Date.now()+1});
+  st.cycStart=date;                       // 0주차 시작일 — 여기서부터 2주 뒤가 다음 진입일
   sortHist(h); save(); refreshVr(); pushRemote&&pushRemote();
-  alert('첫 매수 기록됨 ✓');
+  const du=vrDue(computeVr());
+  alert(`첫 매수 기록됨 ✓\n\n0주차 시작 ${date}\n다음 사이클 진입 ${du?du.dueStr:'2주 뒤'}\n그때까지는 밴드를 벗어날 때만 매매합니다.`);
 }
 function addVr(){ if(!$('vh_date'))return;
   const date=$('vh_date').value; let rec;
