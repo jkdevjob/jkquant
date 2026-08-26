@@ -443,7 +443,7 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
 </div>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v2.74</span></h1></div>
+    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v2.75</span></h1></div>
     <div style="display:flex;align-items:center;gap:8px">
       <a class="btbtn" href="/backtest">📊<span class="bt-txt"> 백테스트</span></a>
       <button class="gear" onclick="openSettings()">⚙️</button>
@@ -737,7 +737,7 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
         <label class="hint" style="color:var(--dim);font-size:12px;font-weight:600">새 사이클 시작일</label>
         <input id="nv_date" type="date" class="dateinput">
         <button class="enterbtn" id="nv_enter" onclick="enterNextCycle()">이대로 다음 사이클 진입</button>
-        <p class="note" style="margin-top:9px">진입 시 적립금이 Pool에 자동 적립되고 V가 갱신됩니다. 기본은 사이클 길이(14일) 후. 짧게 가려면 가까운 영업일로 변경.</p>
+        <p class="note" style="margin-top:9px" id="nv_note">진입 시 적립금이 Pool에 자동 적립되고 V가 갱신됩니다. 기본은 사이클 길이(14일) 후. 짧게 가려면 가까운 영업일로 변경.</p>
       </div>
     </div>
 
@@ -872,7 +872,8 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
           <li><b>현재 탭</b> 현재가/평가금 입력 → 매도·매수·대기 판단</li>
           <li><b>매수·매도표</b> 20차수 예약을 첫날 걸고 2주 방치</li>
           <li><b>체결 기록</b> 실제 체결분을 ＋버튼으로 기록</li>
-          <li><b>다음 V</b> 2주 후 "다음 사이클 진입" → V갱신·적립/인출 자동기록. 진입일은 상단 <b>D-day</b>로 알려줍니다</li></ol></div>
+          <li><b>다음 V</b> 2주 후 "다음 사이클 진입" → V갱신·적립/인출 자동기록. 진입일은 상단 <b>D-day</b>로 알려줍니다</li></ol>
+        <p class="note">설정(⚙️)에서 <b>사이클 진입 → 자동</b>을 고르면 5번이 없어집니다. 진입일이 지난 사이클을 앱이 알아서 따라잡아 V를 갱신하고 적립금을 기록합니다. <b>매매는 어떤 경우에도 자동으로 하지 않습니다</b> — 그건 실제 계좌에서 일어나는 일이라 체결된 것만 기록하셔야 합니다.</p></div>
       <div class="card"><h3><span class="dot"></span>🟢 적립식 — 매달 넣으며 불리기</h3>
         <p class="note" style="margin-top:0">자산 형성기. 매 사이클 새 현금을 넣어 하락장을 가장 공격적으로 매수(Pool 75%).</p>
         <div class="formula"><span class="lbl">예시</span>V 10,000 · Pool 2,000 · G10 · 적립 100<br>다음 V = 10,000 + 200 + 100 = <b>10,300</b> · Pool 2,100</div>
@@ -1352,7 +1353,7 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
   <footer>
     <strong>JK 퀀트</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v2.74</b> · 2026-08-26</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v2.75</b> · 2026-08-26</div>
   </footer>
 </div>
 
@@ -1400,6 +1401,7 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
     <div class="seclabel">통화 <span class="hint" style="color:var(--faint);font-weight:500">국내상장 ETF는 원화</span></div><div class="seg" id="set_vcur"><button data-v="usd">달러 ($)</button><button data-v="krw">원화 (₩)</button></div>
     <div class="seclabel">운용 모드</div><div class="seg" id="set_vmode"><button data-v="0.75">적립식</button><button data-v="0.5">거치식</button><button data-v="0.25">인출식</button></div>
     <div class="seclabel">V 갱신 공식</div><div class="seg" id="set_vformula"><button data-v="basic">기본공식</button><button data-v="skill">실력공식</button></div>
+    <div class="seclabel">사이클 진입 <span class="hint" style="color:var(--faint);font-weight:500">V 갱신·적립을 누가 하나</span></div><div class="seg" id="set_vauto"><button data-v="0">직접 확인</button><button data-v="1">자동 진입</button></div>
     <div class="seclabel">파라미터</div>
     <div class="field"><label>G (Gradient) <span class="hint">1~50, 클수록 보수</span></label><input id="set_g" type="number" inputmode="numeric" value="10"></div>
     <div class="field"><label id="set_initamt_lbl">초기 투자금 ($) <span class="hint">첫 매수에 넣을 돈</span></label><input id="set_initamt" type="text" inputmode="decimal" value="10000" oninput="commaInput(this)"></div>
@@ -1726,7 +1728,7 @@ function forceV40(){
   }catch(e){}
 }
 function toggleRowsField(){const on=$('set_rows_on')&&$('set_rows_on').checked;const f=$('rows_fields');if(f){f.style.opacity=on?'1':'0.4';f.style.pointerEvents=on?'auto':'none';}}
-function defVrSettings(){return{ticker:'TQQQ',mode:0.75,formula:'basic',g:10,initAmt:10000,add:100,band:15,startv:0,startpool:0,cur:'usd'}}
+function defVrSettings(){return{ticker:'TQQQ',mode:0.75,formula:'basic',g:10,initAmt:10000,add:100,band:15,startv:0,startpool:0,autoCyc:false,cur:'usd'}}
 function uid(){return 's'+Date.now()+Math.floor(Math.random()*9999)}
 function newInfSession(name){return{id:uid(),name:name||'세션 1',settings:defInfSettings(),hist:[]}}
 function newVrSession(name){return{id:uid(),name:name||'세션 1',settings:defVrSettings(),hist:[]}}
@@ -2730,10 +2732,12 @@ function renderVrNow(){
     verdict=`<div class="oitem" style="background:rgba(245,196,81,.1);justify-content:center"><span class="nm" style="flex:none;color:var(--gold)">⚪ 대기 — 밴드 안 (거래 없는 사이클)</span></div>`;
   }
   // 사이클 안내 — "2주 지난 걸 어떻게 아나"에 답하는 줄. 판단 밑에 항상 붙인다.
-  if(c.V>0){ const du=vrDue(c);
+  if(c.V>0){ const du=vrDue(c), auto=!!st.autoCyc;
+    if(vrAutoNote && curStrat().id===vrAutoNoteSid)
+      verdict = `<p class="note" style="margin:0 0 10px;color:var(--vio)">${vrAutoNote}</p>` + verdict;
     if(du){ const md=x=>{const t=x.split('-');return `${+t[1]}/${+t[2]}`;};
       verdict += du.state==='wait'
-        ? `<p class="note" style="margin-top:10px">📅 ${c.curCyc}주차 진행 중 · 다음 사이클 진입 <b>${md(du.dueStr)}</b> (${du.d}일 뒤). 그때까지는 밴드를 벗어날 때만 매매합니다.</p>`
+        ? `<p class="note" style="margin-top:10px">📅 ${c.curCyc}주차 진행 중 · 다음 사이클 ${auto?'<b>자동</b> 진입':'진입'} <b>${md(du.dueStr)}</b> (${du.d}일 뒤). 그때까지는 밴드를 벗어날 때만 매매합니다.</p>`
         : `<p class="note" style="margin-top:10px;color:var(--buy)">📅 <b>${du.state==='due'?'오늘이 진입일입니다':`진입일이 ${-du.d}일 지났습니다`}</b> (${md(du.dueStr)}) — 아래 <b>다음 V 미리보기</b>에서 "다음 사이클 진입"을 누르세요.</p>`; } }
   const pill=$('vh_pill'); pill.className='bandpill '+pillCls; pill.textContent=pillTxt;
   $('vh_verdict').innerHTML=verdict;
@@ -2911,6 +2915,10 @@ function renderVrNext(){
     else { const t=new Date(); t.setDate(t.getDate()+CYC_DAYS); $('nv_date').value=t.toISOString().slice(0,10); }
   }
   // 진입일이 됐으면 버튼으로 알려준다 — 날짜를 세고 있지 않아도 눈에 띄게
+  { const nt=$('nv_note');
+    if(nt) nt.innerHTML = st.autoCyc
+      ? '⚙️ <b>자동 진입</b> 켜짐 — 진입일이 지나면 앱을 열 때 V·적립이 알아서 갱신됩니다. 매매는 자동으로 하지 않습니다. 아래 버튼은 앞당겨 진입할 때만 쓰세요.'
+      : '진입 시 적립금이 Pool에 자동 적립되고 V가 갱신됩니다. 기본은 사이클 길이(14일) 후. 짧게 가려면 가까운 영업일로 변경.'; }
   { const btn=$('nv_enter');
     if(btn){ const on = du && du.state!=='wait';
       btn.textContent = on ? (du.state==='due'?'오늘이 진입일 — 다음 사이클 진입':`${-du.d}일 지남 — 다음 사이클 진입`)
@@ -4867,8 +4875,53 @@ function fgLabel(v){
 }
 
 /* refreshVr 갱신 */
+/* 자동 사이클 진입 — 진입일이 지난 사이클을 밀린 만큼 따라잡는다.
+   매매(매수·매도)는 절대 자동으로 하지 않는다. V 갱신 + 적립/인출 기록만 한다.
+   그 둘은 성격이 다르다: 매매는 실제 증권계좌에서 일어나 사용자가 기록하는 것이고,
+   V 갱신은 Pool·적립금만 있으면 되는 기계적 규칙이라 앱이 대신할 수 있다. */
+let _vrAutoBusy=false, vrAutoNote='', vrAutoNoteSid=null;
+function vrAutoAdvance(){
+  const sess=curStrat(); if(!sess||!sess.settings) return 0;
+  const st=sess.settings;
+  if(!st.autoCyc || _vrAutoBusy || S.activeTab!=='vr') return 0;
+  const q=(lastQuote.vr && String(lastQuote.vr.symbol||'').toUpperCase()===String(st.ticker||'').toUpperCase() && lastQuote.vr.days)?lastQuote.vr.days:null;
+  // 실력공식은 진입일 종가가 있어야 정확하다 — 시세 오기 전에는 미룬다 (기본공식은 종가와 무관)
+  if(st.formula==='skill' && !q) return 0;
+  const closes={}, dts=[];
+  if(q) q.forEach(d=>{ closes[d.date]=d.close; dts.push(d.date); });
+  const closeOn=d=>{ if(closes[d]>0) return closes[d];
+    for(let i=dts.length-1;i>=0;i--) if(dts[i]<=d) return closes[dts[i]];
+    return 0; };
+  _vrAutoBusy=true; let n=0, lastV=0, lastCyc=0;
+  try{
+    for(let g=0; g<80; g++){
+      const c=computeVr();
+      if(c.V<=0) break;                                  // 첫 매수 전이면 할 일 없음
+      const du=vrDue(c); if(!du || du.d>0) break;         // 아직 진입일 전
+      const px=closeOn(du.dueStr) || vrLastPrice(c);
+      const ev=px>0 ? px*c.qty : c.V;
+      const r=computeNextV(c,ev);
+      const isAccum=st.mode===0.75, isWd=st.mode===0.25;
+      const add=(isAccum||isWd)?(st.add||0):0;
+      if(!st.cycLog) st.cycLog=[];
+      st.cycLog.push({cyc:c.curCyc, dates:cycDates(c)||'-', V:+c.V.toFixed(2),
+        lo:+c.lo.toFixed(2), up:+c.up.toFixed(2), trade:+c.cycTrade.toFixed(2),
+        startPool:+c.cycStartPool.toFixed(2), E:ev>0?+ev.toFixed(2):null, close:px>0?+px.toFixed(4):null});
+      const newCyc=c.curCyc+1;
+      if(add>0) sess.hist.push({type:(r.sign<0?'wd':'add'), date:du.dueStr, amt:add, cyc:newCyc, ts:Date.now()+g, auto:true});
+      st.startv=+r.nextV.toFixed(4); st.startCyc=newCyc; st.cycStart=du.dueStr;
+      lastV=r.nextV; lastCyc=newCyc; n++;
+    }
+    if(n>0){ st.cycLog=st.cycLog.slice(-120); sortHist(sess.hist);
+      if($('nv_date')) $('nv_date').value='';   // 사이클이 넘어갔으니 진입일 칸의 옛 날짜를 비운다
+      save(); pushRemote&&pushRemote();
+      vrAutoNote=`🤖 사이클 ${n}회 자동 진입 → ${lastCyc}주차 · V ${wn(lastV)}`; vrAutoNoteSid=sess.id; }
+  } finally { _vrAutoBusy=false; }
+  return n;
+}
 function refreshVr(){
   updateCurLabels('vr');
+  vrAutoAdvance();
   renderVrNow(); renderVrTable();   // renderVrNow가 renderVrNext(다음 V)·밴드그래프도 호출
   renderVrHist(); renderVrAnal();
   renderStatusline();
@@ -5466,6 +5519,7 @@ function openSettings(){
     $('set_inf').style.display='none';$('set_vr').style.display='';
     const st=s.settings, sym=(st.cur||'usd')==='krw'?'₩':'$';
     $('set_vticker').value=st.ticker;segSet('set_vmode',String(st.mode));segSet('set_vformula',st.formula);segSet('set_vcur',st.cur||'usd');
+    segSet('set_vauto',st.autoCyc?'1':'0');
     $('set_g').value=st.g;$('set_add').value=nfix(st.add,0);$('set_band').value=st.band;$('set_startv').value=nfix(st.startv,0);$('set_startpool').value=nfix(st.startpool,0);
     $('set_initamt').value=nfix(st.initAmt!=null?st.initAmt:10000,0);
     $('set_add_lbl').textContent=`매 사이클 적립금 (${sym})`;
@@ -5510,7 +5564,7 @@ function syncShortMaUI(eng){
 }
 function setupSegs(){
   ['set_ticker','set_div','set_reverse','set_tgtdyn','set_vmode','set_vformula','set_cur','set_vcur','set_engine','set_shortma','set_lopct','set_maticker','set_mabuy','set_masell','set_mapark','set_dcaticker','set_dcafreq','set_dcamul','set_asapticker',
-   'set_ivsticker','set_ivss0','set_ivslook','set_ivsband','set_ivspark','set_ivsmode'].forEach(id=>{
+   'set_vauto','set_ivsticker','set_ivss0','set_ivslook','set_ivsband','set_ivspark','set_ivsmode'].forEach(id=>{
     const el=$(id);if(!el)return;
     el.querySelectorAll('button').forEach(b=>{
       b.onclick=()=>{el.querySelectorAll('button').forEach(x=>x.classList.remove('on'));b.classList.add('on');
@@ -5558,9 +5612,14 @@ function saveSettings(){
   }else if(S.activeTab==='asap'){
     s.settings={ticker:segGet('set_asapticker')||'SOXL',base:inputNum('set_asapbase')||10,mid:inputNum('set_asapmid')||50,deep:inputNum('set_asapdeep')||100,cur:'usd'};
   }else{
-    s.settings={ticker:$('set_vticker').value||'TQQQ',mode:+segGet('set_vmode')||0.75,
+    // 사이클 번호·시작일·사이클 기록은 설정창에서 입력하는 값이 아니라 진입 버튼이 쌓은 파생 상태다.
+    // settings를 통째로 갈아끼우면 설정을 한 번 저장할 때마다 주차가 0으로 돌아가고
+    // 사이클 기록 표가 비워졌다. (startv·startpool은 입력칸이 있어 그대로 다시 저장된다.)
+    const prev=s.settings||{}, keep={};
+    ['startCyc','cycStart','cycLog'].forEach(k=>{ if(prev[k]!==undefined) keep[k]=prev[k]; });
+    s.settings={...keep, ticker:$('set_vticker').value||'TQQQ',mode:+segGet('set_vmode')||0.75,
       formula:segGet('set_vformula')||'basic',g:inputNum('set_g')||10,add:inputNum('set_add')||100,
-      initAmt:Math.max(0,inputNum('set_initamt')||0),
+      initAmt:Math.max(0,inputNum('set_initamt')||0),autoCyc:segGet('set_vauto')==='1',
       band:inputNum('set_band')||15,startv:inputNum('set_startv')||0,startpool:inputNum('set_startpool')||0,cur:segGet('set_vcur')||'usd'};
   }
   save();closeSettings();refreshAll();pushRemote();
