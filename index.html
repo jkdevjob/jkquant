@@ -445,7 +445,7 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
 </div>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v2.86</span></h1></div>
+    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v2.87</span></h1></div>
     <div style="display:flex;align-items:center;gap:8px">
       <a class="btbtn" href="/backtest" title="백테스트">📊<span class="bt-txt"> 백테스트</span></a>
       <button class="btbtn" id="paperbtn" onclick="openPaper()" title="모의투자 성과" style="display:none;border-color:rgba(245,196,81,.45);color:var(--gold)">🧪<span class="bt-txt"> 모의 성과</span></button>
@@ -1482,7 +1482,7 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
   <footer>
     <strong>JK 퀀트</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v2.86</b> · 2026-08-26</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v2.87</b> · 2026-08-26</div>
   </footer>
 </div>
 
@@ -1642,7 +1642,7 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
     <input type="checkbox" id="sess_paper" style="width:16px;height:16px" onchange="document.getElementById('sess_simstart_wrap').style.display=this.checked?'':'none'"> <span><b style="color:var(--gold)">모의투자</b>로 만들기 <span style="color:var(--faint)">— 실제 매매 없이 연습용</span></span></label>
   <div id="sess_simstart_wrap" style="display:none">
     <div class="field"><label>모의 시작일 <span class="hint">이 날부터 오늘까지 자동으로 굴립니다</span></label><input id="sess_simstart" type="date"></div>
-    <p class="note" style="margin:-4px 0 10px">한 번만 정하면 끝입니다. 이후엔 탭을 열 때마다 오늘까지 알아서 채워집니다.</p>
+    <p class="note" style="margin:-4px 0 10px"><b>오늘</b>로 두면 지금부터 앞으로 굴러갑니다. 과거 성과를 바로 보고 싶으면 <b>지난 날짜</b>를 고르세요 — 그 날부터 오늘까지 한 번에 만들어집니다.<br>한 번만 정하면 끝이고, 이후엔 탭을 열 때마다 오늘까지 알아서 채워집니다.</p>
   </div>
   <div class="mbtns"><button class="close" onclick="closeSess()">닫기</button><button class="save" id="sess_ok" onclick="createSess()">만들기</button></div>
 </div></div>
@@ -2716,8 +2716,9 @@ function infSimForward(startFrom){
   const O=(Q && String(Q.symbol||'').toUpperCase()===sym && Q.ohlc && Q.ohlc.length) ? Q.ohlc : null;
   if(!O) return null;
   const hist=sess.hist||[];
-  const from = startFrom || st.simLast || (hist.length ? hist[hist.length-1].date : null);
+  let from = startFrom || st.simLast || (hist.length ? hist[hist.length-1].date : null);
   if(!from) return null;                                  // 시작일을 정해야 한다
+  from=_clampFrom(from, O[O.length-1].date);
   const today=new Date().toISOString().slice(0,10);
   const iAll=O.map(d=>d.date);
   const days=[];
@@ -4165,7 +4166,8 @@ function ivsReplay(){
 
   const P1={}; (D1||[]).forEach(d=>{ P1[d.date]=d.close; });
   const days=D.filter(d=>d.date>=from && (!X1 || P1[d.date]>0));
-  if(days.length<30){ alert('그 시작일부터의 거래일이 너무 적습니다.'); return false; }
+  // 시작일이 오늘이면 거래일이 하루뿐이다 — 그것도 정상(그날 첫 편입만 하고 앞으로 굴린다)
+  if(days.length<1){ alert('그 시작일부터의 거래일이 없습니다.'); return false; }
   const FIX=(st.mode||'iv')==='fix', s0=(st.s0||55)/100, N=st.look||40, band=(st.band||15)/100;
   // 전 구간 롤링 σ → 목표비중 (백테 _ivsWeights와 같은 계산)
   const all=D.map(d=>d.close), dt=D.map(d=>d.date), W={};
@@ -5301,6 +5303,9 @@ function vrStepCycle(sess, c, dateStr, close){
 let _paperBusy=false, paperNote='', paperNoteSid=null;
 function paperStart(sess){ if(!sess) return null;
   return sess.simStart || (sess.hist&&sess.hist.length?sess.hist[0].date:null); }
+/* 시작일이 마지막 종가보다 뒤면(예: '오늘'인데 오늘 종가가 아직 없음) 그 마지막 종가부터 시작한다.
+   안 그러면 '오늘 시작'으로 만든 세션이 아무것도 안 만들고 며칠씩 빈 채로 남는다. */
+function _clampFrom(from, lastDate){ return (from && lastDate && from>lastDate) ? lastDate : from; }
 /* confirm/alert를 잠시 막고 실행 — 기존 재생 함수를 조용히 재사용하기 위한 래퍼 */
 function _quiet(fn){ const c=window.confirm, a=window.alert;
   window.confirm=()=>true; window.alert=()=>{};
@@ -5312,6 +5317,7 @@ function _histLast(sess){ const h=sess.hist||[]; return h.length?h[h.length-1].d
 /* 섀넌·로테 — 시작일부터 통째로 재생성 (규칙이 시세만으로 결정되므로 결과가 같다) */
 function _paperRegen(sess, from, inputId, replayFn, days){
   const last=_lastTradingDay(days); if(!last) return null;
+  from=_clampFrom(from,last);
   // 로테·섀넌은 신호가 난 날에만 기록이 생겨 마지막 기록이 몇 달 전일 수 있다.
   // '어디까지 만들었나'는 기록 날짜가 아니라 simLast로 따로 들고 간다.
   if((sess.settings.simLast||'')>=last) return null;
@@ -5335,6 +5341,7 @@ function _paperDca(sess, from){
   if(!days||days.length<2) return null;
   const last=_lastTradingDay(days);
   if(!last || (st.simLast||'')>=last) return null;
+  from=_clampFrom(from,last);
   const cl=days.map(d=>d.close), n=cl.length, sma=new Array(n);
   { let s2=0; const buf=[]; for(let i=0;i<n;i++){ buf.push(cl[i]); s2+=cl[i];
       if(buf.length>DCA_N_AUTO) s2-=buf.shift(); sma[i]= buf.length===DCA_N_AUTO ? s2/DCA_N_AUTO : null; } }
@@ -5358,6 +5365,7 @@ function _paperAsap(sess, from){
   if(!days||days.length<2) return null;
   const last=_lastTradingDay(days);
   if(!last || (st.simLast||'')>=last) return null;
+  from=_clampFrom(from,last);
   const cl=days.map(d=>d.close), n=cl.length;
   const MA5=_asapMA(cl,5), MA20=_asapMA(cl,20), MA50=_asapMA(cl,50), MA200=_asapMA(cl,200), RSI=_asapRSI(cl);
   const base=+st.base||10, mid=+st.mid||50, deep=+st.deep||100;
@@ -5451,9 +5459,10 @@ function paperStat(tab, sess){
   const st=sess.settings||{};
   const base=Math.max(1,inflow);
   const from=h[0].date, to=(st.simLast&&st.simLast>h[h.length-1].date)?st.simLast:h[h.length-1].date;
-  const yrs=Math.max(0.05,(new Date(to)-new Date(from))/(365.25*864e5));
+  const spanDays=Math.max(1,Math.round((new Date(to)-new Date(from))/864e5));
+  const yrs=Math.max(0.05,(new Date(to)-new Date(from))/(365.25*864e5));   // 연환산 분모용 하한
   const nTrade=h.filter(x=>{const k=x.kind||x.type||'';return /매수|매도/.test(k)||k==='buy'||k==='sell'||k==='in'||k==='out';}).length;
-  return {tab, name:sess.name, sym, from, to, yrs, inflow:base, total,
+  return {tab, name:sess.name, sym, from, to, yrs, spanDays, inflow:base, total,
     ret:(total/base-1)*100, cagr:(Math.pow(Math.max(total,1)/base,1/yrs)-1)*100, nTrade, price};
 }
 function paperSummary(){
@@ -5522,14 +5531,19 @@ async function openPaper(){
     const cur=rows.map(r=>r.price>0).every(Boolean);
     let h=`<div class="htable-wrap"><table class="htable"><tr><th>전략 · 세션</th><th>기간</th><th>투입</th><th>평가</th><th>수익률</th><th>연</th></tr>`;
     rows.forEach(r=>{ const up=r.ret>=0, ok=r.price>0;
+      const days=r.spanDays||Math.round(r.yrs*365.25);
+      const per = days<45 ? `${days}일` : `${(days/365.25).toFixed(1)}년`;
+      // 한 달도 안 된 세션을 연환산하면 하루 등락이 수십 %로 부풀려진다 — 그 칸은 비운다
+      const long = days>=45;
+      const cagr = long ? `${up?'+':''}${r.cagr.toFixed(1)}%` : '—';
       // 시세를 못 받은 세션은 평가금이 없다 — 0%를 진짜 성과처럼 보여주면 안 된다
       h+=`<tr><td><b>${r.label}</b><span class="cw">${String(r.name).replace(/</g,'&lt;')} · ${r.sym}</span></td>
-        <td>${r.yrs.toFixed(1)}년<span class="cw">${r.nTrade}거래</span></td>
+        <td>${per}<span class="cw">${r.nTrade}거래</span></td>
         <td>${wn(r.inflow)}</td>`
         + (ok
           ? `<td>${wn(r.total)}</td>
              <td style="color:${up?'var(--buy)':'var(--sell)'};font-weight:700">${up?'+':''}${r.ret.toFixed(1)}%</td>
-             <td style="color:${up?'var(--buy)':'var(--sell)'}">${up?'+':''}${r.cagr.toFixed(1)}%</td>`
+             <td style="color:${long?(up?'var(--buy)':'var(--sell)'):'var(--faint)'}">${cagr}</td>`
           : `<td colspan="3" style="color:var(--gold)">시세 대기 — ${r.sym} 탭을 한 번 열어주세요</td>`)
         + `</tr>`; });
     h+=`</table></div>`;
@@ -5608,7 +5622,7 @@ function vrSimForward(){
   const today=new Date().toISOString().slice(0,10);
   if(c.V<=0 || c.qty<1){
     // 첫 매수도 자동으로 — 모의 시작일 종가에 초기 투자금만큼 산 것으로 시작한다
-    const s0=paperStart(sess); if(!s0) return null;
+    const s0=_clampFrom(paperStart(sess), O[O.length-1].date); if(!s0) return null;
     const row=O.find(d=>d.date>=s0 && d.close>0); if(!row) return null;
     const amt=st.initAmt!=null?+st.initAmt:10000, q=Math.floor(amt/row.close);
     if(q<1) return null;
@@ -5618,7 +5632,7 @@ function vrSimForward(){
     st.cycStart=row.date; st.simLast=row.date; st.startv=0; st.startCyc=0; delete st.cycLog;
     sortHist(sess.hist); c=computeVr();
   }
-  const from=st.simLast || vrCycStart(c);
+  const from=_clampFrom(st.simLast || vrCycStart(c), O[O.length-1].date);
   if(!from) return null;
   const days=O.filter(d=>d.date>from && d.date<=today && d.high>0 && d.low>0);
   if(!days.length) return null;
@@ -6198,7 +6212,7 @@ function openSess(){ _sessEditId=null;
   $('sess_ok').textContent='만들기';
   $('sess_name').value=''; const p=$('sess_paper'); if(p)p.checked=false;
   const w=$('sess_simstart_wrap'); if(w) w.style.display='none';
-  const d=$('sess_simstart'); if(d&&!d.value){ const t=new Date(); t.setFullYear(t.getFullYear()-1); d.value=t.toISOString().slice(0,10); }
+  const d=$('sess_simstart'); if(d) d.value=new Date().toISOString().slice(0,10);   // 기본은 오늘 — 지금부터 앞으로 굴린다
   $('sessModal').classList.add('on'); }
 /* 기존 세션 편집 — 이름·모의 여부·모의 시작일. 세션칩 더블탭으로 연다. */
 function editSess(id){
@@ -6210,7 +6224,7 @@ function editSess(id){
   $('sess_name').value=s.name||'';
   const p=$('sess_paper'); if(p)p.checked=!!s.paper;
   const w=$('sess_simstart_wrap'); if(w) w.style.display=s.paper?'':'none';
-  const d=$('sess_simstart'); if(d) d.value=s.simStart||new Date(Date.now()-365*864e5).toISOString().slice(0,10);
+  const d=$('sess_simstart'); if(d) d.value=s.simStart||new Date().toISOString().slice(0,10);
   $('sessModal').classList.add('on');
 }
 function closeSess(){$('sessModal').classList.remove('on')}
@@ -6223,7 +6237,7 @@ function createSess(){
     t.name=n;
     const on=$('sess_paper')&&$('sess_paper').checked;
     if(on){ const sd=$('sess_simstart');
-      const ns=(sd&&sd.value)||new Date(Date.now()-365*864e5).toISOString().slice(0,10);
+      const ns=(sd&&sd.value)||new Date().toISOString().slice(0,10);
       if(!t.paper || t.simStart!==ns){                // 새로 모의로 바꾸거나 시작일을 옮기면 처음부터 다시 만든다
         if((t.hist||[]).length && !confirm(`'${n}' 세션의 기록 ${t.hist.length}건을 지우고 ${ns}부터 다시 만듭니다.\n계속할까요?`)){ closeSess(); return; }
         t.hist=[]; if(t.settings){ delete t.settings.simLast; delete t.settings.cycStart; delete t.settings.startCyc; delete t.settings.cycLog; t.settings.startv=0; } }
@@ -6238,7 +6252,7 @@ function createSess(){
   const s=S.activeTab==='inf'?newInfSession(n):S.activeTab==='ma'?newMaSession(n):S.activeTab==='ivs'?newIvsSession(n)
     :S.activeTab==='dca'?newDcaSession(n):S.activeTab==='asap'?newAsapSession(n):newVrSession(n);
   const pp=$('sess_paper'); if(pp&&pp.checked){ s.paper=true;
-    const sd=$('sess_simstart'); s.simStart=(sd&&sd.value)||new Date(Date.now()-365*864e5).toISOString().slice(0,10); }
+    const sd=$('sess_simstart'); s.simStart=(sd&&sd.value)||new Date().toISOString().slice(0,10); }
   box.sessions.push(s);box.active=s.id;save();closeSess();resetSubnav(S.activeTab);refreshAll();pushRemote();
 }
 
