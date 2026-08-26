@@ -442,7 +442,7 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
 </div>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v2.64</span></h1></div>
+    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v2.65</span></h1></div>
     <div style="display:flex;align-items:center;gap:8px">
       <a class="btbtn" href="/backtest">📊<span class="bt-txt"> 백테스트</span></a>
       <button class="gear" onclick="openSettings()">⚙️</button>
@@ -1019,6 +1019,14 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
         <p class="note" style="margin-top:8px">체결 기록을 누르면 <b>보유 주식수·예수금·평단</b>이 자동으로 갱신됩니다. 실제 체결가가 다르면 현재가 칸을 고쳐서 누르세요.</p>
       </div>
 
+      <!-- 이번 달 투입 -->
+      <div class="card" id="ivs_add_card" style="margin-bottom:13px;display:none">
+        <h3><span class="dot"></span>이번 달 투입 <span class="cnt" id="ivs_add_amt"></span></h3>
+        <div id="ivs_add_body"></div>
+        <button class="fetchbtn" id="ivs_add_btn" style="width:100%;margin-top:12px;background:var(--buy-bg);color:var(--buy);border-color:var(--buy-dim)" onclick="ivsAddMonthly()">💰 이번 달 투입 기록</button>
+        <p class="note" style="margin-top:8px">목표 비중대로 나눠 삽니다. 백테상 별도 DCA보다 <b>도달 확률은 같고 MDD가 4%p 낮습니다.</b></p>
+      </div>
+
       <!-- 다음 점검: 트리거 가격 -->
       <div class="card" style="margin-bottom:13px">
         <h3><span class="dot"></span>다음에 언제 보면 되나</h3>
@@ -1033,6 +1041,7 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
         <div class="ar"><span class="ak">예수금 <span class="sub" id="ivs_park_lbl">단기국채</span></span><span class="av vio" id="ivs_cash">$0</span></div>
         <div class="ar"><span class="ak">총자산</span><span class="av" id="ivs_eq">$0</span></div>
         <div class="ar"><span class="ak">평단</span><span class="av" id="ivs_avg">—</span></div>
+        <div class="ar" id="ivs_x1row" style="display:none"><span class="ak">1배수 <span class="sub" id="ivs_x1nm">QQQ</span></span><span class="av" id="ivs_x1val">—</span></div>
         <div class="ar"><span class="ak">현재 비중 <span class="sub">주식 ÷ 총자산</span></span><span class="av" id="ivs_wnow">—</span></div>
       </div>
 
@@ -1294,7 +1303,7 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
   <footer>
     <strong>JK 퀀트</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v2.64</b> · 2026-08-24</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v2.65</b> · 2026-08-26</div>
   </footer>
 </div>
 
@@ -1355,6 +1364,9 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
       <button data-v="SOXL">SOXL</button><button data-v="USD">USD</button><button data-v="TECL">TECL</button>
       <button data-v="TQQQ" class="on">TQQQ</button><button data-v="QLD">QLD</button><button data-v="KORU">KORU</button></div>
     <p class="note" style="margin:4px 0 8px">변동성은 <b>레버리지 ETF 자체</b>의 수익률로 계산합니다(합성 1배지수 아님). KORU는 백테상 손실확률 68%라 권하지 않습니다.</p>
+    <div class="seclabel">비중 방식 <span class="hint" style="color:var(--faint);font-weight:500">얼마를 레버리지에</span></div>
+    <div class="seg" id="set_ivsmode"><button data-v="iv" class="on">역분산 1/σ²</button><button data-v="fix">고정 5:5</button></div>
+    <p class="note" style="margin:4px 0 8px"><b>고정 5:5</b>는 섀넌 원본으로 비중을 50%에 못 박습니다 — <b>s0·룩백을 쓰지 않습니다</b>(밴드만 작동). <b>역분산</b>은 그 50%를 변동성에 반비례해 매일 다시 잡습니다.</p>
     <div class="seclabel">위험 다이얼 s0 <span class="hint" style="color:var(--faint);font-weight:500">비중 = (s0/σ)²</span></div>
     <div class="seg" id="set_ivss0"><button data-v="35">35%</button><button data-v="40">40%</button><button data-v="45">45%</button><button data-v="50">50%</button><button data-v="55" class="on">55%</button><button data-v="60">60%</button></div>
     <p class="note" style="margin:4px 0 8px">"변동성이 s0일 때 전액 보유"로 읽으면 됩니다. <b>최적화된 값이 아니라 위험 손잡이</b>입니다 — 종목마다 답이 다릅니다.<br>
@@ -1366,12 +1378,20 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
     <div class="seg" id="set_ivsband"><button data-v="5">5%p</button><button data-v="10">10%p</button><button data-v="15" class="on">15%p</button><button data-v="20">20%p</button></div>
     <p class="note" style="margin:4px 0 8px">성적 차이는 거의 없고 <b>거래 횟수만 크게 달라집니다</b>(5%p는 15%p의 4배). 좁힐수록 수수료·양도세가 리밸런싱 보너스를 먹으니 넓게 두세요.</p>
     <div class="seclabel">예수금 위치</div>
-    <div class="seg" id="set_ivspark"><button data-v="bill" class="on">단기국채</button><button data-v="cash">달러현금</button></div>
-    <p class="note" style="margin:4px 0 8px"><b>단기국채</b>(SGOV·BIL)는 이자를 받지만 배당소득세 15.4%와 매매 수수료가 붙습니다. 그래도 백테상 <b>달러현금보다 CAGR 0.3~1.6%p 유리</b>합니다. 노출이 낮은(=현금이 오래 노는) 설정일수록 차이가 커집니다.</p>
+    <div class="seg" id="set_ivspark"><button data-v="bill" class="on">단기국채</button><button data-v="cash">달러현금</button><button data-v="x1">1배수</button></div>
+    <p class="note" style="margin:4px 0 8px"><b>단기국채</b>(SGOV·BIL)는 이자를 받지만 배당소득세 15.4%와 매매 수수료가 붙습니다. 백테상 <b>달러현금보다 CAGR 0.3~1.6%p 유리</b>합니다.<br>
+      <b>1배수</b>는 남은 비중을 같은 지수의 1배 ETF로 채웁니다(TQQQ→QQQ · SOXL→SOXX · TECL→XLK · USD→SMH). 노는 돈이 없어 드리프트를 더 먹지만 <b>최소 노출이 1배라 MDD가 크게 올라갑니다.</b></p>
     <div class="seclabel">지금 내 계좌 <span class="hint" style="color:var(--faint);font-weight:500">체결 기록하면 자동 갱신</span></div>
     <div class="field"><label>보유 주식수</label><input id="set_ivsqty" type="text" inputmode="decimal" value="0" oninput="commaInput(this)"></div>
     <div class="field"><label>예수금 ($)</label><input id="set_ivscash" type="text" inputmode="decimal" value="10000" oninput="commaInput(this)"></div>
     <div class="field"><label>평단 ($) <span class="hint">양도세 계산용 · 0이면 미설정</span></label><input id="set_ivsavg" type="text" inputmode="decimal" value="0" oninput="commaInput(this)"></div>
+    <div id="set_ivs_x1box" style="display:none">
+      <div class="field"><label>1배수 보유 주식수 <span class="hint" id="set_ivs_x1lbl">QQQ</span></label><input id="set_ivsqty1" type="text" inputmode="decimal" value="0" oninput="commaInput(this)"></div>
+      <div class="field"><label>1배수 평단 ($)</label><input id="set_ivsavg1" type="text" inputmode="decimal" value="0" oninput="commaInput(this)"></div>
+    </div>
+    <div class="seclabel">매월 투입액 <span class="hint" style="color:var(--faint);font-weight:500">0이면 사용 안 함</span></div>
+    <div class="field"><label>월 투입 ($)</label><input id="set_ivsmonthly" type="text" inputmode="decimal" value="0" oninput="commaInput(this)"></div>
+    <p class="note" style="margin:4px 0 8px">넣어두면 <b>현재</b> 탭에 이번 달 투입 카드가 뜹니다. 백테상 <b>그 시점 목표 비중대로 나눠 사는 것</b>이 별도 DCA보다 낫습니다(도달 확률 같고 MDD 4%p 낮음).</p>
   </div>
 
   <div id="set_ma" style="display:none">
@@ -1633,7 +1653,7 @@ function newAsapSession(name){return{id:uid(),name:name||'내 계좌',settings:d
 /* ── 역분산 비중 (섀넌의 도깨비) ──
    w = min(1,(s0/σ)²) · σ = 최근 look일 실현변동성(연율) · |w−현재비중|>band 일 때만 리밸런싱
    qty/cash/avg 는 '지금 내 계좌 상태'. 리밸런싱 기록 시 자동 갱신되고 설정에서 직접 고칠 수도 있다. */
-function defIvsSettings(){return{ticker:'TQQQ',s0:55,look:40,band:15,qty:0,cash:10000,avg:0,park:'bill',cur:'usd'}}
+function defIvsSettings(){return{ticker:'TQQQ',mode:'iv',s0:55,look:40,band:15,qty:0,cash:10000,avg:0,qty1:0,avg1:0,park:'bill',monthly:0,cur:'usd'}}
 function newIvsSession(name){return{id:uid(),name:name||'내 계좌',settings:defIvsSettings(),hist:[]}}
 function ensureIvsBox(){ if(S&&(!S.ivs||!S.ivs.sessions||!S.ivs.sessions.length)){ const d=newIvsSession('내 계좌'); S.ivs={sessions:[d],active:d.id}; } }
 function defDcaSettings(){return{ticker:'USD',amount:500,freq:'month',dipMul:2,cur:'usd'}}
@@ -3251,17 +3271,35 @@ function fetchDcaQuote(){ loadDcaData(true); }
      판정은 '전일 종가까지', 체결은 그 다음 거래일 종가(MOC)
    운영에서 추가로 필요한 것: 정확한 주문 주식수 · 수수료 반영 · 트리거 가격 · 양도세 공제 잔여 */
 const IVS_FEE=0.0025, IVS_TAXRATE=0.22, IVS_DEDUCT=250e4, IVS_KRW=1350;
-let ivsQuoteData=null;
+let ivsQuoteData=null, ivsQuote1=null;
+// 짝=1배수일 때 실제로 사는 1배 ETF (백테의 합성 1배지수에 대응하는 실물)
+const IVS_X1={TQQQ:'QQQ',QLD:'QQQ',SOXL:'SOXX',USD:'SMH',TECL:'XLK',UPRO:'SPY',SSO:'SPY',SPYU:'SPY',KORU:'EWY'};
+function ivsX1Of(t){ return IVS_X1[String(t||'').toUpperCase()]||'QQQ'; }
 async function loadIvsData(force){
   const st=curStrat().settings, note=$('ivs_fetchnote');
   const sym=String(st.ticker||'TQQQ').toUpperCase();
-  if(!force && ivsQuoteData && String(ivsQuoteData.symbol||'').toUpperCase()===sym){ renderIvsNow(); return; }
+  // 짝=1배수면 1배 시세까지 갖춰져야 캐시 적중으로 볼 수 있다 — 아니면 조기 반환이 1배 조회를 건너뛴다
+  const needX1=(st.park||'bill')==='x1', x1sym=ivsX1Of(sym);
+  const haveX1=!needX1 || (ivsQuote1 && String(ivsQuote1.symbol||'').toUpperCase()===x1sym);
+  if(!force && ivsQuoteData && String(ivsQuoteData.symbol||'').toUpperCase()===sym && haveX1){ renderIvsNow(); return; }
   if(note){note.className='fetchnote load';note.textContent='종가 이력 불러오는 중…';}
   const q=await fetchDaily(sym);
   if(q && q.days && q.days.length){
     ivsQuoteData={symbol:q.symbol,days:q.days,last:q.last,price:(q.price!=null&&+q.price>0)?+q.price:q.last.close,src:q.src};
     if($('ivs_price')) $('ivs_price').value=nfix(ivsQuoteData.price,2);
-    if(note){note.className='fetchnote ok';note.textContent=`✓ ${q.symbol} ${q.last.date} 종가 ${px(q.last.close)} · ${q.days.length}일 이력`;}
+    let extra='';
+    // 짝=1배수면 1배 ETF 시세도 받아야 총자산·주문을 계산할 수 있다
+    if((st.park||'bill')==='x1'){
+      const s1=ivsX1Of(sym);
+      if(!(ivsQuote1 && String(ivsQuote1.symbol||'').toUpperCase()===s1) || force){
+        const q1=await fetchDaily(s1);
+        ivsQuote1 = (q1&&q1.days&&q1.days.length)
+          ? {symbol:q1.symbol,days:q1.days,last:q1.last,price:(q1.price!=null&&+q1.price>0)?+q1.price:q1.last.close}
+          : null;
+      }
+      extra = ivsQuote1 ? ` · ${ivsQuote1.symbol} ${px(ivsQuote1.price)}` : ' · ⚠ 1배수 시세 실패';
+    } else ivsQuote1=null;
+    if(note){note.className='fetchnote ok';note.textContent=`✓ ${q.symbol} ${q.last.date} 종가 ${px(q.last.close)} · ${q.days.length}일 이력${extra}`;}
     renderIvsNow();
   }else if(note){ note.className='fetchnote err'; note.textContent='⚠ 불러오기 실패 — 잠시 후 다시 시도하세요.'; }
 }
@@ -3270,50 +3308,84 @@ function onIvsPrice(){ const p=inputNum('ivs_price')||0; if(ivsQuoteData&&p>0) i
 
 function computeIvs(){
   const st=curStrat().settings, hist=curStrat().hist||[];
+  const FIX=(st.mode||'iv')==='fix', X1=(st.park||'bill')==='x1';
   const s0=(st.s0||55)/100, N=st.look||40, band=(st.band||15)/100;
-  const sym=String(st.ticker||'TQQQ').toUpperCase();
+  const sym=String(st.ticker||'TQQQ').toUpperCase(), sym1=ivsX1Of(sym);
   const qty=Math.max(0,st.qty||0), cash=Math.max(0,st.cash||0), avg=Math.max(0,st.avg||0);
+  const qty1=Math.max(0,st.qty1||0), avg1=Math.max(0,st.avg1||0);
   const days=(ivsQuoteData && String(ivsQuoteData.symbol||'').toUpperCase()===sym && ivsQuoteData.days) ? ivsQuoteData.days : null;
-  const out={st,s0,N,band,sym,qty,cash,avg,ready:false};
-  // 올해 실현손익 (기록 기준) — 양도세는 매도한 해에 귀속
+  const out={st,FIX,X1,s0,N,band,sym,sym1,qty,cash,avg,qty1,avg1,ready:false,monthly:Math.max(0,st.monthly||0)};
   const yr=new Date().getFullYear();
   out.pnlYear=hist.reduce((s,h)=>s+((h.type==='sell'&&(+String(h.date).slice(0,4))===yr)?(h.pnl||0):0),0);
   out.year=yr;
-  if(!days || days.length<N+1) return out;
-  const closes=days.map(d=>d.close);
-  const n=closes.length;
-  // 마지막 종가까지의 수익률 N개로 σ (백테 varOf와 동일: 모집단 분산)
-  let s=0,s2=0;
-  for(let i=n-N;i<n;i++){ const r=closes[i]/closes[i-1]-1; s+=r; s2+=r*r; }
-  const m=s/N, v=Math.max(1e-8,(s2/N-m*m)*252);
-  out.sigma=Math.sqrt(v);
-  out.w=Math.min(1,(s0*s0)/v);
-  // 변동성 추세: 20거래일 전 시점의 σ와 비교
-  if(n>=N+21){ let a=0,a2=0; for(let i=n-N-20;i<n-20;i++){ const r=closes[i]/closes[i-1]-1; a+=r; a2+=r*r; }
-    const m2=a/N; out.sigmaPrev=Math.sqrt(Math.max(1e-8,(a2/N-m2*m2)*252)); }
+  // 고정 5:5는 변동성을 안 쓰므로 룩백만큼의 이력이 필요 없다
+  if(!days || days.length<(FIX?2:N+1)) return out;
+  const closes=days.map(d=>d.close), n=closes.length;
+  if(FIX){ out.w=0.5; }
+  else{
+    let s=0,s2=0;
+    for(let i=n-N;i<n;i++){ const r=closes[i]/closes[i-1]-1; s+=r; s2+=r*r; }
+    const m=s/N, v=Math.max(1e-8,(s2/N-m*m)*252);
+    out.sigma=Math.sqrt(v);
+    out.w=Math.min(1,(s0*s0)/v);
+    if(n>=N+21){ let a2=0,b2=0; for(let i=n-N-20;i<n-20;i++){ const r=closes[i]/closes[i-1]-1; a2+=r; b2+=r*r; }
+      const m2=a2/N; out.sigmaPrev=Math.sqrt(Math.max(1e-8,(b2/N-m2*m2)*252)); }
+  }
   out.sigDate=days[n-1].date; out.lastClose=closes[n-1];
   const price=(ivsQuoteData.price>0?ivsQuoteData.price:out.lastClose);
   out.price=price;
-  const eq=qty*price+cash; out.eq=eq;
+  // 짝=1배수면 1배 시세가 있어야 총자산을 알 수 있다
+  let price1=0;
+  if(X1){
+    if(!(ivsQuote1 && String(ivsQuote1.symbol||'').toUpperCase()===sym1)){ out.needX1=true; return out; }
+    price1 = ivsQuote1.price>0?ivsQuote1.price:ivsQuote1.last.close;
+  }
+  out.price1=price1;
+  const eq=qty*price + (X1?qty1*price1:0) + cash; out.eq=eq;
   out.wNow= eq>0 ? qty*price/eq : 0;
+  out.w1Now= (X1&&eq>0) ? qty1*price1/eq : 0;
   out.gap=out.w-out.wNow;
   out.hit=Math.abs(out.gap)>band;
-  // 주문 수량 — 수수료를 반영해 목표를 넘지 않게 내림
-  const notional=out.gap*eq;
+  // ── 리밸런싱 주문 ──
+  // 레버리지: 목표 w·eq 로 맞춘다. 짝=1배수면 나머지 (1−w)·eq 를 1배로 맞춘다.
   if(out.hit && price>0){
-    if(notional>0){ const spend=Math.min(cash,notional); out.side='buy';
-      out.orderQty=Math.floor(spend*(1-IVS_FEE)/price); }
-    else { out.side='sell'; out.orderQty=Math.min(qty,Math.floor(-notional/price)); }
+    const tA=out.w*eq, notional=tA-qty*price;
+    if(notional>0){
+      // 매수 재원: 예수금 + (짝=1배수면 1배 매도분)
+      const fund = X1 ? cash + qty1*price1 : cash;
+      const spend=Math.min(fund,notional); out.side='buy';
+      out.orderQty=Math.floor(spend*(1-IVS_FEE)/price);
+    }else{ out.side='sell'; out.orderQty=Math.min(qty,Math.floor(-notional/price)); }
     out.orderAmt=(out.orderQty||0)*price;
     out.orderFee=out.orderAmt*IVS_FEE;
     if(out.side==='sell'&&avg>0) out.orderPnl=(out.orderQty||0)*(price-avg)-out.orderFee;
+    if(X1&&price1>0){
+      // 레버리지 주문 뒤 남는 현금이 1배 목표와 맞도록 반대 주문을 낸다
+      const cashAfter = cash + (out.side==='sell'? out.orderAmt-out.orderFee : -(out.orderAmt+out.orderFee));
+      const tB=(1-out.w)*eq, need=tB-qty1*price1;
+      if(need>0){ const sp=Math.min(Math.max(cashAfter,0),need);
+        out.side1='buy'; out.orderQty1=Math.floor(sp*(1-IVS_FEE)/price1); }
+      else { out.side1='sell'; out.orderQty1=Math.min(qty1,Math.floor(-need/price1)); }
+      out.orderAmt1=(out.orderQty1||0)*price1;
+      out.orderFee1=out.orderAmt1*IVS_FEE;
+      if(out.side1==='sell'&&avg1>0) out.orderPnl1=(out.orderQty1||0)*(price1-avg1)-out.orderFee1;
+    }
   }
-  // 트리거 가격 — 이 밖으로 나가야 밴드를 벗어난다 (σ가 그대로라는 가정)
-  if(qty>0 && cash>0){
-    const tp=(target)=>{ const t=Math.max(0.0001,Math.min(0.9999,target)); return t*cash/(qty*(1-t)); };
-    out.trigUp=tp(out.w+band);     // 주가가 오르면 비중이 커져 상단 이탈 → 매도
-    out.trigDn=tp(out.w-band);     // 내리면 하단 이탈 → 매수
-  }else if(qty===0&&cash>0){ out.trigUp=null; out.trigDn=null; }
+  // ── 이번 달 투입 ── 목표 비중대로 나눠 산다 (백테 검증된 방식)
+  if(out.monthly>0 && price>0){
+    const mA=out.monthly*out.w, mB=out.monthly-mA;
+    out.addQty=Math.floor(mA*(1-IVS_FEE)/price);
+    out.addAmt=(out.addQty||0)*price;
+    if(X1&&price1>0){ out.addQty1=Math.floor(mB*(1-IVS_FEE)/price1); out.addAmt1=(out.addQty1||0)*price1; }
+    else { out.addCash=mB; }   // 짝이 현금·국채면 나머지는 예수금으로
+  }
+  // 트리거 가격 — 이 밖으로 나가야 밴드를 벗어난다 (σ·1배 가격이 그대로라는 가정)
+  const other = X1 ? qty1*price1 + cash : cash;
+  if(qty>0 && other>0){
+    const tp=(target)=>{ const t=Math.max(0.0001,Math.min(0.9999,target)); return t*other/(qty*(1-t)); };
+    out.trigUp=tp(out.w+band);
+    out.trigDn=tp(out.w-band);
+  }
   out.ready=true;
   return out;
 }
@@ -3323,15 +3395,21 @@ function pctFrom(target,now){ const d=(target/now-1)*100; return (d>=0?'+':'')+d
 function renderIvsNow(){
   const c=computeIvs(), st=c.st, pc=v=>(v*100).toFixed(0)+'%';
   $('ivs_ticker').textContent=tickerLabel(st.ticker||'TQQQ');
-  $('ivs_cfg').textContent=`s0 ${st.s0||55}% · ${st.look||40}일σ · 밴드 ${st.band||15}%p`;
-  $('ivs_park_lbl').textContent=(st.park==='cash')?'달러현금':'단기국채';
+  $('ivs_cfg').textContent = c.FIX
+    ? `고정 5:5 · 밴드 ${st.band||15}%p`
+    : `s0 ${st.s0||55}% · ${st.look||40}일σ · 밴드 ${st.band||15}%p`;
+  $('ivs_park_lbl').textContent = c.X1 ? ('1배수 '+c.sym1) : ((st.park==='cash')?'달러현금':'단기국채');
+  // 1배수 보유 행
+  { const row=$('ivs_x1row'); if(row) row.style.display=c.X1?'':'none';
+    if(c.X1){ $('ivs_x1nm').textContent=c.sym1;
+      $('ivs_x1val').textContent = c.price1>0 ? `${nfix(c.qty1,0)}주 · ${px(c.qty1*c.price1)}` : `${nfix(c.qty1,0)}주`; } }
   ['ivs_g_look','ivs_g_s0','ivs_g_band'].forEach((id,i)=>{ const e=$(id); if(e) e.textContent=[st.look||40,st.s0||55,st.band||15][i]; });
   // 계좌
   const price=c.price||0, evalAmt=c.qty*price;
   $('ivs_qty').textContent=nfix(c.qty,0)+'주';
   $('ivs_eval').textContent=px(evalAmt);
   $('ivs_cash').textContent=px(c.cash);
-  $('ivs_eq').textContent=px(c.eq||c.cash);
+  $('ivs_eq').textContent=px(c.eq||(c.cash+(c.X1?c.qty1*(c.price1||0):0)));
   $('ivs_avg').textContent=c.avg>0?px(c.avg):'—';
   $('ivs_wnow').textContent=c.ready?pc(c.wNow):'—';
   { const r=(c.avg>0&&price>0&&c.qty>0)?((price/c.avg-1)*100):null;
@@ -3348,8 +3426,11 @@ function renderIvsNow(){
     $('ivs_pill').className='bandpill wait'; $('ivs_pill').textContent='대기';
     $('ivs_w_txt').textContent='—'; $('ivs_sig_lbl').textContent='변동성 — · 목표 — · 현재 —';
     $('ivs_mark').style.left='50%';
-    $('ivs_verdict').innerHTML='<p class="lead">위 🔄 자동 버튼을 누르면 종가 이력을 불러와 목표 비중과 주문 수량을 계산합니다.</p>';
+    $('ivs_verdict').innerHTML = c.needX1
+      ? `<p class="lead">짝이 <b>1배수</b>라 ${c.sym1} 시세가 필요합니다. 위 🔄 자동을 눌러주세요.</p>`
+      : '<p class="lead">위 🔄 자동 버튼을 누르면 종가 이력을 불러와 목표 비중과 주문 수량을 계산합니다.</p>';
     $('ivs_trigger').innerHTML='<p class="note">—</p>';
+    { const ac=$('ivs_add_card'); if(ac) ac.style.display='none'; }
     return;
   }
   // 히어로
@@ -3357,7 +3438,8 @@ function renderIvsNow(){
   $('ivs_pill').textContent=c.hit?(c.gap>0?'매수':'매도'):'밴드 안';
   $('ivs_w_txt').textContent='목표 '+pc(c.w);
   const trend=(c.sigmaPrev!=null)?(c.sigma>c.sigmaPrev?' ↑':(c.sigma<c.sigmaPrev?' ↓':'')):'';
-  $('ivs_sig_lbl').innerHTML=`σ <b>${(c.sigma*100).toFixed(1)}%</b>${trend} · 목표 <b>${pc(c.w)}</b> · 현재 <b>${pc(c.wNow)}</b> · 차이 <b style="color:${c.hit?'var(--gold)':'var(--faint)'}">${(c.gap>=0?'+':'')}${(c.gap*100).toFixed(1)}%p</b>`;
+  const sigTxt = c.FIX ? '<b>고정 5:5</b> (σ 미사용)' : `σ <b>${(c.sigma*100).toFixed(1)}%</b>${trend}`;
+  $('ivs_sig_lbl').innerHTML=`${sigTxt} · 목표 <b>${pc(c.w)}</b> · 현재 <b>${pc(c.wNow)}</b> · 차이 <b style="color:${c.hit?'var(--gold)':'var(--faint)'}">${(c.gap>=0?'+':'')}${(c.gap*100).toFixed(1)}%p</b>`;
   $('ivs_sc_mid').textContent='목표 '+pc(c.w);
   { let p=c.wNow*100; p=Math.max(0,Math.min(100,p)); $('ivs_mark').style.left=p+'%'; }
   // 오늘 할 일
@@ -3370,12 +3452,27 @@ function renderIvsNow(){
        <p class="note" style="margin-top:8px">밴드는 벗어났지만 주문 수량이 1주가 안 됩니다. 수수료만 나가므로 넘어갑니다.</p>`;
   }else{
     const buy=c.side==='buy';
-    v=`<div class="oitem ${buy?'b':'s'}"><span class="tag">${buy?'매수':'매도'}</span><span class="nm">${nfix(c.orderQty,0)}주 · ${px(c.orderAmt)}</span><span class="pr">${px(c.price)}</span></div>
+    v=`<div class="oitem ${buy?'b':'s'}"><span class="tag">${buy?'매수':'매도'}</span><span class="nm">${c.sym} ${nfix(c.orderQty,0)}주 · ${px(c.orderAmt)}</span><span class="pr">${px(c.price)}</span></div>`
+     +(c.X1&&c.orderQty1>0?`<div class="oitem ${c.side1==='buy'?'b':'s'}" style="margin-top:6px"><span class="tag">${c.side1==='buy'?'매수':'매도'}</span><span class="nm">${c.sym1} ${nfix(c.orderQty1,0)}주 · ${px(c.orderAmt1)}</span><span class="pr">${px(c.price1)}</span></div>`:'')
+     +`
        <p class="note" style="margin-top:8px">수수료 ${px(c.orderFee)} 포함 · 체결 후 비중 ${pc((buy?(c.qty+c.orderQty):(c.qty-c.orderQty))*c.price/Math.max(c.eq,1))}
        ${(c.side==='sell'&&c.orderPnl!=null)?`<br>이 매도의 실현손익 <b style="color:${c.orderPnl>=0?'var(--buy)':'var(--sell)'}">${c.orderPnl>=0?'+':''}${px(Math.abs(c.orderPnl))}</b> — 올해 공제 잔여 ₩${nfix(Math.max(0,IVS_DEDUCT-Math.max(0,(c.pnlYear||0)*IVS_KRW)),0)}`:''}</p>`;
   }
   v+=`<p class="note" style="margin-top:8px;color:var(--faint)">ⓘ 신호 기준 <b>${c.sigDate}</b> 종가 · 체결은 <b>다음 거래일 종가(MOC)</b>가 원칙입니다. 백테와 같은 규약이라 여기서 벗어나면 숫자가 안 맞습니다.</p>`;
   $('ivs_verdict').innerHTML=v;
+  // ── 이번 달 투입 카드 ──
+  { const ac=$('ivs_add_card');
+    if(ac){
+      if(c.monthly>0){
+        ac.style.display='';
+        $('ivs_add_amt').textContent=px(c.monthly);
+        let h=`<div class="oitem b"><span class="tag">매수</span><span class="nm">${c.sym} ${nfix(c.addQty||0,0)}주 · ${px(c.addAmt||0)}</span><span class="pr">${px(c.price)}</span></div>`;
+        if(c.X1) h+=`<div class="oitem b" style="margin-top:6px"><span class="tag">매수</span><span class="nm">${c.sym1} ${nfix(c.addQty1||0,0)}주 · ${px(c.addAmt1||0)}</span><span class="pr">${px(c.price1)}</span></div>`;
+        else h+=`<div class="oitem" style="margin-top:6px;background:var(--panel2)"><span class="tag" style="background:var(--panel);color:var(--dim)">예수금</span><span class="nm">${px(c.addCash||0)} 적립</span><span class="pr">—</span></div>`;
+        h+=`<p class="note" style="margin-top:8px">목표 비중 <b>${pc(c.w)}</b> 기준으로 나눴습니다. 남는 금액 ${px(Math.max(0,c.monthly-(c.addAmt||0)-(c.addAmt1||0)-(c.addCash||0)))}는 예수금으로 들어갑니다.</p>`;
+        $('ivs_add_body').innerHTML=h;
+      } else ac.style.display='none';
+    } }
   // 트리거
   if(c.trigUp||c.trigDn){
     const up=c.trigUp, dn=c.trigDn, p=c.price;
@@ -3392,8 +3489,9 @@ function renderIvsHist(){
   const h=curStrat().hist||[];
   $('ivs_rec_count').textContent=h.length?`(${h.length})`:'';
   const rows=h.slice().reverse().map(r=>{
+    if(r.type==='add') return `<tr><td>${r.date}</td><td style="color:var(--gold)">투입</td><td class="mono">—</td><td class="mono">—</td><td class="mono">${px(r.amt||0)}</td><td class="mono">—</td></tr>`;
     const buy=r.type==='buy';
-    return `<tr><td>${r.date}</td><td style="color:${buy?'var(--buy)':'var(--sell)'}">${buy?'매수':'매도'}</td>`
+    return `<tr><td>${r.date}</td><td style="color:${buy?'var(--buy)':'var(--sell)'}">${buy?'매수':'매도'}${r.sym?` <span style="color:var(--faint);font-size:10px">${r.sym}</span>`:''}</td>`
       +`<td class="mono">${nfix(r.qty,0)}주</td><td class="mono">${px(r.price)}</td><td class="mono">${px(r.amt||0)}</td>`
       +`<td class="mono" style="color:${(r.pnl||0)>=0?'var(--buy)':'var(--sell)'}">${r.type==='sell'?((r.pnl>=0?'+':'')+px(Math.abs(r.pnl||0))):'—'}</td></tr>`;
   }).join('');
@@ -3409,22 +3507,51 @@ function ivsRecord(){
   const c=computeIvs(), st=curStrat().settings;
   if(!c.ready){ alert('먼저 🔄 자동으로 종가 이력을 불러오세요.'); return; }
   if(!c.hit || !c.orderQty){ alert('지금은 주문할 것이 없습니다.'); return; }
-  const buy=c.side==='buy', price=c.price, q=c.orderQty, amt=q*price, fee=amt*IVS_FEE;
   const date=new Date().toISOString().slice(0,10);
-  if(!confirm(`${buy?'매수':'매도'} ${nfix(q,0)}주 × ${px(price)} = ${px(amt)}\n수수료 ${px(fee)}\n\n오늘(${date}) 체결로 기록할까요?`)) return;
-  let pnl=0;
-  if(buy){
-    const newQty=st.qty+q;
-    st.avg = newQty>0 ? ((st.qty*(st.avg||0))+amt+fee)/newQty : 0;   // 매수 수수료는 취득원가에 산입
-    st.qty = newQty; st.cash = Math.max(0, st.cash-amt-fee);
-  }else{
-    pnl = (st.avg>0) ? q*(price-st.avg)-fee : 0;
-    st.qty = Math.max(0, st.qty-q); st.cash = st.cash+amt-fee;
-    if(st.qty<=0) st.avg=0;
-  }
-  curStrat().hist.push({type:buy?'buy':'sell',date,price:+price,qty:q,amt:+amt,fee:+fee,pnl:+pnl,ts:Date.now()});
+  const L=`${c.side==='buy'?'매수':'매도'} ${c.sym} ${nfix(c.orderQty,0)}주 × ${px(c.price)}`;
+  const L1=(c.X1&&c.orderQty1>0)?`\n${c.side1==='buy'?'매수':'매도'} ${c.sym1} ${nfix(c.orderQty1,0)}주 × ${px(c.price1)}`:'';
+  if(!confirm(`${L}${L1}\n\n오늘(${date}) 체결로 기록할까요?`)) return;
+  _ivsFill(st,c,'lev',c.side,c.orderQty,c.price,date);
+  if(c.X1&&c.orderQty1>0) _ivsFill(st,c,'x1',c.side1,c.orderQty1,c.price1,date);
   sortHist(curStrat().hist); save(); refreshIvs(); pushRemote&&pushRemote();
   alert('기록됨 ✓');
+}
+// 한 다리 체결 반영 — leg:'lev'|'x1'
+function _ivsFill(st,c,leg,side,q,price,date){
+  if(!(q>0)||!(price>0)) return;
+  const amt=q*price, fee=amt*IVS_FEE, buy=(side==='buy');
+  const QK=leg==='x1'?'qty1':'qty', AK=leg==='x1'?'avg1':'avg';
+  const curQ=Math.max(0,st[QK]||0), curA=Math.max(0,st[AK]||0);
+  let pnl=0;
+  if(buy){
+    const nq=curQ+q;
+    st[AK]= nq>0 ? ((curQ*curA)+amt+fee)/nq : 0;   // 매수 수수료는 취득원가에 산입
+    st[QK]=nq; st.cash=Math.max(0,(st.cash||0)-amt-fee);
+  }else{
+    pnl=(curA>0)? q*(price-curA)-fee : 0;
+    st[QK]=Math.max(0,curQ-q); st.cash=(st.cash||0)+amt-fee;
+    if(st[QK]<=0) st[AK]=0;
+  }
+  curStrat().hist.push({type:buy?'buy':'sell',leg,sym:leg==='x1'?c.sym1:c.sym,
+    date,price:+price,qty:q,amt:+amt,fee:+fee,pnl:+pnl,ts:Date.now()});
+}
+// 이번 달 투입 — 목표 비중대로 나눠 매수
+function ivsAddMonthly(){
+  const c=computeIvs(), st=curStrat().settings;
+  if(!c.ready){ alert('먼저 🔄 자동으로 종가 이력을 불러오세요.'); return; }
+  if(!(c.monthly>0)){ alert('설정에서 월 투입액을 먼저 넣으세요.'); return; }
+  const date=new Date().toISOString().slice(0,10);
+  const l1=`${c.sym} ${nfix(c.addQty||0,0)}주 × ${px(c.price)} = ${px(c.addAmt||0)}`;
+  const l2=c.X1?`\n${c.sym1} ${nfix(c.addQty1||0,0)}주 × ${px(c.price1)} = ${px(c.addAmt1||0)}`
+               :`\n예수금 ${px(c.addCash||0)}`;
+  if(!confirm(`이번 달 투입 ${px(c.monthly)}\n목표 비중 ${(c.w*100).toFixed(0)}% 기준\n\n${l1}${l2}\n\n오늘(${date}) 기록할까요?`)) return;
+  // 투입금을 먼저 예수금에 넣고, 매수로 빼낸다 (현금 흐름을 실제와 같게)
+  st.cash=(st.cash||0)+c.monthly;
+  curStrat().hist.push({type:'add',date,amt:+c.monthly,ts:Date.now()});
+  if(c.addQty>0) _ivsFill(st,c,'lev','buy',c.addQty,c.price,date);
+  if(c.X1&&c.addQty1>0) _ivsFill(st,c,'x1','buy',c.addQty1,c.price1,date);
+  sortHist(curStrat().hist); save(); refreshIvs(); pushRemote&&pushRemote();
+  alert('투입 기록됨 ✓');
 }
 
 async function loadDcaData(force){
@@ -4814,8 +4941,11 @@ function openSettings(){
     const st=s.settings;
     segSet('set_ivsticker',st.ticker||'TQQQ'); segSet('set_ivss0',String(st.s0||55));
     segSet('set_ivslook',String(st.look||40)); segSet('set_ivsband',String(st.band||15));
-    segSet('set_ivspark',st.park||'bill');
+    segSet('set_ivspark',st.park||'bill'); segSet('set_ivsmode',st.mode||'iv');
     $('set_ivsqty').value=nfix(st.qty||0,0); $('set_ivscash').value=nfix(st.cash||0,0); $('set_ivsavg').value=nfix(st.avg||0,2);
+    $('set_ivsqty1').value=nfix(st.qty1||0,0); $('set_ivsavg1').value=nfix(st.avg1||0,2);
+    $('set_ivsmonthly').value=nfix(st.monthly||0,0);
+    syncIvsSetUI(st.park||'bill', st.ticker||'TQQQ', st.mode||'iv');
   }else if(S.activeTab==='dca'){
     $('set_inf').style.display='none';$('set_vr').style.display='none';if(setDca)setDca.style.display='';
     const st=s.settings;
@@ -4855,6 +4985,13 @@ function openSettings(){
 function closeSettings(){$('setModal').classList.remove('on')}
 // 모달 배경(어두운 영역) 클릭 시 닫기 — box 내부 클릭은 무시
 ['setModal','sessModal'].forEach(id=>{ const m=$(id); if(m) m.addEventListener('click',e=>{ if(e.target===m) m.classList.remove('on'); }); });
+// 짝=1배수일 때만 1배 계좌 입력을 보이고, 고정5:5면 s0·룩백을 흐리게 한다
+function syncIvsSetUI(park,ticker,mode){
+  const box=$('set_ivs_x1box'); if(box) box.style.display=(park==='x1')?'':'none';
+  const lbl=$('set_ivs_x1lbl'); if(lbl) lbl.textContent=ivsX1Of(ticker);
+  const off=(mode==='fix');
+  ['set_ivss0','set_ivslook'].forEach(id=>{ const e=$(id); if(e){ e.style.opacity=off?0.4:1; e.style.pointerEvents=off?'none':''; } });
+}
 function segSet(id,val){$(id).querySelectorAll('button').forEach(b=>b.classList.toggle('on',b.dataset.v===val))}
 function segGet(id){const b=$(id).querySelector('button.on');return b?b.dataset.v:null}
 // 거치식(mode=0.5)은 적립금이 항상 0이므로 입력칸을 비활성화해 혼동 방지
@@ -4878,7 +5015,7 @@ function syncShortMaUI(eng){
 }
 function setupSegs(){
   ['set_ticker','set_div','set_reverse','set_tgtdyn','set_vmode','set_vformula','set_cur','set_vcur','set_engine','set_shortma','set_lopct','set_maticker','set_mabuy','set_masell','set_mapark','set_dcaticker','set_dcafreq','set_dcamul','set_asapticker',
-   'set_ivsticker','set_ivss0','set_ivslook','set_ivsband','set_ivspark'].forEach(id=>{
+   'set_ivsticker','set_ivss0','set_ivslook','set_ivsband','set_ivspark','set_ivsmode'].forEach(id=>{
     const el=$(id);if(!el)return;
     el.querySelectorAll('button').forEach(b=>{
       b.onclick=()=>{el.querySelectorAll('button').forEach(x=>x.classList.remove('on'));b.classList.add('on');
@@ -4895,6 +5032,8 @@ function setupSegs(){
         if(id==='set_engine'){ syncShortMaUI(b.dataset.v); syncTgtNote(); }
         // 운용모드 변경 시 거치식이면 적립금 입력 비활성화
         if(id==='set_vmode'){ applyVrModeUI(b.dataset.v); }
+        if(id==='set_ivspark'||id==='set_ivsticker'||id==='set_ivsmode')
+          syncIvsSetUI(segGet('set_ivspark')||'bill', segGet('set_ivsticker')||'TQQQ', segGet('set_ivsmode')||'iv');
       };
     });
   });
@@ -4912,10 +5051,14 @@ function saveSettings(){
   }else if(S.activeTab==='ma'){
     s.settings={ticker:segGet('set_maticker')||'SOXL',buy:segGet('set_mabuy')||'ma',sell:segGet('set_masell')||'ma',park:segGet('set_mapark')||'cash',principal:inputNum('set_maprincipal')||10000,cur:'usd'};
   }else if(S.activeTab==='ivs'){
-    s.settings={ticker:segGet('set_ivsticker')||'TQQQ',s0:+segGet('set_ivss0')||55,look:+segGet('set_ivslook')||40,
+    s.settings={ticker:segGet('set_ivsticker')||'TQQQ',mode:segGet('set_ivsmode')||'iv',
+      s0:+segGet('set_ivss0')||55,look:+segGet('set_ivslook')||40,
       band:+segGet('set_ivsband')||15,park:segGet('set_ivspark')||'bill',
       qty:Math.max(0,inputNum('set_ivsqty')||0),cash:Math.max(0,inputNum('set_ivscash')||0),
-      avg:Math.max(0,inputNum('set_ivsavg')||0),cur:'usd'};
+      avg:Math.max(0,inputNum('set_ivsavg')||0),
+      qty1:Math.max(0,inputNum('set_ivsqty1')||0),avg1:Math.max(0,inputNum('set_ivsavg1')||0),
+      monthly:Math.max(0,inputNum('set_ivsmonthly')||0),cur:'usd'};
+    ivsQuote1=null;   // 짝·종목이 바뀌었을 수 있으니 1배 시세 캐시를 비운다
   }else if(S.activeTab==='dca'){
     s.settings={ticker:segGet('set_dcaticker')||'USD',freq:segGet('set_dcafreq')||'month',
       amount:inputNum('set_dcaamt')||0,dipMul:+segGet('set_dcamul')||1,cur:'usd'};
