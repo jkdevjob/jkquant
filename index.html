@@ -442,7 +442,7 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
 </div>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v2.67</span></h1></div>
+    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v2.68</span></h1></div>
     <div style="display:flex;align-items:center;gap:8px">
       <a class="btbtn" href="/backtest">📊<span class="bt-txt"> 백테스트</span></a>
       <button class="gear" onclick="openSettings()">⚙️</button>
@@ -994,6 +994,8 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
         <div class="field" style="margin:0"><label>현재가 ($) <span class="hint">주문은 당일 종가(MOC) 기준</span></label>
           <div style="display:flex;gap:8px"><input id="ivs_price" type="text" inputmode="decimal" placeholder="자동 조회" oninput="commaInput(this);onIvsPrice()" style="flex:1">
           <button class="fetchbtn" id="ivs_autobtn" onclick="fetchIvsQuote()">🔄 자동</button></div></div>
+        <div class="field" id="ivs_price1row" style="margin:10px 0 0;display:none"><label>1배수 현재가 ($) <span class="hint" id="ivs_price1lbl">QQQ</span></label>
+          <input id="ivs_price1" type="text" inputmode="decimal" placeholder="자동 조회" oninput="commaInput(this);onIvsPrice1()"></div>
         <div class="fetchnote" id="ivs_fetchnote" style="margin:6px 0 0"></div>
       </div>
 
@@ -1059,8 +1061,14 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
     <!-- ── 기록 ── -->
     <div class="block" id="ivs-hist">
       <div class="card"><h3><span class="dot"></span>리밸런싱 기록 <span id="ivs_rec_count" class="cnt"></span></h3>
+        <p class="note" id="ivs_hist_warn" style="display:none;background:rgba(242,75,95,.12);border-radius:7px;padding:8px 10px;margin-bottom:8px"></p>
         <div class="htable-wrap"><table class="htable" id="ivs_rec_tbl"></table></div>
-        <button class="ghostbtn" style="width:100%;margin-top:10px" onclick="ivsSeed()">➕ 시작 보유 등록</button>
+        <div style="display:flex;gap:8px;margin-top:10px">
+          <button class="ghostbtn" style="flex:1" onclick="ivsCash('add')">＋ 입금</button>
+          <button class="ghostbtn" style="flex:1" onclick="ivsCash('wd')">－ 출금</button>
+        </div>
+        <button class="ghostbtn" style="width:100%;margin-top:8px" onclick="ivsSeed()">➕ 시작 보유 등록</button>
+        <p class="note" style="margin-top:8px">예수금 <b>이자·배당</b>이 들어오거나 <b>양도세를 납부</b>했다면 입금·출금으로 남기세요. 그래야 장부가 실제 계좌와 안 벌어집니다.</p>
         <p class="note" style="margin-top:8px">보유 주식수·예수금·평단은 <b>이 기록에서 계산</b>됩니다. 설정에는 초기자금만 넣습니다.<br>
           앱 쓰기 전부터 갖고 있던 물량은 <b>시작 보유 등록</b>으로 한 번 넣으시면 됩니다. 기록을 전부 지우면 <b>초기자금만 있는 상태</b>로 돌아갑니다.</p>
         <button class="ghostbtn" onclick="clearHist('ivs')">기록 전체 삭제</button></div>
@@ -1307,7 +1315,7 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
   <footer>
     <strong>JK 퀀트</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v2.67</b> · 2026-08-26</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v2.68</b> · 2026-08-26</div>
   </footer>
 </div>
 
@@ -1494,6 +1502,42 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
       <div class="field"><label>체결가 ($)</label><input id="ei_price" type="text" inputmode="decimal" oninput="commaInput(this)"></div>
       <div class="field"><label>수량 (주)</label><input id="ei_qty" type="number" inputmode="numeric"></div>
     </div></div>
+
+<div class="modal" id="editIvsModal"><div class="box">
+  <h3>기록 수정 (섀넌)</h3>
+  <div class="field"><label>구분</label>
+    <select id="ei_type" onchange="syncEiUI()">
+      <option value="buy">매수</option><option value="sell">매도</option>
+      <option value="add">입금 (이자·배당·추가투입)</option><option value="wd">출금 (세금·인출)</option>
+    </select></div>
+  <div class="field" id="ei_legrow"><label>다리</label>
+    <select id="ei_leg"><option value="lev">레버리지</option><option value="x1">1배수</option></select></div>
+  <div class="field"><label>날짜</label><input id="ei_date" type="date"></div>
+  <div class="field" id="ei_qtyrow"><label>수량 (주)</label><input id="ei_qty" type="text" inputmode="decimal" oninput="commaInput(this)"></div>
+  <div class="field" id="ei_pricerow"><label>단가 ($)</label><input id="ei_price" type="text" inputmode="decimal" oninput="commaInput(this)"></div>
+  <div class="field" id="ei_feerow"><label>수수료 ($) <span class="hint">비우면 0.25% 자동</span></label><input id="ei_fee" type="text" inputmode="decimal" oninput="commaInput(this)"></div>
+  <div class="field" id="ei_amtrow"><label>금액 ($)</label><input id="ei_amt" type="text" inputmode="decimal" oninput="commaInput(this)"></div>
+  <div class="field" id="ei_memorow"><label>메모</label><input id="ei_memo" type="text" placeholder="예: 예수금 이자"></div>
+  <p class="note">고치면 보유 주식수·예수금·평단이 <b>전부 다시 계산</b>됩니다.</p>
+  <div class="btns"><button class="ghostbtn" onclick="delIvsFromEdit()">삭제</button>
+    <button class="ghostbtn" onclick="closeEditIvs()">취소</button>
+    <button class="fetchbtn" onclick="saveIvsEdit()">저장</button></div>
+</div></div>
+
+<div class="modal" id="seedIvsModal"><div class="box">
+  <h3>시작 보유 등록</h3>
+  <p class="note" style="margin-bottom:10px">앱 쓰기 전부터 갖고 계신 물량을 매수 기록으로 심습니다. 취득원가만큼 예수금에서 빠집니다.</p>
+  <div class="field"><label id="sd_lev_lbl">TQQQ 보유 주식수</label><input id="sd_qty" type="text" inputmode="decimal" value="0" oninput="commaInput(this)"></div>
+  <div class="field"><label>평단 ($)</label><input id="sd_price" type="text" inputmode="decimal" value="0" oninput="commaInput(this)"></div>
+  <div id="sd_x1box" style="display:none">
+    <div class="field"><label id="sd_x1_lbl">QQQ 보유 주식수</label><input id="sd_qty1" type="text" inputmode="decimal" value="0" oninput="commaInput(this)"></div>
+    <div class="field"><label>1배수 평단 ($)</label><input id="sd_price1" type="text" inputmode="decimal" value="0" oninput="commaInput(this)"></div>
+  </div>
+  <div class="field"><label>취득일</label><input id="sd_date" type="date"></div>
+  <p class="note" id="sd_note">—</p>
+  <div class="btns"><button class="ghostbtn" onclick="closeIvsSeed()">취소</button>
+    <button class="fetchbtn" onclick="saveIvsSeed()">등록</button></div>
+</div></div>
   <div id="ei_cx" style="display:none">
     <div class="grid2">
       <div class="field"><label style="color:var(--sell)">매도가 ($)</label><input id="ei_sprice" type="text" inputmode="decimal" oninput="commaInput(this)"></div>
@@ -3316,6 +3360,7 @@ async function loadIvsData(force){
           : null;
       }
       extra = ivsQuote1 ? ` · ${ivsQuote1.symbol} ${px(ivsQuote1.price)}` : ' · ⚠ 1배수 시세 실패';
+      if($('ivs_price1')&&ivsQuote1) $('ivs_price1').value=nfix(ivsQuote1.price,2);
     } else ivsQuote1=null;
     if(note){note.className='fetchnote ok';note.textContent=`✓ ${q.symbol} ${q.last.date} 종가 ${px(q.last.close)} · ${q.days.length}일 이력${extra}`;}
     renderIvsNow();
@@ -3323,30 +3368,42 @@ async function loadIvsData(force){
 }
 function fetchIvsQuote(){ loadIvsData(true); }
 function onIvsPrice(){ const p=inputNum('ivs_price')||0; if(ivsQuoteData&&p>0) ivsQuoteData.price=p; renderIvsNow(); }
+function onIvsPrice1(){ const p=inputNum('ivs_price1')||0; if(ivsQuote1&&p>0) ivsQuote1.price=p; renderIvsNow(); }
 
 // 포지션을 기록에서 재계산한다 — 설정에는 초기자금만 둔다 (무매·VR과 같은 규약).
 // 이렇게 해야 기록과 계좌가 어긋날 수 없고, 기록을 지우면 초기자금 상태로 되돌아간다.
 function ivsPos(principal,hist){
-  let qty=0,avg=0,qty1=0,avg1=0,cash=Math.max(0,principal||0),realized=0,added=0;
+  let qty=0,avg=0,qty1=0,avg1=0,cash=Math.max(0,principal||0),realized=0,added=0,withdrawn=0;
   const yr=new Date().getFullYear(); let pnlYear=0;
-  for(const h of (hist||[]).slice().sort((a,b)=>(a.date||'').localeCompare(b.date||'')||((a.ts||0)-(b.ts||0)))){
-    if(h.type==='add'){ const a=+h.amt||0; cash+=a; added+=a; continue; }
-    const x1=(h.leg==='x1'), q=+h.qty||0, p=+h.price||0, amt=(h.amt!=null?+h.amt:q*p), fee=+h.fee||0;
-    if(!(q>0)) continue;
+  const rows=[];                                   // 레코드별 파생값(실현손익·잔고) — 표에서 쓴다
+  const ordered=(hist||[]).map((h,i)=>({h,i}))
+    .sort((a,b)=>((a.h.date||'').localeCompare(b.h.date||''))||((a.h.ts||0)-(b.h.ts||0))||(a.i-b.i));
+  for(const {h,i} of ordered){
+    const r={idx:i,h,pnl:0};
+    if(h.type==='add'){ const v=+h.amt||0; cash+=v; added+=v; rows.push(r); continue; }
+    if(h.type==='wd'){ const v=+h.amt||0; cash=Math.max(0,cash-v); withdrawn+=v; rows.push(r); continue; }
+    const x1=(h.leg==='x1'), q=+h.qty||0, p=+h.price||0;
+    const amt=(h.amt!=null?+h.amt:q*p), fee=+h.fee||0;
+    if(!(q>0)){ rows.push(r); continue; }
     if(h.type==='buy'){
       if(x1){ const nq=qty1+q; avg1= nq>0 ? (qty1*avg1+amt+fee)/nq : 0; qty1=nq; }
       else  { const nq=qty +q; avg = nq>0 ? (qty *avg +amt+fee)/nq : 0; qty =nq; }
       cash-=amt+fee;
     }else if(h.type==='sell'){
+      const held=x1?qty1:qty;
+      if(q>held+1e-9) r.bad=`보유 ${nfix(held,0)}주인데 ${nfix(q,0)}주 매도`;
       const base=x1?avg1:avg;
-      const pnl=(base>0)? q*(p-base)-fee : 0;
-      realized+=pnl; if((+String(h.date).slice(0,4))===yr) pnlYear+=pnl;
+      r.pnl=(base>0)? q*(p-base)-fee : 0;
+      realized+=r.pnl; if((+String(h.date).slice(0,4))===yr) pnlYear+=r.pnl;
       if(x1){ qty1=Math.max(0,qty1-q); if(qty1<=0) avg1=0; }
       else  { qty =Math.max(0,qty -q); if(qty <=0) avg =0; }
       cash+=amt-fee;
     }
+    rows.push(r);
   }
-  return {qty,avg,qty1,avg1,cash:Math.max(0,cash),realized,pnlYear,added};
+  const pnlByIdx={}, badByIdx={}; let nbad=0;
+  rows.forEach(r=>{ pnlByIdx[r.idx]=r.pnl; if(r.bad){ badByIdx[r.idx]=r.bad; nbad++; } });
+  return {qty,avg,qty1,avg1,cash:Math.max(0,cash),realized,pnlYear,added,withdrawn,pnlByIdx,badByIdx,nbad};
 }
 function computeIvs(){
   const st=curStrat().settings, hist=curStrat().hist||[];
@@ -3359,7 +3416,7 @@ function computeIvs(){
   const out={st,FIX,X1,s0,N,band,sym,sym1,qty,cash,avg,qty1,avg1,ready:false,
              monthly:Math.max(0,st.monthly||0), principal:Math.max(0,st.principal||0),
              added:P.added, realized:P.realized};
-  out.pnlYear=P.pnlYear; out.year=new Date().getFullYear();
+  out.pnlYear=P.pnlYear; out.year=new Date().getFullYear(); out.pnlByIdx=P.pnlByIdx; out.withdrawn=P.withdrawn; out.badByIdx=P.badByIdx; out.nbad=P.nbad;
   // 고정 5:5는 변동성을 안 쓰므로 룩백만큼의 이력이 필요 없다
   if(!days || days.length<(FIX?2:N+1)) return out;
   const closes=days.map(d=>d.close), n=closes.length;
@@ -3441,6 +3498,8 @@ function renderIvsNow(){
     ? `고정 5:5 · 밴드 ${st.band||15}%p`
     : `s0 ${st.s0||55}% · ${st.look||40}일σ · 밴드 ${st.band||15}%p`;
   $('ivs_park_lbl').textContent = c.X1 ? ('1배수 '+c.sym1) : ((st.park==='cash')?'달러현금':'단기국채');
+  { const pr=$('ivs_price1row'); if(pr) pr.style.display=c.X1?'':'none';
+    const pl=$('ivs_price1lbl'); if(pl) pl.textContent=c.sym1; }
   // 1배수 보유 행
   { const row=$('ivs_x1row'); if(row) row.style.display=c.X1?'':'none';
     if(c.X1){ $('ivs_x1nm').textContent=c.sym1;
@@ -3530,16 +3589,83 @@ function renderIvsNow(){
   }
 }
 function renderIvsHist(){
-  const h=curStrat().hist||[];
+  const h=curStrat().hist||[], c=computeIvs(), P=c.pnlByIdx||{}, B=c.badByIdx||{};
   $('ivs_rec_count').textContent=h.length?`(${h.length})`:'';
-  const rows=h.slice().reverse().map(r=>{
-    if(r.type==='add') return `<tr><td>${r.date}</td><td style="color:var(--gold)">투입</td><td class="mono">—</td><td class="mono">—</td><td class="mono">${px(r.amt||0)}</td><td class="mono">—</td></tr>`;
-    const buy=r.type==='buy';
-    return `<tr><td>${r.date}</td><td style="color:${buy?'var(--buy)':'var(--sell)'}">${buy?'매수':'매도'}${r.sym?` <span style="color:var(--faint);font-size:10px">${r.sym}</span>`:''}</td>`
-      +`<td class="mono">${nfix(r.qty,0)}주</td><td class="mono">${px(r.price)}</td><td class="mono">${px(r.amt||0)}</td>`
-      +`<td class="mono" style="color:${(r.pnl||0)>=0?'var(--buy)':'var(--sell)'}">${r.type==='sell'?((r.pnl>=0?'+':'')+px(Math.abs(r.pnl||0))):'—'}</td></tr>`;
+  const KIND={buy:['매수','var(--buy)'],sell:['매도','var(--sell)'],add:['입금','var(--gold)'],wd:['출금','var(--vio)']};
+  const idx=h.map((r,i)=>i).sort((x,y)=>((h[y].date||'').localeCompare(h[x].date||''))||((h[y].ts||0)-(h[x].ts||0)));
+  const rows=idx.map(i=>{
+    const r=h[i], K=KIND[r.type]||['?','var(--dim)'];
+    const trade=(r.type==='buy'||r.type==='sell');
+    const pnl=P[i]||0;
+    return `<tr${B[i]?' style="background:rgba(242,75,95,.10)"':''}><td>${r.date||'-'}</td>`
+      +`<td style="color:${K[1]}">${K[0]}${r.sym?` <span style="color:var(--faint);font-size:10px">${r.sym}</span>`:''}${r.seed?' <span style="color:var(--faint);font-size:10px">시작</span>':''}${r.memo?` <span style="color:var(--faint);font-size:10px">${String(r.memo).replace(/</g,'&lt;')}</span>`:''}</td>`
+      +`<td class="mono">${trade?nfix(r.qty,0)+'주':'—'}</td>`
+      +`<td class="mono">${trade?px(r.price):'—'}</td>`
+      +`<td class="mono">${px(r.amt||0)}</td>`
+      +`<td class="mono" style="color:${pnl>=0?'var(--buy)':'var(--sell)'}">${r.type==='sell'?((pnl>=0?'+':'')+px(Math.abs(pnl))):'—'}</td>`
+      +`<td style="white-space:nowrap">${B[i]?`<span title="${B[i]}" style="color:var(--sell)">⚠</span> `:''}<span class="edit" onclick="editIvs(${i})">✎</span> <span class="del" onclick="delIvs(${i})">✕</span></td></tr>`;
   }).join('');
-  $('ivs_rec_tbl').innerHTML=`<thead><tr><th>날짜</th><th>구분</th><th>수량</th><th>단가</th><th>금액</th><th>실현손익</th></tr></thead><tbody>${rows||'<tr><td colspan="6" style="color:var(--faint)">기록 없음</td></tr>'}</tbody>`;
+  $('ivs_rec_tbl').innerHTML=`<thead><tr><th>날짜</th><th>구분</th><th>수량</th><th>단가</th><th>금액</th><th>실현손익</th><th></th></tr></thead><tbody>${rows||'<tr><td colspan="7" style="color:var(--faint)">기록 없음</td></tr>'}</tbody>`;
+  { const w=$('ivs_hist_warn');
+    if(w){ if(c.nbad>0){ w.style.display='';
+        w.innerHTML=`⚠ <b>앞뒤가 안 맞는 기록이 ${c.nbad}건</b> 있습니다 — 그 시점 보유보다 많이 판 것으로 되어 있어 평단·실현손익이 틀어집니다. 대개 <b>날짜 순서</b> 문제입니다(시작 보유를 매도보다 뒤 날짜로 넣은 경우). 붉은 줄의 ✎로 날짜를 고치세요.`; }
+      else w.style.display='none'; } }
+}
+// 기록 편집 — 포지션이 기록에서 파생되므로 여기서 고치면 계좌가 즉시 따라온다
+let editIvsIdx=-1;
+function editIvs(i){
+  const r=(curStrat().hist||[])[i]; if(!r) return;
+  editIvsIdx=i;
+  $('ei_type').value=r.type||'buy';
+  $('ei_leg').value=r.leg||'lev';
+  $('ei_date').value=r.date||new Date().toISOString().slice(0,10);
+  $('ei_qty').value=r.qty!=null?r.qty:'';
+  $('ei_price').value=r.price!=null?r.price:'';
+  $('ei_fee').value=r.fee!=null?nfix(r.fee,2):'';
+  $('ei_amt').value=r.amt!=null?nfix(r.amt,2):'';
+  $('ei_memo').value=r.memo||'';
+  syncEiUI();
+  $('editIvsModal').classList.add('on');
+}
+function syncEiUI(){
+  const t=$('ei_type').value, trade=(t==='buy'||t==='sell');
+  ['ei_legrow','ei_qtyrow','ei_pricerow','ei_feerow'].forEach(id=>{const e=$(id); if(e) e.style.display=trade?'':'none';});
+  const ar=$('ei_amtrow'); if(ar) ar.style.display=trade?'none':'';
+  const mr=$('ei_memorow'); if(mr) mr.style.display=trade?'none':'';
+}
+function closeEditIvs(){ $('editIvsModal').classList.remove('on'); editIvsIdx=-1; }
+function saveIvsEdit(){
+  if(editIvsIdx<0) return;
+  const hist=curStrat().hist, r=hist[editIvsIdx]; if(!r){closeEditIvs();return;}
+  const t=$('ei_type').value, date=$('ei_date').value||r.date;
+  if(t==='buy'||t==='sell'){
+    const qty=+unComma($('ei_qty').value), price=+unComma($('ei_price').value);
+    if(!(qty>0)){alert('수량을 입력하세요');return;}
+    if(!(price>0)){alert('단가를 입력하세요');return;}
+    const leg=$('ei_leg').value||'lev';
+    const st=curStrat().settings, sym=(leg==='x1')?ivsX1Of(st.ticker):String(st.ticker||'TQQQ').toUpperCase();
+    let fee=$('ei_fee').value.trim()===''? qty*price*IVS_FEE : +unComma($('ei_fee').value);
+    hist[editIvsIdx]={ts:r.ts||Date.now(),type:t,leg,sym,date,price,qty,amt:qty*price,fee:Math.max(0,fee||0),seed:r.seed||undefined};
+  }else{
+    const amt=+unComma($('ei_amt').value);
+    if(!(amt>0)){alert('금액을 입력하세요');return;}
+    hist[editIvsIdx]={ts:r.ts||Date.now(),type:t,date,amt,memo:$('ei_memo').value.trim()||undefined};
+  }
+  sortHist(hist); save(); refreshIvs(); pushRemote&&pushRemote(); closeEditIvs();
+}
+function delIvsFromEdit(){ if(editIvsIdx<0){closeEditIvs();return;} const i=editIvsIdx; closeEditIvs(); delIvs(i); }
+function delIvs(i){
+  if(!confirm('이 기록을 삭제할까요?\n\n보유 주식수·예수금·평단이 이 기록을 뺀 상태로 다시 계산됩니다.')) return;
+  curStrat().hist.splice(i,1); save(); refreshIvs(); pushRemote&&pushRemote();
+}
+// 입금·출금 — 이자·배당 수령, 세금 납부, 추가 입금/인출을 장부에 반영
+function ivsCash(kind){
+  const nm=kind==='add'?'입금':'출금';
+  const amt=+prompt(`${nm} 금액($)을 입력하세요`,'0'); if(!isFinite(amt)||amt<=0) return;
+  const memo=prompt(`메모 (예: ${kind==='add'?'예수금 이자, 배당':'양도세 납부, 인출'})`,'')||'';
+  const date=prompt('날짜 (YYYY-MM-DD)', new Date().toISOString().slice(0,10)); if(!date) return;
+  curStrat().hist.push({type:kind,date,amt:+amt,memo:memo.trim()||undefined,ts:Date.now()});
+  sortHist(curStrat().hist); save(); refreshIvs(); pushRemote&&pushRemote();
 }
 function refreshIvs(){
   renderIvsNow(); renderIvsHist(); renderStatusline();
@@ -3584,20 +3710,37 @@ function ivsAddMonthly(){
 }
 // 시작 보유 등록 — 앱 쓰기 전부터 갖고 있던 물량을 '매수' 기록으로 심는다
 function ivsSeed(){
-  const st=curStrat().settings, c=computeIvs();
-  const X1=(st.park||'bill')==='x1', sym=String(st.ticker||'TQQQ').toUpperCase(), sym1=ivsX1Of(sym);
-  const q=+prompt(`${sym} 보유 주식수를 입력하세요 (없으면 0)`,'0'); if(!isFinite(q)) return;
-  const p=+prompt(`${sym} 평단($)을 입력하세요`,'0'); if(!isFinite(p)) return;
-  let q1=0,p1=0;
-  if(X1){ q1=+prompt(`${sym1} 보유 주식수 (없으면 0)`,'0'); if(!isFinite(q1)) return;
-          p1=+prompt(`${sym1} 평단($)`,'0'); if(!isFinite(p1)) return; }
+  const st=curStrat().settings, X1=(st.park||'bill')==='x1';
+  const sym=String(st.ticker||'TQQQ').toUpperCase(), sym1=ivsX1Of(sym);
+  $('sd_lev_lbl').textContent=sym+' 보유 주식수';
+  $('sd_x1_lbl').textContent=sym1+' 보유 주식수';
+  $('sd_x1box').style.display=X1?'':'none';
+  $('sd_date').value=new Date().toISOString().slice(0,10);
+  ['sd_qty','sd_price','sd_qty1','sd_price1'].forEach(id=>{const e=$(id); if(e) e.value='0';});
+  ['sd_qty','sd_price','sd_qty1','sd_price1'].forEach(id=>{const e=$(id); if(e) e.oninput=()=>{commaInput(e);syncSeedNote();};});
+  syncSeedNote();
+  $('seedIvsModal').classList.add('on');
+}
+function syncSeedNote(){
+  const st=curStrat().settings, X1=(st.park||'bill')==='x1';
+  const q=+unComma($('sd_qty').value)||0, p=+unComma($('sd_price').value)||0;
+  const q1=X1?(+unComma($('sd_qty1').value)||0):0, p1=X1?(+unComma($('sd_price1').value)||0):0;
+  const cost=q*p+q1*p1, prin=+st.principal||0;
+  const left=prin-cost;
+  $('sd_note').innerHTML = `취득원가 <b>${px(cost)}</b> · 초기자금 ${px(prin)} → 남는 예수금 <b style="color:${left<0?'var(--sell)':'var(--buy)'}">${px(left)}</b>`
+    + (left<0?'<br><b style="color:var(--sell)">초기자금이 모자랍니다.</b> 설정에서 초기자금을 올리세요.':'');
+}
+function closeIvsSeed(){ $('seedIvsModal').classList.remove('on'); }
+function saveIvsSeed(){
+  const st=curStrat().settings, X1=(st.park||'bill')==='x1';
+  const sym=String(st.ticker||'TQQQ').toUpperCase(), sym1=ivsX1Of(sym);
+  const q=+unComma($('sd_qty').value)||0, p=+unComma($('sd_price').value)||0;
+  const q1=X1?(+unComma($('sd_qty1').value)||0):0, p1=X1?(+unComma($('sd_price1').value)||0):0;
   if(q<=0 && q1<=0){ alert('등록할 보유분이 없습니다.'); return; }
-  const date=prompt('취득일 (YYYY-MM-DD)', new Date().toISOString().slice(0,10)); if(!date) return;
-  const cost=q*p+q1*p1;
-  if(!confirm(`시작 보유로 기록합니다\n\n${q>0?`${sym} ${nfix(q,0)}주 @ ${px(p)}\n`:''}${q1>0?`${sym1} ${nfix(q1,0)}주 @ ${px(p1)}\n`:''}\n취득원가 합계 ${px(cost)}\n\n※ 초기자금(${px(st.principal||0)})에서 이만큼 빠져 예수금이 ${px(Math.max(0,(st.principal||0)-cost))}가 됩니다.\n부족하면 설정에서 초기자금을 올리세요.`)) return;
-  if(q>0)  curStrat().hist.push({type:'buy',leg:'lev',sym,  date,price:+p, qty:+q, amt:q*p,  fee:0,seed:true,ts:1});
-  if(q1>0) curStrat().hist.push({type:'buy',leg:'x1', sym:sym1,date,price:+p1,qty:+q1,amt:q1*p1,fee:0,seed:true,ts:2});
-  sortHist(curStrat().hist); save(); refreshIvs(); pushRemote&&pushRemote();
+  const date=$('sd_date').value||new Date().toISOString().slice(0,10);
+  if(q>0)  curStrat().hist.push({type:'buy',leg:'lev',sym,   date,price:p, qty:q, amt:q*p,  fee:0,seed:true,ts:1});
+  if(q1>0) curStrat().hist.push({type:'buy',leg:'x1', sym:sym1,date,price:p1,qty:q1,amt:q1*p1,fee:0,seed:true,ts:2});
+  sortHist(curStrat().hist); save(); refreshIvs(); pushRemote&&pushRemote(); closeIvsSeed();
   alert('시작 보유 등록됨 ✓');
 }
 
@@ -4898,7 +5041,7 @@ function switchSess(id){
   if(box.active===id)return; // 같은 세션이면 무시
   box.active=id;save();
   // 이전 세션 시세 캐시/노트 완전 초기화 (잔상 방지)
-  lastQuote={inf:null,vr:null}; infQuoteCache=null; _lastNeedClose=null; maQuoteData=null; dcaQuoteData=null; ivsQuoteData=null;
+  lastQuote={inf:null,vr:null}; infQuoteCache=null; _lastNeedClose=null; maQuoteData=null; dcaQuoteData=null; ivsQuoteData=null; ivsQuote1=null;
   clearInputs();
   ['vn_fetchnote','chart_note','inf_chart_note','inf_ten_grid','diag_out','ma_fetchnote','dca_fetchnote','ivs_fetchnote'].forEach(id=>{const el=$(id);if(el){el.textContent='';el.className=el.className.replace(/\b(ok|err|load)\b/g,'');}});
   // 현재 탭의 서브탭을 "현재"로 리셋
@@ -4914,7 +5057,7 @@ function switchSess(id){
   }catch(e){console.error(e)}
 }
 function clearInputs(){
-  ['o_close','o_star5man','sh_price','sh_qty','shv_price','shv_qty','shv_amt','vn_price','vn_eval','ma_price','dca_price'].forEach(id=>{const el=$(id);if(el)el.value=''});
+  ['o_close','o_star5man','sh_price','sh_qty','shv_price','shv_qty','shv_amt','vn_price','vn_eval','ma_price','dca_price','ivs_price','ivs_price1'].forEach(id=>{const el=$(id);if(el)el.value=''});
   const fn1=$('o_fetchnote'),fn2=$('ve_fetchnote');if(fn1){fn1.textContent='';fn1.className='fetchnote'}if(fn2){fn2.textContent='';fn2.className='fetchnote'}
   lastQuote={inf:null,vr:null};
 }
