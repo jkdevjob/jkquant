@@ -443,7 +443,7 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
 </div>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v2.77</span></h1></div>
+    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v2.78</span></h1></div>
     <div style="display:flex;align-items:center;gap:8px">
       <a class="btbtn" href="/backtest">📊<span class="bt-txt"> 백테스트</span></a>
       <button class="gear" onclick="openSettings()">⚙️</button>
@@ -1372,7 +1372,7 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
   <footer>
     <strong>JK 퀀트</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v2.77</b> · 2026-08-26</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v2.78</b> · 2026-08-26</div>
   </footer>
 </div>
 
@@ -1515,13 +1515,25 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
 </div></div>
 
 <!-- 구글시트 모달 -->
+<!-- 모의 성과 모달 -->
+<div class="modal" id="paperModal"><div class="box">
+  <button class="mx" onclick="closePaper()" aria-label="닫기">✕</button>
+  <h3>🧪 모의투자 성과</h3><p>모의로 표시한 세션만 모아 보여줍니다.</p>
+  <div id="paper_body"></div>
+  <div class="mbtns"><button class="close" onclick="closePaper()">닫기</button></div>
+</div></div>
+
 <!-- 세션 모달 -->
 <div class="modal" id="sessModal"><div class="box">
   <button class="mx" onclick="closeSess()" aria-label="닫기">✕</button>
   <h3>세션(계좌) 추가</h3><p>증권사·전략별로 따로 관리할 수 있습니다. 예: 키움 SOXL, 토스 TQQQ</p>
   <div class="field"><label>세션 이름</label><input id="sess_name" type="text" placeholder="키움 SOXL"></div>
   <label style="display:flex;align-items:center;gap:8px;margin:2px 0 10px;cursor:pointer;color:var(--dim);font-size:13px">
-    <input type="checkbox" id="sess_paper" style="width:16px;height:16px"> <span><b style="color:var(--gold)">모의투자</b>로 만들기 <span style="color:var(--faint)">— 실제 매매 없이 연습용</span></span></label>
+    <input type="checkbox" id="sess_paper" style="width:16px;height:16px" onchange="document.getElementById('sess_simstart_wrap').style.display=this.checked?'':'none'"> <span><b style="color:var(--gold)">모의투자</b>로 만들기 <span style="color:var(--faint)">— 실제 매매 없이 연습용</span></span></label>
+  <div id="sess_simstart_wrap" style="display:none">
+    <div class="field"><label>모의 시작일 <span class="hint">이 날부터 오늘까지 자동으로 굴립니다</span></label><input id="sess_simstart" type="date"></div>
+    <p class="note" style="margin:-4px 0 10px">한 번만 정하면 끝입니다. 이후엔 탭을 열 때마다 오늘까지 알아서 채워집니다.</p>
+  </div>
   <div class="mbtns"><button class="close" onclick="closeSess()">닫기</button><button class="save" onclick="createSess()">만들기</button></div>
 </div></div>
 
@@ -2684,7 +2696,8 @@ function infSimNow(){
   alert(`${r.upto}까지 확인 ✓\n\n매수 ${r.nBuy}건 · 매도 ${r.nSell}건 · 사이클 ${r.cyc}회 종료\nT ${fmtT(r.T)} · 보유 ${nfix(r.qty,0)}주 · 평단 ${wn(r.avg)} · 잔금 ${wn(r.bal)}`);
 }
 function refreshInf(){
-  { const r=(!_infSimBusy)?infSimForward():null;     // 모의 세션은 열 때마다 오늘까지 자동으로 굴린다
+  { const _s=curStrat(), _from=(_s&&_s.paper&&!(_s.hist||[]).length)?paperStart(_s):null;
+    const r=(!_infSimBusy)?infSimForward(_from):null;   // 모의 세션은 열 때마다 오늘까지 자동으로 굴린다
     if(r){ infSimNote=`🤖 ${r.upto}까지 모의 체결 — 매수 ${r.nBuy} · 매도 ${r.nSell} · 사이클 ${r.cyc}회 종료`;
            infSimNoteSid=curStrat().id; } }
   updateCurLabels('inf');renderInfNow();renderOrderInline();renderInfHist();renderInfAnal();renderInfFx();renderStatusline();drawRegimeChart();
@@ -3337,6 +3350,7 @@ async function loadMaData(force){
   if(S.activeTab!=='ma') return;   // await 사이 탭 전환 가드
   if(q && q.days && q.days.length){
     maQuoteData={symbol:q.symbol,days:q.days,last:q.last,price:(q.price!=null&&+q.price>0)?+q.price:q.last.close,currency:q.currency||'USD',src:q.src};
+    paperAuto();   // 시세가 도착한 뒤에야 모의 생성이 가능하다 — 여기서 한 번 더 돌린다
     const live=maQuoteData.price;
     if($('ma_price')) $('ma_price').value = nfix(live,2);
     if(note){note.className='fetchnote ok';note.textContent=`✓ ${q.symbol} ${q.last.date} 종가 ${px(q.last.close)} · ${q.days.length}일 이력`;}
@@ -3559,6 +3573,7 @@ function saveMaEdit(){
 function delMaFromEdit(){ if(editMaIdx<0){closeEditMa();return;} const i=editMaIdx; closeEditMa(); delMa(i); }
 
 function refreshMa(){
+  paperAuto();   // 모의 세션이면 오늘까지 자동으로 굴린다
   renderMaNow(); renderMaHist(); renderStatusline();
   if(S.activeTab==='ma'){ try{ if(!krwNoAuto(curStrat().settings)) loadMaData(); }catch(e){console.error(e)} }
 }
@@ -3627,6 +3642,7 @@ async function loadIvsData(force){
   if(S.activeTab!=='ivs') return;   // await 사이 탭 전환 가드
   if(q && q.days && q.days.length){
     ivsQuoteData={symbol:q.symbol,days:q.days,last:q.last,price:(q.price!=null&&+q.price>0)?+q.price:q.last.close,src:q.src};
+    paperAuto();   // 시세가 도착한 뒤에야 모의 생성이 가능하다 — 여기서 한 번 더 돌린다
     if($('ivs_price')) $('ivs_price').value=nfix(ivsQuoteData.price,2);
     let extra='';
     // 짝=1배수면 1배 ETF 시세도 받아야 총자산·주문을 계산할 수 있다
@@ -4005,6 +4021,7 @@ function ivsCash(kind){
   sortHist(curStrat().hist); save(); refreshIvs(); pushRemote&&pushRemote();
 }
 function refreshIvs(){
+  paperAuto();   // 모의 세션이면 오늘까지 자동으로 굴린다
   renderIvsNow(); renderIvsHist(); renderStatusline();
   // 설정에서 종목을 바꾸면 그 종목 시세를 받아와야 한다 — 없으면 computeIvs가 ready:false라 '대기'에서 멈춘다
   if(S.activeTab==='ivs'){ try{ loadIvsData(); }catch(e){console.error(e)} }
@@ -4090,6 +4107,7 @@ async function loadDcaData(force){
   if(S.activeTab!=='dca') return;   // await 사이 탭 전환 가드
   if(q && q.days && q.days.length){
     dcaQuoteData={symbol:q.symbol,days:q.days,last:q.last,price:(q.price!=null&&+q.price>0)?+q.price:q.last.close,currency:q.currency||'USD',src:q.src};
+    paperAuto();   // 시세가 도착한 뒤에야 모의 생성이 가능하다 — 여기서 한 번 더 돌린다
     if($('dca_price')) $('dca_price').value = nfix(dcaQuoteData.price,2);
     if(note){note.className='fetchnote ok';note.textContent=`✓ ${q.symbol} ${q.last.date} 종가 ${px(q.last.close)} · ${q.days.length}일 이력`;}
     renderDcaNow(); renderDcaHist();
@@ -4254,6 +4272,7 @@ function saveDcaEdit(){
 function delDcaFromEdit(){ if(editDcaIdx<0){closeEditDca();return;} const i=editDcaIdx; closeEditDca(); delDca(i); }
 
 function refreshDca(){
+  paperAuto();   // 모의 세션이면 오늘까지 자동으로 굴린다
   renderDcaNow(); renderDcaHist(); renderStatusline();
   if(S.activeTab==='dca'){ try{ loadDcaData(); }catch(e){console.error(e)} }
 }
@@ -4325,6 +4344,7 @@ async function loadAsapData(force){
   if(S.activeTab!=='asap') return;   // await 사이 탭 전환 가드
   if(q && q.days && q.days.length){
     asapQuoteData={symbol:q.symbol,days:q.days,last:q.last,price:(q.price!=null&&+q.price>0)?+q.price:q.last.close,currency:q.currency||'USD',src:q.src};
+    paperAuto();   // 시세가 도착한 뒤에야 모의 생성이 가능하다 — 여기서 한 번 더 돌린다
     if($('asap_price')) $('asap_price').value=nfix(asapQuoteData.price,2);
     if(note){note.className='fetchnote ok';note.textContent=`✓ ${q.symbol} ${q.last.date} 종가 ${px(q.last.close)} · ${q.days.length}일 이력`;}
     renderAsapNow(); renderAsapHist();
@@ -4506,6 +4526,7 @@ function saveAsapEdit(){
 }
 function delAsapFromEdit(){ if(editAsapIdx<0){closeEditAsap();return;} const i=editAsapIdx; closeEditAsap(); delAsap(i); }
 function refreshAsap(){
+  paperAuto();   // 모의 세션이면 오늘까지 자동으로 굴린다
   renderAsapNow(); renderAsapHist(); renderStatusline();
   if(S.activeTab==='asap'){ try{ if(!krwNoAuto(curStrat().settings)) loadAsapData(); }catch(e){console.error(e)} }
 }
@@ -5034,6 +5055,190 @@ function vrStepCycle(sess, c, dateStr, close){
   st.startv=+r.nextV.toFixed(4); st.startCyc=newCyc; st.cycStart=dateStr;
   return {nextV:r.nextV, newCyc, add, sign:r.sign};
 }
+/* ════════ 모의투자 자동 운전 ════════
+   모의 세션은 '모의 시작일'만 정해두면 어느 탭을 열든 오늘까지 알아서 굴러간다.
+   전략마다 방식이 다르다:
+     · 무매·VR      — 걸어둔 주문의 체결을 하루하루 판정해 이어붙인다(증분).
+     · 섀넌·로테     — 규칙이 시세만으로 정해지므로 시작일부터 통째로 다시 만든다(재생성).
+     · 적립·ASAP    — 백테 엔진과 같은 규약으로 새로 만든다(재생성).
+   실계좌 세션은 어떤 경우에도 건드리지 않는다. */
+let _paperBusy=false, paperNote='', paperNoteSid=null;
+function paperStart(sess){ if(!sess) return null;
+  return sess.simStart || (sess.hist&&sess.hist.length?sess.hist[0].date:null); }
+/* confirm/alert를 잠시 막고 실행 — 기존 재생 함수를 조용히 재사용하기 위한 래퍼 */
+function _quiet(fn){ const c=window.confirm, a=window.alert;
+  window.confirm=()=>true; window.alert=()=>{};
+  try{ return fn(); } finally { window.confirm=c; window.alert=a; } }
+/* 마지막 거래일(시세 기준) — 이 날짜보다 기록이 뒤처져 있으면 다시 만든다 */
+function _lastTradingDay(days){ return (days&&days.length)?days[days.length-1].date:null; }
+function _histLast(sess){ const h=sess.hist||[]; return h.length?h[h.length-1].date:null; }
+
+/* 섀넌·로테 — 시작일부터 통째로 재생성 (규칙이 시세만으로 결정되므로 결과가 같다) */
+function _paperRegen(sess, from, inputId, replayFn, days){
+  const last=_lastTradingDay(days); if(!last) return null;
+  // 로테·섀넌은 신호가 난 날에만 기록이 생겨 마지막 기록이 몇 달 전일 수 있다.
+  // '어디까지 만들었나'는 기록 날짜가 아니라 simLast로 따로 들고 간다.
+  if((sess.settings.simLast||'')>=last) return null;
+  const el=$(inputId); if(!el) return null;
+  const prev=el.value; el.value=from;
+  const n0=(sess.hist||[]).length;
+  _quiet(()=>replayFn());
+  el.value=prev;
+  sess.settings.simLast=last;
+  const n=(sess.hist||[]).length;
+  return {upto:last, n, added:n-n0, regen:true};
+}
+/* 적립(DCA) — 주기마다 정액 매수, 200일선 아래면 배수 */
+const DCA_N_AUTO=200;
+function _paperDca(sess, from){
+  const st=sess.settings, sym=String(st.ticker||'USD').toUpperCase();
+  const days=(dcaQuoteData && String(dcaQuoteData.symbol||'').toUpperCase()===sym && dcaQuoteData.days)?dcaQuoteData.days:null;
+  if(!days||days.length<2) return null;
+  const last=_lastTradingDay(days);
+  if(!last || (st.simLast||'')>=last) return null;
+  const cl=days.map(d=>d.close), n=cl.length, sma=new Array(n);
+  { let s2=0; const buf=[]; for(let i=0;i<n;i++){ buf.push(cl[i]); s2+=cl[i];
+      if(buf.length>DCA_N_AUTO) s2-=buf.shift(); sma[i]= buf.length===DCA_N_AUTO ? s2/DCA_N_AUTO : null; } }
+  const today=new Date().toISOString().slice(0,10);
+  const freq=st.freq||'month', amt=+st.amount||0, mul=+st.dipMul||1;
+  const rec=[]; let lastKey=null;
+  const keyOf=d=> freq==='day'?d : freq==='week'?(()=>{const t=new Date(d+'T00:00:00');
+      const y=new Date(t); y.setDate(y.getDate()-((y.getDay()+6)%7)); return y.toISOString().slice(0,10);})() : d.slice(0,7);
+  for(let i=0;i<n;i++){ const d=days[i].date; if(d<from||d>today) continue;
+    const k=keyOf(d); if(k===lastKey) continue; lastKey=k;                 // 주기마다 첫 거래일에 매수
+    const m=(mul>1 && sma[i]!=null && cl[i]<=sma[i])?mul:1;
+    if(amt>0) rec.push({type:'buy',date:d,price:+cl[i],amt:+(amt*m).toFixed(2),mul:m,sim:true,ts:rec.length+1}); }
+  if(!rec.length) return null;
+  sess.hist=rec; st.simLast=last; save();
+  return {upto:last, n:rec.length, regen:true};
+}
+/* ASAP — 백테 runASAP와 같은 규약 (하락장 리저브 적립 + RSI 물타기, 회복 3단계 분할 투입) */
+function _paperAsap(sess, from){
+  const st=sess.settings, sym=String(st.ticker||'SOXL').toUpperCase();
+  const days=(asapQuoteData && String(asapQuoteData.symbol||'').toUpperCase()===sym && asapQuoteData.days)?asapQuoteData.days:null;
+  if(!days||days.length<2) return null;
+  const last=_lastTradingDay(days);
+  if(!last || (st.simLast||'')>=last) return null;
+  const cl=days.map(d=>d.close), n=cl.length;
+  const MA5=_asapMA(cl,5), MA20=_asapMA(cl,20), MA50=_asapMA(cl,50), MA200=_asapMA(cl,200), RSI=_asapRSI(cl);
+  const base=+st.base||10, mid=+st.mid||50, deep=+st.deep||100;
+  const today=new Date().toISOString().slice(0,10);
+  const rec=[]; let sgov=0, stage=0, ts=1;
+  const _sgov=(d,a)=>{ if(a>0){ sgov+=a; rec.push({type:'sgov',date:d,amt:+a.toFixed(2),sim:true,ts:ts++}); } };
+  const _buy=(d,c,a,fromRes)=>{ if(!(a>0)||!(c>0))return; const q=a/c;
+    rec.push({type:'buy',date:d,price:+c,qty:+q.toFixed(6),amt:+a.toFixed(2),from:fromRes?'reserve':'new',sim:true,ts:ts++});
+    if(fromRes) sgov-=a; };
+  for(let i=1;i<n;i++){ const d=days[i].date; if(d<from||d>today) continue;
+    const c=cl[i], m200=MA200[i]; if(m200==null) continue;
+    const down=c<m200;
+    const crossDn=MA200[i-1]!=null&&cl[i-1]>=MA200[i-1]&&c<m200;
+    const cross5 =MA5[i-1]!=null&&MA20[i-1]!=null&&MA5[i-1]<=MA20[i-1]&&MA5[i]>MA20[i];
+    const cross20=MA20[i-1]!=null&&MA50[i-1]!=null&&MA20[i-1]<=MA50[i-1]&&MA20[i]>MA50[i];
+    const rsi=RSI[i]!=null?RSI[i]:50;
+    if(crossDn&&stage>0) stage=0;
+    if(down){ _sgov(d,base);
+      if(rsi<=30&&c<=m200*0.85) _buy(d,c,deep,false);
+      else if(rsi<=35&&c<=m200*0.90) _buy(d,c,mid,false); }
+    if(stage===0&&cross5){ _buy(d,c,sgov*0.2,true); stage=1; }
+    if(stage===1&&cross20){ _buy(d,c,sgov*0.3,true); stage=2; }
+    if(stage===2&&!down){ _buy(d,c,sgov,true); stage=3; }
+    if(!down) _buy(d,c,base,false); }
+  if(!rec.length) return null;
+  sess.hist=rec; st.simLast=last; save();
+  return {upto:last, n:rec.length, regen:true};
+}
+/* 모의 성과 — 전 전략의 모의 세션을 한 줄씩. "결과만 확인"용.
+   compute*()가 활성 탭만 읽으므로 여기서는 기록에서 직접 투입·평가를 뽑는다. */
+const PAPER_TABS=[['inf','무한매수법'],['vr','밸류리밸런싱'],['ivs','섀넌(역분산)'],
+                  ['ma','200일선 로테'],['dca','매수적립'],['asap','ASAP']];
+function paperStat(tab, sess){
+  const st=sess.settings||{}, h=sess.hist||[];
+  if(!h.length) return null;
+  const sym=String(st.ticker||'').toUpperCase();
+  const Q={inf:lastQuote.inf,vr:lastQuote.vr,ivs:ivsQuoteData,ma:maQuoteData,dca:dcaQuoteData,asap:asapQuoteData}[tab];
+  const price=(Q && String(Q.symbol||'').toUpperCase()===sym)
+    ? (Q.price>0?Q.price:(Q.last&&Q.last.close)||Q.last||0) : 0;
+  let qty=0, inflow=0, cash=0, extra=0;   // inflow = 밖에서 넣은 돈, cash = 계좌 현금, extra = 1배 짝 평가금
+  if(tab==='ivs'){                        // 섀넌은 짝(1배)까지 있으니 ivsPos를 그대로 쓴다
+    const P=ivsPos(st.principal,h); qty=P.qty; cash=P.cash; inflow=(+st.principal||0)+P.added-P.withdrawn;
+    if(P.qty1>0){ const s1=ivsX1Of(sym), q1=(ivsQuote1&&String(ivsQuote1.symbol||'').toUpperCase()===s1)?ivsQuote1:null;
+      extra=P.qty1*((q1&&(q1.price>0?q1.price:q1.last&&q1.last.close))||P.avg1||0); }
+  }else if(tab==='asap'){                 // ASAP은 리저브(SGOV)가 따로 있다
+    const P=asapPos(h); qty=P.shares; cash=P.reserve;
+    h.forEach(x=>{ if(x.type==='sgov') inflow+=+x.amt||0;
+      else if(x.type==='buy' && x.from!=='reserve') inflow+=(x.amt!=null?+x.amt:(+x.qty||0)*(+x.price||0)); });
+  }else{
+    if(tab==='inf'||tab==='ma') inflow=+st.principal||0;
+    h.forEach(x=>{
+      const k=x.kind||x.type||'', pr=+x.price||0;
+      const amt=(x.amt!=null)?+x.amt:(+x.qty||0)*pr;
+      const q=(+x.qty||0) || (pr>0&&amt>0 ? amt/pr : 0);   // 적립 기록은 금액만 있고 수량이 없다
+      if(tab==='inf'){ if(String(k).includes('매수')){ qty+=q; cash-=q*pr; } else if(String(k).includes('매도')){ qty-=q; cash+=q*pr; } }
+      else if(k==='buy'||k==='in'){ qty+=q; cash-=amt; if(tab==='dca') inflow+=amt; }
+      else if(k==='sell'||k==='out'){ qty-=q; cash+=amt; }
+      else if(k==='add'){ cash+=+x.amt||0; if(tab==='vr') inflow+=+x.amt||0; }
+      else if(k==='wd'){ cash-=+x.amt||0; if(tab==='vr') inflow-=+x.amt||0; }
+      else if(k==='div'){ cash+=+x.amt||0; }
+    });
+    if(tab==='vr'){ const first=h.find(x=>x.type==='buy'); if(first) inflow+=(+first.price||0)*(+first.qty||0); }
+  }
+  const evalNow=(price>0?price*Math.max(0,qty):0)+extra;
+  const base=Math.max(1,inflow);
+  // 로테·섀넌은 신호 난 날에만 기록이 생겨 마지막 기록이 몇 달 전이다 — 굴린 기간은 simLast 기준
+  const from=h[0].date, to=(st.simLast&&st.simLast>h[h.length-1].date)?st.simLast:h[h.length-1].date;
+  const yrs=Math.max(0.05,(new Date(to)-new Date(from))/(365.25*864e5));
+  const val=evalNow+cash+((tab==='inf'||tab==='ma')?(+st.principal||0):0);
+  const nTrade=h.filter(x=>{const k=x.kind||x.type||'';return /매수|매도/.test(k)||k==='buy'||k==='sell'||k==='in'||k==='out';}).length;
+  return {tab, name:sess.name, sym, from, to, yrs, inflow:base, total:val,
+    ret:(val/base-1)*100, cagr:(Math.pow(Math.max(val,1)/base,1/yrs)-1)*100, nTrade, price};
+}
+function paperSummary(){
+  const out=[];
+  PAPER_TABS.forEach(([tab,label])=>{ const box=S[tab]; if(!box||!box.sessions) return;
+    box.sessions.forEach(sess=>{ if(!sess.paper) return;
+      const r=paperStat(tab,sess); if(r){ r.label=label; out.push(r); } }); });
+  return out;
+}
+function openPaper(){
+  const rows=paperSummary();
+  const body=$('paper_body'); if(!body) return;
+  if(!rows.length){
+    body.innerHTML=`<p class="lead">모의투자 세션이 없습니다.<br>세션 바의 <b>+ 세션</b>에서 <b>모의투자로 만들기</b>를 켜고 시작일만 정하면, 그 뒤로는 탭을 열 때마다 오늘까지 알아서 굴러갑니다.</p>`;
+  }else{
+    const cur=rows.map(r=>r.price>0).every(Boolean);
+    let h=`<div class="htable-wrap"><table class="htable"><tr><th>전략 · 세션</th><th>기간</th><th>투입</th><th>평가</th><th>수익률</th><th>연</th></tr>`;
+    rows.forEach(r=>{ const up=r.ret>=0;
+      h+=`<tr><td><b>${r.label}</b><span class="cw">${String(r.name).replace(/</g,'&lt;')} · ${r.sym}</span></td>
+        <td>${r.yrs.toFixed(1)}년<span class="cw">${r.nTrade}거래</span></td>
+        <td>${wn(r.inflow)}</td><td>${wn(r.total)}</td>
+        <td style="color:${up?'var(--buy)':'var(--sell)'};font-weight:700">${up?'+':''}${r.ret.toFixed(1)}%</td>
+        <td style="color:${up?'var(--buy)':'var(--sell)'}">${up?'+':''}${r.cagr.toFixed(1)}%</td></tr>`; });
+    h+=`</table></div>`;
+    if(!cur) h+=`<p class="note" style="margin-top:8px;color:var(--gold)">⚠ 일부 세션은 시세를 아직 안 불러왔습니다. 해당 탭을 한 번 열면 평가금이 채워집니다.</p>`;
+    h+=`<p class="note" style="margin-top:8px">투입 = 밖에서 넣은 돈(원금·적립·입금) · 평가 = 보유 평가금 + 현금. 수수료는 전략별 재생 규약을 따르고 <b>양도세는 넣지 않았습니다</b>.</p>`;
+    if(paperNote) h+=`<p class="note" style="color:var(--vio)">${paperNote}</p>`;
+    body.innerHTML=h;
+  }
+  $('paperModal').classList.add('on');
+}
+function closePaper(){$('paperModal').classList.remove('on')}
+/* 활성 탭의 모의 세션을 오늘까지 굴린다 */
+function paperAuto(){
+  const sess=curStrat();
+  if(!sess||!sess.paper||_paperBusy) return null;
+  const from=paperStart(sess); if(!from) return null;
+  const tab=S.activeTab;
+  _paperBusy=true; let r=null;
+  try{
+    if(tab==='ivs')       r=_paperRegen(sess,from,'rp_from',   ivsReplay, (ivsQuoteData&&ivsQuoteData.days)||null);
+    else if(tab==='ma')   r=_paperRegen(sess,from,'rp_ma_from',maReplay,  (maQuoteData&&maQuoteData.days)||null);
+    else if(tab==='dca')  r=_paperDca(sess,from);
+    else if(tab==='asap') r=_paperAsap(sess,from);
+  }catch(e){ console.error('paperAuto',e); }
+  finally{ _paperBusy=false; }
+  if(r){ paperNote=`🤖 ${r.upto}까지 모의 생성 — 기록 ${r.n}건`; paperNoteSid=sess.id; pushRemote&&pushRemote(); }
+  return r;
+}
 /* 자동 사이클 진입 — 진입일이 지난 사이클을 밀린 만큼 따라잡는다.
    매매(매수·매도)는 절대 자동으로 하지 않는다. V 갱신 + 적립/인출 기록만 한다.
    그 둘은 성격이 다르다: 매매는 실제 증권계좌에서 일어나 사용자가 기록하는 것이고,
@@ -5082,8 +5287,19 @@ function vrSimForward(){
   const O=(lastQuote.vr && String(lastQuote.vr.symbol||'').toUpperCase()===sym && lastQuote.vr.ohlc) ? lastQuote.vr.ohlc : null;
   if(!O||!O.length) return null;
   let c=computeVr();
-  if(c.V<=0 || c.qty<1) return null;                      // 첫 매수 전
   const today=new Date().toISOString().slice(0,10);
+  if(c.V<=0 || c.qty<1){
+    // 첫 매수도 자동으로 — 모의 시작일 종가에 초기 투자금만큼 산 것으로 시작한다
+    const s0=paperStart(sess); if(!s0) return null;
+    const row=O.find(d=>d.date>=s0 && d.close>0); if(!row) return null;
+    const amt=st.initAmt!=null?+st.initAmt:10000, q=Math.floor(amt/row.close);
+    if(q<1) return null;
+    sess.hist.push({type:'buy',date:row.date,price:+row.close,qty:q,cyc:0,sim:true,ts:Date.now()});
+    const left=amt-q*row.close;
+    if(left>0) sess.hist.push({type:'add',date:row.date,amt:+left.toFixed(2),cyc:0,sim:true,ts:Date.now()+1});
+    st.cycStart=row.date; st.simLast=row.date; st.startv=0; st.startCyc=0; delete st.cycLog;
+    sortHist(sess.hist); c=computeVr();
+  }
   const from=st.simLast || vrCycStart(c);
   if(!from) return null;
   const days=O.filter(d=>d.date>from && d.date<=today && d.high>0 && d.low>0);
@@ -5591,6 +5807,8 @@ function renderSessbar(){
     html+=`</div>`;
   });
   html+=`<div class="sesschip add" data-add="1">+ 세션</div>`;
+  if(PAPER_TABS.some(([t])=>S[t]&&S[t].sessions&&S[t].sessions.some(x=>x.paper)))
+    html+=`<div class="sesschip add" data-paper="1" style="border-color:var(--gold);color:var(--gold)">🧪 모의 성과</div>`;
   bar.innerHTML=html;
   requestAnimationFrame(updateStickyOffsets);   // 세션 수 변화 시 세션바 높이 재측정 → 서브탭 고정 위치 갱신
 }
@@ -5598,6 +5816,8 @@ function setupSessbar(){
   $('sessbar').addEventListener('click',e=>{
     const del=e.target.closest('[data-del]');
     if(del){e.stopPropagation();deleteSess(del.getAttribute('data-del'));return;}
+    const pp=e.target.closest('[data-paper]');
+    if(pp){openPaper();return;}
     const add=e.target.closest('[data-add]');
     if(add){openSess();return;}
     const chip=e.target.closest('[data-sid]');
@@ -5652,7 +5872,10 @@ function deleteSess(id){
   if(box.active===id)box.active=box.sessions[0].id;
   save();resetSubnav(S.activeTab);refreshAll();pushRemote();
 }
-function openSess(){$('sess_name').value='';const p=$('sess_paper');if(p)p.checked=false;$('sessModal').classList.add('on')}
+function openSess(){$('sess_name').value='';const p=$('sess_paper');if(p)p.checked=false;
+  const w=$('sess_simstart_wrap'); if(w) w.style.display='none';
+  const d=$('sess_simstart'); if(d&&!d.value){ const t=new Date(); t.setFullYear(t.getFullYear()-1); d.value=t.toISOString().slice(0,10); }
+  $('sessModal').classList.add('on')}
 function closeSess(){$('sessModal').classList.remove('on')}
 function createSess(){
   const box=tabBox();
@@ -5660,7 +5883,8 @@ function createSess(){
   // 탭마다 세션 형식이 다르다 — 빠뜨리면 남의 형식(VR) 세션이 들어가 그 탭이 통째로 깨진다
   const s=S.activeTab==='inf'?newInfSession(n):S.activeTab==='ma'?newMaSession(n):S.activeTab==='ivs'?newIvsSession(n)
     :S.activeTab==='dca'?newDcaSession(n):S.activeTab==='asap'?newAsapSession(n):newVrSession(n);
-  const pp=$('sess_paper'); if(pp&&pp.checked) s.paper=true;
+  const pp=$('sess_paper'); if(pp&&pp.checked){ s.paper=true;
+    const sd=$('sess_simstart'); s.simStart=(sd&&sd.value)||new Date(Date.now()-365*864e5).toISOString().slice(0,10); }
   box.sessions.push(s);box.active=s.id;save();closeSess();resetSubnav(S.activeTab);refreshAll();pushRemote();
 }
 
@@ -5753,7 +5977,7 @@ function openSettings(){
 }
 function closeSettings(){$('setModal').classList.remove('on')}
 // 모달 배경(어두운 영역) 클릭 시 닫기 — box 내부 클릭은 무시
-['setModal','sessModal'].forEach(id=>{ const m=$(id); if(m) m.addEventListener('click',e=>{ if(e.target===m) m.classList.remove('on'); }); });
+['setModal','sessModal','paperModal'].forEach(id=>{ const m=$(id); if(m) m.addEventListener('click',e=>{ if(e.target===m) m.classList.remove('on'); }); });
 // 짝=1배수일 때만 1배 계좌 입력을 보이고, 고정5:5면 s0·룩백을 흐리게 한다
 function syncIvsSetUI(park,ticker,mode){
   const off=(mode==='fix');
