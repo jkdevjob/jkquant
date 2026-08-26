@@ -44,6 +44,7 @@ h1 .v{color:var(--gold)}
 .sesschip{padding:8px 13px;border-radius:10px;background:var(--panel);border:1px solid var(--line);color:var(--dim);font-size:12.5px;font-weight:700;cursor:pointer;white-space:nowrap;flex-shrink:0}
 .sesschip.on{background:var(--vio-bg);color:var(--vio);border-color:var(--vio)}
 .sesschip.add{color:var(--faint)}
+.sesschip .paperbadge{display:inline-block;margin-left:5px;padding:1px 5px;border-radius:5px;background:rgba(245,196,81,.18);color:var(--gold);font-size:9.5px;font-weight:800;vertical-align:middle}
 .sesschip .sessdel{color:var(--sell);font-weight:800;margin-left:2px;opacity:.7}
 .fetchbtn{padding:0 14px;border-radius:10px;border:1px solid var(--vio);background:var(--vio-bg);color:var(--vio);font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;-webkit-tap-highlight-color:transparent}
 .fetchbtn:active{opacity:.7}
@@ -442,7 +443,7 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
 </div>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v2.69</span></h1></div>
+    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v2.70</span></h1></div>
     <div style="display:flex;align-items:center;gap:8px">
       <a class="btbtn" href="/backtest">📊<span class="bt-txt"> 백테스트</span></a>
       <button class="gear" onclick="openSettings()">⚙️</button>
@@ -1068,6 +1069,16 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
           <button class="ghostbtn" style="flex:1" onclick="ivsCash('wd')">－ 출금</button>
         </div>
         <button class="ghostbtn" style="width:100%;margin-top:8px" onclick="ivsSeed()">➕ 시작 보유 등록</button>
+        <div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--line)">
+          <div class="seclabel" style="margin-top:0">모의투자 — 과거부터 자동 채우기</div>
+          <div style="display:flex;gap:8px;align-items:flex-end">
+            <div class="field" style="flex:1;margin:0"><label>시작일</label><input id="rp_from" type="date"></div>
+            <button class="fetchbtn" style="flex:0 0 auto" onclick="ivsReplay()">▶ 재생</button>
+          </div>
+          <p class="note" style="margin-top:8px">그날부터 오늘까지 <b>규칙대로</b> 매매를 만들어 기록에 채웁니다(전일 σ → 당일 종가 체결, 밴드 밖일 때만). 백테와 같은 규약이라 <b>몇 년을 기다리지 않고</b> 결과를 볼 수 있습니다.<br>
+            <b>기존 기록은 지워집니다.</b> 수수료 0.25%는 물지만 <b>양도세·예수금 이자는 넣지 않습니다</b> — 실제보다 후하게 나옵니다.<br>
+            백테와 대조하면 거래 횟수는 같고 결과가 몇 % 차이 납니다: 백테는 짝을 <b>합성 1배지수</b>로, 여기는 <b>실제로 살 수 있는 1배 ETF</b>로 굴리기 때문입니다(10년에 2~3%).</p>
+        </div>
         <p class="note" style="margin-top:8px">예수금 <b>이자·배당</b>이 들어오거나 <b>양도세를 납부</b>했다면 입금·출금으로 남기세요. 그래야 장부가 실제 계좌와 안 벌어집니다.</p>
         <p class="note" style="margin-top:8px">보유 주식수·예수금·평단은 <b>이 기록에서 계산</b>됩니다. 설정에는 초기자금만 넣습니다.<br>
           앱 쓰기 전부터 갖고 있던 물량은 <b>시작 보유 등록</b>으로 한 번 넣으시면 됩니다. 기록을 전부 지우면 <b>초기자금만 있는 상태</b>로 돌아갑니다.</p>
@@ -1315,7 +1326,7 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
   <footer>
     <strong>JK 퀀트</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v2.69</b> · 2026-08-26</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v2.70</b> · 2026-08-26</div>
   </footer>
 </div>
 
@@ -1461,6 +1472,8 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
   <button class="mx" onclick="closeSess()" aria-label="닫기">✕</button>
   <h3>세션(계좌) 추가</h3><p>증권사·전략별로 따로 관리할 수 있습니다. 예: 키움 SOXL, 토스 TQQQ</p>
   <div class="field"><label>세션 이름</label><input id="sess_name" type="text" placeholder="키움 SOXL"></div>
+  <label style="display:flex;align-items:center;gap:8px;margin:2px 0 10px;cursor:pointer;color:var(--dim);font-size:13px">
+    <input type="checkbox" id="sess_paper" style="width:16px;height:16px"> <span><b style="color:var(--gold)">모의투자</b>로 만들기 <span style="color:var(--faint)">— 실제 매매 없이 연습용</span></span></label>
   <div class="mbtns"><button class="close" onclick="closeSess()">닫기</button><button class="save" onclick="createSess()">만들기</button></div>
 </div></div>
 
@@ -3659,6 +3672,63 @@ function delIvs(i){
   if(!confirm('이 기록을 삭제할까요?\n\n보유 주식수·예수금·평단이 이 기록을 뺀 상태로 다시 계산됩니다.')) return;
   curStrat().hist.splice(i,1); save(); refreshIvs(); pushRemote&&pushRemote();
 }
+// ── 모의투자: 과거 구간을 규칙대로 재생해 매매 기록을 만든다 ──
+// 백테 runIVS와 같은 규약: 전일까지의 σ로 목표비중 → 당일 종가 체결, 밴드 밖일 때만.
+// 예수금 이자·세금은 넣지 않는다(실제 현금흐름은 입금·출금 기록으로 받는 게 이 앱 규약).
+function ivsReplay(){
+  const st=curStrat().settings;
+  const sess=curStrat();
+  if(!sess.paper && !confirm('이 세션은 모의투자로 표시돼 있지 않습니다.\n실전 계좌라면 기록이 뒤섞입니다.\n\n그래도 진행할까요?')) return;
+  const sym=String(st.ticker||'TQQQ').toUpperCase(), X1=(st.park||'bill')==='x1', sym1=ivsX1Of(sym);
+  const D=(ivsQuoteData&&String(ivsQuoteData.symbol||'').toUpperCase()===sym)?ivsQuoteData.days:null;
+  if(!D||!D.length){ alert('먼저 🔄 자동으로 종가 이력을 불러오세요.'); return; }
+  const D1=X1?((ivsQuote1&&String(ivsQuote1.symbol||'').toUpperCase()===sym1)?ivsQuote1.days:null):[];
+  if(X1&&(!D1||!D1.length)){ alert(`짝이 1배수라 ${sym1} 이력이 필요합니다. 🔄 자동을 눌러주세요.`); return; }
+  const from=$('rp_from').value;
+  if(!from){ alert('시작일을 고르세요.'); return; }
+  if((sess.hist||[]).length && !confirm(`기존 기록 ${sess.hist.length}건을 지우고 ${from}부터 다시 만듭니다.\n계속할까요?`)) return;
+
+  const P1={}; (D1||[]).forEach(d=>{ P1[d.date]=d.close; });
+  const days=D.filter(d=>d.date>=from && (!X1 || P1[d.date]>0));
+  if(days.length<30){ alert('그 시작일부터의 거래일이 너무 적습니다.'); return; }
+  const FIX=(st.mode||'iv')==='fix', s0=(st.s0||55)/100, N=st.look||40, band=(st.band||15)/100;
+  // 전 구간 롤링 σ → 목표비중 (백테 _ivsWeights와 같은 계산)
+  const all=D.map(d=>d.close), dt=D.map(d=>d.date), W={};
+  { let sm=0,s2=0; const r=new Array(all.length).fill(0);
+    for(let i=1;i<all.length;i++) r[i]=all[i]/all[i-1]-1;
+    for(let i=1;i<all.length;i++){ sm+=r[i]; s2+=r[i]*r[i];
+      if(i>N){ sm-=r[i-N]; s2-=r[i-N]*r[i-N]; }
+      const k=Math.min(i,N);
+      if(k>=10){ const m=sm/k, v=Math.max(1e-8,(s2/k-m*m)*252); W[dt[i]]=Math.min(1,(s0*s0)/v); } } }
+  const idx={}; dt.forEach((d,i)=>idx[d]=i);
+
+  let qty=0,qty1=0,cash=Math.max(0,st.principal||0);
+  const rec=[]; const FEE=IVS_FEE;
+  for(const row of days){
+    const d=row.date, c=row.close, c1=X1?P1[d]:0;
+    const g=idx[d], w = FIX?0.5:(g>0?(W[dt[g-1]]??0):0);
+    const eq=qty*c+(X1?qty1*c1:0)+cash;
+    if(eq<=0) break;
+    if(Math.abs(w-qty*c/eq)<=band) continue;
+    const tA=w*eq, tB=X1?(1-w)*eq:0;
+    // 매도 먼저 → 매수 (현금 확보 순서, 백테와 동일)
+    if(qty*c>tA){ const q=Math.min(qty,(qty*c-tA)/c); if(q*c>1){ const a=q*c,f=a*FEE; cash+=a-f; qty-=q;
+      rec.push({type:'sell',leg:'lev',sym,date:d,price:c,qty:+q.toFixed(6),amt:a,fee:f,sim:true,ts:rec.length+1}); } }
+    if(X1&&qty1*c1>tB){ const q=Math.min(qty1,(qty1*c1-tB)/c1); if(q*c1>1){ const a=q*c1,f=a*FEE; cash+=a-f; qty1-=q;
+      rec.push({type:'sell',leg:'x1',sym:sym1,date:d,price:c1,qty:+q.toFixed(6),amt:a,fee:f,sim:true,ts:rec.length+1}); } }
+    if(qty*c<tA){ const sp=Math.min(cash,tA-qty*c); if(sp>1){ const f=sp*FEE, q=(sp-f)/c; cash-=sp; qty+=q;
+      rec.push({type:'buy',leg:'lev',sym,date:d,price:c,qty:+q.toFixed(6),amt:sp-f,fee:f,sim:true,ts:rec.length+1}); } }
+    if(X1&&qty1*c1<tB){ const sp=Math.min(cash,tB-qty1*c1); if(sp>1){ const f=sp*FEE, q=(sp-f)/c1; cash-=sp; qty1+=q;
+      rec.push({type:'buy',leg:'x1',sym:sym1,date:d,price:c1,qty:+q.toFixed(6),amt:sp-f,fee:f,sim:true,ts:rec.length+1}); } }
+  }
+  const last=days[days.length-1];
+  const fin=qty*last.close+(X1?qty1*P1[last.date]:0)+cash;
+  const yrs=(new Date(last.date)-new Date(days[0].date))/(365.25*864e5);
+  const cagr=yrs>0?(Math.pow(Math.max(fin,1e-9)/Math.max(st.principal||1,1),1/yrs)-1)*100:0;
+  if(!confirm(`${from} ~ ${last.date} (${yrs.toFixed(1)}년) 재생 완료\n\n거래 ${rec.length}건 · 연 ${rec.length/Math.max(yrs,.1)|0}회\n원금 ${px(st.principal||0)} → ${px(fin)}\nCAGR ${cagr>=0?'+':''}${cagr.toFixed(1)}%\n\n※ 세금·예수금 이자는 넣지 않았습니다.\n\n이 기록으로 채울까요?`)) return;
+  sess.hist=rec; sortHist(sess.hist); save(); refreshIvs(); pushRemote&&pushRemote();
+  alert(`${rec.length}건 생성됨 ✓`);
+}
 // 입금·출금 — 이자·배당 수령, 세금 납부, 추가 입금/인출을 장부에 반영
 function ivsCash(kind){
   const nm=kind==='add'?'입금':'출금';
@@ -5016,6 +5086,7 @@ function renderSessbar(){
     const on=s.id===box.active;
     const nm=String(s.name).replace(/</g,'&lt;');
     html+=`<div class="sesschip ${on?'on':''}" data-sid="${s.id}">${nm}`;
+    if(s.paper) html+=`<span class="paperbadge">모의</span>`;
     if(on&&box.sessions.length>1)html+=`<span class="sessdel" data-del="${s.id}"> ✕</span>`;
     html+=`</div>`;
   });
@@ -5081,7 +5152,7 @@ function deleteSess(id){
   if(box.active===id)box.active=box.sessions[0].id;
   save();resetSubnav(S.activeTab);refreshAll();pushRemote();
 }
-function openSess(){$('sess_name').value='';$('sessModal').classList.add('on')}
+function openSess(){$('sess_name').value='';const p=$('sess_paper');if(p)p.checked=false;$('sessModal').classList.add('on')}
 function closeSess(){$('sessModal').classList.remove('on')}
 function createSess(){
   const box=tabBox();
@@ -5089,6 +5160,7 @@ function createSess(){
   // 탭마다 세션 형식이 다르다 — 빠뜨리면 남의 형식(VR) 세션이 들어가 그 탭이 통째로 깨진다
   const s=S.activeTab==='inf'?newInfSession(n):S.activeTab==='ma'?newMaSession(n):S.activeTab==='ivs'?newIvsSession(n)
     :S.activeTab==='dca'?newDcaSession(n):S.activeTab==='asap'?newAsapSession(n):newVrSession(n);
+  const pp=$('sess_paper'); if(pp&&pp.checked) s.paper=true;
   box.sessions.push(s);box.active=s.id;save();closeSess();resetSubnav(S.activeTab);refreshAll();pushRemote();
 }
 
