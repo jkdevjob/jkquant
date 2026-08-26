@@ -443,7 +443,7 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
 </div>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v2.78</span></h1></div>
+    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v2.79</span></h1></div>
     <div style="display:flex;align-items:center;gap:8px">
       <a class="btbtn" href="/backtest">📊<span class="bt-txt"> 백테스트</span></a>
       <button class="gear" onclick="openSettings()">⚙️</button>
@@ -1372,7 +1372,7 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
   <footer>
     <strong>JK 퀀트</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v2.78</b> · 2026-08-26</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v2.79</b> · 2026-08-26</div>
   </footer>
 </div>
 
@@ -1526,7 +1526,7 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
 <!-- 세션 모달 -->
 <div class="modal" id="sessModal"><div class="box">
   <button class="mx" onclick="closeSess()" aria-label="닫기">✕</button>
-  <h3>세션(계좌) 추가</h3><p>증권사·전략별로 따로 관리할 수 있습니다. 예: 키움 SOXL, 토스 TQQQ</p>
+  <h3 id="sess_title">세션(계좌) 추가</h3><p id="sess_desc">증권사·전략별로 따로 관리할 수 있습니다. 예: 키움 SOXL, 토스 TQQQ</p>
   <div class="field"><label>세션 이름</label><input id="sess_name" type="text" placeholder="키움 SOXL"></div>
   <label style="display:flex;align-items:center;gap:8px;margin:2px 0 10px;cursor:pointer;color:var(--dim);font-size:13px">
     <input type="checkbox" id="sess_paper" style="width:16px;height:16px" onchange="document.getElementById('sess_simstart_wrap').style.display=this.checked?'':'none'"> <span><b style="color:var(--gold)">모의투자</b>로 만들기 <span style="color:var(--faint)">— 실제 매매 없이 연습용</span></span></label>
@@ -1534,7 +1534,7 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
     <div class="field"><label>모의 시작일 <span class="hint">이 날부터 오늘까지 자동으로 굴립니다</span></label><input id="sess_simstart" type="date"></div>
     <p class="note" style="margin:-4px 0 10px">한 번만 정하면 끝입니다. 이후엔 탭을 열 때마다 오늘까지 알아서 채워집니다.</p>
   </div>
-  <div class="mbtns"><button class="close" onclick="closeSess()">닫기</button><button class="save" onclick="createSess()">만들기</button></div>
+  <div class="mbtns"><button class="close" onclick="closeSess()">닫기</button><button class="save" id="sess_ok" onclick="createSess()">만들기</button></div>
 </div></div>
 
 <!-- 거래 수정 모달 (VR) -->
@@ -5199,11 +5199,51 @@ function paperSummary(){
       const r=paperStat(tab,sess); if(r){ r.label=label; out.push(r); } }); });
   return out;
 }
-function openPaper(){
+/* 모의 성과를 열 때, 아직 안 채워진 전략까지 채운다.
+   paperAuto()는 '활성 탭'만 굴리고 시세도 그 탭에서만 불러오므로,
+   한 번도 열지 않은 전략은 표에서 통째로 빠져 있었다.
+   여기서 탭·세션을 잠깐 그 전략으로 옮겨 시세를 받고 생성한 뒤 되돌린다. */
+const PAPER_LOADERS={inf:()=>loadInfData(), vr:()=>loadVrChart(), ivs:()=>loadIvsData(),
+  ma:()=>loadMaData(), dca:()=>loadDcaData(), asap:()=>loadAsapData()};
+let _paperFilling=false;
+async function paperFillAll(){
+  if(_paperFilling) return 0;
+  _paperFilling=true;
+  const prevTab=S.activeTab; let n=0;
+  try{
+    for(const [tab] of PAPER_TABS){
+      const box=S[tab]; if(!box||!box.sessions) continue;
+      const targets=box.sessions.filter(x=>x.paper);
+      if(!targets.length) continue;
+      const prevAct=box.active;
+      for(const sess of targets){
+        S.activeTab=tab; box.active=sess.id;
+        try{
+          if(PAPER_LOADERS[tab]) await PAPER_LOADERS[tab]();
+          paperAuto();
+          if(tab==='vr') vrSimForward();
+          if(tab==='inf') infSimForward((sess.hist||[]).length?null:paperStart(sess));
+          if((sess.hist||[]).length) n++;
+        }catch(e){ console.error('paperFill',tab,e); }
+      }
+      box.active=prevAct;
+    }
+  } finally { S.activeTab=prevTab; _paperFilling=false; }
+  return n;
+}
+async function openPaper(){
+  const body=$('paper_body');
+  if(body){ body.innerHTML='<p class="lead">전 전략 모의 세션을 오늘까지 맞추는 중… <span style="color:var(--faint)">시세를 불러오느라 몇 초 걸립니다.</span></p>'; }
+  $('paperModal').classList.add('on');
+  await paperFillAll();
+  refreshAll();
   const rows=paperSummary();
-  const body=$('paper_body'); if(!body) return;
+  if(!body) return;
   if(!rows.length){
-    body.innerHTML=`<p class="lead">모의투자 세션이 없습니다.<br>세션 바의 <b>+ 세션</b>에서 <b>모의투자로 만들기</b>를 켜고 시작일만 정하면, 그 뒤로는 탭을 열 때마다 오늘까지 알아서 굴러갑니다.</p>`;
+    const nPaper=PAPER_TABS.reduce((a,[t])=>a+((S[t]&&S[t].sessions)?S[t].sessions.filter(x=>x.paper).length:0),0);
+    body.innerHTML= nPaper
+      ? `<p class="lead">모의 세션 ${nPaper}개가 있지만 아직 기록이 없습니다.<br>시세를 못 불러왔거나 <b>모의 시작일</b>이 비어 있을 수 있습니다. 해당 탭을 한 번 열어 🔄 자동을 눌러보세요.</p>`
+      : `<p class="lead">모의투자 세션이 없습니다.<br><br>· <b>새로 만들기</b> — 세션바의 <b>+ 세션</b> → <b>모의투자로 만들기</b> 체크 → 시작일 선택<br>· <b>기존 세션을 바꾸기</b> — 세션 이름을 <b>더블탭</b>하면 모의 전환·시작일을 정할 수 있습니다.<br><br>정하고 나면 그 뒤로는 알아서 오늘까지 굴러갑니다.</p>`;
   }else{
     const cur=rows.map(r=>r.price>0).every(Boolean);
     let h=`<div class="htable-wrap"><table class="htable"><tr><th>전략 · 세션</th><th>기간</th><th>투입</th><th>평가</th><th>수익률</th><th>연</th></tr>`;
@@ -5219,7 +5259,6 @@ function openPaper(){
     if(paperNote) h+=`<p class="note" style="color:var(--vio)">${paperNote}</p>`;
     body.innerHTML=h;
   }
-  $('paperModal').classList.add('on');
 }
 function closePaper(){$('paperModal').classList.remove('on')}
 /* 활성 탭의 모의 세션을 오늘까지 굴린다 */
@@ -5825,7 +5864,7 @@ function setupSessbar(){
   });
   $('sessbar').addEventListener('dblclick',e=>{
     const chip=e.target.closest('[data-sid]');
-    if(chip)renameSess(chip.getAttribute('data-sid'));
+    if(chip)editSess(chip.getAttribute('data-sid'));
   });
 }
 function switchSess(id){
@@ -5872,14 +5911,49 @@ function deleteSess(id){
   if(box.active===id)box.active=box.sessions[0].id;
   save();resetSubnav(S.activeTab);refreshAll();pushRemote();
 }
-function openSess(){$('sess_name').value='';const p=$('sess_paper');if(p)p.checked=false;
+let _sessEditId=null;
+function openSess(){ _sessEditId=null;
+  $('sess_title').textContent='세션(계좌) 추가';
+  $('sess_desc').textContent='증권사·전략별로 따로 관리할 수 있습니다. 예: 키움 SOXL, 토스 TQQQ';
+  $('sess_ok').textContent='만들기';
+  $('sess_name').value=''; const p=$('sess_paper'); if(p)p.checked=false;
   const w=$('sess_simstart_wrap'); if(w) w.style.display='none';
   const d=$('sess_simstart'); if(d&&!d.value){ const t=new Date(); t.setFullYear(t.getFullYear()-1); d.value=t.toISOString().slice(0,10); }
-  $('sessModal').classList.add('on')}
+  $('sessModal').classList.add('on'); }
+/* 기존 세션 편집 — 이름·모의 여부·모의 시작일. 세션칩 더블탭으로 연다. */
+function editSess(id){
+  const box=tabBox(), s=box.sessions.find(x=>x.id===id); if(!s) return;
+  _sessEditId=id;
+  $('sess_title').textContent='세션 설정';
+  $('sess_desc').textContent='이름과 모의투자 여부를 바꿀 수 있습니다.';
+  $('sess_ok').textContent='저장';
+  $('sess_name').value=s.name||'';
+  const p=$('sess_paper'); if(p)p.checked=!!s.paper;
+  const w=$('sess_simstart_wrap'); if(w) w.style.display=s.paper?'':'none';
+  const d=$('sess_simstart'); if(d) d.value=s.simStart||new Date(Date.now()-365*864e5).toISOString().slice(0,10);
+  $('sessModal').classList.add('on');
+}
 function closeSess(){$('sessModal').classList.remove('on')}
 function createSess(){
   const box=tabBox();
   const n=$('sess_name').value.trim()||('세션 '+(box.sessions.length+1));
+  if(_sessEditId){                                   // 편집 모드 — 이름·모의 여부만 바꾼다
+    const t=box.sessions.find(x=>x.id===_sessEditId); _sessEditId=null;
+    if(!t){ closeSess(); return; }
+    t.name=n;
+    const on=$('sess_paper')&&$('sess_paper').checked;
+    if(on){ const sd=$('sess_simstart');
+      const ns=(sd&&sd.value)||new Date(Date.now()-365*864e5).toISOString().slice(0,10);
+      if(!t.paper || t.simStart!==ns){                // 새로 모의로 바꾸거나 시작일을 옮기면 처음부터 다시 만든다
+        if((t.hist||[]).length && !confirm(`'${n}' 세션의 기록 ${t.hist.length}건을 지우고 ${ns}부터 다시 만듭니다.\n계속할까요?`)){ closeSess(); return; }
+        t.hist=[]; if(t.settings){ delete t.settings.simLast; delete t.settings.cycStart; delete t.settings.startCyc; delete t.settings.cycLog; t.settings.startv=0; } }
+      t.paper=true; t.simStart=ns;
+    }else if(t.paper){
+      if(!confirm(`'${n}'을 실계좌로 바꿉니다.\n자동 생성이 멈추고 기록은 그대로 남습니다.\n계속할까요?`)){ closeSess(); return; }
+      t.paper=false;
+    }
+    save(); closeSess(); refreshAll(); pushRemote(); return;
+  }
   // 탭마다 세션 형식이 다르다 — 빠뜨리면 남의 형식(VR) 세션이 들어가 그 탭이 통째로 깨진다
   const s=S.activeTab==='inf'?newInfSession(n):S.activeTab==='ma'?newMaSession(n):S.activeTab==='ivs'?newIvsSession(n)
     :S.activeTab==='dca'?newDcaSession(n):S.activeTab==='asap'?newAsapSession(n):newVrSession(n);
