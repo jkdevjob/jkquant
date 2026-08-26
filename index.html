@@ -442,7 +442,7 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
 </div>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v2.65</span></h1></div>
+    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v2.66</span></h1></div>
     <div style="display:flex;align-items:center;gap:8px">
       <a class="btbtn" href="/backtest">📊<span class="bt-txt"> 백테스트</span></a>
       <button class="gear" onclick="openSettings()">⚙️</button>
@@ -1059,6 +1059,7 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
     <div class="block" id="ivs-hist">
       <div class="card"><h3><span class="dot"></span>리밸런싱 기록 <span id="ivs_rec_count" class="cnt"></span></h3>
         <div class="htable-wrap"><table class="htable" id="ivs_rec_tbl"></table></div>
+        <p class="note" style="margin-top:8px">이 표는 <b>로그</b>입니다. 실제 계좌(보유 주식수·예수금·평단)는 <b>설정</b>에 저장되고 체결 기록 시 자동 갱신됩니다 — 기록을 지워도 계좌는 남습니다.</p>
         <button class="ghostbtn" onclick="clearHist('ivs')">기록 전체 삭제</button></div>
       <div class="card"><h3><span class="dot"></span>계좌 상태 직접 수정</h3>
         <p class="note" style="margin-top:0">실제 계좌와 어긋나면 설정(⚙️)에서 <b>보유 주식수·예수금·평단</b>을 직접 고치세요. 기록은 그대로 남습니다.</p></div>
@@ -1303,7 +1304,7 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
   <footer>
     <strong>JK 퀀트</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v2.65</b> · 2026-08-26</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v2.66</b> · 2026-08-26</div>
   </footer>
 </div>
 
@@ -4799,6 +4800,19 @@ function updateCurLabels(which){
 
 /* ── 공통: 현재 세션 이력 전체 삭제 ── */
 function clearHist(strat){
+  // 섀넌만 포지션이 settings(qty·cash·avg)에 저장돼 hist와 분리돼 있다.
+  // 다른 탭은 hist에서 포지션을 재계산하므로 기록을 지우면 포지션도 사라지지만,
+  // 섀넌은 계좌가 그대로 남는다 — 같은 버튼이 다르게 동작하니 명시하고 선택지를 준다.
+  if(strat==='ivs'){
+    const st=curStrat().settings;
+    if(!confirm('리밸런싱 기록을 전부 삭제할까요? 되돌릴 수 없습니다.\n\n※ 보유 주식수·예수금·평단은 설정에 따로 저장돼 있어 그대로 남습니다.')) return;
+    curStrat().hist=[];
+    if(((st.qty||0)+(st.qty1||0))>0
+       && confirm('계좌도 초기화할까요?\n\n보유 주식수와 평단을 0으로 만듭니다 (예수금은 건드리지 않습니다).\n[취소]를 누르면 기록만 지웁니다.')){
+      st.qty=0; st.avg=0; st.qty1=0; st.avg1=0;
+    }
+    save(); refreshIvs(); pushRemote(); return;
+  }
   if(!confirm('이 세션의 기록을 전부 삭제할까요? 되돌릴 수 없습니다'))return;
   curStrat().hist=[];save();
   strat==='inf'?refreshInf():strat==='ma'?refreshMa():strat==='ivs'?refreshIvs():strat==='dca'?refreshDca():strat==='asap'?refreshAsap():refreshVr();pushRemote();
