@@ -443,7 +443,7 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
 </div>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v2.75</span></h1></div>
+    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v2.76</span></h1></div>
     <div style="display:flex;align-items:center;gap:8px">
       <a class="btbtn" href="/backtest">📊<span class="bt-txt"> 백테스트</span></a>
       <button class="gear" onclick="openSettings()">⚙️</button>
@@ -771,6 +771,12 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
         </div>
         <p class="note" style="margin-top:8px">그날부터 오늘까지 <b>규칙대로</b> 리밸런싱을 만들어 기록에 채웁니다(10거래일마다 V 갱신 → 밴드 밖이면 V로 되맞춤, 백테와 같은 규약).<br>
           <b>기존 기록은 지워집니다.</b> 수수료 0.25%는 물지만 양도세는 넣지 않습니다.</p>
+      </div>
+      <div class="card" style="margin-top:13px">
+        <h3><span class="dot"></span>모의투자 — 오늘까지 체결 확인</h3>
+        <button class="fetchbtn" style="width:100%" onclick="vrSimNow()">▶ 지금까지 체결 판정</button>
+        <p class="note" style="margin-top:8px">매수·매도표를 <b>지정가로 걸어둔 셈 치고</b>, 마지막 확인일 다음 날부터 오늘까지 하루하루 <b>고가·저가</b>로 닿았는지 판정해 체결된 차수만 기록합니다. 사이클 진입(V 갱신·적립)도 날짜에 맞춰 같이 처리합니다.<br>
+          모의 세션은 <b>탭을 열 때 자동으로</b> 돌아가니 평소엔 이 버튼을 누를 일이 없습니다. 실계좌 세션은 건드리지 않습니다.</p>
       </div>
     </div>
     <div class="block" id="vr-anal">
@@ -1353,7 +1359,7 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
   <footer>
     <strong>JK 퀀트</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v2.75</b> · 2026-08-26</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v2.76</b> · 2026-08-26</div>
   </footer>
 </div>
 
@@ -2424,7 +2430,7 @@ async function fetchQuote(which){
   const q=await fetchDaily(symbol);
   if(q){
     const live=(q.price!=null&&q.price>0)?q.price:q.last.close;
-    lastQuote[which]={symbol:q.symbol,last:q.last.close,price:live,days:q.days};
+    lastQuote[which]={symbol:q.symbol,last:q.last.close,price:live,days:q.days,ohlc:q.ohlc||null};
     const ms=q.marketState; // PRE/REGULAR/POST/CLOSED
     const msLabel = ms==='REGULAR'?'장중 실시간':ms==='PRE'?'프리장':ms==='POST'?'애프터장':ms==='CLOSED'?'장마감':'';
     const cs=(q.currency==='KRW')?'₩':'$';                 // 통화 기호
@@ -4389,7 +4395,8 @@ async function loadVrChart(force){
   const q=await fetchDaily(st.ticker||'TQQQ');
   if(q){
     vrChartData=q.days;
-    lastQuote.vr={symbol:q.symbol,last:q.last.close,days:q.days.slice(-5)};
+    // days를 5개로 잘라두면 재생·모의체결이 이력을 못 읽는다 — 전 구간을 그대로 둔다
+    lastQuote.vr={symbol:q.symbol,last:q.last.close,days:q.days,ohlc:q.ohlc||null};
     $('chart_note').className='fetchnote ok';
     $('chart_note').textContent=`✓ ${q.symbol} ${q.last.date} 종가 ${px(q.last.close)}${q.src==='api'?'':' (프록시)'}`;
     drawVrChart(); renderVrNow(); renderVrTable();
@@ -4875,6 +4882,24 @@ function fgLabel(v){
 }
 
 /* refreshVr 갱신 */
+/* 사이클 진입 1회 — V 갱신 + 적립/인출 기록 + 사이클 기록.
+   자동 진입과 모의 체결이 같은 규약을 쓰도록 여기 한 곳에만 둔다. */
+function vrStepCycle(sess, c, dateStr, close){
+  const st=sess.settings;
+  const ev = close>0 ? close*c.qty : c.V;
+  const r=computeNextV(c,ev);
+  const isAccum=st.mode===0.75, isWd=st.mode===0.25;
+  const add=(isAccum||isWd)?(st.add||0):0;
+  if(!st.cycLog) st.cycLog=[];
+  st.cycLog.push({cyc:c.curCyc, dates:cycDates(c)||'-', V:+c.V.toFixed(2),
+    lo:+c.lo.toFixed(2), up:+c.up.toFixed(2), trade:+c.cycTrade.toFixed(2),
+    startPool:+c.cycStartPool.toFixed(2), E:ev>0?+ev.toFixed(2):null, close:close>0?+close.toFixed(4):null});
+  const newCyc=c.curCyc+1;
+  if(add>0) sess.hist.push({type:(r.sign<0?'wd':'add'), date:dateStr, amt:add, cyc:newCyc,
+                            ts:Date.now()+st.cycLog.length, auto:true});
+  st.startv=+r.nextV.toFixed(4); st.startCyc=newCyc; st.cycStart=dateStr;
+  return {nextV:r.nextV, newCyc, add, sign:r.sign};
+}
 /* 자동 사이클 진입 — 진입일이 지난 사이클을 밀린 만큼 따라잡는다.
    매매(매수·매도)는 절대 자동으로 하지 않는다. V 갱신 + 적립/인출 기록만 한다.
    그 둘은 성격이 다르다: 매매는 실제 증권계좌에서 일어나 사용자가 기록하는 것이고,
@@ -4898,19 +4923,8 @@ function vrAutoAdvance(){
       const c=computeVr();
       if(c.V<=0) break;                                  // 첫 매수 전이면 할 일 없음
       const du=vrDue(c); if(!du || du.d>0) break;         // 아직 진입일 전
-      const px=closeOn(du.dueStr) || vrLastPrice(c);
-      const ev=px>0 ? px*c.qty : c.V;
-      const r=computeNextV(c,ev);
-      const isAccum=st.mode===0.75, isWd=st.mode===0.25;
-      const add=(isAccum||isWd)?(st.add||0):0;
-      if(!st.cycLog) st.cycLog=[];
-      st.cycLog.push({cyc:c.curCyc, dates:cycDates(c)||'-', V:+c.V.toFixed(2),
-        lo:+c.lo.toFixed(2), up:+c.up.toFixed(2), trade:+c.cycTrade.toFixed(2),
-        startPool:+c.cycStartPool.toFixed(2), E:ev>0?+ev.toFixed(2):null, close:px>0?+px.toFixed(4):null});
-      const newCyc=c.curCyc+1;
-      if(add>0) sess.hist.push({type:(r.sign<0?'wd':'add'), date:du.dueStr, amt:add, cyc:newCyc, ts:Date.now()+g, auto:true});
-      st.startv=+r.nextV.toFixed(4); st.startCyc=newCyc; st.cycStart=du.dueStr;
-      lastV=r.nextV; lastCyc=newCyc; n++;
+      const r=vrStepCycle(sess, c, du.dueStr, closeOn(du.dueStr) || vrLastPrice(c));
+      lastV=r.nextV; lastCyc=r.newCyc; n++;
     }
     if(n>0){ st.cycLog=st.cycLog.slice(-120); sortHist(sess.hist);
       if($('nv_date')) $('nv_date').value='';   // 사이클이 넘어갔으니 진입일 칸의 옛 날짜를 비운다
@@ -4919,8 +4933,80 @@ function vrAutoAdvance(){
   } finally { _vrAutoBusy=false; }
   return n;
 }
+/* ── 모의 체결 — 오늘까지 앞으로 굴리기 ──
+   실전에서는 사이클 첫날 매수·매도표를 지정가로 전부 걸어두고 닿는 것만 체결된다.
+   모의로는 그 주문을 낼 곳이 없으니, 하루하루 고가·저가로 '닿았는지'를 판정해
+   체결됐을 차수만 기록한다 — 결과는 예약 주문을 걸어둔 것과 같다.
+     매도 k차 = 상단 ÷ (남은 보유수량)  → 그날 고가가 그 값 이상이면 1주 체결
+     매수 k차 = 하단 ÷ (매수 전 보유수량) → 그날 저가가 그 값 이하이면 1주 체결
+   하루 매수 총액은 그날 시작 Pool × 모드한도(적립75·거치50·인출25%)까지만.
+   모의(paper) 세션에서만 돈다. 실계좌 세션은 절대 건드리지 않는다. */
+function vrSimForward(){
+  const sess=curStrat(); if(!sess||!sess.paper||!sess.settings) return null;
+  const st=sess.settings; if(_vrAutoBusy) return null;
+  const sym=String(st.ticker||'').toUpperCase();
+  const O=(lastQuote.vr && String(lastQuote.vr.symbol||'').toUpperCase()===sym && lastQuote.vr.ohlc) ? lastQuote.vr.ohlc : null;
+  if(!O||!O.length) return null;
+  let c=computeVr();
+  if(c.V<=0 || c.qty<1) return null;                      // 첫 매수 전
+  const today=new Date().toISOString().slice(0,10);
+  const from=st.simLast || vrCycStart(c);
+  if(!from) return null;
+  const days=O.filter(d=>d.date>from && d.date<=today && d.high>0 && d.low>0);
+  if(!days.length) return null;
+
+  _vrAutoBusy=true;
+  let nSell=0, nBuy=0, nCyc=0, seq=0;
+  try{
+    for(const row of days){
+      // 1) 진입일이 지났으면 V 갱신 (모의는 사람이 누르지 않으므로 항상 자동)
+      for(let g=0; g<10; g++){
+        c=computeVr(); const cs=vrCycStart(c); if(!cs) break;
+        const due=new Date(cs+'T00:00:00'); due.setDate(due.getDate()+CYC_DAYS);
+        while(due.getDay()===0||due.getDay()===6) due.setDate(due.getDate()+1);
+        const ds=due.toISOString().slice(0,10);
+        if(row.date < ds) break;
+        vrStepCycle(sess, c, ds, row.close); nCyc++;
+      }
+      // 2) 사다리 체결 — 매도 먼저(현금 확보) → 매수 (백테와 같은 순서)
+      c=computeVr();
+      let qty=Math.floor(c.qty), pool=c.pool, up=c.up, lo=c.lo, cyc=c.curCyc;
+      const budget=Math.max(0, pool*(st.mode||0.75));     // 그날 매수 한도
+      let spent=0;
+      const push=(type,price)=>{ sess.hist.push({type,date:row.date,price:+price.toFixed(4),qty:1,
+        cyc, sim:true, ts:Date.now()+(seq++)}); };
+      for(let k=0;k<300 && qty>=1;k++){                   // 매도: 오를수록 다음 차수가 더 높다
+        const p=up/qty; if(!(row.high>=p)) break;
+        push('sell',p); pool+=p; qty-=1; nSell++;
+      }
+      for(let k=0;k<300 && qty>=1;k++){                   // 매수: 내릴수록 다음 차수가 더 낮다
+        const p=lo/qty; if(!(row.low<=p)) break;
+        if(spent+p>budget+1e-9) break;                    // Pool 한도 소진
+        push('buy',p); pool-=p; spent+=p; qty+=1; nBuy++;
+      }
+      st.simLast=row.date;
+    }
+    st.cycLog=(st.cycLog||[]).slice(-120);
+    sortHist(sess.hist);
+    if($('nv_date')) $('nv_date').value='';
+    save();
+  } finally { _vrAutoBusy=false; }
+  const c2=computeVr();
+  return {nSell,nBuy,nCyc, upto:days[days.length-1].date, cyc:c2.curCyc, V:c2.V};
+}
+function vrSimNow(){
+  const sess=curStrat();
+  if(!sess.paper){ alert('모의투자 세션에서만 쓸 수 있습니다.\n세션 이름 옆 ⚙️에서 모의로 표시하세요.'); return; }
+  const r=vrSimForward();
+  if(!r){ alert('새로 체결할 날이 없습니다.\n\n· 첫 매수를 먼저 기록했는지\n· 🔄 자동으로 시세를 불러왔는지\n확인해 주세요.'); return; }
+  refreshVr();
+  alert(`${r.upto}까지 확인 ✓\n\n매도 ${r.nSell}건 · 매수 ${r.nBuy}건\n사이클 진입 ${r.nCyc}회 → ${r.cyc}주차 · V ${wn(r.V)}`);
+}
 function refreshVr(){
   updateCurLabels('vr');
+  { const r=vrSimForward();     // 모의 세션은 열 때마다 오늘까지 자동으로 굴린다
+    if(r) vrAutoNote=`🤖 ${r.upto}까지 모의 체결 — 매도 ${r.nSell} · 매수 ${r.nBuy} · 사이클 ${r.nCyc}회 → ${r.cyc}주차`,
+          vrAutoNoteSid=curStrat().id; }
   vrAutoAdvance();
   renderVrNow(); renderVrTable();   // renderVrNow가 renderVrNext(다음 V)·밴드그래프도 호출
   renderVrHist(); renderVrAnal();
@@ -5021,6 +5107,7 @@ function vrReplay(){
   // 화면의 밴드·판단이 마지막 사이클 기준으로 나온다.
   st.startv=+V.toFixed(4); st.startCyc=cyc; st.cycStart=cycStartDate;
   st.cycLog=cycLog.slice(-120);
+  st.simLast=D[D.length-1].date;        // 여기까지는 이미 만들었으니 모의 체결은 그다음 날부터
   save(); refreshVr(); pushRemote&&pushRemote();
   alert(`${rec.length}건 생성됨 ✓ (${cyc}주차 · V ${wn(V)})`);
 }
@@ -5043,6 +5130,7 @@ function vrFirstBuy(){
   h.push({type:'buy',date,price:+pr,qty:+qty,ts:Date.now()});
   if(left>0) h.push({type:'add',date,amt:+left,ts:Date.now()+1});
   st.cycStart=date;                       // 0주차 시작일 — 여기서부터 2주 뒤가 다음 진입일
+  st.simLast=date;                        // 모의 체결은 첫 매수 다음 날부터 판정
   sortHist(h); save(); refreshVr(); pushRemote&&pushRemote();
   const du=vrDue(computeVr());
   alert(`첫 매수 기록됨 ✓\n\n0주차 시작 ${date}\n다음 사이클 진입 ${du?du.dueStr:'2주 뒤'}\n그때까지는 밴드를 벗어날 때만 매매합니다.`);
@@ -5616,7 +5704,7 @@ function saveSettings(){
     // settings를 통째로 갈아끼우면 설정을 한 번 저장할 때마다 주차가 0으로 돌아가고
     // 사이클 기록 표가 비워졌다. (startv·startpool은 입력칸이 있어 그대로 다시 저장된다.)
     const prev=s.settings||{}, keep={};
-    ['startCyc','cycStart','cycLog'].forEach(k=>{ if(prev[k]!==undefined) keep[k]=prev[k]; });
+    ['startCyc','cycStart','cycLog','simLast'].forEach(k=>{ if(prev[k]!==undefined) keep[k]=prev[k]; });
     s.settings={...keep, ticker:$('set_vticker').value||'TQQQ',mode:+segGet('set_vmode')||0.75,
       formula:segGet('set_vformula')||'basic',g:inputNum('set_g')||10,add:inputNum('set_add')||100,
       initAmt:Math.max(0,inputNum('set_initamt')||0),autoCyc:segGet('set_vauto')==='1',
