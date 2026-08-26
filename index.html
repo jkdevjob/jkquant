@@ -443,7 +443,7 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
 </div>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v2.83</span></h1></div>
+    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v2.84</span></h1></div>
     <div style="display:flex;align-items:center;gap:8px">
       <a class="btbtn" href="/backtest">📊<span class="bt-txt"> 백테스트</span></a>
       <button class="gear" onclick="openSettings()">⚙️</button>
@@ -1187,6 +1187,8 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
         <div class="rowline"><span class="k">총 매도금</span><span class="val mono" id="anaI_totsell">$0</span></div>
         <div class="rowline"><span class="k">현재 평단</span><span class="val mono" id="anaI_avg">—</span></div>
         <div class="rowline"><span class="k">보유수량</span><span class="val mono" id="anaI_qty">0주</span></div>
+        <div class="rowline"><span class="k">평가손익 <span class="sub">아직 안 판 몫</span></span><span class="val mono" id="anaI_unreal">—</span></div>
+        <div class="rowline"><span class="k">└ 그중 수수료 <span class="sub">0.25% · 평단에 이미 포함</span></span><span class="val mono" id="anaI_fee">—</span></div>
         <div class="rowline" id="anaI_extra_row"><span class="k" id="anaI_extra_k">—</span><span class="val mono" id="anaI_extra">—</span></div></div>
     </div>
 
@@ -1478,7 +1480,7 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
   <footer>
     <strong>JK 퀀트</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v2.83</b> · 2026-08-26</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v2.84</b> · 2026-08-26</div>
   </footer>
 </div>
 
@@ -3623,10 +3625,10 @@ function maReplay(){
   const sess=curStrat(), st=sess.settings;
   if(!sess.paper && !confirm('이 세션은 모의투자로 표시돼 있지 않습니다.\n실전 계좌라면 기록이 뒤섞입니다.\n\n그래도 진행할까요?')) return;
   const c=computeMa();
-  if(!c.ready){ alert('먼저 🔄 자동으로 종가 이력을 불러오세요.'); return; }
+  if(!c.ready){ alert('먼저 🔄 자동으로 종가 이력을 불러오세요.'); return false; }
   const from=$('rp_ma_from').value;
-  if(!from){ alert('시작일을 고르세요.'); return; }
-  if((sess.hist||[]).length && !confirm(`기존 기록 ${sess.hist.length}건을 지우고 ${from}부터 다시 만듭니다.\n계속할까요?`)) return;
+  if(!from){ alert('시작일을 고르세요.'); return false; }
+  if((sess.hist||[]).length && !confirm(`기존 기록 ${sess.hist.length}건을 지우고 ${from}부터 다시 만듭니다.\n계속할까요?`)) return false;
   const D=c.dates, SEQ=c.sigSeq, CL=maQuoteData.days.map(d=>d.close);
   const FEE=(typeof IVS_FEE!=='undefined')?IVS_FEE:0.0025;
   let cash=Math.max(0,st.principal||0), shares=0, rec=[];
@@ -3651,6 +3653,7 @@ function maReplay(){
   if(!confirm(`${from} ~ ${D[D.length-1]} (${yrs.toFixed(1)}년) 재생 완료\n\n전환 ${rec.length}회\n원금 ${px(st.principal||0)} → ${px(fin)}\nCAGR ${cagr>=0?'+':''}${cagr.toFixed(1)}%\n\n※ 양도세·국채 이자는 넣지 않았습니다.\n\n이 기록으로 채울까요?`)) return;
   sess.hist=rec; sortHist(sess.hist); save(); refreshMa(); pushRemote&&pushRemote();
   alert(`${rec.length}건 생성됨 ✓`);
+  return true;
 }
 function maRecord(type){
   const c=computeMa(), st=curStrat().settings;
@@ -3749,6 +3752,13 @@ function renderIvsAnal(){
   $('anaI_totsell').textContent=wn(totsell);
   $('anaI_avg').textContent=c.qty>0?wn(c.avg):'—';
   $('anaI_qty').textContent=nfix(c.qty,0)+'주';
+  // 사기만 했는데 마이너스인 이유가 여기서 보인다 — 평가손익 0에 수수료만 나간 경우
+  let cost=c.avg*c.qty; if(c.X1) cost+=(c.avg1||0)*(c.qty1||0);
+  const unreal=invested-cost;
+  $('anaI_unreal').textContent=(unreal>=0?'+':'')+wn(unreal);
+  $('anaI_unreal').style.color=unreal>=0?'var(--buy)':'var(--sell)';
+  $('anaI_fee').textContent=(c.fees>0?'−':'')+wn(c.fees||0);
+  $('anaI_fee').style.color=(c.fees>0)?'var(--sell)':'var(--faint)';
   $('anaI_extra_k').innerHTML= c.X1 ? `짝(1배) 보유 <span class="sub">${c.sym1}</span>` : '목표 비중';
   $('anaI_extra').textContent= c.X1 ? `${nfix(c.qty1||0,0)}주` : (c.ready?`${(c.w*100).toFixed(1)}%`:'—');
 }
@@ -3848,7 +3858,7 @@ function onIvsPrice1(){ const p=inputNum('ivs_price1')||0; if(ivsQuote1&&p>0) iv
 // 포지션을 기록에서 재계산한다 — 설정에는 초기자금만 둔다 (무매·VR과 같은 규약).
 // 이렇게 해야 기록과 계좌가 어긋날 수 없고, 기록을 지우면 초기자금 상태로 되돌아간다.
 function ivsPos(principal,hist){
-  let qty=0,avg=0,qty1=0,avg1=0,cash=Math.max(0,principal||0),realized=0,added=0,withdrawn=0;
+  let qty=0,avg=0,qty1=0,avg1=0,cash=Math.max(0,principal||0),realized=0,added=0,withdrawn=0,fees=0;
   const yr=new Date().getFullYear(); let pnlYear=0;
   const rows=[];                                   // 레코드별 파생값(실현손익·잔고) — 표에서 쓴다
   const ordered=(hist||[]).map((h,i)=>({h,i}))
@@ -3860,6 +3870,7 @@ function ivsPos(principal,hist){
     const x1=(h.leg==='x1'), q=+h.qty||0, p=+h.price||0;
     const amt=(h.amt!=null?+h.amt:q*p), fee=+h.fee||0;
     if(!(q>0)){ rows.push(r); continue; }
+    fees+=fee;
     if(h.type==='buy'){
       if(x1){ const nq=qty1+q; avg1= nq>0 ? (qty1*avg1+amt+fee)/nq : 0; qty1=nq; }
       else  { const nq=qty +q; avg = nq>0 ? (qty *avg +amt+fee)/nq : 0; qty =nq; }
@@ -3878,7 +3889,7 @@ function ivsPos(principal,hist){
   }
   const pnlByIdx={}, badByIdx={}; let nbad=0;
   rows.forEach(r=>{ pnlByIdx[r.idx]=r.pnl; if(r.bad){ badByIdx[r.idx]=r.bad; nbad++; } });
-  return {qty,avg,qty1,avg1,cash:Math.max(0,cash),realized,pnlYear,added,withdrawn,pnlByIdx,badByIdx,nbad};
+  return {qty,avg,qty1,avg1,cash:Math.max(0,cash),realized,pnlYear,added,withdrawn,fees,pnlByIdx,badByIdx,nbad};
 }
 function computeIvs(){
   const st=curStrat().settings, hist=curStrat().hist||[];
@@ -3891,7 +3902,7 @@ function computeIvs(){
   const out={st,FIX,X1,s0,N,band,sym,sym1,qty,cash,avg,qty1,avg1,ready:false,
              monthly:Math.max(0,st.monthly||0), principal:Math.max(0,st.principal||0),
              added:P.added, realized:P.realized};
-  out.pnlYear=P.pnlYear; out.year=new Date().getFullYear(); out.pnlByIdx=P.pnlByIdx; out.withdrawn=P.withdrawn; out.badByIdx=P.badByIdx; out.nbad=P.nbad;
+  out.fees=P.fees; out.pnlYear=P.pnlYear; out.year=new Date().getFullYear(); out.pnlByIdx=P.pnlByIdx; out.withdrawn=P.withdrawn; out.badByIdx=P.badByIdx; out.nbad=P.nbad;
   // 고정 5:5는 변동성을 안 쓰므로 룩백만큼의 이력이 필요 없다
   if(!days || days.length<(FIX?2:N+1)) return out;
   const closes=days.map(d=>d.close), n=closes.length;
@@ -4143,16 +4154,16 @@ function ivsReplay(){
   if(!sess.paper && !confirm('이 세션은 모의투자로 표시돼 있지 않습니다.\n실전 계좌라면 기록이 뒤섞입니다.\n\n그래도 진행할까요?')) return;
   const sym=String(st.ticker||'TQQQ').toUpperCase(), X1=(st.park||'bill')==='x1', sym1=ivsX1Of(sym);
   const D=(ivsQuoteData&&String(ivsQuoteData.symbol||'').toUpperCase()===sym)?ivsQuoteData.days:null;
-  if(!D||!D.length){ alert('먼저 🔄 자동으로 종가 이력을 불러오세요.'); return; }
+  if(!D||!D.length){ alert('먼저 🔄 자동으로 종가 이력을 불러오세요.'); return false; }
   const D1=X1?((ivsQuote1&&String(ivsQuote1.symbol||'').toUpperCase()===sym1)?ivsQuote1.days:null):[];
-  if(X1&&(!D1||!D1.length)){ alert(`짝이 1배수라 ${sym1} 이력이 필요합니다. 🔄 자동을 눌러주세요.`); return; }
+  if(X1&&(!D1||!D1.length)){ alert(`짝이 1배수라 ${sym1} 이력이 필요합니다. 🔄 자동을 눌러주세요.`); return false; }
   const from=$('rp_from').value;
-  if(!from){ alert('시작일을 고르세요.'); return; }
-  if((sess.hist||[]).length && !confirm(`기존 기록 ${sess.hist.length}건을 지우고 ${from}부터 다시 만듭니다.\n계속할까요?`)) return;
+  if(!from){ alert('시작일을 고르세요.'); return false; }
+  if((sess.hist||[]).length && !confirm(`기존 기록 ${sess.hist.length}건을 지우고 ${from}부터 다시 만듭니다.\n계속할까요?`)) return false;
 
   const P1={}; (D1||[]).forEach(d=>{ P1[d.date]=d.close; });
   const days=D.filter(d=>d.date>=from && (!X1 || P1[d.date]>0));
-  if(days.length<30){ alert('그 시작일부터의 거래일이 너무 적습니다.'); return; }
+  if(days.length<30){ alert('그 시작일부터의 거래일이 너무 적습니다.'); return false; }
   const FIX=(st.mode||'iv')==='fix', s0=(st.s0||55)/100, N=st.look||40, band=(st.band||15)/100;
   // 전 구간 롤링 σ → 목표비중 (백테 _ivsWeights와 같은 계산)
   const all=D.map(d=>d.close), dt=D.map(d=>d.date), W={};
@@ -4190,6 +4201,7 @@ function ivsReplay(){
   if(!confirm(`${from} ~ ${last.date} (${yrs.toFixed(1)}년) 재생 완료\n\n거래 ${rec.length}건 · 연 ${rec.length/Math.max(yrs,.1)|0}회\n원금 ${px(st.principal||0)} → ${px(fin)}\nCAGR ${cagr>=0?'+':''}${cagr.toFixed(1)}%\n\n※ 세금·예수금 이자는 넣지 않았습니다.\n\n이 기록으로 채울까요?`)) return;
   sess.hist=rec; sortHist(sess.hist); save(); refreshIvs(); pushRemote&&pushRemote();
   alert(`${rec.length}건 생성됨 ✓`);
+  return true;
 }
 // 입금·출금 — 이자·배당 수령, 세금 납부, 추가 입금/인출을 장부에 반영
 function ivsCash(kind){
@@ -5304,8 +5316,11 @@ function _paperRegen(sess, from, inputId, replayFn, days){
   const el=$(inputId); if(!el) return null;
   const prev=el.value; el.value=from;
   const n0=(sess.hist||[]).length;
-  _quiet(()=>replayFn());
+  const ok=_quiet(()=>replayFn());
   el.value=prev;
+  // 재생이 실패했는데(예: 짝=1배수인데 1배 시세가 아직 없음) simLast를 찍어 버리면
+  // 다시는 만들지 않는다. 성공했을 때만 진행점을 옮긴다.
+  if(ok===false) return null;
   sess.settings.simLast=last;
   const n=(sess.hist||[]).length;
   return {upto:last, n, added:n-n0, regen:true};
@@ -5677,8 +5692,8 @@ function vrReplay(){
   const days=(q&&String(q.symbol||'').toUpperCase()===sym&&q.days)?q.days:null;
   if(!days||!days.length){ alert('먼저 🔄 자동으로 종가 이력을 불러오세요.'); return; }
   const from=$('rp_vr_from').value;
-  if(!from){ alert('시작일을 고르세요.'); return; }
-  if((sess.hist||[]).length && !confirm(`기존 기록 ${sess.hist.length}건을 지우고 ${from}부터 다시 만듭니다.\n계속할까요?`)) return;
+  if(!from){ alert('시작일을 고르세요.'); return false; }
+  if((sess.hist||[]).length && !confirm(`기존 기록 ${sess.hist.length}건을 지우고 ${from}부터 다시 만듭니다.\n계속할까요?`)) return false;
 
   const D=days.filter(d=>d.date>=from);
   if(D.length<30){ alert('그 시작일부터의 거래일이 너무 적습니다.'); return; }
