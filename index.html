@@ -443,7 +443,7 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
 </div>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v2.71</span></h1></div>
+    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v2.72</span></h1></div>
     <div style="display:flex;align-items:center;gap:8px">
       <a class="btbtn" href="/backtest">📊<span class="bt-txt"> 백테스트</span></a>
       <button class="gear" onclick="openSettings()">⚙️</button>
@@ -755,6 +755,15 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
       <div class="card"><h3><span class="dot"></span>거래 이력 <span id="vr_count" class="cnt"></span></h3>
         <div class="htable-wrap"><table class="htable" id="vr_table"></table></div>
         <button class="ghostbtn" onclick="clearHist('vr')">이력 전체 삭제</button></div>
+      <div class="card" style="margin-top:13px">
+        <h3><span class="dot"></span>모의투자 — 과거부터 자동 채우기</h3>
+        <div style="display:flex;gap:8px;align-items:flex-end">
+          <div class="field" style="flex:1;margin:0"><label>시작일</label><input id="rp_vr_from" type="date"></div>
+          <button class="fetchbtn" style="flex:0 0 auto" onclick="vrReplay()">▶ 재생</button>
+        </div>
+        <p class="note" style="margin-top:8px">그날부터 오늘까지 <b>규칙대로</b> 리밸런싱을 만들어 기록에 채웁니다(10거래일마다 V 갱신 → 밴드 밖이면 V로 되맞춤, 백테와 같은 규약).<br>
+          <b>기존 기록은 지워집니다.</b> 수수료 0.25%는 물지만 양도세는 넣지 않습니다.</p>
+      </div>
     </div>
     <div class="block" id="vr-anal">
       <div class="dash" style="background:linear-gradient(160deg,var(--buy-bg),var(--panel));border-color:var(--buy-dim)">
@@ -1335,7 +1344,7 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
   <footer>
     <strong>JK 퀀트</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v2.71</b> · 2026-08-26</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v2.72</b> · 2026-08-26</div>
   </footer>
 </div>
 
@@ -4813,6 +4822,67 @@ function toggleVrFields(){ if(!$('vh_pricewrap'))return;
   $('vh_amtwrap').style.display=stock?'none':'';
 }
 let editVrIdx=-1;
+// ── 모의투자: 밸류리밸런싱 과거 재생 ──
+// 백테 runVR과 같은 규약: 10거래일마다 V를 갱신(V += pool/G + 적립)하고 밴드 밖이면 V로 되맞춘다.
+function vrReplay(){
+  const sess=curStrat(), st=sess.settings;
+  if(!sess.paper && !confirm('이 세션은 모의투자로 표시돼 있지 않습니다.\n실전 계좌라면 기록이 뒤섞입니다.\n\n그래도 진행할까요?')) return;
+  const sym=String(st.ticker||'TQQQ').toUpperCase();
+  const q=lastQuote&&lastQuote.vr;
+  const days=(q&&String(q.symbol||'').toUpperCase()===sym&&q.days)?q.days:null;
+  if(!days||!days.length){ alert('먼저 🔄 자동으로 종가 이력을 불러오세요.'); return; }
+  const from=$('rp_vr_from').value;
+  if(!from){ alert('시작일을 고르세요.'); return; }
+  if((sess.hist||[]).length && !confirm(`기존 기록 ${sess.hist.length}건을 지우고 ${from}부터 다시 만듭니다.\n계속할까요?`)) return;
+
+  const D=days.filter(d=>d.date>=from);
+  if(D.length<30){ alert('그 시작일부터의 거래일이 너무 적습니다.'); return; }
+  const G=+st.g||10, band=(+st.band||15)/100, mode=+st.mode||0.5;
+  const contrib=+st.add||0, formula=st.formula||'basic';
+  const isAccum=(mode===0.75), isWd=(mode===0.25), withdraw=isWd?contrib:0;
+  const FEE=(typeof IVS_FEE!=='undefined')?IVS_FEE:0.0025;
+  const INTERVAL=10, poolLimit=mode;
+  let shares=0, pool=+st.startpool||0, V=+st.startv||0, avg=0, totalWd=0;
+  const rec=[]; let first=(V<=0);
+  if(V>0){ // 이어받기 시작: 시작V만큼 이미 보유
+    const c0=D[0].close; shares=V/c0; avg=c0;
+    rec.push({type:'buy',date:D[0].date,price:+c0,qty:+shares.toFixed(6),sim:true,ts:rec.length+1});
+  }
+  const _buy=(amt,c,d)=>{ if(!(amt>0))return; const fee=amt*FEE, net=amt-fee, qy=net/c;
+    avg=(shares<=0)?c:(shares*avg+net)/(shares+qy); shares+=qy;
+    rec.push({type:'buy',date:d,price:+c,qty:+qy.toFixed(6),sim:true,ts:rec.length+1}); };
+  const _sell=(gross,c,d)=>{ if(!(gross>0))return 0; const qy=Math.min(shares,gross/c), fee=qy*c*FEE;
+    shares-=qy; rec.push({type:'sell',date:d,price:+c,qty:+qy.toFixed(6),sim:true,ts:rec.length+1});
+    return qy*c-fee; };
+  D.forEach((row,i)=>{
+    if(i%INTERVAL!==0) return;
+    const c=row.close, d=row.date; if(!(c>0)) return;
+    if(first){
+      if(!isAccum){ const s=+st.startv>0?+st.startv:10000; _buy(s,c,d); V=shares*c; }
+      else { pool+=contrib; rec.push({type:'add',date:d,amt:+contrib,sim:true,ts:rec.length+1});
+             _buy(pool,c,d); pool=0; V=shares*c; }
+      first=false; return;
+    }
+    const cv=shares*c, addCycle=isAccum?contrib:isWd?-withdraw:0;
+    if(formula==='skill'&&V>0) V=V+pool/G+(cv-V)/(2*Math.sqrt(G))+addCycle;
+    else V=V+pool/G+addCycle;
+    V=Math.max(V,0);
+    if(isAccum){ pool+=contrib; rec.push({type:'add',date:d,amt:+contrib,sim:true,ts:rec.length+1}); }
+    else if(isWd){ const wd=Math.min(withdraw,pool); pool-=wd; totalWd+=wd;
+      if(wd>0) rec.push({type:'wd',date:d,amt:+wd,sim:true,ts:rec.length+1}); }
+    const up=V*(1+band), lo=V*(1-band), cv2=shares*c;
+    if(cv2>up){ pool+=_sell(cv2-V,c,d); }
+    else if(cv2<lo){ const use=Math.min(V-cv2,pool*poolLimit); _buy(use,c,d); pool-=use; }
+  });
+  const lastPx=D[D.length-1].close, fin=shares*lastPx+pool+totalWd;
+  const yrs=(new Date(D[D.length-1].date)-new Date(D[0].date))/(365.25*864e5);
+  const base=(+st.startv>0?+st.startv:10000)+(isAccum?contrib*Math.floor(D.length/INTERVAL):0);
+  const cagr=yrs>0?(Math.pow(Math.max(fin,1e-9)/Math.max(base,1),1/yrs)-1)*100:0;
+  const nTrade=rec.filter(r=>r.type==='buy'||r.type==='sell').length;
+  if(!confirm(`${from} ~ ${D[D.length-1].date} (${yrs.toFixed(1)}년) 재생 완료\n\n매매 ${nTrade}건\n총투입 ${px(base)} → ${px(fin)}\nCAGR ${cagr>=0?'+':''}${cagr.toFixed(1)}%\n\n※ 양도세는 넣지 않았습니다.\n\n이 기록으로 채울까요?`)) return;
+  sess.hist=rec; sortHist(sess.hist); save(); refreshVr(); pushRemote&&pushRemote();
+  alert(`${rec.length}건 생성됨 ✓`);
+}
 function addVr(){ if(!$('vh_date'))return;
   const date=$('vh_date').value; let rec;
   if(vhType==='buy'||vhType==='sell'){
