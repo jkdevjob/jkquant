@@ -445,7 +445,7 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
 </div>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v2.87</span></h1></div>
+    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v2.88</span></h1></div>
     <div style="display:flex;align-items:center;gap:8px">
       <a class="btbtn" href="/backtest" title="백테스트">📊<span class="bt-txt"> 백테스트</span></a>
       <button class="btbtn" id="paperbtn" onclick="openPaper()" title="모의투자 성과" style="display:none;border-color:rgba(245,196,81,.45);color:var(--gold)">🧪<span class="bt-txt"> 모의 성과</span></button>
@@ -1482,7 +1482,7 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
   <footer>
     <strong>JK 퀀트</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v2.87</b> · 2026-08-26</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v2.88</b> · 2026-08-26</div>
   </footer>
 </div>
 
@@ -3471,6 +3471,7 @@ async function loadMaData(force){
   if(q && q.days && q.days.length){
     maQuoteData={symbol:q.symbol,days:q.days,last:q.last,price:(q.price!=null&&+q.price>0)?+q.price:q.last.close,currency:q.currency||'USD',src:q.src};
     paperAuto();   // 시세가 도착한 뒤에야 모의 생성이 가능하다 — 여기서 한 번 더 돌린다
+    renderStatusline();   // 시세가 있어야 신호 배지가 나온다
     const live=maQuoteData.price;
     if($('ma_price')) $('ma_price').value = nfix(live,2);
     if(note){note.className='fetchnote ok';note.textContent=`✓ ${q.symbol} ${q.last.date} 종가 ${px(q.last.close)} · ${q.days.length}일 이력`;}
@@ -3836,6 +3837,7 @@ async function loadIvsData(force){
   if(q && q.days && q.days.length){
     ivsQuoteData={symbol:q.symbol,days:q.days,last:q.last,price:(q.price!=null&&+q.price>0)?+q.price:q.last.close,src:q.src};
     paperAuto();   // 시세가 도착한 뒤에야 모의 생성이 가능하다 — 여기서 한 번 더 돌린다
+    renderStatusline();   // 시세가 있어야 신호 배지가 나온다
     if($('ivs_price')) $('ivs_price').value=nfix(ivsQuoteData.price,2);
     let extra='';
     // 짝=1배수면 1배 ETF 시세도 받아야 총자산·주문을 계산할 수 있다
@@ -4304,6 +4306,7 @@ async function loadDcaData(force){
   if(q && q.days && q.days.length){
     dcaQuoteData={symbol:q.symbol,days:q.days,last:q.last,price:(q.price!=null&&+q.price>0)?+q.price:q.last.close,currency:q.currency||'USD',src:q.src};
     paperAuto();   // 시세가 도착한 뒤에야 모의 생성이 가능하다 — 여기서 한 번 더 돌린다
+    renderStatusline();   // 시세가 있어야 신호 배지가 나온다
     if($('dca_price')) $('dca_price').value = nfix(dcaQuoteData.price,2);
     if(note){note.className='fetchnote ok';note.textContent=`✓ ${q.symbol} ${q.last.date} 종가 ${px(q.last.close)} · ${q.days.length}일 이력`;}
     renderDcaNow(); renderDcaHist(); renderDcaAnal();
@@ -4583,6 +4586,7 @@ async function loadAsapData(force){
   if(q && q.days && q.days.length){
     asapQuoteData={symbol:q.symbol,days:q.days,last:q.last,price:(q.price!=null&&+q.price>0)?+q.price:q.last.close,currency:q.currency||'USD',src:q.src};
     paperAuto();   // 시세가 도착한 뒤에야 모의 생성이 가능하다 — 여기서 한 번 더 돌린다
+    renderStatusline();   // 시세가 있어야 신호 배지가 나온다
     if($('asap_price')) $('asap_price').value=nfix(asapQuoteData.price,2);
     if(note){note.className='fetchnote ok';note.textContent=`✓ ${q.symbol} ${q.last.date} 종가 ${px(q.last.close)} · ${q.days.length}일 이력`;}
     renderAsapNow(); renderAsapHist(); renderAsapAnal();
@@ -6263,23 +6267,23 @@ function renderStatusline(){
   if(strat==='inf'){
     const st=s.settings,c=computeInf();
     html+=`<span>${tickerLabel(st.ticker)} · ${st.div}분할 · 익절${st.target}% · ${wn(st.principal)}</span>`;
-    html+=`<span class="badge ${c.T>0?'ok':'warn'}">T ${c.T.toFixed(1)}</span>`;
+    html+=`<span class="badge ${c.T>0?'ok':'warn'}" title="T값 — ${st.div}분할 중 몇 회차까지 샀는지">T ${c.T.toFixed(1)}</span>`;
   }else if(strat==='ma'){
     const st=s.settings,c=computeMa();
     html+=`<span>${tickerLabel(st.ticker)} · 200일선 매수${MA_COND_LBL[c.buy]||'200선'}/매도${MA_COND_LBL[c.sell]||'200선'} · 원금 ${wn(st.principal)}</span>`;
-    if(c.ready) html+=`<span class="badge ${c.signal==='hold'?'ok':'warn'}">${c.signal==='hold'?'보유':'현금'}</span>`;
+    if(c.ready) html+=`<span class="badge ${c.signal==='hold'?'ok':'warn'}" title="200일선 신호 — 지금 들고 있어야 하나 비워야 하나">${c.signal==='hold'?'보유':'현금'}</span>`;
   }else if(strat==='ivs'){
     const st=s.settings,c=computeIvs();
     html+=`<span>${tickerLabel(st.ticker)} · s0 ${st.s0||55}% · ${st.look||40}일σ · 밴드 ±${st.band||15}%p</span>`;
-    if(c.ready) html+=`<span class="badge ${c.hit?'warn':'ok'}">${c.hit?(c.gap>0?'매수':'매도'):'밴드 안'}</span>`;
+    if(c.ready) html+=`<span class="badge ${c.hit?'warn':'ok'}" title="${c.hit?`목표 비중 ${(c.w*100).toFixed(1)}% · 지금 ${(c.wNow*100).toFixed(1)}% — 밴드를 벗어나 오늘 ${c.gap>0?'매수':'매도'}`:'목표 비중과의 차이가 밴드 안 — 오늘은 대기'}">${c.hit?(c.gap>0?'매수 신호':'매도 신호'):'밴드 안'}</span>`;
   }else if(strat==='dca'){
     const st=s.settings,c=computeDca();
     html+=`<span>${tickerLabel(st.ticker)} · ${DCA_FREQ[st.freq||'month']||'매월'} ${wn(st.amount)}${(+st.dipMul||1)>1?` · 하락 ${st.dipMul}배`:''}</span>`;
-    if(c.ready) html+=`<span class="badge ${c.todayMul>1?'ok':'set'}">${c.todayMul}배</span>`;
+    if(c.ready) html+=`<span class="badge ${c.todayMul>1?'ok':'set'}" title="오늘 적립 배수 — 200일선 아래면 배수로 산다">${c.todayMul}배</span>`;
   }else if(strat==='asap'){
     const st=s.settings,c=computeAsap();
     html+=`<span>${tickerLabel(st.ticker)} · 적립 ${wn(st.base)}/일 · 딥 ${wn(st.mid)}/${wn(st.deep)}</span>`;
-    if(c.ready) html+=`<span class="badge ${c.phase==='down'?'warn':'ok'}">${c.phase==='down'?'하락장':(c.stage>=3?'상승·완료':'상승·재진입'+c.stage)}</span>`;
+    if(c.ready) html+=`<span class="badge ${c.phase==='down'?'warn':'ok'}" title="200일선 기준 국면 — 하락장이면 리저브 적립, 상승 전환 시 3단계로 나눠 투입">${c.phase==='down'?'하락장':(c.stage>=3?'상승·완료':'상승·재진입'+c.stage)}</span>`;
   }else{
     const st=s.settings;
     const mode=st.mode===0.75?'적립식':st.mode===0.5?'거치식':'인출식';
