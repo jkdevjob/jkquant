@@ -445,7 +445,7 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
 </div>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v2.85</span></h1></div>
+    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v2.86</span></h1></div>
     <div style="display:flex;align-items:center;gap:8px">
       <a class="btbtn" href="/backtest" title="백테스트">📊<span class="bt-txt"> 백테스트</span></a>
       <button class="btbtn" id="paperbtn" onclick="openPaper()" title="모의투자 성과" style="display:none;border-color:rgba(245,196,81,.45);color:var(--gold)">🧪<span class="bt-txt"> 모의 성과</span></button>
@@ -1482,7 +1482,7 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
   <footer>
     <strong>JK 퀀트</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v2.85</b> · 2026-08-26</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v2.86</b> · 2026-08-26</div>
   </footer>
 </div>
 
@@ -5467,15 +5467,22 @@ function paperSummary(){
    paperAuto()는 '활성 탭'만 굴리고 시세도 그 탭에서만 불러오므로,
    한 번도 열지 않은 전략은 표에서 통째로 빠져 있었다.
    여기서 탭·세션을 잠깐 그 전략으로 옮겨 시세를 받고 생성한 뒤 되돌린다. */
-const PAPER_LOADERS={inf:()=>loadInfData(), vr:()=>loadVrChart(), ivs:()=>loadIvsData(),
-  ma:()=>loadMaData(), dca:()=>loadDcaData(), asap:()=>loadAsapData()};
+const PAPER_LOADERS={inf:f=>loadInfData(f), vr:f=>loadVrChart(f), ivs:f=>loadIvsData(f),
+  ma:f=>loadMaData(f), dca:f=>loadDcaData(f), asap:f=>loadAsapData(f)};
+// 시세 캐시는 탭마다 하나뿐이라 '지금 담겨 있는 종목'을 봐야 한다.
+// 한 탭에 종목이 다른 세션이 둘 이상이면 캐시를 강제로 갈아야 뒤 세션이 제 시세를 본다.
+const PAPER_CACHESYM={inf:()=>lastQuote.inf&&lastQuote.inf.symbol, vr:()=>lastQuote.vr&&lastQuote.vr.symbol,
+  ivs:()=>ivsQuoteData&&ivsQuoteData.symbol, ma:()=>maQuoteData&&maQuoteData.symbol,
+  dca:()=>dcaQuoteData&&dcaQuoteData.symbol, asap:()=>asapQuoteData&&asapQuoteData.symbol};
 let _paperFilling=false;
+/* 세션마다 시세를 맞춘 뒤 그 자리에서 성과까지 계산해 돌려준다.
+   나중에 한꺼번에 계산하면 캐시에 마지막 세션 시세만 남아 앞 세션이 전부 '시세 대기'가 된다. */
 async function paperFillAll(){
-  if(_paperFilling) return 0;
+  if(_paperFilling) return null;
   _paperFilling=true;
-  const prevTab=S.activeTab; let n=0;
+  const prevTab=S.activeTab; const rows=[];
   try{
-    for(const [tab] of PAPER_TABS){
+    for(const [tab,label] of PAPER_TABS){
       const box=S[tab]; if(!box||!box.sessions) continue;
       const targets=box.sessions.filter(x=>x.paper);
       if(!targets.length) continue;
@@ -5483,25 +5490,28 @@ async function paperFillAll(){
       for(const sess of targets){
         S.activeTab=tab; box.active=sess.id;
         try{
-          if(PAPER_LOADERS[tab]) await PAPER_LOADERS[tab]();
+          const want=String((sess.settings&&sess.settings.ticker)||'').toUpperCase();
+          const have=String(PAPER_CACHESYM[tab]()||'').toUpperCase();
+          if(PAPER_LOADERS[tab]) await PAPER_LOADERS[tab](have!==want);   // 종목이 다르면 강제 갱신
           paperAuto();
           if(tab==='vr') vrSimForward();
           if(tab==='inf') infSimForward((sess.hist||[]).length?null:paperStart(sess));
-          if((sess.hist||[]).length) n++;
+          const r=paperStat(tab,sess);
+          if(r){ r.label=label; rows.push(r); }
         }catch(e){ console.error('paperFill',tab,e); }
       }
       box.active=prevAct;
     }
   } finally { S.activeTab=prevTab; _paperFilling=false; }
-  return n;
+  return rows;
 }
 async function openPaper(){
   const body=$('paper_body');
   if(body){ body.innerHTML='<p class="lead">전 전략 모의 세션을 오늘까지 맞추는 중… <span style="color:var(--faint)">시세를 불러오느라 몇 초 걸립니다.</span></p>'; }
   $('paperModal').classList.add('on');
-  await paperFillAll();
+  const filled=await paperFillAll();
   refreshAll();
-  const rows=paperSummary();
+  const rows=filled||paperSummary();
   if(!body) return;
   if(!rows.length){
     const nPaper=PAPER_TABS.reduce((a,[t])=>a+((S[t]&&S[t].sessions)?S[t].sessions.filter(x=>x.paper).length:0),0);
