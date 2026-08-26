@@ -447,7 +447,7 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
 </div>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v2.89</span></h1></div>
+    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v2.90</span></h1></div>
     <div style="display:flex;align-items:center;gap:8px">
       <a class="btbtn" href="/backtest" title="백테스트">📊<span class="bt-txt"> 백테스트</span></a>
       <button class="btbtn" id="paperbtn" onclick="openPaper()" title="모의투자 성과" style="display:none;border-color:rgba(245,196,81,.45);color:var(--gold)">🧪<span class="bt-txt"> 모의 성과</span></button>
@@ -1484,7 +1484,7 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
   <footer>
     <strong>JK 퀀트</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v2.89</b> · 2026-08-26</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v2.90</b> · 2026-08-26</div>
   </footer>
 </div>
 
@@ -3472,8 +3472,7 @@ async function loadMaData(force){
   if(S.activeTab!=='ma') return;   // await 사이 탭 전환 가드
   if(q && q.days && q.days.length){
     maQuoteData={symbol:q.symbol,days:q.days,last:q.last,price:(q.price!=null&&+q.price>0)?+q.price:q.last.close,currency:q.currency||'USD',src:q.src};
-    paperAuto();   // 시세가 도착한 뒤에야 모의 생성이 가능하다 — 여기서 한 번 더 돌린다
-    renderStatusline();   // 시세가 있어야 신호 배지가 나온다
+    _afterQuote();
     const live=maQuoteData.price;
     if($('ma_price')) $('ma_price').value = nfix(live,2);
     if(note){note.className='fetchnote ok';note.textContent=`✓ ${q.symbol} ${q.last.date} 종가 ${px(q.last.close)} · ${q.days.length}일 이력`;}
@@ -3838,8 +3837,7 @@ async function loadIvsData(force){
   if(S.activeTab!=='ivs') return;   // await 사이 탭 전환 가드
   if(q && q.days && q.days.length){
     ivsQuoteData={symbol:q.symbol,days:q.days,last:q.last,price:(q.price!=null&&+q.price>0)?+q.price:q.last.close,src:q.src};
-    paperAuto();   // 시세가 도착한 뒤에야 모의 생성이 가능하다 — 여기서 한 번 더 돌린다
-    renderStatusline();   // 시세가 있어야 신호 배지가 나온다
+    _afterQuote();
     if($('ivs_price')) $('ivs_price').value=nfix(ivsQuoteData.price,2);
     let extra='';
     // 짝=1배수면 1배 ETF 시세도 받아야 총자산·주문을 계산할 수 있다
@@ -4307,8 +4305,7 @@ async function loadDcaData(force){
   if(S.activeTab!=='dca') return;   // await 사이 탭 전환 가드
   if(q && q.days && q.days.length){
     dcaQuoteData={symbol:q.symbol,days:q.days,last:q.last,price:(q.price!=null&&+q.price>0)?+q.price:q.last.close,currency:q.currency||'USD',src:q.src};
-    paperAuto();   // 시세가 도착한 뒤에야 모의 생성이 가능하다 — 여기서 한 번 더 돌린다
-    renderStatusline();   // 시세가 있어야 신호 배지가 나온다
+    _afterQuote();
     if($('dca_price')) $('dca_price').value = nfix(dcaQuoteData.price,2);
     if(note){note.className='fetchnote ok';note.textContent=`✓ ${q.symbol} ${q.last.date} 종가 ${px(q.last.close)} · ${q.days.length}일 이력`;}
     renderDcaNow(); renderDcaHist(); renderDcaAnal();
@@ -4587,8 +4584,7 @@ async function loadAsapData(force){
   if(S.activeTab!=='asap') return;   // await 사이 탭 전환 가드
   if(q && q.days && q.days.length){
     asapQuoteData={symbol:q.symbol,days:q.days,last:q.last,price:(q.price!=null&&+q.price>0)?+q.price:q.last.close,currency:q.currency||'USD',src:q.src};
-    paperAuto();   // 시세가 도착한 뒤에야 모의 생성이 가능하다 — 여기서 한 번 더 돌린다
-    renderStatusline();   // 시세가 있어야 신호 배지가 나온다
+    _afterQuote();
     if($('asap_price')) $('asap_price').value=nfix(asapQuoteData.price,2);
     if(note){note.className='fetchnote ok';note.textContent=`✓ ${q.symbol} ${q.last.date} 종가 ${px(q.last.close)} · ${q.days.length}일 이력`;}
     renderAsapNow(); renderAsapHist(); renderAsapAnal();
@@ -4796,6 +4792,7 @@ async function loadVrChart(force){
     vrChartData=q.days;
     // days를 5개로 잘라두면 재생·모의체결이 이력을 못 읽는다 — 전 구간을 그대로 둔다
     lastQuote.vr={symbol:q.symbol,last:q.last.close,days:q.days,ohlc:q.ohlc||null};
+    _afterQuote();
     $('chart_note').className='fetchnote ok';
     $('chart_note').textContent=`✓ ${q.symbol} ${q.last.date} 종가 ${px(q.last.close)}${q.src==='api'?'':' (프록시)'}`;
     drawVrChart(); renderVrNow(); renderVrTable();
@@ -4864,6 +4861,7 @@ async function loadInfData(force){
     infQuoteCache=q; infChartData=q.days;
     const live=(q.price!=null&&q.price>0)?q.price:q.last.close;
     lastQuote.inf={symbol:q.symbol,last:q.last.close,price:live,days:q.days,ohlc:q.ohlc||null};
+    _afterQuote();
     renderInfRecent(); renderInfDay(); drawInfChart(); drawInfRSI(); drawRegimeChart(); renderInfFx(); renderOrderInline();
     const srcTag=(q.src==='yahoo-query1'||q.src==='yahoo-query2'||q.src==='api')?'':' (프록시)';
     $('inf_chart_note').className='fetchnote ok';
@@ -5560,6 +5558,13 @@ async function openPaper(){
   }
 }
 function closePaper(){$('paperModal').classList.remove('on')}
+/* 시세가 도착한 자리에서 부른다 — 모의 생성은 시세가 있어야 되고,
+   신호 배지도 시세가 있어야 나온다. 새로 만든 게 있으면 화면 전체를 한 번 갱신한다. */
+function _afterQuote(){
+  let r=null; try{ r=paperAuto(); }catch(e){ console.error('afterQuote',e); }
+  try{ renderStatusline(); }catch(e){}
+  if(r) setTimeout(()=>{ try{ refreshAll(); }catch(e){} },0);
+}
 /* 활성 탭의 모의 세션을 오늘까지 굴린다 */
 function paperAuto(){
   const sess=curStrat();
@@ -5568,7 +5573,9 @@ function paperAuto(){
   const tab=S.activeTab;
   _paperBusy=true; let r=null;
   try{
-    if(tab==='ivs')       r=_paperRegen(sess,from,'rp_from',   ivsReplay, (ivsQuoteData&&ivsQuoteData.days)||null);
+    if(tab==='inf'){      const x=infSimForward((sess.hist||[]).length?null:from); if(x) r={upto:x.upto,n:(sess.hist||[]).length}; }
+    else if(tab==='vr'){  const x=vrSimForward();                                   if(x) r={upto:x.upto,n:(sess.hist||[]).length}; }
+    else if(tab==='ivs')  r=_paperRegen(sess,from,'rp_from',   ivsReplay, (ivsQuoteData&&ivsQuoteData.days)||null);
     else if(tab==='ma')   r=_paperRegen(sess,from,'rp_ma_from',maReplay,  (maQuoteData&&maQuoteData.days)||null);
     else if(tab==='dca')  r=_paperDca(sess,from);
     else if(tab==='asap') r=_paperAsap(sess,from);
@@ -5944,6 +5951,36 @@ function fieldPriceQty(prefix,colorLabel,sym){
      <div class="field"><label>수량 (주)</label><input id="${prefix}_qty" type="number" inputmode="numeric" oninput="sheetTprev()"></div>
    </div>`;
 }
+/* 기록 시트 자동 채움 — 종가와 계좌 상태를 이미 아니까 체결가·수량을 미리 넣어준다.
+   LOC 주문은 종가에 체결되고, 익절 지정가는 목표가에 체결된다(주문표·모의체결과 같은 규약). */
+function infSuggest(kind){
+  const c=computeInf(), st=c.st;
+  const Q=lastQuote.inf;
+  const close=(Q && String(Q.symbol||'').toUpperCase()===String(st.ticker||'').toUpperCase())
+    ? (Q.price>0?Q.price:Q.last||0) : 0;
+  if(!(close>0)) return null;
+  const B=imBuy1(c), buy1=B.spent?0:B.amt;
+  const star=c.avg>0?c.avg*(1+starPct(st.ticker,st.div,c.T,st.target)/100):0;
+  let eff=st.target;
+  if(st.tgtDyn===true){ const m=imMomNow(); if(m!=null) eff=imTgtOf(st.target,m); }
+  const tgt=c.avg>0?c.avg*(1+eff/100):0;
+  const qSell=Math.floor(c.qty/4), sellDiv=st.div>=40?20:10;
+  const buyAt=(amt)=>({price:close, qty:Math.floor((amt||0)/close)});      // LOC = 종가 체결
+  const S={
+    '1회매수':  buyAt(buy1),
+    '절반매수':  buyAt(buy1/2),
+    '쿼터매도':  {price:close, qty:Math.min(qSell,c.qty)},                  // 별지점 LOC = 종가 체결
+    '지정가매도':{price:tgt,   qty:Math.max(0,c.qty-qSell)},                // 익절 지정가 = 목표가 체결
+    '리버스매도':{price:close, qty:c.qty>0?Math.min(c.qty,Math.max(1,Math.floor(c.qty/sellDiv))):0},
+    '리버스매수':{price:close, qty:Math.max(Math.floor((c.bal/4)/close), c.bal>=close?1:0)},
+  };
+  if(isCx(kind)){
+    const bk=kind.includes('1회매수')?'1회매수':'절반매수';
+    return {sell:S['지정가매도'], buy:S[bk], close, buy1, star, tgt, quarter:c.bal/4};
+  }
+  const r=S[kind]; if(!r) return null;
+  return {...r, close, buy1, star, tgt, quarter:c.bal/4};
+}
 function sheetSelInf(kind){
   shKind=kind;
   document.querySelectorAll('#sheet .kindopt').forEach(o=>o.classList.toggle('sel',o.dataset.kind===kind));
@@ -5961,6 +5998,7 @@ function sheetSelInf(kind){
     const isSellK=kind.includes('매도');
     f+=fieldPriceQty('sh', {t:isSellK?'매도':'매수', c:isSellK?'var(--sell)':'var(--buy)'}, sym);
   }
+  f+=`<p class="note" id="sh_autonote" style="margin:2px 0 10px;color:var(--vio)"></p>`;
   // T값 변화 + 직접입력 토글
   f+=`<div class="tprevbox">
         <div class="rowline" style="border:none;padding:4px 0"><span class="k">T값 변화</span><span class="val mono" id="sh_tprev">—</span></div>
@@ -5971,6 +6009,20 @@ function sheetSelInf(kind){
   f+=`<div class="sheetbtns"><button class="backbtn" onclick="sheetBackInf()">뒤로</button><button class="bigbtn" onclick="sheetSaveInf()">기록하기</button></div>`;
   $('sheet_form').innerHTML=f;
   $('sheet_form').style.display='block';
+  // 자동 채움 — 값은 그대로 고칠 수 있다
+  { const g=infSuggest(kind);
+    if(g){ const put=(pre,v)=>{ if(!v) return;
+        const p=$(pre+'_price'), q=$(pre+'_qty');
+        if(p && v.price>0) p.value=nfix(v.price,2);
+        if(q && v.qty>0) q.value=v.qty; };
+      if(isCx(kind)){ put('sh_s',g.sell); put('sh_b',g.buy); } else put('sh',g);
+      const hint=$('sh_autonote');
+      if(hint){ const bits=[`종가 ${wn(g.close)}`];
+        if(kind==='리버스매수') bits.push(`쿼터매수 = 잔금÷4 ${wn(g.quarter)}`);
+        else if(kind.includes('매수')&&g.buy1>0) bits.push(`1회매수금 ${wn(g.buy1)}`);
+        if(kind==='지정가매도'||isCx(kind)) bits.push(`익절가 ${wn(g.tgt)}`);
+        if(kind==='쿼터매도'&&g.star>0) bits.push(`별지점 ${wn(g.star)}`);
+        hint.innerHTML=`🔄 <b>자동 채움</b> · ${bits.join(' · ')} — 실제 체결이 다르면 고쳐서 기록하세요`; } } }
   sheetTprev();
   $('sheet_form').scrollIntoView({behavior:'smooth',block:'start'});
 }
