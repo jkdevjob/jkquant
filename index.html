@@ -443,7 +443,7 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
 </div>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v2.81</span></h1></div>
+    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v2.82</span></h1></div>
     <div style="display:flex;align-items:center;gap:8px">
       <a class="btbtn" href="/backtest">📊<span class="bt-txt"> 백테스트</span></a>
       <button class="gear" onclick="openSettings()">⚙️</button>
@@ -1474,7 +1474,7 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
   <footer>
     <strong>JK 퀀트</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v2.81</b> · 2026-08-26</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v2.82</b> · 2026-08-26</div>
   </footer>
 </div>
 
@@ -3691,18 +3691,9 @@ function renderMaAnal(){
   if(!$('ana_realized')) return;
   const c=computeMa(), st=c.st, h=curStrat().hist||[];
   const price=c.ready?(c.price||c.lastClose):(inputNum('ma_price')||0);
-  let qty=0, avg=0, realized=0, totbuy=0, totsell=0, nOut=0, nWin=0;
-  h.forEach(x=>{
-    const q=+x.qty||0, pr=+x.price||0;
-    if(x.type==='in'){ const nq=qty+q; avg=nq>0?(avg*qty+pr*q)/nq:pr; qty=nq; totbuy+=pr*q; }
-    else if(x.type==='out'){ const sq=q>0?Math.min(q,qty):qty;
-      const pnl=(pr-avg)*sq; realized+=pnl; totsell+=pr*sq; qty-=sq; nOut++; if(pnl>0)nWin++;
-      if(qty<=1e-9){qty=0;avg=0;} }
-  });
   const principal=+st.principal||0;
-  const invested=price>0?price*qty:0;
-  const cash=Math.max(0, principal+realized-avg*qty);
-  const total=invested+cash;
+  const L=maLedger(h, price, principal);
+  const {qty,avg,realized,totbuy,totsell,nOut,nWin,invested,cash,total}=L;
   const ratio=total>0?invested/total*100:0;
   $('ana_cnt').textContent=`${nOut} 청산${nOut?` · 승 ${nWin}`:''}`;
   $('ana_realized').textContent=(realized>=0?'+':'')+wn(realized);
@@ -5380,46 +5371,71 @@ function _paperAsap(sess, from){
    compute*()가 활성 탭만 읽으므로 여기서는 기록에서 직접 투입·평가를 뽑는다. */
 const PAPER_TABS=[['inf','무한매수법'],['vr','밸류리밸런싱'],['ivs','섀넌(역분산)'],
                   ['ma','200일선 로테'],['dca','매수적립'],['asap','ASAP']];
+/* 한 세션의 성과. 전략마다 자산 구조가 달라(VR의 초기투입, 적립의 현금 없음 …)
+   여기서 장부를 다시 걸으면 반드시 어긋난다 — 실제로 밸류·적립이 틀렸다.
+   그래서 탭·세션을 잠깐 그 전략으로 옮겨 그 탭의 compute를 그대로 부른다.
+   요약표와 각 탭의 분석이 언제나 같은 값이 되는 유일한 방법이다. */
+function maLedger(hist, price, principal){
+  let qty=0, avg=0, realized=0, totbuy=0, totsell=0, nOut=0, nWin=0;
+  (hist||[]).forEach(x=>{
+    const q=+x.qty||0, pr=+x.price||0;
+    if(x.type==='in'){ const nq=qty+q; avg=nq>0?(avg*qty+pr*q)/nq:pr; qty=nq; totbuy+=pr*q; }
+    else if(x.type==='out'){ const sq=q>0?Math.min(q,qty):qty;
+      const pnl=(pr-avg)*sq; realized+=pnl; totsell+=pr*sq; qty-=sq; nOut++; if(pnl>0)nWin++;
+      if(qty<=1e-9){qty=0;avg=0;} }
+  });
+  const invested=price>0?price*qty:0;
+  const cash=Math.max(0,(principal||0)+realized-avg*qty);
+  return {qty,avg,realized,totbuy,totsell,nOut,nWin,invested,cash,total:invested+cash};
+}
 function paperStat(tab, sess){
-  const st=sess.settings||{}, h=sess.hist||[];
-  if(!h.length) return null;
-  const sym=String(st.ticker||'').toUpperCase();
-  const Q={inf:lastQuote.inf,vr:lastQuote.vr,ivs:ivsQuoteData,ma:maQuoteData,dca:dcaQuoteData,asap:asapQuoteData}[tab];
-  const price=(Q && String(Q.symbol||'').toUpperCase()===sym)
-    ? (Q.price>0?Q.price:(Q.last&&Q.last.close)||Q.last||0) : 0;
-  let qty=0, inflow=0, cash=0, extra=0;   // inflow = 밖에서 넣은 돈, cash = 계좌 현금, extra = 1배 짝 평가금
-  if(tab==='ivs'){                        // 섀넌은 짝(1배)까지 있으니 ivsPos를 그대로 쓴다
-    const P=ivsPos(st.principal,h); qty=P.qty; cash=P.cash; inflow=(+st.principal||0)+P.added-P.withdrawn;
-    if(P.qty1>0){ const s1=ivsX1Of(sym), q1=(ivsQuote1&&String(ivsQuote1.symbol||'').toUpperCase()===s1)?ivsQuote1:null;
-      extra=P.qty1*((q1&&(q1.price>0?q1.price:q1.last&&q1.last.close))||P.avg1||0); }
-  }else if(tab==='asap'){                 // ASAP은 리저브(SGOV)가 따로 있다
-    const P=asapPos(h); qty=P.shares; cash=P.reserve;
-    h.forEach(x=>{ if(x.type==='sgov') inflow+=+x.amt||0;
-      else if(x.type==='buy' && x.from!=='reserve') inflow+=(x.amt!=null?+x.amt:(+x.qty||0)*(+x.price||0)); });
-  }else{
-    if(tab==='inf'||tab==='ma') inflow=+st.principal||0;
-    h.forEach(x=>{
-      const k=x.kind||x.type||'', pr=+x.price||0;
-      const amt=(x.amt!=null)?+x.amt:(+x.qty||0)*pr;
-      const q=(+x.qty||0) || (pr>0&&amt>0 ? amt/pr : 0);   // 적립 기록은 금액만 있고 수량이 없다
-      if(tab==='inf'){ if(String(k).includes('매수')){ qty+=q; cash-=q*pr; } else if(String(k).includes('매도')){ qty-=q; cash+=q*pr; } }
-      else if(k==='buy'||k==='in'){ qty+=q; cash-=amt; if(tab==='dca') inflow+=amt; }
-      else if(k==='sell'||k==='out'){ qty-=q; cash+=amt; }
-      else if(k==='add'){ cash+=+x.amt||0; if(tab==='vr') inflow+=+x.amt||0; }
-      else if(k==='wd'){ cash-=+x.amt||0; if(tab==='vr') inflow-=+x.amt||0; }
-      else if(k==='div'){ cash+=+x.amt||0; }
-    });
-    if(tab==='vr'){ const first=h.find(x=>x.type==='buy'); if(first) inflow+=(+first.price||0)*(+first.qty||0); }
-  }
-  const evalNow=(price>0?price*Math.max(0,qty):0)+extra;
+  const h=sess.hist||[]; if(!h.length) return null;
+  const box=S[tab]; if(!box) return null;
+  const prevTab=S.activeTab, prevAct=box.active;
+  S.activeTab=tab; box.active=sess.id;
+  let inflow=0, total=0, price=0, sym='';
+  try{
+    const st=sess.settings||{};
+    sym=String(st.ticker||'').toUpperCase();
+    if(tab==='inf'){
+      const c=computeInf();
+      price=(lastQuote.inf && String(lastQuote.inf.symbol||'').toUpperCase()===sym)
+        ? (lastQuote.inf.price||lastQuote.inf.last||0) : 0;
+      inflow=+st.principal||0; total=price*c.qty + c.bal;
+    }else if(tab==='vr'){
+      const c=computeVr(); price=vrLastPrice(c)||0;
+      inflow=c.netInvested; total=price*c.qty + c.pool;      // 첫 매수는 밖에서 들어온 돈 — computeVr가 그렇게 센다
+    }else if(tab==='ivs'){
+      const c=computeIvs(); price=c.price||0;
+      inflow=(c.principal||0)+(c.added||0)-(c.withdrawn||0);
+      let ev=price*c.qty;
+      if(c.X1 && c.qty1>0){ const s1=ivsX1Of(sym);
+        const q1=(ivsQuote1&&String(ivsQuote1.symbol||'').toUpperCase()===s1)?ivsQuote1:null;
+        ev += (c.qty1)*((q1&&(q1.price>0?q1.price:(q1.last&&q1.last.close)))||c.avg1||0); }
+      total=ev + (c.cash||0);
+    }else if(tab==='ma'){
+      const c=computeMa(); price=c.ready?(c.price||c.lastClose||0):0;
+      const L=maLedger(h, price, +st.principal||0);
+      inflow=+st.principal||0; total=L.total;
+    }else if(tab==='dca'){
+      const c=computeDca(); price=c.ready?(c.price||c.lastClose||0):0;
+      inflow=c.pos.inv; total=price*c.pos.shares;            // 적립은 현금 계좌가 없다 — 매수액이 곧 투입
+    }else if(tab==='asap'){
+      const c=computeAsap(); price=c.ready?(c.price||0):0;
+      const P=c.pos;
+      h.forEach(x=>{ if(x.type==='sgov') inflow+=+x.amt||0;
+        else if(x.type==='buy' && x.from!=='reserve') inflow+=(x.amt!=null?+x.amt:(+x.qty||0)*(+x.price||0)); });
+      total=price*P.shares + P.reserve;                      // 리저브(SGOV)도 내 돈
+    }
+  }catch(e){ console.error('paperStat',tab,e); }
+  finally{ S.activeTab=prevTab; box.active=prevAct; }
+  const st=sess.settings||{};
   const base=Math.max(1,inflow);
-  // 로테·섀넌은 신호 난 날에만 기록이 생겨 마지막 기록이 몇 달 전이다 — 굴린 기간은 simLast 기준
   const from=h[0].date, to=(st.simLast&&st.simLast>h[h.length-1].date)?st.simLast:h[h.length-1].date;
   const yrs=Math.max(0.05,(new Date(to)-new Date(from))/(365.25*864e5));
-  const val=evalNow+cash+((tab==='inf'||tab==='ma')?(+st.principal||0):0);
   const nTrade=h.filter(x=>{const k=x.kind||x.type||'';return /매수|매도/.test(k)||k==='buy'||k==='sell'||k==='in'||k==='out';}).length;
-  return {tab, name:sess.name, sym, from, to, yrs, inflow:base, total:val,
-    ret:(val/base-1)*100, cagr:(Math.pow(Math.max(val,1)/base,1/yrs)-1)*100, nTrade, price};
+  return {tab, name:sess.name, sym, from, to, yrs, inflow:base, total,
+    ret:(total/base-1)*100, cagr:(Math.pow(Math.max(total,1)/base,1/yrs)-1)*100, nTrade, price};
 }
 function paperSummary(){
   const out=[];
@@ -5476,14 +5492,19 @@ async function openPaper(){
   }else{
     const cur=rows.map(r=>r.price>0).every(Boolean);
     let h=`<div class="htable-wrap"><table class="htable"><tr><th>전략 · 세션</th><th>기간</th><th>투입</th><th>평가</th><th>수익률</th><th>연</th></tr>`;
-    rows.forEach(r=>{ const up=r.ret>=0;
+    rows.forEach(r=>{ const up=r.ret>=0, ok=r.price>0;
+      // 시세를 못 받은 세션은 평가금이 없다 — 0%를 진짜 성과처럼 보여주면 안 된다
       h+=`<tr><td><b>${r.label}</b><span class="cw">${String(r.name).replace(/</g,'&lt;')} · ${r.sym}</span></td>
         <td>${r.yrs.toFixed(1)}년<span class="cw">${r.nTrade}거래</span></td>
-        <td>${wn(r.inflow)}</td><td>${wn(r.total)}</td>
-        <td style="color:${up?'var(--buy)':'var(--sell)'};font-weight:700">${up?'+':''}${r.ret.toFixed(1)}%</td>
-        <td style="color:${up?'var(--buy)':'var(--sell)'}">${up?'+':''}${r.cagr.toFixed(1)}%</td></tr>`; });
+        <td>${wn(r.inflow)}</td>`
+        + (ok
+          ? `<td>${wn(r.total)}</td>
+             <td style="color:${up?'var(--buy)':'var(--sell)'};font-weight:700">${up?'+':''}${r.ret.toFixed(1)}%</td>
+             <td style="color:${up?'var(--buy)':'var(--sell)'}">${up?'+':''}${r.cagr.toFixed(1)}%</td>`
+          : `<td colspan="3" style="color:var(--gold)">시세 대기 — ${r.sym} 탭을 한 번 열어주세요</td>`)
+        + `</tr>`; });
     h+=`</table></div>`;
-    if(!cur) h+=`<p class="note" style="margin-top:8px;color:var(--gold)">⚠ 일부 세션은 시세를 아직 안 불러왔습니다. 해당 탭을 한 번 열면 평가금이 채워집니다.</p>`;
+    if(!cur) h+=`<p class="note" style="margin-top:8px;color:var(--gold)">⚠ 시세를 못 받은 세션이 있습니다. 그 줄은 수익률을 비워 뒀습니다 — 해당 탭을 한 번 열면 채워집니다.</p>`;
     h+=`<p class="note" style="margin-top:8px">투입 = 밖에서 넣은 돈(원금·적립·입금) · 평가 = 보유 평가금 + 현금. 수수료는 전략별 재생 규약을 따르고 <b>양도세는 넣지 않았습니다</b>.</p>`;
     if(paperNote) h+=`<p class="note" style="color:var(--vio)">${paperNote}</p>`;
     body.innerHTML=h;
