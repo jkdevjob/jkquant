@@ -442,7 +442,7 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
 </div>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v2.68</span></h1></div>
+    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v2.69</span></h1></div>
     <div style="display:flex;align-items:center;gap:8px">
       <a class="btbtn" href="/backtest">📊<span class="bt-txt"> 백테스트</span></a>
       <button class="gear" onclick="openSettings()">⚙️</button>
@@ -1315,7 +1315,7 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
   <footer>
     <strong>JK 퀀트</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v2.68</b> · 2026-08-26</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v2.69</b> · 2026-08-26</div>
   </footer>
 </div>
 
@@ -3492,7 +3492,8 @@ function computeIvs(){
 // 트리거가 이미 지나간 가격일 수 있어 부호를 박아두면 안 된다 (+-17% 같은 표시가 난다)
 function pctFrom(target,now){ const d=(target/now-1)*100; return (d>=0?'+':'')+d.toFixed(0)+'%'; }
 function renderIvsNow(){
-  const c=computeIvs(), st=c.st, pc=v=>(v*100).toFixed(0)+'%';
+  // 목표·현재·차이를 같은 자릿수로 — 0자리로 반올림하면 '목표60% 현재0% 차이+59.6%p'처럼 어긋나 보인다
+  const c=computeIvs(), st=c.st, pc=v=>(v*100).toFixed(1)+'%';
   $('ivs_ticker').textContent=tickerLabel(st.ticker||'TQQQ');
   $('ivs_cfg').textContent = c.FIX
     ? `고정 5:5 · 밴드 ${st.band||15}%p`
@@ -3701,7 +3702,7 @@ function ivsAddMonthly(){
   const l1=`${c.sym} ${nfix(c.addQty||0,0)}주 × ${px(c.price)} = ${px(c.addAmt||0)}`;
   const l2=c.X1?`\n${c.sym1} ${nfix(c.addQty1||0,0)}주 × ${px(c.price1)} = ${px(c.addAmt1||0)}`
                :`\n예수금 ${px(c.addCash||0)}`;
-  if(!confirm(`이번 달 투입 ${px(c.monthly)}\n목표 비중 ${(c.w*100).toFixed(0)}% 기준\n\n${l1}${l2}\n\n오늘(${date}) 기록할까요?`)) return;
+  if(!confirm(`이번 달 투입 ${px(c.monthly)}\n목표 비중 ${(c.w*100).toFixed(1)}% 기준\n\n${l1}${l2}\n\n오늘(${date}) 기록할까요?`)) return;
   curStrat().hist.push({type:'add',date,amt:+c.monthly,ts:Date.now()});
   if(c.addQty>0) _ivsPush('lev','buy',c.addQty,c.price,date,c.sym);
   if(c.X1&&c.addQty1>0) _ivsPush('x1','buy',c.addQty1,c.price1,date,c.sym1);
