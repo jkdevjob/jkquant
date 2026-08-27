@@ -328,5 +328,42 @@ console.log('[8] 모의 체결 상한선');
   ok('모의가 오늘 체결을 되돌릴 수 있다', /function paperRewind\(/.test(idx)&&/paperRewind\(sess\)/.test(idx));
 }
 
+
+/* ════ 9. 모의 기록이 '지금 설정'으로 만든 것인가 (12차 버그 클래스) ════
+   모의 기록은 그때의 설정으로 기계가 만든 것이다. 분할·익절을 바꿔도 simLast가
+   오늘에 있으면 새로 만들지 않아, 20분할로 만든 T·평단·수량이 40분할 세션에
+   그대로 남았다. 설정 지문을 찍어 두고 어긋나면 다시 만들어야 한다. */
+console.log('[9] 모의 기록·설정 정합');
+{
+  let keysSrc='';
+  try{ keysSrc=idx.slice(idx.indexOf('const SIM_KEYS='), idx.indexOf('};', idx.indexOf('const SIM_KEYS='))+2); }catch(e){}
+  const TABS=['inf','vr','ma','ivs','dca','asap'];
+  const missTab=TABS.filter(t=>!new RegExp('\\b'+t+'\\s*:\\s*\\[').test(keysSrc));
+  ok('SIM_KEYS가 6개 탭 전부 정의', keysSrc && missTab.length===0, missTab.join(','));
+  // 키 이름이 실제 설정 키와 맞는지 — 오타가 있으면 영원히 안 걸린다
+  let save=''; try{ save=extractFn(idx,'function saveSettings()'); }catch(e){}
+  const bad=[];
+  for(const m of keysSrc.matchAll(/(\w+)\s*:\s*\[([^\]]*)\]/g)){
+    for(const k of m[2].split(',').map(x=>x.trim().replace(/['"]/g,'')).filter(Boolean)){
+      if(!new RegExp('\\b'+k+'\\s*:').test(save)) bad.push(m[1]+'.'+k);
+    }
+  }
+  ok('SIM_KEYS 키가 전부 실제 설정 키', bad.length===0, bad.join(','));
+  let auto=''; try{ auto=extractFn(idx,'function paperAuto()'); }catch(e){}
+  ok('paperAuto가 설정 지문을 확인', /paperSyncSig\(/.test(auto));
+  ok('지문 불일치 시 기계 기록만 버린다',
+     /sess\.hist=\(sess\.hist\|\|\[\]\)\.filter\(x=>!\(x\.sim\|\|x\.auto\)\)/.test(idx));
+  ok('시세가 없으면 지문을 찍지 않는다',
+     /if\(!paperDataReady\(tab,st\)\) return false;/.test(idx));
+  // 시세 캐시는 탭마다 하나뿐이다. 캐시에 든 종목을 안 보고 재사용하면
+  // SOXL 종가로 TQQQ 세션의 모의 체결을 만든다 — 실제로 무매·VR이 그랬다.
+  const LOADERS=['loadInfData','loadVrChart','loadIvsData','loadMaData','loadDcaData','loadAsapData'];
+  const noSym=LOADERS.filter(n=>{
+    let body=''; try{ body=extractFn(idx,'async function '+n+'('); }catch(e){ return true; }
+    return !/\.symbol\|\|''\)\.toUpperCase\(\)===/.test(body);
+  });
+  ok('시세 로더가 캐시 종목을 대조', noSym.length===0, noSym.join(','));
+}
+
 console.log(`\n════ 결과: ${pass} PASS / ${fail} FAIL ${fail===0?'— ALL PASS ★':'— 배포 금지, 위 ✗ 항목 수정 필요'} ════`);
 process.exit(fail===0?0:1);
