@@ -270,7 +270,7 @@ td:first-child{text-align:left;}
   <div class="brand">
     <div>
       <div class="logo">Backtest</div>
-      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v1.159</span></h1>
+      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v1.160</span></h1>
     </div>
   </div>
   <a href="/" class="home">← JK 퀀트</a>
@@ -1123,12 +1123,40 @@ function sortResultTable(th){
   rows.forEach((r,i)=>{ const rk=r.querySelector('td:first-child .cdim'); if(rk&&/^\d+$/.test((rk.textContent||'').trim())) rk.textContent=i+1; });
   const arr=document.createElement('span'); arr.className='sarr'; arr.textContent=dir==='asc'?' ▲':' ▼'; th.appendChild(arr);
 }
+/* ──── 기본 정렬: CAGR 내림차순, 동률이면 MAR ────
+   결과가 나오면 최종금액순(생성순)이 아니라 성과순으로 보이게 한다.
+   Array.sort가 안정 정렬이라 MAR 먼저 → CAGR 나중에 돌리면 CAGR가 1차, MAR가 2차가 된다.
+   사용자가 헤더를 눌러 직접 정렬한 표는 defsorted 표시가 남아 다시 건드리지 않는다. */
+function _sortTableBy(table,name,dir){
+  const th=[...table.querySelectorAll('thead th')].find(h=>
+    ((h.textContent||'').trim().split(/[\s/]/)[0]||'').toUpperCase()===name);
+  if(!th) return false;
+  th.dataset.sdir = (dir==='desc') ? 'asc' : 'desc';   // sortResultTable이 토글하므로 반대로 심어둔다
+  sortResultTable(th); return true;
+}
+function applyDefaultSort(root){
+  if(!root) return;
+  root.querySelectorAll('table.sortable, table#tbl').forEach(tb=>{
+    if(tb.dataset.usersorted) return;                       // 손으로 정렬한 표는 건드리지 않는다
+    if(tb.querySelector('thead th[data-sdir]')) return;      // 이미 정렬된 상태 — 재귀 방지
+    const head=((tb.querySelector('thead th')||{}).textContent||'').trim();
+    if(head==='지표'||head==='연도') return;
+    if(!tb.querySelector('tbody tr')) return;
+    // 표 내용이 나중에 다시 그려지면 sdir가 사라지므로 그때 다시 정렬된다
+    _sortTableBy(tb,'MAR','desc'); _sortTableBy(tb,'CAGR','desc');
+  });
+}
+{ const _r=document.getElementById('result');
+  if(_r && window.MutationObserver){
+    new MutationObserver(()=>applyDefaultSort(_r)).observe(_r,{childList:true,subtree:true});
+  } }
 document.getElementById('result').addEventListener('click',e=>{
   const th=e.target.closest('th'); if(!th||!th.closest('thead')) return;
   const table=th.closest('table'); if(!table) return;
   if(!(table.classList.contains('sortable')||table.id==='tbl')) return;
   const first=((table.querySelector('thead th')||{}).textContent||'').trim();
   if(first==='지표'||first==='연도') return;   // 지표·연말자산 표는 정렬 제외
+  table.dataset.usersorted='1';                // 이후 기본 정렬이 덮어쓰지 않게
   sortResultTable(th);
 });
 let imEngine='v40';   // V5.0 숨김 기간: v40 고정
