@@ -1483,7 +1483,7 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
   <footer>
     <strong>JK 퀀트</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v2.92</b> · 2026-08-26</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v2.93</b> · 2026-08-26</div>
   </footer>
 </div>
 
@@ -4826,7 +4826,8 @@ async function loadVrChart(force){
     $('chart_note').textContent='ⓘ 국내상장 ETF는 종목코드(6자리)를 입력하면 자동 차트가 됩니다.';
     return;
   }
-  if(vrChartData && !force){ drawVrChart(); return; }
+  const _want=String(st.ticker||'TQQQ').toUpperCase();          // 종목이 다르면 캐시 적중이 아니다
+  if(vrChartData && !force && lastQuote.vr && String(lastQuote.vr.symbol||'').toUpperCase()===_want){ drawVrChart(); return; }
   $('chart_note').className='fetchnote load'; $('chart_note').textContent='차트 불러오는 중…';
   const q=await fetchDaily(st.ticker||'TQQQ');
   if(q){
@@ -4891,7 +4892,10 @@ async function loadInfData(force){
     return;
   }
   // 캐시가 짧으면(구버전 1y 데이터 등) 무시하고 다시 받는다 — 국면 계산엔 200일+ 필요
-  const cacheOK = infQuoteCache && infQuoteCache.days && infQuoteCache.days.length>=300;
+  // 종목도 반드시 대조한다. 안 하면 SOXL 시세로 TQQQ 세션을 그리고, 모의 체결까지 남의 종가로 만든다.
+  const _want=String(st.ticker||'SOXL').toUpperCase();
+  const cacheOK = infQuoteCache && infQuoteCache.days && infQuoteCache.days.length>=300
+                  && String(infQuoteCache.symbol||'').toUpperCase()===_want;
   if(cacheOK && !force){ renderInfRecent(); renderInfDay(); drawInfChart(); drawInfRSI(); drawRegimeChart(); renderInfFx(); renderOrderInline(); return; }
   $('inf_chart_note').className='fetchnote load'; $('inf_chart_note').textContent='시세 불러오는 중…';
   const q=await fetchDaily(st.ticker||'SOXL');
@@ -5611,8 +5615,9 @@ function paperAuto(){
   const sess=curStrat();
   if(!sess||!sess.paper||_paperBusy) return null;
   paperRewind(sess);                       // 장중에 찍힌 '오늘' 체결부터 되돌린다
-  const from=paperStart(sess); if(!from) return null;
   const tab=S.activeTab;
+  paperSyncSig(tab,sess);                  // 설정이 바뀌었으면 옛 규칙으로 만든 기록을 버린다
+  const from=paperStart(sess); if(!from) return null;
   _paperBusy=true; let r=null;
   try{
     if(tab==='inf'){      const x=infSimForward((sess.hist||[]).length?null:from); if(x) r={upto:x.upto,n:(sess.hist||[]).length}; }
@@ -6480,6 +6485,52 @@ function setupSegs(){
     });
   });
 }
+/* ── 모의 세션: 규칙이 바뀌면 기록을 다시 만든다 ──────────────────────
+   모의 기록은 '그때의 설정으로 기계가 만든 것'이다. 분할·익절 같은 걸 바꾸면
+   이미 쌓인 기록은 옛 규칙 산물이라 통째로 무효인데, simLast가 오늘에 있으니
+   새로 만들지도 않았다. 그래서 40분할로 바꿔도 20분할로 만든 T·평단·수량이
+   그대로 남아 화면 설정과 기록이 어긋났다.
+   실계좌 세션은 사람이 넣은 실제 거래이므로 절대 건드리지 않는다. */
+const SIM_KEYS={
+  inf :['ticker','div','target','reverse','tgtDyn','principal','cur'],
+  vr  :['ticker','mode','formula','g','add','initAmt','autoCyc','band','cur'],
+  ma  :['ticker','buy','sell','park','principal'],
+  ivs :['ticker','mode','s0','look','band','park','principal','monthly'],
+  dca :['ticker','freq','amount','dipMul'],
+  asap:['ticker','base','mid','deep'],
+};
+/* 기록을 만들 때 쓴 설정의 지문. 이걸 세션에 찍어 두면
+   설정 저장·기기 동기화·가져오기 등 어떤 경로로 바뀌어도 어긋난 걸 스스로 안다. */
+function simSig(tab,st){
+  return (SIM_KEYS[tab]||[]).map(k=>String(st[k]===undefined?'':st[k])).join('|');
+}
+function paperResetGen(sess,sig){
+  // 사람이 직접 넣은 기록은 남긴다 — 버릴 건 기계가 만든 것(sim·auto)뿐이다
+  sess.hist=(sess.hist||[]).filter(x=>!(x.sim||x.auto));
+  const st=sess.settings||{};
+  delete st.simLast; delete st.cycStart; delete st.startCyc; delete st.cycLog;
+  if(st.startv!==undefined) st.startv=0;
+  if(sig!==undefined) st.simSig=sig;
+}
+/* 지금 설정과 기록의 출처가 다르면 처음부터 다시 만들게 한다.
+   지문이 아예 없는 세션(고치기 전에 만들어진 것)도 여기서 한 번 정리된다. */
+/* 그 종목 시세가 실제로 올라와 있나. 없으면 지문을 갱신하지 않는다 —
+   기록만 지우고 다시 못 만든 채로 지문이 찍히면, 맞다고 착각해서 영영 안 만든다.
+   로더가 시세를 받아오면 _afterQuote가 paperAuto를 다시 부른다. */
+function paperDataReady(tab,st){
+  const want=String((st&&st.ticker)||'').toUpperCase();
+  const f=PAPER_CACHESYM[tab]; if(!want||!f) return false;
+  let have=''; try{ have=String(f()||'').toUpperCase(); }catch(e){}
+  return want===have;
+}
+function paperSyncSig(tab,sess){
+  if(!sess||!sess.paper) return false;
+  const st=sess.settings||{}; const sig=simSig(tab,st);
+  if(!paperDataReady(tab,st)) return false;
+  if(st.simSig===sig) return false;
+  paperResetGen(sess,sig);
+  return true;
+}
 function saveSettings(){
   const s=sess();
   if(S.activeTab==='inf'){
@@ -6516,6 +6567,9 @@ function saveSettings(){
       initAmt:Math.max(0,inputNum('set_initamt')||0),autoCyc:segGet('set_vauto')==='1',
       band:inputNum('set_band')||15,startv:inputNum('set_startv')||0,startpool:inputNum('set_startpool')||0,cur:segGet('set_vcur')||'usd'};
   }
+  // 모의 세션이면 여기서 바로 다시 만들어 준다 (어긋남 판정은 paperAuto가 지문으로 한다).
+  // 종목이 바뀌었으면 시세 로더가 끝난 뒤 _afterQuote가 이어서 만든다.
+  if(s.paper){ try{ paperAuto(); }catch(e){} }
   save();closeSettings();refreshAll();pushRemote();
 }
 
