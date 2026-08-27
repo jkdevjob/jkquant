@@ -308,5 +308,25 @@ console.log('[7] DOM 구조');
   structure(idx,'index'); structure(bt,'backtest');
 }
 
+
+/* ════ 8. 모의 체결이 '장중 봉'을 쓰지 않는가 (11차 버그 클래스) ════
+   시세 API는 장 열려 있는 동안에도 오늘 봉을 내주는데 그 close는 종가가 아니라 현재가다.
+   그걸로 체결시키면 탭을 연 시각의 값이 체결가로 박히고, simLast가 넘어가
+   장 마감 뒤 진짜 종가로 다시 계산되지도 않는다. 6종 전부 상한선을 걸어야 한다. */
+console.log('[8] 모의 체결 상한선');
+{
+  const SIM_FNS=['infSimForward','vrSimForward','_paperRegen','_paperDca','_paperAsap','ivsReplay','maReplay'];
+  const miss=SIM_FNS.filter(n=>{
+    let body; try{ body=extractFn(idx,'function '+n+'('); }catch(e){ return true; }
+    return !/simCutoff\(|settledBars\(/.test(body);
+  });
+  ok('모의 체결 함수 전부 상한선 적용', miss.length===0, miss.join(','));
+  // 장중 판정은 '거래소 현지 시각'이어야 한다 — UTC/브라우저 로컬로 하면 13시간이 어긋난다
+  let cut=''; try{ cut=extractFn(idx,'function _exchNow(cur)'); }catch(e){}
+  ok('장중 판정에 거래소 타임존 사용', /America\/New_York/.test(cut)&&/Asia\/Seoul/.test(cut),
+     cut?'':'_exchNow 없음');
+  ok('모의가 오늘 체결을 되돌릴 수 있다', /function paperRewind\(/.test(idx)&&/paperRewind\(sess\)/.test(idx));
+}
+
 console.log(`\n════ 결과: ${pass} PASS / ${fail} FAIL ${fail===0?'— ALL PASS ★':'— 배포 금지, 위 ✗ 항목 수정 필요'} ════`);
 process.exit(fail===0?0:1);
