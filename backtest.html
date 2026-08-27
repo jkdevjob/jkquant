@@ -61,6 +61,11 @@ function loadFromLocalStorage(){
     if(saved.length) applyCustomList(saved);
   }catch(e){}
 }
+// type="module"은 defer라 아래 일반 <script>보다 '나중에' 실행된다.
+// 그래서 초기화 IIFE에서 이 함수를 부르면 항상 ReferenceError였고(커스텀 종목이 새로고침 때 사라졌다),
+// 복원은 모듈 자신이 — TICKERS/buildTickerPick이 이미 준비된 이 시점에 — 직접 해야 한다.
+window.loadFromLocalStorage = loadFromLocalStorage;
+loadFromLocalStorage();
 
 // 로그인 상태 감지
 onAuthStateChanged(auth, async user => {
@@ -84,7 +89,7 @@ window.btLogin = async () => {
 :root{
   --bg:#0f1320;--surf:#171c2e;--surf2:#1e2540;--border:#2a3354;--border2:#34406a;
   --text:#e8ecf7;--dim:#9aa6c9;--dim2:#b3bce0;--accent:#8b8cf0;--green:#36d399;--red:#f87b8c;--gold:#f5c451;
-  --c-dca:#8b8cf0;--c-im:#ff6b6b;--c-vr:#00d4b4;--c-ma:#ffa94d;--c-mom:#4dabf7;--c-asap:#f6c453;--c-all:#a78bfa;--c-ivs:#e879b9;
+  --c-dca:#8b8cf0;--c-im:#ff6b6b;--c-vr:#00d4b4;--c-ma:#ffa94d;--c-mom:#4dabf7;--c-asap:#f6c453;--c-all:#a78bfa;--c-ivs:#e879b9;--c-std:#69db7c;
   --qld:#5b8dee;--tqqq:#00d4b4;--usd:#b088f8;--soxl:#ff6b6b;--tecl:#ffc844;
 }
 *{box-sizing:border-box;margin:0;padding:0;}
@@ -111,6 +116,7 @@ body{background:var(--bg);color:var(--text);font-family:'Pretendard',sans-serif;
 .stab[data-s="mom"].active{background:var(--c-mom);}
 .stab[data-s="asap"].active{background:var(--c-asap);color:#1a1400;}
 .stab[data-s="ivs"].active{background:var(--c-ivs);}
+.stab[data-s="std"].active{background:var(--c-std);color:#08240f;}
 /* 고정 5:5에서는 비중이 50%로 못박히므로 s0·룩백이 계산에 안 들어간다.
    컨트롤이 멀쩡해 보이면 '눌러도 안 바뀐다'는 오해를 사므로 눌리지 않게 하고 이유를 붙인다. */
 .offtag{display:none;font-size:9px;color:var(--gold);margin-left:6px;}
@@ -270,7 +276,7 @@ td:first-child{text-align:left;}
   <div class="brand">
     <div>
       <div class="logo">Backtest</div>
-      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v1.160</span></h1>
+      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v1.161</span></h1>
     </div>
   </div>
   <a href="/" class="home">← JK 퀀트</a>
@@ -801,7 +807,7 @@ let loadedStart='', loadedEnd='';  // 로딩된 기간
   buildTickerPick();
   
   showEmptyState();
-  loadFromLocalStorage();  // 로그인 여부 무관하게 즉시 복원
+  // 커스텀 종목 복원은 위 module 블록이 담당한다 (여기선 아직 정의 전이라 못 부른다)
   // 데이터는 실행 버튼 누를 때 로딩 (기간에 맞춰)
 })();
 
