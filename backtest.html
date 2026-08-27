@@ -61,7 +61,8 @@ function loadFromLocalStorage(){
     if(saved.length) applyCustomList(saved);
   }catch(e){}
 }
-// type="module"은 defer라 아래 일반 <script>보다 '나중에' 실행된다.
+// type="module"은 defer라 아래 일반 스크립트 블록보다 '나중에' 실행된다.
+// (주석에도 script 태그 문자열을 그대로 쓰지 않는다 — 태그 추출·파싱을 깨뜨린다)
 // 그래서 초기화 IIFE에서 이 함수를 부르면 항상 ReferenceError였고(커스텀 종목이 새로고침 때 사라졌다),
 // 복원은 모듈 자신이 — TICKERS/buildTickerPick이 이미 준비된 이 시점에 — 직접 해야 한다.
 window.loadFromLocalStorage = loadFromLocalStorage;
@@ -276,7 +277,7 @@ td:first-child{text-align:left;}
   <div class="brand">
     <div>
       <div class="logo">Backtest</div>
-      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v1.161</span></h1>
+      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v1.162</span></h1>
     </div>
   </div>
   <a href="/" class="home">← JK 퀀트</a>

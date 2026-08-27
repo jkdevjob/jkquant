@@ -1,0 +1,28 @@
+name: 검증
+
+# 배포 전에 반드시 초록이어야 한다. 회귀테스트 헤더의 규약("수정할 때마다 ALL PASS여야 배포")을
+# 사람 기억에 맡기지 않고 여기서 강제한다.
+on:
+  push:
+    branches: ['**']
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '22' }
+
+      - name: 전략 SSOT 체크 (문서 기준값·규약 불변식)
+        run: |
+          node -e "
+            const r=require('./strategy-check.js').run();
+            r.results.filter(x=>!x.pass).forEach(x=>console.log('  ✗ '+x.n+(x.d?' — '+x.d:'')));
+            console.log(r.pass+'/'+r.total+' PASS');
+            process.exit(r.fail?1:0);
+          "
+
+      - name: 회귀 테스트 (엔진 수치 + UI 배선 + DOM 구조)
+        run: node regression-check.js index.html backtest.html .

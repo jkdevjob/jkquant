@@ -1124,7 +1124,7 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
       <!-- 세금 — 숨김. 운영은 실계좌를 따라가는 원장이고 세금은 연말에 실제로 낸 금액을 출금으로 남긴다.
            DOM은 renderIvsNow가 참조하므로 지우지 않고 감춘다. -->
       <div class="card acct" style="display:none">
-        <h3><span style="display:flex;align-items:center;gap:8px"><span class="dot"></span>올해 양도세</h3>
+        <h3><span style="display:flex;align-items:center;gap:8px"><span class="dot"></span>올해 양도세</span></h3>
         <div class="ar"><span class="ak">실현손익 <span class="sub" id="ivs_tax_year">—</span></span><span class="av" id="ivs_pnl">$0</span></div>
         <div class="ar"><span class="ak">기본공제 잔여 <span class="sub">연 250만원</span></span><span class="av buy" id="ivs_ded">₩2,500,000</span></div>
         <div class="ar"><span class="ak">예상 세금 <span class="sub">22%</span></span><span class="av" id="ivs_tax">₩0</span></div>
@@ -1484,7 +1484,7 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
   <footer>
     <strong>JK 퀀트</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v2.90</b> · 2026-08-26</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v2.91</b> · 2026-08-26</div>
   </footer>
 </div>
 
@@ -1688,21 +1688,36 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
       <div class="field"><label>수량 (주)</label><input id="ei_qty" type="number" inputmode="numeric"></div>
     </div></div>
 
+  <div id="ei_cx" style="display:none">
+    <div class="grid2">
+      <div class="field"><label style="color:var(--sell)">매도가 ($)</label><input id="ei_sprice" type="text" inputmode="decimal" oninput="commaInput(this)"></div>
+      <div class="field"><label style="color:var(--sell)">매도수량</label><input id="ei_sqty" type="number" inputmode="numeric"></div>
+    </div>
+    <div class="grid2">
+      <div class="field"><label style="color:var(--buy)">매수가 ($)</label><input id="ei_bprice" type="text" inputmode="decimal" oninput="commaInput(this)"></div>
+      <div class="field"><label style="color:var(--buy)">매수수량</label><input id="ei_bqty" type="number" inputmode="numeric"></div>
+    </div></div>
+  <div class="field"><label>T값 직접입력 <span class="hint">비우면 자동</span></label><input id="ei_tman" type="number" step="0.01" inputmode="decimal" placeholder="자동"></div>
+  <div class="mbtns"><button class="close" onclick="delInfFromEdit()" style="background:var(--sell-bg);color:var(--sell)">삭제</button><button class="save" onclick="saveInfEdit()">저장</button></div>
+</div></div>
+
+<!-- 기록 수정·시작보유 모달 (섀넌) — 예전엔 editInfModal 안쪽에 들어가 있어서
+     부모가 display:none인 동안 열려도 화면에 안 나왔다. 반드시 최상위 형제로 둔다. -->
 <div class="modal" id="editIvsModal"><div class="box">
   <h3>기록 수정 (섀넌)</h3>
   <div class="field"><label>구분</label>
-    <select id="ei_type" onchange="syncEiUI()">
+    <select id="iv_type" onchange="syncEiUI()">
       <option value="buy">매수</option><option value="sell">매도</option>
       <option value="add">입금 (이자·배당·추가투입)</option><option value="wd">출금 (세금·인출)</option>
     </select></div>
-  <div class="field" id="ei_legrow"><label>다리</label>
-    <select id="ei_leg"><option value="lev">레버리지</option><option value="x1">1배수</option></select></div>
-  <div class="field"><label>날짜</label><input id="ei_date" type="date"></div>
-  <div class="field" id="ei_qtyrow"><label>수량 (주)</label><input id="ei_qty" type="text" inputmode="decimal" oninput="commaInput(this)"></div>
-  <div class="field" id="ei_pricerow"><label>단가 ($)</label><input id="ei_price" type="text" inputmode="decimal" oninput="commaInput(this)"></div>
-  <div class="field" id="ei_feerow"><label>수수료 ($) <span class="hint">비우면 0.25% 자동</span></label><input id="ei_fee" type="text" inputmode="decimal" oninput="commaInput(this)"></div>
-  <div class="field" id="ei_amtrow"><label>금액 ($)</label><input id="ei_amt" type="text" inputmode="decimal" oninput="commaInput(this)"></div>
-  <div class="field" id="ei_memorow"><label>메모</label><input id="ei_memo" type="text" placeholder="예: 예수금 이자"></div>
+  <div class="field" id="iv_legrow"><label>다리</label>
+    <select id="iv_leg"><option value="lev">레버리지</option><option value="x1">1배수</option></select></div>
+  <div class="field"><label>날짜</label><input id="iv_date" type="date"></div>
+  <div class="field" id="iv_qtyrow"><label>수량 (주)</label><input id="iv_qty" type="text" inputmode="decimal" oninput="commaInput(this)"></div>
+  <div class="field" id="iv_pricerow"><label>단가 ($)</label><input id="iv_price" type="text" inputmode="decimal" oninput="commaInput(this)"></div>
+  <div class="field" id="iv_feerow"><label>수수료 ($) <span class="hint">비우면 0.25% 자동</span></label><input id="iv_fee" type="text" inputmode="decimal" oninput="commaInput(this)"></div>
+  <div class="field" id="iv_amtrow"><label>금액 ($)</label><input id="iv_amt" type="text" inputmode="decimal" oninput="commaInput(this)"></div>
+  <div class="field" id="iv_memorow"><label>메모</label><input id="iv_memo" type="text" placeholder="예: 예수금 이자"></div>
   <p class="note">고치면 보유 주식수·예수금·평단이 <b>전부 다시 계산</b>됩니다.</p>
   <div class="btns"><button class="ghostbtn" onclick="delIvsFromEdit()">삭제</button>
     <button class="ghostbtn" onclick="closeEditIvs()">취소</button>
@@ -1722,18 +1737,6 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
   <p class="note" id="sd_note">—</p>
   <div class="btns"><button class="ghostbtn" onclick="closeIvsSeed()">취소</button>
     <button class="fetchbtn" onclick="saveIvsSeed()">등록</button></div>
-</div></div>
-  <div id="ei_cx" style="display:none">
-    <div class="grid2">
-      <div class="field"><label style="color:var(--sell)">매도가 ($)</label><input id="ei_sprice" type="text" inputmode="decimal" oninput="commaInput(this)"></div>
-      <div class="field"><label style="color:var(--sell)">매도수량</label><input id="ei_sqty" type="number" inputmode="numeric"></div>
-    </div>
-    <div class="grid2">
-      <div class="field"><label style="color:var(--buy)">매수가 ($)</label><input id="ei_bprice" type="text" inputmode="decimal" oninput="commaInput(this)"></div>
-      <div class="field"><label style="color:var(--buy)">매수수량</label><input id="ei_bqty" type="number" inputmode="numeric"></div>
-    </div></div>
-  <div class="field"><label>T값 직접입력 <span class="hint">비우면 자동</span></label><input id="ei_tman" type="number" step="0.01" inputmode="decimal" placeholder="자동"></div>
-  <div class="mbtns"><button class="close" onclick="delInfFromEdit()" style="background:var(--sell-bg);color:var(--sell)">삭제</button><button class="save" onclick="saveInfEdit()">저장</button></div>
 </div></div>
 
 <!-- 거래 수정 모달 (200일선 로테이션) -->
@@ -2657,18 +2660,9 @@ function renderInfHist(){
   });
   $('inf_table').innerHTML=`<tr><th>날짜</th><th>구분</th><th>체결가</th><th>수량</th><th>잔금</th><th>손익</th><th>T</th><th>별%</th><th>별지점</th><th></th></tr>`+(hist.length?rows:`<tr><td class="empty" colspan="10">아직 기록이 없습니다</td></tr>`);
 }
-function infKindHint(){ const el=$('ih_kind'); if(!el)return; const c=computeInf(), k=el.value;
-  const nt=KIND_T[k]?KIND_T[k](c.T):c.T; if($('ih_tprev'))$('ih_tprev').textContent=`${fmtT(c.T)} → ${fmtT(nt)}`;
-}
 /* 날짜 → 입력순(ts) 정렬: 같은 날짜는 입력한 순서 유지 */
 function sortHist(arr){arr.sort((a,b)=>{const d=(a.date||'').localeCompare(b.date||'');return d!==0?d:((a.ts||0)-(b.ts||0))})}
 let editInfIdx=-1;
-function addInf(){ const el=$('ih_kind'); if(!el)return;
-  const date=$('ih_date').value,kind=el.value,price=inputNum('ih_price'),qty=inputNum('ih_qty');
-  if(!price||!qty){alert('체결가와 수량을 입력하세요');return}
-  const h=curStrat().hist; h.push({date,kind,price,qty,ts:Date.now()});
-  sortHist(h); save(); refreshInf();
-}
 function eiKindUI(k){ const cx=isCx(k); const s=$('ei_simple'), x=$('ei_cx'); if(s)s.style.display=cx?'none':''; if(x)x.style.display=cx?'':'none'; }
 function editInf(i){
   const h=curStrat().hist[i]; if(!h)return;
@@ -4108,40 +4102,40 @@ let editIvsIdx=-1;
 function editIvs(i){
   const r=(curStrat().hist||[])[i]; if(!r) return;
   editIvsIdx=i;
-  $('ei_type').value=r.type||'buy';
-  $('ei_leg').value=r.leg||'lev';
-  $('ei_date').value=r.date||new Date().toISOString().slice(0,10);
-  $('ei_qty').value=r.qty!=null?r.qty:'';
-  $('ei_price').value=r.price!=null?r.price:'';
-  $('ei_fee').value=r.fee!=null?nfix(r.fee,2):'';
-  $('ei_amt').value=r.amt!=null?nfix(r.amt,2):'';
-  $('ei_memo').value=r.memo||'';
+  $('iv_type').value=r.type||'buy';
+  $('iv_leg').value=r.leg||'lev';
+  $('iv_date').value=r.date||new Date().toISOString().slice(0,10);
+  $('iv_qty').value=r.qty!=null?r.qty:'';
+  $('iv_price').value=r.price!=null?r.price:'';
+  $('iv_fee').value=r.fee!=null?nfix(r.fee,2):'';
+  $('iv_amt').value=r.amt!=null?nfix(r.amt,2):'';
+  $('iv_memo').value=r.memo||'';
   syncEiUI();
   $('editIvsModal').classList.add('on');
 }
 function syncEiUI(){
-  const t=$('ei_type').value, trade=(t==='buy'||t==='sell');
-  ['ei_legrow','ei_qtyrow','ei_pricerow','ei_feerow'].forEach(id=>{const e=$(id); if(e) e.style.display=trade?'':'none';});
-  const ar=$('ei_amtrow'); if(ar) ar.style.display=trade?'none':'';
-  const mr=$('ei_memorow'); if(mr) mr.style.display=trade?'none':'';
+  const t=$('iv_type').value, trade=(t==='buy'||t==='sell');
+  ['iv_legrow','iv_qtyrow','iv_pricerow','iv_feerow'].forEach(id=>{const e=$(id); if(e) e.style.display=trade?'':'none';});
+  const ar=$('iv_amtrow'); if(ar) ar.style.display=trade?'none':'';
+  const mr=$('iv_memorow'); if(mr) mr.style.display=trade?'none':'';
 }
 function closeEditIvs(){ $('editIvsModal').classList.remove('on'); editIvsIdx=-1; }
 function saveIvsEdit(){
   if(editIvsIdx<0) return;
   const hist=curStrat().hist, r=hist[editIvsIdx]; if(!r){closeEditIvs();return;}
-  const t=$('ei_type').value, date=$('ei_date').value||r.date;
+  const t=$('iv_type').value, date=$('iv_date').value||r.date;
   if(t==='buy'||t==='sell'){
-    const qty=+unComma($('ei_qty').value), price=+unComma($('ei_price').value);
+    const qty=+unComma($('iv_qty').value), price=+unComma($('iv_price').value);
     if(!(qty>0)){alert('수량을 입력하세요');return;}
     if(!(price>0)){alert('단가를 입력하세요');return;}
-    const leg=$('ei_leg').value||'lev';
+    const leg=$('iv_leg').value||'lev';
     const st=curStrat().settings, sym=(leg==='x1')?ivsX1Of(st.ticker):String(st.ticker||'TQQQ').toUpperCase();
-    let fee=$('ei_fee').value.trim()===''? qty*price*IVS_FEE : +unComma($('ei_fee').value);
+    let fee=$('iv_fee').value.trim()===''? qty*price*IVS_FEE : +unComma($('iv_fee').value);
     hist[editIvsIdx]={ts:r.ts||Date.now(),type:t,leg,sym,date,price,qty,amt:qty*price,fee:Math.max(0,fee||0),seed:r.seed||undefined};
   }else{
-    const amt=+unComma($('ei_amt').value);
+    const amt=+unComma($('iv_amt').value);
     if(!(amt>0)){alert('금액을 입력하세요');return;}
-    hist[editIvsIdx]={ts:r.ts||Date.now(),type:t,date,amt,memo:$('ei_memo').value.trim()||undefined};
+    hist[editIvsIdx]={ts:r.ts||Date.now(),type:t,date,amt,memo:$('iv_memo').value.trim()||undefined};
   }
   sortHist(hist); save(); refreshIvs(); pushRemote&&pushRemote(); closeEditIvs();
 }
@@ -5708,18 +5702,6 @@ function refreshVr(){
   renderStatusline();
 }
 
-let vhType='buy';
-function setupVrTypeSeg(){ const seg=$('vh_typeseg'); if(!seg)return;
-  seg.querySelectorAll('button').forEach(b=>{ b.onclick=()=>{
-      seg.querySelectorAll('button').forEach(x=>x.classList.remove('on'));
-      b.classList.add('on'); vhType=b.dataset.v; toggleVrFields(); }; });
-}
-function toggleVrFields(){ if(!$('vh_pricewrap'))return;
-  const stock=(vhType==='buy'||vhType==='sell');
-  $('vh_pricewrap').style.display=stock?'':'none';
-  $('vh_qtywrap').style.display=stock?'':'none';
-  $('vh_amtwrap').style.display=stock?'none':'';
-}
 let editVrIdx=-1;
 // ── 모의투자: 밸류리밸런싱 과거 재생 ──
 // 백테 runVR과 같은 규약: 10거래일마다 V를 갱신(V += pool/G + 적립)하고 밴드 밖이면 V로 되맞춘다.
@@ -5829,16 +5811,6 @@ function vrFirstBuy(){
   sortHist(h); save(); refreshVr(); pushRemote&&pushRemote();
   const du=vrDue(computeVr());
   alert(`첫 매수 기록됨 ✓\n\n0주차 시작 ${date}\n다음 사이클 진입 ${du?du.dueStr:'2주 뒤'}\n그때까지는 밴드를 벗어날 때만 매매합니다.`);
-}
-function addVr(){ if(!$('vh_date'))return;
-  const date=$('vh_date').value; let rec;
-  if(vhType==='buy'||vhType==='sell'){
-    const price=inputNum('vh_price'),qty=inputNum('vh_qty');
-    if(!price||!qty){alert('단가와 수량을 입력하세요');return}
-    rec={type:vhType,date,price,qty};
-  }else{ const amt=inputNum('vh_amt'); if(!amt){alert('금액을 입력하세요');return} rec={type:vhType,date,amt}; }
-  const h=curStrat().hist; rec.ts=Date.now(); h.push(rec);
-  sortHist(h); save();refreshVr();
 }
 function evTypeUI(t){ const stock=(t==='buy'||t==='sell');
   const s=$('ev_stock'), a=$('ev_amtwrap'); if(s)s.style.display=stock?'':'none'; if(a)a.style.display=stock?'none':''; }
@@ -6154,7 +6126,6 @@ function updateCurLabels(which){
   const sym=isKrw?'₩':'$';
   if(which==='inf'){
     const a=$('o_close_lbl');if(a)a.innerHTML=`전일 종가 (${sym}) <span class="hint">LOC 기준가</span>`;
-    const b=$('ih_price_lbl');if(b)b.textContent=`체결가 (${sym})`;
     // 원화 세션이면 무한매수법 자동 시세/차트/캔들 영역 정리
     const fn=$('o_fetchnote'); if(fn&&isKrw){fn.className='fetchnote';fn.textContent='';}
   }else{
@@ -6241,7 +6212,7 @@ function switchSess(id){
 }
 function clearInputs(){
   ['o_close','o_star5man','sh_price','sh_qty','shv_price','shv_qty','shv_amt','vn_price','vn_eval','ma_price','dca_price','ivs_price','ivs_price1'].forEach(id=>{const el=$(id);if(el)el.value=''});
-  const fn1=$('o_fetchnote'),fn2=$('ve_fetchnote');if(fn1){fn1.textContent='';fn1.className='fetchnote'}if(fn2){fn2.textContent='';fn2.className='fetchnote'}
+  const fn1=$('o_fetchnote');if(fn1){fn1.textContent='';fn1.className='fetchnote'}
   lastQuote={inf:null,vr:null};
 }
 function resetSubnav(sec){
@@ -6599,7 +6570,6 @@ async function pullRemote(){
 /* 구글시트 잔재 호환 (호출되어도 무해) */
 function setLed(){}
 function openCfg(){alert('이제 구글 로그인으로 자동 동기화됩니다. 별도 설정이 필요 없습니다.')}
-function closeCfg(){const m=$('cfgModal');if(m)m.classList.remove('on')}
 function saveCfg(){}
 function copyScript(){}
 
@@ -6694,7 +6664,7 @@ function startApp(){
   if(appStarted){refreshAll();return;}
   appStarted=true;
   applyAdminMode();
-  setupTabs();setupSegs();setupVrTypeSeg();setupSessbar();toggleVrFields();
+  setupTabs();setupSegs();setupSessbar();
   if(S.activeTab!=='inf'){ const tb=document.querySelector(`.tab[data-t="${S.activeTab}"]`); if(tb)tb.click(); }
   refreshAll();
   if(S.activeTab==='ma'||S.activeTab==='asap')hideFab(); else showFab();

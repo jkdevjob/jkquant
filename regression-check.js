@@ -1,13 +1,14 @@
 #!/usr/bin/env node
 /* ════════════════════════════════════════════════════════════════════
    JK 퀀트 회귀 테스트 — 검증 1~6차의 핵심 체크를 한 번에 재실행
-   사용법: node 회귀테스트.js [index.html경로] [backtest.html경로] [CSV디렉토리]
-   기본값: /mnt/project/index.html /mnt/project/backtest.html /mnt/project
+   사용법: node regression-check.js [index.html경로] [backtest.html경로] [CSV디렉토리]
+   기본값: 이 스크립트와 같은 폴더
    원칙: 재구현 금지 — 실제 HTML에서 함수 원문을 추출해 그대로 실행.
    코드를 수정할 때마다 이 스크립트가 ALL PASS여야 배포.
    ════════════════════════════════════════════════════════════════════ */
 const fs=require('fs'), path=require('path');
-const [,, IDX='/mnt/project/index.html', BT='/mnt/project/backtest.html', CSVDIR='/mnt/project']=process.argv;
+const __d=require('path').join(__dirname);
+const [,, IDX=__d+'/index.html', BT=__d+'/backtest.html', CSVDIR=__d]=process.argv;
 let pass=0, fail=0;
 function ok(name, cond, detail=''){ if(cond){pass++;console.log('  ✓ '+name);} else {fail++;console.log('  ✗ '+name+(detail?' — '+detail:''));} }
 function near(a,b,tol){ return Math.abs(a-b)<=Math.max(tol??1e-6, Math.abs(b)*1e-9); }
@@ -229,7 +230,9 @@ if(DAYS.TQQQ){
 /* ════ 6. UI 배선 정적 스캔 (8·9차 버그 클래스 가드) ════ */
 console.log('[6] UI 배선 정적 스캔');
 {
-  const LEGACY_OK=new Set(['ih_kind','ih_tprev','ih_date','ih_price','ih_qty','ih_price_lbl','vh_typeseg','vh_pricewrap','vh_qtywrap','vh_amtwrap','vh_date','ve_fetchnote','cfgModal']); // 8차 판정: null가드 레거시(무해)
+  // 죽은 id 예외는 두지 않는다 — 예외를 허용해 두면 '가드가 있으니 무해'라는 이유로
+  // 안 도는 코드가 계속 쌓이고, 그게 다음 버그의 은신처가 된다. (10차에서 전부 제거)
+  const LEGACY_OK=new Set([]);
   const DUP_OK=new Set(['sheet_form','o_close','o_fetchnote']); // 템플릿 분기 — 런타임 단일 (기대 ×2)
   const scan=(src,label)=>{
     const idCnt={}; for(const m of src.matchAll(/id="([\w-]+)"/g)) idCnt[m[1]]=(idCnt[m[1]]||0)+1;
@@ -241,7 +244,10 @@ console.log('[6] UI 배선 정적 스캔');
     const refs=new Set();
     for(const m of src.matchAll(/\$\('([\w-]+)'\)/g)) refs.add(m[1]);
     for(const m of src.matchAll(/getElementById\('([\w-]+)'\)/g)) refs.add(m[1]);
-    const orph=[...refs].filter(r=>!ids.has(r)&&!LEGACY_OK.has(r)&&!/^sh_|^shv_/.test(r));
+    // 템플릿으로 만드는 id(`id="${prefix}_price"`)는 접미사만 보고 인정한다
+    const tmplSuffix=[...src.matchAll(/id="\$\{[^}]*\}([\w-]+)"/g)].map(m=>m[1]);
+    const byTmpl=r=>tmplSuffix.some(sfx=>r.endsWith(sfx));
+    const orph=[...refs].filter(r=>!ids.has(r)&&!LEGACY_OK.has(r)&&!byTmpl(r));
     ok(label+': 신규 고아 id 참조 없음', orph.length===0, orph.join(','));
     const fns=new Set();
     for(const m of src.matchAll(/function\s+([A-Za-z_$][\w$]*)/g)) fns.add(m[1]);
@@ -261,5 +267,46 @@ console.log('[6] UI 배선 정적 스캔');
   const unw2=idxSegs.filter(id=>!setup.includes(`'${id}'`));
   ok('index: 모든 seg가 setupSegs에 등록', unw2.length===0, unw2.join(','));
 }
+
+/* ════ 7. DOM 구조 (10차 버그 클래스: 모달이 다른 모달 안에 갇힘) ════
+   닫는 </div>가 하나 모자라면 뒤따르는 블록이 통째로 앞 블록의 자식이 된다.
+   div 개수는 그대로라서 태그 수 세기로는 절대 안 잡힌다 — 실제로 섀넌 모달 2개가
+   무한매수법 모달 안에 들어가 있었고, 부모가 display:none이라 열어도 안 보였다. */
+console.log('[7] DOM 구조');
+{
+  const VOID=new Set(['area','base','br','col','embed','hr','img','input','link','meta','param','source','track','wbr']);
+  const OPTIONAL_END=new Set(['li','p','tr','td','th','option','dt','dd','thead','tbody','tfoot']);
+  const structure=(html,label)=>{
+    const body=html.replace(/<script[\s\S]*?<\/script>/g,'').replace(/<!--[\s\S]*?-->/g,'');
+    const stack=[]; const nested=[]; const unclosed=[];
+    for(const m of body.matchAll(/<(\/?)([a-zA-Z][\w-]*)([^>]*)>/g)){
+      const close=m[1]==='/', tag=m[2].toLowerCase(), attrs=m[3];
+      if(close){
+        let k=stack.length-1;
+        while(k>=0 && stack[k].tag!==tag) k--;
+        if(k>=0){
+          for(let n=stack.length-1;n>k;n--) if(!OPTIONAL_END.has(stack[n].tag)) unclosed.push(stack[n]);
+          stack.length=k;
+        }
+        continue;
+      }
+      if(VOID.has(tag)||/\/\s*$/.test(attrs)) continue;
+      const id=(attrs.match(/\bid="([^"]+)"/)||[])[1]||'';
+      const cls=(attrs.match(/\bclass="([^"]+)"/)||[])[1]||'';
+      // '모달 루트'만 본다 — modal-bg ⊃ modal-card처럼 안에 들어가는 게 정상인 조각은 제외
+      const isRoot=c=>c.split(/\s+/).some(x=>x==='modal'||x==='modal-bg');
+      if(isRoot(cls)){
+        const owner=stack.find(x=>isRoot(x.cls));
+        if(owner) nested.push(`#${id||tag} ⊂ #${owner.id||owner.tag}`);
+      }
+      stack.push({tag,id,cls});
+    }
+    ok(label+': 모달이 다른 모달 안에 없음', nested.length===0, nested.join(', '));
+    ok(label+': 안 닫힌 태그 없음', unclosed.length===0,
+       [...new Set(unclosed.map(x=>x.tag+(x.id?'#'+x.id:(x.cls?'.'+x.cls.split(' ')[0]:''))))].slice(0,6).join(', '));
+  };
+  structure(idx,'index'); structure(bt,'backtest');
+}
+
 console.log(`\n════ 결과: ${pass} PASS / ${fail} FAIL ${fail===0?'— ALL PASS ★':'— 배포 금지, 위 ✗ 항목 수정 필요'} ════`);
 process.exit(fail===0?0:1);
