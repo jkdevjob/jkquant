@@ -277,7 +277,7 @@ td:first-child{text-align:left;}
   <div class="brand">
     <div>
       <div class="logo">Backtest</div>
-      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v1.164</span></h1>
+      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v1.165</span></h1>
     </div>
   </div>
   <a href="/" class="home">← JK 퀀트</a>
@@ -368,6 +368,12 @@ td:first-child{text-align:left;}
       <div class="seg" id="imTgtDynSeg" style="align-self:flex-start">
         <button data-x="0" class="active" title="익절%를 고정 (라오어 원안)">끔</button>
         <button data-x="1" title="직전 20거래일 상승률이 +8%를 넘으면 익절% = min(기본×2, 30%). 내릴 때는 조절하지 않음 — 추세가 살아있을 때만 더 들고 간다">상승률</button>
+      </div>
+    </div>
+    <div class="ctrl s-im hide"><label>MACD 매수 필터 <span style="font-size:9px;color:var(--dim)">합성1배 12/26/9</span></label>
+      <div class="seg" id="imMacdSeg">
+        <button data-m="0" class="active" title="필터 없음 — 별지점·평단 조건만 보고 매수">끔</button>
+        <button data-m="1" title="전일 MACD 히스토그램이 음수(하락 모멘텀)일 때만 매수. 노출이 절반으로 줄어 낙폭이 크게 감소하고 잔금이 오래 간다 — 대신 수익률은 조금 낮아진다">하락일 때만</button>
       </div>
     </div>
     <div class="ctrl s-im hide"><label>익절 체결 <span style="font-size:9px;color:var(--dim)">지정가 판정</span></label>
@@ -1181,6 +1187,7 @@ let imTgtDyn=false;  // 익절 동적 조절 (20일 상승률) — 기본 OFF
 
 let imTarget=20;   // 익절%(전 종목 일괄, 기본 20=라오어 공식). 별%base·리버스 복귀조건도 함께 결정 (통합 규약)
 let imFill='high';   // 익절 체결 판정: 'high'=고가 터치(기본·지정가 정석) / 'close'=종가 도달(보수적 하한)
+let imMacd=false;    // MACD 매수 필터 (기본 끔 — 켜면 하락 모멘텀에서만 매수)
 function syncMaCtrl(){
   const on=(imEngine==='v50'||imEngine==='ab');
   ['imMaCtrl','imLoCtrl'].forEach(id=>{ const el=document.getElementById(id); if(!el)return;
@@ -1194,6 +1201,7 @@ document.getElementById('imRev').onclick=e=>{if(e.target.dataset.r){document.que
 document.getElementById('imLoSeg').onclick=e=>{if(e.target.dataset.l){document.querySelectorAll('#imLoSeg button').forEach(b=>b.classList.remove('active'));e.target.classList.add('active');imLoPct=+e.target.dataset.l;if(dataLoaded)run();}};
 document.getElementById('imTgtSeg').onclick=e=>{if(e.target.dataset.t){document.querySelectorAll('#imTgtSeg button').forEach(b=>b.classList.remove('active'));e.target.classList.add('active');imTarget=+e.target.dataset.t;if(dataLoaded)run();}};
 document.getElementById('imFillSeg').onclick=e=>{if(e.target.dataset.f){document.querySelectorAll('#imFillSeg button').forEach(b=>b.classList.remove('active'));e.target.classList.add('active');imFill=e.target.dataset.f;if(dataLoaded)run();}};
+document.getElementById('imMacdSeg').onclick=e=>{if(e.target.dataset.m){document.querySelectorAll('#imMacdSeg button').forEach(b=>b.classList.remove('active'));e.target.classList.add('active');imMacd=e.target.dataset.m==='1';if(dataLoaded)run();}};
 syncMaCtrl();   // 초기: V4.0이므로 국면선 비활성 표시
 
 /* ════════ 모멘텀 로테이션 (상대모멘텀 + 200일선 절대모멘텀 필터) ════════
@@ -1721,6 +1729,32 @@ function _imMom(tkr,L){
 }
 function _imTgtOf(base, mom){ return (mom!=null && mom>IM_MOM_TH) ? Math.min(base*2, IM_MOM_CAP) : base; }
 
+/* ── MACD 매수 필터 (선택) ────────────────────────────────────────────
+   무한매수법은 '떨어질 때 사는' 전략인데, 필터가 없으면 상승 중에도 종가가
+   별지점·평단 아래로 내려오면 산다. MACD 히스토그램이 음수(하락 모멘텀)일
+   때만 사게 하면 노출이 절반으로 줄고 잔금이 오래 간다.
+   5년 롤링 144창 측정: MDD 42.7%→35.0%, CAGR 18.5%→15.9%, MAR 0.500→0.504.
+   파라미터 6종(12/26/9·8/17/9·19/39/9·12/26/5·5/35/5·3배원본) 전부 같은 방향.
+   MACD는 3배 원본이 아니라 합성 1배지수로 잰다 — 레버리지 노이즈를 빼려고
+   (200일선 로테이션이 합성 1배를 쓰는 것과 같은 이유). 판정은 전일 값만 쓴다. */
+const IM_MACD_F=12, IM_MACD_S=26, IM_MACD_G=9;
+function _imMacd(tkr){
+  const D=M[tkr]; if(!D) return {};
+  const ds=Object.keys(D).sort();
+  const lev=(typeof META!=='undefined'&&META[tkr]&&META[tkr].lev)?META[tkr].lev:3;
+  const kf=2/(IM_MACD_F+1), ks=2/(IM_MACD_S+1), kg=2/(IM_MACD_G+1);
+  let syn=100, ef=null, es=null, sl=null; const out={};
+  for(let i=0;i<ds.length;i++){
+    if(i>0){ const r=D[ds[i]][C]/D[ds[i-1]][C]-1; syn*=(1+r/lev); }
+    ef = ef==null?syn:ef+(syn-ef)*kf;
+    es = es==null?syn:es+(syn-es)*ks;
+    const line=ef-es;
+    sl = sl==null?line:sl+(line-sl)*kg;
+    out[ds[i]]=line-sl;                                  // 히스토그램
+  }
+  return out;
+}
+
 function runIM(days,tkr,cap,divs,targetPct,compound=true){
   // 종목 계열: TQQQ만 TQQQ식(base15/복귀−15%), 그 외 전부 SOXL식(base20/복귀−20%) — index.html과 동일 규약
   // (문서상 TQQQ/SOXL만 오피셜. 복귀 기준은 "T 마지막 쿼터매도 기준과 동일"이므로 base와 반드시 짝이어야 함)
@@ -1733,6 +1767,7 @@ function runIM(days,tkr,cap,divs,targetPct,compound=true){
   const exitMul=1-starBase/100;
   const sellDiv = divs>=40?20:10;            // 리버스 무한매도 분모 (20분할→10, 40분할→20)
   const MOM = ((typeof imTgtDyn!=='undefined')&&imTgtDyn) ? _imMom(tkr,IM_MOM_LEN) : null;   // 익절 동적 조절 (OFF면 null → 기존과 완전 동일)
+  const MACDH = ((typeof imMacd!=='undefined')&&imMacd) ? _imMacd(tkr) : null;               // 매수 필터 (OFF면 null → 기존과 완전 동일)
   let cash=cap,shares=0,avg=0,T=0,realized=0,cycles=0,savedProfit=0;
   // ── 비용·세금 (imCostOn=false면 전부 0, 기존과 완전 동일) ──
   const CO = (typeof imCostOn!=='undefined') && imCostOn;
@@ -1847,7 +1882,9 @@ function runIM(days,tkr,cap,divs,targetPct,compound=true){
         else if(cash>cap){ savedProfit+=cash-cap; cash=cap; }  // 단리: 초과익만 인출, 손실 사이클은 잔고 이월(외부수혈 없음)
         T=0;snap.push([d,cash+savedProfit]);return;}
     }
-    if(divs-T>=1&&cash>1){          // 소진 = T>분할−1 → 남은 회차가 1회 이상일 때만 매수
+    // MACD 필터: 전일 히스토그램이 음수(하락 모멘텀)일 때만 매수한다
+    const _macdOK = !MACDH || (i>0 && (MACDH[days[i-1]]??0) < 0);
+    if(_macdOK && divs-T>=1&&cash>1){          // 소진 = T>분할−1 → 남은 회차가 1회 이상일 때만 매수
       let one=cash/(divs-T);        // 남은 회차 ≥1 이므로 1회분 ≤ 잔금 (별도 상한 불필요)
       if(shares===0&&T===0){_buy(c,one);T+=1;}
       else{

@@ -461,5 +461,29 @@ console.log('[11] 무매 계산 공유');
      /Math\.floor\(c\.qty\/4\)/.test(ord) && /Math\.floor\(c\.qty\/4\)/.test(sim));
 }
 
+
+/* ════ 12. MACD 매수 필터 (선택 기능) ════
+   기본은 꺼져 있어야 한다 — 켜지면 기존 사용자의 결과가 조용히 바뀐다.
+   그리고 주문표·모의 체결이 같은 규약(전일 히스토그램 음수)이어야 한다. */
+console.log('[12] MACD 매수 필터');
+{
+  ok('운영 기본값 꺼짐', /macd:false\}/.test(idx));
+  ok('백테 기본값 꺼짐', /let imMacd=false;/.test(bt));
+  let mh=''; try{ mh=extractFn(idx,'function imMacdHist(closes, ticker)'); }catch(e){}
+  ok('MACD를 합성 1배지수로 잰다', /lev=\(ticker===/.test(mh) && /r\/lev/.test(mh),
+     mh?'':'imMacdHist 없음');
+  let ord=''; try{ ord=extractFn(idx,'function renderOrder()'); }catch(e){}
+  let sim=''; try{ sim=extractFn(idx,'function infSimForward(startFrom)'); }catch(e){}
+  ok('주문표가 필터를 본다', /imMacdToday\(\)/.test(ord));
+  ok('모의 체결도 같은 필터를 본다', /st\.macd!==true/.test(sim) && /MACDH/.test(sim));
+  ok('모의는 전일 히스토그램으로 판정', /MACDH\[row\.i-1\]<0/.test(sim));
+  // 매도는 필터와 무관해야 한다 — 필터는 매수만 막는다
+  ok('필터가 매도를 막지 않는다', !/imMacdToday[\s\S]{0,400}?쿼터매도/.test(ord));
+  // 설정이 바뀌면 모의 기록을 다시 만들어야 한다
+  ok('모의 지문에 macd 포함', /'ticker','div','target','reverse','tgtDyn','macd'/.test(idx));
+  let rim=''; try{ rim=extractFn(bt,'function runIM(days,tkr,cap,divs,targetPct,compound'); }catch(e){}
+  ok('백테도 전일 히스토그램으로 판정', /MACDH\[days\[i-1\]\]\?\?0\) < 0/.test(rim));
+}
+
 console.log(`\n════ 결과: ${pass} PASS / ${fail} FAIL ${fail===0?'— ALL PASS ★':'— 배포 금지, 위 ✗ 항목 수정 필요'} ════`);
 process.exit(fail===0?0:1);
