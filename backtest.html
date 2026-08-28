@@ -277,7 +277,7 @@ td:first-child{text-align:left;}
   <div class="brand">
     <div>
       <div class="logo">Backtest</div>
-      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v1.162</span></h1>
+      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v1.163</span></h1>
     </div>
   </div>
   <a href="/" class="home">← JK 퀀트</a>
@@ -2066,7 +2066,8 @@ function runIM50(days,tkr,cap,divs,targetPct,compound=true){
     closeHist.push(c); if(closeHist.length>5) closeHist.shift();
     const gr=!!GM.ready[d];
     const g =!!GM.gate[d];
-    if(!inReverse && (divs-T)<1 && shares>0){ inReverse=true; reverseDay1=true; }
+    const _revOn=(typeof imReverse!=='undefined')&&imReverse;   // runIM과 같은 조건 (A/B가 공정하려면 필수)
+    if(_revOn && !inReverse && (divs-T)<1 && shares>0){ inReverse=true; reverseDay1=true; }
 
     if(inReverse && shares>0 && avg>0){
       if(reverseDay1){

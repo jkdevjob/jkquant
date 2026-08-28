@@ -2,13 +2,13 @@
 /* ════════════════════════════════════════════════════════════════════
    JK 퀀트 회귀 테스트 — 검증 1~6차의 핵심 체크를 한 번에 재실행
    사용법: node regression-check.js [index.html경로] [backtest.html경로] [CSV디렉토리]
-   기본값: 이 스크립트와 같은 폴더
+   기본값: 이 스크립트와 같은 폴더 · 시세는 testdata/ 고정본
    원칙: 재구현 금지 — 실제 HTML에서 함수 원문을 추출해 그대로 실행.
    코드를 수정할 때마다 이 스크립트가 ALL PASS여야 배포.
    ════════════════════════════════════════════════════════════════════ */
 const fs=require('fs'), path=require('path');
 const __d=require('path').join(__dirname);
-const [,, IDX=__d+'/index.html', BT=__d+'/backtest.html', CSVDIR=__d]=process.argv;
+const [,, IDX=__d+'/index.html', BT=__d+'/backtest.html', CSVDIR=__d+'/testdata']=process.argv;
 let pass=0, fail=0;
 function ok(name, cond, detail=''){ if(cond){pass++;console.log('  ✓ '+name);} else {fail++;console.log('  ✗ '+name+(detail?' — '+detail:''));} }
 function near(a,b,tol){ return Math.abs(a-b)<=Math.max(tol??1e-6, Math.abs(b)*1e-9); }
@@ -202,18 +202,64 @@ console.log('[4b] runIM50 스모크 + V4.0 앵커');
     const r50=runIM50(DAYS.SOXL,'SOXL',10000,20,20,true);
     ok('runIM50 전체 실행·유한값', isFinite(r50.final)&&isFinite(r50.mdd));
   }
-  // (b) V4.0 앵커: 전체 이력·복리·원금 1만$·비용 OFF
-  // ⚠ 아래 기대값은 2026-07-07자 CSV · v1.91 종가체결 기준. v1.147에서 소진 기준을
-  //   T≥분할 → T>분할−1(1회 매수 불가 시점)로 바꿨으므로 CSV 보유 환경에서 재산출 필요.
-  const A=[['SOXL',20,20,1037877.52,61.74,72],
-           ['TQQQ',40,10,136093.27,47.68,107],
-           ['TECL',20,20,505877.36,62.05,31]];
+  // (b) V4.0 앵커 — testdata/ 고정 데이터(각 1500 거래일, ~2026-08-27) 기준.
+  //     데이터를 갈면 값이 달라지는 게 정상이므로, 지문이 다르면 실패가 아니라 스킵한다.
+  const FIX_LEN=1500, FIX_END='2026-08-27';
+  const fixOK=t=>DAYS[t] && DAYS[t].length===FIX_LEN && DAYS[t][DAYS[t].length-1]===FIX_END;
+  const A=[['SOXL',20,20,99642.44,54.11,35],
+           ['TQQQ',40,10,25826.31,65.50,29],
+           ['TECL',20,20,44336.37,42.07,14]];
   for(const [tkr,div,tgt,fexp,mexp,cexp] of A){
     if(!DAYS[tkr]){ console.log('  (CSV 없음, 스킵: '+tkr+')'); continue; }
+    if(!fixOK(tkr)){ console.log(`  (데이터가 고정본과 달라 앵커 스킵: ${tkr} ${DAYS[tkr].length}일 ~${DAYS[tkr][DAYS[tkr].length-1]})`); continue; }
     const r=runIM(DAYS[tkr],tkr,10000,div,tgt,true);
     ok(`${tkr} ${div}분할 ${tgt}% V4.0 앵커 (최종·MDD·사이클)`,
        near(r.final,fexp,0.05)&&near(r.mdd,mexp,0.01)&&r.cycles===cexp,
        `final ${r.final.toFixed(2)}/${fexp} mdd ${r.mdd.toFixed(2)}/${mexp} cyc ${r.cycles}/${cexp}`);
+  }
+}
+
+/* ════ 4c. 섀넌 차분 (runIVS 거래로그 → ivsPos 재생) ════
+   백테가 만든 리밸런싱을 운영 장부에 그대로 먹였을 때 수량·예수금이 같아야 한다.
+   백테에만 있는 '예수금 쪽 비용'(국채 매매 수수료·보수·이자)은 거래 기록 밖의 현금 비용이라
+   운영엔 개념이 없다 — 매매 수수료 경로만 격리하려고 그 셋을 끄고 대조한다. */
+console.log('[4c] 섀넌 차분 (runIVS 거래로그 → ivsPos 재생)');
+{
+  global.TBILL_RATE=new Proxy({},{get:()=>0});          // 예수금 이자 중화
+  global.META=global.META||{};
+  global.COST_FEE=0.0025; global.COST_KRW=1350; global.COST_TAXRATE=0.22;
+  global.COST_DEDUCT=1e18;                             // 양도세 중화 (운영은 세금을 안 넣는다)
+  eval(extractFn(bt,'function _ivsWeights(tkr,N,s0)'));
+  let ivsSrc=extractFn(bt,'function runIVS(days,tkr,cap,s0,N,band,costOn,mode,pair)');
+  const inj=(before,after,label)=>{ const p=ivsSrc.split(before);
+    if(p.length!==2) throw new Error(`섀넌 주입 실패(${label}): ${p.length-1}회 매치`);
+    ivsSrc=p[0]+after+p[1]; };
+  inj(`P.avg=(P.sh*P.avg+q*px)/(P.sh+q); P.sh+=q; cash-=spend+lf;`,
+      `P.avg=(P.sh*P.avg+q*px)/(P.sh+q); P.sh+=q; cash-=spend+lf; __LOGI('buy',P===A?'lev':'x1',__DD,px,q,spend-fee,fee);`,'buy');
+  inj(`yearPnl+=q*(px-P.avg)-fee; P.sh-=q;`,
+      `yearPnl+=q*(px-P.avg)-fee; P.sh-=q; __LOGI('sell',P===A?'lev':'x1',__DD,px,q,gross,fee);`,'sell');
+  inj(`days.forEach((d,i)=>{`,`days.forEach((d,i)=>{ __DD=d;`,'date');
+  inj(`const LEGFEE=(costOn&&!X1)?COST_FEE:0;`,`const LEGFEE=0;`,'legfee');
+  inj(`const CASH_DIVTAX=costOn?0.154:0, CASH_EXP=costOn?0.0010:0;`,`const CASH_DIVTAX=0, CASH_EXP=0;`,'cashcost');
+  let ivsLog=[];
+  global.__DD=null;
+  global.__LOGI=(type,leg,date,price,qty,amt,fee)=>ivsLog.push({type,leg,sym:leg,date,price,qty,amt,fee,ts:ivsLog.length+1});
+  eval(ivsSrc);
+  eval(extractFn(idx,'function ivsPos(principal,hist)'));
+  global.nfix=global.nfix||((v,n)=>(+v).toFixed(n));
+  const IVSC=[['TQQQ',55,40,15,'iv'],['TQQQ',55,40,10,'iv'],['TQQQ',40,60,15,'iv'],
+              ['SOXL',55,40,15,'iv'],['SOXL',70,20,20,'iv'],['SOXL',55,40,15,'fix'],
+              ['TECL',55,40,15,'iv'],['TECL',55,40,15,'fix']];
+  for(const costOn of [false,true]){
+    for(const [tkr,s0,N,band,mode] of IVSC){
+      if(!DAYS[tkr]) continue;
+      ivsLog=[];
+      const r=runIVS(DAYS[tkr],tkr,10000,s0/100,N,band/100,costOn,mode,'cash');
+      const P=ivsPos(10000,ivsLog);
+      const good=near(P.qty,r.endShares,1e-6)&&near(P.cash,r.endCash,0.01);
+      ok(`${tkr} s0=${s0}% N=${N} 밴드=${band}% ${mode==='fix'?'고정5:5':'역분산'} 수수료${costOn?'ON':'OFF'} — 거래 ${ivsLog.length}건`,
+         good, good?'':`수량 ${P.qty.toFixed(6)}/${r.endShares.toFixed(6)} 현금 ${P.cash.toFixed(2)}/${r.endCash.toFixed(2)}`);
+    }
   }
 }
 
@@ -387,6 +433,32 @@ console.log('[10] 모의 장부 정합');
   ok('성과 행에 통화를 실어 보낸다', /cur:st\.cur\|\|'usd'/.test(stat));
   ok('성과 표가 줄마다 통화로 찍는다', /wnCur\(r\.inflow,r\.cur\)/.test(idx) && /wnCur\(r\.total,r\.cur\)/.test(idx));
   ok('wn은 wnCur 위에 있다(중복 구현 없음)', /function wn\(v\)\{ return wnCur\(v, curCurrency\(\)\); \}/.test(idx));
+}
+
+
+/* ════ 11. 무매 계산 공유 (주문표·기록시트·모의체결이 갈라지지 않는가) ════
+   같은 규칙을 네 군데서 각자 구현하면 언젠가 어긋난다.
+   별지점·1회매수금은 반드시 한 함수(starPct·imBuy1)를 통해서만 나와야 한다. */
+console.log('[11] 무매 계산 공유');
+{
+  const users=['function renderOrder()','function renderStatusline()','function infSimForward(startFrom)',
+               'function sheetInfHTML(today)','function infSuggest(kind)'];
+  const noShare=[];
+  for(const m of users){
+    let body=''; try{ body=extractFn(idx,m); }catch(e){ noShare.push(m+'(없음)'); continue; }
+    const needsBuy1=/1회|buy1|B1|B\./.test(body);
+    if(needsBuy1 && !/imBuy1\(/.test(body)) noShare.push(m+'→imBuy1');
+    if(/별지점|star/.test(body) && !/starPct\(/.test(body) && !/star5/.test(body)) noShare.push(m+'→starPct');
+  }
+  ok('주문표·기록시트·모의체결이 같은 계산을 쓴다', noShare.length===0, noShare.join(', '));
+  // 매수 주문가는 별지점−0.01 (LOC가 별지점에서 쿼터매도와 겹치지 않게)
+  let ord=''; try{ ord=extractFn(idx,'function renderOrder()'); }catch(e){}
+  ok('매수 주문가 = 별지점 − 0.01', /star-0\.01|star\s*-\s*0\.01/.test(ord));
+  let sim=''; try{ sim=extractFn(idx,'function infSimForward(startFrom)'); }catch(e){}
+  ok('모의 체결도 별지점 − 0.01', /star-0\.01|star\s*-\s*0\.01/.test(sim));
+  // 쿼터매도는 보유÷4, 지정가매도는 나머지 (두 곳 규약 동일)
+  ok('쿼터매도 = 보유÷4 (주문표·모의 동일)',
+     /Math\.floor\(c\.qty\/4\)/.test(ord) && /Math\.floor\(c\.qty\/4\)/.test(sim));
 }
 
 console.log(`\n════ 결과: ${pass} PASS / ${fail} FAIL ${fail===0?'— ALL PASS ★':'— 배포 금지, 위 ✗ 항목 수정 필요'} ════`);
