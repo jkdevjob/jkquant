@@ -143,13 +143,17 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
 .warn{background:rgba(245,196,81,.08);border:1px solid #5a4d20;border-radius:10px;padding:11px 13px;font-size:12.5px;color:#e8d9a8;margin:11px 0}
 .note{font-size:11.5px;color:var(--faint);margin-top:9px;line-height:1.5}
 table.cmp{width:100%;border-collapse:collapse;font-size:12.5px;margin-top:8px}
-table.cmp th,table.cmp td{padding:8px 6px;text-align:center;border-bottom:1px solid var(--line)}
+table.cmp th,table.cmp td{padding:5px 6px;line-height:1.35;text-align:center;border-bottom:1px solid var(--line)}
 table.cmp th{color:var(--dim);font-weight:700;font-size:11px}
 table.cmp td{font-variant-numeric:tabular-nums}
 table.cmp td:first-child,table.cmp th:first-child{text-align:left}
 .cnt{font-size:12px;color:var(--faint);font-weight:600}
 .htable-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
 .htable{width:100%;border-collapse:collapse;font-size:11.5px;min-width:620px}
+/* 모의 성과는 6열뿐이라 거래이력용 폭(620px)을 쓰면 폰에서 수익률·연이 잘려 나간다 */
+.htable.narrow{min-width:0}
+.htable.narrow th,.htable.narrow td{padding:5px 4px}
+.htable.narrow th:first-child,.htable.narrow td:first-child{white-space:normal;word-break:keep-all}
 .htable th,.htable td{white-space:nowrap}
 .htable th{color:var(--faint);font-weight:700;font-size:10.5px;padding:4px 6px;line-height:1.3;text-align:right;border-bottom:1px solid var(--line);white-space:nowrap}
 .htable th:first-child,.htable th:nth-child(2){text-align:left}
@@ -264,7 +268,7 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
 .bandpill.wait{background:#33302040;color:var(--gold)}
 
 /* 계좌 상황 줄 카드 */
-.acct .ar{display:flex;justify-content:space-between;align-items:center;padding:11px 13px;border-radius:11px;background:var(--panel2);margin-bottom:7px;font-size:13.5px}
+.acct .ar{display:flex;justify-content:space-between;align-items:center;padding:8px 12px;border-radius:10px;background:var(--panel2);margin-bottom:5px;font-size:13.5px}
 .acct .ar:last-child{margin-bottom:0}
 .acct .ar .ak{color:var(--dim)}
 .acct .ar .ak .sub{display:block;font-size:10.5px;color:var(--faint);margin-top:1px;font-weight:500}
@@ -344,13 +348,13 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
 /* 사이클 히스토리 테이블 */
 .cyc-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch;margin:0 -4px}
 .cyctbl{width:100%;border-collapse:collapse;font-size:11.5px;min-width:440px}
-.cyctbl th{color:var(--faint);font-weight:700;text-align:right;padding:8px 7px;border-bottom:1px solid var(--line);font-size:10px;text-transform:uppercase;white-space:nowrap}
+.cyctbl th{color:var(--faint);font-weight:700;text-align:right;padding:4px 7px;line-height:1.3;border-bottom:1px solid var(--line);font-size:10px;text-transform:uppercase;white-space:nowrap}
 .cyctbl th:first-child{text-align:left}
-.cyctbl td{padding:9px 7px;border-bottom:1px solid var(--line);text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.cyctbl td{padding:5px 7px;line-height:1.35;border-bottom:1px solid var(--line);text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
 .cyctbl td:first-child{text-align:left}
 .cyctbl tr:last-child td{border-bottom:none}
 .cyctbl .cmin{color:var(--vio)}.cyctbl .cmax{color:var(--gold)}.cyctbl .cneg{color:var(--sell)}
-.cyctbl .cw{color:var(--faint);font-size:10px;display:block;font-weight:500;white-space:nowrap}
+.cw{color:var(--faint);font-size:10px;display:block;font-weight:500;white-space:nowrap;line-height:1.25}
 
 /* 진입 버튼 (다음 V) */
 .enterbtn{width:100%;padding:15px;border:none;border-radius:13px;background:linear-gradient(135deg,var(--vio),var(--vio2));color:#fff;font-size:15px;font-weight:800;cursor:pointer;margin-top:12px;-webkit-tap-highlight-color:transparent}
@@ -1483,7 +1487,7 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
   <footer>
     <strong>JK 퀀트</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v2.95</b> · 2026-08-26</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v2.96</b> · 2026-08-26</div>
   </footer>
 </div>
 
@@ -5600,7 +5604,7 @@ async function openPaper(){
       : `<p class="lead">모의투자 세션이 없습니다.<br><br>· <b>새로 만들기</b> — 세션바의 <b>+ 세션</b> → <b>모의투자로 만들기</b> 체크 → 시작일 선택<br>· <b>기존 세션을 바꾸기</b> — 세션 이름을 <b>더블탭</b>하면 모의 전환·시작일을 정할 수 있습니다.<br><br>정하고 나면 그 뒤로는 알아서 오늘까지 굴러갑니다.</p>`;
   }else{
     const cur=rows.map(r=>r.price>0).every(Boolean);
-    let h=`<div class="htable-wrap"><table class="htable"><tr><th>전략 · 세션</th><th>기간</th><th>투입</th><th>평가</th><th>수익률</th><th>연</th></tr>`;
+    let h=`<div class="htable-wrap"><table class="htable narrow"><tr><th>전략 · 세션</th><th>기간</th><th>투입</th><th>평가</th><th>수익</th><th>연</th></tr>`;
     rows.forEach(r=>{ const up=r.ret>=0, ok=r.price>0;
       const days=r.spanDays||Math.round(r.yrs*365.25);
       const per = days<45 ? `${days}일` : `${(days/365.25).toFixed(1)}년`;
