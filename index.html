@@ -1483,7 +1483,7 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
   <footer>
     <strong>JK 퀀트</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v2.93</b> · 2026-08-26</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v2.94</b> · 2026-08-26</div>
   </footer>
 </div>
 
@@ -1812,11 +1812,14 @@ function tickerLabel(t){
 }
 // 원화 세션인데 종목코드가 없어 자동시세 불가한 경우만 true
 function krwNoAuto(st){return (st.cur||'usd')==='krw' && !isKrCode(st.ticker);}
-function wn(v){
+/* 통화를 지정해서 찍는다. 모의 성과처럼 여러 세션을 한 표에 나열할 때는
+   활성 세션 통화로 전부 찍으면 원화 세션이 $10,000,000으로 나온다. */
+function wnCur(v,cur){
   v=+v||0;
-  if(curCurrency()==='krw') return '₩'+Math.round(v).toLocaleString('en-US');
+  if(cur==='krw') return '₩'+Math.round(v).toLocaleString('en-US');
   return '$'+v.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
 }
+function wn(v){ return wnCur(v, curCurrency()); }
 /* 가격(체결단가 등)도 통화 맞춤. 원화는 정수, 달러는 소수2자리 */
 function wp(v){return wn(v)}
 /* ── 천 단위 콤마 숫자 포맷터 (모든 숫자 공통) ── */
@@ -5451,18 +5454,33 @@ const PAPER_TABS=[['inf','무한매수법'],['vr','밸류리밸런싱'],['ivs','
    여기서 장부를 다시 걸으면 반드시 어긋난다 — 실제로 밸류·적립이 틀렸다.
    그래서 탭·세션을 잠깐 그 전략으로 옮겨 그 탭의 compute를 그대로 부른다.
    요약표와 각 탭의 분석이 언제나 같은 값이 되는 유일한 방법이다. */
+/* 로테 장부. maReplay는 진입·청산마다 0.25%를 실제로 떼는데(백테 runMA200과 같은 규약)
+   여기서는 'principal+실현손익-취득원가'로 현금을 되짚느라 그 수수료가 통째로 빠져 있었다.
+   거래 5건에 총자산이 0.94% 과대였고, 거래가 쌓일수록 벌어진다.
+   섀넌과 같은 규약으로 간다 — 기록에 fee가 있으면 그걸 쓰고 없으면 0.25% 기본. */
 function maLedger(hist, price, principal){
-  let qty=0, avg=0, realized=0, totbuy=0, totsell=0, nOut=0, nWin=0;
+  const FEE=(typeof IVS_FEE!=='undefined')?IVS_FEE:0.0025;
+  let qty=0, avg=0, realized=0, totbuy=0, totsell=0, nOut=0, nWin=0, fees=0;
+  let cash=+principal||0;
   (hist||[]).forEach(x=>{
     const q=+x.qty||0, pr=+x.price||0;
-    if(x.type==='in'){ const nq=qty+q; avg=nq>0?(avg*qty+pr*q)/nq:pr; qty=nq; totbuy+=pr*q; }
-    else if(x.type==='out'){ const sq=q>0?Math.min(q,qty):qty;
-      const pnl=(pr-avg)*sq; realized+=pnl; totsell+=pr*sq; qty-=sq; nOut++; if(pnl>0)nWin++;
-      if(qty<=1e-9){qty=0;avg=0;} }
+    if(!(q>0)||!(pr>0)) return;
+    if(x.type==='in'){
+      const gross=pr*q, fee=(x.fee!=null?+x.fee:gross*FEE);
+      const nq=qty+q; avg=nq>0?(avg*qty+pr*q)/nq:pr; qty=nq;
+      totbuy+=gross; cash-=gross+fee; fees+=fee;
+    }else if(x.type==='out'){
+      const sq=q>0?Math.min(q,qty):qty; const gross=pr*sq;
+      const fee=(x.fee!=null?+x.fee:gross*FEE);
+      const pnl=(pr-avg)*sq-fee;                 // 실현손익도 수수료 차감 후 (백테와 동일)
+      realized+=pnl; totsell+=gross; cash+=gross-fee; fees+=fee;
+      qty-=sq; nOut++; if(pnl>0)nWin++;
+      if(qty<=1e-9){qty=0;avg=0;}
+    }
   });
+  cash=Math.max(0,cash);
   const invested=price>0?price*qty:0;
-  const cash=Math.max(0,(principal||0)+realized-avg*qty);
-  return {qty,avg,realized,totbuy,totsell,nOut,nWin,invested,cash,total:invested+cash};
+  return {qty,avg,realized,totbuy,totsell,nOut,nWin,invested,cash,fees,total:invested+cash};
 }
 function paperStat(tab, sess){
   const h=sess.hist||[]; if(!h.length) return null;
@@ -5507,11 +5525,15 @@ function paperStat(tab, sess){
   finally{ S.activeTab=prevTab; box.active=prevAct; }
   const st=sess.settings||{};
   const base=Math.max(1,inflow);
-  const from=h[0].date, to=(st.simLast&&st.simLast>h[h.length-1].date)?st.simLast:h[h.length-1].date;
+  // 돈은 모의 시작일부터 넣어 둔 것이다. 첫 기록일부터 재면(로테는 첫 신호가 몇 달 뒤일 수 있다)
+  // 기간이 짧게 잡혀 연환산 수익률이 부풀려진다.
+  const first=h[0].date;
+  const from=(sess.simStart && sess.simStart<first) ? sess.simStart : first;
+  const to=(st.simLast&&st.simLast>h[h.length-1].date)?st.simLast:h[h.length-1].date;
   const spanDays=Math.max(1,Math.round((new Date(to)-new Date(from))/864e5));
   const yrs=Math.max(0.05,(new Date(to)-new Date(from))/(365.25*864e5));   // 연환산 분모용 하한
   const nTrade=h.filter(x=>{const k=x.kind||x.type||'';return /매수|매도/.test(k)||k==='buy'||k==='sell'||k==='in'||k==='out';}).length;
-  return {tab, name:sess.name, sym, from, to, yrs, spanDays, inflow:base, total,
+  return {tab, name:sess.name, sym, cur:st.cur||'usd', from, to, yrs, spanDays, inflow:base, total,
     ret:(total/base-1)*100, cagr:(Math.pow(Math.max(total,1)/base,1/yrs)-1)*100, nTrade, price};
 }
 function paperSummary(){
@@ -5588,9 +5610,9 @@ async function openPaper(){
       // 시세를 못 받은 세션은 평가금이 없다 — 0%를 진짜 성과처럼 보여주면 안 된다
       h+=`<tr><td><b>${r.label}</b><span class="cw">${String(r.name).replace(/</g,'&lt;')} · ${r.sym}</span></td>
         <td>${per}<span class="cw">${r.nTrade}거래</span></td>
-        <td>${wn(r.inflow)}</td>`
+        <td>${wnCur(r.inflow,r.cur)}</td>`
         + (ok
-          ? `<td>${wn(r.total)}</td>
+          ? `<td>${wnCur(r.total,r.cur)}</td>
              <td style="color:${up?'var(--buy)':'var(--sell)'};font-weight:700">${up?'+':''}${r.ret.toFixed(1)}%</td>
              <td style="color:${long?(up?'var(--buy)':'var(--sell)'):'var(--faint)'}">${cagr}</td>`
           : `<td colspan="3" style="color:var(--gold)">시세 대기 — ${r.sym} 탭을 한 번 열어주세요</td>`)
