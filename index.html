@@ -143,13 +143,17 @@ select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/
 .warn{background:rgba(245,196,81,.08);border:1px solid #5a4d20;border-radius:10px;padding:11px 13px;font-size:12.5px;color:#e8d9a8;margin:11px 0}
 .note{font-size:11.5px;color:var(--faint);margin-top:9px;line-height:1.5}
 table.cmp{width:100%;border-collapse:collapse;font-size:12.5px;margin-top:8px}
-table.cmp th,table.cmp td{padding:8px 6px;text-align:center;border-bottom:1px solid var(--line)}
+table.cmp th,table.cmp td{padding:5px 6px;line-height:1.35;text-align:center;border-bottom:1px solid var(--line)}
 table.cmp th{color:var(--dim);font-weight:700;font-size:11px}
 table.cmp td{font-variant-numeric:tabular-nums}
 table.cmp td:first-child,table.cmp th:first-child{text-align:left}
 .cnt{font-size:12px;color:var(--faint);font-weight:600}
 .htable-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
 .htable{width:100%;border-collapse:collapse;font-size:11.5px;min-width:620px}
+/* 모의 성과는 6열뿐이라 거래이력용 폭(620px)을 쓰면 폰에서 수익률·연이 잘려 나간다 */
+.htable.narrow{min-width:0}
+.htable.narrow th,.htable.narrow td{padding:5px 4px}
+.htable.narrow th:first-child,.htable.narrow td:first-child{white-space:normal;word-break:keep-all}
 .htable th,.htable td{white-space:nowrap}
 .htable th{color:var(--faint);font-weight:700;font-size:10.5px;padding:4px 6px;line-height:1.3;text-align:right;border-bottom:1px solid var(--line);white-space:nowrap}
 .htable th:first-child,.htable th:nth-child(2){text-align:left}
@@ -264,7 +268,7 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
 .bandpill.wait{background:#33302040;color:var(--gold)}
 
 /* 계좌 상황 줄 카드 */
-.acct .ar{display:flex;justify-content:space-between;align-items:center;padding:11px 13px;border-radius:11px;background:var(--panel2);margin-bottom:7px;font-size:13.5px}
+.acct .ar{display:flex;justify-content:space-between;align-items:center;padding:8px 12px;border-radius:10px;background:var(--panel2);margin-bottom:5px;font-size:13.5px}
 .acct .ar:last-child{margin-bottom:0}
 .acct .ar .ak{color:var(--dim)}
 .acct .ar .ak .sub{display:block;font-size:10.5px;color:var(--faint);margin-top:1px;font-weight:500}
@@ -344,13 +348,13 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
 /* 사이클 히스토리 테이블 */
 .cyc-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch;margin:0 -4px}
 .cyctbl{width:100%;border-collapse:collapse;font-size:11.5px;min-width:440px}
-.cyctbl th{color:var(--faint);font-weight:700;text-align:right;padding:8px 7px;border-bottom:1px solid var(--line);font-size:10px;text-transform:uppercase;white-space:nowrap}
+.cyctbl th{color:var(--faint);font-weight:700;text-align:right;padding:4px 7px;line-height:1.3;border-bottom:1px solid var(--line);font-size:10px;text-transform:uppercase;white-space:nowrap}
 .cyctbl th:first-child{text-align:left}
-.cyctbl td{padding:9px 7px;border-bottom:1px solid var(--line);text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.cyctbl td{padding:5px 7px;line-height:1.35;border-bottom:1px solid var(--line);text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
 .cyctbl td:first-child{text-align:left}
 .cyctbl tr:last-child td{border-bottom:none}
 .cyctbl .cmin{color:var(--vio)}.cyctbl .cmax{color:var(--gold)}.cyctbl .cneg{color:var(--sell)}
-.cyctbl .cw{color:var(--faint);font-size:10px;display:block;font-weight:500;white-space:nowrap}
+.cw{color:var(--faint);font-size:10px;display:block;font-weight:500;white-space:nowrap;line-height:1.25}
 
 /* 진입 버튼 (다음 V) */
 .enterbtn{width:100%;padding:15px;border:none;border-radius:13px;background:linear-gradient(135deg,var(--vio),var(--vio2));color:#fff;font-size:15px;font-weight:800;cursor:pointer;margin-top:12px;-webkit-tap-highlight-color:transparent}
@@ -1483,7 +1487,7 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
   <footer>
     <strong>JK 퀀트</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v2.95</b> · 2026-08-26</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v2.97</b> · 2026-08-26</div>
   </footer>
 </div>
 
@@ -1508,6 +1512,8 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
     <div class="seclabel">분할 수</div><div class="seg" id="set_div"><button data-v="10">10분할</button><button data-v="20">20분할</button><button data-v="30">30분할</button><button data-v="40">40분할</button></div>
     <div class="seclabel">리버스 <span class="hint" style="color:var(--faint);font-weight:500">원금 소진 후 무한매도 · V4.0</span></div><div class="seg" id="set_reverse"><button data-v="0" class="on">끔</button><button data-v="1">켬</button></div>
     <p class="note" style="margin:-2px 0 8px">끔(기본): 원금 소진 후 <b>후반전 별지점 손절 쿼터매도</b>로만 방어(홀드). 켬: 소진 후 <b>리버스 무한매도</b> 모드 진입. 백테스트상 20분할·급락 후 V반등에서는 끔이 유리했습니다.</p>
+    <div class="seclabel">MACD 매수 필터 <span class="hint" style="color:var(--faint);font-weight:500">합성1배 12/26/9 · 선택</span></div><div class="seg" id="set_macd"><button data-v="0" class="on">끔</button><button data-v="1">하락일 때만</button></div>
+    <p class="note" style="margin:-2px 0 8px">켬: 전일 <b>MACD 히스토그램이 음수(하락 모멘텀)</b>인 날에만 매수합니다. 무매는 원래 떨어질 때 사는 전략인데, 필터가 없으면 상승 중에도 종가가 별지점 아래로만 오면 삽니다.<br>5년 롤링 144창 측정: <b>MDD 42.7% → 35.0%</b> · CAGR 18.5% → 15.9% · MAR 0.500 → 0.504 · 기본 대비 승률 56%. 매수일이 절반으로 줄어 <b>잔금이 오래 갑니다</b>. 수익률을 조금 내주고 낙폭을 크게 줄이는 맞바꿈입니다. <b>매도(익절·쿼터)는 그대로</b>입니다.</p>
     <div class="seclabel">익절 조절 <span class="hint" style="color:var(--faint);font-weight:500">20일 상승률 · 선택</span></div><div class="seg" id="set_tgtdyn"><button data-v="0" class="on">끔</button><button data-v="1">상승률</button></div>
     <p class="note" style="margin:-2px 0 8px">켬: 직전 <b>20거래일 상승률 &gt; +8%</b>면 그날 익절% = <b>min(기본×2, 30%)</b>. 하락 시엔 조절하지 않고, <b>매수 규칙(별지점·1회매수금)은 그대로</b>입니다.<br>백테(튜닝에 안 쓴 종목 포함)에서 TQQQ +9~16% · TECL +11% · USD +5%. 다만 사이클이 절반 가까이 줄어 <b>MDD가 나빠지는 구간</b>이 있고(TECL 2010~ 31%→62%), SOXL 전체는 −0.6%로 소폭 열위였습니다. 또 <b>전반전에서만 실효</b>합니다 — 후반전엔 익절가가 평단보다 위라 어차피 닿지 않습니다.</p>
     <div class="seclabel">파라미터</div>
@@ -1862,7 +1868,7 @@ const won=v=>'₩'+Math.round((+v||0)*((typeof liveFX!=='undefined'&&liveFX)?liv
 const LS='qcockpit_v2', LS_URL='qcockpit_gsheet';
 let S=null;
 
-function defInfSettings(){return{ticker:'SOXL',div:20,target:20,big:15,rowsOn:false,rows:8,gap:2.5,rowqty:1,principal:10000,cur:'usd',engine:'v40',shortMA:30,loPct:6,tgtDyn:false}}
+function defInfSettings(){return{ticker:'SOXL',div:20,target:20,big:15,rowsOn:false,rows:8,gap:2.5,rowqty:1,principal:10000,cur:'usd',engine:'v40',shortMA:30,loPct:6,tgtDyn:false,macd:false}}
 // V5.0 숨김 기간: 저장된 세션이 v50이어도 v40으로 강제 (UI가 없어 되돌릴 수 없으므로)
 // 복원 시 이 함수와 load() 안의 호출만 제거하면 된다.
 function forceV40(){
@@ -2050,6 +2056,42 @@ function imBuy1(c){
 // ══════ V5.0 국면 판정 (backtest buildGateIM과 동일 알고리즘) ══════
 // 입력: 종가 배열(과거→미래). 출력: 마지막 시점의 국면(상승/하락)·오늘 익절%. 변동성 계산 불필요.
 // 레버리지: SOXL/TQQQ/TECL=3, QLD/USD/SSO=2. 외부지수 불필요(자체 종가로 합성 1배지수).
+/* ── MACD 매수 필터 (선택) ────────────────────────────────────────────
+   무한매수법은 '떨어질 때 사는' 전략인데, 필터가 없으면 상승 중에도 종가가
+   별지점·평단 아래로 내려오면 산다. 전일 MACD 히스토그램이 음수(하락 모멘텀)일
+   때만 사게 하면 매수일이 절반으로 줄어 잔금이 오래 가고 낙폭이 크게 준다.
+   5년 롤링 144창: MDD 42.7%→35.0% · CAGR 18.5%→15.9% · MAR 0.500→0.504 · 승률 56%.
+   파라미터 6종에서 전부 같은 방향이라 과최적화가 아니다.
+   3배 원본이 아니라 합성 1배지수로 잰다 — 레버리지 노이즈를 빼려고. */
+const IM_MACD_F=12, IM_MACD_S=26, IM_MACD_G=9;
+function imMacdHist(closes, ticker){
+  const n=closes.length; if(n<IM_MACD_S+IM_MACD_G) return null;
+  const lev=(ticker==='QLD'||ticker==='USD'||ticker==='SSO')?2:3;
+  const kf=2/(IM_MACD_F+1), ks=2/(IM_MACD_S+1), kg=2/(IM_MACD_G+1);
+  let syn=100, ef=null, es=null, sl=null; const out=new Array(n);
+  for(let i=0;i<n;i++){
+    if(i>0){ const r=closes[i]/closes[i-1]-1; syn*=(1+r/lev); }
+    ef = ef==null?syn:ef+(syn-ef)*kf;
+    es = es==null?syn:es+(syn-es)*ks;
+    const line=ef-es;
+    sl = sl==null?line:sl+(line-sl)*kg;
+    out[i]=line-sl;
+  }
+  return out;
+}
+/* 오늘 주문에 쓸 판정값 — '전일'까지의 종가로 만든 마지막 히스토그램 */
+function imMacdToday(){
+  const st=curStrat().settings;
+  if(!st || st.macd!==true) return {on:false};
+  const rows=(lastQuote.inf && String(lastQuote.inf.symbol||'').toUpperCase()===String(st.ticker||'').toUpperCase()
+              && lastQuote.inf.ohlc) ? lastQuote.inf.ohlc : null;
+  if(!rows||!rows.length) return {on:true, ready:false};
+  const closes=rows.map(r=>r.close).filter(v=>v>0);
+  const H=imMacdHist(closes, String(st.ticker||'').toUpperCase());
+  if(!H) return {on:true, ready:false};
+  const h=H[H.length-1];
+  return {on:true, ready:true, hist:h, buyOK:h<0, date:rows[rows.length-1].date};
+}
 function imRegime(closes, ticker, shortMA){
   // V5.0 국면: 합성 1배지수 > 200일선 AND > 단기이평(20/30/50일) — 둘 다 위여야 상승국면.
   const SM = shortMA || 30;
@@ -2268,7 +2310,12 @@ function renderOrder(){
   let nBuyRow=0;
   // qtyPrice: 수량 산출에 쓸 가격(생략 시 주문가). 첫 매수는 LOC가 종가에 체결되므로 종가로 나눈다.
   const _brow=(lbl,price,alloc,qtyPrice)=>{ const dp=qtyPrice||price, q=dp>0?Math.floor(alloc/dp):0; if(q<1)return ''; nBuyRow++; return oitem('b',lbl,'LOC',price,q); };
-  if(B1.spent){
+  const _mq=imMacdToday();
+  if(_mq.on && _mq.ready && !_mq.buyOK){
+    // MACD 필터: 전일 히스토그램이 양수(상승 모멘텀) → 오늘은 사지 않는다
+    html+=`<div class="note" style="color:var(--gold)">🚫 <b>매수 없음 — MACD 상승 모멘텀</b> (히스토그램 ${_mq.hist>=0?'+':''}${_mq.hist.toFixed(2)}, ${_mq.date} 기준)<br>`
+      +`필터를 켜 두셔서 <b>하락 모멘텀인 날에만</b> 매수합니다. 잔금 <b>${wn(c.bal)}</b>은 그대로 대기합니다. 아래 <b>매도 주문은 평소대로</b> 거세요.</div>`;
+  }else if(B1.spent){
     // T > 분할−1 → '1회 매수가 불가능' = 원금 소진. 잔금이 남아 있어도 부분 매수 없이 새 회차는 없다.
     html+=`<div class="note" style="color:var(--gold)">🚫 <b>매수 없음 — 원금 소진</b> (T=${fmtT(c.T)} > ${st.div-1}, 남은 회차 ${B1.slot.toFixed(3)}회 &lt; 1)<br>`
       +(B1.slot>0 ? `1회분 ${wn(c.bal/B1.slot)}이 잔금 <b>${wn(c.bal)}</b>을 넘어 매수할 수 없습니다. `
@@ -2301,6 +2348,8 @@ function renderOrder(){
       const p=baseP*(1-gap*i/100);
       if(p>0)html+=oitem('b',`하방 ${i} (-${(gap*i).toFixed(1)}%)`,'LOC',p,rq);
     }
+    if(_mq.on && _mq.ready) html+=`<div class="note" style="color:var(--buy-dim)">✅ MACD 하락 모멘텀 (히스토그램 ${_mq.hist.toFixed(2)}) — 필터 통과, 매수합니다.</div>`;
+    else if(_mq.on) html+=`<div class="note" style="color:var(--gold)">ⓘ MACD 필터가 켜져 있으나 종가 이력이 모자라 판정할 수 없어 평소대로 매수합니다.</div>`;
   }
   html+='</div>';
   // 매도 그룹: 쿼터매도 ¼ = 별지점 LOC / 나머지 ¾ = 평단×익절배율 지정가
@@ -2773,6 +2822,7 @@ function infSimForward(startFrom){
   if(!first.length) return null;
 
   _infSimBusy=true;
+  const MACDH = (st.macd===true) ? imMacdHist(O.map(x=>x.close), sym) : null;
   let nBuy=0,nSell=0,seq=0,nCyc0=computeInf().cycleSeq;
   const closeAt=i=>(O[i]&&O[i].close>0)?O[i].close:0;
   const put=(kind,date,price,qty)=>{ if(!(qty>=1)||!(price>0)) return false;
@@ -2827,7 +2877,9 @@ function infSimForward(startFrom){
       // ── 매수 ──
       c=computeInf();
       const B=imBuy1(c);
-      if(!liquidated && !B.spent && c.bal>1){
+      // MACD 필터(설정 켬): 전일 히스토그램이 음수인 날에만 매수 — 주문표와 같은 규약
+      const macdOK = (st.macd!==true) || (MACDH ? (row.i>0 ? (MACDH[row.i-1]<0) : true) : true);
+      if(macdOK && !liquidated && !B.spent && c.bal>1){
         if(c.qty<=0 || c.avg<=0){                                    // 첫 매수 — 종가×큰수 LOC → 종가 체결
           put('1회매수',d,cl,Math.floor(B.amt/cl));
         }else{
@@ -5600,7 +5652,7 @@ async function openPaper(){
       : `<p class="lead">모의투자 세션이 없습니다.<br><br>· <b>새로 만들기</b> — 세션바의 <b>+ 세션</b> → <b>모의투자로 만들기</b> 체크 → 시작일 선택<br>· <b>기존 세션을 바꾸기</b> — 세션 이름을 <b>더블탭</b>하면 모의 전환·시작일을 정할 수 있습니다.<br><br>정하고 나면 그 뒤로는 알아서 오늘까지 굴러갑니다.</p>`;
   }else{
     const cur=rows.map(r=>r.price>0).every(Boolean);
-    let h=`<div class="htable-wrap"><table class="htable"><tr><th>전략 · 세션</th><th>기간</th><th>투입</th><th>평가</th><th>수익률</th><th>연</th></tr>`;
+    let h=`<div class="htable-wrap"><table class="htable narrow"><tr><th>전략 · 세션</th><th>기간</th><th>투입</th><th>평가</th><th>수익</th><th>연</th></tr>`;
     rows.forEach(r=>{ const up=r.ret>=0, ok=r.price>0;
       const days=r.spanDays||Math.round(r.yrs*365.25);
       const per = days<45 ? `${days}일` : `${(days/365.25).toFixed(1)}년`;
@@ -6424,7 +6476,7 @@ function openSettings(){
   }else if(S.activeTab==='inf'){
     $('set_inf').style.display='';$('set_vr').style.display='none';
     const st=s.settings, sym=(st.cur||'usd')==='krw'?'₩':'$';
-    segSet('set_ticker',st.ticker);segSet('set_div',String(st.div));segSet('set_cur',st.cur||'usd');segSet('set_engine',st.engine||'v40');segSet('set_shortma',String(st.shortMA||30));segSet('set_lopct',String(st.loPct||6));segSet('set_reverse',st.reverse===true?'1':'0');segSet('set_tgtdyn',st.tgtDyn===true?'1':'0');syncShortMaUI(st.engine||'v40');syncTgtNote();
+    segSet('set_ticker',st.ticker);segSet('set_div',String(st.div));segSet('set_cur',st.cur||'usd');segSet('set_engine',st.engine||'v40');segSet('set_shortma',String(st.shortMA||30));segSet('set_lopct',String(st.loPct||6));segSet('set_reverse',st.reverse===true?'1':'0');segSet('set_tgtdyn',st.tgtDyn===true?'1':'0');segSet('set_macd',st.macd===true?'1':'0');syncShortMaUI(st.engine||'v40');syncTgtNote();
     $('set_target').value=st.target;$('set_big').value=st.big;$('set_principal').value=nfix(st.principal,0);
     if($('set_rows'))$('set_rows').value=st.rows!=null?st.rows:8;
     if($('set_gap'))$('set_gap').value=st.gap!=null?st.gap:2.5;
@@ -6483,7 +6535,7 @@ function syncShortMaUI(eng){
   if(note&&note.classList.contains('note')) note.style.opacity=on?'1':'0.4';
 }
 function setupSegs(){
-  ['set_ticker','set_div','set_reverse','set_tgtdyn','set_vmode','set_vformula','set_cur','set_vcur','set_engine','set_shortma','set_lopct','set_maticker','set_mabuy','set_masell','set_mapark','set_dcaticker','set_dcafreq','set_dcamul','set_asapticker',
+  ['set_ticker','set_div','set_reverse','set_tgtdyn','set_macd','set_vmode','set_vformula','set_cur','set_vcur','set_engine','set_shortma','set_lopct','set_maticker','set_mabuy','set_masell','set_mapark','set_dcaticker','set_dcafreq','set_dcamul','set_asapticker',
    'set_vauto','set_ivsticker','set_ivss0','set_ivslook','set_ivsband','set_ivspark','set_ivsmode'].forEach(id=>{
     const el=$(id);if(!el)return;
     el.querySelectorAll('button').forEach(b=>{
@@ -6514,7 +6566,7 @@ function setupSegs(){
    그대로 남아 화면 설정과 기록이 어긋났다.
    실계좌 세션은 사람이 넣은 실제 거래이므로 절대 건드리지 않는다. */
 const SIM_KEYS={
-  inf :['ticker','div','target','reverse','tgtDyn','principal','cur'],
+  inf :['ticker','div','target','reverse','tgtDyn','macd','principal','cur'],
   vr  :['ticker','mode','formula','g','add','initAmt','autoCyc','band','cur'],
   ma  :['ticker','buy','sell','park','principal'],
   ivs :['ticker','mode','s0','look','band','park','principal','monthly'],
@@ -6560,6 +6612,7 @@ function saveSettings(){
       target:inputNum('set_target')||20,big:inputNum('set_big')||12,
       reverse:segGet('set_reverse')==='1',
       tgtDyn:segGet('set_tgtdyn')==='1',
+      macd:segGet('set_macd')==='1',
       rowsOn:$('set_rows_on')?$('set_rows_on').checked:false,
       rows:Math.max(0,Math.min(20,+$('set_rows').value||0)),gap:+$('set_gap').value||2.5,
       rowqty:1,principal:inputNum('set_principal')||10000,cur:segGet('set_cur')||'usd',
