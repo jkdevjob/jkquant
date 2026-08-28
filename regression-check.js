@@ -365,5 +365,29 @@ console.log('[9] 모의 기록·설정 정합');
   ok('시세 로더가 캐시 종목을 대조', noSym.length===0, noSym.join(','));
 }
 
+
+/* ════ 10. 모의 장부 정합 (13차 버그 클래스) ════
+   생성 규약과 장부가 어긋나면 화면 숫자가 통째로 틀린다.
+   실제로 로테는 진입·청산마다 0.25%를 떼면서 장부에선 안 떼, 총자산이 0.94% 과대였다. */
+console.log('[10] 모의 장부 정합');
+{
+  let led=''; try{ led=extractFn(idx,'function maLedger(hist, price, principal)'); }catch(e){}
+  ok('로테 장부가 수수료를 반영', /IVS_FEE/.test(led) && /fee/.test(led), led?'':'maLedger 없음');
+  ok('로테 실현손익이 수수료 차감 후', /\(pr-avg\)\*sq-fee/.test(led));
+  // maReplay(생성)와 maLedger(장부)가 같은 수수료율을 써야 한다
+  let rep=''; try{ rep=extractFn(idx,'function maReplay()'); }catch(e){}
+  const feeOf=src=>{ const m=src.match(/IVS_FEE!=='undefined'\)\?IVS_FEE:([\d.]+)/); return m?m[1]:null; };
+  ok('생성·장부의 수수료 기본값 동일', feeOf(rep)!==null && feeOf(rep)===feeOf(led),
+     `생성 ${feeOf(rep)} / 장부 ${feeOf(led)}`);
+
+  let stat=''; try{ stat=extractFn(idx,'function paperStat(tab, sess)'); }catch(e){}
+  // 기간은 첫 기록일이 아니라 모의 시작일부터 — 아니면 연환산이 부풀려진다
+  ok('모의 기간을 시작일부터 잰다', /sess\.simStart && sess\.simStart<first/.test(stat));
+  // 여러 세션을 한 표에 나열하므로 통화는 줄마다 따로
+  ok('성과 행에 통화를 실어 보낸다', /cur:st\.cur\|\|'usd'/.test(stat));
+  ok('성과 표가 줄마다 통화로 찍는다', /wnCur\(r\.inflow,r\.cur\)/.test(idx) && /wnCur\(r\.total,r\.cur\)/.test(idx));
+  ok('wn은 wnCur 위에 있다(중복 구현 없음)', /function wn\(v\)\{ return wnCur\(v, curCurrency\(\)\); \}/.test(idx));
+}
+
 console.log(`\n════ 결과: ${pass} PASS / ${fail} FAIL ${fail===0?'— ALL PASS ★':'— 배포 금지, 위 ✗ 항목 수정 필요'} ════`);
 process.exit(fail===0?0:1);
