@@ -65,8 +65,8 @@ inject(`if(sellQty>0){ _sell(c,sellQty,0); T=divs>=40?T*0.95:T*0.9; }   // LOC=�
 `if(sellQty>0){ __LOG('리버스매도',c,sellQty); _sell(c,sellQty,0); T=divs>=40?T*0.95:T*0.9; }   // LOC=종가`,'r2');
 inject(`_buy(c, Math.min(cash, Math.max(cash/4, c)));   // LOC=종가`,
 `{const __a=Math.min(cash, Math.max(cash/4, c));__LOG('리버스매수',c,__a/c);_buy(c,__a);}   // LOC=종가`,'r3');
-inject(`{_sell(tgt,q3,SLIP);tpHit=true;}`,
-`{__LOG('지정가매도',tgt,q3);_sell(tgt,q3,SLIP);tpHit=true;}`,'tp');
+inject(`{_sell(o>tgt?o:tgt,q3,SLIP);tpHit=true;}`,
+`{const __px=o>tgt?o:tgt;__LOG('지정가매도',__px,q3);_sell(__px,q3,SLIP);tpHit=true;}`,'tp');
 inject(`{_sell(c,sq,0);qtHit=true;}`,
 `{__LOG('쿼터매도',c,sq);_sell(c,sq,0);qtHit=true;}`,'qt');
 inject(`if(shares===0&&T===0){_buy(c,one);T+=1;}`,
@@ -206,9 +206,11 @@ console.log('[4b] runIM50 스모크 + V4.0 앵커');
   //     데이터를 갈면 값이 달라지는 게 정상이므로, 지문이 다르면 실패가 아니라 스킵한다.
   const FIX_LEN=1500, FIX_END='2026-08-27';
   const fixOK=t=>DAYS[t] && DAYS[t].length===FIX_LEN && DAYS[t][DAYS[t].length-1]===FIX_END;
-  const A=[['SOXL',20,20,99642.44,54.11,35],
-           ['TQQQ',40,10,25826.31,65.50,29],
-           ['TECL',20,20,44336.37,42.07,14]];
+  // v1.167에서 지정가매도 체결가를 max(익절가, 시가)로 바로잡아 최종값만 이동했다.
+  // (MDD·사이클은 그대로 — 체결 '판정'은 안 바뀌고 '체결가'만 바뀐 게 확인됨)
+  const A=[['SOXL',20,20,106916.88,54.11,35],
+           ['TQQQ',40,10,26454.24,65.50,29],
+           ['TECL',20,20,45505.63,42.07,14]];
   for(const [tkr,div,tgt,fexp,mexp,cexp] of A){
     if(!DAYS[tkr]){ console.log('  (CSV 없음, 스킵: '+tkr+')'); continue; }
     if(!fixOK(tkr)){ console.log(`  (데이터가 고정본과 달라 앵커 스킵: ${tkr} ${DAYS[tkr].length}일 ~${DAYS[tkr][DAYS[tkr].length-1]})`); continue; }
@@ -504,12 +506,53 @@ console.log('[13] LOC 주문가 상한');
      ord?'':'renderOrder 없음');
   ok('하방 LOC도 같은 상한', /하방 \$\{i\}[\s\S]{0,80}p>limit\)\?limit:p/.test(ord));
   // 수량은 상한 전 가격으로 — 상한이 수량까지 바꾸면 모의·백테와 어긋난다
-  ok('상한이 수량을 바꾸지 않는다', /_brow\(lbl\+[^,]*,\s*cp,\s*alloc,\s*price\)/.test(ord));
+  // 수량은 상한가가 아니라 '종가'로 나눈다 — 상한이 수량을 흔들면 안 되고,
+  // 주문가(별지점)로 나누면 배정액만큼 못 산다(백테·모의는 종가로 나눈다).
+  ok('수량은 종가 기준 (상한·주문가 아님)', /_brow\(lbl\+[^,]*,\s*cp,\s*alloc,\s*close>0\?close:price\)/.test(ord));
   // 매도는 절대 낮추면 안 된다 — 낮추면 원치 않는 체결이 난다
   const sellCap=/oitem\('s'[^)]*limit/.test(ord);
   ok('매도가는 상한으로 낮추지 않는다', !sellCap, sellCap?'매도에 상한 적용됨':'');
   // 큰수 %가 없는 옛 세션에서 NaN이 되어 상한이 통째로 꺼지지 않아야 한다
   ok('큰수 % 미설정 세션도 상한 동작', /isFinite\(\+st\.big\)/.test(ord));
+}
+
+
+/* ════ 14. 체결가 규약 — 주문 종류별로 어느 가격에 체결되는가 (15차 버그 클래스) ════
+   LOC는 종가, 지정가매도는 익절가. 그런데 시가가 이미 익절가 위면 지정가 매도는
+   '시가'에 체결된다(가격개선). 익절가로 고정하면 갭업 익절이 통째로 과소계상된다.
+   백테 두 엔진(runIM/runIM50)과 모의(infSimForward) 셋 다 같은 규약이어야 한다. */
+console.log('[14] 체결가 규약');
+{
+  const tpBt=(bt.match(/_sell\(o>tgt\?o:tgt,q3,SLIP\)/g)||[]).length;
+  ok('백테 두 엔진 다 갭업 체결가 반영', tpBt===2, `${tpBt}곳 (runIM·runIM50 = 2곳이어야)`);
+  let sim=''; try{ sim=extractFn(idx,'function infSimForward(startFrom)'); }catch(e){}
+  ok('모의도 갭업 체결가 반영', /put\('지정가매도',d,\(op>tgt\?op:tgt\),qTp\)/.test(sim), sim?'':'infSimForward 없음');
+  ok('모의가 시가를 봉에서 읽는다', /op=\(row\.open>0\?row\.open:0\)/.test(sim));
+  // LOC는 반드시 종가 — 매수·쿼터매도가 종가 아닌 값으로 체결되면 안 된다
+  ok('모의 매수는 종가 체결', /put\('절반매수',d,cl,/.test(sim) && /put\('1회매수',d,cl,/.test(sim));
+  ok('모의 쿼터매도는 종가 체결', /put\('쿼터매도',d,cl,/.test(sim));
+  // 체결 '판정'은 그대로여야 한다 — 고가 터치로 판정하고 체결가만 시가로 올린다
+  ok('익절 판정은 여전히 고가 터치', /hi>=tgt && qTp>0/.test(sim));
+}
+
+
+/* ════ 15. 세션 탭 드래그 정렬이 기존 조작을 깨지 않는가 ════
+   세션바는 가로 스크롤 줄이라 드래그를 붙이면 ① 스크롤이 안 되거나
+   ② 끌고 놓은 뒤 따라오는 click이 세션을 바꿔 버리기 쉽다. */
+console.log('[15] 세션 탭 드래그');
+{
+  let su=''; try{ su=extractFn(idx,'function setupSessbar()'); }catch(e){}
+  ok('드래그 배선 존재(pointerdown/move/up)',
+     /pointerdown/.test(su)&&/pointermove/.test(su)&&/pointerup/.test(su), su?'':'setupSessbar 없음');
+  ok('pointermove가 passive:false (preventDefault 가능)', /\{passive:false\}/.test(su));
+  ok('터치는 길게누름으로 스크롤과 구분', /DRAG_HOLD/.test(su)&&/_dragStart\.mouse/.test(su));
+  ok('세션 1개면 드래그 안 함', /sessions\.length<2/.test(su));
+  ok('놓은 뒤 click이 세션을 바꾸지 않는다', /_dragEndAt<\d+/.test(su));
+  // 시간 기반이어야 한다 — 불리언 플래그는 click이 안 따라올 때 남아 다음 탭을 씹는다
+  ok('억제가 시간 기반(플래그 잔류 없음)', !/_dragJustEnded/.test(idx));
+  let st=''; try{ st=extractFn(idx,'function _dragStop()'); }catch(e){}
+  ok('정렬 결과를 저장하고 다시 그린다', /save\(\)/.test(st)&&/renderSessbar\(\)/.test(st));
+  ok('드래그 중 스크롤 차단 CSS', /\.sessbar\.dragmode\{[^}]*touch-action:none/.test(idx));
 }
 
 
