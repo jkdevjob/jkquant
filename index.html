@@ -50,6 +50,10 @@ span.badge{display:inline-block;padding:2px 8px;margin:0;border:0;border-radius:
 .sesschip.add{color:var(--faint)}
 .sesschip .paperbadge{display:inline-block;margin-left:5px;padding:1px 5px;border-radius:5px;background:rgba(245,196,81,.18);color:var(--gold);font-size:9.5px;font-weight:800;vertical-align:middle}
 .sesschip .sessdel{color:var(--sell);font-weight:800;margin-left:2px;opacity:.7}
+/* 세션 탭 드래그 정렬 — 잡는 순간 가로 스크롤을 끄고(touch-action:none) 집힌 칩을 띄운다 */
+.sessbar.dragmode{touch-action:none;user-select:none;-webkit-user-select:none}
+.sessbar.dragmode .sesschip:not(.dragging){transition:transform .12s ease}
+.sesschip.dragging{position:relative;z-index:2;opacity:.9;transform:scale(1.07);box-shadow:0 6px 18px rgba(0,0,0,.45)}
 .fetchbtn{padding:0 14px;border-radius:10px;border:1px solid var(--vio);background:var(--vio-bg);color:var(--vio);font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;-webkit-tap-highlight-color:transparent}
 .fetchbtn:active{opacity:.7}
 .fetchnote{font-size:11.5px;margin:6px 0 10px;min-height:14px}
@@ -450,7 +454,7 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
 </div>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.00</span></h1></div>
+    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.01</span></h1></div>
     <div style="display:flex;align-items:center;gap:8px">
       <a class="btbtn" href="/backtest" title="백테스트">📊<span class="bt-txt"> 백테스트</span></a>
       <button class="btbtn" id="paperbtn" onclick="openPaper()" title="모의투자 성과" style="display:none;border-color:rgba(245,196,81,.45);color:var(--gold)">🧪<span class="bt-txt"> 모의 성과</span></button>
@@ -1487,7 +1491,7 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
   <footer>
     <strong>JK 퀀트</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.00</b> · 2026-09-02</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.01</b> · 2026-09-02</div>
   </footer>
 </div>
 
@@ -2304,7 +2308,9 @@ function renderOrder(){
     const _cbrow=(lbl,price,alloc)=>{
       const cp=(limit>0&&price>limit)?limit:price;
       if(cp<price) capN++;
-      return _brow(lbl+(cp<price?' <span class="hint">↓상한</span>':''), cp, alloc, price);
+      // 수량은 '종가'로 나눈다 — LOC는 종가에 체결되므로 주문가(별지점=종가보다 한참 위)로 나누면
+      // 배정액만큼 못 산다. 처음매수는 이미 종가로 나누고 있었고, 백테·모의도 종가로 나눈다.
+      return _brow(lbl+(cp<price?' <span class="hint">↓상한</span>':''), cp, alloc, close>0?close:price);
     };
     if(half){
       html+=_cbrow('별지점 매수',buyPt,buy1/2);
@@ -2816,7 +2822,7 @@ function infSimForward(startFrom){
     let inRev=false;
     { const c0=computeInf(); inRev=!!c0.reverseActive; }
     for(const row of first){
-      const cl=row.close, hi=row.high, d=row.date;
+      const cl=row.close, hi=row.high, d=row.date, op=(row.open>0?row.open:0);
       let c=computeInf();
       const revOn=(st.reverse===true);
       if(revOn && !inRev && (st.div-c.T)<1 && c.qty>0) inRev=true;   // 원금 소진 → 리버스 진입
@@ -2853,7 +2859,8 @@ function infSimForward(startFrom){
           if(a>0&&b>0) eff=imTgtOf(st.target,(a/b-1)*100); }
         const star=c.avg*(1+starPct(st.ticker,st.div,c.T,st.target)/100);
         const qSell=Math.floor(c.qty/4), qTp=c.qty-qSell, tgt=c.avg*(1+eff/100);
-        if(hi>=tgt && qTp>0) put('지정가매도',d,tgt,qTp);             // ① 지정가: 고가 터치
+        // ① 지정가: 고가 터치 → 익절가 체결. 단 시가가 이미 익절가 위면 시가에 체결된다(가격개선).
+        if(hi>=tgt && qTp>0) put('지정가매도',d,(op>tgt?op:tgt),qTp);
         { const c3=computeInf();
           if(cl>=star && qSell>0 && c3.qty>0) put('쿼터매도',d,cl,Math.min(qSell,c3.qty)); }  // ② 별지점 LOC
         if(computeInf().qty<=0) liquidated=true;   // 전량매도 = 사이클 종료. 새 사이클 첫 매수는 다음 날 (백테 runIM과 같은 규약)
@@ -6278,7 +6285,7 @@ function renderSessbar(){
   box.sessions.forEach(s=>{
     const on=s.id===box.active;
     const nm=String(s.name).replace(/</g,'&lt;');
-    html+=`<div class="sesschip ${on?'on':''}" data-sid="${s.id}">${nm}`;
+    html+=`<div class="sesschip ${on?'on':''}" data-sid="${s.id}" title="길게 눌러 끌면 순서 변경">${nm}`;
     if(s.paper) html+=`<span class="paperbadge">모의</span>`;
     if(on&&box.sessions.length>1)html+=`<span class="sessdel" data-del="${s.id}"> ✕</span>`;
     html+=`</div>`;
@@ -6290,8 +6297,55 @@ function renderSessbar(){
     if(pb) pb.style.display = PAPER_TABS.some(([t])=>S[t]&&S[t].sessions&&S[t].sessions.some(x=>x.paper)) ? '' : 'none'; }
   requestAnimationFrame(updateStickyOffsets);   // 세션 수 변화 시 세션바 높이 재측정 → 서브탭 고정 위치 갱신
 }
+/* ── 세션 탭 드래그 정렬 ─────────────────────────────────────────────
+   세션바는 가로 스크롤이 되는 줄이라, 손가락을 대자마자 끌면 '스크롤'이고
+   가만히 눌러 두면 '집기'다. 그래서 길게누름(350ms)으로 둘을 가른다.
+   집힌 뒤에는 touch-action을 꺼서 스크롤이 끼어들지 못하게 한다.
+   마우스는 스크롤과 겹칠 일이 없으니 조금만 움직여도 바로 집힌다. */
+const DRAG_HOLD=350, DRAG_SLOP=8;
+let _dragEl=null, _dragTimer=null, _dragStart=null, _dragMoved=false, _dragEndAt=0;
+function _chipEls(){ return [...$('sessbar').querySelectorAll('[data-sid]')]; }
+function _dragBegin(chip,pid){
+  _dragEl=chip; _dragMoved=false;
+  chip.classList.add('dragging'); $('sessbar').classList.add('dragmode');
+  try{ chip.setPointerCapture(pid); }catch(e){}
+  if(navigator.vibrate){ try{ navigator.vibrate(12); }catch(e){} }
+}
+function _dragOver(x){
+  if(!_dragEl) return;
+  const bar=$('sessbar');
+  for(const c of _chipEls()){
+    if(c===_dragEl) continue;
+    const r=c.getBoundingClientRect();
+    if(x < r.left+r.width/2){
+      if(c.previousSibling!==_dragEl){ bar.insertBefore(_dragEl,c); _dragMoved=true; }
+      return;
+    }
+  }
+  const add=bar.querySelector('[data-add]');
+  if(add && add.previousSibling!==_dragEl){ bar.insertBefore(_dragEl,add); _dragMoved=true; }
+}
+function _dragStop(){
+  clearTimeout(_dragTimer); _dragTimer=null; _dragStart=null;
+  if(!_dragEl) return;
+  _dragEl.classList.remove('dragging'); $('sessbar').classList.remove('dragmode');
+  if(_dragMoved){
+    const order=_chipEls().map(c=>c.getAttribute('data-sid'));
+    const box=tabBox();
+    box.sessions.sort((a,b)=>order.indexOf(String(a.id))-order.indexOf(String(b.id)));
+    save();
+    // 뗄 때 따라오는 click이 세션을 바꾸지 않게. 불리언 플래그로 두면 click이 안 따라오는
+    // 경우(누른 칩과 뗀 위치가 다르면 click 자체가 안 난다) 플래그가 남아 다음 탭이 씹힌다.
+    _dragEndAt=Date.now();
+  }
+  _dragEl=null;
+  renderSessbar();                     // ✕·모의 배지 위치를 다시 맞춘다
+}
 function setupSessbar(){
-  $('sessbar').addEventListener('click',e=>{
+  const bar=$('sessbar');
+  bar.addEventListener('click',e=>{
+    if(Date.now()-_dragEndAt<250){ return; }               // 방금 순서만 바꾼 것 — 전환 아님
+                                                          // (click은 pointerup 직후에 오므로 250ms면 충분)
     const del=e.target.closest('[data-del]');
     if(del){e.stopPropagation();deleteSess(del.getAttribute('data-del'));return;}
     const add=e.target.closest('[data-add]');
@@ -6299,10 +6353,28 @@ function setupSessbar(){
     const chip=e.target.closest('[data-sid]');
     if(chip){switchSess(chip.getAttribute('data-sid'));}
   });
-  $('sessbar').addEventListener('dblclick',e=>{
+  bar.addEventListener('dblclick',e=>{
     const chip=e.target.closest('[data-sid]');
     if(chip)editSess(chip.getAttribute('data-sid'));
   });
+  bar.addEventListener('pointerdown',e=>{
+    if(e.button>0) return;                                       // 오른쪽 버튼 등은 무시
+    if(e.target.closest('[data-del]')||e.target.closest('[data-add]')) return;
+    const chip=e.target.closest('[data-sid]'); if(!chip) return;
+    if(tabBox().sessions.length<2) return;                        // 한 개면 정렬할 게 없다
+    _dragStart={x:e.clientX,y:e.clientY,chip,pid:e.pointerId,mouse:e.pointerType==='mouse'};
+    clearTimeout(_dragTimer);
+    _dragTimer=setTimeout(()=>{ if(_dragStart) _dragBegin(_dragStart.chip,_dragStart.pid); },DRAG_HOLD);
+  });
+  bar.addEventListener('pointermove',e=>{
+    if(_dragEl){ e.preventDefault(); _dragOver(e.clientX); return; }
+    if(!_dragStart) return;
+    const far=Math.hypot(e.clientX-_dragStart.x,e.clientY-_dragStart.y)>DRAG_SLOP;
+    if(!far) return;
+    if(_dragStart.mouse){ clearTimeout(_dragTimer); _dragBegin(_dragStart.chip,_dragStart.pid); }
+    else { clearTimeout(_dragTimer); _dragTimer=null; _dragStart=null; }   // 터치로 먼저 움직임 = 스크롤
+  },{passive:false});
+  ['pointerup','pointercancel'].forEach(ev=>bar.addEventListener(ev,_dragStop));
 }
 function switchSess(id){
   const box=tabBox();

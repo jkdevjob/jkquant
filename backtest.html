@@ -277,7 +277,7 @@ td:first-child{text-align:left;}
   <div class="brand">
     <div>
       <div class="logo">Backtest</div>
-      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v1.166</span></h1>
+      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v1.167</span></h1>
     </div>
   </div>
   <a href="/" class="home">← JK 퀀트</a>
@@ -1833,7 +1833,9 @@ function runIM(days,tkr,cap,divs,targetPct,compound=true){
       let tpHit=false, qtHit=false;
       // ① 익절 지정가매도 (intraday): 고가 >= 익절가
       const _fillHit=(typeof imFill!=='undefined'&&imFill==='high')?hi:c;   // 익절 판정: '고가'=장중 고가 목표가 터치 시 체결(지정가 정석), '종가'=보수적 하한. imFill 미정의=종가(회귀 앵커 유지)
-      if(_fillHit>=tgt&&q3>0){_sell(tgt,q3,SLIP);tpHit=true;}   // 지정가매도, 체결가 tgt
+      // 체결가: 시가가 이미 익절가 위면 지정가 매도는 '시가'에 체결된다(가격개선).
+      // tgt로 고정하면 갭업 익절이 통째로 과소계상됐다 — SOXL 20분할 20%에서 익절 42건 중 12건이 갭업.
+      if(_fillHit>=tgt&&q3>0){_sell(o>tgt?o:tgt,q3,SLIP);tpHit=true;}   // 지정가매도
       // ② 별지점 LOC매도 (at close): 종가 >= 별지점. 원래 1/4 기준 (이미 팔린 것 차감)
       if(c>=starP&&orig>0){const sq=Math.min(q1,shares);if(sq>1e-9){_sell(c,sq,0);qtHit=true;}}   // 쿼터매도 LOC=종가
       // T값 갱신: 익절(지정가매도)=×0.25, 쿼터매도=×0.75. 둘 다면 전량매도로 아래에서 리셋.
@@ -2109,7 +2111,9 @@ function runIM50(days,tkr,cap,divs,targetPct,compound=true){
       const q1=orig*0.25;
       let tpHit=false, qtHit=false;
       const _fillHit=(typeof imFill!=='undefined'&&imFill==='high')?hi:c;   // 익절 판정: '고가'=장중 고가 목표가 터치 시 체결(지정가 정석), '종가'=보수적 하한. imFill 미정의=종가(회귀 앵커 유지)
-      if(_fillHit>=tgt&&q3>0){_sell(tgt,q3,SLIP);tpHit=true;}   // 지정가매도, 체결가 tgt
+      // 체결가: 시가가 이미 익절가 위면 지정가 매도는 '시가'에 체결된다(가격개선).
+      // tgt로 고정하면 갭업 익절이 통째로 과소계상됐다 — SOXL 20분할 20%에서 익절 42건 중 12건이 갭업.
+      if(_fillHit>=tgt&&q3>0){_sell(o>tgt?o:tgt,q3,SLIP);tpHit=true;}   // 지정가매도
       if(c>=starP&&orig>0){const sq=Math.min(q1,shares);if(sq>1e-9){_sell(c,sq,0);qtHit=true;}}   // 쿼터매도 LOC=종가
       if(tpHit) T*=0.25;
       if(qtHit) T*=0.75;
