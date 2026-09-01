@@ -56,17 +56,8 @@ export async function onRequestGet({ request, env }) {
     } catch (e) { dbg.push(`finnhub: ${e.message}`); }
   }
 
-  // 1) range=max → Yahoo V7 download (period1=0: 상장일~오늘 전체 일간, adjClose 포함)
-  if (range === "max") {
-    try {
-      const d = await yahooDownload(symbol, dbg);
-      if (d && d.ohlc && d.ohlc.length > 200) {
-        series = d.series; ohlc = d.ohlc; src = "yahoo-dl";
-      }
-    } catch (e) { dbg.push(`yahoo-dl: ${e.message}`); }
-  }
-
-  // 2) Yahoo chart API — download 미확보 시 또는 range≠max
+  // 1) Yahoo chart API. range=max는 yahooDaily가 period1=0으로 우회한다.
+  //    (예전엔 V7 download를 먼저 탔는데 야후가 폐기해 매 호출마다 401 두 번을 낭비했다.)
   if (!series.length) for (const host of ["query1", "query2", "query1-fc"]) {
     const realHost = host === "query1-fc" ? "query1" : host;
     try {
@@ -79,7 +70,7 @@ export async function onRequestGet({ request, env }) {
     } catch (e) { dbg.push(`yahooDaily ${host}: ${e.message}`); }
   }
 
-  // 3) Stooq 폴백 (Yahoo도 실패한 경우)
+  // 2) Stooq 폴백 (Yahoo도 실패한 경우)
   if (!series.length) {
     try {
       const s = await stooqDaily(symbol, dbg);
@@ -190,38 +181,6 @@ async function yahooQuote(symbol, dbg) {
   const q = j && j.quoteResponse && j.quoteResponse.result && j.quoteResponse.result[0];
   if (!q) throw new Error("empty");
   return { price: q.regularMarketPrice != null ? +q.regularMarketPrice : null, marketState: q.marketState || null };
-}
-
-// Yahoo V7 download: 전체 상장 기간 일간 데이터 (adjClose 포함)
-async function yahooDownload(symbol, dbg) {
-  for (const host of ["query1", "query2"]) {
-    try {
-      const u = `https://${host}.finance.yahoo.com/v7/finance/download/${encodeURIComponent(symbol)}?period1=0&period2=9999999999&interval=1d&events=history&includeAdjustedClose=true`;
-      const r = await fetch(u, { headers: { "User-Agent": UA, "Accept": "text/csv" }, cf: { cacheTtl: 3600 } });
-      dbg && dbg.push(`yahoo-dl ${host}: HTTP ${r.status}`);
-      if (!r.ok) continue;
-      const txt = await r.text();
-      const rows = txt.trim().split("\n");
-      if (rows.length < 2 || !/date/i.test(rows[0])) { dbg && dbg.push(`yahoo-dl ${host}: bad csv`); continue; }
-      const hdr = rows[0].split(",");
-      const di=hdr.findIndex(h=>/date/i.test(h));
-      const oi=hdr.findIndex(h=>/open/i.test(h));
-      const hi=hdr.findIndex(h=>/high/i.test(h));
-      const li=hdr.findIndex(h=>/low/i.test(h));
-      const aci=hdr.findIndex(h=>/adj/i.test(h));  // Adj Close (배당 반영)
-      const ci=aci>=0?aci:hdr.findIndex(h=>/close/i.test(h));
-      const series=[], ohlc=[];
-      for (let i=1; i<rows.length; i++) {
-        const a=rows[i].split(",");
-        const c=+a[ci]; if(!(c>0)) continue;
-        const d=a[di];
-        series.push({date:d, close:+c.toFixed(4)});
-        ohlc.push({date:d, open:oi>=0&&+a[oi]>0?+a[oi]:c, high:hi>=0&&+a[hi]>0?+a[hi]:c, low:li>=0&&+a[li]>0?+a[li]:c, close:+c.toFixed(4)});
-      }
-      if (series.length > 200) { dbg && dbg.push(`yahoo-dl ${host}: ${series.length}일`); return {series, ohlc}; }
-    } catch(e) { dbg && dbg.push(`yahoo-dl ${host}: ${e.message}`); }
-  }
-  return {series:[], ohlc:[]};
 }
 
 // Stooq fallback
