@@ -462,5 +462,36 @@ console.log('[11] 무매 계산 공유');
 }
 
 
+/* ════ 12. '종가' 자리에 실시간가가 새어 들지 않는가 (13차 버그 클래스) ════
+   무매는 전부 LOC — 종가 체결이다. 그런데 시세 응답에는 값이 세 개 들어 있다:
+     price      = 실시간가 (장중이면 현재가)
+     last.close = 마지막 일봉 종가 — 장중이면 '진행 중인 봉'이라 종가가 아니다
+     확정 종가   = simCutoff 이하의 마지막 봉만
+   infSuggest가 price를 먼저 쓰는 바람에 기록시트 체결가에 장중가가 박혔다
+   (확정 종가 105.91인 날 105.75로 채워짐). 게다가 마감 '직후'에도 시세사가
+   종가 단일가를 아직 안 실어서, 마감시각만 넘기면 되는 게 아니라 대기가 필요하다. */
+console.log('[12] 종가/실시간가 분리');
+{
+  ok('확정 종가 해석기(settledLast) 존재',
+     /function settledLast\(/.test(idx) && /function settledLast\([^)]*\)\{[^}]*settledBars\(/.test(idx));
+  // 종가 확정 대기 — 마감 직후의 미확정 봉을 쓰지 않는다
+  let cut=''; try{ cut=extractFn(idx,'function simCutoff(cur)'); }catch(e){}
+  ok('종가 확정 대기 후에 오늘 봉을 인정', /SETTLE_LAG_MIN/.test(cut) && /const SETTLE_LAG_MIN\s*=\s*\d+/.test(idx),
+     cut?'':'simCutoff 없음');
+  // LOC 체결가를 만드는 곳은 실시간가를 쓰면 안 된다
+  let sug=''; try{ sug=extractFn(idx,'function infSuggest(kind)'); }catch(e){}
+  ok('기록시트 자동채움이 실시간가를 안 쓴다', !!sug && !/Q\.price/.test(sug), sug?'Q.price 사용':'infSuggest 없음');
+  ok('기록시트 자동채움이 확정 종가를 쓴다', /const close=[\s\S]*?Q\.last/.test(sug));
+  // 무매 시세 로더 3곳 전부 last를 확정 종가로 채운다 (한 곳만 빠져도 그 화면에서 새어 든다)
+  const loaders=idx.match(/lastQuote(?:\.inf|\[which\])\s*=\s*\{[^}]*\}/g)||[];
+  const bad=loaders.filter(t=>/last:\s*q\.last\.close/.test(t));
+  ok('무매 시세 로더가 확정 종가를 저장', loaders.length>=3 && bad.length===0,
+     `로더 ${loaders.length}곳 · 미적용 ${bad.length}곳`);
+  // VR의 last는 반대 용도(평가금용 현재가)다 — 같이 바꾸면 VR 평가금이 어제로 굳는다
+  let ev=''; try{ ev=extractFn(idx,'function vrEval(c)'); }catch(e){}
+  ok('VR 평가금은 확정 종가로 굳히지 않는다', /lastQuote\.vr/.test(ev) && !/settledLast\(/.test(ev));
+}
+
+
 console.log(`\n════ 결과: ${pass} PASS / ${fail} FAIL ${fail===0?'— ALL PASS ★':'— 배포 금지, 위 ✗ 항목 수정 필요'} ════`);
 process.exit(fail===0?0:1);
