@@ -493,5 +493,25 @@ console.log('[12] 종가/실시간가 분리');
 }
 
 
+/* ════ 13. LOC 주문가가 증권사 상한을 넘지 않는가 (14차 버그 클래스) ════
+   거래소·증권사는 기준가에서 멀리 떨어진 지정가를 거부한다. 무매의 별지점·평단 매수는
+   평단이 종가보다 한참 위일 때(=물려 있을 때) 종가 대비 +20~30%가 되어 주문 자체가 튕겼다.
+   앱은 '큰수 %'로 처음매수에만 상한을 걸어 뒀고 매일 내는 매수엔 안 걸어 뒀던 게 원인. */
+console.log('[13] LOC 주문가 상한');
+{
+  let ord=''; try{ ord=extractFn(idx,'function renderOrder()'); }catch(e){}
+  ok('매수 주문가에 상한(limit)을 씌운다', /_cbrow/.test(ord) && /price>limit\)\?limit:price/.test(ord),
+     ord?'':'renderOrder 없음');
+  ok('하방 LOC도 같은 상한', /하방 \$\{i\}[\s\S]{0,80}p>limit\)\?limit:p/.test(ord));
+  // 수량은 상한 전 가격으로 — 상한이 수량까지 바꾸면 모의·백테와 어긋난다
+  ok('상한이 수량을 바꾸지 않는다', /_brow\(lbl\+[^,]*,\s*cp,\s*alloc,\s*price\)/.test(ord));
+  // 매도는 절대 낮추면 안 된다 — 낮추면 원치 않는 체결이 난다
+  const sellCap=/oitem\('s'[^)]*limit/.test(ord);
+  ok('매도가는 상한으로 낮추지 않는다', !sellCap, sellCap?'매도에 상한 적용됨':'');
+  // 큰수 %가 없는 옛 세션에서 NaN이 되어 상한이 통째로 꺼지지 않아야 한다
+  ok('큰수 % 미설정 세션도 상한 동작', /isFinite\(\+st\.big\)/.test(ord));
+}
+
+
 console.log(`\n════ 결과: ${pass} PASS / ${fail} FAIL ${fail===0?'— ALL PASS ★':'— 배포 금지, 위 ✗ 항목 수정 필요'} ════`);
 process.exit(fail===0?0:1);
