@@ -454,7 +454,7 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
 </div>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.05</span></h1></div>
+    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.06</span></h1></div>
     <div style="display:flex;align-items:center;gap:8px">
       <a class="btbtn" href="/backtest" title="백테스트">📊<span class="bt-txt"> 백테스트</span></a>
       <button class="btbtn" id="paperbtn" onclick="openPaper()" title="모의투자 성과" style="display:none;border-color:rgba(245,196,81,.45);color:var(--gold)">🧪<span class="bt-txt"> 모의 성과</span></button>
@@ -1491,7 +1491,7 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
   <footer>
     <strong>JK 퀀트</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.05</b> · 2026-09-02</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.06</b> · 2026-09-02</div>
   </footer>
 </div>
 
@@ -2200,10 +2200,8 @@ function renderOrder(){
      값이 비어 있다. 예전엔 그 칸만 봐서 보유 세션에서 close=0이 됐고, 그러면
      limit=0이라 주문가 상한이 통째로 꺼졌다(현재가보다 +33%인 주문가가 그대로 나갔다).
      수량도 종가가 아닌 주문가로 나뉘어 배정액만큼 못 샀다. */
-  const _q=lastQuote.inf;
-  const _qc=(_q && String(_q.symbol||'').toUpperCase()===String(st.ticker||'').toUpperCase())
-            ? (+_q.last||0) : 0;
-  const close=inputNum('o_close')||_qc||0;
+  const _sl=infSettledLast();
+  const close=inputNum('o_close')||(_sl?+_sl.close:0)||0;
   const B1=imBuy1(c), slot=B1.slot, buy1=B1.amt;
   const pct=starPct(st.ticker,st.div,c.T,st.target);
   const star=c.avg>0?c.avg*(1+pct/100):close;
@@ -2788,6 +2786,16 @@ function settledBars(rows,cur){ const cut=simCutoff(cur); return (rows||[]).filt
 /* 종가가 확정된 마지막 봉 {date,close}. LOC 체결가·주문표는 전부 이걸 쓴다.
    실시간가는 장중엔 현재가, 마감 직후엔 아직 안 굳은 값이라 종가 자리에 오면 안 된다. */
 function settledLast(rows,cur){ const r=settledBars(rows,cur); return r.length?r[r.length-1]:null; }
+/* 지금 시점의 확정 종가 {date, close}. lastQuote.inf.last를 그냥 쓰면 안 된다 —
+   그 값은 '시세를 불러온 순간'에 정해진 것이라, 페이지를 열어 둔 채 장 마감·정산
+   시각을 넘기면 옛 종가에 그대로 멈춘다(실측: 기록 날짜 9/2에 8/31 종가가 채워졌다).
+   그래서 쓸 때마다 봉에서 다시 고른다. */
+function infSettledLast(){
+  const Q=lastQuote.inf; if(!Q||!Q.days) return null;
+  const st=(curStrat()&&curStrat().settings)||{};
+  if(String(Q.symbol||'').toUpperCase()!==String(st.ticker||'').toUpperCase()) return null;
+  return settledLast(Q.days, st.cur);
+}
 
 /* 장중에 만들어진 '오늘 봉' 체결을 되돌린다.
    고치기 전 버전이 남긴 기록도 탭을 열 때 여기서 정리된다. */
@@ -4959,8 +4967,13 @@ async function loadInfData(force){
   // 캐시가 짧으면(구버전 1y 데이터 등) 무시하고 다시 받는다 — 국면 계산엔 200일+ 필요
   // 종목도 반드시 대조한다. 안 하면 SOXL 시세로 TQQQ 세션을 그리고, 모의 체결까지 남의 종가로 만든다.
   const _want=String(st.ticker||'SOXL').toUpperCase();
+  /* 캐시는 '가져온 시점의 확정 상한'이 그대로일 때만 유효하다. 종목·길이만 보면
+     페이지를 열어 둔 채 날이 바뀌어도 계속 옛 데이터를 쓴다 — 그래서 이틀 전
+     종가가 오늘 기록에 채워졌다. 상한이 움직였으면 무조건 새로 받는다.
+     (마지막 봉 날짜로 비교하면 주말·휴장에 상한이 거래일을 앞질러 매번 다시 받게 된다) */
   const cacheOK = infQuoteCache && infQuoteCache.days && infQuoteCache.days.length>=300
-                  && String(infQuoteCache.symbol||'').toUpperCase()===_want;
+                  && String(infQuoteCache.symbol||'').toUpperCase()===_want
+                  && infQuoteCache.cut===simCutoff(st.cur);
   if(cacheOK && !force){ renderInfRecent(); renderInfDay(); drawInfChart(); drawInfRSI(); drawRegimeChart(); renderInfFx(); renderOrderInline(); return; }
   $('inf_chart_note').className='fetchnote load'; $('inf_chart_note').textContent='시세 불러오는 중…';
   const q=await fetchDaily(st.ticker||'SOXL');
@@ -4968,7 +4981,7 @@ async function loadInfData(force){
   // 그대로 render*를 부르면 그 기록을 무매 형식으로 해석해 computeInf가 터진다
   if(S.activeTab!=='inf') return;
   if(q){
-    infQuoteCache=q; infChartData=q.days;
+    infQuoteCache=q; infQuoteCache.cut=simCutoff(st.cur); infChartData=q.days;
     const live=(q.price!=null&&q.price>0)?q.price:q.last.close;
     const SL=settledLast(q.days,st.cur)||q.last;              // 종가는 확정된 봉만
     lastQuote.inf={symbol:q.symbol,last:SL.close,lastDate:SL.date,price:live,days:q.days,ohlc:q.ohlc||null};
@@ -6003,7 +6016,8 @@ function isCx(k){return CX_KINDS.includes(k)}
 function sheetInfHTML(today){
   const c=computeInf(),st=c.st,half=c.T<st.div/2;
   let recoKind='1회매수', recoQty=1, recoPrice=0;
-  const lastClose = (lastQuote.inf&&lastQuote.inf.last)|| (inputNum('o_close')||0);
+  const _sl0=infSettledLast();
+  const lastClose = (_sl0?+_sl0.close:0) || (inputNum('o_close')||0);
   recoPrice = c.avg>0 ? (c.avg*(1+starPct(st.ticker,st.div,c.T,st.target)/100)-0.01) : lastClose;
   const B1=imBuy1(c), slot=B1.slot, buy1=B1.amt;
   // 원금 소진(T≥분할)이거나 배정액이 1주 값에 못 미치면 매수를 추천하지 않는다 — 소진 상태에서
@@ -6070,8 +6084,9 @@ function infSuggest(kind){
   // LOC는 '종가' 체결이다. 예전엔 실시간가를 먼저 썼는데, 그러면 장중엔 현재가가,
   // 마감 직후엔 아직 확정 안 된 값이 체결가로 박혔다(확정 종가 105.91인 날 105.75로 채워진 건).
   // 실시간가는 이 함수에 들어오면 안 된다 — 회귀 [12]가 그걸 지킨다.
-  const close=(Q && String(Q.symbol||'').toUpperCase()===String(st.ticker||'').toUpperCase())
-    ? (+Q.last||0) : 0;
+  // 확정 종가는 lastQuote에 박힌 값이 아니라 '지금' 기준으로 다시 고른다.
+  const SL=infSettledLast();
+  const close=SL?+SL.close:0, closeDate=SL?SL.date:null;
   if(!(close>0)) return null;
   const B=imBuy1(c), buy1=B.spent?0:B.amt;
   const star=c.avg>0?c.avg*(1+starPct(st.ticker,st.div,c.T,st.target)/100):0;
@@ -6090,10 +6105,10 @@ function infSuggest(kind){
   };
   if(isCx(kind)){
     const bk=kind.includes('1회매수')?'1회매수':'절반매수';
-    return {sell:S['지정가매도'], buy:S[bk], close, buy1, star, tgt, quarter:c.bal/4};
+    return {sell:S['지정가매도'], buy:S[bk], close, closeDate, buy1, star, tgt, quarter:c.bal/4};
   }
   const r=S[kind]; if(!r) return null;
-  return {...r, close, buy1, star, tgt, quarter:c.bal/4};
+  return {...r, close, closeDate, buy1, star, tgt, quarter:c.bal/4};
 }
 function sheetSelInf(kind){
   shKind=kind;
@@ -6131,12 +6146,19 @@ function sheetSelInf(kind){
         if(q && v.qty>0) q.value=v.qty; };
       if(isCx(kind)){ put('sh_s',g.sell); put('sh_b',g.buy); } else put('sh',g);
       const hint=$('sh_autonote');
-      if(hint){ const bits=[`종가 ${wn(g.close)}`];
+      if(hint){ const bits=[`${g.closeDate?g.closeDate.slice(5).replace('-','/')+' ':''}종가 ${wn(g.close)}`];
         if(kind==='리버스매수') bits.push(`쿼터매수 = 잔금÷4 ${wn(g.quarter)}`);
         else if(kind.includes('매수')&&g.buy1>0) bits.push(`1회매수금 ${wn(g.buy1)}`);
         if(kind==='지정가매도'||isCx(kind)) bits.push(`익절가 ${wn(g.tgt)}`);
         if(kind==='쿼터매도'&&g.star>0) bits.push(`별지점 ${wn(g.star)}`);
-        hint.innerHTML=`🔄 <b>자동 채움</b> · ${bits.join(' · ')} — 실제 체결이 다르면 고쳐서 기록하세요`; } } }
+        /* 기록 날짜와 종가 날짜가 어긋나면 반드시 보여야 한다. 장 마감 직후엔 그날 종가가
+           아직 확정 전이라(정산 대기 ${SETTLE_LAG_MIN}분) 하루 전 종가가 채워진다 —
+           말없이 채우면 옛날 가격이 그대로 기록된다. */
+        const _rd=$('sh_date')&&$('sh_date').value;
+        const stale = g.closeDate && _rd && _rd>g.closeDate;
+        hint.innerHTML=`🔄 <b>자동 채움</b> · ${bits.join(' · ')} — 실제 체결이 다르면 고쳐서 기록하세요`
+          + (stale?`<br><b style="color:var(--gold)">⚠ 기록 날짜(${_rd.slice(5).replace('-','/')})와 종가 날짜(${g.closeDate.slice(5).replace('-','/')})가 다릅니다.</b> `
+              +`장 마감 후 ${SETTLE_LAG_MIN}분이 지나야 그날 종가가 확정됩니다 — 조금 뒤 새로고침하거나, 체결가를 직접 입력하세요.`:''); } } }
   sheetTprev();
   $('sheet_form').scrollIntoView({behavior:'smooth',block:'start'});
 }

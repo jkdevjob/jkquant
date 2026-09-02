@@ -483,7 +483,13 @@ console.log('[12] 종가/실시간가 분리');
   // LOC 체결가를 만드는 곳은 실시간가를 쓰면 안 된다
   let sug=''; try{ sug=extractFn(idx,'function infSuggest(kind)'); }catch(e){}
   ok('기록시트 자동채움이 실시간가를 안 쓴다', !!sug && !/Q\.price/.test(sug), sug?'Q.price 사용':'infSuggest 없음');
-  ok('기록시트 자동채움이 확정 종가를 쓴다', /const close=[\s\S]*?Q\.last/.test(sug));
+  ok('기록시트 자동채움이 확정 종가를 쓴다', /const SL=infSettledLast\(\)/.test(sug)&&/const close=SL\?/.test(sug));
+  /* 확정 종가를 lastQuote에 박아 두고 쓰면, 페이지를 열어 둔 채 마감·정산 시각을 넘길 때
+     옛 종가에 멈춘다(실측: 기록 날짜 9/2에 8/31 종가). 쓸 때마다 봉에서 다시 골라야 한다. */
+  ok('확정 종가를 쓸 때마다 다시 고른다', /function infSettledLast\(\)[\s\S]{0,400}?settledLast\(Q\.days/.test(idx));
+  ok('시세 캐시가 정산 경계를 넘으면 무효', /infQuoteCache\.cut===simCutoff\(/.test(idx)
+     && /infQuoteCache\.cut=simCutoff\(/.test(idx));
+  ok('기록 날짜와 종가 날짜가 어긋나면 경고', /_rd>g\.closeDate/.test(idx));
   // 무매 시세 로더 3곳 전부 last를 확정 종가로 채운다 (한 곳만 빠져도 그 화면에서 새어 든다)
   const loaders=idx.match(/lastQuote(?:\.inf|\[which\])\s*=\s*\{[^}]*\}/g)||[];
   const bad=loaders.filter(t=>/last:\s*q\.last\.close/.test(t));
@@ -513,8 +519,8 @@ console.log('[13] LOC 주문가 상한');
   /* 기준 종가를 입력칸에서만 읽으면, 보유 중인 세션(입력칸이 숨김)에서 close=0이 되어
      limit=0 → 상한이 통째로 꺼진다. 실제로 현재가보다 +33%인 주문가가 그대로 나갔다. */
   ok('기준 종가가 시세로 폴백된다 (입력칸이 비어도)',
-     /inputNum\('o_close'\)\|\|_qc/.test(ord) && /lastQuote\.inf/.test(ord));
-  ok('폴백 시세는 종목을 대조한다', /_q\.symbol[\s\S]{0,80}st\.ticker/.test(ord));
+     /inputNum\('o_close'\)\|\|\(_sl\?/.test(ord) && /infSettledLast\(\)/.test(ord));
+  ok('폴백 시세는 종목을 대조한다', /Q\.symbol[\s\S]{0,120}st\.ticker/.test(idx));
   ok('큰수 % 기본값 20 (꼬리가 닫히는 구간)',
      /isFinite\(\+st\.big\)\)\?\+st\.big:20/.test(idx) && /big:20,/.test(idx));
   ok('하방 LOC는 같은 상한', /하방 \$\{i\}[\s\S]{0,80}p>limit\)\?limit:p/.test(ord));
