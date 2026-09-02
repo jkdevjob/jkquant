@@ -545,11 +545,21 @@ console.log('[14] 체결가 규약');
 console.log('[15] 세션 탭 드래그');
 {
   let su=''; try{ su=extractFn(idx,'function setupSessbar()'); }catch(e){}
-  ok('드래그 배선 존재(pointerdown/move/up)',
-     /pointerdown/.test(su)&&/pointermove/.test(su)&&/pointerup/.test(su), su?'':'setupSessbar 없음');
-  ok('pointermove가 passive:false (preventDefault 가능)', /\{passive:false\}/.test(su));
-  ok('터치는 길게누름으로 스크롤과 구분', /DRAG_HOLD/.test(su)&&/_dragStart\.mouse/.test(su));
-  ok('세션 1개면 드래그 안 함', /sessions\.length<2/.test(su));
+  ok('터치·마우스 배선 존재', /touchstart/.test(su)&&/touchmove/.test(su)&&/touchend/.test(su)
+     &&/mousedown/.test(su)&&/mousemove/.test(su)&&/mouseup/.test(su), su?'':'setupSessbar 없음');
+  /* 스크롤 차단은 non-passive touchmove + preventDefault로만 된다.
+     pointermove의 preventDefault는 스펙상 스크롤을 취소하지 못하고, touch-action은
+     터치 시작 시점에 확정돼 중간 변경이 무시된다 — 그래서 폰에서 드래그가 통째로 죽었다. */
+  ok('touchmove가 non-passive (스크롤 차단 가능)', /touchmove[\s\S]{0,400}?\{passive:false\}/.test(su));
+  // 주석에 이름이 나오는 건 괜찮고, '리스너로 등록'하면 안 된다
+  ok('스크롤 차단을 포인터 이벤트에 기대지 않는다', !/addEventListener\(\s*'pointermove'/.test(su));
+  ok('마우스는 창 전체에서 추적 (바 밖으로 나가도 유지)',
+     /window\.addEventListener\('mousemove'/.test(su)&&/window\.addEventListener\('mouseup'/.test(su));
+  let dd=''; try{ dd=extractFn(idx,'function _dragDown(chip,x,y,isMouse)'); }catch(e){}
+  let dm=''; try{ dm=extractFn(idx,'function _dragMove(x,y)'); }catch(e){}
+  ok('터치는 길게누름으로 스크롤과 구분', /DRAG_HOLD/.test(dd)&&/_dragStart\.mouse/.test(dm));
+  ok('세션 1개면 드래그 안 함', /sessions\.length<2/.test(dd));
+  ok('두 손가락은 드래그로 잡지 않는다', /touches\.length!==1/.test(su));
   ok('놓은 뒤 click이 세션을 바꾸지 않는다', /_dragEndAt<\d+/.test(su));
   // 시간 기반이어야 한다 — 불리언 플래그는 click이 안 따라올 때 남아 다음 탭을 씹는다
   ok('억제가 시간 기반(플래그 잔류 없음)', !/_dragJustEnded/.test(idx));
