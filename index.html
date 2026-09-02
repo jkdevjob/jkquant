@@ -454,7 +454,7 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
 </div>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.04</span></h1></div>
+    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.05</span></h1></div>
     <div style="display:flex;align-items:center;gap:8px">
       <a class="btbtn" href="/backtest" title="백테스트">📊<span class="bt-txt"> 백테스트</span></a>
       <button class="btbtn" id="paperbtn" onclick="openPaper()" title="모의투자 성과" style="display:none;border-color:rgba(245,196,81,.45);color:var(--gold)">🧪<span class="bt-txt"> 모의 성과</span></button>
@@ -1491,7 +1491,7 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
   <footer>
     <strong>JK 퀀트</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.04</b> · 2026-09-02</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.05</b> · 2026-09-02</div>
   </footer>
 </div>
 
@@ -2194,7 +2194,16 @@ function calcStarPoint(c){
 
 function renderOrder(){
   if(!$('o_close'))return; // 주문표 시트가 열려있을 때만
-  const c=computeInf(), st=c.st, close=inputNum('o_close')||0;
+  const c=computeInf(), st=c.st;
+  /* 기준 종가 — 입력칸이 있으면 그 값, 없으면 불러온 시세의 확정 종가.
+     '전일 종가' 입력칸은 첫 매수·리버스일 때만 보이고, 보유 중인 세션에서는 숨김칸이라
+     값이 비어 있다. 예전엔 그 칸만 봐서 보유 세션에서 close=0이 됐고, 그러면
+     limit=0이라 주문가 상한이 통째로 꺼졌다(현재가보다 +33%인 주문가가 그대로 나갔다).
+     수량도 종가가 아닌 주문가로 나뉘어 배정액만큼 못 샀다. */
+  const _q=lastQuote.inf;
+  const _qc=(_q && String(_q.symbol||'').toUpperCase()===String(st.ticker||'').toUpperCase())
+            ? (+_q.last||0) : 0;
+  const close=inputNum('o_close')||_qc||0;
   const B1=imBuy1(c), slot=B1.slot, buy1=B1.amt;
   const pct=starPct(st.ticker,st.div,c.T,st.target);
   const star=c.avg>0?c.avg*(1+pct/100):close;

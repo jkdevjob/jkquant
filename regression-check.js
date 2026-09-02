@@ -510,6 +510,11 @@ console.log('[13] LOC 주문가 상한');
   ok('허용폭 초과 매수에 상한을 씌운다', /_cbrow/.test(ord) && /over\?limit:price/.test(ord),
      ord?'':'renderOrder 없음');
   ok('상한이 공짜가 아님을 안내한다', /건너뜁니다|건너뛰/.test(ord) && /큰수 %/.test(ord));
+  /* 기준 종가를 입력칸에서만 읽으면, 보유 중인 세션(입력칸이 숨김)에서 close=0이 되어
+     limit=0 → 상한이 통째로 꺼진다. 실제로 현재가보다 +33%인 주문가가 그대로 나갔다. */
+  ok('기준 종가가 시세로 폴백된다 (입력칸이 비어도)',
+     /inputNum\('o_close'\)\|\|_qc/.test(ord) && /lastQuote\.inf/.test(ord));
+  ok('폴백 시세는 종목을 대조한다', /_q\.symbol[\s\S]{0,80}st\.ticker/.test(ord));
   ok('큰수 % 기본값 20 (꼬리가 닫히는 구간)',
      /isFinite\(\+st\.big\)\)\?\+st\.big:20/.test(idx) && /big:20,/.test(idx));
   ok('하방 LOC는 같은 상한', /하방 \$\{i\}[\s\S]{0,80}p>limit\)\?limit:p/.test(ord));
