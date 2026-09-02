@@ -45,7 +45,7 @@ span.badge{display:inline-block;padding:2px 8px;margin:0;border:0;border-radius:
 .tab[data-t="ivs"].on{background:linear-gradient(135deg,#b4407f,#7a2453)}
 @media(max-width:380px){.tabs{gap:5px}.tab{font-size:12px;padding:11px 2px}}
 .sessbar{position:sticky;top:var(--h1,54px);z-index:31;background:var(--bg);display:flex;gap:7px;align-items:center;margin:0;padding:11px 0 8px;overflow-x:auto;-webkit-overflow-scrolling:touch}
-.sesschip{padding:8px 13px;border-radius:10px;background:var(--panel);border:1px solid var(--line);color:var(--dim);font-size:12.5px;font-weight:700;cursor:pointer;white-space:nowrap;flex-shrink:0}
+.sesschip{padding:8px 13px;border-radius:10px;background:var(--panel);border:1px solid var(--line);color:var(--dim);font-size:12.5px;font-weight:700;cursor:pointer;white-space:nowrap;flex-shrink:0;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
 .sesschip.on{background:var(--vio-bg);color:var(--vio);border-color:var(--vio)}
 .sesschip.add{color:var(--faint)}
 .sesschip .paperbadge{display:inline-block;margin-left:5px;padding:1px 5px;border-radius:5px;background:rgba(245,196,81,.18);color:var(--gold);font-size:9.5px;font-weight:800;vertical-align:middle}
@@ -454,7 +454,7 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
 </div>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.02</span></h1></div>
+    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.03</span></h1></div>
     <div style="display:flex;align-items:center;gap:8px">
       <a class="btbtn" href="/backtest" title="백테스트">📊<span class="bt-txt"> 백테스트</span></a>
       <button class="btbtn" id="paperbtn" onclick="openPaper()" title="모의투자 성과" style="display:none;border-color:rgba(245,196,81,.45);color:var(--gold)">🧪<span class="bt-txt"> 모의 성과</span></button>
@@ -1491,7 +1491,7 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
   <footer>
     <strong>JK 퀀트</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.02</b> · 2026-09-02</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.03</b> · 2026-09-02</div>
   </footer>
 </div>
 
@@ -6305,11 +6305,30 @@ function renderSessbar(){
 const DRAG_HOLD=350, DRAG_SLOP=8;
 let _dragEl=null, _dragTimer=null, _dragStart=null, _dragMoved=false, _dragEndAt=0;
 function _chipEls(){ return [...$('sessbar').querySelectorAll('[data-sid]')]; }
-function _dragBegin(chip,pid){
+function _dragBegin(chip){
   _dragEl=chip; _dragMoved=false;
   chip.classList.add('dragging'); $('sessbar').classList.add('dragmode');
-  try{ chip.setPointerCapture(pid); }catch(e){}
   if(navigator.vibrate){ try{ navigator.vibrate(12); }catch(e){} }
+}
+/* 누름 → 길게누름 타이머 시작. 입력장치(터치/마우스)에 무관한 공통부. */
+function _dragDown(chip,x,y,isMouse){
+  if(tabBox().sessions.length<2) return;                 // 한 개면 정렬할 게 없다
+  _dragStart={x,y,chip,mouse:isMouse};
+  clearTimeout(_dragTimer);
+  _dragTimer=setTimeout(()=>{ if(_dragStart) _dragBegin(_dragStart.chip); },DRAG_HOLD);
+}
+/* 움직임. 스크롤을 막아야 하면 true를 돌려준다(호출부가 preventDefault). */
+function _dragMove(x,y){
+  if(_dragEl){ _dragOver(x); return true; }
+  if(!_dragStart) return false;
+  if(Math.hypot(x-_dragStart.x,y-_dragStart.y)<=DRAG_SLOP) return false;
+  if(_dragStart.mouse){ clearTimeout(_dragTimer); _dragBegin(_dragStart.chip); return true; }
+  clearTimeout(_dragTimer); _dragTimer=null; _dragStart=null;   // 터치로 먼저 움직임 = 스크롤
+  return false;
+}
+function _dragChipOf(t){
+  if(t.closest('[data-del]')||t.closest('[data-add]')) return null;
+  return t.closest('[data-sid]');
 }
 function _dragOver(x){
   if(!_dragEl) return;
@@ -6357,24 +6376,35 @@ function setupSessbar(){
     const chip=e.target.closest('[data-sid]');
     if(chip)editSess(chip.getAttribute('data-sid'));
   });
-  bar.addEventListener('pointerdown',e=>{
-    if(e.button>0) return;                                       // 오른쪽 버튼 등은 무시
-    if(e.target.closest('[data-del]')||e.target.closest('[data-add]')) return;
-    const chip=e.target.closest('[data-sid]'); if(!chip) return;
-    if(tabBox().sessions.length<2) return;                        // 한 개면 정렬할 게 없다
-    _dragStart={x:e.clientX,y:e.clientY,chip,pid:e.pointerId,mouse:e.pointerType==='mouse'};
-    clearTimeout(_dragTimer);
-    _dragTimer=setTimeout(()=>{ if(_dragStart) _dragBegin(_dragStart.chip,_dragStart.pid); },DRAG_HOLD);
-  });
-  bar.addEventListener('pointermove',e=>{
-    if(_dragEl){ e.preventDefault(); _dragOver(e.clientX); return; }
-    if(!_dragStart) return;
-    const far=Math.hypot(e.clientX-_dragStart.x,e.clientY-_dragStart.y)>DRAG_SLOP;
-    if(!far) return;
-    if(_dragStart.mouse){ clearTimeout(_dragTimer); _dragBegin(_dragStart.chip,_dragStart.pid); }
-    else { clearTimeout(_dragTimer); _dragTimer=null; _dragStart=null; }   // 터치로 먼저 움직임 = 스크롤
+  /* ── 터치 ──
+     pointermove의 preventDefault로는 스크롤을 못 막는다(포인터 이벤트는 스크롤에 대해
+     취소 불가). touch-action도 터치 시작 시점에 확정돼서 중간에 바꿔봐야 무시된다.
+     그래서 폰에서는 손가락을 움직이는 순간 브라우저가 세션바를 스크롤해 버리고
+     pointercancel이 떠서 드래그가 죽었다.
+     실제로 스크롤을 막는 유일한 방법은 non-passive touchmove + preventDefault다.
+     길게누름 동안은 움직임이 없어 브라우저가 아직 스크롤을 시작하지 않았으므로,
+     집힌 뒤 첫 touchmove부터 막으면 스크롤이 아예 시작되지 않는다. */
+  bar.addEventListener('touchstart',e=>{
+    if(e.touches.length!==1) return;                     // 두 손가락은 확대/스크롤
+    const chip=_dragChipOf(e.target); if(!chip) return;
+    const t=e.touches[0]; _dragDown(chip,t.clientX,t.clientY,false);
+  },{passive:true});
+  bar.addEventListener('touchmove',e=>{
+    const t=e.touches[0]; if(!t) return;
+    if(_dragMove(t.clientX,t.clientY)) e.preventDefault();   // 집힌 뒤에만 스크롤 차단
   },{passive:false});
-  ['pointerup','pointercancel'].forEach(ev=>bar.addEventListener(ev,_dragStop));
+  ['touchend','touchcancel'].forEach(ev=>bar.addEventListener(ev,_dragStop));
+  // 집고 있는 동안 길게누름 메뉴·텍스트 선택이 뜨지 않게
+  bar.addEventListener('contextmenu',e=>{ if(_dragEl||_dragStart) e.preventDefault(); });
+
+  /* ── 마우스 ── 창 전체에서 받아야 바 밖으로 나가도 드래그가 유지된다 */
+  bar.addEventListener('mousedown',e=>{
+    if(e.button!==0) return;
+    const chip=_dragChipOf(e.target); if(!chip) return;
+    _dragDown(chip,e.clientX,e.clientY,true);
+  });
+  window.addEventListener('mousemove',e=>{ if(_dragStart||_dragEl) _dragMove(e.clientX,e.clientY); });
+  window.addEventListener('mouseup',()=>{ if(_dragStart||_dragEl) _dragStop(); });
 }
 function switchSess(id){
   const box=tabBox();
