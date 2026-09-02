@@ -502,13 +502,21 @@ console.log('[12] 종가/실시간가 분리');
 console.log('[13] LOC 주문가 상한');
 {
   let ord=''; try{ ord=extractFn(idx,'function renderOrder()'); }catch(e){}
-  ok('매수 주문가에 상한(limit)을 씌운다', /_cbrow/.test(ord) && /price>limit\)\?limit:price/.test(ord),
+  /* 허용폭을 넘으면 상한을 씌워 낸다. 공짜가 아니라는 걸 안내문이 말해야 한다 —
+     체결조건이 바뀌어 종가가 상한 위로 마감한 날은 회차를 건너뛴다.
+     6년·10개 설정 실측 최악: +12% −31.3% · +15% −28.2% · +20% −3.1%.
+     상한이 높을수록 바뀌는 결정이 줄어 꼬리가 닫히므로 기본값을 20으로 둔다.
+     MOC면 밴드를 피하지만 국내 증권사는 MOO/MOC를 매도만 지원해 매수엔 못 쓴다. */
+  ok('허용폭 초과 매수에 상한을 씌운다', /_cbrow/.test(ord) && /over\?limit:price/.test(ord),
      ord?'':'renderOrder 없음');
-  ok('하방 LOC도 같은 상한', /하방 \$\{i\}[\s\S]{0,80}p>limit\)\?limit:p/.test(ord));
+  ok('상한이 공짜가 아님을 안내한다', /건너뜁니다|건너뛰/.test(ord) && /큰수 %/.test(ord));
+  ok('큰수 % 기본값 20 (꼬리가 닫히는 구간)',
+     /isFinite\(\+st\.big\)\)\?\+st\.big:20/.test(idx) && /big:20,/.test(idx));
+  ok('하방 LOC는 같은 상한', /하방 \$\{i\}[\s\S]{0,80}p>limit\)\?limit:p/.test(ord));
   // 수량은 상한 전 가격으로 — 상한이 수량까지 바꾸면 모의·백테와 어긋난다
   // 수량은 상한가가 아니라 '종가'로 나눈다 — 상한이 수량을 흔들면 안 되고,
   // 주문가(별지점)로 나누면 배정액만큼 못 산다(백테·모의는 종가로 나눈다).
-  ok('수량은 종가 기준 (상한·주문가 아님)', /_brow\(lbl\+[^,]*,\s*cp,\s*alloc,\s*close>0\?close:price\)/.test(ord));
+  ok('수량은 종가 기준 (주문가 아님)', /alloc,\s*\n?\s*close>0\?close:price/.test(ord));
   // 매도는 절대 낮추면 안 된다 — 낮추면 원치 않는 체결이 난다
   const sellCap=/oitem\('s'[^)]*limit/.test(ord);
   ok('매도가는 상한으로 낮추지 않는다', !sellCap, sellCap?'매도에 상한 적용됨':'');
