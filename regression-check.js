@@ -588,5 +588,30 @@ console.log('[15] 세션 탭 드래그');
 }
 
 
+/* ════ 16. 적립 탭의 적립/거치 두 방식 ════
+   거치식은 시작일에 원금 전액을 한 번 사고 끝이다 — 주기도 배수도 없다.
+   한 군데라도 빠지면 거치 세션에 적립 규칙이 새어 든다. */
+console.log('[16] 적립·거치 방식');
+{
+  ok('기본 설정에 mode 존재', /function defDcaSettings\(\)[\s\S]{0,200}?mode:'dca'/.test(idx));
+  ok('설정 UI에 방식 선택', /id="set_dcamode"/.test(idx) && /data-v="lump"/.test(idx));
+  ok('설정 저장이 mode를 담는다', /mode:segGet\('set_dcamode'\)\|\|'dca'/.test(idx));
+  ok('방식 전환이 세그에 배선', /id==='set_dcamode'\) dcaModeUI\(\)/.test(idx)
+     && /'set_dcamode'/.test(idx));
+  // 지문에 mode가 없으면 방식을 바꿔도 옛 기록이 남는다
+  let keys=''; try{ keys=idx.slice(idx.indexOf('const SIM_KEYS='), idx.indexOf('};', idx.indexOf('const SIM_KEYS='))+2); }catch(e){}
+  ok('모의 지문에 mode 포함', /dca\s*:\s*\[[^\]]*'mode'/.test(keys));
+  // 거치식은 배수를 절대 타면 안 된다
+  let cd=''; try{ cd=extractFn(idx,'function computeDca()'); }catch(e){}
+  ok('거치식은 배수 1배 고정', /lump\?1:\(\+st\.dipMul\|\|1\)/.test(cd) && /todayMul:\(lump\?1:todayMul\)/.test(cd));
+  let pd=''; try{ pd=extractFn(idx,'function _paperDca(sess, from)'); }catch(e){}
+  ok('모의 거치식은 시작일 한 번만 매수', /if\(lump\)\{[\s\S]{0,400}?n:1,\s*regen:true/.test(pd), pd?'':'_paperDca 없음');
+  ok('모의 거치식도 배수 1배', /const mul=lump\?1:/.test(pd));
+  // 성과표에서 적립과 거치가 구분돼야 비교가 된다
+  ok('성과표가 적립·거치를 구분', /mode==='lump'\)\s*\?\s*'거치\(일시금\)'/.test(idx));
+  ok('거치식은 주기·배수 칸을 감춘다', /function dcaModeUI\(\)[\s\S]{0,500}?set_dcaonly/.test(idx));
+}
+
+
 console.log(`\n════ 결과: ${pass} PASS / ${fail} FAIL ${fail===0?'— ALL PASS ★':'— 배포 금지, 위 ✗ 항목 수정 필요'} ════`);
 process.exit(fail===0?0:1);

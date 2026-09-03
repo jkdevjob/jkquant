@@ -454,7 +454,7 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
 </div>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.06</span></h1></div>
+    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.07</span></h1></div>
     <div style="display:flex;align-items:center;gap:8px">
       <a class="btbtn" href="/backtest" title="백테스트">📊<span class="bt-txt"> 백테스트</span></a>
       <button class="btbtn" id="paperbtn" onclick="openPaper()" title="모의투자 성과" style="display:none;border-color:rgba(245,196,81,.45);color:var(--gold)">🧪<span class="bt-txt"> 모의 성과</span></button>
@@ -468,7 +468,7 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
     <button class="tab" data-t="vr">밸류리밸런싱</button>
     <button class="tab" data-t="ma">로테이션</button>
     <button class="tab" data-t="ivs">섀넌</button>
-    <button class="tab" data-t="dca">적립</button>
+    <button class="tab" data-t="dca">적립·거치</button>
     <button class="tab" data-t="asap">ASAP</button>
   </div>
   <div class="sessbar" id="sessbar"></div>
@@ -1491,7 +1491,7 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
   <footer>
     <strong>JK 퀀트</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.06</b> · 2026-09-02</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.07</b> · 2026-09-02</div>
   </footer>
 </div>
 
@@ -1602,16 +1602,23 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
     <div class="field"><label id="set_maprincipal_lbl">원금 ($)</label><input id="set_maprincipal" type="text" inputmode="decimal" value="10000" oninput="commaInput(this)"></div>
   </div>
   <div id="set_dca" style="display:none">
+    <div class="seclabel">방식</div>
+    <div class="seg" id="set_dcamode"><button data-v="dca" class="on">적립식</button><button data-v="lump">거치식</button></div>
+    <p class="note" style="margin:4px 0 8px" id="set_dcamode_note"></p>
     <div class="seclabel">종목 (티커)</div>
     <div class="seg" id="set_dcaticker" style="flex-wrap:wrap">
       <button data-v="USD">USD</button><button data-v="TQQQ">TQQQ</button><button data-v="SOXL">SOXL</button>
       <button data-v="TECL">TECL</button><button data-v="QLD">QLD</button><button data-v="SCHD">SCHD</button></div>
+    <div id="set_dcaonly">
     <div class="seclabel">적립 주기 <span class="hint" style="color:var(--faint);font-weight:500">알림용 · 계산에는 영향 없음</span></div>
     <div class="seg" id="set_dcafreq"><button data-v="day">매일</button><button data-v="week">매주</button><button data-v="month" class="on">매월</button></div>
+    </div>
     <div class="field"><label id="set_dcaamt_lbl">1회 적립액 ($) <span class="hint">배수 1배일 때 금액</span></label><input id="set_dcaamt" type="text" inputmode="decimal" value="500" oninput="commaInput(this)"></div>
+    <div id="set_dcaonly2">
     <div class="seclabel">하락 시 배수 <span class="hint" style="color:var(--faint);font-weight:500">종가 ≤ 200일선</span></div>
     <div class="seg" id="set_dcamul"><button data-v="1">없음(1배)</button><button data-v="1.5">1.5배</button><button data-v="2" class="on">2배</button><button data-v="3">3배</button></div>
     <p class="note" style="margin:4px 0 8px">종목 자신의 <b>종가 200일선</b> 아래에서만 배수가 걸립니다. 백테(32~40년) 기준 전고점 대비 방식보다 효율 +7~12% 우수. 고정 예산 안에서는 효과가 거의 없고, <b>추가 여윳돈</b>을 넣을 때 의미가 있습니다.</p>
+    </div>
   </div>
   <div id="set_asap" style="display:none">
     <div class="seclabel">종목 (티커)</div>
@@ -1913,7 +1920,8 @@ function migrateIvsSess(sess){
   ['qty','cash','avg','qty1','avg1'].forEach(k=>delete st[k]);
 }
 function ensureIvsBox(){ if(S&&(!S.ivs||!S.ivs.sessions||!S.ivs.sessions.length)){ const d=newIvsSession('내 계좌'); S.ivs={sessions:[d],active:d.id}; } }
-function defDcaSettings(){return{ticker:'USD',amount:500,freq:'month',dipMul:2,cur:'usd'}}
+/* mode: 'dca' 적립식(주기마다 매수) / 'lump' 거치식(시작일에 원금 전액 한 번, 이후 보유) */
+function defDcaSettings(){return{ticker:'USD',mode:'dca',amount:500,freq:'month',dipMul:2,cur:'usd'}}
 function newDcaSession(name){return{id:uid(),name:name||'내 계좌',settings:defDcaSettings(),hist:[]}}
 
 /* 신규 사용자 기본 상태 (빈 세션 1개씩) */
@@ -3895,7 +3903,8 @@ const DCA_N=200;
 function computeDca(){
   const st=curStrat().settings, hist=curStrat().hist||[];
   const sym=String(st.ticker||'USD').toUpperCase();
-  const mul=+st.dipMul||1, amt=+st.amount||0;
+  const lump=(st.mode==='lump');                    // 거치식: 원금 한 번, 이후 보유
+  const mul=lump?1:(+st.dipMul||1), amt=+st.amount||0;
   // 내 적립 현황 (기록 합계)
   let inv=0, shares=0, nBuy=0, nDip=0;
   hist.forEach(h=>{ const a=+h.amt||0, p=+h.price||0;
@@ -3904,7 +3913,7 @@ function computeDca(){
   const pos={inv,shares,avg,nBuy,nDip};
 
   const days=(dcaQuoteData && String(dcaQuoteData.symbol||'').toUpperCase()===sym && dcaQuoteData.days) ? dcaQuoteData.days : null;
-  if(!days || days.length<2) return {st,sym,mul,amt,pos,ready:false};
+  if(!days || days.length<2) return {st,sym,lump,mul,amt,pos,ready:false};
   const closes=days.map(d=>d.close), dates=days.map(d=>d.date), n=closes.length;
   const sma=new Array(n); { let s=0; const buf=[];
     for(let i=0;i<n;i++){ buf.push(closes[i]); s+=closes[i]; if(buf.length>DCA_N)s-=buf.shift();
@@ -3920,7 +3929,7 @@ function computeDca(){
   const flips=[]; let prev=null;
   for(let i=0;i<n;i++){ if(sma[i]==null)continue; const b=closes[i]<=sma[i];
     if(prev!==null && b!==prev) flips.push({date:dates[i], to:b?'dip':'base', gap:(closes[i]/sma[i]-1)*100}); prev=b; }
-  return {st,sym,mul,amt,pos,ready:true,warming,below,todayMul,gapPct,flips,
+  return {st,sym,lump,mul,amt,pos,ready:true,warming,below,todayMul:(lump?1:todayMul),gapPct,flips,
           dates,closes,sma,smaNow,lastClose,lastDate:dates[last],price,
           eval:pos.shares*price, ret: pos.inv>0 ? (pos.shares*price/pos.inv-1)*100 : null};
 }
@@ -4431,7 +4440,10 @@ const DCA_FREQ={day:'매일',week:'매주',month:'매월'};
 function renderDcaNow(){
   const c=computeDca(), st=c.st;
   $('dca_ticker').textContent=tickerLabel(st.ticker||'USD');
-  $('dca_rule_lbl').textContent = (+st.dipMul||1)>1 ? `200일선 ${st.dipMul}배` : '배수 없음';
+  $('dca_rule_lbl').textContent = c.lump ? '거치식 · 보유'
+    : ((+st.dipMul||1)>1 ? `200일선 ${st.dipMul}배` : '배수 없음');
+  { const b=$('dca_buy_btn'); if(b) b.textContent = c.lump
+      ? (c.pos.nBuy>0 ? '🟢 추가 매수 기록' : '🟢 거치 매수 기록') : '🟢 적립(매수) 기록'; }
   $('dcacct_close_k').textContent=tickerLabel(st.ticker||'USD')+' 종가';
   // 적립 현황은 시세 없어도 표시
   const p=c.pos;
@@ -4451,10 +4463,12 @@ function renderDcaNow(){
     return;
   }
   const dip=c.todayMul>1, price=c.price;
-  $('dca_pill').className='bandpill '+(dip?'under':'in');
-  $('dca_pill').textContent=dip?'하락 구간':'정상 구간';
-  $('dca_mul_txt').textContent=c.warming?'⚪ 1배 적립 (워밍업)':(dip?`🟢 ${c.todayMul}배 적립`:'⚪ 1배 적립');
-  $('dca_mul_txt').style.color=dip?'var(--buy)':'var(--faint)';
+  $('dca_pill').className='bandpill '+(c.lump?'in':(dip?'under':'in'));
+  $('dca_pill').textContent=c.lump?'거치 중':(dip?'하락 구간':'정상 구간');
+  $('dca_mul_txt').textContent = c.lump
+    ? (c.pos.nBuy>0?'⏸ 보유 — 추가 매수 없음':'🟢 거치 매수 대기')
+    : (c.warming?'⚪ 1배 적립 (워밍업)':(dip?`🟢 ${c.todayMul}배 적립`:'⚪ 1배 적립'));
+  $('dca_mul_txt').style.color = c.lump ? (c.pos.nBuy>0?'var(--faint)':'var(--buy)') : (dip?'var(--buy)':'var(--faint)');
   const gp=c.gapPct;
   $('dca_gap_lbl').innerHTML = c.warming
     ? `이력 ${c.closes.length}일 · 200일선 계산에 ${DCA_N-c.closes.length}일 더 필요`
@@ -4464,8 +4478,13 @@ function renderDcaNow(){
   const buyAmt=(+st.amount||0)*c.todayMul;
   const qty=price>0?buyAmt/price:0;
   const freq=DCA_FREQ[st.freq||'month']||'매월';
-  $('dca_verdict').innerHTML=
-    `<div class="oitem ${dip?'b':''}"${dip?'':' style="background:var(--panel2)"'}>`
+  $('dca_verdict').innerHTML = c.lump
+    ? (c.pos.nBuy>0
+       ? `<div class="oitem" style="background:var(--panel2)"><span class="tag" style="background:var(--panel);color:var(--dim)">보유</span>`
+         +`<span class="nm">거치식 — 더 살 것이 없습니다</span><span class="pr">${px(c.pos.inv)}</span></div>`
+         +`<p class="note" style="margin-top:8px">거치식은 시작일에 원금을 한 번 넣고 그대로 둡니다. 200일선 배수·적립 주기는 적용되지 않습니다.</p>`
+       : `<div class="oitem b"><span class="tag">거치</span><span class="nm">원금 전액 매수 · ${nfix(qty,4)}주</span><span class="pr">${px(buyAmt)}</span></div>`)
+    : `<div class="oitem ${dip?'b':''}"${dip?'':' style="background:var(--panel2)"'}>`
     +`<span class="tag"${dip?'':' style="background:var(--panel);color:var(--dim)"'}>${c.todayMul}배</span>`
     +`<span class="nm">${freq} 적립 · 1회 ${px(+st.amount||0)}</span><span class="pr">${px(buyAmt)}</span></div>`
     +`<p class="note" style="margin-top:8px">현재가 ${nfix(price,2)} 기준 <b>약 ${Math.floor(qty)}주</b> (${nfix(qty,3)}주). `
@@ -4553,11 +4572,16 @@ function dcaRecord(){
   const c=computeDca(), st=curStrat().settings;
   const price=c.ready?(c.price||c.lastClose):inputNum('dca_price');
   if(!price||price<=0){ alert('먼저 🔄 자동으로 현재가를 불러오거나 직접 입력하세요.'); return; }
-  const mul=c.ready?c.todayMul:1;
+  const mul=c.lump?1:(c.ready?c.todayMul:1);
   const amt=(+st.amount||0)*mul;
-  if(amt<=0){ alert('설정에서 1회 적립액을 입력하세요.'); return; }
+  if(amt<=0){ alert(c.lump?'설정에서 거치 원금을 입력하세요.':'설정에서 1회 적립액을 입력하세요.'); return; }
   const date=new Date().toISOString().slice(0,10);
-  if(!confirm(`적립 ${px(amt)} (1회 ${px(+st.amount||0)} × ${mul}배)\n단가 ${px(price)} · ${nfix(amt/price,4)}주\n오늘(${date}) 기록할까요?`))return;
+  // 거치식은 원금을 한 번만 넣는 것이라, 이미 기록이 있으면 되묻는다
+  if(c.lump && c.pos.nBuy>0 && !confirm(`거치식인데 이미 매수 기록이 ${c.pos.nBuy}건 있습니다.\n그래도 추가로 기록할까요?`)) return;
+  const msg = c.lump
+    ? `거치 매수 ${px(amt)}\n단가 ${px(price)} · ${nfix(amt/price,4)}주\n오늘(${date}) 기록할까요?`
+    : `적립 ${px(amt)} (1회 ${px(+st.amount||0)} × ${mul}배)\n단가 ${px(price)} · ${nfix(amt/price,4)}주\n오늘(${date}) 기록할까요?`;
+  if(!confirm(msg))return;
   const h=curStrat().hist; h.push({type:'buy',date,price:+price,amt:+amt,mul:+mul,ts:Date.now()}); sortHist(h); save(); refreshDca();
   alert('기록됨 ✓');
 }
@@ -4573,6 +4597,22 @@ function editDca(i){
   $('editDcaModal').classList.add('on');
 }
 function closeEditDca(){ $('editDcaModal').classList.remove('on'); editDcaIdx=-1; }
+/* 거치식은 주기·배수가 의미 없다 — 시작일에 원금 전액을 한 번 사고 끝이라
+   '주기마다'도 '하락 시 더'도 걸 자리가 없다. 그 칸들을 감추고 라벨만 바꾼다. */
+function dcaModeUI(){
+  const lump=(typeof segGet==='function' && segGet('set_dcamode')==='lump');
+  const a=$('set_dcaonly'), b=$('set_dcaonly2');
+  if(a) a.style.display=lump?'none':'';
+  if(b) b.style.display=lump?'none':'';
+  const lbl=$('set_dcaamt_lbl');
+  if(lbl) lbl.innerHTML = lump
+    ? '거치 원금 ($) <span class="hint">시작일에 전액 매수</span>'
+    : '1회 적립액 ($) <span class="hint">배수 1배일 때 금액</span>';
+  const note=$('set_dcamode_note');
+  if(note) note.innerHTML = lump
+    ? '<b>거치식</b> — 시작일에 원금을 한 번에 넣고 그대로 둡니다. 같은 종목·같은 돈으로 적립식 세션을 따로 만들면 <b>둘을 나란히 비교</b>할 수 있습니다.'
+    : '<b>적립식</b> — 주기마다 정해진 금액을 삽니다.';
+}
 function saveDcaEdit(){
   if(editDcaIdx<0)return; const hist=curStrat().hist, h=hist[editDcaIdx]; if(!h){closeEditDca();return;}
   const price=+unComma($('ed_price').value), amt=+unComma($('ed_amt').value), mul=+unComma($('ed_mul').value)||1;
@@ -5475,7 +5515,19 @@ function _paperDca(sess, from){
   { let s2=0; const buf=[]; for(let i=0;i<n;i++){ buf.push(cl[i]); s2+=cl[i];
       if(buf.length>DCA_N_AUTO) s2-=buf.shift(); sma[i]= buf.length===DCA_N_AUTO ? s2/DCA_N_AUTO : null; } }
   const today=simCutoff(st.cur);
-  const freq=st.freq||'month', amt=+st.amount||0, mul=+st.dipMul||1;
+  const freq=st.freq||'month', amt=+st.amount||0;
+  const lump=(st.mode==='lump');
+  const mul=lump?1:(+st.dipMul||1);
+  /* 거치식 — 시작일(이후 첫 거래일) 종가에 원금 전액을 한 번 사고 끝.
+     주기도 배수도 없다. 같은 종목·같은 돈으로 적립식 세션을 따로 두면 둘을 나란히 비교할 수 있다. */
+  if(lump){
+    const i0=days.findIndex(d=>d.date>=from && d.date<=today);
+    if(i0<0 || !(amt>0)) return null;
+    const d0=days[i0];
+    sess.hist=[{type:'buy',date:d0.date,price:+d0.close,amt:+amt.toFixed(2),mul:1,lump:true,sim:true,ts:1}];
+    st.simLast=last; save();
+    return {upto:last, n:1, regen:true};
+  }
   const rec=[]; let lastKey=null;
   const keyOf=d=> freq==='day'?d : freq==='week'?(()=>{const t=new Date(d+'T00:00:00');
       const y=new Date(t); y.setDate(y.getDate()-((y.getDay()+6)%7)); return y.toISOString().slice(0,10);})() : d.slice(0,7);
@@ -5654,7 +5706,8 @@ async function paperFillAll(){
           if(tab==='vr') vrSimForward();
           if(tab==='inf') infSimForward((sess.hist||[]).length?null:paperStart(sess));
           const r=paperStat(tab,sess);
-          if(r){ r.label=label; rows.push(r); }
+          // 적립 탭은 세션마다 방식이 다르다 — 표에서 적립/거치가 구분돼야 비교가 된다
+          if(r){ r.label=(tab==='dca' && (sess.settings||{}).mode==='lump') ? '거치(일시금)' : label; rows.push(r); }
         }catch(e){ console.error('paperFill',tab,e); }
       }
       box.active=prevAct;
@@ -6599,7 +6652,9 @@ function openSettings(){
     $('set_inf').style.display='none';$('set_vr').style.display='none';if(setDca)setDca.style.display='';
     const st=s.settings;
     segSet('set_dcaticker',st.ticker||'USD'); segSet('set_dcafreq',st.freq||'month'); segSet('set_dcamul',String(st.dipMul||2));
+    segSet('set_dcamode',st.mode||'dca');
     $('set_dcaamt').value=nfix(st.amount||0,0);
+    dcaModeUI();
   }else if(S.activeTab==='asap'){
     $('set_inf').style.display='none';$('set_vr').style.display='none';if(setAsap)setAsap.style.display='';
     const st=s.settings;
@@ -6667,7 +6722,7 @@ function syncShortMaUI(eng){
   if(note&&note.classList.contains('note')) note.style.opacity=on?'1':'0.4';
 }
 function setupSegs(){
-  ['set_ticker','set_div','set_reverse','set_tgtdyn','set_vmode','set_vformula','set_cur','set_vcur','set_engine','set_shortma','set_lopct','set_maticker','set_mabuy','set_masell','set_mapark','set_dcaticker','set_dcafreq','set_dcamul','set_asapticker',
+  ['set_ticker','set_div','set_reverse','set_tgtdyn','set_vmode','set_vformula','set_cur','set_vcur','set_engine','set_shortma','set_lopct','set_maticker','set_mabuy','set_masell','set_mapark','set_dcaticker','set_dcamode','set_dcafreq','set_dcamul','set_asapticker',
    'set_vauto','set_ivsticker','set_ivss0','set_ivslook','set_ivsband','set_ivspark','set_ivsmode'].forEach(id=>{
     const el=$(id);if(!el)return;
     el.querySelectorAll('button').forEach(b=>{
@@ -6683,6 +6738,7 @@ function setupSegs(){
           syncTgtNote();
         }
         if(id==='set_engine'){ syncShortMaUI(b.dataset.v); syncTgtNote(); }
+        if(id==='set_dcamode') dcaModeUI();          // 적립↔거치 전환 시 칸·라벨 갱신
         // 운용모드 변경 시 거치식이면 적립금 입력 비활성화
         if(id==='set_vmode'){ applyVrModeUI(b.dataset.v); }
         if(id==='set_ivspark'||id==='set_ivsticker'||id==='set_ivsmode')
@@ -6702,7 +6758,7 @@ const SIM_KEYS={
   vr  :['ticker','mode','formula','g','add','initAmt','autoCyc','band','cur'],
   ma  :['ticker','buy','sell','park','principal'],
   ivs :['ticker','mode','s0','look','band','park','principal','monthly'],
-  dca :['ticker','freq','amount','dipMul'],
+  dca :['ticker','mode','freq','amount','dipMul'],
   asap:['ticker','base','mid','deep'],
 };
 /* 기록을 만들 때 쓴 설정의 지문. 이걸 세션에 찍어 두면
@@ -6763,7 +6819,8 @@ function saveSettings(){
       monthly:Math.max(0,inputNum('set_ivsmonthly')||0),cur:'usd'};
     ivsQuote1=null;   // 짝·종목이 바뀌었을 수 있으니 1배 시세 캐시를 비운다
   }else if(S.activeTab==='dca'){
-    s.settings={ticker:segGet('set_dcaticker')||'USD',freq:segGet('set_dcafreq')||'month',
+    s.settings={ticker:segGet('set_dcaticker')||'USD',mode:segGet('set_dcamode')||'dca',
+      freq:segGet('set_dcafreq')||'month',
       amount:inputNum('set_dcaamt')||0,dipMul:+segGet('set_dcamul')||1,cur:'usd'};
   }else if(S.activeTab==='asap'){
     s.settings={ticker:segGet('set_asapticker')||'SOXL',base:inputNum('set_asapbase')||10,mid:inputNum('set_asapmid')||50,deep:inputNum('set_asapdeep')||100,cur:'usd'};
