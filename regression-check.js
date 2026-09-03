@@ -610,6 +610,15 @@ console.log('[16] 적립·거치 방식');
   // 성과표에서 적립과 거치가 구분돼야 비교가 된다
   ok('성과표가 적립·거치를 구분', /mode==='lump'\)\s*\?\s*'거치\(일시금\)'/.test(idx));
   ok('거치식은 주기·배수 칸을 감춘다', /function dcaModeUI\(\)[\s\S]{0,500}?set_dcaonly/.test(idx));
+  /* 화면 곳곳에 적립식 규칙(주기·하락배수)이 남으면, 거치 세션인데 안 쓰는 규칙이
+     켜져 있는 것처럼 보인다 — 실제로 상태줄에 '매월 $10,000 · 하락 2배'가 찍혔다. */
+  let sl=''; try{ sl=extractFn(idx,'function renderStatusline()'); }catch(e){}
+  ok('상태줄이 거치식엔 주기·배수를 안 찍는다', /if\(c\.lump\)\{[\s\S]{0,300}?거치 \$\{wn\(st\.amount\)\}/.test(sl), sl?'':'renderStatusline 없음');
+  let rn=''; try{ rn=extractFn(idx,'function renderDcaNow()'); }catch(e){}
+  ok("거치식 카드 제목이 '오늘 적립'이 아니다", /dca_verdict_h[\s\S]{0,120}?c\.lump \? '거치 현황'/.test(rn));
+  ok('거치식 게이지는 참고용으로 표시', /dca_gauge_lbl[\s\S]{0,120}?참고용/.test(rn));
+  let ra=''; try{ ra=extractFn(idx,'function renderDcaAnal()'); }catch(e){}
+  ok('분석 카드가 거치식에 배수 행을 안 쓴다', /c\.lump\?'—'/.test(ra) && /c\.lump\?'방식':'하락 배수 매수'/.test(ra));
 }
 
 
