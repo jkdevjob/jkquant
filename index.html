@@ -454,7 +454,7 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
 </div>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.07</span></h1></div>
+    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.08</span></h1></div>
     <div style="display:flex;align-items:center;gap:8px">
       <a class="btbtn" href="/backtest" title="백테스트">📊<span class="bt-txt"> 백테스트</span></a>
       <button class="btbtn" id="paperbtn" onclick="openPaper()" title="모의투자 성과" style="display:none;border-color:rgba(245,196,81,.45);color:var(--gold)">🧪<span class="bt-txt"> 모의 성과</span></button>
@@ -1256,13 +1256,13 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
         <div class="vh-band" id="dca_gap_lbl">종가 — · 200일선 —</div>
         <div class="posbar">
           <div class="pb-track" style="background:linear-gradient(90deg,#8fd14f33,#f5a45133)"><div class="pb-mark" id="dg_mark" style="left:50%"></div></div>
-          <div class="pb-scale"><span>−30%</span><span class="mid">200일선</span><span>+30%</span></div>
+          <div class="pb-scale"><span>−30%</span><span class="mid" id="dca_gauge_lbl">200일선</span><span>+30%</span></div>
         </div>
       </div>
 
       <!-- 오늘 할 일 -->
       <div class="card" style="margin-bottom:13px">
-        <h3><span class="dot"></span>오늘 적립</h3>
+        <h3><span class="dot"></span><span id="dca_verdict_h">오늘 적립</span></h3>
         <div id="dca_verdict"><p class="lead">위 🔄 자동 버튼을 누르면 종가 이력을 불러와 오늘 적립 배수를 계산합니다.</p></div>
         <button class="fetchbtn" id="dca_buy_btn" style="width:100%;margin-top:12px;background:var(--buy-bg);color:var(--buy);border-color:var(--buy-dim)" onclick="dcaRecord()">🟢 적립(매수) 기록</button>
       </div>
@@ -1491,7 +1491,7 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
   <footer>
     <strong>JK 퀀트</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.07</b> · 2026-09-02</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.08</b> · 2026-09-02</div>
   </footer>
 </div>
 
@@ -4444,6 +4444,9 @@ function renderDcaNow(){
     : ((+st.dipMul||1)>1 ? `200일선 ${st.dipMul}배` : '배수 없음');
   { const b=$('dca_buy_btn'); if(b) b.textContent = c.lump
       ? (c.pos.nBuy>0 ? '🟢 추가 매수 기록' : '🟢 거치 매수 기록') : '🟢 적립(매수) 기록'; }
+  { const h=$('dca_verdict_h'); if(h) h.textContent = c.lump ? '거치 현황' : '오늘 적립'; }
+  // 200일선 게이지는 배수 판정용이다 — 거치식엔 규칙이 아니라 참고 정보일 뿐
+  { const g=$('dca_gauge_lbl'); if(g) g.textContent = c.lump ? '200일선 (참고용)' : '200일선'; }
   $('dcacct_close_k').textContent=tickerLabel(st.ticker||'USD')+' 종가';
   // 적립 현황은 시세 없어도 표시
   const p=c.pos;
@@ -4456,7 +4459,8 @@ function renderDcaNow(){
     $('dca_mul_txt').textContent='—'; $('dca_mul_txt').style.color='';
     $('dca_gap_lbl').textContent='🔄 자동을 눌러 종가 이력을 불러오세요';
     $('dg_mark').style.left='50%';
-    $('dca_verdict').innerHTML='<p class="lead">위 🔄 자동 버튼을 누르면 종가 이력을 불러와 오늘 적립 배수를 계산합니다.</p>';
+    $('dca_verdict').innerHTML='<p class="lead">위 🔄 자동 버튼을 누르면 종가 이력을 불러옵니다.'
+      +(c.lump?'':' 오늘 적립 배수를 계산합니다.')+'</p>';
     $('dcacct_close').textContent='—'; $('dcacct_eval').textContent=px(0);
     $('dcacct_ret').textContent='—'; $('dcacct_ret').className='bandpill in';
     drawDcaChart(c);
@@ -4651,7 +4655,10 @@ function renderDcaAnal(){
   const price=c.ready?(c.price||c.lastClose||0):0;
   _analPaint('anaD',{inv:P.inv, evalNow:price>0?price*P.shares:0, cash:0,
     avg:P.avg, qty:P.shares, cnt:`${P.nBuy} 매수`, cashLbl:'현금 (없음)',
-    rows:[`${P.nBuy}회`, `${P.nDip}회`], cur:c.st.cur});
+    rows:[`${P.nBuy}회`, c.lump?'—':`${P.nDip}회`], cur:c.st.cur});
+  // 거치식엔 배수가 없다 — 행 이름을 방식으로 바꿔 '0회'가 규칙 미작동처럼 보이지 않게
+  { const k=$('anaD_1'); if(k&&k.previousElementSibling) k.previousElementSibling.textContent = c.lump?'방식':'하락 배수 매수';
+    if(c.lump&&k) k.textContent='거치식 (한 번 매수)'; }
 }
 function renderAsapAnal(){
   if(!$('anaA_pnl')) return;
@@ -6615,8 +6622,14 @@ function renderStatusline(){
     if(c.ready) html+=`<span class="badge ${c.hit?'warn':'ok'}" title="${c.hit?`목표 비중 ${(c.w*100).toFixed(1)}% · 지금 ${(c.wNow*100).toFixed(1)}% — 밴드를 벗어나 오늘 ${c.gap>0?'매수':'매도'}`:'목표 비중과의 차이가 밴드 안 — 오늘은 대기'}">${c.hit?(c.gap>0?'매수 신호':'매도 신호'):'밴드 안'}</span>`;
   }else if(strat==='dca'){
     const st=s.settings,c=computeDca();
-    html+=`<span>${tickerLabel(st.ticker)} · ${DCA_FREQ[st.freq||'month']||'매월'} ${wn(st.amount)}${(+st.dipMul||1)>1?` · 하락 ${st.dipMul}배`:''}</span>`;
-    if(c.ready) html+=`<span class="badge ${c.todayMul>1?'ok':'set'}" title="오늘 적립 배수 — 200일선 아래면 배수로 산다">${c.todayMul}배</span>`;
+    // 거치식엔 적립 주기·하락 배수가 없다 — 그대로 찍으면 안 쓰는 규칙이 켜져 있는 것처럼 보인다
+    if(c.lump){
+      html+=`<span>${tickerLabel(st.ticker)} · 거치 ${wn(st.amount)}</span>`;
+      html+=`<span class="badge ${c.pos.nBuy>0?'set':'ok'}" title="거치식 — 시작일에 원금을 한 번 넣고 그대로 둔다">${c.pos.nBuy>0?'보유':'매수 대기'}</span>`;
+    }else{
+      html+=`<span>${tickerLabel(st.ticker)} · ${DCA_FREQ[st.freq||'month']||'매월'} ${wn(st.amount)}${(+st.dipMul||1)>1?` · 하락 ${st.dipMul}배`:''}</span>`;
+      if(c.ready) html+=`<span class="badge ${c.todayMul>1?'ok':'set'}" title="오늘 적립 배수 — 200일선 아래면 배수로 산다">${c.todayMul}배</span>`;
+    }
   }else if(strat==='asap'){
     const st=s.settings,c=computeAsap();
     html+=`<span>${tickerLabel(st.ticker)} · 적립 ${wn(st.base)}/일 · 딥 ${wn(st.mid)}/${wn(st.deep)}</span>`;
