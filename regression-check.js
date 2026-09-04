@@ -622,5 +622,41 @@ console.log('[16] 적립·거치 방식');
 }
 
 
+/* ════ 17. 배당·분배금 회계 + 티커 자유입력 ════
+   series의 close는 adjclose(배당 재투자 반영)다. 거기에 분배금을 또 더하면 이중계상이다.
+   그래서 매수 체결가·평가는 raw 종가로, 분배금은 events에서 따로 받아 더한다. */
+console.log('[17] 배당·분배금 · 티커 입력');
+{
+  const q=fs.existsSync(__d+'/functions/api/quote.js')?fs.readFileSync(__d+'/functions/api/quote.js','utf8'):'';
+  ok('quote API가 배당·분할 이벤트를 낸다', /events=div%7Csplit/.test(q) && /out\.dividends/.test(q), q?'':'quote.js 없음');
+  ok('quote API가 raw 종가를 같이 낸다', /out\.raw/.test(q) && /wantDiv && rawA\[i\]/.test(q));
+  ok('배당 옵션은 opt-in (기존 응답 불변)', /url\.searchParams\.get\("div"\) === "1"/.test(q) && /if \(wantDiv\) \{ out\.dividends/.test(q));
+  const se=fs.existsSync(__d+'/functions/api/search.js')?fs.readFileSync(__d+'/functions/api/search.js','utf8'):'';
+  ok('티커 검색 API 존재', /finance\/search/.test(se) && /onRequestGet/.test(se), se?'':'search.js 없음');
+  ok('국내상장은 6자리 코드로 정규화', /\\.\(KS\|KQ\)\$/.test(se) || /KS\|KQ/.test(se));
+
+  ok('배당 포함 로더 존재', /async function fetchDailyDiv\(symbol\)/.test(idx) && /div=1/.test(idx));
+  let cd=''; try{ cd=extractFn(idx,'function computeDca()'); }catch(e){}
+  ok('분배금은 배당락일 보유수량 기준', /for\(const d of divs\)/.test(cd) && /held\+=buys\[bi\]\.q/.test(cd), cd?'':'computeDca 없음');
+  ok('재투자는 그날 raw 종가로 되산다', /if\(reinv\)\{ const rp=rawMap\[d\.date\]/.test(cd));
+  ok('가격수익률과 총수익률을 분리', /retPrice:/.test(cd) && /total=evalNow\+\(pos\.reinv\?0:pos\.divCash\)/.test(cd));
+  let pd=''; try{ pd=extractFn(idx,'function _paperDca(sess, from)'); }catch(e){}
+  ok('모의 매수 체결가는 raw 종가', /const buyPx=i=>rawM\[days\[i\]\.date\]/.test(pd) && !/price:\+cl\[i\]/.test(pd), pd?'':'_paperDca 없음');
+  let keys=''; try{ keys=idx.slice(idx.indexOf('const SIM_KEYS='), idx.indexOf('};', idx.indexOf('const SIM_KEYS='))+2); }catch(e){}
+  ok('모의 지문에 reinv 포함', /dca\s*:\s*\[[^\]]*'reinv'/.test(keys));
+  // 성과표도 분배금을 자산에 넣어야 각 탭 분석과 값이 같다
+  let ps=''; try{ ps=extractFn(idx,'function paperStat(tab, sess)'); }catch(e){}
+  ok('성과표가 분배금 포함 총자산을 쓴다', /total=c\.ready\?c\.total:/.test(ps));
+
+  ok('티커는 자유 입력 (버튼 선택 아님)', /id="set_dcaticker_in"/.test(idx) && !/id="set_dcaticker"/.test(idx));
+  ok('입력값으로 저장한다', /ticker:tkVal\('set_dcaticker_in','USD'\)/.test(idx));
+  ok('자동완성 배선', /function tkSearch\(id\)/.test(idx) && /\/api\/search\?q=/.test(idx));
+  // 늦게 온 응답이 새 결과를 덮으면 엉뚱한 목록이 뜬다
+  ok('늦은 응답이 새 결과를 안 덮는다', /if\(seq!==_tk\.seq\) return;/.test(idx));
+  // blur가 먼저 나면 click이 안 잡힌다 — mousedown/touchstart로 받아야 한다
+  ok('목록 선택이 blur보다 먼저 잡힌다', /addEventListener\('mousedown'/.test(idx) && /addEventListener\('touchstart'/.test(idx));
+}
+
+
 console.log(`\n════ 결과: ${pass} PASS / ${fail} FAIL ${fail===0?'— ALL PASS ★':'— 배포 금지, 위 ✗ 항목 수정 필요'} ════`);
 process.exit(fail===0?0:1);
