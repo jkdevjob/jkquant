@@ -26,12 +26,14 @@ export async function onRequestGet({ request, env }) {
   const period2 = url.searchParams.get("period2");  // 유닉스 타임스탬프 (초)
   const debug = url.searchParams.get("debug") === "1";
   const wantIntraday = url.searchParams.get("intraday") !== "0";
+  const wantDiv = url.searchParams.get("div") === "1";     // 배당·분할 이력 + raw 종가
 
   // Finnhub 키: Cloudflare 환경변수(FINNHUB_KEY) 또는 아래 상수에 직접 입력
   const FINNHUB_KEY = (env && env.FINNHUB_KEY) || INLINE_FINNHUB_KEY || "";
 
   const dbg = [];
   let series = [], ohlc = [], price = null, marketState = null, currency = "USD", src = null, intraday = null;
+  let dividends = null, splits = null, raw = null;
 
   // ── 국내상장 ETF (6자리 숫자 종목코드, 예: 423920) → 네이버 금융 ──
   if (/^\d{6}$/.test(symbol)) {
@@ -61,9 +63,10 @@ export async function onRequestGet({ request, env }) {
   if (!series.length) for (const host of ["query1", "query2", "query1-fc"]) {
     const realHost = host === "query1-fc" ? "query1" : host;
     try {
-      const y = await yahooDaily(realHost, symbol, range, dbg, period1, period2);
+      const y = await yahooDaily(realHost, symbol, range, dbg, period1, period2, wantDiv);
       if (y && y.series.length) {
         series = y.series; ohlc = y.ohlc; if (price == null) price = y.price; marketState = y.marketState; currency = y.currency;
+        dividends = y.dividends; splits = y.splits; raw = y.raw;
         if (!src) src = "yahoo-" + realHost;
         break;
       }
@@ -100,6 +103,7 @@ export async function onRequestGet({ request, env }) {
   if (price == null) price = last.close;
 
   const out = { symbol, currency, src, price: +(+price).toFixed(4), marketState, last, series, ohlc, intraday };
+  if (wantDiv) { out.dividends = dividends || []; out.splits = splits || []; out.raw = raw || []; }
   if (debug) out.debug = dbg;
   return new Response(JSON.stringify(out), { headers: JH });
 }
@@ -110,14 +114,17 @@ export async function onRequestOptions() {
   }});
 }
 
-async function yahooDaily(host, symbol, range, dbg, period1=null, period2=null) {
+async function yahooDaily(host, symbol, range, dbg, period1=null, period2=null, wantDiv=false) {
   // period1/period2가 있으면 우선 사용, 없으면 range 사용 (max는 period 방식으로 우회)
   const rangeParam = (period1 && period2)
     ? `period1=${period1}&period2=${period2}`
     : range === "max"
       ? `period1=0&period2=${Math.floor(Date.now()/1000)+86400}`
       : `range=${encodeURIComponent(range)}`;
-  const u = `https://${host}.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?interval=1d&${rangeParam}&includePrePost=false`;
+  // 배당/분할은 events로 따로 받는다. series의 close는 adjclose(배당 재투자 반영)라
+  // 분배금을 따로 보여주려면 raw close가 같이 필요하다 — 안 그러면 이중계상된다.
+  const evParam = wantDiv ? "&events=div%7Csplit" : "";
+  const u = `https://${host}.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?interval=1d&${rangeParam}&includePrePost=false${evParam}`;
   const r = await fetch(u, { headers: { "User-Agent": UA, "Accept": "application/json", "Referer": "https://finance.yahoo.com/", "Origin": "https://finance.yahoo.com" }, cf: { cacheTtl: 60 } });
   dbg && dbg.push(`yahooDaily ${host}: HTTP ${r.status}`);
   if (!r.ok) throw new Error("HTTP " + r.status);
@@ -130,18 +137,32 @@ async function yahooDaily(host, symbol, range, dbg, period1=null, period2=null) 
   const rawA = q.close || [];
   const closeA = adjA.length ? adjA : rawA;  // adjclose 우선 (DRIP 반영), 없으면 raw close
   const openA = q.open || [], highA = q.high || [], lowA = q.low || [];
-  const series = [], ohlc = [];
+  const series = [], ohlc = [], raw = [];
   for (let i = 0; i < ts.length; i++) {
     const c = closeA[i]; if (c == null) continue;
     const d = new Date(ts[i] * 1000).toISOString().slice(0, 10);
     series.push({ date: d, close: +(+c).toFixed(4) });
+    if (wantDiv && rawA[i] != null) raw.push({ date: d, close: +(+rawA[i]).toFixed(4) });
     // O/H/L을 종가와 같은 조정 기준으로 통일: f = adjClose/rawClose (배당·분할 정합).
     // 이전엔 raw O/H/L + adj종가 혼합 → '종가가 고저 밖' 결함, 고가 기준 익절이 과대 체결됐음.
     const f = (adjA.length && rawA[i] > 0) ? c / rawA[i] : 1;
     ohlc.push({ date: d, open: openA[i] != null ? +(openA[i] * f).toFixed(4) : +(+c).toFixed(4), high: highA[i] != null ? +(highA[i] * f).toFixed(4) : +(+c).toFixed(4), low: lowA[i] != null ? +(lowA[i] * f).toFixed(4) : +(+c).toFixed(4), close: +(+c).toFixed(4) });
   }
   const meta = res.meta || {};
-  return { series, ohlc, price: meta.regularMarketPrice != null ? +meta.regularMarketPrice : null, marketState: meta.marketState || null, currency: meta.currency || "USD" };
+  let dividends = null, splits = null;
+  if (wantDiv) {
+    const ev = res.events || {};
+    const dayOf = t => new Date(t * 1000).toISOString().slice(0, 10);
+    dividends = Object.values(ev.dividends || {})
+      .map(v => ({ date: dayOf(v.date), amount: +(+v.amount).toFixed(6) }))
+      .filter(x => x.amount > 0).sort((a, b) => a.date < b.date ? -1 : 1);
+    splits = Object.values(ev.splits || {})
+      .map(v => ({ date: dayOf(v.date), ratio: (+v.numerator || 1) / (+v.denominator || 1) }))
+      .sort((a, b) => a.date < b.date ? -1 : 1);
+  }
+  return { series, ohlc, raw: wantDiv ? raw : null, dividends, splits,
+           price: meta.regularMarketPrice != null ? +meta.regularMarketPrice : null,
+           marketState: meta.marketState || null, currency: meta.currency || "USD" };
 }
 
 async function yahooIntraday(symbol, dbg) {
