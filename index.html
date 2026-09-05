@@ -466,7 +466,7 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
 </div>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.09</span></h1></div>
+    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.10</span></h1></div>
     <div style="display:flex;align-items:center;gap:8px">
       <a class="btbtn" href="/backtest" title="백테스트">📊<span class="bt-txt"> 백테스트</span></a>
       <button class="btbtn" id="paperbtn" onclick="openPaper()" title="모의투자 성과" style="display:none;border-color:rgba(245,196,81,.45);color:var(--gold)">🧪<span class="bt-txt"> 모의 성과</span></button>
@@ -1506,7 +1506,7 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
   <footer>
     <strong>JK 퀀트</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.09</b> · 2026-09-02</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.10</b> · 2026-09-02</div>
   </footer>
 </div>
 
@@ -1629,16 +1629,16 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
       <div class="note" style="margin-top:6px">배당·분배가 있는 종목이면 분배금이 자동으로 잡힙니다. 국내상장 ETF는 <b>6자리 종목코드</b>를 넣으세요.</div>
     </div>
     <div id="set_dcaonly">
-    <div class="seclabel">적립 주기 <span class="hint" style="color:var(--faint);font-weight:500">알림용 · 계산에는 영향 없음</span></div>
-    <div class="seg" id="set_dcafreq"><button data-v="day">매일</button><button data-v="week">매주</button><button data-v="month" class="on">매월</button></div>
+    <div class="seclabel">적립 주기 <span class="hint" style="color:var(--faint);font-weight:500">모의는 이 주기로 매수 · 직접 기록할 땐 알림용</span></div>
+    <div class="seg" id="set_dcafreq"><button data-v="day" class="on">매일</button><button data-v="week">매주</button><button data-v="month">매월</button></div>
     </div>
-    <div class="field"><label id="set_dcaamt_lbl">1회 적립액 ($) <span class="hint">배수 1배일 때 금액</span></label><input id="set_dcaamt" type="text" inputmode="decimal" value="500" oninput="commaInput(this)"></div>
+    <div class="field"><label id="set_dcaamt_lbl">1회 적립액 ($) <span class="hint">배수 1배일 때 금액</span></label><input id="set_dcaamt" type="text" inputmode="decimal" value="10" oninput="commaInput(this)"></div>
     <div class="seclabel">분배금(배당) 처리</div>
-    <div class="seg" id="set_dcareinv"><button data-v="cash" class="on">현금 수령</button><button data-v="reinv">재투자</button></div>
+    <div class="seg" id="set_dcareinv"><button data-v="cash">현금 수령</button><button data-v="reinv" class="on">재투자</button></div>
     <p class="note" style="margin:4px 0 8px">배당·분배가 있는 종목이면 자동으로 잡힙니다. <b>현금 수령</b>은 받은 분배금을 따로 쌓아 총자산에 더하고, <b>재투자</b>는 배당락일 종가로 다시 삽니다.</p>
     <div id="set_dcaonly2">
     <div class="seclabel">하락 시 배수 <span class="hint" style="color:var(--faint);font-weight:500">종가 ≤ 200일선</span></div>
-    <div class="seg" id="set_dcamul"><button data-v="1">없음(1배)</button><button data-v="1.5">1.5배</button><button data-v="2" class="on">2배</button><button data-v="3">3배</button></div>
+    <div class="seg" id="set_dcamul"><button data-v="1" class="on">없음(1배)</button><button data-v="1.5">1.5배</button><button data-v="2">2배</button><button data-v="3">3배</button></div>
     <p class="note" style="margin:4px 0 8px">종목 자신의 <b>종가 200일선</b> 아래에서만 배수가 걸립니다. 백테(32~40년) 기준 전고점 대비 방식보다 효율 +7~12% 우수. 고정 예산 안에서는 효과가 거의 없고, <b>추가 여윳돈</b>을 넣을 때 의미가 있습니다.</p>
     </div>
   </div>
@@ -1943,7 +1943,7 @@ function migrateIvsSess(sess){
 }
 function ensureIvsBox(){ if(S&&(!S.ivs||!S.ivs.sessions||!S.ivs.sessions.length)){ const d=newIvsSession('내 계좌'); S.ivs={sessions:[d],active:d.id}; } }
 /* mode: 'dca' 적립식(주기마다 매수) / 'lump' 거치식(시작일에 원금 전액 한 번, 이후 보유) */
-function defDcaSettings(){return{ticker:'USD',mode:'dca',amount:500,freq:'month',dipMul:2,cur:'usd'}}
+function defDcaSettings(){return{ticker:'USD',mode:'dca',amount:10,freq:'day',dipMul:1,reinv:true,cur:'usd'}}
 function newDcaSession(name){return{id:uid(),name:name||'내 계좌',settings:defDcaSettings(),hist:[]}}
 
 /* 신규 사용자 기본 상태 (빈 세션 1개씩) */
