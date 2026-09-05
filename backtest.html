@@ -277,7 +277,7 @@ td:first-child{text-align:left;}
   <div class="brand">
     <div>
       <div class="logo">Backtest</div>
-      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v1.167</span></h1>
+      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v1.168</span></h1>
     </div>
   </div>
   <a href="/" class="home">← JK 퀀트</a>
@@ -700,8 +700,11 @@ const C=0,O=1,HI=2,LO=3;
 const TICKERS=['SOXL','TQQQ','TECL','KORU','QLD','USD','SSO','UPRO','SPYU','QQQ','QYLD','JEPQ','QQQI','GPIQ'];
 
 // 실시간 가격 로딩: 설정 기간을 5년 단위 청크로 분할 요청
+/* 배당·raw 종가 저장소. M[tkr]은 adjclose 기준이라 그대로 두고, 분해용으로만 쓴다. */
+let DIV={}, RAW={};
 async function fetchPrices(startDate, endDate){
   const out={}; const failed=[]; const qual={};
+  DIV={}; RAW={};
   const p2end = Math.floor(new Date(endDate).getTime()/1000)+86400;
   const p1start= Math.floor(new Date(startDate).getTime()/1000);
   const chunkSec = 5*365.25*86400|0;
@@ -718,10 +721,10 @@ async function fetchPrices(startDate, endDate){
 
   await Promise.all(TICKERS.map(async t=>{
     try{
-      const allData={};
+      const allData={}, allDiv={}, allRaw={};
       for(const [p1,p2] of chunks){
         try{
-          const r=await fetch(`/api/quote?symbol=${t}&range=5y&period1=${p1}&period2=${p2}`);
+          const r=await fetch(`/api/quote?symbol=${t}&range=5y&period1=${p1}&period2=${p2}&div=1`);
           if(!r.ok) continue;
           const j=await r.json();
           const arr=j&&j.ohlc;
@@ -729,6 +732,12 @@ async function fetchPrices(startDate, endDate){
           arr.filter(d=>d&&d.close!=null).forEach(d=>{
             if(!allData[d.date]) allData[d.date]=[d.date,d.close,d.open||d.close,d.high||d.close,d.low||d.close];
           });
+          /* 배당·raw 종가는 청크마다 따로 오므로 합쳐 둔다.
+             M의 close는 adjclose(배당 재투자 반영)라 총수익은 이미 맞다.
+             '분배금 얼마 받았고 그 사이 원금이 얼마나 녹았나'를 따로 보이려면
+             raw 종가와 분배금 스트림이 별도로 있어야 한다. */
+          (j.dividends||[]).forEach(x=>{ if(x&&x.date&&x.amount>0) allDiv[x.date]=+x.amount; });
+          (j.raw||[]).forEach(x=>{ if(x&&x.date&&x.close>0) allRaw[x.date]=+x.close; });
         }catch(e){ console.warn(t,'청크 실패',e.message); }
       }
       const data=Object.values(allData).sort((a,b)=>a[0]<b[0]?-1:1);
@@ -740,6 +749,8 @@ async function fetchPrices(startDate, endDate){
       const medGap=gaps.length?gaps[Math.floor(gaps.length/2)]:1;
       qual[t]={n:data.length, daily:medGap<=4, calYrs:calDays/365.25};
       out[t]=data;
+      DIV[t]=Object.keys(allDiv).sort().map(d=>({date:d,amount:allDiv[d]}));
+      RAW[t]=allRaw;
     }catch(e){ console.warn('로딩 실패:',t,e.message); failed.push(t); }
   }));
   return { data:out, loaded:Object.keys(out), failed, qual };
@@ -1542,7 +1553,8 @@ function _dcaOne(t,days,amt,step,costOn,dipMul){
   });
   const last=D[days[days.length-1]]?.[C]??0;
   const fin=sh*last;
-  return {invested:inv,final:fin,ret:inv>0?(fin/inv-1)*100:0,snap,mdd:mdd*100,uvSnap,cf,
+  const _div=divSplit(t,days,cf.map(x=>[x[0],x[1]*(1-FEE)]));
+  return {invested:inv,final:fin,ret:inv>0?(fin/inv-1)*100:0,snap,mdd:mdd*100,uvSnap,cf,div:_div,
     dipMul:MUL, dipPct:nBuy?+(nDip/nBuy*100).toFixed(0):0};
 }
 
@@ -2419,6 +2431,34 @@ function cmpDrawChart(rows,days,tkr,title){
   lastRender();
 }
 
+/* ── 분배금 분해 ──────────────────────────────────────────────────
+   M의 close는 adjclose다. 그래서 기존 수익률은 '분배금 재투자 총수익'이 이미 맞다.
+   여기서 따로 구하는 건 그 총수익을 둘로 쪼갠 값이다:
+     가격 수익 (raw 종가로만)  +  받은 분배금
+   커버드콜·고배당은 분배는 많은데 원금이 녹는 경우가 흔해, 둘을 나눠야 그게 보인다.
+   raw/배당이 없는 종목(무배당·CSV 로딩)은 null을 돌려주고 화면에서 그냥 감춘다.
+
+   buys: [[date, amount$], ...] 매수 시점·금액. 그 스케줄을 raw 가격으로 다시 태운다. */
+function divSplit(tkr, days, buys){
+  const dv=(typeof DIV!=='undefined'&&DIV[tkr])||null, rw=(typeof RAW!=='undefined'&&RAW[tkr])||null;
+  if(!dv||!dv.length||!rw) return null;
+  const d0=days[0], d1=days[days.length-1];
+  const inWin=dv.filter(x=>x.date>=d0&&x.date<=d1);
+  if(!inWin.length) return null;
+  const B=[...buys].sort((a,b)=>a[0]<b[0]?-1:1);
+  let sh=0, bi=0, cash=0, n=0, inv=0;
+  const rawAt=d=>{ if(rw[d]>0) return rw[d]; return 0; };
+  for(const ev of inWin){
+    while(bi<B.length && B[bi][0]<=ev.date){ const p=rawAt(B[bi][0]); if(p>0){ sh+=B[bi][1]/p; inv+=B[bi][1]; } bi++; }
+    if(sh>0){ cash+=sh*ev.amount; n++; }
+  }
+  while(bi<B.length){ const p=rawAt(B[bi][0]); if(p>0){ sh+=B[bi][1]/p; inv+=B[bi][1]; } bi++; }
+  const pl=rawAt(d1); if(!(pl>0)||!(inv>0)) return null;
+  const priceVal=sh*pl;
+  return {divCash:cash, nDiv:n, priceVal, invRaw:inv,
+          retPrice:(priceVal/inv-1)*100,              // 가격만 (분배금 제외)
+          retCash:((priceVal+cash)/inv-1)*100};       // 분배금 현금 수령 총수익
+}
 // 매수후보유(B&H) — 목돈 cap 전액을 t0에 매수하고 방치 (일시금 기준선)
 // 비용: 매수 수수료만(끝까지 안 팔아 실현이익 없음 → 양도세 이연 = 방치의 실제 이점)
 function runBH(days,tkr,cap,costOn){
@@ -2427,7 +2467,8 @@ function runBH(days,tkr,cap,costOn){
   let mddPeak=cap,mdd=0; const snap=[];
   days.forEach((d,i)=>{ const eq=sh*p(d); if(eq>mddPeak)mddPeak=eq; else{const dd=(mddPeak-eq)/mddPeak;if(dd>mdd)mdd=dd;} if(i%10===0)snap.push([d,eq]); });
   const fin=sh*p(days[days.length-1]); snap.push([days[days.length-1],fin]);
-  return {invested:cap,final:fin,ret:(fin/cap-1)*100,mdd:mdd*100,snap};
+  return {invested:cap,final:fin,ret:(fin/cap-1)*100,mdd:mdd*100,snap,
+          div:divSplit(tkr,days,[[days[0],cap*(1-FEE)]])};
 }
 // 200일선 로테 — 적립형: 매일 균등 적립(총투입=contribTotal) + 전일 신호로 보유/현금. MDD는 단위가치(평가액÷투입) 기준.
 // 매수·매도 조건(16조합)·대피처(현금/단기국채)는 일시금 runMA200과 동일 규약 — 로테 탭 설정을 그대로 따른다.
@@ -3058,18 +3099,31 @@ function renderDCA(res,tickers,opts){
   lastRender();
   // 테이블 (h는 if/else 밖에서 선언 — 블록 let이라 마지막 h+= 에서 ReferenceError로 표가 안 그려지던 버그)
   let h;
+  /* 분배금 열 — 배당 있는 종목이 하나라도 있을 때만 붙인다.
+     '수익률'은 adjclose 기준이라 이미 분배금 재투자 총수익이다.
+     그 옆에 '가격만'을 나란히 놓아야 원금이 녹는 게 보인다. */
+  const anyDiv=ranked.some(t=>res[t].div && res[t].div.nDiv>0);
+  const dvH=anyDiv?'<th title="구간 중 받은 분배금 합계 (1주 기준이 아니라 실제 보유수량 기준)">분배금</th>'
+                  +'<th title="분배금을 뺀 주가만의 수익률 — 총수익과 벌어질수록 원금이 녹고 있다는 뜻">가격만</th>':'';
+  const dvR=r=>{ if(!anyDiv) return '';
+    const d=r.div;
+    if(!d||!d.nDiv) return '<td style="color:var(--dim)">—</td><td style="color:var(--dim)">—</td>';
+    return `<td style="color:var(--green)">$${fmt(Math.round(d.divCash))}<span style="color:var(--dim);font-size:10px"> ${d.nDiv}회</span></td>`
+         + `<td style="color:${d.retPrice>=0?'var(--green)':'var(--red)'}">${pctStr(d.retPrice)}</td>`; };
   if(isInd){
-    h=`<thead><tr><th>ETF</th><th>레버리지</th><th>기간</th><th>원금</th><th>최종</th><th>수익률</th><th>CAGR</th><th>MDD</th><th>MAR</th></tr></thead><tbody>`;
+    h=`<thead><tr><th>ETF</th><th>레버리지</th><th>기간</th><th>원금</th><th>최종</th><th>수익률</th>${dvH}<th>CAGR</th><th>MDD</th><th>MAR</th></tr></thead><tbody>`;
     ranked.forEach((t,i)=>{const r=res[t],m=META[t];
       const _mdd=(r.mdd!=null?r.mdd:0), _cagr=(r.cagr||0), _mar=(_mdd>0?_cagr/_mdd:0);
-      h+=`<tr><td><span class="dot" style="background:${m.color}"></span>${t}<span class="tk-nm">${m.name}</span></td><td>${m.lev}×</td><td style="font-size:11px;color:var(--dim)">${r.period||''} <span style="opacity:.7">(${(r.yrs||0).toFixed(1)}년)</span></td><td>$${fmt(r.invested)}</td><td style="color:var(--accent)">$${fmt(r.final)}</td><td style="color:${r.ret>=0?'var(--green)':'var(--red)'}">${pctStr(r.ret)}</td><td style="color:${_cagr>=0?'var(--green)':'var(--red)'}"><b>${pctStr(_cagr)}</b></td><td>${_mdd.toFixed(1)}%</td><td style="color:var(--gold)">${_mar.toFixed(2)}</td></tr>`;});
+      h+=`<tr><td><span class="dot" style="background:${m.color}"></span>${t}<span class="tk-nm">${m.name}</span></td><td>${m.lev}×</td><td style="font-size:11px;color:var(--dim)">${r.period||''} <span style="opacity:.7">(${(r.yrs||0).toFixed(1)}년)</span></td><td>$${fmt(r.invested)}</td><td style="color:var(--accent)">$${fmt(r.final)}</td><td style="color:${r.ret>=0?'var(--green)':'var(--red)'}">${pctStr(r.ret)}</td>${dvR(r)}<td style="color:${_cagr>=0?'var(--green)':'var(--red)'}"><b>${pctStr(_cagr)}</b></td><td>${_mdd.toFixed(1)}%</td><td style="color:var(--gold)">${_mar.toFixed(2)}</td></tr>`;});
   }else{
-    h=`<thead><tr><th>ETF</th><th>레버리지</th><th>원금</th><th>최종</th><th>수익률</th><th>CAGR</th><th>MDD</th><th>MAR</th><th>기간</th></tr></thead><tbody>`;
+    h=`<thead><tr><th>ETF</th><th>레버리지</th><th>원금</th><th>최종</th><th>수익률</th>${dvH}<th>CAGR</th><th>MDD</th><th>MAR</th><th>기간</th></tr></thead><tbody>`;
     ranked.forEach((t,i)=>{const r=res[t],m=META[t];
       const _mdd=(r.mdd!=null?r.mdd:0), _cagr=(r.cagr||0), _mar=(_mdd>0?_cagr/_mdd:0), _yrs=(r.yrs||0);
-      h+=`<tr><td><span class="dot" style="background:${m.color}"></span>${t}<span class="tk-nm">${m.name}</span></td><td>${m.lev}×</td><td>$${fmt(r.invested)}</td><td style="color:${i===0?'var(--gold)':'var(--accent)'}"><b>$${fmt(r.final)}</b></td><td style="color:${r.ret>=0?'var(--green)':'var(--red)'}">${pctStr(r.ret)}</td><td>${pctStr(_cagr)}</td><td>${_mdd.toFixed(1)}%</td><td style="color:var(--gold)">${_mar.toFixed(2)}</td><td style="font-size:11px;color:var(--dim)">${_yrs.toFixed(1)}년</td></tr>`;});
+      h+=`<tr><td><span class="dot" style="background:${m.color}"></span>${t}<span class="tk-nm">${m.name}</span></td><td>${m.lev}×</td><td>$${fmt(r.invested)}</td><td style="color:${i===0?'var(--gold)':'var(--accent)'}"><b>$${fmt(r.final)}</b></td><td style="color:${r.ret>=0?'var(--green)':'var(--red)'}">${pctStr(r.ret)}</td>${dvR(r)}<td>${pctStr(_cagr)}</td><td>${_mdd.toFixed(1)}%</td><td style="color:var(--gold)">${_mar.toFixed(2)}</td><td style="font-size:11px;color:var(--dim)">${_yrs.toFixed(1)}년</td></tr>`;});
   }
   h+='</tbody>';document.getElementById('tbl').innerHTML=h;
+  if(anyDiv) document.getElementById('winner').innerHTML+=
+    `<div style="font-size:11px;color:var(--dim);margin-top:4px">💰 <b>수익률</b>은 분배금 재투자 총수익 · <b>가격만</b>은 분배금을 뺀 주가 수익률 — 둘이 크게 벌어지면 분배금이 원금에서 나오고 있다는 뜻입니다.</div>`;
   document.getElementById('tblYear').innerHTML=yearCompareCard(ranked.map(t=>({label:t,snap:res[t].snap,color:(META[t]||{}).color})));
 }
 

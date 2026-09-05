@@ -658,5 +658,30 @@ console.log('[17] 배당·분배금 · 티커 입력');
 }
 
 
+/* ════ 18. 백테 분배금 분해 ════
+   M의 close는 adjclose라 기존 수익률은 이미 '분배금 재투자 총수익'이다.
+   그걸 건드리지 않고 옆에 '가격만 + 받은 분배금'을 덧붙인다.
+   커버드콜은 분배는 많은데 원금이 녹는다 — 둘을 나눠야 그게 보인다. */
+console.log('[18] 백테 분배금 분해');
+{
+  ok('배당·raw 저장소 존재', /let DIV=\{\}, RAW=\{\}/.test(bt));
+  ok('시세 요청이 배당을 함께 받는다', /period2=\$\{p2\}&div=1/.test(bt));
+  ok('청크마다 배당·raw를 합친다', /allDiv\[x\.date\]=\+x\.amount/.test(bt) && /allRaw\[x\.date\]=\+x\.close/.test(bt));
+  let ds=''; try{ ds=extractFn(bt,'function divSplit(tkr, days, buys)'); }catch(e){}
+  ok('분해기 존재', !!ds, ds?'':'divSplit 없음');
+  ok('분배금은 배당락일 보유수량 기준', /while\(bi<B\.length && B\[bi\]\[0\]<=ev\.date\)/.test(ds));
+  ok('매수 단가는 raw 종가', /const rawAt=d=>/.test(ds) && /sh\+=B\[bi\]\[1\]\/p/.test(ds));
+  ok('가격수익·현금수령총수익을 따로 낸다', /retPrice:/.test(ds) && /retCash:/.test(ds));
+  ok('배당 없으면 null (화면에서 감춤)', /if\(!inWin\.length\) return null/.test(ds));
+  // 기존 수익률(adjclose)은 절대 바뀌면 안 된다 — 앵커가 그걸 물고 있다
+  let dc=''; try{ dc=extractFn(bt,'function _dcaOne(t,days,amt,step,costOn,dipMul)'); }catch(e){}
+  ok('적립 결과에 div를 덧붙인다(기존 ret 불변)',
+     /ret:inv>0\?\(fin\/inv-1\)\*100:0/.test(dc) && /div:_div/.test(dc));
+  let bh=''; try{ bh=extractFn(bt,'function runBH(days,tkr,cap,costOn)'); }catch(e){}
+  ok('거치(B&H)에도 분해를 붙인다', /div:divSplit\(tkr,days,\[\[days\[0\]/.test(bh));
+  ok('표에 분배금·가격만 열', /const anyDiv=ranked\.some/.test(bt) && /가격만/.test(bt));
+}
+
+
 console.log(`\n════ 결과: ${pass} PASS / ${fail} FAIL ${fail===0?'— ALL PASS ★':'— 배포 금지, 위 ✗ 항목 수정 필요'} ════`);
 process.exit(fail===0?0:1);
