@@ -695,5 +695,38 @@ console.log('[18] 백테 분배금 분해');
 }
 
 
+/* ════ 19. 운영 무매 출금 · 복리/단리 ════
+   잔금 = 원금 + 실현손익 − 보유원가 − 출금 − 단리적립.
+   출금과 단리적립은 계좌 밖으로 나갔을 뿐 없어진 돈이 아니라 총자산엔 다시 더한다.
+   단리 규약은 백테 runIM과 같아야 한다 — 사이클 끝에 원금 초과분만 빼고,
+   손실로 끝난 사이클은 그대로 이월(외부 수혈 없음). */
+console.log('[19] 출금 · 복리/단리');
+{
+  let ci=''; try{ ci=extractFn(idx,'function computeInf()'); }catch(e){}
+  ok('출금 기록을 잔금에서 뺀다', /h\.kind==='출금'/.test(ci) && /withdrawn \+= Math\.max\(0,\+h\.amt\|\|0\)/.test(ci), ci?'':'computeInf 없음');
+  ok('잔금 식에 출금·단리적립 반영', /principal\+realized-inv-withdrawn-saved/.test(ci));
+  ok('단리는 사이클 끝 초과익만 빼낸다', /if\(simple\)\{[\s\S]{0,260}?cashNow>\(\+st\.principal\|\|0\)\) saved\+=/.test(ci));
+  ok('단리 판정은 compound===false', /const simple=\(st\.compound===false\)/.test(ci));
+  ok('출금·단리적립을 밖으로 낸다', /withdrawn,saved,simple,outside:withdrawn\+saved/.test(ci));
+  // 출금이 매매로 잡히면 사이클 종료·T가 오염된다
+  ok('출금은 매수·매도가 아니다', /function isBuy\(k\)\{return k==='출금'\?false/.test(idx)
+     && /function isSell\(k\)\{return k!=='출금'/.test(idx));
+  // 백테와 같은 규약인지 (초과익만·손실 이월)
+  ok('백테 단리 규약과 동일', /else if\(cash>cap\)\{ savedProfit\+=cash-cap; cash=cap; \}/.test(bt));
+  // 설정·지문
+  ok('복리/단리 설정 존재', /id="set_compound"/.test(idx) && /compound:segGet\('set_compound'\)!=='0'/.test(idx));
+  let keys=''; try{ keys=idx.slice(idx.indexOf('const SIM_KEYS='), idx.indexOf('};', idx.indexOf('const SIM_KEYS='))+2); }catch(e){}
+  ok('모의 지문에 compound 포함', /inf\s*:\s*\[[^\]]*'compound'/.test(keys));
+  // 총자산에 다시 더하지 않으면 출금할 때마다 수익률이 떨어져 보인다
+  let ra=''; try{ ra=extractFn(idx,'function renderInfAnal()'); }catch(e){}
+  ok('총자산이 나간 돈을 다시 더한다', /c\.bal\+\(c\.outside\|\|0\)/.test(ra), ra?'':'renderInfAnal 없음');
+  let ps=''; try{ ps=extractFn(idx,'function paperStat(tab, sess)'); }catch(e){}
+  ok('성과표도 같은 기준', /price\*c\.qty \+ c\.bal \+ \(c\.outside\|\|0\)/.test(ps));
+  // 입력·편집 경로
+  ok('시트에 출금 항목·금액칸', /kindOptHTML\('출금'/.test(idx) && /id="sh_amt"/.test(idx));
+  ok('편집에서도 출금 가능', /<option value="출금">/.test(idx) && /id="ei_amt"/.test(idx));
+}
+
+
 console.log(`\n════ 결과: ${pass} PASS / ${fail} FAIL ${fail===0?'— ALL PASS ★':'— 배포 금지, 위 ✗ 항목 수정 필요'} ════`);
 process.exit(fail===0?0:1);

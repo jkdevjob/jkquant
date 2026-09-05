@@ -466,7 +466,7 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
 </div>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.10</span></h1></div>
+    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.11</span></h1></div>
     <div style="display:flex;align-items:center;gap:8px">
       <a class="btbtn" href="/backtest" title="백테스트">📊<span class="bt-txt"> 백테스트</span></a>
       <button class="btbtn" id="paperbtn" onclick="openPaper()" title="모의투자 성과" style="display:none;border-color:rgba(245,196,81,.45);color:var(--gold)">🧪<span class="bt-txt"> 모의 성과</span></button>
@@ -649,7 +649,9 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
         <div class="progress"><div class="bar" id="a_bar" style="width:0%"></div></div>
         <div class="pscale"><span>투자 비중</span><span id="a_ratio">0%</span></div></div>
       <div class="card"><h3><span class="dot"></span>요약</h3>
-        <div class="rowline"><span class="k">총 자산 <span class="sub">평가금 + 잔금</span></span><span class="val mono" id="a_total">$0</span></div>
+        <div class="rowline" id="a_wdrow" style="display:none"><span class="k">출금 <span class="sub">직접 뺀 돈</span></span><span class="val mono" id="a_wd" style="color:var(--gold)">$0</span></div>
+        <div class="rowline" id="a_savedrow" style="display:none"><span class="k">단리 적립 <span class="sub" id="a_saved_sub">사이클 초과익</span></span><span class="val mono" id="a_saved" style="color:var(--gold)">$0</span></div>
+        <div class="rowline"><span class="k">총 자산 <span class="sub" id="a_total_sub">평가금 + 잔금</span></span><span class="val mono" id="a_total">$0</span></div>
         <div class="rowline"><span class="k">누적 수익률</span><span class="val mono" id="a_ret">—</span></div>
         <div class="rowline"><span class="k">총 매수금</span><span class="val mono" id="a_totbuy">$0</span></div>
         <div class="rowline"><span class="k">총 매도금</span><span class="val mono" id="a_totsell">$0</span></div>
@@ -1506,7 +1508,7 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
   <footer>
     <strong>JK 퀀트</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.10</b> · 2026-09-02</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.11</b> · 2026-09-02</div>
   </footer>
 </div>
 
@@ -1529,6 +1531,9 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
     <p class="note" style="margin:-2px 0 8px">TQQQ·SOXL만 라오어 공식. <b>TECL·KORU는 비공식</b>(자체 백테스트). 종목을 고르면 <b>검정으로 확인된 권장 엔진·파라미터가 자동 적용</b>됩니다. 익절%를 바꾸면 별지점·리버스 복귀조건도 함께 바뀝니다.</p>
     <div class="seclabel">통화 <span class="hint" style="color:var(--faint);font-weight:500">국내상장 ETF는 원화</span></div><div class="seg" id="set_cur"><button data-v="usd">달러 ($)</button><button data-v="krw">원화 (₩)</button></div>
     <div class="seclabel">분할 수</div><div class="seg" id="set_div"><button data-v="10">10분할</button><button data-v="20">20분할</button><button data-v="30">30분할</button><button data-v="40">40분할</button></div>
+    <div class="seclabel">익절금 처리 <span class="hint" style="color:var(--faint);font-weight:500">사이클이 끝났을 때</span></div>
+    <div class="seg" id="set_compound"><button data-v="1" class="on">복리</button><button data-v="0">단리</button></div>
+    <p class="note" style="margin:4px 0 8px"><b>복리</b>는 익절금을 잔금에 남겨 다음 회차 매수금이 커집니다. <b>단리</b>는 사이클이 끝날 때 <b>원금을 넘는 초과분만 빼내</b> 따로 쌓아 두고, 잔금은 원금으로 되돌립니다. 손실로 끝난 사이클은 빼지 않고 그대로 이월합니다.</p>
     <div class="seclabel">리버스 <span class="hint" style="color:var(--faint);font-weight:500">원금 소진 후 무한매도 · V4.0</span></div><div class="seg" id="set_reverse"><button data-v="0" class="on">끔</button><button data-v="1">켬</button></div>
     <p class="note" style="margin:-2px 0 8px">끔(기본): 원금 소진 후 <b>후반전 별지점 손절 쿼터매도</b>로만 방어(홀드). 켬: 소진 후 <b>리버스 무한매도</b> 모드 진입. 백테스트상 20분할·급락 후 V반등에서는 끔이 유리했습니다.</p>
     <div class="seclabel">익절 조절 <span class="hint" style="color:var(--faint);font-weight:500">20일 상승률 · 선택</span></div><div class="seg" id="set_tgtdyn"><button data-v="0" class="on">끔</button><button data-v="1">상승률</button></div>
@@ -1717,12 +1722,15 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
       <option value="리버스매수">리버스매수</option><option value="리버스매도">리버스매도</option>
       <option value="지정가매도+1회매수">지정가매도+1회매수</option><option value="지정가매도+절반매수">지정가매도+절반매수</option>
       <option value="1회매수+지정가매도(애프터)">1회매수+지정가매도(애프터)</option><option value="절반매수+지정가매도(애프터)">절반매수+지정가매도(애프터)</option>
+      <option value="출금">출금</option>
     </select></div>
   <div id="ei_simple">
     <div class="grid2">
       <div class="field"><label>체결가 ($)</label><input id="ei_price" type="text" inputmode="decimal" oninput="commaInput(this)"></div>
       <div class="field"><label>수량 (주)</label><input id="ei_qty" type="number" inputmode="numeric"></div>
     </div></div>
+  <div id="ei_wd" style="display:none">
+    <div class="field"><label>출금액 ($)</label><input id="ei_amt" type="text" inputmode="decimal" oninput="commaInput(this)"></div></div>
 
   <div id="ei_cx" style="display:none">
     <div class="grid2">
@@ -1996,13 +2004,19 @@ function reverseT(kind,t,div){
   if(kind==='리버스매수'){ return t + (div - t)*0.25; }
   return t;
 }
-function isBuy(k){return k.includes('매수')&&!k.includes('지정가매도')||k==='지정가매도+1회매수'||k==='지정가매도+절반매수'?k!=='지정가매도':k.includes('매수')}
-function isSell(k){return k.includes('매도')}
+function isBuy(k){return k==='출금'?false:(k.includes('매수')&&!k.includes('지정가매도')||k==='지정가매도+1회매수'||k==='지정가매도+절반매수'?k!=='지정가매도':k.includes('매수'))}
+function isSell(k){return k!=='출금'&&k.includes('매도')}
 
 /* 누적 계산: 평단/보유/잔금/T/실현손익 */
 function computeInf(){
   const st=curStrat().settings, hist=curStrat().hist;
   let avg=0,qty=0,inv=0,realized=0,T=0,totbuy=0,totsell=0,cycleSeq=1;
+  /* withdrawn — 사용자가 직접 뺀 돈 (출금 기록)
+     saved     — 단리 모드에서 사이클이 끝날 때 자동으로 빠진 초과익
+     둘 다 잔금에서 나가지만 성격이 다르다. 총자산에는 둘 다 다시 더한다
+     (계좌 밖으로 나갔을 뿐 없어진 돈이 아니다). */
+  let withdrawn=0, saved=0;
+  const simple=(st.compound===false);
   let reverseTraded=false; // 현재 리버스 스트릭에서 이미 리버스매도/매수가 있었는지 (1일차 MOC 판정용)
   let inReverseNow=false;  // 지금 리버스 진행 중인지 (state). T로 매번 재판정하면 첫 MOC매도에 T가
                            // 분할−1 밑으로 떨어져 리버스가 즉시 풀리므로, state로 들고 간다.
@@ -2015,6 +2029,8 @@ function computeInf(){
       profit=(h.price-avg)*h.qty; realized+=profit; qty-=h.qty; inv-=avg*h.qty; totsell+=h.price*h.qty;
     }else if(h.kind==='1회매수'||h.kind==='절반매수'||h.kind==='리버스매수'){
       const nq=qty+h.qty; avg=nq>0?(avg*qty+h.price*h.qty)/nq:h.price; qty=nq; inv+=h.price*h.qty; totbuy+=h.price*h.qty;
+    }else if(h.kind==='출금'){
+      withdrawn += Math.max(0,+h.amt||0);        // 매매가 아니다 — T·평단·보유 불변, 잔금만 준다
     }else if(h.kind.startsWith('지정가매도+')||h.kind.includes('+지정가매도')){
       // 복합: 이름 순서대로 처리 — "지정가매도+..."는 매도가 먼저(같은날 매도 후 LOC매수),
       // "...+지정가매도(애프터)"는 매수가 먼저(아침 LOC매수 후 전날 건 애프터지정가 체결)
@@ -2038,9 +2054,16 @@ function computeInf(){
     if(qty<=1e-9 && isSell(h.kind) && !isBuy(h.kind)){ // 1e-9 톨러런스: 소수 수량 매도 시 부동소수점 잔여로 전량매도(사이클 종료)를 놓치지 않도록 (backtest와 동일 기준)
       qty=0; avg=0; T=0; inv=0; // 보유·평단·T·투입원가 리셋 (realized 누적은 유지 → 잔금에 반영)
       cycleEnd=true; reverseTraded=false; inReverseNow=false;
+      /* 단리 — 사이클이 끝났을 때 잔금이 원금을 넘으면 그 초과분만 빼낸다.
+         손실 사이클은 그대로 이월한다(밖에서 돈을 더 넣지 않는다).
+         백테 runIM의 `else if(cash>cap){ savedProfit+=cash-cap; cash=cap; }`와 같은 규약. */
+      if(simple){
+        const cashNow=(+st.principal||0)+realized-withdrawn-saved;   // 이 시점 inv=0
+        if(cashNow>(+st.principal||0)) saved+=cashNow-(+st.principal||0);
+      }
     }
     // 이 거래 직후 시점의 잔금·별%·별지점
-    const balAfter=st.principal+realized-inv;
+    const balAfter=st.principal+realized-inv-withdrawn-saved;
     const pctAfter=starPct(st.ticker,st.div,T,st.target);
     const starAfter=avg>0?avg*(1+pctAfter/100):0;
     const row={...h,profit,avgAfter:avg,qtyAfter:qty,Tafter:T,balAfter,pctAfter,starAfter,cycleEnd,cycleSeq};
@@ -2051,8 +2074,10 @@ function computeInf(){
   // 소진 기준(라오어 공지) = '1회 매수가 불가능해지는 시점' = 잔금 < 잔금/(분할−T) ⟺ T > 분할−1.
   // 리버스 OFF(기본): 원금 소진 후에도 리버스모드로 넘어가지 않고 일반모드(후반전 별지점 손절 쿼터매도)로 방어.
   const reverseActive = (st.reverse===true) && (inReverseNow || (st.div-T<1)) && qty>0;   // 소진 = T>분할−1
-  const bal=st.principal+realized-inv; // 가용 잔금 = 원금 + 실현손익 − 현재 보유분 투입원가
-  return {avg,qty,inv,realized,T,totbuy,totsell,bal,rows,st,cycleSeq,reverseTraded,inReverseNow,reverseActive};
+  // 가용 잔금 = 원금 + 실현손익 − 보유분 투입원가 − 출금 − 단리 적립분
+  const bal=st.principal+realized-inv-withdrawn-saved;
+  return {avg,qty,inv,realized,T,totbuy,totsell,bal,rows,st,cycleSeq,reverseTraded,inReverseNow,reverseActive,
+          withdrawn,saved,simple,outside:withdrawn+saved};
 }
 
 /* ──── 익절 동적 조절: 20일 상승률 (선택 · 백테 backtest.html _imMom/_imTgtOf와 동일 정의) ────
@@ -2700,13 +2725,27 @@ function renderInfAnal(){
   $('a_principal').textContent=wn(st.principal);
   // 투자 중 = 평가금(원가 아님). 예전엔 원가÷원금이라 복리로 원금을 넘으면 비중이 180%처럼 나왔다.
   const px0=(lastQuote.inf&&(lastQuote.inf.price||lastQuote.inf.last))||c.avg||0;
-  const invested=px0*c.qty, total=invested+c.bal;
+  /* 출금·단리 적립분은 계좌 밖으로 나갔을 뿐 없어진 돈이 아니다.
+     수익률을 원금 대비로 보려면 총자산에 다시 더해야 한다.
+     안 더하면 출금할 때마다 수익률이 떨어지는 것처럼 보인다. */
+  const invested=px0*c.qty, total=invested+c.bal+(c.outside||0);
   $('a_invested').textContent=wn(invested);
   $('a_cash').textContent=wn(c.bal);
   const ratio=total>0?invested/total*100:0;
   $('a_bar').style.width=Math.min(100,ratio)+'%';
   $('a_ratio').textContent=ratio.toFixed(0)+'%';
   if($('a_total')) $('a_total').textContent=wn(total);
+  /* 출금·단리 적립은 있을 때만 보여준다 — 없는 세션에 0원 행을 띄우면 잡음이다 */
+  { const wd=c.withdrawn||0, sv=c.saved||0;
+    const rw=$('a_wdrow'), rs=$('a_savedrow');
+    if(rw) rw.style.display=wd>0?'':'none';
+    if(rs) rs.style.display=sv>0?'':'none';
+    if(wd>0&&$('a_wd')) $('a_wd').textContent='−'+wn(wd);
+    if(sv>0&&$('a_saved')) $('a_saved').textContent=wn(sv);
+    const sub=$('a_total_sub');
+    if(sub) sub.textContent = (wd+sv)>0 ? '평가금 + 잔금 + 나간 돈' : '평가금 + 잔금';
+    const ss=$('a_saved_sub');
+    if(ss) ss.textContent = c.simple ? '사이클 초과익 (단리)' : '사이클 초과익'; }
   if($('a_ret')){ const rp=st.principal>0?(total/st.principal-1)*100:0;
     $('a_ret').textContent=st.principal>0?((rp>=0?'+':'')+rp.toFixed(2)+'%'):'—';
     $('a_ret').style.color=rp>=0?'var(--buy)':'var(--sell)'; }
@@ -2729,6 +2768,11 @@ function renderInfHist(){
       qtyCell=`${h.sellQty}<br>${h.buyQty}`;
       profitCell=`<span style="color:${h.profit>=0?'var(--buy)':'var(--sell)'}">${h.profit>=0?'+':''}${wn(h.profit)}</span>`;
       cls='cx';
+    }else if(h.kind==='출금'){
+      // 출금은 체결가·수량이 없다 — 금액만 보여준다
+      priceCell='—'; qtyCell='—';
+      profitCell=`<span style="color:var(--gold)">−${wn(+h.amt||0)}</span>`;
+      cls='wd';
     }else{
       priceCell=wn(h.price); qtyCell=h.qty;
       profitCell= sell?`<span style="color:${h.profit>=0?'var(--buy)':'var(--sell)'}">${h.profit>=0?'+':''}${wn(h.profit)}</span>`:'-';
@@ -2746,13 +2790,21 @@ function renderInfHist(){
 /* 날짜 → 입력순(ts) 정렬: 같은 날짜는 입력한 순서 유지 */
 function sortHist(arr){arr.sort((a,b)=>{const d=(a.date||'').localeCompare(b.date||'');return d!==0?d:((a.ts||0)-(b.ts||0))})}
 let editInfIdx=-1;
-function eiKindUI(k){ const cx=isCx(k); const s=$('ei_simple'), x=$('ei_cx'); if(s)s.style.display=cx?'none':''; if(x)x.style.display=cx?'':'none'; }
+function eiKindUI(k){
+  // 출금은 체결가·수량이 없다 — 금액칸만 보인다
+  const cx=isCx(k), wd=(k==='출금');
+  const s=$('ei_simple'), x=$('ei_cx'), w=$('ei_wd');
+  if(s)s.style.display=(cx||wd)?'none':'';
+  if(x)x.style.display=cx?'':'none';
+  if(w)w.style.display=wd?'':'none';
+}
 function editInf(i){
   const h=curStrat().hist[i]; if(!h)return;
   editInfIdx=i;
   $('ei_date').value=h.date||new Date().toISOString().slice(0,10);
   $('ei_kind').value=h.kind; eiKindUI(h.kind);
   if(isCx(h.kind)){ $('ei_sprice').value=h.sellPrice!=null?h.sellPrice:''; $('ei_sqty').value=h.sellQty!=null?h.sellQty:''; $('ei_bprice').value=h.buyPrice!=null?h.buyPrice:''; $('ei_bqty').value=h.buyQty!=null?h.buyQty:''; }
+  else if(h.kind==='출금'){ $('ei_amt').value=h.amt!=null?h.amt:''; }
   else { $('ei_price').value=h.price!=null?h.price:''; $('ei_qty').value=h.qty!=null?h.qty:''; }
   $('ei_tman').value=(typeof h.tManual==='number')?h.tManual:'';
   $('editInfModal').classList.add('on');
@@ -2766,6 +2818,10 @@ function saveInfEdit(){
     const sp=+unComma($('ei_sprice').value),sq=+$('ei_sqty').value,bp=+unComma($('ei_bprice').value),bq=+$('ei_bqty').value;
     if(!sp||!sq||!bp||!bq){alert('매도·매수 가격과 수량을 모두 입력하세요');return}
     rec.sellPrice=sp;rec.sellQty=sq;rec.buyPrice=bp;rec.buyQty=bq;
+  } else if(kind==='출금'){
+    const amt=+unComma($('ei_amt').value);
+    if(!(amt>0)){alert('출금액을 입력하세요');return}
+    rec.amt=amt;
   } else {
     const price=+unComma($('ei_price').value), qty=+$('ei_qty').value;
     if(!price||!qty){alert('체결가와 수량을 입력하세요');return}
@@ -5728,7 +5784,7 @@ function paperStat(tab, sess){
       const c=computeInf();
       price=(lastQuote.inf && String(lastQuote.inf.symbol||'').toUpperCase()===sym)
         ? (lastQuote.inf.price||lastQuote.inf.last||0) : 0;
-      inflow=+st.principal||0; total=price*c.qty + c.bal;
+      inflow=+st.principal||0; total=price*c.qty + c.bal + (c.outside||0);   // 출금·단리 적립분도 자산
     }else if(tab==='vr'){
       const c=computeVr(); price=vrLastPrice(c)||0;
       inflow=c.netInvested; total=price*c.qty + c.pool;      // 첫 매수는 밖에서 들어온 돈 — computeVr가 그렇게 센다
@@ -6218,6 +6274,7 @@ function sheetInfHTML(today){
   h+=kindOptHTML('지정가매도+절반매수','T×0.25 + 0.5','cx',false);
   h+=kindOptHTML('1회매수+지정가매도(애프터)','T×0.25 + 1','cx',false);
   h+=kindOptHTML('절반매수+지정가매도(애프터)','T×0.25 + 0.5','cx',false);
+  h+=kindOptHTML('출금','T 불변','wd',false);      // 매매가 아니다 — 잔금만 줄인다
   // 입력 폼 자리 (종류 선택 시 채워짐)
   h+=`<div id="sheet_form" style="display:none;margin-top:18px"></div>`;
   return h;
@@ -6281,6 +6338,13 @@ function sheetSelInf(kind){
     const buyKind=kind.includes('1회매수')?'1회매수':'절반매수';
     const buyBlk=fieldPriceQty('sh_b',{t:'매수',c:'var(--buy)'},sym);
     f+= sellFirst? (sellBlk+buyBlk) : (buyBlk+sellBlk);
+  }else if(kind==='출금'){
+    // 출금은 체결가·수량이 없다. 계좌 밖으로 뺀 금액 하나뿐이고 T·평단·보유는 그대로다.
+    const c0=computeInf();
+    f+=`<div class="sheetseclbl" style="color:var(--gold)">● 출금</div>
+      <div class="field"><label>출금액 (${sym}) <span class="hint">잔금에서 뺍니다 · 현재 잔금 ${wn(c0.bal)}</span></label>
+        <input id="sh_amt" type="text" inputmode="decimal" oninput="commaInput(this)"></div>
+      <p class="note" style="margin:2px 0 10px">T·평단·보유수량은 바뀌지 않습니다. 잔금이 줄어 <b>1회매수금이 작아집니다</b>. 성과에서는 '밖으로 나간 돈'으로 잡아 총자산에 다시 더합니다.</p>`;
   }else{
     const isSellK=kind.includes('매도');
     f+=fieldPriceQty('sh', {t:isSellK?'매도':'매수', c:isSellK?'var(--sell)':'var(--buy)'}, sym);
@@ -6297,7 +6361,7 @@ function sheetSelInf(kind){
   $('sheet_form').innerHTML=f;
   $('sheet_form').style.display='block';
   // 자동 채움 — 값은 그대로 고칠 수 있다
-  { const g=infSuggest(kind);
+  { const g=(kind==='출금')?null:infSuggest(kind);   // 출금은 체결가·수량이 없다
     if(g){ const put=(pre,v)=>{ if(!v) return;
         const p=$(pre+'_price'), q=$(pre+'_qty');
         if(p && v.price>0) p.value=nfix(v.price,2);
@@ -6351,6 +6415,12 @@ function sheetSaveInf(){
     const sp=+unComma($('sh_s_price').value),sq=+$('sh_s_qty').value,bp=+unComma($('sh_b_price').value),bq=+$('sh_b_qty').value;
     if(!sp||!sq||!bp||!bq){alert('매도·매수 가격과 수량을 모두 입력하세요');return}
     rec.sellPrice=sp;rec.sellQty=sq;rec.buyPrice=bp;rec.buyQty=bq;
+  }else if(shKind==='출금'){
+    const amt=+unComma($('sh_amt').value);
+    if(!(amt>0)){alert('출금액을 입력하세요');return}
+    const c0=computeInf();
+    if(amt>c0.bal && !confirm(`출금액 ${wn(amt)}이 잔금 ${wn(c0.bal)}보다 많습니다.\n그래도 기록할까요?`)) return;
+    rec.amt=amt;
   }else{
     const price=+unComma($('sh_price').value),qty=+$('sh_qty').value;
     if(!price||!qty){alert('체결가와 수량을 입력하세요');return}
@@ -6774,7 +6844,7 @@ function openSettings(){
   }else if(S.activeTab==='inf'){
     $('set_inf').style.display='';$('set_vr').style.display='none';
     const st=s.settings, sym=(st.cur||'usd')==='krw'?'₩':'$';
-    segSet('set_ticker',st.ticker);segSet('set_div',String(st.div));segSet('set_cur',st.cur||'usd');segSet('set_engine',st.engine||'v40');segSet('set_shortma',String(st.shortMA||30));segSet('set_lopct',String(st.loPct||6));segSet('set_reverse',st.reverse===true?'1':'0');segSet('set_tgtdyn',st.tgtDyn===true?'1':'0');syncShortMaUI(st.engine||'v40');syncTgtNote();
+    segSet('set_ticker',st.ticker);segSet('set_div',String(st.div));segSet('set_cur',st.cur||'usd');segSet('set_engine',st.engine||'v40');segSet('set_shortma',String(st.shortMA||30));segSet('set_lopct',String(st.loPct||6));segSet('set_reverse',st.reverse===true?'1':'0');segSet('set_compound',st.compound===false?'0':'1');segSet('set_tgtdyn',st.tgtDyn===true?'1':'0');syncShortMaUI(st.engine||'v40');syncTgtNote();
     $('set_target').value=st.target;$('set_big').value=st.big;$('set_principal').value=nfix(st.principal,0);
     if($('set_rows'))$('set_rows').value=st.rows!=null?st.rows:8;
     if($('set_gap'))$('set_gap').value=st.gap!=null?st.gap:2.5;
@@ -6867,7 +6937,7 @@ function syncShortMaUI(eng){
   if(note&&note.classList.contains('note')) note.style.opacity=on?'1':'0.4';
 }
 function setupSegs(){
-  ['set_ticker','set_div','set_reverse','set_tgtdyn','set_vmode','set_vformula','set_cur','set_vcur','set_engine','set_shortma','set_lopct','set_maticker','set_mabuy','set_masell','set_mapark','set_dcamode','set_dcareinv','set_dcafreq','set_dcamul','set_asapticker',
+  ['set_ticker','set_div','set_reverse','set_tgtdyn','set_vmode','set_vformula','set_cur','set_vcur','set_engine','set_shortma','set_lopct','set_maticker','set_mabuy','set_masell','set_mapark','set_compound','set_dcamode','set_dcareinv','set_dcafreq','set_dcamul','set_asapticker',
    'set_vauto','set_ivsticker','set_ivss0','set_ivslook','set_ivsband','set_ivspark','set_ivsmode'].forEach(id=>{
     const el=$(id);if(!el)return;
     el.querySelectorAll('button').forEach(b=>{
@@ -6899,7 +6969,7 @@ function setupSegs(){
    그대로 남아 화면 설정과 기록이 어긋났다.
    실계좌 세션은 사람이 넣은 실제 거래이므로 절대 건드리지 않는다. */
 const SIM_KEYS={
-  inf :['ticker','div','target','reverse','tgtDyn','principal','cur'],
+  inf :['ticker','div','target','reverse','tgtDyn','principal','cur','compound'],
   vr  :['ticker','mode','formula','g','add','initAmt','autoCyc','band','cur'],
   ma  :['ticker','buy','sell','park','principal'],
   ivs :['ticker','mode','s0','look','band','park','principal','monthly'],
@@ -6948,7 +7018,7 @@ function saveSettings(){
   if(S.activeTab==='inf'){
     s.settings={ticker:segGet('set_ticker')||'SOXL',div:+segGet('set_div')||20,engine:segGet('set_engine')||'v40',shortMA:+segGet('set_shortma')||30,loPct:+segGet('set_lopct')||6,
       target:inputNum('set_target')||20,big:inputNum('set_big')||20,
-      reverse:segGet('set_reverse')==='1',
+      reverse:segGet('set_reverse')==='1',compound:segGet('set_compound')!=='0',
       tgtDyn:segGet('set_tgtdyn')==='1',
       rowsOn:$('set_rows_on')?$('set_rows_on').checked:false,
       rows:Math.max(0,Math.min(20,+$('set_rows').value||0)),gap:+$('set_gap').value||2.5,
