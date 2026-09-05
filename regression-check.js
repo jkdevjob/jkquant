@@ -725,6 +725,17 @@ console.log('[19] 출금 · 복리/단리');
   // 입력·편집 경로
   ok('시트에 출금 항목·금액칸', /kindOptHTML\('출금'/.test(idx) && /id="sh_amt"/.test(idx));
   ok('편집에서도 출금 가능', /<option value="출금">/.test(idx) && /id="ei_amt"/.test(idx));
+  /* 모의 성과표 — 단리는 익절금이 계좌 밖으로 빠져 있다. 평가금엔 더해 놨어도
+     '얼마가 나갔는지'를 안 보이면 잔금이 왜 안 늘었는지 알 수 없다. */
+  ok('성과표가 단리 인출액을 낸다', /_out=\{saved:c\.saved\|\|0, withdrawn:c\.withdrawn\|\|0, simple:!!c\.simple\}/.test(idx)
+     && /nTrade, price, out:_out\}/.test(idx));
+  ok('성과표에 인출 태그를 그린다', /O\.simple\?'단리 인출':'출금'/.test(idx));
+  /* 익절 조절 숨김 — SOXL 열위·MDD 악화 구간 때문. UI만 감추고 코드는 남긴다.
+     감추기만 하면 켜져 있던 세션을 끌 방법이 없으므로 저장분도 꺼야 한다. */
+  ok('익절 조절 UI 숨김', /\.tgtdyn-hidden\{display:none !important\}/.test(idx)
+     && /class="seg tgtdyn-hidden" id="set_tgtdyn"/.test(idx));
+  ok('켜져 있던 익절 조절을 끈다', /o\.settings\.tgtDyn===true\) o\.settings\.tgtDyn=false/.test(idx));
+  ok('익절 조절 코드는 남아 있다 (되살릴 수 있게)', /st\.tgtDyn===true/.test(idx) && /imTgtOf\(/.test(idx));
 }
 
 

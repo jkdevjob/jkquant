@@ -72,6 +72,7 @@ span.badge{display:inline-block;padding:2px 8px;margin:0;border:0;border-radius:
 .fetchnote:empty{margin:0;min-height:0;display:none}
 /* ══ V5.0(국면 익절) 검증 미완료로 UI 숨김. 복원하려면 아래 한 줄만 삭제 ══ */
 .v5-hidden{display:none !important}
+.tgtdyn-hidden{display:none !important}
 .fetchnote.ok{color:var(--buy)}.fetchnote.err{color:var(--gold)}.fetchnote.load{color:var(--dim)}
 .fivebox{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:14px;margin-bottom:13px}
 .fivebox h4{font-size:13px;font-weight:700;margin-bottom:10px;display:flex;justify-content:space-between}
@@ -466,7 +467,7 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
 </div>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.11</span></h1></div>
+    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.12</span></h1></div>
     <div style="display:flex;align-items:center;gap:8px">
       <a class="btbtn" href="/backtest" title="백테스트">📊<span class="bt-txt"> 백테스트</span></a>
       <button class="btbtn" id="paperbtn" onclick="openPaper()" title="모의투자 성과" style="display:none;border-color:rgba(245,196,81,.45);color:var(--gold)">🧪<span class="bt-txt"> 모의 성과</span></button>
@@ -673,7 +674,7 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
         <table class="cmp"><tr><th>분할</th><th>TQQQ</th><th>SOXL</th></tr><tr><td>20분할</td><td>15−1.5T</td><td>20−2T</td></tr><tr><td>40분할</td><td>15−0.75T</td><td>20−T</td></tr></table></div>
       <div class="card"><h3><span class="dot"></span>매수 / 매도</h3>
         <ul class="clean"><li><b>전반전</b> 1회매수금 절반은 별지점-$0.01, 절반은 평단에 LOC매수</li><li><b>후반전</b> 전액 별지점-$0.01에 LOC매수</li><li><b>쿼터매도</b> 보유÷4(내림) 별지점 LOC매도</li><li><b>지정가매도</b> 나머지 전부 평단×익절배율</li></ul></div>
-      <div class="card"><h3><span class="dot"></span>익절 조절 <span style="font-size:11px;color:var(--faint);font-weight:500">· 설정에서 켬/끔 (기본 끔)</span></h3>
+      <div class="card tgtdyn-hidden"><h3><span class="dot"></span>익절 조절 <span style="font-size:11px;color:var(--faint);font-weight:500">· 설정에서 켬/끔 (기본 끔)</span></h3>
         <p class="lead">직전 <b>20거래일 상승률 &gt; +8%</b>면 그날 익절% = <b>min(기본×2, 30%)</b>. 하락 시엔 조절하지 않고, <b>매수 규칙은 그대로</b>입니다 — 익절가 하나만 바뀝니다.</p>
         <ul class="clean"><li><b>근거</b> 익절 체결의 83~85%가 상승 국면에서 일어남 — 추세가 살아있을 때만 더 들고 간다</li>
         <li><b>백테</b> 튜닝에 안 쓴 종목 포함 TQQQ +9~16% · TECL +11% · USD +5% · KORU 2010~ +9%</li>
@@ -1508,7 +1509,7 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
   <footer>
     <strong>JK 퀀트</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.11</b> · 2026-09-02</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.12</b> · 2026-09-02</div>
   </footer>
 </div>
 
@@ -1536,8 +1537,10 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
     <p class="note" style="margin:4px 0 8px"><b>복리</b>는 익절금을 잔금에 남겨 다음 회차 매수금이 커집니다. <b>단리</b>는 사이클이 끝날 때 <b>원금을 넘는 초과분만 빼내</b> 따로 쌓아 두고, 잔금은 원금으로 되돌립니다. 손실로 끝난 사이클은 빼지 않고 그대로 이월합니다.</p>
     <div class="seclabel">리버스 <span class="hint" style="color:var(--faint);font-weight:500">원금 소진 후 무한매도 · V4.0</span></div><div class="seg" id="set_reverse"><button data-v="0" class="on">끔</button><button data-v="1">켬</button></div>
     <p class="note" style="margin:-2px 0 8px">끔(기본): 원금 소진 후 <b>후반전 별지점 손절 쿼터매도</b>로만 방어(홀드). 켬: 소진 후 <b>리버스 무한매도</b> 모드 진입. 백테스트상 20분할·급락 후 V반등에서는 끔이 유리했습니다.</p>
-    <div class="seclabel">익절 조절 <span class="hint" style="color:var(--faint);font-weight:500">20일 상승률 · 선택</span></div><div class="seg" id="set_tgtdyn"><button data-v="0" class="on">끔</button><button data-v="1">상승률</button></div>
-    <p class="note" style="margin:-2px 0 8px">켬: 직전 <b>20거래일 상승률 &gt; +8%</b>면 그날 익절% = <b>min(기본×2, 30%)</b>. 하락 시엔 조절하지 않고, <b>매수 규칙(별지점·1회매수금)은 그대로</b>입니다.<br>백테(튜닝에 안 쓴 종목 포함)에서 TQQQ +9~16% · TECL +11% · USD +5%. 다만 사이클이 절반 가까이 줄어 <b>MDD가 나빠지는 구간</b>이 있고(TECL 2010~ 31%→62%), SOXL 전체는 −0.6%로 소폭 열위였습니다. 또 <b>전반전에서만 실효</b>합니다 — 후반전엔 익절가가 평단보다 위라 어차피 닿지 않습니다.</p>
+    <!-- 익절 조절 숨김 — SOXL 전체 −0.6% 열위, MDD가 나빠지는 구간(TECL 31%→62%),
+         후반전엔 어차피 무효. 코드는 남기고 UI만 감춘다. 복원 시 tgtdyn-hidden 제거 -->
+    <div class="seclabel tgtdyn-hidden">익절 조절 <span class="hint" style="color:var(--faint);font-weight:500">20일 상승률 · 선택</span></div><div class="seg tgtdyn-hidden" id="set_tgtdyn"><button data-v="0" class="on">끔</button><button data-v="1">상승률</button></div>
+    <p class="note tgtdyn-hidden" style="margin:-2px 0 8px">켬: 직전 <b>20거래일 상승률 &gt; +8%</b>면 그날 익절% = <b>min(기본×2, 30%)</b>. 하락 시엔 조절하지 않고, <b>매수 규칙(별지점·1회매수금)은 그대로</b>입니다.<br>백테(튜닝에 안 쓴 종목 포함)에서 TQQQ +9~16% · TECL +11% · USD +5%. 다만 사이클이 절반 가까이 줄어 <b>MDD가 나빠지는 구간</b>이 있고(TECL 2010~ 31%→62%), SOXL 전체는 −0.6%로 소폭 열위였습니다. 또 <b>전반전에서만 실효</b>합니다 — 후반전엔 익절가가 평단보다 위라 어차피 닿지 않습니다.</p>
     <div class="seclabel">파라미터</div>
     <!-- V5.0 검증 미완료 — 엔진 선택 숨김 (V4.0 고정). 복원 시 v5-hidden 클래스 제거 -->
     <div class="seclabel v5-hidden">엔진 버전</div><div class="seg v5-hidden" id="set_engine"><button data-v="v40" class="on">V4.0</button><button data-v="v50">V5.0</button></div>
@@ -1916,6 +1919,8 @@ function forceV40(){
     JSON.parse(JSON.stringify(S));   // 순환참조 방어
     const walk=(o)=>{ if(!o||typeof o!=='object') return;
       if(o.settings && o.settings.engine==='v50') o.settings.engine='v40';
+      // 익절 조절도 숨김 상태 — UI가 없으니 켜져 있으면 끌 방법이 없다. 저장분을 끈다.
+      if(o.settings && o.settings.tgtDyn===true) o.settings.tgtDyn=false;
       Object.values(o).forEach(walk); };
     walk(S);
   }catch(e){}
@@ -5776,7 +5781,7 @@ function paperStat(tab, sess){
   const box=S[tab]; if(!box) return null;
   const prevTab=S.activeTab, prevAct=box.active;
   S.activeTab=tab; box.active=sess.id;
-  let inflow=0, total=0, price=0, sym='';
+  let inflow=0, total=0, price=0, sym='', _out=null;
   try{
     const st=sess.settings||{};
     sym=String(st.ticker||'').toUpperCase();
@@ -5785,6 +5790,7 @@ function paperStat(tab, sess){
       price=(lastQuote.inf && String(lastQuote.inf.symbol||'').toUpperCase()===sym)
         ? (lastQuote.inf.price||lastQuote.inf.last||0) : 0;
       inflow=+st.principal||0; total=price*c.qty + c.bal + (c.outside||0);   // 출금·단리 적립분도 자산
+      _out={saved:c.saved||0, withdrawn:c.withdrawn||0, simple:!!c.simple};
     }else if(tab==='vr'){
       const c=computeVr(); price=vrLastPrice(c)||0;
       inflow=c.netInvested; total=price*c.qty + c.pool;      // 첫 매수는 밖에서 들어온 돈 — computeVr가 그렇게 센다
@@ -5824,7 +5830,7 @@ function paperStat(tab, sess){
   const yrs=Math.max(0.05,(new Date(to)-new Date(from))/(365.25*864e5));   // 연환산 분모용 하한
   const nTrade=h.filter(x=>{const k=x.kind||x.type||'';return /매수|매도/.test(k)||k==='buy'||k==='sell'||k==='in'||k==='out';}).length;
   return {tab, name:sess.name, sym, cur:st.cur||'usd', from, to, yrs, spanDays, inflow:base, total,
-    ret:(total/base-1)*100, cagr:(Math.pow(Math.max(total,1)/base,1/yrs)-1)*100, nTrade, price};
+    ret:(total/base-1)*100, cagr:(Math.pow(Math.max(total,1)/base,1/yrs)-1)*100, nTrade, price, out:_out};
 }
 function paperSummary(){
   const out=[];
@@ -5899,7 +5905,14 @@ async function openPaper(){
       const long = days>=45;
       const cagr = long ? `${up?'+':''}${r.cagr.toFixed(1)}%` : '—';
       // 시세를 못 받은 세션은 평가금이 없다 — 0%를 진짜 성과처럼 보여주면 안 된다
-      h+=`<tr><td><b>${r.label}</b><span class="cw">${String(r.name).replace(/</g,'&lt;')} · ${r.sym}</span></td>
+      /* 단리 세션은 익절금이 계좌 밖으로 빠져 있다. 평가금엔 이미 더해 놨지만
+         '얼마가 빠져 나갔는지'를 안 보여주면 잔금이 왜 안 늘었는지 알 수 없다. */
+      const O=r.out||{};
+      const outAmt=(O.saved||0)+(O.withdrawn||0);
+      const outTag = outAmt>0
+        ? `<span class="cw" style="color:var(--gold)">${O.simple?'단리 인출':'출금'} ${wnCur(outAmt,r.cur)}</span>`
+        : (O.simple ? `<span class="cw" style="color:var(--faint)">단리 · 인출 없음</span>` : '');
+      h+=`<tr><td><b>${r.label}</b><span class="cw">${String(r.name).replace(/</g,'&lt;')} · ${r.sym}</span>${outTag}</td>
         <td>${per}<span class="cw">${r.nTrade}거래</span></td>
         <td>${wnCur(r.inflow,r.cur)}</td>`
         + (ok
@@ -5910,7 +5923,7 @@ async function openPaper(){
         + `</tr>`; });
     h+=`</table></div>`;
     if(!cur) h+=`<p class="note" style="margin-top:8px;color:var(--gold)">⚠ 시세를 못 받은 세션이 있습니다. 그 줄은 수익률을 비워 뒀습니다 — 해당 탭을 한 번 열면 채워집니다.</p>`;
-    h+=`<p class="note" style="margin-top:8px">투입 = 밖에서 넣은 돈(원금·적립·입금) · 평가 = 보유 평가금 + 현금. 수수료는 전략별 재생 규약을 따르고 <b>양도세는 넣지 않았습니다</b>.</p>`;
+    h+=`<p class="note" style="margin-top:8px">투입 = 밖에서 넣은 돈(원금·적립·입금) · 평가 = 보유 평가금 + 현금 + 계좌 밖으로 뺀 돈(출금·단리 인출). 수수료는 전략별 재생 규약을 따르고 <b>양도세는 넣지 않았습니다</b>.</p>`;
     if(paperNote) h+=`<p class="note" style="color:var(--vio)">${paperNote}</p>`;
     body.innerHTML=h;
   }
