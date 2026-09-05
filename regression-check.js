@@ -610,6 +610,18 @@ console.log('[16] 적립·거치 방식');
   // 성과표에서 적립과 거치가 구분돼야 비교가 된다
   ok('성과표가 적립·거치를 구분', /mode==='lump'\)\s*\?\s*'거치\(일시금\)'/.test(idx));
   ok('거치식은 주기·배수 칸을 감춘다', /function dcaModeUI\(\)[\s\S]{0,500}?set_dcaonly/.test(idx));
+  /* 적립식 기본값 — 매일 $10 · 재투자 · 배수 없음. 설정 화면 초기 선택도 같아야
+     '새 세션을 열었더니 화면과 저장값이 다른' 상태가 안 생긴다. */
+  let dd2=''; try{ dd2=extractFn(idx,'function defDcaSettings()'); }catch(e){}
+  ok('적립 기본값 = 매일·$10·재투자·1배',
+     /amount:10/.test(dd2)&&/freq:'day'/.test(dd2)&&/dipMul:1/.test(dd2)&&/reinv:true/.test(dd2), dd2||'없음');
+  ok('설정 화면 초기 선택이 기본값과 같다',
+     /data-v="day" class="on"/.test(idx) && /id="set_dcaamt"[^>]*value="10"/.test(idx)
+     && /data-v="reinv" class="on"/.test(idx) && /data-v="1" class="on">없음/.test(idx));
+  /* 모의는 freq로 매수 스케줄을 만든다(keyOf). '계산에 영향 없음'은 틀린 안내다. */
+  let pd2=''; try{ pd2=extractFn(idx,'function _paperDca(sess, from)'); }catch(e){}
+  ok('모의가 주기로 매수 스케줄을 만든다', /const keyOf=d=>[\s\S]{0,200}?freq==='day'/.test(pd2), pd2?'':'_paperDca 없음');
+  ok("주기 안내가 '영향 없음'이라 말하지 않는다", !/적립 주기[\s\S]{0,140}?계산에는 영향 없음/.test(idx));
   /* 화면 곳곳에 적립식 규칙(주기·하락배수)이 남으면, 거치 세션인데 안 쓰는 규칙이
      켜져 있는 것처럼 보인다 — 실제로 상태줄에 '매월 $10,000 · 하락 2배'가 찍혔다. */
   let sl=''; try{ sl=extractFn(idx,'function renderStatusline()'); }catch(e){}
