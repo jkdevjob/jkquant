@@ -681,7 +681,9 @@ console.log('[18] 백테 분배금 분해');
   ok('청크마다 배당·raw를 합친다', /allDiv\[x\.date\]=\+x\.amount/.test(bt) && /allRaw\[x\.date\]=\+x\.close/.test(bt));
   let ds=''; try{ ds=extractFn(bt,'function divSplit(tkr, days, buys)'); }catch(e){}
   ok('분해기 존재', !!ds, ds?'':'divSplit 없음');
-  ok('분배금은 배당락일 보유수량 기준', /while\(bi<B\.length && B\[bi\]\[0\]<=ev\.date\)/.test(ds));
+  ok('분배금은 배당락일 보유수량 기준', /while\(bi<B\.length && B\[bi\]\[0\]<=d\)/.test(ds) && /dvMap\[d\]!=null && sh>0/.test(ds));
+  // 단리는 현금이 쌓여 복리와 낙폭이 다르다 — 이벤트만 훑으면 중간 낙폭을 못 잰다
+  ok('단리 MDD를 날짜를 걸으며 잰다', /for\(const d of days\)/.test(ds) && /mddCash:mdd\*100/.test(ds));
   ok('매수 단가는 raw 종가', /const rawAt=d=>/.test(ds) && /sh\+=B\[bi\]\[1\]\/p/.test(ds));
   ok('가격수익·현금수령총수익을 따로 낸다', /retPrice:/.test(ds) && /retCash:/.test(ds));
   ok('배당 없으면 null (화면에서 감춤)', /if\(!inWin\.length\) return null/.test(ds));
@@ -690,8 +692,21 @@ console.log('[18] 백테 분배금 분해');
   ok('적립 결과에 div를 덧붙인다(기존 ret 불변)',
      /ret:inv>0\?\(fin\/inv-1\)\*100:0/.test(dc) && /div:_div/.test(dc));
   let bh=''; try{ bh=extractFn(bt,'function runBH(days,tkr,cap,costOn)'); }catch(e){}
-  ok('거치(B&H)에도 분해를 붙인다', /div:divSplit\(tkr,days,\[\[days\[0\]/.test(bh));
-  ok('표에 분배금·가격만 열', /const anyDiv=ranked\.some/.test(bt) && /가격만/.test(bt));
+  ok('거치(B&H)에도 분해를 붙인다', /divSplit\(tkr,days,\[\[days\[0\]/.test(bh));
+  // 단리 선택 시에만 raw 경로 결과로 갈아끼운다 (배당 없는 종목은 두 경로가 같아 불변)
+  let d1=''; try{ d1=extractFn(bt,'function _dcaOne(t,days,amt,step,costOn,dipMul)'); }catch(e){}
+  ok('단리면 최종·MDD를 현금수령 경로로', /dcaReinv===false/.test(d1) && /fin=_div\.priceVal\+_div\.divCash/.test(d1)
+     && /dcaReinv===false/.test(bh));
+  /* 표는 수익률을 셋으로 쪼갠다: 가격 + 분배 = 합계. CAGR·MDD도 합계 기준.
+     기준 투입금을 안 맞추면 셋이 안 더해진다(divSplit은 수수료 뺀 순매수액을 쓴다). */
+  ok('표에 분배금·가격수익·분배수익 열', /const anyDiv=ranked\.some/.test(bt)
+     && /가격 수익/.test(bt) && /분배 수익/.test(bt) && /합계 수익률/.test(bt));
+  ok('가격+분배=합계가 되게 기준을 맞춘다',
+     /const inv=r\.invested\|\|d\.invRaw\|\|1;/.test(bt) && /const retD=r\.ret-retP;/.test(bt));
+  ok('배당 없는 종목은 가격=합계·분배 0', /배당 없으면 가격=합계/.test(bt));
+  ok('복리/단리 토글 존재', /id="dcaReinv"/.test(bt) && /let dcaReinv=true/.test(bt)
+     && /dcaReinv=e\.target\.dataset\.r==='1'/.test(bt));
+  ok('안내문이 현재 모드를 알린다', /복리\(분배금 재투자\)':'단리\(분배금 현금\)/.test(bt));
 }
 
 

@@ -277,7 +277,7 @@ td:first-child{text-align:left;}
   <div class="brand">
     <div>
       <div class="logo">Backtest</div>
-      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v1.168</span></h1>
+      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v1.169</span></h1>
     </div>
   </div>
   <a href="/" class="home">← JK 퀀트</a>
@@ -338,6 +338,12 @@ td:first-child{text-align:left;}
         <button data-m="1.5" title="종가가 자기 200일선 아래인 회차만 1.5배 매수">1.5배</button>
         <button data-m="2" title="종가가 자기 200일선 아래인 회차만 2배 매수 — 32~40년 검증상 효율 +7~12% (총투입 30~40% 증가)">2배</button>
         <button data-m="3" title="종가가 자기 200일선 아래인 회차만 3배 매수 — 자금 부담 큼">3배</button>
+      </div>
+    </div>
+    <div class="ctrl s-dca"><label>분배금 <span style="font-size:9px;color:var(--dim)">배당·분배 처리</span></label>
+      <div class="seg" id="dcaReinv" style="align-self:flex-start">
+        <button data-r="1" class="active" title="복리 — 분배금을 배당락일 종가로 다시 사서 주식수를 늘린다">복리(재투자)</button>
+        <button data-r="0" title="단리 — 분배금을 현금으로 쌓아 두기만 한다. 주식수는 안 늘어난다">단리(현금)</button>
       </div>
     </div>
     <div class="ctrl s-dca"><label>세금·비용</label>
@@ -795,6 +801,9 @@ let ivsS0=45, ivsN=60, ivsBand=10, ivsCostOn=true;   // 역분산 비중: 위험
 let ivsMode='iv', ivsPair='cash';    // 비중 방식(역분산/고정5:5) · 나머지의 짝(현금/1배수)
 let ivsActive=new Set(STRAT_TICKERS);    // 역분산 다중선택 (기본: 전체)
 let dcaDipMul=1;    // DCA 하락 시 배수 (종가 ≤ 200일선일 때 매수금 × 배수). 1 = 기존 단순 DCA
+/* 분배금 처리. true=복리(배당락일 종가로 재매수) / false=단리(현금으로 쌓기만).
+   M의 close는 adjclose라 기존 결과가 곧 복리다 — 단리는 raw 가격 + 분배금 스트림으로 따로 계산한다. */
+let dcaReinv=true;
 let levExt=true, EXTM={}, RAWM={};        // 레버리지 확장 on/off · 확장데이터 · 원본 M 백업 (복원 시 세그 클릭이 TDZ 안 타게 restoreBtState보다 먼저 선언)
 let LAST_EXT={};                          // 직전 실행에서 실제로 확장된 종목 정보 (배너용)
 let maLen=200, maCostOn=true;                   // 이동평균 기간 200일 고정 · 비용 반영
@@ -1081,6 +1090,7 @@ function setStrat(s){
 // seg 버튼들
 document.getElementById('dcaFreq').onclick=e=>{if(e.target.dataset.f){document.querySelectorAll('#dcaFreq button').forEach(b=>b.classList.remove('active'));e.target.classList.add('active');dcaFreq=e.target.dataset.f;if(dataLoaded)run();}};
 document.getElementById('dcaDip').onclick=e=>{if(e.target.dataset.m){document.querySelectorAll('#dcaDip button').forEach(b=>b.classList.remove('active'));e.target.classList.add('active');dcaDipMul=+e.target.dataset.m;if(dataLoaded)run();}};
+document.getElementById('dcaReinv').onclick=e=>{if(e.target.dataset.r){document.querySelectorAll('#dcaReinv button').forEach(b=>b.classList.remove('active'));e.target.classList.add('active');dcaReinv=e.target.dataset.r==='1';if(dataLoaded)run();}};
 document.getElementById('dcaPeriod').onclick=e=>{if(e.target.dataset.p){document.querySelectorAll('#dcaPeriod button').forEach(b=>b.classList.remove('active'));e.target.classList.add('active');dcaPeriodMode=e.target.dataset.p;if(dataLoaded)run();}};
 document.getElementById('levExt').onclick=e=>{if(e.target.dataset.x){document.querySelectorAll('#levExt button').forEach(b=>b.classList.remove('active'));e.target.classList.add('active');levExt=e.target.dataset.x==='1';if(dataLoaded)run();}};
 document.getElementById('imCompound').onclick=e=>{if(e.target.dataset.c){document.querySelectorAll('#imCompound button').forEach(b=>b.classList.remove('active'));e.target.classList.add('active');if(dataLoaded)run();}};
@@ -1552,9 +1562,17 @@ function _dcaOne(t,days,amt,step,costOn,dipMul){
     if(i%10===0){ snap.push([d,p>0?sh*p:null]); uvSnap.push([d,(p>0&&inv>0)?sh*p/inv:null]); }
   });
   const last=D[days[days.length-1]]?.[C]??0;
-  const fin=sh*last;
+  let fin=sh*last;
   const _div=divSplit(t,days,cf.map(x=>[x[0],x[1]*(1-FEE)]));
-  return {invested:inv,final:fin,ret:inv>0?(fin/inv-1)*100:0,snap,mdd:mdd*100,uvSnap,cf,div:_div,
+  /* 단리 — 분배금을 재투자하지 않고 현금으로 쌓는다. M의 close는 adjclose(재투자 반영)라
+     그대로 쓰면 복리가 된다. 단리일 때만 raw 경로 결과로 갈아끼운다.
+     배당이 없는 종목은 두 경로가 같으므로 아무것도 안 바뀐다. */
+  let _mdd=mdd*100;
+  if(_div && (typeof dcaReinv!=='undefined') && dcaReinv===false){
+    fin=_div.priceVal+_div.divCash;
+    _mdd=_div.mddCash;
+  }
+  return {invested:inv,final:fin,ret:inv>0?(fin/inv-1)*100:0,snap,mdd:_mdd,uvSnap,cf,div:_div,
     dipMul:MUL, dipPct:nBuy?+(nDip/nBuy*100).toFixed(0):0};
 }
 
@@ -2445,17 +2463,24 @@ function divSplit(tkr, days, buys){
   const d0=days[0], d1=days[days.length-1];
   const inWin=dv.filter(x=>x.date>=d0&&x.date<=d1);
   if(!inWin.length) return null;
+  /* 날짜를 하루씩 걸으며 (매수→주식수, 배당락일→현금) 단리 경로를 그대로 재현한다.
+     MDD도 여기서 같이 낸다 — 단리는 현금이 쌓여 복리와 낙폭이 다르다.
+     이벤트만 훑으면 최종값은 맞아도 중간 낙폭을 못 잰다. */
   const B=[...buys].sort((a,b)=>a[0]<b[0]?-1:1);
-  let sh=0, bi=0, cash=0, n=0, inv=0;
-  const rawAt=d=>{ if(rw[d]>0) return rw[d]; return 0; };
-  for(const ev of inWin){
-    while(bi<B.length && B[bi][0]<=ev.date){ const p=rawAt(B[bi][0]); if(p>0){ sh+=B[bi][1]/p; inv+=B[bi][1]; } bi++; }
-    if(sh>0){ cash+=sh*ev.amount; n++; }
+  const dvMap={}; inWin.forEach(x=>{ dvMap[x.date]=(dvMap[x.date]||0)+x.amount; });
+  const rawAt=d=>(rw[d]>0?rw[d]:0);
+  let sh=0, bi=0, cash=0, n=0, inv=0, uvPeak=-Infinity, mdd=0;
+  for(const d of days){
+    while(bi<B.length && B[bi][0]<=d){ const p=rawAt(B[bi][0]); if(p>0){ sh+=B[bi][1]/p; inv+=B[bi][1]; } bi++; }
+    if(dvMap[d]!=null && sh>0){ cash+=sh*dvMap[d]; n++; }
+    const p=rawAt(d);
+    if(p>0 && inv>0){ const uv=(sh*p+cash)/inv;
+      if(uv>uvPeak) uvPeak=uv; else if(uvPeak>0){ const dd=(uvPeak-uv)/uvPeak; if(dd>mdd) mdd=dd; } }
   }
   while(bi<B.length){ const p=rawAt(B[bi][0]); if(p>0){ sh+=B[bi][1]/p; inv+=B[bi][1]; } bi++; }
   const pl=rawAt(d1); if(!(pl>0)||!(inv>0)) return null;
   const priceVal=sh*pl;
-  return {divCash:cash, nDiv:n, priceVal, invRaw:inv,
+  return {divCash:cash, nDiv:n, priceVal, invRaw:inv, shares:sh, mddCash:mdd*100,
           retPrice:(priceVal/inv-1)*100,              // 가격만 (분배금 제외)
           retCash:((priceVal+cash)/inv-1)*100};       // 분배금 현금 수령 총수익
 }
@@ -2466,9 +2491,11 @@ function runBH(days,tkr,cap,costOn){
   const p=d=>M[tkr][d][C]; const sh=cap*(1-FEE)/p(days[0]);
   let mddPeak=cap,mdd=0; const snap=[];
   days.forEach((d,i)=>{ const eq=sh*p(d); if(eq>mddPeak)mddPeak=eq; else{const dd=(mddPeak-eq)/mddPeak;if(dd>mdd)mdd=dd;} if(i%10===0)snap.push([d,eq]); });
-  const fin=sh*p(days[days.length-1]); snap.push([days[days.length-1],fin]);
-  return {invested:cap,final:fin,ret:(fin/cap-1)*100,mdd:mdd*100,snap,
-          div:divSplit(tkr,days,[[days[0],cap*(1-FEE)]])};
+  let fin=sh*p(days[days.length-1]); snap.push([days[days.length-1],fin]);
+  const _d=divSplit(tkr,days,[[days[0],cap*(1-FEE)]]);
+  let _m=mdd*100;
+  if(_d && (typeof dcaReinv!=='undefined') && dcaReinv===false){ fin=_d.priceVal+_d.divCash; _m=_d.mddCash; }
+  return {invested:cap,final:fin,ret:(fin/cap-1)*100,mdd:_m,snap,div:_d};
 }
 // 200일선 로테 — 적립형: 매일 균등 적립(총투입=contribTotal) + 전일 신호로 보유/현금. MDD는 단위가치(평가액÷투입) 기준.
 // 매수·매도 조건(16조합)·대피처(현금/단기국채)는 일시금 runMA200과 동일 규약 — 로테 탭 설정을 그대로 따른다.
@@ -3103,27 +3130,39 @@ function renderDCA(res,tickers,opts){
      '수익률'은 adjclose 기준이라 이미 분배금 재투자 총수익이다.
      그 옆에 '가격만'을 나란히 놓아야 원금이 녹는 게 보인다. */
   const anyDiv=ranked.some(t=>res[t].div && res[t].div.nDiv>0);
-  const dvH=anyDiv?'<th title="구간 중 받은 분배금 합계 (1주 기준이 아니라 실제 보유수량 기준)">분배금</th>'
-                  +'<th title="분배금을 뺀 주가만의 수익률 — 총수익과 벌어질수록 원금이 녹고 있다는 뜻">가격만</th>':'';
+  /* 수익률을 셋으로 쪼갠다: 가격 + 분배 = 합계.
+     '수익률' 열이 곧 합계이고 CAGR도 그 합계로 계산된다(복리/단리 선택에 따라 경로가 다름).
+     가격과 분배를 나란히 놔야 '분배는 많은데 원금이 녹는' 게 보인다. */
+  const dvH=anyDiv?'<th title="구간 중 받은 분배금 합계 — 실제 보유수량 기준">분배금</th>'
+                  +'<th title="분배금을 뺀 주가만의 수익률">가격 수익</th>'
+                  +'<th title="분배금이 기여한 수익률 (합계 − 가격)">분배 수익</th>':'';
   const dvR=r=>{ if(!anyDiv) return '';
     const d=r.div;
-    if(!d||!d.nDiv) return '<td style="color:var(--dim)">—</td><td style="color:var(--dim)">—</td>';
+    if(!d||!d.nDiv) return '<td style="color:var(--dim)">—</td>'
+      +`<td style="color:${r.ret>=0?'var(--green)':'var(--red)'}">${pctStr(r.ret)}</td>`   // 배당 없으면 가격=합계
+      +'<td style="color:var(--dim)">0.0%</td>';
+    const inv=r.invested||d.invRaw||1;
+    const retP=(d.priceVal/inv-1)*100;              // 기준을 '수익률' 열과 같은 투입금으로 맞춘다
+    const retD=r.ret-retP;                           // 합계 − 가격 = 분배 기여
     return `<td style="color:var(--green)">$${fmt(Math.round(d.divCash))}<span style="color:var(--dim);font-size:10px"> ${d.nDiv}회</span></td>`
-         + `<td style="color:${d.retPrice>=0?'var(--green)':'var(--red)'}">${pctStr(d.retPrice)}</td>`; };
+         + `<td style="color:${retP>=0?'var(--green)':'var(--red)'}">${pctStr(retP)}</td>`
+         + `<td style="color:var(--gold)">${pctStr(retD)}</td>`; };
   if(isInd){
-    h=`<thead><tr><th>ETF</th><th>레버리지</th><th>기간</th><th>원금</th><th>최종</th><th>수익률</th>${dvH}<th>CAGR</th><th>MDD</th><th>MAR</th></tr></thead><tbody>`;
+    h=`<thead><tr><th>ETF</th><th>레버리지</th><th>기간</th><th>원금</th><th>최종</th>${dvH}<th title="가격 + 분배 = 합계">합계 수익률</th><th title="합계 수익률 기준">CAGR</th><th>MDD</th><th>MAR</th></tr></thead><tbody>`;
     ranked.forEach((t,i)=>{const r=res[t],m=META[t];
       const _mdd=(r.mdd!=null?r.mdd:0), _cagr=(r.cagr||0), _mar=(_mdd>0?_cagr/_mdd:0);
-      h+=`<tr><td><span class="dot" style="background:${m.color}"></span>${t}<span class="tk-nm">${m.name}</span></td><td>${m.lev}×</td><td style="font-size:11px;color:var(--dim)">${r.period||''} <span style="opacity:.7">(${(r.yrs||0).toFixed(1)}년)</span></td><td>$${fmt(r.invested)}</td><td style="color:var(--accent)">$${fmt(r.final)}</td><td style="color:${r.ret>=0?'var(--green)':'var(--red)'}">${pctStr(r.ret)}</td>${dvR(r)}<td style="color:${_cagr>=0?'var(--green)':'var(--red)'}"><b>${pctStr(_cagr)}</b></td><td>${_mdd.toFixed(1)}%</td><td style="color:var(--gold)">${_mar.toFixed(2)}</td></tr>`;});
+      h+=`<tr><td><span class="dot" style="background:${m.color}"></span>${t}<span class="tk-nm">${m.name}</span></td><td>${m.lev}×</td><td style="font-size:11px;color:var(--dim)">${r.period||''} <span style="opacity:.7">(${(r.yrs||0).toFixed(1)}년)</span></td><td>$${fmt(r.invested)}</td><td style="color:var(--accent)">$${fmt(r.final)}</td>${dvR(r)}<td style="color:${r.ret>=0?'var(--green)':'var(--red)'}"><b>${pctStr(r.ret)}</b></td><td style="color:${_cagr>=0?'var(--green)':'var(--red)'}"><b>${pctStr(_cagr)}</b></td><td>${_mdd.toFixed(1)}%</td><td style="color:var(--gold)">${_mar.toFixed(2)}</td></tr>`;});
   }else{
-    h=`<thead><tr><th>ETF</th><th>레버리지</th><th>원금</th><th>최종</th><th>수익률</th>${dvH}<th>CAGR</th><th>MDD</th><th>MAR</th><th>기간</th></tr></thead><tbody>`;
+    h=`<thead><tr><th>ETF</th><th>레버리지</th><th>원금</th><th>최종</th>${dvH}<th title="가격 + 분배 = 합계">합계 수익률</th><th title="합계 수익률 기준">CAGR</th><th>MDD</th><th>MAR</th><th>기간</th></tr></thead><tbody>`;
     ranked.forEach((t,i)=>{const r=res[t],m=META[t];
       const _mdd=(r.mdd!=null?r.mdd:0), _cagr=(r.cagr||0), _mar=(_mdd>0?_cagr/_mdd:0), _yrs=(r.yrs||0);
-      h+=`<tr><td><span class="dot" style="background:${m.color}"></span>${t}<span class="tk-nm">${m.name}</span></td><td>${m.lev}×</td><td>$${fmt(r.invested)}</td><td style="color:${i===0?'var(--gold)':'var(--accent)'}"><b>$${fmt(r.final)}</b></td><td style="color:${r.ret>=0?'var(--green)':'var(--red)'}">${pctStr(r.ret)}</td>${dvR(r)}<td>${pctStr(_cagr)}</td><td>${_mdd.toFixed(1)}%</td><td style="color:var(--gold)">${_mar.toFixed(2)}</td><td style="font-size:11px;color:var(--dim)">${_yrs.toFixed(1)}년</td></tr>`;});
+      h+=`<tr><td><span class="dot" style="background:${m.color}"></span>${t}<span class="tk-nm">${m.name}</span></td><td>${m.lev}×</td><td>$${fmt(r.invested)}</td><td style="color:${i===0?'var(--gold)':'var(--accent)'}"><b>$${fmt(r.final)}</b></td>${dvR(r)}<td style="color:${r.ret>=0?'var(--green)':'var(--red)'}"><b>${pctStr(r.ret)}</b></td><td>${pctStr(_cagr)}</td><td>${_mdd.toFixed(1)}%</td><td style="color:var(--gold)">${_mar.toFixed(2)}</td><td style="font-size:11px;color:var(--dim)">${_yrs.toFixed(1)}년</td></tr>`;});
   }
   h+='</tbody>';document.getElementById('tbl').innerHTML=h;
   if(anyDiv) document.getElementById('winner').innerHTML+=
-    `<div style="font-size:11px;color:var(--dim);margin-top:4px">💰 <b>수익률</b>은 분배금 재투자 총수익 · <b>가격만</b>은 분배금을 뺀 주가 수익률 — 둘이 크게 벌어지면 분배금이 원금에서 나오고 있다는 뜻입니다.</div>`;
+    `<div style="font-size:11px;color:var(--dim);margin-top:4px">💰 <b>가격 수익 + 분배 수익 = 합계 수익률</b> · CAGR·MDD도 합계 기준입니다. `
+    +`지금은 <b style="color:var(--gold)">${(typeof dcaReinv==='undefined'||dcaReinv)?'복리(분배금 재투자)':'단리(분배금 현금)'}</b>. `
+    +`가격 수익이 낮은데 분배 수익만 크면 <b>분배금이 원금에서 나오고 있다</b>는 뜻입니다.</div>`;
   document.getElementById('tblYear').innerHTML=yearCompareCard(ranked.map(t=>({label:t,snap:res[t].snap,color:(META[t]||{}).color})));
 }
 
