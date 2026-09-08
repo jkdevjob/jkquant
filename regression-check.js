@@ -754,5 +754,60 @@ console.log('[19] 출금 · 복리/단리');
 }
 
 
+/* ════ 20. 티커 검색 — 전 탭 ════
+   종목을 버튼 목록으로만 고르면 목록에 없는 ETF는 아예 못 쓴다.
+   운영 6탭·백테 전탭을 자유 입력 + 검색 자동완성으로 바꿨다.
+   버튼(seg)에서 입력칸으로 바꾼 이상, 옛 seg를 읽던 코드가 남으면
+   저장은 빈 값이 되고 openSettings는 null.querySelectorAll로 죽는다. */
+console.log('[20] 티커 검색 — 전 탭');
+{
+  const TABS=[['무매','set_ticker_in','SOXL'],['섀넌','set_ivsticker_in','TQQQ'],
+              ['로테','set_maticker_in','SOXL'],['ASAP','set_asapticker_in','SOXL'],
+              ['적립','set_dcaticker_in','USD']];
+  for(const [name,id,dflt] of TABS){
+    ok(`운영 ${name} 티커 입력칸`,
+       new RegExp(`id="${id}"[^>]*oninput="tkSearch\\('${id}'\\)"`).test(idx)
+       && idx.includes(`id="${id}_list"`));
+    ok(`운영 ${name} 저장은 입력값으로`, idx.includes(`tkVal('${id}','${dflt}')`));
+  }
+  ok('운영 VR 티커도 자동완성', /id="set_vticker"[^>]*oninput="tkSearch\('set_vticker'\)"/.test(idx)
+     && idx.includes('id="set_vticker_list"'));
+  // 옛 seg를 읽거나 쓰는 코드가 남아 있으면 저장이 비거나 설정창이 죽는다
+  const dead=['set_ticker','set_ivsticker','set_maticker','set_asapticker','set_dcaticker']
+    .filter(t=>new RegExp(`seg(Get|Set)\\('${t}'`).test(idx));
+  ok('옛 seg 배선이 남아 있지 않다', dead.length===0, dead.join(','));
+  ok('설정창은 입력칸에 값을 넣는다', /\$\('set_ivsticker_in'\)\.value=st\.ticker/.test(idx)
+     && /\$\('set_maticker_in'\)\.value=st\.ticker/.test(idx)
+     && /\$\('set_asapticker_in'\)\.value=st\.ticker/.test(idx));
+  // seg 초기화 루프가 입력칸 id를 잡으면 querySelectorAll에서 죽는다
+  const segs=(idx.match(/\['set_div'[\s\S]{0,900}?\]/)||[''])[0];
+  ok('seg 목록에 티커 id가 없다',
+     !/'set_ticker'|'set_ivsticker'|'set_maticker'|'set_asapticker'|'set_dcaticker'/.test(segs));
+  ok('무매는 종목 바뀌면 익절배율을 다시 잡는다', /function onInfTickerChange\(\)/.test(idx)
+     && /onchange="onInfTickerChange\(\)"/.test(idx));
+
+  // ── 백테 ──
+  ok('백테 전략탭 검색 입력칸', /id="addTicker2"[^>]*oninput="tkSearch\('addTicker2'\)"/.test(bt)
+     && bt.includes('id="addTicker2_list"'));
+  ok('백테 목록에서 고르면 바로 추가', /if\(id==='addTicker'\|\|id==='addTicker2'\) addCustomTicker\(id\)/.test(bt));
+  ok('백테 추가 함수가 입력칸을 가려 받는다', /function addCustomTicker\(inpId\)/.test(bt)
+     && /document\.getElementById\(inpId\|\|'addTicker'\)/.test(bt));
+  // 목록(pickList)에 없으면 골라도 칩이 안 떠 '선택은 됐는데 안 보이는' 상태가 된다
+  ok('전략탭 칩이 추가 종목까지 덮는다',
+     /function pickList\(\)\{ const base=pickBase\(\); return base\.concat\(TICKERS\.filter\(t=>!base\.includes\(t\)\)\); \}/.test(bt));
+  ok('내장 목록 스냅샷으로 커스텀을 가린다', /const BASE_TICKERS=TICKERS\.slice\(\);/.test(bt)
+     && /function customTickers\(\)/.test(bt));
+  // 제거할 때 세트를 하나라도 빠뜨리면 지운 종목이 계산에 계속 낀다
+  ok('제거는 모든 선택세트를 턴다', /function pickDel\(t\)\{ ALL_SETS\(\)\.forEach/.test(bt)
+     && /dcaActive\.delete\(t\);pickDel\(t\);/.test(bt));
+  // 목록에서 고르면 click 이벤트가 안 나 자동저장이 안 걸린다
+  ok('추가·제거가 상태를 저장한다', /function btSave\(\)\{ if\(typeof saveBtState==='function'\) saveBtState\(\); \}/.test(bt)
+     && (bt.match(/btSave\(\);/g)||[]).length>=3);
+  ok('검색칸 내용은 저장하지 않는다', /el\.id!=='addTicker'&&el\.id!=='addTicker2'/.test(bt));
+  ok('백테 자동완성 배선', /function tkSearch\(id\)/.test(bt) && /\/api\/search\?q=/.test(bt)
+     && /if\(seq!==_tk\.seq\) return;/.test(bt));
+}
+
+
 console.log(`\n════ 결과: ${pass} PASS / ${fail} FAIL ${fail===0?'— ALL PASS ★':'— 배포 금지, 위 ✗ 항목 수정 필요'} ════`);
 process.exit(fail===0?0:1);
