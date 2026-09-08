@@ -181,3 +181,64 @@ p·2 − (1−p)·1 − 0.5 = 0   →   3p = 1.5   →   p = 50%
 1. **종이거래 로그 서식 확정**(§6): 날짜·종목·갭%·재료·트리거유형(A/B/C)·진입·손절·청산·마찰·순손익
 2. 20~30거래 누적 후 **트리거유형별 기대값** 산출 → 지는 트리거 제거
 3. 살아남는 트리거가 있으면 그때 **KIS REST 실시간 알림**을 붙이고, `단타로그` 탭으로 앱에 편입
+
+---
+
+## 8. 외부 조사 — 문서화된 단타 전략과 그 증거 (2026-09 웹조사)
+
+§2~4의 규칙은 즉흥이 아니라 **널리 문서화된 세 가지 원형**을 국내 09:00~09:30에 맞춘 것이다.
+각 전략의 규칙과 **그 전략이 실제로 검증됐는지**를 같이 적는다. 결론부터: **엣지는 얇고, 대부분은 마찰에 먹힌다.**
+
+### 8.1 시가범위 돌파 (ORB, Opening Range Breakout)
+가장 표준적인 장초반 전략. §3-A의 원형이다.
+
+- **규칙**: 첫 5·15·30분의 고가/저가로 범위를 잡고, **종가 기준으로 범위를 돌파 + 거래량 1.5배 이상**일 때 진입.
+  꼬리만 뚫고 종가가 안 뚫리면 무효. 손절은 범위 반대편(또는 중앙). 목표 1~2R 또는 추세일엔 트레일링.
+- **15분 범위**가 리테일에서 가장 인기(신뢰도·빈도 균형, 승률 대략 56% 주장).
+- **⚠️ 학술 증거의 반전 — 여기가 핵심이다.** Zarattini & Aziz(2023)는 QQQ 5분 ORB가 2016~2023에
+  **+1,484%(패시브 +169%)**라고 발표해 화제였다. 그런데 **독립 재현**들은 이걸 무너뜨린다:
+  넓은 기간(2010~2026)으로 확장하면 **풀샘플 샤프 ≈ −0.06(음수)**, 인샘플도 +0.16으로 노이즈 범위 안.
+  체결비용 **주당 약 2.2센트 슬리피지에서 손익분기** — 즉 **마찰을 조금만 현실적으로 잡아도 엣지가 사라진다.**
+  → §1-2에서 마찰을 그토록 강조한 이유가 바로 이것이다. **ORB는 "되는 전략"이 아니라 "마찰에 극도로 민감한 전략"이다.**
+
+### 8.2 갭 앤 고 (Gap and Go)
+§2 종목선정 + §3-B(갭)의 원형. 재료 있는 갭의 관성을 태운다.
+
+- **갭 크기**: 전일 종가 대비 **최소 2%, 실전 4% 이상**이 유효. 4% 미만 갭은 되메움 경향.
+- **갭 되메움 통계**: 갭의 **약 70%가 당일 안에 메워진다**. 큰 수익은 안 메워지는 30%(진짜 추세 갭)에서 나온다
+  → **갭 방향을 무조건 따라가면 70%는 되메움에 물린다.** 재료·거래량 확인이 필수인 이유.
+- **진입**: 시가 직후 노이즈를 피해 **첫 15분 봉이 갭 위에서 마감**하는 걸 확인하고 진입.
+- **선별**: 매일 20개 이상이 갭으로 뜨지만 **조건 다 맞는 건 2~3개뿐**. §2의 "5~10개로 압축"과 일치.
+
+### 8.3 국내 특수 규칙 — VI(변동성완화장치)
+국내에만 있는 제도적 변수. §3-C의 근거.
+
+- **정적 VI**: 시가(또는 기준가) 대비 **±10%** 변동 시 발동. **동적 VI**: 직전 체결가 대비 급변 시 발동.
+- 발동하면 **약 2분 30초 단일가 매매로 냉각** 후 재개. 장초반 급등주에서 수시로 걸린다.
+- 트레이딩 함의: VI는 **과열의 표시**다. 발동 중엔 체결 불가, **해제 직후 첫 방향**이 노이즈가 크므로
+  진입 시 손절을 특히 타이트하게. 상·하한(±30%) 근처·관리종목은 §2에서 후보 제외.
+
+### 8.4 냉정한 통계 — 개인 단타는 대부분 진다
+이 노트의 §7 결론을 뒷받침하는 외부 데이터. 여러 국가·규제기관 공시가 수렴한다:
+
+- 개인 단타의 **약 70~95%가 돈을 잃는다**(브라질·대만·ESMA 공시 등에서 74~97%로 수렴).
+- 첫 1년 내 **80% 이상 손실**, 5년 후에도 꾸준히 수익 내는 사람은 **약 1%**.
+- 결정적: **비용을 빼기 전에도 약 80%가 손실** — 즉 매매 판단 자체가 평균적으로 가치를 파괴한다.
+  마찰(수수료·세금·슬리피지)은 그 위에 얹히는 벌금이다.
+
+### 종합 판단
+1. 원형 전략(ORB·갭앤고)은 **직관은 맞지만 마찰에 극도로 민감**하다. 화려한 백테(+1,484%)도 재현하면 죽는다.
+2. 그래서 이 노트의 무게중심은 **"맞히기"가 아니라 "마찰 최소화 + 지는 트리거를 로그로 제거"**에 있다(§5·§6).
+3. 국내 특수변수(VI·거래세·상하한)는 마찰과 노이즈를 **미국보다 더 키운다** → 기준은 더 보수적으로.
+
+### 참고(웹조사 출처)
+- [Opening Range Breakout — TradeAlgo](https://www.tradealgo.com/trading-guides/day-trading/opening-range-breakout-strategy-how-to-trade-the-first-30-minutes)
+- [ORB Strategy Rules & Settings — Traders Mastermind](https://tradersmastermind.com/trading-strategy-opening-range-breakout/)
+- [Zarattini(2023) 독립 재현 — giovannibrusco/zarattini-2023-orb-qqq (GitHub)](https://github.com/giovannibrusco/zarattini-2023-orb-qqq)
+- [ORB Research: What Two Papers Actually Found — danfin.net](https://danfin.net/opening-range-breakout-research)
+- [Gap and Go Strategy — TradeZella](https://www.tradezella.com/blog/gap-and-go-strategy)
+- [Gap Fill Trading Strategies (Backtest) — QuantifiedStrategies](https://www.quantifiedstrategies.com/gap-fill-trading-strategies/)
+- [주식 VI 발동 뜻 — KB의 생각](https://kbthink.com/investment/101/vi.html)
+- [주식투자/단타매매 기법 — 나무위키](https://namu.wiki/w/%EC%A3%BC%EC%8B%9D%ED%88%AC%EC%9E%90/%EB%8B%A8%ED%83%80%EB%A7%A4%EB%A7%A4%20%EA%B8%B0%EB%B2%95)
+- [Day Trading Statistics: What Academic Research Shows — Curved Trading](https://curvedtrading.com/articles/en/trading/day-trading-statistics/)
+- [What Percentage of Day Traders Lose Money (2026) — Vetted Prop Firms](https://vettedpropfirms.com/what-percentage-of-day-traders-lose-money/)
