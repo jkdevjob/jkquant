@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8">
+<style>
+  @font-face { font-family:'Nanum'; font-weight:400; src:url('fonts/nanum-400.woff2') format('woff2'); }
+  @font-face { font-family:'Nanum'; font-weight:700; src:url('fonts/nanum-700.woff2') format('woff2'); }
+  @font-face { font-family:'Nanum'; font-weight:800; src:url('fonts/nanum-800.woff2') format('woff2'); }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family:'Nanum',sans-serif; background:#333; }
+  .art { width:1080px; height:1080px; position:relative; overflow:hidden;
+         display:flex; flex-direction:column; align-items:center; justify-content:center; }
+
+  /* ── A: 네이비 + 골드 (신뢰/프리미엄) ── */
+  #a { background:radial-gradient(circle at 50% 38%, #1b3a5b 0%, #0d2338 70%, #0a1c2e 100%); }
+  #a .ring { position:absolute; inset:70px; border:3px solid rgba(214,178,102,.28); border-radius:50%; }
+  #a .chart { position:absolute; left:0; right:0; bottom:210px; opacity:.30; }
+  #a .brand { color:#fff; font-weight:800; font-size:250px; letter-spacing:-6px; line-height:1;
+              text-shadow:0 6px 30px rgba(0,0,0,.35); }
+  #a .slogan { margin-top:44px; color:#e2c584; font-weight:700; font-size:66px; letter-spacing:14px; }
+  #a .rule { width:150px; height:5px; background:#d6b266; border-radius:3px; margin-top:52px; }
+  #a .handle { margin-top:34px; color:rgba(255,255,255,.62); font-weight:400; font-size:46px; letter-spacing:2px; }
+
+  /* ── B: 크림 에디토리얼 (친근/노트) ── */
+  #b { background:#f4f1ea; }
+  #b .chart { position:absolute; left:0; right:0; bottom:205px; opacity:.5; }
+  #b .kicker { color:#b23b2e; font-weight:700; font-size:52px; letter-spacing:10px; margin-bottom:26px; }
+  #b .brand { color:#1c1a17; font-weight:800; font-size:252px; letter-spacing:-6px; line-height:1; }
+  #b .rule { width:170px; height:6px; background:#b23b2e; border-radius:3px; margin-top:46px; }
+  #b .slogan { margin-top:40px; color:#5a5248; font-weight:700; font-size:60px; letter-spacing:6px; }
+  #b .handle { margin-top:30px; color:#9a9184; font-weight:400; font-size:44px; }
+</style></head>
+<body>
+  <div class="art" id="a">
+    <div class="ring"></div>
+    <svg class="chart" height="360" viewBox="0 0 1080 360" preserveAspectRatio="none">
+      <polyline points="40,320 220,300 400,250 560,255 720,170 880,120 1040,40"
+        fill="none" stroke="#d6b266" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+    <div class="brand">은퇴노트</div>
+    <div class="rule"></div>
+    <div class="slogan">늦지&nbsp;않았습니다</div>
+    <div class="handle">@은퇴노트</div>
+  </div>
+
+  <div class="art" id="b">
+    <svg class="chart" height="360" viewBox="0 0 1080 360" preserveAspectRatio="none">
+      <polyline points="40,320 220,300 400,250 560,255 720,170 880,120 1040,40"
+        fill="none" stroke="#b23b2e" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+    <div class="kicker">RETIREMENT NOTE</div>
+    <div class="brand">은퇴노트</div>
+    <div class="rule"></div>
+    <div class="slogan">늦지&nbsp;않았습니다</div>
+    <div class="handle">@은퇴노트</div>
+  </div>
+</body></html>
