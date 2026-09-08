@@ -21,8 +21,9 @@
   #a .brand { color:#f4f7fb; }
   #a .divider { width:118px; background:linear-gradient(90deg,transparent,#d2b26e,transparent); }
   #a .slogan { color:rgba(214,182,118,.82); }
-  #a .emblem polyline { stroke:#d6b676; }
-  #a .emblem .dot { fill:#d6b676; }
+  #a .emblem { margin-bottom:34px; }
+  #a .emblem .s  { stroke:#d6b676; }
+  #a .emblem .st { stroke:rgba(214,182,118,.7); }
 
   /* ── B: 크림 에디토리얼 (모던) ── */
   #b { background:radial-gradient(circle at 50% 42%, #f6f2ea 0%, #efe9dd 100%); }
@@ -31,17 +32,19 @@
   #b .brand { color:#1b1813; }
   #b .divider { width:130px; background:#b0473a; }
   #b .slogan { color:#8a7f6f; }
-  #b .emblem { margin-bottom:34px; }
-  #b .emblem polyline { stroke:#b0473a; }
-  #b .emblem .dot { fill:#b0473a; }
+  #b .emblem { margin-bottom:26px; }
+  #b .emblem .s  { stroke:#b0473a; }
+  #b .emblem .st { stroke:rgba(176,71,58,.7); }
 </style></head>
 <body>
   <div class="art" id="a">
     <div class="ring"></div>
-    <svg class="emblem" width="168" height="104" viewBox="0 0 168 104" fill="none">
-      <polyline points="16,86 62,58 100,68 150,26" stroke-width="8"
-        stroke-linecap="round" stroke-linejoin="round"/>
-      <circle cx="150" cy="26" r="11" fill="currentColor" class="dot"/>
+    <svg class="emblem" width="150" height="150" viewBox="0 0 100 100" fill="none">
+      <path class="s" d="M30 46 H62 V60 a13 13 0 0 1 -13 13 H43 a13 13 0 0 1 -13 -13 Z"
+        stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/>
+      <path class="s" d="M62 50 a10 10 0 0 1 0 18" stroke-width="4.5" stroke-linecap="round"/>
+      <path class="s" d="M26 82 H68" stroke-width="4.5" stroke-linecap="round"/>
+      <path class="st" d="M41 26 q7 6 0 13 M53 26 q7 6 0 13" stroke-width="3.5" stroke-linecap="round"/>
     </svg>
     <div class="brand">은퇴노트</div>
     <div class="divider"></div>
@@ -49,10 +52,12 @@
   </div>
 
   <div class="art" id="b">
-    <svg class="emblem" width="168" height="104" viewBox="0 0 168 104" fill="none">
-      <polyline points="16,86 62,58 100,68 150,26" stroke-width="8"
-        stroke-linecap="round" stroke-linejoin="round"/>
-      <circle cx="150" cy="26" r="11" fill="currentColor" class="dot"/>
+    <svg class="emblem" width="150" height="150" viewBox="0 0 100 100" fill="none">
+      <path class="s" d="M30 46 H62 V60 a13 13 0 0 1 -13 13 H43 a13 13 0 0 1 -13 -13 Z"
+        stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/>
+      <path class="s" d="M62 50 a10 10 0 0 1 0 18" stroke-width="4.5" stroke-linecap="round"/>
+      <path class="s" d="M26 82 H68" stroke-width="4.5" stroke-linecap="round"/>
+      <path class="st" d="M41 26 q7 6 0 13 M53 26 q7 6 0 13" stroke-width="3.5" stroke-linecap="round"/>
     </svg>
     <div class="kicker">RETIREMENT&nbsp;NOTE</div>
     <div class="brand">은퇴노트</div>
