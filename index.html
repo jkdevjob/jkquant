@@ -432,7 +432,7 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-app.js";
   import { getAuth, GoogleAuthProvider, signInWithPopup, getRedirectResult, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-auth.js";
-  import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-firestore.js";
+  import { getFirestore, doc, getDoc, setDoc, collection, getDocs } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-firestore.js";
   const firebaseConfig = {
     apiKey: "AIzaSyBzBe9pAttnbDgTlNThWZzNqtAAKxX7Ksw",
     authDomain: "jk-invest.firebaseapp.com",
@@ -447,7 +447,7 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
   const db = getFirestore(app);
   const provider = new GoogleAuthProvider();
   // 전역 노출 (일반 스크립트에서 사용)
-  window.fb = { auth, db, provider, signInWithPopup, getRedirectResult, onAuthStateChanged, signOut, doc, getDoc, setDoc };
+  window.fb = { auth, db, provider, signInWithPopup, getRedirectResult, onAuthStateChanged, signOut, doc, getDoc, setDoc, collection, getDocs };
   window.dispatchEvent(new Event('fb-ready'));
 </script>
 </head>
@@ -467,10 +467,11 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
 </div>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.15</span></h1></div>
+    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.16</span></h1></div>
     <div style="display:flex;align-items:center;gap:8px">
       <a class="btbtn" href="/backtest" title="백테스트">📊<span class="bt-txt"> 백테스트</span></a>
       <button class="btbtn" id="paperbtn" onclick="openPaper()" title="모의투자 성과" style="display:none;border-color:rgba(245,196,81,.45);color:var(--gold)">🧪<span class="bt-txt"> 모의 성과</span></button>
+      <button class="btbtn admin-only" id="adminbtn" onclick="openAdmin()" title="접속 계정·사용자 관리" style="display:none;border-color:rgba(124,140,255,.5);color:var(--acc)">👤<span class="bt-txt"> 사용자</span></button>
     </div>
   </div>
   <div class="userbadge" id="userbadge" style="margin-top:8px"></div>
@@ -1509,7 +1510,7 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
   <footer>
     <strong>JK 퀀트</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.15</b> · 2026-09-08</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.16</b> · 2026-09-08</div>
   </footer>
 </div>
 
@@ -1671,6 +1672,16 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
   <h3>🧪 모의투자 성과</h3><p>모의로 표시한 세션만 모아 보여줍니다.</p>
   <div id="paper_body"></div>
   <div class="mbtns"><button class="close" onclick="closePaper()">닫기</button></div>
+</div></div>
+
+<!-- 관리자: 접속 계정·사용자 관리 -->
+<div class="modal" id="adminModal"><div class="box">
+  <button class="mx" onclick="closeAdmin()" aria-label="닫기">✕</button>
+  <h3>👤 접속 계정 · 사용자 관리</h3>
+  <p>이 앱에 로그인한 적이 있는 계정입니다. 차단하면 다음 로그인부터 막힙니다.</p>
+  <div id="admin_sum" class="note" style="margin-bottom:10px"></div>
+  <div id="admin_body"></div>
+  <div class="mbtns"><button class="close" onclick="closeAdmin()">닫기</button><button class="save" onclick="renderAdmin()">🔄 새로고침</button></div>
 </div></div>
 
 <!-- 세션 모달 -->
@@ -7151,7 +7162,10 @@ async function pushRemote(){
     try{
       const json=JSON.stringify(S);
       if(json===lastPushedJSON){setSync('ok');return;}
-      await window.fb.setDoc(window.fb.doc(window.fb.db,'users',curUid),{state:S,updated:(S._updated||Date.now())});
+      // merge 필수 — 이 문서엔 백테가 쓰는 backtestTickers도 같이 산다.
+      // 통째로 덮어쓰던 탓에 백테에서 추가한 종목이 운영 앱을 열면 서버에서 사라졌다
+      // (같은 기기는 localStorage 사본에 가려 안 보였고, 다른 기기에서 드러났다).
+      await window.fb.setDoc(window.fb.doc(window.fb.db,'users',curUid),{state:S,updated:(S._updated||Date.now())},{merge:true});
       lastPushedJSON=json; setSync('ok');
     }catch(e){console.error('push',e);setSync('err');}
   },800); // 입력 직후 잦은 저장 방지(디바운스)
@@ -7242,31 +7256,117 @@ function renderUserBadge(user){
 }
 
 let appStarted=false;
-/* ── 관리자 모드 (진단 등 숨김 기능) ── */
-let _adminTaps=0, _adminTapTimer=null;
-function isAdmin(){
-  try{
-    const u=new URL(location.href);
-    if(u.searchParams.get('admin')==='1'){ localStorage.setItem('jk_admin','1'); }
-    return localStorage.getItem('jk_admin')==='1';
-  }catch(e){ return false; }
-}
+
+/* ══ 관리자 모드 ═══════════════════════════════════════════════════════
+   전에는 제목 7번 탭 + localStorage 플래그였는데, 그건 잠금이 아니었다 —
+   누구든 7번 두드리면 켜졌고 기기를 옮기면 도로 꺼졌다.
+   로그인이 이미 필수인 앱이니 권한은 계정으로 정한다. 7번 탭은 '잠깐 감추기'로만 남긴다
+   (남에게 화면 보여줄 때 쓰라고. 감춘다고 권한이 생기지는 않는다). */
+const ADMIN_EMAILS=['jk82investing@gmail.com'];
+const normEmail=e=>String(e||'').trim().toLowerCase();
+let curEmail=null, _adminHidden=false;
+function isAdmin(){ return ADMIN_EMAILS.includes(normEmail(curEmail)); }
 function applyAdminMode(){
-  const on=isAdmin();
+  const on=isAdmin() && !_adminHidden;
   document.querySelectorAll('.admin-only').forEach(el=>{ el.style.display = on ? '' : 'none'; });
 }
+let _adminTaps=0, _adminTapTimer=null;
 function adminTap(){
-  // 제목 7번 연속 탭하면 관리자 모드 토글
   _adminTaps++;
   clearTimeout(_adminTapTimer);
   _adminTapTimer=setTimeout(()=>{_adminTaps=0;},1500);
   if(_adminTaps>=7){
     _adminTaps=0;
-    const now=localStorage.getItem('jk_admin')==='1';
-    if(now){ localStorage.removeItem('jk_admin'); alert('관리자 모드 해제'); }
-    else { localStorage.setItem('jk_admin','1'); alert('관리자 모드 켜짐 — 무한매수법 화면 맨 아래 진단 카드'); }
+    if(!isAdmin()){ alert('관리자 계정으로 로그인해야 합니다.'); return; }
+    _adminHidden=!_adminHidden;
     applyAdminMode();
+    alert(_adminHidden?'관리자 화면 감춤 (다시 7번 탭하면 나옵니다)':'관리자 화면 표시');
   }
+}
+
+/* ── 접속 계정 기록 ────────────────────────────────────────────────
+   users/{uid}에는 거래기록 전부가 들어 있어서, 누가 썼는지 보려고 그걸 통째로
+   읽을 수는 없다(용량도 크고 남의 매매를 다 여는 셈이다).
+   profiles/{uid}에 이메일·접속시각만 따로 적어 둔다 — 목록은 이것만 읽는다. */
+async function touchProfile(user){
+  if(!user||!window.fb||!window.fb.collection) return null;
+  const ref=window.fb.doc(window.fb.db,'profiles',user.uid);
+  let prev=null;
+  try{ const snap=await window.fb.getDoc(ref); if(snap.exists()) prev=snap.data()||null; }catch(e){ console.warn('profile read',e.message); }
+  const now=Date.now();
+  const p={ email:user.email||'', name:user.displayName||'', photo:user.photoURL||'',
+            lastSeen:now, firstSeen:(prev&&+prev.firstSeen)||now,
+            visits:((prev&&+prev.visits)||0)+1,
+            ua:String(navigator.userAgent||'').slice(0,180) };
+  try{ await window.fb.setDoc(ref,p,{merge:true}); }catch(e){ console.warn('profile write',e.message); }
+  return Object.assign({},prev||{},p);
+}
+/* 차단은 클라이언트가 로그인 직후 스스로 확인하는 수준이다.
+   진짜로 막으려면 Firestore 규칙이 같이 있어야 한다 — firestore.rules 참고.
+   관리자 자신은 어떤 경우에도 잠기지 않게 한다 (실수로 자기를 차단하면 복구 불가). */
+function isBlocked(prof){ return !!(prof&&prof.blocked) && !isAdmin(); }
+
+function fmtWhen(ms){
+  const t=+ms||0; if(!t) return '—';
+  const d=new Date(t), p=n=>String(n).padStart(2,'0');
+  const days=Math.floor((Date.now()-t)/864e5);
+  const rel = days<=0?'오늘' : days===1?'어제' : days<30?days+'일 전' : Math.floor(days/30)+'개월 전';
+  return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())} <span style="color:var(--faint)">${rel}</span>`;
+}
+function openAdmin(){ if(!isAdmin()) return; $('adminModal').classList.add('on'); renderAdmin(); }
+function closeAdmin(){ $('adminModal').classList.remove('on'); }
+
+const RULES_HINT=`목록을 읽으려면 Firestore 규칙에 관리자 허용이 있어야 합니다.
+Firebase 콘솔 → Firestore Database → 규칙에 저장소의 <b>firestore.rules</b> 내용을 붙여넣으세요.`;
+
+async function renderAdmin(){
+  const body=$('admin_body'), sum=$('admin_sum');
+  if(!body) return;
+  body.innerHTML='<p class="lead">불러오는 중…</p>'; if(sum) sum.textContent='';
+  let rows=[];
+  try{
+    const snap=await window.fb.getDocs(window.fb.collection(window.fb.db,'profiles'));
+    snap.forEach(d=>rows.push(Object.assign({uid:d.id}, d.data()||{})));
+  }catch(e){
+    body.innerHTML=`<p class="lead" style="color:var(--sell)">목록을 못 읽었습니다 — ${String(e.message||e).replace(/</g,'&lt;')}</p><p class="note">${RULES_HINT}</p>`;
+    return;
+  }
+  rows.sort((a,b)=>(+b.lastSeen||0)-(+a.lastSeen||0));
+  if(!rows.length){
+    body.innerHTML='<p class="lead">아직 기록된 계정이 없습니다.<br><span style="color:var(--faint)">이 화면이 생긴 뒤 로그인한 계정부터 쌓입니다 — 관리자 본인도 한 번 다시 로그인하면 잡힙니다.</span></p>';
+    return;
+  }
+  const wk=Date.now()-7*864e5;
+  if(sum) sum.innerHTML=`총 <b>${rows.length}</b>명 · 최근 7일 접속 <b>${rows.filter(r=>(+r.lastSeen||0)>=wk).length}</b>명 · 차단 <b>${rows.filter(r=>r.blocked).length}</b>명`;
+  const esc=t=>String(t||'').replace(/</g,'&lt;');
+  body.innerHTML=`<div class="htable-wrap"><table class="htable"><thead><tr>
+      <th>계정</th><th>마지막 접속</th><th>첫 접속</th><th style="text-align:right">방문</th><th></th></tr></thead><tbody>`
+    + rows.map(r=>{
+        const me=normEmail(r.email)===normEmail(curEmail);
+        const admin=ADMIN_EMAILS.includes(normEmail(r.email));
+        const tag = admin?'<span style="color:var(--acc);font-size:11px;font-weight:700"> 관리자</span>'
+                  : r.blocked?'<span style="color:var(--sell);font-size:11px;font-weight:700"> 차단됨</span>' : '';
+        return `<tr${r.blocked?' style="opacity:.55"':''}>
+          <td><b>${esc(r.email||r.uid)}</b>${me?'<span style="color:var(--faint);font-size:11px"> (나)</span>':''}${tag}
+              <div style="color:var(--faint);font-size:11px">${esc(r.name||'')}</div></td>
+          <td>${fmtWhen(r.lastSeen)}</td><td>${fmtWhen(r.firstSeen)}</td>
+          <td style="text-align:right">${+r.visits||0}</td>
+          <td style="text-align:right">${admin?'':
+            `<button class="ghostbtn" style="padding:4px 10px;font-size:12px;margin:0"
+              onclick="setBlocked('${r.uid}',${r.blocked?'false':'true'},'${esc(r.email).replace(/'/g,"")}')">${r.blocked?'차단 해제':'차단'}</button>`}</td>
+        </tr>`;
+      }).join('')
+    + `</tbody></table></div>
+       <p class="note" style="margin-top:10px">차단은 <b>다음 로그인부터</b> 적용됩니다. 이미 열어 둔 화면은 그대로입니다 —
+       확실히 막으려면 저장소의 <b>firestore.rules</b>를 Firebase 콘솔에 반영해 주세요.</p>`;
+}
+async function setBlocked(uid,on,email){
+  if(!isAdmin()) return;
+  if(!confirm(`${email||uid}\n\n${on?'차단':'차단 해제'}할까요?`)) return;
+  try{
+    await window.fb.setDoc(window.fb.doc(window.fb.db,'profiles',uid),{blocked:!!on},{merge:true});
+  }catch(e){ alert('바꾸지 못했습니다 — '+(e.message||e)); return; }
+  renderAdmin();
 }
 
 function startApp(){
@@ -7290,17 +7390,27 @@ function initAuth(){
   }catch(e){/* storage-partitioned 등으로 던지는 경우 무시 */}
   window.fb.onAuthStateChanged(window.fb.auth, async (user)=>{
     if(user){
-      curUid=user.uid;
+      curUid=user.uid; curEmail=user.email||'';
       renderUserBadge(user);
+      // 접속 기록 + 차단 확인. 차단된 계정은 데이터를 열지 않고 그대로 내보낸다
+      const prof=await touchProfile(user);
+      if(isBlocked(prof)){
+        curUid=null; curEmail=null;
+        try{ await window.fb.signOut(window.fb.auth); }catch(e){}
+        alert('이 계정은 사용이 차단되었습니다.');
+        return;
+      }
       // 1) 클라우드에서 먼저 시도
       const ok=await pullRemote();
       // 2) 없으면 로컬(이 사용자키) 또는 신규
       if(!ok)load();
       $('authgate').style.display='none';
       startApp();
+      applyAdminMode();          // 계정으로 권한이 정해지므로 로그인 뒤에 다시 본다
       setSync('ok');
     }else{
-      curUid=null;
+      curUid=null; curEmail=null;
+      applyAdminMode();
       $('authgate').style.display='flex';
     }
   });
