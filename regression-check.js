@@ -939,5 +939,56 @@ console.log('[22] 해외 이름 부분일치 · 국내 분배금');
 }
 
 
+/* ════ 23. 관리자 모드 — 접속 계정·사용자 관리 ════
+   전에는 제목 7번 탭 + localStorage 플래그였는데 그건 잠금이 아니었다.
+   로그인이 이미 필수이니 권한은 계정으로 정한다. 7번 탭은 '잠깐 감추기'로만 남긴다. */
+console.log('[23] 관리자 모드 — 접속 계정·사용자 관리');
+{
+  ok('관리자는 계정으로 정한다', /const ADMIN_EMAILS=\['jk82investing@gmail\.com'\]/.test(idx)
+     && /function isAdmin\(\)\{ return ADMIN_EMAILS\.includes\(normEmail\(curEmail\)\); \}/.test(idx));
+  // localStorage 플래그가 남아 있으면 아무나 켤 수 있던 옛 구멍이 그대로다
+  ok('localStorage 플래그로는 못 켠다', !/localStorage\.(get|set)Item\('jk_admin'/.test(idx)
+     && !/searchParams\.get\('admin'\)/.test(idx));
+  ok('7번 탭은 감추기일 뿐 권한이 아니다', /if\(!isAdmin\(\)\)\{ alert\('관리자 계정으로 로그인해야 합니다\.'\); return; \}/.test(idx)
+     && /_adminHidden=!_adminHidden/.test(idx));
+  ok('로그인·로그아웃 때 권한을 다시 본다',
+     (idx.match(/applyAdminMode\(\);/g)||[]).length>=3 && /curEmail=user\.email\|\|''/.test(idx));
+
+  /* users/{uid}에는 거래기록 전부가 들어 있다. 목록 하나 그리자고 그걸 다 읽으면
+     용량도 크고 남의 매매를 통째로 여는 셈이라 profiles를 따로 둔다. */
+  ok('접속 기록은 별도 컬렉션', /window\.fb\.doc\(window\.fb\.db,'profiles',user\.uid\)/.test(idx)
+     && /async function touchProfile\(user\)/.test(idx));
+  ok('첫 접속·방문 수가 쌓인다', /firstSeen:\(prev&&\+prev\.firstSeen\)\|\|now/.test(idx)
+     && /visits:\(\(prev&&\+prev\.visits\)\|\|0\)\+1/.test(idx));
+  ok('컬렉션 통째 읽기를 가져왔다', /doc, getDoc, setDoc, collection, getDocs/.test(idx)
+     && /setDoc, collection, getDocs \}/.test(idx));
+  ok('목록은 마지막 접속 최신순', /rows\.sort\(\(a,b\)=>\(\+b\.lastSeen\|\|0\)-\(\+a\.lastSeen\|\|0\)\)/.test(idx));
+
+  // 차단된 계정이 데이터를 열고 나서 쫓겨나면 막은 의미가 없다
+  ok('차단 확인이 데이터 로딩보다 먼저',
+     idx.indexOf("if(isBlocked(prof)){") < idx.indexOf("const ok=await pullRemote();")
+     && /await window\.fb\.signOut\(window\.fb\.auth\)/.test(idx));
+  // 실수로 자기를 차단하면 되돌릴 방법이 없다
+  ok('관리자는 스스로 잠기지 않는다', /function isBlocked\(prof\)\{ return !!\(prof&&prof\.blocked\) && !isAdmin\(\); \}/.test(idx));
+  ok('관리자 행엔 차단 버튼이 없다', /\$\{admin\?'':/.test(idx));
+  ok('규칙이 막으면 그렇다고 말한다', /RULES_HINT/.test(idx) && /목록을 못 읽었습니다/.test(idx));
+
+  /* 클라이언트 차단은 앱을 거쳐 들어올 때만 듣는다. 규칙이 있어야 진짜로 막힌다 */
+  const rp=__d+'/firestore.rules';
+  const ru=fs.existsSync(rp)?fs.readFileSync(rp,'utf8'):'';
+  ok('보안 규칙을 저장소에 둔다', !!ru, ru?'':'firestore.rules 없음');
+  ok('규칙도 같은 관리자만 본다', /request\.auth\.token\.email == 'jk82investing@gmail\.com'/.test(ru));
+  ok('사용자 목록은 관리자만', /allow list: if isAdmin\(\)/.test(ru));
+  ok('거래기록은 관리자도 못 본다', /match \/users\/\{uid\} \{\s*\n\s*allow read, write: if isMine\(uid\) && notBlocked\(\);/.test(ru));
+  ok('본인이 차단을 못 푼다', /!\('blocked' in request\.resource\.data\)/.test(ru)
+     && /affectedKeys\(\)\.hasAny\(\['blocked'\]\)/.test(ru));
+
+  /* 곁들여 고친 것 — users/{uid}는 운영과 백테가 같이 쓰는 문서다.
+     merge 없이 덮어써서 백테의 커스텀 종목이 서버에서 사라지고 있었다. */
+  ok('운영 저장이 백테 종목을 안 지운다',
+     /setDoc\(window\.fb\.doc\(window\.fb\.db,'users',curUid\),\{state:S,updated:\(S\._updated\|\|Date\.now\(\)\)\},\{merge:true\}\)/.test(idx));
+}
+
+
 console.log(`\n════ 결과: ${pass} PASS / ${fail} FAIL ${fail===0?'— ALL PASS ★':'— 배포 금지, 위 ✗ 항목 수정 필요'} ════`);
 process.exit(fail===0?0:1);
