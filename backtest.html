@@ -292,7 +292,7 @@ td:first-child{text-align:left;}
   <div class="brand">
     <div>
       <div class="logo">Backtest</div>
-      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v1.170</span></h1>
+      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v1.171</span></h1>
     </div>
   </div>
   <a href="/" class="home">← JK 퀀트</a>
@@ -985,22 +985,24 @@ function tkSearch(id){
     if(seq!==_tk.seq) return;                     // 늦게 온 응답이 새 결과를 덮지 않게
     if(!items.length){ box.innerHTML=`<div class="tkmsg">일치하는 종목이 없습니다 — <b>${q.toUpperCase()}</b>로 그대로 추가하려면 + 추가</div>`; return; }
     box.innerHTML=items.map(x=>
-      `<div class="tkrow" data-sym="${x.symbol}"><span class="s">${x.symbol}</span>`
+      `<div class="tkrow" data-sym="${x.symbol}" data-name="${String(x.name||'').replace(/"/g,'&quot;')}"><span class="s">${x.symbol}</span>`
       +`<span class="t">${x.kr?'국내':x.type==='ETF'?'ETF':x.type==='INDEX'?'지수':'주식'}</span>`
       +`<span class="n">${(x.name||'').replace(/</g,'&lt;')}</span></div>`).join('');
     box.querySelectorAll('.tkrow').forEach(row=>{
       // mousedown/touchstart로 받는다 — blur가 먼저 나면 click이 안 잡힌다
-      const pick=e=>{ e.preventDefault(); tkPick(id,row.getAttribute('data-sym')); };
+      const pick=e=>{ e.preventDefault(); tkPick(id,row.getAttribute('data-sym'),row.getAttribute('data-name')); };
       row.addEventListener('mousedown',pick);
       row.addEventListener('touchstart',pick,{passive:false});
     });
   },200);
 }
-function tkPick(id,sym){
+let _tkName=null;         // 방금 고른 종목의 이름 — 칩·범례에 코드 대신 이름을 쓴다
+function tkPick(id,sym,name){
   const el=document.getElementById(id); if(!el) return;
-  el.value=sym;
+  el.value=sym; _tkName=name||null;
   const b=document.getElementById(id+'_list'); if(b){b.classList.remove('on');b.innerHTML='';}
   if(id==='addTicker'||id==='addTicker2') addCustomTicker(id);   // 고르면 바로 추가
+  _tkName=null;
 }
 function tkBlur(id){ setTimeout(()=>{ const b=document.getElementById(id+'_list'); if(b) b.classList.remove('on'); },120); }
 /* 검색으로 추가한 종목은 전 탭에서 쓴다 — TICKERS에 넣으면 시세도 같이 받아오고,
@@ -1011,7 +1013,7 @@ function addCustomTicker(inpId){
   const t=inp.value.trim().toUpperCase(); if(!t)return;
   if(TICKERS.includes(t)){inp.value='';pickAdd(t);renderSingle();btSave();return;}   // 이미 있는 종목이면 선택만 켠다
   const colors=['#4fc3f7','#81c784','#ffb74d','#f06292','#9575cd','#4db6ac','#e57373'];
-  if(!META[t]) META[t]={name:t,lev:1,color:colors[TICKERS.length%colors.length]};
+  if(!META[t]) META[t]={name:_tkName||t,lev:1,color:colors[TICKERS.length%colors.length]};
   TICKERS.push(t); dcaActive.add(t); inp.value=''; pickAdd(t);
   if(window.saveCustomTickers) window.saveCustomTickers();
   buildTickerPick(); renderSingle(); btSave();
@@ -3134,7 +3136,9 @@ async function run(){
 }
 
 const fmt=n=>Math.round(n).toLocaleString();
-const isKRW=t=>/^\d{6}$/.test(t);          // 6자리 = 국내 ETF = KRW
+/* 국내 ETF = KRW. 옛 코드는 6자리 숫자(069500)지만 2024년부터 나온 건
+   가운데에 알파벳이 있다(0104N0) — 숫자만 받으면 그런 종목이 달러로 찍힌다. */
+const isKRW=t=>/^(?:\d{6}|\d{4}[A-Z]\d)$/.test(String(t||'').toUpperCase());
 const fmtV=(v,t)=>(isKRW(t)?'₩':'$')+fmt(v); // 통화 표시
 
 function alignSnap(snap,labels){const m=Object.fromEntries(snap.map(s=>[s[0],Math.round(s[1])]));return labels.map(l=>m[l]??null);}

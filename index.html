@@ -467,7 +467,7 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
 </div>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.13</span></h1></div>
+    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.14</span></h1></div>
     <div style="display:flex;align-items:center;gap:8px">
       <a class="btbtn" href="/backtest" title="백테스트">📊<span class="bt-txt"> 백테스트</span></a>
       <button class="btbtn" id="paperbtn" onclick="openPaper()" title="모의투자 성과" style="display:none;border-color:rgba(245,196,81,.45);color:var(--gold)">🧪<span class="bt-txt"> 모의 성과</span></button>
@@ -1509,7 +1509,7 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
   <footer>
     <strong>JK 퀀트</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.13</b> · 2026-09-08</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.14</b> · 2026-09-08</div>
   </footer>
 </div>
 
@@ -1835,8 +1835,11 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
 const $=id=>document.getElementById(id);
 /* 통화 포맷: 현재 세션 통화(usd/krw)에 맞춰 표시. 원화는 정수, 달러는 소수2자리 */
 function curCurrency(){try{return curStrat().settings.cur||'usd'}catch(e){return 'usd'}}
-// 국내상장 ETF 종목코드(6자리 숫자) 여부 — 네이버 자동시세 가능
-function isKrCode(t){return /^\d{6}$/.test(String(t||'').trim());}
+/* 국내상장 종목코드 여부 — 네이버 자동시세 가능.
+   옛 코드는 6자리 숫자(069500)지만 2024년부터 나온 건 가운데에 알파벳이 있다(0104N0).
+   숫자만 받으면 신규 상장 ETF가 통째로 '해외 티커'로 새어 나가 시세를 못 받는다. */
+const KR_CODE_RE=/^(?:\d{6}|\d{4}[A-Z]\d)$/;
+function isKrCode(t){return KR_CODE_RE.test(String(t||'').trim().toUpperCase());}
 // 종목코드 ↔ 이름 매핑 (국내 ETF). 화면엔 이름, 조회엔 코드 사용.
 const KR_ETF_NAME={
   '423920':'TIGER 미국필라델피아반도체레버리지',
@@ -1846,10 +1849,18 @@ const KR_ETF_NAME={
   '122630':'KODEX 레버리지',
   '252670':'KODEX 200선물인버스2X',
 };
+/* 검색으로 고른 종목의 이름을 기억해 둔다. 국내 코드는 숫자뿐이라
+   '국내 0104N0'로만 뜨면 무슨 종목인지 알 수 없다. 고른 순간 이름이 손에 있으니 적어 둔다. */
+let KR_NAME_MEMO=(()=>{try{return JSON.parse(localStorage.getItem('jkq_tkname')||'{}')}catch(e){return {}}})();
+function rememberTickerName(sym,name){
+  if(!sym||!name||KR_NAME_MEMO[sym]===name) return;
+  KR_NAME_MEMO[sym]=String(name).slice(0,60);
+  try{localStorage.setItem('jkq_tkname',JSON.stringify(KR_NAME_MEMO));}catch(e){}
+}
 // 표시용 종목명 (코드면 이름으로, 이름 모르면 코드 그대로)
 function tickerLabel(t){
   const s=String(t||'').trim();
-  if(isKrCode(s)) return KR_ETF_NAME[s] || ('국내 '+s);
+  if(isKrCode(s)) return KR_ETF_NAME[s] || KR_NAME_MEMO[s] || ('국내 '+s);
   return s;
 }
 // 원화 세션인데 종목코드가 없어 자동시세 불가한 경우만 true
@@ -6905,17 +6916,21 @@ function tkSearch(id){
     if(seq!==_tk.seq) return;                       // 늦게 온 응답이 새 결과를 덮지 않게
     if(!items.length){ box.innerHTML=`<div class="tkmsg">일치하는 종목이 없습니다 — <b>${q.toUpperCase()}</b>로 그대로 쓰려면 그냥 두세요</div>`; return; }
     box.innerHTML=items.map(x=>
-      `<div class="tkrow" data-sym="${x.symbol}"><span class="s">${x.symbol}</span>`
+      `<div class="tkrow" data-sym="${x.symbol}" data-name="${String(x.name||'').replace(/"/g,'&quot;')}"><span class="s">${x.symbol}</span>`
       +`<span class="t">${x.kr?'국내':x.type==='ETF'?'ETF':x.type==='INDEX'?'지수':'주식'}</span>`
       +`<span class="n">${(x.name||'').replace(/</g,'&lt;')}</span></div>`).join('');
     box.querySelectorAll('.tkrow').forEach(row=>{
       // mousedown을 쓴다 — blur가 먼저 나면 click이 안 잡힌다
-      row.addEventListener('mousedown',e=>{ e.preventDefault(); tkPick(id,row.getAttribute('data-sym')); });
-      row.addEventListener('touchstart',e=>{ e.preventDefault(); tkPick(id,row.getAttribute('data-sym')); },{passive:false});
+      const pick=e=>{ e.preventDefault(); tkPick(id,row.getAttribute('data-sym'),row.getAttribute('data-name')); };
+      row.addEventListener('mousedown',pick);
+      row.addEventListener('touchstart',pick,{passive:false});
     });
   },200);
 }
-function tkPick(id,sym){ const el=$(id); if(!el) return; el.value=sym; const b=$(id+'_list'); if(b){b.classList.remove('on');b.innerHTML='';} }
+function tkPick(id,sym,name){ const el=$(id); if(!el) return; el.value=sym; rememberTickerName(sym,name);
+  const b=$(id+'_list'); if(b){b.classList.remove('on');b.innerHTML='';}
+  if(id==='set_ticker_in') onInfTickerChange();   // 목록에서 고르면 change가 안 나 익절배율이 안 따라왔다
+}
 function tkBlur(id){ setTimeout(()=>{ const b=$(id+'_list'); if(b){b.classList.remove('on');} },120); }
 function tkVal(id,dflt){ const el=$(id); const v=String((el&&el.value)||'').trim().toUpperCase(); return v||dflt; }
 /* 무매 종목을 바꾸면 그 종목의 오피셜 익절%로 맞춰 준다 (엔진 선택은 유지).

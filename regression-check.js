@@ -809,5 +809,71 @@ console.log('[20] 티커 검색 — 전 탭');
 }
 
 
+/* ════ 21. 국내 종목 부분일치 검색 ════
+   야후·네이버 검색은 둘 다 앞부분 일치라 'TIGER 200타겟위클리커버드콜'을
+   '200'이나 '커버드콜'로는 못 찾았다. 국내 ETF 목록을 받아 이름 어디서든 찾는다.
+   순위는 시총이 가른다 — '커버드콜'처럼 100개가 걸리는 말은 이름만으론 근거가 없다. */
+console.log('[21] 국내 종목 부분일치 검색');
+{
+  const sp=__d+'/functions/api/search.js';
+  const se=fs.existsSync(sp)?fs.readFileSync(sp,'utf8'):'';
+  ok('검색 API 존재', !!se, se?'':'search.js 없음');
+  // EUC-KR로 내려오는 목록을 UTF-8로 읽으면 한글이 통째로 깨진다
+  ok('국내 목록을 EUC-KR로 디코딩', /etfItemList/.test(se) && /new TextDecoder\("euc-kr"\)/.test(se)
+     && /arrayBuffer\(\)/.test(se));
+  ok('빈 응답으로 캐시를 덮지 않는다', /if \(list\.length\) _krCache = \{ at: Date\.now\(\), list \}/.test(se));
+  ok('한글 질의는 야후를 안 부른다', /hangul \? Promise\.resolve\(\[\]\) : yahooSearch/.test(se));
+
+  // 실제 함수를 꺼내 순위를 직접 확인한다 (정적 스캔만으론 정렬이 맞는지 알 수 없다)
+  let api=null;
+  try{ api=new Function(se.replace(/export\s+(async\s+)?function/g,'$1function').replace(/export /g,'')
+        + '\n;return {krSearch, norm, KR_CODE};')(); }catch(e){}
+  ok('검색 함수를 꺼낼 수 있다', !!(api&&api.krSearch), api?'':'평가 실패');
+  if(api&&api.krSearch){
+    const L=[
+      {symbol:'069500',name:'KODEX 200',cap:257939},
+      {symbol:'102110',name:'TIGER 200',cap:30000},
+      {symbol:'200250',name:'KIWOOM 인도Nifty50(합성)',cap:500},
+      {symbol:'0104N0',name:'TIGER 200타겟위클리커버드콜',cap:300},
+      {symbol:'498400',name:'KODEX 200타겟위클리커버드콜',cap:9000},
+      {symbol:'396500',name:'TIGER 반도체TOP10',cap:20000},
+    ];
+    const syms=(q,n=9)=>api.krSearch(L,q,n).map(x=>x.symbol);
+    // 이게 이번 작업의 요구사항 — 이름 가운데 토막으로 찾힌다
+    ok("'200'으로 이름 가운데가 걸린다", syms('200').includes('0104N0'));
+    ok("'커버드콜'로도 걸린다", syms('커버드콜').includes('0104N0'));
+    ok('겹치는 게 많으면 시총 큰 것부터', syms('200')[0]==='069500' && syms('커버드콜')[0]==='498400',
+       syms('200')[0]+' / '+syms('커버드콜')[0]);
+    // 코드 앞자리만 겹치는 것이 이름 일치를 밀어내던 문제
+    ok('짧은 숫자는 코드 앞자리로 안 본다', !syms('200').includes('200250'), syms('200').join(','));
+    ok('4자 이상이면 코드 앞자리도 본다', syms('2002').includes('200250'));
+    ok('코드를 통째로 치면 그것부터', syms('0104N0')[0]==='0104N0' && syms('069500')[0]==='069500');
+    ok('공백은 무시한다 (kodex200 = KODEX 200)', syms('kodex200')[0]==='069500');
+    ok('한 토막도 안 맞으면 뺀다', syms('반도체').length===1 && syms('반도체')[0]==='396500');
+    ok('알파벳 한 글자는 아무거나 걸지 않는다', syms('A').length===0, syms('A').join(','));
+    ok('신형 코드도 국내로 본다', api.KR_CODE.test('0104N0') && api.KR_CODE.test('069500')
+       && !api.KR_CODE.test('TQQQ'));
+  }
+
+  // 신형 코드(0104N0)를 숫자만 받는 곳이 하나라도 남으면 그 종목은 시세를 못 받는다
+  const q=fs.existsSync(__d+'/functions/api/quote.js')?fs.readFileSync(__d+'/functions/api/quote.js','utf8'):'';
+  const NEW=/\(\?:\\d\{6\}\|\\d\{4\}\[A-Z\]\\d\)/;
+  ok('시세 API가 신형 코드를 국내로 보낸다', NEW.test(q), '(quote.js)');
+  ok('운영이 신형 코드를 국내로 본다', /const KR_CODE_RE=/.test(idx) && NEW.test(idx));
+  ok('백테가 신형 코드를 원화로 본다', /const isKRW=t=>/.test(bt) && NEW.test(bt));
+
+  /* 국내 코드는 숫자뿐이라 '국내 0104N0'로만 뜨면 무슨 종목인지 알 수 없다.
+     고르는 순간 이름이 손에 있으니 적어 뒀다가 화면에 쓴다. */
+  ok('목록 행이 이름도 들고 있다', /data-name="\$\{String\(x\.name\|\|''\)/.test(idx)
+     && /data-name="\$\{String\(x\.name\|\|''\)/.test(bt));
+  ok('운영은 고른 이름을 기억한다', /function rememberTickerName\(sym,name\)/.test(idx)
+     && /KR_ETF_NAME\[s\] \|\| KR_NAME_MEMO\[s\]/.test(idx));
+  ok('백테는 고른 이름을 종목명으로 쓴다', /META\[t\]=\{name:_tkName\|\|t,/.test(bt));
+  // 목록에서 고르면 change가 안 나 익절배율이 안 따라오던 문제
+  ok('무매는 목록에서 골라도 익절배율이 따라온다',
+     /if\(id==='set_ticker_in'\) onInfTickerChange\(\);/.test(idx));
+}
+
+
 console.log(`\n════ 결과: ${pass} PASS / ${fail} FAIL ${fail===0?'— ALL PASS ★':'— 배포 금지, 위 ✗ 항목 수정 필요'} ════`);
 process.exit(fail===0?0:1);
