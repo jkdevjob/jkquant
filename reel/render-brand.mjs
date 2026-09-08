@@ -9,7 +9,7 @@ if (process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE)
   launchOpts.executablePath = process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE;
 
 const browser = await chromium.launch(launchOpts);
-const page = await browser.newPage({ viewport: { width: 1080, height: 1080 }, deviceScaleFactor: 1 });
+const page = await browser.newPage({ viewport: { width: 1080, height: 1080 }, deviceScaleFactor: 2 });
 await page.goto("file://" + path.join(__dirname, "brand.html"));
 await page.evaluate(() => document.fonts.ready);
 await page.waitForTimeout(300);
