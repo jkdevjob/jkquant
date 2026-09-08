@@ -5,54 +5,51 @@
   @font-face { font-family:'Nanum'; font-weight:700; src:url('fonts/nanum-700.woff2') format('woff2'); }
   * { margin:0; padding:0; box-sizing:border-box; }
   body { font-family:'Nanum',sans-serif; background:#0a1c2e; padding:40px; }
-  .grid { display:grid; grid-template-columns:repeat(3,1fr); gap:32px; width:1540px; }
-  .card { background:radial-gradient(circle at 50% 42%,#14304c,#0c2137); border-radius:28px;
-          border:1px solid rgba(210,178,110,.18); aspect-ratio:1/.86;
+  .grid { display:grid; grid-template-columns:repeat(2,1fr); gap:36px; width:1180px; }
+  .card { background:radial-gradient(circle at 50% 42%,#14304c,#0c2137); border-radius:32px;
+          border:1px solid rgba(210,178,110,.18); aspect-ratio:1/.82;
           display:flex; flex-direction:column; align-items:center; justify-content:center; }
-  .card svg { width:150px; height:150px; }
-  .card .cap { margin-top:22px; color:#f4f7fb; font-weight:700; font-size:34px; }
-  .card .num { color:#d6b676; font-weight:700; font-size:26px; margin-bottom:8px; letter-spacing:2px; }
-  .g   { stroke:#d6b676; stroke-width:6; fill:none; stroke-linecap:round; stroke-linejoin:round; }
-  .gf  { fill:#d6b676; }
+  .card svg { width:200px; height:200px; }
+  .card .cap { margin-top:20px; color:#f4f7fb; font-weight:700; font-size:36px; }
+  .card .num { color:#d6b676; font-weight:700; font-size:26px; margin-bottom:6px; letter-spacing:3px; }
+  .g  { stroke:#d6b676; stroke-width:4.5; fill:none; stroke-linecap:round; stroke-linejoin:round; }
+  .gt { stroke:#d6b676; stroke-width:3.5; fill:none; stroke-linecap:round; opacity:.72; }
+  .gf { fill:#d6b676; }
 </style></head>
 <body>
   <div class="grid">
     <div class="card"><div class="num">1</div>
       <svg viewBox="0 0 100 100">
-        <path class="g" d="M50 90 V52"/>
-        <path class="gf" d="M50 60 C50 40 66 32 82 34 C80 54 64 62 50 60 Z"/>
-        <path class="gf" d="M50 70 C50 54 36 48 22 51 C25 68 40 74 50 70 Z"/>
-      </svg><div class="cap">새싹</div></div>
+        <path class="gf" d="M29 61 a21 21 0 0 1 42 0 Z"/>
+        <path class="g" d="M12 61 H88"/>
+        <path class="gt" d="M33 71 H67 M40 80 H60"/>
+      </svg><div class="cap">황혼 (노을)</div></div>
 
     <div class="card"><div class="num">2</div>
       <svg viewBox="0 0 100 100">
-        <circle class="gf" cx="50" cy="40" r="26"/>
-        <path class="g" d="M50 62 V90" stroke-width="8"/>
-      </svg><div class="cap">나무</div></div>
+        <path class="g" d="M30 46 H62 V60 a13 13 0 0 1 -13 13 H43 a13 13 0 0 1 -13 -13 Z"/>
+        <path class="g" d="M62 50 a10 10 0 0 1 0 18"/>
+        <path class="g" d="M26 82 H68"/>
+        <path class="gt" d="M41 26 q7 6 0 13 M53 26 q7 6 0 13"/>
+      </svg><div class="cap">여유 (커피)</div></div>
 
     <div class="card"><div class="num">3</div>
       <svg viewBox="0 0 100 100">
-        <path class="g" d="M50 16 L72 60 L50 92 L28 60 Z"/>
-        <path class="g" d="M50 58 V92"/>
-        <circle class="gf" cx="50" cy="48" r="6"/>
-      </svg><div class="cap">펜촉</div></div>
+        <path class="g" d="M50 84 C48 66 52 54 55 47"/>
+        <path class="g" d="M55 47 C42 40 30 42 21 51"/>
+        <path class="g" d="M55 47 C46 32 35 27 24 27"/>
+        <path class="g" d="M55 47 C62 31 73 28 83 33"/>
+        <path class="g" d="M55 47 C67 43 77 48 82 57"/>
+        <path class="gt" d="M40 86 H72"/>
+      </svg><div class="cap">휴양 (야자수)</div></div>
 
     <div class="card"><div class="num">4</div>
       <svg viewBox="0 0 100 100">
-        <path class="g" d="M16 74 H84"/>
-        <path class="g" d="M33 74 A17 17 0 0 1 67 74"/>
-        <path class="g" d="M50 40 V31 M30 50 L24 44 M70 50 L76 44"/>
-      </svg><div class="cap">해돋이</div></div>
-
-    <div class="card"><div class="num">5</div>
-      <svg viewBox="0 0 100 100">
-        <circle class="g" cx="50" cy="50" r="34"/>
-        <path class="g" d="M35 51 L46 64 L67 37"/>
-      </svg><div class="cap">체크</div></div>
-
-    <div class="card"><div class="num">6</div>
-      <svg viewBox="0 0 100 100">
-        <path class="g" d="M32 18 H68 V86 L50 71 L32 86 Z"/>
-      </svg><div class="cap">북마크</div></div>
+        <path class="g" d="M41 82 L45 46 H55 L59 82 Z"/>
+        <path class="g" d="M34 82 H66"/>
+        <path class="g" d="M45 46 L47 36 H53 L55 46"/>
+        <path class="gf" d="M46 36 L54 36 L50 27 Z"/>
+        <path class="gt" d="M45 33 L31 28 M55 33 L69 28"/>
+      </svg><div class="cap">등대 (이정표)</div></div>
   </div>
 </body></html>
