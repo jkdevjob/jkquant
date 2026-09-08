@@ -223,7 +223,12 @@ async function main() {
     specs = [a];
   }
 
-  const browser = await chromium.launch();
+  // 헤드리스 크롬: 환경에 미리 설치된 바이너리가 있으면 그걸 사용(버전 불일치 대비)
+  const launchOpts = { args: ["--no-sandbox"] };
+  if (process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE) {
+    launchOpts.executablePath = process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE;
+  }
+  const browser = await chromium.launch(launchOpts);
   const results = [];
   try {
     for (const spec of specs) {
