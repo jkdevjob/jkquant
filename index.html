@@ -467,7 +467,7 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
 </div>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.12</span></h1></div>
+    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.13</span></h1></div>
     <div style="display:flex;align-items:center;gap:8px">
       <a class="btbtn" href="/backtest" title="백테스트">📊<span class="bt-txt"> 백테스트</span></a>
       <button class="btbtn" id="paperbtn" onclick="openPaper()" title="모의투자 성과" style="display:none;border-color:rgba(245,196,81,.45);color:var(--gold)">🧪<span class="bt-txt"> 모의 성과</span></button>
@@ -1509,7 +1509,7 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
   <footer>
     <strong>JK 퀀트</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.12</b> · 2026-09-02</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.13</b> · 2026-09-08</div>
   </footer>
 </div>
 
@@ -1528,7 +1528,7 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
   <button class="mx" onclick="closeSettings()" aria-label="닫기">✕</button>
   <h3>설정</h3><div class="sub" id="set_sessname"></div>
   <div id="set_inf">
-    <div class="seclabel">종목</div><div class="seg" id="set_ticker"><button data-v="TQQQ">TQQQ</button><button data-v="SOXL">SOXL</button><button data-v="TECL">TECL</button><button data-v="KORU">KORU</button></div>
+    <div class="seclabel">종목 (티커)</div><div class="field tkwrap" style="margin:0 0 8px"><input id="set_ticker_in" type="text" autocomplete="off" spellcheck="false" placeholder="티커를 입력하세요 — 예: SOXL, TQQQ, 423920" oninput="tkSearch('set_ticker_in')" onfocus="tkSearch('set_ticker_in')" onblur="tkBlur('set_ticker_in')" onchange="onInfTickerChange()"><div class="tklist" id="set_ticker_in_list"></div></div>
     <p class="note" style="margin:-2px 0 8px">TQQQ·SOXL만 라오어 공식. <b>TECL·KORU는 비공식</b>(자체 백테스트). 종목을 고르면 <b>검정으로 확인된 권장 엔진·파라미터가 자동 적용</b>됩니다. 익절%를 바꾸면 별지점·리버스 복귀조건도 함께 바뀝니다.</p>
     <div class="seclabel">통화 <span class="hint" style="color:var(--faint);font-weight:500">국내상장 ETF는 원화</span></div><div class="seg" id="set_cur"><button data-v="usd">달러 ($)</button><button data-v="krw">원화 (₩)</button></div>
     <div class="seclabel">분할 수</div><div class="seg" id="set_div"><button data-v="10">10분할</button><button data-v="20">20분할</button><button data-v="30">30분할</button><button data-v="40">40분할</button></div>
@@ -1558,7 +1558,7 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
     </div>
   </div>
   <div id="set_vr" style="display:none">
-    <div class="seclabel">종목 (티커)</div><div class="field"><input id="set_vticker" type="text" value="TQQQ"></div>
+    <div class="seclabel">종목 (티커)</div><div class="field tkwrap" style="margin:0 0 8px"><input id="set_vticker" type="text" autocomplete="off" spellcheck="false" placeholder="티커를 입력하세요 — 예: TQQQ, SOXL" oninput="tkSearch('set_vticker')" onfocus="tkSearch('set_vticker')" onblur="tkBlur('set_vticker')"><div class="tklist" id="set_vticker_list"></div></div>
     <div class="seclabel">통화 <span class="hint" style="color:var(--faint);font-weight:500">국내상장 ETF는 원화</span></div><div class="seg" id="set_vcur"><button data-v="usd">달러 ($)</button><button data-v="krw">원화 (₩)</button></div>
     <div class="seclabel">운용 모드</div><div class="seg" id="set_vmode"><button data-v="0.75">적립식</button><button data-v="0.5">거치식</button><button data-v="0.25">인출식</button></div>
     <div class="seclabel">V 갱신 공식</div><div class="seg" id="set_vformula"><button data-v="basic">기본공식</button><button data-v="skill">실력공식</button></div>
@@ -1573,9 +1573,7 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
   </div>
   <div id="set_ivs" style="display:none">
     <div class="seclabel">종목 (티커)</div>
-    <div class="seg" id="set_ivsticker" style="flex-wrap:wrap">
-      <button data-v="SOXL">SOXL</button><button data-v="USD">USD</button><button data-v="TECL">TECL</button>
-      <button data-v="TQQQ" class="on">TQQQ</button><button data-v="QLD">QLD</button><button data-v="KORU">KORU</button></div>
+<div class="field tkwrap" style="margin:0 0 8px"><input id="set_ivsticker_in" type="text" autocomplete="off" spellcheck="false" placeholder="티커를 입력하세요 — 예: TQQQ, SOXL" oninput="tkSearch('set_ivsticker_in')" onfocus="tkSearch('set_ivsticker_in')" onblur="tkBlur('set_ivsticker_in')"><div class="tklist" id="set_ivsticker_in_list"></div></div>
     <p class="note" style="margin:4px 0 8px">변동성은 <b>레버리지 ETF 자체</b>의 수익률로 계산합니다(합성 1배지수 아님). KORU는 백테상 손실확률 68%라 권하지 않습니다.</p>
     <div class="seclabel">비중 방식 <span class="hint" style="color:var(--faint);font-weight:500">얼마를 레버리지에</span></div>
     <div class="seg" id="set_ivsmode"><button data-v="iv" class="on">역분산 1/σ²</button><button data-v="fix">고정 5:5</button></div>
@@ -1605,9 +1603,7 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
 
   <div id="set_ma" style="display:none">
     <div class="seclabel">종목 (티커)</div>
-    <div class="seg" id="set_maticker" style="flex-wrap:wrap">
-      <button data-v="SOXL">SOXL</button><button data-v="USD">USD</button><button data-v="TECL">TECL</button>
-      <button data-v="TQQQ">TQQQ</button><button data-v="QLD">QLD</button><button data-v="KORU">KORU</button></div>
+<div class="field tkwrap" style="margin:0 0 8px"><input id="set_maticker_in" type="text" autocomplete="off" spellcheck="false" placeholder="티커를 입력하세요 — 예: SOXL, TQQQ" oninput="tkSearch('set_maticker_in')" onfocus="tkSearch('set_maticker_in')" onblur="tkBlur('set_maticker_in')"><div class="tklist" id="set_maticker_in_list"></div></div>
     <p class="note" style="margin:4px 0 8px">합성 1배지수는 종목 배수로 자동 복원됩니다 (SOXL·TECL·TQQQ·KORU=3배, USD·QLD=2배).</p>
     <p class="note" style="margin:4px 0 8px">이동평균은 <b>200일 고정</b>(Gayed·Bilello 논문 기본값) · 단기선 50일.<br>
       <b>A</b> = 합성 1배지수 종가 &gt; 200일선 · <b>B</b> = 50일선 &gt; 200일선(골든크로스)</p>
@@ -1652,9 +1648,7 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
   </div>
   <div id="set_asap" style="display:none">
     <div class="seclabel">종목 (티커)</div>
-    <div class="seg" id="set_asapticker" style="flex-wrap:wrap">
-      <button data-v="SOXL">SOXL</button><button data-v="USD">USD</button><button data-v="TECL">TECL</button>
-      <button data-v="TQQQ">TQQQ</button><button data-v="QLD">QLD</button><button data-v="KORU">KORU</button></div>
+<div class="field tkwrap" style="margin:0 0 8px"><input id="set_asapticker_in" type="text" autocomplete="off" spellcheck="false" placeholder="티커를 입력하세요 — 예: SOXL, TQQQ" oninput="tkSearch('set_asapticker_in')" onfocus="tkSearch('set_asapticker_in')" onblur="tkBlur('set_asapticker_in')"><div class="tklist" id="set_asapticker_in_list"></div></div>
     <p class="note" style="margin:4px 0 8px">ASAP는 SOXL 기준으로 설계됐지만 어떤 레버리지든 200일선·RSI 규칙으로 동작합니다.</p>
     <div class="seclabel">매수 금액 <span class="hint" style="color:var(--faint);font-weight:500">하락장 적립·딥가중</span></div>
     <div class="field"><label>매일 적립금 base ($) <span class="hint">하락장→SGOV · 상승완료→SOXL</span></label><input id="set_asapbase" type="text" inputmode="decimal" value="10" oninput="commaInput(this)"></div>
@@ -2197,7 +2191,7 @@ function bestTgt(tkr, eng){
 // 설정창 익절% 옆 힌트: 현재 종목·엔진의 권장값(+공식값 병기)
 function syncTgtNote(){
   const el=$('target_hint'); if(!el) return;
-  const tk=(typeof segGet==='function' ? segGet('set_ticker') : null)||'SOXL';
+  const tk=(typeof tkVal==='function' ? tkVal('set_ticker_in','SOXL') : 'SOXL');
   const eng=(typeof segGet==='function' ? segGet('set_engine') : null)||'v40';
   const b=bestTgt(tk,eng), off=IM_OFFICIAL[tk];
   let h=`별%·복귀조건 동반 · <b>${tk} 기본 ${b}%</b>`;
@@ -6836,7 +6830,7 @@ function openSettings(){
   if(S.activeTab==='ivs'){
     $('set_inf').style.display='none';$('set_vr').style.display='none';if(setIvs)setIvs.style.display='';
     const st=s.settings;
-    segSet('set_ivsticker',st.ticker||'TQQQ'); segSet('set_ivss0',String(st.s0||55));
+    $('set_ivsticker_in').value=st.ticker||'TQQQ'; segSet('set_ivss0',String(st.s0||55));
     segSet('set_ivslook',String(st.look||40)); segSet('set_ivsband',String(st.band||15));
     segSet('set_ivspark',st.park||'bill'); segSet('set_ivsmode',st.mode||'iv');
     $('set_ivsprincipal').value=nfix(st.principal||0,0);
@@ -6852,12 +6846,12 @@ function openSettings(){
   }else if(S.activeTab==='asap'){
     $('set_inf').style.display='none';$('set_vr').style.display='none';if(setAsap)setAsap.style.display='';
     const st=s.settings;
-    segSet('set_asapticker',st.ticker||'SOXL');
+    $('set_asapticker_in').value=st.ticker||'SOXL';
     $('set_asapbase').value=nfix(st.base||10,0); $('set_asapmid').value=nfix(st.mid||50,0); $('set_asapdeep').value=nfix(st.deep||100,0);
   }else if(S.activeTab==='inf'){
     $('set_inf').style.display='';$('set_vr').style.display='none';
     const st=s.settings, sym=(st.cur||'usd')==='krw'?'₩':'$';
-    segSet('set_ticker',st.ticker);segSet('set_div',String(st.div));segSet('set_cur',st.cur||'usd');segSet('set_engine',st.engine||'v40');segSet('set_shortma',String(st.shortMA||30));segSet('set_lopct',String(st.loPct||6));segSet('set_reverse',st.reverse===true?'1':'0');segSet('set_compound',st.compound===false?'0':'1');segSet('set_tgtdyn',st.tgtDyn===true?'1':'0');syncShortMaUI(st.engine||'v40');syncTgtNote();
+    $('set_ticker_in').value=st.ticker||'SOXL';segSet('set_div',String(st.div));segSet('set_cur',st.cur||'usd');segSet('set_engine',st.engine||'v40');segSet('set_shortma',String(st.shortMA||30));segSet('set_lopct',String(st.loPct||6));segSet('set_reverse',st.reverse===true?'1':'0');segSet('set_compound',st.compound===false?'0':'1');segSet('set_tgtdyn',st.tgtDyn===true?'1':'0');syncShortMaUI(st.engine||'v40');syncTgtNote();
     $('set_target').value=st.target;$('set_big').value=st.big;$('set_principal').value=nfix(st.principal,0);
     if($('set_rows'))$('set_rows').value=st.rows!=null?st.rows:8;
     if($('set_gap'))$('set_gap').value=st.gap!=null?st.gap:2.5;
@@ -6866,7 +6860,7 @@ function openSettings(){
   }else if(S.activeTab==='ma'){
     $('set_inf').style.display='none';$('set_vr').style.display='none';if(setMa)setMa.style.display='';
     const st=s.settings;
-    { const cd=maCond(st); segSet('set_maticker',st.ticker||'SOXL');segSet('set_mabuy',cd.buy);segSet('set_masell',cd.sell);segSet('set_mapark',st.park||'cash'); }
+    { const cd=maCond(st); $('set_maticker_in').value=st.ticker||'SOXL';segSet('set_mabuy',cd.buy);segSet('set_masell',cd.sell);segSet('set_mapark',st.park||'cash'); }
     $('set_maprincipal').value=nfix(st.principal,0);
   }else{
     $('set_inf').style.display='none';$('set_vr').style.display='';
@@ -6924,6 +6918,12 @@ function tkSearch(id){
 function tkPick(id,sym){ const el=$(id); if(!el) return; el.value=sym; const b=$(id+'_list'); if(b){b.classList.remove('on');b.innerHTML='';} }
 function tkBlur(id){ setTimeout(()=>{ const b=$(id+'_list'); if(b){b.classList.remove('on');} },120); }
 function tkVal(id,dflt){ const el=$(id); const v=String((el&&el.value)||'').trim().toUpperCase(); return v||dflt; }
+/* 무매 종목을 바꾸면 그 종목의 오피셜 익절%로 맞춰 준다 (엔진 선택은 유지).
+   예전엔 버튼 클릭 핸들러에 있었는데 티커가 자유 입력이 되면서 여기로 옮겼다. */
+function onInfTickerChange(){
+  const t=$('set_target'); if(t) t.value=bestTgt(tkVal('set_ticker_in','SOXL'), segGet('set_engine')||'v40');
+  syncTgtNote();
+}
 function segSet(id,val){$(id).querySelectorAll('button').forEach(b=>b.classList.toggle('on',b.dataset.v===val))}
 function segGet(id){const b=$(id).querySelector('button.on');return b?b.dataset.v:null}
 // 거치식(mode=0.5)은 적립금이 항상 0이므로 입력칸을 비활성화해 혼동 방지
@@ -6950,8 +6950,8 @@ function syncShortMaUI(eng){
   if(note&&note.classList.contains('note')) note.style.opacity=on?'1':'0.4';
 }
 function setupSegs(){
-  ['set_ticker','set_div','set_reverse','set_tgtdyn','set_vmode','set_vformula','set_cur','set_vcur','set_engine','set_shortma','set_lopct','set_maticker','set_mabuy','set_masell','set_mapark','set_compound','set_dcamode','set_dcareinv','set_dcafreq','set_dcamul','set_asapticker',
-   'set_vauto','set_ivsticker','set_ivss0','set_ivslook','set_ivsband','set_ivspark','set_ivsmode'].forEach(id=>{
+  ['set_div','set_reverse','set_tgtdyn','set_vmode','set_vformula','set_cur','set_vcur','set_engine','set_shortma','set_lopct','set_mabuy','set_masell','set_mapark','set_compound','set_dcamode','set_dcareinv','set_dcafreq','set_dcamul',
+   'set_vauto','set_ivss0','set_ivslook','set_ivsband','set_ivspark','set_ivsmode'].forEach(id=>{
     const el=$(id);if(!el)return;
     el.querySelectorAll('button').forEach(b=>{
       b.onclick=()=>{el.querySelectorAll('button').forEach(x=>x.classList.remove('on'));b.classList.add('on');
@@ -6960,17 +6960,12 @@ function setupSegs(){
         if(id==='set_cur'){const sym=b.dataset.v==='krw'?'₩':'$';$('set_principal_lbl').textContent=`원금 (${sym})`;}
         if(id==='set_vcur'){const sym=b.dataset.v==='krw'?'₩':'$';$('set_add_lbl').textContent=`매 사이클 적립금 (${sym})`;$('set_startv_lbl').innerHTML=`시작 V (${sym}) <span class="hint">0이면 첫 매수가 V</span>`;$('set_startpool_lbl').textContent=`시작 Pool (${sym})`;applyVrModeUI(segGet('set_vmode')||'0.75');}
         // 종목 변경 시 익절배율(별%) 오피셜 기본값 자동 세팅 — TQQQ 15% / SOXL 20%
-        // 종목 변경 → 그 종목의 기본 익절%만 세팅 (엔진은 사용자 선택 유지)
-        if(id==='set_ticker'){
-          const t=$('set_target'); if(t) t.value=bestTgt(b.dataset.v, segGet('set_engine')||'v40');
-          syncTgtNote();
-        }
         if(id==='set_engine'){ syncShortMaUI(b.dataset.v); syncTgtNote(); }
         if(id==='set_dcamode') dcaModeUI();          // 적립↔거치 전환 시 칸·라벨 갱신
         // 운용모드 변경 시 거치식이면 적립금 입력 비활성화
         if(id==='set_vmode'){ applyVrModeUI(b.dataset.v); }
-        if(id==='set_ivspark'||id==='set_ivsticker'||id==='set_ivsmode')
-          syncIvsSetUI(segGet('set_ivspark')||'bill', segGet('set_ivsticker')||'TQQQ', segGet('set_ivsmode')||'iv');
+        if(id==='set_ivspark'||id==='set_ivsmode')
+          syncIvsSetUI(segGet('set_ivspark')||'bill', tkVal('set_ivsticker_in','TQQQ'), segGet('set_ivsmode')||'iv');
       };
     });
   });
@@ -7029,7 +7024,7 @@ function paperSyncSig(tab,sess){
 function saveSettings(){
   const s=sess();
   if(S.activeTab==='inf'){
-    s.settings={ticker:segGet('set_ticker')||'SOXL',div:+segGet('set_div')||20,engine:segGet('set_engine')||'v40',shortMA:+segGet('set_shortma')||30,loPct:+segGet('set_lopct')||6,
+    s.settings={ticker:tkVal('set_ticker_in','SOXL'),div:+segGet('set_div')||20,engine:segGet('set_engine')||'v40',shortMA:+segGet('set_shortma')||30,loPct:+segGet('set_lopct')||6,
       target:inputNum('set_target')||20,big:inputNum('set_big')||20,
       reverse:segGet('set_reverse')==='1',compound:segGet('set_compound')!=='0',
       tgtDyn:segGet('set_tgtdyn')==='1',
@@ -7038,9 +7033,9 @@ function saveSettings(){
       rowqty:1,principal:inputNum('set_principal')||10000,cur:segGet('set_cur')||'usd',
       simLast:(s.settings&&s.settings.simLast)||undefined};   // 모의 체결 진행점은 설정 저장으로 날아가면 안 된다
   }else if(S.activeTab==='ma'){
-    s.settings={ticker:segGet('set_maticker')||'SOXL',buy:segGet('set_mabuy')||'ma',sell:segGet('set_masell')||'ma',park:segGet('set_mapark')||'cash',principal:inputNum('set_maprincipal')||10000,cur:'usd'};
+    s.settings={ticker:tkVal('set_maticker_in','SOXL'),buy:segGet('set_mabuy')||'ma',sell:segGet('set_masell')||'ma',park:segGet('set_mapark')||'cash',principal:inputNum('set_maprincipal')||10000,cur:'usd'};
   }else if(S.activeTab==='ivs'){
-    s.settings={ticker:segGet('set_ivsticker')||'TQQQ',mode:segGet('set_ivsmode')||'iv',
+    s.settings={ticker:tkVal('set_ivsticker_in','TQQQ'),mode:segGet('set_ivsmode')||'iv',
       s0:+segGet('set_ivss0')||55,look:+segGet('set_ivslook')||40,
       band:+segGet('set_ivsband')||15,park:segGet('set_ivspark')||'bill',
       principal:Math.max(0,inputNum('set_ivsprincipal')||0),
@@ -7052,7 +7047,7 @@ function saveSettings(){
       amount:inputNum('set_dcaamt')||0,dipMul:+segGet('set_dcamul')||1,
       reinv:segGet('set_dcareinv')==='reinv',cur:'usd'};
   }else if(S.activeTab==='asap'){
-    s.settings={ticker:segGet('set_asapticker')||'SOXL',base:inputNum('set_asapbase')||10,mid:inputNum('set_asapmid')||50,deep:inputNum('set_asapdeep')||100,cur:'usd'};
+    s.settings={ticker:tkVal('set_asapticker_in','SOXL'),base:inputNum('set_asapbase')||10,mid:inputNum('set_asapmid')||50,deep:inputNum('set_asapdeep')||100,cur:'usd'};
   }else{
     // 사이클 번호·시작일·사이클 기록은 설정창에서 입력하는 값이 아니라 진입 버튼이 쌓은 파생 상태다.
     // settings를 통째로 갈아끼우면 설정을 한 번 저장할 때마다 주차가 0으로 돌아가고
