@@ -16,6 +16,8 @@ const UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (
 //   (또는 Cloudflare Pages → 설정 → 환경변수에 FINNHUB_KEY 추가)
 // 키가 없으면 Yahoo→Stooq 폴백으로 동작합니다 (실시간이 막힐 수 있음).
 const INLINE_FINNHUB_KEY = "";
+// 국내 종목코드: 옛 6자리 숫자(069500)와 2024년부터 나온 신형(0104N0) 두 가지뿐이다.
+const KR_CODE = /^(?:\d{6}|\d{4}[A-Z]\d)$/;
 // ───────────────────────────────────────────────────────────
 
 export async function onRequestGet({ request, env }) {
@@ -38,16 +40,39 @@ export async function onRequestGet({ request, env }) {
   // ── 국내상장 ETF → 네이버 금융 ──
   // 옛 코드는 6자리 숫자(423920), 2024년부터 나온 건 가운데에 알파벳이 있다(0104N0).
   // 숫자만 받으면 신형 코드가 야후로 새어 나가 'no data'가 된다.
-  if (/^(?:\d{6}|\d{4}[A-Z]\d)$/.test(symbol)) {
-    try {
-      const kr = await naverDaily(symbol, range, dbg);
-      if (kr && kr.series.length) {
-        const last = kr.series[kr.series.length - 1];
-        const out = { symbol, currency: "KRW", src: "naver", price: kr.price != null ? kr.price : last.close, marketState: null, last, series: kr.series, ohlc: kr.ohlc, intraday: null };
-        if (debug) out.debug = dbg;
-        return new Response(JSON.stringify(out), { headers: JH });
+  if (KR_CODE.test(symbol)) {
+    let kr = null;
+    try { kr = await naverDaily(symbol, range, dbg, period1, period2); }
+    catch (e) { dbg.push(`naver: ${e.message}`); }
+    /* 분배금을 물으면 야후(.KS/.KQ)로 간다. 네이버 siseJson은 분배 반영 종가만 주고
+       배당 이력도 raw 종가도 없어서, 배당 ETF가 통째로 '분배 수익 0%'로 나왔다.
+       adj·raw·배당을 한 소스에서 받아야 '가격 수익 + 분배 수익 = 합계'가 맞는다.
+       현재가만 네이버 것을 쓴다 — 야후의 국내 시세는 장중에 늦다. */
+    if (wantDiv) {
+      for (const sfx of [".KS", ".KQ"]) {
+        try {
+          const y = await yahooDaily("query1", symbol + sfx, range, dbg, period1, period2, true);
+          if (y && y.series.length) {
+            const last = y.series[y.series.length - 1];
+            const out = { symbol, currency: "KRW", src: "yahoo" + sfx, marketState: null, last,
+              price: (kr && kr.price != null) ? kr.price : (y.price != null ? y.price : last.close),
+              series: y.series, ohlc: y.ohlc, intraday: null,
+              dividends: y.dividends || [], splits: y.splits || [], raw: y.raw || [] };
+            if (debug) out.debug = dbg;
+            return new Response(JSON.stringify(out), { headers: JH });
+          }
+        } catch (e) { dbg.push(`yahoo ${sfx}: ${e.message}`); }
       }
-    } catch (e) { dbg.push(`naver: ${e.message}`); }
+    }
+    if (kr && kr.series.length) {
+      const last = kr.series[kr.series.length - 1];
+      const out = { symbol, currency: "KRW", src: "naver", price: kr.price != null ? kr.price : last.close, marketState: null, last, series: kr.series, ohlc: kr.ohlc, intraday: null };
+      // 야후에서 배당을 못 받은 경우. 네이버 종가는 분배 반영가라 raw를 같은 값으로 두면
+      // 분배 수익 0 — 여태까지의 동작 그대로다. 없는 걸 지어내지는 않는다.
+      if (wantDiv) { out.dividends = []; out.splits = []; out.raw = kr.series; }
+      if (debug) out.debug = dbg;
+      return new Response(JSON.stringify(out), { headers: JH });
+    }
     return new Response(JSON.stringify({ error: "no data", symbol, debug: dbg }), { status: 502, headers: JH });
   }
 
@@ -241,11 +266,12 @@ async function stooqDaily(symbol, dbg) {
 }
 // 국내상장 종목/ETF 일봉 — 네이버 금융 (fchart siseJson)
 // 응답은 엄격한 JSON이 아니라 JS 배열 리터럴 텍스트라서 정규화 후 파싱.
-async function naverDaily(code, range, dbg) {
-  // 기간 → 시작일 계산
+async function naverDaily(code, range, dbg, period1 = null, period2 = null) {
+  /* period1/period2를 무시하고 range만 보던 탓에, 백테스트가 5년씩 끊어 달라고 해도
+     국내 종목만 400일치가 돌아왔다. 해외는 다 받아지는데 국내만 짧아 비교가 어긋났다. */
   const days = range === "3mo" ? 90 : range === "6mo" ? 180 : range === "5d" ? 10 : range === "max" ? 3000 : 400;
-  const end = new Date();
-  const start = new Date(end.getTime() - days * 86400000);
+  const end = period2 ? new Date(+period2 * 1000) : new Date();
+  const start = period1 ? new Date(+period1 * 1000) : new Date(end.getTime() - days * 86400000);
   const fmt = (d) => d.toISOString().slice(0, 10).replace(/-/g, "");
   const u = `https://fchart.stock.naver.com/siseJson.nhn?symbol=${code}&requestType=1&startTime=${fmt(start)}&endTime=${fmt(end)}&timeframe=day`;
   const r = await fetch(u, { headers: { "User-Agent": UA, "Referer": "https://finance.naver.com/" }, cf: { cacheTtl: 60 } });
