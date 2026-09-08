@@ -822,7 +822,8 @@ console.log('[21] 국내 종목 부분일치 검색');
   ok('국내 목록을 EUC-KR로 디코딩', /etfItemList/.test(se) && /new TextDecoder\("euc-kr"\)/.test(se)
      && /arrayBuffer\(\)/.test(se));
   ok('빈 응답으로 캐시를 덮지 않는다', /if \(list\.length\) _krCache = \{ at: Date\.now\(\), list \}/.test(se));
-  ok('한글 질의는 야후를 안 부른다', /hangul \? Promise\.resolve\(\[\]\) : yahooSearch/.test(se));
+  ok('한글 질의는 야후·미국 목록을 안 부른다',
+     /hangul \? \[\] : usSymbolList/.test(se) && /hangul \? \[\] : yahooSearch/.test(se));
 
   // 실제 함수를 꺼내 순위를 직접 확인한다 (정적 스캔만으론 정렬이 맞는지 알 수 없다)
   let api=null;
@@ -872,6 +873,69 @@ console.log('[21] 국내 종목 부분일치 검색');
   // 목록에서 고르면 change가 안 나 익절배율이 안 따라오던 문제
   ok('무매는 목록에서 골라도 익절배율이 따라온다',
      /if\(id==='set_ticker_in'\) onInfTickerChange\(\);/.test(idx));
+}
+
+
+/* ════ 22. 해외 이름 부분일치 + 국내 분배금 ════
+   야후 검색은 이름 앞부분만 봐서 'covered call'·'ultrapro'로는 아무것도 안 나왔다.
+   국내와 같은 방법(목록 받아 훑기)을 미국 전 종목에도 적용한다.
+   국내 ETF는 네이버에 분배금 이력이 없어 배당 ETF가 통째로 '분배 수익 0%'였다. */
+console.log('[22] 해외 이름 부분일치 · 국내 분배금');
+{
+  const sp=__d+'/functions/api/search.js';
+  const se=fs.existsSync(sp)?fs.readFileSync(sp,'utf8'):'';
+  ok('미국 전 종목 목록을 받는다', /nasdaqtraded\.txt/.test(se) && /function usSymbolList\(\)/.test(se));
+  ok('테스트용 가짜 종목은 뺀다', /c\[7\] === "Y"/.test(se));
+  ok('빈 응답으로 캐시를 덮지 않는다 (해외)', /if \(list\.length\) _usCache = \{ at: Date\.now\(\), list \}/.test(se));
+
+  let api=null;
+  try{ api=new Function(se.replace(/export\s+(async\s+)?function/g,'$1function').replace(/export /g,'')
+        + '\n;return {krSearch, usSearch, normHead};')(); }catch(e){}
+  ok('해외 검색 함수를 꺼낼 수 있다', !!(api&&api.usSearch), api?'':'평가 실패');
+  if(api&&api.usSearch){
+    const U=[
+      {symbol:'TQQQ',name:'ProShares UltraPro QQQ',etf:true},
+      {symbol:'SQQQ',name:'ProShares UltraPro Short QQQ',etf:true},
+      {symbol:'PSQ', name:'ProShares Short QQQ',etf:true},
+      {symbol:'SCHD',name:'Schwab US Dividend Equity ETF',etf:true},
+      {symbol:'SOXL',name:'Direxion Daily Semiconductor Bull 3X ETF',etf:true},
+      {symbol:'SMH', name:'VanEck Semiconductor ETF',etf:true},
+      {symbol:'AOSL',name:'Alpha and Omega Semiconductor Limited',etf:false},
+      {symbol:'CVRD',name:'Madison Covered Call ETF',etf:true},
+    ];
+    const syms=(q,n=9)=>api.usSearch(U,q,n).map(x=>x.symbol);
+    // 이번 작업의 요구사항 — 이름 가운데 토막으로 찾힌다
+    ok("'ultrapro'로 이름 가운데가 걸린다", syms('ultrapro').includes('TQQQ'));
+    ok("'covered call'처럼 두 낱말도 걸린다", syms('covered call')[0]==='CVRD');
+    ok("'semiconductor'는 복수형도 잡는다", syms('semiconductor').includes('SMH') && syms('semiconductor').includes('SOXL'));
+    // 낱말 첫머리만 인정한다 — 안 그러면 'ShorT QQQ'가 TQQQ로 걸린다
+    ok('낱말 가운데는 안 걸린다 (ShorT QQQ ≠ TQQQ)', syms('TQQQ').length===1 && syms('TQQQ')[0]==='TQQQ',
+       syms('TQQQ').join(','));
+    ok('토막이 많이 맞은 것부터', syms('3x semiconductor')[0]==='SOXL', syms('3x semiconductor').join(','));
+    ok('같은 조건이면 ETF가 주식보다 먼저',
+       syms('semiconductor').indexOf('SMH') < syms('semiconductor').indexOf('AOSL'));
+    ok('티커를 통째로 치면 그것부터', syms('SCHD')[0]==='SCHD');
+    // 낱말 경계: 기호 뒤 · 소문자→대문자 · 글자↔숫자
+    const h=api.normHead('ProShares UltraPro MidCap400');
+    ok('낱말 경계를 붙여쓴 이름에서도 찾는다',
+       h.n==='PROSHARESULTRAPROMIDCAP400' && h.head[0] && h.head[h.n.indexOf('ULTRA')]
+       && h.head[h.n.indexOf('PROMIDCAP')+3] && h.head[h.n.indexOf('400')], h.n);
+    // 국내는 '200타겟위클리커버드콜'처럼 붙여 쓰므로 경계를 따지면 안 된다
+    const K=[{symbol:'0104N0',name:'TIGER 200타겟위클리커버드콜',cap:300}];
+    ok('국내는 붙여쓴 가운데도 걸린다', api.krSearch(K,'커버드콜',5).length===1);
+  }
+
+  /* 국내 ETF 분배금 — 네이버 siseJson은 분배 반영 종가만 주고 배당 이력도 raw도 없다.
+     그래서 TIGER 배당커버드콜액티브 같은 월배당 ETF가 '분배 수익 0.0%'로 나왔다. */
+  const q=fs.existsSync(__d+'/functions/api/quote.js')?fs.readFileSync(__d+'/functions/api/quote.js','utf8'):'';
+  ok('국내도 분배금을 받아온다 (야후 .KS/.KQ)', /for \(const sfx of \[".KS", ".KQ"\]\)/.test(q)
+     && /yahooDaily\("query1", symbol \+ sfx, range, dbg, period1, period2, true\)/.test(q));
+  ok('현재가는 네이버 것을 쓴다', /price: \(kr && kr\.price != null\) \? kr\.price :/.test(q));
+  // 야후가 안 되면 여태 동작 그대로 — 없는 분배금을 지어내지 않는다
+  ok('야후가 막히면 네이버로 물러난다', /if \(wantDiv\) \{ out\.dividends = \[\]; out\.splits = \[\]; out\.raw = kr\.series; \}/.test(q));
+  // period1/period2를 무시해 국내만 400일로 잘려 있었다
+  ok('국내도 요청 기간을 지킨다', /async function naverDaily\(code, range, dbg, period1 = null, period2 = null\)/.test(q)
+     && /period2 \? new Date\(\+period2 \* 1000\)/.test(q) && /period1 \? new Date\(\+period1 \* 1000\)/.test(q));
 }
 
 
