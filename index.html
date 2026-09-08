@@ -432,7 +432,7 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-app.js";
   import { getAuth, GoogleAuthProvider, signInWithPopup, getRedirectResult, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-auth.js";
-  import { getFirestore, doc, getDoc, setDoc, collection, getDocs } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-firestore.js";
+  import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-firestore.js";
   const firebaseConfig = {
     apiKey: "AIzaSyBzBe9pAttnbDgTlNThWZzNqtAAKxX7Ksw",
     authDomain: "jk-invest.firebaseapp.com",
@@ -447,7 +447,7 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
   const db = getFirestore(app);
   const provider = new GoogleAuthProvider();
   // 전역 노출 (일반 스크립트에서 사용)
-  window.fb = { auth, db, provider, signInWithPopup, getRedirectResult, onAuthStateChanged, signOut, doc, getDoc, setDoc, collection, getDocs };
+  window.fb = { auth, db, provider, signInWithPopup, getRedirectResult, onAuthStateChanged, signOut, doc, getDoc, setDoc };
   window.dispatchEvent(new Event('fb-ready'));
 </script>
 </head>
@@ -467,11 +467,11 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
 </div>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.16</span></h1></div>
+    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.17</span></h1></div>
     <div style="display:flex;align-items:center;gap:8px">
       <a class="btbtn" href="/backtest" title="백테스트">📊<span class="bt-txt"> 백테스트</span></a>
       <button class="btbtn" id="paperbtn" onclick="openPaper()" title="모의투자 성과" style="display:none;border-color:rgba(245,196,81,.45);color:var(--gold)">🧪<span class="bt-txt"> 모의 성과</span></button>
-      <button class="btbtn admin-only" id="adminbtn" onclick="openAdmin()" title="접속 계정·사용자 관리" style="display:none;border-color:rgba(124,140,255,.5);color:var(--acc)">👤<span class="bt-txt"> 사용자</span></button>
+      <a class="btbtn admin-only" id="adminbtn" href="/admin" title="관리자" style="display:none;border-color:rgba(139,140,240,.5);color:var(--vio)">👤<span class="bt-txt"> 관리자</span></a>
     </div>
   </div>
   <div class="userbadge" id="userbadge" style="margin-top:8px"></div>
@@ -613,11 +613,6 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
         <div id="inf_todo_body"><p class="lead" id="d_todo" style="margin-bottom:0">설정(⚙️)에서 종목·분할·원금을 정하고, 위 주문표에서 전일 종가를 입력하세요.</p></div></div>
 
       <!-- 시세 연결 진단 (관리자 모드 전용) -->
-      <div class="card admin-only" id="diag_card" style="margin-top:13px;display:none"><h3><span class="dot"></span>시세 연결 진단 <span style="font-size:11px;color:var(--faint);font-weight:600">관리자</span></h3>
-        <p class="note" style="margin-bottom:10px">각 데이터 경로의 연결 상태를 점검합니다.</p>
-        <button class="ghostbtn" onclick="runDiag()">🔍 진단 실행</button>
-        <div id="diag_out" style="margin-top:10px;font-size:12px;font-variant-numeric:tabular-nums"></div>
-      </div>
     </div>
     <div class="block" id="inf-rec">
       <div class="syncbar"><span class="dotled ok"></span><span class="st">구글 계정에 자동 저장됩니다 ☁</span></div>
@@ -1510,7 +1505,7 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
   <footer>
     <strong>JK 퀀트</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.16</b> · 2026-09-08</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.17</b> · 2026-09-08</div>
   </footer>
 </div>
 
@@ -1672,16 +1667,6 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
   <h3>🧪 모의투자 성과</h3><p>모의로 표시한 세션만 모아 보여줍니다.</p>
   <div id="paper_body"></div>
   <div class="mbtns"><button class="close" onclick="closePaper()">닫기</button></div>
-</div></div>
-
-<!-- 관리자: 접속 계정·사용자 관리 -->
-<div class="modal" id="adminModal"><div class="box">
-  <button class="mx" onclick="closeAdmin()" aria-label="닫기">✕</button>
-  <h3>👤 접속 계정 · 사용자 관리</h3>
-  <p>이 앱에 로그인한 적이 있는 계정입니다. 차단하면 다음 로그인부터 막힙니다.</p>
-  <div id="admin_sum" class="note" style="margin-bottom:10px"></div>
-  <div id="admin_body"></div>
-  <div class="mbtns"><button class="close" onclick="closeAdmin()">닫기</button><button class="save" onclick="renderAdmin()">🔄 새로고침</button></div>
 </div></div>
 
 <!-- 세션 모달 -->
@@ -2525,51 +2510,6 @@ async function proxyText(px, target){
 
 /* 일봉 가져오기: {symbol,last:{date,close},days:[{date,close}]} 반환, 실패 시 null */
 /* 시세 연결 진단 — 각 경로를 독립적으로 찔러 결과 표시 */
-async function runDiag(){
-  const out=$('diag_out'); if(!out)return;
-  const SYM=(curStrat().settings.ticker||'SOXL').toUpperCase();
-  out.innerHTML='<div style="color:var(--faint)">진단 중… (10~20초 걸릴 수 있어요)</div>';
-  const lines=[];
-  const render=()=>out.innerHTML=lines.join('');
-  const add=(label,ok,detail)=>{lines.push(`<div style="padding:5px 0;border-bottom:1px solid var(--line)"><span style="color:${ok?'var(--buy)':'var(--sell)'};font-weight:700">${ok?'✓':'✗'}</span> ${label} <span style="color:var(--faint)">${detail||''}</span></div>`);render();};
-
-  // 1) 자체 함수 /api/quote
-  try{
-    const t0=Date.now();
-    const r=await fetch(`/api/quote?symbol=${SYM}&debug=1`,{headers:{'Accept':'application/json'}});
-    const ms=Date.now()-t0;
-    const ct=r.headers.get('content-type')||'';
-    if(r.ok && ct.includes('json')){
-      const j=await r.json();
-      if(j.series&&j.series.length){ add('자체 API (/api/quote)',true,`${ms}ms · ${j.series.length}일 · src=${j.src||'?'} · 현재가 $${j.price||'?'}`); }
-      else add('자체 API',false,'응답 왔으나 데이터 없음');
-      if(j.debug){lines.push(`<div style="color:var(--faint);font-size:11px;padding:4px 0">서버로그: ${j.debug.join(' / ')}</div>`);render();}
-    }else if(ct.includes('html')){
-      add('자체 API',false,'HTML 반환 → functions 미배포 (드래그업로드는 functions 미지원, Wrangler 필요)');
-    }else add('자체 API',false,`HTTP ${r.status}`);
-  }catch(e){ add('자체 API',false,(e.message||'실패')); }
-
-  // 2) 각 프록시로 Yahoo 일봉
-  const yUrl=`https://query1.finance.yahoo.com/v8/finance/chart/${SYM}?interval=1d&range=5d`;
-  const names=['corsproxy.io','allorigins/raw','codetabs','thingproxy','allorigins/get','직접'];
-  for(let i=0;i<PUBLIC_PROXIES.length;i++){
-    try{
-      const t0=Date.now();
-      const txt=await proxyText(PUBLIC_PROXIES[i],yUrl);
-      const ms=Date.now()-t0;
-      const j=JSON.parse(txt);
-      const ok=!!(j&&j.chart&&j.chart.result&&j.chart.result[0]&&j.chart.result[0].timestamp);
-      add(`프록시 ${names[i]} → Yahoo`, ok, ok?`${ms}ms · OK`:'응답 이상');
-    }catch(e){ add(`프록시 ${names[i]} → Yahoo`,false,(e.message||'실패').slice(0,36)); }
-  }
-
-  // 3) 공포탐욕
-  try{ const fg=await fetchFearGreed(); add('공포탐욕 (CNN)', !!fg, fg?`${fg.score} ${fg.rating||''}`:'실패'); }
-  catch(e){ add('공포탐욕',false,e.message); }
-
-  lines.push(`<div style="color:var(--faint);font-size:11px;padding:8px 0 0">✓가 하나도 없으면 망/프록시 다운. 자체 API가 'HTML 반환'이면 Wrangler 배포 필요.</div>`);
-  render();
-}
 
 async function fetchDaily(symbol){
   const SYM=symbol.toUpperCase();
@@ -6713,7 +6653,7 @@ function switchSess(id){
   // 이전 세션 시세 캐시/노트 완전 초기화 (잔상 방지)
   lastQuote={inf:null,vr:null}; infQuoteCache=null; _lastNeedClose=null; maQuoteData=null; dcaQuoteData=null; ivsQuoteData=null; ivsQuote1=null;
   clearInputs();
-  ['vn_fetchnote','chart_note','inf_chart_note','inf_ten_grid','diag_out','ma_fetchnote','dca_fetchnote','ivs_fetchnote'].forEach(id=>{const el=$(id);if(el){el.textContent='';el.className=el.className.replace(/\b(ok|err|load)\b/g,'');}});
+  ['vn_fetchnote','chart_note','inf_chart_note','inf_ten_grid','ma_fetchnote','dca_fetchnote','ivs_fetchnote'].forEach(id=>{const el=$(id);if(el){el.textContent='';el.className=el.className.replace(/\b(ok|err|load)\b/g,'');}});
   // 현재 탭의 서브탭을 "현재"로 리셋
   resetSubnav(S.activeTab);
   refreshAll();
@@ -7289,7 +7229,7 @@ function adminTap(){
    읽을 수는 없다(용량도 크고 남의 매매를 다 여는 셈이다).
    profiles/{uid}에 이메일·접속시각만 따로 적어 둔다 — 목록은 이것만 읽는다. */
 async function touchProfile(user){
-  if(!user||!window.fb||!window.fb.collection) return null;
+  if(!user||!window.fb||!window.fb.setDoc) return null;
   const ref=window.fb.doc(window.fb.db,'profiles',user.uid);
   let prev=null;
   try{ const snap=await window.fb.getDoc(ref); if(snap.exists()) prev=snap.data()||null; }catch(e){ console.warn('profile read',e.message); }
@@ -7306,68 +7246,6 @@ async function touchProfile(user){
    관리자 자신은 어떤 경우에도 잠기지 않게 한다 (실수로 자기를 차단하면 복구 불가). */
 function isBlocked(prof){ return !!(prof&&prof.blocked) && !isAdmin(); }
 
-function fmtWhen(ms){
-  const t=+ms||0; if(!t) return '—';
-  const d=new Date(t), p=n=>String(n).padStart(2,'0');
-  const days=Math.floor((Date.now()-t)/864e5);
-  const rel = days<=0?'오늘' : days===1?'어제' : days<30?days+'일 전' : Math.floor(days/30)+'개월 전';
-  return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())} <span style="color:var(--faint)">${rel}</span>`;
-}
-function openAdmin(){ if(!isAdmin()) return; $('adminModal').classList.add('on'); renderAdmin(); }
-function closeAdmin(){ $('adminModal').classList.remove('on'); }
-
-const RULES_HINT=`목록을 읽으려면 Firestore 규칙에 관리자 허용이 있어야 합니다.
-Firebase 콘솔 → Firestore Database → 규칙에 저장소의 <b>firestore.rules</b> 내용을 붙여넣으세요.`;
-
-async function renderAdmin(){
-  const body=$('admin_body'), sum=$('admin_sum');
-  if(!body) return;
-  body.innerHTML='<p class="lead">불러오는 중…</p>'; if(sum) sum.textContent='';
-  let rows=[];
-  try{
-    const snap=await window.fb.getDocs(window.fb.collection(window.fb.db,'profiles'));
-    snap.forEach(d=>rows.push(Object.assign({uid:d.id}, d.data()||{})));
-  }catch(e){
-    body.innerHTML=`<p class="lead" style="color:var(--sell)">목록을 못 읽었습니다 — ${String(e.message||e).replace(/</g,'&lt;')}</p><p class="note">${RULES_HINT}</p>`;
-    return;
-  }
-  rows.sort((a,b)=>(+b.lastSeen||0)-(+a.lastSeen||0));
-  if(!rows.length){
-    body.innerHTML='<p class="lead">아직 기록된 계정이 없습니다.<br><span style="color:var(--faint)">이 화면이 생긴 뒤 로그인한 계정부터 쌓입니다 — 관리자 본인도 한 번 다시 로그인하면 잡힙니다.</span></p>';
-    return;
-  }
-  const wk=Date.now()-7*864e5;
-  if(sum) sum.innerHTML=`총 <b>${rows.length}</b>명 · 최근 7일 접속 <b>${rows.filter(r=>(+r.lastSeen||0)>=wk).length}</b>명 · 차단 <b>${rows.filter(r=>r.blocked).length}</b>명`;
-  const esc=t=>String(t||'').replace(/</g,'&lt;');
-  body.innerHTML=`<div class="htable-wrap"><table class="htable"><thead><tr>
-      <th>계정</th><th>마지막 접속</th><th>첫 접속</th><th style="text-align:right">방문</th><th></th></tr></thead><tbody>`
-    + rows.map(r=>{
-        const me=normEmail(r.email)===normEmail(curEmail);
-        const admin=ADMIN_EMAILS.includes(normEmail(r.email));
-        const tag = admin?'<span style="color:var(--acc);font-size:11px;font-weight:700"> 관리자</span>'
-                  : r.blocked?'<span style="color:var(--sell);font-size:11px;font-weight:700"> 차단됨</span>' : '';
-        return `<tr${r.blocked?' style="opacity:.55"':''}>
-          <td><b>${esc(r.email||r.uid)}</b>${me?'<span style="color:var(--faint);font-size:11px"> (나)</span>':''}${tag}
-              <div style="color:var(--faint);font-size:11px">${esc(r.name||'')}</div></td>
-          <td>${fmtWhen(r.lastSeen)}</td><td>${fmtWhen(r.firstSeen)}</td>
-          <td style="text-align:right">${+r.visits||0}</td>
-          <td style="text-align:right">${admin?'':
-            `<button class="ghostbtn" style="padding:4px 10px;font-size:12px;margin:0"
-              onclick="setBlocked('${r.uid}',${r.blocked?'false':'true'},'${esc(r.email).replace(/'/g,"")}')">${r.blocked?'차단 해제':'차단'}</button>`}</td>
-        </tr>`;
-      }).join('')
-    + `</tbody></table></div>
-       <p class="note" style="margin-top:10px">차단은 <b>다음 로그인부터</b> 적용됩니다. 이미 열어 둔 화면은 그대로입니다 —
-       확실히 막으려면 저장소의 <b>firestore.rules</b>를 Firebase 콘솔에 반영해 주세요.</p>`;
-}
-async function setBlocked(uid,on,email){
-  if(!isAdmin()) return;
-  if(!confirm(`${email||uid}\n\n${on?'차단':'차단 해제'}할까요?`)) return;
-  try{
-    await window.fb.setDoc(window.fb.doc(window.fb.db,'profiles',uid),{blocked:!!on},{merge:true});
-  }catch(e){ alert('바꾸지 못했습니다 — '+(e.message||e)); return; }
-  renderAdmin();
-}
 
 function startApp(){
   if(appStarted){refreshAll();return;}

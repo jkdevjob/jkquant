@@ -21,6 +21,9 @@ function extractFn(src, marker){
   return src.slice(i, k+1);
 }
 const idx=fs.readFileSync(IDX,'utf8'), bt=fs.readFileSync(BT,'utf8');
+// 관리자 화면은 별도 페이지다 (백테와 같은 구조). 없으면 [23]에서 잡힌다
+const ADM=__d+'/admin.html';
+const adm=fs.existsSync(ADM)?fs.readFileSync(ADM,'utf8'):'';
 console.log(`대상: ${IDX} (${(idx.match(/appVer">(v[\d.]+)/)||[])[1]||'?'}) · ${BT} (${(bt.match(/btVer[^>]*>(v[\d.]+)/)||[])[1]||'?'})\n`);
 
 /* ════ 0. 파일 문법 ════ */
@@ -960,9 +963,19 @@ console.log('[23] 관리자 모드 — 접속 계정·사용자 관리');
      && /async function touchProfile\(user\)/.test(idx));
   ok('첫 접속·방문 수가 쌓인다', /firstSeen:\(prev&&\+prev\.firstSeen\)\|\|now/.test(idx)
      && /visits:\(\(prev&&\+prev\.visits\)\|\|0\)\+1/.test(idx));
-  ok('컬렉션 통째 읽기를 가져왔다', /doc, getDoc, setDoc, collection, getDocs/.test(idx)
-     && /setDoc, collection, getDocs \}/.test(idx));
-  ok('목록은 마지막 접속 최신순', /rows\.sort\(\(a,b\)=>\(\+b\.lastSeen\|\|0\)-\(\+a\.lastSeen\|\|0\)\)/.test(idx));
+  ok('관리자 화면은 별도 페이지', !!adm && /<title>JK 퀀트 — 관리자<\/title>/.test(adm), adm?'':'admin.html 없음');
+  ok('운영에서 관리자 페이지로 간다', /id="adminbtn" href="\/admin"/.test(idx));
+  // 관리자 UI가 운영에 남아 있으면 같은 걸 두 곳에서 고쳐야 한다
+  ok('관리자 UI는 운영에 남기지 않는다',
+     !/adminModal|renderAdmin|openAdmin|diag_card|runDiag/.test(idx));
+  ok('관리자 페이지도 컬렉션 통째 읽기를 쓴다', /doc, getDoc, setDoc, collection, getDocs/.test(adm)
+     && /getDocs\(window\.fb\.collection\(window\.fb\.db,'profiles'\)\)/.test(adm));
+  ok('목록은 마지막 접속 최신순', /rows\.sort\(\(a,b\)=>\(\+b\.lastSeen\|\|0\)-\(\+a\.lastSeen\|\|0\)\)/.test(adm));
+  // 기능은 SECTIONS 한 줄 + render 함수 하나로 늘린다
+  ok('화면 목록이 한곳에 모여 있다', /const SECTIONS=\[/.test(adm)
+     && /\{id:'users'/.test(adm) && /\{id:'diag'/.test(adm) && /\{id:'rules'/.test(adm));
+  ok('관리자 아닌 계정은 문 앞에서 막힌다', /if\(isAdmin\(\)\)\{[\s\S]{0,200}?\$\('gate'\)\.style\.display='none'/.test(adm)
+     && /계정에는 관리자 권한이 없습니다/.test(adm));
 
   // 차단된 계정이 데이터를 열고 나서 쫓겨나면 막은 의미가 없다
   ok('차단 확인이 데이터 로딩보다 먼저',
@@ -970,8 +983,11 @@ console.log('[23] 관리자 모드 — 접속 계정·사용자 관리');
      && /await window\.fb\.signOut\(window\.fb\.auth\)/.test(idx));
   // 실수로 자기를 차단하면 되돌릴 방법이 없다
   ok('관리자는 스스로 잠기지 않는다', /function isBlocked\(prof\)\{ return !!\(prof&&prof\.blocked\) && !isAdmin\(\); \}/.test(idx));
-  ok('관리자 행엔 차단 버튼이 없다', /\$\{admin\?'':/.test(idx));
-  ok('규칙이 막으면 그렇다고 말한다', /RULES_HINT/.test(idx) && /목록을 못 읽었습니다/.test(idx));
+  ok('관리자 행엔 차단 버튼이 없다', /\$\{adm\?'<span class="sub">—<\/span>':/.test(adm));
+  ok('규칙이 막으면 그렇다고 말한다', /목록을 못 읽었습니다/.test(adm) && /보안 규칙 보기/.test(adm));
+  // 규칙을 두 곳에 적어두면 갈라진다 — 페이지가 보여주는 것과 파일이 같아야 한다
+  ok('페이지가 보여주는 규칙이 파일과 같다',
+     /allow list: if isAdmin\(\)/.test(adm) && /const RULES=`rules_version = '2';/.test(adm));
 
   /* 클라이언트 차단은 앱을 거쳐 들어올 때만 듣는다. 규칙이 있어야 진짜로 막힌다 */
   const rp=__d+'/firestore.rules';

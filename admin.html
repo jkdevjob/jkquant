@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#0f1320">
+<meta name="robots" content="noindex,nofollow">
+<title>JK 퀀트 — 관리자</title>
+<style>
+:root{
+  --bg:#0f1320;--panel:#171c2e;--panel2:#1e2540;--line:#2a3354;
+  --ink:#e8ecf7;--dim:#9aa6c9;--faint:#646e93;
+  --buy:#36d399;--sell:#f87b8c;--gold:#f5c451;--vio:#8b8cf0;--vio2:#6366d9;--r:14px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{-webkit-text-size-adjust:100%}
+body{background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Apple SD Gothic Neo","Noto Sans KR",sans-serif;line-height:1.55;padding-bottom:40px;word-break:keep-all;overflow-wrap:break-word}
+.wrap{max-width:860px;margin:0 auto;padding:0 16px}
+header{padding:20px 0 12px;border-bottom:1px solid var(--line);background:linear-gradient(180deg,#141a2e,var(--bg))}
+.htop{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+.kicker{font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--faint);font-weight:700}
+h1{font-size:22px;font-weight:800;letter-spacing:-.02em;margin-top:4px}
+h1 .v{color:var(--gold)}
+.btbtn{display:inline-flex;align-items:center;gap:5px;height:40px;padding:0 14px;background:var(--panel2);border:1px solid var(--line);color:var(--dim);border-radius:11px;font-size:13px;font-weight:600;cursor:pointer;text-decoration:none;white-space:nowrap;transition:border-color .15s,color .15s}
+.btbtn:hover{border-color:var(--vio);color:var(--vio)}
+@media(max-width:460px){.btbtn .bt-txt{display:none}.btbtn{padding:0 12px}}
+.userbadge{display:flex;align-items:center;gap:7px;font-size:11.5px;color:var(--dim);margin-top:8px}
+.userbadge img{width:20px;height:20px;border-radius:50%}
+.lo{background:none;border:none;color:var(--faint);font-size:11.5px;cursor:pointer;text-decoration:underline;padding:0}
+
+/* 왼쪽 메뉴 — 기능이 늘어나면 SECTIONS에 한 줄 더하면 된다 */
+.layout{display:flex;gap:16px;margin-top:16px;align-items:flex-start}
+.nav{display:flex;flex-direction:column;gap:6px;flex:0 0 168px;position:sticky;top:16px}
+.nav button{text-align:left;background:var(--panel);border:1px solid var(--line);color:var(--dim);border-radius:11px;padding:11px 13px;font-size:13px;font-weight:700;cursor:pointer;transition:border-color .15s,color .15s}
+.nav button:hover{border-color:var(--vio)}
+.nav button.on{background:var(--panel2);border-color:var(--vio2);color:var(--ink)}
+.nav button small{display:block;font-size:10.5px;font-weight:600;color:var(--faint);margin-top:1px}
+.nav button.soon{opacity:.5;cursor:default}
+.nav button.soon:hover{border-color:var(--line)}
+.body{flex:1 1 auto;min-width:0}
+@media(max-width:700px){
+  .layout{flex-direction:column;gap:12px}
+  .nav{flex-direction:row;overflow-x:auto;flex:none;width:100%;position:static;padding-bottom:2px;-webkit-overflow-scrolling:touch}
+  .nav button{flex:0 0 auto;padding:8px 12px}
+  .nav button small{display:none}
+}
+
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:17px;margin-bottom:13px}
+.card h3{font-size:15px;font-weight:800;margin-bottom:12px;display:flex;align-items:center;gap:8px}
+.card h3 .dot{width:7px;height:7px;border-radius:50%;background:var(--gold);flex:0 0 auto}
+.lead{color:var(--dim);font-size:13px;margin-bottom:13px}
+.note{font-size:11.5px;color:var(--faint);margin-top:9px;line-height:1.5}
+.err{color:var(--sell);font-size:13px}
+.ghostbtn{padding:9px 14px;border-radius:10px;border:1px solid var(--line);background:transparent;color:var(--dim);font-size:12.5px;cursor:pointer}
+.ghostbtn:hover{border-color:var(--vio);color:var(--vio)}
+.ghostbtn.sm{padding:4px 10px;font-size:11.5px}
+.ghostbtn.danger{border-color:rgba(248,123,140,.4);color:var(--sell)}
+.prim{padding:9px 16px;border-radius:10px;border:none;background:var(--vio2);color:#fff;font-size:12.5px;font-weight:700;cursor:pointer}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.pill{display:inline-block;background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:3px 9px;font-size:11.5px;color:var(--dim);font-variant-numeric:tabular-nums}
+.pill b{color:var(--ink)}
+input[type=text]{background:var(--panel2);border:1px solid var(--line);color:var(--ink);border-radius:9px;padding:8px 11px;font-size:13px;font-family:inherit}
+
+.htable-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+.htable{width:100%;border-collapse:collapse;font-size:11.5px;min-width:560px}
+.htable th{color:var(--faint);font-weight:700;font-size:10.5px;padding:5px 6px;text-align:right;border-bottom:1px solid var(--line);white-space:nowrap}
+.htable td{padding:7px 6px;line-height:1.35;text-align:right;border-bottom:1px solid var(--line);font-variant-numeric:tabular-nums;white-space:nowrap}
+.htable th:first-child,.htable td:first-child{text-align:left;white-space:normal}
+.htable tr.off{opacity:.5}
+.tag{font-size:10.5px;font-weight:800;padding:1px 6px;border-radius:6px;margin-left:5px;white-space:nowrap}
+.tag.admin{background:rgba(139,140,240,.18);color:var(--vio)}
+.tag.blocked{background:rgba(248,123,140,.15);color:var(--sell)}
+.sub{color:var(--faint);font-size:10.5px}
+
+.diag div.d{padding:6px 0;border-bottom:1px solid var(--line);font-size:12px}
+.diag .ok{color:var(--buy);font-weight:800}
+.diag .no{color:var(--sell);font-weight:800}
+.diag .det{color:var(--faint)}
+pre.rules{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:12px;font-size:11px;line-height:1.5;overflow-x:auto;color:var(--dim);margin-top:10px;max-height:300px}
+
+#gate{position:fixed;inset:0;background:linear-gradient(160deg,#0f1320,#171c2e);z-index:200;display:flex;align-items:center;justify-content:center;padding:24px;text-align:center}
+#gate .gbox{max-width:380px;width:100%}
+#gate .glogo{font-size:28px;font-weight:800;letter-spacing:-.02em;margin-bottom:6px}
+#gate .gsub{color:var(--dim);font-size:13px;margin-bottom:26px;line-height:1.6}
+#gbtn{display:inline-flex;align-items:center;gap:10px;background:#fff;color:#1f1f1f;border:none;border-radius:12px;padding:13px 20px;font-size:15px;font-weight:700;cursor:pointer;width:100%;justify-content:center}
+#gbtn svg{width:20px;height:20px}
+#gate .gnote{color:var(--faint);font-size:11.5px;margin-top:18px;line-height:1.6}
+</style>
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-app.js";
+  import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-auth.js";
+  import { getFirestore, doc, getDoc, setDoc, collection, getDocs } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-firestore.js";
+  const firebaseConfig = {
+    apiKey: "AIzaSyBzBe9pAttnbDgTlNThWZzNqtAAKxX7Ksw",
+    authDomain: "jk-invest.firebaseapp.com",
+    projectId: "jk-invest",
+    storageBucket: "jk-invest.firebasestorage.app",
+    messagingSenderId: "1024066323251",
+    appId: "1:1024066323251:web:23d557527866205f01f446"
+  };
+  const app = initializeApp(firebaseConfig);
+  window.fb = { auth:getAuth(app), db:getFirestore(app), provider:new GoogleAuthProvider(),
+                signInWithPopup, onAuthStateChanged, signOut, doc, getDoc, setDoc, collection, getDocs };
+  window.dispatchEvent(new Event('fb-ready'));
+</script>
+</head>
+<body>
+
+<div id="gate">
+  <div class="gbox">
+    <div class="glogo">JK <span class="v">퀀트</span> 관리자</div>
+    <div class="gsub" id="gate_sub">관리자 계정으로 로그인해야 볼 수 있습니다.</div>
+    <button id="gbtn" onclick="googleLogin()">
+      <svg viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
+      Google로 로그인
+    </button>
+    <div class="err" id="gate_err" style="margin-top:14px;min-height:16px"></div>
+    <div class="gnote"><a href="/" style="color:var(--faint)">← 운영 화면으로</a></div>
+  </div>
+</div>
+
+<header><div class="wrap">
+  <div class="htop">
+    <div><div class="kicker">Admin Console</div><h1>JK <span class="v">퀀트</span> 관리자 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="adVer">v0.1</span></h1></div>
+    <div class="row" style="gap:8px">
+      <a class="btbtn" href="/" title="운영">🏠<span class="bt-txt"> 운영</span></a>
+      <a class="btbtn" href="/backtest" title="백테스트">📊<span class="bt-txt"> 백테</span></a>
+    </div>
+  </div>
+  <div class="userbadge" id="userbadge"></div>
+</div></header>
+
+<div class="wrap"><div class="layout">
+  <nav class="nav" id="nav"></nav>
+  <main class="body" id="body"></main>
+</div></div>
+
+<script>
+const $=id=>document.getElementById(id);
+const esc=t=>String(t==null?'':t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+
+/* 관리자는 운영 화면과 같은 규약 — 계정으로 정한다. 목록도 규칙도 이 주소 하나를 본다. */
+const ADMIN_EMAILS=['jk82investing@gmail.com'];
+const normEmail=e=>String(e||'').trim().toLowerCase();
+let me=null;
+const isAdmin=()=>!!me && ADMIN_EMAILS.includes(normEmail(me.email));
+
+/* ── 화면 목록 ────────────────────────────────────────────────────────
+   기능을 더할 때는 여기 한 줄과 render 함수 하나만 있으면 된다.
+   soon:true 면 자리만 잡아두고 눌러도 안 열린다. */
+const SECTIONS=[
+  {id:'users', label:'사용자',   sub:'접속 계정·차단', render:renderUsers},
+  {id:'diag',  label:'시스템 점검', sub:'API·규칙 상태', render:renderDiag},
+  {id:'rules', label:'보안 규칙',  sub:'Firestore',    render:renderRules},
+];
+let curSec=(location.hash||'#users').slice(1);
+function renderNav(){
+  $('nav').innerHTML=SECTIONS.map(s=>
+    `<button class="${s.id===curSec?'on':''}${s.render?'':' soon'}" onclick="go('${s.id}')">${esc(s.label)}<small>${esc(s.sub)}</small></button>`).join('');
+}
+function go(id){
+  const s=SECTIONS.find(x=>x.id===id); if(!s||!s.render) return;
+  curSec=id; history.replaceState(null,'','#'+id);
+  renderNav(); $('body').innerHTML=''; s.render($('body'));
+}
+window.addEventListener('hashchange',()=>{ const id=(location.hash||'#users').slice(1); if(id!==curSec) go(id); });
+
+// ── 1. 사용자 ────────────────────────────────────────────────────────
+function fmtWhen(ms){
+  const t=+ms||0; if(!t) return '<span class="sub">—</span>';
+  const d=new Date(t), p=n=>String(n).padStart(2,'0');
+  const days=Math.floor((Date.now()-t)/864e5);
+  const rel = days<=0?'오늘' : days===1?'어제' : days<30?days+'일 전' : Math.floor(days/30)+'개월 전';
+  return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}<br><span class="sub">${rel}</span>`;
+}
+function renderUsers(el){
+  el.innerHTML=`<div class="card"><h3><span class="dot"></span>접속 계정</h3>
+    <p class="lead">이 앱에 로그인한 적이 있는 계정입니다. 차단하면 다음 로그인부터 막힙니다.</p>
+    <div class="row" id="u_sum" style="margin-bottom:12px"></div>
+    <div id="u_body"><p class="lead">불러오는 중…</p></div>
+    <div class="row" style="margin-top:12px"><button class="ghostbtn" onclick="loadUsers()">🔄 새로고침</button></div>
+  </div>`;
+  loadUsers();
+}
+async function loadUsers(){
+  const body=$('u_body'), sum=$('u_sum');
+  if(!body) return;
+  body.innerHTML='<p class="lead">불러오는 중…</p>'; if(sum) sum.innerHTML='';
+  let rows=[];
+  try{
+    const snap=await window.fb.getDocs(window.fb.collection(window.fb.db,'profiles'));
+    snap.forEach(d=>rows.push(Object.assign({uid:d.id}, d.data()||{})));
+  }catch(e){
+    body.innerHTML=`<p class="err">목록을 못 읽었습니다 — ${esc(e.message||e)}</p>
+      <p class="note">Firestore 규칙에 관리자 허용이 없어서입니다. <b>보안 규칙</b> 탭의 내용을 Firebase 콘솔에 붙여넣으면 열립니다.</p>
+      <div class="row" style="margin-top:10px"><button class="ghostbtn" onclick="go('rules')">보안 규칙 보기 →</button></div>`;
+    return;
+  }
+  rows.sort((a,b)=>(+b.lastSeen||0)-(+a.lastSeen||0));
+  if(!rows.length){
+    body.innerHTML='<p class="lead">아직 기록된 계정이 없습니다.<br><span class="sub">이 기능이 생긴 뒤 로그인한 계정부터 쌓입니다 — 본인도 운영 화면에 한 번 다시 들어가면 잡힙니다.</span></p>';
+    return;
+  }
+  const wk=Date.now()-7*864e5;
+  if(sum) sum.innerHTML=`<span class="pill">전체 <b>${rows.length}</b></span>`
+    +`<span class="pill">최근 7일 <b>${rows.filter(r=>(+r.lastSeen||0)>=wk).length}</b></span>`
+    +`<span class="pill">차단 <b>${rows.filter(r=>r.blocked).length}</b></span>`;
+  body.innerHTML=`<div class="htable-wrap"><table class="htable"><thead><tr>
+      <th>계정</th><th>마지막 접속</th><th>첫 접속</th><th>방문</th><th></th></tr></thead><tbody>`
+    + rows.map(r=>{
+        const mine=normEmail(r.email)===normEmail(me&&me.email);
+        const adm=ADMIN_EMAILS.includes(normEmail(r.email));
+        const tag = adm?'<span class="tag admin">관리자</span>' : r.blocked?'<span class="tag blocked">차단됨</span>' : '';
+        return `<tr class="${r.blocked?'off':''}">
+          <td><b>${esc(r.email||r.uid)}</b>${mine?'<span class="sub"> (나)</span>':''}${tag}
+              <div class="sub">${esc(r.name||'')}</div></td>
+          <td>${fmtWhen(r.lastSeen)}</td><td>${fmtWhen(r.firstSeen)}</td>
+          <td>${+r.visits||0}</td>
+          <td>${adm?'<span class="sub">—</span>':
+            `<button class="ghostbtn sm${r.blocked?'':' danger'}" onclick="setBlocked('${esc(r.uid)}',${r.blocked?'false':'true'},'${esc(r.email)}')">${r.blocked?'차단 해제':'차단'}</button>`}</td>
+        </tr>`;
+      }).join('')
+    + `</tbody></table></div>
+       <p class="note">차단은 <b>다음 로그인부터</b> 적용됩니다. 이미 열어 둔 화면은 그대로입니다 —
+       확실히 막으려면 <b>보안 규칙</b>을 반영해 주세요.</p>`;
+}
+async function setBlocked(uid,on,email){
+  if(!isAdmin()) return;
+  if(!confirm(`${email||uid}\n\n${on?'차단':'차단 해제'}할까요?`)) return;
+  try{ await window.fb.setDoc(window.fb.doc(window.fb.db,'profiles',uid),{blocked:!!on},{merge:true}); }
+  catch(e){ alert('바꾸지 못했습니다 — '+(e.message||e)); return; }
+  loadUsers();
+}
+
+// ── 2. 시스템 점검 ───────────────────────────────────────────────────
+/* 이번에 났던 버그들이 전부 '안에서 어떤 값을 쓰는지 안 보여서' 늦게 잡혔다.
+   종가가 애프터마켓이던 것, 캐시가 굳어 있던 것, 국내 분배금이 0이던 것,
+   국내만 400일로 잘려 있던 것 — 여기서 src·봉수·기간·배당 건수를 바로 본다. */
+function renderDiag(el){
+  el.innerHTML=`<div class="card"><h3><span class="dot"></span>시스템 점검</h3>
+    <p class="lead">시세·검색 API와 Firestore 권한이 제대로 도는지 한 번에 확인합니다.</p>
+    <div class="row" style="margin-bottom:12px">
+      <input type="text" id="d_us" value="SOXL" size="8" placeholder="해외 티커">
+      <input type="text" id="d_kr" value="472150" size="8" placeholder="국내 코드">
+      <button class="prim" onclick="runDiag()">🔍 점검 실행</button>
+    </div>
+    <div class="diag" id="d_out"><p class="sub">실행을 눌러주세요.</p></div>
+  </div>`;
+}
+async function runDiag(){
+  const out=$('d_out'); if(!out) return;
+  const lines=[]; const paint=()=>out.innerHTML=lines.join('');
+  const add=(label,ok,det)=>{ lines.push(`<div class="d"><span class="${ok?'ok':'no'}">${ok?'✓':'✗'}</span> ${label} <span class="det">${det||''}</span></div>`); paint(); };
+  out.innerHTML='<p class="sub">점검 중…</p>';
+
+  const quote=async (sym,label)=>{
+    try{
+      const t0=Date.now();
+      const r=await fetch(`/api/quote?symbol=${encodeURIComponent(sym)}&range=max&div=1&intraday=0&debug=1`,{headers:{'Accept':'application/json'}});
+      const ms=Date.now()-t0;
+      const ct=r.headers.get('content-type')||'';
+      if(!ct.includes('json')){ add(label,false, ct.includes('html')?'HTML 반환 — functions 미배포':'HTTP '+r.status); return; }
+      const j=await r.json();
+      if(!j.series||!j.series.length){ add(label,false,(j.error||'데이터 없음')); return; }
+      const s=j.series, dv=j.dividends||[], raw=j.raw||[];
+      add(label,true,`${ms}ms · src=<b>${esc(j.src||'?')}</b> · ${s.length}봉 ${s[0].date}~${s[s.length-1].date} · 배당 ${dv.length}건 · raw ${raw.length} · 현재가 ${j.price}`);
+      if(j.debug) lines.push(`<div class="d det" style="font-size:11px">서버로그: ${esc(j.debug.join(' / '))}</div>`), paint();
+    }catch(e){ add(label,false,esc(e.message||'실패')); }
+  };
+  await quote(($('d_us').value||'SOXL').trim().toUpperCase(),'시세 — 해외');
+  await quote(($('d_kr').value||'472150').trim().toUpperCase(),'시세 — 국내');
+
+  const search=async (q,label)=>{
+    try{
+      const t0=Date.now();
+      const r=await fetch(`/api/search?q=${encodeURIComponent(q)}&limit=5`,{headers:{'Accept':'application/json'}});
+      const ms=Date.now()-t0; const j=await r.json();
+      const it=j.items||[];
+      add(label, it.length>0, it.length?`${ms}ms · ${it.length}건 · ${esc(it.slice(0,3).map(x=>x.symbol).join(', '))}`:(j.error||'결과 없음'));
+    }catch(e){ add(label,false,esc(e.message||'실패')); }
+  };
+  await search('커버드콜','검색 — 국내 부분일치');
+  await search('covered call','검색 — 해외 부분일치');
+
+  // 규칙이 안 들어가 있으면 사용자 목록이 통째로 안 열린다 — 여기서 미리 알려준다
+  try{
+    const snap=await window.fb.getDocs(window.fb.collection(window.fb.db,'profiles'));
+    let n=0; snap.forEach(()=>n++);
+    add('Firestore 규칙 — 사용자 목록 조회',true,`${n}건 읽음`);
+  }catch(e){
+    add('Firestore 규칙 — 사용자 목록 조회',false,esc(e.message||e)+' — 보안 규칙 탭 참고');
+  }
+  lines.push('<p class="note">✗가 있으면 그 줄의 서버로그를 먼저 보세요. 국내 시세의 src가 <b>naver</b>면 배당을 못 받은 것이고, <b>yahoo.KS</b>면 정상입니다.</p>');
+  paint();
+}
+
+// ── 3. 보안 규칙 ─────────────────────────────────────────────────────
+const RULES=`rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn()  { return request.auth != null; }
+    function isAdmin()     { return isSignedIn() && request.auth.token.email == 'jk82investing@gmail.com'; }
+    function isMine(uid)   { return isSignedIn() && request.auth.uid == uid; }
+    function notBlocked()  {
+      return isAdmin() || !exists(/databases/$(database)/documents/profiles/$(request.auth.uid))
+             || get(/databases/$(database)/documents/profiles/$(request.auth.uid)).data.blocked != true;
+    }
+
+    // 거래기록은 남이 못 본다 — 관리자도 마찬가지다
+    match /users/{uid} {
+      allow read, write: if isMine(uid) && notBlocked();
+    }
+
+    match /profiles/{uid} {
+      allow get:  if isMine(uid) || isAdmin();
+      allow list: if isAdmin();                       // 사용자 목록은 관리자만
+      // 본인은 접속 기록만 갱신한다. blocked를 스스로 건드리면 차단이 무의미해진다
+      allow create: if isMine(uid) && !('blocked' in request.resource.data);
+      allow update: if isMine(uid)
+                    && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['blocked']);
+      allow write:  if isAdmin();                     // 차단·해제는 관리자만
+    }
+  }
+}`;
+function renderRules(el){
+  el.innerHTML=`<div class="card"><h3><span class="dot"></span>Firestore 보안 규칙</h3>
+    <p class="lead">앱의 차단 기능은 로그인 직후 클라이언트가 스스로 확인하는 수준입니다.
+      앱을 거치지 않고 데이터를 읽는 걸 막으려면, 그리고 <b>사용자 목록을 열려면</b> 이 규칙이 있어야 합니다.</p>
+    <p class="note" style="margin:0 0 10px">Firebase 콘솔 → <b>Firestore Database</b> → <b>규칙</b> 에 붙여넣고 <b>게시</b>를 누르세요.
+      저장소의 <b>firestore.rules</b> 와 같은 내용입니다.</p>
+    <div class="row"><button class="prim" onclick="copyRules()">📋 복사</button>
+      <a class="ghostbtn" href="https://console.firebase.google.com/project/jk-invest/firestore/rules" target="_blank" rel="noopener">콘솔 열기 ↗</a>
+      <span id="r_copied" class="sub"></span></div>
+    <pre class="rules" id="r_pre">${esc(RULES)}</pre>
+  </div>`;
+}
+function copyRules(){
+  const done=()=>{ const e=$('r_copied'); if(e){ e.textContent='✓ 복사됨'; setTimeout(()=>e.textContent='',2500); } };
+  if(navigator.clipboard&&navigator.clipboard.writeText) navigator.clipboard.writeText(RULES).then(done,done);
+  else { const t=document.createElement('textarea'); t.value=RULES; document.body.appendChild(t); t.select();
+         try{document.execCommand('copy');}catch(e){} t.remove(); done(); }
+}
+
+// ── 로그인 ───────────────────────────────────────────────────────────
+function googleLogin(){
+  const err=$('gate_err'); if(err) err.textContent='';
+  window.fb.signInWithPopup(window.fb.auth, window.fb.provider)
+    .catch(e=>{ if(err) err.textContent=(e&&e.message)||'로그인 실패'; });
+}
+function doLogout(){ window.fb.signOut(window.fb.auth); }
+function renderBadge(){
+  const b=$('userbadge'); if(!b) return;
+  if(!me){ b.innerHTML=''; return; }
+  b.innerHTML=`${me.photoURL?`<img src="${esc(me.photoURL)}" alt="">`:''}<span>${esc(me.displayName||me.email||'')}</span>`
+    +` · <button class="lo" onclick="doLogout()">로그아웃</button>`;
+}
+function boot(){
+  window.fb.onAuthStateChanged(window.fb.auth, user=>{
+    me=user||null;
+    renderBadge();
+    if(isAdmin()){
+      $('gate').style.display='none';
+      renderNav();
+      if(!SECTIONS.find(s=>s.id===curSec)) curSec='users';
+      go(curSec);
+    }else{
+      $('gate').style.display='flex';
+      $('gate_sub').innerHTML = user
+        ? `<b>${esc(user.email||'')}</b> 계정에는 관리자 권한이 없습니다.`
+        : '관리자 계정으로 로그인해야 볼 수 있습니다.';
+      $('gbtn').textContent = user ? '다른 계정으로 로그인' : 'Google로 로그인';
+      if(user) $('gbtn').onclick=()=>{ window.fb.signOut(window.fb.auth).then(googleLogin); };
+    }
+  });
+}
+if(window.fb) boot(); else window.addEventListener('fb-ready', boot);
+</script>
+</body>
+</html>
