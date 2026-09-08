@@ -35,8 +35,10 @@ export async function onRequestGet({ request, env }) {
   let series = [], ohlc = [], price = null, marketState = null, currency = "USD", src = null, intraday = null;
   let dividends = null, splits = null, raw = null;
 
-  // ── 국내상장 ETF (6자리 숫자 종목코드, 예: 423920) → 네이버 금융 ──
-  if (/^\d{6}$/.test(symbol)) {
+  // ── 국내상장 ETF → 네이버 금융 ──
+  // 옛 코드는 6자리 숫자(423920), 2024년부터 나온 건 가운데에 알파벳이 있다(0104N0).
+  // 숫자만 받으면 신형 코드가 야후로 새어 나가 'no data'가 된다.
+  if (/^(?:\d{6}|\d{4}[A-Z]\d)$/.test(symbol)) {
     try {
       const kr = await naverDaily(symbol, range, dbg);
       if (kr && kr.series.length) {
