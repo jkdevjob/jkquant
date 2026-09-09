@@ -35,6 +35,13 @@ h1 .v{color:var(--gold)}
 .jkmenu-pop[hidden]{display:none}
 .jkmenu-pop a{display:flex;align-items:center;gap:9px;padding:10px 12px;border-radius:8px;color:var(--dim);text-decoration:none;font-size:14px;font-weight:700;white-space:nowrap}
 .jkmenu-pop a:hover{background:var(--panel2);color:var(--ink)}
+/* 관리자 전용 — 기본은 감춤이고 applyAdminMode가 켠다.
+   기본을 '보임'으로 두면 applyAdminMode를 못 거치는 경로에서 그대로 새어 나온다
+   (차단 계정은 로그인 직후 되돌려보내느라 startApp까지 못 간다).
+   !important를 쓰는 이유: 이건 레이아웃이 아니라 '보여줄 자격'이라 어떤 배치 규칙에도
+   져서는 안 된다. 실제로 .jkmenu-pop a(0,1,1)가 .admin-only(0,1,0)를 이겨서 새어 나왔다. */
+.admin-only{display:none !important}
+.admin-only.admin-on{display:flex !important}
 .jkmenu-pop a.cur{color:var(--gold);background:var(--panel2)}
 .jkmenu-pop a .mi{width:18px;text-align:center}
 .statusline{position:sticky;top:var(--h2,100px);z-index:30;background:var(--bg);display:flex;gap:6px;align-items:center;padding:7px 0 9px;flex-wrap:wrap;font-size:11.5px;border-bottom:1px solid var(--line)}
@@ -477,7 +484,7 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
 </div>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.17</span></h1></div>
+    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.18</span></h1></div>
     <div class="jkmenu" id="jkmenuWrap">
       <button class="jkmenu-btn" id="jkmenuBtn" aria-label="메뉴" onclick="jkMenuToggle(event)">三</button>
       <div class="jkmenu-pop" id="jkmenuPop" hidden>
@@ -1526,7 +1533,7 @@ document.addEventListener('click',function(e){ var m=document.getElementById('jk
   <footer>
     <strong>JK 퀀트</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.17</b> · 2026-09-08</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.18</b> · 2026-09-09</div>
   </footer>
 </div>
 
@@ -2765,9 +2772,9 @@ function renderInfHist(){
     const starCell=h.qtyAfter>0?wn(h.starAfter):'—';
     const endFlag=h.cycleEnd?' <span style="color:var(--gold);font-size:9px;background:rgba(245,196,81,.15);padding:1px 5px;border-radius:4px">사이클 종료</span>':'';
     const rowStyle=h.cycleEnd?' style="border-top:2px solid var(--gold)"':'';
-    rows=`<tr class="${cls}"${rowStyle}><td>${h.date||'-'}</td><td>${h.kind}${tflag}${endFlag}</td><td>${priceCell}</td><td>${qtyCell}</td><td>${wn(h.balAfter)}</td><td>${profitCell}</td><td>${fmtT(h.Tafter)}</td><td>${pctCell}</td><td>${starCell}</td><td style="white-space:nowrap"><span class="edit" onclick="editInf(${i})">✎</span> <span class="del" onclick="delInf(${i})">✕</span></td></tr>`+rows;
+    rows=`<tr class="${cls}"${rowStyle}><td>${h.date||'-'}</td><td>${h.kind}${tflag}${endFlag}</td><td>${priceCell}</td><td>${qtyCell}</td><td>${profitCell}</td><td>${wn(h.balAfter)}</td><td>${fmtT(h.Tafter)}</td><td>${pctCell}</td><td>${starCell}</td><td style="white-space:nowrap"><span class="edit" onclick="editInf(${i})">✎</span> <span class="del" onclick="delInf(${i})">✕</span></td></tr>`+rows;
   });
-  $('inf_table').innerHTML=`<tr><th>날짜</th><th>구분</th><th>체결가</th><th>수량</th><th>잔금</th><th>손익</th><th>T</th><th>별%</th><th>별지점</th><th></th></tr>`+(hist.length?rows:`<tr><td class="empty" colspan="10">아직 기록이 없습니다</td></tr>`);
+  $('inf_table').innerHTML=`<tr><th>날짜</th><th>구분</th><th>체결가</th><th>수량</th><th>손익</th><th>잔금</th><th>T</th><th>별%</th><th>별지점</th><th></th></tr>`+(hist.length?rows:`<tr><td class="empty" colspan="10">아직 기록이 없습니다</td></tr>`);
 }
 /* 날짜 → 입력순(ts) 정렬: 같은 날짜는 입력한 순서 유지 */
 function sortHist(arr){arr.sort((a,b)=>{const d=(a.date||'').localeCompare(b.date||'');return d!==0?d:((a.ts||0)-(b.ts||0))})}
@@ -7230,7 +7237,7 @@ let curEmail=null, _adminHidden=false;
 function isAdmin(){ return ADMIN_EMAILS.includes(normEmail(curEmail)); }
 function applyAdminMode(){
   const on=isAdmin() && !_adminHidden;
-  document.querySelectorAll('.admin-only').forEach(el=>{ el.style.display = on ? '' : 'none'; });
+  document.querySelectorAll('.admin-only').forEach(el=>{ el.style.display=''; el.classList.toggle('admin-on', on); });
 }
 let _adminTaps=0, _adminTapTimer=null;
 function adminTap(){
@@ -7296,6 +7303,7 @@ function initAuth(){
       const prof=await touchProfile(user);
       if(isBlocked(prof)){
         curUid=null; curEmail=null;
+        applyAdminMode();
         try{ await window.fb.signOut(window.fb.auth); }catch(e){}
         alert('이 계정은 사용이 차단되었습니다.');
         return;

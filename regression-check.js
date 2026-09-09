@@ -364,6 +364,20 @@ console.log('[7] DOM 구조');
    시세 API는 장 열려 있는 동안에도 오늘 봉을 내주는데 그 close는 종가가 아니라 현재가다.
    그걸로 체결시키면 탭을 연 시각의 값이 체결가로 박히고, simLast가 넘어가
    장 마감 뒤 진짜 종가로 다시 계산되지도 않는다. 6종 전부 상한선을 걸어야 한다. */
+/* 무매 거래이력 표 — 머리글과 본문 셀이 같은 순서여야 한다.
+   한쪽만 바꾸면 값이 조용히 옆 칸에 들어가 손익 자리에 잔금이 찍힌다. */
+{
+  const head=(idx.match(/<tr><th>날짜<\/th>[\s\S]*?<\/tr>/)||[''])[0]
+    .match(/<th>([^<]*)<\/th>/g).map(x=>x.replace(/<\/?th>/g,''));
+  const body=(idx.match(/<tr class="\$\{cls\}"\$\{rowStyle\}>[\s\S]*?<\/tr>/)||[''])[0];
+  const cells=(body.match(/<td[^>]*>(?:\$\{[^}]*\}|[^<])*/g)||[]).map(x=>x.replace(/<td[^>]*>/,''));
+  const want=['날짜','구분','체결가','수량','손익','잔금','T','별%','별지점'];
+  ok('무매 이력 머리글 순서', JSON.stringify(head.slice(0,9))===JSON.stringify(want), head.join(','));
+  // 셀이 머리글과 같은 값을 같은 자리에 넣는지 — 손익·잔금이 바뀌면 여기서 잡힌다
+  ok('무매 이력 본문이 머리글과 같은 순서',
+     /profitCell\}<\/td><td>\$\{wn\(h\.balAfter\)\}/.test(body), cells.slice(4,6).join(' | '));
+}
+
 console.log('[8] 모의 체결 상한선');
 {
   const SIM_FNS=['infSimForward','vrSimForward','_paperRegen','_paperDca','_paperAsap','ivsReplay','maReplay'];
@@ -968,6 +982,14 @@ console.log('[23] 관리자 모드 — 접속 계정·사용자 관리');
   // 관리자 UI가 운영에 남아 있으면 같은 걸 두 곳에서 고쳐야 한다
   ok('관리자 UI는 운영에 남기지 않는다',
      !/adminModal|renderAdmin|openAdmin|diag_card|runDiag/.test(idx));
+  /* 관리자 링크의 기본 상태는 '감춤'이어야 한다. 스크립트로만 감추면
+     applyAdminMode를 못 거치는 경로(차단 계정은 startApp 전에 되돌려보낸다)에서 새어 나온다.
+     !important가 필요한 것도 확인됐다 — .jkmenu-pop a(0,1,1)가 .admin-only(0,1,0)를 이긴다. */
+  ok('관리자 링크는 기본이 감춤', /\.admin-only\{display:none !important\}/.test(idx)
+     && /\.admin-only\.admin-on\{display:flex !important\}/.test(idx));
+  ok('보임 전환은 클래스로', /classList\.toggle\('admin-on', on\)/.test(idx));
+  ok('차단 계정도 나가기 전에 감춘다',
+     /applyAdminMode\(\);\s*\n\s*try\{ await window\.fb\.signOut/.test(idx));
   ok('관리자 페이지도 컬렉션 통째 읽기를 쓴다', /doc, getDoc, setDoc, collection, getDocs/.test(adm)
      && /getDocs\(window\.fb\.collection\(window\.fb\.db,'profiles'\)\)/.test(adm));
   ok('목록은 마지막 접속 최신순', /rows\.sort\(\(a,b\)=>\(\+b\.lastSeen\|\|0\)-\(\+a\.lastSeen\|\|0\)\)/.test(adm));
