@@ -160,7 +160,7 @@ canvas{display:block;width:100%;height:auto}
 
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Morning Scalping · 09:00–09:30</div><h1>JK <span class="v">퀀트</span> 단타 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="scVer">v0.2</span></h1></div>
+    <div><div class="kicker">Morning Scalping · 09:00–09:30</div><h1>JK <span class="v">퀀트</span> 단타 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="scVer">v0.3</span></h1></div>
     <div class="jkmenu" id="jkmenuWrap">
       <button class="jkmenu-btn" id="jkmenuBtn" aria-label="메뉴" onclick="jkMenuToggle(event)">三</button>
       <div class="jkmenu-pop" id="jkmenuPop" hidden>
@@ -177,22 +177,27 @@ canvas{display:block;width:100%;height:auto}
 
 <div class="wrap" id="app" style="display:none">
 
-  <!-- 1. 스크리너 -->
+  <!-- 1. 전체 스크리닝 -->
   <div class="card">
-    <h3><span class="dot"></span>🔎 관심종목 스크리너 <span class="sub" style="font-weight:600">볼린저 상단 돌파 + RSI≥55</span></h3>
-    <p class="lead">장전에 관심종목을 담아두고 <b>스크리닝</b>을 누르면, 각 종목의 <b>일봉 볼린저밴드(20,2σ)</b>와
-      <b>RSI(14)</b>를 계산해 오늘 <b>매수 신호</b>가 뜬 종목을 골라준다. (국내 종목·ETF, 네이버 시세)</p>
-    <div class="row" style="margin-bottom:10px">
-      <div class="searchwrap">
-        <input id="q" type="text" placeholder="종목명 또는 코드 (예: 삼성전자 / 005930)" autocomplete="off" oninput="onSearch()" onkeydown="if(event.key==='Enter')addFirst()">
-        <div class="sresult" id="sres" hidden></div>
-      </div>
-      <button class="prim" onclick="screenAll()">▶ 스크리닝</button>
+    <h3><span class="dot"></span>🔎 전체 스크리닝 <span class="sub" style="font-weight:600">볼린저 상단 돌파 + RSI≥55</span></h3>
+    <p class="lead"><b>거래대금 상위 유니버스</b>(KOSPI·KOSDAQ)를 자동으로 훑어, 오늘 <b>매수 신호</b>가 뜬 종목을 찾아 목록으로 보여준다.
+      목록에서 종목을 누르면 아래에 <b>캔들·볼린저·RSI 차트</b>가 뜬다. (단타는 유동성이 생명이라 거래대금 상위가 사실상 후보 전체)</p>
+    <div class="row" style="margin-bottom:8px">
+      <div class="fld" style="flex:0 0 140px"><label>유니버스 크기</label>
+        <select id="uniN"><option>50</option><option selected>100</option><option>150</option><option>200</option></select></div>
+      <button class="prim" onclick="runScreen()" id="scrBtn">🔎 전체 스크리닝</button>
       <span class="sub" id="scr_msg"></span>
     </div>
-    <div id="watch_body"></div>
-    <p class="note">신호 = <b>당일 고가가 볼린저 상단 돌파 & RSI≥55</b>. 🟡관찰 = 밴드 근접(상단 −2% 이내)·RSI≥50.
-      신호는 진입 <b>후보</b>일 뿐 — 실제 진입은 09:00~09:03 시가범위 돌파를 눈으로 확인하고(아래 차트) 한다.</p>
+    <div id="scr_prog" style="display:none;height:6px;background:var(--panel2);border-radius:4px;overflow:hidden;margin-bottom:10px"><div id="scr_bar" style="height:100%;width:0;background:var(--vio2);transition:width .1s"></div></div>
+    <div id="scr_body"><p class="sub">「전체 스크리닝」을 누르면 거래대금 상위 종목을 계산해 신호를 찾습니다. (수십 초 걸릴 수 있음)</p></div>
+    <div class="row" style="margin-top:10px">
+      <div class="searchwrap">
+        <input id="q" type="text" placeholder="특정 종목 바로 차트 (종목명·코드 검색)" autocomplete="off" oninput="onSearch()" onkeydown="if(event.key==='Enter')addFirst()">
+        <div class="sresult" id="sres" hidden></div>
+      </div>
+    </div>
+    <p class="note">신호 = <b>당일 고가가 볼린저 상단 돌파 & RSI≥55</b> · 🟡관찰 = 밴드 근접(상단 −2% 이내)·RSI≥50.
+      신호는 진입 <b>후보</b>일 뿐 — 실제 진입은 09:00~09:03 시가범위 돌파를 차트로 확인하고 한다.</p>
   </div>
 
   <!-- 2. 차트 -->
@@ -340,8 +345,8 @@ function rsiSeries(cl,p){
 }
 
 /* ══ 데이터 ══ */
-async function qFetch(code){
-  const r=await fetch(`/api/quote?symbol=${encodeURIComponent(code)}&range=1y&intraday=0&div=0`,{headers:{'Accept':'application/json'}});
+async function qFetch(code,range){
+  const r=await fetch(`/api/quote?symbol=${encodeURIComponent(code)}&range=${range||'1y'}&intraday=0&div=0`,{headers:{'Accept':'application/json'}});
   const ct=r.headers.get('content-type')||'';
   if(!ct.includes('json')) throw new Error('시세 서버 응답 오류');
   const j=await r.json();
@@ -362,25 +367,81 @@ function analyze(j){
   return {price,last,bb,rsi,cl,o,rs,name:j.name};
 }
 
-/* ══ 관심종목 (localStorage) ══ */
-let WKEY='jkq_scalp_watch_anon', PKEY='jkq_scalp_pos_anon', LKEY='jkq_scalp_log_anon';
-let WATCH=[], POS=[], LOG=[], SCAN={};
+/* ══ 저장 (포지션·일지) ══ */
+let PKEY='jkq_scalp_pos_anon', LKEY='jkq_scalp_log_anon';
+let POS=[], LOG=[];
 function loadAll(){
   const g=(k,d)=>{ try{ const v=JSON.parse(localStorage.getItem(k)||'null'); return Array.isArray(v)?v:d; }catch(e){ return d; } };
-  WATCH=g(WKEY,[]); POS=g(PKEY,[]); LOG=g(LKEY,[]);
+  POS=g(PKEY,[]); LOG=g(LKEY,[]);
 }
-function saveW(){ try{ localStorage.setItem(WKEY,JSON.stringify(WATCH)); }catch(e){} }
 function saveP(){ try{ localStorage.setItem(PKEY,JSON.stringify(POS)); }catch(e){} }
 function saveL(){ try{ localStorage.setItem(LKEY,JSON.stringify(LOG)); }catch(e){} }
 
-function addWatch(code,name){
-  code=String(code||'').toUpperCase().trim(); if(!code) return;
-  if(WATCH.some(w=>w.code===code)){ renderWatch(); return; }
-  WATCH.push({code,name:name||code}); saveW(); renderWatch();
+/* 신호 판정 */
+function sig(a){
+  if(!a.bb) return 'off';
+  const nearGap=(a.bb.up-a.last.high)/a.bb.up;
+  if(a.last.high>=a.bb.up && a.rsi>=55) return 'on';
+  if(a.rsi>=50 && nearGap<=0.02) return 'watch';
+  return 'off';
 }
-function delWatch(code){ WATCH=WATCH.filter(w=>w.code!==code); saveW(); renderWatch(); }
 
-/* 검색 */
+/* ══ 전체 스크리닝 ══ */
+let SCREEN=[], _screening=false;
+function nameOf(code){ const s=SCREEN.find(x=>x.code===code); return s?s.name:code; }
+async function runScreen(){
+  if(_screening) return;
+  const N=+($('uniN').value)||100;
+  _screening=true; $('scrBtn').disabled=true; $('scr_msg').textContent='유니버스 불러오는 중…'; $('scr_body').innerHTML='';
+  let uni=[];
+  try{ const r=await fetch('/api/universe?limit='+N); const j=await r.json(); if(j.error) throw new Error(j.error); uni=j.universe||[]; }
+  catch(e){ $('scr_msg').textContent='유니버스 실패: '+(e.message||e); _screening=false; $('scrBtn').disabled=false; return; }
+  if(!uni.length){ $('scr_msg').textContent='유니버스가 비어 있습니다.'; _screening=false; $('scrBtn').disabled=false; return; }
+  SCREEN=[]; let done=0; const total=uni.length;
+  const prog=$('scr_prog'), bar=$('scr_bar'); prog.style.display=''; bar.style.width='0';
+  let idx=0; const CC=8;
+  async function worker(){
+    while(idx<uni.length){
+      const u=uni[idx++];
+      try{ const j=await qFetch(u.code,'3mo'); const a=analyze(j);
+        SCREEN.push({code:u.code,name:u.name||j.name||u.code,market:u.market,amount:u.amount,chg:u.chg,price:a.price,rsi:a.rsi,bb:a.bb,last:a.last,sig:sig(a)}); }
+      catch(e){/* 개별 실패는 건너뛴다 */}
+      done++; bar.style.width=(done/total*100)+'%'; $('scr_msg').textContent=`계산 중… ${done}/${total}`;
+    }
+  }
+  await Promise.all(Array.from({length:CC},()=>worker()));
+  prog.style.display='none';
+  const rank=s=>s==='on'?0:s==='watch'?1:2;
+  SCREEN.sort((x,y)=> rank(x.sig)-rank(y.sig) || (y.rsi-x.rsi));
+  const on=SCREEN.filter(x=>x.sig==='on').length, w=SCREEN.filter(x=>x.sig==='watch').length;
+  $('scr_msg').textContent=`완료 · 🟢신호 ${on} · 🟡관찰 ${w} (검사 ${SCREEN.length}/${total})`;
+  renderScreen();
+  _screening=false; $('scrBtn').disabled=false;
+}
+function renderScreen(){
+  const b=$('scr_body');
+  const hits=SCREEN.filter(x=>x.sig!=='off');
+  if(!SCREEN.length){ b.innerHTML='<p class="sub">결과가 없습니다.</p>'; return; }
+  if(!hits.length){ b.innerHTML='<p class="sub">오늘 신호·관찰 조건을 만족하는 종목이 없습니다. (유니버스 '+SCREEN.length+'개 검사)</p>'; return; }
+  b.innerHTML=`<div class="htable-wrap"><table class="htable"><thead><tr>
+    <th>종목</th><th>현재가</th><th>등락</th><th>RSI</th><th>상단대비</th><th>거래대금(억)</th><th>신호</th></tr></thead><tbody>`
+    + hits.map(s=>{
+       const gap=s.bb? (s.price-s.bb.up)/s.bb.up*100 : null;
+       const sg = s.sig==='on'?'<span class="sig on">🟢 신호</span>':'<span class="sig watch">🟡 관찰</span>';
+       return `<tr style="cursor:pointer" onclick="openChart('${esc(s.code)}')">
+         <td><b>${esc(s.name)}</b> <span class="sub">${esc(s.market||'')}</span><div class="sub">${esc(s.code)}</div></td>
+         <td>${commas(s.price)}</td>
+         <td class="${s.chg>=0?'win':'loss'}">${s.chg>=0?'+':''}${fmt(s.chg,2)}%</td>
+         <td>${fmt(s.rsi,0)}</td>
+         <td class="${gap>=0?'win':''}">${gap!=null?(gap>=0?'+':'')+fmt(gap,1)+'%':'—'}</td>
+         <td>${s.amount?Math.round(s.amount/100).toLocaleString():'—'}</td>
+         <td>${sg}</td>
+       </tr>`;
+     }).join('')
+    + `</tbody></table></div><p class="note">행을 누르면 차트가 열립니다. 거래대금 단위: 억원(추정).</p>`;
+}
+
+/* 검색 — 특정 종목 바로 차트 */
 let _sto=null;
 function onSearch(){
   const q=$('q').value.trim(); const box=$('sres');
@@ -396,74 +457,29 @@ function onSearch(){
     }catch(e){ box.hidden=true; }
   },220);
 }
-function pickSearch(code,name){ $('q').value=''; $('sres').hidden=true; addWatch(code,name); }
+function pickSearch(code,name){ $('q').value=''; $('sres').hidden=true; openChart(code,name); }
 function addFirst(){
   const q=$('q').value.trim(); if(!q) return;
   const box=$('sres'); const first=box.querySelector('div');
   if(!box.hidden && first){ first.click(); return; }
-  if(KRCODE.test(q.toUpperCase())){ $('q').value=''; addWatch(q.toUpperCase(),q.toUpperCase()); }
-}
-
-function renderWatch(){
-  const b=$('watch_body');
-  if(!WATCH.length){ b.innerHTML='<p class="sub">관심종목을 검색해 담아보세요. 담은 뒤 <b>스크리닝</b>을 누르면 신호를 계산합니다.</p>'; return; }
-  b.innerHTML=`<div class="htable-wrap"><table class="htable"><thead><tr>
-    <th>종목</th><th>현재가</th><th>RSI</th><th>볼린저상단</th><th>상단대비</th><th>신호</th><th></th></tr></thead><tbody>`
-    + WATCH.map(w=>{
-       const s=SCAN[w.code];
-       let cells;
-       if(!s){ cells=`<td class="sub">—</td><td class="sub">—</td><td class="sub">—</td><td class="sub">스크리닝 전</td>`; }
-       else if(s.err){ cells=`<td colspan="4" class="loss" style="text-align:left">${esc(s.err)}</td>`; }
-       else {
-         const gap=s.bb? (s.price-s.bb.up)/s.bb.up*100 : null;
-         const sg = s.sig==='on'?'<span class="sig on">🟢 신호</span>':s.sig==='watch'?'<span class="sig watch">🟡 관찰</span>':'<span class="sig off">-</span>';
-         cells=`<td>${commas(s.price)}</td><td>${fmt(s.rsi,0)}</td><td>${s.bb?commas(s.bb.up):'—'}</td>`
-              +`<td class="${gap>=0?'win':''}">${gap!=null?(gap>=0?'+':'')+fmt(gap,1)+'%':'—'}</td><td>${sg}</td>`;
-       }
-       return `<tr>
-         <td><b>${esc(w.name)}</b><div class="sub">${esc(w.code)}</div></td>
-         ${cells}
-         <td><button class="ghostbtn sm" onclick="openChart('${esc(w.code)}')">차트</button>
-             <button class="ghostbtn sm danger" onclick="delWatch('${esc(w.code)}')">✕</button></td>
-       </tr>`;
-     }).join('')
-    + `</tbody></table></div>`;
-}
-async function screenAll(){
-  if(!WATCH.length){ $('scr_msg').textContent='관심종목을 먼저 담아주세요.'; return; }
-  $('scr_msg').textContent='계산 중…';
-  await Promise.all(WATCH.map(async w=>{
-    try{ const j=await qFetch(w.code); const a=analyze(j); SCAN[w.code]={price:a.price,rsi:a.rsi,bb:a.bb,sig:sig(a)}; if(j.name) w.name=w.name||j.name; }
-    catch(e){ SCAN[w.code]={err:e.message||'실패'}; }
-  }));
-  saveW();
-  const on=WATCH.filter(w=>SCAN[w.code]&&SCAN[w.code].sig==='on').length;
-  $('scr_msg').textContent=`완료 · 신호 ${on}개`;
-  renderWatch();
-}
-function sig(a){
-  if(!a.bb) return 'off';
-  const nearGap=(a.bb.up-a.last.high)/a.bb.up;
-  if(a.last.high>=a.bb.up && a.rsi>=55) return 'on';
-  if(a.rsi>=50 && nearGap<=0.02) return 'watch';
-  return 'off';
+  if(KRCODE.test(q.toUpperCase())){ $('q').value=''; openChart(q.toUpperCase(),q.toUpperCase()); }
 }
 
 /* ══ 차트 ══ */
 let CUR=null;
-async function openChart(code){
-  const w=WATCH.find(x=>x.code===code)||{code,name:code};
+async function openChart(code,name){
+  name = name || nameOf(code) || code;
   $('chartCard').style.display='';
-  $('ch_title').textContent=`${w.name} (${code}) — 불러오는 중…`;
+  $('ch_title').textContent=`${name} (${code}) — 불러오는 중…`;
   $('chartCard').scrollIntoView({behavior:'smooth',block:'start'});
   try{
-    const j=await qFetch(code); const a=analyze(j); CUR={code,name:w.name,a};
-    $('ch_title').textContent=`${w.name} (${code})`;
+    const j=await qFetch(code,'1y'); const a=analyze(j); CUR={code,name,a};
+    $('ch_title').textContent=`${name} (${code})`;
     drawChart(a);
     const entry=a.price;
     $('ch_entry').value = entry>=100?Math.round(entry):+entry.toFixed(2);
     renderLevels(entry);
-  }catch(e){ $('ch_title').textContent=`${w.name} (${code}) — ${e.message||'실패'}`; }
+  }catch(e){ $('ch_title').textContent=`${name} (${code}) — ${e.message||'실패'}`; }
 }
 function closeChart(){ $('chartCard').style.display='none'; CUR=null; }
 function levelsOf(entry){
@@ -676,9 +692,9 @@ function boot(){
     me=user||null; renderBadge();
     if(user){
       $('gate').style.display='none'; $('app').style.display='';
-      WKEY='jkq_scalp_watch_'+user.uid; PKEY='jkq_scalp_pos_'+user.uid; LKEY='jkq_scalp_log_'+user.uid;
+      PKEY='jkq_scalp_pos_'+user.uid; LKEY='jkq_scalp_log_'+user.uid;
       $('log_owner').textContent='· '+(user.displayName||user.email||'');
-      loadAll(); recalc(); renderWatch(); renderPos(); renderLog(); kisInit();
+      loadAll(); recalc(); renderPos(); renderLog(); kisInit();
     }else{ $('gate').style.display='flex'; $('app').style.display='none'; }
   });
 }
