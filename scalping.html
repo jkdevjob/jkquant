@@ -78,9 +78,10 @@ input:focus,select:focus{outline:none;border-color:var(--vio)}
 
 /* 표 */
 .htable-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
-.htable{width:100%;border-collapse:collapse;font-size:12px;min-width:560px}
-.htable th{color:var(--faint);font-weight:700;font-size:10.5px;padding:6px 6px;text-align:right;border-bottom:1px solid var(--line);white-space:nowrap}
-.htable td{padding:8px 6px;line-height:1.35;text-align:right;border-bottom:1px solid var(--line);font-variant-numeric:tabular-nums;white-space:nowrap}
+/* 표 밀도 — 운영·백테와 같은 규약 (줄높이를 조여 한 화면에 더 많이) */
+.htable{width:100%;border-collapse:collapse;font-size:11px;min-width:520px}
+.htable th{color:var(--faint);font-weight:700;font-size:10px;padding:3px 4px;line-height:1.2;text-align:right;border-bottom:1px solid var(--line);white-space:nowrap}
+.htable td{padding:3px 4px;line-height:1.25;text-align:right;border-bottom:1px solid var(--line);font-variant-numeric:tabular-nums;white-space:nowrap}
 .htable th:first-child,.htable td:first-child{text-align:left}
 .htable td.win{color:var(--buy);font-weight:700}
 .htable td.loss{color:var(--sell);font-weight:700}

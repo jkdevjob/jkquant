@@ -1034,5 +1034,33 @@ console.log('[23] 관리자 모드 — 접속 계정·사용자 관리');
 }
 
 
+/* ════ 24. 표 밀도 ════
+   줄높이가 곧 '한 화면에 몇 줄'이다. 값은 하나도 안 지우고 자리만 좁힌다.
+   운영 이력표 27px→21px (화면당 +27%), 폭 620→548px. 백테·단타·관리자도 같은 규약. */
+console.log('[24] 표 밀도 — 한 화면에 더 많이');
+{
+  const adm=fs.existsSync(__d+'/admin.html')?fs.readFileSync(__d+'/admin.html','utf8'):'';
+  const scal=fs.existsSync(__d+'/scalping.html')?fs.readFileSync(__d+'/scalping.html','utf8'):'';
+  // 줄높이를 만드는 세 값 — 하나라도 되돌아가면 밀도가 통째로 풀린다
+  ok('운영 이력표 밀도', /\.htable td\{padding:3px 4px;line-height:1\.25;/.test(idx)
+     && /\.htable th\{[^}]*font-size:10px;padding:3px 4px;line-height:1\.2;/.test(idx)
+     && /\.htable\{width:100%;border-collapse:collapse;font-size:11px;min-width:548px\}/.test(idx));
+  ok('수정·삭제 칸도 좁힌다', /\.htable td:last-child\{padding:3px 2px\}/.test(idx));
+  ok('백테 표 밀도', /\.cmp-tbl td\{padding:3px 5px;line-height:1\.25;/.test(bt)
+     && /\.cmp-tbl th\{[^}]*padding:3px 5px;line-height:1\.2;[^}]*font-size:10px;\}/.test(bt)
+     && /table\.cmp th,table\.cmp td\{padding:3px 5px;line-height:1\.25;/.test(bt));
+  ok('관리자 표 밀도', /\.htable td\{padding:4px 4px;line-height:1\.25;/.test(adm), adm?'':'admin.html 없음');
+  ok('단타 표 밀도', /\.htable td\{padding:3px 4px;line-height:1\.25;/.test(scal), scal?'':'scalping.html 없음');
+
+  /* 날짜는 지우는 게 아니라 줄여 쓴다 — 2026-09-09 → 26-09-09 (81px→61px).
+     수정창에는 원래 날짜가 그대로 뜨므로 잃는 정보가 없다. */
+  ok('짧은 날짜 helper', /function dshort\(d\)\{ const t=String\(d\|\|''\); return \/\^\\d\{4\}-\\d\\d-\\d\\d\$\/\.test\(t\)\?t\.slice\(2\)/.test(idx));
+  // 표 하나만 빠뜨리면 그 탭만 날짜 폭이 달라 열이 어긋나 보인다
+  const n=(idx.match(/<td>\$\{dshort\((?:h|r)\.date\)\}/g)||[]).length;
+  ok('모든 이력표가 짧은 날짜를 쓴다 (6개)', n===6, n+'개');
+  ok('긴 날짜를 직접 찍는 표가 없다', !/<td>\$\{(?:h|r)\.date\|\|'-'\}/.test(idx));
+}
+
+
 console.log(`\n════ 결과: ${pass} PASS / ${fail} FAIL ${fail===0?'— ALL PASS ★':'— 배포 금지, 위 ✗ 항목 수정 필요'} ════`);
 process.exit(fail===0?0:1);
