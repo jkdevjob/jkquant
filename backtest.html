@@ -119,6 +119,15 @@ body{background:var(--bg);color:var(--text);font-family:'Pretendard',sans-serif;
 .top .brand h1{font-size:18px;font-weight:700;color:#e6ecfa;}
 .top .home{font-size:12px;color:var(--dim);text-decoration:none;padding:7px 14px;border:1px solid var(--border2);border-radius:7px;transition:all .15s;}
 .top .home:hover{border-color:var(--accent);color:var(--accent);}
+/* ── 三 메뉴 (전 페이지 공통) ── */
+.jkmenu{position:relative;flex-shrink:0}
+.jkmenu-btn{height:38px;width:44px;display:inline-flex;align-items:center;justify-content:center;background:var(--surf2);border:1px solid var(--border);color:var(--text);border-radius:8px;font-size:18px;font-weight:700;line-height:1;cursor:pointer;letter-spacing:1px}
+.jkmenu-btn:hover{border-color:var(--accent);color:var(--accent)}
+.jkmenu-pop{position:absolute;right:0;top:45px;z-index:150;background:var(--surf);border:1px solid var(--border);border-radius:10px;padding:6px;min-width:158px;box-shadow:0 14px 34px rgba(0,0,0,.45);display:flex;flex-direction:column;gap:2px}
+.jkmenu-pop a{display:flex;align-items:center;gap:9px;padding:10px 12px;border-radius:8px;color:var(--dim);text-decoration:none;font-size:14px;font-weight:700;white-space:nowrap}
+.jkmenu-pop a:hover{background:var(--surf2);color:var(--text)}
+.jkmenu-pop a.cur{color:var(--gold);background:var(--surf2)}
+.jkmenu-pop a .mi{width:18px;text-align:center}
 
 /* STRATEGY TABS */
 .stabs-sticky{position:sticky;top:0;z-index:20;background:var(--bg);padding-top:4px;}
@@ -295,9 +304,25 @@ td:first-child{text-align:left;}
       <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v1.172</span></h1>
     </div>
   </div>
-  <a href="/" class="home">← JK 퀀트</a>
-  <button id="btAuthBtn" onclick="btLogin()" style="font-size:11px;padding:6px 12px;border-radius:7px;border:1px solid var(--border2);background:transparent;color:var(--dim);cursor:pointer">로그인</button>
+  <div style="display:flex;align-items:center;gap:8px">
+    <button id="btAuthBtn" onclick="btLogin()" style="font-size:11px;padding:6px 12px;border-radius:7px;border:1px solid var(--border2);background:transparent;color:var(--dim);cursor:pointer">로그인</button>
+    <div class="jkmenu" id="jkmenuWrap">
+      <button class="jkmenu-btn" id="jkmenuBtn" aria-label="메뉴" onclick="jkMenuToggle(event)">三</button>
+      <div class="jkmenu-pop" id="jkmenuPop" hidden>
+        <a href="/"><span class="mi">🏠</span>운영</a>
+        <a href="/backtest" class="cur"><span class="mi">📊</span>백테</a>
+        <a href="/scalping"><span class="mi">⚡</span>단타</a>
+        <a href="/?paper=1"><span class="mi">🧪</span>모의</a>
+        <a href="/admin"><span class="mi">👤</span>관리자</a>
+      </div>
+    </div>
+  </div>
 </div>
+<script>
+function jkMenuToggle(e){ if(e) e.stopPropagation(); var p=document.getElementById('jkmenuPop'); if(p) p.hidden=!p.hidden; }
+function jkMenuClose(){ var p=document.getElementById('jkmenuPop'); if(p) p.hidden=true; }
+document.addEventListener('click',function(e){ var m=document.getElementById('jkmenuWrap'); if(m && !m.contains(e.target)) jkMenuClose(); });
+</script>
 <div id="dataStat" style="font-size:11.5px;color:var(--dim);margin:0 0 10px;font-variant-numeric:tabular-nums;display:none"></div>
 <!-- 로딩 모달: 시세 수신·레버리지 합성 진행 중 화면을 막는다 (완료되면 자동으로 닫힘) -->
 <div class="modal-bg" id="loadModal"><div class="modal-card" style="max-width:400px;text-align:center">

@@ -27,6 +27,15 @@ h1 .v{color:var(--gold)}
 .btbtn{display:inline-flex;align-items:center;gap:5px;height:40px;padding:0 14px;background:var(--panel2);border:1px solid var(--line);color:var(--dim);border-radius:11px;font-size:13px;font-weight:600;cursor:pointer;flex-shrink:0;text-decoration:none;white-space:nowrap;transition:border-color .15s,color .15s}
 .btbtn:hover{border-color:var(--vio);color:var(--vio)}
 @media(max-width:460px){.btbtn .bt-txt{display:none}.btbtn{padding:0 12px}}
+/* ── 三 메뉴 (전 페이지 공통) ── */
+.jkmenu{position:relative;flex-shrink:0}
+.jkmenu-btn{height:40px;width:46px;display:inline-flex;align-items:center;justify-content:center;background:var(--panel2);border:1px solid var(--line);color:var(--ink);border-radius:11px;font-size:19px;font-weight:700;line-height:1;cursor:pointer;letter-spacing:1px}
+.jkmenu-btn:hover{border-color:var(--vio);color:var(--vio)}
+.jkmenu-pop{position:absolute;right:0;top:47px;z-index:150;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:6px;min-width:158px;box-shadow:0 14px 34px rgba(0,0,0,.45);display:flex;flex-direction:column;gap:2px}
+.jkmenu-pop a{display:flex;align-items:center;gap:9px;padding:10px 12px;border-radius:8px;color:var(--dim);text-decoration:none;font-size:14px;font-weight:700;white-space:nowrap}
+.jkmenu-pop a:hover{background:var(--panel2);color:var(--ink)}
+.jkmenu-pop a.cur{color:var(--gold);background:var(--panel2)}
+.jkmenu-pop a .mi{width:18px;text-align:center}
 .statusline{position:sticky;top:var(--h2,100px);z-index:30;background:var(--bg);display:flex;gap:6px;align-items:center;padding:7px 0 9px;flex-wrap:wrap;font-size:11.5px;border-bottom:1px solid var(--line)}
 .setpill{margin-left:auto;flex-shrink:0;background:var(--panel2);border:1px solid var(--line);color:var(--dim);padding:3px 10px;border-radius:8px;font-size:11.5px;font-weight:700;cursor:pointer;white-space:nowrap}
 .setpill:hover{border-color:var(--vio);color:var(--vio)}
@@ -468,14 +477,25 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
 <header><div class="wrap">
   <div class="htop">
     <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.17</span></h1></div>
-    <div style="display:flex;align-items:center;gap:8px">
-      <a class="btbtn" href="/backtest" title="백테스트">📊<span class="bt-txt"> 백테스트</span></a>
-      <button class="btbtn" id="paperbtn" onclick="openPaper()" title="모의투자 성과" style="display:none;border-color:rgba(245,196,81,.45);color:var(--gold)">🧪<span class="bt-txt"> 모의 성과</span></button>
-      <a class="btbtn admin-only" id="adminbtn" href="/admin" title="관리자" style="display:none;border-color:rgba(139,140,240,.5);color:var(--vio)">👤<span class="bt-txt"> 관리자</span></a>
+    <div class="jkmenu" id="jkmenuWrap">
+      <button class="jkmenu-btn" id="jkmenuBtn" aria-label="메뉴" onclick="jkMenuToggle(event)">三</button>
+      <div class="jkmenu-pop" id="jkmenuPop" hidden>
+        <a href="/" class="cur"><span class="mi">🏠</span>운영</a>
+        <a href="/backtest"><span class="mi">📊</span>백테</a>
+        <a href="/scalping"><span class="mi">⚡</span>단타</a>
+        <a href="#" id="jkPaper" onclick="openPaper();jkMenuClose();return false"><span class="mi">🧪</span>모의</a>
+        <a id="adminbtn" href="/admin" class="admin-only"><span class="mi">👤</span>관리자</a>
+      </div>
     </div>
   </div>
   <div class="userbadge" id="userbadge" style="margin-top:8px"></div>
 </div></header>
+<script>
+/* ── 三 메뉴 ── */
+function jkMenuToggle(e){ if(e) e.stopPropagation(); var p=document.getElementById('jkmenuPop'); if(p) p.hidden=!p.hidden; }
+function jkMenuClose(){ var p=document.getElementById('jkmenuPop'); if(p) p.hidden=true; }
+document.addEventListener('click',function(e){ var m=document.getElementById('jkmenuWrap'); if(m && !m.contains(e.target)) jkMenuClose(); });
+</script>
 <div class="wrap">
   <div class="tabs">
     <button class="tab on" data-t="inf">무한매수법</button>
@@ -6533,8 +6553,9 @@ function renderSessbar(){
   html+=`<div class="sesschip add" data-add="1">+ 세션</div>`;
   bar.innerHTML=html;
   // 모의 성과는 전 전략을 한 표로 보는 것이라 탭 안이 아니라 상단(백테스트 옆)에 둔다
-  { const pb=$('paperbtn');
-    if(pb) pb.style.display = PAPER_TABS.some(([t])=>S[t]&&S[t].sessions&&S[t].sessions.some(x=>x.paper)) ? '' : 'none'; }
+  { // 三 메뉴의 '모의'는 항상 열 수 있게 둔다. 타 페이지에서 /?paper=1 로 오면 자동으로 연다.
+    const hasPaper = PAPER_TABS.some(([t])=>S[t]&&S[t].sessions&&S[t].sessions.some(x=>x.paper));
+    if(hasPaper && /[?&]paper=1/.test(location.search) && !window._paperAutoOpened){ window._paperAutoOpened=true; try{ openPaper(); }catch(e){} } }
   requestAnimationFrame(updateStickyOffsets);   // 세션 수 변화 시 세션바 높이 재측정 → 서브탭 고정 위치 갱신
 }
 /* ── 세션 탭 드래그 정렬 ─────────────────────────────────────────────

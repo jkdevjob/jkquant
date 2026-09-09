@@ -24,6 +24,15 @@ h1 .v{color:var(--gold)}
 .btbtn{display:inline-flex;align-items:center;gap:5px;height:40px;padding:0 14px;background:var(--panel2);border:1px solid var(--line);color:var(--dim);border-radius:11px;font-size:13px;font-weight:600;cursor:pointer;text-decoration:none;white-space:nowrap;transition:border-color .15s,color .15s}
 .btbtn:hover{border-color:var(--vio);color:var(--vio)}
 @media(max-width:460px){.btbtn .bt-txt{display:none}.btbtn{padding:0 12px}}
+/* ── 三 메뉴 (전 페이지 공통) ── */
+.jkmenu{position:relative;flex-shrink:0}
+.jkmenu-btn{height:40px;width:46px;display:inline-flex;align-items:center;justify-content:center;background:var(--panel2);border:1px solid var(--line);color:var(--ink);border-radius:11px;font-size:19px;font-weight:700;line-height:1;cursor:pointer;letter-spacing:1px}
+.jkmenu-btn:hover{border-color:var(--vio);color:var(--vio)}
+.jkmenu-pop{position:absolute;right:0;top:47px;z-index:150;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:6px;min-width:158px;box-shadow:0 14px 34px rgba(0,0,0,.45);display:flex;flex-direction:column;gap:2px}
+.jkmenu-pop a{display:flex;align-items:center;gap:9px;padding:10px 12px;border-radius:8px;color:var(--dim);text-decoration:none;font-size:14px;font-weight:700;white-space:nowrap}
+.jkmenu-pop a:hover{background:var(--panel2);color:var(--ink)}
+.jkmenu-pop a.cur{color:var(--gold);background:var(--panel2)}
+.jkmenu-pop a .mi{width:18px;text-align:center}
 .userbadge{display:flex;align-items:center;gap:7px;font-size:11.5px;color:var(--dim);margin-top:8px}
 .userbadge img{width:20px;height:20px;border-radius:50%}
 .lo{background:none;border:none;color:var(--faint);font-size:11.5px;cursor:pointer;text-decoration:underline;padding:0}
@@ -122,13 +131,24 @@ pre.rules{background:var(--bg);border:1px solid var(--line);border-radius:10px;p
 <header><div class="wrap">
   <div class="htop">
     <div><div class="kicker">Admin Console</div><h1>JK <span class="v">퀀트</span> 관리자 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="adVer">v0.1</span></h1></div>
-    <div class="row" style="gap:8px">
-      <a class="btbtn" href="/" title="운영">🏠<span class="bt-txt"> 운영</span></a>
-      <a class="btbtn" href="/backtest" title="백테스트">📊<span class="bt-txt"> 백테</span></a>
+    <div class="jkmenu" id="jkmenuWrap">
+      <button class="jkmenu-btn" id="jkmenuBtn" aria-label="메뉴" onclick="jkMenuToggle(event)">三</button>
+      <div class="jkmenu-pop" id="jkmenuPop" hidden>
+        <a href="/"><span class="mi">🏠</span>운영</a>
+        <a href="/backtest"><span class="mi">📊</span>백테</a>
+        <a href="/scalping"><span class="mi">⚡</span>단타</a>
+        <a href="/?paper=1"><span class="mi">🧪</span>모의</a>
+        <a href="/admin" class="cur"><span class="mi">👤</span>관리자</a>
+      </div>
     </div>
   </div>
   <div class="userbadge" id="userbadge"></div>
 </div></header>
+<script>
+function jkMenuToggle(e){ if(e) e.stopPropagation(); var p=document.getElementById('jkmenuPop'); if(p) p.hidden=!p.hidden; }
+function jkMenuClose(){ var p=document.getElementById('jkmenuPop'); if(p) p.hidden=true; }
+document.addEventListener('click',function(e){ var m=document.getElementById('jkmenuWrap'); if(m && !m.contains(e.target)) jkMenuClose(); });
+</script>
 
 <div class="wrap"><div class="layout">
   <nav class="nav" id="nav"></nav>
