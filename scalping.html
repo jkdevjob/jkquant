@@ -182,12 +182,12 @@ canvas{display:block;width:100%;height:auto}
     <h3><span class="dot"></span>🔎 전체 스크리닝 <span class="sub" style="font-weight:600">볼린저 상단 돌파 + RSI≥55</span></h3>
     <p class="lead"><b>거래대금 상위 유니버스</b>(KOSPI·KOSDAQ)를 자동으로 훑어, 오늘 <b>매수 신호</b>가 뜬 종목을 찾아 목록으로 보여준다.
       목록에서 종목을 누르면 아래에 <b>캔들·볼린저·RSI 차트</b>가 뜬다. (단타는 유동성이 생명이라 거래대금 상위가 사실상 후보 전체)</p>
-    <div class="row" style="margin-bottom:8px">
-      <div class="fld" style="flex:0 0 140px"><label>유니버스 크기</label>
+    <div class="row" style="margin-bottom:8px;align-items:flex-end">
+      <div class="fld" style="flex:0 0 130px"><label>유니버스 크기</label>
         <select id="uniN"><option>50</option><option selected>100</option><option>150</option><option>200</option></select></div>
-      <button class="prim" onclick="runScreen()" id="scrBtn">🔎 전체 스크리닝</button>
-      <span class="sub" id="scr_msg"></span>
+      <button class="prim" onclick="runScreen()" id="scrBtn" style="height:38px">🔎 전체 스크리닝</button>
     </div>
+    <div class="sub" id="scr_msg" style="margin-bottom:8px;min-height:16px"></div>
     <div id="scr_prog" style="display:none;height:6px;background:var(--panel2);border-radius:4px;overflow:hidden;margin-bottom:10px"><div id="scr_bar" style="height:100%;width:0;background:var(--vio2);transition:width .1s"></div></div>
     <div id="scr_body"><p class="sub">「전체 스크리닝」을 누르면 거래대금 상위 종목을 계산해 신호를 찾습니다. (수십 초 걸릴 수 있음)</p></div>
     <div class="row" style="margin-top:10px">
