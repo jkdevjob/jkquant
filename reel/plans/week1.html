@@ -1,0 +1,254 @@
+<title>은퇴노트 1주차 발행 플랜</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Nanum+Myeongjo:wght@400;700;800&family=Noto+Sans+KR:wght@400;500;700&display=swap">
+<style>
+  :root{
+    --bg:#f2efe6; --surface:#fffdf8; --ink:#1b1e26; --muted:#6d7178; --faint:#9a9ca2;
+    --line:#e5dfd1; --navy:#0c2137; --gold:#a9791f; --gold-ink:#7c5710;
+    --p:#a9791f; --p-bg:#f4e8c9; --c:#2c5c86; --c-bg:#d9e8f3;
+    --l:#b0563a; --l-bg:#f3ddd3; --s:#6d7178; --s-bg:#e7e4db;
+    --shadow:0 1px 2px rgba(27,30,38,.05),0 8px 24px rgba(27,30,38,.06);
+    --display:"Nanum Myeongjo",Georgia,serif;
+    --body:"Noto Sans KR",system-ui,sans-serif;
+  }
+  @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+    --bg:#0a1826; --surface:#0f2236; --ink:#eef2f7; --muted:#9fb0c2; --faint:#6f8398;
+    --line:#20374d; --navy:#dfe8f2; --gold:#d8b877; --gold-ink:#e6cd98;
+    --p:#d8b877; --p-bg:#33291344; --c:#7db6e6; --c-bg:#12314c66; --l:#e08a6d; --l-bg:#3a201866;
+    --s:#9fb0c2; --s-bg:#1a2b3d; --shadow:0 1px 2px rgba(0,0,0,.3),0 10px 30px rgba(0,0,0,.35);
+  }}
+  :root[data-theme="dark"]{
+    --bg:#0a1826; --surface:#0f2236; --ink:#eef2f7; --muted:#9fb0c2; --faint:#6f8398;
+    --line:#20374d; --navy:#dfe8f2; --gold:#d8b877; --gold-ink:#e6cd98;
+    --p:#d8b877; --p-bg:#33291344; --c:#7db6e6; --c-bg:#12314c66; --l:#e08a6d; --l-bg:#3a201866;
+    --s:#9fb0c2; --s-bg:#1a2b3d; --shadow:0 1px 2px rgba(0,0,0,.3),0 10px 30px rgba(0,0,0,.35);
+  }
+
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--body);
+       line-height:1.6;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:960px;margin:0 auto;padding:56px 24px 72px}
+
+  /* ── Header ── */
+  header{border-bottom:1px solid var(--line);padding-bottom:28px;margin-bottom:32px}
+  .eyebrow{font-size:13px;letter-spacing:.22em;text-transform:uppercase;color:var(--gold-ink);
+           font-weight:700;margin:0 0 14px}
+  h1{font-family:var(--display);font-weight:800;font-size:clamp(34px,5vw,52px);
+     line-height:1.1;margin:0;letter-spacing:-.01em;text-wrap:balance}
+  .lede{margin:14px 0 0;color:var(--muted);font-size:17px;max-width:62ch}
+  .brand-tag{display:inline-flex;align-items:center;gap:8px;margin-top:18px;
+             font-size:14px;color:var(--muted)}
+  .brand-tag b{color:var(--ink);font-weight:700}
+  .cupmark{width:20px;height:20px;flex:none}
+  .cupmark path{stroke:var(--gold);stroke-width:5;fill:none;stroke-linecap:round;stroke-linejoin:round}
+
+  /* ── Ratio summary ── */
+  .summary{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:14px}
+  .rt{background:var(--surface);border:1px solid var(--line);border-radius:12px;
+      padding:14px 16px;box-shadow:var(--shadow)}
+  .rt .k{display:flex;align-items:baseline;gap:8px}
+  .rt .ax{font-family:var(--display);font-weight:800;font-size:22px}
+  .rt .nm{font-size:12px;color:var(--muted);letter-spacing:.04em}
+  .rt .cnt{font-family:var(--display);font-size:30px;font-weight:800;margin-top:4px;
+           font-variant-numeric:tabular-nums}
+  .rt .cnt small{font-size:14px;color:var(--faint);font-weight:400}
+  .rt.p{border-top:3px solid var(--p)} .rt.p .ax{color:var(--p)}
+  .rt.c{border-top:3px solid var(--c)} .rt.c .ax{color:var(--c)}
+  .rt.l{border-top:3px solid var(--l)} .rt.l .ax{color:var(--l)}
+  .rt.s{border-top:3px solid var(--s)} .rt.s .ax{color:var(--s)}
+  .ratio-note{font-size:13px;color:var(--muted);margin:0 0 40px}
+
+  h2.sec{font-family:var(--display);font-size:15px;font-weight:700;letter-spacing:.14em;
+         text-transform:uppercase;color:var(--muted);margin:0 0 16px}
+
+  /* ── Day rows ── */
+  .days{display:flex;flex-direction:column;gap:14px}
+  .day{position:relative;display:grid;grid-template-columns:104px 1fr;gap:20px;
+       background:var(--surface);border:1px solid var(--line);border-radius:14px;
+       padding:20px 22px 20px 26px;box-shadow:var(--shadow);overflow:hidden}
+  .day::before{content:"";position:absolute;left:0;top:0;bottom:0;width:5px}
+  .day.p::before{background:var(--p)} .day.c::before{background:var(--c)}
+  .day.l::before{background:var(--l)} .day.s::before{background:var(--s)}
+
+  .when{border-right:1px solid var(--line);padding-right:16px}
+  .dow{font-family:var(--display);font-weight:800;font-size:26px;line-height:1}
+  .date{font-size:12px;color:var(--faint);margin-top:3px}
+  .time{margin-top:12px;font-size:15px;font-weight:700;font-variant-numeric:tabular-nums}
+  .time span{font-size:12px;font-weight:400;color:var(--muted);display:block}
+
+  .body h3{font-family:var(--display);font-size:21px;font-weight:800;margin:0 0 4px;
+           letter-spacing:-.01em;text-wrap:balance}
+  .meta{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:12px}
+  .chip{font-size:12px;font-weight:700;letter-spacing:.03em;padding:3px 10px;border-radius:999px;
+        display:inline-flex;align-items:center;gap:6px}
+  .chip.p{background:var(--p-bg);color:var(--p)} .chip.c{background:var(--c-bg);color:var(--c)}
+  .chip.l{background:var(--l-bg);color:var(--l)} .chip.s{background:var(--s-bg);color:var(--s)}
+  .fmt{font-size:12px;color:var(--muted);font-weight:500}
+  .file{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;
+        color:var(--gold-ink);background:var(--p-bg);padding:2px 8px;border-radius:6px}
+  .cap{font-size:14.5px;color:var(--ink);white-space:pre-line;margin:0 0 12px}
+  .tags{font-size:13px;color:var(--c);font-weight:500;word-break:keep-all}
+
+  footer{margin-top:44px;border-top:1px solid var(--line);padding-top:26px;
+         display:grid;grid-template-columns:1fr 1fr;gap:26px}
+  footer h4{font-family:var(--display);font-size:14px;font-weight:700;margin:0 0 10px;
+            letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+  footer ul{margin:0;padding-left:18px;color:var(--ink);font-size:14px}
+  footer li{margin:6px 0}
+  .disc{grid-column:1/-1;font-size:12.5px;color:var(--faint);border-top:1px dashed var(--line);
+        padding-top:16px;margin-top:4px}
+
+  @media (max-width:680px){
+    .summary{grid-template-columns:repeat(2,1fr)}
+    .day{grid-template-columns:1fr;gap:14px}
+    .when{border-right:none;border-bottom:1px solid var(--line);padding:0 0 12px;
+          display:flex;align-items:baseline;gap:14px}
+    .time{margin-top:0;margin-left:auto}
+    footer{grid-template-columns:1fr}
+  }
+  a{color:inherit}
+  :focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+</style>
+
+<div class="wrap">
+  <header>
+    <p class="eyebrow">은퇴노트 · 콘텐츠 캘린더</p>
+    <h1>1주차 발행 플랜</h1>
+    <p class="lede">채널을 여는 첫 주. 데이터로 신뢰를 쌓고(P·C), 공감으로 팔로우를 붙잡습니다(L).
+      6편을 요일·시간에 맞춰 그대로 올리면 됩니다.</p>
+    <span class="brand-tag">
+      <svg class="cupmark" viewBox="0 0 100 100" aria-hidden="true">
+        <path d="M30 46 H62 V60 a13 13 0 0 1 -13 13 H43 a13 13 0 0 1 -13 -13 Z"/>
+        <path d="M62 50 a10 10 0 0 1 0 18"/><path d="M26 82 H68"/>
+        <path d="M41 26 q7 6 0 13 M53 26 q7 6 0 13"/>
+      </svg>
+      <b>은퇴노트</b> · @retire.note · "늦지 않았습니다"
+    </span>
+  </header>
+
+  <div class="summary">
+    <div class="rt p"><div class="k"><span class="ax">P</span><span class="nm">전문성</span></div>
+      <div class="cnt">3<small> / 6편</small></div></div>
+    <div class="rt c"><div class="k"><span class="ax">C</span><span class="nm">신뢰</span></div>
+      <div class="cnt">1<small> / 6편</small></div></div>
+    <div class="rt l"><div class="k"><span class="ax">L</span><span class="nm">친밀감</span></div>
+      <div class="cnt">2<small> / 6편</small></div></div>
+    <div class="rt s"><div class="k"><span class="ax">S</span><span class="nm">성과</span></div>
+      <div class="cnt">0<small> / 6편</small></div></div>
+  </div>
+  <p class="ratio-note">S(성과)는 자랑할 마일스톤이 쌓이는 3~4주차부터. 첫 주는 전문성·신뢰·친밀감에 집중합니다.</p>
+
+  <h2 class="sec">요일별 발행</h2>
+  <div class="days">
+
+    <article class="day p">
+      <div class="when"><div><div class="dow">월</div><div class="date">Day 1 · 오픈</div></div>
+        <div class="time">20:00<span>저녁 황금시간</span></div></div>
+      <div class="body">
+        <h3>국민연금만 믿으면 매달 128만원이 빕니다</h3>
+        <div class="meta"><span class="chip p">P · 전문성</span><span class="fmt">데이터 릴스</span>
+          <span class="file">ep01_hero.mp4</span></div>
+        <p class="cap">노후에 매달 필요한 돈 198만원. 국민연금은 평균 70만원 — 매달 128만원이 빕니다.
+그런데 45세부터 매달 50만원씩 20년만 모아도 원금 1억이 약 1.82억이 됩니다(코스피 실제 데이터).
+격차는 '지금 시작'이 메웁니다. 늦지 않았습니다.
+· 정보 제공용, 투자권유 아님</p>
+        <p class="tags">#은퇴 #노후준비 #국민연금 #연금저축 #노후자금 #재테크 #40대 #50대 #은퇴노트</p>
+      </div>
+    </article>
+
+    <article class="day l">
+      <div class="when"><div><div class="dow">화</div><div class="date">Day 2</div></div>
+        <div class="time">08:00<span>출근길</span></div></div>
+      <div class="body">
+        <h3>저도 마흔에 시작했습니다</h3>
+        <div class="meta"><span class="chip l">L · 친밀감</span><span class="fmt">카드 영상</span>
+          <span class="file">card_L1_empathy.mp4</span></div>
+        <p class="cap">저도 마흔이 넘어서야 노후를 처음 계산해봤습니다. 빠르진 않았죠.
+그래도 '안 하는 것'보단 언제나 나았습니다. 시작은 계좌 하나 여는 것부터.
+늦지 않았습니다.</p>
+        <p class="tags">#마흔 #40대재테크 #은퇴준비 #노후 #연금 #은퇴노트</p>
+      </div>
+    </article>
+
+    <article class="day c">
+      <div class="when"><div><div class="dow">수</div><div class="date">Day 3</div></div>
+        <div class="time">20:00<span>저녁</span></div></div>
+      <div class="body">
+        <h3>"국민연금 곧 없어진다?" 팩트체크</h3>
+        <div class="meta"><span class="chip c">C · 신뢰</span><span class="fmt">카드 영상</span>
+          <span class="file">card_C1_factcheck.mp4</span></div>
+        <p class="cap">"국민연금 곧 없어진다"는 말, 반은 오해입니다.
+기금이 고갈돼도 연금이 사라지진 않습니다. '더 내고, 덜 받는' 구조로 바뀔 뿐이죠.
+그래서 국민연금은 노후의 바닥이지 전부가 아닙니다.
+· 정보 제공용</p>
+        <p class="tags">#국민연금 #팩트체크 #연금개혁 #노후준비 #은퇴노트</p>
+      </div>
+    </article>
+
+    <article class="day p">
+      <div class="when"><div><div class="dow">목</div><div class="date">Day 4</div></div>
+        <div class="time">20:00<span>저녁</span></div></div>
+      <div class="body">
+        <h3>매달 $500, 미국 S&amp;P500에 15년</h3>
+        <div class="meta"><span class="chip p">P · 전문성</span><span class="fmt">데이터 릴스</span>
+          <span class="file">nohu_01_sp500.mp4</span></div>
+        <p class="cap">국민연금만 믿어도 될까요? 매달 $500씩 미국 S&amp;P500에 15년 넣었다면.
+실제 데이터로 확인하면 '왜 국민연금 밖 준비가 필요한지' 보입니다.
+· 정보 제공용, 투자권유 아님</p>
+        <p class="tags">#S&amp;P500 #미국주식 #연금저축 #적립식 #노후준비 #은퇴노트</p>
+      </div>
+    </article>
+
+    <article class="day l">
+      <div class="when"><div><div class="dow">금</div><div class="date">Day 5</div></div>
+        <div class="time">21:00<span>주말 전 저녁</span></div></div>
+      <div class="body">
+        <h3>매달 노후에 얼마 모으세요?</h3>
+        <div class="meta"><span class="chip l">L · 친밀감</span><span class="fmt">카드 · 소통</span>
+          <span class="file">card_L2_question.mp4</span></div>
+        <p class="cap">여러분은 매달 노후를 위해 얼마를 모으고 계신가요?
+정답은 없습니다 — 시작한 사람이 이깁니다. 댓글로 살짝 알려주세요 👇</p>
+        <p class="tags">#노후준비 #연금저축 #40대 #50대 #은퇴 #은퇴노트</p>
+      </div>
+    </article>
+
+    <article class="day p">
+      <div class="when"><div><div class="dow">토</div><div class="date">Day 6</div></div>
+        <div class="time">10:00<span>주말 오전</span></div></div>
+      <div class="body">
+        <h3>국내에만 묻어뒀다면? — 코스피 15년</h3>
+        <div class="meta"><span class="chip p">P · 전문성</span><span class="fmt">데이터 릴스</span>
+          <span class="file">nohu_02_kospi.mp4</span></div>
+        <p class="cap">매달 50만원, 코스피에 15년. 국내 한 곳만으로 노후가 될까요?
+결과를 보면 '왜 분산이 필요한지' 자연스럽게 이해됩니다.
+· 정보 제공용, 투자권유 아님</p>
+        <p class="tags">#코스피 #국내주식 #분산투자 #노후자금 #연금 #은퇴노트</p>
+      </div>
+    </article>
+
+  </div>
+
+  <footer>
+    <div>
+      <h4>발행 팁</h4>
+      <ul>
+        <li>릴스는 <b>저녁 20~21시</b>, 공감·소통은 <b>출근길 8시</b>에 도달이 좋습니다.</li>
+        <li>업로드 직후 <b>첫 30분</b>이 중요 — 댓글에 바로 반응해 참여율을 올리세요.</li>
+        <li>같은 영상을 <b>유튜브 쇼츠</b>에도 교차 업로드(핸들 통일 @retire.note).</li>
+        <li>고정 슬로건 <b>"늦지 않았습니다"</b>를 매 게시물 끝에 반복해 각인.</li>
+      </ul>
+    </div>
+    <div>
+      <h4>다음 주 예고</h4>
+      <ul>
+        <li><b>P</b> — 45세 vs 55세: 10년 차이 시뮬레이션</li>
+        <li><b>C</b> — 연금저축 vs IRP, 60초 정리</li>
+        <li><b>P</b> — 은퇴 후 인출: "3억이면 몇 년?"</li>
+        <li><b>S</b> — (마일스톤 생기면) 첫 성과 인증</li>
+      </ul>
+    </div>
+    <p class="disc">수치 출처: 국민연금연구원 노후 적정생활비(2026), 국민연금 평균 수령액(2026), 연금저축·IRP 세액공제 기준.
+      모든 콘텐츠는 정보 제공 목적이며 투자권유가 아닙니다. · 은퇴노트 콘텐츠 캘린더</p>
+  </footer>
+</div>
