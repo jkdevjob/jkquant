@@ -202,6 +202,7 @@ canvas{display:block;width:100%;height:auto}
     <div class="row" style="margin-top:12px">
       <div class="fld" style="flex:0 0 120px"><label>진입가 (지정가)</label><input id="ch_entry" type="number" step="0.01"></div>
       <button class="ghostbtn buy" onclick="enterPos()">＋ 진입(반자동 기록)</button>
+      <button class="ghostbtn" onclick="kisFromChart()">🔗 KIS 매수창 채우기</button>
       <span class="sub">손절·목표가 자동 계산 → 아래 '보유 포지션'에서 관리</span>
     </div>
     <div class="warn">이 도구는 <b>주문 가격을 계산·기록</b>하는 반자동 도구다. 실제 주문은 증권사 앱/HTS에서 넣는다
@@ -213,6 +214,30 @@ canvas{display:block;width:100%;height:auto}
     <h3><span class="dot"></span>💼 보유 포지션 <span class="caret" onclick="refreshPos()">🔄 현재가 갱신</span></h3>
     <p class="lead">진입을 기록하면 여기서 <b>손절가·1차목표·현재 평가손익</b>을 본다. 청산하면 아래 모의 일지로 넘어간다.</p>
     <div id="pos_body"></div>
+  </div>
+
+  <!-- 3b. KIS 실주문 (모의투자) -->
+  <div class="card">
+    <h3><span class="dot"></span>🔗 KIS 실주문 <span class="sub" id="kis_env" style="font-weight:600"></span> <span class="caret" onclick="kisBalance()">🔄 잔고</span></h3>
+    <div id="kis_status" class="lead">연결 확인 중…</div>
+    <div id="kis_panel" style="display:none">
+      <div class="row" style="margin-bottom:8px">
+        <div class="fld" style="flex:1 1 120px"><label>종목코드</label><input id="k_code" type="text" placeholder="005930"></div>
+        <div class="fld" style="flex:0 0 90px"><label>수량</label><input id="k_qty" type="number" step="1" min="1" placeholder="1"></div>
+        <div class="fld" style="flex:0 0 110px"><label>가격(지정가)</label><input id="k_price" type="number" step="1" placeholder="0"></div>
+        <div class="fld" style="flex:0 0 auto;justify-content:flex-end"><label style="opacity:0">.</label>
+          <label style="font-size:12px;color:var(--dim);display:flex;align-items:center;gap:6px;height:37px"><input id="k_mkt" type="checkbox" style="width:auto"> 시장가</label></div>
+      </div>
+      <div class="row">
+        <button class="ghostbtn buy" onclick="kisOrder('buy')">▲ 매수 주문</button>
+        <button class="ghostbtn danger" onclick="kisOrder('sell')">▼ 매도 주문</button>
+        <span class="sub" id="kis_msg"></span>
+      </div>
+      <div id="kis_bal" style="margin-top:12px"></div>
+    </div>
+    <div class="warn" id="kis_help" style="display:none">KIS 실주문을 켜려면 Cloudflare Pages → 설정 → 환경 변수에
+      <b>KIS_APPKEY · KIS_APPSECRET · KIS_ACCOUNT</b>(예 12345678-01) · <b>KIS_OWNER_EMAIL</b>(주문 허용 계정)을 넣으세요.
+      <b>KIS_ENV</b>는 기본 <b>모의투자(vts)</b>이며 실전은 <b>real</b>로 바꿉니다. 키는 서버(환경변수)에만 저장되고 브라우저엔 노출되지 않습니다.</div>
   </div>
 
   <!-- 4. 전략 규칙 -->
@@ -229,17 +254,18 @@ canvas{display:block;width:100%;height:auto}
     </div>
     <div class="step">
       <div class="st"><span class="n">3</span>손절 (먼저·짧게)</div>
-      <ul><li>진입가 <b>−<span class="k">1.2%</span></b> 또는 시가범위 저가 중 가까운 쪽 · 상한 −1.5% · 물타기 금지</li></ul>
+      <ul><li>진입가 <b>−<span class="k">1.0%</span></b> 또는 시가범위 저가 중 가까운 쪽 · 상한 −1.5% · 물타기 금지</li></ul>
     </div>
     <div class="step">
       <div class="st"><span class="n">4</span>익절 (달리는 말은 탄다)</div>
-      <ul><li><b>+<span class="k">1.5%</span>에서 절반</b>, 잔량은 <b>트레일링(고점 −0.7%)</b> · 첫 음봉 전량청산 금지</li></ul>
+      <ul><li><b>+<span class="k">2.0%</span>에서 절반</b>, 잔량은 <b>트레일링(고점 −0.7%)</b> · 첫 음봉 전량청산 금지</li></ul>
     </div>
     <div class="step">
       <div class="st"><span class="n">5</span>시간청산</div>
       <ul><li><b>09:30 잔량 전량</b> · 손절 후 재진입 하루 1회</li></ul>
     </div>
-    <p class="note">손익비 ≈ 2:1, 마찰 0.5% 가정 시 본전 승률 ≈ 50%. 근거·검증은 저장소 SCALPING.md. 투자 권유 아님·손실 위험 큼.</p>
+    <p class="note">총손익비 2:1(익절 +2.0% / 손절 −1.0%) · 마찰 0.5% 반영하면 순 1:1 → 본전 승률 ≈ 50%.
+      계산기로 직접 확인. 근거·검증은 저장소 SCALPING.md. 투자 권유 아님·손실 위험 큼.</p>
     </div>
   </div>
 
@@ -247,8 +273,8 @@ canvas{display:block;width:100%;height:auto}
   <div class="card">
     <h3><span class="dot"></span>🧮 손익분기 계산기</h3>
     <div class="calcgrid">
-      <div class="fld"><label>익절 % (R)</label><input id="c_r" type="number" step="0.1" value="1.5"></div>
-      <div class="fld"><label>손절 % (L)</label><input id="c_l" type="number" step="0.1" value="1.2"></div>
+      <div class="fld"><label>익절 % (R)</label><input id="c_r" type="number" step="0.1" value="2.0"></div>
+      <div class="fld"><label>손절 % (L)</label><input id="c_l" type="number" step="0.1" value="1.0"></div>
       <div class="fld"><label>왕복 마찰 % (c)</label><input id="c_c" type="number" step="0.1" value="0.5"></div>
       <div class="fld"><label>가정 승률 % (p)</label><input id="c_p" type="number" step="1" value="50"></div>
     </div>
@@ -440,15 +466,15 @@ async function openChart(code){
 }
 function closeChart(){ $('chartCard').style.display='none'; CUR=null; }
 function levelsOf(entry){
-  const stop=entry*(1-0.012), cap=entry*(1-0.015), tgt=entry*1.015;
+  const stop=entry*(1-0.010), cap=entry*(1-0.015), tgt=entry*1.020;
   return {entry, stop:Math.max(stop,cap), tgt};
 }
 function renderLevels(entry){
   const L=levelsOf(entry);
   $('ch_levels').innerHTML=
      `<div class="lv entry"><div class="l">진입 지정가</div><div class="v">${commas(L.entry)}</div></div>`
-    +`<div class="lv stop"><div class="l">손절 (−1.2%)</div><div class="v">${commas(L.stop)}</div></div>`
-    +`<div class="lv tgt"><div class="l">1차 목표 (+1.5%)</div><div class="v">${commas(L.tgt)}</div></div>`
+    +`<div class="lv stop"><div class="l">손절 (−1.0%)</div><div class="v">${commas(L.stop)}</div></div>`
+    +`<div class="lv tgt"><div class="l">1차 목표 (+2.0%)</div><div class="v">${commas(L.tgt)}</div></div>`
     +`<div class="lv"><div class="l">잔량</div><div class="v" style="font-size:12px;color:var(--dim);font-weight:600">고점 −0.7% 트레일링</div></div>`;
 }
 function drawChart(a){
@@ -578,6 +604,65 @@ function exportLog(){
   const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='scalping_log.csv'; document.body.appendChild(a); a.click(); a.remove();
 }
 
+/* ══ KIS 실주문 (모의투자) ══ */
+let KIScfg=null;
+async function kisInit(){
+  const st=$('kis_status');
+  try{
+    const r=await fetch('/api/kis?op=config'); const j=await r.json(); KIScfg=j;
+    $('kis_env').textContent = j.env==='real'?'· 실전':'· 모의투자';
+    if(j.configured && j.hasOwner){
+      st.innerHTML='<span class="pill good">연결됨 <b>'+(j.env==='real'?'실전':'모의투자')+'</b></span> <span class="sub">주문 가능 · 실제 체결은 증권사 규정을 따릅니다</span>';
+      $('kis_panel').style.display=''; $('kis_help').style.display='none';
+    }else{
+      st.innerHTML='<span class="pill bad">미설정</span> <span class="sub">'+(!j.configured?'KIS 키가 없습니다':'KIS_OWNER_EMAIL이 없어 주문이 차단됩니다')+'</span>';
+      $('kis_panel').style.display='none'; $('kis_help').style.display='';
+    }
+  }catch(e){ st.innerHTML='<span class="pill bad">확인 실패</span> <span class="sub">'+esc(e.message||e)+'</span>'; $('kis_help').style.display=''; }
+}
+async function idToken(){ if(!me) throw new Error('로그인이 필요합니다.'); return await me.getIdToken(); }
+function kisFromChart(){
+  if(!CUR){ return; }
+  $('k_code').value=CUR.code; $('k_price').value=Math.round(+$('ch_entry').value||CUR.a.price);
+  $('kis_panel').scrollIntoView&&document.getElementById('kis_panel').scrollIntoView({behavior:'smooth',block:'center'});
+  $('kis_msg').textContent='차트 종목을 채웠습니다 — 수량 확인 후 주문하세요.';
+}
+async function kisOrder(side){
+  if(!KIScfg||!KIScfg.configured){ alert('KIS가 설정되지 않았습니다.'); return; }
+  const code=($('k_code').value||'').toUpperCase().trim();
+  const qty=parseInt($('k_qty').value,10);
+  const mkt=$('k_mkt').checked;
+  const price=mkt?0:Math.round(+$('k_price').value||0);
+  if(!code){ alert('종목코드를 넣어주세요.'); return; }
+  if(!(qty>0)){ alert('수량을 넣어주세요.'); return; }
+  if(!mkt && !(price>0)){ alert('지정가 가격을 넣거나 시장가를 체크하세요.'); return; }
+  const envName=KIScfg.env==='real'?'⚠️ 실전(진짜 돈)':'모의투자';
+  if(!confirm(`[${envName}] ${side==='buy'?'매수':'매도'}\n종목 ${code} · ${qty}주 · ${mkt?'시장가':price.toLocaleString()+'원'}\n\n주문할까요?`)) return;
+  $('kis_msg').textContent='주문 전송 중…';
+  try{
+    const tok=await idToken();
+    const r=await fetch('/api/kis?op=order',{method:'POST',headers:{'content-type':'application/json','Authorization':'Bearer '+tok},
+      body:JSON.stringify({side,code,qty,price,priceType:mkt?'market':'limit'})});
+    const j=await r.json();
+    if(j.ok){ $('kis_msg').innerHTML='<span style="color:var(--buy)">✓ '+esc(j.msg||'주문 접수')+(j.orderNo?' · 주문번호 '+esc(j.orderNo):'')+'</span>'; kisBalance(); }
+    else { $('kis_msg').innerHTML='<span style="color:var(--sell)">✗ '+esc(j.msg||j.error||'주문 실패')+'</span>'; }
+  }catch(e){ $('kis_msg').innerHTML='<span style="color:var(--sell)">✗ '+esc(e.message||e)+'</span>'; }
+}
+async function kisBalance(){
+  if(!KIScfg||!KIScfg.configured) return;
+  const el=$('kis_bal'); el.innerHTML='<span class="sub">잔고 조회 중…</span>';
+  try{
+    const tok=await idToken();
+    const r=await fetch('/api/kis?op=balance',{headers:{'Authorization':'Bearer '+tok}}); const j=await r.json();
+    if(j.error){ el.innerHTML='<span class="sub" style="color:var(--sell)">'+esc(j.error)+'</span>'; return; }
+    const h=j.holdings||[];
+    el.innerHTML=`<div class="row" style="margin-bottom:8px"><span class="pill">예수금 <b>${commas(j.cash)}</b></span><span class="pill">평가총액 <b>${commas(j.evalTotal)}</b></span></div>`
+      + (h.length?`<div class="htable-wrap"><table class="htable"><thead><tr><th>종목</th><th>수량</th><th>평단</th><th>현재가</th><th>수익률</th></tr></thead><tbody>`
+        + h.map(x=>`<tr><td><b>${esc(x.name)}</b><div class="sub">${esc(x.code)}</div></td><td>${x.qty}</td><td>${commas(x.avg)}</td><td>${commas(x.cur)}</td><td class="${x.pl>=0?'win':'loss'}">${x.pl>=0?'+':''}${fmt(x.pl,2)}%</td></tr>`).join('')
+        + `</tbody></table></div>` : '<span class="sub">보유 종목이 없습니다.</span>');
+  }catch(e){ el.innerHTML='<span class="sub" style="color:var(--sell)">'+esc(e.message||e)+'</span>'; }
+}
+
 /* ══ 로그인 ══ */
 let me=null;
 function googleLogin(){ const err=$('gate_err'); if(err) err.textContent=''; window.fb.signInWithPopup(window.fb.auth,window.fb.provider).catch(e=>{ if(err) err.textContent=(e&&e.message)||'로그인 실패'; }); }
@@ -592,7 +677,7 @@ function boot(){
       $('gate').style.display='none'; $('app').style.display='';
       WKEY='jkq_scalp_watch_'+user.uid; PKEY='jkq_scalp_pos_'+user.uid; LKEY='jkq_scalp_log_'+user.uid;
       $('log_owner').textContent='· '+(user.displayName||user.email||'');
-      loadAll(); recalc(); renderWatch(); renderPos(); renderLog();
+      loadAll(); recalc(); renderWatch(); renderPos(); renderLog(); kisInit();
     }else{ $('gate').style.display='flex'; $('app').style.display='none'; }
   });
 }
