@@ -982,6 +982,14 @@ console.log('[23] 관리자 모드 — 접속 계정·사용자 관리');
   // 관리자 UI가 운영에 남아 있으면 같은 걸 두 곳에서 고쳐야 한다
   ok('관리자 UI는 운영에 남기지 않는다',
      !/adminModal|renderAdmin|openAdmin|diag_card|runDiag/.test(idx));
+  /* 관리자 링크의 기본 상태는 '감춤'이어야 한다. 스크립트로만 감추면
+     applyAdminMode를 못 거치는 경로(차단 계정은 startApp 전에 되돌려보낸다)에서 새어 나온다.
+     !important가 필요한 것도 확인됐다 — .jkmenu-pop a(0,1,1)가 .admin-only(0,1,0)를 이긴다. */
+  ok('관리자 링크는 기본이 감춤', /\.admin-only\{display:none !important\}/.test(idx)
+     && /\.admin-only\.admin-on\{display:flex !important\}/.test(idx));
+  ok('보임 전환은 클래스로', /classList\.toggle\('admin-on', on\)/.test(idx));
+  ok('차단 계정도 나가기 전에 감춘다',
+     /applyAdminMode\(\);\s*\n\s*try\{ await window\.fb\.signOut/.test(idx));
   ok('관리자 페이지도 컬렉션 통째 읽기를 쓴다', /doc, getDoc, setDoc, collection, getDocs/.test(adm)
      && /getDocs\(window\.fb\.collection\(window\.fb\.db,'profiles'\)\)/.test(adm));
   ok('목록은 마지막 접속 최신순', /rows\.sort\(\(a,b\)=>\(\+b\.lastSeen\|\|0\)-\(\+a\.lastSeen\|\|0\)\)/.test(adm));
