@@ -412,7 +412,7 @@ async function runScreen(){
   await Promise.all(Array.from({length:CC},()=>worker()));
   prog.style.display='none';
   const rank=s=>s==='on'?0:s==='watch'?1:2;
-  SCREEN.sort((x,y)=> rank(x.sig)-rank(y.sig) || (y.rsi-x.rsi));
+  SCREEN.sort((x,y)=> rank(x.sig)-rank(y.sig) || (y.amount-x.amount));  // 신호 그룹 내 거래대금 순(중립)
   const on=SCREEN.filter(x=>x.sig==='on').length, w=SCREEN.filter(x=>x.sig==='watch').length;
   $('scr_msg').textContent=`완료 · 🟢신호 ${on} · 🟡관찰 ${w} (검사 ${SCREEN.length}/${total})`;
   renderScreen();
@@ -432,13 +432,13 @@ function renderScreen(){
          <td><b>${esc(s.name)}</b> <span class="sub">${esc(s.market||'')}</span><div class="sub">${esc(s.code)}</div></td>
          <td>${commas(s.price)}</td>
          <td class="${s.chg>=0?'win':'loss'}">${s.chg>=0?'+':''}${fmt(s.chg,2)}%</td>
-         <td>${fmt(s.rsi,0)}</td>
+         <td>${fmt(s.rsi,0)}${s.rsi>=70?' <span class="sig watch" style="padding:0 4px">과매수</span>':''}</td>
          <td class="${gap>=0?'win':''}">${gap!=null?(gap>=0?'+':'')+fmt(gap,1)+'%':'—'}</td>
          <td>${s.amount?Math.round(s.amount/100).toLocaleString():'—'}</td>
          <td>${sg}</td>
        </tr>`;
      }).join('')
-    + `</tbody></table></div><p class="note">행을 누르면 차트가 열립니다. 거래대금 단위: 억원(추정).</p>`;
+    + `</tbody></table></div><p class="note">행을 누르면 차트가 열립니다 · 거래대금 순 정렬(억원) · RSI 55~70이 스윗스팟, <b>70+는 과매수(뒷북 주의)</b>.</p>`;
 }
 
 /* 검색 — 특정 종목 바로 차트 */
