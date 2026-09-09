@@ -197,6 +197,7 @@ table.cmp td:first-child,table.cmp th:first-child{text-align:left}
 .htable tr.add td:nth-child(2){color:var(--vio)}.htable tr.wd td:nth-child(2){color:var(--gold)}
 .htable .del{color:var(--sell-dim);cursor:pointer;font-weight:700;padding:0 4px}
 .htable .edit{color:var(--vio);cursor:pointer;font-weight:700;padding:0 2px}
+.htable .cyc-end{font-size:10px;line-height:1;vertical-align:middle;cursor:help}
 .htable .empty{text-align:center;color:var(--faint);padding:14px 0}
 .syncbar{display:flex;align-items:center;gap:8px;background:var(--panel);border:1px solid var(--line);border-radius:11px;padding:10px 13px;margin-bottom:13px;font-size:12px}
 .syncbar .dotled{width:8px;height:8px;border-radius:50%;background:var(--faint);flex-shrink:0}
@@ -484,7 +485,7 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
 </div>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.18</span></h1></div>
+    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.19</span></h1></div>
     <div class="jkmenu" id="jkmenuWrap">
       <button class="jkmenu-btn" id="jkmenuBtn" aria-label="메뉴" onclick="jkMenuToggle(event)">三</button>
       <div class="jkmenu-pop" id="jkmenuPop" hidden>
@@ -1533,7 +1534,7 @@ document.addEventListener('click',function(e){ var m=document.getElementById('jk
   <footer>
     <strong>JK 퀀트</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.18</b> · 2026-09-09</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.19</b> · 2026-09-09</div>
   </footer>
 </div>
 
@@ -2770,7 +2771,9 @@ function renderInfHist(){
     const tflag=(typeof h.tManual==='number')?' <span style="color:var(--gold);font-size:9px">수동</span>':'';
     const pctCell=h.qtyAfter>0?`${(+h.pctAfter.toFixed(2))}%`:'—';   // 0.25% 그대로 (T 3자리와 검산 일치)
     const starCell=h.qtyAfter>0?wn(h.starAfter):'—';
-    const endFlag=h.cycleEnd?' <span style="color:var(--gold);font-size:9px;background:rgba(245,196,81,.15);padding:1px 5px;border-radius:4px">사이클 종료</span>':'';
+    /* 사이클 종료 표시. 글자로 쓰면 '구분' 칸을 통째로 밀어내 체결가·수량이 화면 밖으로 나갔다.
+       줄 위의 금색 선이 이미 같은 걸 말하고 있으니 여기서는 깃발 하나면 된다. */
+    const endFlag=h.cycleEnd?' <span class="cyc-end" title="사이클 종료">🏁</span>':'';
     const rowStyle=h.cycleEnd?' style="border-top:2px solid var(--gold)"':'';
     rows=`<tr class="${cls}"${rowStyle}><td>${h.date||'-'}</td><td>${h.kind}${tflag}${endFlag}</td><td>${priceCell}</td><td>${qtyCell}</td><td>${profitCell}</td><td>${wn(h.balAfter)}</td><td>${fmtT(h.Tafter)}</td><td>${pctCell}</td><td>${starCell}</td><td style="white-space:nowrap"><span class="edit" onclick="editInf(${i})">✎</span> <span class="del" onclick="delInf(${i})">✕</span></td></tr>`+rows;
   });

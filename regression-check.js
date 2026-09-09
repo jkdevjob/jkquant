@@ -376,6 +376,12 @@ console.log('[7] DOM 구조');
   // 셀이 머리글과 같은 값을 같은 자리에 넣는지 — 손익·잔금이 바뀌면 여기서 잡힌다
   ok('무매 이력 본문이 머리글과 같은 순서',
      /profitCell\}<\/td><td>\$\{wn\(h\.balAfter\)\}/.test(body), cells.slice(4,6).join(' | '));
+  /* 사이클 종료는 아이콘으로. 글자 배지는 '구분' 칸을 41px 밀어내
+     좁은 화면에서 손익·잔금을 화면 밖으로 내보냈다. 줄 위 금색 선이 본 표시다. */
+  ok('사이클 종료는 아이콘', /const endFlag=h\.cycleEnd\?' <span class="cyc-end" title="사이클 종료">🏁<\/span>':''/.test(idx)
+     && !/>사이클 종료<\/span>/.test(idx));
+  ok('종료 줄은 금색 선이 그대로', /const rowStyle=h\.cycleEnd\?' style="border-top:2px solid var\(--gold\)"':''/.test(idx));
+  ok('아이콘이 줄 높이를 안 민다', /\.htable \.cyc-end\{font-size:10px;line-height:1;/.test(idx));
 }
 
 console.log('[8] 모의 체결 상한선');
