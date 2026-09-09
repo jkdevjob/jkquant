@@ -196,8 +196,8 @@ canvas{display:block;width:100%;height:auto}
         <div class="sresult" id="sres" hidden></div>
       </div>
     </div>
-    <p class="note">신호 = <b>당일 고가가 볼린저 상단 돌파 & RSI≥55</b> · 🟡관찰 = 밴드 근접(상단 −2% 이내)·RSI≥50.
-      신호는 진입 <b>후보</b>일 뿐 — 실제 진입은 09:00~09:03 시가범위 돌파를 차트로 확인하고 한다.</p>
+    <p class="note">🟢 신호 = <b>당일 고가가 볼린저 상단 돌파 & RSI≥55</b>. 신호는 진입 <b>후보</b>일 뿐 —
+      실제 진입은 목록에서 종목을 눌러 차트로 09:00~09:03 시가범위 돌파를 확인하고 한다.</p>
   </div>
 
   <!-- 2. 차트 -->
@@ -413,16 +413,16 @@ async function runScreen(){
   prog.style.display='none';
   const rank=s=>s==='on'?0:s==='watch'?1:2;
   SCREEN.sort((x,y)=> rank(x.sig)-rank(y.sig) || (y.amount-x.amount));  // 신호 그룹 내 거래대금 순(중립)
-  const on=SCREEN.filter(x=>x.sig==='on').length, w=SCREEN.filter(x=>x.sig==='watch').length;
-  $('scr_msg').textContent=`완료 · 🟢신호 ${on} · 🟡관찰 ${w} (검사 ${SCREEN.length}/${total})`;
+  const on=SCREEN.filter(x=>x.sig==='on').length;
+  $('scr_msg').textContent=`완료 · 🟢 매수신호 ${on}개 (유니버스 ${SCREEN.length}개 검사)`;
   renderScreen();
   _screening=false; $('scrBtn').disabled=false;
 }
 function renderScreen(){
   const b=$('scr_body');
-  const hits=SCREEN.filter(x=>x.sig!=='off');
+  const hits=SCREEN.filter(x=>x.sig==='on');
   if(!SCREEN.length){ b.innerHTML='<p class="sub">결과가 없습니다.</p>'; return; }
-  if(!hits.length){ b.innerHTML='<p class="sub">오늘 신호·관찰 조건을 만족하는 종목이 없습니다. (유니버스 '+SCREEN.length+'개 검사)</p>'; return; }
+  if(!hits.length){ b.innerHTML='<p class="sub">오늘 <b>매수 신호</b> 종목이 없습니다. (유니버스 '+SCREEN.length+'개 검사) — 조건을 만족하는 종목이 없는 날도 정상입니다.</p>'; return; }
   b.innerHTML=`<div class="htable-wrap"><table class="htable"><thead><tr>
     <th>종목</th><th>현재가</th><th>등락</th><th>RSI</th><th>상단대비</th><th>거래대금(억)</th><th>신호</th></tr></thead><tbody>`
     + hits.map(s=>{
@@ -469,7 +469,7 @@ function addFirst(){
 let CUR=null;
 async function openChart(code,name){
   name = name || nameOf(code) || code;
-  $('chartCard').style.display='';
+  $('chartCard').style.display='block';   // CSS #chartCard{display:none} 를 인라인으로 덮어써야 보인다
   $('ch_title').textContent=`${name} (${code}) — 불러오는 중…`;
   $('chartCard').scrollIntoView({behavior:'smooth',block:'start'});
   try{
