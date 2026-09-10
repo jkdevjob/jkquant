@@ -36,6 +36,24 @@ function acct(env) {
   return m ? { cano: m[1], prod: m[2] } : null;
 }
 
+// ── 초당 요청 제한(rate limit) 대응 ──
+// KIS 모의투자는 초당 2건, 실전도 20건으로 막혀 있다. 연달아 쏘면 EGW00201 로 거절된다.
+// 거절은 "요청이 아예 접수되지 않았다"는 뜻이라 되쏘는 게 안전하다(주문 제외 — 아래 주석 참고).
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+const RATE_LIMITED = (j) => /EGW00201|초당\s*거래건수/i.test(JSON.stringify(j || {}));
+
+// 읽기 호출 전용. 제한에 걸리면 간격을 벌려가며 다시 시도한다.
+async function readJson(url, init, tries = 3) {
+  let j = {};
+  for (let i = 0; i < tries; i++) {
+    if (i) await sleep(400 * i);                 // 400ms → 800ms
+    const r = await fetch(url, init);
+    j = await r.json().catch(() => ({}));
+    if (!RATE_LIMITED(j)) return j;
+  }
+  return j;
+}
+
 // ── 접근 토큰 (웜 아이솔레이트 동안 캐시) ──
 let _tok = { at: 0, token: null, env: null };
 async function getToken(env) {
@@ -161,28 +179,29 @@ export async function onRequestGet({ request, env }) {
       catch (e) { add("접근토큰 발급", false, String(e.message || e)); }
       if (token) {
         try {
-          const r = await fetch(base(env) + "/uapi/domestic-stock/v1/quotations/inquire-price?fid_cond_mrkt_div_code=J&fid_input_iscd=005930", {
+          const j = await readJson(base(env) + "/uapi/domestic-stock/v1/quotations/inquire-price?fid_cond_mrkt_div_code=J&fid_input_iscd=005930", {
             headers: { authorization: "Bearer " + token, appkey: env.KIS_APPKEY, appsecret: env.KIS_APPSECRET, tr_id: "FHKST01010100", custtype: "P" },
           });
-          const j = await r.json().catch(() => ({}));
           const p = j.output && j.output.stck_prpr;
-          add("시세조회 (삼성전자)", !!p, p ? `현재가 ${Number(p).toLocaleString()}원` : (j.msg1 || "실패 HTTP " + r.status));
+          add("시세조회 (삼성전자)", !!p, p ? `현재가 ${Number(p).toLocaleString()}원` : (j.msg1 || "실패"));
         } catch (e) { add("시세조회 (삼성전자)", false, String(e.message || e)); }
+        await sleep(600);   // 다음 호출이 초당 제한에 걸리지 않게 간격을 둔다
         if (a) {
           try {
             const tr = isReal(env) ? "TTTC8434R" : "VTTC8434R";
             const qs = new URLSearchParams({ CANO: a.cano, ACNT_PRDT_CD: a.prod, AFHR_FLPR_YN: "N", OFL_YN: "",
               INQR_DVSN: "02", UNPR_DVSN: "01", FUND_STTL_ICLD_YN: "N", FNCG_AMT_AUTO_RDPT_YN: "N", PRCS_DVSN: "00",
               CTX_AREA_FK100: "", CTX_AREA_NK100: "" });
-            const r = await fetch(base(env) + "/uapi/domestic-stock/v1/trading/inquire-balance?" + qs, {
+            const j = await readJson(base(env) + "/uapi/domestic-stock/v1/trading/inquire-balance?" + qs, {
               headers: { authorization: "Bearer " + token, appkey: env.KIS_APPKEY, appsecret: env.KIS_APPSECRET, tr_id: tr, custtype: "P" },
             });
-            const j = await r.json().catch(() => ({}));
             const ok2 = String(j.rt_cd) === "0";
             const cash = j.output2 && j.output2[0] && j.output2[0].dnca_tot_amt;
             let why = j.msg1 || "실패";
             // 실전 계좌번호를 모의(vts)에 넣는 실수가 잦다 — 에러코드로 바로 짚어준다
-            if (/INVALID_CHECK_ACNO|ACNO/i.test(JSON.stringify(j))) {
+            if (RATE_LIMITED(j)) {
+              why += " — 초당 요청 제한입니다. 계좌·키 문제가 아니니 몇 초 뒤 점검을 다시 누르세요";
+            } else if (/INVALID_CHECK_ACNO|ACNO/i.test(JSON.stringify(j))) {
               why += isReal(env)
                 ? " — 실전 계좌번호가 맞는지 확인하세요"
                 : " — 앱키는 정상이므로 계좌번호만 틀렸습니다. 모의투자는 실전과 계좌번호가 다릅니다. "
@@ -224,12 +243,12 @@ export async function onRequestGet({ request, env }) {
       const code = String(url.searchParams.get("code") || "").toUpperCase();
       if (!KRCODE.test(code)) return json({ error: "종목코드가 올바르지 않습니다." }, 400);
       const token = await getToken(env);
-      const r = await fetch(base(env) + "/uapi/domestic-stock/v1/quotations/inquire-price?fid_cond_mrkt_div_code=J&fid_input_iscd=" + code, {
+      const j = await readJson(base(env) + "/uapi/domestic-stock/v1/quotations/inquire-price?fid_cond_mrkt_div_code=J&fid_input_iscd=" + code, {
         headers: { authorization: "Bearer " + token, appkey: env.KIS_APPKEY, appsecret: env.KIS_APPSECRET, tr_id: "FHKST01010100", custtype: "P" },
       });
-      const j = await r.json().catch(() => ({}));
       const o = j.output || {};
-      if (!o.stck_prpr) return json({ error: j.msg1 || "시세 조회 실패" }, 502);
+      if (!o.stck_prpr) return json({ error: RATE_LIMITED(j) ? "초당 요청 제한 — 잠시 후 다시" : (j.msg1 || "시세 조회 실패"),
+        rateLimited: RATE_LIMITED(j) }, 502);
       return json({ code, price: +o.stck_prpr, open: +o.stck_oprc, high: +o.stck_hgpr, low: +o.stck_lwpr,
         chgRate: +o.prdy_ctrt, volume: +o.acml_vol });
     }
@@ -242,10 +261,9 @@ export async function onRequestGet({ request, env }) {
       const qs = new URLSearchParams({ CANO: a.cano, ACNT_PRDT_CD: a.prod, AFHR_FLPR_YN: "N", OFL_YN: "",
         INQR_DVSN: "02", UNPR_DVSN: "01", FUND_STTL_ICLD_YN: "N", FNCG_AMT_AUTO_RDPT_YN: "N", PRCS_DVSN: "00",
         CTX_AREA_FK100: "", CTX_AREA_NK100: "" });
-      const r = await fetch(base(env) + "/uapi/domestic-stock/v1/trading/inquire-balance?" + qs, {
+      const j = await readJson(base(env) + "/uapi/domestic-stock/v1/trading/inquire-balance?" + qs, {
         headers: { authorization: "Bearer " + token, appkey: env.KIS_APPKEY, appsecret: env.KIS_APPSECRET, tr_id: tr, custtype: "P" },
       });
-      const j = await r.json().catch(() => ({}));
       const holdings = (j.output1 || []).filter(x => +x.hldg_qty > 0)
         .map(x => ({ code: x.pdno, name: x.prdt_name, qty: +x.hldg_qty, avg: +x.pchs_avg_pric, cur: +x.prpr, pl: +x.evlu_pfls_rt }));
       const sum = (j.output2 && j.output2[0]) || {};
@@ -296,8 +314,13 @@ export async function onRequestPost({ request, env }) {
     });
     const j = await r.json().catch(() => ({}));
     const ok = String(j.rt_cd) === "0";
+    // 주문은 절대 자동 재시도하지 않는다 — 응답이 유실된 경우 이중 주문이 될 수 있다.
+    // 제한에 걸렸으면 사람이 보고 다시 누르게 한다.
+    const msg = ok ? (j.msg1 || "주문 접수")
+      : RATE_LIMITED(j) ? "초당 요청 제한에 걸려 주문이 접수되지 않았습니다 — 잠시 후 다시 누르세요"
+      : (j.msg1 || "주문 실패");
     return json({ ok, env: real ? "real" : "vts", side, code, qty, price, priceType,
-      orderNo: j.output && (j.output.ODNO || j.output.odno), msg: j.msg1 || (ok ? "주문 접수" : "주문 실패"), raw: j }, ok ? 200 : 502);
+      orderNo: j.output && (j.output.ODNO || j.output.odno), msg, raw: j }, ok ? 200 : 502);
   } catch (e) {
     return json({ error: String(e.message || e) }, 502);
   }

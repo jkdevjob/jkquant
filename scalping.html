@@ -557,12 +557,16 @@ async function liveTick(){
   if(Date.now()-_lastScanAt >= 60000 && !_screening) runScreen(true);  // 목록: 60초마다 조용히 재스캔(네이버 캐시 정합)
 }
 /* 차트 틱: KIS 연동 시 실시간 현재가로 마지막 캔들·지표를 갱신, 아니면 네이버는 60초 캐시라 그 주기로만 재조회 */
+/* KIS 모의투자는 초당 2건까지다. 제한에 걸리면 3초 쉬고 다시 붙는다 — 계속 두드리면 더 오래 막힌다. */
+let _kisHoldUntil=0;
 async function chartTick(){
   if(!CUR) return;
   if(KIScfg && KIScfg.configured){
+    if(Date.now() < _kisHoldUntil) return;      // 초당 제한에 걸린 직후엔 한 박자 쉰다
     try{
       const r=await fetch('/api/kis?op=price&code='+encodeURIComponent(CUR.code));
       const j=await r.json();
+      if(j && j.rateLimited){ _kisHoldUntil=Date.now()+3000; return; }
       if(j && j.price>0){
         const a=CUR.a, n=a.cl.length;
         a.price=j.price; a.cl[n-1]=j.price;
