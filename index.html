@@ -201,6 +201,10 @@ table.cmp td:first-child,table.cmp th:first-child{text-align:left}
 .htable .edit{color:var(--vio);cursor:pointer;font-weight:700;padding:0 3px}
 .htable .cyc-end{font-size:10px;line-height:1;vertical-align:middle;cursor:help}
 .htable .empty{text-align:center;color:var(--faint);padding:14px 0}
+/* 모의 성과 줄 — 눌러서 그 세션 거래이력으로 간다 */
+.htable tr.jump{cursor:pointer}
+.htable tr.jump:hover td{background:var(--panel2)}
+.htable tr.jump:active td{background:var(--vio-bg)}
 /* 수정·삭제 칸 — 아이콘 둘뿐인데 57px을 먹고 있었다 */
 .htable td:last-child{padding:3px 2px}
 .syncbar{display:flex;align-items:center;gap:8px;background:var(--panel);border:1px solid var(--line);border-radius:11px;padding:10px 13px;margin-bottom:13px;font-size:12px}
@@ -489,7 +493,7 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
 </div>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.20</span></h1></div>
+    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.21</span></h1></div>
     <div class="jkmenu" id="jkmenuWrap">
       <button class="jkmenu-btn" id="jkmenuBtn" aria-label="메뉴" onclick="jkMenuToggle(event)">三</button>
       <div class="jkmenu-pop" id="jkmenuPop" hidden>
@@ -1538,7 +1542,7 @@ document.addEventListener('click',function(e){ var m=document.getElementById('jk
   <footer>
     <strong>JK 퀀트</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.20</b> · 2026-09-09</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.21</b> · 2026-09-10</div>
   </footer>
 </div>
 
@@ -5824,7 +5828,7 @@ function paperStat(tab, sess){
   const spanDays=Math.max(1,Math.round((new Date(to)-new Date(from))/864e5));
   const yrs=Math.max(0.05,(new Date(to)-new Date(from))/(365.25*864e5));   // 연환산 분모용 하한
   const nTrade=h.filter(x=>{const k=x.kind||x.type||'';return /매수|매도/.test(k)||k==='buy'||k==='sell'||k==='in'||k==='out';}).length;
-  return {tab, name:sess.name, sym, cur:st.cur||'usd', from, to, yrs, spanDays, inflow:base, total,
+  return {tab, id:sess.id, name:sess.name, sym, cur:st.cur||'usd', from, to, yrs, spanDays, inflow:base, total,
     ret:(total/base-1)*100, cagr:(Math.pow(Math.max(total,1)/base,1/yrs)-1)*100, nTrade, price, out:_out};
 }
 function paperSummary(){
@@ -5907,7 +5911,7 @@ async function openPaper(){
       const outTag = outAmt>0
         ? `<span class="cw" style="color:var(--gold)">${O.simple?'단리 인출':'출금'} ${wnCur(outAmt,r.cur)}</span>`
         : (O.simple ? `<span class="cw" style="color:var(--faint)">단리 · 인출 없음</span>` : '');
-      h+=`<tr><td><b>${r.label}</b><span class="cw">${String(r.name).replace(/</g,'&lt;')} · ${r.sym}</span>${outTag}</td>
+      h+=`<tr class="jump" onclick="gotoSess('${r.tab}','${r.id}')" title="이 세션의 거래이력으로"><td><b>${r.label}</b><span class="cw">${String(r.name).replace(/</g,'&lt;')} · ${r.sym}</span>${outTag}</td>
         <td>${per}<span class="cw">${r.nTrade}거래</span></td>
         <td>${wnCur(r.inflow,r.cur)}</td>`
         + (ok
@@ -5924,6 +5928,23 @@ async function openPaper(){
   }
 }
 function closePaper(){$('paperModal').classList.remove('on')}
+/* 모의 성과 → 그 세션의 거래이력.
+   순서가 중요하다: 탭 → 세션 → 서브탭.
+   switchSess가 서브탭을 '현재'로 되돌리므로 거래이력 열기는 반드시 그 뒤여야 한다.
+   서브탭은 id가 탭마다 다르다(inf-rec·ma-hist…) — 이름으로 찾아 규칙이 바뀌어도 안 깨지게 한다. */
+function gotoSess(tab, id){
+  const box=S[tab]; if(!box||!box.sessions) return;
+  if(!box.sessions.some(x=>x.id===id)) return;
+  closePaper();
+  if(S.activeTab!==tab){
+    const tb=document.querySelector(`.tab[data-t="${tab}"]`);
+    if(tb) tb.click(); else { S.activeTab=tab; save(); }
+  }
+  if(box.active!==id) switchSess(id);        // 시세 재로딩·서브탭 리셋까지 여기서 한다
+  else { renderSessbar(); renderStatusline(); refreshAll(); }
+  const chip=[...document.querySelectorAll(`#${tab} .chip`)].find(c=>c.textContent.trim()==='거래이력');
+  if(chip) chip.click();
+}
 /* 시세가 도착한 자리에서 부른다 — 모의 생성은 시세가 있어야 되고,
    신호 배지도 시세가 있어야 나온다. 새로 만든 게 있으면 화면 전체를 한 번 갱신한다. */
 function _afterQuote(){

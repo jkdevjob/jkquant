@@ -1062,5 +1062,29 @@ console.log('[24] 표 밀도 — 한 화면에 더 많이');
 }
 
 
+/* ════ 25. 모의 성과 → 거래이력 이동 ════
+   성과표에서 눈에 띈 세션을 보려고 탭·세션을 손으로 다시 찾아 들어가야 했다. */
+console.log('[25] 모의 성과 → 거래이력 이동');
+{
+  ok('성과 줄이 어느 세션인지 안다', /return \{tab, id:sess\.id, name:sess\.name/.test(idx));
+  ok('줄을 누르면 이동', /<tr class="jump" onclick="gotoSess\('\$\{r\.tab\}','\$\{r\.id\}'\)"/.test(idx)
+     && /\.htable tr\.jump\{cursor:pointer\}/.test(idx));
+  /* 순서가 핵심 — switchSess가 서브탭을 '현재'로 되돌리므로
+     거래이력 열기가 그보다 먼저 오면 아무 일도 안 일어난 것처럼 보인다. */
+  let gs=''; try{ gs=extractFn(idx,'function gotoSess(tab, id)'); }catch(e){}
+  ok('이동 함수 존재', !!gs, gs?'':'gotoSess 없음');
+  ok('탭 → 세션 → 서브탭 순서',
+     gs.indexOf('tb.click()') < gs.indexOf('switchSess(id)')
+     && gs.indexOf('switchSess(id)') < gs.indexOf("c.textContent.trim()==='거래이력'"), '순서 어긋남');
+  // 서브탭 id가 탭마다 다르다 (inf-rec·vr-rec vs ma-hist·ivs-hist·dca-hist·asap-hist)
+  ok('서브탭은 id가 아니라 이름으로 찾는다',
+     /\[\.\.\.document\.querySelectorAll\(`#\$\{tab\} \.chip`\)\]\.find\(c=>c\.textContent\.trim\(\)==='거래이력'\)/.test(gs));
+  ok('없는 세션이면 아무것도 안 한다', /if\(!box\.sessions\.some\(x=>x\.id===id\)\) return;/.test(gs));
+  // 여섯 탭 모두 '거래이력' 칩이 있어야 이름 찾기가 성립한다
+  const chips=(idx.match(/class="chip" data-b="[a-z]+-(?:rec|hist)">거래이력</g)||[]).length;
+  ok('여섯 탭 모두 거래이력 칩이 있다', chips===6, chips+'개');
+}
+
+
 console.log(`\n════ 결과: ${pass} PASS / ${fail} FAIL ${fail===0?'— ALL PASS ★':'— 배포 금지, 위 ✗ 항목 수정 필요'} ════`);
 process.exit(fail===0?0:1);
