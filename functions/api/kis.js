@@ -157,6 +157,11 @@ export async function onRequestGet({ request, env }) {
     { const r1 = state("KIS_APPKEY", true);  add("KIS_APPKEY", r1.ok, r1.det); }
     { const r2 = state("KIS_APPSECRET", false); add("KIS_APPSECRET", r2.ok, r2.det); }
     // 이 배포가 실제로 어떤 변수들을 보고 있는지 (이름만, 값은 절대 안 나감)
+    // Cloudflare 가 배포마다 넣어주는 값 — "지금 보고 있는 화면이 어느 배포인지"를 못 박는다.
+    // 변수를 고친 뒤 배포가 갱신됐는지 추측하지 않고 확인할 수 있다.
+    add("이 배포", true,
+      (env.CF_PAGES_COMMIT_SHA ? "커밋 " + String(env.CF_PAGES_COMMIT_SHA).slice(0, 7) : "커밋 정보 없음")
+      + (env.CF_PAGES_BRANCH ? " · " + env.CF_PAGES_BRANCH : ""));
     add("이 배포가 보는 KIS_* 변수", true, Object.keys(env).filter(k => /^KIS_|^OWNER_/.test(k)).sort().join(", ") || "(없음)");
     const a = acct(env);
     add("KIS_ACCOUNT", !!a, a ? `${a.cano}-${a.prod} 형식 정상` : (env.KIS_ACCOUNT ? "형식 오류 — 12345678-01 처럼 넣으세요" : "없음"));
