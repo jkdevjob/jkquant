@@ -53,7 +53,11 @@ export async function onRequestGet({ request }) {
       const buf = await r.arrayBuffer();
       const html = new TextDecoder("euc-kr").decode(buf);   // 네이버 금융은 EUC-KR
       const rows = parsePage(html);
-      if (!rows.length) { notes.push(`p${p} 행 없음`); break; }
+      if (!rows.length) {
+        notes.push(`p${p} 행 없음 (len=${html.length})`);
+        if (url.searchParams.get("raw") === "1") return json({ code, raw: html.slice(0, 4000) });
+        break;
+      }
       all.push(...rows);
     } catch (e) { notes.push(`p${p} ${String(e.message || e)}`); break; }
   }
