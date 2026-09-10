@@ -108,7 +108,13 @@ input:focus,select:focus{outline:none;border-color:var(--vio)}
 .ov.good{color:var(--buy)}.ov.bad{color:var(--sell)}.ov.mid{color:var(--gold)}
 
 /* 차트 */
-#chartCard{display:none}
+/* ── 차트 팝업(모달) ── */
+#chartOverlay{display:none;position:fixed;inset:0;z-index:300;background:rgba(8,10,18,.74);align-items:flex-start;justify-content:center;padding:20px 12px 40px;overflow-y:auto;-webkit-overflow-scrolling:touch}
+#chartOverlay.on{display:flex}
+#chartCard{width:100%;max-width:920px;margin:0;box-shadow:0 24px 60px rgba(0,0,0,.6)}
+#chartCard h3 .caret{cursor:pointer;font-size:13px}
+body.modal-open{overflow:hidden}
+@media(max-width:520px){#chartOverlay{padding:8px 6px 30px}#chartCard{padding:13px}}
 .chartbox{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:8px}
 canvas{display:block;width:100%;height:auto}
 .levels{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
@@ -208,7 +214,8 @@ canvas{display:block;width:100%;height:auto}
       실제 진입은 목록에서 종목을 눌러 차트로 09:00~09:03 시가범위 돌파를 확인하고 한다.</p>
   </div>
 
-  <!-- 2. 차트 -->
+  <!-- 2. 차트 (팝업 모달) -->
+  <div id="chartOverlay" onclick="if(event.target===this)closeChart()">
   <div class="card" id="chartCard">
     <h3><span class="dot"></span>📈 <span id="ch_title">차트</span> <span class="caret" onclick="closeChart()">✕ 닫기</span></h3>
     <div class="row" style="gap:6px;margin-bottom:8px">
@@ -228,6 +235,7 @@ canvas{display:block;width:100%;height:auto}
     </div>
     <div class="warn">이 도구는 <b>주문 가격을 계산·기록</b>하는 반자동 도구다. 실제 주문은 증권사 앱/HTS에서 넣는다
       (증권사 API 자동주문 연동은 다음 단계). 계산된 지정가·손절가를 그대로 주문에 입력하면 된다.</div>
+  </div>
   </div>
 
   <!-- 3. 보유 포지션 -->
@@ -571,9 +579,8 @@ function addFirst(){
 let CUR=null;
 async function openChart(code,name){
   name = name || nameOf(code) || code;
-  $('chartCard').style.display='block';   // CSS #chartCard{display:none} 를 인라인으로 덮어써야 보인다
+  openChartModal();
   $('ch_title').textContent=`${name} (${code}) — 불러오는 중…`;
-  $('chartCard').scrollIntoView({behavior:'smooth',block:'start'});
   try{
     const a=await loadFor(code); CUR={code,name,a};
     $('ch_title').textContent=`${name} (${code})`;
@@ -621,7 +628,10 @@ function renderGuide(a){
   el.innerHTML=`지금 판단 · 현재가 <b>${commas(price)}</b> — ${msg}${src}`;
   el.style.color=col;
 }
-function closeChart(){ $('chartCard').style.display='none'; CUR=null; }
+function chartOpen(){ const o=$('chartOverlay'); return !!o && o.classList.contains('on'); }
+function openChartModal(){ const o=$('chartOverlay'); if(o){ o.classList.add('on'); o.scrollTop=0; } document.body.classList.add('modal-open'); }
+function closeChart(){ const o=$('chartOverlay'); if(o) o.classList.remove('on'); document.body.classList.remove('modal-open'); CUR=null; }
+document.addEventListener('keydown',e=>{ if(e.key==='Escape'&&chartOpen()) closeChart(); });
 function levelsOf(entry){
   const stop=entry*(1-0.010), cap=entry*(1-0.015), tgt=entry*1.020;
   return {entry, stop:Math.max(stop,cap), tgt};
@@ -735,7 +745,8 @@ function enterPos(){
   const L=levelsOf(entry);
   POS.unshift({code:CUR.code,name:CUR.name,entry,stop:L.stop,tgt:L.tgt,cur:entry,ts:Date.now()});
   saveP(); renderPos();
-  $('chartCard').style.display!=='none' && window.scrollTo({top:$('pos_body').getBoundingClientRect().top+window.scrollY-80,behavior:'smooth'});
+  if(chartOpen()) closeChart();
+  window.scrollTo({top:$('pos_body').getBoundingClientRect().top+window.scrollY-80,behavior:'smooth'});
 }
 function delPos(i){ POS.splice(i,1); saveP(); renderPos(); }
 async function refreshPos(){
