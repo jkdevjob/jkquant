@@ -54,11 +54,30 @@ async function readJson(url, init, tries = 3) {
   return j;
 }
 
-// ── 접근 토큰 (웜 아이솔레이트 동안 캐시) ──
+// ── 접근 토큰 ──
+// KIS 는 토큰 발급을 1분에 1회로 막는다. 그런데 Cloudflare 는 요청마다 다른 인스턴스를
+// 쓸 수 있어서 모듈 변수 캐시가 자주 비어 있다 — 그때마다 새로 발급하다 제한에 걸렸다.
+// 그래서 인스턴스 밖(엣지 캐시)에도 둔다. 캐시 키는 라우팅되지 않는 내부 호스트라
+// 바깥에서 이 URL 로 토큰을 꺼내갈 수는 없다.
 let _tok = { at: 0, token: null, env: null };
+const TOKKEY = (env) => "https://kis-token.internal/" + encodeURIComponent(base(env));
+const TOK_TTL = 6 * 60 * 60;                                   // KIS 토큰 수명은 24시간 — 여유있게 6시간만 쓴다
+
 async function getToken(env) {
   const now = Date.now();
-  if (_tok.token && _tok.env === base(env) && now - _tok.at < 60 * 60 * 1000) return _tok.token;
+  if (_tok.token && _tok.env === base(env) && now - _tok.at < TOK_TTL * 1000) return _tok.token;
+
+  const cache = (typeof caches !== "undefined" && caches.default) || null;
+  if (cache) {
+    try {
+      const hit = await cache.match(TOKKEY(env));
+      if (hit) {
+        const t = (await hit.text()).trim();
+        if (t) { _tok = { at: now, token: t, env: base(env) }; return t; }
+      }
+    } catch (e) { /* 캐시는 있으면 좋은 것 — 없으면 그냥 발급한다 */ }
+  }
+
   const r = await fetch(base(env) + "/oauth2/tokenP", {
     method: "POST",
     headers: { "content-type": "application/json" },
@@ -67,6 +86,12 @@ async function getToken(env) {
   const j = await r.json().catch(() => ({}));
   if (!j.access_token) throw new Error("KIS 토큰 발급 실패: " + (j.error_description || j.msg1 || r.status));
   _tok = { at: now, token: j.access_token, env: base(env) };
+  if (cache) {
+    try {
+      await cache.put(TOKKEY(env), new Response(j.access_token, {
+        headers: { "cache-control": "max-age=" + TOK_TTL, "content-type": "text/plain" } }));
+    } catch (e) { /* 저장 실패해도 동작은 한다 */ }
+  }
   return j.access_token;
 }
 
