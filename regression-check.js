@@ -364,6 +364,26 @@ console.log('[7] DOM 구조');
    시세 API는 장 열려 있는 동안에도 오늘 봉을 내주는데 그 close는 종가가 아니라 현재가다.
    그걸로 체결시키면 탭을 연 시각의 값이 체결가로 박히고, simLast가 넘어가
    장 마감 뒤 진짜 종가로 다시 계산되지도 않는다. 6종 전부 상한선을 걸어야 한다. */
+/* 무매 거래이력 표 — 머리글과 본문 셀이 같은 순서여야 한다.
+   한쪽만 바꾸면 값이 조용히 옆 칸에 들어가 손익 자리에 잔금이 찍힌다. */
+{
+  const head=(idx.match(/<tr><th>날짜<\/th>[\s\S]*?<\/tr>/)||[''])[0]
+    .match(/<th>([^<]*)<\/th>/g).map(x=>x.replace(/<\/?th>/g,''));
+  const body=(idx.match(/<tr class="\$\{cls\}"\$\{rowStyle\}>[\s\S]*?<\/tr>/)||[''])[0];
+  const cells=(body.match(/<td[^>]*>(?:\$\{[^}]*\}|[^<])*/g)||[]).map(x=>x.replace(/<td[^>]*>/,''));
+  const want=['날짜','구분','체결가','수량','손익','잔금','T','별%','별지점'];
+  ok('무매 이력 머리글 순서', JSON.stringify(head.slice(0,9))===JSON.stringify(want), head.join(','));
+  // 셀이 머리글과 같은 값을 같은 자리에 넣는지 — 손익·잔금이 바뀌면 여기서 잡힌다
+  ok('무매 이력 본문이 머리글과 같은 순서',
+     /profitCell\}<\/td><td>\$\{wn\(h\.balAfter\)\}/.test(body), cells.slice(4,6).join(' | '));
+  /* 사이클 종료는 아이콘으로. 글자 배지는 '구분' 칸을 41px 밀어내
+     좁은 화면에서 손익·잔금을 화면 밖으로 내보냈다. 줄 위 금색 선이 본 표시다. */
+  ok('사이클 종료는 아이콘', /const endFlag=h\.cycleEnd\?' <span class="cyc-end" title="사이클 종료">🏁<\/span>':''/.test(idx)
+     && !/>사이클 종료<\/span>/.test(idx));
+  ok('종료 줄은 금색 선이 그대로', /const rowStyle=h\.cycleEnd\?' style="border-top:2px solid var\(--gold\)"':''/.test(idx));
+  ok('아이콘이 줄 높이를 안 민다', /\.htable \.cyc-end\{font-size:10px;line-height:1;/.test(idx));
+}
+
 console.log('[8] 모의 체결 상한선');
 {
   const SIM_FNS=['infSimForward','vrSimForward','_paperRegen','_paperDca','_paperAsap','ivsReplay','maReplay'];
@@ -968,6 +988,14 @@ console.log('[23] 관리자 모드 — 접속 계정·사용자 관리');
   // 관리자 UI가 운영에 남아 있으면 같은 걸 두 곳에서 고쳐야 한다
   ok('관리자 UI는 운영에 남기지 않는다',
      !/adminModal|renderAdmin|openAdmin|diag_card|runDiag/.test(idx));
+  /* 관리자 링크의 기본 상태는 '감춤'이어야 한다. 스크립트로만 감추면
+     applyAdminMode를 못 거치는 경로(차단 계정은 startApp 전에 되돌려보낸다)에서 새어 나온다.
+     !important가 필요한 것도 확인됐다 — .jkmenu-pop a(0,1,1)가 .admin-only(0,1,0)를 이긴다. */
+  ok('관리자 링크는 기본이 감춤', /\.admin-only\{display:none !important\}/.test(idx)
+     && /\.admin-only\.admin-on\{display:flex !important\}/.test(idx));
+  ok('보임 전환은 클래스로', /classList\.toggle\('admin-on', on\)/.test(idx));
+  ok('차단 계정도 나가기 전에 감춘다',
+     /applyAdminMode\(\);\s*\n\s*try\{ await window\.fb\.signOut/.test(idx));
   ok('관리자 페이지도 컬렉션 통째 읽기를 쓴다', /doc, getDoc, setDoc, collection, getDocs/.test(adm)
      && /getDocs\(window\.fb\.collection\(window\.fb\.db,'profiles'\)\)/.test(adm));
   ok('목록은 마지막 접속 최신순', /rows\.sort\(\(a,b\)=>\(\+b\.lastSeen\|\|0\)-\(\+a\.lastSeen\|\|0\)\)/.test(adm));
@@ -1003,6 +1031,34 @@ console.log('[23] 관리자 모드 — 접속 계정·사용자 관리');
      merge 없이 덮어써서 백테의 커스텀 종목이 서버에서 사라지고 있었다. */
   ok('운영 저장이 백테 종목을 안 지운다',
      /setDoc\(window\.fb\.doc\(window\.fb\.db,'users',curUid\),\{state:S,updated:\(S\._updated\|\|Date\.now\(\)\)\},\{merge:true\}\)/.test(idx));
+}
+
+
+/* ════ 24. 표 밀도 ════
+   줄높이가 곧 '한 화면에 몇 줄'이다. 값은 하나도 안 지우고 자리만 좁힌다.
+   운영 이력표 27px→21px (화면당 +27%), 폭 620→548px. 백테·단타·관리자도 같은 규약. */
+console.log('[24] 표 밀도 — 한 화면에 더 많이');
+{
+  const adm=fs.existsSync(__d+'/admin.html')?fs.readFileSync(__d+'/admin.html','utf8'):'';
+  const scal=fs.existsSync(__d+'/scalping.html')?fs.readFileSync(__d+'/scalping.html','utf8'):'';
+  // 줄높이를 만드는 세 값 — 하나라도 되돌아가면 밀도가 통째로 풀린다
+  ok('운영 이력표 밀도', /\.htable td\{padding:3px 4px;line-height:1\.25;/.test(idx)
+     && /\.htable th\{[^}]*font-size:10px;padding:3px 4px;line-height:1\.2;/.test(idx)
+     && /\.htable\{width:100%;border-collapse:collapse;font-size:11px;min-width:548px\}/.test(idx));
+  ok('수정·삭제 칸도 좁힌다', /\.htable td:last-child\{padding:3px 2px\}/.test(idx));
+  ok('백테 표 밀도', /\.cmp-tbl td\{padding:3px 5px;line-height:1\.25;/.test(bt)
+     && /\.cmp-tbl th\{[^}]*padding:3px 5px;line-height:1\.2;[^}]*font-size:10px;\}/.test(bt)
+     && /table\.cmp th,table\.cmp td\{padding:3px 5px;line-height:1\.25;/.test(bt));
+  ok('관리자 표 밀도', /\.htable td\{padding:4px 4px;line-height:1\.25;/.test(adm), adm?'':'admin.html 없음');
+  ok('단타 표 밀도', /\.htable td\{padding:3px 4px;line-height:1\.25;/.test(scal), scal?'':'scalping.html 없음');
+
+  /* 날짜는 지우는 게 아니라 줄여 쓴다 — 2026-09-09 → 26-09-09 (81px→61px).
+     수정창에는 원래 날짜가 그대로 뜨므로 잃는 정보가 없다. */
+  ok('짧은 날짜 helper', /function dshort\(d\)\{ const t=String\(d\|\|''\); return \/\^\\d\{4\}-\\d\\d-\\d\\d\$\/\.test\(t\)\?t\.slice\(2\)/.test(idx));
+  // 표 하나만 빠뜨리면 그 탭만 날짜 폭이 달라 열이 어긋나 보인다
+  const n=(idx.match(/<td>\$\{dshort\((?:h|r)\.date\)\}/g)||[]).length;
+  ok('모든 이력표가 짧은 날짜를 쓴다 (6개)', n===6, n+'개');
+  ok('긴 날짜를 직접 찍는 표가 없다', !/<td>\$\{(?:h|r)\.date\|\|'-'\}/.test(idx));
 }
 
 

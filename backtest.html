@@ -154,14 +154,15 @@ body{background:var(--bg);color:var(--text);font-family:'Pretendard',sans-serif;
 /* 전체 비교·ASAP 결과 테이블 */
 .cmp-card{background:var(--surf);border:1px solid var(--border);border-radius:12px;padding:12px 13px;margin-bottom:12px;}
 .cmp-card h3{font-size:14px;font-weight:700;color:var(--text);margin:0 0 12px;}
-.cmp-tbl{width:100%;border-collapse:collapse;font-size:12.5px;font-variant-numeric:tabular-nums;white-space:nowrap;}
-.cmp-tbl th{color:var(--dim);font-weight:600;text-align:right;padding:4px 8px;line-height:1.3;border-bottom:1px solid var(--border2);font-size:11px;}
+/* 표 밀도 — 운영과 같은 규약. 한 화면에 더 많은 종목·회차가 들어가게 */
+.cmp-tbl{width:100%;border-collapse:collapse;font-size:11.5px;font-variant-numeric:tabular-nums;white-space:nowrap;}
+.cmp-tbl th{color:var(--dim);font-weight:600;text-align:right;padding:3px 5px;line-height:1.2;border-bottom:1px solid var(--border2);font-size:10px;}
 .cmp-tbl th:first-child,.cmp-tbl td:first-child{text-align:left;}
-.cmp-tbl td{padding:5px 8px;line-height:1.35;text-align:right;border-bottom:1px solid rgba(255,255,255,.04);color:var(--text);}
+.cmp-tbl td{padding:3px 5px;line-height:1.25;text-align:right;border-bottom:1px solid rgba(255,255,255,.04);color:var(--text);}
 .cmp-tbl tr.win{background:rgba(245,196,81,.09);}
 .cmp-tbl tr.win td{font-weight:600;}
 .cmp-tbl td.win{background:rgba(245,196,81,.14);color:var(--gold);font-weight:700;}
-.cmp-tbl .cdim{color:var(--dim);font-size:11px;}
+.cmp-tbl .cdim{color:var(--dim);font-size:10px;}
 .cmp-tbl .cacc{color:var(--accent);font-weight:600;}
 .cmp-tbl .cg{color:var(--green);}
 .cmp-tbl .cr{color:var(--red);}
@@ -236,8 +237,8 @@ body{background:var(--bg);color:var(--text);font-family:'Pretendard',sans-serif;
 .cmp-wrap{background:var(--surf);border:1px solid var(--border);border-radius:9px;padding:11px 12px;margin-bottom:13px;overflow-x:auto;}
 .cmp-wrap h4{font-size:13px;color:var(--dim2);font-family:'IBM Plex Mono',monospace;margin-bottom:12px;font-weight:500;}
 table.cmp{width:100%;border-collapse:collapse;font-size:13px;min-width:380px;}
-table.cmp th,table.cmp td{padding:5px 8px;line-height:1.35;text-align:right;white-space:nowrap;border-bottom:1px solid var(--border);font-variant-numeric:tabular-nums;}
-table.cmp th{color:var(--dim);font-weight:600;font-size:11px;text-transform:uppercase;font-family:'IBM Plex Mono',monospace;}
+table.cmp th,table.cmp td{padding:3px 5px;line-height:1.25;text-align:right;white-space:nowrap;border-bottom:1px solid var(--border);font-variant-numeric:tabular-nums;}
+table.cmp th{color:var(--dim);font-weight:600;font-size:10px;text-transform:uppercase;font-family:'IBM Plex Mono',monospace;}
 table.cmp th:first-child,table.cmp td:first-child{text-align:left;color:var(--dim);}
 table.cmp td.v{font-family:'IBM Plex Mono',monospace;font-weight:600;color:var(--text);}
 table.cmp tr:last-child td{border-bottom:none;}
@@ -302,7 +303,7 @@ td:first-child{text-align:left;}
   <div class="brand">
     <div>
       <div class="logo">Backtest</div>
-      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v1.172</span></h1>
+      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v1.173</span></h1>
     </div>
   </div>
   <div style="display:flex;align-items:center;gap:8px">
