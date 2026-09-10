@@ -296,6 +296,23 @@ export async function onRequestGet({ request, env }) {
       })).filter(b => b.c > 0).sort((a, b) => a.t < b.t ? -1 : 1);
       return json({ code, date, bars, n: bars.length });
     }
+    // 이 함수가 바깥으로 나갈 때 쓰는 IP. 증권사 API 중에는 허용 IP 등록을 요구하는 곳이 있어
+    // (예: 토스증권 오픈API) 우리 구조로 쓸 수 있는지 판단하려면 이 값이 고정인지 봐야 한다.
+    if (op === "egress") {
+      const out = [];
+      for (let i = 0; i < 3; i++) {
+        try {
+          const r = await fetch("https://cloudflare.com/cdn-cgi/trace", { cf: { cacheTtl: 0 } });
+          const t = await r.text();
+          const m = t.match(/^ip=(.+)$/m), c = t.match(/^colo=(.+)$/m);
+          out.push({ ip: m ? m[1] : "?", colo: c ? c[1] : "?" });
+        } catch (e) { out.push({ error: String(e.message || e) }); }
+      }
+      const uniq = [...new Set(out.map(x => x.ip))];
+      return json({ calls: out, uniqueIps: uniq.length,
+        note: uniq.length > 1 ? "호출마다 IP가 다르다 — 허용 IP 등록이 필요한 API는 쓸 수 없다"
+                              : "이번 호출들은 같은 IP였지만 고정이라는 보장은 아니다" });
+    }
     if (op === "price") {
       const code = String(url.searchParams.get("code") || "").toUpperCase();
       if (!KRCODE.test(code)) return json({ error: "종목코드가 올바르지 않습니다." }, 400);
