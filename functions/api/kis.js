@@ -90,6 +90,20 @@ export async function onRequestGet({ request, env }) {
   if (!configured(env)) return json({ error: "KIS 키가 설정되지 않았습니다. Cloudflare 환경변수를 확인하세요." }, 400);
 
   try {
+    if (op === "approval") {
+      // 실시간(웹소켓) 접속키. 시크릿은 서버에 두고 approval_key만 내보낸다.
+      const g = await verifyOwner(request, env);
+      if (!g.ok) return json({ error: g.msg }, 401);
+      const r = await fetch(base(env) + "/oauth2/Approval", {
+        method: "POST", headers: { "content-type": "application/json" },
+        body: JSON.stringify({ grant_type: "client_credentials", appkey: env.KIS_APPKEY, secretkey: env.KIS_APPSECRET }),
+      });
+      const j = await r.json().catch(() => ({}));
+      if (!j.approval_key) return json({ error: "접속키 발급 실패: " + (j.msg1 || r.status) }, 502);
+      return json({ approval_key: j.approval_key, ws: isReal(env)
+        ? "ws://ops.koreainvestment.com:21000/tryitout/H0STCNT0"
+        : "ws://ops.koreainvestment.com:31000/tryitout/H0STCNT0", env: isReal(env) ? "real" : "vts" });
+    }
     if (op === "price") {
       const code = String(url.searchParams.get("code") || "").toUpperCase();
       if (!KRCODE.test(code)) return json({ error: "종목코드가 올바르지 않습니다." }, 400);

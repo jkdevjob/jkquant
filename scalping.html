@@ -232,6 +232,24 @@ canvas{display:block;width:100%;height:auto}
     <div id="bt_body"></div>
   </div>
 
+  <!-- 1c. 분봉 아카이브 -->
+  <div class="card">
+    <h3><span class="dot"></span>📼 분봉 아카이브 <span class="sub" style="font-weight:600">9:00~9:30을 쌓아 진짜 백테스트 데이터를 만든다</span></h3>
+    <p class="lead">네이버 분봉은 <b>항상 최근 7거래일</b>만 준다. 그래서 <b>주 1회만 눌러도</b> 창이 겹치며 끊김 없이 누적된다.
+      몇 주 쌓이면 <b>"시가~9:30 실제 수익률"로 학습·백테스트</b>가 가능해진다 — 지금 없는 데이터를 만드는 유일한 길이다.
+      <span class="sub">(KIS 웹소켓 틱은 브라우저가 ws:// 를 차단해 이 구조에선 못 붙인다. 아래 참고)</span></p>
+    <div class="row" style="margin-bottom:8px;align-items:flex-end">
+      <div class="fld" style="flex:0 0 116px"><label>수집 종목수</label>
+        <select id="ar_n"><option>30</option><option selected>50</option><option>100</option></select></div>
+      <button class="prim" onclick="archSnapshot()" id="arBtn" style="height:38px">📥 스냅샷 수집</button>
+      <button class="ghostbtn" onclick="archExport()" style="height:38px">⬇ CSV</button>
+      <button class="ghostbtn danger" onclick="archClear()" style="height:38px">삭제</button>
+    </div>
+    <div class="sub" id="ar_msg" style="margin-bottom:8px;min-height:16px"></div>
+    <div id="ar_prog" style="display:none;height:6px;background:var(--panel2);border-radius:4px;overflow:hidden;margin-bottom:10px"><div id="ar_bar" style="height:100%;width:0;background:var(--vio2);transition:width .1s"></div></div>
+    <div id="ar_body"></div>
+  </div>
+
   <!-- 2. 차트 (팝업 모달) -->
   <div id="chartOverlay" onclick="if(event.target===this)closeChart()">
   <div class="card" id="chartCard">
@@ -597,6 +615,73 @@ function addFirst(){
   if(!box.hidden && first){ first.click(); return; }
   if(KRCODE.test(q.toUpperCase())){ $('q').value=''; openChart(q.toUpperCase(),q.toUpperCase()); }
 }
+
+/* ══ 분봉 아카이브 (9:00~9:30 누적) ══
+   네이버 분봉은 최근 7거래일만 준다 → 주기적으로 저장하면 창이 겹치며 과거가 쌓인다.
+   구조: ARCH[날짜][종목코드] = [[hhmm, 종가, 거래량], ...]  (09:00~09:30만) */
+let AKEY='jkq_scalp_arch_anon', ARCH={};
+function loadArch(){ try{ const v=JSON.parse(localStorage.getItem(AKEY)||'{}'); ARCH=(v&&typeof v==='object')?v:{}; }catch(e){ ARCH={}; } }
+function saveArch(){ try{ localStorage.setItem(AKEY,JSON.stringify(ARCH)); return true; }
+  catch(e){ alert('저장 공간이 부족합니다. CSV로 내보낸 뒤 삭제하세요.'); return false; } }
+function archStats(){
+  const dates=Object.keys(ARCH).sort(); let bars=0, codes=new Set();
+  dates.forEach(d=>Object.entries(ARCH[d]).forEach(([c,a])=>{ bars+=a.length; codes.add(c); }));
+  const kb=Math.round(JSON.stringify(ARCH).length/1024);
+  return {dates,bars,codes:codes.size,kb};
+}
+function renderArch(){
+  const s=archStats(), b=$('ar_body');
+  if(!s.dates.length){ b.innerHTML='<p class="sub">아직 비어 있습니다. <b>스냅샷 수집</b>을 누르면 최근 7거래일치가 담깁니다.</p>'; return; }
+  b.innerHTML=`<div class="out">
+    <div class="outbox"><div class="ol">누적 거래일</div><div class="ov good">${s.dates.length}일</div></div>
+    <div class="outbox"><div class="ol">종목</div><div class="ov">${s.codes}</div></div>
+    <div class="outbox"><div class="ol">분봉 수</div><div class="ov">${s.bars.toLocaleString()}</div></div>
+    <div class="outbox"><div class="ol">용량</div><div class="ov" style="font-size:16px">${s.kb.toLocaleString()}KB</div></div></div>
+    <p class="note">기간 <b>${s.dates[0]} ~ ${s.dates[s.dates.length-1]}</b> ·
+    7거래일 창이라 <b>주 1회</b>만 수집하면 끊기지 않는다. 브라우저 저장소(약 5MB) 한도에 가까워지면 CSV로 내보내고 삭제.</p>`;
+}
+async function archSnapshot(){
+  const N=+($('ar_n').value)||50;
+  $('arBtn').disabled=true; $('ar_msg').textContent='유니버스 불러오는 중…';
+  let uni=[];
+  try{ const j=await (await fetch('/api/universe?limit='+N)).json(); if(j.error) throw new Error(j.error); uni=j.universe||[]; }
+  catch(e){ $('ar_msg').textContent='유니버스 실패: '+(e.message||e); $('arBtn').disabled=false; return; }
+  const prog=$('ar_prog'), bar=$('ar_bar'); prog.style.display=''; bar.style.width='0';
+  let done=0, idx=0, added=0;
+  async function worker(){
+    while(idx<uni.length){
+      const u=uni[idx++];
+      try{
+        const min=await mFetch(u.code);
+        min.forEach(x=>{
+          const t=x.t||''; const d=t.slice(0,10), hh=+t.slice(11,13), mm=+t.slice(14,16);
+          if(!d || hh!==9 || mm>30) return;                  // 09:00~09:30만
+          const hm=hh*100+mm;
+          (ARCH[d]=ARCH[d]||{}); const arr=(ARCH[d][u.code]=ARCH[d][u.code]||[]);
+          if(!arr.some(r=>r[0]===hm)){ arr.push([hm, x.close, x.vol||0]); added++; }
+        });
+        Object.keys(ARCH).forEach(d=>{ const a=ARCH[d][u.code]; if(a) a.sort((p,q)=>p[0]-q[0]); });
+      }catch(e){}
+      done++; bar.style.width=(done/uni.length*100)+'%'; $('ar_msg').textContent=`수집 중… ${done}/${uni.length}`;
+    }
+  }
+  await Promise.all(Array.from({length:6},()=>worker()));
+  prog.style.display='none'; $('arBtn').disabled=false;
+  const ok=saveArch(); const s=archStats();
+  $('ar_msg').innerHTML=ok?`✓ 새 분봉 <b>${added.toLocaleString()}</b>개 추가 · 누적 <b>${s.dates.length}거래일</b> · ${new Date().toLocaleString('ko-KR',{hour12:false})}`
+                          :'저장 실패(용량) — CSV로 내보낸 뒤 삭제하세요.';
+  renderArch();
+}
+function archExport(){
+  const s=archStats(); if(!s.dates.length){ alert('내보낼 데이터가 없습니다.'); return; }
+  const lines=['date,code,hhmm,close,vol'];
+  s.dates.forEach(d=>Object.entries(ARCH[d]).forEach(([c,a])=>a.forEach(r=>lines.push(`${d},${c},${String(r[0]).padStart(4,'0')},${r[1]},${r[2]}`))));
+  const blob=new Blob(['\ufeff'+lines.join('\n')],{type:'text/csv;charset=utf-8'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
+  a.download=`scalping_0900_0930_${s.dates[0]}_${s.dates[s.dates.length-1]}.csv`;
+  document.body.appendChild(a); a.click(); a.remove();
+}
+function archClear(){ if(!confirm('아카이브를 전부 지울까요? (CSV로 내보냈는지 확인하세요)')) return; ARCH={}; saveArch(); renderArch(); $('ar_msg').textContent='삭제됨'; }
 
 /* ══ 백테스트 ══ */
 const BT={stop:4,tgt:6,hold:5,fee:0.5,minAmt:50};
@@ -1010,9 +1095,9 @@ function boot(){
     me=user||null; renderBadge();
     if(user){
       $('gate').style.display='none'; $('app').style.display='';
-      PKEY='jkq_scalp_pos_'+user.uid; LKEY='jkq_scalp_log_'+user.uid;
+      PKEY='jkq_scalp_pos_'+user.uid; LKEY='jkq_scalp_log_'+user.uid; AKEY='jkq_scalp_arch_'+user.uid;
       $('log_owner').textContent='· '+(user.displayName||user.email||'');
-      loadAll(); recalc(); renderPos(); renderLog(); kisInit();
+      loadAll(); loadArch(); recalc(); renderPos(); renderLog(); renderArch(); kisInit();
     }else{ stopLive(); $('gate').style.display='flex'; $('app').style.display='none'; }
   });
 }
