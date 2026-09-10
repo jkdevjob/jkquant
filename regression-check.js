@@ -1161,5 +1161,70 @@ console.log('[27] 무매 분석 — 월별·사이클별');
 }
 
 
+/* ════ 28. KIS 모의투자 실행 · 주문 이력 ════
+   증권사에 실제로 나간 주문의 기록이라, 브라우저 캐시와 함께 사라지면 안 된다.
+   실현손익은 매도를 같은 종목의 먼저 산 물량과 짝지어(FIFO) 계산한다. */
+console.log('[28] KIS 모의투자 실행 · 주문 이력');
+{
+  const sc=fs.existsSync(__d+'/scalping.html')?fs.readFileSync(__d+'/scalping.html','utf8'):'';
+  const kis=fs.existsSync(__d+'/functions/api/kis.js')?fs.readFileSync(__d+'/functions/api/kis.js','utf8'):'';
+
+  ok('이력 카드가 있다', /id="klog_sum"/.test(sc) && /id="klog_body"/.test(sc));
+  ok('목록에서 바로 KIS 매수', /onclick="event\.stopPropagation\(\);kisBuyPick\('/.test(sc));
+  ok('KIS 포지션은 KIS 로 청산', /\$\{p\.kis\?`<button class="ghostbtn sm danger" onclick="kisSellPos\(\$\{i\}\)"/.test(sc));
+
+  // 나간 주문은 성공이든 실패든 남아야 한다 — 실패 사유가 "왜 그날 안 샀나"의 유일한 근거다
+  ok('성공·실패 모두 기록', /KLOG\.unshift\(rec\); saveK\(\); renderKlog\(\);/.test(sc)
+     && /rec\.ok=!!j\.ok;/.test(sc));
+  ok('수동 주문창도 같은 경로', /const rec=await kisSubmit\(\{side,code,name:nm,qty,price,priceType:mkt\?'market':'limit'\}\);/.test(sc));
+  ok('클라우드에도 남긴다', /window\.fb\.doc\(window\.fb\.db,'users',me\.uid\)[\s\S]{0,80}scalp:\{ kis:KLOG/.test(sc));
+  ok('클라우드 병합은 id 기준(지운 건 안 살아남)', /const seen=new Set\(KLOG\.map\(x=>x\.id\)\);/.test(sc));
+
+  // 반자동이다 — 확인 없이 주문이 나가면 안 된다
+  ok('매수는 확인창을 거친다', /async function kisBuyPick\(code\)\{[\s\S]{0,900}?if\(!confirm\(/.test(sc));
+  ok('매도는 확인창을 거친다', /async function kisSellPos\(i\)\{[\s\S]{0,900}?if\(!confirm\(/.test(sc));
+  ok('전략상 종목당 1포지션', /if\(POS\.some\(p=>p\.code===code\)\)\{ alert\(s\.name\+' 은\(는\) 이미 보유 중입니다\. \(전략상 종목당 동시 1포지션\)'\)/.test(sc));
+  ok('수량은 투입금액÷현재가', /const px=Math\.round\(s\.price\), L=levelsOf\(px\), qty=Math\.floor\(budget\(\)\/px\);/.test(sc));
+  ok('손절·목표는 전략 함수에서', /plan:\{stop:L\.stop,tgt:L\.tgt\}/.test(sc));
+  ok('보유 5일 경과를 표시', /const over=p\.days!=null&&p\.days>=5;/.test(sc)
+     && /over\?' <span class="sig watch">5일경과<\/span>'/.test(sc));
+
+  // 주문은 절대 자동 재시도하지 않는다 — 응답 유실 시 이중 주문이 된다
+  ok('주문은 readJson 을 쓰지 않는다', !/order-cash[\s\S]{0,200}readJson/.test(kis)
+     && /const r = await fetch\(base\(env\) \+ "\/uapi\/domestic-stock\/v1\/trading\/order-cash"/.test(kis));
+  ok('읽기만 재시도한다', /async function readJson\(url, init, tries = 3\)/.test(kis)
+     && /if \(!RATE_LIMITED\(j\)\) return j;/.test(kis));
+
+  // FIFO 실현손익 — 함수를 꺼내 실제로 굴린다
+  let rz=null; try{ rz=extractFn(sc,'function klogRealized()'); }catch(e){}
+  ok('실현손익 함수 존재', !!rz, rz?'':'klogRealized 없음');
+  if(rz){
+    let KLOG=[]; const mk=new Function('KLOG','"use strict";'+rz+'return klogRealized();');
+    const run=(log)=>mk(log).map(x=>[x.qty,x.inPx,x.outPx,+x.pct.toFixed(2)]);
+    const eq=(a,b)=>JSON.stringify(a)===JSON.stringify(b);
+    ok('1매수 1매도 (마찰 0.5% 차감)', eq(run([
+      {ok:1,side:'sell',code:'A',qty:10,price:110,ts:2},
+      {ok:1,side:'buy', code:'A',qty:10,price:100,ts:1}]), [[10,100,110,9.5]]));
+    ok('분할매수는 먼저 산 것부터', eq(run([
+      {ok:1,side:'buy', code:'A',qty:5,price:100,ts:1},
+      {ok:1,side:'buy', code:'A',qty:5,price:120,ts:2},
+      {ok:1,side:'sell',code:'A',qty:10,price:110,ts:3}]), [[5,100,110,9.5],[5,120,110,-8.83]]));
+    ok('실패 주문은 손익에서 뺀다', eq(run([
+      {ok:0,side:'buy', code:'A',qty:10,price:100,ts:1},
+      {ok:1,side:'buy', code:'A',qty:10,price:100,ts:2},
+      {ok:1,side:'sell',code:'A',qty:10,price:100,ts:3}]), [[10,100,100,-0.5]]));
+    ok('짝 없는 매도는 세지 않는다', eq(run([{ok:1,side:'sell',code:'A',qty:5,price:100,ts:1}]), []));
+    ok('부분매도는 판 만큼만', eq(run([
+      {ok:1,side:'buy', code:'A',qty:10,price:100,ts:1},
+      {ok:1,side:'sell',code:'A',qty:4,price:106,ts:2}]), [[4,100,106,5.5]]));
+    ok('종목이 섞여도 각자 짝짓는다', eq(run([
+      {ok:1,side:'buy', code:'A',qty:1,price:100,ts:1},
+      {ok:1,side:'buy', code:'B',qty:1,price:200,ts:2},
+      {ok:1,side:'sell',code:'B',qty:1,price:220,ts:3},
+      {ok:1,side:'sell',code:'A',qty:1,price:90,ts:4}]), [[1,200,220,9.5],[1,100,90,-10.5]]));
+  }
+}
+
+
 console.log(`\n════ 결과: ${pass} PASS / ${fail} FAIL ${fail===0?'— ALL PASS ★':'— 배포 금지, 위 ✗ 항목 수정 필요'} ════`);
 process.exit(fail===0?0:1);

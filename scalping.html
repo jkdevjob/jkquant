@@ -275,16 +275,18 @@ canvas{display:block;width:100%;height:auto}
       <button class="ghostbtn" onclick="kisFromChart()">🔗 KIS 매수창 채우기</button>
       <span class="sub">손절·목표가 자동 계산 → 아래 '보유 포지션'에서 관리</span>
     </div>
-    <div class="warn">이 도구는 <b>주문 가격을 계산·기록</b>하는 반자동 도구다. 실제 주문은 증권사 앱/HTS에서 넣는다
-      (증권사 API 자동주문 연동은 다음 단계). 계산된 지정가·손절가를 그대로 주문에 입력하면 된다.</div>
+    <div class="warn">반자동 도구다 — <b>주문은 확인창을 거쳐야만</b> 나간다. 목록의 <b>🔗KIS</b> 를 누르면
+      계산된 지정가·수량으로 KIS 모의투자 계좌에 실제 주문이 들어가고, 성공·실패가 <b>KIS 모의투자 이력</b>에 남는다.
+      자동으로 알아서 사고파는 기능은 넣지 않았다.</div>
   </div>
   </div>
 
   <!-- 3. 보유 포지션 -->
   <div class="card">
     <h3><span class="dot"></span>💼 보유 포지션 <span class="caret" onclick="refreshPos()">🔄 현재가 갱신</span></h3>
-    <p class="lead"><b>모의투자</b> — 목록의 ＋진입을 누르면 여기에 담기고 <b>손절(−4%)·목표(+6%)·평가손익</b>을 추적한다.
-      실제 돈은 나가지 않는다. 청산하면 아래 모의 일지로 넘어가 승률·기대값이 쌓인다.</p>
+    <p class="lead">목록의 <b>＋진입</b>(종이거래)이나 <b>🔗KIS</b>(모의투자 실주문)를 누르면 여기에 담기고
+      <b>손절(−4%)·목표(+6%)·보유일수</b>를 추적한다. <span class="sig on" style="padding:0 4px">KIS</span> 표시가 붙은 건
+      증권사에 주문이 나간 포지션이다. 청산하면 아래 일지로 넘어가 승률·기대값이 쌓인다.</p>
     <div id="pos_body"></div>
   </div>
 
@@ -310,11 +312,29 @@ canvas{display:block;width:100%;height:auto}
         <button class="ghostbtn danger" onclick="kisOrder('sell')">▼ 매도 주문</button>
         <span class="sub" id="kis_msg"></span>
       </div>
+      <div class="row" style="margin-bottom:10px">
+        <div class="fld" style="flex:0 0 150px"><label>1회 투입금액(원)</label><input id="k_budget" type="number" step="100000" min="10000" value="2000000"></div>
+        <span class="sub">스크리닝 목록의 <b>KIS 매수</b>는 이 금액을 현재가로 나눠 수량을 정합니다</span>
+      </div>
       <div id="kis_bal" style="margin-top:12px"></div>
     </div>
     <div class="warn" id="kis_help" style="display:none">KIS 실주문을 켜려면 Cloudflare Pages → 설정 → 환경 변수에
       <b>KIS_APPKEY · KIS_APPSECRET · KIS_ACCOUNT</b>(예 12345678-01)를 넣으세요. 주문 권한은 <b>OWNER_EMAIL</b>(구글 로그인 이메일)을 그대로 따릅니다.
       <b>KIS_ENV</b>는 기본 <b>모의투자(vts)</b>이며 실전은 <b>real</b>로 바꿉니다. 키는 서버(환경변수)에만 저장되고 브라우저엔 노출되지 않습니다.</div>
+  </div>
+
+  <!-- 3c. KIS 모의투자 이력 -->
+  <div class="card">
+    <h3><span class="dot"></span>📒 KIS 모의투자 이력 <span class="sub" id="klog_env" style="font-weight:600"></span></h3>
+    <p class="lead">증권사에 <b>실제로 나간 주문</b>만 남는다. 종이거래(모의 일지)와 달리 체결 여부·주문번호·실패 사유까지 그대로 기록해
+      전략이 현실에서 어떻게 굴러갔는지 되짚는 근거로 쓴다. 매수와 매도가 짝지어지면 <b>실현손익</b>이 계산된다.</p>
+    <div class="row" id="klog_sum" style="margin-bottom:12px"></div>
+    <div id="klog_body"></div>
+    <div class="row" style="margin-top:12px">
+      <button class="ghostbtn sm" onclick="exportKlog()">⬇ 내보내기(CSV)</button>
+      <button class="ghostbtn sm danger" onclick="clearKlog()">이력 전체 삭제</button>
+      <span class="sub" id="klog_sync"></span>
+    </div>
   </div>
 
   <!-- 4. 전략 규칙 -->
@@ -464,15 +484,50 @@ function analyze(j){
   return {price,last,bb,rsi,cl,o,rs,volR,chg,name:j.name};
 }
 
-/* ══ 저장 (포지션·일지) ══ */
-let PKEY='jkq_scalp_pos_anon', LKEY='jkq_scalp_log_anon';
-let POS=[], LOG=[];
+/* ══ 저장 (포지션·일지·KIS 이력) ══
+   KIS 이력만은 localStorage 로 끝내지 않는다. 증권사에 실제로 나간 주문의 기록이라
+   브라우저 캐시를 지우면 사라지는 자리에 두면 안 된다 — Firestore users/{uid}.scalp 에도 남긴다.
+   (index.html 이 같은 문서의 state 필드를 쓰므로 merge 로 서로 안 건드린다) */
+let PKEY='jkq_scalp_pos_anon', LKEY='jkq_scalp_log_anon', KKEY='jkq_scalp_kis_anon';
+let POS=[], LOG=[], KLOG=[];
 function loadAll(){
   const g=(k,d)=>{ try{ const v=JSON.parse(localStorage.getItem(k)||'null'); return Array.isArray(v)?v:d; }catch(e){ return d; } };
-  POS=g(PKEY,[]); LOG=g(LKEY,[]);
+  POS=g(PKEY,[]); LOG=g(LKEY,[]); KLOG=g(KKEY,[]);
 }
 function saveP(){ try{ localStorage.setItem(PKEY,JSON.stringify(POS)); }catch(e){} }
 function saveL(){ try{ localStorage.setItem(LKEY,JSON.stringify(LOG)); }catch(e){} }
+function saveK(){ try{ localStorage.setItem(KKEY,JSON.stringify(KLOG)); }catch(e){} cloudSave(); }
+
+/* ── 클라우드 동기화 ── */
+let _cloudT=null;
+function cloudSave(){                       // 연타로 쓰지 않게 2초 모아서 한 번
+  if(!me||!window.fb||!window.fb.setDoc) return;
+  clearTimeout(_cloudT);
+  _cloudT=setTimeout(async()=>{
+    try{
+      await window.fb.setDoc(window.fb.doc(window.fb.db,'users',me.uid),
+        { scalp:{ kis:KLOG, pos:POS, updated:Date.now() } }, { merge:true });
+      setSync('클라우드 저장됨 · '+new Date().toLocaleTimeString('ko-KR'));
+    }catch(e){ setSync('클라우드 저장 실패 — '+(e.message||e), true); }
+  },2000);
+}
+async function cloudLoad(){
+  if(!me||!window.fb||!window.fb.getDoc) return;
+  try{
+    const snap=await window.fb.getDoc(window.fb.doc(window.fb.db,'users',me.uid));
+    const sc=snap.exists()&&snap.data()&&snap.data().scalp;
+    if(!sc) return;
+    // 기기마다 기록이 갈릴 수 있다 — 주문 id 기준으로 합치고 최신순 정렬 (지운 기록이 되살아나지 않게 병합만)
+    if(Array.isArray(sc.kis)&&sc.kis.length){
+      const seen=new Set(KLOG.map(x=>x.id));
+      sc.kis.forEach(x=>{ if(x&&x.id&&!seen.has(x.id)){ KLOG.push(x); seen.add(x.id); } });
+      KLOG.sort((a,b)=>(b.ts||0)-(a.ts||0));
+      try{ localStorage.setItem(KKEY,JSON.stringify(KLOG)); }catch(e){}
+    }
+    if(Array.isArray(sc.pos)&&!POS.length&&sc.pos.length){ POS=sc.pos; saveP(); }
+  }catch(e){ setSync('클라우드 읽기 실패 — '+(e.message||e), true); }
+}
+function setSync(t,bad){ const el=$('klog_sync'); if(el){ el.textContent=t; el.style.color=bad?'var(--sell)':''; } }
 
 /* ── 신호 판정 v2 (역추세·과매도 반등) ────────────────────────────────
    추세추종(밴드상단 돌파)은 올해 실증에서 대조군 대비 −0.09%p로 엣지가 0이었다.
@@ -600,7 +655,8 @@ function renderScreen(){
          <td>${fmt(s.rsi,0)}${s.rsi>=70?' <span class="sig watch" style="padding:0 4px">과매수</span>':''}</td>
          <td class="${gap<0?'loss':''}">${gap!=null?(gap>=0?'+':'')+fmt(gap,1)+'%':'—'}</td>
          <td>${s.amount?Math.round(s.amount/100).toLocaleString():'—'}</td>
-         <td><button class="ghostbtn sm buy" onclick="event.stopPropagation();paperEnter('${esc(s.code)}')">＋진입</button></td>
+         <td><button class="ghostbtn sm buy" onclick="event.stopPropagation();paperEnter('${esc(s.code)}')">＋진입</button>
+             <button class="ghostbtn sm" onclick="event.stopPropagation();kisBuyPick('${esc(s.code)}')" title="KIS 모의투자 계좌로 실제 주문">🔗KIS</button></td>
        </tr>`;
      }).join('')
     + `</tbody></table></div><p class="note">점수(0~100) = RSI 낮을수록 40 + 하단 아래 깊이 20 + 당일 급락 15 + 거래량 정상 10 + 변동성 8 + 유동성 7.
@@ -999,19 +1055,23 @@ function closePos(i){
 function renderPos(){
   const b=$('pos_body');
   if(!POS.length){ b.innerHTML='<p class="sub">보유 포지션이 없습니다. 차트에서 <b>진입</b>을 누르면 여기에 담깁니다.</p>'; return; }
+  POS.forEach(p=>{ p.days=p.ts?Math.floor((Date.now()-p.ts)/86400000)+1:null; });
   b.innerHTML=`<div class="htable-wrap"><table class="htable"><thead><tr>
     <th>종목</th><th>진입가</th><th>손절</th><th>목표</th><th>현재가</th><th>평가손익</th><th></th></tr></thead><tbody>`
     + POS.map((p,i)=>{ const pl=(p.cur-p.entry)/p.entry*100; const hitS=p.cur<=p.stop, hitT=p.cur>=p.tgt;
+        const over=p.days!=null&&p.days>=5;
         return `<tr>
-          <td><b>${esc(p.name)}</b><div class="sub">${esc(p.code)}</div></td>
+          <td><b>${esc(p.name)}</b>${p.kis?' <span class="sig on" style="padding:0 4px">KIS</span>':''}<div class="sub">${esc(p.code)}${p.qty?' · '+p.qty+'주':''}${p.days!=null?' · '+p.days+'일차':''}</div></td>
           <td>${commas(p.entry)}</td><td class="loss">${commas(p.stop)}</td><td class="win">${commas(p.tgt)}</td>
-          <td>${commas(p.cur)}${hitS?' <span class="sig off">손절도달</span>':hitT?' <span class="sig on">목표도달</span>':''}</td>
+          <td>${commas(p.cur)}${hitS?' <span class="sig off">손절도달</span>':hitT?' <span class="sig on">목표도달</span>':over?' <span class="sig watch">5일경과</span>':''}</td>
           <td class="${pl>=0?'win':'loss'}">${pl>=0?'+':''}${fmt(pl,2)}%</td>
-          <td><button class="ghostbtn sm buy" onclick="closePos(${i})">청산</button>
+          <td>${p.kis?`<button class="ghostbtn sm danger" onclick="kisSellPos(${i})" title="KIS 모의투자 매도 주문">🔗KIS 매도</button>`
+                     :`<button class="ghostbtn sm buy" onclick="closePos(${i})">청산</button>`}
               <button class="ghostbtn sm danger" onclick="delPos(${i})">✕</button></td>
         </tr>`;
       }).join('')
-    + `</tbody></table></div><p class="note">현재가는 <b>일봉 종가/최신가</b> 기준(장중 지연 가능) — 실제 손절·목표 도달은 증권사 화면으로 확인.</p>`;
+    + `</tbody></table></div><p class="note">현재가는 <b>일봉 종가/최신가</b> 기준(장중 지연 가능) — 실제 손절·목표 도달은 증권사 화면으로 확인.
+       <b>KIS</b> 표시는 증권사에 실제로 주문이 나간 포지션이다. 손절·목표·5일 경과가 뜨면 <b>KIS 매도</b>로 청산한다.</p>`;
 }
 
 /* ══ 손익분기 계산기 ══ */
@@ -1056,6 +1116,143 @@ function exportLog(){
   const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='scalping_log.csv'; document.body.appendChild(a); a.click(); a.remove();
 }
 
+/* ══════════════════════════════════════════════════════════════════
+   KIS 모의투자 — 전략대로 주문하고, 나간 주문을 전부 기록한다
+   · 수량은 '1회 투입금액 ÷ 현재가'. 손절 −4% / 목표 +6% / 최대 5일은 전략 그대로.
+   · 주문은 성공이든 실패든 KLOG 에 남긴다. 실패 사유(장 시간 외, 예수금 부족 등)가
+     나중에 "왜 그날 안 샀나"를 되짚는 유일한 근거가 된다.
+   · 반자동이다 — 확인창 없이 자동으로 나가는 주문은 만들지 않는다.
+   ══════════════════════════════════════════════════════════════════ */
+function kisReady(){
+  if(!KIScfg||!KIScfg.configured){ alert('KIS가 연결되지 않았습니다. 연결 점검을 먼저 눌러보세요.'); return false; }
+  return true;
+}
+function budget(){ const v=+($('k_budget')&&$('k_budget').value); return v>0?v:2000000; }
+function newId(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,7); }
+
+/* 주문 한 건 — 서버로 보내고 결과를 그대로 이력에 남긴다 */
+async function kisSubmit(o){
+  const rec={ id:newId(), ts:Date.now(), date:new Date().toISOString().slice(0,10),
+              time:new Date().toLocaleTimeString('ko-KR',{hour12:false}),
+              side:o.side, code:o.code, name:o.name||o.code, qty:o.qty, price:o.price,
+              priceType:o.priceType||'limit', env:(KIScfg&&KIScfg.env)||'vts',
+              score:o.score!=null?o.score:null, plan:o.plan||null, ok:false, orderNo:'', msg:'' };
+  try{
+    const tok=await idToken();
+    const r=await fetch('/api/kis?op=order',{method:'POST',
+      headers:{'content-type':'application/json','Authorization':'Bearer '+tok},
+      body:JSON.stringify({side:o.side,code:o.code,qty:o.qty,price:o.price,priceType:rec.priceType})});
+    const j=await r.json();
+    rec.ok=!!j.ok; rec.orderNo=j.orderNo||''; rec.msg=j.msg||j.error||(j.ok?'주문 접수':'주문 실패');
+  }catch(e){ rec.msg=String(e.message||e); }
+  KLOG.unshift(rec); saveK(); renderKlog();
+  return rec;
+}
+
+/* 스크리닝 목록 → 전략대로 매수 */
+async function kisBuyPick(code){
+  if(!kisReady()) return;
+  const s=SCREEN.find(x=>x.code===code); if(!s) return;
+  if(POS.some(p=>p.code===code)){ alert(s.name+' 은(는) 이미 보유 중입니다. (전략상 종목당 동시 1포지션)'); return; }
+  const px=Math.round(s.price), L=levelsOf(px), qty=Math.floor(budget()/px);
+  if(!(qty>0)){ alert(`1회 투입금액(${commas(budget())}원)이 ${s.name} 1주(${commas(px)}원)보다 적습니다.`); return; }
+  const envName=(KIScfg.env==='real')?'⚠️ 실전(진짜 돈)':'모의투자';
+  if(!confirm(`[${envName}] ${s.name} 매수\n`
+    +`지정가 ${commas(px)}원 × ${qty}주 = ${commas(px*qty)}원\n\n`
+    +`전략 기준\n  손절 ${commas(L.stop)}원 (−4%)\n  목표 ${commas(L.tgt)}원 (+6%)\n  최대 5일 보유\n  점수 ${s.score}\n\n주문할까요?`)) return;
+  const rec=await kisSubmit({side:'buy',code,name:s.name,qty,price:px,score:s.score,plan:{stop:L.stop,tgt:L.tgt}});
+  if(rec.ok){
+    POS.unshift({code,name:s.name,entry:px,stop:L.stop,tgt:L.tgt,cur:px,ts:Date.now(),score:s.score,kis:true,qty,orderNo:rec.orderNo});
+    saveP(); renderPos(); kisBalance();
+    alert(`매수 주문이 접수됐습니다.\n주문번호 ${rec.orderNo||'—'}\n\n보유 포지션에 담았습니다. 체결 여부는 잔고에서 확인하세요.`);
+  } else {
+    alert('주문이 나가지 않았습니다.\n\n'+rec.msg+'\n\n이력에는 실패로 남겼습니다.');
+  }
+}
+
+/* 보유 포지션 → KIS 매도 (전량) */
+async function kisSellPos(i){
+  if(!kisReady()) return;
+  const p=POS[i]; if(!p) return;
+  const qty=p.qty||0; if(!(qty>0)){ alert('수량 정보가 없습니다. ✕ 로 지우고 다시 진입하세요.'); return; }
+  const px=Math.round(p.cur||p.entry);
+  const pl=(px-p.entry)/p.entry*100;
+  const why = px<=p.stop?'손절 도달' : px>=p.tgt?'목표 도달' : (p.days>=5?'보유 5일 경과':'수동 청산');
+  const envName=(KIScfg.env==='real')?'⚠️ 실전(진짜 돈)':'모의투자';
+  if(!confirm(`[${envName}] ${p.name} 매도 (${why})\n`
+    +`지정가 ${commas(px)}원 × ${qty}주\n`
+    +`진입 ${commas(p.entry)} → 현재 ${commas(px)} · ${pl>=0?'+':''}${fmt(pl,2)}%\n\n주문할까요?`)) return;
+  const rec=await kisSubmit({side:'sell',code:p.code,name:p.name,qty,price:px,plan:{stop:p.stop,tgt:p.tgt}});
+  if(rec.ok){
+    LOG.unshift({date:new Date().toISOString().slice(0,10),tkr:p.name,trig:'스크린',in:p.entry,out:px,fee:0.5,note:'KIS 모의투자 · '+why});
+    saveL(); POS.splice(i,1); saveP(); renderPos(); renderLog(); kisBalance();
+    alert(`매도 주문이 접수됐습니다.\n주문번호 ${rec.orderNo||'—'}`);
+  } else {
+    alert('주문이 나가지 않았습니다.\n\n'+rec.msg+'\n\n포지션은 그대로 두었습니다.');
+  }
+}
+
+/* ── 실현손익: 매도를 같은 종목의 매수와 먼저 산 것부터 짝짓는다(FIFO) ── */
+function klogRealized(){
+  const asc=KLOG.filter(r=>r.ok).slice().sort((a,b)=>(a.ts||0)-(b.ts||0));
+  const open={}, done=[];
+  asc.forEach(r=>{
+    if(r.side==='buy'){ (open[r.code]=open[r.code]||[]).push({px:r.price,qty:r.qty,ts:r.ts,name:r.name}); return; }
+    let left=r.qty; const q=open[r.code]||[];
+    while(left>0 && q.length){
+      const b=q[0], take=Math.min(left,b.qty);
+      done.push({code:r.code,name:r.name,qty:take,inPx:b.px,outPx:r.price,ts:r.ts,
+                 pct:(r.price-b.px)/b.px*100-0.5, amt:(r.price-b.px)*take});   // 마찰 0.5% 차감
+      b.qty-=take; left-=take; if(b.qty<=0) q.shift();
+    }
+  });
+  return done;
+}
+function renderKlog(){
+  const sum=$('klog_sum'), body=$('klog_body'); if(!sum||!body) return;
+  const envEl=$('klog_env'); if(envEl) envEl.textContent=KIScfg?('· '+(KIScfg.env==='real'?'실전':'모의투자')):'';
+  if(!KLOG.length){ sum.innerHTML='<span class="pill">아직 나간 주문이 없습니다</span>'; body.innerHTML=''; return; }
+  const okN=KLOG.filter(r=>r.ok).length, buyN=KLOG.filter(r=>r.ok&&r.side==='buy').length;
+  const rz=klogRealized();
+  const wins=rz.filter(x=>x.pct>0).length;
+  const avg=rz.length?rz.reduce((s,x)=>s+x.pct,0)/rz.length:0;
+  const amt=rz.reduce((s,x)=>s+x.amt,0);
+  sum.innerHTML=`<span class="pill">주문 <b>${KLOG.length}</b></span>`
+    +`<span class="pill ${okN===KLOG.length?'good':'bad'}">접수 <b>${okN}</b> · 실패 <b>${KLOG.length-okN}</b></span>`
+    +`<span class="pill">매수 <b>${buyN}</b>건</span>`
+    +(rz.length?`<span class="pill">청산 <b>${rz.length}</b>건</span>`
+      +`<span class="pill ${wins/rz.length>=0.5?'good':'bad'}">승률 <b>${fmt(wins/rz.length*100,0)}%</b></span>`
+      +`<span class="pill ${avg>0?'good':'bad'}">평균 <b>${avg>=0?'+':''}${fmt(avg,2)}%</b></span>`
+      +`<span class="pill ${amt>0?'good':'bad'}">실현손익 <b>${amt>=0?'+':''}${commas(Math.round(amt))}원</b></span>`
+      :`<span class="pill">아직 청산된 건이 없습니다</span>`);
+  body.innerHTML=`<div class="htable-wrap"><table class="htable"><thead><tr>
+    <th>일시</th><th>구분</th><th>종목</th><th>수량</th><th>가격</th><th>금액</th><th>결과</th><th>주문번호</th><th>메모</th><th></th></tr></thead><tbody>`
+    + KLOG.map((r,i)=>`<tr>
+        <td>${esc(r.date)}<div class="sub">${esc(r.time||'')}</div></td>
+        <td class="${r.side==='buy'?'win':'loss'}"><b>${r.side==='buy'?'매수':'매도'}</b></td>
+        <td><b>${esc(r.name)}</b><div class="sub">${esc(r.code)}${r.score!=null?' · 점수 '+r.score:''}</div></td>
+        <td>${r.qty}</td>
+        <td>${r.priceType==='market'?'시장가':commas(r.price)}</td>
+        <td>${r.priceType==='market'?'—':commas(r.price*r.qty)}</td>
+        <td>${r.ok?'<span class="sig on">접수</span>':'<span class="sig off">실패</span>'}</td>
+        <td class="sub">${esc(r.orderNo||'—')}</td>
+        <td style="text-align:left;white-space:normal" class="sub">${esc(r.msg||'')}</td>
+        <td><button class="ghostbtn sm danger" onclick="delKlog(${i})">✕</button></td>
+      </tr>`).join('')
+    + `</tbody></table></div><p class="note">여기 '접수'는 <b>주문이 증권사에 들어갔다</b>는 뜻이지 체결됐다는 뜻이 아니다 —
+       지정가가 안 닿으면 미체결로 남는다. 실제 보유는 <b>잔고</b> 버튼으로 확인한다.
+       실현손익은 매도를 같은 종목의 먼저 산 물량과 짝지어(FIFO) 마찰 0.5%를 뺀 값이다.</p>`;
+}
+function delKlog(i){ if(!confirm('이 주문 기록을 지울까요? 증권사 주문 자체는 취소되지 않습니다.')) return; KLOG.splice(i,1); saveK(); renderKlog(); }
+function clearKlog(){ if(!KLOG.length) return; if(!confirm('KIS 주문 이력을 전부 지울까요? 증권사 주문은 취소되지 않습니다.')) return; KLOG=[]; saveK(); renderKlog(); }
+function exportKlog(){
+  if(!KLOG.length){ alert('내보낼 이력이 없습니다.'); return; }
+  const rows=KLOG.map(r=>[r.date,r.time||'',r.side,r.code,r.name,r.qty,r.price,r.ok?'접수':'실패',r.orderNo||'',r.env||'',
+    '"'+String(r.msg||'').replace(/"/g,'""')+'"'].join(','));
+  const blob=new Blob(['﻿'+'date,time,side,code,name,qty,price,result,order_no,env,msg\n'+rows.join('\n')],{type:'text/csv;charset=utf-8'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='kis_orders.csv'; document.body.appendChild(a); a.click(); a.remove();
+}
+
 /* ══ KIS 실주문 (모의투자) ══ */
 async function kisDiag(){
   const el=$('kis_diag'); el.innerHTML='<span class="sub">점검 중…</span>';
@@ -1086,6 +1283,7 @@ async function kisInit(){
       $('kis_panel').style.display='none'; $('kis_help').style.display='';
     }
   }catch(e){ st.innerHTML='<span class="pill bad">확인 실패</span> <span class="sub">'+esc(e.message||e)+'</span>'; $('kis_help').style.display=''; }
+  renderKlog();
 }
 async function idToken(){ if(!me) throw new Error('로그인이 필요합니다.'); return await me.getIdToken(); }
 function kisFromChart(){
@@ -1106,14 +1304,10 @@ async function kisOrder(side){
   const envName=KIScfg.env==='real'?'⚠️ 실전(진짜 돈)':'모의투자';
   if(!confirm(`[${envName}] ${side==='buy'?'매수':'매도'}\n종목 ${code} · ${qty}주 · ${mkt?'시장가':price.toLocaleString()+'원'}\n\n주문할까요?`)) return;
   $('kis_msg').textContent='주문 전송 중…';
-  try{
-    const tok=await idToken();
-    const r=await fetch('/api/kis?op=order',{method:'POST',headers:{'content-type':'application/json','Authorization':'Bearer '+tok},
-      body:JSON.stringify({side,code,qty,price,priceType:mkt?'market':'limit'})});
-    const j=await r.json();
-    if(j.ok){ $('kis_msg').innerHTML='<span style="color:var(--buy)">✓ '+esc(j.msg||'주문 접수')+(j.orderNo?' · 주문번호 '+esc(j.orderNo):'')+'</span>'; kisBalance(); }
-    else { $('kis_msg').innerHTML='<span style="color:var(--sell)">✗ '+esc(j.msg||j.error||'주문 실패')+'</span>'; }
-  }catch(e){ $('kis_msg').innerHTML='<span style="color:var(--sell)">✗ '+esc(e.message||e)+'</span>'; }
+  const nm=(SCREEN.find(x=>x.code===code)||{}).name || (CUR&&CUR.code===code?CUR.name:'') || code;
+  const rec=await kisSubmit({side,code,name:nm,qty,price,priceType:mkt?'market':'limit'});
+  if(rec.ok){ $('kis_msg').innerHTML='<span style="color:var(--buy)">✓ '+esc(rec.msg)+(rec.orderNo?' · 주문번호 '+esc(rec.orderNo):'')+'</span>'; kisBalance(); }
+  else { $('kis_msg').innerHTML='<span style="color:var(--sell)">✗ '+esc(rec.msg)+'</span>'; }
 }
 async function kisBalance(){
   if(!KIScfg||!KIScfg.configured) return;
@@ -1172,8 +1366,10 @@ function boot(){
     }
     $('gate').style.display='none'; $('app').style.display='';
     PKEY='jkq_scalp_pos_'+user.uid; LKEY='jkq_scalp_log_'+user.uid; AKEY='jkq_scalp_arch_'+user.uid;
+    KKEY='jkq_scalp_kis_'+user.uid;
     $('log_owner').textContent='· '+(user.displayName||user.email||'');
-    loadAll(); loadArch(); recalc(); renderPos(); renderLog(); renderArch(); kisInit(); archAuto();
+    loadAll(); loadArch(); recalc(); renderPos(); renderLog(); renderKlog(); renderArch(); kisInit(); archAuto();
+    await cloudLoad(); renderKlog(); renderPos();   // 다른 기기에서 남긴 주문 기록을 합친다
   });
 }
 if(window.fb) boot(); else window.addEventListener('fb-ready', boot);
