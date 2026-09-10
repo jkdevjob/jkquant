@@ -36,12 +36,39 @@ function parsePage(html) {
   return out;
 }
 
+/* 수급 데이터 소스 후보 — 네이버가 Next.js 로 바뀌며 옛 표가 사라졌다.
+   어디서 받을 수 있는지 찾기 위한 탐색. URL 은 코드에 고정한다(열린 프록시 방지). */
+function probeUrls(code) {
+  return [
+    ["naver-m-trend",   `https://m.stock.naver.com/api/stock/${code}/trend`],
+    ["naver-m-investor",`https://m.stock.naver.com/api/stock/${code}/investor`],
+    ["naver-api-trend", `https://api.stock.naver.com/stock/${code}/trend`],
+    ["naver-frgn-json", `https://api.finance.naver.com/siseJson.naver?symbol=${code}&requestType=1&count=30&timeframe=day`],
+    ["naver-m-integ",   `https://m.stock.naver.com/api/stock/${code}/integration`],
+    ["naver-m-price",   `https://m.stock.naver.com/api/stock/${code}/price?pageSize=30&page=1`],
+  ];
+}
+
 export async function onRequestGet({ request }) {
   const url = new URL(request.url);
   const code = String(url.searchParams.get("code") || "").toUpperCase().trim();
   if (!KRCODE.test(code)) return json({ error: "종목코드가 올바르지 않습니다." }, 400);
   const pages = Math.min(30, Math.max(1, parseInt(url.searchParams.get("pages") || "3", 10)));
   const debug = url.searchParams.get("debug") === "1";
+
+  if (url.searchParams.get("probe") === "1") {
+    const res = [];
+    for (const [name, u] of probeUrls(code)) {
+      try {
+        const r = await fetch(u, { headers: { "User-Agent": UA, Referer: "https://m.stock.naver.com/" } });
+        const t = await r.text();
+        res.push({ name, status: r.status, len: t.length,
+          head: t.slice(0, 260).replace(/\s+/g, " "),
+          hasFlow: /외국인|기관|foreign|institution|frgn|orgn/i.test(t) });
+      } catch (e) { res.push({ name, error: String(e.message || e) }); }
+    }
+    return json({ code, probe: res });
+  }
 
   const all = [];
   const notes = [];
