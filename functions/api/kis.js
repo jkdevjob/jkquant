@@ -135,7 +135,13 @@ export async function onRequestGet({ request, env }) {
 
     if (env.KIS_APPKEY && env.KIS_APPSECRET) {
       let token = null;
-      try { token = await getToken(env); add("접근토큰 발급", true, "성공"); }
+      // 토큰은 도메인별로 따로 발급된다 — vts 도메인에서 성공했다면 그 키는 모의투자용 키가 맞다
+      try {
+        token = await getToken(env);
+        add("접근토큰 발급", true, isReal(env)
+          ? "성공 — 실전용 앱키가 맞습니다"
+          : "성공 — 모의투자용 앱키가 맞습니다 (키는 정상)");
+      }
       catch (e) { add("접근토큰 발급", false, String(e.message || e)); }
       if (token) {
         try {
@@ -161,8 +167,11 @@ export async function onRequestGet({ request, env }) {
             let why = j.msg1 || "실패";
             // 실전 계좌번호를 모의(vts)에 넣는 실수가 잦다 — 에러코드로 바로 짚어준다
             if (/INVALID_CHECK_ACNO|ACNO/i.test(JSON.stringify(j))) {
-              why += isReal(env) ? " — 실전 계좌번호가 맞는지 확인하세요"
-                                 : " — 모의투자 환경입니다. 실전 계좌번호는 쓸 수 없고 별도의 모의계좌번호가 필요합니다";
+              why += isReal(env)
+                ? " — 실전 계좌번호가 맞는지 확인하세요"
+                : " — 앱키는 정상이므로 계좌번호만 틀렸습니다. 모의투자는 실전과 계좌번호가 다릅니다. "
+                  + "KIS 홈페이지 > 모의투자 > 주식/선물옵션 모의투자 > 참가신청확인 에서 모의계좌번호(8자리-2자리)를 확인해 "
+                  + "KIS_ACCOUNT 를 그 번호로 바꾸세요";
             }
             add("계좌 조회", ok2, ok2 ? `정상 · 예수금 ${Number(cash || 0).toLocaleString()}원` : why);
           } catch (e) { add("계좌 조회", false, String(e.message || e)); }
