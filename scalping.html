@@ -186,8 +186,8 @@ canvas{display:block;width:100%;height:auto}
     <div class="row" style="margin-bottom:8px;align-items:flex-end">
       <div class="fld" style="flex:0 0 116px"><label>유니버스 크기</label>
         <select id="uniN"><option>50</option><option selected>100</option><option>150</option><option>200</option></select></div>
-      <div class="fld" style="flex:0 0 104px"><label>실시간 간격</label>
-        <select id="liveN" onchange="if(LIVE)startLive()"><option value="10">10초</option><option value="30" selected>30초</option><option value="60">60초</option></select></div>
+      <div class="fld" style="flex:0 0 104px"><label>차트 갱신</label>
+        <select id="liveN" onchange="if(LIVE)startLive()"><option value="1">1초</option><option value="2" selected>2초</option><option value="5">5초</option><option value="10">10초</option><option value="30">30초</option></select></div>
       <button class="prim" onclick="runScreen()" id="scrBtn" style="height:38px">🔎 전체 스크리닝</button>
       <button class="ghostbtn" onclick="toggleLive()" id="liveToggle" style="height:38px">▶ 실시간</button>
     </div>
@@ -449,7 +449,7 @@ async function runScreen(silent){
 }
 
 /* ── 실시간 자동 업데이트 (무깜빡임) ── */
-function intervalMs(){ return (+($('liveN')&&$('liveN').value)||30)*1000; }
+function intervalMs(){ return (+($('liveN')&&$('liveN').value)||2)*1000; }
 function startLive(){
   LIVE=true; if(_liveTimer) clearInterval(_liveTimer);
   _liveTimer=setInterval(liveTick, intervalMs());
@@ -461,8 +461,28 @@ function stopLive(){
 }
 function toggleLive(){ if(LIVE) stopLive(); else if(SCREEN.length) startLive(); else runScreen(); }
 async function liveTick(){
-  if(CUR) refreshChartLive();                                   // 선택 차트: 매 간격
-  if(Date.now()-_lastScanAt >= 60000 && !_screening) runScreen(true);  // 목록: 60초마다 조용히 재스캔
+  if(CUR) chartTick();                                          // 선택 차트: 매 간격(간격에 따라 KIS 실시간)
+  if(Date.now()-_lastScanAt >= 60000 && !_screening) runScreen(true);  // 목록: 60초마다 조용히 재스캔(네이버 캐시 정합)
+}
+/* 차트 틱: KIS 연동 시 실시간 현재가로 마지막 캔들·지표를 갱신, 아니면 네이버는 60초 캐시라 그 주기로만 재조회 */
+async function chartTick(){
+  if(!CUR) return;
+  if(KIScfg && KIScfg.configured){
+    try{
+      const r=await fetch('/api/kis?op=price&code='+encodeURIComponent(CUR.code));
+      const j=await r.json();
+      if(j && j.price>0){
+        const a=CUR.a, n=a.cl.length;
+        a.price=j.price; a.cl[n-1]=j.price;
+        const lb=a.o[n-1];
+        if(lb){ lb.close=j.price; if(j.high>0) lb.high=Math.max(lb.high,j.high); if(j.low>0) lb.low=Math.min(lb.low,j.low); if(j.open>0) lb.open=j.open; a.last=lb; }
+        a.bb=bbUpper(a.cl,n-1,20,2); a.rs=rsiSeries(a.cl,14); a.rsi=a.rs[n-1];
+        drawChart(a); renderGuide(a);
+      }
+    }catch(e){/* 조용히 무시 */}
+  } else {
+    if(Date.now()-(CUR._at||0) >= 60000){ CUR._at=Date.now(); refreshChartLive(); }  // 네이버: 60초 주기
+  }
 }
 function renderScreen(){
   const b=$('scr_body');
@@ -543,7 +563,10 @@ function renderGuide(a){
   else if(a.rsi>=72){ msg=`⚠️ 과매수(RSI ${Math.round(a.rsi)}) — 신규 진입은 눌림 기다려`; col='var(--gold)'; }
   else if(a.bb && a.last.high>=a.bb.up && a.rsi>=55){ msg=`🟢 진입 후보 — 09:00~09:03 시가범위 고가 돌파 시 진입 · 손절 ${commas(L.stop)} 먼저 세팅 · 목표 ${commas(L.tgt)}`; col='var(--buy)'; }
   else { msg='⏳ 관망 — 아직 진입 조건(밴드 돌파+RSI≥55) 미충족'; col='var(--dim)'; }
-  el.innerHTML=`지금 판단 · 현재가 <b>${commas(price)}</b> — ${msg}`;
+  const realtime = KIScfg && KIScfg.configured;
+  const src = LIVE ? (realtime ? ` <span class="sub" style="color:var(--buy)">● KIS 실시간 ${(+$('liveN').value||2)}초</span>`
+                               : ` <span class="sub">● 네이버 60초 갱신 (1~2초 실시간은 KIS 연동 필요)</span>`) : '';
+  el.innerHTML=`지금 판단 · 현재가 <b>${commas(price)}</b> — ${msg}${src}`;
   el.style.color=col;
 }
 function closeChart(){ $('chartCard').style.display='none'; CUR=null; }
