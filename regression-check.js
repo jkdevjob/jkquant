@@ -371,11 +371,19 @@ console.log('[7] DOM 구조');
     .match(/<th>([^<]*)<\/th>/g).map(x=>x.replace(/<\/?th>/g,''));
   const body=(idx.match(/<tr class="\$\{cls\}"\$\{rowStyle\}>[\s\S]*?<\/tr>/)||[''])[0];
   const cells=(body.match(/<td[^>]*>(?:\$\{[^}]*\}|[^<])*/g)||[]).map(x=>x.replace(/<td[^>]*>/,''));
-  const want=['날짜','구분','체결가','수량','손익','잔금','T','별%','별지점'];
-  ok('무매 이력 머리글 순서', JSON.stringify(head.slice(0,9))===JSON.stringify(want), head.join(','));
+  const want=['날짜','구분','체결가','수량','손익률','손익','잔금','T','별%','별지점'];
+  ok('무매 이력 머리글 순서', JSON.stringify(head.slice(0,want.length))===JSON.stringify(want), head.join(','));
   // 셀이 머리글과 같은 값을 같은 자리에 넣는지 — 손익·잔금이 바뀌면 여기서 잡힌다
   ok('무매 이력 본문이 머리글과 같은 순서',
-     /profitCell\}<\/td><td>\$\{wn\(h\.balAfter\)\}/.test(body), cells.slice(4,6).join(' | '));
+     /pnlPct\(h\.profit\):'-'\}<\/td><td>\$\{profitCell\}<\/td><td>\$\{wn\(h\.balAfter\)\}/.test(body), cells.slice(4,7).join(' | '));
+  /* 손익률 = 손익 ÷ 원금. 매도분 원가로 나누면 별%·익절%와 거의 같아 옆 칸과 겹치고,
+     원금 기준이라야 한 사이클 손익률을 줄마다 더해서 볼 수 있다. */
+  ok('손익률은 원금 기준', /const cap=\+\(\(curStrat\(\)\.settings\|\|\{\}\)\.principal\)\|\|0;/.test(idx)
+     && /const r=v\/cap\*100;/.test(idx));
+  ok('매수 줄엔 손익률이 없다', /\$\{\(cx\|\|sell\)\?pnlPct\(h\.profit\):'-'\}/.test(idx));
+  ok('원금이 0이면 나눗셈을 안 한다', /if\(v==null\|\|!cap\) return '-';/.test(idx));
+  // 열이 하나 늘면 빈 줄 colspan도 같이 늘어야 한다
+  ok('빈 줄 colspan이 열 수와 맞는다', /<td class="empty" colspan="11">/.test(idx));
   /* 사이클 종료는 아이콘으로. 글자 배지는 '구분' 칸을 41px 밀어내
      좁은 화면에서 손익·잔금을 화면 밖으로 내보냈다. 줄 위 금색 선이 본 표시다. */
   ok('사이클 종료는 아이콘', /const endFlag=h\.cycleEnd\?' <span class="cyc-end" title="사이클 종료">🏁<\/span>':''/.test(idx)
@@ -1044,7 +1052,7 @@ console.log('[24] 표 밀도 — 한 화면에 더 많이');
   // 줄높이를 만드는 세 값 — 하나라도 되돌아가면 밀도가 통째로 풀린다
   ok('운영 이력표 밀도', /\.htable td\{padding:3px 4px;line-height:1\.25;/.test(idx)
      && /\.htable th\{[^}]*font-size:10px;padding:3px 4px;line-height:1\.2;/.test(idx)
-     && /\.htable\{width:100%;border-collapse:collapse;font-size:11px;min-width:548px\}/.test(idx));
+     && /\.htable\{width:100%;border-collapse:collapse;font-size:11px;min-width:590px\}/.test(idx));
   ok('수정·삭제 칸도 좁힌다', /\.htable td:last-child\{padding:3px 2px\}/.test(idx));
   ok('백테 표 밀도', /\.cmp-tbl td\{padding:3px 5px;line-height:1\.25;/.test(bt)
      && /\.cmp-tbl th\{[^}]*padding:3px 5px;line-height:1\.2;[^}]*font-size:10px;\}/.test(bt)
@@ -1122,6 +1130,34 @@ console.log('[26] 단타 분봉 — 장 초반 5분 눈금');
   ok('1분봉은 꺾은선을 덧그린다', /if\(TF==='1m'\)\{[\s\S]{0,220}?ctx\.stroke\(\);/.test(sc));
   // 일봉 70봉 그대로면 5분봉은 6시간도 못 본다
   ok('봉 단위마다 표시 개수가 다르다', /const CAP = TF==='day' \? 70 : TF==='5m' \? 84 : 150;/.test(sc));
+}
+
+
+/* ════ 27. 무매 분석 — 월별·사이클별 실현손익 ════
+   총 실현손익 하나만 있어서 '언제 벌었나'를 알 수 없었다. */
+console.log('[27] 무매 분석 — 월별·사이클별');
+{
+  ok('두 표가 분석 탭에 있다', /id="a_bymonth"/.test(idx) && /id="a_bycycle"/.test(idx)
+     && idx.indexOf('id="a_bymonth"') > idx.indexOf('id="inf-anal"')
+     && idx.indexOf('id="a_bymonth"') < idx.indexOf('id="inf-guide"'));
+  let br=''; try{ br=extractFn(idx,'function renderInfBreak(c)'); }catch(e){}
+  ok('집계 함수 존재', !!br, br?'':'renderInfBreak 없음');
+  ok('분석 그릴 때 같이 그린다', /function renderInfAnal\(\)\{\s*\n\s*const c=computeInf\(\), st=c\.st;\s*\n\s*renderInfBreak\(c\);/.test(idx));
+  // 평가손익을 섞으면 '언제 얼마를 벌었나'가 흐려진다
+  ok('매도로 확정된 것만 센다', /const sells=\(c\.rows\|\|\[\]\)\.filter\(h=>isSell\(h\.kind\)\);/.test(br));
+  ok('손익률 분모는 거래이력과 같은 원금', /const st=c\.st, cap=\+st\.principal\|\|0/.test(br)
+     && /\(v\/cap\*100\)\.toFixed\(2\)/.test(br));
+  /* computeInf의 cycleSeq는 1부터다. +1을 더해 1사이클이 통째로 사라졌었다 —
+     이 표가 없으면 눈으로는 안 걸리는 종류의 어긋남이다. */
+  ok('cycleSeq는 1부터 (그대로 쓴다)', /const k=h\.cycleSeq\|\|1;/.test(br)
+     && /\$\{x\.seq\}사이클/.test(br) && !/x\.seq\+1/.test(br));
+  ok('cycleSeq 시작값이 1', /let avg=0,qty=0,inv=0,realized=0,T=0,totbuy=0,totsell=0,cycleSeq=1;/.test(idx));
+  ok('안 닫힌 사이클은 진행중으로', /closed\.has\(x\.seq\)\?'':' <span style="color:var\(--gold\)[^"]*">진행중/.test(br));
+  // 원화 세션은 이미 원화라 같은 수를 두 번 쓰는 꼴이 된다
+  ok('원화 열은 달러 세션에서만', /isKrw=\(st\.cur==='krw'\)/.test(br)
+     && /\$\{isKrw\?'':'<th>원화<\/th>'\}/.test(br));
+  ok('빈 표 colspan이 열 수를 따라간다', /colspan="\$\{isKrw\?4:5\}"/.test(br));
+  ok('합계 줄이 있다', /<td><b>합계<\/b><\/td>/.test(br));
 }
 
 
