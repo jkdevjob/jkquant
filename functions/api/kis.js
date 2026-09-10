@@ -244,6 +244,33 @@ export async function onRequestGet({ request, env }) {
         ? "ws://ops.koreainvestment.com:21000/tryitout/H0STCNT0"
         : "ws://ops.koreainvestment.com:31000/tryitout/H0STCNT0", env: isReal(env) ? "real" : "vts" });
     }
+    // 과거 날짜의 1분봉. 네이버는 7거래일이 한계라 9:00~9:30 을 몇 달치 검증할 방법이 없었다.
+    // KIS 는 날짜를 지정해 그 시각까지의 분봉 120개를 준다 — 아침 30분이면 한 번에 다 들어온다.
+    // op=price 와 같은 공개 시세라 별도 인증을 두지 않는다.
+    if (op === "minhist") {
+      const code = String(url.searchParams.get("code") || "").toUpperCase();
+      const date = String(url.searchParams.get("date") || "").replace(/\D/g, "");   // YYYYMMDD
+      const hour = String(url.searchParams.get("hour") || "093000").replace(/\D/g, "");
+      if (!KRCODE.test(code)) return json({ error: "종목코드가 올바르지 않습니다." }, 400);
+      if (!/^\d{8}$/.test(date)) return json({ error: "날짜는 YYYYMMDD 형식입니다." }, 400);
+      const token = await getToken(env);
+      const qs = new URLSearchParams({ FID_COND_MRKT_DIV_CODE: "J", FID_INPUT_ISCD: code,
+        FID_INPUT_DATE_1: date, FID_INPUT_HOUR_1: hour.padStart(6, "0"),
+        FID_PW_DATA_INCU_YN: "N", FID_FAKE_TICK_INCU_YN: "N" });
+      const j = await readJson(base(env) + "/uapi/domestic-stock/v1/quotations/inquire-time-dailychartprice?" + qs, {
+        headers: { authorization: "Bearer " + token, appkey: env.KIS_APPKEY, appsecret: env.KIS_APPSECRET,
+          tr_id: "FHKST03010230", custtype: "P" },
+      });
+      if (String(j.rt_cd) !== "0") {
+        return json({ error: j.msg1 || "분봉 조회 실패", code: j.msg_cd || "",
+          rateLimited: RATE_LIMITED(j) }, 502);
+      }
+      const bars = (j.output2 || []).filter(x => x && x.stck_cntg_hour).map(x => ({
+        t: String(x.stck_bsop_date || date) + String(x.stck_cntg_hour).padStart(6, "0"),
+        o: +x.stck_oprc, h: +x.stck_hgpr, l: +x.stck_lwpr, c: +x.stck_prpr, v: +x.cntg_vol,
+      })).filter(b => b.c > 0).sort((a, b) => a.t < b.t ? -1 : 1);
+      return json({ code, date, bars, n: bars.length });
+    }
     if (op === "price") {
       const code = String(url.searchParams.get("code") || "").toUpperCase();
       if (!KRCODE.test(code)) return json({ error: "종목코드가 올바르지 않습니다." }, 400);
