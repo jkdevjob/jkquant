@@ -244,6 +244,8 @@ canvas{display:block;width:100%;height:auto}
       <button class="prim" onclick="archSnapshot()" id="arBtn" style="height:38px">📥 스냅샷 수집</button>
       <button class="ghostbtn" onclick="archExport()" style="height:38px">⬇ CSV</button>
       <button class="ghostbtn danger" onclick="archClear()" style="height:38px">삭제</button>
+      <label class="sub" style="display:flex;align-items:center;gap:6px;height:38px;cursor:pointer">
+        <input type="checkbox" id="ar_auto" checked style="width:auto" onchange="archSaveMeta()"> 자동 수집(3일마다)</label>
     </div>
     <div class="sub" id="ar_msg" style="margin-bottom:8px;min-height:16px"></div>
     <div id="ar_prog" style="display:none;height:6px;background:var(--panel2);border-radius:4px;overflow:hidden;margin-bottom:10px"><div id="ar_bar" style="height:100%;width:0;background:var(--vio2);transition:width .1s"></div></div>
@@ -620,7 +622,22 @@ function addFirst(){
    네이버 분봉은 최근 7거래일만 준다 → 주기적으로 저장하면 창이 겹치며 과거가 쌓인다.
    구조: ARCH[날짜][종목코드] = [[hhmm, 종가, 거래량], ...]  (09:00~09:30만) */
 let AKEY='jkq_scalp_arch_anon', ARCH={};
-function loadArch(){ try{ const v=JSON.parse(localStorage.getItem(AKEY)||'{}'); ARCH=(v&&typeof v==='object')?v:{}; }catch(e){ ARCH={}; } }
+let AMETA={last:0,auto:true};
+function loadArch(){
+  try{ const v=JSON.parse(localStorage.getItem(AKEY)||'{}'); ARCH=(v&&typeof v==='object')?v:{}; }catch(e){ ARCH={}; }
+  try{ const m=JSON.parse(localStorage.getItem(AKEY+'_meta')||'null'); if(m&&typeof m==='object') AMETA=Object.assign(AMETA,m); }catch(e){}
+  const cb=$('ar_auto'); if(cb) cb.checked=AMETA.auto!==false;
+}
+function archSaveMeta(){ const cb=$('ar_auto'); if(cb) AMETA.auto=cb.checked;
+  try{ localStorage.setItem(AKEY+'_meta',JSON.stringify(AMETA)); }catch(e){} }
+/* 7거래일 창이라 놓치면 그 구간은 영영 없다 → 3일마다 자동으로 받아둔다 */
+async function archAuto(){
+  if(AMETA.auto===false) return;
+  const days=(Date.now()-(AMETA.last||0))/864e5;
+  if(days<3) return;
+  $('ar_msg').textContent='자동 수집 중… (7거래일 창을 놓치지 않기 위해 3일마다 받습니다)';
+  await archSnapshot(true);
+}
 function saveArch(){ try{ localStorage.setItem(AKEY,JSON.stringify(ARCH)); return true; }
   catch(e){ alert('저장 공간이 부족합니다. CSV로 내보낸 뒤 삭제하세요.'); return false; } }
 function archStats(){
@@ -640,7 +657,7 @@ function renderArch(){
     <p class="note">기간 <b>${s.dates[0]} ~ ${s.dates[s.dates.length-1]}</b> ·
     7거래일 창이라 <b>주 1회</b>만 수집하면 끊기지 않는다. 브라우저 저장소(약 5MB) 한도에 가까워지면 CSV로 내보내고 삭제.</p>`;
 }
-async function archSnapshot(){
+async function archSnapshot(auto){
   const N=+($('ar_n').value)||50;
   $('arBtn').disabled=true; $('ar_msg').textContent='유니버스 불러오는 중…';
   let uni=[];
@@ -668,7 +685,9 @@ async function archSnapshot(){
   await Promise.all(Array.from({length:6},()=>worker()));
   prog.style.display='none'; $('arBtn').disabled=false;
   const ok=saveArch(); const s=archStats();
-  $('ar_msg').innerHTML=ok?`✓ 새 분봉 <b>${added.toLocaleString()}</b>개 추가 · 누적 <b>${s.dates.length}거래일</b> · ${new Date().toLocaleString('ko-KR',{hour12:false})}`
+  if(ok){ AMETA.last=Date.now(); archSaveMeta(); }
+  const warn = s.kb>3500 ? ' <span style="color:var(--gold)">⚠ 용량 3.5MB 초과 — CSV로 내보낸 뒤 삭제하세요</span>' : '';
+  $('ar_msg').innerHTML=ok?`${auto?'🔄 자동 수집':'✓ 수집'} · 새 분봉 <b>${added.toLocaleString()}</b>개 · 누적 <b>${s.dates.length}거래일</b> · ${new Date().toLocaleString('ko-KR',{hour12:false})}${warn}`
                           :'저장 실패(용량) — CSV로 내보낸 뒤 삭제하세요.';
   renderArch();
 }
@@ -1097,7 +1116,7 @@ function boot(){
       $('gate').style.display='none'; $('app').style.display='';
       PKEY='jkq_scalp_pos_'+user.uid; LKEY='jkq_scalp_log_'+user.uid; AKEY='jkq_scalp_arch_'+user.uid;
       $('log_owner').textContent='· '+(user.displayName||user.email||'');
-      loadAll(); loadArch(); recalc(); renderPos(); renderLog(); renderArch(); kisInit();
+      loadAll(); loadArch(); recalc(); renderPos(); renderLog(); renderArch(); kisInit(); archAuto();
     }else{ stopLive(); $('gate').style.display='flex'; $('app').style.display='none'; }
   });
 }
