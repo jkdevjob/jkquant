@@ -43,7 +43,11 @@ function parseTrend(arr) {
    어디서 받을 수 있는지 찾기 위한 탐색. URL 은 코드에 고정한다(열린 프록시 방지). */
 function probeUrls(code) {
   return [
-    ["naver-m-trend",   `https://m.stock.naver.com/api/stock/${code}/trend`],
+    ["trend-plain",     `https://m.stock.naver.com/api/stock/${code}/trend`],
+    ["trend-page",      `https://m.stock.naver.com/api/stock/${code}/trend?page=2&pageSize=100`],
+    ["trend-size",      `https://m.stock.naver.com/api/stock/${code}/trend?pageSize=200`],
+    ["trend-bizdate",   `https://m.stock.naver.com/api/stock/${code}/trend?bizdate=20250101`],
+    ["krx-isu",         `https://data.krx.co.kr/comm/bldAttendant/getJsonData.cmd?bld=dbms/MDC/STAT/standard/MDCSTAT02203&isuCd=KR7005930003&strtDd=20260101&endDd=20260910&trdVolVal=2&askBid=3`],
     ["naver-m-investor",`https://m.stock.naver.com/api/stock/${code}/investor`],
     ["naver-api-trend", `https://api.stock.naver.com/stock/${code}/trend`],
     ["naver-frgn-json", `https://api.finance.naver.com/siseJson.naver?symbol=${code}&requestType=1&count=30&timeframe=day`],
