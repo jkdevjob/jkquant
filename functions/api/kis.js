@@ -59,6 +59,25 @@ async function hashkey(env, body) {
   return j.HASH || "";
 }
 
+// ── 사이트 소유자 판정 (OWNER_EMAIL → KIS_OWNER_EMAIL → 기본값) ──
+const DEFAULT_OWNERS = ["jk82investing@gmail.com"];
+function siteOwners(env) {
+  const raw = String(env.OWNER_EMAIL || env.KIS_OWNER_EMAIL || "").trim();
+  return raw ? raw.split(",").map(s => s.trim().toLowerCase()).filter(Boolean) : DEFAULT_OWNERS;
+}
+async function emailOfToken(request, env) {
+  const auth = request.headers.get("Authorization") || "";
+  const idToken = auth.startsWith("Bearer ") ? auth.slice(7) : "";
+  if (!idToken) return "";
+  const key = env.FIREBASE_API_KEY || FIREBASE_API_KEY_FALLBACK;
+  const r = await fetch("https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=" + key, {
+    method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ idToken }),
+  });
+  const j = await r.json().catch(() => ({}));
+  const u = j.users && j.users[0];
+  return u ? String(u.email || "").toLowerCase() : "";
+}
+
 // ── Firebase ID 토큰 검증 (소유자만 주문) ──
 async function verifyOwner(request, env) {
   const owners = String(env.KIS_OWNER_EMAIL || "").split(",").map(s => s.trim().toLowerCase()).filter(Boolean);
@@ -88,6 +107,12 @@ export async function onRequestGet({ request, env }) {
       hasOwner: !!(env.KIS_OWNER_EMAIL || "").trim() });
   }
   if (op === "diag") {
+    // 계좌번호·예수금·이메일이 담기므로 소유자만 볼 수 있다
+    const who = await emailOfToken(request, env);
+    if (!who || !siteOwners(env).includes(who)) {
+      return json({ error: who ? `${who} 계정에는 진단 권한이 없습니다.` : "로그인이 필요합니다(소유자 전용).",
+                    needAuth: true }, 401);
+    }
     const checks = [];
     const add = (k, ok, det) => checks.push({ k, ok, det });
     const mask = (v) => v ? `설정됨 (${String(v).length}자, …${String(v).slice(-4)})` : "없음";
