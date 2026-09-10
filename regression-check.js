@@ -1133,5 +1133,33 @@ console.log('[26] 단타 분봉 — 장 초반 5분 눈금');
 }
 
 
+/* ════ 27. 무매 분석 — 월별·사이클별 실현손익 ════
+   총 실현손익 하나만 있어서 '언제 벌었나'를 알 수 없었다. */
+console.log('[27] 무매 분석 — 월별·사이클별');
+{
+  ok('두 표가 분석 탭에 있다', /id="a_bymonth"/.test(idx) && /id="a_bycycle"/.test(idx)
+     && idx.indexOf('id="a_bymonth"') > idx.indexOf('id="inf-anal"')
+     && idx.indexOf('id="a_bymonth"') < idx.indexOf('id="inf-guide"'));
+  let br=''; try{ br=extractFn(idx,'function renderInfBreak(c)'); }catch(e){}
+  ok('집계 함수 존재', !!br, br?'':'renderInfBreak 없음');
+  ok('분석 그릴 때 같이 그린다', /function renderInfAnal\(\)\{\s*\n\s*const c=computeInf\(\), st=c\.st;\s*\n\s*renderInfBreak\(c\);/.test(idx));
+  // 평가손익을 섞으면 '언제 얼마를 벌었나'가 흐려진다
+  ok('매도로 확정된 것만 센다', /const sells=\(c\.rows\|\|\[\]\)\.filter\(h=>isSell\(h\.kind\)\);/.test(br));
+  ok('손익률 분모는 거래이력과 같은 원금', /const st=c\.st, cap=\+st\.principal\|\|0/.test(br)
+     && /\(v\/cap\*100\)\.toFixed\(2\)/.test(br));
+  /* computeInf의 cycleSeq는 1부터다. +1을 더해 1사이클이 통째로 사라졌었다 —
+     이 표가 없으면 눈으로는 안 걸리는 종류의 어긋남이다. */
+  ok('cycleSeq는 1부터 (그대로 쓴다)', /const k=h\.cycleSeq\|\|1;/.test(br)
+     && /\$\{x\.seq\}사이클/.test(br) && !/x\.seq\+1/.test(br));
+  ok('cycleSeq 시작값이 1', /let avg=0,qty=0,inv=0,realized=0,T=0,totbuy=0,totsell=0,cycleSeq=1;/.test(idx));
+  ok('안 닫힌 사이클은 진행중으로', /closed\.has\(x\.seq\)\?'':' <span style="color:var\(--gold\)[^"]*">진행중/.test(br));
+  // 원화 세션은 이미 원화라 같은 수를 두 번 쓰는 꼴이 된다
+  ok('원화 열은 달러 세션에서만', /isKrw=\(st\.cur==='krw'\)/.test(br)
+     && /\$\{isKrw\?'':'<th>원화<\/th>'\}/.test(br));
+  ok('빈 표 colspan이 열 수를 따라간다', /colspan="\$\{isKrw\?4:5\}"/.test(br));
+  ok('합계 줄이 있다', /<td><b>합계<\/b><\/td>/.test(br));
+}
+
+
 console.log(`\n════ 결과: ${pass} PASS / ${fail} FAIL ${fail===0?'— ALL PASS ★':'— 배포 금지, 위 ✗ 항목 수정 필요'} ════`);
 process.exit(fail===0?0:1);
