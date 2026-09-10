@@ -60,7 +60,7 @@ export async function onRequestGet({ request }) {
   const url = new URL(request.url);
   const code = String(url.searchParams.get("code") || "").toUpperCase().trim();
   if (!KRCODE.test(code)) return json({ error: "종목코드가 올바르지 않습니다." }, 400);
-  const pages = Math.min(30, Math.max(1, parseInt(url.searchParams.get("pages") || "3", 10)));
+  const pages = Math.min(120, Math.max(1, parseInt(url.searchParams.get("pages") || "3", 10)));
   const debug = url.searchParams.get("debug") === "1";
 
   if (url.searchParams.get("probe") === "1") {
@@ -77,20 +77,28 @@ export async function onRequestGet({ request }) {
     return json({ code, probe: res });
   }
 
+  /* 네이버 trend 는 한 번에 10거래일만 준다. bizdate 를 과거로 밀며 이어붙인다.
+     응답의 가장 오래된 날짜보다 하루 앞을 다음 bizdate 로 준다. */
   const all = [];
   const notes = [];
-  {
-    const u = `https://m.stock.naver.com/api/stock/${code}/trend`;
+  const until = String(url.searchParams.get("until") || "").replace(/\D/g, "");   // YYYYMMDD, 여기까지 거슬러
+  let cursor = String(url.searchParams.get("from") || "").replace(/\D/g, "");     // 시작 bizdate (없으면 최신)
+  for (let p = 0; p < pages; p++) {
+    const u = `https://m.stock.naver.com/api/stock/${code}/trend` + (cursor ? `?bizdate=${cursor}` : "");
+    let rows = [];
     try {
       const r = await fetch(u, { headers: { "User-Agent": UA, Referer: "https://m.stock.naver.com/", accept: "application/json" } });
-      if (!r.ok) notes.push(`HTTP ${r.status}`);
-      else {
-        const j = await r.json().catch(() => null);
-        const rows = parseTrend(j);
-        if (!rows.length) notes.push("파싱 결과 없음");
-        all.push(...rows);
-      }
-    } catch (e) { notes.push(String(e.message || e)); }
+      if (!r.ok) { notes.push(`p${p} HTTP ${r.status}`); break; }
+      rows = parseTrend(await r.json().catch(() => null));
+    } catch (e) { notes.push(`p${p} ${String(e.message || e)}`); break; }
+    if (!rows.length) { notes.push(`p${p} 빈 응답`); break; }
+    all.push(...rows);
+    const oldest = rows.map(x => x.date).sort()[0];
+    if (until && oldest.replace(/-/g, "") <= until) break;
+    const d = new Date(oldest + "T00:00:00Z"); d.setUTCDate(d.getUTCDate() - 1);
+    const next = d.toISOString().slice(0, 10).replace(/-/g, "");
+    if (next === cursor) break;                       // 더 이상 안 내려감
+    cursor = next;
   }
   const seen = new Set(); const uniq = [];
   for (const r of all) { if (!seen.has(r.date)) { seen.add(r.date); uniq.push(r); } }
