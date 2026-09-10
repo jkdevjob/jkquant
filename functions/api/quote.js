@@ -29,6 +29,7 @@ export async function onRequestGet({ request, env }) {
   const debug = url.searchParams.get("debug") === "1";
   const wantIntraday = url.searchParams.get("intraday") !== "0";
   const wantDiv = url.searchParams.get("div") === "1";     // 배당·분할 이력 + raw 종가
+  const wantMinute = url.searchParams.get("minute") === "1";  // 국내 분봉 (7거래일치 1분)
 
   // Finnhub 키: Cloudflare 환경변수(FINNHUB_KEY) 또는 아래 상수에 직접 입력
   const FINNHUB_KEY = (env && env.FINNHUB_KEY) || INLINE_FINNHUB_KEY || "";
@@ -41,6 +42,19 @@ export async function onRequestGet({ request, env }) {
   // 옛 코드는 6자리 숫자(423920), 2024년부터 나온 건 가운데에 알파벳이 있다(0104N0).
   // 숫자만 받으면 신형 코드가 야후로 새어 나가 'no data'가 된다.
   if (KR_CODE.test(symbol)) {
+    /* 분봉은 따로 받는다 — 일봉과 성격이 달라 같은 응답에 섞으면 캐시 수명도 안 맞는다.
+       단타 화면이 장 초반 5분 구간을 보려면 이게 필요하다. */
+    if (wantMinute) {
+      try {
+        const m = await naverMinute(symbol, dbg);
+        const out = { symbol, currency: "KRW", src: "naver-minute", minutes: m };
+        if (debug) out.debug = dbg;
+        return new Response(JSON.stringify(out), { headers: JH });
+      } catch (e) {
+        dbg.push(`naverMinute: ${e.message}`);
+        return new Response(JSON.stringify({ error: "no minute data", symbol, debug: dbg }), { status: 502, headers: JH });
+      }
+    }
     let kr = null;
     try { kr = await naverDaily(symbol, range, dbg, period1, period2); }
     catch (e) { dbg.push(`naver: ${e.message}`); }
@@ -264,6 +278,27 @@ async function stooqDaily(symbol, dbg) {
   }
   return { series: [], ohlc: [] };
 }
+/* 국내 분봉 — 네이버 fchart. 응답은 1분 간격 7거래일치가 통째로 온다 (count는 무시된다).
+   시가·고가·저가는 전부 null이고 종가·거래량만 있다 — 5분봉으로 묶을 때 이 점을 감안해야 한다.
+   장중이면 마지막 봉이 '지금 이 분'이라, 다음 분이 되기 전까지는 값이 계속 바뀐다. */
+async function naverMinute(code, dbg) {
+  const u = `https://fchart.stock.naver.com/siseJson.nhn?symbol=${code}&requestType=0&count=2400&timeframe=minute`;
+  const r = await fetch(u, { headers: { "User-Agent": UA, "Referer": "https://finance.naver.com/" }, cf: { cacheTtl: 30 } });
+  dbg && dbg.push(`naverMinute ${code}: HTTP ${r.status}`);
+  if (!r.ok) throw new Error("HTTP " + r.status);
+  const txt = await r.text();
+  const out = [];
+  // ["202609100931", null, null, null, 253500, 417754, null] — 날짜·시·고·저·종·거래량
+  for (const m of txt.matchAll(/\["(\d{12})",\s*[^,]+,\s*[^,]+,\s*[^,]+,\s*([\d.]+),\s*(\d+)/g)) {
+    const d = m[1], c = +m[2];
+    if (!(c > 0)) continue;
+    out.push({ t: `${d.slice(0,4)}-${d.slice(4,6)}-${d.slice(6,8)} ${d.slice(8,10)}:${d.slice(10,12)}`,
+               close: c, vol: +m[3] || 0 });
+  }
+  if (!out.length) throw new Error("no rows");
+  return out;
+}
+
 // 국내상장 종목/ETF 일봉 — 네이버 금융 (fchart siseJson)
 // 응답은 엄격한 JSON이 아니라 JS 배열 리터럴 텍스트라서 정규화 후 파싱.
 async function naverDaily(code, range, dbg, period1 = null, period2 = null) {

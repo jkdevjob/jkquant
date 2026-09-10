@@ -85,6 +85,10 @@ input:focus,select:focus{outline:none;border-color:var(--vio)}
 .htable th:first-child,.htable td:first-child{text-align:left}
 .htable td.win{color:var(--buy);font-weight:700}
 .htable td.loss{color:var(--sell);font-weight:700}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:9px;overflow:hidden}
+.seg button{background:var(--panel);border:none;color:var(--dim);font-size:12px;font-weight:700;padding:6px 12px;cursor:pointer}
+.seg button+button{border-left:1px solid var(--line)}
+.seg button.on{background:var(--vio2);color:#fff}
 .sig{font-size:10.5px;font-weight:800;padding:2px 7px;border-radius:6px}
 .sig.on{background:rgba(54,211,153,.16);color:var(--buy)}
 .sig.off{background:rgba(100,110,147,.16);color:var(--faint)}
@@ -161,7 +165,7 @@ canvas{display:block;width:100%;height:auto}
 
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Morning Scalping · 09:00–09:30</div><h1>JK <span class="v">퀀트</span> 단타 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="scVer">v0.4</span></h1></div>
+    <div><div class="kicker">Morning Scalping · 09:00–09:30</div><h1>JK <span class="v">퀀트</span> 단타 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="scVer">v0.5</span></h1></div>
     <div class="jkmenu" id="jkmenuWrap">
       <button class="jkmenu-btn" id="jkmenuBtn" aria-label="메뉴" onclick="jkMenuToggle(event)">三</button>
       <div class="jkmenu-pop" id="jkmenuPop" hidden>
@@ -207,6 +211,12 @@ canvas{display:block;width:100%;height:auto}
   <!-- 2. 차트 -->
   <div class="card" id="chartCard">
     <h3><span class="dot"></span>📈 <span id="ch_title">차트</span> <span class="caret" onclick="closeChart()">✕ 닫기</span></h3>
+    <div class="row" style="gap:6px;margin-bottom:8px">
+      <div class="seg" id="ch_tf">
+        <button data-tf="day" class="on">일봉</button><button data-tf="5m">5분</button><button data-tf="1m">1분</button>
+      </div>
+      <span class="sub" id="ch_tfnote">70일 · 볼린저·RSI는 일봉 기준</span>
+    </div>
     <div class="chartbox"><canvas id="chart" width="860" height="420"></canvas></div>
     <div id="ch_guide" style="margin-top:10px;font-size:13px;font-weight:700;line-height:1.5"></div>
     <div class="levels" id="ch_levels" style="margin-top:8px"></div>
@@ -357,6 +367,31 @@ async function qFetch(code,range){
   const j=await r.json();
   if(!j.ohlc||!j.ohlc.length) throw new Error(j.error||'데이터 없음');
   return j;
+}
+/* ── 분봉 ──────────────────────────────────────────────────────────
+   네이버는 1분 '종가'만 준다(시·고·저는 null). 5분봉은 그 안의 1분 종가로 만든다 —
+   시=첫 종가, 고=최대, 저=최소, 종=마지막. 진짜 체결 기준 O/H/L은 아니지만
+   5분 안에서 어디까지 갔는지는 그대로 보인다.
+   장중이면 마지막 봉은 아직 안 닫힌 봉이라 계속 움직인다. */
+let TF='day';                       // 'day' | '5m' | '1m'
+async function mFetch(code){
+  const r=await fetch(`/api/quote?symbol=${encodeURIComponent(code)}&minute=1`,{headers:{'Accept':'application/json'}});
+  const j=await r.json();
+  if(!j.minutes||!j.minutes.length) throw new Error(j.error||'분봉 없음');
+  return j.minutes;
+}
+function toBars(min, step){
+  if(step<=1) return min.map(x=>({date:x.t, open:x.close, high:x.close, low:x.close, close:x.close, vol:x.vol}));
+  const out=[], key=t=>{ const h=+t.slice(11,13), m=+t.slice(14,16);
+    return t.slice(0,11)+String(h).padStart(2,'0')+':'+String(Math.floor(m/step)*step).padStart(2,'0'); };
+  let cur=null;
+  for(const x of min){
+    const k=key(x.t);
+    if(!cur||cur.date!==k){ cur={date:k, open:x.close, high:x.close, low:x.close, close:x.close, vol:0}; out.push(cur); }
+    cur.high=Math.max(cur.high,x.close); cur.low=Math.min(cur.low,x.close);
+    cur.close=x.close; cur.vol+=x.vol||0;
+  }
+  return out;
 }
 function analyze(j){
   const o=j.ohlc, cl=o.map(x=>x.close), n=o.length;
@@ -540,7 +575,7 @@ async function openChart(code,name){
   $('ch_title').textContent=`${name} (${code}) — 불러오는 중…`;
   $('chartCard').scrollIntoView({behavior:'smooth',block:'start'});
   try{
-    const j=await qFetch(code,'1y'); const a=analyze(j); CUR={code,name,a};
+    const a=await loadFor(code); CUR={code,name,a};
     $('ch_title').textContent=`${name} (${code})`;
     drawChart(a);
     const entry=a.price;
@@ -551,8 +586,25 @@ async function openChart(code,name){
 }
 async function refreshChartLive(){
   if(!CUR) return;
-  try{ const j=await qFetch(CUR.code,'1y'); const a=analyze(j); CUR.a=a; drawChart(a); renderGuide(a); }
+  try{ const a=await loadFor(CUR.code); CUR.a=a; drawChart(a); renderGuide(a); }
   catch(e){/* 조용히 무시 */}
+}
+/* 선택된 봉 단위로 받아 온다. 지표(볼린저·RSI)는 받은 봉 기준으로 다시 계산되므로
+   분봉에서는 '분봉 기준 신호'가 된다 — 일봉 신호와 같은 뜻이 아니다. */
+async function loadFor(code){
+  if(TF==='day'){ return analyze(await qFetch(code,'1y')); }
+  const min=await mFetch(code);
+  const bars=toBars(min, TF==='5m'?5:1);
+  return analyze({ohlc:bars, price:bars[bars.length-1].close});
+}
+function setTF(tf){
+  if(TF===tf) return;
+  TF=tf;
+  document.querySelectorAll('#ch_tf button').forEach(b=>b.classList.toggle('on', b.dataset.tf===tf));
+  $('ch_tfnote').textContent = tf==='day' ? '70일 · 볼린저·RSI는 일봉 기준'
+    : tf==='5m' ? '5분봉 7거래일 · 9:00~9:30 세로줄 · 지표도 5분봉 기준'
+    : '1분봉 7거래일 · 9:00~9:30 세로줄 · 지표도 1분봉 기준';
+  if(CUR) openChart(CUR.code, CUR.name);
 }
 function renderGuide(a){
   const el=$('ch_guide'); if(!el) return;
@@ -589,7 +641,9 @@ function drawChart(a){
   cv.width=cssW*dpr; cv.height=cssH*dpr;
   const ctx=cv.getContext('2d'); ctx.scale(dpr,dpr);
   ctx.clearRect(0,0,cssW,cssH);
-  const N=Math.min(70,a.o.length), o=a.o.slice(-N), rs=a.rs.slice(-N), cl=a.cl;
+  // 분봉은 70봉이면 1시간도 안 된다 — 5분봉은 하루치(78봉), 1분봉은 장 초반이 다 들어가게
+  const CAP = TF==='day' ? 70 : TF==='5m' ? 84 : 150;
+  const N=Math.min(CAP,a.o.length), o=a.o.slice(-N), rs=a.rs.slice(-N), cl=a.cl;
   const base=a.cl.length-N;
   // 볼린저 시리즈
   const bbs=o.map((_,i)=>bbUpper(cl,base+i,20,2));
@@ -606,11 +660,56 @@ function drawChart(a){
   // 볼린저 밴드
   const line=(sel,col,w)=>{ ctx.strokeStyle=col; ctx.lineWidth=w; ctx.beginPath(); let started=false; bbs.forEach((b,i)=>{ if(!b)return; const y=Y(sel(b)); if(!started){ctx.moveTo(X(i),y);started=true;} else ctx.lineTo(X(i),y); }); ctx.stroke(); };
   line(b=>b.up,'rgba(245,196,81,.85)',1.3); line(b=>b.mid,'rgba(154,166,201,.5)',1); line(b=>b.lo,'rgba(245,196,81,.4)',1.1);
+  /* ── 장 초반 5분 눈금 (분봉일 때만) ────────────────────────────
+     9:00~9:30을 5분마다 세로로 끊는다. 오프닝 레인지가 어디서 잡히는지 보려는 것이다.
+     x축이 '봉 번호'라 시각은 봉의 date에서 읽는다 — 빈 시간대는 애초에 봉이 없다. */
+  if(TF!=='day'){
+    const hm=d=>String(d||'').slice(11,16);
+    let lastDay=null;
+    ctx.font='9px -apple-system,sans-serif'; ctx.textAlign='center';
+    o.forEach((c,i)=>{
+      const t=hm(c.date); if(!t) return;
+      const day=String(c.date).slice(0,10);
+      const newDay = day!==lastDay; if(newDay) lastDay=day;
+      const isMark = t>='09:00' && t<='09:30' && (+t.slice(3)%5===0);
+      if(!isMark && !newDay) return;
+      const edge = t==='09:00'||t==='09:30';        // 오프닝 레인지의 양 끝
+      const x=X(i);
+      // 날짜가 바뀌는 자리는 굵게 — 어디까지가 어제인지 구분이 안 됐다
+      ctx.strokeStyle = newDay ? 'rgba(139,140,240,.55)' : edge ? 'rgba(139,140,240,.45)' : 'rgba(100,110,147,.3)';
+      ctx.lineWidth = newDay ? 1.4 : 1;
+      ctx.setLineDash(newDay?[]:[3,3]);
+      ctx.beginPath(); ctx.moveTo(x,4); ctx.lineTo(x,priceH-8); ctx.stroke();
+      ctx.setLineDash([]);
+      /* 5분마다 라벨을 달면 봉 간격(≈10px)보다 글자가 넓어 '1015202530'으로 뭉갠다.
+         구간의 양 끝만 적는다 — 가운데 눈금은 선만 봐도 5분 간격인 게 보인다. */
+      if(edge){ ctx.fillStyle='#8b8cf0'; ctx.fillText(t, x, priceH+10); }
+    });
+    ctx.textAlign='left';
+    // 오프닝 레인지 — 마지막 날 9:00~9:30의 고가·저가
+    const day0=String(o[o.length-1].date).slice(0,10);
+    const or=o.filter(c=>String(c.date).slice(0,10)===day0 && hm(c.date)>='09:00' && hm(c.date)<='09:30');
+    if(or.length>=2){
+      const orH=Math.max(...or.map(c=>c.high)), orL=Math.min(...or.map(c=>c.low));
+      [[orH,'OR 고'],[orL,'OR 저']].forEach(([v,lab])=>{
+        if(v<lo||v>hi) return;
+        const y=Y(v); ctx.strokeStyle='rgba(139,140,240,.6)'; ctx.setLineDash([2,4]); ctx.lineWidth=1;
+        ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(cssW-padR,y); ctx.stroke(); ctx.setLineDash([]);
+        ctx.fillStyle='#8b8cf0'; ctx.fillText(lab, cssW-padR-28, y-2);
+      });
+    }
+  }
   // 캔들
   o.forEach((c,i)=>{ const up=c.close>=c.open, col=up?'#36d399':'#f87b8c'; ctx.strokeStyle=col; ctx.fillStyle=col;
     ctx.beginPath(); ctx.moveTo(X(i),Y(c.high)); ctx.lineTo(X(i),Y(c.low)); ctx.stroke();
     const y1=Y(Math.max(c.open,c.close)), y2=Y(Math.min(c.open,c.close));
     ctx.fillRect(X(i)-cw/2, y1, cw, Math.max(1,y2-y1)); });
+  /* 1분봉은 시·고·저가 종가와 같다(네이버가 종가만 준다) — 캔들로 그리면 막대가 아니라
+     점 줄이 되어 읽히지 않는다. 그 경우만 종가 꺾은선을 덧그린다. */
+  if(TF==='1m'){
+    ctx.strokeStyle='#36d399'; ctx.lineWidth=1.3; ctx.beginPath();
+    o.forEach((c,i)=>{ const y=Y(c.close); i?ctx.lineTo(X(i),y):ctx.moveTo(X(i),y); }); ctx.stroke();
+  }
   // 진입/손절/목표 라인
   const entry=+$('ch_entry').value||a.price; const L=levelsOf(entry);
   const hline=(v,col,txt)=>{ if(v<lo||v>hi) return; const y=Y(v); ctx.strokeStyle=col; ctx.setLineDash([4,3]); ctx.lineWidth=1; ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(cssW-padR,y); ctx.stroke(); ctx.setLineDash([]); ctx.fillStyle=col; ctx.fillText(txt,2,y-2); };
@@ -623,6 +722,9 @@ function drawChart(a){
   rs.forEach((v,i)=>{ if(v==null)return; const y=RY(v); if(!st){ctx.moveTo(X(i),y);st=true;} else ctx.lineTo(X(i),y); }); ctx.stroke();
   ctx.fillStyle='#8b8cf0'; ctx.fillText('RSI '+fmt(a.rsi,0),2,rsiTop+12);
 }
+document.getElementById('ch_tf').addEventListener('click',e=>{
+  const b=e.target.closest('button'); if(b&&b.dataset.tf) setTF(b.dataset.tf);
+});
 window.addEventListener('resize',()=>{ if(CUR) drawChart(CUR.a); });
 document.addEventListener('input',e=>{ if(e.target&&e.target.id==='ch_entry'&&CUR){ renderLevels(+e.target.value||CUR.a.price); renderGuide(CUR.a); drawChart(CUR.a); } });
 
