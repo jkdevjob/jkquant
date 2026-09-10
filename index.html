@@ -185,7 +185,7 @@ table.cmp td:first-child,table.cmp th:first-child{text-align:left}
 .htable-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
 /* 표 밀도 — 줄높이가 곧 '한 화면에 몇 줄'이다. 패딩·행간을 조이고 글자를 반 포인트 줄였다.
    폭도 같이 줄어 가로 스크롤이 덜 필요하다. 값은 하나도 안 지운다 — 자리만 좁힌다. */
-.htable{width:100%;border-collapse:collapse;font-size:11px;min-width:548px}
+.htable{width:100%;border-collapse:collapse;font-size:11px;min-width:590px}
 /* 모의 성과는 6열뿐이라 거래이력용 폭(620px)을 쓰면 폰에서 수익률·연이 잘려 나간다 */
 .htable.narrow{min-width:0}
 .htable.narrow th,.htable.narrow td{padding:3px 4px}
@@ -493,7 +493,7 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
 </div>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.21</span></h1></div>
+    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.22</span></h1></div>
     <div class="jkmenu" id="jkmenuWrap">
       <button class="jkmenu-btn" id="jkmenuBtn" aria-label="메뉴" onclick="jkMenuToggle(event)">三</button>
       <div class="jkmenu-pop" id="jkmenuPop" hidden>
@@ -1542,7 +1542,7 @@ document.addEventListener('click',function(e){ var m=document.getElementById('jk
   <footer>
     <strong>JK 퀀트</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.21</b> · 2026-09-10</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.22</b> · 2026-09-10</div>
   </footer>
 </div>
 
@@ -2760,6 +2760,12 @@ function renderInfAnal(){
 /* ── 무한매수법 이력 ── */
 function renderInfHist(){
   const c=computeInf(), hist=curStrat().hist;
+  /* 손익률 = 그 매도의 손익 ÷ 원금. '이 매도가 원금 대비 몇 % 벌었나'를 본다.
+     매도분 원가로 나누면 별%·익절%와 거의 같은 값이라 옆 칸과 겹친다 —
+     원금 기준이라야 한 사이클 손익률을 줄마다 더해서 볼 수 있다. */
+  const cap=+((curStrat().settings||{}).principal)||0;
+  const pnlPct=v=>{ if(v==null||!cap) return '-'; const r=v/cap*100;
+    return `<span style="color:${v>=0?'var(--buy)':'var(--sell)'}">${v>=0?'+':''}${r.toFixed(2)}%</span>`; };
   $('inf_count').textContent=hist.length?`(${hist.length}건)`:'';
   let rows='';
   c.rows.forEach((h,i)=>{
@@ -2787,9 +2793,9 @@ function renderInfHist(){
        줄 위의 금색 선이 이미 같은 걸 말하고 있으니 여기서는 깃발 하나면 된다. */
     const endFlag=h.cycleEnd?' <span class="cyc-end" title="사이클 종료">🏁</span>':'';
     const rowStyle=h.cycleEnd?' style="border-top:2px solid var(--gold)"':'';
-    rows=`<tr class="${cls}"${rowStyle}><td>${dshort(h.date)}</td><td>${h.kind}${tflag}${endFlag}</td><td>${priceCell}</td><td>${qtyCell}</td><td>${profitCell}</td><td>${wn(h.balAfter)}</td><td>${fmtT(h.Tafter)}</td><td>${pctCell}</td><td>${starCell}</td><td style="white-space:nowrap"><span class="edit" onclick="editInf(${i})">✎</span> <span class="del" onclick="delInf(${i})">✕</span></td></tr>`+rows;
+    rows=`<tr class="${cls}"${rowStyle}><td>${dshort(h.date)}</td><td>${h.kind}${tflag}${endFlag}</td><td>${priceCell}</td><td>${qtyCell}</td><td>${(cx||sell)?pnlPct(h.profit):'-'}</td><td>${profitCell}</td><td>${wn(h.balAfter)}</td><td>${fmtT(h.Tafter)}</td><td>${pctCell}</td><td>${starCell}</td><td style="white-space:nowrap"><span class="edit" onclick="editInf(${i})">✎</span> <span class="del" onclick="delInf(${i})">✕</span></td></tr>`+rows;
   });
-  $('inf_table').innerHTML=`<tr><th>날짜</th><th>구분</th><th>체결가</th><th>수량</th><th>손익</th><th>잔금</th><th>T</th><th>별%</th><th>별지점</th><th></th></tr>`+(hist.length?rows:`<tr><td class="empty" colspan="10">아직 기록이 없습니다</td></tr>`);
+  $('inf_table').innerHTML=`<tr><th>날짜</th><th>구분</th><th>체결가</th><th>수량</th><th>손익률</th><th>손익</th><th>잔금</th><th>T</th><th>별%</th><th>별지점</th><th></th></tr>`+(hist.length?rows:`<tr><td class="empty" colspan="11">아직 기록이 없습니다</td></tr>`);
 }
 /* 날짜 → 입력순(ts) 정렬: 같은 날짜는 입력한 순서 유지 */
 function sortHist(arr){arr.sort((a,b)=>{const d=(a.date||'').localeCompare(b.date||'');return d!==0?d:((a.ts||0)-(b.ts||0))})}
