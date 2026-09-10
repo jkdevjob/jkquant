@@ -197,7 +197,21 @@ canvas{display:block;width:100%;height:auto}
     <h3><span class="dot"></span>🔎 전체 스크리닝 <span class="sub" style="font-weight:600">과매도 반등 · 볼린저 하단 이탈 + RSI&lt;40</span></h3>
     <p class="lead"><b>거래대금 상위 유니버스</b>(KOSPI·KOSDAQ)를 훑어 <b>과매도 반등 후보</b>를 찾는다 —
       볼린저 하단 이탈 + RSI&lt;40 중 <b>점수 65 이상</b>만. 목록에서 종목을 누르면 팝업으로 차트가 뜬다.
-      <span class="sub">(올해 실증: 점수≥65 평균 +1.72%·승률 62%. 추세추종은 엣지 0으로 폐기 — SCALPING.md 11절)</span></p>
+      <span class="sub">⚠ 이 전략은 <b>검증에 실패했다</b> — 8년 재검증에서 p=0.51. 아래 경고를 읽어라 (SCALPING.md 15절)</span></p>
+    <div class="warn" style="border-color:var(--sell)">
+      <b style="color:var(--sell)">⚠ 이 전략은 실증으로 뒷받침되지 않는다.</b><br>
+      11절이 보고한 <b>+1.72%/거래·승률 62%</b> 는 <b>1년치를 거래 단위로 센 값</b>이었다.
+      같은 날 잡은 거래들은 서로 독립이 아닌데(하루에 신호가 84개까지 뜬다) 독립으로 세는 바람에 부풀려졌다.
+      <b>8년·197종목·포트폴리오 회계로 다시 재면:</b>
+      <ul style="margin:6px 0 0 0">
+        <li>거래 단위 t=4.69 → <b>포트폴리오 t=0.92, p=0.51</b> (통계적으로 무의미)</li>
+        <li>최고 설정이 <b>연 +37만원인데 최대낙폭 −549만원</b> — 낙폭이 연수익의 15배</li>
+        <li>같은 1년 구간을 포트폴리오로 세면 +1.72%가 아니라 <b>−0.04%/거래, 승률 45%</b></li>
+        <li>보유 5일 이상에서는 이 신호가 <b>대조군보다 나쁘다</b> (−0.049%p → 60일 −1.729%p)</li>
+      </ul>
+      <b>화면의 점수·신호는 참고용 관찰 도구로만 쓰고, 이걸 근거로 실제 돈을 넣지 마라.</b>
+      전체 검증 기록은 SCALPING.md 13~23절에 있다.
+    </div>
     <div class="row" style="margin-bottom:8px;align-items:flex-end">
       <div class="fld" style="flex:0 0 116px"><label>유니버스 크기</label>
         <select id="uniN"><option>50</option><option selected>100</option><option>150</option><option>200</option></select></div>
@@ -215,8 +229,9 @@ canvas{display:block;width:100%;height:auto}
         <div class="sresult" id="sres" hidden></div>
       </div>
     </div>
-    <p class="note">🟢 신호 = <b>당일 저가가 볼린저 하단 이탈 & RSI&lt;40</b>, 그중 <b>점수 ≥65</b>만 진입 후보.
-      진입은 <b>다음날 시가</b>, 손절 −4% · 목표 +6% · 최대 5일. 하루 3~4종목이 정상이고 <b>없는 날엔 쉬는 게 전략</b>이다.</p>
+    <p class="note">🟢 신호 = <b>당일 저가가 볼린저 하단 이탈 &amp; RSI&lt;40</b>, 그중 <b>점수 ≥65</b>.
+      <b style="color:var(--sell)">단, 8년 재검증에서 이 규칙은 대조군을 이기지 못했다(p=0.51).</b>
+      아래 숫자는 규칙이 무엇을 가리키는지 보여주는 것이지 수익을 약속하지 않는다.</p>
   </div>
 
   <!-- 1b. 백테스트 -->
@@ -337,6 +352,36 @@ canvas{display:block;width:100%;height:auto}
     </div>
   </div>
 
+  <!-- 3d. 검증 기록 -->
+  <div class="card">
+    <h3 onclick="toggleSec('verifyBody',this)"><span class="dot"></span>📉 검증 기록 — 무엇이 안 되는지 <span class="caret">▾</span></h3>
+    <div id="verifyBody">
+    <p class="lead">이 앱을 만들며 아침 단타·스윙 전략을 실제 데이터로 검증한 기록이다.
+      <b>안 되는 것을 아는 게 되는 것을 찾는 것보다 확실했다.</b> 전문은 SCALPING.md 13~23절.</p>
+    <div class="htable-wrap"><table class="htable">
+      <thead><tr><th>검증 대상</th><th>표본</th><th>결과</th></tr></thead>
+      <tbody>
+      <tr><td><b>아침 9:00~9:30 당일청산</b><div class="sub">ORB·갭·VWAP·초반급등 등</div></td>
+          <td>241거래일 실제 1분봉</td><td class="loss">전 신호 마이너스. 대조군 −0.305%/일</td></tr>
+      <tr><td><b>이 앱의 스윙 규칙</b><div class="sub">볼린저하단+RSI&lt;40, −4%/+6%, 5일</div></td>
+          <td>8년 197종목</td><td class="loss">연 +37만원 · 낙폭 −549만원 · <b>p=0.51</b></td></tr>
+      <tr><td><b>캔들 패턴 12종</b><div class="sub">망치·장악·샛별·적삼병 등</div></td>
+          <td>8년 40만봉</td><td class="loss">36칸 중 유의한 플러스 0개</td></tr>
+      <tr><td><b>유튜브 매매법 16개</b><div class="sub">주도테마 대장주·불타기·3분봉 양봉3연속 등</div></td>
+          <td>8년 + 241일 분봉</td><td class="loss">21개 주장 중 확인 1개(퍼센트 목표 금지)</td></tr>
+      <tr><td><b>ETF·인버스·미국시장 조건</b></td><td>8년 2,016일</td>
+          <td class="loss">76개 조건 전수조사 생존 0개</td></tr>
+      <tr><td><b>일일 브리핑(섹터 파급)</b></td><td>8년</td>
+          <td class="loss">미국 1%↑ → 한국 시가에 0.24~0.48% 이미 반영, 장중 잔여 0</td></tr>
+      <tr><td><b>비유동성 20일 보유</b><div class="sub">문헌 기반 · 유일 생존</div></td>
+          <td>6년</td><td class="win">월 +72만원(선정 기여분 29만) · 단타 아님</td></tr>
+      </tbody></table></div>
+    <p class="note"><b>반복해서 확인된 것:</b> ① 매매가 잦을수록 마찰이 이긴다(매일 왕복 시 마찰만 연 126%).
+      ② 뜨거운 것을 쫓는 쪽은 전부 손해였다. ③ 고정 퍼센트 손절·목표는 유의하게 나빴다.
+      ④ 거래 단위로 세면 부풀려진다 — 날짜 단위로 세라.</p>
+    </div>
+  </div>
+
   <!-- 4. 전략 규칙 -->
   <div class="card">
     <h3 onclick="toggleSec('ruleBody',this)"><span class="dot"></span>⚡ 아침 단타 규칙 <span class="caret">▾</span></h3>
@@ -364,8 +409,10 @@ canvas{display:block;width:100%;height:auto}
       <div class="st"><span class="n">5</span>리스크</div>
       <ul><li><b>종목당 동시 1포지션</b> (같은 종목이 연속 신호로 반복 등장)</li></ul>
     </div>
-    <p class="note">올해 실증 기대: 평균 <b>+1.72%/거래 · 승률 62%</b>(마찰 0.5% 반영). 표본 9개월·생존편향·일봉 가정 등
-      한계는 SCALPING.md 11.6에 적어뒀다. <b>이건 3~5일 보유하는 스윙이지 9:00~9:30 단타가 아니다.</b>
+    <p class="note" style="border-color:var(--sell)"><b style="color:var(--sell)">⚠ 폐기된 기대치.</b>
+      한때 "평균 +1.72%/거래 · 승률 62%"로 적어뒀으나 <b>거래 단위로 센 오류</b>였다.
+      8년 포트폴리오 회계 재검증 결과는 <b>연 +37만원 · 최대낙폭 −549만원 · p=0.51</b> 이다.
+      <b>이건 3~5일 보유하는 스윙이고, 그마저도 검증되지 않았다.</b> 근거는 SCALPING.md 15절.
       투자 권유 아님·손실 위험 큼.</p>
     </div>
 
@@ -538,7 +585,7 @@ function sig(a){
   return 'off';
 }
 /* ── 점수(0~100) v2: 낮은 RSI·깊은 하단이탈·급락일수록 높다 ──
-   올해 실증 5분위: Q1 −0.44% → Q5 +1.67% (승률 42%→62%), corr +0.165.
+   ※ 이 점수는 8년 재검증에서 대조군을 이기지 못했다(포트폴리오 p=0.51). SCALPING.md 15절.
    거래량 급증(2배↑)은 패닉 물량이라 오히려 감점. */
 function score(s){
   if(!s.bb) return 0;
@@ -554,7 +601,7 @@ function score(s){
   sc += Math.min(7, Math.log10(Math.max(1,(s.amount||0)/50))*7);      // 유동성
   return Math.round(Math.max(0,Math.min(100,sc)));
 }
-const PICK=65;   // 진입 후보 점수 임계 (실증: ≥65 → 평균 +1.72%, 승률 62%, 하루 3~4종목)
+const PICK=65;   // 진입 후보 점수 임계. ※ 8년 재검증에서 이 규칙은 대조군을 못 이겼다(p=0.51) — SCALPING.md 15절
 
 /* ══ 전체 스크리닝 ══ */
 let SCREEN=[], _screening=false, LIVE=false, _liveTimer=null, _lastScanAt=0;
@@ -640,7 +687,7 @@ function renderScreen(){
   const hits=SCREEN.filter(x=>x.sig==='on' && x.score>=PICK);
   if(!SCREEN.length){ b.innerHTML='<p class="sub">결과가 없습니다.</p>'; return; }
   if(!hits.length){ const near=SCREEN.filter(x=>x.sig==='on').length;
-    b.innerHTML='<p class="sub">오늘 <b>점수 '+PICK+' 이상</b> 진입 후보가 없습니다. (신호 '+near+'건 / 유니버스 '+SCREEN.length+'개 검사)<br>실증상 하루 평균 3~4종목이라 <b>없는 날이 정상</b>입니다 — 억지로 낮은 점수를 잡지 않는 것이 이 전략의 핵심입니다.</p>'; return; }
+    b.innerHTML='<p class="sub">오늘 <b>점수 '+PICK+' 이상</b> 진입 후보가 없습니다. (신호 '+near+'건 / 유니버스 '+SCREEN.length+'개 검사)<br>하루 평균 3~4종목이라 없는 날이 정상입니다.</p>'; return; }
   const scoreCol=v=> v>=75?'var(--buy)':v>=55?'var(--gold)':'var(--dim)';
   b.innerHTML=`<div class="htable-wrap"><table class="htable"><thead><tr>
     <th>점수</th><th>종목</th><th>현재가</th><th>등락</th><th>RSI</th><th>하단대비</th><th>거래대금(억)</th><th>모의</th></tr></thead><tbody>`
@@ -660,7 +707,8 @@ function renderScreen(){
        </tr>`;
      }).join('')
     + `</tbody></table></div><p class="note">점수(0~100) = RSI 낮을수록 40 + 하단 아래 깊이 20 + 당일 급락 15 + 거래량 정상 10 + 변동성 8 + 유동성 7.
-      <b>점수 ≥${PICK}만 표시</b>(실증 5분위 Q1 −0.44% → Q5 +1.67%). 하단대비 음수 = 밴드 아래.</p>`;
+      <b>점수 ≥${PICK}만 표시.</b> <span style="color:var(--sell)">이 규칙은 8년 재검증에서 대조군을 이기지 못했다(p=0.51) — 관찰용이다.</span>
+      하단대비 음수 = 밴드 아래.</p>`;
 }
 
 /* 검색 — 특정 종목 바로 차트 */
@@ -898,8 +946,8 @@ function renderGuide(a){
   else if(a.rsi>=60){ msg=`⚠️ RSI ${Math.round(a.rsi)} — 이미 반등했다. 신규 진입 대상 아님`; col='var(--gold)'; }
   else if(a.bb && a.last.low<=a.bb.lo && a.rsi<40){
     const sc=score({bb:a.bb,rsi:a.rsi,last:a.last,price:a.price,chg:a.chg,volR:a.volR,amount:(a.price*(a.last.vol||0)/1e8)});
-    msg = sc>=PICK ? `🟢 진입 후보 (점수 ${sc}) — 다음날 시가 진입 · 손절 ${commas(L.stop)} · 목표 ${commas(L.tgt)} · 최대 5일`
-                   : `🟡 신호는 떴지만 점수 ${sc} (< ${PICK}) — 실증상 저점수는 마이너스. 건너뛴다`;
+    msg = sc>=PICK ? `🟢 규칙 충족 (점수 ${sc}) — 참고용. 이 규칙은 8년 재검증에서 대조군을 못 이겼다(p=0.51)`
+                   : `🟡 신호는 떴지만 점수 ${sc} (< ${PICK}) — 규칙상 제외`;
     col = sc>=PICK ? 'var(--buy)' : 'var(--gold)'; }
   else { msg='⏳ 관망 — 진입 조건(볼린저 하단 이탈 + RSI<40) 미충족'; col='var(--dim)'; }
   const realtime = KIScfg && KIScfg.configured;
@@ -913,7 +961,7 @@ function openChartModal(){ const o=$('chartOverlay'); if(o){ o.classList.add('on
 function closeChart(){ const o=$('chartOverlay'); if(o) o.classList.remove('on'); document.body.classList.remove('modal-open'); CUR=null; }
 document.addEventListener('keydown',e=>{ if(e.key==='Escape'&&chartOpen()) closeChart(); });
 function levelsOf(entry){
-  return {entry, stop:entry*(1-0.04), tgt:entry*1.06};   // 실증 최적: −4% / +6% · 최대 5일 보유
+  return {entry, stop:entry*(1-0.04), tgt:entry*1.06};   // ※ 고정 퍼센트 목표는 18절에서 유의하게 나쁘다고 나왔다(t=−3.05)
 }
 function renderLevels(entry){
   const L=levelsOf(entry);
