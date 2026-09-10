@@ -163,7 +163,7 @@ canvas{display:block;width:100%;height:auto}
 <div id="gate">
   <div class="gbox">
     <div class="glogo">JK <span class="v">퀀트</span> 단타</div>
-    <div class="gsub" id="gate_sub">Google 계정으로 로그인하면 관심종목·포지션·일지가 이 기기에 저장됩니다.</div>
+    <div class="gsub" id="gate_sub">이 화면은 <b>소유자 계정</b>만 볼 수 있습니다.</div>
     <button id="gbtn" onclick="googleLogin()">
       <svg viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
       Google로 로그인
@@ -1126,22 +1126,47 @@ async function kisBalance(){
   }catch(e){ el.innerHTML='<span class="sub" style="color:var(--sell)">'+esc(e.message||e)+'</span>'; }
 }
 
-/* ══ 로그인 ══ */
-let me=null;
+/* ══ 로그인 · 소유자 확인 ══
+   단타 화면은 소유자만 본다. 허용 계정은 서버(/api/owner)가 정한다 —
+   이메일을 공개 저장소에 박지 않고 환경변수(OWNER_EMAIL)로 바꾸기 위함. */
+let me=null, OWNERS=null;
+async function loadOwners(){
+  if(OWNERS) return OWNERS;
+  const r=await fetch('/api/owner',{cache:'no-store'});      // 실패 시 예외 → 잠금(fail-closed)
+  const j=await r.json();
+  OWNERS=(j.owners||[]).map(s=>String(s).toLowerCase());
+  return OWNERS;
+}
+function denyGate(user,msg){
+  stopLive();
+  $('gate').style.display='flex'; $('app').style.display='none';
+  $('gate_sub').innerHTML=msg;
+  const b=$('gbtn'); if(b){ b.textContent='다른 계정으로 로그인';
+    b.onclick=()=>{ window.fb.signOut(window.fb.auth).then(googleLogin); }; }
+}
 function googleLogin(){ const err=$('gate_err'); if(err) err.textContent=''; window.fb.signInWithPopup(window.fb.auth,window.fb.provider).catch(e=>{ if(err) err.textContent=(e&&e.message)||'로그인 실패'; }); }
 function doLogout(){ window.fb.signOut(window.fb.auth); }
 function renderBadge(){ const b=$('userbadge'); if(!b) return; if(!me){ b.innerHTML=''; return; } b.innerHTML=`${me.photoURL?`<img src="${esc(me.photoURL)}" alt="">`:''}<span>${esc(me.displayName||me.email||'')}</span> · <button class="lo" onclick="doLogout()">로그아웃</button>`; }
 function boot(){
   ['c_r','c_l','c_c','c_p'].forEach(id=>{ const el=$(id); if(el) el.addEventListener('input',recalc); });
   if(!$('f_date').value) $('f_date').value=new Date().toISOString().slice(0,10);
-  window.fb.onAuthStateChanged(window.fb.auth, user=>{
+  window.fb.onAuthStateChanged(window.fb.auth, async user=>{
     me=user||null; renderBadge();
-    if(user){
-      $('gate').style.display='none'; $('app').style.display='';
-      PKEY='jkq_scalp_pos_'+user.uid; LKEY='jkq_scalp_log_'+user.uid; AKEY='jkq_scalp_arch_'+user.uid;
-      $('log_owner').textContent='· '+(user.displayName||user.email||'');
-      loadAll(); loadArch(); recalc(); renderPos(); renderLog(); renderArch(); kisInit(); archAuto();
-    }else{ stopLive(); $('gate').style.display='flex'; $('app').style.display='none'; }
+    if(!user){ stopLive(); $('gate').style.display='flex'; $('app').style.display='none';
+      $('gate_sub').innerHTML='이 화면은 <b>소유자 계정</b>만 볼 수 있습니다.'; return; }
+    let owners;
+    try{ owners=await loadOwners(); }
+    catch(e){ denyGate(user,'권한 확인에 실패했습니다. 새로고침해 주세요.<br><span class="sub">'+esc(e.message||e)+'</span>'); return; }
+    const email=String(user.email||'').toLowerCase();
+    if(!owners.includes(email)){
+      denyGate(user,'<b>'+esc(user.email||'')+'</b> 계정에는 접근 권한이 없습니다.<br>'
+        +'<span class="sub">이 이메일을 허용하려면 Cloudflare 환경변수 <b>OWNER_EMAIL</b> 에 추가하세요.</span>');
+      return;
+    }
+    $('gate').style.display='none'; $('app').style.display='';
+    PKEY='jkq_scalp_pos_'+user.uid; LKEY='jkq_scalp_log_'+user.uid; AKEY='jkq_scalp_arch_'+user.uid;
+    $('log_owner').textContent='· '+(user.displayName||user.email||'');
+    loadAll(); loadArch(); recalc(); renderPos(); renderLog(); renderArch(); kisInit(); archAuto();
   });
 }
 if(window.fb) boot(); else window.addEventListener('fb-ready', boot);
