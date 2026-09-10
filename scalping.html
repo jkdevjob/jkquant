@@ -1129,12 +1129,12 @@ async function kisBalance(){
 /* ══ 로그인 · 소유자 확인 ══
    단타 화면은 소유자만 본다. 허용 계정은 서버(/api/owner)가 정한다 —
    이메일을 공개 저장소에 박지 않고 환경변수(OWNER_EMAIL)로 바꾸기 위함. */
-let me=null, OWNERS=null;
+let me=null, OWNERS=null, OWNSRC='';
 async function loadOwners(){
   if(OWNERS) return OWNERS;
   const r=await fetch('/api/owner',{cache:'no-store'});      // 실패 시 예외 → 잠금(fail-closed)
   const j=await r.json();
-  OWNERS=(j.owners||[]).map(s=>String(s).toLowerCase());
+  OWNERS=(j.owners||[]).map(s=>String(s).toLowerCase()); OWNSRC=j.source||'';
   return OWNERS;
 }
 function denyGate(user,msg){
@@ -1159,8 +1159,11 @@ function boot(){
     catch(e){ denyGate(user,'권한 확인에 실패했습니다. 새로고침해 주세요.<br><span class="sub">'+esc(e.message||e)+'</span>'); return; }
     const email=String(user.email||'').toLowerCase();
     if(!owners.includes(email)){
+      const srcTxt = OWNSRC==='default' ? '아직 <b>OWNER_EMAIL</b> 을 설정하지 않아 기본 계정만 허용된 상태입니다.'
+                   : '현재 허용 목록은 환경변수 <b>'+esc(OWNSRC)+'</b> 에서 읽고 있습니다.';
       denyGate(user,'<b>'+esc(user.email||'')+'</b> 계정에는 접근 권한이 없습니다.<br>'
-        +'<span class="sub">이 이메일을 허용하려면 Cloudflare 환경변수 <b>OWNER_EMAIL</b> 에 추가하세요.</span>');
+        +'<span class="sub">'+srcTxt+'<br>Cloudflare → jkquant → Settings → Variables 에서 '
+        +'<b>OWNER_EMAIL</b> 값을 <b>'+esc(user.email||'')+'</b> 로 넣고 <b>재배포</b>하면 열립니다.</span>');
       return;
     }
     $('gate').style.display='none'; $('app').style.display='';
