@@ -1086,5 +1086,44 @@ console.log('[25] 모의 성과 → 거래이력 이동');
 }
 
 
+/* ════ 26. 단타 분봉 — 장 초반 5분 눈금 ════
+   단타 차트가 일봉이라 하루 안의 9:00~9:30을 그릴 축이 아예 없었다.
+   네이버 1분봉(7거래일)을 받아 5분으로 묶고, 그 위에 눈금을 긋는다. */
+console.log('[26] 단타 분봉 — 장 초반 5분 눈금');
+{
+  const q=fs.existsSync(__d+'/functions/api/quote.js')?fs.readFileSync(__d+'/functions/api/quote.js','utf8'):'';
+  const sc=fs.existsSync(__d+'/scalping.html')?fs.readFileSync(__d+'/scalping.html','utf8'):'';
+  ok('분봉 API 존재', /const wantMinute = url\.searchParams\.get\("minute"\) === "1"/.test(q)
+     && /async function naverMinute\(code, dbg\)/.test(q));
+  ok('분봉은 국내 코드에서만', q.indexOf('if (wantMinute) {') > q.indexOf('if (KR_CODE.test(symbol)) {'));
+  ok('timeframe=minute로 받는다', /timeframe=minute/.test(q));
+  // 네이버 분봉은 시·고·저가 전부 null이고 종가·거래량만 온다
+  ok('종가·거래량만 파싱', /\\\["\(\\d\{12\}\)",\\s\*\[\^,\]\+,\\s\*\[\^,\]\+,\\s\*\[\^,\]\+,\\s\*\(\[\\d\.\]\+\)/.test(q)
+     || /matchAll\(\/\\\[/.test(q));
+
+  ok('봉 단위 토글', /<div class="seg" id="ch_tf">/.test(sc)
+     && /data-tf="day"/.test(sc) && /data-tf="5m"/.test(sc) && /data-tf="1m"/.test(sc));
+  ok('토글이 배선돼 있다', /getElementById\('ch_tf'\)\.addEventListener\('click'/.test(sc)
+     && /function setTF\(tf\)/.test(sc));
+  // 1분 종가를 묶어 5분 O/H/L/C를 만든다 (네이버가 O/H/L을 안 주므로)
+  ok('5분봉 합성', /function toBars\(min, step\)/.test(sc)
+     && /cur\.high=Math\.max\(cur\.high,x\.close\); cur\.low=Math\.min\(cur\.low,x\.close\);/.test(sc));
+  ok('지표도 받은 봉 기준', /return analyze\(\{ohlc:bars, price:bars\[bars\.length-1\]\.close\}\);/.test(sc));
+
+  // 이게 이번 작업의 요구사항 — 9:00~9:30을 5분마다 끊는다
+  ok('9:00~9:30 5분 눈금', /const isMark = t>='09:00' && t<='09:30' && \(\+t\.slice\(3\)%5===0\);/.test(sc));
+  ok('일봉에는 안 그린다', /if\(TF!=='day'\)\{[\s\S]{0,400}?const isMark/.test(sc));
+  /* 5분마다 라벨을 달면 봉 간격(≈10px)보다 글자가 넓어 '1015202530'으로 뭉갠다 */
+  ok('라벨은 양 끝만', /const edge = t==='09:00'\|\|t==='09:30';/.test(sc)
+     && /if\(edge\)\{ ctx\.fillStyle='#8b8cf0'; ctx\.fillText\(t, x, priceH\+10\); \}/.test(sc));
+  ok('날짜 경계는 굵게', /newDay \? 'rgba\(139,140,240,\.55\)'/.test(sc));
+  ok('오프닝 레인지 고·저', /\[\[orH,'OR 고'\],\[orL,'OR 저'\]\]/.test(sc));
+  // 1분봉은 O/H/L이 종가와 같아 캔들이 점 줄이 된다
+  ok('1분봉은 꺾은선을 덧그린다', /if\(TF==='1m'\)\{[\s\S]{0,220}?ctx\.stroke\(\);/.test(sc));
+  // 일봉 70봉 그대로면 5분봉은 6시간도 못 본다
+  ok('봉 단위마다 표시 개수가 다르다', /const CAP = TF==='day' \? 70 : TF==='5m' \? 84 : 150;/.test(sc));
+}
+
+
 console.log(`\n════ 결과: ${pass} PASS / ${fail} FAIL ${fail===0?'— ALL PASS ★':'— 배포 금지, 위 ✗ 항목 수정 필요'} ════`);
 process.exit(fail===0?0:1);
