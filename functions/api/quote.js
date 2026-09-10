@@ -332,10 +332,10 @@ async function naverDaily(code, range, dbg, period1 = null, period2 = null) {
     if (!row || row.length < 5) continue;
     const ds = String(row[0]); // 20260101
     const date = ds.length === 8 ? `${ds.slice(0,4)}-${ds.slice(4,6)}-${ds.slice(6,8)}` : ds;
-    const o = +row[1], h = +row[2], l = +row[3], c = +row[4];
+    const o = +row[1], h = +row[2], l = +row[3], c = +row[4], vol = +row[5] || 0;
     if (!(c > 0)) continue;
     series.push({ date, close: c });
-    ohlc.push({ date, open: o || c, high: h || c, low: l || c, close: c });
+    ohlc.push({ date, open: o || c, high: h || c, low: l || c, close: c, vol });
   }
   if (!series.length) throw new Error("no rows");
   return { series, ohlc, price: series[series.length - 1].close };

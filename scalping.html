@@ -171,7 +171,7 @@ canvas{display:block;width:100%;height:auto}
 
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Morning Scalping · 09:00–09:30</div><h1>JK <span class="v">퀀트</span> 단타 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="scVer">v0.5</span></h1></div>
+    <div><div class="kicker">Morning Scalping · 09:00–09:30</div><h1>JK <span class="v">퀀트</span> 단타 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="scVer">v1.0</span></h1></div>
     <div class="jkmenu" id="jkmenuWrap">
       <button class="jkmenu-btn" id="jkmenuBtn" aria-label="메뉴" onclick="jkMenuToggle(event)">三</button>
       <div class="jkmenu-pop" id="jkmenuPop" hidden>
@@ -190,9 +190,10 @@ canvas{display:block;width:100%;height:auto}
 
   <!-- 1. 전체 스크리닝 -->
   <div class="card">
-    <h3><span class="dot"></span>🔎 전체 스크리닝 <span class="sub" style="font-weight:600">볼린저 상단 돌파 + RSI≥55</span></h3>
-    <p class="lead"><b>거래대금 상위 유니버스</b>(KOSPI·KOSDAQ)를 자동으로 훑어, 오늘 <b>매수 신호</b>가 뜬 종목을 찾아 목록으로 보여준다.
-      목록에서 종목을 누르면 아래에 <b>캔들·볼린저·RSI 차트</b>가 뜬다. (단타는 유동성이 생명이라 거래대금 상위가 사실상 후보 전체)</p>
+    <h3><span class="dot"></span>🔎 전체 스크리닝 <span class="sub" style="font-weight:600">과매도 반등 · 볼린저 하단 이탈 + RSI&lt;40</span></h3>
+    <p class="lead"><b>거래대금 상위 유니버스</b>(KOSPI·KOSDAQ)를 훑어 <b>과매도 반등 후보</b>를 찾는다 —
+      볼린저 하단 이탈 + RSI&lt;40 중 <b>점수 65 이상</b>만. 목록에서 종목을 누르면 팝업으로 차트가 뜬다.
+      <span class="sub">(올해 실증: 점수≥65 평균 +1.72%·승률 62%. 추세추종은 엣지 0으로 폐기 — SCALPING.md 11절)</span></p>
     <div class="row" style="margin-bottom:8px;align-items:flex-end">
       <div class="fld" style="flex:0 0 116px"><label>유니버스 크기</label>
         <select id="uniN"><option>50</option><option selected>100</option><option>150</option><option>200</option></select></div>
@@ -210,8 +211,25 @@ canvas{display:block;width:100%;height:auto}
         <div class="sresult" id="sres" hidden></div>
       </div>
     </div>
-    <p class="note">🟢 신호 = <b>당일 고가가 볼린저 상단 돌파 & RSI≥55</b>. 신호는 진입 <b>후보</b>일 뿐 —
-      실제 진입은 목록에서 종목을 눌러 차트로 09:00~09:03 시가범위 돌파를 확인하고 한다.</p>
+    <p class="note">🟢 신호 = <b>당일 저가가 볼린저 하단 이탈 & RSI&lt;40</b>, 그중 <b>점수 ≥65</b>만 진입 후보.
+      진입은 <b>다음날 시가</b>, 손절 −4% · 목표 +6% · 최대 5일. 하루 3~4종목이 정상이고 <b>없는 날엔 쉬는 게 전략</b>이다.</p>
+  </div>
+
+  <!-- 1b. 백테스트 -->
+  <div class="card">
+    <h3><span class="dot"></span>🧪 백테스트 <span class="sub" style="font-weight:600">전략을 과거에 그대로 돌려본다</span></h3>
+    <p class="lead">지금 화면의 규칙(볼린저 하단 이탈 + RSI&lt;40 · 점수≥65 · 다음날 시가 진입 · −4%/+6% · 최대 5일)을
+      과거 일봉에 그대로 적용해 성과를 낸다. <b>대조군(신호 없이 전종목 매일 진입)</b>과 같이 보여준다 —
+      절대값이 아니라 <b>대조군 대비 초과분</b>이 진짜 엣지다.</p>
+    <div class="row" style="margin-bottom:8px;align-items:flex-end">
+      <div class="fld" style="flex:0 0 116px"><label>유니버스</label>
+        <select id="bt_uni"><option>50</option><option selected>100</option><option>150</option><option>200</option></select></div>
+      <div class="fld" style="flex:0 0 128px"><label>시작일</label><input id="bt_from" type="date" value="2026-01-01"></div>
+      <button class="prim" onclick="runBacktest()" id="btBtn" style="height:38px">▶ 백테스트 실행</button>
+    </div>
+    <div class="sub" id="bt_msg" style="margin-bottom:8px;min-height:16px"></div>
+    <div id="bt_prog" style="display:none;height:6px;background:var(--panel2);border-radius:4px;overflow:hidden;margin-bottom:10px"><div id="bt_bar" style="height:100%;width:0;background:var(--vio2);transition:width .1s"></div></div>
+    <div id="bt_body"></div>
   </div>
 
   <!-- 2. 차트 (팝업 모달) -->
@@ -241,7 +259,8 @@ canvas{display:block;width:100%;height:auto}
   <!-- 3. 보유 포지션 -->
   <div class="card">
     <h3><span class="dot"></span>💼 보유 포지션 <span class="caret" onclick="refreshPos()">🔄 현재가 갱신</span></h3>
-    <p class="lead">진입을 기록하면 여기서 <b>손절가·1차목표·현재 평가손익</b>을 본다. 청산하면 아래 모의 일지로 넘어간다.</p>
+    <p class="lead"><b>모의투자</b> — 목록의 ＋진입을 누르면 여기에 담기고 <b>손절(−4%)·목표(+6%)·평가손익</b>을 추적한다.
+      실제 돈은 나가지 않는다. 청산하면 아래 모의 일지로 넘어가 승률·기대값이 쌓인다.</p>
     <div id="pos_body"></div>
   </div>
 
@@ -274,36 +293,39 @@ canvas{display:block;width:100%;height:auto}
     <h3 onclick="toggleSec('ruleBody',this)"><span class="dot"></span>⚡ 아침 단타 규칙 <span class="caret">▾</span></h3>
     <div id="ruleBody">
     <div class="step">
-      <div class="st"><span class="n">1</span>종목선정 ✓</div>
-      <ul><li>일봉 <b>볼린저(20,2σ) 상단 종가 돌파</b> + <b>RSI(14) ≥ <span class="k">55</span></b> · 거래대금 상위·재료 확인 · 장전 5~10개</li></ul>
+      <div class="st"><span class="n">1</span>유니버스</div>
+      <ul><li>KOSPI·KOSDAQ <b>거래대금 50억 이상</b> (현금·채권 ETF 제외)</li></ul>
     </div>
     <div class="step">
-      <div class="st"><span class="n">2</span>매수</div>
-      <ul><li>09:00 시가 금지 → 첫 <b>3분 시가범위 고가 +1틱</b> 돌파 + 거래량 · 절반 정찰 후 증량</li></ul>
+      <div class="st"><span class="n">2</span>신호 — 과매도 반등</div>
+      <ul><li>일봉 <b>볼린저(20,2) 하단 이탈</b> + <b>RSI(14) &lt; <span class="k">40</span></b></li>
+          <li class="sub">추세추종(밴드상단 돌파)은 올해 실증에서 대조군 대비 −0.09%p로 <b>엣지 0</b> → 폐기</li></ul>
     </div>
     <div class="step">
-      <div class="st"><span class="n">3</span>손절 (먼저·짧게)</div>
-      <ul><li>진입가 <b>−<span class="k">1.0%</span></b> 또는 시가범위 저가 중 가까운 쪽 · 상한 −1.5% · 물타기 금지</li></ul>
+      <div class="st"><span class="n">3</span>선별 — 점수 ≥ <span class="k">65</span></div>
+      <ul><li>RSI 낮을수록·하단 아래 깊을수록·급락일수록 가점, <b>거래량 급증(2배↑)은 감점</b>(패닉 물량)</li>
+          <li><b>"상위 N개"가 아니라 임계값</b> — 하루 3~4종목, <b>없는 날이 정상</b></li></ul>
     </div>
     <div class="step">
-      <div class="st"><span class="n">4</span>익절 (달리는 말은 탄다)</div>
-      <ul><li><b>+<span class="k">2.0%</span>에서 절반</b>, 잔량은 <b>트레일링(고점 −0.7%)</b> · 첫 음봉 전량청산 금지</li></ul>
+      <div class="st"><span class="n">4</span>진입·청산</div>
+      <ul><li>진입 <b>다음날 시가</b> · 손절 <b>−<span class="k">4%</span></b> · 익절 <b>+<span class="k">6%</span></b> · 최대 <b>5일</b> 보유 후 종가청산</li>
+          <li class="sub">−1%/−2% 타이트 손절은 일중 변동(평균 저가 −3.9%)에 다 털린다 — 실증에서 −2%/+3%만 유일하게 마이너스</li></ul>
     </div>
     <div class="step">
-      <div class="st"><span class="n">5</span>시간청산</div>
-      <ul><li><b>09:30 잔량 전량</b> · 손절 후 재진입 하루 1회</li></ul>
+      <div class="st"><span class="n">5</span>리스크</div>
+      <ul><li><b>종목당 동시 1포지션</b> (같은 종목이 연속 신호로 반복 등장)</li></ul>
     </div>
-    <p class="note">총손익비 2:1(익절 +2.0% / 손절 −1.0%) · 마찰 0.5% 반영하면 순 1:1 → 본전 승률 ≈ 50%.
-      계산기로 직접 확인. 근거·검증은 저장소 SCALPING.md. 투자 권유 아님·손실 위험 큼.</p>
+    <p class="note">올해 실증 기대: 평균 <b>+1.72%/거래 · 승률 62%</b>(마찰 0.5% 반영). 표본 9개월·생존편향·일봉 가정 등
+      한계는 SCALPING.md 11.6에 적어뒀다. <b>이건 3~5일 보유하는 스윙이지 9:00~9:30 단타가 아니다.</b>
+      투자 권유 아님·손실 위험 큼.</p>
     </div>
-  </div>
 
   <!-- 5. 손익분기 계산기 -->
   <div class="card">
     <h3><span class="dot"></span>🧮 손익분기 계산기</h3>
     <div class="calcgrid">
-      <div class="fld"><label>익절 % (R)</label><input id="c_r" type="number" step="0.1" value="2.0"></div>
-      <div class="fld"><label>손절 % (L)</label><input id="c_l" type="number" step="0.1" value="1.0"></div>
+      <div class="fld"><label>익절 % (R)</label><input id="c_r" type="number" step="0.1" value="6.0"></div>
+      <div class="fld"><label>손절 % (L)</label><input id="c_l" type="number" step="0.1" value="4.0"></div>
       <div class="fld"><label>왕복 마찰 % (c)</label><input id="c_c" type="number" step="0.1" value="0.5"></div>
       <div class="fld"><label>가정 승률 % (p)</label><input id="c_p" type="number" step="1" value="50"></div>
     </div>
@@ -406,13 +428,11 @@ function analyze(j){
   const bb=bbUpper(cl,n-1,20,2), rs=rsiSeries(cl,14), rsi=rs[n-1];
   const last=o[n-1];
   const price = j.price!=null? j.price : last.close;
-  let sig='off';
-  if(bb){
-    const nearGap=(bb.up-last.high)/bb.up;               // 상단까지 거리
-    if(last.high>=bb.up && rsi>=55) sig='on';
-    else if(rsi>=50 && nearGap<=0.02) sig='watch';
-  }
-  return {price,last,bb,rsi,cl,o,rs,name:j.name};
+  // 거래량비(당일/20일평균) — 점수의 '패닉 물량 감점'에 쓴다
+  let volR=1;
+  if(n>=21 && last.vol>0){ let s=0; for(let k=n-20;k<n;k++) s+=(o[k].vol||0); const avg=s/20; if(avg>0) volR=last.vol/avg; }
+  const chg = n>=2 && cl[n-2]>0 ? (cl[n-1]-cl[n-2])/cl[n-2]*100 : 0;
+  return {price,last,bb,rsi,cl,o,rs,volR,chg,name:j.name};
 }
 
 /* ══ 저장 (포지션·일지) ══ */
@@ -425,32 +445,32 @@ function loadAll(){
 function saveP(){ try{ localStorage.setItem(PKEY,JSON.stringify(POS)); }catch(e){} }
 function saveL(){ try{ localStorage.setItem(LKEY,JSON.stringify(LOG)); }catch(e){} }
 
-/* 신호 판정 */
+/* ── 신호 판정 v2 (역추세·과매도 반등) ────────────────────────────────
+   추세추종(밴드상단 돌파)은 올해 실증에서 대조군 대비 −0.09%p로 엣지가 0이었다.
+   살아남은 것은 밴드하단 이탈 + RSI 저점. 근거는 SCALPING.md 11절. */
 function sig(a){
   if(!a.bb) return 'off';
-  const nearGap=(a.bb.up-a.last.high)/a.bb.up;
-  if(a.last.high>=a.bb.up && a.rsi>=55) return 'on';
-  if(a.rsi>=50 && nearGap<=0.02) return 'watch';
+  if(a.last.low<=a.bb.lo && a.rsi<40) return 'on';
   return 'off';
 }
-/* ── 점수(0~100): 모멘텀 단타 적합도. 높을수록 진입 매력 ──
-   RSI 스윗스팟(62 근처) 35 + 돌파강도(막 돌파 최고·과열 감점) 25 + 추세(20MA 위) 15
-   + 오늘 상승 15 + 유동성(거래대금) 10. 과매수·과확장은 깎는다. */
+/* ── 점수(0~100) v2: 낮은 RSI·깊은 하단이탈·급락일수록 높다 ──
+   올해 실증 5분위: Q1 −0.44% → Q5 +1.67% (승률 42%→62%), corr +0.165.
+   거래량 급증(2배↑)은 패닉 물량이라 오히려 감점. */
 function score(s){
   if(!s.bb) return 0;
   let sc=0;
-  const r=s.rsi;
-  sc += Math.max(0, r<50?0 : r<=62?(r-50)/12*35 : r<=80?(1-(r-62)/18)*35 : 0);   // RSI
-  const gap=(s.price-s.bb.up)/s.bb.up*100;                                        // 상단대비%
-  sc += gap<=0 ? Math.max(0,(gap+2)/2)*10
-      : gap<=2 ? 25
-      : gap<=4 ? 25-(gap-2)/2*10
-      : Math.max(0,15-(gap-4)*3);                                                 // 돌파강도
-  if(s.price>s.bb.mid) sc += 15;                                                  // 추세
-  sc += Math.max(0, Math.min(s.chg||0,5))/5*15;                                   // 오늘 상승
-  sc += Math.min(10, Math.log10(Math.max(1,(s.amount||0)/100))*3);               // 유동성(억)
+  sc += Math.max(0,Math.min(1,(40-s.rsi)/18))*40;                     // RSI 낮을수록(22↓ 만점)
+  const depth=(s.bb.lo-(s.last?s.last.low:s.price))/s.bb.lo*100;      // 하단 아래 깊이%
+  sc += Math.max(0,Math.min(1,depth/4))*20;
+  sc += Math.max(0,Math.min(1,(-(s.chg||0))/6))*15;                   // 당일 급락일수록
+  const vr=s.volR||1;
+  sc += vr>=2 ? 0 : (1-Math.min(1,Math.abs(vr-1)))*10;                // 거래량 정상(1배 근처)
+  const bw=s.bb.mid?(s.bb.up-s.bb.lo)/s.bb.mid*100:0;
+  sc += Math.max(0,Math.min(1,(bw-10)/30))*8;                         // 변동성 가점
+  sc += Math.min(7, Math.log10(Math.max(1,(s.amount||0)/50))*7);      // 유동성
   return Math.round(Math.max(0,Math.min(100,sc)));
 }
+const PICK=65;   // 진입 후보 점수 임계 (실증: ≥65 → 평균 +1.72%, 승률 62%, 하루 3~4종목)
 
 /* ══ 전체 스크리닝 ══ */
 let SCREEN=[], _screening=false, LIVE=false, _liveTimer=null, _lastScanAt=0;
@@ -472,7 +492,7 @@ async function runScreen(silent){
     while(idx<uni.length){
       const u=uni[idx++];
       try{ const j=await qFetch(u.code,'3mo'); const a=analyze(j);
-        rows.push({code:u.code,name:u.name||j.name||u.code,market:u.market,amount:u.amount,chg:u.chg,price:a.price,rsi:a.rsi,bb:a.bb,last:a.last,sig:sig(a)}); }
+        rows.push({code:u.code,name:u.name||j.name||u.code,market:u.market,amount:u.amount,chg:(a.chg!=null?a.chg:u.chg),volR:a.volR,price:a.price,rsi:a.rsi,bb:a.bb,last:a.last,sig:sig(a)}); }
       catch(e){/* 개별 실패는 건너뛴다 */}
       done++; if(!silent){ bar.style.width=(done/total*100)+'%'; $('scr_msg').textContent=`계산 중… ${done}/${total}`; }
     }
@@ -483,9 +503,9 @@ async function runScreen(silent){
   rows.sort((x,y)=> rank(x.sig)-rank(y.sig) || (y.score-x.score));   // 신호 그룹 내 점수 순
   SCREEN=rows; _lastScanAt=Date.now();
   if(!silent) prog.style.display='none';
-  const on=SCREEN.filter(x=>x.sig==='on').length;
+  const on=SCREEN.filter(x=>x.sig==='on'&&x.score>=PICK).length;
   const t=new Date().toLocaleTimeString('ko-KR',{hour12:false});
-  $('scr_msg').innerHTML=`🟢 매수신호 <b>${on}</b>개 · ${SCREEN.length}종목 검사 · ${t} 갱신${LIVE?' · <span style="color:var(--buy)">● 실시간</span>':''}`;
+  $('scr_msg').innerHTML=`🟢 진입후보(점수≥${PICK}) <b>${on}</b>개 · ${SCREEN.length}종목 검사 · ${t} 갱신${LIVE?' · <span style="color:var(--buy)">● 실시간</span>':''}`;
   renderScreen();
   _screening=false; $('scrBtn').disabled=false;
   if(!silent && !LIVE) startLive();
@@ -529,14 +549,15 @@ async function chartTick(){
 }
 function renderScreen(){
   const b=$('scr_body');
-  const hits=SCREEN.filter(x=>x.sig==='on');
+  const hits=SCREEN.filter(x=>x.sig==='on' && x.score>=PICK);
   if(!SCREEN.length){ b.innerHTML='<p class="sub">결과가 없습니다.</p>'; return; }
-  if(!hits.length){ b.innerHTML='<p class="sub">오늘 <b>매수 신호</b> 종목이 없습니다. (유니버스 '+SCREEN.length+'개 검사) — 조건을 만족하는 종목이 없는 날도 정상입니다.</p>'; return; }
+  if(!hits.length){ const near=SCREEN.filter(x=>x.sig==='on').length;
+    b.innerHTML='<p class="sub">오늘 <b>점수 '+PICK+' 이상</b> 진입 후보가 없습니다. (신호 '+near+'건 / 유니버스 '+SCREEN.length+'개 검사)<br>실증상 하루 평균 3~4종목이라 <b>없는 날이 정상</b>입니다 — 억지로 낮은 점수를 잡지 않는 것이 이 전략의 핵심입니다.</p>'; return; }
   const scoreCol=v=> v>=75?'var(--buy)':v>=55?'var(--gold)':'var(--dim)';
   b.innerHTML=`<div class="htable-wrap"><table class="htable"><thead><tr>
-    <th>점수</th><th>종목</th><th>현재가</th><th>등락</th><th>RSI</th><th>상단대비</th><th>거래대금(억)</th></tr></thead><tbody>`
+    <th>점수</th><th>종목</th><th>현재가</th><th>등락</th><th>RSI</th><th>하단대비</th><th>거래대금(억)</th><th>모의</th></tr></thead><tbody>`
     + hits.map(s=>{
-       const gap=s.bb? (s.price-s.bb.up)/s.bb.up*100 : null;
+       const gap=s.bb? (s.price-s.bb.lo)/s.bb.lo*100 : null;   // 하단 대비(음수=하단 아래)
        const cur = CUR && CUR.code===s.code;
        return `<tr style="cursor:pointer${cur?';background:var(--panel2)':''}" onclick="openChart('${esc(s.code)}')">
          <td style="font-weight:800;color:${scoreCol(s.score)};font-size:14px">${s.score}</td>
@@ -544,11 +565,13 @@ function renderScreen(){
          <td>${commas(s.price)}</td>
          <td class="${s.chg>=0?'win':'loss'}">${s.chg>=0?'+':''}${fmt(s.chg,2)}%</td>
          <td>${fmt(s.rsi,0)}${s.rsi>=70?' <span class="sig watch" style="padding:0 4px">과매수</span>':''}</td>
-         <td class="${gap>=0?'win':''}">${gap!=null?(gap>=0?'+':'')+fmt(gap,1)+'%':'—'}</td>
+         <td class="${gap<0?'loss':''}">${gap!=null?(gap>=0?'+':'')+fmt(gap,1)+'%':'—'}</td>
          <td>${s.amount?Math.round(s.amount/100).toLocaleString():'—'}</td>
+         <td><button class="ghostbtn sm buy" onclick="event.stopPropagation();paperEnter('${esc(s.code)}')">＋진입</button></td>
        </tr>`;
      }).join('')
-    + `</tbody></table></div><p class="note">점수 = 모멘텀 단타 적합도(0~100): RSI 스윗스팟·돌파강도·추세·오늘상승·유동성 종합, 과매수·과확장은 감점. 높은 순 정렬.</p>`;
+    + `</tbody></table></div><p class="note">점수(0~100) = RSI 낮을수록 40 + 하단 아래 깊이 20 + 당일 급락 15 + 거래량 정상 10 + 변동성 8 + 유동성 7.
+      <b>점수 ≥${PICK}만 표시</b>(실증 5분위 Q1 −0.44% → Q5 +1.67%). 하단대비 음수 = 밴드 아래.</p>`;
 }
 
 /* 검색 — 특정 종목 바로 차트 */
@@ -573,6 +596,86 @@ function addFirst(){
   const box=$('sres'); const first=box.querySelector('div');
   if(!box.hidden && first){ first.click(); return; }
   if(KRCODE.test(q.toUpperCase())){ $('q').value=''; openChart(q.toUpperCase(),q.toUpperCase()); }
+}
+
+/* ══ 백테스트 ══ */
+const BT={stop:4,tgt:6,hold:5,fee:0.5,minAmt:50};
+function btSimOne(bars,i){                     // i일 신호 → i+1 시가 진입
+  const en=bars[i+1].open; if(!(en>0)) return null;
+  for(let k=1;k<=BT.hold && i+k<bars.length;k++){
+    const b=bars[i+k];
+    const lo=(b.low-en)/en*100, hi=(b.high-en)/en*100;
+    if(lo<=-BT.stop) return {pnl:-BT.stop-BT.fee,days:k};      // 보수적: 손절 우선
+    if(hi>=BT.tgt)   return {pnl:BT.tgt-BT.fee,days:k};
+    if(k===BT.hold||i+k===bars.length-1) return {pnl:(b.close-en)/en*100-BT.fee,days:k};
+  }
+  return null;
+}
+async function runBacktest(){
+  const N=+($('bt_uni').value)||100, from=($('bt_from').value||'2026-01-01');
+  $('btBtn').disabled=true; $('bt_msg').textContent='유니버스 불러오는 중…'; $('bt_body').innerHTML='';
+  let uni=[];
+  try{ const j=await (await fetch('/api/universe?limit='+N)).json(); if(j.error) throw new Error(j.error); uni=j.universe||[]; }
+  catch(e){ $('bt_msg').textContent='유니버스 실패: '+(e.message||e); $('btBtn').disabled=false; return; }
+  const prog=$('bt_prog'), bar=$('bt_bar'); prog.style.display=''; bar.style.width='0';
+  const trades=[], baseline=[]; let done=0, idx=0;
+  async function worker(){
+    while(idx<uni.length){
+      const u=uni[idx++];
+      try{
+        const j=await qFetch(u.code,'1y'); const o=j.ohlc||[];
+        if(o.length>60){
+          const cl=o.map(x=>x.close), rs=rsiSeries(cl,14);
+          for(let i=25;i<o.length-1;i++){
+            if(o[i].date<from) continue;
+            const B=bbUpper(cl,i,20,2); if(!B) continue;
+            const rsi=rs[i]; if(rsi==null) continue;
+            const amount=o[i].close*(o[i].vol||0)/1e8; if(amount<BT.minAmt) continue;
+            const r=btSimOne(o,i); if(!r) continue;
+            baseline.push(r.pnl);                                   // 대조군: 신호 무관 전부
+            if(!(o[i].low<=B.lo && rsi<40)) continue;                // 신호
+            let vr=1; if(i>=20&&o[i].vol>0){let s=0;for(let k=i-20;k<i;k++)s+=(o[k].vol||0); const av=s/20; if(av>0)vr=o[i].vol/av;}
+            const chg=i>=1&&cl[i-1]>0?(cl[i]-cl[i-1])/cl[i-1]*100:0;
+            const sc=score({bb:B,rsi,last:o[i],price:o[i].close,chg,volR:vr,amount});
+            trades.push({code:u.code,name:u.name,date:o[i].date,score:sc,pnl:r.pnl,days:r.days,rsi});
+          }
+        }
+      }catch(e){}
+      done++; bar.style.width=(done/uni.length*100)+'%'; $('bt_msg').textContent=`계산 중… ${done}/${uni.length}`;
+    }
+  }
+  await Promise.all(Array.from({length:8},()=>worker()));
+  prog.style.display='none'; $('btBtn').disabled=false;
+  renderBacktest(trades,baseline,from);
+}
+function renderBacktest(tr,base,from){
+  const mean=a=>a.length?a.reduce((x,y)=>x+y,0)/a.length:0;
+  const wr=a=>a.length?a.filter(x=>x>0).length/a.length*100:0;
+  if(!tr.length){ $('bt_msg').textContent='신호가 없습니다. 기간을 넓혀보세요.'; return; }
+  const pick=tr.filter(t=>t.score>=PICK), all=tr.map(t=>t.pnl), bp=base;
+  const box=(l,v,c)=>`<div class="outbox"><div class="ol">${l}</div><div class="ov ${c||''}">${v}</div></div>`;
+  const pm=mean(pick.map(t=>t.pnl)), bm=mean(bp);
+  $('bt_msg').innerHTML=`${from}~ · 신호 ${tr.length}건 · <b>진입(점수≥${PICK}) ${pick.length}건</b> · 대조군 ${bp.length}건`;
+  let html='<div class="out" style="margin-bottom:12px">'
+    +box('진입 평균손익',(pm>=0?'+':'')+pm.toFixed(2)+'%',pm>0?'good':'bad')
+    +box('승률',wr(pick.map(t=>t.pnl)).toFixed(0)+'%',wr(pick.map(t=>t.pnl))>=50?'good':'bad')
+    +box('대조군 대비',((pm-bm)>=0?'+':'')+(pm-bm).toFixed(2)+'%p',(pm-bm)>0?'good':'bad')
+    +box('대조군',bm.toFixed(2)+'%','')+'</div>';
+  // 점수 구간별
+  html+='<div class="htable-wrap"><table class="htable"><thead><tr><th>점수구간</th><th>건수</th><th>평균손익</th><th>승률</th></tr></thead><tbody>';
+  [[0,40],[40,50],[50,60],[60,65],[65,75],[75,101]].forEach(([a,b])=>{
+    const g=tr.filter(t=>t.score>=a&&t.score<b); if(g.length<5) return;
+    const m=mean(g.map(t=>t.pnl));
+    html+=`<tr${a>=65?' style="background:var(--panel2)"':''}><td>${a}~${b===101?100:b}${a>=65?' <span class="sig on">진입</span>':''}</td><td>${g.length}</td><td class="${m>0?'win':'loss'}">${m>=0?'+':''}${m.toFixed(2)}%</td><td>${wr(g.map(t=>t.pnl)).toFixed(0)}%</td></tr>`;});
+  html+='</tbody></table></div>';
+  // 월별
+  const ms=[...new Set(pick.map(t=>t.date.slice(0,7)))].sort();
+  html+='<div class="htable-wrap" style="margin-top:10px"><table class="htable"><thead><tr><th>월</th><th>건수</th><th>평균손익</th><th>승률</th></tr></thead><tbody>';
+  ms.forEach(m=>{const g=pick.filter(t=>t.date.slice(0,7)===m); if(!g.length)return; const a=mean(g.map(t=>t.pnl));
+    html+=`<tr><td>${m}</td><td>${g.length}</td><td class="${a>0?'win':'loss'}">${a>=0?'+':''}${a.toFixed(2)}%</td><td>${wr(g.map(t=>t.pnl)).toFixed(0)}%</td></tr>`;});
+  html+='</tbody></table></div>';
+  html+='<p class="note">보수적 가정: 일봉이라 손절·익절 도달 순서를 몰라 <b>손절 우선</b>으로 계산(실제는 이보다 나을 수 있음). 마찰 0.5% 반영. 유니버스는 오늘 기준 상위 종목이라 <b>생존편향</b>이 있다.</p>';
+  $('bt_body').innerHTML=html;
 }
 
 /* ══ 차트 ══ */
@@ -618,10 +721,14 @@ function renderGuide(a){
   const price=a.price, L=levelsOf(+$('ch_entry').value||price);
   let msg, col;
   if(price<=L.stop){ msg=`🛑 손절가(${commas(L.stop)}) 이탈 — 보유 중이면 청산`; col='var(--sell)'; }
-  else if(price>=L.tgt){ msg=`🎯 1차 목표(${commas(L.tgt)}) 도달 — 절반 익절 + 잔량 트레일링(고점 −0.7%)`; col='var(--buy)'; }
-  else if(a.rsi>=72){ msg=`⚠️ 과매수(RSI ${Math.round(a.rsi)}) — 신규 진입은 눌림 기다려`; col='var(--gold)'; }
-  else if(a.bb && a.last.high>=a.bb.up && a.rsi>=55){ msg=`🟢 진입 후보 — 09:00~09:03 시가범위 고가 돌파 시 진입 · 손절 ${commas(L.stop)} 먼저 세팅 · 목표 ${commas(L.tgt)}`; col='var(--buy)'; }
-  else { msg='⏳ 관망 — 아직 진입 조건(밴드 돌파+RSI≥55) 미충족'; col='var(--dim)'; }
+  else if(price>=L.tgt){ msg=`🎯 목표(${commas(L.tgt)}) 도달 — 익절`; col='var(--buy)'; }
+  else if(a.rsi>=60){ msg=`⚠️ RSI ${Math.round(a.rsi)} — 이미 반등했다. 신규 진입 대상 아님`; col='var(--gold)'; }
+  else if(a.bb && a.last.low<=a.bb.lo && a.rsi<40){
+    const sc=score({bb:a.bb,rsi:a.rsi,last:a.last,price:a.price,chg:a.chg,volR:a.volR,amount:(a.price*(a.last.vol||0)/1e8)});
+    msg = sc>=PICK ? `🟢 진입 후보 (점수 ${sc}) — 다음날 시가 진입 · 손절 ${commas(L.stop)} · 목표 ${commas(L.tgt)} · 최대 5일`
+                   : `🟡 신호는 떴지만 점수 ${sc} (< ${PICK}) — 실증상 저점수는 마이너스. 건너뛴다`;
+    col = sc>=PICK ? 'var(--buy)' : 'var(--gold)'; }
+  else { msg='⏳ 관망 — 진입 조건(볼린저 하단 이탈 + RSI<40) 미충족'; col='var(--dim)'; }
   const realtime = KIScfg && KIScfg.configured;
   const src = LIVE ? (realtime ? ` <span class="sub" style="color:var(--buy)">● KIS 실시간 ${(+$('liveN').value||2)}초</span>`
                                : ` <span class="sub">● 네이버 60초 갱신 (1~2초 실시간은 KIS 연동 필요)</span>`) : '';
@@ -633,16 +740,15 @@ function openChartModal(){ const o=$('chartOverlay'); if(o){ o.classList.add('on
 function closeChart(){ const o=$('chartOverlay'); if(o) o.classList.remove('on'); document.body.classList.remove('modal-open'); CUR=null; }
 document.addEventListener('keydown',e=>{ if(e.key==='Escape'&&chartOpen()) closeChart(); });
 function levelsOf(entry){
-  const stop=entry*(1-0.010), cap=entry*(1-0.015), tgt=entry*1.020;
-  return {entry, stop:Math.max(stop,cap), tgt};
+  return {entry, stop:entry*(1-0.04), tgt:entry*1.06};   // 실증 최적: −4% / +6% · 최대 5일 보유
 }
 function renderLevels(entry){
   const L=levelsOf(entry);
   $('ch_levels').innerHTML=
      `<div class="lv entry"><div class="l">진입 지정가</div><div class="v">${commas(L.entry)}</div></div>`
-    +`<div class="lv stop"><div class="l">손절 (−1.0%)</div><div class="v">${commas(L.stop)}</div></div>`
-    +`<div class="lv tgt"><div class="l">1차 목표 (+2.0%)</div><div class="v">${commas(L.tgt)}</div></div>`
-    +`<div class="lv"><div class="l">잔량</div><div class="v" style="font-size:12px;color:var(--dim);font-weight:600">고점 −0.7% 트레일링</div></div>`;
+    +`<div class="lv stop"><div class="l">손절 (−4%)</div><div class="v">${commas(L.stop)}</div></div>`
+    +`<div class="lv tgt"><div class="l">목표 (+6%)</div><div class="v">${commas(L.tgt)}</div></div>`
+    +`<div class="lv"><div class="l">보유</div><div class="v" style="font-size:12px;color:var(--dim);font-weight:600">최대 5일 · 미달 시 종가청산</div></div>`;
 }
 function drawChart(a){
   const cv=$('chart'), dpr=window.devicePixelRatio||1;
@@ -737,6 +843,17 @@ document.getElementById('ch_tf').addEventListener('click',e=>{
 });
 window.addEventListener('resize',()=>{ if(CUR) drawChart(CUR.a); });
 document.addEventListener('input',e=>{ if(e.target&&e.target.id==='ch_entry'&&CUR){ renderLevels(+e.target.value||CUR.a.price); renderGuide(CUR.a); drawChart(CUR.a); } });
+
+/* ══ 모의투자(페이퍼) ══ */
+function paperEnter(code){
+  const s=SCREEN.find(x=>x.code===code); if(!s) return;
+  if(POS.some(p=>p.code===code)){ alert(s.name+' 은(는) 이미 보유 중입니다. (종목당 동시 1포지션)'); return; }
+  const en=s.price, L=levelsOf(en);
+  if(!confirm(`[모의투자] ${s.name} 진입\n진입 ${commas(en)} · 손절 ${commas(L.stop)}(−4%) · 목표 ${commas(L.tgt)}(+6%)\n최대 5일 보유\n\n기록할까요?`)) return;
+  POS.unshift({code,name:s.name,entry:en,stop:L.stop,tgt:L.tgt,cur:en,ts:Date.now(),score:s.score});
+  saveP(); renderPos();
+  window.scrollTo({top:$('pos_body').getBoundingClientRect().top+window.scrollY-80,behavior:'smooth'});
+}
 
 /* ══ 포지션 ══ */
 function enterPos(){
