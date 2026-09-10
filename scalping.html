@@ -160,7 +160,7 @@ canvas{display:block;width:100%;height:auto}
 
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Morning Scalping · 09:00–09:30</div><h1>JK <span class="v">퀀트</span> 단타 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="scVer">v0.3</span></h1></div>
+    <div><div class="kicker">Morning Scalping · 09:00–09:30</div><h1>JK <span class="v">퀀트</span> 단타 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="scVer">v0.4</span></h1></div>
     <div class="jkmenu" id="jkmenuWrap">
       <button class="jkmenu-btn" id="jkmenuBtn" aria-label="메뉴" onclick="jkMenuToggle(event)">三</button>
       <div class="jkmenu-pop" id="jkmenuPop" hidden>
@@ -183,9 +183,12 @@ canvas{display:block;width:100%;height:auto}
     <p class="lead"><b>거래대금 상위 유니버스</b>(KOSPI·KOSDAQ)를 자동으로 훑어, 오늘 <b>매수 신호</b>가 뜬 종목을 찾아 목록으로 보여준다.
       목록에서 종목을 누르면 아래에 <b>캔들·볼린저·RSI 차트</b>가 뜬다. (단타는 유동성이 생명이라 거래대금 상위가 사실상 후보 전체)</p>
     <div class="row" style="margin-bottom:8px;align-items:flex-end">
-      <div class="fld" style="flex:0 0 130px"><label>유니버스 크기</label>
+      <div class="fld" style="flex:0 0 116px"><label>유니버스 크기</label>
         <select id="uniN"><option>50</option><option selected>100</option><option>150</option><option>200</option></select></div>
+      <div class="fld" style="flex:0 0 104px"><label>실시간 간격</label>
+        <select id="liveN" onchange="if(LIVE)startLive()"><option value="10">10초</option><option value="30" selected>30초</option><option value="60">60초</option></select></div>
       <button class="prim" onclick="runScreen()" id="scrBtn" style="height:38px">🔎 전체 스크리닝</button>
+      <button class="ghostbtn" onclick="toggleLive()" id="liveToggle" style="height:38px">▶ 실시간</button>
     </div>
     <div class="sub" id="scr_msg" style="margin-bottom:8px;min-height:16px"></div>
     <div id="scr_prog" style="display:none;height:6px;background:var(--panel2);border-radius:4px;overflow:hidden;margin-bottom:10px"><div id="scr_bar" style="height:100%;width:0;background:var(--vio2);transition:width .1s"></div></div>
@@ -204,7 +207,8 @@ canvas{display:block;width:100%;height:auto}
   <div class="card" id="chartCard">
     <h3><span class="dot"></span>📈 <span id="ch_title">차트</span> <span class="caret" onclick="closeChart()">✕ 닫기</span></h3>
     <div class="chartbox"><canvas id="chart" width="860" height="420"></canvas></div>
-    <div class="levels" id="ch_levels"></div>
+    <div id="ch_guide" style="margin-top:10px;font-size:13px;font-weight:700;line-height:1.5"></div>
+    <div class="levels" id="ch_levels" style="margin-top:8px"></div>
     <div class="row" style="margin-top:12px">
       <div class="fld" style="flex:0 0 120px"><label>진입가 (지정가)</label><input id="ch_entry" type="number" step="0.01"></div>
       <button class="ghostbtn buy" onclick="enterPos()">＋ 진입(반자동 기록)</button>
@@ -385,60 +389,102 @@ function sig(a){
   if(a.rsi>=50 && nearGap<=0.02) return 'watch';
   return 'off';
 }
+/* ── 점수(0~100): 모멘텀 단타 적합도. 높을수록 진입 매력 ──
+   RSI 스윗스팟(62 근처) 35 + 돌파강도(막 돌파 최고·과열 감점) 25 + 추세(20MA 위) 15
+   + 오늘 상승 15 + 유동성(거래대금) 10. 과매수·과확장은 깎는다. */
+function score(s){
+  if(!s.bb) return 0;
+  let sc=0;
+  const r=s.rsi;
+  sc += Math.max(0, r<50?0 : r<=62?(r-50)/12*35 : r<=80?(1-(r-62)/18)*35 : 0);   // RSI
+  const gap=(s.price-s.bb.up)/s.bb.up*100;                                        // 상단대비%
+  sc += gap<=0 ? Math.max(0,(gap+2)/2)*10
+      : gap<=2 ? 25
+      : gap<=4 ? 25-(gap-2)/2*10
+      : Math.max(0,15-(gap-4)*3);                                                 // 돌파강도
+  if(s.price>s.bb.mid) sc += 15;                                                  // 추세
+  sc += Math.max(0, Math.min(s.chg||0,5))/5*15;                                   // 오늘 상승
+  sc += Math.min(10, Math.log10(Math.max(1,(s.amount||0)/100))*3);               // 유동성(억)
+  return Math.round(Math.max(0,Math.min(100,sc)));
+}
 
 /* ══ 전체 스크리닝 ══ */
-let SCREEN=[], _screening=false;
+let SCREEN=[], _screening=false, LIVE=false, _liveTimer=null, _lastScanAt=0;
 function nameOf(code){ const s=SCREEN.find(x=>x.code===code); return s?s.name:code; }
-async function runScreen(){
+async function runScreen(silent){
   if(_screening) return;
   const N=+($('uniN').value)||100;
-  _screening=true; $('scrBtn').disabled=true; $('scr_msg').textContent='유니버스 불러오는 중…'; $('scr_body').innerHTML='';
+  _screening=true;
+  if(!silent){ $('scrBtn').disabled=true; $('scr_msg').textContent='유니버스 불러오는 중…'; if(!SCREEN.length) $('scr_body').innerHTML=''; }
   let uni=[];
   try{ const r=await fetch('/api/universe?limit='+N); const j=await r.json(); if(j.error) throw new Error(j.error); uni=j.universe||[]; }
-  catch(e){ $('scr_msg').textContent='유니버스 실패: '+(e.message||e); _screening=false; $('scrBtn').disabled=false; return; }
-  if(!uni.length){ $('scr_msg').textContent='유니버스가 비어 있습니다.'; _screening=false; $('scrBtn').disabled=false; return; }
-  SCREEN=[]; let done=0; const total=uni.length;
-  const prog=$('scr_prog'), bar=$('scr_bar'); prog.style.display=''; bar.style.width='0';
+  catch(e){ if(!silent) $('scr_msg').textContent='유니버스 실패: '+(e.message||e); _screening=false; $('scrBtn').disabled=false; return; }
+  if(!uni.length){ if(!silent) $('scr_msg').textContent='유니버스가 비어 있습니다.'; _screening=false; $('scrBtn').disabled=false; return; }
+  const rows=[]; let done=0; const total=uni.length;
+  const prog=$('scr_prog'), bar=$('scr_bar');
+  if(!silent){ prog.style.display=''; bar.style.width='0'; }
   let idx=0; const CC=8;
   async function worker(){
     while(idx<uni.length){
       const u=uni[idx++];
       try{ const j=await qFetch(u.code,'3mo'); const a=analyze(j);
-        SCREEN.push({code:u.code,name:u.name||j.name||u.code,market:u.market,amount:u.amount,chg:u.chg,price:a.price,rsi:a.rsi,bb:a.bb,last:a.last,sig:sig(a)}); }
+        rows.push({code:u.code,name:u.name||j.name||u.code,market:u.market,amount:u.amount,chg:u.chg,price:a.price,rsi:a.rsi,bb:a.bb,last:a.last,sig:sig(a)}); }
       catch(e){/* 개별 실패는 건너뛴다 */}
-      done++; bar.style.width=(done/total*100)+'%'; $('scr_msg').textContent=`계산 중… ${done}/${total}`;
+      done++; if(!silent){ bar.style.width=(done/total*100)+'%'; $('scr_msg').textContent=`계산 중… ${done}/${total}`; }
     }
   }
   await Promise.all(Array.from({length:CC},()=>worker()));
-  prog.style.display='none';
+  rows.forEach(s=>s.score=score(s));
   const rank=s=>s==='on'?0:s==='watch'?1:2;
-  SCREEN.sort((x,y)=> rank(x.sig)-rank(y.sig) || (y.amount-x.amount));  // 신호 그룹 내 거래대금 순(중립)
+  rows.sort((x,y)=> rank(x.sig)-rank(y.sig) || (y.score-x.score));   // 신호 그룹 내 점수 순
+  SCREEN=rows; _lastScanAt=Date.now();
+  if(!silent) prog.style.display='none';
   const on=SCREEN.filter(x=>x.sig==='on').length;
-  $('scr_msg').textContent=`완료 · 🟢 매수신호 ${on}개 (유니버스 ${SCREEN.length}개 검사)`;
+  const t=new Date().toLocaleTimeString('ko-KR',{hour12:false});
+  $('scr_msg').innerHTML=`🟢 매수신호 <b>${on}</b>개 · ${SCREEN.length}종목 검사 · ${t} 갱신${LIVE?' · <span style="color:var(--buy)">● 실시간</span>':''}`;
   renderScreen();
   _screening=false; $('scrBtn').disabled=false;
+  if(!silent && !LIVE) startLive();
+}
+
+/* ── 실시간 자동 업데이트 (무깜빡임) ── */
+function intervalMs(){ return (+($('liveN')&&$('liveN').value)||30)*1000; }
+function startLive(){
+  LIVE=true; if(_liveTimer) clearInterval(_liveTimer);
+  _liveTimer=setInterval(liveTick, intervalMs());
+  const b=$('liveToggle'); if(b){ b.textContent='⏸ 실시간 중지'; b.style.borderColor='rgba(54,211,153,.5)'; b.style.color='var(--buy)'; }
+}
+function stopLive(){
+  LIVE=false; if(_liveTimer){ clearInterval(_liveTimer); _liveTimer=null; }
+  const b=$('liveToggle'); if(b){ b.textContent='▶ 실시간'; b.style.borderColor=''; b.style.color=''; }
+}
+function toggleLive(){ if(LIVE) stopLive(); else if(SCREEN.length) startLive(); else runScreen(); }
+async function liveTick(){
+  if(CUR) refreshChartLive();                                   // 선택 차트: 매 간격
+  if(Date.now()-_lastScanAt >= 60000 && !_screening) runScreen(true);  // 목록: 60초마다 조용히 재스캔
 }
 function renderScreen(){
   const b=$('scr_body');
   const hits=SCREEN.filter(x=>x.sig==='on');
   if(!SCREEN.length){ b.innerHTML='<p class="sub">결과가 없습니다.</p>'; return; }
   if(!hits.length){ b.innerHTML='<p class="sub">오늘 <b>매수 신호</b> 종목이 없습니다. (유니버스 '+SCREEN.length+'개 검사) — 조건을 만족하는 종목이 없는 날도 정상입니다.</p>'; return; }
+  const scoreCol=v=> v>=75?'var(--buy)':v>=55?'var(--gold)':'var(--dim)';
   b.innerHTML=`<div class="htable-wrap"><table class="htable"><thead><tr>
-    <th>종목</th><th>현재가</th><th>등락</th><th>RSI</th><th>상단대비</th><th>거래대금(억)</th><th>신호</th></tr></thead><tbody>`
+    <th>점수</th><th>종목</th><th>현재가</th><th>등락</th><th>RSI</th><th>상단대비</th><th>거래대금(억)</th></tr></thead><tbody>`
     + hits.map(s=>{
        const gap=s.bb? (s.price-s.bb.up)/s.bb.up*100 : null;
-       const sg = s.sig==='on'?'<span class="sig on">🟢 신호</span>':'<span class="sig watch">🟡 관찰</span>';
-       return `<tr style="cursor:pointer" onclick="openChart('${esc(s.code)}')">
+       const cur = CUR && CUR.code===s.code;
+       return `<tr style="cursor:pointer${cur?';background:var(--panel2)':''}" onclick="openChart('${esc(s.code)}')">
+         <td style="font-weight:800;color:${scoreCol(s.score)};font-size:14px">${s.score}</td>
          <td><b>${esc(s.name)}</b> <span class="sub">${esc(s.market||'')}</span><div class="sub">${esc(s.code)}</div></td>
          <td>${commas(s.price)}</td>
          <td class="${s.chg>=0?'win':'loss'}">${s.chg>=0?'+':''}${fmt(s.chg,2)}%</td>
          <td>${fmt(s.rsi,0)}${s.rsi>=70?' <span class="sig watch" style="padding:0 4px">과매수</span>':''}</td>
          <td class="${gap>=0?'win':''}">${gap!=null?(gap>=0?'+':'')+fmt(gap,1)+'%':'—'}</td>
          <td>${s.amount?Math.round(s.amount/100).toLocaleString():'—'}</td>
-         <td>${sg}</td>
        </tr>`;
      }).join('')
-    + `</tbody></table></div><p class="note">행을 누르면 차트가 열립니다 · 거래대금 순 정렬(억원) · RSI 55~70이 스윗스팟, <b>70+는 과매수(뒷북 주의)</b>.</p>`;
+    + `</tbody></table></div><p class="note">점수 = 모멘텀 단타 적합도(0~100): RSI 스윗스팟·돌파강도·추세·오늘상승·유동성 종합, 과매수·과확장은 감점. 높은 순 정렬.</p>`;
 }
 
 /* 검색 — 특정 종목 바로 차트 */
@@ -478,8 +524,26 @@ async function openChart(code,name){
     drawChart(a);
     const entry=a.price;
     $('ch_entry').value = entry>=100?Math.round(entry):+entry.toFixed(2);
-    renderLevels(entry);
+    renderLevels(entry); renderGuide(a);
+    if(LIVE) renderScreen();   // 목록에서 선택 행 하이라이트
   }catch(e){ $('ch_title').textContent=`${name} (${code}) — ${e.message||'실패'}`; }
+}
+async function refreshChartLive(){
+  if(!CUR) return;
+  try{ const j=await qFetch(CUR.code,'1y'); const a=analyze(j); CUR.a=a; drawChart(a); renderGuide(a); }
+  catch(e){/* 조용히 무시 */}
+}
+function renderGuide(a){
+  const el=$('ch_guide'); if(!el) return;
+  const price=a.price, L=levelsOf(+$('ch_entry').value||price);
+  let msg, col;
+  if(price<=L.stop){ msg=`🛑 손절가(${commas(L.stop)}) 이탈 — 보유 중이면 청산`; col='var(--sell)'; }
+  else if(price>=L.tgt){ msg=`🎯 1차 목표(${commas(L.tgt)}) 도달 — 절반 익절 + 잔량 트레일링(고점 −0.7%)`; col='var(--buy)'; }
+  else if(a.rsi>=72){ msg=`⚠️ 과매수(RSI ${Math.round(a.rsi)}) — 신규 진입은 눌림 기다려`; col='var(--gold)'; }
+  else if(a.bb && a.last.high>=a.bb.up && a.rsi>=55){ msg=`🟢 진입 후보 — 09:00~09:03 시가범위 고가 돌파 시 진입 · 손절 ${commas(L.stop)} 먼저 세팅 · 목표 ${commas(L.tgt)}`; col='var(--buy)'; }
+  else { msg='⏳ 관망 — 아직 진입 조건(밴드 돌파+RSI≥55) 미충족'; col='var(--dim)'; }
+  el.innerHTML=`지금 판단 · 현재가 <b>${commas(price)}</b> — ${msg}`;
+  el.style.color=col;
 }
 function closeChart(){ $('chartCard').style.display='none'; CUR=null; }
 function levelsOf(entry){
@@ -536,7 +600,7 @@ function drawChart(a){
   ctx.fillStyle='#8b8cf0'; ctx.fillText('RSI '+fmt(a.rsi,0),2,rsiTop+12);
 }
 window.addEventListener('resize',()=>{ if(CUR) drawChart(CUR.a); });
-document.addEventListener('input',e=>{ if(e.target&&e.target.id==='ch_entry'&&CUR){ renderLevels(+e.target.value||CUR.a.price); drawChart(CUR.a); } });
+document.addEventListener('input',e=>{ if(e.target&&e.target.id==='ch_entry'&&CUR){ renderLevels(+e.target.value||CUR.a.price); renderGuide(CUR.a); drawChart(CUR.a); } });
 
 /* ══ 포지션 ══ */
 function enterPos(){
@@ -695,7 +759,7 @@ function boot(){
       PKEY='jkq_scalp_pos_'+user.uid; LKEY='jkq_scalp_log_'+user.uid;
       $('log_owner').textContent='· '+(user.displayName||user.email||'');
       loadAll(); recalc(); renderPos(); renderLog(); kisInit();
-    }else{ $('gate').style.display='flex'; $('app').style.display='none'; }
+    }else{ stopLive(); $('gate').style.display='flex'; $('app').style.display='none'; }
   });
 }
 if(window.fb) boot(); else window.addEventListener('fb-ready', boot);
