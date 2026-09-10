@@ -319,9 +319,9 @@ p·2 − (1−p)·1 − 0.5 = 0   →   3p = 1.5   →   p = 50%
   4. 손익분기 계산기 + 모의매매 일지(순손익·승률·손익비·기대값·트리거별 집계, CSV)
   5. **KIS 실주문(모의투자)** — 서버 프록시 `functions/api/kis.js`(Cloudflare Function)로 KIS OpenAPI 연동.
      현재가·잔고·주문(현금) 지원, 기본 **모의투자(vts)** 도메인. 주문 엔드포인트는 Firebase ID토큰으로
-     소유자만 호출 가능(`KIS_OWNER_EMAIL`), 시크릿은 Cloudflare 환경변수에만 저장.
+     소유자만 호출 가능(`OWNER_EMAIL` — 구글 로그인 이메일), 시크릿은 Cloudflare 환경변수에만 저장.
   - 데이터는 기존 `/api/quote`(네이버 국내 시세) 재사용, 관심종목·포지션·일지는 계정별 localStorage 저장.
-  - **KIS 설정**: Cloudflare Pages 환경변수에 `KIS_APPKEY·KIS_APPSECRET·KIS_ACCOUNT(12345678-01)·KIS_OWNER_EMAIL`
+  - **KIS 설정**: Cloudflare Pages 환경변수에 `KIS_APPKEY·KIS_APPSECRET·KIS_ACCOUNT(12345678-01)` 와 주인 계정 `OWNER_EMAIL`
     입력(+실전 전환 시 `KIS_ENV=real`). 키 없으면 앱이 "미설정"으로 표시하고 주문 UI를 숨긴다.
   - 실전 자동주문은 위 환경변수를 real로 바꾸면 동작 — 충분히 모의로 검증한 뒤에만 전환.
 - 상단 네비를 **한문 "三" 드롭다운**으로 통일: **운영·백테·단타·모의·관리자**. index·backtest·admin·scalping 전 페이지 공통.

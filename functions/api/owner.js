@@ -2,9 +2,10 @@
 // "나만 보는" 화면(단타)의 접근 판정. 허용 목록은 절대 내보내지 않는다 —
 // 로그인한 본인이 소유자인지(true/false)만 알려준다. (이메일 노출 방지)
 //
-//   OWNER_EMAIL      : 허용 계정(쉼표로 여러 개)
-//   KIS_OWNER_EMAIL  : 없으면 이걸 재사용 (KIS 주문 허용 계정과 동일하게 쓰려는 경우)
-//   둘 다 없으면 저장소 규약의 관리자 계정으로 폴백한다(잠김 방지).
+//   OWNER_EMAIL : 허용 계정 = 이 앱에 구글 로그인하는 이메일(쉼표로 여러 개).
+//                 한국투자증권 계정도, Cloudflare 계정도 아니다.
+//   없으면 저장소 규약의 관리자 계정으로 폴백한다(잠김 방지).
+//   주문 권한도 기본은 이 값을 그대로 쓴다 — kis.js orderOwners() 참고.
 
 const JH = {
   "Content-Type": "application/json; charset=utf-8",
@@ -15,10 +16,9 @@ const FIREBASE_API_KEY_FALLBACK = "AIzaSyBzBe9pAttnbDgTlNThWZzNqtAAKxX7Ksw"; // 
 const DEFAULT_OWNERS = ["jk82investing@gmail.com"];   // admin.html ADMIN_EMAILS 와 같은 규약
 
 function resolveOwners(env) {
+  // 화면 접근은 OWNER_EMAIL 만 본다. KIS_OWNER_EMAIL 은 '주문만 좁히는' 변수라 여기 끌어오지 않는다.
   const raw = String(env.OWNER_EMAIL || "").trim();
   if (raw) return { owners: raw.split(",").map(s => s.trim().toLowerCase()).filter(Boolean), source: "OWNER_EMAIL" };
-  const kis = String(env.KIS_OWNER_EMAIL || "").trim();
-  if (kis) return { owners: kis.split(",").map(s => s.trim().toLowerCase()).filter(Boolean), source: "KIS_OWNER_EMAIL" };
   return { owners: DEFAULT_OWNERS, source: "default" };
 }
 

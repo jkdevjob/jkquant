@@ -7,7 +7,10 @@
 //   KIS_APPSECRET     : appsecret
 //   KIS_ACCOUNT       : 계좌번호 "12345678-01" (앞 8자리-상품 2자리)
 //   KIS_ENV           : "vts"(모의투자·기본) 또는 "real"(실전)
-//   KIS_OWNER_EMAIL   : 주문을 허용할 계정 이메일(쉼표로 여러 개). 없으면 주문은 전면 차단.
+//   OWNER_EMAIL       : 이 앱에 구글 로그인하는 "주인" 계정(쉼표로 여러 개).
+//                       단타 화면 노출·진단·주문이 전부 이걸 본다. 보통 이 하나만 있으면 된다.
+//   KIS_OWNER_EMAIL   : (선택) 주문만 더 좁게 제한하고 싶을 때. 없으면 OWNER_EMAIL 을 그대로 쓴다.
+//   ※ 둘 다 KIS 계정이나 Cloudflare 계정이 아니라 "구글 로그인 이메일"이다.
 //   FIREBASE_API_KEY  : (선택) 없으면 아래 상수 사용
 //
 // 지원: op=config(상태) · op=diag(자가진단) · op=approval(웹소켓키) · op=price · op=balance · POST op=order
@@ -59,11 +62,22 @@ async function hashkey(env, body) {
   return j.HASH || "";
 }
 
-// ── 사이트 소유자 판정 (OWNER_EMAIL → KIS_OWNER_EMAIL → 기본값) ──
+// ── 사이트 소유자 판정 ──
+// 여기 나오는 이메일은 전부 "이 웹앱에 구글 로그인하는 계정"이다.
+// 한국투자증권 계정도, Cloudflare 계정도 아니다. KIS 쪽 신원은 앱키·앱시크릿·계좌번호가 전담한다.
 const DEFAULT_OWNERS = ["jk82investing@gmail.com"];
+function parseEmails(raw) {
+  return String(raw || "").split(",").map(s => s.trim().toLowerCase()).filter(Boolean);
+}
 function siteOwners(env) {
-  const raw = String(env.OWNER_EMAIL || env.KIS_OWNER_EMAIL || "").trim();
-  return raw ? raw.split(",").map(s => s.trim().toLowerCase()).filter(Boolean) : DEFAULT_OWNERS;
+  const raw = parseEmails(env.OWNER_EMAIL);
+  return raw.length ? raw : DEFAULT_OWNERS;
+}
+// 주문 허용 계정. 기본은 사이트 주인과 동일 —— 관리할 변수를 OWNER_EMAIL 하나로 줄인다.
+// KIS_OWNER_EMAIL 은 선택이고, 넣으면 "주문만 더 좁게" 제한하는 용도로만 쓴다.
+function orderOwners(env) {
+  const narrow = parseEmails(env.KIS_OWNER_EMAIL);
+  return narrow.length ? narrow : siteOwners(env);
 }
 async function emailOfToken(request, env) {
   const auth = request.headers.get("Authorization") || "";
@@ -80,8 +94,7 @@ async function emailOfToken(request, env) {
 
 // ── Firebase ID 토큰 검증 (소유자만 주문) ──
 async function verifyOwner(request, env) {
-  const owners = String(env.KIS_OWNER_EMAIL || "").split(",").map(s => s.trim().toLowerCase()).filter(Boolean);
-  if (!owners.length) return { ok: false, msg: "KIS_OWNER_EMAIL 환경변수가 없어 주문이 차단돼 있습니다." };
+  const owners = orderOwners(env);
   const auth = request.headers.get("Authorization") || "";
   const idToken = auth.startsWith("Bearer ") ? auth.slice(7) : "";
   if (!idToken) return { ok: false, msg: "로그인이 필요합니다." };
@@ -104,7 +117,7 @@ export async function onRequestGet({ request, env }) {
 
   if (op === "config") {
     return json({ configured: configured(env), env: isReal(env) ? "real" : "vts",
-      hasOwner: !!(env.KIS_OWNER_EMAIL || "").trim() });
+      hasOwner: orderOwners(env).length > 0 });
   }
   if (op === "diag") {
     // 계좌번호·예수금·이메일이 담기므로 소유자만 볼 수 있다
@@ -129,8 +142,11 @@ export async function onRequestGet({ request, env }) {
     add("이 배포가 보는 KIS_* 변수", true, Object.keys(env).filter(k => /^KIS_|^OWNER_/.test(k)).sort().join(", ") || "(없음)");
     const a = acct(env);
     add("KIS_ACCOUNT", !!a, a ? `${a.cano}-${a.prod} 형식 정상` : (env.KIS_ACCOUNT ? "형식 오류 — 12345678-01 처럼 넣으세요" : "없음"));
-    const owners = String(env.KIS_OWNER_EMAIL || "").split(",").map(x => x.trim()).filter(Boolean);
-    add("KIS_OWNER_EMAIL", owners.length > 0, owners.length ? `${owners.length}개 등록 (${owners[0]})` : "없음 — 주문이 전면 차단됩니다");
+    const narrow = parseEmails(env.KIS_OWNER_EMAIL);
+    const ords = orderOwners(env);
+    add("주문 허용 계정 (구글 로그인 이메일)", ords.length > 0,
+      narrow.length ? `KIS_OWNER_EMAIL 로 따로 제한 중 — ${narrow.join(", ")}`
+                    : `OWNER_EMAIL 과 동일 — ${ords.join(", ")}`);
     add("KIS_ENV", true, isReal(env) ? "real (실전 — 진짜 돈)" : "vts (모의투자)");
 
     if (env.KIS_APPKEY && env.KIS_APPSECRET) {
@@ -182,7 +198,8 @@ export async function onRequestGet({ request, env }) {
     if ((request.headers.get("Authorization") || "").startsWith("Bearer ")) {
       const g = await verifyOwner(request, env);
       add("로그인 계정 주문 권한", g.ok, g.ok ? `${g.email} — 주문 가능`
-        : g.msg + ` (KIS_OWNER_EMAIL 을 ${who} 로 바꾸거나, 등록된 계정으로 로그인하세요)`);
+        : g.msg + ` — OWNER_EMAIL 을 ${who} 로 맞추세요. `
+                + `KIS_OWNER_EMAIL 이 따로 있으면 그게 우선하니, 안 쓸 거면 그 변수를 지우면 됩니다`);
     }
     return json({ env: isReal(env) ? "real" : "vts", checks, allOk: checks.every(c => c.ok) });
   }

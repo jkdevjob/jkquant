@@ -313,7 +313,7 @@ canvas{display:block;width:100%;height:auto}
       <div id="kis_bal" style="margin-top:12px"></div>
     </div>
     <div class="warn" id="kis_help" style="display:none">KIS 실주문을 켜려면 Cloudflare Pages → 설정 → 환경 변수에
-      <b>KIS_APPKEY · KIS_APPSECRET · KIS_ACCOUNT</b>(예 12345678-01) · <b>KIS_OWNER_EMAIL</b>(주문 허용 계정)을 넣으세요.
+      <b>KIS_APPKEY · KIS_APPSECRET · KIS_ACCOUNT</b>(예 12345678-01)를 넣으세요. 주문 권한은 <b>OWNER_EMAIL</b>(구글 로그인 이메일)을 그대로 따릅니다.
       <b>KIS_ENV</b>는 기본 <b>모의투자(vts)</b>이며 실전은 <b>real</b>로 바꿉니다. 키는 서버(환경변수)에만 저장되고 브라우저엔 노출되지 않습니다.</div>
   </div>
 
@@ -1078,7 +1078,7 @@ async function kisInit(){
       st.innerHTML='<span class="pill good">연결됨 <b>'+(j.env==='real'?'실전':'모의투자')+'</b></span> <span class="sub">주문 가능 · 실제 체결은 증권사 규정을 따릅니다</span>';
       $('kis_panel').style.display=''; $('kis_help').style.display='none';
     }else{
-      st.innerHTML='<span class="pill bad">미설정</span> <span class="sub">'+(!j.configured?'KIS 키가 없습니다':'KIS_OWNER_EMAIL이 없어 주문이 차단됩니다')+'</span>';
+      st.innerHTML='<span class="pill bad">미설정</span> <span class="sub">'+(!j.configured?'KIS 키가 없습니다':'주문 허용 계정이 비어 있습니다')+'</span>';
       $('kis_panel').style.display='none'; $('kis_help').style.display='';
     }
   }catch(e){ st.innerHTML='<span class="pill bad">확인 실패</span> <span class="sub">'+esc(e.message||e)+'</span>'; $('kis_help').style.display=''; }
