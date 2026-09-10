@@ -12,28 +12,31 @@ const json = (o, s = 200) => new Response(JSON.stringify(o), { status: s, header
 const num = (t) => { const v = String(t).replace(/[,\s]/g, "").replace(/&nbsp;/g, ""); 
   if (!v || v === "-") return null; const n = Number(v); return Number.isFinite(n) ? n : null; };
 
-/* 한 페이지(20행) 파싱 — 날짜·종가·전일비·등락률·거래량·기관순매매·외국인순매매·보유주수·보유율 */
-function parsePage(html) {
-  const out = [];
-  // 표의 각 행: 날짜가 있는 tr 만 취한다
-  const rows = html.split(/<tr[^>]*>/i).slice(1);
-  for (const r of rows) {
-    const tds = [...r.matchAll(/<td[^>]*>([\s\S]*?)<\/td>/gi)].map(m =>
-      m[1].replace(/<[^>]+>/g, "").replace(/&nbsp;/g, " ").trim());
-    if (tds.length < 9) continue;
-    const d = tds[0].match(/(\d{4})\.(\d{2})\.(\d{2})/);
-    if (!d) continue;
-    out.push({
-      date: `${d[1]}-${d[2]}-${d[3]}`,
-      close: num(tds[1]),
-      vol: num(tds[4]),
-      inst: num(tds[5]),      // 기관 순매매 (주)
-      frgn: num(tds[6]),      // 외국인 순매매 (주)
-      frgnHold: num(tds[7]),  // 외국인 보유주수
-      frgnRate: num(tds[8]),  // 외국인 보유율 %
-    });
-  }
-  return out;
+/* 네이버 모바일 API 응답 → 표준형
+   foreignerPureBuyQuant / organPureBuyQuant / individualPureBuyQuant 는
+   "+4,266,985" 처럼 부호와 콤마가 섞여 온다. */
+function n(v) {
+  if (v == null) return null;
+  const t = String(v).replace(/[,%\s]/g, "");
+  if (!t || t === "-") return null;
+  const x = Number(t);
+  return Number.isFinite(x) ? x : null;
+}
+function parseTrend(arr) {
+  if (!Array.isArray(arr)) return [];
+  return arr.map((r) => {
+    const d = String(r.bizdate || "");
+    if (!/^\d{8}$/.test(d)) return null;
+    return {
+      date: `${d.slice(0, 4)}-${d.slice(4, 6)}-${d.slice(6, 8)}`,
+      close: n(r.closePrice),
+      frgn: n(r.foreignerPureBuyQuant),        // 외국인 순매수 (주)
+      inst: n(r.organPureBuyQuant),            // 기관 순매수 (주)
+      indi: n(r.individualPureBuyQuant),       // 개인 순매수 (주)
+      frgnRate: n(r.foreignerHoldRatio),       // 외국인 보유율 %
+      accVol: n(r.accumulatedTradingVolume),
+    };
+  }).filter(Boolean);
 }
 
 /* 수급 데이터 소스 후보 — 네이버가 Next.js 로 바뀌며 옛 표가 사라졌다.
@@ -72,21 +75,18 @@ export async function onRequestGet({ request }) {
 
   const all = [];
   const notes = [];
-  for (let p = 1; p <= pages; p++) {
-    const u = `https://finance.naver.com/item/frgn.naver?code=${code}&page=${p}`;
+  {
+    const u = `https://m.stock.naver.com/api/stock/${code}/trend`;
     try {
-      const r = await fetch(u, { headers: { "User-Agent": UA, Referer: "https://finance.naver.com/" } });
-      if (!r.ok) { notes.push(`p${p} HTTP ${r.status}`); break; }
-      const buf = await r.arrayBuffer();
-      const html = new TextDecoder("euc-kr").decode(buf);   // 네이버 금융은 EUC-KR
-      const rows = parsePage(html);
-      if (!rows.length) {
-        notes.push(`p${p} 행 없음 (len=${html.length})`);
-        if (url.searchParams.get("raw") === "1") return json({ code, raw: html.slice(0, 4000) });
-        break;
+      const r = await fetch(u, { headers: { "User-Agent": UA, Referer: "https://m.stock.naver.com/", accept: "application/json" } });
+      if (!r.ok) notes.push(`HTTP ${r.status}`);
+      else {
+        const j = await r.json().catch(() => null);
+        const rows = parseTrend(j);
+        if (!rows.length) notes.push("파싱 결과 없음");
+        all.push(...rows);
       }
-      all.push(...rows);
-    } catch (e) { notes.push(`p${p} ${String(e.message || e)}`); break; }
+    } catch (e) { notes.push(String(e.message || e)); }
   }
   const seen = new Set(); const uniq = [];
   for (const r of all) { if (!seen.has(r.date)) { seen.add(r.date); uniq.push(r); } }
