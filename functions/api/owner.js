@@ -1,21 +1,45 @@
 // Cloudflare Pages Function — /api/owner
-// 단타 화면처럼 "나만 보는" 페이지의 허용 계정을 서버에서 정한다.
-// 이메일을 저장소(공개)에 박지 않고 환경변수로 바꿀 수 있게 하려는 것.
+// "나만 보는" 화면(단타)의 접근 판정. 허용 목록은 절대 내보내지 않는다 —
+// 로그인한 본인이 소유자인지(true/false)만 알려준다. (이메일 노출 방지)
 //
-//   OWNER_EMAIL      : 허용 계정(쉼표로 여러 개). 없으면 KIS_OWNER_EMAIL → 기본값 순으로 폴백
-//   KIS_OWNER_EMAIL  : KIS 주문 허용 계정(이미 쓰던 값) — 따로 안 넣으면 이걸 재사용
-//
-// 값이 하나도 없으면 저장소 규약의 관리자 계정으로 폴백한다(잠김 방지).
+//   OWNER_EMAIL      : 허용 계정(쉼표로 여러 개)
+//   KIS_OWNER_EMAIL  : 없으면 이걸 재사용 (KIS 주문 허용 계정과 동일하게 쓰려는 경우)
+//   둘 다 없으면 저장소 규약의 관리자 계정으로 폴백한다(잠김 방지).
 
 const JH = {
   "Content-Type": "application/json; charset=utf-8",
   "Access-Control-Allow-Origin": "*",
   "Cache-Control": "no-store",
 };
+const FIREBASE_API_KEY_FALLBACK = "AIzaSyBzBe9pAttnbDgTlNThWZzNqtAAKxX7Ksw"; // 공개 웹 키
 const DEFAULT_OWNERS = ["jk82investing@gmail.com"];   // admin.html ADMIN_EMAILS 와 같은 규약
 
-export async function onRequestGet({ env }) {
-  const raw = String(env.OWNER_EMAIL || env.KIS_OWNER_EMAIL || "").trim();
-  const owners = raw ? raw.split(",").map(s => s.trim().toLowerCase()).filter(Boolean) : DEFAULT_OWNERS;
-  return new Response(JSON.stringify({ owners, source: raw ? (env.OWNER_EMAIL ? "OWNER_EMAIL" : "KIS_OWNER_EMAIL") : "default" }), { headers: JH });
+function resolveOwners(env) {
+  const raw = String(env.OWNER_EMAIL || "").trim();
+  if (raw) return { owners: raw.split(",").map(s => s.trim().toLowerCase()).filter(Boolean), source: "OWNER_EMAIL" };
+  const kis = String(env.KIS_OWNER_EMAIL || "").trim();
+  if (kis) return { owners: kis.split(",").map(s => s.trim().toLowerCase()).filter(Boolean), source: "KIS_OWNER_EMAIL" };
+  return { owners: DEFAULT_OWNERS, source: "default" };
+}
+
+export async function onRequestGet({ request, env }) {
+  const { owners, source } = resolveOwners(env);
+  const auth = request.headers.get("Authorization") || "";
+  const idToken = auth.startsWith("Bearer ") ? auth.slice(7) : "";
+  // 로그인 토큰이 없으면 판정 불가 — 목록은 알려주지 않는다
+  if (!idToken) return new Response(JSON.stringify({ isOwner: false, source, needAuth: true }), { headers: JH });
+  try {
+    const key = env.FIREBASE_API_KEY || FIREBASE_API_KEY_FALLBACK;
+    const r = await fetch("https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=" + key, {
+      method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ idToken }),
+    });
+    const j = await r.json().catch(() => ({}));
+    const u = j.users && j.users[0];
+    const email = u ? String(u.email || "").toLowerCase() : "";
+    if (!email) return new Response(JSON.stringify({ isOwner: false, source, error: "로그인 정보를 확인하지 못했습니다." }), { headers: JH });
+    // email 은 '본인 것'이라 돌려줘도 된다(화면 안내용). 허용 목록은 끝까지 숨긴다.
+    return new Response(JSON.stringify({ isOwner: owners.includes(email), email, source }), { headers: JH });
+  } catch (e) {
+    return new Response(JSON.stringify({ isOwner: false, source, error: String(e.message || e) }), { headers: JH });
+  }
 }
