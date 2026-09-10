@@ -115,9 +115,18 @@ export async function onRequestGet({ request, env }) {
     }
     const checks = [];
     const add = (k, ok, det) => checks.push({ k, ok, det });
-    const mask = (v) => v ? `설정됨 (${String(v).length}자, …${String(v).slice(-4)})` : "없음";
-    add("KIS_APPKEY", !!env.KIS_APPKEY, mask(env.KIS_APPKEY));
-    add("KIS_APPSECRET", !!env.KIS_APPSECRET, env.KIS_APPSECRET ? `설정됨 (${String(env.KIS_APPSECRET).length}자)` : "없음");
+    // "변수 자체가 없음" 과 "변수는 있는데 값이 빔"을 구분한다 — 유형을 비밀로 바꿀 때 값이 날아가는 경우가 있다
+    const state = (k, showTail) => {
+      const has = Object.prototype.hasOwnProperty.call(env, k);
+      const v = env[k];
+      if (v && String(v).length) return { ok: true, det: `설정됨 (${String(v).length}자${showTail ? ", …" + String(v).slice(-4) : ""})` };
+      if (has) return { ok: false, det: "변수는 있으나 값이 비어 있음 — 값을 다시 입력하고 저장하세요" };
+      return { ok: false, det: "변수 자체가 없음 — 이름 철자/환경(Production)을 확인하세요" };
+    };
+    { const r1 = state("KIS_APPKEY", true);  add("KIS_APPKEY", r1.ok, r1.det); }
+    { const r2 = state("KIS_APPSECRET", false); add("KIS_APPSECRET", r2.ok, r2.det); }
+    // 이 배포가 실제로 어떤 변수들을 보고 있는지 (이름만, 값은 절대 안 나감)
+    add("이 배포가 보는 KIS_* 변수", true, Object.keys(env).filter(k => /^KIS_|^OWNER_/.test(k)).sort().join(", ") || "(없음)");
     const a = acct(env);
     add("KIS_ACCOUNT", !!a, a ? `${a.cano}-${a.prod} 형식 정상` : (env.KIS_ACCOUNT ? "형식 오류 — 12345678-01 처럼 넣으세요" : "없음"));
     const owners = String(env.KIS_OWNER_EMAIL || "").split(",").map(x => x.trim()).filter(Boolean);
