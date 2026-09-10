@@ -158,7 +158,13 @@ export async function onRequestGet({ request, env }) {
             const j = await r.json().catch(() => ({}));
             const ok2 = String(j.rt_cd) === "0";
             const cash = j.output2 && j.output2[0] && j.output2[0].dnca_tot_amt;
-            add("계좌 조회", ok2, ok2 ? `정상 · 예수금 ${Number(cash || 0).toLocaleString()}원` : (j.msg1 || "실패 — 계좌번호·환경(vts/real)을 확인하세요"));
+            let why = j.msg1 || "실패";
+            // 실전 계좌번호를 모의(vts)에 넣는 실수가 잦다 — 에러코드로 바로 짚어준다
+            if (/INVALID_CHECK_ACNO|ACNO/i.test(JSON.stringify(j))) {
+              why += isReal(env) ? " — 실전 계좌번호가 맞는지 확인하세요"
+                                 : " — 모의투자 환경입니다. 실전 계좌번호는 쓸 수 없고 별도의 모의계좌번호가 필요합니다";
+            }
+            add("계좌 조회", ok2, ok2 ? `정상 · 예수금 ${Number(cash || 0).toLocaleString()}원` : why);
           } catch (e) { add("계좌 조회", false, String(e.message || e)); }
         }
       }
@@ -166,7 +172,8 @@ export async function onRequestGet({ request, env }) {
     // 로그인 계정이 주문 권한과 맞는지 (Authorization 헤더가 있을 때만)
     if ((request.headers.get("Authorization") || "").startsWith("Bearer ")) {
       const g = await verifyOwner(request, env);
-      add("로그인 계정 주문 권한", g.ok, g.ok ? `${g.email} — 주문 가능` : g.msg);
+      add("로그인 계정 주문 권한", g.ok, g.ok ? `${g.email} — 주문 가능`
+        : g.msg + ` (KIS_OWNER_EMAIL 을 ${who} 로 바꾸거나, 등록된 계정으로 로그인하세요)`);
     }
     return json({ env: isReal(env) ? "real" : "vts", checks, allOk: checks.every(c => c.ok) });
   }
