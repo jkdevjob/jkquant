@@ -10,7 +10,7 @@
 //   KIS_OWNER_EMAIL   : 주문을 허용할 계정 이메일(쉼표로 여러 개). 없으면 주문은 전면 차단.
 //   FIREBASE_API_KEY  : (선택) 없으면 아래 상수 사용
 //
-// 지원: op=config(상태) · op=price(현재가) · op=balance(잔고) · POST op=order(주문)
+// 지원: op=config(상태) · op=diag(자가진단) · op=approval(웹소켓키) · op=price · op=balance · POST op=order
 
 const JH = {
   "Content-Type": "application/json; charset=utf-8",
@@ -86,6 +86,55 @@ export async function onRequestGet({ request, env }) {
   if (op === "config") {
     return json({ configured: configured(env), env: isReal(env) ? "real" : "vts",
       hasOwner: !!(env.KIS_OWNER_EMAIL || "").trim() });
+  }
+  if (op === "diag") {
+    const checks = [];
+    const add = (k, ok, det) => checks.push({ k, ok, det });
+    const mask = (v) => v ? `설정됨 (${String(v).length}자, …${String(v).slice(-4)})` : "없음";
+    add("KIS_APPKEY", !!env.KIS_APPKEY, mask(env.KIS_APPKEY));
+    add("KIS_APPSECRET", !!env.KIS_APPSECRET, env.KIS_APPSECRET ? `설정됨 (${String(env.KIS_APPSECRET).length}자)` : "없음");
+    const a = acct(env);
+    add("KIS_ACCOUNT", !!a, a ? `${a.cano}-${a.prod} 형식 정상` : (env.KIS_ACCOUNT ? "형식 오류 — 12345678-01 처럼 넣으세요" : "없음"));
+    const owners = String(env.KIS_OWNER_EMAIL || "").split(",").map(x => x.trim()).filter(Boolean);
+    add("KIS_OWNER_EMAIL", owners.length > 0, owners.length ? `${owners.length}개 등록 (${owners[0]})` : "없음 — 주문이 전면 차단됩니다");
+    add("KIS_ENV", true, isReal(env) ? "real (실전 — 진짜 돈)" : "vts (모의투자)");
+
+    if (env.KIS_APPKEY && env.KIS_APPSECRET) {
+      let token = null;
+      try { token = await getToken(env); add("접근토큰 발급", true, "성공"); }
+      catch (e) { add("접근토큰 발급", false, String(e.message || e)); }
+      if (token) {
+        try {
+          const r = await fetch(base(env) + "/uapi/domestic-stock/v1/quotations/inquire-price?fid_cond_mrkt_div_code=J&fid_input_iscd=005930", {
+            headers: { authorization: "Bearer " + token, appkey: env.KIS_APPKEY, appsecret: env.KIS_APPSECRET, tr_id: "FHKST01010100", custtype: "P" },
+          });
+          const j = await r.json().catch(() => ({}));
+          const p = j.output && j.output.stck_prpr;
+          add("시세조회 (삼성전자)", !!p, p ? `현재가 ${Number(p).toLocaleString()}원` : (j.msg1 || "실패 HTTP " + r.status));
+        } catch (e) { add("시세조회 (삼성전자)", false, String(e.message || e)); }
+        if (a) {
+          try {
+            const tr = isReal(env) ? "TTTC8434R" : "VTTC8434R";
+            const qs = new URLSearchParams({ CANO: a.cano, ACNT_PRDT_CD: a.prod, AFHR_FLPR_YN: "N", OFL_YN: "",
+              INQR_DVSN: "02", UNPR_DVSN: "01", FUND_STTL_ICLD_YN: "N", FNCG_AMT_AUTO_RDPT_YN: "N", PRCS_DVSN: "00",
+              CTX_AREA_FK100: "", CTX_AREA_NK100: "" });
+            const r = await fetch(base(env) + "/uapi/domestic-stock/v1/trading/inquire-balance?" + qs, {
+              headers: { authorization: "Bearer " + token, appkey: env.KIS_APPKEY, appsecret: env.KIS_APPSECRET, tr_id: tr, custtype: "P" },
+            });
+            const j = await r.json().catch(() => ({}));
+            const ok2 = String(j.rt_cd) === "0";
+            const cash = j.output2 && j.output2[0] && j.output2[0].dnca_tot_amt;
+            add("계좌 조회", ok2, ok2 ? `정상 · 예수금 ${Number(cash || 0).toLocaleString()}원` : (j.msg1 || "실패 — 계좌번호·환경(vts/real)을 확인하세요"));
+          } catch (e) { add("계좌 조회", false, String(e.message || e)); }
+        }
+      }
+    }
+    // 로그인 계정이 주문 권한과 맞는지 (Authorization 헤더가 있을 때만)
+    if ((request.headers.get("Authorization") || "").startsWith("Bearer ")) {
+      const g = await verifyOwner(request, env);
+      add("로그인 계정 주문 권한", g.ok, g.ok ? `${g.email} — 주문 가능` : g.msg);
+    }
+    return json({ env: isReal(env) ? "real" : "vts", checks, allOk: checks.every(c => c.ok) });
   }
   if (!configured(env)) return json({ error: "KIS 키가 설정되지 않았습니다. Cloudflare 환경변수를 확인하세요." }, 400);
 

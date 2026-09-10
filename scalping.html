@@ -128,6 +128,10 @@ canvas{display:block;width:100%;height:auto}
 .logform .fld.wide{grid-column:span 2}
 @media(max-width:640px){.logform{grid-template-columns:repeat(2,1fr)}.logform .fld.wide{grid-column:span 2}}
 
+.diagbox .d{padding:6px 0;border-bottom:1px solid var(--line);font-size:12.5px}
+.diagbox .ok{color:var(--buy);font-weight:800}
+.diagbox .no{color:var(--sell);font-weight:800}
+.diagbox .det{color:var(--faint)}
 #gate{position:fixed;inset:0;background:linear-gradient(160deg,#0f1320,#171c2e);z-index:200;display:flex;align-items:center;justify-content:center;padding:24px;text-align:center}
 #gate .gbox{max-width:380px;width:100%}
 #gate .glogo{font-size:28px;font-weight:800;letter-spacing:-.02em;margin-bottom:6px}
@@ -288,6 +292,11 @@ canvas{display:block;width:100%;height:auto}
   <div class="card">
     <h3><span class="dot"></span>🔗 KIS 실주문 <span class="sub" id="kis_env" style="font-weight:600"></span> <span class="caret" onclick="kisBalance()">🔄 잔고</span></h3>
     <div id="kis_status" class="lead">연결 확인 중…</div>
+    <div class="row" style="margin-bottom:10px">
+      <button class="ghostbtn" onclick="kisDiag()" id="kisDiagBtn">🔍 연결 점검</button>
+      <span class="sub">키를 넣은 뒤 눌러보세요 — 어디서 막히는지 항목별로 알려줍니다</span>
+    </div>
+    <div id="kis_diag" style="margin-bottom:10px"></div>
     <div id="kis_panel" style="display:none">
       <div class="row" style="margin-bottom:8px">
         <div class="fld" style="flex:1 1 120px"><label>종목코드</label><input id="k_code" type="text" placeholder="005930"></div>
@@ -1044,6 +1053,21 @@ function exportLog(){
 }
 
 /* ══ KIS 실주문 (모의투자) ══ */
+async function kisDiag(){
+  const el=$('kis_diag'); el.innerHTML='<span class="sub">점검 중…</span>';
+  $('kisDiagBtn').disabled=true;
+  try{
+    const hdr={}; try{ if(me) hdr['Authorization']='Bearer '+(await me.getIdToken()); }catch(e){}
+    const j=await (await fetch('/api/kis?op=diag',{headers:hdr})).json();
+    if(j.error){ el.innerHTML='<span class="err">'+esc(j.error)+'</span>'; return; }
+    el.innerHTML='<div class="diagbox">'+ (j.checks||[]).map(c=>
+      `<div class="d"><span class="${c.ok?'ok':'no'}">${c.ok?'✓':'✗'}</span> <b>${esc(c.k)}</b> <span class="det">${esc(c.det||'')}</span></div>`
+    ).join('') + '</div>' +
+    (j.allOk ? '<p class="note" style="color:var(--buy)">✓ 전부 정상입니다 — 이제 주문·실시간 시세가 동작합니다.</p>'
+             : '<p class="note">✗ 항목의 설명대로 Cloudflare 환경변수를 고친 뒤 <b>재배포</b>하고 다시 점검하세요. (환경변수는 재배포해야 반영됩니다)</p>');
+  }catch(e){ el.innerHTML='<span class="err">'+esc(e.message||e)+'</span>'; }
+  finally{ $('kisDiagBtn').disabled=false; kisInit(); }
+}
 let KIScfg=null;
 async function kisInit(){
   const st=$('kis_status');
