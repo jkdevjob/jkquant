@@ -371,11 +371,19 @@ console.log('[7] DOM 구조');
     .match(/<th>([^<]*)<\/th>/g).map(x=>x.replace(/<\/?th>/g,''));
   const body=(idx.match(/<tr class="\$\{cls\}"\$\{rowStyle\}>[\s\S]*?<\/tr>/)||[''])[0];
   const cells=(body.match(/<td[^>]*>(?:\$\{[^}]*\}|[^<])*/g)||[]).map(x=>x.replace(/<td[^>]*>/,''));
-  const want=['날짜','구분','체결가','수량','손익','잔금','T','별%','별지점'];
-  ok('무매 이력 머리글 순서', JSON.stringify(head.slice(0,9))===JSON.stringify(want), head.join(','));
+  const want=['날짜','구분','체결가','수량','손익률','손익','잔금','T','별%','별지점'];
+  ok('무매 이력 머리글 순서', JSON.stringify(head.slice(0,want.length))===JSON.stringify(want), head.join(','));
   // 셀이 머리글과 같은 값을 같은 자리에 넣는지 — 손익·잔금이 바뀌면 여기서 잡힌다
   ok('무매 이력 본문이 머리글과 같은 순서',
-     /profitCell\}<\/td><td>\$\{wn\(h\.balAfter\)\}/.test(body), cells.slice(4,6).join(' | '));
+     /pnlPct\(h\.profit\):'-'\}<\/td><td>\$\{profitCell\}<\/td><td>\$\{wn\(h\.balAfter\)\}/.test(body), cells.slice(4,7).join(' | '));
+  /* 손익률 = 손익 ÷ 원금. 매도분 원가로 나누면 별%·익절%와 거의 같아 옆 칸과 겹치고,
+     원금 기준이라야 한 사이클 손익률을 줄마다 더해서 볼 수 있다. */
+  ok('손익률은 원금 기준', /const cap=\+\(\(curStrat\(\)\.settings\|\|\{\}\)\.principal\)\|\|0;/.test(idx)
+     && /const r=v\/cap\*100;/.test(idx));
+  ok('매수 줄엔 손익률이 없다', /\$\{\(cx\|\|sell\)\?pnlPct\(h\.profit\):'-'\}/.test(idx));
+  ok('원금이 0이면 나눗셈을 안 한다', /if\(v==null\|\|!cap\) return '-';/.test(idx));
+  // 열이 하나 늘면 빈 줄 colspan도 같이 늘어야 한다
+  ok('빈 줄 colspan이 열 수와 맞는다', /<td class="empty" colspan="11">/.test(idx));
   /* 사이클 종료는 아이콘으로. 글자 배지는 '구분' 칸을 41px 밀어내
      좁은 화면에서 손익·잔금을 화면 밖으로 내보냈다. 줄 위 금색 선이 본 표시다. */
   ok('사이클 종료는 아이콘', /const endFlag=h\.cycleEnd\?' <span class="cyc-end" title="사이클 종료">🏁<\/span>':''/.test(idx)
@@ -1044,7 +1052,7 @@ console.log('[24] 표 밀도 — 한 화면에 더 많이');
   // 줄높이를 만드는 세 값 — 하나라도 되돌아가면 밀도가 통째로 풀린다
   ok('운영 이력표 밀도', /\.htable td\{padding:3px 4px;line-height:1\.25;/.test(idx)
      && /\.htable th\{[^}]*font-size:10px;padding:3px 4px;line-height:1\.2;/.test(idx)
-     && /\.htable\{width:100%;border-collapse:collapse;font-size:11px;min-width:548px\}/.test(idx));
+     && /\.htable\{width:100%;border-collapse:collapse;font-size:11px;min-width:590px\}/.test(idx));
   ok('수정·삭제 칸도 좁힌다', /\.htable td:last-child\{padding:3px 2px\}/.test(idx));
   ok('백테 표 밀도', /\.cmp-tbl td\{padding:3px 5px;line-height:1\.25;/.test(bt)
      && /\.cmp-tbl th\{[^}]*padding:3px 5px;line-height:1\.2;[^}]*font-size:10px;\}/.test(bt)
