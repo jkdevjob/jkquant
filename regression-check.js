@@ -1325,5 +1325,28 @@ console.log('[30] 모의 시작일 일괄 변경');
 }
 
 
+/* ════ 31. 짧은 기간 — 막지 말고 알리기 ════
+   1년 미만을 통째로 막아 두니 '올해 1월부터'를 볼 수가 없었다.
+   막아야 할 건 수익률이 아니라 연환산(CAGR·MAR)이다. */
+console.log('[31] 짧은 기간 — 막지 말고 알리기');
+{
+  let sg=''; try{ sg=extractFn(bt,'function shortGuard(n)'); }catch(e){}
+  ok('경계 함수 존재', !!sg, sg?'':'shortGuard 없음');
+  ok('경계값', /const SHORT_DAYS=250, MIN_DAYS=20;/.test(bt));
+  // 20거래일 미만은 이동평균·표준편차가 아예 안 잡힌다 — 그때만 막는다
+  ok('20일 미만만 막는다', /if\(n<MIN_DAYS\)\{/.test(sg) && /return false;/.test(sg));
+  ok('1년 미만은 통과시키고 알린다', /if\(n<SHORT_DAYS\)\{/.test(sg)
+     && /CAGR·MAR은 연환산이라 부풀려집니다/.test(sg) && /return true;/.test(sg));
+  // 수익률·MDD는 기간과 무관하게 유효하다 — 그걸 명시해야 사용자가 헷갈리지 않는다
+  ok('무엇이 유효한지 적는다', /수익률·MDD는 그대로 유효/.test(sg));
+  ok('경고 자리가 결과 위에 있다', /id="shortWarn"/.test(bt)
+     && bt.indexOf('id="shortWarn"') < bt.indexOf('id="asapResult"'));
+  // 네 탭(ASAP·표준편차·역분산·전체비교)이 모두 같은 경계를 쓴다
+  const n=(bt.match(/if\(!shortGuard\(/g)||[]).length;
+  ok('네 탭이 같은 경계를 쓴다', n===4, n+'곳');
+  ok('옛 하드블록이 안 남아 있다', !/공통 거래일이 1년 미만입니다/.test(bt));
+}
+
+
 console.log(`\n════ 결과: ${pass} PASS / ${fail} FAIL ${fail===0?'— ALL PASS ★':'— 배포 금지, 위 ✗ 항목 수정 필요'} ════`);
 process.exit(fail===0?0:1);
