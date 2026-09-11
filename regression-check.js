@@ -1370,5 +1370,24 @@ console.log('[32] 전반전 매수 — 주문별 정수 내림 (모의 == 백테
   ok('모의: 절반 주문 2건을 각각 내림', half===2, half+'곳');
 }
 
+console.log('[33] 세션 이동 — 보던 서브탭 유지');
+{
+  const ks=extractFn(idx,'function keepSubnav(sec)');
+  ok('유지 함수 존재', !!ks);
+  ok('현재 켜진 칩을 먼저 읽는다', /\.chip\.on/.test(ks) && /cur\.dataset\.b/.test(ks));
+  ok('없는 블록이면 첫 칩으로 떨어진다', /resetSubnav\(sec\)/.test(ks)
+     && ks.indexOf('resetSubnav(sec)') < ks.indexOf('goBlk(sec,blk)'));
+  ok('칩과 블록이 둘 다 있을 때만 되돌린다',
+     /chip\[data-b="\$\{blk\}"\]/.test(ks) && /&& \$\(blk\)/.test(ks));
+  // switchSess만 유지한다 — 새 세션 추가·설정 초기화는 '현재'로 리셋하는 게 맞다
+  const sw=extractFn(idx,'function switchSess(id)');
+  ok('switchSess가 유지를 쓴다', /keepSubnav\(S\.activeTab\)/.test(sw) && !/resetSubnav/.test(sw));
+  const n=(idx.match(/resetSubnav\(S\.activeTab\)/g)||[]).length;
+  ok('새 세션·삭제는 그대로 리셋', n===2, n+'곳');
+  // gotoSess(모의 성과 → 거래이력)는 switchSess 뒤에 칩을 눌러서 덮어쓴다
+  const gs=extractFn(idx,'function gotoSess(tab, id)');
+  ok('gotoSess는 거래이력으로 덮어쓴다', gs.indexOf('switchSess(id)') < gs.indexOf("==='거래이력'"));
+}
+
 console.log(`\n════ 결과: ${pass} PASS / ${fail} FAIL ${fail===0?'— ALL PASS ★':'— 배포 금지, 위 ✗ 항목 수정 필요'} ════`);
 process.exit(fail===0?0:1);

@@ -493,7 +493,7 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
 </div>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.26</span></h1></div>
+    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.27</span></h1></div>
     <div class="jkmenu" id="jkmenuWrap">
       <button class="jkmenu-btn" id="jkmenuBtn" aria-label="메뉴" onclick="jkMenuToggle(event)">三</button>
       <div class="jkmenu-pop" id="jkmenuPop" hidden>
@@ -6848,8 +6848,9 @@ function switchSess(id){
   lastQuote={inf:null,vr:null}; infQuoteCache=null; _lastNeedClose=null; maQuoteData=null; dcaQuoteData=null; ivsQuoteData=null; ivsQuote1=null;
   clearInputs();
   ['vn_fetchnote','chart_note','inf_chart_note','inf_ten_grid','ma_fetchnote','dca_fetchnote','ivs_fetchnote'].forEach(id=>{const el=$(id);if(el){el.textContent='';el.className=el.className.replace(/\b(ok|err|load)\b/g,'');}});
-  // 현재 탭의 서브탭을 "현재"로 리셋
-  resetSubnav(S.activeTab);
+  // 서브탭은 보던 걸 그대로 유지한다 — 분석 보다가 세션을 옮기면 분석이 계속 보인다.
+  // (gotoSess는 이 뒤에 '거래이력' 칩을 눌러서 덮어쓰므로 영향 없다)
+  keepSubnav(S.activeTab);
   refreshAll();
   // 새 세션 자동 로딩
   try{
@@ -6864,6 +6865,15 @@ function clearInputs(){
   ['o_close','o_star5man','sh_price','sh_qty','shv_price','shv_qty','shv_amt','vn_price','vn_eval','ma_price','dca_price','ivs_price','ivs_price1'].forEach(id=>{const el=$(id);if(el)el.value=''});
   const fn1=$('o_fetchnote');if(fn1){fn1.textContent='';fn1.className='fetchnote'}
   lastQuote={inf:null,vr:null};
+}
+/* 보던 서브탭을 그대로 둔다. 없는 블록이면 resetSubnav가 첫 칩으로 떨궈준다.
+   블록 내용은 refreshAll()이 전부 다시 그리고, 시세 로딩은 switchSess가 탭별로
+   따로 하므로 여기서 칩 onclick(지연로드)을 부를 필요가 없다. */
+function keepSubnav(sec){
+  const cur=document.querySelector(`#${sec} .chip.on`);
+  const blk=cur&&cur.dataset.b;
+  resetSubnav(sec);
+  if(blk && document.querySelector(`#${sec} .chip[data-b="${blk}"]`) && $(blk)) goBlk(sec,blk);
 }
 function resetSubnav(sec){
   const first=document.querySelector(`#${sec} .chip`);
