@@ -303,7 +303,7 @@ td:first-child{text-align:left;}
   <div class="brand">
     <div>
       <div class="logo">Backtest</div>
-      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v1.175</span></h1>
+      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v1.176</span></h1>
     </div>
   </div>
   <div style="display:flex;align-items:center;gap:8px">
@@ -2043,11 +2043,13 @@ function runIM(days,tkr,cap,divs,targetPct,compound=true){
       else{
         const starP=avg*(1+(starBase-starSlope*T)/100);const buyP=starP-0.01;
         if(T<divs/2){
-          const half=one/2;let sp=0,ti=0;
-          // 원본 규약: 별지점·평단 두 주문은 같은 날 동시 체결 → 투입금 합산 후 평단 일괄 갱신
-          if(c<=buyP){sp+=half;ti+=0.5;}
-          if(c<=avg){sp+=half;ti+=0.5;}
-          if(sp>0){ if(_buy(c,sp)>0) T+=ti; }
+          const half=one/2;
+          // 별지점·평단은 '별개의 주문' 2건이다 — 각 주문이 따로 정수 내림된다.
+          // 합산해서 한 번만 내리면 실제로는 못 사는 주식을 산 걸로 쳐서 백테가 낙관적으로 나온다
+          // (1회 $500·주가 $65: 합산 floor(500/65)=7주 vs 실제 floor(250/65)×2=6주).
+          // 같은 날 같은 가격 체결이라 평단·잔금은 합산했을 때와 수학적으로 동일하다.
+          if(c<=buyP){ if(_buy(c,half)>0) T+=0.5; }
+          if(c<=avg) { if(_buy(c,half)>0) T+=0.5; }
         }else{ if(c<=buyP){ if(_buy(c,one)>0) T+=1; } }
       }
     }
@@ -2323,11 +2325,13 @@ function runIM50(days,tkr,cap,divs,targetPct,compound=true){
       else{
         const starP=avg*(1+(starBase-starSlope*T)/100);const buyP=starP-0.01;
         if(T<divs/2){
-          const half=one/2;let sp=0,ti=0;
-          // 원본 규약: 별지점·평단 두 주문은 같은 날 동시 체결 → 투입금 합산 후 평단 일괄 갱신
-          if(c<=buyP){sp+=half;ti+=0.5;}
-          if(c<=avg){sp+=half;ti+=0.5;}
-          if(sp>0){ if(_buy(c,sp)>0) T+=ti; }
+          const half=one/2;
+          // 별지점·평단은 '별개의 주문' 2건이다 — 각 주문이 따로 정수 내림된다.
+          // 합산해서 한 번만 내리면 실제로는 못 사는 주식을 산 걸로 쳐서 백테가 낙관적으로 나온다
+          // (1회 $500·주가 $65: 합산 floor(500/65)=7주 vs 실제 floor(250/65)×2=6주).
+          // 같은 날 같은 가격 체결이라 평단·잔금은 합산했을 때와 수학적으로 동일하다.
+          if(c<=buyP){ if(_buy(c,half)>0) T+=0.5; }
+          if(c<=avg) { if(_buy(c,half)>0) T+=0.5; }
         }else{ if(c<=buyP){ if(_buy(c,one)>0) T+=1; } }
       }
     }

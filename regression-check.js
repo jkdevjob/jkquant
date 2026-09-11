@@ -79,8 +79,10 @@ inject(`{_sell(c,sq,0);qtHit=true;}`,
 `{__LOG('쿼터매도',c,sq);_sell(c,sq,0);qtHit=true;}`,'qt');
 inject(`if(shares===0&&T===0){ if(_buy(c,one)>0) T+=1; }   // 못 사면 회차도 안 쓴다`,
 `if(shares===0&&T===0){ const __q=_buy(c,one); if(__q>0){__LOG('1회매수',c,__q); T+=1;} }`,'fb');
-inject(`if(sp>0){ if(_buy(c,sp)>0) T+=ti; }`,
-`if(sp>0){ const __q=_buy(c,sp); if(__q>0){__LOG(ti===1?'1회매수':'절반매수',c,__q); T+=ti;} }`,'hb');
+inject(`if(c<=buyP){ if(_buy(c,half)>0) T+=0.5; }`,
+`if(c<=buyP){ const __q=_buy(c,half); if(__q>0){__LOG('절반매수',c,__q); T+=0.5;} }`,'hb1');
+inject(`if(c<=avg) { if(_buy(c,half)>0) T+=0.5; }`,
+`if(c<=avg) { const __q=_buy(c,half); if(__q>0){__LOG('절반매수',c,__q); T+=0.5;} }`,'hb2');
 inject(`}else{ if(c<=buyP){ if(_buy(c,one)>0) T+=1; } }`,
 `}else{ if(c<=buyP){ const __q=_buy(c,one); if(__q>0){__LOG('1회매수',c,__q); T+=1;} } }`,'bb');
 inject(`const fin=cash+shares*M[tkr][days[days.length-1]][C]+savedProfit;`,
@@ -218,9 +220,13 @@ console.log('[4b] runIM50 스모크 + V4.0 앵커');
   // v1.174 — 주식 수량을 정수로 바꾸면서 셋 다 이동했다. 소수점으로 사면 남는 돈까지
   //   늘 굴러가서 실제보다 좋게 나온다. 증권사에서 0.34주는 못 산다.
   //   낮아지는 게 정상이고(SOXL 106,917→103,037), 사이클 수도 함께 움직인다.
-  const A=[['SOXL',20,20,103036.68,54.06,36],
-           ['TQQQ',40,10,26113.26,64.68,30],
-           ['TECL',20,20,44614.71,42.49,14]];
+  // v1.176 — 별지점·평단 두 주문을 합쳐서 한 번만 내림하던 걸 주문별 내림으로 바로잡아 셋 다 이동.
+  //   실제로는 별개 주문 2건이라 각각 정수 주수다(1회 $500·주가 $65: 합산 7주 → 실제 3+3=6주).
+  //   방향은 종목마다 다르다 — 평단이 바뀌면 이후 체결 경로가 통째로 갈리기 때문이다.
+  //   이 수정으로 운영 모의(infSimForward)와 백테가 원금 $3k/$10k/$100k에서 체결까지 완전 일치한다.
+  const A=[['SOXL',20,20,102989.30,54.04,35],
+           ['TQQQ',40,10,25963.09,62.68,30],
+           ['TECL',20,20,46709.32,40.01,14]];
   for(const [tkr,div,tgt,fexp,mexp,cexp] of A){
     if(!DAYS[tkr]){ console.log('  (CSV 없음, 스킵: '+tkr+')'); continue; }
     if(!fixOK(tkr)){ console.log(`  (데이터가 고정본과 달라 앵커 스킵: ${tkr} ${DAYS[tkr].length}일 ~${DAYS[tkr][DAYS[tkr].length-1]})`); continue; }
@@ -1347,6 +1353,22 @@ console.log('[31] 짧은 기간 — 막지 말고 알리기');
   ok('옛 하드블록이 안 남아 있다', !/공통 거래일이 1년 미만입니다/.test(bt));
 }
 
+console.log('[32] 전반전 매수 — 주문별 정수 내림 (모의 == 백테)');
+{
+  // 별지점·평단은 별개의 주문 2건이다. 합산해서 한 번만 내림하면 실제로는 못 사는
+  // 주식을 산 걸로 쳐서 백테만 낙관적으로 나온다 (1회 $500·주가 $65: 7주 vs 3+3=6주).
+  // 이 한 줄 때문에 모의 38.62% / 백테 38.89%로 갈렸다.
+  const im=extractFn(bt,'function runIM(days,tkr,cap,divs,targetPct,compound');
+  ok('백테: 별지점 주문을 따로 내림', /if\(c<=buyP\)\{ if\(_buy\(c,half\)>0\) T\+=0\.5; \}/.test(im));
+  ok('백테: 평단 주문을 따로 내림',   /if\(c<=avg\) \{ if\(_buy\(c,half\)>0\) T\+=0\.5; \}/.test(im));
+  ok('백테: 합산 후 일괄 내림이 안 남아 있다', !/if\(sp>0\)\{ if\(_buy\(c,sp\)>0\) T\+=ti; \}/.test(bt));
+  // runIM50도 같은 규약이어야 한다 — 예전에 여기만 빠뜨려서 V5.0==V4.0 항등이 깨졌었다
+  const n=(bt.match(/if\(c<=buyP\)\{ if\(_buy\(c,half\)>0\) T\+=0\.5; \}/g)||[]).length;
+  ok('runIM·runIM50 둘 다 고쳐져 있다', n===2, n+'곳');
+  // 운영 모의도 반드시 절반씩 따로 내림해야 한다 (한쪽만 고치면 다시 갈린다)
+  const half=(idx.match(/put\('절반매수',d,cl,Math\.floor\(\(B\.amt\/2\)\/cl\)\)/g)||[]).length;
+  ok('모의: 절반 주문 2건을 각각 내림', half===2, half+'곳');
+}
 
 console.log(`\n════ 결과: ${pass} PASS / ${fail} FAIL ${fail===0?'— ALL PASS ★':'— 배포 금지, 위 ✗ 항목 수정 필요'} ════`);
 process.exit(fail===0?0:1);
