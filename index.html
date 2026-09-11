@@ -493,7 +493,7 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
 </div>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.25</span></h1></div>
+    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.26</span></h1></div>
     <div class="jkmenu" id="jkmenuWrap">
       <button class="jkmenu-btn" id="jkmenuBtn" aria-label="메뉴" onclick="jkMenuToggle(event)">三</button>
       <div class="jkmenu-pop" id="jkmenuPop" hidden>
@@ -1548,7 +1548,7 @@ document.addEventListener('click',function(e){ var m=document.getElementById('jk
   <footer>
     <strong>JK 퀀트</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.25</b> · 2026-09-11</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.26</b> · 2026-09-11</div>
   </footer>
 </div>
 
@@ -3040,8 +3040,11 @@ function infSimForward(startFrom){
           if(a>0&&b>0) eff=imTgtOf(st.target,(a/b-1)*100); }
         const star=c.avg*(1+starPct(st.ticker,st.div,c.T,st.target)/100);
         const qSell=Math.floor(c.qty/4), qTp=c.qty-qSell, tgt=c.avg*(1+eff/100);
-        // ① 지정가: 고가 터치 → 익절가 체결. 단 시가가 이미 익절가 위면 시가에 체결된다(가격개선).
-        if(hi>=tgt && qTp>0) put('지정가매도',d,(op>tgt?op:tgt),qTp);
+        /* ① 지정가 익절 — 판정은 종가로 한다.
+           고가 터치를 체결로 치면 장중에 스치기만 하고 안 팔린 날까지 익절로 세어
+           모의가 실제보다 낙관적으로 나온다(SOXL 20/10 한 해에 +8.7%p 차이가 났다).
+           체결가는 그대로 max(익절가, 시가) — 갭업이면 시가가 더 유리하다. */
+        if(cl>=tgt && qTp>0) put('지정가매도',d,(op>tgt?op:tgt),qTp);
         { const c3=computeInf();
           if(cl>=star && qSell>0 && c3.qty>0) put('쿼터매도',d,cl,Math.min(qSell,c3.qty)); }  // ② 별지점 LOC
         if(computeInf().qty<=0) liquidated=true;   // 전량매도 = 사이클 종료. 새 사이클 첫 매수는 다음 날 (백테 runIM과 같은 규약)
@@ -7147,7 +7150,7 @@ const SIM_KEYS={
    설정 지문만 보면 설정을 안 바꾼 세션은 옛 기록을 그대로 안고 간다 —
    그래서 지문에 규약 판을 같이 넣어, 규약이 바뀌면 전 세션이 다시 만들어지게 한다.
    ※ 체결 규칙을 고칠 때마다 이 숫자를 올릴 것. */
-const SIM_RULE_VER=2;   // 2: 지정가매도 체결가 = max(익절가, 시가)
+const SIM_RULE_VER=3;   // 3: 익절 판정을 고가 터치 → 종가로 (고가로 치면 안 팔린 날도 익절로 셌다)
 function simSig(tab,st){
   return 'r'+SIM_RULE_VER+'|'+(SIM_KEYS[tab]||[]).map(k=>String(st[k]===undefined?'':st[k])).join('|');
 }

@@ -303,7 +303,7 @@ td:first-child{text-align:left;}
   <div class="brand">
     <div>
       <div class="logo">Backtest</div>
-      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v1.173</span></h1>
+      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v1.174</span></h1>
     </div>
   </div>
   <div style="display:flex;align-items:center;gap:8px">
@@ -1315,6 +1315,17 @@ let imEngine='v40';   // V5.0 숨김 기간: v40 고정
    양도소득세 22% · 연 250만원 기본공제 · 손익통산(이월없음) · 환율 1,350원/$
    Python 독립구현(cost_engine.py)과 소수점 일치 검증됨. */
 const COST_FEE=0.0025, COST_SLIP=0.0005, COST_TAXRATE=0.22, COST_KRW=1350, COST_DEDUCT=250e4;
+/* ════ 주식 수량 — 정수 ════
+   증권사에서 0.34주를 살 수는 없다(토스 같은 소수점 매수를 빼면). 소수점으로 사면
+   남는 돈까지 늘 굴러가서 실제보다 좋게 나온다 — 운영 모의는 원래 정수로 굴린다.
+   그 둘이 어긋나 SOXL 20/10 한 해 백테 41.8% vs 모의 38.1%로 갈렸다.
+
+   적립식(DCA·ASAP·로테적립)만 뺀다. 1회 $10로 $100짜리를 사면 floor(10/100)=0주라
+   한 주도 못 사고 전략이 통째로 멈춘다 — 거긴 원래 소수점이 맞고 운영도 그렇게 돈다.
+
+   iq: 금액→주수 (내림) · isq: 주수→주수 (내림, 보유분 초과 방지) */
+const iq=(amt,px)=>(px>0?Math.floor(amt/px):0);
+const isq=(q,have)=>Math.min(Math.floor(q+1e-9), Math.floor(have+1e-9));
 
 let imShortMA=30;   // V5.0 국면 단기이평 (20/30/50)
 let imLoPct=6;      // V5.0 하락국면 익절% (조기탈출)
@@ -1429,7 +1440,8 @@ function momentumBacktest(data, tickers, U, cap, lb, filter, costOn){
     const soldRet = basis>0 ? realized/basis : 0;
     cash=proceeds; if(costOn){ if(U.annual){ yrRealUSD+=realized; } else if(taxable[held]&&realized>0){ const tx=realized*U.taxRate; cash-=tx; taxPaid+=tx; } }
     shares=0; held=null; return soldRet; }
-  function buy(s,d){ const p=px(s,d), fee=cash*FEE; basis=cash; shares=(cash-fee)/p; cash=0; held=s; }
+  function buy(s,d){ const p=px(s,d), q=Math.floor(cash/(p*(1+FEE)));   // 정수 주수
+    const spend=q*p, fee=spend*FEE; basis=spend+fee; shares=q; cash-=spend+fee; held=s; }
   function settleAnnual(priceForPay){ if(!costOn||!U.annual)return; const taxable=Math.max(0,yrRealUSD*COST_KRW-COST_DEDUCT), tx=taxable*U.taxRate/COST_KRW;
     if(tx>0){ if(cash>=tx)cash-=tx; else{ const need=tx-cash; cash=0; if(held&&priceForPay>0)shares-=need/priceForPay; } taxPaid+=tx; } yrRealUSD=0; }
   for(let i=lb;i<months.length;i++){
@@ -1888,11 +1900,13 @@ function runIM(days,tkr,cap,divs,targetPct,compound=true){
   const CO = (typeof imCostOn!=='undefined') && imCostOn;
   const FEE = CO?COST_FEE:0, SLIP = CO?COST_SLIP:0;
   let feesTotal=0, taxTotal=0, yearPnl=0, curYear=null;
-  function _buy(px, amt){                       // amt($) 투입 → 수수료 차감 후 매수
-    // 비용 0일 때 원본 산술과 완전 동일해야 함: net=amt, q=amt/px, avg=(shares*avg+amt)/(shares+q)
-    const fee=amt*FEE, net=amt-fee, q=net/px;
-    avg = (shares<=0) ? px : (shares*avg+net)/(shares+q);
-    shares+=q; cash-=amt; feesTotal+=fee; return q;
+  function _buy(px, amt){                       // amt($) 투입 → 정수 주수만 매수
+    // 소수점 주식은 증권사에서 못 산다 — 못 채운 잔액은 그대로 잔금에 남는다
+    if(amt>cash) amt=cash;                      // V5.0과 같은 규약 (정수라 이 차이가 주 단위로 벌어진다)
+    const q=iq(amt/(1+FEE), px); if(q<=0) return 0;
+    const spend=q*px, fee=spend*FEE;
+    avg = (shares<=0) ? px : (shares*avg+spend)/(shares+q);
+    shares+=q; cash-=spend+fee; feesTotal+=fee; return q;
   }
   function _sell(px, qty, slip){                // qty주 매도 (slip: 지정가매도만)
     const eff=px*(1-(slip||0)), gross=qty*eff, fee=gross*FEE;
@@ -1979,8 +1993,8 @@ function runIM(days,tkr,cap,divs,targetPct,compound=true){
       const starP=avg*(1+(starBase-starSlope*T)/100);
       const tgt=avg*(1+(MOM?_imTgtOf(targetPct,MOM[d]):targetPct)/100);
       const orig=shares;              // 하루 시작 시 보유량 기준
-      const q3=orig*0.75;            // 익절 지정가: 3/4
-      const q1=orig*0.25;            // 별지점 LOC: 1/4
+      const q1=isq(orig/4,orig);     // 별지점 LOC: 1/4 (내림)
+      const q3=orig-q1;              // 익절 지정가: 나머지 (운영 모의와 같은 규약)
       let tpHit=false, qtHit=false;
       // ① 익절 지정가매도 (intraday): 고가 >= 익절가
       const _fillHit=(typeof imFill!=='undefined'&&imFill==='high')?hi:c;   // 익절 판정: '고가'=장중 고가 목표가 터치 시 체결(지정가 정석), '종가'=보수적 하한. imFill 미정의=종가(회귀 앵커 유지)
@@ -2001,7 +2015,7 @@ function runIM(days,tkr,cap,divs,targetPct,compound=true){
     }
     if(divs-T>=1&&cash>1){          // 소진 = T>분할−1 → 남은 회차가 1회 이상일 때만 매수
       let one=cash/(divs-T);        // 남은 회차 ≥1 이므로 1회분 ≤ 잔금 (별도 상한 불필요)
-      if(shares===0&&T===0){_buy(c,one);T+=1;}
+      if(shares===0&&T===0){ if(_buy(c,one)>0) T+=1; }   // 못 사면 회차도 안 쓴다
       else{
         const starP=avg*(1+(starBase-starSlope*T)/100);const buyP=starP-0.01;
         if(T<divs/2){
@@ -2009,8 +2023,8 @@ function runIM(days,tkr,cap,divs,targetPct,compound=true){
           // 원본 규약: 별지점·평단 두 주문은 같은 날 동시 체결 → 투입금 합산 후 평단 일괄 갱신
           if(c<=buyP){sp+=half;ti+=0.5;}
           if(c<=avg){sp+=half;ti+=0.5;}
-          if(sp>0){_buy(c,sp);T+=ti;}
-        }else{ if(c<=buyP){_buy(c,one);T+=1;} }
+          if(sp>0){ if(_buy(c,sp)>0) T+=ti; }
+        }else{ if(c<=buyP){ if(_buy(c,one)>0) T+=1; } }
       }
     }
     if(i%10===0)snap.push([d,cash+shares*c+savedProfit]);
@@ -2030,7 +2044,9 @@ function runIM22(days,tkr,cap,divs,targetPct,compound=true){
   const CO=(typeof imCostOn!=='undefined')&&imCostOn, FEE=CO?COST_FEE:0, SLIP=CO?COST_SLIP:0;
   const base=10, slope=base*0.1*20/divs, takePct=10, one=cap/divs;
   let cash=cap,sh=0,avg=0,cum=0,yearPnl=0,cy=null, mp=cap,mdd=0, quarter=false,qOne=0,qN=0; const snap=[];
-  const _buy=(px,amt)=>{ if(amt>cash)amt=cash; if(amt<=1e-6)return 0; const fee=amt*FEE,net=amt-fee,q=net/px; avg=sh<=0?px:(sh*avg+net)/(sh+q); sh+=q; cash-=amt; return amt; };
+  const _buy=(px,amt)=>{ if(amt>cash)amt=cash; if(amt<=1e-6)return 0;
+    const q=iq(amt/(1+FEE),px); if(q<=0) return 0;                 // 정수 주수 (증권사 현실)
+    const spend=q*px, fee=spend*FEE; avg=sh<=0?px:(sh*avg+spend)/(sh+q); sh+=q; cash-=spend+fee; return spend+fee; };
   const _sell=(px,q,slip)=>{ if(q<=0)return; if(q>sh)q=sh; const eff=px*(1-(slip||0)),g=q*eff,fee=g*FEE; cash+=g-fee; yearPnl+=q*(eff-avg)-fee; sh-=q; };
   const _settle=(px)=>{ if(!CO){yearPnl=0;return;} cash-=Math.max(0,yearPnl*COST_KRW-COST_DEDUCT)*COST_TAXRATE/COST_KRW; yearPnl=0;
     // 잔고 하한: 세금 낼 현금이 모자라면 보유주 매도 → 그래도 모자라면 계좌 소진(0). 음수 자산 방지.
@@ -2044,14 +2060,14 @@ function runIM22(days,tkr,cap,divs,targetPct,compound=true){
       const t=cum/one, sp=base-slope*t, starP=avg*(1+sp/100), take=avg*(1+takePct/100), q0=sh;
       if(sh>1e-9&&avg>0){ if(hi>=take)_sell(take,q0*0.75,SLIP); if(sh>1e-9&&sp>=0&&c>=starP)_sell(c,Math.min(sh,q0*0.25),0); }
       if(sh<=1e-9){ cum=0; }
-      else if(t>divs-1){ quarter=true; _sell(c,sh*0.25,0); qOne=cash/10; qN=0; }
+      else if(t>divs-1){ quarter=true; _sell(c,isq(sh/4,sh),0); qOne=cash/10; qN=0; }
       if(!quarter&&cash>1e-6&&t<divs){ if(sh<=1e-9){cum+=_buy(c,one);} else if(t<divs/2){ if(c<=avg)cum+=_buy(c,one/2); if(c<=starP)cum+=_buy(c,one/2);} else { if(c<=starP)cum+=_buy(c,one);} }
     } else {
       const q0=sh, take=avg*(1+takePct/100), dn=avg*0.9;
       if(hi>=take)_sell(take,q0*0.75,SLIP);
       if(sh>1e-9&&c>=dn)_sell(c,Math.min(sh,q0*0.25),0);
       if(sh<=1e-9){ quarter=false; cum=0; }
-      else if(c<=dn&&cash>1e-6){ _buy(c,Math.min(qOne,cash)); qN++; if(qN>=10){ const ok=c>=dn; _sell(c,sh*0.25,0); if(ok){quarter=false;cum=(divs-1)*one;} else {qOne=cash/10;qN=0;} } }
+      else if(c<=dn&&cash>1e-6){ _buy(c,Math.min(qOne,cash)); qN++; if(qN>=10){ const ok=c>=dn; _sell(c,isq(sh/4,sh),0); if(ok){quarter=false;cum=(divs-1)*one;} else {qOne=cash/10;qN=0;} } }
     }
     if(i%10===0)snap.push([d,cash+sh*c]);
   });
@@ -2068,7 +2084,9 @@ function runIM30(days,tkr,cap,divs,targetPct,compound=true){
   const CO=(typeof imCostOn!=='undefined')&&imCostOn, FEE=CO?COST_FEE:0, SLIP=CO?COST_SLIP:0;
   const base=targetPct, slope=base*0.1*20/divs, takePct=targetPct, baseOne=cap/divs;
   let cash=cap,sh=0,avg=0,cum=0,one=baseOne,savedProfit=0,yearPnl=0,cy=null, mp=cap,mdd=0, quarter=false,qExtra=0; const snap=[];
-  const _buy=(px,amt)=>{ if(amt>cash)amt=cash; if(amt<=1e-6)return 0; const fee=amt*FEE,net=amt-fee,q=net/px; avg=sh<=0?px:(sh*avg+net)/(sh+q); sh+=q; cash-=amt; return amt; };
+  const _buy=(px,amt)=>{ if(amt>cash)amt=cash; if(amt<=1e-6)return 0;
+    const q=iq(amt/(1+FEE),px); if(q<=0) return 0;                 // 정수 주수 (증권사 현실)
+    const spend=q*px, fee=spend*FEE; avg=sh<=0?px:(sh*avg+spend)/(sh+q); sh+=q; cash-=spend+fee; return spend+fee; };
   const _sell=(px,q,slip)=>{ if(q<=0)return 0; if(q>sh)q=sh; const eff=px*(1-(slip||0)),g=q*eff,fee=g*FEE; cash+=g-fee; const pnl=q*(eff-avg)-fee; yearPnl+=pnl; sh-=q; return pnl; };
   const _settle=(px)=>{ if(!CO){yearPnl=0;return;} cash-=Math.max(0,yearPnl*COST_KRW-COST_DEDUCT)*COST_TAXRATE/COST_KRW; yearPnl=0;
     // 잔고 하한: 세금 낼 현금이 모자라면 보유주 매도 → 그래도 모자라면 계좌 소진(0). 음수 자산 방지.
@@ -2082,7 +2100,7 @@ function runIM30(days,tkr,cap,divs,targetPct,compound=true){
     if(!quarter){
       if(sh>1e-9&&avg>0){ if(hi>=take){const p=_sell(take,q0*0.75,SLIP); if(p>0)savedProfit+=p;} if(sh>1e-9&&sp>=0&&c>=starP){const p=_sell(c,Math.min(sh,q0*0.25),0); if(p>0)savedProfit+=p;} }
       if(sh<=1e-9){ cum=0; one=baseOne+Math.max(0,savedProfit)/40; }
-      else if(t>divs-1){ quarter=true; qExtra=0; const p=_sell(c,sh*0.25,0); if(p>0)savedProfit+=p; }
+      else if(t>divs-1){ quarter=true; qExtra=0; const p=_sell(c,isq(sh/4,sh),0); if(p>0)savedProfit+=p; }
       if(!quarter&&cash>1e-6&&t<divs){ if(sh<=1e-9){cum+=_buy(c,one);} else if(t<divs/2){ if(c<=avg)cum+=_buy(c,one/2); if(c<=starP)cum+=_buy(c,one/2);} else { if(c<=starP)cum+=_buy(c,one);} }
     } else {
       if(hi>=take){const p=_sell(take,q0*0.75,SLIP); if(p>0)savedProfit+=p;}
@@ -2108,7 +2126,9 @@ function runStdev(days,tkr,cap,N,g,filter,costOn){
   { let s=0,s2=0; for(let i=0;i<cl.length;i++){ s+=cl[i]; s2+=cl[i]*cl[i]; if(i>=N){s-=cl[i-N];s2-=cl[i-N]*cl[i-N];} if(i>=N-1){ const m=s/N; ma[i]=m; sd[i]=Math.sqrt(Math.max(0,s2/N-m*m)); } } }
   const lvOf=gx=>{ if(ma[gx]==null)return null; const c=cl[gx],m=ma[gx],v=sd[gx]; let lv=0; for(const L of [m+2*v,m+v,m,m-v,m-2*v]) if(c<L)lv++; return lv; };
   let cash=cap,sh=0,avg=0,prevLv=null,yearPnl=0,cy=null,mp=cap,mdd=0; const snap=[];
-  const _buy=(px,amt)=>{ if(amt>cash)amt=cash; if(amt<=1e-6)return; const fee=amt*FEE,net=amt-fee,q=net/px; avg=sh<=0?px:(sh*avg+net)/(sh+q); sh+=q; cash-=amt; };
+  const _buy=(px,amt)=>{ if(amt>cash)amt=cash; if(amt<=1e-6)return;
+    const q=iq(amt/(1+FEE),px); if(q<=0) return;                   // 정수 주수
+    const spend=q*px, fee=spend*FEE; avg=sh<=0?px:(sh*avg+spend)/(sh+q); sh+=q; cash-=spend+fee; };
   const _sell=(px,q)=>{ if(q<=0)return; if(q>sh)q=sh; const gg=q*px,fee=gg*FEE; cash+=gg-fee; yearPnl+=q*(px-avg)-fee; sh-=q; };
   const _settle=(px)=>{ if(!CO){yearPnl=0;return;} cash-=Math.max(0,yearPnl*COST_KRW-COST_DEDUCT)*COST_TAXRATE/COST_KRW; yearPnl=0;
     // 잔고 하한: 세금 낼 현금이 모자라면 보유주 매도 → 그래도 모자라면 계좌 소진(0). 음수 자산 방지.
@@ -2178,11 +2198,13 @@ function runIM50(days,tkr,cap,divs,targetPct,compound=true){
   const CO = (typeof imCostOn!=='undefined') && imCostOn;
   const FEE = CO?COST_FEE:0, SLIP = CO?COST_SLIP:0;
   let feesTotal=0, taxTotal=0, yearPnl=0, curYear=null;
-  function _buy(px, amt){                       // amt($) 투입 → 수수료 차감 후 매수
-    // 비용 0일 때 원본 산술과 완전 동일해야 함: net=amt, q=amt/px, avg=(shares*avg+amt)/(shares+q)
-    const fee=amt*FEE, net=amt-fee, q=net/px;
-    avg = (shares<=0) ? px : (shares*avg+net)/(shares+q);
-    shares+=q; cash-=amt; feesTotal+=fee; return q;
+  function _buy(px, amt){                       // amt($) 투입 → 정수 주수만 매수
+    // 소수점 주식은 증권사에서 못 산다 — 못 채운 잔액은 그대로 잔금에 남는다
+    if(amt>cash) amt=cash;
+    const q=iq(amt/(1+FEE), px); if(q<=0) return 0;
+    const spend=q*px, fee=spend*FEE;
+    avg = (shares<=0) ? px : (shares*avg+spend)/(shares+q);
+    shares+=q; cash-=spend+fee; feesTotal+=fee; return q;
   }
   function _sell(px, qty, slip){                // qty주 매도 (slip: 지정가매도만)
     const eff=px*(1-(slip||0)), gross=qty*eff, fee=gross*FEE;
@@ -2258,8 +2280,7 @@ function runIM50(days,tkr,cap,divs,targetPct,compound=true){
       else dynPct=(typeof imLoPct!=='undefined'?imLoPct:6);   // 하락국면: 조기탈출 익절%
       const tgt=avg*(1+dynPct/100);
       const orig=shares;
-      const q3=orig*0.75;
-      const q1=orig*0.25;
+      const q1=isq(orig/4,orig), q3=orig-q1;   // 정수 주수 (운영 모의와 같은 규약)
       let tpHit=false, qtHit=false;
       const _fillHit=(typeof imFill!=='undefined'&&imFill==='high')?hi:c;   // 익절 판정: '고가'=장중 고가 목표가 터치 시 체결(지정가 정석), '종가'=보수적 하한. imFill 미정의=종가(회귀 앵커 유지)
       // 체결가: 시가가 이미 익절가 위면 지정가 매도는 '시가'에 체결된다(가격개선).
@@ -2274,7 +2295,7 @@ function runIM50(days,tkr,cap,divs,targetPct,compound=true){
     }
     if(divs-T>=1&&cash>1){          // 소진 = T>분할−1 (V4.0과 동일 규약)
       let one=cash/(divs-T);
-      if(shares===0&&T===0){_buy(c,one);T+=1;}
+      if(shares===0&&T===0){ if(_buy(c,one)>0) T+=1; }   // 못 사면 회차도 안 쓴다
       else{
         const starP=avg*(1+(starBase-starSlope*T)/100);const buyP=starP-0.01;
         if(T<divs/2){
@@ -2282,8 +2303,8 @@ function runIM50(days,tkr,cap,divs,targetPct,compound=true){
           // 원본 규약: 별지점·평단 두 주문은 같은 날 동시 체결 → 투입금 합산 후 평단 일괄 갱신
           if(c<=buyP){sp+=half;ti+=0.5;}
           if(c<=avg){sp+=half;ti+=0.5;}
-          if(sp>0){_buy(c,sp);T+=ti;}
-        }else{ if(c<=buyP){_buy(c,one);T+=1;} }
+          if(sp>0){ if(_buy(c,sp)>0) T+=ti; }
+        }else{ if(c<=buyP){ if(_buy(c,one)>0) T+=1; } }
       }
     }
     if(i%10===0)snap.push([d,cash+shares*c+savedProfit]);
@@ -2306,10 +2327,12 @@ function runVR(days,tkr,params){
   //   수수료 0.25% 매수·매도 각 · 양도세 22%(연 250만원 공제, 실현손익만) · 리밸런싱=종가 체결이라 슬리피지 없음
   const FEE=costOn?COST_FEE:0;
   let avg=0, feesTotal=0, taxTotal=0, yearPnl=0, curYear=null;
-  function _vbuy(amt,c){ const fee=amt*FEE, net=amt-fee, q=net/c;
-    avg=(shares<=0)?c:(shares*avg+net)/(shares+q); shares+=q; feesTotal+=fee; }
-  function _vsell(gross,c){ const qty=gross/c, fee=gross*FEE;   // 금액 기준 매도 (비용 0이면 기존 산술과 비트 동일)
-    yearPnl+=qty*(c-avg)-fee; feesTotal+=fee; shares-=qty; return gross-fee; }
+  function _vbuy(amt,c){ const q=iq(amt/(1+FEE),c); if(q<=0) return;   // 정수 주수 (운영 VR도 내림)
+    const spend=q*c, fee=spend*FEE;
+    avg=(shares<=0)?c:(shares*avg+spend)/(shares+q); shares+=q; feesTotal+=fee; }
+  function _vsell(gross,c){ const qty=isq(gross/c,shares), fee=qty*c*FEE;   // 정수 주수 (금액 목표를 넘지 않게 내림)
+    // 실제로 판 만큼만 현금이 들어온다 — gross를 그대로 돌려주면 판 적 없는 돈이 생긴다
+    yearPnl+=qty*(c-avg)-fee; feesTotal+=fee; shares-=qty; return qty*c-fee; }
   // 연말 양도세 정산. Pool에서 먼저 빼되, 모자라면 보유 주식을 팔아 납부한다.
   // (예전엔 pool을 그냥 음수로 만들어 총자산이 마이너스가 되고 MDD가 100%를 넘었다 —
   //  SOXL 2000~ 거치식이 최종 −$18 · MDD 102%로 나오던 원인.)
@@ -2476,7 +2499,8 @@ function runMA200(days,tkr,cap,N,costOn,opt){
     const g=gIdx[d];
     const want = g>0 ? above[dts[g-1]] : true;             // 전일 신호 (기간 앞 이력 사용, 첫날은 보유 시작)
     if(want && shares===0 && cash>0){
-      const fee=cash*FEE, net=cash-fee; shares=net/c; avg=c; cash=0; feesTotal+=fee; trades++;
+      const q=iq(cash/(1+FEE),c); const spend=q*c, fee=spend*FEE;   // 정수 주수 — 남는 돈은 현금으로
+      shares=q; avg=c; cash-=spend+fee; feesTotal+=fee; trades++;
     }else if(!want && shares>0){
       const gross=shares*c, fee=gross*FEE; cash+=gross-fee;
       const pnl=shares*(c-avg)-fee; realized+=pnl; yearPnl+=pnl;
@@ -2609,7 +2633,7 @@ function divSplit(tkr, days, buys){
 // 비용: 매수 수수료만(끝까지 안 팔아 실현이익 없음 → 양도세 이연 = 방치의 실제 이점)
 function runBH(days,tkr,cap,costOn){
   const FEE=costOn?COST_FEE:0;
-  const p=d=>M[tkr][d][C]; const sh=cap*(1-FEE)/p(days[0]);
+  const p=d=>M[tkr][d][C]; const sh=iq(cap/(1+FEE),p(days[0]));   // 거치도 정수 주수
   let mddPeak=cap,mdd=0; const snap=[];
   days.forEach((d,i)=>{ const eq=sh*p(d); if(eq>mddPeak)mddPeak=eq; else{const dd=(mddPeak-eq)/mddPeak;if(dd>mdd)mdd=dd;} if(i%10===0)snap.push([d,eq]); });
   let fin=sh*p(days[days.length-1]); snap.push([days[days.length-1],fin]);
@@ -2709,7 +2733,8 @@ function runIVS(days,tkr,cap,s0,N,band,costOn,mode,pair){
   let feesTotal=0, taxTotal=0, interestTotal=0, trades=0, daysIn=0, expoSum=0;
   let mddPeak=cap, mdd=0; const snap=[];
   // 국채 반대편 수수료(lf)는 현금에서만 빠진다 — 국채 ETF는 가격이 거의 평평해 양도손익이 없다
-  function _buy(P,px,spend){ const fee=spend*FEE, lf=spend*LEGFEE, q=(spend-fee)/px;
+  function _buy(P,px,spend){ const q=iq(spend/(1+FEE+LEGFEE),px); if(q<=0) return;   // 정수 주수
+    spend=q*px*(1+FEE); const fee=q*px*FEE, lf=q*px*LEGFEE;
     P.avg=(P.sh*P.avg+q*px)/(P.sh+q); P.sh+=q; cash-=spend+lf; feesTotal+=fee+lf; trades++; }
   function _sell(P,px,q){ const gross=q*px, fee=gross*FEE, lf=gross*LEGFEE; cash+=gross-fee-lf;
     yearPnl+=q*(px-P.avg)-fee; P.sh-=q; feesTotal+=fee+lf; trades++;
