@@ -493,7 +493,7 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
 </div>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.24</span></h1></div>
+    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.25</span></h1></div>
     <div class="jkmenu" id="jkmenuWrap">
       <button class="jkmenu-btn" id="jkmenuBtn" aria-label="메뉴" onclick="jkMenuToggle(event)">三</button>
       <div class="jkmenu-pop" id="jkmenuPop" hidden>
@@ -1548,7 +1548,7 @@ document.addEventListener('click',function(e){ var m=document.getElementById('jk
   <footer>
     <strong>JK 퀀트</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.24</b> · 2026-09-11</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.25</b> · 2026-09-11</div>
   </footer>
 </div>
 
@@ -1710,12 +1710,16 @@ document.addEventListener('click',function(e){ var m=document.getElementById('jk
   <h3>🧪 모의투자 성과</h3><p>모의로 표시한 세션만 모아 보여줍니다.</p>
   <div class="card" style="padding:12px;margin-bottom:12px">
     <div class="row" style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap">
-      <div class="field" style="flex:1 1 150px;margin:0"><label style="font-size:11.5px">모의 시작일 <span class="hint" id="p_simstart_n"></span></label>
+      <div class="field" style="flex:1 1 130px;margin:0"><label style="font-size:11.5px">모의 시작일 <span class="hint" id="p_simstart_n"></span></label>
         <input id="p_simstart" type="date"></div>
+      <div class="field" style="flex:1 1 110px;margin:0"><label style="font-size:11.5px">원금 ($) <span class="hint">비우면 그대로</span></label>
+        <input id="p_capital" type="text" inputmode="decimal" placeholder="예: 10,000" oninput="commaInput(this)"></div>
       <button class="ghostbtn" style="width:auto;margin:0;padding:9px 14px" onclick="applyAllSimStart()">전체 적용</button>
     </div>
-    <p class="note" style="margin-top:8px">모의 세션 <b>전부</b>의 시작일을 한 번에 바꿉니다. 기존 기록은 지우고 그 날부터 다시 만듭니다 —
-      같은 날 기준으로 전략을 비교하려면 이게 필요합니다. <b>실계좌 세션은 건드리지 않습니다.</b></p>
+    <p class="note" style="margin-top:8px">모의 세션 <b>전부</b>의 시작일(과 원금)을 한 번에 바꿉니다. 기존 기록은 지우고 그 날부터 다시 만듭니다 —
+      같은 날 같은 돈으로 전략을 비교하려면 이게 필요합니다. <b>실계좌 세션은 건드리지 않습니다.</b><br>
+      시작일은 <b>최대 3년 전</b>까지입니다. 원금은 뜻이 같은 전략에만 들어갑니다 —
+      <b>적립식·ASAP</b>은 '1회 적립액'이라 원금을 넣으면 매 회차에 그 돈을 사게 되므로 건너뜁니다.</p>
   </div>
   <div id="paper_body"></div>
   <div class="mbtns"><button class="close" onclick="closePaper()">닫기</button></div>
@@ -5996,28 +6000,62 @@ function paperSessions(){
     box.sessions.forEach(x=>{ if(x.paper) out.push([tab,x]); }); });
   return out;
 }
+/* 시작일 하한 — 3년. 그 앞은 시세를 받아 하루씩 되짚느라 오래 걸리고,
+   레버리지 ETF는 상장 자체가 얼마 안 된 게 많아 구간이 반쯤 비기도 한다. */
+const PAPER_MAX_YEARS=3;
+function paperMinDate(){ const d=new Date(); d.setFullYear(d.getFullYear()-PAPER_MAX_YEARS);
+  return d.toISOString().slice(0,10); }
+/* 전략마다 '금액'의 뜻이 다르다. 원금(한 번에 넣는 총액)과 같은 뜻인 칸에만 넣는다.
+   적립식·ASAP의 금액은 '1회 적립액'이라, 원금을 밀어넣으면 매 회차마다 그 돈을 사게 된다. */
+function paperCapField(tab, st){
+  if(tab==='inf'||tab==='ma'||tab==='ivs') return 'principal';
+  if(tab==='vr') return 'initAmt';
+  if(tab==='dca') return (st&&st.mode==='lump') ? 'amount' : null;   // 거치식만 원금이다
+  return null;                                                        // asap: base/mid/deep 3단계 적립금
+}
 function syncPaperStart(){
   const el=$('p_simstart'); if(!el) return;
   const list=paperSessions();
   const n=$('p_simstart_n'); if(n) n.textContent=list.length?`모의 ${list.length}개`:'모의 세션 없음';
   // 이미 다 같은 날이면 그 날을, 다르면 가장 이른 날을 띄운다
   const ds=list.map(([,x])=>x.simStart).filter(Boolean).sort();
-  el.value=ds[0]||new Date().toISOString().slice(0,10);
+  const min=paperMinDate(), today=new Date().toISOString().slice(0,10);
+  el.min=min; el.max=today;
+  el.value=(ds[0]&&ds[0]>=min)?ds[0]:(ds[0]?min:today);
   el.disabled=!list.length;
+  const c=$('p_capital'); if(c){ c.value=''; c.disabled=!list.length; }
 }
 async function applyAllSimStart(){
   const el=$('p_simstart'); const ns=el&&el.value;
   if(!ns){ alert('시작일을 고르세요.'); return; }
+  /* min 속성만으로는 못 막는다 — 키보드로 직접 친 날짜는 그대로 들어온다 */
+  const min=paperMinDate(), today=new Date().toISOString().slice(0,10);
+  if(ns<min){ alert(`시작일은 최대 ${PAPER_MAX_YEARS}년 전까지입니다.\n${min} 이후로 골라주세요.`); return; }
+  if(ns>today){ alert('시작일을 오늘 이후로 둘 수는 없습니다.'); return; }
   const list=paperSessions();
   if(!list.length){ alert('모의 세션이 없습니다.'); return; }
+  const capRaw=$('p_capital')?String($('p_capital').value||'').trim():'';
+  const cap=capRaw?(inputNum('p_capital')||0):null;
+  if(capRaw && !(cap>0)){ alert('원금은 0보다 커야 합니다. 바꾸지 않으려면 비워 두세요.'); return; }
+  // 원금이 들어가는 세션과 건너뛰는 세션을 미리 갈라 둔다 — 묻기 전에 알려야 한다
+  const hit=cap!=null ? list.filter(([tab,x])=>paperCapField(tab,x.settings)) : [];
+  const skip=cap!=null ? list.filter(([tab,x])=>!paperCapField(tab,x.settings)) : [];
   const nRec=list.reduce((a,[,x])=>a+((x.hist||[]).length),0);
-  if(!confirm(`모의 세션 ${list.length}개의 시작일을 ${ns}로 바꿉니다.\n기존 기록 ${nRec}건을 지우고 그 날부터 다시 만듭니다.\n\n실계좌 세션은 그대로입니다. 계속할까요?`)) return;
-  list.forEach(([,x])=>{
+  let msg=`모의 세션 ${list.length}개의 시작일을 ${ns}로 바꿉니다.\n기존 기록 ${nRec}건을 지우고 그 날부터 다시 만듭니다.`;
+  if(cap!=null){
+    msg+=`\n\n원금 ${wn(cap)} → ${hit.length}개 적용`;
+    if(skip.length) msg+=`, ${skip.length}개 건너뜀 (${skip.map(([,x])=>x.name).join(', ')} — 금액이 '1회 적립액'이라 뜻이 다릅니다)`;
+  }
+  msg+='\n\n실계좌 세션은 그대로입니다. 계속할까요?';
+  if(!confirm(msg)) return;
+  list.forEach(([tab,x])=>{
     x.hist=[]; x.simStart=ns;
-    if(x.settings){ delete x.settings.simLast; delete x.settings.cycStart; delete x.settings.startCyc; delete x.settings.cycLog; x.settings.startv=0; }
+    if(x.settings){ delete x.settings.simLast; delete x.settings.cycStart; delete x.settings.startCyc; delete x.settings.cycLog; x.settings.startv=0;
+      if(cap!=null){ const f=paperCapField(tab,x.settings); if(f) x.settings[f]=cap; } }
   });
   save(); pushRemote();
   await openPaper();          // 지운 자리를 새 시작일로 다시 채우고 표를 새로 그린다
+  if(cap!=null && skip.length) paperNote=`원금은 ${hit.length}개에만 적용했습니다 — ${skip.map(([,x])=>x.name).join(', ')}은 금액이 '1회 적립액'이라 건너뛰었습니다.`;
 }
 function closePaper(){$('paperModal').classList.remove('on')}
 /* 모의 성과 → 그 세션의 거래이력.

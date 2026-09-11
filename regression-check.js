@@ -1276,9 +1276,9 @@ console.log('[30] 모의 시작일 일괄 변경');
   ok('일괄 적용 함수 존재', !!ap, ap?'':'applyAllSimStart 없음');
   // 실계좌를 건드리면 사람이 넣은 실제 거래가 날아간다 — 되돌릴 방법이 없다
   ok('실계좌는 손대지 않는다', /const list=paperSessions\(\);/.test(ap)
-     && /list\.forEach\(\[?\(?\[,x\]\)?=>\{/.test(ap) && !/sessions\.forEach/.test(ap));
-  ok('지우기 전에 묻는다', /if\(!confirm\(`모의 세션 \$\{list\.length\}개의 시작일을/.test(ap)
-     && /기존 기록 \$\{nRec\}건을 지우고/.test(ap));
+     && /list\.forEach\(\(\[tab,x\]\)=>\{/.test(ap) && !/sessions\.forEach/.test(ap));
+  ok('지우기 전에 묻는다', /let msg=`모의 세션 \$\{list\.length\}개의 시작일을 \$\{ns\}로 바꿉니다/.test(ap)
+     && /기존 기록 \$\{nRec\}건을 지우고/.test(ap) && /if\(!confirm\(msg\)\) return;/.test(ap));
   /* 시작일을 옮기면 그때까지 만든 기록은 옛 시작일 산물이라 통째로 무효다.
      세션 편집(createSess)과 같은 키를 지워야 한다 — 하나라도 남으면 새 시작일과 옛 진행상태가 섞인다. */
   const KEYS=['simLast','cycStart','startCyc','cycLog'];
@@ -1288,6 +1288,30 @@ console.log('[30] 모의 시작일 일괄 변경');
      KEYS.filter(k=>!new RegExp(`delete x\\.settings\\.${k};`).test(ap)).join(',')||'ok');
   ok('지운 자리를 다시 채운다', /save\(\); pushRemote\(\);\s*\n\s*await openPaper\(\);/.test(ap));
   ok('모의가 없으면 알리고 멈춘다', /if\(!list\.length\)\{ alert\('모의 세션이 없습니다\.'\); return; \}/.test(ap));
+
+  /* 시작일 하한 3년 — 그 앞은 시세를 하루씩 되짚느라 오래 걸리고,
+     레버리지 ETF는 상장이 얼마 안 된 게 많아 구간이 반쯤 빈다. */
+  ok('3년 하한이 있다', /const PAPER_MAX_YEARS=3;/.test(idx) && /function paperMinDate\(\)/.test(idx));
+  ok('칸에 min·max를 건다', /el\.min=min; el\.max=today;/.test(idx));
+  // min 속성만으로는 못 막는다 — 키보드로 친 날짜는 그대로 들어온다
+  ok('코드에서도 막는다', /if\(ns<min\)\{ alert\(`시작일은 최대 \$\{PAPER_MAX_YEARS\}년 전까지입니다/.test(ap)
+     && /if\(ns>today\)\{ alert\('시작일을 오늘 이후로 둘 수는 없습니다\.'\); return; \}/.test(ap));
+
+  /* 원금 일괄 — 전략마다 '금액'의 뜻이 달라서 아무 데나 넣으면 안 된다.
+     적립식·ASAP의 금액은 '1회 적립액'이라 원금을 밀어넣으면 매 회차마다 그 돈을 산다. */
+  let cf=''; try{ cf=extractFn(idx,'function paperCapField(tab, st)'); }catch(e){}
+  ok('원금 칸이 있다', /id="p_capital"/.test(idx) && /비우면 그대로/.test(idx));
+  ok('전략별 원금 칸을 가린다', !!cf, cf?'':'paperCapField 없음');
+  ok('무매·로테·섀넌은 principal', /if\(tab==='inf'\|\|tab==='ma'\|\|tab==='ivs'\) return 'principal';/.test(cf));
+  ok('VR은 initAmt', /if\(tab==='vr'\) return 'initAmt';/.test(cf));
+  ok('적립·거치는 거치식만', /if\(tab==='dca'\) return \(st&&st\.mode==='lump'\) \? 'amount' : null;/.test(cf));
+  ok('ASAP은 원금 개념이 없다', /return null;\s*\/\/ asap/.test(cf));
+  ok('원금은 비워두면 안 바꾼다', /const cap=capRaw\?\(inputNum\('p_capital'\)\|\|0\):null;/.test(ap)
+     && /if\(cap!=null\)\{ const f=paperCapField\(tab,x\.settings\); if\(f\) x\.settings\[f\]=cap; \}/.test(ap));
+  ok('0 이하는 거부', /if\(capRaw && !\(cap>0\)\)\{ alert\('원금은 0보다 커야 합니다/.test(ap));
+  // 조용히 건너뛰면 '왜 얘만 안 바뀌었지'가 된다
+  ok('건너뛴 세션을 이름까지 알린다', /\$\{skip\.length\}개 건너뜀 \(\$\{skip\.map\(\[?\(?\[,x\]\)?=>x\.name\)\.join\(', '\)\}/.test(ap)
+     && /paperNote=`원금은 \$\{hit\.length\}개에만 적용했습니다/.test(ap));
 }
 
 
