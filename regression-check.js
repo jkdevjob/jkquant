@@ -1389,5 +1389,16 @@ console.log('[33] 세션 이동 — 보던 서브탭 유지');
   ok('gotoSess는 거래이력으로 덮어쓴다', gs.indexOf('switchSess(id)') < gs.indexOf("==='거래이력'"));
 }
 
+console.log('[34] 버전 표기 일치');
+{
+  // index.html은 헤더(appVerTop)와 설정화면(appVer) 두 곳에 버전을 적는다.
+  // 한 곳만 올리면 배포 확인이 옛 버전을 읽어서 '아직 안 올라갔다'고 오판한다.
+  const vs=[...idx.matchAll(/id="appVer(?:Top)?"[^>]*>(?:<b[^>]*>)?\s*(v[0-9.]+)/g)].map(m=>m[1]);
+  ok('운영 버전 표기 2곳', vs.length===2, vs.join(' / '));
+  ok('두 곳이 같다', vs.length===2 && vs[0]===vs[1], vs.join(' vs '));
+  const bv=[...bt.matchAll(/id="btVer"[^>]*>\s*(v[0-9.]+)/g)].map(m=>m[1]);
+  ok('백테 버전 표기 1곳', bv.length===1, bv.join(' / '));
+}
+
 console.log(`\n════ 결과: ${pass} PASS / ${fail} FAIL ${fail===0?'— ALL PASS ★':'— 배포 금지, 위 ✗ 항목 수정 필요'} ════`);
 process.exit(fail===0?0:1);
