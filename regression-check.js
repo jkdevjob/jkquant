@@ -1400,5 +1400,26 @@ console.log('[34] 버전 표기 일치');
   ok('백테 버전 표기 1곳', bv.length===1, bv.join(' / '));
 }
 
+console.log('[35] 로그인 — 조용히 갇히지 않는다');
+{
+  const ia=extractFn(idx,'function initAuth()');
+  // 로그인 성공 뒤 어느 단계에서 예외가 나도 authgate에 갇히면 안 된다.
+  ok('비로그인은 먼저 빠져나간다', /if\(!user\)\{/.test(ia) && ia.indexOf('if(!user){') < ia.indexOf('touchProfile'));
+  ok('배지 그리기 실패를 막는다', /try\{ renderUserBadge\(user\); \}catch/.test(ia));
+  ok('프로필 확인 실패로 로그인을 막지 않는다',
+     /\}catch\(e\)\{ console\.warn\('profile',e\); \}/.test(ia));
+  ok('기록 읽기 실패는 새 상태로 연다', /catch\(e\)\{[\s\S]*?S=freshState\(\)/.test(ia));
+  ok('원인을 화면에 남긴다', /authWarn\(/.test(ia) && !!extractFn(idx,'function authWarn(msg)'));
+  const iGate=ia.indexOf("$('authgate').style.display='none'");
+  ok('앱 시작 전에 로그인창을 닫는다', iGate>0 && iGate < ia.indexOf('startApp()'));
+
+  // localStorage는 용량 초과·사생활 보호 모드에서 던진다 — 그게 로그인까지 타고 올라갔었다
+  const sl=extractFn(idx,'function saveLocal()');
+  ok('saveLocal이 예외를 안 던진다', /try\{/.test(sl) && /catch\(e\)\{/.test(sl));
+  ok('저장 실패를 사용자에게 알린다', /showLsWarn\(/.test(sl) && !!extractFn(idx,'function showLsWarn(msg)'));
+  ok('클라우드 저장은 계속된다', /function save\(\)\{saveLocal\(\);pushRemote\(\);\}/.test(idx));
+  ok('저장이 복구되면 경고를 치운다', /lsFailed=false;[\s\S]{0,60}remove\(\)/.test(sl));
+}
+
 console.log(`\n════ 결과: ${pass} PASS / ${fail} FAIL ${fail===0?'— ALL PASS ★':'— 배포 금지, 위 ✗ 항목 수정 필요'} ════`);
 process.exit(fail===0?0:1);
