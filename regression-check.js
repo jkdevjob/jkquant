@@ -1261,5 +1261,35 @@ console.log('[29] 단타 화면의 성과 주장 정정');
 }
 
 
+/* ════ 30. 모의 시작일 일괄 변경 ════
+   전략을 견주려면 출발선이 같아야 하는데, 세션 이름을 하나씩 더블탭해 고치는 수밖에 없었다. */
+console.log('[30] 모의 시작일 일괄 변경');
+{
+  ok('성과표 위에 있다', /id="p_simstart"/.test(idx)
+     && idx.indexOf('id="p_simstart"') < idx.indexOf('id="paper_body"')
+     && idx.indexOf('id="paperModal"') < idx.indexOf('id="p_simstart"'));
+  ok('모달 열 때 칸을 맞춘다', /async function openPaper\(\)\{\s*\n\s*syncPaperStart\(\);/.test(idx));
+  let ps='', ap='';
+  try{ ps=extractFn(idx,'function paperSessions()'); }catch(e){}
+  try{ ap=extractFn(idx,'async function applyAllSimStart()'); }catch(e){}
+  ok('모의 세션만 모은다', /box\.sessions\.forEach\(x=>\{ if\(x\.paper\) out\.push\(\[tab,x\]\); \}\);/.test(ps), ps?'':'paperSessions 없음');
+  ok('일괄 적용 함수 존재', !!ap, ap?'':'applyAllSimStart 없음');
+  // 실계좌를 건드리면 사람이 넣은 실제 거래가 날아간다 — 되돌릴 방법이 없다
+  ok('실계좌는 손대지 않는다', /const list=paperSessions\(\);/.test(ap)
+     && /list\.forEach\(\[?\(?\[,x\]\)?=>\{/.test(ap) && !/sessions\.forEach/.test(ap));
+  ok('지우기 전에 묻는다', /if\(!confirm\(`모의 세션 \$\{list\.length\}개의 시작일을/.test(ap)
+     && /기존 기록 \$\{nRec\}건을 지우고/.test(ap));
+  /* 시작일을 옮기면 그때까지 만든 기록은 옛 시작일 산물이라 통째로 무효다.
+     세션 편집(createSess)과 같은 키를 지워야 한다 — 하나라도 남으면 새 시작일과 옛 진행상태가 섞인다. */
+  const KEYS=['simLast','cycStart','startCyc','cycLog'];
+  ok('세션 편집과 같은 초기화 규약',
+     KEYS.every(k=>new RegExp(`delete x\\.settings\\.${k};`).test(ap)) && /x\.settings\.startv=0;/.test(ap)
+     && KEYS.every(k=>new RegExp(`delete t\\.settings\\.${k};`).test(idx)),
+     KEYS.filter(k=>!new RegExp(`delete x\\.settings\\.${k};`).test(ap)).join(',')||'ok');
+  ok('지운 자리를 다시 채운다', /save\(\); pushRemote\(\);\s*\n\s*await openPaper\(\);/.test(ap));
+  ok('모의가 없으면 알리고 멈춘다', /if\(!list\.length\)\{ alert\('모의 세션이 없습니다\.'\); return; \}/.test(ap));
+}
+
+
 console.log(`\n════ 결과: ${pass} PASS / ${fail} FAIL ${fail===0?'— ALL PASS ★':'— 배포 금지, 위 ✗ 항목 수정 필요'} ════`);
 process.exit(fail===0?0:1);
