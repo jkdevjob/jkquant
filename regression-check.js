@@ -56,6 +56,11 @@ let __strat=null; global.curStrat=()=>__strat;
 eval(idxParts.join('\n'));
 
 // backtest 엔진 + 거래로그 훅 주입 (실코드에 정확 substring 치환, 각 1회 매치 검증)
+// 정수 주수 헬퍼는 엔진 밖에 있다 — 파일에서 그대로 떼어 와야 실코드와 어긋나지 않는다
+const iqSrc=(bt.match(/^const iq=\(amt,px\)=>[^\n]*\nconst isq=\([^\n]*$/m)||[''])[0];
+if(!iqSrc) throw new Error('정수 주수 헬퍼(iq/isq)를 backtest.html에서 못 찾음');
+// eval 안의 const는 밖으로 안 새어나간다 — 뒤에 따로 eval하는 엔진(runIM50 등)도 봐야 하니 전역으로 올린다
+{ const f=new Function(iqSrc+'\nreturn {iq,isq};')(); global.iq=f.iq; global.isq=f.isq; }
 let btSrc=extractFn(bt,'function runIM(days,tkr,cap,divs,targetPct,compound')+'\n'+extractFn(bt,'function runVR(days,tkr,params)');
 function inject(before, after, label){
   const p=btSrc.split(before);
@@ -67,17 +72,17 @@ inject(`if(sellQty>0){ _sell(c,sellQty,0); T=divs>=40?T*0.95:T*0.9; }   // MOC=�
 inject(`if(sellQty>0){ _sell(c,sellQty,0); T=divs>=40?T*0.95:T*0.9; }   // LOC=종가`,
 `if(sellQty>0){ __LOG('리버스매도',c,sellQty); _sell(c,sellQty,0); T=divs>=40?T*0.95:T*0.9; }   // LOC=종가`,'r2');
 inject(`_buy(c, Math.min(cash, Math.max(cash/4, c)));   // LOC=종가`,
-`{const __a=Math.min(cash, Math.max(cash/4, c));__LOG('리버스매수',c,__a/c);_buy(c,__a);}   // LOC=종가`,'r3');
+`{const __a=Math.min(cash, Math.max(cash/4, c));const __q=_buy(c,__a);if(__q>0)__LOG('리버스매수',c,__q);}   // LOC=종가`,'r3');
 inject(`{_sell(o>tgt?o:tgt,q3,SLIP);tpHit=true;}`,
 `{const __px=o>tgt?o:tgt;__LOG('지정가매도',__px,q3);_sell(__px,q3,SLIP);tpHit=true;}`,'tp');
 inject(`{_sell(c,sq,0);qtHit=true;}`,
 `{__LOG('쿼터매도',c,sq);_sell(c,sq,0);qtHit=true;}`,'qt');
-inject(`if(shares===0&&T===0){_buy(c,one);T+=1;}`,
-`if(shares===0&&T===0){__LOG('1회매수',c,one/c);_buy(c,one);T+=1;}`,'fb');
-inject(`if(sp>0){_buy(c,sp);T+=ti;}`,
-`if(sp>0){__LOG(ti===1?'1회매수':'절반매수',c,sp/c);_buy(c,sp);T+=ti;}`,'hb');
-inject(`}else{ if(c<=buyP){_buy(c,one);T+=1;} }`,
-`}else{ if(c<=buyP){__LOG('1회매수',c,one/c);_buy(c,one);T+=1;} }`,'bb');
+inject(`if(shares===0&&T===0){ if(_buy(c,one)>0) T+=1; }   // 못 사면 회차도 안 쓴다`,
+`if(shares===0&&T===0){ const __q=_buy(c,one); if(__q>0){__LOG('1회매수',c,__q); T+=1;} }`,'fb');
+inject(`if(sp>0){ if(_buy(c,sp)>0) T+=ti; }`,
+`if(sp>0){ const __q=_buy(c,sp); if(__q>0){__LOG(ti===1?'1회매수':'절반매수',c,__q); T+=ti;} }`,'hb');
+inject(`}else{ if(c<=buyP){ if(_buy(c,one)>0) T+=1; } }`,
+`}else{ if(c<=buyP){ const __q=_buy(c,one); if(__q>0){__LOG('1회매수',c,__q); T+=1;} } }`,'bb');
 inject(`const fin=cash+shares*M[tkr][days[days.length-1]][C]+savedProfit;`,
 `__FINAL({T,avg,shares,cash,realized,savedProfit});
   const fin=cash+shares*M[tkr][days[days.length-1]][C]+savedProfit;`,'fin');
@@ -209,11 +214,13 @@ console.log('[4b] runIM50 스모크 + V4.0 앵커');
   //     데이터를 갈면 값이 달라지는 게 정상이므로, 지문이 다르면 실패가 아니라 스킵한다.
   const FIX_LEN=1500, FIX_END='2026-08-27';
   const fixOK=t=>DAYS[t] && DAYS[t].length===FIX_LEN && DAYS[t][DAYS[t].length-1]===FIX_END;
-  // v1.167에서 지정가매도 체결가를 max(익절가, 시가)로 바로잡아 최종값만 이동했다.
-  // (MDD·사이클은 그대로 — 체결 '판정'은 안 바뀌고 '체결가'만 바뀐 게 확인됨)
-  const A=[['SOXL',20,20,106916.88,54.11,35],
-           ['TQQQ',40,10,26454.24,65.50,29],
-           ['TECL',20,20,45505.63,42.07,14]];
+  // v1.167 — 지정가매도 체결가를 max(익절가, 시가)로 바로잡아 최종값만 이동.
+  // v1.174 — 주식 수량을 정수로 바꾸면서 셋 다 이동했다. 소수점으로 사면 남는 돈까지
+  //   늘 굴러가서 실제보다 좋게 나온다. 증권사에서 0.34주는 못 산다.
+  //   낮아지는 게 정상이고(SOXL 106,917→103,037), 사이클 수도 함께 움직인다.
+  const A=[['SOXL',20,20,103036.68,54.06,36],
+           ['TQQQ',40,10,26113.26,64.68,30],
+           ['TECL',20,20,44614.71,42.49,14]];
   for(const [tkr,div,tgt,fexp,mexp,cexp] of A){
     if(!DAYS[tkr]){ console.log('  (CSV 없음, 스킵: '+tkr+')'); continue; }
     if(!fixOK(tkr)){ console.log(`  (데이터가 고정본과 달라 앵커 스킵: ${tkr} ${DAYS[tkr].length}일 ~${DAYS[tkr][DAYS[tkr].length-1]})`); continue; }
@@ -581,8 +588,11 @@ console.log('[14] 체결가 규약');
   // LOC는 반드시 종가 — 매수·쿼터매도가 종가 아닌 값으로 체결되면 안 된다
   ok('모의 매수는 종가 체결', /put\('절반매수',d,cl,/.test(sim) && /put\('1회매수',d,cl,/.test(sim));
   ok('모의 쿼터매도는 종가 체결', /put\('쿼터매도',d,cl,/.test(sim));
-  // 체결 '판정'은 그대로여야 한다 — 고가 터치로 판정하고 체결가만 시가로 올린다
-  ok('익절 판정은 여전히 고가 터치', /hi>=tgt && qTp>0/.test(sim));
+  /* 익절 판정은 '종가'다. 고가 터치를 체결로 치면 장중에 스치기만 하고 안 팔린 날까지
+     익절로 세어 모의가 실제보다 낙관적으로 나온다 (SOXL 20/10 한 해 +8.7%p).
+     체결가는 여전히 max(익절가, 시가) — 갭업이면 시가가 더 유리하다. */
+  ok('익절 판정은 종가', /if\(cl>=tgt && qTp>0\)/.test(sim) && !/hi>=tgt/.test(sim));
+  ok('익절 체결가는 max(익절가, 시가)', /put\('지정가매도',d,\(op>tgt\?op:tgt\),qTp\)/.test(sim));
   // 규약을 바꾸면 이미 쌓인 모의 기록도 다시 만들어져야 한다 — 설정 지문만으로는 안 걸린다
   ok('체결 규약 판이 모의 지문에 들어간다',
      /const SIM_RULE_VER=\d+/.test(idx) && /'r'\+SIM_RULE_VER\+'\|'/.test(idx));
