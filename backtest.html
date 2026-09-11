@@ -303,7 +303,7 @@ td:first-child{text-align:left;}
   <div class="brand">
     <div>
       <div class="logo">Backtest</div>
-      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v1.174</span></h1>
+      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v1.175</span></h1>
     </div>
   </div>
   <div style="display:flex;align-items:center;gap:8px">
@@ -698,6 +698,8 @@ document.addEventListener('click',function(e){ var m=document.getElementById('jk
 
 <!-- 결과 영역 -->
 <div id="result">
+  <div id="shortWarn" style="display:none;margin-bottom:10px;padding:10px 12px;border:1px solid var(--gold);
+       border-radius:10px;background:rgba(245,196,81,.08);color:var(--gold);font-size:12.5px;line-height:1.5"></div>
   <div class="winner" id="winner"></div>
   <div class="cards s-dca" id="cards"></div>
   <div class="detail s-im s-vr hide" id="detail"></div>
@@ -1625,6 +1627,28 @@ document.querySelector('.ctrl-card')?.addEventListener('input',()=>{ if(_restori
 // 초기 복원 (기본값·빈 상태 세팅 뒤, 모든 세그 배선 완료 후 실행)
 restoreBtState();
 
+/* 짧은 기간 — 막지 않고 알린다.
+   1년 미만을 통째로 막아 두니 '올해 1월부터'를 볼 수가 없었다. 막아야 할 이유는
+   수익률이 아니라 연환산(CAGR·MAR)이다 — 두 달치를 연으로 늘리면 하루 등락이
+   수십 %로 부풀려진다. 그러니 계산은 하고, 연환산은 못 믿는다고 표시한다.
+   20거래일 미만은 이동평균·표준편차가 아예 안 잡혀 그때만 막는다. */
+const SHORT_DAYS=250, MIN_DAYS=20;
+function shortGuard(n){
+  const w=document.getElementById('shortWarn');
+  if(n<MIN_DAYS){
+    if(w){ w.style.display='none'; }
+    alert(`공통 거래일이 ${n}일뿐입니다. 지표를 잡으려면 최소 ${MIN_DAYS}거래일이 필요합니다.\n기간을 넓히거나 늦게 상장한 종목을 빼주세요.`);
+    return false;
+  }
+  if(w){
+    if(n<SHORT_DAYS){
+      w.innerHTML=`⚠ 공통 거래일 <b>${n}일</b> — 1년(${SHORT_DAYS}일)이 안 됩니다. `
+        +`<b>수익률·MDD는 그대로 유효</b>하지만 <b>CAGR·MAR은 연환산이라 부풀려집니다</b> — 그 두 칸은 참고만 하세요.`;
+      w.style.display='';
+    }else w.style.display='none';
+  }
+  return true;
+}
 function commonDays(start,end,tickers){
   let s=null;
   tickers.forEach(t=>{
@@ -3042,7 +3066,7 @@ async function run(){
     const {use,skip}=usableTickers(start,end,[...asapActive]);
     if(!use.length){alert('선택 종목 모두 해당 기간 데이터가 없습니다. 날짜를 확인하세요.');return;}
     const commonD=commonDays(start,end,use);
-    if(commonD.length<250){alert('공통 거래일이 1년 미만입니다. 기간을 넓히거나 늦은 상장 종목을 감안하세요.');return;}
+    if(!shortGuard(commonD.length)) return;
     const results={};
     use.forEach(t=>{ results[t]=runASAP(commonD,t,opt); });
     renderASAP(results,commonD,opt);
@@ -3055,7 +3079,7 @@ async function run(){
     const {use,skip}=usableTickers(start,end,[...stdActive]);
     if(!use.length){alert('선택 종목 모두 해당 기간 데이터가 없습니다. 날짜를 확인하세요.');return;}
     const days=commonDays(start,end,use);
-    if(days.length<250){alert('공통 거래일이 1년 미만입니다. 기간을 넓히거나 늦은 상장 종목을 감안하세요.');return;}
+    if(!shortGuard(days.length)) return;
     const results={};
     use.forEach(t=>{ results[t]=runStdev(days,t,cap,stdN,stdG,stdFilter,stdCostOn); });
     renderStdev(results,days);
@@ -3068,7 +3092,7 @@ async function run(){
     const {use,skip}=usableTickers(start,end,[...ivsActive]);
     if(!use.length){alert('선택 종목 모두 해당 기간 데이터가 없습니다. 날짜를 확인하세요.');return;}
     const days=commonDays(start,end,use);
-    if(days.length<250){alert('공통 거래일이 1년 미만입니다. 기간을 넓히거나 늦은 상장 종목을 감안하세요.');return;}
+    if(!shortGuard(days.length)) return;
     const results={};
     use.forEach(t=>{ results[t]=runIVS(days,t,cap,ivsS0/100,ivsN,ivsBand/100,ivsCostOn,ivsMode,ivsPair); });
     renderIVS(results,days,cap);
@@ -3083,7 +3107,7 @@ async function run(){
     const {use,skip}=usableTickers(start,end,[...allActive]);
     if(use.length<1){alert('비교할 종목 데이터가 부족합니다. 기간을 넓히세요.');return;}
     const days=commonDays(start,end,use);
-    if(days.length<250){alert('공통 거래일이 1년 미만입니다. 기간을 넓히거나 늦은 상장 종목을 감안하세요.');return;}
+    if(!shortGuard(days.length)) return;
     renderCombo(runComboCompare(cap,days,use,mode,allCostOn),cap,days,mode,allCostOn);
     noteSkipped(skip);
     return;
