@@ -1381,7 +1381,7 @@ console.log('[33] 세션 이동 — 보던 서브탭 유지');
   ok('유지 함수 존재', !!ks);
   ok('현재 켜진 칩을 먼저 읽는다', /\.chip\.on/.test(ks) && /cur\.dataset\.b/.test(ks));
   ok('없는 블록이면 첫 칩으로 떨어진다', /resetSubnav\(sec\)/.test(ks)
-     && ks.indexOf('resetSubnav(sec)') < ks.indexOf('goBlk(sec,blk)'));
+     && ks.indexOf('resetSubnav(sec)') < ks.indexOf('goBlk(sec,blk,true)'));
   ok('칩과 블록이 둘 다 있을 때만 되돌린다',
      /chip\[data-b="\$\{blk\}"\]/.test(ks) && /&& \$\(blk\)/.test(ks));
   // switchSess만 유지한다 — 새 세션 추가·설정 초기화는 '현재'로 리셋하는 게 맞다
@@ -1471,6 +1471,32 @@ console.log('[37] 모의 성과 표 — 투입은 맨 오른쪽');
   ok('투입 칸이 colspan 뒤에 온다', iSpan>0 && iInflow>iSpan);
   ok('투입 칸이 한 번만 그려진다', (op.match(/\$\{wnCur\(r\.inflow,r\.cur\)\}/g)||[]).length===1);
   ok('각주 설명도 표 순서와 같다', idx.indexOf('평가 = 보유 평가금') < idx.indexOf('투입 = 밖에서 넣은 돈'));
+}
+
+console.log('[38] 세션 이동 — 보던 자리도 지킨다');
+{
+  const sw=extractFn(idx,'function switchSess(id)');
+  ok('이동 전 자리를 기억한다', /const keepY=window\.scrollY;/.test(sw));
+  ok('다 그린 뒤에 되돌린다',
+     sw.indexOf('refreshAll()') < sw.indexOf('holdScroll(keepY)'), '순서 어긋남');
+  const hs=extractFn(idx,'function holdScroll(y)');
+  ok('자리 지키기 함수 존재', !!hs);
+  ok('문서 높이를 넘지 않게 자른다', /Math\.min\(y,max\)/.test(hs) && /scrollHeight - window\.innerHeight/.test(hs));
+  // 시세가 늦게 와서 다시 그려지면 높이가 달라진다 — 한 번 더 맞춘다
+  ok('늦은 렌더까지 한 번 더 맞춘다', /requestAnimationFrame/.test(hs) && /setTimeout/.test(hs));
+  ok('그 사이 사용자가 스크롤했으면 그만둔다', /Math\.round\(window\.scrollY\)===mine/.test(hs));
+  ok('다른 이동이 끼어들면 그만둔다', /tok!==_holdTok/.test(hs) && !!extractFn(idx,'function cancelHold()'));
+
+  // 유지는 세션 이동에서만 — 탭·칩을 직접 누르면 맨 위로 가는 게 맞다
+  const gb=extractFn(idx,'function goBlk(sec,blk,noScroll)');
+  ok('goBlk이 스크롤을 건너뛸 수 있다', /if\(noScroll\) return;/.test(gb));
+  const ks=extractFn(idx,'function keepSubnav(sec)');
+  ok('세션 이동은 스크롤 없이 서브탭만 맞춘다', /goBlk\(sec,blk,true\)/.test(ks));
+  // 위로 올리는 세 곳(goBlk·탭·칩)은 예약된 자리 지키기를 먼저 취소해야 서로 안 싸운다
+  const n=(idx.match(/cancelHold\(\); window\.scrollTo\(\{top:0/g)||[]).length;
+  ok('맨 위로 가는 곳은 먼저 취소한다', n===3, n+'곳');
+  const tops=(idx.match(/window\.scrollTo\(\{top:0/g)||[]).length;
+  ok('취소 없이 올리는 곳이 없다', tops===3, tops+'곳 중 '+n+'곳만 취소');
 }
 
 console.log(`\n════ 결과: ${pass} PASS / ${fail} FAIL ${fail===0?'— ALL PASS ★':'— 배포 금지, 위 ✗ 항목 수정 필요'} ════`);

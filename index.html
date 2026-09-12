@@ -493,7 +493,7 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
 </div>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.31</span></h1></div>
+    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.32</span></h1></div>
     <div class="jkmenu" id="jkmenuWrap">
       <button class="jkmenu-btn" id="jkmenuBtn" aria-label="메뉴" onclick="jkMenuToggle(event)">三</button>
       <div class="jkmenu-pop" id="jkmenuPop" hidden>
@@ -1549,7 +1549,7 @@ document.addEventListener('click',function(e){ var m=document.getElementById('jk
   <footer>
     <strong>JK 퀀트</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.31</b> · 2026-09-11</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.32</b> · 2026-09-11</div>
   </footer>
 </div>
 
@@ -6900,6 +6900,7 @@ function setupSessbar(){
 function switchSess(id){
   const box=tabBox();
   if(box.active===id)return; // 같은 세션이면 무시
+  const keepY=window.scrollY;          // 보던 자리 (아래 keepSubnav가 서브탭을 지키는 것과 짝이다)
   box.active=id;save();
   // 이전 세션 시세 캐시/노트 완전 초기화 (잔상 방지)
   lastQuote={inf:null,vr:null}; infQuoteCache=null; _lastNeedClose=null; maQuoteData=null; dcaQuoteData=null; ivsQuoteData=null; ivsQuote1=null;
@@ -6909,6 +6910,7 @@ function switchSess(id){
   // (gotoSess는 이 뒤에 '거래이력' 칩을 눌러서 덮어쓰므로 영향 없다)
   keepSubnav(S.activeTab);
   refreshAll();
+  holdScroll(keepY);
   // 새 세션 자동 로딩
   try{
     if(S.activeTab==='inf'){ loadInfData(true); loadInfFG(); loadFX(); }
@@ -6930,7 +6932,7 @@ function keepSubnav(sec){
   const cur=document.querySelector(`#${sec} .chip.on`);
   const blk=cur&&cur.dataset.b;
   resetSubnav(sec);
-  if(blk && document.querySelector(`#${sec} .chip[data-b="${blk}"]`) && $(blk)) goBlk(sec,blk);
+  if(blk && document.querySelector(`#${sec} .chip[data-b="${blk}"]`) && $(blk)) goBlk(sec,blk,true);
 }
 function resetSubnav(sec){
   const first=document.querySelector(`#${sec} .chip`);
@@ -7303,10 +7305,30 @@ function refreshAll(){
   const fn = t==='inf'?refreshInf : t==='ma'?refreshMa : t==='ivs'?refreshIvs : t==='dca'?refreshDca : t==='asap'?refreshAsap : refreshVr;
   try{ fn(); }catch(e){ console.error('refresh:'+t,e); }
 }
-function goBlk(sec,blk){
+function goBlk(sec,blk,noScroll){
   document.querySelectorAll(`#${sec} .chip`).forEach(x=>x.classList.toggle('on',x.dataset.b===blk));
   document.querySelectorAll(`#${sec} .block`).forEach(x=>x.classList.toggle('on',x.id===blk));
-  window.scrollTo({top:0,behavior:'smooth'});
+  if(noScroll) return;                 // 세션 이동처럼 '보던 자리'를 지켜야 할 때
+  cancelHold(); window.scrollTo({top:0,behavior:'smooth'});
+}
+/* 세션만 바꿨을 때 보던 자리를 지킨다. 탭을 옮기거나 칩을 직접 누른 게 아니므로
+   맨 위로 올릴 이유가 없다 — 세션을 여러 개 견주는 중이면 매번 다시 내려야 했다.
+   시세가 늦게 도착해 다시 그려지면 높이가 달라지므로 한 번 더 맞추되,
+   그 사이 사용자가 스크롤했거나 다른 이동이 끼어들었으면 건드리지 않는다. */
+let _holdTok=0;
+function cancelHold(){ _holdTok++; }
+function holdScroll(y){
+  const tok=++_holdTok;
+  const put=()=>{
+    if(tok!==_holdTok) return;
+    const max=Math.max(0, document.documentElement.scrollHeight - window.innerHeight);
+    window.scrollTo({top:Math.min(y,max), behavior:'auto'});
+  };
+  requestAnimationFrame(()=>{
+    put();
+    const mine=Math.round(window.scrollY);
+    setTimeout(()=>{ if(tok===_holdTok && Math.round(window.scrollY)===mine) put(); }, 220);
+  });
 }
 function setupTabs(){
   document.querySelectorAll('.tab').forEach(t=>{
@@ -7321,7 +7343,7 @@ function setupTabs(){
       else if(t.dataset.t==='dca'){ refreshDca(); try{ loadDcaData(); }catch(e){console.error(e)} hideFab(); }
       else if(t.dataset.t==='asap'){ refreshAsap(); try{ if(!krwNoAuto(curStrat().settings)) loadAsapData(); }catch(e){console.error(e)} hideFab(); }
       else { refreshVr(); try{ if(!krwNoAuto(curStrat().settings)){ fetchQuote('vr'); } loadVrChart(); loadFearGreed(); }catch(e){console.error(e)} showFab(); }
-      window.scrollTo({top:0,behavior:'smooth'});
+      cancelHold(); window.scrollTo({top:0,behavior:'smooth'});
     };
   });
   document.querySelectorAll('.chip').forEach(c=>{
@@ -7335,7 +7357,7 @@ function setupTabs(){
       if(c.dataset.b==='vr-next'){ try{renderVrNext()}catch(e){console.error(e)} }
       // 무한매수법 현재 진입 시 시세·캔들·차트·지수 로드
       if(c.dataset.b==='inf-now'){ try{loadInfData();loadInfFG();loadFX();}catch(e){console.error(e)} }
-      window.scrollTo({top:0,behavior:'smooth'});
+      cancelHold(); window.scrollTo({top:0,behavior:'smooth'});
     };
   });
   // VR 차트 기간 선택
