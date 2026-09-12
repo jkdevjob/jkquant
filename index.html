@@ -493,7 +493,7 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
 </div>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.30</span></h1></div>
+    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.31</span></h1></div>
     <div class="jkmenu" id="jkmenuWrap">
       <button class="jkmenu-btn" id="jkmenuBtn" aria-label="메뉴" onclick="jkMenuToggle(event)">三</button>
       <div class="jkmenu-pop" id="jkmenuPop" hidden>
@@ -1549,7 +1549,7 @@ document.addEventListener('click',function(e){ var m=document.getElementById('jk
   <footer>
     <strong>JK 퀀트</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.30</b> · 2026-09-11</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.31</b> · 2026-09-11</div>
   </footer>
 </div>
 
@@ -6031,7 +6031,7 @@ async function openPaper(){
       const outTag = outAmt>0
         ? `<span class="cw" style="color:var(--gold)">${O.simple?'단리 인출':'출금'} ${wnCur(outAmt,r.cur)}</span>`
         : (O.simple ? `<span class="cw" style="color:var(--faint)">단리 · 인출 없음</span>` : '');
-      h+=`<tr class="jump" onclick="gotoSess('${r.tab}','${r.id}')" title="이 세션의 거래이력으로"><td><b>${r.label}</b><span class="cw">${String(r.name).replace(/</g,'&lt;')} · ${r.sym}</span>${outTag}</td>
+      h+=`<tr class="jump" onclick="gotoSess('${r.tab}','${r.id}')" title="이 세션의 분석으로"><td><b>${r.label}</b><span class="cw">${String(r.name).replace(/</g,'&lt;')} · ${r.sym}</span>${outTag}</td>
         <td>${per}<span class="cw">${r.nTrade}거래</span></td>`
         + (ok
           ? `<td>${wnCur(r.total,r.cur)}</td>
@@ -6127,9 +6127,12 @@ function gotoSess(tab, id){
     const tb=document.querySelector(`.tab[data-t="${tab}"]`);
     if(tb) tb.click(); else { S.activeTab=tab; save(); }
   }
-  if(box.active!==id) switchSess(id);        // 시세 재로딩·서브탭 리셋까지 여기서 한다
+  if(box.active!==id) switchSess(id);        // 시세 재로딩까지 여기서 한다 (서브탭은 아래에서 분석으로 맞춘다)
   else { renderSessbar(); renderStatusline(); refreshAll(); }
-  const chip=[...document.querySelectorAll(`#${tab} .chip`)].find(c=>c.textContent.trim()==='거래이력');
+  /* 서브탭 블록 id는 여섯 탭 모두 '<탭>-anal'로 같다 — 글자로 찾으면
+     이름을 바꾸는 순간 조용히 안 먹으므로 id로 잡고, 못 찾을 때만 글자로 물러선다. */
+  const chip=document.querySelector(`#${tab} .chip[data-b="${tab}-anal"]`)
+         || [...document.querySelectorAll(`#${tab} .chip`)].find(c=>c.textContent.trim()==='분석');
   if(chip) chip.click();
 }
 /* 시세가 도착한 자리에서 부른다 — 모의 생성은 시세가 있어야 되고,
