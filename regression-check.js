@@ -1499,5 +1499,31 @@ console.log('[38] 세션 이동 — 보던 자리도 지킨다');
   ok('취소 없이 올리는 곳이 없다', tops===3, tops+'곳 중 '+n+'곳만 취소');
 }
 
+console.log('[39] 로그인 진단 — 어디서 막혔는지 화면에서 읽힌다');
+{
+  ok('진단 자리와 버튼이 있다', /id="gdiag"/.test(idx) && /id="gdiagbtn"/.test(idx) && /function toggleDiag\(\)/.test(idx));
+  const ad=extractFn(idx,'function authDiag()');
+  ok('진단 함수 존재', !!ad);
+  // 막히는 지점마다 한 줄씩 — 이게 있어야 되묻지 않고 원인이 갈린다
+  [['모듈 로딩','로그인모듈'],['핸들러 연결','인증대기'],['인증 상태','로그인상태'],
+   ['앱 시작','앱시작'],['저장소','저장소'],['브라우저','브라우저']].forEach(([nm,key])=>{
+    ok('진단에 '+nm+' 줄이 있다', ad.includes("'"+key));
+  });
+  ok('마지막 오류도 남긴다', /authLastErr/.test(ad) && /let authLastErr=/.test(idx));
+  ok('UA도 남긴다', /navigator\.userAgent/.test(ad));
+  ok('저장소는 실제로 써 보고 판단한다', /function storageOK\(\)/.test(idx)
+     && /localStorage\.setItem\('_t','1'\)/.test(extractFn(idx,'function storageOK()')));
+  // 앞단에서 막힌 건지 뒷단에서 막힌 건지 가르는 플래그
+  const ia=extractFn(idx,'function initAuth()');
+  ok('핸들러 연결 표시를 세운다', /authWired=true;/.test(ia) && /let authWired=false;/.test(idx));
+  // 구글 인증은 끝났는데 앱이 안 열리는 상태는 '로그인 실패'와 고칠 곳이 다르다
+  const gl=extractFn(idx,'function googleLogin()');
+  ok('인증 성공 뒤 앱이 안 열리면 알린다',
+     /\.then\(\(\)=>\{[\s\S]*?if\(!appStarted\) authWarn\(/.test(gl));
+  ok('로그인 실패 코드를 진단에 남긴다', /authLastErr=String\(code\);/.test(gl));
+  ok('진단이 펼쳐져 있으면 갱신한다', /if\(d && !d\.hidden\) d\.textContent=authDiag\(\)/.test(extractFn(idx,'function authWarn(msg)')));
+  ok('진단은 선택으로 접혀 있다', /id="gdiag" hidden/.test(idx));
+}
+
 console.log(`\n════ 결과: ${pass} PASS / ${fail} FAIL ${fail===0?'— ALL PASS ★':'— 배포 금지, 위 ✗ 항목 수정 필요'} ════`);
 process.exit(fail===0?0:1);
