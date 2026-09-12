@@ -493,7 +493,7 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
 </div>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.28</span></h1></div>
+    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.29</span></h1></div>
     <div class="jkmenu" id="jkmenuWrap">
       <button class="jkmenu-btn" id="jkmenuBtn" aria-label="메뉴" onclick="jkMenuToggle(event)">三</button>
       <div class="jkmenu-pop" id="jkmenuPop" hidden>
@@ -673,7 +673,7 @@ document.addEventListener('click',function(e){ var m=document.getElementById('jk
     <div class="block" id="inf-anal">
       <div class="dash" style="background:linear-gradient(160deg,var(--buy-bg),var(--panel));border-color:var(--buy-dim)">
         <div class="rowline" style="border:none;padding:0 0 6px"><span class="tlabel">총 실현손익</span><span class="cnt" id="a_cycles">0 매도</span></div>
-        <div class="tval"><span class="big mono" id="a_realized" style="font-size:32px;color:var(--buy)">+$0.00</span></div>
+        <div class="tval"><span class="big mono" id="a_realized" style="font-size:32px;color:var(--buy)">+$0.00</span><span class="of mono" id="a_realized_pct" style="font-size:16px">+0.00%</span></div>
         <div class="note" id="a_realized_krw">≈ ₩0</div>
       </div>
       <div class="card"><h3><span class="dot"></span>자산 현황</h3>
@@ -865,6 +865,7 @@ document.addEventListener('click',function(e){ var m=document.getElementById('jk
       <div class="dash" style="background:linear-gradient(160deg,var(--buy-bg),var(--panel));border-color:var(--buy-dim)">
         <div class="rowline" style="border:none;padding:0 0 6px"><span class="tlabel">계좌 수익금</span><span class="cnt" id="vc_cyc">0 거래</span></div>
         <div class="tval"><span class="big mono" id="vc_profit" style="font-size:30px;color:var(--buy)">+$0.00</span><span class="of mono" id="vc_pct" style="font-size:16px">+0.00%</span></div>
+        <div class="note" id="vc_profit_krw">≈ ₩0</div>
       </div>
 
       <!-- Pool 정리 (도넛) -->
@@ -1083,7 +1084,7 @@ document.addEventListener('click',function(e){ var m=document.getElementById('jk
     <div class="block" id="ma-anal">
       <div class="dash" style="background:linear-gradient(160deg,var(--buy-bg),var(--panel));border-color:var(--buy-dim)">
         <div class="rowline" style="border:none;padding:0 0 6px"><span class="tlabel">총 실현손익</span><span class="cnt" id="ana_cnt">0 매도</span></div>
-        <div class="tval"><span class="big mono" id="ana_realized" style="font-size:32px;color:var(--buy)">+$0.00</span></div>
+        <div class="tval"><span class="big mono" id="ana_realized" style="font-size:32px;color:var(--buy)">+$0.00</span><span class="of mono" id="ana_realized_pct" style="font-size:16px">+0.00%</span></div>
         <div class="note" id="ana_realized_krw">≈ ₩0</div>
       </div>
       <div class="card"><h3><span class="dot"></span>자산 현황</h3>
@@ -1236,7 +1237,7 @@ document.addEventListener('click',function(e){ var m=document.getElementById('jk
     <div class="block" id="ivs-anal">
       <div class="dash" style="background:linear-gradient(160deg,var(--buy-bg),var(--panel));border-color:var(--buy-dim)">
         <div class="rowline" style="border:none;padding:0 0 6px"><span class="tlabel">총 실현손익</span><span class="cnt" id="anaI_cnt">0 매도</span></div>
-        <div class="tval"><span class="big mono" id="anaI_realized" style="font-size:32px;color:var(--buy)">+$0.00</span></div>
+        <div class="tval"><span class="big mono" id="anaI_realized" style="font-size:32px;color:var(--buy)">+$0.00</span><span class="of mono" id="anaI_realized_pct" style="font-size:16px">+0.00%</span></div>
         <div class="note" id="anaI_realized_krw">≈ ₩0</div>
       </div>
       <div class="card"><h3><span class="dot"></span>자산 현황</h3>
@@ -1548,7 +1549,7 @@ document.addEventListener('click',function(e){ var m=document.getElementById('jk
   <footer>
     <strong>JK 퀀트</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.28</b> · 2026-09-11</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.29</b> · 2026-09-11</div>
   </footer>
 </div>
 
@@ -2777,6 +2778,9 @@ function renderInfAnal(){
   $('a_realized').textContent=(c.realized>=0?'+':'')+wn(c.realized);
   $('a_realized').style.color=c.realized>=0?'var(--buy)':'var(--sell)';
   $('a_realized_krw').textContent=(st.cur==='krw')?'':'≈ '+(c.realized>=0?'+':'')+won(c.realized);
+  /* 실현손익률 — 분모는 원금. 거래이력·월별·사이클별 표와 같은 기준이라
+     줄을 더한 값이 그대로 여기 합계가 된다. 매도분 원가로 나누면 익절%와 겹쳐 쓸모가 없다. */
+  setRealizedPct('a_realized_pct', c.realized, +st.principal||0);
   const sells=curStrat().hist.filter(h=>isSell(h.kind)).length;
   $('a_cycles').textContent=sells+' 매도';
   $('a_principal').textContent=wn(st.principal);
@@ -3551,6 +3555,10 @@ function renderVrAnal(){
   $('vc_profit').style.color=profit>=0?'var(--buy)':'var(--sell)';
   const pct=c.netInvested>0?(profit/c.netInvested*100):0;
   $('vc_pct').textContent=(pct>=0?'+':'')+pct.toFixed(2)+'%';
+  $('vc_pct').style.color=pct>=0?'var(--buy)':'var(--sell)';
+  // 원화 환산은 다른 탭과 같은 규약 — 원화 세션은 이미 원화라 같은 수를 두 번 쓰지 않는다
+  { const k=$('vc_profit_krw');
+    if(k) k.textContent=(st.cur==='krw')?'':'≈ '+(profit>=0?'+':'')+won(profit); }
   $('vc_cyc').textContent=c.hist.length+' 거래';
 
   const modeName = st.mode===0.75?'적립식':st.mode===0.5?'거치식':'인출식';
@@ -4012,6 +4020,7 @@ function renderMaAnal(){
   $('ana_realized').textContent=(realized>=0?'+':'')+wn(realized);
   $('ana_realized').style.color=realized>=0?'var(--buy)':'var(--sell)';
   $('ana_realized_krw').textContent=(st.cur==='krw')?'':'≈ '+(realized>=0?'+':'')+won(realized);
+  setRealizedPct('ana_realized_pct', realized, principal);
   $('ana_principal').textContent=wn(principal);
   $('ana_invested').textContent=wn(invested);
   $('ana_cash').textContent=wn(cash);
@@ -4047,6 +4056,7 @@ function renderIvsAnal(){
   $('anaI_realized').textContent=(rz>=0?'+':'')+wn(rz);
   $('anaI_realized').style.color=rz>=0?'var(--buy)':'var(--sell)';
   $('anaI_realized_krw').textContent=(st.cur==='krw')?'':'≈ '+(rz>=0?'+':'')+won(rz);
+  setRealizedPct('anaI_realized_pct', rz, principal);   // 분모는 원금 ± 추가입금/출금
   $('anaI_principal').textContent=wn(principal);
   $('anaI_invested').textContent=wn(invested);
   $('anaI_cash').textContent=wn(cash);
@@ -4882,6 +4892,15 @@ function delDcaFromEdit(){ if(editDcaIdx<0){closeEditDca();return;} const i=edit
 
 /* ── 적립·ASAP 분석 (다른 탭과 같은 구성) ──
    둘 다 팔지 않는 전략이라 머리글은 실현손익이 아니라 평가손익으로 둔다. */
+/* 분석 머리의 손익률. 원금이 없으면 나눌 수가 없으므로 '—'.
+   금액과 색을 맞춘다 — 금액은 초록인데 %는 검정이면 눈이 두 번 간다. */
+function setRealizedPct(id, v, base){
+  const e=$(id); if(!e) return;
+  if(!(base>0)){ e.textContent='—'; e.style.color='var(--faint)'; return; }
+  const r=v/base*100;
+  e.textContent=(r>=0?'+':'')+r.toFixed(2)+'%';
+  e.style.color=r>=0?'var(--buy)':'var(--sell)';
+}
 function _analPaint(pre,{inv,evalNow,cash,avg,qty,cnt,cashLbl,rows,cur}){
   if(!$(pre+'_pnl')) return;
   const total=evalNow+cash, pnl=total-inv, pct=inv>0?(pnl/inv*100):0;
