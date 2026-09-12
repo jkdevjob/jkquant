@@ -1086,27 +1086,32 @@ console.log('[24] 표 밀도 — 한 화면에 더 많이');
 }
 
 
-/* ════ 25. 모의 성과 → 거래이력 이동 ════
-   성과표에서 눈에 띈 세션을 보려고 탭·세션을 손으로 다시 찾아 들어가야 했다. */
-console.log('[25] 모의 성과 → 거래이력 이동');
+/* ════ 25. 모의 성과 → 분석 이동 ════
+   성과표에서 눈에 띈 세션을 보려고 탭·세션을 손으로 다시 찾아 들어가야 했다.
+   가는 곳은 분석이다 — 성과표에서 넘어온 사람이 보고 싶은 건 거래 나열이 아니라
+   그 세션이 왜 그 숫자가 나왔는지다. */
+console.log('[25] 모의 성과 → 분석 이동');
 {
   ok('성과 줄이 어느 세션인지 안다', /return \{tab, id:sess\.id, name:sess\.name/.test(idx));
   ok('줄을 누르면 이동', /<tr class="jump" onclick="gotoSess\('\$\{r\.tab\}','\$\{r\.id\}'\)"/.test(idx)
      && /\.htable tr\.jump\{cursor:pointer\}/.test(idx));
-  /* 순서가 핵심 — switchSess가 서브탭을 '현재'로 되돌리므로
-     거래이력 열기가 그보다 먼저 오면 아무 일도 안 일어난 것처럼 보인다. */
   let gs=''; try{ gs=extractFn(idx,'function gotoSess(tab, id)'); }catch(e){}
   ok('이동 함수 존재', !!gs, gs?'':'gotoSess 없음');
+  /* 순서가 핵심 — switchSess가 서브탭을 건드리므로
+     분석 열기가 그보다 먼저 오면 아무 일도 안 일어난 것처럼 보인다. */
   ok('탭 → 세션 → 서브탭 순서',
      gs.indexOf('tb.click()') < gs.indexOf('switchSess(id)')
-     && gs.indexOf('switchSess(id)') < gs.indexOf("c.textContent.trim()==='거래이력'"), '순서 어긋남');
-  // 서브탭 id가 탭마다 다르다 (inf-rec·vr-rec vs ma-hist·ivs-hist·dca-hist·asap-hist)
-  ok('서브탭은 id가 아니라 이름으로 찾는다',
-     /\[\.\.\.document\.querySelectorAll\(`#\$\{tab\} \.chip`\)\]\.find\(c=>c\.textContent\.trim\(\)==='거래이력'\)/.test(gs));
+     && gs.indexOf('switchSess(id)') < gs.indexOf('-anal"]'), '순서 어긋남');
+  // 분석 블록 id는 여섯 탭이 '<탭>-anal'로 같다 — 글자보다 id가 안 깨진다
+  ok('분석 칩을 id로 찾는다',
+     /querySelector\(`#\$\{tab\} \.chip\[data-b="\$\{tab\}-anal"\]`\)/.test(gs));
+  ok('못 찾으면 이름으로 물러선다', /c\.textContent\.trim\(\)==='분석'/.test(gs));
+  ok('거래이력으로 가던 옛 코드가 안 남아 있다', !/==='거래이력'/.test(gs));
   ok('없는 세션이면 아무것도 안 한다', /if\(!box\.sessions\.some\(x=>x\.id===id\)\) return;/.test(gs));
-  // 여섯 탭 모두 '거래이력' 칩이 있어야 이름 찾기가 성립한다
-  const chips=(idx.match(/class="chip" data-b="[a-z]+-(?:rec|hist)">거래이력</g)||[]).length;
-  ok('여섯 탭 모두 거래이력 칩이 있다', chips===6, chips+'개');
+  // 여섯 탭 모두 '<탭>-anal' 칩이 있어야 id 찾기가 성립한다
+  const chips=(idx.match(/class="chip" data-b="[a-z]+-anal">분석</g)||[]).length;
+  ok('여섯 탭 모두 분석 칩이 있다', chips===6, chips+'개');
+  ok('줄 설명도 분석으로 바뀌었다', /title="이 세션의 분석으로"/.test(idx));
 }
 
 
@@ -1384,9 +1389,9 @@ console.log('[33] 세션 이동 — 보던 서브탭 유지');
   ok('switchSess가 유지를 쓴다', /keepSubnav\(S\.activeTab\)/.test(sw) && !/resetSubnav/.test(sw));
   const n=(idx.match(/resetSubnav\(S\.activeTab\)/g)||[]).length;
   ok('새 세션·삭제는 그대로 리셋', n===2, n+'곳');
-  // gotoSess(모의 성과 → 거래이력)는 switchSess 뒤에 칩을 눌러서 덮어쓴다
+  // gotoSess(모의 성과 → 분석)는 switchSess 뒤에 칩을 눌러서 덮어쓴다
   const gs=extractFn(idx,'function gotoSess(tab, id)');
-  ok('gotoSess는 거래이력으로 덮어쓴다', gs.indexOf('switchSess(id)') < gs.indexOf("==='거래이력'"));
+  ok('gotoSess는 분석으로 덮어쓴다', gs.indexOf('switchSess(id)') < gs.indexOf('-anal"]'));
 }
 
 console.log('[34] 버전 표기 일치');
