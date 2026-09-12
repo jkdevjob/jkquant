@@ -1455,5 +1455,18 @@ console.log('[36] 분석 머리 — 여섯 탭 모두 손익금·손익률·원�
   ok('VR 손익률에도 색이 붙는다', /\$\('vc_pct'\)\.style\.color=/.test(va));
 }
 
+console.log('[37] 모의 성과 표 — 투입은 맨 오른쪽');
+{
+  const op=extractFn(idx,'async function openPaper()');
+  const head=(op.match(/<tr><th>전략 · 세션<\/th>[^`]*?<\/tr>/)||[''])[0];
+  ok('머리글 순서', /전략 · 세션[\s\S]*기간[\s\S]*평가[\s\S]*수익[\s\S]*연[\s\S]*투입/.test(head), head.slice(0,90));
+  ok('투입이 마지막 머리글', head.lastIndexOf('투입') > head.lastIndexOf('연'));
+  // 시세를 못 받은 줄은 평가·수익·연을 colspan 3으로 덮는다 — 투입은 그 뒤에 따로 온다
+  const iSpan=op.indexOf('colspan="3"'), iInflow=op.indexOf('${wnCur(r.inflow,r.cur)}');
+  ok('투입 칸이 colspan 뒤에 온다', iSpan>0 && iInflow>iSpan);
+  ok('투입 칸이 한 번만 그려진다', (op.match(/\$\{wnCur\(r\.inflow,r\.cur\)\}/g)||[]).length===1);
+  ok('각주 설명도 표 순서와 같다', idx.indexOf('평가 = 보유 평가금') < idx.indexOf('투입 = 밖에서 넣은 돈'));
+}
+
 console.log(`\n════ 결과: ${pass} PASS / ${fail} FAIL ${fail===0?'— ALL PASS ★':'— 배포 금지, 위 ✗ 항목 수정 필요'} ════`);
 process.exit(fail===0?0:1);
