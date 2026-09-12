@@ -240,6 +240,10 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
 #gbtn svg{width:20px;height:20px}
 #authgate .gnote{color:var(--faint);font-size:11px;margin-top:20px;line-height:1.6}
 #authgate .gerr{color:var(--sell);font-size:12px;margin-top:14px;min-height:16px}
+#authgate .gdiagbtn{background:none;border:0;color:var(--faint);font-size:11px;margin-top:8px;cursor:pointer;text-decoration:underline}
+#authgate .gdiag{margin-top:10px;padding:10px 11px;background:var(--panel2);border:1px solid var(--line);
+  border-radius:10px;font-family:'IBM Plex Mono',monospace;font-size:10.5px;line-height:1.65;
+  color:var(--dim);text-align:left;white-space:pre-wrap;word-break:break-all;user-select:text}
 #inappwarn{margin-top:16px;text-align:left;background:rgba(245,196,81,.1);border:1px solid rgba(245,196,81,.35);border-radius:10px;padding:12px 13px;font-size:12.5px;line-height:1.65;color:#f6dfa6}
 #inappwarn b{color:var(--gold)}
 #inappwarn .iw-btns{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
@@ -488,12 +492,14 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
     </button>
     <div id="inappwarn"></div>
     <div class="gerr" id="gerr"></div>
+    <div class="gdiag" id="gdiag" hidden></div>
+    <button class="gdiagbtn" id="gdiagbtn" onclick="toggleDiag()">진단 정보 보기</button>
     <div class="gnote">개인 학습·기록용 도구입니다. 투자 권유가 아니며, 레버리지 ETF는 원금 손실 위험이 큽니다.</div>
   </div>
 </div>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.32</span></h1></div>
+    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.33</span></h1></div>
     <div class="jkmenu" id="jkmenuWrap">
       <button class="jkmenu-btn" id="jkmenuBtn" aria-label="메뉴" onclick="jkMenuToggle(event)">三</button>
       <div class="jkmenu-pop" id="jkmenuPop" hidden>
@@ -1549,7 +1555,7 @@ document.addEventListener('click',function(e){ var m=document.getElementById('jk
   <footer>
     <strong>JK 퀀트</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.32</b> · 2026-09-11</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.33</b> · 2026-09-11</div>
   </footer>
 </div>
 
@@ -7449,10 +7455,14 @@ function importJSON(e){
 
 /* ── 로그인 / 인증 흐름 ── */
 function googleLogin(){
-  if(!window.fb){$('gerr').textContent='로그인 모듈 로딩 중… 잠시 후 다시 눌러주세요.';return;}
+  if(!window.fb){$('gerr').textContent='로그인 모듈 로딩 중… 잠시 후 다시 눌러주세요.';authLastErr='window.fb 미로딩';return;}
   $('gerr').textContent='';
   // 팝업 방식만 사용 (모바일 storage-partitioned 환경에서 redirect 가 깨지는 문제 회피)
-  window.fb.signInWithPopup(window.fb.auth,window.fb.provider).catch(e=>{
+  window.fb.signInWithPopup(window.fb.auth,window.fb.provider).then(()=>{
+    /* 구글 인증은 끝났는데 화면이 안 열리는 경우를 잡는다.
+       예전엔 이 상태가 '로그인이 안 된다'와 구분이 안 됐다 — 둘은 고칠 곳이 다르다. */
+    setTimeout(()=>{ if(!appStarted) authWarn('구글 인증은 됐는데 앱이 안 열립니다. 아래 진단 정보를 알려주세요.'); },5000);
+  }).catch(e=>{
     const code=e&&(e.code||e.message)||'알 수 없는 오류';
     if(code==='auth/popup-closed-by-user'||code==='auth/cancelled-popup-request'){
       $('gerr').textContent='로그인 창이 닫혔어요. 다시 눌러주세요.';
@@ -7464,6 +7474,7 @@ function googleLogin(){
     }else{
       $('gerr').textContent='로그인 실패: '+code;
     }
+    authLastErr=String(code);
   });
 }
 function doLogout(){
@@ -7543,7 +7554,9 @@ function startApp(){
   window.addEventListener('load', updateStickyOffsets);
 }
 
+let authWired=false;
 function initAuth(){
+  authWired=true;               // 진단용 — 이게 false면 앞단(모듈 로딩)에서 막힌 것이다
   // 과거 redirect 잔여 상태가 깨져 에러를 던질 수 있으므로 방어적으로 처리
   try{
     const p=window.fb.getRedirectResult(window.fb.auth);
@@ -7594,12 +7607,43 @@ function initAuth(){
     }
   });
 }
+/* 로그인이 막혔을 때 화면에서 바로 읽을 수 있는 진단.
+   두 번이나 '로그인이 안 된다'는 말만 있고 단서가 없어서 원인을 못 좁혔다.
+   여기 찍히는 줄만 보면 어디서 막혔는지 바로 갈린다. */
+let authLastErr='';
+function storageOK(){
+  try{ localStorage.setItem('_t','1'); localStorage.removeItem('_t'); return 'OK'; }
+  catch(e){ return '막힘('+(e&&e.name||'?')+')'; }
+}
+function authDiag(){
+  const L=[];
+  L.push('버전     '+(($('appVerTop')||{}).textContent||'?'));
+  L.push('로그인모듈 '+(window.fb?('로딩됨('+Object.keys(window.fb).length+')'):'미로딩 ← 여기서 막힘'));
+  L.push('인증대기  '+(typeof authWired!=='undefined'&&authWired?'연결됨':'미연결 ← 여기서 막힘'));
+  L.push('로그인상태 '+(window.fb&&window.fb.auth&&window.fb.auth.currentUser
+          ? ('됨 '+(window.fb.auth.currentUser.email||'')) : '안 됨'));
+  L.push('앱시작    '+(appStarted?'됨':'안 됨'));
+  L.push('저장소    '+storageOK());
+  L.push('브라우저  '+(inAppName()||'기본 브라우저'));
+  if(authLastErr) L.push('마지막오류 '+authLastErr);
+  L.push(String(navigator.userAgent||'').slice(0,120));
+  return L.join('\n');
+}
+function toggleDiag(){
+  const d=$('gdiag'), b=$('gdiagbtn'); if(!d) return;
+  const show=d.hidden;
+  if(show) d.textContent=authDiag();
+  d.hidden=!show;
+  if(b) b.textContent=show?'진단 정보 숨기기':'진단 정보 보기';
+}
 /* 로그인 화면에 원인을 남긴다. 조용히 실패하면 사용자도 나도 알 길이 없다. */
 function authWarn(msg){
+  authLastErr=String(msg||'').slice(0,160);
   try{
     const el=$('gerr'); if(!el) return;
     el.textContent=msg;
     el.style.display='block';
+    const d=$('gdiag'); if(d && !d.hidden) d.textContent=authDiag();   // 펼쳐 놨으면 갱신
   }catch(e){ console.error(msg); }
 }
 
