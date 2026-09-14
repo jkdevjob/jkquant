@@ -1698,5 +1698,111 @@ console.log('[41] 한투 모의투자 연결 — 세션 설정과 주문 전송'
   ok('주문표에서 그대로 가져온다', /todayOrders\.filter\(/.test(rp));
 }
 
+/* ════ 42. 자동 주문 — 서버가 브라우저와 같은 주문을 낸다 ════
+   주문 계산이 index.html 안에만 있어서 앱을 안 열면 오늘 낼 주문을 아무도 몰랐다.
+   서버로 옮겼는데, 한 주라도 어긋나면 화면에 보이는 것과 실제로 나가는 게 달라진다.
+   그래서 재구현을 믿지 않고 index.html 의 renderOrder 를 그대로 돌려 맞대 본다. */
+console.log('[42] 자동 주문 — 브라우저와 서버가 같은 주문을 낸다');
+{
+  const imPath=__d+'/functions/api/_im.js';
+  const atPath=__d+'/functions/api/autotrade.js';
+  const im=fs.existsSync(imPath)?fs.readFileSync(imPath,'utf8'):'';
+  const at=fs.existsSync(atPath)?fs.readFileSync(atPath,'utf8'):'';
+  ok('서버용 주문 모듈이 있다', !!im);
+  ok('자동 주문 엔드포인트가 있다', !!at);
+
+  if(im){
+    const M=new Function(im.replace(/export /g,'')+'\nreturn {imOrders,imCompute,imBuy1,starPct};')();
+    // 브라우저 쪽 — DOM 을 최소로 흉내내고 renderOrder 원문을 그대로 실행한다
+    const KIND=idx.slice(idx.indexOf('const KIND_T='), idx.indexOf('};', idx.indexOf('const KIND_T='))+2);
+    const need=['function computeInf()','function imBuy1(c)','function starPct(ticker,div,T,base)',
+      'function reverseT(kind,t,div)','function oitem(cls,name,tag,price,qty)','function renderOrder()',
+      'function imMomNow()','function imTgtOf(base, mom)','function calcStarPoint(c)',
+      'function fmtT(t)','function isSell(k)','function isBuy(k)','function isCx(k)']
+      .map(x=>{ try{ return extractFn(idx,x); }catch(e){ return ''; } }).filter(Boolean).join('\n');
+    const browserOrders=(st,hist,close,days)=>{
+      const EL=()=>({textContent:'',innerHTML:'',style:{},value:'',classList:{add(){},remove(){},toggle(){}}});
+      return new Function('EL','ST','HIST','DAYS','CLOSE', `
+        const S={activeTab:'inf'};
+        let todayOrders=[];
+        const $=(id)=>id==='o_close'?{value:''}:EL();
+        const wn=v=>'$'+(+v||0).toFixed(2);
+        const inputNum=()=>0;
+        const curStrat=()=>({id:'s',settings:ST,hist:HIST});
+        const lastQuote={inf:{days:DAYS}};
+        let infChartData=DAYS, infSimNote='', infSimNoteSid=null, _lastNeedClose=null;
+        ${KIND}
+        const IM_MOM_LEN=20, IM_MOM_TH=8, IM_MOM_CAP=30;
+        ${need}
+        function infSettledLast(){ return {close:CLOSE}; }
+        function render5day(){}
+        function renderKisPanel(){}
+        renderOrder();
+        return todayOrders;`)(EL,st,hist,days,close);
+    };
+    const ST=(o)=>Object.assign({ticker:'SOXL',div:20,target:20,big:20,principal:10000,cur:'usd',
+      rowsOn:false,rows:8,gap:2.5,rowqty:1,compound:false,reverse:false,tgtDyn:false},o);
+    const DAYS=Array.from({length:30},(_,i)=>({date:'2026-01-'+String(i+1).padStart(2,'0'), close:90+i}));
+    const many=(n,f)=>Array.from({length:n},(_,i)=>f(i));
+    const CASES=[
+      ['빈 세션(첫 매수)',       ST({}), [], 100],
+      ['보유·전반전',            ST({}), [{kind:'1회매수',date:'2026-01-02',price:100,qty:5}], 95],
+      ['보유·후반전',            ST({}), many(12,i=>({kind:'1회매수',date:'2026-01-0'+(i%9+1),price:100-i,qty:3})), 80],
+      ['원금 소진',              ST({principal:500}), many(21,()=>({kind:'1회매수',date:'2026-02-01',price:20,qty:1})), 20],
+      ['하방 LOC 켬',            ST({rowsOn:true,rows:3,rowqty:2}), [{kind:'1회매수',date:'2026-01-02',price:100,qty:5}], 95],
+      ['익절 조절 켬',           ST({tgtDyn:true}), [{kind:'1회매수',date:'2026-01-02',price:100,qty:5}], 95],
+      ['평단이 종가보다 위(상한)',ST({}), [{kind:'1회매수',date:'2026-01-02',price:200,qty:10}], 100],
+      ['40분할 TQQQ 익절15',     ST({ticker:'TQQQ',div:40,target:15}), [{kind:'절반매수',date:'2026-01-02',price:70,qty:4}], 68],
+      ['매도 후 사이클 종료',     ST({}), [{kind:'1회매수',date:'2026-01-02',price:100,qty:5},
+                                        {kind:'지정가매도',date:'2026-01-09',price:120,qty:5}], 118],
+      ['국내 종목(원화)',        ST({ticker:'069500',cur:'krw',principal:5000000}),
+                                 [{kind:'1회매수',date:'2026-01-02',price:10000,qty:30}], 9800],
+    ];
+    const norm=o=>`${o.side} ${o.tag} ${(+o.price).toFixed(4)} x${o.qty}`;
+    let diff=0, checked=0;
+    for(const [nm,st,hist,close] of CASES){
+      let a=null,b=null,err='';
+      try{ a=browserOrders(st,hist,close,DAYS).map(norm); }catch(e){ err='브라우저: '+e.message; }
+      try{ b=M.imOrders({st,hist,close,days:DAYS}).orders.map(norm); }catch(e){ err+=' 서버: '+e.message; }
+      const same=!err && a.length===b.length && a.every((x,i)=>x===b[i]);
+      if(!same) diff++;
+      checked++;
+      ok('같은 주문 — '+nm, same, err || ('브라우저['+(a||[]).join(' | ')+'] vs 서버['+(b||[]).join(' | ')+']'));
+    }
+    ok('열 가지 상황을 다 봤다', checked===10, checked+'건');
+    // 리버스는 옮기지 않았다 — 반쯤 옮긴 엔진이 사람 없이 주문을 내면 안 된다
+    const rev=M.imOrders({st:ST({reverse:true}),
+      hist:many(21,()=>({kind:'1회매수',date:'2026-02-01',price:20,qty:1})), close:20, days:DAYS});
+    ok('리버스 세션은 건너뛴다', rev.orders.length===0 && /리버스/.test(rev.skip||''), rev.skip||'안 건너뜀');
+    ok('종가가 없으면 안 낸다', M.imOrders({st:ST({}),hist:[],close:0,days:DAYS}).skip==='확정 종가 없음');
+  }
+
+  if(at){
+    ok('비밀 키 없이는 못 부른다', /if \(!env\.AUTOTRADE_KEY \|\| key !== env\.AUTOTRADE_KEY\) return json\(\{ error: "권한 없음" \}, 401\)/.test(at));
+    ok('드라이런이 있다', /const dry = url\.searchParams\.get\("dry"\) === "1"/.test(at)
+       && /AUTOTRADE_ENABLE/.test(at));
+    // 같은 날 두 번 내면 이중 주문이다
+    ok('하루 한 번만 낸다', /prev\.lastDate === today/.test(at) && /lastDate: today/.test(at));
+    ok('주문은 재시도하지 않는다', /재시도하지 않는다/.test(at) && !/for \(let try/.test(at));
+    ok('초당 제한을 피해 간격을 둔다', /await sleep\(700\)/.test(at));
+    ok('세션 종류가 환경을 정한다', /const kisEnv = s\.paper \? "vts" : "real"/.test(at));
+    ok('연결 안 한 세션은 건너뛴다', /if \(!s\.kis\)/.test(at));
+    ok('서명은 WebCrypto 로 한다', /RSASSA-PKCS1-v1_5/.test(at) && !/require\(/.test(at));
+    // 자동 경로가 열려 있으면 키 없는 사이트가 무방비가 된다
+    const kisSrc=fs.existsSync(__d+'/functions/api/kis.js')?fs.readFileSync(__d+'/functions/api/kis.js','utf8'):'';
+    const vo=kisSrc?extractFn(kisSrc,'async function verifyOwner(request, env)'):'';
+    ok('자동 키는 값이 있을 때만 통한다',
+       /if \(env\.AUTOTRADE_KEY && ak && ak === env\.AUTOTRADE_KEY\)/.test(vo));
+  }
+  const wf=__d+'/.github/workflows/autotrade.yml';
+  ok('시간을 재는 워크플로가 있다', fs.existsSync(wf));
+  if(fs.existsSync(wf)){
+    const y=fs.readFileSync(wf,'utf8');
+    ok('평일에만 돈다', /cron: "40 (19|20) \* \* 1-5"/.test(y));
+    ok('손으로도 돌릴 수 있다', /workflow_dispatch/.test(y));
+    ok('손으로 돌릴 땐 드라이런이 기본', /default: true/.test(y));
+  }
+}
+
 console.log(`\n════ 결과: ${pass} PASS / ${fail} FAIL ${fail===0?'— ALL PASS ★':'— 배포 금지, 위 ✗ 항목 수정 필요'} ════`);
 process.exit(fail===0?0:1);

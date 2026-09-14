@@ -275,6 +275,11 @@ async function emailOfToken(request, env) {
 // ── Firebase ID 토큰 검증 (소유자만 주문) ──
 async function verifyOwner(request, env) {
   const owners = orderOwners(env);
+  /* 자동 주문(/api/autotrade)은 사람이 없어 로그인 토큰이 없다.
+     그 대신 AUTOTRADE_KEY 를 요구한다 — 키가 비어 있으면 이 길은 아예 닫혀 있다.
+     (빈 값끼리 같다고 통과시키면 키를 안 넣은 사이트가 무방비가 된다.) */
+  const ak = request.headers.get("x-autotrade-key") || "";
+  if (env.AUTOTRADE_KEY && ak && ak === env.AUTOTRADE_KEY) return { ok: true, email: "autotrade", auto: true };
   const auth = request.headers.get("Authorization") || "";
   const idToken = auth.startsWith("Bearer ") ? auth.slice(7) : "";
   if (!idToken) return { ok: false, msg: "로그인이 필요합니다." };
