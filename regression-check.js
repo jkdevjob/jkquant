@@ -1560,5 +1560,133 @@ console.log('[40] 모의 일괄 적용 — 원금과 1회 적립액을 따로');
   ok('비우면 그대로 둔다', /if\(!raw\) return null;/.test(rd));
 }
 
+console.log('[41] 한투 모의투자 연결 — 세션 설정과 주문 전송');
+{
+  const kis=fs.existsSync(__d+'/functions/api/kis.js')?fs.readFileSync(__d+'/functions/api/kis.js','utf8'):'';
+  // ── 서버: 해외(미국) 경로 ──
+  ok('미국 티커를 가른다', /const USSYM = \/\^\[A-Z\]\{1,5\}\$\//.test(kis));
+  ok('해외 시세 엔드포인트', /overseas-price\/v1\/quotations\/price/.test(kis) && /HHDFS00000300/.test(kis));
+  ok('해외 잔고 엔드포인트', /overseas-stock\/v1\/trading\/inquire-balance/.test(kis) && /VTTS3012R/.test(kis));
+  ok('해외 주문 엔드포인트', /overseas-stock\/v1\/trading\/order"/.test(kis)
+     && /VTTT1002U/.test(kis) && /VTTT1001U/.test(kis));
+  // 시세·주문의 거래소 코드가 다르다 — 시세로 찾아서 주문에 쓴다
+  ok('거래소를 시세로 찾아 쓴다', /EXCD_ORD = \{ NAS: "NASD", AMS: "AMEX", NYS: "NYSE" \}/.test(kis)
+     && /mkt = q\.market;/.test(kis));
+  // 미국 호가는 소수점 — 국내처럼 반올림하면 딴 주문이 된다
+  ok('미국 호가는 소수 2자리', /us \? Math\.round\(\(\+body\.price \|\| 0\) \* 100\) \/ 100/.test(kis)
+     && /OVRS_ORD_UNPR: price\.toFixed\(2\)/.test(kis));
+  ok('미국 시장가는 거부한다', /미국 주식은 지정가만 주문할 수 있습니다/.test(kis));
+  ok('주문은 재시도하지 않는다', !/overseas-stock\/v1\/trading\/order"[\s\S]{0,300}readJson/.test(kis));
+  ok('국내 경로는 그대로', /domestic-stock\/v1\/trading\/order-cash/.test(kis) && /VTTC0802U/.test(kis));
+
+  // ── 서버: 네 갈래(환경 × 시장) ──
+  ok('환경별 키를 따로 읽는다', /KIS_REAL_/.test(kis) && /KIS_VTS_/.test(kis)
+     && /function withEnv\(env, want, market\)/.test(kis));
+  // 키를 하나만 둔 옛 설정에서 모의 키로 실전 주문이 나가면 안 된다
+  ok('옛 단일 키는 제 환경에서만 쓴다', /const fb = \(k\) => \(legacy === w \? env\[k\] \|\| "" : ""\);/.test(kis));
+  ok('네 갈래를 목록으로 준다', /function modeList\(env\)/.test(kis)
+     && /mk \+ "-" \+ m/.test(kis));
+  /* 한투는 국내·국외 모의계좌를 따로 신청한다 — 앱키는 같은데 계좌번호가 다르다.
+     환경 단위로만 보면 '국내는 되는데 국외는 계좌가 없는' 경우를 통째로 놓친다. */
+  ok('계좌는 시장별로도 갈린다', /KIS_\$\{W\}_ACCOUNT_\$\{MK\}/.test(kis));
+  ok('시장 전용 계좌가 없으면 환경 공통으로 내려간다',
+     /\.\.\.two\("ACCOUNT"\),\s*\/\/ 환경 공통/.test(kis));
+  ok('네 갈래를 각각 따진다', /for \(const \[mk, label\] of \[\["kr", "국내"\], \["us", "국외"\]\]\) \{\s*\n\s*const e = withEnv\(env, m, mk\);/.test(kis));
+  ok('뭐가 비었는지 알려준다 (값은 안 담는다)', /missing: \["APPKEY", "APPSECRET", "ACCOUNT"\]\.filter/.test(kis));
+  ok('시장을 code 로 정해 넘긴다', /USSYM\.test\(c\) \? "us" : "kr"/.test(kis));
+
+  // 실제 해석 결과를 직접 돌려 본다 — 정규식만으로는 새는지 알 수 없다
+  {
+    const F=new Function(kis.replace(/export /g,'')+'\nreturn {withEnv,modeList};')();
+    const solo={KIS_ENV:'vts',KIS_APPKEY:'k',KIS_APPSECRET:'s',KIS_ACCOUNT:'11111111-01'};
+    const ids=m=>F.modeList(m).filter(x=>x.ready).map(x=>x.id).sort().join(',');
+    ok('옛 단일키는 모의 두 갈래만 연다', ids(solo)==='kr-vts,us-vts', ids(solo));
+    const split={KIS_VTS_APPKEY:'k',KIS_VTS_APPSECRET:'s',KIS_VTS_ACCOUNT_KR:'2-01',KIS_VTS_ACCOUNT_US:'3-01'};
+    ok('시장별 계좌를 각각 집어 온다',
+       F.withEnv(split,'vts','kr').KIS_ACCOUNT==='2-01' && F.withEnv(split,'vts','us').KIS_ACCOUNT==='3-01');
+    const usOnly={KIS_VTS_APPKEY:'k',KIS_VTS_APPSECRET:'s',KIS_VTS_ACCOUNT_US:'3-01'};
+    ok('한쪽 계좌만 있으면 그쪽만 열린다', ids(usOnly)==='us-vts', ids(usOnly));
+    // 모의 키로 실전 주문이 나가면 되돌릴 수 없다
+    const leak=F.withEnv(solo,'real','us');
+    ok('모의 키가 실전으로 새지 않는다', leak.KIS_APPKEY==='' && leak.KIS_ACCOUNT==='');
+    /* 사람이 손으로 넣는 값이다 — 앞에 붙였는지 뒤에 붙였는지로 안 되면 버그다.
+       KIS_REAL_APPKEY 와 KIS_APPKEY_REAL 을 똑같이 읽어야 한다. */
+    const suf={KIS_ENV:'vts',KIS_APPKEY:'v',KIS_APPSECRET:'s',KIS_ACCOUNT:'1-01',
+               KIS_APPKEY_REAL:'R',KIS_APPSECRET_REAL:'S',KIS_ACCOUNT_REAL:'9-01'};
+    const pre={KIS_ENV:'vts',KIS_APPKEY:'v',KIS_APPSECRET:'s',KIS_ACCOUNT:'1-01',
+               KIS_REAL_APPKEY:'R',KIS_REAL_APPSECRET:'S',KIS_REAL_ACCOUNT:'9-01'};
+    ok('이름을 뒤에 붙여도 읽는다', ids(suf)==='kr-real,kr-vts,us-real,us-vts', ids(suf));
+    ok('앞뒤 표기가 같은 결과', ids(suf)===ids(pre));
+    ok('뒤 표기도 제 환경 값으로 푼다',
+       F.withEnv(suf,'real','us').KIS_APPKEY==='R' && F.withEnv(suf,'vts','us').KIS_APPKEY==='v');
+    // 섞어 써도 시장 전용 계좌가 우선이어야 한다
+    const mix=Object.assign({},pre,{KIS_ACCOUNT_REAL_US:'8-01'});
+    ok('섞어 써도 시장 전용이 우선', F.withEnv(mix,'real','us').KIS_ACCOUNT==='8-01'
+       && F.withEnv(mix,'real','kr').KIS_ACCOUNT==='9-01');
+    ok('빠진 이름을 두 표기로 알려준다',
+       F.modeList(solo).filter(m=>!m.ready).every(m=>m.missing.every(x=>/ 또는 /.test(x))));
+  }
+  ok('config가 준비된 것만 추려 준다', /ready: modes\.filter\(\(m\) => m\.ready\)\.map\(\(m\) => m\.id\)/.test(kis));
+  ok('주문은 환경을 명시적으로 받는다', /env = withEnv\(env, body\.env \|\| url\.searchParams\.get\("env"\), USSYM\.test\(c\) \? "us" : "kr"\)/.test(kis));
+  ok('어느 환경 키가 없는지 말해 준다', /\$\{isReal\(env\) \? "실전" : "모의투자"\} 키가 설정되지 않았습니다/.test(kis));
+
+  // ── 앱: 세션 설정 ──
+  ok('모의투자 안에만 한투 선택이 있다',
+     idx.indexOf('id="sess_simstart_wrap"') < idx.indexOf('id="sess_kis"'));
+  ok('네 갈래가 모두 선택지에 있다',
+     ['kr-vts','us-vts','kr-real','us-real'].every(m=>idx.includes('value="'+m+'"')));
+  ok('실전에는 경고 표시가 붙어 있다', /value="kr-real">국내 실전투자 ⚠/.test(idx) && /value="us-real">국외 실전투자 ⚠/.test(idx));
+  ok('세션에 고른 갈래를 저장한다', /t\.kisMode=\(\$\('sess_kis'\)&&\$\('sess_kis'\)\.value\)\|\|''/.test(idx)
+     && /s\.kisMode=\(\$\('sess_kis'\)&&\$\('sess_kis'\)\.value\)\|\|''/.test(idx));
+  /* '모의투자' 딱지가 붙은 세션이 실전 주문을 내면 화면의 말과 실제가 어긋난다.
+     잘못 고르면 진짜 돈이 나가고 되돌릴 수가 없으므로, 세션 종류와 주문 환경을 묶는다. */
+  ok('세션 종류에 맞는 갈래만 연다', !!extractFn(idx,'function kisSyncOpts()'));
+  const sy=extractFn(idx,'function kisSyncOpts()');
+  ok('모의 세션은 실전을 잠근다', /const bad=paper\?isReal:!isReal;/.test(sy) && /o\.disabled=bad;/.test(sy));
+  ok('잠긴 걸 고르고 있었으면 비운다', /if\(sel\.selectedOptions\[0\]&&sel\.selectedOptions\[0\]\.disabled\) sel\.value='';/.test(sy));
+  ok('모의 여부를 바꾸면 선택지도 따라온다', /style\.display=this\.checked\?'':'none';kisOptUI\(\)/.test(idx));
+  // 저장할 때도 한 번 더 거른다 — 모의↔실계좌를 바꾼 직후 옛 값이 남을 수 있다
+  const cs=(idx.match(/if\([a-z]+\.kisMode && \(String\([a-z]+\.kisMode\)\.endsWith\('-real'\) === !![a-z]+\.paper\)\) [a-z]+\.kisMode='';/g)||[]).length;
+  ok('저장할 때 안 맞는 조합을 거른다', cs===2, cs+'곳');
+  // 시장은 종목이 정한다 — 고를 여지가 없다
+  ok('시장은 종목코드로 정한다', /function kisMarketOf\(ticker\)/.test(idx) && /KR_CODE_RE\.test/.test(extractFn(idx,'function kisMarketOf(ticker)')));
+  const ku=extractFn(idx,'async function kisOptUI()');
+  ok('연결 상태를 그 자리에서 확인한다', /kisConfig\(true\)/.test(ku) && /j\.ready\|\|\[\]/.test(ku));
+  ok('키가 없으면 어느 갈래인지 짚어 준다', /설정이 서버에 없습니다/.test(ku)
+     && /\(\(j\.modes\|\|\[\]\)\.find\(m=>m\.id===mode\)\|\|\{\}\)\.missing/.test(ku));
+  ok('국내·국외 계좌가 다를 수 있음을 알려준다', /_ACCOUNT_\$\{market\.toUpperCase\(\)\}/.test(ku)
+     && /국내·국외 모의계좌를 따로 신청합니다/.test(ku));
+  ok('실전이면 빨간 경고', /실전투자입니다\. 진짜 돈이 나갑니다/.test(ku));
+  ok('종목과 시장이 어긋나면 미리 알린다', /tkMarket!==market/.test(ku));
+  ok('지정가로 나간다는 걸 미리 알린다', /지정가만<\/b> 받습니다/.test(ku));
+
+  // ── 앱: 보내는 주문은 화면과 같은 것이어야 한다 ──
+  const oi=extractFn(idx,'function oitem(cls,name,tag,price,qty)');
+  ok('주문표를 그리면서 구조도 남긴다', /todayOrders\.push\(/.test(oi));
+  const ro=extractFn(idx,'function renderOrder()');
+  ok('그릴 때마다 비운다', /todayOrders=\[\];/.test(ro));
+  const n=(idx.match(/renderKisPanel\(\)/g)||[]).length;
+  ok('주문표의 모든 종료 지점에서 패널을 그린다', n>=4, n+'곳');   // 정의 1 + 호출 3
+  const ks=extractFn(idx,'async function kisSendToday()');
+  ok('연결된 세션만 보낸다', /if\(!\(s&&s\.kisMode\)\) return;/.test(ks));
+  ok('세션 종류와 환경이 어긋나면 안 보낸다', /if\(real===!!s\.paper\)\{ alert\(/.test(ks));
+  ok('시장이 어긋나면 안 보낸다', /if\(kisMarketOf\(sym\)!==MP\.market\)\{ alert\(/.test(ks));
+  ok('준비 안 된 갈래는 안 보낸다', /if\(!\(j\.ready\|\|\[\]\)\.includes\(mode\)\)/.test(ks));
+  ok('보내기 전에 확인을 받는다', /if\(!confirm\(/.test(ks));
+  ok('실전이면 확인창부터 경고한다', /실전투자입니다\. 진짜 돈이 나갑니다/.test(ks));
+  ok('실전은 한 번 더 묻는다', /if\(real && !confirm\('다시 확인합니다/.test(ks));
+  ok('고른 환경을 서버에 같이 보낸다', /env:MP\.env,side:o\.side/.test(ks));
+  ok('초당 제한을 피해 간격을 둔다', /setTimeout\(r,700\)/.test(ks));
+  ok('주문마다 결과를 남긴다', /done\.push\(\{o,ok:/.test(ks));
+  ok('보여준 값 그대로 보낸다', /price:Math\.round\(o\.price\*100\)\/100/.test(ks));
+  const rp=extractFn(idx,'function renderKisPanel()');
+  ok('연결 안 된 세션엔 패널이 없다', /if\(!\(s&&s\.kisMode\)\)\{ box\.innerHTML=''; return; \}/.test(rp));
+  ok('종류가 어긋나면 패널 대신 안내', /if\(real===!!s\.paper\)\{/.test(rp)
+     && /세션 설정에서 다시 골라 주세요/.test(rp));
+  ok('시장이 어긋나면 패널 대신 안내', /kisMarketOf\(sym\)!==MP\.market/.test(rp));
+  ok('실전 패널은 색과 문구가 다르다', /real\?'sell':'buy'/.test(rp) && /실전 계좌입니다/.test(rp));
+  ok('주문표에서 그대로 가져온다', /todayOrders\.filter\(/.test(rp));
+}
+
 console.log(`\n════ 결과: ${pass} PASS / ${fail} FAIL ${fail===0?'— ALL PASS ★':'— 배포 금지, 위 ✗ 항목 수정 필요'} ════`);
 process.exit(fail===0?0:1);
