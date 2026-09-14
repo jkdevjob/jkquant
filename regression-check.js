@@ -1588,8 +1588,9 @@ console.log('[41] 한투 모의투자 연결 — 세션 설정과 주문 전송'
      && /mk \+ "-" \+ m/.test(kis));
   /* 한투는 국내·국외 모의계좌를 따로 신청한다 — 앱키는 같은데 계좌번호가 다르다.
      환경 단위로만 보면 '국내는 되는데 국외는 계좌가 없는' 경우를 통째로 놓친다. */
-  ok('계좌는 시장별로도 갈린다', /env\[P \+ "ACCOUNT_" \+ mk\.toUpperCase\(\)\]/.test(kis));
-  ok('시장 전용 계좌가 없으면 환경 공통으로 내려간다', /env\[P \+ "ACCOUNT"\] \|\|/.test(kis));
+  ok('계좌는 시장별로도 갈린다', /KIS_\$\{W\}_ACCOUNT_\$\{MK\}/.test(kis));
+  ok('시장 전용 계좌가 없으면 환경 공통으로 내려간다',
+     /\.\.\.two\("ACCOUNT"\),\s*\/\/ 환경 공통/.test(kis));
   ok('네 갈래를 각각 따진다', /for \(const \[mk, label\] of \[\["kr", "국내"\], \["us", "국외"\]\]\) \{\s*\n\s*const e = withEnv\(env, m, mk\);/.test(kis));
   ok('뭐가 비었는지 알려준다 (값은 안 담는다)', /missing: \["APPKEY", "APPSECRET", "ACCOUNT"\]\.filter/.test(kis));
   ok('시장을 code 로 정해 넘긴다', /USSYM\.test\(c\) \? "us" : "kr"/.test(kis));
@@ -1608,6 +1609,22 @@ console.log('[41] 한투 모의투자 연결 — 세션 설정과 주문 전송'
     // 모의 키로 실전 주문이 나가면 되돌릴 수 없다
     const leak=F.withEnv(solo,'real','us');
     ok('모의 키가 실전으로 새지 않는다', leak.KIS_APPKEY==='' && leak.KIS_ACCOUNT==='');
+    /* 사람이 손으로 넣는 값이다 — 앞에 붙였는지 뒤에 붙였는지로 안 되면 버그다.
+       KIS_REAL_APPKEY 와 KIS_APPKEY_REAL 을 똑같이 읽어야 한다. */
+    const suf={KIS_ENV:'vts',KIS_APPKEY:'v',KIS_APPSECRET:'s',KIS_ACCOUNT:'1-01',
+               KIS_APPKEY_REAL:'R',KIS_APPSECRET_REAL:'S',KIS_ACCOUNT_REAL:'9-01'};
+    const pre={KIS_ENV:'vts',KIS_APPKEY:'v',KIS_APPSECRET:'s',KIS_ACCOUNT:'1-01',
+               KIS_REAL_APPKEY:'R',KIS_REAL_APPSECRET:'S',KIS_REAL_ACCOUNT:'9-01'};
+    ok('이름을 뒤에 붙여도 읽는다', ids(suf)==='kr-real,kr-vts,us-real,us-vts', ids(suf));
+    ok('앞뒤 표기가 같은 결과', ids(suf)===ids(pre));
+    ok('뒤 표기도 제 환경 값으로 푼다',
+       F.withEnv(suf,'real','us').KIS_APPKEY==='R' && F.withEnv(suf,'vts','us').KIS_APPKEY==='v');
+    // 섞어 써도 시장 전용 계좌가 우선이어야 한다
+    const mix=Object.assign({},pre,{KIS_ACCOUNT_REAL_US:'8-01'});
+    ok('섞어 써도 시장 전용이 우선', F.withEnv(mix,'real','us').KIS_ACCOUNT==='8-01'
+       && F.withEnv(mix,'real','kr').KIS_ACCOUNT==='9-01');
+    ok('빠진 이름을 두 표기로 알려준다',
+       F.modeList(solo).filter(m=>!m.ready).every(m=>m.missing.every(x=>/ 또는 /.test(x))));
   }
   ok('config가 준비된 것만 추려 준다', /ready: modes\.filter\(\(m\) => m\.ready\)\.map\(\(m\) => m\.id\)/.test(kis));
   ok('주문은 환경을 명시적으로 받는다', /env = withEnv\(env, body\.env \|\| url\.searchParams\.get\("env"\), USSYM\.test\(c\) \? "us" : "kr"\)/.test(kis));

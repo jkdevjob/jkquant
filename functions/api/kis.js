@@ -6,6 +6,7 @@
 //   ── 환경별로 따로 둔다 (실전과 모의는 앱키·계좌·도메인이 전부 다르다) ──
 //   KIS_VTS_APPKEY  / KIS_VTS_APPSECRET  : 모의투자용 앱키
 //   KIS_REAL_APPKEY / KIS_REAL_APPSECRET : 실전용 앱키
+//   ※ 이름을 뒤에 붙여도 읽는다 — KIS_APPKEY_REAL 처럼 써도 같다.
 //   ── 계좌번호는 시장별로도 갈릴 수 있다 ──
 //   한투 모의투자는 국내주식 모의계좌와 해외주식 모의계좌를 각각 신청한다.
 //   앱키는 같은데 계좌번호만 다른 경우가 실제로 있어서, 시장 전용 값을 먼저 본다.
@@ -65,22 +66,28 @@ function wantEnv(v, env) {
    한투 모의투자는 국내주식 모의계좌와 해외주식 모의계좌를 각각 신청하기 때문에
    같은 앱키를 쓰면서 계좌번호만 다른 경우가 실제로 있다.
    그래서 계좌는 시장별 값을 먼저 보고, 없으면 환경 공통 값으로 내려간다. */
+/* 이름을 앞에 붙이든 뒤에 붙이든 받는다 — KIS_REAL_APPKEY 와 KIS_APPKEY_REAL 둘 다.
+   사람이 손으로 넣는 값이라 어느 쪽으로 적었는지로 안 되는 건 버그다. */
+const pickVar = (env, names) => { for (const n of names) if (env[n]) return env[n]; return ""; };
 function withEnv(env, want, market) {
   const w = wantEnv(want, env);
+  const W = w.toUpperCase();                               // VTS | REAL
   const mk = market === "us" || market === "kr" ? market : "";
-  const P = w === "real" ? "KIS_REAL_" : "KIS_VTS_";
+  const MK = mk.toUpperCase();                             // KR | US | ''
   // 예전처럼 키를 하나만 둔 경우 — KIS_ENV 가 가리키는 환경에서만 그 값을 쓴다.
   // 그래야 모의 키로 실전 주문이 나가는 사고가 안 난다.
   const legacy = String(env.KIS_ENV || "vts").toLowerCase() === "real" ? "real" : "vts";
   const fb = (k) => (legacy === w ? env[k] || "" : "");
-  const acctFor =
-    (mk && env[P + "ACCOUNT_" + mk.toUpperCase()]) ||   // KIS_VTS_ACCOUNT_US 처럼 시장 전용
-    env[P + "ACCOUNT"] ||                                // 환경 공통
-    fb("KIS_ACCOUNT");                                   // 옛 단일 설정
+  const two = (f) => [`KIS_${W}_${f}`, `KIS_${f}_${W}`];   // 앞 / 뒤
+  const acctNames = [
+    ...(MK ? [`KIS_${W}_ACCOUNT_${MK}`, `KIS_ACCOUNT_${W}_${MK}`, `KIS_ACCOUNT_${MK}_${W}`,
+              `KIS_${MK}_ACCOUNT_${W}`] : []),            // 시장 전용이 먼저
+    ...two("ACCOUNT"),                                     // 환경 공통
+  ];
   return Object.assign({}, env, {
-    KIS_APPKEY: env[P + "APPKEY"] || fb("KIS_APPKEY"),
-    KIS_APPSECRET: env[P + "APPSECRET"] || fb("KIS_APPSECRET"),
-    KIS_ACCOUNT: acctFor,
+    KIS_APPKEY: pickVar(env, two("APPKEY")) || fb("KIS_APPKEY"),
+    KIS_APPSECRET: pickVar(env, two("APPSECRET")) || fb("KIS_APPSECRET"),
+    KIS_ACCOUNT: pickVar(env, acctNames) || fb("KIS_ACCOUNT"),
     KIS_ENV: w,
     KIS_MARKET: mk,
   });
@@ -96,9 +103,11 @@ function modeList(env) {
         label: label + (m === "vts" ? " 모의투자" : " 실전투자"),
         ready: configured(e),
         // 어디가 비었는지 알아야 고칠 수 있다 (값은 담지 않는다)
-        missing: ["APPKEY", "APPSECRET", "ACCOUNT"].filter((k) =>
-          !e["KIS_" + k]).map((k) => "KIS_" + (m === "real" ? "REAL_" : "VTS_") + k
-            + (k === "ACCOUNT" ? "(_" + mk.toUpperCase() + ")" : "")),
+        missing: ["APPKEY", "APPSECRET", "ACCOUNT"].filter((k) => !e["KIS_" + k]).map((k) => {
+          const W = m.toUpperCase();
+          // 앞뒤 어느 쪽으로 넣어도 읽으므로 둘 다 적어 준다
+          return `KIS_${W}_${k}` + (k === "ACCOUNT" ? `(_${mk.toUpperCase()})` : "") + ` 또는 KIS_${k}_${W}`;
+        }),
       });
     }
   }
