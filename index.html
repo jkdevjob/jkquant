@@ -499,7 +499,7 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
 </div>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.36</span></h1></div>
+    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.37</span></h1></div>
     <div class="jkmenu" id="jkmenuWrap">
       <button class="jkmenu-btn" id="jkmenuBtn" aria-label="메뉴" onclick="jkMenuToggle(event)">三</button>
       <div class="jkmenu-pop" id="jkmenuPop" hidden>
@@ -1555,7 +1555,7 @@ document.addEventListener('click',function(e){ var m=document.getElementById('jk
   <footer>
     <strong>JK 퀀트</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.36</b> · 2026-09-11</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.37</b> · 2026-09-11</div>
   </footer>
 </div>
 
@@ -7139,8 +7139,12 @@ async function kisOptUI(){
   const tkMarket=kisMarketOf(tk);
   let h='';
   if(!ready){
-    h+=`<p class="note" style="margin:-2px 0 6px;color:var(--sell)">⚠ <b>${esc(KIS_MODE_LBL[mode]||mode)}</b> 키가 서버에 없습니다 — `
-      +`Cloudflare Pages 환경변수에 <b>KIS_${env==='real'?'REAL':'VTS'}_APPKEY · _APPSECRET · _ACCOUNT</b>를 넣어야 주문이 나갑니다.</p>`;
+    // 서버가 뭐가 비었는지 알려준다 — '키가 없다'만 보면 어디를 고쳐야 할지 알 수 없다
+    const miss=((j.modes||[]).find(m=>m.id===mode)||{}).missing||[];
+    h+=`<p class="note" style="margin:-2px 0 6px;color:var(--sell)">⚠ <b>${esc(KIS_MODE_LBL[mode]||mode)}</b> 설정이 서버에 없습니다 — `
+      +`Cloudflare Pages 환경변수에 <b>${miss.length?miss.map(esc).join(' · '):'KIS_'+(env==='real'?'REAL':'VTS')+'_APPKEY · _APPSECRET · _ACCOUNT'}</b>를 넣어야 주문이 나갑니다.`
+      +`<br><span style="color:var(--faint)">한투는 국내·국외 모의계좌를 따로 신청합니다. 계좌번호가 다르면 `
+      +`<b>KIS_${env==='real'?'REAL':'VTS'}_ACCOUNT_${market.toUpperCase()}</b>로 그 시장 전용 계좌를 넣으세요.</span></p>`;
   }else if(env==='real'){
     h+='<p class="note" style="margin:-2px 0 6px;color:var(--sell)">🔴 <b>실전투자입니다. 진짜 돈이 나갑니다.</b> 모의로 연습하려면 위에서 모의투자를 고르세요.</p>';
   }else{

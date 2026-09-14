@@ -1581,13 +1581,36 @@ console.log('[41] 한투 모의투자 연결 — 세션 설정과 주문 전송'
 
   // ── 서버: 네 갈래(환경 × 시장) ──
   ok('환경별 키를 따로 읽는다', /KIS_REAL_/.test(kis) && /KIS_VTS_/.test(kis)
-     && /function withEnv\(env, want\)/.test(kis));
+     && /function withEnv\(env, want, market\)/.test(kis));
   // 키를 하나만 둔 옛 설정에서 모의 키로 실전 주문이 나가면 안 된다
   ok('옛 단일 키는 제 환경에서만 쓴다', /const fb = \(k\) => \(legacy === w \? env\[k\] \|\| "" : ""\);/.test(kis));
   ok('네 갈래를 목록으로 준다', /function modeList\(env\)/.test(kis)
      && /mk \+ "-" \+ m/.test(kis));
+  /* 한투는 국내·국외 모의계좌를 따로 신청한다 — 앱키는 같은데 계좌번호가 다르다.
+     환경 단위로만 보면 '국내는 되는데 국외는 계좌가 없는' 경우를 통째로 놓친다. */
+  ok('계좌는 시장별로도 갈린다', /env\[P \+ "ACCOUNT_" \+ mk\.toUpperCase\(\)\]/.test(kis));
+  ok('시장 전용 계좌가 없으면 환경 공통으로 내려간다', /env\[P \+ "ACCOUNT"\] \|\|/.test(kis));
+  ok('네 갈래를 각각 따진다', /for \(const \[mk, label\] of \[\["kr", "국내"\], \["us", "국외"\]\]\) \{\s*\n\s*const e = withEnv\(env, m, mk\);/.test(kis));
+  ok('뭐가 비었는지 알려준다 (값은 안 담는다)', /missing: \["APPKEY", "APPSECRET", "ACCOUNT"\]\.filter/.test(kis));
+  ok('시장을 code 로 정해 넘긴다', /USSYM\.test\(c\) \? "us" : "kr"/.test(kis));
+
+  // 실제 해석 결과를 직접 돌려 본다 — 정규식만으로는 새는지 알 수 없다
+  {
+    const F=new Function(kis.replace(/export /g,'')+'\nreturn {withEnv,modeList};')();
+    const solo={KIS_ENV:'vts',KIS_APPKEY:'k',KIS_APPSECRET:'s',KIS_ACCOUNT:'11111111-01'};
+    const ids=m=>F.modeList(m).filter(x=>x.ready).map(x=>x.id).sort().join(',');
+    ok('옛 단일키는 모의 두 갈래만 연다', ids(solo)==='kr-vts,us-vts', ids(solo));
+    const split={KIS_VTS_APPKEY:'k',KIS_VTS_APPSECRET:'s',KIS_VTS_ACCOUNT_KR:'2-01',KIS_VTS_ACCOUNT_US:'3-01'};
+    ok('시장별 계좌를 각각 집어 온다',
+       F.withEnv(split,'vts','kr').KIS_ACCOUNT==='2-01' && F.withEnv(split,'vts','us').KIS_ACCOUNT==='3-01');
+    const usOnly={KIS_VTS_APPKEY:'k',KIS_VTS_APPSECRET:'s',KIS_VTS_ACCOUNT_US:'3-01'};
+    ok('한쪽 계좌만 있으면 그쪽만 열린다', ids(usOnly)==='us-vts', ids(usOnly));
+    // 모의 키로 실전 주문이 나가면 되돌릴 수 없다
+    const leak=F.withEnv(solo,'real','us');
+    ok('모의 키가 실전으로 새지 않는다', leak.KIS_APPKEY==='' && leak.KIS_ACCOUNT==='');
+  }
   ok('config가 준비된 것만 추려 준다', /ready: modes\.filter\(\(m\) => m\.ready\)\.map\(\(m\) => m\.id\)/.test(kis));
-  ok('주문은 환경을 명시적으로 받는다', /env = withEnv\(env, body\.env \|\| url\.searchParams\.get\("env"\)\)/.test(kis));
+  ok('주문은 환경을 명시적으로 받는다', /env = withEnv\(env, body\.env \|\| url\.searchParams\.get\("env"\), USSYM\.test\(c\) \? "us" : "kr"\)/.test(kis));
   ok('어느 환경 키가 없는지 말해 준다', /\$\{isReal\(env\) \? "실전" : "모의투자"\} 키가 설정되지 않았습니다/.test(kis));
 
   // ── 앱: 세션 설정 ──
@@ -1603,7 +1626,10 @@ console.log('[41] 한투 모의투자 연결 — 세션 설정과 주문 전송'
   ok('시장은 종목코드로 정한다', /function kisMarketOf\(ticker\)/.test(idx) && /KR_CODE_RE\.test/.test(extractFn(idx,'function kisMarketOf(ticker)')));
   const ku=extractFn(idx,'async function kisOptUI()');
   ok('연결 상태를 그 자리에서 확인한다', /kisConfig\(true\)/.test(ku) && /j\.ready\|\|\[\]/.test(ku));
-  ok('키가 없으면 어느 갈래인지 짚어 준다', /키가 서버에 없습니다/.test(ku) && /KIS_\$\{env==='real'\?'REAL':'VTS'\}_APPKEY/.test(ku));
+  ok('키가 없으면 어느 갈래인지 짚어 준다', /설정이 서버에 없습니다/.test(ku)
+     && /\(\(j\.modes\|\|\[\]\)\.find\(m=>m\.id===mode\)\|\|\{\}\)\.missing/.test(ku));
+  ok('국내·국외 계좌가 다를 수 있음을 알려준다', /_ACCOUNT_\$\{market\.toUpperCase\(\)\}/.test(ku)
+     && /국내·국외 모의계좌를 따로 신청합니다/.test(ku));
   ok('실전이면 빨간 경고', /실전투자입니다\. 진짜 돈이 나갑니다/.test(ku));
   ok('종목과 시장이 어긋나면 미리 알린다', /tkMarket!==market/.test(ku));
   ok('지정가로 나간다는 걸 미리 알린다', /지정가만<\/b> 받습니다/.test(ku));

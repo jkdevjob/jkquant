@@ -3,9 +3,15 @@
 // 시크릿은 Cloudflare Pages 환경변수로만 둔다. 주문은 Firebase 로그인(소유자)만 허용한다.
 //
 // ── 필요한 환경변수 (Cloudflare Pages → 설정 → 환경 변수) ──
-//   ── 환경별로 따로 두는 것을 권장 (실전과 모의는 앱키·계좌·도메인이 전부 다르다) ──
-//   KIS_VTS_APPKEY / KIS_VTS_APPSECRET / KIS_VTS_ACCOUNT     : 모의투자용
-//   KIS_REAL_APPKEY / KIS_REAL_APPSECRET / KIS_REAL_ACCOUNT  : 실전용
+//   ── 환경별로 따로 둔다 (실전과 모의는 앱키·계좌·도메인이 전부 다르다) ──
+//   KIS_VTS_APPKEY  / KIS_VTS_APPSECRET  : 모의투자용 앱키
+//   KIS_REAL_APPKEY / KIS_REAL_APPSECRET : 실전용 앱키
+//   ── 계좌번호는 시장별로도 갈릴 수 있다 ──
+//   한투 모의투자는 국내주식 모의계좌와 해외주식 모의계좌를 각각 신청한다.
+//   앱키는 같은데 계좌번호만 다른 경우가 실제로 있어서, 시장 전용 값을 먼저 본다.
+//   KIS_VTS_ACCOUNT_KR / KIS_VTS_ACCOUNT_US    : 있으면 이걸 쓴다
+//   KIS_VTS_ACCOUNT                            : 없으면 환경 공통으로 내려간다
+//   KIS_REAL_ACCOUNT_KR / KIS_REAL_ACCOUNT_US / KIS_REAL_ACCOUNT : 실전도 같은 규칙
 //   ── 예전 방식(하나만 쓸 때) — KIS_ENV 가 가리키는 환경의 값으로 취급한다 ──
 //   KIS_APPKEY        : KIS 개발자센터에서 발급한 appkey
 //   KIS_APPSECRET     : appsecret
@@ -55,28 +61,45 @@ function wantEnv(v, env) {
   if (w === "real" || w === "vts") return w;
   return String(env.KIS_ENV || "vts").toLowerCase() === "real" ? "real" : "vts";
 }
-function withEnv(env, want) {
+/* 앱키·시크릿은 환경(실전·모의)으로 갈리고, 계좌번호는 시장으로도 갈릴 수 있다.
+   한투 모의투자는 국내주식 모의계좌와 해외주식 모의계좌를 각각 신청하기 때문에
+   같은 앱키를 쓰면서 계좌번호만 다른 경우가 실제로 있다.
+   그래서 계좌는 시장별 값을 먼저 보고, 없으면 환경 공통 값으로 내려간다. */
+function withEnv(env, want, market) {
   const w = wantEnv(want, env);
+  const mk = market === "us" || market === "kr" ? market : "";
   const P = w === "real" ? "KIS_REAL_" : "KIS_VTS_";
   // 예전처럼 키를 하나만 둔 경우 — KIS_ENV 가 가리키는 환경에서만 그 값을 쓴다.
   // 그래야 모의 키로 실전 주문이 나가는 사고가 안 난다.
   const legacy = String(env.KIS_ENV || "vts").toLowerCase() === "real" ? "real" : "vts";
   const fb = (k) => (legacy === w ? env[k] || "" : "");
+  const acctFor =
+    (mk && env[P + "ACCOUNT_" + mk.toUpperCase()]) ||   // KIS_VTS_ACCOUNT_US 처럼 시장 전용
+    env[P + "ACCOUNT"] ||                                // 환경 공통
+    fb("KIS_ACCOUNT");                                   // 옛 단일 설정
   return Object.assign({}, env, {
     KIS_APPKEY: env[P + "APPKEY"] || fb("KIS_APPKEY"),
     KIS_APPSECRET: env[P + "APPSECRET"] || fb("KIS_APPSECRET"),
-    KIS_ACCOUNT: env[P + "ACCOUNT"] || fb("KIS_ACCOUNT"),
+    KIS_ACCOUNT: acctFor,
     KIS_ENV: w,
+    KIS_MARKET: mk,
   });
 }
-// 네 갈래의 준비 상태. 시장은 키와 무관하지만(같은 계좌) 화면에 네 개로 보여 주려면 여기서 낸다.
+/* 네 갈래의 준비 상태. 계좌가 시장별로 갈릴 수 있으므로 네 개를 각각 따져야 한다 —
+   환경 단위로만 보면 '국내는 되는데 국외는 계좌가 없는' 경우를 놓친다. */
 function modeList(env) {
   const out = [];
   for (const m of ["vts", "real"]) {
-    const e = withEnv(env, m), ready = configured(e);
     for (const [mk, label] of [["kr", "국내"], ["us", "국외"]]) {
+      const e = withEnv(env, m, mk);
       out.push({ id: mk + "-" + m, market: mk, env: m,
-        label: label + (m === "vts" ? " 모의투자" : " 실전투자"), ready });
+        label: label + (m === "vts" ? " 모의투자" : " 실전투자"),
+        ready: configured(e),
+        // 어디가 비었는지 알아야 고칠 수 있다 (값은 담지 않는다)
+        missing: ["APPKEY", "APPSECRET", "ACCOUNT"].filter((k) =>
+          !e["KIS_" + k]).map((k) => "KIS_" + (m === "real" ? "REAL_" : "VTS_") + k
+            + (k === "ACCOUNT" ? "(_" + mk.toUpperCase() + ")" : "")),
+      });
     }
   }
   return out;
@@ -269,14 +292,17 @@ export async function onRequestGet({ request, env }) {
     const cur = wantEnv(url.searchParams.get("env"), rawEnv);
     return json({
       // 예전 필드 — 단타 화면이 아직 이걸 읽는다. 뜻을 바꾸지 않는다.
-      configured: configured(withEnv(rawEnv, cur)), env: cur,
+      configured: configured(withEnv(rawEnv, cur, url.searchParams.get("market"))), env: cur,
       hasOwner: orderOwners(rawEnv).length > 0,
       defaultEnv: wantEnv(null, rawEnv),
       modes,                                            // kr-vts · kr-real · us-vts · us-real
       ready: modes.filter((m) => m.ready).map((m) => m.id),
     });
   }
-  env = withEnv(env, url.searchParams.get("env"));      // 이 아래는 고른 환경으로만 동작한다
+  // 시장은 code 로 정해진다 — 계좌가 시장별로 갈릴 수 있어 여기서 같이 넘긴다
+  { const c = String(url.searchParams.get("code") || "").toUpperCase();
+    const mk = url.searchParams.get("market") || (c ? (USSYM.test(c) ? "us" : "kr") : "");
+    env = withEnv(env, url.searchParams.get("env"), mk); }
   if (op === "diag") {
     // 계좌번호·예수금·이메일이 담기므로 소유자만 볼 수 있다
     const who = await emailOfToken(request, env);
@@ -485,7 +511,8 @@ export async function onRequestPost({ request, env }) {
   let body = {};
   try { body = await request.json(); } catch (e) {}
   // 주문은 환경을 반드시 명시적으로 받는다 — 기본값에 기대면 실전에 잘못 나갈 수 있다
-  env = withEnv(env, body.env || url.searchParams.get("env"));
+  { const c = String(body.code || "").toUpperCase();
+    env = withEnv(env, body.env || url.searchParams.get("env"), USSYM.test(c) ? "us" : "kr"); }
   if (!configured(env)) return json({ error: `${isReal(env) ? "실전" : "모의투자"} 키가 설정되지 않았습니다.` }, 400);
   const side = String(body.side || "").toLowerCase();          // buy | sell
   const code = String(body.code || "").toUpperCase();
