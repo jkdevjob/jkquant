@@ -1579,16 +1579,33 @@ console.log('[41] 한투 모의투자 연결 — 세션 설정과 주문 전송'
   ok('주문은 재시도하지 않는다', !/overseas-stock\/v1\/trading\/order"[\s\S]{0,300}readJson/.test(kis));
   ok('국내 경로는 그대로', /domestic-stock\/v1\/trading\/order-cash/.test(kis) && /VTTC0802U/.test(kis));
 
+  // ── 서버: 네 갈래(환경 × 시장) ──
+  ok('환경별 키를 따로 읽는다', /KIS_REAL_/.test(kis) && /KIS_VTS_/.test(kis)
+     && /function withEnv\(env, want\)/.test(kis));
+  // 키를 하나만 둔 옛 설정에서 모의 키로 실전 주문이 나가면 안 된다
+  ok('옛 단일 키는 제 환경에서만 쓴다', /const fb = \(k\) => \(legacy === w \? env\[k\] \|\| "" : ""\);/.test(kis));
+  ok('네 갈래를 목록으로 준다', /function modeList\(env\)/.test(kis)
+     && /mk \+ "-" \+ m/.test(kis));
+  ok('config가 준비된 것만 추려 준다', /ready: modes\.filter\(\(m\) => m\.ready\)\.map\(\(m\) => m\.id\)/.test(kis));
+  ok('주문은 환경을 명시적으로 받는다', /env = withEnv\(env, body\.env \|\| url\.searchParams\.get\("env"\)\)/.test(kis));
+  ok('어느 환경 키가 없는지 말해 준다', /\$\{isReal\(env\) \? "실전" : "모의투자"\} 키가 설정되지 않았습니다/.test(kis));
+
   // ── 앱: 세션 설정 ──
   ok('모의투자 안에만 한투 선택이 있다',
      idx.indexOf('id="sess_simstart_wrap"') < idx.indexOf('id="sess_kis"'));
-  ok('세션에 연결 여부를 저장한다', /t\.kis=!!\(\$\('sess_kis'\)&&\$\('sess_kis'\)\.checked\)/.test(idx)
-     && /s\.kis=!!\(\$\('sess_kis'\)&&\$\('sess_kis'\)\.checked\)/.test(idx));
-  ok('실계좌로 되돌리면 연결도 끊는다', /t\.paper=false; t\.kis=false;/.test(idx));
+  ok('네 갈래가 모두 선택지에 있다',
+     ['kr-vts','us-vts','kr-real','us-real'].every(m=>idx.includes('value="'+m+'"')));
+  ok('실전에는 경고 표시가 붙어 있다', /value="kr-real">국내 실전투자 ⚠/.test(idx) && /value="us-real">국외 실전투자 ⚠/.test(idx));
+  ok('세션에 고른 갈래를 저장한다', /t\.kisMode=\(\$\('sess_kis'\)&&\$\('sess_kis'\)\.value\)\|\|''/.test(idx)
+     && /s\.kisMode=\(\$\('sess_kis'\)&&\$\('sess_kis'\)\.value\)\|\|''/.test(idx));
+  ok('실계좌로 되돌리면 연결도 끊는다', /t\.paper=false; t\.kisMode='';/.test(idx));
+  // 시장은 종목이 정한다 — 고를 여지가 없다
+  ok('시장은 종목코드로 정한다', /function kisMarketOf\(ticker\)/.test(idx) && /KR_CODE_RE\.test/.test(extractFn(idx,'function kisMarketOf(ticker)')));
   const ku=extractFn(idx,'async function kisOptUI()');
-  ok('연결 상태를 그 자리에서 확인한다', /kisConfig\(\)/.test(ku));
-  ok('키가 없으면 경고한다', /한투 키가 서버에 없습니다/.test(ku));
-  ok('실전 계좌면 빨간 경고', /실전 계좌\(real\)로 연결돼 있습니다/.test(ku));
+  ok('연결 상태를 그 자리에서 확인한다', /kisConfig\(true\)/.test(ku) && /j\.ready\|\|\[\]/.test(ku));
+  ok('키가 없으면 어느 갈래인지 짚어 준다', /키가 서버에 없습니다/.test(ku) && /KIS_\$\{env==='real'\?'REAL':'VTS'\}_APPKEY/.test(ku));
+  ok('실전이면 빨간 경고', /실전투자입니다\. 진짜 돈이 나갑니다/.test(ku));
+  ok('종목과 시장이 어긋나면 미리 알린다', /tkMarket!==market/.test(ku));
   ok('지정가로 나간다는 걸 미리 알린다', /지정가만<\/b> 받습니다/.test(ku));
 
   // ── 앱: 보내는 주문은 화면과 같은 것이어야 한다 ──
@@ -1599,14 +1616,20 @@ console.log('[41] 한투 모의투자 연결 — 세션 설정과 주문 전송'
   const n=(idx.match(/renderKisPanel\(\)/g)||[]).length;
   ok('주문표의 모든 종료 지점에서 패널을 그린다', n>=4, n+'곳');   // 정의 1 + 호출 3
   const ks=extractFn(idx,'async function kisSendToday()');
-  ok('연결된 모의 세션만 보낸다', /if\(!\(s&&s\.paper&&s\.kis\)\) return;/.test(ks));
+  ok('연결된 모의 세션만 보낸다', /if\(!\(s&&s\.paper&&s\.kisMode\)\) return;/.test(ks));
+  ok('시장이 어긋나면 안 보낸다', /if\(kisMarketOf\(sym\)!==MP\.market\)\{ alert\(/.test(ks));
+  ok('준비 안 된 갈래는 안 보낸다', /if\(!\(j\.ready\|\|\[\]\)\.includes\(mode\)\)/.test(ks));
   ok('보내기 전에 확인을 받는다', /if\(!confirm\(/.test(ks));
-  ok('실전이면 확인창부터 경고한다', /실전 계좌입니다/.test(ks));
+  ok('실전이면 확인창부터 경고한다', /실전투자입니다\. 진짜 돈이 나갑니다/.test(ks));
+  ok('실전은 한 번 더 묻는다', /if\(real && !confirm\('다시 확인합니다/.test(ks));
+  ok('고른 환경을 서버에 같이 보낸다', /env:MP\.env,side:o\.side/.test(ks));
   ok('초당 제한을 피해 간격을 둔다', /setTimeout\(r,700\)/.test(ks));
   ok('주문마다 결과를 남긴다', /done\.push\(\{o,ok:/.test(ks));
   ok('보여준 값 그대로 보낸다', /price:Math\.round\(o\.price\*100\)\/100/.test(ks));
   const rp=extractFn(idx,'function renderKisPanel()');
-  ok('연결 안 된 세션엔 패널이 없다', /if\(!\(s&&s\.paper&&s\.kis\)\)\{ box\.innerHTML=''; return; \}/.test(rp));
+  ok('연결 안 된 세션엔 패널이 없다', /if\(!\(s&&s\.paper&&s\.kisMode\)\)\{ box\.innerHTML=''; return; \}/.test(rp));
+  ok('시장이 어긋나면 패널 대신 안내', /kisMarketOf\(sym\)!==MP\.market/.test(rp));
+  ok('실전 패널은 색과 문구가 다르다', /real\?'sell':'buy'/.test(rp) && /실전 계좌입니다/.test(rp));
   ok('주문표에서 그대로 가져온다', /todayOrders\.filter\(/.test(rp));
 }
 
