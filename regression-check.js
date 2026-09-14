@@ -1638,7 +1638,16 @@ console.log('[41] 한투 모의투자 연결 — 세션 설정과 주문 전송'
   ok('실전에는 경고 표시가 붙어 있다', /value="kr-real">국내 실전투자 ⚠/.test(idx) && /value="us-real">국외 실전투자 ⚠/.test(idx));
   ok('세션에 고른 갈래를 저장한다', /t\.kisMode=\(\$\('sess_kis'\)&&\$\('sess_kis'\)\.value\)\|\|''/.test(idx)
      && /s\.kisMode=\(\$\('sess_kis'\)&&\$\('sess_kis'\)\.value\)\|\|''/.test(idx));
-  ok('실계좌로 되돌리면 연결도 끊는다', /t\.paper=false; t\.kisMode='';/.test(idx));
+  /* '모의투자' 딱지가 붙은 세션이 실전 주문을 내면 화면의 말과 실제가 어긋난다.
+     잘못 고르면 진짜 돈이 나가고 되돌릴 수가 없으므로, 세션 종류와 주문 환경을 묶는다. */
+  ok('세션 종류에 맞는 갈래만 연다', !!extractFn(idx,'function kisSyncOpts()'));
+  const sy=extractFn(idx,'function kisSyncOpts()');
+  ok('모의 세션은 실전을 잠근다', /const bad=paper\?isReal:!isReal;/.test(sy) && /o\.disabled=bad;/.test(sy));
+  ok('잠긴 걸 고르고 있었으면 비운다', /if\(sel\.selectedOptions\[0\]&&sel\.selectedOptions\[0\]\.disabled\) sel\.value='';/.test(sy));
+  ok('모의 여부를 바꾸면 선택지도 따라온다', /style\.display=this\.checked\?'':'none';kisOptUI\(\)/.test(idx));
+  // 저장할 때도 한 번 더 거른다 — 모의↔실계좌를 바꾼 직후 옛 값이 남을 수 있다
+  const cs=(idx.match(/if\([a-z]+\.kisMode && \(String\([a-z]+\.kisMode\)\.endsWith\('-real'\) === !![a-z]+\.paper\)\) [a-z]+\.kisMode='';/g)||[]).length;
+  ok('저장할 때 안 맞는 조합을 거른다', cs===2, cs+'곳');
   // 시장은 종목이 정한다 — 고를 여지가 없다
   ok('시장은 종목코드로 정한다', /function kisMarketOf\(ticker\)/.test(idx) && /KR_CODE_RE\.test/.test(extractFn(idx,'function kisMarketOf(ticker)')));
   const ku=extractFn(idx,'async function kisOptUI()');
@@ -1659,7 +1668,8 @@ console.log('[41] 한투 모의투자 연결 — 세션 설정과 주문 전송'
   const n=(idx.match(/renderKisPanel\(\)/g)||[]).length;
   ok('주문표의 모든 종료 지점에서 패널을 그린다', n>=4, n+'곳');   // 정의 1 + 호출 3
   const ks=extractFn(idx,'async function kisSendToday()');
-  ok('연결된 모의 세션만 보낸다', /if\(!\(s&&s\.paper&&s\.kisMode\)\) return;/.test(ks));
+  ok('연결된 세션만 보낸다', /if\(!\(s&&s\.kisMode\)\) return;/.test(ks));
+  ok('세션 종류와 환경이 어긋나면 안 보낸다', /if\(real===!!s\.paper\)\{ alert\(/.test(ks));
   ok('시장이 어긋나면 안 보낸다', /if\(kisMarketOf\(sym\)!==MP\.market\)\{ alert\(/.test(ks));
   ok('준비 안 된 갈래는 안 보낸다', /if\(!\(j\.ready\|\|\[\]\)\.includes\(mode\)\)/.test(ks));
   ok('보내기 전에 확인을 받는다', /if\(!confirm\(/.test(ks));
@@ -1670,7 +1680,9 @@ console.log('[41] 한투 모의투자 연결 — 세션 설정과 주문 전송'
   ok('주문마다 결과를 남긴다', /done\.push\(\{o,ok:/.test(ks));
   ok('보여준 값 그대로 보낸다', /price:Math\.round\(o\.price\*100\)\/100/.test(ks));
   const rp=extractFn(idx,'function renderKisPanel()');
-  ok('연결 안 된 세션엔 패널이 없다', /if\(!\(s&&s\.paper&&s\.kisMode\)\)\{ box\.innerHTML=''; return; \}/.test(rp));
+  ok('연결 안 된 세션엔 패널이 없다', /if\(!\(s&&s\.kisMode\)\)\{ box\.innerHTML=''; return; \}/.test(rp));
+  ok('종류가 어긋나면 패널 대신 안내', /if\(real===!!s\.paper\)\{/.test(rp)
+     && /세션 설정에서 다시 골라 주세요/.test(rp));
   ok('시장이 어긋나면 패널 대신 안내', /kisMarketOf\(sym\)!==MP\.market/.test(rp));
   ok('실전 패널은 색과 문구가 다르다', /real\?'sell':'buy'/.test(rp) && /실전 계좌입니다/.test(rp));
   ok('주문표에서 그대로 가져온다', /todayOrders\.filter\(/.test(rp));
