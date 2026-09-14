@@ -1327,12 +1327,15 @@ console.log('[30] 모의 시작일 일괄 변경');
   ok('VR은 initAmt', /if\(tab==='vr'\) return 'initAmt';/.test(cf));
   ok('적립·거치는 거치식만', /if\(tab==='dca'\) return \(st&&st\.mode==='lump'\) \? 'amount' : null;/.test(cf));
   ok('ASAP은 원금 개념이 없다', /return null;\s*\/\/ asap/.test(cf));
-  ok('원금은 비워두면 안 바꾼다', /const cap=capRaw\?\(inputNum\('p_capital'\)\|\|0\):null;/.test(ap)
+  // v3.34부터 금액 칸이 둘(원금·1회 적립액)이라 읽기는 paperReadAmt가 맡는다 — 자세한 건 [40]
+  const rd=extractFn(idx,'function paperReadAmt(id, label)');
+  ok('원금은 비워두면 안 바꾼다', /if\(!raw\) return null;/.test(rd)
      && /if\(cap!=null\)\{ const f=paperCapField\(tab,x\.settings\); if\(f\) x\.settings\[f\]=cap; \}/.test(ap));
-  ok('0 이하는 거부', /if\(capRaw && !\(cap>0\)\)\{ alert\('원금은 0보다 커야 합니다/.test(ap));
+  ok('0 이하는 거부', /if\(!\(v>0\)\)\{ alert\(`\$\{label\}은 0보다 커야 합니다/.test(rd));
   // 조용히 건너뛰면 '왜 얘만 안 바뀌었지'가 된다
-  ok('건너뛴 세션을 이름까지 알린다', /\$\{skip\.length\}개 건너뜀 \(\$\{skip\.map\(\[?\(?\[,x\]\)?=>x\.name\)\.join\(', '\)\}/.test(ap)
-     && /paperNote=`원금은 \$\{hit\.length\}개에만 적용했습니다/.test(ap));
+  ok('건너뛴 세션을 이름까지 알린다',
+     /건너뜀 \$\{skip\.length\}개 — \$\{skip\.map\(\(\[,x\]\)=>x\.name\)\.join\(', '\)\}/.test(ap)
+     && /paperNote=`금액은 \$\{touched\.size\}개에만 적용했습니다/.test(ap));
 }
 
 
@@ -1523,6 +1526,38 @@ console.log('[39] 로그인 진단 — 어디서 막혔는지 화면에서 읽�
   ok('로그인 실패 코드를 진단에 남긴다', /authLastErr=String\(code\);/.test(gl));
   ok('진단이 펼쳐져 있으면 갱신한다', /if\(d && !d\.hidden\) d\.textContent=authDiag\(\)/.test(extractFn(idx,'function authWarn(msg)')));
   ok('진단은 선택으로 접혀 있다', /id="gdiag" hidden/.test(idx));
+}
+
+console.log('[40] 모의 일괄 적용 — 원금과 1회 적립액을 따로');
+{
+  ok('칸이 둘이다', /id="p_capital"/.test(idx) && /id="p_addamt"/.test(idx));
+  ok('칸마다 현재값 힌트가 있다', /id="p_capital_n"/.test(idx) && /id="p_addamt_n"/.test(idx));
+  const af=extractFn(idx,'function paperAddField(tab, st)');
+  ok('적립액 매핑 존재', !!af);
+  ok('적립식만 적립액으로 본다', /mode==='lump'\) \? null : 'amount'/.test(af));
+  const cf=extractFn(idx,'function paperCapField(tab, st)');
+  ok('거치식은 여전히 원금', /mode==='lump'\) \? 'amount' : null/.test(cf));
+  ok('ASAP은 둘 다 아니다', /return null;\s*\/\/ asap/.test(cf) && !/asap/.test(af));
+  const vs=extractFn(idx,'function paperValSummary(fieldOf)');
+  ok('현재값 요약 함수 존재', !!vs);
+  ok('세션 통화로 찍는다', /wnCur\(\+st\[f\]\|\|0, st\.cur\)/.test(vs));
+  ok('값이 여러 개면 나열한다', /seen\.join\(' \/ '\)/.test(vs));
+  ok('해당 없으면 그렇게 적는다', /'해당 세션 없음'/.test(vs));
+  const sp=extractFn(idx,'function syncPaperStart()');
+  ok('열 때 두 힌트를 다 채운다',
+     /p_capital_n[\s\S]{0,80}paperValSummary\(paperCapField\)/.test(sp)
+     && /p_addamt_n[\s\S]{0,80}paperValSummary\(paperAddField\)/.test(sp));
+  ok('두 칸 다 비우고 연다', /\$\('p_addamt'\)[\s\S]{0,60}value=''/.test(sp));
+  const ap=extractFn(idx,'async function applyAllSimStart()');
+  ok('두 값을 따로 읽는다', /paperReadAmt\('p_capital'/.test(ap) && /paperReadAmt\('p_addamt'/.test(ap));
+  ok('잘못된 값이면 멈춘다', /cap===false \|\| add===false/.test(ap));
+  ok('둘 다 따로 적용한다', /paperCapField\(tab,x\.settings\); if\(f\) x\.settings\[f\]=cap;/.test(ap)
+     && /paperAddField\(tab,x\.settings\); if\(f\) x\.settings\[f\]=add;/.test(ap));
+  // 원화 세션에 10,000을 넣으면 ₩10,000이다 — 묻기 전에 알려야 한다
+  ok('통화 규약을 미리 알린다', /각 세션의 통화로 그대로 들어갑니다/.test(ap));
+  ok('건너뛴 세션 이름에 조사를 안 붙인다', /건너뛴 세션: /.test(ap) && !/join\(', '\)\}은 금액/.test(ap));
+  const rd=extractFn(idx,'function paperReadAmt(id, label)');
+  ok('비우면 그대로 둔다', /if\(!raw\) return null;/.test(rd));
 }
 
 console.log(`\n════ 결과: ${pass} PASS / ${fail} FAIL ${fail===0?'— ALL PASS ★':'— 배포 금지, 위 ✗ 항목 수정 필요'} ════`);
