@@ -14,6 +14,7 @@
 //   FIREBASE_API_KEY  : (선택) 없으면 아래 상수 사용
 //
 // 지원: op=config(상태) · op=diag(자가진단) · op=approval(웹소켓키) · op=price · op=balance · POST op=order
+//       미국 종목(SOXL·TQQQ 등)은 같은 op에 code만 영문 티커로 주면 해외 경로로 간다.
 
 const JH = {
   "Content-Type": "application/json; charset=utf-8",
@@ -22,6 +23,13 @@ const JH = {
 };
 const FIREBASE_API_KEY_FALLBACK = "AIzaSyBzBe9pAttnbDgTlNThWZzNqtAAKxX7Ksw"; // 공개 웹 키
 const KRCODE = /^(?:\d{6}|\d{4}[A-Z]\d)$/;
+// 미국 티커. 국내 6자리와 겹치지 않으므로 code 하나로 국내/해외를 가른다.
+const USSYM = /^[A-Z]{1,5}$/;
+/* 같은 거래소인데 시세와 주문이 쓰는 코드가 다르다 — KIS 문서가 그렇게 돼 있다.
+   SOXL·TECL은 NYSE Arca 상장인데 KIS에서는 AMEX(AMS)로 잡힌다.
+   종목마다 어디인지 외우지 않고, 시세가 나오는 거래소를 찾아 그걸 주문에도 쓴다. */
+const EXCD_TRY = ["NAS", "AMS", "NYS"];
+const EXCD_ORD = { NAS: "NASD", AMS: "AMEX", NYS: "NYSE" };
 
 const base = (env) => (String(env.KIS_ENV || "vts").toLowerCase() === "real"
   ? "https://openapi.koreainvestment.com:9443"
@@ -109,6 +117,59 @@ async function hashkey(env, body) {
 // 여기 나오는 이메일은 전부 "이 웹앱에 구글 로그인하는 계정"이다.
 // 한국투자증권 계정도, Cloudflare 계정도 아니다. KIS 쪽 신원은 앱키·앱시크릿·계좌번호가 전담한다.
 const DEFAULT_OWNERS = ["jk82investing@gmail.com"];
+/* ── 해외(미국) 주식 ──
+   시세·잔고·주문이 서로 다른 엔드포인트와 거래소 코드를 쓴다.
+   여기서 한 번 감싸 두면 호출하는 쪽은 국내와 똑같이 code 하나만 넘기면 된다. */
+
+// 시세가 나오는 거래소를 찾는다. 한 번 찾으면 주문·잔고에도 그 거래소를 쓴다.
+async function usPrice(env, sym, excdHint) {
+  const token = await getToken(env);
+  const tries = excdHint ? [excdHint] : EXCD_TRY;
+  let last = null;
+  for (const excd of tries) {
+    const qs = new URLSearchParams({ AUTH: "", EXCD: excd, SYMB: sym });
+    const j = await readJson(base(env) + "/uapi/overseas-price/v1/quotations/price?" + qs, {
+      headers: { authorization: "Bearer " + token, appkey: env.KIS_APPKEY, appsecret: env.KIS_APPSECRET,
+        tr_id: "HHDFS00000300", custtype: "P" },
+    });
+    last = j;
+    const o = j.output || {};
+    if (+o.last > 0) {
+      return { ok: true, code: sym, excd, market: EXCD_ORD[excd], price: +o.last,
+        open: +o.open || 0, high: +o.high || 0, low: +o.low || 0,
+        chgRate: +o.rate || 0, volume: +o.tvol || 0, cur: "USD" };
+    }
+  }
+  return { ok: false, error: RATE_LIMITED(last) ? "초당 요청 제한 — 잠시 후 다시"
+    : ((last && last.msg1) || "해외 시세 조회 실패 — 티커나 거래소를 확인하세요"),
+    rateLimited: RATE_LIMITED(last) };
+}
+
+// 해외 잔고는 거래소별로 따로 물어야 한다 — 세 곳을 합쳐서 준다.
+async function usBalance(env) {
+  const a = acct(env); if (!a) return { error: "KIS_ACCOUNT 형식 오류(예: 12345678-01)" };
+  const token = await getToken(env);
+  const tr = isReal(env) ? "TTTS3012R" : "VTTS3012R";
+  const holdings = []; let cash = 0, evalTotal = 0; const errs = [];
+  for (const excd of ["NASD", "NYSE", "AMEX"]) {
+    const qs = new URLSearchParams({ CANO: a.cano, ACNT_PRDT_CD: a.prod, OVRS_EXCG_CD: excd,
+      TR_CRCY_CD: "USD", CTX_AREA_FK200: "", CTX_AREA_NK200: "" });
+    const j = await readJson(base(env) + "/uapi/overseas-stock/v1/trading/inquire-balance?" + qs, {
+      headers: { authorization: "Bearer " + token, appkey: env.KIS_APPKEY, appsecret: env.KIS_APPSECRET,
+        tr_id: tr, custtype: "P" },
+    });
+    if (String(j.rt_cd) !== "0") { if (j.msg1) errs.push(excd + ": " + j.msg1); continue; }
+    (j.output1 || []).filter(x => +x.ovrs_cblc_qty > 0).forEach(x => holdings.push({
+      code: x.ovrs_pdno, name: x.ovrs_item_name, market: excd,
+      qty: +x.ovrs_cblc_qty, avg: +x.pchs_avg_pric, cur: +x.now_pric2, pl: +x.evlu_pfls_rt,
+    }));
+    const o2 = (j.output2 && (Array.isArray(j.output2) ? j.output2[0] : j.output2)) || {};
+    evalTotal += +o2.tot_evlu_pfls_amt || 0;
+    if (!cash) cash = +o2.frcr_pchs_amt1 || 0;
+  }
+  return { holdings, cash, evalTotal, cur: "USD", errs: errs.length ? errs : undefined };
+}
+
 function parseEmails(raw) {
   return String(raw || "").split(",").map(s => s.trim().toLowerCase()).filter(Boolean);
 }
@@ -315,6 +376,10 @@ export async function onRequestGet({ request, env }) {
     }
     if (op === "price") {
       const code = String(url.searchParams.get("code") || "").toUpperCase();
+      if (USSYM.test(code)) {                       // 미국 티커 — 해외 경로
+        const r = await usPrice(env, code, String(url.searchParams.get("excd") || "").toUpperCase() || null);
+        return r.ok ? json(r) : json({ error: r.error, rateLimited: r.rateLimited }, 502);
+      }
       if (!KRCODE.test(code)) return json({ error: "종목코드가 올바르지 않습니다." }, 400);
       const token = await getToken(env);
       const j = await readJson(base(env) + "/uapi/domestic-stock/v1/quotations/inquire-price?fid_cond_mrkt_div_code=J&fid_input_iscd=" + code, {
@@ -329,6 +394,10 @@ export async function onRequestGet({ request, env }) {
     if (op === "balance") {
       const g = await verifyOwner(request, env);
       if (!g.ok) return json({ error: g.msg }, 401);
+      if (String(url.searchParams.get("market") || "").toLowerCase() === "us") {
+        const r = await usBalance(env);
+        return r.error ? json(r, 400) : json(r);
+      }
       const a = acct(env); if (!a) return json({ error: "KIS_ACCOUNT 형식 오류(예: 12345678-01)" }, 400);
       const token = await getToken(env);
       const tr = isReal(env) ? "TTTC8434R" : "VTTC8434R";
@@ -365,14 +434,53 @@ export async function onRequestPost({ request, env }) {
   const code = String(body.code || "").toUpperCase();
   const qty = parseInt(body.qty, 10);
   const priceType = String(body.priceType || "limit");         // limit | market
-  const price = priceType === "market" ? 0 : Math.round(+body.price || 0);
-  if (!KRCODE.test(code)) return json({ error: "종목코드 오류" }, 400);
+  const us = USSYM.test(code);
+  // 미국 주식은 호가가 소수점이다 — 국내처럼 반올림하면 115.76이 116이 되어 딴 주문이 된다
+  const price = priceType === "market" ? 0 : (us ? Math.round((+body.price || 0) * 100) / 100 : Math.round(+body.price || 0));
+  if (!us && !KRCODE.test(code)) return json({ error: "종목코드 오류" }, 400);
   if (!(qty > 0)) return json({ error: "수량 오류" }, 400);
   if (priceType === "limit" && !(price > 0)) return json({ error: "지정가 가격 오류" }, 400);
   if (side !== "buy" && side !== "sell") return json({ error: "side 오류" }, 400);
 
   const a = acct(env); if (!a) return json({ error: "KIS_ACCOUNT 형식 오류(예: 12345678-01)" }, 400);
   const real = isReal(env);
+
+  // ── 미국 주식 주문 ──
+  if (us) {
+    // KIS 미국 주문은 지정가만 받는다. 시장가를 조용히 지정가로 바꾸면 의도와 다른 값에 체결된다.
+    if (priceType === "market") return json({ error: "미국 주식은 지정가만 주문할 수 있습니다. 가격을 정해 주세요." }, 400);
+    // 거래소를 모르면 시세로 찾아 쓴다 — 종목마다 어디 상장인지 외울 필요가 없다
+    let mkt = String(body.market || "").toUpperCase();
+    if (!["NASD", "NYSE", "AMEX"].includes(mkt)) {
+      const q = await usPrice(env, code);
+      if (!q.ok) return json({ error: "거래소를 찾지 못했습니다 — " + q.error }, 502);
+      mkt = q.market;
+    }
+    const trU = side === "buy" ? (real ? "TTTT1002U" : "VTTT1002U") : (real ? "TTTT1006U" : "VTTT1001U");
+    const ordU = { CANO: a.cano, ACNT_PRDT_CD: a.prod, OVRS_EXCG_CD: mkt, PDNO: code,
+      ORD_QTY: String(qty), OVRS_ORD_UNPR: price.toFixed(2), ORD_SVR_DVSN_CD: "0", ORD_DVSN: "00" };
+    try {
+      const token = await getToken(env);
+      const hk = await hashkey(env, ordU);
+      const r = await fetch(base(env) + "/uapi/overseas-stock/v1/trading/order", {
+        method: "POST",
+        headers: { "content-type": "application/json", authorization: "Bearer " + token,
+          appkey: env.KIS_APPKEY, appsecret: env.KIS_APPSECRET, tr_id: trU, custtype: "P", hashkey: hk },
+        body: JSON.stringify(ordU),
+      });
+      const j = await r.json().catch(() => ({}));
+      const ok = String(j.rt_cd) === "0";
+      // 국내와 같은 규약 — 주문은 절대 자동 재시도하지 않는다(이중 주문 위험)
+      const msg = ok ? (j.msg1 || "주문 접수")
+        : RATE_LIMITED(j) ? "초당 요청 제한에 걸려 주문이 접수되지 않았습니다 — 잠시 후 다시 누르세요"
+        : (j.msg1 || "주문 실패");
+      return json({ ok, env: real ? "real" : "vts", market: mkt, side, code, qty, price, priceType: "limit",
+        orderNo: j.output && (j.output.ODNO || j.output.odno), msg, raw: j }, ok ? 200 : 502);
+    } catch (e) {
+      return json({ error: String(e.message || e) }, 502);
+    }
+  }
+
   const tr = side === "buy" ? (real ? "TTTC0802U" : "VTTC0802U") : (real ? "TTTC0801U" : "VTTC0801U");
   const ord = { CANO: a.cano, ACNT_PRDT_CD: a.prod, PDNO: code,
     ORD_DVSN: priceType === "market" ? "01" : "00", ORD_QTY: String(qty), ORD_UNPR: String(price) };

@@ -1560,5 +1560,55 @@ console.log('[40] 모의 일괄 적용 — 원금과 1회 적립액을 따로');
   ok('비우면 그대로 둔다', /if\(!raw\) return null;/.test(rd));
 }
 
+console.log('[41] 한투 모의투자 연결 — 세션 설정과 주문 전송');
+{
+  const kis=fs.existsSync(__d+'/functions/api/kis.js')?fs.readFileSync(__d+'/functions/api/kis.js','utf8'):'';
+  // ── 서버: 해외(미국) 경로 ──
+  ok('미국 티커를 가른다', /const USSYM = \/\^\[A-Z\]\{1,5\}\$\//.test(kis));
+  ok('해외 시세 엔드포인트', /overseas-price\/v1\/quotations\/price/.test(kis) && /HHDFS00000300/.test(kis));
+  ok('해외 잔고 엔드포인트', /overseas-stock\/v1\/trading\/inquire-balance/.test(kis) && /VTTS3012R/.test(kis));
+  ok('해외 주문 엔드포인트', /overseas-stock\/v1\/trading\/order"/.test(kis)
+     && /VTTT1002U/.test(kis) && /VTTT1001U/.test(kis));
+  // 시세·주문의 거래소 코드가 다르다 — 시세로 찾아서 주문에 쓴다
+  ok('거래소를 시세로 찾아 쓴다', /EXCD_ORD = \{ NAS: "NASD", AMS: "AMEX", NYS: "NYSE" \}/.test(kis)
+     && /mkt = q\.market;/.test(kis));
+  // 미국 호가는 소수점 — 국내처럼 반올림하면 딴 주문이 된다
+  ok('미국 호가는 소수 2자리', /us \? Math\.round\(\(\+body\.price \|\| 0\) \* 100\) \/ 100/.test(kis)
+     && /OVRS_ORD_UNPR: price\.toFixed\(2\)/.test(kis));
+  ok('미국 시장가는 거부한다', /미국 주식은 지정가만 주문할 수 있습니다/.test(kis));
+  ok('주문은 재시도하지 않는다', !/overseas-stock\/v1\/trading\/order"[\s\S]{0,300}readJson/.test(kis));
+  ok('국내 경로는 그대로', /domestic-stock\/v1\/trading\/order-cash/.test(kis) && /VTTC0802U/.test(kis));
+
+  // ── 앱: 세션 설정 ──
+  ok('모의투자 안에만 한투 선택이 있다',
+     idx.indexOf('id="sess_simstart_wrap"') < idx.indexOf('id="sess_kis"'));
+  ok('세션에 연결 여부를 저장한다', /t\.kis=!!\(\$\('sess_kis'\)&&\$\('sess_kis'\)\.checked\)/.test(idx)
+     && /s\.kis=!!\(\$\('sess_kis'\)&&\$\('sess_kis'\)\.checked\)/.test(idx));
+  ok('실계좌로 되돌리면 연결도 끊는다', /t\.paper=false; t\.kis=false;/.test(idx));
+  const ku=extractFn(idx,'async function kisOptUI()');
+  ok('연결 상태를 그 자리에서 확인한다', /kisConfig\(\)/.test(ku));
+  ok('키가 없으면 경고한다', /한투 키가 서버에 없습니다/.test(ku));
+  ok('실전 계좌면 빨간 경고', /실전 계좌\(real\)로 연결돼 있습니다/.test(ku));
+  ok('지정가로 나간다는 걸 미리 알린다', /지정가만<\/b> 받습니다/.test(ku));
+
+  // ── 앱: 보내는 주문은 화면과 같은 것이어야 한다 ──
+  const oi=extractFn(idx,'function oitem(cls,name,tag,price,qty)');
+  ok('주문표를 그리면서 구조도 남긴다', /todayOrders\.push\(/.test(oi));
+  const ro=extractFn(idx,'function renderOrder()');
+  ok('그릴 때마다 비운다', /todayOrders=\[\];/.test(ro));
+  const n=(idx.match(/renderKisPanel\(\)/g)||[]).length;
+  ok('주문표의 모든 종료 지점에서 패널을 그린다', n>=4, n+'곳');   // 정의 1 + 호출 3
+  const ks=extractFn(idx,'async function kisSendToday()');
+  ok('연결된 모의 세션만 보낸다', /if\(!\(s&&s\.paper&&s\.kis\)\) return;/.test(ks));
+  ok('보내기 전에 확인을 받는다', /if\(!confirm\(/.test(ks));
+  ok('실전이면 확인창부터 경고한다', /실전 계좌입니다/.test(ks));
+  ok('초당 제한을 피해 간격을 둔다', /setTimeout\(r,700\)/.test(ks));
+  ok('주문마다 결과를 남긴다', /done\.push\(\{o,ok:/.test(ks));
+  ok('보여준 값 그대로 보낸다', /price:Math\.round\(o\.price\*100\)\/100/.test(ks));
+  const rp=extractFn(idx,'function renderKisPanel()');
+  ok('연결 안 된 세션엔 패널이 없다', /if\(!\(s&&s\.paper&&s\.kis\)\)\{ box\.innerHTML=''; return; \}/.test(rp));
+  ok('주문표에서 그대로 가져온다', /todayOrders\.filter\(/.test(rp));
+}
+
 console.log(`\n════ 결과: ${pass} PASS / ${fail} FAIL ${fail===0?'— ALL PASS ★':'— 배포 금지, 위 ✗ 항목 수정 필요'} ════`);
 process.exit(fail===0?0:1);
