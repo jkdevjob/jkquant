@@ -921,16 +921,38 @@ function ipoCalc(){
 }
 
 /* ── 기록 폼 ── */
-function ipoRecSearch(q){
-  const box=$('iprec_results'); if(!box)return; q=(q||'').trim();
-  if(!q){ box.innerHTML=''; box.style.display='none'; return; }
-  const ql=q.toLowerCase();
-  const hits=IPO.feed.map((it,i)=>({it,i})).filter(({it})=>it.name.toLowerCase().includes(ql)).slice(0,8);
-  let html=hits.map(({it,i})=>`<div class="ipo-sr" onclick="ipoRecPick(${i})">${ipoEsc(it.name)}<span class="ipo-sr-pr">${it.poPrice?ipoWon(it.poPrice):(it.status||'')}</span></div>`).join('');
+let ipoStockHits=[], ipoSearchTimer=null, ipoSearchQ='';
+function ipoFeedHits(q){ const ql=q.toLowerCase(); return IPO.feed.map((it,i)=>({it,i})).filter(({it})=>it.name.toLowerCase().includes(ql)).slice(0,6); }
+function ipoRecRenderResults(feedHits, stockHits, q){
+  const box=$('iprec_results'); if(!box)return;
+  const hd=t=>`<div style="padding:6px 12px;font-size:10px;color:var(--faint);background:var(--panel2);font-weight:700">${t}</div>`;
+  let html='';
+  if(feedHits.length){ html+=hd('공모 예정·최근');
+    html+=feedHits.map(({it,i})=>`<div class="ipo-sr" onclick="ipoRecPick(${i})">${ipoEsc(it.name)}<span class="ipo-sr-pr">${it.poPrice?ipoWon(it.poPrice):(it.status||'')}</span></div>`).join(''); }
+  if(stockHits.length){ html+=hd('상장 종목');
+    html+=stockHits.map((s,k)=>`<div class="ipo-sr" onclick="ipoRecPickStock(${k})">${ipoEsc(s.name)}<span class="ipo-sr-pr">${ipoEsc(s.market)} ${ipoEsc(s.code)}</span></div>`).join(''); }
   html+=`<div class="ipo-sr free" onclick="ipoRecPickFree()">'${ipoEsc(q)}' 직접 입력</div>`;
   box.innerHTML=html; box.style.display='';
 }
+function ipoRecSearch(q){
+  q=(q||'').trim(); ipoSearchQ=q;
+  const box=$('iprec_results'); if(!box)return;
+  if(!q){ box.innerHTML=''; box.style.display='none'; ipoStockHits=[]; return; }
+  ipoRecRenderResults(ipoFeedHits(q), (ipoSearchQ===q?ipoStockHits:[]), q);
+  if(ipoSearchTimer) clearTimeout(ipoSearchTimer);
+  ipoSearchTimer=setTimeout(async()=>{
+    try{
+      const r=await fetch(`/api/krsearch?q=${encodeURIComponent(q)}`,{headers:{'Accept':'application/json'}});
+      const j=await r.json();
+      if(ipoSearchQ!==q) return;                 // 그새 더 타이핑함
+      const feedNames=new Set(IPO.feed.map(x=>x.name));
+      ipoStockHits=(j.items||[]).filter(s=>!feedNames.has(s.name)).slice(0,8);
+      ipoRecRenderResults(ipoFeedHits(q), ipoStockHits, q);
+    }catch(e){}
+  }, 250);
+}
 function ipoRecPick(i){ const it=IPO.feed[i]; ipoRecSel={name:it.name,code:it.code||'',poPrice:it.poPrice||null,broker:it.leadManager||''}; ipoRecFill(); }
+function ipoRecPickStock(k){ const s=ipoStockHits[k]; if(!s)return; ipoRecSel={name:s.name,code:s.code||'',poPrice:null,broker:''}; ipoRecFill(); }
 function ipoRecPickFree(){ const q=($('iprec_search').value||'').trim()||'직접 입력'; ipoRecSel={name:q,code:'',poPrice:null,broker:''}; ipoRecFill(); }
 function ipoRecFill(){
   $('iprec_results').style.display='none';
