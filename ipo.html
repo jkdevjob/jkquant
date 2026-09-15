@@ -1024,8 +1024,8 @@ function ipoDelRec(id){ const r=IPO.records.find(x=>x.id===id); if(!r)return; if
 /* ── 기록 목록·성과 ── */
 let ipoRecSort={col:'sellDate',dir:'desc'};   // 기본: 매도일 최신순 (빈 값은 뒤로)
 const IPO_REC_COLS=[
-  {k:'name',label:'종목'},{k:'qty',label:'수량'},{k:'poPrice',label:'공모가'},
-  {k:'exit',label:'매도/현재'},{k:'sellDate',label:'매도일'},{k:'pnl',label:'손익'},{k:'ret',label:'수익률'}
+  {k:'name',label:'종목'},{k:'pnl',label:'손익'},{k:'ret',label:'수익률'},
+  {k:'qty',label:'수량'},{k:'poPrice',label:'공모가'},{k:'exit',label:'매도/현재'},{k:'sellDate',label:'매도일'}
 ];
 function ipoSortRec(col){
   if(ipoRecSort.col===col) ipoRecSort.dir=(ipoRecSort.dir==='asc'?'desc':'asc');
@@ -1061,7 +1061,7 @@ function ipoRenderRec(){
     const pnlTxt=d.pnl==null?'—':`<span style="color:${d.pnl>=0?'var(--buy)':'var(--sell)'}">${d.pnl>=0?'+':'−'}₩${Math.abs(Math.round(d.pnl)).toLocaleString('en-US')}</span>`;
     const retTxt=d.ret==null?'—':`<span style="color:${d.ret>=0?'var(--buy)':'var(--sell)'}">${d.ret>=0?'+':''}${d.ret.toFixed(1)}%</span>`;
     const sold=d.sold?' <span style="color:var(--faint);font-size:9px">매도</span>':'';
-    return `<tr><td>${ipoEsc(r.name)}${sold}</td><td>${d.qty.toLocaleString('en-US')}주</td><td>${d.poPrice?ipoWon(d.poPrice):'—'}</td><td>${exitTxt}</td><td>${d.sellDate?ipoDMD(d.sellDate):'—'}</td><td>${pnlTxt}</td><td>${retTxt}</td><td style="white-space:nowrap"><span class="ipo-del" onclick="ipoEditRec('${r.id}')" title="수정">✎</span><span class="ipo-del" onclick="ipoDelRec('${r.id}')" title="삭제">✕</span></td></tr>`;
+    return `<tr><td>${ipoEsc(r.name)}${sold}</td><td>${pnlTxt}</td><td>${retTxt}</td><td>${d.qty.toLocaleString('en-US')}주</td><td>${d.poPrice?ipoWon(d.poPrice):'—'}</td><td>${exitTxt}</td><td>${d.sellDate?ipoDMD(d.sellDate):'—'}</td><td style="white-space:nowrap"><span class="ipo-del" onclick="ipoEditRec('${r.id}')" title="수정">✎</span><span class="ipo-del" onclick="ipoDelRec('${r.id}')" title="삭제">✕</span></td></tr>`;
   });
   $('ipor_cnt').textContent=`${recs.length}건`;
   const pnlEl=$('ipor_pnl'); pnlEl.textContent=(realizedPnl>=0?'+':'−')+'₩'+Math.abs(Math.round(realizedPnl)).toLocaleString('en-US'); pnlEl.style.color=realizedPnl>=0?'var(--buy)':'var(--sell)';
