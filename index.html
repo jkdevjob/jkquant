@@ -231,6 +231,15 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
 .disc{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px;margin-top:10px}
 /* 로그인 게이트 */
 #authgate{position:fixed;inset:0;background:linear-gradient(160deg,#0f1320,#171c2e);z-index:200;display:flex;align-items:center;justify-content:center;padding:24px}
+/* 이 기기에서 이미 로그인한 적이 있으면 '로그인하세요'를 띄우지 않는다.
+   메뉴로 페이지를 옮길 때마다 로그인 화면이 번쩍이던 원인이 이것이었다.
+   정말 로그인이 풀렸으면 onAuthStateChanged(null) 이 와서 그때 띄운다. */
+html.had-user #authgate .gbox{display:none}
+html.had-user #authgate .bootwait{display:block}
+#authgate .bootwait{display:none;color:var(--faint);font-size:13px;font-weight:600;text-align:center}
+#authgate .bootwait .bw-logo{font-size:22px;font-weight:800;color:var(--dim);margin-bottom:12px}
+#authgate .bootwait .bw-dot{display:inline-block;width:16px;height:16px;border:2.5px solid var(--line);border-top-color:var(--vio);border-radius:50%;animation:bwspin .7s linear infinite;vertical-align:-3px;margin-right:7px}
+@keyframes bwspin{to{transform:rotate(360deg)}}
 #authgate .gbox{max-width:360px;width:100%;text-align:center}
 #authgate .glogo{font-size:30px;font-weight:800;letter-spacing:-.02em;margin-bottom:6px}
 #authgate .glogo .v{color:var(--gold)}
@@ -249,9 +258,14 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
 #inappwarn .iw-btns{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
 #inappwarn .iw-btn{flex:1;min-width:120px;padding:9px 10px;border-radius:8px;border:1px solid rgba(245,196,81,.45);background:rgba(245,196,81,.14);color:var(--gold);font-size:12.5px;font-weight:700;cursor:pointer;text-align:center;text-decoration:none}
 #inappwarn .iw-ok{color:#8fe3b8;font-weight:700}
-.userbadge{display:flex;align-items:center;gap:7px;font-size:11.5px;color:var(--dim)}
+/* ── 상단 오른쪽: 사용자 배지 + 메뉴. 다섯 페이지가 같은 줄, 같은 모양이다 ── */
+.hright{display:flex;align-items:center;gap:9px;flex-shrink:0}
+/* 제목이 길어도 두 줄로 넘어가 헤더가 들쭉날쭉해지지 않게 한다 */
+.htop>div:first-child{min-width:0}
+.htop .kicker{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.userbadge{display:flex;align-items:center;gap:7px;font-size:11.5px;color:var(--dim);white-space:nowrap}
 .userbadge img{width:22px;height:22px;border-radius:50%}
-.userbadge .lo{color:var(--vio);cursor:pointer;font-weight:700;background:none;border:none;font-size:11.5px;padding:0}
+.userbadge .lo{color:var(--vio);cursor:pointer;font-weight:700;background:none;border:none;font-size:11.5px;padding:0;white-space:nowrap;font-family:inherit;text-decoration:none}
 .syncdot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--faint);margin-left:4px;vertical-align:middle}
 .syncdot.ok{background:var(--buy)}.syncdot.sync{background:var(--gold)}.syncdot.err{background:var(--sell)}
 /* 하단 플로팅 버튼(FAB) */
@@ -482,7 +496,13 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
 </script>
 </head>
 <body>
+<script>
+/* 첫 페인트 전에 정해야 번쩍이지 않으므로 여기서 본다.
+   localStorage 를 못 읽는 환경(시크릿·차단)에서는 그냥 로그인 화면을 띄운다. */
+try{ if(localStorage.getItem('qcockpit_hadUser')==='1') document.documentElement.classList.add('had-user'); }catch(e){}
+</script>
 <div id="authgate">
+  <div class="bootwait"><div class="bw-logo">JK 퀀트</div><span class="bw-dot"></span>여는 중…</div>
   <div class="gbox">
     <div class="glogo">JK <span class="v">퀀트</span></div>
     <div class="gsub">무한매수법 · 밸류리밸런싱<br>기록을 구글 계정에 안전하게 저장하고<br>어느 기기에서나 이어서 사용하세요.</div>
@@ -499,7 +519,9 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
 </div>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.45</span></h1></div>
+    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.47</span></h1></div>
+    <div class="hright">
+      <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
       <button class="jkmenu-btn" id="jkmenuBtn" aria-label="메뉴" onclick="jkMenuToggle(event)">三</button>
       <div class="jkmenu-pop" id="jkmenuPop" hidden>
@@ -510,9 +532,9 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
         <a href="/ipo"><span class="mi">🎯</span>공모주</a>
         <a id="adminbtn" href="/admin" class="admin-only"><span class="mi">👤</span>관리자</a>
       </div>
+      </div>
     </div>
   </div>
-  <div class="userbadge" id="userbadge" style="margin-top:8px"></div>
 </div></header>
 <script>
 /* ── 三 메뉴 ── */
@@ -1556,7 +1578,7 @@ document.addEventListener('click',function(e){ var m=document.getElementById('jk
   <footer>
     <strong>JK 퀀트</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.45</b> · 2026-09-15</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.47</b> · 2026-09-15</div>
   </footer>
 </div>
 
@@ -7687,6 +7709,8 @@ function googleLogin(){
 }
 function doLogout(){
   if(!window.fb)return;
+  // 다시 열 때 '여는 중'이 아니라 로그인 화면이 나와야 한다
+  try{ localStorage.removeItem('qcockpit_hadUser'); }catch(e){}
   window.fb.signOut(window.fb.auth).then(()=>{location.reload();});
 }
 function renderUserBadge(user){
@@ -7777,6 +7801,9 @@ function initAuth(){
     if(!user){
       curUid=null; curEmail=null;
       applyAdminMode();
+      // 정말 로그인이 풀렸다 — 다음 번엔 처음부터 로그인 화면을 띄운다
+      try{ localStorage.removeItem('qcockpit_hadUser'); }catch(e){}
+      document.documentElement.classList.remove('had-user');
       $('authgate').style.display='flex';
       return;
     }
@@ -7785,38 +7812,61 @@ function initAuth(){
        '로그인이 안 된다'로 보였다 — 화면엔 아무 메시지도 안 떴다.
        기록을 못 읽는 것과 로그인이 안 되는 것은 다른 문제이므로 섞지 않는다. */
     curUid=user.uid; curEmail=user.email||'';
+    try{ localStorage.setItem('qcockpit_hadUser','1'); }catch(e){}
     authStep='배지';
     try{ renderUserBadge(user); }catch(e){ console.warn('badge',e); }
-    // 접속 기록 + 차단 확인. 차단된 계정은 데이터를 열지 않고 그대로 내보낸다
+    /* 이 기기에 저장된 걸로 곧바로 연다. 예전에는 프로필 쓰기(≤6초)와
+       클라우드 읽기(≤8초)가 둘 다 끝나야 화면이 열려서, 메뉴로 페이지를 옮길
+       때마다 로그인 화면을 몇 초씩 보고 있어야 했다. 기록은 어차피 이 기기에도
+       있으니 먼저 열고, 클라우드는 도착하면 그때 맞춘다. */
+    authStep='로컬 열기';
+    let openedLocal=false;
+    try{ load(); openedLocal=validState(S); }catch(e){ console.error('local',e); }
+    if(openedLocal){
+      $('authgate').style.display='none';
+      try{ startApp(); applyAdminMode(); setSync('sync'); }
+      catch(e){ console.error('startApp',e); openedLocal=false; $('authgate').style.display='flex';
+                authWarn('앱을 여는 중 오류가 났습니다 — '+(e&&e.message||e)); }
+    }
+
+    // 접속 기록 + 차단 확인. 차단된 계정은 그 자리에서 내보낸다.
     authStep='프로필';
     try{
       const prof=await withTimeout(touchProfile(user), 6000, '프로필 확인');
       if(isBlocked(prof)){
         curUid=null; curEmail=null;
         applyAdminMode();
+        try{ localStorage.removeItem('qcockpit_hadUser'); }catch(e){}
         try{ await window.fb.signOut(window.fb.auth); }catch(e){}
         alert('이 계정은 사용이 차단되었습니다.');
+        location.reload();
         return;
       }
     }catch(e){ console.warn('profile',e); }   // 프로필 확인 실패로 로그인까지 막지는 않는다
-    // 1) 클라우드 → 2) 로컬 → 3) 그래도 안 되면 새 상태로 연다
+
+    /* 클라우드 기록. 먼저 연 뒤라면 늦게 와도 상관없고, 못 열었다면 이게 유일한 길이다.
+       pullRemote 는 로컬이 더 최신이면 로컬을 지키고 밀어올리므로, 먼저 연 사이에
+       사용자가 뭔가 적었어도 그게 덮이지 않는다. */
     authStep='기록 읽기';
     try{
       const ok=await withTimeout(pullRemote(), 8000, '클라우드 기록');
-      if(!ok) load();
+      if(!ok && !openedLocal) load();
     }catch(e){
       console.error('load',e);
-      // 클라우드가 안 오면 이 기기에 저장해 둔 걸로 연다. 그것도 없으면 새로 시작한다.
-      let opened=false;
-      try{ load(); opened=validState(S); }catch(e2){ console.error('local',e2); }
-      if(!opened){ try{ S=freshState(); ensureBoxes(); saveLocal(); }catch(e2){ console.error('fresh',e2); } }
-      authWarn((opened?'클라우드 기록을 못 읽어 이 기기에 저장된 걸로 엽니다':'저장된 기록을 읽지 못해 새로 시작합니다')
-        +' — '+(e&&e.message||e));
+      if(!openedLocal){
+        let opened=false;
+        try{ load(); opened=validState(S); }catch(e2){ console.error('local',e2); }
+        if(!opened){ try{ S=freshState(); ensureBoxes(); saveLocal(); }catch(e2){ console.error('fresh',e2); } }
+        authWarn((opened?'클라우드 기록을 못 읽어 이 기기에 저장된 걸로 엽니다':'저장된 기록을 읽지 못해 새로 시작합니다')
+          +' — '+(e&&e.message||e));
+      }else{
+        authWarn('클라우드 기록을 못 읽었습니다 — 이 기기에 저장된 걸로 보고 있습니다 · '+(e&&e.message||e));
+      }
     }
     authStep='앱 시작';
     $('authgate').style.display='none';
     try{
-      startApp();
+      startApp();                // 이미 열려 있으면 다시 그리기만 한다
       applyAdminMode();          // 계정으로 권한이 정해지므로 로그인 뒤에 다시 본다
       setSync('ok');
     }catch(e){

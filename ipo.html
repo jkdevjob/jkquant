@@ -305,9 +305,14 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
 #inappwarn .iw-btns{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
 #inappwarn .iw-btn{flex:1;min-width:120px;padding:9px 10px;border-radius:8px;border:1px solid rgba(245,196,81,.45);background:rgba(245,196,81,.14);color:var(--gold);font-size:12.5px;font-weight:700;cursor:pointer;text-align:center;text-decoration:none}
 #inappwarn .iw-ok{color:#8fe3b8;font-weight:700}
-.userbadge{display:flex;align-items:center;gap:7px;font-size:11.5px;color:var(--dim)}
+/* ── 상단 오른쪽: 사용자 배지 + 메뉴. 다섯 페이지가 같은 줄, 같은 모양이다 ── */
+.hright{display:flex;align-items:center;gap:9px;flex-shrink:0}
+/* 제목이 길어도 두 줄로 넘어가 헤더가 들쭉날쭉해지지 않게 한다 */
+.htop>div:first-child{min-width:0}
+.htop .kicker{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.userbadge{display:flex;align-items:center;gap:7px;font-size:11.5px;color:var(--dim);white-space:nowrap}
 .userbadge img{width:22px;height:22px;border-radius:50%}
-.userbadge .lo{color:var(--vio);cursor:pointer;font-weight:700;background:none;border:none;font-size:11.5px;padding:0}
+.userbadge .lo{color:var(--vio);cursor:pointer;font-weight:700;background:none;border:none;font-size:11.5px;padding:0;white-space:nowrap;font-family:inherit;text-decoration:none}
 .syncdot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--faint);margin-left:4px;vertical-align:middle}
 .syncdot.ok{background:var(--buy)}.syncdot.sync{background:var(--gold)}.syncdot.err{background:var(--sell)}
 /* 하단 플로팅 버튼(FAB) */
@@ -520,8 +525,8 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
 <header><div class="wrap">
   <div class="htop">
     <div><div class="kicker">Public Offering</div><h1>JK <span class="v">공모주</span> <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v1.1</span></h1></div>
-    <div style="display:flex;align-items:center;gap:8px">
-      <button id="ipoAuthBtn" onclick="ipoLogin()" style="font-size:11px;padding:6px 12px;border-radius:7px;border:1px solid var(--line);background:transparent;color:var(--dim);cursor:pointer">로그인</button>
+    <div class="hright">
+      <div class="userbadge" id="userbadge"></div>
       <div class="jkmenu" id="jkmenuWrap">
         <button class="jkmenu-btn" id="jkmenuBtn" aria-label="메뉴" onclick="jkMenuToggle(event)">三</button>
         <div class="jkmenu-pop" id="jkmenuPop" hidden>
@@ -701,14 +706,24 @@ document.addEventListener("click",function(e){ var m=document.getElementById("jk
   const app = initializeApp(firebaseConfig);
   const auth = getAuth(app); const db = getFirestore(app); const provider = new GoogleAuthProvider();
   window.ipoFb = { db, doc, setDoc };
+
+/* 상단 사용자 배지 — 모든 페이지가 같은 모양이다.
+   로그인했으면 사진·이름·로그아웃, 안 했으면 로그인 한 칸. */
+window.renderUserBadge = function(user){
+  const b=document.getElementById('userbadge'); if(!b) return;
+  const esc=t=>String(t==null?'':t).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  if(!user){ b.innerHTML='<button class="lo" onclick="ipoLogin()">로그인</button>'; return; }
+  const photo=user.photoURL?`<img src="${esc(user.photoURL)}" alt="">`:'';
+  const name=esc(user.displayName||user.email||'사용자');
+  b.innerHTML=`${photo}<span>${name}</span> · <button class="lo" onclick="ipoLogin()">로그아웃</button>`;
+};
   window.ipoLogin = function(){
     if(auth.currentUser){ signOut(auth); return; }
     signInWithPopup(auth, provider).catch(e=>console.warn("login", e && (e.code||e.message)));
   };
   onAuthStateChanged(auth, async user => {
-    const btn = document.getElementById("ipoAuthBtn");
+    renderUserBadge(user);
     if(user){
-      if(btn){ btn.textContent = (user.displayName||user.email||"로그아웃"); btn.title="눌러서 로그아웃"; }
       window.ipoFb.uid = user.uid;
       try{
         const snap = await getDoc(doc(db,"users",user.uid));
@@ -716,7 +731,6 @@ document.addEventListener("click",function(e){ var m=document.getElementById("jk
         if(remote && typeof window.ipoOnRemote==="function") window.ipoOnRemote(remote);
       }catch(e){ console.warn("ipo pull", e); }
     } else {
-      if(btn){ btn.textContent="로그인"; btn.title=""; }
       window.ipoFb.uid = null;
     }
   });

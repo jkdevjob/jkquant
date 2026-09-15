@@ -1019,7 +1019,7 @@ console.log('[23] 관리자 모드 — 접속 계정·사용자 관리');
      && /\.admin-only\.admin-on\{display:flex !important\}/.test(idx));
   ok('보임 전환은 클래스로', /classList\.toggle\('admin-on', on\)/.test(idx));
   ok('차단 계정도 나가기 전에 감춘다',
-     /applyAdminMode\(\);\s*\n\s*try\{ await window\.fb\.signOut/.test(idx));
+     /applyAdminMode\(\);[\s\S]{0,220}?try\{ await window\.fb\.signOut/.test(idx));
   ok('관리자 페이지도 컬렉션 통째 읽기를 쓴다', /doc, getDoc, setDoc, collection, getDocs/.test(adm)
      && /getDocs\(window\.fb\.collection\(window\.fb\.db,'profiles'\)\)/.test(adm));
   ok('목록은 마지막 접속 최신순', /rows\.sort\(\(a,b\)=>\(\+b\.lastSeen\|\|0\)-\(\+a\.lastSeen\|\|0\)\)/.test(adm));
@@ -1953,6 +1953,89 @@ console.log('\n[44] 숫자 표기 — 기호는 뒤, 자릿수는 오른쪽 맞�
     if(!src[f]) continue;
     ok(`${f} — 숫자는 같은 폭으로 찍는다`,
        /body\{font-variant-numeric:tabular-nums;/.test(src[f]));
+  }
+}
+
+/* ════ 45. 메뉴로 페이지를 옮길 때 로그인 화면이 번쩍이지 않는다 ════
+   메뉴는 통째 페이지 이동이라 운영을 열 때마다 index.html 이 다시 뜬다.
+   #authgate 는 CSS 로 처음부터 보이는데, 예전에는 프로필 쓰기(≤6초)와
+   클라우드 읽기(≤8초)가 둘 다 끝나야 숨겨졌다. 그래서 이미 로그인해 둔
+   사람도 페이지를 옮길 때마다 '로그인하세요'를 몇 초씩 보고 있어야 했다.
+   (1) 이 기기에서 로그인한 적이 있으면 로그인 화면 대신 조용히 '여는 중'
+   (2) 화면은 이 기기에 저장된 걸로 먼저 열고, 클라우드는 도착하면 맞춘다 */
+console.log('\n[45] 메뉴 이동 — 로그인 화면이 번쩍이지 않는다');
+{
+  // 첫 페인트 전에 정해야 번쩍이지 않는다 — 그래서 <head>/본문 첫머리의 동기 스크립트다
+  ok('로그인한 적 있는 기기는 표시를 남긴다', /localStorage\.setItem\('qcockpit_hadUser','1'\)/.test(idx));
+  ok('그 표시를 첫 페인트 전에 본다',
+     /try\{ if\(localStorage\.getItem\('qcockpit_hadUser'\)==='1'\) document\.documentElement\.classList\.add\('had-user'\); \}catch\(e\)\{\}/.test(idx));
+  ok('표시가 있으면 로그인 상자 대신 여는 중',
+     /html\.had-user #authgate \.gbox\{display:none\}/.test(idx)
+     && /html\.had-user #authgate \.bootwait\{display:block\}/.test(idx));
+  // 정말 풀렸으면 그때 로그인 화면을 띄우고 표시를 지운다 — 안 지우면 영영 '여는 중'이다
+  ok('로그인이 풀리면 표시를 지운다',
+     /if\(!user\)\{[\s\S]{0,320}?localStorage\.removeItem\('qcockpit_hadUser'\)[\s\S]{0,200}?\$\('authgate'\)\.style\.display='flex'/.test(idx));
+  ok('로그아웃해도 표시를 지운다',
+     /function doLogout\(\)\{[\s\S]{0,260}?localStorage\.removeItem\('qcockpit_hadUser'\)/.test(idx));
+
+  // 클라우드를 기다리지 않는다 — 이게 '오래 걸리네'의 알맹이다
+  ok('이 기기 기록으로 먼저 연다',
+     /authStep='로컬 열기'/.test(idx)
+     && /if\(openedLocal\)\{\s*\n\s*\$\('authgate'\)\.style\.display='none';/.test(idx));
+  ok('먼저 여는 쪽이 프로필·클라우드보다 앞선다',
+     idx.indexOf("authStep='로컬 열기'") < idx.indexOf("authStep='프로필'")
+     && idx.indexOf("authStep='프로필'") < idx.indexOf("authStep='기록 읽기'"));
+  // 먼저 열어 놓고 또 load() 하면 사용자가 그 사이 적은 게 날아간다
+  ok('먼저 열었으면 로컬을 다시 읽지 않는다', /if\(!ok && !openedLocal\) load\(\);/.test(idx));
+  // startApp 은 두 번 불려도 다시 그리기만 한다
+  ok('두 번 열어도 안전하다', /if\(appStarted\)\{refreshAll\(\);return;\}/.test(idx));
+  // 차단은 늦게 와도 반드시 듣는다 — 먼저 열어 준 화면을 그대로 두면 안 된다
+  ok('차단이면 열어 준 화면을 되돌린다',
+     /alert\('이 계정은 사용이 차단되었습니다\.'\);\s*\n\s*location\.reload\(\);/.test(idx));
+}
+
+/* ════ 46. 모든 페이지 상단이 같다 ════
+   예전에는 페이지마다 제각각이었다 — 운영·단타·관리자는 사용자 배지가 제목 아래
+   한 줄을 통째로 차지했고, 백테·공모주는 그 자리에 스타일을 직접 박은 로그인 단추가
+   있었다. 이제 다섯 페이지 모두 [제목] … [배지][햄버거] 한 줄이다.
+   배지 줄이 빠진 만큼 아래 내용이 위로 올라온다. */
+console.log('\n[46] 모든 페이지 상단이 같다');
+{
+  const PAGES=['index.html','backtest.html','ipo.html','scalping.html','admin.html'];
+  const src={}; for(const f of PAGES) src[f]=fs.existsSync(__d+'/'+f)?fs.readFileSync(__d+'/'+f,'utf8'):'';
+  for(const f of PAGES){
+    if(!src[f]) continue;
+    // 배지는 햄버거와 같은 칸(.hright) 안에, 햄버거보다 먼저 온다
+    const m=src[f].match(/<div class="hright">([\s\S]{0,400}?)<div class="jkmenu"/);
+    ok(`${f} — 배지가 햄버거 왼쪽에 있다`, !!m && /id="userbadge"/.test(m[1]));
+    // 스타일은 다섯 페이지가 같은 규칙을 쓴다
+    ok(`${f} — 같은 배지 규칙을 쓴다`,
+       /\.hright\{display:flex;align-items:center;gap:9px;flex-shrink:0\}/.test(src[f])
+       && /\.userbadge\{display:flex;align-items:center;gap:7px;font-size:11\.5px;color:var\(--dim\);white-space:nowrap\}/.test(src[f])
+       // 단타·관리자엔 밑줄 있는 .lo 가 따로 있어서 새어 들어왔다 — 공용 규칙이 끝까지 정한다
+       && /\.userbadge \.lo\{[^}]*text-decoration:none\}/.test(src[f]));
+  }
+  // 배지가 제목 아래 따로 한 줄을 차지하던 흔적이 남으면 안 된다 — 그 줄을 없애는 게 목적이었다
+  for(const f of PAGES){
+    if(!src[f]) continue;
+    ok(`${f} — 배지가 따로 한 줄을 차지하지 않는다`,
+       !/<div class="userbadge" id="userbadge"[^>]*><\/div>\s*\n\s*<\/div><\/header>/.test(src[f])
+       && !/userbadge[^>]*style="margin-top/.test(src[f]));
+  }
+  // 백테·공모주에 있던 제각각 단추는 사라졌다
+  ok('백테 — 따로 놀던 로그인 단추를 없앴다', !/btAuthBtn/.test(src['backtest.html']));
+  ok('공모주 — 따로 놀던 로그인 단추를 없앴다', !/ipoAuthBtn/.test(src['ipo.html']));
+  // 로그인 안 한 사람도 그 자리에서 로그인할 수 있어야 한다(문이 없는 페이지)
+  for(const [f,fn] of [['backtest.html','btLogin'],['ipo.html','ipoLogin']]){
+    ok(`${f} — 로그아웃 상태에선 로그인 칸`,
+       new RegExp(`if\\(!user\\)\\{ b\\.innerHTML='<button class="lo" onclick="${fn}\\(\\)">로그인</button>'`).test(src[f]));
+  }
+  // 제목이 길어 두 줄이 되면 페이지마다 헤더 높이가 달라진다
+  for(const f of ['index.html','ipo.html','scalping.html','admin.html']){
+    if(!src[f]) continue;
+    ok(`${f} — 제목이 두 줄로 넘어가지 않는다`,
+       /\.htop>div:first-child\{min-width:0\}/.test(src[f])
+       && /\.htop \.kicker\{white-space:nowrap;overflow:hidden;text-overflow:ellipsis\}/.test(src[f]));
   }
 }
 
