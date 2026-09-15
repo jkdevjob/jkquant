@@ -541,7 +541,7 @@ console.log('[12] 종가/실시간가 분리');
      `로더 ${loaders.length}곳 · 미적용 ${bad.length}곳`);
   // VR의 last는 반대 용도(평가금용 현재가)다 — 같이 바꾸면 VR 평가금이 어제로 굳는다
   let ev=''; try{ ev=extractFn(idx,'function vrEval(c)'); }catch(e){}
-  ok('VR 평가금은 확정 종가로 굳히지 않는다', /lastQuote\.vr/.test(ev) && !/settledLast\(/.test(ev));
+  ok('VR 평가금은 확정 종가로 굳히지 않는다', /quoteOf\('vr'\)|lastQuote\.vr/.test(ev) && !/settledLast\(/.test(ev));
 }
 
 
@@ -1756,18 +1756,19 @@ console.log('[42] 자동 주문 — 브라우저와 서버가 같은 주문을 �
     const need=['function computeInf()','function imBuy1(c)','function starPct(ticker,div,T,base)',
       'function reverseT(kind,t,div)','function oitem(cls,name,tag,price,qty)','function renderOrder()',
       'function imMomNow()','function imTgtOf(base, mom)','function calcStarPoint(c)',
+      'function quoteOf(tab)',
       'function fmtT(t)','function isSell(k)','function isBuy(k)','function isCx(k)']
       .map(x=>{ try{ return extractFn(idx,x); }catch(e){ return ''; } }).filter(Boolean).join('\n');
     const browserOrders=(st,hist,close,days)=>{
       const EL=()=>({textContent:'',innerHTML:'',style:{},value:'',classList:{add(){},remove(){},toggle(){}}});
       return new Function('EL','ST','HIST','DAYS','CLOSE', `
-        const S={activeTab:'inf'};
+        const S={activeTab:'inf', inf:{active:'s', sessions:[{id:'s',settings:ST,hist:HIST}]}};
         let todayOrders=[];
         const $=(id)=>id==='o_close'?{value:''}:EL();
         const wn=v=>'$'+(+v||0).toFixed(2);
         const inputNum=()=>0;
         const curStrat=()=>({id:'s',settings:ST,hist:HIST});
-        const lastQuote={inf:{days:DAYS}};
+        const lastQuote={inf:{symbol:ST.ticker, days:DAYS}};
         let infChartData=DAYS, infSimNote='', infSimNoteSid=null, _lastNeedClose=null;
         ${KIND}
         const IM_MOM_LEN=20, IM_MOM_TH=8, IM_MOM_CAP=30;
@@ -2036,6 +2037,49 @@ console.log('\n[46] 모든 페이지 상단이 같다');
     ok(`${f} — 제목이 두 줄로 넘어가지 않는다`,
        /\.htop>div:first-child\{min-width:0\}/.test(src[f])
        && /\.htop \.kicker\{white-space:nowrap;overflow:hidden;text-overflow:ellipsis\}/.test(src[f]));
+  }
+}
+
+/* ════ 47. 남의 종가로 내 세션을 세지 않는다 ════
+   lastQuote 는 전략마다 한 칸뿐인데, 모의 성과 목록을 열면 paperFillAll 이
+   세션마다 그 칸을 갈아끼운다. 다 돌고 나면 마지막 세션 종목이 남고,
+   openPaper 가 곧바로 refreshAll 을 불러 보고 있던 세션을 그 종가로 그렸다 —
+   실제로 SOXL 102주가 KORU 값(18.58$)으로 계산돼 수익률이 +1.5% → -26.6% 가 됐다.
+   총 매수금은 기록에서 나오니 그대로였고, 그래서 더 알아채기 어려웠다.
+   같은 칸을 모멘텀·5일평균·확정 종가·주문 제안도 쓰므로 주문 가격까지 걸린 문제다. */
+console.log('\n[47] 남의 종가로 내 세션을 세지 않는다');
+{
+  // (1) 뿌리 — 목록을 다 돌면 시세를 원래대로 돌려놓는다
+  const pf=(()=>{ try{ return extractFn(idx,'async function paperFillAll()'); }catch(e){ return ''; } })();
+  ok('목록을 돌기 전 시세를 적어 둔다', /PAPER_TABS\.forEach\(\(\[t\]\)=>\{ prevQuote\[t\]=lastQuote\[t\]; \}\)/.test(pf));
+  ok('다 돌면 시세를 되돌린다',
+     /finally\s*\{[\s\S]{0,300}?PAPER_TABS\.forEach\(\(\[t\]\)=>\{ lastQuote\[t\]=prevQuote\[t\]; \}\)/.test(pf));
+  ok('차트 데이터도 되돌린다',
+     /infChartData=prevChart\.inf/.test(pf) && /vrChartData=prevChart\.vr/.test(pf));
+
+  // (2) 겹 — 종목이 다르면 시세를 아예 안 쓴다
+  const qo=(()=>{ try{ return extractFn(idx,'function quoteOf(tab)'); }catch(e){ return ''; } })();
+  ok('시세를 꺼내는 한 곳이 있다', !!qo);
+  ok('종목이 다르면 없는 셈 친다',
+     /String\(Q\.symbol\|\|''\)\.toUpperCase\(\)===want \? Q : null/.test(qo));
+  ok('종목을 모르는 세션은 막지 않는다', /if\(!want\) return Q;/.test(qo));
+
+  /* 돈 숫자와 주문 가격을 만드는 자리는 전부 quoteOf 를 거쳐야 한다.
+     한 곳이라도 lastQuote 를 직접 집으면 거기서만 남의 종가가 새어 든다. */
+  const mustGuard=[
+    ['무매 분석 평가금',   'function renderInfAnal()',   'inf'],
+    ['확정 종가',         'function infSettledLast()',  'inf'],
+    ['모멘텀',            'function imMomNow()',        'inf'],
+    ['오늘 주문 제안',     'function infSuggest(kind)',  'inf'],
+    ['VR 평가금',         'function vrEval(c)',         'vr'],
+    ['VR 현재가',         'function vrLastPrice(c)',    'vr'],
+  ];
+  for(const [label, sig, tab] of mustGuard){
+    let fn=''; try{ fn=extractFn(idx,sig); }catch(e){}
+    const direct=new RegExp(`lastQuote\\.${tab}`).test(fn);
+    ok(`${label} — 시세를 quoteOf 로 꺼낸다`,
+       !!fn && new RegExp(`quoteOf\\('${tab}'\\)`).test(fn) && !direct,
+       fn ? (direct?'lastQuote 를 직접 집는다':'') : '함수를 못 찾음');
   }
 }
 
