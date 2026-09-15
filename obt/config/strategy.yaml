@@ -1,0 +1,96 @@
+# ============================================================
+# 시초가 단타 전략 백테스트 설정
+# 이 파일의 값만 바꾸면 전략 코드 수정 없이 재테스트할 수 있다.
+# ============================================================
+
+data:
+  # 분봉 CSV 위치. 여러 파일(종목별) 또는 한 파일(통합) 모두 지원.
+  #  포맷: datetime,ticker,open,high,low,close,volume[,value]
+  #  datetime 예: 2023-05-02 09:00:00  (KST, 1분봉 시작시각)
+  minute_dir: "data/processed"        # 이 폴더 안의 *.csv 를 모두 읽는다
+  minute_glob: "*.csv"
+  # (선택) 정확한 전일 종가/거래대금을 위한 일봉 CSV. 없으면 분봉에서 유도.
+  #  포맷: date,ticker,close,volume,value
+  daily_file: null
+  session_start: "09:00"
+  session_end: "15:30"
+  timezone: "Asia/Seoul"
+
+capital:
+  initial_capital: 100000000          # 초기 투자금 (원)
+  position_pct: 0.10                  # 종목당 투자 비중 (전체 자본 대비)
+  max_positions: 1                    # 하루 최대 동시 보유 종목 수 (1/3/5/10 …)
+
+# ---------- 후보 종목 선정 필터 (각 항목 enabled 로 ON/OFF) ----------
+filters:
+  prev_value:                         # 1. 전일 거래대금
+    enabled: true
+    min_krw: 5000000000              # 50억
+  prev_volume:                        # 2. 전일 거래량
+    enabled: false
+    min_shares: 100000
+  gap:                                # 3·4. 시가 갭 = (open/prev_close-1)*100
+    enabled: true
+    min_pct: 2.0
+    max_pct: 15.0
+  first_bar_volume:                   # 5. 당일 첫 1분봉 거래량
+    enabled: false
+    min_shares: 10000
+  first_bar_value:                    # 6. 당일 첫 1분봉 거래대금
+    enabled: true
+    min_krw: 100000000               # 1억
+
+# ---------- 진입 ----------
+entry:
+  # A: 첫 1분봉 고가 돌파 / B: 첫 3분봉 / C: 첫 5분봉
+  # D: 시초가 대비 +open_breakout_pct 돌파 / E: A + 거래량 증가
+  strategy: "A"                       # A B C D E
+  entry_window_min: 1                 # A/B/C/E 의 첫 N분봉 (D는 무시)
+  open_breakout_pct: 2.0             # D 전용: 시초가 대비 상승률(%)
+  require_volume_surge: true          # E, 그리고 A의 기본 요건
+  volume_multiplier: 2.0             # 첫 N분봉 거래량 >= 최근 평균 × 배수
+  volume_lookback_days: 20           # '최근 평균'을 계산할 과거 거래일 수(과거만)
+
+# ---------- 청산 ----------
+exit:
+  stop_loss_pct: -2.0                # 손절 (매수가 대비 %)
+  take_profit_pct: 3.0              # 익절 (매수가 대비 %)
+  time_exit: "15:20"                 # 시간 청산 (09:30/10:00/…/15:29)
+  trailing:
+    enabled: false
+    activate_pct: 3.0               # 이 수익률 이상에서 트레일링 활성화
+    trail_pct: 1.5                  # 최고가 대비 이만큼 하락하면 청산
+
+# ---------- 매매 비용 (실전 반영, 하드코딩 금지) ----------
+costs:
+  buy_commission: 0.00015           # 매수 수수료율
+  sell_commission: 0.00015          # 매도 수수료율
+  tax: 0.0018                        # 매도 거래세 (2024년 기준 예시)
+  slippage: 0.0005                   # 슬리피지 (진입가 +, 청산가 -)
+
+# ---------- 기간 분할 (과최적화 방지) ----------
+split:
+  train: 0.6
+  validation: 0.2
+  test: 0.2
+
+# ---------- 출력 ----------
+output:
+  reports_dir: "reports"
+  trades_csv: "trades.csv"
+  daily_csv: "daily.csv"
+  metrics_csv: "metrics.csv"
+
+# ---------- 최적화 그리드 (optimize 명령이 사용) ----------
+optimize:
+  objective: "cagr_over_mdd"          # cagr_over_mdd / profit_factor / cagr / total_return
+  grid:
+    "filters.gap.min_pct":     [1.0, 2.0, 3.0, 4.0, 5.0]
+    "filters.gap.max_pct":     [5.0, 10.0, 15.0, 20.0]
+    "exit.stop_loss_pct":      [-1.0, -1.5, -2.0, -2.5, -3.0]
+    "exit.take_profit_pct":    [1.0, 2.0, 3.0, 4.0, 5.0, 7.0]
+    "entry.volume_multiplier": [1.0, 1.5, 2.0, 3.0]
+    "entry.entry_window_min":  [1, 3, 5]
+    "exit.time_exit":          ["09:30", "10:00", "11:00", "12:00", "14:00", "15:20"]
+  # 조합 폭발 방지: 한 번에 변화시킬 축만 grid_axes 에 골라 쓴다(나머지는 기본값 고정).
+  grid_axes: ["filters.gap.min_pct", "exit.stop_loss_pct", "exit.take_profit_pct"]
