@@ -1903,11 +1903,15 @@ console.log('\n[43] 미국 주문구분 — 시험은 하되 평소 주문은 �
   const usBlk=(kisSrc.split('// ── 미국 주식 주문 ──')[1]||'').split('const tr = side ===')[0];
   ok('응답이 없으면 다시 내지 않는다',
      /catch \(e\) \{\s*return json\(\{ error: String\(e\.message \|\| e\) \}, 502\);/.test(usBlk));
-  ok('자동 주문이 주문구분을 넘겨준다', /priceType: "limit", ordDvsn \}/.test(at));
+  ok('자동 주문이 주문구분을 넘겨준다', /priceType: "limit", ordDvsn: dvsn \}/.test(at));
   ok('자동 주문 기본값도 지정가다',
      /\["31", "32", "33", "34"\]\.includes\(url\.searchParams\.get\("ordDvsn"\) \|\| ""\)/.test(at)
      && /: "00";/.test(at));
   ok('결과에 무엇으로 나갔는지 적는다', /ordDvsn: j\.ordDvsn \|\| ""/.test(at) && /fellBack: !!j\.fellBack/.test(at));
+  // 틀린 번호가 MOC 면 아무 값에나 체결된다 — 알아내기 전까지 실계좌엔 넣지 않는다
+  ok('모르는 번호는 모의에서만 시험한다',
+     /const dvsn = \(ordDvsn !== "00" && kisEnv !== "vts"\) \? "00" : ordDvsn;/.test(at)
+     && /priceType: "limit", ordDvsn: dvsn \}/.test(at));
 }
 
 /* ════ 44. 숫자 표기 — 기호는 뒤, 자릿수는 오른쪽 맞춤 ════
