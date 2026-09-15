@@ -53,8 +53,13 @@ i.lg.list,.ipo-dot.list{background:#9a7bff}
 .ipo-broker.on .ipo-broker-n{color:var(--ink)}
 .ipo-pnlrow{display:flex;align-items:center;margin-top:12px;padding:12px;background:var(--panel2);border-radius:9px;font-size:13px}
 .ipo-pnlrow b{font-size:16px;margin-left:6px}
-.ipo-del{color:var(--faint);cursor:pointer;font-size:12px;padding:2px 6px}
+.ipo-del{color:var(--faint);cursor:pointer;font-size:12px;padding:2px 5px}
 .ipo-del:active,.ipo-del:hover{color:var(--sell)}
+#ipo_rec_tbl{min-width:0;font-size:10.5px}
+#ipo_rec_tbl th,#ipo_rec_tbl td{padding:4px 5px;line-height:1.2}
+#ipo_rec_tbl th{cursor:pointer;-webkit-user-select:none;user-select:none}
+#ipo_rec_tbl th.sorton{color:var(--vio)}
+#ipo_rec_tbl td:first-child,#ipo_rec_tbl th:first-child{word-break:keep-all}
 
 
 :root{
@@ -1017,23 +1022,46 @@ function ipoRecReset(){ ipoRecSel=null; ipoEditRecId=null; const s=$('iprec_sear
 function ipoDelRec(id){ const r=IPO.records.find(x=>x.id===id); if(!r)return; if(!confirm(`'${r.name}' 기록을 삭제할까요?`))return; IPO.records=IPO.records.filter(x=>x.id!==id); if(ipoEditRecId===id)ipoRecReset(); save(); ipoRenderRec(); }
 
 /* ── 기록 목록·성과 ── */
+let ipoRecSort={col:'',dir:'desc'};   // col='' → 입력 순서
+const IPO_REC_COLS=[
+  {k:'name',label:'종목'},{k:'qty',label:'수량'},{k:'poPrice',label:'공모가'},
+  {k:'exit',label:'매도/현재'},{k:'sellDate',label:'매도일'},{k:'pnl',label:'손익'},{k:'ret',label:'수익률'}
+];
+function ipoSortRec(col){
+  if(ipoRecSort.col===col) ipoRecSort.dir=(ipoRecSort.dir==='asc'?'desc':'asc');
+  else { ipoRecSort.col=col; ipoRecSort.dir=(col==='name'?'asc':'desc'); }
+  ipoRenderRec();
+}
 function ipoRenderRec(){
   const recs=IPO.records;
   let totalInv=0, realizedPnl=0, evalNow=0, plusN=0, retSum=0, retN=0, feeSum=0;
-  const rows=recs.map(r=>{
+  const data=recs.map(r=>{
     const poPrice=+r.poPrice||0, qty=+r.qty||0, fee=+r.fee||0; feeSum+=fee;
     const basis=qty*poPrice; totalInv+=basis;
     const exit=(+r.sellPrice>0)?+r.sellPrice:(+r.curPrice>0?+r.curPrice:0);
     let pnl=null, ret=null;
     if(exit>0&&poPrice>0){ pnl=qty*(exit-poPrice)-fee; ret=basis>0?pnl/basis*100:null; realizedPnl+=pnl;
-      if(+r.sellPrice>0){} else evalNow+=qty*exit;
+      if(!(+r.sellPrice>0)) evalNow+=qty*exit;
       if(pnl>0)plusN++; if(ret!=null){retSum+=ret;retN++;} }
     else if(!(+r.sellPrice>0)) evalNow+=basis;
-    const exitTxt=exit>0?ipoWon(exit):'—';
-    const pnlTxt=pnl==null?'—':`<span style="color:${pnl>=0?'var(--buy)':'var(--sell)'}">${pnl>=0?'+':'−'}₩${Math.abs(Math.round(pnl)).toLocaleString('en-US')}</span>`;
-    const retTxt=ret==null?'—':`<span style="color:${ret>=0?'var(--buy)':'var(--sell)'}">${ret>=0?'+':''}${ret.toFixed(1)}%</span>`;
-    const sold=+r.sellPrice>0?' <span style="color:var(--faint);font-size:10px">매도</span>':'';
-    return `<tr><td>${ipoEsc(r.name)}${sold}</td><td>${qty.toLocaleString('en-US')}주</td><td>${poPrice?ipoWon(poPrice):'—'}</td><td>${exitTxt}</td><td>${pnlTxt}</td><td>${retTxt}</td><td style="white-space:nowrap"><span class="ipo-del" onclick="ipoEditRec('${r.id}')" title="수정">✎</span><span class="ipo-del" onclick="ipoDelRec('${r.id}')" title="삭제">✕</span></td></tr>`;
+    return { r, name:r.name, qty, poPrice:poPrice||null, exit:exit>0?exit:null, sellDate:r.sellDate||'', pnl, ret, sold:+r.sellPrice>0 };
+  });
+  if(ipoRecSort.col){
+    const c=ipoRecSort.col, dir=ipoRecSort.dir==='asc'?1:-1;
+    data.sort((a,b)=>{ let av=a[c],bv=b[c];
+      const ae=(av==null||av===''), be=(bv==null||bv==='');
+      if(ae&&be)return 0; if(ae)return 1; if(be)return -1;   // 빈 값은 항상 뒤로
+      if(c==='name'||c==='sellDate') return dir*String(av).localeCompare(String(bv),'ko');
+      return dir*(av-bv);
+    });
+  }
+  const rows=data.map(d=>{
+    const r=d.r;
+    const exitTxt=d.exit?ipoWon(d.exit):'—';
+    const pnlTxt=d.pnl==null?'—':`<span style="color:${d.pnl>=0?'var(--buy)':'var(--sell)'}">${d.pnl>=0?'+':'−'}₩${Math.abs(Math.round(d.pnl)).toLocaleString('en-US')}</span>`;
+    const retTxt=d.ret==null?'—':`<span style="color:${d.ret>=0?'var(--buy)':'var(--sell)'}">${d.ret>=0?'+':''}${d.ret.toFixed(1)}%</span>`;
+    const sold=d.sold?' <span style="color:var(--faint);font-size:9px">매도</span>':'';
+    return `<tr><td>${ipoEsc(r.name)}${sold}</td><td>${d.qty.toLocaleString('en-US')}주</td><td>${d.poPrice?ipoWon(d.poPrice):'—'}</td><td>${exitTxt}</td><td>${d.sellDate?ipoDMD(d.sellDate):'—'}</td><td>${pnlTxt}</td><td>${retTxt}</td><td style="white-space:nowrap"><span class="ipo-del" onclick="ipoEditRec('${r.id}')" title="수정">✎</span><span class="ipo-del" onclick="ipoDelRec('${r.id}')" title="삭제">✕</span></td></tr>`;
   });
   $('ipor_cnt').textContent=`${recs.length}건`;
   const pnlEl=$('ipor_pnl'); pnlEl.textContent=(realizedPnl>=0?'+':'−')+'₩'+Math.abs(Math.round(realizedPnl)).toLocaleString('en-US'); pnlEl.style.color=realizedPnl>=0?'var(--buy)':'var(--sell)';
@@ -1046,8 +1074,9 @@ function ipoRenderRec(){
   $('ipor_feesum').textContent=ipoWon(feeSum);
   $('ipor_eval').textContent=ipoWon(evalNow);
   $('ipor_note').textContent = recs.length? '' : '종목을 선택하고 수량·매도가를 넣으면 손익이 집계됩니다.';
-  $('ipo_rec_tbl').innerHTML=`<tr><th>종목</th><th>수량</th><th>공모가</th><th>매도/현재</th><th>손익</th><th>수익률</th><th></th></tr>`
-    +(rows.length?rows.join(''):`<tr><td class="empty" colspan="7">아직 기록이 없습니다</td></tr>`);
+  const head=IPO_REC_COLS.map(c=>{ const on=ipoRecSort.col===c.k; const ar=on?(ipoRecSort.dir==='asc'?' ▲':' ▼'):''; return `<th class="${on?'sorton':''}" onclick="ipoSortRec('${c.k}')">${c.label}${ar}</th>`; }).join('')+'<th></th>';
+  $('ipo_rec_tbl').innerHTML=`<tr>${head}</tr>`
+    +(rows.length?rows.join(''):`<tr><td class="empty" colspan="8">아직 기록이 없습니다</td></tr>`);
 }
 async function ipoQuote(code){
   try{ const r=await fetch(`/api/quote?symbol=${encodeURIComponent(code)}&range=1d&intraday=0`,{headers:{'Accept':'application/json'}});
