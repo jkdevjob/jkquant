@@ -177,6 +177,12 @@ export async function onRequest({ request, env }) {
       // 세션 종류가 환경을 정한다 — 모의 세션은 모의계좌, 실계좌 세션은 실전계좌
       const kisEnv = s.paper ? "vts" : "real";
       row.env = kisEnv;
+      /* 아직 어느 번호가 LOC 인지 모른다. 틀렸으면 MOC(장마감 시장가)로 나가서
+         정한 값이 아니라 아무 값에나 체결된다. 모르는 번호는 모의계좌에서만 넣어 본다 —
+         실계좌는 알아낸 뒤에 열어 준다. */
+      const dvsn = (ordDvsn !== "00" && kisEnv !== "vts") ? "00" : ordDvsn;
+      if (dvsn !== ordDvsn) row.dvsnNote = `주문구분 ${ordDvsn} 은 모의에서만 시험합니다 — 지정가로 냅니다`;
+      row.ordDvsn = dvsn;
       row.results = [];
       for (let i = 0; i < row.orders.length; i++) {
         if (i) await sleep(700);                       // 모의투자 초당 2건 제한
@@ -185,7 +191,7 @@ export async function onRequest({ request, env }) {
           const r = await fetch(url.origin + "/api/kis?op=order&internal=1", {
             method: "POST",
             headers: { "content-type": "application/json", "x-autotrade-key": env.AUTOTRADE_KEY },
-            body: JSON.stringify({ env: kisEnv, side: o.side, code: sym, qty: o.qty, price: o.price, priceType: "limit", ordDvsn }),
+            body: JSON.stringify({ env: kisEnv, side: o.side, code: sym, qty: o.qty, price: o.price, priceType: "limit", ordDvsn: dvsn }),
           });
           const j = await r.json().catch(() => ({}));
           row.results.push({ kind: o.kind, ok: !!j.ok, msg: j.msg || j.error || "응답 없음", orderNo: j.orderNo || "",
