@@ -519,7 +519,7 @@ try{ if(localStorage.getItem('qcockpit_hadUser')==='1') document.documentElement
 </div>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.48</span></h1></div>
+    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.49</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -1511,7 +1511,7 @@ document.addEventListener('click',function(e){ var m=document.getElementById('jk
 
       <!-- 내 포지션 -->
       <div class="card acct">
-        <h3 style="justify-content:space-between"><span style="display:flex;align-items:center;gap:8px"><span class="dot"></span>내 포지션</span><span class="bandpill in" id="asap_ret" style="font-size:12px">—</span></h3>
+        <h3 style="justify-content:space-between"><span style="display:flex;align-items:center;gap:8px"><span class="dot"></span>내 포지션</span><span class="bandpill in" id="asap_ret" style="font-size:12px" title="보유분의 현재가 ÷ 평단. 모의 성과 목록의 수익률은 현금까지 포함한 계좌 전체 기준이라 값이 다릅니다.">—</span></h3>
         <div class="ar"><span class="ak" id="asap_close_k">SOXL 종가</span><span class="av" id="asap_close">—</span></div>
         <div class="ar"><span class="ak">SOXL 보유</span><span class="av buy" id="asap_qty">0주</span></div>
         <div class="ar"><span class="ak">평단가</span><span class="av" id="asap_avg">—</span></div>
@@ -1578,7 +1578,7 @@ document.addEventListener('click',function(e){ var m=document.getElementById('jk
   <footer>
     <strong>JK 퀀트</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.48</b> · 2026-09-15</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.49</b> · 2026-09-15</div>
   </footer>
 </div>
 
@@ -5163,7 +5163,10 @@ function renderAsapNow(){
   $('asap_eval').textContent=px(pos.shares*price);
   $('asap_reserve').textContent=px(pos.reserve);
   $('asap_total').textContent=px(pos.shares*price+pos.reserve);
-  if(pos.shares>0&&pos.avg>0){ const hr=(price/pos.avg-1)*100; $('asap_ret').textContent=`${hr>=0?'+':''}${hr.toFixed(2)}%`; $('asap_ret').className='bandpill '+(hr>=0?'in':'over'); }
+  /* 이건 '보유 수익률'(현재가÷평단)이지 계좌 전체 수익률이 아니다.
+     리저브(현금)를 안 세기 때문에 모의 성과 목록의 수익률과 다른 값이 나온다.
+     라벨 없이 숫자만 띄우면 세션 수익률로 읽힌다 — VR 처럼 '보유'를 붙인다. */
+  if(pos.shares>0&&pos.avg>0){ const hr=(price/pos.avg-1)*100; $('asap_ret').textContent=`보유 ${hr>=0?'+':''}${hr.toFixed(2)}%`; $('asap_ret').className='bandpill '+(hr>=0?'in':'over'); }
   else{ $('asap_ret').textContent='—'; $('asap_ret').className='bandpill'; }
   if(!c.ready){
     $('asap_pill').className='bandpill wait'; $('asap_pill').textContent='대기';
