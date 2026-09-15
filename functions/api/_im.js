@@ -79,6 +79,33 @@ export function imCompute(st, hist) {
   return { avg, qty, inv, realized, T, bal, st, reverseActive, withdrawn, saved, simple };
 }
 
+/* ── 확정 종가 ──
+   시세 API는 장중에도 오늘 봉을 내주는데 그 close 는 종가가 아니라 그 순간의 현재가다.
+   자동 주문은 마감 20분 전에 도는데, 그때 오늘 봉을 쓰면 장중 현재가로 주문을 내게 된다.
+   앱(simCutoff·settledBars)과 같은 규약으로 마감+정산지연이 지나야 오늘 봉을 인정한다.
+   마감 '직후'도 아직 종가가 아니다 — 종가 단일가 체결이 일봉에 실리기까지 몇 분 걸린다. */
+const MKT_CLOSE_MIN = { usd: 16 * 60, krw: 15 * 60 + 30 };
+const SETTLE_LAG_MIN = 20;
+export function exchNow(cur, now) {
+  const tz = (cur === "krw") ? "Asia/Seoul" : "America/New_York";
+  const P = new Intl.DateTimeFormat("en-CA", { timeZone: tz, year: "numeric", month: "2-digit", day: "2-digit",
+    hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).formatToParts(now || new Date());
+  const g = (k) => (P.find((x) => x.type === k) || {}).value;
+  return { date: `${g("year")}-${g("month")}-${g("day")}`, min: (+g("hour")) * 60 + (+g("minute")) };
+}
+export function simCutoff(cur, now) {
+  const n = exchNow(cur, now);
+  if (n.min >= MKT_CLOSE_MIN[cur === "krw" ? "krw" : "usd"] + SETTLE_LAG_MIN) return n.date;
+  const y = new Date(n.date + "T00:00:00Z"); y.setUTCDate(y.getUTCDate() - 1);
+  return y.toISOString().slice(0, 10);
+}
+/* 종가가 확정된 마지막 봉 {date, close}. 없으면 null. */
+export function settledLast(rows, cur, now) {
+  const cut = simCutoff(cur, now);
+  const r = (rows || []).filter((x) => x.date <= cut);
+  return r.length ? r[r.length - 1] : null;
+}
+
 /* 익절 동적 조절 — 직전 20거래일 상승률이 +8%를 넘으면 오늘 익절%를 올린다 */
 const IM_MOM_LEN = 20, IM_MOM_TH = 8, IM_MOM_CAP = 30;
 export function imMomOf(days) {

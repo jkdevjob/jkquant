@@ -1711,6 +1711,7 @@ console.log('[42] 자동 주문 — 브라우저와 서버가 같은 주문을 �
   ok('서버용 주문 모듈이 있다', !!im);
   ok('자동 주문 엔드포인트가 있다', !!at);
 
+  const at_=at;
   if(im){
     const M=new Function(im.replace(/export /g,'')+'\nreturn {imOrders,imCompute,imBuy1,starPct};')();
     // 브라우저 쪽 — DOM 을 최소로 흉내내고 renderOrder 원문을 그대로 실행한다
@@ -1775,6 +1776,32 @@ console.log('[42] 자동 주문 — 브라우저와 서버가 같은 주문을 �
       hist:many(21,()=>({kind:'1회매수',date:'2026-02-01',price:20,qty:1})), close:20, days:DAYS});
     ok('리버스 세션은 건너뛴다', rev.orders.length===0 && /리버스/.test(rev.skip||''), rev.skip||'안 건너뜀');
     ok('종가가 없으면 안 낸다', M.imOrders({st:ST({}),hist:[],close:0,days:DAYS}).skip==='확정 종가 없음');
+
+    /* 확정 종가 — 자동 주문은 마감 20분 전에 도는데, 그 시각 오늘 봉의 close 는
+       종가가 아니라 장중 현재가다. 그걸 쓰면 앱과 다른 주문이 나간다.
+       앱(simCutoff·settledBars)과 같은 규약인지 실제 시각을 넣어 확인한다. */
+    const M2=new Function(im.replace(/export /g,'')+'\nreturn {settledLast,simCutoff};')();
+    const bars=[{date:'2026-09-14',close:100},{date:'2026-09-15',close:111}];
+    const at=(iso)=>new Date(iso);
+    // 미국장: 16:00 ET 마감 + 20분 정산. 15:40 ET(=19:40 UTC, 서머타임)은 아직 어제 종가.
+    ok('마감 전에는 어제 봉을 쓴다',
+       (M2.settledLast(bars,'usd',at('2026-09-15T19:40:00Z'))||{}).close===100,
+       JSON.stringify(M2.settledLast(bars,'usd',at('2026-09-15T19:40:00Z'))));
+    // 16:10 ET — 마감은 지났지만 정산 20분이 안 지났다. 아직 어제 것이다.
+    ok('마감 직후도 아직 어제 봉', (M2.settledLast(bars,'usd',at('2026-09-15T20:10:00Z'))||{}).close===100);
+    // 16:25 ET — 정산까지 지났다. 이제 오늘 봉을 쓴다.
+    ok('정산까지 지나야 오늘 봉', (M2.settledLast(bars,'usd',at('2026-09-15T20:25:00Z'))||{}).close===111);
+    // 국내장: 15:30 마감 + 20분 → 15:50 KST 이후
+    ok('국내는 15:50 KST가 경계',
+       (M2.settledLast(bars,'krw',at('2026-09-15T06:30:00Z'))||{}).close===100 &&
+       (M2.settledLast(bars,'krw',at('2026-09-15T07:00:00Z'))||{}).close===111);
+    // 앱과 같은 상수를 쓰는지 — 한쪽만 고치면 또 갈린다
+    ok('앱과 같은 마감·정산 상수',
+       /MKT_CLOSE_MIN = \{ usd: 16 \* 60, krw: 15 \* 60 \+ 30 \}/.test(im)
+       && /SETTLE_LAG_MIN = 20/.test(im)
+       && /const MKT_CLOSE_MIN=\{usd:16\*60, krw:15\*60\+30\}/.test(idx)
+       && /const SETTLE_LAG_MIN=20/.test(idx));
+    ok('자동 주문이 확정 종가를 쓴다', /settledLast\(q\.series \|\| q\.ohlc \|\| \[\], st\.cur\)/.test(at_||''));
   }
 
   if(at){

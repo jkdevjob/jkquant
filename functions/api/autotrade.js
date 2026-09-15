@@ -20,7 +20,7 @@
 //   · 리버스모드 세션은 건너뛴다 — 규칙을 다 옮기지 않았다.
 //   · 실계좌 세션(paper=false)은 KIS_ENV 가 real 이라 진짜 돈이 나간다. dry 로 먼저 확인할 것.
 
-import { imOrders } from "./_im.js";
+import { imOrders, settledLast } from "./_im.js";
 
 const JH = { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store" };
 const json = (o, s = 200) => new Response(JSON.stringify(o, null, 2), { status: s, headers: JH });
@@ -141,13 +141,16 @@ export async function onRequest({ request, env }) {
       const sym = String(st.ticker || "").toUpperCase();
       row.ticker = sym;
 
-      // 확정 종가 — 앱과 같은 시세 경로를 쓴다
+      /* 확정 종가 — 앱과 같은 시세 경로, 같은 규약.
+         마지막 봉을 그냥 쓰면 안 된다. 자동 주문은 마감 20분 전에 도는데
+         그 시각 오늘 봉의 close 는 종가가 아니라 장중 현재가다. */
       let close = 0, days = null;
       try {
         const q = await (await fetch(url.origin + "/api/quote?symbol=" + encodeURIComponent(sym) + "&intraday=0")).json();
         days = q.series || null;
-        const oh = q.ohlc || [];
-        close = oh.length ? +oh[oh.length - 1].close : 0;
+        const bar = settledLast(q.series || q.ohlc || [], st.cur);
+        close = bar ? +bar.close : 0;
+        row.closeDate = bar ? bar.date : null;
       } catch (e) { row.skip = "시세 실패: " + (e.message || e); out.sessions.push(row); continue; }
       row.close = close;
 
