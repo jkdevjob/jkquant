@@ -1022,7 +1022,7 @@ function ipoRecReset(){ ipoRecSel=null; ipoEditRecId=null; const s=$('iprec_sear
 function ipoDelRec(id){ const r=IPO.records.find(x=>x.id===id); if(!r)return; if(!confirm(`'${r.name}' 기록을 삭제할까요?`))return; IPO.records=IPO.records.filter(x=>x.id!==id); if(ipoEditRecId===id)ipoRecReset(); save(); ipoRenderRec(); }
 
 /* ── 기록 목록·성과 ── */
-let ipoRecSort={col:'',dir:'desc'};   // col='' → 입력 순서
+let ipoRecSort={col:'sellDate',dir:'desc'};   // 기본: 매도일 최신순 (빈 값은 뒤로)
 const IPO_REC_COLS=[
   {k:'name',label:'종목'},{k:'qty',label:'수량'},{k:'poPrice',label:'공모가'},
   {k:'exit',label:'매도/현재'},{k:'sellDate',label:'매도일'},{k:'pnl',label:'손익'},{k:'ret',label:'수익률'}
