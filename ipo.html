@@ -633,7 +633,7 @@ document.addEventListener("click",function(e){ var m=document.getElementById("jk
             <span style="margin-left:auto">수익률 <b id="iprec_ret">0%</b></span>
           </div>
           <div style="display:flex;gap:8px;margin-top:12px">
-            <button class="fetchbtn" style="flex:1;background:var(--buy-bg);color:var(--buy);border-color:var(--buy-dim)" onclick="ipoRecSave()">저장</button>
+            <button id="iprec_save" class="fetchbtn" style="flex:1;background:var(--buy-bg);color:var(--buy);border-color:var(--buy-dim)" onclick="ipoRecSave()">저장</button>
             <button class="ghostbtn" style="flex:1;margin:0" onclick="ipoRecReset()">취소</button>
           </div>
         </div>
@@ -740,6 +740,7 @@ function todayStr(){ const d=new Date(); return d.getFullYear()+'-'+String(d.get
 
 let IPO={records:[],feed:[],feedUpdated:0};
 let ipoRecSel=null;                 // 기록 폼에서 선택한 종목
+let ipoEditRecId=null;              // 편집 중인 기록 id (없으면 새 기록)
 let ipoCalY, ipoCalM;               // 캘린더 표시 연/월(0-based)
 let ipoSelDay=null;                 // 선택한 날짜(YYYY-MM-DD)
 const IPO_BROKERS=['한국투자증권','KB증권','삼성증권','미래에셋증권','NH투자증권','대신증권','신한투자증권','하나증권','키움증권','유진투자증권','IBK투자증권','하이투자증권','SK증권','대신증권'];
@@ -955,8 +956,10 @@ function ipoRecPick(i){ const it=IPO.feed[i]; ipoRecSel={name:it.name,code:it.co
 function ipoRecPickStock(k){ const s=ipoStockHits[k]; if(!s)return; ipoRecSel={name:s.name,code:s.code||'',poPrice:null,broker:''}; ipoRecFill(); }
 function ipoRecPickFree(){ const q=($('iprec_search').value||'').trim()||'직접 입력'; ipoRecSel={name:q,code:'',poPrice:null,broker:''}; ipoRecFill(); }
 function ipoRecFill(){
+  ipoEditRecId=null;               // 검색으로 새로 고른 것 = 새 기록
   $('iprec_results').style.display='none';
   $('iprec_form').style.display='';
+  $('iprec_save').textContent='저장';
   $('iprec_name').textContent=ipoRecSel.name;
   $('iprec_price').value=ipoRecSel.poPrice?(+ipoRecSel.poPrice).toLocaleString('en-US'):'';
   $('iprec_qty').value=''; $('iprec_sell').value=''; $('iprec_fee').value='2,000';
@@ -982,16 +985,36 @@ function ipoRecCalc(){
     retEl.textContent=(ret>=0?'+':'')+ret.toFixed(1)+'%'; retEl.style.color=ret>=0?'var(--buy)':'var(--sell)';
   }else{ pnlEl.textContent='0원'; pnlEl.style.color=''; retEl.textContent='0%'; retEl.style.color=''; }
 }
+function ipoEditRec(id){
+  const r=IPO.records.find(x=>x.id===id); if(!r)return;
+  ipoEditRecId=id;
+  ipoRecSel={name:r.name,code:r.code||'',poPrice:r.poPrice||null,broker:r.broker||''};
+  $('iprec_results').style.display='none';
+  $('iprec_form').style.display='';
+  $('iprec_save').textContent='수정 저장';
+  $('iprec_name').textContent=r.name;
+  $('iprec_price').value=r.poPrice?(+r.poPrice).toLocaleString('en-US'):'';
+  $('iprec_qty').value=r.qty?(+r.qty).toLocaleString('en-US'):'';
+  $('iprec_sell').value=r.sellPrice?(+r.sellPrice).toLocaleString('en-US'):'';
+  $('iprec_fee').value=(r.fee||r.fee===0)?(+r.fee).toLocaleString('en-US'):'2,000';
+  $('iprec_date').value=r.sellDate||'';
+  const s=$('iprec_search'); if(s)s.value=r.name;
+  ipoRenderBrokers(); ipoRecCalc();
+  $('iprec_form').scrollIntoView({behavior:'smooth',block:'center'});
+}
 function ipoRecSave(){
   if(!ipoRecSel){ return; }
-  const rec={ id:uid(), name:ipoRecSel.name, code:(ipoRecSel.code||'').replace(/[^0-9A-Za-z]/g,''), broker:ipoRecSel.broker||'',
-    poPrice:inputNum('iprec_price')||null, qty:inputNum('iprec_qty')||null, sellPrice:inputNum('iprec_sell')||null,
-    fee:inputNum('iprec_fee')||0, sellDate:$('iprec_date').value||'', curPrice:null, created:Date.now() };
-  if(!rec.qty){ alert('수량을 입력하세요.'); return; }
-  IPO.records.push(rec); save(); ipoRecReset(); ipoRenderRec();
+  const qty=inputNum('iprec_qty')||null;
+  if(!qty){ alert('수량을 입력하세요.'); return; }
+  const data={ name:ipoRecSel.name, code:(ipoRecSel.code||'').replace(/[^0-9A-Za-z]/g,''), broker:ipoRecSel.broker||'',
+    poPrice:inputNum('iprec_price')||null, qty, sellPrice:inputNum('iprec_sell')||null,
+    fee:inputNum('iprec_fee')||0, sellDate:$('iprec_date').value||'' };
+  if(ipoEditRecId){ const r=IPO.records.find(x=>x.id===ipoEditRecId); if(r) Object.assign(r,data); }
+  else IPO.records.push({ id:uid(), ...data, curPrice:null, created:Date.now() });
+  save(); ipoRecReset(); ipoRenderRec();
 }
-function ipoRecReset(){ ipoRecSel=null; const s=$('iprec_search'); if(s)s.value=''; $('iprec_results').style.display='none'; $('iprec_form').style.display='none'; }
-function ipoDelRec(id){ const r=IPO.records.find(x=>x.id===id); if(!r)return; if(!confirm(`'${r.name}' 기록을 삭제할까요?`))return; IPO.records=IPO.records.filter(x=>x.id!==id); save(); ipoRenderRec(); }
+function ipoRecReset(){ ipoRecSel=null; ipoEditRecId=null; const s=$('iprec_search'); if(s)s.value=''; const sv=$('iprec_save'); if(sv)sv.textContent='저장'; $('iprec_results').style.display='none'; $('iprec_form').style.display='none'; }
+function ipoDelRec(id){ const r=IPO.records.find(x=>x.id===id); if(!r)return; if(!confirm(`'${r.name}' 기록을 삭제할까요?`))return; IPO.records=IPO.records.filter(x=>x.id!==id); if(ipoEditRecId===id)ipoRecReset(); save(); ipoRenderRec(); }
 
 /* ── 기록 목록·성과 ── */
 function ipoRenderRec(){
@@ -1010,7 +1033,7 @@ function ipoRenderRec(){
     const pnlTxt=pnl==null?'—':`<span style="color:${pnl>=0?'var(--buy)':'var(--sell)'}">${pnl>=0?'+':'−'}₩${Math.abs(Math.round(pnl)).toLocaleString('en-US')}</span>`;
     const retTxt=ret==null?'—':`<span style="color:${ret>=0?'var(--buy)':'var(--sell)'}">${ret>=0?'+':''}${ret.toFixed(1)}%</span>`;
     const sold=+r.sellPrice>0?' <span style="color:var(--faint);font-size:10px">매도</span>':'';
-    return `<tr><td>${ipoEsc(r.name)}${sold}</td><td>${qty.toLocaleString('en-US')}주</td><td>${poPrice?ipoWon(poPrice):'—'}</td><td>${exitTxt}</td><td>${pnlTxt}</td><td>${retTxt}</td><td><span class="ipo-del" onclick="ipoDelRec('${r.id}')">✕</span></td></tr>`;
+    return `<tr><td>${ipoEsc(r.name)}${sold}</td><td>${qty.toLocaleString('en-US')}주</td><td>${poPrice?ipoWon(poPrice):'—'}</td><td>${exitTxt}</td><td>${pnlTxt}</td><td>${retTxt}</td><td style="white-space:nowrap"><span class="ipo-del" onclick="ipoEditRec('${r.id}')" title="수정">✎</span><span class="ipo-del" onclick="ipoDelRec('${r.id}')" title="삭제">✕</span></td></tr>`;
   });
   $('ipor_cnt').textContent=`${recs.length}건`;
   const pnlEl=$('ipor_pnl'); pnlEl.textContent=(realizedPnl>=0?'+':'−')+'₩'+Math.abs(Math.round(realizedPnl)).toLocaleString('en-US'); pnlEl.style.color=realizedPnl>=0?'var(--buy)':'var(--sell)';
