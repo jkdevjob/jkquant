@@ -7,9 +7,55 @@
 <title>JK 퀀트 — 공모주</title>
 <style>
 .tab[data-t="ipo"].on{background:linear-gradient(135deg,#7048c4,#40277a)}
-/* 공모주는 독립 페이지라 탭/세션바/상태줄 스택이 없다 — 서브탭 sticky offset(--h3)을
-   계산하는 로직도 없으므로, 여기선 서브탭을 화면 맨 위에 고정한다(id로 우선순위 확보). */
 #ipoWrap .subnav{top:0}
+.ipo-calhead{display:flex;align-items:center;gap:6px;margin-bottom:10px}
+.ipo-navbtn{width:32px;height:32px;border-radius:8px;border:1px solid var(--line);background:var(--panel2);color:var(--ink);font-size:18px;cursor:pointer}
+.ipo-caltitle{font-weight:800;font-size:16px;min-width:78px;text-align:center}
+.ipo-cal-legend{display:flex;gap:14px;font-size:11px;color:var(--faint);margin-bottom:8px}
+.ipo-cal-legend i.lg{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:4px;vertical-align:middle}
+i.lg.sub,.ipo-dot.sub{background:#3fbf7f}
+i.lg.list,.ipo-dot.list{background:#9a7bff}
+.ipo-cal-wk{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;margin-bottom:2px}
+.ipo-cal-wd{text-align:center;font-size:10px;color:var(--faint);font-weight:700;padding:2px 0}
+.ipo-cal-wd.sun{color:#e0607a}.ipo-cal-wd.sat{color:#6aa0ff}
+.ipo-cal-days{display:grid;grid-template-columns:repeat(7,1fr);gap:2px}
+.ipo-cal-cell{min-height:42px;border-radius:8px;padding:3px 0 0;display:flex;flex-direction:column;align-items:center;position:relative;background:transparent}
+.ipo-cal-cell.has{background:var(--panel2);cursor:pointer}
+.ipo-cal-cell.sel{outline:2px solid var(--vio)}
+.ipo-cal-cell.today .dnum{background:var(--vio);color:#fff;border-radius:50%}
+.ipo-cal-cell .dnum{font-size:12px;width:20px;height:20px;line-height:20px;text-align:center;color:var(--dim)}
+.ipo-cal-cell .dnum.sun{color:#e0607a}.ipo-cal-cell .dnum.sat{color:#6aa0ff}
+.ipo-dots{display:flex;gap:3px;margin-top:2px;min-height:6px}
+.ipo-dot{width:6px;height:6px;border-radius:50%;display:inline-block}
+.ipo-row{display:flex;align-items:center;gap:8px;padding:9px 4px;border-bottom:1px solid var(--line);cursor:pointer}
+.ipo-row:last-child{border-bottom:none}
+.ipo-row-date{font-size:11px;color:var(--faint);min-width:74px;font-variant-numeric:tabular-nums}
+.ipo-row-nm{font-weight:700;font-size:13px;flex:1;min-width:0}
+.ipo-row-sub{display:block;font-size:10px;color:var(--faint);font-weight:500;margin-top:1px}
+.ipo-row-pr{font-size:12px;color:var(--dim);font-variant-numeric:tabular-nums;white-space:nowrap}
+.ipo-detail-card{margin-top:10px;padding:12px;border:1px solid #40277a;border-radius:10px;background:linear-gradient(160deg,#1c1730,var(--panel))}
+.ipo-detail-nm{font-weight:800;font-size:15px;margin-bottom:8px}
+.ipo-ctx{background:var(--panel2);border:1px solid var(--line);border-radius:9px;padding:9px 11px;font-size:12px;margin-bottom:12px;line-height:1.5}
+.ipo-search-results:empty{display:none}
+.ipo-search-results{border:1px solid var(--line);border-radius:9px;overflow:hidden;margin-bottom:10px}
+.ipo-sr{padding:10px 12px;border-bottom:1px solid var(--line);cursor:pointer;display:flex;justify-content:space-between;gap:8px;font-size:13px;font-weight:600}
+.ipo-sr:last-child{border-bottom:none}
+.ipo-sr:active,.ipo-sr:hover{background:var(--panel2)}
+.ipo-sr.free{color:var(--vio);font-weight:700}
+.ipo-sr-pr{color:var(--faint);font-weight:500;font-size:11px}
+.ipo-selname{font-weight:800;font-size:16px;margin:4px 0 6px}
+.ipo-flabel{font-size:12px;color:var(--faint);display:block;margin:8px 0}
+.ipo-brokers{display:flex;gap:12px;overflow-x:auto;padding-bottom:8px;margin-bottom:6px;-webkit-overflow-scrolling:touch}
+.ipo-broker{flex:0 0 auto;background:none;border:none;display:flex;flex-direction:column;align-items:center;gap:5px;cursor:pointer;width:58px;padding:0}
+.ipo-broker-c{width:48px;height:48px;border-radius:50%;background:var(--panel2);border:2px solid var(--line);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;color:var(--dim)}
+.ipo-broker.on .ipo-broker-c{border-color:var(--vio);color:#fff;background:#40277a}
+.ipo-broker-n{font-size:10px;color:var(--faint);white-space:nowrap;max-width:58px;overflow:hidden;text-overflow:ellipsis}
+.ipo-broker.on .ipo-broker-n{color:var(--ink)}
+.ipo-pnlrow{display:flex;align-items:center;margin-top:12px;padding:12px;background:var(--panel2);border-radius:9px;font-size:13px}
+.ipo-pnlrow b{font-size:16px;margin-left:6px}
+.ipo-del{color:var(--faint);cursor:pointer;font-size:12px;padding:2px 6px}
+.ipo-del:active,.ipo-del:hover{color:var(--sell)}
+
 
 :root{
   --bg:#0f1320;--panel:#171c2e;--panel2:#1e2540;--line:#2a3354;
@@ -468,7 +514,7 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
 <body>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Public Offering</div><h1>JK <span class="v">공모주</span> <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v1.0</span></h1></div>
+    <div><div class="kicker">Public Offering</div><h1>JK <span class="v">공모주</span> <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v1.1</span></h1></div>
     <div style="display:flex;align-items:center;gap:8px">
       <button id="ipoAuthBtn" onclick="ipoLogin()" style="font-size:11px;padding:6px 12px;border-radius:7px;border:1px solid var(--line);background:transparent;color:var(--dim);cursor:pointer">로그인</button>
       <div class="jkmenu" id="jkmenuWrap">
@@ -493,14 +539,33 @@ document.addEventListener("click",function(e){ var m=document.getElementById("jk
 
 <div class="wrap" id="ipoWrap">
     <div class="subnav">
-      <button class="chip on" data-b="ipo-calc">청약 계산기</button>
-      <button class="chip" data-b="ipo-cal">일정</button>
+      <button class="chip on" data-b="ipo-cal">일정</button>
+      <button class="chip" data-b="ipo-calc">청약 계산기</button>
       <button class="chip" data-b="ipo-rec">기록</button>
       <button class="chip" data-b="ipo-guide">설명</button>
     </div>
 
+    <!-- ── 일정 (캘린더) ── -->
+    <div class="block on" id="ipo-cal">
+      <div class="card" style="margin-bottom:13px">
+        <div class="ipo-calhead">
+          <button class="ipo-navbtn" onclick="ipoCalMove(-1)" aria-label="이전 달">‹</button>
+          <div class="ipo-caltitle" id="ipo_cal_title">—</div>
+          <button class="ipo-navbtn" onclick="ipoCalMove(1)" aria-label="다음 달">›</button>
+          <button class="fetchbtn" id="ipo_feed_btn" style="margin-left:auto;padding:6px 12px" onclick="ipoFetchFeed(true)">🔄</button>
+        </div>
+        <div class="ipo-cal-legend"><span><i class="lg sub"></i>청약</span><span><i class="lg list"></i>상장</span></div>
+        <div id="ipo_cal_grid"></div>
+        <p class="fetchnote" id="ipo_feed_note" style="margin-top:8px;color:var(--faint)">🔄 를 누르면 공모주 일정을 불러옵니다.</p>
+      </div>
+      <div id="ipo_day_panel"></div>
+      <div class="card"><h3 style="justify-content:space-between"><span style="display:flex;align-items:center;gap:8px"><span class="dot"></span>이달의 공모주</span><span class="cnt" id="ipo_month_cnt"></span></h3>
+        <div id="ipo_month_list"><p class="note">일정을 불러오면 이달 공모주가 표시됩니다.</p></div></div>
+    </div>
+
     <!-- ── 청약 계산기 ── -->
-    <div class="block on" id="ipo-calc">
+    <div class="block" id="ipo-calc">
+      <div class="ipo-ctx" id="ipoc_ctx" style="display:none"></div>
       <div class="card" style="margin-bottom:13px">
         <h3><span class="dot"></span>청약 정보</h3>
         <div class="field"><label>확정 공모가 (₩)</label>
@@ -540,36 +605,54 @@ document.addEventListener("click",function(e){ var m=document.getElementById("jk
         <div class="ar"><span class="ak">상장일 예상 손익 <span class="sub">수수료 차감</span></span><span class="av" id="ipoc_profit">₩0</span></div>
         <div class="ar"><span class="ak">수익률 <span class="sub">증거금 대비</span></span><span class="av" id="ipoc_ret">—</span></div>
       </div>
-      <button class="fetchbtn" style="width:100%;margin-top:12px" onclick="ipoAddFromCalc()">＋ 이 내용을 일정에 추가</button>
       <p class="note" style="margin-top:10px">균등배정은 최소 청약단위 이상 청약한 모든 계좌에 <b>균등물량 ÷ 청약건수</b>로 나눠 배정됩니다(초과분은 추첨). 비례배정은 <b>청약주수 ÷ 경쟁률</b>이 근사치입니다. 실제 배정은 증권사·청약 마감 결과에 따라 달라집니다.</p>
-    </div>
-
-    <!-- ── 일정 ── -->
-    <div class="block" id="ipo-cal">
-      <div class="card" style="margin-bottom:13px">
-        <h3 style="justify-content:space-between"><span style="display:flex;align-items:center;gap:8px"><span class="dot"></span>공모주 일정</span>
-          <button class="fetchbtn" style="padding:6px 12px" onclick="ipoNew()">＋ 추가</button></h3>
-        <div id="ipo_cal_list"><p class="note">아직 등록한 공모주가 없습니다. <b>＋ 추가</b>로 청약 일정을 넣어보세요.</p></div>
-      </div>
-      <p class="note">청약일·상장일을 넣으면 오늘 기준으로 <b>청약중 · 상장 대기 · 상장</b> 상태가 자동으로 표시됩니다.</p>
     </div>
 
     <!-- ── 기록 ── -->
     <div class="block" id="ipo-rec">
+      <div class="card" style="margin-bottom:13px">
+        <h3><span class="dot"></span>공모주 기록 추가</h3>
+        <div class="field" style="margin-bottom:8px"><label>공모주 <span class="hint">검색하여 선택</span></label>
+          <input id="iprec_search" type="text" placeholder="종목명 검색 (예: 현대)" oninput="ipoRecSearch(this.value)" autocomplete="off"></div>
+        <div id="iprec_results" class="ipo-search-results"></div>
+        <div id="iprec_form" style="display:none">
+          <div class="ipo-selname" id="iprec_name">—</div>
+          <label class="ipo-flabel">주관사</label>
+          <div class="ipo-brokers" id="iprec_brokers"></div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+            <div class="field"><label>공모가 (원)</label><input id="iprec_price" type="text" inputmode="numeric" placeholder="공모가" oninput="commaInput(this);ipoRecCalc()"></div>
+            <div class="field"><label>수량 (주)</label><input id="iprec_qty" type="text" inputmode="numeric" placeholder="배정 주수" oninput="commaInput(this);ipoRecCalc()"></div>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+            <div class="field"><label>매도가 (원)</label><input id="iprec_sell" type="text" inputmode="numeric" placeholder="매도가를 입력하세요" oninput="commaInput(this);ipoRecCalc()"></div>
+            <div class="field"><label>수수료 (원)</label><input id="iprec_fee" type="text" inputmode="numeric" value="2,000" oninput="commaInput(this);ipoRecCalc()"></div>
+          </div>
+          <div class="field"><label>매도일</label><input id="iprec_date" type="date"></div>
+          <div class="ipo-pnlrow">
+            <span>손익금액 <b id="iprec_pnl">0원</b></span>
+            <span style="margin-left:auto">수익률 <b id="iprec_ret">0%</b></span>
+          </div>
+          <div style="display:flex;gap:8px;margin-top:12px">
+            <button class="fetchbtn" style="flex:1;background:var(--buy-bg);color:var(--buy);border-color:var(--buy-dim)" onclick="ipoRecSave()">저장</button>
+            <button class="ghostbtn" style="flex:1;margin:0" onclick="ipoRecReset()">취소</button>
+          </div>
+        </div>
+      </div>
+
       <div class="dash" style="background:linear-gradient(160deg,#221a3a,var(--panel));border-color:#40277a">
-        <div class="rowline" style="border:none;padding:0 0 6px"><span class="tlabel">누적 손익</span><span class="cnt" id="ipor_cnt">0건 참여</span></div>
+        <div class="rowline" style="border:none;padding:0 0 6px"><span class="tlabel">누적 손익</span><span class="cnt" id="ipor_cnt">0건</span></div>
         <div class="tval"><span class="big mono" id="ipor_pnl" style="font-size:32px">₩0</span><span class="of mono" id="ipor_pnlpct" style="font-size:16px">—</span></div>
-        <div class="note" id="ipor_note">배정 주수와 매도가(또는 현재가)를 넣으면 손익이 집계됩니다.</div>
+        <div class="note" id="ipor_note">종목을 선택하고 수량·매도가를 넣으면 손익이 집계됩니다.</div>
       </div>
       <div class="card"><h3><span class="dot"></span>성과 요약</h3>
         <div class="statgrid">
-          <div class="stat"><div class="sl">참여</div><div class="sv sm mono" id="ipor_join">0건</div></div>
-          <div class="stat"><div class="sl">배정 성공</div><div class="sv sm mono" id="ipor_win">0건</div></div>
+          <div class="stat"><div class="sl">기록 수</div><div class="sv sm mono" id="ipor_n">0건</div></div>
           <div class="stat"><div class="sl">총 투자금</div><div class="sv sm mono" id="ipor_inv" style="color:var(--vio)">₩0</div></div>
+          <div class="stat"><div class="sl">플러스</div><div class="sv sm mono" id="ipor_plus">0건</div></div>
         </div>
         <div class="statgrid" style="margin-top:10px">
-          <div class="stat"><div class="sl">플러스 마감</div><div class="sv sm mono" id="ipor_plus">0건</div></div>
           <div class="stat"><div class="sl">평균 수익률</div><div class="sv sm mono" id="ipor_avg">—</div></div>
+          <div class="stat"><div class="sl">총 수수료</div><div class="sv sm mono" id="ipor_feesum">₩0</div></div>
           <div class="stat"><div class="sl">현재 평가</div><div class="sv sm mono" id="ipor_eval">₩0</div></div>
         </div>
       </div>
@@ -577,27 +660,25 @@ document.addEventListener("click",function(e){ var m=document.getElementById("jk
         <button class="fetchbtn" style="padding:6px 12px" id="ipor_fetch" onclick="ipoFetchPrices()">🔄 현재가</button></h3>
         <div class="htable-wrap"><table class="htable" id="ipo_rec_tbl"></table></div>
         <p class="fetchnote" id="ipo_rec_note" style="margin-top:6px;color:var(--faint)"></p></div>
-      <p class="note">배정 주수가 입력된 공모주만 집계합니다. 매도 완료로 표시하면 실현손익, 아니면 현재가 기준 평가손익입니다. 상장 종목코드(6자리)를 넣으면 <b>🔄 현재가</b>로 시세를 불러옵니다.</p>
+      <p class="note">매도가가 없으면 상장 종목코드로 <b>🔄 현재가</b>를 불러와 평가손익을 냅니다. 손익 = 수량 × (매도·현재가 − 공모가) − 수수료.</p>
     </div>
 
     <!-- ── 설명 ── -->
     <div class="block" id="ipo-guide">
       <div class="card"><h3><span class="dot"></span>한 줄 요약</h3><p class="lead">공모주 청약은 <b>상장 전 회사 주식을 공모가에 미리 배정받는</b> 것입니다. 청약 시 증거금을 넣고, 배정 결과에 따라 주식을 받고 나머지는 환불받습니다.</p></div>
-      <div class="card"><h3><span class="dot"></span>흐름</h3>
-        <ol class="steps"><li><b>수요예측</b> — 기관이 참여해 공모가 확정</li><li><b>청약</b> — 증권사에서 원하는 주수를 청약, 증거금(보통 50%) 예치</li><li><b>배정·환불</b> — 균등·비례로 배정, 못 받은 증거금은 환불일에 반환</li><li><b>상장</b> — 상장일에 시장에서 거래 시작, 매도로 차익 실현</li></ol></div>
+      <div class="card"><h3><span class="dot"></span>이 페이지 쓰는 법</h3>
+        <ol class="steps"><li><b>일정</b>에서 🔄로 공모주 일정을 불러오고, 캘린더에서 종목을 눌러 정보를 봅니다</li><li>정보의 <b>청약 계산기로</b>를 누르면 공모가·경쟁률이 채워진 채 계산기로 이동합니다</li><li>청약 주수를 넣어 예상 배정·손익을 확인합니다</li><li>상장·매도 후 <b>기록</b>에서 종목을 검색해 수량·매도가를 넣으면 손익이 자동 계산됩니다</li></ol></div>
       <div class="card"><h3><span class="dot"></span>배정 방식</h3>
-        <ul class="clean"><li><b>균등배정</b> 일반 배정 물량의 절반을 최소단위 이상 청약한 모든 계좌에 똑같이 나눔. 계좌 수가 많으면 1인당 몇 주로 줄어듭니다.</li><li><b>비례배정</b> 나머지 절반을 청약 주수에 비례해 배정. <b>청약주수 ÷ 경쟁률</b>이 대략의 배정 주수입니다.</li></ul></div>
-      <div class="card"><h3><span class="dot"></span>증거금과 환불</h3>
-        <p class="note">청약 주수 × 공모가 × 증거금률(보통 50%)만큼을 청약일에 예치합니다. 배정받은 주식 대금을 뺀 나머지는 환불일에 돌려받습니다. 여러 계좌로 균등배정만 노리는 전략도 흔합니다.</p></div>
+        <ul class="clean"><li><b>균등배정</b> 일반 배정 물량의 절반을 최소단위 이상 청약한 모든 계좌에 똑같이 나눔.</li><li><b>비례배정</b> 나머지 절반을 청약 주수에 비례해 배정. <b>청약주수 ÷ 경쟁률</b>이 대략의 배정 주수입니다.</li></ul></div>
       <div class="card"><h3><span class="dot"></span>주의</h3>
-        <p class="note">상장일 주가는 공모가보다 낮을 수도 있습니다(공모가 하회). "따상"(시초가 2배 뒤 상한가) 같은 기대는 보장되지 않습니다. 수요예측 경쟁률·의무보유확약 비율·유통물량을 함께 살피세요. 이 계산기는 참고용이며 실제 배정·손익과 다를 수 있습니다.</p></div>
+        <p class="note">일정·공모가·경쟁률은 네이버 금융 자료를 불러온 참고값이며 실제와 다를 수 있습니다. 상장일 주가는 공모가보다 낮을 수도 있습니다. 모든 판단과 책임은 본인에게 있습니다.</p></div>
     </div>
 
 </div>
 
   <footer>
     <strong>JK 퀀트 — 공모주</strong>
-    <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며, 공모주 청약은 원금 손실 위험이 있습니다. 실제 배정·손익은 증권사·청약 결과에 따라 다릅니다.</div>
+    <div class="disc">일정·공모가·경쟁률은 네이버 금융 자료를 불러온 참고값이며 실제와 다를 수 있습니다. 개인 학습·기록용이며 투자 권유가 아닙니다.</div>
   </footer>
 
 <script type="module">
@@ -627,7 +708,7 @@ document.addEventListener("click",function(e){ var m=document.getElementById("jk
       try{
         const snap = await getDoc(doc(db,"users",user.uid));
         const remote = snap.exists() ? (snap.data()||{}).ipo : null;
-        if(remote && Array.isArray(remote.items) && typeof window.ipoOnRemote==="function") window.ipoOnRemote(remote);
+        if(remote && typeof window.ipoOnRemote==="function") window.ipoOnRemote(remote);
       }catch(e){ console.warn("ipo pull", e); }
     } else {
       if(btn){ btn.textContent="로그인"; btn.title=""; }
@@ -637,8 +718,8 @@ document.addEventListener("click",function(e){ var m=document.getElementById("jk
 </script>
 
 <script>
-/* ══════════ 공모주 (IPO 청약 계산기 · 일정 · 기록) — 독립 페이지 ══════════ */
-/* 저장: localStorage(항상) + Firestore users/{uid}.ipo (로그인 시 merge). 원화 전용. */
+/* ══════════ 공모주 (IPO 일정·계산기·기록) — 독립 페이지 ══════════ */
+/* 일정(feed)은 /api/ipo 자동 수집. 기록(records)은 localStorage + Firestore users/{uid}.ipo. 원화 전용. */
 const $=id=>document.getElementById(id);
 function uid(){return 's'+Date.now()+Math.floor(Math.random()*9999)}
 function unComma(s){ if(s==null)return ''; return String(s).replace(/,/g,'').replace(/[^0-9.]/g,'').replace(/(\..*)\./g,'$1'); }
@@ -650,51 +731,181 @@ function commaInput(el){
   el.value=decp!==undefined?fi+'.'+decp:fi;
 }
 function inputNum(id){ const el=$(id); if(!el)return 0; return +unComma(el.value)||0; }
+function ipoWon(v){ return '₩'+Math.round(+v||0).toLocaleString('en-US'); }
+function ipoWonS(v){ v=Math.round(+v||0); return (v>=0?'+':'−')+Math.abs(v).toLocaleString('en-US')+'원'; }
+function ipoEsc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function ipoIv(v){ return (v||v===0)?(+v).toLocaleString('en-US'):''; }
+function ipoDMD(s){ if(!s)return '—'; const p=String(s).split('-'); return p.length===3?`${+p[1]}.${+p[2]}`:s; }
+function todayStr(){ const d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
 
-let IPO={items:[]};
-let ipoEditId=null;
+let IPO={records:[],feed:[],feedUpdated:0};
+let ipoRecSel=null;                 // 기록 폼에서 선택한 종목
+let ipoCalY, ipoCalM;               // 캘린더 표시 연/월(0-based)
+let ipoSelDay=null;                 // 선택한 날짜(YYYY-MM-DD)
+const IPO_BROKERS=['한국투자증권','KB증권','삼성증권','미래에셋증권','NH투자증권','대신증권','신한투자증권','하나증권','키움증권','유진투자증권','IBK투자증권','하이투자증권','SK증권','대신증권'];
 
 /* ── 저장/복원 ── */
-function ipoLoadLocal(){ try{ const o=JSON.parse(localStorage.getItem('jkq_ipo')||'null'); if(o&&Array.isArray(o.items)) IPO=o; }catch(e){} }
-function ipoSaveLocal(){ try{ localStorage.setItem('jkq_ipo',JSON.stringify(IPO)); }catch(e){} }
+function ipoNorm(o){ // 옛 저장(items) 호환
+  if(o&&Array.isArray(o.records)) return {records:o.records};
+  if(o&&Array.isArray(o.items)) return {records:o.items.filter(x=>+x.allotQty>0||+x.qty>0).map(x=>({id:x.id||uid(),name:x.name||'',code:x.code||'',broker:x.underwriter||'',poPrice:+x.price||null,qty:+x.allotQty||+x.qty||null,sellPrice:+x.sellPrice||null,fee:+x.fee||0,sellDate:'',curPrice:+x.curPrice||null,created:x.created||Date.now()}))};
+  return {records:[]};
+}
+function ipoLoadLocal(){
+  try{ const o=JSON.parse(localStorage.getItem('jkq_ipo')||'null'); if(o){ IPO.records=ipoNorm(o).records; } }catch(e){}
+  try{ const f=JSON.parse(localStorage.getItem('jkq_ipo_feed')||'null'); if(f&&Array.isArray(f.feed)){ IPO.feed=f.feed; IPO.feedUpdated=f.feedUpdated||0; } }catch(e){}
+}
+function ipoSaveLocal(){
+  try{ localStorage.setItem('jkq_ipo',JSON.stringify({records:IPO.records})); }catch(e){}
+  try{ localStorage.setItem('jkq_ipo_feed',JSON.stringify({feed:IPO.feed,feedUpdated:IPO.feedUpdated})); }catch(e){}
+}
 function save(){
   ipoSaveLocal();
   const w=window.ipoFb;
-  if(w&&w.uid){ try{ w.setDoc(w.doc(w.db,'users',w.uid),{ipo:IPO},{merge:true}); }catch(e){ console.warn('ipo push',e); } }
+  if(w&&w.uid){ try{ w.setDoc(w.doc(w.db,'users',w.uid),{ipo:{records:IPO.records}},{merge:true}); }catch(e){ console.warn('ipo push',e); } }
 }
-// Firebase 모듈이 로그인 상태를 알려주면 호출된다
 window.ipoOnRemote=function(remote){
-  if(remote&&Array.isArray(remote.items)){ IPO=remote; ipoSaveLocal(); ipoRenderAll(); }
+  const n=ipoNorm(remote);
+  if(n.records.length || (remote&&(Array.isArray(remote.records)||Array.isArray(remote.items)))){ IPO.records=n.records; ipoSaveLocal(); ipoRenderRec(); }
 };
 
-function ipoItems(){ return Array.isArray(IPO.items)?IPO.items:[]; }
-function ipoWon(v){ return '₩'+Math.round(+v||0).toLocaleString('en-US'); }
-function ipoEsc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
-function ipoIv(v){ return (v||v===0)?(+v).toLocaleString('en-US'):''; }
-function ipoDateShort(s){ if(!s)return '—'; const p=String(s).split('-'); return p.length===3?`${+p[1]}.${+p[2]}`:s; }
+/* ── 일정 자동 수집 ── */
+async function ipoFetchFeed(force){
+  const note=$('ipo_feed_note'), btn=$('ipo_feed_btn');
+  const fresh = IPO.feedUpdated && (Date.now()-IPO.feedUpdated < 6*3600*1000);
+  if(!force && fresh && IPO.feed.length){ return; }
+  if(btn){ btn.disabled=true; btn.textContent='…'; }
+  if(note) note.textContent='공모주 일정을 불러오는 중…';
+  try{
+    const r=await fetch('/api/ipo',{headers:{'Accept':'application/json'}});
+    const j=await r.json();
+    if(j&&Array.isArray(j.items)&&j.items.length){
+      IPO.feed=j.items; IPO.feedUpdated=Date.now(); ipoSaveLocal();
+      if(note) note.textContent=`${j.items.length}개 공모주 · ${new Date().toLocaleString('ko-KR',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'})} 기준`;
+    }else{
+      if(note) note.textContent='일정을 불러오지 못했습니다. 잠시 후 다시 시도하세요.';
+    }
+  }catch(e){ if(note) note.textContent='일정을 불러오지 못했습니다(네트워크).'; }
+  if(btn){ btn.disabled=false; btn.textContent='🔄'; }
+  ipoRenderCal();
+}
 
-/* 배정·손익 코어 계산 (계산기 탭과 항목 공용) */
+/* ── 캘린더 ── */
+function ipoEventMap(){ // dateStr → {sub:[i...], list:[i...]}
+  const map={};
+  IPO.feed.forEach((it,i)=>{
+    if(it.subStart&&it.subEnd){ let d=new Date(it.subStart+'T00:00:00'), end=new Date(it.subEnd+'T00:00:00');
+      for(let k=0;k<20 && d<=end;k++){ const s=d.toISOString().slice(0,10); (map[s]=map[s]||{sub:[],list:[]}).sub.push(i); d.setDate(d.getDate()+1); } }
+    else if(it.subStart){ const s=it.subStart; (map[s]=map[s]||{sub:[],list:[]}).sub.push(i); }
+    if(it.listDate){ (map[it.listDate]=map[it.listDate]||{sub:[],list:[]}).list.push(i); }
+  });
+  return map;
+}
+function ipoCalMove(delta){ ipoCalM+=delta; if(ipoCalM<0){ipoCalM=11;ipoCalY--;} if(ipoCalM>11){ipoCalM=0;ipoCalY++;} ipoSelDay=null; ipoRenderCal(); }
+function ipoRenderCal(){
+  const grid=$('ipo_cal_grid'); if(!grid)return;
+  if(ipoCalY==null){ const t=new Date(); ipoCalY=t.getFullYear(); ipoCalM=t.getMonth(); }
+  $('ipo_cal_title').textContent=`${ipoCalY}.${String(ipoCalM+1).padStart(2,'0')}`;
+  const map=ipoEventMap();
+  const first=new Date(ipoCalY,ipoCalM,1), startDow=first.getDay();
+  const daysInMonth=new Date(ipoCalY,ipoCalM+1,0).getDate();
+  const today=todayStr();
+  let html='<div class="ipo-cal-wk">'+['일','월','화','수','목','금','토'].map((d,i)=>`<div class="ipo-cal-wd${i===0?' sun':i===6?' sat':''}">${d}</div>`).join('')+'</div><div class="ipo-cal-days">';
+  for(let i=0;i<startDow;i++) html+='<div class="ipo-cal-cell empty"></div>';
+  for(let d=1;d<=daysInMonth;d++){
+    const ds=`${ipoCalY}-${String(ipoCalM+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const ev=map[ds]; const dow=new Date(ipoCalY,ipoCalM,d).getDay();
+    const sel=ds===ipoSelDay?' sel':''; const tod=ds===today?' today':'';
+    let dots='';
+    if(ev){ if(ev.sub.length)dots+='<i class="ipo-dot sub"></i>'; if(ev.list.length)dots+='<i class="ipo-dot list"></i>'; }
+    html+=`<div class="ipo-cal-cell${sel}${tod}${ev?' has':''}" ${ev?`onclick="ipoSelectDay('${ds}')"`:''}><span class="dnum${dow===0?' sun':dow===6?' sat':''}">${d}</span><span class="ipo-dots">${dots}</span></div>`;
+  }
+  html+='</div>';
+  grid.innerHTML=html;
+  ipoRenderDayPanel();
+  ipoRenderMonthList();
+}
+function ipoSelectDay(ds){ ipoSelDay=(ipoSelDay===ds?null:ds); ipoRenderCal(); if(ipoSelDay){ const p=$('ipo_day_panel'); if(p) p.scrollIntoView({behavior:'smooth',block:'nearest'}); } }
+function ipoRenderDayPanel(){
+  const p=$('ipo_day_panel'); if(!p)return;
+  if(!ipoSelDay){ p.innerHTML=''; return; }
+  const map=ipoEventMap(), ev=map[ipoSelDay];
+  if(!ev){ p.innerHTML=''; return; }
+  const seen=new Set(); const idxs=[...ev.sub,...ev.list].filter(i=>{ if(seen.has(i))return false; seen.add(i); return true; });
+  let rows=idxs.map(i=>{ const it=IPO.feed[i]; const kind=ev.list.includes(i)&&!ev.sub.includes(i)?'상장':(ev.sub.includes(i)?'청약':'상장');
+    return `<div class="ipo-row" onclick="ipoShowDetail(${i})"><span class="bandpill ${kind==='청약'?'in':'under'}" style="font-size:10px">${kind}</span><span class="ipo-row-nm">${ipoEsc(it.name)}</span><span class="ipo-row-pr">${it.poPrice?ipoWon(it.poPrice):(it.bandLo?ipoWon(it.bandLo)+'~':'—')}</span></div>`;
+  }).join('');
+  p.innerHTML=`<div class="card" style="margin-bottom:13px"><h3><span class="dot"></span>${ipoDMD(ipoSelDay)} 공모주</h3>${rows}<div id="ipo_detail"></div></div>`;
+}
+function ipoRenderMonthList(){
+  const wrap=$('ipo_month_list'); if(!wrap)return;
+  const ym=`${ipoCalY}-${String(ipoCalM+1).padStart(2,'0')}`;
+  const list=IPO.feed.map((it,i)=>({it,i})).filter(({it})=>(it.subStart||'').slice(0,7)===ym||(it.subEnd||'').slice(0,7)===ym||(it.listDate||'').slice(0,7)===ym)
+    .sort((a,b)=>((a.it.subStart||a.it.listDate||'9999')).localeCompare(b.it.subStart||b.it.listDate||'9999'));
+  $('ipo_month_cnt').textContent=list.length?`${list.length}건`:'';
+  if(!list.length){ wrap.innerHTML='<p class="note">이달 공모주가 없습니다. 다른 달을 보거나 🔄로 새로고침하세요.</p>'; return; }
+  wrap.innerHTML=list.map(({it,i})=>`<div class="ipo-row" onclick="ipoShowDetail(${i})">
+    <span class="ipo-row-date">${ipoDMD(it.subStart)}~${ipoDMD(it.subEnd)}</span>
+    <span class="ipo-row-nm">${ipoEsc(it.name)}<span class="ipo-row-sub">${it.status?ipoEsc(it.status):''}${it.leadManager?' · '+ipoEsc(it.leadManager):''}</span></span>
+    <span class="ipo-row-pr">${it.poPrice?ipoWon(it.poPrice):(it.bandLo?ipoWon(it.bandLo)+'~'+(it.bandHi?ipoWon(it.bandHi).slice(1):''):'미정')}</span>
+  </div>`).join('');
+}
+function ipoShowDetail(i){
+  const it=IPO.feed[i]; if(!it)return;
+  const band=it.bandLo?`${ipoWon(it.bandLo)}~${it.bandHi?ipoWon(it.bandHi).slice(1):''}`:'—';
+  const rows=[
+    ['확정 공모가', it.poPrice?ipoWon(it.poPrice):'미정'],
+    ['희망 밴드', band],
+    ['청약 기간', it.subStart?`${ipoDMD(it.subStart)} ~ ${ipoDMD(it.subEnd)}`:'—'],
+    ['상장(예정)일', it.listDate?ipoDMD(it.listDate):'—'],
+    ['주간사', it.leadManager||'—'],
+    ['시장', it.market||'—'],
+    ['기관 경쟁률', it.instRate?it.instRate.toLocaleString('en-US')+':1':'—'],
+    ['청약 경쟁률', it.subRate?it.subRate.toLocaleString('en-US')+':1':'—'],
+    ['상태', it.status||'—'],
+  ].map(([k,v])=>`<div class="ar"><span class="ak">${k}</span><span class="av">${v}</span></div>`).join('');
+  const box=$('ipo_detail');
+  const html=`<div class="ipo-detail-card"><div class="ipo-detail-nm">${ipoEsc(it.name)}</div>${rows}
+    <div style="display:flex;gap:8px;margin-top:12px">
+      <button class="fetchbtn" style="flex:1" onclick="ipoToCalc(${i})">청약 계산기로</button>
+      <button class="ghostbtn" style="flex:1;margin:0" onclick="ipoToRecord(${i})">기록에 추가</button>
+    </div></div>`;
+  if(box){ box.innerHTML=html; box.scrollIntoView({behavior:'smooth',block:'nearest'}); }
+  else { // 월간 리스트에서 눌렀을 때는 일정 패널이 없을 수 있다 → 임시 모달 대신 계산기로 바로 안내
+    ipoSelDay=it.subStart||it.listDate||ipoSelDay; ipoRenderCal(); setTimeout(()=>{ const b=$('ipo_detail'); if(b){ b.innerHTML=html; b.scrollIntoView({behavior:'smooth',block:'nearest'}); } },30);
+  }
+}
+
+/* ── 계산기 프리필 ── */
+function ipoToCalc(i){
+  const it=IPO.feed[i]; if(!it)return;
+  ipoGoBlk('ipo-calc');
+  const price=it.poPrice||(it.bandLo&&it.bandHi?Math.round((it.bandLo+it.bandHi)/2):it.bandLo||'');
+  $('ipoc_price').value=price?(+price).toLocaleString('en-US'):'';
+  $('ipoc_prop').value=(it.subRate||it.instRate)?(+(it.subRate||it.instRate)).toLocaleString('en-US'):'';
+  $('ipoc_dep').value='50'; $('ipoc_fee').value='2,000';
+  $('ipoc_qty').value=''; $('ipoc_equal').value=''; $('ipoc_subs').value=''; $('ipoc_list').value='';
+  const ctx=$('ipoc_ctx');
+  ctx.style.display=''; ctx.innerHTML=`<b>${ipoEsc(it.name)}</b> · 공모가 ${it.poPrice?ipoWon(it.poPrice):'미정'} · ${it.leadManager||''} <span style="color:var(--faint)">값이 채워졌습니다. 청약 주수를 넣어보세요.</span>`;
+  ipoCalc();
+}
+
+/* ── 배정·손익 코어 계산 ── */
 function ipoCalcCore(v){
   const price=+v.price||0, qty=Math.floor(+v.qty||0), dep=+v.dep||0, fee=+v.fee||0;
   const equal=+v.equal||0, subs=+v.subs||0, prop=+v.prop||0, listPrice=+v.listPrice||0;
   const deposit=Math.round(price*qty*dep/100);
   let eq=(equal>0&&subs>0)?Math.floor(equal/subs):0;
   let pr=(prop>0)?Math.round(qty/prop):0;
-  if(qty>0){ eq=Math.min(eq,qty); pr=Math.min(pr,Math.max(0,qty-eq)); }   // 배정은 청약주수를 못 넘는다
-  const alloc=eq+pr;
-  const allocAmt=alloc*price;
-  const refund=Math.max(0,deposit-allocAmt);
+  if(qty>0){ eq=Math.min(eq,qty); pr=Math.min(pr,Math.max(0,qty-eq)); }
+  const alloc=eq+pr, allocAmt=alloc*price, refund=Math.max(0,deposit-allocAmt);
   const profit=listPrice>0?(alloc*(listPrice-price)-fee):0;
   const ret=(deposit>0&&listPrice>0)?profit/deposit*100:null;
   return {price,qty,dep,fee,equal,subs,prop,listPrice,deposit,eq,pr,alloc,allocAmt,refund,profit,ret};
 }
-
-/* ── 계산기 탭 ── */
 function ipoCalc(){
-  const v={ price:inputNum('ipoc_price'), qty:inputNum('ipoc_qty'), dep:inputNum('ipoc_dep'),
+  const c=ipoCalcCore({ price:inputNum('ipoc_price'), qty:inputNum('ipoc_qty'), dep:inputNum('ipoc_dep'),
     fee:inputNum('ipoc_fee'), equal:inputNum('ipoc_equal'), subs:inputNum('ipoc_subs'),
-    prop:inputNum('ipoc_prop'), listPrice:inputNum('ipoc_list') };
-  const c=ipoCalcCore(v);
+    prop:inputNum('ipoc_prop'), listPrice:inputNum('ipoc_list') });
   $('ipoc_deposit').textContent=ipoWon(c.deposit);
   $('ipoc_eq').textContent=c.eq.toLocaleString('en-US')+'주';
   $('ipoc_pr').textContent=c.pr.toLocaleString('en-US')+'주';
@@ -705,244 +916,131 @@ function ipoCalc(){
   if(c.listPrice>0){ pf.textContent=(c.profit>=0?'+':'−')+ipoWon(Math.abs(c.profit)); pf.style.color=c.profit>=0?'var(--buy)':'var(--sell)'; }
   else{ pf.textContent='—'; pf.style.color=''; }
   const rt=$('ipoc_ret'), pill=$('ipoc_retpill');
-  if(c.ret!=null){ const s=(c.ret>=0?'+':'')+c.ret.toFixed(2)+'%'; rt.textContent=s; rt.style.color=c.ret>=0?'var(--buy)':'var(--sell)';
-    pill.textContent=s; pill.className='bandpill '+(c.ret>=0?'in':'over'); }
+  if(c.ret!=null){ const s=(c.ret>=0?'+':'')+c.ret.toFixed(2)+'%'; rt.textContent=s; rt.style.color=c.ret>=0?'var(--buy)':'var(--sell)'; pill.textContent=s; pill.className='bandpill '+(c.ret>=0?'in':'over'); }
   else{ rt.textContent='—'; rt.style.color=''; pill.textContent='—'; pill.className='bandpill in'; }
 }
-function ipoAddFromCalc(){
-  const o=ipoNewItem();
-  o.price=inputNum('ipoc_price')||null; o.qty=inputNum('ipoc_qty')||null;
-  o.dep=inputNum('ipoc_dep')||50; o.fee=inputNum('ipoc_fee')||0;
-  o.equal=inputNum('ipoc_equal')||null; o.subs=inputNum('ipoc_subs')||null;
-  o.prop=inputNum('ipoc_prop')||null; o.listPrice=inputNum('ipoc_list')||null;
-  const nm=prompt('공모주 종목명을 입력하세요','');
-  if(nm===null){ return; }        // 취소
-  o.name=nm.trim()||'새 공모주';
-  IPO.items.push(o); save();
-  ipoGoBlk('ipo-cal'); ipoEditId=o.id; ipoRenderCal();
-}
 
-/* ── 항목 CRUD ── */
-function ipoNewItem(){ return { id:uid(), name:'', code:'', price:null, qty:null, dep:50, fee:2000,
-  equal:null, subs:null, prop:null, listPrice:null, allotQty:null, sellPrice:null, curPrice:null,
-  sold:false, subStart:'', subEnd:'', refundDate:'', listDate:'', underwriter:'', memo:'', created:Date.now() }; }
-function ipoNew(){ const o=ipoNewItem(); IPO.items.push(o); save(); ipoEditId=o.id; ipoRenderCal(); }
-function ipoEditOpen(id){ ipoEditId=id; ipoRenderCal(); }
-function ipoDelete(id){
-  const o=ipoItems().find(x=>x.id===id); if(!o)return;
-  if(!confirm(`'${o.name||'이 공모주'}' 기록을 삭제할까요?`))return;
-  IPO.items=ipoItems().filter(x=>x.id!==id); if(ipoEditId===id)ipoEditId=null;
-  save(); ipoRenderCal(); ipoRenderRec();
+/* ── 기록 폼 ── */
+function ipoRecSearch(q){
+  const box=$('iprec_results'); if(!box)return; q=(q||'').trim();
+  if(!q){ box.innerHTML=''; box.style.display='none'; return; }
+  const ql=q.toLowerCase();
+  const hits=IPO.feed.map((it,i)=>({it,i})).filter(({it})=>it.name.toLowerCase().includes(ql)).slice(0,8);
+  let html=hits.map(({it,i})=>`<div class="ipo-sr" onclick="ipoRecPick(${i})">${ipoEsc(it.name)}<span class="ipo-sr-pr">${it.poPrice?ipoWon(it.poPrice):(it.status||'')}</span></div>`).join('');
+  html+=`<div class="ipo-sr free" onclick="ipoRecPickFree()">'${ipoEsc(q)}' 직접 입력</div>`;
+  box.innerHTML=html; box.style.display='';
 }
-function ipoSaveForm(id){
-  const o=ipoItems().find(x=>x.id===id); if(!o)return;
-  o.name=($('ipf_name').value||'').trim()||'새 공모주';
-  o.code=($('ipf_code').value||'').trim().replace(/[^0-9A-Za-z]/g,'');
-  o.price=inputNum('ipf_price')||null;
-  o.qty=inputNum('ipf_qty')||null;
-  o.dep=inputNum('ipf_dep')||50;
-  o.fee=inputNum('ipf_fee')||0;
-  o.equal=inputNum('ipf_equal')||null;
-  o.subs=inputNum('ipf_subs')||null;
-  o.prop=inputNum('ipf_prop')||null;
-  o.listPrice=inputNum('ipf_listprice')||null;
-  o.subStart=$('ipf_substart').value||'';
-  o.subEnd=$('ipf_subend').value||'';
-  o.refundDate=$('ipf_refund').value||'';
-  o.listDate=$('ipf_list').value||'';
-  o.underwriter=($('ipf_uw').value||'').trim();
-  o.allotQty=inputNum('ipf_allot')||null;
-  o.sellPrice=inputNum('ipf_sell')||null;
-  o.sold=!!$('ipf_sold').checked;
-  o.memo=($('ipf_memo').value||'').trim();
-  ipoEditId=null; save(); ipoRenderCal(); ipoRenderRec();
+function ipoRecPick(i){ const it=IPO.feed[i]; ipoRecSel={name:it.name,code:it.code||'',poPrice:it.poPrice||null,broker:it.leadManager||''}; ipoRecFill(); }
+function ipoRecPickFree(){ const q=($('iprec_search').value||'').trim()||'직접 입력'; ipoRecSel={name:q,code:'',poPrice:null,broker:''}; ipoRecFill(); }
+function ipoRecFill(){
+  $('iprec_results').style.display='none';
+  $('iprec_form').style.display='';
+  $('iprec_name').textContent=ipoRecSel.name;
+  $('iprec_price').value=ipoRecSel.poPrice?(+ipoRecSel.poPrice).toLocaleString('en-US'):'';
+  $('iprec_qty').value=''; $('iprec_sell').value=''; $('iprec_fee').value='2,000';
+  $('iprec_date').value=todayStr();
+  ipoRenderBrokers();
+  ipoRecCalc();
 }
-function ipoCancelForm(id){
-  const o=ipoItems().find(x=>x.id===id);
-  if(o && !o.name && o.price==null && o.qty==null && !o.subEnd && !o.listDate){
-    IPO.items=ipoItems().filter(x=>x.id!==id);
-  }
-  ipoEditId=null; save(); ipoRenderCal();
+function ipoRenderBrokers(){
+  const wrap=$('iprec_brokers'); if(!wrap)return;
+  const uniq=[...new Set(IPO_BROKERS)];
+  if(ipoRecSel.broker && !uniq.includes(ipoRecSel.broker)) uniq.unshift(ipoRecSel.broker);
+  wrap.innerHTML=uniq.map(b=>{ const on=b===ipoRecSel.broker; const init=b.replace(/증권|투자|금융/g,'').slice(0,2)||b.slice(0,2);
+    return `<button type="button" class="ipo-broker${on?' on':''}" onclick="ipoRecBroker('${ipoEsc(b)}')"><span class="ipo-broker-c">${ipoEsc(init)}</span><span class="ipo-broker-n">${ipoEsc(b)}</span></button>`;
+  }).join('');
 }
+function ipoRecBroker(b){ if(ipoRecSel){ ipoRecSel.broker=b; ipoRenderBrokers(); } }
+function ipoRecCalc(){
+  const poPrice=inputNum('iprec_price'), qty=inputNum('iprec_qty'), sell=inputNum('iprec_sell'), fee=inputNum('iprec_fee');
+  const pnlEl=$('iprec_pnl'), retEl=$('iprec_ret');
+  if(qty>0 && sell>0 && poPrice>0){
+    const pnl=qty*(sell-poPrice)-fee, ret=pnl/(qty*poPrice)*100;
+    pnlEl.textContent=ipoWonS(pnl); pnlEl.style.color=pnl>=0?'var(--buy)':'var(--sell)';
+    retEl.textContent=(ret>=0?'+':'')+ret.toFixed(1)+'%'; retEl.style.color=ret>=0?'var(--buy)':'var(--sell)';
+  }else{ pnlEl.textContent='0원'; pnlEl.style.color=''; retEl.textContent='0%'; retEl.style.color=''; }
+}
+function ipoRecSave(){
+  if(!ipoRecSel){ return; }
+  const rec={ id:uid(), name:ipoRecSel.name, code:(ipoRecSel.code||'').replace(/[^0-9A-Za-z]/g,''), broker:ipoRecSel.broker||'',
+    poPrice:inputNum('iprec_price')||null, qty:inputNum('iprec_qty')||null, sellPrice:inputNum('iprec_sell')||null,
+    fee:inputNum('iprec_fee')||0, sellDate:$('iprec_date').value||'', curPrice:null, created:Date.now() };
+  if(!rec.qty){ alert('수량을 입력하세요.'); return; }
+  IPO.records.push(rec); save(); ipoRecReset(); ipoRenderRec();
+}
+function ipoRecReset(){ ipoRecSel=null; const s=$('iprec_search'); if(s)s.value=''; $('iprec_results').style.display='none'; $('iprec_form').style.display='none'; }
+function ipoDelRec(id){ const r=IPO.records.find(x=>x.id===id); if(!r)return; if(!confirm(`'${r.name}' 기록을 삭제할까요?`))return; IPO.records=IPO.records.filter(x=>x.id!==id); save(); ipoRenderRec(); }
 
-/* ── 상태 판정 ── */
-function ipoStatus(o){
-  const today=new Date(); today.setHours(0,0,0,0);
-  const d=s=>s?new Date(s+'T00:00:00'):null;
-  const ss=d(o.subStart), se=d(o.subEnd), ld=d(o.listDate);
-  if(o.sold) return {k:'완료',cls:''};
-  if(ld && today>=ld) return {k:'상장',cls:'under'};
-  if(se && today>se) return {k:'배정·상장 대기',cls:'wait'};
-  if(ss && se && today>=ss && today<=se) return {k:'청약중',cls:'in'};
-  if(ss && today<ss) return {k:'청약 예정',cls:'wait'};
-  if(se && today<=se) return {k:'청약 예정',cls:'wait'};
-  return {k:'예정',cls:'wait'};
-}
-function ipoSortKey(o){
-  const cand=[o.subStart,o.subEnd,o.listDate].filter(Boolean).sort();
-  return cand[0] || '9999-12-31';
-}
-
-/* ── 편집 폼 HTML (id는 리터럴로) ── */
-function ipoFormHtml(o){
-  return `<div class="card" style="border-color:#40277a;background:linear-gradient(160deg,#1c1730,var(--panel))">
-    <h3><span class="dot"></span>공모주 편집</h3>
-    <div class="field"><label>종목명</label><input id="ipf_name" type="text" value="${ipoEsc(o.name)}" placeholder="예: OO바이오"></div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-      <div class="field"><label>확정 공모가 (₩)</label><input id="ipf_price" type="text" inputmode="numeric" value="${ipoIv(o.price)}" placeholder="예: 30,000" oninput="commaInput(this)"></div>
-      <div class="field"><label>상장 종목코드 <span class="hint">6자리, 선택</span></label><input id="ipf_code" type="text" inputmode="numeric" value="${ipoEsc(o.code)}" placeholder="예: 123450"></div>
-    </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-      <div class="field"><label>청약 주수</label><input id="ipf_qty" type="text" inputmode="decimal" value="${ipoIv(o.qty)}" placeholder="예: 1,000" oninput="commaInput(this)"></div>
-      <div class="field"><label>증거금률 (%)</label><input id="ipf_dep" type="text" inputmode="decimal" value="${ipoIv(o.dep)}" placeholder="50" oninput="commaInput(this)"></div>
-    </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-      <div class="field"><label>균등물량 (주)</label><input id="ipf_equal" type="text" inputmode="decimal" value="${ipoIv(o.equal)}" placeholder="" oninput="commaInput(this)"></div>
-      <div class="field"><label>청약 건수</label><input id="ipf_subs" type="text" inputmode="decimal" value="${ipoIv(o.subs)}" placeholder="" oninput="commaInput(this)"></div>
-    </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-      <div class="field"><label>비례 경쟁률</label><input id="ipf_prop" type="text" inputmode="decimal" value="${ipoIv(o.prop)}" placeholder="예: 1,200" oninput="commaInput(this)"></div>
-      <div class="field"><label>청약수수료 (₩)</label><input id="ipf_fee" type="text" inputmode="numeric" value="${ipoIv(o.fee)}" placeholder="2,000" oninput="commaInput(this)"></div>
-    </div>
-    <h4 style="font-size:12px;color:var(--faint);margin:14px 0 6px">일정</h4>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-      <div class="field"><label>청약 시작</label><input id="ipf_substart" type="date" value="${o.subStart||''}"></div>
-      <div class="field"><label>청약 종료</label><input id="ipf_subend" type="date" value="${o.subEnd||''}"></div>
-    </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-      <div class="field"><label>환불일</label><input id="ipf_refund" type="date" value="${o.refundDate||''}"></div>
-      <div class="field"><label>상장일</label><input id="ipf_list" type="date" value="${o.listDate||''}"></div>
-    </div>
-    <div class="field"><label>주간사 <span class="hint">선택</span></label><input id="ipf_uw" type="text" value="${ipoEsc(o.underwriter)}" placeholder="예: 한국투자증권"></div>
-    <h4 style="font-size:12px;color:var(--faint);margin:14px 0 6px">배정·손익 (확정 후 입력)</h4>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-      <div class="field"><label>배정 주수</label><input id="ipf_allot" type="text" inputmode="decimal" value="${ipoIv(o.allotQty)}" placeholder="" oninput="commaInput(this)"></div>
-      <div class="field"><label>매도가·현재가 (₩)</label><input id="ipf_sell" type="text" inputmode="numeric" value="${ipoIv(o.sellPrice)}" placeholder="" oninput="commaInput(this)"></div>
-    </div>
-    <div class="field"><label>예상 상장가 (₩)</label><input id="ipf_listprice" type="text" inputmode="numeric" value="${ipoIv(o.listPrice)}" placeholder="예상 손익용" oninput="commaInput(this)"></div>
-    <label class="chkrow" style="display:flex;align-items:center;gap:8px;margin:8px 0;font-size:13px;cursor:pointer"><input id="ipf_sold" type="checkbox" ${o.sold?'checked':''}> 매도 완료(실현손익으로 집계)</label>
-    <div class="field"><label>메모</label><input id="ipf_memo" type="text" value="${ipoEsc(o.memo)}" placeholder=""></div>
-    <div style="display:flex;gap:8px;margin-top:12px">
-      <button class="fetchbtn" style="flex:1;background:var(--buy-bg);color:var(--buy);border-color:var(--buy-dim)" onclick="ipoSaveForm('${o.id}')">저장</button>
-      <button class="ghostbtn" style="flex:1;margin:0" onclick="ipoCancelForm('${o.id}')">취소</button>
-    </div>
-  </div>`;
-}
-
-/* ── 일정 목록 렌더 ── */
-function ipoRenderCal(){
-  const wrap=$('ipo_cal_list'); if(!wrap)return;
-  const items=ipoItems().slice().sort((a,b)=>ipoSortKey(a).localeCompare(ipoSortKey(b)));
-  if(!items.length){ wrap.innerHTML='<p class="note">아직 등록한 공모주가 없습니다. <b>＋ 추가</b>로 청약 일정을 넣어보세요.</p>'; return; }
-  let html='';
-  items.forEach(o=>{
-    if(o.id===ipoEditId){ html+=ipoFormHtml(o); return; }
-    const st=ipoStatus(o);
-    const c=ipoCalcCore({price:o.price,qty:o.qty,dep:o.dep,fee:o.fee,equal:o.equal,subs:o.subs,prop:o.prop,listPrice:o.listPrice});
-    const priceLbl=o.price?ipoWon(o.price):'공모가 미정';
-    let dateLine='';
-    if(o.subStart||o.subEnd) dateLine+=`청약 ${ipoDateShort(o.subStart)}~${ipoDateShort(o.subEnd)}`;
-    if(o.listDate) dateLine+=(dateLine?' · ':'')+`상장 ${ipoDateShort(o.listDate)}`;
-    if(!dateLine) dateLine='일정 미정';
-    let sub='';
-    if(o.qty) sub+=`청약 ${(+o.qty).toLocaleString('en-US')}주`;
-    if(o.prop) sub+=(sub?' · ':'')+`경쟁률 ${(+o.prop).toLocaleString('en-US')}:1`;
-    if(c.deposit>0) sub+=(sub?' · ':'')+`증거금 ${ipoWon(c.deposit)}`;
-    if(c.alloc>0) sub+=(sub?' · ':'')+`예상배정 ${c.alloc}주`;
-    html+=`<div class="card" style="margin-bottom:10px;padding:12px">
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">
-        <div style="min-width:0">
-          <div style="font-weight:800;font-size:14px">${ipoEsc(o.name||'새 공모주')}</div>
-          <div style="font-size:11px;color:var(--faint);margin-top:2px">${priceLbl} · ${dateLine}</div>
-        </div>
-        <span class="bandpill ${st.cls}">${st.k}</span>
-      </div>
-      ${sub?`<div style="font-size:11px;color:var(--dim);margin-top:8px;font-variant-numeric:tabular-nums">${sub}</div>`:''}
-      ${o.memo?`<div style="font-size:11px;color:var(--faint);margin-top:6px">📝 ${ipoEsc(o.memo)}</div>`:''}
-      <div style="display:flex;gap:8px;margin-top:10px">
-        <button class="ghostbtn" style="flex:1;margin:0;padding:7px" onclick="ipoEditOpen('${o.id}')">편집</button>
-        <button class="ghostbtn" style="flex:1;margin:0;padding:7px" onclick="ipoDelete('${o.id}')">삭제</button>
-      </div>
-    </div>`;
-  });
-  wrap.innerHTML=html;
-}
-
-/* ── 기록·성과 렌더 ── */
+/* ── 기록 목록·성과 ── */
 function ipoRenderRec(){
-  const items=ipoItems();
-  const join=items.filter(o=>(+o.qty>0)||(+o.allotQty>0));
-  const allotted=items.filter(o=>+o.allotQty>0);
-  let totalInv=0, realizedPnl=0, evalNow=0, plusN=0, retSum=0, retN=0;
-  const rows=[];
-  allotted.forEach(o=>{
-    const price=+o.price||0, aq=+o.allotQty||0, fee=+o.fee||0;
-    const basis=aq*price; totalInv+=basis;
-    const exit=o.sold?(+o.sellPrice||0):(+o.sellPrice||+o.curPrice||0);
+  const recs=IPO.records;
+  let totalInv=0, realizedPnl=0, evalNow=0, plusN=0, retSum=0, retN=0, feeSum=0;
+  const rows=recs.map(r=>{
+    const poPrice=+r.poPrice||0, qty=+r.qty||0, fee=+r.fee||0; feeSum+=fee;
+    const basis=qty*poPrice; totalInv+=basis;
+    const exit=(+r.sellPrice>0)?+r.sellPrice:(+r.curPrice>0?+r.curPrice:0);
     let pnl=null, ret=null;
-    if(exit>0){ pnl=aq*(exit-price)-fee; ret=basis>0?pnl/basis*100:null;
-      realizedPnl+=pnl; if(!o.sold){ evalNow+=aq*exit; }
-      if(pnl>0)plusN++; if(ret!=null){retSum+=ret;retN++;}
-    } else if(!o.sold){ evalNow+=basis; }
+    if(exit>0&&poPrice>0){ pnl=qty*(exit-poPrice)-fee; ret=basis>0?pnl/basis*100:null; realizedPnl+=pnl;
+      if(+r.sellPrice>0){} else evalNow+=qty*exit;
+      if(pnl>0)plusN++; if(ret!=null){retSum+=ret;retN++;} }
+    else if(!(+r.sellPrice>0)) evalNow+=basis;
     const exitTxt=exit>0?ipoWon(exit):'—';
-    const pnlTxt=pnl==null?'—':`<span style="color:${pnl>=0?'var(--buy)':'var(--sell)'}">${pnl>=0?'+':'−'}₩${ipoWon(Math.abs(pnl)).slice(1)}</span>`;
+    const pnlTxt=pnl==null?'—':`<span style="color:${pnl>=0?'var(--buy)':'var(--sell)'}">${pnl>=0?'+':'−'}₩${Math.abs(Math.round(pnl)).toLocaleString('en-US')}</span>`;
     const retTxt=ret==null?'—':`<span style="color:${ret>=0?'var(--buy)':'var(--sell)'}">${ret>=0?'+':''}${ret.toFixed(1)}%</span>`;
-    rows.push(`<tr><td>${ipoEsc(o.name||'—')}${o.sold?' <span style="color:var(--faint);font-size:10px">완료</span>':''}</td><td>${aq}주</td><td>${ipoWon(price)}</td><td>${exitTxt}</td><td>${pnlTxt}</td><td>${retTxt}</td></tr>`);
+    const sold=+r.sellPrice>0?' <span style="color:var(--faint);font-size:10px">매도</span>':'';
+    return `<tr><td>${ipoEsc(r.name)}${sold}</td><td>${qty.toLocaleString('en-US')}주</td><td>${poPrice?ipoWon(poPrice):'—'}</td><td>${exitTxt}</td><td>${pnlTxt}</td><td>${retTxt}</td><td><span class="ipo-del" onclick="ipoDelRec('${r.id}')">✕</span></td></tr>`;
   });
-  $('ipor_cnt').textContent=`${join.length}건 참여`;
-  const pnlEl=$('ipor_pnl');
-  pnlEl.textContent=(realizedPnl>=0?'+':'−')+'₩'+ipoWon(Math.abs(realizedPnl)).slice(1);
-  pnlEl.style.color=realizedPnl>=0?'var(--buy)':'var(--sell)';
+  $('ipor_cnt').textContent=`${recs.length}건`;
+  const pnlEl=$('ipor_pnl'); pnlEl.textContent=(realizedPnl>=0?'+':'−')+'₩'+Math.abs(Math.round(realizedPnl)).toLocaleString('en-US'); pnlEl.style.color=realizedPnl>=0?'var(--buy)':'var(--sell)';
   const totRet=totalInv>0?realizedPnl/totalInv*100:null;
   $('ipor_pnlpct').textContent=totRet==null?'—':`${totRet>=0?'+':''}${totRet.toFixed(2)}%`;
-  $('ipor_join').textContent=join.length+'건';
-  $('ipor_win').textContent=allotted.length+'건';
+  $('ipor_n').textContent=recs.length+'건';
   $('ipor_inv').textContent=ipoWon(totalInv);
   $('ipor_plus').textContent=plusN+'건';
   $('ipor_avg').textContent=retN?`${(retSum/retN)>=0?'+':''}${(retSum/retN).toFixed(1)}%`:'—';
+  $('ipor_feesum').textContent=ipoWon(feeSum);
   $('ipor_eval').textContent=ipoWon(evalNow);
-  $('ipor_note').textContent = allotted.length? '' : '배정 주수와 매도가(또는 현재가)를 넣으면 손익이 집계됩니다.';
-  $('ipo_rec_tbl').innerHTML=`<tr><th>종목</th><th>배정</th><th>공모가</th><th>현재/매도</th><th>손익</th><th>수익률</th></tr>`
-    +(rows.length?rows.join(''):`<tr><td class="empty" colspan="6">배정 주수를 입력한 공모주가 없습니다</td></tr>`);
+  $('ipor_note').textContent = recs.length? '' : '종목을 선택하고 수량·매도가를 넣으면 손익이 집계됩니다.';
+  $('ipo_rec_tbl').innerHTML=`<tr><th>종목</th><th>수량</th><th>공모가</th><th>매도/현재</th><th>손익</th><th>수익률</th><th></th></tr>`
+    +(rows.length?rows.join(''):`<tr><td class="empty" colspan="7">아직 기록이 없습니다</td></tr>`);
 }
-
-/* 상장 종목 현재가 자동 조회 (매도 안 한 항목) — /api/quote 사용 */
 async function ipoQuote(code){
-  try{
-    const r=await fetch(`/api/quote?symbol=${encodeURIComponent(code)}&range=1d&intraday=0`,{headers:{'Accept':'application/json'}});
-    if(!r.ok) return null;
-    const j=await r.json();
-    const p=(j&&j.price!=null&&+j.price>0)?+j.price:(j&&j.last&&+j.last.close>0?+j.last.close:0);
-    return p>0?p:null;
+  try{ const r=await fetch(`/api/quote?symbol=${encodeURIComponent(code)}&range=1d&intraday=0`,{headers:{'Accept':'application/json'}});
+    if(!r.ok)return null; const j=await r.json();
+    const p=(j&&+j.price>0)?+j.price:(j&&j.last&&+j.last.close>0?+j.last.close:0); return p>0?p:null;
   }catch(e){ return null; }
 }
 async function ipoFetchPrices(){
   const btn=$('ipor_fetch'), note=$('ipo_rec_note');
-  const targets=ipoItems().filter(o=>!o.sold && /^\d{6}$/.test(String(o.code||'')) && +o.allotQty>0);
-  if(!targets.length){ if(note)note.textContent='종목코드(6자리)가 입력된 보유 공모주가 없습니다.'; return; }
+  const targets=IPO.records.filter(r=>!(+r.sellPrice>0) && /^[0-9A-Za-z]{6}$/.test(String(r.code||'')));
+  if(!targets.length){ if(note)note.textContent='매도 전 · 종목코드가 있는 기록이 없습니다.'; return; }
   if(btn){ btn.disabled=true; btn.textContent='조회 중…'; }
-  let ok=0;
-  for(const o of targets){ const p=await ipoQuote(o.code); if(p){ o.curPrice=p; ok++; } }
+  let ok=0; for(const r of targets){ const p=await ipoQuote(r.code); if(p){ r.curPrice=p; ok++; } }
   save(); ipoRenderRec();
   if(btn){ btn.disabled=false; btn.textContent='🔄 현재가'; }
-  if(note)note.textContent=ok?`${ok}개 종목 현재가를 불러왔습니다.`:'현재가를 불러오지 못했습니다. 종목코드를 확인하세요.';
+  if(note) note.textContent=ok?`${ok}개 종목 현재가를 불러왔습니다.`:'현재가를 불러오지 못했습니다.';
+}
+function ipoToRecord(i){
+  const it=IPO.feed[i]; if(!it)return;
+  ipoGoBlk('ipo-rec');
+  $('iprec_search').value=it.name;
+  ipoRecSel={name:it.name,code:it.code||'',poPrice:it.poPrice||null,broker:it.leadManager||''}; ipoRecFill();
 }
 
 /* ── 서브탭 전환 ── */
 function ipoGoBlk(blk){
   document.querySelectorAll('#ipoWrap .chip').forEach(x=>x.classList.toggle('on',x.dataset.b===blk));
   document.querySelectorAll('#ipoWrap .block').forEach(x=>x.classList.toggle('on',x.id===blk));
+  if(blk==='ipo-cal'){ ipoFetchFeed(false); ipoRenderCal(); }
   if(blk==='ipo-calc') ipoCalc();
-  if(blk==='ipo-cal') ipoRenderCal();
   if(blk==='ipo-rec') ipoRenderRec();
   window.scrollTo({top:0,behavior:'smooth'});
 }
-function ipoRenderAll(){ try{ipoCalc()}catch(e){} ipoRenderCal(); ipoRenderRec(); }
-
 function ipoInit(){
   ipoLoadLocal();
   document.querySelectorAll('#ipoWrap .chip').forEach(c=>{ c.onclick=()=>ipoGoBlk(c.dataset.b); });
-  ipoRenderAll();
+  ipoRenderCal(); ipoRenderRec();
+  ipoFetchFeed(false);
 }
 document.addEventListener('DOMContentLoaded',ipoInit);
 
