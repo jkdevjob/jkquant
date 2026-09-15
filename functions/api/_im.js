@@ -105,6 +105,16 @@ export function settledLast(rows, cur, now) {
   const r = (rows || []).filter((x) => x.date <= cut);
   return r.length ? r[r.length - 1] : null;
 }
+/* 그 종가가 며칠 묵었나 — 기준일(cutoff)에서 며칠 전 것인지.
+   시세사가 봉을 늦게 올리는 일이 실제로 있다(야후가 9/14 봉을 마감 4시간 뒤에 올렸다).
+   사람이 보고 있으면 이상한 걸 알아채지만 자동 주문은 그대로 내버린다.
+   3일 연휴까지는 정상이므로 그보다 더 묵었을 때만 막는다. */
+export const STALE_MAX_DAYS = 4;
+export function staleDays(closeDate, cur, now) {
+  if (!closeDate) return Infinity;
+  const cut = simCutoff(cur, now);
+  return Math.round((Date.parse(cut + "T00:00:00Z") - Date.parse(closeDate + "T00:00:00Z")) / 864e5);
+}
 
 /* 익절 동적 조절 — 직전 20거래일 상승률이 +8%를 넘으면 오늘 익절%를 올린다 */
 const IM_MOM_LEN = 20, IM_MOM_TH = 8, IM_MOM_CAP = 30;
