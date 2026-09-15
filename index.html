@@ -519,7 +519,7 @@ try{ if(localStorage.getItem('qcockpit_hadUser')==='1') document.documentElement
 </div>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.47</span></h1></div>
+    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.48</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -1578,7 +1578,7 @@ document.addEventListener('click',function(e){ var m=document.getElementById('jk
   <footer>
     <strong>JK 퀀트</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.47</b> · 2026-09-15</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.48</b> · 2026-09-15</div>
   </footer>
 </div>
 
@@ -2232,7 +2232,8 @@ function computeInf(){
    · 전반전에서만 실효 — 후반전은 익절가가 평단보다 위라 어차피 닿지 않는다.                        */
 const IM_MOM_LEN=20, IM_MOM_TH=8, IM_MOM_CAP=30;
 function imMomNow(){
-  const ds=(lastQuote.inf&&lastQuote.inf.days)||infChartData;
+  const _Qm=quoteOf('inf');
+  const ds=(_Qm&&_Qm.days)||infChartData;
   if(!ds||ds.length<IM_MOM_LEN+1) return null;
   const n=ds.length, a=ds[n-1]&&ds[n-1].close, b=ds[n-1-IM_MOM_LEN]&&ds[n-1-IM_MOM_LEN].close;
   return (a>0&&b>0) ? (a/b-1)*100 : null;
@@ -2379,7 +2380,8 @@ function calcStarPoint(c){
   const man=+($('o_star5man')&&$('o_star5man').value);
   if(man>0) return {val:man, src:'수동 입력'};
   // ② 자동시세 5일평균
-  const q5=lastQuote.inf&&lastQuote.inf.days?lastQuote.inf.days.slice(-5):null;
+  const _Q5=quoteOf('inf');
+  const q5=(_Q5&&_Q5.days)?_Q5.days.slice(-5):null;
   if(q5&&q5.length){const a=q5.reduce((s,d)=>s+d.close,0)/q5.length; return {val:a, src:`자동시세 ${q5.length}일평균`};}
   // ③ 최근 매수/매도 기록의 체결가 (price 있는 거래) 최근 5개
   const prices=c.rows.filter(r=>r.price>0).slice(-5).map(r=>r.price);
@@ -2468,7 +2470,8 @@ function renderOrder(){
     // 가격 기반 일반모드 복귀 조건 안내 (자동 전환은 아님 — 확인용 배너)
     const exitMul = exitMulOf(st.target);
     const exitPrice = c.avg*exitMul;
-    const lastClose = (lastQuote.inf&&lastQuote.inf.last) || close || 0;
+    const _Qc=quoteOf('inf');
+    const lastClose = (_Qc&&_Qc.last) || close || 0;
     if(lastClose>0 && lastClose>exitPrice){
       rh+=`<div class="warn" style="border-color:var(--buy-dim);background:rgba(54,211,153,.08);color:#bfe9d3">✅ 최근 종가(${wn(lastClose)})가 복귀 기준(${wn(exitPrice)}) 위로 회복했습니다. 라오어님 기준 <b>내일부터 일반모드 복귀</b>이며, T값(${fmtT(c.T)})은 그대로 이어집니다. 복귀 후 일반모드 1회매수금 = 잔금 ÷ (분할−T)이 가능하면 정상 진행하고, 그래도 1회분조차 안 되면(T가 분할에 도달) 다시 리버스로 들어갑니다.</div>`;
     }else{
@@ -2907,7 +2910,8 @@ function renderInfAnal(){
   $('a_cycles').textContent=sells+' 매도';
   $('a_principal').textContent=wn(st.principal);
   // 투자 중 = 평가금(원가 아님). 예전엔 원가÷원금이라 복리로 원금을 넘으면 비중이 180%처럼 나왔다.
-  const px0=(lastQuote.inf&&(lastQuote.inf.price||lastQuote.inf.last))||c.avg||0;
+  const _Qp=quoteOf('inf');
+  const px0=(_Qp&&(_Qp.price||_Qp.last))||c.avg||0;
   /* 출금·단리 적립분은 계좌 밖으로 나갔을 뿐 없어진 돈이 아니다.
      수익률을 원금 대비로 보려면 총자산에 다시 더해야 한다.
      안 더하면 출금할 때마다 수익률이 떨어지는 것처럼 보인다. */
@@ -3104,7 +3108,7 @@ function settledLast(rows,cur){ const r=settledBars(rows,cur); return r.length?r
    시각을 넘기면 옛 종가에 그대로 멈춘다(실측: 기록 날짜 9/2에 8/31 종가가 채워졌다).
    그래서 쓸 때마다 봉에서 다시 고른다. */
 function infSettledLast(){
-  const Q=lastQuote.inf; if(!Q||!Q.days) return null;
+  const Q=quoteOf('inf'); if(!Q||!Q.days) return null;
   const st=(curStrat()&&curStrat().settings)||{};
   if(String(Q.symbol||'').toUpperCase()!==String(st.ticker||'').toUpperCase()) return null;
   return settledLast(Q.days, st.cur);
@@ -3347,7 +3351,8 @@ function cycDates(c){
 function vrEval(c){
   const man=inputNum('vn_eval'); // 콤마 포함 입력 안전 파싱 (+value는 콤마에서 NaN)
   if(man>0) return man;
-  const last=(lastQuote.vr&&lastQuote.vr.last)||0;
+  const _Qv=quoteOf('vr');
+  const last=(_Qv&&_Qv.last)||0;
   if(last>0 && c.qty>0) return last*c.qty;
   return 0;
 }
@@ -3356,7 +3361,8 @@ function vrEval(c){
 function vrLastPrice(c){
   const p=inputNum('vn_price');
   if(p>0) return p;
-  if(lastQuote.vr&&lastQuote.vr.last) return lastQuote.vr.last;
+  const _Qv2=quoteOf('vr');
+  if(_Qv2&&_Qv2.last) return _Qv2.last;
   if(c.qty>0 && c.avgNom>0) return c.avgNom; // 폴백
   return 0;
 }
@@ -6016,6 +6022,17 @@ function maLedger(hist, price, principal){
   const invested=price>0?price*qty:0;
   return {qty,avg,realized,totbuy,totsell,nOut,nWin,invested,cash,fees,total:invested+cash};
 }
+/* 시세는 반드시 이 함수로 꺼낸다 — 종목이 다르면 없는 셈 친다.
+   같은 칸을 모멘텀·5일평균·확정 종가·주문 제안이 다 같이 쓰기 때문에,
+   한 번 어긋나면 화면 숫자만이 아니라 주문 가격까지 남의 종가로 나간다. */
+function quoteOf(tab){
+  const Q=lastQuote[tab]; if(!Q) return null;
+  const box=S&&S[tab];
+  const sess=box&&box.sessions&&box.sessions.find(x=>x.id===box.active);
+  const want=String(((sess&&sess.settings)||{}).ticker||'').toUpperCase();
+  if(!want) return Q;                     // 종목을 모르는 세션(원화 수동 등)은 막지 않는다
+  return String(Q.symbol||'').toUpperCase()===want ? Q : null;
+}
 function paperStat(tab, sess){
   const h=sess.hist||[]; if(!h.length) return null;
   const box=S[tab]; if(!box) return null;
@@ -6097,6 +6114,13 @@ async function paperFillAll(){
   if(_paperFilling) return null;
   _paperFilling=true;
   const prevTab=S.activeTab; const rows=[];
+  /* 시세도 원래대로 돌려놔야 한다. lastQuote 는 전략마다 한 칸뿐인데 아래에서
+     세션마다 갈아끼우므로, 다 돌고 나면 마지막 세션 종목이 남는다.
+     그 상태로 openPaper 가 refreshAll 을 부르면 보고 있던 세션을 남의 종가로 그린다 —
+     SOXL 102주를 KORU 값(18.58$)으로 세서 수익률이 +1.5% → -26.6% 로 뒤집혔다. */
+  const prevQuote={}, prevChart={inf:(typeof infChartData!=='undefined'?infChartData:undefined),
+                                 vr:(typeof vrChartData!=='undefined'?vrChartData:undefined)};
+  PAPER_TABS.forEach(([t])=>{ prevQuote[t]=lastQuote[t]; });
   try{
     for(const [tab,label] of PAPER_TABS){
       const box=S[tab]; if(!box||!box.sessions) continue;
@@ -6119,7 +6143,13 @@ async function paperFillAll(){
       }
       box.active=prevAct;
     }
-  } finally { S.activeTab=prevTab; _paperFilling=false; }
+  } finally {
+    S.activeTab=prevTab;
+    PAPER_TABS.forEach(([t])=>{ lastQuote[t]=prevQuote[t]; });
+    if(prevChart.inf!==undefined) infChartData=prevChart.inf;
+    if(prevChart.vr!==undefined) vrChartData=prevChart.vr;
+    _paperFilling=false;
+  }
   return rows;
 }
 async function openPaper(){
@@ -6674,7 +6704,7 @@ function fieldPriceQty(prefix,colorLabel,sym){
    LOC 주문은 종가에 체결되고, 익절 지정가는 목표가에 체결된다(주문표·모의체결과 같은 규약). */
 function infSuggest(kind){
   const c=computeInf(), st=c.st;
-  const Q=lastQuote.inf;
+  const Q=quoteOf('inf');
   // LOC는 '종가' 체결이다. 예전엔 실시간가를 먼저 썼는데, 그러면 장중엔 현재가가,
   // 마감 직후엔 아직 확정 안 된 값이 체결가로 박혔다(확정 종가 105.91인 날 105.75로 채워진 건).
   // 실시간가는 이 함수에 들어오면 안 된다 — 회귀 [12]가 그걸 지킨다.
