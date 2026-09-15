@@ -499,7 +499,7 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
 </div>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.43</span></h1></div>
+    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.44</span></h1></div>
     <div class="jkmenu" id="jkmenuWrap">
       <button class="jkmenu-btn" id="jkmenuBtn" aria-label="메뉴" onclick="jkMenuToggle(event)">三</button>
       <div class="jkmenu-pop" id="jkmenuPop" hidden>
@@ -1556,7 +1556,7 @@ document.addEventListener('click',function(e){ var m=document.getElementById('jk
   <footer>
     <strong>JK 퀀트</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.43</b> · 2026-09-15</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.44</b> · 2026-09-15</div>
   </footer>
 </div>
 
@@ -1748,11 +1748,13 @@ document.addEventListener('click',function(e){ var m=document.getElementById('jk
 
     <p class="note" style="margin:-4px 0 10px"><b>오늘</b>로 두면 지금부터 앞으로 굴러갑니다. 과거 성과를 바로 보고 싶으면 <b>지난 날짜</b>를 고르세요 — 그 날부터 오늘까지 한 번에 만들어집니다.<br>한 번만 정하면 끝이고, 이후엔 탭을 열 때마다 오늘까지 알아서 채워집니다.</p>
   </div>
-  <label style="display:flex;align-items:flex-start;gap:8px;margin:2px 0 8px;cursor:pointer;color:var(--dim);font-size:13px">
-    <input type="checkbox" id="sess_kis" style="width:16px;height:16px;flex-shrink:0;margin-top:2px" onchange="kisOptUI()">
-    <span><b style="color:var(--buy)">한국투자증권</b>에 실제 주문 내기
-      <span class="hint" id="sess_kis_hint" style="color:var(--faint)"></span></span></label>
-  <div id="sess_kis_info" style="display:none"></div>
+  <div id="sess_kis_row" style="display:none">
+    <label style="display:flex;align-items:flex-start;gap:8px;margin:2px 0 8px;cursor:pointer;color:var(--dim);font-size:13px">
+      <input type="checkbox" id="sess_kis" style="width:16px;height:16px;flex-shrink:0;margin-top:2px" onchange="kisOptUI()">
+      <span><b style="color:var(--buy)">한국투자증권</b>에 실제 주문 내기
+        <span class="hint" id="sess_kis_hint" style="color:var(--faint)"></span></span></label>
+    <div id="sess_kis_info" style="display:none"></div>
+  </div>
   <div class="mbtns"><button class="close" onclick="closeSess()">닫기</button><button class="save" id="sess_ok" onclick="createSess()">만들기</button></div>
 </div></div>
 
@@ -2796,7 +2798,7 @@ const esc=v=>String(v==null?'':v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;'
 function renderKisPanel(){
   const box=$('o_kis'); if(!box) return;
   const s=curStrat();
-  if(!(s&&s.kis)){ box.innerHTML=''; return; }
+  if(!(s&&s.kis&&kisOwner)){ box.innerHTML=''; return; }
   const st=s.settings||{}, sym=String(st.ticker||'').toUpperCase();
   // 갈래는 세션이 정한다 — 종목이 시장을, 세션 종류가 환경을 정한다
   const mode=kisModeFor(s), MP=kisModeParts(mode), real=MP.env==='real';
@@ -2827,6 +2829,7 @@ function renderKisPanel(){
    초당 제한(모의 2건)에 걸리지 않게 간격을 둔다. */
 async function kisSendToday(){
   const s=curStrat(); if(!(s&&s.kis)) return;
+  if(!await kisSyncOwner()){ alert('이 계정에는 주문 권한이 없습니다.'); return; }
   const sym=String((s.settings||{}).ticker||'').toUpperCase();
   const mode=kisModeFor(s), MP=kisModeParts(mode), real=MP.env==='real';
   const list=todayOrders.filter(o=>o.qty>0&&o.price>0);
@@ -7092,7 +7095,7 @@ function openSess(){ _sessEditId=null;
   $('sess_desc').textContent='증권사·전략별로 따로 관리할 수 있습니다. 예: 키움 SOXL, 토스 TQQQ';
   $('sess_ok').textContent='만들기';
   $('sess_name').value=''; const p=$('sess_paper'); if(p)p.checked=false;
-  const k=$('sess_kis'); if(k)k.checked=false; kisOptUI();
+  const k=$('sess_kis'); if(k)k.checked=false; kisSyncOwner().then(kisOptUI);
   const w=$('sess_simstart_wrap'); if(w) w.style.display='none';
   const d=$('sess_simstart'); if(d) d.value=new Date().toISOString().slice(0,10);   // 기본은 오늘 — 지금부터 앞으로 굴린다
   $('sessModal').classList.add('on'); }
@@ -7105,7 +7108,7 @@ function editSess(id){
   $('sess_ok').textContent='저장';
   $('sess_name').value=s.name||'';
   const p=$('sess_paper'); if(p)p.checked=!!s.paper;
-  const k=$('sess_kis'); if(k)k.checked=!!s.kis; kisOptUI();
+  const k=$('sess_kis'); if(k)k.checked=!!s.kis; kisSyncOwner().then(kisOptUI);
   const w=$('sess_simstart_wrap'); if(w) w.style.display=s.paper?'':'none';
   const d=$('sess_simstart'); if(d) d.value=s.simStart||new Date().toISOString().slice(0,10);
   $('sessModal').classList.add('on');
@@ -7115,9 +7118,23 @@ function editSess(id){
 let kisCfg=null;
 async function kisConfig(force){
   if(kisCfg && !force) return kisCfg;
-  try{ kisCfg=await (await fetch('/api/kis?op=config')).json(); }
-  catch(e){ kisCfg={configured:false,error:String(e.message||e)}; }
+  try{
+    // 토큰을 실어야 서버가 '이 사람이 주문 낼 수 있는 계정인지'를 답해 준다
+    const h={}; try{ const u=window.fb&&window.fb.auth&&window.fb.auth.currentUser;
+      if(u) h.Authorization='Bearer '+await u.getIdToken(); }catch(e){}
+    kisCfg=await (await fetch('/api/kis?op=config',{headers:h})).json();
+  }
+  catch(e){ kisCfg={configured:false,owner:false,error:String(e.message||e)}; }
   return kisCfg;
+}
+/* 주문 권한은 서버(OWNER_EMAIL)가 정한다. 못 낼 사람에게 '주문 내기'를 보여주면
+   남의 계좌로 주문이 나갈 것처럼 보인다 — 서버가 막더라도 화면에서 감춘다. */
+let kisOwner=false;
+async function kisSyncOwner(){
+  const j=await kisConfig(true);
+  kisOwner=j.owner===true;
+  const row=$('sess_kis_row'); if(row) row.style.display=kisOwner?'':'none';
+  return kisOwner;
 }
 /* 종목코드로 시장이 정해진다 — 6자리면 국내, 영문 티커면 국외. 고를 여지가 없다. */
 const KIS_MODE_LBL={'kr-vts':'국내 모의투자','us-vts':'국외 모의투자','kr-real':'국내 실전투자','us-real':'국외 실전투자'};
@@ -7186,7 +7203,7 @@ function createSess(){
     }
     // 한투 연결은 모의·실계좌 모두 고를 수 있다 — 다만 종류에 맞는 갈래만 화면에서 열린다
     // 연결 여부만 저장한다 — 어느 갈래로 나갈지는 종목·세션 종류가 정한다
-    t.kis=!!($('sess_kis')&&$('sess_kis').checked); delete t.kisMode;
+    t.kis=kisOwner && !!($('sess_kis')&&$('sess_kis').checked); delete t.kisMode;
     save(); closeSess(); refreshAll(); pushRemote(); return;
   }
   // 탭마다 세션 형식이 다르다 — 빠뜨리면 남의 형식(VR) 세션이 들어가 그 탭이 통째로 깨진다
@@ -7194,7 +7211,7 @@ function createSess(){
     :S.activeTab==='dca'?newDcaSession(n):S.activeTab==='asap'?newAsapSession(n):newVrSession(n);
   const pp=$('sess_paper'); if(pp&&pp.checked){ s.paper=true;
     const sd=$('sess_simstart'); s.simStart=(sd&&sd.value)||new Date().toISOString().slice(0,10); }
-  s.kis=!!($('sess_kis')&&$('sess_kis').checked);
+  s.kis=kisOwner && !!($('sess_kis')&&$('sess_kis').checked);
   box.sessions.push(s);box.active=s.id;save();closeSess();resetSubnav(S.activeTab);refreshAll();pushRemote();
 }
 
@@ -7737,6 +7754,9 @@ function startApp(){
   if(S.activeTab!=='inf'){ const tb=document.querySelector(`.tab[data-t="${S.activeTab}"]`); if(tb)tb.click(); }
   refreshAll();
   if(S.activeTab==='ma'||S.activeTab==='asap')hideFab(); else showFab();
+  /* 주문 권한은 서버가 정한다. 답이 오면 주문 패널을 다시 그린다 —
+     기다렸다 시작하면 서버가 늦을 때 앱이 통째로 늦어진다. */
+  try{ kisSyncOwner().then(ok=>{ if(ok) try{ renderOrder(); }catch(e){} }); }catch(e){}
   updateStickyOffsets();
   window.addEventListener('resize', updateStickyOffsets);
   window.addEventListener('load', updateStickyOffsets);

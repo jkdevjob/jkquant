@@ -1665,8 +1665,8 @@ console.log('[41] 한투 모의투자 연결 — 세션 설정과 주문 전송'
      && !/<option value="us-vts"/.test(idx));
   ok('어느 갈래로 나가는지 옆에 띄운다', /id="sess_kis_hint"/.test(idx)
      && /hint\.textContent = ' — '\+\(KIS_MODE_LBL\[mode\]\|\|mode\)/.test(extractFn(idx,'async function kisOptUI()')));
-  ok('세션엔 연결 여부만 저장한다', /t\.kis=!!\(\$\('sess_kis'\)&&\$\('sess_kis'\)\.checked\); delete t\.kisMode;/.test(idx)
-     && /s\.kis=!!\(\$\('sess_kis'\)&&\$\('sess_kis'\)\.checked\);/.test(idx));
+  ok('세션엔 연결 여부만 저장한다', /t\.kis=kisOwner && !!\(\$\('sess_kis'\)&&\$\('sess_kis'\)\.checked\); delete t\.kisMode;/.test(idx)
+     && /s\.kis=kisOwner && !!\(\$\('sess_kis'\)&&\$\('sess_kis'\)\.checked\);/.test(idx));
   /* '모의투자' 딱지가 붙은 세션이 실전 주문을 내는 길이 있으면 안 된다.
      고르게 하지 않고 세션 종류에서 끌어내면 어긋날 수가 없다. */
   ok('모의 세션은 늘 모의계좌로 간다', kisModeOf('SOXL', true)==='us-vts' && kisModeOf('069500', true)==='kr-vts');
@@ -1707,7 +1707,25 @@ console.log('[41] 한투 모의투자 연결 — 세션 설정과 주문 전송'
   ok('주문마다 결과를 남긴다', /done\.push\(\{o,ok:/.test(ks));
   ok('보여준 값 그대로 보낸다', /price:Math\.round\(o\.price\*100\)\/100/.test(ks));
   const rp=extractFn(idx,'function renderKisPanel()');
-  ok('연결 안 된 세션엔 패널이 없다', /if\(!\(s&&s\.kis\)\)\{ box\.innerHTML=''; return; \}/.test(rp));
+  ok('연결 안 된 세션엔 패널이 없다', /if\(!\(s&&s\.kis&&kisOwner\)\)\{ box\.innerHTML=''; return; \}/.test(rp));
+
+  /* 남이 로그인해서 '주문 내기'를 켜면 어떻게 되나 — 서버는 OWNER_EMAIL 로 막는다.
+     다만 못 낼 사람에게 버튼을 보여주면 남의 계좌로 주문이 나갈 것처럼 보인다.
+     서버가 막더라도 화면에서 감춘다(두 겹). */
+  ok('서버가 주문 권한을 확인해 준다', /let owner = false;/.test(kis)
+     && /\(await verifyOwner\(request, rawEnv\)\)\.ok === true/.test(kis));
+  ok('허용 목록이 비어도 열리지 않는다', /const DEFAULT_OWNERS = \["[^"]+"\];/.test(kis)
+     && /return raw\.length \? raw : DEFAULT_OWNERS;/.test(kis));
+  ok('이메일은 서버가 토큰에서 직접 캔다', /identitytoolkit\.googleapis\.com\/v1\/accounts:lookup/.test(kis)
+     && /if \(!owners\.includes\(email\)\) return \{ ok: false/.test(kis));
+  ok('앱이 토큰을 실어 권한을 묻는다', /Authorization='Bearer '\+await u\.getIdToken\(\)/.test(idx));
+  ok('권한 없으면 설정칸을 감춘다', /row\.style\.display=kisOwner\?'':'none'/.test(idx)
+     && /id="sess_kis_row"/.test(idx));
+  ok('권한 없으면 저장해도 안 켜진다',
+     (idx.match(/kis=kisOwner && !!\(\$\('sess_kis'\)/g)||[]).length===2);
+  ok('보낼 때 권한을 한 번 더 본다', /if\(!await kisSyncOwner\(\)\)\{ alert\('이 계정에는 주문 권한이 없습니다\.'\); return; \}/.test(ks));
+  // 권한 확인을 기다리느라 앱이 늦어지면 안 된다
+  ok('권한 확인은 앱을 붙잡지 않는다', /kisSyncOwner\(\)\.then\(ok=>/.test(extractFn(idx,'function startApp()')));
   ok('패널도 갈래를 세션에서 끌어낸다', /const mode=kisModeFor\(s\), MP=kisModeParts\(mode\)/.test(rp));
   ok('시장이 어긋나면 패널 대신 안내', /kisMarketOf\(sym\)!==MP\.market/.test(rp));
   ok('실전 패널은 색과 문구가 다르다', /real\?'sell':'buy'/.test(rp) && /실전 계좌입니다/.test(rp));

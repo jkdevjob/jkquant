@@ -304,7 +304,15 @@ export async function onRequestGet({ request, env }) {
   if (op === "config") {
     const modes = modeList(rawEnv);
     const cur = wantEnv(url.searchParams.get("env"), rawEnv);
+    /* 이 사람이 주문을 낼 수 있는 계정인지 같이 알려준다.
+       서버는 어차피 막지만, 못 낼 사람에게 '주문 내기' 버튼을 보여주면
+       남의 계좌로 주문이 나갈 것처럼 보인다. 화면에서 아예 감추려면 이 값이 필요하다. */
+    let owner = false;
+    if (request.headers.get("Authorization")) {
+      try { owner = (await verifyOwner(request, rawEnv)).ok === true; } catch (e) { owner = false; }
+    }
     return json({
+      owner,
       // 예전 필드 — 단타 화면이 아직 이걸 읽는다. 뜻을 바꾸지 않는다.
       configured: configured(withEnv(rawEnv, cur, url.searchParams.get("market"))), env: cur,
       hasOwner: orderOwners(rawEnv).length > 0,
