@@ -1070,10 +1070,13 @@ console.log('[24] 표 밀도 — 한 화면에 더 많이');
      && /\.htable th\{[^}]*font-size:10px;padding:3px 4px;line-height:1\.2;/.test(idx)
      && /\.htable\{width:100%;border-collapse:collapse;font-size:11px;min-width:590px\}/.test(idx));
   ok('수정·삭제 칸도 좁힌다', /\.htable td:last-child\{padding:3px 2px\}/.test(idx));
-  ok('백테 표 밀도', /\.cmp-tbl td\{padding:3px 5px;line-height:1\.25;/.test(bt)
-     && /\.cmp-tbl th\{[^}]*padding:3px 5px;line-height:1\.2;[^}]*font-size:10px;\}/.test(bt)
-     && /table\.cmp th,table\.cmp td\{padding:3px 5px;line-height:1\.25;/.test(bt));
-  ok('관리자 표 밀도', /\.htable td\{padding:4px 4px;line-height:1\.25;/.test(adm), adm?'':'admin.html 없음');
+  ok('백테 표 밀도', /\.cmp-tbl td\{padding:3px 4px;line-height:1\.25;/.test(bt)
+     && /\.cmp-tbl th\{[^}]*padding:3px 4px;line-height:1\.2;[^}]*font-size:10px;\}/.test(bt)
+     && /table\.cmp th,table\.cmp td\{padding:3px 4px;line-height:1\.25;/.test(bt));
+  // 결과 표(#tbl)가 앱에서 제일 헐거웠다 — 6px 9px 로 되돌아가면 한 화면에 절반밖에 안 들어간다
+  ok('백테 결과표 밀도', /^td\{padding:3px 5px;line-height:1\.25;/m.test(bt)
+     && /^thead th\{[^}]*padding:3px 5px;line-height:1\.2;/m.test(bt));
+  ok('관리자 표 밀도', /\.htable td\{padding:3px 4px;line-height:1\.25;/.test(adm), adm?'':'admin.html 없음');
   ok('단타 표 밀도', /\.htable td\{padding:3px 4px;line-height:1\.25;/.test(scal), scal?'':'scalping.html 없음');
 
   /* 날짜는 지우는 게 아니라 줄여 쓴다 — 2026-09-09 → 26-09-09 (81px→61px).
@@ -1905,6 +1908,48 @@ console.log('\n[43] 미국 주문구분 — 시험은 하되 평소 주문은 �
      /\["31", "32", "33", "34"\]\.includes\(url\.searchParams\.get\("ordDvsn"\) \|\| ""\)/.test(at)
      && /: "00";/.test(at));
   ok('결과에 무엇으로 나갔는지 적는다', /ordDvsn: j\.ordDvsn \|\| ""/.test(at) && /fellBack: !!j\.fellBack/.test(at));
+}
+
+/* ════ 44. 숫자 표기 — 기호는 뒤, 자릿수는 오른쪽 맞춤 ════
+   목록에서 숫자를 오른쪽으로 맞춰 놓으면 기호가 앞에 붙어 있을 때
+   ₩1,234 / ₩99 처럼 기호가 들쭉날쭉 흩어진다. 뒤로 보내면 기호가
+   오른쪽 끝에서 한 줄로 서고 자릿수도 그대로 맞는다.
+   한 군데라도 앞으로 되돌아가면 그 표만 어긋나 보이므로 전 페이지를 본다. */
+console.log('\n[44] 숫자 표기 — 기호는 뒤, 자릿수는 오른쪽 맞춤');
+{
+  const PAGES = ['index.html','backtest.html','ipo.html','scalping.html','admin.html'];
+  const src = {};
+  for(const f of PAGES) src[f] = fs.existsSync(__d+'/'+f) ? fs.readFileSync(__d+'/'+f,'utf8') : '';
+
+  // 통화 기호가 숫자 앞에 붙은 자리가 하나도 없어야 한다.
+  // 정규식 역참조 '$1' 은 통화가 아니므로 먼저 걷어낸다.
+  for(const f of PAGES){
+    if(!src[f]) continue;
+    const t = src[f].replace(/'\$1'/g,'');
+    const bad = (t.match(/[₩](?=[0-9])/g)||[]).length
+              + (t.match(/\$(?=[0-9])/g)||[]).length;
+    ok(`${f} — 기호가 숫자 앞에 붙은 데가 없다`, bad===0, bad?`${bad}곳 남음`:'');
+  }
+
+  // 만드는 쪽(포맷터)이 뒤에 붙이는지
+  const idx=src['index.html'], ipo=src['ipo.html'], bt=src['backtest.html'];
+  ok('운영 — wnCur 가 기호를 뒤에 붙인다',
+     /toLocaleString\('en-US'\)\+'₩'/.test(idx) && /maximumFractionDigits:2\}\)\+'\$'/.test(idx));
+  ok('운영 — usd·px·won 도 뒤에 붙인다',
+     (idx.match(/\+'\$';/g)||[]).length>=2 && /liveFX:FX\)\)\.toLocaleString\('en-US'\)\+'₩'/.test(idx));
+  ok('백테 — money 가 기호를 뒤에 붙인다', /fmt\(Math\.round\(x\)\)\+'\$'/.test(bt));
+  ok('공모주 — ipoWon 이 기호를 뒤에 붙인다', /toLocaleString\('en-US'\)\+'₩'/.test(ipo));
+  // 범위는 "1,000~2,000₩" — 기호를 떼는 쪽이 뒤가 아니라 앞 값이다
+  ok('공모주 — 범위는 앞 값의 기호만 뗀다',
+     /function ipoWonBare\(v\)\{ return ipoWon\(v\)\.slice\(0,-1\); \}/.test(ipo)
+     && !/ipoWon\([^)]*\)\.slice\(1\)/.test(ipo));
+
+  // 숫자 폭이 같아야 자릿수가 맞는다 — 한 페이지라도 빠지면 그 페이지만 어긋난다
+  for(const f of PAGES){
+    if(!src[f]) continue;
+    ok(`${f} — 숫자는 같은 폭으로 찍는다`,
+       /body\{font-variant-numeric:tabular-nums;/.test(src[f]));
+  }
 }
 
 console.log(`\n════ 결과: ${pass} PASS / ${fail} FAIL ${fail===0?'— ALL PASS ★':'— 배포 금지, 위 ✗ 항목 수정 필요'} ════`);
