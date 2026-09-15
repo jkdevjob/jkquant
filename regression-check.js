@@ -1862,7 +1862,15 @@ console.log('[42] 자동 주문 — 브라우저와 서버가 같은 주문을 �
     // 같은 날 두 번 내면 이중 주문이다
     ok('하루 한 번만 낸다', /prev\.lastDate === today/.test(at) && /lastDate: today/.test(at));
     ok('주문은 재시도하지 않는다', /재시도하지 않는다/.test(at) && !/for \(let try/.test(at));
-    ok('초당 제한을 피해 간격을 둔다', /await sleep\(700\)/.test(at));
+    /* 2026-09-15: 12건을 내는데 한 건도 접수되지 않았다. 세션 안에서만 간격을 뒀고
+       (i 가 세션마다 0 부터 다시 시작) 세션 경계는 간격이 0 이었다. 주문 1건이
+       hashkey+order 로 API 를 두 번 쓰는 것도 안 세고 있었다. */
+    ok('초당 제한을 피해 간격을 둔다', /await paceOrder\(\);/.test(at)
+       && /const ORDER_GAP_MS = 1200;/.test(at));
+    ok('간격은 세션을 넘어서도 이어진다',
+       /let _lastOrderAt = 0;/.test(at)
+       && /_lastOrderAt \? ORDER_GAP_MS - \(Date\.now\(\) - _lastOrderAt\) : 0/.test(at)
+       && !/if \(i\) await sleep/.test(at));
     ok('세션 종류가 환경을 정한다', /const kisEnv = s\.paper \? "vts" : "real"/.test(at));
     ok('연결 안 한 세션은 건너뛴다', /if \(!s\.kis\)/.test(at));
     ok('서명은 WebCrypto 로 한다', /RSASSA-PKCS1-v1_5/.test(at) && !/require\(/.test(at));
@@ -1909,10 +1917,14 @@ console.log('\n[43] 미국 주문구분 — 시험은 하되 평소 주문은 �
      /\["31", "32", "33", "34"\]\.includes\(url\.searchParams\.get\("ordDvsn"\) \|\| ""\)/.test(at)
      && /: "00";/.test(at));
   ok('결과에 무엇으로 나갔는지 적는다', /ordDvsn: j\.ordDvsn \|\| ""/.test(at) && /fellBack: !!j\.fellBack/.test(at));
-  // 틀린 번호가 MOC 면 아무 값에나 체결된다 — 알아내기 전까지 실계좌엔 넣지 않는다
-  ok('모르는 번호는 모의에서만 시험한다',
-     /const dvsn = \(ordDvsn !== "00" && kisEnv !== "vts"\) \? "00" : ordDvsn;/.test(at)
+  /* 실측으로 답이 나왔다 — 모의는 "지정가만 가능한 상품입니다"(40650000)로 거절한다.
+     거절이 확정된 요청을 보내면 초당 제한만 잡아먹으므로 아예 안 보낸다.
+     실계좌에도 아직 안 보낸다(틀린 번호가 MOC 면 아무 값에나 체결된다). */
+  ok('모르는 번호는 어디에도 보내지 않는다',
+     /const dvsn = ordDvsn !== "00" \? "00" : ordDvsn;/.test(at)
      && /priceType: "limit", ordDvsn: dvsn \}/.test(at));
+  ok('왜 안 보냈는지 기록에 남긴다',
+     /모의는 지정가만 받습니다/.test(at) && /아직 실계좌에 보내지 않습니다/.test(at));
 }
 
 /* ════ 44. 숫자 표기 — 기호는 뒤, 자릿수는 오른쪽 맞춤 ════

@@ -104,6 +104,19 @@ async function findUid(tok, pid, email) {
   return null;
 }
 
+/* 주문 간격은 세션을 넘어서도 이어져야 한다. 예전엔 세션 안에서만 700ms 를 뒀고
+   (for 문의 i 가 세션마다 0 부터 다시 시작한다) 세션이 바뀌는 순간은 간격이 0 이었다.
+   게다가 주문 1건은 hashkey + order 로 API 를 두 번 부른다. 그래서 12건을 내던 날
+   초당 4~6회가 나가 전부 "초당 요청 제한"에 걸렸다 — 한 건도 접수되지 않았다.
+   한투 모의는 초당 2회다. 1건당 2회를 쓰므로 건당 1.2초를 둔다. */
+const ORDER_GAP_MS = 1200;
+let _lastOrderAt = 0;
+async function paceOrder() {
+  const wait = _lastOrderAt ? ORDER_GAP_MS - (Date.now() - _lastOrderAt) : 0;
+  if (wait > 0) await sleep(wait);
+  _lastOrderAt = Date.now();
+}
+
 export async function onRequest({ request, env }) {
   const url = new URL(request.url);
   // 아무나 주문을 낼 수 없게 막는다. 키는 쿼리나 헤더 어느 쪽으로 줘도 된다.
@@ -180,12 +193,19 @@ export async function onRequest({ request, env }) {
       /* 아직 어느 번호가 LOC 인지 모른다. 틀렸으면 MOC(장마감 시장가)로 나가서
          정한 값이 아니라 아무 값에나 체결된다. 모르는 번호는 모의계좌에서만 넣어 본다 —
          실계좌는 알아낸 뒤에 열어 준다. */
-      const dvsn = (ordDvsn !== "00" && kisEnv !== "vts") ? "00" : ordDvsn;
-      if (dvsn !== ordDvsn) row.dvsnNote = `주문구분 ${ordDvsn} 은 모의에서만 시험합니다 — 지정가로 냅니다`;
+      /* 2026-09-15 실측: 모의계좌에 34 를 넣으니 한투가 이렇게 답했다 —
+           "모의투자 주문처리가 안되었습니다(지정가만 가능한 상품입니다)" (40650000)
+         모의는 지정가만 받는다. 그러니 모의에 34 를 보내는 건 거절이 확정된 요청을
+         한 번 더 쏘는 것뿐이고, 그만큼 초당 제한만 잡아먹는다(실제로 그래서 그날
+         주문이 전부 제한에 걸렸다). LOC 가 몇 번인지는 실계좌에서만 알 수 있다. */
+      const dvsn = ordDvsn !== "00" ? "00" : ordDvsn;
+      if (dvsn !== ordDvsn) row.dvsnNote = kisEnv === "vts"
+        ? `모의는 지정가만 받습니다 — 주문구분 ${ordDvsn} 은 보내지 않고 지정가로 냅니다`
+        : `주문구분 ${ordDvsn} 은 아직 실계좌에 보내지 않습니다 — 지정가로 냅니다`;
       row.ordDvsn = dvsn;
       row.results = [];
       for (let i = 0; i < row.orders.length; i++) {
-        if (i) await sleep(700);                       // 모의투자 초당 2건 제한
+        await paceOrder();                             // 세션이 바뀌어도 간격은 이어진다
         const o = row.orders[i];
         try {
           const r = await fetch(url.origin + "/api/kis?op=order&internal=1", {
