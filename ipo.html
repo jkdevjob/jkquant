@@ -7,6 +7,9 @@
 <title>JK 퀀트 — 공모주</title>
 <style>
 .tab[data-t="ipo"].on{background:linear-gradient(135deg,#7048c4,#40277a)}
+/* 공모주는 독립 페이지라 탭/세션바/상태줄 스택이 없다 — 서브탭 sticky offset(--h3)을
+   계산하는 로직도 없으므로, 여기선 서브탭을 화면 맨 위에 고정한다(id로 우선순위 확보). */
+#ipoWrap .subnav{top:0}
 
 :root{
   --bg:#0f1320;--panel:#171c2e;--panel2:#1e2540;--line:#2a3354;
