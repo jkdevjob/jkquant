@@ -111,6 +111,11 @@ export async function onRequest({ request, env }) {
   if (!env.AUTOTRADE_KEY || key !== env.AUTOTRADE_KEY) return json({ error: "권한 없음" }, 401);
   // dry=1 이면 계산만 하고 주문은 내지 않는다. 환경변수로도 막을 수 있다.
   const dry = url.searchParams.get("dry") === "1" || String(env.AUTOTRADE_ENABLE || "") === "0";
+  /* 미국 주문구분. 안 주면 지금까지와 같은 "00"(지정가)라서 평소 주문은 아무것도 달라지지 않는다.
+     LOC 가 몇 번인지 알아보려고 손으로 돌릴 때만 ordDvsn=34 처럼 붙여 부른다.
+     거절당하면 /api/kis 가 알아서 "00" 으로 한 번 떨어뜨리고, 무엇으로 나갔는지 기록에 남긴다. */
+  const ordDvsn = ["31", "32", "33", "34"].includes(url.searchParams.get("ordDvsn") || "")
+    ? url.searchParams.get("ordDvsn") : "00";
 
   let sa;
   try { sa = JSON.parse(env.FIREBASE_SERVICE_ACCOUNT || "{}"); }
@@ -118,7 +123,7 @@ export async function onRequest({ request, env }) {
   if (!sa.client_email || !sa.private_key) return json({ error: "FIREBASE_SERVICE_ACCOUNT 가 없습니다" }, 400);
   const pid = sa.project_id || "jk-invest";
 
-  const out = { at: new Date().toISOString(), dry, sessions: [] };
+  const out = { at: new Date().toISOString(), dry, ordDvsn, sessions: [] };
   try {
     const tok = await googleToken(sa, "https://www.googleapis.com/auth/datastore");
     const uid = env.AUTOTRADE_UID || await findUid(tok, pid, String(env.OWNER_EMAIL || "").split(",")[0].trim());
@@ -180,10 +185,11 @@ export async function onRequest({ request, env }) {
           const r = await fetch(url.origin + "/api/kis?op=order&internal=1", {
             method: "POST",
             headers: { "content-type": "application/json", "x-autotrade-key": env.AUTOTRADE_KEY },
-            body: JSON.stringify({ env: kisEnv, side: o.side, code: sym, qty: o.qty, price: o.price, priceType: "limit" }),
+            body: JSON.stringify({ env: kisEnv, side: o.side, code: sym, qty: o.qty, price: o.price, priceType: "limit", ordDvsn }),
           });
           const j = await r.json().catch(() => ({}));
-          row.results.push({ kind: o.kind, ok: !!j.ok, msg: j.msg || j.error || "응답 없음", orderNo: j.orderNo || "" });
+          row.results.push({ kind: o.kind, ok: !!j.ok, msg: j.msg || j.error || "응답 없음", orderNo: j.orderNo || "",
+            ordDvsn: j.ordDvsn || "", fellBack: !!j.fellBack, firstTry: j.firstTry || null });
         } catch (e) {
           // 재시도하지 않는다 — 응답이 유실된 경우 이미 접수됐을 수 있다
           row.results.push({ kind: o.kind, ok: false, msg: "전송 실패: " + (e.message || e) });

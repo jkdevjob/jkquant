@@ -15,7 +15,7 @@
 }
 *{box-sizing:border-box;margin:0;padding:0}
 html{-webkit-text-size-adjust:100%}
-body{background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Apple SD Gothic Neo","Noto Sans KR",sans-serif;line-height:1.55;padding-bottom:env(safe-area-inset-bottom);word-break:keep-all;overflow-wrap:break-word}
+body{font-variant-numeric:tabular-nums;/* 숫자는 어디서나 같은 폭 — 목록에서 위아래 자릿수가 저절로 맞는다 */background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Apple SD Gothic Neo","Noto Sans KR",sans-serif;line-height:1.55;padding-bottom:env(safe-area-inset-bottom);word-break:keep-all;overflow-wrap:break-word}
 .wrap{max-width:760px;margin:0 auto;padding:0 16px}
 .mono{font-variant-numeric:tabular-nums}
 header{padding:20px 0 12px;border-bottom:1px solid var(--line);background:linear-gradient(180deg,#141a2e,var(--bg))}
@@ -111,7 +111,7 @@ section.on{display:block;animation:fade .25s ease}
 .card h3{font-size:15px;font-weight:800;margin-bottom:12px;display:flex;align-items:center;gap:8px}
 .card h3 .dot{width:7px;height:7px;border-radius:50%;background:var(--gold)}
 .lead{color:var(--dim);font-size:13px;margin-bottom:13px}
-.rowline{display:flex;justify-content:space-between;gap:12px;padding:9px 0;border-bottom:1px solid var(--line);font-size:13.5px}
+.rowline{display:flex;justify-content:space-between;gap:10px;padding:7px 0;border-bottom:1px solid var(--line);font-size:13.5px}
 .rowline:last-child{border-bottom:none}
 .rowline .k{color:var(--dim);flex-shrink:0}.rowline .val{text-align:right;font-weight:600}
 .formula{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:11px 13px;font-size:13px;margin:8px 0;font-variant-numeric:tabular-nums}
@@ -315,7 +315,7 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
 .bandpill.wait{background:#33302040;color:var(--gold)}
 
 /* 계좌 상황 줄 카드 */
-.acct .ar{display:flex;justify-content:space-between;align-items:center;padding:8px 12px;border-radius:10px;background:var(--panel2);margin-bottom:5px;font-size:13.5px}
+.acct .ar{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:6px 10px;border-radius:10px;background:var(--panel2);margin-bottom:4px;font-size:13.5px}
 .acct .ar:last-child{margin-bottom:0}
 .acct .ar .ak{color:var(--dim)}
 .acct .ar .ak .sub{display:block;font-size:10.5px;color:var(--faint);margin-top:1px;font-weight:500}
@@ -395,9 +395,9 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
 /* 사이클 히스토리 테이블 */
 .cyc-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch;margin:0 -4px}
 .cyctbl{width:100%;border-collapse:collapse;font-size:11.5px;min-width:440px}
-.cyctbl th{color:var(--faint);font-weight:700;text-align:right;padding:4px 7px;line-height:1.3;border-bottom:1px solid var(--line);font-size:10px;text-transform:uppercase;white-space:nowrap}
+.cyctbl th{color:var(--faint);font-weight:700;text-align:right;padding:3px 5px;line-height:1.2;border-bottom:1px solid var(--line);font-size:10px;text-transform:uppercase;white-space:nowrap}
 .cyctbl th:first-child{text-align:left}
-.cyctbl td{padding:5px 7px;line-height:1.35;border-bottom:1px solid var(--line);text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.cyctbl td{padding:3px 5px;line-height:1.25;border-bottom:1px solid var(--line);text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
 .cyctbl td:first-child{text-align:left}
 .cyctbl tr:last-child td{border-bottom:none}
 .cyctbl .cmin{color:var(--vio)}.cyctbl .cmax{color:var(--gold)}.cyctbl .cneg{color:var(--sell)}
@@ -499,7 +499,7 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
 </div>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.44</span></h1></div>
+    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.45</span></h1></div>
     <div class="jkmenu" id="jkmenuWrap">
       <button class="jkmenu-btn" id="jkmenuBtn" aria-label="메뉴" onclick="jkMenuToggle(event)">三</button>
       <div class="jkmenu-pop" id="jkmenuPop" hidden>
@@ -554,7 +554,7 @@ document.addEventListener('click',function(e){ var m=document.getElementById('jk
       <div class="statgrid" style="display:none">
         <div class="stat"><div class="sl">평단가</div><div class="sv mono" id="d_avg">—</div></div>
         <div class="stat"><div class="sl">보유수량</div><div class="sv mono" id="d_qty">0주</div></div>
-        <div class="stat"><div class="sl">잔금</div><div class="sv sm mono" id="d_bal">$0</div></div>
+        <div class="stat"><div class="sl">잔금</div><div class="sv sm mono" id="d_bal">0$</div></div>
       </div>
       <div class="statgrid" style="display:none">
         <div class="stat"><div class="sl">별%</div><div class="sv sm mono" id="d_pct" style="color:var(--buy)">—</div></div>
@@ -680,22 +680,22 @@ document.addEventListener('click',function(e){ var m=document.getElementById('jk
     <div class="block" id="inf-anal">
       <div class="dash" style="background:linear-gradient(160deg,var(--buy-bg),var(--panel));border-color:var(--buy-dim)">
         <div class="rowline" style="border:none;padding:0 0 6px"><span class="tlabel">총 실현손익</span><span class="cnt" id="a_cycles">0 매도</span></div>
-        <div class="tval"><span class="big mono" id="a_realized" style="font-size:32px;color:var(--buy)">+$0.00</span><span class="of mono" id="a_realized_pct" style="font-size:16px">+0.00%</span></div>
-        <div class="note" id="a_realized_krw">≈ ₩0</div>
+        <div class="tval"><span class="big mono" id="a_realized" style="font-size:32px;color:var(--buy)">+0.00$</span><span class="of mono" id="a_realized_pct" style="font-size:16px">+0.00%</span></div>
+        <div class="note" id="a_realized_krw">≈ 0₩</div>
       </div>
       <div class="card"><h3><span class="dot"></span>자산 현황</h3>
-        <div class="statgrid"><div class="stat"><div class="sl">총 원금</div><div class="sv sm mono" id="a_principal">$0</div></div>
-          <div class="stat"><div class="sl">투자 중</div><div class="sv sm mono" id="a_invested" style="color:var(--vio)">$0</div></div>
-          <div class="stat"><div class="sl">잔금</div><div class="sv sm mono" id="a_cash">$0</div></div></div>
+        <div class="statgrid"><div class="stat"><div class="sl">총 원금</div><div class="sv sm mono" id="a_principal">0$</div></div>
+          <div class="stat"><div class="sl">투자 중</div><div class="sv sm mono" id="a_invested" style="color:var(--vio)">0$</div></div>
+          <div class="stat"><div class="sl">잔금</div><div class="sv sm mono" id="a_cash">0$</div></div></div>
         <div class="progress"><div class="bar" id="a_bar" style="width:0%"></div></div>
         <div class="pscale"><span>투자 비중</span><span id="a_ratio">0%</span></div></div>
       <div class="card"><h3><span class="dot"></span>요약</h3>
-        <div class="rowline" id="a_wdrow" style="display:none"><span class="k">출금 <span class="sub">직접 뺀 돈</span></span><span class="val mono" id="a_wd" style="color:var(--gold)">$0</span></div>
-        <div class="rowline" id="a_savedrow" style="display:none"><span class="k">단리 적립 <span class="sub" id="a_saved_sub">사이클 초과익</span></span><span class="val mono" id="a_saved" style="color:var(--gold)">$0</span></div>
-        <div class="rowline"><span class="k">총 자산 <span class="sub" id="a_total_sub">평가금 + 잔금</span></span><span class="val mono" id="a_total">$0</span></div>
+        <div class="rowline" id="a_wdrow" style="display:none"><span class="k">출금 <span class="sub">직접 뺀 돈</span></span><span class="val mono" id="a_wd" style="color:var(--gold)">0$</span></div>
+        <div class="rowline" id="a_savedrow" style="display:none"><span class="k">단리 적립 <span class="sub" id="a_saved_sub">사이클 초과익</span></span><span class="val mono" id="a_saved" style="color:var(--gold)">0$</span></div>
+        <div class="rowline"><span class="k">총 자산 <span class="sub" id="a_total_sub">평가금 + 잔금</span></span><span class="val mono" id="a_total">0$</span></div>
         <div class="rowline"><span class="k">누적 수익률</span><span class="val mono" id="a_ret">—</span></div>
-        <div class="rowline"><span class="k">총 매수금</span><span class="val mono" id="a_totbuy">$0</span></div>
-        <div class="rowline"><span class="k">총 매도금</span><span class="val mono" id="a_totsell">$0</span></div>
+        <div class="rowline"><span class="k">총 매수금</span><span class="val mono" id="a_totbuy">0$</span></div>
+        <div class="rowline"><span class="k">총 매도금</span><span class="val mono" id="a_totsell">0$</span></div>
         <div class="rowline"><span class="k">현재 평단</span><span class="val mono" id="a_avg">—</span></div>
         <div class="rowline"><span class="k">보유수량</span><span class="val mono" id="a_qty">0주</span></div></div>
       <div class="card"><h3><span class="dot"></span>월별 실현손익</h3>
@@ -716,10 +716,10 @@ document.addEventListener('click',function(e){ var m=document.getElementById('jk
         <div class="rowline"><span class="k">지정가매도+1회매수</span><span class="val mono">T×0.25+1</span></div>
         <div class="rowline"><span class="k">지정가매도+절반매수</span><span class="val mono">T×0.25+0.5</span></div></div>
       <div class="card"><h3><span class="dot"></span>별지점 & 별%</h3>
-        <div class="formula"><span class="lbl">별지점</span>평단 × (1 + 별% ÷ 100) · 매수점 = 별지점 − $0.01</div>
+        <div class="formula"><span class="lbl">별지점</span>평단 × (1 + 별% ÷ 100) · 매수점 = 별지점 − 0.01$</div>
         <table class="cmp"><tr><th>분할</th><th>TQQQ</th><th>SOXL</th></tr><tr><td>20분할</td><td>15−1.5T</td><td>20−2T</td></tr><tr><td>40분할</td><td>15−0.75T</td><td>20−T</td></tr></table></div>
       <div class="card"><h3><span class="dot"></span>매수 / 매도</h3>
-        <ul class="clean"><li><b>전반전</b> 1회매수금 절반은 별지점-$0.01, 절반은 평단에 LOC매수</li><li><b>후반전</b> 전액 별지점-$0.01에 LOC매수</li><li><b>쿼터매도</b> 보유÷4(내림) 별지점 LOC매도</li><li><b>지정가매도</b> 나머지 전부 평단×익절배율</li></ul></div>
+        <ul class="clean"><li><b>전반전</b> 1회매수금 절반은 별지점-0.01$, 절반은 평단에 LOC매수</li><li><b>후반전</b> 전액 별지점-0.01$에 LOC매수</li><li><b>쿼터매도</b> 보유÷4(내림) 별지점 LOC매도</li><li><b>지정가매도</b> 나머지 전부 평단×익절배율</li></ul></div>
       <div class="card tgtdyn-hidden"><h3><span class="dot"></span>익절 조절 <span style="font-size:11px;color:var(--faint);font-weight:500">· 설정에서 켬/끔 (기본 끔)</span></h3>
         <p class="lead">직전 <b>20거래일 상승률 &gt; +8%</b>면 그날 익절% = <b>min(기본×2, 30%)</b>. 하락 시엔 조절하지 않고, <b>매수 규칙은 그대로</b>입니다 — 익절가 하나만 바뀝니다.</p>
         <ul class="clean"><li><b>근거</b> 익절 체결의 83~85%가 상승 국면에서 일어남 — 추세가 살아있을 때만 더 들고 간다</li>
@@ -756,11 +756,11 @@ document.addEventListener('click',function(e){ var m=document.getElementById('jk
           <span class="vh-kick">CURRENT V · <span class="vh-cyc" id="vh_cyc">0주차</span> <span id="vh_dates" style="color:var(--faint);font-weight:500"></span> <span id="vh_dday" style="font-weight:700"></span></span>
           <span class="bandpill wait" id="vh_pill">대기</span>
         </div>
-        <div class="vh-big" id="vh_v">$0.00</div>
-        <div class="vh-band" id="vh_band">밴드 $0.00 ~ $0.00</div>
+        <div class="vh-big" id="vh_v">0.00$</div>
+        <div class="vh-band" id="vh_band">밴드 0.00$ ~ 0.00$</div>
         <div class="posbar">
           <div class="pb-track"><div class="pb-mark" id="pb_mark" style="left:0%"></div></div>
-          <div class="pb-scale"><span id="pb_min">min $0</span><span class="mid" id="pb_eval">평가 —</span><span id="pb_max">max $0</span></div>
+          <div class="pb-scale"><span id="pb_min">min 0$</span><span class="mid" id="pb_eval">평가 —</span><span id="pb_max">max 0$</span></div>
         </div>
       </div>
 
@@ -795,23 +795,23 @@ document.addEventListener('click',function(e){ var m=document.getElementById('jk
         <h3 style="justify-content:space-between"><span style="display:flex;align-items:center;gap:8px"><span class="dot"></span>계좌 상황</span><span class="bandpill in" id="acct_ret" style="font-size:12px">보유 +0.00%</span></h3>
         <div class="ar"><span class="ak" id="acct_close_k">종가</span><span class="av vio" id="acct_close">—</span></div>
         <div class="ar"><span class="ak">보유 개수</span><span class="av" id="acct_qty">0주</span></div>
-        <div class="ar"><span class="ak">보유 평가금</span><span class="av" id="acct_eval">$0</span></div>
-        <div class="ar"><span class="ak">마지막 Pool</span><span class="av vio" id="acct_pool">$0</span></div>
+        <div class="ar"><span class="ak">보유 평가금</span><span class="av" id="acct_eval">0$</span></div>
+        <div class="ar"><span class="ak">마지막 Pool</span><span class="av vio" id="acct_pool">0$</span></div>
         <div class="ar"><span class="ak">명목평단 <span class="sub">증권사 기준 · 총매수금/수량</span></span><span class="av" id="acct_nom">—</span></div>
         <div class="ar"><span class="ak">실효평단 <span class="sub">VR 기준 · (매수−매도−배당)/수량</span></span><span class="av sell" id="acct_eff">—</span></div>
-        <div class="ar"><span class="ak">회수 원금 <span class="sub">매도·배당으로 회수</span></span><span class="av buy" id="acct_recov">$0</span></div>
+        <div class="ar"><span class="ak">회수 원금 <span class="sub">매도·배당으로 회수</span></span><span class="av buy" id="acct_recov">0$</span></div>
       </div>
 
       <!-- ── 다음 V 미리보기 (현재 탭으로 이동) ── -->
       <div class="card" style="border-color:var(--vio2);background:linear-gradient(165deg,#1a2038,var(--panel))">
         <h3 style="justify-content:space-between"><span style="display:flex;align-items:center;gap:8px"><span class="dot" style="background:var(--vio)"></span>다음 V 미리보기</span><span class="lh-stage" id="nv_formula_lbl">실력공식</span></h3>
         <p class="lead" id="nv_assume" style="margin-bottom:10px">현재 평가금으로 이번 사이클 마감 → 다음 사이클 진입 가정.</p>
-        <div class="nv-bignext"><div class="bl">다음 V</div><div class="bv" id="nv_v">$0.00</div></div>
+        <div class="nv-bignext"><div class="bl">다음 V</div><div class="bv" id="nv_v">0.00$</div></div>
         <div class="formula" id="nv_calc"><span class="lbl">계산</span>—</div>
         <div class="nv-grid">
-          <div class="nvc hl"><div class="nl">다음 Pool</div><div class="nval" id="nv_pool">$0</div></div>
-          <div class="nvc"><div class="nl">새 최소</div><div class="nval min" id="nv_min">$0</div></div>
-          <div class="nvc"><div class="nl">새 최대</div><div class="nval max" id="nv_max">$0</div></div>
+          <div class="nvc hl"><div class="nl">다음 Pool</div><div class="nval" id="nv_pool">0$</div></div>
+          <div class="nvc"><div class="nl">새 최소</div><div class="nval min" id="nv_min">0$</div></div>
+          <div class="nvc"><div class="nl">새 최대</div><div class="nval max" id="nv_max">0$</div></div>
         </div>
         <label class="hint" style="color:var(--dim);font-size:12px;font-weight:600">새 사이클 시작일</label>
         <input id="nv_date" type="date" class="dateinput">
@@ -871,19 +871,19 @@ document.addEventListener('click',function(e){ var m=document.getElementById('jk
     <div class="block" id="vr-anal">
       <div class="dash" style="background:linear-gradient(160deg,var(--buy-bg),var(--panel));border-color:var(--buy-dim)">
         <div class="rowline" style="border:none;padding:0 0 6px"><span class="tlabel">계좌 수익금</span><span class="cnt" id="vc_cyc">0 거래</span></div>
-        <div class="tval"><span class="big mono" id="vc_profit" style="font-size:30px;color:var(--buy)">+$0.00</span><span class="of mono" id="vc_pct" style="font-size:16px">+0.00%</span></div>
-        <div class="note" id="vc_profit_krw">≈ ₩0</div>
+        <div class="tval"><span class="big mono" id="vc_profit" style="font-size:30px;color:var(--buy)">+0.00$</span><span class="of mono" id="vc_pct" style="font-size:16px">+0.00%</span></div>
+        <div class="note" id="vc_profit_krw">≈ 0₩</div>
       </div>
 
       <!-- Pool 정리 (도넛) -->
       <div class="card"><h3 style="justify-content:space-between"><span style="display:flex;align-items:center;gap:8px"><span class="dot"></span>Pool 정리</span><span class="lh-stage" id="pl_mode">적립식</span></h3>
         <div class="poolwrap">
           <div class="pl-list">
-            <div class="plr"><span class="plk">처음 Pool (사이클 시작)</span><span class="plv" id="pl_start">$0</span></div>
-            <div class="plr"><span class="plk">총 매매액</span><span class="plv sell" id="pl_trade" style="color:var(--sell)">$0</span></div>
-            <div class="plr"><span class="plk">배당</span><span class="plv" id="pl_div" style="color:var(--vio)">$0</span></div>
-            <div class="plr hl"><span class="plk">마지막 Pool (현재)</span><span class="plv" id="pl_now">$0</span></div>
-            <div class="plr hl"><span class="plk">다음 Pool (+적립)</span><span class="plv" id="pl_next" style="color:var(--vio)">$0</span></div>
+            <div class="plr"><span class="plk">처음 Pool (사이클 시작)</span><span class="plv" id="pl_start">0$</span></div>
+            <div class="plr"><span class="plk">총 매매액</span><span class="plv sell" id="pl_trade" style="color:var(--sell)">0$</span></div>
+            <div class="plr"><span class="plk">배당</span><span class="plv" id="pl_div" style="color:var(--vio)">0$</span></div>
+            <div class="plr hl"><span class="plk">마지막 Pool (현재)</span><span class="plv" id="pl_now">0$</span></div>
+            <div class="plr hl"><span class="plk">다음 Pool (+적립)</span><span class="plv" id="pl_next" style="color:var(--vio)">0$</span></div>
           </div>
           <svg class="donut" id="pl_donut" viewBox="0 0 42 42"></svg>
         </div>
@@ -891,13 +891,13 @@ document.addEventListener('click',function(e){ var m=document.getElementById('jk
 
       <!-- 누적 정리 -->
       <div class="card"><h3 style="justify-content:space-between"><span style="display:flex;align-items:center;gap:8px"><span class="dot"></span>누적 정리</span><span class="lh-stage" id="cum_mode">적립식</span></h3>
-        <div class="statgrid"><div class="stat"><div class="sl">평가금</div><div class="sv sm mono" id="vc_eval">$0</div></div>
-          <div class="stat"><div class="sl">Pool</div><div class="sv sm mono" id="vc_pool">$0</div></div>
-          <div class="stat"><div class="sl">계좌총액</div><div class="sv sm mono" id="vc_total" style="color:var(--vio)">$0</div></div></div>
-        <div class="statgrid" style="margin-top:9px"><div class="stat"><div class="sl">투자금 (순투입)</div><div class="sv sm mono" id="vc_invested">$0</div></div>
+        <div class="statgrid"><div class="stat"><div class="sl">평가금</div><div class="sv sm mono" id="vc_eval">0$</div></div>
+          <div class="stat"><div class="sl">Pool</div><div class="sv sm mono" id="vc_pool">0$</div></div>
+          <div class="stat"><div class="sl">계좌총액</div><div class="sv sm mono" id="vc_total" style="color:var(--vio)">0$</div></div></div>
+        <div class="statgrid" style="margin-top:9px"><div class="stat"><div class="sl">투자금 (순투입)</div><div class="sv sm mono" id="vc_invested">0$</div></div>
           <div class="stat"><div class="sl">수익률</div><div class="sv sm mono" id="vc_pct2" style="color:var(--buy)">+0%</div></div>
-          <div class="stat"><div class="sl">총 적립금</div><div class="sv sm mono" id="vc_totadd">$0</div></div></div>
-        <div class="rowline" style="margin-top:4px"><span class="k">총 매수 / 매도</span><span class="val mono" id="vc_buysell">$0 / $0</span></div>
+          <div class="stat"><div class="sl">총 적립금</div><div class="sv sm mono" id="vc_totadd">0$</div></div></div>
+        <div class="rowline" style="margin-top:4px"><span class="k">총 매수 / 매도</span><span class="val mono" id="vc_buysell">0$ / 0$</span></div>
         <div class="rowline"><span class="k">명목평단 <span class="hint" style="color:var(--faint)">총매수/수량</span></span><span class="val mono" id="vc_avgnom">—</span></div>
         <div class="rowline"><span class="k">실효평단 <span class="hint" style="color:var(--faint)">(매수−매도−배당)/수량</span></span><span class="val mono" id="vc_avgeff">—</span></div></div>
 
@@ -1054,7 +1054,7 @@ document.addEventListener('click',function(e){ var m=document.getElementById('jk
         <div class="ar"><span class="ak">현재 상태</span><span class="av vio" id="macct_pos">현금</span></div>
         <div class="ar"><span class="ak" id="macct_close_k">종가</span><span class="av" id="macct_close">—</span></div>
         <div class="ar"><span class="ak">보유 개수</span><span class="av" id="macct_qty">0주</span></div>
-        <div class="ar"><span class="ak">보유 평가금</span><span class="av" id="macct_eval">$0</span></div>
+        <div class="ar"><span class="ak">보유 평가금</span><span class="av" id="macct_eval">0$</span></div>
         <div class="ar"><span class="ak">진입가 <span class="sub">마지막 진입 기록</span></span><span class="av" id="macct_entry">—</span></div>
         <div class="ar"><span class="ak">현재 국면 지속 <span class="sub">신호 전환 이후</span></span><span class="av buy" id="ma_regime">—</span></div>
       </div>
@@ -1091,20 +1091,20 @@ document.addEventListener('click',function(e){ var m=document.getElementById('jk
     <div class="block" id="ma-anal">
       <div class="dash" style="background:linear-gradient(160deg,var(--buy-bg),var(--panel));border-color:var(--buy-dim)">
         <div class="rowline" style="border:none;padding:0 0 6px"><span class="tlabel">총 실현손익</span><span class="cnt" id="ana_cnt">0 매도</span></div>
-        <div class="tval"><span class="big mono" id="ana_realized" style="font-size:32px;color:var(--buy)">+$0.00</span><span class="of mono" id="ana_realized_pct" style="font-size:16px">+0.00%</span></div>
-        <div class="note" id="ana_realized_krw">≈ ₩0</div>
+        <div class="tval"><span class="big mono" id="ana_realized" style="font-size:32px;color:var(--buy)">+0.00$</span><span class="of mono" id="ana_realized_pct" style="font-size:16px">+0.00%</span></div>
+        <div class="note" id="ana_realized_krw">≈ 0₩</div>
       </div>
       <div class="card"><h3><span class="dot"></span>자산 현황</h3>
-        <div class="statgrid"><div class="stat"><div class="sl">총 원금</div><div class="sv sm mono" id="ana_principal">$0</div></div>
-          <div class="stat"><div class="sl">투자 중</div><div class="sv sm mono" id="ana_invested" style="color:var(--vio)">$0</div></div>
-          <div class="stat"><div class="sl">현금</div><div class="sv sm mono" id="ana_cash">$0</div></div></div>
+        <div class="statgrid"><div class="stat"><div class="sl">총 원금</div><div class="sv sm mono" id="ana_principal">0$</div></div>
+          <div class="stat"><div class="sl">투자 중</div><div class="sv sm mono" id="ana_invested" style="color:var(--vio)">0$</div></div>
+          <div class="stat"><div class="sl">현금</div><div class="sv sm mono" id="ana_cash">0$</div></div></div>
         <div class="progress"><div class="bar" id="ana_bar" style="width:0%"></div></div>
         <div class="pscale"><span>투자 비중</span><span id="ana_ratio">0%</span></div></div>
       <div class="card"><h3><span class="dot"></span>요약</h3>
-        <div class="rowline"><span class="k">총 자산 <span class="sub">투자중 + 현금</span></span><span class="val mono" id="ana_total">$0</span></div>
+        <div class="rowline"><span class="k">총 자산 <span class="sub">투자중 + 현금</span></span><span class="val mono" id="ana_total">0$</span></div>
         <div class="rowline"><span class="k">누적 수익률</span><span class="val mono" id="ana_ret">—</span></div>
-        <div class="rowline"><span class="k">총 매수금</span><span class="val mono" id="ana_totbuy">$0</span></div>
-        <div class="rowline"><span class="k">총 매도금</span><span class="val mono" id="ana_totsell">$0</span></div>
+        <div class="rowline"><span class="k">총 매수금</span><span class="val mono" id="ana_totbuy">0$</span></div>
+        <div class="rowline"><span class="k">총 매도금</span><span class="val mono" id="ana_totsell">0$</span></div>
         <div class="rowline"><span class="k">현재 평단</span><span class="val mono" id="ana_avg">—</span></div>
         <div class="rowline"><span class="k">보유수량</span><span class="val mono" id="ana_qty">0주</span></div>
         <div class="rowline" id="ana_extra_row"><span class="k" id="ana_extra_k">—</span><span class="val mono" id="ana_extra">—</span></div></div>
@@ -1181,10 +1181,10 @@ document.addEventListener('click',function(e){ var m=document.getElementById('jk
       <div class="card acct" style="margin-bottom:13px">
         <h3 style="justify-content:space-between"><span style="display:flex;align-items:center;gap:8px"><span class="dot"></span>내 계좌</span><span class="bandpill in" id="ivs_ret" style="font-size:12px">—</span></h3>
         <div class="ar"><span class="ak">보유 주식수</span><span class="av" id="ivs_qty">0주</span></div>
-        <div class="ar"><span class="ak">보유 평가금</span><span class="av" id="ivs_eval">$0</span></div>
-        <div class="ar"><span class="ak">예수금 <span class="sub" id="ivs_park_lbl">단기국채</span></span><span class="av vio" id="ivs_cash">$0</span></div>
-        <div class="ar"><span class="ak">초기자금 <span class="sub" id="ivs_addsub"></span></span><span class="av cdim" id="ivs_prin">$0</span></div>
-        <div class="ar"><span class="ak">총자산</span><span class="av" id="ivs_eq">$0</span></div>
+        <div class="ar"><span class="ak">보유 평가금</span><span class="av" id="ivs_eval">0$</span></div>
+        <div class="ar"><span class="ak">예수금 <span class="sub" id="ivs_park_lbl">단기국채</span></span><span class="av vio" id="ivs_cash">0$</span></div>
+        <div class="ar"><span class="ak">초기자금 <span class="sub" id="ivs_addsub"></span></span><span class="av cdim" id="ivs_prin">0$</span></div>
+        <div class="ar"><span class="ak">총자산</span><span class="av" id="ivs_eq">0$</span></div>
         <div class="ar"><span class="ak">평단</span><span class="av" id="ivs_avg">—</span></div>
         <div class="ar" id="ivs_x1row" style="display:none"><span class="ak">1배수 <span class="sub" id="ivs_x1nm">QQQ</span></span><span class="av" id="ivs_x1val">—</span></div>
         <div class="ar"><span class="ak">현재 비중 <span class="sub">주식 ÷ 총자산</span></span><span class="av" id="ivs_wnow">—</span></div>
@@ -1194,9 +1194,9 @@ document.addEventListener('click',function(e){ var m=document.getElementById('jk
            DOM은 renderIvsNow가 참조하므로 지우지 않고 감춘다. -->
       <div class="card acct" style="display:none">
         <h3><span style="display:flex;align-items:center;gap:8px"><span class="dot"></span>올해 양도세</span></h3>
-        <div class="ar"><span class="ak">실현손익 <span class="sub" id="ivs_tax_year">—</span></span><span class="av" id="ivs_pnl">$0</span></div>
-        <div class="ar"><span class="ak">기본공제 잔여 <span class="sub">연 250만원</span></span><span class="av buy" id="ivs_ded">₩2,500,000</span></div>
-        <div class="ar"><span class="ak">예상 세금 <span class="sub">22%</span></span><span class="av" id="ivs_tax">₩0</span></div>
+        <div class="ar"><span class="ak">실현손익 <span class="sub" id="ivs_tax_year">—</span></span><span class="av" id="ivs_pnl">0$</span></div>
+        <div class="ar"><span class="ak">기본공제 잔여 <span class="sub">연 250만원</span></span><span class="av buy" id="ivs_ded">2,500,000₩</span></div>
+        <div class="ar"><span class="ak">예상 세금 <span class="sub">22%</span></span><span class="av" id="ivs_tax">0₩</span></div>
         <p class="note" style="margin-top:8px" id="ivs_tax_note">공제 잔여가 남아 있으면 그만큼은 세금이 없습니다. 연말에 이익이 공제를 넘길 것 같으면 손실 종목 매도로 상계하는 것을 고려하세요.</p>
       </div>
       <!-- 현재가 입력 — 맨 아래 (판단을 먼저 보고, 값 고칠 때만 내려온다) -->
@@ -1244,20 +1244,20 @@ document.addEventListener('click',function(e){ var m=document.getElementById('jk
     <div class="block" id="ivs-anal">
       <div class="dash" style="background:linear-gradient(160deg,var(--buy-bg),var(--panel));border-color:var(--buy-dim)">
         <div class="rowline" style="border:none;padding:0 0 6px"><span class="tlabel">총 실현손익</span><span class="cnt" id="anaI_cnt">0 매도</span></div>
-        <div class="tval"><span class="big mono" id="anaI_realized" style="font-size:32px;color:var(--buy)">+$0.00</span><span class="of mono" id="anaI_realized_pct" style="font-size:16px">+0.00%</span></div>
-        <div class="note" id="anaI_realized_krw">≈ ₩0</div>
+        <div class="tval"><span class="big mono" id="anaI_realized" style="font-size:32px;color:var(--buy)">+0.00$</span><span class="of mono" id="anaI_realized_pct" style="font-size:16px">+0.00%</span></div>
+        <div class="note" id="anaI_realized_krw">≈ 0₩</div>
       </div>
       <div class="card"><h3><span class="dot"></span>자산 현황</h3>
-        <div class="statgrid"><div class="stat"><div class="sl">총 원금</div><div class="sv sm mono" id="anaI_principal">$0</div></div>
-          <div class="stat"><div class="sl">투자 중</div><div class="sv sm mono" id="anaI_invested" style="color:var(--vio)">$0</div></div>
-          <div class="stat"><div class="sl">현금</div><div class="sv sm mono" id="anaI_cash">$0</div></div></div>
+        <div class="statgrid"><div class="stat"><div class="sl">총 원금</div><div class="sv sm mono" id="anaI_principal">0$</div></div>
+          <div class="stat"><div class="sl">투자 중</div><div class="sv sm mono" id="anaI_invested" style="color:var(--vio)">0$</div></div>
+          <div class="stat"><div class="sl">현금</div><div class="sv sm mono" id="anaI_cash">0$</div></div></div>
         <div class="progress"><div class="bar" id="anaI_bar" style="width:0%"></div></div>
         <div class="pscale"><span>투자 비중</span><span id="anaI_ratio">0%</span></div></div>
       <div class="card"><h3><span class="dot"></span>요약</h3>
-        <div class="rowline"><span class="k">총 자산 <span class="sub">투자중 + 현금</span></span><span class="val mono" id="anaI_total">$0</span></div>
+        <div class="rowline"><span class="k">총 자산 <span class="sub">투자중 + 현금</span></span><span class="val mono" id="anaI_total">0$</span></div>
         <div class="rowline"><span class="k">누적 수익률</span><span class="val mono" id="anaI_ret">—</span></div>
-        <div class="rowline"><span class="k">총 매수금</span><span class="val mono" id="anaI_totbuy">$0</span></div>
-        <div class="rowline"><span class="k">총 매도금</span><span class="val mono" id="anaI_totsell">$0</span></div>
+        <div class="rowline"><span class="k">총 매수금</span><span class="val mono" id="anaI_totbuy">0$</span></div>
+        <div class="rowline"><span class="k">총 매도금</span><span class="val mono" id="anaI_totsell">0$</span></div>
         <div class="rowline"><span class="k">현재 평단</span><span class="val mono" id="anaI_avg">—</span></div>
         <div class="rowline"><span class="k">보유수량</span><span class="val mono" id="anaI_qty">0주</span></div>
         <div class="rowline"><span class="k">평가손익 <span class="sub">아직 안 판 몫</span></span><span class="val mono" id="anaI_unreal">—</span></div>
@@ -1352,13 +1352,13 @@ document.addEventListener('click',function(e){ var m=document.getElementById('jk
       <!-- 적립 현황 -->
       <div class="card acct">
         <h3 style="justify-content:space-between"><span style="display:flex;align-items:center;gap:8px"><span class="dot"></span>내 적립 현황</span><span class="bandpill in" id="dcacct_ret" style="font-size:12px">—</span></h3>
-        <div class="ar"><span class="ak">누적 투입금 <span class="sub">기록 합계</span></span><span class="av vio" id="dcacct_inv">$0</span></div>
+        <div class="ar"><span class="ak">누적 투입금 <span class="sub">기록 합계</span></span><span class="av vio" id="dcacct_inv">0$</span></div>
         <div class="ar"><span class="ak">보유 개수</span><span class="av" id="dcacct_qty">0주</span></div>
         <div class="ar"><span class="ak">평균 단가</span><span class="av" id="dcacct_avg">—</span></div>
         <div class="ar"><span class="ak" id="dcacct_close_k">종가</span><span class="av" id="dcacct_close">—</span></div>
-        <div class="ar"><span class="ak">평가금 <span class="sub">주식만</span></span><span class="av" id="dcacct_eval">$0</span></div>
-        <div class="ar" id="dcacct_divrow" style="display:none"><span class="ak">받은 분배금 <span class="sub" id="dcacct_div_sub">누적</span></span><span class="av buy" id="dcacct_div">$0</span></div>
-        <div class="ar" id="dcacct_totrow" style="display:none"><span class="ak">총자산 <span class="sub">주식 + 분배금</span></span><span class="av vio" id="dcacct_tot">$0</span></div>
+        <div class="ar"><span class="ak">평가금 <span class="sub">주식만</span></span><span class="av" id="dcacct_eval">0$</span></div>
+        <div class="ar" id="dcacct_divrow" style="display:none"><span class="ak">받은 분배금 <span class="sub" id="dcacct_div_sub">누적</span></span><span class="av buy" id="dcacct_div">0$</span></div>
+        <div class="ar" id="dcacct_totrow" style="display:none"><span class="ak">총자산 <span class="sub">주식 + 분배금</span></span><span class="av vio" id="dcacct_tot">0$</span></div>
         <div class="ar" id="dcacct_pricerow" style="display:none"><span class="ak">가격 수익률 <span class="sub">분배금 제외</span></span><span class="av" id="dcacct_priceret">—</span></div>
         <div class="ar"><span class="ak">적립 횟수 <span class="sub">2배 적립 포함</span></span><span class="av buy" id="dcacct_n">0회</span></div>
       </div>
@@ -1387,17 +1387,17 @@ document.addEventListener('click',function(e){ var m=document.getElementById('jk
     <div class="block" id="dca-anal">
       <div class="dash" style="background:linear-gradient(160deg,var(--buy-bg),var(--panel));border-color:var(--buy-dim)">
         <div class="rowline" style="border:none;padding:0 0 6px"><span class="tlabel">평가손익</span><span class="cnt" id="anaD_cnt">0 매수</span></div>
-        <div class="tval"><span class="big mono" id="anaD_pnl" style="font-size:32px;color:var(--buy)">+$0.00</span><span class="of mono" id="anaD_pnlpct" style="font-size:16px">+0.00%</span></div>
-        <div class="note" id="anaD_pnl_krw">≈ ₩0</div>
+        <div class="tval"><span class="big mono" id="anaD_pnl" style="font-size:32px;color:var(--buy)">+0.00$</span><span class="of mono" id="anaD_pnlpct" style="font-size:16px">+0.00%</span></div>
+        <div class="note" id="anaD_pnl_krw">≈ 0₩</div>
       </div>
       <div class="card"><h3><span class="dot"></span>자산 현황</h3>
-        <div class="statgrid"><div class="stat"><div class="sl">총 투입</div><div class="sv sm mono" id="anaD_inv">$0</div></div>
-          <div class="stat"><div class="sl">주식 평가</div><div class="sv sm mono" id="anaD_eval" style="color:var(--vio)">$0</div></div>
-          <div class="stat"><div class="sl" id="anaD_cash_lbl">현금</div><div class="sv sm mono" id="anaD_cash">$0</div></div></div>
+        <div class="statgrid"><div class="stat"><div class="sl">총 투입</div><div class="sv sm mono" id="anaD_inv">0$</div></div>
+          <div class="stat"><div class="sl">주식 평가</div><div class="sv sm mono" id="anaD_eval" style="color:var(--vio)">0$</div></div>
+          <div class="stat"><div class="sl" id="anaD_cash_lbl">현금</div><div class="sv sm mono" id="anaD_cash">0$</div></div></div>
         <div class="progress"><div class="bar" id="anaD_bar" style="width:0%"></div></div>
         <div class="pscale"><span>투자 비중</span><span id="anaD_ratio">0%</span></div></div>
       <div class="card"><h3><span class="dot"></span>요약</h3>
-        <div class="rowline"><span class="k">총 자산</span><span class="val mono" id="anaD_total">$0</span></div>
+        <div class="rowline"><span class="k">총 자산</span><span class="val mono" id="anaD_total">0$</span></div>
         <div class="rowline"><span class="k">현재 평단</span><span class="val mono" id="anaD_avg">—</span></div>
         <div class="rowline"><span class="k">보유수량</span><span class="val mono" id="anaD_qty">0주</span></div>
         <div class="rowline"><span class="k">매수 횟수</span><span class="val mono" id="anaD_0">—</span></div>
@@ -1493,9 +1493,9 @@ document.addEventListener('click',function(e){ var m=document.getElementById('jk
         <div class="ar"><span class="ak" id="asap_close_k">SOXL 종가</span><span class="av" id="asap_close">—</span></div>
         <div class="ar"><span class="ak">SOXL 보유</span><span class="av buy" id="asap_qty">0주</span></div>
         <div class="ar"><span class="ak">평단가</span><span class="av" id="asap_avg">—</span></div>
-        <div class="ar"><span class="ak">평가금</span><span class="av" id="asap_eval">$0</span></div>
-        <div class="ar"><span class="ak">SGOV 리저브 <span class="sub">현금성 대기자금</span></span><span class="av vio" id="asap_reserve">$0</span></div>
-        <div class="ar"><span class="ak">총자산 <span class="sub">SOXL + 리저브</span></span><span class="av" id="asap_total">$0</span></div>
+        <div class="ar"><span class="ak">평가금</span><span class="av" id="asap_eval">0$</span></div>
+        <div class="ar"><span class="ak">SGOV 리저브 <span class="sub">현금성 대기자금</span></span><span class="av vio" id="asap_reserve">0$</span></div>
+        <div class="ar"><span class="ak">총자산 <span class="sub">SOXL + 리저브</span></span><span class="av" id="asap_total">0$</span></div>
         <div class="ar"><span class="ak">현재 국면 · 단계</span><span class="av gold" id="asap_stage">—</span></div>
       </div>
       <!-- 현재가 입력 — 맨 아래 (판단을 먼저 보고, 값 고칠 때만 내려온다) -->
@@ -1520,17 +1520,17 @@ document.addEventListener('click',function(e){ var m=document.getElementById('jk
     <div class="block" id="asap-anal">
       <div class="dash" style="background:linear-gradient(160deg,var(--buy-bg),var(--panel));border-color:var(--buy-dim)">
         <div class="rowline" style="border:none;padding:0 0 6px"><span class="tlabel">평가손익</span><span class="cnt" id="anaA_cnt">0 매수</span></div>
-        <div class="tval"><span class="big mono" id="anaA_pnl" style="font-size:32px;color:var(--buy)">+$0.00</span><span class="of mono" id="anaA_pnlpct" style="font-size:16px">+0.00%</span></div>
-        <div class="note" id="anaA_pnl_krw">≈ ₩0</div>
+        <div class="tval"><span class="big mono" id="anaA_pnl" style="font-size:32px;color:var(--buy)">+0.00$</span><span class="of mono" id="anaA_pnlpct" style="font-size:16px">+0.00%</span></div>
+        <div class="note" id="anaA_pnl_krw">≈ 0₩</div>
       </div>
       <div class="card"><h3><span class="dot"></span>자산 현황</h3>
-        <div class="statgrid"><div class="stat"><div class="sl">총 투입</div><div class="sv sm mono" id="anaA_inv">$0</div></div>
-          <div class="stat"><div class="sl">주식 평가</div><div class="sv sm mono" id="anaA_eval" style="color:var(--vio)">$0</div></div>
-          <div class="stat"><div class="sl" id="anaA_cash_lbl">현금</div><div class="sv sm mono" id="anaA_cash">$0</div></div></div>
+        <div class="statgrid"><div class="stat"><div class="sl">총 투입</div><div class="sv sm mono" id="anaA_inv">0$</div></div>
+          <div class="stat"><div class="sl">주식 평가</div><div class="sv sm mono" id="anaA_eval" style="color:var(--vio)">0$</div></div>
+          <div class="stat"><div class="sl" id="anaA_cash_lbl">현금</div><div class="sv sm mono" id="anaA_cash">0$</div></div></div>
         <div class="progress"><div class="bar" id="anaA_bar" style="width:0%"></div></div>
         <div class="pscale"><span>투자 비중</span><span id="anaA_ratio">0%</span></div></div>
       <div class="card"><h3><span class="dot"></span>요약</h3>
-        <div class="rowline"><span class="k">총 자산</span><span class="val mono" id="anaA_total">$0</span></div>
+        <div class="rowline"><span class="k">총 자산</span><span class="val mono" id="anaA_total">0$</span></div>
         <div class="rowline"><span class="k">현재 평단</span><span class="val mono" id="anaA_avg">—</span></div>
         <div class="rowline"><span class="k">보유수량</span><span class="val mono" id="anaA_qty">0주</span></div>
         <div class="rowline"><span class="k">리저브(SGOV)</span><span class="val mono" id="anaA_0">—</span></div>
@@ -1540,10 +1540,10 @@ document.addEventListener('click',function(e){ var m=document.getElementById('jk
 
     <div class="block" id="asap-guide">
       <div class="card"><h3><span class="dot"></span>한 줄 요약</h3><p class="lead"><b>매일 base 적립</b>을 기본으로 — 하락장엔 SGOV(현금성)로 실탄을 모으고, 상승장엔 SOXL에 그대로 담습니다. 하락 깊을수록(낙폭·RSI) SOXL을 크게 담고(딥), 상승 전환엔 모아둔 리저브를 이동평균 교차 따라 단계로 태워 재진입합니다.</p></div>
-      <div class="card"><h3><span class="dot"></span>매일 적립금 base (기본 $10)</h3>
+      <div class="card"><h3><span class="dot"></span>매일 적립금 base (기본 10$)</h3>
         <ul class="clean"><li><b>하락장</b>(종가&lt;200일선) → base를 <b>SGOV</b>에 적립(실탄 축적)</li><li><b>상승장</b>(종가≥200일선) → base로 <b>SOXL 매수</b>(DCA 지속)</li></ul></div>
       <div class="card"><h3><span class="dot"></span>하락장 딥 가중 매수</h3>
-        <ul class="clean"><li><b>−10% & RSI≤35</b> → SOXL <b>mid</b> 매수 (기본 $50)</li><li><b>−15% & RSI≤30</b> → SOXL <b>deep</b> 매수 (기본 $100, mid 대체)</li></ul></div>
+        <ul class="clean"><li><b>−10% & RSI≤35</b> → SOXL <b>mid</b> 매수 (기본 50$)</li><li><b>−15% & RSI≤30</b> → SOXL <b>deep</b> 매수 (기본 100$, mid 대체)</li></ul></div>
       <div class="card"><h3><span class="dot"></span>상승 전환 리저브 재진입</h3>
         <ul class="clean"><li><b>1차</b> MA5 &gt; MA20 교차 → 리저브 <b>20%</b> SOXL 매수</li><li><b>2차</b> MA20 &gt; MA50 교차 → 남은 리저브 <b>30%</b></li><li><b>3차</b> <b>상승장 재확인</b>(종가≥200일선) → 남은 리저브 <b>전액</b> — 리저브가 묶이지 않게 레벨식</li><li>재하락(종가&lt;200일선) 시 카운터 리셋(1차부터)</li></ul></div>
       <div class="card"><h3><span class="dot"></span>운영 방법</h3>
@@ -1556,7 +1556,7 @@ document.addEventListener('click',function(e){ var m=document.getElementById('jk
   <footer>
     <strong>JK 퀀트</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.44</b> · 2026-09-15</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.45</b> · 2026-09-15</div>
   </footer>
 </div>
 
@@ -1941,21 +1941,24 @@ function tickerLabel(t){
 // 원화 세션인데 종목코드가 없어 자동시세 불가한 경우만 true
 function krwNoAuto(st){return (st.cur||'usd')==='krw' && !isKrCode(st.ticker);}
 /* 통화를 지정해서 찍는다. 모의 성과처럼 여러 세션을 한 표에 나열할 때는
-   활성 세션 통화로 전부 찍으면 원화 세션이 $10,000,000으로 나온다. */
+   활성 세션 통화로 전부 찍으면 원화 세션이 10,000,000$으로 나온다. */
+/* 기호는 숫자 뒤에 붙인다. 목록에서 숫자를 오른쪽으로 맞춰 놓으면
+   기호가 앞에 있을 때 1,234₩ / 99₩ 처럼 기호가 들쭉날쭉 흩어진다.
+   뒤로 보내면 기호가 오른쪽 끝에서 한 줄로 서고 자릿수도 그대로 맞는다. */
 function wnCur(v,cur){
   v=+v||0;
-  if(cur==='krw') return '₩'+Math.round(v).toLocaleString('en-US');
-  return '$'+v.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+  if(cur==='krw') return Math.round(v).toLocaleString('en-US')+'₩';
+  return v.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})+'$';
 }
 function wn(v){ return wnCur(v, curCurrency()); }
 /* 가격(체결단가 등)도 통화 맞춤. 원화는 정수, 달러는 소수2자리 */
 function wp(v){return wn(v)}
 /* ── 천 단위 콤마 숫자 포맷터 (모든 숫자 공통) ── */
-// 달러: $ + 콤마 + 소수2자리.  예: 1234.5 → "$1,234.50"
+// 달러: $ + 콤마 + 소수2자리.  예: 1234.5 → "1,234.50$"
 // 달러 고정 포맷 (참고용)
-function usd(v){return '$'+(+v||0).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});}
+function usd(v){return (+v||0).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})+'$';}
 // 통화 자동: krw면 ₩정수, 아니면 $소수2. cs 인자로 '₩'/'$' 강제 가능
-function px(v,cs){v=+v||0; const s=cs||(curCurrency()==='krw'?'₩':'$'); return s==='₩'?'₩'+Math.round(v).toLocaleString('en-US'):'$'+v.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});}
+function px(v,cs){v=+v||0; const s=cs||(curCurrency()==='krw'?'₩':'$'); return s==='₩'?Math.round(v).toLocaleString('en-US')+'₩':v.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})+'$';}
 // 콤마만 (기호 없음). 소수 자릿수 지정. 예: nfix(1234.5,2) → "1,234.50"
 function nfix(v,d){d=d==null?2:d; return (+v||0).toLocaleString('en-US',{minimumFractionDigits:d,maximumFractionDigits:d});}
 /* ── 입력칸 천 단위 콤마 자동 ── */
@@ -1978,7 +1981,7 @@ function commaInput(el){
 // input의 숫자값 읽기 (콤마 무시)
 function inputNum(id){ const el=$(id); if(!el)return 0; return +unComma(el.value)||0; }
 const FX=1520.21; // USD/KRW 폴백 상수 (loadFX 실패 시에만 사용)
-const won=v=>'₩'+Math.round((+v||0)*((typeof liveFX!=='undefined'&&liveFX)?liveFX:FX)).toLocaleString('en-US');
+const won=v=>Math.round((+v||0)*((typeof liveFX!=='undefined'&&liveFX)?liveFX:FX)).toLocaleString('en-US')+'₩';
 
 /* ── 저장 구조 (v2: 무매/VR 세션 완전 분리) ──
  state = {
@@ -2218,7 +2221,7 @@ function imTgtOf(base, mom){ return (mom!=null && mom>IM_MOM_TH) ? Math.min(base
    ── 소진 기준 (라오어 공지) ──
    (1) 일반모드: '1회 매수가 불가능해지는 시점' = T > 분할−1 (남은 회차 < 1회)
        남은 회차가 1회 미만이면 1회분이 잔금을 넘으므로 부분 매수 없이 소진 처리한다.
-       (예: 잔금 $366.77 · T=19.844/20분할 → slot=0.156 → 1회분 $2,347 = 잔금의 6.3배 → 소진)
+       (예: 잔금 366.77$ · T=19.844/20분할 → slot=0.156 → 1회분 2,347$ = 잔금의 6.3배 → 소진)
    (2) 리버스모드: '1개(1주) 매수가 불가능해지는 시점' — T가 분할−1을 넘어도
        1주를 살 수 있으면 별지점 아래에서 매수를 계속한다. (리버스 쿼터매수 참조)                     */
 function imBuy1(c){
@@ -3261,7 +3264,7 @@ function computeVr(){
         // 초기 투입은 Pool(여유현금)에서 꺼낸 게 아니므로 차감 안 함.
         // startv가 사이클 진입으로 갱신돼도(startCyc>0) 이 판정은 유지되어 Pool이 음수로 회귀하지 않음.
         // 대신 '밖에서 들어온 돈'이므로 총투입(netInvested)에는 반드시 더해야 한다 —
-        // 안 그러면 첫 매수만 있는 새 세션이 총투입 $0 · 수익 = 평가금 전액으로 보인다.
+        // 안 그러면 첫 매수만 있는 새 세션이 총투입 0$ · 수익 = 평가금 전액으로 보인다.
         initBuy+=amt; cycStartPool=pool;
       }else{
         pool-=amt; cycTrade-=amt;
@@ -4458,8 +4461,8 @@ function renderIvsNow(){
   $('ivs_tax_year').textContent=c.year+'년';
   $('ivs_pnl').textContent=(pnl>=0?'+':'')+px(Math.abs(pnl));
   $('ivs_pnl').className='av '+(pnl>=0?'buy':'sell');
-  $('ivs_ded').textContent='₩'+nfix(ded,0);
-  $('ivs_tax').textContent='₩'+nfix(Math.max(0,pnlKrw-IVS_DEDUCT)*IVS_TAXRATE,0);
+  $('ivs_ded').textContent=nfix(ded,0)+'₩';
+  $('ivs_tax').textContent=nfix(Math.max(0,pnlKrw-IVS_DEDUCT)*IVS_TAXRATE,0)+'₩';
   if(!c.ready){
     $('ivs_pill').className='bandpill wait'; $('ivs_pill').textContent='대기';
     $('ivs_w_txt').textContent='—'; $('ivs_sig_lbl').textContent='변동성 — · 목표 — · 현재 —';
@@ -4494,7 +4497,7 @@ function renderIvsNow(){
      +(c.X1&&c.orderQty1>0?`<div class="oitem ${c.side1==='buy'?'b':'s'}" style="margin-top:6px"><span class="tag">${c.side1==='buy'?'매수':'매도'}</span><span class="nm">${c.sym1} ${nfix(c.orderQty1,0)}주 · ${px(c.orderAmt1)}</span><span class="pr">${px(c.price1)}</span></div>`:'')
      +`
        <p class="note" style="margin-top:8px">수수료 ${px(c.orderFee)} 포함 · 체결 후 비중 ${pc((buy?(c.qty+c.orderQty):(c.qty-c.orderQty))*c.price/Math.max(c.eq,1))}
-       ${(c.side==='sell'&&c.orderPnl!=null)?`<br>이 매도의 실현손익 <b style="color:${c.orderPnl>=0?'var(--buy)':'var(--sell)'}">${c.orderPnl>=0?'+':''}${px(Math.abs(c.orderPnl))}</b> — 올해 공제 잔여 ₩${nfix(Math.max(0,IVS_DEDUCT-Math.max(0,(c.pnlYear||0)*IVS_KRW)),0)}`:''}</p>`;
+       ${(c.side==='sell'&&c.orderPnl!=null)?`<br>이 매도의 실현손익 <b style="color:${c.orderPnl>=0?'var(--buy)':'var(--sell)'}">${c.orderPnl>=0?'+':''}${px(Math.abs(c.orderPnl))}</b> — 올해 공제 잔여 ${nfix(Math.max(0,IVS_DEDUCT-Math.max(0,(c.pnlYear||0)*IVS_KRW)),0)}₩`:''}</p>`;
   }
   v+=`<p class="note" style="margin-top:8px;color:var(--faint)">ⓘ 신호 기준 <b>${c.sigDate}</b> 종가 · 체결은 <b>다음 거래일 종가(MOC)</b>가 원칙입니다. 백테와 같은 규약이라 여기서 벗어나면 숫자가 안 맞습니다.</p>`;
   $('ivs_verdict').innerHTML=v;
@@ -5540,7 +5543,7 @@ function renderInfFx(){
   const el=$('inf_fx'); if(!el)return;
   const rate=(typeof liveFX!=='undefined'&&liveFX)?liveFX:FX;
   const dateStr=(typeof liveFXDate!=='undefined'&&liveFXDate)?liveFXDate:'';
-  el.innerHTML=`USD/KRW <b>₩${rate.toLocaleString('en-US',{maximumFractionDigits:2})}</b>${dateStr?` <span style="opacity:.7">(${dateStr})</span>`:''}`;
+  el.innerHTML=`USD/KRW <b>${rate.toLocaleString('en-US',{maximumFractionDigits:2})}₩</b>${dateStr?` <span style="opacity:.7">(${dateStr})</span>`:''}`;
 }
 let liveFX=null, liveFXDate=null;
 async function loadFX(){
@@ -6224,7 +6227,7 @@ async function applyAllSimStart(){
   if(cap!=null) msg+=`\n\n원금 ${cap.toLocaleString('en-US')} → ${capHit.length}개 적용`;
   if(add!=null) msg+=`\n1회 적립액 ${add.toLocaleString('en-US')} → ${addHit.length}개 적용`;
   if((cap!=null||add!=null)){
-    // 숫자는 각 세션의 통화 그대로 들어간다 — 원화 세션에 10,000을 넣으면 ₩10,000이다
+    // 숫자는 각 세션의 통화 그대로 들어간다 — 원화 세션에 10,000을 넣으면 10,000₩이다
     msg+='\n※ 금액은 각 세션의 통화로 그대로 들어갑니다.';
     if(skip.length) msg+=`\n건너뜀 ${skip.length}개 — ${skip.map(([,x])=>x.name).join(', ')}`;
   }

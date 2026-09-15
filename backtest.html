@@ -109,7 +109,7 @@ window.btLogin = async () => {
   --qld:#5b8dee;--tqqq:#00d4b4;--usd:#b088f8;--soxl:#ff6b6b;--tecl:#ffc844;
 }
 *{box-sizing:border-box;margin:0;padding:0;}
-body{background:var(--bg);color:var(--text);font-family:'Pretendard',sans-serif;font-size:14px;line-height:1.55;-webkit-tap-highlight-color:transparent;word-break:keep-all;overflow-wrap:break-word;}
+body{font-variant-numeric:tabular-nums;/* 숫자는 어디서나 같은 폭 — 목록에서 위아래 자릿수가 저절로 맞는다 */background:var(--bg);color:var(--text);font-family:'Pretendard',sans-serif;font-size:14px;line-height:1.55;-webkit-tap-highlight-color:transparent;word-break:keep-all;overflow-wrap:break-word;}
 .wrap{max-width:1100px;margin:0 auto;padding:20px 16px 60px;}
 
 /* HEADER */
@@ -156,9 +156,9 @@ body{background:var(--bg);color:var(--text);font-family:'Pretendard',sans-serif;
 .cmp-card h3{font-size:14px;font-weight:700;color:var(--text);margin:0 0 12px;}
 /* 표 밀도 — 운영과 같은 규약. 한 화면에 더 많은 종목·회차가 들어가게 */
 .cmp-tbl{width:100%;border-collapse:collapse;font-size:11.5px;font-variant-numeric:tabular-nums;white-space:nowrap;}
-.cmp-tbl th{color:var(--dim);font-weight:600;text-align:right;padding:3px 5px;line-height:1.2;border-bottom:1px solid var(--border2);font-size:10px;}
+.cmp-tbl th{color:var(--dim);font-weight:600;text-align:right;padding:3px 4px;line-height:1.2;border-bottom:1px solid var(--border2);font-size:10px;}
 .cmp-tbl th:first-child,.cmp-tbl td:first-child{text-align:left;}
-.cmp-tbl td{padding:3px 5px;line-height:1.25;text-align:right;border-bottom:1px solid rgba(255,255,255,.04);color:var(--text);}
+.cmp-tbl td{padding:3px 4px;line-height:1.25;text-align:right;border-bottom:1px solid rgba(255,255,255,.04);color:var(--text);}
 .cmp-tbl tr.win{background:rgba(245,196,81,.09);}
 .cmp-tbl tr.win td{font-weight:600;}
 .cmp-tbl td.win{background:rgba(245,196,81,.14);color:var(--gold);font-weight:700;}
@@ -229,15 +229,15 @@ body{background:var(--bg);color:var(--text);font-family:'Pretendard',sans-serif;
 .detail{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:18px;}
 .dbox{background:var(--surf);border:1px solid var(--border);border-radius:9px;padding:16px 18px;}
 .dbox h4{font-size:13px;color:var(--dim2);font-family:'IBM Plex Mono',monospace;margin-bottom:12px;font-weight:500;}
-.metric{display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--border);font-size:13px;}
+.metric{display:flex;justify-content:space-between;gap:10px;padding:5px 0;border-bottom:1px solid var(--border);font-size:13px;}
 .metric:last-child{border-bottom:none;}
 .metric .k{color:var(--dim);}
-.metric .v{font-family:'IBM Plex Mono',monospace;font-weight:500;}
+.metric .v{font-family:'IBM Plex Mono',monospace;font-weight:500;text-align:right;font-variant-numeric:tabular-nums;}
 /* 전략 vs 거치식 비교표 */
 .cmp-wrap{background:var(--surf);border:1px solid var(--border);border-radius:9px;padding:11px 12px;margin-bottom:13px;overflow-x:auto;}
 .cmp-wrap h4{font-size:13px;color:var(--dim2);font-family:'IBM Plex Mono',monospace;margin-bottom:12px;font-weight:500;}
 table.cmp{width:100%;border-collapse:collapse;font-size:13px;min-width:380px;}
-table.cmp th,table.cmp td{padding:3px 5px;line-height:1.25;text-align:right;white-space:nowrap;border-bottom:1px solid var(--border);font-variant-numeric:tabular-nums;}
+table.cmp th,table.cmp td{padding:3px 4px;line-height:1.25;text-align:right;white-space:nowrap;border-bottom:1px solid var(--border);font-variant-numeric:tabular-nums;}
 table.cmp th{color:var(--dim);font-weight:600;font-size:10px;text-transform:uppercase;font-family:'IBM Plex Mono',monospace;}
 table.cmp th:first-child,table.cmp td:first-child{text-align:left;color:var(--dim);}
 table.cmp td.v{font-family:'IBM Plex Mono',monospace;font-weight:600;color:var(--text);}
@@ -270,11 +270,11 @@ table.cmp .col-strat{color:var(--accent);}
 .tbl-wrap{background:var(--surf);border:1px solid var(--border);border-radius:9px;overflow:hidden;margin-bottom:18px;}
 .tblscroll{overflow-x:auto;}   /* 종목 테이블만 독립 가로 스크롤 — 연도별(#tblYear)이 함께 밀리지 않도록 */
 table{width:100%;border-collapse:collapse;}
-thead th{font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:var(--dim);padding:6px 9px;line-height:1.3;text-align:right;border-bottom:1px solid var(--border);white-space:nowrap;}
+thead th{font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:var(--dim);padding:3px 5px;line-height:1.2;text-align:right;border-bottom:1px solid var(--border);white-space:nowrap;}
 thead th:first-child{text-align:left;}
 tbody tr{border-bottom:1px solid var(--border);}tbody tr:last-child{border-bottom:none;}
 tbody tr:hover{background:rgba(91,141,238,.05);}
-td{padding:6px 9px;line-height:1.35;text-align:right;font-family:'IBM Plex Mono',monospace;font-size:12px;white-space:nowrap;}
+td{padding:3px 5px;line-height:1.25;text-align:right;font-family:'IBM Plex Mono',monospace;font-size:12px;white-space:nowrap;font-variant-numeric:tabular-nums;}
 td:first-child{text-align:left;}
 .dot{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:7px;vertical-align:middle;}
 .tk-nm{font-size:11px;color:var(--dim);margin-left:5px;font-family:'Pretendard';font-weight:400;}
@@ -1323,7 +1323,7 @@ const COST_FEE=0.0025, COST_SLIP=0.0005, COST_TAXRATE=0.22, COST_KRW=1350, COST_
    남는 돈까지 늘 굴러가서 실제보다 좋게 나온다 — 운영 모의는 원래 정수로 굴린다.
    그 둘이 어긋나 SOXL 20/10 한 해 백테 41.8% vs 모의 38.1%로 갈렸다.
 
-   적립식(DCA·ASAP·로테적립)만 뺀다. 1회 $10로 $100짜리를 사면 floor(10/100)=0주라
+   적립식(DCA·ASAP·로테적립)만 뺀다. 1회 10$로 100$짜리를 사면 floor(10/100)=0주라
    한 주도 못 사고 전략이 통째로 멈춘다 — 거긴 원래 소수점이 맞고 운영도 그렇게 돈다.
 
    iq: 금액→주수 (내림) · isq: 주수→주수 (내림, 보유분 초과 방지) */
@@ -1702,7 +1702,7 @@ function _dcaOne(t,days,amt,step,costOn,dipMul){
   const D=srcOf(t);
   if(!D) return {invested:0,final:0,ret:0,snap:[],mdd:0,uvSnap:[]};
   // MDD·변동성은 단위가치(평가액÷누적투입) 기준 — 적립금 유입이 '수익률'로 잡히는 왜곡 제거.
-  //   (평가액 기준이면 초기 $3→$30 적립 구간이 +900% 수익처럼 계산돼 변동성 수천% 버그)
+  //   (평가액 기준이면 초기 3$→30$ 적립 구간이 +900% 수익처럼 계산돼 변동성 수천% 버그)
   const FEE=costOn?COST_FEE:0;   // 비용반영 시 매회 매수 수수료 (costOn 미지정=기존과 동일)
   const MUL=(dipMul!=null?dipMul:(typeof dcaDipMul!=='undefined'?dcaDipMul:1));
   const MA=MUL>1?_dcaMA(t,200):null;      // 배수 1이면 계산 생략 (기존과 완전 동일)
@@ -2047,7 +2047,7 @@ function runIM(days,tkr,cap,divs,targetPct,compound=true){
           const half=one/2;
           // 별지점·평단은 '별개의 주문' 2건이다 — 각 주문이 따로 정수 내림된다.
           // 합산해서 한 번만 내리면 실제로는 못 사는 주식을 산 걸로 쳐서 백테가 낙관적으로 나온다
-          // (1회 $500·주가 $65: 합산 floor(500/65)=7주 vs 실제 floor(250/65)×2=6주).
+          // (1회 500$·주가 65$: 합산 floor(500/65)=7주 vs 실제 floor(250/65)×2=6주).
           // 같은 날 같은 가격 체결이라 평단·잔금은 합산했을 때와 수학적으로 동일하다.
           if(c<=buyP){ if(_buy(c,half)>0) T+=0.5; }
           if(c<=avg) { if(_buy(c,half)>0) T+=0.5; }
@@ -2329,7 +2329,7 @@ function runIM50(days,tkr,cap,divs,targetPct,compound=true){
           const half=one/2;
           // 별지점·평단은 '별개의 주문' 2건이다 — 각 주문이 따로 정수 내림된다.
           // 합산해서 한 번만 내리면 실제로는 못 사는 주식을 산 걸로 쳐서 백테가 낙관적으로 나온다
-          // (1회 $500·주가 $65: 합산 floor(500/65)=7주 vs 실제 floor(250/65)×2=6주).
+          // (1회 500$·주가 65$: 합산 floor(500/65)=7주 vs 실제 floor(250/65)×2=6주).
           // 같은 날 같은 가격 체결이라 평단·잔금은 합산했을 때와 수학적으로 동일하다.
           if(c<=buyP){ if(_buy(c,half)>0) T+=0.5; }
           if(c<=avg) { if(_buy(c,half)>0) T+=0.5; }
@@ -2364,7 +2364,7 @@ function runVR(days,tkr,params){
     yearPnl+=qty*(c-avg)-fee; feesTotal+=fee; shares-=qty; return qty*c-fee; }
   // 연말 양도세 정산. Pool에서 먼저 빼되, 모자라면 보유 주식을 팔아 납부한다.
   // (예전엔 pool을 그냥 음수로 만들어 총자산이 마이너스가 되고 MDD가 100%를 넘었다 —
-  //  SOXL 2000~ 거치식이 최종 −$18 · MDD 102%로 나오던 원인.)
+  //  SOXL 2000~ 거치식이 최종 −18$ · MDD 102%로 나오던 원인.)
   function _settle(c){ if(!costOn){yearPnl=0;return;}
     const taxable=Math.max(0, yearPnl*COST_KRW-COST_DEDUCT);
     const owed=taxable*COST_TAXRATE/COST_KRW; let due=owed; yearPnl=0;
@@ -2810,7 +2810,7 @@ function runIVS(days,tkr,cap,s0,N,band,costOn,mode,pair){
 }
 
 // 종목비교·전체비교 공용: 각 전략 '탭에서 설정한 옵션값'을 그대로 읽어 실행 (DOM 없으면 기본값 폴백).
-// 원금은 항상 cap($1만)으로 정규화 — 전략별 절대 적립금·거치금은 비교 위해 cap 기준으로 환산.
+// 원금은 항상 cap(1$만)으로 정규화 — 전략별 절대 적립금·거치금은 비교 위해 cap 기준으로 환산.
 function _stratSeg(id,def){ if(typeof document==='undefined')return def; const b=document.querySelector('#'+id+' button.active'); return b?String(Object.values(b.dataset)[0]):def; }
 function _stratNum(id,def){ if(typeof document==='undefined')return def; const el=document.getElementById(id); const v=el?+el.value:NaN; return isFinite(v)&&v>0?v:def; }
 function _runOneStrat(key,tkr,cap,days,costOn){
@@ -2912,7 +2912,7 @@ function runComboCompare(cap, days, tickers, mode, costOn){
 const COMBO_PAL=['#f6c453','#5b9bff','#3ecf8e','#a78bfa','#e0872a','#f24b5f','#4fb0f5','#e879b9'];
 // ──── 연도별 총자산 비교 카드 (모든 백테 공통 · ASAP 포맷) — entries:[{label,snap,color}] ────
 function yearCompareCard(entries, money){
-  money=money||(x=>'$'+fmt(Math.round(x)));
+  money=money||(x=>fmt(Math.round(x))+'$');
   const yEnd={}, yset=new Set();
   entries.forEach(e=>{ yEnd[e.label]={}; (e.snap||[]).forEach(s=>{ if(s[1]!=null){ const y=s[0].slice(0,4); yEnd[e.label][y]=s[1]; yset.add(y); } }); });
   const years=[...yset].sort(); if(!years.length) return '';
@@ -2924,7 +2924,7 @@ function yearCompareCard(entries, money){
 }
 function renderCombo(res, cap, days, mode, costOn){
   hideEmptyState();
-  const R=res.rows, money=x=>'$'+fmt(Math.round(x)), pct=x=>(x>=0?'+':'')+x.toFixed(1)+'%';
+  const R=res.rows, money=x=>fmt(Math.round(x))+'$', pct=x=>(x>=0?'+':'')+x.toFixed(1)+'%';
   const isDca=res.cmode==='dca', modeLbl=isDca?'적립(기간 분할)':'일시금(목돈 거치)';
   const nStrat=new Set(R.map(r=>r.key)).size, nTkr=new Set(R.map(r=>r.ticker)).size;
   const costBadge=`<span style="font-size:11px;color:var(--${costOn?'gold':'dim'})">· ${costOn?'세후':'세전'}</span>`;
@@ -2952,7 +2952,7 @@ function renderStdev(results, days){
   document.querySelector('.cards').classList.add('hide');
   document.querySelector('.tbl-wrap').classList.remove('hide');
   const yrs=Math.max((new Date(days[days.length-1])-new Date(days[0]))/(365.25*864e5),0.1);
-  const money=x=>'$'+fmt(Math.round(x)), pct=x=>(x>=0?'+':'')+x.toFixed(1)+'%';
+  const money=x=>fmt(Math.round(x))+'$', pct=x=>(x>=0?'+':'')+x.toFixed(1)+'%';
   const rows=Object.keys(results).map(t=>{ const r=results[t], cg=cagrOf(r.final,r.invested,yrs);
     return {t, color:(META[t]&&META[t].color)||'#888', invested:r.invested, final:r.final, ret:r.ret, cagr:cg, mdd:r.mdd, mar:r.mdd>0?cg/r.mdd:0, snap:r.snap}; });
   rows.sort((a,b)=>b.final-a.final);
@@ -2980,7 +2980,7 @@ function renderStdev(results, days){
 function renderIVS(results, days, cap){
   hideEmptyState();
   const yrs=Math.max((new Date(days[days.length-1])-new Date(days[0]))/(365.25*864e5),0.1);
-  const money=x=>'$'+fmt(Math.round(x)), pct=x=>(x>=0?'+':'')+x.toFixed(1)+'%';
+  const money=x=>fmt(Math.round(x))+'$', pct=x=>(x>=0?'+':'')+x.toFixed(1)+'%';
   const rows=Object.keys(results).map(t=>{ const r=results[t], cg=cagrOf(r.final,r.invested,yrs);
     return {ticker:t, color:(META[t]&&META[t].color)||'#888', invested:r.invested, final:r.final, ret:r.ret,
             cagr:cg, mdd:r.mdd, mar:r.mdd>0?cg/r.mdd:0, snap:r.snap,
@@ -3011,7 +3011,7 @@ function renderIVS(results, days, cap){
 function renderASAP(results, days, opt){
   hideEmptyState();
   const o=opt||{}, yrs=Math.max((new Date(days[days.length-1])-new Date(days[0]))/(365.25*864e5),0.1);
-  const money=x=>'$'+fmt(Math.round(x)), pct=x=>(x>=0?'+':'')+x.toFixed(1)+'%';
+  const money=x=>fmt(Math.round(x))+'$', pct=x=>(x>=0?'+':'')+x.toFixed(1)+'%';
   const rows=Object.keys(results).map(t=>{ const a=results[t], cg=cagrOf(a.final,a.invested,yrs);
     return {ticker:t, color:(META[t]&&META[t].color)||'#888', invested:a.invested, final:a.final, ret:a.ret, cagr:cg, mdd:a.mdd, mar:a.mdd>0?cg/a.mdd:0, snap:a.snap}; });
   rows.sort((x,y)=>y.ret-x.ret);
@@ -3271,11 +3271,11 @@ function renderDCA(res,tickers,opts){
   if(isInd){
     const top=ranked[0],r0=res[top];
     document.getElementById('winner').style.display='';
-    document.getElementById('winner').innerHTML=`🏆 <strong>${top}</strong> CAGR ${pctStr(r0.cagr||0)} 1위 · 개별기간 · $${fmt(Math.round(+document.getElementById('dcaAmt').value||10))}/${freqL}${dipBadge}`;
+    document.getElementById('winner').innerHTML=`🏆 <strong>${top}</strong> CAGR ${pctStr(r0.cagr||0)} 1위 · 개별기간 · ${fmt(Math.round(+document.getElementById('dcaAmt').value||10))}$/${freqL}${dipBadge}`;
   }else{
     const top=ranked[0],r0=res[top];
     document.getElementById('winner').style.display='';
-    document.getElementById('winner').innerHTML=`🏆 <strong>${top}</strong> 1위 · ${opts.days[0]}~${opts.days[opts.days.length-1]} · $${fmt(+document.getElementById('dcaAmt').value||10)}/${freqL} · 원금 $${fmt(r0.invested)} → <strong>$${fmt(r0.final)}</strong> (+${r0.ret.toFixed(0)}%)${dipBadge}`;
+    document.getElementById('winner').innerHTML=`🏆 <strong>${top}</strong> 1위 · ${opts.days[0]}~${opts.days[opts.days.length-1]} · ${fmt(+document.getElementById('dcaAmt').value||10)}$/${freqL} · 원금 ${fmt(r0.invested)}$ → <strong>${fmt(r0.final)}$</strong> (+${r0.ret.toFixed(0)}%)${dipBadge}`;
   }
   // 레버리지 기간 확장 안내
   { const ext=opts.ext||{}, extList=Object.keys(ext);
@@ -3294,7 +3294,7 @@ function renderDCA(res,tickers,opts){
     d.onclick=()=>{d.classList.toggle('off');const ds=chart&&chart.data.datasets.find(x=>x.label===t);if(ds){ds.hidden=!ds.hidden;chart.update();}}
     // 무매 카드와 동일 항목: CAGR · MDD · MAR + 기간 · 원금 (_dcaOne의 mdd는 이미 %단위 — ×100 이중곱 버그 수정)
     const _mdd=(r.mdd!=null?r.mdd:0), _mar=(_mdd>0?(r.cagr||0)/_mdd:0);
-    d.innerHTML=`<div class="card-bar" style="background:${m.color}"></div><div class="card-rk ${i===0?'g':''}">#${i+1}</div><div class="card-body"><div class="card-tkr">${t}<span class="tk-nm">${m.name}</span></div><div class="card-val">$${fmt(r.final)}</div><div class="card-sub">CAGR ${pctStr(r.cagr||0)} · MDD ${_mdd.toFixed(0)}% · MAR ${_mar.toFixed(2)}</div><div class="card-sub" style="opacity:.7">${(r.yrs||0).toFixed(1)}년 · 원금 $${fmt(r.invested)}</div></div>`;
+    d.innerHTML=`<div class="card-bar" style="background:${m.color}"></div><div class="card-rk ${i===0?'g':''}">#${i+1}</div><div class="card-body"><div class="card-tkr">${t}<span class="tk-nm">${m.name}</span></div><div class="card-val">${fmt(r.final)}$</div><div class="card-sub">CAGR ${pctStr(r.cagr||0)} · MDD ${_mdd.toFixed(0)}% · MAR ${_mar.toFixed(2)}</div><div class="card-sub" style="opacity:.7">${(r.yrs||0).toFixed(1)}년 · 원금 ${fmt(r.invested)}$</div></div>`;
     cc.appendChild(d);
   });
   const labels=[...new Set(valid.flatMap(t=>res[t].snap.map(s=>s[0])))].sort();
@@ -3321,19 +3321,19 @@ function renderDCA(res,tickers,opts){
     const inv=r.invested||d.invRaw||1;
     const retP=(d.priceVal/inv-1)*100;              // 기준을 '수익률' 열과 같은 투입금으로 맞춘다
     const retD=r.ret-retP;                           // 합계 − 가격 = 분배 기여
-    return `<td style="color:var(--green)">$${fmt(Math.round(d.divCash))}<span style="color:var(--dim);font-size:10px"> ${d.nDiv}회</span></td>`
+    return `<td style="color:var(--green)">${fmt(Math.round(d.divCash))}$<span style="color:var(--dim);font-size:10px"> ${d.nDiv}회</span></td>`
          + `<td style="color:${retP>=0?'var(--green)':'var(--red)'}">${pctStr(retP)}</td>`
          + `<td style="color:var(--gold)">${pctStr(retD)}</td>`; };
   if(isInd){
     h=`<thead><tr><th>ETF</th><th>레버리지</th><th>기간</th><th>원금</th><th>최종</th>${dvH}<th title="가격 + 분배 = 합계">합계 수익률</th><th title="합계 수익률 기준">CAGR</th><th>MDD</th><th>MAR</th></tr></thead><tbody>`;
     ranked.forEach((t,i)=>{const r=res[t],m=META[t];
       const _mdd=(r.mdd!=null?r.mdd:0), _cagr=(r.cagr||0), _mar=(_mdd>0?_cagr/_mdd:0);
-      h+=`<tr><td><span class="dot" style="background:${m.color}"></span>${t}<span class="tk-nm">${m.name}</span></td><td>${m.lev}×</td><td style="font-size:11px;color:var(--dim)">${r.period||''} <span style="opacity:.7">(${(r.yrs||0).toFixed(1)}년)</span></td><td>$${fmt(r.invested)}</td><td style="color:var(--accent)">$${fmt(r.final)}</td>${dvR(r)}<td style="color:${r.ret>=0?'var(--green)':'var(--red)'}"><b>${pctStr(r.ret)}</b></td><td style="color:${_cagr>=0?'var(--green)':'var(--red)'}"><b>${pctStr(_cagr)}</b></td><td>${_mdd.toFixed(1)}%</td><td style="color:var(--gold)">${_mar.toFixed(2)}</td></tr>`;});
+      h+=`<tr><td><span class="dot" style="background:${m.color}"></span>${t}<span class="tk-nm">${m.name}</span></td><td>${m.lev}×</td><td style="font-size:11px;color:var(--dim)">${r.period||''} <span style="opacity:.7">(${(r.yrs||0).toFixed(1)}년)</span></td><td>${fmt(r.invested)}$</td><td style="color:var(--accent)">${fmt(r.final)}$</td>${dvR(r)}<td style="color:${r.ret>=0?'var(--green)':'var(--red)'}"><b>${pctStr(r.ret)}</b></td><td style="color:${_cagr>=0?'var(--green)':'var(--red)'}"><b>${pctStr(_cagr)}</b></td><td>${_mdd.toFixed(1)}%</td><td style="color:var(--gold)">${_mar.toFixed(2)}</td></tr>`;});
   }else{
     h=`<thead><tr><th>ETF</th><th>레버리지</th><th>원금</th><th>최종</th>${dvH}<th title="가격 + 분배 = 합계">합계 수익률</th><th title="합계 수익률 기준">CAGR</th><th>MDD</th><th>MAR</th><th>기간</th></tr></thead><tbody>`;
     ranked.forEach((t,i)=>{const r=res[t],m=META[t];
       const _mdd=(r.mdd!=null?r.mdd:0), _cagr=(r.cagr||0), _mar=(_mdd>0?_cagr/_mdd:0), _yrs=(r.yrs||0);
-      h+=`<tr><td><span class="dot" style="background:${m.color}"></span>${t}<span class="tk-nm">${m.name}</span></td><td>${m.lev}×</td><td>$${fmt(r.invested)}</td><td style="color:${i===0?'var(--gold)':'var(--accent)'}"><b>$${fmt(r.final)}</b></td>${dvR(r)}<td style="color:${r.ret>=0?'var(--green)':'var(--red)'}"><b>${pctStr(r.ret)}</b></td><td>${pctStr(_cagr)}</td><td>${_mdd.toFixed(1)}%</td><td style="color:var(--gold)">${_mar.toFixed(2)}</td><td style="font-size:11px;color:var(--dim)">${_yrs.toFixed(1)}년</td></tr>`;});
+      h+=`<tr><td><span class="dot" style="background:${m.color}"></span>${t}<span class="tk-nm">${m.name}</span></td><td>${m.lev}×</td><td>${fmt(r.invested)}$</td><td style="color:${i===0?'var(--gold)':'var(--accent)'}"><b>${fmt(r.final)}$</b></td>${dvR(r)}<td style="color:${r.ret>=0?'var(--green)':'var(--red)'}"><b>${pctStr(r.ret)}</b></td><td>${pctStr(_cagr)}</td><td>${_mdd.toFixed(1)}%</td><td style="color:var(--gold)">${_mar.toFixed(2)}</td><td style="font-size:11px;color:var(--dim)">${_yrs.toFixed(1)}년</td></tr>`;});
   }
   h+='</tbody>';document.getElementById('tbl').innerHTML=h;
   if(anyDiv) document.getElementById('winner').innerHTML+=
@@ -3604,21 +3604,21 @@ function renderSingle2(type,r,days){
   let stratExtra='';
   if(type==='im'){
     stratExtra=`
-      <div class="metric"><span class="k">한도 원금</span><span class="v">$${fmt(r.invested)}</span></div>
-      <div class="metric"><span class="k">실제 투입 피크</span><span class="v" style="color:var(--accent)">$${fmt(r.peakInvested||0)}</span></div>
-      <div class="metric"><span class="k">최종 평가액</span><span class="v" style="color:${r.ret>=0?'var(--green)':'var(--red)'}">$${fmt(r.final)}</span></div>
+      <div class="metric"><span class="k">한도 원금</span><span class="v">${fmt(r.invested)}$</span></div>
+      <div class="metric"><span class="k">실제 투입 피크</span><span class="v" style="color:var(--accent)">${fmt(r.peakInvested||0)}$</span></div>
+      <div class="metric"><span class="k">최종 평가액</span><span class="v" style="color:${r.ret>=0?'var(--green)':'var(--red)'}">${fmt(r.final)}$</span></div>
       <div class="metric"><span class="k">총 수익률</span><span class="v" style="color:${r.ret>=0?'var(--green)':'var(--red)'}">${pct(r.ret)}</span></div>
       <div class="metric"><span class="k">CAGR</span><span class="v">${pct(sCagr)}</span></div>
       <div class="metric"><span class="k">MDD</span><span class="v">${pctP(sMDD)}</span></div>
       <div class="metric"><span class="k">MAR (CAGR/MDD)</span><span class="v" style="color:var(--gold)">${(sMDD>0?sCagr/sMDD:0).toFixed(2)}</span></div>
       <div class="metric"><span class="k">기간</span><span class="v">${yrs.toFixed(1)}년</span></div>
-      <div class="metric"><span class="k">누적 실현익</span><span class="v">$${fmt(r.realized)}</span></div>
+      <div class="metric"><span class="k">누적 실현익</span><span class="v">${fmt(r.realized)}$</span></div>
       <div class="metric"><span class="k">익절 사이클</span><span class="v">${r.cycles}회</span></div>
-      <div class="metric"><span class="k">종료 현금 / 주식</span><span class="v" style="font-size:11px">$${fmt(r.endCash)} / ${r.endShares.toFixed(1)}주</span></div>`;
+      <div class="metric"><span class="k">종료 현금 / 주식</span><span class="v" style="font-size:11px">${fmt(r.endCash)}$ / ${r.endShares.toFixed(1)}주</span></div>`;
   }else if(type==='ma'){
     stratExtra=`
-      <div class="metric"><span class="k">투입 원금</span><span class="v">$${fmt(r.invested)}</span></div>
-      <div class="metric"><span class="k">최종 평가액</span><span class="v" style="color:${r.ret>=0?'var(--green)':'var(--red)'}">$${fmt(r.final)}</span></div>
+      <div class="metric"><span class="k">투입 원금</span><span class="v">${fmt(r.invested)}$</span></div>
+      <div class="metric"><span class="k">최종 평가액</span><span class="v" style="color:${r.ret>=0?'var(--green)':'var(--red)'}">${fmt(r.final)}$</span></div>
       <div class="metric"><span class="k">총 수익률</span><span class="v" style="color:${r.ret>=0?'var(--green)':'var(--red)'}">${pct(r.ret)}</span></div>
       <div class="metric"><span class="k">CAGR</span><span class="v">${pct(sCagr)}</span></div>
       <div class="metric"><span class="k">MDD</span><span class="v">${pctP(sMDD)}</span></div>
@@ -3626,27 +3626,27 @@ function renderSingle2(type,r,days){
       <div class="metric"><span class="k">기간</span><span class="v">${yrs.toFixed(1)}년</span></div>
       <div class="metric"><span class="k">매매 (보유↔현금 전환)</span><span class="v">${r.trades}회</span></div>
       <div class="metric"><span class="k">투자중 비율</span><span class="v" style="color:var(--accent)">${r.timeIn.toFixed(0)}%</span></div>
-      <div class="metric"><span class="k">누적 실현익</span><span class="v">$${fmt(r.realized)}</span></div>
-      <div class="metric"><span class="k">수수료 / 세금</span><span class="v" style="font-size:11px">$${fmt(r.fees)} / $${fmt(r.tax)}</span></div>`;
+      <div class="metric"><span class="k">누적 실현익</span><span class="v">${fmt(r.realized)}$</span></div>
+      <div class="metric"><span class="k">수수료 / 세금</span><span class="v" style="font-size:11px">${fmt(r.fees)}$ / ${fmt(r.tax)}$</span></div>`;
   }else{
     stratExtra=`
-      <div class="metric"><span class="k">총 투입 원금</span><span class="v">$${fmt(r.invested)}</span></div>
-      <div class="metric"><span class="k">최종 평가액</span><span class="v" style="color:${r.ret>=0?'var(--green)':'var(--red)'}">$${fmt(r.final)}</span></div>
+      <div class="metric"><span class="k">총 투입 원금</span><span class="v">${fmt(r.invested)}$</span></div>
+      <div class="metric"><span class="k">최종 평가액</span><span class="v" style="color:${r.ret>=0?'var(--green)':'var(--red)'}">${fmt(r.final)}$</span></div>
       <div class="metric"><span class="k">총 수익률</span><span class="v" style="color:${r.ret>=0?'var(--green)':'var(--red)'}">${pct(r.ret)}</span></div>
       <div class="metric"><span class="k">CAGR</span><span class="v">${pct(sCagr)}</span></div>
       <div class="metric"><span class="k">MDD</span><span class="v">${pctP(sMDD)}</span></div>
       <div class="metric"><span class="k">MAR (CAGR/MDD)</span><span class="v" style="color:var(--gold)">${(sMDD>0?sCagr/sMDD:0).toFixed(2)}</span></div>
       <div class="metric"><span class="k">기간</span><span class="v">${yrs.toFixed(1)}년</span></div>
-      <div class="metric"><span class="k">현금 Pool</span><span class="v">$${fmt(r.pool)}</span></div>
-      <div class="metric"><span class="k">최종 기준값 V</span><span class="v">$${fmt(r.V)}</span></div>
+      <div class="metric"><span class="k">현금 Pool</span><span class="v">${fmt(r.pool)}$</span></div>
+      <div class="metric"><span class="k">최종 기준값 V</span><span class="v">${fmt(r.V)}$</span></div>
       <div class="metric"><span class="k">리밸런싱</span><span class="v">${r.rebal}회 (매수${r.buys}/매도${r.sells})</span></div>
-      <div class="metric"><span class="k">수수료 / 세금</span><span class="v" style="font-size:11px">$${fmt(r.fees||0)} / $${fmt(r.tax||0)}</span></div>`;
+      <div class="metric"><span class="k">수수료 / 세금</span><span class="v" style="font-size:11px">${fmt(r.fees||0)}$ / ${fmt(r.tax||0)}$</span></div>`;
   }
 
   // 비교 기준 안내
   const baseNote = (type==='vr'
-    ? `거치식·DCA 기준: VR 총 투입액 <b>$${fmt(bhBase)}</b>`
-    : `거치식·DCA 기준: 동일 원금 <b>$${fmt(bhBase)}</b>`)
+    ? `거치식·DCA 기준: VR 총 투입액 <b>${fmt(bhBase)}$</b>`
+    : `거치식·DCA 기준: 동일 원금 <b>${fmt(bhBase)}$</b>`)
     + (cOn?` · <span style="color:var(--gold)">거치식·DCA도 수수료+기말매도 세후</span>`:'');
 
   document.getElementById('detail').innerHTML=`
@@ -3666,13 +3666,13 @@ function renderSingle2(type,r,days){
     </div>
     <div class="dbox"><h4>📈 ${stratName} 상세</h4>${stratExtra}</div>
     <div class="dbox"><h4>🏦 ${r.tkr} 거치식(B&H) · 🔵 단순DCA 상세</h4>
-      <div class="metric"><span class="k">투입 기준</span><span class="v" style="color:var(--accent)">$${fmt(bhBase)}</span></div>
+      <div class="metric"><span class="k">투입 기준</span><span class="v" style="color:var(--accent)">${fmt(bhBase)}$</span></div>
       <div class="metric" style="padding-top:10px;padding-bottom:4px"><span class="k" style="font-weight:600">거치식</span><span class="v"></span></div>
-      <div class="metric"><span class="k">└ 최종 평가액</span><span class="v" style="color:${bhRet>=0?'var(--green)':'var(--red)'}">$${fmt(bhFinal)}</span></div>
+      <div class="metric"><span class="k">└ 최종 평가액</span><span class="v" style="color:${bhRet>=0?'var(--green)':'var(--red)'}">${fmt(bhFinal)}$</span></div>
       <div class="metric"><span class="k">└ CAGR</span><span class="v">${pct(bCagr)}</span></div>
       <div class="metric"><span class="k">└ 최대 낙폭</span><span class="v" style="color:var(--red)">-${pctP(bMDD)}</span></div>
-      <div class="metric" style="padding-top:10px;padding-bottom:4px"><span class="k" style="font-weight:600">단순 DCA</span><span class="v">($${fmt(Math.round(dcaAmt))}/일)</span></div>
-      <div class="metric"><span class="k">└ 최종 평가액</span><span class="v" style="color:${dcaRet>=0?'var(--green)':'var(--red)'}">$${fmt(dcaFinal)}</span></div>
+      <div class="metric" style="padding-top:10px;padding-bottom:4px"><span class="k" style="font-weight:600">단순 DCA</span><span class="v">(${fmt(Math.round(dcaAmt))}$/일)</span></div>
+      <div class="metric"><span class="k">└ 최종 평가액</span><span class="v" style="color:${dcaRet>=0?'var(--green)':'var(--red)'}">${fmt(dcaFinal)}$</span></div>
       <div class="metric"><span class="k">└ CAGR</span><span class="v">${pct(dCagr)}</span></div>
       <div class="metric"><span class="k">└ 최대 낙폭</span><span class="v" style="color:var(--red)">-${pctP(dMDD)}</span></div>
     </div>

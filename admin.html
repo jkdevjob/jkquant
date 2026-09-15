@@ -14,7 +14,7 @@
 }
 *{box-sizing:border-box;margin:0;padding:0}
 html{-webkit-text-size-adjust:100%}
-body{background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Apple SD Gothic Neo","Noto Sans KR",sans-serif;line-height:1.55;padding-bottom:40px;word-break:keep-all;overflow-wrap:break-word}
+body{font-variant-numeric:tabular-nums;/* 숫자는 어디서나 같은 폭 — 목록에서 위아래 자릿수가 저절로 맞는다 */background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Apple SD Gothic Neo","Noto Sans KR",sans-serif;line-height:1.55;padding-bottom:40px;word-break:keep-all;overflow-wrap:break-word}
 .wrap{max-width:860px;margin:0 auto;padding:0 16px}
 header{padding:20px 0 12px;border-bottom:1px solid var(--line);background:linear-gradient(180deg,#141a2e,var(--bg))}
 .htop{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
@@ -74,7 +74,7 @@ input[type=text]{background:var(--panel2);border:1px solid var(--line);color:var
 .htable-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
 .htable{width:100%;border-collapse:collapse;font-size:11px;min-width:520px}
 .htable th{color:var(--faint);font-weight:700;font-size:10px;padding:3px 4px;line-height:1.2;text-align:right;border-bottom:1px solid var(--line);white-space:nowrap}
-.htable td{padding:4px 4px;line-height:1.25;text-align:right;border-bottom:1px solid var(--line);font-variant-numeric:tabular-nums;white-space:nowrap}
+.htable td{padding:3px 4px;line-height:1.25;text-align:right;border-bottom:1px solid var(--line);font-variant-numeric:tabular-nums;white-space:nowrap}
 .htable th:first-child,.htable td:first-child{text-align:left;white-space:normal}
 .htable tr.off{opacity:.5}
 .tag{font-size:10.5px;font-weight:800;padding:1px 6px;border-radius:6px;margin-left:5px;white-space:nowrap}

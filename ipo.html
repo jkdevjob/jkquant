@@ -71,7 +71,7 @@ i.lg.list,.ipo-dot.list{background:#9a7bff}
 }
 *{box-sizing:border-box;margin:0;padding:0}
 html{-webkit-text-size-adjust:100%}
-body{background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Apple SD Gothic Neo","Noto Sans KR",sans-serif;line-height:1.55;padding-bottom:env(safe-area-inset-bottom);word-break:keep-all;overflow-wrap:break-word}
+body{font-variant-numeric:tabular-nums;/* 숫자는 어디서나 같은 폭 — 목록에서 위아래 자릿수가 저절로 맞는다 */background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Apple SD Gothic Neo","Noto Sans KR",sans-serif;line-height:1.55;padding-bottom:env(safe-area-inset-bottom);word-break:keep-all;overflow-wrap:break-word}
 .wrap{max-width:760px;margin:0 auto;padding:0 16px}
 .mono{font-variant-numeric:tabular-nums}
 header{padding:20px 0 12px;border-bottom:1px solid var(--line);background:linear-gradient(180deg,#141a2e,var(--bg))}
@@ -451,9 +451,9 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
 /* 사이클 히스토리 테이블 */
 .cyc-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch;margin:0 -4px}
 .cyctbl{width:100%;border-collapse:collapse;font-size:11.5px;min-width:440px}
-.cyctbl th{color:var(--faint);font-weight:700;text-align:right;padding:4px 7px;line-height:1.3;border-bottom:1px solid var(--line);font-size:10px;text-transform:uppercase;white-space:nowrap}
+.cyctbl th{color:var(--faint);font-weight:700;text-align:right;padding:3px 5px;line-height:1.2;border-bottom:1px solid var(--line);font-size:10px;text-transform:uppercase;white-space:nowrap}
 .cyctbl th:first-child{text-align:left}
-.cyctbl td{padding:5px 7px;line-height:1.35;border-bottom:1px solid var(--line);text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.cyctbl td{padding:3px 5px;line-height:1.25;border-bottom:1px solid var(--line);text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
 .cyctbl td:first-child{text-align:left}
 .cyctbl tr:last-child td{border-bottom:none}
 .cyctbl .cmin{color:var(--vio)}.cyctbl .cmax{color:var(--gold)}.cyctbl .cneg{color:var(--sell)}
@@ -601,13 +601,13 @@ document.addEventListener("click",function(e){ var m=document.getElementById("jk
 
       <div class="card acct">
         <h3 style="justify-content:space-between"><span style="display:flex;align-items:center;gap:8px"><span class="dot"></span>계산 결과</span><span class="bandpill in" id="ipoc_retpill" style="font-size:12px">—</span></h3>
-        <div class="ar"><span class="ak">필요 증거금 <span class="sub">청약 시 예치</span></span><span class="av vio" id="ipoc_deposit">₩0</span></div>
+        <div class="ar"><span class="ak">필요 증거금 <span class="sub">청약 시 예치</span></span><span class="av vio" id="ipoc_deposit">0₩</span></div>
         <div class="ar"><span class="ak">예상 균등배정</span><span class="av" id="ipoc_eq">0주</span></div>
         <div class="ar"><span class="ak">예상 비례배정</span><span class="av" id="ipoc_pr">0주</span></div>
         <div class="ar"><span class="ak">예상 총 배정</span><span class="av buy" id="ipoc_alloc">0주</span></div>
-        <div class="ar"><span class="ak">배정 대금 <span class="sub">배정 × 공모가</span></span><span class="av" id="ipoc_allocamt">₩0</span></div>
-        <div class="ar"><span class="ak">환불 예정금 <span class="sub">증거금 − 배정대금</span></span><span class="av" id="ipoc_refund">₩0</span></div>
-        <div class="ar"><span class="ak">상장일 예상 손익 <span class="sub">수수료 차감</span></span><span class="av" id="ipoc_profit">₩0</span></div>
+        <div class="ar"><span class="ak">배정 대금 <span class="sub">배정 × 공모가</span></span><span class="av" id="ipoc_allocamt">0₩</span></div>
+        <div class="ar"><span class="ak">환불 예정금 <span class="sub">증거금 − 배정대금</span></span><span class="av" id="ipoc_refund">0₩</span></div>
+        <div class="ar"><span class="ak">상장일 예상 손익 <span class="sub">수수료 차감</span></span><span class="av" id="ipoc_profit">0₩</span></div>
         <div class="ar"><span class="ak">수익률 <span class="sub">증거금 대비</span></span><span class="av" id="ipoc_ret">—</span></div>
       </div>
       <p class="note" style="margin-top:10px">균등배정은 최소 청약단위 이상 청약한 모든 계좌에 <b>균등물량 ÷ 청약건수</b>로 나눠 배정됩니다(초과분은 추첨). 비례배정은 <b>청약주수 ÷ 경쟁률</b>이 근사치입니다. 실제 배정은 증권사·청약 마감 결과에 따라 달라집니다.</p>
@@ -646,19 +646,19 @@ document.addEventListener("click",function(e){ var m=document.getElementById("jk
 
       <div class="dash" style="background:linear-gradient(160deg,#221a3a,var(--panel));border-color:#40277a">
         <div class="rowline" style="border:none;padding:0 0 6px"><span class="tlabel">누적 손익</span><span class="cnt" id="ipor_cnt">0건</span></div>
-        <div class="tval"><span class="big mono" id="ipor_pnl" style="font-size:32px">₩0</span><span class="of mono" id="ipor_pnlpct" style="font-size:16px">—</span></div>
+        <div class="tval"><span class="big mono" id="ipor_pnl" style="font-size:32px">0₩</span><span class="of mono" id="ipor_pnlpct" style="font-size:16px">—</span></div>
         <div class="note" id="ipor_note">종목을 선택하고 수량·매도가를 넣으면 손익이 집계됩니다.</div>
       </div>
       <div class="card"><h3><span class="dot"></span>성과 요약</h3>
         <div class="statgrid">
           <div class="stat"><div class="sl">기록 수</div><div class="sv sm mono" id="ipor_n">0건</div></div>
-          <div class="stat"><div class="sl">총 투자금</div><div class="sv sm mono" id="ipor_inv" style="color:var(--vio)">₩0</div></div>
+          <div class="stat"><div class="sl">총 투자금</div><div class="sv sm mono" id="ipor_inv" style="color:var(--vio)">0₩</div></div>
           <div class="stat"><div class="sl">플러스</div><div class="sv sm mono" id="ipor_plus">0건</div></div>
         </div>
         <div class="statgrid" style="margin-top:10px">
           <div class="stat"><div class="sl">평균 수익률</div><div class="sv sm mono" id="ipor_avg">—</div></div>
-          <div class="stat"><div class="sl">총 수수료</div><div class="sv sm mono" id="ipor_feesum">₩0</div></div>
-          <div class="stat"><div class="sl">현재 평가</div><div class="sv sm mono" id="ipor_eval">₩0</div></div>
+          <div class="stat"><div class="sl">총 수수료</div><div class="sv sm mono" id="ipor_feesum">0₩</div></div>
+          <div class="stat"><div class="sl">현재 평가</div><div class="sv sm mono" id="ipor_eval">0₩</div></div>
         </div>
       </div>
       <div class="card"><h3 style="justify-content:space-between"><span style="display:flex;align-items:center;gap:8px"><span class="dot"></span>종목별 손익</span>
@@ -736,7 +736,10 @@ function commaInput(el){
   el.value=decp!==undefined?fi+'.'+decp:fi;
 }
 function inputNum(id){ const el=$(id); if(!el)return 0; return +unComma(el.value)||0; }
-function ipoWon(v){ return '₩'+Math.round(+v||0).toLocaleString('en-US'); }
+/* 기호는 숫자 뒤에 — 목록에서 숫자를 오른쪽으로 맞췄을 때 기호가 흩어지지 않게 */
+function ipoWon(v){ return Math.round(+v||0).toLocaleString('en-US')+'₩'; }
+/* 범위를 "1,000~2,000₩" 로 적으려고 앞쪽 값의 기호만 뗀다 */
+function ipoWonBare(v){ return ipoWon(v).slice(0,-1); }
 function ipoWonS(v){ v=Math.round(+v||0); return (v>=0?'+':'−')+Math.abs(v).toLocaleString('en-US')+'원'; }
 function ipoEsc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 function ipoIv(v){ return (v||v===0)?(+v).toLocaleString('en-US'):''; }
@@ -852,12 +855,12 @@ function ipoRenderMonthList(){
   wrap.innerHTML=list.map(({it,i})=>`<div class="ipo-row" onclick="ipoShowDetail(${i})">
     <span class="ipo-row-date">${ipoDMD(it.subStart)}~${ipoDMD(it.subEnd)}</span>
     <span class="ipo-row-nm">${ipoEsc(it.name)}<span class="ipo-row-sub">${it.status?ipoEsc(it.status):''}${it.leadManager?' · '+ipoEsc(it.leadManager):''}</span></span>
-    <span class="ipo-row-pr">${it.poPrice?ipoWon(it.poPrice):(it.bandLo?ipoWon(it.bandLo)+'~'+(it.bandHi?ipoWon(it.bandHi).slice(1):''):'미정')}</span>
+    <span class="ipo-row-pr">${it.poPrice?ipoWon(it.poPrice):(it.bandLo?(it.bandHi?ipoWonBare(it.bandLo)+'~'+ipoWon(it.bandHi):ipoWon(it.bandLo)):'미정')}</span>
   </div>`).join('');
 }
 function ipoShowDetail(i){
   const it=IPO.feed[i]; if(!it)return;
-  const band=it.bandLo?`${ipoWon(it.bandLo)}~${it.bandHi?ipoWon(it.bandHi).slice(1):''}`:'—';
+  const band=it.bandLo?(it.bandHi?`${ipoWonBare(it.bandLo)}~${ipoWon(it.bandHi)}`:ipoWon(it.bandLo)):'—';
   const rows=[
     ['확정 공모가', it.poPrice?ipoWon(it.poPrice):'미정'],
     ['희망 밴드', band],
@@ -1058,13 +1061,13 @@ function ipoRenderRec(){
   const rows=data.map(d=>{
     const r=d.r;
     const exitTxt=d.exit?ipoWon(d.exit):'—';
-    const pnlTxt=d.pnl==null?'—':`<span style="color:${d.pnl>=0?'var(--buy)':'var(--sell)'}">${d.pnl>=0?'+':'−'}₩${Math.abs(Math.round(d.pnl)).toLocaleString('en-US')}</span>`;
+    const pnlTxt=d.pnl==null?'—':`<span style="color:${d.pnl>=0?'var(--buy)':'var(--sell)'}">${d.pnl>=0?'+':'−'}${Math.abs(Math.round(d.pnl)).toLocaleString('en-US')}₩</span>`;
     const retTxt=d.ret==null?'—':`<span style="color:${d.ret>=0?'var(--buy)':'var(--sell)'}">${d.ret>=0?'+':''}${d.ret.toFixed(1)}%</span>`;
     const sold=d.sold?' <span style="color:var(--faint);font-size:9px">매도</span>':'';
     return `<tr><td>${ipoEsc(r.name)}${sold}</td><td>${pnlTxt}</td><td>${retTxt}</td><td>${d.qty.toLocaleString('en-US')}주</td><td>${d.poPrice?ipoWon(d.poPrice):'—'}</td><td>${exitTxt}</td><td>${d.sellDate?ipoDMD(d.sellDate):'—'}</td><td style="white-space:nowrap"><span class="ipo-del" onclick="ipoEditRec('${r.id}')" title="수정">✎</span><span class="ipo-del" onclick="ipoDelRec('${r.id}')" title="삭제">✕</span></td></tr>`;
   });
   $('ipor_cnt').textContent=`${recs.length}건`;
-  const pnlEl=$('ipor_pnl'); pnlEl.textContent=(realizedPnl>=0?'+':'−')+'₩'+Math.abs(Math.round(realizedPnl)).toLocaleString('en-US'); pnlEl.style.color=realizedPnl>=0?'var(--buy)':'var(--sell)';
+  const pnlEl=$('ipor_pnl'); pnlEl.textContent=(realizedPnl>=0?'+':'−')+Math.abs(Math.round(realizedPnl)).toLocaleString('en-US')+'₩'; pnlEl.style.color=realizedPnl>=0?'var(--buy)':'var(--sell)';
   const totRet=totalInv>0?realizedPnl/totalInv*100:null;
   $('ipor_pnlpct').textContent=totRet==null?'—':`${totRet>=0?'+':''}${totRet.toFixed(2)}%`;
   $('ipor_n').textContent=recs.length+'건';
