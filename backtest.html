@@ -72,15 +72,21 @@ loadFromLocalStorage();
 
 // 로그인 상태 감지
 onAuthStateChanged(auth, async user => {
-  const btn = document.getElementById('btAuthBtn');
-  if (user) {
-    if (btn) btn.textContent = '로그아웃';
-    await loadCustomTickers(user.uid);
-  } else {
-    if (btn) btn.textContent = '로그인';
-  }
+  renderUserBadge(user);
+  if (user) await loadCustomTickers(user.uid);
 });
 
+
+/* 상단 사용자 배지 — 모든 페이지가 같은 모양이다.
+   로그인했으면 사진·이름·로그아웃, 안 했으면 로그인 한 칸. */
+window.renderUserBadge = function(user){
+  const b=document.getElementById('userbadge'); if(!b) return;
+  const esc=t=>String(t==null?'':t).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  if(!user){ b.innerHTML='<button class="lo" onclick="btLogin()">로그인</button>'; return; }
+  const photo=user.photoURL?`<img src="${esc(user.photoURL)}" alt="">`:'';
+  const name=esc(user.displayName||user.email||'사용자');
+  b.innerHTML=`${photo}<span>${name}</span> · <button class="lo" onclick="btLogin()">로그아웃</button>`;
+};
 window.btLogin = async () => {
   const user = auth.currentUser;
   if (user) { await signOut(auth); }
@@ -120,6 +126,12 @@ body{font-variant-numeric:tabular-nums;/* 숫자는 어디서나 같은 폭 — 
 .top .home{font-size:12px;color:var(--dim);text-decoration:none;padding:7px 14px;border:1px solid var(--border2);border-radius:7px;transition:all .15s;}
 .top .home:hover{border-color:var(--accent);color:var(--accent);}
 /* ── 三 메뉴 (전 페이지 공통) ── */
+/* ── 상단 오른쪽: 사용자 배지 + 메뉴. 다섯 페이지가 같은 줄, 같은 모양이다 ── */
+/* ── 상단 오른쪽: 사용자 배지 + 메뉴. 다섯 페이지가 같은 줄, 같은 모양이다 ── */
+.hright{display:flex;align-items:center;gap:9px;flex-shrink:0}
+.userbadge{display:flex;align-items:center;gap:7px;font-size:11.5px;color:var(--dim);white-space:nowrap}
+.userbadge img{width:22px;height:22px;border-radius:50%}
+.userbadge .lo{color:var(--accent);cursor:pointer;font-weight:700;background:none;border:none;font-size:11.5px;padding:0;white-space:nowrap;font-family:inherit;text-decoration:none}
 .jkmenu{position:relative;flex-shrink:0}
 .jkmenu-btn{height:38px;width:44px;display:inline-flex;align-items:center;justify-content:center;background:var(--surf2);border:1px solid var(--border);color:var(--text);border-radius:8px;font-size:18px;font-weight:700;line-height:1;cursor:pointer;letter-spacing:1px}
 .jkmenu-btn:hover{border-color:var(--accent);color:var(--accent)}
@@ -306,8 +318,8 @@ td:first-child{text-align:left;}
       <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v1.176</span></h1>
     </div>
   </div>
-  <div style="display:flex;align-items:center;gap:8px">
-    <button id="btAuthBtn" onclick="btLogin()" style="font-size:11px;padding:6px 12px;border-radius:7px;border:1px solid var(--border2);background:transparent;color:var(--dim);cursor:pointer">로그인</button>
+  <div class="hright">
+    <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
       <button class="jkmenu-btn" id="jkmenuBtn" aria-label="메뉴" onclick="jkMenuToggle(event)">三</button>
       <div class="jkmenu-pop" id="jkmenuPop" hidden>

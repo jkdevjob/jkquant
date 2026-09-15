@@ -258,9 +258,14 @@ html.had-user #authgate .bootwait{display:block}
 #inappwarn .iw-btns{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
 #inappwarn .iw-btn{flex:1;min-width:120px;padding:9px 10px;border-radius:8px;border:1px solid rgba(245,196,81,.45);background:rgba(245,196,81,.14);color:var(--gold);font-size:12.5px;font-weight:700;cursor:pointer;text-align:center;text-decoration:none}
 #inappwarn .iw-ok{color:#8fe3b8;font-weight:700}
-.userbadge{display:flex;align-items:center;gap:7px;font-size:11.5px;color:var(--dim)}
+/* ── 상단 오른쪽: 사용자 배지 + 메뉴. 다섯 페이지가 같은 줄, 같은 모양이다 ── */
+.hright{display:flex;align-items:center;gap:9px;flex-shrink:0}
+/* 제목이 길어도 두 줄로 넘어가 헤더가 들쭉날쭉해지지 않게 한다 */
+.htop>div:first-child{min-width:0}
+.htop .kicker{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.userbadge{display:flex;align-items:center;gap:7px;font-size:11.5px;color:var(--dim);white-space:nowrap}
 .userbadge img{width:22px;height:22px;border-radius:50%}
-.userbadge .lo{color:var(--vio);cursor:pointer;font-weight:700;background:none;border:none;font-size:11.5px;padding:0}
+.userbadge .lo{color:var(--vio);cursor:pointer;font-weight:700;background:none;border:none;font-size:11.5px;padding:0;white-space:nowrap;font-family:inherit;text-decoration:none}
 .syncdot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--faint);margin-left:4px;vertical-align:middle}
 .syncdot.ok{background:var(--buy)}.syncdot.sync{background:var(--gold)}.syncdot.err{background:var(--sell)}
 /* 하단 플로팅 버튼(FAB) */
@@ -514,7 +519,9 @@ try{ if(localStorage.getItem('qcockpit_hadUser')==='1') document.documentElement
 </div>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.46</span></h1></div>
+    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.47</span></h1></div>
+    <div class="hright">
+      <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
       <button class="jkmenu-btn" id="jkmenuBtn" aria-label="메뉴" onclick="jkMenuToggle(event)">三</button>
       <div class="jkmenu-pop" id="jkmenuPop" hidden>
@@ -525,9 +532,9 @@ try{ if(localStorage.getItem('qcockpit_hadUser')==='1') document.documentElement
         <a href="/ipo"><span class="mi">🎯</span>공모주</a>
         <a id="adminbtn" href="/admin" class="admin-only"><span class="mi">👤</span>관리자</a>
       </div>
+      </div>
     </div>
   </div>
-  <div class="userbadge" id="userbadge" style="margin-top:8px"></div>
 </div></header>
 <script>
 /* ── 三 메뉴 ── */
@@ -1571,7 +1578,7 @@ document.addEventListener('click',function(e){ var m=document.getElementById('jk
   <footer>
     <strong>JK 퀀트</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.46</b> · 2026-09-15</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.47</b> · 2026-09-15</div>
   </footer>
 </div>
 

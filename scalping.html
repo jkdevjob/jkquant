@@ -21,8 +21,14 @@ header{padding:20px 0 12px;border-bottom:1px solid var(--line);background:linear
 .kicker{font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--faint);font-weight:700}
 h1{font-size:22px;font-weight:800;letter-spacing:-.02em;margin-top:4px}
 h1 .v{color:var(--gold)}
-.userbadge{display:flex;align-items:center;gap:7px;font-size:11.5px;color:var(--dim);margin-top:8px}
-.userbadge img{width:20px;height:20px;border-radius:50%}
+/* ── 상단 오른쪽: 사용자 배지 + 메뉴. 다섯 페이지가 같은 줄, 같은 모양이다 ── */
+.hright{display:flex;align-items:center;gap:9px;flex-shrink:0}
+/* 제목이 길어도 두 줄로 넘어가 헤더가 들쭉날쭉해지지 않게 한다 */
+.htop>div:first-child{min-width:0}
+.htop .kicker{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.userbadge{display:flex;align-items:center;gap:7px;font-size:11.5px;color:var(--dim);white-space:nowrap}
+.userbadge img{width:22px;height:22px;border-radius:50%}
+.userbadge .lo{color:var(--vio);cursor:pointer;font-weight:700;background:none;border:none;font-size:11.5px;padding:0;white-space:nowrap;font-family:inherit;text-decoration:none}
 .lo{background:none;border:none;color:var(--faint);font-size:11.5px;cursor:pointer;text-decoration:underline;padding:0}
 
 /* ── 三 메뉴 (전 페이지 공통) ── */
@@ -175,7 +181,9 @@ canvas{display:block;width:100%;height:auto}
 
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Morning Scalping · 09:00–09:30</div><h1>JK <span class="v">퀀트</span> 단타 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="scVer">v1.1</span></h1></div>
+    <div><div class="kicker">Morning Scalping</div><h1>JK <span class="v">퀀트</span> 단타 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="scVer">v1.1</span></h1></div>
+    <div class="hright">
+      <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
       <button class="jkmenu-btn" id="jkmenuBtn" aria-label="메뉴" onclick="jkMenuToggle(event)">三</button>
       <div class="jkmenu-pop" id="jkmenuPop" hidden>
@@ -186,9 +194,9 @@ canvas{display:block;width:100%;height:auto}
         <a href="/ipo"><span class="mi">🎯</span>공모주</a>
         <a href="/admin"><span class="mi">👤</span>관리자</a>
       </div>
+      </div>
     </div>
   </div>
-  <div class="userbadge" id="userbadge"></div>
 </div></header>
 
 <div class="wrap" id="app" style="display:none">

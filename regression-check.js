@@ -1994,5 +1994,50 @@ console.log('\n[45] 메뉴 이동 — 로그인 화면이 번쩍이지 않는다
      /alert\('이 계정은 사용이 차단되었습니다\.'\);\s*\n\s*location\.reload\(\);/.test(idx));
 }
 
+/* ════ 46. 모든 페이지 상단이 같다 ════
+   예전에는 페이지마다 제각각이었다 — 운영·단타·관리자는 사용자 배지가 제목 아래
+   한 줄을 통째로 차지했고, 백테·공모주는 그 자리에 스타일을 직접 박은 로그인 단추가
+   있었다. 이제 다섯 페이지 모두 [제목] … [배지][햄버거] 한 줄이다.
+   배지 줄이 빠진 만큼 아래 내용이 위로 올라온다. */
+console.log('\n[46] 모든 페이지 상단이 같다');
+{
+  const PAGES=['index.html','backtest.html','ipo.html','scalping.html','admin.html'];
+  const src={}; for(const f of PAGES) src[f]=fs.existsSync(__d+'/'+f)?fs.readFileSync(__d+'/'+f,'utf8'):'';
+  for(const f of PAGES){
+    if(!src[f]) continue;
+    // 배지는 햄버거와 같은 칸(.hright) 안에, 햄버거보다 먼저 온다
+    const m=src[f].match(/<div class="hright">([\s\S]{0,400}?)<div class="jkmenu"/);
+    ok(`${f} — 배지가 햄버거 왼쪽에 있다`, !!m && /id="userbadge"/.test(m[1]));
+    // 스타일은 다섯 페이지가 같은 규칙을 쓴다
+    ok(`${f} — 같은 배지 규칙을 쓴다`,
+       /\.hright\{display:flex;align-items:center;gap:9px;flex-shrink:0\}/.test(src[f])
+       && /\.userbadge\{display:flex;align-items:center;gap:7px;font-size:11\.5px;color:var\(--dim\);white-space:nowrap\}/.test(src[f])
+       // 단타·관리자엔 밑줄 있는 .lo 가 따로 있어서 새어 들어왔다 — 공용 규칙이 끝까지 정한다
+       && /\.userbadge \.lo\{[^}]*text-decoration:none\}/.test(src[f]));
+  }
+  // 배지가 제목 아래 따로 한 줄을 차지하던 흔적이 남으면 안 된다 — 그 줄을 없애는 게 목적이었다
+  for(const f of PAGES){
+    if(!src[f]) continue;
+    ok(`${f} — 배지가 따로 한 줄을 차지하지 않는다`,
+       !/<div class="userbadge" id="userbadge"[^>]*><\/div>\s*\n\s*<\/div><\/header>/.test(src[f])
+       && !/userbadge[^>]*style="margin-top/.test(src[f]));
+  }
+  // 백테·공모주에 있던 제각각 단추는 사라졌다
+  ok('백테 — 따로 놀던 로그인 단추를 없앴다', !/btAuthBtn/.test(src['backtest.html']));
+  ok('공모주 — 따로 놀던 로그인 단추를 없앴다', !/ipoAuthBtn/.test(src['ipo.html']));
+  // 로그인 안 한 사람도 그 자리에서 로그인할 수 있어야 한다(문이 없는 페이지)
+  for(const [f,fn] of [['backtest.html','btLogin'],['ipo.html','ipoLogin']]){
+    ok(`${f} — 로그아웃 상태에선 로그인 칸`,
+       new RegExp(`if\\(!user\\)\\{ b\\.innerHTML='<button class="lo" onclick="${fn}\\(\\)">로그인</button>'`).test(src[f]));
+  }
+  // 제목이 길어 두 줄이 되면 페이지마다 헤더 높이가 달라진다
+  for(const f of ['index.html','ipo.html','scalping.html','admin.html']){
+    if(!src[f]) continue;
+    ok(`${f} — 제목이 두 줄로 넘어가지 않는다`,
+       /\.htop>div:first-child\{min-width:0\}/.test(src[f])
+       && /\.htop \.kicker\{white-space:nowrap;overflow:hidden;text-overflow:ellipsis\}/.test(src[f]));
+  }
+}
+
 console.log(`\n════ 결과: ${pass} PASS / ${fail} FAIL ${fail===0?'— ALL PASS ★':'— 배포 금지, 위 ✗ 항목 수정 필요'} ════`);
 process.exit(fail===0?0:1);
