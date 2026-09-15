@@ -20,6 +20,11 @@ on:
         description: "드라이런 (주문 안 내고 계산만)"
         type: boolean
         default: true
+      ord_dvsn:
+        description: "미국 주문구분 — 00 지정가(평소) · 31~34 중 어느 게 LOC 인지 알아보는 시험"
+        type: choice
+        default: "00"
+        options: ["00", "31", "32", "33", "34"]
 
 jobs:
   order:
@@ -29,13 +34,14 @@ jobs:
         env:
           KEY: ${{ secrets.AUTOTRADE_KEY }}
           DRY: ${{ github.event_name == 'workflow_dispatch' && inputs.dry && '1' || '0' }}
+          DVSN: ${{ github.event_name == 'workflow_dispatch' && inputs.ord_dvsn || '00' }}
         run: |
           if [ -z "$KEY" ]; then echo "AUTOTRADE_KEY Secret 이 없습니다"; exit 1; fi
           # 미국 시장은 하루에 두 번 걸리는 크론 중 한쪽만 실제 마감 20분 전이다.
           # 서버가 같은 날 두 번째 호출을 lastDate 로 막으므로 그냥 둘 다 부른다.
           code=$(curl -sS -o resp.json -w '%{http_code}' --max-time 120 \
             -H "x-autotrade-key: $KEY" \
-            "https://jkquant.pages.dev/api/autotrade?dry=$DRY")
+            "https://jkquant.pages.dev/api/autotrade?dry=$DRY&ordDvsn=$DVSN")
           echo "HTTP $code"
           cat resp.json
           # 이미 오늘 돌았으면 성공으로 친다 — 크론이 두 번 걸리는 건 설계다

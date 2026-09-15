@@ -541,6 +541,13 @@ export async function onRequestPost({ request, env }) {
   const qty = parseInt(body.qty, 10);
   const priceType = String(body.priceType || "limit");         // limit | market
   const us = USSYM.test(code);
+  /* 미국 주문구분(ORD_DVSN). 기본은 지금까지와 같은 "00"(지정가)다.
+     31~34 는 MOO/LOO/MOC/LOC 로 알려져 있으나 공개 문서마다 순서가 엇갈려
+     어느 숫자가 LOC 인지 확정하지 못했다. 그래서 값을 코드에 박지 않고
+     부르는 쪽이 정해 보내게 하고, 실제로 무엇이 쓰였는지 응답에 담아 돌려준다.
+     — 숫자를 찍어 맞히는 대신, 한 번 넣어 보고 답을 읽어서 알아낸다. */
+  const DVSN_OK = ["00", "31", "32", "33", "34"];
+  const wantDvsn = DVSN_OK.includes(String(body.ordDvsn || "")) ? String(body.ordDvsn) : "00";
   // 미국 주식은 호가가 소수점이다 — 국내처럼 반올림하면 115.76이 116이 되어 딴 주문이 된다
   const price = priceType === "market" ? 0 : (us ? Math.round((+body.price || 0) * 100) / 100 : Math.round(+body.price || 0));
   if (!us && !KRCODE.test(code)) return json({ error: "종목코드 오류" }, 400);
@@ -563,9 +570,9 @@ export async function onRequestPost({ request, env }) {
       mkt = q.market;
     }
     const trU = side === "buy" ? (real ? "TTTT1002U" : "VTTT1002U") : (real ? "TTTT1006U" : "VTTT1001U");
-    const ordU = { CANO: a.cano, ACNT_PRDT_CD: a.prod, OVRS_EXCG_CD: mkt, PDNO: code,
-      ORD_QTY: String(qty), OVRS_ORD_UNPR: price.toFixed(2), ORD_SVR_DVSN_CD: "0", ORD_DVSN: "00" };
-    try {
+    const send = async (dvsn) => {
+      const ordU = { CANO: a.cano, ACNT_PRDT_CD: a.prod, OVRS_EXCG_CD: mkt, PDNO: code,
+        ORD_QTY: String(qty), OVRS_ORD_UNPR: price.toFixed(2), ORD_SVR_DVSN_CD: "0", ORD_DVSN: dvsn };
       const token = await getToken(env);
       const hk = await hashkey(env, ordU);
       const r = await fetch(base(env) + "/uapi/overseas-stock/v1/trading/order", {
@@ -575,13 +582,28 @@ export async function onRequestPost({ request, env }) {
         body: JSON.stringify(ordU),
       });
       const j = await r.json().catch(() => ({}));
-      const ok = String(j.rt_cd) === "0";
-      // 국내와 같은 규약 — 주문은 절대 자동 재시도하지 않는다(이중 주문 위험)
+      return { j, ok: String(j.rt_cd) === "0" };
+    };
+    const dressed = (dvsn, j, ok, extra) => {
       const msg = ok ? (j.msg1 || "주문 접수")
         : RATE_LIMITED(j) ? "초당 요청 제한에 걸려 주문이 접수되지 않았습니다 — 잠시 후 다시 누르세요"
         : (j.msg1 || "주문 실패");
       return json({ ok, env: real ? "real" : "vts", market: mkt, side, code, qty, price, priceType: "limit",
-        orderNo: j.output && (j.output.ODNO || j.output.odno), msg, raw: j }, ok ? 200 : 502);
+        ordDvsn: dvsn, orderNo: j.output && (j.output.ODNO || j.output.odno), msg, raw: j, ...extra },
+        ok ? 200 : 502);
+    };
+    try {
+      let { j, ok } = await send(wantDvsn);
+      /* 여기서만은 한 번 더 보낸다. 재시도 금지는 "접수됐는지 모를 때" 의 규칙인데
+         (그물이 끊기거나 응답이 없으면 이미 들어갔을 수 있으니 두 번 내면 이중 주문이다)
+         지금은 한투가 답을 줘서 "안 받았다" 고 말한 경우다. 안 받은 주문은 없는 주문이니
+         다른 주문구분으로 다시 내도 겹치지 않는다. 던져진 예외나 초당제한은 해당 없다. */
+      if (!ok && wantDvsn !== "00" && !RATE_LIMITED(j)) {
+        const first = { code: wantDvsn, msg: j.msg1 || "주문 실패", rt: String(j.msg_cd || j.rt_cd || "") };
+        ({ j, ok } = await send("00"));
+        return dressed("00", j, ok, { fellBack: true, firstTry: first });
+      }
+      return dressed(wantDvsn, j, ok, {});
     } catch (e) {
       return json({ error: String(e.message || e) }, 502);
     }

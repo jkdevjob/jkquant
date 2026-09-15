@@ -1875,7 +1875,36 @@ console.log('[42] 자동 주문 — 브라우저와 서버가 같은 주문을 �
     ok('평일에만 돈다', /cron: "40 (19|20) \* \* 1-5"/.test(y));
     ok('손으로도 돌릴 수 있다', /workflow_dispatch/.test(y));
     ok('손으로 돌릴 땐 드라이런이 기본', /default: true/.test(y));
+    ok('주문구분을 손으로 골라 시험할 수 있다', /ord_dvsn:/.test(y) && /ordDvsn=\$DVSN/.test(y));
+    ok('평소 주문구분은 지정가다', /inputs\.ord_dvsn \|\| '00'/.test(y));
   }
+}
+
+/* ════ 43. 미국 주문구분 — LOC 가 몇 번인지 알아보되, 평소 주문은 건드리지 않는다 ════
+   공개 문서가 31~34 의 순서를 서로 다르게 적어 놔서 어느 숫자가 LOC 인지 확정이 안 된다.
+   숫자를 찍어 박아 넣으면 MOC(장마감 시장가)로 나갈 수도 있다 — 그러면 정한 값이 아닌
+   아무 값에나 체결된다. 그래서 (1) 기본값은 예전 그대로 "00", (2) 무엇으로 나갔는지
+   응답에 적어 돌려주고, (3) 확실히 거절당한 때에만 "00" 으로 한 번 떨어뜨린다. */
+console.log('\n[43] 미국 주문구분 — 시험은 하되 평소 주문은 그대로');
+{
+  const kisSrc=fs.existsSync(__d+'/functions/api/kis.js')?fs.readFileSync(__d+'/functions/api/kis.js','utf8'):'';
+  const at=fs.existsSync(__d+'/functions/api/autotrade.js')?fs.readFileSync(__d+'/functions/api/autotrade.js','utf8'):'';
+  ok('안 주면 지정가로 나간다', /DVSN_OK\.includes\(String\(body\.ordDvsn \|\| ""\)\) \? String\(body\.ordDvsn\) : "00"/.test(kisSrc));
+  ok('아는 번호만 받는다', /const DVSN_OK = \["00", "31", "32", "33", "34"\]/.test(kisSrc));
+  ok('무엇으로 나갔는지 돌려준다', /ordDvsn: dvsn/.test(kisSrc));
+  // 되던짐은 "한투가 안 받았다고 답한" 때만 — 예외나 초당제한이면 이미 접수됐을 수 있다
+  ok('확실한 거절일 때만 지정가로 떨어진다',
+     /if \(!ok && wantDvsn !== "00" && !RATE_LIMITED\(j\)\)/.test(kisSrc));
+  ok('떨어뜨린 사실을 기록에 남긴다', /fellBack: true, firstTry: first/.test(kisSrc));
+  // 예외 경로에는 되던짐이 없어야 한다 — 응답을 못 받은 주문은 냈는지 모른다
+  const usBlk=(kisSrc.split('// ── 미국 주식 주문 ──')[1]||'').split('const tr = side ===')[0];
+  ok('응답이 없으면 다시 내지 않는다',
+     /catch \(e\) \{\s*return json\(\{ error: String\(e\.message \|\| e\) \}, 502\);/.test(usBlk));
+  ok('자동 주문이 주문구분을 넘겨준다', /priceType: "limit", ordDvsn \}/.test(at));
+  ok('자동 주문 기본값도 지정가다',
+     /\["31", "32", "33", "34"\]\.includes\(url\.searchParams\.get\("ordDvsn"\) \|\| ""\)/.test(at)
+     && /: "00";/.test(at));
+  ok('결과에 무엇으로 나갔는지 적는다', /ordDvsn: j\.ordDvsn \|\| ""/.test(at) && /fellBack: !!j\.fellBack/.test(at));
 }
 
 console.log(`\n════ 결과: ${pass} PASS / ${fail} FAIL ${fail===0?'— ALL PASS ★':'— 배포 금지, 위 ✗ 항목 수정 필요'} ════`);
