@@ -1031,7 +1031,7 @@ console.log('[23] 관리자 모드 — 접속 계정·사용자 관리');
 
   // 차단된 계정이 데이터를 열고 나서 쫓겨나면 막은 의미가 없다
   ok('차단 확인이 데이터 로딩보다 먼저',
-     idx.indexOf("if(isBlocked(prof)){") < idx.indexOf("const ok=await pullRemote();")
+     idx.indexOf("if(isBlocked(prof)){") < idx.indexOf("withTimeout(pullRemote()")
      && /await window\.fb\.signOut\(window\.fb\.auth\)/.test(idx));
   // 실수로 자기를 차단하면 되돌릴 방법이 없다
   ok('관리자는 스스로 잠기지 않는다', /function isBlocked\(prof\)\{ return !!\(prof&&prof\.blocked\) && !isAdmin\(\); \}/.test(idx));
@@ -1427,6 +1427,22 @@ console.log('[35] 로그인 — 조용히 갇히지 않는다');
   ok('저장 실패를 사용자에게 알린다', /showLsWarn\(/.test(sl) && !!extractFn(idx,'function showLsWarn(msg)'));
   ok('클라우드 저장은 계속된다', /function save\(\)\{saveLocal\(\);pushRemote\(\);\}/.test(idx));
   ok('저장이 복구되면 경고를 치운다', /lsFailed=false;[\s\S]{0,60}remove\(\)/.test(sl));
+
+  /* try/catch 는 '던져야' 잡는다. Firestore 호출이 영영 안 끝나면 예외가 아니라
+     그냥 멈춰 있어서 로그인 처리가 통째로 갇힌다 — 웨일 iOS에서 실제로 났다
+     (구글 인증은 됐는데 앱시작 '안 됨'). 그래서 시간을 재서 끊는다. */
+  const wt=extractFn(idx,'function withTimeout(p, ms, label)');
+  ok('안 끝나는 호출을 시간으로 끊는다', !!wt && /Promise\.race/.test(wt) && /setTimeout/.test(wt));
+  ok('프로필 확인에 제한시간', /withTimeout\(touchProfile\(user\), 6000, '프로필 확인'\)/.test(ia));
+  ok('클라우드 읽기에 제한시간', /withTimeout\(pullRemote\(\), 8000, '클라우드 기록'\)/.test(ia));
+  // 클라우드가 안 와도 이 기기에 있는 걸로 열어야 한다 — 새로 시작하면 기록이 사라진 것처럼 보인다
+  ok('클라우드가 안 오면 로컬로 연다', /load\(\); opened=validState\(S\);/.test(ia)
+     && /이 기기에 저장된 걸로 엽니다/.test(ia));
+  ok('로컬도 없을 때만 새로 시작', /if\(!opened\)\{[\s\S]{0,80}freshState\(\)/.test(ia));
+  // 어디서 멈췄는지 알아야 다음에 안 헤맨다
+  ok('진행 단계를 남긴다', /let authStep=/.test(idx)
+     && (idx.match(/authStep='/g)||[]).length>=4);
+  ok('진단이 멈춘 자리를 보여준다', /멈춘 자리 '\+authStep/.test(extractFn(idx,'function authDiag()')));
 }
 
 console.log('[36] 분석 머리 — 여섯 탭 모두 손익금·손익률·원화');
@@ -1802,6 +1818,19 @@ console.log('[42] 자동 주문 — 브라우저와 서버가 같은 주문을 �
        && /const MKT_CLOSE_MIN=\{usd:16\*60, krw:15\*60\+30\}/.test(idx)
        && /const SETTLE_LAG_MIN=20/.test(idx));
     ok('자동 주문이 확정 종가를 쓴다', /settledLast\(q\.series \|\| q\.ohlc \|\| \[\], st\.cur\)/.test(at_||''));
+
+    /* 시세사가 봉을 늦게 올리는 일이 실제로 있다 — 야후가 9/14 봉을 마감 4시간 뒤에 올렸다.
+       사람이면 이상한 걸 알아채지만 자동 주문은 낡은 가격으로 그대로 내버린다. */
+    const M3=new Function(im.replace(/export /g,'')+'\nreturn {staleDays,STALE_MAX_DAYS};')();
+    const t=(iso)=>new Date(iso);
+    // 2026-09-15 19:40Z = 15:40 ET 화요일 → cutoff 는 09-14(월)
+    ok('전날 종가는 안 묵은 것', M3.staleDays('2026-09-14','usd',t('2026-09-15T19:40:00Z'))===0);
+    ok('주말을 낀 금요일 종가도 통과', M3.staleDays('2026-09-11','usd',t('2026-09-15T19:40:00Z'))===3);
+    ok('그보다 묵으면 걸린다', M3.staleDays('2026-09-09','usd',t('2026-09-15T19:40:00Z'))>M3.STALE_MAX_DAYS);
+    ok('종가 자체가 없으면 무한대', M3.staleDays(null,'usd',t('2026-09-15T19:40:00Z'))===Infinity);
+    ok('3일 연휴까지는 봐준다', M3.STALE_MAX_DAYS===4);
+    ok('묵은 종가면 주문을 건너뛴다', /if \(stale > STALE_MAX_DAYS\)/.test(at_||'')
+       && /일 묵었습니다/.test(at_||''));
   }
 
   if(at){

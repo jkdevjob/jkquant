@@ -20,7 +20,7 @@
 //   · 리버스모드 세션은 건너뛴다 — 규칙을 다 옮기지 않았다.
 //   · 실계좌 세션(paper=false)은 KIS_ENV 가 real 이라 진짜 돈이 나간다. dry 로 먼저 확인할 것.
 
-import { imOrders, settledLast } from "./_im.js";
+import { imOrders, settledLast, staleDays, STALE_MAX_DAYS } from "./_im.js";
 
 const JH = { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store" };
 const json = (o, s = 200) => new Response(JSON.stringify(o, null, 2), { status: s, headers: JH });
@@ -153,6 +153,15 @@ export async function onRequest({ request, env }) {
         row.closeDate = bar ? bar.date : null;
       } catch (e) { row.skip = "시세 실패: " + (e.message || e); out.sessions.push(row); continue; }
       row.close = close;
+      /* 묵은 종가로는 주문하지 않는다. 시세사가 봉을 늦게 올리는 일이 실제로 있는데
+         (야후가 9/14 봉을 마감 4시간 뒤에 올렸다) 사람이라면 이상한 걸 알아채지만
+         자동 주문은 그대로 내버린다. 낡은 가격으로 낸 주문은 되돌릴 수가 없다. */
+      const stale = staleDays(row.closeDate, st.cur);
+      if (stale > STALE_MAX_DAYS) {
+        row.skip = `종가가 ${stale}일 묵었습니다 (${row.closeDate}) — 시세가 안 올라와 건너뜁니다`;
+        out.sessions.push(row); continue;
+      }
+      row.staleDays = stale;
 
       const { orders, skip } = imOrders({ st, hist: s.hist || [], close, days });
       if (skip) { row.skip = skip; out.sessions.push(row); continue; }

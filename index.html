@@ -499,7 +499,7 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
 </div>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.42</span></h1></div>
+    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.43</span></h1></div>
     <div class="jkmenu" id="jkmenuWrap">
       <button class="jkmenu-btn" id="jkmenuBtn" aria-label="메뉴" onclick="jkMenuToggle(event)">三</button>
       <div class="jkmenu-pop" id="jkmenuPop" hidden>
@@ -1556,7 +1556,7 @@ document.addEventListener('click',function(e){ var m=document.getElementById('jk
   <footer>
     <strong>JK 퀀트</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.42</b> · 2026-09-15</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.43</b> · 2026-09-15</div>
   </footer>
 </div>
 
@@ -7762,10 +7762,12 @@ function initAuth(){
        '로그인이 안 된다'로 보였다 — 화면엔 아무 메시지도 안 떴다.
        기록을 못 읽는 것과 로그인이 안 되는 것은 다른 문제이므로 섞지 않는다. */
     curUid=user.uid; curEmail=user.email||'';
+    authStep='배지';
     try{ renderUserBadge(user); }catch(e){ console.warn('badge',e); }
     // 접속 기록 + 차단 확인. 차단된 계정은 데이터를 열지 않고 그대로 내보낸다
+    authStep='프로필';
     try{
-      const prof=await touchProfile(user);
+      const prof=await withTimeout(touchProfile(user), 6000, '프로필 확인');
       if(isBlocked(prof)){
         curUid=null; curEmail=null;
         applyAdminMode();
@@ -7775,14 +7777,20 @@ function initAuth(){
       }
     }catch(e){ console.warn('profile',e); }   // 프로필 확인 실패로 로그인까지 막지는 않는다
     // 1) 클라우드 → 2) 로컬 → 3) 그래도 안 되면 새 상태로 연다
+    authStep='기록 읽기';
     try{
-      const ok=await pullRemote();
+      const ok=await withTimeout(pullRemote(), 8000, '클라우드 기록');
       if(!ok) load();
     }catch(e){
       console.error('load',e);
-      try{ S=freshState(); ensureBoxes(); saveLocal(); }catch(e2){ console.error('fresh',e2); }
-      authWarn('저장된 기록을 읽지 못해 새로 시작합니다 — '+(e&&e.message||e));
+      // 클라우드가 안 오면 이 기기에 저장해 둔 걸로 연다. 그것도 없으면 새로 시작한다.
+      let opened=false;
+      try{ load(); opened=validState(S); }catch(e2){ console.error('local',e2); }
+      if(!opened){ try{ S=freshState(); ensureBoxes(); saveLocal(); }catch(e2){ console.error('fresh',e2); } }
+      authWarn((opened?'클라우드 기록을 못 읽어 이 기기에 저장된 걸로 엽니다':'저장된 기록을 읽지 못해 새로 시작합니다')
+        +' — '+(e&&e.message||e));
     }
+    authStep='앱 시작';
     $('authgate').style.display='none';
     try{
       startApp();
@@ -7799,6 +7807,16 @@ function initAuth(){
    두 번이나 '로그인이 안 된다'는 말만 있고 단서가 없어서 원인을 못 좁혔다.
    여기 찍히는 줄만 보면 어디서 막혔는지 바로 갈린다. */
 let authLastErr='';
+/* 어디까지 갔는지 남긴다 — 멈춘 자리가 곧 원인이다. */
+let authStep='시작 전';
+/* Firestore 호출은 실패하는 게 아니라 '영영 안 끝나는' 경우가 있다.
+   (웨일 iOS에서 실제로 그랬다 — 구글 인증은 됐는데 앱이 안 열렸다.)
+   try/catch 는 던져야 잡는다. 안 끝나는 건 못 잡으므로 시간을 재서 끊는다.
+   기록을 못 읽는 건 불편할 뿐이지만, 로그인 자체가 막히는 건 앱을 못 쓰는 것이다. */
+function withTimeout(p, ms, label){
+  return Promise.race([p, new Promise((_,rej)=>setTimeout(
+    ()=>rej(new Error(`${label} 응답 없음(${Math.round(ms/1000)}초)`)), ms))]);
+}
 function storageOK(){
   try{ localStorage.setItem('_t','1'); localStorage.removeItem('_t'); return 'OK'; }
   catch(e){ return '막힘('+(e&&e.name||'?')+')'; }
@@ -7810,7 +7828,7 @@ function authDiag(){
   L.push('인증대기  '+(typeof authWired!=='undefined'&&authWired?'연결됨':'미연결 ← 여기서 막힘'));
   L.push('로그인상태 '+(window.fb&&window.fb.auth&&window.fb.auth.currentUser
           ? ('됨 '+(window.fb.auth.currentUser.email||'')) : '안 됨'));
-  L.push('앱시작    '+(appStarted?'됨':'안 됨'));
+  L.push('앱시작    '+(appStarted?'됨':'안 됨 · 멈춘 자리 '+authStep));
   L.push('저장소    '+storageOK());
   L.push('브라우저  '+(inAppName()||'기본 브라우저'));
   if(authLastErr) L.push('마지막오류 '+authLastErr);
