@@ -1,0 +1,42 @@
+name: 무매 자동 주문
+
+# Cloudflare Pages Functions 에는 크론이 없다. 깃허브 액션이 시간을 재서
+# /api/autotrade 를 두드리면, 거기서 세션을 읽고 오늘 주문을 낸다.
+#
+# 필요한 Secret (저장소 → Settings → Secrets and variables → Actions)
+#   AUTOTRADE_KEY : Cloudflare 환경변수에 넣은 것과 같은 값
+#
+# 시각은 UTC다. 미국 정규장 마감이 16:00 ET —
+#   서머타임(3~11월) 20:00 UTC · 겨울 21:00 UTC.
+# LOC 주문은 마감 전에 들어가 있어야 하므로 그보다 앞선 시각에 낸다.
+
+on:
+  schedule:
+    - cron: "40 19 * * 1-5"   # 서머타임 기준 15:40 ET (마감 20분 전)
+    - cron: "40 20 * * 1-5"   # 겨울시간 기준 15:40 ET
+  workflow_dispatch:           # 손으로도 돌릴 수 있게
+    inputs:
+      dry:
+        description: "드라이런 (주문 안 내고 계산만)"
+        type: boolean
+        default: true
+
+jobs:
+  order:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 자동 주문 호출
+        env:
+          KEY: ${{ secrets.AUTOTRADE_KEY }}
+          DRY: ${{ github.event_name == 'workflow_dispatch' && inputs.dry && '1' || '0' }}
+        run: |
+          if [ -z "$KEY" ]; then echo "AUTOTRADE_KEY Secret 이 없습니다"; exit 1; fi
+          # 미국 시장은 하루에 두 번 걸리는 크론 중 한쪽만 실제 마감 20분 전이다.
+          # 서버가 같은 날 두 번째 호출을 lastDate 로 막으므로 그냥 둘 다 부른다.
+          code=$(curl -sS -o resp.json -w '%{http_code}' --max-time 120 \
+            -H "x-autotrade-key: $KEY" \
+            "https://jkquant.pages.dev/api/autotrade?dry=$DRY")
+          echo "HTTP $code"
+          cat resp.json
+          # 이미 오늘 돌았으면 성공으로 친다 — 크론이 두 번 걸리는 건 설계다
+          if [ "$code" != "200" ]; then exit 1; fi

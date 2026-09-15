@@ -1633,21 +1633,29 @@ console.log('[41] 한투 모의투자 연결 — 세션 설정과 주문 전송'
   // ── 앱: 세션 설정 ──
   ok('모의투자 안에만 한투 선택이 있다',
      idx.indexOf('id="sess_simstart_wrap"') < idx.indexOf('id="sess_kis"'));
-  ok('네 갈래가 모두 선택지에 있다',
-     ['kr-vts','us-vts','kr-real','us-real'].every(m=>idx.includes('value="'+m+'"')));
-  ok('실전에는 경고 표시가 붙어 있다', /value="kr-real">국내 실전투자 ⚠/.test(idx) && /value="us-real">국외 실전투자 ⚠/.test(idx));
-  ok('세션에 고른 갈래를 저장한다', /t\.kisMode=\(\$\('sess_kis'\)&&\$\('sess_kis'\)\.value\)\|\|''/.test(idx)
-     && /s\.kisMode=\(\$\('sess_kis'\)&&\$\('sess_kis'\)\.value\)\|\|''/.test(idx));
-  /* '모의투자' 딱지가 붙은 세션이 실전 주문을 내면 화면의 말과 실제가 어긋난다.
-     잘못 고르면 진짜 돈이 나가고 되돌릴 수가 없으므로, 세션 종류와 주문 환경을 묶는다. */
-  ok('세션 종류에 맞는 갈래만 연다', !!extractFn(idx,'function kisSyncOpts()'));
-  const sy=extractFn(idx,'function kisSyncOpts()');
-  ok('모의 세션은 실전을 잠근다', /const bad=paper\?isReal:!isReal;/.test(sy) && /o\.disabled=bad;/.test(sy));
-  ok('잠긴 걸 고르고 있었으면 비운다', /if\(sel\.selectedOptions\[0\]&&sel\.selectedOptions\[0\]\.disabled\) sel\.value='';/.test(sy));
-  ok('모의 여부를 바꾸면 선택지도 따라온다', /style\.display=this\.checked\?'':'none';kisOptUI\(\)/.test(idx));
-  // 저장할 때도 한 번 더 거른다 — 모의↔실계좌를 바꾼 직후 옛 값이 남을 수 있다
-  const cs=(idx.match(/if\([a-z]+\.kisMode && \(String\([a-z]+\.kisMode\)\.endsWith\('-real'\) === !![a-z]+\.paper\)\) [a-z]+\.kisMode='';/g)||[]).length;
-  ok('저장할 때 안 맞는 조합을 거른다', cs===2, cs+'곳');
+  /* 갈래는 고르는 게 아니라 정해진다 — 시장은 종목이, 환경은 세션 종류가 정한다.
+     넷 중에 고르게 하면 잘못 골라 막히기만 하고, '모의투자' 딱지로 실전 주문이
+     나갈 길도 열린다. 사람이 정할 건 '연결할지 말지' 하나뿐이다. */
+  const kf=extractFn(idx,'function kisModeFor(sess, paperOverride)');
+  // 실제로 실행해서 확인한다 — 정규식만으로는 '모의인데 실전으로 간다'를 못 잡는다
+  const kisModeOf=(ticker,paper)=>{
+    const F=new Function('KR_CODE_RE',
+      extractFn(idx,'function kisMarketOf(ticker)')+'\n'+kf+'\nreturn kisModeFor;')(/^(?:\d{6}|\d{4}[A-Z]\d)$/);
+    return F({paper, settings:{ticker}});
+  };
+  ok('갈래를 종목·세션에서 끌어낸다', !!kf
+     && /kisMarketOf\(tk\) \+ '-' \+ \(paper\?'vts':'real'\)/.test(kf));
+  ok('고르는 칸이 아니라 체크 하나다', /type="checkbox" id="sess_kis"/.test(idx)
+     && !/<option value="us-vts"/.test(idx));
+  ok('어느 갈래로 나가는지 옆에 띄운다', /id="sess_kis_hint"/.test(idx)
+     && /hint\.textContent = ' — '\+\(KIS_MODE_LBL\[mode\]\|\|mode\)/.test(extractFn(idx,'async function kisOptUI()')));
+  ok('세션엔 연결 여부만 저장한다', /t\.kis=!!\(\$\('sess_kis'\)&&\$\('sess_kis'\)\.checked\); delete t\.kisMode;/.test(idx)
+     && /s\.kis=!!\(\$\('sess_kis'\)&&\$\('sess_kis'\)\.checked\);/.test(idx));
+  /* '모의투자' 딱지가 붙은 세션이 실전 주문을 내는 길이 있으면 안 된다.
+     고르게 하지 않고 세션 종류에서 끌어내면 어긋날 수가 없다. */
+  ok('모의 세션은 늘 모의계좌로 간다', kisModeOf('SOXL', true)==='us-vts' && kisModeOf('069500', true)==='kr-vts');
+  ok('실계좌 세션은 늘 실전계좌로 간다', kisModeOf('SOXL', false)==='us-real' && kisModeOf('069500', false)==='kr-real');
+  ok('모의 여부를 바꾸면 안내도 따라온다', /style\.display=this\.checked\?'':'none';kisOptUI\(\)/.test(idx));
   // 시장은 종목이 정한다 — 고를 여지가 없다
   ok('시장은 종목코드로 정한다', /function kisMarketOf\(ticker\)/.test(idx) && /KR_CODE_RE\.test/.test(extractFn(idx,'function kisMarketOf(ticker)')));
   const ku=extractFn(idx,'async function kisOptUI()');
@@ -1655,9 +1663,11 @@ console.log('[41] 한투 모의투자 연결 — 세션 설정과 주문 전송'
   ok('키가 없으면 어느 갈래인지 짚어 준다', /설정이 서버에 없습니다/.test(ku)
      && /\(\(j\.modes\|\|\[\]\)\.find\(m=>m\.id===mode\)\|\|\{\}\)\.missing/.test(ku));
   ok('국내·국외 계좌가 다를 수 있음을 알려준다', /_ACCOUNT_\$\{market\.toUpperCase\(\)\}/.test(ku)
-     && /국내·국외 모의계좌를 따로 신청합니다/.test(ku));
-  ok('실전이면 빨간 경고', /실전투자입니다\. 진짜 돈이 나갑니다/.test(ku));
-  ok('종목과 시장이 어긋나면 미리 알린다', /tkMarket!==market/.test(ku));
+     && /국내·국외 계좌를 따로 신청합니다/.test(ku));
+  ok('실전이면 빨간 경고', /실전계좌입니다\. 진짜 돈이 나갑니다/.test(ku));
+  // 어긋날 수가 없다 — 대신 어디로 나가는지 설명한다
+  ok('어디로 왜 나가는지 설명한다', /종목 <b>\$\{esc\(tk\|\|'\?'\)\}<\/b>이라/.test(ku)
+     && /모의투자 세션이라 <b>모의계좌<\/b>/.test(ku));
   ok('지정가로 나간다는 걸 미리 알린다', /지정가만<\/b> 받습니다/.test(ku));
 
   // ── 앱: 보내는 주문은 화면과 같은 것이어야 한다 ──
@@ -1668,9 +1678,10 @@ console.log('[41] 한투 모의투자 연결 — 세션 설정과 주문 전송'
   const n=(idx.match(/renderKisPanel\(\)/g)||[]).length;
   ok('주문표의 모든 종료 지점에서 패널을 그린다', n>=4, n+'곳');   // 정의 1 + 호출 3
   const ks=extractFn(idx,'async function kisSendToday()');
-  ok('연결된 세션만 보낸다', /if\(!\(s&&s\.kisMode\)\) return;/.test(ks));
-  ok('세션 종류와 환경이 어긋나면 안 보낸다', /if\(real===!!s\.paper\)\{ alert\(/.test(ks));
-  ok('시장이 어긋나면 안 보낸다', /if\(kisMarketOf\(sym\)!==MP\.market\)\{ alert\(/.test(ks));
+  ok('연결된 세션만 보낸다', /if\(!\(s&&s\.kis\)\) return;/.test(ks));
+  ok('보낼 때도 갈래를 세션에서 끌어낸다', /const mode=kisModeFor\(s\), MP=kisModeParts\(mode\)/.test(ks));
+  ok('보낼 종목과 갈래가 늘 같은 데서 나온다',
+     /const mode=kisModeFor\(s\)/.test(ks) && !/kisMarketOf\(sym\)!==MP\.market/.test(ks));
   ok('준비 안 된 갈래는 안 보낸다', /if\(!\(j\.ready\|\|\[\]\)\.includes\(mode\)\)/.test(ks));
   ok('보내기 전에 확인을 받는다', /if\(!confirm\(/.test(ks));
   ok('실전이면 확인창부터 경고한다', /실전투자입니다\. 진짜 돈이 나갑니다/.test(ks));
@@ -1680,12 +1691,117 @@ console.log('[41] 한투 모의투자 연결 — 세션 설정과 주문 전송'
   ok('주문마다 결과를 남긴다', /done\.push\(\{o,ok:/.test(ks));
   ok('보여준 값 그대로 보낸다', /price:Math\.round\(o\.price\*100\)\/100/.test(ks));
   const rp=extractFn(idx,'function renderKisPanel()');
-  ok('연결 안 된 세션엔 패널이 없다', /if\(!\(s&&s\.kisMode\)\)\{ box\.innerHTML=''; return; \}/.test(rp));
-  ok('종류가 어긋나면 패널 대신 안내', /if\(real===!!s\.paper\)\{/.test(rp)
-     && /세션 설정에서 다시 골라 주세요/.test(rp));
+  ok('연결 안 된 세션엔 패널이 없다', /if\(!\(s&&s\.kis\)\)\{ box\.innerHTML=''; return; \}/.test(rp));
+  ok('패널도 갈래를 세션에서 끌어낸다', /const mode=kisModeFor\(s\), MP=kisModeParts\(mode\)/.test(rp));
   ok('시장이 어긋나면 패널 대신 안내', /kisMarketOf\(sym\)!==MP\.market/.test(rp));
   ok('실전 패널은 색과 문구가 다르다', /real\?'sell':'buy'/.test(rp) && /실전 계좌입니다/.test(rp));
   ok('주문표에서 그대로 가져온다', /todayOrders\.filter\(/.test(rp));
+}
+
+/* ════ 42. 자동 주문 — 서버가 브라우저와 같은 주문을 낸다 ════
+   주문 계산이 index.html 안에만 있어서 앱을 안 열면 오늘 낼 주문을 아무도 몰랐다.
+   서버로 옮겼는데, 한 주라도 어긋나면 화면에 보이는 것과 실제로 나가는 게 달라진다.
+   그래서 재구현을 믿지 않고 index.html 의 renderOrder 를 그대로 돌려 맞대 본다. */
+console.log('[42] 자동 주문 — 브라우저와 서버가 같은 주문을 낸다');
+{
+  const imPath=__d+'/functions/api/_im.js';
+  const atPath=__d+'/functions/api/autotrade.js';
+  const im=fs.existsSync(imPath)?fs.readFileSync(imPath,'utf8'):'';
+  const at=fs.existsSync(atPath)?fs.readFileSync(atPath,'utf8'):'';
+  ok('서버용 주문 모듈이 있다', !!im);
+  ok('자동 주문 엔드포인트가 있다', !!at);
+
+  if(im){
+    const M=new Function(im.replace(/export /g,'')+'\nreturn {imOrders,imCompute,imBuy1,starPct};')();
+    // 브라우저 쪽 — DOM 을 최소로 흉내내고 renderOrder 원문을 그대로 실행한다
+    const KIND=idx.slice(idx.indexOf('const KIND_T='), idx.indexOf('};', idx.indexOf('const KIND_T='))+2);
+    const need=['function computeInf()','function imBuy1(c)','function starPct(ticker,div,T,base)',
+      'function reverseT(kind,t,div)','function oitem(cls,name,tag,price,qty)','function renderOrder()',
+      'function imMomNow()','function imTgtOf(base, mom)','function calcStarPoint(c)',
+      'function fmtT(t)','function isSell(k)','function isBuy(k)','function isCx(k)']
+      .map(x=>{ try{ return extractFn(idx,x); }catch(e){ return ''; } }).filter(Boolean).join('\n');
+    const browserOrders=(st,hist,close,days)=>{
+      const EL=()=>({textContent:'',innerHTML:'',style:{},value:'',classList:{add(){},remove(){},toggle(){}}});
+      return new Function('EL','ST','HIST','DAYS','CLOSE', `
+        const S={activeTab:'inf'};
+        let todayOrders=[];
+        const $=(id)=>id==='o_close'?{value:''}:EL();
+        const wn=v=>'$'+(+v||0).toFixed(2);
+        const inputNum=()=>0;
+        const curStrat=()=>({id:'s',settings:ST,hist:HIST});
+        const lastQuote={inf:{days:DAYS}};
+        let infChartData=DAYS, infSimNote='', infSimNoteSid=null, _lastNeedClose=null;
+        ${KIND}
+        const IM_MOM_LEN=20, IM_MOM_TH=8, IM_MOM_CAP=30;
+        ${need}
+        function infSettledLast(){ return {close:CLOSE}; }
+        function render5day(){}
+        function renderKisPanel(){}
+        renderOrder();
+        return todayOrders;`)(EL,st,hist,days,close);
+    };
+    const ST=(o)=>Object.assign({ticker:'SOXL',div:20,target:20,big:20,principal:10000,cur:'usd',
+      rowsOn:false,rows:8,gap:2.5,rowqty:1,compound:false,reverse:false,tgtDyn:false},o);
+    const DAYS=Array.from({length:30},(_,i)=>({date:'2026-01-'+String(i+1).padStart(2,'0'), close:90+i}));
+    const many=(n,f)=>Array.from({length:n},(_,i)=>f(i));
+    const CASES=[
+      ['빈 세션(첫 매수)',       ST({}), [], 100],
+      ['보유·전반전',            ST({}), [{kind:'1회매수',date:'2026-01-02',price:100,qty:5}], 95],
+      ['보유·후반전',            ST({}), many(12,i=>({kind:'1회매수',date:'2026-01-0'+(i%9+1),price:100-i,qty:3})), 80],
+      ['원금 소진',              ST({principal:500}), many(21,()=>({kind:'1회매수',date:'2026-02-01',price:20,qty:1})), 20],
+      ['하방 LOC 켬',            ST({rowsOn:true,rows:3,rowqty:2}), [{kind:'1회매수',date:'2026-01-02',price:100,qty:5}], 95],
+      ['익절 조절 켬',           ST({tgtDyn:true}), [{kind:'1회매수',date:'2026-01-02',price:100,qty:5}], 95],
+      ['평단이 종가보다 위(상한)',ST({}), [{kind:'1회매수',date:'2026-01-02',price:200,qty:10}], 100],
+      ['40분할 TQQQ 익절15',     ST({ticker:'TQQQ',div:40,target:15}), [{kind:'절반매수',date:'2026-01-02',price:70,qty:4}], 68],
+      ['매도 후 사이클 종료',     ST({}), [{kind:'1회매수',date:'2026-01-02',price:100,qty:5},
+                                        {kind:'지정가매도',date:'2026-01-09',price:120,qty:5}], 118],
+      ['국내 종목(원화)',        ST({ticker:'069500',cur:'krw',principal:5000000}),
+                                 [{kind:'1회매수',date:'2026-01-02',price:10000,qty:30}], 9800],
+    ];
+    const norm=o=>`${o.side} ${o.tag} ${(+o.price).toFixed(4)} x${o.qty}`;
+    let diff=0, checked=0;
+    for(const [nm,st,hist,close] of CASES){
+      let a=null,b=null,err='';
+      try{ a=browserOrders(st,hist,close,DAYS).map(norm); }catch(e){ err='브라우저: '+e.message; }
+      try{ b=M.imOrders({st,hist,close,days:DAYS}).orders.map(norm); }catch(e){ err+=' 서버: '+e.message; }
+      const same=!err && a.length===b.length && a.every((x,i)=>x===b[i]);
+      if(!same) diff++;
+      checked++;
+      ok('같은 주문 — '+nm, same, err || ('브라우저['+(a||[]).join(' | ')+'] vs 서버['+(b||[]).join(' | ')+']'));
+    }
+    ok('열 가지 상황을 다 봤다', checked===10, checked+'건');
+    // 리버스는 옮기지 않았다 — 반쯤 옮긴 엔진이 사람 없이 주문을 내면 안 된다
+    const rev=M.imOrders({st:ST({reverse:true}),
+      hist:many(21,()=>({kind:'1회매수',date:'2026-02-01',price:20,qty:1})), close:20, days:DAYS});
+    ok('리버스 세션은 건너뛴다', rev.orders.length===0 && /리버스/.test(rev.skip||''), rev.skip||'안 건너뜀');
+    ok('종가가 없으면 안 낸다', M.imOrders({st:ST({}),hist:[],close:0,days:DAYS}).skip==='확정 종가 없음');
+  }
+
+  if(at){
+    ok('비밀 키 없이는 못 부른다', /if \(!env\.AUTOTRADE_KEY \|\| key !== env\.AUTOTRADE_KEY\) return json\(\{ error: "권한 없음" \}, 401\)/.test(at));
+    ok('드라이런이 있다', /const dry = url\.searchParams\.get\("dry"\) === "1"/.test(at)
+       && /AUTOTRADE_ENABLE/.test(at));
+    // 같은 날 두 번 내면 이중 주문이다
+    ok('하루 한 번만 낸다', /prev\.lastDate === today/.test(at) && /lastDate: today/.test(at));
+    ok('주문은 재시도하지 않는다', /재시도하지 않는다/.test(at) && !/for \(let try/.test(at));
+    ok('초당 제한을 피해 간격을 둔다', /await sleep\(700\)/.test(at));
+    ok('세션 종류가 환경을 정한다', /const kisEnv = s\.paper \? "vts" : "real"/.test(at));
+    ok('연결 안 한 세션은 건너뛴다', /if \(!s\.kis\)/.test(at));
+    ok('서명은 WebCrypto 로 한다', /RSASSA-PKCS1-v1_5/.test(at) && !/require\(/.test(at));
+    // 자동 경로가 열려 있으면 키 없는 사이트가 무방비가 된다
+    const kisSrc=fs.existsSync(__d+'/functions/api/kis.js')?fs.readFileSync(__d+'/functions/api/kis.js','utf8'):'';
+    const vo=kisSrc?extractFn(kisSrc,'async function verifyOwner(request, env)'):'';
+    ok('자동 키는 값이 있을 때만 통한다',
+       /if \(env\.AUTOTRADE_KEY && ak && ak === env\.AUTOTRADE_KEY\)/.test(vo));
+  }
+  const wf=__d+'/.github/workflows/autotrade.yml';
+  ok('시간을 재는 워크플로가 있다', fs.existsSync(wf));
+  if(fs.existsSync(wf)){
+    const y=fs.readFileSync(wf,'utf8');
+    ok('평일에만 돈다', /cron: "40 (19|20) \* \* 1-5"/.test(y));
+    ok('손으로도 돌릴 수 있다', /workflow_dispatch/.test(y));
+    ok('손으로 돌릴 땐 드라이런이 기본', /default: true/.test(y));
+  }
 }
 
 console.log(`\n════ 결과: ${pass} PASS / ${fail} FAIL ${fail===0?'— ALL PASS ★':'— 배포 금지, 위 ✗ 항목 수정 필요'} ════`);

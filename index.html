@@ -499,7 +499,7 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
 </div>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.39</span></h1></div>
+    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.41</span></h1></div>
     <div class="jkmenu" id="jkmenuWrap">
       <button class="jkmenu-btn" id="jkmenuBtn" aria-label="메뉴" onclick="jkMenuToggle(event)">三</button>
       <div class="jkmenu-pop" id="jkmenuPop" hidden>
@@ -1555,7 +1555,7 @@ document.addEventListener('click',function(e){ var m=document.getElementById('jk
   <footer>
     <strong>JK 퀀트</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.39</b> · 2026-09-11</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.41</b> · 2026-09-11</div>
   </footer>
 </div>
 
@@ -1747,14 +1747,10 @@ document.addEventListener('click',function(e){ var m=document.getElementById('jk
 
     <p class="note" style="margin:-4px 0 10px"><b>오늘</b>로 두면 지금부터 앞으로 굴러갑니다. 과거 성과를 바로 보고 싶으면 <b>지난 날짜</b>를 고르세요 — 그 날부터 오늘까지 한 번에 만들어집니다.<br>한 번만 정하면 끝이고, 이후엔 탭을 열 때마다 오늘까지 알아서 채워집니다.</p>
   </div>
-  <div class="field"><label>한국투자증권 연결 <span class="hint" id="sess_kis_hint">앱 안에서만 굴릴지, 한투에 진짜 주문을 낼지</span></label>
-    <select id="sess_kis" onchange="kisOptUI()" style="width:100%;padding:11px;border-radius:10px;border:1px solid var(--line);background:var(--panel2);color:var(--ink);font-size:14px;font-weight:600">
-      <option value="">연결 안 함 — 앱 안에서만 기록</option>
-      <option value="kr-vts">국내 모의투자</option>
-      <option value="us-vts">국외 모의투자</option>
-      <option value="kr-real">국내 실전투자 ⚠</option>
-      <option value="us-real">국외 실전투자 ⚠</option>
-    </select></div>
+  <label style="display:flex;align-items:flex-start;gap:8px;margin:2px 0 8px;cursor:pointer;color:var(--dim);font-size:13px">
+    <input type="checkbox" id="sess_kis" style="width:16px;height:16px;flex-shrink:0;margin-top:2px" onchange="kisOptUI()">
+    <span><b style="color:var(--buy)">한국투자증권</b>에 실제 주문 내기
+      <span class="hint" id="sess_kis_hint" style="color:var(--faint)"></span></span></label>
   <div id="sess_kis_info" style="display:none"></div>
   <div class="mbtns"><button class="close" onclick="closeSess()">닫기</button><button class="save" id="sess_ok" onclick="createSess()">만들기</button></div>
 </div></div>
@@ -2799,16 +2795,10 @@ const esc=v=>String(v==null?'':v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;'
 function renderKisPanel(){
   const box=$('o_kis'); if(!box) return;
   const s=curStrat();
-  if(!(s&&s.kisMode)){ box.innerHTML=''; return; }
+  if(!(s&&s.kis)){ box.innerHTML=''; return; }
   const st=s.settings||{}, sym=String(st.ticker||'').toUpperCase();
-  const mode=s.kisMode, MP=kisModeParts(mode), real=MP.env==='real';
-  // 세션 종류와 주문 환경이 어긋나면 아무것도 보내지 않는다 (설정을 옮기다 남은 값일 수 있다)
-  if(real===!!s.paper){
-    box.innerHTML=`<div class="card" style="margin-top:10px;border-color:var(--sell-dim)"><div class="note">`
-      +`⚠ 이 세션은 <b>${s.paper?'모의투자':'실계좌'}</b>인데 <b>${esc(KIS_MODE_LBL[mode]||mode)}</b>로 연결돼 있습니다.`
-      +` 세션 설정에서 다시 골라 주세요.</div></div>`;
-    return;
-  }
+  // 갈래는 세션이 정한다 — 종목이 시장을, 세션 종류가 환경을 정한다
+  const mode=kisModeFor(s), MP=kisModeParts(mode), real=MP.env==='real';
   // 고른 시장과 종목이 어긋나면 보내지 않는다 — 국내 계좌로 SOXL을 주문할 수는 없다
   if(kisMarketOf(sym)!==MP.market){
     box.innerHTML=`<div class="card" style="margin-top:10px;border-color:var(--sell-dim)"><div class="note">`
@@ -2835,11 +2825,9 @@ function renderKisPanel(){
 /* 주문을 실제로 보낸다. 무재시도 — 응답이 유실되면 이중 주문이 된다.
    초당 제한(모의 2건)에 걸리지 않게 간격을 둔다. */
 async function kisSendToday(){
-  const s=curStrat(); if(!(s&&s.kisMode)) return;
+  const s=curStrat(); if(!(s&&s.kis)) return;
   const sym=String((s.settings||{}).ticker||'').toUpperCase();
-  const mode=s.kisMode, MP=kisModeParts(mode), real=MP.env==='real';
-  if(real===!!s.paper){ alert('세션 종류와 주문 환경이 맞지 않습니다. 세션 설정에서 다시 골라 주세요.'); return; }
-  if(kisMarketOf(sym)!==MP.market){ alert('연결한 시장과 종목이 다릅니다. 세션 설정에서 맞춰 주세요.'); return; }
+  const mode=kisModeFor(s), MP=kisModeParts(mode), real=MP.env==='real';
   const list=todayOrders.filter(o=>o.qty>0&&o.price>0);
   if(!list.length) return;
   const j=await kisConfig(true);
@@ -7103,7 +7091,7 @@ function openSess(){ _sessEditId=null;
   $('sess_desc').textContent='증권사·전략별로 따로 관리할 수 있습니다. 예: 키움 SOXL, 토스 TQQQ';
   $('sess_ok').textContent='만들기';
   $('sess_name').value=''; const p=$('sess_paper'); if(p)p.checked=false;
-  const k=$('sess_kis'); if(k)k.value=''; kisOptUI();
+  const k=$('sess_kis'); if(k)k.checked=false; kisOptUI();
   const w=$('sess_simstart_wrap'); if(w) w.style.display='none';
   const d=$('sess_simstart'); if(d) d.value=new Date().toISOString().slice(0,10);   // 기본은 오늘 — 지금부터 앞으로 굴린다
   $('sessModal').classList.add('on'); }
@@ -7116,7 +7104,7 @@ function editSess(id){
   $('sess_ok').textContent='저장';
   $('sess_name').value=s.name||'';
   const p=$('sess_paper'); if(p)p.checked=!!s.paper;
-  const k=$('sess_kis'); if(k)k.value=s.kisMode||''; kisOptUI();
+  const k=$('sess_kis'); if(k)k.checked=!!s.kis; kisOptUI();
   const w=$('sess_simstart_wrap'); if(w) w.style.display=s.paper?'':'none';
   const d=$('sess_simstart'); if(d) d.value=s.simStart||new Date().toISOString().slice(0,10);
   $('sessModal').classList.add('on');
@@ -7134,59 +7122,45 @@ async function kisConfig(force){
 const KIS_MODE_LBL={'kr-vts':'국내 모의투자','us-vts':'국외 모의투자','kr-real':'국내 실전투자','us-real':'국외 실전투자'};
 function kisMarketOf(ticker){ return KR_CODE_RE.test(String(ticker||'').toUpperCase())?'kr':'us'; }
 function kisModeParts(m){ const p=String(m||'').split('-'); return {market:p[0]||'',env:p[1]||''}; }
-/* 세션 종류와 주문 환경을 묶는다.
-   '모의투자' 딱지가 붙은 세션이 실전 주문을 내면 화면의 말과 실제가 어긋난다 —
-   잘못 고르면 진짜 돈이 나가는데 되돌릴 수가 없다.
-   그래서 모의 세션은 모의투자만, 실계좌 세션은 실전만 고를 수 있다. */
-function kisSyncOpts(){
-  const sel=$('sess_kis'), paper=$('sess_paper')&&$('sess_paper').checked;
-  if(!sel) return;
-  [...sel.options].forEach(o=>{
-    if(!o.value) return;
-    const isReal=o.value.endsWith('-real');
-    const bad=paper?isReal:!isReal;
-    o.disabled=bad;
-    o.textContent=o.textContent.replace(/ — .*$/,'')
-      +(bad?(paper?' — 실계좌 세션에서만':' — 모의투자 세션에서만'):'');
-  });
-  if(sel.selectedOptions[0]&&sel.selectedOptions[0].disabled) sel.value='';
-  const hint=$('sess_kis_hint');
-  if(hint) hint.textContent = paper ? '모의투자 세션 — 한투 모의계좌로만 주문합니다'
-                                    : '실계좌 세션 — 한투 실전계좌로 주문합니다';
+/* 갈래는 고르는 게 아니라 정해진다.
+     시장 — 종목코드가 정한다 (6자리 국내 / 영문 티커 국외)
+     환경 — 세션 종류가 정한다 (모의투자 세션 → 모의계좌 / 실계좌 세션 → 실전계좌)
+   그래서 사람이 정할 건 '연결할지 말지' 하나뿐이다. 넷 중에 고르게 하면
+   잘못 골라 막히기만 하고, '모의투자' 딱지로 실전 주문이 나갈 길도 열린다. */
+function kisModeFor(sess, paperOverride){
+  const paper = paperOverride==null ? !!(sess&&sess.paper) : !!paperOverride;
+  const tk = String(((sess||{}).settings||{}).ticker||'').toUpperCase();
+  return kisMarketOf(tk) + '-' + (paper?'vts':'real');
 }
 async function kisOptUI(){
-  const sel=$('sess_kis'), box=$('sess_kis_info');
-  if(!box||!sel) return;
-  kisSyncOpts();
-  const mode=sel.value;
-  box.style.display=mode?'':'none';
-  if(!mode) return;
+  const box=$('sess_kis_info'), chk=$('sess_kis');
+  if(!box||!chk) return;
+  const paper=$('sess_paper')&&$('sess_paper').checked;
+  const s=curStrat()||{};
+  const tk=String((s.settings||{}).ticker||'').toUpperCase();
+  const mode=kisModeFor(s,paper), {market,env}=kisModeParts(mode);
+  // 체크만 해도 어디로 나가는지 옆에 뜬다 — 고를 게 없어도 알고는 있어야 한다
+  const hint=$('sess_kis_hint');
+  if(hint) hint.textContent = ' — '+(KIS_MODE_LBL[mode]||mode)+(tk?` (${tk})`:'');
+  box.style.display=chk.checked?'':'none';
+  if(!chk.checked) return;
   box.innerHTML='<p class="note" style="margin:-2px 0 10px">한투 연결 확인 중…</p>';
   const j=await kisConfig(true);
-  const {market,env}=kisModeParts(mode);
   const ready=(j.ready||[]).includes(mode);
-  const tk=String(((curStrat()||{}).settings||{}).ticker||'').toUpperCase();
-  const tkMarket=kisMarketOf(tk);
-  let h='';
+  let h=`<p class="note" style="margin:-2px 0 6px">이 세션은 <b>${esc(KIS_MODE_LBL[mode]||mode)}</b>로 나갑니다 —`
+    +` 종목 <b>${esc(tk||'?')}</b>이라 ${market==='kr'?'국내':'국외'}, ${paper?'모의투자 세션이라 <b>모의계좌</b>':'실계좌 세션이라 <b>실전계좌</b>'}입니다.</p>`;
   if(!ready){
     // 서버가 뭐가 비었는지 알려준다 — '키가 없다'만 보면 어디를 고쳐야 할지 알 수 없다
     const miss=((j.modes||[]).find(m=>m.id===mode)||{}).missing||[];
-    h+=`<p class="note" style="margin:-2px 0 6px;color:var(--sell)">⚠ <b>${esc(KIS_MODE_LBL[mode]||mode)}</b> 설정이 서버에 없습니다 — `
+    h+=`<p class="note" style="margin:0 0 6px;color:var(--sell)">⚠ 이 갈래 설정이 서버에 없습니다 — `
       +`Cloudflare Pages 환경변수에 <b>${miss.length?miss.map(esc).join(' · '):'KIS_'+(env==='real'?'REAL':'VTS')+'_APPKEY · _APPSECRET · _ACCOUNT'}</b>를 넣어야 주문이 나갑니다.`
-      +`<br><span style="color:var(--faint)">한투는 국내·국외 모의계좌를 따로 신청합니다. 계좌번호가 다르면 `
+      +`<br><span style="color:var(--faint)">한투는 국내·국외 계좌를 따로 신청합니다. 계좌번호가 다르면 `
       +`<b>KIS_${env==='real'?'REAL':'VTS'}_ACCOUNT_${market.toUpperCase()}</b>로 그 시장 전용 계좌를 넣으세요.</span></p>`;
   }else if(env==='real'){
-    h+='<p class="note" style="margin:-2px 0 6px;color:var(--sell)">🔴 <b>실전투자입니다. 진짜 돈이 나갑니다.</b> 모의로 연습하려면 위에서 모의투자를 고르세요.</p>';
-  }else{
-    h+='<p class="note" style="margin:-2px 0 6px">✅ 한투 <b>모의투자</b> 계좌로 주문이 실제 접수됩니다.</p>';
+    h+='<p class="note" style="margin:0 0 6px;color:var(--sell)">🔴 <b>실전계좌입니다. 진짜 돈이 나갑니다.</b> 연습용이면 이 세션을 모의투자로 바꾸세요.</p>';
   }
-  // 고른 시장과 종목이 어긋나면 주문이 나갈 수 없다 — 미리 말한다
-  if(tk && tkMarket!==market){
-    h+=`<p class="note" style="margin:0 0 6px;color:var(--gold)">⚠ 이 세션 종목은 <b>${esc(tk)}</b>(${tkMarket==='kr'?'국내':'국외'})인데 `
-      +`<b>${esc(KIS_MODE_LBL[mode])}</b>를 골랐습니다. 시장이 맞아야 주문이 나갑니다.</p>`;
-  }
-  h+='<p class="note" style="margin:0 0 10px">주문은 <b>자동으로 나가지 않습니다</b> — 현재 탭의 주문표에서 확인하고 누를 때만 나갑니다.'
-    +(market==='us'?'<br>한투 해외주식은 <b>지정가만</b> 받습니다. LOC·MOC는 표에 적힌 가격의 지정가로 나가므로 체결 조건이 앱 기록과 다를 수 있습니다.':'')
+  h+='<p class="note" style="margin:0 0 10px">'
+    +(market==='us'?'한투 해외주식은 <b>지정가만</b> 받습니다. LOC·MOC는 주문표 가격의 지정가로 나가므로 체결 조건이 앱 기록과 다를 수 있습니다.':'국내 주식은 지정가·시장가 모두 나갑니다.')
     +'</p>';
   box.innerHTML=h;
 }
@@ -7210,9 +7184,8 @@ function createSess(){
       t.paper=false;
     }
     // 한투 연결은 모의·실계좌 모두 고를 수 있다 — 다만 종류에 맞는 갈래만 화면에서 열린다
-    t.kisMode=($('sess_kis')&&$('sess_kis').value)||'';   // '' | kr-vts | us-vts | kr-real | us-real
-    // 뜻이 안 맞는 조합이 남지 않게 한 번 더 거른다 (모의↔실계좌를 바꾼 직후)
-    if(t.kisMode && (String(t.kisMode).endsWith('-real') === !!t.paper)) t.kisMode='';
+    // 연결 여부만 저장한다 — 어느 갈래로 나갈지는 종목·세션 종류가 정한다
+    t.kis=!!($('sess_kis')&&$('sess_kis').checked); delete t.kisMode;
     save(); closeSess(); refreshAll(); pushRemote(); return;
   }
   // 탭마다 세션 형식이 다르다 — 빠뜨리면 남의 형식(VR) 세션이 들어가 그 탭이 통째로 깨진다
@@ -7220,8 +7193,7 @@ function createSess(){
     :S.activeTab==='dca'?newDcaSession(n):S.activeTab==='asap'?newAsapSession(n):newVrSession(n);
   const pp=$('sess_paper'); if(pp&&pp.checked){ s.paper=true;
     const sd=$('sess_simstart'); s.simStart=(sd&&sd.value)||new Date().toISOString().slice(0,10); }
-  s.kisMode=($('sess_kis')&&$('sess_kis').value)||'';
-  if(s.kisMode && (String(s.kisMode).endsWith('-real') === !!s.paper)) s.kisMode='';
+  s.kis=!!($('sess_kis')&&$('sess_kis').checked);
   box.sessions.push(s);box.active=s.id;save();closeSess();resetSubnav(S.activeTab);refreshAll();pushRemote();
 }
 
