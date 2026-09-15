@@ -1802,6 +1802,19 @@ console.log('[42] 자동 주문 — 브라우저와 서버가 같은 주문을 �
        && /const MKT_CLOSE_MIN=\{usd:16\*60, krw:15\*60\+30\}/.test(idx)
        && /const SETTLE_LAG_MIN=20/.test(idx));
     ok('자동 주문이 확정 종가를 쓴다', /settledLast\(q\.series \|\| q\.ohlc \|\| \[\], st\.cur\)/.test(at_||''));
+
+    /* 시세사가 봉을 늦게 올리는 일이 실제로 있다 — 야후가 9/14 봉을 마감 4시간 뒤에 올렸다.
+       사람이면 이상한 걸 알아채지만 자동 주문은 낡은 가격으로 그대로 내버린다. */
+    const M3=new Function(im.replace(/export /g,'')+'\nreturn {staleDays,STALE_MAX_DAYS};')();
+    const t=(iso)=>new Date(iso);
+    // 2026-09-15 19:40Z = 15:40 ET 화요일 → cutoff 는 09-14(월)
+    ok('전날 종가는 안 묵은 것', M3.staleDays('2026-09-14','usd',t('2026-09-15T19:40:00Z'))===0);
+    ok('주말을 낀 금요일 종가도 통과', M3.staleDays('2026-09-11','usd',t('2026-09-15T19:40:00Z'))===3);
+    ok('그보다 묵으면 걸린다', M3.staleDays('2026-09-09','usd',t('2026-09-15T19:40:00Z'))>M3.STALE_MAX_DAYS);
+    ok('종가 자체가 없으면 무한대', M3.staleDays(null,'usd',t('2026-09-15T19:40:00Z'))===Infinity);
+    ok('3일 연휴까지는 봐준다', M3.STALE_MAX_DAYS===4);
+    ok('묵은 종가면 주문을 건너뛴다', /if \(stale > STALE_MAX_DAYS\)/.test(at_||'')
+       && /일 묵었습니다/.test(at_||''));
   }
 
   if(at){
