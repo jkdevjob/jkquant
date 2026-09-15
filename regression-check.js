@@ -694,7 +694,9 @@ console.log('[17] 배당·분배금 · 티커 입력');
   ok('티커 검색 API 존재', /finance\/search/.test(se) && /onRequestGet/.test(se), se?'':'search.js 없음');
   ok('국내상장은 6자리 코드로 정규화', /\\.\(KS\|KQ\)\$/.test(se) || /KS\|KQ/.test(se));
 
-  ok('배당 포함 로더 존재', /async function fetchDailyDiv\(symbol\)/.test(idx) && /div=1/.test(idx));
+  // 이름이 _fetchDailyDivRaw 로 바뀌고 fetchDailyDiv 는 시세를 아끼는 래퍼가 됐다
+  ok('배당 포함 로더 존재', /async function _fetchDailyDivRaw\(symbol\)/.test(idx)
+     && /const fetchDailyDiv=_memoQuote\(_fetchDailyDivRaw\);/.test(idx) && /div=1/.test(idx));
   let cd=''; try{ cd=extractFn(idx,'function computeDca()'); }catch(e){}
   ok('분배금은 배당락일 보유수량 기준', /for\(const d of divs\)/.test(cd) && /held\+=buys\[bi\]\.q/.test(cd), cd?'':'computeDca 없음');
   ok('재투자는 그날 raw 종가로 되산다', /if\(reinv\)\{ const rp=rawMap\[d\.date\]/.test(cd));
@@ -2112,7 +2114,8 @@ console.log('\n[48] 분석 화면 수익률 — 무엇을 재는지 적는다');
   ok('섀넌은 분석도 추가·출금을 센다',
      /const principal=\(\+st\.principal\|\|0\)\+\(c\.added\|\|0\)-\(c\.withdrawn\|\|0\)/.test(ivsA));
   const infA=(()=>{ try{ return extractFn(idx,'function renderInfAnal()'); }catch(e){ return ''; } })();
-  ok('무매는 분석도 원금으로 나눈다', /total\/st\.principal-1/.test(infA));
+  ok('무매는 분석도 원금으로 나눈다',
+     /const P=\+st\.principal\|\|0/.test(infA) && /\(total\/P-1\)\*100/.test(infA));
 
   /* 보유 수익률을 띄우는 두 곳은 '보유'라고 적어야 한다.
      ASAP 은 라벨이 없어서 맨숫자 %가 세션 수익률처럼 보였다. */
@@ -2126,6 +2129,61 @@ console.log('\n[48] 분석 화면 수익률 — 무엇을 재는지 적는다');
      /id="asap_ret"[^>]*title="보유분의 현재가 ÷ 평단[^"]*"/.test(idx));
   // 보유 수익률은 현금을 안 센다 — 계좌 전체 수익률과 같은 식이 아니어야 정상이다
   ok('보유 수익률은 평단 대비다', /const hr=\(price\/pos\.avg-1\)\*100/.test(asapN));
+}
+
+/* ════ 49. 시세가 도착하면 분석 카드도 다시 그린다 ════
+   _afterQuote 가 '모의 기록이 새로 생겼을 때만' refreshAll 을 불렀다.
+   이미 오늘까지 따라잡힌 세션은 시세가 와도 다시 안 그려서, 시세 오기 전에
+   그린 값에 머물렀다. 그 값은 보유분을 현재가가 아니라 평단으로 센 것이라
+   (px0 가 c.avg 로 떨어진다) 평가손익이 정확히 0 이 되고, 같은 세션인데
+   목록과 수익률이 달라 보였다 — 실측 분석 +9.79% vs 목록 +4.93%. */
+console.log('\n[49] 시세가 오면 분석 카드도 다시 그린다');
+{
+  const aq=(()=>{ try{ return extractFn(idx,'function _afterQuote()'); }catch(e){ return ''; } })();
+  ok('_afterQuote 가 있다', !!aq);
+  ok('기록이 안 늘어도 다시 그린다',
+     /setTimeout\(\(\)=>\{ try\{ refreshAll\(\); \}catch\(e\)\{\} \},0\);/.test(aq)
+     && !/if\(r\) setTimeout/.test(aq));
+  // 시세를 못 쓸 때 평단으로 떨어지는 건 그대로 둔다(남의 종가를 쓰는 것보다 낫다).
+  // 다만 시세가 오면 반드시 다시 그려야 그 값이 화면에 남지 않는다.
+  const infA=(()=>{ try{ return extractFn(idx,'function renderInfAnal()'); }catch(e){ return ''; } })();
+  ok('시세가 없으면 평단으로 떨어진다', /const px0=\(_Qp&&\(_Qp\.price\|\|_Qp\.last\)\)\|\|c\.avg\|\|0;/.test(infA));
+}
+
+/* ════ 50. 돈을 빼는 전략은 수익률이 둘이다 ════
+   현재 = (평가금+잔금) ÷ 원금            — 계좌에 지금 남아 있는 것만
+   누적 = (평가금+잔금+나간 돈) ÷ 원금     — 빼 간 돈까지 합쳐 전략이 얼마를 벌었나
+   단리 적립은 사이클 초과익을 계좌 밖으로 빼므로 둘이 크게 갈린다
+   (실측 누적 +81.54% / 현재 +1.30%). 나간 돈이 없으면 같은 값이라 한 줄만 띄운다. */
+console.log('\n[50] 돈을 빼는 전략 — 현재·누적 수익률을 둘 다 보여준다');
+{
+  const infA=(()=>{ try{ return extractFn(idx,'function renderInfAnal()'); }catch(e){ return ''; } })();
+  ok('현재 수익률 줄이 있다', /id="a_retnowrow"/.test(idx) && /id="a_ret_now"/.test(idx));
+  ok('누적은 나간 돈을 더해서 잰다', /const rpAll = P>0 \? \(total\/P-1\)\*100 : 0;/.test(infA)
+     && /total=invested\+c\.bal\+\(c\.outside\|\|0\)/.test(infA));
+  ok('현재는 나간 돈을 빼고 잰다', /const rpNow = P>0 \? \(\(total-outMoney\)\/P-1\)\*100 : 0;/.test(infA));
+  // 나간 돈이 없으면 두 값이 같다 — 같은 줄을 두 번 띄우면 잡음이다
+  ok('나간 돈이 없으면 한 줄만', /row\.style\.display = outMoney>0 \? '' : 'none'/.test(infA));
+  ok('무엇 기준인지 적는다', /계좌에 남은 것만/.test(idx)
+     && /rs\.textContent = outMoney>0 \? '나간 돈 포함' : ''/.test(infA));
+}
+
+/* ════ 51. 모의 성과 목록이 종목마다 시세를 한 번만 받는다 ════
+   세션이 18개라도 종목은 서넛뿐인데 세션마다 다시 받아 28번을 받아 왔다.
+   실측: 목록 다시 열기 3,192ms 중 장부 걷기는 11ms 뿐 — 나머지가 거의 전부 시세다.
+   종목별로 한 번만 받게 하니 1,605ms 로 줄었고 값은 한 자리도 안 바뀌었다. */
+console.log('\n[51] 목록을 열 때 같은 종목 시세를 두 번 받지 않는다');
+{
+  ok('시세를 아끼는 래퍼가 있다',
+     /const fetchDaily=_memoQuote\(_fetchDailyRaw\);/.test(idx)
+     && /const fetchDailyDiv=_memoQuote\(_fetchDailyDivRaw\);/.test(idx));
+  // 약속을 담아야 동시에 같은 종목을 불러도 한 번만 나간다
+  ok('약속을 담아 동시 호출도 묶는다', /if\(!m\.has\(SYM\)\) m\.set\(SYM, fn\(SYM\)\);/.test(idx));
+  const pf=(()=>{ try{ return extractFn(idx,'async function paperFillAll()'); }catch(e){ return ''; } })();
+  ok('목록을 도는 동안만 켠다', /_fillQuoteCache=new Map\(\);/.test(pf));
+  ok('다 돌면 반드시 끈다', /finally\s*\{[\s\S]{0,400}?_fillQuoteCache=null;/.test(pf));
+  // 평소 화면은 예전처럼 매번 새로 받아야 한다 — 캐시가 켜져 있지 않으면 그대로 통과
+  ok('평소엔 캐시를 타지 않는다', /if\(!_fillQuoteCache\) return fn\(SYM\);/.test(idx));
 }
 
 console.log(`\n════ 결과: ${pass} PASS / ${fail} FAIL ${fail===0?'— ALL PASS ★':'— 배포 금지, 위 ✗ 항목 수정 필요'} ════`);
