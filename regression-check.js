@@ -2095,5 +2095,38 @@ console.log('\n[47] 남의 종가로 내 세션을 세지 않는다');
   }
 }
 
+/* ════ 48. 분석 화면의 수익률과 모의 성과 목록의 수익률 ════
+   여섯 전략 중 넷(무매·섀넌·200일선·적립)은 두 곳이 같은 식을 쓴다 — 총자산 ÷ 투입.
+   밸류리밸런싱과 ASAP 의 머리에 붙은 알약만 다른 것을 잰다:
+   '보유 수익률'(현재가 ÷ 평단)이라 현금(pool·리저브)을 안 센다.
+   둘 다 맞는 값이지만 라벨이 없으면 세션 수익률로 읽힌다 — 실제로 그렇게 읽혔다. */
+console.log('\n[48] 분석 화면 수익률 — 무엇을 재는지 적는다');
+{
+  // 목록은 전 전략이 같은 식이다 (paperStat)
+  const ps=(()=>{ try{ return extractFn(idx,'function paperStat(tab, sess)'); }catch(e){ return ''; } })();
+  ok('목록은 총자산 ÷ 투입으로 잰다',
+     /ret:\(total\/base-1\)\*100/.test(ps) && /const base=Math\.max\(1,inflow\)/.test(ps));
+
+  // 분모가 같아야 분석과 목록이 맞는다
+  const ivsA=(()=>{ try{ return extractFn(idx,'function renderIvsAnal()'); }catch(e){ return ''; } })();
+  ok('섀넌은 분석도 추가·출금을 센다',
+     /const principal=\(\+st\.principal\|\|0\)\+\(c\.added\|\|0\)-\(c\.withdrawn\|\|0\)/.test(ivsA));
+  const infA=(()=>{ try{ return extractFn(idx,'function renderInfAnal()'); }catch(e){ return ''; } })();
+  ok('무매는 분석도 원금으로 나눈다', /total\/st\.principal-1/.test(infA));
+
+  /* 보유 수익률을 띄우는 두 곳은 '보유'라고 적어야 한다.
+     ASAP 은 라벨이 없어서 맨숫자 %가 세션 수익률처럼 보였다. */
+  const vrN=(()=>{ try{ return extractFn(idx,'function renderVrAcct(c)'); }catch(e){ return ''; } })()
+            || idx;
+  ok('VR 은 보유 수익률이라고 적는다', /textContent=`보유 \$\{hr>=0\?'\+':''\}\$\{hr\.toFixed\(2\)\}%`/.test(idx));
+  const asapN=(()=>{ try{ return extractFn(idx,'function renderAsapNow()'); }catch(e){ return ''; } })();
+  ok('ASAP 도 보유 수익률이라고 적는다',
+     /\$\('asap_ret'\)\.textContent=`보유 \$\{hr>=0\?'\+':''\}\$\{hr\.toFixed\(2\)\}%`/.test(asapN));
+  ok('ASAP 알약에 설명이 붙어 있다',
+     /id="asap_ret"[^>]*title="보유분의 현재가 ÷ 평단[^"]*"/.test(idx));
+  // 보유 수익률은 현금을 안 센다 — 계좌 전체 수익률과 같은 식이 아니어야 정상이다
+  ok('보유 수익률은 평단 대비다', /const hr=\(price\/pos\.avg-1\)\*100/.test(asapN));
+}
+
 console.log(`\n════ 결과: ${pass} PASS / ${fail} FAIL ${fail===0?'— ALL PASS ★':'— 배포 금지, 위 ✗ 항목 수정 필요'} ════`);
 process.exit(fail===0?0:1);
