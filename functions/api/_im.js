@@ -93,6 +93,20 @@ export function exchNow(cur, now) {
   const g = (k) => (P.find((x) => x.type === k) || {}).value;
   return { date: `${g("year")}-${g("month")}-${g("day")}`, min: (+g("hour")) * 60 + (+g("minute")) };
 }
+/* 주문은 마감 전에 들어가야 뜻이 있다. 마감 뒤에 낸 지정가는 그날 체결되지 않고
+   다음 거래일로 넘어가 엉뚱한 가격에 걸리거나 거절된다.
+   실측(2026-09-15): 깃허브 크론이 19:40/20:40 UTC 예정인데 22:25/23:08 에 돌았다 —
+   1시간 46분·2시간 28분 늦어 둘 다 미국 마감(20:00 UTC) 뒤였다. 크론 지연은 우리가
+   못 막으니, 늦게 도착한 실행이 마감 뒤에 주문을 내지 않도록 여기서 막는다.
+   창은 '마감 1시간 전 ~ 마감'. 드라이런은 계산만 하므로 아무 때나 된다. */
+export const ORDER_WINDOW_MIN = 60;
+export function orderWindow(cur, now) {
+  const n = exchNow(cur, now);
+  const close = MKT_CLOSE_MIN[cur === "krw" ? "krw" : "usd"];
+  const hhmm = (m) => `${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`;
+  return { ok: n.min >= close - ORDER_WINDOW_MIN && n.min <= close,
+           now: hhmm(n.min), from: hhmm(close - ORDER_WINDOW_MIN), to: hhmm(close) };
+}
 export function simCutoff(cur, now) {
   const n = exchNow(cur, now);
   if (n.min >= MKT_CLOSE_MIN[cur === "krw" ? "krw" : "usd"] + SETTLE_LAG_MIN) return n.date;

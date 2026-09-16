@@ -1894,12 +1894,36 @@ console.log('[42] 자동 주문 — 브라우저와 서버가 같은 주문을 �
     /* 2026-09-15: 12건을 내는데 한 건도 접수되지 않았다. 세션 안에서만 간격을 뒀고
        (i 가 세션마다 0 부터 다시 시작) 세션 경계는 간격이 0 이었다. 주문 1건이
        hashkey+order 로 API 를 두 번 쓰는 것도 안 세고 있었다. */
+    /* 2026-09-16 재시험: 11건 중 10건이 한투까지 갔고 제한은 한 건(두 번째 주문)뿐이었다.
+       첫 주문은 토큰 발급까지 붙어 1초에 3건이라, 1200ms 로는 다음 주문의 hashkey 가
+       같은 1초 창에 들어갔다. 한 주문이 이미 2건을 쓰므로 창 하나에 한 주문만 들어가야 한다. */
     ok('초당 제한을 피해 간격을 둔다', /await paceOrder\(\);/.test(at)
-       && /const ORDER_GAP_MS = 1200;/.test(at));
+       && /const ORDER_GAP_MS = 2000;/.test(at));
     ok('간격은 세션을 넘어서도 이어진다',
        /let _lastOrderAt = 0;/.test(at)
        && /_lastOrderAt \? ORDER_GAP_MS - \(Date\.now\(\) - _lastOrderAt\) : 0/.test(at)
        && !/if \(i\) await sleep/.test(at));
+    /* 크론이 늦게 돌면 마감 뒤에 주문이 나간다 — 그날 체결되지 않고 다음 거래일로 넘어간다.
+       실측(2026-09-15): 19:40·20:40 UTC 예정이 22:25·23:08 에 돌았다(1시간 46분·2시간 28분 지연). */
+    ok('마감 뒤에는 주문하지 않는다',
+       /const win = orderWindow\(st\.cur\);/.test(at) && /주문 시간이 아닙니다 — 지금 \$\{win\.now\}/.test(at));
+    /* 예전엔 부르기만 하면 lastDate 가 찍혀, 늦게 돈 크론이 아무것도 안 내고도
+       그날을 소진해 제 시각 실행이 막혔다. */
+    ok('한 건도 안 냈으면 오늘을 소진하지 않는다',
+       /const tried = out\.sessions\.some\(\(x\) => Array\.isArray\(x\.results\) && x\.results\.length\);/.test(at)
+       && /if \(!dry && tried\) await fsSet/.test(at));
+    {
+      const M4=new Function(im.replace(/export /g,'')+'\nreturn {orderWindow};')();
+      const t=(iso)=>new Date(iso);
+      ok('마감 24분 전은 주문한다', M4.orderWindow('usd', t('2026-09-16T19:36:00Z')).ok===true);
+      ok('마감 1시간 1분 전은 이르다', M4.orderWindow('usd', t('2026-09-16T18:59:00Z')).ok===false);
+      // 실제로 늦게 돈 두 크론
+      ok('늦게 돈 크론은 막힌다',
+         M4.orderWindow('usd', t('2026-09-15T22:25:45Z')).ok===false
+         && M4.orderWindow('usd', t('2026-09-15T23:08:29Z')).ok===false);
+      ok('국내는 국내 마감 기준', M4.orderWindow('krw', t('2026-09-16T05:50:00Z')).ok===true
+         && M4.orderWindow('krw', t('2026-09-16T07:00:00Z')).ok===false);
+    }
     ok('세션 종류가 환경을 정한다', /const kisEnv = s\.paper \? "vts" : "real"/.test(at));
     ok('연결 안 한 세션은 건너뛴다', /if \(!s\.kis\)/.test(at));
     ok('서명은 WebCrypto 로 한다', /RSASSA-PKCS1-v1_5/.test(at) && !/require\(/.test(at));

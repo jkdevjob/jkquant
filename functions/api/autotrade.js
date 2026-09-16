@@ -20,7 +20,7 @@
 //   · 리버스모드 세션은 건너뛴다 — 규칙을 다 옮기지 않았다.
 //   · 실계좌 세션(paper=false)은 KIS_ENV 가 real 이라 진짜 돈이 나간다. dry 로 먼저 확인할 것.
 
-import { imOrders, settledLast, staleDays, STALE_MAX_DAYS } from "./_im.js";
+import { imOrders, settledLast, staleDays, STALE_MAX_DAYS, orderWindow } from "./_im.js";
 
 const JH = { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store" };
 const json = (o, s = 200) => new Response(JSON.stringify(o, null, 2), { status: s, headers: JH });
@@ -109,7 +109,11 @@ async function findUid(tok, pid, email) {
    게다가 주문 1건은 hashkey + order 로 API 를 두 번 부른다. 그래서 12건을 내던 날
    초당 4~6회가 나가 전부 "초당 요청 제한"에 걸렸다 — 한 건도 접수되지 않았다.
    한투 모의는 초당 2회다. 1건당 2회를 쓰므로 건당 1.2초를 둔다. */
-const ORDER_GAP_MS = 1200;
+/* 모의 한도는 초당 2건인데 주문 하나가 hashkey+order 로 이미 2건을 쓴다.
+   1200ms 로는 이웃 주문의 호출이 같은 1초 창에 겹쳤다 — 실측(2026-09-16) 11건 중
+   두 번째 주문 하나가 제한에 걸렸다(첫 주문은 토큰 발급까지 더해 1초에 3건이었다).
+   2000ms 면 한 주문의 두 호출만 한 창에 들어간다. */
+const ORDER_GAP_MS = 2000;
 let _lastOrderAt = 0;
 async function paceOrder() {
   const wait = _lastOrderAt ? ORDER_GAP_MS - (Date.now() - _lastOrderAt) : 0;
@@ -186,6 +190,14 @@ export async function onRequest({ request, env }) {
       row.orders = orders.map((o) => ({ ...o, price: Math.round(o.price * (KRCODE.test(sym) ? 1 : 100)) / (KRCODE.test(sym) ? 1 : 100) }));
       if (!orders.length) { row.skip = "낼 주문 없음"; out.sessions.push(row); continue; }
       if (dry) { row.sent = "드라이런 — 주문 안 냄"; out.sessions.push(row); continue; }
+      /* 마감 뒤에 도착한 실행은 주문을 내지 않는다. 깃허브 크론은 예정 시각보다
+         한두 시간씩 늦게 도는 일이 있는데(실측 1시간 46분·2시간 28분), 그때 낸
+         지정가는 그날 체결되지 않고 다음 거래일로 넘어간다. */
+      const win = orderWindow(st.cur);
+      if (!win.ok) {
+        row.skip = `주문 시간이 아닙니다 — 지금 ${win.now}, 주문 창은 ${win.from}~${win.to} (거래소 시각)`;
+        out.sessions.push(row); continue;
+      }
 
       // 세션 종류가 환경을 정한다 — 모의 세션은 모의계좌, 실계좌 세션은 실전계좌
       const kisEnv = s.paper ? "vts" : "real";
@@ -224,7 +236,12 @@ export async function onRequest({ request, env }) {
       out.sessions.push(row);
     }
 
-    if (!dry) await fsSet(tok, pid, "autotrade/" + uid, { lastDate: today, lastRun: out.at, log: JSON.stringify(out.sessions).slice(0, 8000) });
+    /* 주문을 한 건이라도 냈을 때만 '오늘 했다'로 찍는다. 예전엔 부르기만 하면 찍혀서,
+       늦게 돈 크론이 아무것도 안 내고도 그날을 소진해 제 시각 실행이 막혔다.
+       한 건이라도 냈으면 응답이 유실됐을 수 있으므로 반드시 찍는다(이중 주문 방지). */
+    const tried = out.sessions.some((x) => Array.isArray(x.results) && x.results.length);
+    out.marked = tried;
+    if (!dry && tried) await fsSet(tok, pid, "autotrade/" + uid, { lastDate: today, lastRun: out.at, log: JSON.stringify(out.sessions).slice(0, 8000) });
     return json(out);
   } catch (e) {
     return json({ ...out, error: String(e.message || e) }, 500);
