@@ -2397,18 +2397,23 @@ console.log('\n[57] 분배금 현금 수령 — 월 수입으로 읽는다');
   // 재투자는 계좌 안에 남으므로 나간 돈이 아니다
   ok('재투자는 흐름에 넣지 않는다', /if\(reinv\)\{[^}]*divShares\+=cash\/rp; \}\s*\n\s*else divFlows\.push/.test(cd));
 
-  ok('카드는 현금 수령일 때만 보인다', /const show=!p\.reinv && flows\.length>0;/.test(rd));
-  // 무매와 같은 함수를 써야 두 탭이 어긋나지 않는다
-  ok('무매와 같은 함수로 센다',
-     /const fs2=flowStats\(flows, dFirst,/.test(rd)
-     && /fillFlowRows\(\{avg:'dca_cf_avg'/.test(rd));
+  /* 카드는 이제 분석탭에 있다 — 무매가 요약·월별표를 분석탭에 두는 것과 같은 자리.
+     '현재' 탭에 따로 그리던 옛 카드는 지웠다(같은 표를 두 군데서 그리면 또 어긋난다). */
+  const ra=(()=>{ try{ return extractFn(idx,'function renderDcaAnal()'); }catch(e){ return ''; } })();
+  ok('분석탭에서 공용 카드로 그린다',
+     /paintCashFlow\('anaD', \{flows:fl, base:P\.inv/.test(ra) && /id="anaD_cfcard"/.test(idx));
+  ok('카드는 현금 수령일 때만 보인다',
+     /const cash=\(!P\.reinv&&\(P\.divCash\|\|0\)>0\)\?P\.divCash:0;/.test(ra) && /show:cash>0\}\);/.test(ra));
+  ok('옛 전용 카드는 지웠다', !/dca_cashcard|dca_cf_/.test(idx));
   /* 거치식은 매수 기록이 하나뿐이다. 매수일만 보면 기간이 한 달로 잡혀
      월 평균이 통째로 틀린다 — 마지막 분배금까지 세야 한다. */
   ok('기간은 첫 매수 ~ 마지막 분배금',
-     /const hLast=hist\[hist\.length-1\]\|\|'', fLast=\(flows\[flows\.length-1\]\|\|\{\}\)\.date\|\|'';/.test(rd)
-     && /fLast>hLast\?fLast:hLast/.test(rd));
-  ok('월별 수령 표가 있다', /id="dca_cf_tbl"/.test(idx) && /<th>월<\/th><th>수령<\/th>/.test(rd));
-  ok('원화 세션엔 원화 칸을 겹쳐 넣지 않는다', /\$\{isKrw\?'':'<th>원화<\/th>'\}/.test(rd));
+     /const hLast=hd\[hd\.length-1\]\|\|'', fLast=\(fl\[fl\.length-1\]\|\|\{\}\)\.date\|\|'';/.test(ra)
+     && /to:\(fLast>hLast\?fLast:hLast\)/.test(ra));
+  // 무매 요약과 같은 세 수익률이 적립에도 있어야 한다
+  ok('무매와 같은 세 수익률을 찍는다',
+     /paintRet3\('anaD', \{base:P\.inv, now:evalNow, realized:cash, out:cash\}\);/.test(ra)
+     && /id="anaD_ret_now"/.test(idx) && /id="anaD_ret_real"/.test(idx) && /id="anaD_ret"/.test(idx));
 
   // 모의 성과 목록의 최종·현재·인출이 적립 세션에도 들어맞아야 한다
   const ps=(()=>{ try{ return extractFn(idx,'function paperStat(tab, sess)'); }catch(e){ return ''; } })();
@@ -2487,6 +2492,76 @@ console.log('\n[58] 국내 종목의 비용·세금 규약');
   // 원금 헤더는 세 탭 모두 섞임을 아는 쪽으로
   ok('원금 헤더가 섞임을 안다', (bt.match(/_capV\(/g)||[]).length===4,
      `${(bt.match(/_capV\(/g)||[]).length}곳`);
+}
+
+/* ════ 59. 월 현금흐름 — 전 전략 한 곳에서 그린다 ════
+   무매 단리 인출·VR 인출·적립 분배금 현금수령은 전부 "계좌 밖으로 나온 돈"이다.
+   전략마다 따로 그리면 또 어긋난다(거래 수·현금 흐름에서 이미 두 번 당했다).
+   특히 VR은 인출이 본질인 전략인데 computeVr가 totwd를 세고도 화면에 안 띄웠다. */
+console.log('\n[59] 월 현금흐름 — 전 전략 공용');
+{
+  const need=['vc','ana','anaI','anaD','anaA'];
+  const miss=need.filter(p=>!new RegExp(`id="${p}_cfcard"`).test(idx));
+  ok('다섯 전략에 카드 자리가 있다', miss.length===0, miss.join(','));
+  ok('그리는 함수는 하나다', (idx.match(/function paintCashFlow\(/g)||[]).length===1);
+  ok('무매와 같은 함수로 센다',
+     /function paintCashFlow[\s\S]*?flowStats\(flows,/.test(idx)
+     && /function paintCashFlow[\s\S]*?fillFlowRows\(\{avg:id\('avg'\)/.test(idx));
+  // 원화 세션에 원화 칸을 겹쳐 넣으면 같은 수가 두 번 나온다
+  ok('원화 세션엔 원화 칸을 겹쳐 넣지 않는다', /const kw=!!o\.isKrw;[\s\S]{0,400}\+\(kw\?'':'<th>원화<\/th>'\)/.test(idx));
+  ok('입금이 없으면 입금·합계 칸을 안 만든다', /const hasIn=inn>0;/.test(idx) && /\(hasIn\?row\(/.test(idx));
+
+  // 수익률 세 줄도 한 곳에서
+  ok('수익률 세 줄도 함수는 하나다', (idx.match(/function paintRet3\(/g)||[]).length===1);
+  const r3=(()=>{ const m=idx.match(/function paintRet3[\s\S]*?\n\}/); return m?m[0]:''; })();
+  ok('누적은 밖으로 나간 돈까지 더한다', /put\('_ret', \(now\|\|0\)\+\(out\|\|0\)-B\);/.test(r3));
+  ok('현재는 지금 들고 있는 것만', /put\('_ret_now', \(now\|\|0\)-B\);/.test(r3));
+  const cs=['vc','ana','anaI','anaD','anaA'].filter(p=>new RegExp(`paintRet3\\('${p}'`).test(idx));
+  ok('다섯 전략이 모두 부른다', cs.length===5, cs.join(','));
+  const h3=['vc','ana','anaI','anaD','anaA'].filter(p=>
+    new RegExp(`id="${p}_ret_now"`).test(idx) && new RegExp(`id="${p}_ret_real"`).test(idx) && new RegExp(`id="${p}_ret"`).test(idx));
+  ok('다섯 전략에 세 줄이 다 있다', h3.length===5, h3.join(','));
+
+  /* VR — 인출이 본질인 전략. 실현손익을 아예 안 재고 있었고 인출도 화면에 없었다. */
+  const cv=(()=>{ try{ return extractFn(idx,'function computeVr()'); }catch(e){ return ''; } })();
+  ok('VR이 실현손익을 잰다', /realized\+=amt-av\*h\.qty; cost-=av\*h\.qty;/.test(cv) && /\brealized,flows,/.test(cv));
+  ok('VR 인출은 나온 돈, 적립은 넣은 돈',
+     /type==='wd'\)\{[^}]*flows\.push\(\{date:h\.date,out:\+h\.amt\|\|0,in:0\}\)/.test(cv)
+     && /type==='add'\)\{[^}]*flows\.push\(\{date:h\.date,out:0,in:\+h\.amt\|\|0\}\)/.test(cv));
+  // 배당은 Pool에 남는다 — 손에 쥔 돈이 아니므로 흐름에 넣으면 안 된다
+  ok('VR 배당은 흐름이 아니다', !/type==='div'\)\{[^}]*flows\.push/.test(cv));
+  /* 분모가 netInvested(인출 뺀 뒤)면 '누적(인출 포함)'이 인출을 두 번 센다 */
+  ok('VR 분모는 인출 빼기 전 총투입',
+     /const grossIn=totadd \+ \(st\.startpool\|\|0\) \+ initBuy;/.test(cv)
+     && /paintRet3\('vc', \{base:c\.grossIn, now:total, realized:c\.realized, out:c\.totwd\}\)/.test(idx));
+  ok('VR 받은 분배금을 띄운다', /id="vc_divrow"/.test(idx) && /id="vc_div"/.test(idx));
+
+  // 섀넌도 입출금을 장부에서 뽑아야 한다
+  const ip=(()=>{ try{ return extractFn(idx,'function ivsPos(principal,hist)'); }catch(e){ return ''; } })();
+  ok('섀넌이 입출금을 흐름으로 남긴다',
+     /withdrawn\+=v; flows\.push\(\{date:h\.date,out:v,in:0\}\)/.test(ip)
+     && /added\+=v; flows\.push\(\{date:h\.date,out:0,in:v\}\)/.test(ip));
+  ok('섀넌 흐름이 밖으로 나온다', /out\.withdrawn=P\.withdrawn; out\.flows=P\.flows;/.test(idx));
+
+  /* 수익률 셋을 나란히 놓자마자 드러난 것 — 로테는 매수 수수료를 현금에서만 빼고
+     평단에는 안 넣고 있었다. 다 청산한 계좌인데 실현(+9.90%)이 현재(+9.83%)보다
+     높게 나왔다. 섀넌 ivsPos·백테 runIM은 둘 다 수수료를 원가에 넣는다. */
+  const ml=(()=>{ try{ return extractFn(idx,'function maLedger(hist, price, principal)'); }catch(e){ return ''; } })();
+  ok('로테도 매수 수수료를 원가에 넣는다', /avg=nq>0\?\(avg\*qty\+pr\*q\+fee\)\/nq:/.test(ml));
+  {
+    // 다 청산하면 실현 = 현재 = 누적 이어야 한다 (열린 포지션이 없으니)
+    const fn=new Function('hist','price','principal','const IVS_FEE=0.0025;'+ml+';return maLedger(hist,price,principal);');
+    const L=fn([{date:'2025-01-06',type:'in',qty:100,price:30},
+                {date:'2025-05-02',type:'out',qty:100,price:40}], 0, 10000);
+    ok('전량 청산이면 실현 = 총자산 − 원금',
+       Math.abs(L.realized-(L.total-10000))<1e-9,
+       `실현 ${L.realized.toFixed(2)} / 자산증가 ${(L.total-10000).toFixed(2)}`);
+  }
+  // 한 화면에 ASCII '-' 와 타이포 '−' 가 섞이면 눈에 띈다
+  // 한 줄 안에서 금액엔 −를 붙이고 %엔 안 붙이면 부호가 어긋나 보인다
+  ok('금액과 %에 부호를 같이 붙인다',
+     /const net=out-inn, sg=net<0\?'−':'', a=Math\.abs\(net\);/.test(idx)
+     && /put\('net', `\$\{sg\}\$\{wn\(a\)\} \(\$\{sg\}\$\{\(a\/base\*100\)\.toFixed\(1\)\}%\)`/.test(idx));
 }
 
 console.log(`\n════ 결과: ${pass} PASS / ${fail} FAIL ${fail===0?'— ALL PASS ★':'— 배포 금지, 위 ✗ 항목 수정 필요'} ════`);
