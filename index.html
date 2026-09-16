@@ -520,7 +520,7 @@ try{ if(localStorage.getItem('qcockpit_hadUser')==='1') document.documentElement
 </div>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.58</span></h1></div>
+    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.59</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -1396,6 +1396,16 @@ document.addEventListener('click',function(e){ var m=document.getElementById('jk
         <div class="ar" id="dcacct_pricerow" style="display:none"><span class="ak">가격 수익률 <span class="sub">분배금 제외</span></span><span class="av" id="dcacct_priceret">—</span></div>
         <div class="ar"><span class="ak">적립 횟수 <span class="sub">2배 적립 포함</span></span><span class="av buy" id="dcacct_n">0회</span></div>
       </div>
+      <!-- 분배금을 현금으로 받으면 그 돈은 계좌 밖으로 나간다 — 무매 단리 인출과 같다.
+           커버드콜처럼 분배금이 수익의 대부분인 종목은 이게 곧 월 수입이다. -->
+      <div class="card" id="dca_cashcard" style="display:none">
+        <h3><span class="dot"></span>분배금 현금 수입</h3>
+        <div class="rowline"><span class="k">받은 분배금 <span class="sub">누적 · 투입 대비</span></span><span class="val mono" id="dca_cf_tot">—</span></div>
+        <div class="rowline"><span class="k">월 평균 <span class="sub" id="dca_cf_avgsub">안 나온 달도 포함</span></span><span class="val mono" id="dca_cf_avg">—</span></div>
+        <div class="rowline"><span class="k">나온 달 <span class="sub">연속으로 끊긴 최장</span></span><span class="val mono" id="dca_cf_hit">—</span></div>
+        <div class="rowline"><span class="k">마지막 수령</span><span class="val mono" id="dca_cf_last">—</span></div>
+        <div class="htable-wrap" style="margin-top:10px"><table class="htable narrow" id="dca_cf_tbl"></table></div>
+      </div>
       <!-- 현재가 입력 — 맨 아래 (판단을 먼저 보고, 값 고칠 때만 내려온다) -->
       <div class="card" style="margin-bottom:13px">
         <div class="field" style="margin:0"><label id="dca_price_lbl">현재가 ($) <span class="hint">배수 판정은 종가 200일선 기준</span></label>
@@ -1590,7 +1600,7 @@ document.addEventListener('click',function(e){ var m=document.getElementById('jk
   <footer>
     <strong>JK 퀀트</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.58</b> · 2026-09-15</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.59</b> · 2026-09-15</div>
   </footer>
 </div>
 
@@ -2989,30 +2999,10 @@ function renderInfAnal(){
       setv('a_sv_net', out-inn, (out-inn)>=0?'var(--buy)':'var(--sell)');
 
       // 사이클이 닫힐 때만 돈이 오간다. computeInf 가 그 시점을 이미 모아 뒀다.
-      const ev=(c.flows||[]).map(f=>({d:f.date, v:(f.out||0)-(f.in||0)}));
       const rows=c.rows||[];
-      const first=(rows[0]||{}).date, lastD=(rows[rows.length-1]||{}).date;
-      const byM={}; for(const e of ev){ const m=e.d.slice(0,7); byM[m]=(byM[m]||0)+e.v; }
-      const months=[];
-      if(first&&lastD){ let d=new Date(first.slice(0,7)+'-01T00:00:00'); const end=new Date(lastD.slice(0,7)+'-01T00:00:00');
-        while(d<=end){ const m=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
-          months.push({m, v:byM[m]||0}); d.setMonth(d.getMonth()+1); } }
-      const nM=months.length||1, paid=months.filter(x=>x.v>0);
-      const avg=months.reduce((a,x)=>a+x.v,0)/nM;
-      if($('a_sv_mavg')){ $('a_sv_mavg').textContent=wn(avg)+pct(avg);
-        $('a_sv_mavg').style.color=avg>=0?'var(--buy)':'var(--sell)'; }
-      if($('a_sv_msub')) $('a_sv_msub').textContent=`${nM}개월 · 안 나온 달도 포함`;
-      let run=0, worst=0; for(const x of months){ if(x.v<=0){run++; worst=Math.max(worst,run);} else run=0; }
-      if($('a_sv_hit')){ $('a_sv_hit').textContent=`${paid.length}/${nM}`+(nM?` (${Math.round(paid.length/nM*100)}%)`:'')
-          +(worst>0?` · 최장 ${worst}개월`:'');
-        $('a_sv_hit').style.color=paid.length*2>=nM?'var(--buy)':'var(--gold)'; }
-      const lastPaid=[...months].reverse().find(x=>x.v>0);
-      if($('a_sv_last')){
-        if(!lastPaid) $('a_sv_last').textContent='아직 없음', $('a_sv_last').style.color='var(--faint)';
-        else { const gap=months.length-1-months.findIndex(x=>x.m===lastPaid.m);
-          $('a_sv_last').textContent=`${lastPaid.m} · ${wn(lastPaid.v)}`+(gap>0?` · ${gap}개월 전`:' · 이번 달');
-          $('a_sv_last').style.color = gap>=3 ? 'var(--sell)' : (gap>=1?'var(--gold)':'var(--buy)'); }
-      }
+      const fs2=flowStats(c.flows, (rows[0]||{}).date, (rows[rows.length-1]||{}).date);
+      fillFlowRows({avg:'a_sv_mavg', avgSub:'a_sv_msub', hit:'a_sv_hit', last:'a_sv_last'},
+                   fs2, v=>wn(v)+pct(v));
     }
   }
   /* 세 가지를 나눠 본다. 서로 다른 축이라 더해지지 않는다 —
@@ -4375,6 +4365,9 @@ function computeDca(){
   const rawMap={}; if(dcaQuoteData && dcaQuoteData.raw) dcaQuoteData.raw.forEach(r=>rawMap[r.date]=r.close);
   const reinv=(st.reinv===true);
   let divCash=0, divShares=0, nDiv=0;
+  /* 현금 수령이면 그 돈은 계좌 밖으로 나간 것이다 — 무매 단리의 인출과 같다.
+     월 현금흐름을 보려면 언제 얼마가 나왔는지가 있어야 하므로 날짜째로 남긴다. */
+  const divFlows=[];
   if(divs.length && hist.length){
     const buys=hist.filter(h=>(+h.price||0)>0&&(+h.amt||0)>0)
                    .map(h=>({date:h.date, q:(+h.amt)/(+h.price)})).sort((a,b)=>a.date<b.date?-1:1);
@@ -4386,9 +4379,10 @@ function computeDca(){
       if(!(cash>0)) continue;
       divCash+=cash; nDiv++;
       if(reinv){ const rp=rawMap[d.date]; if(rp>0) divShares+=cash/rp; }
+      else divFlows.push({date:d.date, out:cash, in:0});
     }
   }
-  pos.divCash=divCash; pos.divShares=divShares; pos.nDiv=nDiv; pos.reinv=reinv;
+  pos.divCash=divCash; pos.divShares=divShares; pos.nDiv=nDiv; pos.reinv=reinv; pos.flows=divFlows;
 
   const days=(dcaQuoteData && String(dcaQuoteData.symbol||'').toUpperCase()===sym && dcaQuoteData.days) ? dcaQuoteData.days : null;
   if(!days || days.length<2) return {st,sym,lump,mul,amt,pos,ready:false};
@@ -4972,6 +4966,38 @@ function renderDcaNow(){
     if(has){
       $('dcacct_div').textContent=px(p.divCash);
       $('dcacct_div_sub').textContent=p.reinv?`${p.nDiv}회 · 재투자 ${nfix(p.divShares,4)}주`:`${p.nDiv}회 수령`;
+  /* 현금 수령이면 월 수입으로 읽어 준다 — 무매 단리와 같은 함수를 쓴다.
+     분모는 투입금(적립은 원금 칸이 따로 없다). 재투자면 나간 돈이 없으니 카드를 감춘다. */
+  { const box=$('dca_cashcard'), flows=(p.flows||[]), base=Math.max(1,p.inv||0);
+    const show=!p.reinv && flows.length>0;
+    if(box) box.style.display = show ? '' : 'none';
+    if(show){
+      const hist=(curStrat().hist||[]).filter(h=>h&&h.date).map(h=>h.date).sort();
+      const fmt=v=>`${wn(v)} (${(v/base*100).toFixed(1)}%)`;
+      /* 기간은 '첫 매수 ~ 마지막 분배금'이다. 거치식은 매수 기록이 하나뿐이라
+         매수일만 보면 기간이 한 달로 잡혀 월 평균이 통째로 틀린다. */
+      const dFirst=hist[0]||flows[0].date;
+      const hLast=hist[hist.length-1]||'', fLast=(flows[flows.length-1]||{}).date||'';
+      const fs2=flowStats(flows, dFirst, fLast>hLast?fLast:hLast);
+      const tt=$('dca_cf_tot');
+      if(tt){ tt.textContent=fmt(p.divCash||0); tt.style.color='var(--gold)'; }
+      fillFlowRows({avg:'dca_cf_avg', avgSub:'dca_cf_avgsub', hit:'dca_cf_hit', last:'dca_cf_last'}, fs2, fmt);
+      // 월별 표 — 최근이 위로. 무매 월별 표와 같은 칸 구성(수령·원화)
+      const isKrw=(st.cur==='krw');
+      const tb=$('dca_cf_tbl');
+      if(tb){
+        const head=`<tr><th>월</th><th>수령</th>${isKrw?'':'<th>원화</th>'}</tr>`;
+        const body=[...fs2.months].reverse().map(m=>
+          `<tr><td>${m.m.replace('-','년 ')+'월'}</td>`
+          +`<td style="color:${m.v>0?'var(--gold)':'var(--faint)'}">${m.v>0?wn(m.v):'—'}</td>`
+          +(isKrw?'':`<td style="color:var(--faint)">${m.v>0?won(m.v):'—'}</td>`)+`</tr>`).join('');
+        const tot=fs2.months.reduce((a,m)=>a+m.v,0);
+        const sum=`<tr style="border-top:2px solid var(--line)"><td><b>합계</b></td>`
+          +`<td style="color:var(--gold)">${wn(tot)}</td>`+(isKrw?'':`<td style="color:var(--faint)">${won(tot)}</td>`)+`</tr>`;
+        tb.innerHTML=head+body+sum;
+      }
+    }
+  }
       if(c.ready){
         $('dcacct_tot').textContent=px(c.total);
         const pr=c.retPrice;
@@ -6159,6 +6185,39 @@ function maLedger(hist, price, principal){
   const invested=price>0?price*qty:0;
   return {qty,avg,realized,totbuy,totsell,nOut,nWin,invested,cash,fees,total:invested+cash};
 }
+/* 계좌 밖으로 오간 돈을 월 단위로 읽어 준다.
+   무매 단리(사이클 초과익)와 적립(현금 수령 분배금)이 같은 함수를 쓴다 —
+   같은 걸 두 군데서 따로 세면 또 어긋난다(거래 수에서 이미 겪었다).
+   flows: [{date,out,in}] · from~to: 달을 셀 구간(빈 달도 0원으로 센다) */
+function flowStats(flows, from, to){
+  const byM={};
+  (flows||[]).forEach(f=>{ const m=String(f.date||'').slice(0,7); if(m.length!==7) return;
+    byM[m]=(byM[m]||0)+((f.out||0)-(f.in||0)); });
+  const months=[];
+  if(from&&to){ let d=new Date(String(from).slice(0,7)+'-01T00:00:00');
+    const end=new Date(String(to).slice(0,7)+'-01T00:00:00');
+    while(d<=end){ const m=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+      months.push({m, v:byM[m]||0}); d.setMonth(d.getMonth()+1); } }
+  const nM=months.length||1, paid=months.filter(x=>x.v>0);
+  const avg=months.reduce((a,x)=>a+x.v,0)/nM;
+  let run=0, worst=0; for(const x of months){ if(x.v<=0){run++; worst=Math.max(worst,run);} else run=0; }
+  const lastPaid=[...months].reverse().find(x=>x.v>0)||null;
+  const gap=lastPaid ? months.length-1-months.findIndex(x=>x.m===lastPaid.m) : -1;
+  return {months, nM, nPaid:paid.length, avg, worst, lastPaid, gap};
+}
+/* 월 수입 세 줄을 채운다 — 무매·적립이 같은 모양으로 보이게 */
+function fillFlowRows(ids, st2, fmt){
+  const put=(id,txt,col)=>{ const el=$(id); if(!el) return; el.textContent=txt; el.style.color=col; };
+  put(ids.avg, fmt(st2.avg), st2.avg>=0?'var(--buy)':'var(--sell)');
+  const sub=$(ids.avgSub); if(sub) sub.textContent=`${st2.nM}개월 · 안 나온 달도 포함`;
+  put(ids.hit, `${st2.nPaid}/${st2.nM}`+(st2.nM?` (${Math.round(st2.nPaid/st2.nM*100)}%)`:'')
+      +(st2.worst>0?` · 최장 ${st2.worst}개월`:''),
+      st2.nPaid*2>=st2.nM?'var(--buy)':'var(--gold)');
+  if(!st2.lastPaid) put(ids.last, '아직 없음', 'var(--faint)');
+  else put(ids.last, `${st2.lastPaid.m} · ${fmt(st2.lastPaid.v)}`+(st2.gap>0?` · ${st2.gap}개월 전`:' · 이번 달'),
+          st2.gap>=3?'var(--sell)':(st2.gap>=1?'var(--gold)':'var(--buy)'));
+}
+
 /* 시세는 반드시 이 함수로 꺼낸다 — 종목이 다르면 없는 셈 친다.
    같은 칸을 모멘텀·5일평균·확정 종가·주문 제안이 다 같이 쓰기 때문에,
    한 번 어긋나면 화면 숫자만이 아니라 주문 가격까지 남의 종가로 나간다. */
@@ -6211,6 +6270,10 @@ function paperStat(tab, sess){
       const c=computeDca(); price=c.ready?(c.price||c.lastClose||0):0;
       // 적립은 현금 계좌가 없다 — 매수액이 곧 투입. 받은 분배금은 자산에 더한다.
       inflow=c.pos.inv; total=c.ready?c.total:(price*c.pos.shares);
+      /* 현금 수령 분배금은 계좌 밖으로 나간 돈이다 — 무매 단리 인출과 같은 칸에 넣는다.
+         그래야 목록의 최종·현재·인출 세 칸이 적립 세션에도 그대로 들어맞는다. */
+      if(c.pos && !c.pos.reinv && (c.pos.divCash||0)>0)
+        _out={saved:c.pos.divCash, withdrawn:0, simple:true};
     }else if(tab==='asap'){
       const c=computeAsap(); price=c.ready?(c.price||0):0;
       const P=c.pos;
