@@ -486,7 +486,7 @@ console.log('[10] 모의 장부 정합');
   // 기간은 첫 기록일이 아니라 모의 시작일부터 — 아니면 연환산이 부풀려진다
   ok('모의 기간을 시작일부터 잰다', /sess\.simStart && sess\.simStart<first/.test(stat));
   // 여러 세션을 한 표에 나열하므로 통화는 줄마다 따로
-  ok('성과 행에 통화를 실어 보낸다', /cur:st\.cur\|\|'usd'/.test(stat));
+  ok('성과 행에 통화를 실어 보낸다', /cur:curOf\(st\)/.test(stat));
   ok('성과 표가 줄마다 통화로 찍는다', /wnCur\(r\.inflow,r\.cur\)/.test(idx) && /wnCur\(r\.total,r\.cur\)/.test(idx));
   ok('wn은 wnCur 위에 있다(중복 구현 없음)', /function wn\(v\)\{ return wnCur\(v, curCurrency\(\)\); \}/.test(idx));
 }
@@ -1201,7 +1201,7 @@ console.log('[27] 무매 분석 — 월별·사이클별');
   ok('cycleSeq 시작값이 1', /let avg=0,qty=0,inv=0,realized=0,T=0,totbuy=0,totsell=0,cycleSeq=1;/.test(idx));
   ok('안 닫힌 사이클은 진행중으로', /closed\.has\(x\.seq\)\?'':' <span style="color:var\(--gold\)[^"]*">진행중/.test(br));
   // 원화 세션은 이미 원화라 같은 수를 두 번 쓰는 꼴이 된다
-  ok('원화 열은 달러 세션에서만', /isKrw=\(st\.cur==='krw'\)/.test(br)
+  ok('원화 열은 달러 세션에서만', /isKrw=isKrwSt\(st\)/.test(br)
      && /\$\{isKrw\?'':'<th>원화<\/th>'\}/.test(br));
   // 단리면 출금·입금·합계에 달러 세션은 합계원화까지 — 원화 세션은 셋, 달러 세션은 넷
   ok('빈 표 colspan이 열 수를 따라간다',
@@ -1500,10 +1500,10 @@ console.log('[36] 분석 머리 — 여섯 탭 모두 손익금·손익률·원�
   ok('원금이 없으면 나누지 않는다', /if\(!\(base>0\)\)\{[\s\S]*?'—'/.test(sp));
   ok('금액과 색을 맞춘다', /var\(--buy\)/.test(sp) && /var\(--sell\)/.test(sp));
   // 원화는 달러 세션에서만 — 원화 세션에 원화를 또 쓰면 같은 수가 두 번 나온다
-  const krwLines=(idx.match(/\$\('(?:a_realized_krw|ana_realized_krw|anaI_realized_krw)'\)\.textContent=\(st\.cur==='krw'\)\?'':/g)||[]).length;
+  const krwLines=(idx.match(/\$\('(?:a_realized_krw|ana_realized_krw|anaI_realized_krw)'\)\.textContent=isKrwSt\(st\)\?'':/g)||[]).length;
   ok('무매·이평·섀넌이 같은 원화 규약', krwLines===3, krwLines+'곳');
   const va=extractFn(idx,'function renderVrAnal()');
-  ok('VR도 같은 원화 규약', /vc_profit_krw[\s\S]{0,80}st\.cur==='krw'/.test(va) && /won\(profit\)/.test(va));
+  ok('VR도 같은 원화 규약', /vc_profit_krw[\s\S]{0,80}isKrwSt\(st\)/.test(va) && /won\(profit\)/.test(va));
   ok('VR 손익률에도 색이 붙는다', /\$\('vc_pct'\)\.style\.color=/.test(va));
 }
 
@@ -1587,7 +1587,7 @@ console.log('[40] 모의 일괄 적용 — 원금과 1회 적립액을 따로');
   ok('ASAP은 둘 다 아니다', /return null;\s*\/\/ asap/.test(cf) && !/asap/.test(af));
   const vs=extractFn(idx,'function paperValSummary(fieldOf)');
   ok('현재값 요약 함수 존재', !!vs);
-  ok('세션 통화로 찍는다', /wnCur\(\+st\[f\]\|\|0, st\.cur\)/.test(vs));
+  ok('세션 통화로 찍는다', /wnCur\(\+st\[f\]\|\|0, curOf\(st\)\)/.test(vs));
   ok('값이 여러 개면 나열한다', /seen\.join\(' \/ '\)/.test(vs));
   ok('해당 없으면 그렇게 적는다', /'해당 세션 없음'/.test(vs));
   const sp=extractFn(idx,'function syncPaperStart()');
@@ -2365,25 +2365,56 @@ console.log('\n[55] 단리 현금 흐름');
   ok('안 오간 달은 합계도 비운다', /const has=\(x\.out\|\|0\)\|\|\(x\.in\|\|0\), net=\(x\.out\|\|0\)-\(x\.in\|\|0\)/.test(br2));
 }
 
-/* ════ 56. 국내(원화) 세션 — 통화를 고를 수 있어야 한다 ════
-   설정값(cur)은 여섯 전략에 다 있는데 고르는 칸은 무매·VR 에만 있었다.
-   게다가 로테·섀넌·적립·ASAP 은 설정을 저장할 때마다 cur:'usd' 로 덮어썼다.
-   그래서 국내 ETF 세션이 1억을 $100,000,000 으로, 평단 19,775원을 $19,775 로 찍었다. */
-console.log('\n[56] 국내(원화) 세션 — 통화 칸');
+/* ════ 56. 통화는 종목이 정한다 ════
+   예전엔 설정창에서 달러/원화를 직접 고르게 했다. 종목코드를 보면 알 수 있는 걸
+   사람이 또 고르게 한 셈이라, 안 고르거나 잘못 고르면 국내 ETF가 1억을
+   $100,000,000 으로 찍었다. 고르는 칸을 없애고 종목에서 뽑는다.
+   저장도 안 한다 — 저장하면 종목과 어긋날 수 있는 두 번째 진실이 생긴다. */
+console.log('\n[56] 통화는 종목이 정한다');
 {
-  for(const [tab,sid] of [['로테이션','set_macur'],['섀넌','set_ivscur'],
-                          ['적립·거치','set_dcacur'],['ASAP','set_asapcur']]){
-    ok(`${tab} — 통화를 고를 수 있다`, new RegExp(`id="${sid}"`).test(idx));
-    // 고를 수 있어도 저장에서 덮어쓰면 소용없다
-    ok(`${tab} — 고른 통화를 저장한다`,
-       new RegExp(`cur:segGet\\('${sid}'\\)\\|\\|'usd'`).test(idx));
-    ok(`${tab} — 설정창에 다시 채운다`, new RegExp(`segSet\\('${sid}',st\\.cur\\|\\|'usd'\\)`).test(idx));
-    ok(`${tab} — 토글이 눌린다`, new RegExp(`'${sid}',`).test(idx));
+  ok('고르는 칸이 없다',
+     !/id="set_(?:cur|vcur|macur|ivscur|dcacur|asapcur)"/.test(idx));
+  ok('설정에 통화를 저장하지 않는다',
+     !/cur:segGet\(/.test(idx) && !/cur:'usd'/.test(idx) && !/segSet\('set_[a-z]*cur'/.test(idx));
+  ok('정의는 한 곳이다',
+     (idx.match(/function curOf\(st\)/g)||[]).length===1
+     && /function curOf\(st\)\{ return isKrCode\(\(st\|\|\{\}\)\.ticker\) \? 'krw' : 'usd'; \}/.test(idx));
+  ok('활성 세션 통화도 거기서 나온다',
+     /function curCurrency\(\)\{try\{return curOf\(curStrat\(\)\.settings\)\}/.test(idx));
+  // st.cur 를 직접 읽는 데가 하나라도 남으면 그 화면만 옛 값으로 찍힌다
+  {
+    const left=(idx.match(/\bst\.cur\b|\bsettings\.cur\b|c\.st\.cur/g)||[]);
+    ok('설정에서 통화를 직접 읽는 데가 없다', left.length===0, left.join(','));
   }
-  // 하드코딩이 하나라도 남으면 그 탭만 또 달러로 덮인다
-  ok('통화를 달러로 박아 두지 않는다', !/cur:'usd'\};/.test(idx));
-  ok('통화는 활성 세션 설정에서 읽는다',
-     /function curCurrency\(\)\{try\{return curStrat\(\)\.settings\.cur\|\|'usd'\}/.test(idx));
+  /* 통화가 종목에서 나오므로 '원화라고 골랐는데 종목코드가 아닌' 상태가
+     만들어지지 않는다 — 그걸 막던 가드도 같이 걷어냈어야 한다. */
+  ok('없어진 상태를 막던 가드도 걷어냈다', !/function krwNoAuto/.test(idx) && !/krwNoAuto\(/.test(idx));
+  // 모의 지문에 통화가 남아 있으면 종목과 중복이라 세션이 공연히 다시 돈다
+  {
+    const sk=(idx.match(/const SIM_KEYS=\{[\s\S]*?\n\};/)||[''])[0];
+    ok('모의 지문에서도 뺐다', /ticker/.test(sk) && !/'cur'/.test(sk));
+  }
+  // 설정창 라벨의 ($) 도 종목칸을 따라가야 한다
+  ok('설정 라벨이 종목칸을 따라간다',
+     (idx.match(/data-tk="set_/g)||[]).length>=11
+     && /function syncSetCurLabels\(\)/.test(idx)
+     && /const tk=\$\(el\.dataset\.tk\), c=isKrCode\(tk&&tk\.value\)\?'₩':'\$';/.test(idx));
+  ok('종목을 치면 바로 따라온다',
+     /function tkSearch\(id\)\{\s*\n\s*syncSetCurLabels\(\);/.test(idx));
+  ok('설정창을 열 때도 맞춘다', /syncSetCurLabels\(\);\s*\n\s*\$\('setModal'\)\.classList\.add\('on'\);/.test(idx));
+  // 고르는 칸을 없앴으니 무엇이 통화를 정하는지는 알려 줘야 한다
+  ok('종목 칸에 안내가 붙어 있다',
+     (idx.match(/6자리 코드면 국내 — 통화가 원화로 바뀝니다/g)||[]).length===6);
+  // 국내 코드 판정 — 옛 6자리와 2024년 이후 알파벳 낀 코드
+  {
+    const f=new Function(
+      (idx.match(/const KR_CODE_RE=[^\n]*/)||[''])[0]+'\n'+
+      (idx.match(/function isKrCode\([^\n]*/)||[''])[0]+'\n'+
+      (idx.match(/function curOf\(st\)[^\n]*/)||[''])[0]+'\nreturn curOf;')();
+    ok('국내 코드면 원화', f({ticker:'069500'})==='krw' && f({ticker:'0104N0'})==='krw');
+    ok('미국 티커면 달러', f({ticker:'SOXL'})==='usd' && f({ticker:'TQQQ'})==='usd');
+    ok('종목이 없으면 달러', f({})==='usd' && f(null)==='usd');
+  }
 }
 
 /* ════ 57. 분배금 현금 수령 = 월 수입 ════

@@ -520,7 +520,7 @@ try{ if(localStorage.getItem('qcockpit_hadUser')==='1') document.documentElement
 </div>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.62</span></h1></div>
+    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.63</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -1610,7 +1610,7 @@ document.addEventListener('click',function(e){ var m=document.getElementById('jk
   <footer>
     <strong>JK 퀀트</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.62</b> · 2026-09-16</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.63</b> · 2026-09-16</div>
   </footer>
 </div>
 
@@ -1629,9 +1629,8 @@ document.addEventListener('click',function(e){ var m=document.getElementById('jk
   <button class="mx" onclick="closeSettings()" aria-label="닫기">✕</button>
   <h3>설정</h3><div class="sub" id="set_sessname"></div>
   <div id="set_inf">
-    <div class="seclabel">종목 (티커)</div><div class="field tkwrap" style="margin:0 0 8px"><input id="set_ticker_in" type="text" autocomplete="off" spellcheck="false" placeholder="티커를 입력하세요 — 예: SOXL, TQQQ, 423920" oninput="tkSearch('set_ticker_in')" onfocus="tkSearch('set_ticker_in')" onblur="tkBlur('set_ticker_in')" onchange="onInfTickerChange()"><div class="tklist" id="set_ticker_in_list"></div></div>
+    <div class="seclabel">종목 (티커) <span class="hint" style="color:var(--faint);font-weight:500">6자리 코드면 국내 — 통화가 원화로 바뀝니다</span></div><div class="field tkwrap" style="margin:0 0 8px"><input id="set_ticker_in" type="text" autocomplete="off" spellcheck="false" placeholder="티커를 입력하세요 — 예: SOXL, TQQQ, 423920" oninput="tkSearch('set_ticker_in')" onfocus="tkSearch('set_ticker_in')" onblur="tkBlur('set_ticker_in')" onchange="onInfTickerChange()"><div class="tklist" id="set_ticker_in_list"></div></div>
     <p class="note" style="margin:-2px 0 8px">TQQQ·SOXL만 라오어 공식. <b>TECL·KORU는 비공식</b>(자체 백테스트). 종목을 고르면 <b>검정으로 확인된 권장 엔진·파라미터가 자동 적용</b>됩니다. 익절%를 바꾸면 별지점·리버스 복귀조건도 함께 바뀝니다.</p>
-    <div class="seclabel">통화 <span class="hint" style="color:var(--faint);font-weight:500">국내상장 ETF는 원화</span></div><div class="seg" id="set_cur"><button data-v="usd">달러 ($)</button><button data-v="krw">원화 (₩)</button></div>
     <div class="seclabel">분배금 <span class="hint" style="color:var(--faint);font-weight:500">현금 수령은 단리 인출과 같은 취급</span></div><div class="seg" id="set_infdivmode"><button data-v="reinv" class="on">재투자</button><button data-v="cash">현금 수령</button></div>
     <div class="seclabel">분할 수</div><div class="seg" id="set_div"><button data-v="10">10분할</button><button data-v="20">20분할</button><button data-v="30">30분할</button><button data-v="40">40분할</button></div>
     <div class="seclabel">익절금 처리 <span class="hint" style="color:var(--faint);font-weight:500">사이클이 끝났을 때</span></div>
@@ -1651,7 +1650,7 @@ document.addEventListener('click',function(e){ var m=document.getElementById('jk
     <p class="note v5-hidden" style="margin:-2px 0 8px">하락국면엔 익절 목표를 낮춰 반등에 빨리 턴다.</p>
     <div class="field"><label>목표 수익률 (%) <span class="hint" id="target_hint">별%·지정가매도</span></label><input id="set_target" type="number" inputmode="decimal" value="20"></div>
     <div class="field"><label>큰수 % <span class="hint">LOC 주문가 상한 — 증권사가 받아주는 한 높게 (권장 20)</span></label><input id="set_big" type="number" inputmode="decimal" value="20" min="0" max="40"></div>
-    <div class="field"><label id="set_principal_lbl">원금 ($)</label><input id="set_principal" type="text" inputmode="decimal" value="10000" oninput="commaInput(this)"></div>
+    <div class="field"><label id="set_principal_lbl" data-tk="set_ticker_in">원금 ($)</label><input id="set_principal" type="text" inputmode="decimal" value="10000" oninput="commaInput(this)"></div>
     <div class="rowline" style="border:none;padding:10px 0 6px"><span class="k" style="font-weight:700">하방 LOC 매수 <span style="color:var(--faint);font-weight:400;font-size:11px">급락 대비 추가매수</span></span>
       <label class="switch"><input type="checkbox" id="set_rows_on" onchange="toggleRowsField()"><span class="sl2"></span></label></div>
     <div class="grid2" id="rows_fields">
@@ -1660,24 +1659,22 @@ document.addEventListener('click',function(e){ var m=document.getElementById('jk
     </div>
   </div>
   <div id="set_vr" style="display:none">
-    <div class="seclabel">종목 (티커)</div><div class="field tkwrap" style="margin:0 0 8px"><input id="set_vticker" type="text" autocomplete="off" spellcheck="false" placeholder="티커를 입력하세요 — 예: TQQQ, SOXL" oninput="tkSearch('set_vticker')" onfocus="tkSearch('set_vticker')" onblur="tkBlur('set_vticker')"><div class="tklist" id="set_vticker_list"></div></div>
-    <div class="seclabel">통화 <span class="hint" style="color:var(--faint);font-weight:500">국내상장 ETF는 원화</span></div><div class="seg" id="set_vcur"><button data-v="usd">달러 ($)</button><button data-v="krw">원화 (₩)</button></div>
+    <div class="seclabel">종목 (티커) <span class="hint" style="color:var(--faint);font-weight:500">6자리 코드면 국내 — 통화가 원화로 바뀝니다</span></div><div class="field tkwrap" style="margin:0 0 8px"><input id="set_vticker" type="text" autocomplete="off" spellcheck="false" placeholder="티커를 입력하세요 — 예: TQQQ, SOXL" oninput="tkSearch('set_vticker')" onfocus="tkSearch('set_vticker')" onblur="tkBlur('set_vticker')"><div class="tklist" id="set_vticker_list"></div></div>
     <div class="seclabel">분배금 <span class="hint" style="color:var(--faint);font-weight:500">현금 수령은 단리 인출과 같은 취급</span></div><div class="seg" id="set_vrdivmode"><button data-v="reinv" class="on">재투자</button><button data-v="cash">현금 수령</button></div>
     <div class="seclabel">운용 모드</div><div class="seg" id="set_vmode"><button data-v="0.75">적립식</button><button data-v="0.5">거치식</button><button data-v="0.25">인출식</button></div>
     <div class="seclabel">V 갱신 공식</div><div class="seg" id="set_vformula"><button data-v="basic">기본공식</button><button data-v="skill">실력공식</button></div>
     <div class="seclabel">사이클 진입 <span class="hint" style="color:var(--faint);font-weight:500">V 갱신·적립을 누가 하나</span></div><div class="seg" id="set_vauto"><button data-v="0">직접 확인</button><button data-v="1">자동 진입</button></div>
     <div class="seclabel">파라미터</div>
     <div class="field"><label>G (Gradient) <span class="hint">1~50, 클수록 보수</span></label><input id="set_g" type="number" inputmode="numeric" value="10"></div>
-    <div class="field"><label id="set_initamt_lbl">초기 투자금 ($) <span class="hint">첫 매수에 넣을 돈</span></label><input id="set_initamt" type="text" inputmode="decimal" value="10000" oninput="commaInput(this)"></div>
-    <div class="field"><label id="set_add_lbl">매 사이클 적립금 ($)</label><input id="set_add" type="text" inputmode="decimal" value="100" oninput="commaInput(this)"></div>
+    <div class="field"><label id="set_initamt_lbl" data-tk="set_vticker">초기 투자금 ($) <span class="hint">첫 매수에 넣을 돈</span></label><input id="set_initamt" type="text" inputmode="decimal" value="10000" oninput="commaInput(this)"></div>
+    <div class="field"><label id="set_add_lbl" data-tk="set_vticker">매 사이클 적립금 ($)</label><input id="set_add" type="text" inputmode="decimal" value="100" oninput="commaInput(this)"></div>
     <div class="field"><label>밴드 폭 (%) <span class="hint">±, 좁을수록 매매↑</span></label><input id="set_band" type="number" inputmode="decimal" value="15"></div>
-    <div class="field"><label id="set_startv_lbl">시작 V ($) <span class="hint">0이면 첫 매수가 V</span></label><input id="set_startv" type="text" inputmode="decimal" value="0" oninput="commaInput(this)"></div>
-    <div class="field"><label id="set_startpool_lbl">시작 Pool ($)</label><input id="set_startpool" type="text" inputmode="decimal" value="0" oninput="commaInput(this)"></div>
+    <div class="field"><label id="set_startv_lbl" data-tk="set_vticker">시작 V ($) <span class="hint">0이면 첫 매수가 V</span></label><input id="set_startv" type="text" inputmode="decimal" value="0" oninput="commaInput(this)"></div>
+    <div class="field"><label id="set_startpool_lbl" data-tk="set_vticker">시작 Pool ($)</label><input id="set_startpool" type="text" inputmode="decimal" value="0" oninput="commaInput(this)"></div>
   </div>
   <div id="set_ivs" style="display:none">
-    <div class="seclabel">통화 <span class="hint" style="color:var(--faint);font-weight:500">국내상장 ETF는 원화</span></div><div class="seg" id="set_ivscur"><button data-v="usd">달러 ($)</button><button data-v="krw">원화 (₩)</button></div>
     <div class="seclabel">분배금 <span class="hint" style="color:var(--faint);font-weight:500">현금 수령은 단리 인출과 같은 취급</span></div><div class="seg" id="set_ivsdivmode"><button data-v="reinv" class="on">재투자</button><button data-v="cash">현금 수령</button></div>
-    <div class="seclabel">종목 (티커)</div>
+    <div class="seclabel">종목 (티커) <span class="hint" style="color:var(--faint);font-weight:500">6자리 코드면 국내 — 통화가 원화로 바뀝니다</span></div>
 <div class="field tkwrap" style="margin:0 0 8px"><input id="set_ivsticker_in" type="text" autocomplete="off" spellcheck="false" placeholder="티커를 입력하세요 — 예: TQQQ, SOXL" oninput="tkSearch('set_ivsticker_in')" onfocus="tkSearch('set_ivsticker_in')" onblur="tkBlur('set_ivsticker_in')"><div class="tklist" id="set_ivsticker_in_list"></div></div>
     <p class="note" style="margin:4px 0 8px">변동성은 <b>레버리지 ETF 자체</b>의 수익률로 계산합니다(합성 1배지수 아님). KORU는 백테상 손실확률 68%라 권하지 않습니다.</p>
     <div class="seclabel">비중 방식 <span class="hint" style="color:var(--faint);font-weight:500">얼마를 레버리지에</span></div>
@@ -1702,14 +1699,13 @@ document.addEventListener('click',function(e){ var m=document.getElementById('jk
     <p class="note" style="margin:4px 0 8px">보유 주식수·예수금·평단은 <b>여기 넣지 않습니다.</b> 기록에서 자동으로 계산됩니다(무매·밸류리밸런싱과 같은 방식).<br>
       앱 쓰기 전부터 갖고 계신 물량이 있으면 <b>기록 탭 → 시작 보유 등록</b>으로 한 번만 넣으세요.</p>
     <div class="seclabel">매월 투입액 <span class="hint" style="color:var(--faint);font-weight:500">0이면 사용 안 함</span></div>
-    <div class="field"><label>월 투입 ($)</label><input id="set_ivsmonthly" type="text" inputmode="decimal" value="0" oninput="commaInput(this)"></div>
+    <div class="field"><label data-tk="set_ivsticker_in">월 투입 ($)</label><input id="set_ivsmonthly" type="text" inputmode="decimal" value="0" oninput="commaInput(this)"></div>
     <p class="note" style="margin:4px 0 8px">넣어두면 <b>현재</b> 탭에 이번 달 투입 카드가 뜹니다. 백테상 <b>그 시점 목표 비중대로 나눠 사는 것</b>이 별도 DCA보다 낫습니다(도달 확률 같고 MDD 4%p 낮음).</p>
   </div>
 
   <div id="set_ma" style="display:none">
-    <div class="seclabel">통화 <span class="hint" style="color:var(--faint);font-weight:500">국내상장 ETF는 원화</span></div><div class="seg" id="set_macur"><button data-v="usd">달러 ($)</button><button data-v="krw">원화 (₩)</button></div>
     <div class="seclabel">분배금 <span class="hint" style="color:var(--faint);font-weight:500">현금 수령은 단리 인출과 같은 취급</span></div><div class="seg" id="set_madivmode"><button data-v="reinv" class="on">재투자</button><button data-v="cash">현금 수령</button></div>
-    <div class="seclabel">종목 (티커)</div>
+    <div class="seclabel">종목 (티커) <span class="hint" style="color:var(--faint);font-weight:500">6자리 코드면 국내 — 통화가 원화로 바뀝니다</span></div>
 <div class="field tkwrap" style="margin:0 0 8px"><input id="set_maticker_in" type="text" autocomplete="off" spellcheck="false" placeholder="티커를 입력하세요 — 예: SOXL, TQQQ" oninput="tkSearch('set_maticker_in')" onfocus="tkSearch('set_maticker_in')" onblur="tkBlur('set_maticker_in')"><div class="tklist" id="set_maticker_in_list"></div></div>
     <p class="note" style="margin:4px 0 8px">합성 1배지수는 종목 배수로 자동 복원됩니다 (SOXL·TECL·TQQQ·KORU=3배, USD·QLD=2배).</p>
     <p class="note" style="margin:4px 0 8px">이동평균은 <b>200일 고정</b>(Gayed·Bilello 논문 기본값) · 단기선 50일.<br>
@@ -1725,14 +1721,13 @@ document.addEventListener('click',function(e){ var m=document.getElementById('jk
     <div class="seclabel">대피처 <span class="hint" style="color:var(--faint);font-weight:500">현금 신호 구간</span></div>
     <div class="seg" id="set_mapark"><button data-v="cash" class="on">현금</button><button data-v="bill">단기국채</button></div>
     <p class="note" style="margin:4px 0 8px">현금 신호일 때 <b>단기국채</b>(SGOV·BIL 등)로 대기하면 이자를 받습니다 — 백테상 CAGR +0.9~1.2%p, MDD는 오히려 개선. 배당주(SCHD·VYM)는 폭락장에 같이 빠져(2008년 −32%) 대피처로 부적합합니다.</p>
-    <div class="field"><label id="set_maprincipal_lbl">원금 ($)</label><input id="set_maprincipal" type="text" inputmode="decimal" value="10000" oninput="commaInput(this)"></div>
+    <div class="field"><label id="set_maprincipal_lbl" data-tk="set_maticker_in">원금 ($)</label><input id="set_maprincipal" type="text" inputmode="decimal" value="10000" oninput="commaInput(this)"></div>
   </div>
   <div id="set_dca" style="display:none">
-    <div class="seclabel">통화 <span class="hint" style="color:var(--faint);font-weight:500">국내상장 ETF는 원화</span></div><div class="seg" id="set_dcacur"><button data-v="usd">달러 ($)</button><button data-v="krw">원화 (₩)</button></div>
     <div class="seclabel">방식</div>
     <div class="seg" id="set_dcamode"><button data-v="dca" class="on">적립식</button><button data-v="lump">거치식</button></div>
     <p class="note" style="margin:4px 0 8px" id="set_dcamode_note"></p>
-    <div class="seclabel">종목 (티커)</div>
+    <div class="seclabel">종목 (티커) <span class="hint" style="color:var(--faint);font-weight:500">6자리 코드면 국내 — 통화가 원화로 바뀝니다</span></div>
     <div class="field tkwrap" style="margin:0 0 8px">
       <input id="set_dcaticker_in" type="text" autocomplete="off" spellcheck="false"
              placeholder="티커를 입력하세요 — 예: SCHD, JEPQ, 458730"
@@ -1744,7 +1739,7 @@ document.addEventListener('click',function(e){ var m=document.getElementById('jk
     <div class="seclabel">적립 주기 <span class="hint" style="color:var(--faint);font-weight:500">모의는 이 주기로 매수 · 직접 기록할 땐 알림용</span></div>
     <div class="seg" id="set_dcafreq"><button data-v="day" class="on">매일</button><button data-v="week">매주</button><button data-v="month">매월</button></div>
     </div>
-    <div class="field"><label id="set_dcaamt_lbl">1회 적립액 ($) <span class="hint">배수 1배일 때 금액</span></label><input id="set_dcaamt" type="text" inputmode="decimal" value="10" oninput="commaInput(this)"></div>
+    <div class="field"><label id="set_dcaamt_lbl" data-tk="set_dcaticker_in">1회 적립액 ($) <span class="hint">배수 1배일 때 금액</span></label><input id="set_dcaamt" type="text" inputmode="decimal" value="10" oninput="commaInput(this)"></div>
     <div class="seclabel">분배금(배당) 처리</div>
     <div class="seg" id="set_dcareinv"><button data-v="cash">현금 수령</button><button data-v="reinv" class="on">재투자</button></div>
     <p class="note" style="margin:4px 0 8px">배당·분배가 있는 종목이면 자동으로 잡힙니다. <b>현금 수령</b>은 받은 분배금을 따로 쌓아 총자산에 더하고, <b>재투자</b>는 배당락일 종가로 다시 삽니다.</p>
@@ -1755,15 +1750,14 @@ document.addEventListener('click',function(e){ var m=document.getElementById('jk
     </div>
   </div>
   <div id="set_asap" style="display:none">
-    <div class="seclabel">통화 <span class="hint" style="color:var(--faint);font-weight:500">국내상장 ETF는 원화</span></div><div class="seg" id="set_asapcur"><button data-v="usd">달러 ($)</button><button data-v="krw">원화 (₩)</button></div>
     <div class="seclabel">분배금 <span class="hint" style="color:var(--faint);font-weight:500">현금 수령은 단리 인출과 같은 취급</span></div><div class="seg" id="set_asapdivmode"><button data-v="reinv" class="on">재투자</button><button data-v="cash">현금 수령</button></div>
-    <div class="seclabel">종목 (티커)</div>
+    <div class="seclabel">종목 (티커) <span class="hint" style="color:var(--faint);font-weight:500">6자리 코드면 국내 — 통화가 원화로 바뀝니다</span></div>
 <div class="field tkwrap" style="margin:0 0 8px"><input id="set_asapticker_in" type="text" autocomplete="off" spellcheck="false" placeholder="티커를 입력하세요 — 예: SOXL, TQQQ" oninput="tkSearch('set_asapticker_in')" onfocus="tkSearch('set_asapticker_in')" onblur="tkBlur('set_asapticker_in')"><div class="tklist" id="set_asapticker_in_list"></div></div>
     <p class="note" style="margin:4px 0 8px">ASAP는 SOXL 기준으로 설계됐지만 어떤 레버리지든 200일선·RSI 규칙으로 동작합니다.</p>
     <div class="seclabel">매수 금액 <span class="hint" style="color:var(--faint);font-weight:500">하락장 적립·딥가중</span></div>
-    <div class="field"><label>매일 적립금 base ($) <span class="hint">하락장→SGOV · 상승완료→SOXL</span></label><input id="set_asapbase" type="text" inputmode="decimal" value="10" oninput="commaInput(this)"></div>
-    <div class="field"><label>−10% · RSI≤35 매수 mid ($)</label><input id="set_asapmid" type="text" inputmode="decimal" value="50" oninput="commaInput(this)"></div>
-    <div class="field"><label>−15% · RSI≤30 매수 deep ($) <span class="hint">mid 대체</span></label><input id="set_asapdeep" type="text" inputmode="decimal" value="100" oninput="commaInput(this)"></div>
+    <div class="field"><label data-tk="set_asapticker_in">매일 적립금 base ($) <span class="hint">하락장→SGOV · 상승완료→SOXL</span></label><input id="set_asapbase" type="text" inputmode="decimal" value="10" oninput="commaInput(this)"></div>
+    <div class="field"><label data-tk="set_asapticker_in">−10% · RSI≤35 매수 mid ($)</label><input id="set_asapmid" type="text" inputmode="decimal" value="50" oninput="commaInput(this)"></div>
+    <div class="field"><label data-tk="set_asapticker_in">−15% · RSI≤30 매수 deep ($) <span class="hint">mid 대체</span></label><input id="set_asapdeep" type="text" inputmode="decimal" value="100" oninput="commaInput(this)"></div>
   </div>
   <div class="seclabel">데이터 백업 · 동기화</div>
   <button class="addbtn" style="margin-bottom:8px;background:var(--panel2);color:var(--ink);border:1px solid var(--line)" onclick="exportJSON()">⬇ JSON 파일로 내보내기</button>
@@ -1972,7 +1966,7 @@ const $=id=>document.getElementById(id);
    수정창에는 원래 날짜가 그대로 뜨므로 잃는 정보는 없다. */
 function dshort(d){ const t=String(d||''); return /^\d{4}-\d\d-\d\d$/.test(t)?t.slice(2):(t||'-'); }
 /* 통화 포맷: 현재 세션 통화(usd/krw)에 맞춰 표시. 원화는 정수, 달러는 소수2자리 */
-function curCurrency(){try{return curStrat().settings.cur||'usd'}catch(e){return 'usd'}}
+function curCurrency(){try{return curOf(curStrat().settings)}catch(e){return 'usd'}}
 /* 국내상장 종목코드 여부 — 네이버 자동시세 가능.
    옛 코드는 6자리 숫자(069500)지만 2024년부터 나온 건 가운데에 알파벳이 있다(0104N0).
    숫자만 받으면 신규 상장 ETF가 통째로 '해외 티커'로 새어 나가 시세를 못 받는다. */
@@ -2001,8 +1995,17 @@ function tickerLabel(t){
   if(isKrCode(s)) return KR_ETF_NAME[s] || KR_NAME_MEMO[s] || ('국내 '+s);
   return s;
 }
-// 원화 세션인데 종목코드가 없어 자동시세 불가한 경우만 true
-function krwNoAuto(st){return (st.cur||'usd')==='krw' && !isKrCode(st.ticker);}
+/* ── 통화는 종목이 정한다 ──
+   예전엔 설정창에서 달러/원화를 직접 고르게 했는데, 종목코드를 보면 알 수 있는 걸
+   사람이 또 고르게 한 셈이었다. 안 고르거나 잘못 고르면 국내 ETF가 달러로 찍혔다.
+   고르는 칸을 없애고 여기 한 줄에서 뽑는다 — 저장도 안 한다(저장하면 종목과
+   어긋날 수 있는 두 번째 진실이 생긴다).
+   국내 시장은 장 마감·정산 시각도 달라서 이 값이 시세 커트오프까지 정한다. */
+function curOf(st){ return isKrCode((st||{}).ticker) ? 'krw' : 'usd'; }
+function isKrwSt(st){ return curOf(st)==='krw'; }
+/* 예전엔 '원화라고 골랐는데 종목코드가 아닌' 세션이 있어 자동 시세를 막아야 했다.
+   이제 통화가 종목코드에서 나오므로 그런 상태 자체가 만들어지지 않는다 —
+   막던 가드(krwNoAuto)는 같이 걷어냈다. */
 /* 통화를 지정해서 찍는다. 모의 성과처럼 여러 세션을 한 표에 나열할 때는
    활성 세션 통화로 전부 찍으면 원화 세션이 10,000,000$으로 나온다. */
 /* 기호는 숫자 뒤에 붙인다. 목록에서 숫자를 오른쪽으로 맞춰 놓으면
@@ -2056,7 +2059,7 @@ const won=v=>Math.round((+v||0)*((typeof liveFX!=='undefined'&&liveFX)?liveFX:FX
 const LS='qcockpit_v2', LS_URL='qcockpit_gsheet';
 let S=null;
 
-function defInfSettings(){return{ticker:'SOXL',div:20,target:20,big:20,rowsOn:false,rows:8,gap:2.5,rowqty:1,principal:10000,cur:'usd',divmode:'reinv',engine:'v40',shortMA:30,loPct:6,tgtDyn:false}}
+function defInfSettings(){return{ticker:'SOXL',div:20,target:20,big:20,rowsOn:false,rows:8,gap:2.5,rowqty:1,principal:10000,divmode:'reinv',engine:'v40',shortMA:30,loPct:6,tgtDyn:false}}
 // V5.0 숨김 기간: 저장된 세션이 v50이어도 v40으로 강제 (UI가 없어 되돌릴 수 없으므로)
 // 복원 시 이 함수와 load() 안의 호출만 제거하면 된다.
 function forceV40(){
@@ -2072,18 +2075,18 @@ function forceV40(){
   }catch(e){}
 }
 function toggleRowsField(){const on=$('set_rows_on')&&$('set_rows_on').checked;const f=$('rows_fields');if(f){f.style.opacity=on?'1':'0.4';f.style.pointerEvents=on?'auto':'none';}}
-function defVrSettings(){return{ticker:'TQQQ',mode:0.75,formula:'basic',g:10,initAmt:10000,add:100,band:15,startv:0,startpool:0,autoCyc:false,cur:'usd',divmode:'reinv'}}
+function defVrSettings(){return{ticker:'TQQQ',mode:0.75,formula:'basic',g:10,initAmt:10000,add:100,band:15,startv:0,startpool:0,autoCyc:false,divmode:'reinv'}}
 function uid(){return 's'+Date.now()+Math.floor(Math.random()*9999)}
 function newInfSession(name){return{id:uid(),name:name||'세션 1',settings:defInfSettings(),hist:[]}}
 function newVrSession(name){return{id:uid(),name:name||'세션 1',settings:defVrSettings(),hist:[]}}
-function defMaSettings(){return{ticker:'SOXL',buy:'ma',sell:'ma',park:'cash',principal:10000,cur:'usd',divmode:'reinv'}}   // 이평 200일 고정 · 매수/매도 조건 16조합
+function defMaSettings(){return{ticker:'SOXL',buy:'ma',sell:'ma',park:'cash',principal:10000,divmode:'reinv'}}   // 이평 200일 고정 · 매수/매도 조건 16조합
 function newMaSession(name){return{id:uid(),name:name||'세션 1',settings:defMaSettings(),hist:[]}}
-function defAsapSettings(){return{ticker:'SOXL',base:10,mid:50,deep:100,cur:'usd',divmode:'reinv'}}
+function defAsapSettings(){return{ticker:'SOXL',base:10,mid:50,deep:100,divmode:'reinv'}}
 function newAsapSession(name){return{id:uid(),name:name||'내 계좌',settings:defAsapSettings(),hist:[]}}
 /* ── 역분산 비중 (섀넌의 도깨비) ──
    w = min(1,(s0/σ)²) · σ = 최근 look일 실현변동성(연율) · |w−현재비중|>band 일 때만 리밸런싱
    qty/cash/avg 는 '지금 내 계좌 상태'. 리밸런싱 기록 시 자동 갱신되고 설정에서 직접 고칠 수도 있다. */
-function defIvsSettings(){return{ticker:'TQQQ',mode:'iv',s0:55,look:40,band:15,principal:10000,park:'bill',monthly:0,cur:'usd',divmode:'reinv'}}
+function defIvsSettings(){return{ticker:'TQQQ',mode:'iv',s0:55,look:40,band:15,principal:10000,park:'bill',monthly:0,divmode:'reinv'}}
 function newIvsSession(name){return{id:uid(),name:name||'내 계좌',settings:defIvsSettings(),hist:[]}}
 // 구형식 마이그레이션: 계좌를 설정에 들고 있던 세션을 '초기자금 + 기록' 형식으로 옮긴다.
 // 보유분은 평단으로 매수한 '시작 보유' 기록으로 남겨 포지션이 그대로 재현되게 한다.
@@ -2102,7 +2105,7 @@ function migrateIvsSess(sess){
 }
 function ensureIvsBox(){ if(S&&(!S.ivs||!S.ivs.sessions||!S.ivs.sessions.length)){ const d=newIvsSession('내 계좌'); S.ivs={sessions:[d],active:d.id}; } }
 /* mode: 'dca' 적립식(주기마다 매수) / 'lump' 거치식(시작일에 원금 전액 한 번, 이후 보유) */
-function defDcaSettings(){return{ticker:'USD',mode:'dca',amount:10,freq:'day',dipMul:1,reinv:true,cur:'usd'}}
+function defDcaSettings(){return{ticker:'USD',mode:'dca',amount:10,freq:'day',dipMul:1,reinv:true}}   // 적립은 divmode 대신 reinv 를 쓴다(칸 이름이 set_dcareinv)
 function newDcaSession(name){return{id:uid(),name:name||'내 계좌',settings:defDcaSettings(),hist:[]}}
 
 /* 신규 사용자 기본 상태 (빈 세션 1개씩) */
@@ -2839,11 +2842,6 @@ async function fetchQuote(which){
   const st=curStrat().settings;
   const noteId=which==='inf'?'o_fetchnote':'vn_fetchnote';
   const note=$(noteId);
-  if(krwNoAuto(st)){
-    note.className='fetchnote err';
-    note.textContent='ⓘ 국내상장 ETF는 설정에서 종목코드(6자리)를 입력하면 자동 시세가 됩니다. 예: 423920';
-    return;
-  }
   const symbol=st.ticker||'SOXL';
   note.className='fetchnote load'; note.textContent='불러오는 중…';
   const q=await fetchDaily(symbol);
@@ -2851,7 +2849,7 @@ async function fetchQuote(which){
     const live=(q.price!=null&&q.price>0)?q.price:q.last.close;
     // 무매(inf)의 last는 'LOC 체결가로 쓸 확정 종가'다 — 장중·마감직후 봉의 close는 종가가 아니다.
     // VR의 last는 평가금 계산용 현재가라 그대로 둔다(용도가 반대).
-    const SL=(which==='inf')?(settledLast(q.days,st.cur)||q.last):q.last;
+    const SL=(which==='inf')?(settledLast(q.days,curOf(st))||q.last):q.last;
     lastQuote[which]={symbol:q.symbol,last:SL.close,lastDate:SL.date,price:live,days:q.days,ohlc:q.ohlc||null};
     const ms=q.marketState; // PRE/REGULAR/POST/CLOSED
     const msLabel = ms==='REGULAR'?'장중 실시간':ms==='PRE'?'프리장':ms==='POST'?'애프터장':ms==='CLOSED'?'장마감':'';
@@ -2969,7 +2967,7 @@ function renderInfAnal(){
   const _dv=sessDivCash(st, c.hist||curStrat().hist, ()=>renderInfAnal());
   { const hd=(curStrat().hist||[]).filter(h=>h&&h.date).map(h=>h.date).sort();
     const fl=_dv.flows||[], fLast=(fl[fl.length-1]||{}).date||'', hLast=hd[hd.length-1]||'';
-    paintCashFlow('a', {flows:fl, base:+st.principal||0, isKrw:(st.cur==='krw'),
+    paintCashFlow('a', {flows:fl, base:+st.principal||0, isKrw:isKrwSt(st),
       from:hd[0]||(fl[0]||{}).date, to:(fLast>hLast?fLast:hLast),
       title:'분배금 현금 수입 <span class="sub" style="font-weight:400">시세 기준 추정</span>',
       outK:'수령', outSub:'계좌 밖으로 받은 분배금', lastK:'마지막 수령',
@@ -2977,7 +2975,7 @@ function renderInfAnal(){
   renderInfBreak(c);
   $('a_realized').textContent=(c.realized>=0?'+':'')+wn(c.realized);
   $('a_realized').style.color=c.realized>=0?'var(--buy)':'var(--sell)';
-  $('a_realized_krw').textContent=(st.cur==='krw')?'':'≈ '+(c.realized>=0?'+':'')+won(c.realized);
+  $('a_realized_krw').textContent=isKrwSt(st)?'':'≈ '+(c.realized>=0?'+':'')+won(c.realized);
   /* 실현손익률 — 분모는 원금. 거래이력·월별·사이클별 표와 같은 기준이라
      줄을 더한 값이 그대로 여기 합계가 된다. 매도분 원가로 나누면 익절%와 겹쳐 쓸모가 없다. */
   setRealizedPct('a_realized_pct', c.realized, +st.principal||0);
@@ -3058,7 +3056,7 @@ function renderInfAnal(){
    손익률 분모는 거래이력과 같은 원금이다. 그래야 줄을 더한 값이 곧 그 기간 손익률이 된다.
    원화는 달러 세션에서만 붙인다 — 원화 세션은 이미 원화라 같은 수를 두 번 쓰는 꼴이다. */
 function renderInfBreak(c){
-  const st=c.st, cap=+st.principal||0, isKrw=(st.cur==='krw');
+  const st=c.st, cap=+st.principal||0, isKrw=isKrwSt(st);
   const sells=(c.rows||[]).filter(h=>isSell(h.kind));
   const pctTxt=v=>cap?`<span style="color:${v>=0?'var(--buy)':'var(--sell)'}">${v>=0?'+':''}${(v/cap*100).toFixed(2)}%</span>`:'—';
   const amtTxt=v=>`<span style="color:${v>=0?'var(--buy)':'var(--sell)'}">${v>=0?'+':''}${wn(v)}</span>`;
@@ -3245,7 +3243,7 @@ function infSettledLast(){
   const Q=quoteOf('inf'); if(!Q||!Q.days) return null;
   const st=(curStrat()&&curStrat().settings)||{};
   if(String(Q.symbol||'').toUpperCase()!==String(st.ticker||'').toUpperCase()) return null;
-  return settledLast(Q.days, st.cur);
+  return settledLast(Q.days, curOf(st));
 }
 
 /* 장중에 만들어진 '오늘 봉' 체결을 되돌린다.
@@ -3262,7 +3260,7 @@ function _vrRewind(st,cut){
 }
 function paperRewind(sess){
   if(!sess||!sess.paper) return 0;
-  const st=sess.settings||{}, cut=simCutoff(st.cur);
+  const st=sess.settings||{}, cut=simCutoff(curOf(st));
   const h=sess.hist||[];
   const keep=h.filter(x=>!((x.sim||x.auto) && x.date>cut));
   const n=h.length-keep.length;
@@ -3282,7 +3280,7 @@ function infSimForward(startFrom){
   const hist=sess.hist||[];
   let from = startFrom || st.simLast || (hist.length ? hist[hist.length-1].date : null);
   if(!from) return null;                                  // 시작일을 정해야 한다
-  const cut=simCutoff(st.cur);                            // 장중이면 오늘 봉은 안 쓴다
+  const cut=simCutoff(curOf(st));                            // 장중이면 오늘 봉은 안 쓴다
   from=_clampFrom(from, cut);
   const days=[];
   for(let i=0;i<O.length;i++){ const d=O[i];
@@ -3537,7 +3535,7 @@ function onVnPrice(){
 
 /* ════════ 현재 탭 (히어로 + 판단 + 계좌상황) ════════ */
 function renderVrNow(){
-  const c=computeVr(), st=c.st, sym=(st.cur==='krw')?'₩':'$';
+  const c=computeVr(), st=c.st, sym=isKrwSt(st)?'₩':'$';
   const ev=vrEval(c), price=vrLastPrice(c);
 
   // 히어로
@@ -3660,7 +3658,7 @@ function poolLimit(c){ return c.pool * (c.st.mode||0.75); }
 
 /* ════════ 매수·매도표 (사다리) ════════ */
 function renderVrTable(){
-  const c=computeVr(), st=c.st, sym=(st.cur==='krw')?'₩':'$';
+  const c=computeVr(), st=c.st, sym=isKrwSt(st)?'₩':'$';
   if(c.V<=0){
     $('sell_lad').innerHTML='<div class="lxr" style="justify-content:center;color:var(--faint)">첫 매수 기록 후 표가 생성됩니다</div>';
     $('buy_lad').innerHTML='<div class="lxr" style="justify-content:center;color:var(--faint)">첫 매수 기록 후 표가 생성됩니다</div>';
@@ -3834,7 +3832,7 @@ function enterNextCycle(){
 
 /* ════════ 분석 탭 ════════ */
 function renderVrAnal(){
-  const c=computeVr(), st=c.st, sym=(st.cur==='krw')?'₩':'$';
+  const c=computeVr(), st=c.st, sym=isKrwSt(st)?'₩':'$';
   const price=vrLastPrice(c);
   const evalNow=price*c.qty;
   const total=c.pool + evalNow;
@@ -3846,7 +3844,7 @@ function renderVrAnal(){
   $('vc_pct').style.color=pct>=0?'var(--buy)':'var(--sell)';
   // 원화 환산은 다른 탭과 같은 규약 — 원화 세션은 이미 원화라 같은 수를 두 번 쓰지 않는다
   { const k=$('vc_profit_krw');
-    if(k) k.textContent=(st.cur==='krw')?'':'≈ '+(profit>=0?'+':'')+won(profit); }
+    if(k) k.textContent=isKrwSt(st)?'':'≈ '+(profit>=0?'+':'')+won(profit); }
   $('vc_cyc').textContent=tradeCount(c.hist)+' 거래';   // 매매만 — 목록과 같은 기준
 
   const modeName = st.mode===0.75?'적립식':st.mode===0.5?'거치식':'인출식';
@@ -3873,7 +3871,7 @@ function renderVrAnal(){
   { const _dv=sessDivCash(st, c.hist, ()=>renderVrAnal());
     const fl=[...(c.flows||[]), ..._dv.flows].sort((a,b)=>a.date<b.date?-1:1);
     const hd=(c.hist||[]).filter(h=>h&&h.date).map(h=>h.date).sort();
-    paintCashFlow('vc', {flows:fl, base:c.grossIn, isKrw:(st.cur==='krw'),
+    paintCashFlow('vc', {flows:fl, base:c.grossIn, isKrw:isKrwSt(st),
       from:hd[0]||(fl[0]||{}).date, to:hd[hd.length-1]||(fl[fl.length-1]||{}).date,
       title:'현금 흐름', outK:'인출', outSub:'Pool에서 빼낸 돈',
       inK:'적립', inSub:'Pool에 더 넣은 돈', lastK:'마지막 인출',
@@ -4079,7 +4077,6 @@ function computeMa(){
 function fetchMaQuote(){ loadMaData(true); }
 async function loadMaData(force){
   const st=curStrat().settings, note=$('ma_fetchnote');
-  if(krwNoAuto(st)){ if(note){note.className='fetchnote err';note.textContent='ⓘ 원화 종목은 설정에서 종목코드(6자리) 입력 시 자동 시세가 됩니다.';} return; }
   const sym=String(st.ticker||'SOXL').toUpperCase();
   if(!force && maQuoteData && String(maQuoteData.symbol||'').toUpperCase()===sym){ renderMaNow(); renderMaHist(); renderMaAnal(); return; }
   if(note){note.className='fetchnote load';note.textContent='종가 이력 불러오는 중…';}
@@ -4252,7 +4249,7 @@ function maReplay(){
   const D=c.dates, SEQ=c.sigSeq, CL=maQuoteData.days.map(d=>d.close);
   const FEE=(typeof IVS_FEE!=='undefined')?IVS_FEE:0.0025;
   let cash=Math.max(0,st.principal||0), shares=0, rec=[];
-  const _cut=simCutoff(st.cur);                     // 장중이면 오늘 봉은 안 쓴다
+  const _cut=simCutoff(curOf(st));                     // 장중이면 오늘 봉은 안 쓴다
   for(let i=0;i<D.length;i++){
     if(D[i]<from) continue;
     if(D[i]>_cut) break;
@@ -4325,7 +4322,7 @@ function renderMaAnal(){
   $('ana_cnt').textContent=`${nOut} 청산${nOut?` · 승 ${nWin}`:''}`;
   $('ana_realized').textContent=(realized>=0?'+':'')+wn(realized);
   $('ana_realized').style.color=realized>=0?'var(--buy)':'var(--sell)';
-  $('ana_realized_krw').textContent=(st.cur==='krw')?'':'≈ '+(realized>=0?'+':'')+won(realized);
+  $('ana_realized_krw').textContent=isKrwSt(st)?'':'≈ '+(realized>=0?'+':'')+won(realized);
   setRealizedPct('ana_realized_pct', realized, principal);
   $('ana_principal').textContent=wn(principal);
   $('ana_invested').textContent=wn(invested);
@@ -4346,7 +4343,7 @@ function renderMaAnal(){
   { const _dv=sessDivCash(st, h, ()=>renderMaAnal());
     paintRet3('ana', {base:principal, now:total, realized:realized+_dv.divCash, out:_dv.divCash});
     const hd=h.filter(x=>x&&x.date).map(x=>x.date).sort(), fl=_dv.flows||[];
-    paintCashFlow('ana', {flows:fl, base:principal, isKrw:(st.cur==='krw'),
+    paintCashFlow('ana', {flows:fl, base:principal, isKrw:isKrwSt(st),
       from:hd[0]||(fl[0]||{}).date, to:(fl[fl.length-1]||{}).date||hd[hd.length-1],
       title:'분배금 현금 수입 <span class="sub" style="font-weight:400">시세 기준 추정</span>',
       outK:'수령', outSub:'계좌 밖으로 받은 분배금', lastK:'마지막 수령',
@@ -4371,7 +4368,7 @@ function renderIvsAnal(){
   $('anaI_cnt').textContent=`${nT} 리밸런싱`;
   $('anaI_realized').textContent=(rz>=0?'+':'')+wn(rz);
   $('anaI_realized').style.color=rz>=0?'var(--buy)':'var(--sell)';
-  $('anaI_realized_krw').textContent=(st.cur==='krw')?'':'≈ '+(rz>=0?'+':'')+won(rz);
+  $('anaI_realized_krw').textContent=isKrwSt(st)?'':'≈ '+(rz>=0?'+':'')+won(rz);
   setRealizedPct('anaI_realized_pct', rz, principal);   // 분모는 원금 ± 추가입금/출금
   $('anaI_principal').textContent=wn(principal);
   $('anaI_invested').textContent=wn(invested);
@@ -4403,7 +4400,7 @@ function renderIvsAnal(){
     const _dv=sessDivCash(st, h, ()=>renderIvsAnal());
     const fl=[...(c.flows||[]), ..._dv.flows].sort((a,b)=>a.date<b.date?-1:1);
     const hd=h.filter(x=>x&&x.date).map(x=>x.date).sort();
-    paintCashFlow('anaI', {flows:fl, base:grossIn, isKrw:(st.cur==='krw'),
+    paintCashFlow('anaI', {flows:fl, base:grossIn, isKrw:isKrwSt(st),
       from:hd[0]||(fl[0]||{}).date, to:hd[hd.length-1]||(fl[fl.length-1]||{}).date,
       title:'현금 흐름', outK:'출금', outSub:'계좌에서 빼낸 돈',
       inK:'입금', inSub:'계좌에 더 넣은 돈', lastK:'마지막 출금',
@@ -4412,7 +4409,7 @@ function renderIvsAnal(){
 function refreshMa(){
   paperAuto();   // 모의 세션이면 오늘까지 자동으로 굴린다
   renderMaNow(); renderMaHist(); renderMaAnal(); renderStatusline();
-  if(S.activeTab==='ma'){ try{ if(!krwNoAuto(curStrat().settings)) loadMaData(); }catch(e){console.error(e)} }
+  if(S.activeTab==='ma'){ try{ loadMaData(); }catch(e){console.error(e)} }
 }
 
 /* ══════════ 적립(DCA) 운영 — 단순 적립 + 200일선 하락 배수 ══════════ */
@@ -4847,7 +4844,7 @@ function ivsReplay(){
   if((sess.hist||[]).length && !confirm(`기존 기록 ${sess.hist.length}건을 지우고 ${from}부터 다시 만듭니다.\n계속할까요?`)) return false;
 
   const P1={}; (D1||[]).forEach(d=>{ P1[d.date]=d.close; });
-  const _cut=simCutoff(st.cur);                            // 장중이면 오늘 봉은 안 쓴다
+  const _cut=simCutoff(curOf(st));                            // 장중이면 오늘 봉은 안 쓴다
   const days=D.filter(d=>d.date>=from && d.date<=_cut && (!X1 || P1[d.date]>0));
   // 시작일이 오늘이면 거래일이 하루뿐이다 — 그것도 정상(그날 첫 편입만 하고 앞으로 굴린다)
   if(days.length<1){ alert('그 시작일부터의 거래일이 없습니다.'); return false; }
@@ -5261,7 +5258,7 @@ function renderDcaAnal(){
   const price=c.ready?(c.price||c.lastClose||0):0;
   _analPaint('anaD',{inv:P.inv, evalNow:price>0?price*P.shares:0, cash:0,
     avg:P.avg, qty:P.shares, cnt:`${P.nBuy} 매수`, cashLbl:'현금 (없음)',
-    rows:[`${P.nBuy}회`, c.lump?'—':`${P.nDip}회`], cur:c.st.cur});
+    rows:[`${P.nBuy}회`, c.lump?'—':`${P.nDip}회`], cur:curOf(c.st)});
   // 거치식엔 배수가 없다 — 행 이름을 방식으로 바꿔 '0회'가 규칙 미작동처럼 보이지 않게
   { const k=$('anaD_1'); if(k&&k.previousElementSibling) k.previousElementSibling.textContent = c.lump?'방식':'하락 배수 매수';
     if(c.lump&&k) k.textContent='거치식 (한 번 매수)'; }
@@ -5275,7 +5272,7 @@ function renderDcaAnal(){
     const hd=(curStrat().hist||[]).filter(h=>h&&h.date).map(h=>h.date).sort();
     const fl=P.flows||[];
     const hLast=hd[hd.length-1]||'', fLast=(fl[fl.length-1]||{}).date||'';
-    paintCashFlow('anaD', {flows:fl, base:P.inv, isKrw:(c.st.cur==='krw'),
+    paintCashFlow('anaD', {flows:fl, base:P.inv, isKrw:isKrwSt(c.st),
       from:hd[0]||(fl[0]||{}).date, to:(fLast>hLast?fLast:hLast),
       title:'분배금 현금 수입', outK:'수령', outSub:'계좌 밖으로 받은 분배금',
       lastK:'마지막 수령', show:cash>0}); }
@@ -5290,7 +5287,7 @@ function renderAsapAnal(){
     else if(x.type==='buy'){ nBuy++; if(x.from!=='reserve') inv+=(x.amt!=null?+x.amt:(+x.qty||0)*(+x.price||0)); } });
   _analPaint('anaA',{inv, evalNow:price>0?price*P.shares:0, cash:P.reserve,
     avg:P.avg, qty:P.shares, cnt:`${nBuy} 매수`, cashLbl:'리저브',
-    rows:[wn(P.reserve), `${nBuy}건`], cur:c.st.cur});
+    rows:[wn(P.reserve), `${nBuy}건`], cur:curOf(c.st)});
   /* 수익률 세 줄 — 무매 요약과 같은 구성. ASAP은 팔아도 계좌 안에 남으므로
      밖으로 나간 돈이 없다(out=0). 실현은 매도로 확정된 몫. */
   { let rz=0, sh=0, cost=0;
@@ -5300,7 +5297,7 @@ function renderAsapAnal(){
     const _dv=sessDivCash(c.st, h, ()=>renderAsapAnal());
     paintRet3('anaA', {base:inv, now:(price>0?price*P.shares:0)+P.reserve, realized:rz+_dv.divCash, out:_dv.divCash});
     const hd=h.filter(x=>x&&x.date).map(x=>x.date).sort(), fl=_dv.flows||[];
-    paintCashFlow('anaA', {flows:fl, base:inv, isKrw:(c.st.cur==='krw'),
+    paintCashFlow('anaA', {flows:fl, base:inv, isKrw:isKrwSt(c.st),
       from:hd[0]||(fl[0]||{}).date, to:(fl[fl.length-1]||{}).date||hd[hd.length-1],
       title:'분배금 현금 수입 <span class="sub" style="font-weight:400">시세 기준 추정</span>',
       outK:'수령', outSub:'계좌 밖으로 받은 분배금', lastK:'마지막 수령',
@@ -5371,7 +5368,6 @@ function computeAsap(){
 function fetchAsapQuote(){ loadAsapData(true); }
 async function loadAsapData(force){
   const st=curStrat().settings, note=$('asap_fetchnote');
-  if(krwNoAuto(st)){ if(note){note.className='fetchnote err';note.textContent='ⓘ 원화 종목은 설정에서 종목코드(6자리) 입력 시 자동 시세가 됩니다.';} return; }
   const sym=String(st.ticker||'SOXL').toUpperCase();
   if(!force && asapQuoteData && String(asapQuoteData.symbol||'').toUpperCase()===sym){ renderAsapNow(); renderAsapHist(); renderAsapAnal(); return; }
   if(note){note.className='fetchnote load';note.textContent='종가 이력 불러오는 중…';}
@@ -5566,7 +5562,7 @@ function delAsapFromEdit(){ if(editAsapIdx<0){closeEditAsap();return;} const i=e
 function refreshAsap(){
   paperAuto();   // 모의 세션이면 오늘까지 자동으로 굴린다
   renderAsapNow(); renderAsapHist(); renderAsapAnal(); renderStatusline();
-  if(S.activeTab==='asap'){ try{ if(!krwNoAuto(curStrat().settings)) loadAsapData(); }catch(e){console.error(e)} }
+  if(S.activeTab==='asap'){ try{ loadAsapData(); }catch(e){console.error(e)} }
 }
 
 /* 구버전 주문시트 호환용 (더 이상 사용 안 함) */
@@ -5578,11 +5574,6 @@ let vrChartRange=252, vrChartData=null, fgLoaded=false;
 async function loadVrChart(force){
   const st=curStrat().settings;
   $('chart_sym').textContent=tickerLabel(st.ticker||'TQQQ');
-  if(krwNoAuto(st)){
-    $('chart_note').className='fetchnote err';
-    $('chart_note').textContent='ⓘ 국내상장 ETF는 종목코드(6자리)를 입력하면 자동 차트가 됩니다.';
-    return;
-  }
   const _want=String(st.ticker||'TQQQ').toUpperCase();          // 종목이 다르면 캐시 적중이 아니다
   if(vrChartData && !force && lastQuote.vr && String(lastQuote.vr.symbol||'').toUpperCase()===_want){ drawVrChart(); return; }
   $('chart_note').className='fetchnote load'; $('chart_note').textContent='차트 불러오는 중…';
@@ -5643,11 +5634,6 @@ async function loadInfData(force){
   const st=curStrat().settings;
   $('inf_ten_sym').textContent=tickerLabel(st.ticker||'SOXL');
   $('inf_chart_sym').textContent=tickerLabel(st.ticker||'SOXL');
-  if(krwNoAuto(st)){
-    $('inf_ten_grid').innerHTML='<div class="note">ⓘ 국내상장 ETF는 종목코드(6자리)를 입력하면 자동 시세가 됩니다.</div>';
-    $('inf_chart_note').className='fetchnote err'; $('inf_chart_note').textContent='ⓘ 원화 세션은 자동 차트 미지원.';
-    return;
-  }
   // 캐시가 짧으면(구버전 1y 데이터 등) 무시하고 다시 받는다 — 국면 계산엔 200일+ 필요
   // 종목도 반드시 대조한다. 안 하면 SOXL 시세로 TQQQ 세션을 그리고, 모의 체결까지 남의 종가로 만든다.
   const _want=String(st.ticker||'SOXL').toUpperCase();
@@ -5657,7 +5643,7 @@ async function loadInfData(force){
      (마지막 봉 날짜로 비교하면 주말·휴장에 상한이 거래일을 앞질러 매번 다시 받게 된다) */
   const cacheOK = infQuoteCache && infQuoteCache.days && infQuoteCache.days.length>=300
                   && String(infQuoteCache.symbol||'').toUpperCase()===_want
-                  && infQuoteCache.cut===simCutoff(st.cur);
+                  && infQuoteCache.cut===simCutoff(curOf(st));
   if(cacheOK && !force){ renderInfRecent(); renderInfDay(); drawInfChart(); drawInfRSI(); drawRegimeChart(); renderInfFx(); renderOrderInline(); return; }
   $('inf_chart_note').className='fetchnote load'; $('inf_chart_note').textContent='시세 불러오는 중…';
   const q=await fetchDaily(st.ticker||'SOXL');
@@ -5665,9 +5651,9 @@ async function loadInfData(force){
   // 그대로 render*를 부르면 그 기록을 무매 형식으로 해석해 computeInf가 터진다
   if(S.activeTab!=='inf') return;
   if(q){
-    infQuoteCache=q; infQuoteCache.cut=simCutoff(st.cur); infChartData=q.days;
+    infQuoteCache=q; infQuoteCache.cut=simCutoff(curOf(st)); infChartData=q.days;
     const live=(q.price!=null&&q.price>0)?q.price:q.last.close;
-    const SL=settledLast(q.days,st.cur)||q.last;              // 종가는 확정된 봉만
+    const SL=settledLast(q.days,curOf(st))||q.last;              // 종가는 확정된 봉만
     lastQuote.inf={symbol:q.symbol,last:SL.close,lastDate:SL.date,price:live,days:q.days,ohlc:q.ohlc||null};
     _afterQuote();
     renderInfRecent(); renderInfDay(); drawInfChart(); drawInfRSI(); drawRegimeChart(); renderInfFx(); renderOrderInline();
@@ -5887,18 +5873,13 @@ function drawFgChart(){
 async function loadInfChart(force){
   const st=curStrat().settings;
   $('inf_chart_sym').textContent=tickerLabel(st.ticker||'SOXL');
-  if(krwNoAuto(st)){
-    $('inf_chart_note').className='fetchnote err';
-    $('inf_chart_note').textContent='ⓘ 국내상장 ETF는 종목코드(6자리)를 입력하면 자동 차트가 됩니다.';
-    return;
-  }
   if(infChartData && !force){ drawInfChart(); drawInfRSI(); return; }
   $('inf_chart_note').className='fetchnote load'; $('inf_chart_note').textContent='차트 불러오는 중…';
   const q=await fetchDaily(st.ticker||'SOXL');
   if(q){
     infChartData=q.days;
     const live=(q.price!=null&&q.price>0)?q.price:q.last.close;
-    const SL=settledLast(q.days,st.cur)||q.last;              // 종가는 확정된 봉만
+    const SL=settledLast(q.days,curOf(st))||q.last;              // 종가는 확정된 봉만
     lastQuote.inf={symbol:q.symbol,last:SL.close,lastDate:SL.date,price:live,days:q.days,ohlc:q.ohlc||null};
     $('inf_chart_note').className='fetchnote ok';
     $('inf_chart_note').textContent=`✓ ${q.symbol} ${SL.date} 종가 ${px(SL.close)}${live!==SL.close?` · 현재가 ${px(live)}`:''}${q.src==='yahoo-query1'||q.src==='yahoo-query2'||q.src==='api'?'':' (프록시)'}`;
@@ -6129,7 +6110,7 @@ function _histLast(sess){ const h=sess.hist||[]; return h.length?h[h.length-1].d
 
 /* 섀넌·로테 — 시작일부터 통째로 재생성 (규칙이 시세만으로 결정되므로 결과가 같다) */
 function _paperRegen(sess, from, inputId, replayFn, days){
-  const last=_lastTradingDay(settledBars(days,(sess.settings||{}).cur)); if(!last) return null;
+  const last=_lastTradingDay(settledBars(days,curOf(sess.settings))); if(!last) return null;
   from=_clampFrom(from,last);
   // 로테·섀넌은 신호가 난 날에만 기록이 생겨 마지막 기록이 몇 달 전일 수 있다.
   // '어디까지 만들었나'는 기록 날짜가 아니라 simLast로 따로 들고 간다.
@@ -6152,7 +6133,7 @@ function _paperDca(sess, from){
   const st=sess.settings, sym=String(st.ticker||'USD').toUpperCase();
   const days=(dcaQuoteData && String(dcaQuoteData.symbol||'').toUpperCase()===sym && dcaQuoteData.days)?dcaQuoteData.days:null;
   if(!days||days.length<2) return null;
-  const last=_lastTradingDay(settledBars(days,st.cur));   // 장중이면 오늘 봉은 안 쓴다
+  const last=_lastTradingDay(settledBars(days,curOf(st)));   // 장중이면 오늘 봉은 안 쓴다
   if(!last || (st.simLast||'')>=last) return null;
   from=_clampFrom(from,last);
   // 매수 체결가는 raw 종가 — adjclose로 사면 배당 재투자가 이미 섞인 값이라
@@ -6162,7 +6143,7 @@ function _paperDca(sess, from){
   const cl=days.map(d=>d.close), n=cl.length, sma=new Array(n);
   { let s2=0; const buf=[]; for(let i=0;i<n;i++){ buf.push(cl[i]); s2+=cl[i];
       if(buf.length>DCA_N_AUTO) s2-=buf.shift(); sma[i]= buf.length===DCA_N_AUTO ? s2/DCA_N_AUTO : null; } }
-  const today=simCutoff(st.cur);
+  const today=simCutoff(curOf(st));
   const freq=st.freq||'month', amt=+st.amount||0;
   const lump=(st.mode==='lump');
   const mul=lump?1:(+st.dipMul||1);
@@ -6192,13 +6173,13 @@ function _paperAsap(sess, from){
   const st=sess.settings, sym=String(st.ticker||'SOXL').toUpperCase();
   const days=(asapQuoteData && String(asapQuoteData.symbol||'').toUpperCase()===sym && asapQuoteData.days)?asapQuoteData.days:null;
   if(!days||days.length<2) return null;
-  const last=_lastTradingDay(settledBars(days,st.cur));   // 장중이면 오늘 봉은 안 쓴다
+  const last=_lastTradingDay(settledBars(days,curOf(st)));   // 장중이면 오늘 봉은 안 쓴다
   if(!last || (st.simLast||'')>=last) return null;
   from=_clampFrom(from,last);
   const cl=days.map(d=>d.close), n=cl.length;
   const MA5=_asapMA(cl,5), MA20=_asapMA(cl,20), MA50=_asapMA(cl,50), MA200=_asapMA(cl,200), RSI=_asapRSI(cl);
   const base=+st.base||10, mid=+st.mid||50, deep=+st.deep||100;
-  const today=simCutoff(st.cur);
+  const today=simCutoff(curOf(st));
   const rec=[]; let sgov=0, stage=0, ts=1;
   const _sgov=(d,a)=>{ if(a>0){ sgov+=a; rec.push({type:'sgov',date:d,amt:+a.toFixed(2),sim:true,ts:ts++}); } };
   const _buy=(d,c,a,fromRes)=>{ if(!(a>0)||!(c>0))return; const q=a/c;
@@ -6530,7 +6511,7 @@ function paperStat(tab, sess){
        인출 =  나간 돈             ÷ 원금         매도해서 계좌 밖으로 뺀 것
      현재 + 인출 = 최종. 단리 세션은 초과익이 계좌 밖으로 빠지므로 이 셋이 크게 갈린다. */
   const outAmt=(_out&&((_out.saved||0)+(_out.withdrawn||0)))||0;
-  return {tab, id:sess.id, name:sess.name, sym, cur:st.cur||'usd', from, to, yrs, spanDays, inflow:base, total,
+  return {tab, id:sess.id, name:sess.name, sym, cur:curOf(st), from, to, yrs, spanDays, inflow:base, total,
     ret:(total/base-1)*100, retNow:((total-outAmt)/base-1)*100, retOut:(outAmt/base)*100,
     cagr:(Math.pow(Math.max(total,1)/base,1/yrs)-1)*100, nTrade, price, out:_out};
 }
@@ -6689,7 +6670,7 @@ function paperValSummary(fieldOf){
   const seen=[];
   paperSessions().forEach(([tab,x])=>{
     const st=x.settings||{}, f=fieldOf(tab,st); if(!f) return;
-    const txt=wnCur(+st[f]||0, st.cur);
+    const txt=wnCur(+st[f]||0, curOf(st));
     if(!seen.includes(txt)) seen.push(txt);
   });
   const n=paperSessions().filter(([tab,x])=>fieldOf(tab,(x.settings||{}))).length;
@@ -6862,7 +6843,7 @@ function vrSimForward(){
   const O=(lastQuote.vr && String(lastQuote.vr.symbol||'').toUpperCase()===sym && lastQuote.vr.ohlc) ? lastQuote.vr.ohlc : null;
   if(!O||!O.length) return null;
   let c=computeVr();
-  const cut=simCutoff(st.cur);                            // 장중이면 오늘 봉은 안 쓴다
+  const cut=simCutoff(curOf(st));                            // 장중이면 오늘 봉은 안 쓴다
   if(c.V<=0 || c.qty<1){
     // 첫 매수도 자동으로 — 모의 시작일 종가에 초기 투자금만큼 산 것으로 시작한다
     const s0=_clampFrom(paperStart(sess), cut); if(!s0) return null;
@@ -7199,7 +7180,7 @@ function infSuggest(kind){
 function sheetSelInf(kind){
   shKind=kind;
   document.querySelectorAll('#sheet .kindopt').forEach(o=>o.classList.toggle('sel',o.dataset.kind===kind));
-  const sym=(curStrat().settings.cur==='krw')?'₩':'$';
+  const sym=(curCurrency()==='krw')?'₩':'$';
   const today=new Date().toISOString().slice(0,10);
   let f=`<div class="field"><label>날짜</label><input id="sh_date" type="date" value="${today}"></div>`;
   if(isCx(kind)){
@@ -7303,7 +7284,7 @@ function sheetSaveInf(){
 /* ── VR 시트 ── */
 let shVrType='buy';
 function sheetVrHTML(today){
-  const sym=(curStrat().settings.cur==='krw')?'₩':'$';
+  const sym=(curCurrency()==='krw')?'₩':'$';
   let h='';
   h+=`<div class="sheetseclbl">거래 유형</div>`;
   const types=[['buy','매수','buy'],['sell','매도','sell'],['add','적립 (Pool 추가)','cx'],['wd','인출 (Pool 차감)','cx'],['div','배당 (Pool 입금)','cx']];
@@ -7386,7 +7367,7 @@ function renderOrderInline(){
   renderOrder();
 }
 function updateCurLabels(which){
-  const isKrw=(curStrat().settings.cur||'usd')==='krw';
+  const isKrw=(curCurrency()==='krw');
   const sym=isKrw?'₩':'$';
   if(which==='inf'){
     const a=$('o_close_lbl');if(a)a.innerHTML=`전일 종가 (${sym}) <span class="hint">LOC 기준가</span>`;
@@ -7395,14 +7376,10 @@ function updateCurLabels(which){
   }else{
     const a=$('vn_price_lbl');if(a)a.innerHTML=`현재가 (${sym}) <span class="hint">보유수량 × 현재가 = 평가금</span>`;
     const b=$('vn_eval_lbl');if(b)b.innerHTML=`현재 평가금 (${sym}) <span class="hint">수동 수정 가능</span>`;
-    // 원화(국내상장) 세션: 종목코드 있으면 자동 허용, 없으면 버튼 숨김
-    const noAuto=krwNoAuto(curStrat().settings);
-    const btn=$('vn_autobtn'); if(btn) btn.style.display = noAuto ? 'none' : '';
+    // 종목코드로 통화가 정해지므로 자동 시세를 막을 이유가 없다 — 버튼은 늘 보인다
+    const btn=$('vn_autobtn'); if(btn) btn.style.display='';
     const note=$('vn_fetchnote');
-    if(note){
-      if(noAuto){ note.className='fetchnote'; note.textContent='국내상장 ETF는 설정에서 종목코드(6자리)를 입력하면 자동 시세가 됩니다.'; }
-      else { if(note.textContent.includes('국내상장')) note.textContent=''; }
-    }
+    if(note && note.textContent.includes('국내상장')) note.textContent='';
   }
 }
 
@@ -7567,10 +7544,10 @@ function switchSess(id){
   // 새 세션 자동 로딩
   try{
     if(S.activeTab==='inf'){ loadInfData(true); loadInfFG(); loadFX(); }
-    else if(S.activeTab==='ma'){ if(!krwNoAuto(curStrat().settings)) loadMaData(true); }
+    else if(S.activeTab==='ma'){ loadMaData(true); }
     else if(S.activeTab==='ivs'){ loadIvsData(true); }
     else if(S.activeTab==='dca'){ loadDcaData(true); }
-    else { if(!krwNoAuto(curStrat().settings)) fetchQuote('vr'); loadVrChart(true); loadFearGreed(); }
+    else { fetchQuote('vr'); loadVrChart(true); loadFearGreed(); }
   }catch(e){console.error(e)}
 }
 function clearInputs(){
@@ -7785,7 +7762,7 @@ function openSettings(){
     const st=s.settings;
     $('set_ivsticker_in').value=st.ticker||'TQQQ'; segSet('set_ivss0',String(st.s0||55));
     segSet('set_ivslook',String(st.look||40)); segSet('set_ivsband',String(st.band||15));
-    segSet('set_ivspark',st.park||'bill'); segSet('set_ivsmode',st.mode||'iv'); segSet('set_ivscur',st.cur||'usd'); segSet('set_ivsdivmode',st.divmode||'reinv');
+    segSet('set_ivspark',st.park||'bill'); segSet('set_ivsmode',st.mode||'iv'); segSet('set_ivsdivmode',st.divmode||'reinv');
     $('set_ivsprincipal').value=nfix(st.principal||0,0);
     $('set_ivsmonthly').value=nfix(st.monthly||0,0);
     syncIvsSetUI(st.park||'bill', st.ticker||'TQQQ', st.mode||'iv');
@@ -7793,18 +7770,18 @@ function openSettings(){
     $('set_inf').style.display='none';$('set_vr').style.display='none';if(setDca)setDca.style.display='';
     const st=s.settings;
     $('set_dcaticker_in').value=st.ticker||'USD'; segSet('set_dcafreq',st.freq||'month'); segSet('set_dcamul',String(st.dipMul||2));
-    segSet('set_dcamode',st.mode||'dca'); segSet('set_dcareinv',st.reinv?'reinv':'cash'); segSet('set_dcacur',st.cur||'usd');
+    segSet('set_dcamode',st.mode||'dca'); segSet('set_dcareinv',st.reinv?'reinv':'cash');
     $('set_dcaamt').value=nfix(st.amount||0,0);
     dcaModeUI();
   }else if(S.activeTab==='asap'){
     $('set_inf').style.display='none';$('set_vr').style.display='none';if(setAsap)setAsap.style.display='';
     const st=s.settings;
     $('set_asapticker_in').value=st.ticker||'SOXL';
-    $('set_asapbase').value=nfix(st.base||10,0); $('set_asapmid').value=nfix(st.mid||50,0); $('set_asapdeep').value=nfix(st.deep||100,0); segSet('set_asapcur',st.cur||'usd'); segSet('set_asapdivmode',st.divmode||'reinv');
+    $('set_asapbase').value=nfix(st.base||10,0); $('set_asapmid').value=nfix(st.mid||50,0); $('set_asapdeep').value=nfix(st.deep||100,0); segSet('set_asapdivmode',st.divmode||'reinv');
   }else if(S.activeTab==='inf'){
     $('set_inf').style.display='';$('set_vr').style.display='none';
-    const st=s.settings, sym=(st.cur||'usd')==='krw'?'₩':'$';
-    $('set_ticker_in').value=st.ticker||'SOXL';segSet('set_div',String(st.div));segSet('set_cur',st.cur||'usd');segSet('set_infdivmode',st.divmode||'reinv');segSet('set_engine',st.engine||'v40');segSet('set_shortma',String(st.shortMA||30));segSet('set_lopct',String(st.loPct||6));segSet('set_reverse',st.reverse===true?'1':'0');segSet('set_compound',st.compound===false?'0':'1');segSet('set_tgtdyn',st.tgtDyn===true?'1':'0');syncShortMaUI(st.engine||'v40');syncTgtNote();
+    const st=s.settings, sym=isKrwSt(st)?'₩':'$';
+    $('set_ticker_in').value=st.ticker||'SOXL';segSet('set_div',String(st.div));segSet('set_infdivmode',st.divmode||'reinv');segSet('set_engine',st.engine||'v40');segSet('set_shortma',String(st.shortMA||30));segSet('set_lopct',String(st.loPct||6));segSet('set_reverse',st.reverse===true?'1':'0');segSet('set_compound',st.compound===false?'0':'1');segSet('set_tgtdyn',st.tgtDyn===true?'1':'0');syncShortMaUI(st.engine||'v40');syncTgtNote();
     $('set_target').value=st.target;$('set_big').value=st.big;$('set_principal').value=nfix(st.principal,0);
     if($('set_rows'))$('set_rows').value=st.rows!=null?st.rows:8;
     if($('set_gap'))$('set_gap').value=st.gap!=null?st.gap:2.5;
@@ -7813,12 +7790,12 @@ function openSettings(){
   }else if(S.activeTab==='ma'){
     $('set_inf').style.display='none';$('set_vr').style.display='none';if(setMa)setMa.style.display='';
     const st=s.settings;
-    { const cd=maCond(st); $('set_maticker_in').value=st.ticker||'SOXL';segSet('set_macur',st.cur||'usd');segSet('set_madivmode',st.divmode||'reinv');segSet('set_mabuy',cd.buy);segSet('set_masell',cd.sell);segSet('set_mapark',st.park||'cash'); }
+    { const cd=maCond(st); $('set_maticker_in').value=st.ticker||'SOXL';segSet('set_madivmode',st.divmode||'reinv');segSet('set_mabuy',cd.buy);segSet('set_masell',cd.sell);segSet('set_mapark',st.park||'cash'); }
     $('set_maprincipal').value=nfix(st.principal,0);
   }else{
     $('set_inf').style.display='none';$('set_vr').style.display='';
-    const st=s.settings, sym=(st.cur||'usd')==='krw'?'₩':'$';
-    $('set_vticker').value=st.ticker;segSet('set_vmode',String(st.mode));segSet('set_vformula',st.formula);segSet('set_vcur',st.cur||'usd');segSet('set_vrdivmode',st.divmode||'reinv');
+    const st=s.settings, sym=isKrwSt(st)?'₩':'$';
+    $('set_vticker').value=st.ticker;segSet('set_vmode',String(st.mode));segSet('set_vformula',st.formula);segSet('set_vrdivmode',st.divmode||'reinv');
     segSet('set_vauto',st.autoCyc?'1':'0');
     $('set_g').value=st.g;$('set_add').value=nfix(st.add,0);$('set_band').value=st.band;$('set_startv').value=nfix(st.startv,0);$('set_startpool').value=nfix(st.startpool,0);
     $('set_initamt').value=nfix(st.initAmt!=null?st.initAmt:10000,0);
@@ -7827,6 +7804,7 @@ function openSettings(){
     $('set_startpool_lbl').textContent=`시작 Pool (${sym})`;
     applyVrModeUI(st.mode);
   }
+  syncSetCurLabels();
   $('setModal').classList.add('on');
 }
 function closeSettings(){$('setModal').classList.remove('on')}
@@ -7843,6 +7821,7 @@ function syncIvsSetUI(park,ticker,mode){
    입력 자체는 자유다 — 목록에 없어도 티커를 그대로 쓸 수 있다. */
 const _tk={timer:null, seq:0};
 function tkSearch(id){
+  syncSetCurLabels();   // 종목이 통화를 정하므로 치는 즉시 라벨이 따라와야 한다
   const el=$(id), box=$(id+'_list'); if(!el||!box) return;
   const q=String(el.value||'').trim();
   clearTimeout(_tk.timer);
@@ -7888,11 +7867,15 @@ function applyVrModeUI(mode){
   const isLump=String(mode)==='0.5', isWd=String(mode)==='0.25';
   const inp=$('set_add'); if(inp) inp.disabled=isLump;
   const lbl=$('set_add_lbl'); if(lbl){ lbl.style.opacity=isLump?'0.4':'1';
-    lbl.textContent = isWd ? '매 사이클 인출금 ($)' : '매 사이클 적립금 ($)'; }   // 인출식이면 '인출금'으로 (백테와 라벨 일치)
+    const cs=isKrCode(($('set_vticker')||{}).value)?'₩':'$';
+    lbl.textContent = (isWd ? '매 사이클 인출금 (' : '매 사이클 적립금 (')+cs+')';   // 인출식이면 '인출금'으로 (백테와 라벨 일치)
+    [...lbl.childNodes].forEach(nd=>{ if(nd.nodeType===3) delete nd.__curBase; }); }
   // 초기 투자금은 세 모드 모두 쓴다 — 첫 매수 금액이자 곧 0주차 V가 된다
-  const il=$('set_initamt_lbl'), csym=(segGet('set_vcur')==='krw')?'₩':'$';
-  if(il) il.innerHTML = `초기 투자금 (${csym}) <span class="hint">`
+  const il=$('set_initamt_lbl'), csym=isKrCode(($('set_vticker')||{}).value)?'₩':'$';
+  if(il){ il.innerHTML = `초기 투자금 (${csym}) <span class="hint">`
     + (isLump ? '첫 매수에 넣을 목돈' : '첫 매수 금액 · 보통 적립금과 같게') + '</span>';
+    // innerHTML을 새로 쓰면 라벨 원문 캐시가 날아간다 — 새 글자 노드로 다시 잡게 둔다
+    il.childNodes.forEach&&[...il.childNodes].forEach(nd=>{ if(nd.nodeType===3) delete nd.__curBase; }); }
 }
 // V4.0이면 국면선 선택 비활성화 (국면 개념 없음)
 function syncShortMaUI(eng){
@@ -7906,17 +7889,28 @@ function syncShortMaUI(eng){
   const note=$('set_lopct')&&$('set_lopct').nextElementSibling;
   if(note&&note.classList.contains('note')) note.style.opacity=on?'1':'0.4';
 }
+/* ── 설정창 라벨의 통화 ──
+   통화를 고르는 칸을 없앴으니, 라벨의 ($) 는 그 탭의 종목칸을 따라가야 한다.
+   라벨 안에 <span class="hint"> 꼬리표가 붙은 칸이 있어 글자 노드만 손댄다. */
+function syncSetCurLabels(){
+  document.querySelectorAll('#setModal [data-tk]').forEach(el=>{
+    const tk=$(el.dataset.tk), c=isKrCode(tk&&tk.value)?'₩':'$';
+    for(const nd of el.childNodes){
+      if(nd.nodeType!==3) continue;
+      if(nd.__curBase===undefined){ if(!/\(\s*[\u20a9$]\)/.test(nd.nodeValue)) continue; nd.__curBase=nd.nodeValue; }
+      nd.nodeValue=nd.__curBase.replace(/\(\s*[\u20a9$]\)/, '('+c+')');
+      break;
+    }
+  });
+}
 function setupSegs(){
-  ['set_macur','set_ivscur','set_dcacur','set_asapcur','set_div','set_reverse','set_tgtdyn','set_vmode','set_vformula','set_cur','set_vcur','set_engine','set_shortma','set_lopct','set_mabuy','set_masell','set_mapark','set_compound','set_dcamode','set_dcareinv','set_dcafreq','set_dcamul',
+  ['set_div','set_reverse','set_tgtdyn','set_vmode','set_vformula','set_engine','set_shortma','set_lopct','set_mabuy','set_masell','set_mapark','set_compound','set_dcamode','set_dcareinv','set_dcafreq','set_dcamul',
    'set_infdivmode','set_vrdivmode','set_madivmode','set_ivsdivmode','set_asapdivmode',
    'set_vauto','set_ivss0','set_ivslook','set_ivsband','set_ivspark','set_ivsmode'].forEach(id=>{
     const el=$(id);if(!el)return;
     el.querySelectorAll('button').forEach(b=>{
       b.onclick=()=>{el.querySelectorAll('button').forEach(x=>x.classList.remove('on'));b.classList.add('on');
-        // 통화 토글 시 설정창 라벨 즉시 갱신
         if(id==='set_engine') syncShortMaUI(b.dataset.v);
-        if(id==='set_cur'){const sym=b.dataset.v==='krw'?'₩':'$';$('set_principal_lbl').textContent=`원금 (${sym})`;}
-        if(id==='set_vcur'){const sym=b.dataset.v==='krw'?'₩':'$';$('set_add_lbl').textContent=`매 사이클 적립금 (${sym})`;$('set_startv_lbl').innerHTML=`시작 V (${sym}) <span class="hint">0이면 첫 매수가 V</span>`;$('set_startpool_lbl').textContent=`시작 Pool (${sym})`;applyVrModeUI(segGet('set_vmode')||'0.75');}
         // 종목 변경 시 익절배율(별%) 오피셜 기본값 자동 세팅 — TQQQ 15% / SOXL 20%
         if(id==='set_engine'){ syncShortMaUI(b.dataset.v); syncTgtNote(); }
         if(id==='set_dcamode') dcaModeUI();          // 적립↔거치 전환 시 칸·라벨 갱신
@@ -7935,8 +7929,8 @@ function setupSegs(){
    그대로 남아 화면 설정과 기록이 어긋났다.
    실계좌 세션은 사람이 넣은 실제 거래이므로 절대 건드리지 않는다. */
 const SIM_KEYS={
-  inf :['ticker','div','target','reverse','tgtDyn','principal','cur','compound'],
-  vr  :['ticker','mode','formula','g','add','initAmt','autoCyc','band','cur'],
+  inf :['ticker','div','target','reverse','tgtDyn','principal','compound'],
+  vr  :['ticker','mode','formula','g','add','initAmt','autoCyc','band'],
   ma  :['ticker','buy','sell','park','principal'],
   ivs :['ticker','mode','s0','look','band','park','principal','monthly'],
   dca :['ticker','mode','freq','amount','dipMul','reinv'],
@@ -7988,25 +7982,25 @@ function saveSettings(){
       tgtDyn:segGet('set_tgtdyn')==='1',
       rowsOn:$('set_rows_on')?$('set_rows_on').checked:false,
       rows:Math.max(0,Math.min(20,+$('set_rows').value||0)),gap:+$('set_gap').value||2.5,
-      rowqty:1,principal:inputNum('set_principal')||10000,cur:segGet('set_cur')||'usd',divmode:segGet('set_infdivmode')||'reinv',
+      rowqty:1,principal:inputNum('set_principal')||10000,divmode:segGet('set_infdivmode')||'reinv',
       simLast:(s.settings&&s.settings.simLast)||undefined};   // 모의 체결 진행점은 설정 저장으로 날아가면 안 된다
   }else if(S.activeTab==='ma'){
-    s.settings={ticker:tkVal('set_maticker_in','SOXL'),buy:segGet('set_mabuy')||'ma',sell:segGet('set_masell')||'ma',park:segGet('set_mapark')||'cash',principal:inputNum('set_maprincipal')||10000,cur:segGet('set_macur')||'usd',divmode:segGet('set_madivmode')||'reinv'};
+    s.settings={ticker:tkVal('set_maticker_in','SOXL'),buy:segGet('set_mabuy')||'ma',sell:segGet('set_masell')||'ma',park:segGet('set_mapark')||'cash',principal:inputNum('set_maprincipal')||10000,divmode:segGet('set_madivmode')||'reinv'};
   }else if(S.activeTab==='ivs'){
     s.settings={ticker:tkVal('set_ivsticker_in','TQQQ'),mode:segGet('set_ivsmode')||'iv',
       s0:+segGet('set_ivss0')||55,look:+segGet('set_ivslook')||40,
       band:+segGet('set_ivsband')||15,park:segGet('set_ivspark')||'bill',
       principal:Math.max(0,inputNum('set_ivsprincipal')||0),
-      monthly:Math.max(0,inputNum('set_ivsmonthly')||0),cur:segGet('set_ivscur')||'usd',
+      monthly:Math.max(0,inputNum('set_ivsmonthly')||0),
       divmode:segGet('set_ivsdivmode')||'reinv'};
     ivsQuote1=null;   // 짝·종목이 바뀌었을 수 있으니 1배 시세 캐시를 비운다
   }else if(S.activeTab==='dca'){
     s.settings={ticker:tkVal('set_dcaticker_in','USD'),mode:segGet('set_dcamode')||'dca',
       freq:segGet('set_dcafreq')||'month',
       amount:inputNum('set_dcaamt')||0,dipMul:+segGet('set_dcamul')||1,
-      reinv:segGet('set_dcareinv')==='reinv',cur:segGet('set_dcacur')||'usd'};
+      reinv:segGet('set_dcareinv')==='reinv'};
   }else if(S.activeTab==='asap'){
-    s.settings={ticker:tkVal('set_asapticker_in','SOXL'),base:inputNum('set_asapbase')||10,mid:inputNum('set_asapmid')||50,deep:inputNum('set_asapdeep')||100,cur:segGet('set_asapcur')||'usd',divmode:segGet('set_asapdivmode')||'reinv'};
+    s.settings={ticker:tkVal('set_asapticker_in','SOXL'),base:inputNum('set_asapbase')||10,mid:inputNum('set_asapmid')||50,deep:inputNum('set_asapdeep')||100,divmode:segGet('set_asapdivmode')||'reinv'};
   }else{
     // 사이클 번호·시작일·사이클 기록은 설정창에서 입력하는 값이 아니라 진입 버튼이 쌓은 파생 상태다.
     // settings를 통째로 갈아끼우면 설정을 한 번 저장할 때마다 주차가 0으로 돌아가고
@@ -8016,7 +8010,7 @@ function saveSettings(){
     s.settings={...keep, ticker:$('set_vticker').value||'TQQQ',mode:+segGet('set_vmode')||0.75,
       formula:segGet('set_vformula')||'basic',g:inputNum('set_g')||10,add:inputNum('set_add')||100,
       initAmt:Math.max(0,inputNum('set_initamt')||0),autoCyc:segGet('set_vauto')==='1',
-      band:inputNum('set_band')||15,startv:inputNum('set_startv')||0,startpool:inputNum('set_startpool')||0,cur:segGet('set_vcur')||'usd',divmode:segGet('set_vrdivmode')||'reinv'};
+      band:inputNum('set_band')||15,startv:inputNum('set_startv')||0,startpool:inputNum('set_startpool')||0,divmode:segGet('set_vrdivmode')||'reinv'};
   }
   // 모의 세션이면 여기서 바로 다시 만들어 준다 (어긋남 판정은 paperAuto가 지문으로 한다).
   // 종목이 바뀌었으면 시세 로더가 끝난 뒤 _afterQuote가 이어서 만든다.
@@ -8068,11 +8062,11 @@ function setupTabs(){
       t.classList.add('on');$(t.dataset.t).classList.add('on');
       S.activeTab=t.dataset.t;save();renderSessbar();renderStatusline();
       if(t.dataset.t==='inf'){ refreshInf(); try{loadInfData();loadInfFG();loadFX();}catch(e){console.error(e)} showFab(); }
-      else if(t.dataset.t==='ma'){ refreshMa(); try{ if(!krwNoAuto(curStrat().settings)) loadMaData(); }catch(e){console.error(e)} hideFab(); }
+      else if(t.dataset.t==='ma'){ refreshMa(); try{ loadMaData(); }catch(e){console.error(e)} hideFab(); }
       else if(t.dataset.t==='ivs'){ refreshIvs(); try{ loadIvsData(); }catch(e){console.error(e)} hideFab(); }
       else if(t.dataset.t==='dca'){ refreshDca(); try{ loadDcaData(); }catch(e){console.error(e)} hideFab(); }
-      else if(t.dataset.t==='asap'){ refreshAsap(); try{ if(!krwNoAuto(curStrat().settings)) loadAsapData(); }catch(e){console.error(e)} hideFab(); }
-      else { refreshVr(); try{ if(!krwNoAuto(curStrat().settings)){ fetchQuote('vr'); } loadVrChart(); loadFearGreed(); }catch(e){console.error(e)} showFab(); }
+      else if(t.dataset.t==='asap'){ refreshAsap(); try{ loadAsapData(); }catch(e){console.error(e)} hideFab(); }
+      else { refreshVr(); try{ fetchQuote('vr'); loadVrChart(); loadFearGreed(); }catch(e){console.error(e)} showFab(); }
       cancelHold(); window.scrollTo({top:0,behavior:'smooth'});
     };
   });
