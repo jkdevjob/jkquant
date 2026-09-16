@@ -519,7 +519,7 @@ try{ if(localStorage.getItem('qcockpit_hadUser')==='1') document.documentElement
 </div>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.52</span></h1></div>
+    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.53</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -1579,7 +1579,7 @@ document.addEventListener('click',function(e){ var m=document.getElementById('jk
   <footer>
     <strong>JK 퀀트</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.52</b> · 2026-09-15</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.53</b> · 2026-09-15</div>
   </footer>
 </div>
 
@@ -6140,8 +6140,15 @@ function paperStat(tab, sess){
   const spanDays=Math.max(1,Math.round((new Date(to)-new Date(from))/864e5));
   const yrs=Math.max(0.05,(new Date(to)-new Date(from))/(365.25*864e5));   // 연환산 분모용 하한
   const nTrade=tradeCount(h);
+  /* 수익률을 셋으로 쪼갠다. 정확히 더해진다 —
+       최종 = (평가금+잔금+나간 돈) ÷ 원금 − 1
+       현재 = (평가금+잔금)        ÷ 원금 − 1     계좌에 지금 남아 있는 것
+       인출 =  나간 돈             ÷ 원금         매도해서 계좌 밖으로 뺀 것
+     현재 + 인출 = 최종. 단리 세션은 초과익이 계좌 밖으로 빠지므로 이 셋이 크게 갈린다. */
+  const outAmt=(_out&&((_out.saved||0)+(_out.withdrawn||0)))||0;
   return {tab, id:sess.id, name:sess.name, sym, cur:st.cur||'usd', from, to, yrs, spanDays, inflow:base, total,
-    ret:(total/base-1)*100, cagr:(Math.pow(Math.max(total,1)/base,1/yrs)-1)*100, nTrade, price, out:_out};
+    ret:(total/base-1)*100, retNow:((total-outAmt)/base-1)*100, retOut:(outAmt/base)*100,
+    cagr:(Math.pow(Math.max(total,1)/base,1/yrs)-1)*100, nTrade, price, out:_out};
 }
 function paperSummary(){
   const out=[];
@@ -6224,7 +6231,11 @@ async function openPaper(){
       : `<p class="lead">모의투자 세션이 없습니다.<br><br>· <b>새로 만들기</b> — 세션바의 <b>+ 세션</b> → <b>모의투자로 만들기</b> 체크 → 시작일 선택<br>· <b>기존 세션을 바꾸기</b> — 세션 이름을 <b>더블탭</b>하면 모의 전환·시작일을 정할 수 있습니다.<br><br>정하고 나면 그 뒤로는 알아서 오늘까지 굴러갑니다.</p>`;
   }else{
     const cur=rows.map(r=>r.price>0).every(Boolean);
-    let h=`<div class="htable-wrap"><table class="htable narrow"><tr><th>전략 · 세션</th><th>기간</th><th>평가</th><th>수익</th><th>연</th><th>투입</th></tr>`;
+    let h=`<div class="htable-wrap"><table class="htable narrow"><tr><th>전략 · 세션</th><th>기간</th><th>평가</th>`
+      + `<th title="평가금 + 잔금 + 나간 돈 ÷ 원금. 현재 + 인출 과 정확히 같습니다">최종</th>`
+      + `<th title="평가금 + 잔금 ÷ 원금 — 계좌에 지금 남아 있는 것만">현재</th>`
+      + `<th title="매도해서 계좌 밖으로 뺀 돈(단리 적립·출금) ÷ 원금">인출</th>`
+      + `<th>연</th><th>투입</th></tr>`;
     rows.forEach(r=>{ const up=r.ret>=0, ok=r.price>0;
       const days=r.spanDays||Math.round(r.yrs*365.25);
       const per = days<45 ? `${days}일` : `${(days/365.25).toFixed(1)}년`;
@@ -6243,9 +6254,13 @@ async function openPaper(){
         <td>${per}<span class="cw">${r.nTrade}거래</span></td>`
         + (ok
           ? `<td>${wnCur(r.total,r.cur)}</td>
-             <td style="color:${up?'var(--buy)':'var(--sell)'};font-weight:700">${up?'+':''}${r.ret.toFixed(1)}%</td>
-             <td style="color:${long?(up?'var(--buy)':'var(--sell)'):'var(--faint)'}">${cagr}</td>`
-          : `<td colspan="3" style="color:var(--gold)">시세 대기 — ${r.sym} 탭을 한 번 열어주세요</td>`)
+             <td style="color:${up?'var(--buy)':'var(--sell)'};font-weight:700">${up?'+':''}${r.ret.toFixed(1)}%</td>`
+             /* 나간 돈이 없으면 현재는 최종과 같은 값이고 인출은 0이다 —
+                같은 숫자를 굵게 두 번 띄우면 잡음이라 흐리게 두고 인출은 비운다 */
+             + `<td style="color:${outAmt>0?(r.retNow>=0?'var(--buy)':'var(--sell)'):'var(--faint)'}">${r.retNow>=0?'+':''}${r.retNow.toFixed(1)}%</td>`
+             + `<td style="color:${outAmt>0?'var(--gold)':'var(--faint)'}">${outAmt>0?'+'+r.retOut.toFixed(1)+'%':'—'}</td>`
+             + `<td style="color:${long?(up?'var(--buy)':'var(--sell)'):'var(--faint)'}">${cagr}</td>`
+          : `<td colspan="5" style="color:var(--gold)">시세 대기 — ${r.sym} 탭을 한 번 열어주세요</td>`)
         // 투입은 맨 오른쪽 — 눈이 먼저 가야 하는 건 성과(평가·수익·연)다
         + `<td style="color:var(--dim)">${wnCur(r.inflow,r.cur)}</td></tr>`; });
     h+=`</table></div>`;
