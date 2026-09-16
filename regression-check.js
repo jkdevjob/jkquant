@@ -1487,11 +1487,14 @@ console.log('[36] 분석 머리 — 여섯 탭 모두 손익금·손익률·원�
 console.log('[37] 모의 성과 표 — 투입은 맨 오른쪽');
 {
   const op=extractFn(idx,'async function openPaper()');
-  const head=(op.match(/<tr><th>전략 · 세션<\/th>[^`]*?<\/tr>/)||[''])[0];
-  ok('머리글 순서', /전략 · 세션[\s\S]*기간[\s\S]*평가[\s\S]*수익[\s\S]*연[\s\S]*투입/.test(head), head.slice(0,90));
+  // 수익 한 칸이 최종·현재·인출 셋으로 갈렸다 (v3.53)
+  const head=(op.match(/<tr><th>전략 · 세션<\/th>[\s\S]*?<\/tr>/)||[''])[0];
+  ok('머리글 순서',
+     /전략 · 세션[\s\S]*기간[\s\S]*평가[\s\S]*최종[\s\S]*현재[\s\S]*인출[\s\S]*연[\s\S]*투입/.test(head),
+     head.slice(0,90));
   ok('투입이 마지막 머리글', head.lastIndexOf('투입') > head.lastIndexOf('연'));
-  // 시세를 못 받은 줄은 평가·수익·연을 colspan 3으로 덮는다 — 투입은 그 뒤에 따로 온다
-  const iSpan=op.indexOf('colspan="3"'), iInflow=op.indexOf('${wnCur(r.inflow,r.cur)}');
+  // 시세를 못 받은 줄은 평가~연 다섯 칸을 colspan 으로 덮는다 — 투입은 그 뒤에 따로 온다
+  const iSpan=op.indexOf('colspan="5"'), iInflow=op.indexOf('${wnCur(r.inflow,r.cur)}');
   ok('투입 칸이 colspan 뒤에 온다', iSpan>0 && iInflow>iSpan);
   ok('투입 칸이 한 번만 그려진다', (op.match(/\$\{wnCur\(r\.inflow,r\.cur\)\}/g)||[]).length===1);
   ok('각주 설명도 표 순서와 같다', idx.indexOf('평가 = 보유 평가금') < idx.indexOf('투입 = 밖에서 넣은 돈'));
@@ -2229,6 +2232,44 @@ console.log('\n[53] 수동 현재가·평가금은 넣은 세션에서만 쓴다
   ok('세션을 옮기면 남의 값을 지운다',
      /function vnClear\(\)\{/.test(idx)
      && /function refreshVr\(\)\{[\s\S]{0,120}?vnClear\(\);/.test(idx));
+}
+
+/* ════ 54. 모의 성과 목록 — 수익률을 셋으로 나눈다 ════
+     최종 = (평가금+잔금+나간 돈) ÷ 원금 − 1
+     현재 = (평가금+잔금)        ÷ 원금 − 1     계좌에 지금 남아 있는 것
+     인출 =  나간 돈             ÷ 원금         매도해서 계좌 밖으로 뺀 것
+   셋은 정확히 더해진다: 현재 + 인출 = 최종.
+   단리 세션은 초과익이 계좌 밖으로 빠지므로 크게 갈린다 —
+   실측 SOXL 최종 +81.54% = 현재 +1.30% + 인출 +80.24%. */
+console.log('\n[54] 모의 성과 — 최종·현재·인출 세 칸');
+{
+  const ps=(()=>{ try{ return extractFn(idx,'function paperStat(tab, sess)'); }catch(e){ return ''; } })();
+  ok('셋을 다 돌려준다',
+     /ret:\(total\/base-1\)\*100, retNow:\(\(total-outAmt\)\/base-1\)\*100, retOut:\(outAmt\/base\)\*100/.test(ps));
+  ok('나간 돈은 출금 + 단리 적립이다',
+     /const outAmt=\(_out&&\(\(_out\.saved\|\|0\)\+\(_out\.withdrawn\|\|0\)\)\)\|\|0;/.test(ps));
+
+  // 더해지는지 식으로 확인한다 — (T-O)/B-1 + O/B === T/B-1
+  const B=30000, T=54463.20, O=24072.98;
+  const fin=(T/B-1)*100, now=((T-O)/B-1)*100, wd=(O/B)*100;
+  ok('현재 + 인출 = 최종', Math.abs((now+wd)-fin)<1e-9,
+     `${fin.toFixed(2)} vs ${(now+wd).toFixed(2)}`);
+
+  // 표에 세 칸이 사용자가 말한 순서로 있어야 한다
+  const head=(idx.match(/<tr><th>전략 · 세션<\/th>[\s\S]{0,700}?<\/tr>/)||[''])[0];
+  ok('최종·현재·인출 순으로 놓았다',
+     head.indexOf('>최종<')>0 && head.indexOf('>현재<')>head.indexOf('>최종<')
+     && head.indexOf('>인출<')>head.indexOf('>현재<'));
+  ok('각 칸이 무엇인지 적어 뒀다',
+     /title="평가금 \+ 잔금 \+ 나간 돈 ÷ 원금/.test(idx)
+     && /title="평가금 \+ 잔금 ÷ 원금/.test(idx)
+     && /title="매도해서 계좌 밖으로 뺀 돈/.test(idx));
+  // 나간 돈이 없으면 현재는 최종과 같은 값이다 — 굵게 두 번 띄우면 잡음
+  ok('나간 돈이 없으면 흐리게 두고 인출은 비운다',
+     /outAmt>0\?\(r\.retNow>=0\?'var\(--buy\)':'var\(--sell\)'\):'var\(--faint\)'/.test(idx)
+     && /\$\{outAmt>0\?'\+'\+r\.retOut\.toFixed\(1\)\+'%':'—'\}/.test(idx));
+  // 시세를 못 받은 줄은 평가~연 다섯 칸을 덮어야 한다
+  ok('시세 대기 줄이 칸 수를 맞춘다', /<td colspan="5" style="color:var\(--gold\)">시세 대기/.test(idx));
 }
 
 console.log(`\n════ 결과: ${pass} PASS / ${fail} FAIL ${fail===0?'— ALL PASS ★':'— 배포 금지, 위 ✗ 항목 수정 필요'} ════`);
