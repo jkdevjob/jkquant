@@ -2186,5 +2186,24 @@ console.log('\n[51] 목록을 열 때 같은 종목 시세를 두 번 받지 않
   ok('평소엔 캐시를 타지 않는다', /if\(!_fillQuoteCache\) return fn\(SYM\);/.test(idx));
 }
 
+/* ════ 52. '거래 수'를 두 군데서 따로 세지 않는다 ════
+   분석 탭은 "2 거래", 목록은 "1거래" 였다. VR 기록엔 매매 말고도
+   V 갱신·적립·인출이 같이 사는데 분석이 c.hist.length 로 전부 세고 있었다.
+   수익률·평가금은 소수점까지 같았는데 이 숫자만 갈려서 "다 다르다" 로 보였다.
+   같은 걸 두 군데서 따로 세면 또 어긋난다 — 한 함수로 모은다. */
+console.log('\n[52] 거래 수는 한 곳에서만 센다');
+{
+  ok('거래를 세는 함수가 하나 있다', /function tradeCount\(hist\)\{/.test(idx));
+  ok('매수·매도만 센다',
+     /return \/매수\|매도\/\.test\(k\)\|\|k==='buy'\|\|k==='sell'\|\|k==='in'\|\|k==='out'; \}\)\.length;/.test(idx));
+  const ps=(()=>{ try{ return extractFn(idx,'function paperStat(tab, sess)'); }catch(e){ return ''; } })();
+  ok('목록이 그 함수를 쓴다', /const nTrade=tradeCount\(h\);/.test(ps));
+  ok('VR 분석도 같은 함수를 쓴다',
+     /\$\('vc_cyc'\)\.textContent=tradeCount\(c\.hist\)\+' 거래';/.test(idx)
+     && !/vc_cyc'\)\.textContent=c\.hist\.length/.test(idx));
+  // 라벨이 '매도'·'청산'인 칸은 애초에 다른 걸 세는 것이므로 건드리지 않는다
+  ok('매도·청산 칸은 그대로', /\$\('a_cycles'\)\.textContent=sells\+' 매도'/.test(idx));
+}
+
 console.log(`\n════ 결과: ${pass} PASS / ${fail} FAIL ${fail===0?'— ALL PASS ★':'— 배포 금지, 위 ✗ 항목 수정 필요'} ════`);
 process.exit(fail===0?0:1);
