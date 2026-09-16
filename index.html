@@ -520,7 +520,7 @@ try{ if(localStorage.getItem('qcockpit_hadUser')==='1') document.documentElement
 </div>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.60</span></h1></div>
+    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.61</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -931,9 +931,14 @@ document.addEventListener('click',function(e){ var m=document.getElementById('jk
         <div class="statgrid" style="margin-top:9px"><div class="stat"><div class="sl">투자금 (순투입)</div><div class="sv sm mono" id="vc_invested">0$</div></div>
           <div class="stat"><div class="sl">수익률</div><div class="sv sm mono" id="vc_pct2" style="color:var(--buy)">+0%</div></div>
           <div class="stat"><div class="sl">총 적립금</div><div class="sv sm mono" id="vc_totadd">0$</div></div></div>
+        <div class="rowline" style="margin-top:4px"><span class="k">현재 수익률 <span class="sub">평가금 + Pool</span></span><span class="val mono" id="vc_ret_now">—</span></div>
+        <div class="rowline"><span class="k">실현 수익률 <span class="sub">매도 + 받은 분배금</span></span><span class="val mono" id="vc_ret_real">—</span></div>
+        <div class="rowline"><span class="k">누적 수익률 <span class="sub">인출 포함</span></span><span class="val mono" id="vc_ret">—</span></div>
+        <div class="rowline" id="vc_divrow" style="display:none"><span class="k">받은 분배금 <span class="sub">Pool에 남아 있다</span></span><span class="val mono" id="vc_div">—</span></div>
         <div class="rowline" style="margin-top:4px"><span class="k">총 매수 / 매도</span><span class="val mono" id="vc_buysell">0$ / 0$</span></div>
         <div class="rowline"><span class="k">명목평단 <span class="hint" style="color:var(--faint)">총매수/수량</span></span><span class="val mono" id="vc_avgnom">—</span></div>
         <div class="rowline"><span class="k">실효평단 <span class="hint" style="color:var(--faint)">(매수−매도−배당)/수량</span></span><span class="val mono" id="vc_avgeff">—</span></div></div>
+      <div class="card" id="vc_cfcard" style="display:none"></div>
 
       <!-- 종가 추이 차트 -->
       <div class="card"><div class="chart-head"><h3 style="margin:0;display:flex;align-items:center;gap:6px;min-width:0"><span class="dot" style="flex-shrink:0"></span><span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis"><span id="chart_sym">TQQQ</span> 종가 추이</span><span id="chart_chg" class="chgpos" style="flex-shrink:0">—</span></h3>
@@ -1136,12 +1141,15 @@ document.addEventListener('click',function(e){ var m=document.getElementById('jk
         <div class="pscale"><span>투자 비중</span><span id="ana_ratio">0%</span></div></div>
       <div class="card"><h3><span class="dot"></span>요약</h3>
         <div class="rowline"><span class="k">총 자산 <span class="sub">투자중 + 현금</span></span><span class="val mono" id="ana_total">0$</span></div>
-        <div class="rowline"><span class="k">누적 수익률</span><span class="val mono" id="ana_ret">—</span></div>
+        <div class="rowline"><span class="k">현재 수익률 <span class="sub">매수 상태 · 평가금 + 잔금</span></span><span class="val mono" id="ana_ret_now">—</span></div>
+        <div class="rowline"><span class="k">실현 수익률 <span class="sub">청산으로 확정된 것</span></span><span class="val mono" id="ana_ret_real">—</span></div>
+        <div class="rowline"><span class="k">누적 수익률 <span class="sub">출금 포함</span></span><span class="val mono" id="ana_ret">—</span></div>
         <div class="rowline"><span class="k">총 매수금</span><span class="val mono" id="ana_totbuy">0$</span></div>
         <div class="rowline"><span class="k">총 매도금</span><span class="val mono" id="ana_totsell">0$</span></div>
         <div class="rowline"><span class="k">현재 평단</span><span class="val mono" id="ana_avg">—</span></div>
         <div class="rowline"><span class="k">보유수량</span><span class="val mono" id="ana_qty">0주</span></div>
         <div class="rowline" id="ana_extra_row"><span class="k" id="ana_extra_k">—</span><span class="val mono" id="ana_extra">—</span></div></div>
+      <div class="card" id="ana_cfcard" style="display:none"></div>
     </div>
 
     <!-- ── 설명 ── -->
@@ -1289,7 +1297,9 @@ document.addEventListener('click',function(e){ var m=document.getElementById('jk
         <div class="pscale"><span>투자 비중</span><span id="anaI_ratio">0%</span></div></div>
       <div class="card"><h3><span class="dot"></span>요약</h3>
         <div class="rowline"><span class="k">총 자산 <span class="sub">투자중 + 현금</span></span><span class="val mono" id="anaI_total">0$</span></div>
-        <div class="rowline"><span class="k">누적 수익률</span><span class="val mono" id="anaI_ret">—</span></div>
+        <div class="rowline"><span class="k">현재 수익률 <span class="sub">매수 상태 · 평가금 + 잔금</span></span><span class="val mono" id="anaI_ret_now">—</span></div>
+        <div class="rowline"><span class="k">실현 수익률 <span class="sub">매도로 확정된 것</span></span><span class="val mono" id="anaI_ret_real">—</span></div>
+        <div class="rowline"><span class="k">누적 수익률 <span class="sub">출금 포함</span></span><span class="val mono" id="anaI_ret">—</span></div>
         <div class="rowline"><span class="k">총 매수금</span><span class="val mono" id="anaI_totbuy">0$</span></div>
         <div class="rowline"><span class="k">총 매도금</span><span class="val mono" id="anaI_totsell">0$</span></div>
         <div class="rowline"><span class="k">현재 평단</span><span class="val mono" id="anaI_avg">—</span></div>
@@ -1297,6 +1307,7 @@ document.addEventListener('click',function(e){ var m=document.getElementById('jk
         <div class="rowline"><span class="k">평가손익 <span class="sub">아직 안 판 몫</span></span><span class="val mono" id="anaI_unreal">—</span></div>
         <div class="rowline"><span class="k">└ 그중 수수료 <span class="sub">0.25% · 평단에 이미 포함</span></span><span class="val mono" id="anaI_fee">—</span></div>
         <div class="rowline" id="anaI_extra_row"><span class="k" id="anaI_extra_k">—</span><span class="val mono" id="anaI_extra">—</span></div></div>
+      <div class="card" id="anaI_cfcard" style="display:none"></div>
     </div>
 
     <div class="block" id="ivs-guide">
@@ -1396,16 +1407,6 @@ document.addEventListener('click',function(e){ var m=document.getElementById('jk
         <div class="ar" id="dcacct_pricerow" style="display:none"><span class="ak">가격 수익률 <span class="sub">분배금 제외</span></span><span class="av" id="dcacct_priceret">—</span></div>
         <div class="ar"><span class="ak">적립 횟수 <span class="sub">2배 적립 포함</span></span><span class="av buy" id="dcacct_n">0회</span></div>
       </div>
-      <!-- 분배금을 현금으로 받으면 그 돈은 계좌 밖으로 나간다 — 무매 단리 인출과 같다.
-           커버드콜처럼 분배금이 수익의 대부분인 종목은 이게 곧 월 수입이다. -->
-      <div class="card" id="dca_cashcard" style="display:none">
-        <h3><span class="dot"></span>분배금 현금 수입</h3>
-        <div class="rowline"><span class="k">받은 분배금 <span class="sub">누적 · 투입 대비</span></span><span class="val mono" id="dca_cf_tot">—</span></div>
-        <div class="rowline"><span class="k">월 평균 <span class="sub" id="dca_cf_avgsub">안 나온 달도 포함</span></span><span class="val mono" id="dca_cf_avg">—</span></div>
-        <div class="rowline"><span class="k">나온 달 <span class="sub">연속으로 끊긴 최장</span></span><span class="val mono" id="dca_cf_hit">—</span></div>
-        <div class="rowline"><span class="k">마지막 수령</span><span class="val mono" id="dca_cf_last">—</span></div>
-        <div class="htable-wrap" style="margin-top:10px"><table class="htable narrow" id="dca_cf_tbl"></table></div>
-      </div>
       <!-- 현재가 입력 — 맨 아래 (판단을 먼저 보고, 값 고칠 때만 내려온다) -->
       <div class="card" style="margin-bottom:13px">
         <div class="field" style="margin:0"><label id="dca_price_lbl">현재가 ($) <span class="hint">배수 판정은 종가 200일선 기준</span></label>
@@ -1441,12 +1442,16 @@ document.addEventListener('click',function(e){ var m=document.getElementById('jk
         <div class="progress"><div class="bar" id="anaD_bar" style="width:0%"></div></div>
         <div class="pscale"><span>투자 비중</span><span id="anaD_ratio">0%</span></div></div>
       <div class="card"><h3><span class="dot"></span>요약</h3>
-        <div class="rowline"><span class="k">총 자산</span><span class="val mono" id="anaD_total">0$</span></div>
+        <div class="rowline"><span class="k">총 자산 <span class="sub" id="anaD_total_sub">주식 평가</span></span><span class="val mono" id="anaD_total">0$</span></div>
+        <div class="rowline"><span class="k">현재 수익률 <span class="sub">주식만 · 분배금 제외</span></span><span class="val mono" id="anaD_ret_now">—</span></div>
+        <div class="rowline"><span class="k">실현 수익률 <span class="sub">현금으로 받은 분배금</span></span><span class="val mono" id="anaD_ret_real">—</span></div>
+        <div class="rowline"><span class="k">누적 수익률 <span class="sub">분배금 포함</span></span><span class="val mono" id="anaD_ret">—</span></div>
         <div class="rowline"><span class="k">현재 평단</span><span class="val mono" id="anaD_avg">—</span></div>
         <div class="rowline"><span class="k">보유수량</span><span class="val mono" id="anaD_qty">0주</span></div>
         <div class="rowline"><span class="k">매수 횟수</span><span class="val mono" id="anaD_0">—</span></div>
         <div class="rowline"><span class="k">하락 배수 매수</span><span class="val mono" id="anaD_1">—</span></div>
       </div>
+      <div class="card" id="anaD_cfcard" style="display:none"></div>
     </div>
 
     <div class="block" id="dca-guide">
@@ -1574,12 +1579,16 @@ document.addEventListener('click',function(e){ var m=document.getElementById('jk
         <div class="progress"><div class="bar" id="anaA_bar" style="width:0%"></div></div>
         <div class="pscale"><span>투자 비중</span><span id="anaA_ratio">0%</span></div></div>
       <div class="card"><h3><span class="dot"></span>요약</h3>
-        <div class="rowline"><span class="k">총 자산</span><span class="val mono" id="anaA_total">0$</span></div>
+        <div class="rowline"><span class="k">총 자산 <span class="sub">주식 + 리저브</span></span><span class="val mono" id="anaA_total">0$</span></div>
+        <div class="rowline"><span class="k">현재 수익률 <span class="sub">주식 + 리저브</span></span><span class="val mono" id="anaA_ret_now">—</span></div>
+        <div class="rowline"><span class="k">실현 수익률 <span class="sub">매도로 확정된 것</span></span><span class="val mono" id="anaA_ret_real">—</span></div>
+        <div class="rowline"><span class="k">누적 수익률 <span class="sub">출금 포함</span></span><span class="val mono" id="anaA_ret">—</span></div>
         <div class="rowline"><span class="k">현재 평단</span><span class="val mono" id="anaA_avg">—</span></div>
         <div class="rowline"><span class="k">보유수량</span><span class="val mono" id="anaA_qty">0주</span></div>
         <div class="rowline"><span class="k">리저브(SGOV)</span><span class="val mono" id="anaA_0">—</span></div>
         <div class="rowline"><span class="k">총 매수 건수</span><span class="val mono" id="anaA_1">—</span></div>
       </div>
+      <div class="card" id="anaA_cfcard" style="display:none"></div>
     </div>
 
     <div class="block" id="asap-guide">
@@ -1600,7 +1609,7 @@ document.addEventListener('click',function(e){ var m=document.getElementById('jk
   <footer>
     <strong>JK 퀀트</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.60</b> · 2026-09-16</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.61</b> · 2026-09-16</div>
   </footer>
 </div>
 
@@ -3382,6 +3391,12 @@ function refreshInf(){
 function computeVr(){
   const st=curStrat().settings, hist=curStrat().hist;
   let qty=0,totbuy=0,totsell=0,totdiv=0,totadd=0,totwd=0,buyShares=0,initBuy=0;
+  /* 실현손익 — 무매·로테는 재는데 VR만 안 재서 분석탭에 '실현 수익률'을 못 띄우고 있었다.
+     이동평균 원가로 판 몫만 확정익으로 잡는다(무매 _sell과 같은 규약). */
+  let cost=0, realized=0;
+  /* 현금 흐름 — 인출(wd)이 내게 온 돈, 적립(add)이 내가 넣은 돈. 무매 단리 flows와 같은 모양.
+     배당(div)은 Pool에 남으니 손에 쥔 돈이 아니다 — 재투자와 같은 취급으로 빼 둔다. */
+  const flows=[];
   let pool=st.startpool||0, V=st.startv||0;
   let vSet=V>0;                                  // V 확정 여부 (startv>0이면 이미 확정)
   let sawBuy=false;                              // 이력상 첫 buy 만났는지
@@ -3392,7 +3407,7 @@ function computeVr(){
     const hc=(h.cyc!=null?h.cyc:0);
     if(hc!==curCyc){ curCyc=hc; cycStartPool=pool; cycTrade=0; cycDiv=0; }
     if(h.type==='buy'){
-      const amt=h.price*h.qty; qty+=h.qty; totbuy+=amt; buyShares+=h.qty;
+      const amt=h.price*h.qty; qty+=h.qty; totbuy+=amt; buyShares+=h.qty; cost+=amt;
       const isInit=!sawBuy && !carriedIn; sawBuy=true;   // 초기투입 = 이력 첫 buy (이어받기 시작 제외)
       if(!vSet){ V=amt; vSet=true; }                     // 0원 시작: 첫 매수가 곧 V
       if(isInit){
@@ -3405,9 +3420,11 @@ function computeVr(){
         pool-=amt; cycTrade-=amt;
       }
     }
-    else if(h.type==='sell'){const amt=h.price*h.qty;qty-=h.qty;totsell+=amt;pool+=amt;cycTrade+=amt;}
-    else if(h.type==='add'){pool+=h.amt;totadd+=h.amt;}
-    else if(h.type==='wd'){pool-=h.amt;totwd+=h.amt;}
+    else if(h.type==='sell'){const amt=h.price*h.qty;const av=qty>0?cost/qty:0;
+      realized+=amt-av*h.qty; cost-=av*h.qty; qty-=h.qty; if(qty<1e-9){qty=0;cost=0;}
+      totsell+=amt;pool+=amt;cycTrade+=amt;}
+    else if(h.type==='add'){pool+=h.amt;totadd+=h.amt;flows.push({date:h.date,out:0,in:+h.amt||0});}
+    else if(h.type==='wd'){pool-=h.amt;totwd+=h.amt;flows.push({date:h.date,out:+h.amt||0,in:0});}
     else if(h.type==='div'){pool+=h.amt;totdiv+=h.amt;cycDiv+=h.amt;}
   });
   // 진행 중 사이클 번호 = 마지막 거래의 cyc (없으면 0). 설정 V/startCyc 우선.
@@ -3421,8 +3438,11 @@ function computeVr(){
   const netInvested=totadd - totwd + (st.startpool||0) + initBuy;
   const recov=totsell+totdiv; // 회수 원금 = 매도+배당
   const cycTradeNet=cycTrade+cycDiv; // 사이클 총 매매액(Pool 순흐름, 배당 포함)
+  /* 밖에서 들어온 돈의 총액 — 인출을 빼기 전. 수익률 분모는 이쪽이어야
+     '누적(인출 포함)'이 인출을 두 번 세지 않는다. */
+  const grossIn=totadd + (st.startpool||0) + initBuy;
   return {st,qty,totbuy,totsell,totdiv,totadd,totwd,buyShares,pool,V,avgNom,avgEff,up,lo,initBuy,
-          netInvested,recov,curCyc,cycStartPool,cycTrade,cycTradeNet,cycDiv,hist};
+          netInvested,grossIn,realized,flows,recov,curCyc,cycStartPool,cycTrade,cycTradeNet,cycDiv,hist};
 }
 
 const CYC_DAYS=14;   // 한 사이클 = 2주(달력 14일 ≒ 거래일 10일, 백테 INTERVAL과 같음)
@@ -3824,6 +3844,21 @@ function renderVrAnal(){
   const sign=(st.mode===0.25)?-1:1;
   $('pl_next').textContent=wn(c.pool+sign*(st.add||0));
   drawDonut(evalNow, c.pool);
+
+  /* 수익률 세 줄 — 무매 요약과 같은 구성.
+     분모는 grossIn(인출 빼기 전 총투입)이라 '누적(인출 포함)'이 인출을 두 번 세지 않는다. */
+  paintRet3('vc', {base:c.grossIn, now:total, realized:c.realized, out:c.totwd});
+  { const r=$('vc_divrow'), v=$('vc_div');
+    if(r) r.style.display=(c.totdiv>0)?'':'none';
+    if(v&&c.totdiv>0){ v.textContent=wn(c.totdiv); v.style.color='var(--buy)'; } }
+  /* 인출·적립은 계좌 밖 돈의 오고감이다 — 무매 단리와 같은 카드로 보여준다.
+     인출식(mode 0.25)이 본질인 전략인데 지금까지 월별로 볼 화면이 없었다. */
+  { const fl=c.flows||[], hd=(c.hist||[]).filter(h=>h&&h.date).map(h=>h.date).sort();
+    paintCashFlow('vc', {flows:fl, base:c.grossIn, isKrw:(st.cur==='krw'),
+      from:hd[0]||(fl[0]||{}).date, to:hd[hd.length-1]||(fl[fl.length-1]||{}).date,
+      title:'현금 흐름', outK:'인출', outSub:'Pool에서 빼낸 돈',
+      inK:'적립', inSub:'Pool에 더 넣은 돈', lastK:'마지막 인출',
+      show:fl.length>0}); }
 
   // 누적 정리
   $('vc_eval').textContent=wn(evalNow);
@@ -4287,6 +4322,9 @@ function renderMaAnal(){
   $('ana_qty').textContent=nfix(qty,0)+'주';
   $('ana_extra_k').textContent='승률';
   $('ana_extra').textContent=nOut?`${(nWin/nOut*100).toFixed(0)}% (${nWin}/${nOut})`:'—';
+  /* 수익률 세 줄 — 무매 요약과 같은 구성. 로테는 청산 현금이 계좌에 남으므로
+     밖으로 나간 돈이 없다(out=0) — 누적과 현재가 같게 나오는 게 맞다. */
+  paintRet3('ana', {base:principal, now:total, realized, out:0});
 }
 /* ── 섀넌 분석 (무매 분석과 같은 구성) ── */
 function renderIvsAnal(){
@@ -4331,6 +4369,16 @@ function renderIvsAnal(){
   $('anaI_fee').style.color=(c.fees>0)?'var(--sell)':'var(--faint)';
   $('anaI_extra_k').innerHTML= c.X1 ? `짝(1배) 보유 <span class="sub">${c.sym1}</span>` : '목표 비중';
   $('anaI_extra').textContent= c.X1 ? `${nfix(c.qty1||0,0)}주` : (c.ready?`${(c.w*100).toFixed(1)}%`:'—');
+  /* 수익률 세 줄 + 입출금 월별 — 무매 분석과 같은 구성.
+     분모는 밖에서 넣은 총액(원금 + 추가입금)이라 '누적(출금 포함)'이 출금을 두 번 세지 않는다. */
+  { const grossIn=(+st.principal||0)+(c.added||0);
+    paintRet3('anaI', {base:grossIn, now:total, realized:rz, out:c.withdrawn||0});
+    const fl=c.flows||[], hd=h.filter(x=>x&&x.date).map(x=>x.date).sort();
+    paintCashFlow('anaI', {flows:fl, base:grossIn, isKrw:(st.cur==='krw'),
+      from:hd[0]||(fl[0]||{}).date, to:hd[hd.length-1]||(fl[fl.length-1]||{}).date,
+      title:'현금 흐름', outK:'출금', outSub:'계좌에서 빼낸 돈',
+      inK:'입금', inSub:'계좌에 더 넣은 돈', lastK:'마지막 출금',
+      show:fl.length>0}); }
 }
 function refreshMa(){
   paperAuto();   // 모의 세션이면 오늘까지 자동으로 굴린다
@@ -4466,14 +4514,15 @@ function onIvsPrice1(){ const p=inputNum('ivs_price1')||0; if(ivsQuote1&&p>0) iv
 // 이렇게 해야 기록과 계좌가 어긋날 수 없고, 기록을 지우면 초기자금 상태로 되돌아간다.
 function ivsPos(principal,hist){
   let qty=0,avg=0,qty1=0,avg1=0,cash=Math.max(0,principal||0),realized=0,added=0,withdrawn=0,fees=0;
+  const flows=[];   // 계좌 밖 돈의 오고감 — 무매 단리 flows와 같은 모양 {date,out,in}
   const yr=new Date().getFullYear(); let pnlYear=0;
   const rows=[];                                   // 레코드별 파생값(실현손익·잔고) — 표에서 쓴다
   const ordered=(hist||[]).map((h,i)=>({h,i}))
     .sort((a,b)=>((a.h.date||'').localeCompare(b.h.date||''))||((a.h.ts||0)-(b.h.ts||0))||(a.i-b.i));
   for(const {h,i} of ordered){
     const r={idx:i,h,pnl:0};
-    if(h.type==='add'){ const v=+h.amt||0; cash+=v; added+=v; rows.push(r); continue; }
-    if(h.type==='wd'){ const v=+h.amt||0; cash=Math.max(0,cash-v); withdrawn+=v; rows.push(r); continue; }
+    if(h.type==='add'){ const v=+h.amt||0; cash+=v; added+=v; flows.push({date:h.date,out:0,in:v}); rows.push(r); continue; }
+    if(h.type==='wd'){ const v=+h.amt||0; cash=Math.max(0,cash-v); withdrawn+=v; flows.push({date:h.date,out:v,in:0}); rows.push(r); continue; }
     const x1=(h.leg==='x1'), q=+h.qty||0, p=+h.price||0;
     const amt=(h.amt!=null?+h.amt:q*p), fee=+h.fee||0;
     if(!(q>0)){ rows.push(r); continue; }
@@ -4496,7 +4545,7 @@ function ivsPos(principal,hist){
   }
   const pnlByIdx={}, badByIdx={}; let nbad=0;
   rows.forEach(r=>{ pnlByIdx[r.idx]=r.pnl; if(r.bad){ badByIdx[r.idx]=r.bad; nbad++; } });
-  return {qty,avg,qty1,avg1,cash:Math.max(0,cash),realized,pnlYear,added,withdrawn,fees,pnlByIdx,badByIdx,nbad};
+  return {qty,avg,qty1,avg1,cash:Math.max(0,cash),realized,pnlYear,added,withdrawn,flows,fees,pnlByIdx,badByIdx,nbad};
 }
 function computeIvs(){
   const st=curStrat().settings, hist=curStrat().hist||[];
@@ -4509,7 +4558,7 @@ function computeIvs(){
   const out={st,FIX,X1,s0,N,band,sym,sym1,qty,cash,avg,qty1,avg1,ready:false,
              monthly:Math.max(0,st.monthly||0), principal:Math.max(0,st.principal||0),
              added:P.added, realized:P.realized};
-  out.fees=P.fees; out.pnlYear=P.pnlYear; out.year=new Date().getFullYear(); out.pnlByIdx=P.pnlByIdx; out.withdrawn=P.withdrawn; out.badByIdx=P.badByIdx; out.nbad=P.nbad;
+  out.fees=P.fees; out.pnlYear=P.pnlYear; out.year=new Date().getFullYear(); out.pnlByIdx=P.pnlByIdx; out.withdrawn=P.withdrawn; out.flows=P.flows; out.badByIdx=P.badByIdx; out.nbad=P.nbad;
   // 고정 5:5는 변동성을 안 쓰므로 룩백만큼의 이력이 필요 없다
   if(!days || days.length<(FIX?2:N+1)) return out;
   const closes=days.map(d=>d.close), n=closes.length;
@@ -4966,38 +5015,6 @@ function renderDcaNow(){
     if(has){
       $('dcacct_div').textContent=px(p.divCash);
       $('dcacct_div_sub').textContent=p.reinv?`${p.nDiv}회 · 재투자 ${nfix(p.divShares,4)}주`:`${p.nDiv}회 수령`;
-  /* 현금 수령이면 월 수입으로 읽어 준다 — 무매 단리와 같은 함수를 쓴다.
-     분모는 투입금(적립은 원금 칸이 따로 없다). 재투자면 나간 돈이 없으니 카드를 감춘다. */
-  { const box=$('dca_cashcard'), flows=(p.flows||[]), base=Math.max(1,p.inv||0);
-    const show=!p.reinv && flows.length>0;
-    if(box) box.style.display = show ? '' : 'none';
-    if(show){
-      const hist=(curStrat().hist||[]).filter(h=>h&&h.date).map(h=>h.date).sort();
-      const fmt=v=>`${wn(v)} (${(v/base*100).toFixed(1)}%)`;
-      /* 기간은 '첫 매수 ~ 마지막 분배금'이다. 거치식은 매수 기록이 하나뿐이라
-         매수일만 보면 기간이 한 달로 잡혀 월 평균이 통째로 틀린다. */
-      const dFirst=hist[0]||flows[0].date;
-      const hLast=hist[hist.length-1]||'', fLast=(flows[flows.length-1]||{}).date||'';
-      const fs2=flowStats(flows, dFirst, fLast>hLast?fLast:hLast);
-      const tt=$('dca_cf_tot');
-      if(tt){ tt.textContent=fmt(p.divCash||0); tt.style.color='var(--gold)'; }
-      fillFlowRows({avg:'dca_cf_avg', avgSub:'dca_cf_avgsub', hit:'dca_cf_hit', last:'dca_cf_last'}, fs2, fmt);
-      // 월별 표 — 최근이 위로. 무매 월별 표와 같은 칸 구성(수령·원화)
-      const isKrw=(st.cur==='krw');
-      const tb=$('dca_cf_tbl');
-      if(tb){
-        const head=`<tr><th>월</th><th>수령</th>${isKrw?'':'<th>원화</th>'}</tr>`;
-        const body=[...fs2.months].reverse().map(m=>
-          `<tr><td>${m.m.replace('-','년 ')+'월'}</td>`
-          +`<td style="color:${m.v>0?'var(--gold)':'var(--faint)'}">${m.v>0?wn(m.v):'—'}</td>`
-          +(isKrw?'':`<td style="color:var(--faint)">${m.v>0?won(m.v):'—'}</td>`)+`</tr>`).join('');
-        const tot=fs2.months.reduce((a,m)=>a+m.v,0);
-        const sum=`<tr style="border-top:2px solid var(--line)"><td><b>합계</b></td>`
-          +`<td style="color:var(--gold)">${wn(tot)}</td>`+(isKrw?'':`<td style="color:var(--faint)">${won(tot)}</td>`)+`</tr>`;
-        tb.innerHTML=head+body+sum;
-      }
-    }
-  }
       if(c.ready){
         $('dcacct_tot').textContent=px(c.total);
         const pr=c.retPrice;
@@ -5219,6 +5236,20 @@ function renderDcaAnal(){
   // 거치식엔 배수가 없다 — 행 이름을 방식으로 바꿔 '0회'가 규칙 미작동처럼 보이지 않게
   { const k=$('anaD_1'); if(k&&k.previousElementSibling) k.previousElementSibling.textContent = c.lump?'방식':'하락 배수 매수';
     if(c.lump&&k) k.textContent='거치식 (한 번 매수)'; }
+  /* 분배금을 현금으로 받으면 그 돈은 계좌 밖으로 나간다 — 무매 단리 인출과 똑같다.
+     그래서 무매 분석과 같은 세 수익률 + 같은 월별 현금 카드로 보여준다.
+     재투자면 주식으로 돌아와 평가금에 이미 들어 있으니 확정익도 나간 돈도 0이다. */
+  { const cash=(!P.reinv&&(P.divCash||0)>0)?P.divCash:0;
+    const evalNow=price>0?price*P.shares:0;
+    paintRet3('anaD', {base:P.inv, now:evalNow, realized:cash, out:cash});
+    const sub=$('anaD_total_sub'); if(sub) sub.textContent=cash>0?'주식 평가 (분배금 제외)':'주식 평가';
+    const hd=(curStrat().hist||[]).filter(h=>h&&h.date).map(h=>h.date).sort();
+    const fl=P.flows||[];
+    const hLast=hd[hd.length-1]||'', fLast=(fl[fl.length-1]||{}).date||'';
+    paintCashFlow('anaD', {flows:fl, base:P.inv, isKrw:(c.st.cur==='krw'),
+      from:hd[0]||(fl[0]||{}).date, to:(fLast>hLast?fLast:hLast),
+      title:'분배금 현금 수입', outK:'수령', outSub:'계좌 밖으로 받은 분배금',
+      lastK:'마지막 수령', show:cash>0}); }
 }
 function renderAsapAnal(){
   if(!$('anaA_pnl')) return;
@@ -5231,6 +5262,13 @@ function renderAsapAnal(){
   _analPaint('anaA',{inv, evalNow:price>0?price*P.shares:0, cash:P.reserve,
     avg:P.avg, qty:P.shares, cnt:`${nBuy} 매수`, cashLbl:'리저브',
     rows:[wn(P.reserve), `${nBuy}건`], cur:c.st.cur});
+  /* 수익률 세 줄 — 무매 요약과 같은 구성. ASAP은 팔아도 계좌 안에 남으므로
+     밖으로 나간 돈이 없다(out=0). 실현은 매도로 확정된 몫. */
+  { let rz=0, sh=0, cost=0;
+    h.forEach(x=>{ const q=+x.qty||0, pr=+x.price||0, amt=(x.amt!=null?+x.amt:q*pr);
+      if(x.type==='buy'&&q>0){ sh+=q; cost+=amt; }
+      else if(x.type==='sell'&&q>0){ const av=sh>0?cost/sh:0; rz+=amt-av*q; cost-=av*q; sh-=q; if(sh<1e-9){sh=0;cost=0;} } });
+    paintRet3('anaA', {base:inv, now:(price>0?price*P.shares:0)+P.reserve, realized:rz, out:0}); }
 }
 function refreshDca(){
   paperAuto();   // 모의 세션이면 오늘까지 자동으로 굴린다
@@ -6170,7 +6208,11 @@ function maLedger(hist, price, principal){
     if(!(q>0)||!(pr>0)) return;
     if(x.type==='in'){
       const gross=pr*q, fee=(x.fee!=null?+x.fee:gross*FEE);
-      const nq=qty+q; avg=nq>0?(avg*qty+pr*q)/nq:pr; qty=nq;
+      /* 매수 수수료는 현금에서 나가는데 평단에는 안 들어가고 있었다 —
+         그만큼 실현손익이 부풀려져, 다 청산한 계좌인데도 실현 수익률이
+         현재 수익률보다 높게 나왔다(+9.90% vs +9.83%). 섀넌 ivsPos·백테 runIM은
+         둘 다 수수료를 원가에 넣는다. 같은 규약으로 맞춘다. */
+      const nq=qty+q; avg=nq>0?(avg*qty+pr*q+fee)/nq:(q>0?(pr*q+fee)/q:pr); qty=nq;
       totbuy+=gross; cash-=gross+fee; fees+=fee;
     }else if(x.type==='out'){
       const sq=q>0?Math.min(q,qty):qty; const gross=pr*sq;
@@ -6216,6 +6258,77 @@ function fillFlowRows(ids, st2, fmt){
   if(!st2.lastPaid) put(ids.last, '아직 없음', 'var(--faint)');
   else put(ids.last, `${st2.lastPaid.m} · ${fmt(st2.lastPaid.v)}`+(st2.gap>0?` · ${st2.gap}개월 전`:' · 이번 달'),
           st2.gap>=3?'var(--sell)':(st2.gap>=1?'var(--gold)':'var(--buy)'));
+}
+
+/* ── 월 현금흐름 카드 (전 전략 공용) ──
+   무매 단리·VR 인출·적립 분배금은 "계좌 밖으로 나온 돈"이라는 점에서 전부 같다.
+   전략마다 따로 그리면 또 어긋난다 — 한 곳에서 그리고 흐름만 받는다.
+   flows: [{date, out, in}] · out=내게 온 돈, in=내가 넣은 돈 (무매 단리와 같은 모양)
+   opt: {flows, base, from, to, title, outK, outSub, inK, inSub, lastK, isKrw, show} */
+function paintCashFlow(pre, opt){
+  const box=$(pre+'_cfcard'); if(!box) return;
+  const o=opt||{}, flows=(o.flows||[]).filter(f=>f&&f.date&&((f.out||0)||(f.in||0)));
+  if(!o.show || !flows.length){ box.style.display='none'; box.innerHTML=''; return; }
+  const base=Math.max(1, o.base||0);
+  const fmt=v=>`${wn(v)} (${(v/base*100).toFixed(1)}%)`;
+  const out=flows.reduce((a,f)=>a+(f.out||0),0), inn=flows.reduce((a,f)=>a+(f.in||0),0);
+  const hasIn=inn>0;
+  const st2=flowStats(flows, o.from||flows[0].date, o.to||flows[flows.length-1].date);
+  const id=k=>`${pre}_cf_${k}`;
+  const row=(k,sub,vid)=>`<div class="rowline"><span class="k">${k}${sub?` <span class="sub">${sub}</span>`:''}</span><span class="val mono" id="${vid}">—</span></div>`;
+  box.style.display='';
+  box.innerHTML=`<h3><span class="dot"></span>${o.title||'현금 수입'}</h3>`
+    + row(o.outK||'출금', o.outSub||'계좌 밖으로 나온 돈', id('out'))
+    + (hasIn?row(o.inK||'입금', o.inSub||'내가 더 넣은 돈', id('in')):'')
+    + (hasIn?row('합계','실제로 손에 쥔 돈 · 출금 − 입금', id('net')):'')
+    + `<div style="border-top:1px solid var(--line);margin:6px 0 0"></div>`
+    + row('월 평균','<span id="'+id('avgsub')+'">안 나온 달도 포함</span>', id('avg'))
+    + row('나온 달','연속으로 끊긴 최장', id('hit'))
+    + row(o.lastK||'마지막 인출','', id('last'))
+    + `<div class="htable-wrap" style="margin-top:10px"><table class="htable narrow" id="${id('tbl')}"></table></div>`;
+  const put=(k,v,col)=>{ const e=$(id(k)); if(e){ e.textContent=v; e.style.color=col; } };
+  put('out', fmt(out), 'var(--gold)');
+  /* 부호는 요약의 수익률 세 줄과 같은 글자(−)로 쓴다. 금액에만 붙이고 %를 빼먹으면
+     '−700$ (5.8%)' 처럼 한 줄 안에서 부호가 어긋난다 — 둘 다 붙인다. */
+  if(hasIn){ const net=out-inn, sg=net<0?'−':'', a=Math.abs(net);
+    put('in', fmt(inn), 'var(--sell)');
+    put('net', `${sg}${wn(a)} (${sg}${(a/base*100).toFixed(1)}%)`, net>=0?'var(--buy)':'var(--sell)'); }
+  fillFlowRows({avg:id('avg'), avgSub:id('avgsub'), hit:id('hit'), last:id('last')}, st2, fmt);
+  // 월별 표 — 최근이 위로. 원화 세션엔 원화 칸을 겹쳐 넣지 않는다.
+  const tb=$(id('tbl'));
+  if(tb){
+    const kw=!!o.isKrw;
+    const head=`<tr><th>월</th><th>${o.outK||'출금'}</th>`+(hasIn?`<th>${o.inK||'입금'}</th><th>합계</th>`:'')+(kw?'':'<th>원화</th>')+`</tr>`;
+    const byM={};
+    flows.forEach(f=>{ const m=String(f.date).slice(0,7); if(m.length!==7) return;
+      (byM[m]=byM[m]||{o:0,i:0}).o+=(f.out||0); byM[m].i+=(f.in||0); });
+    const cell=(v,col)=>`<td style="color:${v>0?col:'var(--faint)'}">${v>0?wn(v):'—'}</td>`;
+    const body=[...st2.months].reverse().map(m=>{
+      const d=byM[m.m]||{o:0,i:0}, net=d.o-d.i;
+      return `<tr><td>${m.m.replace('-','년 ')+'월'}</td>`
+        + cell(d.o,'var(--gold)')
+        + (hasIn?cell(d.i,'var(--sell)')+`<td style="color:${net>0?'var(--buy)':(net<0?'var(--sell)':'var(--faint)')}">${net?wn(net):'—'}</td>`:'')
+        + (kw?'':`<td style="color:var(--faint)">${net?won(net):'—'}</td>`)+`</tr>`; }).join('');
+    const nCol=2+(hasIn?2:0)+(kw?0:1);
+    const sum=`<tr style="border-top:2px solid var(--line)"><td><b>합계</b></td>`
+      + `<td style="color:var(--gold)"><b>${wn(out)}</b></td>`
+      + (hasIn?`<td style="color:var(--sell)"><b>${wn(inn)}</b></td><td style="color:${out-inn>=0?'var(--buy)':'var(--sell)'}"><b>${wn(out-inn)}</b></td>`:'')
+      + (kw?'':`<td style="color:var(--faint)">${won(out-inn)}</td>`)+`</tr>`;
+    tb.innerHTML=body? head+body+sum : `<tr><td colspan="${nCol}" style="color:var(--faint)">아직 없습니다</td></tr>`;
+  }
+}
+/* 수익률 세 줄 — 무매 요약과 같은 구성으로 전 전략에 똑같이 찍는다.
+   현재=지금 들고 있는 것, 실현=확정된 것, 누적=밖으로 나간 돈까지 합친 것. */
+function paintRet3(pre, {base, now, realized, out}){
+  const B=+base||0;
+  const put=(id,amt)=>{ const el=$(pre+id); if(!el) return;
+    if(!(B>0)){ el.textContent='—'; el.style.color=''; return; }
+    const sgn=amt>=0?'+':'−', a=Math.abs(amt);
+    el.textContent=`${sgn}${wn(a)} (${sgn}${(a/B*100).toFixed(2)}%)`;
+    el.style.color=amt>=0?'var(--buy)':'var(--sell)'; };
+  put('_ret_now', (now||0)-B);
+  put('_ret_real', realized||0);
+  put('_ret', (now||0)+(out||0)-B);
 }
 
 /* 시세는 반드시 이 함수로 꺼낸다 — 종목이 다르면 없는 셈 친다.
