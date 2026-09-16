@@ -774,13 +774,16 @@ console.log('[19] 출금 · 복리/단리');
      넘치면 빼고(saved) 모자라면 채운다(added). 한쪽만 하면 진 사이클 뒤로
      계좌가 원금보다 작은 채 굴러가 1회매수금이 줄고 전략이 저절로 약해진다. */
   ok('단리는 사이클 끝에 원금으로 맞춘다',
-     /if\(simple\)\{[\s\S]{0,320}?if\(cashNow>P0\) saved\+=cashNow-P0;[\s\S]{0,80}?else if\(cashNow<P0\) added\+=P0-cashNow;/.test(ci));
+     /if\(simple\)\{[\s\S]{0,360}?if\(cashNow>P0\)\{ fo=cashNow-P0; saved\+=fo; \}[\s\S]{0,120}?else if\(cashNow<P0\)\{ fi=P0-cashNow; added\+=fi; \}/.test(ci));
+  // 오간 돈의 시점을 한 곳에서 모아 둔다 — 카드도 표도 이걸 쓴다
+  ok('오간 돈을 한 곳에서 모은다',
+     /flows\.push\(\{date:h\.date, seq:cycleSeq, out:fo, in:fi\}\);/.test(ci));
   // 백테도 같은 규약이어야 한다 — 한쪽만 바꾸면 모의와 백테가 갈린다
   ok('백테도 원금으로 맞춘다',
      (bt.match(/else if\(cash<cap\)\{ addedCash\+=cap-cash; cash=cap; \}/g)||[]).length===4);
   ok('백테는 넣은 돈을 총자산에서 뺀다', /\+savedProfit-addedCash;/.test(bt));
   ok('단리 판정은 compound===false', /const simple=\(st\.compound===false\)/.test(ci));
-  ok('출금·단리인출·단리보충을 밖으로 낸다', /withdrawn,saved,added,simple,outside:withdrawn\+saved/.test(ci));
+  ok('출금·단리인출·단리보충을 밖으로 낸다', /withdrawn,saved,added,flows,simple,outside:withdrawn\+saved/.test(ci));
   // 출금이 매매로 잡히면 사이클 종료·T가 오염된다
   ok('출금은 매수·매도가 아니다', /function isBuy\(k\)\{return k==='출금'\?false/.test(idx)
      && /function isSell\(k\)\{return k!=='출금'/.test(idx));
@@ -1191,7 +1194,8 @@ console.log('[27] 무매 분석 — 월별·사이클별');
   // 원화 세션은 이미 원화라 같은 수를 두 번 쓰는 꼴이 된다
   ok('원화 열은 달러 세션에서만', /isKrw=\(st\.cur==='krw'\)/.test(br)
      && /\$\{isKrw\?'':'<th>원화<\/th>'\}/.test(br));
-  ok('빈 표 colspan이 열 수를 따라간다', /colspan="\$\{isKrw\?4:5\}"/.test(br));
+  ok('빈 표 colspan이 열 수를 따라간다',
+     /const nCol=\(isKrw\?4:5\)\+\(simple\?3:0\);/.test(br) && /colspan="\$\{nCol\}"/.test(br));
   ok('합계 줄이 있다', /<td><b>합계<\/b><\/td>/.test(br));
 }
 
@@ -2316,8 +2320,17 @@ console.log('\n[55] 단리 현금 흐름');
   // 오래 끊기면 눈에 띄어야 한다
   ok('3개월 넘게 끊기면 빨갛게', /gap>=3 \? 'var\(--sell\)'/.test(infA));
   // 되짚기는 computeInf 와 같은 순서여야 값이 어긋나지 않는다
-  ok('사이클 종료 시점을 같은 식으로 되짚는다',
-     /const now=P0\+rz-wd-sv\+ad;/.test(infA) && /if\(now>P0\)\{[\s\S]{0,90}?else if\(now<P0\)/.test(infA));
+  // 카드와 표가 따로 세면 또 갈린다 — 둘 다 computeInf 가 낸 flows 만 쓴다
+  ok('카드는 따로 되짚지 않는다',
+     /const ev=\(c\.flows\|\|\[\]\)\.map\(f=>\(\{d:f\.date, v:\(f\.out\|\|0\)-\(f\.in\|\|0\)\}\)\);/.test(infA));
+  const br2=(()=>{ try{ return extractFn(idx,'function renderInfBreak(c)'); }catch(e){ return ''; } })();
+  ok('월별·사이클별 표도 같은 flows 를 쓴다',
+     /\(c\.flows\|\|\[\]\)\.forEach\(f=>\{ const k=String\(f\.date\|\|''\)\.slice\(0,7\)/.test(br2)
+     && /\(c\.flows\|\|\[\]\)\.forEach\(f=>\{ const o=C\.get\(f\.seq\)/.test(br2));
+  ok('단리 세션에만 세 칸이 붙는다',
+     /\(simple\?'<th>출금<\/th><th>입금<\/th><th>합계<\/th>':''\)/.test(br2));
+  // 돈이 안 오간 달에 +0.00$ (+0.0%) 가 뜨면 잡음이다
+  ok('안 오간 달은 합계도 비운다', /const has=\(x\.out\|\|0\)\|\|\(x\.in\|\|0\);/.test(br2));
 }
 
 console.log(`\n════ 결과: ${pass} PASS / ${fail} FAIL ${fail===0?'— ALL PASS ★':'— 배포 금지, 위 ✗ 항목 수정 필요'} ════`);
