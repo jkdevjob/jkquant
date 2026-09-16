@@ -2205,5 +2205,31 @@ console.log('\n[52] 거래 수는 한 곳에서만 센다');
   ok('매도·청산 칸은 그대로', /\$\('a_cycles'\)\.textContent=sells\+' 매도'/.test(idx));
 }
 
+/* ════ 53. 수동 입력칸은 그 세션 것일 때만 쓴다 ════
+   현재가·평가금 수동 입력칸은 화면에 하나뿐인데 세션은 여럿이다.
+   vrLastPrice 가 그 칸을 종목 확인 없이 제일 먼저 읽어서, TECL 에서 🔄 를 눌러
+   채워진 222.26 으로 TQQQ·SOXL 평가금까지 계산했다.
+   실측: TQQQ 가 +321.07% 에서 +1080.21% 로 튀었다 (같은 기록, 남의 가격).
+   목록·분석이 둘 다 같은 함수를 쓰므로 둘 다 틀렸고, 그래서 어느 쪽이 맞는지
+   화면만 봐서는 알 수 없었다. */
+console.log('\n[53] 수동 현재가·평가금은 넣은 세션에서만 쓴다');
+{
+  ok('어느 세션 값인지 기억한다',
+     /let _vnFor=\{price:null, eval:null\};/.test(idx)
+     && /function vnOwn\(kind\)\{ return _vnFor\[kind\]!=null && _vnFor\[kind\]===vnOwner\(\); \}/.test(idx));
+  const lp=(()=>{ try{ return extractFn(idx,'function vrLastPrice(c)'); }catch(e){ return ''; } })();
+  const ev=(()=>{ try{ return extractFn(idx,'function vrEval(c)'); }catch(e){ return ''; } })();
+  ok('현재가는 주인일 때만 쓴다', /const p=vnOwn\('price'\)\?inputNum\('vn_price'\):0;/.test(lp));
+  ok('평가금도 주인일 때만 쓴다', /const man=vnOwn\('eval'\)\?inputNum\('vn_eval'\):0;/.test(ev));
+  // 넣는 길이 셋이다 — 손으로 치기, 🔄 가 채우기, 현재가에서 평가금 자동 계산
+  ok('손으로 친 값도 주인을 남긴다', /oninput="commaInput\(this\);vnClaim\('eval'\);renderVrNow\(\)"/.test(idx));
+  ok('자동 시세가 채울 때도 주인을 남긴다', /nfix\(live,2\); vnClaim\('price'\);\}/.test(idx));
+  ok('현재가로 평가금을 채울 때도 남긴다', /\$\('vn_eval'\)\.value=nfix\(p\*c\.qty,2\); vnClaim\('eval'\);/.test(idx));
+  // 안 쓰더라도 화면에 남아 있으면 그 세션 현재가로 읽힌다
+  ok('세션을 옮기면 남의 값을 지운다',
+     /function vnClear\(\)\{/.test(idx)
+     && /function refreshVr\(\)\{[\s\S]{0,120}?vnClear\(\);/.test(idx));
+}
+
 console.log(`\n════ 결과: ${pass} PASS / ${fail} FAIL ${fail===0?'— ALL PASS ★':'— 배포 금지, 위 ✗ 항목 수정 필요'} ════`);
 process.exit(fail===0?0:1);

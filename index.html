@@ -519,7 +519,7 @@ try{ if(localStorage.getItem('qcockpit_hadUser')==='1') document.documentElement
 </div>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.51</span></h1></div>
+    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.52</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -848,7 +848,7 @@ document.addEventListener('click',function(e){ var m=document.getElementById('jk
           <button class="fetchbtn" id="vn_autobtn" onclick="fetchQuote('vr')">🔄 자동</button></div></div>
         <div class="fetchnote" id="vn_fetchnote" style="margin:0"></div>
         <div class="field" style="margin:8px 0 0"><label id="vn_eval_lbl">현재 평가금 ($) <span class="hint">수동 수정 가능</span></label>
-          <input id="vn_eval" type="text" inputmode="decimal" placeholder="평가금" oninput="commaInput(this);renderVrNow()"></div>
+          <input id="vn_eval" type="text" inputmode="decimal" placeholder="평가금" oninput="commaInput(this);vnClaim('eval');renderVrNow()"></div>
       </div>
 
     </div>
@@ -1579,7 +1579,7 @@ document.addEventListener('click',function(e){ var m=document.getElementById('jk
   <footer>
     <strong>JK 퀀트</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.51</b> · 2026-09-15</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.52</b> · 2026-09-15</div>
   </footer>
 </div>
 
@@ -2816,7 +2816,7 @@ async function fetchQuote(which){
     }else{
       // VR은 평가금 기준 → 실시간 현재가 사용
       vrChartData=q.days;
-      const vp=$('vn_price'); if(vp){vp.value = (q.currency==='KRW')? nfix(Math.round(live),0) : nfix(live,2);}
+      const vp=$('vn_price'); if(vp){vp.value = (q.currency==='KRW')? nfix(Math.round(live),0) : nfix(live,2); vnClaim('price');}
       onVnPrice(); refreshVr(); if(typeof drawVrChart==='function')drawVrChart();
       note.className='fetchnote ok';
       note.textContent=`✓ ${q.symbol} 현재가 ${fmtP(live)}${msLabel?` (${msLabel})`:''}${srcTag}`;
@@ -3377,8 +3377,22 @@ function cycDates(c){
 }
 
 /* 현재 평가금: 입력칸 우선, 없으면 보유×최근가, 없으면 0 */
+/* 현재가·평가금 수동 입력칸은 화면에 하나뿐인데 세션은 여럿이다.
+   어느 세션 값인지 기억해 두지 않으면, TECL 에서 🔄 를 눌러 채워진 222.26 으로
+   TQQQ·SOXL 평가금까지 계산한다 — 실측으로 TQQQ 가 +321% 에서 +1080% 로 튀었다.
+   값을 넣은 그 세션에서만 쓰고, 다른 세션에서는 없는 셈 친다. */
+let _vnFor={price:null, eval:null};
+function vnOwner(){ return (S&&S.vr&&S.vr.active)||null; }
+function vnOwn(kind){ return _vnFor[kind]!=null && _vnFor[kind]===vnOwner(); }
+function vnClaim(kind){ _vnFor[kind]=vnOwner(); }
+/* 세션을 옮기면 남의 값을 지운다 — 안 쓰더라도 화면에 남아 있으면 그 세션 현재가로 읽힌다 */
+function vnClear(){
+  for(const [k,id] of [['price','vn_price'],['eval','vn_eval']]){
+    if(_vnFor[k]!=null && _vnFor[k]!==vnOwner()){ const el=$(id); if(el) el.value=''; _vnFor[k]=null; }
+  }
+}
 function vrEval(c){
-  const man=inputNum('vn_eval'); // 콤마 포함 입력 안전 파싱 (+value는 콤마에서 NaN)
+  const man=vnOwn('eval')?inputNum('vn_eval'):0; // 그 세션에서 넣은 값일 때만 쓴다
   if(man>0) return man;
   const _Qv=quoteOf('vr');
   const last=(_Qv&&_Qv.last)||0;
@@ -3388,7 +3402,7 @@ function vrEval(c){
 
 /* 현재가(종가) 추정 */
 function vrLastPrice(c){
-  const p=inputNum('vn_price');
+  const p=vnOwn('price')?inputNum('vn_price'):0;   // 그 세션에서 넣은 값일 때만 쓴다
   if(p>0) return p;
   const _Qv2=quoteOf('vr');
   if(_Qv2&&_Qv2.last) return _Qv2.last;
@@ -3398,8 +3412,9 @@ function vrLastPrice(c){
 
 /* ── 현재가 입력 → 평가금 자동 계산 ── */
 function onVnPrice(){
+  vnClaim('price');
   const c=computeVr(), p=inputNum('vn_price')||0;
-  if(p>0 && c.qty>0) $('vn_eval').value=nfix(p*c.qty,2);
+  if(p>0 && c.qty>0){ $('vn_eval').value=nfix(p*c.qty,2); vnClaim('eval'); }
   else if(p>0 && c.qty===0) $('vn_eval').value='';
   renderVrNow();
 }
@@ -6515,6 +6530,7 @@ function vrSimNow(){
 }
 function refreshVr(){
   updateCurLabels('vr');
+  vnClear();                       // 세션이 바뀌었으면 남의 수동 입력값을 지운다
   { const r=vrSimForward();     // 모의 세션은 열 때마다 오늘까지 자동으로 굴린다
     if(r) vrAutoNote=`🤖 ${r.upto}까지 모의 체결 — 매도 ${r.nSell} · 매수 ${r.nBuy} · 사이클 ${r.nCyc}회 → ${r.cyc}주차`,
           vrAutoNoteSid=curStrat().id; }
