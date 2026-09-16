@@ -520,7 +520,7 @@ try{ if(localStorage.getItem('qcockpit_hadUser')==='1') document.documentElement
 </div>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.57</span></h1></div>
+    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.58</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -1590,7 +1590,7 @@ document.addEventListener('click',function(e){ var m=document.getElementById('jk
   <footer>
     <strong>JK 퀀트</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.57</b> · 2026-09-15</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.58</b> · 2026-09-15</div>
   </footer>
 </div>
 
@@ -3054,24 +3054,26 @@ function renderInfBreak(c){
   const simple=!!c.simple;
   const flowTxt=(v,col)=>v?`<span style="color:${col}">${v>=0?'+':''}${wn(v)}</span>`:'<span style="color:var(--faint)">—</span>';
   const netTxt=v=>!cap?'—':`<span style="color:${v>=0?'var(--buy)':'var(--sell)'}">${v>=0?'+':''}${wn(v)} <span style="font-size:10px">(${v>=0?'+':''}${(v/cap*100).toFixed(1)}%)</span></span>`;
-  const head=lbl=>`<tr><th>${lbl}</th><th>매도</th><th>손익금</th><th>손익률</th>`
-    + (simple?'<th>출금</th><th>입금</th><th>합계</th>':'')
-    + `${isKrw?'':'<th>원화</th>'}</tr>`;
+  const head=lbl=>`<tr><th>${lbl}</th><th>매도</th>`
+    + (simple?`<th>출금</th><th>입금</th><th>합계</th>${isKrw?'':'<th>합계원화</th>'}`:'')
+    + `<th>손익금</th><th>손익률</th>${isKrw?'':'<th>원화</th>'}</tr>`;
   const body=(list,empty)=>{
-    const nCol=(isKrw?4:5)+(simple?3:0);
+    const nCol=(isKrw?4:5)+(simple?(isKrw?3:4):0);
     if(!list.length) return head('구분')+`<tr><td class="empty" colspan="${nCol}">${empty}</td></tr>`;
     let tot=0, n=0, to=0, ti=0;
     const flowCells=x=>{ if(!simple) return '';
       to+=(x.out||0); ti+=(x.in||0);
       // 그 달에 돈이 안 오갔으면 합계도 비운다 — +0.00$ (+0.0%) 는 잡음이다
-      const has=(x.out||0)||(x.in||0);
+      const has=(x.out||0)||(x.in||0), net=(x.out||0)-(x.in||0), dash='<span style="color:var(--faint)">—</span>';
       return `<td>${flowTxt(x.out||0,'var(--gold)')}</td><td>${flowTxt(-(x.in||0),'var(--sell)')}</td>`
-        + `<td>${has?netTxt((x.out||0)-(x.in||0)):'<span style="color:var(--faint)">—</span>'}</td>`; };
+        + `<td>${has?netTxt(net):dash}</td>`
+        + (isKrw?'':`<td>${has?krwTxt(net):dash}</td>`); };
     const rows=list.map(x=>{ tot+=x.p; n+=x.n;
-      return `<tr><td>${x.label}</td><td>${x.n}</td><td>${amtTxt(x.p)}</td><td>${pctTxt(x.p)}</td>${flowCells(x)}${isKrw?'':`<td>${krwTxt(x.p)}</td>`}</tr>`; }).join('');
+      return `<tr><td>${x.label}</td><td>${x.n}</td>${flowCells(x)}<td>${amtTxt(x.p)}</td><td>${pctTxt(x.p)}</td>${isKrw?'':`<td>${krwTxt(x.p)}</td>`}</tr>`; }).join('');
     const sumFlow = simple
-      ? `<td>${flowTxt(to,'var(--gold)')}</td><td>${flowTxt(-ti,'var(--sell)')}</td><td>${netTxt(to-ti)}</td>` : '';
-    const sum=`<tr style="border-top:2px solid var(--line)"><td><b>합계</b></td><td>${n}</td><td>${amtTxt(tot)}</td><td>${pctTxt(tot)}</td>${sumFlow}${isKrw?'':`<td>${krwTxt(tot)}</td>`}</tr>`;
+      ? `<td>${flowTxt(to,'var(--gold)')}</td><td>${flowTxt(-ti,'var(--sell)')}</td><td>${netTxt(to-ti)}</td>`
+        + (isKrw?'':`<td>${krwTxt(to-ti)}</td>`) : '';
+    const sum=`<tr style="border-top:2px solid var(--line)"><td><b>합계</b></td><td>${n}</td>${sumFlow}<td>${amtTxt(tot)}</td><td>${pctTxt(tot)}</td>${isKrw?'':`<td>${krwTxt(tot)}</td>`}</tr>`;
     return rows+sum;
   };
   // 월별 — 최근이 위로

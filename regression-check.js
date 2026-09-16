@@ -1194,8 +1194,9 @@ console.log('[27] 무매 분석 — 월별·사이클별');
   // 원화 세션은 이미 원화라 같은 수를 두 번 쓰는 꼴이 된다
   ok('원화 열은 달러 세션에서만', /isKrw=\(st\.cur==='krw'\)/.test(br)
      && /\$\{isKrw\?'':'<th>원화<\/th>'\}/.test(br));
+  // 단리면 출금·입금·합계에 달러 세션은 합계원화까지 — 원화 세션은 셋, 달러 세션은 넷
   ok('빈 표 colspan이 열 수를 따라간다',
-     /const nCol=\(isKrw\?4:5\)\+\(simple\?3:0\);/.test(br) && /colspan="\$\{nCol\}"/.test(br));
+     /const nCol=\(isKrw\?4:5\)\+\(simple\?\(isKrw\?3:4\):0\);/.test(br) && /colspan="\$\{nCol\}"/.test(br));
   ok('합계 줄이 있다', /<td><b>합계<\/b><\/td>/.test(br));
 }
 
@@ -2327,10 +2328,17 @@ console.log('\n[55] 단리 현금 흐름');
   ok('월별·사이클별 표도 같은 flows 를 쓴다',
      /\(c\.flows\|\|\[\]\)\.forEach\(f=>\{ const k=String\(f\.date\|\|''\)\.slice\(0,7\)/.test(br2)
      && /\(c\.flows\|\|\[\]\)\.forEach\(f=>\{ const o=C\.get\(f\.seq\)/.test(br2));
-  ok('단리 세션에만 세 칸이 붙는다',
-     /\(simple\?'<th>출금<\/th><th>입금<\/th><th>합계<\/th>':''\)/.test(br2));
+  /* 돈이 오간 칸은 매도 바로 오른쪽 — 월 현금흐름이 먼저 보여야 한다.
+     손익금·손익률은 그 뒤로 민다. 달러 세션엔 합계원화까지 붙는다. */
+  ok('단리 세션에만 붙고, 매도 바로 오른쪽이다',
+     /<th>\$\{lbl\}<\/th><th>매도<\/th>`\s*\+ \(simple\?`<th>출금<\/th><th>입금<\/th><th>합계<\/th>\$\{isKrw\?'':'<th>합계원화<\/th>'\}`:''\)/.test(br2)
+     && /\+ `<th>손익금<\/th><th>손익률<\/th>/.test(br2));
+  ok('줄에서도 매도 바로 뒤에 온다',
+     /<td>\$\{x\.label\}<\/td><td>\$\{x\.n\}<\/td>\$\{flowCells\(x\)\}<td>\$\{amtTxt\(x\.p\)\}/.test(br2)
+     && /<td><b>합계<\/b><\/td><td>\$\{n\}<\/td>\$\{sumFlow\}<td>\$\{amtTxt\(tot\)\}/.test(br2));
+  ok('합계원화는 달러 세션에만', /\(isKrw\?'':`<td>\$\{has\?krwTxt\(net\):dash\}<\/td>`\)/.test(br2));
   // 돈이 안 오간 달에 +0.00$ (+0.0%) 가 뜨면 잡음이다
-  ok('안 오간 달은 합계도 비운다', /const has=\(x\.out\|\|0\)\|\|\(x\.in\|\|0\);/.test(br2));
+  ok('안 오간 달은 합계도 비운다', /const has=\(x\.out\|\|0\)\|\|\(x\.in\|\|0\), net=\(x\.out\|\|0\)-\(x\.in\|\|0\)/.test(br2));
 }
 
 /* ════ 56. 국내(원화) 세션 — 통화를 고를 수 있어야 한다 ════
