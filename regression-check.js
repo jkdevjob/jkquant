@@ -61,6 +61,11 @@ const iqSrc=(bt.match(/^const iq=\(amt,px\)=>[^\n]*\nconst isq=\([^\n]*$/m)||[''
 if(!iqSrc) throw new Error('정수 주수 헬퍼(iq/isq)를 backtest.html에서 못 찾음');
 // eval 안의 const는 밖으로 안 새어나간다 — 뒤에 따로 eval하는 엔진(runIM50 등)도 봐야 하니 전역으로 올린다
 { const f=new Function(iqSrc+'\nreturn {iq,isq};')(); global.iq=f.iq; global.isq=f.isq; }
+/* 비용·세금 프로필도 엔진이 직접 부른다 — iq/isq와 같은 이유로 전역에 올린다 */
+const costSrc=(bt.match(/const COST_FEE=[\s\S]*?function capGainTax\([\s\S]*?\n\}/)||[''])[0];
+if(!costSrc) throw new Error('비용·세금 프로필(costOf/capGainTax)을 backtest.html에서 못 찾음');
+{ const f=new Function(costSrc+'\nreturn {isKRW,krTaxRate,costOf,capGainTax};')();
+  global.isKRW=f.isKRW; global.krTaxRate=f.krTaxRate; global.costOf=f.costOf; global.capGainTax=f.capGainTax; }
 let btSrc=extractFn(bt,'function runIM(days,tkr,cap,divs,targetPct,compound')+'\n'+extractFn(bt,'function runVR(days,tkr,params)');
 function inject(before, after, label){
   const p=btSrc.split(before);
@@ -246,8 +251,7 @@ console.log('[4c] 섀넌 차분 (runIVS 거래로그 → ivsPos 재생)');
 {
   global.TBILL_RATE=new Proxy({},{get:()=>0});          // 예수금 이자 중화
   global.META=global.META||{};
-  global.COST_FEE=0.0025; global.COST_KRW=1350; global.COST_TAXRATE=0.22;
-  global.COST_DEDUCT=1e18;                             // 양도세 중화 (운영은 세금을 안 넣는다)
+  global.COST_FEE=0.0025; global.COST_KRW=1350; global.COST_TAXRATE=0.22; global.COST_DEDUCT=250e4;
   eval(extractFn(bt,'function _ivsWeights(tkr,N,s0)'));
   let ivsSrc=extractFn(bt,'function runIVS(days,tkr,cap,s0,N,band,costOn,mode,pair)');
   const inj=(before,after,label)=>{ const p=ivsSrc.split(before);
@@ -258,8 +262,11 @@ console.log('[4c] 섀넌 차분 (runIVS 거래로그 → ivsPos 재생)');
   inj(`yearPnl+=q*(px-P.avg)-fee; P.sh-=q;`,
       `yearPnl+=q*(px-P.avg)-fee; P.sh-=q; __LOGI('sell',P===A?'lev':'x1',__DD,px,q,gross,fee);`,'sell');
   inj(`days.forEach((d,i)=>{`,`days.forEach((d,i)=>{ __DD=d;`,'date');
-  inj(`const LEGFEE=(costOn&&!X1)?COST_FEE:0;`,`const LEGFEE=0;`,'legfee');
+  inj(`const LEGFEE=(costOn&&!X1)?costOf(tkr).fee:0;`,`const LEGFEE=0;`,'legfee');
   inj(`const CASH_DIVTAX=costOn?0.154:0, CASH_EXP=costOn?0.0010:0;`,`const CASH_DIVTAX=0, CASH_EXP=0;`,'cashcost');
+  /* 양도세 중화 — 운영 장부엔 세금 개념이 없다. 예전엔 COST_DEDUCT를 무한대로 올려 껐지만
+     세금이 costOf/capGainTax 안으로 들어가면서 밖에서 상수를 덮어써도 안 먹는다. 식을 직접 끈다. */
+  inj(`const owed=capGainTax(yearPnl, tkr); let due=owed; yearPnl=0;`,`const owed=0; let due=owed; yearPnl=0;`,'tax');
   let ivsLog=[];
   global.__DD=null;
   global.__LOGI=(type,leg,date,price,qty,amt,fee)=>ivsLog.push({type,leg,sym:leg,date,price,qty,amt,fee,ts:ivsLog.length+1});
@@ -1973,7 +1980,17 @@ console.log('\n[44] 숫자 표기 — 기호는 뒤, 자릿수는 오른쪽 맞�
      /toLocaleString\('en-US'\)\+'₩'/.test(idx) && /maximumFractionDigits:2\}\)\+'\$'/.test(idx));
   ok('운영 — usd·px·won 도 뒤에 붙인다',
      (idx.match(/\+'\$';/g)||[]).length>=2 && /liveFX:FX\)\)\.toLocaleString\('en-US'\)\+'₩'/.test(idx));
-  ok('백테 — money 가 기호를 뒤에 붙인다', /fmt\(Math\.round\(x\)\)\+'\$'/.test(bt));
+  ok('백테 — fmtV 가 기호를 뒤에 붙인다', /const fmtV=\(v,t\)=>fmt\(v\)\+curOf\(t\)/.test(bt));
+  ok('백테 — 로테이션 money 도 뒤에 붙인다', /money=v=>fmt\(Math\.round\(v\)\)\+cur\b/.test(bt));
+  ok('백테 — 차트 축도 뒤에 붙인다', /const fmtY=v=>[^\n]*\+cs:[^\n]*\+cs;/.test(bt));
+  /* 런타임 앞붙임 — 소스에 '₩1' 같은 글자가 없어도 통화를 변수로 앞에 이어붙이면
+     화면엔 그대로 앞에 나온다. 로테이션 탭의 `cur+fmt(...)` 가 정확히 이 방식으로
+     위의 글자 스캔을 빠져나가 국내 원금이 ₩10,000,000 으로 찍히고 있었다. */
+  for(const f of PAGES){
+    if(!src[f]) continue;
+    const hits = src[f].match(/(?:'[₩$]'\)?|curOf\([^()]*\)|\bU\.cur|\bcurSym\b|\bcs\b|\bcur\b)\s*\+\s*(?:fmt\(|Math\.round\(|String\()/g) || [];
+    ok(`${f} — 통화를 숫자 앞에 이어붙인 데가 없다`, hits.length===0, hits.join(' / '));
+  }
   ok('공모주 — ipoWon 이 기호를 뒤에 붙인다', /toLocaleString\('en-US'\)\+'₩'/.test(ipo));
   // 범위는 "1,000~2,000₩" — 기호를 떼는 쪽이 뒤가 아니라 앞 값이다
   ok('공모주 — 범위는 앞 값의 기호만 뗀다',
@@ -2397,6 +2414,79 @@ console.log('\n[57] 분배금 현금 수령 — 월 수입으로 읽는다');
   const ps=(()=>{ try{ return extractFn(idx,'function paperStat(tab, sess)'); }catch(e){ return ''; } })();
   ok('목록에서 현금 수령분은 인출이다',
      /if\(c\.pos && !c\.pos\.reinv && \(c\.pos\.divCash\|\|0\)>0\)\s*\n\s*_out=\{saved:c\.pos\.divCash, withdrawn:0, simple:true\};/.test(ps));
+}
+
+/* ════ 58. 국내 종목의 비용·세금 규약 ════
+   국내 ETF는 미국과 겹치는 숫자가 하나도 없다. 그런데 백테 엔진은 전부
+   COST_FEE(0.25%)·COST_TAXRATE(22%)·COST_KRW(1350)을 박아 쓰고 있었다.
+   원화 종목에 1,350을 곱하면 과세표준이 1,350배로 부풀어 세금이 터지고,
+   수수료도 16배 넘게 물린다 — 국내 백테 결과가 통째로 못 쓰게 된다.
+   costOf()/capGainTax() 한 군데로 모았으니 그 한 군데를 지킨다. */
+console.log('\n[58] 국내 종목의 비용·세금 규약');
+{
+  // 종목 판별 — 옛 6자리, 2024년 이후 알파벳 낀 코드, 야후 접미사
+  ok('국내 코드를 알아본다',
+     isKRW('069500') && isKRW('0104N0') && isKRW('122630.KS') && isKRW('233740.KQ'));
+  ok('미국 티커를 국내로 오인하지 않는다',
+     !isKRW('SOXL') && !isKRW('TQQQ') && !isKRW('QQQ') && !isKRW(''));
+
+  const us=costOf('SOXL'), kr=costOf('069500'), krOther=costOf('0104N0');
+  ok('미국은 종전 그대로', us.fee===0.0025 && us.taxRate===0.22 && us.krw===1350 && us.deduct===250e4 && us.cur==='$');
+  ok('국내 수수료는 0.015%', kr.fee===0.00015 && krOther.fee===0.00015);
+  ok('국내엔 환율·공제를 쓰지 않는다', kr.krw===1 && kr.deduct===0 && krOther.krw===1 && krOther.deduct===0);
+  ok('국내 통화 기호는 ₩', kr.cur==='₩');
+
+  // 국내주식형 ETF는 매매차익 비과세, 그 밖(해외지수·채권·원자재·커버드콜)은 15.4%
+  ok('국내주식형은 매매차익 비과세', krTaxRate('069500')===0 && krTaxRate('122630')===0 && krTaxRate('233740')===0);
+  ok('그 밖의 국내 ETF는 15.4%', krTaxRate('133690')===0.154 && krTaxRate('0104N0')===0.154);
+  ok('야후 접미사가 붙어도 같은 판정', krTaxRate('069500.KS')===0 && krTaxRate('133690.KS')===0.154);
+
+  // 세액 — 미국 경로는 종전 식과 소수점까지 같아야 한다
+  ok('미국: 공제 안쪽이면 0', capGainTax(1000,'SOXL')===0);
+  ok('미국: 공제 바깥은 종전 식 그대로',
+     near(capGainTax(10000,'SOXL'), Math.max(0,10000*1350-250e4)*0.22/1350, 1e-9),
+     capGainTax(10000,'SOXL').toFixed(4));
+  ok('손실이면 세금 없다', capGainTax(-5000,'SOXL')===0 && capGainTax(-5000,'0104N0')===0);
+  // 국내: 환율을 곱하면 안 된다 — 곱하는 순간 공제가 무의미해지고 세액이 실현익을 넘는다
+  ok('국내 기타형: 실현익 × 15.4%', near(capGainTax(1000000,'0104N0'), 154000, 1e-6));
+  ok('국내 주식형: 얼마를 벌어도 0', capGainTax(1000000,'069500')===0);
+
+  // 로테이션 탭이 이미 쓰던 taxable 플래그와 어긋나면 한 앱 안에서 세율이 둘이 된다
+  const univ=(bt.match(/kr:\{[\s\S]*?bench:/)||[''])[0];
+  const flags=[...univ.matchAll(/\{sym:'(\d{6})\.KS',name:'[^']*',taxable:(true|false)/g)];
+  ok('로테이션 kr 유니버스를 읽었다', flags.length>=6, `${flags.length}종목`);
+  const clash=flags.filter(([,sym,tx])=>(tx==='true') !== (krTaxRate(sym)>0)).map(x=>x[1]);
+  ok('로테이션 taxable 플래그와 세율이 일치한다', clash.length===0, clash.join(','));
+
+  // 엔진이 상수를 직접 쓰지 않는지 — 한 군데라도 새면 그 전략만 미국 규약으로 돈다
+  const engines=bt.slice(bt.indexOf('function runIM(days,tkr'), bt.indexOf('const COMBO_PAL='));
+  const leaks=(engines.match(/COST_FEE|COST_SLIP|COST_KRW|COST_TAXRATE|COST_DEDUCT/g)||[]);
+  ok('전략 엔진이 미국 상수를 직접 쓰지 않는다', leaks.length===0, leaks.join(','));
+  ok('기말 전량매도도 종목을 받는다',
+     /function saleNet\(gross, invested, costOn, tkr\)/.test(bt)
+     && (bt.match(/saleNet\([^)]*,\s*(?:t|r\.tkr)\)/g)||[]).length===3);
+
+  /* 화면 쪽 — 원금 칸과 주석이 종목을 따라가야 한다.
+     '원금 ($)' 을 박아 두면 국내 ETF를 골라 놓고도 달러 넣는 칸처럼 보이고,
+     '수수료 0.25% 반영' 은 실제로 0.015%를 물렸는데도 그대로 남아 거짓말이 된다. */
+  ok('원금·적립금 칸이 탭을 달고 있다', (bt.match(/<label data-cur="/g)||[]).length===12,
+     `${(bt.match(/<label data-cur="/g)||[]).length}개`);
+  ok('칸 라벨에 통화를 박아 두지 않는다', !/<label data-cur="[a-z]+">[^<]*USD/.test(bt));
+  ok('라벨은 원문을 들고 다시 쓴다', /nd\.__curBase===undefined/.test(bt) && /nd\.nodeValue=nd\.__curBase\.replace/.test(bt));
+  ok('탭을 옮기거나 종목을 바꾸면 다시 쓴다',
+     /function renderSingle\(\)\{[^}]*syncCurLabels\(\);/.test(bt)
+     && /_ivsSync\(\);\n\s*syncCurLabels\(\);/.test(bt));
+  // 섞어 고르면 원금 한 칸이 두 통화를 뜻하게 된다 — 한쪽 기호를 붙이면 나머지가 거짓이다
+  ok('섞였을 땐 기호를 떼고 그렇다고 적는다',
+     /\(ts\.some\(isKRW\)&&ts\.some\(t=>!isKRW\(t\)\)\) \? '종목별'/.test(bt)
+     && /\(종목별 통화\)/.test(bt)
+     && /원화·달러가 섞여 있어/.test(bt));
+  ok('주석의 비율을 글로 박아 두지 않는다',
+     /function _costNote\(tkrs\)/.test(bt) && /function _curNote\(tkrs\)/.test(bt)
+     && !/costOn\?'수수료 0\.25%/.test(bt));
+  // 원금 헤더는 세 탭 모두 섞임을 아는 쪽으로
+  ok('원금 헤더가 섞임을 안다', (bt.match(/_capV\(/g)||[]).length===4,
+     `${(bt.match(/_capV\(/g)||[]).length}곳`);
 }
 
 console.log(`\n════ 결과: ${pass} PASS / ${fail} FAIL ${fail===0?'— ALL PASS ★':'— 배포 금지, 위 ✗ 항목 수정 필요'} ════`);
