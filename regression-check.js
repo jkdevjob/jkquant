@@ -250,6 +250,8 @@ console.log('[4b] runIM50 스모크 + V4.0 앵커');
 console.log('[4c] 섀넌 차분 (runIVS 거래로그 → ivsPos 재생)');
 {
   global.TBILL_RATE=new Proxy({},{get:()=>0});          // 예수금 이자 중화
+  global.KR_RATE=new Proxy({},{get:()=>0});
+  global.parkRate=()=>0;                               // 금리가 종목 통화를 따라가게 되면서 함수로 바뀌었다
   global.META=global.META||{};
   global.COST_FEE=0.0025; global.COST_KRW=1350; global.COST_TAXRATE=0.22; global.COST_DEDUCT=250e4;
   eval(extractFn(bt,'function _ivsWeights(tkr,N,s0)'));
@@ -1187,7 +1189,7 @@ console.log('[27] 무매 분석 — 월별·사이클별');
      && idx.indexOf('id="a_bymonth"') < idx.indexOf('id="inf-guide"'));
   let br=''; try{ br=extractFn(idx,'function renderInfBreak(c)'); }catch(e){}
   ok('집계 함수 존재', !!br, br?'':'renderInfBreak 없음');
-  ok('분석 그릴 때 같이 그린다', /function renderInfAnal\(\)\{\s*\n\s*const c=computeInf\(\), st=c\.st;\s*\n\s*renderInfBreak\(c\);/.test(idx));
+  ok('분석 그릴 때 같이 그린다', /function renderInfAnal\(\)\{[\s\S]{0,900}?renderInfBreak\(c\);/.test(idx));
   // 평가손익을 섞으면 '언제 얼마를 벌었나'가 흐려진다
   ok('매도로 확정된 것만 센다', /const sells=\(c\.rows\|\|\[\]\)\.filter\(h=>isSell\(h\.kind\)\);/.test(br));
   ok('손익률 분모는 거래이력과 같은 원금', /const st=c\.st, cap=\+st\.principal\|\|0/.test(br)
@@ -2200,8 +2202,10 @@ console.log('\n[50] 무매 분석 요약 — 현재·실현·누적 세 수익�
     const i1=idx.indexOf('id="a_ret_now"'), i2=idx.indexOf('id="a_ret_real"'), i3=idx.indexOf('id="a_ret"');
     return i1>0 && i2>i1 && i3>i2; })());
   ok('현재는 나간 돈을 빼고 잰다', /put\('a_ret_now',\s*total - outMoney - P\);/.test(infA));
-  ok('실현은 확정된 손익이다',    /put\('a_ret_real',\s*c\.realized\|\|0\);/.test(infA));
-  ok('누적은 나간 돈을 포함한다', /put\('a_ret',\s*total - P\);/.test(infA)
+  /* 분배금 현금수령을 켜면 그 돈도 확정된 수입이다 — 재투자(기본)면 _dv.divCash=0이라
+     아래 두 식이 예전과 글자 그대로 같은 값이 된다. */
+  ok('실현은 확정된 손익이다',    /put\('a_ret_real', \(c\.realized\|\|0\) \+ _dv\.divCash\);/.test(infA));
+  ok('누적은 나간 돈을 포함한다', /put\('a_ret', {6}total - P \+ _dv\.divCash\);/.test(infA)
      && /total=invested\+c\.bal\+\(c\.outside\|\|0\)/.test(infA));
   // 비율만 보면 원금이 다른 세션끼리 감이 안 온다 — 금액을 같이 적는다
   ok('수익금(수익률) 로 적는다',
@@ -2467,6 +2471,14 @@ console.log('\n[58] 국내 종목의 비용·세금 규약');
   const engines=bt.slice(bt.indexOf('function runIM(days,tkr'), bt.indexOf('const COMBO_PAL='));
   const leaks=(engines.match(/COST_FEE|COST_SLIP|COST_KRW|COST_TAXRATE|COST_DEDUCT/g)||[]);
   ok('전략 엔진이 미국 상수를 직접 쓰지 않는다', leaks.length===0, leaks.join(','));
+  /* 예수금 이자·차입비용도 종목 통화를 따라가야 한다 — 원화 종목에 미국 T-Bill을
+     물리면 현금 대피 구간 수익과 레버리지 드래그가 통째로 틀린다. */
+  ok('예수금 금리는 종목 통화를 따라간다',
+     /const parkRate=\(y,tkr\)=>isKRW\(tkr\) \? \(KR_RATE\[y\] \?\? 0\.025\) : \(TBILL_RATE\[y\] \?\? 0\.04\);/.test(bt));
+  ok('미국 금리를 직접 읽는 데가 남지 않았다',
+     (bt.match(/TBILL_RATE\[/g)||[]).length===1, `${(bt.match(/TBILL_RATE\[/g)||[]).length}곳`);
+  ok('차입비용도 같은 금리를 쓴다', (bt.match(/_bor\*\(parkRate\(y,/g)||[]).length===2);
+
   ok('기말 전량매도도 종목을 받는다',
      /function saleNet\(gross, invested, costOn, tkr\)/.test(bt)
      && (bt.match(/saleNet\([^)]*,\s*(?:t|r\.tkr)\)/g)||[]).length===3);
@@ -2533,7 +2545,7 @@ console.log('\n[59] 월 현금흐름 — 전 전략 공용');
   /* 분모가 netInvested(인출 뺀 뒤)면 '누적(인출 포함)'이 인출을 두 번 센다 */
   ok('VR 분모는 인출 빼기 전 총투입',
      /const grossIn=totadd \+ \(st\.startpool\|\|0\) \+ initBuy;/.test(cv)
-     && /paintRet3\('vc', \{base:c\.grossIn, now:total, realized:c\.realized, out:c\.totwd\}\)/.test(idx));
+     && /paintRet3\('vc', \{base:c\.grossIn, now:total, realized:c\.realized\+_dv\.divCash, out:c\.totwd\+_dv\.divCash\}\)/.test(idx));
   ok('VR 받은 분배금을 띄운다', /id="vc_divrow"/.test(idx) && /id="vc_div"/.test(idx));
 
   // 섀넌도 입출금을 장부에서 뽑아야 한다
@@ -2562,6 +2574,70 @@ console.log('\n[59] 월 현금흐름 — 전 전략 공용');
   ok('금액과 %에 부호를 같이 붙인다',
      /const net=out-inn, sg=net<0\?'−':'', a=Math\.abs\(net\);/.test(idx)
      && /put\('net', `\$\{sg\}\$\{wn\(a\)\} \(\$\{sg\}\$\{\(a\/base\*100\)\.toFixed\(1\)\}%\)`/.test(idx));
+}
+
+/* ════ 60. 분배금 현금 수령 — 전 전략 ════
+   적립 탭만 분배금을 세고 있었다. SOXL·TQQQ도 분배금이 나오는데 무매·VR·로테·
+   섀넌·ASAP 장부엔 어디에도 안 잡혔다. '현금 수령'을 고르면 그 돈은 계좌 밖으로
+   나간 것이므로 단리 인출과 같은 취급이다.
+   기본은 '재투자' — 켜지 않으면 기존 세션 숫자가 하나도 바뀌지 않아야 한다. */
+console.log('\n[60] 분배금 현금 수령 — 전 전략');
+{
+  const tabs=['inf','vr','ma','ivs','asap'];
+  const miss=tabs.filter(t=>!new RegExp(`id="set_${t}divmode"`).test(idx));
+  ok('다섯 전략에 칸이 있다', miss.length===0, miss.join(','));
+  ok('기본은 재투자다', (idx.match(/divmode:'reinv'/g)||[]).length===5,
+     `${(idx.match(/divmode:'reinv'/g)||[]).length}곳`);
+  const wired=tabs.filter(t=>new RegExp(`'set_${t}divmode'`).test(idx));
+  ok('토글이 배선돼 있다', wired.length===5, wired.join(','));
+  const saved=tabs.filter(t=>new RegExp(`divmode:segGet\\('set_${t}divmode'\\)\\|\\|'reinv'`).test(idx));
+  ok('저장된다', saved.length===5, saved.join(','));
+  const restored=tabs.filter(t=>new RegExp(`segSet\\('set_${t}divmode',st\\.divmode\\|\\|'reinv'\\)`).test(idx));
+  ok('설정창에 다시 채운다', restored.length===5, restored.join(','));
+
+  /* 모의 기록을 만드는 규칙이 아니다 — SIM_KEYS에 넣으면 이미 쌓인 모의 세션이
+     전부 '옛 규칙'으로 찍혀 다시 돌게 된다. */
+  const sk=(idx.match(/const SIM_KEYS=\{[\s\S]*?\n\};/)||[''])[0];
+  ok('모의 지문에는 넣지 않는다', !/divmode/.test(sk));
+
+  // 세는 함수는 하나 — 적립이 쓰던 규약 그대로
+  ok('세는 함수는 하나다', (idx.match(/function divIncome\(/g)||[]).length===1
+     && (idx.match(/function shareTimeline\(/g)||[]).length===1);
+  const di=(()=>{ try{ return extractFn(idx,'function divIncome(divs, lots, reinv)'); }catch(e){ return ''; } })();
+  const st=(()=>{ try{ return extractFn(idx,'function shareTimeline(hist)'); }catch(e){ return ''; } })();
+  ok('매수·매도 이름이 전략마다 달라도 읽는다', /BUY=\{buy:1,in:1\}, SELL=\{sell:1,out:1\}/.test(st)
+     && /if\(\/매수\/\.test\(h\.kind\)\)/.test(st) && /const bq=\+h\.buyQty\|\|0, sq=\+h\.sellQty\|\|0;/.test(st));
+  ok('재투자는 흐름에 넣지 않는다', /if\(!reinv\) out\.flows\.push\(\{date:d\.date, out:cash, in:0\}\);/.test(di));
+  {
+    const fn=new Function(st+'\n'+di+'\nreturn {shareTimeline,divIncome};')();
+    const lots=fn.shareTimeline([{date:'2025-01-06',type:'buy',qty:100,price:30},
+                                 {date:'2025-06-02',type:'sell',qty:40,price:45},
+                                 {date:'2025-07-01',type:'in',qty:10,price:50}]);
+    ok('매도는 수량을 줄인다', lots.length===3 && lots[1].q===-40 && lots[2].q===10);
+    const r=fn.divIncome([{date:'2024-12-01',amount:1},   // 매수 전 — 세면 안 된다
+                          {date:'2025-03-01',amount:1},   // 100주
+                          {date:'2025-08-01',amount:2}],  // 70주
+                         lots, false);
+    ok('배당락 시점 보유수량으로 센다', r.nDiv===2 && Math.abs(r.divCash-(100*1+70*2))<1e-9,
+       `${r.nDiv}회 ${r.divCash}`);
+    ok('매수 전 분배금은 안 센다', !r.flows.some(f=>f.date<'2025-01-06'));
+    const r2=fn.divIncome([{date:'2025-03-01',amount:1}], lots, true);
+    ok('재투자면 나간 돈이 없다', r2.divCash>0 && r2.flows.length===0);
+  }
+  /* 끄면(기본) 전부 0 — 기존 세션의 수익률이 한 자리도 안 움직여야 한다 */
+  const sd=(()=>{ try{ return extractFn(idx,'function sessDivCash(st, hist, onReady)'); }catch(e){ return ''; } })();
+  ok('끄면 전부 0이다', /if\(!divCashOn\(st\)\) return \{divCash:0, nDiv:0, flows:\[\]\};/.test(sd));
+  // 가격 경로를 건드리면 국내 종목 시세 출처까지 바뀐다 — 분배금만 따로 받는다
+  { // 전 탭이 같이 쓰는 가격 fetch에 div=1이 붙으면 국내 종목 시세 출처까지 바뀐다
+    const fr=(()=>{ try{ return extractFn(idx,'async function _fetchDailyRaw(symbol)'); }catch(e){ return ''; } })();
+    ok('가격 경로를 건드리지 않는다',
+       /_divCache\[K\]='loading';/.test(idx) && /fetchDailyDiv\(K\)/.test(idx)
+       && fr.length>0 && !/div=1/.test(fr)); }
+  const calls=['renderInfAnal','renderVrAnal','renderMaAnal','renderIvsAnal','renderAsapAnal']
+    .filter(f=>new RegExp(`sessDivCash\\([\\s\\S]{0,60}?\\(\\)=>${f}\\(\\)\\)`).test(idx));
+  ok('다섯 렌더가 모두 쓴다', calls.length===5, calls.join(','));
+  // 시세에서 뽑은 추정이다 — 화면에 밝힌다
+  ok('추정이라고 밝힌다', (idx.match(/시세 기준 추정/g)||[]).length>=3);
 }
 
 console.log(`\n════ 결과: ${pass} PASS / ${fail} FAIL ${fail===0?'— ALL PASS ★':'— 배포 금지, 위 ✗ 항목 수정 필요'} ════`);

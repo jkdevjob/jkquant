@@ -1929,7 +1929,7 @@ async function buildLevExt(tickers, start){
     //  ※ 비용을 빼지 않으면 3배는 연 7%p 이상 과대평가된다 (SOXL 실제 37.4% vs 무비용합성 44.9%).
     const _exp=LEV_EXPENSE[t]??LEV_EXPENSE_DEF, _bor=Math.max(0,lev-1);
     const _div=LEV_PRICEIDX[t] ? ((IDX_EXTEND[under]||{}).div||0) : 0;   // 가격지수 상품만 배당 되돌림
-    const dragOf=y=>(_exp + _bor*((TBILL_RATE[y]??0.04)+LEV_SPREAD) + lev*_div)/252;
+    const dragOf=y=>(_exp + _bor*(parkRate(y,t)+LEV_SPREAD) + lev*_div)/252;
     const synMap={}; let syn=1; synMap[upTo[0]]=1;
     for(let i=1;i<upTo.length;i++){ const r=U[upTo[i]][C]/U[upTo[i-1]][C]-1;
       syn*=(1+r*lev-dragOf(+upTo[i].slice(0,4))); synMap[upTo[i]]=syn; }
@@ -2587,7 +2587,7 @@ function runMA200(days,tkr,cap,N,costOn,opt){
     const c=M[tkr][d][C];
     { const y=d.slice(0,4); if(curYear===null)curYear=y; else if(y!==curYear){_settle();curYear=y;} }
     // 대피처가 '단기국채'면 현금 보유일에 일할 이자 (T-Bill 연평균, TBILL_RATE)
-    if(PARK==='bill'&&cash>0){ const it=cash*(TBILL_RATE[+d.slice(0,4)]??0.04)/252; cash+=it; interestTotal+=it; }
+    if(PARK==='bill'&&cash>0){ const it=cash*parkRate(+d.slice(0,4),tkr)/252; cash+=it; interestTotal+=it; }
     const g=gIdx[d];
     const want = g>0 ? above[dts[g-1]] : true;             // 전일 신호 (기간 앞 이력 사용, 첫날은 보유 시작)
     if(want && shares===0 && cash>0){
@@ -2631,6 +2631,16 @@ const TBILL_RATE={1980:.115,1981:.140,1982:.106,1983:.086,1984:.095,1985:.075,19
  2000:.058,2001:.034,2002:.016,2003:.010,2004:.014,2005:.032,2006:.047,2007:.044,2008:.014,2009:.0015,
  2010:.001,2011:.001,2012:.001,2013:.001,2014:.001,2015:.002,2016:.004,2017:.010,2018:.019,2019:.022,
  2020:.004,2021:.001,2022:.017,2023:.050,2024:.052,2025:.045,2026:.043};
+/* 국내 종목의 예수금·차입 금리 — 한국은행 기준금리 연평균 근사.
+   단기 CD(91일)·통안채가 기준금리 근처에서 움직이므로 대피처 이자의 대용으로 쓴다.
+   원화 종목에 미국 T-Bill을 물리면 현금 대피 구간 수익이 통째로 틀리고,
+   레버리지 ETF의 차입비용(dragOf)도 같은 이유로 원화 금리를 써야 한다.
+   미국 표와 마찬가지로 근사값이다 — 연중 변동은 반영하지 않는다. */
+const KR_RATE={2005:.033,2006:.043,2007:.048,2008:.048,2009:.021,
+ 2010:.022,2011:.031,2012:.030,2013:.026,2014:.023,2015:.017,2016:.013,2017:.013,2018:.015,2019:.016,
+ 2020:.006,2021:.006,2022:.018,2023:.035,2024:.033,2025:.027,2026:.025};
+/* 그 종목 통화의 단기금리. 국내면 기준금리, 아니면 T-Bill. */
+const parkRate=(y,tkr)=>isKRW(tkr) ? (KR_RATE[y] ?? 0.025) : (TBILL_RATE[y] ?? 0.04);
 const SGOV_RATE={2010:.001,2011:.001,2012:.001,2013:.001,2014:.001,2015:.002,2016:.004,2017:.010,2018:.019,2019:.022,2020:.004,2021:.001,2022:.017,2023:.050,2024:.052,2025:.045,2026:.043};
 function _asapInd(tkr){
   const dts=Object.keys(M[tkr]).sort(), cl=dts.map(d=>M[tkr][d][C]), N=cl.length;
@@ -2747,7 +2757,7 @@ function runMA200Accum(days,tkr,contribTotal,N,costOn,opt){
   days.forEach((d,i)=>{ const c=M[tkr][d][C], g=gIdx[d];
     { const y=d.slice(0,4); if(curYear===null)curYear=y; else if(y!==curYear){_settle();curYear=y;} }
     // 대피처가 '단기국채'면 전일까지 쌓인 현금에 일할 이자 (오늘 적립분이 들어오기 전 잔액 기준)
-    if(PARK==='bill'&&cash>0){ const it=cash*(TBILL_RATE[+d.slice(0,4)]??0.04)/252; cash+=it; interestTotal+=it; }
+    if(PARK==='bill'&&cash>0){ const it=cash*parkRate(+d.slice(0,4),tkr)/252; cash+=it; interestTotal+=it; }
     cash+=add; inv+=add;                                   // 매일 균등 적립
     const want=g>0?above[dts[g-1]]:true;
     if(want&&cash>0){ const fee=cash*FEE, net=cash-fee, q=net/c; avg=(avg*shares+c*q)/(shares+q); shares+=q; cash=0; }   // 신호 ON: 매수(가중평단 갱신)
@@ -2786,7 +2796,7 @@ function _ivsX1(tkr){
   const _exp=LEV_EXPENSE[tkr]??LEV_EXPENSE_DEF, _bor=Math.max(0,lev-1);
   const _div=LEV_PRICEIDX[tkr] ? ((IDX_EXTEND[u]||{}).div||0) : 0;
   const _x1=(X1_EXPENSE[u]??X1_EXPENSE_DEF)/252;
-  const dragOf=y=>(_exp + _bor*((TBILL_RATE[y]??0.04)+LEV_SPREAD) + lev*_div)/252;
+  const dragOf=y=>(_exp + _bor*(parkRate(y,tkr)+LEV_SPREAD) + lev*_div)/252;
   const px={}; let v=100; px[dts[0]]=v;
   for(let i=1;i<dts.length;i++){
     const rl=M[tkr][dts[i]][C]/M[tkr][dts[i-1]][C]-1;
@@ -2842,7 +2852,7 @@ function runIVS(days,tkr,cap,s0,N,band,costOn,mode,pair){
   days.forEach((d,i)=>{
     const c=M[tkr][d][C], c1=X1?P1[d]:0;
     { const y=d.slice(0,4); if(curYear===null)curYear=y; else if(y!==curYear){_settle(c,c1);curYear=y;} }
-    if(cash>0){ const gross=cash*(TBILL_RATE[+d.slice(0,4)]??0.04)/252;
+    if(cash>0){ const gross=cash*parkRate(+d.slice(0,4),tkr)/252;   // 종목 통화의 단기금리
       const it=gross*(1-CASH_DIVTAX) - cash*CASH_EXP/252; cash+=it; interestTotal+=it; }
     const eq0=cash+A.sh*c+B.sh*c1; if(eq0<=0) return;
     const g=gIdx[d];
