@@ -520,7 +520,7 @@ try{ if(localStorage.getItem('qcockpit_hadUser')==='1') document.documentElement
 </div>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.64</span></h1></div>
+    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.65</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -613,22 +613,22 @@ document.addEventListener('click',function(e){ var m=document.getElementById('jk
         </div>
       </div>
 
-      <!-- 종가 추이 (1년 차트) -->
+      <!-- 종가 추이 — 기간은 고르는 것이고, 최저·최고도 그 기간에서 나온다 -->
       <div class="card"><div class="chart-head"><h3 style="margin:0;display:flex;align-items:center;gap:6px;min-width:0;cursor:pointer" onclick="toggleSec('inf_chart_body',this)"><span class="dot" style="flex-shrink:0"></span><span class="sec-caret">▾</span><span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis"><span id="inf_chart_sym">SOXL</span> 종가 추이</span><span id="inf_chart_chg" class="chgpos" style="flex-shrink:0">—</span></h3>
         <select class="chart-select" id="inf_chart_sel">
           <option value="21">1달</option><option value="42">2달</option><option value="63">3달</option>
-          <option value="84">4달</option><option value="105">5달</option><option value="126" selected>6달</option>
+          <option value="84">4달</option><option value="105">5달</option><option value="126">6달</option>
           <option value="147">7달</option><option value="168">8달</option><option value="189">9달</option>
           <option value="210">10달</option><option value="231">11달</option>
-          <option value="252">1년</option><option value="504">2년</option><option value="756">3년</option>
+          <option value="252" selected>1년</option><option value="504">2년</option><option value="756">3년</option>
           <option value="1008">4년</option><option value="1260">5년</option><option value="1512">6년</option>
           <option value="1764">7년</option><option value="2016">8년</option><option value="2268">9년</option>
           <option value="2520">10년</option><option value="99999">전체</option>
         </select></div>
         <div id="inf_chart_body">
-        <div class="statgrid" style="margin-bottom:4px"><div class="stat"><div class="sl">1년 최저</div><div class="sv sm mono" id="inf_chart_lo">—</div></div>
+        <div class="statgrid" style="margin-bottom:4px"><div class="stat"><div class="sl">최저</div><div class="sv sm mono" id="inf_chart_lo">—</div></div>
           <div class="stat"><div class="sl">현재</div><div class="sv sm mono" id="inf_chart_cur" style="color:var(--vio)">—</div></div>
-          <div class="stat"><div class="sl">1년 최고</div><div class="sv sm mono" id="inf_chart_hi">—</div></div></div>
+          <div class="stat"><div class="sl">최고</div><div class="sv sm mono" id="inf_chart_hi">—</div></div></div>
         <svg class="minichart" id="inf_chart" viewBox="0 0 320 150" preserveAspectRatio="none"></svg>
         <div class="fetchnote" id="inf_chart_note" style="margin-top:6px"></div>
         </div>
@@ -1610,7 +1610,7 @@ document.addEventListener('click',function(e){ var m=document.getElementById('jk
   <footer>
     <strong>JK 퀀트</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.64</b> · 2026-09-16</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.65</b> · 2026-09-16</div>
   </footer>
 </div>
 
@@ -5630,7 +5630,7 @@ function drawVrChart(){
 }
 
 /* ── 무한매수법 현재 탭: 통합 데이터 로드 (종가표·캔들·차트·환율) ── */
-let infChartRange=126, infChartData=null;   // 기본 6개월
+let infChartRange=252, infChartData=null;   // 기본 1년 (칸의 selected 와 같아야 한다)
 let infQuoteCache=null;
 async function loadInfData(force){
   const st=curStrat().settings;
@@ -5844,7 +5844,7 @@ function drawFgChart(){
   }
   svg.style.height='110px';
   // 거래일 → 달력일 근사 (252거래일 ≈ 365일)
-  const calDays = Math.round((infChartRange||126) * 365/252);
+  const calDays = Math.round((infChartRange||252) * 365/252);
   const cutoff = Date.now() - calDays*864e5;
   let d = fgHist.filter(p=>p.t>=cutoff);
   if(d.length<2) d = fgHist.slice(-Math.max(30, Math.min(fgHist.length, calDays)));
@@ -8136,7 +8136,7 @@ function setupTabs(){
   // 무한매수법 차트 기간 선택
   const isel=$('inf_chart_sel');
   if(isel) isel.addEventListener('change',()=>{
-    infChartRange=+isel.value || 126;
+    infChartRange=+isel.value || 252;
     // 하나가 실패해도 나머지는 그려지도록 각각 독립 실행
     [drawInfChart, drawInfRSI, drawRegimeChart, drawFgChart].forEach(fn=>{ try{ fn(); }catch(e){ console.error(e); } });
   });

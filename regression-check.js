@@ -2740,5 +2740,33 @@ console.log('\n[61] 모의 성과 — 원화로 받아 세션 통화로 환산')
   ok('못 찾으면 502 — 엉뚱한 값을 지어내지 않는다', /no fx for/.test(fx) && /status: 502/.test(fx));
 }
 
+/* ════ 62. 차트 라벨은 고른 기간을 따라간다 ════
+   최저·최고는 고른 기간의 값인데 라벨엔 '1년 최저'라고 박혀 있었다.
+   10년을 골라도 '1년 최저 2.29$'로 나와서, 숫자는 맞는데 라벨이 거짓말을 했다.
+   기간이 바뀌는 칸 옆에는 기간을 글로 적지 않는다. */
+console.log('\n[62] 차트 라벨은 고른 기간을 따라간다');
+{
+  // 값은 고른 기간에서 나온다 — 라벨에 기간을 적으면 반드시 어긋난다
+  const dc=(()=>{ try{ return extractFn(idx,'function drawInfChart()'); }catch(e){ return ''; } })();
+  ok('최저·최고는 고른 기간에서 나온다',
+     /const data=infChartData\.slice\(-infChartRange\);/.test(dc)
+     && /const lo=Math\.min\(\.\.\.closes\), hi=Math\.max\(\.\.\.closes\)/.test(dc));
+  ok('라벨에 기간을 박아 두지 않는다',
+     !/<div class="sl">\d+[년달] ?(최저|최고)<\/div>/.test(idx));
+  ok('무매·VR 라벨이 같다', (idx.match(/<div class="sl">최저<\/div>/g)||[]).length===2
+     && (idx.match(/<div class="sl">최고<\/div>/g)||[]).length===2);
+
+  /* 칸의 selected 와 코드의 기본값이 다르면, 새로 연 사람은 6달 데이터를
+     1년 칸으로 보게 된다. 둘을 같은 값으로 묶는다. */
+  for(const [sel, v] of [['inf_chart_sel','252'], ['chart_sel','252']]){
+    const blk=(idx.match(new RegExp(`id="${sel}"[\\s\\S]*?</select>`))||[''])[0];
+    const m=blk.match(/<option value="(\d+)" selected>/);
+    ok(`${sel} — 기본 기간이 1년`, !!m && m[1]===v, m?m[1]:'selected 없음');
+  }
+  ok('코드 기본값도 1년', /let infChartRange=252,/.test(idx));
+  const fb=(idx.match(/infChartRange\s*(?:=\s*\+isel\.value\s*\|\||\|\|)\s*(\d+)/g)||[]);
+  ok('못 읽었을 때 쓰는 값도 1년', fb.length>0 && fb.every(x=>/252/.test(x)), fb.join(' / '));
+}
+
 console.log(`\n════ 결과: ${pass} PASS / ${fail} FAIL ${fail===0?'— ALL PASS ★':'— 배포 금지, 위 ✗ 항목 수정 필요'} ════`);
 process.exit(fail===0?0:1);
