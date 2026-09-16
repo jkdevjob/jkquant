@@ -2333,5 +2333,26 @@ console.log('\n[55] 단리 현금 흐름');
   ok('안 오간 달은 합계도 비운다', /const has=\(x\.out\|\|0\)\|\|\(x\.in\|\|0\);/.test(br2));
 }
 
+/* ════ 56. 국내(원화) 세션 — 통화를 고를 수 있어야 한다 ════
+   설정값(cur)은 여섯 전략에 다 있는데 고르는 칸은 무매·VR 에만 있었다.
+   게다가 로테·섀넌·적립·ASAP 은 설정을 저장할 때마다 cur:'usd' 로 덮어썼다.
+   그래서 국내 ETF 세션이 1억을 $100,000,000 으로, 평단 19,775원을 $19,775 로 찍었다. */
+console.log('\n[56] 국내(원화) 세션 — 통화 칸');
+{
+  for(const [tab,sid] of [['로테이션','set_macur'],['섀넌','set_ivscur'],
+                          ['적립·거치','set_dcacur'],['ASAP','set_asapcur']]){
+    ok(`${tab} — 통화를 고를 수 있다`, new RegExp(`id="${sid}"`).test(idx));
+    // 고를 수 있어도 저장에서 덮어쓰면 소용없다
+    ok(`${tab} — 고른 통화를 저장한다`,
+       new RegExp(`cur:segGet\\('${sid}'\\)\\|\\|'usd'`).test(idx));
+    ok(`${tab} — 설정창에 다시 채운다`, new RegExp(`segSet\\('${sid}',st\\.cur\\|\\|'usd'\\)`).test(idx));
+    ok(`${tab} — 토글이 눌린다`, new RegExp(`'${sid}',`).test(idx));
+  }
+  // 하드코딩이 하나라도 남으면 그 탭만 또 달러로 덮인다
+  ok('통화를 달러로 박아 두지 않는다', !/cur:'usd'\};/.test(idx));
+  ok('통화는 활성 세션 설정에서 읽는다',
+     /function curCurrency\(\)\{try\{return curStrat\(\)\.settings\.cur\|\|'usd'\}/.test(idx));
+}
+
 console.log(`\n════ 결과: ${pass} PASS / ${fail} FAIL ${fail===0?'— ALL PASS ★':'— 배포 금지, 위 ✗ 항목 수정 필요'} ════`);
 process.exit(fail===0?0:1);

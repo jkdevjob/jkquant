@@ -520,7 +520,7 @@ try{ if(localStorage.getItem('qcockpit_hadUser')==='1') document.documentElement
 </div>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.56</span></h1></div>
+    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.57</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -1590,7 +1590,7 @@ document.addEventListener('click',function(e){ var m=document.getElementById('jk
   <footer>
     <strong>JK 퀀트</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.56</b> · 2026-09-15</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.57</b> · 2026-09-15</div>
   </footer>
 </div>
 
@@ -1653,6 +1653,7 @@ document.addEventListener('click',function(e){ var m=document.getElementById('jk
     <div class="field"><label id="set_startpool_lbl">시작 Pool ($)</label><input id="set_startpool" type="text" inputmode="decimal" value="0" oninput="commaInput(this)"></div>
   </div>
   <div id="set_ivs" style="display:none">
+    <div class="seclabel">통화 <span class="hint" style="color:var(--faint);font-weight:500">국내상장 ETF는 원화</span></div><div class="seg" id="set_ivscur"><button data-v="usd">달러 ($)</button><button data-v="krw">원화 (₩)</button></div>
     <div class="seclabel">종목 (티커)</div>
 <div class="field tkwrap" style="margin:0 0 8px"><input id="set_ivsticker_in" type="text" autocomplete="off" spellcheck="false" placeholder="티커를 입력하세요 — 예: TQQQ, SOXL" oninput="tkSearch('set_ivsticker_in')" onfocus="tkSearch('set_ivsticker_in')" onblur="tkBlur('set_ivsticker_in')"><div class="tklist" id="set_ivsticker_in_list"></div></div>
     <p class="note" style="margin:4px 0 8px">변동성은 <b>레버리지 ETF 자체</b>의 수익률로 계산합니다(합성 1배지수 아님). KORU는 백테상 손실확률 68%라 권하지 않습니다.</p>
@@ -1683,6 +1684,7 @@ document.addEventListener('click',function(e){ var m=document.getElementById('jk
   </div>
 
   <div id="set_ma" style="display:none">
+    <div class="seclabel">통화 <span class="hint" style="color:var(--faint);font-weight:500">국내상장 ETF는 원화</span></div><div class="seg" id="set_macur"><button data-v="usd">달러 ($)</button><button data-v="krw">원화 (₩)</button></div>
     <div class="seclabel">종목 (티커)</div>
 <div class="field tkwrap" style="margin:0 0 8px"><input id="set_maticker_in" type="text" autocomplete="off" spellcheck="false" placeholder="티커를 입력하세요 — 예: SOXL, TQQQ" oninput="tkSearch('set_maticker_in')" onfocus="tkSearch('set_maticker_in')" onblur="tkBlur('set_maticker_in')"><div class="tklist" id="set_maticker_in_list"></div></div>
     <p class="note" style="margin:4px 0 8px">합성 1배지수는 종목 배수로 자동 복원됩니다 (SOXL·TECL·TQQQ·KORU=3배, USD·QLD=2배).</p>
@@ -1702,6 +1704,7 @@ document.addEventListener('click',function(e){ var m=document.getElementById('jk
     <div class="field"><label id="set_maprincipal_lbl">원금 ($)</label><input id="set_maprincipal" type="text" inputmode="decimal" value="10000" oninput="commaInput(this)"></div>
   </div>
   <div id="set_dca" style="display:none">
+    <div class="seclabel">통화 <span class="hint" style="color:var(--faint);font-weight:500">국내상장 ETF는 원화</span></div><div class="seg" id="set_dcacur"><button data-v="usd">달러 ($)</button><button data-v="krw">원화 (₩)</button></div>
     <div class="seclabel">방식</div>
     <div class="seg" id="set_dcamode"><button data-v="dca" class="on">적립식</button><button data-v="lump">거치식</button></div>
     <p class="note" style="margin:4px 0 8px" id="set_dcamode_note"></p>
@@ -1728,6 +1731,7 @@ document.addEventListener('click',function(e){ var m=document.getElementById('jk
     </div>
   </div>
   <div id="set_asap" style="display:none">
+    <div class="seclabel">통화 <span class="hint" style="color:var(--faint);font-weight:500">국내상장 ETF는 원화</span></div><div class="seg" id="set_asapcur"><button data-v="usd">달러 ($)</button><button data-v="krw">원화 (₩)</button></div>
     <div class="seclabel">종목 (티커)</div>
 <div class="field tkwrap" style="margin:0 0 8px"><input id="set_asapticker_in" type="text" autocomplete="off" spellcheck="false" placeholder="티커를 입력하세요 — 예: SOXL, TQQQ" oninput="tkSearch('set_asapticker_in')" onfocus="tkSearch('set_asapticker_in')" onblur="tkBlur('set_asapticker_in')"><div class="tklist" id="set_asapticker_in_list"></div></div>
     <p class="note" style="margin:4px 0 8px">ASAP는 SOXL 기준으로 설계됐지만 어떤 레버리지든 200일선·RSI 규칙으로 동작합니다.</p>
@@ -7485,7 +7489,7 @@ function openSettings(){
     const st=s.settings;
     $('set_ivsticker_in').value=st.ticker||'TQQQ'; segSet('set_ivss0',String(st.s0||55));
     segSet('set_ivslook',String(st.look||40)); segSet('set_ivsband',String(st.band||15));
-    segSet('set_ivspark',st.park||'bill'); segSet('set_ivsmode',st.mode||'iv');
+    segSet('set_ivspark',st.park||'bill'); segSet('set_ivsmode',st.mode||'iv'); segSet('set_ivscur',st.cur||'usd');
     $('set_ivsprincipal').value=nfix(st.principal||0,0);
     $('set_ivsmonthly').value=nfix(st.monthly||0,0);
     syncIvsSetUI(st.park||'bill', st.ticker||'TQQQ', st.mode||'iv');
@@ -7493,14 +7497,14 @@ function openSettings(){
     $('set_inf').style.display='none';$('set_vr').style.display='none';if(setDca)setDca.style.display='';
     const st=s.settings;
     $('set_dcaticker_in').value=st.ticker||'USD'; segSet('set_dcafreq',st.freq||'month'); segSet('set_dcamul',String(st.dipMul||2));
-    segSet('set_dcamode',st.mode||'dca'); segSet('set_dcareinv',st.reinv?'reinv':'cash');
+    segSet('set_dcamode',st.mode||'dca'); segSet('set_dcareinv',st.reinv?'reinv':'cash'); segSet('set_dcacur',st.cur||'usd');
     $('set_dcaamt').value=nfix(st.amount||0,0);
     dcaModeUI();
   }else if(S.activeTab==='asap'){
     $('set_inf').style.display='none';$('set_vr').style.display='none';if(setAsap)setAsap.style.display='';
     const st=s.settings;
     $('set_asapticker_in').value=st.ticker||'SOXL';
-    $('set_asapbase').value=nfix(st.base||10,0); $('set_asapmid').value=nfix(st.mid||50,0); $('set_asapdeep').value=nfix(st.deep||100,0);
+    $('set_asapbase').value=nfix(st.base||10,0); $('set_asapmid').value=nfix(st.mid||50,0); $('set_asapdeep').value=nfix(st.deep||100,0); segSet('set_asapcur',st.cur||'usd');
   }else if(S.activeTab==='inf'){
     $('set_inf').style.display='';$('set_vr').style.display='none';
     const st=s.settings, sym=(st.cur||'usd')==='krw'?'₩':'$';
@@ -7513,7 +7517,7 @@ function openSettings(){
   }else if(S.activeTab==='ma'){
     $('set_inf').style.display='none';$('set_vr').style.display='none';if(setMa)setMa.style.display='';
     const st=s.settings;
-    { const cd=maCond(st); $('set_maticker_in').value=st.ticker||'SOXL';segSet('set_mabuy',cd.buy);segSet('set_masell',cd.sell);segSet('set_mapark',st.park||'cash'); }
+    { const cd=maCond(st); $('set_maticker_in').value=st.ticker||'SOXL';segSet('set_macur',st.cur||'usd');segSet('set_mabuy',cd.buy);segSet('set_masell',cd.sell);segSet('set_mapark',st.park||'cash'); }
     $('set_maprincipal').value=nfix(st.principal,0);
   }else{
     $('set_inf').style.display='none';$('set_vr').style.display='';
@@ -7607,7 +7611,7 @@ function syncShortMaUI(eng){
   if(note&&note.classList.contains('note')) note.style.opacity=on?'1':'0.4';
 }
 function setupSegs(){
-  ['set_div','set_reverse','set_tgtdyn','set_vmode','set_vformula','set_cur','set_vcur','set_engine','set_shortma','set_lopct','set_mabuy','set_masell','set_mapark','set_compound','set_dcamode','set_dcareinv','set_dcafreq','set_dcamul',
+  ['set_macur','set_ivscur','set_dcacur','set_asapcur','set_div','set_reverse','set_tgtdyn','set_vmode','set_vformula','set_cur','set_vcur','set_engine','set_shortma','set_lopct','set_mabuy','set_masell','set_mapark','set_compound','set_dcamode','set_dcareinv','set_dcafreq','set_dcamul',
    'set_vauto','set_ivss0','set_ivslook','set_ivsband','set_ivspark','set_ivsmode'].forEach(id=>{
     const el=$(id);if(!el)return;
     el.querySelectorAll('button').forEach(b=>{
@@ -7690,21 +7694,21 @@ function saveSettings(){
       rowqty:1,principal:inputNum('set_principal')||10000,cur:segGet('set_cur')||'usd',
       simLast:(s.settings&&s.settings.simLast)||undefined};   // 모의 체결 진행점은 설정 저장으로 날아가면 안 된다
   }else if(S.activeTab==='ma'){
-    s.settings={ticker:tkVal('set_maticker_in','SOXL'),buy:segGet('set_mabuy')||'ma',sell:segGet('set_masell')||'ma',park:segGet('set_mapark')||'cash',principal:inputNum('set_maprincipal')||10000,cur:'usd'};
+    s.settings={ticker:tkVal('set_maticker_in','SOXL'),buy:segGet('set_mabuy')||'ma',sell:segGet('set_masell')||'ma',park:segGet('set_mapark')||'cash',principal:inputNum('set_maprincipal')||10000,cur:segGet('set_macur')||'usd'};
   }else if(S.activeTab==='ivs'){
     s.settings={ticker:tkVal('set_ivsticker_in','TQQQ'),mode:segGet('set_ivsmode')||'iv',
       s0:+segGet('set_ivss0')||55,look:+segGet('set_ivslook')||40,
       band:+segGet('set_ivsband')||15,park:segGet('set_ivspark')||'bill',
       principal:Math.max(0,inputNum('set_ivsprincipal')||0),
-      monthly:Math.max(0,inputNum('set_ivsmonthly')||0),cur:'usd'};
+      monthly:Math.max(0,inputNum('set_ivsmonthly')||0),cur:segGet('set_ivscur')||'usd'};
     ivsQuote1=null;   // 짝·종목이 바뀌었을 수 있으니 1배 시세 캐시를 비운다
   }else if(S.activeTab==='dca'){
     s.settings={ticker:tkVal('set_dcaticker_in','USD'),mode:segGet('set_dcamode')||'dca',
       freq:segGet('set_dcafreq')||'month',
       amount:inputNum('set_dcaamt')||0,dipMul:+segGet('set_dcamul')||1,
-      reinv:segGet('set_dcareinv')==='reinv',cur:'usd'};
+      reinv:segGet('set_dcareinv')==='reinv',cur:segGet('set_dcacur')||'usd'};
   }else if(S.activeTab==='asap'){
-    s.settings={ticker:tkVal('set_asapticker_in','SOXL'),base:inputNum('set_asapbase')||10,mid:inputNum('set_asapmid')||50,deep:inputNum('set_asapdeep')||100,cur:'usd'};
+    s.settings={ticker:tkVal('set_asapticker_in','SOXL'),base:inputNum('set_asapbase')||10,mid:inputNum('set_asapmid')||50,deep:inputNum('set_asapdeep')||100,cur:segGet('set_asapcur')||'usd'};
   }else{
     // 사이클 번호·시작일·사이클 기록은 설정창에서 입력하는 값이 아니라 진입 버튼이 쌓은 파생 상태다.
     // settings를 통째로 갈아끼우면 설정을 한 번 저장할 때마다 주차가 0으로 돌아가고
