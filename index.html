@@ -520,7 +520,7 @@ try{ if(localStorage.getItem('qcockpit_hadUser')==='1') document.documentElement
 </div>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.55</span></h1></div>
+    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.56</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -1590,7 +1590,7 @@ document.addEventListener('click',function(e){ var m=document.getElementById('jk
   <footer>
     <strong>JK 퀀트</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.55</b> · 2026-09-15</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.56</b> · 2026-09-15</div>
   </footer>
 </div>
 
@@ -2173,6 +2173,9 @@ function computeInf(){
      둘 다 잔금에서 나가지만 성격이 다르다. 총자산에는 둘 다 다시 더한다
      (계좌 밖으로 나갔을 뿐 없어진 돈이 아니다). */
   let withdrawn=0, saved=0, added=0;
+  /* 사이클이 닫힐 때마다 오간 돈. 카드도 표도 이걸 쓴다 —
+     같은 걸 두 군데서 따로 세면 또 어긋난다(거래 수에서 이미 겪었다). */
+  const flows=[];
   const simple=(st.compound===false);
   let reverseTraded=false; // 현재 리버스 스트릭에서 이미 리버스매도/매수가 있었는지 (1일차 MOC 판정용)
   let inReverseNow=false;  // 지금 리버스 진행 중인지 (state). T로 매번 재판정하면 첫 MOC매도에 T가
@@ -2220,8 +2223,10 @@ function computeInf(){
       if(simple){
         const P0=+st.principal||0;
         const cashNow=P0+realized-withdrawn-saved+added;   // 이 시점 inv=0
-        if(cashNow>P0) saved+=cashNow-P0;
-        else if(cashNow<P0) added+=P0-cashNow;
+        let fo=0, fi=0;
+        if(cashNow>P0){ fo=cashNow-P0; saved+=fo; }
+        else if(cashNow<P0){ fi=P0-cashNow; added+=fi; }
+        flows.push({date:h.date, seq:cycleSeq, out:fo, in:fi});
       }
     }
     // 이 거래 직후 시점의 잔금·별%·별지점
@@ -2239,7 +2244,7 @@ function computeInf(){
   // 가용 잔금 = 원금 + 실현손익 − 보유분 투입원가 − 출금 − 단리 인출 + 단리 보충
   const bal=st.principal+realized-inv-withdrawn-saved+added;
   return {avg,qty,inv,realized,T,totbuy,totsell,bal,rows,st,cycleSeq,reverseTraded,inReverseNow,reverseActive,
-          withdrawn,saved,added,simple,outside:withdrawn+saved};
+          withdrawn,saved,added,flows,simple,outside:withdrawn+saved};
 }
 
 /* ──── 익절 동적 조절: 20일 상승률 (선택 · 백테 backtest.html _imMom/_imTgtOf와 동일 정의) ────
@@ -2979,19 +2984,8 @@ function renderInfAnal(){
       setv('a_sv_in',  inn, inn>0?'var(--sell)':'var(--faint)');
       setv('a_sv_net', out-inn, (out-inn)>=0?'var(--buy)':'var(--sell)');
 
-      /* 사이클이 닫힐 때만 돈이 오간다. 그 시점을 되짚어 달별로 묶는다 —
-         computeInf 안에서 쓰는 식과 같은 순서로 다시 걸어야 값이 어긋나지 않는다. */
-      let rz=0, wd=0, sv=0, ad=0; const ev=[];
-      for(const r of (c.rows||[])){
-        rz += (+r.profit||0);
-        if(r.type==='wd') wd += (+r.amt||0);
-        if(r.cycleEnd){
-          const now=P0+rz-wd-sv+ad;
-          if(now>P0){ const x=now-P0; sv+=x; ev.push({d:r.date, v:x}); }
-          else if(now<P0){ const x=P0-now; ad+=x; ev.push({d:r.date, v:-x}); }
-          else ev.push({d:r.date, v:0});
-        }
-      }
+      // 사이클이 닫힐 때만 돈이 오간다. computeInf 가 그 시점을 이미 모아 뒀다.
+      const ev=(c.flows||[]).map(f=>({d:f.date, v:(f.out||0)-(f.in||0)}));
       const rows=c.rows||[];
       const first=(rows[0]||{}).date, lastD=(rows[rows.length-1]||{}).date;
       const byM={}; for(const e of ev){ const m=e.d.slice(0,7); byM[m]=(byM[m]||0)+e.v; }
@@ -3050,27 +3044,49 @@ function renderInfBreak(c){
   const pctTxt=v=>cap?`<span style="color:${v>=0?'var(--buy)':'var(--sell)'}">${v>=0?'+':''}${(v/cap*100).toFixed(2)}%</span>`:'—';
   const amtTxt=v=>`<span style="color:${v>=0?'var(--buy)':'var(--sell)'}">${v>=0?'+':''}${wn(v)}</span>`;
   const krwTxt=v=>`<span style="color:var(--faint)">${v>=0?'+':''}${won(v)}</span>`;
-  const head=lbl=>`<tr><th>${lbl}</th><th>매도</th><th>손익금</th><th>손익률</th>${isKrw?'':'<th>원화</th>'}</tr>`;
+  /* 단리는 사이클이 닫힐 때 계좌를 원금으로 맞춘다 — 넘치면 나가고 모자라면 들어온다.
+     월별로 얼마가 오갔는지가 곧 그 달의 수입이라 단리 세션에만 세 칸을 더 붙인다.
+     합계는 출금 − 입금이고 원금 대비 %를 같이 적는다. */
+  const simple=!!c.simple;
+  const flowTxt=(v,col)=>v?`<span style="color:${col}">${v>=0?'+':''}${wn(v)}</span>`:'<span style="color:var(--faint)">—</span>';
+  const netTxt=v=>!cap?'—':`<span style="color:${v>=0?'var(--buy)':'var(--sell)'}">${v>=0?'+':''}${wn(v)} <span style="font-size:10px">(${v>=0?'+':''}${(v/cap*100).toFixed(1)}%)</span></span>`;
+  const head=lbl=>`<tr><th>${lbl}</th><th>매도</th><th>손익금</th><th>손익률</th>`
+    + (simple?'<th>출금</th><th>입금</th><th>합계</th>':'')
+    + `${isKrw?'':'<th>원화</th>'}</tr>`;
   const body=(list,empty)=>{
-    if(!list.length) return head('구분')+`<tr><td class="empty" colspan="${isKrw?4:5}">${empty}</td></tr>`;
-    let tot=0, n=0;
+    const nCol=(isKrw?4:5)+(simple?3:0);
+    if(!list.length) return head('구분')+`<tr><td class="empty" colspan="${nCol}">${empty}</td></tr>`;
+    let tot=0, n=0, to=0, ti=0;
+    const flowCells=x=>{ if(!simple) return '';
+      to+=(x.out||0); ti+=(x.in||0);
+      // 그 달에 돈이 안 오갔으면 합계도 비운다 — +0.00$ (+0.0%) 는 잡음이다
+      const has=(x.out||0)||(x.in||0);
+      return `<td>${flowTxt(x.out||0,'var(--gold)')}</td><td>${flowTxt(-(x.in||0),'var(--sell)')}</td>`
+        + `<td>${has?netTxt((x.out||0)-(x.in||0)):'<span style="color:var(--faint)">—</span>'}</td>`; };
     const rows=list.map(x=>{ tot+=x.p; n+=x.n;
-      return `<tr><td>${x.label}</td><td>${x.n}</td><td>${amtTxt(x.p)}</td><td>${pctTxt(x.p)}</td>${isKrw?'':`<td>${krwTxt(x.p)}</td>`}</tr>`; }).join('');
-    const sum=`<tr style="border-top:2px solid var(--line)"><td><b>합계</b></td><td>${n}</td><td>${amtTxt(tot)}</td><td>${pctTxt(tot)}</td>${isKrw?'':`<td>${krwTxt(tot)}</td>`}</tr>`;
+      return `<tr><td>${x.label}</td><td>${x.n}</td><td>${amtTxt(x.p)}</td><td>${pctTxt(x.p)}</td>${flowCells(x)}${isKrw?'':`<td>${krwTxt(x.p)}</td>`}</tr>`; }).join('');
+    const sumFlow = simple
+      ? `<td>${flowTxt(to,'var(--gold)')}</td><td>${flowTxt(-ti,'var(--sell)')}</td><td>${netTxt(to-ti)}</td>` : '';
+    const sum=`<tr style="border-top:2px solid var(--line)"><td><b>합계</b></td><td>${n}</td><td>${amtTxt(tot)}</td><td>${pctTxt(tot)}</td>${sumFlow}${isKrw?'':`<td>${krwTxt(tot)}</td>`}</tr>`;
     return rows+sum;
   };
   // 월별 — 최근이 위로
   const M=new Map();
+  const mkM=k=>({label:k.replace('-','년 ')+'월',p:0,n:0,out:0,in:0});
   sells.forEach(h=>{ const k=String(h.date||'').slice(0,7); if(k.length!==7) return;
-    const o=M.get(k)||{label:k.replace('-','년 ')+'월',p:0,n:0}; o.p+=h.profit||0; o.n++; M.set(k,o); });
+    const o=M.get(k)||mkM(k); o.p+=h.profit||0; o.n++; M.set(k,o); });
+  // 돈이 오간 달은 매도가 없어도 줄이 있어야 한다 (사이클이 닫힌 달엔 늘 매도가 있지만 규약으로 둔다)
+  (c.flows||[]).forEach(f=>{ const k=String(f.date||'').slice(0,7); if(k.length!==7) return;
+    const o=M.get(k)||mkM(k); o.out+=f.out||0; o.in+=f.in||0; M.set(k,o); });
   const months=[...M.entries()].sort((a,b)=>b[0]<a[0]?-1:1).map(x=>x[1]);
   const mt=$('a_bymonth'); if(mt) mt.innerHTML=head('월')+body(months,'매도 기록이 없습니다').replace(head('구분'),'');
   // 사이클별 — 최근이 위로. cycleEnd가 있는 사이클만 닫힌 것
   const closed=new Set((c.rows||[]).filter(h=>h.cycleEnd).map(h=>h.cycleSeq));
   const C=new Map();
   sells.forEach(h=>{ const k=h.cycleSeq||1;      // computeInf의 cycleSeq는 1부터다 — +1 하면 1사이클이 사라진다
-    const o=C.get(k)||{seq:k,p:0,n:0,from:h.date,to:h.date}; o.p+=h.profit||0; o.n++;
+    const o=C.get(k)||{seq:k,p:0,n:0,out:0,in:0,from:h.date,to:h.date}; o.p+=h.profit||0; o.n++;
     if(h.date<o.from)o.from=h.date; if(h.date>o.to)o.to=h.date; C.set(k,o); });
+  (c.flows||[]).forEach(f=>{ const o=C.get(f.seq); if(o){ o.out+=f.out||0; o.in+=f.in||0; } });
   const cycles=[...C.values()].sort((a,b)=>b.seq-a.seq).map(x=>Object.assign(x,{
     label:`${x.seq}사이클 <span class="sub">${dshort(x.from)}~${dshort(x.to)}</span>`
       + (closed.has(x.seq)?'':' <span style="color:var(--gold);font-size:10px">진행중</span>')}));
