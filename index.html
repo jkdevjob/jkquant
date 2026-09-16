@@ -520,7 +520,7 @@ try{ if(localStorage.getItem('qcockpit_hadUser')==='1') document.documentElement
 </div>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.63</span></h1></div>
+    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.64</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -1610,7 +1610,7 @@ document.addEventListener('click',function(e){ var m=document.getElementById('jk
   <footer>
     <strong>JK 퀀트</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.63</b> · 2026-09-16</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.64</b> · 2026-09-16</div>
   </footer>
 </div>
 
@@ -1777,9 +1777,9 @@ document.addEventListener('click',function(e){ var m=document.getElementById('jk
     <div class="row" style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap">
       <div class="field" style="flex:1 1 130px;margin:0"><label style="font-size:11.5px">모의 시작일 <span class="hint" id="p_simstart_n"></span></label>
         <input id="p_simstart" type="date"></div>
-      <div class="field" style="flex:1 1 118px;margin:0"><label style="font-size:11.5px">원금 <span class="hint" id="p_capital_n"></span></label>
+      <div class="field" style="flex:1 1 118px;margin:0"><label style="font-size:11.5px">원금 (₩) <span class="hint" id="p_capital_n"></span></label>
         <input id="p_capital" type="text" inputmode="decimal" placeholder="비우면 그대로" oninput="commaInput(this)"></div>
-      <div class="field" style="flex:1 1 118px;margin:0"><label style="font-size:11.5px">1회 적립액 <span class="hint" id="p_addamt_n"></span></label>
+      <div class="field" style="flex:1 1 118px;margin:0"><label style="font-size:11.5px">1회 적립액 (₩) <span class="hint" id="p_addamt_n"></span></label>
         <input id="p_addamt" type="text" inputmode="decimal" placeholder="비우면 그대로" oninput="commaInput(this)"></div>
       <button class="ghostbtn" style="width:auto;margin:0;padding:9px 14px" onclick="applyAllSimStart()">전체 적용</button>
     </div>
@@ -1787,7 +1787,9 @@ document.addEventListener('click',function(e){ var m=document.getElementById('jk
       같은 날 같은 돈으로 전략을 비교하려면 이게 필요합니다. <b>실계좌 세션은 건드리지 않습니다.</b><br>
       시작일은 <b>최대 3년 전</b>까지입니다. 금액은 뜻이 같은 칸끼리만 들어갑니다 —
       <b>원금</b>은 무매·이평·섀넌·VR·적립식(거치)에, <b>1회 적립액</b>은 적립식(적립)에 들어갑니다.
-      <b>ASAP</b>만 건너뜁니다 (base·mid·deep 3단계라 한 값으로 못 넣습니다).</p>
+      <b>ASAP</b>만 건너뜁니다 (base·mid·deep 3단계라 한 값으로 못 넣습니다).<br>
+      <b>금액은 원화로 넣습니다.</b> 국내 종목 세션은 그대로 들어가고, 미국 종목 세션은
+      <b>시작일 환율</b>로 달러 환산해 들어갑니다 — 그래야 같은 돈으로 시작한 비교가 됩니다.</p>
   </div>
   <div id="paper_body"></div>
   <div class="mbtns"><button class="close" onclick="closePaper()">닫기</button></div>
@@ -6710,13 +6712,33 @@ async function applyAllSimStart(){
   const addHit = add!=null ? list.filter(([tab,x])=>paperAddField(tab,x.settings)) : [];
   const touched = new Set([...capHit,...addHit].map(([,x])=>x.id));
   const skip = (cap!=null||add!=null) ? list.filter(([,x])=>!touched.has(x.id)) : [];
+  /* 금액 칸은 원화다. 미국 종목 세션에 넣으려면 시작 시점 환율이 있어야 한다 —
+     오늘 환율로 대신하면 3년 전 시작인데 지금 환율로 환산한 원금이 되어 버린다. */
+  let fx=null;
+  if(cap!=null || add!=null){
+    const needUsd=[...capHit,...addHit].some(([,x])=>!isKrwSt(x.settings));
+    if(needUsd){
+      fx=await fxAt(ns);
+      if(!fx){
+        const now=(typeof liveFX!=='undefined'&&liveFX)?liveFX:FX;
+        if(!confirm(`${ns} 환율을 못 받았습니다.\n오늘 환율 ${now.toLocaleString('en-US')}원으로 환산할까요?\n(시작일 환율과 달라 원금이 어긋날 수 있습니다.)`)) return;
+        fx={rate:now, date:'(오늘)', src:'fallback'};
+      }
+    }
+  }
   const nRec=list.reduce((a,[,x])=>a+((x.hist||[]).length),0);
   let msg=`모의 세션 ${list.length}개의 시작일을 ${ns}로 바꿉니다.\n기존 기록 ${nRec}건을 지우고 그 날부터 다시 만듭니다.`;
-  if(cap!=null) msg+=`\n\n원금 ${cap.toLocaleString('en-US')} → ${capHit.length}개 적용`;
-  if(add!=null) msg+=`\n1회 적립액 ${add.toLocaleString('en-US')} → ${addHit.length}개 적용`;
+  if(cap!=null) msg+=`\n\n원금 ${cap.toLocaleString('en-US')}₩ → ${capHit.length}개 적용`;
+  if(add!=null) msg+=`\n1회 적립액 ${add.toLocaleString('en-US')}₩ → ${addHit.length}개 적용`;
   if((cap!=null||add!=null)){
-    // 숫자는 각 세션의 통화 그대로 들어간다 — 원화 세션에 10,000을 넣으면 10,000₩이다
-    msg+='\n※ 금액은 각 세션의 통화로 그대로 들어갑니다.';
+    if(fx){
+      msg+=`\n\n환율 ${fx.date} 기준 ${fx.rate.toLocaleString('en-US')}원/$`;
+      if(cap!=null) msg+=`\n  미국 종목 원금 → ${wonToSess(cap,{},fx.rate).toLocaleString('en-US')}$`;
+      if(add!=null) msg+=`\n  미국 종목 적립액 → ${wonToSess(add,{},fx.rate).toLocaleString('en-US')}$`;
+      msg+='\n  국내 종목은 원화 그대로';
+    }else{
+      msg+='\n※ 전부 국내 종목이라 환산 없이 들어갑니다.';
+    }
     if(skip.length) msg+=`\n건너뜀 ${skip.length}개 — ${skip.map(([,x])=>x.name).join(', ')}`;
   }
   msg+='\n\n실계좌 세션은 그대로입니다. 계속할까요?';
@@ -6724,14 +6746,38 @@ async function applyAllSimStart(){
   list.forEach(([tab,x])=>{
     x.hist=[]; x.simStart=ns;
     if(x.settings){ delete x.settings.simLast; delete x.settings.cycStart; delete x.settings.startCyc; delete x.settings.cycLog; x.settings.startv=0;
-      if(cap!=null){ const f=paperCapField(tab,x.settings); if(f) x.settings[f]=cap; }
-      if(add!=null){ const f=paperAddField(tab,x.settings); if(f) x.settings[f]=add; } }
+      // 원화로 받은 금액을 그 세션 통화로 바꿔 넣는다 (국내는 그대로, 미국은 시작일 환율)
+      const R=fx?fx.rate:1;
+      if(cap!=null){ const f=paperCapField(tab,x.settings); if(f) x.settings[f]=wonToSess(cap,x.settings,R); }
+      if(add!=null){ const f=paperAddField(tab,x.settings); if(f) x.settings[f]=wonToSess(add,x.settings,R); } }
   });
   save(); pushRemote();
   await openPaper();          // 지운 자리를 새 시작일로 다시 채우고 표를 새로 그린다
   // 이름 뒤에 조사를 붙이면 '내 계좌은'처럼 어긋난다 — 괄호로 빼서 이름에 안 붙인다
-  if(skip.length) paperNote=`금액은 ${touched.size}개에만 적용했습니다. 건너뛴 세션: ${skip.map(([,x])=>x.name).join(', ')} (금액의 뜻이 달라서)`;
+  const fxNote = fx ? `미국 종목은 ${fx.date} 환율 ${fx.rate.toLocaleString('en-US')}원/$ 로 환산했습니다.` : '';
+  if(skip.length) paperNote=`금액은 ${touched.size}개에만 적용했습니다. 건너뛴 세션: ${skip.map(([,x])=>x.name).join(', ')} (금액의 뜻이 달라서) ${fxNote}`.trim();
+  else if(fxNote) paperNote=fxNote;
 }
+/* 그 날의 USD/KRW. 주말·공휴일이면 직전 영업일 값이 온다.
+   실패하면 null — 부르는 쪽이 오늘 환율로 갈지 물어본다(조용히 다른 값을 쓰면 안 된다). */
+const _fxAtCache={};
+async function fxAt(date){
+  if(_fxAtCache[date]!==undefined) return _fxAtCache[date];
+  try{
+    const r=await fetch(`/api/fx?date=${encodeURIComponent(date)}`,{headers:{'Accept':'application/json'}});
+    if(r.ok){ const j=await r.json(); if(j&&j.rate>0) return _fxAtCache[date]={rate:+j.rate, date:j.date||date, src:j.src||''}; }
+  }catch(e){}
+  return _fxAtCache[date]=null;
+}
+/* 모의 성과의 금액 칸은 원화로 받는다. 국내 종목 세션은 그대로, 미국 종목 세션은
+   시작 시점 환율로 달러 환산해서 넣는다 — 그래야 '같은 돈으로 시작한 비교'가 된다.
+   세션마다 통화를 달리 적어 넣으면 1억이 한쪽은 1억원, 다른 쪽은 1억달러가 된다. */
+function wonToSess(won, st, rate){
+  if(isKrwSt(st)) return won;
+  const v=won/rate;
+  return v>=1000 ? Math.round(v) : Math.round(v*100)/100;   // 큰 금액은 딱 떨어지게, 적립액은 소수 둘째까지
+}
+
 /* 비었으면 null(그대로 두기), 숫자면 그 값, 잘못 썼으면 false(안내 후 중단). */
 function paperReadAmt(id, label){
   const el=$(id); if(!el) return null;

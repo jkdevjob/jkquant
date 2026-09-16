@@ -1358,7 +1358,7 @@ console.log('[30] 모의 시작일 일괄 변경');
   // v3.34부터 금액 칸이 둘(원금·1회 적립액)이라 읽기는 paperReadAmt가 맡는다 — 자세한 건 [40]
   const rd=extractFn(idx,'function paperReadAmt(id, label)');
   ok('원금은 비워두면 안 바꾼다', /if\(!raw\) return null;/.test(rd)
-     && /if\(cap!=null\)\{ const f=paperCapField\(tab,x\.settings\); if\(f\) x\.settings\[f\]=cap; \}/.test(ap));
+     && /if\(cap!=null\)\{ const f=paperCapField\(tab,x\.settings\); if\(f\) x\.settings\[f\]=wonToSess\(cap,x\.settings,R\); \}/.test(ap));
   ok('0 이하는 거부', /if\(!\(v>0\)\)\{ alert\(`\$\{label\}은 0보다 커야 합니다/.test(rd));
   // 조용히 건너뛰면 '왜 얘만 안 바뀌었지'가 된다
   ok('건너뛴 세션을 이름까지 알린다',
@@ -1598,10 +1598,11 @@ console.log('[40] 모의 일괄 적용 — 원금과 1회 적립액을 따로');
   const ap=extractFn(idx,'async function applyAllSimStart()');
   ok('두 값을 따로 읽는다', /paperReadAmt\('p_capital'/.test(ap) && /paperReadAmt\('p_addamt'/.test(ap));
   ok('잘못된 값이면 멈춘다', /cap===false \|\| add===false/.test(ap));
-  ok('둘 다 따로 적용한다', /paperCapField\(tab,x\.settings\); if\(f\) x\.settings\[f\]=cap;/.test(ap)
-     && /paperAddField\(tab,x\.settings\); if\(f\) x\.settings\[f\]=add;/.test(ap));
-  // 원화 세션에 10,000을 넣으면 ₩10,000이다 — 묻기 전에 알려야 한다
-  ok('통화 규약을 미리 알린다', /각 세션의 통화로 그대로 들어갑니다/.test(ap));
+  ok('둘 다 따로 적용한다', /paperCapField\(tab,x\.settings\); if\(f\) x\.settings\[f\]=wonToSess\(cap,/.test(ap)
+     && /paperAddField\(tab,x\.settings\); if\(f\) x\.settings\[f\]=wonToSess\(add,/.test(ap));
+  /* 금액 칸은 원화다. 미국 종목 세션엔 시작일 환율로 환산해 들어가므로
+     어떤 환율을 썼는지 묻기 전에 보여야 한다 — 원금이 얼마로 들어갈지가 달라진다. */
+  ok('통화 규약을 미리 알린다', /환율 \$\{fx\.date\} 기준/.test(ap) && /국내 종목은 원화 그대로/.test(ap));
   ok('건너뛴 세션 이름에 조사를 안 붙인다', /건너뛴 세션: /.test(ap) && !/join\(', '\)\}은 금액/.test(ap));
   const rd=extractFn(idx,'function paperReadAmt(id, label)');
   ok('비우면 그대로 둔다', /if\(!raw\) return null;/.test(rd));
@@ -2669,6 +2670,50 @@ console.log('\n[60] 분배금 현금 수령 — 전 전략');
   ok('다섯 렌더가 모두 쓴다', calls.length===5, calls.join(','));
   // 시세에서 뽑은 추정이다 — 화면에 밝힌다
   ok('추정이라고 밝힌다', (idx.match(/시세 기준 추정/g)||[]).length>=3);
+}
+
+/* ════ 61. 모의 성과 금액은 원화로 받는다 ════
+   '전체 적용'은 숫자를 세션마다 그대로 밀어 넣고 있었다. 1억을 넣으면 국내 세션은
+   1억원, 미국 세션은 1억달러가 된다 — 같은 돈으로 시작한 비교가 아니게 된다.
+   원화로 받아, 국내는 그대로 두고 미국은 '시작 시점' 환율로 환산해 넣는다.
+   오늘 환율로 대신하면 3년 전 시작인데 지금 환율로 환산한 원금이 된다. */
+console.log('\n[61] 모의 성과 — 원화로 받아 세션 통화로 환산');
+{
+  ok('칸이 원화라고 적혀 있다', /원금 \(₩\) <span class="hint" id="p_capital_n">/.test(idx)
+     && /1회 적립액 \(₩\) <span class="hint" id="p_addamt_n">/.test(idx));
+  ok('무엇이 환산되는지 적어 뒀다', /국내 종목 세션은 그대로 들어가고, 미국 종목 세션은/.test(idx)
+     && /<b>시작일 환율<\/b>/.test(idx));
+
+  const w2=(()=>{ try{ return extractFn(idx,'function wonToSess(won, st, rate)'); }catch(e){ return ''; } })();
+  ok('환산 함수는 하나다', (idx.match(/function wonToSess\(/g)||[]).length===1 && w2.length>0);
+  {
+    const f=new Function('isKrwSt', w2+'\nreturn wonToSess;')(st=>st&&st.kr);
+    ok('국내는 그대로', f(100000000,{kr:true},1300)===100000000);
+    ok('미국은 시작일 환율로 나눈다', f(100000000,{kr:false},1300)===Math.round(100000000/1300));
+    ok('적립액은 소수 둘째까지', f(10000,{kr:false},1300)===Math.round(10000/1300*100)/100);
+    ok('큰 금액은 딱 떨어지게', Number.isInteger(f(100000000,{kr:false},1327.22)));
+  }
+  ok('넣을 때 세션 통화로 바꾼다',
+     /x\.settings\[f\]=wonToSess\(cap,x\.settings,R\)/.test(idx)
+     && /x\.settings\[f\]=wonToSess\(add,x\.settings,R\)/.test(idx));
+
+  // 시작 시점 환율 — 오늘 값으로 조용히 대신하면 안 된다
+  const fa=(()=>{ try{ return extractFn(idx,'async function fxAt(date)'); }catch(e){ return ''; } })();
+  ok('시작일 환율을 따로 받는다', /\/api\/fx\?date=\$\{encodeURIComponent\(date\)\}/.test(fa));
+  ok('못 받으면 물어본다',
+     /환율을 못 받았습니다/.test(idx) && /오늘 환율 \$\{now\.toLocaleString\('en-US'\)\}원으로 환산할까요\?/.test(idx));
+  ok('쓴 환율을 확인창에 적는다', /환율 \$\{fx\.date\} 기준 \$\{fx\.rate\.toLocaleString\('en-US'\)\}원\/\$/.test(idx));
+  ok('국내만 있으면 환율을 안 부른다', /const needUsd=\[\.\.\.capHit,\.\.\.addHit\]\.some\(\(\[,x\]\)=>!isKrwSt\(x\.settings\)\);/.test(idx));
+  ok('끝나고도 쓴 환율을 남긴다', /const fxNote = fx \? `미국 종목은 \$\{fx\.date\} 환율/.test(idx));
+
+  // 서버: 날짜를 주면 그 날 값, 주말이면 직전 영업일
+  const fx=fs.existsSync(__d+'/functions/api/fx.js') ? fs.readFileSync(__d+'/functions/api/fx.js','utf8') : '';
+  ok('fx API가 날짜를 받는다', /const want = new URL\(request\.url\)\.searchParams\.get\("date"\);/.test(fx)
+     && /if \(want && \/\^.{0,20}\$\/\.test\(want\)\)/.test(fx));
+  ok('소스가 둘이다 (하나 죽어도 산다)',
+     /api\.frankfurter\.dev\/v1\//.test(fx) && /chart\/KRW=X\?interval=1d&period1=/.test(fx));
+  ok('휴장일이면 그 이전 값을 쓴다', /if \(d <= date && cl\[i\] > 0\)/.test(fx));
+  ok('못 찾으면 502 — 엉뚱한 값을 지어내지 않는다', /no fx for/.test(fx) && /status: 502/.test(fx));
 }
 
 console.log(`\n════ 결과: ${pass} PASS / ${fail} FAIL ${fail===0?'— ALL PASS ★':'— 배포 금지, 위 ✗ 항목 수정 필요'} ════`);
