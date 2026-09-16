@@ -2312,18 +2312,21 @@ console.log('\n[55] 단리 현금 흐름');
   ok('합계는 출금 − 입금이다', /setv\('a_sv_net', out-inn,/.test(infA));
   ok('원금 대비 %를 같이 적는다', /const pct=v=>` \(\$\{\(v\/P0\*100\)\.toFixed\(1\)\}%\)`;/.test(infA));
 
-  // 월 수입으로 읽히려면 셋이 더 필요하다
+  /* 월 수입으로 읽는 계산은 무매(사이클 초과익)와 적립(현금 수령 분배금)이
+     같은 함수를 쓴다 — 따로 세면 또 어긋난다. */
+  const fst=(()=>{ try{ return extractFn(idx,'function flowStats(flows, from, to)'); }catch(e){ return ''; } })();
+  const ffr=(()=>{ try{ return extractFn(idx,'function fillFlowRows(ids, st2, fmt)'); }catch(e){ return ''; } })();
+  ok('월 수입 계산이 한 곳에 있다', !!fst && !!ffr);
   ok('월 평균은 안 나온 달도 센다',
-     /const avg=months\.reduce\(\(a,x\)=>a\+x\.v,0\)\/nM;/.test(infA) && /안 나온 달도 포함/.test(idx));
+     /const avg=months\.reduce\(\(a,x\)=>a\+x\.v,0\)\/nM;/.test(fst) && /안 나온 달도 포함/.test(ffr));
   ok('끊긴 달과 최장 연속을 센다',
-     /let run=0, worst=0; for\(const x of months\)\{ if\(x\.v<=0\)\{run\+\+; worst=Math\.max\(worst,run\);\} else run=0; \}/.test(infA));
-  ok('마지막 인출이 언제였는지 알린다', /id="a_sv_last"/.test(idx) && /개월 전/.test(infA));
-  // 오래 끊기면 눈에 띄어야 한다
-  ok('3개월 넘게 끊기면 빨갛게', /gap>=3 \? 'var\(--sell\)'/.test(infA));
+     /let run=0, worst=0; for\(const x of months\)\{ if\(x\.v<=0\)\{run\+\+; worst=Math\.max\(worst,run\);\} else run=0; \}/.test(fst));
+  ok('마지막 인출이 언제였는지 알린다', /id="a_sv_last"/.test(idx) && /개월 전/.test(ffr));
+  ok('3개월 넘게 끊기면 빨갛게', /st2\.gap>=3\?'var\(--sell\)'/.test(ffr));
   // 되짚기는 computeInf 와 같은 순서여야 값이 어긋나지 않는다
   // 카드와 표가 따로 세면 또 갈린다 — 둘 다 computeInf 가 낸 flows 만 쓴다
   ok('카드는 따로 되짚지 않는다',
-     /const ev=\(c\.flows\|\|\[\]\)\.map\(f=>\(\{d:f\.date, v:\(f\.out\|\|0\)-\(f\.in\|\|0\)\}\)\);/.test(infA));
+     /const fs2=flowStats\(c\.flows, \(rows\[0\]\|\|\{\}\)\.date, \(rows\[rows\.length-1\]\|\|\{\}\)\.date\);/.test(infA));
   const br2=(()=>{ try{ return extractFn(idx,'function renderInfBreak(c)'); }catch(e){ return ''; } })();
   ok('월별·사이클별 표도 같은 flows 를 쓴다',
      /\(c\.flows\|\|\[\]\)\.forEach\(f=>\{ const k=String\(f\.date\|\|''\)\.slice\(0,7\)/.test(br2)
@@ -2360,6 +2363,40 @@ console.log('\n[56] 국내(원화) 세션 — 통화 칸');
   ok('통화를 달러로 박아 두지 않는다', !/cur:'usd'\};/.test(idx));
   ok('통화는 활성 세션 설정에서 읽는다',
      /function curCurrency\(\)\{try\{return curStrat\(\)\.settings\.cur\|\|'usd'\}/.test(idx));
+}
+
+/* ════ 57. 분배금 현금 수령 = 월 수입 ════
+   분배금을 현금으로 받으면 그 돈은 계좌 밖으로 나간다 — 무매 단리 인출과 같다.
+   커버드콜처럼 분배금이 수익의 대부분인 종목은 이게 곧 월 수입이다.
+   실측(월배당 ETF, 거치 1억): 누적 35,600,506원(35.6%) · 32/32개월(100%) ·
+   월 평균 1,112,516원. 무매 단리(28/45, 62%)와 대조가 선명하다. */
+console.log('\n[57] 분배금 현금 수령 — 월 수입으로 읽는다');
+{
+  const cd=(()=>{ try{ return extractFn(idx,'function computeDca()'); }catch(e){ return ''; } })();
+  const rd=(()=>{ try{ return extractFn(idx,'function renderDcaNow()'); }catch(e){ return ''; } })()
+           || idx;
+  ok('현금 수령분을 날짜째로 남긴다',
+     /else divFlows\.push\(\{date:d\.date, out:cash, in:0\}\);/.test(cd) && /pos\.flows=divFlows;/.test(cd));
+  // 재투자는 계좌 안에 남으므로 나간 돈이 아니다
+  ok('재투자는 흐름에 넣지 않는다', /if\(reinv\)\{[^}]*divShares\+=cash\/rp; \}\s*\n\s*else divFlows\.push/.test(cd));
+
+  ok('카드는 현금 수령일 때만 보인다', /const show=!p\.reinv && flows\.length>0;/.test(rd));
+  // 무매와 같은 함수를 써야 두 탭이 어긋나지 않는다
+  ok('무매와 같은 함수로 센다',
+     /const fs2=flowStats\(flows, dFirst,/.test(rd)
+     && /fillFlowRows\(\{avg:'dca_cf_avg'/.test(rd));
+  /* 거치식은 매수 기록이 하나뿐이다. 매수일만 보면 기간이 한 달로 잡혀
+     월 평균이 통째로 틀린다 — 마지막 분배금까지 세야 한다. */
+  ok('기간은 첫 매수 ~ 마지막 분배금',
+     /const hLast=hist\[hist\.length-1\]\|\|'', fLast=\(flows\[flows\.length-1\]\|\|\{\}\)\.date\|\|'';/.test(rd)
+     && /fLast>hLast\?fLast:hLast/.test(rd));
+  ok('월별 수령 표가 있다', /id="dca_cf_tbl"/.test(idx) && /<th>월<\/th><th>수령<\/th>/.test(rd));
+  ok('원화 세션엔 원화 칸을 겹쳐 넣지 않는다', /\$\{isKrw\?'':'<th>원화<\/th>'\}/.test(rd));
+
+  // 모의 성과 목록의 최종·현재·인출이 적립 세션에도 들어맞아야 한다
+  const ps=(()=>{ try{ return extractFn(idx,'function paperStat(tab, sess)'); }catch(e){ return ''; } })();
+  ok('목록에서 현금 수령분은 인출이다',
+     /if\(c\.pos && !c\.pos\.reinv && \(c\.pos\.divCash\|\|0\)>0\)\s*\n\s*_out=\{saved:c\.pos\.divCash, withdrawn:0, simple:true\};/.test(ps));
 }
 
 console.log(`\n════ 결과: ${pass} PASS / ${fail} FAIL ${fail===0?'— ALL PASS ★':'— 배포 금지, 위 ✗ 항목 수정 필요'} ════`);
