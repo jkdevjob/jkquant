@@ -2118,7 +2118,7 @@ console.log('\n[48] 분석 화면 수익률 — 무엇을 재는지 적는다');
      /const principal=\(\+st\.principal\|\|0\)\+\(c\.added\|\|0\)-\(c\.withdrawn\|\|0\)/.test(ivsA));
   const infA=(()=>{ try{ return extractFn(idx,'function renderInfAnal()'); }catch(e){ return ''; } })();
   ok('무매는 분석도 원금으로 나눈다',
-     /const P=\+st\.principal\|\|0/.test(infA) && /\(total\/P-1\)\*100/.test(infA));
+     /const P=\+st\.principal\|\|0/.test(infA) && /\(amt\/P\*100\)\.toFixed\(2\)/.test(infA));
 
   /* 보유 수익률을 띄우는 두 곳은 '보유'라고 적어야 한다.
      ASAP 은 라벨이 없어서 맨숫자 %가 세션 수익률처럼 보였다. */
@@ -2158,17 +2158,28 @@ console.log('\n[49] 시세가 오면 분석 카드도 다시 그린다');
    누적 = (평가금+잔금+나간 돈) ÷ 원금     — 빼 간 돈까지 합쳐 전략이 얼마를 벌었나
    단리 적립은 사이클 초과익을 계좌 밖으로 빼므로 둘이 크게 갈린다
    (실측 누적 +81.54% / 현재 +1.30%). 나간 돈이 없으면 같은 값이라 한 줄만 띄운다. */
-console.log('\n[50] 돈을 빼는 전략 — 현재·누적 수익률을 둘 다 보여준다');
+console.log('\n[50] 무매 분석 요약 — 현재·실현·누적 세 수익률');
 {
   const infA=(()=>{ try{ return extractFn(idx,'function renderInfAnal()'); }catch(e){ return ''; } })();
-  ok('현재 수익률 줄이 있다', /id="a_retnowrow"/.test(idx) && /id="a_ret_now"/.test(idx));
-  ok('누적은 나간 돈을 더해서 잰다', /const rpAll = P>0 \? \(total\/P-1\)\*100 : 0;/.test(infA)
+  /* 서로 다른 축이라 더해지지 않는다 —
+       현재 = 평가금 + 잔금 − 원금   계좌에 지금 남아 있는 것 (미실현 포함)
+       실현 = 매도로 확정된 손익     계좌 안에 있든 밖으로 나갔든 전부
+       누적 = 현재 + 나간 돈         빼 간 돈까지 합쳐 전략이 번 것 */
+  ok('세 줄이 사용자가 말한 순서로 있다', (()=>{
+    const i1=idx.indexOf('id="a_ret_now"'), i2=idx.indexOf('id="a_ret_real"'), i3=idx.indexOf('id="a_ret"');
+    return i1>0 && i2>i1 && i3>i2; })());
+  ok('현재는 나간 돈을 빼고 잰다', /put\('a_ret_now',\s*total - outMoney - P\);/.test(infA));
+  ok('실현은 확정된 손익이다',    /put\('a_ret_real',\s*c\.realized\|\|0\);/.test(infA));
+  ok('누적은 나간 돈을 포함한다', /put\('a_ret',\s*total - P\);/.test(infA)
      && /total=invested\+c\.bal\+\(c\.outside\|\|0\)/.test(infA));
-  ok('현재는 나간 돈을 빼고 잰다', /const rpNow = P>0 \? \(\(total-outMoney\)\/P-1\)\*100 : 0;/.test(infA));
-  // 나간 돈이 없으면 두 값이 같다 — 같은 줄을 두 번 띄우면 잡음이다
-  ok('나간 돈이 없으면 한 줄만', /row\.style\.display = outMoney>0 \? '' : 'none'/.test(infA));
-  ok('무엇 기준인지 적는다', /계좌에 남은 것만/.test(idx)
-     && /rs\.textContent = outMoney>0 \? '나간 돈 포함' : ''/.test(infA));
+  // 비율만 보면 원금이 다른 세션끼리 감이 안 온다 — 금액을 같이 적는다
+  ok('수익금(수익률) 로 적는다',
+     /el\.textContent = P>0 \? `\$\{sgn\}\$\{wn\(amt\)\} \(\$\{sgn\}\$\{\(amt\/P\*100\)\.toFixed\(2\)\}%\)` : '—';/.test(infA));
+  ok('무엇 기준인지 적는다', /매수 상태 · 평가금 \+ 잔금/.test(idx)
+     && /매도로 확정된 것/.test(idx) && /출금 포함/.test(idx));
+  // 설명이 본문과 같은 크기로 한 줄에 붙으면 값이 밀려 두 줄이 된다
+  ok('설명은 작은 둘째 줄이다',
+     /\.rowline \.k \.sub\{display:block;font-size:10\.5px;/.test(idx));
 }
 
 /* ════ 51. 모의 성과 목록이 종목마다 시세를 한 번만 받는다 ════

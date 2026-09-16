@@ -113,7 +113,8 @@ section.on{display:block;animation:fade .25s ease}
 .lead{color:var(--dim);font-size:13px;margin-bottom:13px}
 .rowline{display:flex;justify-content:space-between;gap:10px;padding:7px 0;border-bottom:1px solid var(--line);font-size:13.5px}
 .rowline:last-child{border-bottom:none}
-.rowline .k{color:var(--dim);flex-shrink:0}.rowline .val{text-align:right;font-weight:600}
+.rowline .k{color:var(--dim);min-width:0}.rowline .val{text-align:right;font-weight:600;white-space:nowrap}
+.rowline .k .sub{display:block;font-size:10.5px;color:var(--faint);margin-top:1px;font-weight:500}
 .formula{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:11px 13px;font-size:13px;margin:8px 0;font-variant-numeric:tabular-nums}
 .formula .lbl{color:var(--gold);font-weight:700;font-size:11px;display:block;margin-bottom:3px;letter-spacing:.03em}
 ul.clean{list-style:none}
@@ -519,7 +520,7 @@ try{ if(localStorage.getItem('qcockpit_hadUser')==='1') document.documentElement
 </div>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.53</span></h1></div>
+    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.54</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -715,8 +716,9 @@ document.addEventListener('click',function(e){ var m=document.getElementById('jk
         <div class="rowline" id="a_wdrow" style="display:none"><span class="k">출금 <span class="sub">직접 뺀 돈</span></span><span class="val mono" id="a_wd" style="color:var(--gold)">0$</span></div>
         <div class="rowline" id="a_savedrow" style="display:none"><span class="k">단리 적립 <span class="sub" id="a_saved_sub">사이클 초과익</span></span><span class="val mono" id="a_saved" style="color:var(--gold)">0$</span></div>
         <div class="rowline"><span class="k">총 자산 <span class="sub" id="a_total_sub">평가금 + 잔금</span></span><span class="val mono" id="a_total">0$</span></div>
-        <div class="rowline" id="a_retnowrow" style="display:none"><span class="k">현재 수익률 <span class="sub">계좌에 남은 것만</span></span><span class="val mono" id="a_ret_now">—</span></div>
-        <div class="rowline"><span class="k">누적 수익률 <span class="sub" id="a_ret_sub"></span></span><span class="val mono" id="a_ret">—</span></div>
+        <div class="rowline"><span class="k">현재 수익률 <span class="sub">매수 상태 · 평가금 + 잔금</span></span><span class="val mono" id="a_ret_now">—</span></div>
+        <div class="rowline"><span class="k">실현 수익률 <span class="sub">매도로 확정된 것</span></span><span class="val mono" id="a_ret_real">—</span></div>
+        <div class="rowline"><span class="k">누적 수익률 <span class="sub">출금 포함</span></span><span class="val mono" id="a_ret">—</span></div>
         <div class="rowline"><span class="k">총 매수금</span><span class="val mono" id="a_totbuy">0$</span></div>
         <div class="rowline"><span class="k">총 매도금</span><span class="val mono" id="a_totsell">0$</span></div>
         <div class="rowline"><span class="k">현재 평단</span><span class="val mono" id="a_avg">—</span></div>
@@ -1579,7 +1581,7 @@ document.addEventListener('click',function(e){ var m=document.getElementById('jk
   <footer>
     <strong>JK 퀀트</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.53</b> · 2026-09-15</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.54</b> · 2026-09-15</div>
   </footer>
 </div>
 
@@ -2948,22 +2950,21 @@ function renderInfAnal(){
     if(sub) sub.textContent = (wd+sv)>0 ? '평가금 + 잔금 + 나간 돈' : '평가금 + 잔금';
     const ss=$('a_saved_sub');
     if(ss) ss.textContent = c.simple ? '사이클 초과익 (단리)' : '사이클 초과익'; }
-  /* 돈을 빼는 전략(출금·단리 적립)은 수익률이 둘로 갈린다.
-       현재 = (평가금+잔금) ÷ 원금        — 계좌에 지금 남아 있는 것만
-       누적 = (평가금+잔금+나간 돈) ÷ 원금 — 빼 간 돈까지 합쳐 전략이 얼마를 벌었나
-     나간 돈이 없으면 둘이 같은 값이라 한 줄만 보여 준다. */
+  /* 세 가지를 나눠 본다. 서로 다른 축이라 더해지지 않는다 —
+       현재 = 평가금 + 잔금 − 원금      계좌에 지금 남아 있는 것 (미실현 포함)
+       실현 = 매도로 확정된 손익        아직 계좌 안에 있든 밖으로 나갔든 전부
+       누적 = 현재 + 나간 돈            빼 간 돈까지 합쳐 전략이 얼마를 벌었나
+     단리 세션은 번 돈을 계좌 밖으로 빼므로 현재가 본전 근처인데 누적은 크게 는다.
+     금액과 비율을 같이 적는다 — 비율만 보면 원금이 다른 세션끼리 감이 안 온다. */
   if($('a_ret')){
     const P=+st.principal||0, outMoney=c.outside||0;
-    const put=(id,v)=>{ const el=$(id); if(!el) return;
-      el.textContent = P>0 ? ((v>=0?'+':'')+v.toFixed(2)+'%') : '—';
-      el.style.color = v>=0?'var(--buy)':'var(--sell)'; };
-    const rpAll = P>0 ? (total/P-1)*100 : 0;
-    const rpNow = P>0 ? ((total-outMoney)/P-1)*100 : 0;
-    put('a_ret', rpAll);
-    const row=$('a_retnowrow');
-    if(row) row.style.display = outMoney>0 ? '' : 'none';
-    if(outMoney>0) put('a_ret_now', rpNow);
-    const rs=$('a_ret_sub'); if(rs) rs.textContent = outMoney>0 ? '나간 돈 포함' : '';
+    const put=(id,amt)=>{ const el=$(id); if(!el) return;
+      const sgn=amt>=0?'+':'';
+      el.textContent = P>0 ? `${sgn}${wn(amt)} (${sgn}${(amt/P*100).toFixed(2)}%)` : '—';
+      el.style.color = amt>=0?'var(--buy)':'var(--sell)'; };
+    put('a_ret_now',  total - outMoney - P);     // 계좌에 남은 것
+    put('a_ret_real', c.realized||0);            // 매도로 확정된 것
+    put('a_ret',      total - P);                // 출금까지 합친 것
   }
   $('a_totbuy').textContent=wn(c.totbuy);
   $('a_totsell').textContent=wn(c.totsell);
