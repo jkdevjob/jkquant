@@ -85,9 +85,10 @@ inject(`if(c<=avg) { if(_buy(c,half)>0) T+=0.5; }`,
 `if(c<=avg) { const __q=_buy(c,half); if(__q>0){__LOG('절반매수',c,__q); T+=0.5;} }`,'hb2');
 inject(`}else{ if(c<=buyP){ if(_buy(c,one)>0) T+=1; } }`,
 `}else{ if(c<=buyP){ const __q=_buy(c,one); if(__q>0){__LOG('1회매수',c,__q); T+=1;} } }`,'bb');
-inject(`const fin=cash+shares*M[tkr][days[days.length-1]][C]+savedProfit;`,
-`__FINAL({T,avg,shares,cash,realized,savedProfit});
-  const fin=cash+shares*M[tkr][days[days.length-1]][C]+savedProfit;`,'fin');
+// 단리에서 밖에서 넣은 돈(addedCash)을 총자산에서 빼게 되면서 이 줄이 바뀌었다
+inject(`const fin=cash+shares*M[tkr][days[days.length-1]][C]+savedProfit-addedCash;`,
+`__FINAL({T,avg,shares,cash,realized,savedProfit,addedCash});
+  const fin=cash+shares*M[tkr][days[days.length-1]][C]+savedProfit-addedCash;`,'fin');
 let tradeLog=[], finalState=null;
 global.__LOG=(k,p,q)=>tradeLog.push({kind:k,price:p,qty:q});
 global.__FINAL=s=>finalState=s;
@@ -192,7 +193,7 @@ for(const [tkr,div,tgt,compound] of CONFIGS){
   runIM(DAYS[tkr], tkr, 10000, div, tgt, compound);
   __strat={settings:{ticker:tkr,div,principal:10000}, hist:tradeLog};
   const ci=computeInf();
-  const btBal=finalState.cash+finalState.savedProfit;
+  const btBal=finalState.cash+finalState.savedProfit-(finalState.addedCash||0);
   const okAll=near(ci.avg,finalState.avg)&&near(ci.qty,finalState.shares)&&near(ci.T,finalState.T)&&near(ci.realized,finalState.realized)&&near(ci.bal,btBal);
   ok(`${tkr} ${div}분할 ${tgt}% ${compound?'복리':'단리'} — 거래 ${tradeLog.length}건 5지표 항등`, okAll,
     okAll?'':`avg ${ci.avg}/${finalState.avg} qty ${ci.qty}/${finalState.shares} T ${ci.T}/${finalState.T} bal ${ci.bal}/${btBal}`);
@@ -768,10 +769,18 @@ console.log('[19] 출금 · 복리/단리');
 {
   let ci=''; try{ ci=extractFn(idx,'function computeInf()'); }catch(e){}
   ok('출금 기록을 잔금에서 뺀다', /h\.kind==='출금'/.test(ci) && /withdrawn \+= Math\.max\(0,\+h\.amt\|\|0\)/.test(ci), ci?'':'computeInf 없음');
-  ok('잔금 식에 출금·단리적립 반영', /principal\+realized-inv-withdrawn-saved/.test(ci));
-  ok('단리는 사이클 끝 초과익만 빼낸다', /if\(simple\)\{[\s\S]{0,260}?cashNow>\(\+st\.principal\|\|0\)\) saved\+=/.test(ci));
+  ok('잔금 식에 출금·단리인출·단리보충 반영', /principal\+realized-inv-withdrawn-saved\+added/.test(ci));
+  /* 단리는 사이클이 끝나면 계좌를 원금으로 되돌린다 — 양쪽 다.
+     넘치면 빼고(saved) 모자라면 채운다(added). 한쪽만 하면 진 사이클 뒤로
+     계좌가 원금보다 작은 채 굴러가 1회매수금이 줄고 전략이 저절로 약해진다. */
+  ok('단리는 사이클 끝에 원금으로 맞춘다',
+     /if\(simple\)\{[\s\S]{0,320}?if\(cashNow>P0\) saved\+=cashNow-P0;[\s\S]{0,80}?else if\(cashNow<P0\) added\+=P0-cashNow;/.test(ci));
+  // 백테도 같은 규약이어야 한다 — 한쪽만 바꾸면 모의와 백테가 갈린다
+  ok('백테도 원금으로 맞춘다',
+     (bt.match(/else if\(cash<cap\)\{ addedCash\+=cap-cash; cash=cap; \}/g)||[]).length===4);
+  ok('백테는 넣은 돈을 총자산에서 뺀다', /\+savedProfit-addedCash;/.test(bt));
   ok('단리 판정은 compound===false', /const simple=\(st\.compound===false\)/.test(ci));
-  ok('출금·단리적립을 밖으로 낸다', /withdrawn,saved,simple,outside:withdrawn\+saved/.test(ci));
+  ok('출금·단리인출·단리보충을 밖으로 낸다', /withdrawn,saved,added,simple,outside:withdrawn\+saved/.test(ci));
   // 출금이 매매로 잡히면 사이클 종료·T가 오염된다
   ok('출금은 매수·매도가 아니다', /function isBuy\(k\)\{return k==='출금'\?false/.test(idx)
      && /function isSell\(k\)\{return k!=='출금'/.test(idx));
@@ -2281,6 +2290,34 @@ console.log('\n[54] 모의 성과 — 최종·현재·인출 세 칸');
      && /\$\{outAmt>0\?'\+'\+r\.retOut\.toFixed\(1\)\+'%':'—'\}/.test(idx));
   // 시세를 못 받은 줄은 평가~연 다섯 칸을 덮어야 한다
   ok('시세 대기 줄이 칸 수를 맞춘다', /<td colspan="5" style="color:var\(--gold\)">시세 대기/.test(idx));
+}
+
+/* ════ 55. 단리 현금 흐름 — 출금·입금·합계와 월 수입 ════
+   단리를 쓰는 이유가 월 현금인데 누적 한 줄로는 "달마다 얼마 나오나"가 안 보였다.
+   실측(SOXL 20/10 단리, 45개월): 총 인출 51,912$ 로는 훌륭해 보이지만
+   17개월은 0원이었고 연속 3개월 끊긴 적이 있으며 지금도 3개월째 안 나온다. */
+console.log('\n[55] 단리 현금 흐름');
+{
+  const infA=(()=>{ try{ return extractFn(idx,'function renderInfAnal()'); }catch(e){ return ''; } })();
+  ok('단리 세션에만 보여준다', /box\.style\.display = \(c\.simple && P0>0\) \? '' : 'none';/.test(infA));
+  // 사용자가 말한 순서 — 출금 · 입금 · 합계, 각각 원금 대비 %
+  ok('출금·입금·합계 순이다', (()=>{
+    const i1=idx.indexOf('id="a_sv_out"'), i2=idx.indexOf('id="a_sv_in"'), i3=idx.indexOf('id="a_sv_net"');
+    return i1>0 && i2>i1 && i3>i2; })());
+  ok('합계는 출금 − 입금이다', /setv\('a_sv_net', out-inn,/.test(infA));
+  ok('원금 대비 %를 같이 적는다', /const pct=v=>` \(\$\{\(v\/P0\*100\)\.toFixed\(1\)\}%\)`;/.test(infA));
+
+  // 월 수입으로 읽히려면 셋이 더 필요하다
+  ok('월 평균은 안 나온 달도 센다',
+     /const avg=months\.reduce\(\(a,x\)=>a\+x\.v,0\)\/nM;/.test(infA) && /안 나온 달도 포함/.test(idx));
+  ok('끊긴 달과 최장 연속을 센다',
+     /let run=0, worst=0; for\(const x of months\)\{ if\(x\.v<=0\)\{run\+\+; worst=Math\.max\(worst,run\);\} else run=0; \}/.test(infA));
+  ok('마지막 인출이 언제였는지 알린다', /id="a_sv_last"/.test(idx) && /개월 전/.test(infA));
+  // 오래 끊기면 눈에 띄어야 한다
+  ok('3개월 넘게 끊기면 빨갛게', /gap>=3 \? 'var\(--sell\)'/.test(infA));
+  // 되짚기는 computeInf 와 같은 순서여야 값이 어긋나지 않는다
+  ok('사이클 종료 시점을 같은 식으로 되짚는다',
+     /const now=P0\+rz-wd-sv\+ad;/.test(infA) && /if\(now>P0\)\{[\s\S]{0,90}?else if\(now<P0\)/.test(infA));
 }
 
 console.log(`\n════ 결과: ${pass} PASS / ${fail} FAIL ${fail===0?'— ALL PASS ★':'— 배포 금지, 위 ✗ 항목 수정 필요'} ════`);
