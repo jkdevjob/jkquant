@@ -2576,7 +2576,7 @@ console.log('\n[59] 월 현금흐름 — 전 전략 공용');
      /function paintCashFlow[\s\S]*?flowStats\(flows,/.test(idx)
      && /function paintCashFlow[\s\S]*?fillFlowRows\(\{avg:id\('avg'\)/.test(idx));
   // 원화 세션에 원화 칸을 겹쳐 넣으면 같은 수가 두 번 나온다
-  ok('원화 세션엔 원화 칸을 겹쳐 넣지 않는다', /const kw=!!o\.isKrw;[\s\S]{0,400}\+\(kw\?'':'<th>원화<\/th>'\)/.test(idx));
+  ok('원화 세션엔 원화 칸을 겹쳐 넣지 않는다', /const kw=!!o\.isKrw;[\s\S]{0,700}\+\s*\(kw\?'':'<th>원화<\/th>'\)/.test(idx));
   ok('입금이 없으면 입금·합계 칸을 안 만든다', /const hasIn=inn>0;/.test(idx) && /\(hasIn\?row\(/.test(idx));
 
   // 수익률 세 줄도 한 곳에서
@@ -2594,8 +2594,8 @@ console.log('\n[59] 월 현금흐름 — 전 전략 공용');
   const cv=(()=>{ try{ return extractFn(idx,'function computeVr()'); }catch(e){ return ''; } })();
   ok('VR이 실현손익을 잰다', /realized\+=amt-av\*h\.qty; cost-=av\*h\.qty;/.test(cv) && /\brealized,flows,/.test(cv));
   ok('VR 인출은 나온 돈, 적립은 넣은 돈',
-     /type==='wd'\)\{[^}]*flows\.push\(\{date:h\.date,out:\+h\.amt\|\|0,in:0\}\)/.test(cv)
-     && /type==='add'\)\{[^}]*flows\.push\(\{date:h\.date,out:0,in:\+h\.amt\|\|0\}\)/.test(cv));
+     /type==='wd'\)\{[^}]*flows\.push\(\{date:h\.date,out:\+h\.amt\|\|0,in:0,kind:'wd'\}\)/.test(cv)
+     && /type==='add'\)\{[^}]*flows\.push\(\{date:h\.date,out:0,in:\+h\.amt\|\|0,kind:'add'\}\)/.test(cv));
   // 배당은 Pool에 남는다 — 손에 쥔 돈이 아니므로 흐름에 넣으면 안 된다
   ok('VR 배당은 흐름이 아니다', !/type==='div'\)\{[^}]*flows\.push/.test(cv));
   /* 분모가 netInvested(인출 뺀 뒤)면 '누적(인출 포함)'이 인출을 두 번 센다 */
@@ -2607,9 +2607,31 @@ console.log('\n[59] 월 현금흐름 — 전 전략 공용');
   // 섀넌도 입출금을 장부에서 뽑아야 한다
   const ip=(()=>{ try{ return extractFn(idx,'function ivsPos(principal,hist)'); }catch(e){ return ''; } })();
   ok('섀넌이 입출금을 흐름으로 남긴다',
-     /withdrawn\+=v; flows\.push\(\{date:h\.date,out:v,in:0\}\)/.test(ip)
-     && /added\+=v; flows\.push\(\{date:h\.date,out:0,in:v\}\)/.test(ip));
+     /withdrawn\+=v; flows\.push\(\{date:h\.date,out:v,in:0,kind:'wd'\}\)/.test(ip)
+     && /added\+=v; flows\.push\(\{date:h\.date,out:0,in:v,kind:'add'\}\)/.test(ip));
   ok('섀넌 흐름이 밖으로 나온다', /out\.withdrawn=P\.withdrawn; out\.flows=P\.flows;/.test(idx));
+
+  /* 나온 돈의 출처가 둘일 수 있다 — VR 인출식에 분배금 현금수령을 켜면 인출과 분배금이
+     같이 나온다. 한 칸에 뭉치면 그 달에 뭐가 얼마인지 알 수 없고, '인출 — Pool에서
+     빼낸 돈' 이라는 라벨이 분배금까지 덮어 거짓이 된다.
+     실측: QYLD 2,000주 · 2주마다 500$ 인출 2년 → 한 칸일 땐 20,712$ 한 덩어리였다. */
+  ok('흐름에 출처를 적는다',
+     /flows\.push\(\{date:h\.date,out:\+h\.amt\|\|0,in:0,kind:'wd'\}\)/.test(idx)
+     && /flows\.push\(\{date:h\.date,out:0,in:\+h\.amt\|\|0,kind:'add'\}\)/.test(idx)
+     && /out\.flows\.push\(\{date:d\.date, out:cash, in:0, kind:'div'\}\)/.test(idx));
+  ok('출처가 둘 이상일 때만 칸을 나눈다',
+     /const split=kinds\.length>1;/.test(idx)
+     && /\.filter\(k=>k\.sum>0\)/.test(idx));
+  ok('VR·섀넌이 인출과 분배금을 갈라 놓는다',
+     (idx.match(/kinds:\[\{k:'wd'/g)||[]).length===2
+     && (idx.match(/\{k:'div', label:'분배금'/g)||[]).length===2);
+  ok('월별 표도 출처별로 나뉜다',
+     /\(split\?kinds\.map\(k=>cell\(d\.k\[k\.k\]\|\|0,'var\(--gold\)'\)\)\.join\(''\):cell\(d\.o,'var\(--gold\)'\)\)/.test(idx)
+     && /if\(f\.kind\) b\.k\[f\.kind\]=\(b\.k\[f\.kind\]\|\|0\)\+\(f\.out\|\|0\);/.test(idx));
+  /* 받은 분배금 줄이 hist 의 div 기록만 보고 있어, 현금수령으로 8,712$ 를 받고도
+     화면엔 '—' 로 비어 있었다. */
+  ok('받은 분배금에 추정분도 더한다',
+     /const tot=\(c\.totdiv\|\|0\)\+_d2\.divCash/.test(idx) && /\(추정 포함\)/.test(idx));
 
   /* 수익률 셋을 나란히 놓자마자 드러난 것 — 로테는 매수 수수료를 현금에서만 빼고
      평단에는 안 넣고 있었다. 다 청산한 계좌인데 실현(+9.90%)이 현재(+9.83%)보다
@@ -2663,7 +2685,7 @@ console.log('\n[60] 분배금 현금 수령 — 전 전략');
   const st=(()=>{ try{ return extractFn(idx,'function shareTimeline(hist)'); }catch(e){ return ''; } })();
   ok('매수·매도 이름이 전략마다 달라도 읽는다', /BUY=\{buy:1,in:1\}, SELL=\{sell:1,out:1\}/.test(st)
      && /if\(\/매수\/\.test\(h\.kind\)\)/.test(st) && /const bq=\+h\.buyQty\|\|0, sq=\+h\.sellQty\|\|0;/.test(st));
-  ok('재투자는 흐름에 넣지 않는다', /if\(!reinv\) out\.flows\.push\(\{date:d\.date, out:cash, in:0\}\);/.test(di));
+  ok('재투자는 흐름에 넣지 않는다', /if\(!reinv\) out\.flows\.push\(\{date:d\.date, out:cash, in:0, kind:'div'\}\);/.test(di));
   {
     const fn=new Function(st+'\n'+di+'\nreturn {shareTimeline,divIncome};')();
     const lots=fn.shareTimeline([{date:'2025-01-06',type:'buy',qty:100,price:30},
