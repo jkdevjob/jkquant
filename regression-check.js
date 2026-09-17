@@ -812,7 +812,7 @@ console.log('[19] 출금 · 복리/단리');
   ok('편집에서도 출금 가능', /<option value="출금">/.test(idx) && /id="ei_amt"/.test(idx));
   /* 모의 성과표 — 단리는 익절금이 계좌 밖으로 빠져 있다. 평가금엔 더해 놨어도
      '얼마가 나갔는지'를 안 보이면 잔금이 왜 안 늘었는지 알 수 없다. */
-  ok('성과표가 단리 인출액을 낸다', /_out=\{saved:c\.saved\|\|0, withdrawn:c\.withdrawn\|\|0, simple:!!c\.simple\}/.test(idx)
+  ok('성과표가 단리 인출액을 낸다', /_out=\{saved:\(c\.saved\|\|0\)\+_dv\.divCash, withdrawn:c\.withdrawn\|\|0, simple:!!c\.simple\}/.test(idx)
      && /nTrade, price, out:_out\}/.test(idx));
   ok('성과표에 인출 태그를 그린다', /O\.simple\?'단리 인출':'출금'/.test(idx));
   /* 익절 조절 숨김 — SOXL 열위·MDD 악화 구간 때문. UI만 감추고 코드는 남긴다.
@@ -2472,7 +2472,7 @@ console.log('\n[57] 분배금 현금 수령 — 월 수입으로 읽는다');
      && /to:\(fLast>hLast\?fLast:hLast\)/.test(ra));
   // 무매 요약과 같은 세 수익률이 적립에도 있어야 한다
   ok('무매와 같은 세 수익률을 찍는다',
-     /paintRet3\('anaD', \{base:P\.inv, now:evalNow, realized:cash, out:cash\}\);/.test(ra)
+     /paintRet3\('anaD', \{base:P\.inv, now:evalAll, realized:cash, out:cash\}\);/.test(ra)
      && /id="anaD_ret_now"/.test(idx) && /id="anaD_ret_real"/.test(idx) && /id="anaD_ret"/.test(idx));
 
   // 모의 성과 목록의 최종·현재·인출이 적립 세션에도 들어맞아야 한다
@@ -2788,6 +2788,71 @@ console.log('\n[62] 차트 라벨은 고른 기간을 따라간다');
   ok('코드 기본값도 1년', /let infChartRange=252,/.test(idx));
   const fb=(idx.match(/infChartRange\s*(?:=\s*\+isel\.value\s*\|\||\|\|)\s*(\d+)/g)||[]);
   ok('못 읽었을 때 쓰는 값도 1년', fb.length>0 && fb.every(x=>/252/.test(x)), fb.join(' / '));
+}
+
+/* ════ 63. 나간 돈은 여섯 전략이 같은 규약으로 센다 ════
+   분석탭 누적과 목록 최종은 같은 것을 재는데, paperStat 이 무매·적립에만 '나간 돈'을
+   넘기고 있었다. VR 인출식은 인출이 분모(netInvested)에서 빠지고 분자에도 없어
+   양쪽에서 통째로 사라졌다 — 목록의 인출 칸이 늘 비어 있던 이유다.
+
+   규약(무매 기준):
+     inflow = 밖에서 넣은 총액 (인출 빼기 전)
+     total  = 평가금 + 현금 + 나간 돈
+     _out   = {saved: 분배금 현금수령, withdrawn: 인출}
+   그래야 '현재 + 인출 = 최종' 이 성립한다.
+
+   실측(QYLD · 원금 36,600$) — 고치기 전 → 후, 분석탭 누적 대비 목록 최종:
+     무매   12.93% vs 10.00%  →  12.93% = 12.93%
+     VR     23.80% vs  0.00%  →  23.80% = 23.80%
+     섀넌   11.90% vs −56.13% →  11.90% = 11.90%
+     적립   28.16% vs  0.00%  →  28.16% = 28.16%   (재투자분 divShares 누락이었다) */
+console.log('\n[63] 나간 돈 — 여섯 전략 같은 규약');
+{
+  const ps=(()=>{ try{ return extractFn(idx,'function paperStat(tab, sess)'); }catch(e){ return ''; } })();
+  ok('paperStat 을 읽었다', ps.length>0);
+  // 여섯 갈래가 모두 나간 돈을 넘겨야 '인출' 칸이 채워진다
+  const outs=(ps.match(/_out=\{/g)||[]).length;
+  ok('여섯 전략이 모두 나간 돈을 넘긴다', outs===6, `${outs}곳`);
+  // 분배금 현금수령은 어느 전략에서 켜도 잡혀야 한다
+  /* 적립은 sessDivCash 를 쓰지 않는다 — 자기 칸(reinv)으로 computeDca 가 이미 세고,
+     c.total 에 반영해 둔다. 나머지 다섯은 divmode 를 보고 여기서 센다. */
+  const dv=(ps.match(/sessDivCash\(st, (?:h|c\.hist)\)/g)||[]).length;
+  ok('나머지 다섯이 분배금을 센다', dv===5, `${dv}곳`);
+  ok('적립은 제 방식으로 이미 센다',
+     /if\(c\.pos && !c\.pos\.reinv && \(c\.pos\.divCash\|\|0\)>0\)/.test(ps)
+     && /total=c\.ready\?c\.total:/.test(ps));
+
+  /* 분모에서 인출을 빼면 '현재 + 인출 = 최종' 이 깨진다 — 분자에 도로 더하기 때문이다 */
+  ok('VR 분모는 인출 빼기 전 총투입',
+     /inflow=c\.grossIn; total=price\*c\.qty \+ c\.pool \+ \(c\.totwd\|\|0\) \+ _dv\.divCash;/.test(ps)
+     && !/inflow=c\.netInvested/.test(ps));
+  ok('섀넌 분모도 출금 빼기 전',
+     /inflow=\(c\.principal\|\|0\)\+\(c\.added\|\|0\);/.test(ps)
+     && /total=ev \+ \(c\.cash\|\|0\) \+ \(c\.withdrawn\|\|0\) \+ _dv\.divCash;/.test(ps));
+  ok('VR·섀넌이 인출을 나간 돈으로 넘긴다',
+     /_out=\{saved:_dv\.divCash, withdrawn:c\.totwd\|\|0, simple:false\}/.test(ps)
+     && /_out=\{saved:_dv\.divCash, withdrawn:c\.withdrawn\|\|0, simple:false\}/.test(ps));
+  ok('무매는 단리 적립분과 분배금을 같이 넘긴다',
+     /_out=\{saved:\(c\.saved\|\|0\)\+_dv\.divCash, withdrawn:c\.withdrawn\|\|0, simple:!!c\.simple\}/.test(ps));
+  // 로테·ASAP 은 인출이 없다 — 분배금만 나간다
+  ok('로테·ASAP 은 분배금만 나간 돈',
+     (ps.match(/_out=\{saved:_dv\.divCash, withdrawn:0, simple:true\}/g)||[]).length===2);
+
+  /* 재투자를 고르면 분배금이 주식으로 돌아온다. 분석탭이 그 늘어난 몫을 빼고 세서
+     목록(c.total)과 갈렸다 — computeDca 가 계산해 둔 c.eval 을 쓴다. */
+  const ra=(()=>{ try{ return extractFn(idx,'function renderDcaAnal()'); }catch(e){ return ''; } })();
+  ok('적립 분석탭이 재투자분을 센다',
+     /const evalAll = c\.ready \? \(c\.eval\|\|0\) : \(price>0 \? price\*\(P\.shares\+\(P\.divShares\|\|0\)\) : 0\);/.test(ra)
+     && !/price\*P\.shares/.test(ra));
+  {
+    const cd=(()=>{ try{ return extractFn(idx,'function computeDca()'); }catch(e){ return ''; } })();
+    ok('c.eval 은 재투자분을 더한 값', /const shAll=pos\.shares\+pos\.divShares;\s*\n\s*const evalNow=shAll\*price;/.test(cd)
+       && /eval:evalNow, total,/.test(cd));
+  }
+  // 목록을 한 번에 그리므로 분배 이력이 그때 와 있어야 한다
+  ok('목록을 채우기 전에 분배 이력을 받아 둔다',
+     /async function warmDiv\(sym\)/.test(idx)
+     && /if\(divCashOn\(sess\.settings\)\) await warmDiv\(want\);/.test(idx));
 }
 
 console.log(`\n════ 결과: ${pass} PASS / ${fail} FAIL ${fail===0?'— ALL PASS ★':'— 배포 금지, 위 ✗ 항목 수정 필요'} ════`);
