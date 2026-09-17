@@ -520,7 +520,7 @@ try{ if(localStorage.getItem('qcockpit_hadUser')==='1') document.documentElement
 </div>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.66</span></h1></div>
+    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.67</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -1610,7 +1610,7 @@ document.addEventListener('click',function(e){ var m=document.getElementById('jk
   <footer>
     <strong>JK 퀀트</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.66</b> · 2026-09-16</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.67</b> · 2026-09-16</div>
   </footer>
 </div>
 
@@ -5268,7 +5268,11 @@ function renderDcaAnal(){
   if(!$('anaD_pnl')) return;
   const c=computeDca(), P=c.pos;
   const price=c.ready?(c.price||c.lastClose||0):0;
-  _analPaint('anaD',{inv:P.inv, evalNow:price>0?price*P.shares:0, cash:0,
+  /* 재투자를 고르면 분배금이 주식으로 돌아와 보유가 늘어난다. 그 늘어난 몫(divShares)을
+     빼고 세면 분석탭만 낮게 나온다 — 성과 목록(c.total)은 더하고 있어 두 화면이 갈렸다.
+     computeDca 가 이미 shares+divShares 로 계산해 둔 c.eval 을 그대로 쓴다. */
+  const evalAll = c.ready ? (c.eval||0) : (price>0 ? price*(P.shares+(P.divShares||0)) : 0);
+  _analPaint('anaD',{inv:P.inv, evalNow:evalAll, cash:0,
     avg:P.avg, qty:P.shares, cnt:`${P.nBuy} 매수`, cashLbl:'현금 (없음)',
     rows:[`${P.nBuy}회`, c.lump?'—':`${P.nDip}회`], cur:curOf(c.st)});
   // 거치식엔 배수가 없다 — 행 이름을 방식으로 바꿔 '0회'가 규칙 미작동처럼 보이지 않게
@@ -5278,8 +5282,7 @@ function renderDcaAnal(){
      그래서 무매 분석과 같은 세 수익률 + 같은 월별 현금 카드로 보여준다.
      재투자면 주식으로 돌아와 평가금에 이미 들어 있으니 확정익도 나간 돈도 0이다. */
   { const cash=(!P.reinv&&(P.divCash||0)>0)?P.divCash:0;
-    const evalNow=price>0?price*P.shares:0;
-    paintRet3('anaD', {base:P.inv, now:evalNow, realized:cash, out:cash});
+    paintRet3('anaD', {base:P.inv, now:evalAll, realized:cash, out:cash});
     const sub=$('anaD_total_sub'); if(sub) sub.textContent=cash>0?'주식 평가 (분배금 제외)':'주식 평가';
     const hd=(curStrat().hist||[]).filter(h=>h&&h.date).map(h=>h.date).sort();
     const fl=P.flows||[];
@@ -6356,6 +6359,14 @@ function divOf(sym, onReady){
 }
 /* 이 세션이 분배금을 현금으로 받기로 했는가 — 기본은 재투자(= 오늘까지의 동작 그대로). */
 function divCashOn(st){ return (st&&st.divmode)==='cash'; }
+/* 성과 목록은 한 번에 그린다 — 분배금이 그때 안 와 있으면 그 세션만 0 으로 찍히고
+   다시 그릴 기회가 없다. 목록을 채우는 동안 미리 받아 둔다. */
+async function warmDiv(sym){
+  const K=String(sym||'').toUpperCase();
+  if(!K || (_divCache[K] && _divCache[K]!=='loading')) return;
+  try{ const q=await fetchDailyDiv(K); _divCache[K]={symbol:K, dividends:(q&&q.dividends)||[], raw:(q&&q.raw)||[]}; }
+  catch(e){ _divCache[K]={symbol:K, dividends:[], raw:[]}; }
+}
 /* 현금 수령 세션의 받은 분배금. 끄면 전부 0이라 기존 숫자가 하나도 안 바뀐다. */
 function sessDivCash(st, hist, onReady){
   if(!divCashOn(st)) return {divCash:0, nDiv:0, flows:[]};
@@ -6491,23 +6502,36 @@ function paperStat(tab, sess){
       const c=computeInf();
       price=(lastQuote.inf && String(lastQuote.inf.symbol||'').toUpperCase()===sym)
         ? (lastQuote.inf.price||lastQuote.inf.last||0) : 0;
-      inflow=+st.principal||0; total=price*c.qty + c.bal + (c.outside||0);   // 출금·단리 적립분도 자산
-      _out={saved:c.saved||0, withdrawn:c.withdrawn||0, simple:!!c.simple};
+      /* 분배금 현금수령분도 계좌 밖으로 나간 돈이다 — 단리 적립분과 같은 칸에 넣는다.
+         빠뜨리면 분석탭 누적(+12.93%)과 목록 최종(10.00%)이 그만큼 갈린다. */
+      const _dv=sessDivCash(st, h);
+      inflow=+st.principal||0;
+      total=price*c.qty + c.bal + (c.outside||0) + _dv.divCash;   // 출금·단리 적립분·분배금도 자산
+      _out={saved:(c.saved||0)+_dv.divCash, withdrawn:c.withdrawn||0, simple:!!c.simple};
     }else if(tab==='vr'){
       const c=computeVr(); price=vrLastPrice(c)||0;
-      inflow=c.netInvested; total=price*c.qty + c.pool;      // 첫 매수는 밖에서 들어온 돈 — computeVr가 그렇게 센다
+      /* 분모는 인출 빼기 전 총투입, 분자엔 나간 돈을 도로 더한다 — 무매와 같은 규약.
+         예전엔 inflow 에서 인출을 빼고 total 에도 안 넣어, 인출이 양쪽에서 통째로 사라졌다.
+         (인출식 세션의 인출 칸이 늘 비어 있던 이유다.) */
+      const _dv=sessDivCash(st, c.hist);
+      inflow=c.grossIn; total=price*c.qty + c.pool + (c.totwd||0) + _dv.divCash;
+      _out={saved:_dv.divCash, withdrawn:c.totwd||0, simple:false};
     }else if(tab==='ivs'){
       const c=computeIvs(); price=c.price||0;
-      inflow=(c.principal||0)+(c.added||0)-(c.withdrawn||0);
       let ev=price*c.qty;
       if(c.X1 && c.qty1>0){ const s1=ivsX1Of(sym);
         const q1=(ivsQuote1&&String(ivsQuote1.symbol||'').toUpperCase()===s1)?ivsQuote1:null;
         ev += (c.qty1)*((q1&&(q1.price>0?q1.price:(q1.last&&q1.last.close)))||c.avg1||0); }
-      total=ev + (c.cash||0);
+      const _dv=sessDivCash(st, h);
+      inflow=(c.principal||0)+(c.added||0);                  // 출금을 빼지 않는다 — 분자에 도로 더하므로
+      total=ev + (c.cash||0) + (c.withdrawn||0) + _dv.divCash;
+      _out={saved:_dv.divCash, withdrawn:c.withdrawn||0, simple:false};
     }else if(tab==='ma'){
       const c=computeMa(); price=c.ready?(c.price||c.lastClose||0):0;
       const L=maLedger(h, price, +st.principal||0);
-      inflow=+st.principal||0; total=L.total;
+      const _dv=sessDivCash(st, h);
+      inflow=+st.principal||0; total=L.total + _dv.divCash;   // 로테는 인출이 없다 — 분배금만 나간다
+      if(_dv.divCash>0) _out={saved:_dv.divCash, withdrawn:0, simple:true};
     }else if(tab==='dca'){
       const c=computeDca(); price=c.ready?(c.price||c.lastClose||0):0;
       // 적립은 현금 계좌가 없다 — 매수액이 곧 투입. 받은 분배금은 자산에 더한다.
@@ -6521,7 +6545,9 @@ function paperStat(tab, sess){
       const P=c.pos;
       h.forEach(x=>{ if(x.type==='sgov') inflow+=+x.amt||0;
         else if(x.type==='buy' && x.from!=='reserve') inflow+=(x.amt!=null?+x.amt:(+x.qty||0)*(+x.price||0)); });
-      total=price*P.shares + P.reserve;                      // 리저브(SGOV)도 내 돈
+      const _dv=sessDivCash(st, h);
+      total=price*P.shares + P.reserve + _dv.divCash;         // 리저브(SGOV)도 내 돈
+      if(_dv.divCash>0) _out={saved:_dv.divCash, withdrawn:0, simple:true};
     }
   }catch(e){ console.error('paperStat',tab,e); }
   finally{ S.activeTab=prevTab; box.active=prevAct; }
@@ -6590,6 +6616,7 @@ async function paperFillAll(){
           const want=String((sess.settings&&sess.settings.ticker)||'').toUpperCase();
           const have=String(PAPER_CACHESYM[tab]()||'').toUpperCase();
           if(PAPER_LOADERS[tab]) await PAPER_LOADERS[tab](have!==want);   // 종목이 다르면 강제 갱신
+          if(divCashOn(sess.settings)) await warmDiv(want);   // 분배금 현금수령 세션은 분배 이력도 미리
           paperAuto();
           if(tab==='vr') vrSimForward();
           if(tab==='inf') infSimForward((sess.hist||[]).length?null:paperStart(sess));
