@@ -181,7 +181,7 @@ canvas{display:block;width:100%;height:auto}
 
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Morning Scalping</div><h1>JK <span class="v">퀀트</span> 단타 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="scVer">v2.0</span></h1></div>
+    <div><div class="kicker">Morning Scalping</div><h1>JK <span class="v">퀀트</span> 단타 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="scVer">v2.1</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -884,7 +884,8 @@ function runOpeningBreakout(){
   if(!trades.length){m.innerHTML='조건을 만족한 거래가 없습니다.'+(useGap&&noMeta?' <b>기존 아카이브 '+noMeta+'건은 갭 메타데이터가 없어 제외</b> — 스냅샷을 다시 수집하면 새 데이터부터 채워집니다.':'');b.innerHTML='';return;}
   const avg=trades.reduce((s,x)=>s+x.pnl,0)/trades.length,wins=trades.filter(x=>x.pnl>0).length,gp=trades.filter(x=>x.pnl>0).reduce((s,x)=>s+x.pnl,0),gl=-trades.filter(x=>x.pnl<0).reduce((s,x)=>s+x.pnl,0),pf=gl?gp/gl:Infinity;
   let eq=0,peak=0,mdd=0; trades.slice().sort((x,y)=>(x.date+String(x.time)).localeCompare(y.date+String(y.time))).forEach(x=>{eq+=x.pnl;peak=Math.max(peak,eq);mdd=Math.min(mdd,eq-peak);});
-  m.innerHTML=`검사 <b>${examined}</b> 종목-일 · 거래 <b>${trades.length}</b>건 · 데이터부족 ${skipped} · 갭제외 ${gapOut}${noMeta?' · 메타없음 '+noMeta:''}`;
+  const usedDates=[...new Set(trades.map(x=>x.date))].sort(), period=usedDates.length?`${usedDates[0]} ~ ${usedDates[usedDates.length-1]} (${usedDates.length}거래일)`:'—';
+  m.innerHTML=`기간 <b>${period}</b> · 검사 <b>${examined}</b> 종목-일 · 거래 <b>${trades.length}</b>건 · 데이터부족 ${skipped} · 갭제외 ${gapOut}${noMeta?' · 메타없음 '+noMeta:''}`;
   const box=(l,v,c)=>`<div class="outbox"><div class="ol">${l}</div><div class="ov ${c||''}">${v}</div></div>`;
   b.innerHTML=`<div class="out">${box('승률',(wins/trades.length*100).toFixed(1)+'%',wins/trades.length>=.5?'good':'bad')}${box('평균손익',(avg>=0?'+':'')+avg.toFixed(2)+'%',avg>=0?'good':'bad')}${box('Profit Factor',isFinite(pf)?pf.toFixed(2):'∞',pf>=1?'good':'bad')}${box('누적 단순합',(eq>=0?'+':'')+eq.toFixed(2)+'%',eq>=0?'good':'bad')}${box('MDD(단순합)',mdd.toFixed(2)+'%','bad')}</div>
   <div class="htable-wrap" style="margin-top:10px"><table class="htable"><thead><tr><th>일자</th><th>종목</th><th>갭</th><th>진입</th><th>진입가</th><th>청산가</th><th>결과</th><th>사유</th></tr></thead><tbody>${trades.slice().sort((a,b)=>(b.date+String(b.time)).localeCompare(a.date+String(a.time))).slice(0,100).map(t=>`<tr><td>${t.date}</td><td>${esc(t.code)}</td><td>${t.gap==null?'—':(t.gap>=0?'+':'')+t.gap.toFixed(2)+'%'}</td><td>${String(t.time).padStart(4,'0')}</td><td>${commas(t.entry)}</td><td>${commas(t.exit)}</td><td class="${t.pnl>=0?'win':'loss'}">${t.pnl>=0?'+':''}${t.pnl.toFixed(2)}%</td><td>${t.reason}</td></tr>`).join('')}</tbody></table></div>`;
