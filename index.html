@@ -2437,8 +2437,9 @@ function calcStarPoint(c){
   if(man>0) return {val:man, src:'수동 입력'};
   // ② 자동시세 5일평균
   const _Q5=quoteOf('inf');
-  const q5=(_Q5&&_Q5.days)?_Q5.days.slice(-5):null;
-  if(q5&&q5.length){const a=q5.reduce((s,d)=>s+d.close,0)/q5.length; return {val:a, src:`자동시세 ${q5.length}일평균`};}
+  // 리버스 별지점은 '직전 5거래일 확정 종가'다. 장중 진행 중인 오늘 봉은 절대 포함하지 않는다.
+  const q5=(_Q5&&_Q5.days)?settledBars(_Q5.days,curOf(st)).slice(-5):null;
+  if(q5&&q5.length){const a=q5.reduce((s,d)=>s+d.close,0)/q5.length; return {val:a, src:`확정 종가 ${q5.length}일평균`};}
   // ③ 최근 매수/매도 기록의 체결가 (price 있는 거래) 최근 5개
   const prices=c.rows.filter(r=>r.price>0).slice(-5).map(r=>r.price);
   if(prices.length){const a=prices.reduce((s,p)=>s+p,0)/prices.length; return {val:a, src:`최근 거래 ${prices.length}건 평균`};}
@@ -5685,7 +5686,11 @@ async function loadInfData(force){
 /* 최근 종가 10일 그리드 (고가 H 표시, 5일 평균) */
 function renderInfRecent(){
   const q=infQuoteCache; if(!q){return}
-  const rows=(q.ohlc&&q.ohlc.length)?q.ohlc.slice(-10):q.days.slice(-10).map(d=>({date:d.date,close:d.close,high:d.close}));
+  // 리버스 별지점과 같은 화면이므로 최근 종가도 확정봉만 표시한다. 장중 오늘 봉은 제외.
+  const _st=curStrat()&&curStrat().settings||{};
+  const _srcRows=(q.ohlc&&q.ohlc.length)?q.ohlc:q.days.map(d=>({date:d.date,close:d.close,high:d.close,low:d.close}));
+  const rows=settledBars(_srcRows,curOf(_st)).slice(-10);
+  if(!rows.length){ $('inf_ten_avg').textContent='5일 평균 —'; $('inf_ten_grid').innerHTML=''; return; }
   const recent=rows.slice().reverse(); // 최신 먼저
   const five=rows.slice(-5);
   const avg5=five.reduce((s,d)=>s+d.close,0)/five.length;
