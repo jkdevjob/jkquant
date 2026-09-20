@@ -181,7 +181,7 @@ canvas{display:block;width:100%;height:auto}
 
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Morning Scalping</div><h1>JK <span class="v">퀀트</span> 단타 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="scVer">v1.3</span></h1></div>
+    <div><div class="kicker">Morning Scalping</div><h1>JK <span class="v">퀀트</span> 단타 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="scVer">v1.4</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -271,7 +271,8 @@ canvas{display:block;width:100%;height:auto}
       <div class="fld"><label>1차익절 %</label><input id="ob_t1" type="number" value="0.8" min="0.1" step="0.1" style="width:80px"></div>
       <div class="fld"><label>2차익절 %</label><input id="ob_t2" type="number" value="1.5" min="0.1" step="0.1" style="width:80px"></div>
       <div class="fld"><label>마찰비용 %</label><input id="ob_fee" type="number" value="0.25" min="0" step="0.05" style="width:80px"></div>
-      <button class="prim" onclick="runOpeningBreakout()">▶ 아카이브 백테스트</button>
+      <button class="prim" onclick="runOpeningBreakout()">▶ 즉시돌파 백테스트</button>
+      <button class="ghostbtn" onclick="runPullbackRebreak()">↘ 눌림→재돌파 백테스트</button>
     </div>
     <div class="row" style="align-items:flex-end;margin-bottom:8px"><div class="fld"><label>최소 갭 %</label><input id="ob_gmin" type="number" value="2" step="0.5" style="width:80px"></div><div class="fld"><label>최대 갭 %</label><input id="ob_gmax" type="number" value="7" step="0.5" style="width:80px"></div><label class="sub" style="display:flex;align-items:center;gap:6px;height:38px"><input id="ob_gap" type="checkbox" checked style="width:auto"> 갭 필터 사용</label></div>
     <div class="warn"><b>데이터 정직성:</b> 네이버 1분 API 자체가 O/H/L을 null로 주므로 가짜 OHLC를 만들지 않는다. 분봉 돌파·청산은 <b>종가 기준</b>이다. 대신 새 아카이브부터 일봉 원자료의 <b>전일 종가·당일 시가</b>를 함께 저장해 +2~7% 갭 필터를 정확히 적용한다. 기존 아카이브는 메타데이터가 없어 갭 필터 사용 시 제외된다.</div>
@@ -886,6 +887,51 @@ function runOpeningBreakout(){
   b.innerHTML=`<div class="out">${box('승률',(wins/trades.length*100).toFixed(1)+'%',wins/trades.length>=.5?'good':'bad')}${box('평균손익',(avg>=0?'+':'')+avg.toFixed(2)+'%',avg>=0?'good':'bad')}${box('Profit Factor',isFinite(pf)?pf.toFixed(2):'∞',pf>=1?'good':'bad')}${box('누적 단순합',(eq>=0?'+':'')+eq.toFixed(2)+'%',eq>=0?'good':'bad')}${box('MDD(단순합)',mdd.toFixed(2)+'%','bad')}</div>
   <div class="htable-wrap" style="margin-top:10px"><table class="htable"><thead><tr><th>일자</th><th>종목</th><th>갭</th><th>진입</th><th>진입가</th><th>청산가</th><th>결과</th><th>사유</th></tr></thead><tbody>${trades.slice().sort((a,b)=>(b.date+String(b.time)).localeCompare(a.date+String(a.time))).slice(0,100).map(t=>`<tr><td>${t.date}</td><td>${esc(t.code)}</td><td>${t.gap==null?'—':(t.gap>=0?'+':'')+t.gap.toFixed(2)+'%'}</td><td>${String(t.time).padStart(4,'0')}</td><td>${commas(t.entry)}</td><td>${commas(t.exit)}</td><td class="${t.pnl>=0?'win':'loss'}">${t.pnl>=0?'+':''}${t.pnl.toFixed(2)}%</td><td>${t.reason}</td></tr>`).join('')}</tbody></table></div>`;
 }
+/* ══ 돌파 → 눌림 → 지지 → 재돌파 (분봉 종가 기반) ══ */
+function runPullbackRebreak(){
+  const obs=+($('ob_obs').value||3), stop=+($('ob_stop').value||1), tp=+($('ob_t2').value||1.5),
+        fee=+($('ob_fee').value||0.25), useGap=$('ob_gap').checked, gmin=+($('ob_gmin').value||2), gmax=+($('ob_gmax').value||7);
+  const minRise=.5, pbMin=.3, pbMax=1.0, volMult=1.0, trades=[];
+  let examined=0,noMeta=0,gapOut=0,insufficient=0;
+  Object.keys(ARCH).sort().forEach(date=>Object.entries(ARCH[date]||{}).forEach(([code,raw])=>{
+    if(code==='_meta'||!Array.isArray(raw)) return;
+    const meta=((ARCH[date]||{})._meta||{})[code]||null;
+    if(useGap){ if(!meta||!(meta.open>0&&meta.prevClose>0)){noMeta++;return;} const gap=(meta.open/meta.prevClose-1)*100; if(gap<gmin||gap>gmax){gapOut++;return;} }
+    const a=raw.slice().sort((x,y)=>x[0]-y[0]).filter(x=>x[0]>=900&&x[0]<=930&&+x[1]>0);
+    if(a.length<obs+4){insufficient++;return;} examined++;
+    const open=(meta&&meta.open>0)?meta.open:+a[0][1], firstHigh=Math.max(...a.slice(0,obs).map(x=>+x[1]));
+    let bi=-1;
+    for(let i=obs;i<a.length-3;i++){const px=+a[i][1];if(px>firstHigh&&(px/open-1)*100>=minRise){bi=i;break;}}
+    if(bi<0)return;
+    let peak=+a[bi][1],peakI=bi,done=false;
+    for(let i=bi+1;i<a.length-1&&!done;i++){
+      const px=+a[i][1];
+      if(px>peak){peak=px;peakI=i;continue;}
+      const dd=(peak-px)/peak*100;
+      if(dd<pbMin||dd>pbMax||px<open)continue;
+      const vols=a.slice(peakI+1,i+1).map(x=>+x[2]||0), base=Math.max(1,vols.reduce((s,v)=>s+v,0)/Math.max(1,vols.length));
+      for(let j=i+1;j<a.length;j++){
+        if(+a[j][1]>peak&&(+a[j][2]||0)>=base*volMult){
+          const entry=+a[j][1];let exit=+a[a.length-1][1],reason='09:30';
+          for(let k=j+1;k<a.length;k++){const r=(+a[k][1]/entry-1)*100;if(r<=-stop){exit=+a[k][1];reason='손절';break;}if(r>=tp){exit=+a[k][1];reason='익절';break;}}
+          const pnl=(exit/entry-1)*100-fee, gap=meta&&meta.prevClose>0?(meta.open/meta.prevClose-1)*100:null;
+          trades.push({date,code,time:a[j][0],entry,exit,pnl,reason,gap});done=true;break;
+        }
+      }
+      break;
+    }
+  }));
+  const b=$('ob_body'),m=$('ob_msg');
+  if(!trades.length){m.innerHTML='눌림→재돌파 조건을 만족한 거래가 없습니다.'+(useGap&&noMeta?' 기존 아카이브 '+noMeta+'건은 갭 메타데이터가 없어 제외됐습니다.':'');b.innerHTML='';return;}
+  const pn=trades.map(x=>x.pnl),wins=pn.filter(x=>x>0).length,avg=pn.reduce((s,x)=>s+x,0)/pn.length,gp=pn.filter(x=>x>0).reduce((s,x)=>s+x,0),gl=-pn.filter(x=>x<0).reduce((s,x)=>s+x,0),pf=gl?gp/gl:Infinity;
+  let eq=0,peakEq=0,mdd=0; trades.slice().sort((x,y)=>(x.date+String(x.time)).localeCompare(y.date+String(y.time))).forEach(x=>{eq+=x.pnl;peakEq=Math.max(peakEq,eq);mdd=Math.min(mdd,eq-peakEq);});
+  m.innerHTML=`<b>눌림→재돌파</b> · 검사 ${examined} · 거래 <b>${trades.length}</b> · 갭제외 ${gapOut}${noMeta?' · 메타없음 '+noMeta:''} · 규칙: 최초돌파 +0.5%↑ → 고점대비 0.3~1.0% 눌림(시초가 지지) → 눌림평균 이상 거래량으로 고점 재돌파`;
+  const box=(l,v,cl)=>`<div class="outbox"><div class="ol">${l}</div><div class="ov ${cl||''}">${v}</div></div>`;
+  b.innerHTML=`<div class="out">${box('승률',(wins/pn.length*100).toFixed(1)+'%',wins/pn.length>=.5?'good':'bad')}${box('평균손익',(avg>=0?'+':'')+avg.toFixed(3)+'%',avg>=0?'good':'bad')}${box('Profit Factor',isFinite(pf)?pf.toFixed(2):'∞',pf>=1?'good':'bad')}${box('누적 단순합',(eq>=0?'+':'')+eq.toFixed(2)+'%',eq>=0?'good':'bad')}${box('MDD(단순합)',mdd.toFixed(2)+'%','bad')}</div>
+  <div class="warn" style="margin-top:10px">이 결과도 분봉 <b>종가 체결 근사</b>다. OHLC/틱 데이터가 생기기 전에는 실전 체결 성과로 해석하지 않는다.</div>
+  <div class="htable-wrap" style="margin-top:10px"><table class="htable"><thead><tr><th>일자</th><th>종목</th><th>갭</th><th>진입</th><th>진입가</th><th>청산가</th><th>손익</th><th>사유</th></tr></thead><tbody>${trades.slice().sort((a,b)=>(b.date+String(b.time)).localeCompare(a.date+String(a.time))).slice(0,100).map(t=>`<tr><td>${t.date}</td><td>${esc(t.code)}</td><td>${t.gap==null?'—':(t.gap>=0?'+':'')+t.gap.toFixed(2)+'%'}</td><td>${String(t.time).padStart(4,'0')}</td><td>${commas(t.entry)}</td><td>${commas(t.exit)}</td><td class="${t.pnl>=0?'win':'loss'}">${t.pnl>=0?'+':''}${t.pnl.toFixed(2)}%</td><td>${t.reason}</td></tr>`).join('')}</tbody></table></div>`;
+}
+
 
 /* ══ 백테스트 ══ */
 const BT={stop:4,tgt:6,hold:5,fee:0.5,minAmt:50};
