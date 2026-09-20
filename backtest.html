@@ -2076,9 +2076,11 @@ function runIM(days,tkr,cap,divs,targetPct,compound=true){
     }
 
     // ── 일반모드 ──
+    // 오늘 주문은 프리장/본장 전에 계산해 함께 내므로, 주문가격·1회매수금은 장 시작 전 T·잔금·평단으로 고정한다.
+    const orderT=T, orderCash=cash, orderAvg=avg, orderHadShares=shares>0;
     if(shares>0&&avg>0){
-      const starP=avg*(1+(starBase-starSlope*T)/100);
-      const tgt=avg*(1+(MOM?_imTgtOf(targetPct,MOM[d]):targetPct)/100);
+      const starP=orderAvg*(1+(starBase-starSlope*orderT)/100);
+      const tgt=orderAvg*(1+(MOM?_imTgtOf(targetPct,MOM[d]):targetPct)/100);
       const orig=shares;              // 하루 시작 시 보유량 기준
       const q1=isq(orig/4,orig);     // 별지점 LOC: 1/4 (내림)
       const q3=orig-q1;              // 익절 지정가: 나머지 (운영 모의와 같은 규약)
@@ -2101,19 +2103,19 @@ function runIM(days,tkr,cap,divs,targetPct,compound=true){
         else if(cash<cap){ /* 단리 손실 사이클: 외부 보충 없이 남은 현금을 그대로 다음 사이클로 이월 */ }  // 단리: 초과익만 인출, 손실 사이클은 잔고 이월(외부수혈 없음)
         T=0;snap.push([d,cash+savedProfit-addedCash]);return;}
     }
-    if(divs-T>=1&&cash>1){          // 소진 = T>분할−1 → 남은 회차가 1회 이상일 때만 매수
-      let one=cash/(divs-T);        // 남은 회차 ≥1 이므로 1회분 ≤ 잔금 (별도 상한 불필요)
-      if(shares===0&&T===0){ if(_buy(c,one)>0) T+=1; }   // 못 사면 회차도 안 쓴다
+    if(divs-orderT>=1&&orderCash>1){          // 소진 = T>분할−1 → 남은 회차가 1회 이상일 때만 매수
+      let one=orderCash/(divs-orderT);        // 남은 회차 ≥1 이므로 1회분 ≤ 잔금 (별도 상한 불필요)
+      if(!orderHadShares&&orderT===0){ if(_buy(c,one)>0) T+=1; }   // 못 사면 회차도 안 쓴다
       else{
-        const starP=avg*(1+(starBase-starSlope*T)/100);const buyP=starP-0.01;
-        if(T<divs/2){
+        const starP=orderAvg*(1+(starBase-starSlope*orderT)/100);const buyP=starP-0.01;
+        if(orderT<divs/2){
           const half=one/2;
           // 별지점·평단은 '별개의 주문' 2건이다 — 각 주문이 따로 정수 내림된다.
           // 합산해서 한 번만 내리면 실제로는 못 사는 주식을 산 걸로 쳐서 백테가 낙관적으로 나온다
           // (1회 500$·주가 65$: 합산 floor(500/65)=7주 vs 실제 floor(250/65)×2=6주).
           // 같은 날 같은 가격 체결이라 평단·잔금은 합산했을 때와 수학적으로 동일하다.
           if(c<=buyP){ if(_buy(c,half)>0) T+=0.5; }
-          if(c<=avg) { if(_buy(c,half)>0) T+=0.5; }
+          if(c<=orderAvg) { if(_buy(c,half)>0) T+=0.5; }
         }else{ if(c<=buyP){ if(_buy(c,one)>0) T+=1; } }
       }
     }
@@ -2365,14 +2367,16 @@ function runIM50(days,tkr,cap,divs,targetPct,compound=true){
       return;
     }
 
+    // V5도 V4 일반모드의 주문 타이밍을 그대로 따른다. 장중 매도 체결 뒤 같은 날 주문 기준을 재계산하지 않는다.
+    const orderT=T, orderCash=cash, orderAvg=avg, orderHadShares=shares>0;
     if(shares>0&&avg>0){
-      const starP=avg*(1+(starBase-starSlope*T)/100);
+      const starP=orderAvg*(1+(starBase-starSlope*orderT)/100);
       // ★ 국면 익절 (V5.0): 워밍업=기본 / 상승국면=기본 / 하락국면=6% 고정(조기탈출)
       let dynPct;
       if(!gr) dynPct=targetPct;      // 워밍업(200일 미만)
       else if(g) dynPct=targetPct;   // 상승국면: 기본 그대로
       else dynPct=(typeof imLoPct!=='undefined'?imLoPct:6);   // 하락국면: 조기탈출 익절%
-      const tgt=avg*(1+dynPct/100);
+      const tgt=orderAvg*(1+dynPct/100);
       const orig=shares;
       const q1=isq(orig/4,orig), q3=orig-q1;   // 정수 주수 (운영 모의와 같은 규약)
       let tpHit=false, qtHit=false;
@@ -2388,19 +2392,19 @@ function runIM50(days,tkr,cap,divs,targetPct,compound=true){
         else if(cash<cap){ /* 단리 손실 사이클: 외부 보충 없이 남은 현금을 그대로 다음 사이클로 이월 */ }
         T=0;snap.push([d,cash+savedProfit-addedCash]);return;}
     }
-    if(divs-T>=1&&cash>1){          // 소진 = T>분할−1 (V4.0과 동일 규약)
-      let one=cash/(divs-T);
-      if(shares===0&&T===0){ if(_buy(c,one)>0) T+=1; }   // 못 사면 회차도 안 쓴다
+    if(divs-orderT>=1&&orderCash>1){          // 소진 = T>분할−1 (V4.0과 동일 규약)
+      let one=orderCash/(divs-orderT);
+      if(!orderHadShares&&orderT===0){ if(_buy(c,one)>0) T+=1; }   // 못 사면 회차도 안 쓴다
       else{
-        const starP=avg*(1+(starBase-starSlope*T)/100);const buyP=starP-0.01;
-        if(T<divs/2){
+        const starP=orderAvg*(1+(starBase-starSlope*orderT)/100);const buyP=starP-0.01;
+        if(orderT<divs/2){
           const half=one/2;
           // 별지점·평단은 '별개의 주문' 2건이다 — 각 주문이 따로 정수 내림된다.
           // 합산해서 한 번만 내리면 실제로는 못 사는 주식을 산 걸로 쳐서 백테가 낙관적으로 나온다
           // (1회 500$·주가 65$: 합산 floor(500/65)=7주 vs 실제 floor(250/65)×2=6주).
           // 같은 날 같은 가격 체결이라 평단·잔금은 합산했을 때와 수학적으로 동일하다.
           if(c<=buyP){ if(_buy(c,half)>0) T+=0.5; }
-          if(c<=avg) { if(_buy(c,half)>0) T+=0.5; }
+          if(c<=orderAvg) { if(_buy(c,half)>0) T+=0.5; }
         }else{ if(c<=buyP){ if(_buy(c,one)>0) T+=1; } }
       }
     }
