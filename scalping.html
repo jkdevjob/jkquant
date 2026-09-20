@@ -187,7 +187,7 @@ canvas{display:block;width:100%;height:auto}
 
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Morning Scalping</div><h1>JK <span class="v">퀀트</span> 단타 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="scVer">v1.1.1</span></h1></div>
+    <div><div class="kicker">Morning Scalping</div><h1>JK <span class="v">퀀트</span> 단타 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="scVer">v1.1.2</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -949,11 +949,23 @@ function openingTrades(cfg){
     trades.push({date,code,pnl:pnl-cfg.fee,reason,gap,time:a[ei][0],entry});
   }));return trades;
 }
-function optimizeOpening(){
-  const out=$('ob_opt');out.innerHTML='<span class="sub">아카이브 전체 조합 계산 중…</span>'; const fee=+($('ob_fee').value||.25), rows=[];
-  for(const obs of [1,2,3,5])for(const vm of [1,1.2,1.5,2])for(const stop of [.5,.75,1,1.25])for(const t1 of [.5,.8,1,1.2])for(const t2 of [1,1.5,2,2.5]){if(t2<=t1)continue;const cfg={obs,vm,stop,t1,t2,fee,gmin:+($('ob_gmin').value||2),gmax:+($('ob_gmax').value||7)},tr=openingTrades(cfg);if(tr.length<10)continue;const avg=tr.reduce((s,x)=>s+x.pnl,0)/tr.length,gp=tr.filter(x=>x.pnl>0).reduce((s,x)=>s+x.pnl,0),gl=-tr.filter(x=>x.pnl<0).reduce((s,x)=>s+x.pnl,0),pf=gl?gp/gl:99;rows.push({cfg,n:tr.length,avg,pf,win:tr.filter(x=>x.pnl>0).length/tr.length*100,tr});}
-  rows.sort((a,b)=>(b.avg-a.avg)||(b.pf-a.pf));if(!rows.length){out.innerHTML='<div class="warn">최적화할 유효 과거 표본이 부족합니다.</div>';return;}const best=rows[0],st=best.tr.filter(x=>x.reason==='손절'),tp=best.tr.filter(x=>x.reason==='2차익절'),av=x=>x.length?x.reduce((s,z)=>s+z.gap,0)/x.length:0;
-  out.innerHTML='<div class="warn"><b>과거값 탐색 1위(인샘플)</b> · 관찰 '+best.cfg.obs+'분 · 거래량 '+best.cfg.vm+'배 · 손절 '+best.cfg.stop+'% · 1차 '+best.cfg.t1+'% · 2차 '+best.cfg.t2+'%<br>거래 '+best.n+' · 평균 '+best.avg.toFixed(3)+'% · PF '+best.pf.toFixed(2)+' · 승률 '+best.win.toFixed(1)+'%<br><b>손절 '+st.length+'건 vs 2차익절 '+tp.length+'건</b> · 평균 갭 손절 '+av(st).toFixed(2)+'% / 익절 '+av(tp).toFixed(2)+'%<br><span class="sub">같은 과거자료에서 고른 최적값이라 과최적화 가능성이 큼. 미래 성과를 의미하지 않음.</span></div>';
+async function optimizeOpening(){
+  const out=$('ob_opt'), fee=+($('ob_fee').value||.25), rows=[], combos=[];
+  for(const obs of [1,2,3,5])for(const vm of [1,1.2,1.5,2])for(const stop of [.5,.75,1,1.25])for(const t1 of [.5,.8,1,1.2])for(const t2 of [1,1.5,2,2.5])if(t2>t1)combos.push({obs,vm,stop,t1,t2,fee,gmin:+($('ob_gmin').value||2),gmax:+($('ob_gmax').value||7)});
+  out.innerHTML='<div class="warn"><b>과거값 최적화 0%</b> · 0 / '+combos.length+' 조합<div style="height:6px;background:var(--panel2);border-radius:4px;overflow:hidden;margin-top:8px"><div id="ob_opt_bar" style="height:100%;width:0;background:var(--vio2);transition:width .1s"></div></div><div class="sub" style="margin-top:6px">계산 중에도 화면이 멈추지 않도록 나눠서 처리합니다.</div></div>';
+  await new Promise(r=>setTimeout(r,0));
+  const chunk=12;
+  for(let base=0;base<combos.length;base+=chunk){
+    const end=Math.min(base+chunk,combos.length);
+    for(let n=base;n<end;n++){const cfg=combos[n],tr=openingTrades(cfg);if(tr.length<10)continue;const avg=tr.reduce((s,x)=>s+x.pnl,0)/tr.length,gp=tr.filter(x=>x.pnl>0).reduce((s,x)=>s+x.pnl,0),gl=-tr.filter(x=>x.pnl<0).reduce((s,x)=>s+x.pnl,0),pf=gl?gp/gl:99;rows.push({cfg,n:tr.length,avg,pf,win:tr.filter(x=>x.pnl>0).length/tr.length*100,tr});}
+    const pct=Math.round(end/combos.length*100),bar=$('ob_opt_bar');if(bar)bar.style.width=pct+'%';
+    const box=out.firstElementChild;if(box&&box.firstChild)box.firstChild.innerHTML='<b>과거값 최적화 '+pct+'%</b> · '+end+' / '+combos.length+' 조합';
+    await new Promise(r=>setTimeout(r,0));
+  }
+  rows.sort((a,b)=>(b.avg-a.avg)||(b.pf-a.pf));
+  if(!rows.length){out.innerHTML='<div class="warn">완료했지만 최적화할 유효 과거 표본이 부족합니다. 각 조합에 최소 10건의 거래가 필요합니다.</div>';return;}
+  const best=rows[0],st=best.tr.filter(x=>x.reason==='손절'),tp=best.tr.filter(x=>x.reason==='2차익절'),av=x=>x.length?x.reduce((s,z)=>s+z.gap,0)/x.length:0;
+  out.innerHTML='<div class="warn"><b>과거값 최적화 완료 · '+combos.length+'조합</b><br><b>과거값 탐색 1위(인샘플)</b> · 관찰 '+best.cfg.obs+'분 · 거래량 '+best.cfg.vm+'배 · 손절 '+best.cfg.stop+'% · 1차 '+best.cfg.t1+'% · 2차 '+best.cfg.t2+'%<br>거래 '+best.n+' · 평균 '+best.avg.toFixed(3)+'% · PF '+best.pf.toFixed(2)+' · 승률 '+best.win.toFixed(1)+'%<br><b>손절 '+st.length+'건 vs 2차익절 '+tp.length+'건</b> · 평균 갭 손절 '+av(st).toFixed(2)+'% / 익절 '+av(tp).toFixed(2)+'%<br><span class="sub">같은 과거자료에서 고른 최적값이라 과최적화 가능성이 큼. 미래 성과를 의미하지 않음.</span></div>';
 }
 /* ══ 시초가 첫고점 돌파 — ARCH 분봉 종가 기반 ══ */
 function runOpeningBreakout(){
