@@ -2426,62 +2426,108 @@ function runVR(days,tkr,params){
   const band=bandPct/100,interval=10,poolLimit=mode;
   const isAccum=mode===0.75, isWd=mode===0.25, isLump=!isAccum;
   let shares=0,pool=startPool||0,V=startV||0,inv=startPool||0,totalWd=0,rebal=0,buys=0,sells=0;
-  // ── 비용·세금 (costOn=false면 전부 0 — 기존 산술과 완전 동일) · 규약은 무매·200일선과 같음 ──
-  //   수수료 0.25% 매수·매도 각 · 양도세 22%(연 250만원 공제, 실현손익만) · 리밸런싱=종가 체결이라 슬리피지 없음
+  // ── 비용·세금 (costOn=false면 전부 0 — 기존 산술과 완전 동일) ──
   const FEE=costOn?costOf(tkr).fee:0;
   let avg=0, feesTotal=0, taxTotal=0, yearPnl=0, curYear=null;
-  function _vbuy(amt,c){ const q=iq(amt/(1+FEE),c); if(q<=0) return;   // 정수 주수 (운영 VR도 내림)
-    const spend=q*c, fee=spend*FEE;
-    avg=(shares<=0)?c:(shares*avg+spend)/(shares+q); shares+=q; feesTotal+=fee; }
-  function _vsell(gross,c){ const qty=isq(gross/c,shares), fee=qty*c*FEE;   // 정수 주수 (금액 목표를 넘지 않게 내림)
-    // 실제로 판 만큼만 현금이 들어온다 — gross를 그대로 돌려주면 판 적 없는 돈이 생긴다
-    yearPnl+=qty*(c-avg)-fee; feesTotal+=fee; shares-=qty; return qty*c-fee; }
-  // 연말 양도세 정산. Pool에서 먼저 빼되, 모자라면 보유 주식을 팔아 납부한다.
-  // (예전엔 pool을 그냥 음수로 만들어 총자산이 마이너스가 되고 MDD가 100%를 넘었다 —
-  //  SOXL 2000~ 거치식이 최종 −18$ · MDD 102%로 나오던 원인.)
-  function _settle(c){ if(!costOn){yearPnl=0;return;}
+
+  // 실제 체결금액을 반환한다. 정수주 내림 때문에 주문예산보다 덜 쓰면 차액은 Pool에 남겨야 한다.
+  function _vbuy(amt,c){
+    const q=iq(amt/(1+FEE),c); if(q<=0) return 0;
+    const spend=q*c, fee=spend*FEE, total=spend+fee;
+    avg=(shares<=0)?c:(shares*avg+spend)/(shares+q);
+    shares+=q; feesTotal+=fee; return total;
+  }
+  function _vsell(gross,c){
+    const qty=isq(gross/c,shares), fee=qty*c*FEE;
+    yearPnl+=qty*(c-avg)-fee; feesTotal+=fee; shares-=qty;
+    return qty*c-fee;
+  }
+  function _settle(c){
+    if(!costOn){yearPnl=0;return;}
     const owed=capGainTax(yearPnl, tkr); let due=owed; yearPnl=0;
     const fromPool=Math.min(Math.max(pool,0), due); pool-=fromPool; due-=fromPool;
-    if(due>1e-9 && shares>0 && c>0){                 // 납부용 매도 — 실현손익은 다음 해로 이월
-      const q=Math.min(shares, due/c); yearPnl+=q*(c-avg); shares-=q; due-=q*c; }
-    taxTotal+=owed-due; }                            // 실제로 낸 만큼만 집계 (자산이 0이면 더 못 냄)
-  // 시작V 지정 시: 이미 V만큼 보유 중인 상태로 간주 (운용도구와 동일 — "이어서 시작" 시나리오)
+    if(due>1e-9 && shares>0 && c>0){
+      const q=Math.min(shares, due/c); yearPnl+=q*(c-avg); shares-=q; due-=q*c;
+    }
+    taxTotal+=owed-due;
+  }
+
+  // startV>0이면 이어서 시작하는 현재 V로 간주한다.
   let first;
   if(V>0){
     shares=V/M[tkr][days[0]][C]; avg=M[tkr][days[0]][C]; inv+=V; first=false;
-  } else {
-    first=true;
-  }
-  const snap=[], cf=[];          // cf = 현금흐름(투입 시점·금액) — IRR·평균투입자본용
-  let mddPeak=-Infinity, mdd=0;  // 일별 MDD (총자산 = 주식+Pool+누적인출 기준 — fin과 동일 철학)
+  } else first=true;
+
+  const snap=[], cf=[];
+  let mddPeak=-Infinity, mdd=0;
+  // V와 밴드는 2주(10거래일)마다 갱신하지만, 그 2주치 LOC 주문은 매 거래일 체결 가능하다.
+  let cycleUp=null, cycleLo=null, buyBudget=0;
+
   days.forEach((d,i)=>{
     const c=M[tkr][d][C];
     { const y=d.slice(0,4); if(curYear===null)curYear=y; else if(y!==curYear){_settle(c);curYear=y;} }
-    { const eq=shares*c+pool+totalWd; if(eq>mddPeak)mddPeak=eq; else if(mddPeak>0){ const dd=Math.min((mddPeak-eq)/mddPeak,1); if(dd>mdd)mdd=dd; } }
+
     if(i%interval===0){
       if(first){
-        if(isLump){const s=initAmt||10000;inv+=s;cf.push([d,s]);_vbuy(s,c);V=shares*c;}  // 거치식/인출식: 첫매수가=V (pool 무관)
-        else{pool+=contrib;inv+=contrib;cf.push([d,contrib]);_vbuy(pool,c);pool=0;V=shares*c;} // 적립식: 첫매수가=V
-        first=false;buys++;rebal++;snap.push([d,shares*c+pool+totalWd]);return;
+        if(isLump){
+          const s=initAmt||10000; inv+=s; cf.push([d,s]);
+          const spent=_vbuy(s,c);
+          pool+=Math.max(0,s-spent);            // 정수주 내림 잔액 보존
+          V=shares*c;
+        }else{
+          pool+=contrib; inv+=contrib; cf.push([d,contrib]);
+          const spent=_vbuy(pool,c);
+          pool-=spent;                          // 주문예산이 아니라 실제 체결액만 차감
+          V=shares*c;
+        }
+        first=false;
+        if(shares>0) buys++;
+        rebal++;
+        cycleUp=V*(1+band); cycleLo=V*(1-band);
+        buyBudget=Math.max(0,pool*poolLimit);
+        const eq=shares*c+pool+totalWd;
+        if(eq>mddPeak)mddPeak=eq; else if(mddPeak>0){const dd=Math.min((mddPeak-eq)/mddPeak,1);if(dd>mdd)mdd=dd;}
+        snap.push([d,eq]);
+        return;
       }
+
       const cv=shares*c;
       const addCycle=isAccum?contrib:isWd?-withdraw:0;
       if(formula==='skill'&&V>0) V=V+pool/G+(cv-V)/(2*Math.sqrt(G))+addCycle;
       else V=V+pool/G+addCycle;
       V=Math.max(V,0);
+
       if(isAccum){pool+=contrib;inv+=contrib;cf.push([d,contrib]);}
       else if(isWd){const wd=Math.min(withdraw,pool);pool-=wd;totalWd+=wd;}
-      const up=V*(1+band),lo=V*(1-band),cv2=shares*c;
-      if(cv2>up){const ex=cv2-V;pool+=_vsell(ex,c);sells++;}
-      else if(cv2<lo){const need=V-cv2;const use=Math.min(need,pool*poolLimit);_vbuy(use,c);pool-=use;buys++;}
+
+      cycleUp=V*(1+band); cycleLo=V*(1-band);
+      // 한 사이클 매수 한도: 사이클 시작 직후 Pool 기준 75%/50%/25%.
+      buyBudget=Math.max(0,pool*poolLimit);
       rebal++;
     }
-    if(i%interval===0||i===days.length-1)snap.push([d,shares*c+pool+totalWd]);
+
+    // 매수표/매도표는 사이클 첫날 만들지만 2주 동안 매일 LOC 체결 여부를 확인한다.
+    const cv2=shares*c;
+    if(cycleUp!=null && cv2>cycleUp){
+      const ex=cv2-V, proceeds=_vsell(ex,c);
+      if(proceeds>0){pool+=proceeds;sells++;}
+    } else if(cycleLo!=null && cv2<cycleLo){
+      const need=Math.max(0,V-cv2);
+      const use=Math.min(need,buyBudget,pool);
+      const spent=_vbuy(use,c);
+      if(spent>0){pool-=spent;buyBudget=Math.max(0,buyBudget-spent);buys++;}
+    }
+
+    // 거래·수수료까지 반영한 일말 평가액으로 MDD 계산
+    const eq=shares*c+pool+totalWd;
+    if(eq>mddPeak)mddPeak=eq; else if(mddPeak>0){const dd=Math.min((mddPeak-eq)/mddPeak,1);if(dd>mdd)mdd=dd;}
+    if(i%interval===0||i===days.length-1)snap.push([d,eq]);
   });
+
   const lc=M[tkr][days[days.length-1]][C];
-  _settle(lc);   // 마지막 해 정산
-  // 인출식: 누적 인출액도 회수가치에 포함해야 정확한 수익률 (인출한 돈은 사라진 게 아님)
+  _settle(lc);
   const fin=shares*lc+pool+totalWd;
+  if(fin>mddPeak)mddPeak=fin; else if(mddPeak>0){const dd=Math.min((mddPeak-fin)/mddPeak,1);if(dd>mdd)mdd=dd;}
   const calYrs=(new Date(days[days.length-1])-new Date(days[0]))/(365.25*864e5);
   return {invested:inv,final:fin,pool,shares,sharesVal:shares*lc,rebal,buys,sells,totalWd,
     ret:inv>0?(fin/inv-1)*100:0,yrs:Math.max(calYrs,0.1),snap,cf,tkr,mdd:mdd*100,fees:feesTotal,tax:taxTotal};
