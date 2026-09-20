@@ -181,7 +181,7 @@ canvas{display:block;width:100%;height:auto}
 
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Morning Scalping</div><h1>JK <span class="v">퀀트</span> 단타 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="scVer">v1.2</span></h1></div>
+    <div><div class="kicker">Morning Scalping</div><h1>JK <span class="v">퀀트</span> 단타 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="scVer">v1.3</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -273,7 +273,8 @@ canvas{display:block;width:100%;height:auto}
       <div class="fld"><label>마찰비용 %</label><input id="ob_fee" type="number" value="0.25" min="0" step="0.05" style="width:80px"></div>
       <button class="prim" onclick="runOpeningBreakout()">▶ 아카이브 백테스트</button>
     </div>
-    <div class="warn">현재 아카이브는 <b>분봉 종가·거래량</b>만 저장하므로 봉 내부 고가/저가는 알 수 없다. 따라서 돌파·손절·익절은 분봉 종가 기준으로 보수적으로 판정한다. 갭 +2~7% 필터는 전일 종가가 아카이브에 없어 아직 적용하지 않는다.</div>
+    <div class="row" style="align-items:flex-end;margin-bottom:8px"><div class="fld"><label>최소 갭 %</label><input id="ob_gmin" type="number" value="2" step="0.5" style="width:80px"></div><div class="fld"><label>최대 갭 %</label><input id="ob_gmax" type="number" value="7" step="0.5" style="width:80px"></div><label class="sub" style="display:flex;align-items:center;gap:6px;height:38px"><input id="ob_gap" type="checkbox" checked style="width:auto"> 갭 필터 사용</label></div>
+    <div class="warn"><b>데이터 정직성:</b> 네이버 1분 API 자체가 O/H/L을 null로 주므로 가짜 OHLC를 만들지 않는다. 분봉 돌파·청산은 <b>종가 기준</b>이다. 대신 새 아카이브부터 일봉 원자료의 <b>전일 종가·당일 시가</b>를 함께 저장해 +2~7% 갭 필터를 정확히 적용한다. 기존 아카이브는 메타데이터가 없어 갭 필터 사용 시 제외된다.</div>
     <div id="ob_msg" class="sub" style="margin-top:10px"></div><div id="ob_body" style="margin-top:10px"></div>
   </div>
 
@@ -281,7 +282,7 @@ canvas{display:block;width:100%;height:auto}
   <div class="card">
     <h3><span class="dot"></span>📼 분봉 아카이브 <span class="sub" style="font-weight:600">9:00~9:30을 쌓아 진짜 백테스트 데이터를 만든다</span></h3>
     <p class="lead">네이버 분봉은 <b>항상 최근 7거래일</b>만 준다. 그래서 <b>주 1회만 눌러도</b> 창이 겹치며 끊김 없이 누적된다.
-      몇 주 쌓이면 <b>"시가~9:30 실제 수익률"로 학습·백테스트</b>가 가능해진다 — 지금 없는 데이터를 만드는 유일한 길이다.
+      몇 주 쌓이면 <b>"시가~9:30 실제 수익률"로 학습·백테스트</b>가 가능해진다. 수집 시 일봉도 함께 받아 <b>전일 종가·당일 시가·갭</b>을 저장한다.
       <span class="sub">(KIS 웹소켓 틱은 브라우저가 ws:// 를 차단해 이 구조에선 못 붙인다. 아래 참고)</span></p>
     <div class="row" style="margin-bottom:8px;align-items:flex-end">
       <div class="fld" style="flex:0 0 116px"><label>수집 종목수</label>
@@ -785,7 +786,7 @@ function saveArch(){ try{ localStorage.setItem(AKEY,JSON.stringify(ARCH)); retur
   catch(e){ alert('저장 공간이 부족합니다. CSV로 내보낸 뒤 삭제하세요.'); return false; } }
 function archStats(){
   const dates=Object.keys(ARCH).sort(); let bars=0, codes=new Set();
-  dates.forEach(d=>Object.entries(ARCH[d]).forEach(([c,a])=>{ bars+=a.length; codes.add(c); }));
+  dates.forEach(d=>Object.entries(ARCH[d]).forEach(([c,a])=>{ if(c==='_meta'||!Array.isArray(a)) return; bars+=a.length; codes.add(c); }));
   const kb=Math.round(JSON.stringify(ARCH).length/1024);
   return {dates,bars,codes:codes.size,kb};
 }
@@ -812,13 +813,16 @@ async function archSnapshot(auto){
     while(idx<uni.length){
       const u=uni[idx++];
       try{
-        const min=await mFetch(u.code);
+        const [min,daily]=await Promise.all([mFetch(u.code),qFetch(u.code,'3mo')]);
+        const doh=(daily&&daily.ohlc)||[];
         min.forEach(x=>{
           const t=x.t||''; const d=t.slice(0,10), hh=+t.slice(11,13), mm=+t.slice(14,16);
           if(!d || hh!==9 || mm>30) return;                  // 09:00~09:30만
           const hm=hh*100+mm;
           (ARCH[d]=ARCH[d]||{}); const arr=(ARCH[d][u.code]=ARCH[d][u.code]||[]);
           if(!arr.some(r=>r[0]===hm)){ arr.push([hm, x.close, x.vol||0]); added++; }
+          const di=doh.findIndex(z=>z.date===d);
+          if(di>=0){ ARCH[d]._meta=ARCH[d]._meta||{}; ARCH[d]._meta[u.code]={open:+doh[di].open||0,prevClose:di>0?(+doh[di-1].close||0):0}; }
         });
         Object.keys(ARCH).forEach(d=>{ const a=ARCH[d][u.code]; if(a) a.sort((p,q)=>p[0]-q[0]); });
       }catch(e){}
@@ -836,8 +840,8 @@ async function archSnapshot(auto){
 }
 function archExport(){
   const s=archStats(); if(!s.dates.length){ alert('내보낼 데이터가 없습니다.'); return; }
-  const lines=['date,code,hhmm,close,vol'];
-  s.dates.forEach(d=>Object.entries(ARCH[d]).forEach(([c,a])=>a.forEach(r=>lines.push(`${d},${c},${String(r[0]).padStart(4,'0')},${r[1]},${r[2]}`))));
+  const lines=['date,code,hhmm,close,vol,day_open,prev_close,gap_pct'];
+  s.dates.forEach(d=>Object.entries(ARCH[d]).forEach(([c,a])=>{ if(c==='_meta'||!Array.isArray(a)) return; const m=(ARCH[d]._meta||{})[c]||{}, gap=m.prevClose>0?(m.open/m.prevClose-1)*100:''; a.forEach(r=>lines.push(`${d},${c},${String(r[0]).padStart(4,'0')},${r[1]},${r[2]},${m.open||''},${m.prevClose||''},${gap===''?'':gap.toFixed(4)}`)); }));
   const blob=new Blob(['\ufeff'+lines.join('\n')],{type:'text/csv;charset=utf-8'});
   const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
   a.download=`scalping_0900_0930_${s.dates[0]}_${s.dates[s.dates.length-1]}.csv`;
@@ -848,39 +852,39 @@ function archClear(){ if(!confirm('아카이브를 전부 지울까요? (CSV로 
 /* ══ 시초가 첫고점 돌파 — ARCH 분봉 종가 기반 ══ */
 function runOpeningBreakout(){
   const obs=+($('ob_obs').value||3), vm=+($('ob_vol').value||1.2), stop=+($('ob_stop').value||1),
-        t1=+($('ob_t1').value||0.8), t2=+($('ob_t2').value||1.5), fee=+($('ob_fee').value||0.25);
-  const trades=[]; let examined=0, skipped=0;
+        t1=+($('ob_t1').value||0.8), t2=+($('ob_t2').value||1.5), fee=+($('ob_fee').value||0.25),
+        useGap=$('ob_gap').checked, gmin=+($('ob_gmin').value||2), gmax=+($('ob_gmax').value||7);
+  const trades=[]; let examined=0, skipped=0, noMeta=0, gapOut=0;
   Object.keys(ARCH).sort().forEach(date=>Object.entries(ARCH[date]||{}).forEach(([code,raw])=>{
+    if(code==='_meta'||!Array.isArray(raw)) return;
+    const meta=((ARCH[date]||{})._meta||{})[code]||null;
+    if(useGap){ if(!meta||!(meta.open>0&&meta.prevClose>0)){ noMeta++; return; } const g=(meta.open/meta.prevClose-1)*100; if(g<gmin||g>gmax){gapOut++;return;} }
     const a=raw.slice().sort((x,y)=>x[0]-y[0]).filter(x=>x[0]>=900&&x[0]<=930&&+x[1]>0);
     if(a.length<obs+2){ skipped++; return; } examined++;
     const opening=a.filter(x=>x[0]>=900&&x[0]<900+obs); if(opening.length<obs){ skipped++; return; }
-    const open=+opening[0][1], firstHigh=Math.max(...opening.map(x=>+x[1]));
+    const sessionOpen=(meta&&meta.open>0)?meta.open:+opening[0][1], firstHigh=Math.max(...opening.map(x=>+x[1]));
     let ei=-1;
-    for(let i=obs;i<a.length;i++){
-      const prevVol=Math.max(1,+a[i-1][2]||0), px=+a[i][1], vol=+a[i][2]||0;
-      if(px>firstHigh && px>=open && vol>=prevVol*vm){ ei=i; break; }
-    }
+    for(let i=obs;i<a.length;i++){ const prevVol=Math.max(1,+a[i-1][2]||0), px=+a[i][1], vol=+a[i][2]||0;
+      if(px>firstHigh && px>=sessionOpen && vol>=prevVol*vm){ ei=i; break; } }
     if(ei<0) return;
     const entry=+a[ei][1]; let half1=false, exit=+a[a.length-1][1], reason='09:30', pnl=0;
-    for(let i=ei+1;i<a.length;i++){
-      const px=+a[i][1], r=(px-entry)/entry*100;
-      if(r<=-stop){ pnl+=(half1?0.5:1)*(-stop); exit=px; reason='손절'; break; }
-      if(!half1 && r>=t1){ pnl+=0.5*t1; half1=true; }
-      if(half1 && r>=t2){ pnl+=0.5*t2; exit=px; reason='2차익절'; break; }
-      if(i===a.length-1){ pnl+=(half1?0.5:1)*r; exit=px; }
+    for(let i=ei+1;i<a.length;i++){ const px=+a[i][1], r=(px-entry)/entry*100;
+      if(r<=-stop){ pnl+=(half1?0.5:1)*r; exit=px; reason='손절'; break; }
+      if(!half1&&r>=t1){ pnl+=0.5*r; half1=true; }
+      if(half1&&r>=t2){ pnl+=0.5*r; exit=px; reason='2차익절'; break; }
+      if(i===a.length-1) pnl+=(half1?0.5:1)*r;
     }
-    pnl-=fee;
-    trades.push({date,code,time:a[ei][0],entry,exit,pnl,reason});
+    pnl-=fee; const gap=meta&&meta.prevClose>0?(meta.open/meta.prevClose-1)*100:null;
+    trades.push({date,code,time:a[ei][0],entry,exit,pnl,reason,gap});
   }));
-  const b=$('ob_body'), m=$('ob_msg');
-  if(!trades.length){ m.textContent='조건을 만족한 거래가 없습니다. 아카이브를 더 쌓거나 조건을 완화해보세요.'; b.innerHTML=''; return; }
-  const avg=trades.reduce((s,x)=>s+x.pnl,0)/trades.length, wins=trades.filter(x=>x.pnl>0).length,
-        gp=trades.filter(x=>x.pnl>0).reduce((s,x)=>s+x.pnl,0), gl=-trades.filter(x=>x.pnl<0).reduce((s,x)=>s+x.pnl,0), pf=gl?gp/gl:Infinity;
-  let eq=0,peak=0,mdd=0; trades.slice().sort((x,y)=>(x.date+x.time).localeCompare(y.date+y.time)).forEach(x=>{eq+=x.pnl;peak=Math.max(peak,eq);mdd=Math.min(mdd,eq-peak);});
-  m.innerHTML=`검사 <b>${examined}</b> 종목-일 · 거래 <b>${trades.length}</b>건 · 데이터 부족 ${skipped}건`;
+  const b=$('ob_body'),m=$('ob_msg');
+  if(!trades.length){m.innerHTML='조건을 만족한 거래가 없습니다.'+(useGap&&noMeta?' <b>기존 아카이브 '+noMeta+'건은 갭 메타데이터가 없어 제외</b> — 스냅샷을 다시 수집하면 새 데이터부터 채워집니다.':'');b.innerHTML='';return;}
+  const avg=trades.reduce((s,x)=>s+x.pnl,0)/trades.length,wins=trades.filter(x=>x.pnl>0).length,gp=trades.filter(x=>x.pnl>0).reduce((s,x)=>s+x.pnl,0),gl=-trades.filter(x=>x.pnl<0).reduce((s,x)=>s+x.pnl,0),pf=gl?gp/gl:Infinity;
+  let eq=0,peak=0,mdd=0; trades.slice().sort((x,y)=>(x.date+String(x.time)).localeCompare(y.date+String(y.time))).forEach(x=>{eq+=x.pnl;peak=Math.max(peak,eq);mdd=Math.min(mdd,eq-peak);});
+  m.innerHTML=`검사 <b>${examined}</b> 종목-일 · 거래 <b>${trades.length}</b>건 · 데이터부족 ${skipped} · 갭제외 ${gapOut}${noMeta?' · 메타없음 '+noMeta:''}`;
   const box=(l,v,c)=>`<div class="outbox"><div class="ol">${l}</div><div class="ov ${c||''}">${v}</div></div>`;
   b.innerHTML=`<div class="out">${box('승률',(wins/trades.length*100).toFixed(1)+'%',wins/trades.length>=.5?'good':'bad')}${box('평균손익',(avg>=0?'+':'')+avg.toFixed(2)+'%',avg>=0?'good':'bad')}${box('Profit Factor',isFinite(pf)?pf.toFixed(2):'∞',pf>=1?'good':'bad')}${box('누적 단순합',(eq>=0?'+':'')+eq.toFixed(2)+'%',eq>=0?'good':'bad')}${box('MDD(단순합)',mdd.toFixed(2)+'%','bad')}</div>
-  <div class="htable-wrap" style="margin-top:10px"><table class="htable"><thead><tr><th>일자</th><th>종목</th><th>진입</th><th>진입가</th><th>청산가</th><th>결과</th><th>사유</th></tr></thead><tbody>${trades.slice().sort((a,b)=>(b.date+String(b.time)).localeCompare(a.date+String(a.time))).slice(0,100).map(t=>`<tr><td>${t.date}</td><td>${esc(t.code)}</td><td>${String(t.time).padStart(4,'0')}</td><td>${commas(t.entry)}</td><td>${commas(t.exit)}</td><td class="${t.pnl>=0?'win':'loss'}">${t.pnl>=0?'+':''}${t.pnl.toFixed(2)}%</td><td>${t.reason}</td></tr>`).join('')}</tbody></table></div>`;
+  <div class="htable-wrap" style="margin-top:10px"><table class="htable"><thead><tr><th>일자</th><th>종목</th><th>갭</th><th>진입</th><th>진입가</th><th>청산가</th><th>결과</th><th>사유</th></tr></thead><tbody>${trades.slice().sort((a,b)=>(b.date+String(b.time)).localeCompare(a.date+String(a.time))).slice(0,100).map(t=>`<tr><td>${t.date}</td><td>${esc(t.code)}</td><td>${t.gap==null?'—':(t.gap>=0?'+':'')+t.gap.toFixed(2)+'%'}</td><td>${String(t.time).padStart(4,'0')}</td><td>${commas(t.entry)}</td><td>${commas(t.exit)}</td><td class="${t.pnl>=0?'win':'loss'}">${t.pnl>=0?'+':''}${t.pnl.toFixed(2)}%</td><td>${t.reason}</td></tr>`).join('')}</tbody></table></div>`;
 }
 
 /* ══ 백테스트 ══ */
