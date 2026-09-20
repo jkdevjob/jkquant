@@ -2748,7 +2748,7 @@ function retTxt(x){ if(x==null||!isFinite(x)) return '—';
 // ──── 전략 6: ASAP (SOXL 커스텀 — SGOV 리저브 + 딥 가중매수 + 재진입) ────
 // 하락장(가격<200일선): SGOV base 적립 + RSI≤35&−10% → mid, RSI≤30&−15% → deep (대체)
 // 상승장: 재진입 3차 완료 익일부터 base/일. 재진입 5>20(20%)→20>50(30%)→200돌파(전액). 재하락 시 카운터 리셋.
-// SGOV = 현금성(미 단기국채 연이자 근사 반영). 판정·체결은 당일 종가.
+// SGOV = 현금성(미 단기국채 연이자 근사 반영). 판정은 전일 확정 종가·지표, 체결은 다음 거래일 종가.
 // 3개월 미국 국채(T-Bill) 연평균 수익률 근사 — 200일선 로테 '단기국채 대피' 옵션용.
 // 1980년대 고금리 구간이 결과를 크게 바꾸므로 확장 백테에서 반드시 필요하다.
 const TBILL_RATE={1980:.115,1981:.140,1982:.106,1983:.086,1984:.095,1985:.075,1986:.060,1987:.058,1988:.067,1989:.081,
@@ -2781,28 +2781,55 @@ function runASAP(days,tkr,opt){
   const lump=o.startCash>0;   // 거치식: 목돈을 SGOV로 시작, 신규 적립 없이 리저브에서만 매수
   const FEE=o.costOn?costOf(tkr).fee:0, F=1-FEE;   // 비용: 매수 수수료(스톡은 안 팔아 실현 양도세 없음)
   const {cl,MA5,MA20,MA50,MA200,RSI,gi}=_asapInd(tkr);
-  let sgov=lump?o.startCash:0,sh=0,stage=0,up3=-1,inv=lump?o.startCash:0,mddPeak=-Infinity,mdd=0; const snap=[];
+  let sgov=lump?o.startCash:0,sh=0,stage=0,up3=-1,inv=lump?o.startCash:0; const snap=[];
   const cf=lump?[[days[0],o.startCash]]:[];   // 현금흐름(신규 투입 시점·금액) — IRR·평균투입자본용. 거치는 첫날 전액.
   const _cf=(d,a)=>{ if(a>0){ const L=cf[cf.length-1]; if(L&&L[0]===d)L[1]+=a; else cf.push([d,a]); } };
+  // 적립식 MDD는 총자산 자체가 아니라 현금흐름 중립 단위가치(NAV)로 잰다.
+  // 신규 입금 때문에 계좌가 커지는 것을 '고점 갱신'으로 세면 낙폭이 인위적으로 작아진다.
+  let units=lump?o.startCash:0, navPeak=-Infinity, mdd=0;
+  const markNav=v=>{ if(!(v>0))return; if(v>navPeak)navPeak=v; else if(navPeak>0){const dd=(navPeak-v)/navPeak;if(dd>mdd)mdd=dd;} };
   days.forEach((d,di)=>{
-    const g=gi[d]; const c=cl[g], m200=MA200[g], rsi=RSI[g]!=null?RSI[g]:50;
+    const g=gi[d]; const c=cl[g];
     sgov*=(1+(SGOV_RATE[+d.slice(0,4)]||0.04)/252);   // SGOV 이자
-    if(m200==null){ if(di%10===0)snap.push([d,sh*c+sgov]); return; }
-    const p=g-1, down=c<m200;
-    const crossDn=p>=0&&cl[p]>=MA200[p]&&c<m200;
-    const cross5=p>=0&&MA5[p]<=MA20[p]&&MA5[g]>MA20[g];
-    const cross20=p>=0&&MA20[p]<=MA50[p]&&MA20[g]>MA50[g];
-    const crossUp=p>=0&&cl[p]<MA200[p]&&c>=m200;
+
+    // 오늘 주문에 쓰는 신호는 전일 확정 지표. 오늘 종가로 신호를 만든 뒤 같은 종가에 사는 룩어헤드를 금지한다.
+    const sig=g-1, prev=sig-1;
+    const ready=sig>=0 && MA200[sig]!=null;
+    const m200=ready?MA200[sig]:null, sigClose=ready?cl[sig]:null;
+    const rsi=(ready&&RSI[sig]!=null)?RSI[sig]:50;
+    const down=ready && sigClose<m200;
+    const crossDn=ready&&prev>=0&&MA200[prev]!=null&&cl[prev]>=MA200[prev]&&sigClose<m200;
+    const cross5=ready&&prev>=0&&MA5[prev]!=null&&MA20[prev]!=null&&MA5[sig]!=null&&MA20[sig]!=null
+      &&MA5[prev]<=MA20[prev]&&MA5[sig]>MA20[sig];
+    const cross20=ready&&prev>=0&&MA20[prev]!=null&&MA50[prev]!=null&&MA20[sig]!=null&&MA50[sig]!=null
+      &&MA20[prev]<=MA50[prev]&&MA20[sig]>MA50[sig];
+
+    // 외부 입금 전 NAV를 먼저 찍어 가격 하락을 입금으로 가리지 않는다.
+    const preEq=sh*c+sgov;
+    const issueNav=units>0&&preEq>0?preEq/units:1;
+    if(units>0) markNav(preEq/units);
+    let flowToday=0;
+    const addFlow=a=>{ if(a>0){inv+=a;_cf(d,a);flowToday+=a;} };
+
+    if(!ready){
+      if(di%10===0)snap.push([d,preEq]);
+      return;
+    }
     if(crossDn&&stage>0){stage=0;up3=-1;}
-    if(down){ if(!lump){sgov+=base;inv+=base;_cf(d,base);}
-      // 적립: 신규자금 투입 / 거치: 리저브(sgov)에서 차감
-      if(rsi<=30&&c<=m200*0.85){const amt=lump?Math.min(deep,sgov):deep;sh+=amt*F/c;if(lump)sgov-=amt;else {inv+=amt;_cf(d,amt);}}
-      else if(rsi<=35&&c<=m200*0.90){const amt=lump?Math.min(mid,sgov):mid;sh+=amt*F/c;if(lump)sgov-=amt;else {inv+=amt;_cf(d,amt);}} }
-    if(stage===0&&cross5){sh+=sgov*0.2*F/c;sgov*=0.8;stage=1;}
-    if(stage===1&&cross20){sh+=sgov*0.3*F/c;sgov*=0.7;stage=2;}
-    if(stage===2&&!down){sh+=sgov*F/c;sgov=0;stage=3;up3=di;}   // 3차: 상승장 재확인(종가≥200선) — 리저브 안 묶임
-    if(!down&&!lump){sh+=base*F/c;inv+=base;_cf(d,base);}       // 상승장: 매일 base로 SOXL 적립(DCA)
-    const eq=sh*c+sgov; if(eq>mddPeak)mddPeak=eq; else if(mddPeak>0){const dd=(mddPeak-eq)/mddPeak;if(dd>mdd)mdd=dd;}
+    if(down){
+      if(!lump){sgov+=base;addFlow(base);}
+      // 신호의 RSI·200일선은 전일 값, 실제 매수 체결가는 오늘 종가.
+      if(rsi<=30&&sigClose<=m200*0.85){const amt=lump?Math.min(deep,sgov):deep;sh+=amt*F/c;if(lump)sgov-=amt;else addFlow(amt);}
+      else if(rsi<=35&&sigClose<=m200*0.90){const amt=lump?Math.min(mid,sgov):mid;sh+=amt*F/c;if(lump)sgov-=amt;else addFlow(amt);}
+    }
+    if(stage===0&&cross5){const a=sgov*0.2;sh+=a*F/c;sgov-=a;stage=1;}
+    if(stage===1&&cross20){const a=sgov*0.3;sh+=a*F/c;sgov-=a;stage=2;}
+    if(stage===2&&!down){sh+=sgov*F/c;sgov=0;stage=3;up3=di;}   // 전일 200선 위 신호 → 오늘 3차 재진입
+    if(!down&&!lump){sh+=base*F/c;addFlow(base);}                // 전일 상승장 신호 → 오늘 base 적립
+
+    if(flowToday>0) units+=flowToday/Math.max(issueNav,1e-12);
+    const eq=sh*c+sgov;
+    if(units>0) markNav(eq/units);
     if(di%10===0)snap.push([d,eq]);
   });
   const lc=cl[gi[days[days.length-1]]], fin=sh*lc+sgov;
