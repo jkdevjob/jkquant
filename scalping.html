@@ -187,7 +187,7 @@ canvas{display:block;width:100%;height:auto}
 
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Morning Scalping</div><h1>JK <span class="v">퀀트</span> 단타 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="scVer">v4.0</span></h1></div>
+    <div><div class="kicker">Morning Scalping</div><h1>JK <span class="v">퀀트</span> 단타 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="scVer">v5.0</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -286,6 +286,7 @@ canvas{display:block;width:100%;height:auto}
       <span class="sub" id="ob_live_msg">장중 09:00~09:30에 사용</span>
     </div>
     <div id="ob_live_body"><p class="sub">감시를 시작하면 조건 충족 종목이 여기에 표시됩니다.</p></div>
+    <div id="ob_track" class="warn" style="display:none;margin-top:10px"></div>
   </div>
 
   <!-- 1bb. 시초가 첫고점 돌파 -->
@@ -301,10 +302,12 @@ canvas{display:block;width:100%;height:auto}
       <div class="fld"><label>마찰비용 %</label><input id="ob_fee" type="number" value="0.25" min="0" step="0.05" style="width:80px"></div>
       <button class="prim" onclick="runOpeningBreakout()">▶ 즉시돌파 백테스트</button>
       <button class="ghostbtn" onclick="runPullbackRebreak()">↘ 눌림→재돌파 백테스트</button>
+      <button class="ghostbtn" onclick="optimizeOpening()">⚙ 과거값 최적화</button>
     </div>
     <div class="row" style="align-items:flex-end;margin-bottom:8px"><div class="fld"><label>최소 갭 %</label><input id="ob_gmin" type="number" value="2" step="0.5" style="width:80px"></div><div class="fld"><label>최대 갭 %</label><input id="ob_gmax" type="number" value="7" step="0.5" style="width:80px"></div><label class="sub" style="display:flex;align-items:center;gap:6px;height:38px"><input id="ob_gap" type="checkbox" checked style="width:auto"> 갭 필터 사용</label></div>
     <div class="warn"><b>데이터 정직성:</b> 네이버 1분 API 자체가 O/H/L을 null로 주므로 가짜 OHLC를 만들지 않는다. 분봉 돌파·청산은 <b>종가 기준</b>이다. 대신 새 아카이브부터 일봉 원자료의 <b>전일 종가·당일 시가</b>를 함께 저장해 +2~7% 갭 필터를 정확히 적용한다. 기존 아카이브는 메타데이터가 없어 갭 필터 사용 시 제외된다.</div>
     <div id="ob_msg" class="sub" style="margin-top:10px"></div><div id="ob_body" style="margin-top:10px"></div>
+    <div id="ob_opt" style="margin-top:10px"></div>
   </div>
 
   <!-- 1c. 분봉 아카이브 -->
@@ -913,10 +916,45 @@ async function openingLiveScan(){
     }} }catch(e){} done++; msg.textContent='감시 중… '+done+'/'+uni.length;} }
   await Promise.all(Array.from({length:6},()=>worker())); hits.sort((a,b)=>b.fresh-a.fresh);
   msg.innerHTML='● 실시간 감시 · '+N+'종목 · 조건충족 <b>'+hits.length+'</b>개 · '+new Date().toLocaleTimeString('ko-KR');
-  body.innerHTML=hits.length?'<div class="htable-wrap"><table class="htable"><thead><tr><th>시각</th><th>종목</th><th>갭</th><th>첫고점</th><th>현재가</th><th>데이터</th></tr></thead><tbody>'+hits.map(x=>'<tr><td><b>'+esc(x.time)+'</b></td><td><b>'+esc(x.name)+'</b><div class="sub">'+esc(x.code)+'</div></td><td>'+(x.gap==null?'—':(x.gap>=0?'+':'')+x.gap.toFixed(2)+'%')+'</td><td>'+commas(x.high)+'</td><td class="win"><b>'+commas(x.price)+'</b></td><td>'+esc(x.src)+'</td></tr>').join('')+'</tbody></table></div>':'<p class="sub">현재 조건을 모두 충족한 매수 후보가 없습니다.</p>';
+  body.innerHTML=hits.length?'<div class="htable-wrap"><table class="htable"><thead><tr><th>시각</th><th>종목</th><th>갭</th><th>첫고점</th><th>현재가</th><th>데이터</th></tr></thead><tbody>'+hits.map(x=>'<tr onclick="trackOpeningCandidate(\''+esc(x.code)+'\',\''+esc(x.name).replace(/'/g,'&#39;')+'\')" style="cursor:pointer"><td><b>'+esc(x.time)+'</b></td><td><b>'+esc(x.name)+'</b><div class="sub">'+esc(x.code)+' · 선택</div></td><td>'+(x.gap==null?'—':(x.gap>=0?'+':'')+x.gap.toFixed(2)+'%')+'</td><td>'+commas(x.high)+'</td><td class="win"><b>'+commas(x.price)+'</b></td><td>'+esc(x.src)+'</td></tr>').join('')+'</tbody></table></div>':'<p class="sub">현재 조건을 모두 충족한 매수 후보가 없습니다.</p>';
   OB_BUSY=false;
 }
 
+let OB_TRACK=null, OB_TRACK_TIMER=null;
+async function trackOpeningCandidate(code,name){
+  OB_TRACK={code,name}; clearInterval(OB_TRACK_TIMER); await refreshOpeningTrack(); OB_TRACK_TIMER=setInterval(refreshOpeningTrack,15000);
+}
+async function refreshOpeningTrack(){
+  if(!OB_TRACK)return; const el=$('ob_track'); el.style.display=''; el.innerHTML='선택 종목 추적 중…';
+  try{
+    const obs=+($('ob_obs').value||3),stop=+($('ob_stop').value||1),t1=+($('ob_t1').value||.8),t2=+($('ob_t2').value||1.5),vm=+($('ob_vol').value||1.2);
+    const min=await mFetch(OB_TRACK.code), all=toBars(min,1).filter(x=>{const t=x.date||'',h=+t.slice(11,13),m=+t.slice(14,16);return h===9&&m<=30;}).sort((a,b)=>a.date.localeCompare(b.date));
+    const day=all.length?all[all.length-1].date.slice(0,10):'',a=all.filter(x=>x.date.slice(0,10)===day); if(a.length<obs){el.innerHTML='<b>'+esc(OB_TRACK.name)+'</b> · 첫 '+obs+'분 관찰 중';return;}
+    const fh=Math.max(...a.slice(0,obs).map(x=>x.high)),cur=a[a.length-1],pv=a[Math.max(0,a.length-2)],volRatio=cur.vol/Math.max(1,pv.vol),breakout=cur.high>fh&&volRatio>=vm;
+    const entry=breakout?Math.max(fh,cur.open):null, sl=entry?entry*(1-stop/100):null,p1=entry?entry*(1+t1/100):null,p2=entry?entry*(1+t2/100):null;
+    let state=breakout?'진입조건 충족':'진입 대기',why=breakout?'첫고점 돌파 + 거래량 '+volRatio.toFixed(2)+'배':'첫고점까지 '+((fh/cur.close-1)*100).toFixed(2)+'% · 거래량 '+volRatio.toFixed(2)+'배';
+    if(entry){if(cur.low<=sl){state='손절 조건';why='현재 저가가 손절선 '+commas(Math.round(sl))+' 이하';}else if(cur.high>=p2){state='2차 익절 조건';why='현재 고가가 2차 목표 '+commas(Math.round(p2))+' 이상';}else if(cur.high>=p1){state='1차 익절 조건';why='현재 고가가 1차 목표 '+commas(Math.round(p1))+' 이상';}}
+    el.innerHTML='<b>'+esc(OB_TRACK.name)+' ('+esc(OB_TRACK.code)+')</b> · <b>'+state+'</b><br>현재 '+commas(cur.close)+' · 첫고점 '+commas(fh)+' · '+why+(entry?'<br>진입기준 '+commas(Math.round(entry))+' · 손절 '+commas(Math.round(sl))+' · 1차 '+commas(Math.round(p1))+' · 2차 '+commas(Math.round(p2)):'')+'<br><span class="sub">15초마다 갱신 · 규칙 기반 참고 신호, 자동 주문 아님</span>';
+  }catch(e){el.innerHTML='추적 실패: '+esc(e.message||e);}
+}
+function openingTrades(cfg){
+  const trades=[]; Object.keys(ARCH).sort().forEach(date=>Object.entries(ARCH[date]||{}).forEach(([code,raw])=>{
+    if(code==='_meta'||!Array.isArray(raw))return; const meta=((ARCH[date]||{})._meta||{})[code]; if(!meta||!(meta.open>0&&meta.prevClose>0))return;
+    const gap=(meta.open/meta.prevClose-1)*100;if(gap<cfg.gmin||gap>cfg.gmax)return;
+    const a=raw.slice().sort((x,y)=>x[0]-y[0]).filter(x=>x[0]>=900&&x[0]<=930&&+x[1]>0);if(a.length<cfg.obs+2)return;
+    const op=a.slice(0,cfg.obs),fh=Math.max(...op.map(x=>x[4]!=null?+x[4]:+x[1]));let ei=-1;
+    for(let i=cfg.obs;i<a.length;i++){const px=+a[i][1],hi=a[i][4]!=null?+a[i][4]:px,vol=+a[i][2]||0,pv=Math.max(1,+a[i-1][2]||0);if(hi>fh&&px>=meta.open&&vol>=pv*cfg.vm){ei=i;break;}}
+    if(ei<0)return;const entry=+a[ei][1];let exit=+a[a.length-1][1],reason='09:30',pnl=0,half=false;
+    for(let i=ei+1;i<a.length;i++){const lo=a[i][5]!=null?+a[i][5]:+a[i][1],hi=a[i][4]!=null?+a[i][4]:+a[i][1];if(lo<=entry*(1-cfg.stop/100)){pnl+=(half?.5:1)*(-cfg.stop);exit=entry*(1-cfg.stop/100);reason='손절';break;}if(!half&&hi>=entry*(1+cfg.t1/100)){pnl+=.5*cfg.t1;half=true;}if(half&&hi>=entry*(1+cfg.t2/100)){pnl+=.5*cfg.t2;exit=entry*(1+cfg.t2/100);reason='2차익절';break;}if(i===a.length-1)pnl+=(half?.5:1)*(+a[i][1]/entry-1)*100;}
+    trades.push({date,code,pnl:pnl-cfg.fee,reason,gap,time:a[ei][0],entry});
+  }));return trades;
+}
+function optimizeOpening(){
+  const out=$('ob_opt');out.innerHTML='<span class="sub">아카이브 전체 조합 계산 중…</span>'; const fee=+($('ob_fee').value||.25), rows=[];
+  for(const obs of [1,2,3,5])for(const vm of [1,1.2,1.5,2])for(const stop of [.5,.75,1,1.25])for(const t1 of [.5,.8,1,1.2])for(const t2 of [1,1.5,2,2.5]){if(t2<=t1)continue;const cfg={obs,vm,stop,t1,t2,fee,gmin:+($('ob_gmin').value||2),gmax:+($('ob_gmax').value||7)},tr=openingTrades(cfg);if(tr.length<10)continue;const avg=tr.reduce((s,x)=>s+x.pnl,0)/tr.length,gp=tr.filter(x=>x.pnl>0).reduce((s,x)=>s+x.pnl,0),gl=-tr.filter(x=>x.pnl<0).reduce((s,x)=>s+x.pnl,0),pf=gl?gp/gl:99;rows.push({cfg,n:tr.length,avg,pf,win:tr.filter(x=>x.pnl>0).length/tr.length*100,tr});}
+  rows.sort((a,b)=>(b.avg-a.avg)||(b.pf-a.pf));if(!rows.length){out.innerHTML='<div class="warn">최적화할 유효 과거 표본이 부족합니다.</div>';return;}const best=rows[0],st=best.tr.filter(x=>x.reason==='손절'),tp=best.tr.filter(x=>x.reason==='2차익절'),av=x=>x.length?x.reduce((s,z)=>s+z.gap,0)/x.length:0;
+  out.innerHTML='<div class="warn"><b>과거값 탐색 1위(인샘플)</b> · 관찰 '+best.cfg.obs+'분 · 거래량 '+best.cfg.vm+'배 · 손절 '+best.cfg.stop+'% · 1차 '+best.cfg.t1+'% · 2차 '+best.cfg.t2+'%<br>거래 '+best.n+' · 평균 '+best.avg.toFixed(3)+'% · PF '+best.pf.toFixed(2)+' · 승률 '+best.win.toFixed(1)+'%<br><b>손절 '+st.length+'건 vs 2차익절 '+tp.length+'건</b> · 평균 갭 손절 '+av(st).toFixed(2)+'% / 익절 '+av(tp).toFixed(2)+'%<br><span class="sub">같은 과거자료에서 고른 최적값이라 과최적화 가능성이 큼. 미래 성과를 의미하지 않음.</span></div>';
+}
 /* ══ 시초가 첫고점 돌파 — ARCH 분봉 종가 기반 ══ */
 function runOpeningBreakout(){
   const obs=+($('ob_obs').value||3), vm=+($('ob_vol').value||1.2), stop=+($('ob_stop').value||1),
