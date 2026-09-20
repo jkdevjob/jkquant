@@ -452,7 +452,7 @@ document.addEventListener('click',function(e){ var m=document.getElementById('jk
     <div class="ctrl s-im hide"><label>재투자</label>
       <div class="seg" id="imCompound">
         <button data-c="1" title="익절금을 다음 사이클 원금에 합산 — 초장기는 기하급수 폭주">복리</button>
-        <button data-c="0" class="active" title="초과익만 인출, 손실은 잔고 이월 — 장기 비교 권장">단리</button>
+        <button data-c="0" class="active" title="매 사이클 원금 고정 — 초과익은 인출하고 부족분은 외부입금으로 보충(입금은 성과에서 차감)">단리</button>
       </div>
     </div>
     <div class="ctrl s-im hide"><label>엔진</label>
@@ -741,7 +741,7 @@ document.addEventListener('click',function(e){ var m=document.getElementById('jk
   <span class="bd">익절조절</span> (선택) 직전 20거래일 상승률 &gt; <b>+8%</b>면 익절% = <b>min(기본×2, 30%)</b> · 하락 시엔 조절 안 함 — 매수 규칙은 그대로<br>
   <span class="bd">소진</span> 일반모드=<b>1회 매수가 불가능</b>해지는 시점(T&gt;분할−1) · 리버스모드=<b>1개(1주) 매수가 불가능</b>해지는 시점 — 리버스는 T가 분할−1을 넘어도 1주를 살 수 있으면 별지점 아래 매수를 지속<br>
   <span class="bd">리버스</span> 원금소진 시 무한매도(보유÷10·÷20)+쿼터매수(잔금÷4) · 종가&gt;평단×(1−15%/20%) 회복 시 다음날 일반모드 복귀<br>
-  <span class="bd">재투자</span> 복리=익절금 원금 합산 / 단리=초과익만 인출(손실은 잔고 이월) · <b>장기(5년↑) 비교는 단리 권장</b> — 복리 초장기는 기하급수 폭주<br>
+  <span class="bd">재투자</span> 복리=익절금 원금 합산 / 단리=매 사이클 원금 고정(초과익 인출·부족분 외부입금, 입금은 성과에서 차감)<br>
   <span class="bd v5-hidden">V5.0</span><span class="v5-hidden"> 국면 익절 (검증 미완료 · 비활성)</span>
 </div>
 <div class="rules s-vr hide">
@@ -2065,7 +2065,7 @@ function runIM(days,tkr,cap,divs,targetPct,compound=true){
       // 전량 매도 → 사이클 리셋 (복리/단리 동일 처리)
       if(shares<1e-9){ shares=0;avg=0;cycles++; inReverse=false;
         if(compound){} else if(cash>cap){ savedProfit+=cash-cap; cash=cap; }
-        else if(cash<cap){ addedCash+=cap-cash; cash=cap; } // 단리: 초과익만 인출, 손실은 잔고 그대로 이월
+        else if(cash<cap){ addedCash+=cap-cash; cash=cap; } // 단리 고정원금: 부족분은 외부입금으로 보충하고 addedCash로 성과에서 차감
         T=0; snap.push([d,cash+savedProfit-addedCash]); peakInvested=Math.max(peakInvested,cap-cash); return; }
       // 가격 회복(종가>평단×exitMul) → 내일부터 일반모드 복귀. T는 그대로 승계.
       // (복귀 후 일반모드에서 1회분도 못 사는 상태가 되면 T>분할−1이라 자동으로 다시 리버스 진입)
