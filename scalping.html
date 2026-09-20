@@ -542,7 +542,10 @@ function toBars(min, step){
   let cur=null;
   for(const raw of min){ const x=norm(raw),k=key(x.date);
     if(!cur||cur.date!==k){cur={date:k,open:x.open,high:x.high,low:x.low,close:x.close,vol:0,ohlcv:x.ohlcv};out.push(cur);}
-    cur.high=Math.max(cur.high,x.high);cur.low=Math.min(cur.low,x.low);cur.close=x.close;cur.vol+=x.vol;cur.ohlcv=cur.ohlcv&&x.ohlcv;
+    // 실제 OHLCV면 실제 고저를 사용한다. 네이버 종가-only 폴백은 기존 회귀 규약대로 종가로 합성한다.
+    if(x.ohlcv){cur.high=Math.max(cur.high,x.high); cur.low=Math.min(cur.low,x.low);}
+    else {cur.high=Math.max(cur.high,x.close); cur.low=Math.min(cur.low,x.close);}
+    cur.close=x.close;cur.vol+=x.vol;cur.ohlcv=cur.ohlcv&&x.ohlcv;
   }
   return out;
 }
