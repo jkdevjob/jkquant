@@ -181,7 +181,7 @@ canvas{display:block;width:100%;height:auto}
 
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Morning Scalping</div><h1>JK <span class="v">퀀트</span> 단타 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="scVer">v2.1</span></h1></div>
+    <div><div class="kicker">Morning Scalping</div><h1>JK <span class="v">퀀트</span> 단타 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="scVer">v3.0</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -258,6 +258,18 @@ canvas{display:block;width:100%;height:auto}
     <div class="sub" id="bt_msg" style="margin-bottom:8px;min-height:16px"></div>
     <div id="bt_prog" style="display:none;height:6px;background:var(--panel2);border-radius:4px;overflow:hidden;margin-bottom:10px"><div id="bt_bar" style="height:100%;width:0;background:var(--vio2);transition:width .1s"></div></div>
     <div id="bt_body"></div>
+  </div>
+
+  <!-- 1ba. 시초가 실시간 감시 -->
+  <div class="card">
+    <h3><span class="dot"></span>🚨 시초가 실시간 매수후보 <span class="sub" style="font-weight:600">09:00~09:30 · 1분마다 자동 감시</span></h3>
+    <p class="lead">유니버스를 자동 감시해 <b>갭 + 첫 고점 돌파 + 거래량 증가</b> 조건이 동시에 충족된 종목을 즉시 표시한다. 신호 표시 기능이며 주문은 자동 전송하지 않는다.</p>
+    <div class="row" style="align-items:flex-end;margin-bottom:8px">
+      <div class="fld"><label>감시 종목수</label><select id="ob_live_n"><option>30</option><option selected>50</option><option>100</option></select></div>
+      <button class="prim" id="obLiveBtn" onclick="toggleOpeningLive()">▶ 실시간 감시 시작</button>
+      <span class="sub" id="ob_live_msg">장중 09:00~09:30에 사용</span>
+    </div>
+    <div id="ob_live_body"><p class="sub">감시를 시작하면 조건 충족 종목이 여기에 표시됩니다.</p></div>
   </div>
 
   <!-- 1bb. 시초가 첫고점 돌파 -->
@@ -851,6 +863,33 @@ function archExport(){
   document.body.appendChild(a); a.click(); a.remove();
 }
 function archClear(){ if(!confirm('아카이브를 전부 지울까요? (CSV로 내보냈는지 확인하세요)')) return; ARCH={}; saveArch(); renderArch(); $('ar_msg').textContent='삭제됨'; }
+
+/* ══ 시초가 실시간 감시 ══ */
+let OB_LIVE=false, OB_TIMER=null, OB_BUSY=false, OB_SIGNALS=new Map();
+function obKstHM(){ const p=new Intl.DateTimeFormat('en-GB',{timeZone:'Asia/Seoul',hour:'2-digit',minute:'2-digit',hour12:false}).formatToParts(new Date()); return +(p.find(x=>x.type==='hour').value)*100 + +(p.find(x=>x.type==='minute').value); }
+function toggleOpeningLive(){ OB_LIVE?stopOpeningLive():startOpeningLive(); }
+function startOpeningLive(){ OB_LIVE=true; const b=$('obLiveBtn'); if(b) b.textContent='⏸ 실시간 감시 중지'; openingLiveScan(); clearInterval(OB_TIMER); OB_TIMER=setInterval(openingLiveScan,60000); }
+function stopOpeningLive(){ OB_LIVE=false; if(OB_TIMER){clearInterval(OB_TIMER);OB_TIMER=null;} const b=$('obLiveBtn'); if(b)b.textContent='▶ 실시간 감시 시작'; }
+async function openingLiveScan(){
+  if(OB_BUSY) return; OB_BUSY=true;
+  const msg=$('ob_live_msg'), body=$('ob_live_body'), hm=obKstHM();
+  if(hm<900||hm>930){ msg.textContent='현재 장중 감시시간(09:00~09:30)이 아닙니다 · 마지막 확인 '+new Date().toLocaleTimeString('ko-KR'); OB_BUSY=false; return; }
+  const N=+($('ob_live_n').value||50), obs=+($('ob_obs').value||3), vm=+($('ob_vol').value||1.2), gmin=+($('ob_gmin').value||2), gmax=+($('ob_gmax').value||7), useGap=$('ob_gap').checked;
+  msg.textContent='유니버스 불러오는 중…'; let uni=[];
+  try{const j=await (await fetch('/api/universe?limit='+N)).json(); if(j.error)throw new Error(j.error); uni=j.universe||[];}catch(e){msg.textContent='유니버스 실패: '+(e.message||e);OB_BUSY=false;return;}
+  let idx=0,done=0; const hits=[];
+  async function worker(){while(idx<uni.length){const u=uni[idx++];try{
+    const [min,daily]=await Promise.all([mFetch(u.code),qFetch(u.code,'3mo')]); const bars=toBars(min,1).filter(x=>{const t=x.date||'',h=+t.slice(11,13),m=+t.slice(14,16);return h===9&&m<=30;}).sort((a,b)=>a.date.localeCompare(b.date));
+    if(bars.length>=obs+1){const today=bars[bars.length-1].date.slice(0,10), a=bars.filter(x=>x.date.slice(0,10)===today); if(a.length>=obs+1){
+      const doh=daily.ohlc||[], di=doh.findIndex(z=>z.date===today), dayOpen=di>=0?+doh[di].open:+a[0].open, prev=di>0?+doh[di-1].close:0, gap=prev>0?(dayOpen/prev-1)*100:null;
+      if(!useGap||(gap!=null&&gap>=gmin&&gap<=gmax)){const opening=a.slice(0,obs), firstHigh=Math.max(...opening.map(x=>x.high)), cur=a[a.length-1], pv=a[a.length-2], ok=cur.high>firstHigh&&cur.close>=dayOpen&&cur.vol>=Math.max(1,pv.vol)*vm;
+        if(ok){const key=today+'_'+u.code; if(!OB_SIGNALS.has(key))OB_SIGNALS.set(key,Date.now()); hits.push({code:u.code,name:u.name||u.code,gap,price:cur.close,high:firstHigh,time:(cur.date||'').slice(11,16),src:cur.ohlcv?'KIS OHLCV':'종가 폴백',fresh:OB_SIGNALS.get(key)});}}
+    }} }catch(e){} done++; msg.textContent='감시 중… '+done+'/'+uni.length;} }
+  await Promise.all(Array.from({length:6},()=>worker())); hits.sort((a,b)=>b.fresh-a.fresh);
+  msg.innerHTML='● 실시간 감시 · '+N+'종목 · 조건충족 <b>'+hits.length+'</b>개 · '+new Date().toLocaleTimeString('ko-KR');
+  body.innerHTML=hits.length?'<div class="htable-wrap"><table class="htable"><thead><tr><th>시각</th><th>종목</th><th>갭</th><th>첫고점</th><th>현재가</th><th>데이터</th></tr></thead><tbody>'+hits.map(x=>'<tr><td><b>'+esc(x.time)+'</b></td><td><b>'+esc(x.name)+'</b><div class="sub">'+esc(x.code)+'</div></td><td>'+(x.gap==null?'—':(x.gap>=0?'+':'')+x.gap.toFixed(2)+'%')+'</td><td>'+commas(x.high)+'</td><td class="win"><b>'+commas(x.price)+'</b></td><td>'+esc(x.src)+'</td></tr>').join('')+'</tbody></table></div>':'<p class="sub">현재 조건을 모두 충족한 매수 후보가 없습니다.</p>';
+  OB_BUSY=false;
+}
 
 /* ══ 시초가 첫고점 돌파 — ARCH 분봉 종가 기반 ══ */
 function runOpeningBreakout(){
