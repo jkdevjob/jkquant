@@ -181,7 +181,7 @@ canvas{display:block;width:100%;height:auto}
 
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Morning Scalping</div><h1>JK <span class="v">퀀트</span> 단타 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="scVer">v1.4</span></h1></div>
+    <div><div class="kicker">Morning Scalping</div><h1>JK <span class="v">퀀트</span> 단타 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="scVer">v1.5</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -535,15 +535,14 @@ async function mFetch(code){
   return j.minutes;
 }
 function toBars(min, step){
-  if(step<=1) return min.map(x=>({date:x.t, open:x.close, high:x.close, low:x.close, close:x.close, vol:x.vol}));
+  const norm=x=>({date:x.t,open:+(x.open??x.close),high:+(x.high??x.close),low:+(x.low??x.close),close:+x.close,vol:+x.vol||0,ohlcv:x.open!=null&&x.high!=null&&x.low!=null});
+  if(step<=1) return min.map(norm);
   const out=[], key=t=>{ const h=+t.slice(11,13), m=+t.slice(14,16);
     return t.slice(0,11)+String(h).padStart(2,'0')+':'+String(Math.floor(m/step)*step).padStart(2,'0'); };
   let cur=null;
-  for(const x of min){
-    const k=key(x.t);
-    if(!cur||cur.date!==k){ cur={date:k, open:x.close, high:x.close, low:x.close, close:x.close, vol:0}; out.push(cur); }
-    cur.high=Math.max(cur.high,x.close); cur.low=Math.min(cur.low,x.close);
-    cur.close=x.close; cur.vol+=x.vol||0;
+  for(const raw of min){ const x=norm(raw),k=key(x.date);
+    if(!cur||cur.date!==k){cur={date:k,open:x.open,high:x.high,low:x.low,close:x.close,vol:0,ohlcv:x.ohlcv};out.push(cur);}
+    cur.high=Math.max(cur.high,x.high);cur.low=Math.min(cur.low,x.low);cur.close=x.close;cur.vol+=x.vol;cur.ohlcv=cur.ohlcv&&x.ohlcv;
   }
   return out;
 }
@@ -821,7 +820,7 @@ async function archSnapshot(auto){
           if(!d || hh!==9 || mm>30) return;                  // 09:00~09:30만
           const hm=hh*100+mm;
           (ARCH[d]=ARCH[d]||{}); const arr=(ARCH[d][u.code]=ARCH[d][u.code]||[]);
-          if(!arr.some(r=>r[0]===hm)){ arr.push([hm, x.close, x.vol||0]); added++; }
+          if(!arr.some(r=>r[0]===hm)){ arr.push(x.open!=null&&x.high!=null&&x.low!=null?[hm,x.close,x.vol||0,x.open,x.high,x.low]:[hm,x.close,x.vol||0]); added++; }
           const di=doh.findIndex(z=>z.date===d);
           if(di>=0){ ARCH[d]._meta=ARCH[d]._meta||{}; ARCH[d]._meta[u.code]={open:+doh[di].open||0,prevClose:di>0?(+doh[di-1].close||0):0}; }
         });
@@ -841,8 +840,8 @@ async function archSnapshot(auto){
 }
 function archExport(){
   const s=archStats(); if(!s.dates.length){ alert('내보낼 데이터가 없습니다.'); return; }
-  const lines=['date,code,hhmm,close,vol,day_open,prev_close,gap_pct'];
-  s.dates.forEach(d=>Object.entries(ARCH[d]).forEach(([c,a])=>{ if(c==='_meta'||!Array.isArray(a)) return; const m=(ARCH[d]._meta||{})[c]||{}, gap=m.prevClose>0?(m.open/m.prevClose-1)*100:''; a.forEach(r=>lines.push(`${d},${c},${String(r[0]).padStart(4,'0')},${r[1]},${r[2]},${m.open||''},${m.prevClose||''},${gap===''?'':gap.toFixed(4)}`)); }));
+  const lines=['date,code,hhmm,close,vol,open,high,low,day_open,prev_close,gap_pct'];
+  s.dates.forEach(d=>Object.entries(ARCH[d]).forEach(([c,a])=>{ if(c==='_meta'||!Array.isArray(a)) return; const m=(ARCH[d]._meta||{})[c]||{}, gap=m.prevClose>0?(m.open/m.prevClose-1)*100:''; a.forEach(r=>lines.push(`${d},${c},${String(r[0]).padStart(4,'0')},${r[1]},${r[2]},${r[3]??''},${r[4]??''},${r[5]??''},${m.open||''},${m.prevClose||''},${gap===''?'':gap.toFixed(4)}`)); }));
   const blob=new Blob(['\ufeff'+lines.join('\n')],{type:'text/csv;charset=utf-8'});
   const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
   a.download=`scalping_0900_0930_${s.dates[0]}_${s.dates[s.dates.length-1]}.csv`;
