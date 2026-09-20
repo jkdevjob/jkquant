@@ -445,8 +445,8 @@ document.addEventListener('click',function(e){ var m=document.getElementById('jk
     </div>
     <div class="ctrl s-im hide"><label>리버스 <span style="font-size:9px;color:var(--dim)">V4.0 원금소진 후</span></label>
       <div class="seg" id="imRev" style="align-self:flex-start">
-        <button data-r="0" class="active" title="원금 소진(T&gt;분할−1) 후 리버스 무한매도 안 함 — 후반전 별지점 손절 쿼터매도로만 방어. 백테스트상 20분할·저점 V반등에서 리버스보다 유리(기본)">끔</button>
-        <button data-r="1" title="원금 소진(T&gt;분할−1) 후 리버스 무한매도 모드 진입 — 라오어 공식 V4.0. 급락 저점에서 분할 매도 후 반등 시 재매수">켬</button>
+        <button data-r="0" title="리버스를 끄는 사용자 변형 — 공식 V4.0과 별도 비교용">끔</button>
+        <button data-r="1" class="active" title="원금 소진(T&gt;분할−1) 후 리버스 무한매도+쿼터매수 — 라오어 공식 V4.0 기본 규칙">켬</button>
       </div>
     </div>
     <div class="ctrl s-im hide"><label>재투자</label>
@@ -457,8 +457,8 @@ document.addEventListener('click',function(e){ var m=document.getElementById('jk
     </div>
     <div class="ctrl s-im hide"><label>엔진</label>
       <div class="seg" id="imEngine">
-        <button data-e="v22" title="V2.2(2023 오피셜) — 별%base10·+10%익절·쿼터손절 · quantstack 재현">V2.2</button>
-        <button data-e="v30" title="V3.0(2024) — 20분할·반복리·쿼터매도 · quantstack 재현">V3.0</button>
+        <button data-e="v22" title="V2.2(2023 오피셜) — 별%base10·+10%익절·쿼터손절 · 문서 기반 재현">V2.2</button>
+        <button data-e="v30" title="V3.0(2024) — 20분할·반복리·쿼터매도 · 문서 기반 재현(쿼터 후반 세부는 근사)">V3.0</button>
         <button data-e="v40" class="active" title="라오어 공식 V4.0 (리버스 무한매도)">V4.0</button>
         <button data-e="v50" class="v5-hidden" title="V5.0 (검증 미완료)">V5.0</button>
         <button data-e="ab" class="v5-hidden" title="V4.0 vs V5.0 비교">A/B</button>
@@ -862,7 +862,7 @@ const MA_TICKERS=STRAT_TICKERS;
 let M={};
 let strat='dca';
 let dcaFreq='daily', dcaPeriodMode='common', imDiv=20;
-let imReverse=false;   // V4.0 리버스 무한매도 (원금소진 후) — 기본 OFF (20분할 백테 상 리버스가 저점 손절 후 V반등을 놓쳐 불리)
+let imReverse=true;    // V4.0 오피셜: 원금소진 후 리버스 무한매도+쿼터매수. OFF는 사용자 변형 비교용.
 let imActive=new Set(IM_TICKERS);   // 무매 다중선택
 let vrActive=new Set(VR_TICKERS);   // VR 다중선택
 let maActive=new Set(MA_TICKERS);   // 200일선 다중선택 (기본: 전체 — 카드 비교로 시작)
