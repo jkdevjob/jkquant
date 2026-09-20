@@ -2864,7 +2864,7 @@ function cmpDrawChart(rows,days,tkr,title){
    raw/배당이 없는 종목(무배당·CSV 로딩)은 null을 돌려주고 화면에서 그냥 감춘다.
 
    buys: [[date, amount$], ...] 매수 시점·금액. 그 스케줄을 raw 가격으로 다시 태운다. */
-function divSplit(tkr, days, buys){
+function divSplit(tkr, days, buys, idleCash=0, extraCost=0){
   const dv=(typeof DIV!=='undefined'&&DIV[tkr])||null, rw=(typeof RAW!=='undefined'&&RAW[tkr])||null;
   if(!dv||!dv.length||!rw) return null;
   const d0=days[0], d1=days[days.length-1];
@@ -2876,33 +2876,36 @@ function divSplit(tkr, days, buys){
   const B=[...buys].sort((a,b)=>a[0]<b[0]?-1:1);
   const dvMap={}; inWin.forEach(x=>{ dvMap[x.date]=(dvMap[x.date]||0)+x.amount; });
   const rawAt=d=>(rw[d]>0?rw[d]:0);
-  let sh=0, bi=0, cash=0, n=0, inv=0, uvPeak=-Infinity, mdd=0;
+  let sh=0, bi=0, cash=0, n=0, inv=Math.max(0,idleCash)+Math.max(0,extraCost), uvPeak=-Infinity, mdd=0;
   for(const d of days){
     while(bi<B.length && B[bi][0]<=d){ const p=rawAt(B[bi][0]); if(p>0){ sh+=B[bi][1]/p; inv+=B[bi][1]; } bi++; }
     if(dvMap[d]!=null && sh>0){ cash+=sh*dvMap[d]; n++; }
     const p=rawAt(d);
-    if(p>0 && inv>0){ const uv=(sh*p+cash)/inv;
+    if(p>0 && inv>0){ const uv=(sh*p+cash+idleCash)/inv;
       if(uv>uvPeak) uvPeak=uv; else if(uvPeak>0){ const dd=(uvPeak-uv)/uvPeak; if(dd>mdd) mdd=dd; } }
   }
   while(bi<B.length){ const p=rawAt(B[bi][0]); if(p>0){ sh+=B[bi][1]/p; inv+=B[bi][1]; } bi++; }
   const pl=rawAt(d1); if(!(pl>0)||!(inv>0)) return null;
   const priceVal=sh*pl;
-  return {divCash:cash, nDiv:n, priceVal, invRaw:inv, shares:sh, mddCash:mdd*100,
-          retPrice:(priceVal/inv-1)*100,              // 가격만 (분배금 제외)
-          retCash:((priceVal+cash)/inv-1)*100};       // 분배금 현금 수령 총수익
+  return {divCash:cash, nDiv:n, priceVal, invRaw:inv, shares:sh, idleCash, mddCash:mdd*100,
+          retPrice:((priceVal+idleCash)/inv-1)*100,              // 가격만 (분배금 제외)
+          retCash:((priceVal+cash+idleCash)/inv-1)*100};         // 분배금 현금 수령 총수익
 }
 // 매수후보유(B&H) — 목돈 cap 전액을 t0에 매수하고 방치 (일시금 기준선)
 // 비용: 매수 수수료만(끝까지 안 팔아 실현이익 없음 → 양도세 이연 = 방치의 실제 이점)
 function runBH(days,tkr,cap,costOn){
   const FEE=costOn?costOf(tkr).fee:0;
-  const p=d=>M[tkr][d][C]; const sh=iq(cap/(1+FEE),p(days[0]));   // 거치도 정수 주수
+  const p=d=>M[tkr][d][C], p0=p(days[0]);
+  const sh=iq(cap/(1+FEE),p0);                         // 거치도 정수 주수
+  const spend=sh*p0, fee=spend*FEE, cash=Math.max(0,cap-spend-fee); // 정수주 내림 뒤 남은 현금은 자산이다
   let mddPeak=cap,mdd=0; const snap=[];
-  days.forEach((d,i)=>{ const eq=sh*p(d); if(eq>mddPeak)mddPeak=eq; else{const dd=(mddPeak-eq)/mddPeak;if(dd>mdd)mdd=dd;} if(i%10===0)snap.push([d,eq]); });
-  let fin=sh*p(days[days.length-1]); snap.push([days[days.length-1],fin]);
-  const _d=divSplit(tkr,days,[[days[0],cap*(1-FEE)]]);
+  days.forEach((d,i)=>{ const eq=cash+sh*p(d); if(eq>mddPeak)mddPeak=eq; else{const dd=(mddPeak-eq)/mddPeak;if(dd>mdd)mdd=dd;} if(i%10===0)snap.push([d,eq]); });
+  let fin=cash+sh*p(days[days.length-1]); snap.push([days[days.length-1],fin]);
+  // raw/현금분배 경로에서도 남은 현금과 매수수수료를 분리해 총 원금 cap 기준의 NAV를 유지한다.
+  const _d=divSplit(tkr,days,[[days[0],spend]],cash,fee);
   let _m=mdd*100;
-  if(_d && (typeof dcaReinv!=='undefined') && dcaReinv===false){ fin=_d.priceVal+_d.divCash; _m=_d.mddCash; }
-  return {invested:cap,final:fin,ret:(fin/cap-1)*100,mdd:_m,snap,div:_d};
+  if(_d && (typeof dcaReinv!=='undefined') && dcaReinv===false){ fin=cash+_d.priceVal+_d.divCash; _m=_d.mddCash; }
+  return {invested:cap,final:fin,ret:(fin/cap-1)*100,mdd:_m,snap,div:_d,endCash:cash,endShares:sh};
 }
 // 200일선 로테 — 적립형: 매일 균등 적립(총투입=contribTotal) + 전일 신호로 보유/현금. MDD는 단위가치(평가액÷투입) 기준.
 // 매수·매도 조건(16조합)·대피처(현금/단기국채)는 일시금 runMA200과 동일 규약 — 로테 탭 설정을 그대로 따른다.
