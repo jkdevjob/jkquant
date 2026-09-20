@@ -577,6 +577,13 @@ console.log('[11] 무매 계산 공유');
   ok('매수 주문가 = 별지점 − 0.01', /star-0\.01|star\s*-\s*0\.01/.test(ord));
   let sim=''; try{ sim=extractFn(idx,'function infSimForward(startFrom)'); }catch(e){}
   ok('모의 체결도 별지점 − 0.01', /star-0\.01|star\s*-\s*0\.01/.test(sim));
+  ok('모의 V4 주문 기준은 하루 시작 상태로 고정', /const order=c, B=imBuy1\(order\)/.test(sim)
+     && /starPct\(st\.ticker,st\.div,order\.T,st\.target\)/.test(sim));
+  ok('모의 지정가 전량매도 뒤 같은 날 LOC 재매수를 막지 않는다',
+     !/liquidated/.test(sim) && /미리 걸어둔 매수 주문은 살아 있다/.test(sim));
+  ok('모의 리버스 회복은 T 잔여와 무관하게 다음날 일반모드로 전환',
+     /else if\(cl > c2\.avg\*exitMulOf\(st\.target\)\) inRev=false/.test(sim)
+     && !/cl > c2\.avg\*exitMulOf\(st\.target\) && \(st\.div-c2\.T\)>=1/.test(sim));
   // 쿼터매도는 보유÷4, 지정가매도는 나머지 (두 곳 규약 동일)
   ok('쿼터매도 = 보유÷4 (주문표·모의 동일)',
      /Math\.floor\(c\.qty\/4\)/.test(ord) && /Math\.floor\(c\.qty\/4\)/.test(sim));
@@ -677,6 +684,7 @@ console.log('[14] 체결가 규약');
   // 규약을 바꾸면 이미 쌓인 모의 기록도 다시 만들어져야 한다 — 설정 지문만으로는 안 걸린다
   ok('체결 규약 판이 모의 지문에 들어간다',
      /const SIM_RULE_VER=\d+/.test(idx) && /'r'\+SIM_RULE_VER\+'\|'/.test(idx));
+  ok('V4 체결순서 변경으로 모의 규칙 버전 4', /const SIM_RULE_VER=4;/.test(idx));
 }
 
 
