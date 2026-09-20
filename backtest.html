@@ -2139,29 +2139,52 @@ function runIM22(days,tkr,cap,divs,targetPct,compound=true){
   const base=10, slope=base*0.1*20/divs, takePct=10, one=cap/divs;
   let cash=cap,sh=0,avg=0,cum=0,yearPnl=0,cy=null, mp=cap,mdd=0, quarter=false,qOne=0,qN=0; const snap=[];
   const _buy=(px,amt)=>{ if(amt>cash)amt=cash; if(amt<=1e-6)return 0;
-    const q=iq(amt/(1+FEE),px); if(q<=0) return 0;                 // 정수 주수 (증권사 현실)
-    const spend=q*px, fee=spend*FEE; avg=sh<=0?px:(sh*avg+spend)/(sh+q); sh+=q; cash-=spend+fee; return spend+fee; };
+    const q=iq(amt/(1+FEE),px); if(q<=0) return 0;
+    const spend=q*px, fee=spend*FEE; avg=sh<=0?px:(sh*avg+spend)/(sh+q); sh+=q; cash-=spend+fee;
+    return spend;   // T의 '매수누적액'에는 수수료를 넣지 않는다.
+  };
   const _sell=(px,q,slip)=>{ if(q<=0)return; if(q>sh)q=sh; const eff=px*(1-(slip||0)),g=q*eff,fee=g*FEE; cash+=g-fee; yearPnl+=q*(eff-avg)-fee; sh-=q; };
   const _settle=(px)=>{ if(!CO){yearPnl=0;return;} cash-=capGainTax(yearPnl, tkr); yearPnl=0;
-    // 잔고 하한: 세금 낼 현금이 모자라면 보유주 매도 → 그래도 모자라면 계좌 소진(0). 음수 자산 방지.
-    const EPS=0.01;   // 부동소수 잔여 음수를 파산으로 오판하지 않도록 ε 적용
+    const EPS=0.01;
     if(cash<-EPS&&sh>1e-9&&px>0){ const q=Math.min(sh,(-cash)/(px*(1-FEE))); if(q>1e-12){ const g=q*px; cash+=g-g*FEE; sh-=q; } }
     if(cash<-EPS){ cash=0; sh=0; avg=0; } else if(cash<0){ cash=0; } };
   days.forEach((d,i)=>{ const [c,o,hi,lo]=M[tkr][d];
     { const y=d.slice(0,4); if(cy===null)cy=y; else if(y!==cy){_settle(c);cy=y;} }
     { const eq=cash+sh*c; if(eq>mp)mp=eq; else if(mp>0){const dd=(mp-eq)/mp; if(dd>mdd)mdd=dd;} }
     if(!quarter){
-      const t=cum/one, sp=base-slope*t, starP=avg*(1+sp/100), take=avg*(1+takePct/100), q0=sh;
-      if(sh>1e-9&&avg>0){ if(hi>=take)_sell(take,q0*0.75,SLIP); if(sh>1e-9&&sp>=0&&c>=starP)_sell(c,Math.min(sh,q0*0.25),0); }
+      const t=Math.round((cum/one)*100)/100;   // 2024-09-05 업데이트: 소수점 셋째 자리 반올림
+      const sp=base-slope*t, starP=avg*(1+sp/100), take=avg*(1+takePct/100), q0=sh;
+      if(sh>1e-9&&avg>0){
+        if(hi>=take)_sell(take,q0*0.75,SLIP);
+        // V2.2 매도는 전/후반 통일: 별%가 음수가 되어도 1/4 LOC매도는 계속 건다.
+        if(sh>1e-9&&c>=starP)_sell(c,Math.min(sh,q0*0.25),0);
+      }
       if(sh<=1e-9){ cum=0; }
-      else if(t>divs-1){ quarter=true; _sell(c,isq(sh/4,sh),0); qOne=cash/10; qN=0; }
-      if(!quarter&&cash>1e-6&&t<divs){ if(sh<=1e-9){cum+=_buy(c,one);} else if(t<divs/2){ if(c<=avg)cum+=_buy(c,one/2); if(c<=starP)cum+=_buy(c,one/2);} else { if(c<=starP)cum+=_buy(c,one);} }
+      else if(t>divs-1){
+        quarter=true; _sell(c,isq(sh/4,sh),0);
+        qOne=Math.min(one,cash/10);   // 쿼터손절 1회금은 기존 1회매수금을 넘지 않는다.
+        qN=0;
+      }
+      if(!quarter&&cash>1e-6&&t<divs){
+        if(sh<=1e-9){cum+=_buy(c,one);}
+        else if(t<divs/2){ if(c<=avg)cum+=_buy(c,one/2); if(c<=starP)cum+=_buy(c,one/2);}
+        else { if(c<=starP)cum+=_buy(c,one); }
+      }
     } else {
       const q0=sh, take=avg*(1+takePct/100), dn=avg*0.9;
       if(hi>=take)_sell(take,q0*0.75,SLIP);
       if(sh>1e-9&&c>=dn)_sell(c,Math.min(sh,q0*0.25),0);
       if(sh<=1e-9){ quarter=false; cum=0; }
-      else if(c<=dn&&cash>1e-6){ _buy(c,Math.min(qOne,cash)); qN++; if(qN>=10){ const ok=c>=dn; _sell(c,isq(sh/4,sh),0); if(ok){quarter=false;cum=(divs-1)*one;} else {qOne=cash/10;qN=0;} } }
+      else if(c<=dn&&cash>1e-6){
+        _buy(c,Math.min(qOne,cash)); qN++;
+        if(qN>=10){
+          // 10번째 매수 뒤 바뀐 평단의 -10%를 기준으로 MOC 복귀 여부를 판정한다.
+          const dnAfter=avg*0.9, ok=c>=dnAfter;
+          _sell(c,isq(sh/4,sh),0);
+          if(ok){quarter=false;cum=(divs-1)*one;}
+          else {qOne=Math.min(one,cash/10);qN=0;}
+        }
+      }
     }
     if(i%10===0)snap.push([d,cash+sh*c]);
   });
@@ -2177,30 +2200,60 @@ function runIM22(days,tkr,cap,divs,targetPct,compound=true){
 function runIM30(days,tkr,cap,divs,targetPct,compound=true){
   const CO=(typeof imCostOn!=='undefined')&&imCostOn, _C=costOf(tkr), FEE=CO?_C.fee:0, SLIP=CO?_C.slip:0;
   const base=targetPct, slope=base*0.1*20/divs, takePct=targetPct, baseOne=cap/divs;
-  let cash=cap,sh=0,avg=0,cum=0,one=baseOne,savedProfit=0,yearPnl=0,cy=null, mp=cap,mdd=0, quarter=false,qExtra=0; const snap=[];
-  const _buy=(px,amt)=>{ if(amt>cash)amt=cash; if(amt<=1e-6)return 0;
-    const q=iq(amt/(1+FEE),px); if(q<=0) return 0;                 // 정수 주수 (증권사 현실)
-    const spend=q*px, fee=spend*FEE; avg=sh<=0?px:(sh*avg+spend)/(sh+q); sh+=q; cash-=spend+fee; return spend+fee; };
+  let cash=cap,sh=0,avg=0,cum=0,one=baseOne,profitCum=0,reserve=0,yearPnl=0,cy=null, mp=cap,mdd=0;
+  let quarter=false,qExtra=0,qEach=0; const snap=[];
+  const _buy=(px,amt)=>{ if(amt>cash)amt=cash; if(amt<=1e-6)return null;
+    const q=iq(amt/(1+FEE),px); if(q<=0) return null;
+    const spend=q*px, fee=spend*FEE; avg=sh<=0?px:(sh*avg+spend)/(sh+q); sh+=q; cash-=spend+fee;
+    return {principal:spend,total:spend+fee};
+  };
   const _sell=(px,q,slip)=>{ if(q<=0)return 0; if(q>sh)q=sh; const eff=px*(1-(slip||0)),g=q*eff,fee=g*FEE; cash+=g-fee; const pnl=q*(eff-avg)-fee; yearPnl+=pnl; sh-=q; return pnl; };
+  // 양(+)의 실현수익만 과거 최고 수익으로 누적한다. 절반은 반복리 효과, 절반은 쿼터모드 대비 보관.
+  const _credit=p=>{ if(p>0){ profitCum+=p; reserve+=p*0.5; } };
   const _settle=(px)=>{ if(!CO){yearPnl=0;return;} cash-=capGainTax(yearPnl, tkr); yearPnl=0;
-    // 잔고 하한: 세금 낼 현금이 모자라면 보유주 매도 → 그래도 모자라면 계좌 소진(0). 음수 자산 방지.
-    const EPS=0.01;   // 부동소수 잔여 음수를 파산으로 오판하지 않도록 ε 적용
+    const EPS=0.01;
     if(cash<-EPS&&sh>1e-9&&px>0){ const q=Math.min(sh,(-cash)/(px*(1-FEE))); if(q>1e-12){ const g=q*px; cash+=g-g*FEE; sh-=q; } }
     if(cash<-EPS){ cash=0; sh=0; avg=0; } else if(cash<0){ cash=0; } };
   days.forEach((d,i)=>{ const [c,o,hi,lo]=M[tkr][d];
     { const y=d.slice(0,4); if(cy===null)cy=y; else if(y!==cy){_settle(c);cy=y;} }
     { const eq=cash+sh*c; if(eq>mp)mp=eq; else if(mp>0){const dd=(mp-eq)/mp; if(dd>mdd)mdd=dd;} }
-    const t=one>0?cum/one:0, sp=base-slope*t, starP=avg*(1+sp/100), take=avg*(1+takePct/100), q0=sh;
+
+    const oneToday=one;
+    const rawT=oneToday>0?cum/oneToday:0;
+    const t=Math.ceil((rawT-1e-12)*10)/10;   // V3.0: 소수점 둘째 자리 올림
+    const sp=base-slope*t, starP=avg*(1+sp/100), take=avg*(1+takePct/100), q0=sh;
+
     if(!quarter){
-      if(sh>1e-9&&avg>0){ if(hi>=take){const p=_sell(take,q0*0.75,SLIP); if(p>0)savedProfit+=p;} if(sh>1e-9&&sp>=0&&c>=starP){const p=_sell(c,Math.min(sh,q0*0.25),0); if(p>0)savedProfit+=p;} }
-      if(sh<=1e-9){ cum=0; one=baseOne+Math.max(0,savedProfit)/40; }
-      else if(t>divs-1){ quarter=true; qExtra=0; const p=_sell(c,isq(sh/4,sh),0); if(p>0)savedProfit+=p; }
-      if(!quarter&&cash>1e-6&&t<divs){ if(sh<=1e-9){cum+=_buy(c,one);} else if(t<divs/2){ if(c<=avg)cum+=_buy(c,one/2); if(c<=starP)cum+=_buy(c,one/2);} else { if(c<=starP)cum+=_buy(c,one);} }
+      if(sh>1e-9&&avg>0){
+        if(hi>=take){const p=_sell(take,q0*0.75,SLIP);_credit(p);}
+        if(sh>1e-9&&c>=starP){const p=_sell(c,Math.min(sh,q0*0.25),0);_credit(p);}
+      }
+      if(sh<=1e-9){ cum=0; }
+      else if(t>divs-1){
+        quarter=true; qExtra=0;
+        const p=_sell(c,isq(sh/4,sh),0); _credit(p);   // 진입일 1/4 MOC, 그날 매수 없음
+        qEach=Math.min(cash,reserve)/5;                 // 보관수익 절반을 5회로 고정 분할
+      }
+      if(!quarter&&cash>1e-6&&t<divs){
+        if(sh<=1e-9){const b=_buy(c,oneToday); if(b)cum+=b.principal;}
+        else if(t<divs/2){
+          if(c<=avg){const b=_buy(c,oneToday/2); if(b)cum+=b.principal;}
+          if(c<=starP){const b=_buy(c,oneToday/2); if(b)cum+=b.principal;}
+        }else if(c<=starP){const b=_buy(c,oneToday); if(b)cum+=b.principal;}
+      }
     } else {
-      if(hi>=take){const p=_sell(take,q0*0.75,SLIP); if(p>0)savedProfit+=p;}
-      if(sh<=1e-9){ quarter=false; cum=0; one=baseOne+Math.max(0,savedProfit)/40; }
-      else if(qExtra<5&&savedProfit>0&&c<=starP){ const amt=Math.min(savedProfit*0.5/5,cash); if(amt>1e-6){_buy(c,amt);savedProfit-=amt;qExtra++;} }
+      if(hi>=take){const p=_sell(take,q0*0.75,SLIP);_credit(p);}
+      if(sh<=1e-9){ quarter=false; cum=0; qExtra=0; qEach=0; }
+      else if(qExtra<5 && reserve>1e-6 && c<=starP){
+        const amt=Math.min(qEach,reserve,cash);
+        const b=_buy(c,amt);
+        if(b){ reserve=Math.max(0,reserve-b.total); qExtra++; }
+      }
+      // 공개 요약들 사이에 '5회 후 쿼터모드 탈출/MOC 반복' 세부 해석이 달라 이 부분은 기존 해석을 유지한다.
     }
+
+    // 수익 발생 즉시 다음 거래일부터 1회매수금에 반영. 손실로는 절대 감소시키지 않는다.
+    one=Math.max(one,baseOne+profitCum/40);
     if(i%10===0)snap.push([d,cash+sh*c]);
   });
   _settle(M[tkr][days[days.length-1]][C]);
