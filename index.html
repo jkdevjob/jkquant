@@ -3326,19 +3326,21 @@ function infSimForward(startFrom){
         }
         const c2=computeInf();
         if(c2.qty<=0) inRev=false;                                   // 전량매도 → 사이클 종료
-        else if(cl > c2.avg*exitMulOf(st.target) && (st.div-c2.T)>=1) inRev=false;  // 가격 회복 → 내일부터 일반
+        else if(cl > c2.avg*exitMulOf(st.target)) inRev=false;  // 가격 회복 → 내일부터 일반. T가 여전히 소진이면 다음날 다시 리버스 1일차로 진입
         st.simLast=d; continue;
       }
 
       // ── 일반모드 ──
-      let liquidated=false;
-      if(c.qty>0 && c.avg>0){
+      // 프리장/본장 전에 오늘 주문을 함께 만든다. 장중 매도가 먼저 체결돼도
+      // 같은 날 LOC 매수의 T·잔금·평단·1회매수금은 하루 시작 상태로 고정한다.
+      const order=c, B=imBuy1(order);
+      if(order.qty>0 && order.avg>0){
         // 익절% (동적 조절이 켜져 있으면 전일 기준 20일 상승률로 상향)
         let eff=st.target;
         if(st.tgtDyn===true){ const a=closeAt(row.i-1), b=closeAt(row.i-1-IM_MOM_LEN);
           if(a>0&&b>0) eff=imTgtOf(st.target,(a/b-1)*100); }
-        const star=c.avg*(1+starPct(st.ticker,st.div,c.T,st.target)/100);
-        const qSell=Math.floor(c.qty/4), qTp=c.qty-qSell, tgt=c.avg*(1+eff/100);
+        const star=order.avg*(1+starPct(st.ticker,st.div,order.T,st.target)/100);
+        const qSell=Math.floor(order.qty/4), qTp=order.qty-qSell, tgt=order.avg*(1+eff/100);
         /* ① 지정가 익절 — 판정은 종가로 한다.
            고가 터치를 체결로 치면 장중에 스치기만 하고 안 팔린 날까지 익절로 세어
            모의가 실제보다 낙관적으로 나온다(SOXL 20/10 한 해에 +8.7%p 차이가 났다).
@@ -3346,19 +3348,17 @@ function infSimForward(startFrom){
         if(cl>=tgt && qTp>0) put('지정가매도',d,(op>tgt?op:tgt),qTp);
         { const c3=computeInf();
           if(cl>=star && qSell>0 && c3.qty>0) put('쿼터매도',d,cl,Math.min(qSell,c3.qty)); }  // ② 별지점 LOC
-        if(computeInf().qty<=0) liquidated=true;   // 전량매도 = 사이클 종료. 새 사이클 첫 매수는 다음 날 (백테 runIM과 같은 규약)
+        // 지정가 전량매도 뒤 종가가 LOC 매수선까지 급락하면, 미리 걸어둔 매수 주문은 살아 있다.
       }
       // ── 매수 ──
-      c=computeInf();
-      const B=imBuy1(c);
-      if(!liquidated && !B.spent && c.bal>1){
-        if(c.qty<=0 || c.avg<=0){                                    // 첫 매수 — 종가×큰수 LOC → 종가 체결
+      if(!B.spent && order.bal>1){
+        if(order.qty<=0 || order.avg<=0){                            // 첫 매수 — 종가×큰수 LOC → 종가 체결
           put('1회매수',d,cl,Math.floor(B.amt/cl));
         }else{
-          const star=c.avg*(1+starPct(st.ticker,st.div,c.T,st.target)/100), buyP=star-0.01;
-          if(c.T<st.div/2){                                          // 전반전: 별지점 절반 + 평단 절반
+          const star=order.avg*(1+starPct(st.ticker,st.div,order.T,st.target)/100), buyP=star-0.01;
+          if(order.T<st.div/2){                                      // 전반전: 별지점 절반 + 평단 절반
             if(cl<=buyP) put('절반매수',d,cl,Math.floor((B.amt/2)/cl));
-            if(cl<=c.avg) put('절반매수',d,cl,Math.floor((B.amt/2)/cl));
+            if(cl<=order.avg) put('절반매수',d,cl,Math.floor((B.amt/2)/cl));
           }else{                                                     // 후반전: 별지점 전액
             if(cl<=buyP) put('1회매수',d,cl,Math.floor(B.amt/cl));
           }
