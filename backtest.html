@@ -1747,7 +1747,7 @@ function runDCA1(tkr,days,totalAmt,costOn){
   const amt=totalAmt/days.length;
   return _dcaOne(tkr,days,amt,1,costOn);
 }
-// 하락 시 배수: 종가 ≤ 자기 200일선이면 그 회차 매수금을 dcaDipMul배로.
+// 하락 시 배수: 전일 확정 종가 ≤ 전일 자기 200일선이면 다음 회차 매수금을 dcaDipMul배로.
 //   기준선은 '해당 ETF 자신의 종가 200일 이동평균' — 사용자가 차트에서 그대로 확인·실행할 수 있는 형태.
 //   워밍업은 로딩된 전체 이력을 사용 (선택 기간 앞 데이터 활용, 룩어헤드 없음)
 function _dcaMA(t,N){
@@ -1766,12 +1766,16 @@ function _dcaOne(t,days,amt,step,costOn,dipMul){
   const FEE=costOn?costOf(t).fee:0;   // 비용반영 시 매회 매수 수수료 (costOn 미지정=기존과 동일)
   const MUL=(dipMul!=null?dipMul:(typeof dcaDipMul!=='undefined'?dcaDipMul:1));
   const MA=MUL>1?_dcaMA(t,200):null;      // 배수 1이면 계산 생략 (기존과 완전 동일)
+  const _ds=Object.keys(D).sort(), _gi={}; _ds.forEach((d,i)=>_gi[d]=i);
   let sh=0,inv=0,uvPeak=-Infinity,mdd=0,nDip=0,nBuy=0;const snap=[],uvSnap=[],cf=[];
   days.forEach((d,i)=>{
     const p=D[d]?.[C]??0;
     if(p>0&&i%step===0){
-      const ma=MA?MA[d]:null;
-      const dip=(ma!=null&&p<=ma);            // 200일선 워밍업 전(null)은 1배
+      // 하락배수 여부는 전일 확정 종가/200일선으로 결정하고 오늘 정기매수 종가에 체결한다.
+      // 오늘 종가로 오늘 배수를 정하면 종가를 미리 아는 룩어헤드가 된다.
+      const gx=_gi[d], pd=gx>0?_ds[gx-1]:null;
+      const pp=pd?(D[pd]?.[C]??0):0, ma=(MA&&pd)?MA[pd]:null;
+      const dip=(ma!=null&&pp<=ma);           // 200일선 워밍업 전(null)은 1배
       const a=dip?amt*MUL:amt;
       const fee=a*FEE;sh+=(a-fee)/p;inv+=a; nBuy++; if(dip)nDip++;
       cf.push([d,a]);                          // 현금흐름(투입 시점·금액) — IRR·평균투입자본용
