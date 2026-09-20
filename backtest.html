@@ -2530,7 +2530,17 @@ function runVR(days,tkr,params){
   } else first=true;
 
   const snap=[], cf=[];
-  let mddPeak=-Infinity, mdd=0;
+  // 적립식의 외부입금이 고점을 밀어 올려 MDD를 축소하지 않도록 단위가치(NAV)로 낙폭을 계산한다.
+  // 인출식은 pool→totalWd 이동이 총회수가치를 바꾸지 않으므로 별도 unit 소각이 필요 없다.
+  let navUnits=Math.max(0,(startPool||0)+(V>0?V:0)), navPeak=-Infinity, mdd=0;
+  const _markNav=c=>{ const wealth=shares*c+pool+totalWd; if(navUnits>0){
+      const nav=wealth/navUnits; if(nav>navPeak)navPeak=nav; else if(navPeak>0){const dd=(navPeak-nav)/navPeak;if(dd>mdd)mdd=dd;}
+    } return wealth; };
+  const _addFlow=(amt,c)=>{ if(!(amt>0))return; const wealth=shares*c+pool+totalWd;
+    const nav=(navUnits>0&&wealth>0)?wealth/navUnits:1;
+    if(navUnits>0){ if(nav>navPeak)navPeak=nav; else if(navPeak>0){const dd=(navPeak-nav)/navPeak;if(dd>mdd)mdd=dd;} }
+    navUnits+=amt/Math.max(nav,1e-12);
+  };
   // V와 밴드는 2주(10거래일)마다 갱신하지만, 그 2주치 LOC 주문은 매 거래일 체결 가능하다.
   let cycleUp=null, cycleLo=null, buyBudget=0;
 
@@ -2541,12 +2551,12 @@ function runVR(days,tkr,params){
     if(i%interval===0){
       if(first){
         if(isLump){
-          const s=initAmt||10000; inv+=s; cf.push([d,s]);
+          const s=initAmt||10000; _addFlow(s,c); inv+=s; cf.push([d,s]);
           const spent=_vbuy(s,c);
           pool+=Math.max(0,s-spent);            // 정수주 내림 잔액 보존
           V=shares*c;
         }else{
-          pool+=contrib; inv+=contrib; cf.push([d,contrib]);
+          _addFlow(contrib,c); pool+=contrib; inv+=contrib; cf.push([d,contrib]);
           const spent=_vbuy(pool,c);
           pool-=spent;                          // 주문예산이 아니라 실제 체결액만 차감
           V=shares*c;
@@ -2556,8 +2566,7 @@ function runVR(days,tkr,params){
         rebal++;
         cycleUp=V*(1+band); cycleLo=V*(1-band);
         buyBudget=Math.max(0,pool*poolLimit);
-        const eq=shares*c+pool+totalWd;
-        if(eq>mddPeak)mddPeak=eq; else if(mddPeak>0){const dd=Math.min((mddPeak-eq)/mddPeak,1);if(dd>mdd)mdd=dd;}
+        const eq=_markNav(c);
         snap.push([d,eq]);
         return;
       }
@@ -2568,7 +2577,7 @@ function runVR(days,tkr,params){
       else V=V+pool/G+addCycle;
       V=Math.max(V,0);
 
-      if(isAccum){pool+=contrib;inv+=contrib;cf.push([d,contrib]);}
+      if(isAccum){_addFlow(contrib,c);pool+=contrib;inv+=contrib;cf.push([d,contrib]);}
       else if(isWd){const wd=Math.min(withdraw,pool);pool-=wd;totalWd+=wd;}
 
       cycleUp=V*(1+band); cycleLo=V*(1-band);
@@ -2590,15 +2599,14 @@ function runVR(days,tkr,params){
     }
 
     // 거래·수수료까지 반영한 일말 평가액으로 MDD 계산
-    const eq=shares*c+pool+totalWd;
-    if(eq>mddPeak)mddPeak=eq; else if(mddPeak>0){const dd=Math.min((mddPeak-eq)/mddPeak,1);if(dd>mdd)mdd=dd;}
+    const eq=_markNav(c);
     if(i%interval===0||i===days.length-1)snap.push([d,eq]);
   });
 
   const lc=M[tkr][days[days.length-1]][C];
   _settle(lc);
   const fin=shares*lc+pool+totalWd;
-  if(fin>mddPeak)mddPeak=fin; else if(mddPeak>0){const dd=Math.min((mddPeak-fin)/mddPeak,1);if(dd>mdd)mdd=dd;}
+  _markNav(lc);
   const calYrs=(new Date(days[days.length-1])-new Date(days[0]))/(365.25*864e5);
   return {invested:inv,final:fin,pool,shares,sharesVal:shares*lc,rebal,buys,sells,totalWd,
     ret:inv>0?(fin/inv-1)*100:0,yrs:Math.max(calYrs,0.1),snap,cf,tkr,mdd:mdd*100,fees:feesTotal,tax:taxTotal};
