@@ -755,14 +755,14 @@ document.addEventListener('click',function(e){ var m=document.getElementById('jk
         <table class="cmp"><tr><th>분할</th><th>TQQQ</th><th>SOXL</th></tr><tr><td>20분할</td><td>15−1.5T</td><td>20−2T</td></tr><tr><td>40분할</td><td>15−0.75T</td><td>20−T</td></tr></table></div>
       <div class="card"><h3><span class="dot"></span>매수 / 매도</h3>
         <ul class="clean"><li><b>전반전</b> 1회매수금 절반은 별지점-0.01$, 절반은 평단에 LOC매수</li><li><b>후반전</b> 전액 별지점-0.01$에 LOC매수</li><li><b>쿼터매도</b> 보유÷4(내림) 별지점 LOC매도</li><li><b>지정가매도</b> 나머지 전부 평단×익절배율</li></ul></div>
-      <div class="card tgtdyn-hidden"><h3><span class="dot"></span>익절 조절 <span style="font-size:11px;color:var(--faint);font-weight:500">· 설정에서 켬/끔 (기본 끔)</span></h3>
+      <div class="card tgtdyn-hidden"><h3><span class="dot"></span>익절 조절 <span style="font-size:11px;color:var(--faint);font-weight:500">· 설정에서 켬/끔 (기본 켬 · V4.0 오피셜)</span></h3>
         <p class="lead">직전 <b>20거래일 상승률 &gt; +8%</b>면 그날 익절% = <b>min(기본×2, 30%)</b>. 하락 시엔 조절하지 않고, <b>매수 규칙은 그대로</b>입니다 — 익절가 하나만 바뀝니다.</p>
         <ul class="clean"><li><b>근거</b> 익절 체결의 83~85%가 상승 국면에서 일어남 — 추세가 살아있을 때만 더 들고 간다</li>
         <li><b>백테</b> 튜닝에 안 쓴 종목 포함 TQQQ +9~16% · TECL +11% · USD +5% · KORU 2010~ +9%</li>
         <li><b>대가</b> 사이클이 절반 가까이 줄어 MDD가 나빠지는 구간 있음 (TECL 2010~ 31%→62%) · SOXL 전체는 −0.6%</li>
         <li><b>한계</b> 전반전에서만 실효 — 후반전엔 익절가가 평단보다 위라 어차피 닿지 않음</li></ul>
         <p class="note">하락 시 익절을 <b>낮추는</b> 변형은 20개 조합 전부 실패했습니다(손상이 단조 증가). 올릴 때만 조절하는 비대칭이 핵심입니다.</p></div>
-      <div class="card" style="border-color:var(--sell-dim)"><h3><span class="dot" style="background:var(--sell)"></span>리버스모드 <span style="font-size:11px;color:var(--faint);font-weight:500">· 설정에서 켬/끔 (기본 끔)</span></h3>
+      <div class="card" style="border-color:var(--sell-dim)"><h3><span class="dot" style="background:var(--sell)"></span>리버스모드 <span style="font-size:11px;color:var(--faint);font-weight:500">· 설정에서 켬/끔 (기본 켬 · V4.0 오피셜)</span></h3>
         <p class="lead">원금 소진 시(20분할 T&gt;19 · 40분할 T&gt;39) 진입. 별지점=직전 5거래일 종가 평균. <b>기본은 끔</b> — 소진 후엔 후반전 별지점 손절 쿼터매도로만 방어(홀드).</p>
         <ul class="clean"><li>첫날 무조건매도 — 20분할 보유÷10 / 40분할 보유÷20 (내림) MOC, 매수 없음</li><li>이후 매도 직전보유÷10(÷20) 별지점 위 / 매수 잔금÷4 별지점 아래</li><li>T갱신 — 20분할 매도 T×0.9·매수 T+(20−T)×0.25 / 40분할 매도 T×0.95·매수 T+(40−T)×0.25</li><li>복귀 TQQQ 종가&gt;평단×0.85 · SOXL&gt;평단×0.80</li></ul></div>
       <div class="card"><h3><span class="dot"></span>원금 소진 기준</h3>
@@ -1636,8 +1636,8 @@ document.addEventListener('click',function(e){ var m=document.getElementById('jk
     <div class="seclabel">익절금 처리 <span class="hint" style="color:var(--faint);font-weight:500">사이클이 끝났을 때</span></div>
     <div class="seg" id="set_compound"><button data-v="1" class="on">복리</button><button data-v="0">단리</button></div>
     <p class="note" style="margin:4px 0 8px"><b>복리</b>는 익절금을 잔금에 남겨 다음 회차 매수금이 커집니다. <b>단리</b>는 사이클이 끝날 때 <b>원금을 넘는 초과분만 빼내</b> 따로 쌓아 두고, 잔금은 원금으로 되돌립니다. 손실로 끝난 사이클은 빼지 않고 그대로 이월합니다.</p>
-    <div class="seclabel">리버스 <span class="hint" style="color:var(--faint);font-weight:500">원금 소진 후 무한매도 · V4.0</span></div><div class="seg" id="set_reverse"><button data-v="0" class="on">끔</button><button data-v="1">켬</button></div>
-    <p class="note" style="margin:-2px 0 8px">끔(기본): 원금 소진 후 <b>후반전 별지점 손절 쿼터매도</b>로만 방어(홀드). 켬: 소진 후 <b>리버스 무한매도</b> 모드 진입. 백테스트상 20분할·급락 후 V반등에서는 끔이 유리했습니다.</p>
+    <div class="seclabel">리버스 <span class="hint" style="color:var(--faint);font-weight:500">원금 소진 후 무한매도 · V4.0</span></div><div class="seg" id="set_reverse"><button data-v="0">끔</button><button data-v="1" class="on">켬</button></div>
+    <p class="note" style="margin:-2px 0 8px"><b>켬(기본·V4.0 오피셜)</b>: 원금 소진 후 리버스 무한매도+쿼터매수. <b>끔</b>은 공식 V4.0이 아닌 사용자 변형이며, 후반전 별지점 쿼터매도로만 방어합니다. 과거 백테스트 성과가 더 좋아도 오피셜 규칙과 구분해서 비교합니다.</p>
     <!-- 익절 조절 숨김 — SOXL 전체 −0.6% 열위, MDD가 나빠지는 구간(TECL 31%→62%),
          후반전엔 어차피 무효. 코드는 남기고 UI만 감춘다. 복원 시 tgtdyn-hidden 제거 -->
     <div class="seclabel tgtdyn-hidden">익절 조절 <span class="hint" style="color:var(--faint);font-weight:500">20일 상승률 · 선택</span></div><div class="seg tgtdyn-hidden" id="set_tgtdyn"><button data-v="0" class="on">끔</button><button data-v="1">상승률</button></div>
@@ -2061,7 +2061,7 @@ const won=v=>Math.round((+v||0)*((typeof liveFX!=='undefined'&&liveFX)?liveFX:FX
 const LS='qcockpit_v2', LS_URL='qcockpit_gsheet';
 let S=null;
 
-function defInfSettings(){return{ticker:'SOXL',div:20,target:20,big:20,rowsOn:false,rows:8,gap:2.5,rowqty:1,principal:10000,divmode:'reinv',engine:'v40',shortMA:30,loPct:6,tgtDyn:false}}
+function defInfSettings(){return{ticker:'SOXL',div:20,target:20,big:20,rowsOn:false,rows:8,gap:2.5,rowqty:1,principal:10000,divmode:'reinv',engine:'v40',shortMA:30,loPct:6,tgtDyn:false,reverse:true}}
 // V5.0 숨김 기간: 저장된 세션이 v50이어도 v40으로 강제 (UI가 없어 되돌릴 수 없으므로)
 // 복원 시 이 함수와 load() 안의 호출만 제거하면 된다.
 function forceV40(){
@@ -2273,8 +2273,8 @@ function computeInf(){
   });
   // 리버스 표시 여부: 이미 리버스 거래로 진행 중이거나(state), 아직 리버스 거래는 없지만 원금이 소진된 경우.
   // 소진 기준(라오어 공지) = '1회 매수가 불가능해지는 시점' = 잔금 < 잔금/(분할−T) ⟺ T > 분할−1.
-  // 리버스 OFF(기본): 원금 소진 후에도 리버스모드로 넘어가지 않고 일반모드(후반전 별지점 손절 쿼터매도)로 방어.
-  const reverseActive = (st.reverse===true) && (inReverseNow || (st.div-T<1)) && qty>0;   // 소진 = T>분할−1
+  // 리버스 OFF(사용자 변형): 원금 소진 후에도 리버스모드로 넘어가지 않고 일반모드(후반전 별지점 손절 쿼터매도)로 방어.
+  const reverseActive = (st.reverse!==false) && (inReverseNow || (st.div-T<1)) && qty>0;   // 소진 = T>분할−1
   // 가용 잔금 = 원금 + 실현손익 − 보유분 투입원가 − 출금 − 단리 인출 + 단리 보충
   const bal=st.principal+realized-inv-withdrawn-saved+added;
   return {avg,qty,inv,realized,T,totbuy,totsell,bal,rows,st,cycleSeq,reverseTraded,inReverseNow,reverseActive,
@@ -2421,7 +2421,7 @@ function renderInfNow(){
   $('d_star').textContent=c.avg>0?wn(star):'—';
   $('d_buy1').textContent=B1.spent?`소진 (T>${st.div-1})`:wn(buy1);
   // '소진'은 잔금 0이 아니라 1회 매수가 불가능해졌다는 뜻 — 잔금이 남아도 1회분에 못 미치면 못 산다.
-  $('d_todo').textContent=B1.spent?(`원금 소진 (T=${fmtT(c.T)} > ${st.div-1}). 잔금 ${wn(c.bal)}이 1회분에 못 미쳐 다음 사이클까지 대기. `+(st.reverse===true?'리버스모드 진입 대상입니다.':'매수 없이 후반전 별지점 쿼터매도로만 방어합니다.')):
+  $('d_todo').textContent=B1.spent?(`원금 소진 (T=${fmtT(c.T)} > ${st.div-1}). 잔금 ${wn(c.bal)}이 1회분에 못 미쳐 다음 사이클까지 대기. `+(st.reverse!==false?'리버스모드 진입 대상입니다.':'매수 없이 후반전 별지점 쿼터매도로만 방어합니다.')):
     `${tickerLabel(st.ticker)} ${st.div}분할 · T=${fmtT(c.T)} · ${half?'전반전':'후반전'}. 주문표 탭에서 전일 종가를 넣어 LOC 주문을 확인하세요.`;
 }
 
@@ -2552,7 +2552,7 @@ function renderOrder(){
       +(B1.slot>0 ? `1회분 ${wn(c.bal/B1.slot)}이 잔금 <b>${wn(c.bal)}</b>을 넘어 매수할 수 없습니다. `
                   : `${st.div}회차를 모두 썼습니다. `)
       +`잔금 <b>${wn(c.bal)}</b>은 다음 사이클까지 대기합니다. `
-      +`${st.reverse===true?'리버스모드 진입 대상입니다.':'아래 <b>쿼터매도</b>로만 방어합니다 (리버스 꺼짐).'}</div>`;
+      +`${st.reverse!==false?'리버스모드 진입 대상입니다.':'아래 <b>쿼터매도</b>로만 방어합니다 (리버스 꺼짐).'}</div>`;
   }else if(c.avg<=0){
     // 첫 매수: 1회매수금 전액을 종가×큰수에 LOC매수
     // 수량은 예상 체결가(≈전일종가) 기준. LOC는 종가에 체결되므로 큰수가로 나누면 ~큰수%만큼 과소매수됨.
@@ -3304,7 +3304,7 @@ function infSimForward(startFrom){
     for(const row of first){
       const cl=row.close, hi=row.high, d=row.date, op=(row.open>0?row.open:0);
       let c=computeInf();
-      const revOn=(st.reverse===true);
+      const revOn=(st.reverse!==false);
       if(revOn && !inRev && (st.div-c.T)<1 && c.qty>0) inRev=true;   // 원금 소진 → 리버스 진입
 
       if(revOn && inRev && c.qty>0 && c.avg>0){
@@ -7207,7 +7207,7 @@ function sheetInfHTML(today){
   // 추천이 '매수 없음'이면 기록할 거래가 없으므로 '이대로 기록' 버튼을 내린다 (유효한 거래종류가 아님).
   h+=`<div class="reco"><div class="rl"><div class="rt">📌 오늘의 추천</div><div class="rmain">${recoKind}</div><div class="rsub">${recoLine}${recoQty>0?' · 아래에서 직접 선택 · T값 자동 계산':' · 필요하면 아래에서 직접 선택'}</div></div>`
     +(recoQty>0?`<button class="rgo" onclick="sheetPickInf('${recoKind}',${recoPrice||0},${recoQty})">이대로 기록</button>`:'')+`</div>`;
-  const reverse = (st.reverse===true) && c.T>st.div-1 && c.qty>0;
+  const reverse = (st.reverse!==false) && c.T>st.div-1 && c.qty>0;
   if(reverse){
     const sellDiv=st.div>=40?20:10;
     h+=`<div class="sheetseclbl" style="color:var(--sell)">리버스모드 (원금 소진 · T>${st.div-1})</div>`;
@@ -7882,7 +7882,7 @@ function openSettings(){
   }else if(S.activeTab==='inf'){
     $('set_inf').style.display='';$('set_vr').style.display='none';
     const st=s.settings, sym=isKrwSt(st)?'₩':'$';
-    $('set_ticker_in').value=st.ticker||'SOXL';segSet('set_div',String(st.div));segSet('set_infdivmode',st.divmode||'reinv');segSet('set_engine',st.engine||'v40');segSet('set_shortma',String(st.shortMA||30));segSet('set_lopct',String(st.loPct||6));segSet('set_reverse',st.reverse===true?'1':'0');segSet('set_compound',st.compound===false?'0':'1');segSet('set_tgtdyn',st.tgtDyn===true?'1':'0');syncShortMaUI(st.engine||'v40');syncTgtNote();
+    $('set_ticker_in').value=st.ticker||'SOXL';segSet('set_div',String(st.div));segSet('set_infdivmode',st.divmode||'reinv');segSet('set_engine',st.engine||'v40');segSet('set_shortma',String(st.shortMA||30));segSet('set_lopct',String(st.loPct||6));segSet('set_reverse',st.reverse===false?'0':'1');segSet('set_compound',st.compound===false?'0':'1');segSet('set_tgtdyn',st.tgtDyn===true?'1':'0');syncShortMaUI(st.engine||'v40');syncTgtNote();
     $('set_target').value=st.target;$('set_big').value=st.big;$('set_principal').value=nfix(st.principal,0);
     if($('set_rows'))$('set_rows').value=st.rows!=null?st.rows:8;
     if($('set_gap'))$('set_gap').value=st.gap!=null?st.gap:2.5;
