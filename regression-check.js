@@ -308,6 +308,40 @@ console.log('[4b-3] V4.0 오피셜 기본값');
      && /segSet\('set_reverse',st\.reverse===false\?'0':'1'\)/.test(idx));
 }
 
+/* ════ 4b-4. 다른 전략 룩어헤드·MDD 현금흐름 중립 ════ */
+console.log('[4b-4] DCA·표준편차·ASAP·VR 신호시점/MDD');
+{
+  const dca=extractFn(bt,'function _dcaOne(t,days,amt,step,costOn,dipMul)');
+  const std=extractFn(bt,'function runStdev(days,tkr,cap,N,g,filter,costOn)');
+  const asap=extractFn(bt,'function runASAP(days,tkr,opt)');
+  const vr=extractFn(bt,'function runVR(days,tkr,params)');
+
+  ok('DCA 하락배수는 전일 종가/200일선 신호',
+     /const gx=_gi\[d\], pd=gx>0\?_ds\[gx-1\]:null/.test(dca)
+     && /const dip=\(ma!=null&&pp<=ma\)/.test(dca)
+     && !/const dip=\(ma!=null&&p<=ma\)/.test(dca));
+
+  ok('표준편차는 전일 σ밴드 신호로 다음날 체결',
+     /const sg=gx-1, lv=sg>=0\?lvOf\(sg\):null/.test(std)
+     && /ma200\[sg\]/.test(std));
+
+  ok('ASAP은 전일 확정 RSI·이평 신호',
+     /const sig=g-1, prev=sig-1/.test(asap)
+     && /RSI\[sig\]/.test(asap)
+     && /sigClose<=m200\*0\.85/.test(asap));
+
+  ok('ASAP 적립식 MDD는 단위가치 NAV',
+     /let units=lump\?o\.startCash:0, navPeak=-Infinity, mdd=0/.test(asap)
+     && /flowToday\/Math\.max\(issueNav/.test(asap)
+     && /markNav\(eq\/units\)/.test(asap));
+
+  ok('VR 적립금 유입은 MDD 단위가치에서 unit 발행 처리',
+     /let navUnits=Math\.max/.test(vr)
+     && /const _addFlow=/.test(vr)
+     && /_addFlow\(contrib,c\)/.test(vr)
+     && /_markNav\(c\)/.test(vr));
+}
+
 /* ════ 4c. 섀넌 차분 (runIVS 거래로그 → ivsPos 재생) ════
    백테가 만든 리밸런싱을 운영 장부에 그대로 먹였을 때 수량·예수금이 같아야 한다.
    백테에만 있는 '예수금 쪽 비용'(국채 매매 수수료·보수·이자)은 거래 기록 밖의 현금 비용이라
