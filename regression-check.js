@@ -1391,12 +1391,13 @@ console.log('[31] 짧은 기간 — 막지 말고 알리기');
 
 console.log('[32] 전반전 매수 — 주문별 정수 내림 (모의 == 백테)');
 {
-  // 별지점·평단은 별개의 주문 2건이다. 합산해서 한 번만 내림하면 실제로는 못 사는
+  // 별지점·평단은 별개의 주문 2건이다. 주문가는 장 시작 전 평단(orderAvg)으로 고정한다.
+  // 합산해서 한 번만 내림하면 실제로는 못 사는
   // 주식을 산 걸로 쳐서 백테만 낙관적으로 나온다 (1회 $500·주가 $65: 7주 vs 3+3=6주).
   // 이 한 줄 때문에 모의 38.62% / 백테 38.89%로 갈렸다.
   const im=extractFn(bt,'function runIM(days,tkr,cap,divs,targetPct,compound');
   ok('백테: 별지점 주문을 따로 내림', /if\(c<=buyP\)\{ if\(_buy\(c,half\)>0\) T\+=0\.5; \}/.test(im));
-  ok('백테: 평단 주문을 따로 내림',   /if\(c<=avg\) \{ if\(_buy\(c,half\)>0\) T\+=0\.5; \}/.test(im));
+  ok('백테: 평단 주문을 따로 내림',   /if\(c<=orderAvg\) \{ if\(_buy\(c,half\)>0\) T\+=0\.5; \}/.test(im));
   ok('백테: 합산 후 일괄 내림이 안 남아 있다', !/if\(sp>0\)\{ if\(_buy\(c,sp\)>0\) T\+=ti; \}/.test(bt));
   // runIM50도 같은 규약이어야 한다 — 예전에 여기만 빠뜨려서 V5.0==V4.0 항등이 깨졌었다
   const n=(bt.match(/if\(c<=buyP\)\{ if\(_buy\(c,half\)>0\) T\+=0\.5; \}/g)||[]).length;
