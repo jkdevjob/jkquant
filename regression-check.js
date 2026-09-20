@@ -577,6 +577,9 @@ console.log('[11] 무매 계산 공유');
   ok('매수 주문가 = 별지점 − 0.01', /star-0\.01|star\s*-\s*0\.01/.test(ord));
   let sim=''; try{ sim=extractFn(idx,'function infSimForward(startFrom)'); }catch(e){}
   ok('모의 체결도 별지점 − 0.01', /star-0\.01|star\s*-\s*0\.01/.test(sim));
+  let csp=''; try{ csp=extractFn(idx,'function calcStarPoint(c)'); }catch(e){}
+  ok('리버스 주문표 5일 평균은 확정봉만 사용',
+     /settledBars\(_Q5\.days,curOf\(st\)\)\.slice\(-5\)/.test(csp), csp?'':'calcStarPoint 없음');
   ok('모의 V4 주문 기준은 하루 시작 상태로 고정', /const order=c, B=imBuy1\(order\)/.test(sim)
      && /starPct\(st\.ticker,st\.div,order\.T,st\.target\)/.test(sim));
   ok('모의 지정가 전량매도 뒤 같은 날 LOC 재매수를 막지 않는다',
@@ -864,6 +867,9 @@ console.log('[19] 출금 · 복리/단리');
   ok('백테도 원금으로 맞춘다',
      (bt.match(/else if\(cash<cap\)\{ addedCash\+=cap-cash; cash=cap; \}/g)||[]).length===4);
   ok('백테는 넣은 돈을 총자산에서 뺀다', /\+savedProfit-addedCash;/.test(bt));
+  ok('단리 안내가 고정원금·외부입금 규약을 숨기지 않는다',
+     /단리=매 사이클 원금 고정\(초과익 인출·부족분 외부입금/.test(bt)
+     && /원금보다 부족하면 그 차액을 <b>외부입금<\/b>으로 보충/.test(idx));
   ok('단리 판정은 compound===false', /const simple=\(st\.compound===false\)/.test(ci));
   ok('출금·단리인출·단리보충을 밖으로 낸다', /withdrawn,saved,added,flows,simple,outside:withdrawn\+saved/.test(ci));
   // 출금이 매매로 잡히면 사이클 종료·T가 오염된다
