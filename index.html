@@ -755,7 +755,7 @@ document.addEventListener('click',function(e){ var m=document.getElementById('jk
         <table class="cmp"><tr><th>분할</th><th>TQQQ</th><th>SOXL</th></tr><tr><td>20분할</td><td>15−1.5T</td><td>20−2T</td></tr><tr><td>40분할</td><td>15−0.75T</td><td>20−T</td></tr></table></div>
       <div class="card"><h3><span class="dot"></span>매수 / 매도</h3>
         <ul class="clean"><li><b>전반전</b> 1회매수금 절반은 별지점-0.01$, 절반은 평단에 LOC매수</li><li><b>후반전</b> 전액 별지점-0.01$에 LOC매수</li><li><b>쿼터매도</b> 보유÷4(내림) 별지점 LOC매도</li><li><b>지정가매도</b> 나머지 전부 평단×익절배율</li></ul></div>
-      <div class="card tgtdyn-hidden"><h3><span class="dot"></span>익절 조절 <span style="font-size:11px;color:var(--faint);font-weight:500">· 설정에서 켬/끔 (기본 켬 · V4.0 오피셜)</span></h3>
+      <div class="card tgtdyn-hidden"><h3><span class="dot"></span>익절 조절 <span style="font-size:11px;color:var(--faint);font-weight:500">· 설정에서 켬/끔 (기본 끔 · JK 확장)</span></h3>
         <p class="lead">직전 <b>20거래일 상승률 &gt; +8%</b>면 그날 익절% = <b>min(기본×2, 30%)</b>. 하락 시엔 조절하지 않고, <b>매수 규칙은 그대로</b>입니다 — 익절가 하나만 바뀝니다.</p>
         <ul class="clean"><li><b>근거</b> 익절 체결의 83~85%가 상승 국면에서 일어남 — 추세가 살아있을 때만 더 들고 간다</li>
         <li><b>백테</b> 튜닝에 안 쓴 종목 포함 TQQQ +9~16% · TECL +11% · USD +5% · KORU 2010~ +9%</li>
@@ -763,7 +763,7 @@ document.addEventListener('click',function(e){ var m=document.getElementById('jk
         <li><b>한계</b> 전반전에서만 실효 — 후반전엔 익절가가 평단보다 위라 어차피 닿지 않음</li></ul>
         <p class="note">하락 시 익절을 <b>낮추는</b> 변형은 20개 조합 전부 실패했습니다(손상이 단조 증가). 올릴 때만 조절하는 비대칭이 핵심입니다.</p></div>
       <div class="card" style="border-color:var(--sell-dim)"><h3><span class="dot" style="background:var(--sell)"></span>리버스모드 <span style="font-size:11px;color:var(--faint);font-weight:500">· 설정에서 켬/끔 (기본 켬 · V4.0 오피셜)</span></h3>
-        <p class="lead">원금 소진 시(20분할 T&gt;19 · 40분할 T&gt;39) 진입. 별지점=직전 5거래일 종가 평균. <b>기본은 끔</b> — 소진 후엔 후반전 별지점 손절 쿼터매도로만 방어(홀드).</p>
+        <p class="lead">원금 소진 시(20분할 T&gt;19 · 40분할 T&gt;39) 진입. 별지점=직전 5거래일 종가 평균. <b>기본은 켬(V4.0 오피셜)</b>이며, 끔은 사용자 변형 비교용입니다.</p>
         <ul class="clean"><li>첫날 무조건매도 — 20분할 보유÷10 / 40분할 보유÷20 (내림) MOC, 매수 없음</li><li>이후 매도 직전보유÷10(÷20) 별지점 위 / 매수 잔금÷4 별지점 아래</li><li>T갱신 — 20분할 매도 T×0.9·매수 T+(20−T)×0.25 / 40분할 매도 T×0.95·매수 T+(40−T)×0.25</li><li>복귀 TQQQ 종가&gt;평단×0.85 · SOXL&gt;평단×0.80</li></ul></div>
       <div class="card"><h3><span class="dot"></span>원금 소진 기준</h3>
         <ul class="clean"><li><b>일반모드</b> — <b>1회 매수가 불가능</b>해지는 시점. 1회분 = 잔금÷(분할−T)이므로 남은 회차가 1회 미만(<b>T &gt; 분할−1</b>)이면 1회분이 잔금을 넘어 매수 불가. 잔금이 남아 있어도 부분 매수는 하지 않습니다.</li>
