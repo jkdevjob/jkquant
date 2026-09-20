@@ -2027,6 +2027,8 @@ function runIM(days,tkr,cap,divs,targetPct,compound=true){
     const [c,o,hi,lo]=M[tkr][d];
     { const _y=d.slice(0,4); if(curYear===null) curYear=_y; else if(_y!==curYear){ _settleTax(c); curYear=_y; } }
     { const eq=cash+shares*c+savedProfit-addedCash; if(eq>mddPeak)mddPeak=eq; else { const dd=Math.min((mddPeak-eq)/mddPeak,1); if(dd>mdd)mdd=dd; } }
+    // 리버스 별지점은 '직전 5거래일 종가 평균'. 오늘 종가를 넣기 전에 계산해야 미래정보가 섞이지 않는다.
+    const reverseStarPrev=closeHist.length ? closeHist.reduce((s,x)=>s+x,0)/closeHist.length : null;
     closeHist.push(c); if(closeHist.length>5) closeHist.shift();
 
     // 리버스 진입: 원금 소진 = '1회 매수가 불가능해지는 시점'(라오어 공지).
@@ -2044,7 +2046,7 @@ function runIM(days,tkr,cap,divs,targetPct,compound=true){
         if(sellQty>0){ _sell(c,sellQty,0); T=divs>=40?T*0.95:T*0.9; }   // MOC=종가
         reverseDay1=false;
       }else{
-        const star5=closeHist.reduce((s,x)=>s+x,0)/closeHist.length;
+        const star5=reverseStarPrev;
         // 매도: 종가>=별지점 → 직전 보유÷10(or÷20)
         if(c>=star5){
           const sellQty=Math.floor(shares/sellDiv);
@@ -2326,6 +2328,8 @@ function runIM50(days,tkr,cap,divs,targetPct,compound=true){
     const [c,o,hi,lo]=M[tkr][d];
     { const _y=d.slice(0,4); if(curYear===null) curYear=_y; else if(_y!==curYear){ _settleTax(c); curYear=_y; } }
     { const eq=cash+shares*c+savedProfit-addedCash; if(eq>mddPeak)mddPeak=eq; else { const dd=Math.min((mddPeak-eq)/mddPeak,1); if(dd>mdd)mdd=dd; } }
+    // 리버스 별지점은 '직전 5거래일 종가 평균'. 오늘 종가를 넣기 전에 계산해야 미래정보가 섞이지 않는다.
+    const reverseStarPrev=closeHist.length ? closeHist.reduce((s,x)=>s+x,0)/closeHist.length : null;
     closeHist.push(c); if(closeHist.length>5) closeHist.shift();
     const gr=!!GM.ready[d];
     const g =!!GM.gate[d];
@@ -2338,7 +2342,7 @@ function runIM50(days,tkr,cap,divs,targetPct,compound=true){
         if(sellQty>0){ _sell(c,sellQty,0); T=divs>=40?T*0.95:T*0.9; }   // MOC=종가
         reverseDay1=false;
       }else{
-        const star5=closeHist.reduce((s,x)=>s+x,0)/closeHist.length;
+        const star5=reverseStarPrev;
         if(c>=star5 && (!gr || !g)){
           const sellQty=Math.floor(shares/sellDiv);
           if(sellQty>0){ _sell(c,sellQty,0); T=divs>=40?T*0.95:T*0.9; }   // LOC=종가
