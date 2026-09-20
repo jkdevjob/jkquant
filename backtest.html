@@ -390,9 +390,9 @@ document.addEventListener('click',function(e){ var m=document.getElementById('jk
     <div class="ctrl s-dca"><label>하락 시 배수 <span style="font-size:9px;color:var(--dim)">200일선 아래</span></label>
       <div class="seg" id="dcaDip" style="align-self:flex-start">
         <button data-m="1" class="active" title="배수 없음 — 순수 정액 적립">1배</button>
-        <button data-m="1.5" title="종가가 자기 200일선 아래인 회차만 1.5배 매수">1.5배</button>
-        <button data-m="2" title="종가가 자기 200일선 아래인 회차만 2배 매수 — 32~40년 검증상 효율 +7~12% (총투입 30~40% 증가)">2배</button>
-        <button data-m="3" title="종가가 자기 200일선 아래인 회차만 3배 매수 — 자금 부담 큼">3배</button>
+        <button data-m="1.5" title="전일 확정 종가가 자기 200일선 아래면 다음 정기매수를 1.5배">1.5배</button>
+        <button data-m="2" title="전일 확정 종가가 자기 200일선 아래면 다음 정기매수를 2배 — 룩어헤드 없이 다음 거래일 체결">2배</button>
+        <button data-m="3" title="전일 확정 종가가 자기 200일선 아래면 다음 정기매수를 3배 — 자금 부담 큼">3배</button>
       </div>
     </div>
     <div class="ctrl s-dca"><label>분배금 <span style="font-size:9px;color:var(--dim)">배당·분배 처리</span></label>
@@ -648,7 +648,7 @@ document.addEventListener('click',function(e){ var m=document.getElementById('jk
     </div>
     <div class="ctrl s-std hide"><label>200일선 필터 <span style="font-size:9px;color:var(--dim)">하락장 대응</span></label>
       <div class="seg" id="stdFilter">
-        <button data-f="none" class="active" title="필터 없음(기본) — 밴드 그대로 매매">없음</button>
+        <button data-f="none" class="active" title="필터 없음(기본) — 전일 확정 σ밴드 신호로 다음 거래일 리밸런싱">없음</button>
         <button data-f="nobuy" title="200일선 아래선 추가매수 금지(물타기 차단) — MDD↓">물타기금지</button>
         <button data-f="exit" title="200일선 아래선 전량 현금 — 과방어(수익↓)">현금이탈</button>
       </div>
@@ -3255,7 +3255,7 @@ function renderASAP(results, days, opt){
   h+=`</tbody></table></div>`;
   // 연도별 총자산 비교 (공용 카드)
   h+=yearCompareCard(rows.map(r=>({label:r.ticker,tkr:r.ticker,snap:r.snap,color:r.color})), money);
-  h+=`<p class="note" style="font-size:11px;color:var(--dim);margin-top:10px;line-height:1.7">하락장: SGOV 매일 ${money(o.base||10)} 적립 · −10%&amp;RSI≤35→${money(o.mid||50)} · −15%&amp;RSI≤30→${money(o.deep||100)} 딥매수. 상승 3단 재진입. 200일선은 <b>종목 자체 종가</b> 기준. 총투입은 매일 적립+딥·재진입의 누적 결과라 종목마다 다름. 전 종목 미국상장 USD · <b>${o.costOn?'세후':'세전'}</b>(${o.costOn?'매수 수수료 0.25% 반영 · 스톡 미매도로 양도세 이연':'세금·수수료 미반영'}).</p></div>`;
+  h+=`<p class="note" style="font-size:11px;color:var(--dim);margin-top:10px;line-height:1.7"><b>신호는 전일 확정 종가·RSI·이평, 체결은 다음 거래일 종가</b> · 하락장: SGOV 매일 ${money(o.base||10)} 적립 · −10%&amp;RSI≤35→${money(o.mid||50)} · −15%&amp;RSI≤30→${money(o.deep||100)} 딥매수. 상승 3단 재진입. 200일선은 <b>종목 자체 종가</b> 기준. 총투입은 매일 적립+딥·재진입의 누적 결과라 종목마다 다름. 전 종목 미국상장 USD · <b>${o.costOn?'세후':'세전'}</b>(${o.costOn?'매수 수수료 0.25% 반영 · 스톡 미매도로 양도세 이연':'세금·수수료 미반영'}).</p></div>`;
   document.getElementById('asapResult').innerHTML=h;
   cmpDrawChart(rows.map(r=>({name:r.ticker,snap:r.snap,color:r.color})),days,rows[0]?rows[0].ticker:'SOXL','ASAP · 종목별 누적 총자산');
 }
