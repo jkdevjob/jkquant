@@ -623,7 +623,7 @@ console.log('[11] 무매 계산 공유');
      && !/cl > c2\.avg\*exitMulOf\(st\.target\) && \(st\.div-c2\.T\)>=1/.test(sim));
   // 쿼터매도는 보유÷4, 지정가매도는 나머지 (두 곳 규약 동일)
   ok('쿼터매도 = 보유÷4 (주문표·모의 동일)',
-     /Math\.floor\(c\.qty\/4\)/.test(ord) && /Math\.floor\(c\.qty\/4\)/.test(sim));
+     /Math\.floor\(c\.qty\/4\)/.test(ord) && /Math\.floor\(order\.qty\/4\)/.test(sim));
 }
 
 
@@ -848,7 +848,7 @@ console.log('[18] 백테 분배금 분해');
   ok('배당·raw 저장소 존재', /let DIV=\{\}, RAW=\{\}/.test(bt));
   ok('시세 요청이 배당을 함께 받는다', /period2=\$\{p2\}&div=1/.test(bt));
   ok('청크마다 배당·raw를 합친다', /allDiv\[x\.date\]=\+x\.amount/.test(bt) && /allRaw\[x\.date\]=\+x\.close/.test(bt));
-  let ds=''; try{ ds=extractFn(bt,'function divSplit(tkr, days, buys)'); }catch(e){}
+  let ds=''; try{ ds=extractFn(bt,'function divSplit('); }catch(e){}
   ok('분해기 존재', !!ds, ds?'':'divSplit 없음');
   ok('분배금은 배당락일 보유수량 기준', /while\(bi<B\.length && B\[bi\]\[0\]<=d\)/.test(ds) && /dvMap\[d\]!=null && sh>0/.test(ds));
   // 단리는 현금이 쌓여 복리와 낙폭이 다르다 — 이벤트만 훑으면 중간 낙폭을 못 잰다
