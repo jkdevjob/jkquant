@@ -181,7 +181,7 @@ canvas{display:block;width:100%;height:auto}
 
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Morning Scalping</div><h1>JK <span class="v">퀀트</span> 단타 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="scVer">v1.1</span></h1></div>
+    <div><div class="kicker">Morning Scalping</div><h1>JK <span class="v">퀀트</span> 단타 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="scVer">v1.2</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -258,6 +258,23 @@ canvas{display:block;width:100%;height:auto}
     <div class="sub" id="bt_msg" style="margin-bottom:8px;min-height:16px"></div>
     <div id="bt_prog" style="display:none;height:6px;background:var(--panel2);border-radius:4px;overflow:hidden;margin-bottom:10px"><div id="bt_bar" style="height:100%;width:0;background:var(--vio2);transition:width .1s"></div></div>
     <div id="bt_body"></div>
+  </div>
+
+  <!-- 1bb. 시초가 첫고점 돌파 -->
+  <div class="card">
+    <h3><span class="dot"></span>⚡ 시초가 첫고점 돌파 <span class="sub" style="font-weight:600">분봉 아카이브 기반 · 룩어헤드 방지</span></h3>
+    <p class="lead">09:00 이후 관찰구간의 <b>첫 고점</b>을 확정한 뒤, 다음 분봉부터 <b>가격 돌파 + 거래량 증가</b>가 동시에 나오면 진입한다. 같은 봉에서 손절·익절이 모두 닿으면 <b>손절 우선</b>으로 계산한다.</p>
+    <div class="row" style="align-items:flex-end;margin-bottom:8px">
+      <div class="fld"><label>관찰(분)</label><select id="ob_obs"><option>1</option><option selected>3</option><option>5</option></select></div>
+      <div class="fld"><label>거래량 배수</label><input id="ob_vol" type="number" value="1.2" min="1" step="0.1" style="width:90px"></div>
+      <div class="fld"><label>손절 %</label><input id="ob_stop" type="number" value="1" min="0.1" step="0.1" style="width:80px"></div>
+      <div class="fld"><label>1차익절 %</label><input id="ob_t1" type="number" value="0.8" min="0.1" step="0.1" style="width:80px"></div>
+      <div class="fld"><label>2차익절 %</label><input id="ob_t2" type="number" value="1.5" min="0.1" step="0.1" style="width:80px"></div>
+      <div class="fld"><label>마찰비용 %</label><input id="ob_fee" type="number" value="0.25" min="0" step="0.05" style="width:80px"></div>
+      <button class="prim" onclick="runOpeningBreakout()">▶ 아카이브 백테스트</button>
+    </div>
+    <div class="warn">현재 아카이브는 <b>분봉 종가·거래량</b>만 저장하므로 봉 내부 고가/저가는 알 수 없다. 따라서 돌파·손절·익절은 분봉 종가 기준으로 보수적으로 판정한다. 갭 +2~7% 필터는 전일 종가가 아카이브에 없어 아직 적용하지 않는다.</div>
+    <div id="ob_msg" class="sub" style="margin-top:10px"></div><div id="ob_body" style="margin-top:10px"></div>
   </div>
 
   <!-- 1c. 분봉 아카이브 -->
@@ -827,6 +844,44 @@ function archExport(){
   document.body.appendChild(a); a.click(); a.remove();
 }
 function archClear(){ if(!confirm('아카이브를 전부 지울까요? (CSV로 내보냈는지 확인하세요)')) return; ARCH={}; saveArch(); renderArch(); $('ar_msg').textContent='삭제됨'; }
+
+/* ══ 시초가 첫고점 돌파 — ARCH 분봉 종가 기반 ══ */
+function runOpeningBreakout(){
+  const obs=+($('ob_obs').value||3), vm=+($('ob_vol').value||1.2), stop=+($('ob_stop').value||1),
+        t1=+($('ob_t1').value||0.8), t2=+($('ob_t2').value||1.5), fee=+($('ob_fee').value||0.25);
+  const trades=[]; let examined=0, skipped=0;
+  Object.keys(ARCH).sort().forEach(date=>Object.entries(ARCH[date]||{}).forEach(([code,raw])=>{
+    const a=raw.slice().sort((x,y)=>x[0]-y[0]).filter(x=>x[0]>=900&&x[0]<=930&&+x[1]>0);
+    if(a.length<obs+2){ skipped++; return; } examined++;
+    const opening=a.filter(x=>x[0]>=900&&x[0]<900+obs); if(opening.length<obs){ skipped++; return; }
+    const open=+opening[0][1], firstHigh=Math.max(...opening.map(x=>+x[1]));
+    let ei=-1;
+    for(let i=obs;i<a.length;i++){
+      const prevVol=Math.max(1,+a[i-1][2]||0), px=+a[i][1], vol=+a[i][2]||0;
+      if(px>firstHigh && px>=open && vol>=prevVol*vm){ ei=i; break; }
+    }
+    if(ei<0) return;
+    const entry=+a[ei][1]; let half1=false, exit=+a[a.length-1][1], reason='09:30', pnl=0;
+    for(let i=ei+1;i<a.length;i++){
+      const px=+a[i][1], r=(px-entry)/entry*100;
+      if(r<=-stop){ pnl+=(half1?0.5:1)*(-stop); exit=px; reason='손절'; break; }
+      if(!half1 && r>=t1){ pnl+=0.5*t1; half1=true; }
+      if(half1 && r>=t2){ pnl+=0.5*t2; exit=px; reason='2차익절'; break; }
+      if(i===a.length-1){ pnl+=(half1?0.5:1)*r; exit=px; }
+    }
+    pnl-=fee;
+    trades.push({date,code,time:a[ei][0],entry,exit,pnl,reason});
+  }));
+  const b=$('ob_body'), m=$('ob_msg');
+  if(!trades.length){ m.textContent='조건을 만족한 거래가 없습니다. 아카이브를 더 쌓거나 조건을 완화해보세요.'; b.innerHTML=''; return; }
+  const avg=trades.reduce((s,x)=>s+x.pnl,0)/trades.length, wins=trades.filter(x=>x.pnl>0).length,
+        gp=trades.filter(x=>x.pnl>0).reduce((s,x)=>s+x.pnl,0), gl=-trades.filter(x=>x.pnl<0).reduce((s,x)=>s+x.pnl,0), pf=gl?gp/gl:Infinity;
+  let eq=0,peak=0,mdd=0; trades.slice().sort((x,y)=>(x.date+x.time).localeCompare(y.date+y.time)).forEach(x=>{eq+=x.pnl;peak=Math.max(peak,eq);mdd=Math.min(mdd,eq-peak);});
+  m.innerHTML=`검사 <b>${examined}</b> 종목-일 · 거래 <b>${trades.length}</b>건 · 데이터 부족 ${skipped}건`;
+  const box=(l,v,c)=>`<div class="outbox"><div class="ol">${l}</div><div class="ov ${c||''}">${v}</div></div>`;
+  b.innerHTML=`<div class="out">${box('승률',(wins/trades.length*100).toFixed(1)+'%',wins/trades.length>=.5?'good':'bad')}${box('평균손익',(avg>=0?'+':'')+avg.toFixed(2)+'%',avg>=0?'good':'bad')}${box('Profit Factor',isFinite(pf)?pf.toFixed(2):'∞',pf>=1?'good':'bad')}${box('누적 단순합',(eq>=0?'+':'')+eq.toFixed(2)+'%',eq>=0?'good':'bad')}${box('MDD(단순합)',mdd.toFixed(2)+'%','bad')}</div>
+  <div class="htable-wrap" style="margin-top:10px"><table class="htable"><thead><tr><th>일자</th><th>종목</th><th>진입</th><th>진입가</th><th>청산가</th><th>결과</th><th>사유</th></tr></thead><tbody>${trades.slice().sort((a,b)=>(b.date+String(b.time)).localeCompare(a.date+String(a.time))).slice(0,100).map(t=>`<tr><td>${t.date}</td><td>${esc(t.code)}</td><td>${String(t.time).padStart(4,'0')}</td><td>${commas(t.entry)}</td><td>${commas(t.exit)}</td><td class="${t.pnl>=0?'win':'loss'}">${t.pnl>=0?'+':''}${t.pnl.toFixed(2)}%</td><td>${t.reason}</td></tr>`).join('')}</tbody></table></div>`;
+}
 
 /* ══ 백테스트 ══ */
 const BT={stop:4,tgt:6,hold:5,fee:0.5,minAmt:50};
