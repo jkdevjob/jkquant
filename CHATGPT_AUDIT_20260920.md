@@ -224,8 +224,8 @@ VR 적립식에서도 외부 적립금이 고점을 밀어 올려 MDD를 축소�
 
 ## 13. 최종 검증 상태
 
-- 전용 브랜치 HEAD: `188d6a67935d66001f7759109f22fadb8186870a`
-- main 대비: **31 commits ahead / 0 behind**
+- 기능 코드 검증 기준 커밋: `188d6a67935d66001f7759109f22fadb8186870a` (이후 커밋은 인계문서 갱신만 포함)
+- 기준 `main` 분기점: `d654ea741ca59b209cc71074e053eb00ddae446c` · **behind 0**
 - 변경 파일: `CHATGPT_AUDIT_20260920.md`, `backtest.html`, `index.html`, `regression-check.js`, `scalping.html`
 - 전략 SSOT: **22 / 22 PASS**
 - 전체 회귀: **931 PASS / 0 FAIL**
