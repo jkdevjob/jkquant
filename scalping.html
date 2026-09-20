@@ -111,6 +111,12 @@ input:focus,select:focus{outline:none;border-color:var(--vio)}
 .outbox{flex:1 1 130px;background:var(--panel2);border:1px solid var(--line);border-radius:11px;padding:12px 14px}
 .outbox .ol{font-size:11px;color:var(--faint);font-weight:700}
 .outbox .ov{font-size:22px;font-weight:800;margin-top:3px;font-variant-numeric:tabular-nums}
+.strategy-tabs{display:flex;gap:8px;margin:14px 0 12px;position:sticky;top:8px;z-index:40;background:var(--bg);padding:6px 0}
+.strategy-tab{flex:1;padding:11px 10px;border:1px solid var(--line);border-radius:10px;background:var(--panel);color:var(--dim);font-weight:800;cursor:pointer}
+.strategy-tab.on{background:var(--vio);border-color:var(--vio2);color:white}
+.strategy-pane{display:none}.strategy-pane.on{display:block}
+.strategy-head{margin:4px 0 10px;color:var(--dim);font-size:12px}
+
 .ov.good{color:var(--buy)}.ov.bad{color:var(--sell)}.ov.mid{color:var(--gold)}
 
 /* 차트 */
@@ -181,7 +187,7 @@ canvas{display:block;width:100%;height:auto}
 
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Morning Scalping</div><h1>JK <span class="v">퀀트</span> 단타 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="scVer">v3.0</span></h1></div>
+    <div><div class="kicker">Morning Scalping</div><h1>JK <span class="v">퀀트</span> 단타 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="scVer">v4.0</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -200,6 +206,12 @@ canvas{display:block;width:100%;height:auto}
 </div></header>
 
 <div class="wrap" id="app" style="display:none">
+  <div class="strategy-tabs">
+    <button class="strategy-tab on" data-strategy="swing" onclick="showStrategy('swing')">📉 과매도 반등</button>
+    <button class="strategy-tab" data-strategy="opening" onclick="showStrategy('opening')">⚡ 시초가 돌파</button>
+  </div>
+  <div id="strategy_swing" class="strategy-pane on">
+    <div class="strategy-head">실시간 감시 → 과거 백테스트 순서</div>
 
   <!-- 1. 전체 스크리닝 -->
   <div class="card">
@@ -260,6 +272,10 @@ canvas{display:block;width:100%;height:auto}
     <div id="bt_body"></div>
   </div>
 
+  </div>
+  <div id="strategy_opening" class="strategy-pane">
+    <div class="strategy-head">실시간 감시 → 과거 백테스트 순서</div>
+
   <!-- 1ba. 시초가 실시간 감시 -->
   <div class="card">
     <h3><span class="dot"></span>🚨 시초가 실시간 매수후보 <span class="sub" style="font-weight:600">09:00~09:30 · 1분마다 자동 감시</span></h3>
@@ -309,6 +325,8 @@ canvas{display:block;width:100%;height:auto}
     <div class="sub" id="ar_msg" style="margin-bottom:8px;min-height:16px"></div>
     <div id="ar_prog" style="display:none;height:6px;background:var(--panel2);border-radius:4px;overflow:hidden;margin-bottom:10px"><div id="ar_bar" style="height:100%;width:0;background:var(--vio2);transition:width .1s"></div></div>
     <div id="ar_body"></div>
+  </div>
+
   </div>
 
   <!-- 2. 차트 (팝업 모달) -->
@@ -863,6 +881,14 @@ function archExport(){
   document.body.appendChild(a); a.click(); a.remove();
 }
 function archClear(){ if(!confirm('아카이브를 전부 지울까요? (CSV로 내보냈는지 확인하세요)')) return; ARCH={}; saveArch(); renderArch(); $('ar_msg').textContent='삭제됨'; }
+
+function showStrategy(name){
+  document.querySelectorAll('.strategy-pane').forEach(x=>x.classList.remove('on'));
+  document.querySelectorAll('.strategy-tab').forEach(x=>x.classList.toggle('on',x.dataset.strategy===name));
+  const p=$('strategy_'+name); if(p)p.classList.add('on');
+  try{localStorage.setItem('jkq_scalp_strategy_tab',name);}catch(e){}
+}
+function restoreStrategy(){let n='swing';try{n=localStorage.getItem('jkq_scalp_strategy_tab')||'swing';}catch(e){} if(n!=='opening')n='swing';showStrategy(n);}
 
 /* ══ 시초가 실시간 감시 ══ */
 let OB_LIVE=false, OB_TIMER=null, OB_BUSY=false, OB_SIGNALS=new Map();
@@ -1572,7 +1598,7 @@ function boot(){
     PKEY='jkq_scalp_pos_'+user.uid; LKEY='jkq_scalp_log_'+user.uid; AKEY='jkq_scalp_arch_'+user.uid;
     KKEY='jkq_scalp_kis_'+user.uid;
     $('log_owner').textContent='· '+(user.displayName||user.email||'');
-    loadAll(); loadArch(); recalc(); renderPos(); renderLog(); renderKlog(); renderArch(); kisInit(); archAuto();
+    loadAll(); loadArch(); recalc(); renderPos(); renderLog(); renderKlog(); renderArch(); restoreStrategy(); kisInit(); archAuto();
     await cloudLoad(); renderKlog(); renderPos();   // 다른 기기에서 남긴 주문 기록을 합친다
   });
 }
