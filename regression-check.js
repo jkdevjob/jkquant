@@ -161,6 +161,33 @@ __strat={settings:{ticker:'TQQQ',mode:0.75,formula:'basic',g:10,add:100,band:15,
   hist:[{type:'buy',price:77,qty:2,cyc:0}]};
 ok('이어받기 시작: 첫 buy는 Pool 차감 (200→46)', near(computeVr().pool,46));
 
+/* ════ 3b. 이번 감사에서 잡은 체결순서 회귀 ════ */
+console.log('[3b] 주문 타이밍·VR 예약주문 회귀');
+{
+  // VR: V/밴드는 10거래일마다 갱신하지만, 그 사이 걸어둔 LOC 주문은 매일 체결될 수 있어야 한다.
+  M.__VRTEST={
+    '2026-01-02':[100,100,100,100],
+    '2026-01-05':[80,80,80,80],
+  };
+  const vr=runVR(['2026-01-02','2026-01-05'],'__VRTEST',
+    {startV:1000,startPool:1000,mode:0.5,G:10,bandPct:15,costOn:false});
+  ok('VR 2주 사이 중간 거래일에도 LOC매수 체결', near(vr.shares,13), 'shares='+vr.shares);
+  ok('VR 정수주 내림 잔액은 Pool에 보존', near(vr.pool,760), 'pool='+vr.pool);
+  delete M.__VRTEST;
+
+  // V4: 지정가 전량매도가 장중 체결된 뒤 종가가 LOC 매수선까지 급락하면 같은 날 매수가 살아 있어야 한다.
+  M.__V4TEST={
+    '2026-01-02':[100,100,100,100],
+    '2026-01-05':[90,100,125,85],
+  };
+  const prevFill=global.imFill; global.imFill='high';
+  const v4=runIM(['2026-01-02','2026-01-05'],'__V4TEST',6000,20,20,true);
+  if(prevFill===undefined) delete global.imFill; else global.imFill=prevFill;
+  ok('V4 지정가 전량매도 뒤 같은 날 LOC 재매수면 사이클 미종료', v4.cycles===0 && v4.endShares>0,
+     'cycles='+v4.cycles+' shares='+v4.endShares);
+  delete M.__V4TEST;
+}
+
 /* ════ 4. 차분 테스트 (5차·6차) — 실데이터, 두 엔진 회계 항등 ════ */
 console.log('[4] 차분 테스트 (runIM 거래로그 → computeInf 재생)');
 let __bogusFiltered=0;
@@ -230,9 +257,11 @@ console.log('[4b] runIM50 스모크 + V4.0 앵커');
   //   실제로는 별개 주문 2건이라 각각 정수 주수다(1회 $500·주가 $65: 합산 7주 → 실제 3+3=6주).
   //   방향은 종목마다 다르다 — 평단이 바뀌면 이후 체결 경로가 통째로 갈리기 때문이다.
   //   이 수정으로 운영 모의(infSimForward)와 백테가 원금 $3k/$10k/$100k에서 체결까지 완전 일치한다.
-  const A=[['SOXL',20,20,102989.30,54.04,35],
-           ['TQQQ',40,10,25963.09,62.68,30],
-           ['TECL',20,20,46709.32,40.01,14]];
+  // 2026-09-20 — 주문 기준을 장 시작 전 T/잔금/평단으로 고정하고, 같은 날 지정가매도 뒤 LOC매수를
+  // 종료 판정보다 먼저 처리. 직전 5일 리버스 별지점에서도 당일 종가 룩어헤드를 제거한 뒤의 고정본.
+  const A=[['SOXL',20,20,114884.34,54.80,40],
+           ['TQQQ',40,10,25281.39,60.15,32],
+           ['TECL',20,20,41731.80,40.34,18]];
   for(const [tkr,div,tgt,fexp,mexp,cexp] of A){
     if(!DAYS[tkr]){ console.log('  (CSV 없음, 스킵: '+tkr+')'); continue; }
     if(!fixOK(tkr)){ console.log(`  (데이터가 고정본과 달라 앵커 스킵: ${tkr} ${DAYS[tkr].length}일 ~${DAYS[tkr][DAYS[tkr].length-1]})`); continue; }
@@ -240,6 +269,27 @@ console.log('[4b] runIM50 스모크 + V4.0 앵커');
     ok(`${tkr} ${div}분할 ${tgt}% V4.0 앵커 (최종·MDD·사이클)`,
        near(r.final,fexp,0.05)&&near(r.mdd,mexp,0.01)&&r.cycles===cexp,
        `final ${r.final.toFixed(2)}/${fexp} mdd ${r.mdd.toFixed(2)}/${mexp} cyc ${r.cycles}/${cexp}`);
+  }
+}
+
+
+/* ════ 4b-2. V2.2 / V3.0 원문 규칙 스모크 ════ */
+console.log('[4b-2] V2.2 / V3.0 원문 규칙');
+{
+  const s22=extractFn(bt,'function runIM22(days,tkr,cap,divs,targetPct,compound');
+  const s30=extractFn(bt,'function runIM30(days,tkr,cap,divs,targetPct,compound');
+  ok('V2.2 T는 소수점 셋째자리 반올림', /Math\.round\(\(cum\/one\)\*100\)\/100/.test(s22));
+  ok('V2.2 후반에도 음수 별% LOC 쿼터매도 유지', !/sp>=0&&c>=starP/.test(s22) && /c>=starP/.test(s22));
+  ok('V2.2 쿼터 1회금은 기존 1회매수금 상한', /qOne=Math\.min\(one,cash\/10\)/.test(s22));
+  ok('V3 T는 소수점 둘째자리 올림', /Math\.ceil\(\(rawT-1e-12\)\*10\)\/10/.test(s30));
+  ok('V3 수익 절반 보관과 반복리 누적을 분리', /profitCum\+=p; reserve\+=p\*0\.5/.test(s30));
+  ok('V3 양수익 즉시 다음 1회매수금에 반영', /one=Math\.max\(one,baseOne\+profitCum\/40\)/.test(s30));
+  ok('V3 쿼터 보관수익은 5회 고정분할', /qEach=Math\.min\(cash,reserve\)\/5/.test(s30));
+  eval(s22); eval(s30);
+  if(DAYS.SOXL){
+    const d=DAYS.SOXL.slice(0,Math.min(400,DAYS.SOXL.length));
+    const a=runIM22(d,'SOXL',10000,20,20,true), b=runIM30(d,'SOXL',10000,20,20,true);
+    ok('V2.2/V3.0 실데이터 스모크 유한값', isFinite(a.final)&&isFinite(a.mdd)&&isFinite(b.final)&&isFinite(b.mdd));
   }
 }
 
@@ -1177,6 +1227,25 @@ console.log('[26] 단타 분봉 — 장 초반 5분 눈금');
   ok('1분봉은 꺾은선을 덧그린다', /if\(TF==='1m'\)\{[\s\S]{0,220}?ctx\.stroke\(\);/.test(sc));
   // 일봉 70봉 그대로면 5분봉은 6시간도 못 본다
   ok('봉 단위마다 표시 개수가 다르다', /const CAP = TF==='day' \? 70 : TF==='5m' \? 84 : 150;/.test(sc));
+  // 다음 거래일 시가가 손절/목표를 건너뛴 경우 -4%/+6%에 체결됐다고 가정하면 낙관 편향이다.
+  let btOne=''; try{ btOne=extractFn(sc,'function btSimOne(bars,i)'); }catch(e){}
+  if(btOne){
+    const sim=new Function('BT',btOne+'; return btSimOne;')({stop:4,tgt:6,hold:5,fee:0.5,minAmt:50});
+    const loss=sim([
+      {open:100,high:101,low:99,close:100},
+      {open:100,high:101,low:99,close:100},
+      {open:90, high:92, low:89,close:91}
+    ],0);
+    const gain=sim([
+      {open:100,high:101,low:99,close:100},
+      {open:100,high:101,low:99,close:100},
+      {open:110,high:112,low:109,close:111}
+    ],0);
+    ok('단타 갭하락 손절은 다음날 시가 체결', near(loss.pnl,-10.5), 'pnl='+loss.pnl);
+    ok('단타 갭상승 목표는 다음날 시가 체결', near(gain.pnl,9.5), 'pnl='+gain.pnl);
+  }else{
+    ok('단타 갭 체결 함수 추출', false, 'btSimOne 없음');
+  }
 }
 
 
