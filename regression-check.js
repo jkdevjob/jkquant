@@ -281,16 +281,31 @@ console.log('[4b-2] V2.2 / V3.0 원문 규칙');
   ok('V2.2 T는 소수점 셋째자리 반올림', /Math\.round\(\(cum\/one\)\*100\)\/100/.test(s22));
   ok('V2.2 후반에도 음수 별% LOC 쿼터매도 유지', !/sp>=0&&c>=starP/.test(s22) && /c>=starP/.test(s22));
   ok('V2.2 쿼터 1회금은 기존 1회매수금 상한', /qOne=Math\.min\(one,cash\/10\)/.test(s22));
+  ok('V2.2 1/4·3/4 매도수량은 정수', /const q1=isq\(q0\/4,q0\), q3=q0-q1/.test(s22) && !/q0\*0\.75/.test(s22));
+  ok('V2.2 쿼터 회차는 실제 매수 체결 때만 증가', /const bought=_buy\(c,Math\.min\(qOne,cash\)\);[\s\S]{0,60}?if\(bought>0\)\{ qN\+\+/.test(s22));
   ok('V3 T는 소수점 둘째자리 올림', /Math\.ceil\(\(rawT-1e-12\)\*10\)\/10/.test(s30));
   ok('V3 수익 절반 보관과 반복리 누적을 분리', /profitCum\+=p; reserve\+=p\*0\.5/.test(s30));
   ok('V3 양수익 즉시 다음 1회매수금에 반영', /one=Math\.max\(one,baseOne\+profitCum\/40\)/.test(s30));
   ok('V3 쿼터 보관수익은 5회 고정분할', /qEach=Math\.min\(cash,reserve\)\/5/.test(s30));
+  ok('V3 1/4·3/4 매도수량은 정수', /const q1=isq\(q0\/4,q0\), q3=q0-q1/.test(s30) && !/q0\*0\.75/.test(s30));
   eval(s22); eval(s30);
   if(DAYS.SOXL){
     const d=DAYS.SOXL.slice(0,Math.min(400,DAYS.SOXL.length));
     const a=runIM22(d,'SOXL',10000,20,20,true), b=runIM30(d,'SOXL',10000,20,20,true);
     ok('V2.2/V3.0 실데이터 스모크 유한값', isFinite(a.final)&&isFinite(a.mdd)&&isFinite(b.final)&&isFinite(b.mdd));
+    ok('V2.2/V3.0 기말 보유수량은 정수', Number.isInteger(a.endShares)&&Number.isInteger(b.endShares),
+       `v22=${a.endShares} v30=${b.endShares}`);
   }
+}
+
+/* ════ 4b-3. V4.0 오피셜 기본값 ════ */
+console.log('[4b-3] V4.0 오피셜 기본값');
+{
+  ok('백테스트 V4.0 기본 리버스 ON', /let imReverse=true/.test(bt)
+     && /data-r="1" class="active"/.test(bt));
+  ok('운영 새 무매 세션 기본 리버스 ON', /function defInfSettings\(\)\{return\{[^}]*reverse:true/.test(idx));
+  ok('운영 구세션 reverse 미지정도 오피셜 ON으로 해석', /st\.reverse!==false/.test(idx)
+     && /segSet\('set_reverse',st\.reverse===false\?'0':'1'\)/.test(idx));
 }
 
 /* ════ 4c. 섀넌 차분 (runIVS 거래로그 → ivsPos 재생) ════
