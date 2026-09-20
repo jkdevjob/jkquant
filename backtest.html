@@ -2274,7 +2274,7 @@ function runIM30(days,tkr,cap,divs,targetPct,compound=true){
 }
 
 // ──── 표준편차 매매법 (볼린저 5마디 σ밴드 · 200일선 필터) ────
-// 5마디(MA·±1σ·±2σ) 목표 투자비중 = min(100%, g×마디레벨/5). 밴드 돌파 시 리밸런싱(하향=분할매수, 상향=분할매도, 평단관리).
+// 5마디(MA·±1σ·±2σ) 목표 투자비중 = min(100%, g×마디레벨/5). 전일 확정 밴드 신호로 다음 거래일 종가 리밸런싱.
 // 필터: 'nobuy'=200일선 아래선 추가매수 금지(물타기 차단·기본) · 'exit'=200선 아래 전량 현금 · 'none'=무필터.
 function runStdev(days,tkr,cap,N,g,filter,costOn){
   const CO=costOn, FEE=CO?costOf(tkr).fee:0;
@@ -2297,11 +2297,14 @@ function runStdev(days,tkr,cap,N,g,filter,costOn){
   days.forEach((d,i)=>{ const gx=gi[d], c=cl[gx];
     { const y=d.slice(0,4); if(cy===null)cy=y; else if(y!==cy){_settle(c);cy=y;} }
     { const eq=cash+sh*c; if(eq>mp)mp=eq; else if(mp>0){const dd=(mp-eq)/mp; if(dd>mdd)mdd=dd;} }
-    const lv=lvOf(gx), bear = ma200[gx]!=null && c<ma200[gx];
+    // σ밴드/200일선 신호는 전일 확정 종가로 만들고 오늘 종가에 리밸런싱한다.
+    // 오늘 종가로 밴드 위치를 정한 뒤 같은 오늘 종가에 체결하면 룩어헤드다.
+    const sg=gx-1, lv=sg>=0?lvOf(sg):null;
+    const bear = sg>=0 && ma200[sg]!=null && cl[sg]<ma200[sg];
     if(lv!=null){
       if(filter==='exit' && bear){ if(sh>1e-9)_sell(c,sh); prevLv=lv; }
       else if(lv!==prevLv){ const eq=cash+sh*c, frac=Math.min(1,g*lv/5), target=eq*frac, cur=sh*c;
-        if(target>cur+1e-6){ if(!(filter==='nobuy'&&bear))_buy(c,Math.min(target-cur,cash)); }   // nobuy: 하락장 추가매수 차단
+        if(target>cur+1e-6){ if(!(filter==='nobuy'&&bear))_buy(c,Math.min(target-cur,cash)); }   // nobuy: 전일 하락장 신호면 추가매수 차단
         else if(cur>target+1e-6)_sell(c,(cur-target)/c);
         prevLv=lv; }
     }
