@@ -832,11 +832,15 @@ function archClear(){ if(!confirm('아카이브를 전부 지울까요? (CSV로 
 const BT={stop:4,tgt:6,hold:5,fee:0.5,minAmt:50};
 function btSimOne(bars,i){                     // i일 신호 → i+1 시가 진입
   const en=bars[i+1].open; if(!(en>0)) return null;
+  const stopPx=en*(1-BT.stop/100), tgtPx=en*(1+BT.tgt/100);
   for(let k=1;k<=BT.hold && i+k<bars.length;k++){
     const b=bars[i+k];
-    const lo=(b.low-en)/en*100, hi=(b.high-en)/en*100;
-    if(lo<=-BT.stop) return {pnl:-BT.stop-BT.fee,days:k};      // 보수적: 손절 우선
-    if(hi>=BT.tgt)   return {pnl:BT.tgt-BT.fee,days:k};
+    // 진입 다음날 이후 시가가 손절/목표선을 넘어 갭으로 시작하면 그 가격에는 체결할 수 없다.
+    // 현실적인 시가 체결을 먼저 반영한 뒤, 장중 고저가가 둘 다 닿으면 보수적으로 손절 우선.
+    if(k>1 && b.open<=stopPx) return {pnl:(b.open-en)/en*100-BT.fee,days:k};
+    if(k>1 && b.open>=tgtPx)  return {pnl:(b.open-en)/en*100-BT.fee,days:k};
+    if(b.low<=stopPx)  return {pnl:-BT.stop-BT.fee,days:k};
+    if(b.high>=tgtPx)  return {pnl:BT.tgt-BT.fee,days:k};
     if(k===BT.hold||i+k===bars.length-1) return {pnl:(b.close-en)/en*100-BT.fee,days:k};
   }
   return null;
@@ -904,7 +908,7 @@ function renderBacktest(tr,base,from){
   ms.forEach(m=>{const g=pick.filter(t=>t.date.slice(0,7)===m); if(!g.length)return; const a=mean(g.map(t=>t.pnl));
     html+=`<tr><td>${m}</td><td>${g.length}</td><td class="${a>0?'win':'loss'}">${a>=0?'+':''}${a.toFixed(2)}%</td><td>${wr(g.map(t=>t.pnl)).toFixed(0)}%</td></tr>`;});
   html+='</tbody></table></div>';
-  html+='<p class="note">보수적 가정: 일봉이라 손절·익절 도달 순서를 몰라 <b>손절 우선</b>으로 계산(실제는 이보다 나을 수 있음). 마찰 0.5% 반영. 유니버스는 오늘 기준 상위 종목이라 <b>생존편향</b>이 있다.</p>';
+  html+='<p class="note">보수적 가정: 일봉에서 손절·익절을 모두 터치하면 <b>손절 우선</b>. 다음날 이후 갭은 <b>시가 체결</b>로 계산. 마찰 0.5% 반영. 유니버스는 오늘 기준 상위 종목이라 <b>생존편향</b>이 있다.</p>';
   $('bt_body').innerHTML=html;
 }
 
