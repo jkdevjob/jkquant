@@ -296,12 +296,27 @@ console.log('[5] runVR 스모크');
 if(DAYS.TQQQ){
   const r=runVR(DAYS.TQQQ,'TQQQ',{contrib:100,G:10,bandPct:15,mode:0.75,formula:'basic',initAmt:10000,withdraw:100,startV:0,startPool:0});
   ok('적립식 실행·유한값', isFinite(r.final)&&r.pool>=-1e-6, 'final='+r.final+' pool='+r.pool);
-  const r2=runVR(DAYS.TQQQ,'TQQQ',{contrib:100,G:10,bandPct:15,mode:0.25,formula:'basic',initAmt:10000,withdraw:100,startV:0,startPool:2000});
+  const r2=runVR(DAYS.TQQQ,'TQQQ',{contrib:100,G:10,bandPct:15,mode:0.25,formula:'basic',initAmt:10000,withdraw:200,startV:0,startPool:2000});
   ok('인출식 실행·Pool 비음수·인출 회수 포함', isFinite(r2.final)&&r2.pool>=-1e-6&&r2.totalWd>=0);
+  // 계획 인출액이 Pool보다 커도 V에서는 실제 인출액만 빠져야 한다.
+  ok('인출식 V 차감 = 실제 인출액',
+     /const actualWd=isWd\?Math\.min\(withdraw,Math\.max\(0,pool\)\):0;/.test(bt)
+     && /const addCycle=isAccum\?contrib:isWd\?-actualWd:0;/.test(bt),
+     '계획액을 먼저 V에서 차감하는 회귀 금지');
 }
 
 
 /* ════ 6. UI 배선 정적 스캔 (8·9차 버그 클래스 가드) ════ */
+console.log('[5b] VR 인출 실제액 규칙');
+{
+  const nv=extractFn(idx,'function computeNextV(c,ev)');
+  const step=extractFn(idx,'function vrStepCycle(sess, c, dateStr, close)');
+  ok('운영 인출 계획액은 2주 $200', /const VR_WITHDRAW_CYCLE=200/.test(idx));
+  ok('운영 V는 실제 인출액만 차감', /flowAmt = isWd \? Math\.min\(planned,Pool\) : planned/.test(nv)
+     && /nextV=V \+ Pool\/G \+ sign\*flowAmt/.test(nv));
+  ok('운영 인출 이력도 실제액만 기록', /amt:r\.flowAmt/.test(step) && /if\(r\.flowAmt>0\)/.test(step));
+}
+
 console.log('[6] UI 배선 정적 스캔');
 {
   // 죽은 id 예외는 두지 않는다 — 예외를 허용해 두면 '가드가 있으니 무해'라는 이유로
@@ -1432,8 +1447,10 @@ console.log('[34] 버전 표기 일치');
   const vs=[...idx.matchAll(/id="appVer(?:Top)?"[^>]*>(?:<b[^>]*>)?\s*(v[0-9.]+)/g)].map(m=>m[1]);
   ok('운영 버전 표기 2곳', vs.length===2, vs.join(' / '));
   ok('두 곳이 같다', vs.length===2 && vs[0]===vs[1], vs.join(' vs '));
+  ok('운영 버전 x.y.z 형식', vs.length===2 && vs.every(v=>/^v\d+\.\d+\.\d+$/.test(v)), vs.join(' / '));
   const bv=[...bt.matchAll(/id="btVer"[^>]*>\s*(v[0-9.]+)/g)].map(m=>m[1]);
   ok('백테 버전 표기 1곳', bv.length===1, bv.join(' / '));
+  ok('백테 버전 x.y.z 형식', bv.length===1 && /^v\d+\.\d+\.\d+$/.test(bv[0]), bv.join(' / '));
 }
 
 console.log('[35] 로그인 — 조용히 갇히지 않는다');
