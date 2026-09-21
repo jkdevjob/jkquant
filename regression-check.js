@@ -730,7 +730,7 @@ console.log('[17] 배당·분배금 · 티커 입력');
   let keys=''; try{ keys=idx.slice(idx.indexOf('const SIM_KEYS='), idx.indexOf('};', idx.indexOf('const SIM_KEYS='))+2); }catch(e){}
   ok('모의 지문에 reinv 포함', /dca\s*:\s*\[[^\]]*'reinv'/.test(keys));
   // 성과표도 분배금을 자산에 넣어야 각 탭 분석과 값이 같다
-  let ps=''; try{ ps=extractFn(idx,'function paperStat(tab, sess)'); }catch(e){}
+  let ps=''; try{ ps=extractFn(idx,'function paperRaw(tab, sess)'); }catch(e){}
   ok('성과표가 분배금 포함 총자산을 쓴다', /total=c\.ready\?c\.total:/.test(ps));
 
   ok('티커는 자유 입력 (버튼 선택 아님)', /id="set_dcaticker_in"/.test(idx) && !/id="set_dcaticker"/.test(idx));
@@ -824,7 +824,7 @@ console.log('[19] 출금 · 복리/단리');
   // 총자산에 다시 더하지 않으면 출금할 때마다 수익률이 떨어져 보인다
   let ra=''; try{ ra=extractFn(idx,'function renderInfAnal()'); }catch(e){}
   ok('총자산이 나간 돈을 다시 더한다', /c\.bal\+\(c\.outside\|\|0\)/.test(ra), ra?'':'renderInfAnal 없음');
-  let ps=''; try{ ps=extractFn(idx,'function paperStat(tab, sess)'); }catch(e){}
+  let ps=''; try{ ps=extractFn(idx,'function paperRaw(tab, sess)'); }catch(e){}
   ok('성과표도 같은 기준', /price\*c\.qty \+ c\.bal \+ \(c\.outside\|\|0\)/.test(ps));
   // 입력·편집 경로
   ok('시트에 출금 항목·금액칸', /kindOptHTML\('출금'/.test(idx) && /id="sh_amt"/.test(idx));
@@ -832,7 +832,7 @@ console.log('[19] 출금 · 복리/단리');
   /* 모의 성과표 — 단리는 익절금이 계좌 밖으로 빠져 있다. 평가금엔 더해 놨어도
      '얼마가 나갔는지'를 안 보이면 잔금이 왜 안 늘었는지 알 수 없다. */
   ok('성과표가 단리 인출액을 낸다', /_out=\{saved:\(c\.saved\|\|0\)\+_dv\.divCash, withdrawn:c\.withdrawn\|\|0, simple:!!c\.simple\}/.test(idx)
-     && /nTrade, price, out:_out\}/.test(idx));
+     && /nTrade, price, out:_out, mdd\}/.test(idx));
   ok('성과표에 인출 태그를 그린다', /O\.simple\?'단리 인출':'출금'/.test(idx));
   /* 익절 조절 숨김 — SOXL 열위·MDD 악화 구간 때문. UI만 감추고 코드는 남긴다.
      감추기만 하면 켜져 있던 세션을 끌 방법이 없으므로 저장분도 꺼야 한다. */
@@ -1545,8 +1545,8 @@ console.log('[37] 모의 성과 표 — 투입은 맨 오른쪽');
      /전략 · 세션[\s\S]*기간[\s\S]*평가[\s\S]*최종[\s\S]*현재[\s\S]*인출[\s\S]*연[\s\S]*투입/.test(head),
      head.slice(0,90));
   ok('투입이 마지막 머리글', head.lastIndexOf('투입') > head.lastIndexOf('연'));
-  // 시세를 못 받은 줄은 평가~연 다섯 칸을 colspan 으로 덮는다 — 투입은 그 뒤에 따로 온다
-  const iSpan=op.indexOf('colspan="5"'), iInflow=op.indexOf('${wnCur(r.inflow,r.cur)}');
+  // 시세를 못 받은 줄은 평가~연 여섯 칸(평가·최종·MDD·현재·인출·연)을 colspan 으로 덮는다
+  const iSpan=op.indexOf('colspan="6"'), iInflow=op.indexOf('${wnCur(r.inflow,r.cur)}');
   ok('투입 칸이 colspan 뒤에 온다', iSpan>0 && iInflow>iSpan);
   ok('투입 칸이 한 번만 그려진다', (op.match(/\$\{wnCur\(r\.inflow,r\.cur\)\}/g)||[]).length===1);
   ok('각주 설명도 표 순서와 같다', idx.indexOf('평가 = 보유 평가금') < idx.indexOf('투입 = 밖에서 넣은 돈'));
@@ -2369,7 +2369,7 @@ console.log('\n[54] 모의 성과 — 최종·현재·인출 세 칸');
      /outAmt>0\?\(r\.retNow>=0\?'var\(--buy\)':'var\(--sell\)'\):'var\(--faint\)'/.test(idx)
      && /\$\{outAmt>0\?'\+'\+r\.retOut\.toFixed\(1\)\+'%':'—'\}/.test(idx));
   // 시세를 못 받은 줄은 평가~연 다섯 칸을 덮어야 한다
-  ok('시세 대기 줄이 칸 수를 맞춘다', /<td colspan="5" style="color:var\(--gold\)">시세 대기/.test(idx));
+  ok('시세 대기 줄이 칸 수를 맞춘다', /<td colspan="6" style="color:var\(--gold\)">시세 대기/.test(idx));
 }
 
 /* ════ 55. 단리 현금 흐름 — 출금·입금·합계와 월 수입 ════
@@ -2507,7 +2507,7 @@ console.log('\n[57] 분배금 현금 수령 — 월 수입으로 읽는다');
      && /id="anaD_ret_now"/.test(idx) && /id="anaD_ret_real"/.test(idx) && /id="anaD_ret"/.test(idx));
 
   // 모의 성과 목록의 최종·현재·인출이 적립 세션에도 들어맞아야 한다
-  const ps=(()=>{ try{ return extractFn(idx,'function paperStat(tab, sess)'); }catch(e){ return ''; } })();
+  const ps=(()=>{ try{ return extractFn(idx,'function paperRaw(tab, sess)'); }catch(e){ return ''; } })();
   ok('목록에서 현금 수령분은 인출이다',
      /if\(c\.pos && !c\.pos\.reinv && \(c\.pos\.divCash\|\|0\)>0\)\s*\n\s*_out=\{saved:c\.pos\.divCash, withdrawn:0, simple:true\};/.test(ps));
 }
@@ -2839,7 +2839,7 @@ console.log('\n[62] 차트 라벨은 고른 기간을 따라간다');
      적립   28.16% vs  0.00%  →  28.16% = 28.16%   (재투자분 divShares 누락이었다) */
 console.log('\n[63] 나간 돈 — 여섯 전략 같은 규약');
 {
-  const ps=(()=>{ try{ return extractFn(idx,'function paperStat(tab, sess)'); }catch(e){ return ''; } })();
+  const ps=(()=>{ try{ return extractFn(idx,'function paperRaw(tab, sess)'); }catch(e){ return ''; } })();
   ok('paperStat 을 읽었다', ps.length>0);
   // 여섯 갈래가 모두 나간 돈을 넘겨야 '인출' 칸이 채워진다
   const outs=(ps.match(/_out=\{/g)||[]).length;
@@ -3224,6 +3224,93 @@ console.log('\n[69] VR 예약주문 — 앱 체결기와 같은 규칙');
   }
   ok('경우를 실제로 돌렸다', ran>=30, ran+'개');
   ok('앱 체결기와 백테 사다리가 같은 체결을 낸다', !bad, bad||'');
+}
+
+/* ════ 70. 모의 성과 MDD ════
+   총자산의 뜻은 paperRaw 한 곳에서만 정한다. MDD가 거기서 현금을 다시 세기 시작하면
+   목록의 '최종'과 반드시 갈린다 — 이 세션에서만 벌써 몇 번을 그렇게 갈렸다.
+   재는 값은 '총자산 ÷ 그때까지 넣은 돈'(단위가치)이다. 총자산 그대로 재면
+   적립식에서 매달 들어오는 적립금이 상승처럼 잡혀 낙폭이 지워진다. */
+console.log('\n[70] 모의 성과 MDD — 단위가치로 잰다');
+{
+  const md=(()=>{ try{ return extractFn(idx,'function paperMdd(tab, sess, R, hist)'); }catch(e){ return ''; } })();
+  ok('MDD 함수가 있다', !!md);
+  // 잴 수 있는지 판가름은 걷기 한 곳에서만 — 앞에 조건을 또 두면 규칙이 갈린다
+  ok('앞뒤로 조건을 두 번 두지 않는다', !/R\.total>0/.test(md) && /if\(n<3\) return null;/.test(md));
+  ok('총자산을 스스로 다시 세지 않는다', /cur=paperRaw\(tab, sess\);/.test(md)
+     && !/computeInf\(|computeVr\(|c\.pool|c\.bal/.test(md));
+  ok('단위가치로 잰다', /const uv=tot\/cur\.inflow;/.test(md));
+  ok('거래 없는 날은 주가만 갈아끼운다',
+     /if\(grew \|\| !cur\)\{ sess\.hist=h\.slice\(0,idx\); cur=paperRaw\(tab, sess\); \}/.test(md)
+     && /const tot=cur\.qty\*row\.close \+ \(cur\.qty1\|\|0\)\*p1 \+ cur\.k;/.test(md));
+  ok('빌려 쓴 기록은 반드시 되돌린다', /\} finally \{ sess\.hist=real; \}/.test(md));
+  /* 거래가 몇 달 전에 멈췄어도 들고 있는 동안 주가는 움직인다 —
+     마지막 거래일에서 끊으면 그 사이 낙폭을 통째로 놓친다. */
+  ok('시세가 있는 끝까지 본다', /const D=days\.filter\(d=>d&&d\.date>=from&&d\.close>0\);/.test(md));
+  ok('paperRaw 가 k 와 주식 수를 돌려준다',
+     /k: total - qty\*price - qty1\*price1/.test(idx) && /return \{inflow, total, price, sym, qty, qty1, price1, out:_out,/.test(idx));
+  // 열 자리 — '최종' 바로 오른쪽
+  { const op=(()=>{ try{ return extractFn(idx,'async function openPaper()'); }catch(e){ return ''; } })();
+    const iF=op.indexOf('>최종</th>'), iM=op.indexOf('>MDD</th>'), iN=op.indexOf('>현재</th>');
+    ok('머리글이 최종과 현재 사이에 있다', iF>0 && iM>iF && iN>iM, `최종${iF} MDD${iM} 현재${iN}`);
+    const vF=op.indexOf('${r.ret.toFixed(1)}%'), vM=op.indexOf('r.mdd.pct.toFixed(1)'), vN=op.indexOf('${r.retNow.toFixed(1)}%');
+    ok('값도 같은 자리에 있다', vF>0 && vM>vF && vN>vM, `최종${vF} MDD${vM} 현재${vN}`);
+    ok('못 잰 세션은 0%가 아니라 비운다', /r\.mdd\?'−'\+r\.mdd\.pct\.toFixed\(1\)\+'%':'—'/.test(op)); }
+
+  /* 값으로 확인 — 실코드를 떼어 와 이웃(paperRaw·종가)만 가짜로 물린다 */
+  if(md){
+    let calls=0, days=[], raw=null;
+    const run=(closes, hist, rawFn, inflowFn)=>{
+      days=closes.map(([d,c])=>({date:d,close:c}));
+      calls=0;
+      const g={ PAPER_DAYS:{t:()=>days},
+                paperRaw:(tab,sess)=>{ calls++; return rawFn(sess.hist); },
+                ivsQuote1:null, console:{error(){}} };
+      const fn=new Function('PAPER_DAYS','paperRaw','ivsQuote1','console','return ('+md.replace(/^function \w+\(/,'function (')+')')
+                 (g.PAPER_DAYS,g.paperRaw,g.ivsQuote1,g.console);
+      const sess={hist:hist, simStart:hist[0].date};
+      const R=rawFn(hist);
+      const out=fn('t', sess, R, hist);
+      return {out, sess};
+    };
+    /* ① 거치식 — 투입이 안 변하니 총자산 MDD 와 같다.
+       100주 · 종가 100→120→60→90 · 현금 0 · 투입 10000
+       단위가치 1.0 → 1.2 → 0.6 → 0.9 · 고점 1.2 · 저점 0.6 → 50% */
+    { const hist=[{date:'2026-01-02'}];
+      const rawFn=()=>({inflow:10000, qty:100, qty1:0, price1:0, k:0, total:10000, price:100});
+      const {out,sess}=run([['2026-01-02',100],['2026-01-05',120],['2026-01-06',60],['2026-01-07',90]], hist, rawFn);
+      ok('거치식 MDD 50%', out && near(out.pct,50,1e-9), out?out.pct.toFixed(4):'못 잼');
+      ok('네 거래일을 다 봤다', out && out.nDay===4, out?String(out.nDay):'-');
+      ok('빌려 쓴 기록을 되돌렸다', sess.hist===hist);
+    }
+    /* ② 적립식 — 총자산만 보면 낙폭이 0으로 지워진다.
+       1일: 1주@100 · 투입 100 · 총자산 100 → 단위가치 1.0
+       2일: 종가 50에 1주 더 · 투입 150 · 총자산 100 → 단위가치 0.667
+       총자산은 100 그대로라 '낙폭 없음'으로 보이지만 실제론 −33.3% 다. */
+    { const hist=[{date:'2026-01-02'},{date:'2026-01-05'}];
+      const rawFn=(h2)=>(h2.length<2
+        ? {inflow:100, qty:1, qty1:0, price1:0, k:0, total:100, price:100}
+        : {inflow:150, qty:2, qty1:0, price1:0, k:0, total:100, price:50});
+      const {out}=run([['2026-01-02',100],['2026-01-05',50],['2026-01-06',50]], hist, rawFn);
+      ok('적립식은 적립금에 낙폭이 안 지워진다', out && near(out.pct,100/3,1e-9), out?out.pct.toFixed(4):'못 잼');
+    }
+    /* ③ 거래가 없는 날은 다시 세지 않는다 — 그래도 답은 같아야 한다.
+       거래 2건 · 거래일 6일이면 paperRaw 는 2번만 불려야 한다. */
+    { const hist=[{date:'2026-01-02'},{date:'2026-01-06'}];
+      const rawFn=(h2)=>({inflow:1000, qty:h2.length, qty1:0, price1:0, k:0, total:h2.length*10, price:10});
+      const {out}=run([['2026-01-02',10],['2026-01-05',8],['2026-01-06',12],
+                       ['2026-01-07',6],['2026-01-08',9],['2026-01-09',11]], hist, rawFn);
+      ok('거래 있는 날만 다시 센다', calls<=3, `paperRaw ${calls}번 (거래 2건)`);
+      // 단위가치: 10/1000, 8/1000, 24/1000, 12/1000, 18/1000, 22/1000 → 고점 24, 저점 12 → 50%
+      ok('그래도 값은 맞다', out && near(out.pct,50,1e-9), out?out.pct.toFixed(4):'못 잼');
+    }
+    // 종가가 모자라면 0%처럼 보이게 두지 않고 아예 안 잰다
+    { const hist=[{date:'2026-01-02'}];
+      const rawFn=()=>({inflow:100, qty:1, qty1:0, price1:0, k:0, total:100, price:100});
+      const {out}=run([['2026-01-02',100],['2026-01-05',90]], hist, rawFn);
+      ok('종가가 모자라면 안 잰다', out===null, JSON.stringify(out));
+    }
+  }
 }
 
 console.log(`\n════ 결과: ${pass} PASS / ${fail} FAIL ${fail===0?'— ALL PASS ★':'— 배포 금지, 위 ✗ 항목 수정 필요'} ════`);
