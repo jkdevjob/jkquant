@@ -778,21 +778,24 @@ console.log('[19] 출금 · 복리/단리');
 {
   let ci=''; try{ ci=extractFn(idx,'function computeInf()'); }catch(e){}
   ok('출금 기록을 잔금에서 뺀다', /h\.kind==='출금'/.test(ci) && /withdrawn \+= Math\.max\(0,\+h\.amt\|\|0\)/.test(ci), ci?'':'computeInf 없음');
-  ok('잔금 식에 출금·단리인출·단리보충 반영', /principal\+realized-inv-withdrawn-saved\+added/.test(ci));
-  /* 단리는 사이클이 끝나면 계좌를 원금으로 되돌린다 — 양쪽 다.
-     넘치면 빼고(saved) 모자라면 채운다(added). 한쪽만 하면 진 사이클 뒤로
-     계좌가 원금보다 작은 채 굴러가 1회매수금이 줄고 전략이 저절로 약해진다. */
-  ok('단리는 사이클 끝에 원금으로 맞춘다',
-     /if\(simple\)\{[\s\S]{0,360}?if\(cashNow>P0\)\{ fo=cashNow-P0; saved\+=fo; \}[\s\S]{0,120}?else if\(cashNow<P0\)\{ fi=P0-cashNow; added\+=fi; \}/.test(ci));
+  ok('잔금 식에 출금·단리인출 반영', /principal\+realized-inv-withdrawn-saved/.test(ci)
+     && !/principal\+realized-inv-withdrawn-saved\+added/.test(ci));
+  /* 단리 판정은 '사이클 종료 잔액이 최초 원금을 넘는가'다.
+       넘으면 넘은 만큼만 인출하고 원금으로 다시 시작
+       못 넘으면 인출도 보충도 없이 그 잔액 그대로 다음 사이클로
+     한때 모자란 만큼 밖에서 채워 넣었는데, 그건 번 돈이 아니라 새로 넣은 돈이다. */
+  ok('넘은 만큼만 인출한다',
+     /if\(simple\)\{[\s\S]{0,420}?if\(cashNow>P0\)\{ fo=cashNow-P0; saved\+=fo; \}/.test(ci));
+  ok('모자라도 채워 넣지 않는다',
+     !/added\+=/.test(ci) && !/cashNow<P0/.test(ci));
   // 오간 돈의 시점을 한 곳에서 모아 둔다 — 카드도 표도 이걸 쓴다
   ok('오간 돈을 한 곳에서 모은다',
-     /flows\.push\(\{date:h\.date, seq:cycleSeq, out:fo, in:fi\}\);/.test(ci));
+     /flows\.push\(\{date:h\.date, seq:cycleSeq, out:fo, in:0\}\);/.test(ci));
   // 백테도 같은 규약이어야 한다 — 한쪽만 바꾸면 모의와 백테가 갈린다
-  ok('백테도 원금으로 맞춘다',
-     (bt.match(/else if\(cash<cap\)\{ addedCash\+=cap-cash; cash=cap; \}/g)||[]).length===4);
+  ok('백테도 채워 넣지 않는다', !/addedCash\+=/.test(bt));
   ok('백테는 넣은 돈을 총자산에서 뺀다', /\+savedProfit-addedCash;/.test(bt));
   ok('단리 판정은 compound===false', /const simple=\(st\.compound===false\)/.test(ci));
-  ok('출금·단리인출·단리보충을 밖으로 낸다', /withdrawn,saved,added,flows,simple,outside:withdrawn\+saved/.test(ci));
+  ok('출금·단리인출을 밖으로 낸다', /withdrawn,saved,added:0,flows,simple,outside:withdrawn\+saved/.test(ci));
   // 출금이 매매로 잡히면 사이클 종료·T가 오염된다
   ok('출금은 매수·매도가 아니다', /function isBuy\(k\)\{return k==='출금'\?false/.test(idx)
      && /function isSell\(k\)\{return k!=='출금'/.test(idx));
@@ -1205,7 +1208,7 @@ console.log('[27] 무매 분석 — 월별·사이클별');
      && /\$\{isKrw\?'':'<th>원화<\/th>'\}/.test(br));
   // 단리면 출금·입금·합계에 달러 세션은 합계원화까지 — 원화 세션은 셋, 달러 세션은 넷
   ok('빈 표 colspan이 열 수를 따라간다',
-     /const nCol=\(isKrw\?4:5\)\+\(simple\?\(isKrw\?3:4\):0\);/.test(br) && /colspan="\$\{nCol\}"/.test(br));
+     /const nCol=\(isKrw\?4:5\)\+\(simple\?\(isKrw\?1:2\):0\);/.test(br) && /colspan="\$\{nCol\}"/.test(br));
   ok('합계 줄이 있다', /<td><b>합계<\/b><\/td>/.test(br));
 }
 
@@ -2352,10 +2355,10 @@ console.log('\n[55] 단리 현금 흐름');
   const infA=(()=>{ try{ return extractFn(idx,'function renderInfAnal()'); }catch(e){ return ''; } })();
   ok('단리 세션에만 보여준다', /box\.style\.display = \(c\.simple && P0>0\) \? '' : 'none';/.test(infA));
   // 사용자가 말한 순서 — 출금 · 입금 · 합계, 각각 원금 대비 %
-  ok('출금·입금·합계 순이다', (()=>{
-    const i1=idx.indexOf('id="a_sv_out"'), i2=idx.indexOf('id="a_sv_in"'), i3=idx.indexOf('id="a_sv_net"');
-    return i1>0 && i2>i1 && i3>i2; })());
-  ok('합계는 출금 − 입금이다', /setv\('a_sv_net', out-inn,/.test(infA));
+  // 채워 넣는 일이 없어졌으니 입금·합계 줄도 없어야 한다 — 늘 0 인 칸은 잡음이다
+  ok('입금·합계 줄은 없앴다',
+     idx.indexOf('id="a_sv_out"')>0
+     && idx.indexOf('id="a_sv_in"')<0 && idx.indexOf('id="a_sv_net"')<0);
   ok('원금 대비 %를 같이 적는다', /const pct=v=>` \(\$\{\(v\/P0\*100\)\.toFixed\(1\)\}%\)`;/.test(infA));
 
   /* 월 수입으로 읽는 계산은 무매(사이클 초과익)와 적립(현금 수령 분배금)이
@@ -2379,15 +2382,17 @@ console.log('\n[55] 단리 현금 흐름');
      && /\(c\.flows\|\|\[\]\)\.forEach\(f=>\{ const o=C\.get\(f\.seq\)/.test(br2));
   /* 돈이 오간 칸은 매도 바로 오른쪽 — 월 현금흐름이 먼저 보여야 한다.
      손익금·손익률은 그 뒤로 민다. 달러 세션엔 합계원화까지 붙는다. */
+  /* 채워 넣는 일이 없어져 들어오는 칸이 사라졌다 — 나간 칸 하나면 된다 */
   ok('단리 세션에만 붙고, 매도 바로 오른쪽이다',
-     /<th>\$\{lbl\}<\/th><th>매도<\/th>`\s*\+ \(simple\?`<th>출금<\/th><th>입금<\/th><th>합계<\/th>\$\{isKrw\?'':'<th>합계원화<\/th>'\}`:''\)/.test(br2)
+     /<th>\$\{lbl\}<\/th><th>매도<\/th>`\s*\+ \(simple\?`<th>인출<\/th>\$\{isKrw\?'':'<th>원화<\/th>'\}`:''\)/.test(br2)
      && /\+ `<th>손익금<\/th><th>손익률<\/th>/.test(br2));
+  ok('입금 칸은 없앴다', !/<th>입금<\/th>/.test(br2) && !/x\.in\|\|0/.test(br2));
   ok('줄에서도 매도 바로 뒤에 온다',
      /<td>\$\{x\.label\}<\/td><td>\$\{x\.n\}<\/td>\$\{flowCells\(x\)\}<td>\$\{amtTxt\(x\.p\)\}/.test(br2)
      && /<td><b>합계<\/b><\/td><td>\$\{n\}<\/td>\$\{sumFlow\}<td>\$\{amtTxt\(tot\)\}/.test(br2));
-  ok('합계원화는 달러 세션에만', /\(isKrw\?'':`<td>\$\{has\?krwTxt\(net\):dash\}<\/td>`\)/.test(br2));
-  // 돈이 안 오간 달에 +0.00$ (+0.0%) 가 뜨면 잡음이다
-  ok('안 오간 달은 합계도 비운다', /const has=\(x\.out\|\|0\)\|\|\(x\.in\|\|0\), net=\(x\.out\|\|0\)-\(x\.in\|\|0\)/.test(br2));
+  ok('원화 칸은 달러 세션에만', /\(isKrw\?'':`<td>\$\{v\?krwTxt\(v\):dash\}<\/td>`\)/.test(br2));
+  // 안 나온 달에 +0.00$ (+0.0%) 가 뜨면 잡음이다
+  ok('안 나온 달은 비운다', /const v=x\.out\|\|0, dash=/.test(br2) && /\$\{v\?netTxt\(v\):dash\}/.test(br2));
 }
 
 /* ════ 56. 통화는 종목이 정한다 ════

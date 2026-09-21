@@ -1980,7 +1980,10 @@ function runIM(days,tkr,cap,divs,targetPct,compound=true){
   const exitMul=1-starBase/100;
   const sellDiv = divs>=40?20:10;            // 리버스 무한매도 분모 (20분할→10, 40분할→20)
   const MOM = ((typeof imTgtDyn!=='undefined')&&imTgtDyn) ? _imMom(tkr,IM_MOM_LEN) : null;   // 익절 동적 조절 (OFF면 null → 기존과 완전 동일)
-  let cash=cap,shares=0,avg=0,T=0,realized=0,cycles=0,savedProfit=0,addedCash=0;   // 단리에서 사이클 끝에 원금까지 채워 넣은 누적액
+  /* 단리 판정은 '사이클 종료 잔액이 최초 원금을 넘는가'다. 넘으면 넘은 만큼만 인출하고
+     원금으로 다시 시작, 못 넘으면 인출도 보충도 없이 그 잔액 그대로 다음 사이클로 간다.
+     addedCash 는 밖에서 채워 넣던 흔적이라 이제 늘 0 이다 — 운영 computeInf 와 같은 규약. */
+  let cash=cap,shares=0,avg=0,T=0,realized=0,cycles=0,savedProfit=0,addedCash=0;
   // ── 비용·세금 (imCostOn=false면 전부 0, 기존과 완전 동일) ──
   const CO = (typeof imCostOn!=='undefined') && imCostOn;
   const _C=costOf(tkr), FEE = CO?_C.fee:0, SLIP = CO?_C.slip:0;
@@ -2063,7 +2066,6 @@ function runIM(days,tkr,cap,divs,targetPct,compound=true){
       // 전량 매도 → 사이클 리셋 (복리/단리 동일 처리)
       if(shares<1e-9){ shares=0;avg=0;cycles++; inReverse=false;
         if(compound){} else if(cash>cap){ savedProfit+=cash-cap; cash=cap; }
-        else if(cash<cap){ addedCash+=cap-cash; cash=cap; } // 단리: 초과익만 인출, 손실은 잔고 그대로 이월
         T=0; snap.push([d,cash+savedProfit-addedCash]); peakInvested=Math.max(peakInvested,cap-cash); return; }
       // 가격 회복(종가>평단×exitMul) → 내일부터 일반모드 복귀. T는 그대로 승계.
       // (복귀 후 일반모드에서 1회분도 못 사는 상태가 되면 T>분할−1이라 자동으로 다시 리버스 진입)
@@ -2096,7 +2098,6 @@ function runIM(days,tkr,cap,divs,targetPct,compound=true){
       if(shares<1e-9){shares=0;avg=0;cycles++;
         if(compound){ /* 복리: 익절금 포함 현금 그대로 다음 사이클 사용 */ }
         else if(cash>cap){ savedProfit+=cash-cap; cash=cap; }
-        else if(cash<cap){ addedCash+=cap-cash; cash=cap; }  // 단리: 초과익만 인출, 손실 사이클은 잔고 이월(외부수혈 없음)
         T=0;snap.push([d,cash+savedProfit-addedCash]);return;}
     }
     if(divs-T>=1&&cash>1){          // 소진 = T>분할−1 → 남은 회차가 1회 이상일 때만 매수
@@ -2283,7 +2284,10 @@ function runIM50(days,tkr,cap,divs,targetPct,compound=true){
   const exitMul=1-starBase/100;
   const sellDiv = divs>=40?20:10;
   const GM=buildGateIM(tkr);
-  let cash=cap,shares=0,avg=0,T=0,realized=0,cycles=0,savedProfit=0,addedCash=0;   // 단리에서 사이클 끝에 원금까지 채워 넣은 누적액
+  /* 단리 판정은 '사이클 종료 잔액이 최초 원금을 넘는가'다. 넘으면 넘은 만큼만 인출하고
+     원금으로 다시 시작, 못 넘으면 인출도 보충도 없이 그 잔액 그대로 다음 사이클로 간다.
+     addedCash 는 밖에서 채워 넣던 흔적이라 이제 늘 0 이다 — 운영 computeInf 와 같은 규약. */
+  let cash=cap,shares=0,avg=0,T=0,realized=0,cycles=0,savedProfit=0,addedCash=0;
   // ── 비용·세금 (imCostOn=false면 전부 0, 기존과 완전 동일) ──
   const CO = (typeof imCostOn!=='undefined') && imCostOn;
   const _C=costOf(tkr), FEE = CO?_C.fee:0, SLIP = CO?_C.slip:0;
@@ -2353,7 +2357,6 @@ function runIM50(days,tkr,cap,divs,targetPct,compound=true){
       }
       if(shares<1e-9){ shares=0;avg=0;cycles++; inReverse=false;
         if(compound){} else if(cash>cap){ savedProfit+=cash-cap; cash=cap; }
-        else if(cash<cap){ addedCash+=cap-cash; cash=cap; }
         T=0; snap.push([d,cash+savedProfit-addedCash]); peakInvested=Math.max(peakInvested,cap-cash); return; }
       if(c>avg*exitMul){ inReverse=false; }
       if(i%10===0)snap.push([d,cash+shares*c+savedProfit-addedCash]);
@@ -2381,7 +2384,6 @@ function runIM50(days,tkr,cap,divs,targetPct,compound=true){
       if(qtHit) T*=0.75;
       if(shares<1e-9){shares=0;avg=0;cycles++;
         if(compound){} else if(cash>cap){ savedProfit+=cash-cap; cash=cap; }
-        else if(cash<cap){ addedCash+=cap-cash; cash=cap; }
         T=0;snap.push([d,cash+savedProfit-addedCash]);return;}
     }
     if(divs-T>=1&&cash>1){          // 소진 = T>분할−1 (V4.0과 동일 규약)
