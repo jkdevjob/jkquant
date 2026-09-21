@@ -265,14 +265,14 @@ console.log('[4c] 섀넌 차분 (runIVS 거래로그 → ivsPos 재생)');
     ivsSrc=p[0]+after+p[1]; };
   inj(`P.avg=(P.sh*P.avg+q*px)/(P.sh+q); P.sh+=q; cash-=spend+lf;`,
       `P.avg=(P.sh*P.avg+q*px)/(P.sh+q); P.sh+=q; cash-=spend+lf; __LOGI('buy',P===A?'lev':'x1',__DD,px,q,spend-fee,fee);`,'buy');
-  inj(`yearPnl+=q*(px-P.avg)-fee; P.sh-=q;`,
-      `yearPnl+=q*(px-P.avg)-fee; P.sh-=q; __LOGI('sell',P===A?'lev':'x1',__DD,px,q,gross,fee);`,'sell');
+  inj(`yearPnl+=q*(px-P.avg)-fee;P.sh-=q;`,
+      `yearPnl+=q*(px-P.avg)-fee;P.sh-=q;__LOGI('sell',P===A?'lev':'x1',__DD,px,q,gross,fee);`,'sell');
   inj(`days.forEach((d,i)=>{`,`days.forEach((d,i)=>{ __DD=d;`,'date');
   inj(`const LEGFEE=(costOn&&!X1)?costOf(tkr).fee:0;`,`const LEGFEE=0;`,'legfee');
   inj(`const CASH_DIVTAX=costOn?0.154:0, CASH_EXP=costOn?0.0010:0;`,`const CASH_DIVTAX=0, CASH_EXP=0;`,'cashcost');
   /* 양도세 중화 — 운영 장부엔 세금 개념이 없다. 예전엔 COST_DEDUCT를 무한대로 올려 껐지만
      세금이 costOf/capGainTax 안으로 들어가면서 밖에서 상수를 덮어써도 안 먹는다. 식을 직접 끈다. */
-  inj(`const owed=capGainTax(yearPnl, tkr); let due=owed; yearPnl=0;`,`const owed=0; let due=owed; yearPnl=0;`,'tax');
+  inj(`const owed=capGainTax(yearPnl,tkr);yearPnl=0;let due=owed;`,`const owed=0;yearPnl=0;let due=owed;`,'tax');
   let ivsLog=[];
   global.__DD=null;
   global.__LOGI=(type,leg,date,price,qty,amt,fee)=>ivsLog.push({type,leg,sym:leg,date,price,qty,amt,fee,ts:ivsLog.length+1});
@@ -415,6 +415,25 @@ console.log('[5g] 비교엔진·공식 기본값·모멘텀 룩어헤드');
      && !/px\(s,d\)\/px\(s,pd\)/.test(mom));
   ok('모멘텀 보유중 잔여현금도 평가액에 포함', /eq\[dates\[k\]\]=cash\+shares\*lp/.test(mom)
      && /const fin=held\?cash\+shares\*px/.test(mom));
+}
+
+console.log('[5h] 달력 주기·정수주·세금재원');
+{
+  const dca=extractFn(bt,'function _dcaOne(t,days,amt,step,costOn,dipMul)');
+  const ds=extractFn(bt,'function _dcaBuySet(days,freq)');
+  const one=extractFn(bt,'function _runOneStrat(key,tkr,cap,days,costOn)');
+  const std=extractFn(bt,'function runStdev(days,tkr,cap,N,g,filter,costOn)');
+  const ivs=extractFn(bt,'function runIVS(days,tkr,cap,s0,N,band,costOn,mode,pair)');
+  const ma=extractFn(bt,'function runMA200(days,tkr,cap,N,costOn,opt)');
+  ok('DCA 매주·매월은 달력 첫 거래일', /freq==='weekly'/.test(ds) && /freq==='monthly'/.test(ds)
+     && !/weekly:5/.test(ds) && !/monthly:21/.test(ds));
+  ok('DCA 엔진은 달력 매수일 Set을 사용', /buyDays=_dcaBuySet\(days,step\)/.test(dca) && /buyDays\.has\(d\)/.test(dca));
+  ok('전체비교 VR 적립도 14일 실제 사이클 수로 정규화', /_vrCycleCount\(days\)/.test(one));
+  ok('표준편차·역분산 매도는 정수주', /Math\.floor\(sh\+1e-9\)/.test(std)
+     && /Math\.floor\(P\.sh\+1e-9\)/.test(ivs));
+  ok('로테이션 0주 매수를 거래로 세지 않음', /if\(q>0\)\{const spend=q\*c/.test(ma));
+  ok('세금 납부용 매도도 현금·수수료·새해 실현손익을 반영',
+     /taxTotal\+=owed-due/.test(std) && /taxTotal\+=owed-due/.test(ivs) && /yearPnl\+=q\*\(px-avg\)-fee/.test(ma));
 }
 
 console.log('[6] UI 배선 정적 스캔');
@@ -2650,9 +2669,10 @@ console.log('\n[58] 국내 종목의 비용·세금 규약');
      (bt.match(/TBILL_RATE\[/g)||[]).length===1, `${(bt.match(/TBILL_RATE\[/g)||[]).length}곳`);
   ok('차입비용도 같은 금리를 쓴다', (bt.match(/_bor\*\(parkRate\(y,/g)||[]).length===2);
 
-  ok('기말 전량매도도 종목을 받는다',
+  ok('비교 기준은 전 전략 기말 미청산으로 통일',
      /function saleNet\(gross, invested, costOn, tkr\)/.test(bt)
-     && (bt.match(/saleNet\([^)]*,\s*(?:t|r\.tkr)\)/g)||[]).length===3);
+     && (bt.match(/saleNet\(/g)||[]).length===1
+     && /기말 보유분은 전 전략 동일하게 미청산 평가/.test(bt));
 
   /* 화면 쪽 — 원금 칸과 주석이 종목을 따라가야 한다.
      '원금 ($)' 을 박아 두면 국내 ETF를 골라 놓고도 달러 넣는 칸처럼 보이고,
