@@ -524,7 +524,7 @@ try{ if(localStorage.getItem('qcockpit_hadUser')==='1') document.documentElement
 </div>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.72</span></h1></div>
+    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.73</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -1612,7 +1612,7 @@ document.addEventListener('click',function(e){ var m=document.getElementById('jk
   <footer>
     <strong>JK 퀀트</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.72</b> · 2026-09-21</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.73</b> · 2026-09-21</div>
   </footer>
 </div>
 
@@ -6494,12 +6494,77 @@ function tradeCount(hist){
   return (hist||[]).filter(x=>{ const k=x.kind||x.type||'';
     return /매수|매도/.test(k)||k==='buy'||k==='sell'||k==='in'||k==='out'; }).length;
 }
-function paperStat(tab, sess){
-  const h=sess.hist||[]; if(!h.length) return null;
-  const box=S[tab]; if(!box) return null;
-  const prevTab=S.activeTab, prevAct=box.active;
-  S.activeTab=tab; box.active=sess.id;
-  let inflow=0, total=0, price=0, sym='', _out=null;
+/* 탭마다 종가 이력이 사는 곳이 다르다 — MDD를 재려면 하루하루 종가가 필요하다 */
+const PAPER_DAYS={
+  inf :()=>(lastQuote.inf && lastQuote.inf.days)||null,
+  vr  :()=>(lastQuote.vr  && lastQuote.vr.days)||null,
+  ivs :()=>(typeof ivsQuoteData !=='undefined' && ivsQuoteData  && ivsQuoteData.days)||null,
+  ma  :()=>(typeof maQuoteData  !=='undefined' && maQuoteData   && maQuoteData.days)||null,
+  dca :()=>(typeof dcaQuoteData !=='undefined' && dcaQuoteData  && dcaQuoteData.days)||null,
+  asap:()=>(typeof asapQuoteData!=='undefined' && asapQuoteData && asapQuoteData.days)||null};
+
+/* ── 모의 MDD — 최대 낙폭 ──
+   재는 건 '단위가치 = 총자산 ÷ 그때까지 넣은 돈'이다. 총자산 그대로 재면 적립식에서
+   매달 들어오는 적립금이 상승처럼 잡혀 낙폭이 지워진다(백테 _dcaOne 도 같은 이유로
+   단위가치로 잰다). 거치식은 투입이 안 변하니 총자산 MDD 와 같은 값이 된다 —
+   그래서 한 가지 규칙으로 여섯 전략을 다 덮는다.
+
+   총자산은 paperRaw 가 정한 뜻 그대로 쓴다. 여기서 현금을 다시 세지 않는다 —
+   그러면 같은 걸 두 군데서 세는 꼴이라 목록의 '최종'과 반드시 갈린다.
+   거래가 있는 날만 다시 세고(그날까지의 기록으로 paperRaw), 없는 날은 주가만 갈아끼운다.
+   사다리 VR 모의 세션은 거래가 수천 건이라 이 구분이 없으면 눈에 띄게 느려진다. */
+function paperMdd(tab, sess, R, hist){
+  try{
+    const getD=PAPER_DAYS[tab]; if(!getD) return null;
+    const days=getD(); if(!days||days.length<3) return null;
+    const h=(hist||[]).filter(x=>x&&x.date);
+    // 잴 수 있는지는 아래 걷기에서 판가름난다 (투입>0 인 날이 세 날은 있어야 한다).
+    // 여기서 '지금 총자산이 0이면 안 잰다' 같은 조건을 또 두면 규칙이 두 군데로 갈린다.
+    if(!h.length) return null;
+    const first=h[0].date;
+    const from=(sess.simStart && sess.simStart<first) ? sess.simStart : first;
+    /* 끝은 마지막 '거래일'이 아니라 시세가 있는 끝까지다 — 거래가 몇 달 전에 멈췄어도
+       들고 있는 동안 주가는 계속 움직인다. 목록의 '최종'도 지금 주가로 잰 값이라
+       여기서 거래일에 멈추면 그 사이 낙폭을 통째로 놓친다. */
+    const D=days.filter(d=>d&&d.date>=from&&d.close>0);
+    if(D.length<3) return null;
+    // 짝 종목(섀넌 1배수)도 제 종가로 움직인다 — 없으면 마지막 값으로 둔다
+    let P1=null;
+    if(R.qty1>0 && typeof ivsQuote1!=='undefined' && ivsQuote1 && ivsQuote1.days){
+      P1={}; ivsQuote1.days.forEach(x=>{ if(x&&x.close>0) P1[x.date]=x.close; });
+    }
+    const real=sess.hist;
+    let peak=-Infinity, mdd=0, n=0, endTot=0, cur=null, idx=0;
+    try{
+      for(const row of D){
+        let grew=false;
+        while(idx<h.length && h[idx].date<=row.date){ idx++; grew=true; }
+        if(grew || !cur){ sess.hist=h.slice(0,idx); cur=paperRaw(tab, sess); }
+        if(!cur || !(cur.inflow>0)) continue;
+        const p1=(P1&&P1[row.date])||cur.price1||0;
+        const tot=cur.qty*row.close + (cur.qty1||0)*p1 + cur.k;
+        const uv=tot/cur.inflow;
+        if(!isFinite(uv)||uv<=0) continue;
+        n++; endTot=tot;
+        if(uv>peak) peak=uv; else if(peak>0){ const dd=(peak-uv)/peak; if(dd>mdd) mdd=dd; }
+      }
+    } finally { sess.hist=real; }
+    if(n<3) return null;
+    return {pct:mdd*100, nDay:n, endTot};
+  }catch(e){ console.error('paperMdd',tab,e); return null; }
+}
+
+/* ── 한 세션의 '지금 값' — 총자산의 뜻을 정하는 유일한 자리 ──
+   총자산 = 보유 평가금 + 계좌 현금 + 계좌 밖으로 나간 돈.
+   전략마다 현금 장부가 달라(무매 잔금 · VR Pool · 적립은 현금 계좌가 없음)
+   밖에서 다시 세면 반드시 갈린다 — 그 전략의 compute 를 그대로 부른다.
+   주식 수(qty·qty1)를 같이 돌려주는 건 MDD 때문이다: 총자산은 주가에 선형이라
+     나머지 k = 총자산 − qty×주가 − qty1×짝주가
+   를 빼 두면, 거래가 없는 날은 다시 세지 않고 주가만 갈아끼워도 정확하다.
+   부르는 쪽이 S.activeTab·box.active 를 그 세션으로 맞춰 둔 상태여야 한다. */
+function paperRaw(tab, sess){
+  const h=sess.hist||[];
+  let inflow=0, total=0, price=0, sym='', _out=null, qty=0, qty1=0, price1=0;
   try{
     const st=sess.settings||{};
     sym=String(st.ticker||'').toUpperCase();
@@ -6511,6 +6576,7 @@ function paperStat(tab, sess){
          빠뜨리면 분석탭 누적(+12.93%)과 목록 최종(10.00%)이 그만큼 갈린다. */
       const _dv=sessDivCash(st, h);
       inflow=+st.principal||0;
+      qty=c.qty;
       total=price*c.qty + c.bal + (c.outside||0) + _dv.divCash;   // 출금·단리 적립분·분배금도 자산
       _out={saved:(c.saved||0)+_dv.divCash, withdrawn:c.withdrawn||0, simple:!!c.simple};
     }else if(tab==='vr'){
@@ -6519,14 +6585,17 @@ function paperStat(tab, sess){
          예전엔 inflow 에서 인출을 빼고 total 에도 안 넣어, 인출이 양쪽에서 통째로 사라졌다.
          (인출식 세션의 인출 칸이 늘 비어 있던 이유다.) */
       const _dv=sessDivCash(st, c.hist);
+      qty=c.qty;
       inflow=c.grossIn; total=price*c.qty + c.pool + (c.totwd||0) + _dv.divCash;
       _out={saved:_dv.divCash, withdrawn:c.totwd||0, simple:false};
     }else if(tab==='ivs'){
       const c=computeIvs(); price=c.price||0;
+      qty=c.qty;
       let ev=price*c.qty;
       if(c.X1 && c.qty1>0){ const s1=ivsX1Of(sym);
         const q1=(ivsQuote1&&String(ivsQuote1.symbol||'').toUpperCase()===s1)?ivsQuote1:null;
-        ev += (c.qty1)*((q1&&(q1.price>0?q1.price:(q1.last&&q1.last.close)))||c.avg1||0); }
+        qty1=c.qty1; price1=((q1&&(q1.price>0?q1.price:(q1.last&&q1.last.close)))||c.avg1||0);
+        ev += qty1*price1; }
       const _dv=sessDivCash(st, h);
       inflow=(c.principal||0)+(c.added||0);                  // 출금을 빼지 않는다 — 분자에 도로 더하므로
       total=ev + (c.cash||0) + (c.withdrawn||0) + _dv.divCash;
@@ -6535,11 +6604,13 @@ function paperStat(tab, sess){
       const c=computeMa(); price=c.ready?(c.price||c.lastClose||0):0;
       const L=maLedger(h, price, +st.principal||0);
       const _dv=sessDivCash(st, h);
+      qty=L.qty;
       inflow=+st.principal||0; total=L.total + _dv.divCash;   // 로테는 인출이 없다 — 분배금만 나간다
       if(_dv.divCash>0) _out={saved:_dv.divCash, withdrawn:0, simple:true};
     }else if(tab==='dca'){
       const c=computeDca(); price=c.ready?(c.price||c.lastClose||0):0;
       // 적립은 현금 계좌가 없다 — 매수액이 곧 투입. 받은 분배금은 자산에 더한다.
+      qty=c.ready?(c.pos.shares+(c.pos.divShares||0)):c.pos.shares;
       inflow=c.pos.inv; total=c.ready?c.total:(price*c.pos.shares);
       /* 현금 수령 분배금은 계좌 밖으로 나간 돈이다 — 무매 단리 인출과 같은 칸에 넣는다.
          그래야 목록의 최종·현재·인출 세 칸이 적립 세션에도 그대로 들어맞는다. */
@@ -6551,11 +6622,25 @@ function paperStat(tab, sess){
       h.forEach(x=>{ if(x.type==='sgov') inflow+=+x.amt||0;
         else if(x.type==='buy' && x.from!=='reserve') inflow+=(x.amt!=null?+x.amt:(+x.qty||0)*(+x.price||0)); });
       const _dv=sessDivCash(st, h);
+      qty=P.shares;
       total=price*P.shares + P.reserve + _dv.divCash;         // 리저브(SGOV)도 내 돈
       if(_dv.divCash>0) _out={saved:_dv.divCash, withdrawn:0, simple:true};
     }
-  }catch(e){ console.error('paperStat',tab,e); }
+  }catch(e){ console.error('paperRaw',tab,e); }
+  /* k = 주가와 무관한 나머지. 총자산이 주가에 선형이라 어느 주가로 빼도 같은 값이다 —
+     그래서 MDD를 잴 때 그날 종가만 갈아끼우면 된다. */
+  return {inflow, total, price, sym, qty, qty1, price1, out:_out,
+          k: total - qty*price - qty1*price1};
+}
+function paperStat(tab, sess){
+  const h=sess.hist||[]; if(!h.length) return null;
+  const box=S[tab]; if(!box) return null;
+  const prevTab=S.activeTab, prevAct=box.active;
+  S.activeTab=tab; box.active=sess.id;
+  let R, mdd=null;
+  try{ R=paperRaw(tab, sess); mdd=paperMdd(tab, sess, R, h); }
   finally{ S.activeTab=prevTab; box.active=prevAct; }
+  const {inflow, total, price, sym, out:_out}=R;
   const st=sess.settings||{};
   const base=Math.max(1,inflow);
   // 돈은 모의 시작일부터 넣어 둔 것이다. 첫 기록일부터 재면(로테는 첫 신호가 몇 달 뒤일 수 있다)
@@ -6574,7 +6659,7 @@ function paperStat(tab, sess){
   const outAmt=(_out&&((_out.saved||0)+(_out.withdrawn||0)))||0;
   return {tab, id:sess.id, name:sess.name, sym, cur:curOf(st), from, to, yrs, spanDays, inflow:base, total,
     ret:(total/base-1)*100, retNow:((total-outAmt)/base-1)*100, retOut:(outAmt/base)*100,
-    cagr:(Math.pow(Math.max(total,1)/base,1/yrs)-1)*100, nTrade, price, out:_out};
+    cagr:(Math.pow(Math.max(total,1)/base,1/yrs)-1)*100, nTrade, price, out:_out, mdd};
 }
 function paperSummary(){
   const out=[];
@@ -6660,6 +6745,7 @@ async function openPaper(){
     const cur=rows.map(r=>r.price>0).every(Boolean);
     let h=`<div class="htable-wrap"><table class="htable narrow"><tr><th>전략 · 세션</th><th>기간</th><th>평가</th>`
       + `<th title="평가금 + 잔금 + 나간 돈 ÷ 원금. 현재 + 인출 과 정확히 같습니다">최종</th>`
+      + `<th title="최대 낙폭 — 하루하루 '총자산 ÷ 그때까지 넣은 돈'을 재서 고점 대비 가장 깊이 빠진 폭. 적립금이 상승처럼 잡히지 않도록 투입으로 나눠 잽니다">MDD</th>`
       + `<th title="평가금 + 잔금 ÷ 원금 — 계좌에 지금 남아 있는 것만">현재</th>`
       + `<th title="매도해서 계좌 밖으로 뺀 돈(단리 적립·출금) ÷ 원금">인출</th>`
       + `<th>연</th><th>투입</th></tr>`;
@@ -6682,17 +6768,19 @@ async function openPaper(){
         + (ok
           ? `<td>${wnCur(r.total,r.cur)}</td>
              <td style="color:${up?'var(--buy)':'var(--sell)'};font-weight:700">${up?'+':''}${r.ret.toFixed(1)}%</td>`
+             /* MDD는 종가 이력이 있어야 잰다 — 못 재면 0%처럼 보이지 않게 비운다 */
+             + `<td style="color:${r.mdd?'var(--sell)':'var(--faint)'}" title="${r.mdd?r.mdd.nDay+'거래일을 하루하루 재봤습니다':'종가 이력이 모자라 못 쟀습니다'}">${r.mdd?'−'+r.mdd.pct.toFixed(1)+'%':'—'}</td>`
              /* 나간 돈이 없으면 현재는 최종과 같은 값이고 인출은 0이다 —
                 같은 숫자를 굵게 두 번 띄우면 잡음이라 흐리게 두고 인출은 비운다 */
              + `<td style="color:${outAmt>0?(r.retNow>=0?'var(--buy)':'var(--sell)'):'var(--faint)'}">${r.retNow>=0?'+':''}${r.retNow.toFixed(1)}%</td>`
              + `<td style="color:${outAmt>0?'var(--gold)':'var(--faint)'}">${outAmt>0?'+'+r.retOut.toFixed(1)+'%':'—'}</td>`
              + `<td style="color:${long?(up?'var(--buy)':'var(--sell)'):'var(--faint)'}">${cagr}</td>`
-          : `<td colspan="5" style="color:var(--gold)">시세 대기 — ${r.sym} 탭을 한 번 열어주세요</td>`)
+          : `<td colspan="6" style="color:var(--gold)">시세 대기 — ${r.sym} 탭을 한 번 열어주세요</td>`)
         // 투입은 맨 오른쪽 — 눈이 먼저 가야 하는 건 성과(평가·수익·연)다
         + `<td style="color:var(--dim)">${wnCur(r.inflow,r.cur)}</td></tr>`; });
     h+=`</table></div>`;
     if(!cur) h+=`<p class="note" style="margin-top:8px;color:var(--gold)">⚠ 시세를 못 받은 세션이 있습니다. 그 줄은 수익률을 비워 뒀습니다 — 해당 탭을 한 번 열면 채워집니다.</p>`;
-    h+=`<p class="note" style="margin-top:8px"><b style="color:var(--vio)">전략 이름</b>을 누르면 그 세션의 분석으로 갑니다. · 평가 = 보유 평가금 + 현금 + 계좌 밖으로 뺀 돈(출금·단리 인출) · 투입 = 밖에서 넣은 돈(원금·적립·입금). 수수료는 전략별 재생 규약을 따르고 <b>양도세는 넣지 않았습니다</b>.</p>`;
+    h+=`<p class="note" style="margin-top:8px"><b style="color:var(--vio)">전략 이름</b>을 누르면 그 세션의 분석으로 갑니다. · 평가 = 보유 평가금 + 현금 + 계좌 밖으로 뺀 돈(출금·단리 인출) · 투입 = 밖에서 넣은 돈(원금·적립·입금) · <b>MDD</b> = 하루하루 <b>총자산 ÷ 그때까지 넣은 돈</b>의 고점 대비 최대 낙폭(적립금이 상승으로 잡히지 않게 투입으로 나눠 잽니다). 수수료는 전략별 재생 규약을 따르고 <b>양도세는 넣지 않았습니다</b>.</p>`;
     if(paperNote) h+=`<p class="note" style="color:var(--vio)">${paperNote}</p>`;
     body.innerHTML=h;
   }
