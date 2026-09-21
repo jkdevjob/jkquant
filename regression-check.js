@@ -328,7 +328,7 @@ console.log('[5c] VR 2주 고정 예약표 · V 복귀 수량');
   const plan=extractFn(idx,'function vrOrderPlan(c)');
   const sim=extractFn(idx,'function vrSimForward()');
   const vrbt=extractFn(bt,'function runVR(days,tkr,params)');
-  ok('VR 주문표는 사이클 시작 수량 고정', /vrCycleQty\(c\)/.test(plan) && /const plan=vrOrderPlan\(c\)/.test(tab));
+  ok('VR 주문표는 사이클 시작 수량 고정', /vrCycleQty\(c\)/.test(plan) && /plan=vrOrderPlan\(c\)/.test(tab));
   ok('VR 주문수량은 밴드 도달 시 V 복귀량', /Math\.round\(V\/p\)/.test(plan)
      && /q=sh-target/.test(plan) && /target-sh/.test(plan));
   ok('운영 매수한도는 사이클 시작 Pool 기준', /poolCycleBudget\(c\)/.test(plan)
