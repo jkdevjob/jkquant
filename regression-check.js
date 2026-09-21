@@ -375,6 +375,28 @@ console.log('[5e] ASAP 확정안');
   ok('ASAP 재하락 시 재진입 기준 리셋', /stageReserve=0/.test(asap));
 }
 
+console.log('[5f] 일정·룩어헤드·공식범위');
+{
+  const vrbt=extractFn(bt,'function runVR(days,tkr,params)');
+  const dca=extractFn(bt,'function _dcaOne(t,days,amt,step,costOn,dipMul)');
+  const std=extractFn(bt,'function runStdev(days,tkr,cap,N,g,filter,costOn)');
+  const asap=extractFn(bt,'function runASAP(days,tkr,opt)');
+  const ci=extractFn(idx,'function computeInf()');
+  ok('VR 백테 주기는 달력 14일', /setUTCDate\(x\.getUTCDate\(\)\+14\)/.test(vrbt)
+     && !/interval=10/.test(vrbt));
+  ok('DCA 200일선 배수는 전일 확정 신호', /pd=\(gx>0\?allDs\[gx-1\]/.test(dca)
+     && /pp<=ma/.test(dca));
+  ok('표준편차 전략도 전일 신호', /const sg=gx-1/.test(std)
+     && /lv=sg>=0\?lvOf\(sg\)/.test(std));
+  ok('ASAP도 전일 확정 신호', /const sigC=p>=0\?cl\[p\]/.test(asap)
+     && /판정하고 오늘 종가에 집행/.test(asap));
+  ok('V4 리버스 기본값은 공식 ON', /reverse:true/.test(idx)
+     && /let imReverse=true/.test(bt));
+  ok('V4 리버스는 확인된 20·40분할만 공식 적용',
+     /reverseSupported=\(st\.div===20\|\|st\.div===40\)/.test(ci)
+     && (bt.match(/divs===20\|\|divs===40/g)||[]).length>=2);
+}
+
 console.log('[6] UI 배선 정적 스캔');
 {
   // 죽은 id 예외는 두지 않는다 — 예외를 허용해 두면 '가드가 있으니 무해'라는 이유로
@@ -851,17 +873,16 @@ console.log('[19] 출금 · 복리/단리');
   let ci=''; try{ ci=extractFn(idx,'function computeInf()'); }catch(e){}
   ok('출금 기록을 잔금에서 뺀다', /h\.kind==='출금'/.test(ci) && /withdrawn \+= Math\.max\(0,\+h\.amt\|\|0\)/.test(ci), ci?'':'computeInf 없음');
   ok('잔금 식에 출금·단리인출·단리보충 반영', /principal\+realized-inv-withdrawn-saved\+added/.test(ci));
-  /* 단리는 사이클이 끝나면 계좌를 원금으로 되돌린다 — 양쪽 다.
-     넘치면 빼고(saved) 모자라면 채운다(added). 한쪽만 하면 진 사이클 뒤로
-     계좌가 원금보다 작은 채 굴러가 1회매수금이 줄고 전략이 저절로 약해진다. */
-  ok('단리는 사이클 끝에 원금으로 맞춘다',
-     /if\(simple\)\{[\s\S]{0,360}?if\(cashNow>P0\)\{ fo=cashNow-P0; saved\+=fo; \}[\s\S]{0,120}?else if\(cashNow<P0\)\{ fi=P0-cashNow; added\+=fi; \}/.test(ci));
+  /* 단리는 초과익만 밖으로 빼고, 손실 사이클은 외부 수혈 없이 줄어든 잔고 그대로 이월한다. */
+  ok('단리는 초과익만 인출·손실은 그대로 이월',
+     /if\(simple\)\{[\s\S]{0,360}?if\(cashNow>P0\)\{ fo=cashNow-P0; saved\+=fo; \}/.test(ci)
+     && !/added\+=fi/.test(ci));
   // 오간 돈의 시점을 한 곳에서 모아 둔다 — 카드도 표도 이걸 쓴다
   ok('오간 돈을 한 곳에서 모은다',
      /flows\.push\(\{date:h\.date, seq:cycleSeq, out:fo, in:fi\}\);/.test(ci));
-  // 백테도 같은 규약이어야 한다 — 한쪽만 바꾸면 모의와 백테가 갈린다
-  ok('백테도 원금으로 맞춘다',
-     (bt.match(/else if\(cash<cap\)\{ addedCash\+=cap-cash; cash=cap; \}/g)||[]).length===4);
+  // 백테도 같은 규약이어야 한다 — 손실 사이클에 외부자금 보충 금지
+  ok('백테도 손실 외부보충 없음',
+     (bt.match(/addedCash\+=cap-cash/g)||[]).length===0);
   ok('백테는 넣은 돈을 총자산에서 뺀다', /\+savedProfit-addedCash;/.test(bt));
   ok('단리 판정은 compound===false', /const simple=\(st\.compound===false\)/.test(ci));
   ok('출금·단리인출·단리보충을 밖으로 낸다', /withdrawn,saved,added,flows,simple,outside:withdrawn\+saved/.test(ci));
