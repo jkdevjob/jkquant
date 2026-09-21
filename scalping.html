@@ -187,7 +187,7 @@ canvas{display:block;width:100%;height:auto}
 
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Morning Scalping</div><h1>JK <span class="v">퀀트</span> 단타 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="scVer">v1.6.0</span></h1></div>
+    <div><div class="kicker">Morning Scalping</div><h1>JK <span class="v">퀀트</span> 단타 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="scVer">v1.7.0</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -288,7 +288,7 @@ canvas{display:block;width:100%;height:auto}
       <div class="fld"><label>감시 유니버스</label><select id="ob_live_n"><option>30</option><option selected>50</option><option>100</option></select></div>
       <div class="fld"><label>종목당 모의금액(원)</label><input id="ob_budget" type="number" value="2000000" min="10000" step="100000" style="width:130px"></div>
       <button class="prim" id="obLiveBtn" onclick="toggleOpeningLive()">▶ Top2 감시 시작</button>
-      <button class="ghostbtn" id="obNotifyBtn" onclick="toggleOpeningNotify()">🔔 알림 켜기</button>
+      <button class="ghostbtn" id="obNotifyBtn" onclick="toggleOpeningNotify()">🔔 웹 알림</button>\n      <button class="ghostbtn" onclick="testTelegramOpening()">📨 Telegram 테스트</button>
       <span class="sub" id="ob_live_msg">09:09 전에 감시를 켜 두세요</span>
     </div>
     <div id="ob_live_body"><p class="sub">09:00~09:08은 관찰, 09:09부터 오늘의 Top2를 고정하고 09:30까지 추적합니다.</p></div>
@@ -1004,11 +1004,29 @@ async function toggleOpeningNotify(){
   else OB_NOTIFY=false;
   try{localStorage.setItem('jkq_ob_notify',OB_NOTIFY?'1':'0');}catch(e){} renderOpeningNotify();
 }
-function renderOpeningNotify(){const b=$('obNotifyBtn');if(b)b.textContent=OB_NOTIFY?'🔔 알림 켜짐':'🔕 알림 꺼짐';}
+function renderOpeningNotify(){const b=$('obNotifyBtn');if(b)b.textContent=OB_NOTIFY?'🔔 웹 알림 켜짐':'🔕 웹 알림 꺼짐';}
+async function telegramOpeningEvent(title,body){
+  try{
+    if(!me)return false;
+    const tok=await me.getIdToken();
+    const r=await fetch('/api/telegram',{method:'POST',headers:{'content-type':'application/json','Authorization':'Bearer '+tok},body:JSON.stringify({title,body})});
+    const j=await r.json().catch(()=>({}));
+    if(!r.ok||!j.ok){console.warn('Telegram 알림 실패:',j.error||r.status);return false;}
+    return true;
+  }catch(e){console.warn('Telegram 알림 실패:',e);return false;}
+}
+async function testTelegramOpening(){
+  const ok=await telegramOpeningEvent('JK 퀀트 연결 테스트','Telegram 시초가 알림 연결이 정상입니다.');
+  alert(ok?'Telegram 테스트 메시지를 보냈습니다.':'Telegram 전송 실패 — Cloudflare의 TELEGRAM_BOT_TOKEN / TELEGRAM_CHAT_ID를 확인하세요.');
+}
 function notifyOpeningEvent(key,title,body){
-  if(!OB_NOTIFY||OB_NOTIFIED.has(key)||!('Notification' in window)||Notification.permission!=='granted')return false;
+  if(OB_NOTIFIED.has(key))return false;
   OB_NOTIFIED.add(key);
-  try{new Notification(title,{body,tag:'jkq-ob-'+key});return true;}catch(e){return false;}
+  void telegramOpeningEvent(title,body);
+  if(OB_NOTIFY&&('Notification' in window)&&Notification.permission==='granted'){
+    try{new Notification(title,{body,tag:'jkq-ob-'+key});}catch(e){}
+  }
+  return true;
 }
 function obKstNow(){
   const p=new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Seoul',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hour12:false}).formatToParts(new Date());
