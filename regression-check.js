@@ -317,6 +317,17 @@ console.log('[5b] VR 인출 실제액 규칙');
   ok('운영 인출 이력도 실제액만 기록', /amt:r\.flowAmt/.test(step) && /if\(r\.flowAmt>0\)/.test(step));
 }
 
+console.log('[5c] VR 사다리 동적 차수');
+{
+  const tab=extractFn(idx,'function renderVrTable()');
+  const sim=extractFn(idx,'function vrSimForward()');
+  ok('VR 사다리에 고정 20차수 없음', !/const N=20/.test(tab));
+  ok('매도표는 보유수량 전체 범위', /const sTiers=S/.test(tab));
+  ok('매수표는 Pool 한도까지만 생성', /if\(spent\+p > limit\+1e-6\) break/.test(tab));
+  ok('모의체결 고정 300차수 상한 없음', !/k<300/.test(sim) && /while\(qty>=1\)/.test(sim));
+  ok('가이드가 2주 내 가격도달 체결을 설명', /2주는 V 갱신 주기일 뿐/.test(idx));
+}
+
 console.log('[6] UI 배선 정적 스캔');
 {
   // 죽은 id 예외는 두지 않는다 — 예외를 허용해 두면 '가드가 있으니 무해'라는 이유로
