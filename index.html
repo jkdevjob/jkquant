@@ -520,7 +520,7 @@ try{ if(localStorage.getItem('qcockpit_hadUser')==='1') document.documentElement
 </div>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.67</span></h1></div>
+    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.68</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -708,8 +708,6 @@ document.addEventListener('click',function(e){ var m=document.getElementById('jk
         <!-- 단리는 인출금이 곧 수입이다. 누적 한 줄로는 "달마다 얼마 나오나"가 안 보인다. -->
         <div id="a_simple" style="display:none;margin-top:10px;padding-top:9px;border-top:1px solid var(--line)">
           <div class="rowline" style="border:none;padding:3px 0"><span class="k">출금 <span class="sub">사이클 초과익을 빼낸 것</span></span><span class="val mono" id="a_sv_out">—</span></div>
-          <div class="rowline" style="border:none;padding:3px 0"><span class="k">입금 <span class="sub">진 사이클을 원금까지 채운 것</span></span><span class="val mono" id="a_sv_in">—</span></div>
-          <div class="rowline" style="border:none;padding:3px 0"><span class="k">합계 <span class="sub">실제로 손에 쥔 돈 · 출금 − 입금</span></span><span class="val mono" id="a_sv_net">—</span></div>
           <div class="rowline" style="border:none;padding:6px 0 3px;border-top:1px solid var(--line)"><span class="k">월 평균 <span class="sub" id="a_sv_msub">안 나온 달도 포함</span></span><span class="val mono" id="a_sv_mavg">—</span></div>
           <div class="rowline" style="border:none;padding:3px 0"><span class="k">나온 달 <span class="sub">연속으로 끊긴 최장</span></span><span class="val mono" id="a_sv_hit">—</span></div>
           <div class="rowline" style="border:none;padding:3px 0"><span class="k">마지막 인출</span><span class="val mono" id="a_sv_last">—</span></div>
@@ -1610,7 +1608,7 @@ document.addEventListener('click',function(e){ var m=document.getElementById('jk
   <footer>
     <strong>JK 퀀트</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.67</b> · 2026-09-16</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.68</b> · 2026-09-16</div>
   </footer>
 </div>
 
@@ -2206,7 +2204,7 @@ function computeInf(){
      saved     — 단리 모드에서 사이클이 끝날 때 자동으로 빠진 초과익
      둘 다 잔금에서 나가지만 성격이 다르다. 총자산에는 둘 다 다시 더한다
      (계좌 밖으로 나갔을 뿐 없어진 돈이 아니다). */
-  let withdrawn=0, saved=0, added=0;
+  let withdrawn=0, saved=0;
   /* 사이클이 닫힐 때마다 오간 돈. 카드도 표도 이걸 쓴다 —
      같은 걸 두 군데서 따로 세면 또 어긋난다(거래 수에서 이미 겪었다). */
   const flows=[];
@@ -2248,23 +2246,25 @@ function computeInf(){
     if(qty<=1e-9 && isSell(h.kind) && !isBuy(h.kind)){ // 1e-9 톨러런스: 소수 수량 매도 시 부동소수점 잔여로 전량매도(사이클 종료)를 놓치지 않도록 (backtest와 동일 기준)
       qty=0; avg=0; T=0; inv=0; // 보유·평단·T·투입원가 리셋 (realized 누적은 유지 → 잔금에 반영)
       cycleEnd=true; reverseTraded=false; inReverseNow=false;
-      /* 단리 — 사이클이 끝나면 계좌를 원금으로 되돌린다. 양쪽 다.
-           넘치면 빼고(saved), 모자라면 채운다(added).
-         예전에는 초과분만 빼고 손실은 그대로 이월했는데, 그러면 진 사이클 뒤로
-         계좌가 원금보다 작은 채로 굴러가 1회매수금이 줄고 전략이 저절로 약해진다.
-         단리는 매 사이클을 같은 돈으로 시작하는 방식이라 모자라면 채워 넣는 게 맞다.
-         백테 runIM 도 같은 규약으로 맞춰 뒀다 — 한쪽만 바꾸면 또 갈린다. */
+      /* 단리 — 판정 기준은 사이클 수익이 아니라 '사이클 종료 잔액이 최초 원금을 넘는가'다.
+           넘으면 넘은 만큼만 인출하고 원금으로 다시 시작한다.
+           못 넘으면 인출도 없고 채워 넣지도 않는다 — 그 잔액 그대로 다음 사이클로 간다.
+         원금 1억 예:
+           종료 9,000만  → 인출 없음 · 다음 시작 9,000만
+           종료 9,800만  → 인출 없음 · 다음 시작 9,800만
+           종료 1억 500만 → 인출 500만 · 다음 시작 1억
+         한때 모자란 만큼 밖에서 채워 넣었는데(added), 그건 번 돈이 아니라 새로 넣은 돈이라
+         단리의 뜻이 아니다. 백테 runIM·runIM50 도 같은 규약이다 — 한쪽만 바꾸면 또 갈린다. */
       if(simple){
         const P0=+st.principal||0;
-        const cashNow=P0+realized-withdrawn-saved+added;   // 이 시점 inv=0
-        let fo=0, fi=0;
+        const cashNow=P0+realized-withdrawn-saved;   // 이 시점 inv=0
+        let fo=0;
         if(cashNow>P0){ fo=cashNow-P0; saved+=fo; }
-        else if(cashNow<P0){ fi=P0-cashNow; added+=fi; }
-        flows.push({date:h.date, seq:cycleSeq, out:fo, in:fi});
+        flows.push({date:h.date, seq:cycleSeq, out:fo, in:0});
       }
     }
     // 이 거래 직후 시점의 잔금·별%·별지점
-    const balAfter=st.principal+realized-inv-withdrawn-saved+added;
+    const balAfter=st.principal+realized-inv-withdrawn-saved;
     const pctAfter=starPct(st.ticker,st.div,T,st.target);
     const starAfter=avg>0?avg*(1+pctAfter/100):0;
     const row={...h,profit,avgAfter:avg,qtyAfter:qty,Tafter:T,balAfter,pctAfter,starAfter,cycleEnd,cycleSeq};
@@ -2276,9 +2276,9 @@ function computeInf(){
   // 리버스 OFF(기본): 원금 소진 후에도 리버스모드로 넘어가지 않고 일반모드(후반전 별지점 손절 쿼터매도)로 방어.
   const reverseActive = (st.reverse===true) && (inReverseNow || (st.div-T<1)) && qty>0;   // 소진 = T>분할−1
   // 가용 잔금 = 원금 + 실현손익 − 보유분 투입원가 − 출금 − 단리 인출 + 단리 보충
-  const bal=st.principal+realized-inv-withdrawn-saved+added;
+  const bal=st.principal+realized-inv-withdrawn-saved;
   return {avg,qty,inv,realized,T,totbuy,totsell,bal,rows,st,cycleSeq,reverseTraded,inReverseNow,reverseActive,
-          withdrawn,saved,added,flows,simple,outside:withdrawn+saved};
+          withdrawn,saved,added:0,flows,simple,outside:withdrawn+saved};   // added 는 남은 소비처 호환용 — 단리는 채워 넣지 않는다
 }
 
 /* ──── 익절 동적 조절: 20일 상승률 (선택 · 백테 backtest.html _imMom/_imTgtOf와 동일 정의) ────
@@ -3018,10 +3018,8 @@ function renderInfAnal(){
       const pct=v=>` (${(v/P0*100).toFixed(1)}%)`;
       const setv=(id,v,col)=>{ const el=$(id); if(!el) return;
         el.textContent=wn(v)+pct(v); el.style.color=col; };
-      const out=c.saved||0, inn=c.added||0;
+      const out=c.saved||0;
       setv('a_sv_out', out, 'var(--gold)');
-      setv('a_sv_in',  inn, inn>0?'var(--sell)':'var(--faint)');
-      setv('a_sv_net', out-inn, (out-inn)>=0?'var(--buy)':'var(--sell)');
 
       // 사이클이 닫힐 때만 돈이 오간다. computeInf 가 그 시점을 이미 모아 뒀다.
       const rows=c.rows||[];
@@ -3063,31 +3061,26 @@ function renderInfBreak(c){
   const pctTxt=v=>cap?`<span style="color:${v>=0?'var(--buy)':'var(--sell)'}">${v>=0?'+':''}${(v/cap*100).toFixed(2)}%</span>`:'—';
   const amtTxt=v=>`<span style="color:${v>=0?'var(--buy)':'var(--sell)'}">${v>=0?'+':''}${wn(v)}</span>`;
   const krwTxt=v=>`<span style="color:var(--faint)">${v>=0?'+':''}${won(v)}</span>`;
-  /* 단리는 사이클이 닫힐 때 계좌를 원금으로 맞춘다 — 넘치면 나가고 모자라면 들어온다.
-     월별로 얼마가 오갔는지가 곧 그 달의 수입이라 단리 세션에만 세 칸을 더 붙인다.
-     합계는 출금 − 입금이고 원금 대비 %를 같이 적는다. */
+  /* 단리는 사이클이 닫힐 때 잔액이 원금을 넘으면 넘은 만큼만 인출한다.
+     못 넘으면 인출도 보충도 없다 — 들어오는 칸이 없으니 나간 칸 하나면 된다.
+     월별로 얼마가 나왔는지가 곧 그 달의 수입이라 단리 세션에만 붙인다. */
   const simple=!!c.simple;
-  const flowTxt=(v,col)=>v?`<span style="color:${col}">${v>=0?'+':''}${wn(v)}</span>`:'<span style="color:var(--faint)">—</span>';
   const netTxt=v=>!cap?'—':`<span style="color:${v>=0?'var(--buy)':'var(--sell)'}">${v>=0?'+':''}${wn(v)} <span style="font-size:10px">(${v>=0?'+':''}${(v/cap*100).toFixed(1)}%)</span></span>`;
   const head=lbl=>`<tr><th>${lbl}</th><th>매도</th>`
-    + (simple?`<th>출금</th><th>입금</th><th>합계</th>${isKrw?'':'<th>합계원화</th>'}`:'')
+    + (simple?`<th>인출</th>${isKrw?'':'<th>원화</th>'}`:'')
     + `<th>손익금</th><th>손익률</th>${isKrw?'':'<th>원화</th>'}</tr>`;
   const body=(list,empty)=>{
-    const nCol=(isKrw?4:5)+(simple?(isKrw?3:4):0);
+    const nCol=(isKrw?4:5)+(simple?(isKrw?1:2):0);
     if(!list.length) return head('구분')+`<tr><td class="empty" colspan="${nCol}">${empty}</td></tr>`;
-    let tot=0, n=0, to=0, ti=0;
+    let tot=0, n=0, to=0;
     const flowCells=x=>{ if(!simple) return '';
-      to+=(x.out||0); ti+=(x.in||0);
-      // 그 달에 돈이 안 오갔으면 합계도 비운다 — +0.00$ (+0.0%) 는 잡음이다
-      const has=(x.out||0)||(x.in||0), net=(x.out||0)-(x.in||0), dash='<span style="color:var(--faint)">—</span>';
-      return `<td>${flowTxt(x.out||0,'var(--gold)')}</td><td>${flowTxt(-(x.in||0),'var(--sell)')}</td>`
-        + `<td>${has?netTxt(net):dash}</td>`
-        + (isKrw?'':`<td>${has?krwTxt(net):dash}</td>`); };
+      to+=(x.out||0);
+      // 그 달에 안 나왔으면 비운다 — +0.00$ (+0.0%) 는 잡음이다
+      const v=x.out||0, dash='<span style="color:var(--faint)">—</span>';
+      return `<td>${v?netTxt(v):dash}</td>` + (isKrw?'':`<td>${v?krwTxt(v):dash}</td>`); };
     const rows=list.map(x=>{ tot+=x.p; n+=x.n;
       return `<tr><td>${x.label}</td><td>${x.n}</td>${flowCells(x)}<td>${amtTxt(x.p)}</td><td>${pctTxt(x.p)}</td>${isKrw?'':`<td>${krwTxt(x.p)}</td>`}</tr>`; }).join('');
-    const sumFlow = simple
-      ? `<td>${flowTxt(to,'var(--gold)')}</td><td>${flowTxt(-ti,'var(--sell)')}</td><td>${netTxt(to-ti)}</td>`
-        + (isKrw?'':`<td>${krwTxt(to-ti)}</td>`) : '';
+    const sumFlow = simple ? `<td>${netTxt(to)}</td>` + (isKrw?'':`<td>${krwTxt(to)}</td>`) : '';
     const sum=`<tr style="border-top:2px solid var(--line)"><td><b>합계</b></td><td>${n}</td>${sumFlow}<td>${amtTxt(tot)}</td><td>${pctTxt(tot)}</td>${isKrw?'':`<td>${krwTxt(tot)}</td>`}</tr>`;
     return rows+sum;
   };
