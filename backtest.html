@@ -315,7 +315,7 @@ td:first-child{text-align:left;}
   <div class="brand">
     <div>
       <div class="logo">Backtest</div>
-      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v1.176</span></h1>
+      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v1.177</span></h1>
     </div>
   </div>
   <div class="hright">
@@ -418,11 +418,12 @@ document.addEventListener('click',function(e){ var m=document.getElementById('jk
         <button data-d="40">40</button>
       </div>
     </div>
-    <div class="ctrl s-im hide"><label>익절 % <span style="font-size:9px;color:var(--dim)">전 종목 일괄 적용</span></label>
+    <div class="ctrl s-im hide"><label>익절 % <span style="font-size:9px;color:var(--dim)">공식=종목별 · 숫자=일괄</span></label>
       <div class="seg" id="imTgtSeg">
+        <button data-t="0" class="active" title="라오어 문서 공식값을 종목별로 적용 — TQQQ 15% · 그 외 20%. 운영 페이지의 새 세션 기본값과 같다">공식</button>
         <button data-t="10" title="Walk-Forward OOS 최적">10%</button>
-        <button data-t="15">15%</button>
-        <button data-t="20" class="active" title="라오어 문서 공식(SOXL)">20%</button>
+        <button data-t="15" title="문서 공식(TQQQ)">15%</button>
+        <button data-t="20" title="문서 공식(SOXL)">20%</button>
       </div>
     </div>
     <div class="ctrl s-im hide"><label>익절 조절 <span style="font-size:9px;color:var(--dim)">20일 상승률</span></label>
@@ -1395,7 +1396,16 @@ let imLoPct=6;      // V5.0 하락국면 익절% (조기탈출)
 let imCostOn=true;   // 세금·수수료·슬리피지 반영 (기본 ON)
 let imTgtDyn=false;  // 익절 동적 조절 (20일 상승률) — 기본 OFF
 
-let imTarget=20;   // 익절%(전 종목 일괄, 기본 20=라오어 공식). 별%base·리버스 복귀조건도 함께 결정 (통합 규약)
+/* 라오어 문서 공식 익절%는 종목별로 다르다 — TQQQ 15 · SOXL 20 (문서 미수록 종목은 20).
+   운영 index.html 의 IM_OFFICIAL 과 같은 값이어야 한다. 한쪽만 고치면 같은 종목·같은 설정인데
+   앱이 권하는 익절%와 백테가 돌린 익절%가 갈려, 백테 숫자가 앱의 숫자가 아니게 된다.
+   예전엔 세그가 숫자 하나뿐이라 TQQQ 도 20%로 돌아갔다 — 앱 기본(15%)과 어긋났고,
+   실측 TQQQ 40분할 복리 152.8%(20%) vs 142.4%(15%) 로 결과가 실제로 달랐다. */
+const IM_OFFICIAL={TQQQ:15, SOXL:20};
+const IM_TGT_AUTO=0;   // 세그의 '공식' — 숫자 하나로 못 박지 않고 종목마다 갈라 쓴다는 뜻
+let imTarget=IM_TGT_AUTO;   // 익절%. 별%base·리버스 복귀조건도 함께 결정 (통합 규약)
+const imTgtFor=t=>(imTarget>0?imTarget:(IM_OFFICIAL[t]||20));   // 엔진에 들어가는 실제 익절%
+const imTgtTxt=()=>(imTarget>0?imTarget+'%':'공식(TQQQ 15·그 외 20)');
 let imFill='high';   // 익절 체결 판정: 'high'=고가 터치(기본·지정가 정석) / 'close'=종가 도달(보수적 하한)
 function syncMaCtrl(){
   const on=(imEngine==='v50'||imEngine==='ab');
@@ -2030,6 +2040,11 @@ function runIM(days,tkr,cap,divs,targetPct,compound=true){
     const [c,o,hi,lo]=M[tkr][d];
     { const _y=d.slice(0,4); if(curYear===null) curYear=_y; else if(_y!==curYear){ _settleTax(c); curYear=_y; } }
     { const eq=cash+shares*c+savedProfit-addedCash; if(eq>mddPeak)mddPeak=eq; else { const dd=Math.min((mddPeak-eq)/mddPeak,1); if(dd>mdd)mdd=dd; } }
+    /* 오늘 종가를 넣기 '전'의 창이 곧 직전 5거래일이다. 넣고 나서 평균을 내면
+       오늘 종가가 제 판정 기준에 섞여, 종가를 보고 그 종가로 체결하는 꼴이 된다(룩어헤드).
+       운영 주문표(calcStarPoint)도 모의 재생(row.i−5…row.i−1)도 오늘을 뺀 5일이다 —
+       백테만 오늘을 넣고 있었다. 실측 SOXL 20분할 복리 V5.0 에서 59.4%p 부풀려졌다. */
+    const prev5=closeHist.length?closeHist.reduce((s,x)=>s+x,0)/closeHist.length:0;
     closeHist.push(c); if(closeHist.length>5) closeHist.shift();
 
     // 리버스 진입: 원금 소진 = '1회 매수가 불가능해지는 시점'(라오어 공지).
@@ -2047,14 +2062,14 @@ function runIM(days,tkr,cap,divs,targetPct,compound=true){
         if(sellQty>0){ _sell(c,sellQty,0); T=divs>=40?T*0.95:T*0.9; }   // MOC=종가
         reverseDay1=false;
       }else{
-        const star5=closeHist.reduce((s,x)=>s+x,0)/closeHist.length;
+        const star5=prev5;   // 직전 5거래일 (오늘 제외) — 없으면 0, 아래에서 아무것도 안 한다
         // 매도: 종가>=별지점 → 직전 보유÷10(or÷20)
-        if(c>=star5){
+        if(star5>0 && c>=star5){
           const sellQty=Math.floor(shares/sellDiv);
           if(sellQty>0){ _sell(c,sellQty,0); T=divs>=40?T*0.95:T*0.9; }   // LOC=종가
         }
         // 매수: 잔금÷4, 별지점 −2.5% LOC (운용도구 기본 gap%와 동일)
-        if(shares>1e-9){
+        if(shares>1e-9 && star5>0){
           const buyP=star5*0.975;
           // 리버스 소진 = '1개(1주) 매수 불가' 시점 — 1주라도 살 수 있으면 계속 매수
           if(c<=buyP && cash>=c){
@@ -2124,7 +2139,7 @@ function runIM(days,tkr,cap,divs,targetPct,compound=true){
      총자산에서 빼야 원금 대비 성과가 된다. 복리는 addedCash 가 늘 0 이라 그대로다. */
   const fin=cash+shares*M[tkr][days[days.length-1]][C]+savedProfit-addedCash;
   if(fin>mddPeak)mddPeak=fin; else { const dd=Math.min((mddPeak-fin)/mddPeak,1); if(dd>mdd)mdd=dd; }
-  return {invested:cap,peakInvested,final:fin,realized,cycles,added:addedCash,endCash:cash+savedProfit-addedCash,endShares:shares,ret:(fin/cap-1)*100,snap,tkr,mdd:mdd*100,fees:feesTotal,tax:taxTotal};
+  return {invested:cap,peakInvested,final:fin,realized,cycles,added:addedCash,endCash:cash+savedProfit-addedCash,endShares:shares,ret:(fin/cap-1)*100,snap,tkr,tgt:targetPct,mdd:mdd*100,fees:feesTotal,tax:taxTotal};
 }
 
 // ──── 무한매수법 V2.2 (2023 오피셜) — quantstack.app 규칙 재현 ────
@@ -2164,7 +2179,7 @@ function runIM22(days,tkr,cap,divs,targetPct,compound=true){
   });
   _settle(M[tkr][days[days.length-1]][C]);
   const lc=M[tkr][days[days.length-1]][C], fin=cash+sh*lc; snap.push([days[days.length-1],fin]);
-  return {invested:cap, final:fin, ret:(fin/cap-1)*100, mdd:mdd*100, snap, tkr, endCash:cash, endShares:sh};
+  return {invested:cap, final:fin, ret:(fin/cap-1)*100, mdd:mdd*100, snap, tkr, tgt:targetPct, endCash:cash, endShares:sh};
 }
 
 // ──── 무한매수법 V3.0 (2024) — quantstack.app 규칙 재현 ────
@@ -2202,7 +2217,7 @@ function runIM30(days,tkr,cap,divs,targetPct,compound=true){
   });
   _settle(M[tkr][days[days.length-1]][C]);
   const lc=M[tkr][days[days.length-1]][C], fin=cash+sh*lc; snap.push([days[days.length-1],fin]);
-  return {invested:cap, final:fin, ret:(fin/cap-1)*100, mdd:mdd*100, snap, tkr, endCash:cash, endShares:sh};
+  return {invested:cap, final:fin, ret:(fin/cap-1)*100, mdd:mdd*100, snap, tkr, tgt:targetPct, endCash:cash, endShares:sh};
 }
 
 // ──── 표준편차 매매법 (볼린저 5마디 σ밴드 · 200일선 필터) ────
@@ -2330,6 +2345,11 @@ function runIM50(days,tkr,cap,divs,targetPct,compound=true){
     const [c,o,hi,lo]=M[tkr][d];
     { const _y=d.slice(0,4); if(curYear===null) curYear=_y; else if(_y!==curYear){ _settleTax(c); curYear=_y; } }
     { const eq=cash+shares*c+savedProfit-addedCash; if(eq>mddPeak)mddPeak=eq; else { const dd=Math.min((mddPeak-eq)/mddPeak,1); if(dd>mdd)mdd=dd; } }
+    /* 오늘 종가를 넣기 '전'의 창이 곧 직전 5거래일이다. 넣고 나서 평균을 내면
+       오늘 종가가 제 판정 기준에 섞여, 종가를 보고 그 종가로 체결하는 꼴이 된다(룩어헤드).
+       운영 주문표(calcStarPoint)도 모의 재생(row.i−5…row.i−1)도 오늘을 뺀 5일이다 —
+       백테만 오늘을 넣고 있었다. 실측 SOXL 20분할 복리 V5.0 에서 59.4%p 부풀려졌다. */
+    const prev5=closeHist.length?closeHist.reduce((s,x)=>s+x,0)/closeHist.length:0;
     closeHist.push(c); if(closeHist.length>5) closeHist.shift();
     const gr=!!GM.ready[d];
     const g =!!GM.gate[d];
@@ -2342,12 +2362,12 @@ function runIM50(days,tkr,cap,divs,targetPct,compound=true){
         if(sellQty>0){ _sell(c,sellQty,0); T=divs>=40?T*0.95:T*0.9; }   // MOC=종가
         reverseDay1=false;
       }else{
-        const star5=closeHist.reduce((s,x)=>s+x,0)/closeHist.length;
-        if(c>=star5 && (!gr || !g)){
+        const star5=prev5;   // 직전 5거래일 (오늘 제외) — 없으면 0, 아래에서 아무것도 안 한다
+        if(star5>0 && c>=star5 && (!gr || !g)){
           const sellQty=Math.floor(shares/sellDiv);
           if(sellQty>0){ _sell(c,sellQty,0); T=divs>=40?T*0.95:T*0.9; }   // LOC=종가
         }
-        if(shares>1e-9){
+        if(shares>1e-9 && star5>0){
           const buyP=star5*0.975;
           if(c<=buyP && cash>=c){   // 리버스 소진 = 1주도 못 사는 시점 (V4.0과 동일 규약)
             _buy(c, Math.min(cash, Math.max(cash/4, c)));   // LOC=종가
@@ -2410,7 +2430,7 @@ function runIM50(days,tkr,cap,divs,targetPct,compound=true){
      총자산에서 빼야 원금 대비 성과가 된다. 복리는 addedCash 가 늘 0 이라 그대로다. */
   const fin=cash+shares*M[tkr][days[days.length-1]][C]+savedProfit-addedCash;
   if(fin>mddPeak)mddPeak=fin; else { const dd=Math.min((mddPeak-fin)/mddPeak,1); if(dd>mdd)mdd=dd; }
-  return {invested:cap,peakInvested,final:fin,realized,cycles,added:addedCash,endCash:cash+savedProfit-addedCash,endShares:shares,ret:(fin/cap-1)*100,snap,tkr,mdd:mdd*100,fees:feesTotal,tax:taxTotal};
+  return {invested:cap,peakInvested,final:fin,realized,cycles,added:addedCash,endCash:cash+savedProfit-addedCash,endShares:shares,ret:(fin/cap-1)*100,snap,tkr,tgt:targetPct,mdd:mdd*100,fees:feesTotal,tax:taxTotal};
 }
 
 
@@ -2424,9 +2444,13 @@ function runVR(days,tkr,params){
   //   수수료 0.25% 매수·매도 각 · 양도세 22%(연 250만원 공제, 실현손익만) · 리밸런싱=종가 체결이라 슬리피지 없음
   const FEE=costOn?costOf(tkr).fee:0;
   let avg=0, feesTotal=0, taxTotal=0, yearPnl=0, curYear=null;
-  function _vbuy(amt,c){ const q=iq(amt/(1+FEE),c); if(q<=0) return;   // 정수 주수 (운영 VR도 내림)
+  /* 실제로 나간 돈만 돌려준다 — _vsell 이 '판 만큼만' 돌려주는 것과 같은 이치다.
+     정수 내림 때문에 배정액이 다 나가지 않는데, 부르는 쪽에서 배정액을 그대로 Pool 에서
+     빼면 못 산 잔돈이 증발한다. 10일마다 리밸런싱하면 회당 최대 1주값이 사라져
+     6년이면 수천 달러가 된다 — 실측 TECL 거치 skill G20 밴드10 에서 +47.6%p. */
+  function _vbuy(amt,c){ const q=iq(amt/(1+FEE),c); if(q<=0) return 0;   // 정수 주수 (운영 VR도 내림)
     const spend=q*c, fee=spend*FEE;
-    avg=(shares<=0)?c:(shares*avg+spend)/(shares+q); shares+=q; feesTotal+=fee; }
+    avg=(shares<=0)?c:(shares*avg+spend)/(shares+q); shares+=q; feesTotal+=fee; return spend+fee; }
   function _vsell(gross,c){ const qty=isq(gross/c,shares), fee=qty*c*FEE;   // 정수 주수 (금액 목표를 넘지 않게 내림)
     // 실제로 판 만큼만 현금이 들어온다 — gross를 그대로 돌려주면 판 적 없는 돈이 생긴다
     yearPnl+=qty*(c-avg)-fee; feesTotal+=fee; shares-=qty; return qty*c-fee; }
@@ -2454,8 +2478,8 @@ function runVR(days,tkr,params){
     { const eq=shares*c+pool+totalWd; if(eq>mddPeak)mddPeak=eq; else if(mddPeak>0){ const dd=Math.min((mddPeak-eq)/mddPeak,1); if(dd>mdd)mdd=dd; } }
     if(i%interval===0){
       if(first){
-        if(isLump){const s=initAmt||10000;inv+=s;cf.push([d,s]);_vbuy(s,c);V=shares*c;}  // 거치식/인출식: 첫매수가=V (pool 무관)
-        else{pool+=contrib;inv+=contrib;cf.push([d,contrib]);_vbuy(pool,c);pool=0;V=shares*c;} // 적립식: 첫매수가=V
+        if(isLump){const s=initAmt||10000;inv+=s;cf.push([d,s]);pool+=s-_vbuy(s,c);V=shares*c;}  // 거치식/인출식: 첫매수가=V · 못 산 잔돈은 Pool 로
+        else{pool+=contrib;inv+=contrib;cf.push([d,contrib]);pool-=_vbuy(pool,c);V=shares*c;} // 적립식: 첫매수가=V · 잔돈은 Pool 에 남는다
         first=false;buys++;rebal++;snap.push([d,shares*c+pool+totalWd]);return;
       }
       const cv=shares*c;
@@ -2467,7 +2491,7 @@ function runVR(days,tkr,params){
       else if(isWd){const wd=Math.min(withdraw,pool);pool-=wd;totalWd+=wd;}
       const up=V*(1+band),lo=V*(1-band),cv2=shares*c;
       if(cv2>up){const ex=cv2-V;pool+=_vsell(ex,c);sells++;}
-      else if(cv2<lo){const need=V-cv2;const use=Math.min(need,pool*poolLimit);_vbuy(use,c);pool-=use;buys++;}
+      else if(cv2<lo){const need=V-cv2;const use=Math.min(need,pool*poolLimit);pool-=_vbuy(use,c);buys++;}
       rebal++;
     }
     if(i%interval===0||i===days.length-1)snap.push([d,shares*c+pool+totalWd]);
@@ -2895,7 +2919,7 @@ function _runOneStrat(key,tkr,cap,days,costOn){
     case 'ma':   return runMA200(days,tkr,cap,ml,costOn);                                   // 이평기간: maLen 탭
     case 'maa':  return runMA200Accum(days,tkr,cap,ml,costOn);
     case 'im':   {                                                                          // 분할·익절·복리단리·엔진·리버스(전역) 탭
-      const divs=(typeof imDiv!=='undefined'?imDiv:20), tgt=(typeof imTarget!=='undefined'?imTarget:20);
+      const divs=(typeof imDiv!=='undefined'?imDiv:20), tgt=(typeof imTgtFor!=='undefined'?imTgtFor(tkr):20);
       const comp=_stratSeg('imCompound','0')!=='0';                                         // 기본 단리
       const eng=(typeof imEngine!=='undefined'?imEngine:'v40');
       const fn = eng==='v22'?runIM22 : eng==='v30'?runIM30 : runIM;                          // v40/v50/ab→runIM (리버스·imFill은 전역)
@@ -2930,13 +2954,13 @@ function comboOpts(mode){
   const comp=_stratSeg('imCompound','0')!=='0'?'복리':'단리';
   const rev=(typeof imReverse!=='undefined'&&imReverse)?'리버스켬':'리버스끔';
   const tdy=(typeof imTgtDyn!=='undefined'&&imTgtDyn)?'·익절조절ON':'';
-  const div=(typeof imDiv!=='undefined'?imDiv:20), tgt=(typeof imTarget!=='undefined'?imTarget:20);
+  const div=(typeof imDiv!=='undefined'?imDiv:20), tgt=(typeof imTgtTxt!=='undefined'?imTgtTxt():'20%');
   const filt={none:'필터없음',nobuy:'물타기금지',exit:'현금이탈'}[(typeof stdFilter!=='undefined'?stdFilter:'none')]||'필터없음';
   const sN=(typeof stdN!=='undefined'?stdN:40), sG=(typeof stdG!=='undefined'?stdG:2.5);
   const iS=(typeof ivsS0!=='undefined'?ivsS0:45), iN=(typeof ivsN!=='undefined'?ivsN:60), iB=(typeof ivsBand!=='undefined'?ivsBand:10);
   const iM=(typeof ivsMode!=='undefined'&&ivsMode==='fix')?'고정5:5':`역분산 s0${iS}%·${iN}일σ`;
   const iP=(typeof ivsPair!=='undefined'&&ivsPair==='x1')?'1배수':'현금';
-  return `무매(${eng}): ${div}분할·익절${tgt}%${tdy}·${comp}·${rev} · 200로테: ${maTxt} · VR거치: G${vG}·밴드±${vB}·${vF} · 표준편차: N${sN}·g${sG}·${filt} · 역분산: ${iM}·짝${iP}·밴드${iB}%p`;
+  return `무매(${eng}): ${div}분할·익절 ${tgt}${tdy}·${comp}·${rev} · 200로테: ${maTxt} · VR거치: G${vG}·밴드±${vB}·${vF} · 표준편차: N${sN}·g${sG}·${filt} · 역분산: ${iM}·짝${iP}·밴드${iB}%p`;
 }
 
 /* ──── 자본-시간 지표: 적립식은 돈이 천천히 들어가 '평균 투입자본'이 거치식의 절반 수준이다.
@@ -3224,7 +3248,7 @@ async function run(){
   }else if(strat==='im'){
     if(!imActive.size){alert('종목을 선택하세요.');return;}
     const cap=+document.getElementById('imCap').value||10000;
-    const tgtOverride=imTarget;   // 세그에서 선택한 익절% (전 종목 동일)
+    // 세그가 '공식'이면 종목마다 문서값이 달라진다 — 숫자를 고르면 전 종목 그 값.
     const compound=document.querySelector('#imCompound button.active')?.dataset.c!=='0';
     const {use:imUse,skip:imSkip}=usableTickers(start,end,[...imActive]);
     if(!imUse.length){alert('선택 종목 모두 해당 기간 데이터가 없습니다. 날짜를 확인하세요.');return;}
@@ -3232,7 +3256,7 @@ async function run(){
     if(commonD.length<10){alert('공통 거래일이 부족합니다.');return;}
     const results={};
     imUse.forEach(t=>{
-      const tgt = tgtOverride;   // 전 종목 동일 익절%
+      const tgt = imTgtFor(t);
       if(imEngine==='ab'){
         results[t]={res:runIM(commonD,t,cap,imDiv,tgt,compound), res50:runIM50(commonD,t,cap,imDiv,tgt,compound), tgt, days:commonD};
       }else{
@@ -3252,7 +3276,7 @@ async function run(){
       noteSkipped(imSkip);
       return;
     }
-    renderMultiStrat('im',results,{cap,tgt:tgtOverride});
+    renderMultiStrat('im',results,{cap,tgt:imTgtTxt()});
     noteSkipped(imSkip);
   }else if(strat==='ma'){
     if(!maActive.size){alert('종목을 선택하세요.');return;}
@@ -3458,7 +3482,7 @@ function renderMultiStrat(type, results, params){
   document.getElementById('detail').classList.add('hide');
   document.querySelector('.cards').classList.remove('hide');
   document.querySelector('.tbl-wrap').classList.remove('hide');
-  const stratName=type==='im'?('무한매수법 '+(imEngine==='v22'?'V2.2':imEngine==='v30'?'V3.0':imEngine==='v50'?('V5.0('+imShortMA+'일·하락'+imLoPct+'%)'):'V4.0')+(imEngine==='v40'&&imReverse?' · 리버스ON':'')+(imTgtDyn?' · 익절조절(20일상승률)':'')+(imCostOn?' · 비용반영':''))
+  const stratName=type==='im'?('무한매수법 '+(imEngine==='v22'?'V2.2':imEngine==='v30'?'V3.0':imEngine==='v50'?('V5.0('+imShortMA+'일·하락'+imLoPct+'%)'):'V4.0')+' · 익절 '+imTgtTxt()+(imEngine==='v40'&&imReverse?' · 리버스ON':'')+(imTgtDyn?' · 익절조절(20일상승률)':'')+(imCostOn?' · 비용반영':''))
     :type==='ma'?(maStratName(maLen)+(maCostOn?' · 비용반영':''))
     :('VR 5.0'+(vrCostOn?' · 비용반영':''));
   const pct=x=>(x>=0?'+':'')+x.toFixed(1)+'%';
@@ -3596,7 +3620,7 @@ function renderABMulti(results, compound){
   tks.forEach(t=>{ [results[t].res,results[t].res50].forEach(r=>{r.yrs=yrs;r.cagr=cagrOf(r.final,r.invested,yrs);}); });
   document.getElementById('winner').style.display='';
   document.getElementById('winner').innerHTML=
-    `⚖️ <strong>${tks.length}종목</strong> 무한매수법 <strong>V4.0 vs V5.0(${imShortMA}일·하락${imLoPct}%)</strong> · ${imDiv}분할 · ${compound?'복리':'단리'} · ${anyDays[0]}~${anyDays[anyDays.length-1]} · ${yrs.toFixed(1)}년`;
+    `⚖️ <strong>${tks.length}종목</strong> 무한매수법 <strong>V4.0 vs V5.0(${imShortMA}일·하락${imLoPct}%)</strong> · ${imDiv}분할 · 익절 ${imTgtTxt()} · ${compound?'복리':'단리'} · ${anyDays[0]}~${anyDays[anyDays.length-1]} · ${yrs.toFixed(1)}년`;
   const pct=x=>(x>=0?'+':'')+x.toFixed(1)+'%';
   const money=(x,t)=>fmtV(x,t);
   const marOf=r=>(r.mdd>0? r.cagr/r.mdd : 0);
@@ -3644,7 +3668,8 @@ function renderSingle2(type,r,days){
   logBtns.forEach(b=>b.classList.remove('active'));
   if(logBtns[1]) logBtns[1].classList.add('active');  // '로그' 버튼 활성화
   const m=META[r.tkr];
-  const stratName = type==='im' ? ('무한매수법 '+(imEngine==='v22'?'V2.2':imEngine==='v30'?'V3.0':imEngine==='v50'?('V5.0('+imShortMA+'일)'):'V4.0')) : type==='ma' ? maStratName(r.maLen) : 'VR 5.0';
+  const stratName = type==='im' ? ('무한매수법 '+(imEngine==='v22'?'V2.2':imEngine==='v30'?'V3.0':imEngine==='v50'?('V5.0('+imShortMA+'일)'):'V4.0')
+                                   +(r.tgt!=null?' · 익절 '+r.tgt+'%':'')) : type==='ma' ? maStratName(r.maLen) : 'VR 5.0';
   const stratShort = type==='im' ? '무한매수법' : type==='ma' ? ((r.maLen||200)+'일선') : 'VR 5.0';
 
   // ── yrs: 실제 날짜 구간 기반 (days.length/252는 월간 데이터 시 오차 큼)

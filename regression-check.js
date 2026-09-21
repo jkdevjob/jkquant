@@ -46,6 +46,7 @@ const idxParts=[
   extractFn(idx,'function reverseT(kind,t,div)'),
   idx.slice(idx.indexOf('function isBuy(k)'), idx.indexOf('\n', idx.indexOf('function isBuy(k)'))),
   idx.slice(idx.indexOf('function isSell(k)'), idx.indexOf('\n', idx.indexOf('function isSell(k)'))),
+  idx.slice(idx.indexOf('const IM_OFFICIAL='), idx.indexOf(';', idx.indexOf('const IM_OFFICIAL='))+1),
   extractFn(idx,'function starPct(ticker,div,T,base)'),
   extractFn(idx,'function exitMulOf(base)'),
   extractFn(idx,'function computeInf()'),
@@ -54,6 +55,8 @@ const idxParts=[
 ];
 let __strat=null; global.curStrat=()=>__strat;
 eval(idxParts.join('\n'));
+// eval 안의 const 는 밖으로 안 샌다 — iq/isq 와 같은 이유로 전역에 올린다
+global.IM_OFFICIAL=new Function(idxParts[4]+'\nreturn IM_OFFICIAL;')();
 
 // backtest 엔진 + 거래로그 훅 주입 (실코드에 정확 substring 치환, 각 1회 매치 검증)
 // 정수 주수 헬퍼는 엔진 밖에 있다 — 파일에서 그대로 떼어 와야 실코드와 어긋나지 않는다
@@ -107,10 +110,14 @@ const btExit=new Function('starBase','return '+mExit[1].replace(/\/\/.*$/,''));
 
 /* ════ 1. 문서 수치 재현 (3차) ════ */
 console.log('[1] 문서 수치 재현');
-ok('별% TQQQ 20분할 T=10 → 0', near(starPct('TQQQ',20,10),0));
-ok('별% TQQQ 40분할 T=10 → 7.5', near(starPct('TQQQ',40,10),7.5));
-ok('별% SOXL 20분할 T=10 → 0', near(starPct('SOXL',20,10),0));
-ok('별% SOXL 40분할 T=25 → −5', near(starPct('SOXL',40,25),-5));
+/* 앱은 언제나 base(=설정 익절%)를 넘겨 부른다. base 없이 부르면 실전에 없는
+   갈래를 시험하게 되고, 그쪽만 맞춰 놓으면 실제 경로가 틀려도 초록불이 뜬다.
+   그래서 문서 4케이스를 '공식값을 base 로 넘긴' 실제 경로로 재현한다. */
+ok('별% TQQQ 20분할 T=10 → 0', near(starPct('TQQQ',20,10,IM_OFFICIAL.TQQQ),0));
+ok('별% TQQQ 40분할 T=10 → 7.5', near(starPct('TQQQ',40,10,IM_OFFICIAL.TQQQ),7.5));
+ok('별% SOXL 20분할 T=10 → 0', near(starPct('SOXL',20,10,IM_OFFICIAL.SOXL),0));
+ok('별% SOXL 40분할 T=25 → −5', near(starPct('SOXL',40,25,IM_OFFICIAL.SOXL),-5));
+ok('공식값 표: TQQQ 15 · SOXL 20', IM_OFFICIAL.TQQQ===15&&IM_OFFICIAL.SOXL===20, JSON.stringify(IM_OFFICIAL));
 ok('1회매수금 19522/39 = 500.56', near(19522/39,500.56,0.01));
 ok('리버스T 매도 39.5×0.95 = 37.525', near(reverseT('리버스매도',39.5,40),37.525));
 ok('리버스T 매수 → 38.14375', near(reverseT('리버스매수',37.525,40),38.14375));
@@ -136,8 +143,10 @@ for(const base of [10,15,20,25]){
   }
   ok(`복귀기준↔base 짝: base${base}`, near(exitMulOf(base),btExit(base)), `idx=${exitMulOf(base)} bt=${btExit(base)}`);
 }
+// base 를 안 줬을 때의 갈래도 공식표를 봐야 한다 (옛 세션·미설정 대비)
 ok('index 기본 base: TQQQ=15', near(starPct('TQQQ',20,0),15));
 ok('index 기본 base: SOXL=20', near(starPct('SOXL',20,0),20));
+ok('index 기본 base가 공식표를 읽는다', /IM_OFFICIAL\[ticker\]\|\|20/.test(idx) && !/ticker==='TQQQ'\?15/.test(idx));
 
 /* ════ 3. VR 엣지 (4차) — 0원 시작 첫매수 Pool 미차감 ════ */
 console.log('[3] VR 엣지');
@@ -795,7 +804,9 @@ console.log('[19] 출금 · 복리/단리');
   ok('백테도 채워 넣지 않는다', !/addedCash\+=/.test(bt));
   ok('백테는 넣은 돈을 총자산에서 뺀다', /\+savedProfit-addedCash;/.test(bt));
   ok('단리 판정은 compound===false', /const simple=\(st\.compound===false\)/.test(ci));
-  ok('출금·단리인출을 밖으로 낸다', /withdrawn,saved,added:0,flows,simple,outside:withdrawn\+saved/.test(ci));
+  // 입금 자리(added)는 아예 없앴다 — 무매는 나가기만 한다
+  ok('출금·단리인출을 밖으로 낸다', /withdrawn,saved,flows,simple,outside:withdrawn\+saved/.test(ci));
+  ok('무매 반환값에 입금 자리가 없다', !/added:0/.test(ci));
   // 출금이 매매로 잡히면 사이클 종료·T가 오염된다
   ok('출금은 매수·매도가 아니다', /function isBuy\(k\)\{return k==='출금'\?false/.test(idx)
      && /function isSell\(k\)\{return k!=='출금'/.test(idx));
@@ -2858,6 +2869,204 @@ console.log('\n[63] 나간 돈 — 여섯 전략 같은 규약');
   ok('목록을 채우기 전에 분배 이력을 받아 둔다',
      /async function warmDiv\(sym\)/.test(idx)
      && /if\(divCashOn\(sess\.settings\)\) await warmDiv\(want\);/.test(idx));
+}
+
+/* ════ 64. 공식 익절%가 '실제로 돌아가는 길'로 들어가는가 ════
+   앞선 [1][2]는 공식을 계산식에 직접 먹여 본 것뿐이다. 계산식이 맞아도 그 값을
+   엔진에 넘겨 주는 배선이 끊겨 있으면 화면 숫자는 딴판이 된다 — 실제로 백테는
+   세그의 숫자 하나를 전 종목에 똑같이 물려 TQQQ 를 20%로 돌리고 있었고,
+   앱은 같은 종목에 15%를 권하고 있었다. 여기서 보는 건 '배선'이다. */
+console.log('\n[64] 공식 익절% — 실제 경로');
+{
+  const mo=(bt.match(/const IM_OFFICIAL=\{([^}]*)\}/)||[])[1]||'';
+  const btOff=new Function('return {'+mo+'}')();
+  ok('백테도 같은 공식표를 갖는다',
+     btOff.TQQQ===IM_OFFICIAL.TQQQ && btOff.SOXL===IM_OFFICIAL.SOXL,
+     `idx=${JSON.stringify(IM_OFFICIAL)} bt=${JSON.stringify(btOff)}`);
+
+  // 해석기: '공식'(0)이면 종목별, 숫자면 전 종목 그 값
+  const mf=(bt.match(/const imTgtFor=([^;]+);/)||[])[1];
+  ok('백테에 종목별 해석기가 있다', !!mf, 'imTgtFor 없음');
+  if(mf){
+    const mk=v=>{ global.imTarget=v; return new Function('IM_OFFICIAL','imTarget','return ('+mf+');')(btOff,v); };
+    const auto=mk(0), fixed=mk(10);
+    ok('공식 → TQQQ 15', auto('TQQQ')===15, String(auto('TQQQ')));
+    ok('공식 → SOXL 20', auto('SOXL')===20, String(auto('SOXL')));
+    ok('공식 → 미수록 종목 20', auto('TECL')===20 && auto('KORU')===20);
+    ok('숫자를 고르면 전 종목 그 값', fixed('TQQQ')===10 && fixed('SOXL')===10);
+    delete global.imTarget;
+  }
+  // 배선: 실행부가 세그 전역이 아니라 해석기를 부른다
+  ok('무매 실행이 종목별로 익절%를 뽑는다', /const tgt = imTgtFor\(t\);/.test(bt));
+  ok('전체비교도 종목별로 뽑는다', /imTgtFor!=='undefined'\?imTgtFor\(tkr\)/.test(bt));
+  ok('세그에 공식 버튼이 기본으로 켜져 있다', /data-t="0" class="active"/.test(bt));
+  ok('세그 기본값이 공식(0)이다', /let imTarget=IM_TGT_AUTO;/.test(bt));
+  ok('전 종목 일괄이라는 옛 주석이 안 남아 있다', !/전 종목 동일 익절%/.test(bt));
+
+  /* 배선이 살아 있으면 TQQQ 는 20%일 때와 다른 숫자가 나와야 한다.
+     같으면 어딘가에서 다시 20으로 덮어쓰고 있다는 뜻이다. */
+  if(DAYS.TQQQ){
+    const a=runIM(DAYS.TQQQ,'TQQQ',10000,40,20,true), b=runIM(DAYS.TQQQ,'TQQQ',10000,40,IM_OFFICIAL.TQQQ,true);
+    ok('TQQQ 15%는 20%와 실제로 다른 결과', Math.abs(a.final-b.final)>1,
+       `20%=${a.final.toFixed(0)} 15%=${b.final.toFixed(0)}`);
+    ok('엔진이 쓴 익절%를 결과에 담아 돌려준다', b.tgt===IM_OFFICIAL.TQQQ, String(b.tgt));
+  }
+  // SOXL·TECL 은 공식이 20 이라 예전 기본과 같아야 한다 — 바뀌면 딴 걸 건드린 것
+  if(DAYS.SOXL){
+    const a=runIM(DAYS.SOXL,'SOXL',10000,40,20,true), b=runIM(DAYS.SOXL,'SOXL',10000,40,btOff.SOXL||20,true);
+    ok('SOXL 은 공식=20 이라 예전과 같다', near(a.final,b.final,1e-9));
+  }
+}
+
+/* ════ 65. 리버스 별지점 — '직전 5거래일'이 정말 직전인가 ════
+   오늘 종가를 창에 넣고 그 평균으로 오늘 종가 체결을 판정하면, 종가를 보고 그 종가로
+   주문한 셈이라 백테가 실제보다 좋게 나온다. 리버스는 기본 OFF 라 여태 이 회귀가
+   한 번도 리버스를 켜 본 적이 없었고(_revOn=false), 그래서 초록불인 채로 지나갔다.
+   여기선 켜고 돌린 뒤, 그날 쓴 별지점을 '직전 5거래일 평균'과 직접 맞춰 본다. */
+console.log('\n[65] 리버스 별지점 — 직전 5거래일 (오늘 제외)');
+{
+  const shape=s=>/const prev5=closeHist\.length\?closeHist\.reduce[\s\S]{0,40}closeHist\.push\(c\);/.test(s)
+              && /const star5=prev5;/.test(s)
+              && !/const star5=closeHist\.reduce/.test(s);
+  const im=extractFn(bt,'function runIM(days,tkr,cap,divs,targetPct,compound');
+  const im50=extractFn(bt,'function runIM50(days,tkr,cap,divs,targetPct,compound');
+  ok('V4.0 별지점을 오늘 종가 넣기 전 창에서 뽑는다', shape(im));
+  ok('V5.0 별지점을 오늘 종가 넣기 전 창에서 뽑는다', shape(im50));
+  ok('운영 모의 재생도 오늘을 뺀다 (row.i−5 … row.i−1)',
+     /for\(let k=row\.i-5;k<row\.i;k\+\+\)/.test(idx));
+
+  /* 말이 아니라 실제로 그 값을 썼는지 본다 — 그날 쓴 별지점을 기록해
+     시세에서 직접 뽑은 직전 5일 평균과 맞춰 본다. */
+  let inst=im.replace('const star5=prev5;', 'const star5=prev5; __STAR(d,c,star5);');
+  ok('별지점 기록 훅 주입', inst!==im);
+  const stars=[];
+  global.__STAR=(d,c,v)=>stars.push({d,c,v});
+  const _revSave=global.imReverse; global.imReverse=true;
+  const runIMrev=new Function('return ('+inst.replace('function runIM(','function (')+')')();
+  let ran=0, bad=null, sameAsToday=0;
+  for(const tkr of ['SOXL','TQQQ','TECL']){
+    if(!DAYS[tkr]) continue;
+    for(const div of [20,40]){
+      stars.length=0;
+      runIMrev(DAYS[tkr], tkr, 10000, div, IM_OFFICIAL[tkr]||20, true);
+      const at={}; DAYS[tkr].forEach((d,i)=>at[d]=i);
+      for(const s2 of stars){
+        ran++;
+        const i=at[s2.d]; if(i==null||i<5) continue;
+        let sum=0; for(let k=i-5;k<i;k++) sum+=M[tkr][DAYS[tkr][k]][C];
+        const want=sum/5;
+        if(!near(s2.v, want, 1e-9) && !bad) bad=`${tkr} ${div}분할 ${s2.d}: 쓴값 ${s2.v} ≠ 직전5일 ${want}`;
+        // 오늘을 넣은 평균과 우연히 같을 수도 있으니, 다른 날이 하나라도 있어야 시험이 의미가 있다
+        let s6=sum+M[tkr][s2.d][C];
+        if(near(s2.v, s6/6, 1e-9)) sameAsToday++;
+      }
+    }
+  }
+  global.imReverse=_revSave;
+  ok('리버스가 실제로 돌았다 (별지점 판정일이 있다)', ran>0, '판정일 '+ran+'건');
+  // 판정일이 0건이면 이 줄은 아무것도 안 본 채 초록불이 된다 — ran>0 을 같이 본다
+  ok('그날 쓴 별지점 = 직전 5거래일 종가 평균', ran>0 && !bad, bad||(ran?'':'판정일 0건'));
+  ok('오늘을 넣은 평균과 구별된다', ran>0 && sameAsToday<ran, `구별 불가 ${sameAsToday}/${ran}건`);
+  delete global.__STAR;
+}
+
+/* ════ 66. VR 현금 장부 — 정수 내림 잔돈이 증발하지 않는가 ════
+   _vbuy 는 정수 주수로 내림해 사므로 배정액을 다 쓰지 않는다. 부르는 쪽이 배정액을
+   그대로 Pool 에서 빼면 못 산 잔돈이 사라진다 — 10일마다 리밸런싱이면 회당 최대 1주값,
+   6년이면 수천 달러다(실측 TECL 거치 +47.6%p). 값이 맞는지 눈으로 볼 방법이 없어
+   오래 안 보였으므로, 여기선 현금 장부가 닫히는지를 본다:
+     남은 Pool = 들어온 돈 − 인출 − 매수에 나간 돈 + 매도로 들어온 돈
+   비용 OFF 로 돌린다 — 세금 납부는 주식으로 내는 길(_settle)이 있어 장부가 한 줄 더 필요하고,
+   잔돈 증발은 수수료와 무관하므로 이 조건에서 전부 드러난다. */
+console.log('\n[66] VR 현금 장부 — 잔돈 증발 없음');
+{
+  let vsrc=extractFn(bt,'function runVR(days,tkr,params)');
+  ok('_vbuy 가 실제로 나간 돈을 돌려준다', /function _vbuy\(amt,c\)\{ const q=iq\(amt\/\(1\+FEE\),c\); if\(q<=0\) return 0;/.test(vsrc)
+     && /feesTotal\+=fee; return spend\+fee; \}/.test(vsrc));
+  ok('리밸런싱 매수가 배정액이 아니라 나간 돈을 뺀다',
+     /pool-=_vbuy\(use,c\);buys\+\+;/.test(vsrc) && !/_vbuy\(use,c\);pool-=use/.test(vsrc));
+  ok('첫 매수 잔돈도 Pool 로 남는다',
+     /pool\+=s-_vbuy\(s,c\);/.test(vsrc) && /pool-=_vbuy\(pool,c\);/.test(vsrc) && !/_vbuy\(pool,c\);pool=0;/.test(vsrc));
+
+  // 오간 현금을 세어 장부를 맞춰 본다 (실코드에 한 줄씩 덧대기만 한다)
+  const a1='feesTotal+=fee; return spend+fee; }', a2='shares-=qty; return qty*c-fee; }';
+  ok('현금 훅 주입 자리 확인', vsrc.includes(a1)&&vsrc.includes(a2));
+  vsrc=vsrc.replace(a1,'feesTotal+=fee; __VB(spend+fee); return spend+fee; }')
+           .replace(a2,'shares-=qty; __VS(qty*c-fee); return qty*c-fee; }');
+  let VB=0, VS=0; global.__VB=v=>VB+=v; global.__VS=v=>VS+=v;
+  const runVRc=new Function('return ('+vsrc.replace('function runVR(','function (')+')')();
+  const MODE={0.5:'거치',0.75:'적립',0.25:'인출'};
+  let checked=0, worst=0, wl='';
+  for(const tk of ['SOXL','TQQQ','TECL']){
+    if(!DAYS[tk]) continue;
+    for(const mode of [0.5,0.75,0.25]) for(const formula of ['basic','skill']){
+      VB=0; VS=0;
+      const r=runVRc(DAYS[tk], tk, {initAmt:10000, contrib:mode===0.75?80:0, withdraw:mode===0.25?50:0,
+        G:10, bandPct:15, mode, formula, startV:0, startPool:mode===0.5?0:10000, costOn:false});
+      const want=r.invested - r.totalWd - VB + VS;
+      const gap=Math.abs(r.pool-want);
+      checked++;
+      if(gap>worst){ worst=gap; wl=`${tk} ${MODE[mode]} ${formula}`; }
+    }
+  }
+  ok('VR 조합을 실제로 돌렸다', checked>0, checked+'개');
+  ok('현금 장부가 닫힌다 (잔돈 증발 0)', worst<1e-6, `최대 어긋남 ${worst.toFixed(4)}$ (${wl})`);
+  delete global.__VB; delete global.__VS;
+}
+
+/* ════ 67. 엔진 스모크 — 전부 실제로 굴러가는가 ════
+   여태 이 회귀는 runIM 계열과 runVR·runIVS 만 '돌려' 보고, runStdev·runASAP·runMA200·
+   적립(_dcaOne)·runBH 는 소스를 눈으로만 읽었다. 그래서 runStdev 반환줄에 그 함수엔
+   없는 이름(targetPct)이 들어간 적이 있는데도 931개가 전부 초록불이었다 — 부르는 순간
+   ReferenceError 로 터지는 코드였다. 배선을 고칠 때마다 제일 먼저 깨지는 게 이런 것이라,
+   엔진은 전부 한 번씩 굴려 보고 결과가 유한한 숫자인지 본다. */
+console.log('\n[67] 엔진 스모크 — 전부 실제로 굴러간다');
+{
+  // 엔진이 기대는 이웃 함수들도 파일에서 그대로 떼어 온다 (재구현 금지 원칙)
+  const helpers=['function srcOf(t)','function divSplit(tkr, days, buys)','function _maOpt(opt)',
+                 'function _maHold(sell,a,b)','function _maEntry(buy,a,b)',
+                 'function _maAbove(tkr,N,SHORT,BUY,SELL)','function _asapInd(tkr)','function _ivsWeights(tkr,N,s0)'];
+  let pre='';
+  for(const h of helpers){ try{ pre+=extractFn(bt,h)+'\n'; }catch(e){ ok('도우미 추출: '+h, false, e.message); } }
+  const mSg=bt.match(/const SGOV_RATE=\{[^}]*\};/); if(mSg) pre+=mSg[0]+'\n';
+  const mMa=bt.match(/const MA_COND_LBL=\{[^}]*\};/); if(mMa) pre+=mMa[0]+'\n';
+  pre='var levExt=false, EXTM={}, dcaReinv=true, dcaDipMul=1, maBuy="ma", maSell="ma", maShort=50, maPark="cash";\n'+pre;
+
+  const mk=(marker)=>{ const src=extractFn(bt,marker);
+    return new Function(pre+'return ('+src.replace(/^function [\w$]+\(/,'function (')+')')(); };
+  const D=DAYS.SOXL||DAYS.TQQQ, T=DAYS.SOXL?'SOXL':'TQQQ';
+  const fine=r=>r && isFinite(r.final) && r.final>=0 && isFinite(r.ret) && isFinite(r.mdd!=null?r.mdd:0);
+  const ENG=[
+    ['runBH',        'function runBH(days,tkr,cap,costOn)',                          f=>f(D,T,10000,true)],
+    ['runStdev',     'function runStdev(days,tkr,cap,N,g,filter,costOn)',            f=>f(D,T,10000,40,2.5,'none',true)],
+    ['runMA200',     'function runMA200(days,tkr,cap,N,costOn,opt)',                 f=>f(D,T,10000,200,true)],
+    ['runMA200Accum','function runMA200Accum(days,tkr,contribTotal,N,costOn,opt)',   f=>f(D,T,10000,200,true)],
+    ['runASAP',      'function runASAP(days,tkr,opt)',                               f=>f(D,T,{base:10,mid:50,deep:100,costOn:true})],
+    ['_dcaOne',      'function _dcaOne(t,days,amt,step,costOn,dipMul)',              f=>f(T,D,10,1,true,1)],
+    ['runIVS',       'function runIVS(days,tkr,cap,s0,N,band,costOn,mode,pair)',     f=>f(D,T,10000,0.45,60,0.10,true,'iv','cash')],
+    ['runIM22',      'function runIM22(days,tkr,cap,divs,targetPct,compound',        f=>f(D,T,10000,20,20,true)],
+    ['runIM30',      'function runIM30(days,tkr,cap,divs,targetPct,compound',        f=>f(D,T,10000,20,20,true)],
+    ['runIM',        'function runIM(days,tkr,cap,divs,targetPct,compound',          f=>f(D,T,10000,20,20,true)],
+    ['runVR',        'function runVR(days,tkr,params)',                              f=>f(D,T,{initAmt:10000,G:10,bandPct:15,mode:0.5,formula:'basic',startV:0,startPool:0,costOn:true})],
+  ];
+  for(const [name,marker,call] of ENG){
+    let r=null, err='';
+    try{ r=call(mk(marker)); }catch(e){ err=e.message; }
+    ok(`${name} 실행·유한값`, fine(r), err||(r?`final=${r.final} ret=${r.ret}`:'결과 없음'));
+  }
+  // 무매 4엔진은 자기가 쓴 익절%를 담아 돌려줘야 한다 (화면 머리글이 이걸 읽는다)
+  for(const [n,m] of [['runIM','function runIM(days,tkr,cap,divs,targetPct,compound'],
+                      ['runIM22','function runIM22(days,tkr,cap,divs,targetPct,compound'],
+                      ['runIM30','function runIM30(days,tkr,cap,divs,targetPct,compound'],
+                      ['runIM50','function runIM50(days,tkr,cap,divs,targetPct,compound']]){
+    ok(`${n} 이 쓴 익절%를 돌려준다`, /snap,\s*tkr,\s*tgt:targetPct|snap,tkr,tgt:targetPct/.test(extractFn(bt,m)));
+  }
+  // 반대로 targetPct 를 안 받는 엔진엔 그 이름이 있으면 안 된다 (있으면 부르는 순간 터진다)
+  for(const [n,m] of [['runStdev','function runStdev(days,tkr,cap,N,g,filter,costOn)'],
+                      ['runVR','function runVR(days,tkr,params)'],
+                      ['runASAP','function runASAP(days,tkr,opt)']]){
+    ok(`${n} 에 남의 매개변수 이름이 없다`, !/targetPct/.test(extractFn(bt,m)));
+  }
 }
 
 console.log(`\n════ 결과: ${pass} PASS / ${fail} FAIL ${fail===0?'— ALL PASS ★':'— 배포 금지, 위 ✗ 항목 수정 필요'} ════`);

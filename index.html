@@ -520,7 +520,7 @@ try{ if(localStorage.getItem('qcockpit_hadUser')==='1') document.documentElement
 </div>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.68</span></h1></div>
+    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.69</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -1608,7 +1608,7 @@ document.addEventListener('click',function(e){ var m=document.getElementById('jk
   <footer>
     <strong>JK 퀀트</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.68</b> · 2026-09-16</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.69</b> · 2026-09-21</div>
   </footer>
 </div>
 
@@ -2253,8 +2253,9 @@ function computeInf(){
            종료 9,000만  → 인출 없음 · 다음 시작 9,000만
            종료 9,800만  → 인출 없음 · 다음 시작 9,800만
            종료 1억 500만 → 인출 500만 · 다음 시작 1억
-         한때 모자란 만큼 밖에서 채워 넣었는데(added), 그건 번 돈이 아니라 새로 넣은 돈이라
-         단리의 뜻이 아니다. 백테 runIM·runIM50 도 같은 규약이다 — 한쪽만 바꾸면 또 갈린다. */
+         한때 모자란 만큼 밖에서 채워 넣었는데, 그건 번 돈이 아니라 새로 넣은 돈이라
+         단리의 뜻이 아니다. 무매엔 입금이라는 개념 자체가 없다 — 나가기만 한다.
+         백테 runIM·runIM50 도 같은 규약이다 — 한쪽만 바꾸면 또 갈린다. */
       if(simple){
         const P0=+st.principal||0;
         const cashNow=P0+realized-withdrawn-saved;   // 이 시점 inv=0
@@ -2278,7 +2279,7 @@ function computeInf(){
   // 가용 잔금 = 원금 + 실현손익 − 보유분 투입원가 − 출금 − 단리 인출 + 단리 보충
   const bal=st.principal+realized-inv-withdrawn-saved;
   return {avg,qty,inv,realized,T,totbuy,totsell,bal,rows,st,cycleSeq,reverseTraded,inReverseNow,reverseActive,
-          withdrawn,saved,added:0,flows,simple,outside:withdrawn+saved};   // added 는 남은 소비처 호환용 — 단리는 채워 넣지 않는다
+          withdrawn,saved,flows,simple,outside:withdrawn+saved};
 }
 
 /* ──── 익절 동적 조절: 20일 상승률 (선택 · 백테 backtest.html _imMom/_imTgtOf와 동일 정의) ────
@@ -2366,11 +2367,18 @@ function fmtT(t){
   return s.replace(/0+$/,'').replace(/\.$/,'');   // 9.875 → "9.875", 8.000 → "8"
 }
 
+/* 라오어 문서 공식 익절% — 종목별로 다르다. 문서 미수록 종목은 20.
+   백테 backtest.html 의 IM_OFFICIAL 과 같은 값이어야 한다. 한쪽만 고치면
+   앱이 권하는 익절%와 백테가 돌린 익절%가 갈려 백테 숫자가 앱의 숫자가 아니게 된다. */
+const IM_OFFICIAL={TQQQ:15, SOXL:20};
+
 // ★ 통합 규약: 별%base = 익절%(설정값). slope = base×0.1×(20/div).
 //   문서 4케이스 재현: TQQQ 15%→20분할 1.5·40분할 0.75 / SOXL 20%→2.0·1.0
 //   30분할도 표값 일치 (TQQQ 1.0 / SOXL 1.333). 익절% 변경 시 별지점·복귀조건 동반 이동.
+//   base 를 안 주면(옛 세션·미설정) 그 종목의 문서 공식값으로 떨어진다 — 15/20 을 여기 또
+//   적어 두면 IM_OFFICIAL 과 갈리므로 반드시 그 표를 본다.
 function starPct(ticker,div,T,base){
-  const b=(base!=null&&base>0)?base:(ticker==='TQQQ'?15:20);
+  const b=(base!=null&&base>0)?base:(IM_OFFICIAL[ticker]||20);
   return b - (b*0.1*20/div)*T;
 }
 // 리버스 복귀 배율 = 1 − base/100 (문서: 복귀 기준 = T 마지막 쿼터매도 기준)
@@ -2386,7 +2394,6 @@ function exitMulOf(base){ return 1-((base!=null&&base>0)?base:20)/100; }
 //   TECL·KORU는 문서 미수록(비공식) — 2026-07 종가체결(v1.91) 재검증: 둘 다 t20 최적 (t12·t15는 섭동 0/40 완패).
 //   KORU는 비용 반영 시 전 구간 세후 마이너스 — 무매 종목으로 부적합 주의.
 const IM_BEST={ v40:{TQQQ:15,SOXL:20,TECL:20,KORU:20}, v50:{TQQQ:15,SOXL:20,TECL:20,KORU:20} };
-const IM_OFFICIAL={TQQQ:15, SOXL:20};
 function bestTgt(tkr, eng){
   const tbl=IM_BEST[eng==='v40'?'v40':'v50'];
   return tbl[tkr]!==undefined ? tbl[tkr] : (IM_OFFICIAL[tkr]||20);
@@ -3008,9 +3015,10 @@ function renderInfAnal(){
     if(sub) sub.textContent = (wd+sv)>0 ? '평가금 + 잔금 + 나간 돈' : '평가금 + 잔금';
     const ss=$('a_saved_sub');
     if(ss) ss.textContent = c.simple ? '사이클 초과익 (단리)' : '사이클 초과익'; }
-  /* ── 단리 현금 흐름 ── 사이클이 끝날 때마다 계좌를 원금으로 맞추므로
-     넘치면 나가고(출금) 모자라면 들어온다(입금). 단리를 쓰는 이유가 월 현금이라
-     누적 한 줄로는 부족하다 — 달마다 얼마가, 얼마나 자주 나왔는지까지 본다. */
+  /* ── 단리 현금 흐름 ── 사이클 종료 잔액이 원금을 넘을 때만 넘은 만큼 나간다.
+     못 넘으면 아무것도 오가지 않고 그 잔액 그대로 다음 사이클로 간다 — 들어오는 돈은 없다.
+     단리를 쓰는 이유가 월 현금이라 누적 한 줄로는 부족하다 —
+     달마다 얼마가, 얼마나 자주 나왔는지까지 본다. */
   {
     const box=$('a_simple'), P0=+st.principal||0;
     if(box) box.style.display = (c.simple && P0>0) ? '' : 'none';
