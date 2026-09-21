@@ -315,7 +315,7 @@ td:first-child{text-align:left;}
   <div class="brand">
     <div>
       <div class="logo">Backtest</div>
-      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v1.178.1</span></h1>
+      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v1.178.2</span></h1>
     </div>
   </div>
   <div class="hright">
@@ -2058,25 +2058,23 @@ function runIM(days,tkr,cap,divs,targetPct,compound=true){
     yearPnl += qty*(eff-avg) - fee;             // 실현손익(수수료=필요경비)
     realized += qty*(eff-avg) - fee;
   }
-  function _settleTax(px){                       // 연말 정산 (px: 정산 시점 종가 — 잔고 부족 시 매도용)
-    if(!CO){ yearPnl=0; return; }
-    const taxUsd=capGainTax(yearPnl, tkr);
-    if(compound){ cash-=taxUsd; }
-    else { const take=Math.min(savedProfit,taxUsd); savedProfit-=take; cash-=(taxUsd-take); }
-    taxTotal+=taxUsd; yearPnl=0;
-    // ── 잔고 하한 처리 ──
-    // 전년 익절로 세금이 확정된 뒤 그 해에 폭락하면 낼 현금이 모자랄 수 있다(3배 −99% 구간에서 실제로 발생).
-    // 현실대로 ① 보유주를 팔아 충당하고 ② 그래도 모자라면 계좌 소진(0)으로 고정한다.
-    // 이 처리가 없으면 자산이 음수가 되어 MDD>100%·CAGR NaN 같은 모델 붕괴가 난다.
-    // ε(1센트) 미만의 음수는 부동소수 잔여이므로 파산으로 보지 않는다.
-    // (ε 없이 cash<0으로 판정하면 −1e-13 같은 값에 멀쩡한 포지션이 청산돼 버린다.)
-    const EPS=0.01;
-    if(cash<-EPS && shares>1e-9 && px>0){
-      const need=-cash, q=Math.min(shares, need/(px*(1-FEE)));
-      if(q>1e-12){ const gross=q*px, fee=gross*FEE; cash+=gross-fee; shares-=q; feesTotal+=fee; }
+  function _settleTax(px){
+    if(!CO){yearPnl=0;return;}
+    const owed=capGainTax(yearPnl,tkr);yearPnl=0;let due=owed;
+    // 단리의 savedProfit은 계좌 밖으로 빼 둔 이익이므로 세금 재원으로 먼저 사용한다.
+    if(!compound&&due>0){const take=Math.min(savedProfit,due);savedProfit-=take;due-=take;}
+    const fromCash=Math.min(Math.max(cash,0),due);cash-=fromCash;due-=fromCash;
+    if(due>0.01&&shares>=1&&px>0){
+      const netPer=px*(1-FEE),q=Math.min(Math.floor(shares+1e-9),Math.ceil(due/netPer-1e-12));
+      if(q>0){
+        // 세금 마련 매도도 실제 매도다. 실현손익은 새 연도의 yearPnl로 넘긴다.
+        _sell(px,q,0);
+        const pay=Math.min(Math.max(cash,0),due);cash-=pay;due-=pay;
+      }
     }
-    if(cash<-EPS){ cash=0; shares=0; avg=0; T=0; }   // 주식 다 팔아도 모자람 = 파산, 이후 사이클 없음
-    else if(cash<0){ cash=0; }                        // 반올림 잔여만 정리
+    taxTotal+=owed-due;
+    if(due>0.01){cash=0;shares=0;avg=0;T=0;} // 자산으로도 납부 못 한 잔액은 계좌가 소진된 상태로 처리
+    else if(cash<0)cash=0;
   }const snap=[];
   let peakInvested=0;
   let inReverse=false, reverseDay1=false;    // 리버스모드 상태 추적
@@ -2092,7 +2090,7 @@ function runIM(days,tkr,cap,divs,targetPct,compound=true){
     // 리버스 진입: 원금 소진 = '1회 매수가 불가능해지는 시점'(라오어 공지).
     //   1회분 = 잔금/(분할−T) 이므로  1회분 > 잔금 ⟺ (분할−T) < 1 ⟺ T > 분할−1.
     // 일단 들어가면 T가 매도로 줄어도 리버스 유지, 종료는 오직 '가격 회복' 또는 '전량 매도'로만 판정.
-    // 리버스 OFF(기본): 진입선을 무력화 → 원금 소진 후엔 일반모드의 후반전 별지점 손절 쿼터매도로만 방어(홀드).
+    // 리버스를 사용하지 않으면 원금 소진 후 일반모드 후반전 규칙만 유지한다.
     const _revOn=(typeof imReverse!=='undefined')&&imReverse&&(divs===20||divs===40); // 원전 리버스 공식 확인 범위
     if(_revOn && !inReverse && (divs-T)<1 && shares>0){ inReverse=true; reverseDay1=true; }
 
@@ -2198,11 +2196,16 @@ function runIM22(days,tkr,cap,divs,targetPct,compound=true){
     const q=iq(amt/(1+FEE),px); if(q<=0) return 0;                 // 정수 주수 (증권사 현실)
     const spend=q*px, fee=spend*FEE; avg=sh<=0?px:(sh*avg+spend)/(sh+q); sh+=q; cash-=spend+fee; return spend+fee; };
   const _sell=(px,q,slip)=>{ if(q<=0)return; if(q>sh)q=sh; const eff=px*(1-(slip||0)),g=q*eff,fee=g*FEE; cash+=g-fee; yearPnl+=q*(eff-avg)-fee; sh-=q; };
-  const _settle=(px)=>{ if(!CO){yearPnl=0;return;} cash-=capGainTax(yearPnl, tkr); yearPnl=0;
-    // 잔고 하한: 세금 낼 현금이 모자라면 보유주 매도 → 그래도 모자라면 계좌 소진(0). 음수 자산 방지.
-    const EPS=0.01;   // 부동소수 잔여 음수를 파산으로 오판하지 않도록 ε 적용
-    if(cash<-EPS&&sh>1e-9&&px>0){ const q=Math.min(sh,(-cash)/(px*(1-FEE))); if(q>1e-12){ const g=q*px; cash+=g-g*FEE; sh-=q; } }
-    if(cash<-EPS){ cash=0; sh=0; avg=0; } else if(cash<0){ cash=0; } };
+  const _settle=(px)=>{if(!CO){yearPnl=0;return;}
+    const owed=capGainTax(yearPnl,tkr);yearPnl=0;let due=owed;
+    const fromCash=Math.min(Math.max(cash,0),due);cash-=fromCash;due-=fromCash;
+    if(due>0.01&&sh>=1&&px>0){
+      const q=Math.min(Math.floor(sh+1e-9),Math.ceil(due/(px*(1-FEE))-1e-12));
+      if(q>0){_sell(px,q);const pay=Math.min(Math.max(cash,0),due);cash-=pay;due-=pay;}
+    }
+    taxTotal+=owed-due;
+    if(due>0.01){cash=0;sh=0;avg=0;}else if(cash<0)cash=0;
+  };
   days.forEach((d,i)=>{ const [c,o,hi,lo]=M[tkr][d];
     { const y=d.slice(0,4); if(cy===null)cy=y; else if(y!==cy){_settle(c);cy=y;} }
     { const eq=cash+sh*c; if(eq>mp)mp=eq; else if(mp>0){const dd=(mp-eq)/mp; if(dd>mdd)mdd=dd;} }
@@ -2275,11 +2278,12 @@ function runStdev(days,tkr,cap,N,g,filter,costOn){
   const ma=Array(cl.length).fill(null), sd=Array(cl.length).fill(null);
   { let s=0,s2=0; for(let i=0;i<cl.length;i++){ s+=cl[i]; s2+=cl[i]*cl[i]; if(i>=N){s-=cl[i-N];s2-=cl[i-N]*cl[i-N];} if(i>=N-1){ const m=s/N; ma[i]=m; sd[i]=Math.sqrt(Math.max(0,s2/N-m*m)); } } }
   const lvOf=gx=>{ if(ma[gx]==null)return null; const c=cl[gx],m=ma[gx],v=sd[gx]; let lv=0; for(const L of [m+2*v,m+v,m,m-v,m-2*v]) if(c<L)lv++; return lv; };
-  let cash=cap,sh=0,avg=0,prevLv=null,yearPnl=0,cy=null,mp=cap,mdd=0; const snap=[];
+  let cash=cap,sh=0,avg=0,prevLv=null,yearPnl=0,cy=null,mp=cap,mdd=0,feesTotal=0,taxTotal=0;const snap=[];
   const _buy=(px,amt)=>{ if(amt>cash)amt=cash; if(amt<=1e-6)return;
     const q=iq(amt/(1+FEE),px); if(q<=0) return;                   // 정수 주수
-    const spend=q*px, fee=spend*FEE; avg=sh<=0?px:(sh*avg+spend)/(sh+q); sh+=q; cash-=spend+fee; };
-  const _sell=(px,q)=>{ if(q<=0)return; if(q>sh)q=sh; const gg=q*px,fee=gg*FEE; cash+=gg-fee; yearPnl+=q*(px-avg)-fee; sh-=q; };
+    const spend=q*px,fee=spend*FEE;avg=sh<=0?px:(sh*avg+spend)/(sh+q);sh+=q;cash-=spend+fee;feesTotal+=fee;return q; };
+  const _sell=(px,q)=>{q=Math.min(Math.floor(sh+1e-9),Math.floor(q+1e-9));if(q<=0)return 0;
+    const gg=q*px,fee=gg*FEE;cash+=gg-fee;yearPnl+=q*(px-avg)-fee;sh-=q;feesTotal+=fee;if(sh<=0){sh=0;avg=0;}return q;};
   const _settle=(px)=>{ if(!CO){yearPnl=0;return;} cash-=capGainTax(yearPnl, tkr); yearPnl=0;
     // 잔고 하한: 세금 낼 현금이 모자라면 보유주 매도 → 그래도 모자라면 계좌 소진(0). 음수 자산 방지.
     const EPS=0.01;   // 부동소수 잔여 음수를 파산으로 오판하지 않도록 ε 적용
@@ -2300,7 +2304,7 @@ function runStdev(days,tkr,cap,N,g,filter,costOn){
     if(i%10===0)snap.push([d,cash+sh*c]);
   });
   _settle(cl[gi[days[days.length-1]]]); const lc=cl[gi[days[days.length-1]]], fin=cash+sh*lc; snap.push([days[days.length-1],fin]);
-  return {invested:cap, final:fin, ret:(fin/cap-1)*100, mdd:mdd*100, snap, tkr};
+  return {invested:cap,final:fin,ret:(fin/cap-1)*100,mdd:mdd*100,snap,tkr,fees:feesTotal,tax:taxTotal,endCash:cash,endShares:sh};
 }
 
 // ──── 국면 판정 (V5.0 공용) ────
@@ -2726,7 +2730,7 @@ function runMA200(days,tkr,cap,N,costOn,opt){
     const owed=capGainTax(yearPnl,tkr); yearPnl=0; let due=owed;
     const fromCash=Math.min(Math.max(cash,0),due); cash-=fromCash; due-=fromCash;
     if(due>1e-9&&shares>0&&px>0){
-      const q=Math.min(shares,due/(px*(1-FEE)));
+      const q=Math.min(Math.floor(shares+1e-9),Math.ceil(due/(px*(1-FEE))-1e-12));
       const gross=q*px,fee=gross*FEE,net=gross-fee;
       shares-=q; cash+=net; feesTotal+=fee; yearPnl+=q*(px-avg)-fee;
       const pay=Math.min(cash,due); cash-=pay; due-=pay;
@@ -2743,8 +2747,8 @@ function runMA200(days,tkr,cap,N,costOn,opt){
     const g=gIdx[d];
     const want = g>0 ? above[dts[g-1]] : true;             // 전일 신호 (기간 앞 이력 사용, 첫날은 보유 시작)
     if(want && shares===0 && cash>0){
-      const q=iq(cash/(1+FEE),c); const spend=q*c, fee=spend*FEE;   // 정수 주수 — 남는 돈은 현금으로
-      shares=q; avg=c; cash-=spend+fee; feesTotal+=fee; trades++;
+      const q=iq(cash/(1+FEE),c);
+      if(q>0){const spend=q*c,fee=spend*FEE;shares=q;avg=c;cash-=spend+fee;feesTotal+=fee;trades++;}
     }else if(!want && shares>0){
       const gross=shares*c, fee=gross*FEE; cash+=gross-fee;
       const pnl=shares*(c-avg)-fee; realized+=pnl; yearPnl+=pnl;
@@ -3016,17 +3020,21 @@ function runIVS(days,tkr,cap,s0,N,band,costOn,mode,pair){
   function _buy(P,px,spend){ const q=iq(spend/(1+FEE+LEGFEE),px); if(q<=0) return;   // 정수 주수
     spend=q*px*(1+FEE); const fee=q*px*FEE, lf=q*px*LEGFEE;
     P.avg=(P.sh*P.avg+q*px)/(P.sh+q); P.sh+=q; cash-=spend+lf; feesTotal+=fee+lf; trades++; }
-  function _sell(P,px,q){ const gross=q*px, fee=gross*FEE, lf=gross*LEGFEE; cash+=gross-fee-lf;
-    yearPnl+=q*(px-P.avg)-fee; P.sh-=q; feesTotal+=fee+lf; trades++;
-    if(P.sh<1e-9){P.sh=0;P.avg=0;} }
-  function _settle(c,c1){ if(!costOn){yearPnl=0;return;}
-    const owed=capGainTax(yearPnl, tkr); let due=owed; yearPnl=0;
-    const fromCash=Math.min(Math.max(cash,0), due); cash-=fromCash; due-=fromCash;
-    // 현금이 모자라면 보유분을 판다 — 실현손익은 다음 해로 이월 (총자산 음수 방지)
+  function _sell(P,px,q){q=Math.min(Math.floor(P.sh+1e-9),Math.floor(q+1e-9));if(q<=0)return 0;
+    const gross=q*px,fee=gross*FEE,lf=gross*LEGFEE;cash+=gross-fee-lf;
+    yearPnl+=q*(px-P.avg)-fee;P.sh-=q;feesTotal+=fee+lf;trades++;
+    if(P.sh<1e-9){P.sh=0;P.avg=0;}return q;}
+  function _settle(c,c1){if(!costOn){yearPnl=0;return;}
+    const owed=capGainTax(yearPnl,tkr);yearPnl=0;let due=owed;
+    const fromCash=Math.min(Math.max(cash,0),due);cash-=fromCash;due-=fromCash;
     for(const [P,px] of [[A,c],[B,c1]]){
-      if(due<=1e-9 || !(P.sh>0) || !(px>0)) continue;
-      const q=Math.min(P.sh, due/px); yearPnl+=q*(px-P.avg); P.sh-=q; due-=q*px; }
-    taxTotal+=owed-due; }
+      if(due<=0.01||P.sh<1||!(px>0))continue;
+      const netPer=px*(1-FEE-LEGFEE),q=Math.min(Math.floor(P.sh+1e-9),Math.ceil(due/netPer-1e-12));
+      if(q>0){_sell(P,px,q);const pay=Math.min(Math.max(cash,0),due);cash-=pay;due-=pay;}
+    }
+    taxTotal+=owed-due;
+    if(due>0.01){cash=0;A.sh=0;A.avg=0;B.sh=0;B.avg=0;}
+  }
   days.forEach((d,i)=>{
     const c=M[tkr][d][C], c1=X1?P1[d]:0;
     { const y=d.slice(0,4); if(curYear===null)curYear=y; else if(y!==curYear){_settle(c,c1);curYear=y;} }
