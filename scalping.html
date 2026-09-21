@@ -187,7 +187,7 @@ canvas{display:block;width:100%;height:auto}
 
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Morning Scalping</div><h1>JK <span class="v">퀀트</span> 단타 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="scVer">v1.3.1</span></h1></div>
+    <div><div class="kicker">Morning Scalping</div><h1>JK <span class="v">퀀트</span> 단타 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="scVer">v1.3.2</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -567,7 +567,21 @@ async function mFetch(code){
   const r=await fetch(`/api/quote?symbol=${encodeURIComponent(code)}&minute=1`,{headers:{'Accept':'application/json'}});
   const j=await r.json();
   if(!j.minutes||!j.minutes.length) throw new Error(j.error||'분봉 없음');
-  return j.minutes;
+  const a=j.minutes.map(x=>Object.assign({},x));
+  /* 네이버 close-volume의 vol은 이 아카이브 표본에서 전 종목·전 분봉이 단조증가하는
+     누적거래량이었다. 그대로 전분 대비 배수로 비교하면 가짜 거래량 신호가 생긴다.
+     날짜가 바뀔 때 0으로 리셋해 실제 1분 거래량으로 바꾼다. KIS OHLCV는 원래 분봉 거래량. */
+  if(j.minuteSchema==='close-volume'){
+    let prevDay='', prevCum=0;
+    for(const x of a){
+      const d=String(x.t||'').slice(0,10), cum=Math.max(0,+x.vol||0);
+      x.vol=(d===prevDay)?Math.max(0,cum-prevCum):cum;
+      x.volMode='minute'; prevDay=d; prevCum=cum;
+    }
+  }else{
+    a.forEach(x=>x.volMode='minute');
+  }
+  return a;
 }
 function toBars(min, step){
   const norm=x=>({date:x.t,open:+(x.open??x.close),high:+(x.high??x.close),low:+(x.low??x.close),close:+x.close,vol:+x.vol||0,ohlcv:x.open!=null&&x.high!=null&&x.low!=null});
@@ -822,6 +836,16 @@ async function archAuto(){
 }
 function saveArch(){ try{ localStorage.setItem(AKEY,JSON.stringify(ARCH)); return true; }
   catch(e){ alert('저장 공간이 부족합니다. CSV로 내보낸 뒤 삭제하세요.'); return false; } }
+function normalizeArchRows(raw,meta){
+  const a=(raw||[]).slice().sort((x,y)=>x[0]-y[0]).map(r=>r.slice());
+  if(!a.length || (meta&&meta.volMode==='minute')) return a;
+  // 구형 네이버 아카이브([hhmm,close,vol])는 vol이 누적값이었다. KIS OHLCV(6칸)는 건드리지 않는다.
+  if(a.every(r=>r.length<6)){
+    let prev=0;
+    for(const r of a){ const cum=Math.max(0,+r[2]||0); r[2]=Math.max(0,cum-prev); prev=cum; }
+  }
+  return a;
+}
 function archStats(){
   const dates=Object.keys(ARCH).sort(); let bars=0, codes=new Set();
   dates.forEach(d=>Object.entries(ARCH[d]).forEach(([c,a])=>{ if(c==='_meta'||!Array.isArray(a)) return; bars+=a.length; codes.add(c); }));
@@ -860,7 +884,9 @@ async function archSnapshot(auto){
           (ARCH[d]=ARCH[d]||{}); const arr=(ARCH[d][u.code]=ARCH[d][u.code]||[]);
           if(!arr.some(r=>r[0]===hm)){ arr.push(x.open!=null&&x.high!=null&&x.low!=null?[hm,x.close,x.vol||0,x.open,x.high,x.low]:[hm,x.close,x.vol||0]); added++; }
           const di=doh.findIndex(z=>z.date===d);
-          if(di>=0){ ARCH[d]._meta=ARCH[d]._meta||{}; ARCH[d]._meta[u.code]={open:+doh[di].open||0,prevClose:di>0?(+doh[di-1].close||0):0}; }
+          ARCH[d]._meta=ARCH[d]._meta||{}; const oldm=ARCH[d]._meta[u.code]||{};
+          ARCH[d]._meta[u.code]=Object.assign({},oldm,{volMode:'minute'});
+          if(di>=0) Object.assign(ARCH[d]._meta[u.code],{open:+doh[di].open||0,prevClose:di>0?(+doh[di-1].close||0):0});
         });
         Object.keys(ARCH).forEach(d=>{ const a=ARCH[d][u.code]; if(a) a.sort((p,q)=>p[0]-q[0]); });
       }catch(e){}
@@ -879,7 +905,7 @@ async function archSnapshot(auto){
 function archExport(){
   const s=archStats(); if(!s.dates.length){ alert('내보낼 데이터가 없습니다.'); return; }
   const lines=['date,code,hhmm,close,vol,open,high,low,day_open,prev_close,gap_pct'];
-  s.dates.forEach(d=>Object.entries(ARCH[d]).forEach(([c,a])=>{ if(c==='_meta'||!Array.isArray(a)) return; const m=(ARCH[d]._meta||{})[c]||{}, gap=m.prevClose>0?(m.open/m.prevClose-1)*100:''; a.forEach(r=>lines.push(`${d},${c},${String(r[0]).padStart(4,'0')},${r[1]},${r[2]},${r[3]??''},${r[4]??''},${r[5]??''},${m.open||''},${m.prevClose||''},${gap===''?'':gap.toFixed(4)}`)); }));
+  s.dates.forEach(d=>Object.entries(ARCH[d]).forEach(([c,a])=>{ if(c==='_meta'||!Array.isArray(a)) return; const m=(ARCH[d]._meta||{})[c]||{}, gap=m.prevClose>0?(m.open/m.prevClose-1)*100:''; normalizeArchRows(a,m).forEach(r=>lines.push(`${d},${c},${String(r[0]).padStart(4,'0')},${r[1]},${r[2]},${r[3]??''},${r[4]??''},${r[5]??''},${m.open||''},${m.prevClose||''},${gap===''?'':gap.toFixed(4)}`)); }));
   const blob=new Blob(['\ufeff'+lines.join('\n')],{type:'text/csv;charset=utf-8'});
   const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
   a.download=`scalping_0900_0930_${s.dates[0]}_${s.dates[s.dates.length-1]}.csv`;
@@ -924,7 +950,9 @@ function archiveOpeningFeed(code,min,daily){
     if(at>=0) arr[at]=row; else {arr.push(row);added++;}
     arr.sort((a,b)=>a[0]-b[0]);
     const di=doh.findIndex(z=>z.date===d);
-    if(di>=0){ARCH[d]._meta=ARCH[d]._meta||{};ARCH[d]._meta[code]={open:+doh[di].open||0,prevClose:di>0?(+doh[di-1].close||0):0};}
+    ARCH[d]._meta=ARCH[d]._meta||{}; const oldm=ARCH[d]._meta[code]||{};
+    ARCH[d]._meta[code]=Object.assign({},oldm,{volMode:'minute'});
+    if(di>=0) Object.assign(ARCH[d]._meta[code],{open:+doh[di].open||0,prevClose:di>0?(+doh[di-1].close||0):0});
   });
   return added;
 }
@@ -984,7 +1012,7 @@ function openingTrades(cfg){
   const trades=[]; Object.keys(ARCH).sort().forEach(date=>Object.entries(ARCH[date]||{}).forEach(([code,raw])=>{
     if(code==='_meta'||!Array.isArray(raw))return; const meta=((ARCH[date]||{})._meta||{})[code]; if(!meta||!(meta.open>0&&meta.prevClose>0))return;
     const gap=(meta.open/meta.prevClose-1)*100;if(gap<cfg.gmin||gap>cfg.gmax)return;
-    const a=raw.slice().sort((x,y)=>x[0]-y[0]).filter(x=>x[0]>=900&&x[0]<=930&&+x[1]>0);if(a.length<cfg.obs+2)return;
+    const a=normalizeArchRows(raw,meta).filter(x=>x[0]>=900&&x[0]<=930&&+x[1]>0);if(a.length<cfg.obs+2)return;
     const op=a.slice(0,cfg.obs),fh=Math.max(...op.map(x=>x[4]!=null?+x[4]:+x[1]));let ei=-1;
     for(let i=cfg.obs;i<a.length;i++){const px=+a[i][1],hi=a[i][4]!=null?+a[i][4]:px,vol=+a[i][2]||0,pv=Math.max(1,+a[i-1][2]||0);if(hi>fh&&px>=meta.open&&vol>=pv*cfg.vm){ei=i;break;}}
     if(ei<0)return;const entry=+a[ei][1];let exit=+a[a.length-1][1],reason='09:30',pnl=0,half=false;
@@ -1020,7 +1048,7 @@ function runOpeningBreakout(){
     if(code==='_meta'||!Array.isArray(raw)) return;
     const meta=((ARCH[date]||{})._meta||{})[code]||null;
     if(useGap){ if(!meta||!(meta.open>0&&meta.prevClose>0)){ noMeta++; return; } const g=(meta.open/meta.prevClose-1)*100; if(g<gmin||g>gmax){gapOut++;return;} }
-    const a=raw.slice().sort((x,y)=>x[0]-y[0]).filter(x=>x[0]>=900&&x[0]<=930&&+x[1]>0);
+    const a=normalizeArchRows(raw,meta).filter(x=>x[0]>=900&&x[0]<=930&&+x[1]>0);
     if(a.length<obs+2){ skipped++; return; } examined++;
     const opening=a.filter(x=>x[0]>=900&&x[0]<900+obs); if(opening.length<obs){ skipped++; return; }
     const sessionOpen=(meta&&meta.open>0)?meta.open:+opening[0][1], firstHigh=Math.max(...opening.map(x=>+x[1]));
@@ -1058,7 +1086,7 @@ function runPullbackRebreak(){
     if(code==='_meta'||!Array.isArray(raw)) return;
     const meta=((ARCH[date]||{})._meta||{})[code]||null;
     if(useGap){ if(!meta||!(meta.open>0&&meta.prevClose>0)){noMeta++;return;} const gap=(meta.open/meta.prevClose-1)*100; if(gap<gmin||gap>gmax){gapOut++;return;} }
-    const a=raw.slice().sort((x,y)=>x[0]-y[0]).filter(x=>x[0]>=900&&x[0]<=930&&+x[1]>0);
+    const a=normalizeArchRows(raw,meta).filter(x=>x[0]>=900&&x[0]<=930&&+x[1]>0);
     if(a.length<obs+4){insufficient++;return;} examined++;
     const open=(meta&&meta.open>0)?meta.open:+a[0][1], firstHigh=Math.max(...a.slice(0,obs).map(x=>+x[1]));
     let bi=-1;
