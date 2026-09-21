@@ -315,7 +315,7 @@ td:first-child{text-align:left;}
   <div class="brand">
     <div>
       <div class="logo">Backtest</div>
-      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v1.177.8</span></h1>
+      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v1.177.9</span></h1>
     </div>
   </div>
   <div class="hright">
@@ -1497,26 +1497,63 @@ function momentumBacktest(data, tickers, U, cap, lb, filter, costOn){
   const SMA={}; syms.forEach(s=>SMA[s]=momSMA(data[s]));
   // 전 종목 거래일 합집합 — 상장시점이 달라도 각 달 '가용 종목'만 순위매김(없는 종목은 수익률 NaN으로 자동 제외)
   const _dset=new Set(); syms.forEach(s=>Object.keys(data[s]).forEach(d=>_dset.add(d))); const dates=[..._dset].sort();
-  const mf={}; dates.forEach(d=>{const ym=d.slice(0,7); if(!mf[ym])mf[ym]=d;});
+  const mf={}, ml={}; dates.forEach(d=>{const ym=d.slice(0,7); if(!mf[ym])mf[ym]=d; ml[ym]=d;});
   const months=Object.keys(mf).sort(); const dIdx={}; dates.forEach((d,i)=>dIdx[d]=i);
-  const px=(s,d)=>data[s][d];
+  const px=(sym,d)=>data[sym][d];
+  const symDs={}; syms.forEach(sym=>symDs[sym]=Object.keys(data[sym]).sort());
+  const lastAt=(sym,d)=>{
+    const a=symDs[sym]; let lo=0,hi=a.length-1,ans=-1;
+    while(lo<=hi){const m=(lo+hi)>>1;if(a[m]<=d){ans=m;lo=m+1;}else hi=m-1;}
+    return ans>=0?{date:a[ans],price:data[sym][a[ans]]}:null;
+  };
   const FEE=costOn?U.fee:0;
   let held=null, shares=0, cash=cap, basis=0, started=false, startDate=null;
   const eq={}; let sw=0, cashMonths=0; const holdCount={}; const seq=[]; let yrRealUSD=0, curYear=null, taxPaid=0;
   // 매도 시 실현수익률(순수익, 수수료만 반영·세전) 반환. 팔 포지션이 없으면 null(=매도 없음).
-  function sellAll(d){ if(!held)return null; const p=px(held,d), gross=shares*p, fee=gross*FEE, proceeds=gross-fee, realized=proceeds-basis;
-    const soldRet = basis>0 ? realized/basis : 0;
-    cash=proceeds; if(costOn){ if(U.annual){ yrRealUSD+=realized; } else if(taxable[held]&&realized>0){ const tx=realized*U.taxRate; cash-=tx; taxPaid+=tx; } }
-    shares=0; held=null; return soldRet; }
-  function buy(s,d){ const p=px(s,d), q=Math.floor(cash/(p*(1+FEE)));   // 정수 주수
-    const spend=q*p, fee=spend*FEE; basis=spend+fee; shares=q; cash-=spend+fee; held=s; }
-  function settleAnnual(priceForPay){ if(!costOn||!U.annual)return; const taxable=Math.max(0,yrRealUSD*COST_KRW-COST_DEDUCT), tx=taxable*U.taxRate/COST_KRW;
-    if(tx>0){ if(cash>=tx)cash-=tx; else{ const need=tx-cash; cash=0; if(held&&priceForPay>0)shares-=need/priceForPay; } taxPaid+=tx; } yrRealUSD=0; }
-  for(let i=lb;i<months.length;i++){
-    const d=mf[months[i]], pd=mf[months[i-lb]];
+  function sellAll(d){ if(!held)return null; const p=px(held,d); if(!(p>0))return null;
+    const gross=shares*p, fee=gross*FEE, proceeds=gross-fee, realized=proceeds-basis;
+    const soldRet=basis>0?realized/basis:0;
+    cash+=proceeds; if(costOn){ if(U.annual){yrRealUSD+=realized;} else if(taxable[held]&&realized>0){const tx=realized*U.taxRate;cash-=tx;taxPaid+=tx;} }
+    shares=0; basis=0; held=null; return soldRet; }
+  function buy(sym,d){ const p=px(sym,d); if(!(p>0)||cash<=0)return;
+    const q=Math.floor(cash/(p*(1+FEE))); if(q<=0)return;
+    const spend=q*p,fee=spend*FEE; basis=spend+fee;shares=q;cash-=spend+fee;held=sym; }
+  function settleAnnual(priceForPay){
+    if(!costOn||!U.annual)return;
+    const owed=Math.max(0,yrRealUSD*COST_KRW-COST_DEDUCT)*U.taxRate/COST_KRW;
+    yrRealUSD=0; let due=owed;
+    const fromCash=Math.min(Math.max(cash,0),due);cash-=fromCash;due-=fromCash;
+    if(due>1e-9&&held&&shares>0&&priceForPay>0){
+      const netPer=priceForPay*(1-FEE);
+      const q=Math.min(shares,Math.ceil(due/netPer-1e-12));
+      if(q>0){
+        const before=shares,costPart=basis*(q/before),gross=q*priceForPay,fee=gross*FEE,net=gross-fee;
+        shares-=q;basis-=costPart;cash+=net;yrRealUSD+=net-costPart;
+        const pay=Math.min(cash,due);cash-=pay;due-=pay;
+        if(shares<=0){shares=0;basis=0;held=null;}
+      }
+    }
+    taxPaid+=owed-due;
+  }
+  // 월 첫 거래일에 매매하지만 순위/200일선 신호는 직전 월말까지 확정된 데이터만 사용한다.
+  // 1개월 모멘텀 = 직전 월말 / 그 전 월말 - 1. 당월 첫날 종가를 신호에 넣고 같은 종가에 사는 룩어헤드 금지.
+  for(let i=lb+1;i<months.length;i++){
+    const d=mf[months[i]], sigD=ml[months[i-1]], baseD=ml[months[i-lb-1]];
     const y=d.slice(0,4); if(curYear===null)curYear=y; else if(y!==curYear){ settleAnnual(held?px(held,d):0); curYear=y; }
-    let best=null,bs=-1e9; syms.forEach(s=>{ const r=px(s,d)/px(s,pd)-1; if(r>bs){bs=r;best=s;} });
-    let target=best; if(filter){ const sm=SMA[best][d]; if(sm!=null && px(best,d)<sm) target=null; }
+    let best=null,bs=-1e9,bestSig=null;
+    syms.forEach(sym=>{
+      const a=lastAt(sym,sigD),b=lastAt(sym,baseD);
+      if(!a||!b||!(a.price>0&&b.price>0)||a.date<=b.date)return;
+      const rr=a.price/b.price-1;
+      if(rr>bs){bs=rr;best=sym;bestSig=a;}
+    });
+    let target=best;
+    if(target&&filter){
+      const sm=SMA[target][bestSig.date];
+      if(sm!=null&&bestSig.price<sm)target=null;
+    }
+    // 실행일 가격이 없는 종목은 그 달엔 진입하지 않는다.
+    if(target&&!(px(target,d)>0))target=null;
     if(target)holdCount[target]=(holdCount[target]||0)+1; else cashMonths++;
     let soldRet=null;   // 이번 달 진입 시 직전 포지션을 매도했다면 그 실현수익률 · 첫 달·홀드 유지면 null(매도 없음)
     if(!started){ started=true; startDate=d; if(target)buy(target,d); }
@@ -1524,10 +1561,10 @@ function momentumBacktest(data, tickers, U, cap, lb, filter, costOn){
     seq.push({month:months[i], sym:target, ret:bs, soldRet});   // 월별 선택 (sym=null이면 현금) · ret=선정점수(신규픽 직전 N개월 수익률) · soldRet=직전 포지션 매도 실현수익률
     const nextD=(i+1<months.length)?mf[months[i+1]]:null, from=dIdx[d], to=nextD?dIdx[nextD]:dates.length;
     let lp=held?px(held,d):0;   // 보유종목 마지막 유효가 (거래일 누락 방어)
-    for(let k=from;k<to;k++){ if(held){ const p=data[held][dates[k]]; if(p>0)lp=p; eq[dates[k]]=shares*lp; } else eq[dates[k]]=cash; }
+    for(let k=from;k<to;k++){ if(held){ const p=data[held][dates[k]]; if(p>0)lp=p; eq[dates[k]]=cash+shares*lp; } else eq[dates[k]]=cash; }
   }
   const ed=Object.keys(eq).sort(); const lastD=ed[ed.length-1];
-  settleAnnual(held?px(held,lastD):0); const fin= held? shares*px(held,lastD) : cash; eq[lastD]=fin;
+  settleAnnual(held?px(held,lastD):0); const fin=held?cash+shares*px(held,lastD):cash; eq[lastD]=fin;
   let peak=0,mdd=0; ed.forEach(d=>{const e=eq[d];if(e>peak)peak=e;else{const dd=(peak-e)/peak;if(dd>mdd)mdd=dd;}});
   const yrs=(new Date(lastD)-new Date(startDate))/(365.25*864e5);
   const cagr=(Math.pow(fin/cap,1/yrs)-1)*100, mddP=mdd*100;
@@ -1547,7 +1584,7 @@ function momentumBacktest(data, tickers, U, cap, lb, filter, costOn){
     const f=sh*P[bd[bd.length-1]], yy=(new Date(bd[bd.length-1])-new Date(bd[0]))/(365.25*864e5), cg=(Math.pow(f/cap,1/yy)-1)*100;
     return {sym:bt.sym,name:bt.name,color:bt.color,cagr:cg,mdd:md*100,mar:md>0?cg/(md*100):0,tot:(f/cap-1)*100,fin:f,full};
   }).filter(Boolean).sort((a,b)=>b.fin-a.fin);
-  return {cagr,mdd:mddP,mar:mddP>0?cagr/mddP:0,tot:(fin/cap-1)*100,fin,cap,sw,cashMonths,startDate,endDate:lastD,yrs,months:months.length-lb,
+  return {cagr,mdd:mddP,mar:mddP>0?cagr/mddP:0,tot:(fin/cap-1)*100,fin,cap,sw,cashMonths,startDate,endDate:lastD,yrs,months:Math.max(0,months.length-lb-1),
     holdCount,seq,snap,taxPaid,benches, bench:{sym:bt0,cagr:bcagr,mdd:bmdd*100,mar:bmdd>0?bcagr/(bmdd*100):0,tot:(bfin/cap-1)*100,fin:bfin,snap:bsnap} };
 }
 
