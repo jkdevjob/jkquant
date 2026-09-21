@@ -520,7 +520,7 @@ try{ if(localStorage.getItem('qcockpit_hadUser')==='1') document.documentElement
 </div>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.67</span></h1></div>
+    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.67.1</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -997,8 +997,8 @@ document.addEventListener('click',function(e){ var m=document.getElementById('jk
         <p class="note" style="margin-top:0">밴드·사다리·V갱신은 셋 다 똑같고, 아래 <b>3가지만</b> 모드에 따라 바뀝니다.</p>
         <div class="cyc-scroll"><table class="cyctbl">
           <tr><th>구분</th><th>🟢적립식</th><th>🔵거치식</th><th>🟠인출식</th></tr>
-          <tr><td>매 사이클 현금</td><td>+적립금</td><td>없음</td><td>−인출금</td></tr>
-          <tr><td>다음 V</td><td>+Pool/G <b>+적립</b></td><td>+Pool/G</td><td>+Pool/G <b>−인출</b></td></tr>
+          <tr><td>매 사이클 현금</td><td>+적립금</td><td>없음</td><td>2주마다 최대 −$200</td></tr>
+          <tr><td>다음 V</td><td>+Pool/G <b>+적립</b></td><td>+Pool/G</td><td>+Pool/G <b>−실제 인출액</b></td></tr>
           <tr><td>Pool 매수한도</td><td>×0.75</td><td>×0.5</td><td>×0.25</td></tr>
           <tr><td>용도</td><td>자산 형성</td><td>목돈 굴리기</td><td>생활비 인출</td></tr>
         </table></div>
@@ -1610,7 +1610,7 @@ document.addEventListener('click',function(e){ var m=document.getElementById('jk
   <footer>
     <strong>JK 퀀트</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.67</b> · 2026-09-16</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.67.1</b> · 2026-09-21</div>
   </footer>
 </div>
 
@@ -3462,6 +3462,7 @@ function computeVr(){
 }
 
 const CYC_DAYS=14;   // 한 사이클 = 2주(달력 14일 ≒ 거래일 10일, 백테 INTERVAL과 같음)
+const VR_WITHDRAW_CYCLE=200; // 인출식: 2주 갱신마다 계획 인출액 $200
 /* 이번 사이클이 언제 시작됐나.
    설정 cycStart가 우선이고, 없으면 이력에서 되찾는다 —
    첫 매수만 하고 아직 한 번도 '다음 사이클 진입'을 안 누른 계좌도 D-day가 나와야 한다. */
@@ -3743,22 +3744,25 @@ function quickLadder(type,price){
 
 /* ════════ 다음 V 미리보기 ════════ */
 function computeNextV(c,ev){
-  const st=c.st, V=c.V, Pool=c.pool, G=st.g;
-  const isAccum=st.mode===0.75, isWd=st.mode===0.25; // 거치식(0.5)은 적립금 항상 0
-  const add = (isAccum||isWd) ? (st.add||0) : 0;
-  const sign=isWd?-1:1; // 인출식이면 적립금 자리를 인출(−)로
+  const st=c.st, V=c.V, Pool=Math.max(0,c.pool), G=st.g;
+  const isAccum=st.mode===0.75, isWd=st.mode===0.25; // 거치식(0.5)은 현금흐름 0
+  const planned = isWd ? VR_WITHDRAW_CYCLE : (isAccum ? (st.add||0) : 0);
+  // 인출식은 "계획액"이 아니라 실제로 Pool에서 빠질 수 있는 금액만 V에서 차감한다.
+  // Pool이 $80이면 실제 인출도 $80, V 차감도 $80. Pool이 0이면 둘 다 0.
+  const flowAmt = isWd ? Math.min(planned,Pool) : planned;
+  const sign=isWd?-1:1;
+  const flowLabel=isWd?'인출금':'적립금';
   let nextV, calcStr;
   if(st.formula==='skill' && V>0){
     const corr=(ev-V)/(2*Math.sqrt(G));
-    nextV=V + Pool/G + corr + sign*add;
-    calcStr=`V₂ = V₁ + Pool/G + (E−V₁)/(2√G) ${sign<0?'−':'+'} 적립금<br>= ${V.toFixed(2)} + ${(Pool/G).toFixed(2)} + ${corr.toFixed(2)} ${sign<0?'−':'+'} ${add} = <b>${nextV.toFixed(2)}</b>`;
+    nextV=V + Pool/G + corr + sign*flowAmt;
+    calcStr=`V₂ = V₁ + Pool/G + (E−V₁)/(2√G) ${sign<0?'−':'+'} ${flowLabel}<br>= ${V.toFixed(2)} + ${(Pool/G).toFixed(2)} + ${corr.toFixed(2)} ${sign<0?'−':'+'} ${flowAmt.toFixed(2)} = <b>${nextV.toFixed(2)}</b>`;
   } else {
-    nextV=V + Pool/G + sign*add;
-    calcStr=`V₂ = V₁ + Pool/G ${sign<0?'−':'+'} 적립금<br>= ${V.toFixed(2)} + ${(Pool/G).toFixed(2)} ${sign<0?'−':'+'} ${add} = <b>${nextV.toFixed(2)}</b>`;
+    nextV=V + Pool/G + sign*flowAmt;
+    calcStr=`V₂ = V₁ + Pool/G ${sign<0?'−':'+'} ${flowLabel}<br>= ${V.toFixed(2)} + ${(Pool/G).toFixed(2)} ${sign<0?'−':'+'} ${flowAmt.toFixed(2)} = <b>${nextV.toFixed(2)}</b>`;
   }
-  // 다음 Pool = 현재 Pool + 적립(또는 −인출)
-  const nextPool = Pool + sign*add;
-  return {nextV, nextPool, calcStr, sign};
+  const nextPool = Pool + sign*flowAmt;
+  return {nextV, nextPool, calcStr, sign, planned, flowAmt};
 }
 function renderVrNext(){
   const c=computeVr(), st=c.st;
@@ -3784,9 +3788,16 @@ function renderVrNext(){
   }
   // 진입일이 됐으면 버튼으로 알려준다 — 날짜를 세고 있지 않아도 눈에 띄게
   { const nt=$('nv_note');
-    if(nt) nt.innerHTML = st.autoCyc
-      ? '⚙️ <b>자동 진입</b> 켜짐 — 진입일이 지나면 앱을 열 때 V·적립이 알아서 갱신됩니다. 매매는 자동으로 하지 않습니다. 아래 버튼은 앞당겨 진입할 때만 쓰세요.'
-      : '진입 시 적립금이 Pool에 자동 적립되고 V가 갱신됩니다. 기본은 사이클 길이(14일) 후. 짧게 가려면 가까운 영업일로 변경.'; }
+    if(nt){
+      if(st.mode===0.25){
+        const short=r.flowAmt<r.planned ? ` · 현재 Pool 기준 실제 인출 ${wn(r.flowAmt)}` : '';
+        nt.innerHTML=`🟠 인출식 — <b>2주마다 계획 $200</b>. 실제로 Pool에서 빠지는 금액만 V에서 차감합니다${short}. Pool이 부족하면 부족한 만큼만 인출되고, 0이면 V에서도 0만 차감됩니다.`;
+      }else{
+        nt.innerHTML = st.autoCyc
+          ? '⚙️ <b>자동 진입</b> 켜짐 — 진입일이 지나면 앱을 열 때 V·적립이 알아서 갱신됩니다. 매매는 자동으로 하지 않습니다. 아래 버튼은 앞당겨 진입할 때만 쓰세요.'
+          : '진입 시 적립금이 Pool에 자동 적립되고 V가 갱신됩니다. 기본은 사이클 길이(14일) 후. 짧게 가려면 가까운 영업일로 변경.';
+      }
+    } }
   { const btn=$('nv_enter');
     if(btn){ const on = du && du.state!=='wait';
       btn.textContent = on ? (du.state==='due'?'오늘이 진입일 — 다음 사이클 진입':`${-du.d}일 지남 — 다음 사이클 진입`)
@@ -6090,17 +6101,17 @@ function vrStepCycle(sess, c, dateStr, close){
   const st=sess.settings;
   const ev = close>0 ? close*c.qty : c.V;
   const r=computeNextV(c,ev);
-  const isAccum=st.mode===0.75, isWd=st.mode===0.25;
-  const add=(isAccum||isWd)?(st.add||0):0;
   if(!st.cycLog) st.cycLog=[];
   st.cycLog.push({cyc:c.curCyc, from:st.cycStart||null, dates:cycDates(c)||'-', V:+c.V.toFixed(2),
     lo:+c.lo.toFixed(2), up:+c.up.toFixed(2), trade:+c.cycTrade.toFixed(2),
     startPool:+c.cycStartPool.toFixed(2), E:ev>0?+ev.toFixed(2):null, close:close>0?+close.toFixed(4):null});
   const newCyc=c.curCyc+1;
-  if(add>0) sess.hist.push({type:(r.sign<0?'wd':'add'), date:dateStr, amt:add, cyc:newCyc,
-                            ts:Date.now()+st.cycLog.length, auto:true});
+  // 실제 현금흐름만 기록한다. 인출식에서 Pool 부족으로 $200을 다 못 빼면
+  // 실제 빠진 금액만 wd 기록에 남고, 0이면 가짜 인출 기록도 만들지 않는다.
+  if(r.flowAmt>0) sess.hist.push({type:(r.sign<0?'wd':'add'), date:dateStr, amt:r.flowAmt, cyc:newCyc,
+                                  ts:Date.now()+st.cycLog.length, auto:true});
   st.startv=+r.nextV.toFixed(4); st.startCyc=newCyc; st.cycStart=dateStr;
-  return {nextV:r.nextV, newCyc, add, sign:r.sign};
+  return {nextV:r.nextV, newCyc, add:r.flowAmt, planned:r.planned, sign:r.sign};
 }
 /* ════════ 모의투자 자동 운전 ════════
    모의 세션은 '모의 시작일'만 정해두면 어느 탭을 열든 오늘까지 알아서 굴러간다.
@@ -7039,7 +7050,7 @@ function vrReplay(){
   if(D.length<30){ alert('그 시작일부터의 거래일이 너무 적습니다.'); return; }
   const G=+st.g||10, band=(+st.band||15)/100, mode=+st.mode||0.5;
   const contrib=+st.add||0, formula=st.formula||'basic';
-  const isAccum=(mode===0.75), isWd=(mode===0.25), withdraw=isWd?contrib:0;
+  const isAccum=(mode===0.75), isWd=(mode===0.25), withdraw=isWd?VR_WITHDRAW_CYCLE:0;
   const FEE=(typeof IVS_FEE!=='undefined')?IVS_FEE:0.0025;
   const INTERVAL=10, poolLimit=mode;
   // 재생을 다시 돌릴 때 지난 재생이 남긴 startv를 '이어받기'로 오해하면 안 된다 —
@@ -7080,14 +7091,15 @@ function vrReplay(){
       lo:+(V*(1-band)).toFixed(2), up:+(V*(1+band)).toFixed(2),
       trade:+cycTrade.toFixed(2), startPool:+cycStartPool.toFixed(2),
       E:+(shares*c).toFixed(2), close:+c.toFixed(4)});
-    const cv=shares*c, addCycle=isAccum?contrib:isWd?-withdraw:0;
+    const cv=shares*c, actualWd=isWd?Math.min(withdraw,Math.max(0,pool)):0;
+    const addCycle=isAccum?contrib:isWd?-actualWd:0;
     if(formula==='skill'&&V>0) V=V+pool/G+(cv-V)/(2*Math.sqrt(G))+addCycle;
     else V=V+pool/G+addCycle;
     V=Math.max(V,0);
     cyc++; cycStartPool=pool; cycTrade=0; cycStartDate=d;
     if(isAccum){ pool+=contrib; rec.push({type:'add',date:d,amt:+contrib,cyc,sim:true,ts:rec.length+1}); }
-    else if(isWd){ const wd=Math.min(withdraw,pool); pool-=wd; totalWd+=wd;
-      if(wd>0) rec.push({type:'wd',date:d,amt:+wd,cyc,sim:true,ts:rec.length+1}); }
+    else if(isWd){ pool-=actualWd; totalWd+=actualWd;
+      if(actualWd>0) rec.push({type:'wd',date:d,amt:+actualWd,cyc,sim:true,ts:rec.length+1}); }
     const up=V*(1+band), lo=V*(1-band), cv2=shares*c;
     if(cv2>up){ const got=_sell(cv2-V,c,d); pool+=got; cycTrade+=got; }
     else if(cv2<lo){ const use=Math.min(V-cv2,pool*poolLimit); if(use>0){ _buy(use,c,d); pool-=use; cycTrade-=use; } }
@@ -7966,10 +7978,624 @@ function segGet(id){const b=$(id).querySelector('button.on');return b?b.dataset.
 // 거치식(mode=0.5)은 적립금이 항상 0이므로 입력칸을 비활성화해 혼동 방지
 function applyVrModeUI(mode){
   const isLump=String(mode)==='0.5', isWd=String(mode)==='0.25';
-  const inp=$('set_add'); if(inp) inp.disabled=isLump;
+  const inp=$('set_add'); if(inp){ inp.disabled=isLump||isWd; if(isWd) inp.value=String(VR_WITHDRAW_CYCLE); }
   const lbl=$('set_add_lbl'); if(lbl){ lbl.style.opacity=isLump?'0.4':'1';
-    const cs=isKrCode(($('set_vticker')||{}).value)?'₩':'$';
-    lbl.textContent = (isWd ? '매 사이클 인출금 (' : '매 사이클 적립금 (')+cs+')';   // 인출식이면 '인출금'으로 (백테와 라벨 일치)
+    const cs=isKrCode(($('set_vticker')||{}).value)?'₩':'  // 초기 투자금은 세 모드 모두 쓴다 — 첫 매수 금액이자 곧 0주차 V가 된다
+  const il=$('set_initamt_lbl'), csym=isKrCode(($('set_vticker')||{}).value)?'₩':'$';
+  if(il){ il.innerHTML = `초기 투자금 (${csym}) <span class="hint">`
+    + (isLump ? '첫 매수에 넣을 목돈' : '첫 매수 금액 · 보통 적립금과 같게') + '</span>';
+    // innerHTML을 새로 쓰면 라벨 원문 캐시가 날아간다 — 새 글자 노드로 다시 잡게 둔다
+    il.childNodes.forEach&&[...il.childNodes].forEach(nd=>{ if(nd.nodeType===3) delete nd.__curBase; }); }
+}
+// V4.0이면 국면선 선택 비활성화 (국면 개념 없음)
+function syncShortMaUI(eng){
+  const on = eng==='v50';
+  ['set_shortma','set_lopct'].forEach(id=>{
+    const seg=$(id); if(!seg) return;
+    seg.style.opacity = on?'1':'0.35';
+    seg.style.pointerEvents = on?'':'none';
+    const lbl=seg.previousElementSibling; if(lbl&&lbl.classList.contains('seclabel')) lbl.style.opacity=on?'1':'0.4';
+  });
+  const note=$('set_lopct')&&$('set_lopct').nextElementSibling;
+  if(note&&note.classList.contains('note')) note.style.opacity=on?'1':'0.4';
+}
+/* ── 설정창 라벨의 통화 ──
+   통화를 고르는 칸을 없앴으니, 라벨의 ($) 는 그 탭의 종목칸을 따라가야 한다.
+   라벨 안에 <span class="hint"> 꼬리표가 붙은 칸이 있어 글자 노드만 손댄다. */
+function syncSetCurLabels(){
+  document.querySelectorAll('#setModal [data-tk]').forEach(el=>{
+    const tk=$(el.dataset.tk), c=isKrCode(tk&&tk.value)?'₩':'$';
+    for(const nd of el.childNodes){
+      if(nd.nodeType!==3) continue;
+      if(nd.__curBase===undefined){ if(!/\(\s*[\u20a9$]\)/.test(nd.nodeValue)) continue; nd.__curBase=nd.nodeValue; }
+      nd.nodeValue=nd.__curBase.replace(/\(\s*[\u20a9$]\)/, '('+c+')');
+      break;
+    }
+  });
+}
+function setupSegs(){
+  ['set_div','set_reverse','set_tgtdyn','set_vmode','set_vformula','set_engine','set_shortma','set_lopct','set_mabuy','set_masell','set_mapark','set_compound','set_dcamode','set_dcareinv','set_dcafreq','set_dcamul',
+   'set_infdivmode','set_vrdivmode','set_madivmode','set_ivsdivmode','set_asapdivmode',
+   'set_vauto','set_ivss0','set_ivslook','set_ivsband','set_ivspark','set_ivsmode'].forEach(id=>{
+    const el=$(id);if(!el)return;
+    el.querySelectorAll('button').forEach(b=>{
+      b.onclick=()=>{el.querySelectorAll('button').forEach(x=>x.classList.remove('on'));b.classList.add('on');
+        if(id==='set_engine') syncShortMaUI(b.dataset.v);
+        // 종목 변경 시 익절배율(별%) 오피셜 기본값 자동 세팅 — TQQQ 15% / SOXL 20%
+        if(id==='set_engine'){ syncShortMaUI(b.dataset.v); syncTgtNote(); }
+        if(id==='set_dcamode') dcaModeUI();          // 적립↔거치 전환 시 칸·라벨 갱신
+        // 운용모드 변경 시 거치식이면 적립금 입력 비활성화
+        if(id==='set_vmode'){ applyVrModeUI(b.dataset.v); }
+        if(id==='set_ivspark'||id==='set_ivsmode')
+          syncIvsSetUI(segGet('set_ivspark')||'bill', tkVal('set_ivsticker_in','TQQQ'), segGet('set_ivsmode')||'iv');
+      };
+    });
+  });
+}
+/* ── 모의 세션: 규칙이 바뀌면 기록을 다시 만든다 ──────────────────────
+   모의 기록은 '그때의 설정으로 기계가 만든 것'이다. 분할·익절 같은 걸 바꾸면
+   이미 쌓인 기록은 옛 규칙 산물이라 통째로 무효인데, simLast가 오늘에 있으니
+   새로 만들지도 않았다. 그래서 40분할로 바꿔도 20분할로 만든 T·평단·수량이
+   그대로 남아 화면 설정과 기록이 어긋났다.
+   실계좌 세션은 사람이 넣은 실제 거래이므로 절대 건드리지 않는다. */
+const SIM_KEYS={
+  inf :['ticker','div','target','reverse','tgtDyn','principal','compound'],
+  vr  :['ticker','mode','formula','g','add','initAmt','autoCyc','band'],
+  ma  :['ticker','buy','sell','park','principal'],
+  ivs :['ticker','mode','s0','look','band','park','principal','monthly'],
+  dca :['ticker','mode','freq','amount','dipMul','reinv'],
+  asap:['ticker','base','mid','deep'],
+};
+/* 기록을 만들 때 쓴 설정의 지문. 이걸 세션에 찍어 두면
+   설정 저장·기기 동기화·가져오기 등 어떤 경로로 바뀌어도 어긋난 걸 스스로 안다. */
+/* 체결 규약을 고치면 이미 쌓인 모의 기록은 '옛 규칙으로 만든 것'이 된다.
+   설정 지문만 보면 설정을 안 바꾼 세션은 옛 기록을 그대로 안고 간다 —
+   그래서 지문에 규약 판을 같이 넣어, 규약이 바뀌면 전 세션이 다시 만들어지게 한다.
+   ※ 체결 규칙을 고칠 때마다 이 숫자를 올릴 것. */
+const SIM_RULE_VER=3;   // 3: 익절 판정을 고가 터치 → 종가로 (고가로 치면 안 팔린 날도 익절로 셌다)
+function simSig(tab,st){
+  return 'r'+SIM_RULE_VER+'|'+(SIM_KEYS[tab]||[]).map(k=>String(st[k]===undefined?'':st[k])).join('|');
+}
+function paperResetGen(sess,sig){
+  // 사람이 직접 넣은 기록은 남긴다 — 버릴 건 기계가 만든 것(sim·auto)뿐이다
+  sess.hist=(sess.hist||[]).filter(x=>!(x.sim||x.auto));
+  const st=sess.settings||{};
+  delete st.simLast; delete st.cycStart; delete st.startCyc; delete st.cycLog;
+  if(st.startv!==undefined) st.startv=0;
+  if(sig!==undefined) st.simSig=sig;
+}
+/* 지금 설정과 기록의 출처가 다르면 처음부터 다시 만들게 한다.
+   지문이 아예 없는 세션(고치기 전에 만들어진 것)도 여기서 한 번 정리된다. */
+/* 그 종목 시세가 실제로 올라와 있나. 없으면 지문을 갱신하지 않는다 —
+   기록만 지우고 다시 못 만든 채로 지문이 찍히면, 맞다고 착각해서 영영 안 만든다.
+   로더가 시세를 받아오면 _afterQuote가 paperAuto를 다시 부른다. */
+function paperDataReady(tab,st){
+  const want=String((st&&st.ticker)||'').toUpperCase();
+  const f=PAPER_CACHESYM[tab]; if(!want||!f) return false;
+  let have=''; try{ have=String(f()||'').toUpperCase(); }catch(e){}
+  return want===have;
+}
+function paperSyncSig(tab,sess){
+  if(!sess||!sess.paper) return false;
+  const st=sess.settings||{}; const sig=simSig(tab,st);
+  if(!paperDataReady(tab,st)) return false;
+  if(st.simSig===sig) return false;
+  paperResetGen(sess,sig);
+  return true;
+}
+function saveSettings(){
+  const s=sess();
+  if(S.activeTab==='inf'){
+    s.settings={ticker:tkVal('set_ticker_in','SOXL'),div:+segGet('set_div')||20,engine:segGet('set_engine')||'v40',shortMA:+segGet('set_shortma')||30,loPct:+segGet('set_lopct')||6,
+      target:inputNum('set_target')||20,big:inputNum('set_big')||20,
+      reverse:segGet('set_reverse')==='1',compound:segGet('set_compound')!=='0',
+      tgtDyn:segGet('set_tgtdyn')==='1',
+      rowsOn:$('set_rows_on')?$('set_rows_on').checked:false,
+      rows:Math.max(0,Math.min(20,+$('set_rows').value||0)),gap:+$('set_gap').value||2.5,
+      rowqty:1,principal:inputNum('set_principal')||10000,divmode:segGet('set_infdivmode')||'reinv',
+      simLast:(s.settings&&s.settings.simLast)||undefined};   // 모의 체결 진행점은 설정 저장으로 날아가면 안 된다
+  }else if(S.activeTab==='ma'){
+    s.settings={ticker:tkVal('set_maticker_in','SOXL'),buy:segGet('set_mabuy')||'ma',sell:segGet('set_masell')||'ma',park:segGet('set_mapark')||'cash',principal:inputNum('set_maprincipal')||10000,divmode:segGet('set_madivmode')||'reinv'};
+  }else if(S.activeTab==='ivs'){
+    s.settings={ticker:tkVal('set_ivsticker_in','TQQQ'),mode:segGet('set_ivsmode')||'iv',
+      s0:+segGet('set_ivss0')||55,look:+segGet('set_ivslook')||40,
+      band:+segGet('set_ivsband')||15,park:segGet('set_ivspark')||'bill',
+      principal:Math.max(0,inputNum('set_ivsprincipal')||0),
+      monthly:Math.max(0,inputNum('set_ivsmonthly')||0),
+      divmode:segGet('set_ivsdivmode')||'reinv'};
+    ivsQuote1=null;   // 짝·종목이 바뀌었을 수 있으니 1배 시세 캐시를 비운다
+  }else if(S.activeTab==='dca'){
+    s.settings={ticker:tkVal('set_dcaticker_in','USD'),mode:segGet('set_dcamode')||'dca',
+      freq:segGet('set_dcafreq')||'month',
+      amount:inputNum('set_dcaamt')||0,dipMul:+segGet('set_dcamul')||1,
+      reinv:segGet('set_dcareinv')==='reinv'};
+  }else if(S.activeTab==='asap'){
+    s.settings={ticker:tkVal('set_asapticker_in','SOXL'),base:inputNum('set_asapbase')||10,mid:inputNum('set_asapmid')||50,deep:inputNum('set_asapdeep')||100,divmode:segGet('set_asapdivmode')||'reinv'};
+  }else{
+    // 사이클 번호·시작일·사이클 기록은 설정창에서 입력하는 값이 아니라 진입 버튼이 쌓은 파생 상태다.
+    // settings를 통째로 갈아끼우면 설정을 한 번 저장할 때마다 주차가 0으로 돌아가고
+    // 사이클 기록 표가 비워졌다. (startv·startpool은 입력칸이 있어 그대로 다시 저장된다.)
+    const prev=s.settings||{}, keep={};
+    ['startCyc','cycStart','cycLog','simLast'].forEach(k=>{ if(prev[k]!==undefined) keep[k]=prev[k]; });
+    s.settings={...keep, ticker:$('set_vticker').value||'TQQQ',mode:+segGet('set_vmode')||0.75,
+      formula:segGet('set_vformula')||'basic',g:inputNum('set_g')||10,add:(+segGet('set_vmode')===0.25?VR_WITHDRAW_CYCLE:(inputNum('set_add')||100)),
+      initAmt:Math.max(0,inputNum('set_initamt')||0),autoCyc:segGet('set_vauto')==='1',
+      band:inputNum('set_band')||15,startv:inputNum('set_startv')||0,startpool:inputNum('set_startpool')||0,divmode:segGet('set_vrdivmode')||'reinv'};
+  }
+  // 모의 세션이면 여기서 바로 다시 만들어 준다 (어긋남 판정은 paperAuto가 지문으로 한다).
+  // 종목이 바뀌었으면 시세 로더가 끝난 뒤 _afterQuote가 이어서 만든다.
+  if(s.paper){ try{ paperAuto(); }catch(e){} }
+  save();closeSettings();refreshAll();pushRemote();
+}
+
+/* ── 탭/서브탭 ── */
+/* 활성 탭만 갱신한다. compute*()는 모두 curStrat()(=활성 탭의 세션)을 읽으므로,
+   비활성 탭까지 갱신하면 남의 탭 기록을 자기 형식으로 해석해 예외가 난다
+   (예: 로테이션 기록 {type:'in'}에는 kind가 없어 computeInf가 터짐).
+   비활성 탭은 탭 전환 시 setupTabs가 각자 refresh를 호출하므로 갱신이 보장된다. */
+function refreshAll(){
+  renderSessbar();renderStatusline();
+  const t=S&&S.activeTab;
+  const fn = t==='inf'?refreshInf : t==='ma'?refreshMa : t==='ivs'?refreshIvs : t==='dca'?refreshDca : t==='asap'?refreshAsap : refreshVr;
+  try{ fn(); }catch(e){ console.error('refresh:'+t,e); }
+}
+function goBlk(sec,blk,noScroll){
+  document.querySelectorAll(`#${sec} .chip`).forEach(x=>x.classList.toggle('on',x.dataset.b===blk));
+  document.querySelectorAll(`#${sec} .block`).forEach(x=>x.classList.toggle('on',x.id===blk));
+  if(noScroll) return;                 // 세션 이동처럼 '보던 자리'를 지켜야 할 때
+  cancelHold(); window.scrollTo({top:0,behavior:'smooth'});
+}
+/* 세션만 바꿨을 때 보던 자리를 지킨다. 탭을 옮기거나 칩을 직접 누른 게 아니므로
+   맨 위로 올릴 이유가 없다 — 세션을 여러 개 견주는 중이면 매번 다시 내려야 했다.
+   시세가 늦게 도착해 다시 그려지면 높이가 달라지므로 한 번 더 맞추되,
+   그 사이 사용자가 스크롤했거나 다른 이동이 끼어들었으면 건드리지 않는다. */
+let _holdTok=0;
+function cancelHold(){ _holdTok++; }
+function holdScroll(y){
+  const tok=++_holdTok;
+  const put=()=>{
+    if(tok!==_holdTok) return;
+    const max=Math.max(0, document.documentElement.scrollHeight - window.innerHeight);
+    window.scrollTo({top:Math.min(y,max), behavior:'auto'});
+  };
+  requestAnimationFrame(()=>{
+    put();
+    const mine=Math.round(window.scrollY);
+    setTimeout(()=>{ if(tok===_holdTok && Math.round(window.scrollY)===mine) put(); }, 220);
+  });
+}
+function setupTabs(){
+  document.querySelectorAll('.tab').forEach(t=>{
+    t.onclick=()=>{
+      document.querySelectorAll('.tab').forEach(x=>x.classList.remove('on'));
+      document.querySelectorAll('section').forEach(x=>x.classList.remove('on'));
+      t.classList.add('on');$(t.dataset.t).classList.add('on');
+      S.activeTab=t.dataset.t;save();renderSessbar();renderStatusline();
+      if(t.dataset.t==='inf'){ refreshInf(); try{loadInfData();loadInfFG();loadFX();}catch(e){console.error(e)} showFab(); }
+      else if(t.dataset.t==='ma'){ refreshMa(); try{ loadMaData(); }catch(e){console.error(e)} hideFab(); }
+      else if(t.dataset.t==='ivs'){ refreshIvs(); try{ loadIvsData(); }catch(e){console.error(e)} hideFab(); }
+      else if(t.dataset.t==='dca'){ refreshDca(); try{ loadDcaData(); }catch(e){console.error(e)} hideFab(); }
+      else if(t.dataset.t==='asap'){ refreshAsap(); try{ loadAsapData(); }catch(e){console.error(e)} hideFab(); }
+      else { refreshVr(); try{ fetchQuote('vr'); loadVrChart(); loadFearGreed(); }catch(e){console.error(e)} showFab(); }
+      cancelHold(); window.scrollTo({top:0,behavior:'smooth'});
+    };
+  });
+  document.querySelectorAll('.chip').forEach(c=>{
+    c.onclick=()=>{const p=c.closest('section');
+      p.querySelectorAll('.chip').forEach(x=>x.classList.remove('on'));
+      p.querySelectorAll('.block').forEach(x=>x.classList.remove('on'));
+      c.classList.add('on');$(c.dataset.b).classList.add('on');
+      // VR 분석 진입 시 차트·지수 지연 로드
+      if(c.dataset.b==='vr-anal'){ try{loadVrChart();loadFearGreed();}catch(e){console.error(e)} }
+      if(c.dataset.b==='vr-table'){ try{renderVrTable()}catch(e){console.error(e)} }
+      if(c.dataset.b==='vr-next'){ try{renderVrNext()}catch(e){console.error(e)} }
+      // 무한매수법 현재 진입 시 시세·캔들·차트·지수 로드
+      if(c.dataset.b==='inf-now'){ try{loadInfData();loadInfFG();loadFX();}catch(e){console.error(e)} }
+      cancelHold(); window.scrollTo({top:0,behavior:'smooth'});
+    };
+  });
+  // VR 차트 기간 선택
+  const csel=$('chart_sel');
+  if(csel) csel.addEventListener('change',()=>{ vrChartRange=+csel.value; drawVrChart(); });
+  // 무한매수법 차트 기간 선택
+  const isel=$('inf_chart_sel');
+  if(isel) isel.addEventListener('change',()=>{
+    infChartRange=+isel.value || 252;
+    // 하나가 실패해도 나머지는 그려지도록 각각 독립 실행
+    [drawInfChart, drawInfRSI, drawRegimeChart, drawFgChart].forEach(fn=>{ try{ fn(); }catch(e){ console.error(e); } });
+  });
+}
+
+/* ── Firebase Firestore 동기화 (사용자별) ── */
+let saveTimer=null, lastPushedJSON='';
+function setSync(state){ // 'ok'|'sync'|'err'|null
+  const d=$('syncdot');if(d)d.className='syncdot'+(state?(' '+state):'');
+}
+async function pushRemote(){
+  if(!curUid||!window.fb)return;            // 로그인 전엔 로컬만
+  if(saveTimer)clearTimeout(saveTimer);
+  setSync('sync');
+  saveTimer=setTimeout(async()=>{
+    try{
+      const json=JSON.stringify(S);
+      if(json===lastPushedJSON){setSync('ok');return;}
+      // merge 필수 — 이 문서엔 백테가 쓰는 backtestTickers도 같이 산다.
+      // 통째로 덮어쓰던 탓에 백테에서 추가한 종목이 운영 앱을 열면 서버에서 사라졌다
+      // (같은 기기는 localStorage 사본에 가려 안 보였고, 다른 기기에서 드러났다).
+      await window.fb.setDoc(window.fb.doc(window.fb.db,'users',curUid),{state:S,updated:(S._updated||Date.now())},{merge:true});
+      lastPushedJSON=json; setSync('ok');
+    }catch(e){console.error('push',e);setSync('err');}
+  },800); // 입력 직후 잦은 저장 방지(디바운스)
+}
+async function pullRemote(){
+  if(!curUid||!window.fb)return false;
+  try{
+    const snap=await window.fb.getDoc(window.fb.doc(window.fb.db,'users',curUid));
+    if(snap.exists()){
+      const d=snap.data();
+      if(d&&validState(d.state)){
+        // 신선도 가드: 이 기기의 로컬 저장본이 서버보다 최신이면(오프라인 수정 등) 낡은 서버로 덮지 않고 로컬을 밀어올림
+        let local=null; try{local=JSON.parse(localStorage.getItem(lsKey()))}catch(e){}
+        if(local&&validState(local)&&(local._updated||0)>(d.updated||0)){
+          S=local; if(!S.activeTab)S.activeTab='inf'; ensureBoxes();
+          lastPushedJSON=null; pushRemote();
+          return true;
+        }
+        S=d.state;if(!S.activeTab)S.activeTab='inf';ensureBoxes();saveLocal();lastPushedJSON=JSON.stringify(S);return true;
+      }
+    }
+  }catch(e){console.error('pull',e);}
+  return false;
+}
+/* 구글시트 잔재 호환 (호출되어도 무해) */
+function setLed(){}
+function openCfg(){alert('이제 구글 로그인으로 자동 동기화됩니다. 별도 설정이 필요 없습니다.')}
+function saveCfg(){}
+function copyScript(){}
+
+const fetchDaily=_memoQuote(_fetchDailyRaw);
+const fetchDailyDiv=_memoQuote(_fetchDailyDivRaw);
+
+/* ── JSON 파일 백업 ── */
+function exportJSON(){
+  const data=JSON.stringify(S,null,2);
+  const blob=new Blob([data],{type:'application/json'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  const d=new Date().toISOString().slice(0,10);
+  a.href=url;a.download=`quant-cockpit-${d}.json`;
+  document.body.appendChild(a);a.click();document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+function importJSON(e){
+  const file=e.target.files[0];if(!file)return;
+  const reader=new FileReader();
+  reader.onload=ev=>{
+    try{
+      const obj=JSON.parse(ev.target.result);
+      if(!obj.inf||!obj.vr||!obj.inf.sessions||!obj.vr.sessions)throw new Error('형식이 올바르지 않습니다');
+      if(!confirm('현재 데이터를 불러온 파일로 교체할까요? 지금 데이터는 사라집니다.'))return;
+      S=obj;ensureBoxes();save();
+      closeSettings();resetSubnav('inf');resetSubnav('vr');refreshAll();pushRemote();
+      alert('불러오기 완료');
+    }catch(err){alert('불러오기 실패: '+err.message)}
+  };
+  reader.readAsText(file);
+  e.target.value='';
+}
+
+/* ── 로그인 / 인증 흐름 ── */
+function googleLogin(){
+  if(!window.fb){$('gerr').textContent='로그인 모듈 로딩 중… 잠시 후 다시 눌러주세요.';authLastErr='window.fb 미로딩';return;}
+  $('gerr').textContent='';
+  // 팝업 방식만 사용 (모바일 storage-partitioned 환경에서 redirect 가 깨지는 문제 회피)
+  window.fb.signInWithPopup(window.fb.auth,window.fb.provider).then(()=>{
+    /* 구글 인증은 끝났는데 화면이 안 열리는 경우를 잡는다.
+       예전엔 이 상태가 '로그인이 안 된다'와 구분이 안 됐다 — 둘은 고칠 곳이 다르다. */
+    setTimeout(()=>{ if(!appStarted) authWarn('구글 인증은 됐는데 앱이 안 열립니다. 아래 진단 정보를 알려주세요.'); },5000);
+  }).catch(e=>{
+    const code=e&&(e.code||e.message)||'알 수 없는 오류';
+    if(code==='auth/popup-closed-by-user'||code==='auth/cancelled-popup-request'){
+      $('gerr').textContent='로그인 창이 닫혔어요. 다시 눌러주세요.';
+    }else if(code==='auth/popup-blocked'){
+      const nm=(typeof inAppName==='function')&&inAppName();
+      $('gerr').textContent = nm
+        ? (nm+' 안에서는 로그인 팝업이 차단됩니다. 위 안내대로 기본 브라우저로 열어주세요.')
+        : '팝업이 차단됐어요. 브라우저 주소창의 팝업 차단을 허용하거나, Safari/Chrome 기본 브라우저로 열어 다시 시도하세요.';
+    }else{
+      $('gerr').textContent='로그인 실패: '+code;
+    }
+    authLastErr=String(code);
+  });
+}
+function doLogout(){
+  if(!window.fb)return;
+  // 다시 열 때 '여는 중'이 아니라 로그인 화면이 나와야 한다
+  try{ localStorage.removeItem('qcockpit_hadUser'); }catch(e){}
+  window.fb.signOut(window.fb.auth).then(()=>{location.reload();});
+}
+function renderUserBadge(user){
+  const b=$('userbadge');if(!b)return;
+  if(!user){b.innerHTML='';return;}
+  const photo=user.photoURL?`<img src="${user.photoURL}" alt="">`:'';
+  const name=user.displayName||user.email||'사용자';
+  b.innerHTML=`${photo}<span>${name}</span><span class="syncdot" id="syncdot"></span> · <button class="lo" onclick="doLogout()">로그아웃</button>`;
+}
+
+let appStarted=false;
+
+/* ══ 관리자 모드 ═══════════════════════════════════════════════════════
+   전에는 제목 7번 탭 + localStorage 플래그였는데, 그건 잠금이 아니었다 —
+   누구든 7번 두드리면 켜졌고 기기를 옮기면 도로 꺼졌다.
+   로그인이 이미 필수인 앱이니 권한은 계정으로 정한다. 7번 탭은 '잠깐 감추기'로만 남긴다
+   (남에게 화면 보여줄 때 쓰라고. 감춘다고 권한이 생기지는 않는다). */
+const ADMIN_EMAILS=['jk82investing@gmail.com'];
+const normEmail=e=>String(e||'').trim().toLowerCase();
+let curEmail=null, _adminHidden=false;
+function isAdmin(){ return ADMIN_EMAILS.includes(normEmail(curEmail)); }
+function applyAdminMode(){
+  const on=isAdmin() && !_adminHidden;
+  document.querySelectorAll('.admin-only').forEach(el=>{ el.style.display=''; el.classList.toggle('admin-on', on); });
+}
+let _adminTaps=0, _adminTapTimer=null;
+function adminTap(){
+  _adminTaps++;
+  clearTimeout(_adminTapTimer);
+  _adminTapTimer=setTimeout(()=>{_adminTaps=0;},1500);
+  if(_adminTaps>=7){
+    _adminTaps=0;
+    if(!isAdmin()){ alert('관리자 계정으로 로그인해야 합니다.'); return; }
+    _adminHidden=!_adminHidden;
+    applyAdminMode();
+    alert(_adminHidden?'관리자 화면 감춤 (다시 7번 탭하면 나옵니다)':'관리자 화면 표시');
+  }
+}
+
+/* ── 접속 계정 기록 ────────────────────────────────────────────────
+   users/{uid}에는 거래기록 전부가 들어 있어서, 누가 썼는지 보려고 그걸 통째로
+   읽을 수는 없다(용량도 크고 남의 매매를 다 여는 셈이다).
+   profiles/{uid}에 이메일·접속시각만 따로 적어 둔다 — 목록은 이것만 읽는다. */
+async function touchProfile(user){
+  if(!user||!window.fb||!window.fb.setDoc) return null;
+  const ref=window.fb.doc(window.fb.db,'profiles',user.uid);
+  let prev=null;
+  try{ const snap=await window.fb.getDoc(ref); if(snap.exists()) prev=snap.data()||null; }catch(e){ console.warn('profile read',e.message); }
+  const now=Date.now();
+  const p={ email:user.email||'', name:user.displayName||'', photo:user.photoURL||'',
+            lastSeen:now, firstSeen:(prev&&+prev.firstSeen)||now,
+            visits:((prev&&+prev.visits)||0)+1,
+            ua:String(navigator.userAgent||'').slice(0,180) };
+  try{ await window.fb.setDoc(ref,p,{merge:true}); }catch(e){ console.warn('profile write',e.message); }
+  return Object.assign({},prev||{},p);
+}
+/* 차단은 클라이언트가 로그인 직후 스스로 확인하는 수준이다.
+   진짜로 막으려면 Firestore 규칙이 같이 있어야 한다 — firestore.rules 참고.
+   관리자 자신은 어떤 경우에도 잠기지 않게 한다 (실수로 자기를 차단하면 복구 불가). */
+function isBlocked(prof){ return !!(prof&&prof.blocked) && !isAdmin(); }
+
+
+function startApp(){
+  if(appStarted){refreshAll();return;}
+  appStarted=true;
+  applyAdminMode();
+  setupTabs();setupSegs();setupSessbar();
+  if(S.activeTab!=='inf'){ const tb=document.querySelector(`.tab[data-t="${S.activeTab}"]`); if(tb)tb.click(); }
+  refreshAll();
+  if(S.activeTab==='ma'||S.activeTab==='asap')hideFab(); else showFab();
+  /* 주문 권한은 서버가 정한다. 답이 오면 주문 패널을 다시 그린다 —
+     기다렸다 시작하면 서버가 늦을 때 앱이 통째로 늦어진다. */
+  try{ kisSyncOwner().then(ok=>{ if(ok) try{ renderOrder(); }catch(e){} }); }catch(e){}
+  updateStickyOffsets();
+  window.addEventListener('resize', updateStickyOffsets);
+  window.addEventListener('load', updateStickyOffsets);
+}
+
+let authWired=false;
+function initAuth(){
+  authWired=true;               // 진단용 — 이게 false면 앞단(모듈 로딩)에서 막힌 것이다
+  // 과거 redirect 잔여 상태가 깨져 에러를 던질 수 있으므로 방어적으로 처리
+  try{
+    const p=window.fb.getRedirectResult(window.fb.auth);
+    if(p&&p.catch)p.catch(()=>{});
+  }catch(e){/* storage-partitioned 등으로 던지는 경우 무시 */}
+  window.fb.onAuthStateChanged(window.fb.auth, async (user)=>{
+    if(!user){
+      curUid=null; curEmail=null;
+      applyAdminMode();
+      // 정말 로그인이 풀렸다 — 다음 번엔 처음부터 로그인 화면을 띄운다
+      try{ localStorage.removeItem('qcockpit_hadUser'); }catch(e){}
+      document.documentElement.classList.remove('had-user');
+      $('authgate').style.display='flex';
+      return;
+    }
+    /* 로그인 성공 뒤의 처리는 단계별로 막는다.
+       예전에는 이 안에서 예외가 하나만 나도 authgate를 숨기는 줄까지 못 가서
+       '로그인이 안 된다'로 보였다 — 화면엔 아무 메시지도 안 떴다.
+       기록을 못 읽는 것과 로그인이 안 되는 것은 다른 문제이므로 섞지 않는다. */
+    curUid=user.uid; curEmail=user.email||'';
+    try{ localStorage.setItem('qcockpit_hadUser','1'); }catch(e){}
+    authStep='배지';
+    try{ renderUserBadge(user); }catch(e){ console.warn('badge',e); }
+    /* 이 기기에 저장된 걸로 곧바로 연다. 예전에는 프로필 쓰기(≤6초)와
+       클라우드 읽기(≤8초)가 둘 다 끝나야 화면이 열려서, 메뉴로 페이지를 옮길
+       때마다 로그인 화면을 몇 초씩 보고 있어야 했다. 기록은 어차피 이 기기에도
+       있으니 먼저 열고, 클라우드는 도착하면 그때 맞춘다. */
+    authStep='로컬 열기';
+    let openedLocal=false;
+    try{ load(); openedLocal=validState(S); }catch(e){ console.error('local',e); }
+    if(openedLocal){
+      $('authgate').style.display='none';
+      try{ startApp(); applyAdminMode(); setSync('sync'); }
+      catch(e){ console.error('startApp',e); openedLocal=false; $('authgate').style.display='flex';
+                authWarn('앱을 여는 중 오류가 났습니다 — '+(e&&e.message||e)); }
+    }
+
+    // 접속 기록 + 차단 확인. 차단된 계정은 그 자리에서 내보낸다.
+    authStep='프로필';
+    try{
+      const prof=await withTimeout(touchProfile(user), 6000, '프로필 확인');
+      if(isBlocked(prof)){
+        curUid=null; curEmail=null;
+        applyAdminMode();
+        try{ localStorage.removeItem('qcockpit_hadUser'); }catch(e){}
+        try{ await window.fb.signOut(window.fb.auth); }catch(e){}
+        alert('이 계정은 사용이 차단되었습니다.');
+        location.reload();
+        return;
+      }
+    }catch(e){ console.warn('profile',e); }   // 프로필 확인 실패로 로그인까지 막지는 않는다
+
+    /* 클라우드 기록. 먼저 연 뒤라면 늦게 와도 상관없고, 못 열었다면 이게 유일한 길이다.
+       pullRemote 는 로컬이 더 최신이면 로컬을 지키고 밀어올리므로, 먼저 연 사이에
+       사용자가 뭔가 적었어도 그게 덮이지 않는다. */
+    authStep='기록 읽기';
+    try{
+      const ok=await withTimeout(pullRemote(), 8000, '클라우드 기록');
+      if(!ok && !openedLocal) load();
+    }catch(e){
+      console.error('load',e);
+      if(!openedLocal){
+        let opened=false;
+        try{ load(); opened=validState(S); }catch(e2){ console.error('local',e2); }
+        if(!opened){ try{ S=freshState(); ensureBoxes(); saveLocal(); }catch(e2){ console.error('fresh',e2); } }
+        authWarn((opened?'클라우드 기록을 못 읽어 이 기기에 저장된 걸로 엽니다':'저장된 기록을 읽지 못해 새로 시작합니다')
+          +' — '+(e&&e.message||e));
+      }else{
+        authWarn('클라우드 기록을 못 읽었습니다 — 이 기기에 저장된 걸로 보고 있습니다 · '+(e&&e.message||e));
+      }
+    }
+    authStep='앱 시작';
+    $('authgate').style.display='none';
+    try{
+      startApp();                // 이미 열려 있으면 다시 그리기만 한다
+      applyAdminMode();          // 계정으로 권한이 정해지므로 로그인 뒤에 다시 본다
+      setSync('ok');
+    }catch(e){
+      console.error('startApp',e);
+      $('authgate').style.display='flex';
+      authWarn('앱을 여는 중 오류가 났습니다 — '+(e&&e.message||e));
+    }
+  });
+}
+/* 로그인이 막혔을 때 화면에서 바로 읽을 수 있는 진단.
+   두 번이나 '로그인이 안 된다'는 말만 있고 단서가 없어서 원인을 못 좁혔다.
+   여기 찍히는 줄만 보면 어디서 막혔는지 바로 갈린다. */
+let authLastErr='';
+/* 어디까지 갔는지 남긴다 — 멈춘 자리가 곧 원인이다. */
+let authStep='시작 전';
+/* Firestore 호출은 실패하는 게 아니라 '영영 안 끝나는' 경우가 있다.
+   (웨일 iOS에서 실제로 그랬다 — 구글 인증은 됐는데 앱이 안 열렸다.)
+   try/catch 는 던져야 잡는다. 안 끝나는 건 못 잡으므로 시간을 재서 끊는다.
+   기록을 못 읽는 건 불편할 뿐이지만, 로그인 자체가 막히는 건 앱을 못 쓰는 것이다. */
+function withTimeout(p, ms, label){
+  return Promise.race([p, new Promise((_,rej)=>setTimeout(
+    ()=>rej(new Error(`${label} 응답 없음(${Math.round(ms/1000)}초)`)), ms))]);
+}
+function storageOK(){
+  try{ localStorage.setItem('_t','1'); localStorage.removeItem('_t'); return 'OK'; }
+  catch(e){ return '막힘('+(e&&e.name||'?')+')'; }
+}
+function authDiag(){
+  const L=[];
+  L.push('버전     '+(($('appVerTop')||{}).textContent||'?'));
+  L.push('로그인모듈 '+(window.fb?('로딩됨('+Object.keys(window.fb).length+')'):'미로딩 ← 여기서 막힘'));
+  L.push('인증대기  '+(typeof authWired!=='undefined'&&authWired?'연결됨':'미연결 ← 여기서 막힘'));
+  L.push('로그인상태 '+(window.fb&&window.fb.auth&&window.fb.auth.currentUser
+          ? ('됨 '+(window.fb.auth.currentUser.email||'')) : '안 됨'));
+  L.push('앱시작    '+(appStarted?'됨':'안 됨 · 멈춘 자리 '+authStep));
+  L.push('저장소    '+storageOK());
+  L.push('브라우저  '+(inAppName()||'기본 브라우저'));
+  if(authLastErr) L.push('마지막오류 '+authLastErr);
+  L.push(String(navigator.userAgent||'').slice(0,120));
+  return L.join('\n');
+}
+function toggleDiag(){
+  const d=$('gdiag'), b=$('gdiagbtn'); if(!d) return;
+  const show=d.hidden;
+  if(show) d.textContent=authDiag();
+  d.hidden=!show;
+  if(b) b.textContent=show?'진단 정보 숨기기':'진단 정보 보기';
+}
+/* 로그인 화면에 원인을 남긴다. 조용히 실패하면 사용자도 나도 알 길이 없다. */
+function authWarn(msg){
+  authLastErr=String(msg||'').slice(0,160);
+  try{
+    const el=$('gerr'); if(!el) return;
+    el.textContent=msg;
+    el.style.display='block';
+    const d=$('gdiag'); if(d && !d.hidden) d.textContent=authDiag();   // 펼쳐 놨으면 갱신
+  }catch(e){ console.error(msg); }
+}
+
+/* ── 인앱 브라우저 감지 ──────────────────────────────────────────────
+   인앱 브라우저(네이버·카카오톡 등)는 window.open 팝업을 같은 탭 이동으로 바꾼다.
+   그러면 signInWithPopup 이 사실상 redirect 가 되고, 돌아올 때 인증 핸들러
+   (jk-invest.firebaseapp.com)가 storage-partitioned 환경에서 sessionStorage 를
+   읽지 못해 'missing initial state' 로 실패한다.
+   그 에러 화면은 firebaseapp.com 에서 뜨므로 우리 코드로는 catch 도 못 한다
+   → 누르기 전에 안내해서 기본 브라우저로 유도하는 것이 유일한 방어.
+   (근본 해결은 authDomain 을 우리 도메인으로 옮기고 /__/auth/* 를 프록시하는 것) */
+const INAPP_UA=[[/NAVER\(/i,'네이버 앱'],[/KAKAOTALK/i,'카카오톡'],[/Instagram/i,'인스타그램'],
+  [/FBAN|FBAV|FB_IAB/i,'페이스북'],[/\bLine\//i,'라인'],[/DaumApps/i,'다음 앱'],
+  [/\bBand\//i,'밴드'],[/everytimeApp/i,'에브리타임'],[/Snapchat/i,'스냅챗'],[/TwitterAndroid|Twitter for/i,'X(트위터)']];
+function inAppName(){ const ua=navigator.userAgent||''; for(const [re,nm] of INAPP_UA) if(re.test(ua)) return nm; return null; }
+function copyAppUrl(){
+  const u=location.origin+location.pathname;
+  const done=()=>{ const e=document.getElementById('iw_copied'); if(e){e.textContent='✓ 복사됨 — 브라우저 주소창에 붙여넣으세요';} };
+  if(navigator.clipboard&&navigator.clipboard.writeText) navigator.clipboard.writeText(u).then(done,done);
+  else { const t=document.createElement('textarea'); t.value=u; document.body.appendChild(t); t.select();
+         try{document.execCommand('copy');}catch(e){} t.remove(); done(); }
+}
+function renderInAppWarn(){
+  const box=document.getElementById('inappwarn'); if(!box) return;
+  const nm=inAppName(); if(!nm){ box.style.display='none'; return; }
+  const ua=navigator.userAgent||'', android=/Android/i.test(ua);
+  const url=location.origin+location.pathname;
+  const intent='intent://'+location.host+location.pathname+'#Intent;scheme=https;package=com.android.chrome;end';
+  box.innerHTML='⚠️ <b>'+nm+' 안에서는 구글 로그인이 되지 않습니다.</b><br>'
+    +'앱 내장 브라우저는 로그인 창을 팝업으로 못 띄워서, 구글 인증이 <b>missing initial state</b> 오류로 끊깁니다.<br>'
+    +'<b>Safari·Chrome 같은 기본 브라우저로 열어주세요.</b> '
+    +(android?'아래 버튼을 누르거나, ':'')+'브라우저 메뉴(⋯ 또는 ≡) → <b>“기본 브라우저로 열기”</b>를 선택하면 됩니다.'
+    +'<div class="iw-btns">'
+    +(android?'<a class="iw-btn" href="'+intent+'">Chrome으로 열기</a>':'')
+    +'<button class="iw-btn" type="button" onclick="copyAppUrl()">주소 복사</button>'
+    +'</div><div id="iw_copied" style="margin-top:7px;font-size:11.5px;color:#8fe3b8"></div>'
+    +'<div style="margin-top:7px;font-size:11px;color:var(--faint);word-break:break-all">'+url+'</div>';
+  box.style.display='';
+}
+try{ renderInAppWarn(); }catch(e){}
+
+/* ── 시작: Firebase 준비되면 인증 시작 ── */
+if(window.fb){initAuth();}
+else{window.addEventListener('fb-ready',initAuth);}
+
+/* ── 셀프테스트 (?selftest=1) — 앱 실함수를 브라우저에서 직접 검증 ── */
+(function(){
+  try{
+    if(!/[?&]selftest=1/.test(location.search)) return;
+    const s=document.createElement('script'); s.src='/strategy-check.js';
+    s.onload=function(){
+      // 앱 실함수를 sandbox 세션에 주입해 대조 (실사용 데이터 불변)
+      let _sandbox=null; const _origCur=curStrat;
+      const adapter={
+        starPct: (t,d,T)=>starPct(t,d,T),
+        setHist:(st,hist)=>{ _sandbox={id:'__test',settings:{...st},hist}; window.curStrat=()=>_sandbox; },
+        computeInf:()=>computeInf(),
+        setVr:(st,hist)=>{ _sandbox={id:'__test',settings:{...st},hist,vr:true}; window.curStrat=()=>_sandbox; },
+        computeVr:()=>computeVr(),
+      };
+      try{ window.StrategyCheck.badge(adapter); }
+      finally{ window.curStrat=_origCur; } // 원상복구 — 실사용 세션 보호
+    };
+    s.onerror=function(){ console.warn('strategy-check.js 로드 실패 — 배포에 함께 올렸는지 확인'); };
+    document.head.appendChild(s);
+  }catch(e){ console.error('selftest',e); }
+})();
+</script>
+</body>
+</html>
+;
+    lbl.textContent = (isWd ? '2주 고정 인출금 (' : '매 사이클 적립금 (')+cs+')';   // 인출식은 2주마다 $200 고정
     [...lbl.childNodes].forEach(nd=>{ if(nd.nodeType===3) delete nd.__curBase; }); }
   // 초기 투자금은 세 모드 모두 쓴다 — 첫 매수 금액이자 곧 0주차 V가 된다
   const il=$('set_initamt_lbl'), csym=isKrCode(($('set_vticker')||{}).value)?'₩':'$';
