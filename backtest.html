@@ -315,7 +315,7 @@ td:first-child{text-align:left;}
   <div class="brand">
     <div>
       <div class="logo">Backtest</div>
-      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v1.177.7</span></h1>
+      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v1.177.8</span></h1>
     </div>
   </div>
   <div class="hright">
@@ -418,11 +418,12 @@ document.addEventListener('click',function(e){ var m=document.getElementById('jk
         <button data-d="40">40</button>
       </div>
     </div>
-    <div class="ctrl s-im hide"><label>익절 % <span style="font-size:9px;color:var(--dim)">전 종목 일괄 적용</span></label>
+    <div class="ctrl s-im hide"><label>익절 % <span style="font-size:9px;color:var(--dim)">V4 공식값 또는 사용자 고정값</span></label>
       <div class="seg" id="imTgtSeg">
-        <button data-t="10" title="Walk-Forward OOS 최적">10%</button>
+        <button data-t="auto" class="active" title="종목별 공식 기본값: TQQQ 15%, SOXL 20%. 그 외 비공식 종목은 20% 기본">공식</button>
+        <button data-t="10">10%</button>
         <button data-t="15">15%</button>
-        <button data-t="20" class="active" title="라오어 문서 공식(SOXL)">20%</button>
+        <button data-t="20">20%</button>
       </div>
     </div>
     <div class="ctrl s-im hide"><label>익절 조절 <span style="font-size:9px;color:var(--dim)">20일 상승률</span></label>
@@ -1395,7 +1396,11 @@ let imLoPct=6;      // V5.0 하락국면 익절% (조기탈출)
 let imCostOn=true;   // 세금·수수료·슬리피지 반영 (기본 ON)
 let imTgtDyn=false;  // 익절 동적 조절 (20일 상승률) — 기본 OFF
 
-let imTarget=20;   // 익절%(전 종목 일괄, 기본 20=라오어 공식). 별%base·리버스 복귀조건도 함께 결정 (통합 규약)
+let imTarget='auto';   // 기본=종목별 V4 공식값(TQQQ 15 / SOXL 20). 숫자를 고르면 전 종목 사용자 고정값.
+function imTargetOf(tkr){
+  if(imTarget==='auto') return tkr==='TQQQ'?15:20;  // SOXL=20 공식, 기타는 비공식 20 기본
+  const x=+imTarget; return isFinite(x)&&x>0?x:(tkr==='TQQQ'?15:20);
+}
 let imFill='high';   // 익절 체결 판정: 'high'=고가 터치(기본·지정가 정석) / 'close'=종가 도달(보수적 하한)
 function syncMaCtrl(){
   const on=(imEngine==='v50'||imEngine==='ab');
@@ -1408,7 +1413,7 @@ document.getElementById('imCost').onclick=e=>{if(e.target.dataset.x){document.qu
 document.getElementById('imTgtDynSeg').onclick=e=>{if(e.target.dataset.x){document.querySelectorAll('#imTgtDynSeg button').forEach(b=>b.classList.remove('active'));e.target.classList.add('active');imTgtDyn=e.target.dataset.x==='1';if(dataLoaded)run();}};
 document.getElementById('imRev').onclick=e=>{if(e.target.dataset.r){document.querySelectorAll('#imRev button').forEach(b=>b.classList.remove('active'));e.target.classList.add('active');imReverse=e.target.dataset.r==='1';if(dataLoaded)run();}};
 document.getElementById('imLoSeg').onclick=e=>{if(e.target.dataset.l){document.querySelectorAll('#imLoSeg button').forEach(b=>b.classList.remove('active'));e.target.classList.add('active');imLoPct=+e.target.dataset.l;if(dataLoaded)run();}};
-document.getElementById('imTgtSeg').onclick=e=>{if(e.target.dataset.t){document.querySelectorAll('#imTgtSeg button').forEach(b=>b.classList.remove('active'));e.target.classList.add('active');imTarget=+e.target.dataset.t;if(dataLoaded)run();}};
+document.getElementById('imTgtSeg').onclick=e=>{if(e.target.dataset.t){document.querySelectorAll('#imTgtSeg button').forEach(b=>b.classList.remove('active'));e.target.classList.add('active');imTarget=e.target.dataset.t==='auto'?'auto':+e.target.dataset.t;if(dataLoaded)run();}};
 document.getElementById('imFillSeg').onclick=e=>{if(e.target.dataset.f){document.querySelectorAll('#imFillSeg button').forEach(b=>b.classList.remove('active'));e.target.classList.add('active');imFill=e.target.dataset.f;if(dataLoaded)run();}};
 syncMaCtrl();   // 초기: V4.0이므로 국면선 비활성 표시
 
@@ -2557,7 +2562,7 @@ function runVR(days,tkr,params){
   const calYrs=(new Date(days[days.length-1])-new Date(days[0]))/(365.25*864e5);
   return {invested:inv,final:fin,pool,shares,sharesVal:shares*lc,rebal,buys,sells,totalWd,
     ret:inv>0?(fin/inv-1)*100:0,yrs:Math.max(calYrs,0.1),snap,cf,tkr,mdd:mdd*100,fees:feesTotal,tax:taxTotal,
-    ladder:true,cycleBudget};
+    ladder:true,cycleBudget,V};
 }
 
 // ──── 비교/지표 헬퍼 ────
@@ -2661,12 +2666,22 @@ function runMA200(days,tkr,cap,N,costOn,opt){
   const FEE=costOn?costOf(tkr).fee:0;
   let cash=cap, shares=0, avg=0, realized=0, feesTotal=0, taxTotal=0, yearPnl=0, curYear=null;
   let trades=0, daysIn=0, mddPeak=cap, mdd=0; const snap=[];
-  function _settle(){ if(!costOn){yearPnl=0;return;}
-    const taxUsd=capGainTax(yearPnl, tkr); cash-=taxUsd; taxTotal+=taxUsd; yearPnl=0; }
+  function _settle(px){ if(!costOn){yearPnl=0;return;}
+    const owed=capGainTax(yearPnl,tkr); yearPnl=0; let due=owed;
+    const fromCash=Math.min(Math.max(cash,0),due); cash-=fromCash; due-=fromCash;
+    if(due>1e-9&&shares>0&&px>0){
+      const q=Math.min(shares,due/(px*(1-FEE)));
+      const gross=q*px,fee=gross*FEE,net=gross-fee;
+      shares-=q; cash+=net; feesTotal+=fee; yearPnl+=q*(px-avg)-fee;
+      const pay=Math.min(cash,due); cash-=pay; due-=pay;
+      if(shares<1e-9){shares=0;avg=0;}
+    }
+    taxTotal+=owed-due;
+  }
   let interestTotal=0;
   days.forEach((d,i)=>{
     const c=M[tkr][d][C];
-    { const y=d.slice(0,4); if(curYear===null)curYear=y; else if(y!==curYear){_settle();curYear=y;} }
+    { const y=d.slice(0,4); if(curYear===null)curYear=y; else if(y!==curYear){_settle(c);curYear=y;} }
     // 대피처가 '단기국채'면 현금 보유일에 일할 이자 (T-Bill 연평균, TBILL_RATE)
     if(PARK==='bill'&&cash>0){ const it=cash*parkRate(+d.slice(0,4),tkr)/252; cash+=it; interestTotal+=it; }
     const g=gIdx[d];
@@ -2684,7 +2699,7 @@ function runMA200(days,tkr,cap,N,costOn,opt){
     if(eq>mddPeak)mddPeak=eq; else { const dd=(mddPeak-eq)/mddPeak; if(dd>mdd)mdd=dd; }
     if(i%10===0)snap.push([d,eq]);
   });
-  _settle();   // 마지막 해 정산
+  _settle(M[tkr][days[days.length-1]][C]);   // 마지막 해 정산
   const fin=cash+shares*M[tkr][days[days.length-1]][C];
   if(fin>mddPeak)mddPeak=fin; else { const dd=Math.min((mddPeak-fin)/mddPeak,1); if(dd>mdd)mdd=dd; }
   snap.push([days[days.length-1],fin]);
@@ -2735,7 +2750,7 @@ function _asapInd(tkr){
 function runASAP(days,tkr,opt){
   const o=opt||{}, base=o.base||10, mid=o.mid||50, deep=o.deep||100;
   const lump=o.startCash>0;   // 거치식: 목돈을 SGOV로 시작, 신규 적립 없이 리저브에서만 매수
-  const FEE=o.costOn?costOf(tkr).fee:0, F=1-FEE;   // 비용: 매수 수수료(스톡은 안 팔아 실현 양도세 없음)
+  const FEE=o.costOn?costOf(tkr).fee:0, F=1/(1+FEE);   // 투입액/(1+수수료)=실제 매수원금 (스톡은 안 팔아 양도세 이연)
   const {cl,MA5,MA20,MA50,MA200,RSI,gi}=_asapInd(tkr);
   let sgov=lump?o.startCash:0,sh=0,stage=0,up3=-1,stageReserve=0,inv=lump?o.startCash:0,mddPeak=-Infinity,mdd=0; const snap=[];
   const cf=lump?[[days[0],o.startCash]]:[];   // 현금흐름(신규 투입 시점·금액) — IRR·평균투입자본용. 거치는 첫날 전액.
@@ -2826,14 +2841,19 @@ function divSplit(tkr, days, buys){
 // 비용: 매수 수수료만(끝까지 안 팔아 실현이익 없음 → 양도세 이연 = 방치의 실제 이점)
 function runBH(days,tkr,cap,costOn){
   const FEE=costOn?costOf(tkr).fee:0;
-  const p=d=>M[tkr][d][C]; const sh=iq(cap/(1+FEE),p(days[0]));   // 거치도 정수 주수
+  const p=d=>M[tkr][d][C], p0=p(days[0]);
+  const sh=iq(cap/(1+FEE),p0);                         // 정수 주수
+  const cash=Math.max(0,cap-sh*p0*(1+FEE));            // 정수 내림 뒤 남은 현금도 자산이다
   let mddPeak=cap,mdd=0; const snap=[];
-  days.forEach((d,i)=>{ const eq=sh*p(d); if(eq>mddPeak)mddPeak=eq; else{const dd=(mddPeak-eq)/mddPeak;if(dd>mdd)mdd=dd;} if(i%10===0)snap.push([d,eq]); });
-  let fin=sh*p(days[days.length-1]); snap.push([days[days.length-1],fin]);
-  const _d=divSplit(tkr,days,[[days[0],cap*(1-FEE)]]);
+  days.forEach((d,i)=>{ const eq=cash+sh*p(d); if(eq>mddPeak)mddPeak=eq; else{const dd=(mddPeak-eq)/mddPeak;if(dd>mdd)mdd=dd;} if(i%10===0)snap.push([d,eq]); });
+  let fin=cash+sh*p(days[days.length-1]); snap.push([days[days.length-1],fin]);
+  const _d=divSplit(tkr,days,[[days[0],Math.max(0,cap-cash)]]);
   let _m=mdd*100;
-  if(_d && (typeof dcaReinv!=='undefined') && dcaReinv===false){ fin=_d.priceVal+_d.divCash; _m=_d.mddCash; }
-  return {invested:cap,final:fin,ret:(fin/cap-1)*100,mdd:_m,snap,div:_d};
+  if(_d && (typeof dcaReinv!=='undefined') && dcaReinv===false){
+    // divSplit은 매수에 실제 투입된 금액 경로만 계산하므로, 안 쓰고 남은 cash를 반드시 다시 더한다.
+    fin=cash+_d.priceVal+_d.divCash; _m=_d.mddCash;
+  }
+  return {invested:cap,final:fin,ret:(fin/cap-1)*100,mdd:_m,snap,div:_d,endCash:cash};
 }
 // 200일선 로테 — 적립형: 매일 균등 적립(총투입=contribTotal) + 전일 신호로 보유/현금. MDD는 단위가치(평가액÷투입) 기준.
 // 매수·매도 조건(16조합)·대피처(현금/단기국채)는 일시금 runMA200과 동일 규약 — 로테 탭 설정을 그대로 따른다.
@@ -2844,9 +2864,20 @@ function runMA200Accum(days,tkr,contribTotal,N,costOn,opt){
   const add=contribTotal/days.length;
   const FEE=costOn?costOf(tkr).fee:0;   // 비용: 매수·매도 수수료 + 회전 매도 시 실현이익 연간 양도세(200로테 일시금과 동일 규약)
   let cash=0,shares=0,avg=0,inv=0,uvPeak=-Infinity,mdd=0,yearPnl=0,curYear=null,taxTotal=0,interestTotal=0; const snap=[];
-  function _settle(){ if(!costOn){yearPnl=0;return;} const taxUsd=capGainTax(yearPnl, tkr); cash-=taxUsd; taxTotal+=taxUsd; yearPnl=0; }
+  function _settle(px){ if(!costOn){yearPnl=0;return;}
+    const owed=capGainTax(yearPnl,tkr); yearPnl=0; let due=owed;
+    const fromCash=Math.min(Math.max(cash,0),due); cash-=fromCash; due-=fromCash;
+    if(due>1e-9&&shares>0&&px>0){
+      const q=Math.min(shares,due/(px*(1-FEE)));
+      const gross=q*px,fee=gross*FEE,net=gross-fee;
+      shares-=q; cash+=net; yearPnl+=q*(px-avg)-fee;
+      const pay=Math.min(cash,due); cash-=pay; due-=pay;
+      if(shares<1e-9){shares=0;avg=0;}
+    }
+    taxTotal+=owed-due;
+  }
   days.forEach((d,i)=>{ const c=M[tkr][d][C], g=gIdx[d];
-    { const y=d.slice(0,4); if(curYear===null)curYear=y; else if(y!==curYear){_settle();curYear=y;} }
+    { const y=d.slice(0,4); if(curYear===null)curYear=y; else if(y!==curYear){_settle(c);curYear=y;} }
     // 대피처가 '단기국채'면 전일까지 쌓인 현금에 일할 이자 (오늘 적립분이 들어오기 전 잔액 기준)
     if(PARK==='bill'&&cash>0){ const it=cash*parkRate(+d.slice(0,4),tkr)/252; cash+=it; interestTotal+=it; }
     cash+=add; inv+=add;                                   // 매일 균등 적립
@@ -2856,7 +2887,7 @@ function runMA200Accum(days,tkr,contribTotal,N,costOn,opt){
     const eq=cash+shares*c; if(inv>0){const uv=eq/inv;if(uv>uvPeak)uvPeak=uv;else if(uvPeak>0){const dd=(uvPeak-uv)/uvPeak;if(dd>mdd)mdd=dd;}}
     if(i%10===0)snap.push([d,eq]);
   });
-  _settle();
+  _settle(M[tkr][days[days.length-1]][C]);
   const fin=cash+shares*M[tkr][days[days.length-1]][C]; snap.push([days[days.length-1],fin]);
   return {invested:contribTotal,final:fin,ret:contribTotal>0?(fin/contribTotal-1)*100:0,mdd:mdd*100,snap,
           cf:days.map(d=>[d,add]),   // 현금흐름(매일 균등 투입) — IRR·평균투입자본용
@@ -2984,7 +3015,7 @@ function _runOneStrat(key,tkr,cap,days,costOn){
     case 'ma':   return runMA200(days,tkr,cap,ml,costOn);                                   // 이평기간: maLen 탭
     case 'maa':  return runMA200Accum(days,tkr,cap,ml,costOn);
     case 'im':   {                                                                          // 분할·익절·복리단리·엔진·리버스(전역) 탭
-      const divs=(typeof imDiv!=='undefined'?imDiv:20), tgt=(typeof imTarget!=='undefined'?imTarget:20);
+      const divs=(typeof imDiv!=='undefined'?imDiv:20), tgt=imTargetOf(tkr);
       const comp=_stratSeg('imCompound','0')!=='0';                                         // 기본 단리
       const eng=(typeof imEngine!=='undefined'?imEngine:'v40');
       const fn = eng==='v22'?runIM22 : eng==='v30'?runIM30 : runIM;                          // v40/v50/ab→runIM (리버스·imFill은 전역)
@@ -3019,13 +3050,13 @@ function comboOpts(mode){
   const comp=_stratSeg('imCompound','0')!=='0'?'복리':'단리';
   const rev=(typeof imReverse!=='undefined'&&imReverse)?'리버스켬':'리버스끔';
   const tdy=(typeof imTgtDyn!=='undefined'&&imTgtDyn)?'·익절조절ON':'';
-  const div=(typeof imDiv!=='undefined'?imDiv:20), tgt=(typeof imTarget!=='undefined'?imTarget:20);
+  const div=(typeof imDiv!=='undefined'?imDiv:20), tgtTxt=(typeof imTarget!=='undefined'&&imTarget==='auto')?'공식(종목별)':((typeof imTarget!=='undefined'?imTarget:20)+'%');
   const filt={none:'필터없음',nobuy:'물타기금지',exit:'현금이탈'}[(typeof stdFilter!=='undefined'?stdFilter:'none')]||'필터없음';
   const sN=(typeof stdN!=='undefined'?stdN:40), sG=(typeof stdG!=='undefined'?stdG:2.5);
   const iS=(typeof ivsS0!=='undefined'?ivsS0:45), iN=(typeof ivsN!=='undefined'?ivsN:60), iB=(typeof ivsBand!=='undefined'?ivsBand:10);
   const iM=(typeof ivsMode!=='undefined'&&ivsMode==='fix')?'고정5:5':`역분산 s0${iS}%·${iN}일σ`;
   const iP=(typeof ivsPair!=='undefined'&&ivsPair==='x1')?'1배수':'현금';
-  return `무매(${eng}): ${div}분할·익절${tgt}%${tdy}·${comp}·${rev} · 200로테: ${maTxt} · VR거치: G${vG}·밴드±${vB}·${vF} · 표준편차: N${sN}·g${sG}·${filt} · 역분산: ${iM}·짝${iP}·밴드${iB}%p`;
+  return `무매(${eng}): ${div}분할·익절${tgtTxt}${tdy}·${comp}·${rev} · 200로테: ${maTxt} · VR거치: G${vG}·밴드±${vB}·${vF} · 표준편차: N${sN}·g${sG}·${filt} · 역분산: ${iM}·짝${iP}·밴드${iB}%p`;
 }
 
 /* ──── 자본-시간 지표: 적립식은 돈이 천천히 들어가 '평균 투입자본'이 거치식의 절반 수준이다.
@@ -3313,7 +3344,7 @@ async function run(){
   }else if(strat==='im'){
     if(!imActive.size){alert('종목을 선택하세요.');return;}
     const cap=+document.getElementById('imCap').value||10000;
-    const tgtOverride=imTarget;   // 세그에서 선택한 익절% (전 종목 동일)
+    const tgtOverride=imTarget;   // 'auto'=종목별 공식값, 숫자=사용자 고정값
     const compound=document.querySelector('#imCompound button.active')?.dataset.c!=='0';
     const {use:imUse,skip:imSkip}=usableTickers(start,end,[...imActive]);
     if(!imUse.length){alert('선택 종목 모두 해당 기간 데이터가 없습니다. 날짜를 확인하세요.');return;}
@@ -3321,12 +3352,12 @@ async function run(){
     if(commonD.length<10){alert('공통 거래일이 부족합니다.');return;}
     const results={};
     imUse.forEach(t=>{
-      const tgt = tgtOverride;   // 전 종목 동일 익절%
+      const tgt = imTargetOf(t);
       if(imEngine==='ab'){
         results[t]={res:runIM(commonD,t,cap,imDiv,tgt,compound), res50:runIM50(commonD,t,cap,imDiv,tgt,compound), tgt, days:commonD};
       }else{
         const eng = imEngine==='v22' ? runIM22 : imEngine==='v30' ? runIM30 : imEngine==='v50' ? runIM50 : runIM;
-        results[t]={res:eng(commonD,t,cap,imDiv,tgt,compound), days:commonD};
+        results[t]={res:eng(commonD,t,cap,imDiv,tgt,compound), tgt, days:commonD};
       }
     });
     if(!Object.keys(results).length){alert('데이터 부족');return;}
