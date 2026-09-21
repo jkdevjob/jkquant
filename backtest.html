@@ -315,7 +315,7 @@ td:first-child{text-align:left;}
   <div class="brand">
     <div>
       <div class="logo">Backtest</div>
-      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v1.177.1</span></h1>
+      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v1.177.2</span></h1>
     </div>
   </div>
   <div class="hright">
@@ -2697,7 +2697,7 @@ function retTxt(x){ if(x==null||!isFinite(x)) return '—';
 
 // ──── 전략 6: ASAP (SOXL 커스텀 — SGOV 리저브 + 딥 가중매수 + 재진입) ────
 // 하락장(가격<200일선): SGOV base 적립 + RSI≤35&−10% → mid, RSI≤30&−15% → deep (대체)
-// 상승장: 재진입 3차 완료 익일부터 base/일. 재진입 5>20(20%)→20>50(30%)→200돌파(전액). 재하락 시 카운터 리셋.
+// 상승장: 재진입 3차 완료 익일부터 base/일. 재진입 5>20(30%)→20>50(30%)→200돌파(잔여≈40%). 재하락 시 카운터 리셋.
 // SGOV = 현금성(미 단기국채 연이자 근사 반영). 판정·체결은 당일 종가.
 // 3개월 미국 국채(T-Bill) 연평균 수익률 근사 — 200일선 로테 '단기국채 대피' 옵션용.
 // 1980년대 고금리 구간이 결과를 크게 바꾸므로 확장 백테에서 반드시 필요하다.
@@ -2731,7 +2731,7 @@ function runASAP(days,tkr,opt){
   const lump=o.startCash>0;   // 거치식: 목돈을 SGOV로 시작, 신규 적립 없이 리저브에서만 매수
   const FEE=o.costOn?costOf(tkr).fee:0, F=1-FEE;   // 비용: 매수 수수료(스톡은 안 팔아 실현 양도세 없음)
   const {cl,MA5,MA20,MA50,MA200,RSI,gi}=_asapInd(tkr);
-  let sgov=lump?o.startCash:0,sh=0,stage=0,up3=-1,inv=lump?o.startCash:0,mddPeak=-Infinity,mdd=0; const snap=[];
+  let sgov=lump?o.startCash:0,sh=0,stage=0,up3=-1,stageReserve=0,inv=lump?o.startCash:0,mddPeak=-Infinity,mdd=0; const snap=[];
   const cf=lump?[[days[0],o.startCash]]:[];   // 현금흐름(신규 투입 시점·금액) — IRR·평균투입자본용. 거치는 첫날 전액.
   const _cf=(d,a)=>{ if(a>0){ const L=cf[cf.length-1]; if(L&&L[0]===d)L[1]+=a; else cf.push([d,a]); } };
   days.forEach((d,di)=>{
@@ -2743,15 +2743,22 @@ function runASAP(days,tkr,opt){
     const cross5=p>=0&&MA5[p]<=MA20[p]&&MA5[g]>MA20[g];
     const cross20=p>=0&&MA20[p]<=MA50[p]&&MA20[g]>MA50[g];
     const crossUp=p>=0&&cl[p]<MA200[p]&&c>=m200;
-    if(crossDn&&stage>0){stage=0;up3=-1;}
+    if(crossDn&&stage>0){stage=0;up3=-1;stageReserve=0;}
     if(down){ if(!lump){sgov+=base;inv+=base;_cf(d,base);}
       // 적립: 신규자금 투입 / 거치: 리저브(sgov)에서 차감
       if(rsi<=30&&c<=m200*0.85){const amt=lump?Math.min(deep,sgov):deep;sh+=amt*F/c;if(lump)sgov-=amt;else {inv+=amt;_cf(d,amt);}}
       else if(rsi<=35&&c<=m200*0.90){const amt=lump?Math.min(mid,sgov):mid;sh+=amt*F/c;if(lump)sgov-=amt;else {inv+=amt;_cf(d,amt);}} }
-    if(stage===0&&cross5){sh+=sgov*0.2*F/c;sgov*=0.8;stage=1;}
-    if(stage===1&&cross20){sh+=sgov*0.3*F/c;sgov*=0.7;stage=2;}
-    if(stage===2&&!down){sh+=sgov*F/c;sgov=0;stage=3;up3=di;}   // 3차: 상승장 재확인(종가≥200선) — 리저브 안 묶임
-    if(!down&&!lump){sh+=base*F/c;inv+=base;_cf(d,base);}       // 상승장: 매일 base로 SOXL 적립(DCA)
+    // 재진입은 신호가 시작된 시점의 SGOV를 기준으로 30% / 30% / 잔여(약 40%) 배분한다.
+    // '현재 잔고의 30%'를 두 번 쓰면 30%→21%→49%가 되어 사용자가 정한 30/30/40과 달라진다.
+    if(stage===0&&cross5){
+      stageReserve=sgov;
+      const amt=Math.min(sgov,stageReserve*0.30); sh+=amt*F/c;sgov-=amt;stage=1;
+    }
+    if(stage===1&&cross20){
+      const amt=Math.min(sgov,stageReserve*0.30); sh+=amt*F/c;sgov-=amt;stage=2;
+    }
+    if(stage===2&&!down){sh+=sgov*F/c;sgov=0;stage=3;up3=di;}   // 3차: 200일선 회복 → 남은 리저브 전액(기준 약 40%)
+    if(!down&&!lump&&(up3<0||di>up3)){sh+=base*F/c;inv+=base;_cf(d,base);} // 3차 완료 당일은 중복 base 매수하지 않고 익일부터
     const eq=sh*c+sgov; if(eq>mddPeak)mddPeak=eq; else if(mddPeak>0){const dd=(mddPeak-eq)/mddPeak;if(dd>mdd)mdd=dd;}
     if(di%10===0)snap.push([d,eq]);
   });
@@ -3170,7 +3177,7 @@ function renderASAP(results, days, opt){
   h+=`</tbody></table></div>`;
   // 연도별 총자산 비교 (공용 카드)
   h+=yearCompareCard(rows.map(r=>({label:r.ticker,tkr:r.ticker,snap:r.snap,color:r.color})), money);
-  h+=`<p class="note" style="font-size:11px;color:var(--dim);margin-top:10px;line-height:1.7">하락장: SGOV 매일 ${money(o.base||10)} 적립 · −10%&amp;RSI≤35→${money(o.mid||50)} · −15%&amp;RSI≤30→${money(o.deep||100)} 딥매수. 상승 3단 재진입. 200일선은 <b>종목 자체 종가</b> 기준. 총투입은 매일 적립+딥·재진입의 누적 결과라 종목마다 다름. 전 종목 미국상장 USD · <b>${o.costOn?'세후':'세전'}</b>(${o.costOn?'매수 수수료 0.25% 반영 · 스톡 미매도로 양도세 이연':'세금·수수료 미반영'}).</p></div>`;
+  h+=`<p class="note" style="font-size:11px;color:var(--dim);margin-top:10px;line-height:1.7">하락장: SGOV 매일 ${money(o.base||10)} 적립 · −10%&amp;RSI≤35→${money(o.mid||50)} · −15%&amp;RSI≤30→${money(o.deep||100)} 딥매수. 상승 재진입은 SGOV 30%→30%→잔여(약40%). 200일선은 <b>종목 자체 종가</b> 기준. 총투입은 매일 적립+딥·재진입의 누적 결과라 종목마다 다름. 전 종목 미국상장 USD · <b>${o.costOn?'세후':'세전'}</b>(${o.costOn?'매수 수수료 0.25% 반영 · 스톡 미매도로 양도세 이연':'세금·수수료 미반영'}).</p></div>`;
   document.getElementById('asapResult').innerHTML=h;
   cmpDrawChart(rows.map(r=>({name:r.ticker,snap:r.snap,color:r.color})),days,rows[0]?rows[0].ticker:'SOXL','ASAP · 종목별 누적 총자산');
 }
