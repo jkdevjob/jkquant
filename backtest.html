@@ -315,7 +315,7 @@ td:first-child{text-align:left;}
   <div class="brand">
     <div>
       <div class="logo">Backtest</div>
-      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v1.177.9</span></h1>
+      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v1.178.0</span></h1>
     </div>
   </div>
   <div class="hright">
@@ -748,7 +748,7 @@ document.addEventListener('click',function(e){ var m=document.getElementById('jk
 <div class="rules s-vr hide">
   <span class="bd">V 갱신</span> 다음 V = 현재 V + <b>Pool/G</b> + 적립금 · <b>달력 14일</b> 사이클(휴장 시 다음 거래일)<br>
   <span class="bd">밴드</span> 상단 V×(1+밴드) / 하단 V×(1−밴드)<br>
-  <span class="bd">예약매매</span> 사이클 첫날 보유수량으로 상·하단 1주 단위 예약표를 만들고 2주간 고정 · 가격 도달 즉시 체결 · <span class="bd">매수</span>는 시작 Pool의 75/50/25% 한도
+  <span class="bd">예약매매</span> 밴드 도달 때 평가금이 V로 돌아오도록 정수 주문수량을 계산해 사이클 첫날 2주치 표를 고정 · 가격 도달 즉시 체결 · <span class="bd">매수</span>는 시작 Pool의 75/50/25% 한도
 </div>
 <div class="rules s-ma hide">
   <span class="bd">출처</span> Gayed·Bilello <b>"Leverage for the Long Run"</b> (2016 CMT 다우상) — 역사적으로 3× 조합 연 26.7%<br>
@@ -2507,35 +2507,40 @@ function runVR(days,tkr,params){
     taxTotal+=owed-due;
   }
   function _buildOrders(){
-    up=V*(1+band); lo=V*(1-band); buyOrders=[]; sellOrders=[];
-    const S=Math.floor(shares+1e-9); if(!(S>=1&&V>0)) return;
-    // 실제 VR 예약표: 사이클 시작 보유수량을 기준으로 1주씩 단계 주문을 2주간 고정한다.
-    for(let k=1;k<=S;k++){
-      const before=S-k+1, p=up/before;
-      if(p>0) sellOrders.push({p,filled:false});
+    up=V*(1+band);lo=V*(1-band);buyOrders=[];sellOrders=[];
+    const S=Math.floor(shares+1e-9);if(!(S>=1&&V>0))return;
+    // 공식 핵심: 밴드에 닿으면 "평가금이 V로 돌아올 만큼" 거래한다.
+    // 각 단계의 밴드 재도달 가격과 V 복귀 정수수량을 사이클 첫날 미리 계산해 14일 동안 고정한다.
+    let sh=S,guard=0;
+    while(sh>0&&guard++<200){
+      const p=up/sh;let target=Math.max(0,Math.round(V/p)),q=sh-target;
+      if(q<1)q=1;if(q>sh)q=sh;
+      sellOrders.push({p,q,filled:false});sh-=q;
     }
     cycleBudget=Math.max(0,pool*usage);
-    let reserved=0;
-    for(let k=1;k<100000;k++){
-      const before=S+k-1, p=lo/before; if(!(p>0.000001)) break;
-      const need=p*(1+FEE);
-      if(reserved+need>cycleBudget+1e-9) break;
-      buyOrders.push({p,filled:false,reserve:need}); reserved+=need;
+    let reserved=0;sh=S;guard=0;
+    while(sh>=1&&guard++<200){
+      const p=lo/sh;if(!(p>0.000001))break;
+      let target=Math.max(sh+1,Math.round(V/p)),q=Math.max(1,target-sh);
+      const can=Math.floor((cycleBudget-reserved)/(p*(1+FEE))+1e-9);
+      if(can<1)break;if(q>can)q=can;
+      const need=q*p*(1+FEE);reserved+=need;
+      buyOrders.push({p,q,filled:false,reserve:need});sh+=q;
+      if(reserved>=cycleBudget-1e-9)break;
     }
   }
   function _fillOrders(row){
-    const o=row[O]>0?row[O]:row[C], hi=row[HI], low=row[LO];
-    // 두 방향 주문은 사이클 첫날 미리 각각 걸려 있으므로 같은 날 고가·저가가 모두 닿으면 둘 다 체결 가능.
+    const o=row[O]>0?row[O]:row[C],hi=row[HI],low=row[LO];
+    // OHLC로는 장중 순서를 알 수 없지만 주문표는 양방향 사전예약이므로 각 도달 주문을 독립 체결한다.
     for(const ord of sellOrders){
-      if(ord.filled||!(hi>=ord.p)||shares<1) continue;
-      const px=o>=ord.p?o:ord.p; const q=_sellToPool(px,1);
-      if(q>0){ord.filled=true;sells+=q;}
+      if(ord.filled||!(hi>=ord.p))continue;
+      const px=o>=ord.p?o:ord.p,q=_sellToPool(px,ord.q);
+      if(q===ord.q){ord.filled=true;sells+=q;}
     }
     for(const ord of buyOrders){
-      if(ord.filled||!(low<=ord.p)) continue;
-      const px=o<=ord.p?o:ord.p;
-      const q=_buyFromPool(px,1);
-      if(q>0){ord.filled=true;buys+=q;}
+      if(ord.filled||!(low<=ord.p))continue;
+      const px=o<=ord.p?o:ord.p,q=_buyFromPool(px,ord.q);
+      if(q===ord.q){ord.filled=true;buys+=q;}
     }
   }
 
