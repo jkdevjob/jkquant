@@ -315,7 +315,7 @@ td:first-child{text-align:left;}
   <div class="brand">
     <div>
       <div class="logo">Backtest</div>
-      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v1.177.3</span></h1>
+      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v1.177.4</span></h1>
     </div>
   </div>
   <div class="hright">
@@ -1766,12 +1766,15 @@ function _dcaOne(t,days,amt,step,costOn,dipMul){
   const FEE=costOn?costOf(t).fee:0;   // 비용반영 시 매회 매수 수수료 (costOn 미지정=기존과 동일)
   const MUL=(dipMul!=null?dipMul:(typeof dcaDipMul!=='undefined'?dcaDipMul:1));
   const MA=MUL>1?_dcaMA(t,200):null;      // 배수 1이면 계산 생략 (기존과 완전 동일)
+  const allDs=MUL>1?Object.keys(D).sort():null, allGi={};
+  if(allDs) allDs.forEach((d,i)=>allGi[d]=i);
   let sh=0,inv=0,uvPeak=-Infinity,mdd=0,nDip=0,nBuy=0;const snap=[],uvSnap=[],cf=[];
   days.forEach((d,i)=>{
     const p=D[d]?.[C]??0;
     if(p>0&&i%step===0){
-      const ma=MA?MA[d]:null;
-      const dip=(ma!=null&&p<=ma);            // 200일선 워밍업 전(null)은 1배
+      const gx=allDs?allGi[d]:-1, pd=(gx>0?allDs[gx-1]:null);
+      const ma=(MA&&pd)?MA[pd]:null, pp=pd?(D[pd]?.[C]??0):0;
+      const dip=(ma!=null&&pp>0&&pp<=ma);      // 전일 확정 종가 신호 → 오늘 종가 매수 (룩어헤드 방지)
       const a=dip?amt*MUL:amt;
       const fee=a*FEE;sh+=(a-fee)/p;inv+=a; nBuy++; if(dip)nDip++;
       cf.push([d,a]);                          // 현금흐름(투입 시점·금액) — IRR·평균투입자본용
@@ -2229,7 +2232,8 @@ function runStdev(days,tkr,cap,N,g,filter,costOn){
   days.forEach((d,i)=>{ const gx=gi[d], c=cl[gx];
     { const y=d.slice(0,4); if(cy===null)cy=y; else if(y!==cy){_settle(c);cy=y;} }
     { const eq=cash+sh*c; if(eq>mp)mp=eq; else if(mp>0){const dd=(mp-eq)/mp; if(dd>mdd)mdd=dd;} }
-    const lv=lvOf(gx), bear = ma200[gx]!=null && c<ma200[gx];
+    const sg=gx-1;                              // 전일 확정 신호를 오늘 종가에 집행
+    const lv=sg>=0?lvOf(sg):null, bear=sg>=0&&ma200[sg]!=null&&cl[sg]<ma200[sg];
     if(lv!=null){
       if(filter==='exit' && bear){ if(sh>1e-9)_sell(c,sh); prevLv=lv; }
       else if(lv!==prevLv){ const eq=cash+sh*c, frac=Math.min(1,g*lv/5), target=eq*frac, cur=sh*c;
@@ -2700,7 +2704,7 @@ function retTxt(x){ if(x==null||!isFinite(x)) return '—';
 // ──── 전략 6: ASAP (SOXL 커스텀 — SGOV 리저브 + 딥 가중매수 + 재진입) ────
 // 하락장(가격<200일선): SGOV base 적립 + RSI≤35&−10% → mid, RSI≤30&−15% → deep (대체)
 // 상승장: 재진입 3차 완료 익일부터 base/일. 재진입 5>20(30%)→20>50(30%)→200돌파(잔여≈40%). 재하락 시 카운터 리셋.
-// SGOV = 현금성(미 단기국채 연이자 근사 반영). 판정·체결은 당일 종가.
+// SGOV = 현금성(미 단기국채 연이자 근사 반영). 판정은 전일 확정 종가, 체결은 다음 거래일 종가.
 // 3개월 미국 국채(T-Bill) 연평균 수익률 근사 — 200일선 로테 '단기국채 대피' 옵션용.
 // 1980년대 고금리 구간이 결과를 크게 바꾸므로 확장 백테에서 반드시 필요하다.
 const TBILL_RATE={1980:.115,1981:.140,1982:.106,1983:.086,1984:.095,1985:.075,1986:.060,1987:.058,1988:.067,1989:.081,
@@ -2737,19 +2741,22 @@ function runASAP(days,tkr,opt){
   const cf=lump?[[days[0],o.startCash]]:[];   // 현금흐름(신규 투입 시점·금액) — IRR·평균투입자본용. 거치는 첫날 전액.
   const _cf=(d,a)=>{ if(a>0){ const L=cf[cf.length-1]; if(L&&L[0]===d)L[1]+=a; else cf.push([d,a]); } };
   days.forEach((d,di)=>{
-    const g=gi[d]; const c=cl[g], m200=MA200[g], rsi=RSI[g]!=null?RSI[g]:50;
+    const g=gi[d], c=cl[g], p=g-1, pp=p-1;
     sgov*=(1+(SGOV_RATE[+d.slice(0,4)]||0.04)/252);   // SGOV 이자
+    // 모든 조건은 전일 확정 종가/지표로 판정하고 오늘 종가에 집행한다.
+    // 현재 종가로 신호를 계산한 뒤 같은 종가에 체결시키면 실전 불가능한 룩어헤드가 된다.
+    const sigC=p>=0?cl[p]:0, m200=p>=0?MA200[p]:null, rsi=(p>=0&&RSI[p]!=null)?RSI[p]:50;
     if(m200==null){ if(di%10===0)snap.push([d,sh*c+sgov]); return; }
-    const p=g-1, down=c<m200;
-    const crossDn=p>=0&&cl[p]>=MA200[p]&&c<m200;
-    const cross5=p>=0&&MA5[p]<=MA20[p]&&MA5[g]>MA20[g];
-    const cross20=p>=0&&MA20[p]<=MA50[p]&&MA20[g]>MA50[g];
-    const crossUp=p>=0&&cl[p]<MA200[p]&&c>=m200;
+    const down=sigC<m200;
+    const crossDn=pp>=0&&MA200[pp]!=null&&cl[pp]>=MA200[pp]&&sigC<m200;
+    const cross5=pp>=0&&MA5[pp]!=null&&MA20[pp]!=null&&MA5[pp]<=MA20[pp]&&MA5[p]>MA20[p];
+    const cross20=pp>=0&&MA20[pp]!=null&&MA50[pp]!=null&&MA20[pp]<=MA50[pp]&&MA20[p]>MA50[p];
+    const crossUp=pp>=0&&MA200[pp]!=null&&cl[pp]<MA200[pp]&&sigC>=m200;
     if(crossDn&&stage>0){stage=0;up3=-1;stageReserve=0;}
     if(down){ if(!lump){sgov+=base;inv+=base;_cf(d,base);}
       // 적립: 신규자금 투입 / 거치: 리저브(sgov)에서 차감
-      if(rsi<=30&&c<=m200*0.85){const amt=lump?Math.min(deep,sgov):deep;sh+=amt*F/c;if(lump)sgov-=amt;else {inv+=amt;_cf(d,amt);}}
-      else if(rsi<=35&&c<=m200*0.90){const amt=lump?Math.min(mid,sgov):mid;sh+=amt*F/c;if(lump)sgov-=amt;else {inv+=amt;_cf(d,amt);}} }
+      if(rsi<=30&&sigC<=m200*0.85){const amt=lump?Math.min(deep,sgov):deep;sh+=amt*F/c;if(lump)sgov-=amt;else {inv+=amt;_cf(d,amt);}}
+      else if(rsi<=35&&sigC<=m200*0.90){const amt=lump?Math.min(mid,sgov):mid;sh+=amt*F/c;if(lump)sgov-=amt;else {inv+=amt;_cf(d,amt);}} }
     // 재진입은 신호가 시작된 시점의 SGOV를 기준으로 30% / 30% / 잔여(약 40%) 배분한다.
     // '현재 잔고의 30%'를 두 번 쓰면 30%→21%→49%가 되어 사용자가 정한 30/30/40과 달라진다.
     if(stage===0&&cross5){
