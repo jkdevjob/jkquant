@@ -315,7 +315,7 @@ td:first-child{text-align:left;}
   <div class="brand">
     <div>
       <div class="logo">Backtest</div>
-      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v1.176.2</span></h1>
+      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v1.177.0</span></h1>
     </div>
   </div>
   <div class="hright">
@@ -2417,70 +2417,141 @@ function runIM50(days,tkr,cap,divs,targetPct,compound=true){
 // ──── 전략 3: VR 5.0 ────
 function runVR(days,tkr,params){
   const {contrib=100,G=10,bandPct=15,mode=0.75,formula='basic',initAmt=0,withdraw=0,startV=0,startPool=0,costOn=false}=params||{};
-  const band=bandPct/100,interval=10,poolLimit=mode;
-  const isAccum=mode===0.75, isWd=mode===0.25, isLump=!isAccum;
+  const band=bandPct/100, interval=10, usage=mode;
+  const isAccum=mode===0.75, isWd=mode===0.25, isLump=mode===0.5||isWd;
   let shares=0,pool=startPool||0,V=startV||0,inv=startPool||0,totalWd=0,rebal=0,buys=0,sells=0;
-  // ── 비용·세금 (costOn=false면 전부 0 — 기존 산술과 완전 동일) · 규약은 무매·200일선과 같음 ──
-  //   수수료 0.25% 매수·매도 각 · 양도세 22%(연 250만원 공제, 실현손익만) · 리밸런싱=종가 체결이라 슬리피지 없음
+  let up=0,lo=0,buyOrders=[],sellOrders=[],cycleBudget=0;
   const FEE=costOn?costOf(tkr).fee:0;
-  let avg=0, feesTotal=0, taxTotal=0, yearPnl=0, curYear=null;
-  function _vbuy(amt,c){ const q=iq(amt/(1+FEE),c); if(q<=0) return;   // 정수 주수 (운영 VR도 내림)
-    const spend=q*c, fee=spend*FEE;
-    avg=(shares<=0)?c:(shares*avg+spend)/(shares+q); shares+=q; feesTotal+=fee; }
-  function _vsell(gross,c){ const qty=isq(gross/c,shares), fee=qty*c*FEE;   // 정수 주수 (금액 목표를 넘지 않게 내림)
-    // 실제로 판 만큼만 현금이 들어온다 — gross를 그대로 돌려주면 판 적 없는 돈이 생긴다
-    yearPnl+=qty*(c-avg)-fee; feesTotal+=fee; shares-=qty; return qty*c-fee; }
-  // 연말 양도세 정산. Pool에서 먼저 빼되, 모자라면 보유 주식을 팔아 납부한다.
-  // (예전엔 pool을 그냥 음수로 만들어 총자산이 마이너스가 되고 MDD가 100%를 넘었다 —
-  //  SOXL 2000~ 거치식이 최종 −18$ · MDD 102%로 나오던 원인.)
-  function _settle(c){ if(!costOn){yearPnl=0;return;}
-    const owed=capGainTax(yearPnl, tkr); let due=owed; yearPnl=0;
-    const fromPool=Math.min(Math.max(pool,0), due); pool-=fromPool; due-=fromPool;
-    if(due>1e-9 && shares>0 && c>0){                 // 납부용 매도 — 실현손익은 다음 해로 이월
-      const q=Math.min(shares, due/c); yearPnl+=q*(c-avg); shares-=q; due-=q*c; }
-    taxTotal+=owed-due; }                            // 실제로 낸 만큼만 집계 (자산이 0이면 더 못 냄)
-  // 시작V 지정 시: 이미 V만큼 보유 중인 상태로 간주 (운용도구와 동일 — "이어서 시작" 시나리오)
-  let first;
-  if(V>0){
-    shares=V/M[tkr][days[0]][C]; avg=M[tkr][days[0]][C]; inv+=V; first=false;
-  } else {
-    first=true;
+  let avg=0,feesTotal=0,taxTotal=0,yearPnl=0,curYear=null;
+
+  function _buyExternal(amt,px){
+    if(!(amt>0&&px>0)) return 0;
+    const q=iq(amt/(1+FEE),px); if(q<=0){ pool+=amt; return 0; }
+    const spend=q*px,fee=spend*FEE,out=spend+fee;
+    avg=(shares<=0)?px:(shares*avg+spend)/(shares+q);
+    shares+=q; feesTotal+=fee;
+    pool+=Math.max(0,amt-out);                 // 정수 주수 때문에 못 쓴 초기자금은 Pool로
+    return out;
   }
-  const snap=[], cf=[];          // cf = 현금흐름(투입 시점·금액) — IRR·평균투입자본용
-  let mddPeak=-Infinity, mdd=0;  // 일별 MDD (총자산 = 주식+Pool+누적인출 기준 — fin과 동일 철학)
+  function _buyFromPool(px,q=1){
+    q=Math.floor(Math.min(q, pool/(px*(1+FEE)))+1e-9);
+    if(q<=0||!(px>0)) return 0;
+    const spend=q*px,fee=spend*FEE,out=spend+fee;
+    avg=(shares<=0)?px:(shares*avg+spend)/(shares+q);
+    shares+=q; pool-=out; feesTotal+=fee; return q;
+  }
+  function _sellToPool(px,q=1){
+    q=Math.min(shares,Math.floor(q+1e-9)); if(q<=0||!(px>0)) return 0;
+    const gross=q*px,fee=gross*FEE;
+    yearPnl+=q*(px-avg)-fee; shares-=q; pool+=gross-fee; feesTotal+=fee;
+    if(shares<1e-9){shares=0;avg=0;}
+    return q;
+  }
+  function _settle(px){
+    if(!costOn){yearPnl=0;return;}
+    const owed=capGainTax(yearPnl,tkr); let due=owed; yearPnl=0;
+    const fromPool=Math.min(Math.max(pool,0),due); pool-=fromPool; due-=fromPool;
+    if(due>1e-9&&shares>0&&px>0){
+      const q=Math.min(shares,due/(px*(1-FEE)));
+      const gross=q*px,fee=gross*FEE; pool+=gross-fee; shares-=q; feesTotal+=fee;
+      yearPnl+=q*(px-avg)-fee; due=Math.max(0,due-(gross-fee));
+      if(shares<1e-9){shares=0;avg=0;}
+    }
+    taxTotal+=owed-due;
+  }
+  function _buildOrders(){
+    up=V*(1+band); lo=V*(1-band); buyOrders=[]; sellOrders=[];
+    const S=Math.floor(shares+1e-9); if(!(S>=1&&V>0)) return;
+    // 실제 VR 예약표: 사이클 시작 보유수량을 기준으로 1주씩 단계 주문을 2주간 고정한다.
+    for(let k=1;k<=S;k++){
+      const before=S-k+1, p=up/before;
+      if(p>0) sellOrders.push({p,filled:false});
+    }
+    cycleBudget=Math.max(0,pool*usage);
+    let reserved=0;
+    for(let k=1;k<100000;k++){
+      const before=S+k-1, p=lo/before; if(!(p>0.000001)) break;
+      const need=p*(1+FEE);
+      if(reserved+need>cycleBudget+1e-9) break;
+      buyOrders.push({p,filled:false,reserve:need}); reserved+=need;
+    }
+  }
+  function _fillOrders(row){
+    const o=row[O]>0?row[O]:row[C], hi=row[HI], low=row[LO];
+    // 두 방향 주문은 사이클 첫날 미리 각각 걸려 있으므로 같은 날 고가·저가가 모두 닿으면 둘 다 체결 가능.
+    for(const ord of sellOrders){
+      if(ord.filled||!(hi>=ord.p)||shares<1) continue;
+      const px=o>=ord.p?o:ord.p; const q=_sellToPool(px,1);
+      if(q>0){ord.filled=true;sells+=q;}
+    }
+    for(const ord of buyOrders){
+      if(ord.filled||!(low<=ord.p)) continue;
+      const px=o<=ord.p?o:ord.p;
+      const q=_buyFromPool(px,1);
+      if(q>0){ord.filled=true;buys+=q;}
+    }
+  }
+
+  // 시작 V를 직접 입력한 경우: 첫 날짜 시점에 이미 그만큼 보유 중인 이어받기 상태로 본다.
+  if(V>0){
+    const c0=M[tkr][days[0]][C];
+    shares=V/c0; avg=c0; inv+=V; _buildOrders();
+  }
+  const snap=[],cf=[];
+  let mddPeak=-Infinity,mdd=0,first=(V<=0);
+
   days.forEach((d,i)=>{
-    const c=M[tkr][d][C];
+    const row=M[tkr][d], c=row[C];
     { const y=d.slice(0,4); if(curYear===null)curYear=y; else if(y!==curYear){_settle(c);curYear=y;} }
-    { const eq=shares*c+pool+totalWd; if(eq>mddPeak)mddPeak=eq; else if(mddPeak>0){ const dd=Math.min((mddPeak-eq)/mddPeak,1); if(dd>mdd)mdd=dd; } }
+
     if(i%interval===0){
       if(first){
-        if(isLump){const s=initAmt||10000;inv+=s;cf.push([d,s]);_vbuy(s,c);V=shares*c;}  // 거치식/인출식: 첫매수가=V (pool 무관)
-        else{pool+=contrib;inv+=contrib;cf.push([d,contrib]);_vbuy(pool,c);pool=0;V=shares*c;} // 적립식: 첫매수가=V
-        first=false;buys++;rebal++;snap.push([d,shares*c+pool+totalWd]);return;
+        // 첫 V = 첫 실제 매수 평가금. startPool은 비상 Pool로 남기고 첫 매수액과 섞지 않는다.
+        if(isAccum){
+          inv+=contrib; cf.push([d,contrib]);
+          const before=pool; pool+=contrib;
+          const qBefore=shares;
+          _buyFromPool(c,Math.floor(contrib/(c*(1+FEE))+1e-9));
+          // contrib 중 정수주 매수에 쓰지 못한 잔액은 Pool에 그대로 남는다.
+          if(shares===qBefore && contrib>0 && pool===before+contrib){ /* 0주면 전액 Pool */ }
+          V=shares*c;
+        }else{
+          const s=initAmt||10000; inv+=s; cf.push([d,s]);
+          _buyExternal(s,c); V=shares*c;
+        }
+        first=false; rebal++; _buildOrders();
+        // 첫 매수는 종가 체결로 가정하므로 같은 날 예약표를 다시 체결시키지는 않는다.
+      }else{
+        // 사이클 시작 전날까지의 상태로 V를 갱신하고, 오늘 장 전에 새 예약표를 건다.
+        const prevC=i>0?M[tkr][days[i-1]][C]:c;
+        const E=shares*prevC, P=pool;
+        const actualWd=isWd?Math.min(withdraw,Math.max(0,pool)):0;
+        const flow=isAccum?contrib:isWd?-actualWd:0;
+        if(formula==='skill'&&V>0) V=V+P/G+(E-V)/(2*Math.sqrt(G))+flow;
+        else V=V+P/G+flow;
+        V=Math.max(V,0);
+        if(isAccum){pool+=contrib;inv+=contrib;cf.push([d,contrib]);}
+        else if(isWd){pool-=actualWd;totalWd+=actualWd;}
+        rebal++; _buildOrders();
+        _fillOrders(row);
       }
-      const cv=shares*c;
-      // 인출식은 계획액이 아니라 이 시점에 실제로 Pool에서 빠질 수 있는 금액만 V에서 차감한다.
-      const actualWd=isWd?Math.min(withdraw,Math.max(0,pool)):0;
-      const addCycle=isAccum?contrib:isWd?-actualWd:0;
-      if(formula==='skill'&&V>0) V=V+pool/G+(cv-V)/(2*Math.sqrt(G))+addCycle;
-      else V=V+pool/G+addCycle;
-      V=Math.max(V,0);
-      if(isAccum){pool+=contrib;inv+=contrib;cf.push([d,contrib]);}
-      else if(isWd){pool-=actualWd;totalWd+=actualWd;}
-      const up=V*(1+band),lo=V*(1-band),cv2=shares*c;
-      if(cv2>up){const ex=cv2-V;pool+=_vsell(ex,c);sells++;}
-      else if(cv2<lo){const need=V-cv2;const use=Math.min(need,pool*poolLimit);_vbuy(use,c);pool-=use;buys++;}
-      rebal++;
+    }else{
+      _fillOrders(row);
     }
-    if(i%interval===0||i===days.length-1)snap.push([d,shares*c+pool+totalWd]);
+
+    const eq=shares*c+pool+totalWd;
+    if(eq>mddPeak)mddPeak=eq; else if(mddPeak>0){const dd=Math.min((mddPeak-eq)/mddPeak,1);if(dd>mdd)mdd=dd;}
+    if(i%interval===0||i===days.length-1)snap.push([d,eq]);
   });
+
   const lc=M[tkr][days[days.length-1]][C];
-  _settle(lc);   // 마지막 해 정산
-  // 인출식: 누적 인출액도 회수가치에 포함해야 정확한 수익률 (인출한 돈은 사라진 게 아님)
+  _settle(lc);
   const fin=shares*lc+pool+totalWd;
+  if(fin>mddPeak)mddPeak=fin; else if(mddPeak>0){const dd=Math.min((mddPeak-fin)/mddPeak,1);if(dd>mdd)mdd=dd;}
   const calYrs=(new Date(days[days.length-1])-new Date(days[0]))/(365.25*864e5);
   return {invested:inv,final:fin,pool,shares,sharesVal:shares*lc,rebal,buys,sells,totalWd,
-    ret:inv>0?(fin/inv-1)*100:0,yrs:Math.max(calYrs,0.1),snap,cf,tkr,mdd:mdd*100,fees:feesTotal,tax:taxTotal};
+    ret:inv>0?(fin/inv-1)*100:0,yrs:Math.max(calYrs,0.1),snap,cf,tkr,mdd:mdd*100,fees:feesTotal,tax:taxTotal,
+    ladder:true,cycleBudget};
 }
 
 // ──── 비교/지표 헬퍼 ────
@@ -2906,7 +2977,7 @@ function _runOneStrat(key,tkr,cap,days,costOn){
     case 'std':  return runStdev(days,tkr,cap,(typeof stdN!=='undefined'?stdN:40),(typeof stdG!=='undefined'?stdG:2.5),(typeof stdFilter!=='undefined'?stdFilter:'none'),costOn);  // N·g·필터 탭
     case 'ivs':  return runIVS(days,tkr,cap,(typeof ivsS0!=='undefined'?ivsS0:45)/100,(typeof ivsN!=='undefined'?ivsN:60),(typeof ivsBand!=='undefined'?ivsBand:10)/100,costOn,
                    (typeof ivsMode!=='undefined'?ivsMode:'iv'),(typeof ivsPair!=='undefined'?ivsPair:'cash'));   // s0·룩백·밴드·방식·짝
-    case 'vrl':  return runVR(days,tkr,{initAmt:cap,G:vG,bandPct:vB,mode:0.5,formula:vF,startV:0,startPool:0,costOn});                                    // 거치(mode0.5)·G·밴드·공식 탭
+    case 'vrl':  return runVR(days,tkr,{initAmt:cap*0.9,G:vG,bandPct:vB,mode:0.5,formula:vF,startV:0,startPool:cap*0.1,costOn});                                    // 거치(mode0.5)·G·밴드·공식 탭
     case 'vra':  return runVR(days,tkr,{contrib:cap/Math.max(1,Math.floor(days.length/10)),G:vG,bandPct:vB,mode:0.75,formula:vF,startV:0,startPool:0,costOn});  // 적립(mode0.75)
     case 'dca':  { const step={daily:1,weekly:5,monthly:21}[(typeof dcaFreq!=='undefined'?dcaFreq:'daily')]||1;   // 적립주기 탭
       const nb=Math.floor((days.length-1)/step)+1, amt=cap/nb; return _dcaOne(tkr,days,amt,step,costOn); }
