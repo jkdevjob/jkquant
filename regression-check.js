@@ -126,7 +126,9 @@ ok('쿼터매수 (400+300)/4 = 175', (400+300)/4===175);
   const c=(mode)=>({st:{mode,formula:'basic',g:10,add:250}, V:9000, pool:1000});
   ok('VR 다음V 적립식 9350', near(computeNextV(c(0.75),9000).nextV,9350));
   ok('VR 다음V 거치식 9100 (적립 자동 0)', near(computeNextV(c(0.5),9000).nextV,9100));
-  ok('VR 다음V 인출식 8850', near(computeNextV(c(0.25),9000).nextV,8850));
+  ok('VR 다음V 인출식 8900 (2주 $200)', near(computeNextV(c(0.25),9000).nextV,8900));
+  const low={st:{mode:0.25,formula:'basic',g:10,add:999},V:9000,pool:80};
+  ok('VR 인출식 Pool 부족 시 실제 $80만 V 차감', near(computeNextV(low,9000).nextV,8928));
 }
 
 /* ════ 2. 통합 규약 (v1.90+) — 익절%=별%base · slope=base×0.1×20/div · 복귀=1−base/100 · index↔backtest 동일 ════ */
