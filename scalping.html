@@ -187,7 +187,7 @@ canvas{display:block;width:100%;height:auto}
 
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Morning Scalping</div><h1>JK <span class="v">퀀트</span> 단타 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="scVer">v1.2.0</span></h1></div>
+    <div><div class="kicker">Morning Scalping</div><h1>JK <span class="v">퀀트</span> 단타 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="scVer">v1.3.0</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -304,6 +304,7 @@ canvas{display:block;width:100%;height:auto}
       <button class="prim" onclick="runOpeningBreakout()">▶ 즉시돌파 백테스트</button>
       <button class="ghostbtn" onclick="runPullbackRebreak()">↘ 눌림→재돌파 백테스트</button>
       <button class="ghostbtn" onclick="optimizeOpening()">⚙ 과거값 최적화</button>
+      <button class="ghostbtn buy" onclick="runTodayOpeningTest()">📅 오늘 전략 검증</button>
     </div>
     <div class="row" style="align-items:flex-end;margin-bottom:8px"><div class="fld"><label>최소 갭 %</label><input id="ob_gmin" type="number" value="2" step="0.5" style="width:80px"></div><div class="fld"><label>최대 갭 %</label><input id="ob_gmax" type="number" value="7" step="0.5" style="width:80px"></div><label class="sub" style="display:flex;align-items:center;gap:6px;height:38px"><input id="ob_gap" type="checkbox" checked style="width:auto"> 갭 필터 사용</label></div>
     <div class="warn"><b>데이터 정직성:</b> 네이버 1분 API 자체가 O/H/L을 null로 주므로 가짜 OHLC를 만들지 않는다. 분봉 돌파·청산은 <b>종가 기준</b>이다. 대신 새 아카이브부터 일봉 원자료의 <b>전일 종가·당일 시가</b>를 함께 저장해 +2~7% 갭 필터를 정확히 적용한다. 기존 아카이브는 메타데이터가 없어 갭 필터 사용 시 제외된다.</div>
@@ -912,6 +913,21 @@ function obKstHM(){ const p=new Intl.DateTimeFormat('en-GB',{timeZone:'Asia/Seou
 function toggleOpeningLive(){ OB_LIVE?stopOpeningLive():startOpeningLive(); }
 function startOpeningLive(){ OB_LIVE=true; const b=$('obLiveBtn'); if(b) b.textContent='⏸ 실시간 감시 중지'; openingLiveScan(); clearInterval(OB_TIMER); OB_TIMER=setInterval(openingLiveScan,60000); }
 function stopOpeningLive(){ OB_LIVE=false; if(OB_TIMER){clearInterval(OB_TIMER);OB_TIMER=null;} const b=$('obLiveBtn'); if(b)b.textContent='▶ 실시간 감시 시작'; }
+function archiveOpeningFeed(code,min,daily){
+  let added=0; const doh=(daily&&daily.ohlc)||[];
+  (min||[]).forEach(x=>{
+    const t=x.t||'',d=t.slice(0,10),hh=+t.slice(11,13),mm=+t.slice(14,16);
+    if(!d||hh!==9||mm>30)return;
+    const hm=hh*100+mm; ARCH[d]=ARCH[d]||{}; const arr=ARCH[d][code]=ARCH[d][code]||[];
+    const row=x.open!=null&&x.high!=null&&x.low!=null?[hm,+x.close,+x.vol||0,+x.open,+x.high,+x.low]:[hm,+x.close,+x.vol||0];
+    const at=arr.findIndex(r=>r[0]===hm);
+    if(at>=0) arr[at]=row; else {arr.push(row);added++;}
+    arr.sort((a,b)=>a[0]-b[0]);
+    const di=doh.findIndex(z=>z.date===d);
+    if(di>=0){ARCH[d]._meta=ARCH[d]._meta||{};ARCH[d]._meta[code]={open:+doh[di].open||0,prevClose:di>0?(+doh[di-1].close||0):0};}
+  });
+  return added;
+}
 async function openingLiveScan(){
   if(OB_BUSY) return; OB_BUSY=true;
   const msg=$('ob_live_msg'), body=$('ob_live_body'), hm=obKstHM();
@@ -921,7 +937,7 @@ async function openingLiveScan(){
   try{const j=await (await fetch('/api/universe?limit='+N)).json(); if(j.error)throw new Error(j.error); uni=j.universe||[];}catch(e){msg.textContent='유니버스 실패: '+(e.message||e);OB_BUSY=false;return;}
   let idx=0,done=0; const hits=[];
   async function worker(){while(idx<uni.length){const u=uni[idx++];try{
-    const [min,daily]=await Promise.all([mFetch(u.code),qFetch(u.code,'3mo')]); const bars=toBars(min,1).filter(x=>{const t=x.date||'',h=+t.slice(11,13),m=+t.slice(14,16);return h===9&&m<=30;}).sort((a,b)=>a.date.localeCompare(b.date));
+    const [min,daily]=await Promise.all([mFetch(u.code),qFetch(u.code,'3mo')]); archiveOpeningFeed(u.code,min,daily); const bars=toBars(min,1).filter(x=>{const t=x.date||'',h=+t.slice(11,13),m=+t.slice(14,16);return h===9&&m<=30;}).sort((a,b)=>a.date.localeCompare(b.date));
     if(bars.length>=obs+1){const today=bars[bars.length-1].date.slice(0,10), a=bars.filter(x=>x.date.slice(0,10)===today); if(a.length>=obs+1){
       const doh=daily.ohlc||[], di=doh.findIndex(z=>z.date===today), dayOpen=di>=0?+doh[di].open:+a[0].open, prev=di>0?+doh[di-1].close:0, gap=prev>0?(dayOpen/prev-1)*100:null;
       if(!useGap||(gap!=null&&gap>=gmin&&gap<=gmax)){const opening=a.slice(0,obs), firstHigh=Math.max(...opening.map(x=>x.high)), cur=a[a.length-1], pv=a[a.length-2], ok=cur.high>firstHigh&&cur.close>=dayOpen&&cur.vol>=Math.max(1,pv.vol)*vm;
@@ -930,7 +946,21 @@ async function openingLiveScan(){
   await Promise.all(Array.from({length:6},()=>worker())); hits.sort((a,b)=>b.fresh-a.fresh);
   msg.innerHTML='● 실시간 감시 · '+N+'종목 · 조건충족 <b>'+hits.length+'</b>개 · '+new Date().toLocaleTimeString('ko-KR');
   body.innerHTML=hits.length?'<div class="htable-wrap"><table class="htable"><thead><tr><th>시각</th><th>종목</th><th>갭</th><th>첫고점</th><th>현재가</th><th>데이터</th></tr></thead><tbody>'+hits.map(x=>'<tr onclick="trackOpeningCandidate(\''+esc(x.code)+'\',\''+esc(x.name).replace(/'/g,'&#39;')+'\')" style="cursor:pointer"><td><b>'+esc(x.time)+'</b></td><td><b>'+esc(x.name)+'</b><div class="sub">'+esc(x.code)+' · 선택</div></td><td>'+(x.gap==null?'—':(x.gap>=0?'+':'')+x.gap.toFixed(2)+'%')+'</td><td>'+commas(x.high)+'</td><td class="win"><b>'+commas(x.price)+'</b></td><td>'+esc(x.src)+'</td></tr>').join('')+'</tbody></table></div>':'<p class="sub">현재 조건을 모두 충족한 매수 후보가 없습니다.</p>';
+  if(saveArch()){ AMETA.last=Date.now(); archSaveMeta(); renderArch(); }
   OB_BUSY=false;
+}
+
+async function runTodayOpeningTest(){
+  const m=$('ob_msg'),b=$('ob_body'); m.textContent='오늘 09:00~09:30 분봉을 수집하고 검증 중…';
+  await archSnapshot(true);
+  const today=new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Seoul',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
+  const cfg={obs:+($('ob_obs').value||3),vm:+($('ob_vol').value||1.2),stop:+($('ob_stop').value||1),t1:+($('ob_t1').value||.8),t2:+($('ob_t2').value||1.5),fee:+($('ob_fee').value||.25),gmin:+($('ob_gmin').value||2),gmax:+($('ob_gmax').value||7)};
+  const all=openingTrades(cfg),tr=all.filter(x=>x.date===today),day=ARCH[today]||{},codes=Object.keys(day).filter(k=>k!=='_meta'&&Array.isArray(day[k]));
+  if(!codes.length){m.innerHTML='<b>'+today+'</b> 저장 분봉이 없습니다. KIS/네이버 분봉 응답과 수집 상태를 확인하세요.';b.innerHTML='';return;}
+  if(!tr.length){m.innerHTML='<b>'+today+'</b> · 저장 '+codes.length+'종목 · 현재 설정에서 진입 신호 <b>0건</b>';b.innerHTML='<div class="warn">오늘 수집된 실제 분봉으로 검사했지만 현재 갭·돌파·거래량 조건을 모두 통과한 거래가 없습니다.</div>';return;}
+  const avg=tr.reduce((z,x)=>z+x.pnl,0)/tr.length,w=tr.filter(x=>x.pnl>0).length,gp=tr.filter(x=>x.pnl>0).reduce((z,x)=>z+x.pnl,0),gl=-tr.filter(x=>x.pnl<0).reduce((z,x)=>z+x.pnl,0),pf=gl?gp/gl:Infinity;
+  m.innerHTML='<b>'+today+'</b> · 저장 '+codes.length+'종목 · 거래 <b>'+tr.length+'</b>건 · 비용 '+cfg.fee+'% 반영';
+  b.innerHTML='<div class="out"><div class="outbox"><div class="ol">승률</div><div class="ov '+(w/tr.length>=.5?'good':'bad')+'">'+(w/tr.length*100).toFixed(1)+'%</div></div><div class="outbox"><div class="ol">평균손익</div><div class="ov '+(avg>=0?'good':'bad')+'">'+(avg>=0?'+':'')+avg.toFixed(3)+'%</div></div><div class="outbox"><div class="ol">PF</div><div class="ov">'+(isFinite(pf)?pf.toFixed(2):'∞')+'</div></div></div><div class="htable-wrap" style="margin-top:10px"><table class="htable"><thead><tr><th>종목</th><th>진입시각</th><th>갭</th><th>진입가</th><th>순손익</th><th>청산</th></tr></thead><tbody>'+tr.map(x=>'<tr><td>'+esc(x.code)+'</td><td>'+String(x.time).padStart(4,'0')+'</td><td>'+(x.gap>=0?'+':'')+x.gap.toFixed(2)+'%</td><td>'+commas(x.entry)+'</td><td class="'+(x.pnl>=0?'win':'loss')+'">'+(x.pnl>=0?'+':'')+x.pnl.toFixed(3)+'%</td><td>'+esc(x.reason)+'</td></tr>').join('')+'</tbody></table></div>';
 }
 
 let OB_TRACK=null, OB_TRACK_TIMER=null;
@@ -1630,7 +1660,7 @@ async function checkOwner(user){
   return !!j.isOwner;
 }
 function denyGate(user,msg){
-  stopLive();
+  stopLive(); stopOpeningLive();
   $('gate').style.display='flex'; $('app').style.display='none';
   $('gate_sub').innerHTML=msg;
   const b=$('gbtn'); if(b){ b.textContent='다른 계정으로 로그인';
@@ -1644,7 +1674,7 @@ function boot(){
   if(!$('f_date').value) $('f_date').value=new Date().toISOString().slice(0,10);
   window.fb.onAuthStateChanged(window.fb.auth, async user=>{
     me=user||null; renderBadge();
-    if(!user){ stopLive(); $('gate').style.display='flex'; $('app').style.display='none';
+    if(!user){ stopLive(); stopOpeningLive(); $('gate').style.display='flex'; $('app').style.display='none';
       $('gate_sub').innerHTML='이 화면은 <b>소유자 계정</b>만 볼 수 있습니다.'; return; }
     let isOwner=false;
     try{ isOwner=await checkOwner(user); }
