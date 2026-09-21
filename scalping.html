@@ -187,7 +187,7 @@ canvas{display:block;width:100%;height:auto}
 
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Morning Scalping</div><h1>JK <span class="v">퀀트</span> 단타 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="scVer">v1.4.1</span></h1></div>
+    <div><div class="kicker">Morning Scalping</div><h1>JK <span class="v">퀀트</span> 단타 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="scVer">v1.5.0</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -293,6 +293,19 @@ canvas{display:block;width:100%;height:auto}
     </div>
     <div id="ob_live_body"><p class="sub">09:00~09:08은 관찰, 09:09부터 오늘의 Top2를 고정하고 09:30까지 추적합니다.</p></div>
     <div id="ob_track" class="warn" style="display:none;margin-top:10px"></div>
+  </div>
+
+  <div class="card">
+    <h3><span class="dot"></span>📒 Top2 모의매매 이력 <span class="sub" style="font-weight:600">일별 자동 저장</span></h3>
+    <p class="lead">09:09에 Top2가 확정되면 <b>매수시각·매수가·수량·매수금액</b>을 기록하고,
+      09:30에는 <b>매도가·매도금액·손익률·손익금액</b>을 같은 날짜 기록에 자동으로 채운다.
+      브라우저 저장소와 로그인 계정의 Firestore에 함께 보관한다.</p>
+    <div class="row" style="margin-bottom:8px">
+      <button class="ghostbtn" onclick="renderTop2History()">🔄 이력 새로고침</button>
+      <button class="ghostbtn" onclick="top2HistoryCsv()">⬇ CSV</button>
+      <span class="sub">페이지를 닫았더라도 같은 날 다시 열면 미완료 09:30 기록을 복구 시도합니다.</span>
+    </div>
+    <div id="ob_hist_body"><p class="sub">아직 기록이 없습니다.</p></div>
   </div>
 
   <!-- 1bb. 시초가 첫고점 돌파 -->
@@ -619,15 +632,16 @@ function analyze(j){
    KIS 이력만은 localStorage 로 끝내지 않는다. 증권사에 실제로 나간 주문의 기록이라
    브라우저 캐시를 지우면 사라지는 자리에 두면 안 된다 — Firestore users/{uid}.scalp 에도 남긴다.
    (index.html 이 같은 문서의 state 필드를 쓰므로 merge 로 서로 안 건드린다) */
-let PKEY='jkq_scalp_pos_anon', LKEY='jkq_scalp_log_anon', KKEY='jkq_scalp_kis_anon';
-let POS=[], LOG=[], KLOG=[];
+let PKEY='jkq_scalp_pos_anon', LKEY='jkq_scalp_log_anon', KKEY='jkq_scalp_kis_anon', THKEY='jkq_scalp_top2_hist_anon';
+let POS=[], LOG=[], KLOG=[], TOP2HIST=[];
 function loadAll(){
   const g=(k,d)=>{ try{ const v=JSON.parse(localStorage.getItem(k)||'null'); return Array.isArray(v)?v:d; }catch(e){ return d; } };
-  POS=g(PKEY,[]); LOG=g(LKEY,[]); KLOG=g(KKEY,[]);
+  POS=g(PKEY,[]); LOG=g(LKEY,[]); KLOG=g(KKEY,[]); TOP2HIST=g(THKEY,[]);
 }
 function saveP(){ try{ localStorage.setItem(PKEY,JSON.stringify(POS)); }catch(e){} }
 function saveL(){ try{ localStorage.setItem(LKEY,JSON.stringify(LOG)); }catch(e){} }
 function saveK(){ try{ localStorage.setItem(KKEY,JSON.stringify(KLOG)); }catch(e){} cloudSave(); }
+function saveTop2Hist(){ try{ localStorage.setItem(THKEY,JSON.stringify(TOP2HIST)); }catch(e){} cloudSave(); renderTop2History(); }
 
 /* ── 클라우드 동기화 ── */
 let _cloudT=null;
@@ -637,7 +651,7 @@ function cloudSave(){                       // 연타로 쓰지 않게 2초 모�
   _cloudT=setTimeout(async()=>{
     try{
       await window.fb.setDoc(window.fb.doc(window.fb.db,'users',me.uid),
-        { scalp:{ kis:KLOG, pos:POS, updated:Date.now() } }, { merge:true });
+        { scalp:{ kis:KLOG, pos:POS, top2:TOP2HIST, updated:Date.now() } }, { merge:true });
       setSync('클라우드 저장됨 · '+new Date().toLocaleTimeString('ko-KR'));
     }catch(e){ setSync('클라우드 저장 실패 — '+(e.message||e), true); }
   },2000);
@@ -656,9 +670,55 @@ async function cloudLoad(){
       try{ localStorage.setItem(KKEY,JSON.stringify(KLOG)); }catch(e){}
     }
     if(Array.isArray(sc.pos)&&!POS.length&&sc.pos.length){ POS=sc.pos; saveP(); }
+    if(Array.isArray(sc.top2)&&sc.top2.length){
+      const byDate=new Map(TOP2HIST.filter(x=>x&&x.date).map(x=>[x.date,x]));
+      sc.top2.forEach(x=>{ if(!x||!x.date)return; const cur=byDate.get(x.date); if(!cur||(x.updated||0)>(cur.updated||0))byDate.set(x.date,x); });
+      TOP2HIST=[...byDate.values()].sort((a,b)=>String(b.date).localeCompare(String(a.date)));
+      try{ localStorage.setItem(THKEY,JSON.stringify(TOP2HIST)); }catch(e){}
+    }
   }catch(e){ setSync('클라우드 읽기 실패 — '+(e.message||e), true); }
 }
 function setSync(t,bad){ const el=$('klog_sync'); if(el){ el.textContent=t; el.style.color=bad?'var(--sell)':''; } }
+
+function upsertTop2History(lock,rows,closed){
+  if(!lock||!lock.date||!Array.isArray(lock.items))return;
+  const items=lock.items.map((x,i)=>{
+    const r=rows&&rows[i]?rows[i]:x;
+    return {
+      rank:x.rank,code:x.code,name:x.name,mom3:x.mom3,breakout:x.breakout,volRatio:x.volRatio,
+      buyTime:'09:09',buyPrice:+x.entry||0,qty:+(r.qty??x.qty)||0,buyAmount:+(r.buyAmount??x.buyAmount)||0,
+      sellTime:closed?'09:30':'',sellPrice:closed?(+(r.exitPrice||r.cur)||0):0,
+      sellAmount:closed?(+r.sellAmount||0):0,pnlPct:closed&&r.pnl!=null?+r.pnl:null,profit:closed&&r.profit!=null?+r.profit:null
+    };
+  });
+  const rec={date:lock.date,budgetPerStock:+lock.budgetPerStock||0,status:closed?'closed':'open',lockedAt:lock.lockedAt||'',updated:Date.now(),items};
+  const at=TOP2HIST.findIndex(x=>x&&x.date===rec.date);
+  if(at>=0){
+    if(TOP2HIST[at].status==='closed'&&!closed)return;
+    TOP2HIST[at]=rec;
+  }else TOP2HIST.push(rec);
+  TOP2HIST.sort((a,b)=>String(b.date).localeCompare(String(a.date)));
+  saveTop2Hist();
+}
+function renderTop2History(){
+  const el=$('ob_hist_body'); if(!el)return;
+  if(!TOP2HIST.length){el.innerHTML='<p class="sub">아직 기록이 없습니다.</p>';return;}
+  const rows=[];
+  TOP2HIST.forEach(d=>(d.items||[]).forEach(x=>rows.push({d,x})));
+  el.innerHTML='<div class="htable-wrap"><table class="htable"><thead><tr><th>일자</th><th>순위</th><th>종목</th><th>매수</th><th>수량</th><th>매수금액</th><th>매도</th><th>매도금액</th><th>손익률</th><th>손익금액</th><th>상태</th></tr></thead><tbody>'+
+    rows.slice(0,120).map(({d,x})=>'<tr><td>'+esc(d.date)+'</td><td>'+x.rank+'</td><td><b>'+esc(x.name||x.code)+'</b><div class="sub">'+esc(x.code)+'</div></td><td>'+esc(x.buyTime||'')+' · '+commas(Math.round(x.buyPrice||0))+'</td><td>'+commas(x.qty||0)+'주</td><td>'+commas(Math.round(x.buyAmount||0))+'원</td><td>'+(x.sellPrice?esc(x.sellTime||'09:30')+' · '+commas(Math.round(x.sellPrice)):'—')+'</td><td>'+(x.sellAmount?commas(Math.round(x.sellAmount))+'원':'—')+'</td><td class="'+(x.pnlPct!=null&&x.pnlPct>=0?'win':'loss')+'">'+(x.pnlPct==null?'—':(x.pnlPct>=0?'+':'')+x.pnlPct.toFixed(2)+'%')+'</td><td class="'+(x.profit!=null&&x.profit>=0?'win':'loss')+'">'+(x.profit==null?'—':(x.profit>=0?'+':'')+commas(Math.round(x.profit))+'원')+'</td><td><b>'+(d.status==='closed'?'완료':'보유중')+'</b></td></tr>').join('')+
+    '</tbody></table></div>';
+}
+function top2HistoryCsv(){
+  if(!TOP2HIST.length){alert('Top2 이력이 없습니다.');return;}
+  const lines=['date,rank,code,name,mom3,breakout,vol_ratio,buy_time,buy_price,qty,buy_amount,sell_time,sell_price,sell_amount,pnl_pct,profit,status'];
+  TOP2HIST.slice().sort((a,b)=>String(a.date).localeCompare(String(b.date))).forEach(d=>(d.items||[]).forEach(x=>{
+    const q=v=>'"'+String(v??'').replace(/"/g,'""')+'"';
+    lines.push([d.date,x.rank,x.code,q(x.name),x.mom3,x.breakout,x.volRatio,x.buyTime,x.buyPrice,x.qty,x.buyAmount,x.sellTime,x.sellPrice,x.sellAmount,x.pnlPct,x.profit,d.status].join(','));
+  }));
+  const blob=new Blob(['\ufeff'+lines.join('\n')],{type:'text/csv;charset=utf-8'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='top2_paper_history_'+new Date().toISOString().slice(0,10)+'.csv';document.body.appendChild(a);a.click();a.remove();
+}
 
 /* ── 신호 판정 v2 (역추세·과매도 반등) ────────────────────────────────
    추세추종(밴드상단 돌파)은 올해 실증에서 대조군 대비 −0.09%p로 엣지가 0이었다.
@@ -1020,6 +1080,7 @@ function renderTop2(now,candidates,latestByCode){
       return {rank:i+1,code:x.code,name:x.name,mom3:x.mom3,breakout:x.breakout,volRatio:x.volRatio,firstHigh:x.firstHigh,entry:x.entry,entrySrc:x.entrySrc,qty,buyAmount};
     })};
     saveTop2Lock();
+    upsertTop2History(OB_TOP2,null,false);
   }
   const exitNow=now.hm>=930;
   const budgetPerStock=OB_TOP2.budgetPerStock||Math.max(10000,+($('ob_budget')?.value||2000000));
@@ -1034,6 +1095,8 @@ function renderTop2(now,candidates,latestByCode){
     const pnl=isFinite(mark)&&x.entry>0?(mark/x.entry-1)*100:null;
     return Object.assign({},x,{cur,exitPrice,qty,buyAmount,sellAmount,profit,pnl});
   });
+  if(!TOP2HIST.some(h=>h&&h.date===OB_TOP2.date)) upsertTop2History(OB_TOP2,rows,false);
+  if(exitNow) upsertTop2History(OB_TOP2,rows,true);
   if(!OB_TOP2.entryNotified){
     const ok=notifyOpeningEvent('top2-entry-'+now.date,'Top2 모의 매수 시점 · 09:09',
       rows.map(x=>x.rank+'위 '+x.name+' '+x.qty+'주 · 약 '+commas(Math.round(x.buyAmount))+'원 @ '+commas(Math.round(x.entry))).join(' / ')+' · 09:30 전량 모의매도');
@@ -1048,6 +1111,27 @@ function renderTop2(now,candidates,latestByCode){
   body.innerHTML='<div class="htable-wrap"><table class="htable"><thead><tr><th>순위</th><th>종목</th><th>3분 모멘텀</th><th>09:09 매수가</th><th>수량</th><th>매수금액</th><th>'+(exitNow?'09:30 매도가':'현재가')+'</th><th>'+(exitNow?'매도금액':'모의손익')+'</th><th>손익</th><th>상태</th></tr></thead><tbody>'+
     rows.map(x=>'<tr onclick="openChart(\''+esc(x.code)+'\',\''+esc(x.name).replace(/'/g,'&#39;')+'\')" style="cursor:pointer"><td><b>'+x.rank+'</b></td><td><b>'+esc(x.name)+'</b><div class="sub">'+esc(x.code)+' · 돌파 +'+x.breakout.toFixed(2)+'% · 거래량 '+x.volRatio.toFixed(2)+'배</div></td><td class="win"><b>+'+x.mom3.toFixed(2)+'%</b></td><td>'+commas(Math.round(x.entry))+'<div class="sub">'+esc(x.entrySrc)+'</div></td><td><b>'+x.qty+'주</b></td><td>'+commas(Math.round(x.buyAmount))+'원</td><td>'+(exitNow?(x.exitPrice>0?commas(Math.round(x.exitPrice)):'—'):(isFinite(x.cur)?commas(Math.round(x.cur)):'—'))+'</td><td>'+(exitNow?(x.sellAmount==null?'—':commas(Math.round(x.sellAmount))+'원'):(x.pnl==null?'—':(x.pnl>=0?'+':'')+x.pnl.toFixed(2)+'%'))+'</td><td class="'+(x.profit!=null?x.profit>=0:x.pnl!=null&&x.pnl>=0?'win':'loss')+'">'+(x.profit!=null?(x.profit>=0?'+':'')+commas(Math.round(x.profit))+'원':(x.pnl==null?'—':(x.pnl>=0?'+':'')+x.pnl.toFixed(2)+'%'))+'</td><td><b>'+(exitNow?'09:30 전량 모의매도':'09:30까지 보유 관찰')+'</b></td></tr>').join('')+
     '</tbody></table></div><p class="note">종목당 모의금액 '+commas(Math.round(budgetPerStock))+'원 기준 · 09:09에 정수주 수량으로 모의매수 · 선정 후 장중 교체 없음 · 고정 손절/익절 없음 · 09:30 전량 모의매도. 실제 주문은 전송하지 않는다.</p>';
+}
+async function recoverTop2History(){
+  const now=obKstNow();
+  if(!OB_TOP2||OB_TOP2.date!==now.date||now.hm<930)return;
+  const rec=TOP2HIST.find(x=>x&&x.date===now.date);
+  if(rec&&rec.status==='closed')return;
+  const rows=[];
+  for(const x of OB_TOP2.items){
+    try{
+      const min=await mFetch(x.code),a=toBars(min,1).filter(z=>(z.date||'').slice(0,10)===now.date);
+      const b=a.find(z=>{const t=z.date||'';return +t.slice(11,13)===9&&+t.slice(14,16)===30;});
+      const exitPrice=b?(b.ohlcv?(+b.open||+b.close):+b.close):NaN;
+      const qty=x.qty!=null?x.qty:Math.floor((OB_TOP2.budgetPerStock||2000000)/Math.max(1,x.entry));
+      const buyAmount=x.buyAmount!=null?x.buyAmount:qty*x.entry;
+      const sellAmount=isFinite(exitPrice)?qty*exitPrice:null;
+      const profit=sellAmount==null?null:sellAmount-buyAmount;
+      const pnl=isFinite(exitPrice)&&x.entry>0?(exitPrice/x.entry-1)*100:null;
+      rows.push(Object.assign({},x,{qty,buyAmount,exitPrice,cur:exitPrice,sellAmount,profit,pnl}));
+    }catch(e){rows.push(Object.assign({},x,{qty:x.qty||0,buyAmount:x.buyAmount||0}));}
+  }
+  if(rows.some(x=>x.exitPrice>0)) upsertTop2History(OB_TOP2,rows,true);
 }
 async function openingLiveScan(force){
   if(OB_BUSY)return;
@@ -1816,10 +1900,10 @@ function boot(){
     }
     $('gate').style.display='none'; $('app').style.display='';
     PKEY='jkq_scalp_pos_'+user.uid; LKEY='jkq_scalp_log_'+user.uid; AKEY='jkq_scalp_arch_'+user.uid;
-    KKEY='jkq_scalp_kis_'+user.uid;
+    KKEY='jkq_scalp_kis_'+user.uid; THKEY='jkq_scalp_top2_hist_'+user.uid;
     $('log_owner').textContent='· '+(user.displayName||user.email||'');
-    loadAll(); loadArch(); recalc(); renderPos(); renderLog(); renderKlog(); renderArch(); restoreStrategy(); kisInit(); archAuto(); renderOpeningNotify();
-    await cloudLoad(); renderKlog(); renderPos();   // 다른 기기에서 남긴 주문 기록을 합친다
+    loadAll(); loadArch(); recalc(); renderPos(); renderLog(); renderKlog(); renderArch(); renderTop2History(); restoreStrategy(); kisInit(); archAuto(); renderOpeningNotify();
+    await cloudLoad(); renderKlog(); renderPos(); renderTop2History(); await recoverTop2History();   // 다른 기기 기록 병합 + 오늘 미완료 Top2 복구
   });
 }
 if(window.fb) boot(); else window.addEventListener('fb-ready', boot);
