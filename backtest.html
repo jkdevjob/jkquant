@@ -315,7 +315,7 @@ td:first-child{text-align:left;}
   <div class="brand">
     <div>
       <div class="logo">Backtest</div>
-      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v1.178.3</span></h1>
+      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v1.178.4</span></h1>
     </div>
   </div>
   <div class="hright">
@@ -2292,11 +2292,19 @@ function runStdev(days,tkr,cap,N,g,filter,costOn){
     const spend=q*px,fee=spend*FEE;avg=sh<=0?px:(sh*avg+spend)/(sh+q);sh+=q;cash-=spend+fee;feesTotal+=fee;return q; };
   const _sell=(px,q)=>{q=Math.min(Math.floor(sh+1e-9),Math.floor(q+1e-9));if(q<=0)return 0;
     const gg=q*px,fee=gg*FEE;cash+=gg-fee;yearPnl+=q*(px-avg)-fee;sh-=q;feesTotal+=fee;if(sh<=0){sh=0;avg=0;}return q;};
-  const _settle=(px)=>{ if(!CO){yearPnl=0;return;} cash-=capGainTax(yearPnl, tkr); yearPnl=0;
-    // 잔고 하한: 세금 낼 현금이 모자라면 보유주 매도 → 그래도 모자라면 계좌 소진(0). 음수 자산 방지.
-    const EPS=0.01;   // 부동소수 잔여 음수를 파산으로 오판하지 않도록 ε 적용
-    if(cash<-EPS&&sh>1e-9&&px>0){ const q=Math.min(sh,(-cash)/(px*(1-FEE))); if(q>1e-12){ const g=q*px; cash+=g-g*FEE; sh-=q; } }
-    if(cash<-EPS){ cash=0; sh=0; avg=0; } else if(cash<0){ cash=0; } };
+  const _settle=(px)=>{if(!CO){yearPnl=0;return;}
+    const owed=capGainTax(yearPnl,tkr);yearPnl=0;let due=owed;
+    const fromCash=Math.min(Math.max(cash,0),due);cash-=fromCash;due-=fromCash;
+    if(due>0.01&&sh>=1&&px>0){
+      const q=Math.min(Math.floor(sh+1e-9),Math.ceil(due/(px*(1-FEE))-1e-12));
+      if(q>0){
+        _sell(px,q);
+        const pay=Math.min(Math.max(cash,0),due);cash-=pay;due-=pay;
+      }
+    }
+    taxTotal+=owed-due;
+    if(due>0.01){cash=0;sh=0;avg=0;}else if(cash<0)cash=0;
+  };
   days.forEach((d,i)=>{ const gx=gi[d], c=cl[gx];
     { const y=d.slice(0,4); if(cy===null)cy=y; else if(y!==cy){_settle(c);cy=y;} }
     { const eq=cash+sh*c; if(eq>mp)mp=eq; else if(mp>0){const dd=(mp-eq)/mp; if(dd>mdd)mdd=dd;} }
