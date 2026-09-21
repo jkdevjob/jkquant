@@ -315,7 +315,7 @@ td:first-child{text-align:left;}
   <div class="brand">
     <div>
       <div class="logo">Backtest</div>
-      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v1.177.6</span></h1>
+      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v1.177.7</span></h1>
     </div>
   </div>
   <div class="hright">
@@ -2387,7 +2387,7 @@ function runIM50(days,tkr,cap,divs,targetPct,compound=true){
       if(qtHit) T*=0.75;
       if(shares<1e-9){shares=0;avg=0;cycles++;
         if(compound){} else if(cash>cap){ savedProfit+=cash-cap; cash=cap; }
-        else if(cash<cap){ addedCash+=cap-cash; cash=cap; }
+        // 단리 손실 사이클은 외부자금으로 원금을 복구하지 않고 줄어든 잔고 그대로 이월
         T=0;snap.push([d,cash+savedProfit-addedCash]);return;}
     }
     if(divs-T>=1&&cash>1){          // 소진 = T>분할−1 (V4.0과 동일 규약)
