@@ -315,7 +315,7 @@ td:first-child{text-align:left;}
   <div class="brand">
     <div>
       <div class="logo">Backtest</div>
-      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v1.177.0</span></h1>
+      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v1.177.1</span></h1>
     </div>
   </div>
   <div class="hright">
@@ -2054,10 +2054,10 @@ function runIM(days,tkr,cap,divs,targetPct,compound=true){
         // 매수: 잔금÷4, 별지점 −2.5% LOC (운용도구 기본 gap%와 동일)
         if(shares>1e-9){
           const buyP=star5*0.975;
-          // 리버스 소진 = '1개(1주) 매수 불가' 시점 — 1주라도 살 수 있으면 계속 매수
-          if(c<=buyP && cash>=c){
-            _buy(c, Math.min(cash, Math.max(cash/4, c)));   // LOC=종가 (잔금÷4가 1주에 못 미치면 1주)
-            T=T+(divs-T)*0.25;
+          // 원전 쿼터매수: 잔금의 1/4 범위에서만 매수. 1주도 못 사면 그날 매수 없음.
+          if(c<=buyP){
+            const qAmt=cash/4;
+            if(qAmt>=c && _buy(c,qAmt)>0) T=T+(divs-T)*0.25;
           }
         }
       }
@@ -2347,9 +2347,9 @@ function runIM50(days,tkr,cap,divs,targetPct,compound=true){
         }
         if(shares>1e-9){
           const buyP=star5*0.975;
-          if(c<=buyP && cash>=c){   // 리버스 소진 = 1주도 못 사는 시점 (V4.0과 동일 규약)
-            _buy(c, Math.min(cash, Math.max(cash/4, c)));   // LOC=종가
-            T=T+(divs-T)*0.25;
+          if(c<=buyP){
+            const qAmt=cash/4;   // V4.0 원전과 동일: 쿼터 금액을 넘겨 1주를 강제하지 않음
+            if(qAmt>=c && _buy(c,qAmt)>0) T=T+(divs-T)*0.25;
           }
         }
       }
