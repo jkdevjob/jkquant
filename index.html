@@ -520,7 +520,7 @@ try{ if(localStorage.getItem('qcockpit_hadUser')==='1') document.documentElement
 </div>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.67.14</span></h1></div>
+    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.67.15</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -1610,7 +1610,7 @@ document.addEventListener('click',function(e){ var m=document.getElementById('jk
   <footer>
     <strong>JK 퀀트</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.67.14</b> · 2026-09-21</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.67.15</b> · 2026-09-21</div>
   </footer>
 </div>
 
@@ -1636,8 +1636,8 @@ document.addEventListener('click',function(e){ var m=document.getElementById('jk
     <div class="seclabel">익절금 처리 <span class="hint" style="color:var(--faint);font-weight:500">사이클이 끝났을 때</span></div>
     <div class="seg" id="set_compound"><button data-v="1" class="on">복리</button><button data-v="0">단리</button></div>
     <p class="note" style="margin:4px 0 8px"><b>복리</b>는 익절금을 잔금에 남겨 다음 회차 매수금이 커집니다. <b>단리</b>는 사이클이 끝날 때 <b>원금을 넘는 초과분만 빼내</b> 따로 쌓아 두고, 잔금은 원금으로 되돌립니다. 손실로 끝난 사이클은 빼지 않고 그대로 이월합니다.</p>
-    <div class="seclabel">리버스 <span class="hint" style="color:var(--faint);font-weight:500">원금 소진 후 무한매도 · V4.0</span></div><div class="seg" id="set_reverse"><button data-v="0" class="on">끔</button><button data-v="1">켬</button></div>
-    <p class="note" style="margin:-2px 0 8px">끔(기본): 원금 소진 후 <b>후반전 별지점 손절 쿼터매도</b>로만 방어(홀드). 켬: 소진 후 <b>리버스 무한매도</b> 모드 진입. 백테스트상 20분할·급락 후 V반등에서는 끔이 유리했습니다.</p>
+    <div class="seclabel">리버스 <span class="hint" style="color:var(--faint);font-weight:500">원금 소진 후 무한매도 · V4.0</span></div><div class="seg" id="set_reverse"><button data-v="0">끔</button><button data-v="1" class="on">켬</button></div>
+    <p class="note" style="margin:-2px 0 8px"><b>켬(기본)</b>: V4.0 원전대로 소진 후 리버스 무한매도+쿼터매수. <b>끔</b>: 리버스를 사용하지 않는 앱의 비공식 변형입니다. 제공된 리버스 산식은 20·40분할에만 적용합니다.</p>
     <!-- 익절 조절 숨김 — SOXL 전체 −0.6% 열위, MDD가 나빠지는 구간(TECL 31%→62%),
          후반전엔 어차피 무효. 코드는 남기고 UI만 감춘다. 복원 시 tgtdyn-hidden 제거 -->
     <div class="seclabel tgtdyn-hidden">익절 조절 <span class="hint" style="color:var(--faint);font-weight:500">20일 상승률 · 선택</span></div><div class="seg tgtdyn-hidden" id="set_tgtdyn"><button data-v="0" class="on">끔</button><button data-v="1">상승률</button></div>
@@ -2061,7 +2061,7 @@ const won=v=>Math.round((+v||0)*((typeof liveFX!=='undefined'&&liveFX)?liveFX:FX
 const LS='qcockpit_v2', LS_URL='qcockpit_gsheet';
 let S=null;
 
-function defInfSettings(){return{ticker:'SOXL',div:20,target:20,big:20,rowsOn:false,rows:8,gap:2.5,rowqty:1,principal:10000,divmode:'reinv',engine:'v40',shortMA:30,loPct:6,tgtDyn:false}}
+function defInfSettings(){return{ticker:'SOXL',div:20,target:20,big:20,rowsOn:false,rows:8,gap:2.5,rowqty:1,principal:10000,divmode:'reinv',engine:'v40',shortMA:30,loPct:6,tgtDyn:false,reverse:true}}
 // V5.0 숨김 기간: 저장된 세션이 v50이어도 v40으로 강제 (UI가 없어 되돌릴 수 없으므로)
 // 복원 시 이 함수와 load() 안의 호출만 제거하면 된다.
 function forceV40(){
@@ -2072,6 +2072,7 @@ function forceV40(){
       if(o.settings && o.settings.engine==='v50') o.settings.engine='v40';
       // 익절 조절도 숨김 상태 — UI가 없으니 켜져 있으면 끌 방법이 없다. 저장분을 끈다.
       if(o.settings && o.settings.tgtDyn===true) o.settings.tgtDyn=false;
+      if(o.settings && o.settings.reverse===undefined) o.settings.reverse=true;
       Object.values(o).forEach(walk); };
     walk(S);
   }catch(e){}
@@ -2259,7 +2260,7 @@ function computeInf(){
         const cashNow=P0+realized-withdrawn-saved+added;   // 이 시점 inv=0
         let fo=0, fi=0;
         if(cashNow>P0){ fo=cashNow-P0; saved+=fo; }
-        else if(cashNow<P0){ fi=P0-cashNow; added+=fi; }
+        // 단리에서 손실 사이클은 외부자금으로 원금을 복구하지 않는다. 줄어든 잔고 그대로 다음 사이클로 이월.
         flows.push({date:h.date, seq:cycleSeq, out:fo, in:fi});
       }
     }
