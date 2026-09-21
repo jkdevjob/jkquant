@@ -29,8 +29,7 @@ export async function onRequestGet({ request, env }) {
   const debug = url.searchParams.get("debug") === "1";
   const wantIntraday = url.searchParams.get("intraday") !== "0";
   const wantDiv = url.searchParams.get("div") === "1";     // 배당·분할 이력 + raw 종가
-  const wantMinute = url.searchParams.get("minute") === "1";  // 국내 분봉
-  const minuteSource = (url.searchParams.get("minuteSource") || "auto").toLowerCase();
+  const wantMinute = url.searchParams.get("minute") === "1";  // 국내 분봉 (7거래일치 1분)
 
   // Finnhub 키: Cloudflare 환경변수(FINNHUB_KEY) 또는 아래 상수에 직접 입력
   const FINNHUB_KEY = (env && env.FINNHUB_KEY) || INLINE_FINNHUB_KEY || "";
@@ -46,24 +45,9 @@ export async function onRequestGet({ request, env }) {
     /* 분봉은 따로 받는다 — 일봉과 성격이 달라 같은 응답에 섞으면 캐시 수명도 안 맞는다.
        단타 화면이 장 초반 5분 구간을 보려면 이게 필요하다. */
     if (wantMinute) {
-      /* auto: KIS 인증정보가 있으면 OHLCV를 우선 사용하고 실패 시 네이버 종가분봉으로 폴백.
-         Cloudflare 환경변수에 KIS_APP_KEY / KIS_APP_SECRET을 넣으면 프런트에 키가 노출되지 않는다. */
-      if (minuteSource !== "naver" && env && env.KIS_APP_KEY && env.KIS_APP_SECRET) {
-        try {
-          const m = await kisMinute(symbol, env, dbg);
-          if (m.length) {
-            const out = { symbol, currency: "KRW", src: "kis-minute", minuteSchema: "ohlcv", minutes: m };
-            if (debug) out.debug = dbg;
-            return new Response(JSON.stringify(out), { headers: { ...JH, "Cache-Control": "private, max-age=5" } });
-          }
-        } catch (e) {
-          dbg.push(`kisMinute: ${e.message}`);
-          if (minuteSource === "kis") return new Response(JSON.stringify({ error: "no KIS minute data", symbol, debug: dbg }), { status: 502, headers: JH });
-        }
-      }
       try {
         const m = await naverMinute(symbol, dbg);
-        const out = { symbol, currency: "KRW", src: "naver-minute", minuteSchema: "close-volume", minutes: m };
+        const out = { symbol, currency: "KRW", src: "naver-minute", minutes: m };
         if (debug) out.debug = dbg;
         return new Response(JSON.stringify(out), { headers: JH });
       } catch (e) {
@@ -294,48 +278,6 @@ async function stooqDaily(symbol, dbg) {
   }
   return { series: [], ohlc: [] };
 }
-/* 한국투자 Open API 국내주식 당일 분봉 OHLCV.
-   인증정보는 Cloudflare 서버 환경변수에만 둔다. access token은 Cache API에 저장해 호출마다 재발급하지 않는다.
-   과거 여러 거래일 전체 수집은 브로커별 조회 한계가 있으므로 이 함수는 우선 당일 장초반의 정확한 OHLCV 축적용이다. */
-async function kisToken(env, dbg) {
-  const cache = caches.default, key = new Request("https://jkquant.local/kis-token");
-  const hit = await cache.match(key);
-  if (hit) { const j=await hit.json(); if (j && j.access_token) return j.access_token; }
-  const r=await fetch("https://openapi.koreainvestment.com:9443/oauth2/tokenP",{
-    method:"POST",headers:{"Content-Type":"application/json"},
-    body:JSON.stringify({grant_type:"client_credentials",appkey:env.KIS_APP_KEY,appsecret:env.KIS_APP_SECRET})
-  });
-  dbg&&dbg.push(`KIS token: HTTP ${r.status}`);
-  if(!r.ok) throw new Error("token HTTP "+r.status);
-  const j=await r.json(); if(!j.access_token) throw new Error("token missing");
-  const resp=new Response(JSON.stringify({access_token:j.access_token}),{headers:{"Cache-Control":"max-age=21600"}});
-  await cache.put(key,resp); return j.access_token;
-}
-async function kisMinute(code, env, dbg) {
-  const token=await kisToken(env,dbg);
-  const now=new Date(Date.now()+9*3600000), hh=String(now.getUTCHours()).padStart(2,"0"), mm=String(now.getUTCMinutes()).padStart(2,"0");
-  const time=hh+mm+"00";
-  const u=new URL("https://openapi.koreainvestment.com:9443/uapi/domestic-stock/v1/quotations/inquire-time-itemchartprice");
-  u.searchParams.set("FID_ETC_CLS_CODE","");
-  u.searchParams.set("FID_COND_MRKT_DIV_CODE","J");
-  u.searchParams.set("FID_INPUT_ISCD",code);
-  u.searchParams.set("FID_INPUT_HOUR_1",time);
-  u.searchParams.set("FID_PW_DATA_INCU_YN","Y");
-  const r=await fetch(u.toString(),{headers:{authorization:"Bearer "+token,appkey:env.KIS_APP_KEY,appsecret:env.KIS_APP_SECRET,tr_id:"FHKST03010200","Content-Type":"application/json"},cf:{cacheTtl:5}});
-  dbg&&dbg.push(`KIS minute ${code}: HTTP ${r.status}`);
-  if(!r.ok) throw new Error("HTTP "+r.status);
-  const j=await r.json(); if(j.rt_cd && j.rt_cd!=="0") throw new Error(j.msg1||j.msg_cd||"API error");
-  const rows=Array.isArray(j.output2)?j.output2:[], out=[];
-  for(const x of rows){
-    const tm=String(x.stck_cntg_hour||""); if(tm.length<6) continue;
-    const d=String(x.stck_bsop_date||""); if(d.length!==8) continue;
-    const o=+x.stck_oprc,h=+x.stck_hgpr,l=+x.stck_lwpr,cl=+x.stck_prpr,v=+x.cntg_vol||0;
-    if(!(cl>0)) continue;
-    out.push({t:`${d.slice(0,4)}-${d.slice(4,6)}-${d.slice(6,8)} ${tm.slice(0,2)}:${tm.slice(2,4)}`,open:o||cl,high:h||cl,low:l||cl,close:cl,vol:v});
-  }
-  out.sort((a,b)=>a.t.localeCompare(b.t)); return out;
-}
-
 /* 국내 분봉 — 네이버 fchart. 응답은 1분 간격 7거래일치가 통째로 온다 (count는 무시된다).
    시가·고가·저가는 전부 null이고 종가·거래량만 있다 — 5분봉으로 묶을 때 이 점을 감안해야 한다.
    장중이면 마지막 봉이 '지금 이 분'이라, 다음 분이 되기 전까지는 값이 계속 바뀐다. */
