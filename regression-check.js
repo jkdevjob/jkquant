@@ -41,8 +41,10 @@ console.log('[0] 파일 문법');
 
 // index 엔진
 const ki=idx.indexOf('const KIND_T=');
+const vrc=idx.indexOf('const VR_WITHDRAW_CYCLE=');
 const idxParts=[
   idx.slice(ki, idx.indexOf(';', idx.indexOf('(애프터)', ki))+1),
+  idx.slice(vrc, idx.indexOf('\n',vrc)),
   extractFn(idx,'function reverseT(kind,t,div)'),
   idx.slice(idx.indexOf('function isBuy(k)'), idx.indexOf('\n', idx.indexOf('function isBuy(k)'))),
   idx.slice(idx.indexOf('function isSell(k)'), idx.indexOf('\n', idx.indexOf('function isSell(k)'))),
