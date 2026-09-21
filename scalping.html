@@ -187,7 +187,7 @@ canvas{display:block;width:100%;height:auto}
 
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Morning Scalping</div><h1>JK <span class="v">퀀트</span> 단타 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="scVer">v1.3.2</span></h1></div>
+    <div><div class="kicker">Morning Scalping</div><h1>JK <span class="v">퀀트</span> 단타 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="scVer">v1.4.0</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -276,17 +276,21 @@ canvas{display:block;width:100%;height:auto}
   <div id="strategy_opening" class="strategy-pane">
     <div class="strategy-head">실시간 감시 → 과거 백테스트 순서</div>
 
-  <!-- 1ba. 시초가 실시간 감시 -->
+  <!-- 1ba. 시초가 Top2 실시간 연구 신호 -->
   <div class="card">
-    <h3><span class="dot"></span>🚨 시초가 실시간 매수후보 <span class="sub" style="font-weight:600">09:00~09:30 · 1분마다 자동 감시</span></h3>
-    <p class="lead">유니버스를 자동 감시해 <b>갭 + 첫 고점 돌파 + 거래량 증가</b> 조건이 동시에 충족된 종목을 즉시 표시한다. 신호 표시 기능이며 주문은 자동 전송하지 않는다.</p>
+    <h3><span class="dot"></span>🎯 시초가 Top2 모멘텀 <span class="sub" style="font-weight:600">09:08 확정 → 09:09 모의진입 → 09:30 모의청산</span></h3>
+    <p class="lead"><b>첫 3분 고점 대비 +0.2% 이상</b>이고, 09:08의 1분 거래량이 직전 3분 평균의 <b>0.5배 이상</b>인 종목만 남긴 뒤
+      <b>09:05→09:08 최근 3분 상승률</b>이 높은 순으로 <b>상위 2개</b>를 하루 한 번 잠근다.
+      <b>09:09에 모의 진입 시점</b>, <b>09:30에 모의 청산 시점</b>을 표시·알림한다.</p>
+    <div class="warn" style="margin-bottom:10px"><b>시장 테스트용 연구 신호:</b> 자동 주문은 하지 않는다. 13거래일 표본에서 찾은 후보 규칙이라 과최적화 가능성이 있으며,
+      내일은 규칙을 바꾸지 않고 그대로 관찰하기 위한 기능이다. 09:09에 선정된 2종목은 장중에 더 좋아 보이는 종목이 생겨도 교체하지 않는다.</div>
     <div class="row" style="align-items:flex-end;margin-bottom:8px">
-      <div class="fld"><label>감시 종목수</label><select id="ob_live_n"><option>30</option><option selected>50</option><option>100</option></select></div>
-      <button class="prim" id="obLiveBtn" onclick="toggleOpeningLive()">▶ 실시간 감시 시작</button>
+      <div class="fld"><label>감시 유니버스</label><select id="ob_live_n"><option>30</option><option selected>50</option><option>100</option></select></div>
+      <button class="prim" id="obLiveBtn" onclick="toggleOpeningLive()">▶ Top2 감시 시작</button>
       <button class="ghostbtn" id="obNotifyBtn" onclick="toggleOpeningNotify()">🔔 알림 켜기</button>
-      <span class="sub" id="ob_live_msg">장중 09:00~09:30에 사용</span>
+      <span class="sub" id="ob_live_msg">09:09 전에 감시를 켜 두세요</span>
     </div>
-    <div id="ob_live_body"><p class="sub">감시를 시작하면 조건 충족 종목이 여기에 표시됩니다.</p></div>
+    <div id="ob_live_body"><p class="sub">09:00~09:08은 관찰, 09:09부터 오늘의 Top2를 고정하고 09:30까지 추적합니다.</p></div>
     <div id="ob_track" class="warn" style="display:none;margin-top:10px"></div>
   </div>
 
@@ -921,9 +925,13 @@ function showStrategy(name){
 }
 function restoreStrategy(){let n='swing';try{n=localStorage.getItem('jkq_scalp_strategy_tab')||'swing';}catch(e){} if(n!=='opening')n='swing';showStrategy(n);}
 
-/* ══ 시초가 실시간 감시 ══ */
-let OB_LIVE=false, OB_TIMER=null, OB_BUSY=false, OB_SIGNALS=new Map(), OB_NOTIFIED=new Set(), OB_NOTIFY=false;
-try{OB_NOTIFY=localStorage.getItem('jkq_ob_notify')==='1';}catch(e){}
+/* ══ 시초가 Top2 모멘텀 실시간 연구 신호 ══ */
+let OB_LIVE=false, OB_TIMER=null, OB_BUSY=false, OB_NOTIFIED=new Set(), OB_NOTIFY=false, OB_LAST_MINUTE='', OB_TOP2=null;
+try{
+  OB_NOTIFY=localStorage.getItem('jkq_ob_notify')==='1';
+  const z=JSON.parse(localStorage.getItem('jkq_ob_top2_lock')||'null');
+  if(z&&z.date&&Array.isArray(z.items)) OB_TOP2=z;
+}catch(e){}
 async function toggleOpeningNotify(){
   if(!('Notification' in window)){alert('이 브라우저는 웹 알림을 지원하지 않습니다.');return;}
   if(!OB_NOTIFY){const p=await Notification.requestPermission();if(p!=='granted'){alert('알림 권한이 허용되지 않았습니다.');return;}OB_NOTIFY=true;}
@@ -931,14 +939,29 @@ async function toggleOpeningNotify(){
   try{localStorage.setItem('jkq_ob_notify',OB_NOTIFY?'1':'0');}catch(e){} renderOpeningNotify();
 }
 function renderOpeningNotify(){const b=$('obNotifyBtn');if(b)b.textContent=OB_NOTIFY?'🔔 알림 켜짐':'🔕 알림 꺼짐';}
-function notifyOpeningHit(x,key){
-  if(!OB_NOTIFY||OB_NOTIFIED.has(key)||!('Notification' in window)||Notification.permission!=='granted')return;
-  OB_NOTIFIED.add(key); try{new Notification('시초가 매수후보 · '+x.name,{body:x.code+' · 현재 '+commas(x.price)+' · 갭 '+(x.gap==null?'—':x.gap.toFixed(2)+'%')+' · 첫고점 '+commas(x.high),tag:'jkq-ob-'+key});}catch(e){}
+function notifyOpeningEvent(key,title,body){
+  if(!OB_NOTIFY||OB_NOTIFIED.has(key)||!('Notification' in window)||Notification.permission!=='granted')return false;
+  OB_NOTIFIED.add(key);
+  try{new Notification(title,{body,tag:'jkq-ob-'+key});return true;}catch(e){return false;}
 }
-function obKstHM(){ const p=new Intl.DateTimeFormat('en-GB',{timeZone:'Asia/Seoul',hour:'2-digit',minute:'2-digit',hour12:false}).formatToParts(new Date()); return +(p.find(x=>x.type==='hour').value)*100 + +(p.find(x=>x.type==='minute').value); }
-function toggleOpeningLive(){ OB_LIVE?stopOpeningLive():startOpeningLive(); }
-function startOpeningLive(){ OB_LIVE=true; const b=$('obLiveBtn'); if(b) b.textContent='⏸ 실시간 감시 중지'; openingLiveScan(); clearInterval(OB_TIMER); OB_TIMER=setInterval(openingLiveScan,60000); }
-function stopOpeningLive(){ OB_LIVE=false; if(OB_TIMER){clearInterval(OB_TIMER);OB_TIMER=null;} const b=$('obLiveBtn'); if(b)b.textContent='▶ 실시간 감시 시작'; }
+function obKstNow(){
+  const p=new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Seoul',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hour12:false}).formatToParts(new Date());
+  const g=t=>p.find(x=>x.type===t)?.value||'';
+  const date=g('year')+'-'+g('month')+'-'+g('day'), hh=+g('hour'), mm=+g('minute');
+  return {date,hm:hh*100+mm,key:date+' '+String(hh).padStart(2,'0')+':'+String(mm).padStart(2,'0')};
+}
+function obKstHM(){return obKstNow().hm;}
+function saveTop2Lock(){try{localStorage.setItem('jkq_ob_top2_lock',JSON.stringify(OB_TOP2));}catch(e){}}
+function toggleOpeningLive(){OB_LIVE?stopOpeningLive():startOpeningLive();}
+function startOpeningLive(){
+  OB_LIVE=true; const b=$('obLiveBtn'); if(b)b.textContent='⏸ Top2 감시 중지';
+  OB_LAST_MINUTE=''; openingLiveScan(true);
+  clearInterval(OB_TIMER); OB_TIMER=setInterval(()=>openingLiveScan(false),15000);
+}
+function stopOpeningLive(){
+  OB_LIVE=false; if(OB_TIMER){clearInterval(OB_TIMER);OB_TIMER=null;}
+  const b=$('obLiveBtn'); if(b)b.textContent='▶ Top2 감시 시작';
+}
 function archiveOpeningFeed(code,min,daily){
   let added=0; const doh=(daily&&daily.ohlc)||[];
   (min||[]).forEach(x=>{
@@ -956,26 +979,92 @@ function archiveOpeningFeed(code,min,daily){
   });
   return added;
 }
-async function openingLiveScan(){
-  if(OB_BUSY) return; OB_BUSY=true;
-  const msg=$('ob_live_msg'), body=$('ob_live_body'), hm=obKstHM();
-  if(hm<900||hm>930){ msg.textContent='현재 장중 감시시간(09:00~09:30)이 아닙니다 · 마지막 확인 '+new Date().toLocaleTimeString('ko-KR'); OB_BUSY=false; return; }
-  const N=+($('ob_live_n').value||50), obs=+($('ob_obs').value||3), vm=+($('ob_vol').value||1.2), gmin=+($('ob_gmin').value||2), gmax=+($('ob_gmax').value||7), useGap=$('ob_gap').checked;
-  msg.textContent='유니버스 불러오는 중…'; let uni=[];
-  try{const j=await (await fetch('/api/universe?limit='+N)).json(); if(j.error)throw new Error(j.error); uni=j.universe||[];}catch(e){msg.textContent='유니버스 실패: '+(e.message||e);OB_BUSY=false;return;}
-  let idx=0,done=0; const hits=[];
-  async function worker(){while(idx<uni.length){const u=uni[idx++];try{
-    const [min,daily]=await Promise.all([mFetch(u.code),qFetch(u.code,'3mo')]); archiveOpeningFeed(u.code,min,daily); const bars=toBars(min,1).filter(x=>{const t=x.date||'',h=+t.slice(11,13),m=+t.slice(14,16);return h===9&&m<=30;}).sort((a,b)=>a.date.localeCompare(b.date));
-    if(bars.length>=obs+1){const today=bars[bars.length-1].date.slice(0,10), a=bars.filter(x=>x.date.slice(0,10)===today); if(a.length>=obs+1){
-      const doh=daily.ohlc||[], di=doh.findIndex(z=>z.date===today), dayOpen=di>=0?+doh[di].open:+a[0].open, prev=di>0?+doh[di-1].close:0, gap=prev>0?(dayOpen/prev-1)*100:null;
-      if(!useGap||(gap!=null&&gap>=gmin&&gap<=gmax)){const opening=a.slice(0,obs), firstHigh=Math.max(...opening.map(x=>x.high)), cur=a[a.length-1], pv=a[a.length-2], ok=cur.high>firstHigh&&cur.close>=dayOpen&&cur.vol>=Math.max(1,pv.vol)*vm;
-        if(ok){const key=today+'_'+u.code; if(!OB_SIGNALS.has(key))OB_SIGNALS.set(key,Date.now()); const hit={code:u.code,name:u.name||u.code,gap,price:cur.close,high:firstHigh,time:(cur.date||'').slice(11,16),src:cur.ohlcv?'KIS OHLCV':'종가 폴백',fresh:OB_SIGNALS.get(key)}; hits.push(hit); notifyOpeningHit(hit,key);}}
-    }} }catch(e){} done++; msg.textContent='감시 중… '+done+'/'+uni.length;} }
-  await Promise.all(Array.from({length:6},()=>worker())); hits.sort((a,b)=>b.fresh-a.fresh);
-  msg.innerHTML='● 실시간 감시 · '+N+'종목 · 조건충족 <b>'+hits.length+'</b>개 · '+new Date().toLocaleTimeString('ko-KR');
-  body.innerHTML=hits.length?'<div class="htable-wrap"><table class="htable"><thead><tr><th>시각</th><th>종목</th><th>갭</th><th>첫고점</th><th>현재가</th><th>데이터</th></tr></thead><tbody>'+hits.map(x=>'<tr onclick="trackOpeningCandidate(\''+esc(x.code)+'\',\''+esc(x.name).replace(/'/g,'&#39;')+'\')" style="cursor:pointer"><td><b>'+esc(x.time)+'</b></td><td><b>'+esc(x.name)+'</b><div class="sub">'+esc(x.code)+' · 선택</div></td><td>'+(x.gap==null?'—':(x.gap>=0?'+':'')+x.gap.toFixed(2)+'%')+'</td><td>'+commas(x.high)+'</td><td class="win"><b>'+commas(x.price)+'</b></td><td>'+esc(x.src)+'</td></tr>').join('')+'</tbody></table></div>':'<p class="sub">현재 조건을 모두 충족한 매수 후보가 없습니다.</p>';
-  if(saveArch()){ AMETA.last=Date.now(); archSaveMeta(); renderArch(); }
-  OB_BUSY=false;
+function top2Feature(a){
+  const by=new Map();
+  a.forEach(x=>{const t=x.date||'',hm=+(t.slice(11,13)+t.slice(14,16));by.set(hm,x);});
+  const need=[900,901,902,905,906,907,908];
+  if(need.some(h=>!by.has(h))) return null;
+  const first=[by.get(900),by.get(901),by.get(902)];
+  const b5=by.get(905),b6=by.get(906),b7=by.get(907),b8=by.get(908),b9=by.get(909);
+  const firstHigh=Math.max(...first.map(x=>+x.high||+x.close));
+  const breakout=(+b8.close/firstHigh-1)*100;
+  const vavg=((+b5.vol||0)+(+b6.vol||0)+(+b7.vol||0))/3;
+  const volRatio=(+b8.vol||0)/Math.max(1,vavg);
+  const mom3=(+b8.close/+b5.close-1)*100;
+  if(!(breakout>=0.2&&volRatio>=0.5)) return null;
+  const entry=b9?(b9.ohlcv?(+b9.open||+b9.close):+b9.close):null;
+  return {firstHigh,breakout,volRatio,mom3,price:+b8.close,entry,entrySrc:b9?(b9.ohlcv?'09:09 시가':'09:09 참조가'):'대기'};
+}
+function renderTop2(now,candidates,latestByCode){
+  const body=$('ob_live_body'), msg=$('ob_live_msg');
+  if(now.hm<909){
+    const remain=909-now.hm;
+    msg.innerHTML='● 관찰 중 · <b>09:08 봉 마감 후 09:09에 Top2 확정</b> · '+new Date().toLocaleTimeString('ko-KR');
+    body.innerHTML='<div class="warn"><b>아직 선정하지 않습니다.</b> 09:08 봉까지 모두 끝난 뒤 최근 3분 모멘텀을 계산해 상위 2개만 잠급니다.</div>';
+    return;
+  }
+  if(!OB_TOP2||OB_TOP2.date!==now.date){
+    if(!candidates.length){
+      msg.innerHTML='● '+now.date+' · 09:08 확정조건을 만족한 종목이 없습니다.';
+      body.innerHTML='<p class="sub">첫 3분 고점 +0.2% 돌파와 거래량 조건을 동시에 만족한 종목이 없습니다.</p>'; return;
+    }
+    const top=candidates.slice(0,2);
+    if(top.some(x=>!x.entry)){
+      msg.innerHTML='● Top2 계산 완료 · <b>09:09 진입 참조가 수신 대기</b>';
+      body.innerHTML='<p class="sub">09:08 기준 순위는 계산됐지만 09:09 분봉이 아직 도착하지 않았습니다. 잠시 후 자동 재확인합니다.</p>'; return;
+    }
+    OB_TOP2={date:now.date,lockedAt:new Date().toISOString(),entryNotified:false,exitNotified:false,items:top.map((x,i)=>({
+      rank:i+1,code:x.code,name:x.name,mom3:x.mom3,breakout:x.breakout,volRatio:x.volRatio,firstHigh:x.firstHigh,entry:x.entry,entrySrc:x.entrySrc
+    }))};
+    saveTop2Lock();
+  }
+  const exitNow=now.hm>=930;
+  const rows=OB_TOP2.items.map(x=>{
+    const q=latestByCode.get(x.code),cur=q?+q.close:NaN;
+    const pnl=isFinite(cur)&&x.entry>0?(cur/x.entry-1)*100:null;
+    return Object.assign({},x,{cur,pnl});
+  });
+  if(!OB_TOP2.entryNotified){
+    const ok=notifyOpeningEvent('top2-entry-'+now.date,'Top2 모의 진입 시점',
+      rows.map(x=>x.rank+'위 '+x.name+'('+x.code+') '+commas(Math.round(x.entry))).join(' / ')+' · 09:30 모의청산');
+    if(ok){OB_TOP2.entryNotified=true;saveTop2Lock();}
+  }
+  if(exitNow&&!OB_TOP2.exitNotified){
+    const ok=notifyOpeningEvent('top2-exit-'+now.date,'Top2 모의 청산 시점',
+      rows.map(x=>x.name+' '+(x.pnl==null?'—':(x.pnl>=0?'+':'')+x.pnl.toFixed(2)+'%')).join(' / '));
+    if(ok){OB_TOP2.exitNotified=true;saveTop2Lock();}
+  }
+  msg.innerHTML='● '+now.date+' · <b>Top2 확정</b> · '+(exitNow?'<b>09:30 모의청산 시점</b>':'09:30까지 추적 중')+' · '+new Date().toLocaleTimeString('ko-KR');
+  body.innerHTML='<div class="htable-wrap"><table class="htable"><thead><tr><th>순위</th><th>종목</th><th>3분 모멘텀</th><th>첫고점 돌파</th><th>거래량비</th><th>09:09 참조가</th><th>현재가</th><th>모의손익</th><th>상태</th></tr></thead><tbody>'+
+    rows.map(x=>'<tr onclick="openChart(\''+esc(x.code)+'\',\''+esc(x.name).replace(/'/g,'&#39;')+'\')" style="cursor:pointer"><td><b>'+x.rank+'</b></td><td><b>'+esc(x.name)+'</b><div class="sub">'+esc(x.code)+'</div></td><td class="win"><b>+'+x.mom3.toFixed(2)+'%</b></td><td>+'+x.breakout.toFixed(2)+'%</td><td>'+x.volRatio.toFixed(2)+'배</td><td>'+commas(Math.round(x.entry))+'<div class="sub">'+esc(x.entrySrc)+'</div></td><td>'+(isFinite(x.cur)?commas(Math.round(x.cur)):'—')+'</td><td class="'+(x.pnl!=null&&x.pnl>=0?'win':'loss')+'">'+(x.pnl==null?'—':(x.pnl>=0?'+':'')+x.pnl.toFixed(2)+'%')+'</td><td><b>'+(exitNow?'모의청산':'보유 관찰')+'</b></td></tr>').join('')+
+    '</tbody></table></div><p class="note">선정은 09:08 데이터로 하루 한 번 고정 · 장중 교체 없음 · 고정 손절/익절 없음 · 09:30 모의청산. 실제 주문 신호가 아니라 시장 검증용 기록이다.</p>';
+}
+async function openingLiveScan(force){
+  if(OB_BUSY)return;
+  const now=obKstNow();
+  const retry909=now.hm===909&&(!OB_TOP2||OB_TOP2.date!==now.date);
+  if(!force&&OB_LAST_MINUTE===now.key&&!retry909)return;
+  if(now.hm<900||now.hm>930){
+    $('ob_live_msg').textContent='현재 감시시간(09:00~09:30)이 아닙니다 · 마지막 확인 '+new Date().toLocaleTimeString('ko-KR');
+    return;
+  }
+  OB_BUSY=true; OB_LAST_MINUTE=now.key;
+  const msg=$('ob_live_msg'),N=+($('ob_live_n').value||50); msg.textContent='Top2 계산용 분봉 수집 중…'; let uni=[];
+  try{
+    const j=await (await fetch('/api/universe?limit='+N)).json(); if(j.error)throw new Error(j.error); uni=j.universe||[];
+    let idx=0,done=0; const candidates=[],latestByCode=new Map();
+    async function worker(){while(idx<uni.length){const u=uni[idx++];try{
+      const [min,daily]=await Promise.all([mFetch(u.code),qFetch(u.code,'3mo')]); archiveOpeningFeed(u.code,min,daily);
+      const all=toBars(min,1).filter(x=>{const t=x.date||'',h=+t.slice(11,13),m=+t.slice(14,16);return h===9&&m<=30;}).sort((a,b)=>a.date.localeCompare(b.date));
+      const a=all.filter(x=>(x.date||'').slice(0,10)===now.date);
+      if(a.length){latestByCode.set(u.code,a[a.length-1]); const f=top2Feature(a); if(f)candidates.push(Object.assign({code:u.code,name:u.name||u.code},f));}
+    }catch(e){} done++;msg.textContent='Top2 계산 중… '+done+'/'+uni.length;} }
+    await Promise.all(Array.from({length:6},()=>worker()));
+    candidates.sort((a,b)=>(b.mom3-a.mom3)||(b.breakout-a.breakout));
+    renderTop2(now,candidates,latestByCode);
+    if(saveArch()){AMETA.last=Date.now();archSaveMeta();renderArch();}
+  }catch(e){msg.textContent='Top2 감시 실패: '+(e.message||e);}
+  finally{OB_BUSY=false;}
 }
 
 async function runTodayOpeningTest(){
