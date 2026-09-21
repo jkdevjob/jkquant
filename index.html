@@ -520,7 +520,7 @@ try{ if(localStorage.getItem('qcockpit_hadUser')==='1') document.documentElement
 </div>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.67.13</span></h1></div>
+    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.67.14</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -1610,7 +1610,7 @@ document.addEventListener('click',function(e){ var m=document.getElementById('jk
   <footer>
     <strong>JK 퀀트</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.67.13</b> · 2026-09-21</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.67.14</b> · 2026-09-21</div>
   </footer>
 </div>
 
@@ -2274,10 +2274,11 @@ function computeInf(){
   // 리버스 표시 여부: 이미 리버스 거래로 진행 중이거나(state), 아직 리버스 거래는 없지만 원금이 소진된 경우.
   // 소진 기준(라오어 공지) = '1회 매수가 불가능해지는 시점' = 잔금 < 잔금/(분할−T) ⟺ T > 분할−1.
   // 리버스 OFF(기본): 원금 소진 후에도 리버스모드로 넘어가지 않고 일반모드(후반전 별지점 손절 쿼터매도)로 방어.
-  const reverseActive = (st.reverse===true) && (inReverseNow || (st.div-T<1)) && qty>0;   // 소진 = T>분할−1
+  const reverseSupported=(st.div===20||st.div===40); // 제공된 V4.0 리버스 원전은 20·40분할 규칙만 명시
+  const reverseActive = reverseSupported && (st.reverse===true) && (inReverseNow || (st.div-T<1)) && qty>0;
   // 가용 잔금 = 원금 + 실현손익 − 보유분 투입원가 − 출금 − 단리 인출 + 단리 보충
   const bal=st.principal+realized-inv-withdrawn-saved+added;
-  return {avg,qty,inv,realized,T,totbuy,totsell,bal,rows,st,cycleSeq,reverseTraded,inReverseNow,reverseActive,
+  return {avg,qty,inv,realized,T,totbuy,totsell,bal,rows,st,cycleSeq,reverseTraded,inReverseNow,reverseSupported,reverseActive,
           withdrawn,saved,added,flows,simple,outside:withdrawn+saved};
 }
 
@@ -2553,7 +2554,7 @@ function renderOrder(){
       +(B1.slot>0 ? `1회분 ${wn(c.bal/B1.slot)}이 잔금 <b>${wn(c.bal)}</b>을 넘어 매수할 수 없습니다. `
                   : `${st.div}회차를 모두 썼습니다. `)
       +`잔금 <b>${wn(c.bal)}</b>은 다음 사이클까지 대기합니다. `
-      +`${st.reverse===true?'리버스모드 진입 대상입니다.':'아래 <b>쿼터매도</b>로만 방어합니다 (리버스 꺼짐).'}</div>`;
+      +`${st.reverse===true?(c.reverseSupported?'리버스모드 진입 대상입니다.':'⚠ 현재 분할은 원전 리버스 공식이 확인되지 않아 리버스 주문을 만들지 않습니다.'):'아래 <b>쿼터매도</b>로만 방어합니다 (리버스 꺼짐).'}</div>`;
   }else if(c.avg<=0){
     // 첫 매수: 1회매수금 전액을 종가×큰수에 LOC매수
     // 수량은 예상 체결가(≈전일종가) 기준. LOC는 종가에 체결되므로 큰수가로 나누면 ~큰수%만큼 과소매수됨.
@@ -3305,7 +3306,7 @@ function infSimForward(startFrom){
     for(const row of first){
       const cl=row.close, hi=row.high, d=row.date, op=(row.open>0?row.open:0);
       let c=computeInf();
-      const revOn=(st.reverse===true);
+      const revOn=(st.reverse===true)&&(st.div===20||st.div===40);
       if(revOn && !inRev && (st.div-c.T)<1 && c.qty>0) inRev=true;   // 원금 소진 → 리버스 진입
 
       if(revOn && inRev && c.qty>0 && c.avg>0){
