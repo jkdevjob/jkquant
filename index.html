@@ -520,7 +520,7 @@ try{ if(localStorage.getItem('qcockpit_hadUser')==='1') document.documentElement
 </div>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.67.5</span></h1></div>
+    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.67.6</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -1610,7 +1610,7 @@ document.addEventListener('click',function(e){ var m=document.getElementById('jk
   <footer>
     <strong>JK 퀀트</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.67.5</b> · 2026-09-21</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.67.6</b> · 2026-09-21</div>
   </footer>
 </div>
 
@@ -2491,7 +2491,8 @@ function renderOrder(){
     if(isDay1){
       // ── 1일차: 별지점 계산 불필요, 무조건 MOC매도. 매수 없음 ──
       rh+='<div class="order-grp sell"><div class="gt"><span class="gd"></span>리버스 무한매도 · 1일차</div>';
-      rh+=oitem('s',`무한매도 (보유÷${sellDiv})`,'MOC',c.avg,Math.max(1,sellQty));
+      if(sellQty>=1) rh+=oitem('s',`무한매도 (보유÷${sellDiv})`,'MOC',c.avg,sellQty);
+      else rh+=`<div class="note" style="color:var(--gold)">🚫 무한매도 수량 0주 — 보유 ${nfix(c.qty,0)}주 ÷ ${sellDiv} = ${sellQty}주(내림). 원전 규칙대로 최소 1주를 강제하지 않습니다.</div>`;
       rh+=`<div class="note">리버스모드 진입 1일차 — 별지점 무관, <b>무조건 MOC매도</b>. 매수는 없습니다.</div>`;
       rh+='</div>';
     }else{
@@ -2504,7 +2505,8 @@ function renderOrder(){
         <div class="note" style="margin-top:6px">현재 적용: ${star5?('<b>'+px(star5)+'</b> ('+sp.src+')'):'<b style=\\"color:var(--gold)\\">계산 불가</b> — 종가 입력 필요'}</div>
       </div></div>`;
       rh+='<div class="order-grp sell"><div class="gt"><span class="gd"></span>리버스 무한매도</div>';
-      rh+=oitem('s',`무한매도 (보유÷${sellDiv})`, star5?'LOC':'MOC', star5||c.avg, Math.max(1,sellQty));
+      if(sellQty>=1) rh+=oitem('s',`무한매도 (보유÷${sellDiv})`, star5?'LOC':'MOC', star5||c.avg, sellQty);
+      else rh+=`<div class="note" style="color:var(--gold)">🚫 무한매도 수량 0주 — 보유 ${nfix(c.qty,0)}주 ÷ ${sellDiv} = ${sellQty}주(내림).</div>`;
       rh+=`<div class="note">별지점 위에서 매도. 별지점 계산 불가 시에만 잠정 MOC.</div>`;
       rh+='</div>';
       rh+='<div class="order-grp buy"><div class="gt"><span class="gd"></span>리버스 쿼터매수</div>';
@@ -3311,12 +3313,12 @@ function infSimForward(startFrom){
         const sellDiv=st.div>=40?20:10;
         const day1=!c.reverseTraded;
         if(day1){                                                    // 1일차: 무조건 MOC 매도
-          put('리버스매도',d,cl,Math.min(c.qty,Math.max(1,Math.floor(c.qty/sellDiv))));
+          { const sq=Math.floor(c.qty/sellDiv); if(sq>=1) put('리버스매도',d,cl,Math.min(c.qty,sq)); }
         }else{
           const p5=[]; for(let k=row.i-5;k<row.i;k++){ const v=closeAt(k); if(v>0) p5.push(v); }
           const star5=p5.length?p5.reduce((a,b)=>a+b,0)/p5.length:0;
           if(star5>0 && cl>=star5){
-            put('리버스매도',d,cl,Math.min(c.qty,Math.max(1,Math.floor(c.qty/sellDiv))));
+            { const sq=Math.floor(c.qty/sellDiv); if(sq>=1) put('리버스매도',d,cl,Math.min(c.qty,sq)); }
           }else if(star5>0){
             const bp=star5*(1-(st.gap||2.5)/100);
             if(cl<=bp){ const bal=c.bal;                              // 리버스 소진 = 1주도 못 살 때
@@ -3326,7 +3328,7 @@ function infSimForward(startFrom){
         }
         const c2=computeInf();
         if(c2.qty<=0) inRev=false;                                   // 전량매도 → 사이클 종료
-        else if(cl > c2.avg*exitMulOf(st.target) && (st.div-c2.T)>=1) inRev=false;  // 가격 회복 → 내일부터 일반
+        else if(cl > c2.avg*exitMulOf(st.target)) inRev=false;  // 가격 회복 → 내일부터 일반. 복귀 후 1회분이 안 되면 다시 리버스 진입
         st.simLast=d; continue;
       }
 
