@@ -187,7 +187,7 @@ canvas{display:block;width:100%;height:auto}
 
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Morning Scalping</div><h1>JK <span class="v">퀀트</span> 단타 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="scVer">v1.1.2</span></h1></div>
+    <div><div class="kicker">Morning Scalping</div><h1>JK <span class="v">퀀트</span> 단타 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="scVer">v1.2.0</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -283,6 +283,7 @@ canvas{display:block;width:100%;height:auto}
     <div class="row" style="align-items:flex-end;margin-bottom:8px">
       <div class="fld"><label>감시 종목수</label><select id="ob_live_n"><option>30</option><option selected>50</option><option>100</option></select></div>
       <button class="prim" id="obLiveBtn" onclick="toggleOpeningLive()">▶ 실시간 감시 시작</button>
+      <button class="ghostbtn" id="obNotifyBtn" onclick="toggleOpeningNotify()">🔔 알림 켜기</button>
       <span class="sub" id="ob_live_msg">장중 09:00~09:30에 사용</span>
     </div>
     <div id="ob_live_body"><p class="sub">감시를 시작하면 조건 충족 종목이 여기에 표시됩니다.</p></div>
@@ -894,7 +895,19 @@ function showStrategy(name){
 function restoreStrategy(){let n='swing';try{n=localStorage.getItem('jkq_scalp_strategy_tab')||'swing';}catch(e){} if(n!=='opening')n='swing';showStrategy(n);}
 
 /* ══ 시초가 실시간 감시 ══ */
-let OB_LIVE=false, OB_TIMER=null, OB_BUSY=false, OB_SIGNALS=new Map();
+let OB_LIVE=false, OB_TIMER=null, OB_BUSY=false, OB_SIGNALS=new Map(), OB_NOTIFIED=new Set(), OB_NOTIFY=false;
+try{OB_NOTIFY=localStorage.getItem('jkq_ob_notify')==='1';}catch(e){}
+async function toggleOpeningNotify(){
+  if(!('Notification' in window)){alert('이 브라우저는 웹 알림을 지원하지 않습니다.');return;}
+  if(!OB_NOTIFY){const p=await Notification.requestPermission();if(p!=='granted'){alert('알림 권한이 허용되지 않았습니다.');return;}OB_NOTIFY=true;}
+  else OB_NOTIFY=false;
+  try{localStorage.setItem('jkq_ob_notify',OB_NOTIFY?'1':'0');}catch(e){} renderOpeningNotify();
+}
+function renderOpeningNotify(){const b=$('obNotifyBtn');if(b)b.textContent=OB_NOTIFY?'🔔 알림 켜짐':'🔕 알림 꺼짐';}
+function notifyOpeningHit(x,key){
+  if(!OB_NOTIFY||OB_NOTIFIED.has(key)||!('Notification' in window)||Notification.permission!=='granted')return;
+  OB_NOTIFIED.add(key); try{new Notification('시초가 매수후보 · '+x.name,{body:x.code+' · 현재 '+commas(x.price)+' · 갭 '+(x.gap==null?'—':x.gap.toFixed(2)+'%')+' · 첫고점 '+commas(x.high),tag:'jkq-ob-'+key});}catch(e){}
+}
 function obKstHM(){ const p=new Intl.DateTimeFormat('en-GB',{timeZone:'Asia/Seoul',hour:'2-digit',minute:'2-digit',hour12:false}).formatToParts(new Date()); return +(p.find(x=>x.type==='hour').value)*100 + +(p.find(x=>x.type==='minute').value); }
 function toggleOpeningLive(){ OB_LIVE?stopOpeningLive():startOpeningLive(); }
 function startOpeningLive(){ OB_LIVE=true; const b=$('obLiveBtn'); if(b) b.textContent='⏸ 실시간 감시 중지'; openingLiveScan(); clearInterval(OB_TIMER); OB_TIMER=setInterval(openingLiveScan,60000); }
@@ -912,7 +925,7 @@ async function openingLiveScan(){
     if(bars.length>=obs+1){const today=bars[bars.length-1].date.slice(0,10), a=bars.filter(x=>x.date.slice(0,10)===today); if(a.length>=obs+1){
       const doh=daily.ohlc||[], di=doh.findIndex(z=>z.date===today), dayOpen=di>=0?+doh[di].open:+a[0].open, prev=di>0?+doh[di-1].close:0, gap=prev>0?(dayOpen/prev-1)*100:null;
       if(!useGap||(gap!=null&&gap>=gmin&&gap<=gmax)){const opening=a.slice(0,obs), firstHigh=Math.max(...opening.map(x=>x.high)), cur=a[a.length-1], pv=a[a.length-2], ok=cur.high>firstHigh&&cur.close>=dayOpen&&cur.vol>=Math.max(1,pv.vol)*vm;
-        if(ok){const key=today+'_'+u.code; if(!OB_SIGNALS.has(key))OB_SIGNALS.set(key,Date.now()); hits.push({code:u.code,name:u.name||u.code,gap,price:cur.close,high:firstHigh,time:(cur.date||'').slice(11,16),src:cur.ohlcv?'KIS OHLCV':'종가 폴백',fresh:OB_SIGNALS.get(key)});}}
+        if(ok){const key=today+'_'+u.code; if(!OB_SIGNALS.has(key))OB_SIGNALS.set(key,Date.now()); const hit={code:u.code,name:u.name||u.code,gap,price:cur.close,high:firstHigh,time:(cur.date||'').slice(11,16),src:cur.ohlcv?'KIS OHLCV':'종가 폴백',fresh:OB_SIGNALS.get(key)}; hits.push(hit); notifyOpeningHit(hit,key);}}
     }} }catch(e){} done++; msg.textContent='감시 중… '+done+'/'+uni.length;} }
   await Promise.all(Array.from({length:6},()=>worker())); hits.sort((a,b)=>b.fresh-a.fresh);
   msg.innerHTML='● 실시간 감시 · '+N+'종목 · 조건충족 <b>'+hits.length+'</b>개 · '+new Date().toLocaleTimeString('ko-KR');
@@ -1648,7 +1661,7 @@ function boot(){
     PKEY='jkq_scalp_pos_'+user.uid; LKEY='jkq_scalp_log_'+user.uid; AKEY='jkq_scalp_arch_'+user.uid;
     KKEY='jkq_scalp_kis_'+user.uid;
     $('log_owner').textContent='· '+(user.displayName||user.email||'');
-    loadAll(); loadArch(); recalc(); renderPos(); renderLog(); renderKlog(); renderArch(); restoreStrategy(); kisInit(); archAuto();
+    loadAll(); loadArch(); recalc(); renderPos(); renderLog(); renderKlog(); renderArch(); restoreStrategy(); kisInit(); archAuto(); renderOpeningNotify();
     await cloudLoad(); renderKlog(); renderPos();   // 다른 기기에서 남긴 주문 기록을 합친다
   });
 }
