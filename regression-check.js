@@ -756,13 +756,13 @@ console.log('[18] 백테 분배금 분해');
   ok('가격수익·현금수령총수익을 따로 낸다', /retPrice:/.test(ds) && /retCash:/.test(ds));
   ok('배당 없으면 null (화면에서 감춤)', /if\(!inWin\.length\) return null/.test(ds));
   // 기존 수익률(adjclose)은 절대 바뀌면 안 된다 — 앵커가 그걸 물고 있다
-  let dc=''; try{ dc=extractFn(bt,'function _dcaOne(t,days,amt,step,costOn,dipMul)'); }catch(e){}
+  let dc=''; try{ dc=extractFn(bt,'function _dcaOne(t,days,amt,freq,costOn,dipMul)'); }catch(e){}
   ok('적립 결과에 div를 덧붙인다(기존 ret 불변)',
      /ret:inv>0\?\(fin\/inv-1\)\*100:0/.test(dc) && /div:_div/.test(dc));
   let bh=''; try{ bh=extractFn(bt,'function runBH(days,tkr,cap,costOn)'); }catch(e){}
   ok('거치(B&H)에도 분해를 붙인다', /divSplit\(tkr,days,\[\[days\[0\]/.test(bh));
   // 단리 선택 시에만 raw 경로 결과로 갈아끼운다 (배당 없는 종목은 두 경로가 같아 불변)
-  let d1=''; try{ d1=extractFn(bt,'function _dcaOne(t,days,amt,step,costOn,dipMul)'); }catch(e){}
+  let d1=''; try{ d1=extractFn(bt,'function _dcaOne(t,days,amt,freq,costOn,dipMul)'); }catch(e){}
   ok('단리면 최종·MDD를 현금수령 경로로', /dcaReinv===false/.test(d1) && /fin=_div\.priceVal\+_div\.divCash/.test(d1)
      && /dcaReinv===false/.test(bh));
   /* 표는 수익률을 셋으로 쪼갠다: 가격 + 분배 = 합계. CAGR·MDD도 합계 기준.
@@ -3025,7 +3025,8 @@ console.log('\n[67] 엔진 스모크 — 전부 실제로 굴러간다');
   // 엔진이 기대는 이웃 함수들도 파일에서 그대로 떼어 온다 (재구현 금지 원칙)
   const helpers=['function srcOf(t)','function divSplit(tkr, days, buys)','function _maOpt(opt)',
                  'function _maHold(sell,a,b)','function _maEntry(buy,a,b)',
-                 'function _maAbove(tkr,N,SHORT,BUY,SELL)','function _asapInd(tkr)','function _ivsWeights(tkr,N,s0)'];
+                 'function _maAbove(tkr,N,SHORT,BUY,SELL)','function _asapInd(tkr)','function _ivsWeights(tkr,N,s0)',
+                 'function _isoWeek(d)','function _dcaFreq(f)','function _dcaHits(days,freq)','function _dcaMA(t,N)'];
   let pre='';
   for(const h of helpers){ try{ pre+=extractFn(bt,h)+'\n'; }catch(e){ ok('도우미 추출: '+h, false, e.message); } }
   const mSg=bt.match(/const SGOV_RATE=\{[^}]*\};/); if(mSg) pre+=mSg[0]+'\n';
@@ -3042,7 +3043,9 @@ console.log('\n[67] 엔진 스모크 — 전부 실제로 굴러간다');
     ['runMA200',     'function runMA200(days,tkr,cap,N,costOn,opt)',                 f=>f(D,T,10000,200,true)],
     ['runMA200Accum','function runMA200Accum(days,tkr,contribTotal,N,costOn,opt)',   f=>f(D,T,10000,200,true)],
     ['runASAP',      'function runASAP(days,tkr,opt)',                               f=>f(D,T,{base:10,mid:50,deep:100,costOn:true})],
-    ['_dcaOne',      'function _dcaOne(t,days,amt,step,costOn,dipMul)',              f=>f(T,D,10,1,true,1)],
+    ['_dcaOne(매일)', 'function _dcaOne(t,days,amt,freq,costOn,dipMul)',              f=>f(T,D,10,'daily',true,1)],
+    ['_dcaOne(매주)', 'function _dcaOne(t,days,amt,freq,costOn,dipMul)',              f=>f(T,D,10,'weekly',true,1)],
+    ['_dcaOne(매월)', 'function _dcaOne(t,days,amt,freq,costOn,dipMul)',              f=>f(T,D,10,'monthly',true,2)],
     ['runIVS',       'function runIVS(days,tkr,cap,s0,N,band,costOn,mode,pair)',     f=>f(D,T,10000,0.45,60,0.10,true,'iv','cash')],
     ['runIM22',      'function runIM22(days,tkr,cap,divs,targetPct,compound',        f=>f(D,T,10000,20,20,true)],
     ['runIM30',      'function runIM30(days,tkr,cap,divs,targetPct,compound',        f=>f(D,T,10000,20,20,true)],
@@ -3066,6 +3069,75 @@ console.log('\n[67] 엔진 스모크 — 전부 실제로 굴러간다');
                       ['runVR','function runVR(days,tkr,params)'],
                       ['runASAP','function runASAP(days,tkr,opt)']]){
     ok(`${n} 에 남의 매개변수 이름이 없다`, !/targetPct/.test(extractFn(bt,m)));
+  }
+}
+
+/* ════ 68. 적립 주기는 달력 · 강제매도 회계는 한 규약 · 워밍업은 숨기지 않는다 ════ */
+console.log('\n[68] 달력 적립 · 강제매도 회계 · 워밍업 표시');
+{
+  // ── ⑦ 적립 주기: '매주'는 주의 첫 거래일, '매월'은 달의 첫 거래일 ──
+  const hitSrc=[extractFn(bt,'function _isoWeek(d)'),extractFn(bt,'function _dcaFreq(f)'),
+                extractFn(bt,'function _dcaHits(days,freq)'),extractFn(bt,'function _dcaCount(days,freq)')].join('\n');
+  const H=new Function(hitSrc+'\nreturn {_isoWeek,_dcaHits,_dcaCount};')();
+  ok('나머지(i%step)로 적립일을 잡지 않는다', !/i%step===0/.test(bt) && /if\(p>0&&HIT\[i\]\)/.test(bt));
+  ok('주기표(5·21 거래일)가 코드에 안 남아 있다', !/\{daily:1,weekly:5,monthly:21\}/.test(bt));
+  const dd=DAYS.SOXL||DAYS.TQQQ;
+  if(dd){
+    const firstOf=(k)=>{ const m={}; for(const d of dd) if(!m[k(d)]) m[k(d)]=d; return m; };
+    const mKey=d=>d.slice(0,7), wKey=H._isoWeek;
+    const fm=firstOf(mKey), fw=firstOf(wKey);
+    const hitM=dd.filter((d,i)=>H._dcaHits(dd,'monthly')[i]);
+    const hitW=dd.filter((d,i)=>H._dcaHits(dd,'weekly')[i]);
+    ok('매월 = 그 달의 첫 거래일, 달마다 딱 한 번',
+       hitM.every(d=>fm[mKey(d)]===d) && hitM.length===Object.keys(fm).length, `${hitM.length}회 / ${Object.keys(fm).length}달`);
+    ok('매주 = 그 주의 첫 거래일, 주마다 딱 한 번',
+       hitW.every(d=>fw[wKey(d)]===d) && hitW.length===Object.keys(fw).length, `${hitW.length}회 / ${Object.keys(fw).length}주`);
+    ok('매일은 모든 거래일', H._dcaCount(dd,'daily')===dd.length);
+    // 옛 방식(i%21)은 달 안에서 날짜가 떠돌았다 — 새 방식은 안 떠돈다
+    const oldM=dd.filter((d,i)=>i%21===0);
+    ok('옛 나머지 방식과 실제로 다르다', JSON.stringify(oldM)!==JSON.stringify(hitM));
+    // 해가 바뀌는 주를 ISO 규칙대로 묶는가 (12월 말과 1월 초가 같은 주)
+    ok('ISO 주가 연말연시를 가르지 않는다', H._isoWeek('2025-12-31')===H._isoWeek('2026-01-02'),
+       `${H._isoWeek('2025-12-31')} vs ${H._isoWeek('2026-01-02')}`);
+  }
+
+  // ── ⑧ 세금 낼 현금이 모자라 파는 길: 여섯 엔진이 같은 회계여야 한다 ──
+  const bodies={
+    'runIM'  : extractFn(bt,'function runIM(days,tkr,cap,divs,targetPct,compound'),
+    'runIM22': extractFn(bt,'function runIM22(days,tkr,cap,divs,targetPct,compound'),
+    'runIM30': extractFn(bt,'function runIM30(days,tkr,cap,divs,targetPct,compound'),
+    'runIM50': extractFn(bt,'function runIM50(days,tkr,cap,divs,targetPct,compound'),
+    'runStdev': extractFn(bt,'function runStdev(days,tkr,cap,N,g,filter,costOn)'),
+  };
+  for(const [n,b2] of Object.entries(bodies)){
+    ok(`${n} 강제매도가 제 _sell 을 탄다`, /if\(q>1e-12\) _sell\(px, ?q(, ?0)?\);/.test(b2),
+       '손익·수수료를 손으로 다시 쓰면 또 갈린다');
+    ok(`${n} 강제매도에서 주식 수만 줄이지 않는다`, !/const (gross|g)=q\*px[^\n]*sh(ares)?-=q;/.test(b2));
+  }
+  { const v=extractFn(bt,'function runVR(days,tkr,params)');
+    ok('runVR 강제매도도 수수료를 문다', /const q=Math\.min\(shares, due\/\(c\*\(1-FEE\)\)\), gross=q\*c, fee=gross\*FEE;/.test(v)
+       && /yearPnl\+=q\*\(c-avg\)-fee; feesTotal\+=fee;/.test(v)); }
+
+  // ── ⑪ 워밍업: 신호 없이 보유로 들어간 날을 세어 화면에 알린다 ──
+  ok('_maAbove 가 워밍업 길이를 돌려준다', /return \{above,dts,warmN:Math\.max\(N,SHORT\)\};/.test(bt));
+  ok('두 200일선 엔진이 워밍업 일수를 센다',
+     (bt.match(/const warmDays=days\.reduce\(/g)||[]).length===2
+     && /mdd:mdd\*100,warmDays,/.test(bt) && /snap, warmDays,/.test(bt));
+  ok('워밍업이 있으면 화면에 알린다', /function noteWarmup\(results\)/.test(bt)
+     && /noteSkipped\(maSkip\); noteWarmup\(results\);/.test(bt));
+  // 실제로 세는지 — 상장 초부터 고르면 199일, 뒤로 옮기면 0일
+  {
+    const pre2=['function srcOf(t)','function _maOpt(opt)','function _maHold(sell,a,b)','function _maEntry(buy,a,b)',
+                'function _maAbove(tkr,N,SHORT,BUY,SELL)','function divSplit(tkr, days, buys)']
+               .map(m=>extractFn(bt,m)).join('\n')+'\n'
+               +(bt.match(/const MA_COND_LBL=\{[^}]*\};/)||[''])[0]+'\n'
+               +'var levExt=false, EXTM={}, maBuy="ma", maSell="ma", maShort=50, maPark="cash";\n';
+    global.META=global.META||{SOXL:{lev:3},TQQQ:{lev:3},TECL:{lev:3}};
+    const fn=new Function(pre2+'return ('+extractFn(bt,'function runMA200(days,tkr,cap,N,costOn,opt)').replace(/^function \w+\(/,'function (')+')')();
+    const T2=DAYS.SOXL?'SOXL':'TQQQ', D2=DAYS[T2];
+    const a=fn(D2,T2,10000,200,true), b2=fn(D2.slice(250),T2,10000,200,true);
+    ok('상장 초부터 고르면 워밍업 일수가 잡힌다', a.warmDays>150&&a.warmDays<200, String(a.warmDays));
+    ok('시작일을 뒤로 옮기면 0일', b2.warmDays===0, String(b2.warmDays));
   }
 }
 
