@@ -520,7 +520,7 @@ try{ if(localStorage.getItem('qcockpit_hadUser')==='1') document.documentElement
 </div>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.67.4</span></h1></div>
+    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.67.5</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -997,7 +997,7 @@ document.addEventListener('click',function(e){ var m=document.getElementById('jk
         <p class="note" style="margin-top:0">밴드·사다리·V갱신은 셋 다 똑같고, 아래 <b>3가지만</b> 모드에 따라 바뀝니다.</p>
         <div class="cyc-scroll"><table class="cyctbl">
           <tr><th>구분</th><th>🟢적립식</th><th>🔵거치식</th><th>🟠인출식</th></tr>
-          <tr><td>매 사이클 현금</td><td>+적립금</td><td>없음</td><td>2주마다 최대 −$200</td></tr>
+          <tr><td>매 사이클 현금</td><td>+적립금</td><td>없음</td><td>2주마다 최대 −200$</td></tr>
           <tr><td>다음 V</td><td>+Pool/G <b>+적립</b></td><td>+Pool/G</td><td>+Pool/G <b>−실제 인출액</b></td></tr>
           <tr><td>Pool 매수한도</td><td>×0.75</td><td>×0.5</td><td>×0.25</td></tr>
           <tr><td>용도</td><td>자산 형성</td><td>목돈 굴리기</td><td>생활비 인출</td></tr>
@@ -1610,7 +1610,7 @@ document.addEventListener('click',function(e){ var m=document.getElementById('jk
   <footer>
     <strong>JK 퀀트</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.67.4</b> · 2026-09-21</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.67.5</b> · 2026-09-21</div>
   </footer>
 </div>
 
@@ -3462,7 +3462,7 @@ function computeVr(){
 }
 
 const CYC_DAYS=14;   // 한 사이클 = 2주(달력 14일 ≒ 거래일 10일, 백테 INTERVAL과 같음)
-const VR_WITHDRAW_CYCLE=200; // 인출식: 2주 갱신마다 계획 인출액 $200
+const VR_WITHDRAW_CYCLE=200; // 인출식: 2주 갱신마다 계획 인출액 200$
 /* 이번 사이클이 언제 시작됐나.
    설정 cycStart가 우선이고, 없으면 이력에서 되찾는다 —
    첫 매수만 하고 아직 한 번도 '다음 사이클 진입'을 안 누른 계좌도 D-day가 나와야 한다. */
@@ -3752,7 +3752,7 @@ function computeNextV(c,ev){
   const isAccum=st.mode===0.75, isWd=st.mode===0.25; // 거치식(0.5)은 현금흐름 0
   const planned = isWd ? VR_WITHDRAW_CYCLE : (isAccum ? (st.add||0) : 0);
   // 인출식은 "계획액"이 아니라 실제로 Pool에서 빠질 수 있는 금액만 V에서 차감한다.
-  // Pool이 $80이면 실제 인출도 $80, V 차감도 $80. Pool이 0이면 둘 다 0.
+  // Pool이 80$이면 실제 인출도 80$, V 차감도 80$. Pool이 0이면 둘 다 0.
   const flowAmt = isWd ? Math.min(planned,Pool) : planned;
   const sign=isWd?-1:1;
   const flowLabel=isWd?'인출금':'적립금';
@@ -3795,7 +3795,7 @@ function renderVrNext(){
     if(nt){
       if(st.mode===0.25){
         const short=r.flowAmt<r.planned ? ` · 현재 Pool 기준 실제 인출 ${wn(r.flowAmt)}` : '';
-        nt.innerHTML=`🟠 인출식 — <b>2주마다 계획 $200</b>. 실제로 Pool에서 빠지는 금액만 V에서 차감합니다${short}. Pool이 부족하면 부족한 만큼만 인출되고, 0이면 V에서도 0만 차감됩니다.`;
+        nt.innerHTML=`🟠 인출식 — <b>2주마다 계획 200$</b>. 실제로 Pool에서 빠지는 금액만 V에서 차감합니다${short}. Pool이 부족하면 부족한 만큼만 인출되고, 0이면 V에서도 0만 차감됩니다.`;
       }else{
         nt.innerHTML = st.autoCyc
           ? '⚙️ <b>자동 진입</b> 켜짐 — 진입일이 지나면 앱을 열 때 V·적립이 알아서 갱신됩니다. 매매는 자동으로 하지 않습니다. 아래 버튼은 앞당겨 진입할 때만 쓰세요.'
@@ -6110,7 +6110,7 @@ function vrStepCycle(sess, c, dateStr, close){
     lo:+c.lo.toFixed(2), up:+c.up.toFixed(2), trade:+c.cycTrade.toFixed(2),
     startPool:+c.cycStartPool.toFixed(2), E:ev>0?+ev.toFixed(2):null, close:close>0?+close.toFixed(4):null});
   const newCyc=c.curCyc+1;
-  // 실제 현금흐름만 기록한다. 인출식에서 Pool 부족으로 $200을 다 못 빼면
+  // 실제 현금흐름만 기록한다. 인출식에서 Pool 부족으로 200$을 다 못 빼면
   // 실제 빠진 금액만 wd 기록에 남고, 0이면 가짜 인출 기록도 만들지 않는다.
   if(r.flowAmt>0) sess.hist.push({type:(r.sign<0?'wd':'add'), date:dateStr, amt:r.flowAmt, cyc:newCyc,
                                   ts:Date.now()+st.cycLog.length, auto:true});
