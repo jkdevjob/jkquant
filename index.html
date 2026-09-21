@@ -520,7 +520,7 @@ try{ if(localStorage.getItem('qcockpit_hadUser')==='1') document.documentElement
 </div>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.67.11</span></h1></div>
+    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.67.12</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -1610,7 +1610,7 @@ document.addEventListener('click',function(e){ var m=document.getElementById('jk
   <footer>
     <strong>JK 퀀트</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.67.11</b> · 2026-09-21</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.67.12</b> · 2026-09-21</div>
   </footer>
 </div>
 
@@ -3752,6 +3752,17 @@ function renderVrTable(){
     ? '<div class="resv-row" style="background:#33302040;color:var(--gold)">⚠ 이번 사이클 Pool 사용 한도 소진 — 다음 V 갱신까지 추가 예약매수 없음.</div>'
     : '';
 }
+function quickLadder(type,price){
+  const c=computeVr();
+  if(!confirm(`${type==='buy'?'매수':'매도'} ${wn(price)} × 1주를 지금 기록할까요?`))return;
+  const date=new Date().toISOString().slice(0,10);
+  const rec={type,date,price:+price,qty:1,cyc:c.curCyc,ts:Date.now()};
+  const h=curStrat().hist; h.push(rec); sortHist(h); save(); refreshVr();
+  alert('기록됨 ✓');
+}
+
+/* ════════ 다음 V 미리보기 ════════ */
+
 function computeNextV(c,ev){
   const st=c.st, V=c.V, Pool=Math.max(0,c.pool), G=st.g;
   const isAccum=st.mode===0.75, isWd=st.mode===0.25;
