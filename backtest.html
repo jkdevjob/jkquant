@@ -315,7 +315,7 @@ td:first-child{text-align:left;}
   <div class="brand">
     <div>
       <div class="logo">Backtest</div>
-      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v1.178</span></h1>
+      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v1.179</span></h1>
     </div>
   </div>
   <div class="hright">
@@ -493,6 +493,12 @@ document.addEventListener('click',function(e){ var m=document.getElementById('jk
       <div class="seg" id="vrFormula">
         <button data-f="basic" class="active">기본</button>
         <button data-f="skill">실력</button>
+      </div>
+    </div>
+    <div class="ctrl s-vr hide"><label>체결 방식 <span style="font-size:9px;color:var(--dim)">앱 매수·매도표와 같게</span></label>
+      <div class="seg" id="vrFillSeg">
+        <button data-v="ladder" class="active" title="실전과 같게 — 사이클 첫날 20차수 지정가를 걸어두고 2주 동안 그날 고가·저가에 닿은 차수만 1주씩 체결">예약주문</button>
+        <button data-v="close" title="예전 방식 — 2주에 한 번, 그날 종가에 평가금을 V로 되맞춤">종가 리밸런싱</button>
       </div>
     </div>
     <div class="ctrl s-vr hide vr-accum"><label data-cur="vr">적립금 ($/2주)</label><input type="number" id="vrContrib" value="100" min="10"></div>
@@ -748,7 +754,9 @@ document.addEventListener('click',function(e){ var m=document.getElementById('jk
 <div class="rules s-vr hide">
   <span class="bd">V 갱신</span> 다음 V = 현재 V + <b>Pool/G</b> + 적립금 · 2주(10거래일) 사이클<br>
   <span class="bd">밴드</span> 상단 V×(1+밴드) / 하단 V×(1−밴드)<br>
-  <span class="bd">매도</span> 평가금>상단 → V 복귀분 매도 → Pool · <span class="bd">매수</span> 평가금<하단 → V까지, 적립후 <b>Pool 75%</b> 한도
+  <span class="bd">예약주문</span> (기본) 실전 그대로 — 사이클 첫날 <b>매수·매도표 차수를 지정가로 걸고 2주 방치</b>, 그날 <b>고가·저가</b>에 닿은 차수만 1주씩 체결. 매도 k차 = 상단÷보유 · 매수 k차 = 하단÷보유 · 하루 매수한도 = 그날 시작 Pool×모드한도(적립75·거치50·인출25%) · 운영 앱 체결기와 같은 규칙<br>
+  <span class="bd">종가</span> (선택) 예전 방식 — 2주에 한 번 그날 <b>종가</b>에만 평가금을 V로 되맞춤. 실제로 내는 주문과 다르므로 비교용으로만<br>
+  <span class="bd">매도</span> 평가금>상단 → Pool 로 · <span class="bd">매수</span> 평가금&lt;하단 → 적립후 <b>Pool 75%</b> 한도
 </div>
 <div class="rules s-ma hide">
   <span class="bd">출처</span> Gayed·Bilello <b>"Leverage for the Long Run"</b> (2016 CMT 다우상) — 역사적으로 3× 조합 연 26.7%<br>
@@ -764,6 +772,7 @@ document.addEventListener('click',function(e){ var m=document.getElementById('jk
   ※ 실제 OHLC 종가 기반 백테스트. 수수료·세금·환율·배당 미반영. LOC매수=종가≤주문가 시 체결, 지정가매도=당일 고가≥목표가 시 체결로 근사.<br>
   ※ <b>USD</b>=반도체 2× · <b>QLD</b>=나스닥 2× · <b>SOXL</b>=반도체 3× · <b>TQQQ</b>=나스닥 3× · <b>TECL</b>=테크 3×<br>
   ※ 무한매수법 V4.0 · VR 5.0 (라오어). 일봉 근사라 실제 체결과 차이 가능. 과거 성과는 미래를 보장하지 않습니다.<br>
+  ※ <b>체결 규약</b> — ASAP·표준편차·섀넌·매수적립은 그날 <b>종가로 만든 지표</b>로 판단해 <b>그날 종가에 체결</b>합니다(MOC/LOC 주문). 마감 직전 값으로 주문을 내는 실제 운용과 같은 규약이고, 운영 페이지의 모의 체결도 같은 방식이라 앱과 백테 숫자가 어긋나지 않습니다. 무매의 별지점·익절 지정가와 VR 예약주문은 <b>장중 고가·저가</b>로 체결을 판정합니다.<br>
   <b>JK 퀀트</b> · 학습용 도구
 </div>
 
@@ -1395,6 +1404,11 @@ let imShortMA=30;   // V5.0 국면 단기이평 (20/30/50)
 let imLoPct=6;      // V5.0 하락국면 익절% (조기탈출)
 let imCostOn=true;   // 세금·수수료·슬리피지 반영 (기본 ON)
 let imTgtDyn=false;  // 익절 동적 조절 (20일 상승률) — 기본 OFF
+/* VR 체결 방식. 'ladder'(기본) = 실전 그대로 — 사이클 첫날 매수·매도표(20차수)를 지정가로
+   걸어두고 2주 방치, 그날 고가·저가에 닿은 차수만 1주씩 체결된다.
+   'close' = 예전 백테 방식 — 2주에 한 번 그날 종가만 보고 평가금을 V로 되맞춘다.
+   운영 앱은 처음부터 예약주문이었다(vrSimForward). 백테만 종가 하나를 보고 있었다. */
+let vrFill='ladder';
 
 /* 라오어 문서 공식 익절%는 종목별로 다르다 — TQQQ 15 · SOXL 20 (문서 미수록 종목은 20).
    운영 index.html 의 IM_OFFICIAL 과 같은 값이어야 한다. 한쪽만 고치면 같은 종목·같은 설정인데
@@ -1419,6 +1433,7 @@ document.getElementById('imTgtDynSeg').onclick=e=>{if(e.target.dataset.x){docume
 document.getElementById('imRev').onclick=e=>{if(e.target.dataset.r){document.querySelectorAll('#imRev button').forEach(b=>b.classList.remove('active'));e.target.classList.add('active');imReverse=e.target.dataset.r==='1';if(dataLoaded)run();}};
 document.getElementById('imLoSeg').onclick=e=>{if(e.target.dataset.l){document.querySelectorAll('#imLoSeg button').forEach(b=>b.classList.remove('active'));e.target.classList.add('active');imLoPct=+e.target.dataset.l;if(dataLoaded)run();}};
 document.getElementById('imTgtSeg').onclick=e=>{if(e.target.dataset.t){document.querySelectorAll('#imTgtSeg button').forEach(b=>b.classList.remove('active'));e.target.classList.add('active');imTarget=+e.target.dataset.t;if(dataLoaded)run();}};
+document.getElementById('vrFillSeg').onclick=e=>{if(e.target.dataset.v){document.querySelectorAll('#vrFillSeg button').forEach(b=>b.classList.remove('active'));e.target.classList.add('active');vrFill=e.target.dataset.v;if(dataLoaded)run();}};
 document.getElementById('imFillSeg').onclick=e=>{if(e.target.dataset.f){document.querySelectorAll('#imFillSeg button').forEach(b=>b.classList.remove('active'));e.target.classList.add('active');imFill=e.target.dataset.f;if(dataLoaded)run();}};
 syncMaCtrl();   // 초기: V4.0이므로 국면선 비활성 표시
 
@@ -2481,6 +2496,10 @@ function runIM50(days,tkr,cap,divs,targetPct,compound=true){
 function runVR(days,tkr,params){
   const {contrib=100,G=10,bandPct=15,mode=0.75,formula='basic',initAmt=0,withdraw=0,startV=0,startPool=0,costOn=false}=params||{};
   const band=bandPct/100,interval=10,poolLimit=mode;
+  /* 체결 방식 — 'ladder'(기본)는 실전처럼 2주 내내 지정가가 살아 있고,
+     'close'는 2주에 한 번 그날 종가에만 되맞추는 예전 방식이다.
+     파라미터로 못 박을 수 있고, 안 주면 화면 세그를 따른다. */
+  const LADDER = (params && params.fill!=null ? params.fill : (typeof vrFill!=='undefined'?vrFill:'ladder')) !== 'close';
   const isAccum=mode===0.75, isWd=mode===0.25, isLump=!isAccum;
   let shares=0,pool=startPool||0,V=startV||0,inv=startPool||0,totalWd=0,rebal=0,buys=0,sells=0;
   // ── 비용·세금 (costOn=false면 전부 0 — 기존 산술과 완전 동일) · 규약은 무매·200일선과 같음 ──
@@ -2491,12 +2510,18 @@ function runVR(days,tkr,params){
      정수 내림 때문에 배정액이 다 나가지 않는데, 부르는 쪽에서 배정액을 그대로 Pool 에서
      빼면 못 산 잔돈이 증발한다. 10일마다 리밸런싱하면 회당 최대 1주값이 사라져
      6년이면 수천 달러가 된다 — 실측 TECL 거치 skill G20 밴드10 에서 +47.6%p. */
-  function _vbuy(amt,c){ const q=iq(amt/(1+FEE),c); if(q<=0) return 0;   // 정수 주수 (운영 VR도 내림)
+  /* 주식과 현금이 움직이는 자리는 여기 둘뿐이다 — 사다리도 리밸런싱도 다 이 길로 지나간다.
+     밖에서 손으로 shares·pool·수수료를 다시 쓰기 시작하면 반드시 한쪽이 빠진다. */
+  function _vbuyQ(q,c){ if(!(q>0)) return 0;            // q주 매수 → 실제로 나간 돈
     const spend=q*c, fee=spend*FEE;
     avg=(shares<=0)?c:(shares*avg+spend)/(shares+q); shares+=q; feesTotal+=fee; return spend+fee; }
-  function _vsell(gross,c){ const qty=isq(gross/c,shares), fee=qty*c*FEE;   // 정수 주수 (금액 목표를 넘지 않게 내림)
-    // 실제로 판 만큼만 현금이 들어온다 — gross를 그대로 돌려주면 판 적 없는 돈이 생긴다
+  function _vsellQ(q,c){ const qty=Math.min(q,shares); if(!(qty>0)) return 0;   // q주 매도 → 들어온 돈
+    const fee=qty*c*FEE;
     yearPnl+=qty*(c-avg)-fee; feesTotal+=fee; shares-=qty; return qty*c-fee; }
+  // 금액으로 부르는 쪽 — 정수 주수로 내림한다 (운영 VR도 내림). 못 산 잔돈은 부른 쪽이 Pool 에 남긴다
+  function _vbuy(amt,c){ return _vbuyQ(iq(amt/(1+FEE),c), c); }
+  // 실제로 판 만큼만 현금이 들어온다 — gross를 그대로 돌려주면 판 적 없는 돈이 생긴다
+  function _vsell(gross,c){ return _vsellQ(isq(gross/c,shares), c); }
   // 연말 양도세 정산. Pool에서 먼저 빼되, 모자라면 보유 주식을 팔아 납부한다.
   // (예전엔 pool을 그냥 음수로 만들어 총자산이 마이너스가 되고 MDD가 100%를 넘었다 —
   //  SOXL 2000~ 거치식이 최종 −18$ · MDD 102%로 나오던 원인.)
@@ -2504,9 +2529,9 @@ function runVR(days,tkr,params){
     const owed=capGainTax(yearPnl, tkr); let due=owed; yearPnl=0;
     const fromPool=Math.min(Math.max(pool,0), due); pool-=fromPool; due-=fromPool;
     if(due>1e-9 && shares>0 && c>0){                 // 납부용 매도 — 실현손익은 다음 해로 이월
-      // 수수료도 똑같이 물린다 — 예전엔 이 길로만 공짜로 팔렸다 (무매·표준편차와 같은 규약)
-      const q=Math.min(shares, due/(c*(1-FEE))), gross=q*c, fee=gross*FEE;
-      yearPnl+=q*(c-avg)-fee; feesTotal+=fee; shares-=q; due-=gross-fee; }
+      // 수수료도 똑같이 물린다 — 예전엔 이 길로만 공짜로 팔렸다 (무매·표준편차와 같은 규약).
+      // 파는 일은 _vsellQ 하나가 맡는다 — 여기서 손으로 다시 쓰면 또 한쪽이 빠진다
+      due-=_vsellQ(Math.min(shares, due/(c*(1-FEE))), c); }
     taxTotal+=owed-due; }                            // 실제로 낸 만큼만 집계 (자산이 0이면 더 못 냄)
   // 시작V 지정 시: 이미 V만큼 보유 중인 상태로 간주 (운용도구와 동일 — "이어서 시작" 시나리오)
   let first;
@@ -2517,6 +2542,35 @@ function runVR(days,tkr,params){
   }
   const snap=[], cf=[];          // cf = 현금흐름(투입 시점·금액) — IRR·평균투입자본용
   let mddPeak=-Infinity, mdd=0;  // 일별 MDD (총자산 = 주식+Pool+누적인출 기준 — fin과 동일 철학)
+  /* ── 하루치 사다리 체결 (예약주문 방식) ──
+     실전에서는 사이클 첫날 매수·매도표 20차수를 지정가로 전부 걸어두고 2주 방치한다.
+     차수 값은 운영 앱의 표·체결기(vrSimForward)와 같은 식이다:
+       매도 k차 = 상단(up) ÷ 매도 전 보유수량   → 그날 고가가 그 값 이상이면 1주 체결
+       매수 k차 = 하단(lo) ÷ 매수 전 보유수량   → 그날 저가가 그 값 이하이면 1주 체결
+     주가가 오를수록 다음 매도 차수가 더 높고, 내릴수록 다음 매수 차수가 더 낮다 —
+     한 번에 몰아 파는 게 아니라 한 주씩 계단으로 나간다. 그래서 종가 하나만 보던
+     예전 방식과 결과가 다르다(그쪽은 2주에 한 번, 그날 종가에만 V로 되맞췄다).
+     하루 매수 총액은 그날 시작 Pool × 모드한도(적립75·거치50·인출25%)까지.
+     매도를 먼저 도는 것도 운영과 같다 — 판 돈이 그날 매수 재원이 된다. */
+  function _ladder(hi, lo2){
+    if(!(V>0)) return;
+    const up=V*(1+band), dn=V*(1-band);
+    const budget=Math.max(0, pool*poolLimit), fee1=1+FEE;
+    let spent=0;
+    for(let k=0;k<400;k++){                       // 매도: 오를수록 다음 차수가 더 높다
+      const q=Math.floor(shares+1e-9); if(q<1) break;
+      const p=up/q; if(!(hi>=p)) break;
+      pool+=_vsellQ(1,p); sells++;
+    }
+    for(let k=0;k<400;k++){                       // 매수: 내릴수록 다음 차수가 더 낮다
+      const q=Math.floor(shares+1e-9); if(q<1) break;
+      const p=dn/q; if(!(lo2<=p)) break;
+      const cost=p*fee1;
+      if(spent+cost>budget+1e-9) break;           // Pool 한도 소진
+      if(cost>pool+1e-9) break;                   // 현금 부족
+      pool-=_vbuyQ(1,p); spent+=cost; buys++;
+    }
+  }
   days.forEach((d,i)=>{
     const c=M[tkr][d][C];
     { const y=d.slice(0,4); if(curYear===null)curYear=y; else if(y!==curYear){_settle(c);curYear=y;} }
@@ -2534,11 +2588,16 @@ function runVR(days,tkr,params){
       V=Math.max(V,0);
       if(isAccum){pool+=contrib;inv+=contrib;cf.push([d,contrib]);}
       else if(isWd){const wd=Math.min(withdraw,pool);pool-=wd;totalWd+=wd;}
-      const up=V*(1+band),lo=V*(1-band),cv2=shares*c;
-      if(cv2>up){const ex=cv2-V;pool+=_vsell(ex,c);sells++;}
-      else if(cv2<lo){const need=V-cv2;const use=Math.min(need,pool*poolLimit);pool-=_vbuy(use,c);buys++;}
-      rebal++;
+      if(LADDER){ rebal++; }
+      else {
+        const up=V*(1+band),lo=V*(1-band),cv2=shares*c;
+        if(cv2>up){const ex=cv2-V;pool+=_vsell(ex,c);sells++;}
+        else if(cv2<lo){const need=V-cv2;const use=Math.min(need,pool*poolLimit);pool-=_vbuy(use,c);buys++;}
+        rebal++;
+      }
     }
+    // 걸어둔 지정가는 사이클 첫날만이 아니라 2주 내내 살아 있다
+    if(LADDER && !first){ const row=M[tkr][d]; _ladder(row[HI]||c, row[LO]||c); }
     if(i%interval===0||i===days.length-1)snap.push([d,shares*c+pool+totalWd]);
   });
   const lc=M[tkr][days[days.length-1]][C];
@@ -2999,10 +3058,11 @@ function comboOpts(mode){
   const maParkTxt=(_mo.park==='bill')?'국채대피':'현금대피';
   const maTxt=`${ml}일선·${maCondTxt(_mo.buy,_mo.sell)}·${maParkTxt}`;
   const vG=_stratNum('vrG',10), vB=_stratNum('vrBand',15), vF={basic:'기본공식',skill:'실력공식'}[_stratSeg('vrFormula','basic')]||'기본공식';
+  const vFill=(typeof vrFill!=='undefined'&&vrFill==='close')?'종가':'예약주문';
   if(mode==='dca'){
     const dipTxt=(typeof dcaDipMul!=='undefined'&&dcaDipMul>1)?`·하락시${dcaDipMul}배`:'';
     const freq={daily:'매일',weekly:'매주',monthly:'매월'}[(typeof dcaFreq!=='undefined'?dcaFreq:'daily')]||'매일';
-    return `매수적립: ${freq}${dipTxt} · VR적립: G${vG}·밴드±${vB}·${vF} · ASAP: base${_stratNum('asapBase',10)}/mid${_stratNum('asapMid',50)}/deep${_stratNum('asapDeep',100)} · 200로테적립: ${maTxt}`;
+    return `매수적립: ${freq}${dipTxt} · VR적립: G${vG}·밴드±${vB}·${vF}·${vFill} · ASAP: base${_stratNum('asapBase',10)}/mid${_stratNum('asapMid',50)}/deep${_stratNum('asapDeep',100)} · 200로테적립: ${maTxt}`;
   }
   const eng={v22:'V2.2',v30:'V3.0',v40:'V4.0',v50:'V5.0',ab:'A/B'}[(typeof imEngine!=='undefined'?imEngine:'v40')]||'V4.0';
   const comp=_stratSeg('imCompound','0')!=='0'?'복리':'단리';
@@ -3014,7 +3074,7 @@ function comboOpts(mode){
   const iS=(typeof ivsS0!=='undefined'?ivsS0:45), iN=(typeof ivsN!=='undefined'?ivsN:60), iB=(typeof ivsBand!=='undefined'?ivsBand:10);
   const iM=(typeof ivsMode!=='undefined'&&ivsMode==='fix')?'고정5:5':`역분산 s0${iS}%·${iN}일σ`;
   const iP=(typeof ivsPair!=='undefined'&&ivsPair==='x1')?'1배수':'현금';
-  return `무매(${eng}): ${div}분할·익절 ${tgt}${tdy}·${comp}·${rev} · 200로테: ${maTxt} · VR거치: G${vG}·밴드±${vB}·${vF} · 표준편차: N${sN}·g${sG}·${filt} · 역분산: ${iM}·짝${iP}·밴드${iB}%p`;
+  return `무매(${eng}): ${div}분할·익절 ${tgt}${tdy}·${comp}·${rev} · 200로테: ${maTxt} · VR거치: G${vG}·밴드±${vB}·${vF}·${vFill} · 표준편차: N${sN}·g${sG}·${filt} · 역분산: ${iM}·짝${iP}·밴드${iB}%p`;
 }
 
 /* ──── 자본-시간 지표: 적립식은 돈이 천천히 들어가 '평균 투입자본'이 거치식의 절반 수준이다.
@@ -3538,7 +3598,7 @@ function renderMultiStrat(type, results, params){
   document.querySelector('.tbl-wrap').classList.remove('hide');
   const stratName=type==='im'?('무한매수법 '+(imEngine==='v22'?'V2.2':imEngine==='v30'?'V3.0':imEngine==='v50'?('V5.0('+imShortMA+'일·하락'+imLoPct+'%)'):'V4.0')+' · 익절 '+imTgtTxt()+(imEngine==='v40'&&imReverse?' · 리버스ON':'')+(imTgtDyn?' · 익절조절(20일상승률)':'')+(imCostOn?' · 비용반영':''))
     :type==='ma'?(maStratName(maLen)+(maCostOn?' · 비용반영':''))
-    :('VR 5.0'+(vrCostOn?' · 비용반영':''));
+    :('VR 5.0 · '+(vrFill==='close'?'종가 리밸런싱':'예약주문(2주)')+(vrCostOn?' · 비용반영':''));
   const pct=x=>(x>=0?'+':'')+x.toFixed(1)+'%';
   const money=(x,t)=>fmtV(x,t||tickers[0]);
 
@@ -3723,7 +3783,8 @@ function renderSingle2(type,r,days){
   if(logBtns[1]) logBtns[1].classList.add('active');  // '로그' 버튼 활성화
   const m=META[r.tkr];
   const stratName = type==='im' ? ('무한매수법 '+(imEngine==='v22'?'V2.2':imEngine==='v30'?'V3.0':imEngine==='v50'?('V5.0('+imShortMA+'일)'):'V4.0')
-                                   +(r.tgt!=null?' · 익절 '+r.tgt+'%':'')) : type==='ma' ? maStratName(r.maLen) : 'VR 5.0';
+                                   +(r.tgt!=null?' · 익절 '+r.tgt+'%':'')) : type==='ma' ? maStratName(r.maLen)
+                   : ('VR 5.0 · '+(vrFill==='close'?'종가 리밸런싱':'예약주문(2주)'));
   const stratShort = type==='im' ? '무한매수법' : type==='ma' ? ((r.maLen||200)+'일선') : 'VR 5.0';
 
   // ── yrs: 실제 날짜 구간 기반 (days.length/252는 월간 데이터 시 오차 큼)

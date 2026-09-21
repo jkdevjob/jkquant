@@ -100,7 +100,12 @@ inject(`const fin=cash+shares*M[tkr][days[days.length-1]][C]+savedProfit-addedCa
 let tradeLog=[], finalState=null;
 global.__LOG=(k,p,q)=>tradeLog.push({kind:k,price:p,qty:q});
 global.__FINAL=s=>finalState=s;
-global.M={}; global.C=0;
+/* 봉의 자리(종가·시가·고가·저가)도 파일에서 그대로 떼어 온다 —
+   여기서 숫자를 다시 적으면 backtest.html 과 어긋날 수 있다 */
+global.M={};
+{ const m=bt.match(/const C=(\d+),O=(\d+),HI=(\d+),LO=(\d+);/);
+  if(!m) throw new Error('봉 자리(C/O/HI/LO)를 backtest.html에서 못 찾음');
+  global.C=+m[1]; global.O=+m[2]; global.HI=+m[3]; global.LO=+m[4]; }
 eval(btSrc);
 // backtest 상수(starBase/starSlope/exitMul)를 함수화 — 계열 규약 검사용
 const mBase=btSrc.match(/const starBase=([^;]+);/), mSlope=btSrc.match(/const starSlope=([^;]+);/), mExit=btSrc.match(/const exitMul ?= ?([^;]+);/);
@@ -2981,8 +2986,16 @@ console.log('\n[65] 리버스 별지점 — 직전 5거래일 (오늘 제외)');
 console.log('\n[66] VR 현금 장부 — 잔돈 증발 없음');
 {
   let vsrc=extractFn(bt,'function runVR(days,tkr,params)');
-  ok('_vbuy 가 실제로 나간 돈을 돌려준다', /function _vbuy\(amt,c\)\{ const q=iq\(amt\/\(1\+FEE\),c\); if\(q<=0\) return 0;/.test(vsrc)
+  ok('_vbuy 가 실제로 나간 돈을 돌려준다', /function _vbuy\(amt,c\)\{ return _vbuyQ\(iq\(amt\/\(1\+FEE\),c\), c\); \}/.test(vsrc)
      && /feesTotal\+=fee; return spend\+fee; \}/.test(vsrc));
+  /* 주식·수수료·실현손익이 움직이는 자리는 _vbuyQ·_vsellQ 둘뿐이어야 한다.
+     사다리가 밖에서 shares 를 직접 만지기 시작하면 [66]의 장부가 못 잡는 구멍이 생긴다. */
+  ok('주식이 움직이는 자리가 둘뿐이다',
+     (vsrc.match(/shares[+-]=/g)||[]).length===2
+     && (vsrc.match(/shares\+=q;/g)||[]).length===1 && (vsrc.match(/shares-=qty;/g)||[]).length===1);
+  ok('세금 납부 매도도 같은 길로 지나간다', /due-=_vsellQ\(Math\.min\(shares, due\/\(c\*\(1-FEE\)\)\), c\);/.test(vsrc));
+  ok('사다리도 같은 길로 지나간다',
+     /pool\+=_vsellQ\(1,p\); sells\+\+;/.test(vsrc) && /pool-=_vbuyQ\(1,p\); spent\+=cost; buys\+\+;/.test(vsrc));
   ok('리밸런싱 매수가 배정액이 아니라 나간 돈을 뺀다',
      /pool-=_vbuy\(use,c\);buys\+\+;/.test(vsrc) && !/_vbuy\(use,c\);pool-=use/.test(vsrc));
   ok('첫 매수 잔돈도 Pool 로 남는다',
@@ -3115,8 +3128,8 @@ console.log('\n[68] 달력 적립 · 강제매도 회계 · 워밍업 표시');
     ok(`${n} 강제매도에서 주식 수만 줄이지 않는다`, !/const (gross|g)=q\*px[^\n]*sh(ares)?-=q;/.test(b2));
   }
   { const v=extractFn(bt,'function runVR(days,tkr,params)');
-    ok('runVR 강제매도도 수수료를 문다', /const q=Math\.min\(shares, due\/\(c\*\(1-FEE\)\)\), gross=q\*c, fee=gross\*FEE;/.test(v)
-       && /yearPnl\+=q\*\(c-avg\)-fee; feesTotal\+=fee;/.test(v)); }
+    ok('runVR 강제매도도 수수료를 문다', /due-=_vsellQ\(Math\.min\(shares, due\/\(c\*\(1-FEE\)\)\), c\);/.test(v)
+       && /const fee=qty\*c\*FEE;/.test(v)); }
 
   // ── ⑪ 워밍업: 신호 없이 보유로 들어간 날을 세어 화면에 알린다 ──
   ok('_maAbove 가 워밍업 길이를 돌려준다', /return \{above,dts,warmN:Math\.max\(N,SHORT\)\};/.test(bt));
@@ -3139,6 +3152,68 @@ console.log('\n[68] 달력 적립 · 강제매도 회계 · 워밍업 표시');
     ok('상장 초부터 고르면 워밍업 일수가 잡힌다', a.warmDays>150&&a.warmDays<200, String(a.warmDays));
     ok('시작일을 뒤로 옮기면 0일', b2.warmDays===0, String(b2.warmDays));
   }
+}
+
+/* ════ 69. VR 예약주문 — 백테 사다리가 운영 앱의 체결기와 같은 규칙인가 ════
+   실전에서는 사이클 첫날 매수·매도표를 지정가로 걸어두고 2주 방치한다. 운영 앱은
+   처음부터 그렇게 굴러갔는데(vrSimForward) 백테만 2주에 한 번 그날 종가 하나를 보고
+   평가금을 V로 되맞추고 있었다 — 아예 다른 주문을 낸 셈이다. 규칙이 같은지 본다. */
+console.log('\n[69] VR 예약주문 — 앱 체결기와 같은 규칙');
+{
+  const vsrc=extractFn(bt,'function runVR(days,tkr,params)');
+  const app=extractFn(idx,'function vrSimForward()');
+  ok('앱에 하루하루 체결 판정하는 체결기가 있다', /고가·저가로 '닿았는지'를 판정/.test(idx) && !!app);
+  ok('백테에 사다리 체결이 있다', /function _ladder\(hi, lo2\)/.test(vsrc));
+  ok('예약주문이 기본이다', /let vrFill='ladder';/.test(bt) && /data-v="ladder" class="active"/.test(bt));
+  ok('예전 종가 방식도 고를 수 있다', /data-v="close"/.test(bt) && /!== 'close'/.test(vsrc));
+  // 차수 값이 같은 식인가 — 매도는 상단÷보유, 매수는 하단÷보유
+  ok('앱 매도 차수 = 상단 ÷ 보유', /const p=up\/qty; if\(!\(row\.high>=p\)\) break;/.test(app));
+  ok('앱 매수 차수 = 하단 ÷ 보유', /const p=lo\/qty; if\(!\(row\.low<=p\)\) break;/.test(app));
+  ok('백테 매도 차수도 같은 식', /const p=up\/q; if\(!\(hi>=p\)\) break;/.test(vsrc));
+  ok('백테 매수 차수도 같은 식', /const p=dn\/q; if\(!\(lo2<=p\)\) break;/.test(vsrc));
+  ok('둘 다 매도를 먼저 돈다 (판 돈이 그날 매수 재원)',
+     app.indexOf('row.high>=p') < app.indexOf('row.low<=p') && vsrc.indexOf('hi>=p') < vsrc.indexOf('lo2<=p'));
+  ok('하루 매수 한도 = 그날 시작 Pool × 모드한도',
+     /const budget=Math\.max\(0, pool\*\(st\.mode\|\|0\.75\)\);/.test(app)
+     && /const budget=Math\.max\(0, pool\*poolLimit\)/.test(vsrc));
+
+  /* 말이 아니라 값으로 — 같은 (상단·하단·보유·고가·저가·한도)를 주고
+     앱 규칙과 백테 사다리가 같은 체결을 내는지 맞춰 본다. */
+  const appLad=(up,lo,qty,pool,high,low,mode)=>{      // vrSimForward 의 속 루프를 그대로 옮긴 것
+    const budget=Math.max(0,pool*mode); let spent=0, nS=0, nB=0;
+    for(let k=0;k<300&&qty>=1;k++){ const p=up/qty; if(!(high>=p)) break; pool+=p; qty-=1; nS++; }
+    for(let k=0;k<300&&qty>=1;k++){ const p=lo/qty; if(!(low<=p)) break; if(spent+p>budget+1e-9) break;
+      pool-=p; spent+=p; qty+=1; nB++; }
+    return {qty,nS,nB};
+  };
+  // 백테 _ladder 를 수수료 0 으로 떼어 내 같은 조건으로 돌린다 (수수료는 백테만의 규약)
+  let bad=null, ran=0;
+  const mk=(shares0,pool0,V0,band0,mode0)=>{
+    const body=extractFn(bt,'function runVR(days,tkr,params)');
+    const inner=body.slice(body.indexOf('function _ladder(hi, lo2)'), body.indexOf('  days.forEach((d,i)=>{'));
+    const src=`let shares=${shares0}, pool=${pool0}, V=${V0}, avg=1, yearPnl=0, feesTotal=0, buys=0, sells=0;
+      const band=${band0}, poolLimit=${mode0}, FEE=0;
+      function _vbuyQ(q,c){ if(!(q>0)) return 0; const spend=q*c, fee=spend*FEE;
+        avg=(shares<=0)?c:(shares*avg+spend)/(shares+q); shares+=q; feesTotal+=fee; return spend+fee; }
+      function _vsellQ(q,c){ const qty=Math.min(q,shares); if(!(qty>0)) return 0; const fee=qty*c*FEE;
+        yearPnl+=qty*(c-avg)-fee; feesTotal+=fee; shares-=qty; return qty*c-fee; }
+      ${inner}
+      return (hi,lo2)=>{ _ladder(hi,lo2); return {qty:shares,nS:sells,nB:buys}; };`;
+    return new Function(src)();
+  };
+  for(const [sh,pl,V0,bd,md] of [[100,5000,3000,0.15,0.75],[50,200,1200,0.10,0.5],[333,10000,9990,0.15,0.25],
+                                 [5,50,120,0.2,0.75],[1,1000,30,0.15,0.5],[200,0,6000,0.15,0.75]]){
+    for(const [hi,lo2] of [[40,20],[31,29],[100,1],[30.0001,29.9999],[12,11]]){
+      ran++;
+      const A=appLad(V0*(1+bd), V0*(1-bd), Math.floor(sh), pl, hi, lo2, md);
+      const B=mk(sh,pl,V0,bd,md)(hi,lo2);
+      if(A.qty!==B.qty || A.nS!==B.nS || A.nB!==B.nB){
+        bad=bad||`보유${sh} Pool${pl} V${V0} 밴드${bd} 모드${md} 고가${hi} 저가${lo2} → 앱 ${JSON.stringify(A)} / 백테 ${JSON.stringify(B)}`;
+      }
+    }
+  }
+  ok('경우를 실제로 돌렸다', ran>=30, ran+'개');
+  ok('앱 체결기와 백테 사다리가 같은 체결을 낸다', !bad, bad||'');
 }
 
 console.log(`\n════ 결과: ${pass} PASS / ${fail} FAIL ${fail===0?'— ALL PASS ★':'— 배포 금지, 위 ✗ 항목 수정 필요'} ════`);
