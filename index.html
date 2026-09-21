@@ -520,7 +520,7 @@ try{ if(localStorage.getItem('qcockpit_hadUser')==='1') document.documentElement
 </div>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.67.6</span></h1></div>
+    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.67.7</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -1610,7 +1610,7 @@ document.addEventListener('click',function(e){ var m=document.getElementById('jk
   <footer>
     <strong>JK 퀀트</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.67.6</b> · 2026-09-21</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.67.7</b> · 2026-09-21</div>
   </footer>
 </div>
 
@@ -3420,10 +3420,12 @@ function computeVr(){
   let sawBuy=false;                              // 이력상 첫 buy 만났는지
   const carriedIn=V>0 && !(st.startCyc>0);       // "이어받기 시작"(설정 startv 직접입력, 사이클 진입 이력 없음) — 이 경우만 첫 buy도 추가매수(pool 차감)
   // 사이클 시작 시점 Pool 추적 (현재 진행 사이클의 '처음 Pool')
-  let curCyc=0, cycStartPool=pool, cycTrade=0, cycDiv=0;
+  let curCyc=0, cycStartPool=pool, cycLimitBase=pool, cycTrade=0, cycDiv=0, cycBuy=0, cycSell=0, cycFlowOpen=true;
   hist.forEach(h=>{
     const hc=(h.cyc!=null?h.cyc:0);
-    if(hc!==curCyc){ curCyc=hc; cycStartPool=pool; cycTrade=0; cycDiv=0; }
+    if(hc!==curCyc){
+      curCyc=hc; cycStartPool=pool; cycLimitBase=pool; cycTrade=0; cycDiv=0; cycBuy=0; cycSell=0; cycFlowOpen=true;
+    }
     if(h.type==='buy'){
       const amt=h.price*h.qty; qty+=h.qty; totbuy+=amt; buyShares+=h.qty; cost+=amt;
       const isInit=!sawBuy && !carriedIn; sawBuy=true;   // 초기투입 = 이력 첫 buy (이어받기 시작 제외)
@@ -3433,21 +3435,25 @@ function computeVr(){
         // startv가 사이클 진입으로 갱신돼도(startCyc>0) 이 판정은 유지되어 Pool이 음수로 회귀하지 않음.
         // 대신 '밖에서 들어온 돈'이므로 총투입(netInvested)에는 반드시 더해야 한다 —
         // 안 그러면 첫 매수만 있는 새 세션이 총투입 0$ · 수익 = 평가금 전액으로 보인다.
-        initBuy+=amt; cycStartPool=pool;
+        initBuy+=amt; cycStartPool=pool; cycLimitBase=pool;
       }else{
-        pool-=amt; cycTrade-=amt;
+        pool-=amt; cycTrade-=amt; cycBuy+=amt; cycFlowOpen=false;
       }
     }
     else if(h.type==='sell'){const amt=h.price*h.qty;const av=qty>0?cost/qty:0;
       realized+=amt-av*h.qty; cost-=av*h.qty; qty-=h.qty; if(qty<1e-9){qty=0;cost=0;}
-      totsell+=amt;pool+=amt;cycTrade+=amt;}
-    else if(h.type==='add'){pool+=h.amt;totadd+=h.amt;flows.push({date:h.date,out:0,in:+h.amt||0,kind:'add'});}
-    else if(h.type==='wd'){pool-=h.amt;totwd+=h.amt;flows.push({date:h.date,out:+h.amt||0,in:0,kind:'wd'});}
+      totsell+=amt;pool+=amt;cycTrade+=amt;cycSell+=amt;cycFlowOpen=false;}
+    else if(h.type==='add'){pool+=h.amt;totadd+=h.amt;if(cycFlowOpen)cycLimitBase=pool;flows.push({date:h.date,out:0,in:+h.amt||0,kind:'add'});}
+    else if(h.type==='wd'){pool-=h.amt;totwd+=h.amt;if(cycFlowOpen)cycLimitBase=pool;flows.push({date:h.date,out:+h.amt||0,in:0,kind:'wd'});}
     else if(h.type==='div'){pool+=h.amt;totdiv+=h.amt;cycDiv+=h.amt;}
   });
   // 진행 중 사이클 번호 = 마지막 거래의 cyc (없으면 0). 설정 V/startCyc 우선.
-  const lastCyc = hist.length ? (hist[hist.length-1].cyc!=null?hist[hist.length-1].cyc:0) : (st.startCyc||0);
-  curCyc = Math.max(lastCyc, st.startCyc||0);
+  const lastCyc = hist.length ? (hist[hist.length-1].cyc!=null?hist[hist.length-1].cyc:0) : 0;
+  const settingCyc=st.startCyc||0;
+  if(settingCyc>lastCyc){
+    // 거치식처럼 새 사이클 진입 때 add/wd 기록이 없는 경우도 새 사이클 한도를 새로 고정한다.
+    curCyc=settingCyc; cycStartPool=pool; cycLimitBase=pool; cycTrade=0; cycDiv=0; cycBuy=0; cycSell=0;
+  }else curCyc=Math.max(lastCyc,settingCyc);
   // 명목평단(증권사 기준) = 총매수금 / 총 매수 주식수
   const avgNom=buyShares>0?totbuy/buyShares:0;
   // 실효평단(VR 기준) = (총매수 − 총매도 − 배당) / 현재 보유수량
@@ -3460,7 +3466,7 @@ function computeVr(){
      '누적(인출 포함)'이 인출을 두 번 세지 않는다. */
   const grossIn=totadd + (st.startpool||0) + initBuy;
   return {st,qty,totbuy,totsell,totdiv,totadd,totwd,buyShares,pool,V,avgNom,avgEff,up,lo,initBuy,
-          netInvested,grossIn,realized,flows,recov,curCyc,cycStartPool,cycTrade,cycTradeNet,cycDiv,hist};
+          netInvested,grossIn,realized,flows,recov,curCyc,cycStartPool,cycLimitBase,cycBuy,cycSell,cycTrade,cycTradeNet,cycDiv,hist};
 }
 
 const CYC_DAYS=14;   // 한 사이클 = 2주(달력 14일 ≒ 거래일 10일, 백테 INTERVAL과 같음)
@@ -3658,8 +3664,14 @@ function renderVrBandGauge(){
   if(note)note.textContent='';
 }
 
-/* Pool 사용 한도 = (이미 반영된)Pool × mode */
-function poolLimit(c){ return c.pool * (c.st.mode||0.75); }
+/* Pool 사용 한도 = 사이클 시작 시 적립/인출까지 반영된 Pool × mode.
+   한 사이클당 상한이므로, 중간 매도로 Pool이 늘어도 한도를 다시 키우지 않는다.
+   이미 이번 사이클에 매수한 금액은 차감해 '남은 매수 가능액'만 반환한다. */
+function poolLimit(c){
+  const base=Math.max(0,c.cycLimitBase!=null?c.cycLimitBase:c.pool);
+  const budget=base*(c.st.mode||0.75);
+  return Math.max(0,budget-(c.cycBuy||0));
+}
 
 /* ════════ 매수·매도표 (사다리) ════════ */
 function renderVrTable(){
@@ -6995,7 +7007,7 @@ function vrSimForward(){
       // 2) 사다리 체결 — 매도 먼저(현금 확보) → 매수 (백테와 같은 순서)
       c=computeVr();
       let qty=Math.floor(c.qty), pool=c.pool, up=c.up, lo=c.lo, cyc=c.curCyc;
-      const budget=Math.max(0, pool*(st.mode||0.75));     // 그날 매수 한도
+      const budget=poolLimit(c);                          // 이번 사이클 남은 매수 한도(중간 매도로 확대하지 않음)
       let spent=0;
       const push=(type,price)=>{ sess.hist.push({type,date:row.date,price:+price.toFixed(4),qty:1,
         cyc, sim:true, ts:Date.now()+(seq++)}); };
