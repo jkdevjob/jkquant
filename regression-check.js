@@ -1138,8 +1138,17 @@ console.log('[24] 표 밀도 — 한 화면에 더 많이');
 console.log('[25] 모의 성과 → 분석 이동');
 {
   ok('성과 줄이 어느 세션인지 안다', /return \{tab, id:sess\.id, name:sess\.name/.test(idx));
-  ok('줄을 누르면 이동', /<tr class="jump" onclick="gotoSess\('\$\{r\.tab\}','\$\{r\.id\}'\)"/.test(idx)
-     && /\.htable tr\.jump\{cursor:pointer\}/.test(idx));
+  /* 줄 전체를 누르게 했더니 숫자를 보려고 짚기만 해도 화면이 넘어갔다 —
+     이제 '전략 이름'만 누른다. 줄에는 onclick 이 남아 있으면 안 된다. */
+  ok('전략 이름을 누르면 이동',
+     /<b class="slink" onclick="gotoSess\('\$\{r\.tab\}','\$\{r\.id\}'\)"[^>]*>\$\{r\.label\}<\/b>/.test(idx)
+     && /\.htable \.slink\{/.test(idx));
+  ok('줄 전체는 더 이상 안 눌린다', !/<tr class="jump"/.test(idx) && !/\.htable tr\.jump\{/.test(idx));
+  ok('눌리는 곳이 폰에서도 짚힌다', /\.htable \.slink\{[^}]*padding:4px 7px/.test(idx)
+     && /\.htable \.slink\{[^}]*line-height:20px/.test(idx));
+  ok('쓰는 CSS 변수가 실제로 있다',
+     (idx.match(/\.htable \.slink[^}]*\}/g)||[]).join(' ').match(/var\(--[a-z-]+\)/g)
+       .every(v=>new RegExp(v.slice(4,-1).replace(/[-]/g,'\\-')+':').test(idx)));
   let gs=''; try{ gs=extractFn(idx,'function gotoSess(tab, id)'); }catch(e){}
   ok('이동 함수 존재', !!gs, gs?'':'gotoSess 없음');
   /* 순서가 핵심 — switchSess가 서브탭을 건드리므로
@@ -1156,7 +1165,8 @@ console.log('[25] 모의 성과 → 분석 이동');
   // 여섯 탭 모두 '<탭>-anal' 칩이 있어야 id 찾기가 성립한다
   const chips=(idx.match(/class="chip" data-b="[a-z]+-anal">분석</g)||[]).length;
   ok('여섯 탭 모두 분석 칩이 있다', chips===6, chips+'개');
-  ok('줄 설명도 분석으로 바뀌었다', /title="이 세션의 분석으로"/.test(idx));
+  ok('누르는 곳 설명도 분석으로', /title="\$\{r\.label\} 분석으로 이동"/.test(idx));
+  ok('전략 이름을 누르라고 알려 준다', /<b style="color:var\(--vio\)">전략 이름<\/b>을 누르면/.test(idx));
 }
 
 
