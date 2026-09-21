@@ -315,7 +315,7 @@ td:first-child{text-align:left;}
   <div class="brand">
     <div>
       <div class="logo">Backtest</div>
-      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v1.177.5</span></h1>
+      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v1.177.6</span></h1>
     </div>
   </div>
   <div class="hright">
@@ -445,8 +445,8 @@ document.addEventListener('click',function(e){ var m=document.getElementById('jk
     </div>
     <div class="ctrl s-im hide"><label>리버스 <span style="font-size:9px;color:var(--dim)">V4.0 원금소진 후</span></label>
       <div class="seg" id="imRev" style="align-self:flex-start">
-        <button data-r="0" class="active" title="원금 소진(T&gt;분할−1) 후 리버스 무한매도 안 함 — 후반전 별지점 손절 쿼터매도로만 방어. 백테스트상 20분할·저점 V반등에서 리버스보다 유리(기본)">끔</button>
-        <button data-r="1" title="20·40분할에서 원금 소진(T&gt;분할−1) 후 리버스 무한매도 모드 진입 — 라오어 공식 V4.0. 10·30분할은 제공된 원전 자료에 리버스 산식이 없어 적용하지 않음. 급락 저점에서 분할 매도 후 반등 시 재매수">켬</button>
+        <button data-r="0" title="리버스를 사용하지 않는 비공식 변형 — 비교용">끔</button>
+        <button data-r="1" class="active" title="20·40분할에서 원금 소진(T&gt;분할−1) 후 리버스 무한매도+쿼터매수 — 라오어 공식 V4.0. 10·30분할은 제공된 원전 자료에 리버스 산식이 없어 적용하지 않음">켬</button>
       </div>
     </div>
     <div class="ctrl s-im hide"><label>재투자</label>
@@ -862,7 +862,7 @@ const MA_TICKERS=STRAT_TICKERS;
 let M={};
 let strat='dca';
 let dcaFreq='daily', dcaPeriodMode='common', imDiv=20;
-let imReverse=false;   // V4.0 리버스 무한매도 (원금소진 후) — 기본 OFF (20분할 백테 상 리버스가 저점 손절 후 V반등을 놓쳐 불리)
+let imReverse=true;    // V4.0 원전: 원금소진 후 리버스 무한매도+쿼터매수 — 20·40분할 공식 범위
 let imActive=new Set(IM_TICKERS);   // 무매 다중선택
 let vrActive=new Set(VR_TICKERS);   // VR 다중선택
 let maActive=new Set(MA_TICKERS);   // 200일선 다중선택 (기본: 전체 — 카드 비교로 시작)
@@ -2067,7 +2067,7 @@ function runIM(days,tkr,cap,divs,targetPct,compound=true){
       // 전량 매도 → 사이클 리셋 (복리/단리 동일 처리)
       if(shares<1e-9){ shares=0;avg=0;cycles++; inReverse=false;
         if(compound){} else if(cash>cap){ savedProfit+=cash-cap; cash=cap; }
-        else if(cash<cap){ addedCash+=cap-cash; cash=cap; } // 단리: 초과익만 인출, 손실은 잔고 그대로 이월
+        // 단리 손실 사이클: 외부자금 보충 없이 줄어든 cash 그대로 다음 사이클 이월
         T=0; snap.push([d,cash+savedProfit-addedCash]); peakInvested=Math.max(peakInvested,cap-cash); return; }
       // 가격 회복(종가>평단×exitMul) → 내일부터 일반모드 복귀. T는 그대로 승계.
       // (복귀 후 일반모드에서 1회분도 못 사는 상태가 되면 T>분할−1이라 자동으로 다시 리버스 진입)
@@ -2100,7 +2100,7 @@ function runIM(days,tkr,cap,divs,targetPct,compound=true){
       if(shares<1e-9){shares=0;avg=0;cycles++;
         if(compound){ /* 복리: 익절금 포함 현금 그대로 다음 사이클 사용 */ }
         else if(cash>cap){ savedProfit+=cash-cap; cash=cap; }
-        else if(cash<cap){ addedCash+=cap-cash; cash=cap; }  // 단리: 초과익만 인출, 손실 사이클은 잔고 이월(외부수혈 없음)
+        // 손실은 외부자금으로 원금 복구하지 않고 그대로 이월
         T=0;snap.push([d,cash+savedProfit-addedCash]);return;}
     }
     if(divs-T>=1&&cash>1){          // 소진 = T>분할−1 → 남은 회차가 1회 이상일 때만 매수
@@ -2359,7 +2359,7 @@ function runIM50(days,tkr,cap,divs,targetPct,compound=true){
       }
       if(shares<1e-9){ shares=0;avg=0;cycles++; inReverse=false;
         if(compound){} else if(cash>cap){ savedProfit+=cash-cap; cash=cap; }
-        else if(cash<cap){ addedCash+=cap-cash; cash=cap; }
+        // 단리 손실 사이클은 외부자금 보충 없음
         T=0; snap.push([d,cash+savedProfit-addedCash]); peakInvested=Math.max(peakInvested,cap-cash); return; }
       if(c>avg*exitMul){ inReverse=false; }
       if(i%10===0)snap.push([d,cash+shares*c+savedProfit-addedCash]);
