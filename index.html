@@ -202,10 +202,14 @@ table.cmp td:first-child,table.cmp th:first-child{text-align:left}
 .htable .edit{color:var(--vio);cursor:pointer;font-weight:700;padding:0 3px}
 .htable .cyc-end{font-size:10px;line-height:1;vertical-align:middle;cursor:help}
 .htable .empty{text-align:center;color:var(--faint);padding:14px 0}
-/* 모의 성과 줄 — 눌러서 그 세션 거래이력으로 간다 */
-.htable tr.jump{cursor:pointer}
-.htable tr.jump:hover td{background:var(--panel2)}
-.htable tr.jump:active td{background:var(--vio-bg)}
+/* 모의 성과 — '전략 이름'만 눌러서 그 세션 분석으로 간다.
+   줄 전체를 누르게 했더니 숫자를 보려고 짚기만 해도 화면이 넘어갔다.
+   폰에서도 편하게 짚히도록 글자보다 조금 넓게 잡는다(세로 28px). */
+.htable .slink{display:inline-block;color:var(--vio);cursor:pointer;font-weight:800;
+  padding:4px 7px;margin:-4px -7px 0;border-radius:7px;line-height:20px;
+  text-decoration:underline;text-decoration-color:var(--vio-bg);text-underline-offset:3px}
+.htable .slink:hover{background:var(--vio-bg);text-decoration-color:var(--vio)}
+.htable .slink:active{background:var(--vio-bg);opacity:.75}
 /* 수정·삭제 칸 — 아이콘 둘뿐인데 57px을 먹고 있었다 */
 .htable td:last-child{padding:3px 2px}
 .syncbar{display:flex;align-items:center;gap:8px;background:var(--panel);border:1px solid var(--line);border-radius:11px;padding:10px 13px;margin-bottom:13px;font-size:12px}
@@ -520,7 +524,7 @@ try{ if(localStorage.getItem('qcockpit_hadUser')==='1') document.documentElement
 </div>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.71</span></h1></div>
+    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.72</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -1608,7 +1612,7 @@ document.addEventListener('click',function(e){ var m=document.getElementById('jk
   <footer>
     <strong>JK 퀀트</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.71</b> · 2026-09-21</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.72</b> · 2026-09-21</div>
   </footer>
 </div>
 
@@ -6673,7 +6677,7 @@ async function openPaper(){
       const outTag = outAmt>0
         ? `<span class="cw" style="color:var(--gold)">${O.simple?'단리 인출':'출금'} ${wnCur(outAmt,r.cur)}</span>`
         : (O.simple ? `<span class="cw" style="color:var(--faint)">단리 · 인출 없음</span>` : '');
-      h+=`<tr class="jump" onclick="gotoSess('${r.tab}','${r.id}')" title="이 세션의 분석으로"><td><b>${r.label}</b><span class="cw">${String(r.name).replace(/</g,'&lt;')} · ${r.sym}</span>${outTag}</td>
+      h+=`<tr><td><b class="slink" onclick="gotoSess('${r.tab}','${r.id}')" title="${r.label} 분석으로 이동">${r.label}</b><span class="cw">${String(r.name).replace(/</g,'&lt;')} · ${r.sym}</span>${outTag}</td>
         <td>${per}<span class="cw">${r.nTrade}거래</span></td>`
         + (ok
           ? `<td>${wnCur(r.total,r.cur)}</td>
@@ -6688,7 +6692,7 @@ async function openPaper(){
         + `<td style="color:var(--dim)">${wnCur(r.inflow,r.cur)}</td></tr>`; });
     h+=`</table></div>`;
     if(!cur) h+=`<p class="note" style="margin-top:8px;color:var(--gold)">⚠ 시세를 못 받은 세션이 있습니다. 그 줄은 수익률을 비워 뒀습니다 — 해당 탭을 한 번 열면 채워집니다.</p>`;
-    h+=`<p class="note" style="margin-top:8px">평가 = 보유 평가금 + 현금 + 계좌 밖으로 뺀 돈(출금·단리 인출) · 투입 = 밖에서 넣은 돈(원금·적립·입금). 수수료는 전략별 재생 규약을 따르고 <b>양도세는 넣지 않았습니다</b>.</p>`;
+    h+=`<p class="note" style="margin-top:8px"><b style="color:var(--vio)">전략 이름</b>을 누르면 그 세션의 분석으로 갑니다. · 평가 = 보유 평가금 + 현금 + 계좌 밖으로 뺀 돈(출금·단리 인출) · 투입 = 밖에서 넣은 돈(원금·적립·입금). 수수료는 전략별 재생 규약을 따르고 <b>양도세는 넣지 않았습니다</b>.</p>`;
     if(paperNote) h+=`<p class="note" style="color:var(--vio)">${paperNote}</p>`;
     body.innerHTML=h;
   }
