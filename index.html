@@ -520,7 +520,7 @@ try{ if(localStorage.getItem('qcockpit_hadUser')==='1') document.documentElement
 </div>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.67.10</span></h1></div>
+    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.67.11</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -1610,7 +1610,7 @@ document.addEventListener('click',function(e){ var m=document.getElementById('jk
   <footer>
     <strong>JK 퀀트</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.67.10</b> · 2026-09-21</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.67.11</b> · 2026-09-21</div>
   </footer>
 </div>
 
@@ -2514,10 +2514,9 @@ function renderOrder(){
         const bp=star5*(1-gap/100);
         // 리버스 소진 기준(라오어 공지) = '1개 매수가 불가능해지는 시점'. T가 분할−1을 넘어도
         // 1주를 살 수 있으면 계속 매수한다 → 잔금÷4가 1주에 못 미쳐도 잔금으로 1주는 산다.
-        { const qq=bp>0?Math.max(Math.floor(quarterBuy/bp), (c.bal>=bp?1:0)):0;
+        { const qq=bp>0?Math.floor(quarterBuy/bp):0;
           rh+= qq>=1 ? oitem('b','쿼터매수 (잔금÷4)','LOC',bp,qq)
-                     : `<div class="note" style="color:var(--gold)">🚫 쿼터매수 없음 — 잔금 ${wn(c.bal)}으로 1주(${wn(bp)})도 살 수 없습니다. 리버스 기준으로도 소진입니다.</div>`;
-          if(qq===1 && quarterBuy<bp) rh+=`<div class="note" style="color:var(--gold)">ⓘ 잔금÷4(${wn(quarterBuy)})가 1주 값에 못 미치지만, 리버스는 <b>1개 매수가 가능할 때까지 지속</b>이라 1주를 주문합니다.</div>`; }
+                     : `<div class="note" style="color:var(--gold)">🚫 쿼터매수 없음 — 잔금÷4(${wn(quarterBuy)})로 1주(${wn(bp)})를 살 수 없습니다. 남은 현금을 더 써서 1주를 강제하지 않습니다.</div>`; }
         rh+=`<div class="note">매수금 = 잔금÷4 = ${wn(quarterBuy)} · 별지점 −${gap}% LOC.</div>`;
       }else{
         rh+=`<div class="note">매수금 = 잔금÷4 = ${wn(quarterBuy)} (별지점 아래 LOC). 별지점을 입력하면 단가가 계산됩니다.</div>`;
@@ -3321,8 +3320,8 @@ function infSimForward(startFrom){
             { const sq=Math.floor(c.qty/sellDiv); if(sq>=1) put('리버스매도',d,cl,Math.min(c.qty,sq)); }
           }else if(star5>0){
             const bp=star5*(1-(st.gap||2.5)/100);
-            if(cl<=bp){ const bal=c.bal;                              // 리버스 소진 = 1주도 못 살 때
-              const qq=Math.max(Math.floor((bal/4)/cl), bal>=cl?1:0);
+            if(cl<=bp){ const bal=c.bal;
+              const qq=Math.floor((bal/4)/cl);
               if(qq>=1) put('리버스매수',d,cl,qq); }
           }
         }
@@ -3341,11 +3340,9 @@ function infSimForward(startFrom){
           if(a>0&&b>0) eff=imTgtOf(st.target,(a/b-1)*100); }
         const star=c.avg*(1+starPct(st.ticker,st.div,c.T,st.target)/100);
         const qSell=Math.floor(c.qty/4), qTp=c.qty-qSell, tgt=c.avg*(1+eff/100);
-        /* ① 지정가 익절 — 판정은 종가로 한다.
-           고가 터치를 체결로 치면 장중에 스치기만 하고 안 팔린 날까지 익절로 세어
-           모의가 실제보다 낙관적으로 나온다(SOXL 20/10 한 해에 +8.7%p 차이가 났다).
-           체결가는 그대로 max(익절가, 시가) — 갭업이면 시가가 더 유리하다. */
-        if(cl>=tgt && qTp>0) put('지정가매도',d,(op>tgt?op:tgt),qTp);
+        /* ① 지정가 익절 — 프리장에 미리 건 일반 지정가 주문이므로 장중 고가가 목표가에 닿으면 체결.
+           시가가 목표가 위에서 시작하면 가격개선으로 시가 체결로 근사한다. */
+        if(hi>=tgt && qTp>0) put('지정가매도',d,(op>tgt?op:tgt),qTp);
         { const c3=computeInf();
           if(cl>=star && qSell>0 && c3.qty>0) put('쿼터매도',d,cl,Math.min(qSell,c3.qty)); }  // ② 별지점 LOC
         if(computeInf().qty<=0) liquidated=true;   // 전량매도 = 사이클 종료. 새 사이클 첫 매수는 다음 날 (백테 runIM과 같은 규약)
