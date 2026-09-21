@@ -305,7 +305,8 @@ if(DAYS.TQQQ){
   // 계획 인출액이 Pool보다 커도 V에서는 실제 인출액만 빠져야 한다.
   ok('인출식 V 차감 = 실제 인출액',
      /const actualWd=isWd\?Math\.min\(withdraw,Math\.max\(0,pool\)\):0;/.test(bt)
-     && /const addCycle=isAccum\?contrib:isWd\?-actualWd:0;/.test(bt),
+     && /const flow=isAccum\?contrib:isWd\?-actualWd:0;/.test(bt)
+     && /V=V\+P\/G\+flow;/.test(bt),
      '계획액을 먼저 V에서 차감하는 회귀 금지');
 }
 
