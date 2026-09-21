@@ -3048,7 +3048,7 @@ console.log('\n[67] 엔진 스모크 — 전부 실제로 굴러간다');
   // 엔진이 기대는 이웃 함수들도 파일에서 그대로 떼어 온다 (재구현 금지 원칙)
   const helpers=['function srcOf(t)','function divSplit(tkr, days, buys)','function _maOpt(opt)',
                  'function _maHold(sell,a,b)','function _maEntry(buy,a,b)',
-                 'function _maAbove(tkr,N,SHORT,BUY,SELL)','function _asapInd(tkr)','function _ivsWeights(tkr,N,s0)',
+                 'function _maAbove(tkr,N,SHORT,BUY,SELL)','function _asapInd(tkr)','function _ivsWeights(tkr,N,s0)','function _ivsX1(tkr)',
                  'function _isoWeek(d)','function _dcaFreq(f)','function _dcaHits(days,freq)','function _dcaMA(t,N)'];
   let pre='';
   for(const h of helpers){ try{ pre+=extractFn(bt,h)+'\n'; }catch(e){ ok('도우미 추출: '+h, false, e.message); } }
@@ -3154,6 +3154,14 @@ console.log('\n[68] 달력 적립 · 강제매도 회계 · 워밍업 표시');
                 'function _maAbove(tkr,N,SHORT,BUY,SELL)','function divSplit(tkr, days, buys)']
                .map(m=>extractFn(bt,m)).join('\n')+'\n'
                +(bt.match(/const MA_COND_LBL=\{[^}]*\};/)||[''])[0]+'\n'
+               +(bt.match(/const LEV_UNDERLYING=\{[^}]*\};/)||[''])[0]+'\n'
+               +(bt.match(/const LEV_EXPENSE=\{[^}]*\};/)||[''])[0]+'\n'
+               +(bt.match(/const LEV_EXPENSE_DEF=[^\n]*/)||[''])[0]+'\n'
+               +(bt.match(/const LEV_SPREAD=[^\n]*/)||[''])[0]+'\n'
+               +(bt.match(/const LEV_PRICEIDX=\{[^}]*\};/)||[''])[0]+'\n'
+               +(bt.match(/const X1_EXPENSE=\{[^}]*\};/)||[''])[0]+'\n'
+               +(bt.match(/const X1_EXPENSE_DEF=[^\n]*/)||[''])[0]+'\n'
+               +(bt.match(/const IDX_EXTEND=\{[\s\S]*?\n\};/)||[''])[0]+'\n'
                +'var levExt=false, EXTM={}, maBuy="ma", maSell="ma", maShort=50, maPark="cash";\n';
     global.META=global.META||{SOXL:{lev:3},TQQQ:{lev:3},TECL:{lev:3}};
     const fn=new Function(pre2+'return ('+extractFn(bt,'function runMA200(days,tkr,cap,N,costOn,opt)').replace(/^function \w+\(/,'function (')+')')();
@@ -3311,6 +3319,154 @@ console.log('\n[70] 모의 성과 MDD — 단위가치로 잰다');
       ok('종가가 모자라면 안 잰다', out===null, JSON.stringify(out));
     }
   }
+}
+
+/* ════ 71. same-close 룩어헤드 탐지 ════
+   "오늘 종가로 신호를 확정하고 같은 오늘 종가에 체결"은 낼 수 없는 주문이다.
+   잡는 법: 마지막 날 종가만 인위적으로 흔들어 보고, 그날 '거래가 일어났는지' 자체가
+   바뀌면 신호가 그 종가를 보고 있었다는 뜻이다.
+   예외 — 전날 미리 걸어 둔 지정가·사다리가 오늘 OHLC 에 닿아 체결되는 건 정상이다
+   (무매 별지점·익절 지정가, VR 예약주문). 그래서 이 절은 종가 신호 전략만 본다.
+
+   이 전략들은 체결가가 오늘 종가라 '거래 금액'은 당연히 바뀐다. 보는 건 금액이 아니라
+   '그날 손이 나갔는가(주수 변화)'다. */
+console.log('\n[71] same-close 룩어헤드 탐지');
+{
+  const pre=['function srcOf(t)','function divSplit(tkr, days, buys)','function _isoWeek(d)',
+             'function _dcaFreq(f)','function _dcaHits(days,freq)','function _dcaMA(t,N)',
+             'function _asapInd(tkr)','function _ivsWeights(tkr,N,s0)','function _ivsX1(tkr)']
+            .map(m=>extractFn(bt,m)).join('\n')+'\n'
+    +(bt.match(/const SGOV_RATE=\{[^}]*\};/)||[''])[0]+'\n'
+    +(bt.match(/const KR_RATE=\{[^}]*\};/)||[''])[0]+'\n'
+    +(bt.match(/const TBILL_RATE=\{[^}]*\};/)||[''])[0]+'\n'
+    +(bt.match(/const parkRate=\(y,tkr\)=>[^\n]*/)||[''])[0]+'\n'
+    +(bt.match(/const LEV_UNDERLYING=\{[^}]*\};/)||[''])[0]+'\n'
+    +(bt.match(/const LEV_EXPENSE=\{[^}]*\};/)||[''])[0]+'\n'
+    +(bt.match(/const LEV_EXPENSE_DEF=[^\n]*/)||[''])[0]+'\n'
+    +(bt.match(/const LEV_SPREAD=[^\n]*/)||[''])[0]+'\n'
+    +(bt.match(/const LEV_PRICEIDX=\{[^}]*\};/)||[''])[0]+'\n'
+    +(bt.match(/const X1_EXPENSE=\{[^}]*\};/)||[''])[0]+'\n'
+    +(bt.match(/const X1_EXPENSE_DEF=[^\n]*/)||[''])[0]+'\n'
+    +(bt.match(/const IDX_EXTEND=\{[\s\S]*?\n\};/)||[''])[0]+'\n'
+    +'var levExt=false, EXTM={}, dcaReinv=true, dcaDipMul=1;\n';
+  const mk=(m)=>new Function(pre+'return ('+extractFn(bt,m).replace(/^function [\w$]+\(/,'function (')+')')();
+  const T=DAYS.SOXL?'SOXL':'TQQQ', D0=DAYS[T];
+  ok('탐지에 쓸 데이터가 있다', !!D0 && D0.length>300);
+
+  if(D0){
+    /* 탐지 방법 — 날짜 d 를 하나 골라 '그날까지 잘라' 돌리고, d 의 종가만 흔든다.
+       d 를 흔들어도 d 까지의 거래 '건수'가 그대로여야 한다. 바뀌면 그날 신호가
+       d 의 종가를 보고 있었다는 뜻이다. 앞 날들은 d 를 안 보므로 차이는 온전히 d 몫이다.
+
+       마지막 날 하나만 흔드는 방식은 약하다 — 그날 마침 거래가 없으면 옛 코드도 통과한다
+       (처음에 그렇게 짰다가 변이 시험에서 안 잡히는 걸 보고 바꿨다). 40개 날을 훑는다.
+       재는 건 '주수·금액'이 아니라 '건수'다 — 체결가가 오늘 종가라 금액은 당연히 달라진다.
+       원금을 크게 잡는 건 정수 내림 때문이다: 1만$이면 주가를 흔들 때 주문이 0주로
+       내려앉아 '거래 없음'이 되는 일이 생겨, 룩어헤드가 없는데도 몇 번 걸린다.
+       실측(표준편차·SOXL): 옛 코드 80회 중 33회가 바뀌었고, 고친 뒤는 0회다. */
+    const CAP=1e7;
+    const scan=(name, run)=>{
+      const step=Math.floor((D0.length-300)/40)||1;
+      let flips=0, checked=0, first='';
+      for(let k=300;k<D0.length;k+=step){
+        const d=D0[k], orig=M[T][d].slice(), sub=D0.slice(0,k+1);
+        const pick=r=>(r.rebals!=null?r.rebals:r.trades);   // 다리가 여럿이면 '판단 횟수'로
+        const base=pick(run(sub));
+        for(const m of [0.7,1.4]){
+          const [c,o,h,l]=orig;
+          M[T][d]=[c*m,o,Math.max(h,c*m),Math.min(l,c*m)];
+          let v; try{ v=pick(run(sub)); } finally{ M[T][d]=orig.slice(); }
+          checked++;
+          if(v!==base){ flips++; if(!first) first=`${d} 종가 ×${m} → ${base}건이 ${v}건으로`; }
+        }
+      }
+      ok(`${name} — 오늘 종가가 오늘 거래를 바꾸지 않는다`, checked>0 && flips===0,
+         checked? `${checked}회 중 ${flips}회 바뀜${first?' · 예: '+first:''}` : '검사 0회');
+    };
+    const asap=mk('function runASAP(days,tkr,opt)');
+    const std =mk('function runStdev(days,tkr,cap,N,g,filter,costOn)');
+    const ivs =mk('function runIVS(days,tkr,cap,s0,N,band,costOn,mode,pair)');
+    const dca =mk('function _dcaOne(t,days,amt,freq,costOn,dipMul)');
+
+    scan('ASAP', sub=>asap(sub,T,{base:1000,mid:5000,deep:10000,costOn:true}));
+    for(const fl of ['none','nobuy','exit'])
+      scan(`표준편차(${({none:'필터없음',nobuy:'물타기금지',exit:'현금이탈'})[fl]})`,
+           sub=>std(sub,T,CAP,40,2.5,fl,true));
+    for(const [m,pr] of [['iv','cash'],['fix','cash'],['iv','x1']])
+      scan(`역분산(${m==='fix'?'고정5:5':'역분산'}·${pr==='x1'?'1배짝':'현금짝'})`,
+           sub=>ivs(sub,T,CAP,0.45,60,0.10,true,m,pr));
+    for(const mul of [1,2,3])
+      scan(`적립 하락${mul}배`, sub=>dca(T,sub,1e5,'monthly',true,mul));
+
+    /* 예약주문은 반대다 — 전날 걸어 둔 지정가가 오늘 OHLC 에 닿으면 체결되는 게 정상이므로
+       종가(그리고 그에 맞춘 고저)를 흔들면 결과가 바뀌어야 한다. 안 바뀌면 사다리가 죽은 것이다. */
+    const vr=mk('function runVR(days,tkr,params)');
+    { const P={initAmt:CAP,G:10,bandPct:15,mode:0.75,contrib:CAP/200,formula:'basic',
+                 startV:0,startPool:CAP,costOn:true,fill:'ladder'};
+      const step=Math.floor((D0.length-300)/40)||1; let flips=0, checked=0;
+      for(let k=300;k<D0.length;k+=step){
+        const d=D0[k], orig=M[T][d].slice(), sub=D0.slice(0,k+1);
+        const base=vr(sub,T,{...P}).trades;
+        for(const m of [0.7,1.4]){ const [c,o,h,l]=orig;
+          M[T][d]=[c*m,o,Math.max(h,c*m),Math.min(l,c*m)];
+          let v; try{ v=vr(sub,T,{...P}).trades; } finally{ M[T][d]=orig.slice(); }
+          checked++; if(v!==base) flips++; } }
+      /* 여기만 부호가 반대다 — 전날 걸어 둔 지정가가 오늘 고가·저가에 닿아 체결되는 건
+         정상이고, 오히려 반응이 없으면 사다리가 죽은 것이다. 매번 닿지는 않으므로
+         (그날 값이 차수에 못 미치는 날이 더 많다) '몇 번이라도 반응하는가'를 본다. */
+      ok('VR 예약주문은 오늘 OHLC 에 반응한다 (정상)', flips>=3,
+         `${checked}회 중 ${flips}회 반응 — 사다리를 다음날 체결로 바꾸면 여기가 0이 된다`); }
+  }
+
+  // 소스 모양 — 신호를 만드는 자리가 전일 인덱스를 보는가
+  const stdS=extractFn(bt,'function runStdev(days,tkr,cap,N,g,filter,costOn)');
+  ok('표준편차 신호가 전일까지로 만들어진다',
+     /const gp=gx-1;\s*\n\s*const lv=lvOf\(gp\), bear = gp>=0 && ma200\[gp\]!=null && cl\[gp\]<ma200\[gp\];/.test(stdS)
+     && !/const lv=lvOf\(gx\)/.test(stdS));
+  const ivsS=extractFn(bt,'function runIVS(days,tkr,cap,s0,N,band,costOn,mode,pair)');
+  ok('역분산 밴드 판정이 전일 종가로',
+     /const eqP = cash \+ A\.sh\*pc \+ B\.sh\*pc1;/.test(ivsS)
+     && /if\(eqP>0 && Math\.abs\(w-A\.sh\*pc\/eqP\)>band\)\{/.test(ivsS)
+     && !/if\(Math\.abs\(w-A\.sh\*c\/eq0\)>band\)/.test(ivsS));
+  const asapS=extractFn(bt,'function runASAP(days,tkr,opt)');
+  ok('ASAP 지표가 전일까지로',
+     /const g=gi\[d\], q=g-1, p=g-2;/.test(asapS) && /const pc=cl\[q\], down=pc<m200;/.test(asapS)
+     && !/rsi<=30&&c<=m200\*0\.85/.test(asapS));
+  const dcaS=extractFn(bt,'function _dcaOne(t,days,amt,freq,costOn,dipMul)');
+  ok('적립 배수 판정이 전일까지로',
+     /const ma=\(MA&&pd\)\?MA\[pd\]:null;/.test(dcaS) && !/const ma=MA\?MA\[d\]:null;/.test(dcaS));
+
+  // 운영 앱도 같은 규약이어야 한다 — 한쪽만 고치면 앱과 백테가 갈린다
+  const appIvs=extractFn(idx,'function ivsReplay()');
+  ok('운영 섀넌도 전일 종가로 판정',
+     /const eqP = qty\*pc \+ \(X1\?qty1\*pc1:0\) \+ cash;/.test(appIvs)
+     && !/if\(Math\.abs\(w-qty\*c\/eq\)<=band\) continue;/.test(appIvs));
+  const appAsap=extractFn(idx,'function _paperAsap(sess, from)');
+  ok('운영 ASAP 도 전일 지표로',
+     /const q=i-1, p=i-2;/.test(appAsap) && /const pc=cl\[q\], down=pc<m200;/.test(appAsap)
+     && !/rsi<=30&&c<=m200\*0\.85/.test(appAsap));
+
+  // VR 사이클은 달력 14일 — 앱 CYC_DAYS 와 같은 숫자여야 한다
+  const vrS=extractFn(bt,'function runVR(days,tkr,params)');
+  const appCyc=(idx.match(/const CYC_DAYS=(\d+);/)||[])[1];
+  const btCyc=(vrS.match(/const VR_CYC_DAYS=(\d+);/)||[])[1];
+  ok('VR 사이클을 달력으로 센다', !!btCyc && !/i%interval===0/.test(vrS) && !/interval=10/.test(vrS));
+  ok('앱과 같은 사이클 길이', appCyc===btCyc, `앱 ${appCyc} / 백테 ${btCyc}`);
+  ok('주말이면 다음 영업일로 민다',
+     /while\(t\.getUTCDay\(\)===0\|\|t\.getUTCDay\(\)===6\) t\.setUTCDate\(t\.getUTCDate\(\)\+1\);/.test(vrS));
+
+  // 세금 강제매도 — 남은 두 엔진도 같은 규약
+  const maS=extractFn(bt,'function runMA200(days,tkr,cap,N,costOn,opt)');
+  const maaS=extractFn(bt,'function runMA200Accum(days,tkr,contribTotal,N,costOn,opt)');
+  for(const [n,b2] of [['200로테 거치',maS],['200로테 적립',maaS]]){
+    ok(`${n} 세금이 현금을 음수로 만들지 않는다`,
+       /const fromCash=Math\.min\(Math\.max\(cash,0\), due\); cash-=fromCash; due-=fromCash;/.test(b2)
+       && /if\(cash<-0\.01\)\{ cash=0; shares=0; avg=0; \}/.test(b2)
+       && !/cash-=taxUsd;/.test(b2));
+    ok(`${n} 모자라면 보유분을 판다`, /due-=gross-fee;/.test(b2)); }
+  ok('역분산 강제매도가 제 _sell 을 탄다',
+     /const before=cash; _sell\(P, px, Math\.min\(P\.sh, due\/\(px\*\(1-FEE\)\)\)\);/.test(ivsS)
+     && !/P\.sh-=q; due-=q\*px;/.test(ivsS));
 }
 
 console.log(`\n════ 결과: ${pass} PASS / ${fail} FAIL ${fail===0?'— ALL PASS ★':'— 배포 금지, 위 ✗ 항목 수정 필요'} ════`);

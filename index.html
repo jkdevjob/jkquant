@@ -524,7 +524,7 @@ try{ if(localStorage.getItem('qcockpit_hadUser')==='1') document.documentElement
 </div>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.73</span></h1></div>
+    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.74</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -1612,7 +1612,7 @@ document.addEventListener('click',function(e){ var m=document.getElementById('jk
   <footer>
     <strong>JK 퀀트</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.73</b> · 2026-09-21</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.74</b> · 2026-09-21</div>
   </footer>
 </div>
 
@@ -4883,7 +4883,15 @@ function ivsReplay(){
     const g=idx[d], w = FIX?0.5:(g>0?(W[dt[g-1]]??0):0);
     const eq=qty*c+(X1?qty1*c1:0)+cash;
     if(eq<=0) break;
-    if(Math.abs(w-qty*c/eq)<=band) continue;
+    /* 목표비중은 전일 것을 쓰면서 '지금 비중'만 오늘 종가로 재면, 결국 오늘 종가로
+       밴드 이탈을 판정하고 그 종가에 체결하는 꼴이 된다 — 낼 수 없는 주문이다.
+       이탈 판정도 전일 종가로 한다. 백테 runIVS 와 같은 규약 — 한쪽만 고치면 갈린다.
+       체결 '금액'은 오늘 종가로 잡는다(주문을 내는 시점의 값). */
+    const pc  = g>0 ? (all[g-1] ?? c) : c;
+    const pc1 = (X1 && g>0) ? (P1[dt[g-1]] ?? c1) : c1;
+    const eqP = qty*pc + (X1?qty1*pc1:0) + cash;
+    if(!(eqP>0)) continue;
+    if(Math.abs(w-qty*pc/eqP)<=band) continue;
     const tA=w*eq, tB=X1?(1-w)*eq:0;
     // 매도 먼저 → 매수 (현금 확보 순서, 백테와 동일)
     if(qty*c>tA){ const q=Math.min(qty,(qty*c-tA)/c); if(q*c>1){ const a=q*c,f=a*FEE; cash+=a-f; qty-=q;
@@ -6205,17 +6213,21 @@ function _paperAsap(sess, from){
   const _buy=(d,c,a,fromRes)=>{ if(!(a>0)||!(c>0))return; const q=a/c;
     rec.push({type:'buy',date:d,price:+c,qty:+q.toFixed(6),amt:+a.toFixed(2),from:fromRes?'reserve':'new',sim:true,ts:ts++});
     if(fromRes) sgov-=a; };
-  for(let i=1;i<n;i++){ const d=days[i].date; if(d<from||d>today) continue;
-    const c=cl[i], m200=MA200[i]; if(m200==null) continue;
-    const down=c<m200;
-    const crossDn=MA200[i-1]!=null&&cl[i-1]>=MA200[i-1]&&c<m200;
-    const cross5 =MA5[i-1]!=null&&MA20[i-1]!=null&&MA5[i-1]<=MA20[i-1]&&MA5[i]>MA20[i];
-    const cross20=MA20[i-1]!=null&&MA50[i-1]!=null&&MA20[i-1]<=MA50[i-1]&&MA20[i]>MA50[i];
-    const rsi=RSI[i]!=null?RSI[i]:50;
+  /* 지표는 '전일 종가까지'로 만들고 체결만 오늘 종가에 한다 — 백테 runASAP 와 같은 규약.
+     오늘 종가로 RSI·이평·교차를 확정한 뒤 같은 종가에 샀다고 치면 낼 수 없는 주문이다. */
+  for(let i=2;i<n;i++){ const d=days[i].date; if(d<from||d>today) continue;
+    const c=cl[i];                              // 체결가만 오늘 종가
+    const q=i-1, p=i-2;                         // q=전일, p=전전일
+    const m200=MA200[q]; if(m200==null) continue;
+    const pc=cl[q], down=pc<m200;
+    const crossDn=MA200[p]!=null&&cl[p]>=MA200[p]&&pc<m200;
+    const cross5 =MA5[p]!=null&&MA20[p]!=null&&MA5[p]<=MA20[p]&&MA5[q]>MA20[q];
+    const cross20=MA20[p]!=null&&MA50[p]!=null&&MA20[p]<=MA50[p]&&MA20[q]>MA50[q];
+    const rsi=RSI[q]!=null?RSI[q]:50;
     if(crossDn&&stage>0) stage=0;
     if(down){ _sgov(d,base);
-      if(rsi<=30&&c<=m200*0.85) _buy(d,c,deep,false);
-      else if(rsi<=35&&c<=m200*0.90) _buy(d,c,mid,false); }
+      if(rsi<=30&&pc<=m200*0.85) _buy(d,c,deep,false);
+      else if(rsi<=35&&pc<=m200*0.90) _buy(d,c,mid,false); }
     if(stage===0&&cross5){ _buy(d,c,sgov*0.2,true); stage=1; }
     if(stage===1&&cross20){ _buy(d,c,sgov*0.3,true); stage=2; }
     if(stage===2&&!down){ _buy(d,c,sgov,true); stage=3; }
