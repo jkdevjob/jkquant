@@ -78,8 +78,8 @@ inject(`if(sellQty>0){ _sell(c,sellQty,0); T=divs>=40?T*0.95:T*0.9; }   // MOC=�
 `if(sellQty>0){ __LOG('리버스매도',c,sellQty); _sell(c,sellQty,0); T=divs>=40?T*0.95:T*0.9; }   // MOC=종가`,'r1');
 inject(`if(sellQty>0){ _sell(c,sellQty,0); T=divs>=40?T*0.95:T*0.9; }   // LOC=종가`,
 `if(sellQty>0){ __LOG('리버스매도',c,sellQty); _sell(c,sellQty,0); T=divs>=40?T*0.95:T*0.9; }   // LOC=종가`,'r2');
-inject(`_buy(c, Math.min(cash, Math.max(cash/4, c)));   // LOC=종가`,
-`{const __a=Math.min(cash, Math.max(cash/4, c));const __q=_buy(c,__a);if(__q>0)__LOG('리버스매수',c,__q);}   // LOC=종가`,'r3');
+inject(`if(qAmt>=c && _buy(c,qAmt)>0) T=T+(divs-T)*0.25;`,
+`if(qAmt>=c){const __q=_buy(c,qAmt);if(__q>0){__LOG('리버스매수',c,__q);T=T+(divs-T)*0.25;}}`,'r3');
 inject(`{_sell(o>tgt?o:tgt,q3,SLIP);tpHit=true;}`,
 `{const __px=o>tgt?o:tgt;__LOG('지정가매도',__px,q3);_sell(__px,q3,SLIP);tpHit=true;}`,'tp');
 inject(`{_sell(c,sq,0);qtHit=true;}`,
@@ -322,15 +322,57 @@ console.log('[5b] VR 인출 실제액 규칙');
   ok('운영 인출 이력도 실제액만 기록', /amt:r\.flowAmt/.test(step) && /if\(r\.flowAmt>0\)/.test(step));
 }
 
-console.log('[5c] VR 사다리 동적 차수');
+console.log('[5c] VR 2주 고정 예약표');
 {
   const tab=extractFn(idx,'function renderVrTable()');
   const sim=extractFn(idx,'function vrSimForward()');
+  const vrbt=extractFn(bt,'function runVR(days,tkr,params)');
   ok('VR 사다리에 고정 20차수 없음', !/const N=20/.test(tab));
-  ok('매도표는 보유수량 전체 범위', /const sTiers=S/.test(tab));
-  ok('매수표는 Pool 한도까지만 생성', /if\(spent\+p > limit\+1e-6\) break/.test(tab));
-  ok('모의체결 고정 300차수 상한 없음', !/k<300/.test(sim) && /while\(qty>=1\)/.test(sim));
-  ok('가이드가 2주 내 가격도달 체결을 설명', /2주는 V 갱신 주기일 뿐/.test(idx));
+  ok('운영 주문표는 사이클 시작 수량 고정', /const S=vrCycleQty\(c\)/.test(tab)
+     && /filledSell/.test(tab) && /filledBuy/.test(tab));
+  ok('운영 매수한도는 사이클 시작 Pool 기준', /poolCycleBudget\(c\)/.test(tab)
+     && /remainBudget=Math\.max\(0,poolLimit\(c\)\)/.test(tab));
+  ok('모의도 사이클 시작 수량·한도 사용', /const S=vrCycleQty\(c\)/.test(sim)
+     && /const totalBudget=poolCycleBudget\(c\)/.test(sim));
+  ok('모의 V 갱신은 오늘 종가 아닌 직전 종가', /prevClose=.*O\[oi-1\]/.test(sim)
+     && /vrStepCycle\(sess,c,ds,prevClose\)/.test(sim));
+  ok('백테는 2주 사이 고가·저가로 예약표 체결', /function _buildOrders\(\)/.test(vrbt)
+     && /function _fillOrders\(row\)/.test(vrbt)
+     && /hi>=ord\.p/.test(vrbt) && /low<=ord\.p/.test(vrbt));
+  ok('백테 주문표도 사이클 중 재계산하지 않음', /sellOrders\.push\(\{p,filled:false\}\)/.test(vrbt)
+     && /buyOrders\.push\(\{p,filled:false,reserve:need\}\)/.test(vrbt));
+  ok('가이드가 2주 내 가격도달 체결을 설명', /2주는 V 갱신 주기일 뿐/.test(idx)
+     && /중간 체결 후 재계산하지 않음/.test(idx));
+}
+
+console.log('[5d] 무한매수 V4 원전 핵심 규칙');
+{
+  const sim=extractFn(idx,'function infSimForward(startFrom)');
+  const ord=extractFn(idx,'function renderOrder()');
+  const im=extractFn(bt,'function runIM(days,tkr,cap,divs,targetPct,compound');
+  ok('리버스 쿼터매수는 잔금÷4를 넘기지 않음',
+     !/Math\.max\(cash\/4,\s*c\)/.test(im)
+     && /const qAmt=cash\/4/.test(im)
+     && /Math\.floor\(quarterBuy\/bp\)/.test(ord));
+  ok('리버스 무한매도 최소 1주 강제 없음',
+     !/Math\.max\(1,sellQty\)/.test(ord)
+     && !/Math\.max\(1,Math\.floor\(c\.qty\/sellDiv\)\)/.test(sim));
+  ok('리버스 별지점은 직전 5거래일 종가',
+     /const prev5=closeHist\.slice\(-5\)/.test(im)
+     && /prev5\.length===5/.test(im));
+  ok('모의 지정가 익절은 장중 고가 터치',
+     /if\(hi>=tgt && qTp>0\)/.test(sim)
+     && /\(op>tgt\?op:tgt\)/.test(sim));
+}
+
+console.log('[5e] ASAP 확정안');
+{
+  const asap=extractFn(bt,'function runASAP(days,tkr,opt)');
+  ok('ASAP 재진입 30-30-40 기준', /stageReserve=sgov/.test(asap)
+     && (asap.match(/stageReserve\*0\.30/g)||[]).length===2
+     && /stage===2&&!down\)\{sh\+=sgov\*F\/c;sgov=0/.test(asap));
+  ok('ASAP 3차 당일 base 중복매수 없음', /up3<0\|\|di>up3/.test(asap));
+  ok('ASAP 재하락 시 재진입 기준 리셋', /stageReserve=0/.test(asap));
 }
 
 console.log('[6] UI 배선 정적 스캔');
