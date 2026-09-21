@@ -99,7 +99,7 @@ inject(`const fin=cash+shares*M[tkr][days[days.length-1]][C]+savedProfit-addedCa
 let tradeLog=[], finalState=null;
 global.__LOG=(k,p,q)=>tradeLog.push({kind:k,price:p,qty:q});
 global.__FINAL=s=>finalState=s;
-global.M={}; global.C=0;
+global.M={}; global.C=0; global.O=1; global.HI=2; global.LO=3;
 eval(btSrc);
 // backtest 상수(starBase/starSlope/exitMul)를 함수화 — 계열 규약 검사용
 const mBase=btSrc.match(/const starBase=([^;]+);/), mSlope=btSrc.match(/const starSlope=([^;]+);/), mExit=btSrc.match(/const exitMul ?= ?([^;]+);/);
