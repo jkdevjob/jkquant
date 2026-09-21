@@ -317,8 +317,8 @@ console.log('[5b] VR 인출 실제액 규칙');
   const nv=extractFn(idx,'function computeNextV(c,ev)');
   const step=extractFn(idx,'function vrStepCycle(sess, c, dateStr, close)');
   ok('운영 인출 계획액은 2주 $200', /const VR_WITHDRAW_CYCLE=200/.test(idx));
-  ok('운영 V는 실제 인출액만 차감', /flowAmt = isWd \? Math\.min\(planned,Pool\) : planned/.test(nv)
-     && /nextV=V \+ Pool\/G \+ sign\*flowAmt/.test(nv));
+  ok('운영 V는 실제 인출액만 차감', /flowAmt\s*=\s*isWd\?Math\.min\(planned,Pool\):planned/.test(nv)
+     && /nextV\s*=\s*V\+Pool\/G\+sign\*flowAmt/.test(nv));
   ok('운영 인출 이력도 실제액만 기록', /amt:r\.flowAmt/.test(step) && /if\(r\.flowAmt>0\)/.test(step));
 }
 
@@ -677,10 +677,9 @@ console.log('[14] 체결가 규약');
   // LOC는 반드시 종가 — 매수·쿼터매도가 종가 아닌 값으로 체결되면 안 된다
   ok('모의 매수는 종가 체결', /put\('절반매수',d,cl,/.test(sim) && /put\('1회매수',d,cl,/.test(sim));
   ok('모의 쿼터매도는 종가 체결', /put\('쿼터매도',d,cl,/.test(sim));
-  /* 익절 판정은 '종가'다. 고가 터치를 체결로 치면 장중에 스치기만 하고 안 팔린 날까지
-     익절로 세어 모의가 실제보다 낙관적으로 나온다 (SOXL 20/10 한 해 +8.7%p).
-     체결가는 여전히 max(익절가, 시가) — 갭업이면 시가가 더 유리하다. */
-  ok('익절 판정은 종가', /if\(cl>=tgt && qTp>0\)/.test(sim) && !/hi>=tgt/.test(sim));
+  /* 지정가 익절은 프리장에 미리 걸어 두는 일반 지정가 주문이다.
+     따라서 당일 고가가 목표가를 터치하면 체결, 갭업이면 시가 가격개선으로 근사한다. */
+  ok('익절 판정은 장중 고가 터치', /if\(hi>=tgt && qTp>0\)/.test(sim));
   ok('익절 체결가는 max(익절가, 시가)', /put\('지정가매도',d,\(op>tgt\?op:tgt\),qTp\)/.test(sim));
   // 규약을 바꾸면 이미 쌓인 모의 기록도 다시 만들어져야 한다 — 설정 지문만으로는 안 걸린다
   ok('체결 규약 판이 모의 지문에 들어간다',
