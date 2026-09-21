@@ -2569,7 +2569,7 @@ console.log('\n[58] 국내 종목의 비용·세금 규약');
   ok('라벨은 원문을 들고 다시 쓴다', /nd\.__curBase===undefined/.test(bt) && /nd\.nodeValue=nd\.__curBase\.replace/.test(bt));
   ok('탭을 옮기거나 종목을 바꾸면 다시 쓴다',
      /function renderSingle\(\)\{[^}]*syncCurLabels\(\);/.test(bt)
-     && /_ivsSync\(\);\n\s*syncCurLabels\(\);/.test(bt));
+     && /function setStrat\(s\)\{[\s\S]{0,1500}?syncCurLabels\(\);/.test(bt));
   // 섞어 고르면 원금 한 칸이 두 통화를 뜻하게 된다 — 한쪽 기호를 붙이면 나머지가 거짓이다
   ok('섞였을 땐 기호를 떼고 그렇다고 적는다',
      /\(ts\.some\(isKRW\)&&ts\.some\(t=>!isKRW\(t\)\)\) \? '종목별'/.test(bt)
