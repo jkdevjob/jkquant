@@ -322,27 +322,28 @@ console.log('[5b] VR 인출 실제액 규칙');
   ok('운영 인출 이력도 실제액만 기록', /amt:r\.flowAmt/.test(step) && /if\(r\.flowAmt>0\)/.test(step));
 }
 
-console.log('[5c] VR 2주 고정 예약표');
+console.log('[5c] VR 2주 고정 예약표 · V 복귀 수량');
 {
   const tab=extractFn(idx,'function renderVrTable()');
+  const plan=extractFn(idx,'function vrOrderPlan(c)');
   const sim=extractFn(idx,'function vrSimForward()');
   const vrbt=extractFn(bt,'function runVR(days,tkr,params)');
-  ok('VR 사다리에 고정 20차수 없음', !/const N=20/.test(tab));
-  ok('운영 주문표는 사이클 시작 수량 고정', /const S=vrCycleQty\(c\)/.test(tab)
-     && /filledSell/.test(tab) && /filledBuy/.test(tab));
-  ok('운영 매수한도는 사이클 시작 Pool 기준', /poolCycleBudget\(c\)/.test(tab)
+  ok('VR 주문표는 사이클 시작 수량 고정', /vrCycleQty\(c\)/.test(plan) && /const plan=vrOrderPlan\(c\)/.test(tab));
+  ok('VR 주문수량은 밴드 도달 시 V 복귀량', /Math\.round\(V\/p\)/.test(plan)
+     && /q=sh-target/.test(plan) && /target-sh/.test(plan));
+  ok('운영 매수한도는 사이클 시작 Pool 기준', /poolCycleBudget\(c\)/.test(plan)
      && /remainBudget=Math\.max\(0,poolLimit\(c\)\)/.test(tab));
-  ok('모의도 사이클 시작 수량·한도 사용', /const S=vrCycleQty\(c\)/.test(sim)
-     && /const totalBudget=poolCycleBudget\(c\)/.test(sim));
+  ok('모의도 같은 고정 주문표 사용', /const plan=vrOrderPlan\(c\)/.test(sim)
+     && /o\.q/.test(sim) && /o\.cum/.test(sim));
   ok('모의 V 갱신은 오늘 종가 아닌 직전 종가', /prevClose=.*O\[oi-1\]/.test(sim)
      && /vrStepCycle\(sess,c,ds,prevClose\)/.test(sim));
-  ok('백테는 2주 사이 고가·저가로 예약표 체결', /function _buildOrders\(\)/.test(vrbt)
+  ok('백테는 고가·저가 도달 예약표 체결', /function _buildOrders\(\)/.test(vrbt)
      && /function _fillOrders\(row\)/.test(vrbt)
      && /hi>=ord\.p/.test(vrbt) && /low<=ord\.p/.test(vrbt));
-  ok('백테 주문표도 사이클 중 재계산하지 않음', /sellOrders\.push\(\{p,filled:false\}\)/.test(vrbt)
-     && /buyOrders\.push\(\{p,filled:false,reserve:need\}\)/.test(vrbt));
-  ok('가이드가 2주 내 가격도달 체결을 설명', /2주는 V 갱신 주기일 뿐/.test(idx)
-     && /중간 체결 후 재계산하지 않음/.test(idx));
+  ok('백테도 1주 강제 사다리가 아니라 V 복귀수량', /Math\.round\(V\/p\)/.test(vrbt)
+     && /sellOrders\.push\(\{p,q,filled:false\}\)/.test(vrbt)
+     && /buyOrders\.push\(\{p,q,filled:false,reserve:need\}\)/.test(vrbt));
+  ok('가이드가 V 복귀 주문표를 설명', /평가금이 V로 복귀하도록 주문수량/.test(idx));
 }
 
 console.log('[5d] 무한매수 V4 원전 핵심 규칙');
@@ -395,6 +396,25 @@ console.log('[5f] 일정·룩어헤드·공식범위');
   ok('V4 리버스는 확인된 20·40분할만 공식 적용',
      /reverseSupported=\(st\.div===20\|\|st\.div===40\)/.test(ci)
      && (bt.match(/divs===20\|\|divs===40/g)||[]).length>=2);
+}
+
+console.log('[5g] 비교엔진·공식 기본값·모멘텀 룩어헤드');
+{
+  const bh=extractFn(bt,'function runBH(days,tkr,cap,costOn)');
+  const mom=extractFn(bt,'function momentumBacktest(data, tickers, U, cap, lb, filter, costOn)');
+  ok('무매 백테 기본 익절은 종목별 공식값', /let imTarget='auto'/.test(bt)
+     && /function imTargetOf\(tkr\)/.test(bt)
+     && /tkr==='TQQQ'\?15:20/.test(bt)
+     && /const tgt = imTargetOf\(t\)/.test(bt));
+  ok('전체비교 무매도 종목별 익절값 사용', /tgt=imTargetOf\(tkr\)/.test(bt));
+  ok('거치식 정수매수 잔여현금 보존', /const cash=Math\.max\(0,cap-sh\*p0\*\(1\+FEE\)\)/.test(bh)
+     && /cash\+sh\*p\(d\)/.test(bh));
+  ok('VR 결과에 마지막 V 반환', /ladder:true,cycleBudget,V/.test(bt));
+  ok('모멘텀 신호는 직전 월말까지만 사용', /sigD=ml\[months\[i-1\]\]/.test(mom)
+     && /baseD=ml\[months\[i-lb-1\]\]/.test(mom)
+     && !/px\(s,d\)\/px\(s,pd\)/.test(mom));
+  ok('모멘텀 보유중 잔여현금도 평가액에 포함', /eq\[dates\[k\]\]=cash\+shares\*lp/.test(mom)
+     && /const fin=held\?cash\+shares\*px/.test(mom));
 }
 
 console.log('[6] UI 배선 정적 스캔');
