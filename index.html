@@ -520,7 +520,7 @@ try{ if(localStorage.getItem('qcockpit_hadUser')==='1') document.documentElement
 </div>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.67.9</span></h1></div>
+    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.67.10</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -1610,7 +1610,7 @@ document.addEventListener('click',function(e){ var m=document.getElementById('jk
   <footer>
     <strong>JK 퀀트</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.67.9</b> · 2026-09-21</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.67.10</b> · 2026-09-21</div>
   </footer>
 </div>
 
@@ -3755,6 +3755,25 @@ function renderVrTable(){
     ? '<div class="resv-row" style="background:#33302040;color:var(--gold)">⚠ 이번 사이클 Pool 사용 한도 소진 — 다음 V 갱신까지 추가 예약매수 없음.</div>'
     : '';
 }
+function computeNextV(c,ev){
+  const st=c.st, V=c.V, Pool=Math.max(0,c.pool), G=st.g;
+  const isAccum=st.mode===0.75, isWd=st.mode===0.25;
+  const planned=isWd?VR_WITHDRAW_CYCLE:(isAccum?(st.add||0):0);
+  const flowAmt=isWd?Math.min(planned,Pool):planned;
+  const sign=isWd?-1:1, flowLabel=isWd?'인출금':'적립금';
+  let nextV, calcStr;
+  if(st.formula==='skill'&&V>0){
+    const corr=(ev-V)/(2*Math.sqrt(G));
+    nextV=V+Pool/G+corr+sign*flowAmt;
+    calcStr=`V₂ = V₁ + Pool/G + (E−V₁)/(2√G) ${sign<0?'−':'+'} ${flowLabel}<br>= ${V.toFixed(2)} + ${(Pool/G).toFixed(2)} + ${corr.toFixed(2)} ${sign<0?'−':'+'} ${flowAmt.toFixed(2)} = <b>${nextV.toFixed(2)}</b>`;
+  }else{
+    nextV=V+Pool/G+sign*flowAmt;
+    calcStr=`V₂ = V₁ + Pool/G ${sign<0?'−':'+'} ${flowLabel}<br>= ${V.toFixed(2)} + ${(Pool/G).toFixed(2)} ${sign<0?'−':'+'} ${flowAmt.toFixed(2)} = <b>${nextV.toFixed(2)}</b>`;
+  }
+  const nextPool=Pool+sign*flowAmt;
+  return {nextV,nextPool,calcStr,sign,planned,flowAmt};
+}
+
 function renderVrNext(){
   const c=computeVr(), st=c.st;
   $('nv_formula_lbl').textContent= st.formula==='skill'?'실력공식':'기본공식(오피셜)';
