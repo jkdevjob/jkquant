@@ -1006,7 +1006,7 @@ document.addEventListener('click',function(e){ var m=document.getElementById('jk
       <div class="card"><h3><span class="dot"></span>매 사이클 운영 (공통 5단계)</h3>
         <ol class="steps"><li><b>첫 진입</b> 설정에 <b>초기 투자금</b> → 현재 탭 "오늘 할 일 · 첫 매수" 버튼 (첫 매수 금액 = 0주차 V)</li>
           <li><b>현재 탭</b> 현재가/평가금 입력 → 매도·매수·대기 판단</li>
-          <li><b>매수·매도표</b> 보유수량·Pool 한도 안에서 가능한 예약주문을 첫날 걸고 2주 운용</li>
+          <li><b>매수·매도표</b> 사이클 시작 보유수량·Pool 한도로 첫날 확정하고 2주 동안 고정 운용 (중간 체결 후 재계산하지 않음)</li>
           <li><b>체결 기록</b> 실제 체결분을 ＋버튼으로 기록</li>
           <li><b>다음 V</b> 2주 후 "다음 사이클 진입" → V갱신·적립/인출 자동기록. 진입일은 상단 <b>D-day</b>로 알려줍니다</li></ol>
         <p class="note">설정(⚙️)에서 <b>사이클 진입 → 자동</b>을 고르면 5번이 없어집니다. 진입일이 지난 사이클을 앱이 알아서 따라잡아 V를 갱신하고 적립금을 기록합니다. <b>2주는 V 갱신 주기일 뿐</b>이고, 그 전에라도 예약가격에 닿으면 매수·매도가 체결됩니다. <b>매매는 어떤 경우에도 자동으로 하지 않습니다</b> — 실제 계좌에서 체결된 것만 기록하셔야 합니다.</p></div>
@@ -3420,11 +3420,13 @@ function computeVr(){
   let sawBuy=false;                              // 이력상 첫 buy 만났는지
   const carriedIn=V>0 && !(st.startCyc>0);       // "이어받기 시작"(설정 startv 직접입력, 사이클 진입 이력 없음) — 이 경우만 첫 buy도 추가매수(pool 차감)
   // 사이클 시작 시점 Pool 추적 (현재 진행 사이클의 '처음 Pool')
-  let curCyc=0, cycStartPool=pool, cycLimitBase=pool, cycTrade=0, cycDiv=0, cycBuy=0, cycSell=0, cycFlowOpen=true;
+  let curCyc=0, cycStartPool=pool, cycLimitBase=pool, cycStartQty=qty,
+      cycTrade=0, cycDiv=0, cycBuy=0, cycSell=0, cycBuyQty=0, cycSellQty=0, cycFlowOpen=true;
   hist.forEach(h=>{
     const hc=(h.cyc!=null?h.cyc:0);
     if(hc!==curCyc){
-      curCyc=hc; cycStartPool=pool; cycLimitBase=pool; cycTrade=0; cycDiv=0; cycBuy=0; cycSell=0; cycFlowOpen=true;
+      curCyc=hc; cycStartPool=pool; cycLimitBase=pool; cycStartQty=qty;
+      cycTrade=0; cycDiv=0; cycBuy=0; cycSell=0; cycBuyQty=0; cycSellQty=0; cycFlowOpen=true;
     }
     if(h.type==='buy'){
       const amt=h.price*h.qty; qty+=h.qty; totbuy+=amt; buyShares+=h.qty; cost+=amt;
@@ -3435,14 +3437,14 @@ function computeVr(){
         // startv가 사이클 진입으로 갱신돼도(startCyc>0) 이 판정은 유지되어 Pool이 음수로 회귀하지 않음.
         // 대신 '밖에서 들어온 돈'이므로 총투입(netInvested)에는 반드시 더해야 한다 —
         // 안 그러면 첫 매수만 있는 새 세션이 총투입 0$ · 수익 = 평가금 전액으로 보인다.
-        initBuy+=amt; cycStartPool=pool; cycLimitBase=pool;
+        initBuy+=amt; cycStartPool=pool; cycLimitBase=pool; cycStartQty=qty;
       }else{
-        pool-=amt; cycTrade-=amt; cycBuy+=amt; cycFlowOpen=false;
+        pool-=amt; cycTrade-=amt; cycBuy+=amt; cycBuyQty+=h.qty; cycFlowOpen=false;
       }
     }
     else if(h.type==='sell'){const amt=h.price*h.qty;const av=qty>0?cost/qty:0;
       realized+=amt-av*h.qty; cost-=av*h.qty; qty-=h.qty; if(qty<1e-9){qty=0;cost=0;}
-      totsell+=amt;pool+=amt;cycTrade+=amt;cycSell+=amt;cycFlowOpen=false;}
+      totsell+=amt;pool+=amt;cycTrade+=amt;cycSell+=amt;cycSellQty+=h.qty;cycFlowOpen=false;}
     else if(h.type==='add'){pool+=h.amt;totadd+=h.amt;if(cycFlowOpen)cycLimitBase=pool;flows.push({date:h.date,out:0,in:+h.amt||0,kind:'add'});}
     else if(h.type==='wd'){pool-=h.amt;totwd+=h.amt;if(cycFlowOpen)cycLimitBase=pool;flows.push({date:h.date,out:+h.amt||0,in:0,kind:'wd'});}
     else if(h.type==='div'){pool+=h.amt;totdiv+=h.amt;cycDiv+=h.amt;}
@@ -3452,7 +3454,8 @@ function computeVr(){
   const settingCyc=st.startCyc||0;
   if(settingCyc>lastCyc){
     // 거치식처럼 새 사이클 진입 때 add/wd 기록이 없는 경우도 새 사이클 한도를 새로 고정한다.
-    curCyc=settingCyc; cycStartPool=pool; cycLimitBase=pool; cycTrade=0; cycDiv=0; cycBuy=0; cycSell=0;
+    curCyc=settingCyc; cycStartPool=pool; cycLimitBase=pool; cycStartQty=qty;
+    cycTrade=0; cycDiv=0; cycBuy=0; cycSell=0; cycBuyQty=0; cycSellQty=0;
   }else curCyc=Math.max(lastCyc,settingCyc);
   // 명목평단(증권사 기준) = 총매수금 / 총 매수 주식수
   const avgNom=buyShares>0?totbuy/buyShares:0;
@@ -3466,7 +3469,8 @@ function computeVr(){
      '누적(인출 포함)'이 인출을 두 번 세지 않는다. */
   const grossIn=totadd + (st.startpool||0) + initBuy;
   return {st,qty,totbuy,totsell,totdiv,totadd,totwd,buyShares,pool,V,avgNom,avgEff,up,lo,initBuy,
-          netInvested,grossIn,realized,flows,recov,curCyc,cycStartPool,cycLimitBase,cycBuy,cycSell,cycTrade,cycTradeNet,cycDiv,hist};
+          netInvested,grossIn,realized,flows,recov,curCyc,cycStartPool,cycLimitBase,cycStartQty,
+          cycBuy,cycSell,cycBuyQty,cycSellQty,cycTrade,cycTradeNet,cycDiv,hist};
 }
 
 const CYC_DAYS=14;   // 한 사이클 = 2주(달력 14일 ≒ 거래일 10일, 백테 INTERVAL과 같음)
@@ -3667,15 +3671,20 @@ function renderVrBandGauge(){
 /* Pool 사용 한도 = 사이클 시작 시 적립/인출까지 반영된 Pool × mode.
    한 사이클당 상한이므로, 중간 매도로 Pool이 늘어도 한도를 다시 키우지 않는다.
    이미 이번 사이클에 매수한 금액은 차감해 '남은 매수 가능액'만 반환한다. */
-function poolLimit(c){
+function poolCycleBudget(c){
   const base=Math.max(0,c.cycLimitBase!=null?c.cycLimitBase:c.pool);
-  const budget=base*(c.st.mode||0.75);
-  return Math.max(0,budget-(c.cycBuy||0));
+  return base*(c.st.mode||0.75);
+}
+function poolLimit(c){
+  return Math.max(0,poolCycleBudget(c)-(c.cycBuy||0));
+}
+function vrCycleQty(c){
+  return Math.max(0,Math.floor((c.cycStartQty!=null?c.cycStartQty:c.qty)+1e-9));
 }
 
 /* ════════ 매수·매도표 (사다리) ════════ */
 function renderVrTable(){
-  const c=computeVr(), st=c.st, sym=isKrwSt(st)?'₩':'$';
+  const c=computeVr(), st=c.st;
   if(c.V<=0){
     $('sell_lad').innerHTML='<div class="lxr" style="justify-content:center;color:var(--faint)">첫 매수 기록 후 표가 생성됩니다</div>';
     $('buy_lad').innerHTML='<div class="lxr" style="justify-content:center;color:var(--faint)">첫 매수 기록 후 표가 생성됩니다</div>';
@@ -3684,103 +3693,65 @@ function renderVrTable(){
     return;
   }
   const price=vrLastPrice(c);
-  const limit=Math.max(0,poolLimit(c));
-  const ev=(price>0&&c.qty>0)?price*c.qty:vrEval(c);   // 현재 평가금 (즉시 체결 판단용)
-  const S=Math.floor(c.qty);           // 보유 주식수 (사다리 차수의 기준)
-  if(S<=0){                            // 보유 없음(시작 V만 입력 등) — per-share 차수 계산 불가
-    const setup='<div class="lxr" style="justify-content:center;color:var(--faint)">첫 매수를 기록하면 보유수량 기준으로 차수가 계산됩니다</div>';
+  const totalBudget=Math.max(0,poolCycleBudget(c)), remainBudget=Math.max(0,poolLimit(c));
+  const S=vrCycleQty(c);                 // 중요: 2주 시작 시 보유수량으로 주문표를 고정
+  const filledSell=Math.max(0,Math.floor((c.cycSellQty||0)+1e-9));
+  const filledBuy =Math.max(0,Math.floor((c.cycBuyQty ||0)+1e-9));
+  if(S<=0){
+    const setup='<div class="lxr" style="justify-content:center;color:var(--faint)">사이클 시작 보유수량이 있어야 예약표를 계산할 수 있습니다</div>';
     $('sell_lad').innerHTML=setup; $('buy_lad').innerHTML=setup;
     $('sell_wait').innerHTML=''; $('buy_wait').innerHTML=''; $('buy_warn').innerHTML='';
     $('lad_state_s').textContent='—'; $('lad_state_b').textContent='—';
-    $('lad_stage_s').textContent=c.curCyc+'주차'; $('lad_limit_b').textContent=`한도 ${wn(limit)} / ${wn(c.pool)}`;
+    $('lad_stage_s').textContent=c.curCyc+'주차'; $('lad_limit_b').textContent=`남은 한도 ${wn(remainBudget)}`;
     return;
   }
 
-  // ── 매도표 ── 매도가(k) = 상단가치(up) ÷ 매도 전 남은 보유수량 (per-share)
-  //   (S−k+1)주가 up 가치가 되는 주가에서 1주 매도 → 남은 S−k주. 보유 S주 → 최대 S차수.
-  let srows=''; let sPool=c.pool, sellReached=0; const sTiers=S;
-  for(let k=1;k<=sTiers;k++){
-    const remain=S-k+1;                // 매도 전 보유
-    const p=c.up/remain;               // 이 주가에서 remain주 = 상단가치
-    sPool+=p;                          // 1주 매도 → Pool 누적
-    const reached=price>=p; if(reached)sellReached++;
-    srows+=`<div class="lxr ${reached?'hit':''}" onclick="quickLadder('sell',${p.toFixed(2)})">
-      <span class="lx-n">${k}${reached?' 🔥':''}</span>
+  // 예약표는 사이클 첫날 한 번 만든 뒤 2주 동안 고정한다. 중간 체결 후 현재 수량으로 재계산하지 않는다.
+  let srows='', sPool=c.cycLimitBase, sellReady=0;
+  for(let k=1;k<=S;k++){
+    const before=S-k+1, p=c.up/before, filled=k<=filledSell;
+    sPool+=p;
+    const ready=!filled && price>=p; if(ready)sellReady++;
+    srows+=`<div class="lxr ${ready?'hit':''}" ${filled?'':'onclick="quickLadder(\'sell\','+p.toFixed(2)+')"}>
+      <span class="lx-n">${k}${filled?' ✓':(ready?' 🔥':'')}</span>
       <span class="lx-p">${wn(p)}</span>
       <span class="lx-q">${S-k}주</span>
       <span class="lx-pool pos">${wn(sPool)}</span></div>`;
   }
   $('sell_lad').innerHTML=`<div class="lxh"><span>차수</span><span>매도가</span><span>잔여수량</span><span>Pool</span></div>`+srows;
-  const sell1=c.up/S;                  // 1차 매도가 (가장 먼저 체결)
-  if(sellReached>0 && price>0){
-    $('sell_wait').innerHTML=`<div class="firebanner">🔥 현재가 기준 <b>예약매도 ${sellReached}주 체결권</b><span class="fb-sub">1차 ${wn(sell1)}부터 현재가 이하의 예약가격 ${sellReached}개가 체결 조건입니다. VR은 V까지 한 번에 시장가로 파는 게 아니라 예약표가 단계별로 체결됩니다.</span></div>`;
-  } else $('sell_wait').innerHTML=`⌛ 매도 대기 — 가격이 1차 ${wn(sell1)} 이상으로 오르면 체결<div class="wb-now">현재가 ${wn(price)}</div>`;
-  $('lad_state_s').textContent=price>=sell1?'체결 가능':'예약 매매';
+  const nextSellK=Math.min(S,filledSell+1), sell1=c.up/(S-nextSellK+1);
+  if(sellReady>0 && price>0) $('sell_wait').innerHTML=`<div class="firebanner">🔥 현재가 기준 <b>남은 예약매도 ${sellReady}주 체결권</b><span class="fb-sub">예약표는 이번 2주 시작 수량 ${S}주 기준으로 고정되어 있습니다.</span></div>`;
+  else if(filledSell>=S) $('sell_wait').innerHTML='✅ 이번 사이클 예약매도 전부 체결';
+  else $('sell_wait').innerHTML=`⌛ 다음 매도 ${wn(sell1)} 이상 대기<div class="wb-now">현재가 ${wn(price)}</div>`;
+  $('lad_state_s').textContent=sellReady>0?'체결 가능':'예약 매매';
   $('lad_stage_s').textContent=c.curCyc+'주차';
 
-  // ── 매수표 ── 매수가(k) = 하단가치(lo) ÷ 매수 전 보유수량 (per-share)
-  //   (S+k−1)주가 lo 가치가 되는 주가에서 1주 매수 → S+k주. Pool 한도까지.
-  let brows=''; let bPool=c.pool, spent=0, buyTiers=0, buyReached=0;
-  // 고정 차수 없음. 누적 주문금액이 이번 사이클 Pool 사용한도를 넘기기 직전까지만 만든다.
-  // 미국달러는 0.01달러, 원화는 1원 미만 주문가는 실제 주문가격으로 쓸 수 없으므로 거기서도 종료.
+  let brows='', bPool=c.cycLimitBase, reserved=0, buyTiers=0, buyReady=0;
   const minOrderPrice=isKrwSt(st)?1:0.01;
   for(let k=1;;k++){
-    const before=S+k-1;                // 매수 전 보유 (S≥1이라 항상 ≥1)
-    const p=c.lo/before;               // 이 주가에서 before주 = 하단가치
+    const before=S+k-1, p=c.lo/before;
     if(!(p>=minOrderPrice)) break;
-    if(spent+p > limit+1e-6) break;    // 실제 Pool 한도 안에서 가능한 차수까지만
-    spent+=p; bPool-=p; buyTiers=k;
-    const reached=price<=p; if(reached)buyReached++;
-    brows+=`<div class="lxr ${reached?'hit':''}" onclick="quickLadder('buy',${p.toFixed(2)})">
-      <span class="lx-n">${k}${reached?' 🔥':''}</span>
+    if(reserved+p > totalBudget+1e-6) break;
+    reserved+=p; bPool-=p; buyTiers=k;
+    const filled=k<=filledBuy, ready=!filled && price<=p; if(ready)buyReady++;
+    brows+=`<div class="lxr ${ready?'hit':''}" ${filled?'':'onclick="quickLadder(\'buy\','+p.toFixed(2)+')"}>
+      <span class="lx-n">${k}${filled?' ✓':(ready?' 🔥':'')}</span>
       <span class="lx-p">${wn(p)}</span>
       <span class="lx-q">${S+k}주</span>
       <span class="lx-pool">${wn(bPool)}</span></div>`;
   }
   $('buy_lad').innerHTML=`<div class="lxh"><span>차수</span><span>매수가</span><span>총수량</span><span>Pool</span></div>`
-    +(brows||'<div class="lxr" style="justify-content:center;color:var(--faint)">현재 Pool 한도로 가능한 예약매수가 없습니다</div>');
-  const buy1=c.lo/S;                   // 1차 매수가 (가장 먼저 체결)
-  if(buyReached>0 && price>0){
-    $('buy_wait').innerHTML=`<div class="firebanner">🔥 현재가 기준 <b>예약매수 ${buyReached}주 체결권</b><span class="fb-sub">1차 ${wn(buy1)}부터 현재가 이상의 예약가격 ${buyReached}개가 체결 조건입니다. 이번 사이클 고정 Pool 한도 안에서 예약표 순서대로 체결합니다.</span></div>`;
-  } else $('buy_wait').innerHTML=`⌛ 매수 대기 — 가격이 1차 ${wn(buy1)} 이하로 떨어지면 체결<div class="wb-now">현재가 ${wn(price)}</div>`;
-  $('lad_state_b').textContent=price<=buy1?'체결 가능':'예약 매매';
-  $('lad_limit_b').textContent=`가능 ${buyTiers}차 · 한도 ${wn(limit)} / ${wn(c.pool)}`;
-  if(limit<=0){
-    $('buy_warn').innerHTML=`<div class="resv-row" style="background:#33302040;color:var(--gold)">⚠ Pool 한도 소진 — 가이드대로면 이번 사이클 매수 안 함. 더 공격적이면 ⚠ 차수 탭해 매수.</div>`;
-  } else $('buy_warn').innerHTML='';
-}
-
-/* 사다리 행 탭 → 즉시 1주 기록 */
-function quickLadder(type,price){
-  const c=computeVr();
-  if(!confirm(`${type==='buy'?'매수':'매도'} ${wn(price)} × 1주를 지금 기록할까요?`))return;
-  const date=new Date().toISOString().slice(0,10);
-  const rec={type,date,price:+price,qty:1,cyc:c.curCyc,ts:Date.now()};
-  const h=curStrat().hist; h.push(rec); sortHist(h); save(); refreshVr();
-  alert('기록됨 ✓');
-}
-
-/* ════════ 다음 V 미리보기 ════════ */
-function computeNextV(c,ev){
-  const st=c.st, V=c.V, Pool=Math.max(0,c.pool), G=st.g;
-  const isAccum=st.mode===0.75, isWd=st.mode===0.25; // 거치식(0.5)은 현금흐름 0
-  const planned = isWd ? VR_WITHDRAW_CYCLE : (isAccum ? (st.add||0) : 0);
-  // 인출식은 "계획액"이 아니라 실제로 Pool에서 빠질 수 있는 금액만 V에서 차감한다.
-  // Pool이 80$이면 실제 인출도 80$, V 차감도 80$. Pool이 0이면 둘 다 0.
-  const flowAmt = isWd ? Math.min(planned,Pool) : planned;
-  const sign=isWd?-1:1;
-  const flowLabel=isWd?'인출금':'적립금';
-  let nextV, calcStr;
-  if(st.formula==='skill' && V>0){
-    const corr=(ev-V)/(2*Math.sqrt(G));
-    nextV=V + Pool/G + corr + sign*flowAmt;
-    calcStr=`V₂ = V₁ + Pool/G + (E−V₁)/(2√G) ${sign<0?'−':'+'} ${flowLabel}<br>= ${V.toFixed(2)} + ${(Pool/G).toFixed(2)} + ${corr.toFixed(2)} ${sign<0?'−':'+'} ${flowAmt.toFixed(2)} = <b>${nextV.toFixed(2)}</b>`;
-  } else {
-    nextV=V + Pool/G + sign*flowAmt;
-    calcStr=`V₂ = V₁ + Pool/G ${sign<0?'−':'+'} ${flowLabel}<br>= ${V.toFixed(2)} + ${(Pool/G).toFixed(2)} ${sign<0?'−':'+'} ${flowAmt.toFixed(2)} = <b>${nextV.toFixed(2)}</b>`;
-  }
-  const nextPool = Pool + sign*flowAmt;
-  return {nextV, nextPool, calcStr, sign, planned, flowAmt};
+    +(brows||'<div class="lxr" style="justify-content:center;color:var(--faint)">사이클 시작 Pool 한도로 가능한 예약매수가 없습니다</div>');
+  const nextBuyK=filledBuy+1, buy1=nextBuyK<=buyTiers ? c.lo/(S+nextBuyK-1) : 0;
+  if(buyReady>0 && price>0) $('buy_wait').innerHTML=`<div class="firebanner">🔥 현재가 기준 <b>남은 예약매수 ${buyReady}주 체결권</b><span class="fb-sub">중간 매도나 매수 뒤에도 가격표를 다시 계산하지 않고 사이클 시작표를 유지합니다.</span></div>`;
+  else if(filledBuy>=buyTiers && buyTiers>0) $('buy_wait').innerHTML='✅ 이번 사이클 예약매수 한도 전부 사용';
+  else if(buy1>0) $('buy_wait').innerHTML=`⌛ 다음 매수 ${wn(buy1)} 이하 대기<div class="wb-now">현재가 ${wn(price)}</div>`;
+  else $('buy_wait').innerHTML='⌛ 예약매수 없음';
+  $('lad_state_b').textContent=buyReady>0?'체결 가능':'예약 매매';
+  $('lad_limit_b').textContent=`원 한도 ${wn(totalBudget)} · 남은 ${wn(remainBudget)} · ${filledBuy}/${buyTiers}차 체결`;
+  $('buy_warn').innerHTML=remainBudget<=0
+    ? '<div class="resv-row" style="background:#33302040;color:var(--gold)">⚠ 이번 사이클 Pool 사용 한도 소진 — 다음 V 갱신까지 추가 예약매수 없음.</div>'
+    : '';
 }
 function renderVrNext(){
   const c=computeVr(), st=c.st;
@@ -6973,9 +6944,8 @@ function vrSimForward(){
   const O=(lastQuote.vr && String(lastQuote.vr.symbol||'').toUpperCase()===sym && lastQuote.vr.ohlc) ? lastQuote.vr.ohlc : null;
   if(!O||!O.length) return null;
   let c=computeVr();
-  const cut=simCutoff(curOf(st));                            // 장중이면 오늘 봉은 안 쓴다
+  const cut=simCutoff(curOf(st));
   if(c.V<=0 || c.qty<1){
-    // 첫 매수도 자동으로 — 모의 시작일 종가에 초기 투자금만큼 산 것으로 시작한다
     const s0=_clampFrom(paperStart(sess), cut); if(!s0) return null;
     const row=O.find(d=>d.date>=s0 && d.date<=cut && d.close>0); if(!row) return null;
     const amt=st.initAmt!=null?+st.initAmt:10000, q=Math.floor(amt/row.close);
@@ -6991,34 +6961,49 @@ function vrSimForward(){
   const days=O.filter(d=>d.date>from && d.date<=cut && d.high>0 && d.low>0);
   if(!days.length) return null;
 
+  const oIdx={}; O.forEach((x,i)=>oIdx[x.date]=i);
   _vrAutoBusy=true;
-  let nSell=0, nBuy=0, nCyc=0, seq=0;
+  let nSell=0,nBuy=0,nCyc=0,seq=0;
   try{
     for(const row of days){
-      // 1) 진입일이 지났으면 V 갱신 (모의는 사람이 누르지 않으므로 항상 자동)
+      // 새 사이클 주문은 장 시작 전에 걸어야 한다. 따라서 V의 E 보정도 오늘 종가가 아니라 직전 거래일 종가를 쓴다.
       for(let g=0; g<10; g++){
         c=computeVr(); const cs=vrCycStart(c); if(!cs) break;
         const due=new Date(cs+'T00:00:00'); due.setDate(due.getDate()+CYC_DAYS);
         while(due.getDay()===0||due.getDay()===6) due.setDate(due.getDate()+1);
         const ds=due.toISOString().slice(0,10);
-        if(row.date < ds) break;
-        vrStepCycle(sess, c, ds, row.close); nCyc++;
+        if(row.date<ds) break;
+        const oi=oIdx[row.date], prevClose=(oi>0&&O[oi-1]&&O[oi-1].close>0)?O[oi-1].close:row.close;
+        vrStepCycle(sess,c,ds,prevClose); nCyc++;
       }
-      // 2) 사다리 체결 — 매도 먼저(현금 확보) → 매수 (백테와 같은 순서)
+
       c=computeVr();
-      let qty=Math.floor(c.qty), pool=c.pool, up=c.up, lo=c.lo, cyc=c.curCyc;
-      const budget=poolLimit(c);                          // 이번 사이클 남은 매수 한도(중간 매도로 확대하지 않음)
-      let spent=0;
+      const S=vrCycleQty(c), sold=Math.max(0,Math.floor((c.cycSellQty||0)+1e-9)),
+            bought=Math.max(0,Math.floor((c.cycBuyQty||0)+1e-9));
+      const totalBudget=poolCycleBudget(c);
+      const op=row.open>0?row.open:row.close, cyc=c.curCyc;
       const push=(type,price)=>{ sess.hist.push({type,date:row.date,price:+price.toFixed(4),qty:1,
-        cyc, sim:true, ts:Date.now()+(seq++)}); };
-      while(qty>=1){                                     // 매도: 보유수량 범위까지
-        const p=up/qty; if(!(row.high>=p)) break;
-        push('sell',p); pool+=p; qty-=1; nSell++;
+        cyc,sim:true,ts:Date.now()+(seq++)}); };
+
+      // 사이클 첫날 만들어 둔 고정 매도표에서 아직 안 채운 차수만 검사.
+      for(let k=sold+1;k<=S;k++){
+        const before=S-k+1, p=c.up/before;
+        if(!(row.high>=p)) break;
+        push('sell',op>=p?op:p); nSell++;
       }
-      while(qty>=1){                                     // 매수: Pool 한도·당일 저가가 허용하는 만큼
-        const p=lo/qty; if(!(row.low<=p)) break;
-        if(spent+p>budget+1e-9) break;                    // Pool 한도 소진
-        push('buy',p); pool-=p; spent+=p; qty+=1; nBuy++;
+
+      // 고정 매수표의 전체 차수는 '사이클 시작 Pool×사용률'로 결정. 중간 매도금으로 새 차수를 만들지 않는다.
+      let reserved=0, maxBuy=0;
+      const minOrderPrice=isKrwSt(st)?1:0.01;
+      for(let k=1;;k++){
+        const p=c.lo/(S+k-1); if(!(p>=minOrderPrice)) break;
+        if(reserved+p>totalBudget+1e-6) break;
+        reserved+=p; maxBuy=k;
+      }
+      for(let k=bought+1;k<=maxBuy;k++){
+        const p=c.lo/(S+k-1);
+        if(!(row.low<=p)) break;
+        push('buy',op<=p?op:p); nBuy++;
       }
       st.simLast=row.date;
     }
@@ -7028,7 +7013,7 @@ function vrSimForward(){
     save();
   } finally { _vrAutoBusy=false; }
   const c2=computeVr();
-  return {nSell,nBuy,nCyc, upto:days[days.length-1].date, cyc:c2.curCyc, V:c2.V};
+  return {nSell,nBuy,nCyc,upto:days[days.length-1].date,cyc:c2.curCyc,V:c2.V};
 }
 function vrSimNow(){
   const sess=curStrat();
