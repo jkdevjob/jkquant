@@ -315,7 +315,7 @@ td:first-child{text-align:left;}
   <div class="brand">
     <div>
       <div class="logo">Backtest</div>
-      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v1.177.2</span></h1>
+      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v1.177.3</span></h1>
     </div>
   </div>
   <div class="hright">
@@ -745,9 +745,9 @@ document.addEventListener('click',function(e){ var m=document.getElementById('jk
   <span class="bd v5-hidden">V5.0</span><span class="v5-hidden"> 국면 익절 (검증 미완료 · 비활성)</span>
 </div>
 <div class="rules s-vr hide">
-  <span class="bd">V 갱신</span> 다음 V = 현재 V + <b>Pool/G</b> + 적립금 · 2주(10거래일) 사이클<br>
+  <span class="bd">V 갱신</span> 다음 V = 현재 V + <b>Pool/G</b> + 적립금 · <b>달력 14일</b> 사이클(휴장 시 다음 거래일)<br>
   <span class="bd">밴드</span> 상단 V×(1+밴드) / 하단 V×(1−밴드)<br>
-  <span class="bd">매도</span> 평가금>상단 → V 복귀분 매도 → Pool · <span class="bd">매수</span> 평가금<하단 → V까지, 적립후 <b>Pool 75%</b> 한도
+  <span class="bd">예약매매</span> 사이클 첫날 보유수량으로 상·하단 1주 단위 예약표를 만들고 2주간 고정 · 가격 도달 즉시 체결 · <span class="bd">매수</span>는 시작 Pool의 75/50/25% 한도
 </div>
 <div class="rules s-ma hide">
   <span class="bd">출처</span> Gayed·Bilello <b>"Leverage for the Long Run"</b> (2016 CMT 다우상) — 역사적으로 3× 조합 연 26.7%<br>
@@ -2417,7 +2417,8 @@ function runIM50(days,tkr,cap,divs,targetPct,compound=true){
 // ──── 전략 3: VR 5.0 ────
 function runVR(days,tkr,params){
   const {contrib=100,G=10,bandPct=15,mode=0.75,formula='basic',initAmt=0,withdraw=0,startV=0,startPool=0,costOn=false}=params||{};
-  const band=bandPct/100, interval=10, usage=mode;
+  const band=bandPct/100, snapStep=10, usage=mode;
+  const add14=dateStr=>{ const x=new Date(dateStr+'T00:00:00Z'); x.setUTCDate(x.getUTCDate()+14); return x.toISOString().slice(0,10); };
   const isAccum=mode===0.75, isWd=mode===0.25, isLump=mode===0.5||isWd;
   let shares=0,pool=startPool||0,V=startV||0,inv=startPool||0,totalWd=0,rebal=0,buys=0,sells=0;
   let up=0,lo=0,buyOrders=[],sellOrders=[],cycleBudget=0;
@@ -2498,31 +2499,32 @@ function runVR(days,tkr,params){
     shares=V/c0; avg=c0; inv+=V; _buildOrders();
   }
   const snap=[],cf=[];
-  let mddPeak=-Infinity,mdd=0,first=(V<=0);
+  let mddPeak=-Infinity,mdd=0,first=(V<=0),nextCycleAt=V>0?add14(days[0]):null;
 
   days.forEach((d,i)=>{
     const row=M[tkr][d], c=row[C];
     { const y=d.slice(0,4); if(curYear===null)curYear=y; else if(y!==curYear){_settle(c);curYear=y;} }
 
-    if(i%interval===0){
-      if(first){
-        // 첫 V = 첫 실제 매수 평가금. startPool은 비상 Pool로 남기고 첫 매수액과 섞지 않는다.
-        if(isAccum){
-          inv+=contrib; cf.push([d,contrib]);
-          const before=pool; pool+=contrib;
-          const qBefore=shares;
-          _buyFromPool(c,Math.floor(contrib/(c*(1+FEE))+1e-9));
-          // contrib 중 정수주 매수에 쓰지 못한 잔액은 Pool에 그대로 남는다.
-          if(shares===qBefore && contrib>0 && pool===before+contrib){ /* 0주면 전액 Pool */ }
-          V=shares*c;
-        }else{
-          const s=initAmt||10000; inv+=s; cf.push([d,s]);
-          _buyExternal(s,c); V=shares*c;
-        }
-        first=false; rebal++; _buildOrders();
-        // 첫 매수는 종가 체결로 가정하므로 같은 날 예약표를 다시 체결시키지는 않는다.
+    let startedToday=false;
+    if(first){
+      // 첫 V = 첫 실제 매수 평가금. startPool은 비상 Pool로 남기고 첫 매수액과 섞지 않는다.
+      if(isAccum){
+        inv+=contrib; cf.push([d,contrib]);
+        const before=pool; pool+=contrib;
+        const qBefore=shares;
+        _buyFromPool(c,Math.floor(contrib/(c*(1+FEE))+1e-9));
+        if(shares===qBefore && contrib>0 && pool===before+contrib){ /* 0주면 전액 Pool */ }
+        V=shares*c;
       }else{
-        // 사이클 시작 전날까지의 상태로 V를 갱신하고, 오늘 장 전에 새 예약표를 건다.
+        const s=initAmt||10000; inv+=s; cf.push([d,s]);
+        _buyExternal(s,c); V=shares*c;
+      }
+      first=false; rebal++; _buildOrders(); nextCycleAt=add14(d); startedToday=true;
+      // 첫 매수는 종가 체결이므로 같은 날 새 예약표 체결은 하지 않는다.
+    }else if(nextCycleAt && d>=nextCycleAt){
+      // '2주 = 10거래일' 근사가 아니라 달력 14일. 휴장일이면 첫 다음 거래일에 실행한다.
+      // 여러 사이클이 휴장으로 겹칠 경우에도 예정일을 14일씩 유지해 장기적으로 주기가 밀리지 않는다.
+      while(nextCycleAt && d>=nextCycleAt){
         const prevC=i>0?M[tkr][days[i-1]][C]:c;
         const E=shares*prevC, P=pool;
         const actualWd=isWd?Math.min(withdraw,Math.max(0,pool)):0;
@@ -2532,16 +2534,16 @@ function runVR(days,tkr,params){
         V=Math.max(V,0);
         if(isAccum){pool+=contrib;inv+=contrib;cf.push([d,contrib]);}
         else if(isWd){pool-=actualWd;totalWd+=actualWd;}
-        rebal++; _buildOrders();
-        _fillOrders(row);
+        rebal++; _buildOrders(); nextCycleAt=add14(nextCycleAt);
       }
-    }else{
+      _fillOrders(row);
+    }else if(!startedToday){
       _fillOrders(row);
     }
 
     const eq=shares*c+pool+totalWd;
     if(eq>mddPeak)mddPeak=eq; else if(mddPeak>0){const dd=Math.min((mddPeak-eq)/mddPeak,1);if(dd>mdd)mdd=dd;}
-    if(i%interval===0||i===days.length-1)snap.push([d,eq]);
+    if(i%snapStep===0||i===days.length-1)snap.push([d,eq]);
   });
 
   const lc=M[tkr][days[days.length-1]][C];
