@@ -82,12 +82,12 @@ inject(`{_sell(o>tgt?o:tgt,q3,SLIP);tpHit=true;}`,
 `{const __px=o>tgt?o:tgt;__LOG('지정가매도',__px,q3);_sell(__px,q3,SLIP);tpHit=true;}`,'tp');
 inject(`{_sell(c,sq,0);qtHit=true;}`,
 `{__LOG('쿼터매도',c,sq);_sell(c,sq,0);qtHit=true;}`,'qt');
-inject(`if(shares===0&&T===0){ if(_buy(c,one)>0) T+=1; }   // 못 사면 회차도 안 쓴다`,
-`if(shares===0&&T===0){ const __q=_buy(c,one); if(__q>0){__LOG('1회매수',c,__q); T+=1;} }`,'fb');
+inject(`if(!orderHadShares&&orderT===0){ if(_buy(c,one)>0) T+=1; }   // 못 사면 회차도 안 쓴다`,
+`if(!orderHadShares&&orderT===0){ const __q=_buy(c,one); if(__q>0){__LOG('1회매수',c,__q); T+=1;} }`,'fb');
 inject(`if(c<=buyP){ if(_buy(c,half)>0) T+=0.5; }`,
 `if(c<=buyP){ const __q=_buy(c,half); if(__q>0){__LOG('절반매수',c,__q); T+=0.5;} }`,'hb1');
-inject(`if(c<=avg) { if(_buy(c,half)>0) T+=0.5; }`,
-`if(c<=avg) { const __q=_buy(c,half); if(__q>0){__LOG('절반매수',c,__q); T+=0.5;} }`,'hb2');
+inject(`if(c<=orderAvg) { if(_buy(c,half)>0) T+=0.5; }`,
+`if(c<=orderAvg) { const __q=_buy(c,half); if(__q>0){__LOG('절반매수',c,__q); T+=0.5;} }`,'hb2');
 inject(`}else{ if(c<=buyP){ if(_buy(c,one)>0) T+=1; } }`,
 `}else{ if(c<=buyP){ const __q=_buy(c,one); if(__q>0){__LOG('1회매수',c,__q); T+=1;} } }`,'bb');
 // 단리에서 밖에서 넣은 돈(addedCash)을 총자산에서 빼게 되면서 이 줄이 바뀌었다
@@ -161,6 +161,33 @@ __strat={settings:{ticker:'TQQQ',mode:0.75,formula:'basic',g:10,add:100,band:15,
   hist:[{type:'buy',price:77,qty:2,cyc:0}]};
 ok('이어받기 시작: 첫 buy는 Pool 차감 (200→46)', near(computeVr().pool,46));
 
+/* ════ 3b. 이번 감사에서 잡은 체결순서 회귀 ════ */
+console.log('[3b] 주문 타이밍·VR 예약주문 회귀');
+{
+  // VR: V/밴드는 10거래일마다 갱신하지만, 그 사이 걸어둔 LOC 주문은 매일 체결될 수 있어야 한다.
+  M.__VRTEST={
+    '2026-01-02':[100,100,100,100],
+    '2026-01-05':[80,80,80,80],
+  };
+  const vr=runVR(['2026-01-02','2026-01-05'],'__VRTEST',
+    {startV:1000,startPool:1000,mode:0.5,G:10,bandPct:15,costOn:false});
+  ok('VR 2주 사이 중간 거래일에도 LOC매수 체결', near(vr.shares,13), 'shares='+vr.shares);
+  ok('VR 정수주 내림 잔액은 Pool에 보존', near(vr.pool,760), 'pool='+vr.pool);
+  delete M.__VRTEST;
+
+  // V4: 지정가 전량매도가 장중 체결된 뒤 종가가 LOC 매수선까지 급락하면 같은 날 매수가 살아 있어야 한다.
+  M.__V4TEST={
+    '2026-01-02':[100,100,100,100],
+    '2026-01-05':[90,100,125,85],
+  };
+  const prevFill=global.imFill; global.imFill='high';
+  const v4=runIM(['2026-01-02','2026-01-05'],'__V4TEST',6000,20,20,true);
+  if(prevFill===undefined) delete global.imFill; else global.imFill=prevFill;
+  ok('V4 지정가 전량매도 뒤 같은 날 LOC 재매수면 사이클 미종료', v4.cycles===0 && v4.endShares>0,
+     'cycles='+v4.cycles+' shares='+v4.endShares);
+  delete M.__V4TEST;
+}
+
 /* ════ 4. 차분 테스트 (5차·6차) — 실데이터, 두 엔진 회계 항등 ════ */
 console.log('[4] 차분 테스트 (runIM 거래로그 → computeInf 재생)');
 let __bogusFiltered=0;
@@ -230,9 +257,11 @@ console.log('[4b] runIM50 스모크 + V4.0 앵커');
   //   실제로는 별개 주문 2건이라 각각 정수 주수다(1회 $500·주가 $65: 합산 7주 → 실제 3+3=6주).
   //   방향은 종목마다 다르다 — 평단이 바뀌면 이후 체결 경로가 통째로 갈리기 때문이다.
   //   이 수정으로 운영 모의(infSimForward)와 백테가 원금 $3k/$10k/$100k에서 체결까지 완전 일치한다.
-  const A=[['SOXL',20,20,102989.30,54.04,35],
-           ['TQQQ',40,10,25963.09,62.68,30],
-           ['TECL',20,20,46709.32,40.01,14]];
+  // 2026-09-20 — 주문 기준을 장 시작 전 T/잔금/평단으로 고정하고, 같은 날 지정가매도 뒤 LOC매수를
+  // 종료 판정보다 먼저 처리. 직전 5일 리버스 별지점에서도 당일 종가 룩어헤드를 제거한 뒤의 고정본.
+  const A=[['SOXL',20,20,114884.34,54.80,40],
+           ['TQQQ',40,10,25281.39,60.15,32],
+           ['TECL',20,20,41731.80,40.34,18]];
   for(const [tkr,div,tgt,fexp,mexp,cexp] of A){
     if(!DAYS[tkr]){ console.log('  (CSV 없음, 스킵: '+tkr+')'); continue; }
     if(!fixOK(tkr)){ console.log(`  (데이터가 고정본과 달라 앵커 스킵: ${tkr} ${DAYS[tkr].length}일 ~${DAYS[tkr][DAYS[tkr].length-1]})`); continue; }
@@ -241,6 +270,76 @@ console.log('[4b] runIM50 스모크 + V4.0 앵커');
        near(r.final,fexp,0.05)&&near(r.mdd,mexp,0.01)&&r.cycles===cexp,
        `final ${r.final.toFixed(2)}/${fexp} mdd ${r.mdd.toFixed(2)}/${mexp} cyc ${r.cycles}/${cexp}`);
   }
+}
+
+
+/* ════ 4b-2. V2.2 / V3.0 원문 규칙 스모크 ════ */
+console.log('[4b-2] V2.2 / V3.0 원문 규칙');
+{
+  const s22=extractFn(bt,'function runIM22(days,tkr,cap,divs,targetPct,compound');
+  const s30=extractFn(bt,'function runIM30(days,tkr,cap,divs,targetPct,compound');
+  ok('V2.2 T는 소수점 셋째자리 반올림', /Math\.round\(\(cum\/one\)\*100\)\/100/.test(s22));
+  ok('V2.2 후반에도 음수 별% LOC 쿼터매도 유지', !/sp>=0&&c>=starP/.test(s22) && /c>=starP/.test(s22));
+  ok('V2.2 쿼터 1회금은 기존 1회매수금 상한', /qOne=Math\.min\(one,cash\/10\)/.test(s22));
+  ok('V2.2 1/4·3/4 매도수량은 정수', /const q1=isq\(q0\/4,q0\), q3=q0-q1/.test(s22) && !/q0\*0\.75/.test(s22));
+  ok('V2.2 쿼터 회차는 실제 매수 체결 때만 증가', /const bought=_buy\(c,Math\.min\(qOne,cash\)\);[\s\S]{0,60}?if\(bought>0\)\{ qN\+\+/.test(s22));
+  ok('V3 T는 소수점 둘째자리 올림', /Math\.ceil\(\(rawT-1e-12\)\*10\)\/10/.test(s30));
+  ok('V3 수익 절반 보관과 반복리 누적을 분리', /profitCum\+=p; reserve\+=p\*0\.5/.test(s30));
+  ok('V3 양수익 즉시 다음 1회매수금에 반영', /one=Math\.max\(one,baseOne\+profitCum\/40\)/.test(s30));
+  ok('V3 쿼터 보관수익은 5회 고정분할', /qEach=Math\.min\(cash,reserve\)\/5/.test(s30));
+  ok('V3 1/4·3/4 매도수량은 정수', /const q1=isq\(q0\/4,q0\), q3=q0-q1/.test(s30) && !/q0\*0\.75/.test(s30));
+  eval(s22); eval(s30);
+  if(DAYS.SOXL){
+    const d=DAYS.SOXL.slice(0,Math.min(400,DAYS.SOXL.length));
+    const a=runIM22(d,'SOXL',10000,20,20,true), b=runIM30(d,'SOXL',10000,20,20,true);
+    ok('V2.2/V3.0 실데이터 스모크 유한값', isFinite(a.final)&&isFinite(a.mdd)&&isFinite(b.final)&&isFinite(b.mdd));
+    ok('V2.2/V3.0 기말 보유수량은 정수', Number.isInteger(a.endShares)&&Number.isInteger(b.endShares),
+       `v22=${a.endShares} v30=${b.endShares}`);
+  }
+}
+
+/* ════ 4b-3. V4.0 오피셜 기본값 ════ */
+console.log('[4b-3] V4.0 오피셜 기본값');
+{
+  ok('백테스트 V4.0 기본 리버스 ON', /let imReverse=true/.test(bt)
+     && /data-r="1" class="active"/.test(bt));
+  ok('운영 새 무매 세션 기본 리버스 ON', /function defInfSettings\(\)\{return\{[^}]*reverse:true/.test(idx));
+  ok('운영 구세션 reverse 미지정도 오피셜 ON으로 해석', /st\.reverse!==false/.test(idx)
+     && /segSet\('set_reverse',st\.reverse===false\?'0':'1'\)/.test(idx));
+}
+
+/* ════ 4b-4. 다른 전략 룩어헤드·MDD 현금흐름 중립 ════ */
+console.log('[4b-4] DCA·표준편차·ASAP·VR 신호시점/MDD');
+{
+  const dca=extractFn(bt,'function _dcaOne(t,days,amt,step,costOn,dipMul)');
+  const std=extractFn(bt,'function runStdev(days,tkr,cap,N,g,filter,costOn)');
+  const asap=extractFn(bt,'function runASAP(days,tkr,opt)');
+  const vr=extractFn(bt,'function runVR(days,tkr,params)');
+
+  ok('DCA 하락배수는 전일 종가/200일선 신호',
+     /const gx=_gi\[d\], pd=gx>0\?_ds\[gx-1\]:null/.test(dca)
+     && /const dip=\(ma!=null&&pp<=ma\)/.test(dca)
+     && !/const dip=\(ma!=null&&p<=ma\)/.test(dca));
+
+  ok('표준편차는 전일 σ밴드 신호로 다음날 체결',
+     /const sg=gx-1, lv=sg>=0\?lvOf\(sg\):null/.test(std)
+     && /ma200\[sg\]/.test(std));
+
+  ok('ASAP은 전일 확정 RSI·이평 신호',
+     /const sig=g-1, prev=sig-1/.test(asap)
+     && /RSI\[sig\]/.test(asap)
+     && /sigClose<=m200\*0\.85/.test(asap));
+
+  ok('ASAP 적립식 MDD는 단위가치 NAV',
+     /let units=lump\?o\.startCash:0, navPeak=-Infinity, mdd=0/.test(asap)
+     && /flowToday\/Math\.max\(issueNav/.test(asap)
+     && /markNav\(eq\/units\)/.test(asap));
+
+  ok('VR 적립금 유입은 MDD 단위가치에서 unit 발행 처리',
+     /let navUnits=Math\.max/.test(vr)
+     && /const _addFlow=/.test(vr)
+     && /_addFlow\(contrib,c\)/.test(vr)
+     && /_markNav\(c\)/.test(vr));
 }
 
 /* ════ 4c. 섀넌 차분 (runIVS 거래로그 → ivsPos 재생) ════
@@ -512,9 +611,19 @@ console.log('[11] 무매 계산 공유');
   ok('매수 주문가 = 별지점 − 0.01', /star-0\.01|star\s*-\s*0\.01/.test(ord));
   let sim=''; try{ sim=extractFn(idx,'function infSimForward(startFrom)'); }catch(e){}
   ok('모의 체결도 별지점 − 0.01', /star-0\.01|star\s*-\s*0\.01/.test(sim));
+  let csp=''; try{ csp=extractFn(idx,'function calcStarPoint(c)'); }catch(e){}
+  ok('리버스 주문표 5일 평균은 확정봉만 사용',
+     /settledBars\(_Q5\.days,curOf\(st\)\)\.slice\(-5\)/.test(csp), csp?'':'calcStarPoint 없음');
+  ok('모의 V4 주문 기준은 하루 시작 상태로 고정', /const order=c, B=imBuy1\(order\)/.test(sim)
+     && /starPct\(st\.ticker,st\.div,order\.T,st\.target\)/.test(sim));
+  ok('모의 지정가 전량매도 뒤 같은 날 LOC 재매수를 막지 않는다',
+     !/liquidated/.test(sim) && /미리 걸어둔 매수 주문은 살아 있다/.test(sim));
+  ok('모의 리버스 회복은 T 잔여와 무관하게 다음날 일반모드로 전환',
+     /else if\(cl > c2\.avg\*exitMulOf\(st\.target\)\) inRev=false/.test(sim)
+     && !/cl > c2\.avg\*exitMulOf\(st\.target\) && \(st\.div-c2\.T\)>=1/.test(sim));
   // 쿼터매도는 보유÷4, 지정가매도는 나머지 (두 곳 규약 동일)
   ok('쿼터매도 = 보유÷4 (주문표·모의 동일)',
-     /Math\.floor\(c\.qty\/4\)/.test(ord) && /Math\.floor\(c\.qty\/4\)/.test(sim));
+     /Math\.floor\(c\.qty\/4\)/.test(ord) && /Math\.floor\(order\.qty\/4\)/.test(sim));
 }
 
 
@@ -612,6 +721,7 @@ console.log('[14] 체결가 규약');
   // 규약을 바꾸면 이미 쌓인 모의 기록도 다시 만들어져야 한다 — 설정 지문만으로는 안 걸린다
   ok('체결 규약 판이 모의 지문에 들어간다',
      /const SIM_RULE_VER=\d+/.test(idx) && /'r'\+SIM_RULE_VER\+'\|'/.test(idx));
+  ok('V4 체결순서 변경으로 모의 규칙 버전 4', /const SIM_RULE_VER=4;/.test(idx));
 }
 
 
@@ -738,7 +848,7 @@ console.log('[18] 백테 분배금 분해');
   ok('배당·raw 저장소 존재', /let DIV=\{\}, RAW=\{\}/.test(bt));
   ok('시세 요청이 배당을 함께 받는다', /period2=\$\{p2\}&div=1/.test(bt));
   ok('청크마다 배당·raw를 합친다', /allDiv\[x\.date\]=\+x\.amount/.test(bt) && /allRaw\[x\.date\]=\+x\.close/.test(bt));
-  let ds=''; try{ ds=extractFn(bt,'function divSplit(tkr, days, buys)'); }catch(e){}
+  let ds=''; try{ ds=extractFn(bt,'function divSplit('); }catch(e){}
   ok('분해기 존재', !!ds, ds?'':'divSplit 없음');
   ok('분배금은 배당락일 보유수량 기준', /while\(bi<B\.length && B\[bi\]\[0\]<=d\)/.test(ds) && /dvMap\[d\]!=null && sh>0/.test(ds));
   // 단리는 현금이 쌓여 복리와 낙폭이 다르다 — 이벤트만 훑으면 중간 낙폭을 못 잰다
@@ -791,6 +901,9 @@ console.log('[19] 출금 · 복리/단리');
   ok('백테도 원금으로 맞춘다',
      (bt.match(/else if\(cash<cap\)\{ addedCash\+=cap-cash; cash=cap; \}/g)||[]).length===4);
   ok('백테는 넣은 돈을 총자산에서 뺀다', /\+savedProfit-addedCash;/.test(bt));
+  ok('단리 안내가 고정원금·외부입금 규약을 숨기지 않는다',
+     /단리=매 사이클 원금 고정\(초과익 인출·부족분 외부입금/.test(bt)
+     && /원금보다 부족하면 그 차액을 <b>외부입금<\/b>으로 보충/.test(idx));
   ok('단리 판정은 compound===false', /const simple=\(st\.compound===false\)/.test(ci));
   ok('출금·단리인출·단리보충을 밖으로 낸다', /withdrawn,saved,added,flows,simple,outside:withdrawn\+saved/.test(ci));
   // 출금이 매매로 잡히면 사이클 종료·T가 오염된다
@@ -1177,6 +1290,25 @@ console.log('[26] 단타 분봉 — 장 초반 5분 눈금');
   ok('1분봉은 꺾은선을 덧그린다', /if\(TF==='1m'\)\{[\s\S]{0,220}?ctx\.stroke\(\);/.test(sc));
   // 일봉 70봉 그대로면 5분봉은 6시간도 못 본다
   ok('봉 단위마다 표시 개수가 다르다', /const CAP = TF==='day' \? 70 : TF==='5m' \? 84 : 150;/.test(sc));
+  // 다음 거래일 시가가 손절/목표를 건너뛴 경우 -4%/+6%에 체결됐다고 가정하면 낙관 편향이다.
+  let btOne=''; try{ btOne=extractFn(sc,'function btSimOne(bars,i)'); }catch(e){}
+  if(btOne){
+    const sim=new Function('BT',btOne+'; return btSimOne;')({stop:4,tgt:6,hold:5,fee:0.5,minAmt:50});
+    const loss=sim([
+      {open:100,high:101,low:99,close:100},
+      {open:100,high:101,low:99,close:100},
+      {open:90, high:92, low:89,close:91}
+    ],0);
+    const gain=sim([
+      {open:100,high:101,low:99,close:100},
+      {open:100,high:101,low:99,close:100},
+      {open:110,high:112,low:109,close:111}
+    ],0);
+    ok('단타 갭하락 손절은 다음날 시가 체결', near(loss.pnl,-10.5), 'pnl='+loss.pnl);
+    ok('단타 갭상승 목표는 다음날 시가 체결', near(gain.pnl,9.5), 'pnl='+gain.pnl);
+  }else{
+    ok('단타 갭 체결 함수 추출', false, 'btSimOne 없음');
+  }
 }
 
 
@@ -1391,12 +1523,13 @@ console.log('[31] 짧은 기간 — 막지 말고 알리기');
 
 console.log('[32] 전반전 매수 — 주문별 정수 내림 (모의 == 백테)');
 {
-  // 별지점·평단은 별개의 주문 2건이다. 합산해서 한 번만 내림하면 실제로는 못 사는
+  // 별지점·평단은 별개의 주문 2건이다. 주문가는 장 시작 전 평단(orderAvg)으로 고정한다.
+  // 합산해서 한 번만 내림하면 실제로는 못 사는
   // 주식을 산 걸로 쳐서 백테만 낙관적으로 나온다 (1회 $500·주가 $65: 7주 vs 3+3=6주).
   // 이 한 줄 때문에 모의 38.62% / 백테 38.89%로 갈렸다.
   const im=extractFn(bt,'function runIM(days,tkr,cap,divs,targetPct,compound');
   ok('백테: 별지점 주문을 따로 내림', /if\(c<=buyP\)\{ if\(_buy\(c,half\)>0\) T\+=0\.5; \}/.test(im));
-  ok('백테: 평단 주문을 따로 내림',   /if\(c<=avg\) \{ if\(_buy\(c,half\)>0\) T\+=0\.5; \}/.test(im));
+  ok('백테: 평단 주문을 따로 내림',   /if\(c<=orderAvg\) \{ if\(_buy\(c,half\)>0\) T\+=0\.5; \}/.test(im));
   ok('백테: 합산 후 일괄 내림이 안 남아 있다', !/if\(sp>0\)\{ if\(_buy\(c,sp\)>0\) T\+=ti; \}/.test(bt));
   // runIM50도 같은 규약이어야 한다 — 예전에 여기만 빠뜨려서 V5.0==V4.0 항등이 깨졌었다
   const n=(bt.match(/if\(c<=buyP\)\{ if\(_buy\(c,half\)>0\) T\+=0\.5; \}/g)||[]).length;
