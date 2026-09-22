@@ -143,7 +143,7 @@ th:first-child,td:first-child{text-align:left}
 <body>
 <div class="wrap">
   <div class="top">
-    <div class="brand"><div class="logo">Five Year Plan</div><h1>5년 자산플랜 <span class="ver">v1.5.0</span></h1></div>
+    <div class="brand"><div class="logo">Five Year Plan</div><h1>5년 자산플랜 <span class="ver">v1.5.1</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
       <div class="jkmenu" id="jkmenuWrap">
@@ -211,7 +211,7 @@ th:first-child,td:first-child{text-align:left}
       </div>
       <div class="sessionbar">
         <div class="field"><label>5년 플랜 연동 세션</label><select id="soxlSessionSelect"><option value="">세션을 선택하세요</option></select></div>
-        <button class="btn primary" id="soxlCreateSession">+ 새 SOXL 세션</button>
+        <button class="btn primary" id="soxlCreateSession">+ 자동 생성</button>
         <div class="sessionstate" id="soxlSessionState">연동할 실전 세션을 선택하거나 새로 만드세요.</div>
       </div>
       <div class="todaybox"><h3>📋 오늘 SOXL 실행</h3><div class="sub" id="soxlTabMeta">실전 세션과 시세를 불러오는 중…</div><div class="liveact" id="soxlTabActions" style="margin-top:8px"></div></div>
@@ -237,7 +237,7 @@ th:first-child,td:first-child{text-align:left}
       </div>
       <div class="sessionbar">
         <div class="field"><label>5년 플랜 연동 세션</label><select id="tqqqSessionSelect"><option value="">세션을 선택하세요</option></select></div>
-        <button class="btn primary" id="tqqqCreateSession">+ 새 TQQQ VR 세션</button>
+        <button class="btn primary" id="tqqqCreateSession">+ 자동 생성</button>
         <div class="sessionstate" id="tqqqSessionState">모의세션은 목록에서 제외됩니다.</div>
       </div>
       <div class="todaybox"><h3>📋 오늘 TQQQ VR 실행</h3><div class="sub" id="tqqqTabMeta">실전 세션과 시세를 불러오는 중…</div><div class="liveact" id="tqqqTabActions" style="margin-top:8px"></div></div>
@@ -263,7 +263,7 @@ th:first-child,td:first-child{text-align:left}
       </div>
       <div class="sessionbar">
         <div class="field"><label>5년 플랜 장부 세션</label><select id="sleeveSessionSelect"><option value="">세션을 선택하세요</option></select></div>
-        <button class="btn primary" id="sleeveCreateSession">+ 새 QLD·SGOV 세션</button>
+        <button class="btn primary" id="sleeveCreateSession">+ 자동 생성</button>
         <div class="sessionstate" id="sleeveSessionState">세션마다 보유수량·현금·거래기록을 따로 저장합니다.</div>
       </div>
       <div class="todaybox"><h3>📋 오늘 QLD·SGOV 실행</h3><div class="sub" id="sleeveTabMeta">QQQ 지표를 불러오는 중…</div><div class="liveact" id="sleeveTabActions" style="margin-top:8px"></div></div>
@@ -344,8 +344,15 @@ th:first-child,td:first-child{text-align:left}
     </div>
     <div class="autotoggle"><input type="checkbox" id="autoBalances" checked><label for="autoBalances"><b>SOXL·TQQQ 잔고를 운영장부에서 자동 반영</b> · 끄면 직접 입력할 수 있습니다.</label></div>
     <div class="sub" id="outsideCashNote" style="margin-top:5px">무매 단리 인출금은 운영전략 밖 자금이라 자동으로 SGOV에 합치지 않습니다.</div>
+    <div class="guidegrid" style="margin-top:12px" id="initialAllocationPreview">
+      <div class="guidekpi"><div class="k">SOXL 무매 자동배정</div><div class="v" id="allocInitSoxl">$0</div></div>
+      <div class="guidekpi"><div class="k">TQQQ VR 자동배정</div><div class="v" id="allocInitTqqq">$0</div></div>
+      <div class="guidekpi"><div class="k">QLD·SGOV 자동배정</div><div class="v" id="allocInitSleeve">$0</div></div>
+      <div class="guidekpi"><div class="k">초기 비율</div><div class="v" id="allocInitRatio">33 / 33 / 34</div></div>
+    </div>
     <div class="btnrow">
-      <button class="btn primary" id="calcBtn">현재 상태 계산</button>
+      <button class="btn primary" id="createAllPlanSessions">⚡ 3개 전략 세션 한 번에 생성</button>
+      <button class="btn" id="calcBtn">현재 상태 계산</button>
       <button class="btn" id="setBaselineBtn">현재 플랜자산을 시작자산으로 설정</button>
       <button class="btn" id="seedBtn">현재자금을 STEP 1 비중으로 채우기</button>
       <button class="btn gold" id="saveBtn">설정 저장</button>
@@ -357,7 +364,7 @@ th:first-child,td:first-child{text-align:left}
     <div class="ledger-head">
       <div>
         <h2>2. QLD / SGOV 실계좌 장부</h2>
-        <div class="sub">처음 한 번 시작 보유수량·현금을 넣고, 이후 거래만 기록하면 QLD/SGOV 슬리브 평가액이 자동으로 플랜에 반영됩니다.</div>
+        <div class="sub">새 세션은 플랜 배정금액 전부를 현금으로 시작합니다. 실제 QLD/SGOV 체결 후 거래를 기록하면 평가액과 비중이 자동 반영됩니다.</div>
       </div>
       <label class="autotoggle" style="margin:0"><input type="checkbox" id="autoSleeve" checked><span><b>장부를 플랜 잔고에 자동반영</b></span></label>
     </div>
@@ -553,38 +560,67 @@ async function saveOperatingState(){
     catch(e){console.error('operating save',e);}
   }
 }
-function suggestedStrategyCapital(kind){
-  const total=num('startCapital')||planProgress().total||30000,stage=currentStage();
-  const a=stage<4?STAGES[stage].main:[10,0,20];
-  const w=kind==='inf'?a[0]:kind==='vr'?a[1]:a[2];
-  return Math.max(1000,Math.round(total*w/100/100)*100);
+function initialPlanAllocation(){
+  const total=num('startCapital');
+  const a=STAGES[1].main;
+  return {
+    ready:total>0,total,
+    inf:Math.round(total*a[0]/100),
+    vr:Math.round(total*a[1]/100),
+    sleeve:Math.max(0,total-Math.round(total*a[0]/100)-Math.round(total*a[1]/100)),
+    weights:a
+  };
 }
-async function createPlanInfSession(){
+function updateInitialAllocationPreview(){
+  const a=initialPlanAllocation();
+  if($('allocInitSoxl'))$('allocInitSoxl').textContent=usd(a.inf);
+  if($('allocInitTqqq'))$('allocInitTqqq').textContent=usd(a.vr);
+  if($('allocInitSleeve'))$('allocInitSleeve').textContent=usd(a.sleeve);
+  if($('allocInitRatio'))$('allocInitRatio').textContent=a.weights.join(' / ');
+}
+function requireInitialCapital(){
+  const a=initialPlanAllocation();
+  if(a.ready)return a;
+  setPlanTab('overview');
+  setTimeout(()=>{try{$('startCapital').focus();}catch(e){}},250);
+  alert('먼저 전체현황에서 플랜 시작자산($)을 입력하세요. 입력하면 SOXL/TQQQ/QLD·SGOV 금액을 자동으로 나눕니다.');
+  return null;
+}
+function suggestedStrategyCapital(kind){
+  const a=initialPlanAllocation();
+  return kind==='inf'?a.inf:kind==='vr'?a.vr:a.sleeve;
+}
+function sessionDateName(label){
+  return '5년플랜 '+label+' '+todayISO();
+}
+async function createPlanInfSession(opts={}){
   ensureLiveBoxes();
-  const cap=Number(prompt('SOXL 무매 초기 원금($)',String(suggestedStrategyCapital('inf'))));
-  if(!(cap>0))return;
-  const name=prompt('세션 이름','5년플랜 SOXL')||'5년플랜 SOXL';
-  const id=planSid('pinf');
-  const sess={id,name,planManaged:true,settings:{
+  const a=requireInitialCapital();if(!a)return null;
+  if(planLinks.inf && linkedOpSession(liveState.inf,'SOXL',planLinks.inf) && !opts.force)return linkedOpSession(liveState.inf,'SOXL',planLinks.inf);
+  const cap=a.inf,id=planSid('pinf');
+  const sess={id,name:sessionDateName('SOXL'),planManaged:true,settings:{
     ticker:'SOXL',div:20,target:10,big:20,reverse:true,compound:false,
     rowsOn:false,rows:8,gap:2.5,revGap:2.5,rowqty:1,principal:cap,
     divmode:'reinv',engine:'v40',shortMA:30,loPct:6,tgtDyn:false
   },hist:[]};
   liveState.inf.sessions.push(sess);liveState.inf.active=id;liveState.activeTab='inf';
-  planLinks.inf=id;await saveOperatingState();await cloudSave();renderSessionSelectors();await refreshLive();
+  planLinks.inf=id;
+  if(!opts.defer){await saveOperatingState();await cloudSave();renderSessionSelectors();await refreshLive();}
+  return sess;
 }
-async function createPlanVrSession(){
+async function createPlanVrSession(opts={}){
   ensureLiveBoxes();
-  const cap=Number(prompt('TQQQ VR 초기 원금($)',String(suggestedStrategyCapital('vr'))));
-  if(!(cap>0))return;
-  const name=prompt('세션 이름','5년플랜 TQQQ VR')||'5년플랜 TQQQ VR';
-  const id=planSid('pvr');
-  const sess={id,name,planManaged:true,settings:{
+  const a=requireInitialCapital();if(!a)return null;
+  if(planLinks.vr && linkedOpSession(liveState.vr,'TQQQ',planLinks.vr) && !opts.force)return linkedOpSession(liveState.vr,'TQQQ',planLinks.vr);
+  const cap=a.vr,id=planSid('pvr');
+  const sess={id,name:sessionDateName('TQQQ VR'),planManaged:true,settings:{
     ticker:'TQQQ',mode:.5,formula:'skill',g:15,initAmt:cap,add:0,
     band:30,startv:0,startpool:0,autoCyc:true,divmode:'reinv'
   },hist:[]};
   liveState.vr.sessions.push(sess);liveState.vr.active=id;liveState.activeTab='vr';
-  planLinks.vr=id;await saveOperatingState();await cloudSave();renderSessionSelectors();await refreshLive();
+  planLinks.vr=id;
+  if(!opts.defer){await saveOperatingState();await cloudSave();renderSessionSelectors();await refreshLive();}
+  return sess;
 }
 function activeSleeveSession(){
   return sleeveSessions.find(x=>x.id===planLinks.sleeve)||null;
@@ -593,11 +629,33 @@ function bindSleeveLedger(){
   const ss=activeSleeveSession();
   sleeveLedger=ss?ss.ledger:{startQLD:0,startSGOV:0,startCash:0,trades:[]};
 }
-async function createPlanSleeveSession(){
-  const name=prompt('세션 이름','5년플랜 QLD·SGOV')||'5년플랜 QLD·SGOV';
+async function createPlanSleeveSession(opts={}){
+  const a=requireInitialCapital();if(!a)return null;
+  if(activeSleeveSession()&&!opts.force)return activeSleeveSession();
   const id=planSid('psl');
-  sleeveSessions.push({id,name,createdAt:Date.now(),ledger:{startQLD:0,startSGOV:0,startCash:0,trades:[]}});
-  planLinks.sleeve=id;bindSleeveLedger();await cloudSave();renderSessionSelectors();renderLedger();render();
+  const sess={
+    id,name:sessionDateName('QLD·SGOV'),createdAt:Date.now(),planManaged:true,allocatedCapital:a.sleeve,
+    ledger:{startQLD:0,startSGOV:0,startCash:a.sleeve,trades:[]}
+  };
+  sleeveSessions.push(sess);planLinks.sleeve=id;bindSleeveLedger();
+  if(!opts.defer){await cloudSave();renderSessionSelectors();renderLedger();render();}
+  return sess;
+}
+async function createAllPlanSessions(){
+  const a=requireInitialCapital();if(!a)return;
+  const existing=[];
+  if(linkedOpSession(liveState?.inf,'SOXL',planLinks.inf))existing.push('SOXL');
+  if(linkedOpSession(liveState?.vr,'TQQQ',planLinks.vr))existing.push('TQQQ VR');
+  if(activeSleeveSession())existing.push('QLD·SGOV');
+  if(existing.length && !confirm('이미 연동된 세션('+existing.join(', ')+')은 유지하고 없는 세션만 만들까요?'))return;
+  await createPlanInfSession({defer:true});
+  await createPlanVrSession({defer:true});
+  await createPlanSleeveSession({defer:true});
+  await saveOperatingState();
+  await cloudSave();
+  renderSessionSelectors();renderLedger();render();
+  await refreshLive();
+  alert('5년 플랜 세션 생성 완료\nSOXL '+usd(a.inf)+' / TQQQ '+usd(a.vr)+' / QLD·SGOV '+usd(a.sleeve));
 }
 function fillSessionSelect(id,sessions,linked,emptyText){
   const el=$(id);if(!el)return;
@@ -620,9 +678,9 @@ function renderSessionSelectors(){
     sl.value=sleeveSessions.some(x=>x.id===planLinks.sleeve)?planLinks.sleeve:'';
   }
   const inf=linkedOpSession(liveState.inf,'SOXL',planLinks.inf),vr=linkedOpSession(liveState.vr,'TQQQ',planLinks.vr),ss=activeSleeveSession();
-  if($('soxlSessionState')){$('soxlSessionState').className='sessionstate '+(inf?'ok':'warn');$('soxlSessionState').textContent=inf?'연동됨 · '+inf.name:'연동 세션 없음 · 새 세션을 만들거나 선택하세요.';}
-  if($('tqqqSessionState')){$('tqqqSessionState').className='sessionstate '+(vr?'ok':'warn');$('tqqqSessionState').textContent=vr?'연동됨 · '+vr.name:'연동 세션 없음 · 모의세션은 제외됩니다.';}
-  if($('sleeveSessionState')){$('sleeveSessionState').className='sessionstate '+(ss?'ok':'warn');$('sleeveSessionState').textContent=ss?'연동됨 · '+ss.name:'장부 세션 없음 · 먼저 새 세션을 만드세요.';}
+  if($('soxlSessionState')){$('soxlSessionState').className='sessionstate '+(inf?'ok':'warn');$('soxlSessionState').textContent=inf?'연동됨 · '+inf.name+' · 초기원금 '+usd(+inf.settings?.principal||0):'연동 세션 없음 · 새 세션을 만들거나 선택하세요.';}
+  if($('tqqqSessionState')){$('tqqqSessionState').className='sessionstate '+(vr?'ok':'warn');$('tqqqSessionState').textContent=vr?'연동됨 · '+vr.name+' · 초기원금 '+usd(+vr.settings?.initAmt||0):'연동 세션 없음 · 모의세션은 제외됩니다.';}
+  if($('sleeveSessionState')){$('sleeveSessionState').className='sessionstate '+(ss?'ok':'warn');$('sleeveSessionState').textContent=ss?'연동됨 · '+ss.name+' · 배정 '+usd(+ss.allocatedCapital||ledgerCalc().cash):'장부 세션 없음 · 먼저 새 세션을 만드세요.';}
 }
 async function selectPlanOpSession(kind,id){
   ensureLiveBoxes();planLinks[kind]=id||'';
@@ -974,6 +1032,7 @@ function allocationRows(stage){
   return [["SOXL 무매",a[0],"var(--soxl)"],["TQQQ VR",a[1],"var(--tqqq)"],["QLD/SGOV 슬리브",a[2],"var(--qld)"]];
 }
 function render(){
+  updateInitialAllocationPreview();
   renderLedger();
   const stage=currentStage(),st=STAGES[stage],pg=planProgress();
   document.querySelectorAll(".step").forEach(b=>b.classList.toggle("on",Number(b.dataset.step)===stage));
@@ -1057,6 +1116,7 @@ if(saved && saved.startCapital===undefined) saved.startCapital=0; // v1.4.0 이�
 apply(saved||d);$("slDate").value=todayISO();renderSessionSelectors();renderLedger();render();
 ["startDate","targetDate","startCapital","targetCapital","monthlyAdd","targetIncome","stageMode","balMM","balVR","balQLD","balSGOV","cagrLow","cagrBase","cagrHigh","incomeBasis","incomeYield","sgovYield","extraWithdraw"].forEach(id=>$(id).addEventListener("change",render));
 $("calcBtn").addEventListener("click",()=>{render();refreshLive()});$("setBaselineBtn").addEventListener("click",setPlanBaseline);$("seedBtn").addEventListener("click",seed);$("saveBtn").addEventListener("click",cloudSave);$("liveRefresh").addEventListener("click",refreshLive);
+$("createAllPlanSessions").addEventListener("click",createAllPlanSessions);
 $("soxlCreateSession").addEventListener("click",createPlanInfSession);
 $("tqqqCreateSession").addEventListener("click",createPlanVrSession);
 $("sleeveCreateSession").addEventListener("click",createPlanSleeveSession);
