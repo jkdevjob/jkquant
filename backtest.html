@@ -1527,6 +1527,20 @@ function capGainTax(pnl, t){
    한 주도 못 사고 전략이 통째로 멈춘다 — 거긴 원래 소수점이 맞고 운영도 그렇게 돈다.
 
    iq: 금액→주수 (내림) · isq: 주수→주수 (내림, 보유분 초과 방지) */
+/* ── 매수 회계 규약 (전 전략 공통) ───────────────────────────────────
+   예산은 언제나 '수수료까지 포함한 금액' 이다 — budget = 매수금 + 수수료.
+     주수 = budget / (가격 × (1 + 수수료율))
+   정수 주수 전략은 여기서 내림하고 남는 건 현금으로 들고 간다.
+   소수 주수 전략은 그대로 쓴다.
+   예전엔 budget*(1-fee)/가격 을 쓰는 곳(적립·200적립·ASAP)이 섞여 있었다.
+   같은 예산·같은 가격인데 전략마다 주수가 미세하게 달랐고, 회당 budget×수수료율²
+   만큼 잔돈이 샜다. '주수를 정수로 끊는가'는 전략마다 다른 규약이라
+   화면(전체비교 규약표)에 그대로 밝힌다. */
+function buyQty(budget, px, feeRate, integer){
+  if(!(budget>0)||!(px>0)) return 0;
+  const q=budget/(px*(1+(feeRate||0)));
+  return integer ? Math.floor(q+1e-9) : q;
+}
 const iq=(amt,px)=>(px>0?Math.floor(amt/px):0);
 const isq=(q,have)=>Math.min(Math.floor(q+1e-9), Math.floor(have+1e-9));
 
@@ -2061,7 +2075,7 @@ function _dcaOne(t,days,amt,freq,costOn,dipMul){
     const p=D[d]?.[C]??0;
     { const dc=divCash(t,d,sh,costOn);
       if(dc>0){ divTotal+=dc; nDivDay++;
-        if(REINV&&p>0){ const fee=dc*FEE; sh+=(dc-fee)/p; }   // 배당락일 종가로 재매수
+        if(REINV&&p>0){ sh+=buyQty(dc,p,FEE,false); }   // 배당락일 종가로 재매수
         else dcash+=dc; } }
     if(p>0&&HIT[i]){
       /* 배수 판정도 전일까지의 값으로 — MA[d] 에는 오늘 종가가 들어 있어서
@@ -2071,7 +2085,7 @@ function _dcaOne(t,days,amt,freq,costOn,dipMul){
       const ma=(MA&&pd)?MA[pd]:null;
       const dip=(ma!=null&&pp>0&&pp<=ma);     // 200일선 워밍업 전(null)은 1배
       const a=dip?amt*MUL:amt;
-      const fee=a*FEE;sh+=(a-fee)/p;inv+=a; nBuy++; if(dip)nDip++;
+      sh+=buyQty(a,p,FEE,false); inv+=a; nBuy++; if(dip)nDip++;   // 예산 a 에 수수료 포함
       cf.push([d,a]);                          // 현금흐름(투입 시점·금액) — IRR·평균투입자본용
     }
     if(p>0&&inv>0){ const uv=(sh*p+dcash)/inv; if(uv>uvPeak)uvPeak=uv; else if(uvPeak>0){ const dd=(uvPeak-uv)/uvPeak; if(dd>mdd)mdd=dd; } }
@@ -3151,7 +3165,7 @@ function _asapInd(tkr){
 function runASAP(days,tkr,opt){
   const o=opt||{}, base=o.base||10, mid=o.mid||50, deep=o.deep||100;
   const lump=o.startCash>0;   // 거치식: 목돈을 SGOV로 시작, 신규 적립 없이 리저브에서만 매수
-  const FEE=o.costOn?costOf(tkr).fee:0, F=1-FEE;   // 비용: 매수 수수료(스톡은 안 팔아 실현 양도세 없음)
+  const FEE=o.costOn?costOf(tkr).fee:0;   // 비용: 매수 수수료(스톡은 안 팔아 실현 양도세 없음)
   const {cl,MA5,MA20,MA50,MA200,RSI,gi}=_asapInd(tkr);
   let sgov=lump?o.startCash:0,sh=0,stage=0,up3=-1,inv=lump?o.startCash:0,mddPeak=-Infinity,mdd=0; const snap=[];
   const cf=lump?[[days[0],o.startCash]]:[];   // 현금흐름(신규 투입 시점·금액) — IRR·평균투입자본용. 거치는 첫날 전액.
@@ -3184,12 +3198,12 @@ function runASAP(days,tkr,opt){
     if(crossDn&&stage>0){stage=0;up3=-1;}
     if(down){ if(!lump){sgov+=base;inv+=base;_cf(d,base);}
       // 적립: 신규자금 투입 / 거치: 리저브(sgov)에서 차감
-      if(rsi<=30&&pc<=m200*0.85){const amt=lump?Math.min(deep,sgov):deep;sh+=amt*F/c;trades++;if(lump)sgov-=amt;else {inv+=amt;_cf(d,amt);}}
-      else if(rsi<=35&&pc<=m200*0.90){const amt=lump?Math.min(mid,sgov):mid;sh+=amt*F/c;trades++;if(lump)sgov-=amt;else {inv+=amt;_cf(d,amt);}} }
-    if(stage===0&&cross5){sh+=sgov*0.2*F/c;sgov*=0.8;stage=1;trades++;}
-    if(stage===1&&cross20){sh+=sgov*0.3*F/c;sgov*=0.7;stage=2;trades++;}
-    if(stage===2&&!down){sh+=sgov*F/c;sgov=0;stage=3;up3=di;trades++;}   // 3차: 상승장 재확인(종가≥200선) — 리저브 안 묶임
-    if(!down&&!lump){sh+=base*F/c;inv+=base;_cf(d,base);trades++;}       // 상승장: 매일 base로 SOXL 적립(DCA)
+      if(rsi<=30&&pc<=m200*0.85){const amt=lump?Math.min(deep,sgov):deep;sh+=buyQty(amt,c,FEE,false);trades++;if(lump)sgov-=amt;else {inv+=amt;_cf(d,amt);}}
+      else if(rsi<=35&&pc<=m200*0.90){const amt=lump?Math.min(mid,sgov):mid;sh+=buyQty(amt,c,FEE,false);trades++;if(lump)sgov-=amt;else {inv+=amt;_cf(d,amt);}} }
+    if(stage===0&&cross5){sh+=buyQty(sgov*0.2,c,FEE,false);sgov*=0.8;stage=1;trades++;}
+    if(stage===1&&cross20){sh+=buyQty(sgov*0.3,c,FEE,false);sgov*=0.7;stage=2;trades++;}
+    if(stage===2&&!down){sh+=buyQty(sgov,c,FEE,false);sgov=0;stage=3;up3=di;trades++;}   // 3차: 상승장 재확인(종가≥200선) — 리저브 안 묶임
+    if(!down&&!lump){sh+=buyQty(base,c,FEE,false);inv+=base;_cf(d,base);trades++;}       // 상승장: 매일 base로 적립(DCA)
     const eq=sh*c+sgov; if(eq>mddPeak)mddPeak=eq; else if(mddPeak>0){const dd=(mddPeak-eq)/mddPeak;if(dd>mdd)mdd=dd;}
     if(di%10===0)snap.push([d,eq]);
   });
@@ -3304,7 +3318,7 @@ function runMA200Accum(days,tkr,contribTotal,N,costOn,opt){
     if(PARK==='bill'&&cash>0){ const it=cash*parkRate(+d.slice(0,4),tkr)/252; cash+=it; interestTotal+=it; }
     cash+=add; inv+=add;                                   // 매일 균등 적립
     const want=g>0?above[dts[g-1]]:true;
-    if(want&&cash>0){ const fee=cash*FEE, net=cash-fee, q=net/c; avg=(avg*shares+c*q)/(shares+q); shares+=q; cash=0; }   // 신호 ON: 매수(가중평단 갱신)
+    if(want&&cash>0){ const q=buyQty(cash,c,FEE,false); if(q>0){ avg=(avg*shares+c*q)/(shares+q); shares+=q; } cash=0; }   // 신호 ON: 매수(가중평단 갱신)
     else if(!want&&shares>0){ const gross=shares*c, fee=gross*FEE; cash+=gross-fee; yearPnl+=shares*(c-avg)-fee; shares=0; }   // 신호 OFF: 매도(실현이익 계상)
     const eq=cash+shares*c; if(inv>0){const uv=eq/inv;if(uv>uvPeak)uvPeak=uv;else if(uvPeak>0){const dd=(uvPeak-uv)/uvPeak;if(dd>mdd)mdd=dd;}}
     if(i%10===0)snap.push([d,eq]);
@@ -3389,7 +3403,7 @@ function runIVS(days,tkr,cap,s0,N,band,costOn,mode,pair){
        이자에 배당소득세 15.4% · 국채 ETF 보수 0.10%/년 · 리밸런싱 때 국채 매매 수수료도 부과
      (짝=1배수는 양쪽 다 실물이라 이미 각자 수수료를 물므로 추가 부과 없음)
      체감: 10년창 중앙 CAGR이 TQQQ −0.4%p · SOXL −0.8%p. 노출이 낮아 현금이 오래 놀수록 커진다. */
-  const CASH_DIVTAX=costOn?0.154:0, CASH_EXP=costOn?0.0010:0;
+  const CASH_DIVTAX=costOn?DIV_TAXRATE:0, CASH_EXP=costOn?0.0010:0;   // 배당소득세율은 파일 한 곳(DIV_TAXRATE)
   const LEGFEE=(costOn&&!X1)?costOf(tkr).fee:0;   // 국채 반대편 매매 수수료
   const A={sh:0,avg:0}, B={sh:0,avg:0};                // A=레버리지(비중 w) · B=1배수(1−w)
   let cash=cap, yearPnl=0, curYear=null;
@@ -3491,6 +3505,34 @@ function imVariant(tkrs){
 function imVariantTag(tkrs){
   const v=imVariant(tkrs);
   return v.length ? ` · <span style="color:var(--gold)">V4.0 변형</span> <span style="font-size:10px;color:var(--dim)">(${v.join(' · ')})</span>` : '';
+}
+/* ── 전략별 실행 규약 ─────────────────────────────────────────────────
+   '공정 비교'라고 적어 두려면, 무엇이 같고 무엇이 다른지가 화면에 있어야 한다.
+   같은 것 — 예산은 언제나 수수료 포함(budget = 매수금 + 수수료, buyQty 한 곳)
+            · 배당은 받은 날 현금(divCash 한 곳) · 잔돈은 버리지 않는다
+   다른 것 — 주수를 정수로 끊는지, 세금을 무는지, 남는 돈이 어디에 머무는지
+   여기 적힌 값이 곧 화면에 뜨는 값이다 — 코드와 설명이 갈라지지 않게 한 곳에 둔다. */
+const STRAT_ACCT={
+  im  :{name:'무한매수법',  qty:'정수', park:'예수금(무이자)',      tax:'양도세 연 정산'},
+  vr  :{name:'밸류리밸런싱',qty:'정수', park:'Pool(무이자)',        tax:'양도세 연 정산'},
+  std :{name:'표준편차',    qty:'정수', park:'예수금(무이자)',      tax:'양도세 연 정산'},
+  ma  :{name:'200일선 로테',qty:'정수', park:'현금 또는 단기국채',  tax:'양도세 연 정산'},
+  maa :{name:'200일선 적립',qty:'소수', park:'현금 또는 단기국채',  tax:'양도세 연 정산'},
+  ivs :{name:'역분산',      qty:'정수', park:'단기국채(이자·보수·배당세)', tax:'양도세 연 정산'},
+  asap:{name:'ASAP',        qty:'소수', park:'리저브(T-Bill 근사)', tax:'매도 없음 — 양도세 이연'},
+  dca :{name:'매수적립',    qty:'소수', park:'없음(전액 투입)',     tax:'매도 없음 — 양도세 이연'},
+  bh  :{name:'매수후보유',  qty:'정수', park:'잔돈 현금',           tax:'매도 없음 — 양도세 이연'},
+};
+function stratAcctTable(keys){
+  const ks=[...new Set((keys||[]).map(k=>k.replace(/^(vrl|vra)$/,'vr').replace(/^(maa2|maa)$/,'maa')
+    .replace(/^asapa$/,'asap').replace(/^im\d*$/,'im')))].filter(k=>STRAT_ACCT[k]);
+  if(!ks.length) return '';
+  return `<div style="overflow-x:auto;margin-top:8px"><table class="cmp-tbl"><thead><tr>`
+    +`<th>전략</th><th title="주문 수량을 정수로 끊는지 — 정수면 못 산 잔돈이 현금으로 남는다">주수</th>`
+    +`<th title="주식에 안 들어간 돈이 어디에 머무는지">남는 돈</th><th>세금</th></tr></thead><tbody>`
+    +ks.map(k=>{const a=STRAT_ACCT[k];
+      return `<tr><td><b>${a.name}</b></td><td class="${a.qty==='정수'?'cgold':'cdim'}">${a.qty}</td><td class="cdim">${a.park}</td><td class="cdim">${a.tax}</td></tr>`;}).join('')
+    +`</tbody></table></div>`;
 }
 function _runOneStrat(key,tkr,cap,days,costOn){
   if(costOn===undefined)costOn=true;   // 기본 세후(비용 반영)
@@ -3623,7 +3665,13 @@ function renderCombo(res, cap, days, mode, costOn){
   h+=`<p class="note" style="font-size:11px;color:var(--dim);margin-top:8px;line-height:1.7">${note} ${_curNote(R.map(r=>r.ticker))} · <b>${costOn?'세후':'세전'}</b>(${costOn?_costNote(R.map(r=>r.ticker)):'세금·수수료 미반영'}). 아래 연도별·차트는 상위 8개.</p>`;
   h+=`<p class="note" style="font-size:11px;color:var(--dim2);margin-top:6px;line-height:1.7;padding:7px 10px;background:var(--surf2);border-radius:7px">💡 <b>IRR·평균투입자본</b> — 총투입이 같아도 <b>돈이 시장에 머문 시간</b>은 다릅니다. 거치는 첫날 전액이 끝까지 일하지만, 적립은 마지막에 넣은 돈이 0일 일하고 끝나 <b>평균투입자본이 원금의 절반</b> 수준입니다. 최종금액·CAGR은 그 차이를 무시해 적립식을 구조적으로 불리하게 보이게 하므로, 투입 시점을 반영한 <b>IRR</b>(=XIRR, "내 돈이 실제로 연 몇 %였나")을 함께 보세요. 거치식은 IRR ≡ CAGR입니다.</p>`;
   if(!isDca) h+=`<p class="note" style="font-size:11px;color:var(--dim2);margin-top:2px;line-height:1.7;padding:7px 10px;background:var(--surf2);border-radius:7px">🎲 <b>역분산 = 섀넌의 도깨비 최적비중형</b> — 클로드 섀넌은 "매일 두 배가 되거나 반토막 나는" 성장률 0짜리 주식이라도, 현금과 <b>50:50으로 맞춰두고 리밸런싱만</b> 하면 매 회 <b>+6.07%</b>씩 복리로 불어난다는 걸 보였습니다. 변동성 자체가 수익원이 되는 것(<b>리밸런싱 보너스 = ½·w(1−w)·σ²</b>)이죠. 역분산은 그 <b>고정 50%</b>를 시간가변 최적비중으로 바꿉니다 — 기하성장 <b>g(w) ≈ w·μ − ½·w²σ²</b>를 최대화하면 <b>w* ∝ 1/σ²</b>이므로, 최근 ${(typeof ivsN!=='undefined'?ivsN:60)}일 실현변동성의 <b>제곱에 반비례</b>해 비중을 잡고 남은 돈은 단기국채에 둡니다. 밴드 밖일 때만 손대서 거래는 <b>연 4~8회</b>. 다만 기초자산에 <b>상승 드리프트가 있어야</b> 성립합니다(KORU처럼 없으면 실패).</p>`;
-  h+=`<p class="note" style="font-size:11px;color:var(--dim2);margin-top:2px;line-height:1.7;padding:7px 10px;background:var(--surf2);border-radius:7px">⚙️ <b>각 전략 탭 설정 반영</b> — ${comboOpts(res.cmode)}</p></div>`;
+  h+=`<p class="note" style="font-size:11px;color:var(--dim2);margin-top:2px;line-height:1.7;padding:7px 10px;background:var(--surf2);border-radius:7px">⚙️ <b>각 전략 탭 설정 반영</b> — ${comboOpts(res.cmode)}</p>`;
+  /* '공정 비교'라고 적으려면 무엇이 다른지도 적어야 한다. */
+  h+=`<p class="note" style="font-size:11px;color:var(--dim2);margin-top:6px;line-height:1.7;padding:7px 10px;background:var(--surf2);border-radius:7px">`
+    +`⚖️ <b>실행 규약</b> — 모든 전략이 같은 것: 예산은 <b>수수료까지 포함</b>(매수금+수수료), `
+    +`배당은 <b>받은 날 현금</b>, <b>잔돈은 버리지 않습니다</b>. 다른 것은 아래 표대로입니다.`
+    +stratAcctTable(R.map(r=>r.key))
+    +`</p></div>`;
   const top=R.slice(0,8).map((r,i)=>({name:r.name, snap:r.snap, color:COMBO_PAL[i%8]}));
   h+=yearCompareCard(top.map(t=>({label:t.name,snap:t.snap,color:t.color})), money);
   document.getElementById('allResult').innerHTML=h;

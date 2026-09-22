@@ -64,6 +64,10 @@ const iqSrc=(bt.match(/^const iq=\(amt,px\)=>[^\n]*\nconst isq=\([^\n]*$/m)||[''
 if(!iqSrc) throw new Error('정수 주수 헬퍼(iq/isq)를 backtest.html에서 못 찾음');
 // eval 안의 const는 밖으로 안 새어나간다 — 뒤에 따로 eval하는 엔진(runIM50 등)도 봐야 하니 전역으로 올린다
 { const f=new Function(iqSrc+'\nreturn {iq,isq};')(); global.iq=f.iq; global.isq=f.isq; }
+/* 매수 회계 규약 헬퍼 — 전 전략이 부른다. 파일에서 그대로 떼어 온다. */
+{ const m=bt.match(/function buyQty\(budget, px, feeRate, integer\)\{[\s\S]*?\n\}/);
+  if(!m) throw new Error('매수 회계 헬퍼(buyQty)를 backtest.html에서 못 찾음');
+  global.buyQty=new Function(m[0]+'\nreturn buyQty;')(); }
 /* 비용·세금 프로필도 엔진이 직접 부른다 — iq/isq와 같은 이유로 전역에 올린다 */
 const costSrc=(bt.match(/const COST_FEE=[\s\S]*?function capGainTax\([\s\S]*?\n\}/)||[''])[0];
 if(!costSrc) throw new Error('비용·세금 프로필(costOf/capGainTax)을 backtest.html에서 못 찾음');
@@ -308,7 +312,7 @@ console.log('[4c] 섀넌 차분 (runIVS 거래로그 → ivsPos 재생)');
       `yearPnl+=q*(px-P.avg)-fee; P.sh-=q; __LOGI('sell',P===A?'lev':'x1',__DD,px,q,gross,fee);`,'sell');
   inj(`days.forEach((d,i)=>{`,`days.forEach((d,i)=>{ __DD=d;`,'date');
   inj(`const LEGFEE=(costOn&&!X1)?costOf(tkr).fee:0;`,`const LEGFEE=0;`,'legfee');
-  inj(`const CASH_DIVTAX=costOn?0.154:0, CASH_EXP=costOn?0.0010:0;`,`const CASH_DIVTAX=0, CASH_EXP=0;`,'cashcost');
+  inj(`const CASH_DIVTAX=costOn?DIV_TAXRATE:0, CASH_EXP=costOn?0.0010:0;`,`const CASH_DIVTAX=0, CASH_EXP=0;`,'cashcost');
   /* 양도세 중화 — 운영 장부엔 세금 개념이 없다. 예전엔 COST_DEDUCT를 무한대로 올려 껐지만
      세금이 costOf/capGainTax 안으로 들어가면서 밖에서 상수를 덮어써도 안 먹는다. 식을 직접 끈다. */
   inj(`const owed=capGainTax(yearPnl, tkr); let due=owed; yearPnl=0;`,`const owed=0; let due=owed; yearPnl=0;`,'tax');
@@ -3199,7 +3203,7 @@ console.log('\n[68] 달력 적립 · 강제매도 회계 · 워밍업 표시');
                +(bt.match(/const LEV_PRICEIDX=\{[^}]*\};/)||[''])[0]+'\n'
                +(bt.match(/const X1_EXPENSE=\{[^}]*\};/)||[''])[0]+'\n'
                +(bt.match(/const X1_EXPENSE_DEF=[^\n]*/)||[''])[0]+'\n'
-               +(bt.match(/const IDX_EXTEND=\{[\s\S]*?\n\};/)||[''])[0]+'\n'
+               +(bt.match(/const IDX_EXTEND=\{[\s\S]*?\}\s*\};/)||[''])[0]+'\n'
                +'var levExt=false, EXTM={}, maBuy="ma", maSell="ma", maShort=50, maPark="cash";\n';
     global.META=global.META||{SOXL:{lev:3},TQQQ:{lev:3},TECL:{lev:3}};
     const fn=new Function(pre2+'return ('+extractFn(bt,'function runMA200(days,tkr,cap,N,costOn,opt)').replace(/^function \w+\(/,'function (')+')')();
@@ -3397,7 +3401,7 @@ console.log('\n[71] same-close 룩어헤드 탐지');
     +(bt.match(/const LEV_PRICEIDX=\{[^}]*\};/)||[''])[0]+'\n'
     +(bt.match(/const X1_EXPENSE=\{[^}]*\};/)||[''])[0]+'\n'
     +(bt.match(/const X1_EXPENSE_DEF=[^\n]*/)||[''])[0]+'\n'
-    +(bt.match(/const IDX_EXTEND=\{[\s\S]*?\n\};/)||[''])[0]+'\n'
+    +(bt.match(/const IDX_EXTEND=\{[\s\S]*?\}\s*\};/)||[''])[0]+'\n'
     +'var levExt=false, EXTM={}, dcaReinv=true, dcaDipMul=1;\n';
   const mk=(m)=>new Function(pre+'return ('+extractFn(bt,m).replace(/^function [\w$]+\(/,'function (')+')')();
   const T=DAYS.SOXL?'SOXL':'TQQQ', D0=DAYS[T];
@@ -4259,7 +4263,7 @@ console.log('\n[80] 역분산 1배 짝 — 운영·백테 기초가격 일치');
     +(bt.match(/const LEV_PRICEIDX=\{[^}]*\};/)||[''])[0]+'\n'
     +(bt.match(/const X1_EXPENSE=\{[^}]*\};/)||[''])[0]+'\n'
     +(bt.match(/const X1_EXPENSE_DEF=[^\n]*/)||[''])[0]+'\n'
-    +(bt.match(/const IDX_EXTEND=\{[\s\S]*?\n\};/)||[''])[0]+'\n'
+    +(bt.match(/const IDX_EXTEND=\{[\s\S]*?\}\s*\};/)||[''])[0]+'\n'
     +(bt.match(/const TBILL_RATE=\{[\s\S]*?\};/)||[''])[0]+'\n'
     +(bt.match(/const KR_RATE=\{[\s\S]*?\};/)||[''])[0]+'\n'
     +(bt.match(/const parkRate=\(y,tkr\)=>[^\n]*/)||[''])[0]+'\n';
@@ -4639,6 +4643,135 @@ console.log('\n[83] 체결가 · 조정종가 · 배당 이벤트 분리');
   }
 }
 function dcaReinvSet(v){ /* 전역 스위치 — 엔진이 typeof 로 읽는다 */ global.dcaReinv=v; }
+
+/* ════ 84. 회계 규약 공통화 ════  (감사 ⑬ · 필수시험 L)
+   전체비교가 '공정 비교'라고 적혀 있으려면, 같은 것과 다른 것이 화면에 있어야 한다.
+     같은 것 — 예산은 언제나 수수료 포함(buyQty 한 곳) · 배당은 받은 날 현금(divCash 한 곳)
+              · 잔돈은 버리지 않는다
+     다른 것 — 주수를 정수로 끊는지 · 남는 돈이 어디에 머무는지 · 세금을 무는지
+   예전엔 budget*(1-fee)/가격 과 budget/(가격*(1+fee)) 가 섞여 있어, 같은 예산·같은
+   가격인데 전략마다 주수가 달랐고 회당 budget×수수료율² 만큼 잔돈이 샜다.            */
+console.log('\n[84] 회계 규약 — 예산·잔돈·장부 항등');
+{
+  // ── 매수 회계 규약이 한 곳인가 ──
+  ok('매수 주수 계산이 파일 한 곳에 있다', /function buyQty\(budget, px, feeRate, integer\)/.test(bt));
+  ok('예산은 수수료를 포함한다 (budget = 매수금 + 수수료)', (()=>{
+      // 예산 1000 · 가격 100 · 수수료 0.25% → 9.97506... 주 · 정수면 9주
+      const q=buyQty(1000,100,0.0025,false), qi=buyQty(1000,100,0.0025,true);
+      const spend=q*100, fee=spend*0.0025;
+      return near(spend+fee, 1000, 1e-9) && qi===9; })(),
+     `${buyQty(1000,100,0.0025,false)} / ${buyQty(1000,100,0.0025,true)}`);
+  ok('수수료가 0이면 예산 ÷ 가격', near(buyQty(1000,100,0,false),10,1e-12) && buyQty(1000,100,0,true)===10);
+  ok('예산이나 가격이 0이면 0주', buyQty(0,100,0.0025,true)===0 && buyQty(1000,0,0.0025,true)===0);
+  ok('옛 규약(budget*(1-fee)/가격)이 안 남아 있다',
+     !/\*\(1-FEE\)\/|\*F\/c/.test(bt), '아직 남아 있음');
+  ok('소수 주수 전략도 같은 헬퍼를 쓴다', (()=>{
+      for(const m of ['function _dcaOne(t,days,amt,freq,costOn,dipMul)',
+                      'function runMA200Accum(days,tkr,contribTotal,N,costOn,opt)',
+                      'function runASAP(days,tkr,opt)'])
+        if(!/buyQty\(/.test(extractFn(bt,m))) return false;
+      return true; })());
+
+  // ── 규약표가 코드와 같은 이야기를 하는가 ──
+  ok('전략별 규약표가 있다', /const STRAT_ACCT=\{/.test(bt) && /function stratAcctTable\(keys\)/.test(bt));
+  ok('전체비교 결과에 규약표를 붙인다',
+     /stratAcctTable\(R\.map\(r=>r\.key\)\)/.test(bt) && /잔돈은 버리지 않습니다/.test(bt));
+  {
+    const m=bt.match(/const STRAT_ACCT=\{[\s\S]*?\n\};/);
+    const T=new Function((m||[''])[0]+'\nreturn STRAT_ACCT;')();
+    // 표에 적힌 '주수' 가 실제 코드와 같아야 한다 — 다르면 표가 거짓말이다
+    const isInt=(marker)=>/buyQty\([^)]*,\s*true\)|iq\(/.test(extractFn(bt,marker));
+    const pairs=[['im','function runIM(days,tkr,cap,divs,targetPct,compound'],
+                 ['vr','function runVR(days,tkr,params)'],
+                 ['std','function runStdev(days,tkr,cap,N,g,filter,costOn)'],
+                 ['ma','function runMA200(days,tkr,cap,N,costOn,opt)'],
+                 ['maa','function runMA200Accum(days,tkr,contribTotal,N,costOn,opt)'],
+                 ['ivs','function runIVS(days,tkr,cap,s0,N,band,costOn,mode,pair)'],
+                 ['asap','function runASAP(days,tkr,opt)'],
+                 ['dca','function _dcaOne(t,days,amt,freq,costOn,dipMul)'],
+                 ['bh','function runBH(days,tkr,cap,costOn)']];
+    let bad='';
+    for(const [k,mk] of pairs){
+      const want=(T[k]||{}).qty==='정수', got=isInt(mk);
+      if(want!==got && !bad) bad=`${k}: 표는 '${(T[k]||{}).qty}' 인데 코드는 ${got?'정수':'소수'}`;
+    }
+    ok('규약표의 주수가 실제 코드와 같다', !bad, bad);
+    ok('규약표가 비교에 쓰는 전략을 다 담는다', pairs.every(([k])=>!!T[k]), Object.keys(T).join(' '));
+  }
+
+  /* ── L. 장부 항등 — 최종 평가액 = 현금 + 보유평가 (+ 누적인출) ──
+     잔돈이 어디선가 사라지면 이 식이 깨진다. 실데이터로 값을 맞춰 본다. */
+  {
+    const helpers=['function srcOf(t)','function divSplit(tkr, days, buys)','function _maOpt(opt)',
+                   'function _maHold(sell,a,b)','function _maEntry(buy,a,b)','function _maAbove(tkr,N,SHORT,BUY,SELL)',
+                   'function _asapInd(tkr)','function _ivsWeights(tkr,N,s0)','function _ivsX1(tkr)',
+                   'function _ivsPair1(tkr, days)','function _isoWeek(d)','function _dcaFreq(f)',
+                   'function _dcaHits(days,freq)','function _dcaCount(days,freq)','function _dcaMA(t,N)'];
+    let pre='var levExt=false, EXTM={}, dcaDipMul=1, maBuy="ma", maSell="ma", maShort=50, maPark="cash", imCostOn=true;\n';
+    for(const h of helpers) pre+=extractFn(bt,h)+'\n';
+    for(const re of [/const SGOV_RATE=\{[^}]*\};/, /const MA_COND_LBL=\{[^}]*\};/, /const TBILL_RATE=\{[\s\S]*?\};/,
+                     /const KR_RATE=\{[\s\S]*?\};/, /const parkRate=\(y,tkr\)=>[^\n]*/,
+                     /const LEV_SPREAD=[^\n]*/, /const LEV_UNDERLYING=\{[^}]*\};/, /const LEV_EXPENSE=\{[^}]*\};/,
+                     /const LEV_EXPENSE_DEF=[^\n]*/, /const LEV_PRICEIDX=\{[^}]*\};/,
+                     /const X1_EXPENSE=\{[^}]*\};/, /const X1_EXPENSE_DEF=[^\n]*/,
+                     /const IDX_EXTEND=\{[\s\S]*?\}\s*\};/]){
+      const m=bt.match(re); if(m) pre+=m[0]+'\n'; }
+    const mk=(m)=>new Function(pre+'return ('+extractFn(bt,m).replace(/^function [\w$]+\(/,'function (')+')')();
+    const T=DAYS.SOXL?'SOXL':'TQQQ', D=DAYS[T].slice(-900), lc=M[T][D[D.length-1]][C];
+    global.dcaReinv=true;
+
+    const CASES=[
+      ['무매 V4.0', mk('function runIM(days,tkr,cap,divs,targetPct,compound'), f=>f(D,T,10000,20,20,true),
+        r=>r.endCash+r.endShares*lc],
+      ['무매 V2.2', mk('function runIM22(days,tkr,cap,divs,targetPct,compound'), f=>f(D,T,10000,20,20,true),
+        r=>r.endCash+r.endShares*lc],
+      ['무매 V3.0', mk('function runIM30(days,tkr,cap,divs,targetPct,compound'), f=>f(D,T,10000,20,20,true),
+        r=>r.endCash+r.endShares*lc],
+      ['표준편차',  mk('function runStdev(days,tkr,cap,N,g,filter,costOn)'), f=>f(D,T,10000,40,2.5,'none',true),
+        r=>r.endCash+r.endShares*lc],
+      ['200로테',  mk('function runMA200(days,tkr,cap,N,costOn,opt)'), f=>f(D,T,10000,200,true),
+        r=>r.endCash+r.endShares*lc],
+      ['역분산',   mk('function runIVS(days,tkr,cap,s0,N,band,costOn,mode,pair)'), f=>f(D,T,10000,0.45,60,0.10,true,'iv','cash'),
+        r=>r.endCash+r.endShares*lc],
+      ['거치(B&H)',mk('function runBH(days,tkr,cap,costOn)'), f=>f(D,T,10000,true),
+        r=>r.endCash+r.endShares*lc],
+      ['ASAP',    mk('function runASAP(days,tkr,opt)'), f=>f(D,T,{base:10,mid:50,deep:100,costOn:true}),
+        r=>r.endReserve+r.endShares*lc],
+    ];
+    for(const [nm,fn,call,ledger] of CASES){
+      const r=call(fn);
+      ok(`${nm} — 최종 = 현금 + 보유평가`, near(r.final, ledger(r), Math.max(1e-6, Math.abs(r.final)*1e-12)),
+         `${r.final} vs ${ledger(r)}`);
+      ok(`${nm} — 현금이 음수로 남지 않는다`, (r.endCash!=null?r.endCash:r.endReserve)>=-1e-6,
+         String(r.endCash!=null?r.endCash:r.endReserve));
+    }
+    // VR 은 Pool 이 현금이고 인출액도 회수가치에 든다
+    const rv=mk('function runVR(days,tkr,params)')(D,T,{initAmt:10000,G:10,bandPct:15,mode:0.25,
+      withdraw:50,formula:'basic',startV:0,startPool:0,costOn:true});
+    ok('VR — 최종 = 보유평가 + Pool + 누적인출',
+       near(rv.final, rv.sharesVal+rv.pool+rv.totalWd, 1e-6),
+       `${rv.final} vs ${rv.sharesVal}+${rv.pool}+${rv.totalWd}`);
+    ok('VR — Pool 이 음수로 남지 않는다', rv.pool>=-1e-6, String(rv.pool));
+  }
+
+  /* ── 수수료가 어디에 들어가는지 문서화 + 검사 ── */
+  ok('취득가액에 매수 수수료가 들어간다 (평단은 수수료 전 체결가)', (()=>{
+      const f=extractFn(bt,'function runIM(days,tkr,cap,divs,targetPct,compound');
+      // 평단은 체결가로 굴리고, 수수료는 현금에서 따로 뺀다 — 두 줄이 같이 있어야 한다
+      return /cash-=spend\+fee/.test(f) || /cash-=amt/.test(f); })());
+  ok('양도비용(매도 수수료)이 실현손익에서 빠진다', (()=>{
+      for(const m of ['function runStdev(days,tkr,cap,N,g,filter,costOn)',
+                      'function runIVS(days,tkr,cap,s0,N,band,costOn,mode,pair)',
+                      'function runVR(days,tkr,params)'])
+        if(!/yearPnl\+=[^;]*-fee/.test(extractFn(bt,m))) return false;
+      return true; })());
+  /* 배당·예수금 이자에 쓰는 세율은 한 값이어야 한다.
+     (국내 ETF 매매차익 세율·모멘텀 국내 세율은 성격이 다른 세금이라 별개다) */
+  ok('배당소득세율이 파일 한 곳에 있다',
+     /const DIV_TAXRATE=0\.154;/.test(bt)
+     && /const CASH_DIVTAX=costOn\?DIV_TAXRATE:0/.test(bt)
+     && !/costOn\?0\.154:0/.test(bt));
+}
 
 console.log(`\n════ 결과: ${pass} PASS / ${fail} FAIL ${fail===0?'— ALL PASS ★':'— 배포 금지, 위 ✗ 항목 수정 필요'} ════`);
 process.exit(fail===0?0:1);
