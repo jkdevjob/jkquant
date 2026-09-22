@@ -6232,5 +6232,75 @@ console.log('\n[99] VR 적립식 최초 자금 — 세 엔진 같은 장부');
     ok('옛 분모면 11,000 이었다 (쓰지도 않은 초기금 포함)', initAmt+contrib*cyc===11000); }
 }
 
+
+/* ════ 100. 플랜·VR 주문 엔진 동기화 ════
+   5년 플랜은 메인 주문표와 같은 무매 상태머신을 써야 하고,
+   VR은 사이클 시작 때 만든 20차 예약 주문을 그 사이클 동안 고정한다. */
+console.log('\n[100] 5년 플랜·VR 예약주문 동기화');
+{
+  const pl=fs.readFileSync(__d+'/plan.html','utf8');
+
+  // ── 무한매수 플랜: 리버스 상태는 출금 같은 비거래 이벤트로 풀리면 안 된다.
+  const revF=new Function('return ('+extractFn(pl,'function reverseTPlan').replace(/^function [\w$]+\(/,'function (')+')')();
+  const stateSrc=extractFn(pl,'function calcInfState(sess)');
+  const stateF=new Function('KIND_T','isBuyKind','isSellKind','reverseTPlan',
+    'return ('+stateSrc.replace(/^function [\w$]+\(/,'function (')+')')(
+      {'1회매수':t=>t+1,'절반매수':t=>t+0.5,'지정가매도':t=>t*0.25,'쿼터매도':t=>t*0.75},
+      k=>k==='1회매수'||k==='절반매수'||k==='리버스매수'||String(k).includes('+1회매수')||String(k).includes('+절반매수'),
+      k=>k==='지정가매도'||k==='쿼터매도'||k==='리버스매도'||String(k).includes('지정가매도+'),
+      revF
+    );
+  const base={settings:{principal:1000,div:20,target:20,reverse:true,compound:true},hist:[
+    {kind:'1회매수',price:10,qty:20,tManual:20},
+    {kind:'리버스매도',price:9,qty:2},
+    {kind:'출금',amt:10}
+  ]};
+  const a=stateF(base);
+  ok('플랜: 출금 뒤에도 리버스 상태 유지', a.revState==='REVERSE' && a.reverseActive===true, a.revState);
+  const b=stateF({settings:base.settings,hist:[...base.hist,{kind:'리버스복귀'}]});
+  ok('플랜: 리버스복귀 기록만 상태를 NORMAL로 돌린다', b.revState==='NORMAL' && b.reverseActive===false, b.revState);
+  ok('플랜: 리버스 매도수량에 최소 1주 강제가 없다',
+     /sellQty=Math\.floor\(c\.qty\/sellDiv\)/.test(pl) && !/sellQty=Math\.max\(1,Math\.floor\(c\.qty\/sellDiv\)\)/.test(pl));
+  ok('플랜: 리버스 쿼터매수는 잔금÷4 배정액만 사용',
+     /Math\.floor\(\(balance\/4\)\/buyPrice\)/.test(pl) && !/c\.bal>=bp\?1:0/.test(pl));
+  ok('플랜: 일반 매수 수량은 공통 배정액 헬퍼 사용', /imBuyQtyPlan\(/.test(pl));
+  ok('플랜: rowsOn 하방 LOC 주문도 표시', /st\.rowsOn\?Math\.max\(0,\+st\.rows\|\|0\):0/.test(pl) && /name:'하방 '\+i/.test(pl));
+
+  // ── VR: 실제 함수로 20차 상한·체결차수 비재생·양방향 독립을 값으로 검증.
+  for(const [label,src] of [['운영',idx],['백테',bt]]){
+    const vf=new Function('return ('+extractFn(src,'function vrOrderPlan(S,P,bar)').replace(/^function [\w$]+\(/,'function (')+')')();
+    let S={shares:100,pool:1e9,avg:100,V:10000};
+    let z=vf(S,{band:.15,poolLimit:.5,budgetRemaining:1e9,FEE:0,baseShares:100,sellFilled:0,buyFilled:0,maxTiers:20},
+             {high:1e9,low:1e9,close:100});
+    ok(label+': 한 사이클 예약매도는 최대 20차', z.filter(x=>x.type==='sell').length===20,
+       String(z.filter(x=>x.type==='sell').length));
+    z=vf({shares:80,pool:1e9,avg:100,V:10000},
+         {band:.15,poolLimit:.5,budgetRemaining:1e9,FEE:0,baseShares:100,sellFilled:20,buyFilled:0,maxTiers:20},
+         {high:1e9,low:1e9,close:100});
+    ok(label+': 이미 체결한 20차를 다음 날 재생성하지 않는다', z.filter(x=>x.type==='sell').length===0);
+
+    S={shares:100,pool:1e9,avg:100,V:10000};
+    z=vf(S,{band:.15,poolLimit:.5,budgetRemaining:1e9,FEE:0,baseShares:100,sellFilled:0,buyFilled:0,maxTiers:20},
+           {high:.01,low:.01,close:.01});
+    ok(label+': 한 사이클 예약매수는 최대 20차', z.filter(x=>x.type==='buy').length===20,
+       String(z.filter(x=>x.type==='buy').length));
+    z=vf({shares:120,pool:1e9,avg:100,V:10000},
+         {band:.15,poolLimit:.5,budgetRemaining:1e9,FEE:0,baseShares:100,sellFilled:0,buyFilled:20,maxTiers:20},
+         {high:.01,low:.01,close:.01});
+    ok(label+': 이미 체결한 매수 20차를 재생성하지 않는다', z.filter(x=>x.type==='buy').length===0);
+
+    // 5차 매수가 체결돼 현재 105주여도 매도 1차 가격은 사이클 시작 B=100 기준 115여야 한다.
+    z=vf({shares:105,pool:1e9,avg:100,V:10000},
+         {band:.15,poolLimit:.5,budgetRemaining:1e9,FEE:0,baseShares:100,sellFilled:0,buyFilled:5,maxTiers:20},
+         {high:115.01,low:115.01,close:115.01});
+    const s1=z.find(x=>x.type==='sell');
+    ok(label+': 반대편 체결이 있어도 사다리 기준수량은 사이클 시작값 고정',
+       !!s1 && near(s1.price,115,1e-9), s1?String(s1.price):'no fill');
+  }
+  ok('운영: 모의 규약 버전 5로 올려 옛 VR 모의 기록을 재생성', /const SIM_RULE_VER=5;/.test(idx));
+  ok('운영·백테: 잘못된 “공식 (V 복귀)” UI 제거', !/공식 \(V 복귀\)/.test(idx) && !/공식 \(V 복귀\)/.test(bt));
+  ok('플랜: 현재 사이클 시작수량과 양쪽 체결차수를 복원', /cycleBaseQty/.test(pl) && /cycleSellFilled/.test(pl) && /cycleBuyFilled/.test(pl));
+}
+
 console.log(`\n════ 결과: ${pass} PASS / ${fail} FAIL ${fail===0?'— ALL PASS ★':'— 배포 금지, 위 ✗ 항목 수정 필요'} ════`);
 process.exit(fail===0?0:1);
