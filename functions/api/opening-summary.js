@@ -37,6 +37,7 @@ export async function onRequestPost({request,env}){
     const body=await request.json();
     const date=String(body.date||"");
     const trades=Array.isArray(body.trades)?body.trades:[];
+    const shadowVariants=Array.isArray(body.shadowVariants)?body.shadowVariants:[];
     const lines=[];
 
     if(!trades.length){
@@ -60,6 +61,22 @@ export async function onRequestPost({request,env}){
       lines.push("거래 "+trades.length+"건 · 승 "+win+" · 패 "+loss+(flat?" · 보합 "+flat:""));
       if(nPnl)lines.push("평균 "+(sum/nPnl>=0?"+":"")+(sum/nPnl).toFixed(2)+"% · 단순합 "+(sum>=0?"+":"")+sum.toFixed(2)+"%");
       lines.push("손익은 왕복 마찰비용 0.25% 반영 · 분봉 종가 체결 근사");
+    }
+
+    if(shadowVariants.length){
+      lines.push("","🧪 그림자 전략 비교");
+      shadowVariants.forEach(v=>{
+        const a=Array.isArray(v.trades)?v.trades:[];
+        const pn=a.map(x=>Number.isFinite(+x.pnl)?+x.pnl:null).filter(x=>x!=null);
+        const wins=pn.filter(x=>x>0).length;
+        const avg=pn.length?pn.reduce((s,x)=>s+x,0)/pn.length:0;
+        const sum=pn.reduce((s,x)=>s+x,0);
+        lines.push(
+          String(v.label||v.name||"shadow")+" · "+a.length+"건"+
+          (pn.length?" · 승률 "+(wins/pn.length*100).toFixed(0)+"% · 평균 "+(avg>=0?"+":"")+avg.toFixed(2)+"% · 합 "+(sum>=0?"+":"")+sum.toFixed(2)+"%":"")
+        );
+      });
+      lines.push("그림자 전략은 연구용이며 기준전략 알림/주문에 영향을 주지 않습니다.");
     }
 
     const id=await sendTelegram(env,(date||"오늘")+" 시초가 모의매매 결과",lines);
