@@ -3478,6 +3478,95 @@ console.log('\n[71] same-close 룩어헤드 탐지');
          (그날 값이 차수에 못 미치는 날이 더 많다) '몇 번이라도 반응하는가'를 본다. */
       ok('VR 예약주문은 오늘 OHLC 에 반응한다 (정상)', flips>=3,
          `${checked}회 중 ${flips}회 반응 — 사다리를 다음날 체결로 바꾸면 여기가 0이 된다`); }
+
+    /* ── 더 센 검사: 오늘 '고가·저가' 를 극단으로 흔든다 ──────────────────
+       종가신호 전략은 고저가를 아예 안 본다. 그러니 고저를 어떻게 흔들어도
+       결과가 한 푼도 달라지면 안 된다 — 달라지면 어딘가에서 장중 값을 훔쳐본 것이다.
+       종가를 흔드는 검사(위)는 체결가가 종가라 '건수'로만 잴 수 있었지만,
+       이건 '최종 평가액까지 완전히 같아야 한다'로 잴 수 있어 훨씬 세다. */
+    const shakeHL=(name, run)=>{
+      const sub=D0.slice(0,900);
+      const base=run(sub);
+      const saved={};
+      for(let k=400;k<sub.length;k++){ const d=sub[k]; saved[d]=M[T][d].slice();
+        const [c,o]=saved[d];
+        M[T][d]=[c,o, c*3, c*0.3];             // 고가 3배·저가 0.3배 — 장중을 통째로 뒤집는다
+      }
+      let v; try{ v=run(sub); } finally{ for(const d in saved) M[T][d]=saved[d]; }
+      const same = near(base.final, v.final, Math.max(1e-9, Math.abs(base.final)*1e-12))
+                && (base.trades==null || base.trades===v.trades)
+                && (base.rebals==null || base.rebals===v.rebals);
+      ok(`${name} — 오늘 고가·저가를 흔들어도 한 푼도 안 바뀐다`, same,
+         same?'':`최종 ${base.final} → ${v.final} · 거래 ${base.trades}→${v.trades}`);
+    };
+    shakeHL('ASAP', sub=>asap(sub,T,{base:1000,mid:5000,deep:10000,costOn:true}));
+    for(const fl of ['none','nobuy','exit'])
+      shakeHL(`표준편차(${({none:'필터없음',nobuy:'물타기금지',exit:'현금이탈'})[fl]})`,
+              sub=>std(sub,T,CAP,40,2.5,fl,true));
+    for(const [m,pr] of [['iv','cash'],['iv','x1']])
+      shakeHL(`역분산(${pr==='x1'?'1배짝':'현금짝'})`, sub=>ivs(sub,T,CAP,0.45,60,0.10,true,m,pr));
+    shakeHL('적립 하락2배', sub=>dca(T,sub,1e5,'monthly',true,2));
+
+    /* ── 예약주문 쪽은 따로 본다 ────────────────────────────────────────
+       VR 사다리는 전날 걸어 둔 지정가라 '오늘 고가·저가' 로 체결을 판정하는 게 정상이다.
+       반대로 그날 '종가' 는 사다리가 아예 안 본다 — 종가만 흔들었을 때 그날 사다리
+       체결이 달라지면, 걸어 둔 주문가가 오늘 종가를 보고 정해졌다는 뜻이다. */
+    {
+      const lad=extractFn(idx,'function vrLadder(S, P, bar)');
+      const L=new Function(lad+'\nreturn vrLadder;')();
+      let moved=0, same=0;
+      for(let k=0;k<40;k++){
+        const V=1000+k*37, band=0.15, poolLimit=0.5, FEE=0.0025;
+        const S1={shares:10+k, pool:5000, avg:100, V};
+        const hi=V/(10+k)*1.2, lo=V/(10+k)*0.8;
+        const a=L({...S1},{band,poolLimit,FEE},{high:hi,low:lo,close:100});
+        const b=L({...S1},{band,poolLimit,FEE},{high:hi,low:lo,close:100*3.7});   // 종가만 극단으로
+        if(JSON.stringify(a)===JSON.stringify(b)) same++; else moved++;
+        // 고가를 낮추면 매도 체결이 줄어야 한다 (사다리가 실제로 고저를 본다는 증거)
+        const cLow=L({...S1},{band,poolLimit,FEE},{high:V/(10+k)*0.99,low:lo,close:100});
+        if(cLow.filter(f=>f.type==='sell').length > a.filter(f=>f.type==='sell').length) moved++;
+      }
+      ok('VR 사다리는 그날 종가를 안 본다 (주문가는 전날 상태로 정해진다)', moved===0 && same===40,
+         `같음 ${same}/40 · 달라짐 ${moved}`);
+    }
+
+    /* 무매도 같은 갈래다 — 별지점·익절 지정가는 '오늘 고가' 로 판정하는 게 정상(예약주문),
+       LOC 매수·쿼터매도는 '오늘 종가' 로 판정한다. 고가를 크게 올리면 지정가 익절이
+       늘어나야 한다 — 안 늘면 지정가 판정이 죽어 있고, 종가만 보고 있다는 뜻이다. */
+    {
+      const sub=D0.slice(0,900);
+      const count=k=>tradeLog.filter(x=>x.kind===k).length;
+      /* 화면 기본값은 '고가' 판정이다(imFill='high'). 다른 섹션의 앵커를 건드리지 않게
+         여기서만 켜고 끝나면 되돌린다 — 안 켜면 보수적 하한('종가')으로 돌아 고가를
+         아무리 올려도 아무 일이 안 일어난다. */
+      const _fill0=global.imFill; global.imFill='high';
+      tradeLog=[]; runIM(sub,T,10000,20,20,true);
+      const baseTp=count('지정가매도');
+      const saved={};
+      for(let k=1;k<sub.length;k++){ const d=sub[k]; saved[d]=M[T][d].slice();
+        const [c,o,h,l]=saved[d]; M[T][d]=[c,o,Math.max(h,c*3),l]; }   // 장중 고가만 3배
+      let hiTp=0;
+      try{ tradeLog=[]; runIM(sub,T,10000,20,20,true); hiTp=count('지정가매도'); }
+      finally{ for(const d in saved) M[T][d]=saved[d]; }
+      ok('무매 지정가 익절은 오늘 고가로 판정한다 (예약주문 · 정상)', hiTp>baseTp,
+         `고가를 3배로 올리니 ${baseTp}건 → ${hiTp}건`);
+
+      /* 반대로 '종가' 만 흔들면? 무매는 LOC 매수·쿼터매도가 종가 기준이라 바뀌는 게 정상이다.
+         바뀌지 않으면 종가 규약이 죽은 것이다 — 두 규약이 둘 다 살아 있는지 같이 본다. */
+      const saved2={};
+      for(let k=1;k<sub.length;k++){ const d=sub[k]; saved2[d]=M[T][d].slice();
+        const [c,o,h,l]=saved2[d]; M[T][d]=[c*0.7,o,h,Math.min(l,c*0.7)]; }
+      let loTr=0;
+      try{ tradeLog=[]; runIM(sub,T,10000,20,20,true);
+           loTr=count('1회매수')+count('절반매수')+count('쿼터매도'); }
+      finally{ for(const d in saved2) M[T][d]=saved2[d]; }
+      tradeLog=[]; runIM(sub,T,10000,20,20,true);
+      const baseTr=count('1회매수')+count('절반매수')+count('쿼터매도');
+      ok('무매 LOC·쿼터는 오늘 종가로 판정한다 (정상)', loTr!==baseTr,
+         `종가를 0.7배로 내리니 ${baseTr}건 → ${loTr}건`);
+      if(_fill0===undefined) delete global.imFill; else global.imFill=_fill0;
+      tradeLog=[];
+    }
   }
 
   // 소스 모양 — 신호를 만드는 자리가 전일 인덱스를 보는가
