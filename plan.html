@@ -143,7 +143,7 @@ th:first-child,td:first-child{text-align:left}
 <body>
 <div class="wrap">
   <div class="top">
-    <div class="brand"><div class="logo">Five Year Plan</div><h1>5년 자산플랜 <span class="ver">v1.7.1</span></h1></div>
+    <div class="brand"><div class="logo">Five Year Plan</div><h1>5년 자산플랜 <span class="ver">v1.7.2</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
       <div class="jkmenu" id="jkmenuWrap">
@@ -194,7 +194,7 @@ th:first-child,td:first-child{text-align:left}
         <div class="guidekpi"><div class="k">현재 기준 SOXL</div><div class="v">V4.0 · 20분할 · +20% · 복리</div></div>
         <div class="guidekpi"><div class="k">현재 기준 TQQQ</div><div class="v">VR 5.0 · G10 · ±15 · 기본 · 초기주식100%</div></div>
         <div class="guidekpi"><div class="k">QLD / SGOV</div><div class="v">60:40 · 30/30/20/20</div></div>
-        <div class="guidekpi"><div class="k">5년 운용 기준</div><div class="v"><span class="note-strong">미래 500 + 스트레스 400 경로 검증</span></div></div>
+        <div class="guidekpi"><div class="k">5년 운용 기준</div><div class="v"><span class="note-strong">2010~2026 블록부트스트랩 · 정상/스트레스 재검증</span></div></div>
       </div>
     </div>
   </div>
@@ -244,7 +244,7 @@ th:first-child,td:first-child{text-align:left}
       <div class="todaybox"><h3>📋 오늘 TQQQ VR 실행</h3><div class="sub" id="tqqqTabMeta">실전 세션과 시세를 불러오는 중…</div><div class="liveact" id="tqqqTabActions" style="margin-top:8px"></div><div class="btnrow" id="vrCycleActionRow" style="display:none"><button class="btn gold" id="vrCycleAdvanceBtn">다음 사이클 진입</button></div></div>
       <div class="rulelist">
         <div class="rule"><span class="num">1</span><div><b>연동된 VR 세션이 없으면 먼저 생성</b><small>플랜에서 직접 만든 세션 또는 직접 선택한 실전세션만 사용합니다. 모의세션은 선택 목록에서 제외합니다.</small></div></div>
-        <div class="rule"><span class="num">2</span><div><b>14일 사이클 자동</b><small>사이클 기준일에는 V를 갱신하고, 새 사다리는 다음 거래일부터 적용하는 규칙을 사용합니다.</small></div></div>
+        <div class="rule"><span class="num">2</span><div><b>14일 사이클 · 장 마감 후 확정</b><small>기준일 장중까지는 기존 V 사다리가 유효합니다. 그날 체결을 기록한 뒤 플랜의 ‘다음 사이클 진입’을 눌러 V를 갱신하며, 새 사다리는 다음 거래일부터 적용합니다.</small></div></div>
         <div class="rule"><span class="num">3</span><div><b>전체 예약 사다리를 이 화면에 표시</b><small>밴드 밖 즉시조정과 함께, 사이클 Pool 한도 내 예약매수·예약매도 전 차수를 가격·수량으로 보여줍니다.</small></div></div>
         <div class="rule"><span class="num">4</span><div><b>월 적립금은 무조건 VR에 넣지 않음</b><small>전체 플랜에서 목표비중보다 부족할 때만 VR 축을 보충합니다.</small></div></div>
       </div>
@@ -639,7 +639,7 @@ async function createPlanVrSession(opts={}){
   const initAmt=Math.round(cap), startPool=0;
   const sess={id,name:sessionDateName('TQQQ VR'),planManaged:true,settings:{
     ticker:'TQQQ',mode:.5,formula:'basic',g:10,initAmt,add:0,
-    band:15,startv:0,startpool:startPool,autoCyc:true,divmode:'reinv',
+    band:15,startv:0,startpool:startPool,autoCyc:false,divmode:'reinv',
     planTotalCapital:cap,planInitStockPct:100
   },hist:[]};
   liveState.vr.sessions.push(sess);liveState.vr.active=id;liveState.activeTab='vr';
@@ -714,7 +714,7 @@ function enforcePlanManagedDefaults(){
     if(x&&x.planManaged&&String(x.settings?.ticker||'').toUpperCase()==='TQQQ'){
       const st=x.settings||(x.settings={});
       if(st.mode==null)st.mode=.5;if(st.formula==null)st.formula='basic';if(st.g==null)st.g=10;
-      if(st.band==null)st.band=15;if(st.autoCyc==null)st.autoCyc=true;
+      if(st.band==null)st.band=15;st.autoCyc=false;
     }
   }
 }
