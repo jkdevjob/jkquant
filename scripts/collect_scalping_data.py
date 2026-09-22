@@ -29,6 +29,30 @@ def get_json(path: str, timeout: int = 60):
         return json.loads(r.read().decode("utf-8"))
 
 
+def daily_meta(code: str, date_iso: str):
+    """Return exact previous close for gap backtests.
+
+    The KIS minute archive already contains the day's actual 09:00 open. We only need
+    the prior daily close here. Falling back is handled by the backtester for older
+    files that predate this field.
+    """
+    qs = urllib.parse.urlencode({"symbol": code, "range": "5d", "intraday": "0", "div": "0"})
+    last = None
+    for attempt in range(3):
+        try:
+            j = get_json("/api/quote?" + qs, timeout=60)
+            rows = j.get("ohlc") or []
+            prev = [x for x in rows if str(x.get("date") or "") < date_iso and float(x.get("close") or 0) > 0]
+            if prev:
+                p = prev[-1]
+                return {"prevClose": float(p.get("close") or 0), "prevDate": str(p.get("date") or "")}, None
+            raise RuntimeError("previous close not found")
+        except Exception as e:
+            last = e
+            time.sleep(1.0 + attempt)
+    return {}, str(last)
+
+
 def minute_history(code: str, date_yyyymmdd: str):
     qs = urllib.parse.urlencode({"op": "minhist", "code": code, "date": date_yyyymmdd, "hour": "093000"})
     last = None
@@ -80,10 +104,18 @@ def main():
         if not code:
             continue
         bars, err = minute_history(code, date_compact)
+        meta, meta_err = daily_meta(code, date_iso)
         if bars:
             successful += 1
         if err:
             errors.append({"rank": idx, "code": code, "error": err})
+        if meta_err:
+            errors.append({"rank": idx, "code": code, "error": "daily-meta: " + meta_err})
+
+        day_open = float(bars[0].get("o") or bars[0].get("c") or 0) if bars else 0.0
+        prev_close = float(meta.get("prevClose") or 0)
+        gap = ((day_open / prev_close - 1.0) * 100.0) if day_open > 0 and prev_close > 0 else None
+
         rows.append({
             "rank": idx,
             "code": code,
@@ -93,9 +125,13 @@ def main():
             "cap": item.get("cap") or 0,
             "chg": item.get("chg") or 0,
             "close": item.get("close") or 0,
+            "open": day_open,
+            "prevClose": prev_close,
+            "prevDate": meta.get("prevDate") or "",
+            "gap": gap,
             "bars": bars,
         })
-        print(f"{idx:03d}/{len(universe)} {code} bars={len(bars)}")
+        print(f"{idx:03d}/{len(universe)} {code} bars={len(bars)} gap={gap if gap is not None else 'n/a'}")
         time.sleep(0.70)
 
     # Holiday / no-session day: all symbols have no intraday bars. Do not create an empty dataset.
@@ -110,7 +146,7 @@ def main():
         return 2
 
     payload = {
-        "schema": 1,
+        "schema": 2,
         "date": date_iso,
         "collectedAt": datetime.now(KST).isoformat(),
         "universeLimit": LIMIT,
