@@ -3638,8 +3638,16 @@ console.log('\n[73] VR — 백테 == 과거 재생 (거래 로그 대조)');
     const cyc=(idx.match(/const CYC_DAYS=(\d+);/)||[])[1];
     const appEng=new Function('CYC_DAYS', nx+'\n'+lad+'\nreturn {vrLadder,vrNextDue};')(+cyc);
     const appRun=(days, P)=>{
-      let shares=0, pool=P.startPool||0, V=0, avg=0, totalWd=0, cycN=0, due=null, first=true;
+      let shares=0, pool=P.startPool||0, V=P.startV||0, avg=0, totalWd=0, cycN=0, due=null, first=true;
       const log=[], cycDates=[];
+      /* 이어받기 — vrReplay 의 'V>0' 분기 그대로. 정수 주수로 끊고 잔돈은 Pool 로. */
+      if(V>0){
+        const c0=M[T][days[0]][C], q0=Math.floor(V/c0);
+        if(q0>0){ shares=q0; avg=c0; pool+=V-q0*c0; first=false; }
+        else { pool+=V; V=0; }
+        if(!first){ const base=(P.cycStart&&P.cycStart<=days[0])?P.cycStart:days[0];
+                    due=appEng.vrNextDue(base); }
+      }
       for(const d of days){
         const bar={date:d, close:M[T][d][C], high:M[T][d][HI], low:M[T][d][LO]};
         if(!(bar.close>0)) continue;
@@ -3690,16 +3698,39 @@ console.log('\n[73] VR — 백테 == 과거 재생 (거래 로그 대조)');
     global.__VCYC=d=>bcyc.push(d);
     const btRun=new Function('return ('+vsrc2.replace(/^function \w+\(/,'function (')+')')();
 
+    /* 과거 재생(vrReplay)은 양도세를 넣지 않는다 — 화면에도 그렇게 적혀 있다.
+       수수료까지 맞춰 보려면 백테 쪽 세금만 꺼야 같은 것끼리 비교가 된다.
+       세금을 끄지 않고 비교하면 '연말마다 갈린다'는 당연한 차이만 나온다. */
+    const _tax0=global.capGainTax;
     let bad=null, checked=0;
+    const EARLY=D0[Math.floor(D0.length*0.55)];             // 이어받기 시작일 (중간 지점)
+    const LATE=D0.filter(d=>d>=EARLY);
+    const CYC_BEFORE=D0[Math.floor(D0.length*0.55)-8];      // 첫날보다 이전인 사이클 기준일
+    const CASES=[];
     for(const [mode,nm] of [[0.5,'거치'],[0.75,'적립'],[0.25,'인출']])
-    for(const formula of ['basic','skill']){
+    for(const formula of ['basic','skill'])
+    for(const [sv,spool,cyc0,dd,lbl] of [
+        [0,     mode===0.5?0:10000, '',         D0,   '새로시작'],
+        [10000, 0,                  '',         LATE, '이어받기·Pool0'],
+        [10000, 3000,               '',         LATE, '이어받기·Pool3000'],
+        [10000, 3000,               CYC_BEFORE, LATE, '이어받기·기준일 이전']])
+    for(const feeOn of [false,true])
+      CASES.push({mode,nm,formula,sv,spool,cyc0,dd,lbl,feeOn});
+
+    for(const K of CASES){
+      const {mode,nm,formula,sv,spool,cyc0,dd,lbl,feeOn}=K;
+      const FEE=feeOn?costOf(T).fee:0;
       const P={initAmt:10000, contrib:mode===0.75?80:0, withdraw:mode===0.25?50:0,
-               G:10, band:0.15, mode, formula, FEE:0, startPool:mode===0.5?0:10000};
+               G:10, band:0.15, mode, formula, FEE, startPool:spool, startV:sv, cycStart:cyc0};
       blog=[]; bcyc=[];
-      const b=btRun(D0, T, {initAmt:P.initAmt, contrib:P.contrib, withdraw:P.withdraw, G:P.G,
-        bandPct:15, mode, formula, startV:0, startPool:P.startPool, costOn:false, fill:'ladder'});
-      const a=appRun(D0, P);
+      global.capGainTax=()=>0;        // 과거 재생에는 세금이 없다 — 같은 것끼리 비교
+      const b=btRun(dd, T, {initAmt:P.initAmt, contrib:P.contrib, withdraw:P.withdraw, G:P.G,
+        bandPct:15, mode, formula, startV:sv, startPool:spool, cycStart:cyc0,
+        costOn:feeOn, fill:'ladder'});
+      global.capGainTax=_tax0;
+      const a=appRun(dd, P);
       checked++;
+      const nm2=`${nm}·${formula}·${lbl}·수수료${feeOn?'ON':'OFF'}`;
       const cmp=[
         ['V 갱신 날짜', JSON.stringify(a.cycDates), JSON.stringify(bcyc)],
         ['거래 로그',   JSON.stringify(a.log),      JSON.stringify(blog)],
@@ -3713,12 +3744,13 @@ console.log('\n[73] VR — 백테 == 과거 재생 (거래 로그 대조)');
             if(Array.isArray(A)){ for(let i=0;i<Math.max(A.length,B.length);i++)
               if(A[i]!==B[i]) return `${i}번째: 앱 ${A[i]} / 백테 ${B[i]} (앱 ${A.length}건 · 백테 ${B.length}건)`; }
           }catch(e){} return `앱 ${x} / 백테 ${y}`; })();
-          bad=`${nm}·${formula} ${what} — ${dx}`;
+          bad=`${nm2} ${what} — ${dx}`;
         }
       }
     }
-    ok('여섯 조합을 실제로 돌렸다', checked===6, String(checked));
+    ok('48개 조합(모드3×식2×이어받기4×수수료2)을 실제로 돌렸다', checked===48, String(checked));
     ok('백테와 과거 재생이 같은 거래를 낸다', !bad, bad||'');
+    global.capGainTax=_tax0;
     delete global.__VLOG; delete global.__VCYC; delete global.__VDAY;
   }
 }

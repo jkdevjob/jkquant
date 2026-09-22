@@ -515,6 +515,7 @@ document.addEventListener('click',function(e){ var m=document.getElementById('jk
     <div class="ctrl s-vr hide"><label>밴드 ±%</label><input type="number" id="vrBand" value="15" min="5" max="30"></div>
     <div class="ctrl s-vr hide"><label data-cur="vr">시작 V ($)</label><input type="number" id="vrStartV" value="0" min="0" placeholder="0=첫매수가 V"></div>
     <div class="ctrl s-vr hide"><label data-cur="vr">시작 Pool ($)</label><input type="number" id="vrStartPool" value="0" min="0"></div>
+    <div class="ctrl s-vr hide"><label>사이클 기준일</label><input type="date" id="vrCycStart" title="시작 V로 이어받을 때, 마지막 사이클이 시작된 날. 비워 두면 첫 거래일을 기준으로 잡습니다."></div>
     <div class="ctrl s-vr hide"><label>세금·비용</label>
       <div class="seg" id="vrCost">
         <button data-x="0" title="비용 없이 순수 전략 성과">미적용</button>
@@ -1814,6 +1815,14 @@ function usableTickers(start,end,tickers){
     (n>=10?use:skip).push(t); });
   return {use,skip};
 }
+/* 이어받기(시작V>0)인데 사이클 기준일을 안 줬으면, 첫 거래일을 기준으로 잡는다.
+   조용히 정하면 안 된다 — 기준일이 며칠만 달라도 V 갱신 날짜가 통째로 밀린다. */
+function noteVrCycAssumed(results){
+  if(!Object.values(results||{}).some(r=>r&&r.res&&r.res.cycStartAssumed)) return;
+  const w=document.getElementById('winner'); if(!w) return; w.style.display='';
+  w.innerHTML=(w.innerHTML?w.innerHTML+' ':'')
+    +'<span style="color:var(--gold);font-size:12px">⚠ 사이클 기준일이 없어 첫 거래일을 기준으로 잡았습니다 — 이어받기라면 \'사이클 기준일\'을 넣으세요</span>';
+}
 function noteSkipped(skip){
   if(!skip.length) return;
   const w=document.getElementById('winner'); w.style.display='';
@@ -2576,7 +2585,7 @@ function runIM50(days,tkr,cap,divs,targetPct,compound=true){
 
 // ──── 전략 3: VR 5.0 ────
 function runVR(days,tkr,params){
-  const {contrib=100,G=10,bandPct=15,mode=0.75,formula='basic',initAmt=0,withdraw=0,startV=0,startPool=0,costOn=false}=params||{};
+  const {contrib=100,G=10,bandPct=15,mode=0.75,formula='basic',initAmt=0,withdraw=0,startV=0,startPool=0,cycStart='',costOn=false}=params||{};
   const band=bandPct/100,poolLimit=mode;
   /* 사이클은 거래일 수가 아니라 달력으로 센다 — 운영 앱과 같은 규약(CYC_DAYS=14).
      10거래일은 늘 14일이 아니다. 휴장이 낄 때마다 어긋나 6년이면 150회 vs 156회가 되고,
@@ -2626,12 +2635,27 @@ function runVR(days,tkr,params){
       // 파는 일은 _vsellQ 하나가 맡는다 — 여기서 손으로 다시 쓰면 또 한쪽이 빠진다
       due-=_vsellQ(Math.min(shares, due/(c*(1-FEE))), c); }
     taxTotal+=owed-due; }                            // 실제로 낸 만큼만 집계 (자산이 0이면 더 못 냄)
-  // 시작V 지정 시: 이미 V만큼 보유 중인 상태로 간주 (운용도구와 동일 — "이어서 시작" 시나리오)
-  let first;
+  /* ── 이어받기(시작V>0) — 운영 vrReplay 와 글자 그대로 같은 규약 ──
+     이미 V만큼 보유 중인 상태로 이어 시작한다. 정수 주수로 끊고 못 산 잔돈은
+     Pool 에 남긴다. 예전엔 V/가격 으로 소수점 주수를 만들어 뒀는데, 사다리가
+     Math.floor 로 자르면서 그 소수점 몫이 장부에서 그냥 사라졌다(자산 증발). */
+  let first, cycStartAssumed=false;
   if(V>0){
-    shares=V/M[tkr][days[0]][C]; avg=M[tkr][days[0]][C]; inv+=V; first=false;
+    const c0=M[tkr][days[0]][C], q0=Math.floor(V/c0);
+    inv+=V;
+    if(q0>0){ shares=q0; avg=c0; pool+=V-q0*c0; first=false; }
+    else { pool+=V; V=0; first=true; }        // 1주도 못 사는 시작V면 그냥 현금으로 둔다
   } else {
     first=true;
+  }
+  /* 이어받기는 '새 사이클'이 아니다 — 기준일을 미리 세워 두지 않으면 첫날이 사이클
+     첫날로 처리되고, 14일 갱신도 거기서부터 다시 센다. 설정에 사이클 기준일(cycStart)이
+     있으면 그걸 쓰고, 없으면 첫 거래일을 기준으로 잡되 그 사실을 돌려준다 —
+     조용히 임의로 정하면 안 된다 (운영 vrReplay 와 같은 규칙). */
+  if(!first){
+    const base=(cycStart && cycStart<=days[0]) ? cycStart : days[0];
+    if(base!==cycStart) cycStartAssumed=true;
+    _vrDue=_vrNextDue(base);
   }
   const snap=[], cf=[];          // cf = 현금흐름(투입 시점·금액) — IRR·평균투입자본용
   let mddPeak=-Infinity, mdd=0;  // 일별 MDD (총자산 = 주식+Pool+누적인출 기준 — fin과 동일 철학)
@@ -2703,7 +2727,8 @@ function runVR(days,tkr,params){
   const fin=shares*lc+pool+totalWd;
   const calYrs=(new Date(days[days.length-1])-new Date(days[0]))/(365.25*864e5);
   return {invested:inv,final:fin,pool,shares,sharesVal:shares*lc,rebal,buys,sells,trades:buys+sells,totalWd,
-    ret:inv>0?(fin/inv-1)*100:0,yrs:Math.max(calYrs,0.1),snap,cf,tkr,mdd:mdd*100,fees:feesTotal,tax:taxTotal};
+    ret:inv>0?(fin/inv-1)*100:0,yrs:Math.max(calYrs,0.1),snap,cf,tkr,mdd:mdd*100,fees:feesTotal,tax:taxTotal,
+    V,cycStartAssumed};
 }
 
 // ──── 비교/지표 헬퍼 ────
@@ -3578,17 +3603,19 @@ async function run(){
     const withdraw=+document.getElementById('vrWithdraw')?.value||100;
     const startV=+document.getElementById('vrStartV')?.value||0;
     const startPool=+document.getElementById('vrStartPool')?.value||0;
+    const cycStart=document.getElementById('vrCycStart')?.value||'';
     const {use:vrUse,skip:vrSkip}=usableTickers(start,end,[...vrActive]);
     if(!vrUse.length){alert('선택 종목 모두 해당 기간 데이터가 없습니다. 날짜를 확인하세요.');return;}
     const commonD=commonDays(start,end,vrUse);
     if(commonD.length<10){alert('공통 거래일이 부족합니다.');return;}
     const results={};
     vrUse.forEach(t=>{
-      results[t]={res:runVR(commonD,t,{contrib:contribUSD,G,bandPct:band,mode,formula,initAmt,withdraw,startV,startPool,costOn:vrCostOn}), days:commonD};
+      results[t]={res:runVR(commonD,t,{contrib:contribUSD,G,bandPct:band,mode,formula,initAmt,withdraw,startV,startPool,cycStart,costOn:vrCostOn}), days:commonD};
     });
     if(!Object.keys(results).length){alert('데이터 부족');return;}
-    renderMultiStrat('vr',results,{contribUSD,G,band,mode,formula,initAmt,withdraw,startV,startPool});
+    renderMultiStrat('vr',results,{contribUSD,G,band,mode,formula,initAmt,withdraw,startV,startPool,cycStart});
     noteSkipped(vrSkip);
+    noteVrCycAssumed(results);
   }
 }
 
