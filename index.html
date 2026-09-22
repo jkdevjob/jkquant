@@ -524,7 +524,7 @@ try{ if(localStorage.getItem('qcockpit_hadUser')==='1') document.documentElement
 </div>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.76</span></h1></div>
+    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.77</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -1612,7 +1612,7 @@ document.addEventListener('click',function(e){ var m=document.getElementById('jk
   <footer>
     <strong>JK 퀀트</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.76</b> · 2026-09-21</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.77</b> · 2026-09-21</div>
   </footer>
 </div>
 
@@ -3378,7 +3378,8 @@ function infSimForward(startFrom){
         }
         const c2=computeInf();
         if(c2.qty<=0) inRev=false;                                   // 전량매도 → 사이클 종료
-        else if(cl > c2.avg*exitMulOf(st.target) && (st.div-c2.T)>=1) inRev=false;  // 가격 회복 → 내일부터 일반
+        // 복귀 조건은 '가격 회복' 하나다 (문서 그대로) — T는 승계하고, 다시 소진이면 재진입
+        else if(cl > c2.avg*exitMulOf(st.target)) inRev=false;
         st.simLast=d; continue;
       }
 
@@ -3461,7 +3462,7 @@ function computeVr(){
   let qty=0,totbuy=0,totsell=0,totdiv=0,totadd=0,totwd=0,buyShares=0,initBuy=0;
   /* 실현손익 — 무매·로테는 재는데 VR만 안 재서 분석탭에 '실현 수익률'을 못 띄우고 있었다.
      이동평균 원가로 판 몫만 확정익으로 잡는다(무매 _sell과 같은 규약). */
-  let cost=0, realized=0;
+  let cost=0, realized=0, fees=0;
   /* 현금 흐름 — 인출(wd)이 내게 온 돈, 적립(add)이 내가 넣은 돈. 무매 단리 flows와 같은 모양.
      배당(div)은 Pool에 남으니 손에 쥔 돈이 아니다 — 재투자와 같은 취급으로 빼 둔다. */
   const flows=[];
@@ -3475,22 +3476,32 @@ function computeVr(){
     const hc=(h.cyc!=null?h.cyc:0);
     if(hc!==curCyc){ curCyc=hc; cycStartPool=pool; cycTrade=0; cycDiv=0; }
     if(h.type==='buy'){
-      const amt=h.price*h.qty; qty+=h.qty; totbuy+=amt; buyShares+=h.qty; cost+=amt;
-      const isInit=!sawBuy && !carriedIn; sawBuy=true;   // 초기투입 = 이력 첫 buy (이어받기 시작 제외)
+      /* 수수료는 기록에 적힌 것만 쓴다(fee). 실제 계좌 기록엔 이 칸이 없으므로 0 —
+         예전과 글자 그대로 같다. 모의 재생·모의 체결만 이 칸을 채운다.
+         이게 없으면 재생기가 안에서 문 수수료를 저장 뒤에 복원할 방법이 없어
+         '재생이 끝난 순간의 Pool' 과 '화면이 다시 계산한 Pool' 이 갈린다. */
+      const amt=h.price*h.qty, fee=+h.fee||0; qty+=h.qty; totbuy+=amt; buyShares+=h.qty; cost+=amt; fees+=fee;
+      /* 초기 투입(=밖에서 들어온 돈, Pool 미차감)인지 아닌지를 기록이 직접 말한다.
+         예전엔 '이력의 첫 buy면 초기투입' 으로 추측했는데, 적립식 재생처럼 첫 매수가
+         Pool 에서 나가는 경우를 구분할 수 없어 저장 뒤 Pool 이 갈렸다.
+         init 칸이 없는 실계좌 기록은 예전 추측을 그대로 쓴다(하위호환). */
+      const isInit=(h.init!==undefined) ? !!h.init : (!sawBuy && !carriedIn); sawBuy=true;
       if(!vSet){ V=amt; vSet=true; }                     // 0원 시작: 첫 매수가 곧 V
       if(isInit){
         // 초기 투입은 Pool(여유현금)에서 꺼낸 게 아니므로 차감 안 함.
         // startv가 사이클 진입으로 갱신돼도(startCyc>0) 이 판정은 유지되어 Pool이 음수로 회귀하지 않음.
         // 대신 '밖에서 들어온 돈'이므로 총투입(netInvested)에는 반드시 더해야 한다 —
         // 안 그러면 첫 매수만 있는 새 세션이 총투입 0$ · 수익 = 평가금 전액으로 보인다.
-        initBuy+=amt; cycStartPool=pool;
+        /* 초기 투입은 Pool 에서 꺼낸 게 아니므로 수수료까지 통째로 '밖에서 들어온 돈'이다.
+           못 산 잔돈은 부르는 쪽이 add 기록으로 따로 남긴다 — 그래야 복원된다. */
+        initBuy+=amt+fee; cycStartPool=pool;
       }else{
-        pool-=amt; cycTrade-=amt;
+        pool-=amt+fee; cycTrade-=amt+fee;
       }
     }
-    else if(h.type==='sell'){const amt=h.price*h.qty;const av=qty>0?cost/qty:0;
-      realized+=amt-av*h.qty; cost-=av*h.qty; qty-=h.qty; if(qty<1e-9){qty=0;cost=0;}
-      totsell+=amt;pool+=amt;cycTrade+=amt;}
+    else if(h.type==='sell'){const amt=h.price*h.qty, fee=+h.fee||0;const av=qty>0?cost/qty:0;
+      realized+=amt-av*h.qty-fee; cost-=av*h.qty; qty-=h.qty; if(qty<1e-9){qty=0;cost=0;}
+      totsell+=amt;fees+=fee;pool+=amt-fee;cycTrade+=amt-fee;}
     else if(h.type==='add'){pool+=h.amt;totadd+=h.amt;flows.push({date:h.date,out:0,in:+h.amt||0,kind:'add'});}
     else if(h.type==='wd'){pool-=h.amt;totwd+=h.amt;flows.push({date:h.date,out:+h.amt||0,in:0,kind:'wd'});}
     else if(h.type==='div'){pool+=h.amt;totdiv+=h.amt;cycDiv+=h.amt;}
@@ -3510,7 +3521,7 @@ function computeVr(){
      '누적(인출 포함)'이 인출을 두 번 세지 않는다. */
   const grossIn=totadd + (st.startpool||0) + initBuy;
   return {st,qty,totbuy,totsell,totdiv,totadd,totwd,buyShares,pool,V,avgNom,avgEff,up,lo,initBuy,
-          netInvested,grossIn,realized,flows,recov,curCyc,cycStartPool,cycTrade,cycTradeNet,cycDiv,hist};
+          netInvested,grossIn,realized,fees,flows,recov,curCyc,cycStartPool,cycTrade,cycTradeNet,cycDiv,hist};
 }
 
 const CYC_DAYS=14;   // 한 사이클 = 2주(달력 14일). 백테 VR_CYC_DAYS 와 같은 값이어야 한다 —
@@ -7155,10 +7166,12 @@ function vrSimForward(){
     // 첫 매수도 자동으로 — 모의 시작일 종가에 초기 투자금만큼 산 것으로 시작한다
     const s0=_clampFrom(paperStart(sess), cut); if(!s0) return null;
     const row=O.find(d=>d.date>=s0 && d.date<=cut && d.close>0); if(!row) return null;
-    const amt=st.initAmt!=null?+st.initAmt:10000, q=Math.floor(amt/row.close);
+    const _F0=(typeof IVS_FEE!=='undefined')?IVS_FEE:0.0025;
+    const amt=st.initAmt!=null?+st.initAmt:10000, q=Math.floor(amt/(1+_F0)/row.close);
     if(q<1) return null;
-    sess.hist.push({type:'buy',date:row.date,price:+row.close,qty:q,cyc:0,sim:true,ts:Date.now()});
-    const left=amt-q*row.close;
+    const _fee0=q*row.close*_F0;
+    sess.hist.push({type:'buy',date:row.date,price:+row.close,qty:q,fee:+_fee0.toFixed(6),init:true,cyc:0,sim:true,ts:Date.now()});
+    const left=amt-q*row.close-_fee0;
     if(left>0) sess.hist.push({type:'add',date:row.date,amt:+left.toFixed(2),cyc:0,sim:true,ts:Date.now()+1});
     st.cycStart=row.date; st.simLast=row.date; st.startv=0; st.startCyc=0; delete st.cycLog;
     sortHist(sess.hist); c=computeVr();
@@ -7183,10 +7196,15 @@ function vrSimForward(){
       c=computeVr();
       const cyc=c.curCyc;
       const St={shares:Math.floor(c.qty), pool:c.pool, avg:c.avg||0, V:c.V};
-      const fills=vrLadder(St, {band:(st.band||15)/100, poolLimit:(st.mode||0.75), FEE:0}, row);
+      /* 수수료 규약도 과거 재생과 같아야 한다 — 예전엔 재생만 0.25%를 물고 여기는 안 물어서,
+         같은 세션을 재생으로 만들었느냐 모의체결로 이어 붙였느냐에 따라 잔금이 달라졌다.
+         fee 칸에 따로 적어 computeVr 가 그대로 복원한다. */
+      const _F=(typeof IVS_FEE!=='undefined')?IVS_FEE:0.0025;
+      const fills=vrLadder(St, {band:(st.band||15)/100, poolLimit:(st.mode||0.75), FEE:_F}, row);
       for(const f of fills){
+        const fee=(f.type==='sell') ? (f.price-f.net) : (f.cost-f.price);
         sess.hist.push({type:f.type, date:row.date, price:+f.price.toFixed(4), qty:1,
-          cyc, sim:true, ts:Date.now()+(seq++)});
+          fee:+fee.toFixed(6), cyc, sim:true, ts:Date.now()+(seq++)});
         if(f.type==='sell') nSell++; else nBuy++;
       }
       st.simLast=row.date;
@@ -7220,6 +7238,8 @@ function refreshVr(){
 }
 
 let editVrIdx=-1;
+/* 과거 재생이 끝날 때마다 '저장 전 장부 == 저장 후 장부'를 확인한 결과가 들어온다 */
+let vrLedgerCheck=null;
 // ── 모의투자: 밸류리밸런싱 과거 재생 ──
 /* 백테 runVR·모의체결 vrSimForward 와 같은 규약:
    사이클은 달력 14일(vrNextDue)마다 V 갱신(V += Pool/G ± 적립), 체결은 걸어 둔
@@ -7252,24 +7272,42 @@ function vrReplay(){
   let cyc=0, cycStartPool=pool, cycTrade=0, cycStartDate=D[0].date;
   const cycLog=[];
   const md=x=>{const t=x.split('-');return `${+t[1]}/${+t[2]}`;};
-  // 체결가는 '수수료까지 반영한 실효단가'로 남긴다.
-  //   computeVr는 기록의 price×qty만 보고 Pool을 재계산하므로, 종가 그대로 적으면
-  //   재생기 내부 Pool과 화면 Pool이 수수료만큼 매 매매 어긋난다.
-  if(V>0){ // 이어받기 시작: 시작V만큼 이미 보유
-    const c0=D[0].close; shares=V/c0; avg=c0;
-    rec.push({type:'buy',date:D[0].date,price:+c0,qty:+shares.toFixed(6),cyc:0,sim:true,ts:rec.length+1});
+  /* 체결가는 '실제 체결가' 그대로 적고, 수수료는 fee 칸에 따로 남긴다.
+     computeVr 가 그 칸을 읽어 Pool 을 복원하므로 재생기 안의 장부와 저장 뒤 화면의
+     장부가 정확히 같아진다. 예전엔 수수료를 체결가에 녹여 적었는데(실효단가),
+     그러면 거래이력에 뜨는 가격이 실제 체결가가 아니게 된다. */
+  if(V>0){
+    /* 이어받기 시작 — 시작V만큼 이미 보유. 정수 주수로 끊고 못 산 잔돈은 Pool 에 남긴다.
+       예전엔 V/가격 으로 소수점 주수를 만들어 뒀는데, 사다리가 Math.floor 로 자르면서
+       그 소수점 몫이 장부에서 그냥 사라졌다(자산 증발). */
+    const c0=D[0].close, q0=Math.floor(V/c0);
+    if(q0>0){ shares=q0; avg=c0; pool+=V-q0*c0;
+      rec.push({type:'buy',date:D[0].date,price:+c0.toFixed(6),qty:q0,fee:0,init:true,cyc:0,sim:true,ts:rec.length+1});
+      if(V-q0*c0>1e-9) rec.push({type:'add',date:D[0].date,amt:+(V-q0*c0).toFixed(6),cyc:0,sim:true,ts:rec.length+1}); }
+    else { pool+=V; V=0; first=true; }   // 1주도 못 사는 시작V면 그냥 현금으로 둔다
   }
   /* 정수 주수 매수 — 실제로 나간 돈을 돌려준다 (백테 _vbuy 와 같은 규약).
      못 산 잔돈은 부르는 쪽이 Pool 에 남긴다 — 배정액을 그대로 빼면 잔돈이 증발한다. */
-  const _buyInt=(amt,c,d)=>{ const q=Math.floor(amt/(1+FEE)/c); if(!(q>0)) return 0;
+  const _buyInt=(amt,c,d,init)=>{ const q=Math.floor(amt/(1+FEE)/c); if(!(q>0)) return 0;
     const spend=q*c, fee=spend*FEE;
     avg=(shares<=0)?c:(shares*avg+spend)/(shares+q); shares+=q;
-    rec.push({type:'buy',date:d,price:+c.toFixed(6),qty:q,cyc,sim:true,ts:rec.length+1});
+    rec.push({type:'buy',date:d,price:+c.toFixed(6),qty:q,fee:+fee.toFixed(6),
+      init:!!init, cyc, sim:true, ts:rec.length+1});
     return spend+fee; };
   /* 하루씩 굴린다 — 백테 runVR·모의체결 vrSimForward 와 같은 규약.
      예전엔 여기만 '10거래일마다 그날 종가에 V로 되맞춤' 이었다. 같은 종목·같은 설정인데
      과거 재생과 백테 결과가 달랐던 이유다. 사이클은 달력 14일, 체결은 예약주문 사다리다. */
-  let due=null;
+  /* 이어받기(시작V>0)면 first 분기를 안 타므로 기준일을 여기서 세워야 한다.
+     예전엔 due 가 null 인 채로 남아 while(due && ...) 이 한 번도 안 돌았고,
+     14일 사이클 갱신이 아예 일어나지 않았다.
+     설정에 사이클 기준일(cycStart)이 있으면 그걸 쓰고, 없으면 첫 데이터 날짜를 기준으로
+     삼되 그 사실을 화면에 알린다 — 조용히 임의로 정하면 안 된다. */
+  let due=null, cycStartAssumed=false;
+  if(!first){
+    const base=(st.cycStart && st.cycStart<=D[0].date) ? st.cycStart : D[0].date;
+    if(base!==st.cycStart) cycStartAssumed=true;
+    cycStartDate=base; due=vrNextDue(base);
+  }
   D.forEach((row,i)=>{
     const c=row.close, d=row.date; if(!(c>0)) return;
     if(first){
@@ -7278,8 +7316,17 @@ function vrReplay(){
          못 산 잔돈은 Pool 에 남기며, 적립식은 initAmt 가 아니라 'Pool+적립금' 으로 산다.
          add 기록을 따로 남기지 않는 이유는 그대로다 — computeVr 는 '이력 첫 buy =
          밖에서 들어온 초기 투입' 으로 보고 Pool 을 깎지 않으므로 이중 계상이 된다. */
-      if(isAccum){ pool+=contrib; pool-=_buyInt(pool,c,d); }
-      else { const amt=st.initAmt!=null?+st.initAmt:10000; pool+=amt-_buyInt(amt,c,d); }
+      /* 적립식은 Pool(+이번 적립금)으로 산다 — 밖에서 새로 들어온 돈이 아니므로 init:false.
+         거치·인출식은 초기 투자금이 밖에서 들어온다 — init:true 로 적고, 못 산 잔돈은
+         add 로 따로 남긴다. 둘 다 저장 뒤 computeVr 가 그대로 되살릴 수 있어야 한다. */
+      if(isAccum){
+        pool+=contrib; rec.push({type:'add',date:d,amt:+contrib.toFixed(6),cyc,sim:true,ts:rec.length+1});
+        pool-=_buyInt(pool,c,d,false);
+      } else {
+        const amt=st.initAmt!=null?+st.initAmt:10000;
+        const spent=_buyInt(amt,c,d,true), left=amt-spent;
+        if(left>1e-9){ pool+=left; rec.push({type:'add',date:d,amt:+left.toFixed(6),cyc,sim:true,ts:rec.length+1}); }
+      }
       V=shares*c;
       first=false; cycStartPool=pool; cycTrade=0; cycStartDate=d; due=vrNextDue(d); return;
     }
@@ -7305,9 +7352,9 @@ function vrReplay(){
     const fills=vrLadder(St, {band, poolLimit, FEE}, row);
     for(const f of fills){
       if(f.type==='sell'){ pool+=f.net; cycTrade+=f.net;
-        rec.push({type:'sell',date:d,price:+f.price.toFixed(6),qty:1,cyc,sim:true,ts:rec.length+1}); }
+        rec.push({type:'sell',date:d,price:+f.price.toFixed(6),qty:1,fee:+(f.price-f.net).toFixed(6),cyc,sim:true,ts:rec.length+1}); }
       else { pool-=f.cost; cycTrade-=f.cost;
-        rec.push({type:'buy',date:d,price:+f.price.toFixed(6),qty:1,cyc,sim:true,ts:rec.length+1}); }
+        rec.push({type:'buy',date:d,price:+f.price.toFixed(6),qty:1,fee:+(f.cost-f.price).toFixed(6),cyc,sim:true,ts:rec.length+1}); }
     }
     shares=St.shares; avg=St.avg;
   });
@@ -7316,13 +7363,28 @@ function vrReplay(){
   const base=(st.initAmt!=null?+st.initAmt:10000)+(isAccum?contrib*cyc:0);
   const cagr=yrs>0?(Math.pow(Math.max(fin,1e-9)/Math.max(base,1),1/yrs)-1)*100:0;
   const nTrade=rec.filter(r=>r.type==='buy'||r.type==='sell').length;
-  if(!confirm(`${from} ~ ${D[D.length-1].date} (${yrs.toFixed(1)}년) 재생 완료\n\n매매 ${nTrade}건\n총투입 ${px(base)} → ${px(fin)}\nCAGR ${cagr>=0?'+':''}${cagr.toFixed(1)}%\n\n※ 양도세는 넣지 않았습니다.\n\n이 기록으로 채울까요?`)) return;
+  const assumeNote = cycStartAssumed
+    ? `\n\n⚠ 사이클 기준일이 설정에 없어 ${D[0].date}(첫 거래일)을 기준으로 잡았습니다.\n   이후 사이클은 여기서 14일마다 넘어갑니다.`
+    : '';
+  if(!confirm(`${from} ~ ${D[D.length-1].date} (${yrs.toFixed(1)}년) 재생 완료${assumeNote}\n\n매매 ${nTrade}건\n총투입 ${px(base)} → ${px(fin)}\nCAGR ${cagr>=0?'+':''}${cagr.toFixed(1)}%\n\n※ 양도세는 넣지 않았습니다.\n\n이 기록으로 채울까요?`)) return;
+  /* 저장 전(재생기 안) 장부와 저장 후(기록에서 되계산한) 장부가 같아야 한다.
+     재생기는 수수료를 물지만 computeVr 는 기록만 보므로, 기록에 빠진 값이 있으면
+     바로 여기서 갈린다 — 실제로 fee 칸이 없던 시절엔 매매마다 수수료만큼 어긋났다.
+     이 검사는 시험용 발판이 아니라 그 회귀를 다시 못 나게 막는 장치다. */
+  const _inner={shares, pool, V, avg, totalWd};
   sess.hist=rec; sortHist(sess.hist);
   // V는 이력에서 되계산되지 않는다(첫 매수가 = 0주차 V). 재생이 굴려온 V·사이클을 설정에 옮겨야
   // 화면의 밴드·판단이 마지막 사이클 기준으로 나온다.
   st.startv=+V.toFixed(4); st.startCyc=cyc; st.cycStart=cycStartDate;
   st.cycLog=cycLog.slice(-120);
   st.simLast=D[D.length-1].date;        // 여기까지는 이미 만들었으니 모의 체결은 그다음 날부터
+  { const a=computeVr();
+    const gap=Math.max(Math.abs(a.qty-_inner.shares), Math.abs(a.pool-_inner.pool),
+                       Math.abs((a.totwd||0)-_inner.totalWd));
+    vrLedgerCheck={inner:_inner,
+      after:{shares:a.qty, pool:a.pool, V:a.V, avg:a.avgNom, totalWd:a.totwd||0, fees:a.fees||0},
+      gap};
+    if(gap>0.01) console.error('VR 재생 장부 불일치 — 기록에 안 남은 값이 있다', vrLedgerCheck); }
   save(); refreshVr(); pushRemote&&pushRemote();
   alert(`${rec.length}건 생성됨 ✓ (${cyc}주차 · V ${wn(V)})`);
 }

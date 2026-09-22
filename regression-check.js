@@ -2628,7 +2628,14 @@ console.log('\n[59] 월 현금흐름 — 전 전략 공용');
 
   /* VR — 인출이 본질인 전략. 실현손익을 아예 안 재고 있었고 인출도 화면에 없었다. */
   const cv=(()=>{ try{ return extractFn(idx,'function computeVr()'); }catch(e){ return ''; } })();
-  ok('VR이 실현손익을 잰다', /realized\+=amt-av\*h\.qty; cost-=av\*h\.qty;/.test(cv) && /\brealized,flows,/.test(cv));
+  // 수수료는 필요경비라 실현손익에서 뺀다 (무매·백테와 같은 규약)
+  ok('VR이 실현손익을 잰다', /realized\+=amt-av\*h\.qty-fee; cost-=av\*h\.qty;/.test(cv) && /\brealized,fees,flows,/.test(cv));
+  /* 기록에 적힌 수수료를 그대로 되살려야 재생기 안 장부와 화면 장부가 같아진다.
+     실계좌 기록엔 fee 칸이 없어 0 — 예전과 글자 그대로 같다. */
+  ok('VR이 기록의 수수료로 Pool 을 복원한다',
+     /const amt=h\.price\*h\.qty, fee=\+h\.fee\|\|0;/.test(cv)
+     && /pool-=amt\+fee; cycTrade-=amt\+fee;/.test(cv)
+     && /pool\+=amt-fee;cycTrade\+=amt-fee;/.test(cv));
   ok('VR 인출은 나온 돈, 적립은 넣은 돈',
      /type==='wd'\)\{[^}]*flows\.push\(\{date:h\.date,out:\+h\.amt\|\|0,in:0,kind:'wd'\}\)/.test(cv)
      && /type==='add'\)\{[^}]*flows\.push\(\{date:h\.date,out:0,in:\+h\.amt\|\|0,kind:'add'\}\)/.test(cv));
@@ -3583,9 +3590,24 @@ console.log('\n[72] 리버스 — 상태머신·별지점·gap');
 
   // ── 네 군데 대조: 복귀 조건이 앱·백테에서 같은가 ──
   const rIM=extractFn(bt,'function runIM(days,tkr,cap,divs,targetPct,compound');
-  ok('복귀 조건이 앱·백테 같다 (가격 회복 AND 1회 매수 가능)',
-     /if\(c>avg\*exitMul && \(divs-T\)>=1\)\{ inReverse=false; \}/.test(rIM)
-     && /cl > c2\.avg\*exitMulOf\(st\.target\) && \(st\.div-c2\.T\)>=1/.test(idx));
+  /* 복귀 조건은 '가격 회복' 하나다 — 문서 그대로. T 조건을 덧붙이면 공식이 아니다. */
+  ok('복귀 조건이 앱·백테 같다 (가격 회복만)',
+     /if\(c>avg\*exitMul\)\{ inReverse=false; \}/.test(rIM)
+     && /else if\(cl > c2\.avg\*exitMulOf\(st\.target\)\) inRev=false;/.test(idx)
+     && !/\(divs-T\)>=1\)\{ inReverse=false/.test(bt)
+     && !/exitMulOf\(st\.target\) && \(st\.div-c2\.T\)>=1/.test(idx));
+  /* 값으로 — 복귀선 바로 위면 1회분이 안 남아도 복귀해야 한다.
+       SOXL 익절20 → 복귀선 = 평단×0.80. 평단 100 · 종가 81 · T=19.5(20분할)
+       TQQQ 익절15 → 복귀선 = 평단×0.85. 평단 100 · 종가 86 */
+  { const ex=new Function('return ('+extractFn(idx,'function exitMulOf(base)').replace(/^function \w+\(/,'function (')+')')();
+    const cases=[['SOXL',20,100,81,true],['SOXL',20,100,79,false],
+                 ['TQQQ',15,100,86,true],['TQQQ',15,100,84,false]];
+    let bad=null;
+    for(const [tk,tgt,avg,close,want] of cases){
+      const got = close > avg*ex(tgt);            // T 조건 없음 — 1회분이 안 남아도 복귀
+      if(got!==want) bad=`${tk} 익절${tgt} 평단${avg} 종가${close} → ${got?'복귀':'유지'} (기대 ${want?'복귀':'유지'})`;
+    }
+    ok('복귀선 바로 위면 1회분이 없어도 복귀한다', !bad, bad||''); }
   ok('운영 재생기도 진입할 때마다 1일차를 세운다',
      /if\(revOn && !inRev && \(st\.div-c\.T\)<1 && c\.qty>0\)\{ inRev=true; revDay1=true; \}/.test(idx)
      && /const day1=revDay1; revDay1=false;/.test(idx));
@@ -3724,6 +3746,66 @@ console.log('\n[74] 리버스 — 규칙이 있는 분할(20·40)에서만');
     }
     global.imReverse=false;
     ok('10·30분할은 리버스를 켜도 안 돌고 20·40분할은 돈다', !bad, bad||''); }
+}
+
+/* ════ 75. VR 장부 — 저장 전과 저장 후가 같은가 ════
+   재생기는 안에서 수수료를 물고 정수 주수로 끊는데, 저장되는 건 거래이력뿐이다.
+   화면은 그 이력으로 Pool·평가금을 다시 계산하므로, 기록에 안 남은 값이 하나라도 있으면
+   '재생이 끝난 순간의 장부' 와 '화면이 보여 주는 장부' 가 갈린다.
+   실제로 갈렸다 — 수수료(매매마다)와 첫 매수 잔돈(35.53$)이 복원되지 않았다. */
+console.log('\n[75] VR 장부 — 저장 전 == 저장 후');
+{
+  const cv2=extractFn(idx,'function computeVr()');
+  ok('기록의 수수료로 Pool 을 되살린다',
+     /const amt=h\.price\*h\.qty, fee=\+h\.fee\|\|0;/.test(cv2)
+     && /pool-=amt\+fee;/.test(cv2) && /pool\+=amt-fee;/.test(cv2));
+  ok("'초기 투입인가'를 기록이 직접 말한다",
+     /const isInit=\(h\.init!==undefined\) \? !!h\.init : \(!sawBuy && !carriedIn\);/.test(cv2));
+  const vr2=extractFn(idx,'function vrReplay()');
+  ok('재생이 수수료를 기록에 남긴다', /fee:\+fee\.toFixed\(6\)/.test(vr2));
+  ok('재생이 초기투입 여부를 기록에 남긴다', /init:!!init/.test(vr2));
+  ok('첫 매수 잔돈을 add 로 남긴다', /if\(left>1e-9\)\{ pool\+=left; rec\.push\(\{type:'add'/.test(vr2));
+  ok('적립식은 적립금을 add 로 남기고 Pool 에서 산다',
+     /rec\.push\(\{type:'add',date:d,amt:\+contrib\.toFixed\(6\)/.test(vr2)
+     && /pool-=_buyInt\(pool,c,d,false\);/.test(vr2));
+  ok('이어받기 시작이 정수 주수·잔돈 보존', /const c0=D\[0\]\.close, q0=Math\.floor\(V\/c0\);/.test(vr2)
+     && /pool\+=V-q0\*c0;/.test(vr2) && !/shares=V\/c0;/.test(vr2));
+  ok('이어받기에서도 사이클 기준일을 세운다',
+     /if\(!first\)\{[\s\S]{0,240}due=vrNextDue\(base\);/.test(vr2)
+     && /cycStartAssumed/.test(vr2));
+  ok('기준일을 임의로 정했으면 알린다', /사이클 기준일이 설정에 없어/.test(idx));
+  ok('재생이 스스로 장부를 대조한다',
+     /vrLedgerCheck=\{inner:_inner,/.test(vr2) && /if\(gap>0\.01\) console\.error/.test(vr2));
+  ok('모의 체결도 같은 수수료 규약', /const _F=\(typeof IVS_FEE!=='undefined'\)\?IVS_FEE:0\.0025;/.test(idx)
+     && /vrLadder\(St, \{band:\(st\.band\|\|15\)\/100, poolLimit:\(st\.mode\|\|0\.75\), FEE:_F\}, row\)/.test(idx));
+
+  /* 값으로 — 이력을 손으로 만들어 computeVr 가 되살리는지 본다.
+     초기자금 10,000$ · 주가 100$ · 수수료 0.25% → 99주(9,900$) + 수수료 24.75$ · 잔금 75.25$ */
+  {
+    const st={ticker:'SOXL',mode:0.5,formula:'basic',g:10,add:0,band:15,startv:0,startpool:0,cur:'usd'};
+    const hist=[
+      {type:'buy', date:'2026-01-05', price:100, qty:99, fee:24.75, init:true, cyc:0},
+      {type:'add', date:'2026-01-05', amt:75.25, cyc:0},
+    ];
+    __strat={settings:st, hist};
+    const c=computeVr();
+    ok('초기 매수 99주 + 수수료 24.75 → 잔금 75.25', near(c.pool,75.25,1e-9) && c.qty===99,
+       `pool=${c.pool} qty=${c.qty}`);
+    ok('총투입은 매수금+수수료+잔돈 = 10,000', near(c.grossIn,10000,1e-9), String(c.grossIn));
+    ok('수수료를 따로 센다', near(c.fees,24.75,1e-9), String(c.fees));
+    // 이어서 사다리 매도 1주 (110$, 수수료 0.275) → 잔금 += 109.725
+    hist.push({type:'sell', date:'2026-01-20', price:110, qty:1, fee:0.275, cyc:1});
+    __strat={settings:st, hist};
+    const c2=computeVr();
+    ok('매도는 수수료를 뺀 순액이 Pool 로', near(c2.pool, 75.25+110-0.275, 1e-9), String(c2.pool));
+    ok('실현손익도 수수료를 뺀다', near(c2.realized, 110-100-0.275, 1e-9), String(c2.realized));
+    ok('매도 수수료까지 합산', near(c2.fees, 24.75+0.275, 1e-9), String(c2.fees));
+    // init 칸이 없는 실계좌 기록은 예전과 같아야 한다 (하위호환)
+    __strat={settings:st, hist:[{type:'buy',date:'2026-01-05',price:100,qty:10,cyc:0}]};
+    const c3=computeVr();
+    ok('fee·init 없는 옛 기록은 예전 그대로', c3.qty===10 && near(c3.pool,0,1e-9) && near(c3.fees,0,1e-9),
+       `qty=${c3.qty} pool=${c3.pool} fees=${c3.fees}`);
+  }
 }
 
 console.log(`\n════ 결과: ${pass} PASS / ${fail} FAIL ${fail===0?'— ALL PASS ★':'— 배포 금지, 위 ✗ 항목 수정 필요'} ════`);
