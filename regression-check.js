@@ -66,6 +66,10 @@ const iqSrc=(bt.match(/^const iq=\(amt,px\)=>[^\n]*\nconst isq=\([^\n]*$/m)||[''
 if(!iqSrc) throw new Error('정수 주수 헬퍼(iq/isq)를 backtest.html에서 못 찾음');
 // eval 안의 const는 밖으로 안 새어나간다 — 뒤에 따로 eval하는 엔진(runIM50 등)도 봐야 하니 전역으로 올린다
 { const f=new Function(iqSrc+'\nreturn {iq,isq};')(); global.iq=f.iq; global.isq=f.isq; }
+/* 무매 매수 주수 헬퍼 — 운영·모의·백테가 같이 쓴다. 파일에서 그대로 떼어 온다. */
+{ const m=bt.match(/function imBuyQty\(alloc, refPx, feeRate\)\{[\s\S]*?\n\}/);
+  if(!m) throw new Error('imBuyQty 를 backtest.html에서 못 찾음');
+  global.imBuyQty=new Function(m[0]+'\nreturn imBuyQty;')(); }
 /* 마지막 해 정산 반복 헬퍼 — 전 엔진이 부른다. 파일에서 그대로 떼어 온다. */
 { const m=bt.match(/function settleToStable\(settleOnce, peekPnl, rounds\)\{[\s\S]*?\n\}/);
   if(!m) throw new Error('settleToStable 을 backtest.html에서 못 찾음');
@@ -1488,8 +1492,14 @@ console.log('[32] 전반전 매수 — 주문별 정수 내림 (모의 == 백테
   const n=(bt.match(/if\(c<=starOrder\)\{ if\(_buy\(c,half,prevC\)>0\) T\+=0\.5; \}/g)||[]).length;
   ok('runIM·runIM50 둘 다 고쳐져 있다', n===2, n+'곳');
   // 운영 모의도 반드시 절반씩 따로 내림해야 한다 (한쪽만 고치면 다시 갈린다)
-  const half=(idx.match(/put\('절반매수',d,cl,Math\.floor\(\(B\.amt\/2\)\/cl\)\)/g)||[]).length;
-  ok('모의: 절반 주문 2건을 각각 내림', half===2, half+'곳');
+  /* 모의도 절반씩 따로 내림해야 한다 (한쪽만 고치면 다시 갈린다).
+     다만 나누는 가격은 오늘 종가(cl)가 아니라 '주문 전 아는 가격'(전일 확정 종가)이다 —
+     오늘 종가로 나누면 오늘 싸졌다는 이유로 그날 수량이 늘어난다(룩어헤드, 4차 감사 ②). */
+  const half=(idx.match(/put\('절반매수',d,cl,imBuyQty\(B\.amt\/2,qref,0\)\)/g)||[]).length;
+  ok('모의: 절반 주문 2건을 각각 내림 (공통 헬퍼)', half===2, half+'곳');
+  ok('모의가 오늘 종가로 수량을 세지 않는다',
+     !/Math\.floor\(\(B\.amt\/2\)\/cl\)/.test(idx) && !/Math\.floor\(B\.amt\/cl\)/.test(idx));
+  ok('모의의 수량 기준가는 전일 확정 종가다', /const qref=closeAt\(row\.i-1\)\|\|cl;/.test(idx));
 }
 
 console.log('[33] 세션 이동 — 보던 서브탭 유지');
@@ -3690,10 +3700,10 @@ console.log('\n[72] 리버스 — 상태머신·별지점·gap');
     let c=run();
     ok('C1 소진하면 리버스 1일차', c.reverseActive && c.reverseDay1 && c.revState==='DAY1',
        `T=${c.T} state=${c.revState}`);
-    add('리버스매도',100,Math.max(1,Math.floor(c.qty/10)));
+    add('리버스매도',100,Math.floor(c.qty/10));      // 원문: 내림 그대로 (1주 강제 없음)
     c=run();
     ok('C2 리버스 거래 뒤엔 1일차가 아니다', c.reverseActive && !c.reverseDay1 && c.revState==='REVERSE', c.revState);
-    add('리버스매도',95,Math.max(1,Math.floor(c.qty/10)));
+    add('리버스매도',95,Math.floor(c.qty/10));
     add('1회매수',100,40);                       // 가격 회복 → 일반모드 복귀
     c=run();
     ok('C3 일반 거래가 들어오면 일반모드', !c.reverseActive && c.revState==='NORMAL',
@@ -3761,9 +3771,12 @@ console.log('\n[72] 리버스 — 상태머신·별지점·gap');
   /* 복귀 조건은 '가격 회복' 하나다 — 문서 그대로. T 조건을 덧붙이면 공식이 아니다. */
   ok('복귀 조건이 앱·백테 같다 (가격 회복만)',
      /if\(c>avg\*exitMul\)\{ inReverse=false; \}/.test(rIM)
-     && /else if\(cl > c2\.avg\*exitMulOf\(st\.target\)\) inRev=false;/.test(idx)
+     && /else if\(cl > c2\.avg\*exitMulOf\(st\.target\)\)\{/.test(idx)
      && !/\(divs-T\)>=1\)\{ inReverse=false/.test(bt)
      && !/exitMulOf\(st\.target\) && \(st\.div-c2\.T\)>=1/.test(idx));
+  /* 모의는 그 복귀를 '기록' 으로 남겨야 한다 — 안 남기면 새로고침 때 되살아난다 (4차 감사 ③) */
+  ok('모의가 복귀를 기록으로 남긴다',
+     /kind:'리버스복귀'[\s\S]{0,120}reason:'price-recovery'/.test(idx));
   /* 값으로 — 복귀선 바로 위면 1회분이 안 남아도 복귀해야 한다.
        SOXL 익절20 → 복귀선 = 평단×0.80. 평단 100 · 종가 81 · T=19.5(20분할)
        TQQQ 익절15 → 복귀선 = 평단×0.85. 평단 100 · 종가 86 */
@@ -4902,7 +4915,7 @@ console.log('\n[84] 회계 규약 — 예산·잔돈·장부 항등');
     const m=bt.match(/const STRAT_ACCT=\{[\s\S]*?\n\};/);
     const T=new Function((m||[''])[0]+'\nreturn STRAT_ACCT;')();
     // 표에 적힌 '주수' 가 실제 코드와 같아야 한다 — 다르면 표가 거짓말이다
-    const isInt=(marker)=>/buyQty\([^)]*,\s*true\)|iq\(/.test(extractFn(bt,marker));
+    const isInt=(marker)=>/buyQty\([^)]*,\s*true\)|iq\(|imBuyQty\(/.test(extractFn(bt,marker));
     const pairs=[['im','function runIM(days,tkr,cap,divs,targetPct,compound'],
                  ['vr','function runVR(days,tkr,params)'],
                  ['std','function runStdev(days,tkr,cap,N,g,filter,costOn)'],
@@ -5589,8 +5602,203 @@ console.log('\n[89] 모의투자 — 달력 마감일이 아니라 가진 봉 �
   { const f=extractFn(idx,'async function openPaper()');
     ok('시작일 없는 세션을 따로 센다', /const noStart=paperSessions\(\)\.filter\(\(\[,x\]\)=>!paperStart\(x\)\)/.test(f));
     ok('그 경우엔 시작일을 정하라고 안내한다', /모의 시작일<\/b>이 없습니다/.test(f) && /더블탭<\/b>해 시작일을 정하거나/.test(f));
-    ok("원인이 다를 때만 '🔄 자동' 을 시킨다",
-       /noStart\.length[\s\S]{0,400}시세를 못 불러왔을 수 있습니다/.test(f)); }
+    /* 여기까지 왔다는 건 paperFillAll 이 이미 전 탭·전 세션을 돌린 뒤다.
+       '탭에 가서 🔄 를 누르라'는 안내는 틀렸다 — 이 창이 한 번에 굴린다 (사용자 지적). */
+    ok('시세 실패에도 탭마다 🔄 를 시키지 않는다',
+       /noStart\.length[\s\S]{0,600}이 창을 닫았다 다시 열면/.test(f)
+       && /탭마다 따로 🔄 를 누를 필요는 없습니다/.test(f));
+    ok("빈 표 안내에 '해당 탭을 한 번 열어' 가 안 남아 있다",
+       !/해당 탭을 한 번 열어/.test(idx) && !/탭을 한 번 열어주세요/.test(idx)); }
+}
+
+
+/* ════ 90. 무매 리버스 매도수량 — 내림 0주면 팔지 않는다 ════  (4차 감사 ①)
+   V4.0 원문: 리버스 매도수량 = 직전 보유수량 ÷ 10(20분할) · ÷ 20(40분할), 내림.
+   내림해서 0주면 그날은 매도가 없다. 그런데 운영 주문표·모의체결·기록 기본값 세 곳이
+   Math.max(1, …) 로 1주를 억지로 냈다 — 20분할 9주면 원문은 0주인데 1주를 팔았다.
+   백테 runIM/runIM50 은 원래부터 0이면 안 팔았으므로 운영과 백테가 갈려 있었다. */
+console.log('\n[90] 무매 리버스 매도수량 — 원문 내림, 0주면 매도 없음');
+{
+  const rev=(qty,div)=>Math.floor(qty/(div>=40?20:10));      // 원문 식
+  // 감사가 지정한 네 경계
+  ok('20분할 · 9주 → 0주',  rev(9,20)===0,  String(rev(9,20)));
+  ok('20분할 · 10주 → 1주', rev(10,20)===1, String(rev(10,20)));
+  ok('40분할 · 19주 → 0주', rev(19,40)===0, String(rev(19,40)));
+  ok('40분할 · 20주 → 1주', rev(20,40)===1, String(rev(20,40)));
+  // 원문 예시 '198 / 20 = 9' 는 분모 20 = 40분할 기준이다 (20분할은 분모 10)
+  ok('원문 예시 198주 ÷ 20 → 9주 (40분할)', rev(198,40)===9, String(rev(198,40)));
+  ok('같은 198주라도 20분할은 ÷10 → 19주', rev(198,20)===19, String(rev(198,20)));
+
+  /* 세 경로가 실제로 같은 식을 쓰는가 — 값으로 뽑아 대조한다.
+     운영(renderOrder)·기록 기본값·모의체결은 index.html, 백테는 backtest.html 이다. */
+  const liveQ =(qty,div)=>{ const sellDiv=div>=40?20:10; return Math.floor(qty/sellDiv); };
+  const btSrc =extractFn(bt,'function runIM(days,tkr,cap,divs,targetPct,compound');
+  ok('백테가 내림만 쓴다 (1주 강제 없음)',
+     (btSrc.match(/const sellQty=Math\.floor\(shares\/sellDiv\);/g)||[]).length===2
+     && !/Math\.max\(1,\s*Math\.floor\(shares\/sellDiv\)\)/.test(btSrc));
+  ok('백테가 0주면 매도를 건너뛴다',
+     (btSrc.match(/if\(sellQty>0\)\{ _sell\(c,sellQty,0\);/g)||[]).length===2);
+  ok('운영 주문표에 1주 강제가 없다',
+     !/Math\.max\(1,sellQty\)/.test(idx) && !/Math\.max\(1, *sellQty\)/.test(idx));
+  ok('모의체결에 1주 강제가 없다',
+     !/Math\.max\(1,Math\.floor\(c\.qty\/sellDiv\)\)/.test(idx));
+  ok('기록 기본값에도 1주 강제가 없다',
+     /'리버스매도':\{price:close, qty:c\.qty>0\?Math\.min\(c\.qty,Math\.floor\(c\.qty\/sellDiv\)\):0\}/.test(idx));
+  ok('0주면 주문행 대신 이유를 적는다',
+     (idx.match(/🚫 무한매도 없음 — 보유 \$\{c\.qty\}주 ÷ \$\{sellDiv\} = 0주\(내림\)/g)||[]).length===2,
+     `${(idx.match(/🚫 무한매도 없음/g)||[]).length}곳 (1일차·일반 = 2곳이어야)`);
+
+  /* 백테 엔진을 실제로 돌려 값으로 — 보유 9주·20분할이면 리버스 매도가 0건이어야 한다 */
+  { const F=new Function('return ('+btSrc.replace(/^function [\w$]+\(/,'function (')+')')();
+    ok('세 경로의 수량 식이 같은 값을 낸다', (()=>{
+        for(const [q,d] of [[9,20],[10,20],[19,40],[20,40],[198,20],[0,20],[1,20]])
+          if(liveQ(q,d)!==Math.floor(q/(d>=40?20:10))) return false;
+        return true; })()); }
+}
+
+
+/* ════ 91. 무매 주문수량 — 오늘 종가를 보고 수량을 늘리지 않는다 ════  (4차 감사 ②)
+   주문은 '오늘 장이 끝나기 전에' 내는 것이다. 그러니 수량은 주문 시점에 이미 아는
+   가격(전일 확정 종가 또는 주문가)으로 확정돼야 한다. 모의체결만 오늘 종가로 나눠
+   수량을 정하고 있었다 — 오늘 급락하면 그날 주문수량이 저절로 늘어난다(룩어헤드).
+   백테 runIM/runIM50 은 이미 qtyRefPx 규약이고 운영 주문표도 전일 종가를 쓴다. */
+console.log('\n[91] 무매 주문수량 — 주문 전 아는 가격으로 확정');
+{
+  // ── 감사가 지정한 수치 ──
+  const prevC=100, todayC=80, alloc=1000;
+  ok('전일 100 · 배정 1000 → 10주', imBuyQty(alloc, prevC, 0)===10, String(imBuyQty(alloc,prevC,0)));
+  ok('오늘 80으로 세면 12주 (옛 규약 — 이러면 안 된다)', Math.floor(alloc/todayC)===12);
+  ok('오늘 급락해도 주문수량은 그대로 10주',
+     imBuyQty(alloc, prevC, 0)===10 && imBuyQty(alloc, prevC, 0)!==Math.floor(alloc/todayC));
+  ok('오늘 급등해도 마찬가지', imBuyQty(alloc, prevC, 0)===10 && Math.floor(alloc/130)===7);
+  // 예산 규약 — 배정금 = 매수금 + 수수료
+  ok('수수료를 물면 그만큼 적게 산다', imBuyQty(1000,100,0.0025)===9, String(imBuyQty(1000,100,0.0025)));
+  ok('수수료 0이면 그냥 내림 나눗셈', imBuyQty(1000,100,0)===10 && imBuyQty(999,100,0)===9);
+  ok('가격·배정이 0이면 0주', imBuyQty(0,100,0)===0 && imBuyQty(1000,0,0)===0 && imBuyQty(-5,100,0)===0);
+
+  // ── 한 곳에서만 센다 ──
+  ok('헬퍼가 두 파일에 같은 몸으로 있다', (()=>{
+      const re=/function imBuyQty\(alloc, refPx, feeRate\)\{[\s\S]*?\n\}/;
+      const a=(idx.match(re)||[''])[0], b=(bt.match(re)||[''])[0];
+      return !!a && a===b; })(), '두 파일의 imBuyQty 가 다르다');
+  ok('운영 주문표가 헬퍼를 쓴다', /const dp=qtyPrice\|\|price, q=imBuyQty\(alloc,dp,0\);/.test(idx));
+  ok('모의체결 네 자리가 모두 헬퍼를 쓴다',
+     (idx.match(/imBuyQty\(B\.amt(\/2)?,qref,0\)/g)||[]).length===4,
+     `${(idx.match(/imBuyQty\(B\.amt/g)||[]).length}곳`);
+  ok('백테 두 엔진이 모두 헬퍼를 쓴다',
+     (bt.match(/let q=imBuyQty\(amt, ref, FEE\)/g)||[]).length===2
+     && (bt.match(/const maxQ=imBuyQty\(cash, px, FEE\)/g)||[]).length===2);
+  ok('옛 iq(amt/(1+FEE), ref) 규약이 안 남아 있다', !/iq\(amt\/\(1\+FEE\), ref\)/.test(bt));
+
+  /* ── 값으로 — 백테 엔진을 실제로 돌려 수량 기준가가 전일 종가인지 본다 ──
+     오늘 종가만 확 낮춘 시세를 만들어, 그날 매수 주수가 안 변해야 한다. */
+  {
+    const T='__QREF__', ds=[];
+    const mk=(rows)=>{ M[T]={}; rows.forEach(([d,c])=>{ M[T][d]=[c,c,c*1.001,c*0.999]; }); return rows.map(r=>r[0]); };
+    const base=[]; for(let i=1;i<=30;i++) base.push(['2026-01-'+String(i).padStart(2,'0'), 100]);
+    const im=extractFn(bt,'function runIM(days,tkr,cap,divs,targetPct,compound');
+    const F=new Function('return ('+im.replace(/^function [\w$]+\(/,'function (')+')')();
+    const runWith=(lastClose)=>{ const rows=base.map((r,i)=>i===base.length-1?[r[0],lastClose]:r);
+      const days=mk(rows); PBASIS[T]='trade';
+      const r=F(days,T,10000,20,20,false); const out={sh:r.endShares, tr:r.trades}; delete M[T]; return out; };
+    const a=runWith(100), b2=runWith(60);
+    ok('마지막날 종가를 100→60 으로 바꿔도 그날 주문수량 규약이 유지된다',
+       a.sh>0 && b2.sh>0, `${a.sh}주 / ${b2.sh}주`);
+    /* 수량이 '오늘 종가'로 정해졌다면 60원일 때 훨씬 많이 샀을 것이다.
+       전일(100)로 정해지면 두 경우의 '그날 매수 주수'가 같다 — 차이는 체결가뿐이다. */
+    ok('오늘 종가만 낮춰도 매수 건수가 같다', a.tr===b2.tr, `${a.tr} / ${b2.tr}`);
+    delete PBASIS[T];
+  }
+}
+
+
+/* ════ 92. 무매 리버스 복귀 — 상태를 기록으로 남긴다 ════  (4차 감사 ③)
+   원문: 종가가 평단 × 복귀배수 위로 올라오면 '다음날부터' 일반모드, T는 승계.
+   그런데 상태는 거래이력에서만 복원된다. 가격이 회복돼도 그날 거래가 없으면 남길 것이
+   없어서, 저장·새로고침하면 computeInf 가 마지막 리버스 거래를 보고 다시 REVERSE 로
+   되살렸다. 게다가 '리버스 거래가 아니면 전부 NORMAL' 이라, 출금 한 줄만 적어도
+   리버스가 풀렸다. 상태를 바꾸는 이벤트만 상태를 바꾸게 고치고, 복귀를 기록으로 남긴다. */
+console.log('\n[92] 무매 리버스 복귀 — 저장·재로드에서 재현된다');
+{
+  const st={ticker:'SOXL',div:20,target:20,principal:100000,compound:true,reverse:true};
+  const mk=()=>{ const hist=[]; let n=0;
+    const run=()=>{ __strat={settings:st,hist:JSON.parse(JSON.stringify(hist))}; return computeInf(); };
+    const add=(o)=>{ hist.push({date:'2026-01-'+String(++n).padStart(2,'0'), ...o}); };
+    return {hist, run, add}; };
+
+  // 리버스 진입까지 (20분할 소진)
+  const seed=(E)=>{ for(let i=0;i<19;i++) E.add({kind:'1회매수',price:100,qty:50});
+                    E.add({kind:'절반매수',price:100,qty:25}); };
+
+  /* A. 리버스매도 → 가격회복 → 거래 없음 → 직렬화/재로드 → NORMAL 유지 */
+  {
+    const E=mk(); seed(E);
+    let c=E.run();
+    ok('A0 소진하면 리버스 1일차', c.reverseActive && c.revState==='DAY1', c.revState);
+    E.add({kind:'리버스매도',price:100,qty:Math.floor(c.qty/10)});
+    c=E.run();
+    ok('A1 리버스 거래 뒤 REVERSE', c.revState==='REVERSE' && c.reverseActive, c.revState);
+    // 가격 회복 — 거래는 없고 복귀 기록만 남긴다
+    const cRev=c;
+    E.add({kind:'리버스복귀', price:+(cRev.avg*0.95).toFixed(4), qty:0,
+           T:cRev.T, reason:'price-recovery'});
+    c=E.run();
+    ok('A2 복귀 기록만으로 NORMAL', c.revState==='NORMAL' && !c.reverseActive, c.revState);
+    ok('A2 T가 승계된다', near(c.T, cRev.T, 1e-9), `${c.T} / ${cRev.T}`);
+    ok('A2 평단·보유가 안 바뀐다',
+       near(c.avg,cRev.avg,1e-9) && near(c.qty,cRev.qty,1e-9), `${c.avg}/${c.qty}`);
+    // 직렬화 → 재로드 (JSON 왕복) 후에도 같아야 한다
+    const round=JSON.parse(JSON.stringify(E.hist));
+    __strat={settings:st, hist:round};
+    const c2=computeInf();
+    ok('A3 저장·재로드 뒤에도 NORMAL', c2.revState==='NORMAL' && !c2.reverseActive, c2.revState);
+    ok('A3 재로드 뒤 T·평단도 같다', near(c2.T,c.T,1e-9) && near(c2.avg,c.avg,1e-9));
+    /* 옛 규약이면? — 복귀 기록을 빼면 마지막이 리버스매도라 다시 REVERSE 로 되살아난다 */
+    __strat={settings:st, hist:round.filter(h=>h.kind!=='리버스복귀')};
+    const c3=computeInf();
+    ok('A4 복귀 기록이 없으면 REVERSE 로 되살아난다 (옛 증상)',
+       c3.revState==='REVERSE' && c3.reverseActive, c3.revState);
+  }
+
+  /* B. REVERSE 중 출금 → 가격회복 없음 → REVERSE 유지 */
+  {
+    const E=mk(); seed(E);
+    let c=E.run();
+    E.add({kind:'리버스매도',price:100,qty:Math.floor(c.qty/10)});
+    c=E.run();
+    ok('B1 리버스 상태', c.revState==='REVERSE');
+    E.add({kind:'출금', amt:1000});
+    c=E.run();
+    ok('B2 출금은 상태를 바꾸지 않는다 — REVERSE 유지',
+       c.revState==='REVERSE' && c.reverseActive, c.revState);
+    ok('B2 출금이 잔금만 줄인다', c.qty>0 && c.avg>0);
+  }
+
+  /* C. 전량매도 → NORMAL + T=0 */
+  {
+    const E=mk(); seed(E);
+    let c=E.run();
+    E.add({kind:'리버스매도',price:100,qty:Math.floor(c.qty/10)});
+    c=E.run();
+    E.add({kind:'지정가매도',price:200,qty:c.qty});
+    c=E.run();
+    ok('C 전량매도 → NORMAL · T=0', !c.reverseActive && c.revState==='NORMAL' && c.T===0,
+       `state=${c.revState} T=${c.T}`);
+  }
+
+  /* 코드 규약 — 상태를 바꾸는 이벤트만 상태를 바꾼다 */
+  { const f=extractFn(idx,'function computeInf()');
+    ok('옛 규약(비-리버스면 전부 NORMAL)이 안 남아 있다',
+       !/revState = isRev \? 'REVERSE' : 'NORMAL';/.test(f));
+    ok('복귀 기록이 상태를 NORMAL 로 돌린다', /else if\(h\.kind==='리버스복귀'\) revState='NORMAL';/.test(f));
+    ok('일반 매매도 복귀로 본다', /else if\(isBuy\(h\.kind\)\|\|isSell\(h\.kind\)\) revState='NORMAL';/.test(f));
+    ok('복귀 기록은 T를 건드리지 않는다', !/KIND_T\['리버스복귀'\]/.test(idx) && !/리버스복귀[^\n]*reverseT/.test(idx)); }
+  ok('운영 화면에서 복귀를 기록할 수 있다',
+     /function recordRevExit\(\)/.test(idx) && /onclick="recordRevExit\(\)"/.test(idx));
+  ok('운영 기록도 확정 종가로만 남긴다',
+     /const last=settledLast\(Q&&Q\.days, curOf\(st\)\);/.test(extractFn(idx,'function recordRevExit()')));
+  ok('거래이력이 복귀 기록을 매매로 표시하지 않는다',
+     /h\.kind==='리버스복귀'[\s\S]{0,200}일반모드 복귀/.test(idx));
 }
 
 console.log(`\n════ 결과: ${pass} PASS / ${fail} FAIL ${fail===0?'— ALL PASS ★':'— 배포 금지, 위 ✗ 항목 수정 필요'} ════`);

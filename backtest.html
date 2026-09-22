@@ -320,7 +320,7 @@ td:first-child{text-align:left;}
   <div class="brand">
     <div>
       <div class="logo">Backtest</div>
-      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v2.1.0</span></h1>
+      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v2.1.1</span></h1>
     </div>
   </div>
   <div class="hright">
@@ -2387,6 +2387,15 @@ function _imMom(tkr,L){
   return out;
 }
 function _imTgtOf(base, mom){ return (mom!=null && mom>IM_MOM_TH) ? Math.min(base*2, IM_MOM_CAP) : base; }
+/* 무매 매수 주수 — 한 곳에서만 센다 (운영 주문표 · 모의체결 · 백테 runIM/runIM50 공통).
+   주문 수량은 '주문을 내는 시점에 이미 알 수 있는 가격'(전일 확정 종가 또는 주문가)으로 확정한다.
+   오늘 종가로 수량을 정하면, 오늘 싸졌다는 이유로 그날 주문수량이 늘어난다 — 룩어헤드다.
+   (전일 100 · 오늘 80 · 배정 1000 → 올바른 답은 10주. 오늘 종가로 세면 12주가 된다.)
+   예산 규약: 배정금 = 매수금 + 수수료. 비용 OFF(feeRate 0)면 그냥 내림 나눗셈이다. */
+function imBuyQty(alloc, refPx, feeRate){
+  const f=1+(feeRate||0);
+  return (refPx>0 && alloc>0) ? Math.floor(alloc/f/refPx) : 0;
+}
 function runIM(days,tkr,cap,divs,targetPct,compound=true){
   // 종목 계열: TQQQ만 TQQQ식(base15/복귀−15%), 그 외 전부 SOXL식(base20/복귀−20%) — index.html과 동일 규약
   // (문서상 TQQQ/SOXL만 오피셜. 복귀 기준은 "T 마지막 쿼터매도 기준과 동일"이므로 base와 반드시 짝이어야 함)
@@ -2412,9 +2421,9 @@ function runIM(days,tkr,cap,divs,targetPct,compound=true){
   function _buy(px, amt, qtyRefPx){             // 주문수량은 주문 전 알 수 있는 가격으로 확정, 체결은 실제 종가
     if(amt>cash) amt=cash;
     const ref=(qtyRefPx>0?qtyRefPx:px);
-    let q=iq(amt/(1+FEE), ref);                // 운영 주문표와 동일: 전일종가/주문가로 수량을 미리 확정
+    let q=imBuyQty(amt, ref, FEE);             // 운영 주문표와 같은 헬퍼: 주문 전 아는 가격으로 수량 확정
     if(q<=0) return 0;
-    const maxQ=iq(cash/(1+FEE),px);            // 실제 종가 상승으로 잔금 초과 시 가능한 수량까지만
+    const maxQ=imBuyQty(cash, px, FEE);        // 실제 종가 상승으로 잔금 초과 시 가능한 수량까지만
     q=Math.min(q,maxQ); if(q<=0)return 0;
     const spend=q*px, fee=spend*FEE;
     avg = (shares<=0) ? px : (shares*avg+spend)/(shares+q);
@@ -2778,8 +2787,8 @@ function runIM50(days,tkr,cap,divs,targetPct,compound=true){
   function _buy(px, amt, qtyRefPx){
     if(amt>cash) amt=cash;
     const ref=(qtyRefPx>0?qtyRefPx:px);
-    let q=iq(amt/(1+FEE), ref); if(q<=0) return 0;
-    const maxQ=iq(cash/(1+FEE),px);
+    let q=imBuyQty(amt, ref, FEE); if(q<=0) return 0;   // 운영·모의와 같은 헬퍼
+    const maxQ=imBuyQty(cash, px, FEE);
     q=Math.min(q,maxQ); if(q<=0)return 0;
     const spend=q*px, fee=spend*FEE;
     avg = (shares<=0) ? px : (shares*avg+spend)/(shares+q);
