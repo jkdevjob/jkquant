@@ -560,8 +560,11 @@ async function refreshLive(){
   try{
     await loadOperatingState(auth.currentUser);
     const inf=liveState?pickOpSession(liveState.inf,'SOXL'):null,vr=liveState?pickOpSession(liveState.vr,'TQQQ'):null;
-    const [qs,qv,qqq,qld,sgov]=await Promise.all([fetchPlanQuote('SOXL'),fetchPlanQuote('TQQQ'),fetchPlanQuote('QQQ'),fetchPlanQuote('QLD'),fetchPlanQuote('SGOV')]);
-    const asof=[qs.settled.date,qv.settled.date,qqq.settled.date,qld.settled.date,sgov.settled.date].sort()[0];$('liveSync').textContent=liveStateSource+' · 확정 일봉 '+asof+' 기준';
+    const [qs,qv,qqq,qld,sgov]=await Promise.all([
+      fetchPlanQuote('SOXL'),fetchPlanQuote('TQQQ'),fetchPlanQuote('QQQ'),
+      fetchPlanQuote('QLD').catch(()=>null),fetchPlanQuote('SGOV').catch(()=>null)
+    ]);
+    const asof=[qs.settled.date,qv.settled.date,qqq.settled.date,qld&&qld.settled&&qld.settled.date,sgov&&sgov.settled&&sgov.settled.date].filter(Boolean).sort()[0];$('liveSync').textContent=liveStateSource+' · 확정 일봉 '+asof+' 기준';
     const actions=[];
     if(inf){
       const r=imOrders(inf,qs.settled.close),c=r.state,st=inf.settings||{};
