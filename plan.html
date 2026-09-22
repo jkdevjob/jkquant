@@ -47,6 +47,9 @@ button{cursor:pointer}
 .rule{display:grid;grid-template-columns:28px 1fr;gap:9px;align-items:start;background:var(--surf2);border-radius:9px;padding:10px}
 .rule .num{width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:var(--accent);font-size:11px;font-weight:900;color:white}
 .rule b{display:block;margin-bottom:2px}.rule small{color:var(--dim);line-height:1.45}
+.sessionbar{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:end;margin-top:10px;padding:10px;background:var(--surf2);border:1px solid var(--border);border-radius:10px}
+.sessionbar .field{min-width:0}.sessionbar select{width:100%}.sessionstate{grid-column:1/-1;font-size:10.5px;color:var(--dim)}
+.sessionstate.ok{color:var(--green)}.sessionstate.warn{color:var(--gold)}
 .todaybox{border:1px solid var(--border2);border-radius:10px;padding:12px;background:rgba(255,255,255,.025);margin-top:10px}
 .todaybox h3{font-size:13px;margin-bottom:7px}
 .status-pill{display:inline-block;border-radius:999px;padding:3px 8px;font-size:10px;font-weight:900;border:1px solid var(--border2);color:var(--dim)}
@@ -133,14 +136,14 @@ th:first-child,td:first-child{text-align:left}
 }
 @media(max-width:480px){
   .wrap{padding:14px 10px 55px}.top{align-items:flex-start}.userbadge span{display:none}.grid4{grid-template-columns:1fr}.guidegrid{grid-template-columns:1fr}
-  .steps{grid-template-columns:1fr}.alloc-row{grid-template-columns:125px 1fr 46px}.stage-title{font-size:20px}.ledger-summary{grid-template-columns:1fr}.ledger-form{grid-template-columns:1fr}
+  .steps{grid-template-columns:1fr}.alloc-row{grid-template-columns:125px 1fr 46px}.stage-title{font-size:20px}.ledger-summary{grid-template-columns:1fr}.ledger-form{grid-template-columns:1fr}.sessionbar{grid-template-columns:1fr}
 }
 </style>
 </head>
 <body>
 <div class="wrap">
   <div class="top">
-    <div class="brand"><div class="logo">Five Year Plan</div><h1>5년 자산플랜 <span class="ver">v1.4.1</span></h1></div>
+    <div class="brand"><div class="logo">Five Year Plan</div><h1>5년 자산플랜 <span class="ver">v1.5.0</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
       <div class="jkmenu" id="jkmenuWrap">
@@ -206,10 +209,15 @@ th:first-child,td:first-child{text-align:left}
         <div class="guidekpi"><div class="k">운용</div><div class="v">단리 · 리버스 ON</div></div>
         <div class="guidekpi"><div class="k">목표비중</div><div class="v" id="soxlTargetPct">33%</div></div>
       </div>
+      <div class="sessionbar">
+        <div class="field"><label>5년 플랜 연동 세션</label><select id="soxlSessionSelect"><option value="">세션을 선택하세요</option></select></div>
+        <button class="btn primary" id="soxlCreateSession">+ 새 SOXL 세션</button>
+        <div class="sessionstate" id="soxlSessionState">연동할 실전 세션을 선택하거나 새로 만드세요.</div>
+      </div>
       <div class="todaybox"><h3>📋 오늘 SOXL 실행</h3><div class="sub" id="soxlTabMeta">실전 세션과 시세를 불러오는 중…</div><div class="liveact" id="soxlTabActions" style="margin-top:8px"></div></div>
       <div class="rulelist">
         <div class="rule"><span class="num">1</span><div><b>매일 플랜의 주문표만 확인</b><small>별지점·평단·익절 주문 가격과 수량을 앱이 계산합니다. 직접 공식을 다시 계산하지 않습니다.</small></div></div>
-        <div class="rule"><span class="num">2</span><div><b>실제 체결 후 운영 세션에 기록</b><small>거래이력이 있어야 플랜이 실전 세션으로 인정합니다. 모의세션은 완전히 제외합니다.</small></div></div>
+        <div class="rule"><span class="num">2</span><div><b>실제 체결 후 운영 세션에 기록</b><small>플랜에서 선택한 실전 세션 하나만 사용합니다. 새 플랜 세션은 거래 전 빈 상태부터 정상 연동됩니다.</small></div></div>
         <div class="rule"><span class="num">3</span><div><b>단리 수익은 전략 밖으로 분리</b><small>사이클 수익을 SOXL 원금에 자동 합치지 않습니다. QLD/SGOV 축 부족분이나 SGOV 보호자금으로 이동합니다.</small></div></div>
         <div class="rule"><span class="num">4</span><div><b>리버스 상태면 운영 화면에서 최종 주문 확인</b><small>리버스는 직전 5일 종가 별지점이 필요하므로 플랜 안내와 운영 주문표를 함께 확인합니다.</small></div></div>
       </div>
@@ -227,9 +235,14 @@ th:first-child,td:first-child{text-align:left}
         <div class="guidekpi"><div class="k">공식 / Pool</div><div class="v">실력공식 / 50%</div></div>
         <div class="guidekpi"><div class="k">목표비중</div><div class="v" id="tqqqTargetPct">33%</div></div>
       </div>
+      <div class="sessionbar">
+        <div class="field"><label>5년 플랜 연동 세션</label><select id="tqqqSessionSelect"><option value="">세션을 선택하세요</option></select></div>
+        <button class="btn primary" id="tqqqCreateSession">+ 새 TQQQ VR 세션</button>
+        <div class="sessionstate" id="tqqqSessionState">모의세션은 목록에서 제외됩니다.</div>
+      </div>
       <div class="todaybox"><h3>📋 오늘 TQQQ VR 실행</h3><div class="sub" id="tqqqTabMeta">실전 세션과 시세를 불러오는 중…</div><div class="liveact" id="tqqqTabActions" style="margin-top:8px"></div></div>
       <div class="rulelist">
-        <div class="rule"><span class="num">1</span><div><b>실전 VR 세션이 없으면 아무것도 하지 않음</b><small>빈 기본세션이나 모의투자 세션은 플랜이 실전으로 인식하지 않습니다.</small></div></div>
+        <div class="rule"><span class="num">1</span><div><b>연동된 VR 세션이 없으면 먼저 생성</b><small>플랜에서 직접 만든 세션 또는 직접 선택한 실전세션만 사용합니다. 모의세션은 선택 목록에서 제외합니다.</small></div></div>
         <div class="rule"><span class="num">2</span><div><b>14일 사이클 자동</b><small>사이클 기준일에는 V를 갱신하고, 새 사다리는 다음 거래일부터 적용하는 규칙을 사용합니다.</small></div></div>
         <div class="rule"><span class="num">3</span><div><b>즉시매매와 예약주문을 구분</b><small>밴드 밖이면 즉시 조정, 밴드 안이면 예약매수·예약매도 가격을 유지합니다.</small></div></div>
         <div class="rule"><span class="num">4</span><div><b>월 적립금은 무조건 VR에 넣지 않음</b><small>전체 플랜에서 목표비중보다 부족할 때만 VR 축을 보충합니다.</small></div></div>
@@ -247,6 +260,11 @@ th:first-child,td:first-child{text-align:left}
         <div class="guidekpi"><div class="k">딥 매수</div><div class="v">20% → 30%</div></div>
         <div class="guidekpi"><div class="k">회복 매수</div><div class="v">25% → 25%</div></div>
         <div class="guidekpi"><div class="k">판단 지수</div><div class="v">QQQ · MA200/RSI</div></div>
+      </div>
+      <div class="sessionbar">
+        <div class="field"><label>5년 플랜 장부 세션</label><select id="sleeveSessionSelect"><option value="">세션을 선택하세요</option></select></div>
+        <button class="btn primary" id="sleeveCreateSession">+ 새 QLD·SGOV 세션</button>
+        <div class="sessionstate" id="sleeveSessionState">세션마다 보유수량·현금·거래기록을 따로 저장합니다.</div>
       </div>
       <div class="todaybox"><h3>📋 오늘 QLD·SGOV 실행</h3><div class="sub" id="sleeveTabMeta">QQQ 지표를 불러오는 중…</div><div class="liveact" id="sleeveTabActions" style="margin-top:8px"></div></div>
       <div class="rulelist">
@@ -491,6 +509,8 @@ const STAGES={
 
 let liveState=null, liveStateSource="", liveBusy=false, liveQuotes={};
 const FEE=0.0025;
+let planLinks={inf:"",vr:"",sleeve:""};
+let sleeveSessions=[];
 let sleeveLedger={startQLD:0,startSGOV:0,startCash:0,trades:[]};
 const KIND_T={'1회매수':t=>t+1,'절반매수':t=>t+0.5,'쿼터매도':t=>t*0.75,'지정가매도':t=>t*0.25,
   '지정가매도+1회매수':t=>t*0.25+1,'지정가매도+절반매수':t=>t*0.25+0.5,
@@ -501,6 +521,117 @@ function opLocalState(uid){
   const keys=uid?['qcockpit_v2_'+uid,'qcockpit_v2_guest']:['qcockpit_v2_guest'];
   for(const k of keys){try{const x=JSON.parse(localStorage.getItem(k)||'null');if(x&&x.inf&&x.vr)return x;}catch(e){}}
   return null;
+}
+
+function planSid(prefix){return prefix+'_'+Date.now().toString(36)+'_'+Math.random().toString(36).slice(2,8);}
+function ensureLiveBoxes(){
+  if(!liveState)liveState={activeTab:'inf'};
+  if(!liveState.inf)liveState.inf={sessions:[],active:null};
+  if(!Array.isArray(liveState.inf.sessions))liveState.inf.sessions=[];
+  if(!liveState.vr)liveState.vr={sessions:[],active:null};
+  if(!Array.isArray(liveState.vr.sessions))liveState.vr.sessions=[];
+}
+function planEligibleSessions(box,ticker){
+  if(!(box&&Array.isArray(box.sessions)))return [];
+  const tt=String(ticker).toUpperCase();
+  return box.sessions.filter(x=>!x.paper&&String(x.settings?.ticker||'').toUpperCase()===tt);
+}
+function linkedOpSession(box,ticker,id){
+  if(!id||!(box&&Array.isArray(box.sessions)))return null;
+  const tt=String(ticker).toUpperCase();
+  const x=box.sessions.find(s=>s.id===id);
+  if(!x||x.paper||String(x.settings?.ticker||'').toUpperCase()!==tt)return null;
+  return x;
+}
+async function saveOperatingState(){
+  ensureLiveBoxes();
+  const ts=Date.now();liveState._updated=ts;
+  const key=auth.currentUser?'qcockpit_v2_'+auth.currentUser.uid:'qcockpit_v2_guest';
+  try{localStorage.setItem(key,JSON.stringify(liveState));}catch(e){}
+  if(auth.currentUser){
+    try{await setDoc(doc(db,'users',auth.currentUser.uid),{state:liveState,updated:ts},{merge:true});liveStateSource='5년 플랜에서 저장';}
+    catch(e){console.error('operating save',e);}
+  }
+}
+function suggestedStrategyCapital(kind){
+  const total=num('startCapital')||planProgress().total||30000,stage=currentStage();
+  const a=stage<4?STAGES[stage].main:[10,0,20];
+  const w=kind==='inf'?a[0]:kind==='vr'?a[1]:a[2];
+  return Math.max(1000,Math.round(total*w/100/100)*100);
+}
+async function createPlanInfSession(){
+  ensureLiveBoxes();
+  const cap=Number(prompt('SOXL 무매 초기 원금($)',String(suggestedStrategyCapital('inf'))));
+  if(!(cap>0))return;
+  const name=prompt('세션 이름','5년플랜 SOXL')||'5년플랜 SOXL';
+  const id=planSid('pinf');
+  const sess={id,name,planManaged:true,settings:{
+    ticker:'SOXL',div:20,target:10,big:20,reverse:true,compound:false,
+    rowsOn:false,rows:8,gap:2.5,revGap:2.5,rowqty:1,principal:cap,
+    divmode:'reinv',engine:'v40',shortMA:30,loPct:6,tgtDyn:false
+  },hist:[]};
+  liveState.inf.sessions.push(sess);liveState.inf.active=id;liveState.activeTab='inf';
+  planLinks.inf=id;await saveOperatingState();await cloudSave();renderSessionSelectors();await refreshLive();
+}
+async function createPlanVrSession(){
+  ensureLiveBoxes();
+  const cap=Number(prompt('TQQQ VR 초기 원금($)',String(suggestedStrategyCapital('vr'))));
+  if(!(cap>0))return;
+  const name=prompt('세션 이름','5년플랜 TQQQ VR')||'5년플랜 TQQQ VR';
+  const id=planSid('pvr');
+  const sess={id,name,planManaged:true,settings:{
+    ticker:'TQQQ',mode:.5,formula:'skill',g:15,initAmt:cap,add:0,
+    band:30,startv:0,startpool:0,autoCyc:true,divmode:'reinv'
+  },hist:[]};
+  liveState.vr.sessions.push(sess);liveState.vr.active=id;liveState.activeTab='vr';
+  planLinks.vr=id;await saveOperatingState();await cloudSave();renderSessionSelectors();await refreshLive();
+}
+function activeSleeveSession(){
+  return sleeveSessions.find(x=>x.id===planLinks.sleeve)||null;
+}
+function bindSleeveLedger(){
+  const ss=activeSleeveSession();
+  sleeveLedger=ss?ss.ledger:{startQLD:0,startSGOV:0,startCash:0,trades:[]};
+}
+async function createPlanSleeveSession(){
+  const name=prompt('세션 이름','5년플랜 QLD·SGOV')||'5년플랜 QLD·SGOV';
+  const id=planSid('psl');
+  sleeveSessions.push({id,name,createdAt:Date.now(),ledger:{startQLD:0,startSGOV:0,startCash:0,trades:[]}});
+  planLinks.sleeve=id;bindSleeveLedger();await cloudSave();renderSessionSelectors();renderLedger();render();
+}
+function fillSessionSelect(id,sessions,linked,emptyText){
+  const el=$(id);if(!el)return;
+  const cur=linked||'';
+  el.innerHTML='<option value="">'+emptyText+'</option>'+sessions.map(x=>{
+    const tag=x.planManaged?' · 5년플랜':'';
+    const empty=Array.isArray(x.hist)&&x.hist.length===0?' · 빈 세션':'';
+    return '<option value="'+String(x.id).replace(/"/g,'&quot;')+'">'+String(x.name||'세션').replace(/</g,'&lt;')+tag+empty+'</option>';
+  }).join('');
+  el.value=sessions.some(x=>x.id===cur)?cur:'';
+}
+function renderSessionSelectors(){
+  ensureLiveBoxes();
+  const infs=planEligibleSessions(liveState.inf,'SOXL'),vrs=planEligibleSessions(liveState.vr,'TQQQ');
+  fillSessionSelect('soxlSessionSelect',infs,planLinks.inf,'SOXL 실전 세션 선택');
+  fillSessionSelect('tqqqSessionSelect',vrs,planLinks.vr,'TQQQ VR 실전 세션 선택');
+  const sl=$('sleeveSessionSelect');
+  if(sl){
+    sl.innerHTML='<option value="">QLD·SGOV 장부 세션 선택</option>'+sleeveSessions.map(x=>'<option value="'+x.id+'">'+String(x.name||'세션').replace(/</g,'&lt;')+'</option>').join('');
+    sl.value=sleeveSessions.some(x=>x.id===planLinks.sleeve)?planLinks.sleeve:'';
+  }
+  const inf=linkedOpSession(liveState.inf,'SOXL',planLinks.inf),vr=linkedOpSession(liveState.vr,'TQQQ',planLinks.vr),ss=activeSleeveSession();
+  if($('soxlSessionState')){$('soxlSessionState').className='sessionstate '+(inf?'ok':'warn');$('soxlSessionState').textContent=inf?'연동됨 · '+inf.name:'연동 세션 없음 · 새 세션을 만들거나 선택하세요.';}
+  if($('tqqqSessionState')){$('tqqqSessionState').className='sessionstate '+(vr?'ok':'warn');$('tqqqSessionState').textContent=vr?'연동됨 · '+vr.name:'연동 세션 없음 · 모의세션은 제외됩니다.';}
+  if($('sleeveSessionState')){$('sleeveSessionState').className='sessionstate '+(ss?'ok':'warn');$('sleeveSessionState').textContent=ss?'연동됨 · '+ss.name:'장부 세션 없음 · 먼저 새 세션을 만드세요.';}
+}
+async function selectPlanOpSession(kind,id){
+  ensureLiveBoxes();planLinks[kind]=id||'';
+  const box=kind==='inf'?liveState.inf:liveState.vr;
+  if(id&&box.sessions.some(x=>x.id===id)){box.active=id;liveState.activeTab=kind;}
+  await saveOperatingState();await cloudSave();renderSessionSelectors();await refreshLive();
+}
+async function selectSleeveSession(id){
+  planLinks.sleeve=id||'';bindSleeveLedger();await cloudSave();renderSessionSelectors();renderLedger();render();
 }
 function hasRealOperatingData(sess,kind){
   if(!sess)return false;
@@ -657,6 +788,8 @@ function ledgerCalc(){
 }
 function ledgerQuote(sym){const q=liveQuotes[String(sym).toUpperCase()];return q&&q.settled?+q.settled.close:0;}
 function renderLedger(){
+  const hasSession=!!activeSleeveSession();
+  for(const id of ['slStartQLD','slStartSGOV','slStartCash','slDate','slSymbol','slSide','slQty','slPrice','slAdd','slFillPrice','slReset'])if($(id))$(id).disabled=!hasSession;
   $('slStartQLD').value=Number(sleeveLedger.startQLD||0);
   $('slStartSGOV').value=Number(sleeveLedger.startSGOV||0);
   $('slStartCash').value=Number(sleeveLedger.startCash||0);
@@ -668,7 +801,7 @@ function renderLedger(){
   const tr=[...(sleeveLedger.trades||[])].sort((a,b)=>String(b.date).localeCompare(String(a.date))||(b.id||0)-(a.id||0));
   $('slBody').innerHTML=tr.length?tr.map(t=>'<tr><td>'+t.date+'</td><td>'+t.symbol+'</td><td class="'+(t.side==='buy'?'pos':'neg')+'">'+(t.side==='buy'?'매수':'매도')+'</td><td>'+Number(t.qty).toLocaleString()+'</td><td>'+usd(t.price)+'</td><td>'+usd((+t.qty||0)*(+t.price||0))+'</td><td><button class="ledger-del" data-id="'+t.id+'">✕</button></td></tr>').join('')
     :'<tr><td colspan="7" style="text-align:center;color:var(--dim)">아직 기록 없음</td></tr>';
-  if($('autoSleeve').checked&&ledgerReady()&&qp>0&&sp>0){
+  if(hasSession&&$('autoSleeve').checked&&ledgerReady()&&qp>0&&sp>0){
     $('balQLD').value=Math.round(qv);$('balSGOV').value=Math.round(sv+c.cash);
     $('balQLD').readOnly=true;$('balSGOV').readOnly=true;$('balQLD').classList.add('autofill');$('balSGOV').classList.add('autofill');
   }else{
@@ -676,10 +809,12 @@ function renderLedger(){
   }
 }
 function syncLedgerBase(){
+  if(!activeSleeveSession()){alert('먼저 QLD·SGOV 장부 세션을 생성하거나 선택하세요.');renderSessionSelectors();return;}
   sleeveLedger.startQLD=Math.max(0,num('slStartQLD'));sleeveLedger.startSGOV=Math.max(0,num('slStartSGOV'));sleeveLedger.startCash=num('slStartCash');
   renderLedger();render();localSave();
 }
 function addLedgerTrade(){
+  if(!activeSleeveSession()){alert('먼저 QLD·SGOV 장부 세션을 생성하거나 선택하세요.');return;}
   const date=$('slDate').value,symbol=$('slSymbol').value,side=$('slSide').value,qty=num('slQty'),price=num('slPrice');
   if(!date||!(qty>0)||!(price>0)){alert('거래일·수량·체결가를 입력하세요.');return;}
   const c=ledgerCalc(),held=symbol==='QLD'?c.qld:c.sgov;
@@ -691,8 +826,9 @@ function delLedgerTrade(id){
   sleeveLedger.trades=(sleeveLedger.trades||[]).filter(t=>String(t.id)!==String(id));renderLedger();render();cloudSave();
 }
 function resetLedger(){
-  if(!confirm('QLD/SGOV 장부 시작값과 거래기록을 모두 지울까요?'))return;
-  sleeveLedger={startQLD:0,startSGOV:0,startCash:0,trades:[]};renderLedger();render();cloudSave();
+  const ss=activeSleeveSession();if(!ss){alert('선택된 QLD·SGOV 장부 세션이 없습니다.');return;}
+  if(!confirm('현재 장부 세션의 시작값과 거래기록을 모두 지울까요?'))return;
+  ss.ledger={startQLD:0,startSGOV:0,startCash:0,trades:[]};bindSleeveLedger();renderLedger();render();cloudSave();
 }
 function autoBalanceEnabled(){return !!($('autoBalances')&&$('autoBalances').checked);}
 function setAutoBalanceField(id,value,source){
@@ -713,12 +849,14 @@ async function loadOperatingState(user){
   else if(cloud&&cloud.inf&&cloud.vr){liveState=cloud;liveStateSource='클라우드 운영데이터';}
   else if(local){liveState=local;liveStateSource='이 기기 운영데이터';}
   else{liveState=null;liveStateSource='운영데이터 없음';}
+  ensureLiveBoxes();renderSessionSelectors();
 }
 async function refreshLive(){
   if(liveBusy)return;liveBusy=true;$('liveRefresh').disabled=true;$('liveSync').textContent='운영데이터와 확정 일봉을 읽는 중…';liveQuotes={};
   try{
     await loadOperatingState(auth.currentUser);
-    const inf=liveState?pickOpSession(liveState.inf,'SOXL','inf'):null,vr=liveState?pickOpSession(liveState.vr,'TQQQ','vr'):null;
+    renderSessionSelectors();
+    const inf=liveState?linkedOpSession(liveState.inf,'SOXL',planLinks.inf):null,vr=liveState?linkedOpSession(liveState.vr,'TQQQ',planLinks.vr):null;
     const [qs,qv,qqq,qld,sgov]=await Promise.all([
       fetchPlanQuote('SOXL'),fetchPlanQuote('TQQQ'),fetchPlanQuote('QQQ'),
       fetchPlanQuote('QLD').catch(()=>null),fetchPlanQuote('SGOV').catch(()=>null)
@@ -739,8 +877,8 @@ async function refreshLive(){
     }else{
       setAutoBalanceField('balMM',NaN,'SOXL 실전 세션 없음 · 수동 입력');
       const pn=paperSessionCount(liveState&&liveState.inf,'SOXL');
-      $('liveInfMeta').textContent='SOXL 실전 세션 없음'+(pn?' · 모의 '+pn+'개 제외':'');
-      $('liveInf').innerHTML=waitHtml('실제 거래기록이 있는 SOXL 무매 실전세션이 없습니다.',pn?('모의투자 세션 '+pn+'개는 플랜에서 제외했습니다.'):'빈 기본세션은 제외합니다.');
+      $('liveInfMeta').textContent='SOXL 연동 세션 없음'+(pn?' · 모의 '+pn+'개 제외':'');
+      $('liveInf').innerHTML=waitHtml('5년 플랜에 연동된 SOXL 실전세션이 없습니다.','SOXL 탭에서 세션을 생성하거나 선택하세요.');
       mirrorStrategyTab('soxlTabMeta','soxlTabActions',$('liveInfMeta').textContent,$('liveInf').innerHTML);
     }
     if(vr){
@@ -754,8 +892,8 @@ async function refreshLive(){
     }else{
       setAutoBalanceField('balVR',NaN,'TQQQ VR 실전 세션 없음 · 수동 입력');
       const pn=paperSessionCount(liveState&&liveState.vr,'TQQQ');
-      $('liveVrMeta').textContent='TQQQ VR 실전 세션 없음'+(pn?' · 모의 '+pn+'개 제외':'');
-      $('liveVr').innerHTML=waitHtml('실제 운용기록이 있는 TQQQ VR 실전세션이 없습니다.',pn?('모의투자 세션 '+pn+'개는 플랜에서 제외했습니다.'):'빈 기본세션은 제외합니다.');
+      $('liveVrMeta').textContent='TQQQ VR 연동 세션 없음'+(pn?' · 모의 '+pn+'개 제외':'');
+      $('liveVr').innerHTML=waitHtml('5년 플랜에 연동된 TQQQ VR 실전세션이 없습니다.','TQQQ VR 탭에서 세션을 생성하거나 선택하세요.');
       mirrorStrategyTab('tqqqTabMeta','tqqqTabActions',$('liveVrMeta').textContent,$('liveVr').innerHTML);
     }
     const qRows=qqq.rows.filter(x=>x.date<=qqq.settled.date),sg=qldSignal(qRows,$('startDate').value);
@@ -775,15 +913,27 @@ function defaults(){
   const s=todayISO(),t=plusYears(s,5);
   return {startDate:s,targetDate:t,startCapital:0,targetCapital:150000,monthlyAdd:0,targetIncome:2000,stageMode:"auto",
     balMM:0,balVR:0,balQLD:0,balSGOV:0,cagrLow:8,cagrBase:15,cagrHigh:22,
-    incomeBasis:150000,incomeYield:8,sgovYield:4,extraWithdraw:0,autoBalances:true,autoSleeve:true,sleeveLedger:{startQLD:0,startSGOV:0,startCash:0,trades:[]}};
+    incomeBasis:150000,incomeYield:8,sgovYield:4,extraWithdraw:0,autoBalances:true,autoSleeve:true,
+    planLinks:{inf:"",vr:"",sleeve:""},sleeveSessions:[],sleeveLedger:{startQLD:0,startSGOV:0,startCash:0,trades:[]}};
 }
 function readForm(){
   const ids=["startDate","targetDate","startCapital","targetCapital","monthlyAdd","targetIncome","stageMode","balMM","balVR","balQLD","balSGOV","cagrLow","cagrBase","cagrHigh","incomeBasis","incomeYield","sgovYield","extraWithdraw","autoBalances","autoSleeve"];
-  const o={};ids.forEach(id=>{const el=$(id);o[id]=el.type==='checkbox'?el.checked:el.value;});o.sleeveLedger=JSON.parse(JSON.stringify(sleeveLedger));return o;
+  const o={};ids.forEach(id=>{const el=$(id);o[id]=el.type==='checkbox'?el.checked:el.value;});
+  o.planLinks={...planLinks};
+  o.sleeveSessions=JSON.parse(JSON.stringify(sleeveSessions));
+  o.sleeveLedger=JSON.parse(JSON.stringify(sleeveLedger));
+  return o;
 }
 function apply(o){
   const all={...defaults(),...o};
-  if(all.sleeveLedger&&typeof all.sleeveLedger==='object')sleeveLedger={startQLD:+all.sleeveLedger.startQLD||0,startSGOV:+all.sleeveLedger.startSGOV||0,startCash:+all.sleeveLedger.startCash||0,trades:Array.isArray(all.sleeveLedger.trades)?all.sleeveLedger.trades:[]};
+  planLinks={inf:String(all.planLinks?.inf||''),vr:String(all.planLinks?.vr||''),sleeve:String(all.planLinks?.sleeve||'')};
+  sleeveSessions=Array.isArray(all.sleeveSessions)?all.sleeveSessions:[];
+  // v1.4.x 장부를 최초 1회 세션 구조로 마이그레이션
+  if(!sleeveSessions.length&&all.sleeveLedger&&typeof all.sleeveLedger==='object'){
+    const old=all.sleeveLedger,hasOld=(+old.startQLD||0)>0||(+old.startSGOV||0)>0||(+old.startCash||0)!==0||(Array.isArray(old.trades)&&old.trades.length);
+    if(hasOld){const id=planSid('psl');sleeveSessions=[{id,name:'기존 QLD·SGOV 장부',createdAt:Date.now(),ledger:old}];planLinks.sleeve=id;}
+  }
+  bindSleeveLedger();
   Object.entries(all).forEach(([k,v])=>{const el=$(k);if(!el)return;if(el.type==='checkbox')el.checked=(v===true||v==='true');else el.value=v;});
 }
 function localSave(){
@@ -890,7 +1040,7 @@ async function cloudLoad(user){
   if(!user)return;
   try{
     const snap=await getDoc(doc(db,"users",user.uid)),d=snap.data()||{},v=d.fiveYearPlan;
-    if(v){apply(v);render();$("saveState").textContent="계정 설정 불러옴";}
+    if(v){apply(v);renderSessionSelectors();renderLedger();render();$("saveState").textContent="계정 설정 불러옴";}
     if(d.state&&d.state.inf&&d.state.vr){liveState=d.state;liveStateSource="클라우드 운영데이터";}
   }catch(e){}
 }
@@ -904,9 +1054,15 @@ function userBadge(user){
 
 const d=defaults();let saved=null;try{saved=JSON.parse(localStorage.getItem(KEY)||"null")}catch(e){}
 if(saved && saved.startCapital===undefined) saved.startCapital=0; // v1.4.0 이하: 잘못된 total/target 진행률을 폐기
-apply(saved||d);$("slDate").value=todayISO();renderLedger();render();
+apply(saved||d);$("slDate").value=todayISO();renderSessionSelectors();renderLedger();render();
 ["startDate","targetDate","startCapital","targetCapital","monthlyAdd","targetIncome","stageMode","balMM","balVR","balQLD","balSGOV","cagrLow","cagrBase","cagrHigh","incomeBasis","incomeYield","sgovYield","extraWithdraw"].forEach(id=>$(id).addEventListener("change",render));
 $("calcBtn").addEventListener("click",()=>{render();refreshLive()});$("setBaselineBtn").addEventListener("click",setPlanBaseline);$("seedBtn").addEventListener("click",seed);$("saveBtn").addEventListener("click",cloudSave);$("liveRefresh").addEventListener("click",refreshLive);
+$("soxlCreateSession").addEventListener("click",createPlanInfSession);
+$("tqqqCreateSession").addEventListener("click",createPlanVrSession);
+$("sleeveCreateSession").addEventListener("click",createPlanSleeveSession);
+$("soxlSessionSelect").addEventListener("change",e=>selectPlanOpSession('inf',e.target.value));
+$("tqqqSessionSelect").addEventListener("change",e=>selectPlanOpSession('vr',e.target.value));
+$("sleeveSessionSelect").addEventListener("change",e=>selectSleeveSession(e.target.value));
 $("autoBalances").addEventListener("change",()=>{if($("autoBalances").checked)refreshLive();else{unlockAutoBalanceFields();render();}});
 $("autoSleeve").addEventListener("change",()=>{renderLedger();render();localSave();});
 ["slStartQLD","slStartSGOV","slStartCash"].forEach(id=>$(id).addEventListener("change",syncLedgerBase));
