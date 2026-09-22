@@ -66,6 +66,12 @@ const iqSrc=(bt.match(/^const iq=\(amt,px\)=>[^\n]*\nconst isq=\([^\n]*$/m)||[''
 if(!iqSrc) throw new Error('정수 주수 헬퍼(iq/isq)를 backtest.html에서 못 찾음');
 // eval 안의 const는 밖으로 안 새어나간다 — 뒤에 따로 eval하는 엔진(runIM50 등)도 봐야 하니 전역으로 올린다
 { const f=new Function(iqSrc+'\nreturn {iq,isq};')(); global.iq=f.iq; global.isq=f.isq; }
+/* 선택 기간 첫날의 전일 종가 — 워밍업 창에서 찾는다. 파일에서 그대로 떼어 온다. */
+{ const m=bt.match(/function imPrevClose\(tkr, days, i\)\{[\s\S]*?\n\}/);
+  if(!m) throw new Error('imPrevClose 를 backtest.html에서 못 찾음');
+  /* 인자로 넘기면 이 시점의 값(아직 비어 있는 M·미설정 C)을 붙잡는다.
+     자유변수로 두어 호출할 때 전역에서 찾게 한다 — 실제 브라우저와 같은 해석 순서다. */
+  global.imPrevClose=new Function(m[0]+'\nreturn imPrevClose;')(); }
 /* 큰수 상한 — 앱·백테가 같은 한 곳을 쓴다. 파일에서 그대로 떼어 온다. */
 { const m=bt.match(/const IM_BIG_DEFAULT=\d+;\nfunction imBigPct\(st\)\{[^\n]*\}/);
   if(!m) throw new Error('IM_BIG_DEFAULT/imBigPct 를 backtest.html에서 못 찾음');
@@ -5885,6 +5891,50 @@ console.log('\n[93] VR 과거재생 — 고가·저가 체결 (모의·백테와
        /_ladder\(row\[HI\]\|\|c, row\[LO\]\|\|c\)/.test(vr)); }
   ok('vrLadder 가 고저 없으면 종가로 떨어지는 건 그대로 (마지막 안전망)',
      /const hi=bar\.high>0\?bar\.high:bar\.close, lo=bar\.low>0\?bar\.low:bar\.close;/.test(idx));
+}
+
+
+/* ════ 94. 무매 선택 첫날의 '전일 종가' ════  (4차 감사 ⑥)
+   prevC 는 '오늘 주문을 낼 때 이미 아는 마지막 확정 종가' 다. 주문수량과 큰수 상한이
+   이 값으로 정해진다. 그런데 선택 기간 첫날만 i===0 이라 오늘 종가를 그대로 썼다 —
+   그날 주문이 오늘 시세를 보고 정해진 셈이다(룩어헤드).
+   워밍업 창에는 직전 거래일이 이미 들어 있으니 거기서 찾아 쓰면 된다. */
+console.log('\n[94] 무매 선택 첫날 — 전일 종가를 워밍업에서 찾는다');
+{
+  const T='__PREVC__';
+  const all=[]; for(let i=1;i<=40;i++) all.push('2026-02-'+String(i).padStart(2,'0'));
+  const mkM=(firstSelClose)=>{ M[T]={};
+    all.forEach((d,i)=>{ const base=100+i;               // 워밍업 구간은 100,101,...
+      const c=(d===all[20]) ? firstSelClose : base;      // 선택 첫날만 갈아끼운다
+      M[T][d]=[c,c,c*1.001,c*0.999]; });
+    PBASIS[T]='trade'; };
+  const sel=all.slice(20);                                // 선택 기간 = 21번째부터
+
+  mkM(120);
+  ok('워밍업 직전 거래일이 실제로 있다', !!M[T][all[19]] && M[T][all[19]][C]===119, String(M[T][all[19]][C]));
+  ok('선택 첫날의 전일 종가 = 워밍업 마지막 봉', imPrevClose(T,sel,0)===119, String(imPrevClose(T,sel,0)));
+  ok('둘째 날부터는 선택 구간 안에서 집는다', imPrevClose(T,sel,1)===M[T][sel[0]][C],
+     `${imPrevClose(T,sel,1)} / ${M[T][sel[0]][C]}`);
+
+  /* 필수 변이 시험 — 선택 첫날의 종가를 크게 바꿔도 기준가는 그대로여야 한다 */
+  const before=imPrevClose(T,sel,0);
+  mkM(60);                                                // 첫날만 120 → 60 으로 급락
+  ok('선택 첫날 종가를 120→60 으로 바꿔도 기준가 불변',
+     imPrevClose(T,sel,0)===before && before===119, `${imPrevClose(T,sel,0)} / ${before}`);
+  mkM(300);
+  ok('300 으로 급등시켜도 기준가 불변', imPrevClose(T,sel,0)===119, String(imPrevClose(T,sel,0)));
+  /* 옛 규약이면 첫날 기준가가 오늘 종가를 그대로 따라간다 */
+  const oldPrev=(days,i)=>i>0?M[T][days[i-1]][C]:M[T][days[i]][C];
+  ok('옛 규약은 오늘 종가를 따라간다 (그래서 틀렸다)', oldPrev(sel,0)===300, String(oldPrev(sel,0)));
+
+  // 앞에 봉이 하나도 없으면 어쩔 수 없이 오늘 종가 (조용히 깨지지 않게)
+  { const only=[all[0]];
+    ok('워밍업이 아예 없으면 오늘 종가로 떨어진다', imPrevClose(T,only,0)===M[T][all[0]][C]); }
+  delete M[T]; delete PBASIS[T];
+
+  ok('두 엔진이 모두 헬퍼를 쓴다',
+     (bt.match(/const prevC=imPrevClose\(tkr,days,i\);/g)||[]).length===2
+     && !/const prevC=i>0\?M\[tkr\]\[days\[i-1\]\]\[C\]:c;/.test(bt));
 }
 
 console.log(`\n════ 결과: ${pass} PASS / ${fail} FAIL ${fail===0?'— ALL PASS ★':'— 배포 금지, 위 ✗ 항목 수정 필요'} ════`);
