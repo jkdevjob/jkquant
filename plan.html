@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#0f1320">
+<title>JK 퀀트 — 5년 자산플랜</title>
+<style>
+:root{
+  --bg:#0f1320;--surf:#171c2e;--surf2:#1e2540;--border:#2a3354;--border2:#34406a;
+  --text:#e8ecf7;--dim:#9aa6c9;--accent:#8b8cf0;--green:#36d399;--red:#f87b8c;--gold:#f5c451;
+  --soxl:#ff6b6b;--tqqq:#00d4b4;--qld:#5b8dee;--sgov:#f5c451;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Pretendard","Segoe UI",sans-serif;font-size:14px;line-height:1.55;font-variant-numeric:tabular-nums}
+button,input,select{font:inherit}
+button{cursor:pointer}
+.wrap{max-width:1100px;margin:0 auto;padding:20px 16px 70px}
+.top{display:flex;align-items:center;justify-content:space-between;padding-bottom:16px;border-bottom:1px solid var(--border);margin-bottom:18px}
+.brand .logo{font-size:11px;letter-spacing:.1em;color:var(--accent);text-transform:uppercase}
+.brand h1{font-size:18px;margin-top:2px}
+.ver{font-size:11px;font-weight:500;color:var(--dim);margin-left:6px}
+.hright{display:flex;align-items:center;gap:9px}
+.userbadge{display:flex;align-items:center;gap:7px;font-size:11.5px;color:var(--dim)}
+.userbadge img{width:22px;height:22px;border-radius:50%}
+.lo{border:0;background:none;color:var(--accent);font-weight:700}
+.jkmenu{position:relative}
+.jkmenu-btn{height:38px;width:44px;display:inline-flex;align-items:center;justify-content:center;background:var(--surf2);border:1px solid var(--border);color:var(--text);border-radius:8px;font-size:18px;font-weight:700}
+.jkmenu-pop{position:absolute;right:0;top:45px;z-index:100;background:var(--surf);border:1px solid var(--border);border-radius:10px;padding:6px;min-width:166px;box-shadow:0 14px 34px rgba(0,0,0,.45);display:flex;flex-direction:column;gap:2px}
+.jkmenu-pop[hidden]{display:none}
+.jkmenu-pop a{display:flex;align-items:center;gap:9px;padding:10px 12px;border-radius:8px;color:var(--dim);text-decoration:none;font-weight:700}
+.jkmenu-pop a:hover,.jkmenu-pop a.cur{background:var(--surf2);color:var(--text)}
+.jkmenu-pop a.cur{color:var(--gold)}
+.mi{width:18px;text-align:center}
+.hero{display:grid;grid-template-columns:1.45fr .75fr;gap:12px;margin-bottom:12px}
+.card{background:var(--surf);border:1px solid var(--border);border-radius:12px;padding:15px;margin-bottom:12px}
+.card h2{font-size:15px;margin-bottom:4px}
+.card h3{font-size:13.5px;margin-bottom:10px}
+.sub{font-size:11.5px;color:var(--dim)}
+.stage-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+.stage-title{font-size:23px;font-weight:800}
+.badge{border:1px solid var(--border2);border-radius:999px;padding:5px 9px;color:var(--gold);font-size:11px;font-weight:800;white-space:nowrap}
+.bar{height:8px;background:var(--surf2);border-radius:999px;overflow:hidden;margin-top:14px}
+.bar>span{display:block;height:100%;background:var(--accent);transition:width .2s}
+.bar-meta{display:flex;justify-content:space-between;gap:8px;margin-top:6px;color:var(--dim);font-size:11px}
+.next-title{font-size:18px;font-weight:800;margin-top:5px}
+.grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.field label{display:block;color:var(--dim);font-size:11px;margin-bottom:5px}
+.field input,.field select{width:100%;min-height:42px;border:1px solid var(--border2);border-radius:8px;background:var(--bg);color:var(--text);padding:8px 10px;font-size:15px}
+.field input:focus,.field select:focus{outline:2px solid rgba(139,140,240,.45);outline-offset:1px}
+.btnrow{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.btn{min-height:40px;border-radius:8px;border:1px solid var(--border2);background:var(--surf2);color:var(--text);padding:8px 12px;font-weight:700}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:white}
+.btn.gold{border-color:rgba(245,196,81,.45);color:var(--gold)}
+.steps{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.step{border:1px solid var(--border);border-radius:10px;background:transparent;color:var(--text);padding:12px;text-align:left;min-height:108px}
+.step.on{background:var(--surf2);border-color:var(--accent)}
+.step .n{font-size:10px;color:var(--dim);font-weight:800}
+.step .t{font-weight:800;margin-top:2px}
+.step p{font-size:11px;color:var(--dim);margin-top:6px}
+.alloc-list{display:grid;gap:9px}
+.alloc-row{display:grid;grid-template-columns:170px 1fr 56px;align-items:center;gap:10px}
+.alloc-track{height:8px;background:var(--surf2);border-radius:99px;overflow:hidden}
+.alloc-fill{height:100%;border-radius:99px}
+.table-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;white-space:nowrap}
+th,td{padding:8px 7px;border-bottom:1px solid var(--border);text-align:right;font-size:12px}
+th{color:var(--dim);font-weight:600;font-size:10.5px}
+th:first-child,td:first-child{text-align:left}
+.pos{color:var(--green);font-weight:800}.neg{color:var(--red);font-weight:800}.zero{color:var(--dim)}
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.kpi{background:var(--surf2);border-radius:9px;padding:10px}
+.kpi .k{font-size:10px;color:var(--dim)}.kpi .v{font-size:18px;font-weight:800;margin-top:2px}
+.scenarios{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:10px}
+.scenario{background:var(--surf2);border-radius:9px;padding:12px}
+.scenario strong{font-size:18px;display:block;margin-top:3px}
+.cashgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:10px}
+.cashbucket{background:var(--surf2);border-radius:9px;padding:10px;text-align:center}
+.cashbucket .pct{font-size:20px;font-weight:800}
+.callout{border-left:3px solid var(--gold);background:rgba(245,196,81,.06);padding:10px 12px;border-radius:6px;font-size:12px;color:var(--dim);margin-top:10px}
+.callout b{color:var(--text)}
+.checks{display:grid;gap:7px;margin-top:10px}
+.check{display:flex;gap:9px;align-items:flex-start;background:var(--surf2);border-radius:8px;padding:9px 10px}
+.check .dot{width:8px;height:8px;border-radius:50%;background:var(--accent);margin-top:6px;flex:none}
+.save-state{font-size:11px;color:var(--dim);margin-left:auto;align-self:center}
+@media(max-width:780px){
+  .hero{grid-template-columns:1fr}.grid4{grid-template-columns:repeat(2,1fr)}.grid3{grid-template-columns:1fr}.steps{grid-template-columns:repeat(2,1fr)}
+  .kpis{grid-template-columns:repeat(2,1fr)}.cashgrid{grid-template-columns:repeat(2,1fr)}.scenarios{grid-template-columns:1fr}
+}
+@media(max-width:480px){
+  .wrap{padding:14px 10px 55px}.top{align-items:flex-start}.userbadge span{display:none}.grid4{grid-template-columns:1fr}
+  .steps{grid-template-columns:1fr}.alloc-row{grid-template-columns:125px 1fr 46px}.stage-title{font-size:20px}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <div class="brand"><div class="logo">Five Year Plan</div><h1>5년 자산플랜 <span class="ver">v1.0.0</span></h1></div>
+    <div class="hright">
+      <div class="userbadge" id="userbadge"></div>
+      <div class="jkmenu" id="jkmenuWrap">
+        <button class="jkmenu-btn" id="jkmenuBtn" aria-label="메뉴">三</button>
+        <div class="jkmenu-pop" id="jkmenuPop" hidden>
+          <a href="/"><span class="mi">🏠</span>운영</a>
+          <a href="/plan" class="cur"><span class="mi">🧭</span>5년 플랜</a>
+          <a href="/backtest"><span class="mi">📊</span>백테</a>
+          <a href="/scalping"><span class="mi">⚡</span>단타</a>
+          <a href="/?paper=1"><span class="mi">🧪</span>모의</a>
+          <a href="/ipo"><span class="mi">🎯</span>공모주</a>
+          <a href="/admin"><span class="mi">👤</span>관리자</a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="hero">
+    <section class="card">
+      <div class="stage-head">
+        <div><div class="sub">현재 자동판정 단계</div><div class="stage-title" id="stageTitle">STEP 1 · 성장 가속</div><div class="sub" id="stageDesc">자산을 키우는 단계</div></div>
+        <div class="badge" id="stageBadge">GROWTH</div>
+      </div>
+      <div class="bar"><span id="goalBar" style="width:0"></span></div>
+      <div class="bar-meta"><span id="goalPct">목표 0%</span><span id="timeText">남은 기간 계산 중</span></div>
+    </section>
+    <section class="card">
+      <div class="sub">다음 단계 조건</div>
+      <div class="next-title" id="nextRule">목표 70% 또는 3년 경과</div>
+      <div class="sub" id="nextNote">둘 중 하나라도 먼저 오면 보호를 시작합니다.</div>
+    </section>
+  </div>
+
+  <section class="card">
+    <h2>1. 목표 설정</h2>
+    <div class="sub">목표와 시간을 바꾸면 단계가 즉시 다시 계산됩니다.</div>
+    <div class="grid4" style="margin-top:12px">
+      <div class="field"><label>플랜 시작일</label><input type="date" id="startDate"></div>
+      <div class="field"><label>목표일</label><input type="date" id="targetDate"></div>
+      <div class="field"><label>목표 자산 ($)</label><input type="number" id="targetCapital" min="1" step="1000"></div>
+      <div class="field"><label>월 추가 투자 ($)</label><input type="number" id="monthlyAdd" min="0" step="100"></div>
+    </div>
+    <div class="grid4" style="margin-top:10px">
+      <div class="field"><label>5년 뒤 원하는 월 현금흐름 ($)</label><input type="number" id="targetIncome" min="0" step="100"></div>
+      <div class="field"><label>단계 판정</label><select id="stageMode"><option value="auto">자동</option><option value="1">STEP 1 고정</option><option value="2">STEP 2 고정</option><option value="3">STEP 3 고정</option><option value="4">STEP 4 고정</option></select></div>
+      <div class="field"><label>현재 SOXL 무매 잔고 ($)</label><input type="number" id="balMM" min="0" step="100"></div>
+      <div class="field"><label>현재 TQQQ VR 잔고 ($)</label><input type="number" id="balVR" min="0" step="100"></div>
+    </div>
+    <div class="grid4" style="margin-top:10px">
+      <div class="field"><label>현재 QLD 잔고 ($)</label><input type="number" id="balQLD" min="0" step="100"></div>
+      <div class="field"><label>현재 SGOV/현금 잔고 ($)</label><input type="number" id="balSGOV" min="0" step="100"></div>
+      <div class="field"><label>보수 시나리오 CAGR (%)</label><input type="number" id="cagrLow" min="-50" max="100" step="0.5"></div>
+      <div class="field"><label>기준 / 공격 CAGR (%)</label><div style="display:grid;grid-template-columns:1fr 1fr;gap:6px"><input type="number" id="cagrBase" min="-50" max="100" step="0.5"><input type="number" id="cagrHigh" min="-50" max="100" step="0.5"></div></div>
+    </div>
+    <div class="btnrow">
+      <button class="btn primary" id="calcBtn">현재 상태 계산</button>
+      <button class="btn" id="seedBtn">현재자금을 STEP 1 비중으로 채우기</button>
+      <button class="btn gold" id="saveBtn">설정 저장</button>
+      <span class="save-state" id="saveState">브라우저에 자동 보관됩니다.</span>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>2. 4단계 로드맵</h2>
+    <div class="steps" style="margin-top:12px">
+      <button class="step" data-step="1"><span class="n">STEP 1</span><div class="t">성장 가속</div><p>SOXL 무매 + TQQQ VR + QLD/SGOV로 자산 증식</p></button>
+      <button class="step" data-step="2"><span class="n">STEP 2</span><div class="t">수익 보호</div><p>목표 70% 또는 3년 경과부터 안전자산 비중 확대</p></button>
+      <button class="step" data-step="3"><span class="n">STEP 3</span><div class="t">전환 준비</div><p>목표 85% 또는 12개월 전부터 레버리지 축소</p></button>
+      <button class="step" data-step="4"><span class="n">STEP 4</span><div class="t">현금흐름</div><p>성장·인컴·SGOV·무매로 생활비 구조 전환</p></button>
+    </div>
+  </section>
+
+  <div class="grid3">
+    <section class="card" style="margin-bottom:12px">
+      <h2>3. 현재 단계 목표비중</h2>
+      <div class="sub" id="allocHint">3개 전략축 기준</div>
+      <div class="alloc-list" id="allocList" style="margin-top:12px"></div>
+      <div class="callout" id="sleeveNote"></div>
+    </section>
+
+    <section class="card" style="margin-bottom:12px;grid-column:span 2">
+      <h2>4. 지금 해야 할 리밸런싱</h2>
+      <div class="sub">QLD와 SGOV는 합쳐서 하나의 순환 슬리브로 보고, 내부 매매는 QLD/SGOV 신호를 우선합니다.</div>
+      <div class="table-wrap" style="margin-top:8px"><table><thead><tr><th>전략축</th><th>현재</th><th>목표</th><th>차이</th><th>행동</th></tr></thead><tbody id="rebalanceBody"></tbody></table></div>
+      <div class="callout" id="contribText"></div>
+    </section>
+  </div>
+
+  <section class="card">
+    <h2>5. 5년 성장 시나리오</h2>
+    <div class="sub">아래 CAGR은 예측이 아니라 가정값입니다. 월 추가 투자까지 합산해 목표 도달 가능성을 비교합니다.</div>
+    <div class="scenarios" id="scenarioCards"></div>
+  </section>
+
+  <section class="card">
+    <h2>6. STEP 4 현금흐름 전환</h2>
+    <div class="cashgrid">
+      <div class="cashbucket"><div class="sub">성장 ETF</div><div class="pct">40%</div><div class="sub">장기 물가 대응</div></div>
+      <div class="cashbucket"><div class="sub">커버드콜·인컴</div><div class="pct">30%</div><div class="sub">분배금 축</div></div>
+      <div class="cashbucket"><div class="sub">SGOV·단기채</div><div class="pct">20%</div><div class="sub">생활비 완충</div></div>
+      <div class="cashbucket"><div class="sub">SOXL 무매</div><div class="pct">10%</div><div class="sub">추가 성장</div></div>
+    </div>
+    <div class="grid4" style="margin-top:12px">
+      <div class="field"><label>현금흐름 계산 기준자산 ($)</label><input type="number" id="incomeBasis" min="1" step="1000"></div>
+      <div class="field"><label>인컴 30% 예상 분배율 (%)</label><input type="number" id="incomeYield" min="0" max="30" step="0.1"></div>
+      <div class="field"><label>SGOV 20% 예상 이자율 (%)</label><input type="number" id="sgovYield" min="0" max="20" step="0.1"></div>
+      <div class="field"><label>성장/무매 추가 인출률 (%)</label><input type="number" id="extraWithdraw" min="0" max="20" step="0.1"></div>
+    </div>
+    <div class="kpis" style="margin-top:12px">
+      <div class="kpi"><div class="k">예상 월 현금유입</div><div class="v" id="monthlyCash">$0</div></div>
+      <div class="kpi"><div class="k">원하는 월 현금흐름</div><div class="v" id="wantedCash">$0</div></div>
+      <div class="kpi"><div class="k">월 부족/여유</div><div class="v" id="cashGap">$0</div></div>
+      <div class="kpi"><div class="k">목표 현금흐름 필요 인출률</div><div class="v" id="needRate">0%</div></div>
+    </div>
+    <div class="callout"><b>원칙:</b> 표시 분배율이 높은 상품 하나에 전부 맡기지 않고, 성장·인컴·단기채·무매 네 축에서 현금흐름을 만듭니다. 세금은 계좌별로 다르므로 이 계산은 세전입니다.</div>
+  </section>
+
+  <section class="card">
+    <h2>7. 현재 STEP 실행 체크리스트</h2>
+    <div class="checks" id="checkList"></div>
+    <div class="btnrow"><a class="btn" href="/backtest" style="text-decoration:none">📊 백테스트에서 전략 검증</a><a class="btn" href="/" style="text-decoration:none">🏠 운영 화면</a></div>
+  </section>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-app.js";
+import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-auth.js";
+import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-firestore.js";
+
+const firebaseConfig={
+  apiKey:"AIzaSyBzBe9pAttnbDgTlNThWZzNqtAAKxX7Ksw",
+  authDomain:"jk-invest.firebaseapp.com",
+  projectId:"jk-invest",
+  storageBucket:"jk-invest.firebasestorage.app",
+  messagingSenderId:"1024066323251",
+  appId:"1:1024066323251:web:23d557527866205f01f446"
+};
+const app=initializeApp(firebaseConfig),auth=getAuth(app),db=getFirestore(app);
+const KEY="jkq_5y_plan_v1";
+const $=id=>document.getElementById(id);
+const num=(id,fallback=0)=>{const v=Number($(id).value);return Number.isFinite(v)?v:fallback};
+const usd=v=>"$"+Math.round(v||0).toLocaleString("en-US");
+const pct=v=>(Number(v)||0).toFixed(1)+"%";
+const todayISO=()=>{const d=new Date();return new Date(Date.UTC(d.getFullYear(),d.getMonth(),d.getDate())).toISOString().slice(0,10)};
+const plusYears=(iso,n)=>{const d=new Date(iso+"T00:00:00Z");d.setUTCFullYear(d.getUTCFullYear()+n);return d.toISOString().slice(0,10)};
+const days=(a,b)=>(new Date(b+"T00:00:00Z")-new Date(a+"T00:00:00Z"))/86400000;
+
+const STAGES={
+  1:{title:"STEP 1 · 성장 가속",badge:"GROWTH",desc:"자산을 최대한 키우는 단계",main:[33,33,34],sleeve:"QLD/SGOV 슬리브는 평상시 50:50 기준. 실제 내부 비중은 순환 전략 신호를 우선합니다.",
+     checks:["SOXL 무매는 20분할·익절 10%·단리 기본값을 유지합니다.","TQQQ VR은 G15·밴드30·실력공식 연구 기본값으로 추적합니다.","월 추가자금은 세 전략축 중 목표비중 대비 가장 부족한 축에 먼저 배분합니다.","파라미터를 최근 며칠 성과만 보고 자주 바꾸지 않습니다."]},
+  2:{title:"STEP 2 · 수익 보호",badge:"PROTECT",desc:"번 돈을 일부 잠그기 시작하는 단계",main:[25,25,50],sleeve:"QLD/SGOV 슬리브 50% 중 보호기준은 QLD 30% / SGOV 70%입니다. 즉 전체자산 기준 약 QLD 15% / SGOV 35%.",
+     checks:["SOXL 무매와 TQQQ VR 합산 목표를 50% 수준으로 낮춥니다.","매도·익절로 생긴 현금을 우선 SGOV 보호자금으로 이동합니다.","QLD/SGOV 슬리브를 전체의 50%까지 키웁니다.","목표금액 85% 또는 목표일까지 12개월이 되면 STEP 3으로 넘어갑니다."]},
+  3:{title:"STEP 3 · 전환 준비",badge:"TRANSITION",desc:"마지막 폭락에 목표자산을 잃지 않도록 감속하는 단계",main:[15,15,70],sleeve:"QLD/SGOV 슬리브 70% 중 기준은 QLD 약 20% / SGOV 약 50%입니다. 생활비 12~18개월분을 우선 확보합니다.",
+     checks:["레버리지 전략 합산 목표를 30% 수준까지 낮춥니다.","최소 12개월치 예정 생활비를 SGOV·현금성 자산으로 확보합니다.","목표금액을 달성했다면 추가 수익보다 보호를 우선합니다.","목표일 또는 목표금액 100% 도달 시 STEP 4 현금흐름 구조로 전환합니다."]},
+  4:{title:"STEP 4 · 현금흐름",badge:"INCOME",desc:"자산을 오래 유지하면서 생활비를 만드는 단계",main:[10,0,20],sleeve:"기본 현금흐름 구조: 성장ETF 40% / 인컴 30% / SGOV 20% / SOXL 무매 10%. TQQQ VR은 기본안에서 종료합니다.",
+     checks:["성장 ETF 40%는 장기 자산성장과 물가 대응 역할입니다.","커버드콜·인컴 30%는 정기 현금흐름을 담당합니다.","SGOV 20%는 생활비 완충과 급락장 강제매도 방지를 담당합니다.","SOXL 무매 10%는 생활비 주력이 아니라 추가 성장·알파 역할로 제한합니다."]}
+};
+
+function defaults(){
+  const s=todayISO(),t=plusYears(s,5);
+  return {startDate:s,targetDate:t,targetCapital:150000,monthlyAdd:0,targetIncome:2000,stageMode:"auto",
+    balMM:9900,balVR:9900,balQLD:5100,balSGOV:5100,cagrLow:8,cagrBase:15,cagrHigh:22,
+    incomeBasis:150000,incomeYield:8,sgovYield:4,extraWithdraw:0};
+}
+function readForm(){
+  const ids=["startDate","targetDate","targetCapital","monthlyAdd","targetIncome","stageMode","balMM","balVR","balQLD","balSGOV","cagrLow","cagrBase","cagrHigh","incomeBasis","incomeYield","sgovYield","extraWithdraw"];
+  const o={};ids.forEach(id=>o[id]=$(id).value);return o;
+}
+function apply(o){
+  Object.entries({...defaults(),...o}).forEach(([k,v])=>{if($(k))$(k).value=v});
+}
+function localSave(){
+  try{localStorage.setItem(KEY,JSON.stringify(readForm()));$("saveState").textContent="브라우저 저장 완료 · "+new Date().toLocaleTimeString("ko-KR",{hour:"2-digit",minute:"2-digit"});}catch(e){}
+}
+function monthsLeft(){
+  const d=Math.max(0,days(todayISO(),$("targetDate").value));return Math.ceil(d/30.4375);
+}
+function autoStage(){
+  const total=num("balMM")+num("balVR")+num("balQLD")+num("balSGOV"),target=Math.max(1,num("targetCapital",1));
+  const progress=total/target;
+  const start=$("startDate").value,targetDate=$("targetDate").value,today=todayISO();
+  const full=Math.max(1,days(start,targetDate)),elapsed=Math.max(0,Math.min(full,days(start,today))),timeRatio=elapsed/full,remain=monthsLeft();
+  if(progress>=1||today>=targetDate)return 4;
+  if(progress>=.85||remain<=12)return 3;
+  if(progress>=.70||timeRatio>=.60)return 2;
+  return 1;
+}
+function currentStage(){const m=$("stageMode").value;return m==="auto"?autoStage():Number(m);}
+function actionText(diff,total){
+  const tol=Math.max(50,total*.005);
+  if(Math.abs(diff)<=tol)return ["유지","zero"];
+  return diff>0?["+"+usd(diff)+" 보강","pos"]:["-"+usd(Math.abs(diff))+" 축소","neg"];
+}
+function allocationRows(stage){
+  if(stage===4)return [
+    ["성장 ETF",40,"var(--qld)"],["커버드콜·인컴",30,"var(--tqqq)"],["SGOV·단기채",20,"var(--sgov)"],["SOXL 무매",10,"var(--soxl)"]
+  ];
+  const a=STAGES[stage].main;
+  return [["SOXL 무매",a[0],"var(--soxl)"],["TQQQ VR",a[1],"var(--tqqq)"],["QLD/SGOV 슬리브",a[2],"var(--qld)"]];
+}
+function render(){
+  const stage=currentStage(),st=STAGES[stage];
+  document.querySelectorAll(".step").forEach(b=>b.classList.toggle("on",Number(b.dataset.step)===stage));
+  $("stageTitle").textContent=st.title;$("stageBadge").textContent=st.badge;$("stageDesc").textContent=st.desc;
+  const total=num("balMM")+num("balVR")+num("balQLD")+num("balSGOV"),target=Math.max(1,num("targetCapital",1)),progress=total/target*100,remain=monthsLeft();
+  $("goalBar").style.width=Math.min(100,Math.max(0,progress))+"%";$("goalPct").textContent="목표 "+pct(progress);
+  $("timeText").textContent="목표일까지 약 "+remain+"개월";
+  const next={1:["목표 70% 또는 3년 경과","둘 중 하나라도 먼저 오면 수익 보호 시작"],2:["목표 85% 또는 12개월 전","둘 중 하나라도 먼저 오면 전환 준비"],3:["목표 100% 또는 목표일","달성 즉시 현금흐름 구조로 전환"],4:["월 현금흐름·원금 유지 관리","분배율보다 총수익과 인출 지속성을 함께 점검"]}[stage];
+  $("nextRule").textContent=next[0];$("nextNote").textContent=next[1];
+
+  $("allocList").innerHTML=allocationRows(stage).map(r=>'<div class="alloc-row"><span>'+r[0]+'</span><div class="alloc-track"><div class="alloc-fill" style="width:'+r[1]+'%;background:'+r[2]+'"></div></div><strong>'+r[1]+'%</strong></div>').join("");
+  $("sleeveNote").innerHTML="<b>슬리브 규칙:</b> "+st.sleeve;
+  $("allocHint").textContent=stage===4?"5년 뒤 기본 현금흐름 구조":"현재 단계의 전략축 목표";
+
+  if(stage<4){
+    const a=st.main,cur=[num("balMM"),num("balVR"),num("balQLD")+num("balSGOV")],names=["SOXL 무매","TQQQ VR","QLD/SGOV 슬리브"];
+    $("rebalanceBody").innerHTML=names.map((n,i)=>{const tv=total*a[i]/100,d=tv-cur[i],act=actionText(d,total);return "<tr><td>"+n+"</td><td>"+usd(cur[i])+"</td><td>"+usd(tv)+"</td><td class='"+(d>0?"pos":d<0?"neg":"zero")+"'>"+(d>=0?"+":"")+usd(d)+"</td><td class='"+act[1]+"'>"+act[0]+"</td></tr>"}).join("");
+    const add=num("monthlyAdd"),short=a.map((w,i)=>Math.max(0,total*w/100-cur[i])),sum=short.reduce((x,y)=>x+y,0);
+    const parts=names.map((n,i)=>({n,v:sum>0?add*short[i]/sum:add*a[i]/100})).filter(x=>x.v>=1);
+    $("contribText").innerHTML="<b>다음 월 추가투자 "+usd(add)+" 배분:</b> "+(parts.length?parts.map(x=>x.n+" "+usd(x.v)).join(" · "):"추가 투자금 0");
+  }else{
+    $("rebalanceBody").innerHTML='<tr><td colspan="5" style="text-align:left;color:var(--dim)">STEP 4에서는 기존 3축 비중 맞추기를 중단하고 아래 현금흐름 40/30/20/10 구조로 전환합니다.</td></tr>';
+    $("contribText").innerHTML="<b>전환 원칙:</b> 한 번에 전량 교체하기보다 목표일 전후 여러 회차로 나눠 성장·인컴·SGOV·무매 비중을 맞춥니다.";
+  }
+
+  const start=todayISO(),end=$("targetDate").value,n=Math.max(0,Math.round(days(start,end)/30.4375)),P=total,monthly=num("monthlyAdd");
+  const scen=[["보수",num("cagrLow")],["기준",num("cagrBase")],["공격",num("cagrHigh")]];
+  $("scenarioCards").innerHTML=scen.map(x=>{const r=x[1]/100,rm=Math.pow(1+r,1/12)-1;let fv=P*Math.pow(1+r,n/12);if(monthly>0)fv+=Math.abs(rm)<1e-9?monthly*n:monthly*(Math.pow(1+rm,n)-1)/rm;const hit=fv/target*100;return '<div class="scenario"><div class="sub">'+x[0]+' · CAGR '+x[1].toFixed(1)+'%</div><strong>'+usd(fv)+'</strong><div class="sub">목표의 '+hit.toFixed(0)+'%</div></div>'}).join("");
+
+  const basis=Math.max(1,num("incomeBasis",target)),iy=num("incomeYield")/100,sy=num("sgovYield")/100,ew=num("extraWithdraw")/100;
+  const annual=basis*.30*iy+basis*.20*sy+basis*.50*ew,month=annual/12,want=num("targetIncome"),gap=month-want,need=want*12/basis*100;
+  $("monthlyCash").textContent=usd(month);$("wantedCash").textContent=usd(want);$("cashGap").textContent=(gap>=0?"+":"")+usd(gap);$("cashGap").className="v "+(gap>=0?"pos":"neg");$("needRate").textContent=pct(need);
+  $("checkList").innerHTML=st.checks.map(x=>'<div class="check"><span class="dot"></span><div>'+x+'</div></div>').join("");
+  localSave();
+}
+function seed(){
+  const total=Math.max(0,num("balMM")+num("balVR")+num("balQLD")+num("balSGOV"))||30000;
+  $("balMM").value=Math.round(total*.33);$("balVR").value=Math.round(total*.33);$("balQLD").value=Math.round(total*.17);$("balSGOV").value=Math.round(total*.17);render();
+}
+async function cloudSave(){
+  localSave();
+  if(!auth.currentUser){$("saveState").textContent="브라우저 저장 완료 · 로그인하면 계정에도 저장";return;}
+  try{await setDoc(doc(db,"users",auth.currentUser.uid),{fiveYearPlan:readForm()},{merge:true});$("saveState").textContent="계정 + 브라우저 저장 완료";}catch(e){$("saveState").textContent="브라우저 저장 완료 · 계정 저장 실패";}
+}
+async function cloudLoad(user){
+  if(!user)return;
+  try{const snap=await getDoc(doc(db,"users",user.uid)),v=snap.data()?.fiveYearPlan;if(v){apply(v);render();$("saveState").textContent="계정 설정 불러옴";}}catch(e){}
+}
+function userBadge(user){
+  const b=$("userbadge");
+  if(!user){b.innerHTML='<button class="lo" id="loginBtn">로그인</button>';$("loginBtn").addEventListener("click",()=>signInWithPopup(auth,new GoogleAuthProvider()).catch(()=>{}));return;}
+  const photo=user.photoURL?'<img src="'+user.photoURL.replace(/"/g,"&quot;")+'" alt="">':"";
+  b.innerHTML=photo+'<span>'+(user.displayName||user.email||"사용자")+'</span><button class="lo" id="logoutBtn">로그아웃</button>';
+  $("logoutBtn").addEventListener("click",()=>signOut(auth));
+}
+
+const d=defaults();let saved=null;try{saved=JSON.parse(localStorage.getItem(KEY)||"null")}catch(e){}
+apply(saved||d);render();
+["startDate","targetDate","targetCapital","monthlyAdd","targetIncome","stageMode","balMM","balVR","balQLD","balSGOV","cagrLow","cagrBase","cagrHigh","incomeBasis","incomeYield","sgovYield","extraWithdraw"].forEach(id=>$(id).addEventListener("change",render));
+$("calcBtn").addEventListener("click",render);$("seedBtn").addEventListener("click",seed);$("saveBtn").addEventListener("click",cloudSave);
+document.querySelectorAll(".step").forEach(b=>b.addEventListener("click",()=>{$("stageMode").value=b.dataset.step;render()}));
+$("jkmenuBtn").addEventListener("click",e=>{e.stopPropagation();$("jkmenuPop").hidden=!$("jkmenuPop").hidden});
+document.addEventListener("click",e=>{if(!$("jkmenuWrap").contains(e.target))$("jkmenuPop").hidden=true});
+onAuthStateChanged(auth,async user=>{userBadge(user);if(user)await cloudLoad(user)});
+</script>
+</body>
+</html>
