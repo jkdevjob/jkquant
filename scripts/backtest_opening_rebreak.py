@@ -236,6 +236,99 @@ def summary(trades, days):
     }
 
 
+def trades_for_days(days, p: Params):
+    out = []
+    for day in days:
+        for row in day.get("universe") or []:
+            t = one_trade(day, row, p)
+            if t:
+                out.append(t)
+    return out
+
+
+def walk_forward(days, variant_trade_map):
+    """Chronological 20d train -> 5d test walk-forward.
+
+    No variant is auto-promoted. This only reports out-of-sample behavior.
+    Test windows are non-overlapping because step=5.
+    """
+    train_days = 20
+    test_days = 5
+    step_days = 5
+    labels = [x["date"] for x in days]
+
+    if len(labels) < train_days + test_days:
+        return {
+            "status": "collecting",
+            "trainDays": train_days,
+            "testDays": test_days,
+            "stepDays": step_days,
+            "archiveDays": len(labels),
+            "daysNeededForFirstFold": train_days + test_days,
+            "folds": [],
+            "oosVariants": [],
+            "note": "Need at least 25 trading days for the first chronological out-of-sample fold.",
+        }
+
+    folds = []
+    oos_by_variant = {p.name: [] for p in VARIANTS}
+
+    for start in range(0, len(labels) - train_days - test_days + 1, step_days):
+        train_dates = labels[start : start + train_days]
+        test_dates = labels[start + train_days : start + train_days + test_days]
+        train_set = set(train_dates)
+        test_set = set(test_dates)
+
+        fv = []
+        for p in VARIANTS:
+            all_trades = variant_trade_map.get(p.name, [])
+            train_trades = [x for x in all_trades if x["date"] in train_set]
+            test_trades = [x for x in all_trades if x["date"] in test_set]
+            oos_by_variant[p.name].extend(test_trades)
+            fv.append({
+                "name": p.name,
+                "train": summary(train_trades, train_dates),
+                "test": summary(test_trades, test_dates),
+            })
+
+        folds.append({
+            "fold": len(folds) + 1,
+            "trainFrom": train_dates[0],
+            "trainTo": train_dates[-1],
+            "testFrom": test_dates[0],
+            "testTo": test_dates[-1],
+            "variants": fv,
+        })
+
+    oos = []
+    oos_days = []
+    for fold in folds:
+        oos_days.extend([
+            d for d in labels
+            if fold["testFrom"] <= d <= fold["testTo"]
+        ])
+    oos_days = sorted(set(oos_days))
+
+    for p in VARIANTS:
+        oos.append({
+            "name": p.name,
+            "summary": summary(oos_by_variant[p.name], oos_days),
+        })
+
+    return {
+        "status": "reviewable" if len(folds) >= 3 else "early",
+        "trainDays": train_days,
+        "testDays": test_days,
+        "stepDays": step_days,
+        "archiveDays": len(labels),
+        "foldCount": len(folds),
+        "oosDays": len(oos_days),
+        "folds": folds,
+        "oosVariants": oos,
+        "note": "Out-of-sample only. No strategy is automatically promoted from this result.",
+    }
+
+
 def main():
     days = load_days()
     OUT.mkdir(parents=True, exist_ok=True)
@@ -246,22 +339,20 @@ def main():
     reports = []
     baseline = []
     day_labels = [x["date"] for x in days]
+    variant_trade_map = {}
 
     for p in VARIANTS:
-        trades = []
-        for day in days:
-            for row in day.get("universe") or []:
-                t = one_trade(day, row, p)
-                if t:
-                    trades.append(t)
+        trades = trades_for_days(days, p)
+        variant_trade_map[p.name] = trades
         s = summary(trades, day_labels)
         reports.append({"params": asdict(p), "summary": s})
         if p.name == "baseline":
             baseline = trades
 
+    wf = walk_forward(days, variant_trade_map)
     enough = len(days) >= 20 and len(baseline) >= 30
     report = {
-        "schema": 2,
+        "schema": 3,
         "generatedAt": datetime.now(KST).isoformat(),
         "from": day_labels[0],
         "to": day_labels[-1],
@@ -272,6 +363,7 @@ def main():
         "signalModel": "live-parity-close-only",
         "signalModelNote": "Breakout/peak decisions use 1-minute close to match the current live Naver feed. Full KIS OHLC remains archived for future research.",
         "variants": reports,
+        "walkForward": wf,
     }
 
     with (OUT / "latest.json").open("w", encoding="utf-8") as f:
@@ -295,6 +387,8 @@ def main():
         "to": day_labels[-1],
         "baseline": base["summary"],
         "comparisonStatus": report["comparisonStatus"],
+        "walkForwardStatus": wf["status"],
+        "walkForwardFolds": wf.get("foldCount", 0),
     }, ensure_ascii=False, indent=2))
     return 0
 
