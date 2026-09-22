@@ -122,14 +122,14 @@ inject(`{_sell(o>tgt?o:tgt,q3,SLIP);tpHit=true;}`,
 `{const __px=o>tgt?o:tgt;__LOG('지정가매도',__px,q3);_sell(__px,q3,SLIP);tpHit=true;}`,'tp');
 inject(`{_sell(c,sq,0);qtHit=true;}`,
 `{__LOG('쿼터매도',c,sq);_sell(c,sq,0);qtHit=true;}`,'qt');
-inject(`if(shares===0&&T===0){ if(_buy(c,one)>0) T+=1; }   // 못 사면 회차도 안 쓴다`,
-`if(shares===0&&T===0){ const __q=_buy(c,one); if(__q>0){__LOG('1회매수',c,__q); T+=1;} }`,'fb');
-inject(`if(c<=buyP){ if(_buy(c,half)>0) T+=0.5; }`,
-`if(c<=buyP){ const __q=_buy(c,half); if(__q>0){__LOG('절반매수',c,__q); T+=0.5;} }`,'hb1');
-inject(`if(c<=avg) { if(_buy(c,half)>0) T+=0.5; }`,
-`if(c<=avg) { const __q=_buy(c,half); if(__q>0){__LOG('절반매수',c,__q); T+=0.5;} }`,'hb2');
-inject(`}else{ if(c<=buyP){ if(_buy(c,one)>0) T+=1; } }`,
-`}else{ if(c<=buyP){ const __q=_buy(c,one); if(__q>0){__LOG('1회매수',c,__q); T+=1;} } }`,'bb');
+inject(`if(c<=buyLimit && _buy(c,one,prevC)>0) T+=1;`,
+`{const __q=(c<=buyLimit)?_buy(c,one,prevC):0;if(__q>0){__LOG('1회매수',c,__q);T+=1;}}`,'fb');
+inject(`if(c<=starOrder){ if(_buy(c,half,prevC)>0) T+=0.5; }`,
+`if(c<=starOrder){ const __q=_buy(c,half,prevC); if(__q>0){__LOG('절반매수',c,__q);T+=0.5;} }`,'hb1');
+inject(`if(c<=avgOrder) { if(_buy(c,half,prevC)>0) T+=0.5; }`,
+`if(c<=avgOrder) { const __q=_buy(c,half,prevC); if(__q>0){__LOG('절반매수',c,__q);T+=0.5;} }`,'hb2');
+inject(`if(c<=starOrder){ if(_buy(c,one,prevC)>0) T+=1; }`,
+`if(c<=starOrder){ const __q=_buy(c,one,prevC); if(__q>0){__LOG('1회매수',c,__q);T+=1;} }`,'bb');
 // 단리에서 밖에서 넣은 돈(addedCash)을 총자산에서 빼게 되면서 이 줄이 바뀌었다
 inject(`const fin=cash+shares*M[tkr][days[days.length-1]][C]+savedProfit-addedCash;`,
 `__FINAL({T,avg,shares,cash,realized,savedProfit,addedCash});
