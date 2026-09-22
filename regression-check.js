@@ -5532,5 +5532,66 @@ console.log('\n[88] 마지막 해 정산 · 배당 재투자 회계');
   }
 }
 
+
+/* ════ 89. 모의투자 — 시작일이 '오늘'이어도 기록이 생긴다 ════
+   모의 체결기는 [시작일, 마감일] 창의 봉을 훑는다. 그런데 마감일(simCutoff)은
+   주말·휴장·시세 지연을 모르는 '달력 날짜' 였다. 그 날짜에 봉이 없으면
+   시작일이 그 날로 밀리면서 창이 통째로 비고, 첫 매수조차 안 만들어진다.
+   세션 만들기의 모의 시작일 기본값이 '오늘' 이라 이 길로 아주 쉽게 빠진다.
+   결과: 기록 0건 → 모의 성과 목록에 그 세션이 아예 안 나온다 (브라우저로 재현함).
+   _paperRegen(섀넌·로테·적립·ASAP)은 원래부터 봉 기준이었다 — 두 엔진만 달랐다. */
+console.log('\n[89] 모의투자 — 달력 마감일이 아니라 가진 봉 기준');
+{
+  const pre=[/function simCutoff\(cur\)\{[\s\S]*?\n\}/, /function settledBars\(rows,cur\)\{[^\n]*/]
+    .map(re=>(idx.match(re)||[''])[0]).join('\n');
+  ok('마감일·봉 헬퍼를 꺼낼 수 있다', /function simCutoff/.test(pre) && /function settledBars/.test(pre));
+  const F=new Function('_exchNow','MKT_CLOSE_MIN','SETTLE_LAG_MIN',
+    pre+'\n'+extractFn(idx,'function _clampFrom(from, lastDate)')
+       +'\n'+extractFn(idx,'function _lastSettled(rows, cur)')
+       +'\nreturn {simCutoff, settledBars, _clampFrom, _lastSettled};')(
+    ()=>({date:'2026-09-21', min:24*60}), {usd:16*60, krw:15*60+30}, 30);
+
+  // 봉은 금요일(9/18)까지인데 달력 마감일은 월요일(9/21) — 그 사이엔 봉이 없다
+  const rows=[{date:'2026-09-16'},{date:'2026-09-17'},{date:'2026-09-18'}];
+  ok('달력 마감일은 봉이 없는 날일 수 있다', F.simCutoff('usd')==='2026-09-21', F.simCutoff('usd'));
+  ok('가진 봉 중 마지막 확정 봉을 집어 온다', F._lastSettled(rows,'usd')==='2026-09-18',
+     String(F._lastSettled(rows,'usd')));
+
+  /* 값으로 — 시작일이 '오늘'일 때 창에 봉이 몇 개 잡히나 */
+  const win=(from, cut)=>{ const f=F._clampFrom(from, cut); return rows.filter(r=>r.date>=f && r.date<=cut).length; };
+  ok('옛 규약(달력 마감일로 클램프)이면 창이 빈다', win('2026-09-22', F.simCutoff('usd'))===0,
+     String(win('2026-09-22', F.simCutoff('usd'))));
+  ok('새 규약(마지막 봉으로 클램프)이면 한 건이 잡힌다',
+     win('2026-09-22', F._lastSettled(rows,'usd'))===1, String(win('2026-09-22', F._lastSettled(rows,'usd'))));
+  ok('과거 시작일은 두 규약이 같은 창을 낸다',
+     win('2026-09-16', F.simCutoff('usd'))===3 && win('2026-09-16', F._lastSettled(rows,'usd'))===3);
+  ok('확정 봉이 하나도 없으면 null (부르는 쪽이 달력값으로 되돌아간다)',
+     F._lastSettled([{date:'2026-09-30'}],'usd')===null && F._lastSettled([],'usd')===null);
+  ok('클램프는 앞당기기만 한다 (뒤로 밀지 않는다)',
+     F._clampFrom('2026-09-16','2026-09-18')==='2026-09-16'
+     && F._clampFrom('2026-09-22','2026-09-18')==='2026-09-18');
+
+  /* 두 체결기가 실제로 그 규약을 쓰는가 — 한 곳만 남아도 그 탭만 또 빈다 */
+  for(const [nm,mk] of [['VR 모의체결','function vrSimForward()'],
+                        ['무매 모의체결','function infSimForward(startFrom)']]){
+    const f=extractFn(idx,mk);
+    ok(`${nm} — 가진 봉으로 마감일을 잡는다`,
+       /const cut=_lastSettled\(O, curOf\(st\)\) \|\| simCutoff\(curOf\(st\)\);/.test(f),
+       '아직 달력 마감일을 그대로 쓴다');
+    ok(`${nm} — 달력 마감일을 그대로 쓰는 자리가 안 남아 있다`,
+       !/const cut=simCutoff\(curOf\(st\)\);/.test(f));
+  }
+  ok('되살린 재생기(_paperRegen)도 같은 규약',
+     /const last=_lastTradingDay\(settledBars\(days,curOf\(sess\.settings\)\)\); if\(!last\) return null;/
+       .test(extractFn(idx,'function _paperRegen(sess, from, inputId, replayFn, days)')));
+
+  /* 비었을 때 화면이 '왜 비었는지'를 짚는가 — 예전엔 원인과 무관하게 늘 🔄 를 시켰다 */
+  { const f=extractFn(idx,'async function openPaper()');
+    ok('시작일 없는 세션을 따로 센다', /const noStart=paperSessions\(\)\.filter\(\(\[,x\]\)=>!paperStart\(x\)\)/.test(f));
+    ok('그 경우엔 시작일을 정하라고 안내한다', /모의 시작일<\/b>이 없습니다/.test(f) && /더블탭<\/b>해 시작일을 정하거나/.test(f));
+    ok("원인이 다를 때만 '🔄 자동' 을 시킨다",
+       /noStart\.length[\s\S]{0,400}시세를 못 불러왔을 수 있습니다/.test(f)); }
+}
+
 console.log(`\n════ 결과: ${pass} PASS / ${fail} FAIL ${fail===0?'— ALL PASS ★':'— 배포 금지, 위 ✗ 항목 수정 필요'} ════`);
 process.exit(fail===0?0:1);
