@@ -23,7 +23,9 @@ function extractFn(src, marker){
 const idx=fs.readFileSync(IDX,'utf8'), bt=fs.readFileSync(BT,'utf8');
 // 관리자 화면은 별도 페이지다 (백테와 같은 구조). 없으면 [23]에서 잡힌다
 const ADM=__d+'/admin.html';
+const SCL=__d+'/scalping.html';
 const adm=fs.existsSync(ADM)?fs.readFileSync(ADM,'utf8'):'';
+const scl=fs.existsSync(SCL)?fs.readFileSync(SCL,'utf8'):'';
 console.log(`대상: ${IDX} (${(idx.match(/appVer">(v[\d.]+)/)||[])[1]||'?'}) · ${BT} (${(bt.match(/btVer[^>]*>(v[\d.]+)/)||[])[1]||'?'})\n`);
 
 /* ════ 0. 파일 문법 ════ */
@@ -32,11 +34,11 @@ console.log('[0] 파일 문법');
   const {spawnSync}=require('child_process');
   const chk=(html,label)=>{
     const js=[...html.matchAll(/<script(?![^>]*src=)(?![^>]*type="module")[^>]*>([\s\S]*?)<\/script>/g)].map(m=>m[1]).join('\n;\n');
-    const tmp='/tmp/__syn_'+label+'.js'; fs.writeFileSync(tmp,js);
+    const tmp=path.join(require('os').tmpdir(),'__syn_'+label+'.js'); fs.writeFileSync(tmp,js);
     const r=spawnSync('node',['--check',tmp],{encoding:'utf8'});
     ok(label+' 메인 스크립트 문법', r.status===0, (r.stderr||'').split('\n')[0]);
   };
-  chk(idx,'index'); chk(bt,'backtest');
+  chk(idx,'index'); chk(bt,'backtest'); if(scl) chk(scl,'scalping');
 }
 
 // index 엔진
