@@ -1634,31 +1634,69 @@ function momentumBacktest(data, tickers, U, cap, lb, filter, costOn){
   const FEE=costOn?U.fee:0;
   let held=null, shares=0, cash=cap, basis=0, started=false, startDate=null;
   const eq={}; let sw=0, cashMonths=0; const holdCount={}; const seq=[]; let yrRealUSD=0, curYear=null, taxPaid=0;
+  /* ── 장부는 언제나 '현금 + 보유평가' 다 ──
+     예전엔 보유 중일 때 평가액을 shares*price 로만 냈다. 정수 주수로 사고 남은 잔돈이
+     화면에서 사라졌고, sellAll 은 cash=proceeds 로 기존 잔돈을 덮어썼다.
+     파는 일도 _sellQty 하나로 모은다 — 밖에서 손으로 shares 를 줄이면
+     수수료·실현손익·세금 중 하나가 반드시 빠진다(무매·VR·표준편차와 같은 규약). */
+  function _sellQty(d,q){
+    if(!held||!(q>0)) return 0;
+    const p=px(held,d); if(!(p>0)) return 0;
+    q=Math.min(q,shares); if(!(q>0)) return 0;
+    const gross=q*p, fee=gross*FEE, proceeds=gross-fee;
+    const cost=basis*(shares>0?q/shares:0), realized=proceeds-cost;
+    basis-=cost; shares-=q; cash+=proceeds;
+    if(costOn){ if(U.annual){ yrRealUSD+=realized; }
+                else if(taxable[held]&&realized>0){ const tx=realized*U.taxRate; cash-=tx; taxPaid+=tx; } }
+    if(shares<=1e-9){ shares=0; basis=0; held=null; }
+    return realized; }
   // 매도 시 실현수익률(순수익, 수수료만 반영·세전) 반환. 팔 포지션이 없으면 null(=매도 없음).
-  function sellAll(d){ if(!held)return null; const p=px(held,d), gross=shares*p, fee=gross*FEE, proceeds=gross-fee, realized=proceeds-basis;
-    const soldRet = basis>0 ? realized/basis : 0;
-    cash=proceeds; if(costOn){ if(U.annual){ yrRealUSD+=realized; } else if(taxable[held]&&realized>0){ const tx=realized*U.taxRate; cash-=tx; taxPaid+=tx; } }
-    shares=0; held=null; return soldRet; }
-  function buy(s,d){ const p=px(s,d), q=Math.floor(cash/(p*(1+FEE)));   // 정수 주수
+  function sellAll(d){ if(!held)return null;
+    const b=basis, realized=_sellQty(d,shares);
+    return b>0 ? realized/b : 0; }
+  function buy(s,d){ const p=px(s,d); if(!(p>0)) return;
+    const q=Math.floor(cash/(p*(1+FEE)));   // 정수 주수 — 못 산 잔돈은 cash 에 그대로 남는다
+    if(!(q>0)) return;
     const spend=q*p, fee=spend*FEE; basis=spend+fee; shares=q; cash-=spend+fee; held=s; }
-  function settleAnnual(priceForPay){ if(!costOn||!U.annual)return; const taxable=Math.max(0,yrRealUSD*COST_KRW-COST_DEDUCT), tx=taxable*U.taxRate/COST_KRW;
-    if(tx>0){ if(cash>=tx)cash-=tx; else{ const need=tx-cash; cash=0; if(held&&priceForPay>0)shares-=need/priceForPay; } taxPaid+=tx; } yrRealUSD=0; }
+  /* 연말 양도세 — 현금에서 먼저 내고 모자라면 보유분을 판다.
+     파는 것도 _sellQty 를 지나가므로 수수료가 붙고 실현손익은 다음 해로 이월된다. */
+  function settleAnnual(d){ if(!costOn||!U.annual)return;
+    const taxAmt=Math.max(0,yrRealUSD*COST_KRW-COST_DEDUCT), tx=taxAmt*U.taxRate/COST_KRW;
+    yrRealUSD=0; if(!(tx>0)) return;
+    let due=tx;
+    const fromCash=Math.min(Math.max(cash,0),due); cash-=fromCash; due-=fromCash;
+    if(due>1e-9 && held && shares>0){
+      const p=px(held,d);
+      if(p>0){ const before=cash;
+        _sellQty(d, Math.min(shares, due/(p*(1-FEE))));
+        const got=cash-before, pay=Math.min(got,due); cash-=pay; due-=pay; } }
+    taxPaid+=tx-due; }                       // 실제로 낸 만큼만 (자산이 0이면 더 못 냄)
   for(let i=lb;i<months.length;i++){
     const d=mf[months[i]], pd=mf[months[i-lb]];
-    const y=d.slice(0,4); if(curYear===null)curYear=y; else if(y!==curYear){ settleAnnual(held?px(held,d):0); curYear=y; }
-    let best=null,bs=-1e9; syms.forEach(s=>{ const r=px(s,d)/px(s,pd)-1; if(r>bs){bs=r;best=s;} });
-    let target=best; if(filter){ const sm=SMA[best][d]; if(sm!=null && px(best,d)<sm) target=null; }
+    /* 신호는 '직전 확정 거래일까지' 로 만들고 체결만 오늘 종가에 한다.
+       예전엔 오늘(월 첫 거래일) 종가로 순위와 200일선을 정한 뒤 같은 종가에 사고팔았다 —
+       종가를 본 뒤에 그 종가로 내는 주문이라 실제로는 낼 수 없다(same-close 룩어헤드).
+       다른 종가신호 전략(ASAP·표준편차·역분산·적립 배수)과 같은 규약으로 맞춘다. */
+    const sd=dates[dIdx[d]-1], spd=dates[dIdx[pd]-1];
+    if(sd==null||spd==null) continue;        // 신호를 낼 만큼의 과거가 아직 없다
+    const y=d.slice(0,4); if(curYear===null)curYear=y; else if(y!==curYear){ settleAnnual(d); curYear=y; }
+    let best=null,bs=-1e9; syms.forEach(s=>{ const a=px(s,sd), b=px(s,spd);
+      if(!(a>0)||!(b>0)) return; const r=a/b-1; if(r>bs){bs=r;best=s;} });
+    if(best===null){ cashMonths++; seq.push({month:months[i], sym:null, ret:0, soldRet:null}); continue; }
+    let target=best; if(filter){ const sm=SMA[best][sd]; if(sm!=null && px(best,sd)<sm) target=null; }
+    if(target && !(px(target,d)>0)) target=held;    // 체결가가 없는 날은 갈아타지 않는다
     if(target)holdCount[target]=(holdCount[target]||0)+1; else cashMonths++;
     let soldRet=null;   // 이번 달 진입 시 직전 포지션을 매도했다면 그 실현수익률 · 첫 달·홀드 유지면 null(매도 없음)
     if(!started){ started=true; startDate=d; if(target)buy(target,d); }
     else if(target!==held){ soldRet=sellAll(d); if(target)buy(target,d); sw++; }
-    seq.push({month:months[i], sym:target, ret:bs, soldRet});   // 월별 선택 (sym=null이면 현금) · ret=선정점수(신규픽 직전 N개월 수익률) · soldRet=직전 포지션 매도 실현수익률
+    seq.push({month:months[i], sym:target, ret:bs, soldRet});   // 월별 선택 (sym=null이면 현금) · ret=선정점수(직전 확정일까지의 N개월 수익률) · soldRet=직전 포지션 매도 실현수익률
     const nextD=(i+1<months.length)?mf[months[i+1]]:null, from=dIdx[d], to=nextD?dIdx[nextD]:dates.length;
     let lp=held?px(held,d):0;   // 보유종목 마지막 유효가 (거래일 누락 방어)
-    for(let k=from;k<to;k++){ if(held){ const p=data[held][dates[k]]; if(p>0)lp=p; eq[dates[k]]=shares*lp; } else eq[dates[k]]=cash; }
+    for(let k=from;k<to;k++){ if(held){ const p=data[held][dates[k]]; if(p>0)lp=p; }
+      eq[dates[k]]=cash+(held?shares*lp:0); }   // 잔돈도 자산이다
   }
   const ed=Object.keys(eq).sort(); const lastD=ed[ed.length-1];
-  settleAnnual(held?px(held,lastD):0); const fin= held? shares*px(held,lastD) : cash; eq[lastD]=fin;
+  settleAnnual(lastD); const fin= cash + (held? shares*px(held,lastD) : 0); eq[lastD]=fin;
   let peak=0,mdd=0; ed.forEach(d=>{const e=eq[d];if(e>peak)peak=e;else{const dd=(peak-e)/peak;if(dd>mdd)mdd=dd;}});
   const yrs=(new Date(lastD)-new Date(startDate))/(365.25*864e5);
   const cagr=(Math.pow(fin/cap,1/yrs)-1)*100, mddP=mdd*100;

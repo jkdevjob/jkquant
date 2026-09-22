@@ -4392,5 +4392,103 @@ console.log('\n[81] 출처 표기 · 프리셋 · 설명문');
       return ['dca','im','vr','ma','asap','std','ivs','all','mom'].every(k=>f.includes(k+':')); })());
 }
 
+/* ════ 82. 모멘텀 로테이션 (숨김 탭) ════  (감사 ⑨ · 필수시험 J·K)
+   회귀가 한 줄도 없던 엔진이다. 네 가지가 한꺼번에 틀려 있었다.
+     · 월 첫 거래일 '오늘 종가'로 순위·200일선을 정하고 그 종가에 매매 (same-close)
+     · 정수 주수로 사고 남은 잔돈이 평가액에서 빠짐
+     · sellAll 이 cash=proceeds 로 기존 잔돈을 덮어씀
+     · 세금 강제매도가 매도 helper 를 안 지나가 수수료·실현손익이 빠짐
+   합성 시세로 값을 만들어 확인한다. 전부 통과하기 전에는 탭을 계속 숨겨 둔다.   */
+console.log('\n[82] 모멘텀 로테이션 — 룩어헤드·현금 장부');
+{
+  const src=extractFn(bt,'function momentumBacktest(data, tickers, U, cap, lb, filter, costOn)');
+  const pre=(bt.match(/const COST_FEE=[^\n]*/)||[''])[0]+'\n'
+    +extractFn(bt,'function momSMA(series)')+'\n';
+  const run=new Function(pre+'return ('+src.replace(/^function \w+\(/,'function (')+')')();
+
+  // ── 합성 시세: 3종목 × 4년 (달마다 순위가 바뀌도록 서로 다른 주기) ──
+  const DATES=[]; { const t=new Date(Date.UTC(2020,0,1));
+    while(t<new Date(Date.UTC(2024,0,1))){ const w=t.getUTCDay();
+      if(w!==0&&w!==6) DATES.push(t.toISOString().slice(0,10));
+      t.setUTCDate(t.getUTCDate()+1); } }
+  const mkData=()=>{ const d={};
+    d.AAA=Object.fromEntries(DATES.map((x,i)=>[x, 100*(1+0.0006*i)+18*Math.sin(2*Math.PI*i/70)]));
+    d.BBB=Object.fromEntries(DATES.map((x,i)=>[x, 100*(1+0.0004*i)+22*Math.sin(2*Math.PI*i/110+1)]));
+    d.CCC=Object.fromEntries(DATES.map((x,i)=>[x, 100*(1+0.0002*i)+9*Math.sin(2*Math.PI*i/45+2)]));
+    return d; };
+  const tickers=[{sym:'AAA',name:'A',taxable:true},{sym:'BBB',name:'B',taxable:true},{sym:'CCC',name:'C',taxable:true}];
+  const U={label:'시험',cur:'$',cap:10000,fee:0.0030,taxRate:0.22,annual:true,tickers,bench:[]};
+  const CAP=10000;
+
+  const base=run(mkData(),tickers,U,CAP,3,true,true);
+  ok('모멘텀 엔진이 굴러간다', isFinite(base.fin)&&base.fin>0&&base.sw>0,
+     `최종 ${base.fin} · 교체 ${base.sw}회 · ${base.months}개월`);
+
+  /* ── J. same-close 탐지 ──
+     월 첫 거래일의 종가만 흔들어도 '그 달에 무엇을 고르는가'가 바뀌면 안 된다.
+     체결가는 그 종가라 금액은 당연히 달라지므로, 재는 건 '고른 종목'이다. */
+  {
+    const months=[...new Set(DATES.map(d=>d.slice(0,7)))].sort();
+    const firstOf={}; for(const d of DATES){ const m=d.slice(0,7); if(!firstOf[m]) firstOf[m]=d; }
+    let flips=0, checked=0, first='';
+    const pick=r=>r.seq.map(x=>x.sym===null?'-':x.sym).join(',');
+    for(let mi=12; mi<months.length; mi+=3){
+      const d=firstOf[months[mi]];
+      const b=pick(run(mkData(),tickers,U,CAP,3,true,true));
+      for(const mul of [0.75,1.35]){
+        const D=mkData();
+        for(const s of ['AAA','BBB','CCC']) D[s][d]=D[s][d]*mul;   // 그날 세 종목 모두 흔든다
+        D.AAA[d]=D.AAA[d]*1.2;                                     // 순위를 뒤집을 만큼 한 종목만 더
+        const v=pick(run(D,tickers,U,CAP,3,true,true));
+        checked++;
+        if(v!==b){ flips++; if(!first){
+          const B=b.split(','), V=v.split(',');
+          const k=B.findIndex((x,i)=>x!==V[i]);
+          first=`${d} ×${mul} → ${k}번째 달 선택이 ${B[k]}에서 ${V[k]}로`; } }
+      }
+    }
+    ok('오늘 종가가 오늘 선택을 바꾸지 않는다', checked>0&&flips===0,
+       `${checked}회 중 ${flips}회 바뀜${first?' · '+first:''}`);
+  }
+
+  /* ── K. 현금 장부 ── 잔돈은 사라지지 않는다 ── */
+  {
+    // 값이 손에 잡히게: 종목 하나·필터 없음·비용 있음 → 첫 매수의 잔돈을 직접 센다
+    const D={AAA:Object.fromEntries(DATES.map((x,i)=>[x, 100+0*i]))};   // 값이 고정된 시세
+    const one=[{sym:'AAA',name:'A',taxable:true}];
+    const U1={...U, tickers:one, bench:[]};
+    const r=run(D,one,U1,10000,1,false,true);
+    /* 주가 100 · 수수료 0.30% → floor(10000/100.3)=99주 · 9,900 + 29.7 → 잔돈 70.30
+       가격이 변하지 않으므로 교체도 없고, 최종은 잔돈 + 99주×100 이어야 한다. */
+    ok('정수 주수로 사고 잔돈을 들고 간다', near(r.fin, (10000-9900-29.7)+99*100, 1e-6), String(r.fin));
+    ok('잔돈을 버리던 옛 값(9,900)과 다르다', Math.abs(r.fin-9900)>1e-6);
+    ok('원금 = 매수액 + 수수료 + 잔돈', near(9900+29.7+(10000-9900-29.7), 10000, 1e-9));
+
+    // 여러 번 갈아타도 자산이 통째로 뛰거나 사라지지 않는다 (교체마다 수수료만큼만 줄어야 한다)
+    const r2=run(mkData(),tickers,U,CAP,3,false,false);   // 비용 없음 → 수수료도 0
+    const eqs=Object.keys(r2.snap).map(i=>r2.snap[i][1]).filter(v=>v>0);
+    let jump=0; for(let i=1;i<eqs.length;i++) if(Math.abs(eqs[i]/eqs[i-1]-1)>0.5) jump++;
+    ok('교체 때 자산이 튀지 않는다 (잔돈 덮어쓰기 없음)', jump===0, jump+'회 튐');
+  }
+
+  /* ── 세금 강제매도도 매도 helper 를 지나간다 ── */
+  ok('파는 자리가 _sellQty 한 곳이다', (()=>{
+      const f=extractFn(bt,'function momentumBacktest(data, tickers, U, cap, lb, filter, costOn)');
+      // shares 를 직접 줄이는 자리는 _sellQty 안에만 있어야 한다
+      const cuts=(f.match(/shares\s*-=/g)||[]).length;
+      return cuts===1 && /_sellQty\(d, Math\.min\(shares, due\/\(p\*\(1-FEE\)\)\)\)/.test(f); })());
+  ok('평가액이 현금 + 보유평가다', /eq\[dates\[k\]\]=cash\+\(held\?shares\*lp:0\);/.test(bt)
+     && /const fin= cash \+ \(held\? shares\*px\(held,lastD\) : 0\);/.test(bt));
+  ok('sellAll 이 기존 현금을 덮어쓰지 않는다',
+     !/cash=proceeds;/.test(bt) && /cash\+=proceeds;/.test(bt));
+  ok('신호는 직전 확정 거래일까지만 쓴다',
+     /const sd=dates\[dIdx\[d\]-1\], spd=dates\[dIdx\[pd\]-1\];/.test(bt)
+     && /SMA\[best\]\[sd\]/.test(bt) && /px\(best,sd\)<sm/.test(bt));
+
+  // 전부 통과하기 전에는 탭을 계속 숨겨 둔다 (감사 지시)
+  ok('모멘텀 탭은 아직 숨겨져 있다',
+     /data-s="mom" onclick="setStrat\('mom'\)" style="display:none"/.test(bt));
+}
+
 console.log(`\n════ 결과: ${pass} PASS / ${fail} FAIL ${fail===0?'— ALL PASS ★':'— 배포 금지, 위 ✗ 항목 수정 필요'} ════`);
 process.exit(fail===0?0:1);
