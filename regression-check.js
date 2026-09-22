@@ -69,6 +69,13 @@ const costSrc=(bt.match(/const COST_FEE=[\s\S]*?function capGainTax\([\s\S]*?\n\
 if(!costSrc) throw new Error('비용·세금 프로필(costOf/capGainTax)을 backtest.html에서 못 찾음');
 { const f=new Function(costSrc+'\nreturn {isKRW,krTaxRate,costOf,capGainTax};')();
   global.isKRW=f.isKRW; global.krTaxRate=f.krTaxRate; global.costOf=f.costOf; global.capGainTax=f.capGainTax; }
+/* VR 사이클 엔진 — runVR 과 전체비교가 같이 쓴다. 파일에서 그대로 떼어 온다. */
+const vrCycSrc=(bt.match(/const VR_CYC_DAYS=\d+;\s*\nfunction vrNextDue\(s\)\{[\s\S]*?\n\}\n/)||[''])[0]
+  + (bt.match(/function vrCycleCount\(days\)\{[\s\S]*?\n\}\n/)||[''])[0];
+if(!/vrNextDue/.test(vrCycSrc)||!/vrCycleCount/.test(vrCycSrc))
+  throw new Error('VR 사이클 엔진(VR_CYC_DAYS/vrNextDue/vrCycleCount)을 backtest.html에서 못 찾음');
+{ const f=new Function(vrCycSrc+'\nreturn {VR_CYC_DAYS,vrNextDue,vrCycleCount};')();
+  global.VR_CYC_DAYS=f.VR_CYC_DAYS; global.vrNextDue=f.vrNextDue; global.vrCycleCount=f.vrCycleCount; }
 /* 지표 워밍업 창 — 엔진이 [WARM_FROM, WARM_TO] 밖의 날짜를 못 보게 하는 실코드 헬퍼.
    파일에서 그대로 떼어 온다. WARM_FROM/WARM_TO 는 테스트가 중간에 바꿔야 하므로
    전역으로 올린다 (new Function 안의 let 은 밖에서 못 바꾼다). */
@@ -3223,7 +3230,7 @@ console.log('\n[69] VR 예약주문 — 앱 체결기와 같은 규칙');
   ok('과거 재생에 옛 10거래일 방식이 안 남아 있다',
      !/INTERVAL=10/.test(idx) && !/i%INTERVAL!==0/.test(idx));
   ok('앱·백테 사이클 길이가 같다',
-     (idx.match(/const CYC_DAYS=(\d+);/)||[])[1] === (vsrc.match(/const VR_CYC_DAYS=(\d+);/)||[])[1]);
+     (idx.match(/const CYC_DAYS=(\d+);/)||[])[1] === (bt.match(/const VR_CYC_DAYS=(\d+);/)||[])[1]);
   ok('앱 기준일 계산도 공용 함수', /function vrNextDue\(s\)/.test(idx)
      && (idx.match(/vrNextDue\(/g)||[]).length>=4);
 
@@ -3489,11 +3496,11 @@ console.log('\n[71] same-close 룩어헤드 탐지');
   // VR 사이클은 달력 14일 — 앱 CYC_DAYS 와 같은 숫자여야 한다
   const vrS=extractFn(bt,'function runVR(days,tkr,params)');
   const appCyc=(idx.match(/const CYC_DAYS=(\d+);/)||[])[1];
-  const btCyc=(vrS.match(/const VR_CYC_DAYS=(\d+);/)||[])[1];
+  const btCyc=(bt.match(/const VR_CYC_DAYS=(\d+);/)||[])[1];
   ok('VR 사이클을 달력으로 센다', !!btCyc && !/i%interval===0/.test(vrS) && !/interval=10/.test(vrS));
   ok('앱과 같은 사이클 길이', appCyc===btCyc, `앱 ${appCyc} / 백테 ${btCyc}`);
   ok('주말이면 다음 영업일로 민다',
-     /while\(t\.getUTCDay\(\)===0\|\|t\.getUTCDay\(\)===6\) t\.setUTCDate\(t\.getUTCDate\(\)\+1\);/.test(vrS));
+     /while\(t\.getUTCDay\(\)===0\|\|t\.getUTCDay\(\)===6\) t\.setUTCDate\(t\.getUTCDate\(\)\+1\);/.test(bt));
 
   // 세금 강제매도 — 남은 두 엔진도 같은 규약
   const maS=extractFn(bt,'function runMA200(days,tkr,cap,N,costOn,opt)');
@@ -4063,6 +4070,107 @@ console.log('\n[78] 표준편차 필터 — 하락장이 끝나면 바로 되돌
   ok('필터가 풀린 날에는 레벨이 같아도 다시 본다', /const unblocked = filtOn && prevBear && !bear;/.test(bt)
      && /else if\(lv!==prevLv \|\| unblocked\)/.test(bt));
   delete M[T]; delete META[T];
+}
+
+/* ════ 79. 잔돈은 사라지지 않는다 ════  (감사 ⑥⑦⑬ · 필수시험 G·H)
+   정수 주수로 끊으면 반드시 잔돈이 남는다. 그 돈이 장부에서 빠지면 전략이
+   실제보다 나빠 보이고, 전략끼리의 '공정 비교'도 깨진다.
+   불변식: 초기자금 = 주식매수액 + 수수료 + 잔돈.                                */
+console.log('\n[79] 잔돈 보존 · 전체비교 총투입');
+{
+  const helpers=['function srcOf(t)','function divSplit(tkr, days, buys)',
+                 'function _maOpt(opt)','function _maHold(sell,a,b)','function _maEntry(buy,a,b)',
+                 'function _maAbove(tkr,N,SHORT,BUY,SELL)','function _asapInd(tkr)',
+                 'function _ivsWeights(tkr,N,s0)','function _ivsX1(tkr)','function _isoWeek(d)',
+                 'function _dcaFreq(f)','function _dcaHits(days,freq)','function _dcaCount(days,freq)','function _dcaMA(t,N)'];
+  let pre='var levExt=false, EXTM={}, dcaReinv=true, dcaDipMul=1, maBuy="ma", maSell="ma", maShort=50, maPark="cash";\n';
+  for(const h of helpers){ try{ pre+=extractFn(bt,h)+'\n'; }catch(e){ ok('도우미 추출: '+h, false, e.message); } }
+  for(const re of [/const SGOV_RATE=\{[^}]*\};/, /const MA_COND_LBL=\{[^}]*\};/, /const TBILL_RATE=\{[\s\S]*?\};/,
+                   /const KR_RATE=\{[\s\S]*?\};/, /const parkRate=\(y,tkr\)=>[^\n]*/,
+                   /const LEV_SPREAD=[^\n]*/, /const LEV_UNDERLYING=\{[\s\S]*?\};/]){
+    const m=bt.match(re); if(m) pre+=m[0]+'\n'; }
+  const mk=(marker)=>{ const src=extractFn(bt,marker);
+    return new Function(pre+'return ('+src.replace(/^function [\w$]+\(/,'function (')+')')(); };
+
+  /* ── ⑥ 거치식(B&H) 잔돈 ── 값을 손으로 셀 수 있는 합성 시세로 검사한다 ── */
+  {
+    const T='__BHTEST__';
+    const days=[]; const d0=new Date(Date.UTC(2021,0,4));
+    for(let i=0;i<60;i++){ const t=new Date(d0); t.setUTCDate(t.getUTCDate()+i);
+      days.push(t.toISOString().slice(0,10)); }
+    M[T]={}; days.forEach((d,i)=>{ const p=(i===0)?100:(i<30?80:120);   // 100 → 80(낙폭) → 120
+      M[T][d]=[p,p,p,p]; });
+    META[T]={name:'시험용',lev:3,color:'#000'};
+    const runBH=mk('function runBH(days,tkr,cap,costOn)');
+    const r=runBH(days,T,10000,true);
+    // 수수료 0.25% · 주가 100 → iq(10000/1.0025, 100) = 99주 · 9,900 + 24.75 → 잔돈 75.25
+    ok('B&H 정수 주수 99주', r.endShares===99, String(r.endShares));
+    ok('B&H 잔돈 75.25 를 들고 간다', near(r.endCash, 10000-9900-24.75, 1e-9), String(r.endCash));
+    ok('B&H 불변식: 원금 = 매수액 + 수수료 + 잔돈',
+       near(99*100 + r.fees + r.endCash, 10000, 1e-9), `${99*100}+${r.fees}+${r.endCash}`);
+    ok('B&H 최종 = 잔돈 + 주식평가', near(r.final, 75.25+99*120, 1e-9), String(r.final));
+    // MDD 도 잔돈을 포함해야 한다 — 10000 → 75.25+99*80=8,995.25 → 10.05%
+    ok('B&H MDD 에도 잔돈이 들어간다', near(r.mdd, (1-(75.25+99*80)/10000)*100, 1e-9), String(r.mdd));
+    // 잔돈을 버리던 옛 계산과 실제로 다른 값이어야 한다 (이 시험이 살아 있다는 증거)
+    ok('잔돈을 버리던 옛 값과 다르다', Math.abs(r.final-99*120)>1e-6 && Math.abs(r.mdd-(1-99*80/10000)*100)>1e-6);
+    delete M[T]; delete META[T];
+  }
+
+  /* ── ⑦ 전체비교 VR 적립식: 총투입이 원금과 같아야 한다 ── */
+  {
+    const vrCycleCountSrc=extractFn(bt,'function vrCycleCount(days)');
+    ok('사이클 세는 함수가 파일 한 곳에 있다', !!vrCycleCountSrc);
+    ok('전체비교가 10거래일 분모를 안 쓴다',
+       !/Math\.floor\(days\.length\/10\)/.test(bt) && /contrib:cap\/vrCycleCount\(days\)/.test(bt));
+
+    const runVRf=mk('function runVR(days,tkr,params)');
+    const T=DAYS.SOXL?'SOXL':'TQQQ', ALL=DAYS[T];
+    // 연휴(연말연시·독립기념일)가 반드시 들어가도록 통째로 여러 해를 쓴다
+    const wins=[[0,260],[260,800],[500,1500],[0,ALL.length]].filter(w=>w[1]-w[0]>60);
+    let worst=0, worstLbl='';
+    for(const [a2,b2] of wins){
+      const days=ALL.slice(a2,b2);
+      const cap=10000, n=vrCycleCount(days);
+      const r=runVRf(days,T,{contrib:cap/n,G:10,bandPct:15,mode:0.75,formula:'basic',
+                             startV:0,startPool:0,costOn:true});
+      const gap=Math.abs(r.invested-cap);
+      if(gap>worst){ worst=gap; worstLbl=`${days[0]}~${days[days.length-1]} 적립 ${n}회 → 총투입 ${r.invested.toFixed(2)}`; }
+    }
+    ok('전체비교 VR 적립식 총투입 == 원금 (연휴 포함 구간에서도)', worst<1e-6, worstLbl);
+
+    // 옛 분모(10거래일)로는 실제로 어긋난다 — 이 시험이 살아 있다는 증거
+    const days=ALL.slice(0, ALL.length);
+    const capX=10000, oldN=Math.max(1,Math.floor(days.length/10)), newN=vrCycleCount(days);
+    const rOld=runVRf(days,T,{contrib:capX/oldN,G:10,bandPct:15,mode:0.75,formula:'basic',
+                              startV:0,startPool:0,costOn:true});
+    ok('옛 10거래일 분모로는 총투입이 원금과 어긋난다', Math.abs(rOld.invested-capX)>1,
+       `적립 ${oldN}회(옛) vs ${newN}회(실제) → 총투입 ${rOld.invested.toFixed(2)}`);
+  }
+
+  /* ── ⑬ 잔돈 불변식 — 장부를 돌려주는 엔진은 전부 지켜야 한다 ── */
+  {
+    const T=DAYS.SOXL?'SOXL':'TQQQ', D=DAYS[T].slice(-900);
+    const cap=10000;
+    const runStdev=mk('function runStdev(days,tkr,cap,N,g,filter,costOn)');
+    const runIVS=mk('function runIVS(days,tkr,cap,s0,N,band,costOn,mode,pair)');
+    const runVRf=mk('function runVR(days,tkr,params)');
+    const cases=[
+      ['표준편차', ()=>{ const r=runStdev(D,T,cap,40,2.5,'none',true);
+        return {cash:r.endCash, sh:r.endShares, fin:r.final}; }],
+      ['역분산',  ()=>{ const r=runIVS(D,T,cap,0.45,60,0.10,true,'iv','cash');
+        return {cash:r.endCash, sh:r.endShares, fin:r.final}; }],
+    ];
+    for(const [nm,f] of cases){
+      const r=f();
+      ok(`${nm} — 최종 평가액에 현금이 들어 있다`, r.cash>=-1e-6 && isFinite(r.fin) && r.fin>0,
+         `현금 ${r.cash} · 보유 ${r.sh} · 최종 ${r.fin}`);
+    }
+    // VR 은 Pool 이 곧 현금이다 — 최종 = 주식 + Pool + 누적인출
+    const rv=runVRf(D,T,{initAmt:cap,G:10,bandPct:15,mode:0.5,formula:'basic',startV:0,startPool:0,costOn:true});
+    ok('VR — 최종 = 주식평가 + Pool + 누적인출',
+       near(rv.final, rv.sharesVal+rv.pool+rv.totalWd, 1e-6),
+       `${rv.final} vs ${rv.sharesVal}+${rv.pool}+${rv.totalWd}`);
+  }
 }
 
 console.log(`\n════ 결과: ${pass} PASS / ${fail} FAIL ${fail===0?'— ALL PASS ★':'— 배포 금지, 위 ✗ 항목 수정 필요'} ════`);

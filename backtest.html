@@ -2593,6 +2593,29 @@ function runIM50(days,tkr,cap,divs,targetPct,compound=true){
 
 
 // ──── 전략 3: VR 5.0 ────
+/* ── VR 사이클 엔진 (파일 한 곳) ───────────────────────────────────────
+   사이클은 거래일 수가 아니라 달력으로 센다 — 운영 앱과 같은 규약(CYC_DAYS=14).
+   10거래일은 늘 14일이 아니다. 휴장이 낄 때마다 어긋나 6년이면 150회 vs 156회가 되고,
+   앱이 알려 주는 진입일과 백테가 넘기는 날이 서로 다른 날이 된다.
+   앱은 '직전 기준일 + 14일(주말이면 다음 영업일)'을 다음 기준일로 삼고,
+   그 날짜가 지난 첫 거래일에 사이클을 넘긴다.
+   여기서 한 번만 정의하고 runVR·전체비교가 같이 쓴다 — 두 군데서 세면 반드시 갈라진다. */
+const VR_CYC_DAYS=14;
+function vrNextDue(s){ const t=new Date(s+'T00:00:00Z');
+  t.setUTCDate(t.getUTCDate()+VR_CYC_DAYS);
+  while(t.getUTCDay()===0||t.getUTCDay()===6) t.setUTCDate(t.getUTCDate()+1);
+  return t.toISOString().slice(0,10); }
+/* 이 기간에 사이클이 실제로 몇 번 넘어가는가 (첫날의 첫 매수 포함).
+   runVR 의 적립식은 '사이클이 넘어간 날'마다 적립금을 한 번 넣는다 —
+   하루에 여러 기준일이 지나도 한 번이다. 그 셈과 글자 그대로 같아야 한다. */
+function vrCycleCount(days){
+  if(!days||!days.length) return 1;
+  let n=1, due=vrNextDue(days[0]);
+  for(let i=1;i<days.length;i++){ let hit=false, g=0;
+    while(days[i]>=due && g++<10){ hit=true; due=vrNextDue(due); }
+    if(hit) n++; }
+  return n;
+}
 function runVR(days,tkr,params){
   const {contrib=100,G=10,bandPct=15,mode=0.75,formula='basic',initAmt=0,withdraw=0,startV=0,startPool=0,cycStart='',costOn=false}=params||{};
   const band=bandPct/100,poolLimit=mode;
@@ -2601,11 +2624,6 @@ function runVR(days,tkr,params){
      앱이 알려 주는 진입일과 백테가 넘기는 날이 서로 다른 날이 된다.
      앱은 '직전 기준일 + 14일(주말이면 다음 영업일)'을 다음 기준일로 삼고,
      그 날짜가 지난 첫 거래일에 사이클을 넘긴다 — 여기서도 똑같이 한다. */
-  const VR_CYC_DAYS=14;
-  const _vrNextDue=(s)=>{ const t=new Date(s+'T00:00:00Z');
-    t.setUTCDate(t.getUTCDate()+VR_CYC_DAYS);
-    while(t.getUTCDay()===0||t.getUTCDay()===6) t.setUTCDate(t.getUTCDate()+1);
-    return t.toISOString().slice(0,10); };
   let _vrDue=null;
   /* 체결 방식 — 'ladder'(기본)는 실전처럼 2주 내내 지정가가 살아 있고,
      'close'는 2주에 한 번 그날 종가에만 되맞추는 예전 방식이다.
@@ -2664,7 +2682,7 @@ function runVR(days,tkr,params){
   if(!first){
     const base=(cycStart && cycStart<=days[0]) ? cycStart : days[0];
     if(base!==cycStart) cycStartAssumed=true;
-    _vrDue=_vrNextDue(base);
+    _vrDue=vrNextDue(base);
   }
   const snap=[], cf=[];          // cf = 현금흐름(투입 시점·금액) — IRR·평균투입자본용
   let mddPeak=-Infinity, mdd=0;  // 일별 MDD (총자산 = 주식+Pool+누적인출 기준 — fin과 동일 철학)
@@ -2703,8 +2721,8 @@ function runVR(days,tkr,params){
     { const eq=shares*c+pool+totalWd; if(eq>mddPeak)mddPeak=eq; else if(mddPeak>0){ const dd=Math.min((mddPeak-eq)/mddPeak,1); if(dd>mdd)mdd=dd; } }
     // 기준일이 지났으면 사이클을 넘긴다 (길게 쉬어 여러 번 밀렸을 수 있으므로 while — 앱과 같다)
     let isCyc=false;
-    if(_vrDue===null){ if(i===0){ isCyc=true; _vrDue=_vrNextDue(d); } }
-    else { let g2=0; while(d>=_vrDue && g2++<10){ isCyc=true; _vrDue=_vrNextDue(_vrDue); } }
+    if(_vrDue===null){ if(i===0){ isCyc=true; _vrDue=vrNextDue(d); } }
+    else { let g2=0; while(d>=_vrDue && g2++<10){ isCyc=true; _vrDue=vrNextDue(_vrDue); } }
     if(isCyc){
       if(first){
         if(isLump){const s=initAmt||10000;inv+=s;cf.push([d,s]);pool+=s-_vbuy(s,c);V=shares*c;}  // 거치식/인출식: 첫매수가=V · 못 산 잔돈은 Pool 로
@@ -3023,14 +3041,23 @@ function divSplit(tkr, days, buys){
 // 비용: 매수 수수료만(끝까지 안 팔아 실현이익 없음 → 양도세 이연 = 방치의 실제 이점)
 function runBH(days,tkr,cap,costOn){
   const FEE=costOn?costOf(tkr).fee:0;
-  const p=d=>M[tkr][d][C]; const sh=iq(cap/(1+FEE),p(days[0]));   // 거치도 정수 주수
+  const p=d=>M[tkr][d][C], p0=p(days[0]);
+  /* 정수 주수로 끊고 남는 현금을 그대로 들고 간다 — 예전엔 그냥 버렸다.
+     원금 1만$·주가 100$·수수료 0.25% 면 99주(9,900) + 수수료 24.75 → 잔돈 75.25.
+     그 75.25가 최종 평가액에서도 MDD에서도 사라져, 거치식이 실제보다 나쁘게 나왔다.
+     불변식: 초기자금 = 주식매수액 + 수수료 + 잔돈 (회귀가 값으로 검사한다) */
+  const sh=iq(cap/(1+FEE),p0);                       // 거치도 정수 주수
+  const spend=sh*p0, fee=spend*FEE, cash=cap-spend-fee;
   let mddPeak=cap,mdd=0; const snap=[];
-  days.forEach((d,i)=>{ const eq=sh*p(d); if(eq>mddPeak)mddPeak=eq; else{const dd=(mddPeak-eq)/mddPeak;if(dd>mdd)mdd=dd;} if(i%10===0)snap.push([d,eq]); });
-  let fin=sh*p(days[days.length-1]); snap.push([days[days.length-1],fin]);
-  const _d=divSplit(tkr,days,[[days[0],cap*(1-FEE)]]);
+  days.forEach((d,i)=>{ const eq=cash+sh*p(d); if(eq>mddPeak)mddPeak=eq; else{const dd=(mddPeak-eq)/mddPeak;if(dd>mdd)mdd=dd;} if(i%10===0)snap.push([d,eq]); });
+  let fin=cash+sh*p(days[days.length-1]); snap.push([days[days.length-1],fin]);
+  /* 분배금 경로에도 '실제로 주식에 들어간 돈'을 넘긴다 —
+     예전엔 cap*(1-FEE) 였다. 수수료 규약(budget/(1+fee))과 어긋나 두 길의 주식수가 달랐다. */
+  const _d=divSplit(tkr,days,[[days[0],spend]]);
   let _m=mdd*100;
-  if(_d && (typeof dcaReinv!=='undefined') && dcaReinv===false){ fin=_d.priceVal+_d.divCash; _m=_d.mddCash; }
-  return {invested:cap,final:fin,ret:(fin/cap-1)*100,mdd:_m,snap,div:_d};
+  if(_d && (typeof dcaReinv!=='undefined') && dcaReinv===false){ fin=cash+_d.priceVal+_d.divCash; _m=_d.mddCash; }
+  return {invested:cap,final:fin,ret:(fin/cap-1)*100,mdd:_m,snap,div:_d,
+          endCash:cash,endShares:sh,fees:fee};
 }
 // 200일선 로테 — 적립형: 매일 균등 적립(총투입=contribTotal) + 전일 신호로 보유/현금. MDD는 단위가치(평가액÷투입) 기준.
 // 매수·매도 조건(16조합)·대피처(현금/단기국채)는 일시금 runMA200과 동일 규약 — 로테 탭 설정을 그대로 따른다.
@@ -3235,7 +3262,10 @@ function _runOneStrat(key,tkr,cap,days,costOn){
     case 'ivs':  return runIVS(days,tkr,cap,(typeof ivsS0!=='undefined'?ivsS0:45)/100,(typeof ivsN!=='undefined'?ivsN:60),(typeof ivsBand!=='undefined'?ivsBand:10)/100,costOn,
                    (typeof ivsMode!=='undefined'?ivsMode:'iv'),(typeof ivsPair!=='undefined'?ivsPair:'cash'));   // s0·룩백·밴드·방식·짝
     case 'vrl':  return runVR(days,tkr,{initAmt:cap,G:vG,bandPct:vB,mode:0.5,formula:vF,startV:0,startPool:0,costOn});                                    // 거치(mode0.5)·G·밴드·공식 탭
-    case 'vra':  return runVR(days,tkr,{contrib:cap/Math.max(1,Math.floor(days.length/10)),G:vG,bandPct:vB,mode:0.75,formula:vF,startV:0,startPool:0,costOn});  // 적립(mode0.75)
+    /* 적립식 총투입이 cap 이 되도록 실제 적립 횟수로 나눈다.
+       예전엔 days.length/10 — 10거래일 규칙 시절의 분모다. VR 엔진은 달력 14일이라
+       연휴가 낀 구간에서 횟수가 어긋났고, '같은 원금으로 공정 비교'가 깨졌다. */
+    case 'vra':  return runVR(days,tkr,{contrib:cap/vrCycleCount(days),G:vG,bandPct:vB,mode:0.75,formula:vF,startV:0,startPool:0,costOn});  // 적립(mode0.75)
     case 'dca':  { const fq=(typeof dcaFreq!=='undefined'?dcaFreq:'daily');   // 적립주기 탭
       const nb=_dcaCount(days,fq), amt=cap/nb; return _dcaOne(tkr,days,amt,fq,costOn); }
     case 'asapa':{const a=runASAP(days,tkr,{base:_stratNum('asapBase',10),mid:_stratNum('asapMid',50),deep:_stratNum('asapDeep',100),costOn}); const sc=a.invested>0?cap/a.invested:1;
