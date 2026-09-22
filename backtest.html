@@ -3015,14 +3015,14 @@ function vrOrderPlan(S, P, bar){
   for(let k=sf+1;k<=Math.min(N,B);k++){
     const before=B-k+1,p=up/before;
     if(!(hi>=p))break;
-    _sell(p,1);sf++;
+    _sell(p,1); sf++;
   }
   let spent=0;
   for(let k=bf+1;k<=N;k++){
     const before=B+k-1,p=dn/before,cost=p*fee1;
     if(!(lo<=p))break;
     if(spent+cost>budget+1e-9||cost>S.pool+1e-9)break;
-    _buy(p,1);spent+=cost;bf++;
+    _buy(p,1); spent+=cost; bf++;
   }
   return out;
 }
