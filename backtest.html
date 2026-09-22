@@ -357,7 +357,7 @@ document.addEventListener('click',function(e){ var m=document.getElementById('jk
   <button class="stab" data-s="vr" onclick="setStrat('vr')">밸류리밸런싱<span class="sub">VR 5.0</span></button>
   <button class="stab" data-s="ma" onclick="setStrat('ma')">200일선 로테이션<span class="sub">이평선↔현금</span></button>
   <button class="stab" data-s="mom" onclick="setStrat('mom')" style="display:none">모멘텀 로테이션<span class="sub">1위 갈아타기</span></button>
-  <button class="stab" data-s="asap" onclick="setStrat('asap')">ASAP<span class="sub">SGOV 리저브</span></button>
+  <button class="stab" data-s="asap" onclick="setStrat('asap')">ASAP<span class="sub">T-Bill 리저브</span></button>
   <button class="stab" data-s="ivs" onclick="setStrat('ivs')">역분산 비중<span class="sub">섀넌의 도깨비</span></button>
   <button class="stab" data-s="std" onclick="setStrat('std')">표준편차<span class="sub">σ밴드 매매</span></button>
   <button class="stab" data-s="all" onclick="setStrat('all')">전체 비교<span class="sub">한눈에</span></button>
@@ -589,7 +589,7 @@ document.addEventListener('click',function(e){ var m=document.getElementById('jk
     </div>
 
     <!-- ASAP (SOXL 커스텀) — 원금 없음: 매일 적립금이 엔진, 총투입은 결과값. 종목은 아래 공용 다중 피커에서 선택(기본 전체) -->
-    <div class="ctrl s-asap hide"><label data-cur="asap">매일 적립금 base ($) <span style="font-size:9px;color:var(--dim)">하락장 SGOV</span></label><input type="number" id="asapBase" value="10" min="1"></div>
+    <div class="ctrl s-asap hide"><label data-cur="asap">매일 적립금 base ($) <span style="font-size:9px;color:var(--dim)">하락장 리저브</span></label><input type="number" id="asapBase" value="10" min="1"></div>
     <div class="ctrl s-asap hide"><label>−10%·RSI35 매수 <span style="font-size:9px;color:var(--dim)">mid</span></label><input type="number" id="asapMid" value="50" min="1"></div>
     <div class="ctrl s-asap hide"><label>−15%·RSI30 매수 <span style="font-size:9px;color:var(--dim)">deep</span></label><input type="number" id="asapDeep" value="100" min="1"></div>
     <div class="ctrl s-asap hide"><label>세금·비용</label>
@@ -2968,7 +2968,14 @@ function runASAP(days,tkr,opt){
     const c=cl[g];                        // 체결가만 오늘 종가
     const m200=q>=0?MA200[q]:null, rsi=(q>=0&&RSI[q]!=null)?RSI[q]:50;
     sgov*=(1+(SGOV_RATE[+d.slice(0,4)]||0.04)/252);   // SGOV 이자
-    if(m200==null){ if(di%10===0)snap.push([d,sh*c+sgov]); return; }
+    if(m200==null){
+      /* 지표가 아직 안 섰다(상장 직후 등). 그래도 적립은 계속된다 —
+         돈은 들어오는데 장부에 안 잡히면 총투입이 실제보다 작아져 수익률이 부풀려진다.
+         예전엔 여기서 그냥 return 해서 200거래일치 적립금이 통째로 사라졌다.
+         신호를 못 내는 동안의 신규 적립은 리저브(SGOV)에 쌓아 두고,
+         지표가 서면 그때부터 평소 규칙대로 그 리저브를 쓴다. */
+      if(!lump){ sgov+=base; inv+=base; _cf(d,base); }
+      if(di%10===0)snap.push([d,sh*c+sgov]); return; }
     const pc=cl[q], down=pc<m200;
     const crossDn=p>=0&&cl[p]>=MA200[p]&&pc<m200;
     const cross5=p>=0&&MA5[p]<=MA20[p]&&MA5[q]>MA20[q];
@@ -3458,7 +3465,9 @@ function renderASAP(results, days, opt){
   h+=`</tbody></table></div>`;
   // 연도별 총자산 비교 (공용 카드)
   h+=yearCompareCard(rows.map(r=>({label:r.ticker,tkr:r.ticker,snap:r.snap,color:r.color})), money);
-  h+=`<p class="note" style="font-size:11px;color:var(--dim);margin-top:10px;line-height:1.7">하락장: SGOV 매일 ${money(o.base||10)} 적립 · −10%&amp;RSI≤35→${money(o.mid||50)} · −15%&amp;RSI≤30→${money(o.deep||100)} 딥매수. 상승 3단 재진입. 200일선은 <b>종목 자체 종가</b> 기준. 총투입은 매일 적립+딥·재진입의 누적 결과라 종목마다 다름. 전 종목 미국상장 USD · <b>${o.costOn?'세후':'세전'}</b>(${o.costOn?'매수 수수료 0.25% 반영 · 스톡 미매도로 양도세 이연':'세금·수수료 미반영'}).</p></div>`;
+  h+=`<p class="note" style="font-size:11px;color:var(--dim);margin-top:10px;line-height:1.7">하락장: 리저브에 매일 ${money(o.base||10)} 적립 · −10%&amp;RSI≤35→${money(o.mid||50)} · −15%&amp;RSI≤30→${money(o.deep||100)} 딥매수. 상승 3단 재진입. 200일선은 <b>종목 자체 종가</b> 기준. 총투입은 매일 적립+딥·재진입의 누적 결과라 종목마다 다름. 전 종목 미국상장 USD · <b>${o.costOn?'세후':'세전'}</b>(${o.costOn?'매수 수수료 0.25% 반영 · 스톡 미매도로 양도세 이연':'세금·수수료 미반영'}).`
+    +`<br>※ <b>리저브는 실제 SGOV 시세가 아니라 T-Bill 연이자 근사</b>입니다(연도별 상수, 일할 복리). 리저브에는 <b>보수·이자소득세·매매수수료를 물리지 않습니다</b> — 비용반영을 켜도 주식 매수 수수료만 반영됩니다.`
+    +`<br>※ 200일선이 아직 안 선 구간(상장 직후 등)의 적립금은 <b>리저브에 쌓아 둡니다</b> — 그 돈도 총투입에 그대로 들어갑니다.</p></div>`;
   document.getElementById('asapResult').innerHTML=h;
   cmpDrawChart(rows.map(r=>({name:r.ticker,snap:r.snap,color:r.color})),days,rows[0]?rows[0].ticker:'SOXL','ASAP · 종목별 누적 총자산');
 }

@@ -4147,6 +4147,27 @@ console.log('\n[79] 잔돈 보존 · 전체비교 총투입');
        `적립 ${oldN}회(옛) vs ${newN}회(실제) → 총투입 ${rOld.invested.toFixed(2)}`);
   }
 
+  /* ── ⑧ ASAP 워밍업 적립금 — 지표가 안 섰다고 돈이 사라지면 안 된다 ── */
+  {
+    const runASAP=mk('function runASAP(days,tkr,opt)');
+    const T=DAYS.SOXL?'SOXL':'TQQQ', ALL=DAYS[T];
+    /* 워밍업이 없는 상태를 일부러 만든다 — 창을 딱 이 구간으로 못박으면
+       200일선은 앞 199거래일 동안 null 이다. 옛 코드는 그 구간 적립을 통째로 빼먹었다. */
+    const days=ALL.slice(-600);
+    const _wf=WARM_FROM, _wt=WARM_TO;
+    WARM_FROM=days[0]; WARM_TO=days[days.length-1];
+    /* 딥매수 금액을 0에 가깝게 두면 총투입 = base × 거래일수 로 떨어진다.
+       딱 0을 주면 안 된다 — 엔진이 o.mid||50 로 기본값을 되살려 버린다. */
+    const r=runASAP(days,T,{base:10,mid:1e-9,deep:1e-9,costOn:false});
+    WARM_FROM=_wf; WARM_TO=_wt;
+    ok('ASAP — 지표가 안 선 구간에도 적립금이 장부에 남는다',
+       near(r.invested, 10*days.length, 1e-4),
+       `총투입 ${r.invested} · 기대 ${10*days.length} (거래일 ${days.length})`);
+    ok('ASAP — 빠진 적립금이 리저브에 쌓여 있다', r.endReserve>0, String(r.endReserve));
+    // 옛 동작(워밍업 구간 return)이라면 199일치가 비었을 것이다 — 그 차이가 실제로 크다
+    ok('빼먹었다면 티가 날 만큼 크다 (199거래일치)', 10*days.length - 10*(days.length-199) === 1990);
+  }
+
   /* ── ⑬ 잔돈 불변식 — 장부를 돌려주는 엔진은 전부 지켜야 한다 ── */
   {
     const T=DAYS.SOXL?'SOXL':'TQQQ', D=DAYS[T].slice(-900);
