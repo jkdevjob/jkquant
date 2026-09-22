@@ -3391,6 +3391,7 @@ function paperRewind(sess){
   return n;
 }
 let _infSimBusy=false, infSimNote='', infSimNoteSid=null;
+function imTpHit(hi,close,tgt){ return (+hi||0)>=(+tgt||0); }
 function infSimForward(startFrom){
   const sess=curStrat(); if(!sess||!sess.paper||!sess.settings) return null;
   const st=sess.settings; if(_infSimBusy) return null;
@@ -3481,7 +3482,7 @@ function infSimForward(startFrom){
         /* ① 지정가 익절 — 장 시작 전부터 걸어 둔 지정가이므로 당일 고가가 가격을
            통과하면 체결로 본다. 실전 주문표·백테 runIM(imFill=high)과 같은 규약이다.
            갭업 시에는 지정가보다 유리한 시가 체결로 기록한다. */
-        if(hi>=tgt && qTp>0) put('지정가매도',d,(op>tgt?op:tgt),qTp);
+        if(imTpHit(hi,cl,tgt) && qTp>0) put('지정가매도',d,(op>tgt?op:tgt),qTp);
         { const c3=computeInf();
           if(cl>=star && qSell>0 && c3.qty>0) put('쿼터매도',d,cl,Math.min(qSell,c3.qty)); }  // ② 별지점 LOC
         if(computeInf().qty<=0) liquidated=true;   // 전량매도 = 사이클 종료. 새 사이클 첫 매수는 다음 날 (백테 runIM과 같은 규약)
