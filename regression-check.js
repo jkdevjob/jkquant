@@ -52,6 +52,7 @@ const idxParts=[
   extractFn(idx,'function starPct(ticker,div,T,base)'),
   extractFn(idx,'function exitMulOf(base)'),
   extractFn(idx,'function computeInf()'),
+  extractFn(idx,'function vrNextVValue(V,pool,G,ev,formula,addCycle)'),
   extractFn(idx,'function computeNextV(c,ev)'),
   extractFn(idx,'function computeVr()'),
 ];
@@ -77,7 +78,11 @@ if(!iqSrc) throw new Error('정수 주수 헬퍼(iq/isq)를 backtest.html에서 
   if(!m) throw new Error('IM_BIG_DEFAULT/imBigPct 를 backtest.html에서 못 찾음');
   const f=new Function(m[0]+'\nreturn {IM_BIG_DEFAULT, imBigPct};')();
   global.IM_BIG_DEFAULT=f.IM_BIG_DEFAULT; global.imBigPct=f.imBigPct; }
-/* VR 주문 체결 엔진 — 사이클 시작 20차 예약 사다리. 앱·백테가 같이 쓴다. */
+/* VR V 갱신 공통식 — 별도로 떼어 실행하는 백테 함수도 같은 전역 헬퍼를 본다. */
+{ const m=bt.match(/function vrNextVValue\(V,pool,G,ev,formula,addCycle\)\{[\s\S]*?\n\}/);
+  if(!m) throw new Error('vrNextVValue 를 backtest.html에서 못 찾음');
+  global.vrNextVValue=new Function(m[0]+'\nreturn vrNextVValue;')(); }
+/* VR 주문 체결 엔진 — 공식 V 복귀. 앱·백테가 같이 쓴다. */
 { const m=bt.match(/const VR_MODEL_DEFAULT='official';\nfunction vrModelOf\(st\)\{[^\n]*\}\n/);
   const g=bt.match(/function vrOrderPlan\(S, P, bar\)\{[\s\S]*?\n\}/);
   if(!m||!g) throw new Error('vrOrderPlan/VR_MODEL_DEFAULT 를 backtest.html에서 못 찾음');
