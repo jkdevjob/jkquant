@@ -45,6 +45,7 @@ class Params:
 
 VARIANTS = [
     Params("baseline"),
+    Params("today_combo_v1", pb_max=0.5, amount_mult=1.5, entry_cutoff=915),
     Params("top50", top_n=50),
     Params("pb_max_0.5", pb_max=0.5),
     Params("pb_max_0.7", pb_max=0.7),
