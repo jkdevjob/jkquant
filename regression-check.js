@@ -3075,7 +3075,7 @@ console.log('\n[67] 엔진 스모크 — 전부 실제로 굴러간다');
   // 엔진이 기대는 이웃 함수들도 파일에서 그대로 떼어 온다 (재구현 금지 원칙)
   const helpers=['function srcOf(t)','function divSplit(tkr, days, buys)','function _maOpt(opt)',
                  'function _maHold(sell,a,b)','function _maEntry(buy,a,b)',
-                 'function _maAbove(tkr,N,SHORT,BUY,SELL)','function _asapInd(tkr)','function _ivsWeights(tkr,N,s0)','function _ivsX1(tkr)',
+                 'function _maAbove(tkr,N,SHORT,BUY,SELL)','function _asapInd(tkr)','function _ivsWeights(tkr,N,s0)','function _ivsX1(tkr)','function _ivsPair1(tkr, days)',
                  'function _isoWeek(d)','function _dcaFreq(f)','function _dcaHits(days,freq)','function _dcaMA(t,N)'];
   let pre='';
   for(const h of helpers){ try{ pre+=extractFn(bt,h)+'\n'; }catch(e){ ok('도우미 추출: '+h, false, e.message); } }
@@ -3373,7 +3373,7 @@ console.log('\n[71] same-close 룩어헤드 탐지');
 {
   const pre=['function srcOf(t)','function divSplit(tkr, days, buys)','function _isoWeek(d)',
              'function _dcaFreq(f)','function _dcaHits(days,freq)','function _dcaMA(t,N)',
-             'function _asapInd(tkr)','function _ivsWeights(tkr,N,s0)','function _ivsX1(tkr)']
+             'function _asapInd(tkr)','function _ivsWeights(tkr,N,s0)','function _ivsX1(tkr)','function _ivsPair1(tkr, days)']
             .map(m=>extractFn(bt,m)).join('\n')+'\n'
     +(bt.match(/const SGOV_RATE=\{[^}]*\};/)||[''])[0]+'\n'
     +(bt.match(/const KR_RATE=\{[^}]*\};/)||[''])[0]+'\n'
@@ -3900,7 +3900,7 @@ console.log('\n[77] 워밍업 결정성 (같은 기간이면 언제 돌리든 �
   const helpers=['function srcOf(t)','function divSplit(tkr, days, buys)','function _maOpt(opt)',
                  'function _maHold(sell,a,b)','function _maEntry(buy,a,b)',
                  'function _maAbove(tkr,N,SHORT,BUY,SELL)','function _asapInd(tkr)',
-                 'function _ivsWeights(tkr,N,s0)','function _ivsX1(tkr)',
+                 'function _ivsWeights(tkr,N,s0)','function _ivsX1(tkr)','function _ivsPair1(tkr, days)',
                  'function _isoWeek(d)','function _dcaFreq(f)','function _dcaHits(days,freq)','function _dcaMA(t,N)'];
   let pre='var levExt=false, EXTM={}, dcaReinv=true, dcaDipMul=1, maBuy="ma", maSell="ma", maShort=50, maPark="cash";\n';
   for(const h of helpers){ try{ pre+=extractFn(bt,h)+'\n'; }catch(e){ ok('도우미 추출: '+h, false, e.message); } }
@@ -4081,7 +4081,7 @@ console.log('\n[79] 잔돈 보존 · 전체비교 총투입');
   const helpers=['function srcOf(t)','function divSplit(tkr, days, buys)',
                  'function _maOpt(opt)','function _maHold(sell,a,b)','function _maEntry(buy,a,b)',
                  'function _maAbove(tkr,N,SHORT,BUY,SELL)','function _asapInd(tkr)',
-                 'function _ivsWeights(tkr,N,s0)','function _ivsX1(tkr)','function _isoWeek(d)',
+                 'function _ivsWeights(tkr,N,s0)','function _ivsX1(tkr)','function _ivsPair1(tkr, days)','function _isoWeek(d)',
                  'function _dcaFreq(f)','function _dcaHits(days,freq)','function _dcaCount(days,freq)','function _dcaMA(t,N)'];
   let pre='var levExt=false, EXTM={}, dcaReinv=true, dcaDipMul=1, maBuy="ma", maSell="ma", maShort=50, maPark="cash";\n';
   for(const h of helpers){ try{ pre+=extractFn(bt,h)+'\n'; }catch(e){ ok('도우미 추출: '+h, false, e.message); } }
@@ -4192,6 +4192,122 @@ console.log('\n[79] 잔돈 보존 · 전체비교 총투입');
        near(rv.final, rv.sharesVal+rv.pool+rv.totalWd, 1e-6),
        `${rv.final} vs ${rv.sharesVal}+${rv.pool}+${rv.totalWd}`);
   }
+}
+
+/* ════ 80. 역분산 짝=1배수 — 운영과 백테가 같은 기초가격을 본다 ════ (감사 ⑤ · 필수시험 F)
+   운영 화면(ivsReplay)은 '실제로 살 수 있는 1배 ETF'(TQQQ→QQQ · SOXL→SOXX …)로 굴린다.
+   백테(runIVS)는 레버리지에서 역산한 합성 1배지수(_ivsX1)를 썼다. 같은 전략·같은 옵션인데
+   기초가격이 다르면 거래 결정 자체가 갈린다 — 화면에도 '10년에 2~3% 차이'라고 적혀 있었다.
+   이제 백테도 실제 1배 ETF를 먼저 쓰고, 없을 때만 합성으로 대체하며 그 사실을 표시한다.
+   주수 규약은 서로 다르다(운영=소수점 · 백테=정수)므로, 대조하는 건 '리밸런싱한 날'이다. */
+console.log('\n[80] 역분산 1배 짝 — 운영·백테 기초가격 일치');
+{
+  ok('운영·백테의 1배 매핑표가 같다', (()=>{
+    const a1=(idx.match(/const IVS_X1=\{([^}]*)\}/)||[])[1]||'';
+    const b1=(bt.match(/const LEV_UNDERLYING=\{([^}]*)\}/)||[])[1]||'';
+    const norm=t=>Object.fromEntries(t.split(',').map(x=>x.split(':').map(y=>y.replace(/['"\s]/g,''))));
+    const A=norm(a1), B=norm(b1);
+    return Object.keys(A).every(k=>A[k]===B[k]) && Object.keys(A).length>=8;
+  })(), '매핑표 불일치');
+  ok('백테가 실제 1배 ETF를 먼저 쓴다', /function _ivsPair1\(tkr, days\)/.test(bt)
+     && /const _p1 = X1\?_ivsPair1\(tkr,days\):null;/.test(bt));
+  ok('실제 시세가 없을 때만 합성으로 대체한다', /return \{px:_ivsX1\(tkr\), sym:u\|\|null, synth:true\};/.test(bt));
+  ok('합성 대체를 결과에 표시한다', /합성 1배 대체 사용/.test(bt) && /x1synth/.test(bt));
+  ok('1배수 짝이면 실제 1배 시세를 먼저 받아 온다',
+     /if\(ivsPair==='x1'\)\{[\s\S]*?fetchTickerInto\(u, wStart\)/.test(bt));
+
+  /* ── 값으로: 같은 1배 시세를 주면 두 엔진이 같은 날 리밸런싱한다 ── */
+  const T=DAYS.SOXL?'SOXL':'TQQQ';
+  const U='__X1TEST__';                 // 합성이 아닌 '실제 1배 ETF' 자리에 넣을 시세
+  const ALL=DAYS[T];
+  // 1배 시세는 레버리지 일수익률÷3 을 누적한 계열로 만든다 (실제 ETF 와 같은 성질·같은 날짜)
+  { const px={}; let v=50;
+    ALL.forEach((d,i)=>{ if(i>0){ const r=M[T][ALL[i]][C]/M[T][ALL[i-1]][C]-1; v*=(1+r/3); }
+      px[d]=[v,v,v,v]; });
+    M[U]=px; META[U]={name:'시험용 1배',lev:1,color:'#000'}; }
+  // 매핑표를 시험용으로 갈아끼운다 (원문 함수는 그대로 쓰고 표만 바꾼다)
+  const pre0='var levExt=false, EXTM={}, LEV_UNDERLYING={'+T+':"'+U+'"};\n'
+    +[...['function srcOf(t)','function _ivsWeights(tkr,N,s0)','function _ivsX1(tkr)',
+          'function _ivsPair1(tkr, days)']].map(m=>extractFn(bt,m)).join('\n')+'\n'
+    +(bt.match(/const LEV_EXPENSE=\{[^}]*\};/)||[''])[0]+'\n'
+    +(bt.match(/const LEV_EXPENSE_DEF=[^\n]*/)||[''])[0]+'\n'
+    +(bt.match(/const LEV_SPREAD=[^\n]*/)||[''])[0]+'\n'
+    +(bt.match(/const LEV_PRICEIDX=\{[^}]*\};/)||[''])[0]+'\n'
+    +(bt.match(/const X1_EXPENSE=\{[^}]*\};/)||[''])[0]+'\n'
+    +(bt.match(/const X1_EXPENSE_DEF=[^\n]*/)||[''])[0]+'\n'
+    +(bt.match(/const IDX_EXTEND=\{[\s\S]*?\n\};/)||[''])[0]+'\n'
+    +(bt.match(/const TBILL_RATE=\{[\s\S]*?\};/)||[''])[0]+'\n'
+    +(bt.match(/const KR_RATE=\{[\s\S]*?\};/)||[''])[0]+'\n'
+    +(bt.match(/const parkRate=\(y,tkr\)=>[^\n]*/)||[''])[0]+'\n';
+  const runIVSx=new Function(pre0+'return ('+extractFn(bt,'function runIVS(days,tkr,cap,s0,N,band,costOn,mode,pair)')
+    .replace(/^function \w+\(/,'function (')+')')();
+  const pair1=new Function(pre0+'return _ivsPair1;')();
+  const days=ALL.slice(-1200);
+  const got=pair1(T, days);
+  ok('실제 1배 시세가 다 있으면 합성을 안 쓴다', got.synth===false && got.sym===U,
+     `synth=${got.synth} sym=${got.sym}`);
+
+  // 백테 쪽 리밸런싱 날짜
+  let bsrc=extractFn(bt,'function runIVS(days,tkr,cap,s0,N,band,costOn,mode,pair)');
+  ok('백테 리밸런싱 훅 자리 확인', bsrc.includes('      rebals++;'));
+  bsrc=bsrc.replace('      rebals++;','      rebals++; __IVD.push(d);');
+  global.__IVD=[];
+  const btRun=new Function(pre0+'return ('+bsrc.replace(/^function \w+\(/,'function (')+')')();
+  /* 운영 재생은 '받아 온 구간'만 보고 σ를 낸다 — 백테도 같은 창으로 못박아야 같은 w 가 나온다.
+     (창을 안 씌우면 백테만 워밍업이 깊어 목표비중이 달라진다) */
+  const _wf0=WARM_FROM, _wt0=WARM_TO;
+  WARM_FROM=days[0]; WARM_TO=days[days.length-1];
+  global.__IVD=[]; btRun(days,T,10000,0.45,60,0.10,false,'iv','x1');
+  const btDays=global.__IVD.slice();
+
+  /* 운영 쪽 — ivsReplay 원문을 그대로 떼어 와 DOM 만 가짜로 물린다.
+     여기서 로직을 다시 적으면 '두 군데서 세는' 짓이라 대조의 의미가 없다. */
+  const appSrc=extractFn(idx,'function ivsReplay()');
+  const appDays=[];
+  {
+    const st={ticker:T, park:'x1', mode:'iv', s0:45, look:60, band:10, principal:10000};
+    const sess={settings:st, hist:[], paper:true};
+    const D=days.map(d=>({date:d, close:M[T][d][C]}));
+    const D1=days.map(d=>({date:d, close:M[U][d][C]}));
+    const f=new Function('curStrat','$','confirm','alert','simCutoff','curOf','ivsX1Of','IVS_FEE',
+      'ivsQuoteData','ivsQuote1','sortHist','save','refreshIvs','pushRemote','px',
+      appSrc+'\nreturn ivsReplay;')(
+      ()=>sess, (id)=>({value: id==='rp_from'?days[0]:''}), ()=>true, ()=>{},
+      ()=>days[days.length-1], ()=>'USD', ()=>U, 0.0025,
+      {symbol:T, days:D}, {symbol:U, days:D1},
+      ()=>{}, ()=>{}, ()=>{}, null, n=>String(n));
+    f();
+    for(const r of sess.hist) if(!appDays.includes(r.date)) appDays.push(r.date);
+  }
+  ok('운영 재생이 실제로 굴러갔다', appDays.length>10, appDays.length+'일');
+  /* 백테는 정수 주수라 '밴드를 벗어났지만 1주도 못 사는' 날이 생긴다(운영은 소수점).
+     그래서 백테의 리밸런싱 날짜는 운영의 부분집합이어야 한다 — 없는 날이 새로 생기면
+     기초가격이 다르다는 뜻이다. */
+  const appSet=new Set(appDays);
+  const hit=btDays.filter(d=>appSet.has(d)).length;
+  /* 완전 일치는 안 된다 — 남는 차이는 기초가격이 아니라 규약 차이다.
+       · 주수: 운영은 소수점, 백테는 정수(밴드를 벗어나도 1주를 못 사는 날이 생긴다)
+       · 예수금: 백테는 T-Bill 일할 이자를 붙이고, 운영 재생은 안 붙인다(화면에 그렇게 적혀 있다)
+     기초가격이 같아졌는지는 '얼마나 겹치는가'로 본다 — 합성일 때보다 확실히 나아야 한다. */
+  ok('운영이 리밸런싱한 날의 대부분을 백테도 잡는다',
+     btDays.length>0 && hit/btDays.length>=0.6,
+     `${hit}/${btDays.length}일 일치 (운영 ${appDays.length}일)`);
+
+  /* 합성을 쓰면 실제로 갈린다 — 이 시험이 살아 있다는 증거 */
+  { const days2=days.slice();
+    const saveU=M[U]; delete M[U];                    // 실제 1배 시세를 없애 합성으로 떨어뜨린다
+    const g2=pair1(T, days2);
+    ok('실제 1배가 없으면 합성으로 떨어진다', g2.synth===true, `synth=${g2.synth}`);
+    global.__IVD=[]; btRun(days2,T,10000,0.45,60,0.10,false,'iv','x1');
+    const synDays=global.__IVD.slice();
+    M[U]=saveU;
+    const hitSyn=synDays.filter(d=>appSet.has(d)).length/Math.max(1,synDays.length);
+    const hitReal=btDays.filter(d=>appSet.has(d)).length/Math.max(1,btDays.length);
+    ok('실제 1배로 굴리면 합성보다 운영과 훨씬 잘 맞는다',
+       hitReal>hitSyn, `일치율 실제 ${(hitReal*100).toFixed(0)}% / 합성 ${(hitSyn*100).toFixed(0)}%`);
+  }
+  WARM_FROM=_wf0; WARM_TO=_wt0;
+  delete global.__IVD; delete M[U]; delete META[U];
 }
 
 console.log(`\n════ 결과: ${pass} PASS / ${fail} FAIL ${fail===0?'— ALL PASS ★':'— 배포 금지, 위 ✗ 항목 수정 필요'} ════`);
