@@ -94,6 +94,11 @@ th:first-child,td:first-child{text-align:left}
 .live-summary.ok{background:rgba(54,211,153,.07);border-color:rgba(54,211,153,.25)}
 .live-summary.warn{background:rgba(245,196,81,.07);border-color:rgba(245,196,81,.25)}
 .live-sync{font-size:11px;color:var(--dim);margin-top:5px}
+.autosrc{font-size:10px;color:var(--dim);margin-top:4px;min-height:15px}
+.autosrc.ok{color:var(--green)}.autosrc.warn{color:var(--gold)}
+.autotoggle{display:flex;align-items:center;gap:7px;color:var(--dim);font-size:11.5px;margin-top:8px}
+.autotoggle input{width:16px;height:16px;accent-color:var(--accent)}
+.field input.autofill{border-color:rgba(54,211,153,.45);background:rgba(54,211,153,.04)}
 .save-state{font-size:11px;color:var(--dim);margin-left:auto;align-self:center}
 @media(max-width:780px){
   .hero{grid-template-columns:1fr}.grid4{grid-template-columns:repeat(2,1fr)}.grid3{grid-template-columns:1fr}.steps{grid-template-columns:repeat(2,1fr)}.livegrid{grid-template-columns:1fr}
@@ -108,7 +113,7 @@ th:first-child,td:first-child{text-align:left}
 <body>
 <div class="wrap">
   <div class="top">
-    <div class="brand"><div class="logo">Five Year Plan</div><h1>5년 자산플랜 <span class="ver">v1.1.0</span></h1></div>
+    <div class="brand"><div class="logo">Five Year Plan</div><h1>5년 자산플랜 <span class="ver">v1.2.0</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
       <div class="jkmenu" id="jkmenuWrap">
@@ -183,8 +188,8 @@ th:first-child,td:first-child{text-align:left}
     <div class="grid4" style="margin-top:10px">
       <div class="field"><label>5년 뒤 원하는 월 현금흐름 ($)</label><input type="number" id="targetIncome" min="0" step="100"></div>
       <div class="field"><label>단계 판정</label><select id="stageMode"><option value="auto">자동</option><option value="1">STEP 1 고정</option><option value="2">STEP 2 고정</option><option value="3">STEP 3 고정</option><option value="4">STEP 4 고정</option></select></div>
-      <div class="field"><label>현재 SOXL 무매 잔고 ($)</label><input type="number" id="balMM" min="0" step="100"></div>
-      <div class="field"><label>현재 TQQQ VR 잔고 ($)</label><input type="number" id="balVR" min="0" step="100"></div>
+      <div class="field"><label>SOXL 무매 운용자산 ($)</label><input type="number" id="balMM" min="0" step="1"><div class="autosrc" id="balMMsrc">운영장부 연동 대기</div></div>
+      <div class="field"><label>TQQQ VR 운용자산 ($)</label><input type="number" id="balVR" min="0" step="1"><div class="autosrc" id="balVRsrc">운영장부 연동 대기</div></div>
     </div>
     <div class="grid4" style="margin-top:10px">
       <div class="field"><label>현재 QLD 잔고 ($)</label><input type="number" id="balQLD" min="0" step="100"></div>
@@ -192,6 +197,8 @@ th:first-child,td:first-child{text-align:left}
       <div class="field"><label>보수 시나리오 CAGR (%)</label><input type="number" id="cagrLow" min="-50" max="100" step="0.5"></div>
       <div class="field"><label>기준 / 공격 CAGR (%)</label><div style="display:grid;grid-template-columns:1fr 1fr;gap:6px"><input type="number" id="cagrBase" min="-50" max="100" step="0.5"><input type="number" id="cagrHigh" min="-50" max="100" step="0.5"></div></div>
     </div>
+    <div class="autotoggle"><input type="checkbox" id="autoBalances" checked><label for="autoBalances"><b>SOXL·TQQQ 잔고를 운영장부에서 자동 반영</b> · 끄면 직접 입력할 수 있습니다.</label></div>
+    <div class="sub" id="outsideCashNote" style="margin-top:5px">무매 단리 인출금은 운영전략 밖 자금이라 자동으로 SGOV에 합치지 않습니다.</div>
     <div class="btnrow">
       <button class="btn primary" id="calcBtn">현재 상태 계산</button>
       <button class="btn" id="seedBtn">현재자금을 STEP 1 비중으로 채우기</button>
@@ -345,7 +352,7 @@ function calcInfState(sess){
   }
   if(st.reverse===true&&revState==='NORMAL'&&qty>0&&((+st.div||20)-T)<1)revState='DAY1';
   const bal=(+st.principal||0)+realized-inv-withdrawn-saved;
-  return {st,avg,qty:Math.max(0,qty),T,bal,reverseActive:st.reverse===true&&revState!=='NORMAL'&&qty>0,reverseDay1:revState==='DAY1'};
+  return {st,avg,qty:Math.max(0,qty),T,bal,withdrawn,saved,outside:withdrawn+saved,reverseActive:st.reverse===true&&revState!=='NORMAL'&&qty>0,reverseDay1:revState==='DAY1'};
 }
 function imOrders(sess,price){
   const c=calcInfState(sess),st=c.st,div=+st.div||20,target=+st.target||20,big=st.big!=null?+st.big:20,slot=div-c.T;
@@ -432,6 +439,16 @@ function qldSignal(rows,startDate){
   const i=rows.length-1,dd=pxs[i]/ath[i]-1;
   return {date:rows[i].date,close:pxs[i],ma200:m200[i],rsi:rs[i],dd:dd*100,phase,acts:lastActs};
 }
+
+function autoBalanceEnabled(){return !!($('autoBalances')&&$('autoBalances').checked);}
+function setAutoBalanceField(id,value,source){
+  const el=$(id),src=$(id+'src');if(!el)return;
+  if(autoBalanceEnabled()&&Number.isFinite(value)&&value>=0){el.value=Math.round(value);el.readOnly=true;el.classList.add('autofill');if(src){src.className='autosrc ok';src.textContent='자동 · '+source;}}
+  else{el.readOnly=false;el.classList.remove('autofill');if(src){src.className='autosrc warn';src.textContent=source||'수동 입력';}}
+}
+function unlockAutoBalanceFields(){
+  for(const id of ['balMM','balVR']){const el=$(id),src=$(id+'src');if(el){el.readOnly=false;el.classList.remove('autofill');}if(src){src.className='autosrc';src.textContent='수동 입력 모드';}}
+}
 function orderHtml(o){const c=o.side==='buy'?'buy':'sell',lab=o.side==='buy'?'매수':'매도';return '<div class="liveitem '+c+'"><strong>'+lab+' · '+o.name+'</strong><small>'+o.tag+' · '+usd(o.price)+' × '+Math.round(o.qty)+'주</small></div>';}
 function waitHtml(t,sub=''){return '<div class="liveitem wait"><strong>'+t+'</strong>'+(sub?'<small>'+sub+'</small>':'')+'</div>';}
 async function loadOperatingState(user){
@@ -453,23 +470,36 @@ async function refreshLive(){
     const actions=[];
     if(inf){
       const r=imOrders(inf,qs.settled.close),c=r.state,st=inf.settings||{};
-      $('liveInfMeta').textContent=(inf.name||'SOXL 세션')+' · '+(st.div||20)+'분할 / '+(st.target||20)+'% / '+(st.compound===false?'단리':'복리')+' · T '+c.T.toFixed(2)+' · 보유 '+Math.round(c.qty)+'주';
+      const mmValue=Math.max(0,c.bal)+Math.max(0,c.qty)*qs.settled.close;
+      setAutoBalanceField('balMM',mmValue,(inf.name||'SOXL')+' · '+qs.settled.date+' 종가 평가');
+      $('outsideCashNote').textContent=c.outside>0
+        ? '무매 단리·출금으로 전략 밖에 빠진 누계 '+usd(c.outside)+' (단리 자동인출 '+usd(c.saved)+' · 직접출금 '+usd(c.withdrawn)+'). 실제 SGOV에 보관 중이면 SGOV 잔고에 직접 포함하세요.'
+        : '무매 전략 밖 누적 인출금 없음 · SGOV 실보유액은 현재 SGOV 입력값을 사용합니다.';
+      $('liveInfMeta').textContent=(inf.name||'SOXL 세션')+' · '+(st.div||20)+'분할 / '+(st.target||20)+'% / '+(st.compound===false?'단리':'복리')+' · T '+c.T.toFixed(2)+' · 보유 '+Math.round(c.qty)+'주 · 운용자산 '+usd(mmValue);
       const primary=r.orders.filter(o=>o.tag!=='예약');$('liveInf').innerHTML=(primary.length?primary.map(orderHtml).join(''):waitHtml('오늘 신규 주문 없음',r.note||'현재 상태에서 실행할 주문이 없습니다.'));
       if(primary.length)actions.push('SOXL '+primary.length+'건');
-    }else{$('liveInfMeta').textContent='SOXL 실전 세션 없음';$('liveInf').innerHTML=waitHtml('운영 화면에 SOXL 실전 세션을 먼저 만드세요.');}
+    }else{
+      setAutoBalanceField('balMM',NaN,'SOXL 실전 세션 없음 · 수동 입력');
+      $('liveInfMeta').textContent='SOXL 실전 세션 없음';$('liveInf').innerHTML=waitHtml('운영 화면에 SOXL 실전 세션을 먼저 만드세요.');
+    }
     if(vr){
-      const r=vrOrders(vr,qv.settled.close),c=r.state,st=vr.settings||{};
-      $('liveVrMeta').textContent=(vr.name||'TQQQ 세션')+' · G'+(st.g||10)+' / ±'+(st.band||15)+'% / '+(st.formula==='skill'?'실력':'기본')+' · V '+usd(c.V)+' · Pool '+usd(c.pool);
+      const r=vrOrders(vr,qv.settled.close),c=r.state,st=vr.settings||{},vrValue=Math.max(0,c.pool)+Math.max(0,c.qty)*qv.settled.close;
+      setAutoBalanceField('balVR',vrValue,(vr.name||'TQQQ VR')+' · '+qv.settled.date+' 종가 평가');
+      $('liveVrMeta').textContent=(vr.name||'TQQQ 세션')+' · G'+(st.g||10)+' / ±'+(st.band||15)+'% / '+(st.formula==='skill'?'실력':'기본')+' · V '+usd(c.V)+' · Pool '+usd(c.pool)+' · 운용자산 '+usd(vrValue);
       const immediate=r.orders.filter(o=>o.tag!=='예약'),reserve=r.orders.filter(o=>o.tag==='예약');
       $('liveVr').innerHTML=(immediate.length?immediate.map(orderHtml).join(''):waitHtml('즉시 매매 없음','현재 평가금이 VR 밴드 안입니다.'))+(reserve.length?reserve.slice(0,2).map(orderHtml).join(''):'')+waitHtml(r.note);
       if(immediate.length)actions.push('TQQQ VR '+immediate.length+'건');
-    }else{$('liveVrMeta').textContent='TQQQ VR 실전 세션 없음';$('liveVr').innerHTML=waitHtml('운영 화면에 TQQQ VR 실전 세션을 먼저 만드세요.');}
+    }else{
+      setAutoBalanceField('balVR',NaN,'TQQQ VR 실전 세션 없음 · 수동 입력');
+      $('liveVrMeta').textContent='TQQQ VR 실전 세션 없음';$('liveVr').innerHTML=waitHtml('운영 화면에 TQQQ VR 실전 세션을 먼저 만드세요.');
+    }
     const qRows=qqq.rows.filter(x=>x.date<=qqq.settled.date),sg=qldSignal(qRows,$('startDate').value);
     $('liveQldMeta').textContent='QQQ '+sg.date+' · 종가 '+usd(sg.close)+' · MA200 '+usd(sg.ma200)+' · RSI '+(sg.rsi||0).toFixed(1)+' · ATH '+sg.dd.toFixed(1)+'%';
     if(sg.acts.length){$('liveQld').innerHTML=sg.acts.map(x=>'<div class="liveitem buy"><strong>'+x+'</strong><small>'+sg.phase+'</small></div>').join('');actions.push('QLD/SGOV '+sg.acts.length+'개 신호');}
     else $('liveQld').innerHTML=waitHtml('오늘 신규 전환 신호 없음',sg.phase);
     const sum=$('liveSummary');if(actions.length){sum.className='live-summary warn';sum.innerHTML='<b>오늘 확인:</b> '+actions.join(' · ')+' · 실제 주문 전 운영 화면의 주문표와 한 번 더 대조하세요.';}
     else{sum.className='live-summary ok';sum.innerHTML='<b>오늘 할 일 없음.</b> 세 전략축 모두 신규 실행 신호가 없습니다. 예약주문은 기존 운영 계획을 유지하세요.';}
+    render();
   }catch(e){$('liveSync').textContent='연동 실패 · '+(e&&e.message||e);$('liveSummary').className='live-summary warn';$('liveSummary').textContent='시세나 운영데이터를 읽지 못했습니다. 운영 화면에서 직접 확인하세요.';}
   finally{liveBusy=false;$('liveRefresh').disabled=false;}
 }
@@ -478,14 +508,14 @@ function defaults(){
   const s=todayISO(),t=plusYears(s,5);
   return {startDate:s,targetDate:t,targetCapital:150000,monthlyAdd:0,targetIncome:2000,stageMode:"auto",
     balMM:9900,balVR:9900,balQLD:5100,balSGOV:5100,cagrLow:8,cagrBase:15,cagrHigh:22,
-    incomeBasis:150000,incomeYield:8,sgovYield:4,extraWithdraw:0};
+    incomeBasis:150000,incomeYield:8,sgovYield:4,extraWithdraw:0,autoBalances:true};
 }
 function readForm(){
-  const ids=["startDate","targetDate","targetCapital","monthlyAdd","targetIncome","stageMode","balMM","balVR","balQLD","balSGOV","cagrLow","cagrBase","cagrHigh","incomeBasis","incomeYield","sgovYield","extraWithdraw"];
-  const o={};ids.forEach(id=>o[id]=$(id).value);return o;
+  const ids=["startDate","targetDate","targetCapital","monthlyAdd","targetIncome","stageMode","balMM","balVR","balQLD","balSGOV","cagrLow","cagrBase","cagrHigh","incomeBasis","incomeYield","sgovYield","extraWithdraw","autoBalances"];
+  const o={};ids.forEach(id=>{const el=$(id);o[id]=el.type==='checkbox'?el.checked:el.value;});return o;
 }
 function apply(o){
-  Object.entries({...defaults(),...o}).forEach(([k,v])=>{if($(k))$(k).value=v});
+  Object.entries({...defaults(),...o}).forEach(([k,v])=>{const el=$(k);if(!el)return;if(el.type==='checkbox')el.checked=(v===true||v==='true');else el.value=v;});
 }
 function localSave(){
   try{localStorage.setItem(KEY,JSON.stringify(readForm()));$("saveState").textContent="브라우저 저장 완료 · "+new Date().toLocaleTimeString("ko-KR",{hour:"2-digit",minute:"2-digit"});}catch(e){}
@@ -580,6 +610,7 @@ const d=defaults();let saved=null;try{saved=JSON.parse(localStorage.getItem(KEY)
 apply(saved||d);render();
 ["startDate","targetDate","targetCapital","monthlyAdd","targetIncome","stageMode","balMM","balVR","balQLD","balSGOV","cagrLow","cagrBase","cagrHigh","incomeBasis","incomeYield","sgovYield","extraWithdraw"].forEach(id=>$(id).addEventListener("change",render));
 $("calcBtn").addEventListener("click",()=>{render();refreshLive()});$("seedBtn").addEventListener("click",seed);$("saveBtn").addEventListener("click",cloudSave);$("liveRefresh").addEventListener("click",refreshLive);
+$("autoBalances").addEventListener("change",()=>{if($("autoBalances").checked)refreshLive();else{unlockAutoBalanceFields();render();}});
 document.querySelectorAll(".step").forEach(b=>b.addEventListener("click",()=>{$("stageMode").value=b.dataset.step;render()}));
 $("jkmenuBtn").addEventListener("click",e=>{e.stopPropagation();$("jkmenuPop").hidden=!$("jkmenuPop").hidden});
 document.addEventListener("click",e=>{if(!$("jkmenuWrap").contains(e.target))$("jkmenuPop").hidden=true});
