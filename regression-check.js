@@ -3787,7 +3787,20 @@ console.log('\n[74] 리버스 — 규칙이 있는 분할(20·40)에서만');
      /function syncRevSeg\(\)/.test(idx) && /function syncRevUI\(\)/.test(bt)
      && /리버스 규칙이 문서에 없어 적용하지 않습니다/.test(idx)
      && /리버스 규칙이 문서에 없어 적용하지 않습니다/.test(bt));
-  ok('변형 표시에도 이유가 뜬다', /분할\(리버스 규칙 미수록\)/.test(bt));
+  ok('변형 표시에도 이유가 뜬다', /리버스 미적용\(그 분할 규칙 미수록\)/.test(bt));
+  /* 문서에 있는 값과 우리가 일반화·추정한 값을 같은 이름으로 보이면 안 된다.
+     문서 수록: 익절 TQQQ 15 · SOXL 20 / 분할 20·40 의 별% 와 리버스 규칙
+     확장·추정: 그 밖 종목의 익절 20 · 30분할 별% 일반화식 · 10분할 전체 · 리버스 gap 2.5% */
+  ok('그 외 종목 익절 20%를 문서값이라 하지 않는다',
+     /TQQQ 15 · SOXL 20 · 그 외 실험값 20/.test(bt) && !/공식\(TQQQ 15·그 외 20\)/.test(bt));
+  ok('10분할은 실험으로 표시한다', /10분할\(공식 규칙 미수록 · 실험\)/.test(bt));
+  ok('30분할 별%는 일반화·추정으로 표시한다', /30분할\(별% 일반화식 · 추정\)/.test(bt));
+  ok('리버스 gap 은 출처 미확인·사용자 설정으로 표시한다',
+     /리버스 gap '\+imRevGap\+'%\(출처 미확인 · 사용자 설정\)/.test(bt));
+  ok('분할 세그에도 문서 미수록 표시가 붙는다',
+     /data-d="10"[^>]*문서에 10분할 공식 규칙이 없습니다/.test(bt)
+     && /data-d="30"[^>]*명시 확인되지 않았습니다/.test(bt)
+     && /\* 문서 미수록 · 일반화식/.test(bt));
   // 값으로 — 10·30분할은 리버스를 켜도 결과가 안 바뀌어야 한다
   { const T=DAYS.SOXL?'SOXL':'TQQQ', D0=DAYS[T];
     let bad=null;
@@ -4308,6 +4321,75 @@ console.log('\n[80] 역분산 1배 짝 — 운영·백테 기초가격 일치');
   }
   WARM_FROM=_wf0; WARM_TO=_wt0;
   delete global.__IVD; delete M[U]; delete META[U];
+}
+
+/* ════ 81. 출처와 실제를 같은 이름으로 보이지 않기 ════  (감사 ⑩⑫⑪⑭)
+   문서·논문에 있는 값과 우리가 얹은 확장을 한 이름으로 보이면, 사용자가
+   실험 결과를 원전 결과로 읽는다. 표시와 프리셋을 값으로 검사한다.               */
+console.log('\n[81] 출처 표기 · 프리셋 · 설명문');
+{
+  // ── ⑫ 200일선: 논문 원형 vs 기반 확장형 ──
+  const preMa='var maLen=200, maBuy="ma", maSell="ma", maShort=50, maPark="cash";\n'
+    +(bt.match(/const MA_COND_LBL=\{[^}]*\};/)||[''])[0]+'\n'
+    +extractFn(bt,'function _maOpt(opt)')+'\n';
+  const mkMa=()=>new Function(preMa
+    +extractFn(bt,'function maVariant(len)')+'\n'
+    +extractFn(bt,'function maVariantTag(len)')+'\n'
+    +'return {maVariant,maVariantTag,set:(o)=>{maLen=o.len??maLen;maBuy=o.buy??maBuy;maSell=o.sell??maSell;maPark=o.park??maPark;}};')();
+  { const A=mkMa();
+    ok('200로테 기본값이 논문 원형으로 뜬다',
+       A.maVariant(200).length===0 && /논문 원형/.test(A.maVariantTag(200)), A.maVariantTag(200));
+    A.set({buy:'cross'});
+    ok('매수 조건을 바꾸면 기반 확장형으로 뜬다',
+       /기반 확장형/.test(A.maVariantTag(200)) && A.maVariant(200).join().includes('매수'), A.maVariantTag(200));
+    A.set({buy:'ma', park:'bill'});
+    ok('국채 대피도 확장으로 센다', A.maVariant(200).some(x=>/단기국채/.test(x)), A.maVariant(200).join(' · '));
+    A.set({park:'cash', len:100});
+    ok('200일이 아니면 확장으로 센다', A.maVariant(100).some(x=>/100일선/.test(x)), A.maVariant(100).join(' · '));
+  }
+  ok('출처 문구가 원형과 확장을 갈라 적는다',
+     /기반 확장형<\/b> — 논문 원형은/.test(bt) && /우리가 얹은 확장<\/b>/.test(bt));
+  ok('결과 머리글에 원형·확장 표시가 붙는다', /\+ maVariantTag\(L\);/.test(bt));
+
+  // ── 프리셋 ──
+  ok('공식 V4.0 프리셋이 있다', /function imPreset\(\)/.test(bt) && /onclick="imPreset\(\)"/.test(bt));
+  ok('공식 프리셋이 문서 수록 종목만 고른다', /imActive=new Set\(Object\.keys\(IM_OFFICIAL\)/.test(bt));
+  ok('공식 프리셋이 익절·분할·리버스·엔진을 못 박는다', (()=>{
+      const f=extractFn(bt,'function imPreset()');
+      return /_segPick\('imEngine','e','v40'\)/.test(f) && /_segPick\('imDiv','d','20'\)/.test(f)
+          && /_segPick\('imTgtSeg','t','0'\)/.test(f) && /_segPick\('imTgtDynSeg','x','0'\)/.test(f)
+          && /_segPick\('imRev','r','1'\)/.test(f); })());
+  ok('공식 프리셋이 출처 없는 gap 은 안 건드린다',
+     !/imRevGap\s*=/.test(extractFn(bt,'function imPreset()')));
+  ok('논문 원형 프리셋이 있다', /function maPreset\(\)/.test(bt) && /onclick="maPreset\(\)"/.test(bt));
+  ok('논문 프리셋이 200선·현금으로 되돌린다', (()=>{
+      const f=extractFn(bt,'function maPreset()');
+      return /_segPick\('maBuySeg','s','ma'\)/.test(f) && /_segPick\('maSellSeg','s','ma'\)/.test(f)
+          && /_segPick\('maParkSeg','p','cash'\)/.test(f) && /maLen=200/.test(f); })());
+
+  // ── ⑪ VR 설명문이 코드의 실제 규칙과 같은가 ──
+  ok('VR 설명문이 달력 14일이라고 적는다',
+     /<b>달력 14일<\/b> 사이클 \(기준일이 주말이면 다음 영업일\)/.test(bt));
+  ok("화면 문구에 '10거래일' 이 안 남아 있다", (()=>{
+      // 주석(과거 설명)은 놔두고, 화면에 뜨는 문구만 본다
+      const ui=[...bt.matchAll(/<div class="rules[\s\S]*?<\/div>/g)].map(m=>m[0]).join('\n')
+             + [...bt.matchAll(/<div class="foot">[\s\S]*?<\/div>/g)].map(m=>m[0]).join('\n');
+      return !/10거래일/.test(ui); })());
+  ok('앱 과거재생 안내도 달력 14일이라고 적는다',
+     /<b>달력 14일<\/b>마다 V 갱신/.test(idx) && !/\(10거래일마다 V 갱신/.test(idx));
+
+  // ── ⑭ 하단 문구가 실행 옵션을 따라간다 ──
+  ok("하단에 '수수료·세금·환율·배당 미반영' 이 안 남아 있다", (()=>{
+      const ui=[...bt.matchAll(/<div class="foot">[\s\S]*?<\/div>/g)].map(m=>m[0]).join('\n');
+      return !/수수료·세금·환율·배당 미반영/.test(ui); })());
+  ok('하단 문구를 실행 옵션으로 다시 적는다',
+     /function renderFootNote\(\)/.test(bt) && /id="footCost"/.test(bt)
+     && /비용 적용<\/b>/.test(bt) && /비용 미적용<\/b>/.test(bt));
+  ok('탭 전환·실행·첫 화면에서 모두 갱신한다',
+     (bt.match(/renderFootNote\(\);/g)||[]).length>=3);
+  ok('탭마다 실제 비용 토글을 읽는다', (()=>{
+      const f=(bt.match(/const COST_FLAG=\{[\s\S]*?\};/)||[''])[0];
+      return ['dca','im','vr','ma','asap','std','ivs','all','mom'].every(k=>f.includes(k+':')); })());
 }
 
 console.log(`\n════ 결과: ${pass} PASS / ${fail} FAIL ${fail===0?'— ALL PASS ★':'— 배포 금지, 위 ✗ 항목 수정 필요'} ════`);

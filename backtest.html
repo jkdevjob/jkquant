@@ -206,6 +206,8 @@ body{font-variant-numeric:tabular-nums;/* 숫자는 어디서나 같은 폭 — 
 .ctrl select{width:130px;}
 .seg{display:flex;gap:4px;background:var(--surf2);border:1px solid var(--border2);border-radius:7px;padding:3px;}
 .seg button{padding:7px 12px;border-radius:5px;border:none;background:transparent;color:var(--dim);font-family:'IBM Plex Mono',monospace;font-size:12px;cursor:pointer;transition:all .15s;}
+.preset-btn{align-self:flex-start;padding:7px 13px;border-radius:7px;border:1px solid var(--line);background:var(--panel2);color:var(--gold);font-family:'IBM Plex Mono',monospace;font-size:12px;font-weight:600;cursor:pointer;transition:all .15s}
+.preset-btn:hover{border-color:var(--gold);background:var(--panel)}
 .seg button.active{background:var(--accent);color:#fff;}
 .run{background:var(--accent);border:none;border-radius:8px;color:#fff;font-size:14px;font-weight:600;font-family:'Pretendard';padding:10px 24px;cursor:pointer;transition:opacity .15s;}
 .run:hover{opacity:.88;}
@@ -416,15 +418,16 @@ document.addEventListener('click',function(e){ var m=document.getElementById('jk
     <div class="ctrl s-im hide"><label data-cur="im">원금 ($)</label><input type="number" id="imCap" value="10000" min="100"></div>
     <div class="ctrl s-im hide"><label>분할 수</label>
       <div class="seg" id="imDiv">
-        <button data-d="10">10</button>
-        <button data-d="20" class="active">20</button>
-        <button data-d="30">30</button>
-        <button data-d="40">40</button>
+        <button data-d="10" title="문서에 10분할 공식 규칙이 없습니다 — 별% 일반화식으로 돌리는 실험값입니다">10*</button>
+        <button data-d="20" class="active" title="문서 수록 (별% base·기울기·리버스 규칙 모두 있음)">20</button>
+        <button data-d="30" title="일반모드 분할로는 문서에 나오지만, 별% 값이 20·40처럼 명시 확인되지 않았습니다 — 일반화식으로 추정해 씁니다">30*</button>
+        <button data-d="40" title="문서 수록 (별% base·기울기·리버스 규칙 모두 있음)">40</button>
       </div>
+      <span style="font-size:9px;color:var(--gold);margin-left:6px">* 문서 미수록 · 일반화식</span>
     </div>
     <div class="ctrl s-im hide"><label>익절 % <span style="font-size:9px;color:var(--dim)">공식=종목별 · 숫자=일괄</span></label>
       <div class="seg" id="imTgtSeg">
-        <button data-t="0" class="active" title="라오어 문서 공식값을 종목별로 적용 — TQQQ 15% · 그 외 20%. 운영 페이지의 새 세션 기본값과 같다">공식</button>
+        <button data-t="0" class="active" title="문서 공식값은 TQQQ 15% · SOXL 20% 둘뿐입니다. 그 밖의 종목에 쓰는 20%는 문서값이 아니라 'SOXL 값을 따른다'는 확장(실험값)입니다. 운영 페이지의 새 세션 기본값과 같습니다">종목별</button>
         <button data-t="10" title="Walk-Forward OOS 최적">10%</button>
         <button data-t="15" title="문서 공식(TQQQ)">15%</button>
         <button data-t="20" title="문서 공식(SOXL)">20%</button>
@@ -455,6 +458,9 @@ document.addEventListener('click',function(e){ var m=document.getElementById('jk
       </div>
     </div>
     <div class="ctrl s-im hide" style="flex-basis:100%"><span id="imRevNote" style="font-size:10px;color:var(--gold)"></span></div>
+    <div class="ctrl s-im hide"><label>프리셋</label>
+      <button type="button" class="preset-btn" onclick="imPreset()" title="라오어 공식 V4.0 으로 맞춥니다 — 공식 수록 종목(TQQQ·SOXL)만 · 익절 종목별(15/20) · 20분할 · 리버스 ON · 익절조절 OFF · 엔진 V4.0">📄 공식 V4.0</button>
+    </div>
     <div class="ctrl s-im hide"><label>리버스 gap % <span style="font-size:9px;color:var(--dim)">별지점 아래 · 앱과 같은 값</span></label>
       <input type="number" id="imRevGapIn" value="2.5" min="0.1" max="20" step="0.1" style="width:72px"></div>
     <div class="ctrl s-im hide"><label>재투자</label>
@@ -546,6 +552,9 @@ document.addEventListener('click',function(e){ var m=document.getElementById('jk
         A = 합성 1배지수 종가 &gt; 200일선 · B = 50일선 &gt; 200일선(골든크로스) · 이동평균 200일 고정<br>
         <b>진입 조건이 보유유지 조건보다 엄격해야</b> 휩쏘가 줄어듭니다 (예: 매도 <b>둘다</b> + 매수 <b>크로스</b>, 매도 <b>200선</b> + 매수 <b>둘다</b>).
       </div>
+    </div>
+    <div class="ctrl s-ma hide"><label>프리셋</label>
+      <button type="button" class="preset-btn" onclick="maPreset()" title="논문 원형으로 되돌립니다 — 200일선 · 매수/매도 모두 200선 · 대피처 현금">📄 논문 원형</button>
     </div>
     <div class="ctrl s-ma hide"><label>대피처 <span style="font-size:9px;color:var(--dim)">신호 이탈 구간</span></label>
       <div class="seg" id="maParkSeg" style="align-self:flex-start">
@@ -761,14 +770,14 @@ document.addEventListener('click',function(e){ var m=document.getElementById('jk
   <span class="bd v5-hidden">V5.0</span><span class="v5-hidden"> 국면 익절 (검증 미완료 · 비활성)</span>
 </div>
 <div class="rules s-vr hide">
-  <span class="bd">V 갱신</span> 다음 V = 현재 V + <b>Pool/G</b> + 적립금 · 2주(10거래일) 사이클<br>
+  <span class="bd">V 갱신</span> 다음 V = 현재 V + <b>Pool/G</b> + 적립금 · <b>달력 14일</b> 사이클 (기준일이 주말이면 다음 영업일) — 거래일 수가 아니라 달력으로 셉니다<br>
   <span class="bd">밴드</span> 상단 V×(1+밴드) / 하단 V×(1−밴드)<br>
   <span class="bd">예약주문</span> (기본) 실전 그대로 — 사이클 첫날 <b>매수·매도표 차수를 지정가로 걸고 2주 방치</b>, 그날 <b>고가·저가</b>에 닿은 차수만 1주씩 체결. 매도 k차 = 상단÷보유 · 매수 k차 = 하단÷보유 · 하루 매수한도 = 그날 시작 Pool×모드한도(적립75·거치50·인출25%) · 운영 앱 체결기와 같은 규칙<br>
   <span class="bd">종가</span> (선택) 예전 방식 — 2주에 한 번 그날 <b>종가</b>에만 평가금을 V로 되맞춤. 실제로 내는 주문과 다르므로 비교용으로만<br>
   <span class="bd">매도</span> 평가금>상단 → Pool 로 · <span class="bd">매수</span> 평가금&lt;하단 → 적립후 <b>Pool 75%</b> 한도
 </div>
 <div class="rules s-ma hide">
-  <span class="bd">출처</span> Gayed·Bilello <b>"Leverage for the Long Run"</b> (2016 CMT 다우상) — 역사적으로 3× 조합 연 26.7%<br>
+  <span class="bd">출처</span> Gayed·Bilello <b>"Leverage for the Long Run"</b> (2016 CMT 다우상) <b>기반 확장형</b> — 논문 원형은 <b>'합성 1배지수 종가 &gt; 200일선이면 레버리지 100%, 아니면 전액 현금'</b> 하나입니다. 아래의 매수·매도 4택×4택(16조합)·50/200 골든크로스·국채 대피는 <b>우리가 얹은 확장</b>이며, 결과 머리글에 <b>논문 원형 / 기반 확장형</b>으로 표시됩니다. (논문 성과: 3× 조합 역사적 연 26.7%)<br>
   <span class="bd">신호</span> 합성 1배지수(레버리지 일수익률÷배수 누적) 기준 <b>A</b>=종가&gt;200일선 · <b>B</b>=50일선&gt;200일선(골든크로스) — 조건 충족이면 레버리지 100% 보유, 아니면 <b>전액 현금(또는 단기국채)</b><br>
   <span class="bd">매수·매도</span> 각각 200선(A)/크로스(B)/둘다(A∧B)/하나만(A∨B) 4택 = <b>16조합</b> · 매도는 '조건이 무너지면' 파는 것이라 <b>둘다</b>=A∨B가 무너져야, <b>하나만</b>=A∧B가 깨지면 매도<br>
   <span class="bd">체결</span> 전일 종가로 판정(룩어헤드 없음) → 당일 종가(MOC) 매매 · 이평 이력 부족(워밍업)은 보유로 간주<br>
@@ -778,7 +787,7 @@ document.addEventListener('click',function(e){ var m=document.getElementById('jk
 </div>
 
 <div class="foot">
-  ※ 실제 OHLC 종가 기반 백테스트. 수수료·세금·환율·배당 미반영. LOC매수=종가≤주문가 시 체결, 지정가매도=당일 고가≥목표가 시 체결로 근사.<br>
+  <span id="footCost">※ 실제 OHLC 종가 기반 백테스트. LOC매수=종가≤주문가 시 체결, 지정가매도=당일 고가≥목표가 시 체결로 근사.</span><br>
   ※ <b>USD</b>=반도체 2× · <b>QLD</b>=나스닥 2× · <b>SOXL</b>=반도체 3× · <b>TQQQ</b>=나스닥 3× · <b>TECL</b>=테크 3×<br>
   ※ 무한매수법 V4.0 · VR 5.0 (라오어). 일봉 근사라 실제 체결과 차이 가능. 과거 성과는 미래를 보장하지 않습니다.<br>
   ※ <b>체결 규약</b> — ASAP·표준편차·역분산·적립 배수 같은 <b>종가 신호</b> 전략은 <b>전일까지 확정된 지표</b>로 신호를 정하고 <b>당일 종가에 체결</b>합니다. 오늘 종가로 신호를 만든 뒤 그 종가에 체결하면 낼 수 없는 주문이 되므로, 신호와 체결 사이에 하루를 둡니다. 운영 페이지의 모의 체결도 같은 규약이라 앱과 백테 숫자가 어긋나지 않습니다.<br>
@@ -943,6 +952,7 @@ let loadedStart='', loadedEnd='';  // 로딩된 기간
   buildTickerPick();
   
   showEmptyState();
+  renderFootNote();          // 첫 화면부터 실제 설정대로 적는다
   // 커스텀 종목 복원은 위 module 블록이 담당한다 (여기선 아직 정의 전이라 못 부른다)
   // 데이터는 실행 버튼 누를 때 로딩 (기간에 맞춰)
 })();
@@ -1285,6 +1295,7 @@ function setStrat(s){
   document.querySelectorAll('.s-im.s-vr').forEach(e=>e.classList.toggle('hide',!(s==='im'||s==='vr'||s==='ma'||s==='asap'||s==='ivs'||s==='all'||s==='std')));
   buildPickSingle();
   renderSingle();
+  renderFootNote();          // 하단 문구도 탭 설정을 따라간다
   if(typeof saveBtState==='function'&&!_restoring) saveBtState();   // 전략 탭 변경 저장
   if(dataLoaded) run();      // 데이터 있을 때만 재계산 (탭 전환만으로 로딩 안 함)
 }
@@ -1335,6 +1346,41 @@ document.getElementById('vrCost').onclick=e=>{if(e.target.dataset.x){document.qu
 document.getElementById('imDiv').onclick=e=>{if(e.target.dataset.d){document.querySelectorAll('#imDiv button').forEach(b=>b.classList.remove('active'));e.target.classList.add('active');imDiv=+e.target.dataset.d;syncRevUI();if(dataLoaded)run();}};
 /* 리버스 규칙이 없는 분할(10·30)에서는 세그를 잠근다 — 켜 봐야 엔진이 무시하므로
    켜진 것처럼 보이게 두면 화면이 거짓말을 한다 */
+/* ── 프리셋 ──────────────────────────────────────────────────────────
+   '문서/논문 그대로'를 한 번에 맞춰 주는 버튼. 세그 버튼을 실제로 눌러서
+   상태·화면·저장이 한꺼번에 따라가게 한다 — 변수만 바꾸면 화면이 거짓말을 한다. */
+function _segPick(segId, attr, val){
+  const seg=document.getElementById(segId); if(!seg) return false;
+  const b=seg.querySelector(`button[data-${attr}="${val}"]`); if(!b) return false;
+  b.click(); return true;
+}
+/* 라오어 공식 V4.0 — 문서에 값이 있는 것만 켠다.
+   공식 종목(TQQQ·SOXL) · 익절 종목별(15/20) · 20분할 · 리버스 ON · 익절조절 OFF · 엔진 V4.0
+   리버스 gap 2.5% 는 문서에서 확인되지 않은 값이라 프리셋이 건드리지 않는다(현재 값 유지). */
+function imPreset(){
+  imActive=new Set(Object.keys(IM_OFFICIAL).filter(t=>M[t]&&Object.keys(M[t]).length));
+  if(!imActive.size) imActive=new Set(Object.keys(IM_OFFICIAL));
+  _segPick('imEngine','e','v40');
+  _segPick('imDiv','d','20');
+  _segPick('imTgtSeg','t','0');
+  _segPick('imTgtDynSeg','x','0');
+  syncRevUI(); _segPick('imRev','r','1');
+  imTarget=IM_TGT_AUTO; imTgtDyn=false; imEngine='v40'; imDiv=20; imReverse=true;
+  renderSingle(); buildTickerPick(); syncRevUI();
+  if(typeof saveBtState==='function') saveBtState();
+  if(dataLoaded) run();
+  alert('공식 V4.0 으로 맞췄습니다.\n\n· 종목 TQQQ · SOXL (문서 수록 종목만)\n· 익절 종목별 TQQQ 15% · SOXL 20%\n· 20분할 · 리버스 ON · 익절조절 OFF · 엔진 V4.0\n\n리버스 gap 은 문서에서 확인되지 않은 값이라 그대로 뒀습니다 (현재 '+imRevGap+'%).');
+}
+/* Gayed·Bilello 논문 원형 — 200일선 하나, 매수·매도 모두 200선, 대피처는 현금. */
+function maPreset(){
+  _segPick('maBuySeg','s','ma');
+  _segPick('maSellSeg','s','ma');
+  _segPick('maParkSeg','p','cash');
+  maBuy='ma'; maSell='ma'; maPark='cash'; maLen=200;
+  if(typeof saveBtState==='function') saveBtState();
+  if(dataLoaded) run();
+  alert('논문 원형으로 맞췄습니다.\n\n· 200일선\n· 매수·매도 모두 200선 (합성 1배지수 종가 기준)\n· 대피처 현금 (이자 없음)');
+}
 function syncRevUI(){
   const el=document.getElementById('imRev'); if(!el) return;
   const on=revSupported(imDiv);
@@ -1473,7 +1519,10 @@ const revSupported=d=>REV_DIVS.includes(+d);
 const IM_TGT_AUTO=0;   // 세그의 '공식' — 숫자 하나로 못 박지 않고 종목마다 갈라 쓴다는 뜻
 let imTarget=IM_TGT_AUTO;   // 익절%. 별%base·리버스 복귀조건도 함께 결정 (통합 규약)
 const imTgtFor=t=>(imTarget>0?imTarget:(IM_OFFICIAL[t]||20));   // 엔진에 들어가는 실제 익절%
-const imTgtTxt=()=>(imTarget>0?imTarget+'%':'공식(TQQQ 15·그 외 20)');
+/* 문서에 실린 공식 익절률은 TQQQ 15 · SOXL 20 둘뿐이다.
+   그 밖의 종목에 쓰는 20은 문서값이 아니라 '그 외는 SOXL 값을 따른다'는 우리 확장이다 —
+   같은 이름으로 보이면 사용자가 실험값을 문서값으로 읽는다. */
+const imTgtTxt=()=>(imTarget>0?imTarget+'%':'TQQQ 15 · SOXL 20 · 그 외 실험값 20');
 let imFill='high';   // 익절 체결 판정: 'high'=고가 터치(기본·지정가 정석) / 'close'=종가 도달(보수적 하한)
 /* 리버스 쿼터매수 gap — 별지점에서 이만큼 아래에 LOC를 건다.
    예전엔 0.975(=2.5%)가 코드에 못 박혀 있었다. 운영 앱은 사용자가 바꿀 수 있는 값이라,
@@ -1822,6 +1871,25 @@ function noteVrCycAssumed(results){
   const w=document.getElementById('winner'); if(!w) return; w.style.display='';
   w.innerHTML=(w.innerHTML?w.innerHTML+' ':'')
     +'<span style="color:var(--gold);font-size:12px">⚠ 사이클 기준일이 없어 첫 거래일을 기준으로 잡았습니다 — 이어받기라면 \'사이클 기준일\'을 넣으세요</span>';
+}
+/* 하단 고정 문구가 실제 실행 옵션과 어긋나면 안 된다.
+   예전엔 '수수료·세금·환율·배당 미반영'이라고 못 박아 뒀는데, 화면에는 전략마다
+   비용 토글과 배당 처리(복리/단리)가 있다 — 켜 두고도 '미반영'이라고 적혀 있었다.
+   지금 탭의 실제 설정을 읽어 그대로 적는다. */
+const COST_FLAG={dca:()=>dcaCostOn, im:()=>imCostOn, vr:()=>vrCostOn, ma:()=>maCostOn,
+  asap:()=>asapCostOn, std:()=>stdCostOn, ivs:()=>ivsCostOn, all:()=>allCostOn,
+  mom:()=>(typeof momCostOn!=='undefined'?momCostOn:true)};
+function renderFootNote(){
+  const el=document.getElementById('footCost'); if(!el) return;
+  const base='※ 실제 OHLC 종가 기반 백테스트. LOC매수=종가≤주문가 시 체결, 지정가매도=당일 고가≥목표가 시 체결로 근사.';
+  const f=COST_FLAG[strat], on=f?!!f():false;
+  const cost=on
+    ? '<b style="color:var(--gold)">비용 적용</b> — 매매 수수료·양도세(미국 22%, 연 250만원 공제 / 국내 규약 별도)·ETF 보수를 반영합니다.'
+    : '<b>비용 미적용</b> — 수수료·세금·보수를 넣지 않은 총수익 기준입니다.';
+  const div=(strat==='dca'||strat==='all')
+    ? ` · 분배금 <b>${(typeof dcaReinv==='undefined'||dcaReinv)?'재투자(복리)':'현금 수령(단리)'}</b>`
+    : ' · 분배금은 조정종가에 반영된 총수익 기준';
+  el.innerHTML=`${base}<br>※ <b>이번 실행</b> — ${cost}${div} · 환율은 반영하지 않습니다(종목 통화 그대로).`;
 }
 function noteSkipped(skip){
   if(!skip.length) return;
@@ -2619,11 +2687,7 @@ function vrCycleCount(days){
 function runVR(days,tkr,params){
   const {contrib=100,G=10,bandPct=15,mode=0.75,formula='basic',initAmt=0,withdraw=0,startV=0,startPool=0,cycStart='',costOn=false}=params||{};
   const band=bandPct/100,poolLimit=mode;
-  /* 사이클은 거래일 수가 아니라 달력으로 센다 — 운영 앱과 같은 규약(CYC_DAYS=14).
-     10거래일은 늘 14일이 아니다. 휴장이 낄 때마다 어긋나 6년이면 150회 vs 156회가 되고,
-     앱이 알려 주는 진입일과 백테가 넘기는 날이 서로 다른 날이 된다.
-     앱은 '직전 기준일 + 14일(주말이면 다음 영업일)'을 다음 기준일로 삼고,
-     그 날짜가 지난 첫 거래일에 사이클을 넘긴다 — 여기서도 똑같이 한다. */
+  // 사이클 판정은 파일 위의 공용 엔진(VR_CYC_DAYS·vrNextDue)을 쓴다 — 여기서 다시 세지 않는다
   let _vrDue=null;
   /* 체결 방식 — 'ladder'(기본)는 실전처럼 2주 내내 지정가가 살아 있고,
      'close'는 2주에 한 번 그날 종가에만 되맞추는 예전 방식이다.
@@ -2822,11 +2886,30 @@ function maCondTxt(buy,sell){ return `매수 ${MA_COND_LBL[buy]||'200선'}·매�
    ※ 예전엔 다종목 화면과 단일종목 상세가 각자 문자열을 만들어, 상세 쪽에만 조건이 빠져 있었다.
      조건을 바꿔도 헤더가 그대로라 "값이 안 바뀐다"고 오해하기 쉬웠다(비교 기준선인 거치식·DCA는
      원래 조건과 무관해 안 바뀌므로, 헤더가 유일한 확인 수단이었다). 한 곳에서 만들어 어긋나지 않게 한다. */
+/* 논문(Gayed·Bilello "Leverage for the Long Run", 2016) 의 원형은 하나다 —
+     합성 1배지수 종가 > 200일선 이면 레버리지 100% 보유, 아니면 전액 현금.
+   화면에 있는 매수·매도 4택×4택(16조합)·50/200 골든크로스·국채 대피는
+   우리가 얹은 확장이다. 같은 이름으로 보이면 사용자가 확장 결과를 논문 결과로 읽는다. */
+function maVariant(len){
+  const v=[], L=len||(typeof maLen!=='undefined'?maLen:200), O=_maOpt(null);
+  if(+L!==200) v.push(L+'일선(논문은 200일)');
+  if(O.buy!=='ma')  v.push('매수 '+(MA_COND_LBL[O.buy]||O.buy));
+  if(O.sell!=='ma') v.push('매도 '+(MA_COND_LBL[O.sell]||O.sell));
+  if(O.park!=='cash') v.push('대피처 단기국채(논문은 현금)');
+  return v;
+}
+function maVariantTag(len){
+  const v=maVariant(len);
+  return v.length
+    ? ` · <span style="color:var(--gold)">기반 확장형</span> <span style="font-size:10px;color:var(--dim)">(${v.join(' · ')})</span>`
+    : ` · <span style="color:var(--green)">논문 원형</span>`;
+}
 function maStratName(len){
   const L=len||(typeof maLen!=='undefined'?maLen:200), O=_maOpt(null);
   return `${L}일선 로테이션 · ${maCondTxt(O.buy,O.sell)}`
     + ((O.buy!=='ma'||O.sell!=='ma')?`(${O.short}/${L})`:'')
-    + (O.park==='bill'?' · 국채대피':'');
+    + (O.park==='bill'?' · 국채대피':'')
+    + maVariantTag(L);
 }
 function _maOpt(opt){
   let buy =(opt&&opt.buy) ||(typeof maBuy !=='undefined'?maBuy :'ma');
@@ -3256,11 +3339,19 @@ function _stratNum(id,def){ if(typeof document==='undefined')return def; const e
 function imVariant(tkrs){
   const v=[];
   const list=[].concat(tkrs||[]).filter(Boolean);
-  if(list.length && list.some(t=>!IM_OFFICIAL[t])) v.push('비공식 종목');
-  if(typeof imDiv!=='undefined' && !revSupported(imDiv)) v.push(imDiv+'분할(리버스 규칙 미수록)');
+  if(list.length && list.some(t=>!IM_OFFICIAL[t])) v.push('비공식 종목(익절 20%는 확장값)');
+  /* 분할수의 근거를 갈라 적는다.
+       20·40 — 별% base·기울기·리버스 규칙이 전부 문서에 있다
+       30     — 일반모드 분할로는 나오지만 별% 값이 20·40처럼 명시 확인되지 않았다 → 일반화식 추정
+       10     — 공식 규칙 자체가 문서에 없다 → 실험 */
+  if(typeof imDiv!=='undefined'){
+    if(+imDiv===10) v.push('10분할(공식 규칙 미수록 · 실험)');
+    else if(+imDiv===30) v.push('30분할(별% 일반화식 · 추정)');
+  }
+  if(typeof imDiv!=='undefined' && !revSupported(imDiv)) v.push('리버스 미적용(그 분할 규칙 미수록)');
   else if(typeof imReverse!=='undefined' && !imReverse) v.push('리버스 OFF');
+  else if(typeof imRevGap!=='undefined') v.push('리버스 gap '+imRevGap+'%(출처 미확인 · 사용자 설정)');
   if(typeof imTarget!=='undefined' && imTarget>0) v.push('익절 '+imTarget+'% 고정');
-  if(typeof imRevGap!=='undefined' && Math.abs(imRevGap-2.5)>1e-9) v.push('리버스 gap '+imRevGap+'%');
   if(typeof imTgtDyn!=='undefined' && imTgtDyn) v.push('익절 조절 ON');
   if(typeof imEngine!=='undefined' && imEngine!=='v40') v.push('엔진 '+imEngine.toUpperCase());
   return v;
@@ -3506,6 +3597,7 @@ async function run(){
   const start=document.getElementById('dStart').value;
   const end=document.getElementById('dEnd').value;
   if(!start||!end||start>=end){alert('날짜를 확인하세요.');return;}
+  renderFootNote();          // 비용 토글은 탭을 안 바꾸고 눌리므로 실행할 때마다 다시 적는다
   if(strat==='mom'){ await runMomentum(start,end); return; }   // 모멘텀은 독립 데이터 캐시 사용
   // 데이터 없거나 · 요청 기간이 더 넓거나 · 선택 종목 중 미로딩분이 있으면 재로딩
   const wanted = strat==='dca' ? [...dcaActive] : strat==='im' ? [...imActive] : strat==='ma' ? [...maActive]
