@@ -66,6 +66,11 @@ const iqSrc=(bt.match(/^const iq=\(amt,px\)=>[^\n]*\nconst isq=\([^\n]*$/m)||[''
 if(!iqSrc) throw new Error('정수 주수 헬퍼(iq/isq)를 backtest.html에서 못 찾음');
 // eval 안의 const는 밖으로 안 새어나간다 — 뒤에 따로 eval하는 엔진(runIM50 등)도 봐야 하니 전역으로 올린다
 { const f=new Function(iqSrc+'\nreturn {iq,isq};')(); global.iq=f.iq; global.isq=f.isq; }
+/* 큰수 상한 — 앱·백테가 같은 한 곳을 쓴다. 파일에서 그대로 떼어 온다. */
+{ const m=bt.match(/const IM_BIG_DEFAULT=\d+;\nfunction imBigPct\(st\)\{[^\n]*\}/);
+  if(!m) throw new Error('IM_BIG_DEFAULT/imBigPct 를 backtest.html에서 못 찾음');
+  const f=new Function(m[0]+'\nreturn {IM_BIG_DEFAULT, imBigPct};')();
+  global.IM_BIG_DEFAULT=f.IM_BIG_DEFAULT; global.imBigPct=f.imBigPct; }
 /* 무매 매수 주수 헬퍼 — 운영·모의·백테가 같이 쓴다. 파일에서 그대로 떼어 온다. */
 { const m=bt.match(/function imBuyQty\(alloc, refPx, feeRate\)\{[\s\S]*?\n\}/);
   if(!m) throw new Error('imBuyQty 를 backtest.html에서 못 찾음');
@@ -647,8 +652,27 @@ console.log('[13] LOC 주문가 상한');
   ok('기준 종가가 시세로 폴백된다 (입력칸이 비어도)',
      /inputNum\('o_close'\)\|\|\(_sl\?/.test(ord) && /infSettledLast\(\)/.test(ord));
   ok('폴백 시세는 종목을 대조한다', /Q\.symbol[\s\S]{0,120}st\.ticker/.test(idx));
-  ok('큰수 % 기본값 15 (V4.0 첫매수 큰수 상단)', 
-     /isFinite\(\+st\.big\)\)\?\+st\.big:20/.test(idx) && /big:15,/.test(idx));
+  /* 큰수 기본은 한 곳(IM_BIG_DEFAULT)에서만 나온다 — 예전엔 신규 15 · 백테 15 ·
+     옛 세션 fallback 20 이 섞여 같은 설정인데 화면마다 상한이 달랐다 (4차 감사 ④). */
+  ok('큰수 % 기본값이 한 곳에 있다', /const IM_BIG_DEFAULT=15;/.test(idx) && /const IM_BIG_DEFAULT=15;/.test(bt));
+  ok('앱·백테의 imBigPct 가 같은 몸이다', (()=>{
+      const re=/function imBigPct\(st\)\{[^\n]*\}/;
+      const a=(idx.match(re)||[''])[0], b=(bt.match(re)||[''])[0];
+      return !!a && a===b; })());
+  ok('기본 세션이 그 상수를 읽는다', /big:IM_BIG_DEFAULT,/.test(idx) && !/big:15,/.test(idx));
+  ok('fallback 20 이 안 남아 있다', !/\+st\.big:20/.test(idx));
+  ok('값으로 — 미설정·0·음수는 15, 설정값은 그대로',
+     imBigPct({})===15 && imBigPct({big:0})===15 && imBigPct({big:-3})===15
+     && imBigPct({big:25})===25 && imBigPct(undefined)===15,
+     `${imBigPct({})} ${imBigPct({big:25})}`);
+  ok('백테 두 엔진이 같은 헬퍼를 쓴다',
+     (bt.match(/const bigPct=imBigPct\(\{big:bigOverride\}\);/g)||[]).length===2
+     && !/const bigPct=15;/.test(bt));
+  ok('백테 엔진이 큰수를 파라미터로 받는다',
+     /function runIM\(days,tkr,cap,divs,targetPct,compound=true,bigOverride\)/.test(bt)
+     && /function runIM50\(days,tkr,cap,divs,targetPct,compound=true,bigOverride\)/.test(bt));
+  ok('모의체결도 같은 헬퍼를 쓴다',
+     /const bigPct=imBigPct\(st\);/.test(extractFn(idx,'function infSimForward(startFrom)')));
   ok('하방 LOC는 같은 상한', /하방 \$\{i\}[\s\S]{0,80}p>limit\)\?limit:p/.test(ord));
   // 수량은 상한 전 가격으로 — 상한이 수량까지 바꾸면 모의·백테와 어긋난다
   // 수량은 상한가가 아니라 '종가'로 나눈다 — 상한이 수량을 흔들면 안 되고,
@@ -658,7 +682,7 @@ console.log('[13] LOC 주문가 상한');
   const sellCap=/oitem\('s'[^)]*limit/.test(ord);
   ok('매도가는 상한으로 낮추지 않는다', !sellCap, sellCap?'매도에 상한 적용됨':'');
   // 큰수 %가 없는 옛 세션에서 NaN이 되어 상한이 통째로 꺼지지 않아야 한다
-  ok('큰수 % 미설정 세션도 상한 동작', /isFinite\(\+st\.big\)/.test(ord));
+  ok('큰수 % 미설정 세션도 상한 동작', /const bigPct=imBigPct\(st\);/.test(ord));
 }
 
 
@@ -676,10 +700,9 @@ console.log('[14] 체결가 규약');
   // LOC는 반드시 종가 — 매수·쿼터매도가 종가 아닌 값으로 체결되면 안 된다
   ok('모의 매수는 종가 체결', /put\('절반매수',d,cl,/.test(sim) && /put\('1회매수',d,cl,/.test(sim));
   ok('모의 쿼터매도는 종가 체결', /put\('쿼터매도',d,cl,/.test(sim));
-  /* 익절 판정은 '종가'다. 고가 터치를 체결로 치면 장중에 스치기만 하고 안 팔린 날까지
-     익절로 세어 모의가 실제보다 낙관적으로 나온다 (SOXL 20/10 한 해 +8.7%p).
-     체결가는 여전히 max(익절가, 시가) — 갭업이면 시가가 더 유리하다. */
-  ok('익절 판정은 종가', /if\(cl>=tgt && qTp>0\)/.test(sim) && !/hi>=tgt/.test(sim));
+  /* 지정가 익절은 장 시작 전에 이미 걸어 둔 주문이다. 따라서 당일 고가가 지정가에
+     도달하면 체결로 본다. 운영 주문표와 백테 runIM(imFill=high)의 규약과 같아야 한다. */
+  ok('익절 지정가는 고가 터치로 판정', /if\(hi>=tgt && qTp>0\)/.test(sim) && !/if\(cl>=tgt && qTp>0\)/.test(sim));
   ok('익절 체결가는 max(익절가, 시가)', /put\('지정가매도',d,\(op>tgt\?op:tgt\),qTp\)/.test(sim));
   // 규약을 바꾸면 이미 쌓인 모의 기록도 다시 만들어져야 한다 — 설정 지문만으로는 안 걸린다
   ok('체결 규약 판이 모의 지문에 들어간다',
@@ -1491,15 +1514,19 @@ console.log('[32] 전반전 매수 — 주문별 정수 내림 (모의 == 백테
   // runIM50도 같은 규약이어야 한다 — 예전에 여기만 빠뜨려서 V5.0==V4.0 항등이 깨졌었다
   const n=(bt.match(/if\(c<=starOrder\)\{ if\(_buy\(c,half,prevC\)>0\) T\+=0\.5; \}/g)||[]).length;
   ok('runIM·runIM50 둘 다 고쳐져 있다', n===2, n+'곳');
-  // 운영 모의도 반드시 절반씩 따로 내림해야 한다 (한쪽만 고치면 다시 갈린다)
-  /* 모의도 절반씩 따로 내림해야 한다 (한쪽만 고치면 다시 갈린다).
-     다만 나누는 가격은 오늘 종가(cl)가 아니라 '주문 전 아는 가격'(전일 확정 종가)이다 —
+  /* 운영 모의도 별지점·평단 두 주문을 따로 수량 계산해야 한다 (한쪽만 고치면 다시 갈린다).
+     수량 기준은 당일 종가가 아니라 주문 전 알 수 있는 전일 종가(prevC)다 —
      오늘 종가로 나누면 오늘 싸졌다는 이유로 그날 수량이 늘어난다(룩어헤드, 4차 감사 ②). */
-  const half=(idx.match(/put\('절반매수',d,cl,imBuyQty\(B\.amt\/2,qref,0\)\)/g)||[]).length;
-  ok('모의: 절반 주문 2건을 각각 내림 (공통 헬퍼)', half===2, half+'곳');
+  const sim=extractFn(idx,'function infSimForward(startFrom)');
+  const half=(sim.match(/_qtyBuy\(B\.amt\/2,prevC,cl\)/g)||[]).length;
+  ok('모의: 절반 주문 2건을 전일종가 기준으로 각각 내림', half===2, half+'곳');
+  ok('모의: 첫매수도 전일종가 기준 수량', /_qtyBuy\(B\.amt,prevC,cl\)/.test(sim));
+  ok('모의: 큰수 상한을 넘긴 종가에는 매수하지 않는다', /if\(cl<=buyLimit\)/.test(sim));
   ok('모의가 오늘 종가로 수량을 세지 않는다',
      !/Math\.floor\(\(B\.amt\/2\)\/cl\)/.test(idx) && !/Math\.floor\(B\.amt\/cl\)/.test(idx));
-  ok('모의의 수량 기준가는 전일 확정 종가다', /const qref=closeAt\(row\.i-1\)\|\|cl;/.test(idx));
+  ok('모의 수량도 공통 헬퍼 imBuyQty 로 센다',
+     /Math\.min\(imBuyQty\(alloc,rp,0\), imBuyQty\(Math\.max\(0,cNow\.bal\),fillPx,0\)\)/.test(sim),
+     '모의가 아직 자기만의 내림식을 쓴다');
 }
 
 console.log('[33] 세션 이동 — 보던 서브탭 유지');
@@ -5682,9 +5709,13 @@ console.log('\n[91] 무매 주문수량 — 주문 전 아는 가격으로 확�
       const a=(idx.match(re)||[''])[0], b=(bt.match(re)||[''])[0];
       return !!a && a===b; })(), '두 파일의 imBuyQty 가 다르다');
   ok('운영 주문표가 헬퍼를 쓴다', /const dp=qtyPrice\|\|price, q=imBuyQty\(alloc,dp,0\);/.test(idx));
-  ok('모의체결 네 자리가 모두 헬퍼를 쓴다',
-     (idx.match(/imBuyQty\(B\.amt(\/2)?,qref,0\)/g)||[]).length===4,
-     `${(idx.match(/imBuyQty\(B\.amt/g)||[]).length}곳`);
+  /* 모의는 _qtyBuy 한 겹을 더 두른다 — 전일종가로 수량을 확정한 뒤 체결가 기준 잔금으로
+     한 번 더 자른다(백테 maxQ 와 같은 규약). 그 안쪽 수량 산출은 공통 헬퍼여야 한다. */
+  ok('모의체결도 공통 헬퍼로 수량을 센다', (()=>{
+      const sim=extractFn(idx,'function infSimForward(startFrom)');
+      const calls=(sim.match(/_qtyBuy\(B\.amt(\/2)?,prevC,cl\)/g)||[]).length;
+      return calls===4 && /imBuyQty\(alloc,rp,0\)/.test(sim) && /imBuyQty\(Math\.max\(0,cNow\.bal\),fillPx,0\)/.test(sim); })(),
+     `${((extractFn(idx,'function infSimForward(startFrom)')||'').match(/_qtyBuy\(B\.amt/g)||[]).length}곳`);
   ok('백테 두 엔진이 모두 헬퍼를 쓴다',
      (bt.match(/let q=imBuyQty\(amt, ref, FEE\)/g)||[]).length===2
      && (bt.match(/const maxQ=imBuyQty\(cash, px, FEE\)/g)||[]).length===2);

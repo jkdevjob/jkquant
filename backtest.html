@@ -320,7 +320,7 @@ td:first-child{text-align:left;}
   <div class="brand">
     <div>
       <div class="logo">Backtest</div>
-      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v2.1.1</span></h1>
+      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v2.1.2</span></h1>
     </div>
   </div>
   <div class="hright">
@@ -2392,11 +2392,17 @@ function _imTgtOf(base, mom){ return (mom!=null && mom>IM_MOM_TH) ? Math.min(bas
    오늘 종가로 수량을 정하면, 오늘 싸졌다는 이유로 그날 주문수량이 늘어난다 — 룩어헤드다.
    (전일 100 · 오늘 80 · 배정 1000 → 올바른 답은 10주. 오늘 종가로 세면 12주가 된다.)
    예산 규약: 배정금 = 매수금 + 수수료. 비용 OFF(feeRate 0)면 그냥 내림 나눗셈이다. */
+/* 큰수(첫 매수 LOC 상한) — 한 값만 쓴다 (4차 감사 ④).
+   공식 V4.0 기본은 전일 확정 종가 +15% 다. 예전엔 신규 세션 15 · 백테 하드코딩 15 ·
+   옛 세션 fallback 20 이 섞여 있어, 같은 설정인데 화면마다 상한이 달랐다.
+   사용자가 바꾸면 그건 '변형' 이고, 안 바꾸면 어디서나 이 값이다. */
+const IM_BIG_DEFAULT=15;
+function imBigPct(st){ const v=+((st||{}).big); return isFinite(v)&&v>0 ? v : IM_BIG_DEFAULT; }
 function imBuyQty(alloc, refPx, feeRate){
   const f=1+(feeRate||0);
   return (refPx>0 && alloc>0) ? Math.floor(alloc/f/refPx) : 0;
 }
-function runIM(days,tkr,cap,divs,targetPct,compound=true){
+function runIM(days,tkr,cap,divs,targetPct,compound=true,bigOverride){
   // 종목 계열: TQQQ만 TQQQ식(base15/복귀−15%), 그 외 전부 SOXL식(base20/복귀−20%) — index.html과 동일 규약
   // (문서상 TQQQ/SOXL만 오피셜. 복귀 기준은 "T 마지막 쿼터매도 기준과 동일"이므로 base와 반드시 짝이어야 함)
   // ★ 통합 규약: 익절% = 별%base (문서: TQQQ 15/15, SOXL 20/20)
@@ -2407,7 +2413,7 @@ function runIM(days,tkr,cap,divs,targetPct,compound=true){
   const starSlope=starBase*0.1*20/divs;
   const exitMul=1-starBase/100;
   const sellDiv = divs>=40?20:10;            // 리버스 무한매도 분모 (20분할→10, 40분할→20)
-  const bigPct=15;                            // V4.0 첫매수 큰수 기본: 전일 종가 +15%
+  const bigPct=imBigPct({big:bigOverride});   // 큰수 상한 — 앱과 같은 한 곳에서 (기본 15)
   const MOM = ((typeof imTgtDyn!=='undefined')&&imTgtDyn) ? _imMom(tkr,IM_MOM_LEN) : null;   // 익절 동적 조절 (OFF면 null → 기존과 완전 동일)
   /* 단리 판정은 '사이클 종료 잔액이 최초 원금을 넘는가'다. 넘으면 넘은 만큼만 인출하고
      원금으로 다시 시작, 못 넘으면 인출도 보충도 없이 그 잔액 그대로 다음 사이클로 간다.
@@ -2767,13 +2773,13 @@ function buildGateIM(tkr, shortMA){
 // 국면 = 합성 1배지수 > 200일선 AND > 50일선 (buildGateIM).
 // 검증: Walk-Forward OOS에서 하락익절 6%가 전 종목 최적 근접 + 변동성 상향은 무효(제거) 확인.
 //   SOXL 전구간 CAGR 49→62%, MDD 66→66%(불변), 최종액 3.6배. 하락익절 6은 5·7 대비 섭동 20전20승.
-function runIM50(days,tkr,cap,divs,targetPct,compound=true){
+function runIM50(days,tkr,cap,divs,targetPct,compound=true,bigOverride){
   // ★ 통합 규약 (runIM과 동일): base=익절% / slope=base×0.1×20/divs / exitMul=1−base/100
   const starBase=targetPct;
   const starSlope=starBase*0.1*20/divs;
   const exitMul=1-starBase/100;
   const sellDiv = divs>=40?20:10;
-  const bigPct=15;
+  const bigPct=imBigPct({big:bigOverride});   // 큰수 상한 — 앱과 같은 한 곳에서 (기본 15)
   const GM=buildGateIM(tkr);
   /* 단리 판정은 '사이클 종료 잔액이 최초 원금을 넘는가'다. 넘으면 넘은 만큼만 인출하고
      원금으로 다시 시작, 못 넘으면 인출도 보충도 없이 그 잔액 그대로 다음 사이클로 간다.
@@ -4125,7 +4131,9 @@ async function run(){
     imUse.forEach(t=>{
       const tgt = imTgtFor(t);
       if(imEngine==='ab'){
-        results[t]={res:runIM(commonD,t,cap,imDiv,tgt,compound), res50:runIM50(commonD,t,cap,imDiv,tgt,compound), tgt, days:commonD};
+        /* 큰수 상한은 백테에 입력칸이 없다 — 공식 기본(IM_BIG_DEFAULT=15)으로 돈다.
+       엔진은 파라미터를 받으므로 나중에 칸이 생기면 그 값만 넘기면 된다. */
+    results[t]={res:runIM(commonD,t,cap,imDiv,tgt,compound), res50:runIM50(commonD,t,cap,imDiv,tgt,compound), tgt, days:commonD};
       }else{
         const eng = imEngine==='v22' ? runIM22 : imEngine==='v30' ? runIM30 : imEngine==='v50' ? runIM50 : runIM;
         results[t]={res:eng(commonD,t,cap,imDiv,tgt,compound), days:commonD};

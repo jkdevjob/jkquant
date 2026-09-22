@@ -143,7 +143,7 @@ th:first-child,td:first-child{text-align:left}
 <body>
 <div class="wrap">
   <div class="top">
-    <div class="brand"><div class="logo">Five Year Plan</div><h1>5년 자산플랜 <span class="ver">v1.6.4</span></h1></div>
+    <div class="brand"><div class="logo">Five Year Plan</div><h1>5년 자산플랜 <span class="ver">v1.7.3</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
       <div class="jkmenu" id="jkmenuWrap">
@@ -192,9 +192,9 @@ th:first-child,td:first-child{text-align:left}
       <div class="sub">① 새로고침 → ② 세 전략의 오늘 주문·신호 확인 → ③ 실제 체결 후 장부 기록 → ④ 목표비중 부족 축에 새 돈 배분</div>
       <div class="guidegrid">
         <div class="guidekpi"><div class="k">현재 기준 SOXL</div><div class="v">V4.0 · 20분할 · +20% · 복리</div></div>
-        <div class="guidekpi"><div class="k">현재 기준 TQQQ</div><div class="v">VR 5.0 · G10 · ±15 · 기본</div></div>
-        <div class="guidekpi"><div class="k">QLD / SGOV</div><div class="v">50:50 · 20/30/25/25</div></div>
-        <div class="guidekpi"><div class="k">5년 운용 기준</div><div class="v"><span class="note-strong">강건성 우선 · 과최적화 제외</span></div></div>
+        <div class="guidekpi"><div class="k">현재 기준 TQQQ</div><div class="v">VR 5.0 · G10 · ±15 · 기본 · 초기주식100%</div></div>
+        <div class="guidekpi"><div class="k">QLD / SGOV</div><div class="v">60:40 · 30/30/20/20</div></div>
+        <div class="guidekpi"><div class="k">5년 운용 기준</div><div class="v"><span class="note-strong">2010~2026 블록부트스트랩 · 정상/스트레스 재검증</span></div></div>
       </div>
     </div>
   </div>
@@ -232,7 +232,8 @@ th:first-child,td:first-child{text-align:left}
       <div class="guidegrid">
         <div class="guidekpi"><div class="k">종목</div><div class="v">TQQQ</div></div>
         <div class="guidekpi"><div class="k">G / 밴드</div><div class="v">G10 / ±15%</div></div>
-        <div class="guidekpi"><div class="k">공식 / Pool</div><div class="v">기본공식 / 사이클 50%</div></div>
+        <div class="guidekpi"><div class="k">공식 / Pool</div><div class="v">기본공식 / Pool한도 50%</div></div>
+        <div class="guidekpi"><div class="k">초기 배정</div><div class="v">TQQQ 100 / Pool 0</div><div class="sub">5년 플랜 최적화값 · 오피셜 고정값 아님</div></div>
         <div class="guidekpi"><div class="k">목표비중</div><div class="v" id="tqqqTargetPct">30%</div></div>
       </div>
       <div class="sessionbar">
@@ -240,10 +241,10 @@ th:first-child,td:first-child{text-align:left}
         <button class="btn primary" id="tqqqCreateSession">+ 자동 생성</button>
         <div class="sessionstate" id="tqqqSessionState">모의세션은 목록에서 제외됩니다.</div>
       </div>
-      <div class="todaybox"><h3>📋 오늘 TQQQ VR 실행</h3><div class="sub" id="tqqqTabMeta">실전 세션과 시세를 불러오는 중…</div><div class="liveact" id="tqqqTabActions" style="margin-top:8px"></div></div>
+      <div class="todaybox"><h3>📋 오늘 TQQQ VR 실행</h3><div class="sub" id="tqqqTabMeta">실전 세션과 시세를 불러오는 중…</div><div class="liveact" id="tqqqTabActions" style="margin-top:8px"></div><div class="btnrow" id="vrCycleActionRow" style="display:none"><button class="btn gold" id="vrCycleAdvanceBtn">다음 사이클 진입</button></div></div>
       <div class="rulelist">
         <div class="rule"><span class="num">1</span><div><b>연동된 VR 세션이 없으면 먼저 생성</b><small>플랜에서 직접 만든 세션 또는 직접 선택한 실전세션만 사용합니다. 모의세션은 선택 목록에서 제외합니다.</small></div></div>
-        <div class="rule"><span class="num">2</span><div><b>14일 사이클 자동</b><small>사이클 기준일에는 V를 갱신하고, 새 사다리는 다음 거래일부터 적용하는 규칙을 사용합니다.</small></div></div>
+        <div class="rule"><span class="num">2</span><div><b>14일 사이클 · 장 마감 후 확정</b><small>기준일 장중까지는 기존 V 사다리가 유효합니다. 그날 체결을 기록한 뒤 플랜의 ‘다음 사이클 진입’을 눌러 V를 갱신하며, 새 사다리는 다음 거래일부터 적용합니다.</small></div></div>
         <div class="rule"><span class="num">3</span><div><b>전체 예약 사다리를 이 화면에 표시</b><small>밴드 밖 즉시조정과 함께, 사이클 Pool 한도 내 예약매수·예약매도 전 차수를 가격·수량으로 보여줍니다.</small></div></div>
         <div class="rule"><span class="num">4</span><div><b>월 적립금은 무조건 VR에 넣지 않음</b><small>전체 플랜에서 목표비중보다 부족할 때만 VR 축을 보충합니다.</small></div></div>
       </div>
@@ -256,9 +257,9 @@ th:first-child,td:first-child{text-align:left}
       <div class="eyebrow">STRATEGY 3 · QLD / SGOV ROTATION</div>
       <h2>QLD·SGOV — 방어자금과 저점매수 탄약</h2>
       <div class="guidegrid">
-        <div class="guidekpi"><div class="k">평상시</div><div class="v">QLD 50 / SGOV 50</div></div>
-        <div class="guidekpi"><div class="k">딥 매수</div><div class="v">20% → 30%</div></div>
-        <div class="guidekpi"><div class="k">회복 매수</div><div class="v">25% → 25%</div></div>
+        <div class="guidekpi"><div class="k">평상시</div><div class="v">QLD 60 / SGOV 40</div></div>
+        <div class="guidekpi"><div class="k">딥 매수</div><div class="v">30% → 30%</div></div>
+        <div class="guidekpi"><div class="k">회복 매수</div><div class="v">20% → 20%</div></div>
         <div class="guidekpi"><div class="k">판단 지수</div><div class="v">QQQ · MA200/RSI</div></div>
       </div>
       <div class="sessionbar">
@@ -268,11 +269,11 @@ th:first-child,td:first-child{text-align:left}
       </div>
       <div class="todaybox"><h3>📋 오늘 QLD·SGOV 실행</h3><div class="sub" id="sleeveTabMeta">QQQ 지표를 불러오는 중…</div><div class="liveact" id="sleeveTabActions" style="margin-top:8px"></div></div>
       <div class="rulelist">
-        <div class="rule"><span class="num">1</span><div><b>QQQ가 200일선 위</b><small>기본 QLD 50 / SGOV 50을 유지합니다. 신규 전환 신호가 없으면 거래하지 않습니다.</small></div></div>
-        <div class="rule"><span class="num">2</span><div><b>딥 1 · RSI≤35 & ATH -10%</b><small>하락장 시작 시점에 스냅샷한 SGOV 기준금액의 20%를 QLD로 이동합니다.</small></div></div>
+        <div class="rule"><span class="num">1</span><div><b>QQQ가 200일선 위</b><small>기본 QLD 60 / SGOV 40을 유지합니다. 신규 전환 신호가 없으면 거래하지 않습니다.</small></div></div>
+        <div class="rule"><span class="num">2</span><div><b>딥 1 · RSI≤35 & ATH -10%</b><small>하락장 시작 시점에 스냅샷한 SGOV 기준금액의 30%를 QLD로 이동합니다.</small></div></div>
         <div class="rule"><span class="num">3</span><div><b>딥 2 · RSI≤30 & ATH -18%</b><small>같은 기준 SGOV의 30%를 추가로 QLD로 이동합니다.</small></div></div>
-        <div class="rule"><span class="num">4</span><div><b>회복 · 5MA↑20MA / 20MA↑50MA</b><small>각각 기준 SGOV의 25%, 25%를 QLD로 이동합니다.</small></div></div>
-        <div class="rule"><span class="num">5</span><div><b>QQQ 종가가 MA200 재돌파</b><small>하락장 사이클을 끝내고 전체 QLD/SGOV 슬리브를 다시 50:50으로 맞춥니다.</small></div></div>
+        <div class="rule"><span class="num">4</span><div><b>회복 · 5MA↑20MA / 20MA↑50MA</b><small>각각 기준 SGOV의 20%, 20%를 QLD로 이동합니다.</small></div></div>
+        <div class="rule"><span class="num">5</span><div><b>QQQ 종가가 MA200 재돌파</b><small>하락장 사이클을 끝내고 전체 QLD/SGOV 슬리브를 다시 60:40으로 맞춥니다.</small></div></div>
       </div>
     </div>
   </div>
@@ -503,18 +504,18 @@ function mirrorStrategyTab(metaId,actionsId,meta,html){
 }
 
 const STAGES={
-  1:{title:"STEP 1 · 성장 가속",badge:"GROWTH",desc:"자산을 최대한 키우는 단계",main:[40,30,30],sleeve:"QLD/SGOV 슬리브는 평상시 50:50 기준. 실제 내부 비중은 순환 전략 신호를 우선합니다.",
-     checks:["SOXL 무매는 V4.0 20분할·익절20%·복리·리버스 ON·큰수15%를 유지합니다.","TQQQ VR은 거치식·기본공식·G10·밴드15·사이클 Pool 50%를 사용합니다.","월 추가자금은 세 전략축 중 목표비중 대비 가장 부족한 축에 먼저 배분합니다.","단일 과거 1위보다 5년 운용 강건성을 우선해 파라미터를 고정합니다."]},
-  2:{title:"STEP 2 · 수익 보호",badge:"PROTECT",desc:"번 돈을 일부 잠그기 시작하는 단계",main:[25,25,50],sleeve:"QLD/SGOV 슬리브 50% 중 보호기준은 QLD 30% / SGOV 70%입니다. 즉 전체자산 기준 약 QLD 15% / SGOV 35%.",
-     checks:["SOXL 무매와 TQQQ VR 합산 목표를 50% 수준으로 낮춥니다.","매도·익절로 생긴 현금을 우선 SGOV 보호자금으로 이동합니다.","QLD/SGOV 슬리브를 전체의 50%까지 키웁니다.","목표금액 85% 또는 목표일까지 12개월이 되면 STEP 3으로 넘어갑니다."]},
-  3:{title:"STEP 3 · 전환 준비",badge:"TRANSITION",desc:"마지막 폭락에 목표자산을 잃지 않도록 감속하는 단계",main:[15,15,70],sleeve:"QLD/SGOV 슬리브 70% 중 기준은 QLD 약 20% / SGOV 약 50%입니다. 생활비 12~18개월분을 우선 확보합니다.",
-     checks:["레버리지 전략 합산 목표를 30% 수준까지 낮춥니다.","최소 12개월치 예정 생활비를 SGOV·현금성 자산으로 확보합니다.","목표금액을 달성했다면 추가 수익보다 보호를 우선합니다.","목표일 또는 목표금액 100% 도달 시 STEP 4 현금흐름 구조로 전환합니다."]},
+  1:{title:"STEP 1 · 성장 가속",badge:"GROWTH",desc:"5년 종료시점까지 성장과 생존을 함께 최적화하는 단계",main:[30,20,50],sleeve:"QLD/SGOV 슬리브는 평상시 QLD 60 / SGOV 40. 하락장 기준 SGOV를 30/30/20/20으로 QLD에 투입합니다.",
+     checks:["SOXL 무매는 V4.0 20분할·익절20%·복리·리버스 ON·큰수15%를 유지합니다.","TQQQ VR은 거치식·기본공식·G10·밴드15·Pool 사용한도 50%를 사용합니다.","QLD/SGOV 슬리브는 60:40에서 시작하고 하락장 투입은 기준 SGOV의 30/30/20/20으로 운용합니다.","월 추가자금은 세 전략축 중 목표비중 대비 가장 부족한 축에 먼저 배분합니다."]},
+  2:{title:"STEP 2 · 수익 보호",badge:"PROTECT",desc:"번 돈을 일부 잠그기 시작하는 단계",main:[20,15,65],sleeve:"QLD/SGOV 슬리브 65%를 보호축으로 사용합니다. STEP 2에서는 신규자금과 익절금을 우선 SGOV 쪽으로 이동합니다.",
+     checks:["SOXL 무매와 TQQQ VR 합산 목표를 35% 수준으로 낮춥니다.","매도·익절로 생긴 현금을 우선 SGOV 보호자금으로 이동합니다.","QLD/SGOV 슬리브를 전체의 65%까지 키웁니다.","목표금액 85% 또는 목표일까지 12개월이 되면 STEP 3으로 넘어갑니다."]},
+  3:{title:"STEP 3 · 전환 준비",badge:"TRANSITION",desc:"마지막 폭락에 목표자산을 잃지 않도록 감속하는 단계",main:[10,5,85],sleeve:"QLD/SGOV 슬리브 85%를 전환 준비축으로 사용합니다. 목표일이 가까울수록 SGOV·현금성 비중을 우선 확보합니다.",
+     checks:["SOXL 무매와 TQQQ VR 합산 목표를 15% 수준까지 낮춥니다.","최소 12개월치 예정 생활비를 SGOV·현금성 자산으로 확보합니다.","목표금액을 달성했다면 추가 수익보다 보호를 우선합니다.","목표일 또는 목표금액 100% 도달 시 STEP 4 현금흐름 구조로 전환합니다."]},
   4:{title:"STEP 4 · 현금흐름",badge:"INCOME",desc:"자산을 오래 유지하면서 생활비를 만드는 단계",main:[10,0,20],sleeve:"기본 현금흐름 구조: 성장ETF 40% / 인컴 30% / SGOV 20% / SOXL 무매 10%. TQQQ VR은 기본안에서 종료합니다.",
      checks:["성장 ETF 40%는 장기 자산성장과 물가 대응 역할입니다.","커버드콜·인컴 30%는 정기 현금흐름을 담당합니다.","SGOV 20%는 생활비 완충과 급락장 강제매도 방지를 담당합니다.","SOXL 무매 10%는 생활비 주력이 아니라 추가 성장·알파 역할로 제한합니다."]}
 };
 
 
-let liveState=null, liveStateSource="", liveBusy=false, liveQuotes={};
+let liveState=null, liveStateSource="", liveBusy=false, liveQuotes={}, pendingVrCycle=null;
 const FEE=0.0025;
 let planLinks={inf:"",vr:"",sleeve:""};
 let sleeveSessions=[];
@@ -634,12 +635,12 @@ async function createPlanVrSession(opts={}){
   if(planLinks.vr && linkedOpSession(liveState.vr,'TQQQ',planLinks.vr) && !opts.force)return linkedOpSession(liveState.vr,'TQQQ',planLinks.vr);
   const cap=a.vr,id=planSid('pvr');
   /* 5년 플랜의 VR 배정액은 '첫 매수 + Pool' 합계다.
-     거치식 기본은 50:50. autoCyc는 켜 두되 V=0(첫 매수 전)에는 사이클이 진행되지 않는다. */
-  const initAmt=Math.round(cap*0.50), startPool=Math.max(0,cap-initAmt);
+     5년 플랜 최적화값은 초기 주식 100%다. 이는 VR 오피셜 고정값이 아니라 플랜 최적화 변수다. Pool 사용한도는 거치식 오피셜 50%를 유지한다. */
+  const initAmt=Math.round(cap), startPool=0;
   const sess={id,name:sessionDateName('TQQQ VR'),planManaged:true,settings:{
     ticker:'TQQQ',mode:.5,formula:'basic',g:10,initAmt,add:0,
-    band:15,startv:0,startpool:startPool,autoCyc:true,divmode:'reinv',
-    planTotalCapital:cap,planInitStockPct:50
+    band:15,startv:0,startpool:startPool,autoCyc:false,divmode:'reinv',
+    planTotalCapital:cap,planInitStockPct:100
   },hist:[]};
   liveState.vr.sessions.push(sess);liveState.vr.active=id;liveState.activeTab='vr';
   planLinks.vr=id;
@@ -713,7 +714,7 @@ function enforcePlanManagedDefaults(){
     if(x&&x.planManaged&&String(x.settings?.ticker||'').toUpperCase()==='TQQQ'){
       const st=x.settings||(x.settings={});
       if(st.mode==null)st.mode=.5;if(st.formula==null)st.formula='basic';if(st.g==null)st.g=10;
-      if(st.band==null)st.band=15;if(st.autoCyc==null)st.autoCyc=true;
+      if(st.band==null)st.band=15;st.autoCyc=false;
     }
   }
 }
@@ -825,7 +826,7 @@ function imOrders(sess,price,rows){
     return {state:c,orders,note:'리버스 별지점 = 직전 5거래일 종가 평균 '+usd(star5)+' · 매수가는 별지점−$0.01'};
   }
   const buy1=slot>=1?c.bal/slot:0,pct=starPctPlan(st,c.T),star=c.avg>0?c.avg*(1+pct/100):price,buyPt=star-.01,limit=price*(1+big/100),half=c.T<div/2;
-  const addBuy=(name,p,alloc)=>{const pp=Math.max(.01,Math.min(p,limit)),q=Math.floor(Math.max(0,alloc)/pp);if(q>0)orders.push({side:'buy',name,price:pp,qty:q,tag:'LOC'});};
+  const addBuy=(name,p,alloc)=>{const pp=Math.max(.01,Math.min(p,limit)),q=Math.floor(Math.max(0,alloc)/price);if(q>0)orders.push({side:'buy',name,price:pp,qty:q,tag:'LOC'});};
   if(slot>=1&&buy1>0){
     if(c.avg<=0)addBuy('처음매수',limit,buy1);
     else if(half){addBuy('별지점 절반매수',buyPt,buy1/2);addBuy('평단 절반매수',c.avg,buy1/2);}
@@ -859,6 +860,32 @@ function calcVrState(sess){
   return {st,hist,qty:Math.max(0,qty),pool,V,avgNom,up,lo,curCyc,cycleStartPool,cycleBuySpent};
 }
 function nextVrDate(s){const t=new Date(s+'T00:00:00Z');t.setUTCDate(t.getUTCDate()+14);while(t.getUTCDay()===0||t.getUTCDay()===6)t.setUTCDate(t.getUTCDate()+1);return t.toISOString().slice(0,10);}
+function resolvePlanVrDue(rows,dueStr,settledDate){
+  const a=(rows||[]).filter(x=>x&&x.date>=dueStr&&x.date<=settledDate&&+x.close>0).sort((x,y)=>x.date.localeCompare(y.date));
+  return a[0]||null;
+}
+function calcPlanNextV(c,close){
+  const st=c.st||{},G=Math.max(1,+st.g||10),ev=(close>0?close*c.qty:c.V);
+  const isAccum=+st.mode===.75,isWd=+st.mode===.25,add=(isAccum||isWd)?(+st.add||0):0,sign=isWd?-1:1;
+  let nextV=c.V+c.pool/G+sign*add;
+  if(st.formula==='skill'&&c.V>0) nextV+=(ev-c.V)/(2*Math.sqrt(G));
+  return {nextV:Math.max(0,nextV),ev,add,sign};
+}
+async function advancePlanVrCycle(){
+  const vr=liveState?linkedOpSession(liveState.vr,'TQQQ',planLinks.vr):null;
+  if(!vr||!pendingVrCycle){alert('지금 진입할 VR 사이클이 없습니다.');return;}
+  const c=calcVrState(vr),st=vr.settings||{},r=calcPlanNextV(c,pendingVrCycle.close),newCyc=(+st.startCyc||c.curCyc||0)+1;
+  if(!confirm('TQQQ VR 다음 사이클로 진입합니다.\n기준일 '+pendingVrCycle.date+' 종가 '+usd(pendingVrCycle.close)+'\nV '+usd(c.V)+' → '+usd(r.nextV)+'\n진행할까요?'))return;
+  if(r.add>0){
+    vr.hist.push({type:r.sign<0?'wd':'add',date:pendingVrCycle.date,amt:r.add,cyc:newCyc,auto:true,ts:Date.now()});
+  }
+  st.startv=+r.nextV.toFixed(4);st.startCyc=newCyc;st.cycStart=pendingVrCycle.date;
+  if(!Array.isArray(st.cycLog))st.cycLog=[];
+  st.cycLog.push({cyc:newCyc-1,from:null,dates:'플랜 확정',V:+c.V.toFixed(2),lo:+c.lo.toFixed(2),up:+c.up.toFixed(2),E:+r.ev.toFixed(2),close:+pendingVrCycle.close.toFixed(4)});
+  st.cycLog=st.cycLog.slice(-120);
+  pendingVrCycle=null;
+  await saveOperatingState();await cloudSave();await refreshLive();
+}
 function vrCycleStart(c){if(c.st.cycStart)return c.st.cycStart;for(let i=c.hist.length-1;i>=0;i--){const x=c.hist[i];if(x.auto&&(x.type==='add'||x.type==='wd'))return x.date;}const f=c.hist.find(x=>x.type==='buy');return f?f.date:null;}
 function vrOrders(sess,price){
   const c=calcVrState(sess),st=c.st,orders=[];if(!(price>0))return {state:c,orders,note:'확정 종가가 없어 계산하지 못했습니다.'};
@@ -898,13 +925,13 @@ function qldSignal(rows,startDate){
     if(down&&!prevDown){bear=true;used=[false,false,false,false];}
     const acts=[];
     const dd=pxs[i]/ath[i]-1;
-    if(bear&&down&&!used[0]&&rs[i]!=null&&rs[i]<=35&&dd<=-.10){used[0]=true;acts.push('딥 1단계 · SGOV 기준 20% → QLD');}
+    if(bear&&down&&!used[0]&&rs[i]!=null&&rs[i]<=35&&dd<=-.10){used[0]=true;acts.push('딥 1단계 · SGOV 기준 30% → QLD');}
     if(bear&&down&&!used[1]&&rs[i]!=null&&rs[i]<=30&&dd<=-.18){used[1]=true;acts.push('딥 2단계 · SGOV 기준 30% → QLD');}
-    if(bear&&!used[2]&&cross5){used[2]=true;acts.push('회복 1단계 · 5MA↑20MA · SGOV 기준 25% → QLD');}
-    if(bear&&!used[3]&&cross20){used[3]=true;acts.push('회복 2단계 · 20MA↑50MA · SGOV 기준 25% → QLD');}
-    if(bear&&crossUp){acts.push('200MA 회복 · QLD/SGOV를 50:50으로 리밸런싱');bear=false;used=[false,false,false,false];}
+    if(bear&&!used[2]&&cross5){used[2]=true;acts.push('회복 1단계 · 5MA↑20MA · SGOV 기준 20% → QLD');}
+    if(bear&&!used[3]&&cross20){used[3]=true;acts.push('회복 2단계 · 20MA↑50MA · SGOV 기준 20% → QLD');}
+    if(bear&&crossUp){acts.push('200MA 회복 · QLD/SGOV를 60:40으로 리밸런싱');bear=false;used=[false,false,false,false];}
     if(i===rows.length-1)lastActs=acts;
-    phase=bear?'하락장 순환 중':'상승장 50:50 유지';
+    phase=bear?'하락장 순환 중':'상승장 60:40 유지';
   }
   const i=rows.length-1,dd=pxs[i]/ath[i]-1;
   return {date:rows[i].date,close:pxs[i],ma200:m200[i],rsi:rs[i],dd:dd*100,phase,acts:lastActs};
@@ -1027,11 +1054,16 @@ async function refreshLive(){
       $('liveVrMeta').textContent=(vr.name||'TQQQ 세션')+' · G'+(st.g||10)+' / ±'+(st.band||15)+'% / '+(st.formula==='skill'?'실력':'기본')+' · V '+usd(c.V)+' · Pool '+usd(c.pool)+' · 운용자산 '+usd(vrValue);
       const immediate=r.orders.filter(o=>o.tag!=='예약'),reserve=r.orders.filter(o=>o.tag==='예약');
       $('liveVr').innerHTML=(immediate.length?immediate.map(orderHtml).join(''):waitHtml('즉시 매매 없음','현재 평가금이 VR 밴드 안입니다.'))+(reserve.length?reserve.map(orderHtml).join(''):'')+waitHtml(r.note);
+      pendingVrCycle=null;
+      const _cs=vrCycleStart(c),_due=_cs?nextVrDate(_cs):null,_dueRow=_due?resolvePlanVrDue(qv.rows,_due,qv.settled.date):null;
+      if(_dueRow){pendingVrCycle={date:_dueRow.date,close:+_dueRow.close,due:_due};$('vrCycleActionRow').style.display='flex';$('vrCycleAdvanceBtn').textContent='사이클 마감 '+_dueRow.date+' → 다음 V 적용';}
+      else $('vrCycleActionRow').style.display='none';
       mirrorStrategyTab('tqqqTabMeta','tqqqTabActions',$('liveVrMeta').textContent,$('liveVr').innerHTML);
       if(immediate.length)actions.push('TQQQ VR '+immediate.length+'건');
     }else{
       setAutoBalanceField('balVR',NaN,'TQQQ VR 실전 세션 없음 · 수동 입력');
       const pn=paperSessionCount(liveState&&liveState.vr,'TQQQ');
+      pendingVrCycle=null;if($('vrCycleActionRow'))$('vrCycleActionRow').style.display='none';
       $('liveVrMeta').textContent='TQQQ VR 연동 세션 없음'+(pn?' · 모의 '+pn+'개 제외':'');
       $('liveVr').innerHTML=waitHtml('5년 플랜에 연동된 TQQQ VR 실전세션이 없습니다.','TQQQ VR 탭에서 세션을 생성하거나 선택하세요.');
       mirrorStrategyTab('tqqqTabMeta','tqqqTabActions',$('liveVrMeta').textContent,$('liveVr').innerHTML);
@@ -1201,6 +1233,7 @@ $("calcBtn").addEventListener("click",()=>{render();refreshLive()});$("setBaseli
 $("createAllPlanSessions").addEventListener("click",createAllPlanSessions);
 $("soxlCreateSession").addEventListener("click",createPlanInfSession);
 $("tqqqCreateSession").addEventListener("click",createPlanVrSession);
+$("vrCycleAdvanceBtn").addEventListener("click",advancePlanVrCycle);
 $("sleeveCreateSession").addEventListener("click",createPlanSleeveSession);
 $("soxlSessionSelect").addEventListener("change",e=>selectPlanOpSession('inf',e.target.value));
 $("tqqqSessionSelect").addEventListener("change",e=>selectPlanOpSession('vr',e.target.value));

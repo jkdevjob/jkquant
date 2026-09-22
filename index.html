@@ -2071,7 +2071,7 @@ const won=v=>Math.round((+v||0)*((typeof liveFX!=='undefined'&&liveFX)?liveFX:FX
 const LS='qcockpit_v2', LS_URL='qcockpit_gsheet';
 let S=null;
 
-function defInfSettings(){return{ticker:'SOXL',div:20,target:20,big:15,rowsOn:false,rows:8,gap:2.5,revGap:REV_GAP_DEF,rowqty:1,principal:10000,divmode:'reinv',engine:'v40',shortMA:30,loPct:6,tgtDyn:false}}
+function defInfSettings(){return{ticker:'SOXL',div:20,target:20,big:IM_BIG_DEFAULT,rowsOn:false,rows:8,gap:2.5,revGap:REV_GAP_DEF,rowqty:1,principal:10000,divmode:'reinv',engine:'v40',shortMA:30,loPct:6,tgtDyn:false}}
 // V5.0 숨김 기간: 저장된 세션이 v50이어도 v40으로 강제 (UI가 없어 되돌릴 수 없으므로)
 // 복원 시 이 함수와 load() 안의 호출만 제거하면 된다.
 function forceV40(){
@@ -2336,6 +2336,12 @@ function imTgtOf(base, mom){ return (mom!=null && mom>IM_MOM_TH) ? Math.min(base
    오늘 종가로 수량을 정하면, 오늘 싸졌다는 이유로 그날 주문수량이 늘어난다 — 룩어헤드다.
    (전일 100 · 오늘 80 · 배정 1000 → 올바른 답은 10주. 오늘 종가로 세면 12주가 된다.)
    예산 규약: 배정금 = 매수금 + 수수료. 비용 OFF(feeRate 0)면 그냥 내림 나눗셈이다. */
+/* 큰수(첫 매수 LOC 상한) — 한 값만 쓴다 (4차 감사 ④).
+   공식 V4.0 기본은 전일 확정 종가 +15% 다. 예전엔 신규 세션 15 · 백테 하드코딩 15 ·
+   옛 세션 fallback 20 이 섞여 있어, 같은 설정인데 화면마다 상한이 달랐다.
+   사용자가 바꾸면 그건 '변형' 이고, 안 바꾸면 어디서나 이 값이다. */
+const IM_BIG_DEFAULT=15;
+function imBigPct(st){ const v=+((st||{}).big); return isFinite(v)&&v>0 ? v : IM_BIG_DEFAULT; }
 function imBuyQty(alloc, refPx, feeRate){
   const f=1+(feeRate||0);
   return (refPx>0 && alloc>0) ? Math.floor(alloc/f/refPx) : 0;
@@ -2544,7 +2550,7 @@ function renderOrder(){
   if($('o_avg')) $('o_avg').textContent = c.avg>0 ? `${wn(c.avg)} · ${c.qty}주` : '—';
   // 큰수 %가 없는 옛 세션(설정 신설 전 저장분)은 st.big이 undefined → bigMul이 NaN이 되어
   // 상한이 통째로 꺼졌다. 기본값으로 메운다.
-  const bigPct=(st.big!=null&&isFinite(+st.big))?+st.big:20;
+  const bigPct=imBigPct(st);
   const bigMul=1+(bigPct/100), limit=close>0?close*bigMul:0;
   if($('o_limit')) $('o_limit').textContent=close>0?wn(limit):'—';   // 첫 매수 때만 존재
   if(!close&&c.avg<=0){$('o_orders').innerHTML='<div class="note">🔄 자동 버튼을 누르거나 전일 종가를 입력하면 주문표가 나옵니다.</div>';render5day();renderKisPanel();return}
@@ -3395,6 +3401,17 @@ function infSimForward(startFrom){
     { const c0=computeInf(); inRev=!!c0.reverseActive; revDay1=!!c0.reverseDay1; }
     for(const row of first){
       const cl=row.close, hi=row.high, d=row.date, op=(row.open>0?row.open:0);
+      const prevC=closeAt(row.i-1)||cl;
+      const bigPct=imBigPct(st);
+      const buyLimit=prevC*(1+bigPct/100);
+      /* 주문수량은 '주문 전에 아는 가격'(전일 확정 종가)으로 확정하고, 실제 체결가 기준
+         잔금으로 한 번 더 자른다 — 백테 _buy 의 maxQ 와 같은 규약.
+         수량 산출은 공통 헬퍼 imBuyQty 한 곳에서만 한다 (운영 주문표·백테와 같은 함수). */
+      const _qtyBuy=(alloc,refPx,fillPx)=>{
+        const cNow=computeInf(), rp=(refPx>0?refPx:fillPx);
+        if(!(alloc>0)||!(rp>0)||!(fillPx>0))return 0;
+        return Math.max(0, Math.min(imBuyQty(alloc,rp,0), imBuyQty(Math.max(0,cNow.bal),fillPx,0)));
+      };
       let c=computeInf();
       const revOn=(st.reverse===true);
       if(revOn && !inRev && (st.div-c.T)<1 && c.qty>0){ inRev=true; revDay1=true; }   // 소진 → 새 리버스 1일차
@@ -3413,7 +3430,8 @@ function infSimForward(startFrom){
             const _rg=revGapOf(st);                    // 0 = 공식(별지점−$0.01), >0 = 사용자 변형
             const bp=_rg>0 ? star5*(1-_rg/100) : Math.max(0.01,star5-0.01);
             if(cl<=bp){ const bal=c.bal;                              // 리버스 소진 = 1주도 못 살 때
-              const qq=Math.max(Math.floor((bal/4)/cl), bal>=cl?1:0);
+              const alloc=Math.min(bal,Math.max(bal/4,bp));
+              const qq=Math.max(0,Math.min(Math.floor(alloc/bp),Math.floor(bal/cl)));
               if(qq>=1) put('리버스매수',d,cl,qq); }
           }
         }
@@ -3438,11 +3456,10 @@ function infSimForward(startFrom){
           if(a>0&&b>0) eff=imTgtOf(st.target,(a/b-1)*100); }
         const star=c.avg*(1+starPct(st.ticker,st.div,c.T,st.target)/100);
         const qSell=Math.floor(c.qty/4), qTp=c.qty-qSell, tgt=c.avg*(1+eff/100);
-        /* ① 지정가 익절 — 판정은 종가로 한다.
-           고가 터치를 체결로 치면 장중에 스치기만 하고 안 팔린 날까지 익절로 세어
-           모의가 실제보다 낙관적으로 나온다(SOXL 20/10 한 해에 +8.7%p 차이가 났다).
-           체결가는 그대로 max(익절가, 시가) — 갭업이면 시가가 더 유리하다. */
-        if(cl>=tgt && qTp>0) put('지정가매도',d,(op>tgt?op:tgt),qTp);
+        /* ① 지정가 익절 — 장 시작 전부터 걸어 둔 지정가이므로 당일 고가가 가격을
+           통과하면 체결로 본다. 실전 주문표·백테 runIM(imFill=high)과 같은 규약이다.
+           갭업 시에는 지정가보다 유리한 시가 체결로 기록한다. */
+        if(hi>=tgt && qTp>0) put('지정가매도',d,(op>tgt?op:tgt),qTp);
         { const c3=computeInf();
           if(cl>=star && qSell>0 && c3.qty>0) put('쿼터매도',d,cl,Math.min(qSell,c3.qty)); }  // ② 별지점 LOC
         if(computeInf().qty<=0) liquidated=true;   // 전량매도 = 사이클 종료. 새 사이클 첫 매수는 다음 날 (백테 runIM과 같은 규약)
@@ -3451,18 +3468,19 @@ function infSimForward(startFrom){
       c=computeInf();
       const B=imBuy1(c);
       if(!liquidated && !B.spent && c.bal>1){
-        /* 주문수량은 주문 전에 알 수 있는 가격으로 확정한다 — 운영 주문표·백테와 같은 규약.
-           예전엔 오늘 종가(cl)로 나눠, 오늘 싸졌다는 이유로 그날 수량이 늘었다(룩어헤드). */
-        const qref=closeAt(row.i-1)||cl;
-        if(c.qty<=0 || c.avg<=0){                                    // 첫 매수 — 종가×큰수 LOC → 종가 체결
-          put('1회매수',d,cl,imBuyQty(B.amt,qref,0));
+        if(c.qty<=0 || c.avg<=0){                                    // 첫 매수 — 전일종가×큰수 LOC
+          if(cl<=buyLimit){
+            const q=_qtyBuy(B.amt,prevC,cl);
+            if(q>=1) put('1회매수',d,cl,q);
+          }
         }else{
           const star=c.avg*(1+starPct(st.ticker,st.div,c.T,st.target)/100), buyP=star-0.01;
+          const starOrder=Math.min(buyP,buyLimit), avgOrder=Math.min(c.avg,buyLimit);
           if(c.T<st.div/2){                                          // 전반전: 별지점 절반 + 평단 절반
-            if(cl<=buyP) put('절반매수',d,cl,imBuyQty(B.amt/2,qref,0));
-            if(cl<=c.avg) put('절반매수',d,cl,imBuyQty(B.amt/2,qref,0));
+            if(cl<=starOrder){const q=_qtyBuy(B.amt/2,prevC,cl);if(q>=1)put('절반매수',d,cl,q);}
+            if(cl<=avgOrder) {const q=_qtyBuy(B.amt/2,prevC,cl);if(q>=1)put('절반매수',d,cl,q);}
           }else{                                                     // 후반전: 별지점 전액
-            if(cl<=buyP) put('1회매수',d,cl,imBuyQty(B.amt,qref,0));
+            if(cl<=starOrder){const q=_qtyBuy(B.amt,prevC,cl);if(q>=1)put('1회매수',d,cl,q);}
           }
         }
       }
@@ -8403,7 +8421,7 @@ const SIM_KEYS={
    설정 지문만 보면 설정을 안 바꾼 세션은 옛 기록을 그대로 안고 간다 —
    그래서 지문에 규약 판을 같이 넣어, 규약이 바뀌면 전 세션이 다시 만들어지게 한다.
    ※ 체결 규칙을 고칠 때마다 이 숫자를 올릴 것. */
-const SIM_RULE_VER=3;   // 3: 익절 판정을 고가 터치 → 종가로 (고가로 치면 안 팔린 날도 익절로 셌다)
+const SIM_RULE_VER=4;   // 4: 무매 모의를 실전 주문표·백테와 통일 — 전일종가 수량, 큰수 상한, 지정가 고가 터치
 function simSig(tab,st){
   return 'r'+SIM_RULE_VER+'|'+(SIM_KEYS[tab]||[]).map(k=>String(st[k]===undefined?'':st[k])).join('|');
 }
