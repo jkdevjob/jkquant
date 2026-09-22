@@ -143,7 +143,7 @@ th:first-child,td:first-child{text-align:left}
 <body>
 <div class="wrap">
   <div class="top">
-    <div class="brand"><div class="logo">Five Year Plan</div><h1>5년 자산플랜 <span class="ver">v1.6.3</span></h1></div>
+    <div class="brand"><div class="logo">Five Year Plan</div><h1>5년 자산플랜 <span class="ver">v1.6.4</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
       <div class="jkmenu" id="jkmenuWrap">
@@ -634,11 +634,11 @@ async function createPlanVrSession(opts={}){
   if(planLinks.vr && linkedOpSession(liveState.vr,'TQQQ',planLinks.vr) && !opts.force)return linkedOpSession(liveState.vr,'TQQQ',planLinks.vr);
   const cap=a.vr,id=planSid('pvr');
   /* 5년 플랜의 VR 배정액은 '첫 매수 + Pool' 합계다.
-     거치식 기본은 50:50. 실계좌는 체결기록 확인 전에 V가 자동으로 넘어가지 않게 autoCyc OFF. */
+     거치식 기본은 50:50. autoCyc는 켜 두되 V=0(첫 매수 전)에는 사이클이 진행되지 않는다. */
   const initAmt=Math.round(cap*0.50), startPool=Math.max(0,cap-initAmt);
   const sess={id,name:sessionDateName('TQQQ VR'),planManaged:true,settings:{
     ticker:'TQQQ',mode:.5,formula:'basic',g:10,initAmt,add:0,
-    band:15,startv:0,startpool:startPool,autoCyc:false,divmode:'reinv',
+    band:15,startv:0,startpool:startPool,autoCyc:true,divmode:'reinv',
     planTotalCapital:cap,planInitStockPct:50
   },hist:[]};
   liveState.vr.sessions.push(sess);liveState.vr.active=id;liveState.activeTab='vr';
@@ -702,13 +702,18 @@ function fillSessionSelect(id,sessions,linked,emptyText){
 function enforcePlanManagedDefaults(){
   ensureLiveBoxes();
   for(const x of liveState.inf.sessions||[]){
-    if(x&&x.planManaged&&String(x.settings?.ticker||'').toUpperCase()==='SOXL'&&(!x.hist||!x.hist.length)){
-      Object.assign(x.settings,{div:20,target:20,big:15,reverse:true,compound:true,revGap:0,engine:'v40',tgtDyn:false});
+    if(x&&x.planManaged&&String(x.settings?.ticker||'').toUpperCase()==='SOXL'){
+      const st=x.settings||(x.settings={});
+      if(st.div==null)st.div=20;if(st.target==null)st.target=20;if(st.big==null)st.big=15;
+      if(st.reverse==null)st.reverse=true;if(st.compound==null)st.compound=true;
+      if(st.revGap==null)st.revGap=0;if(st.engine==null)st.engine='v40';if(st.tgtDyn==null)st.tgtDyn=false;
     }
   }
   for(const x of liveState.vr.sessions||[]){
-    if(x&&x.planManaged&&String(x.settings?.ticker||'').toUpperCase()==='TQQQ'&&(!x.hist||!x.hist.length)){
-      Object.assign(x.settings,{mode:.5,formula:'basic',g:10,band:15,autoCyc:true});
+    if(x&&x.planManaged&&String(x.settings?.ticker||'').toUpperCase()==='TQQQ'){
+      const st=x.settings||(x.settings={});
+      if(st.mode==null)st.mode=.5;if(st.formula==null)st.formula='basic';if(st.g==null)st.g=10;
+      if(st.band==null)st.band=15;if(st.autoCyc==null)st.autoCyc=true;
     }
   }
 }
@@ -734,7 +739,10 @@ async function selectPlanOpSession(kind,id){
   const sess=id?box.sessions.find(x=>x.id===id):null;
   if(sess&&$('autoBalances')&&$('autoBalances').checked&&!(sess.hist||[]).length){
     if(kind==='inf')setAutoBalanceField('balMM',+sess.settings?.principal||0,(sess.name||'SOXL')+' · 첫 거래 전 배정금');
-    else setAutoBalanceField('balVR',+sess.settings?.initAmt||0,(sess.name||'TQQQ VR')+' · 첫 거래 전 배정금');
+    else {
+      const st=sess.settings||{}, total=(+st.planTotalCapital||0)||((+st.initAmt||0)+(+st.startpool||0));
+      setAutoBalanceField('balVR',total,(sess.name||'TQQQ VR')+' · 첫 거래 전 총배정금(첫매수+Pool)');
+    }
     render();
   }
   await saveOperatingState();await cloudSave();renderSessionSelectors();await refreshLive();
@@ -834,18 +842,19 @@ function imOrders(sess,price,rows){
 function calcVrState(sess){
   const st=sess.settings||{},hist=sess.hist||[];let qty=0,totbuy=0,totsell=0,totdiv=0,totadd=0,totwd=0,buyShares=0,initBuy=0,pool=+st.startpool||0,V=+st.startv||0,cost=0;
   let vSet=V>0,sawBuy=false;const carriedIn=V>0&&!(st.startCyc>0);
-  let curCyc=st.startCyc||0,cycleStartPool=pool,cycleBuySpent=0,seen=false;
+  let curCyc=st.startCyc||0,cycleStartPool=pool,cycleBuySpent=0,cycleHasTrade=false,seen=false;
   for(const h of hist){
     const hc=h.cyc!=null?+h.cyc:curCyc;
     if(!seen){curCyc=hc;cycleStartPool=pool;cycleBuySpent=0;seen=true;}
-    else if(hc!==curCyc){curCyc=hc;cycleStartPool=pool;cycleBuySpent=0;}
+    else if(hc!==curCyc){curCyc=hc;cycleStartPool=pool;cycleBuySpent=0;cycleHasTrade=false;}
     if(h.type==='buy'){const amt=(+h.price||0)*(+h.qty||0),fee=+h.fee||0;qty+=+h.qty||0;totbuy+=amt;buyShares+=+h.qty||0;cost+=amt;
-      const isInit=h.init!==undefined?!!h.init:(!sawBuy&&!carriedIn);sawBuy=true;if(!vSet){V=amt;vSet=true;}if(isInit)initBuy+=amt+fee;else{pool-=amt+fee;cycleBuySpent+=amt+fee;}}
-    else if(h.type==='sell'){const q=+h.qty||0,amt=(+h.price||0)*q,fee=+h.fee||0,av=qty>0?cost/qty:0;cost-=av*q;qty-=q;if(qty<1e-9){qty=0;cost=0;}totsell+=amt;pool+=amt-fee;}
-    else if(h.type==='add'){pool+=+h.amt||0;totadd+=+h.amt||0;}
-    else if(h.type==='wd'){pool-=+h.amt||0;totwd+=+h.amt||0;}
+      const isInit=h.init!==undefined?!!h.init:(!sawBuy&&!carriedIn);sawBuy=true;if(!vSet){V=amt;vSet=true;}if(isInit){initBuy+=amt+fee;cycleStartPool=pool;}else{pool-=amt+fee;cycleBuySpent+=amt+fee;cycleHasTrade=true;}}
+    else if(h.type==='sell'){const q=+h.qty||0,amt=(+h.price||0)*q,fee=+h.fee||0,av=qty>0?cost/qty:0;cost-=av*q;qty-=q;if(qty<1e-9){qty=0;cost=0;}totsell+=amt;pool+=amt-fee;cycleHasTrade=true;}
+    else if(h.type==='add'){pool+=+h.amt||0;totadd+=+h.amt||0;if((h.auto||(curCyc===0&&!cycleHasTrade))&&!cycleHasTrade)cycleStartPool=pool;}
+    else if(h.type==='wd'){pool-=+h.amt||0;totwd+=+h.amt||0;if(h.auto&&!cycleHasTrade)cycleStartPool=pool;}
     else if(h.type==='div'){pool+=+h.amt||0;totdiv+=+h.amt||0;}
   }
+  if((+st.startCyc||0)>curCyc){curCyc=+st.startCyc||0;cycleStartPool=pool;cycleBuySpent=0;}
   const avgNom=buyShares>0?totbuy/buyShares:0,up=V*(1+(+st.band||15)/100),lo=V*(1-(+st.band||15)/100);
   return {st,hist,qty:Math.max(0,qty),pool,V,avgNom,up,lo,curCyc,cycleStartPool,cycleBuySpent};
 }
@@ -1011,7 +1020,7 @@ async function refreshLive(){
     if(vr){
       const r=vrOrders(vr,qv.settled.close),c=r.state,st=vr.settings||{};
       const vrEmpty=!(Array.isArray(vr.hist)&&vr.hist.length) && !(c.qty>0) && !(c.V>0);
-      const vrValue=vrEmpty?(+st.initAmt||0):(c.pool+Math.max(0,c.qty)*qv.settled.close);
+      const vrValue=vrEmpty?((+st.planTotalCapital||0)||((+st.initAmt||0)+(+st.startpool||0))):(c.pool+Math.max(0,c.qty)*qv.settled.close);
       setAutoBalanceField('balVR',vrValue,vrEmpty
         ? ((vr.name||'TQQQ VR')+' · 첫 매수 전 배정금')
         : ((vr.name||'TQQQ VR')+' · '+qv.settled.date+' 종가 평가'));
