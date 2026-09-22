@@ -6308,5 +6308,23 @@ console.log('\n[100] 5년 플랜·VR 예약주문 동기화');
   ok('5년 플랜도 공식 상단매도·하단매수 수량을 표시', /name:'공식 상단매도'/.test(pl) && /name:'공식 하단매수'/.test(pl));
 }
 
+
+/* ════ 101. VR V 갱신식 — 운영·재생·백테·5년플랜 한 식 ════ */
+console.log('\n[101] VR V 갱신식 — 공통 헬퍼');
+{
+  const pl=fs.readFileSync(__d+'/plan.html','utf8');
+  const get=s=>extractFn(s,'function vrNextVValue(V,pool,G,ev,formula,addCycle)');
+  const a=get(idx), b=get(bt), c=get(pl);
+  ok('V 갱신 공통 헬퍼 본문이 세 화면에서 동일', a===b && a===c);
+  const fn=new Function('return ('+a.replace(/^function [\w$]+\(/,'function (')+')')();
+  ok('기본공식 값', near(fn(10000,1000,10,11000,'basic',0),10100,1e-9));
+  ok('실력공식 보정값', near(fn(10000,1000,10,11000,'skill',0),10258.113883008419,1e-9));
+  ok('인출 addCycle 음수 반영', near(fn(10000,1000,10,11000,'basic',-100),10000,1e-9));
+  ok('과거재생이 공통 헬퍼를 쓴다', /V=vrNextVValue\(V,pool,G,cv,formula,addCycle\)/.test(extractFn(idx,'function vrReplay()')));
+  ok('백테가 공통 헬퍼를 쓴다', /V=vrNextVValue\(V,pool,G,cv,formula,addCycle\)/.test(extractFn(bt,'function runVR(days,tkr,params)')));
+  ok('운영 다음 V가 공통 헬퍼를 쓴다', /vrNextVValue\(V,Pool,G,ev,st\.formula,sign\*add\)/.test(extractFn(idx,'function computeNextV(c,ev)')));
+  ok('5년플랜 다음 V가 공통 헬퍼를 쓴다', /vrNextVValue\(c\.V,c\.pool,G,ev,st\.formula,sign\*add\)/.test(extractFn(pl,'function calcPlanNextV(c,close)')));
+}
+
 console.log(`\n════ 결과: ${pass} PASS / ${fail} FAIL ${fail===0?'— ALL PASS ★':'— 배포 금지, 위 ✗ 항목 수정 필요'} ════`);
 process.exit(fail===0?0:1);
