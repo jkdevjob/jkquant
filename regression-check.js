@@ -5936,7 +5936,15 @@ console.log('\n[93] VR 과거재생 — 고가·저가 체결 (모의·백테와
   /* 세 경로가 모두 고저 봉을 넘기는가 — 한 곳이라도 종가만 넘기면 또 갈린다 */
   { const rep=extractFn(idx,'function vrReplay()');
     ok('과거재생이 OHLC 봉으로 돈다', /const bars=\(q\.ohlc && q\.ohlc\.length\) \? q\.ohlc : null;/.test(rep)
-       && /const D=bars\.filter\(d=>d\.date>=from\);/.test(rep));
+       && /const D=bars\.filter\(d=>d\.date>=from && d\.date<=_cutR\);/.test(rep));
+    /* 끝도 확정 봉까지만 — 장중 과거재생이 오늘 미확정 고저로 체결을 박으면 안 된다 */
+    ok('과거재생이 끝을 확정 봉으로 자른다',
+       /const _cutR=_lastSettled\(bars, curOf\(st\)\) \|\| simCutoff\(curOf\(st\)\);/.test(rep));
+    ok('세 갈래가 모두 확정 마감 기준을 쓴다', (()=>{
+        const sim=extractFn(idx,'function vrSimForward()'), adv=extractFn(idx,'function vrAutoAdvance()');
+        return /_lastSettled\(O, curOf\(st\)\)/.test(sim) && /simCutoff\(curOf\(st\)\)/.test(adv)
+            && /_lastSettled\(bars, curOf\(st\)\)/.test(rep); })(),
+       '모의체결·자동진입·과거재생 중 확정 기준을 안 쓰는 곳이 있다');
     ok('과거재생이 종가 배열(days)로 안 돈다', !/const D=days\.filter\(d=>d\.date>=from\);/.test(rep));
     ok('OHLC 가 없으면 조용히 떨어지지 않고 알린다',
        /일봉 고가·저가\(OHLC\)가 필요합니다/.test(rep) && /종가만으로 돌리면 모의투자·백테스트와 다른 결과/.test(rep));

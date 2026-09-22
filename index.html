@@ -529,7 +529,7 @@ try{ if(localStorage.getItem('qcockpit_hadUser')==='1') document.documentElement
 </div>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.81.0</span></h1></div>
+    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.82.0</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -1620,7 +1620,7 @@ document.addEventListener('click',function(e){ var m=document.getElementById('jk
   <footer>
     <strong>JK 퀀트</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.81.0</b> · 2026-09-22</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.82.0</b> · 2026-09-22</div>
   </footer>
 </div>
 
@@ -7472,7 +7472,12 @@ function vrReplay(){
   if(!from){ alert('시작일을 고르세요.'); return false; }
   if((sess.hist||[]).length && !confirm(`기존 기록 ${sess.hist.length}건을 지우고 ${from}부터 다시 만듭니다.\n계속할까요?`)) return false;
 
-  const D=bars.filter(d=>d.date>=from);      // 고가·저가가 있는 봉으로 돈다
+  /* 끝도 잘라야 한다 — /api/quote 응답에는 오늘 장중 봉이 들어 있다.
+     모의체결(vrSimForward)·자동진입(vrAutoAdvance)은 확정 봉까지만 도는데 재생만 안 잘라,
+     장중에 돌리면 아직 움직이는 오늘 고가·저가로 체결을 박고 simLast 를 오늘로 찍었다.
+     그러면 그날 하루가 미확정 값으로 굳고, 그 뒤 모의체결은 오늘을 건너뛴다. */
+  const _cutR=_lastSettled(bars, curOf(st)) || simCutoff(curOf(st));
+  const D=bars.filter(d=>d.date>=from && d.date<=_cutR);   // 고가·저가가 있는 '확정' 봉으로만 돈다
   if(D.length<30){ alert('그 시작일부터의 거래일이 너무 적습니다.'); return; }
   const G=+st.g||10, band=(+st.band||15)/100, mode=+st.mode||0.5;
   const contrib=+st.add||0, formula=st.formula||'basic';
