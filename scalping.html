@@ -187,7 +187,7 @@ canvas{display:block;width:100%;height:auto}
 
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Morning Scalping</div><h1>JK <span class="v">퀀트</span> 단타 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="scVer">v1.10.0</span></h1></div>
+    <div><div class="kicker">Morning Scalping</div><h1>JK <span class="v">퀀트</span> 단타 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="scVer">v1.11.0</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -281,7 +281,7 @@ canvas{display:block;width:100%;height:auto}
     <h3><span class="dot"></span>🔥 실시간 시초가 돌파 감시 <span class="sub" style="font-weight:600">갭 + 첫고점 + 눌림 + 재돌파 + 수급</span></h3>
     <p class="lead">첫 3분 고점을 확정한 뒤 <b>최초 돌파 → 0.3~1.0% 눌림 → 시초가 지지 → 전고점 재돌파</b>를 확인하고,
       재돌파 시 <b>1분 거래량과 추정 거래대금이 다시 붙는 종목</b>만 후보로 표시한다. 조건 충족 시 Telegram으로 한 번 알린다.</p>
-    <div class="warn" style="margin-bottom:10px"><b>서버 자동감시:</b> 매 영업일 09:00~09:30에는 웹페이지를 닫아도 Cloudflare 서버가 Top100을 매분 검사해 Telegram으로 보낸다. 아래 버튼은 화면에서 즉시 확인할 때만 사용한다.</div>
+    <div class="warn" style="margin-bottom:10px"><b>서버 자동감시:</b> 매 영업일 09:00~09:30에는 웹페이지를 닫아도 Cloudflare 서버가 Top100을 매분 검사해 Telegram으로 보낸다. <b>매수·매도 신호</b>를 각각 알리고, 09:31에는 <b>오늘 매매 결과 요약</b>을 Telegram으로 보낸 뒤 일별 이력을 서버 아카이브에 영구 저장한다. 아래 버튼은 화면에서 즉시 확인할 때만 사용한다.</div>
     <div class="row" style="align-items:flex-end;margin-bottom:8px">
       <div class="fld"><label>감시 유니버스</label><select id="ob_live_n"><option>30</option><option selected>50</option><option>100</option></select></div>
       <button class="prim" id="obLiveBtn" onclick="toggleOpeningLive()">▶ 시초가 감시 시작</button>
@@ -293,9 +293,9 @@ canvas{display:block;width:100%;height:auto}
   </div>
 
   <div class="card">
-    <h3><span class="dot"></span>📒 오늘 서버 매매 이력 <span class="sub" style="font-weight:600">웹을 닫아도 서버 데이터로 재구성</span></h3>
+    <h3><span class="dot"></span>📒 오늘 서버 매매 이력 <span class="sub" style="font-weight:600">09:31 영구 저장 · 웹을 닫아도 유지</span></h3>
     <p class="lead">서버의 눌림→재돌파 신호를 기준으로 <b>매수 시점</b>과 이후 <b>손절 −1% · 익절 +1.5% · 미청산 시 09:30 청산</b>을 같은 규칙으로 다시 계산한다.
-      분봉은 종가 체결 근사이며 손익은 왕복 마찰비용 <b>0.25%</b>를 반영한다.</p>
+      분봉은 종가 체결 근사이며 손익은 왕복 마찰비용 <b>0.25%</b>를 반영한다. 장 종료 후에는 같은 결과를 <b>scalping-data 서버 아카이브</b>에 날짜별로 저장한다.</p>
     <div class="row" style="margin-bottom:8px">
       <button class="ghostbtn" onclick="loadServerOpeningHistory()">🔄 오늘 이력 새로고침</button>
       <span class="sub" id="ob_server_hist_msg"></span>
