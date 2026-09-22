@@ -77,7 +77,7 @@ if(!iqSrc) throw new Error('정수 주수 헬퍼(iq/isq)를 backtest.html에서 
   if(!m) throw new Error('IM_BIG_DEFAULT/imBigPct 를 backtest.html에서 못 찾음');
   const f=new Function(m[0]+'\nreturn {IM_BIG_DEFAULT, imBigPct};')();
   global.IM_BIG_DEFAULT=f.IM_BIG_DEFAULT; global.imBigPct=f.imBigPct; }
-/* VR 주문 체결 엔진 — 공식(V 복귀)·커스텀(1주 사다리). 앱·백테가 같이 쓴다. */
+/* VR 주문 체결 엔진 — 사이클 시작 20차 예약 사다리. 앱·백테가 같이 쓴다. */
 { const m=bt.match(/const VR_MODEL_DEFAULT='official';\nfunction vrModelOf\(st\)\{[^\n]*\}\n/);
   const g=bt.match(/function vrOrderPlan\(S, P, bar\)\{[\s\S]*?\n\}/);
   if(!m||!g) throw new Error('vrOrderPlan/VR_MODEL_DEFAULT 를 backtest.html에서 못 찾음');
@@ -4072,16 +4072,16 @@ console.log('\n[75] VR 장부 — 저장 전 == 저장 후');
       const w=vr2.slice(vr2.indexOf('while(due && d>=due'));
       const iAdd=w.indexOf('pool+=contrib;'), iSet=w.indexOf('cycStartPool=pool;');
       return iAdd>0 && iSet>iAdd; })());
-  ok('모의 체결도 같은 수수료 규약', /const _F=\(typeof IVS_FEE!=='undefined'\)\?IVS_FEE:0\.0025;/.test(idx)
-     && /vrOrderPlan\(St, \{band:\(st\.band\|\|15\)\/100, poolLimit:\(st\.mode\|\|0\.75\),[\s\S]{0,120}budgetRemaining:poolLimit\(c\), FEE:_F, model:vrModelOf\(st\)\}, row\)/.test(idx));
+  ok('모의 체결도 같은 수수료·고정차수 규약', /const _F=\(typeof IVS_FEE!=='undefined'\)\?IVS_FEE:0\.0025;/.test(idx)
+     && /budgetRemaining:poolLimit\(c\), FEE:_F, model:vrModelOf\(st\),[\s\S]{0,160}baseShares:c\.cycBaseQty, sellFilled:c\.cycSellFilled, buyFilled:c\.cycBuyFilled, maxTiers:20/.test(idx));
   /* 사이클 매수한도는 '그 사이클 시작 Pool × 비중 − 이미 쓴 돈' 이다. 세 갈래(모의체결·
      과거재생·백테)가 각자 세면 갈린다 — 실제로 매도 대금이 같은 사이클 한도를 늘렸다. */
   ok('사다리가 남은 한도를 넘겨받는다',
-     /const budget=Math\.max\(0, P\.budgetRemaining!=null \? \+P\.budgetRemaining : S\.pool\*P\.poolLimit\);/.test(idx));
+     /const budget=Math\.max\(0,P\.budgetRemaining!=null\?\+P\.budgetRemaining:S\.pool\*P\.poolLimit\);/.test(idx));
   ok('세 갈래가 모두 남은 한도를 넘긴다',
      (idx.match(/budgetRemaining:/g)||[]).length===2
      && /function poolLimit\(c\)\{ return Math\.max\(0,\(c\.cycStartPool\|\|0\)\*\(c\.st\.mode\|\|0\.75\)-\(c\.cycBuySpent\|\|0\)\); \}/.test(idx)
-     && /budgetRemaining:Math\.max\(0, cycPoolBase\*poolLimit-cycBuySpent\)/.test(bt),
+     && /budgetRemaining:Math\.max\(0,cycPoolBase\*poolLimit-cycBuySpent\)/.test(bt),
      `앱 ${(idx.match(/budgetRemaining:/g)||[]).length}곳`);
   { // 값으로 — 같은 상태면 세 갈래가 같은 한도를 낸다
     const pl=new Function('return ('+extractFn(idx,'function poolLimit(c)').replace(/^function \w+\(/,'function (')+')')();
