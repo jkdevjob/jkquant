@@ -244,6 +244,8 @@ html.had-user #authgate .bootwait{display:block}
 #authgate .bootwait{display:none;color:var(--faint);font-size:13px;font-weight:600;text-align:center}
 #authgate .bootwait .bw-logo{font-size:22px;font-weight:800;color:var(--dim);margin-bottom:12px}
 #authgate .bootwait .bw-dot{display:inline-block;width:16px;height:16px;border:2.5px solid var(--line);border-top-color:var(--vio);border-radius:50%;animation:bwspin .7s linear infinite;vertical-align:-3px;margin-right:7px}
+#authgate .bootwait .bw-help{margin-top:18px;font-size:11.5px;color:var(--faint);line-height:1.6}
+#authgate .bootwait .bw-plan{display:inline-block;margin-top:12px;padding:9px 13px;border:1px solid var(--line);border-radius:9px;color:var(--vio);text-decoration:none;background:rgba(139,124,246,.08);font-weight:700}
 @keyframes bwspin{to{transform:rotate(360deg)}}
 #authgate .gbox{max-width:360px;width:100%;text-align:center}
 #authgate .glogo{font-size:30px;font-weight:800;letter-spacing:-.02em;margin-bottom:6px}
@@ -507,7 +509,10 @@ html.had-user #authgate .bootwait{display:block}
 try{ if(localStorage.getItem('qcockpit_hadUser')==='1') document.documentElement.classList.add('had-user'); }catch(e){}
 </script>
 <div id="authgate">
-  <div class="bootwait"><div class="bw-logo">JK 퀀트</div><span class="bw-dot"></span>여는 중…</div>
+  <div class="bootwait"><div class="bw-logo">JK 퀀트</div><span class="bw-dot"></span>여는 중…
+    <div class="bw-help">오래 멈추면 자동으로 복구 화면으로 전환됩니다.</div>
+    <a class="bw-plan" href="/plan">🧭 5년 플랜 바로 열기</a>
+  </div>
   <div class="gbox">
     <div class="glogo">JK <span class="v">퀀트</span></div>
     <div class="gsub">무한매수법 · 밸류리밸런싱<br>기록을 구글 계정에 안전하게 저장하고<br>어느 기기에서나 이어서 사용하세요.</div>
@@ -524,7 +529,7 @@ try{ if(localStorage.getItem('qcockpit_hadUser')==='1') document.documentElement
 </div>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.77.1</span></h1></div>
+    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.77.2</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -1613,7 +1618,7 @@ document.addEventListener('click',function(e){ var m=document.getElementById('jk
   <footer>
     <strong>JK 퀀트</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.77.1</b> · 2026-09-21</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.77.2</b> · 2026-09-21</div>
   </footer>
 </div>
 
@@ -8810,7 +8815,7 @@ function authWarn(msg){
    그 에러 화면은 firebaseapp.com 에서 뜨므로 우리 코드로는 catch 도 못 한다
    → 누르기 전에 안내해서 기본 브라우저로 유도하는 것이 유일한 방어.
    (근본 해결은 authDomain 을 우리 도메인으로 옮기고 /__/auth/* 를 프록시하는 것) */
-const INAPP_UA=[[/NAVER\(/i,'네이버 앱'],[/KAKAOTALK/i,'카카오톡'],[/Instagram/i,'인스타그램'],
+const INAPP_UA=[[/NAVER/i,'네이버 앱'],[/KAKAOTALK/i,'카카오톡'],[/Instagram/i,'인스타그램'],
   [/FBAN|FBAV|FB_IAB/i,'페이스북'],[/\bLine\//i,'라인'],[/DaumApps/i,'다음 앱'],
   [/\bBand\//i,'밴드'],[/everytimeApp/i,'에브리타임'],[/Snapchat/i,'스냅챗'],[/TwitterAndroid|Twitter for/i,'X(트위터)']];
 function inAppName(){ const ua=navigator.userAgent||''; for(const [re,nm] of INAPP_UA) if(re.test(ua)) return nm; return null; }
@@ -8839,6 +8844,33 @@ function renderInAppWarn(){
   box.style.display='';
 }
 try{ renderInAppWarn(); }catch(e){}
+
+/* ── 부팅 워치독 ────────────────────────────────────────────────────
+   had-user 기기는 로그인 박스를 숨기고 스플래시만 보여준다.
+   Firebase 모듈 자체가 네트워크/인앱 브라우저에서 로드되지 않으면 fb-ready도,
+   onAuthStateChanged도 오지 않아 과거에는 '여는 중…'에 영구 고정됐다.
+   6초 뒤에도 authgate가 떠 있으면 숨김을 풀고 사용자가 다시 로그인하거나
+   5년 플랜으로 바로 이동할 수 있게 한다. */
+(function bootWatchdog(){
+  setTimeout(function(){
+    try{
+      const gate=document.getElementById('authgate');
+      if(!gate || getComputedStyle(gate).display==='none') return;   // 이미 정상 진입
+      document.documentElement.classList.remove('had-user');
+      const bw=gate.querySelector('.bootwait'), gb=gate.querySelector('.gbox');
+      if(bw) bw.style.display='none';
+      if(gb) gb.style.display='block';
+      const err=document.getElementById('gerr');
+      if(err){
+        err.style.display='block';
+        err.textContent=window.fb
+          ? '로그인 확인이 지연되고 있습니다. Google로 시작하기를 다시 눌러주세요.'
+          : '로그인 모듈을 불러오지 못했습니다. 네이버 앱 안이라면 Safari/Chrome 같은 기본 브라우저로 열어주세요.';
+      }
+      try{ renderInAppWarn(); }catch(e){}
+    }catch(e){ console.error('boot watchdog',e); }
+  },6000);
+})();
 
 /* ── 시작: Firebase 준비되면 인증 시작 ── */
 if(window.fb){initAuth();}
