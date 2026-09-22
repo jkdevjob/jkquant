@@ -3121,7 +3121,6 @@ function runVR(days,tkr,params){
   /* Pool 매수한도는 하루마다 재계산하지 않는다. 한 사이클 시작 Pool을 기준으로 고정하고
      같은 사이클에서 실제로 매수한 금액을 누적 차감한다. 매도대금은 한도를 늘리지 않는다. */
   let cycPoolBase=pool, cycBuySpent=0;
-  let cycBaseShares=Math.floor(shares+1e-9),cycSellFilled=0,cycBuyFilled=0;
   /* ── 하루치 사다리 체결 (예약주문 방식) ──
      실전에서는 사이클 첫날 매수·매도표 20차수를 지정가로 전부 걸어두고 2주 방치한다.
      차수 값은 운영 앱의 표·체결기(vrSimForward)와 같은 식이다:
@@ -3141,11 +3140,11 @@ function runVR(days,tkr,params){
     const St={shares:Math.floor(shares+1e-9), pool, avg, V};
     const fills=vrOrderPlan(St, {band, poolLimit,
         budgetRemaining:Math.max(0,cycPoolBase*poolLimit-cycBuySpent),FEE,
-        baseShares:cycBaseShares,sellFilled:cycSellFilled,buyFilled:cycBuyFilled,maxTiers:20},
+        model:(_vmode==='ladder')?'ladder':'official'},
       {date:'',high:hi,low:lo2,close:(cl>0?cl:hi)});
     for(const f of fills){
-      if(f.type==='sell'){ pool+=_vsellQ(f.qty, f.price); cycSellFilled+=f.qty; sells++; }
-      else { pool-=_vbuyQ(f.qty, f.price); cycBuySpent+=f.cost; cycBuyFilled+=f.qty; buys++; }
+      if(f.type==='sell'){ pool+=_vsellQ(f.qty, f.price); sells++; }
+      else { pool-=_vbuyQ(f.qty, f.price); cycBuySpent+=f.cost; buys++; }
     }
   }
   days.forEach((d,i)=>{
@@ -3166,7 +3165,7 @@ function runVR(days,tkr,params){
     if(first && isCyc){
       if(isLump){const s=initAmt||10000;inv+=s;cf.push([d,s]);pool+=s-_vbuy(s,c);V=shares*c;}
       else{pool+=contrib;inv+=contrib;cf.push([d,contrib]);pool-=_vbuy(pool,c);V=shares*c;}
-      first=false;cycPoolBase=pool;cycBuySpent=0;cycBaseShares=Math.floor(shares+1e-9);cycSellFilled=0;cycBuyFilled=0;buys++;rebal++;snap.push([d,shares*c+pool+totalWd]);return;
+      first=false;cycPoolBase=pool;cycBuySpent=0;buys++;rebal++;snap.push([d,shares*c+pool+totalWd]);return;
     }
 
     // 먼저 기존 사이클 사다리를 오늘 OHLC에 체결한다.
@@ -3182,7 +3181,7 @@ function runVR(days,tkr,params){
       if(isAccum){pool+=contrib;inv+=contrib;cf.push([d,contrib]);}
       else if(isWd){const wd=Math.min(withdraw,pool);pool-=wd;totalWd+=wd;}
       /* 새 사이클의 한도 기준 Pool은 적립/인출을 반영한 직후 금액이다. */
-      cycPoolBase=pool;cycBuySpent=0;cycBaseShares=Math.floor(shares+1e-9);cycSellFilled=0;cycBuyFilled=0;
+      cycPoolBase=pool;cycBuySpent=0;
       if(LADDER){ rebal++; }
       else {
         const up=V*(1+band),lo=V*(1-band),cv2=shares*c;
