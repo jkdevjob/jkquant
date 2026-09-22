@@ -83,9 +83,20 @@ th:first-child,td:first-child{text-align:left}
 .checks{display:grid;gap:7px;margin-top:10px}
 .check{display:flex;gap:9px;align-items:flex-start;background:var(--surf2);border-radius:8px;padding:9px 10px}
 .check .dot{width:8px;height:8px;border-radius:50%;background:var(--accent);margin-top:6px;flex:none}
+.live-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.livegrid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:12px}
+.livebox{background:var(--surf2);border:1px solid var(--border);border-radius:10px;padding:12px;min-width:0}
+.livebox h3{font-size:13px;margin:0 0 3px}.livebox .meta{font-size:10.5px;color:var(--dim);margin-bottom:8px}
+.liveact{display:grid;gap:6px}.liveitem{border-radius:7px;background:rgba(255,255,255,.035);padding:7px 8px;font-size:12px}
+.liveitem.buy{border-left:3px solid var(--green)}.liveitem.sell{border-left:3px solid var(--red)}.liveitem.wait{border-left:3px solid var(--gold)}
+.liveitem strong{display:block;font-size:12.5px}.liveitem small{display:block;color:var(--dim);margin-top:2px;line-height:1.45}
+.live-summary{margin-top:10px;padding:10px 12px;border-radius:9px;background:rgba(139,140,240,.08);border:1px solid rgba(139,140,240,.22);font-size:12px}
+.live-summary.ok{background:rgba(54,211,153,.07);border-color:rgba(54,211,153,.25)}
+.live-summary.warn{background:rgba(245,196,81,.07);border-color:rgba(245,196,81,.25)}
+.live-sync{font-size:11px;color:var(--dim);margin-top:5px}
 .save-state{font-size:11px;color:var(--dim);margin-left:auto;align-self:center}
 @media(max-width:780px){
-  .hero{grid-template-columns:1fr}.grid4{grid-template-columns:repeat(2,1fr)}.grid3{grid-template-columns:1fr}.steps{grid-template-columns:repeat(2,1fr)}
+  .hero{grid-template-columns:1fr}.grid4{grid-template-columns:repeat(2,1fr)}.grid3{grid-template-columns:1fr}.steps{grid-template-columns:repeat(2,1fr)}.livegrid{grid-template-columns:1fr}
   .kpis{grid-template-columns:repeat(2,1fr)}.cashgrid{grid-template-columns:repeat(2,1fr)}.scenarios{grid-template-columns:1fr}
 }
 @media(max-width:480px){
@@ -97,7 +108,7 @@ th:first-child,td:first-child{text-align:left}
 <body>
 <div class="wrap">
   <div class="top">
-    <div class="brand"><div class="logo">Five Year Plan</div><h1>5년 자산플랜 <span class="ver">v1.0.0</span></h1></div>
+    <div class="brand"><div class="logo">Five Year Plan</div><h1>5년 자산플랜 <span class="ver">v1.1.0</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
       <div class="jkmenu" id="jkmenuWrap">
@@ -130,6 +141,35 @@ th:first-child,td:first-child{text-align:left}
       <div class="sub" id="nextNote">둘 중 하나라도 먼저 오면 보호를 시작합니다.</div>
     </section>
   </div>
+
+  <section class="card" id="livePanel">
+    <div class="live-head">
+      <div>
+        <h2>0. 오늘의 실행 · 운영계좌 연동</h2>
+        <div class="sub">운영 화면의 실제 SOXL 무매·TQQQ VR 세션을 읽고, 확정 일봉 기준으로 오늘 주문과 QLD/SGOV 신호를 계산합니다. 주문은 여기서 전송하지 않습니다.</div>
+        <div class="live-sync" id="liveSync">운영데이터 연결 준비 중…</div>
+      </div>
+      <button class="btn primary" id="liveRefresh">🔄 운영데이터·시세 새로고침</button>
+    </div>
+    <div class="livegrid">
+      <div class="livebox">
+        <h3>SOXL 무한매수</h3>
+        <div class="meta" id="liveInfMeta">운영 세션 확인 중…</div>
+        <div class="liveact" id="liveInf"><div class="liveitem wait">데이터를 불러오고 있습니다.</div></div>
+      </div>
+      <div class="livebox">
+        <h3>TQQQ VR</h3>
+        <div class="meta" id="liveVrMeta">운영 세션 확인 중…</div>
+        <div class="liveact" id="liveVr"><div class="liveitem wait">데이터를 불러오고 있습니다.</div></div>
+      </div>
+      <div class="livebox">
+        <h3>QLD / SGOV 순환</h3>
+        <div class="meta" id="liveQldMeta">QQQ 지표 확인 중…</div>
+        <div class="liveact" id="liveQld"><div class="liveitem wait">데이터를 불러오고 있습니다.</div></div>
+      </div>
+    </div>
+    <div class="live-summary" id="liveSummary">세 전략축을 확인한 뒤 오늘 해야 할 일을 한 줄로 정리합니다.</div>
+  </section>
 
   <section class="card">
     <h2>1. 목표 설정</h2>
@@ -256,6 +296,184 @@ const STAGES={
      checks:["성장 ETF 40%는 장기 자산성장과 물가 대응 역할입니다.","커버드콜·인컴 30%는 정기 현금흐름을 담당합니다.","SGOV 20%는 생활비 완충과 급락장 강제매도 방지를 담당합니다.","SOXL 무매 10%는 생활비 주력이 아니라 추가 성장·알파 역할로 제한합니다."]}
 };
 
+
+let liveState=null, liveStateSource="", liveBusy=false, liveQuotes={};
+const FEE=0.0025;
+const KIND_T={'1회매수':t=>t+1,'절반매수':t=>t+0.5,'쿼터매도':t=>t*0.75,'지정가매도':t=>t*0.25,
+  '지정가매도+1회매수':t=>t*0.25+1,'지정가매도+절반매수':t=>t*0.25+0.5,
+  '1회매수+지정가매도(애프터)':t=>t*0.25+1,'절반매수+지정가매도(애프터)':t=>t*0.25+0.5};
+const isBuyKind=k=>k!=='출금'&&String(k||'').includes('매수');
+const isSellKind=k=>k!=='출금'&&String(k||'').includes('매도');
+function opLocalState(uid){
+  const keys=uid?['qcockpit_v2_'+uid,'qcockpit_v2_guest']:['qcockpit_v2_guest'];
+  for(const k of keys){try{const x=JSON.parse(localStorage.getItem(k)||'null');if(x&&x.inf&&x.vr)return x;}catch(e){}}
+  return null;
+}
+function pickOpSession(box,ticker){
+  if(!(box&&Array.isArray(box.sessions)))return null;
+  const tt=String(ticker).toUpperCase(),active=box.sessions.find(x=>x.id===box.active);
+  if(active&&!active.paper&&String(active.settings?.ticker||'').toUpperCase()===tt)return active;
+  return box.sessions.find(x=>!x.paper&&String(x.settings?.ticker||'').toUpperCase()===tt)
+      ||box.sessions.find(x=>String(x.settings?.ticker||'').toUpperCase()===tt)||null;
+}
+function reverseTPlan(kind,t,div){if(kind==='리버스매도')return div>=40?t*.95:t*.9;if(kind==='리버스매수')return t+(div-t)*.25;return t;}
+function starPctPlan(st,T){const b=(+st.target>0)?+st.target:20;return b-(b*.1*20/(+st.div||20))*T;}
+function calcInfState(sess){
+  const st=sess.settings||{},hist=sess.hist||[];let avg=0,qty=0,inv=0,realized=0,T=0,withdrawn=0,saved=0,revState='NORMAL';
+  const simple=st.compound===false;
+  for(const h of hist){
+    const kind=String(h.kind||''),isRev=kind==='리버스매도'||kind==='리버스매수';
+    if(kind==='지정가매도'||kind==='쿼터매도'||kind==='리버스매도'){
+      realized+=(+h.price-avg)*(+h.qty||0);qty-=+h.qty||0;inv-=avg*(+h.qty||0);
+    }else if(kind==='1회매수'||kind==='절반매수'||kind==='리버스매수'){
+      const q=+h.qty||0,nq=qty+q;avg=nq>0?(avg*qty+(+h.price||0)*q)/nq:(+h.price||0);qty=nq;inv+=(+h.price||0)*q;
+    }else if(kind==='출금')withdrawn+=Math.max(0,+h.amt||0);
+    else if(kind.startsWith('지정가매도+')||kind.includes('+지정가매도')){
+      const sp=+h.sellPrice||0,sq=+h.sellQty||0,bp=+h.buyPrice||0,bq=+h.buyQty||0,sellFirst=kind.startsWith('지정가매도+');
+      const ds=()=>{if(sq>0){realized+=(sp-avg)*sq;qty-=sq;inv-=avg*sq;}};
+      const db=()=>{if(bq>0){const nq=qty+bq;avg=nq>0?(avg*qty+bp*bq)/nq:bp;qty=nq;inv+=bp*bq;}};
+      sellFirst?(ds(),db()):(db(),ds());
+    }
+    if(typeof h.tManual==='number'&&!isNaN(h.tManual))T=h.tManual;
+    else if(isRev)T=reverseTPlan(kind,T,+st.div||20);
+    else T=KIND_T[kind]?KIND_T[kind](T):T;
+    revState=isRev?'REVERSE':'NORMAL';
+    if(qty<=1e-9&&isSellKind(kind)&&!isBuyKind(kind)){
+      qty=0;avg=0;T=0;inv=0;revState='NORMAL';
+      if(simple){const P0=+st.principal||0,cash=P0+realized-withdrawn-saved;if(cash>P0)saved+=cash-P0;}
+    }
+  }
+  if(st.reverse===true&&revState==='NORMAL'&&qty>0&&((+st.div||20)-T)<1)revState='DAY1';
+  const bal=(+st.principal||0)+realized-inv-withdrawn-saved;
+  return {st,avg,qty:Math.max(0,qty),T,bal,reverseActive:st.reverse===true&&revState!=='NORMAL'&&qty>0,reverseDay1:revState==='DAY1'};
+}
+function imOrders(sess,price){
+  const c=calcInfState(sess),st=c.st,div=+st.div||20,target=+st.target||20,big=st.big!=null?+st.big:20,slot=div-c.T;
+  if(!(price>0))return {state:c,orders:[],note:'확정 종가가 없어 주문을 계산하지 못했습니다.'};
+  if(c.reverseActive)return {state:c,orders:[],note:'리버스모드 진행 중입니다. 별지점 5일평균이 필요한 주문은 운영 화면에서 확인하세요.'};
+  const orders=[],buy1=slot>=1?c.bal/slot:0,pct=starPctPlan(st,c.T),star=c.avg>0?c.avg*(1+pct/100):price,buyPt=star-.01,limit=price*(1+big/100),half=c.T<div/2;
+  const addBuy=(name,p,alloc)=>{const pp=Math.min(p,limit),q=Math.floor(Math.max(0,alloc)/price);if(q>0)orders.push({side:'buy',name,price:pp,qty:q,tag:'LOC'});};
+  if(slot>=1&&buy1>0){
+    if(c.avg<=0)addBuy('처음매수',price*(1+big/100),buy1);
+    else if(half){addBuy('별지점 절반매수',buyPt,buy1/2);addBuy('평단 절반매수',c.avg,buy1/2);}
+    else addBuy('별지점 전액매수',buyPt,buy1);
+  }
+  if(c.qty>0&&c.avg>0){
+    const q1=Math.floor(c.qty/4);
+    if(q1>0)orders.push({side:'sell',name:'쿼터매도',price:star,qty:q1,tag:'LOC'});
+    const qr=Math.max(0,Math.round(c.qty-q1));
+    if(qr>0)orders.push({side:'sell',name:'나머지 익절',price:c.avg*(1+target/100),qty:qr,tag:'지정가'});
+  }
+  return {state:c,orders,note:slot<1?'원금 소진 — 신규 매수 없이 매도 규칙만 유지':''};
+}
+function calcVrState(sess){
+  const st=sess.settings||{},hist=sess.hist||[];let qty=0,totbuy=0,totsell=0,totdiv=0,totadd=0,totwd=0,buyShares=0,initBuy=0,pool=+st.startpool||0,V=+st.startv||0,cost=0;
+  let vSet=V>0,sawBuy=false;const carriedIn=V>0&&!(st.startCyc>0);
+  for(const h of hist){
+    if(h.type==='buy'){const amt=(+h.price||0)*(+h.qty||0),fee=+h.fee||0;qty+=+h.qty||0;totbuy+=amt;buyShares+=+h.qty||0;cost+=amt;
+      const isInit=h.init!==undefined?!!h.init:(!sawBuy&&!carriedIn);sawBuy=true;if(!vSet){V=amt;vSet=true;}if(isInit)initBuy+=amt+fee;else pool-=amt+fee;}
+    else if(h.type==='sell'){const q=+h.qty||0,amt=(+h.price||0)*q,fee=+h.fee||0,av=qty>0?cost/qty:0;cost-=av*q;qty-=q;if(qty<1e-9){qty=0;cost=0;}totsell+=amt;pool+=amt-fee;}
+    else if(h.type==='add'){pool+=+h.amt||0;totadd+=+h.amt||0;}
+    else if(h.type==='wd'){pool-=+h.amt||0;totwd+=+h.amt||0;}
+    else if(h.type==='div'){pool+=+h.amt||0;totdiv+=+h.amt||0;}
+  }
+  const avgNom=buyShares>0?totbuy/buyShares:0,up=V*(1+(+st.band||15)/100),lo=V*(1-(+st.band||15)/100);
+  return {st,hist,qty:Math.max(0,qty),pool,V,avgNom,up,lo};
+}
+function nextVrDate(s){const t=new Date(s+'T00:00:00Z');t.setUTCDate(t.getUTCDate()+14);while(t.getUTCDay()===0||t.getUTCDay()===6)t.setUTCDate(t.getUTCDate()+1);return t.toISOString().slice(0,10);}
+function vrCycleStart(c){if(c.st.cycStart)return c.st.cycStart;for(let i=c.hist.length-1;i>=0;i--){const x=c.hist[i];if(x.auto&&(x.type==='add'||x.type==='wd'))return x.date;}const f=c.hist.find(x=>x.type==='buy');return f?f.date:null;}
+function vrOrders(sess,price){
+  const c=calcVrState(sess),st=c.st,orders=[];if(!(price>0))return {state:c,orders,note:'확정 종가가 없어 계산하지 못했습니다.'};
+  if(!(c.V>0)&&!(c.qty>0)){const amt=st.initAmt!=null?+st.initAmt:10000,q=Math.floor(amt/price);if(q>0)orders.push({side:'buy',name:'첫 매수',price,qty:q,tag:'초기'});return {state:c,orders,note:'첫 매수 후 V와 사다리가 생성됩니다.'};}
+  const S=Math.floor(c.qty),ev=price*c.qty,limit=Math.max(0,c.pool*(+st.mode||.75));
+  if(S>0){
+    const sell1=c.up/S,buy1=c.lo/S;
+    if(ev>c.up){const q=Math.max(0,Math.round((ev-c.V)/price));if(q>0)orders.push({side:'sell',name:'밴드 상단 초과 즉시매도',price,qty:q,tag:'시장가 기준'});}
+    else if(ev<c.lo){const need=c.V-ev,real=Math.min(need,limit),q=Math.max(0,Math.round(real/price));if(q>0)orders.push({side:'buy',name:'밴드 하단 이탈 즉시매수',price,qty:q,tag:'Pool 한도'});}
+    orders.push({side:'sell',name:'예약매도 1차',price:sell1,qty:1,tag:'예약'});
+    if(limit>=buy1*(1+FEE))orders.push({side:'buy',name:'예약매수 1차',price:buy1,qty:1,tag:'예약'});
+  }
+  const cs=vrCycleStart(c),due=cs?nextVrDate(cs):null;
+  return {state:c,orders,note:due?'다음 사이클 기준일 '+due:'사이클 기준일을 확인하세요.'};
+}
+async function fetchPlanQuote(symbol){
+  const sym=String(symbol||'').toUpperCase();if(liveQuotes[sym])return liveQuotes[sym];
+  const r=await fetch('/api/quote?symbol='+encodeURIComponent(sym)+'&range=max',{headers:{Accept:'application/json'}});
+  if(!r.ok)throw new Error(sym+' 시세 HTTP '+r.status);
+  const j=await r.json();if(!(j&&j.series&&j.series.length))throw new Error(sym+' 시세 없음');
+  const rows=j.series.map(x=>({date:x.date,close:+x.close})).filter(x=>x.close>0);
+  const ohlc=Array.isArray(j.ohlc)?j.ohlc:[];
+  const nyParts=new Intl.DateTimeFormat('en-CA',{timeZone:'America/New_York',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hour12:false}).formatToParts(new Date());
+  const pv=Object.fromEntries(nyParts.map(x=>[x.type,x.value])),nyDate=pv.year+'-'+pv.month+'-'+pv.day,nyMin=(+pv.hour)*60+(+pv.minute);
+  let settled=rows[rows.length-1];if(settled&&settled.date===nyDate&&nyMin<16*60+10&&rows.length>1)settled=rows[rows.length-2];
+  return liveQuotes[sym]={symbol:sym,rows,ohlc,settled,marketState:j.marketState||'',price:+j.price||settled.close};
+}
+function indicatorSeries(a,n){const out=Array(a.length).fill(null);let s=0;for(let i=0;i<a.length;i++){s+=a[i];if(i>=n)s-=a[i-n];if(i>=n-1)out[i]=s/n;}return out;}
+function rsiSeries(a,n=14){const out=Array(a.length).fill(null);let ag=0,al=0;for(let i=1;i<a.length;i++){const z=a[i]-a[i-1],g=Math.max(z,0),l=Math.max(-z,0);if(i<=n){ag+=g;al+=l;if(i===n){ag/=n;al/=n;out[i]=100-100/(1+(al===0?100:ag/al));}}else{ag=(ag*(n-1)+g)/n;al=(al*(n-1)+l)/n;out[i]=100-100/(1+(al===0?100:ag/al));}}return out;}
+function qldSignal(rows,startDate){
+  const pxs=rows.map(x=>x.close),m5=indicatorSeries(pxs,5),m20=indicatorSeries(pxs,20),m50=indicatorSeries(pxs,50),m200=indicatorSeries(pxs,200),rs=rsiSeries(pxs),ath=[];let mx=-Infinity;
+  for(const p of pxs){mx=Math.max(mx,p);ath.push(mx);}
+  let start=Math.max(200,rows.findIndex(x=>x.date>=startDate));if(start<200)start=200;
+  let bear=false,used=[false,false,false,false],lastActs=[],phase='상승장';
+  for(let i=start;i<rows.length;i++){
+    const down=pxs[i]<m200[i],prevDown=pxs[i-1]<m200[i-1],cross5=m5[i-1]<=m20[i-1]&&m5[i]>m20[i],cross20=m20[i-1]<=m50[i-1]&&m20[i]>m50[i],crossUp=pxs[i-1]<m200[i-1]&&pxs[i]>=m200[i];
+    if(i===start&&down){bear=true;used=[false,false,false,false];}
+    if(down&&!prevDown){bear=true;used=[false,false,false,false];}
+    const acts=[];
+    const dd=pxs[i]/ath[i]-1;
+    if(bear&&down&&!used[0]&&rs[i]!=null&&rs[i]<=35&&dd<=-.10){used[0]=true;acts.push('딥 1단계 · SGOV 기준 20% → QLD');}
+    if(bear&&down&&!used[1]&&rs[i]!=null&&rs[i]<=30&&dd<=-.18){used[1]=true;acts.push('딥 2단계 · SGOV 기준 30% → QLD');}
+    if(bear&&!used[2]&&cross5){used[2]=true;acts.push('회복 1단계 · 5MA↑20MA · SGOV 기준 25% → QLD');}
+    if(bear&&!used[3]&&cross20){used[3]=true;acts.push('회복 2단계 · 20MA↑50MA · SGOV 기준 25% → QLD');}
+    if(bear&&crossUp){acts.push('200MA 회복 · QLD/SGOV를 50:50으로 리밸런싱');bear=false;used=[false,false,false,false];}
+    if(i===rows.length-1)lastActs=acts;
+    phase=bear?'하락장 순환 중':'상승장 50:50 유지';
+  }
+  const i=rows.length-1,dd=pxs[i]/ath[i]-1;
+  return {date:rows[i].date,close:pxs[i],ma200:m200[i],rsi:rs[i],dd:dd*100,phase,acts:lastActs};
+}
+function orderHtml(o){const c=o.side==='buy'?'buy':'sell',lab=o.side==='buy'?'매수':'매도';return '<div class="liveitem '+c+'"><strong>'+lab+' · '+o.name+'</strong><small>'+o.tag+' · '+usd(o.price)+' × '+Math.round(o.qty)+'주</small></div>';}
+function waitHtml(t,sub=''){return '<div class="liveitem wait"><strong>'+t+'</strong>'+(sub?'<small>'+sub+'</small>':'')+'</div>';}
+async function loadOperatingState(user){
+  const local=opLocalState(user?.uid),localUpdated=+local?._updated||0;
+  let cloud=null,cloudUpdated=0;
+  if(user){try{const snap=await getDoc(doc(db,'users',user.uid));if(snap.exists()){const d=snap.data();cloud=d.state||null;cloudUpdated=+d.updated||0;}}catch(e){}}
+  if(local&&localUpdated>=cloudUpdated){liveState=local;liveStateSource='이 기기 운영데이터';}
+  else if(cloud&&cloud.inf&&cloud.vr){liveState=cloud;liveStateSource='클라우드 운영데이터';}
+  else if(local){liveState=local;liveStateSource='이 기기 운영데이터';}
+  else{liveState=null;liveStateSource='운영데이터 없음';}
+}
+async function refreshLive(){
+  if(liveBusy)return;liveBusy=true;$('liveRefresh').disabled=true;$('liveSync').textContent='운영데이터와 확정 일봉을 읽는 중…';liveQuotes={};
+  try{
+    await loadOperatingState(auth.currentUser);
+    const inf=liveState?pickOpSession(liveState.inf,'SOXL'):null,vr=liveState?pickOpSession(liveState.vr,'TQQQ'):null;
+    const [qs,qv,qqq]=await Promise.all([fetchPlanQuote('SOXL'),fetchPlanQuote('TQQQ'),fetchPlanQuote('QQQ')]);
+    const asof=[qs.settled.date,qv.settled.date,qqq.settled.date].sort()[0];$('liveSync').textContent=liveStateSource+' · 확정 일봉 '+asof+' 기준';
+    const actions=[];
+    if(inf){
+      const r=imOrders(inf,qs.settled.close),c=r.state,st=inf.settings||{};
+      $('liveInfMeta').textContent=(inf.name||'SOXL 세션')+' · '+(st.div||20)+'분할 / '+(st.target||20)+'% / '+(st.compound===false?'단리':'복리')+' · T '+c.T.toFixed(2)+' · 보유 '+Math.round(c.qty)+'주';
+      const primary=r.orders.filter(o=>o.tag!=='예약');$('liveInf').innerHTML=(primary.length?primary.map(orderHtml).join(''):waitHtml('오늘 신규 주문 없음',r.note||'현재 상태에서 실행할 주문이 없습니다.'));
+      if(primary.length)actions.push('SOXL '+primary.length+'건');
+    }else{$('liveInfMeta').textContent='SOXL 실전 세션 없음';$('liveInf').innerHTML=waitHtml('운영 화면에 SOXL 실전 세션을 먼저 만드세요.');}
+    if(vr){
+      const r=vrOrders(vr,qv.settled.close),c=r.state,st=vr.settings||{};
+      $('liveVrMeta').textContent=(vr.name||'TQQQ 세션')+' · G'+(st.g||10)+' / ±'+(st.band||15)+'% / '+(st.formula==='skill'?'실력':'기본')+' · V '+usd(c.V)+' · Pool '+usd(c.pool);
+      const immediate=r.orders.filter(o=>o.tag!=='예약'),reserve=r.orders.filter(o=>o.tag==='예약');
+      $('liveVr').innerHTML=(immediate.length?immediate.map(orderHtml).join(''):waitHtml('즉시 매매 없음','현재 평가금이 VR 밴드 안입니다.'))+(reserve.length?reserve.slice(0,2).map(orderHtml).join(''):'')+waitHtml(r.note);
+      if(immediate.length)actions.push('TQQQ VR '+immediate.length+'건');
+    }else{$('liveVrMeta').textContent='TQQQ VR 실전 세션 없음';$('liveVr').innerHTML=waitHtml('운영 화면에 TQQQ VR 실전 세션을 먼저 만드세요.');}
+    const qRows=qqq.rows.filter(x=>x.date<=qqq.settled.date),sg=qldSignal(qRows,$('startDate').value);
+    $('liveQldMeta').textContent='QQQ '+sg.date+' · 종가 '+usd(sg.close)+' · MA200 '+usd(sg.ma200)+' · RSI '+(sg.rsi||0).toFixed(1)+' · ATH '+sg.dd.toFixed(1)+'%';
+    if(sg.acts.length){$('liveQld').innerHTML=sg.acts.map(x=>'<div class="liveitem buy"><strong>'+x+'</strong><small>'+sg.phase+'</small></div>').join('');actions.push('QLD/SGOV '+sg.acts.length+'개 신호');}
+    else $('liveQld').innerHTML=waitHtml('오늘 신규 전환 신호 없음',sg.phase);
+    const sum=$('liveSummary');if(actions.length){sum.className='live-summary warn';sum.innerHTML='<b>오늘 확인:</b> '+actions.join(' · ')+' · 실제 주문 전 운영 화면의 주문표와 한 번 더 대조하세요.';}
+    else{sum.className='live-summary ok';sum.innerHTML='<b>오늘 할 일 없음.</b> 세 전략축 모두 신규 실행 신호가 없습니다. 예약주문은 기존 운영 계획을 유지하세요.';}
+  }catch(e){$('liveSync').textContent='연동 실패 · '+(e&&e.message||e);$('liveSummary').className='live-summary warn';$('liveSummary').textContent='시세나 운영데이터를 읽지 못했습니다. 운영 화면에서 직접 확인하세요.';}
+  finally{liveBusy=false;$('liveRefresh').disabled=false;}
+}
+
 function defaults(){
   const s=todayISO(),t=plusYears(s,5);
   return {startDate:s,targetDate:t,targetCapital:150000,monthlyAdd:0,targetIncome:2000,stageMode:"auto",
@@ -344,7 +562,11 @@ async function cloudSave(){
 }
 async function cloudLoad(user){
   if(!user)return;
-  try{const snap=await getDoc(doc(db,"users",user.uid)),v=snap.data()?.fiveYearPlan;if(v){apply(v);render();$("saveState").textContent="계정 설정 불러옴";}}catch(e){}
+  try{
+    const snap=await getDoc(doc(db,"users",user.uid)),d=snap.data()||{},v=d.fiveYearPlan;
+    if(v){apply(v);render();$("saveState").textContent="계정 설정 불러옴";}
+    if(d.state&&d.state.inf&&d.state.vr){liveState=d.state;liveStateSource="클라우드 운영데이터";}
+  }catch(e){}
 }
 function userBadge(user){
   const b=$("userbadge");
@@ -357,11 +579,11 @@ function userBadge(user){
 const d=defaults();let saved=null;try{saved=JSON.parse(localStorage.getItem(KEY)||"null")}catch(e){}
 apply(saved||d);render();
 ["startDate","targetDate","targetCapital","monthlyAdd","targetIncome","stageMode","balMM","balVR","balQLD","balSGOV","cagrLow","cagrBase","cagrHigh","incomeBasis","incomeYield","sgovYield","extraWithdraw"].forEach(id=>$(id).addEventListener("change",render));
-$("calcBtn").addEventListener("click",render);$("seedBtn").addEventListener("click",seed);$("saveBtn").addEventListener("click",cloudSave);
+$("calcBtn").addEventListener("click",()=>{render();refreshLive()});$("seedBtn").addEventListener("click",seed);$("saveBtn").addEventListener("click",cloudSave);$("liveRefresh").addEventListener("click",refreshLive);
 document.querySelectorAll(".step").forEach(b=>b.addEventListener("click",()=>{$("stageMode").value=b.dataset.step;render()}));
 $("jkmenuBtn").addEventListener("click",e=>{e.stopPropagation();$("jkmenuPop").hidden=!$("jkmenuPop").hidden});
 document.addEventListener("click",e=>{if(!$("jkmenuWrap").contains(e.target))$("jkmenuPop").hidden=true});
-onAuthStateChanged(auth,async user=>{userBadge(user);if(user)await cloudLoad(user)});
+onAuthStateChanged(auth,async user=>{userBadge(user);if(user)await cloudLoad(user);await refreshLive();});
 </script>
 </body>
 </html>
