@@ -320,7 +320,7 @@ td:first-child{text-align:left;}
   <div class="brand">
     <div>
       <div class="logo">Backtest</div>
-      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v2.0.0</span></h1>
+      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v2.0.1</span></h1>
     </div>
   </div>
   <div class="hright">
@@ -2911,16 +2911,26 @@ function runVR(days,tkr,params){
     pool+=divCash(tkr,d,shares,costOn);   // VR 은 Pool 이 곧 현금이다
     { const y=d.slice(0,4); if(curYear===null)curYear=y; else if(y!==curYear){_settle(c);curYear=y;} }
     { const eq=shares*c+pool+totalWd; if(eq>mddPeak)mddPeak=eq; else if(mddPeak>0){ const dd=Math.min((mddPeak-eq)/mddPeak,1); if(dd>mdd)mdd=dd; } }
-    // 기준일이 지났으면 사이클을 넘긴다 (길게 쉬어 여러 번 밀렸을 수 있으므로 while — 앱과 같다)
+    // 기준일 판정. 핵심 시간축:
+    //   ① 기준일 장중에는 '이전 V'로 2주간 걸어둔 사다리가 그대로 살아 있다.
+    //   ② 장 마감 종가를 확인한 뒤 새 V를 계산한다.
+    //   ③ 새 V 사다리는 다음 거래일부터 유효하다.
+    // 종가로 만든 새 V를 같은 날의 고가/저가에 소급 적용하면 룩어헤드가 된다.
     let isCyc=false;
     if(_vrDue===null){ if(i===0){ isCyc=true; _vrDue=vrNextDue(d); } }
     else { let g2=0; while(d>=_vrDue && g2++<10){ isCyc=true; _vrDue=vrNextDue(_vrDue); } }
-    if(isCyc){
-      if(first){
-        if(isLump){const s=initAmt||10000;inv+=s;cf.push([d,s]);pool+=s-_vbuy(s,c);V=shares*c;}  // 거치식/인출식: 첫매수가=V · 못 산 잔돈은 Pool 로
-        else{pool+=contrib;inv+=contrib;cf.push([d,contrib]);pool-=_vbuy(pool,c);V=shares*c;} // 적립식: 첫매수가=V · 잔돈은 Pool 에 남는다
-        first=false;buys++;rebal++;snap.push([d,shares*c+pool+totalWd]);return;
-      }
+
+    if(first && isCyc){
+      if(isLump){const s=initAmt||10000;inv+=s;cf.push([d,s]);pool+=s-_vbuy(s,c);V=shares*c;}
+      else{pool+=contrib;inv+=contrib;cf.push([d,contrib]);pool-=_vbuy(pool,c);V=shares*c;}
+      first=false;buys++;rebal++;snap.push([d,shares*c+pool+totalWd]);return;
+    }
+
+    // 먼저 기존 사이클 사다리를 오늘 OHLC에 체결한다.
+    if(LADDER && !first){ const row=M[tkr][d]; _ladder(row[HI]||c, row[LO]||c); }
+
+    // 그 다음 장 마감 기준으로 새 사이클을 만든다. 새 사다리는 내일부터.
+    if(isCyc && !first){
       const cv=shares*c;
       const addCycle=isAccum?contrib:isWd?-withdraw:0;
       if(formula==='skill'&&V>0) V=V+pool/G+(cv-V)/(2*Math.sqrt(G))+addCycle;
@@ -2936,8 +2946,6 @@ function runVR(days,tkr,params){
         rebal++;
       }
     }
-    // 걸어둔 지정가는 사이클 첫날만이 아니라 2주 내내 살아 있다
-    if(LADDER && !first){ const row=M[tkr][d]; _ladder(row[HI]||c, row[LO]||c); }
     if(isCyc||i===days.length-1)snap.push([d,shares*c+pool+totalWd]);
   });
   const lc=M[tkr][days[days.length-1]][C];
