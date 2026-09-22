@@ -6278,7 +6278,7 @@ console.log('\n[100] 5년 플랜·VR 예약주문 동기화');
 
   // ── VR 공식 골든: 밴드에 닿으면 평가금을 V 근처로 되돌리는 수량.
   for(const [label,src] of [['운영',idx],['백테',bt]]){
-    const vf=new Function('return ('+extractFn(src,'function vrOrderPlan(S, P, bar)').replace(/^function [\\w$]+\\(/,'function (')+')')();
+    const vf=new Function('return ('+extractFn(src,'function vrOrderPlan(S, P, bar)').replace(/^function [\w$]+\(/,'function (')+')')();
     const P0={band:.15,poolLimit:.5,FEE:0};
     let S={shares:100,pool:100000,avg:90,V:10000};
     let z=vf(S,{...P0,budgetRemaining:100000},{high:116,low:110,close:116});
