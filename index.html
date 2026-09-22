@@ -1676,7 +1676,7 @@ document.addEventListener('click',function(e){ var m=document.getElementById('jk
     <div class="seclabel">운용 모드</div><div class="seg" id="set_vmode"><button data-v="0.75">적립식</button><button data-v="0.5">거치식</button><button data-v="0.25">인출식</button></div>
     <div class="seclabel">체결 모델 <span class="hint" style="color:var(--faint);font-weight:500">밴드를 벗어났을 때 얼마나 움직이나</span></div>
     <div class="seg" id="set_vmodel">
-      <button data-v="official" title="VR 예약주문 — 사이클 시작 보유수량 기준으로 상·하단 밴드 경계에 1주씩 최대 20차를 걸고 2주 동안 유지">공식 예약 사다리</button>
+      <button data-v="official" title="공식 VR — 밴드 경계에 닿으면 평가금이 V 근처로 돌아오도록 수량을 한 번에 조정">공식 V 복귀</button>
     </div>
     <div class="seclabel">V 갱신 공식</div><div class="seg" id="set_vformula"><button data-v="basic">기본공식</button><button data-v="skill">실력(실험적)</button></div>
     <div class="seclabel">사이클 진입 <span class="hint" style="color:var(--faint);font-weight:500">V 갱신·적립을 누가 하나</span></div><div class="seg" id="set_vauto"><button data-v="0">직접 확인</button><button data-v="1">자동 진입</button></div>
@@ -3760,11 +3760,11 @@ function renderVrNow(){
   } else if(!ev){
     verdict=`<p class="lead">위에 현재가나 평가금을 넣으면 매도·매수·대기 판단이 나옵니다.</p>`;
   } else if(ev>c.up){
-    pillCls='over';pillTxt='상단 사다리';
-    verdict=`<div class="oitem s"><span class="tag">예약매도</span><span class="nm">상단 사다리 체결 구간</span><span class="pr">표 확인</span></div>
-      <p class="note" style="margin-top:8px">아래 예약매도 사다리 중 현재가가 도달한 차수를 확인하세요. <b>시장가로 V까지 별도 매도하지 않습니다.</b> 실제 체결된 차수만 기록합니다.</p>`;
+    pillCls='over';pillTxt='상단 매도';
+    verdict=`<div class="oitem s"><span class="tag">예약매도</span><span class="nm">상단 밴드 도달</span><span class="pr">주문표 확인</span></div>
+      <p class="note" style="margin-top:8px">공식 VR은 상단 밴드 가격에 도달하면 <b>평가금이 V 근처로 돌아오도록 계산된 수량</b>을 매도합니다. 아래 공식 주문 수량을 확인하세요.</p>`;
   } else if(ev<c.lo){
-    pillCls='under';pillTxt='하단 사다리';
+    pillCls='under';pillTxt='하단 매수';
     const limit=poolLimit(c);
     verdict=`<div class="oitem b"><span class="tag">예약매수</span><span class="nm">하단 사다리 체결 구간</span><span class="pr">${wn(limit)} 한도</span></div>
       <p class="note" style="margin-top:8px">아래 예약매수 사다리 중 현재가가 도달한 차수를 확인하세요. <b>시장가로 V까지 별도 매수하지 않습니다.</b> 남은 Pool 한도 안에서 실제 체결된 차수만 기록합니다.</p>`;
@@ -3882,7 +3882,7 @@ function renderVrTable(){
   $('lad_limit_b').textContent=`한도 ${wn(limit)} / ${wn(c.pool)} · 예상사용 ${wn(buyCost)}`;
   $('buy_warn').innerHTML=want>buyQty?'<div class="resv-row" style="background:#33302040;color:var(--gold)">⚠ Pool 한도 때문에 V까지 전부 복귀하지 못하고 가능한 수량까지만 매수합니다.</div>':'';
 }
-/* 사다리 행 탭 → 즉시 1주 기록 */
+/* 공식 주문 행 탭 → 표시된 수량을 즉시 기록 */
 function quickLadder(type,price,qty){
   qty=Math.max(1,Math.floor(+qty||1));
   const c=computeVr();
@@ -3894,20 +3894,21 @@ function quickLadder(type,price,qty){
 }
 
 /* ════════ 다음 V 미리보기 ════════ */
+function vrNextVValue(V,pool,G,ev,formula,addCycle){
+  V=+V||0; pool=+pool||0; G=Math.max(1,+G||10); ev=+ev||0; addCycle=+addCycle||0;
+  const corr=(formula==='skill'&&V>0)?(ev-V)/(2*Math.sqrt(G)):0;
+  return Math.max(0,V+pool/G+corr+addCycle);
+}
 function computeNextV(c,ev){
   const st=c.st, V=c.V, Pool=c.pool, G=st.g;
   const isAccum=st.mode===0.75, isWd=st.mode===0.25; // 거치식(0.5)은 적립금 항상 0
   const add = (isAccum||isWd) ? (st.add||0) : 0;
   const sign=isWd?-1:1; // 인출식이면 적립금 자리를 인출(−)로
-  let nextV, calcStr;
-  if(st.formula==='skill' && V>0){
-    const corr=(ev-V)/(2*Math.sqrt(G));
-    nextV=V + Pool/G + corr + sign*add;
-    calcStr=`V₂ = V₁ + Pool/G + (E−V₁)/(2√G) ${sign<0?'−':'+'} 적립금<br>= ${V.toFixed(2)} + ${(Pool/G).toFixed(2)} + ${corr.toFixed(2)} ${sign<0?'−':'+'} ${add} = <b>${nextV.toFixed(2)}</b>`;
-  } else {
-    nextV=V + Pool/G + sign*add;
-    calcStr=`V₂ = V₁ + Pool/G ${sign<0?'−':'+'} 적립금<br>= ${V.toFixed(2)} + ${(Pool/G).toFixed(2)} ${sign<0?'−':'+'} ${add} = <b>${nextV.toFixed(2)}</b>`;
-  }
+  const corr=(st.formula==='skill'&&V>0)?(ev-V)/(2*Math.sqrt(G)):0;
+  const nextV=vrNextVValue(V,Pool,G,ev,st.formula,sign*add);
+  const calcStr=st.formula==='skill' && V>0
+    ? `V₂ = V₁ + Pool/G + (E−V₁)/(2√G) ${sign<0?'−':'+'} 적립금<br>= ${V.toFixed(2)} + ${(Pool/G).toFixed(2)} + ${corr.toFixed(2)} ${sign<0?'−':'+'} ${add} = <b>${nextV.toFixed(2)}</b>`
+    : `V₂ = V₁ + Pool/G ${sign<0?'−':'+'} 적립금<br>= ${V.toFixed(2)} + ${(Pool/G).toFixed(2)} ${sign<0?'−':'+'} ${add} = <b>${nextV.toFixed(2)}</b>`;
   // 다음 Pool = 현재 Pool + 적립(또는 −인출)
   const nextPool = Pool + sign*add;
   return {nextV, nextPool, calcStr, sign};
@@ -7548,9 +7549,7 @@ function vrReplay(){
         trade:+cycTrade.toFixed(2), startPool:+cycStartPool.toFixed(2),
         E:+(shares*c).toFixed(2), close:+c.toFixed(4)});
       const cv=shares*c, addCycle=isAccum?contrib:isWd?-withdraw:0;
-      if(formula==='skill'&&V>0) V=V+pool/G+(cv-V)/(2*Math.sqrt(G))+addCycle;
-      else V=V+pool/G+addCycle;
-      V=Math.max(V,0);
+      V=vrNextVValue(V,pool,G,cv,formula,addCycle);
       cyc++; cycTrade=0; cycBuySpent=0; cycStartDate=d;cycBaseQty=shares;cycSellFilled=0;cycBuyFilled=0;
       if(isAccum){ pool+=contrib; rec.push({type:'add',date:d,amt:+contrib,cyc,sim:true,ts:rec.length+1}); }
       else if(isWd){ const wd=Math.min(withdraw,pool); pool-=wd; totalWd+=wd;
