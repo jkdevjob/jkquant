@@ -187,7 +187,7 @@ canvas{display:block;width:100%;height:auto}
 
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Morning Scalping</div><h1>JK <span class="v">퀀트</span> 단타 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="scVer">v1.9.0</span></h1></div>
+    <div><div class="kicker">Morning Scalping</div><h1>JK <span class="v">퀀트</span> 단타 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="scVer">v1.10.0</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -290,6 +290,17 @@ canvas{display:block;width:100%;height:auto}
     </div>
     <div id="ob_rebreak_body"><p class="sub">감시를 시작하면 09:03 이후 조건을 실시간 검사합니다.</p></div>
     <div id="ob_track" class="warn" style="display:none;margin-top:10px"></div>
+  </div>
+
+  <div class="card">
+    <h3><span class="dot"></span>📒 오늘 서버 매매 이력 <span class="sub" style="font-weight:600">웹을 닫아도 서버 데이터로 재구성</span></h3>
+    <p class="lead">서버의 눌림→재돌파 신호를 기준으로 <b>매수 시점</b>과 이후 <b>손절 −1% · 익절 +1.5% · 미청산 시 09:30 청산</b>을 같은 규칙으로 다시 계산한다.
+      분봉은 종가 체결 근사이며 손익은 왕복 마찰비용 <b>0.25%</b>를 반영한다.</p>
+    <div class="row" style="margin-bottom:8px">
+      <button class="ghostbtn" onclick="loadServerOpeningHistory()">🔄 오늘 이력 새로고침</button>
+      <span class="sub" id="ob_server_hist_msg"></span>
+    </div>
+    <div id="ob_server_hist_body"><p class="sub">새로고침을 누르면 오늘 서버 감시 이력을 불러옵니다.</p></div>
   </div>
 
   <!-- 1bb. 시초가 첫고점 돌파 -->
@@ -989,6 +1000,35 @@ async function telegramOpeningEvent(title,body){
 async function testTelegramOpening(){
   const ok=await telegramOpeningEvent('JK 퀀트 연결 테스트','Telegram 시초가 알림 연결이 정상입니다.');
   alert(ok?'Telegram 테스트 메시지를 보냈습니다.':'Telegram 전송 실패 — Cloudflare의 TELEGRAM_BOT_TOKEN / TELEGRAM_CHAT_ID를 확인하세요.');
+}
+async function loadServerOpeningHistory(){
+  const msg=$('ob_server_hist_msg'),body=$('ob_server_hist_body');
+  if(!msg||!body)return;
+  if(!me){msg.textContent='로그인이 필요합니다.';return;}
+  msg.textContent='오늘 서버 감시 이력 계산 중…'; body.innerHTML='';
+  try{
+    const tok=await me.getIdToken();
+    const req=[0,1,2,3,4].map(shard=>fetch('/api/opening-monitor?history=1&shard='+shard+'&shards=5&limit=100',{
+      headers:{'Authorization':'Bearer '+tok,'Accept':'application/json'}
+    }).then(async r=>{const j=await r.json().catch(()=>({}));if(!r.ok||!j.ok)throw new Error(j.error||('HTTP '+r.status));return j;}));
+    const parts=await Promise.all(req),trades=parts.flatMap(x=>x.trades||[]);
+    trades.sort((a,b)=>(a.entryTime-b.entryTime)||String(a.code).localeCompare(String(b.code)));
+    if(!trades.length){
+      msg.textContent='오늘 조건을 충족한 서버 매수신호가 없습니다.';
+      body.innerHTML='<div class="warn">오늘 서버 규칙(+2~7% 갭 → 첫3분 고점 → 눌림 → 재돌파 → 수급)을 모두 통과한 종목이 없습니다.</div>';
+      return;
+    }
+    msg.textContent='오늘 '+trades.length+'건 · Top100 서버 재구성';
+    body.innerHTML='<div class="htable-wrap"><table class="htable"><thead><tr><th>종목</th><th>매수</th><th>매수가</th><th>매도</th><th>매도가</th><th>사유</th><th>손익</th></tr></thead><tbody>'+
+      trades.map(x=>'<tr><td><b>'+esc(x.name||x.code)+'</b><div class="sub">'+esc(x.code)+'</div></td>'+
+      '<td>'+String(x.entryTime||'').padStart(4,'0')+'</td><td>'+commas(Math.round(x.entryPrice||0))+'</td>'+
+      '<td>'+(x.exitTime==null?'—':String(x.exitTime).padStart(4,'0'))+'</td><td>'+(x.exitPrice==null?'—':commas(Math.round(x.exitPrice)))+'</td>'+
+      '<td>'+(x.reason||'진행 중')+'</td><td class="'+(x.pnl==null?'':x.pnl>=0?'win':'loss')+'">'+(x.pnl==null?'—':(x.pnl>=0?'+':'')+x.pnl.toFixed(2)+'%')+'</td></tr>').join('')+
+      '</tbody></table></div><p class="note">실제 주문 체결 이력이 아니라 서버 전략 신호의 모의 매매 이력입니다.</p>';
+  }catch(e){
+    msg.textContent='서버 이력 조회 실패';
+    body.innerHTML='<div class="warn">'+esc(e.message||String(e))+'</div>';
+  }
 }
 function notifyOpeningEvent(key,title,body){
   if(OB_NOTIFIED.has(key))return false;
