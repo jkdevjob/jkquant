@@ -3808,5 +3808,30 @@ console.log('\n[75] VR 장부 — 저장 전 == 저장 후');
   }
 }
 
+/* ════ 76. 버전 형식 ════
+   버전은 x.y.z 다. 배포할 때마다 같이 올린다 —
+     마지막 자리  작은 수정·버그·UI 조정
+     가운데 자리  기능 추가·중간 규모 변경
+     첫 자리      전면 개편·호환성이 크게 바뀌는 수준
+   화면 두 곳(머리말·설정창)에 같은 값이 떠야 한다. 예전엔 두 자리(v3.77)였다. */
+console.log('\n[76] 버전 형식 (x.y.z)');
+{
+  const SEMVER=/^v\d+\.\d+\.\d+$/;
+  const pages=[['index.html',idx],['backtest.html',bt]];
+  for(const f of ['admin.html','scalping.html','ipo.html']){
+    const fp=__d+'/'+f;
+    if(fs.existsSync(fp)) pages.push([f, fs.readFileSync(fp,'utf8')]);
+  }
+  for(const [name,src] of pages){
+    const vs=[...new Set((src.match(/>v\d+(?:\.\d+)+</g)||[]).map(x=>x.slice(1,-1)))];
+    ok(`${name} 버전이 x.y.z`, vs.length>0 && vs.every(v=>SEMVER.test(v)), vs.join(' / ')||'못 찾음');
+    ok(`${name} 화면마다 같은 버전`, vs.length===1, vs.join(' / '));
+  }
+  // 운영 앱은 머리말·설정창 두 곳에 같은 값이 떠야 한다
+  const top=(idx.match(/id="appVerTop"[^>]*>(v[\d.]+)</)||[])[1];
+  const set=(idx.match(/id="appVer">(v[\d.]+)</)||[])[1];
+  ok('머리말과 설정창 버전이 같다', !!top && top===set, `머리말 ${top} / 설정창 ${set}`);
+}
+
 console.log(`\n════ 결과: ${pass} PASS / ${fail} FAIL ${fail===0?'— ALL PASS ★':'— 배포 금지, 위 ✗ 항목 수정 필요'} ════`);
 process.exit(fail===0?0:1);
