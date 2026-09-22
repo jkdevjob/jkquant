@@ -818,57 +818,81 @@ function customTickers(){ return TICKERS.filter(t=>!BASE_TICKERS.includes(t)); }
    예전엔 M 이 adjclose 였다. 배당까지 얹힌 가격에 주수를 세는 셈이라
    주수·평단·양도세가 실제 장부와 어긋났다(무매·VR은 주수가 다음 주문을 바꾼다). */
 let DIV={}, RAW={}, ADJ={}, DIVMAP={}, PBASIS={};
+
+/* ── /api/quote 응답을 '가격의 역할'로 나누는 일은 여기 한 곳만 한다 ──────
+   예전엔 메인 로더(fetchPrices)만 이 규약을 지키고, 기초지수를 받아오는
+   helper(fetchTickerInto)는 div=1 도 안 붙인 채 j.ohlc(조정가)를 그대로
+   M 에 넣었다. 같은 종목인데 '어느 길로 들어왔는지'에 따라 M 의 뜻이 달라졌다 —
+   SOXX·SMH·XLK·SPY·EWY 가 그 길로 들어온다. 파서를 하나로 모아 끊는다.
+
+   PBASIS 는 세 갈래다. '체결가가 아니다' 와 '배당까지 들어간 총수익가다' 는
+   다른 말이다 — Stooq 처럼 조정 여부를 모르는 소스를 총수익가라고 단정하면,
+   배당이 이미 가격에 있다고 보고 배당 현금을 빼 버린다.
+     trade         실제 체결가 (분할만 소급 · 배당 미반영)
+     total_return  배당까지 소급 반영된 조정가 (야후 adjclose)
+     unknown       조정 여부를 모름 (Stooq 등) — 배당이 들었다고 가정하면 안 된다   */
+function quoteUrl(sym, p1, p2){
+  return `/api/quote?symbol=${encodeURIComponent(sym)}&range=5y&period1=${p1}&period2=${p2}&div=1`;
+}
+function newPriceBag(){ return {adj:{}, trade:{}, div:{}, raw:{}, src:new Set()}; }
+function absorbQuote(bag, j){
+  if(!j) return bag;
+  (Array.isArray(j.ohlc)?j.ohlc:[]).filter(d=>d&&d.close!=null).forEach(d=>{
+    if(!bag.adj[d.date]) bag.adj[d.date]=[d.date,d.close,d.open||d.close,d.high||d.close,d.low||d.close]; });
+  (Array.isArray(j.ohlcTrade)?j.ohlcTrade:[]).filter(d=>d&&d.close>0).forEach(d=>{
+    if(!bag.trade[d.date]) bag.trade[d.date]=[d.date,d.close,d.open||d.close,d.high||d.close,d.low||d.close]; });
+  (j.dividends||[]).forEach(x=>{ if(x&&x.date&&x.amount>0) bag.div[x.date]=+x.amount; });
+  (j.raw||[]).forEach(x=>{ if(x&&x.date&&x.close>0) bag.raw[x.date]=+x.close; });
+  if(j.src) bag.src.add(String(j.src));
+  return bag;
+}
+/* 받아 온 것을 M/ADJ/DIVMAP/RAW/PBASIS 에 앉힌다. 두 로더가 같은 함수를 쓰므로
+   같은 종목·같은 날짜면 어느 길로 들어와도 값이 완전히 같다. */
+function commitPriceBag(sym, bag){
+  const adjRows=Object.values(bag.adj).sort((a,b)=>a[0]<b[0]?-1:1);
+  const trRows =Object.values(bag.trade).sort((a,b)=>a[0]<b[0]?-1:1);
+  /* 체결가 계열이 조정가와 같은 날짜를 다 덮을 때만 쓴다. 일부만 덮으면
+     중간에 기준이 바뀌어 수익률이 통째로 틀어진다 — 그럴 바엔 안 쓰는 게 낫다. */
+  const useTrade = trRows.length>=10 && trRows.length===adjRows.length;
+  const rows = useTrade ? trRows : adjRows;
+  if(rows.length<10) return null;
+  const srcs=[...bag.src];
+  PBASIS[sym] = useTrade ? 'trade'
+    : (srcs.length && srcs.every(x=>/^yahoo/.test(x))) ? 'total_return'
+    : 'unknown';
+  M[sym]={}; rows.forEach(r=>{ M[sym][r[0]]=[r[1],r[2],r[3],r[4]]; });
+  ADJ[sym]={}; adjRows.forEach(r=>{ ADJ[sym][r[0]]=r[1]; });
+  DIVMAP[sym]=bag.div;
+  DIV[sym]=Object.keys(bag.div).sort().map(d=>({date:d,amount:bag.div[d]}));
+  RAW[sym]=bag.raw;
+  return rows;
+}
+// 기간을 5년 단위로 쪼갠다 (endDate → startDate 방향). 두 로더가 같은 규칙을 쓴다.
+function quoteChunks(p1start, p2end){
+  const chunkSec = 5*365.25*86400|0, chunks=[];
+  let cur=p2end;
+  while(cur>p1start){ const from=Math.max(p1start, cur-chunkSec); chunks.push([from, cur]); cur=from; if(cur<=p1start) break; }
+  return chunks;
+}
 async function fetchPrices(startDate, endDate){
   const out={}; const failed=[]; const qual={};
-  DIV={}; RAW={}; ADJ={}; DIVMAP={}; PBASIS={};
+  M={}; DIV={}; RAW={}; ADJ={}; DIVMAP={}; PBASIS={};
   const p2end = Math.floor(new Date(endDate).getTime()/1000)+86400;
   const p1start= Math.floor(new Date(startDate).getTime()/1000);
-  const chunkSec = 5*365.25*86400|0;
-
-  // 기간을 5년 단위로 분할 (endDate → startDate 방향)
-  const chunks=[];
-  let cur=p2end;
-  while(cur>p1start){
-    const from=Math.max(p1start, cur-chunkSec);
-    chunks.push([from, cur]);
-    cur=from;
-    if(cur<=p1start) break;
-  }
+  const chunks=quoteChunks(p1start, p2end);
 
   await Promise.all(TICKERS.map(async t=>{
     try{
-      const allData={}, allTrade={}, allDiv={}, allRaw={};
+      const bag=newPriceBag();
       for(const [p1,p2] of chunks){
         try{
-          const r=await fetch(`/api/quote?symbol=${t}&range=5y&period1=${p1}&period2=${p2}&div=1`);
+          const r=await fetch(quoteUrl(t,p1,p2));
           if(!r.ok) continue;
-          const j=await r.json();
-          const arr=j&&j.ohlc;
-          if(!Array.isArray(arr)) continue;
-          arr.filter(d=>d&&d.close!=null).forEach(d=>{
-            if(!allData[d.date]) allData[d.date]=[d.date,d.close,d.open||d.close,d.high||d.close,d.low||d.close];
-          });
-          // 실제 체결가 계열 — 이게 있으면 매매는 전부 이것으로 한다
-          (j.ohlcTrade||[]).filter(d=>d&&d.close>0).forEach(d=>{
-            if(!allTrade[d.date]) allTrade[d.date]=[d.date,d.close,d.open||d.close,d.high||d.close,d.low||d.close];
-          });
-          /* 배당·raw 종가는 청크마다 따로 오므로 합쳐 둔다.
-             M의 close는 adjclose(배당 재투자 반영)라 총수익은 이미 맞다.
-             '분배금 얼마 받았고 그 사이 원금이 얼마나 녹았나'를 따로 보이려면
-             raw 종가와 분배금 스트림이 별도로 있어야 한다. */
-          (j.dividends||[]).forEach(x=>{ if(x&&x.date&&x.amount>0) allDiv[x.date]=+x.amount; });
-          (j.raw||[]).forEach(x=>{ if(x&&x.date&&x.close>0) allRaw[x.date]=+x.close; });
+          absorbQuote(bag, await r.json());
         }catch(e){ console.warn(t,'청크 실패',e.message); }
       }
-      const adjRows=Object.values(allData).sort((a,b)=>a[0]<b[0]?-1:1);
-      const trRows =Object.values(allTrade).sort((a,b)=>a[0]<b[0]?-1:1);
-      /* 체결가 계열이 조정가와 같은 날짜를 다 덮을 때만 쓴다. 일부만 덮으면
-         중간에 기준이 바뀌어 수익률이 통째로 틀어진다 — 그럴 바엔 안 쓰는 게 낫다. */
-      const useTrade = trRows.length>=10 && trRows.length===adjRows.length;
-      PBASIS[t]= useTrade ? 'trade' : 'adjusted';
-      const data = useTrade ? trRows : adjRows;
-      if(data.length<10){ failed.push(t); return; }
-      ADJ[t]={}; adjRows.forEach(r=>{ ADJ[t][r[0]]=r[1]; });
+      const data=commitPriceBag(t, bag);
+      if(!data){ failed.push(t); return; }
       const calDays=(new Date(data[data.length-1][0])-new Date(data[0][0]))/864e5;
       // 일봉 여부 실제 감지: 연속 날짜 간격의 중앙값이 4일 이하면 일봉, 아니면 주간/월간 다운샘플 의심
       const gaps=[]; for(let gi=1;gi<data.length;gi++) gaps.push((new Date(data[gi][0])-new Date(data[gi-1][0]))/864e5);
@@ -876,9 +900,6 @@ async function fetchPrices(startDate, endDate){
       const medGap=gaps.length?gaps[Math.floor(gaps.length/2)]:1;
       qual[t]={n:data.length, daily:medGap<=4, calYrs:calDays/365.25};
       out[t]=data;
-      DIV[t]=Object.keys(allDiv).sort().map(d=>({date:d,amount:allDiv[d]}));
-      DIVMAP[t]=allDiv;
-      RAW[t]=allRaw;
     }catch(e){ console.warn('로딩 실패:',t,e.message); failed.push(t); }
   }));
   return { data:out, loaded:Object.keys(out), failed, qual };
@@ -1022,7 +1043,7 @@ async function loadData(startDate, endDate){
       if(stat){ stat.style.display=''; stat.textContent='⚠ 시세 로딩 실패 — 잠시 후 다시 실행해 주세요'; stat.style.color='var(--red)'; }
       return false;
     }
-    M={}; loaded.forEach(t=>{ M[t]={}; data[t].forEach(r=>{M[t][r[0]]=[r[1],r[2],r[3],r[4]];}); });
+    // M·ADJ·DIVMAP·RAW·PBASIS 는 fetchPrices 안의 commitPriceBag 이 이미 앉혔다 (두 로더 공통)
     // 데이터 정합: 종가∉[저가,고가] 비율 — 고저가 미조정(구버전 quote.js·구CSV) 감지
     const ohlcBad=loaded.map(t=>{let n=0,b=0;data[t].forEach(r=>{if(r[3]>0&&r[4]>0){n++;if(r[1]>r[3]*1.001||r[1]<r[4]*0.999)b++;}});return [t,n?b/n:0];}).filter(x=>x[1]>0.01).map(x=>`${x[0]} ${(x[1]*100).toFixed(0)}%`);
     dataLoaded=true; loadedTickers=loaded;
@@ -1166,24 +1187,11 @@ function addCustomTicker(inpId){
   // 이미 로딩 상태면 해당 종목 청크 로딩
   const stat=document.getElementById('dataStat');
   showLoadModal(`${t} 로딩 중…`,'추가 종목 시세를 불러오고 있습니다.');   // 이 함수는 async가 아니라 _paint 생략
-  const now=Math.floor(Date.now()/1000);
-  const p1=Math.floor(new Date(loadedStart||'2010-01-01').getTime()/1000);
-  const chunkSec=5*365.25*86400|0;
-  const chunks=[];let cur=now+86400;
-  while(cur>p1){const from=Math.max(p1,cur-chunkSec);chunks.push([from,cur]);cur=from;if(cur<=p1)break;}
-  const allData={};
-  Promise.all(chunks.map(([c1,c2])=>
-    fetch(`/api/quote?symbol=${t}&range=5y&period1=${c1}&period2=${c2}`)
-      .then(r=>r.json()).then(j=>{
-        (j&&j.ohlc||[]).filter(d=>d&&d.close).forEach(d=>{
-          if(!allData[d.date])allData[d.date]=[d.date,d.close,d.open||d.close,d.high||d.close,d.low||d.close];
-        });
-      }).catch(()=>{})
-  )).then(()=>{
-    if(Object.keys(allData).length>5){
-      M[t]={};
-      Object.values(allData).sort((a,b)=>a[0]<b[0]?-1:1).forEach(r=>{M[t][r[0]]=[r[1],r[2],r[3],r[4]];});
-      if(stat){stat.textContent=`✓ ${t} 추가 (${(Object.keys(M[t]).length/252).toFixed(0)}년)`;stat.style.color='var(--green)';}
+  /* 사용자가 검색해 추가한 종목도 같은 파서를 지나야 한다 —
+     예전엔 여기서도 div=1 없이 조정가를 M 에 바로 넣었다(로더 셋째 갈래). */
+  fetchTickerInto(t, loadedStart||'2010-01-01').then(okAdd=>{
+    if(okAdd){
+      if(stat){stat.textContent=`✓ ${t} 추가 (${(Object.keys(M[t]).length/252).toFixed(0)}년 · ${PBASIS[t]==='trade'?'실제 체결가':PBASIS[t]==='total_return'?'조정종가':'기준 불명'})`;stat.style.color='var(--green)';}
     }else{
       TICKERS.splice(TICKERS.indexOf(t),1);dcaActive.delete(t);pickDel(t);delete META[t];
       if(stat){stat.textContent=`${t}: 데이터 없음`;stat.style.color='var(--red)';}
@@ -2211,18 +2219,17 @@ function renderLevNote(info){
 function clearLevExt(){ for(const t in RAWM){ if(RAWM[t]) M[t]=RAWM[t]; } RAWM={}; EXTM={}; }
 function applyLevExt(){ for(const t in EXTM){ if(!RAWM[t]) RAWM[t]=M[t]; M[t]=EXTM[t]; } }
 // 단일 종목 시세를 M[sym]에 로드 (기초지수 확보용)
+/* 기초지수·1배 ETF 를 필요할 때 따로 받아 온다.
+   예전엔 여기만 div=1 도 안 붙이고 조정가(j.ohlc)를 그대로 M 에 넣었다 —
+   메인 로더와 규약이 달라, 같은 종목도 들어온 길에 따라 M 의 뜻이 갈렸다.
+   이제 메인 로더와 똑같은 파서(newPriceBag/absorbQuote/commitPriceBag)를 쓴다. */
 async function fetchTickerInto(sym, fromDate){
-  const now=Math.floor(Date.now()/1000), p1=Math.floor(new Date(fromDate||'1998-01-01').getTime()/1000);
-  const chunkSec=5*365.25*86400|0, chunks=[]; let cur=now+86400;
-  while(cur>p1){ const from=Math.max(p1,cur-chunkSec); chunks.push([from,cur]); cur=from; if(cur<=p1)break; }
-  const allData={};
-  await Promise.all(chunks.map(([c1,c2])=>
-    fetch(`/api/quote?symbol=${sym}&range=5y&period1=${c1}&period2=${c2}`).then(r=>r.ok?r.json():null).then(j=>{
-      (j&&j.ohlc||[]).filter(d=>d&&d.close!=null).forEach(d=>{ if(!allData[d.date])allData[d.date]=[d.date,d.close,d.open||d.close,d.high||d.close,d.low||d.close]; });
-    }).catch(()=>{})));
-  const rows=Object.values(allData).sort((a,b)=>a[0]<b[0]?-1:1);
-  if(rows.length>5){ M[sym]={}; rows.forEach(r=>{M[sym][r[0]]=[r[1],r[2],r[3],r[4]];}); return true; }
-  return false;
+  const p2=Math.floor(Date.now()/1000)+86400, p1=Math.floor(new Date(fromDate||'1998-01-01').getTime()/1000);
+  const bag=newPriceBag();
+  const parts=await Promise.all(quoteChunks(p1,p2).map(([c1,c2])=>
+    fetch(quoteUrl(sym,c1,c2)).then(r=>r.ok?r.json():null).catch(()=>null)));
+  for(const j of parts) absorbQuote(bag, j);
+  return !!commitPriceBag(sym, bag);
 }
 // 활성 레버리지 종목들의 확장 데이터 구축 (필요 시 기초지수 fetch). extInfo: t → {under,from,to}
 // ※ 반드시 원본 M 기준으로 계산해야 하므로 먼저 clearLevExt()로 되돌린 뒤 구축한다.

@@ -783,8 +783,9 @@ console.log('[17] 배당·분배금 · 티커 입력');
 console.log('[18] 백테 분배금 분해');
 {
   ok('배당·raw 저장소 존재', /let DIV=\{\}, RAW=\{\}/.test(bt));
-  ok('시세 요청이 배당을 함께 받는다', /period2=\$\{p2\}&div=1/.test(bt));
-  ok('청크마다 배당·raw를 합친다', /allDiv\[x\.date\]=\+x\.amount/.test(bt) && /allRaw\[x\.date\]=\+x\.close/.test(bt));
+  ok('시세 요청이 배당을 함께 받는다', /&div=1`;/.test(bt) && /function quoteUrl\(sym, p1, p2\)/.test(bt));
+  ok('청크마다 배당·raw를 합친다',
+     /bag\.div\[x\.date\]=\+x\.amount/.test(bt) && /bag\.raw\[x\.date\]=\+x\.close/.test(bt));
   let ds=''; try{ ds=extractFn(bt,'function divSplit(tkr, days, buys)'); }catch(e){}
   ok('분해기 존재', !!ds, ds?'':'divSplit 없음');
   ok('분배금은 배당락일 보유수량 기준', /while\(bi<B\.length && B\[bi\]\[0\]<=d\)/.test(ds) && /dvMap\[d\]!=null && sh>0/.test(ds));
@@ -4617,8 +4618,8 @@ console.log('\n[83] 체결가 · 조정종가 · 배당 이벤트 분리');
   // ── 로더가 역할을 갈라 담는가 ──
   ok('M·ADJ·DIVMAP·PBASIS 를 따로 담는다',
      /let DIV=\{\}, RAW=\{\}, ADJ=\{\}, DIVMAP=\{\}, PBASIS=\{\};/.test(bt)
-     && /PBASIS\[t\]= useTrade \? 'trade' : 'adjusted';/.test(bt)
-     && /ADJ\[t\]=\{\}; adjRows\.forEach/.test(bt));
+     && /PBASIS\[sym\] = useTrade \? 'trade'/.test(bt)
+     && /ADJ\[sym\]=\{\}; adjRows\.forEach/.test(bt));
   ok('체결가가 구간을 다 덮을 때만 쓴다',
      /const useTrade = trRows\.length>=10 && trRows\.length===adjRows\.length;/.test(bt));
   ok('가격 기준을 화면에 적는다', /가격 기준<\/b>/.test(bt) && /조정종가<\/b>\(배당 소급 반영\)/.test(bt));
@@ -4860,6 +4861,155 @@ console.log('\n[84] 회계 규약 — 예산·잔돈·장부 항등');
      /const DIV_TAXRATE=0\.154;/.test(bt)
      && /const CASH_DIVTAX=costOn\?DIV_TAXRATE:0/.test(bt)
      && !/costOn\?0\.154:0/.test(bt));
+}
+
+
+/* ════ 85. 로더 두 갈래가 같은 규약을 쓴다 ════  (3차 감사 ①⑧ · 시험 A·B·K)
+   v2.0 에서 M/ADJ/DIVMAP/PBASIS 로 가격 역할을 나눴는데, 메인 로더만 그 규약을
+   지키고 기초지수를 받아오는 helper(fetchTickerInto)는 div=1 도 안 붙인 채
+   조정가를 그대로 M 에 넣고 있었다. SOXX·SMH·XLK·SPY·EWY 가 그 길로 들어온다 —
+   같은 종목인데 '어느 길로 들어왔는지'에 따라 M 의 뜻이 달라졌다.
+   기존 1271개로 안 잡힌 이유는 로딩 경로를 아예 안 돌려봤기 때문이다.
+   그래서 여기서는 두 로더를 '실제로' 돌린다. 로더는 async 인데 이 스크립트는
+   동기라서, 자식 프로세스에서 돌리고 결과를 JSON 으로 받아 대조한다.          */
+console.log('\n[85] 로더 규약 — 메인 로더 == helper 로더');
+{
+  const CHILD=`/* 로더 두 갈래를 실제로 돌려 상태를 찍어 내는 자식 프로세스.
+   regression-check.js 는 동기 스크립트라 async 로더를 직접 못 돌린다 —
+   여기서 돌리고 JSON 으로 돌려준다. */
+const fs=require('fs');
+const bt=fs.readFileSync(process.argv[2],'utf8');
+function extractFn(src,marker){const i=src.indexOf(marker);if(i<0)throw new Error('추출 실패: '+marker);
+  let j=src.indexOf('{',i),d=0,k=j;for(;k<src.length;k++){if(src[k]==='{')d++;else if(src[k]==='}'){d--;if(d===0)break;}}return src.slice(i,k+1);}
+const pick=re=>{const m=bt.match(re); if(!m) throw new Error('못 찾음: '+re); return m[0];};
+const SRC=[
+  pick(/function quoteUrl\\(sym, p1, p2\\)\\{[\\s\\S]*?\\n\\}/),
+  pick(/function newPriceBag\\(\\)\\{[^\\n]*\\}/),
+  pick(/function absorbQuote\\(bag, j\\)\\{[\\s\\S]*?\\n\\}/),
+  pick(/function commitPriceBag\\(sym, bag\\)\\{[\\s\\S]*?\\n\\}/),
+  pick(/function quoteChunks\\(p1start, p2end\\)\\{[\\s\\S]*?\\n\\}/),
+  extractFn(bt,'async function fetchPrices(startDate, endDate)'),
+  extractFn(bt,'async function fetchTickerInto(sym, fromDate)'),
+].join('\\n');
+
+const DATES=[]; { const t=new Date(Date.UTC(2022,0,3));
+  while(DATES.length<400){ const w=t.getUTCDay(); if(w!==0&&w!==6) DATES.push(t.toISOString().slice(0,10));
+    t.setUTCDate(t.getUTCDate()+1); } }
+const DIVDAYS=[DATES[40],DATES[120],DATES[200],DATES[300]];
+function fixture(sym, opt){
+  const ohlc=[],ohlcTrade=[],raw=[],dividends=[];
+  let px=100;
+  const future={};                       // 그 날 이후에 지급될 배당 합 → 조정가는 그만큼 낮다
+  const amts={};
+  for(const d of DATES){ if(DIVDAYS.includes(d)) amts[d]=+(100*0.004).toFixed(4); }
+  for(const d of DATES){
+    px=+(px*1.0007).toFixed(4);
+    if(amts[d]) dividends.push({date:d,amount:amts[d]});
+    const later=DATES.filter(x=>x>d).reduce((a,x)=>a+(amts[x]||0),0);
+    const ac=+(px-later).toFixed(4);
+    ohlc.push({date:d,open:ac,high:+(ac*1.01).toFixed(4),low:+(ac*0.99).toFixed(4),close:ac});
+    raw.push({date:d,close:px});
+    if(opt.withTrade) ohlcTrade.push({date:d,open:px,high:+(px*1.01).toFixed(4),low:+(px*0.99).toFixed(4),close:px});
+  }
+  const out={symbol:sym,currency:'USD',src:opt.src,price:px,
+    series:ohlc.map(x=>({date:x.date,close:x.close})),ohlc,raw,dividends,splits:[]};
+  if(opt.withTrade){ out.ohlcTrade=ohlcTrade; out.priceBasis='trade'; }
+  else { out.ohlcTrade=[]; out.priceBasis='adjusted'; }
+  return out;
+}
+
+function makeScope(){
+  return new Function('TICKERS','fetch','console',
+    'let M={},DIV={},RAW={},ADJ={},DIVMAP={},PBASIS={};\\n'+SRC+\`
+    const snap=(s)=>({M:M[s]||null, ADJ:ADJ[s]||null, DIVMAP:DIVMAP[s]||null, RAW:RAW[s]||null, PB:PBASIS[s]||null});
+    return { fetchPrices, fetchTickerInto, snap,
+             reset(){ M={};DIV={};RAW={};ADJ={};DIVMAP={};PBASIS={}; } };\`);
+}
+const QUIET={warn(){},error(){},log(){}};
+
+async function scenario(opt){
+  const seen=[];
+  const fakeFetch=async(u)=>{
+    seen.push(u);
+    const sym=decodeURIComponent((u.match(/symbol=([^&]+)/)||[])[1]||'');
+    if(sym!=='QQQ') return {ok:false};
+    const wantDiv=/[?&]div=1(&|$)/.test(u);
+    // div=1 을 안 붙이면 API 는 배당·체결가 계열을 아예 안 준다 (실제 동작과 같다)
+    const j=fixture(sym, opt);
+    if(!wantDiv){ const bare={...j}; delete bare.ohlcTrade; delete bare.dividends; delete bare.raw; delete bare.priceBasis; return {ok:true,json:async()=>bare}; }
+    return {ok:true, json:async()=>j};
+  };
+  const S=makeScope()(['QQQ'], fakeFetch, QUIET);
+  await S.fetchPrices('2022-01-03','2023-08-01');
+  const main=JSON.parse(JSON.stringify(S.snap('QQQ')));
+  S.reset();
+  const okh=await S.fetchTickerInto('QQQ','2022-01-03');
+  const helper=JSON.parse(JSON.stringify(S.snap('QQQ')));
+  return {main, helper, okh, divInEveryCall: seen.length>0 && seen.every(u=>/[?&]div=1(&|$)/.test(u)), calls:seen.length};
+}
+
+(async()=>{
+  const out={};
+  out.trade   = await scenario({withTrade:true,  src:'yahoo-query1'});
+  out.noTrade = await scenario({withTrade:false, src:'yahoo-query1'});
+  out.stooq   = await scenario({withTrade:false, src:'stooq'});
+  process.stdout.write(JSON.stringify(out));
+})().catch(e=>{ process.stdout.write(JSON.stringify({error:e.message})); process.exit(1); });
+`;
+  const tmp='/tmp/__loader_parity.js';
+  fs.writeFileSync(tmp, CHILD);
+  const {spawnSync}=require('child_process');
+  const r=spawnSync('node',[tmp,BT],{encoding:'utf8',maxBuffer:64*1024*1024});
+  let J=null; try{ J=JSON.parse(r.stdout||'{}'); }catch(e){}
+  ok('두 로더를 실제로 돌렸다', !!J && !J.error, (J&&J.error)||((r.stderr||'').split('\n')[0]));
+  if(J && !J.error){
+    const same=(a,b)=>JSON.stringify(a)===JSON.stringify(b);
+    for(const [key,nm,wantPB] of [['trade','체결가 계열이 다 있을 때','trade'],
+                                  ['noTrade','체결가 계열이 없을 때(야후)','total_return'],
+                                  ['stooq','조정 여부를 모르는 소스(Stooq)','unknown']]){
+      const c=J[key]||{};
+      ok(`${nm} — 두 로더의 M 이 완전히 같다`, !!c.main && same(c.main.M, c.helper.M), (()=>{
+          if(!c.main) return '결과 없음';
+          const mk=Object.keys(c.main.M||{}), d=mk[0];
+          return d ? `${d} 메인 ${JSON.stringify(c.main.M[d])} / helper ${JSON.stringify((c.helper.M||{})[d])}` : '';
+        })());
+      ok(`${nm} — ADJ 가 같다`,    !!c.main && same(c.main.ADJ, c.helper.ADJ));
+      ok(`${nm} — DIVMAP 이 같다`, !!c.main && same(c.main.DIVMAP, c.helper.DIVMAP));
+      ok(`${nm} — RAW 가 같다`,    !!c.main && same(c.main.RAW, c.helper.RAW));
+      ok(`${nm} — PBASIS 가 같고 '${wantPB}' 다`,
+         !!c.main && c.main.PB===wantPB && c.helper.PB===wantPB,
+         c.main?`메인 ${c.main.PB} / helper ${c.helper.PB}`:'');
+      ok(`${nm} — helper 도 div=1 로만 요청한다`, !!c.divInEveryCall, `요청 ${c.calls}건`);
+      ok(`${nm} — helper 가 성공했다고 답한다`, c.okh===true);
+    }
+    /* 체결가 계열이 있으면 M 은 조정가와 달라야 한다 — 같으면 체결가를 안 쓴 것이다. */
+    { const c=J.trade||{}; const d=Object.keys((c.main||{}).M||{})[0];
+      ok('체결가 계열이 있으면 M 이 조정가와 다르다',
+         !!d && Math.abs(c.main.M[d][0]-c.main.ADJ[d])>1e-9,
+         d?`M ${c.main.M[d][0]} / ADJ ${c.main.ADJ[d]}`:''); }
+  }
+  // 코드 쪽 — 파서가 한 곳인지, helper 가 옛 길로 안 가는지
+  ok('가격 파서가 파일 한 곳에 있다',
+     /function absorbQuote\(bag, j\)/.test(bt) && /function commitPriceBag\(sym, bag\)/.test(bt));
+  ok('두 로더가 같은 파서를 쓴다',
+     (bt.match(/commitPriceBag\(/g)||[]).length===3 && (bt.match(/newPriceBag\(\)/g)||[]).length===3);
+  ok('로더 세 갈래(메인·기초지수·커스텀 종목)에 옛 파싱이 안 남아 있다',
+     !/const allData=\{\};/.test(bt) && !/j&&j\.ohlc\|\|\[\]/.test(bt));
+  /* M 에 시세를 앉히는 자리는 commitPriceBag 하나여야 한다.
+     레버리지 확장 스왑(applyLevExt/clearLevExt)은 이미 파싱된 계열을 갈아끼우는 것이라 예외다.
+     모멘텀 로더는 M 을 안 건드리고 자기 캐시(MOMDATA)에 조정종가만 담는다 — 그것도 예외다. */
+  ok('M 에 시세를 앉히는 자리가 한 곳이다', (()=>{
+      const lines=bt.split('\n').filter(l=>/(^|[^.\w])M\[[^\]]+\]\s*=\s*\{\}/.test(l));
+      return lines.length===1 && /commitPriceBag|M\[sym\]=\{\}/.test(lines[0]); })(),
+     bt.split('\n').filter(l=>/(^|[^.\w])M\[[^\]]+\]\s*=\s*\{\}/.test(l)).map(l=>l.trim().slice(0,60)).join(' | '));
+  ok('시세 로딩 fetch 가 전부 quoteUrl 을 지난다 (모멘텀 캐시는 예외)',
+     (bt.match(/fetch\(quoteUrl\(/g)||[]).length===2
+     && (bt.match(/fetch\(`\/api\/quote/g)||[]).length===1
+     && /const r=await fetch\(`\/api\/quote\?symbol=\$\{encodeURIComponent\(sym\)\}&period1=/.test(bt));
+  ok('모멘텀 로더는 M 을 안 건드린다',
+     !/M\[sym\]=/.test(extractFn(bt,'async function loadMomData(univKey, start, end, stat)')));
+  ok("PBASIS 가 세 갈래다 (trade/total_return/unknown)",
+     /'trade'\s*\n\s*:\s*\(srcs\.length && srcs\.every\(x=>\/\^yahoo\/\.test\(x\)\)\)\s*\?\s*'total_return'\s*\n\s*:\s*'unknown';/.test(bt));
 }
 
 console.log(`\n════ 결과: ${pass} PASS / ${fail} FAIL ${fail===0?'— ALL PASS ★':'— 배포 금지, 위 ✗ 항목 수정 필요'} ════`);
