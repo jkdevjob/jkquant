@@ -102,13 +102,18 @@ def estimate_prev_close(row):
 def norm_bars(row):
     a = []
     for b in row.get("bars") or []:
+        close = float(b.get("c") or 0)
         x = {
             "hm": hm(b.get("t")),
-            "o": float(b.get("o") or b.get("c") or 0),
-            "h": float(b.get("h") or b.get("c") or 0),
-            "l": float(b.get("l") or b.get("c") or 0),
-            "c": float(b.get("c") or 0),
+            "o": float(b.get("o") or close or 0),
+            "h": float(b.get("h") or close or 0),
+            "l": float(b.get("l") or close or 0),
+            "c": close,
             "v": float(b.get("v") or 0),
+            # 현재 실시간 서버의 Naver 1분 데이터는 O/H/L이 없어
+            # 돌파/전고점 판정에 분봉 종가를 사용한다. 장기 백테스트도
+            # 기준전략 비교만큼은 같은 관측정보(close-only)로 맞춘다.
+            "signal_h": close,
         }
         if 900 <= x["hm"] <= 930 and x["c"] > 0:
             a.append(x)
@@ -131,24 +136,24 @@ def one_trade(day, row, p: Params):
     if gap < p.gap_min or gap > p.gap_max:
         return None
 
-    first_high = max(x["h"] for x in a[:p.obs])
+    first_high = max(x["signal_h"] for x in a[:p.obs])
     bi = -1
     for i in range(p.obs, len(a) - 2):
         x = a[i]
         if x["hm"] > p.entry_cutoff:
             break
-        if x["h"] > first_high and x["c"] >= day_open and (x["c"] / day_open - 1) * 100 >= p.min_rise:
+        if x["signal_h"] > first_high and x["c"] >= day_open and (x["c"] / day_open - 1) * 100 >= p.min_rise:
             bi = i
             break
     if bi < 0:
         return None
 
-    peak = a[bi]["h"]
+    peak = a[bi]["signal_h"]
     peak_i = bi
     for i in range(bi + 1, len(a) - 1):
         x = a[i]
-        if x["h"] > peak:
-            peak = x["h"]
+        if x["signal_h"] > peak:
+            peak = x["signal_h"]
             peak_i = i
             continue
         dd = (peak - x["c"]) / peak * 100
@@ -256,7 +261,7 @@ def main():
 
     enough = len(days) >= 20 and len(baseline) >= 30
     report = {
-        "schema": 1,
+        "schema": 2,
         "generatedAt": datetime.now(KST).isoformat(),
         "from": day_labels[0],
         "to": day_labels[-1],
@@ -264,6 +269,8 @@ def main():
         "baselineTradeCount": len(baseline),
         "comparisonStatus": "eligible" if enough else "collecting",
         "comparisonRule": "Variant comparison is treated as preliminary until >=20 trading days and >=30 baseline trades.",
+        "signalModel": "live-parity-close-only",
+        "signalModelNote": "Breakout/peak decisions use 1-minute close to match the current live Naver feed. Full KIS OHLC remains archived for future research.",
         "variants": reports,
     }
 
