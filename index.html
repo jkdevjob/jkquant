@@ -2907,6 +2907,31 @@ async function _fetchDailyRaw(symbol){
   return null;
 }
 
+/* 무매·VR 전용 실제 체결가 로더.
+   백테 M 과 같은 역할: 분할만 소급한 실제 거래 OHLC + 분배금 이벤트.
+   총수익(adjusted) series 는 totalReturnDays 로 따로 보존한다.
+   정확한 ohlcTrade 를 못 받으면 조정가로 조용히 대체하지 않고 null 을 돌려
+   모의·재생이 다른 가격계열로 실행되는 것을 막는다. */
+async function _fetchTradeDailyRaw(symbol){
+  const SYM=String(symbol||'').toUpperCase();
+  try{
+    const r=await fetch(`/api/quote?symbol=${encodeURIComponent(SYM)}&range=max&div=1`,{headers:{'Accept':'application/json'}});
+    if(!r.ok) return null;
+    const j=await r.json();
+    const trade=(j.ohlcTrade||[]).map(d=>({
+      date:d.date, open:+d.open, high:+d.high, low:+d.low, close:+d.close
+    })).filter(d=>d.date&&d.close>0&&d.high>0&&d.low>0);
+    if(!trade.length || j.priceBasis!=='trade') return null;
+    const days=trade.map(d=>({date:d.date,close:d.close}));
+    const last=days[days.length-1];
+    return {symbol:SYM,last,days,price:(j.price!=null&&+j.price>0)?+j.price:last.close,
+      marketState:j.marketState||null,ohlc:trade,intraday:j.intraday||null,
+      currency:j.currency||'USD',src:j.src||'api',priceBasis:'trade',
+      dividends:(j.dividends||[]).map(d=>({date:d.date,amount:+d.amount})).filter(d=>d.date&&d.amount>0),
+      splits:j.splits||[],raw:j.raw||[],totalReturnDays:j.series||[],totalReturnOhlc:j.ohlc||[]};
+  }catch(e){ return null; }
+}
+
 /* Yahoo 1분봉 JSON → 프리/정규/애프터 OHLC */
 function parseIntraday(j){
   const res=j&&j.chart&&j.chart.result&&j.chart.result[0];
@@ -2965,13 +2990,13 @@ async function fetchQuote(which){
   const note=$(noteId);
   const symbol=st.ticker||'SOXL';
   note.className='fetchnote load'; note.textContent='불러오는 중…';
-  const q=await fetchDaily(symbol);
+  const q=await fetchTradeDaily(symbol);
   if(q){
     const live=(q.price!=null&&q.price>0)?q.price:q.last.close;
     // 무매(inf)의 last는 'LOC 체결가로 쓸 확정 종가'다 — 장중·마감직후 봉의 close는 종가가 아니다.
     // VR의 last는 평가금 계산용 현재가라 그대로 둔다(용도가 반대).
     const SL=(which==='inf')?(settledLast(q.days,curOf(st))||q.last):q.last;
-    lastQuote[which]={symbol:q.symbol,last:SL.close,lastDate:SL.date,price:live,days:q.days,ohlc:q.ohlc||null};
+    lastQuote[which]={symbol:q.symbol,last:SL.close,lastDate:SL.date,price:live,days:q.days,ohlc:q.ohlc||null,dividends:q.dividends||[],priceBasis:q.priceBasis||'unknown'};
     const ms=q.marketState; // PRE/REGULAR/POST/CLOSED
     const msLabel = ms==='REGULAR'?'장중 실시간':ms==='PRE'?'프리장':ms==='POST'?'애프터장':ms==='CLOSED'?'장마감':'';
     const cs=(q.currency==='KRW')?'₩':'$';                 // 통화 기호
@@ -5764,11 +5789,12 @@ async function loadVrChart(force){
   const _want=String(st.ticker||'TQQQ').toUpperCase();          // 종목이 다르면 캐시 적중이 아니다
   if(vrChartData && !force && lastQuote.vr && String(lastQuote.vr.symbol||'').toUpperCase()===_want){ drawVrChart(); return; }
   $('chart_note').className='fetchnote load'; $('chart_note').textContent='차트 불러오는 중…';
-  const q=await fetchDaily(st.ticker||'TQQQ');
+  const q=await fetchTradeDaily(st.ticker||'TQQQ');
   if(q){
     vrChartData=q.days;
     // days를 5개로 잘라두면 재생·모의체결이 이력을 못 읽는다 — 전 구간을 그대로 둔다
-    lastQuote.vr={symbol:q.symbol,last:q.last.close,days:q.days,ohlc:q.ohlc||null};
+    lastQuote.vr={symbol:q.symbol,last:q.last.close,days:q.days,ohlc:q.ohlc||null,dividends:q.dividends||[],priceBasis:q.priceBasis||'unknown'};
+    if(q.dividends) _divCache[String(q.symbol||'').toUpperCase()]={symbol:q.symbol,dividends:q.dividends||[],raw:q.raw||[]};
     _afterQuote();
     $('chart_note').className='fetchnote ok';
     $('chart_note').textContent=`✓ ${q.symbol} ${q.last.date} 종가 ${px(q.last.close)}${q.src==='api'?'':' (프록시)'}`;
@@ -5833,7 +5859,7 @@ async function loadInfData(force){
                   && infQuoteCache.cut===simCutoff(curOf(st));
   if(cacheOK && !force){ renderInfRecent(); renderInfDay(); drawInfChart(); drawInfRSI(); drawRegimeChart(); renderInfFx(); renderOrderInline(); return; }
   $('inf_chart_note').className='fetchnote load'; $('inf_chart_note').textContent='시세 불러오는 중…';
-  const q=await fetchDaily(st.ticker||'SOXL');
+  const q=await fetchTradeDaily(st.ticker||'SOXL');
   // await 사이에 탭이 바뀌면 curStrat()이 남의 세션을 가리킨다 —
   // 그대로 render*를 부르면 그 기록을 무매 형식으로 해석해 computeInf가 터진다
   if(S.activeTab!=='inf') return;
@@ -5841,7 +5867,8 @@ async function loadInfData(force){
     infQuoteCache=q; infQuoteCache.cut=simCutoff(curOf(st)); infChartData=q.days;
     const live=(q.price!=null&&q.price>0)?q.price:q.last.close;
     const SL=settledLast(q.days,curOf(st))||q.last;              // 종가는 확정된 봉만
-    lastQuote.inf={symbol:q.symbol,last:SL.close,lastDate:SL.date,price:live,days:q.days,ohlc:q.ohlc||null};
+    lastQuote.inf={symbol:q.symbol,last:SL.close,lastDate:SL.date,price:live,days:q.days,ohlc:q.ohlc||null,dividends:q.dividends||[],priceBasis:q.priceBasis||'unknown'};
+    if(q.dividends) _divCache[String(q.symbol||'').toUpperCase()]={symbol:q.symbol,dividends:q.dividends||[],raw:q.raw||[]};
     _afterQuote();
     renderInfRecent(); renderInfDay(); drawInfChart(); drawInfRSI(); drawRegimeChart(); renderInfFx(); renderOrderInline();
     const srcTag=(q.src==='yahoo-query1'||q.src==='yahoo-query2'||q.src==='api')?'':' (프록시)';
@@ -6062,12 +6089,12 @@ async function loadInfChart(force){
   $('inf_chart_sym').textContent=tickerLabel(st.ticker||'SOXL');
   if(infChartData && !force){ drawInfChart(); drawInfRSI(); return; }
   $('inf_chart_note').className='fetchnote load'; $('inf_chart_note').textContent='차트 불러오는 중…';
-  const q=await fetchDaily(st.ticker||'SOXL');
+  const q=await fetchTradeDaily(st.ticker||'SOXL');
   if(q){
     infChartData=q.days;
     const live=(q.price!=null&&q.price>0)?q.price:q.last.close;
     const SL=settledLast(q.days,curOf(st))||q.last;              // 종가는 확정된 봉만
-    lastQuote.inf={symbol:q.symbol,last:SL.close,lastDate:SL.date,price:live,days:q.days,ohlc:q.ohlc||null};
+    lastQuote.inf={symbol:q.symbol,last:SL.close,lastDate:SL.date,price:live,days:q.days,ohlc:q.ohlc||null,dividends:q.dividends||[],priceBasis:q.priceBasis||'unknown'};
     $('inf_chart_note').className='fetchnote ok';
     $('inf_chart_note').textContent=`✓ ${q.symbol} ${SL.date} 종가 ${px(SL.close)}${live!==SL.close?` · 현재가 ${px(live)}`:''}${q.src==='yahoo-query1'||q.src==='yahoo-query2'||q.src==='api'?'':' (프록시)'}`;
     drawInfChart(); drawInfRSI();
@@ -8733,6 +8760,7 @@ function saveCfg(){}
 function copyScript(){}
 
 const fetchDaily=_memoQuote(_fetchDailyRaw);
+const fetchTradeDaily=_memoQuote(_fetchTradeDailyRaw);
 const fetchDailyDiv=_memoQuote(_fetchDailyDivRaw);
 
 /* ── JSON 파일 백업 ── */
