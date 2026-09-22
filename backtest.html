@@ -3005,7 +3005,7 @@ function vrOrderPlan(S, P, bar){
   if(!(S.V>0))return out;
   const up=S.V*(1+P.band),dn=S.V*(1-P.band),FEE=P.FEE||0,fee1=1+FEE;
   const budget=Math.max(0,P.budgetRemaining!=null?+P.budgetRemaining:S.pool*P.poolLimit);
-  const hi=bar.high>0?bar.high:bar.close,lo=bar.low>0?bar.low:bar.close;
+  const hi=bar.high>0?bar.high:bar.close, lo=bar.low>0?bar.low:bar.close;
   const N=Math.max(1,Math.min(20,+P.maxTiers||20));
   const B=Math.floor(+P.baseShares||S.shares||0);
   let sf=Math.max(0,Math.floor(+P.sellFilled||0)),bf=Math.max(0,Math.floor(+P.buyFilled||0));
@@ -3119,8 +3119,8 @@ function runVR(days,tkr,params){
         baseShares:cycBaseShares,sellFilled:cycSellFilled,buyFilled:cycBuyFilled,maxTiers:20},
       {date:'',high:hi,low:lo2,close:(cl>0?cl:hi)});
     for(const f of fills){
-      if(f.type==='sell'){pool+=_vsellQ(f.qty,f.price);cycSellFilled+=f.qty;sells++;}
-      else {pool-=_vbuyQ(f.qty,f.price);cycBuySpent+=f.cost;cycBuyFilled+=f.qty;buys++;}
+      if(f.type==='sell'){ pool+=_vsellQ(f.qty, f.price); cycSellFilled+=f.qty; sells++; }
+      else { pool-=_vbuyQ(f.qty, f.price); cycBuySpent+=f.cost; cycBuyFilled+=f.qty; buys++; }
     }
   }
   days.forEach((d,i)=>{
