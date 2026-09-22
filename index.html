@@ -529,7 +529,7 @@ try{ if(localStorage.getItem('qcockpit_hadUser')==='1') document.documentElement
 </div>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.79.0</span></h1></div>
+    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.80.0</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -1620,7 +1620,7 @@ document.addEventListener('click',function(e){ var m=document.getElementById('jk
   <footer>
     <strong>JK 퀀트</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.79.0</b> · 2026-09-22</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.80.0</b> · 2026-09-22</div>
   </footer>
 </div>
 
@@ -1674,6 +1674,11 @@ document.addEventListener('click',function(e){ var m=document.getElementById('jk
     <div class="seclabel">종목 (티커) <span class="hint" style="color:var(--faint);font-weight:500">6자리 코드면 국내 — 통화가 원화로 바뀝니다</span></div><div class="field tkwrap" style="margin:0 0 8px"><input id="set_vticker" type="text" autocomplete="off" spellcheck="false" placeholder="티커를 입력하세요 — 예: TQQQ, SOXL" oninput="tkSearch('set_vticker')" onfocus="tkSearch('set_vticker')" onblur="tkBlur('set_vticker')"><div class="tklist" id="set_vticker_list"></div></div>
     <div class="seclabel">분배금 <span class="hint" style="color:var(--faint);font-weight:500">현금 수령은 단리 인출과 같은 취급</span></div><div class="seg" id="set_vrdivmode"><button data-v="reinv" class="on">재투자</button><button data-v="cash">현금 수령</button></div>
     <div class="seclabel">운용 모드</div><div class="seg" id="set_vmode"><button data-v="0.75">적립식</button><button data-v="0.5">거치식</button><button data-v="0.25">인출식</button></div>
+    <div class="seclabel">체결 모델 <span class="hint" style="color:var(--faint);font-weight:500">밴드를 벗어났을 때 얼마나 움직이나</span></div>
+    <div class="seg" id="set_vmodel">
+      <button data-v="official" title="공식 VR 5.0 — 평가금이 V±밴드를 벗어나면 평가금이 V로 돌아오도록 한 번에 조정">공식 (V 복귀)</button>
+      <button data-v="ladder" title="커스텀 — 밴드를 넘어도 한 주씩만 계단으로 움직인다. 공식 VR이 아니다">커스텀 1주 사다리</button>
+    </div>
     <div class="seclabel">V 갱신 공식</div><div class="seg" id="set_vformula"><button data-v="basic">기본공식</button><button data-v="skill">실력(실험적)</button></div>
     <div class="seclabel">사이클 진입 <span class="hint" style="color:var(--faint);font-weight:500">V 갱신·적립을 누가 하나</span></div><div class="seg" id="set_vauto"><button data-v="0">직접 확인</button><button data-v="1">자동 진입</button></div>
     <div class="seclabel">파라미터</div>
@@ -2344,6 +2349,15 @@ function imTgtOf(base, mom){ return (mom!=null && mom>IM_MOM_TH) ? Math.min(base
    사용자가 바꾸면 그건 '변형' 이고, 안 바꾸면 어디서나 이 값이다. */
 const IM_BIG_DEFAULT=15;
 function imBigPct(st){ const v=+((st||{}).big); return isFinite(v)&&v>0 ? v : IM_BIG_DEFAULT; }
+/* 리버스 쿼터매수 주수 — 원문: 둘째날 이후 매수금 = 총 잔금 ÷ 4.
+   배정액으로 1주도 못 사면 그날은 매수가 없다(T도 안 올라간다).
+   예전엔 '잔금 전체로 1주를 살 수 있으면 강제로 1주' 를 넣었는데, 그건
+   '1개 매수가 가능할 때까지 리버스 지속' 이라는 소진 판정을 매수 수량 규칙으로
+   잘못 옮긴 것이다 — 잔금 100·매수가 60 이면 배정액은 25 인데 60 을 썼다.
+   두 규칙은 다르다: 소진 판정은 그대로 두고, 수량은 배정액으로만 센다. */
+function imRevBuyQty(balance, buyPrice){
+  return (balance>0 && buyPrice>0) ? Math.floor((balance/4)/buyPrice) : 0;
+}
 function imBuyQty(alloc, refPx, feeRate){
   const f=1+(feeRate||0);
   return (refPx>0 && alloc>0) ? Math.floor(alloc/f/refPx) : 0;
@@ -2606,10 +2620,10 @@ function renderOrder(){
         const bp=gap>0 ? star5*(1-gap/100) : Math.max(0.01,star5-0.01);
         // 리버스 소진 기준(라오어 공지) = '1개 매수가 불가능해지는 시점'. T가 분할−1을 넘어도
         // 1주를 살 수 있으면 계속 매수한다 → 잔금÷4가 1주에 못 미쳐도 잔금으로 1주는 산다.
-        { const qq=bp>0?Math.max(Math.floor(quarterBuy/bp), (c.bal>=bp?1:0)):0;
+        { const qq=imRevBuyQty(c.bal, bp);
           rh+= qq>=1 ? oitem('b','쿼터매수 (잔금÷4)','LOC',bp,qq)
                      : `<div class="note" style="color:var(--gold)">🚫 쿼터매수 없음 — 잔금 ${wn(c.bal)}으로 1주(${wn(bp)})도 살 수 없습니다. 리버스 기준으로도 소진입니다.</div>`;
-          if(qq===1 && quarterBuy<bp) rh+=`<div class="note" style="color:var(--gold)">ⓘ 잔금÷4(${wn(quarterBuy)})가 1주 값에 못 미치지만, 리버스는 <b>1개 매수가 가능할 때까지 지속</b>이라 1주를 주문합니다.</div>`; }
+          if(qq<1) rh+=`<div class="note" style="color:var(--gold)">ⓘ 잔금÷4(${wn(quarterBuy)})로는 1주(${wn(bp)})를 못 삽니다 — 원문 배정액 규칙상 <b>오늘 매수는 없습니다</b>.</div>`; }
         rh+=`<div class="note">매수금 = 잔금÷4 = ${wn(quarterBuy)} · ${gap>0?('사용자 변형: 별지점 −'+gap+'%'):'공식 기본: 별지점 −$0.01'} LOC.</div>`;
       }else{
         rh+=`<div class="note">매수금 = 잔금÷4 = ${wn(quarterBuy)} (별지점 아래 LOC). 별지점을 입력하면 단가가 계산됩니다.</div>`;
@@ -3431,9 +3445,8 @@ function infSimForward(startFrom){
           }else if(star5>0){
             const _rg=revGapOf(st);                    // 0 = 공식(별지점−$0.01), >0 = 사용자 변형
             const bp=_rg>0 ? star5*(1-_rg/100) : Math.max(0.01,star5-0.01);
-            if(cl<=bp){ const bal=c.bal;                              // 리버스 소진 = 1주도 못 살 때
-              const alloc=Math.min(bal,Math.max(bal/4,bp));
-              const qq=Math.max(0,Math.min(Math.floor(alloc/bp),Math.floor(bal/cl)));
+            if(cl<=bp){ const bal=c.bal;                              // 배정액 = 잔금÷4 (원문)
+              const qq=Math.max(0,Math.min(imRevBuyQty(bal,bp), Math.floor(bal/cl)));
               if(qq>=1) put('리버스매수',d,cl,qq); }
           }
         }
@@ -7245,7 +7258,29 @@ function vrAutoAdvance(){
    하루 매수 한도 = 그날 시작 Pool × 모드한도(적립75·거치50·인출25%).
    매도를 먼저 도는 것도 규약이다 — 판 돈이 그날 매수 재원이 된다.
    S={shares,pool,avg} 를 직접 고치고, 체결된 차수를 돌려준다. FEE 는 부르는 쪽 규약. */
-function vrLadder(S, P, bar){
+/* ════ VR 주문 체결 엔진 — 공식(V 복귀) · 커스텀(1주 사다리) ════
+   공식 VR 5.0 규칙:
+     상단 = V×(1+band) · 하단 = V×(1−band)
+     평가금이 상단을 넘으면 → 평가금이 V로 돌아오도록 매도
+     평가금이 하단을 밑돌면 → 평가금이 V에 닿도록 매수 (Pool 사용한도까지만)
+     밴드 안이면 거래 없음
+   예약주문으로 옮기면: 매도 트리거가 = 상단 ÷ 보유주수 (이 가격에서 평가금이 상단에 닿는다).
+   그 가격에 걸어 둘 수량 = 보유 − V ÷ 트리거가. 매수도 대칭이다.
+     V=10,000 · 보유 100주 · 밴드 15% → 매도 트리거 115, 수량 100−10,000/115 = 13주
+     → 남은 87주 × 115 = 10,005 ≈ V
+
+   커스텀 '1주 사다리' 는 한 주씩 계단으로 나간다 — 밴드를 넘어도 V로 안 돌아온다.
+   같은 예에서 1주만 팔고 멈춰 평가금이 11,484 로 남는다. 공식과 다른 전략이라
+   기본값이 아니라 커스텀 옵션이고, 화면에도 그렇게 적는다.
+
+   S: {shares, pool, avg, V} — 이 객체를 직접 고친다 (부르는 쪽이 결과를 받아 간다)
+   P: {band, poolLimit, budgetRemaining, FEE, model} — model 미지정이면 'official'
+   반환: [{type:'sell'|'buy', price, qty, net|cost}] — net·cost 는 그 체결 '전체' 금액 */
+/* VR 체결 모델 — 기본은 공식(V 복귀). 세션이 'ladder' 로 지정했을 때만 커스텀 사다리.
+   공식과 커스텀이 같은 이름으로 보이면 안 되므로 화면에도 갈라 적는다. */
+const VR_MODEL_DEFAULT='official';
+function vrModelOf(st){ return ((st||{}).vrModel==='ladder') ? 'ladder' : VR_MODEL_DEFAULT; }
+function vrOrderPlan(S, P, bar){
   const out=[];
   if(!(S.V>0)) return out;
   const up=S.V*(1+P.band), dn=S.V*(1-P.band);
@@ -7253,25 +7288,47 @@ function vrLadder(S, P, bar){
   /* budgetRemaining이 주어지면 그 값을 최우선으로 쓴다.
      이 값은 '사이클 시작 Pool × 한도 − 이번 사이클 누적 매수액'이다. */
   const budget=Math.max(0, P.budgetRemaining!=null ? +P.budgetRemaining : S.pool*P.poolLimit);
-  let spent=0;
   const hi=bar.high>0?bar.high:bar.close, lo=bar.low>0?bar.low:bar.close;
-  for(let k=0;k<400;k++){
-    const q=Math.floor(S.shares+1e-9); if(q<1) break;
-    const p=up/q; if(!(hi>=p)) break;
-    const net=p*(1-FEE);
-    S.shares-=1; S.pool+=net;
-    out.push({type:'sell', price:p, net});
+  const LADDER=(P.model==='ladder');
+  const _sell=(p,qty)=>{ if(!(qty>=1)) return;
+    const net=p*(1-FEE)*qty; S.shares-=qty; S.pool+=net;
+    out.push({type:'sell', price:p, qty, net}); };
+  const _buy=(p,qty)=>{ if(!(qty>=1)) return;
+    const cost=p*fee1*qty;
+    S.avg=(S.shares<=0)?p:(S.shares*S.avg+p*qty)/(S.shares+qty);
+    S.shares+=qty; S.pool-=cost;
+    out.push({type:'buy', price:p, qty, cost}); };
+
+  if(LADDER){
+    let spent=0;
+    for(let k=0;k<400;k++){
+      const q=Math.floor(S.shares+1e-9); if(q<1) break;
+      const p=up/q; if(!(hi>=p)) break;
+      _sell(p,1);
+    }
+    for(let k=0;k<400;k++){
+      const q=Math.floor(S.shares+1e-9); if(q<1) break;
+      const p=dn/q; if(!(lo<=p)) break;
+      const cost=p*fee1;
+      if(spent+cost>budget+1e-9) break;      // Pool 한도 소진
+      if(cost>S.pool+1e-9) break;            // 현금 부족
+      _buy(p,1); spent+=cost;
+    }
+    return out;
   }
-  for(let k=0;k<400;k++){
-    const q=Math.floor(S.shares+1e-9); if(q<1) break;
-    const p=dn/q; if(!(lo<=p)) break;
-    const cost=p*fee1;
-    if(spent+cost>budget+1e-9) break;
-    if(cost>S.pool+1e-9) break;
-    S.avg=(S.shares<=0)?p:(S.shares*S.avg+p)/(S.shares+1);
-    S.shares+=1; S.pool-=cost; spent+=cost;
-    out.push({type:'buy', price:p, cost});
-  }
+
+  /* ── 공식: 밴드를 벗어나면 평가금을 V로 되돌린다 ── */
+  { const q=Math.floor(S.shares+1e-9);
+    if(q>=1){ const p=up/q;
+      if(hi>=p){ const qty=Math.floor(q - S.V/p + 1e-9); _sell(p, Math.min(qty,q)); } } }
+  { const q=Math.floor(S.shares+1e-9);
+    if(q>=1){ const p=dn/q;
+      if(lo<=p && p>0){
+        const want=Math.floor(S.V/p - q + 1e-9);                       // V 까지 채울 수량
+        const cash=Math.min(budget, S.pool);                            // Pool 한도·잔고 중 작은 쪽
+        const afford=Math.floor(cash/(p*fee1) + 1e-9);
+        _buy(p, Math.max(0, Math.min(want, afford)));
+      } } }
   return out;
 }
 
@@ -7321,10 +7378,12 @@ function vrSimForward(){
       const cyc=c.curCyc;
       const St={shares:Math.floor(c.qty), pool:c.pool, avg:c.avg||0, V:c.V};
       const _F=(typeof IVS_FEE!=='undefined')?IVS_FEE:0.0025;
-      const fills=vrLadder(St, {band:(st.band||15)/100, poolLimit:(st.mode||0.75), budgetRemaining:poolLimit(c), FEE:_F}, row);
+      const fills=vrOrderPlan(St, {band:(st.band||15)/100, poolLimit:(st.mode||0.75),
+        budgetRemaining:poolLimit(c), FEE:_F, model:vrModelOf(st)}, row);
       for(const f of fills){
-        const fee=(f.type==='sell') ? (f.price-f.net) : (f.cost-f.price);
-        sess.hist.push({type:f.type, date:row.date, price:+f.price.toFixed(4), qty:1,
+        // net·cost 는 체결 '전체' 금액이다 — 수수료도 전체로 센다
+        const fee=(f.type==='sell') ? (f.price*f.qty-f.net) : (f.cost-f.price*f.qty);
+        sess.hist.push({type:f.type, date:row.date, price:+f.price.toFixed(4), qty:f.qty,
           fee:+fee.toFixed(6), cyc, sim:true, ts:Date.now()+(seq++)});
         if(f.type==='sell') nSell++; else nBuy++;
       }
@@ -7470,12 +7529,13 @@ function vrReplay(){
 
     // ① 기준일 장중까지는 이전 V로 걸어둔 사다리를 먼저 체결한다.
     const St={shares:Math.floor(shares+1e-9), pool, avg, V};
-    const fills=vrLadder(St, {band, poolLimit, budgetRemaining:Math.max(0,cycStartPool*poolLimit-cycBuySpent), FEE}, row);
+    const fills=vrOrderPlan(St, {band, poolLimit,
+      budgetRemaining:Math.max(0,cycStartPool*poolLimit-cycBuySpent), FEE, model:vrModelOf(st)}, row);
     for(const f of fills){
       if(f.type==='sell'){ pool+=f.net; cycTrade+=f.net;
-        rec.push({type:'sell',date:d,price:+f.price.toFixed(6),qty:1,fee:+(f.price-f.net).toFixed(6),cyc,sim:true,ts:rec.length+1}); }
+        rec.push({type:'sell',date:d,price:+f.price.toFixed(6),qty:f.qty,fee:+(f.price*f.qty-f.net).toFixed(6),cyc,sim:true,ts:rec.length+1}); }
       else { pool-=f.cost; cycTrade-=f.cost; cycBuySpent+=f.cost;
-        rec.push({type:'buy',date:d,price:+f.price.toFixed(6),qty:1,fee:+(f.cost-f.price).toFixed(6),cyc,sim:true,ts:rec.length+1}); }
+        rec.push({type:'buy',date:d,price:+f.price.toFixed(6),qty:f.qty,fee:+(f.cost-f.price*f.qty).toFixed(6),cyc,sim:true,ts:rec.length+1}); }
     }
     shares=St.shares; avg=St.avg;
 
@@ -7690,7 +7750,7 @@ function infSuggest(kind){
     '쿼터매도':  {price:close, qty:Math.min(qSell,c.qty)},                  // 별지점 LOC = 종가 체결
     '지정가매도':{price:tgt,   qty:Math.max(0,c.qty-qSell)},                // 익절 지정가 = 목표가 체결
     '리버스매도':{price:close, qty:c.qty>0?Math.min(c.qty,Math.floor(c.qty/sellDiv)):0},   // 내림 0주면 0 (원문)
-    '리버스매수':{price:close, qty:Math.max(Math.floor((c.bal/4)/close), c.bal>=close?1:0)},
+    '리버스매수':{price:close, qty:imRevBuyQty(c.bal, close)},   // 원문: 잔금÷4 (강제 1주 없음)
   };
   if(isCx(kind)){
     const bk=kind.includes('1회매수')?'1회매수':'절반매수';
@@ -8320,6 +8380,7 @@ function openSettings(){
     const st=s.settings, sym=isKrwSt(st)?'₩':'$';
     $('set_vticker').value=st.ticker;segSet('set_vmode',String(st.mode));segSet('set_vformula',st.formula);segSet('set_vrdivmode',st.divmode||'reinv');
     segSet('set_vauto',st.autoCyc?'1':'0');
+    segSet('set_vmodel', vrModelOf(st));
     $('set_g').value=st.g;$('set_add').value=nfix(st.add,0);$('set_band').value=st.band;$('set_startv').value=nfix(st.startv,0);$('set_startpool').value=nfix(st.startpool,0);
     $('set_initamt').value=nfix(st.initAmt!=null?st.initAmt:10000,0);
     $('set_add_lbl').textContent=`매 사이클 적립금 (${sym})`;
@@ -8429,7 +8490,7 @@ function syncSetCurLabels(){
 function setupSegs(){
   ['set_div','set_reverse','set_tgtdyn','set_vmode','set_vformula','set_engine','set_shortma','set_lopct','set_mabuy','set_masell','set_mapark','set_compound','set_dcamode','set_dcareinv','set_dcafreq','set_dcamul',
    'set_infdivmode','set_vrdivmode','set_madivmode','set_ivsdivmode','set_asapdivmode',
-   'set_vauto','set_ivss0','set_ivslook','set_ivsband','set_ivspark','set_ivsmode'].forEach(id=>{
+   'set_vauto','set_vmodel','set_ivss0','set_ivslook','set_ivsband','set_ivspark','set_ivsmode'].forEach(id=>{
     const el=$(id);if(!el)return;
     el.querySelectorAll('button').forEach(b=>{
       b.onclick=()=>{el.querySelectorAll('button').forEach(x=>x.classList.remove('on'));b.classList.add('on');
@@ -8453,7 +8514,7 @@ function setupSegs(){
    실계좌 세션은 사람이 넣은 실제 거래이므로 절대 건드리지 않는다. */
 const SIM_KEYS={
   inf :['ticker','div','target','reverse','tgtDyn','principal','compound'],
-  vr  :['ticker','mode','formula','g','add','initAmt','autoCyc','band'],
+  vr  :['ticker','mode','formula','g','add','initAmt','autoCyc','band','vrModel'],
   ma  :['ticker','buy','sell','park','principal'],
   ivs :['ticker','mode','s0','look','band','park','principal','monthly'],
   dca :['ticker','mode','freq','amount','dipMul','reinv'],
@@ -8534,6 +8595,7 @@ function saveSettings(){
     s.settings={...keep, ticker:$('set_vticker').value||'TQQQ',mode:+segGet('set_vmode')||0.75,
       formula:segGet('set_vformula')||'basic',g:inputNum('set_g')||10,add:inputNum('set_add')||100,
       initAmt:Math.max(0,inputNum('set_initamt')||0),autoCyc:segGet('set_vauto')==='1',
+      vrModel:(segGet('set_vmodel')==='ladder'?'ladder':'official'),
       band:inputNum('set_band')||15,startv:inputNum('set_startv')||0,startpool:inputNum('set_startpool')||0,divmode:segGet('set_vrdivmode')||'reinv'};
   }
   // 모의 세션이면 여기서 바로 다시 만들어 준다 (어긋남 판정은 paperAuto가 지문으로 한다).
