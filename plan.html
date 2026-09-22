@@ -143,7 +143,7 @@ th:first-child,td:first-child{text-align:left}
 <body>
 <div class="wrap">
   <div class="top">
-    <div class="brand"><div class="logo">Five Year Plan</div><h1>5년 자산플랜 <span class="ver">v1.7.2</span></h1></div>
+    <div class="brand"><div class="logo">Five Year Plan</div><h1>5년 자산플랜 <span class="ver">v1.7.3</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
       <div class="jkmenu" id="jkmenuWrap">
@@ -826,7 +826,7 @@ function imOrders(sess,price,rows){
     return {state:c,orders,note:'리버스 별지점 = 직전 5거래일 종가 평균 '+usd(star5)+' · 매수가는 별지점−$0.01'};
   }
   const buy1=slot>=1?c.bal/slot:0,pct=starPctPlan(st,c.T),star=c.avg>0?c.avg*(1+pct/100):price,buyPt=star-.01,limit=price*(1+big/100),half=c.T<div/2;
-  const addBuy=(name,p,alloc)=>{const pp=Math.max(.01,Math.min(p,limit)),q=Math.floor(Math.max(0,alloc)/pp);if(q>0)orders.push({side:'buy',name,price:pp,qty:q,tag:'LOC'});};
+  const addBuy=(name,p,alloc)=>{const pp=Math.max(.01,Math.min(p,limit)),q=Math.floor(Math.max(0,alloc)/price);if(q>0)orders.push({side:'buy',name,price:pp,qty:q,tag:'LOC'});};
   if(slot>=1&&buy1>0){
     if(c.avg<=0)addBuy('처음매수',limit,buy1);
     else if(half){addBuy('별지점 절반매수',buyPt,buy1/2);addBuy('평단 절반매수',c.avg,buy1/2);}
