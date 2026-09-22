@@ -2153,29 +2153,62 @@ const IDX_EXTEND={ SOXX:{idx:'^SOX', div:0.0129, from:'1994-05'},
                    QQQ :{idx:'^NDX', div:0.0057, from:'1985-10'},
                    SPY :{idx:'^GSPC',div:0.0195, from:'1980-01'} };
 // 기초 1배 시계열을 최대한 길게 구성: [가격지수(배당보정) → 기초 ETF 실데이터] 접합
+/* 기초 1배의 '총수익' 계열을 만든다 (가격지수로 상장 전까지 소급 + ETF 실데이터 접합).
+   종가만 쓴다 — 합성은 일수익률만 보므로 고저시가가 필요 없고,
+   여기에 OHLC 를 들고 다니면 '이게 체결가인가 총수익가인가'가 흐려진다. */
 async function baseSeries(under, start){
   if(!M[under]||!Object.keys(M[under]).length){ await fetchTickerInto(under, start); }
-  const E=M[under]; if(!E||!Object.keys(E).length) return null;
+  const tr=totalReturnSeries(under); if(!tr) return null;
+  LEV_INPUT_BASIS[under]=tr.basis;
+  const E=tr.px;                                               // date → 총수익 종가
+  const row=o=>{ const m={}; for(const d in o) m[d]=[o[d],o[d],o[d],o[d]]; return m; };
   const ed=Object.keys(E).sort(), eStart=ed[0];
   const ext=IDX_EXTEND[under];
-  if(!ext || start>=eStart) return {series:E, idx:null};      // 더 소급할 필요 없음
+  if(!ext || start>=eStart) return {series:row(E), idx:null, basis:tr.basis};   // 더 소급할 필요 없음
   if(!M[ext.idx]||!Object.keys(M[ext.idx]).length){ await fetchTickerInto(ext.idx, start); }
-  const I=M[ext.idx]; if(!I||!Object.keys(I).length) return {series:E, idx:null};
+  /* 가격지수(^NDX·^GSPC·^SOX)는 배당이 없다 — 그래서 ext.div 로 배당수익률을 더해
+     총수익 계열로 되돌린 뒤 ETF 총수익에 접합한다. 여기서 단위가 섞이면 안 된다. */
+  const itr=totalReturnSeries(ext.idx); if(!itr) return {series:row(E), idx:null, basis:tr.basis};
+  const I=itr.px;
   const upTo=Object.keys(I).sort().filter(d=>d<=eStart);
   const pre=upTo.filter(d=>d<eStart);
-  if(pre.length<10) return {series:E, idx:null};
+  if(pre.length<10) return {series:row(E), idx:null, basis:tr.basis};
   const dDiv=ext.div/252;
   const rel={}; let v=1; rel[upTo[0]]=1;
-  for(let i=1;i<upTo.length;i++){ const r=I[upTo[i]][C]/I[upTo[i-1]][C]-1; v*=(1+r+dDiv); rel[upTo[i]]=v; }
+  for(let i=1;i<upTo.length;i++){ const r=I[upTo[i]]/I[upTo[i-1]]-1; v*=(1+r+dDiv); rel[upTo[i]]=v; }
   const relAt=rel[eStart]!=null?rel[eStart]:v;
-  const k=E[eStart][C]/relAt;                                  // 기초 ETF 상장일 가격에 접합
+  const k=E[eStart]/relAt;                                     // 기초 ETF 상장일 총수익가에 접합
   const merged={};
-  pre.forEach(d=>{ const s=rel[d]; if(s!=null){ const px=+(s*k); merged[d]=[px,px,px,px]; } });
+  pre.forEach(d=>{ const s=rel[d]; if(s!=null) merged[d]=+(s*k); });
   ed.forEach(d=>{ merged[d]=E[d]; });
-  return {series:merged, idx:ext.idx, idxFrom:pre[0]};
+  return {series:row(merged), idx:ext.idx, idxFrom:pre[0], basis:tr.basis};
 }
 // levExt · EXTM · RAWM 은 위(상태 플래그 구역)에서 선언 — restoreBtState 세그 클릭보다 먼저 초기화돼야 TDZ 안 남
 function srcOf(t){ return (levExt && EXTM[t]) ? EXTM[t] : M[t]; }
+/* ── 합성에 먹이는 계열은 '총수익' 이다 (명시) ────────────────────────
+   보유비용 모형은 기초 시계열이 배당 재투자 기준이라는 전제로 맞춰 놓은 것이다 —
+   위 주석에 '기초 시계열은 배당 재투자 기준이라 배수×배당수익률만큼 과대평가되므로
+   되돌려 뺀다' 고 적혀 있고, 그 되돌림(LEV_PRICEIDX)은 가격지수 상품(SPYU)에만 쓴다.
+   그런데 v2.0 에서 M 이 체결가(배당 미반영)로 바뀌면서, 합성이 가격수익률을 먹게 됐다.
+   그러면 기초 배당수익률×배수 만큼 상장 전 구간이 통째로 과소평가된다
+   (SPY 1.3% × 3배 ≈ 연 4%p · 10~20년 구간이면 매우 크다).
+   그래서 M 을 암묵적으로 쓰지 않고, 총수익 계열을 명시적으로 집어 온다.
+   출력(합성된 레버리지 가격)은 M 과 같은 '체결가' 단위다 — 레버리지 ETF 의 실제
+   상장일 가격에 접합하고, 레버리지 ETF 는 배당이 거의 없어 두 단위가 사실상 같다. */
+function totalReturnSeries(t){
+  const a=ADJ&&ADJ[t];
+  if(a && Object.keys(a).length){
+    const basis=(PBASIS[t]==='unknown')?'unknown':'total_return';
+    return {px:a, basis};
+  }
+  /* 조정종가를 못 받은 종목 — 있는 것으로 굴리되 그 사실을 남긴다.
+     (조용히 체결가를 총수익인 척 쓰면 합성이 배당만큼 낮게 나온다) */
+  const D=M[t]; if(!D||!Object.keys(D).length) return null;
+  const px={}; for(const d in D) px[d]=D[d][C];
+  return {px, basis:(PBASIS[t]||'unknown')==='total_return' ? 'total_return' : (PBASIS[t]==='trade'?'trade_only':'unknown')};
+}
+// 합성에 실제로 무엇을 먹였는지 — 화면(레버리지 확장 상세)에 그대로 적는다
+let LEV_INPUT_BASIS={};
 // ── 전 탭 공통 적용/해제 ──
 // 모든 전략 엔진이 M[tkr]을 직접 읽으므로, 확장 시계열을 M에 '갈아끼우는' 방식으로 전 탭에 일괄 적용한다.
 // (엔진 35곳을 srcOf로 바꾸는 것보다 안전 — 원본은 RAWM에 보관해 언제든 되돌린다.)
@@ -2208,10 +2241,14 @@ function renderLevNote(info){
   if(!ks.length){ el.style.display='none'; el.innerHTML=''; return; }
   el.style.display='';
   el.innerHTML=`<div class="cmp-card"><h3>🧬 레버리지 확장 적용 <span style="font-size:11px;color:var(--dim);font-weight:400">${ks.length}종목 · 상장 전 구간 합성</span></h3>`
-    +`<div style="overflow-x:auto"><table class="cmp-tbl"><thead><tr><th>종목</th><th>배수</th><th>합성 소스</th><th>합성 구간</th><th>보유비용<br><span style="font-weight:400;font-size:10px">연평균</span></th></tr></thead><tbody>`
+    +`<div style="overflow-x:auto"><table class="cmp-tbl"><thead><tr><th>종목</th><th>배수</th><th>합성 소스</th><th title="합성에 먹인 기초 계열의 뜻. 보유비용 모형은 총수익 전제로 맞춰 놓은 것이라, 여기가 총수익이 아니면 합성이 배당수익률×배수만큼 낮게 나온다">입력 기준</th><th>합성 구간</th><th>보유비용<br><span style="font-weight:400;font-size:10px">연평균</span></th></tr></thead><tbody>`
     +ks.map(t=>{const e=info[t];
-      return `<tr><td><b>${t}</b></td><td>${e.lev}배</td><td>${e.idx?`<b>${e.idx}</b> + ${e.under}`:e.under}</td><td>${e.from} ~ ${e.to}</td><td>${e.cost!=null?(e.cost*100).toFixed(1)+'%':'-'}</td></tr>`;}).join('')
+      const bl={total_return:['총수익','var(--green)'],trade_only:['체결가 — 배당 빠짐','var(--red)'],unknown:['불명','var(--gold)']}[e.inBasis]||['불명','var(--gold)'];
+      return `<tr><td><b>${t}</b></td><td>${e.lev}배</td><td>${e.idx?`<b>${e.idx}</b> + ${e.under}`:e.under}</td><td style="color:${bl[1]}">${bl[0]}</td><td>${e.from} ~ ${e.to}</td><td>${e.cost!=null?(e.cost*100).toFixed(1)+'%':'-'}</td></tr>`;}).join('')
     +`</tbody></table></div>`
+    +(ks.some(t=>info[t].inBasis!=='total_return')
+      ? `<p class="note" style="font-size:11px;margin-top:6px;line-height:1.7;padding:8px 10px;border-radius:7px;background:rgba(248,123,140,.12);border:1px solid rgba(248,123,140,.32);color:#ffc9d2">⚠️ <b>입력 기준이 총수익이 아닌 종목이 있습니다.</b> 보유비용 모형은 기초 시계열이 배당 재투자 기준이라는 전제로 맞춘 것이라, 배당이 빠진 계열을 먹이면 <b>기초 배당수익률 × 배수</b>만큼 상장 전 구간이 낮게 나옵니다(예: SPY 1.3% × 3배 ≈ 연 4%p). 그 구간 숫자는 참고만 하세요.</p>`
+      : '')
     +`<p class="note" style="font-size:11px;color:var(--dim);margin-top:8px;line-height:1.7">합성 구간 이후는 실제 ETF 데이터 · 가격지수(^SOX·^NDX·^GSPC) 구간은 배당 보정(+0.57~1.95%p/년, 기초별 실측) · 합성 구간 보유비용 = <b>운용보수(종목별 0.75~1.08%) + (배수−1)×(그 해 3개월 국채금리 + 0.77%)</b>. 상장 이후 실데이터와 대조해 추정했습니다(7종목 16년, 잔차 RMSE 2.4%p).</p>`
     +`<p class="note" style="font-size:11px;margin-top:6px;line-height:1.7;padding:8px 10px;border-radius:7px;background:rgba(245,196,81,.12);border:1px solid rgba(245,196,81,.32);color:#f6dfa6">⚠️ <b>차입비용은 그 시대 금리를 따릅니다.</b> 1980~2000년대는 단기금리가 5~14%여서 3배 상품이면 차입비용만 연 12~24%였습니다. 제로금리기(2010~2021)에 익숙한 감각으로 보면 <b>옛 구간 성과가 뜻밖에 나쁘게 나오는 게 정상</b>입니다.</p>`
     +`</div>`;
@@ -2234,7 +2271,7 @@ async function fetchTickerInto(sym, fromDate){
 // 활성 레버리지 종목들의 확장 데이터 구축 (필요 시 기초지수 fetch). extInfo: t → {under,from,to}
 // ※ 반드시 원본 M 기준으로 계산해야 하므로 먼저 clearLevExt()로 되돌린 뒤 구축한다.
 async function buildLevExt(tickers, start){
-  clearLevExt(); const info={};
+  clearLevExt(); const info={}; LEV_INPUT_BASIS={};
   if(!levExt) return info;
   for(const t of tickers){
     const under=LEV_UNDERLYING[t], lev=(META[t]&&META[t].lev)||0;
@@ -2261,7 +2298,8 @@ async function buildLevExt(tickers, start){
     preDates.forEach(d=>{ const s=synMap[d]; if(s!=null){ const px=+(s*k); merged[d]=[px,px,px,px]; } });
     realDates.forEach(d=>{ merged[d]=M[t][d]; });
     const avgDrag=preDates.reduce((s,d)=>s+dragOf(+d.slice(0,4))*252,0)/preDates.length;
-    EXTM[t]=merged; info[t]={under,from:preDates[0],to:realStart,lev,idx:bs.idx||null,cost:avgDrag};
+    EXTM[t]=merged; info[t]={under,from:preDates[0],to:realStart,lev,idx:bs.idx||null,cost:avgDrag,
+                             inBasis:bs.basis||LEV_INPUT_BASIS[under]||'unknown'};
   }
   return info;
 }
@@ -3357,15 +3395,21 @@ function runMA200Accum(days,tkr,contribTotal,N,costOn,opt){
    일간 추적오차 0.98%). 1배 보수를 빼면 약간 보수적으로 맞는다. */
 const X1_EXPENSE={SOXX:.0035,SMH:.0035,QQQ:.0020,XLK:.0009,SPY:.0009,EWY:.0059};
 const X1_EXPENSE_DEF=0.0020;
+/* 합성 1배 — 레버리지 일수익률÷배수. 보유비용 모형이 총수익 전제로 맞춰져 있으므로
+   여기도 총수익 계열을 먹인다. 출력은 '살 수 없는 계열'이라 실제 1배 ETF 가 있으면
+   그쪽을 먼저 쓰고(_ivsPair1), 없을 때만 이 계열로 대체하며 화면에 표시한다. */
 function _ivsX1(tkr){
   const dts=dtsOf(tkr), lev=(META[tkr]&&META[tkr].lev)||3, u=LEV_UNDERLYING[tkr];
+  const _tr=totalReturnSeries(tkr), TR=_tr?_tr.px:null;
   const _exp=LEV_EXPENSE[tkr]??LEV_EXPENSE_DEF, _bor=Math.max(0,lev-1);
   const _div=LEV_PRICEIDX[tkr] ? ((IDX_EXTEND[u]||{}).div||0) : 0;
   const _x1=(X1_EXPENSE[u]??X1_EXPENSE_DEF)/252;
   const dragOf=y=>(_exp + _bor*(parkRate(y,tkr)+LEV_SPREAD) + lev*_div)/252;
+  const cl=d=>(TR&&TR[d]!=null)?TR[d]:(M[tkr][d]?M[tkr][d][C]:null);
   const px={}; let v=100; px[dts[0]]=v;
   for(let i=1;i<dts.length;i++){
-    const rl=M[tkr][dts[i]][C]/M[tkr][dts[i-1]][C]-1;
+    const a=cl(dts[i]), b=cl(dts[i-1]);
+    const rl=(a>0&&b>0)?(a/b-1):0;
     v*=(1+(rl+dragOf(+dts[i].slice(0,4)))/lev-_x1); px[dts[i]]=v; }
   return px;
 }

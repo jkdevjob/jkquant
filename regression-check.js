@@ -73,6 +73,13 @@ const costSrc=(bt.match(/const COST_FEE=[\s\S]*?function capGainTax\([\s\S]*?\n\
 if(!costSrc) throw new Error('비용·세금 프로필(costOf/capGainTax)을 backtest.html에서 못 찾음');
 { const f=new Function(costSrc+'\nreturn {isKRW,krTaxRate,costOf,capGainTax};')();
   global.isKRW=f.isKRW; global.krTaxRate=f.krTaxRate; global.costOf=f.costOf; global.capGainTax=f.capGainTax; }
+/* 합성에 먹이는 '총수익 계열' 헬퍼 — 레버리지 확장·합성 1배가 부른다.
+   ADJ/PBASIS 는 테스트가 채우므로 전역으로 둔다. CSV 시험 데이터에는 ADJ 가 없어
+   기본값은 M 의 종가(basis 'trade_only'/'unknown') — 여태까지의 동작 그대로다. */
+global.ADJ={};
+{ const m=bt.match(/function totalReturnSeries\(t\)\{[\s\S]*?\n\}/);
+  if(!m) throw new Error('totalReturnSeries 를 backtest.html에서 못 찾음');
+  global.totalReturnSeries=new Function(m[0]+'\nreturn totalReturnSeries;')(); }
 /* 배당 헬퍼 — 엔진이 전부 부른다. 파일에서 그대로 떼어 오고, 가격 기준(PBASIS)과
    배당 이벤트(DIVMAP)는 테스트가 중간에 바꿀 수 있게 전역으로 둔다.
    CSV 시험 데이터에는 배당이 없으므로 기본값은 '조정가' — 즉 divCash 가 0을 낸다
@@ -4890,6 +4897,24 @@ const SRC=[
   pick(/function quoteChunks\\(p1start, p2end\\)\\{[\\s\\S]*?\\n\\}/),
   extractFn(bt,'async function fetchPrices(startDate, endDate)'),
   extractFn(bt,'async function fetchTickerInto(sym, fromDate)'),
+  /* 레버리지 상장 전 합성까지 같은 스코프에서 돌린다 — 합성이 무엇을 먹는지가 이번 핵심이다 */
+  pick(/function totalReturnSeries\\(t\\)\\{[\\s\\S]*?\\n\\}/),
+  'let LEV_INPUT_BASIS={};',
+  pick(/const LEV_UNDERLYING=\\{[^}]*\\};/),
+  pick(/const LEV_EXPENSE=\\{[^}]*\\};/),
+  pick(/const LEV_EXPENSE_DEF=[^\\n]*/),
+  pick(/const LEV_SPREAD=[^\\n]*/),
+  pick(/const LEV_PRICEIDX=\\{[^}]*\\};/),
+  pick(/const IDX_EXTEND=\\{[\\s\\S]*?\\}\\s*\\};/),
+  pick(/const TBILL_RATE=\\{[\\s\\S]*?\\};/),
+  pick(/const KR_RATE=\\{[\\s\\S]*?\\};/),
+  pick(/const isKRW=[^\\n]*/),
+  pick(/const parkRate=\\(y,tkr\\)=>[^\\n]*/),
+  extractFn(bt,'function srcOf(t)'),
+  extractFn(bt,'function clearLevExt()'),
+  extractFn(bt,'function applyLevExt()'),
+  extractFn(bt,'async function baseSeries(under, start)'),
+  extractFn(bt,'async function buildLevExt(tickers, start)'),
 ].join('\\n');
 
 const DATES=[]; { const t=new Date(Date.UTC(2022,0,3));
@@ -4919,13 +4944,15 @@ function fixture(sym, opt){
 }
 
 function makeScope(){
-  return new Function('TICKERS','fetch','console',
-    'let M={},DIV={},RAW={},ADJ={},DIVMAP={},PBASIS={};\\n'+SRC+\`
+  return new Function('TICKERS','fetch','console','META','C','O','HI','LO',
+    'let M={},DIV={},RAW={},ADJ={},DIVMAP={},PBASIS={},EXTM={},RAWM={},levExt=true;\\n'+SRC+\`
     const snap=(s)=>({M:M[s]||null, ADJ:ADJ[s]||null, DIVMAP:DIVMAP[s]||null, RAW:RAW[s]||null, PB:PBASIS[s]||null});
-    return { fetchPrices, fetchTickerInto, snap,
-             reset(){ M={};DIV={};RAW={};ADJ={};DIVMAP={};PBASIS={}; } };\`);
+    return { fetchPrices, fetchTickerInto, buildLevExt, totalReturnSeries, snap,
+             ext:(s)=>EXTM[s]||null,
+             reset(){ M={};DIV={};RAW={};ADJ={};DIVMAP={};PBASIS={};EXTM={};RAWM={}; } };\`);
 }
 const QUIET={warn(){},error(){},log(){}};
+const META={QQQ:{lev:1}, TQQQ:{lev:3}};
 
 async function scenario(opt){
   const seen=[];
@@ -4939,7 +4966,7 @@ async function scenario(opt){
     if(!wantDiv){ const bare={...j}; delete bare.ohlcTrade; delete bare.dividends; delete bare.raw; delete bare.priceBasis; return {ok:true,json:async()=>bare}; }
     return {ok:true, json:async()=>j};
   };
-  const S=makeScope()(['QQQ'], fakeFetch, QUIET);
+  const S=makeScope()(['QQQ'], fakeFetch, QUIET, META, 0,1,2,3);
   await S.fetchPrices('2022-01-03','2023-08-01');
   const main=JSON.parse(JSON.stringify(S.snap('QQQ')));
   S.reset();
@@ -4948,13 +4975,49 @@ async function scenario(opt){
   return {main, helper, okh, divInEveryCall: seen.length>0 && seen.every(u=>/[?&]div=1(&|$)/.test(u)), calls:seen.length};
 }
 
+/* ── 레버리지 상장 전 합성 ───────────────────────────────────────────
+   기초(QQQ)는 2022-01-03 부터, 레버리지(TQQQ)는 한참 뒤부터 있다.
+   합성이 '총수익'을 먹는지, 그리고 기초가 어느 로더로 들어왔든 결과가 같은지 본다.
+   기초에 배당이 있으므로 체결가를 먹이면 합성이 배당만큼 낮게 나온다 — 값으로 갈린다. */
+const LEV_START=DATES[250];
+async function levScenario(viaHelper){
+  const fakeFetch=async(u)=>{
+    const sym=decodeURIComponent((u.match(/symbol=([^&]+)/)||[])[1]||'');
+    const wantDiv=/[?&]div=1(&|$)/.test(u);
+    if(sym!=='QQQ'&&sym!=='TQQQ') return {ok:false};
+    const opt={withTrade:true, src:'yahoo-query1'};
+    let j=fixture(sym, opt);
+    if(sym==='TQQQ'){                       // 레버리지는 늦게 상장 — 앞 구간을 잘라 낸다
+      const keep=d=>d>=LEV_START;
+      j={...j, ohlc:j.ohlc.filter(x=>keep(x.date)), ohlcTrade:j.ohlcTrade.filter(x=>keep(x.date)),
+         raw:j.raw.filter(x=>keep(x.date)), series:j.series.filter(x=>keep(x.date)), dividends:[]};
+    }
+    if(!wantDiv){ const bare={...j}; delete bare.ohlcTrade; delete bare.dividends; delete bare.raw; delete bare.priceBasis; return {ok:true,json:async()=>bare}; }
+    return {ok:true, json:async()=>j};
+  };
+  const S=makeScope()(viaHelper?['TQQQ']:['QQQ','TQQQ'], fakeFetch, QUIET, META, 0,1,2,3);
+  await S.fetchPrices(DATES[0], DATES[DATES.length-1]);
+  if(viaHelper) await S.fetchTickerInto('QQQ', DATES[0]);   // 기초는 helper 로만 들어온다
+  const tr=S.totalReturnSeries('QQQ');
+  const info=await S.buildLevExt(['TQQQ'], DATES[0]);
+  const ext=S.ext('TQQQ');
+  const preDates=ext?Object.keys(ext).filter(d=>d<LEV_START).sort():[];
+  return { inBasis:(info.TQQQ||{}).inBasis||null, trBasis:tr?tr.basis:null,
+           preN:preDates.length,
+           first:preDates.length?ext[preDates[0]][0]:null,
+           last:preDates.length?ext[preDates[preDates.length-1]][0]:null,
+           sig:preDates.map(d=>ext[d][0].toFixed(6)).join(',') };
+}
+
 (async()=>{
   const out={};
   out.trade   = await scenario({withTrade:true,  src:'yahoo-query1'});
   out.noTrade = await scenario({withTrade:false, src:'yahoo-query1'});
   out.stooq   = await scenario({withTrade:false, src:'stooq'});
+  out.levMain   = await levScenario(false);
+  out.levHelper = await levScenario(true);
   process.stdout.write(JSON.stringify(out));
-})().catch(e=>{ process.stdout.write(JSON.stringify({error:e.message})); process.exit(1); });
+})().catch(e=>{ process.stdout.write(JSON.stringify({error:e.message, stack:(e.stack||'').split('\\n').slice(0,3).join(' | ')})); process.exit(1); });
 `;
   const tmp='/tmp/__loader_parity.js';
   fs.writeFileSync(tmp, CHILD);
@@ -5008,6 +5071,27 @@ async function scenario(opt){
      && /const r=await fetch\(`\/api\/quote\?symbol=\$\{encodeURIComponent\(sym\)\}&period1=/.test(bt));
   ok('모멘텀 로더는 M 을 안 건드린다',
      !/M\[sym\]=/.test(extractFn(bt,'async function loadMomData(univKey, start, end, stat)')));
+  /* ── 레버리지 상장 전 합성이 무엇을 먹는가 (3차 감사 ② · 시험 C·D) ──
+     보유비용 모형은 '기초 시계열이 배당 재투자 기준' 이라는 전제로 맞춰 놓은 것이다.
+     v2.0 에서 M 이 체결가로 바뀌면서 합성이 가격수익률을 먹게 됐고, 기초 배당수익률×배수
+     만큼 상장 전 구간이 통째로 과소평가됐다 (실측 UPRO 13년 구간 연 −4.27%p).            */
+  if(J && !J.error){
+    const a=J.levMain||{}, b=J.levHelper||{};
+    ok('합성 입력이 총수익 계열이다', a.inBasis==='total_return' && a.trBasis==='total_return',
+       `inBasis ${a.inBasis} / trBasis ${a.trBasis}`);
+    ok('합성이 실제로 굴러갔다 (상장 전 구간이 생겼다)', a.preN>100, String(a.preN));
+    ok('기초가 어느 로더로 들어와도 합성 결과가 같다', !!a.sig && a.sig===b.sig,
+       a.sig===b.sig?'':`메인 첫 ${a.first} / helper 첫 ${b.first}`);
+    ok('helper 로만 받아도 입력 기준이 총수익이다', b.inBasis==='total_return', String(b.inBasis));
+  }
+  ok('합성이 M 을 암묵적으로 안 쓴다 (총수익 헬퍼를 지난다)',
+     /const tr=totalReturnSeries\(under\); if\(!tr\) return null;/.test(bt)
+     && /const itr=totalReturnSeries\(ext\.idx\);/.test(bt)
+     && !/const E=M\[under\];/.test(bt));
+  ok('합성 1배도 총수익 계열을 먹는다',
+     /const _tr=totalReturnSeries\(tkr\), TR=_tr\?_tr\.px:null;/.test(bt)
+     && !/const rl=M\[tkr\]\[dts\[i\]\]\[C\]\/M\[tkr\]\[dts\[i-1\]\]\[C\]-1;/.test(bt));
+  ok('무엇을 먹였는지 확장 정보에 남긴다', /inBasis:bs\.basis\|\|LEV_INPUT_BASIS\[under\]\|\|'unknown'/.test(bt));
   ok("PBASIS 가 세 갈래다 (trade/total_return/unknown)",
      /'trade'\s*\n\s*:\s*\(srcs\.length && srcs\.every\(x=>\/\^yahoo\/\.test\(x\)\)\)\s*\?\s*'total_return'\s*\n\s*:\s*'unknown';/.test(bt));
 }
