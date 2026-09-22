@@ -84,7 +84,9 @@ function sellLines(rows){
 }
 
 export async function onRequestGet({request,env}){
-  const url=new URL(request.url),history=url.searchParams.get("history")==="1";
+  const url=new URL(request.url);
+  const history=url.searchParams.get("history")==="1";
+  const serverHistory=url.searchParams.get("serverHistory")==="1";
   if(history){
     if(!(await ownerAuthorized(request,env)))return new Response(JSON.stringify({ok:false,error:"unauthorized"}),{status:401,headers:JH});
   }else if(!monitorAuthorized(request,env)){
@@ -97,14 +99,14 @@ export async function onRequestGet({request,env}){
   const limit=Math.max(10,Math.min(100,parseInt(url.searchParams.get("limit")||"100",10)||100));
   const origin=url.origin;
 
-  if(!history&&(now.hm<905||now.hm>931)){
+  if(!history&&!serverHistory&&(now.hm<905||now.hm>931)){
     return new Response(JSON.stringify({ok:true,skipped:"outside_market_window",now}),{headers:JH});
   }
-  const cutoffHm=history?Math.min(930,now.hm>930?930:now.targetHm):now.targetHm;
+  const cutoffHm=(history||serverHistory)?Math.min(930,now.hm>930?930:now.targetHm):now.targetHm;
 
   try{
     const res=await scanShard(origin,now,shard,shards,limit,cutoffHm);
-    if(history){
+    if(history||serverHistory){
       return new Response(JSON.stringify({ok:true,date:now.date,cutoffHm,shard,shards,universe:res.universe,trades:res.trades,errors:res.errors.length}),{headers:JH});
     }
 
