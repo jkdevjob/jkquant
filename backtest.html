@@ -462,7 +462,7 @@ document.addEventListener('click',function(e){ var m=document.getElementById('jk
       <button type="button" class="preset-btn" onclick="imPreset()" title="라오어 공식 V4.0 으로 맞춥니다 — 공식 수록 종목(TQQQ·SOXL)만 · 익절 종목별(15/20) · 20분할 · 리버스 ON · 익절조절 OFF · 엔진 V4.0">📄 공식 V4.0</button>
     </div>
     <div class="ctrl s-im hide"><label>리버스 gap % <span style="font-size:9px;color:var(--dim)">별지점 아래 · 앱과 같은 값</span></label>
-      <input type="number" id="imRevGapIn" value="2.5" min="0.1" max="20" step="0.1" style="width:72px"></div>
+      <input type="number" id="imRevGapIn" value="0" min="0" max="20" step="0.1" style="width:72px"></div>
     <div class="ctrl s-im hide"><label>재투자</label>
       <div class="seg" id="imCompound">
         <button data-c="1" title="익절금을 다음 사이클 원금에 합산 — 초장기는 기하급수 폭주">복리</button>
@@ -1420,7 +1420,8 @@ function imPreset(){
   renderSingle(); buildTickerPick(); syncRevUI();
   if(typeof saveBtState==='function') saveBtState();
   if(dataLoaded) run();
-  alert('공식 V4.0 으로 맞췄습니다.\n\n· 종목 TQQQ · SOXL (문서 수록 종목만)\n· 익절 종목별 TQQQ 15% · SOXL 20%\n· 20분할 · 리버스 ON · 익절조절 OFF · 엔진 V4.0\n\n리버스 gap 은 문서에서 확인되지 않은 값이라 그대로 뒀습니다 (현재 '+imRevGap+'%).');
+  imRevGap=0; const rg=document.getElementById('imRevGapIn'); if(rg) rg.value='0';
+  alert('공식 V4.0 으로 맞췄습니다.\n\n· 종목 TQQQ · SOXL (문서 수록 종목만)\n· 익절 종목별 TQQQ 15% · SOXL 20%\n· 20분할 · 리버스 ON · 익절조절 OFF · 엔진 V4.0\n· 리버스 매수: 직전 5일 평균 − $0.01');
 }
 /* Gayed·Bilello 논문 원형 — 200일선 하나, 매수·매도 모두 200선, 대피처는 현금. */
 function maPreset(){
@@ -2877,6 +2878,9 @@ function runVR(days,tkr,params){
   }
   const snap=[], cf=[];          // cf = 현금흐름(투입 시점·금액) — IRR·평균투입자본용
   let mddPeak=-Infinity, mdd=0;  // 일별 MDD (총자산 = 주식+Pool+누적인출 기준 — fin과 동일 철학)
+  /* Pool 매수한도는 하루마다 재계산하지 않는다. 한 사이클 시작 Pool을 기준으로 고정하고
+     같은 사이클에서 실제로 매수한 금액을 누적 차감한다. 매도대금은 한도를 늘리지 않는다. */
+  let cycPoolBase=pool, cycBuySpent=0;
   /* ── 하루치 사다리 체결 (예약주문 방식) ──
      실전에서는 사이클 첫날 매수·매도표 20차수를 지정가로 전부 걸어두고 2주 방치한다.
      차수 값은 운영 앱의 표·체결기(vrSimForward)와 같은 식이다:
@@ -2890,7 +2894,7 @@ function runVR(days,tkr,params){
   function _ladder(hi, lo2){
     if(!(V>0)) return;
     const up=V*(1+band), dn=V*(1-band);
-    const budget=Math.max(0, pool*poolLimit), fee1=1+FEE;
+    const budget=Math.max(0, cycPoolBase*poolLimit-cycBuySpent), fee1=1+FEE;
     let spent=0;
     for(let k=0;k<400;k++){                       // 매도: 오를수록 다음 차수가 더 높다
       const q=Math.floor(shares+1e-9); if(q<1) break;
@@ -2903,7 +2907,7 @@ function runVR(days,tkr,params){
       const cost=p*fee1;
       if(spent+cost>budget+1e-9) break;           // Pool 한도 소진
       if(cost>pool+1e-9) break;                   // 현금 부족
-      pool-=_vbuyQ(1,p); spent+=cost; buys++;
+      pool-=_vbuyQ(1,p); spent+=cost; cycBuySpent+=cost; buys++;
     }
   }
   days.forEach((d,i)=>{
@@ -2924,7 +2928,7 @@ function runVR(days,tkr,params){
     if(first && isCyc){
       if(isLump){const s=initAmt||10000;inv+=s;cf.push([d,s]);pool+=s-_vbuy(s,c);V=shares*c;}
       else{pool+=contrib;inv+=contrib;cf.push([d,contrib]);pool-=_vbuy(pool,c);V=shares*c;}
-      first=false;buys++;rebal++;snap.push([d,shares*c+pool+totalWd]);return;
+      first=false;cycPoolBase=pool;cycBuySpent=0;buys++;rebal++;snap.push([d,shares*c+pool+totalWd]);return;
     }
 
     // 먼저 기존 사이클 사다리를 오늘 OHLC에 체결한다.
@@ -2939,6 +2943,8 @@ function runVR(days,tkr,params){
       V=Math.max(V,0);
       if(isAccum){pool+=contrib;inv+=contrib;cf.push([d,contrib]);}
       else if(isWd){const wd=Math.min(withdraw,pool);pool-=wd;totalWd+=wd;}
+      /* 새 사이클의 한도 기준 Pool은 적립/인출을 반영한 직후 금액이다. */
+      cycPoolBase=pool; cycBuySpent=0;
       if(LADDER){ rebal++; }
       else {
         const up=V*(1+band),lo=V*(1-band),cv2=shares*c;
