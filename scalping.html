@@ -187,7 +187,7 @@ canvas{display:block;width:100%;height:auto}
 
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Morning Scalping</div><h1>JK <span class="v">퀀트</span> 단타 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="scVer">v1.7.0</span></h1></div>
+    <div><div class="kicker">Morning Scalping</div><h1>JK <span class="v">퀀트</span> 단타 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="scVer">v1.8.0</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -274,43 +274,21 @@ canvas{display:block;width:100%;height:auto}
 
   </div>
   <div id="strategy_opening" class="strategy-pane">
-    <div class="strategy-head">실시간 감시 → 과거 백테스트 순서</div>
+    <div class="strategy-head">실시간 시초가 돌파 감시 → 백테스트 → 분봉 아카이브</div>
 
-  <!-- 1ba. 시초가 Top2 실시간 연구 신호 -->
+  <!-- 시초가 돌파 실시간 감시 -->
   <div class="card">
-    <h3><span class="dot"></span>🎯 시초가 Top2 모멘텀 <span class="sub" style="font-weight:600">09:08 확정 → 09:09 모의진입 → 09:30 모의청산</span></h3>
-    <p class="lead"><b>첫 3분 고점 대비 +0.2% 이상</b>이고, 09:08의 1분 거래량이 직전 3분 평균의 <b>0.5배 이상</b>인 종목만 남긴 뒤
-      <b>09:05→09:08 최근 3분 상승률</b>이 높은 순으로 <b>상위 2개</b>를 하루 한 번 잠근다.
-      <b>09:09에 모의 진입 시점</b>, <b>09:30에 모의 청산 시점</b>을 표시·알림한다.</p>
-    <div class="warn" style="margin-bottom:10px"><b>시장 테스트용 연구 신호:</b> 자동 주문은 하지 않는다. 13거래일 표본에서 찾은 후보 규칙이라 과최적화 가능성이 있으며,
-      내일은 규칙을 바꾸지 않고 그대로 관찰하기 위한 기능이다. 09:09에 선정된 2종목은 장중에 더 좋아 보이는 종목이 생겨도 교체하지 않는다.</div>
+    <h3><span class="dot"></span>🔥 실시간 시초가 돌파 감시 <span class="sub" style="font-weight:600">갭 + 첫고점 + 눌림 + 재돌파 + 수급</span></h3>
+    <p class="lead">첫 3분 고점을 확정한 뒤 <b>최초 돌파 → 0.3~1.0% 눌림 → 시초가 지지 → 전고점 재돌파</b>를 확인하고,
+      재돌파 시 <b>1분 거래량과 추정 거래대금이 다시 붙는 종목</b>만 후보로 표시한다. 조건 충족 시 Telegram으로 한 번 알린다.</p>
     <div class="row" style="align-items:flex-end;margin-bottom:8px">
       <div class="fld"><label>감시 유니버스</label><select id="ob_live_n"><option>30</option><option selected>50</option><option>100</option></select></div>
-      <div class="fld"><label>종목당 모의금액(원)</label><input id="ob_budget" type="number" value="2000000" min="10000" step="100000" style="width:130px"></div>
-      <button class="prim" id="obLiveBtn" onclick="toggleOpeningLive()">▶ Top2 감시 시작</button>
-      <button class="ghostbtn" id="obNotifyBtn" onclick="toggleOpeningNotify()">🔔 웹 알림</button>\n      <button class="ghostbtn" onclick="testTelegramOpening()">📨 Telegram 테스트</button>
-      <span class="sub" id="ob_live_msg">09:09 전에 감시를 켜 두세요</span>
+      <button class="prim" id="obLiveBtn" onclick="toggleOpeningLive()">▶ 시초가 감시 시작</button>
+      <button class="ghostbtn" onclick="testTelegramOpening()">📨 Telegram 테스트</button>
+      <span class="sub" id="ob_live_msg">09:00~09:30 실시간 감시</span>
     </div>
-    <div id="ob_live_body"><p class="sub">09:00~09:08은 관찰, 09:09부터 오늘의 Top2를 고정하고 09:30까지 추적합니다.</p></div>
-    <div style="margin-top:14px;border-top:1px solid var(--line);padding-top:12px">
-      <div style="font-weight:800;margin-bottom:6px">🔥 실시간 눌림→재돌파 후보 <span class="sub" style="font-weight:600">갭 + 첫고점 + 눌림 + 수급 재확인</span></div>
-      <div class="sub" style="margin-bottom:8px">첫 3분 고점 돌파 후 0.3~1.0% 눌림, 시초가 지지, 전고점 재돌파와 함께 1분 거래량·추정 거래대금이 다시 붙는 종목만 표시합니다.</div>
-      <div id="ob_rebreak_body"><p class="sub">감시를 시작하면 09:03 이후 조건을 실시간 검사합니다.</p></div>
-    </div>
+    <div id="ob_rebreak_body"><p class="sub">감시를 시작하면 09:03 이후 조건을 실시간 검사합니다.</p></div>
     <div id="ob_track" class="warn" style="display:none;margin-top:10px"></div>
-  </div>
-
-  <div class="card">
-    <h3><span class="dot"></span>📒 Top2 모의매매 이력 <span class="sub" style="font-weight:600">일별 자동 저장</span></h3>
-    <p class="lead">09:09에 Top2가 확정되면 <b>매수시각·매수가·수량·매수금액</b>을 기록하고,
-      09:30에는 <b>매도가·매도금액·손익률·손익금액</b>을 같은 날짜 기록에 자동으로 채운다.
-      브라우저 저장소와 로그인 계정의 Firestore에 함께 보관한다.</p>
-    <div class="row" style="margin-bottom:8px">
-      <button class="ghostbtn" onclick="renderTop2History()">🔄 이력 새로고침</button>
-      <button class="ghostbtn" onclick="top2HistoryCsv()">⬇ CSV</button>
-      <span class="sub">페이지를 닫았더라도 같은 날 다시 열면 미완료 09:30 기록을 복구 시도합니다.</span>
-    </div>
-    <div id="ob_hist_body"><p class="sub">아직 기록이 없습니다.</p></div>
   </div>
 
   <!-- 1bb. 시초가 첫고점 돌파 -->
@@ -991,20 +969,12 @@ function showStrategy(name){
 }
 function restoreStrategy(){let n='swing';try{n=localStorage.getItem('jkq_scalp_strategy_tab')||'swing';}catch(e){} if(n!=='opening')n='swing';showStrategy(n);}
 
-/* ══ 시초가 Top2 모멘텀 실시간 연구 신호 ══ */
-let OB_LIVE=false, OB_TIMER=null, OB_BUSY=false, OB_NOTIFIED=new Set(), OB_NOTIFY=false, OB_LAST_MINUTE='', OB_TOP2=null;
+/* ══ 시초가 돌파 실시간 감시 ══ */
+let OB_LIVE=false, OB_TIMER=null, OB_BUSY=false, OB_NOTIFIED=new Set(), OB_LAST_MINUTE='', OB_TOP2=null;
 try{
-  OB_NOTIFY=localStorage.getItem('jkq_ob_notify')==='1';
   const z=JSON.parse(localStorage.getItem('jkq_ob_top2_lock')||'null');
   if(z&&z.date&&Array.isArray(z.items)) OB_TOP2=z;
 }catch(e){}
-async function toggleOpeningNotify(){
-  if(!('Notification' in window)){alert('이 브라우저는 웹 알림을 지원하지 않습니다.');return;}
-  if(!OB_NOTIFY){const p=await Notification.requestPermission();if(p!=='granted'){alert('알림 권한이 허용되지 않았습니다.');return;}OB_NOTIFY=true;}
-  else OB_NOTIFY=false;
-  try{localStorage.setItem('jkq_ob_notify',OB_NOTIFY?'1':'0');}catch(e){} renderOpeningNotify();
-}
-function renderOpeningNotify(){const b=$('obNotifyBtn');if(b)b.textContent=OB_NOTIFY?'🔔 웹 알림 켜짐':'🔕 웹 알림 꺼짐';}
 async function telegramOpeningEvent(title,body){
   try{
     if(!me)return false;
@@ -1023,9 +993,6 @@ function notifyOpeningEvent(key,title,body){
   if(OB_NOTIFIED.has(key))return false;
   OB_NOTIFIED.add(key);
   void telegramOpeningEvent(title,body);
-  if(OB_NOTIFY&&('Notification' in window)&&Notification.permission==='granted'){
-    try{new Notification(title,{body,tag:'jkq-ob-'+key});}catch(e){}
-  }
   return true;
 }
 function obKstNow(){
@@ -1038,13 +1005,13 @@ function obKstHM(){return obKstNow().hm;}
 function saveTop2Lock(){try{localStorage.setItem('jkq_ob_top2_lock',JSON.stringify(OB_TOP2));}catch(e){}}
 function toggleOpeningLive(){OB_LIVE?stopOpeningLive():startOpeningLive();}
 function startOpeningLive(){
-  OB_LIVE=true; const b=$('obLiveBtn'); if(b)b.textContent='⏸ Top2 감시 중지';
+  OB_LIVE=true; const b=$('obLiveBtn'); if(b)b.textContent='⏸ 시초가 감시 중지';
   OB_LAST_MINUTE=''; openingLiveScan(true);
   clearInterval(OB_TIMER); OB_TIMER=setInterval(()=>openingLiveScan(false),15000);
 }
 function stopOpeningLive(){
   OB_LIVE=false; if(OB_TIMER){clearInterval(OB_TIMER);OB_TIMER=null;}
-  const b=$('obLiveBtn'); if(b)b.textContent='▶ Top2 감시 시작';
+  const b=$('obLiveBtn'); if(b)b.textContent='▶ 시초가 감시 시작';
 }
 function archiveOpeningFeed(code,min,daily){
   let added=0; const doh=(daily&&daily.ohlc)||[];
@@ -1208,29 +1175,27 @@ function renderLiveRebreak(now,rows){
 async function openingLiveScan(force){
   if(OB_BUSY)return;
   const now=obKstNow();
-  const retry909=now.hm===909&&(!OB_TOP2||OB_TOP2.date!==now.date);
-  if(!force&&OB_LAST_MINUTE===now.key&&!retry909)return;
+  if(!force&&OB_LAST_MINUTE===now.key)return;
   if(now.hm<900||now.hm>930){
     $('ob_live_msg').textContent='현재 감시시간(09:00~09:30)이 아닙니다 · 마지막 확인 '+new Date().toLocaleTimeString('ko-KR');
     return;
   }
   OB_BUSY=true; OB_LAST_MINUTE=now.key;
-  const msg=$('ob_live_msg'),N=+($('ob_live_n').value||50); msg.textContent='Top2 계산용 분봉 수집 중…'; let uni=[];
+  const msg=$('ob_live_msg'),N=+($('ob_live_n').value||50); msg.textContent='시초가 후보 분봉 수집 중…'; let uni=[];
   try{
     const j=await (await fetch('/api/universe?limit='+N)).json(); if(j.error)throw new Error(j.error); uni=j.universe||[];
-    let idx=0,done=0; const candidates=[],rebreaks=[],latestByCode=new Map();
+    let idx=0,done=0; const rebreaks=[];
     async function worker(){while(idx<uni.length){const u=uni[idx++];try{
       const [min,daily]=await Promise.all([mFetch(u.code),qFetch(u.code,'3mo')]); archiveOpeningFeed(u.code,min,daily);
       const all=toBars(min,1).filter(x=>{const t=x.date||'',h=+t.slice(11,13),m=+t.slice(14,16);return h===9&&m<=30;}).sort((a,b)=>a.date.localeCompare(b.date));
       const a=all.filter(x=>(x.date||'').slice(0,10)===now.date);
-      if(a.length){latestByCode.set(u.code,a[a.length-1]); const f=top2Feature(a); if(f)candidates.push(Object.assign({code:u.code,name:u.name||u.code},f)); const meta=(((ARCH[now.date]||{})._meta||{})[u.code]||null); const rb=liveRebreakFeature(a,meta); if(rb)rebreaks.push(Object.assign({code:u.code,name:u.name||u.code},rb));}
-    }catch(e){} done++;msg.textContent='Top2 계산 중… '+done+'/'+uni.length;} }
+      if(a.length){const meta=(((ARCH[now.date]||{})._meta||{})[u.code]||null); const rb=liveRebreakFeature(a,meta); if(rb)rebreaks.push(Object.assign({code:u.code,name:u.name||u.code},rb));}
+    }catch(e){} done++;msg.textContent='시초가 후보 검사 중… '+done+'/'+uni.length;} }
     await Promise.all(Array.from({length:6},()=>worker()));
-    candidates.sort((a,b)=>(b.mom3-a.mom3)||(b.breakout-a.breakout));
-    renderTop2(now,candidates,latestByCode);
     renderLiveRebreak(now,rebreaks);
+    msg.textContent='● 실시간 감시 중 · '+rebreaks.length+'개 후보 · '+new Date().toLocaleTimeString('ko-KR');
     if(saveArch()){AMETA.last=Date.now();archSaveMeta();renderArch();}
-  }catch(e){msg.textContent='Top2 감시 실패: '+(e.message||e);}
+  }catch(e){msg.textContent='시초가 감시 실패: '+(e.message||e);}
   finally{OB_BUSY=false;}
 }
 
@@ -1975,8 +1940,8 @@ function boot(){
     PKEY='jkq_scalp_pos_'+user.uid; LKEY='jkq_scalp_log_'+user.uid; AKEY='jkq_scalp_arch_'+user.uid;
     KKEY='jkq_scalp_kis_'+user.uid; THKEY='jkq_scalp_top2_hist_'+user.uid;
     $('log_owner').textContent='· '+(user.displayName||user.email||'');
-    loadAll(); loadArch(); recalc(); renderPos(); renderLog(); renderKlog(); renderArch(); renderTop2History(); restoreStrategy(); kisInit(); archAuto(); renderOpeningNotify();
-    await cloudLoad(); renderKlog(); renderPos(); renderTop2History(); await recoverTop2History();   // 다른 기기 기록 병합 + 오늘 미완료 Top2 복구
+    loadAll(); loadArch(); recalc(); renderPos(); renderLog(); renderKlog(); renderArch(); restoreStrategy(); kisInit(); archAuto();
+    await cloudLoad(); renderKlog(); renderPos();
   });
 }
 if(window.fb) boot(); else window.addEventListener('fb-ready', boot);
