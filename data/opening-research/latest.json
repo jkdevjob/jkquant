@@ -1,0 +1,384 @@
+{
+  "schema": 1,
+  "generatedAt": "2026-09-22T11:55:01.527117+09:00",
+  "from": "2026-09-21",
+  "to": "2026-09-22",
+  "archiveDays": 2,
+  "baselineTradeCount": 8,
+  "comparisonStatus": "collecting",
+  "comparisonRule": "Variant comparison is treated as preliminary until >=20 trading days and >=30 baseline trades.",
+  "variants": [
+    {
+      "params": {
+        "name": "baseline",
+        "top_n": 100,
+        "gap_min": 2.0,
+        "gap_max": 7.0,
+        "obs": 3,
+        "min_rise": 0.5,
+        "pb_min": 0.3,
+        "pb_max": 1.0,
+        "vol_mult": 1.0,
+        "amount_mult": 1.2,
+        "entry_cutoff": 930,
+        "stop": 1.0,
+        "take_profit": 1.5,
+        "final_exit": 930,
+        "fee": 0.25
+      },
+      "summary": {
+        "days": 2,
+        "trades": 8,
+        "winRate": 37.5,
+        "avgPnl": -0.10812146906623693,
+        "medianPnl": -0.7554456155157705,
+        "sumPnl": -0.8649717525298954,
+        "profitFactor": 0.8460599398658887,
+        "maxDrawdownSimple": -2.699014715052094,
+        "tradesPerDay": 4.0,
+        "estimatedGapTrades": 1
+      }
+    },
+    {
+      "params": {
+        "name": "top50",
+        "top_n": 50,
+        "gap_min": 2.0,
+        "gap_max": 7.0,
+        "obs": 3,
+        "min_rise": 0.5,
+        "pb_min": 0.3,
+        "pb_max": 1.0,
+        "vol_mult": 1.0,
+        "amount_mult": 1.2,
+        "entry_cutoff": 930,
+        "stop": 1.0,
+        "take_profit": 1.5,
+        "final_exit": 930,
+        "fee": 0.25
+      },
+      "summary": {
+        "days": 2,
+        "trades": 6,
+        "winRate": 16.666666666666664,
+        "avgPnl": -0.7118361944975836,
+        "medianPnl": -1.2966436714162142,
+        "sumPnl": -4.2710171669855015,
+        "profitFactor": 0.23988195268047655,
+        "maxDrawdownSimple": -4.271017166985501,
+        "tradesPerDay": 3.0,
+        "estimatedGapTrades": 1
+      }
+    },
+    {
+      "params": {
+        "name": "pb_max_0.5",
+        "top_n": 100,
+        "gap_min": 2.0,
+        "gap_max": 7.0,
+        "obs": 3,
+        "min_rise": 0.5,
+        "pb_min": 0.3,
+        "pb_max": 0.5,
+        "vol_mult": 1.0,
+        "amount_mult": 1.2,
+        "entry_cutoff": 930,
+        "stop": 1.0,
+        "take_profit": 1.5,
+        "final_exit": 930,
+        "fee": 0.25
+      },
+      "summary": {
+        "days": 2,
+        "trades": 7,
+        "winRate": 14.285714285714285,
+        "avgPnl": -0.739795610483463,
+        "medianPnl": -1.3271992818671472,
+        "sumPnl": -5.178569273384241,
+        "profitFactor": 0.20652450020796614,
+        "maxDrawdownSimple": -5.178569273384241,
+        "tradesPerDay": 3.5,
+        "estimatedGapTrades": 1
+      }
+    },
+    {
+      "params": {
+        "name": "pb_max_0.7",
+        "top_n": 100,
+        "gap_min": 2.0,
+        "gap_max": 7.0,
+        "obs": 3,
+        "min_rise": 0.5,
+        "pb_min": 0.3,
+        "pb_max": 0.7,
+        "vol_mult": 1.0,
+        "amount_mult": 1.2,
+        "entry_cutoff": 930,
+        "stop": 1.0,
+        "take_profit": 1.5,
+        "final_exit": 930,
+        "fee": 0.25
+      },
+      "summary": {
+        "days": 2,
+        "trades": 8,
+        "winRate": 37.5,
+        "avgPnl": -0.10812146906623693,
+        "medianPnl": -0.7554456155157705,
+        "sumPnl": -0.8649717525298954,
+        "profitFactor": 0.8460599398658887,
+        "maxDrawdownSimple": -2.699014715052094,
+        "tradesPerDay": 4.0,
+        "estimatedGapTrades": 1
+      }
+    },
+    {
+      "params": {
+        "name": "amount_1.5",
+        "top_n": 100,
+        "gap_min": 2.0,
+        "gap_max": 7.0,
+        "obs": 3,
+        "min_rise": 0.5,
+        "pb_min": 0.3,
+        "pb_max": 1.0,
+        "vol_mult": 1.0,
+        "amount_mult": 1.5,
+        "entry_cutoff": 930,
+        "stop": 1.0,
+        "take_profit": 1.5,
+        "final_exit": 930,
+        "fee": 0.25
+      },
+      "summary": {
+        "days": 2,
+        "trades": 6,
+        "winRate": 50.0,
+        "avgPnl": 0.3010866072401847,
+        "medianPnl": 0.532051636778669,
+        "sumPnl": 1.8065196434411082,
+        "profitFactor": 1.6129207224827145,
+        "maxDrawdownSimple": -2.6636290445718354,
+        "tradesPerDay": 3.0,
+        "estimatedGapTrades": 1
+      }
+    },
+    {
+      "params": {
+        "name": "amount_2.0",
+        "top_n": 100,
+        "gap_min": 2.0,
+        "gap_max": 7.0,
+        "obs": 3,
+        "min_rise": 0.5,
+        "pb_min": 0.3,
+        "pb_max": 1.0,
+        "vol_mult": 1.0,
+        "amount_mult": 2.0,
+        "entry_cutoff": 930,
+        "stop": 1.0,
+        "take_profit": 1.5,
+        "final_exit": 930,
+        "fee": 0.25
+      },
+      "summary": {
+        "days": 2,
+        "trades": 6,
+        "winRate": 50.0,
+        "avgPnl": 0.21070122408807443,
+        "medianPnl": 0.26089548732233814,
+        "sumPnl": 1.2642073445284465,
+        "profitFactor": 1.3622674154045935,
+        "maxDrawdownSimple": -2.6636290445718354,
+        "tradesPerDay": 3.0,
+        "estimatedGapTrades": 1
+      }
+    },
+    {
+      "params": {
+        "name": "entry_by_0915",
+        "top_n": 100,
+        "gap_min": 2.0,
+        "gap_max": 7.0,
+        "obs": 3,
+        "min_rise": 0.5,
+        "pb_min": 0.3,
+        "pb_max": 1.0,
+        "vol_mult": 1.0,
+        "amount_mult": 1.2,
+        "entry_cutoff": 915,
+        "stop": 1.0,
+        "take_profit": 1.5,
+        "final_exit": 930,
+        "fee": 0.25
+      },
+      "summary": {
+        "days": 2,
+        "trades": 8,
+        "winRate": 37.5,
+        "avgPnl": -0.10812146906623693,
+        "medianPnl": -0.7554456155157705,
+        "sumPnl": -0.8649717525298954,
+        "profitFactor": 0.8460599398658887,
+        "maxDrawdownSimple": -2.699014715052094,
+        "tradesPerDay": 4.0,
+        "estimatedGapTrades": 1
+      }
+    },
+    {
+      "params": {
+        "name": "gap_2_5",
+        "top_n": 100,
+        "gap_min": 2.0,
+        "gap_max": 5.0,
+        "obs": 3,
+        "min_rise": 0.5,
+        "pb_min": 0.3,
+        "pb_max": 1.0,
+        "vol_mult": 1.0,
+        "amount_mult": 1.2,
+        "entry_cutoff": 930,
+        "stop": 1.0,
+        "take_profit": 1.5,
+        "final_exit": 930,
+        "fee": 0.25
+      },
+      "summary": {
+        "days": 2,
+        "trades": 6,
+        "winRate": 33.33333333333333,
+        "avgPnl": -0.15779219981469708,
+        "medianPnl": -0.7860012259667035,
+        "sumPnl": -0.9467531988881825,
+        "profitFactor": 0.7824955200119186,
+        "maxDrawdownSimple": -2.780796161410381,
+        "tradesPerDay": 3.0,
+        "estimatedGapTrades": 1
+      }
+    },
+    {
+      "params": {
+        "name": "gap_3_7",
+        "top_n": 100,
+        "gap_min": 3.0,
+        "gap_max": 7.0,
+        "obs": 3,
+        "min_rise": 0.5,
+        "pb_min": 0.3,
+        "pb_max": 1.0,
+        "vol_mult": 1.0,
+        "amount_mult": 1.2,
+        "entry_cutoff": 930,
+        "stop": 1.0,
+        "take_profit": 1.5,
+        "final_exit": 930,
+        "fee": 0.25
+      },
+      "summary": {
+        "days": 2,
+        "trades": 4,
+        "winRate": 50.0,
+        "avgPnl": 0.1099978544785859,
+        "medianPnl": 0.04089072317914355,
+        "sumPnl": 0.4399914179143436,
+        "profitFactor": 1.1660756565913162,
+        "maxDrawdownSimple": -1.383255177803827,
+        "tradesPerDay": 2.0,
+        "estimatedGapTrades": 0
+      }
+    },
+    {
+      "params": {
+        "name": "stop_0.8",
+        "top_n": 100,
+        "gap_min": 2.0,
+        "gap_max": 7.0,
+        "obs": 3,
+        "min_rise": 0.5,
+        "pb_min": 0.3,
+        "pb_max": 1.0,
+        "vol_mult": 1.0,
+        "amount_mult": 1.2,
+        "entry_cutoff": 930,
+        "stop": 0.8,
+        "take_profit": 1.5,
+        "final_exit": 930,
+        "fee": 0.25
+      },
+      "summary": {
+        "days": 2,
+        "trades": 8,
+        "winRate": 25.0,
+        "avgPnl": -0.39652129923915097,
+        "medianPnl": -1.1065979442761107,
+        "sumPnl": -3.1721703939132078,
+        "profitFactor": 0.48708727317132616,
+        "maxDrawdownSimple": -4.591947488942671,
+        "tradesPerDay": 4.0,
+        "estimatedGapTrades": 1
+      }
+    },
+    {
+      "params": {
+        "name": "tp_1.0",
+        "top_n": 100,
+        "gap_min": 2.0,
+        "gap_max": 7.0,
+        "obs": 3,
+        "min_rise": 0.5,
+        "pb_min": 0.3,
+        "pb_max": 1.0,
+        "vol_mult": 1.0,
+        "amount_mult": 1.2,
+        "entry_cutoff": 930,
+        "stop": 1.0,
+        "take_profit": 1.0,
+        "final_exit": 930,
+        "fee": 0.25
+      },
+      "summary": {
+        "days": 2,
+        "trades": 8,
+        "winRate": 37.5,
+        "avgPnl": -0.22160540506517118,
+        "medianPnl": -0.7554456155157705,
+        "sumPnl": -1.7728432405213694,
+        "profitFactor": 0.6844849623632304,
+        "maxDrawdownSimple": -3.1650599880214783,
+        "tradesPerDay": 4.0,
+        "estimatedGapTrades": 1
+      }
+    },
+    {
+      "params": {
+        "name": "tp_2.0",
+        "top_n": 100,
+        "gap_min": 2.0,
+        "gap_max": 7.0,
+        "obs": 3,
+        "min_rise": 0.5,
+        "pb_min": 0.3,
+        "pb_max": 1.0,
+        "vol_mult": 1.0,
+        "amount_mult": 1.2,
+        "entry_cutoff": 930,
+        "stop": 1.0,
+        "take_profit": 2.0,
+        "final_exit": 930,
+        "fee": 0.25
+      },
+      "summary": {
+        "days": 2,
+        "trades": 8,
+        "winRate": 25.0,
+        "avgPnl": -0.4291943240837049,
+        "medianPnl": -1.2966436714162142,
+        "sumPnl": -3.433554592669639,
+        "profitFactor": 0.5099729008066034,
+        "maxDrawdownSimple": -5.147882497713828,
+        "tradesPerDay": 4.0,
+        "estimatedGapTrades": 1
+      }
+    }
+  ]
+}
