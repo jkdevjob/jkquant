@@ -1,6 +1,6 @@
 {
-  "schema": 2,
-  "generatedAt": "2026-09-22T17:02:56.769805+09:00",
+  "schema": 3,
+  "generatedAt": "2026-09-22T17:10:14.516584+09:00",
   "from": "2026-09-21",
   "to": "2026-09-22",
   "archiveDays": 2,
@@ -413,5 +413,16 @@
         "estimatedGapTrades": 0
       }
     }
-  ]
+  ],
+  "walkForward": {
+    "status": "collecting",
+    "trainDays": 20,
+    "testDays": 5,
+    "stepDays": 5,
+    "archiveDays": 2,
+    "daysNeededForFirstFold": 25,
+    "folds": [],
+    "oosVariants": [],
+    "note": "Need at least 25 trading days for the first chronological out-of-sample fold."
+  }
 }
