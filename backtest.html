@@ -2989,10 +2989,10 @@ function vrCycleCount(days){
     if(hit) n++; }
   return n;
 }
-/* VR 체결 모델 — 기본은 공식(V 복귀). 'ladder' 를 고르면 커스텀 1주 사다리. */
+/* VR 체결 모델 — 기본은 공식 예약 사다리. 'ladder' 를 고르면 커스텀 1주 사다리. */
 const VR_MODEL_DEFAULT='official';
-function vrModelOf(st){ return ((st||{}).vrModel==='ladder') ? 'ladder' : VR_MODEL_DEFAULT; }
-/* ════ VR 주문 체결 엔진 — 공식(V 복귀) · 커스텀(1주 사다리) ════
+function vrModelOf(st){ return VR_MODEL_DEFAULT; }
+/* ════ VR 주문 체결 엔진 — 공식 예약 사다리 · 커스텀(1주 사다리) ════
    예약 사다리 규칙:
    사이클 시작 보유수량으로 상·하단 밴드 경계에 1주 단위 주문을 매수·매도 각 최대 20차 고정한다.
    한 번 체결된 차수는 그 사이클에서 다시 생성하지 않으며, 다음 V가 확정될 때 새 사다리를 만든다.
@@ -3000,7 +3000,7 @@ function vrModelOf(st){ return ((st||{}).vrModel==='ladder') ? 'ladder' : VR_MOD
    S: {shares, pool, avg, V} — 이 객체를 직접 고친다 (부르는 쪽이 결과를 받아 간다)
    P: {band, poolLimit, budgetRemaining, FEE, model} — model 미지정이면 'official'
    반환: [{type:'sell'|'buy', price, qty, net|cost}] — net·cost 는 그 체결 '전체' 금액 */
-function vrOrderPlan(S,P,bar){
+function vrOrderPlan(S, P, bar){
   const out=[];
   if(!(S.V>0))return out;
   const up=S.V*(1+P.band),dn=S.V*(1-P.band),FEE=P.FEE||0,fee1=1+FEE;
