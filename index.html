@@ -529,7 +529,7 @@ try{ if(localStorage.getItem('qcockpit_hadUser')==='1') document.documentElement
 </div>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.77.3</span></h1></div>
+    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.77.4</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -1618,7 +1618,7 @@ document.addEventListener('click',function(e){ var m=document.getElementById('jk
   <footer>
     <strong>JK 퀀트</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.77.3</b> · 2026-09-22</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.77.4</b> · 2026-09-22</div>
   </footer>
 </div>
 
@@ -7191,20 +7191,12 @@ function vrSimForward(){
   let nSell=0, nBuy=0, nCyc=0, seq=0;
   try{
     for(const row of days){
-      // 1) 진입일이 지났으면 V 갱신 (모의는 사람이 누르지 않으므로 항상 자동)
-      for(let g=0; g<10; g++){
-        c=computeVr(); const cs=vrCycStart(c); if(!cs) break;
-        const ds=vrNextDue(cs);          // 과거 재생·백테와 같은 식
-        if(row.date < ds) break;
-        vrStepCycle(sess, c, ds, row.close); nCyc++;
-      }
-      // 2) 사다리 체결 — 공용 엔진(vrLadder). 과거 재생·백테와 글자 그대로 같은 규칙
+      // 시간축 원칙: 기준일 장중까지는 기존 V 사다리가 유효하고,
+      // 장 마감 종가로 다음 V를 만든 뒤 새 사다리는 다음 거래일부터 적용한다.
+      // 새 V를 먼저 만든 뒤 같은 날 high/low에 적용하면 미래정보 소급(룩어헤드)이 된다.
       c=computeVr();
       const cyc=c.curCyc;
       const St={shares:Math.floor(c.qty), pool:c.pool, avg:c.avg||0, V:c.V};
-      /* 수수료 규약도 과거 재생과 같아야 한다 — 예전엔 재생만 0.25%를 물고 여기는 안 물어서,
-         같은 세션을 재생으로 만들었느냐 모의체결로 이어 붙였느냐에 따라 잔금이 달라졌다.
-         fee 칸에 따로 적어 computeVr 가 그대로 복원한다. */
       const _F=(typeof IVS_FEE!=='undefined')?IVS_FEE:0.0025;
       const fills=vrLadder(St, {band:(st.band||15)/100, poolLimit:(st.mode||0.75), FEE:_F}, row);
       for(const f of fills){
@@ -7212,6 +7204,14 @@ function vrSimForward(){
         sess.hist.push({type:f.type, date:row.date, price:+f.price.toFixed(4), qty:1,
           fee:+fee.toFixed(6), cyc, sim:true, ts:Date.now()+(seq++)});
         if(f.type==='sell') nSell++; else nBuy++;
+      }
+
+      // 기존 사다리의 오늘 체결을 기록한 뒤, 장 마감 기준으로 밀린 사이클을 갱신한다.
+      for(let g=0; g<10; g++){
+        c=computeVr(); const cs=vrCycStart(c); if(!cs) break;
+        const ds=vrNextDue(cs);
+        if(row.date < ds) break;
+        vrStepCycle(sess, c, ds, row.close); nCyc++;
       }
       st.simLast=row.date;
     }
@@ -7317,14 +7317,6 @@ function vrReplay(){
   D.forEach((row,i)=>{
     const c=row.close, d=row.date; if(!(c>0)) return;
     if(first){
-      /* 첫 매수 = 초기 투입. 백테 runVR 의 first 분기와 글자 그대로 같아야 한다 —
-         정수 주수로 사고(예전엔 소수점 주수라 백테와 첫 거래부터 어긋났다),
-         못 산 잔돈은 Pool 에 남기며, 적립식은 initAmt 가 아니라 'Pool+적립금' 으로 산다.
-         add 기록을 따로 남기지 않는 이유는 그대로다 — computeVr 는 '이력 첫 buy =
-         밖에서 들어온 초기 투입' 으로 보고 Pool 을 깎지 않으므로 이중 계상이 된다. */
-      /* 적립식은 Pool(+이번 적립금)으로 산다 — 밖에서 새로 들어온 돈이 아니므로 init:false.
-         거치·인출식은 초기 투자금이 밖에서 들어온다 — init:true 로 적고, 못 산 잔돈은
-         add 로 따로 남긴다. 둘 다 저장 뒤 computeVr 가 그대로 되살릴 수 있어야 한다. */
       if(isAccum){
         pool+=contrib; rec.push({type:'add',date:d,amt:+contrib.toFixed(6),cyc,sim:true,ts:rec.length+1});
         pool-=_buyInt(pool,c,d,false);
@@ -7336,7 +7328,19 @@ function vrReplay(){
       V=shares*c;
       first=false; cycStartPool=pool; cycTrade=0; cycStartDate=d; due=vrNextDue(d); return;
     }
-    // ① 기준일이 지났으면 사이클 넘김 (달력 14일 · 주말이면 다음 영업일)
+
+    // ① 기준일 장중까지는 이전 V로 걸어둔 사다리를 먼저 체결한다.
+    const St={shares:Math.floor(shares+1e-9), pool, avg, V};
+    const fills=vrLadder(St, {band, poolLimit, FEE}, row);
+    for(const f of fills){
+      if(f.type==='sell'){ pool+=f.net; cycTrade+=f.net;
+        rec.push({type:'sell',date:d,price:+f.price.toFixed(6),qty:1,fee:+(f.price-f.net).toFixed(6),cyc,sim:true,ts:rec.length+1}); }
+      else { pool-=f.cost; cycTrade-=f.cost;
+        rec.push({type:'buy',date:d,price:+f.price.toFixed(6),qty:1,fee:+(f.cost-f.price).toFixed(6),cyc,sim:true,ts:rec.length+1}); }
+    }
+    shares=St.shares; avg=St.avg;
+
+    // ② 오늘 장 마감 종가/장부로 다음 V를 계산한다. 새 사다리는 다음 거래일부터.
     let guard=0;
     while(due && d>=due && guard++<10){
       cycLog.push({cyc, dates:`${md(cycStartDate)}~${md(d)}`, V:+V.toFixed(2),
@@ -7353,16 +7357,6 @@ function vrReplay(){
         if(wd>0) rec.push({type:'wd',date:d,amt:+wd,cyc,sim:true,ts:rec.length+1}); }
       due=vrNextDue(due);
     }
-    // ② 걸어 둔 매수·매도표 체결 — 공용 엔진(vrLadder)
-    const St={shares:Math.floor(shares+1e-9), pool, avg, V};
-    const fills=vrLadder(St, {band, poolLimit, FEE}, row);
-    for(const f of fills){
-      if(f.type==='sell'){ pool+=f.net; cycTrade+=f.net;
-        rec.push({type:'sell',date:d,price:+f.price.toFixed(6),qty:1,fee:+(f.price-f.net).toFixed(6),cyc,sim:true,ts:rec.length+1}); }
-      else { pool-=f.cost; cycTrade-=f.cost;
-        rec.push({type:'buy',date:d,price:+f.price.toFixed(6),qty:1,fee:+(f.cost-f.price).toFixed(6),cyc,sim:true,ts:rec.length+1}); }
-    }
-    shares=St.shares; avg=St.avg;
   });
   const lastPx=D[D.length-1].close, fin=shares*lastPx+pool+totalWd;
   const yrs=(new Date(D[D.length-1].date)-new Date(D[0].date))/(365.25*864e5);
