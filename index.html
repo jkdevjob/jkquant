@@ -529,7 +529,7 @@ try{ if(localStorage.getItem('qcockpit_hadUser')==='1') document.documentElement
 </div>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.77.10</span></h1></div>
+    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.79.0</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -908,6 +908,7 @@ document.addEventListener('click',function(e){ var m=document.getElementById('jk
         <h3><span class="dot"></span>모의투자 — 오늘까지 체결 확인</h3>
         <button class="fetchbtn" style="width:100%" onclick="vrSimNow()">▶ 지금까지 체결 판정</button>
         <p class="note" style="margin-top:8px">매수·매도표를 <b>지정가로 걸어둔 셈 치고</b>, 마지막 확인일 다음 날부터 오늘까지 하루하루 <b>고가·저가</b>로 닿았는지 판정해 체결된 차수만 기록합니다. 사이클 진입(V 갱신·적립)도 날짜에 맞춰 같이 처리합니다.<br>
+          같은 날 매도·매수가 둘 다 닿으면 <b>매도 → 매수 순서</b>로 가정합니다 — 일봉으로는 어느 쪽이 먼저였는지 알 수 없어 둔 <b>모델 가정</b>입니다.<br>
           모의 세션은 <b>탭을 열 때 자동으로</b> 돌아가니 평소엔 이 버튼을 누를 일이 없습니다. 실계좌 세션은 건드리지 않습니다.</p>
       </div>
     </div>
@@ -999,7 +1000,8 @@ document.addEventListener('click',function(e){ var m=document.getElementById('jk
       <div class="card"><h3><span class="dot"></span>V 갱신 (기본공식 · 오피셜)</h3>
         <div class="formula"><span class="lbl">다음 V</span>V₁ + Pool/G ± 적립금</div>
         <p class="note">라오어 VR 5.0 오피셜 공식입니다. 2주마다 Pool/G만큼 V가 상승하고, 적립식은 +적립금 / 인출식은 −인출금이 반영됩니다.</p>
-        <div class="formula" style="margin-top:10px;opacity:.75"><span class="lbl">실력공식(옵션)</span>V₁ + Pool/G + (E−V₁)/(2√G) ± 적립금</div>
+        <div class="formula" style="margin-top:10px;opacity:.75"><span class="lbl">실력공식(실험적 확장)</span>V₁ + Pool/G + (E−V₁)/(2√G) ± 적립금</div>
+        <p class="note" style="margin-top:6px;color:var(--gold)">⚠ 이 식은 <b>원전 출처를 아직 확인하지 못했습니다</b>. 공개 2차 자료에서 기본식과 75/50/25 규칙은 확인됐지만 이 식의 근거는 확인되지 않았습니다 — <b>실험적 확장</b>으로 두고, 공식(오피셜)과 구분해 표시합니다.</p>
         <p class="note">평가금 E가 V에서 멀어질 때 차이를 일부 반영하는 변형입니다. 오피셜이 아니며, 설정에서 선택할 수 있습니다.</p></div>
       <div class="card"><h3><span class="dot"></span>적립식·거치식·인출식, 뭐가 다른가</h3>
         <p class="note" style="margin-top:0">밴드·사다리·V갱신은 셋 다 똑같고, 아래 <b>3가지만</b> 모드에 따라 바뀝니다.</p>
@@ -1618,7 +1620,7 @@ document.addEventListener('click',function(e){ var m=document.getElementById('jk
   <footer>
     <strong>JK 퀀트</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.77.10</b> · 2026-09-22</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.79.0</b> · 2026-09-22</div>
   </footer>
 </div>
 
@@ -1672,7 +1674,7 @@ document.addEventListener('click',function(e){ var m=document.getElementById('jk
     <div class="seclabel">종목 (티커) <span class="hint" style="color:var(--faint);font-weight:500">6자리 코드면 국내 — 통화가 원화로 바뀝니다</span></div><div class="field tkwrap" style="margin:0 0 8px"><input id="set_vticker" type="text" autocomplete="off" spellcheck="false" placeholder="티커를 입력하세요 — 예: TQQQ, SOXL" oninput="tkSearch('set_vticker')" onfocus="tkSearch('set_vticker')" onblur="tkBlur('set_vticker')"><div class="tklist" id="set_vticker_list"></div></div>
     <div class="seclabel">분배금 <span class="hint" style="color:var(--faint);font-weight:500">현금 수령은 단리 인출과 같은 취급</span></div><div class="seg" id="set_vrdivmode"><button data-v="reinv" class="on">재투자</button><button data-v="cash">현금 수령</button></div>
     <div class="seclabel">운용 모드</div><div class="seg" id="set_vmode"><button data-v="0.75">적립식</button><button data-v="0.5">거치식</button><button data-v="0.25">인출식</button></div>
-    <div class="seclabel">V 갱신 공식</div><div class="seg" id="set_vformula"><button data-v="basic">기본공식</button><button data-v="skill">실력공식</button></div>
+    <div class="seclabel">V 갱신 공식</div><div class="seg" id="set_vformula"><button data-v="basic">기본공식</button><button data-v="skill">실력(실험적)</button></div>
     <div class="seclabel">사이클 진입 <span class="hint" style="color:var(--faint);font-weight:500">V 갱신·적립을 누가 하나</span></div><div class="seg" id="set_vauto"><button data-v="0">직접 확인</button><button data-v="1">자동 진입</button></div>
     <div class="seclabel">파라미터</div>
     <div class="field"><label>G (Gradient) <span class="hint">1~50, 클수록 보수</span></label><input id="set_g" type="number" inputmode="numeric" value="10"></div>
@@ -2071,7 +2073,7 @@ const won=v=>Math.round((+v||0)*((typeof liveFX!=='undefined'&&liveFX)?liveFX:FX
 const LS='qcockpit_v2', LS_URL='qcockpit_gsheet';
 let S=null;
 
-function defInfSettings(){return{ticker:'SOXL',div:20,target:20,big:15,rowsOn:false,rows:8,gap:2.5,revGap:REV_GAP_DEF,rowqty:1,principal:10000,divmode:'reinv',engine:'v40',shortMA:30,loPct:6,tgtDyn:false}}
+function defInfSettings(){return{ticker:'SOXL',div:20,target:20,big:IM_BIG_DEFAULT,rowsOn:false,rows:8,gap:2.5,revGap:REV_GAP_DEF,rowqty:1,principal:10000,divmode:'reinv',engine:'v40',shortMA:30,loPct:6,tgtDyn:false}}
 // V5.0 숨김 기간: 저장된 세션이 v50이어도 v40으로 강제 (UI가 없어 되돌릴 수 없으므로)
 // 복원 시 이 함수와 load() 안의 호출만 제거하면 된다.
 function forceV40(){
@@ -2255,8 +2257,15 @@ function computeInf(){
     if(typeof h.tManual==='number' && !isNaN(h.tManual)){ T=h.tManual; }
     else if(isRev){ T=reverseT(h.kind,T,st.div); }
     else { T=KIND_T[h.kind]?KIND_T[h.kind](T):T; }
-    // 리버스 거래가 기록됐으면 1일차는 지난 것 · 일반거래면 가격 회복으로 일반모드 복귀
-    revState = isRev ? 'REVERSE' : 'NORMAL';
+    /* 상태를 바꾸는 이벤트만 상태를 바꾼다 (4차 감사 ③).
+       예전엔 '리버스 거래가 아니면 전부 NORMAL' 이라, 출금 한 줄만 적어도 리버스가 풀렸다.
+       그리고 가격이 회복돼도 그날 거래가 없으면 남길 기록이 없어, 저장·새로고침하면
+       computeInf 가 마지막 리버스 거래를 보고 다시 REVERSE 로 되살렸다.
+       그래서 '리버스복귀' 를 명시적 상태 이벤트로 기록한다 — 매매가 아니라 상태만 바꾼다. */
+    if(isRev) revState='REVERSE';
+    else if(h.kind==='리버스복귀') revState='NORMAL';
+    else if(isBuy(h.kind)||isSell(h.kind)) revState='NORMAL';   // 일반 매매가 났다 = 이미 복귀한 것
+    // 그 밖(출금 등 비매매 기록)은 상태를 건드리지 않는다
     // ── 사이클 자동 전환: 매도로 보유 0이 되면 T·평단 리셋 (이력·잔금은 유지) ──
     let cycleEnd=false;
     if(qty<=1e-9 && isSell(h.kind) && !isBuy(h.kind)){ // 1e-9 톨러런스: 소수 수량 매도 시 부동소수점 잔여로 전량매도(사이클 종료)를 놓치지 않도록 (backtest와 동일 기준)
@@ -2324,6 +2333,21 @@ function imTgtOf(base, mom){ return (mom!=null && mom>IM_MOM_TH) ? Math.min(base
        (예: 잔금 366.77$ · T=19.844/20분할 → slot=0.156 → 1회분 2,347$ = 잔금의 6.3배 → 소진)
    (2) 리버스모드: '1개(1주) 매수가 불가능해지는 시점' — T가 분할−1을 넘어도
        1주를 살 수 있으면 별지점 아래에서 매수를 계속한다. (리버스 쿼터매수 참조)                     */
+/* 무매 매수 주수 — 한 곳에서만 센다 (운영 주문표 · 모의체결 · 백테 runIM/runIM50 공통).
+   주문 수량은 '주문을 내는 시점에 이미 알 수 있는 가격'(전일 확정 종가 또는 주문가)으로 확정한다.
+   오늘 종가로 수량을 정하면, 오늘 싸졌다는 이유로 그날 주문수량이 늘어난다 — 룩어헤드다.
+   (전일 100 · 오늘 80 · 배정 1000 → 올바른 답은 10주. 오늘 종가로 세면 12주가 된다.)
+   예산 규약: 배정금 = 매수금 + 수수료. 비용 OFF(feeRate 0)면 그냥 내림 나눗셈이다. */
+/* 큰수(첫 매수 LOC 상한) — 한 값만 쓴다 (4차 감사 ④).
+   공식 V4.0 기본은 전일 확정 종가 +15% 다. 예전엔 신규 세션 15 · 백테 하드코딩 15 ·
+   옛 세션 fallback 20 이 섞여 있어, 같은 설정인데 화면마다 상한이 달랐다.
+   사용자가 바꾸면 그건 '변형' 이고, 안 바꾸면 어디서나 이 값이다. */
+const IM_BIG_DEFAULT=15;
+function imBigPct(st){ const v=+((st||{}).big); return isFinite(v)&&v>0 ? v : IM_BIG_DEFAULT; }
+function imBuyQty(alloc, refPx, feeRate){
+  const f=1+(feeRate||0);
+  return (refPx>0 && alloc>0) ? Math.floor(alloc/f/refPx) : 0;
+}
 function imBuy1(c){
   const slot=(c.st.div||20)-c.T;
   // 소진 = '1회 매수가 불가능해지는 시점'. 1회분 = 잔금÷(분할−T)이므로
@@ -2528,7 +2552,7 @@ function renderOrder(){
   if($('o_avg')) $('o_avg').textContent = c.avg>0 ? `${wn(c.avg)} · ${c.qty}주` : '—';
   // 큰수 %가 없는 옛 세션(설정 신설 전 저장분)은 st.big이 undefined → bigMul이 NaN이 되어
   // 상한이 통째로 꺼졌다. 기본값으로 메운다.
-  const bigPct=(st.big!=null&&isFinite(+st.big))?+st.big:20;
+  const bigPct=imBigPct(st);
   const bigMul=1+(bigPct/100), limit=close>0?close*bigMul:0;
   if($('o_limit')) $('o_limit').textContent=close>0?wn(limit):'—';   // 첫 매수 때만 존재
   if(!close&&c.avg<=0){$('o_orders').innerHTML='<div class="note">🔄 자동 버튼을 누르거나 전일 종가를 입력하면 주문표가 나옵니다.</div>';render5day();renderKisPanel();return}
@@ -2545,7 +2569,12 @@ function renderOrder(){
     if(isDay1){
       // ── 1일차: 별지점 계산 불필요, 무조건 MOC매도. 매수 없음 ──
       rh+='<div class="order-grp sell"><div class="gt"><span class="gd"></span>리버스 무한매도 · 1일차</div>';
-      rh+=oitem('s',`무한매도 (보유÷${sellDiv})`,'MOC',c.avg,Math.max(1,sellQty));
+      /* 원문: 매도수량 = 직전 보유수량 ÷ 10(20분할) 또는 ÷ 20(40분할), 내림.
+         내림해서 0주면 그날은 매도가 없다 — 예전엔 Math.max(1,…) 로 1주를 억지로 냈다
+         (20분할 9주 → 원문 0주인데 1주를 팔았다). 백테 runIM 은 원래부터 0이면 안 판다. */
+      rh+= sellQty>0
+        ? oitem('s',`무한매도 (보유÷${sellDiv})`,'MOC',c.avg,sellQty)
+        : `<div class="note" style="color:var(--gold)">🚫 무한매도 없음 — 보유 ${c.qty}주 ÷ ${sellDiv} = 0주(내림). 원문 규칙상 오늘은 매도하지 않습니다.</div>`;
       rh+=`<div class="note">리버스모드 진입 1일차 — 별지점 무관, <b>무조건 MOC매도</b>. 매수는 없습니다.</div>`;
       rh+='</div>';
     }else{
@@ -2567,7 +2596,9 @@ function renderOrder(){
         $('o_orders').innerHTML=rh; render5day(); renderKisPanel(); return;
       }
       rh+='<div class="order-grp sell"><div class="gt"><span class="gd"></span>리버스 무한매도</div>';
-      rh+=oitem('s',`무한매도 (보유÷${sellDiv})`, 'LOC', star5, Math.max(1,sellQty));
+      rh+= sellQty>0
+        ? oitem('s',`무한매도 (보유÷${sellDiv})`, 'LOC', star5, sellQty)
+        : `<div class="note" style="color:var(--gold)">🚫 무한매도 없음 — 보유 ${c.qty}주 ÷ ${sellDiv} = 0주(내림). 원문 규칙상 오늘은 매도하지 않습니다.</div>`;
       rh+=`<div class="note">별지점(${px(star5)}) 위에서 매도.</div>`;
       rh+='</div>';
       rh+='<div class="order-grp buy"><div class="gt"><span class="gd"></span>리버스 쿼터매수</div>';
@@ -2592,7 +2623,11 @@ function renderOrder(){
     const _Qc=quoteOf('inf');
     const lastClose = (_Qc&&_Qc.last) || close || 0;
     if(lastClose>0 && lastClose>exitPrice){
-      rh+=`<div class="warn" style="border-color:var(--buy-dim);background:rgba(54,211,153,.08);color:#bfe9d3">✅ 최근 종가(${wn(lastClose)})가 복귀 기준(${wn(exitPrice)}) 위로 회복했습니다. 라오어님 기준 <b>내일부터 일반모드 복귀</b>이며, T값(${fmtT(c.T)})은 그대로 이어집니다. 복귀 후 일반모드 1회매수금 = 잔금 ÷ (분할−T)이 가능하면 정상 진행하고, 그래도 1회분조차 안 되면(T가 분할에 도달) 다시 리버스로 들어갑니다.</div>`;
+      /* 배너만 띄우면 화면을 닫는 순간 사라진다 — 상태는 거래이력에서만 복원되므로
+         가격 회복을 '기록' 으로 남겨야 새로고침 뒤에도 일반모드가 재현된다 (4차 감사 ③). */
+      rh+=`<div class="warn" style="border-color:var(--buy-dim);background:rgba(54,211,153,.08);color:#bfe9d3">✅ 최근 종가(${wn(lastClose)})가 복귀 기준(${wn(exitPrice)}) 위로 회복했습니다. 라오어님 기준 <b>내일부터 일반모드 복귀</b>이며, T값(${fmtT(c.T)})은 그대로 이어집니다. 복귀 후 일반모드 1회매수금 = 잔금 ÷ (분할−T)이 가능하면 정상 진행하고, 그래도 1회분조차 안 되면(T가 분할에 도달) 다시 리버스로 들어갑니다.
+        <div style="margin-top:8px"><button class="fetchbtn" style="width:auto;padding:8px 14px" onclick="recordRevExit()">✅ 일반모드 복귀 기록</button>
+        <span style="color:var(--faint);font-size:11px;margin-left:8px">기록해 두지 않으면 새로고침 때 다시 리버스로 보입니다.</span></div></div>`;
     }else{
       rh+=`<div class="warn">리버스모드 진행 중 (T=${fmtT(c.T)} &gt; ${st.div-1}). 종가가 평단의 −${st.target}%(${wn(exitPrice)}) 위로 회복하면 다음날 일반모드 복귀입니다. 리버스 매도가 누적되면 T가 ×${st.div>=40?'0.95':'0.9'}씩 줄어 자연히 분할−1 밑으로 내려갑니다.</div>`;
     }
@@ -2608,7 +2643,7 @@ function renderOrder(){
   // (예전엔 Math.max(1,…)로 최소 1주를 강제해, 원금 소진 상태나 잔금 부족일 때도 매수 주문이 나갔다.)
   let nBuyRow=0;
   // qtyPrice: 수량 산출에 쓸 가격(생략 시 주문가). 첫 매수는 LOC가 종가에 체결되므로 종가로 나눈다.
-  const _brow=(lbl,price,alloc,qtyPrice,tag)=>{ const dp=qtyPrice||price, q=dp>0?Math.floor(alloc/dp):0; if(q<1)return ''; nBuyRow++; return oitem('b',lbl,tag||'LOC',price,q); };
+  const _brow=(lbl,price,alloc,qtyPrice,tag)=>{ const dp=qtyPrice||price, q=imBuyQty(alloc,dp,0); if(q<1)return ''; nBuyRow++; return oitem('b',lbl,tag||'LOC',price,q); };
   if(B1.spent){
     // T > 분할−1 → '1회 매수가 불가능' = 원금 소진. 잔금이 남아 있어도 부분 매수 없이 새 회차는 없다.
     html+=`<div class="note" style="color:var(--gold)">🚫 <b>매수 없음 — 원금 소진</b> (T=${fmtT(c.T)} > ${st.div-1}, 남은 회차 ${B1.slot.toFixed(3)}회 &lt; 1)<br>`
@@ -3193,6 +3228,11 @@ function renderInfHist(){
       priceCell='—'; qtyCell='—';
       profitCell=`<span style="color:var(--gold)">−${wn(+h.amt||0)}</span>`;
       cls='wd';
+    }else if(h.kind==='리버스복귀'){
+      // 매매가 아니라 상태 기록이다 — 그날 종가가 복귀 기준 위로 올라왔다는 사실만 남긴다
+      priceCell=wn(h.price); qtyCell='—';
+      profitCell='<span style="color:var(--buy)">일반모드 복귀</span>';
+      cls='wd';
     }else{
       priceCell=wn(h.price); qtyCell=h.qty;
       profitCell= sell?`<span style="color:${h.profit>=0?'var(--buy)':'var(--sell)'}">${h.profit>=0?'+':''}${wn(h.profit)}</span>`:'-';
@@ -3364,12 +3404,15 @@ function infSimForward(startFrom){
     for(const row of first){
       const cl=row.close, hi=row.high, d=row.date, op=(row.open>0?row.open:0);
       const prevC=closeAt(row.i-1)||cl;
-      const bigPct=(st.big!=null&&isFinite(+st.big))?+st.big:15;
+      const bigPct=imBigPct(st);
       const buyLimit=prevC*(1+bigPct/100);
+      /* 주문수량은 '주문 전에 아는 가격'(전일 확정 종가)으로 확정하고, 실제 체결가 기준
+         잔금으로 한 번 더 자른다 — 백테 _buy 의 maxQ 와 같은 규약.
+         수량 산출은 공통 헬퍼 imBuyQty 한 곳에서만 한다 (운영 주문표·백테와 같은 함수). */
       const _qtyBuy=(alloc,refPx,fillPx)=>{
         const cNow=computeInf(), rp=(refPx>0?refPx:fillPx);
         if(!(alloc>0)||!(rp>0)||!(fillPx>0))return 0;
-        return Math.max(0,Math.min(Math.floor(alloc/rp),Math.floor(Math.max(0,cNow.bal)/fillPx)));
+        return Math.max(0, Math.min(imBuyQty(alloc,rp,0), imBuyQty(Math.max(0,cNow.bal),fillPx,0)));
       };
       let c=computeInf();
       const revOn=(st.reverse===true);
@@ -3379,12 +3422,12 @@ function infSimForward(startFrom){
         const sellDiv=st.div>=40?20:10;
         const day1=revDay1; revDay1=false;
         if(day1){                                                    // 1일차: 무조건 MOC 매도
-          put('리버스매도',d,cl,Math.min(c.qty,Math.max(1,Math.floor(c.qty/sellDiv))));
+          put('리버스매도',d,cl,Math.min(c.qty,Math.floor(c.qty/sellDiv)));   // 내림해서 0주면 put 이 건너뛴다
         }else{
           const p5=[]; for(let k=row.i-5;k<row.i;k++){ const v=closeAt(k); if(v>0) p5.push(v); }
           const star5=p5.length?p5.reduce((a,b)=>a+b,0)/p5.length:0;
           if(star5>0 && cl>=star5){
-            put('리버스매도',d,cl,Math.min(c.qty,Math.max(1,Math.floor(c.qty/sellDiv))));
+            put('리버스매도',d,cl,Math.min(c.qty,Math.floor(c.qty/sellDiv)));   // 내림해서 0주면 put 이 건너뛴다
           }else if(star5>0){
             const _rg=revGapOf(st);                    // 0 = 공식(별지점−$0.01), >0 = 사용자 변형
             const bp=_rg>0 ? star5*(1-_rg/100) : Math.max(0.01,star5-0.01);
@@ -3396,8 +3439,13 @@ function infSimForward(startFrom){
         }
         const c2=computeInf();
         if(c2.qty<=0) inRev=false;                                   // 전량매도 → 사이클 종료
-        // 복귀 조건은 '가격 회복' 하나다 (문서 그대로) — T는 승계하고, 다시 소진이면 재진입
-        else if(cl > c2.avg*exitMulOf(st.target)) inRev=false;
+        /* 복귀 조건은 '가격 회복' 하나다 (문서 그대로) — T는 승계하고, 다시 소진이면 재진입.
+           복귀를 기록으로 남겨야 저장·새로고침 뒤에도 일반모드가 재현된다 (4차 감사 ③). */
+        else if(cl > c2.avg*exitMulOf(st.target)){
+          inRev=false;
+          sess.hist.push({date:d, kind:'리버스복귀', price:+cl.toFixed(4), qty:0,
+                          T:+c2.T.toFixed(6), reason:'price-recovery', ts:Date.now()+(seq++), sim:true});
+        }
         st.simLast=d; continue;
       }
 
@@ -3455,6 +3503,22 @@ function infSimNow(){
   if(!r){ alert('새로 체결할 날이 없습니다.\n\n· 🔄 자동으로 시세를 불러왔는지\n· 시작일이 시세 이력 안에 있는지\n확인해 주세요.'); return; }
   refreshInf();
   alert(`${r.upto}까지 확인 ✓\n\n매수 ${r.nBuy}건 · 매도 ${r.nSell}건 · 사이클 ${r.cyc}회 종료\nT ${fmtT(r.T)} · 보유 ${nfix(r.qty,0)}주 · 평단 ${wn(r.avg)} · 잔금 ${wn(r.bal)}`);
+}
+/* 리버스 → 일반모드 복귀를 기록으로 남긴다 (4차 감사 ③).
+   원문: 종가가 평단 × 복귀배수 위로 올라오면 '다음날부터' 일반모드이고 T는 승계한다.
+   매매가 아니라 상태 이벤트다 — 평단·보유·T를 건드리지 않고 상태만 NORMAL 로 돌린다. */
+function recordRevExit(){
+  const sess=curStrat(), st=sess.settings, c=computeInf();
+  if(!c.reverseActive){ alert('지금은 리버스모드가 아닙니다.'); return; }
+  const Q=quoteOf('inf');
+  const last=settledLast(Q&&Q.days, curOf(st));
+  if(!last||!(last.close>0)){ alert('먼저 🔄 자동으로 확정 종가를 불러오세요.'); return; }
+  const exitPrice=c.avg*exitMulOf(st.target);
+  if(!(last.close>exitPrice)){
+    alert(`아직 복귀 기준 위가 아닙니다.\n확정 종가 ${wn(last.close)} · 복귀 기준 ${wn(exitPrice)}`); return; }
+  sess.hist.push({date:last.date, kind:'리버스복귀', price:+last.close.toFixed(4), qty:0,
+                  T:+c.T.toFixed(6), reason:'price-recovery', ts:Date.now()});
+  sortHist(sess.hist); save(); refreshInf();
 }
 function refreshInf(){
   { const _s=curStrat(), _from=(_s&&_s.paper&&!(_s.hist||[]).length)?paperStart(_s):null;
@@ -3689,12 +3753,15 @@ function renderVrNow(){
     verdict=`<div class="oitem" style="background:rgba(245,196,81,.1);justify-content:center"><span class="nm" style="flex:none;color:var(--gold)">⚪ 대기 — 밴드 안 (거래 없는 사이클)</span></div>`;
   }
   // 사이클 안내 — "2주 지난 걸 어떻게 아나"에 답하는 줄. 판단 밑에 항상 붙인다.
-  if(c.V>0){ const du=vrDue(c), auto=!!st.autoCyc;
+  /* '자동 진입' 은 모의 세션에서만 실제로 돈다 — vrAutoAdvance 가 !sess.paper 면 바로 빠진다.
+     실계좌인데 설정만 켜져 있다고 '자동' 이라고 적으면 화면이 실제 동작과 다른 말을 한다
+     (4차 감사 ⑫). 아래 nv_note 는 이미 갈라 적고 있었는데 이 줄만 안 봤다. */
+  if(c.V>0){ const du=vrDue(c), auto=!!st.autoCyc && !!curStrat().paper;
     if(vrAutoNote && curStrat().id===vrAutoNoteSid)
       verdict = `<p class="note" style="margin:0 0 10px;color:var(--vio)">${vrAutoNote}</p>` + verdict;
     if(du){ const md=x=>{const t=x.split('-');return `${+t[1]}/${+t[2]}`;};
       verdict += du.state==='wait'
-        ? `<p class="note" style="margin-top:10px">📅 ${c.curCyc}주차 진행 중 · 다음 사이클 ${auto?'<b>자동</b> 진입':'진입'} <b>${md(du.dueStr)}</b> (${du.d}일 뒤). 그때까지는 밴드를 벗어날 때만 매매합니다.</p>`
+        ? `<p class="note" style="margin-top:10px">📅 ${c.curCyc}주차 진행 중 · 다음 사이클 ${auto?'<b>자동</b> 진입':(st.autoCyc?'진입 <b>(실계좌는 수동)</b>':'진입')} <b>${md(du.dueStr)}</b> (${du.d}일 뒤). 그때까지는 밴드를 벗어날 때만 매매합니다.</p>`
         : `<p class="note" style="margin-top:10px;color:var(--buy)">📅 <b>${du.state==='due'?'오늘이 진입일입니다':`진입일이 ${-du.d}일 지났습니다`}</b> (${md(du.dueStr)}) — 아래 <b>다음 V 미리보기</b>에서 "다음 사이클 진입"을 누르세요.</p>`; } }
   const pill=$('vh_pill'); pill.className='bandpill '+pillCls; pill.textContent=pillTxt;
   $('vh_verdict').innerHTML=verdict;
@@ -3852,7 +3919,8 @@ function computeNextV(c,ev){
 }
 function renderVrNext(){
   const c=computeVr(), st=c.st;
-  $('nv_formula_lbl').textContent= st.formula==='skill'?'실력공식':'기본공식(오피셜)';
+  /* 실력공식은 원전 출처 미확인 — '공식' 이라고 단정하지 않는다 (4차 감사 ⑯) */
+  $('nv_formula_lbl').textContent= st.formula==='skill'?'실력공식(실험적 확장)':'기본공식(오피셜)';
   if(c.V<=0){
     $('nv_v').textContent='첫 매수 후'; $('nv_calc').innerHTML='<span class="lbl">계산</span>첫 매수를 기록하면 V가 설정됩니다';
     $('nv_pool').textContent='—';$('nv_min').textContent='—';$('nv_max').textContent='—';
@@ -3892,6 +3960,14 @@ function enterNextCycle(){
   const ev=vrEval(c)||c.V;
   const r=computeNextV(c,ev);
   const startDate=$('nv_date').value || new Date().toISOString().slice(0,10);
+  /* 공식 VR 은 달력 14일 사이클이다. 진입일 전에 넘기면 공식이 아니라 변형이다 —
+     막지는 않되 '커스텀 조기 진입' 임을 확인받고 기록에도 남긴다 (4차 감사 ⑬). */
+  const _du=vrDue(c);
+  let _early=false;
+  if(_du && _du.state==='wait'){
+    _early=true;
+    if(!confirm(`⚠ 아직 진입일이 아닙니다.\n\n· 공식 진입일 ${_du.dueStr} (${_du.d}일 뒤)\n· 지금 넘기면 공식 2주 사이클이 아니라 커스텀 조기 진입입니다.\n  (사이클 기록에 '조기' 로 남습니다)\n\n그래도 진행할까요?`)) return;
+  }
   const isAccum=st.mode===0.75, isWd=st.mode===0.25; // 거치식(0.5)은 적립금 항상 0
   const sign=r.sign, add=(isAccum||isWd)?(st.add||0):0;
   if(!confirm(`${c.curCyc+1}주차로 진입합니다.\n· 다음 V = ${wn(r.nextV)}\n· ${sign<0?'인출':'적립'} ${wn(add)} ${sign<0?'Pool 차감':'Pool 추가'}\n· 시작일 ${startDate}\n진행할까요?`))return;
@@ -3901,7 +3977,8 @@ function enterNextCycle(){
   const _cycClose=vrLastPrice(c);
   st.cycLog.push({cyc:c.curCyc, from:st.cycStart||null, dates:cycDates(c)||'-', V:+c.V.toFixed(2),
     lo:+c.lo.toFixed(2), up:+c.up.toFixed(2), trade:+c.cycTrade.toFixed(2), startPool:+c.cycStartPool.toFixed(2),
-    E:ev>0?+ev.toFixed(2):null, close:_cycClose>0?+_cycClose.toFixed(4):null});   // 평가금·종가 (사이클 분석 차트용)
+    E:ev>0?+ev.toFixed(2):null, close:_cycClose>0?+_cycClose.toFixed(4):null,
+    early:_early||undefined, due:_du?_du.dueStr:undefined});   // 평가금·종가 (사이클 분석 차트용) · 조기 진입 표시
 
   // 적립/인출 자동 기록 (Pool은 이력에서 재계산되므로 이 거래로만 반영)
   const newCyc=c.curCyc+1;
@@ -6848,7 +6925,10 @@ async function openPaper(){
     body.innerHTML= nPaper
       ? (noStart.length
           ? `<p class="lead">모의 세션 ${nPaper}개 중 <b>${noStart.length}개</b>에 <b>모의 시작일</b>이 없습니다 — 그래서 한 건도 안 만들어집니다.<br><span style="color:var(--faint)">${noStart.map(n=>String(n).replace(/</g,'&lt;')).join(' · ')}</span><br><br>세션 이름을 <b>더블탭</b>해 시작일을 정하거나, 위 <b>모의 시작일</b> 칸에 날짜를 넣고 <b>전체 적용</b>을 누르세요.</p>`
-          : `<p class="lead">모의 세션 ${nPaper}개가 있지만 아직 기록이 없습니다.<br>시세를 못 불러왔을 수 있습니다 — 해당 탭을 한 번 열어 🔄 자동을 눌러보세요.</p>`)
+          /* 여기까지 왔다는 건 paperFillAll 이 이미 전 탭·전 세션의 시세를 받아
+             체결기까지 돌린 뒤다. 그러니 '탭에 가서 🔄 를 누르라'는 건 틀린 안내다 —
+             한 번에 도는 게 맞고, 실패했으면 다시 시도하는 게 맞다. */
+          : `<p class="lead">모의 세션 ${nPaper}개를 오늘까지 굴려 봤지만 기록이 안 만들어졌습니다.<br>시세를 못 받았을 수 있습니다 — <b>이 창을 닫았다 다시 열면</b> 다시 시도합니다.<br><span style="color:var(--faint)">탭마다 따로 🔄 를 누를 필요는 없습니다. 이 창이 전 전략을 한 번에 굴립니다.</span></p>`)
       : `<p class="lead">모의투자 세션이 없습니다.<br><br>· <b>새로 만들기</b> — 세션바의 <b>+ 세션</b> → <b>모의투자로 만들기</b> 체크 → 시작일 선택<br>· <b>기존 세션을 바꾸기</b> — 세션 이름을 <b>더블탭</b>하면 모의 전환·시작일을 정할 수 있습니다.<br><br>정하고 나면 그 뒤로는 알아서 오늘까지 굴러갑니다.</p>`;
   }else{
     const cur=rows.map(r=>r.price>0).every(Boolean);
@@ -6884,7 +6964,7 @@ async function openPaper(){
              + `<td style="color:${outAmt>0?(r.retNow>=0?'var(--buy)':'var(--sell)'):'var(--faint)'}">${r.retNow>=0?'+':''}${r.retNow.toFixed(1)}%</td>`
              + `<td style="color:${outAmt>0?'var(--gold)':'var(--faint)'}">${outAmt>0?'+'+r.retOut.toFixed(1)+'%':'—'}</td>`
              + `<td style="color:${long?(up?'var(--buy)':'var(--sell)'):'var(--faint)'}">${cagr}</td>`
-          : `<td colspan="6" style="color:var(--gold)">시세 대기 — ${r.sym} 탭을 한 번 열어주세요</td>`)
+          : `<td colspan="6" style="color:var(--gold)">시세 대기 — ${r.sym} 시세를 못 받았습니다. 창을 다시 열면 재시도합니다</td>`)
         // 투입은 맨 오른쪽 — 눈이 먼저 가야 하는 건 성과(평가·수익·연)다
         + `<td style="color:var(--dim)">${wnCur(r.inflow,r.cur)}</td></tr>`; });
     h+=`</table></div>`;
@@ -7118,13 +7198,30 @@ function vrAutoAdvance(){
   const closeOn=d=>{ if(closes[d]>0) return closes[d];
     for(let i=dts.length-1;i>=0;i--) if(dts[i]<=d) return closes[dts[i]];
     return 0; };
+  /* 진입일 이후 '실제로 존재하는 첫 거래일' 의 확정 종가 (4차 감사 ⑩·⑭).
+     closeOn 은 봉이 없으면 이전 거래일 종가로 내려간다 — 진입일 장중이거나
+     진입일이 휴장이면 '어제 종가로 새 V 확정' 이 되어, 모의체결(vrSimForward)이
+     오늘 사다리를 처리하기도 전에 사이클이 넘어간다. 그래서 뒤로만 찾는다. */
+  const settledOnOrAfter=(d, cut)=>{
+    for(let i=0;i<dts.length;i++){
+      const k=dts[i];
+      if(k>=d && k<=cut && closes[k]>0) return {date:k, close:closes[k]};
+    }
+    return null;
+  };
   _vrAutoBusy=true; let n=0, lastV=0, lastCyc=0;
   try{
     for(let g=0; g<80; g++){
       const c=computeVr();
       if(c.V<=0) break;                                  // 첫 매수 전이면 할 일 없음
       const du=vrDue(c); if(!du || du.d>0) break;         // 아직 진입일 전
-      const r=vrStepCycle(sess, c, du.dueStr, closeOn(du.dueStr) || vrLastPrice(c));
+      /* 진입일 '장중' 에는 넘기지 않는다 — 그날 걸어둔 사다리가 아직 체결 중이고
+         종가도 안 굳었다. 확정된 봉이 실제로 있는 날에만 넘긴다.
+         진입일이 휴장이면 이전 종가를 끌어오지 않고 다음 거래일까지 미룬다. */
+      const _cut=simCutoff(curOf(st));
+      const _bar=settledOnOrAfter(du.dueStr, _cut);
+      if(!_bar) break;                                   // 아직 확정 종가가 없다 → 다음 새로고침에
+      const r=vrStepCycle(sess, c, du.dueStr, _bar.close);
       lastV=r.nextV; lastCyc=r.newCyc; n++;
     }
     if(n>0){ st.cycLog=st.cycLog.slice(-120); sortHist(sess.hist);
@@ -7283,11 +7380,23 @@ function vrReplay(){
   const q=lastQuote&&lastQuote.vr;
   const days=(q&&String(q.symbol||'').toUpperCase()===sym&&q.days)?q.days:null;
   if(!days||!days.length){ alert('먼저 🔄 자동으로 종가 이력을 불러오세요.'); return; }
+  /* 예약주문 사다리는 '그날 고가·저가에 닿았는가'로 체결을 가른다 (4차 감사 ⑧).
+     days 는 {date, close} 뿐이라 vrLadder 가 high=low=close 로 떨어진다 —
+     그러면 같은 전략인데 과거재생만 종가 모델이 되고, 모의체결·백테(고저 모델)와
+     다른 거래가 나온다. 조용히 떨어지지 말고 OHLC 를 쓰거나, 없으면 사실을 알리고 멈춘다. */
+  const bars=(q.ohlc && q.ohlc.length) ? q.ohlc : null;
+  if(!bars){
+    alert('과거 재생에는 일봉 고가·저가(OHLC)가 필요합니다.\n\n'
+      +'예약주문 사다리는 그날 고가·저가에 닿았는지로 체결을 가릅니다. '
+      +'종가만으로 돌리면 모의투자·백테스트와 다른 결과가 나옵니다.\n\n'
+      +'🔄 자동으로 시세를 다시 불러온 뒤 시도해 주세요.');
+    return;
+  }
   const from=$('rp_vr_from').value;
   if(!from){ alert('시작일을 고르세요.'); return false; }
   if((sess.hist||[]).length && !confirm(`기존 기록 ${sess.hist.length}건을 지우고 ${from}부터 다시 만듭니다.\n계속할까요?`)) return false;
 
-  const D=days.filter(d=>d.date>=from);
+  const D=bars.filter(d=>d.date>=from);      // 고가·저가가 있는 봉으로 돈다
   if(D.length<30){ alert('그 시작일부터의 거래일이 너무 적습니다.'); return; }
   const G=+st.g||10, band=(+st.band||15)/100, mode=+st.mode||0.5;
   const contrib=+st.add||0, formula=st.formula||'basic';
@@ -7580,7 +7689,7 @@ function infSuggest(kind){
     '절반매수':  buyAt(buy1/2),
     '쿼터매도':  {price:close, qty:Math.min(qSell,c.qty)},                  // 별지점 LOC = 종가 체결
     '지정가매도':{price:tgt,   qty:Math.max(0,c.qty-qSell)},                // 익절 지정가 = 목표가 체결
-    '리버스매도':{price:close, qty:c.qty>0?Math.min(c.qty,Math.max(1,Math.floor(c.qty/sellDiv))):0},
+    '리버스매도':{price:close, qty:c.qty>0?Math.min(c.qty,Math.floor(c.qty/sellDiv)):0},   // 내림 0주면 0 (원문)
     '리버스매수':{price:close, qty:Math.max(Math.floor((c.bal/4)/close), c.bal>=close?1:0)},
   };
   if(isCx(kind)){
@@ -8155,7 +8264,7 @@ function renderStatusline(){
   }else{
     const st=s.settings;
     const mode=st.mode===0.75?'적립식':st.mode===0.5?'거치식':'인출식';
-    html+=`<span>${tickerLabel(st.ticker)} · ${mode} · ±${st.band}% · ${st.formula==='skill'?'실력':'기본'}공식</span>`;
+    html+=`<span>${tickerLabel(st.ticker)} · ${mode} · ±${st.band}% · ${st.formula==='skill'?'실력(실험적)':'기본'}공식</span>`;
   }
   // 설정은 '지금 보고 있는 전략·세션'의 설정이라 상단 헤더보다 상태줄이 맞다
   html+=`<button class="setpill" onclick="openSettings()" title="설정">⚙️ 설정</button>`;
