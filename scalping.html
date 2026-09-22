@@ -187,7 +187,7 @@ canvas{display:block;width:100%;height:auto}
 
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Morning Scalping</div><h1>JK <span class="v">퀀트</span> 단타 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="scVer">v1.12.0</span></h1></div>
+    <div><div class="kicker">Morning Scalping</div><h1>JK <span class="v">퀀트</span> 단타 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="scVer">v1.13.0</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -281,7 +281,7 @@ canvas{display:block;width:100%;height:auto}
     <h3><span class="dot"></span>🔥 실시간 시초가 돌파 감시 <span class="sub" style="font-weight:600">갭 + 첫고점 + 눌림 + 재돌파 + 수급</span></h3>
     <p class="lead">첫 3분 고점을 확정한 뒤 <b>최초 돌파 → 0.3~1.0% 눌림 → 시초가 지지 → 전고점 재돌파</b>를 확인하고,
       재돌파 시 <b>1분 거래량과 추정 거래대금이 다시 붙는 종목</b>만 후보로 표시한다. 조건 충족 시 Telegram으로 한 번 알린다.</p>
-    <div class="warn" style="margin-bottom:10px"><b>서버 자동감시:</b> 매 영업일 09:00~09:30에는 웹페이지를 닫아도 Cloudflare 서버가 Top100을 매분 검사해 Telegram으로 보낸다. <b>매수·매도 신호</b>를 각각 알리고, 09:31에는 <b>오늘 매매 결과 요약</b>을 Telegram으로 보낸 뒤 일별 이력을 서버 아카이브에 영구 저장한다. 아래 버튼은 화면에서 즉시 확인할 때만 사용한다.</div>
+    <div class="warn" style="margin-bottom:10px"><b>서버 자동감시:</b> 매 영업일 09:00~09:30에는 웹페이지를 닫아도 Cloudflare 서버가 Top100을 매분 검사한다. <b>기준전략만 Telegram 매수·매도 알림</b>을 보내고, 개선후보들은 같은 시점에 <b>그림자 신호</b>로 병렬 기록한다. 09:31에는 기준전략 결과와 그림자전략 비교를 저장하며, 장기 백테스트에는 매일 누적한다.</div>
     <div class="row" style="align-items:flex-end;margin-bottom:8px">
       <div class="fld"><label>감시 유니버스</label><select id="ob_live_n"><option>30</option><option selected>50</option><option>100</option></select></div>
       <button class="prim" id="obLiveBtn" onclick="toggleOpeningLive()">▶ 시초가 감시 시작</button>
@@ -1016,7 +1016,7 @@ async function loadServerOpeningHistory(){
   const msg=$('ob_server_hist_msg'),body=$('ob_server_hist_body');
   if(!msg||!body)return;
   if(!me){msg.textContent='로그인이 필요합니다.';return;}
-  msg.textContent='오늘 서버 감시 이력 계산 중…'; body.innerHTML='';
+  msg.textContent='오늘 기준+그림자 신호 계산 중…'; body.innerHTML='';
   try{
     const tok=await me.getIdToken();
     const req=[0,1,2,3,4].map(shard=>fetch('/api/opening-monitor?history=1&shard='+shard+'&shards=5&limit=100',{
@@ -1024,23 +1024,49 @@ async function loadServerOpeningHistory(){
     }).then(async r=>{const j=await r.json().catch(()=>({}));if(!r.ok||!j.ok)throw new Error(j.error||('HTTP '+r.status));return j;}));
     const parts=await Promise.all(req),trades=parts.flatMap(x=>x.trades||[]);
     trades.sort((a,b)=>(a.entryTime-b.entryTime)||String(a.code).localeCompare(String(b.code)));
+
+    const sm=new Map();
+    parts.forEach(part=>(part.shadowVariants||[]).forEach(v=>{
+      if(!sm.has(v.name))sm.set(v.name,{name:v.name,label:v.label||v.name,description:v.description||'',params:v.params||{},trades:[]});
+      sm.get(v.name).trades.push(...(v.trades||[]));
+    }));
+    const shadows=[...sm.values()];
+    shadows.forEach(v=>v.trades.sort((a,b)=>(a.entryTime-b.entryTime)||String(a.code).localeCompare(String(b.code))));
+
+    msg.textContent='오늘 기준 '+trades.length+'건 · 그림자 '+shadows.length+'개 전략 · Top100 서버 재구성';
+
+    let baseHtml='';
     if(!trades.length){
-      msg.textContent='오늘 조건을 충족한 서버 매수신호가 없습니다.';
-      body.innerHTML='<div class="warn">오늘 서버 규칙(+2~7% 갭 → 첫3분 고점 → 눌림 → 재돌파 → 수급)을 모두 통과한 종목이 없습니다.</div>';
-      return;
+      baseHtml='<div class="warn">오늘 기준전략(+2~7% 갭 → 첫3분 고점 → 눌림 → 재돌파 → 수급)을 모두 통과한 종목이 없습니다.</div>';
+    }else{
+      baseHtml='<div class="htable-wrap"><table class="htable"><thead><tr><th>종목</th><th>매수</th><th>매수가</th><th>매도</th><th>매도가</th><th>사유</th><th>손익</th></tr></thead><tbody>'+
+        trades.map(x=>'<tr><td><b>'+esc(x.name||x.code)+'</b><div class="sub">'+esc(x.code)+'</div></td>'+
+        '<td>'+String(x.entryTime||'').padStart(4,'0')+'</td><td>'+commas(Math.round(x.entryPrice||0))+'</td>'+
+        '<td>'+(x.exitTime==null?'—':String(x.exitTime).padStart(4,'0'))+'</td><td>'+(x.exitPrice==null?'—':commas(Math.round(x.exitPrice)))+'</td>'+
+        '<td>'+(x.reason||'진행 중')+'</td><td class="'+(x.pnl==null?'':x.pnl>=0?'win':'loss')+'">'+(x.pnl==null?'—':(x.pnl>=0?'+':'')+x.pnl.toFixed(2)+'%')+'</td></tr>').join('')+
+        '</tbody></table></div>';
     }
-    msg.textContent='오늘 '+trades.length+'건 · Top100 서버 재구성';
-    body.innerHTML='<div class="htable-wrap"><table class="htable"><thead><tr><th>종목</th><th>매수</th><th>매수가</th><th>매도</th><th>매도가</th><th>사유</th><th>손익</th></tr></thead><tbody>'+
-      trades.map(x=>'<tr><td><b>'+esc(x.name||x.code)+'</b><div class="sub">'+esc(x.code)+'</div></td>'+
-      '<td>'+String(x.entryTime||'').padStart(4,'0')+'</td><td>'+commas(Math.round(x.entryPrice||0))+'</td>'+
-      '<td>'+(x.exitTime==null?'—':String(x.exitTime).padStart(4,'0'))+'</td><td>'+(x.exitPrice==null?'—':commas(Math.round(x.exitPrice)))+'</td>'+
-      '<td>'+(x.reason||'진행 중')+'</td><td class="'+(x.pnl==null?'':x.pnl>=0?'win':'loss')+'">'+(x.pnl==null?'—':(x.pnl>=0?'+':'')+x.pnl.toFixed(2)+'%')+'</td></tr>').join('')+
-      '</tbody></table></div><p class="note">실제 주문 체결 이력이 아니라 서버 전략 신호의 모의 매매 이력입니다.</p>';
+
+    const shadowHtml=shadows.length?'<div style="margin-top:12px"><b>🧪 오늘 그림자 전략 비교</b><div class="htable-wrap" style="margin-top:8px"><table class="htable"><thead><tr><th>전략</th><th>거래</th><th>승률</th><th>평균손익</th><th>단순합</th><th>기준과 다른 종목</th></tr></thead><tbody>'+
+      shadows.map(v=>{
+        const pn=v.trades.map(x=>x.pnl).filter(x=>x!=null),wins=pn.filter(x=>x>0).length;
+        const avg=pn.length?pn.reduce((s,x)=>s+x,0)/pn.length:0,sum=pn.reduce((s,x)=>s+x,0);
+        const baseSet=new Set(trades.map(x=>x.code)),vSet=new Set(v.trades.map(x=>x.code));
+        const diff=[...baseSet].filter(x=>!vSet.has(x)).length+[...vSet].filter(x=>!baseSet.has(x)).length;
+        return '<tr><td><b>'+esc(v.label)+'</b><div class="sub">'+esc(v.description)+'</div></td><td>'+v.trades.length+'</td>'+
+          '<td>'+(pn.length?(wins/pn.length*100).toFixed(1)+'%':'—')+'</td>'+
+          '<td class="'+(avg>=0?'win':'loss')+'">'+(pn.length?(avg>=0?'+':'')+avg.toFixed(3)+'%':'—')+'</td>'+
+          '<td class="'+(sum>=0?'win':'loss')+'">'+(pn.length?(sum>=0?'+':'')+sum.toFixed(2)+'%':'—')+'</td><td>'+diff+'</td></tr>';
+      }).join('')+'</tbody></table></div></div>':'';
+
+    body.innerHTML=baseHtml+shadowHtml+
+      '<p class="note">기준전략만 Telegram 알림 대상입니다. 그림자 전략은 실제 주문이나 기준전략에 영향을 주지 않는 연구용 병렬 신호입니다.</p>';
   }catch(e){
     msg.textContent='서버 이력 조회 실패';
     body.innerHTML='<div class="warn">'+esc(e.message||String(e))+'</div>';
   }
 }
+
 async function loadOpeningResearch(){
   const msg=$('ob_research_msg'),body=$('ob_research_body');
   if(!msg||!body)return;
@@ -1063,7 +1089,7 @@ async function loadOpeningResearch(){
       '</div>';
     const rows=vars.map(x=>{
       const p=x.params||{},z=x.summary||{},label={
-        baseline:'현재 기준',top50:'Top50',pb_max_0.5:'눌림≤0.5%',pb_max_0.7:'눌림≤0.7%',
+        baseline:'현재 기준',today_combo_v1:'오늘 개선안 v1',top50:'Top50',pb_max_0.5:'눌림≤0.5%',pb_max_0.7:'눌림≤0.7%',
         amount_1.5:'거래대금≥1.5배',amount_2.0:'거래대금≥2.0배',entry_by_0915:'09:15 이전',
         gap_2_5:'갭 2~5%',gap_3_7:'갭 3~7%',stop_0.8:'손절 0.8%',tp_1.0:'익절 1.0%',tp_2.0:'익절 2.0%'
       }[p.name]||p.name||'';
