@@ -441,8 +441,7 @@ document.addEventListener('click',function(e){ var m=document.getElementById('jk
     </div>
     <div class="ctrl s-im hide"><label>익절 체결 <span style="font-size:9px;color:var(--dim)">지정가 판정</span></label>
       <div class="seg" id="imFillSeg">
-        <button data-f="high" class="active" title="장중 고가가 목표가를 터치하면 체결 — 지정가 주문의 정석 (조정 OHLC 기준, 낙관 상한)">고가</button>
-        <button data-f="close" title="종가가 목표가 이상일 때만 체결 — 보수적 하한">종가</button>
+        <button data-f="high" class="active" title="장중 고가가 목표가를 터치하면 체결 — 운영·모의와 같은 지정가 규약">고가 터치 (공식)</button>
       </div>
     </div>
     <div class="ctrl s-im hide"><label>세금·비용</label>
@@ -1671,7 +1670,7 @@ const imTgtFor=t=>(imTarget>0?imTarget:(IM_OFFICIAL[t]||20));   // 엔진에 들
    그 밖의 종목에 쓰는 20은 문서값이 아니라 '그 외는 SOXL 값을 따른다'는 우리 확장이다 —
    같은 이름으로 보이면 사용자가 실험값을 문서값으로 읽는다. */
 const imTgtTxt=()=>(imTarget>0?imTarget+'%':'TQQQ 15 · SOXL 20 · 그 외 실험값 20');
-let imFill='high';   // 익절 체결 판정: 'high'=고가 터치(기본·지정가 정석) / 'close'=종가 도달(보수적 하한)
+let imFill='high';   // 하위호환 표시값. 공식 익절 체결은 imTpHit(고가 터치)로 고정
 /* 리버스 쿼터매수 gap — 별지점에서 이만큼 아래에 LOC를 건다.
    예전엔 0.975(=2.5%)가 코드에 못 박혀 있었다. 운영 앱은 사용자가 바꿀 수 있는 값이라,
    앱에서 gap 을 바꾸면 운영 주문가와 백테 주문가가 서로 달라졌다.
@@ -2430,6 +2429,7 @@ function imBuyQty(alloc, refPx, feeRate){
   const f=1+(feeRate||0);
   return (refPx>0 && alloc>0) ? Math.floor(alloc/f/refPx) : 0;
 }
+function imTpHit(hi,close,tgt){ return (+hi||0)>=(+tgt||0); }
 function runIM(days,tkr,cap,divs,targetPct,compound=true,bigOverride){
   // 종목 계열: TQQQ만 TQQQ식(base15/복귀−15%), 그 외 전부 SOXL식(base20/복귀−20%) — index.html과 동일 규약
   // (문서상 TQQQ/SOXL만 오피셜. 복귀 기준은 "T 마지막 쿼터매도 기준과 동일"이므로 base와 반드시 짝이어야 함)
@@ -2573,10 +2573,9 @@ function runIM(days,tkr,cap,divs,targetPct,compound=true,bigOverride){
       const q3=orig-q1;              // 익절 지정가: 나머지 (운영 모의와 같은 규약)
       let tpHit=false, qtHit=false;
       // ① 익절 지정가매도 (intraday): 고가 >= 익절가
-      const _fillHit=(typeof imFill!=='undefined'&&imFill==='high')?hi:c;   // 익절 판정: '고가'=장중 고가 목표가 터치 시 체결(지정가 정석), '종가'=보수적 하한. imFill 미정의=종가(회귀 앵커 유지)
-      // 체결가: 시가가 이미 익절가 위면 지정가 매도는 '시가'에 체결된다(가격개선).
-      // tgt로 고정하면 갭업 익절이 통째로 과소계상됐다 — SOXL 20분할 20%에서 익절 42건 중 12건이 갭업.
-      if(_fillHit>=tgt&&q3>0){_sell(o>tgt?o:tgt,q3,SLIP);tpHit=true;}   // 지정가매도
+      // 익절 지정가는 장 시작 전에 걸어 둔 주문 — 장중 고가가 목표가에 닿으면 체결.
+      // 운영 모의와 동일한 imTpHit 한 규약만 쓴다.
+      if(imTpHit(hi,c,tgt)&&q3>0){_sell(o>tgt?o:tgt,q3,SLIP);tpHit=true;}   // 지정가매도
       // ② 별지점 LOC매도 (at close): 종가 >= 별지점. 원래 1/4 기준 (이미 팔린 것 차감)
       if(c>=starP&&orig>0){const sq=Math.min(q1,shares);if(sq>1e-9){_sell(c,sq,0);qtHit=true;}}   // 쿼터매도 LOC=종가
       // T값 갱신: 익절(지정가매도)=×0.25, 쿼터매도=×0.75. 둘 다면 전량매도로 아래에서 리셋.
@@ -2926,10 +2925,9 @@ function runIM50(days,tkr,cap,divs,targetPct,compound=true,bigOverride){
       const orig=shares;
       const q1=isq(orig/4,orig), q3=orig-q1;   // 정수 주수 (운영 모의와 같은 규약)
       let tpHit=false, qtHit=false;
-      const _fillHit=(typeof imFill!=='undefined'&&imFill==='high')?hi:c;   // 익절 판정: '고가'=장중 고가 목표가 터치 시 체결(지정가 정석), '종가'=보수적 하한. imFill 미정의=종가(회귀 앵커 유지)
-      // 체결가: 시가가 이미 익절가 위면 지정가 매도는 '시가'에 체결된다(가격개선).
-      // tgt로 고정하면 갭업 익절이 통째로 과소계상됐다 — SOXL 20분할 20%에서 익절 42건 중 12건이 갭업.
-      if(_fillHit>=tgt&&q3>0){_sell(o>tgt?o:tgt,q3,SLIP);tpHit=true;}   // 지정가매도
+      // 익절 지정가는 장 시작 전에 걸어 둔 주문 — 장중 고가가 목표가에 닿으면 체결.
+      // 운영 모의와 동일한 imTpHit 한 규약만 쓴다.
+      if(imTpHit(hi,c,tgt)&&q3>0){_sell(o>tgt?o:tgt,q3,SLIP);tpHit=true;}   // 지정가매도
       if(c>=starP&&orig>0){const sq=Math.min(q1,shares);if(sq>1e-9){_sell(c,sq,0);qtHit=true;}}   // 쿼터매도 LOC=종가
       if(tpHit) T*=0.25;
       if(qtHit) T*=0.75;
