@@ -5832,5 +5832,60 @@ console.log('\n[92] 무매 리버스 복귀 — 저장·재로드에서 재현�
      /h\.kind==='리버스복귀'[\s\S]{0,200}일반모드 복귀/.test(idx));
 }
 
+
+/* ════ 93. VR 과거재생도 고가·저가로 체결한다 ════  (4차 감사 ⑧)
+   vrLadder 는 bar.high/bar.low 가 없으면 close 로 떨어진다. 그런데 vrReplay 만
+   q.days({date, close})를 넘기고 있었다 — 같은 예약주문 전략인데 과거재생만
+   종가 모델이었다(모의체결 vrSimForward·백테 runVR 은 고저 모델).
+   그러면 장중에 닿았다 되돌아온 차수가 과거재생에서만 통째로 빠진다. */
+console.log('\n[93] VR 과거재생 — 고가·저가 체결 (모의·백테와 같은 모델)');
+{
+  const lad=extractFn(idx,'function vrLadder(S, P, bar)');
+  const F=new Function('return ('+lad.replace(/^function \w+\(/,'function (')+')')();
+
+  /* 감사가 지정한 봉 ①: 매도 차수 100 · O=95 H=105 L=90 C=95 → 매도 체결.
+     V=1000·밴드 10% → 상단 1100 · 보유 11주 → 첫 매도 차수 1100/11 = 100.
+     Pool 0 으로 두어 같은 날 매수가 끼지 않게 한다(양방향 체결은 [15]에서 따로 본다). */
+  const bar1={date:'2026-01-05', open:95, high:105, low:90, close:95};
+  { const S={shares:11, pool:0, avg:90, V:1000};
+    const fills=F(S, {band:0.10, poolLimit:0.5, budgetRemaining:0, FEE:0}, bar1);
+    const sells=fills.filter(f=>f.type==='sell');
+    ok('① 고가가 매도 차수에 닿으면 체결된다', sells.length===1, `${fills.length}건 / 매도 ${sells.length}건`);
+    ok('① 첫 매도 차수가 100', sells.length>0 && near(sells[0].price,100,1e-9), sells.length?String(sells[0].price):'없음'); }
+  /* 같은 봉을 '종가만' 넘기면 (옛 과거재생) 안 팔린다 — 이게 갈라짐의 정체 */
+  { const S={shares:11, pool:0, avg:90, V:1000};
+    const fills=F(S, {band:0.10, poolLimit:0.5, budgetRemaining:0, FEE:0}, {date:bar1.date, close:bar1.close});
+    ok('① 종가만 주면 체결이 사라진다 (옛 과거재생)', fills.length===0, `${fills.length}건`); }
+
+  /* 감사가 지정한 봉 ②: 매수 차수 90 · O=95 H=100 L=85 C=95 → 매수 체결.
+     V=1000·밴드 10% → 하단 900 · 보유 10주 → 첫 매수 차수 900/10 = 90.
+     상단 1100/10 = 110 이라 고가 100 으로는 매도가 안 난다. */
+  const bar2={date:'2026-01-06', open:95, high:100, low:85, close:95};
+  { const S={shares:10, pool:10000, avg:100, V:1000};
+    const fills=F(S, {band:0.10, poolLimit:1, budgetRemaining:10000, FEE:0}, bar2);
+    const buys=fills.filter(f=>f.type==='buy'), sells=fills.filter(f=>f.type==='sell');
+    ok('② 저가가 매수 차수에 닿으면 체결된다', buys.length>=1 && sells.length===0,
+       `매수 ${buys.length}건 · 매도 ${sells.length}건`);
+    ok('② 첫 매수 차수가 90', buys.length>0 && near(buys[0].price,90,1e-9), buys.length?String(buys[0].price):'없음'); }
+  { const S={shares:10, pool:10000, avg:100, V:1000};
+    const fills=F(S, {band:0.10, poolLimit:1, budgetRemaining:10000, FEE:0}, {date:bar2.date, close:bar2.close});
+    ok('② 종가만 주면 매수도 사라진다', fills.length===0, `${fills.length}건`); }
+
+  /* 세 경로가 모두 고저 봉을 넘기는가 — 한 곳이라도 종가만 넘기면 또 갈린다 */
+  { const rep=extractFn(idx,'function vrReplay()');
+    ok('과거재생이 OHLC 봉으로 돈다', /const bars=\(q\.ohlc && q\.ohlc\.length\) \? q\.ohlc : null;/.test(rep)
+       && /const D=bars\.filter\(d=>d\.date>=from\);/.test(rep));
+    ok('과거재생이 종가 배열(days)로 안 돈다', !/const D=days\.filter\(d=>d\.date>=from\);/.test(rep));
+    ok('OHLC 가 없으면 조용히 떨어지지 않고 알린다',
+       /일봉 고가·저가\(OHLC\)가 필요합니다/.test(rep) && /종가만으로 돌리면 모의투자·백테스트와 다른 결과/.test(rep));
+    const sim=extractFn(idx,'function vrSimForward()');
+    ok('모의체결은 원래부터 OHLC 봉', /lastQuote\.vr\.ohlc\) \? lastQuote\.vr\.ohlc : null/.test(sim));
+    const vr=extractFn(bt,'function runVR(days,tkr,params)');
+    ok('백테도 고가·저가로 사다리를 친다',
+       /_ladder\(row\[HI\]\|\|c, row\[LO\]\|\|c\)/.test(vr)); }
+  ok('vrLadder 가 고저 없으면 종가로 떨어지는 건 그대로 (마지막 안전망)',
+     /const hi=bar\.high>0\?bar\.high:bar\.close, lo=bar\.low>0\?bar\.low:bar\.close;/.test(idx));
+}
+
 console.log(`\n════ 결과: ${pass} PASS / ${fail} FAIL ${fail===0?'— ALL PASS ★':'— 배포 금지, 위 ✗ 항목 수정 필요'} ════`);
 process.exit(fail===0?0:1);
