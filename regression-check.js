@@ -900,8 +900,8 @@ console.log('[19] 출금 · 복리/단리');
 {
   let ci=''; try{ ci=extractFn(idx,'function computeInf()'); }catch(e){}
   ok('출금 기록을 잔금에서 뺀다', /h\.kind==='출금'/.test(ci) && /withdrawn \+= Math\.max\(0,\+h\.amt\|\|0\)/.test(ci), ci?'':'computeInf 없음');
-  ok('잔금 식에 출금·단리인출 반영', /principal\+realized-inv-withdrawn-saved/.test(ci)
-     && !/principal\+realized-inv-withdrawn-saved\+added/.test(ci));
+  ok('잔금 식에 분배금·출금·단리인출 반영', /principal\+realized\+dividends\+autoDiv-inv-withdrawn-saved/.test(ci)
+     && !/principal\+realized[^;]*\+added/.test(ci));
   /* 단리 판정은 '사이클 종료 잔액이 최초 원금을 넘는가'다.
        넘으면 넘은 만큼만 인출하고 원금으로 다시 시작
        못 넘으면 인출도 보충도 없이 그 잔액 그대로 다음 사이클로
@@ -918,7 +918,7 @@ console.log('[19] 출금 · 복리/단리');
   ok('백테는 넣은 돈을 총자산에서 뺀다', /\+savedProfit-addedCash;/.test(bt));
   ok('단리 판정은 compound===false', /const simple=\(st\.compound===false\)/.test(ci));
   // 입금 자리(added)는 아예 없앴다 — 무매는 나가기만 한다
-  ok('출금·단리인출을 밖으로 낸다', /withdrawn,saved,flows,simple,outside:withdrawn\+saved/.test(ci));
+  ok('출금·단리인출만 밖으로 낸다', /withdrawn,saved,dividends,autoDiv,flows,simple,outside:withdrawn\+saved/.test(ci));
   ok('무매 반환값에 입금 자리가 없다', !/added:0/.test(ci));
   // 출금이 매매로 잡히면 사이클 종료·T가 오염된다
   ok('출금은 매수·매도가 아니다', /function isBuy\(k\)\{return k==='출금'\?false/.test(idx)
