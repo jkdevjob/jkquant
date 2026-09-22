@@ -320,7 +320,7 @@ td:first-child{text-align:left;}
   <div class="brand">
     <div>
       <div class="logo">Backtest</div>
-      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v2.0.1</span></h1>
+      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v2.0.2</span></h1>
     </div>
   </div>
   <div class="hright">
@@ -1611,7 +1611,7 @@ let imFill='high';   // 익절 체결 판정: 'high'=고가 터치(기본·지�
    예전엔 0.975(=2.5%)가 코드에 못 박혀 있었다. 운영 앱은 사용자가 바꿀 수 있는 값이라,
    앱에서 gap 을 바꾸면 운영 주문가와 백테 주문가가 서로 달라졌다.
    앱의 revGap(REV_GAP_DEF=2.5)과 같은 값·같은 식을 쓴다. */
-let imRevGap=2.5;
+let imRevGap=0;
 function syncMaCtrl(){
   const on=(imEngine==='v50'||imEngine==='ab');
   ['imMaCtrl','imLoCtrl'].forEach(id=>{ const el=document.getElementById(id); if(!el)return;
@@ -1626,7 +1626,7 @@ document.getElementById('imLoSeg').onclick=e=>{if(e.target.dataset.l){document.q
 document.getElementById('imTgtSeg').onclick=e=>{if(e.target.dataset.t){document.querySelectorAll('#imTgtSeg button').forEach(b=>b.classList.remove('active'));e.target.classList.add('active');imTarget=+e.target.dataset.t;if(dataLoaded)run();}};
 document.getElementById('vrFillSeg').onclick=e=>{if(e.target.dataset.v){document.querySelectorAll('#vrFillSeg button').forEach(b=>b.classList.remove('active'));e.target.classList.add('active');vrFill=e.target.dataset.v;if(dataLoaded)run();}};
 { const el=document.getElementById('imRevGapIn');
-  if(el) el.onchange=()=>{ const v=+el.value; imRevGap=(isFinite(v)&&v>0)?Math.min(20,v):2.5; el.value=imRevGap; if(dataLoaded)run(); }; }
+  if(el) el.onchange=()=>{ const v=+el.value; imRevGap=(isFinite(v)&&v>=0)?Math.min(20,v):0; el.value=imRevGap; if(dataLoaded)run(); }; }
 document.getElementById('imFillSeg').onclick=e=>{if(e.target.dataset.f){document.querySelectorAll('#imFillSeg button').forEach(b=>b.classList.remove('active'));e.target.classList.add('active');imFill=e.target.dataset.f;if(dataLoaded)run();}};
 syncMaCtrl();   // 초기: V4.0이므로 국면선 비활성 표시
 syncRevUI();
@@ -2379,9 +2379,10 @@ function runIM(days,tkr,cap,divs,targetPct,compound=true){
           const sellQty=Math.floor(shares/sellDiv);
           if(sellQty>0){ _sell(c,sellQty,0); T=divs>=40?T*0.95:T*0.9; }   // LOC=종가
         }
-        // 매수: 잔금÷4, 별지점 −2.5% LOC (운용도구 기본 gap%와 동일)
+        // 매수: 잔금÷4, 공식 기본은 별지점−$0.01 LOC (imRevGap>0이면 사용자 변형)
         if(shares>1e-9 && star5>0){
-          const buyP=star5*(1-(typeof imRevGap!=='undefined'?imRevGap:2.5)/100);
+          const _rg=(typeof imRevGap!=='undefined'?imRevGap:0);
+          const buyP=_rg>0 ? star5*(1-_rg/100) : Math.max(0.01,star5-0.01);
           // 리버스 소진 = '1개(1주) 매수 불가' 시점 — 1주라도 살 수 있으면 계속 매수
           if(c<=buyP && cash>=c){
             _buy(c, Math.min(cash, Math.max(cash/4, c)));   // LOC=종가 (잔금÷4가 1주에 못 미치면 1주)
