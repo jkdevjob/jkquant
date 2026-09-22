@@ -64,6 +64,14 @@ const iqSrc=(bt.match(/^const iq=\(amt,px\)=>[^\n]*\nconst isq=\([^\n]*$/m)||[''
 if(!iqSrc) throw new Error('정수 주수 헬퍼(iq/isq)를 backtest.html에서 못 찾음');
 // eval 안의 const는 밖으로 안 새어나간다 — 뒤에 따로 eval하는 엔진(runIM50 등)도 봐야 하니 전역으로 올린다
 { const f=new Function(iqSrc+'\nreturn {iq,isq};')(); global.iq=f.iq; global.isq=f.isq; }
+/* 세무 원가 헬퍼 — 전 엔진이 부른다. 파일에서 그대로 떼어 온다.
+   가격 평단(avg)과 세무 원가(taxBasis)는 다르다 — 매수 필요경비가 들어가는 쪽은 후자다. */
+{ const m=[/function taxLot\(\)\{[^\n]*\}/, /function lotBuy\(L, qty, px, fee\)\{[^\n]*\}/,
+           /function lotSell\(L, qty, px, fee\)\{[\s\S]*?\n\}/].map(re=>{
+    const x=bt.match(re); if(!x) throw new Error('세무 원가 헬퍼(taxLot/lotBuy/lotSell)를 backtest.html에서 못 찾음');
+    return x[0]; }).join('\n');
+  const f=new Function(m+'\nreturn {taxLot,lotBuy,lotSell};')();
+  global.taxLot=f.taxLot; global.lotBuy=f.lotBuy; global.lotSell=f.lotSell; }
 /* 매수 회계 규약 헬퍼 — 전 전략이 부른다. 파일에서 그대로 떼어 온다. */
 { const m=bt.match(/function buyQty\(budget, px, feeRate, integer\)\{[\s\S]*?\n\}/);
   if(!m) throw new Error('매수 회계 헬퍼(buyQty)를 backtest.html에서 못 찾음');
@@ -313,10 +321,10 @@ console.log('[4c] 섀넌 차분 (runIVS 거래로그 → ivsPos 재생)');
   const inj=(before,after,label)=>{ const p=ivsSrc.split(before);
     if(p.length!==2) throw new Error(`섀넌 주입 실패(${label}): ${p.length-1}회 매치`);
     ivsSrc=p[0]+after+p[1]; };
-  inj(`P.avg=(P.sh*P.avg+q*px)/(P.sh+q); P.sh+=q; cash-=spend+lf;`,
-      `P.avg=(P.sh*P.avg+q*px)/(P.sh+q); P.sh+=q; cash-=spend+lf; __LOGI('buy',P===A?'lev':'x1',__DD,px,q,spend-fee,fee);`,'buy');
-  inj(`yearPnl+=q*(px-P.avg)-fee; P.sh-=q;`,
-      `yearPnl+=q*(px-P.avg)-fee; P.sh-=q; __LOGI('sell',P===A?'lev':'x1',__DD,px,q,gross,fee);`,'sell');
+  inj(`lotBuy(P.lot,q,px,fee+lf); P.sh+=q; cash-=spend+lf;`,
+      `lotBuy(P.lot,q,px,fee+lf); P.sh+=q; cash-=spend+lf; __LOGI('buy',P===A?'lev':'x1',__DD,px,q,spend-fee,fee);`,'buy');
+  inj(`yearPnl+=lotSell(P.lot,q,px,fee+lf); P.sh-=q;`,
+      `yearPnl+=lotSell(P.lot,q,px,fee+lf); P.sh-=q; __LOGI('sell',P===A?'lev':'x1',__DD,px,q,gross,fee);`,'sell');
   inj(`days.forEach((d,i)=>{`,`days.forEach((d,i)=>{ __DD=d;`,'date');
   inj(`const LEGFEE=(costOn&&!X1)?costOf(tkr).fee:0;`,`const LEGFEE=0;`,'legfee');
   inj(`const CASH_DIVTAX=costOn?DIV_TAXRATE:0, CASH_EXP=costOn?0.0010:0;`,`const CASH_DIVTAX=0, CASH_EXP=0;`,'cashcost');
@@ -4877,17 +4885,65 @@ console.log('\n[84] 회계 규약 — 예산·잔돈·장부 항등');
     ok('VR — Pool 이 음수로 남지 않는다', rv.pool>=-1e-6, String(rv.pool));
   }
 
-  /* ── 수수료가 어디에 들어가는지 문서화 + 검사 ── */
-  ok('취득가액에 매수 수수료가 들어간다 (평단은 수수료 전 체결가)', (()=>{
-      const f=extractFn(bt,'function runIM(days,tkr,cap,divs,targetPct,compound');
-      // 평단은 체결가로 굴리고, 수수료는 현금에서 따로 뺀다 — 두 줄이 같이 있어야 한다
-      return /cash-=spend\+fee/.test(f) || /cash-=amt/.test(f); })());
-  ok('양도비용(매도 수수료)이 실현손익에서 빠진다', (()=>{
-      for(const m of ['function runStdev(days,tkr,cap,N,g,filter,costOn)',
-                      'function runIVS(days,tkr,cap,s0,N,band,costOn,mode,pair)',
-                      'function runVR(days,tkr,params)'])
-        if(!/yearPnl\+=[^;]*-fee/.test(extractFn(bt,m))) return false;
-      return true; })());
+  /* ── 세무 원가 — 값으로 검사한다 (3차 감사 ⑤ · 시험 G·H) ────────────
+     예전 검사는 'cash-=spend+fee 가 있는가' 만 봤다. 그건 '현금에서 수수료를 냈다'
+     는 뜻이지 '세금용 취득원가에 들어갔다' 는 뜻이 아니다. 실제로 매수수수료는
+     현금에서만 나가고 취득가액에는 안 들어가, 과세 실현손익이 그만큼 과대였다. */
+  {
+    // 감사가 지정한 사례: 100$ × 100주 매수(0.25%) → 110$ 전량매도(0.25%)
+    const P=100,Q=100,F=0.0025,S=110;
+    const buyFee=P*Q*F, sellFee=S*Q*F;
+    const L=taxLot(); lotBuy(L,Q,P,buyFee);
+    ok('매수 직후 세무 원가 = 체결금액 + 매수수수료',
+       near(L.basis, P*Q+buyFee, 1e-9) && L.qty===Q, `${L.basis} / ${P*Q+buyFee}`);
+    const r=lotSell(L,Q,S,sellFee);
+    const wantPnl=S*Q-sellFee-(P*Q+buyFee);
+    ok('전량매도 과세 실현손익 = 매도순액 − 취득가액', near(r, wantPnl, 1e-9), `${r} / ${wantPnl}`);
+    ok('현금 장부와 같은 값이다 (실제로 늘어난 돈)',
+       near(r, (S*Q-sellFee)-(P*Q+buyFee), 1e-9) && near(r, 947.5, 1e-9), String(r));
+    ok('옛 계산(평단=체결가)보다 매수수수료만큼 작다',
+       near(Q*(S-P)-sellFee - r, buyFee, 1e-9), `차이 ${Q*(S-P)-sellFee-r} / 매수수수료 ${buyFee}`);
+    ok('매도 뒤 원가가 0으로 비워진다', L.qty===0 && L.basis===0);
+
+    /* H. 부분매도 — 취득가액이 수량 비례로 안분되고, 합이 보존돼야 한다 */
+    const L2=taxLot(); lotBuy(L2,Q,P,buyFee);
+    const base0=L2.basis;
+    const r1=lotSell(L2,30,S,S*30*F);
+    ok('부분매도 30주 — 원가의 30%가 빠진다', near(base0-L2.basis, base0*0.3, 1e-9) && L2.qty===70,
+       `남은 원가 ${L2.basis} · 보유 ${L2.qty}`);
+    const r2=lotSell(L2,20,S,S*20*F);
+    ok('부분매도 20주 — 남은 원가의 비율로 다시 안분', near(L2.qty,50,1e-12) && near(L2.basis, base0*0.5, 1e-9),
+       `남은 원가 ${L2.basis} · 기대 ${base0*0.5}`);
+    const r3=lotSell(L2,50,S,S*50*F);
+    ok('나머지 전량매도 — 원가가 정확히 소진된다', L2.qty===0 && near(L2.basis,0,1e-9), String(L2.basis));
+    ok('부분매도 세 번의 실현손익 합 == 한 번에 판 값',
+       near(r1+r2+r3, wantPnl, 1e-9), `${r1+r2+r3} / ${wantPnl}`);
+
+    /* 평단(avg)은 그대로여야 한다 — 무매 별지점·익절가가 이 값으로 정해진다 */
+    ok('가격 평단과 세무 원가를 따로 둔다',
+       /function taxLot\(\)/.test(bt) && /function lotBuy\(L, qty, px, fee\)/.test(bt)
+       && /function lotSell\(L, qty, px, fee\)/.test(bt)
+       && /avg = \(shares<=0\) \? px : \(shares\*avg\+spend\)\/\(shares\+q\);\s*\n\s*lotBuy\(LOT,q,px,fee\);/.test(bt));
+  }
+  /* 엔진마다 세무 원가를 실제로 쓰는가 — 한 곳이라도 빠지면 그 전략만 세금이 과대다 */
+  for(const [nm,mk2] of [['무매 V4.0','function runIM(days,tkr,cap,divs,targetPct,compound'],
+                         ['무매 V2.2','function runIM22(days,tkr,cap,divs,targetPct,compound'],
+                         ['무매 V3.0','function runIM30(days,tkr,cap,divs,targetPct,compound'],
+                         ['무매 V5.0','function runIM50(days,tkr,cap,divs,targetPct,compound'],
+                         ['VR','function runVR(days,tkr,params)'],
+                         ['표준편차','function runStdev(days,tkr,cap,N,g,filter,costOn)'],
+                         ['200로테','function runMA200(days,tkr,cap,N,costOn,opt)'],
+                         ['200적립','function runMA200Accum(days,tkr,contribTotal,N,costOn,opt)'],
+                         ['역분산','function runIVS(days,tkr,cap,s0,N,band,costOn,mode,pair)']]){
+    const f=extractFn(bt,mk2);
+    ok(`${nm} — 매수수수료를 취득가액에 넣는다`, /lotBuy\(/.test(f), '');
+    ok(`${nm} — 실현손익을 세무 원가로 계산한다`,
+       /lotSell\(/.test(f) && !/yearPnl\s*\+=\s*q\*\(px-avg\)/.test(f) && !/yearPnl\s*\+=\s*qty\*\(eff-avg\)/.test(f));
+  }
+  // 모멘텀은 원래부터 basis 를 들고 있었다 (같은 규약인지 확인)
+  ok('모멘텀도 매수수수료를 취득가액에 넣는다', (()=>{
+      const f=extractFn(bt,'function momentumBacktest(data, tickers, U, cap, lb, filter, costOn)');
+      return /basis=spend\+fee;/.test(f) && /const cost=basis\*\(shares>0\?q\/shares:0\), realized=proceeds-cost;/.test(f); })());
   /* 배당·예수금 이자에 쓰는 세율은 한 값이어야 한다.
      (국내 ETF 매매차익 세율·모멘텀 국내 세율은 성격이 다른 세금이라 별개다) */
   ok('배당소득세율이 파일 한 곳에 있다',
