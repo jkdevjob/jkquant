@@ -7276,7 +7276,7 @@ function vrOrderPlan(S, P, bar){
   if(!(S.V>0))return out;
   const up=S.V*(1+P.band),dn=S.V*(1-P.band),FEE=P.FEE||0,fee1=1+FEE;
   const budget=Math.max(0,P.budgetRemaining!=null?+P.budgetRemaining:S.pool*P.poolLimit);
-  const hi=bar.high>0?bar.high:bar.close,lo=bar.low>0?bar.low:bar.close;
+  const hi=bar.high>0?bar.high:bar.close, lo=bar.low>0?bar.low:bar.close;
   const N=Math.max(1,Math.min(20,+P.maxTiers||20));
   const B=Math.floor(+P.baseShares||S.shares||0);
   let sf=Math.max(0,Math.floor(+P.sellFilled||0)),bf=Math.max(0,Math.floor(+P.buyFilled||0));
