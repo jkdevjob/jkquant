@@ -529,7 +529,7 @@ try{ if(localStorage.getItem('qcockpit_hadUser')==='1') document.documentElement
 </div>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.77.4</span></h1></div>
+    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.77.5</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -1618,7 +1618,7 @@ document.addEventListener('click',function(e){ var m=document.getElementById('jk
   <footer>
     <strong>JK 퀀트</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.77.4</b> · 2026-09-22</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.77.5</b> · 2026-09-22</div>
   </footer>
 </div>
 
@@ -2414,8 +2414,10 @@ function exitMulOf(base){ return 1-((base!=null&&base>0)?base:20)/100; }
    그걸 바꾸면 리버스 주문가까지 따라 움직였다. 게다가 백테는 2.5%가 못 박혀 있어
    사용자가 줄 간격을 바꾸면 운영 주문과 백테가 서로 다른 가격을 쓰게 됐다.
    리버스 전용 값으로 떼어 내고, 백테 imRevGap 과 같은 값·같은 식을 쓴다. */
-const REV_GAP_DEF=2.5;
-function revGapOf(st){ const v=+((st||{}).revGap); return (isFinite(v)&&v>0)?v:REV_GAP_DEF; }
+// 리버스 공식 기본: 별지점 바로 아래 LOC = 별지점 - $0.01.
+// revGap>0 은 사용자가 선택한 % 하단 변형을 위한 호환 옵션이며 공식 기본값이 아니다.
+const REV_GAP_DEF=0;
+function revGapOf(st){ const v=+((st||{}).revGap); return (isFinite(v)&&v>=0)?v:REV_GAP_DEF; }
 
 // ★ 종목별 기본 익절%(=별%base). 통합 규약이라 별지점·리버스 복귀조건이 함께 결정된다.
 //   TQQQ 15 / SOXL 20 은 라오어 문서 공식값. 이 값은 '최적화 결과'가 아니라 설계 철학이다:
@@ -2570,14 +2572,14 @@ function renderOrder(){
       rh+='</div>';
       rh+='<div class="order-grp buy"><div class="gt"><span class="gd"></span>리버스 쿼터매수</div>';
       if(star5){
-        const bp=star5*(1-gap/100);
+        const bp=gap>0 ? star5*(1-gap/100) : Math.max(0.01,star5-0.01);
         // 리버스 소진 기준(라오어 공지) = '1개 매수가 불가능해지는 시점'. T가 분할−1을 넘어도
         // 1주를 살 수 있으면 계속 매수한다 → 잔금÷4가 1주에 못 미쳐도 잔금으로 1주는 산다.
         { const qq=bp>0?Math.max(Math.floor(quarterBuy/bp), (c.bal>=bp?1:0)):0;
           rh+= qq>=1 ? oitem('b','쿼터매수 (잔금÷4)','LOC',bp,qq)
                      : `<div class="note" style="color:var(--gold)">🚫 쿼터매수 없음 — 잔금 ${wn(c.bal)}으로 1주(${wn(bp)})도 살 수 없습니다. 리버스 기준으로도 소진입니다.</div>`;
           if(qq===1 && quarterBuy<bp) rh+=`<div class="note" style="color:var(--gold)">ⓘ 잔금÷4(${wn(quarterBuy)})가 1주 값에 못 미치지만, 리버스는 <b>1개 매수가 가능할 때까지 지속</b>이라 1주를 주문합니다.</div>`; }
-        rh+=`<div class="note">매수금 = 잔금÷4 = ${wn(quarterBuy)} · 별지점 −${gap}% LOC.</div>`;
+        rh+=`<div class="note">매수금 = 잔금÷4 = ${wn(quarterBuy)} · ${gap>0?('사용자 변형: 별지점 −'+gap+'%'):'공식 기본: 별지점 −$0.01'} LOC.</div>`;
       }else{
         rh+=`<div class="note">매수금 = 잔금÷4 = ${wn(quarterBuy)} (별지점 아래 LOC). 별지점을 입력하면 단가가 계산됩니다.</div>`;
       }
@@ -8365,7 +8367,7 @@ function saveSettings(){
       tgtDyn:segGet('set_tgtdyn')==='1',
       rowsOn:$('set_rows_on')?$('set_rows_on').checked:false,
       rows:Math.max(0,Math.min(20,+$('set_rows').value||0)),gap:+$('set_gap').value||2.5,
-      revGap:Math.max(0.1,Math.min(20,+($('set_revgap')||{}).value||REV_GAP_DEF)),
+      revGap:Math.max(0,Math.min(20,Number(($('set_revgap')||{}).value)||REV_GAP_DEF)),
       rowqty:1,principal:inputNum('set_principal')||10000,divmode:segGet('set_infdivmode')||'reinv',
       simLast:(s.settings&&s.settings.simLast)||undefined};   // 모의 체결 진행점은 설정 저장으로 날아가면 안 된다
   }else if(S.activeTab==='ma'){
