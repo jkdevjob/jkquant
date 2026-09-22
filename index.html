@@ -7244,7 +7244,7 @@ function vrAutoAdvance(){
    하루 매수 한도 = 그날 시작 Pool × 모드한도(적립75·거치50·인출25%).
    매도를 먼저 도는 것도 규약이다 — 판 돈이 그날 매수 재원이 된다.
    S={shares,pool,avg} 를 직접 고치고, 체결된 차수를 돌려준다. FEE 는 부르는 쪽 규약. */
-/* ════ VR 주문 체결 엔진 — 공식(V 복귀) · 커스텀(1주 사다리) ════
+/* ════ VR 주문 체결 엔진 — 공식 예약 사다리 · 커스텀(1주 사다리) ════
    공식 VR 5.0 규칙:
      상단 = V×(1+band) · 하단 = V×(1−band)
      평가금이 상단을 넘으면 → 평가금이 V로 돌아오도록 매도
@@ -7262,7 +7262,7 @@ function vrAutoAdvance(){
    S: {shares, pool, avg, V} — 이 객체를 직접 고친다 (부르는 쪽이 결과를 받아 간다)
    P: {band, poolLimit, budgetRemaining, FEE, model} — model 미지정이면 'official'
    반환: [{type:'sell'|'buy', price, qty, net|cost}] — net·cost 는 그 체결 '전체' 금액 */
-/* VR 체결 모델 — 기본은 공식(V 복귀). 세션이 'ladder' 로 지정했을 때만 커스텀 사다리.
+/* VR 체결 모델 — 기본은 공식 예약 사다리. 세션이 'ladder' 로 지정했을 때만 커스텀 사다리.
    공식과 커스텀이 같은 이름으로 보이면 안 되므로 화면에도 갈라 적는다. */
 const VR_MODEL_DEFAULT='official';
 function vrModelOf(st){ return VR_MODEL_DEFAULT; }
@@ -7271,7 +7271,7 @@ function vrModelOf(st){ return VR_MODEL_DEFAULT; }
    매도 k차 = 상단가치 / (B-k+1), 매수 k차 = 하단가치 / (B+k-1).
    이미 체결된 차수는 sellFilled/buyFilled 로 건너뛰며 다음 날 다시 생성하지 않는다.
    기준일 장중까지 이전 사다리가 유효하고, 장 마감 후 새 V·새 B로 다음 사이클 사다리를 만든다. */
-function vrOrderPlan(S,P,bar){
+function vrOrderPlan(S, P, bar){
   const out=[];
   if(!(S.V>0))return out;
   const up=S.V*(1+P.band),dn=S.V*(1-P.band),FEE=P.FEE||0,fee1=1+FEE;
