@@ -143,7 +143,7 @@ th:first-child,td:first-child{text-align:left}
 <body>
 <div class="wrap">
   <div class="top">
-    <div class="brand"><div class="logo">Five Year Plan</div><h1>5년 자산플랜 <span class="ver">v1.5.1</span></h1></div>
+    <div class="brand"><div class="logo">Five Year Plan</div><h1>5년 자산플랜 <span class="ver">v1.5.2</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
       <div class="jkmenu" id="jkmenuWrap">
@@ -560,6 +560,21 @@ async function saveOperatingState(){
     catch(e){console.error('operating save',e);}
   }
 }
+function applyInitialBalances(a){
+  if(!a)return;
+  if($('autoBalances')&&$('autoBalances').checked){
+    $('balMM').value=Math.round(a.inf);$('balVR').value=Math.round(a.vr);
+    $('balMM').readOnly=true;$('balVR').readOnly=true;
+    $('balMM').classList.add('autofill');$('balVR').classList.add('autofill');
+    if($('balMMsrc')){$('balMMsrc').className='autosrc ok';$('balMMsrc').textContent='자동 · 세션 초기 배정금';}
+    if($('balVRsrc')){$('balVRsrc').className='autosrc ok';$('balVRsrc').textContent='자동 · 세션 초기 배정금';}
+  }
+  if($('autoSleeve')&&$('autoSleeve').checked){
+    $('balQLD').value=0;$('balSGOV').value=Math.round(a.sleeve);
+    $('balQLD').readOnly=true;$('balSGOV').readOnly=true;
+    $('balQLD').classList.add('autofill');$('balSGOV').classList.add('autofill');
+  }
+}
 function initialPlanAllocation(){
   const total=num('startCapital');
   const a=STAGES[1].main;
@@ -605,6 +620,11 @@ async function createPlanInfSession(opts={}){
   },hist:[]};
   liveState.inf.sessions.push(sess);liveState.inf.active=id;liveState.activeTab='inf';
   planLinks.inf=id;
+  if($('autoBalances')&&$('autoBalances').checked){
+    $('balMM').value=Math.round(cap);$('balMM').readOnly=true;$('balMM').classList.add('autofill');
+    if($('balMMsrc')){$('balMMsrc').className='autosrc ok';$('balMMsrc').textContent='자동 · SOXL 세션 초기원금';}
+    render();
+  }
   if(!opts.defer){await saveOperatingState();await cloudSave();renderSessionSelectors();await refreshLive();}
   return sess;
 }
@@ -619,6 +639,11 @@ async function createPlanVrSession(opts={}){
   },hist:[]};
   liveState.vr.sessions.push(sess);liveState.vr.active=id;liveState.activeTab='vr';
   planLinks.vr=id;
+  if($('autoBalances')&&$('autoBalances').checked){
+    $('balVR').value=Math.round(cap);$('balVR').readOnly=true;$('balVR').classList.add('autofill');
+    if($('balVRsrc')){$('balVRsrc').className='autosrc ok';$('balVRsrc').textContent='자동 · TQQQ VR 세션 초기배정금';}
+    render();
+  }
   if(!opts.defer){await saveOperatingState();await cloudSave();renderSessionSelectors();await refreshLive();}
   return sess;
 }
@@ -638,6 +663,7 @@ async function createPlanSleeveSession(opts={}){
     ledger:{startQLD:0,startSGOV:0,startCash:a.sleeve,trades:[]}
   };
   sleeveSessions.push(sess);planLinks.sleeve=id;bindSleeveLedger();
+  renderLedger();render();
   if(!opts.defer){await cloudSave();renderSessionSelectors();renderLedger();render();}
   return sess;
 }
@@ -651,6 +677,8 @@ async function createAllPlanSessions(){
   await createPlanInfSession({defer:true});
   await createPlanVrSession({defer:true});
   await createPlanSleeveSession({defer:true});
+  applyInitialBalances(a);
+  renderLedger();render();
   await saveOperatingState();
   await cloudSave();
   renderSessionSelectors();renderLedger();render();
@@ -686,6 +714,12 @@ async function selectPlanOpSession(kind,id){
   ensureLiveBoxes();planLinks[kind]=id||'';
   const box=kind==='inf'?liveState.inf:liveState.vr;
   if(id&&box.sessions.some(x=>x.id===id)){box.active=id;liveState.activeTab=kind;}
+  const sess=id?box.sessions.find(x=>x.id===id):null;
+  if(sess&&$('autoBalances')&&$('autoBalances').checked&&!(sess.hist||[]).length){
+    if(kind==='inf')setAutoBalanceField('balMM',+sess.settings?.principal||0,(sess.name||'SOXL')+' · 첫 거래 전 배정금');
+    else setAutoBalanceField('balVR',+sess.settings?.initAmt||0,(sess.name||'TQQQ VR')+' · 첫 거래 전 배정금');
+    render();
+  }
   await saveOperatingState();await cloudSave();renderSessionSelectors();await refreshLive();
 }
 async function selectSleeveSession(id){
@@ -859,7 +893,8 @@ function renderLedger(){
   const tr=[...(sleeveLedger.trades||[])].sort((a,b)=>String(b.date).localeCompare(String(a.date))||(b.id||0)-(a.id||0));
   $('slBody').innerHTML=tr.length?tr.map(t=>'<tr><td>'+t.date+'</td><td>'+t.symbol+'</td><td class="'+(t.side==='buy'?'pos':'neg')+'">'+(t.side==='buy'?'매수':'매도')+'</td><td>'+Number(t.qty).toLocaleString()+'</td><td>'+usd(t.price)+'</td><td>'+usd((+t.qty||0)*(+t.price||0))+'</td><td><button class="ledger-del" data-id="'+t.id+'">✕</button></td></tr>').join('')
     :'<tr><td colspan="7" style="text-align:center;color:var(--dim)">아직 기록 없음</td></tr>';
-  if(hasSession&&$('autoSleeve').checked&&ledgerReady()&&qp>0&&sp>0){
+  const quoteReady=(!c.qld||qp>0)&&(!c.sgov||sp>0);
+  if(hasSession&&$('autoSleeve').checked&&ledgerReady()&&quoteReady){
     $('balQLD').value=Math.round(qv);$('balSGOV').value=Math.round(sv+c.cash);
     $('balQLD').readOnly=true;$('balSGOV').readOnly=true;$('balQLD').classList.add('autofill');$('balSGOV').classList.add('autofill');
   }else{
@@ -940,8 +975,12 @@ async function refreshLive(){
       mirrorStrategyTab('soxlTabMeta','soxlTabActions',$('liveInfMeta').textContent,$('liveInf').innerHTML);
     }
     if(vr){
-      const r=vrOrders(vr,qv.settled.close),c=r.state,st=vr.settings||{},vrValue=c.pool+Math.max(0,c.qty)*qv.settled.close;
-      setAutoBalanceField('balVR',vrValue,(vr.name||'TQQQ VR')+' · '+qv.settled.date+' 종가 평가');
+      const r=vrOrders(vr,qv.settled.close),c=r.state,st=vr.settings||{};
+      const vrEmpty=!(Array.isArray(vr.hist)&&vr.hist.length) && !(c.qty>0) && !(c.V>0);
+      const vrValue=vrEmpty?(+st.initAmt||0):(c.pool+Math.max(0,c.qty)*qv.settled.close);
+      setAutoBalanceField('balVR',vrValue,vrEmpty
+        ? ((vr.name||'TQQQ VR')+' · 첫 매수 전 배정금')
+        : ((vr.name||'TQQQ VR')+' · '+qv.settled.date+' 종가 평가'));
       $('liveVrMeta').textContent=(vr.name||'TQQQ 세션')+' · G'+(st.g||10)+' / ±'+(st.band||15)+'% / '+(st.formula==='skill'?'실력':'기본')+' · V '+usd(c.V)+' · Pool '+usd(c.pool)+' · 운용자산 '+usd(vrValue);
       const immediate=r.orders.filter(o=>o.tag!=='예약'),reserve=r.orders.filter(o=>o.tag==='예약');
       $('liveVr').innerHTML=(immediate.length?immediate.map(orderHtml).join(''):waitHtml('즉시 매매 없음','현재 평가금이 VR 밴드 안입니다.'))+(reserve.length?reserve.slice(0,2).map(orderHtml).join(''):'')+waitHtml(r.note);
