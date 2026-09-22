@@ -3180,9 +3180,7 @@ function runVR(days,tkr,params){
     if(isCyc && !first){
       const cv=shares*c;
       const addCycle=isAccum?contrib:isWd?-withdraw:0;
-      if(formula==='skill'&&V>0) V=V+pool/G+(cv-V)/(2*Math.sqrt(G))+addCycle;
-      else V=V+pool/G+addCycle;
-      V=Math.max(V,0);
+      V=vrNextVValue(V,pool,G,cv,formula,addCycle);
       if(isAccum){pool+=contrib;inv+=contrib;cf.push([d,contrib]);}
       else if(isWd){const wd=Math.min(withdraw,pool);pool-=wd;totalWd+=wd;}
       /* 새 사이클의 한도 기준 Pool은 적립/인출을 반영한 직후 금액이다. */
