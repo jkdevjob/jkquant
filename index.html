@@ -524,7 +524,7 @@ try{ if(localStorage.getItem('qcockpit_hadUser')==='1') document.documentElement
 </div>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.75</span></h1></div>
+    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.76</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -1612,7 +1612,7 @@ document.addEventListener('click',function(e){ var m=document.getElementById('jk
   <footer>
     <strong>JK 퀀트</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.75</b> · 2026-09-21</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.76</b> · 2026-09-21</div>
   </footer>
 </div>
 
@@ -1634,7 +1634,8 @@ document.addEventListener('click',function(e){ var m=document.getElementById('jk
     <div class="seclabel">종목 (티커) <span class="hint" style="color:var(--faint);font-weight:500">6자리 코드면 국내 — 통화가 원화로 바뀝니다</span></div><div class="field tkwrap" style="margin:0 0 8px"><input id="set_ticker_in" type="text" autocomplete="off" spellcheck="false" placeholder="티커를 입력하세요 — 예: SOXL, TQQQ, 423920" oninput="tkSearch('set_ticker_in')" onfocus="tkSearch('set_ticker_in')" onblur="tkBlur('set_ticker_in')" onchange="onInfTickerChange()"><div class="tklist" id="set_ticker_in_list"></div></div>
     <p class="note" style="margin:-2px 0 8px">TQQQ·SOXL만 라오어 공식. <b>TECL·KORU는 비공식</b>(자체 백테스트). 종목을 고르면 <b>검정으로 확인된 권장 엔진·파라미터가 자동 적용</b>됩니다. 익절%를 바꾸면 별지점·리버스 복귀조건도 함께 바뀝니다.</p>
     <div class="seclabel">분배금 <span class="hint" style="color:var(--faint);font-weight:500">현금 수령은 단리 인출과 같은 취급</span></div><div class="seg" id="set_infdivmode"><button data-v="reinv" class="on">재투자</button><button data-v="cash">현금 수령</button></div>
-    <div class="seclabel">분할 수</div><div class="seg" id="set_div"><button data-v="10">10분할</button><button data-v="20">20분할</button><button data-v="30">30분할</button><button data-v="40">40분할</button></div>
+    <div class="seclabel">분할 수</div><div class="seg" id="set_div" onclick="onDivChange()"><button data-v="10">10분할</button><button data-v="20">20분할</button><button data-v="30">30분할</button><button data-v="40">40분할</button></div>
+    <div id="set_rev_note" style="font-size:11px;color:var(--gold);margin:-4px 0 6px"></div>
     <div class="seclabel">익절금 처리 <span class="hint" style="color:var(--faint);font-weight:500">사이클이 끝났을 때</span></div>
     <div class="seg" id="set_compound"><button data-v="1" class="on">복리</button><button data-v="0">단리</button></div>
     <p class="note" style="margin:4px 0 8px"><b>복리</b>는 익절금을 잔금에 남겨 다음 회차 매수금이 커집니다. <b>단리</b>는 사이클이 끝날 때 <b>원금을 넘는 초과분만 빼내</b> 따로 쌓아 두고, 잔금은 원금으로 되돌립니다. 손실로 끝난 사이클은 빼지 않고 그대로 이월합니다.</p>
@@ -2224,7 +2225,7 @@ function computeInf(){
      T로 매번 재판정하지 않는 이유는 그대로다 — 첫 MOC매도로 T가 분할−1 밑으로
      떨어져 리버스가 즉시 풀려 버리므로 상태로 들고 간다. */
   let revState='NORMAL';
-  const revEnter=()=>{ if(st.reverse===true && revState==='NORMAL' && qty>1e-9 && (st.div-T)<1) revState='DAY1'; };
+  const revEnter=()=>{ if(st.reverse===true && revSupported(st.div) && revState==='NORMAL' && qty>1e-9 && (st.div-T)<1) revState='DAY1'; };
   const rows=hist.map(h=>{
     let profit=0;
     const Tbefore=T;
@@ -2384,6 +2385,12 @@ function fmtT(t){
    백테 backtest.html 의 IM_OFFICIAL 과 같은 값이어야 한다. 한쪽만 고치면
    앱이 권하는 익절%와 백테가 돌린 익절%가 갈려 백테 숫자가 앱의 숫자가 아니게 된다. */
 const IM_OFFICIAL={TQQQ:15, SOXL:20};
+/* 리버스 규칙(무한매도 보유÷N · T 갱신 배율)이 문서에 실린 분할수는 20·40 둘뿐이다.
+   10·30분할에는 그 값이 정의돼 있지 않은데, 예전엔 'div>=40 이 아니면 20분할 규칙'
+   으로 갈라 10·30분할이 20분할 값을 그대로 썼다 — 근거 없는 값을 공식처럼 돌린 셈이다.
+   백테 REV_DIVS 와 같은 목록이어야 한다. */
+const REV_DIVS=[20,40];
+function revSupported(div){ return REV_DIVS.includes(+div); }
 
 // ★ 통합 규약: 별%base = 익절%(설정값). slope = base×0.1×(20/div).
 //   문서 4케이스 재현: TQQQ 15%→20분할 1.5·40분할 0.75 / SOXL 20%→2.0·1.0
@@ -2419,6 +2426,18 @@ function bestTgt(tkr, eng){
   return tbl[tkr]!==undefined ? tbl[tkr] : (IM_OFFICIAL[tkr]||20);
 }
 // 설정창 익절% 옆 힌트: 현재 종목·엔진의 권장값(+공식값 병기)
+/* 리버스 규칙이 없는 분할(10·30)에서는 설정의 리버스 세그를 잠근다 —
+   켜 봐도 computeInf 가 무시하므로 켜진 것처럼 보이게 두면 화면이 거짓말을 한다 */
+// 세그의 기본 클릭 처리(.on 토글)가 끝난 뒤에 읽어야 새 분할수가 잡힌다
+function onDivChange(){ setTimeout(syncRevSeg,0); }
+function syncRevSeg(){
+  const el=$('set_reverse'); if(!el) return;
+  const d=+(segGet('set_div')||20), on=revSupported(d);
+  el.style.opacity=on?'1':'0.4'; el.style.pointerEvents=on?'':'none';
+  if(!on) segSet('set_reverse','0');
+  const n=$('set_rev_note');
+  if(n) n.textContent = on ? '' : `⚠ ${d}분할은 리버스 규칙이 문서에 없어 적용하지 않습니다 (20·40분할만)`;
+}
 function syncTgtNote(){
   const el=$('target_hint'); if(!el) return;
   const tk=(typeof tkVal==='function' ? tkVal('set_ticker_in','SOXL') : 'SOXL');
@@ -3494,7 +3513,17 @@ function computeVr(){
           netInvested,grossIn,realized,flows,recov,curCyc,cycStartPool,cycTrade,cycTradeNet,cycDiv,hist};
 }
 
-const CYC_DAYS=14;   // 한 사이클 = 2주(달력 14일 ≒ 거래일 10일, 백테 INTERVAL과 같음)
+const CYC_DAYS=14;   // 한 사이클 = 2주(달력 14일). 백테 VR_CYC_DAYS 와 같은 값이어야 한다 —
+                     // 거래일 10일로 세면 휴장이 낄 때마다 어긋나 6년에 150회 vs 156회가 된다.
+/* 다음 사이클 기준일 — 직전 기준일 + 14일, 주말이면 다음 영업일.
+   거래일 10일은 늘 14일이 아니다(휴장이 끼면 어긋난다). 백테 _vrNextDue 와 같은 식. */
+function vrNextDue(s){
+  const t=new Date(s+'T00:00:00Z');
+  t.setUTCDate(t.getUTCDate()+CYC_DAYS);
+  while(t.getUTCDay()===0||t.getUTCDay()===6) t.setUTCDate(t.getUTCDate()+1);
+  return t.toISOString().slice(0,10);
+}
+
 /* 이번 사이클이 언제 시작됐나.
    설정 cycStart가 우선이고, 없으면 이력에서 되찾는다 —
    첫 매수만 하고 아직 한 번도 '다음 사이클 진입'을 안 누른 계좌도 D-day가 나와야 한다. */
@@ -3508,11 +3537,13 @@ function vrCycStart(c){
 /* 다음 사이클 진입일까지 며칠 남았나 (주말이면 다음 영업일로 미룬다) */
 function vrDue(c){
   const s=vrCycStart(c); if(!s) return null;
-  const due=new Date(s+'T00:00:00'); due.setDate(due.getDate()+CYC_DAYS);
-  while(due.getDay()===0||due.getDay()===6) due.setDate(due.getDate()+1);
+  // 기준일 계산은 vrNextDue 한 곳뿐 — 예전엔 여기서 지역시각으로 따로 세어
+  // 시간대에 따라 재생·모의체결과 하루 어긋날 수 있었다
+  const dueStr=vrNextDue(s);
+  const due=new Date(dueStr+'T00:00:00');
   const t=new Date(); t.setHours(0,0,0,0);
   const d=Math.round((due-t)/864e5);
-  return {start:s, dueStr:due.toISOString().slice(0,10), d,
+  return {start:s, dueStr, d,
     label: d>0?`D-${d}`:(d===0?'오늘 진입일':`D+${-d}`),
     state: d>0?'wait':(d===0?'due':'late')};
 }
@@ -7062,6 +7093,48 @@ function vrAutoAdvance(){
   } finally { _vrAutoBusy=false; }
   return n;
 }
+/* ════════ VR 체결 엔진 (공용) ════════
+   같은 전략을 세 군데가 각자 구현하면 시간이 지나면서 반드시 갈라진다 —
+   실제로 백테는 예약주문 사다리로 고쳤는데 과거 재생만 옛 '10거래일 종가 리밸런싱'
+   으로 남아, 같은 종목·같은 설정인데 두 화면의 결과가 달랐다.
+   그래서 '기준일 계산'과 '사다리 체결' 두 가지를 여기 한 번만 적고
+   과거 재생(vrReplay)·모의 체결(vrSimForward)·백테(runVR)가 모두 이 규칙을 쓴다. */
+
+/* 하루치 사다리 체결. 사이클 첫날 걸어 둔 매수·매도표가 2주 내내 살아 있고,
+   그날 고가·저가에 닿은 차수만 1주씩 체결된다.
+     매도 k차 = 상단 ÷ 매도 전 보유수량   → 고가 ≥ 그 값이면 1주
+     매수 k차 = 하단 ÷ 매수 전 보유수량   → 저가 ≤ 그 값이면 1주
+   하루 매수 한도 = 그날 시작 Pool × 모드한도(적립75·거치50·인출25%).
+   매도를 먼저 도는 것도 규약이다 — 판 돈이 그날 매수 재원이 된다.
+   S={shares,pool,avg} 를 직접 고치고, 체결된 차수를 돌려준다. FEE 는 부르는 쪽 규약. */
+function vrLadder(S, P, bar){
+  const out=[];
+  if(!(S.V>0)) return out;
+  const up=S.V*(1+P.band), dn=S.V*(1-P.band);
+  const FEE=P.FEE||0, fee1=1+FEE;
+  const budget=Math.max(0, S.pool*P.poolLimit);
+  let spent=0;
+  const hi=bar.high>0?bar.high:bar.close, lo=bar.low>0?bar.low:bar.close;
+  for(let k=0;k<400;k++){
+    const q=Math.floor(S.shares+1e-9); if(q<1) break;
+    const p=up/q; if(!(hi>=p)) break;
+    const net=p*(1-FEE);
+    S.shares-=1; S.pool+=net;
+    out.push({type:'sell', price:p, net});
+  }
+  for(let k=0;k<400;k++){
+    const q=Math.floor(S.shares+1e-9); if(q<1) break;
+    const p=dn/q; if(!(lo<=p)) break;
+    const cost=p*fee1;
+    if(spent+cost>budget+1e-9) break;      // Pool 한도 소진
+    if(cost>S.pool+1e-9) break;            // 현금 부족
+    S.avg=(S.shares<=0)?p:(S.shares*S.avg+p)/(S.shares+1);
+    S.shares+=1; S.pool-=cost; spent+=cost;
+    out.push({type:'buy', price:p, cost});
+  }
+  return out;
+}
+
 /* ── 모의 체결 — 오늘까지 앞으로 굴리기 ──
    실전에서는 사이클 첫날 매수·매도표를 지정가로 전부 걸어두고 닿는 것만 체결된다.
    모의로는 그 주문을 낼 곳이 없으니, 하루하루 고가·저가로 '닿았는지'를 판정해
@@ -7102,27 +7175,19 @@ function vrSimForward(){
       // 1) 진입일이 지났으면 V 갱신 (모의는 사람이 누르지 않으므로 항상 자동)
       for(let g=0; g<10; g++){
         c=computeVr(); const cs=vrCycStart(c); if(!cs) break;
-        const due=new Date(cs+'T00:00:00'); due.setDate(due.getDate()+CYC_DAYS);
-        while(due.getDay()===0||due.getDay()===6) due.setDate(due.getDate()+1);
-        const ds=due.toISOString().slice(0,10);
+        const ds=vrNextDue(cs);          // 과거 재생·백테와 같은 식
         if(row.date < ds) break;
         vrStepCycle(sess, c, ds, row.close); nCyc++;
       }
-      // 2) 사다리 체결 — 매도 먼저(현금 확보) → 매수 (백테와 같은 순서)
+      // 2) 사다리 체결 — 공용 엔진(vrLadder). 과거 재생·백테와 글자 그대로 같은 규칙
       c=computeVr();
-      let qty=Math.floor(c.qty), pool=c.pool, up=c.up, lo=c.lo, cyc=c.curCyc;
-      const budget=Math.max(0, pool*(st.mode||0.75));     // 그날 매수 한도
-      let spent=0;
-      const push=(type,price)=>{ sess.hist.push({type,date:row.date,price:+price.toFixed(4),qty:1,
-        cyc, sim:true, ts:Date.now()+(seq++)}); };
-      for(let k=0;k<300 && qty>=1;k++){                   // 매도: 오를수록 다음 차수가 더 높다
-        const p=up/qty; if(!(row.high>=p)) break;
-        push('sell',p); pool+=p; qty-=1; nSell++;
-      }
-      for(let k=0;k<300 && qty>=1;k++){                   // 매수: 내릴수록 다음 차수가 더 낮다
-        const p=lo/qty; if(!(row.low<=p)) break;
-        if(spent+p>budget+1e-9) break;                    // Pool 한도 소진
-        push('buy',p); pool-=p; spent+=p; qty+=1; nBuy++;
+      const cyc=c.curCyc;
+      const St={shares:Math.floor(c.qty), pool:c.pool, avg:c.avg||0, V:c.V};
+      const fills=vrLadder(St, {band:(st.band||15)/100, poolLimit:(st.mode||0.75), FEE:0}, row);
+      for(const f of fills){
+        sess.hist.push({type:f.type, date:row.date, price:+f.price.toFixed(4), qty:1,
+          cyc, sim:true, ts:Date.now()+(seq++)});
+        if(f.type==='sell') nSell++; else nBuy++;
       }
       st.simLast=row.date;
     }
@@ -7156,7 +7221,9 @@ function refreshVr(){
 
 let editVrIdx=-1;
 // ── 모의투자: 밸류리밸런싱 과거 재생 ──
-// 백테 runVR과 같은 규약: 10거래일마다 V를 갱신(V += pool/G + 적립)하고 밴드 밖이면 V로 되맞춘다.
+/* 백테 runVR·모의체결 vrSimForward 와 같은 규약:
+   사이클은 달력 14일(vrNextDue)마다 V 갱신(V += Pool/G ± 적립), 체결은 걸어 둔
+   매수·매도표가 그날 고가·저가에 닿았는지로 판정한다(vrLadder). */
 function vrReplay(){
   const sess=curStrat(), st=sess.settings;
   if(!sess.paper && !confirm('이 세션은 모의투자로 표시돼 있지 않습니다.\n실전 계좌라면 기록이 뒤섞입니다.\n\n그래도 진행할까요?')) return;
@@ -7174,7 +7241,7 @@ function vrReplay(){
   const contrib=+st.add||0, formula=st.formula||'basic';
   const isAccum=(mode===0.75), isWd=(mode===0.25), withdraw=isWd?contrib:0;
   const FEE=(typeof IVS_FEE!=='undefined')?IVS_FEE:0.0025;
-  const INTERVAL=10, poolLimit=mode;
+  const poolLimit=mode;
   // 재생을 다시 돌릴 때 지난 재생이 남긴 startv를 '이어받기'로 오해하면 안 된다 —
   // 사용자가 손으로 넣은 시작V(모의 기록이 하나도 없을 때)만 이어받기로 본다.
   const carry=(+st.startv>0) && !(sess.hist||[]).some(h=>h.sim);
@@ -7192,42 +7259,61 @@ function vrReplay(){
     const c0=D[0].close; shares=V/c0; avg=c0;
     rec.push({type:'buy',date:D[0].date,price:+c0,qty:+shares.toFixed(6),cyc:0,sim:true,ts:rec.length+1});
   }
-  const _buy=(amt,c,d)=>{ if(!(amt>0))return; const fee=amt*FEE, net=amt-fee, qy=net/c;
-    avg=(shares<=0)?c:(shares*avg+net)/(shares+qy); shares+=qy;
-    rec.push({type:'buy',date:d,price:+(amt/qy).toFixed(6),qty:+qy.toFixed(6),cyc,sim:true,ts:rec.length+1}); };
-  const _sell=(gross,c,d)=>{ if(!(gross>0))return 0; const qy=Math.min(shares,gross/c), net=qy*c*(1-FEE);
-    shares-=qy; rec.push({type:'sell',date:d,price:+(net/qy).toFixed(6),qty:+qy.toFixed(6),cyc,sim:true,ts:rec.length+1});
-    return net; };
+  /* 정수 주수 매수 — 실제로 나간 돈을 돌려준다 (백테 _vbuy 와 같은 규약).
+     못 산 잔돈은 부르는 쪽이 Pool 에 남긴다 — 배정액을 그대로 빼면 잔돈이 증발한다. */
+  const _buyInt=(amt,c,d)=>{ const q=Math.floor(amt/(1+FEE)/c); if(!(q>0)) return 0;
+    const spend=q*c, fee=spend*FEE;
+    avg=(shares<=0)?c:(shares*avg+spend)/(shares+q); shares+=q;
+    rec.push({type:'buy',date:d,price:+c.toFixed(6),qty:q,cyc,sim:true,ts:rec.length+1});
+    return spend+fee; };
+  /* 하루씩 굴린다 — 백테 runVR·모의체결 vrSimForward 와 같은 규약.
+     예전엔 여기만 '10거래일마다 그날 종가에 V로 되맞춤' 이었다. 같은 종목·같은 설정인데
+     과거 재생과 백테 결과가 달랐던 이유다. 사이클은 달력 14일, 체결은 예약주문 사다리다. */
+  let due=null;
   D.forEach((row,i)=>{
-    if(i%INTERVAL!==0) return;
     const c=row.close, d=row.date; if(!(c>0)) return;
     if(first){
-      // 첫 매수 = 초기 투자금. add 기록을 따로 남기지 않는다 —
-      // computeVr는 '이력 첫 buy = 밖에서 들어온 초기 투입'으로 보고 Pool을 깎지 않으므로,
-      // add까지 넣으면 Pool과 총투입이 이중 계상된다.
-      _buy(st.initAmt!=null?+st.initAmt:10000, c, d); V=shares*c;
-      first=false; cycStartPool=pool; cycTrade=0; cycStartDate=d; return;
+      /* 첫 매수 = 초기 투입. 백테 runVR 의 first 분기와 글자 그대로 같아야 한다 —
+         정수 주수로 사고(예전엔 소수점 주수라 백테와 첫 거래부터 어긋났다),
+         못 산 잔돈은 Pool 에 남기며, 적립식은 initAmt 가 아니라 'Pool+적립금' 으로 산다.
+         add 기록을 따로 남기지 않는 이유는 그대로다 — computeVr 는 '이력 첫 buy =
+         밖에서 들어온 초기 투입' 으로 보고 Pool 을 깎지 않으므로 이중 계상이 된다. */
+      if(isAccum){ pool+=contrib; pool-=_buyInt(pool,c,d); }
+      else { const amt=st.initAmt!=null?+st.initAmt:10000; pool+=amt-_buyInt(amt,c,d); }
+      V=shares*c;
+      first=false; cycStartPool=pool; cycTrade=0; cycStartDate=d; due=vrNextDue(d); return;
     }
-    // 직전 사이클 마감 기록
-    cycLog.push({cyc, dates:`${md(cycStartDate)}~${md(d)}`, V:+V.toFixed(2),
-      lo:+(V*(1-band)).toFixed(2), up:+(V*(1+band)).toFixed(2),
-      trade:+cycTrade.toFixed(2), startPool:+cycStartPool.toFixed(2),
-      E:+(shares*c).toFixed(2), close:+c.toFixed(4)});
-    const cv=shares*c, addCycle=isAccum?contrib:isWd?-withdraw:0;
-    if(formula==='skill'&&V>0) V=V+pool/G+(cv-V)/(2*Math.sqrt(G))+addCycle;
-    else V=V+pool/G+addCycle;
-    V=Math.max(V,0);
-    cyc++; cycStartPool=pool; cycTrade=0; cycStartDate=d;
-    if(isAccum){ pool+=contrib; rec.push({type:'add',date:d,amt:+contrib,cyc,sim:true,ts:rec.length+1}); }
-    else if(isWd){ const wd=Math.min(withdraw,pool); pool-=wd; totalWd+=wd;
-      if(wd>0) rec.push({type:'wd',date:d,amt:+wd,cyc,sim:true,ts:rec.length+1}); }
-    const up=V*(1+band), lo=V*(1-band), cv2=shares*c;
-    if(cv2>up){ const got=_sell(cv2-V,c,d); pool+=got; cycTrade+=got; }
-    else if(cv2<lo){ const use=Math.min(V-cv2,pool*poolLimit); if(use>0){ _buy(use,c,d); pool-=use; cycTrade-=use; } }
+    // ① 기준일이 지났으면 사이클 넘김 (달력 14일 · 주말이면 다음 영업일)
+    let guard=0;
+    while(due && d>=due && guard++<10){
+      cycLog.push({cyc, dates:`${md(cycStartDate)}~${md(d)}`, V:+V.toFixed(2),
+        lo:+(V*(1-band)).toFixed(2), up:+(V*(1+band)).toFixed(2),
+        trade:+cycTrade.toFixed(2), startPool:+cycStartPool.toFixed(2),
+        E:+(shares*c).toFixed(2), close:+c.toFixed(4)});
+      const cv=shares*c, addCycle=isAccum?contrib:isWd?-withdraw:0;
+      if(formula==='skill'&&V>0) V=V+pool/G+(cv-V)/(2*Math.sqrt(G))+addCycle;
+      else V=V+pool/G+addCycle;
+      V=Math.max(V,0);
+      cyc++; cycStartPool=pool; cycTrade=0; cycStartDate=d;
+      if(isAccum){ pool+=contrib; rec.push({type:'add',date:d,amt:+contrib,cyc,sim:true,ts:rec.length+1}); }
+      else if(isWd){ const wd=Math.min(withdraw,pool); pool-=wd; totalWd+=wd;
+        if(wd>0) rec.push({type:'wd',date:d,amt:+wd,cyc,sim:true,ts:rec.length+1}); }
+      due=vrNextDue(due);
+    }
+    // ② 걸어 둔 매수·매도표 체결 — 공용 엔진(vrLadder)
+    const St={shares:Math.floor(shares+1e-9), pool, avg, V};
+    const fills=vrLadder(St, {band, poolLimit, FEE}, row);
+    for(const f of fills){
+      if(f.type==='sell'){ pool+=f.net; cycTrade+=f.net;
+        rec.push({type:'sell',date:d,price:+f.price.toFixed(6),qty:1,cyc,sim:true,ts:rec.length+1}); }
+      else { pool-=f.cost; cycTrade-=f.cost;
+        rec.push({type:'buy',date:d,price:+f.price.toFixed(6),qty:1,cyc,sim:true,ts:rec.length+1}); }
+    }
+    shares=St.shares; avg=St.avg;
   });
   const lastPx=D[D.length-1].close, fin=shares*lastPx+pool+totalWd;
   const yrs=(new Date(D[D.length-1].date)-new Date(D[0].date))/(365.25*864e5);
-  const base=(st.initAmt!=null?+st.initAmt:10000)+(isAccum?contrib*Math.floor(D.length/INTERVAL):0);
+  const base=(st.initAmt!=null?+st.initAmt:10000)+(isAccum?contrib*cyc:0);
   const cagr=yrs>0?(Math.pow(Math.max(fin,1e-9)/Math.max(base,1),1/yrs)-1)*100:0;
   const nTrade=rec.filter(r=>r.type==='buy'||r.type==='sell').length;
   if(!confirm(`${from} ~ ${D[D.length-1].date} (${yrs.toFixed(1)}년) 재생 완료\n\n매매 ${nTrade}건\n총투입 ${px(base)} → ${px(fin)}\nCAGR ${cagr>=0?'+':''}${cagr.toFixed(1)}%\n\n※ 양도세는 넣지 않았습니다.\n\n이 기록으로 채울까요?`)) return;
@@ -8015,7 +8101,7 @@ function openSettings(){
   }else if(S.activeTab==='inf'){
     $('set_inf').style.display='';$('set_vr').style.display='none';
     const st=s.settings, sym=isKrwSt(st)?'₩':'$';
-    $('set_ticker_in').value=st.ticker||'SOXL';segSet('set_div',String(st.div));segSet('set_infdivmode',st.divmode||'reinv');segSet('set_engine',st.engine||'v40');segSet('set_shortma',String(st.shortMA||30));segSet('set_lopct',String(st.loPct||6));segSet('set_reverse',st.reverse===true?'1':'0');segSet('set_compound',st.compound===false?'0':'1');segSet('set_tgtdyn',st.tgtDyn===true?'1':'0');syncShortMaUI(st.engine||'v40');syncTgtNote();
+    $('set_ticker_in').value=st.ticker||'SOXL';segSet('set_div',String(st.div));segSet('set_infdivmode',st.divmode||'reinv');segSet('set_engine',st.engine||'v40');segSet('set_shortma',String(st.shortMA||30));segSet('set_lopct',String(st.loPct||6));segSet('set_reverse',st.reverse===true?'1':'0');segSet('set_compound',st.compound===false?'0':'1');segSet('set_tgtdyn',st.tgtDyn===true?'1':'0');syncShortMaUI(st.engine||'v40');syncTgtNote();syncRevSeg();
     $('set_target').value=st.target;$('set_big').value=st.big;$('set_principal').value=nfix(st.principal,0);
     if($('set_rows'))$('set_rows').value=st.rows!=null?st.rows:8;
     if($('set_gap'))$('set_gap').value=st.gap!=null?st.gap:2.5;

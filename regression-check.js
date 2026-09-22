@@ -69,6 +69,11 @@ const costSrc=(bt.match(/const COST_FEE=[\s\S]*?function capGainTax\([\s\S]*?\n\
 if(!costSrc) throw new Error('비용·세금 프로필(costOf/capGainTax)을 backtest.html에서 못 찾음');
 { const f=new Function(costSrc+'\nreturn {isKRW,krTaxRate,costOf,capGainTax};')();
   global.isKRW=f.isKRW; global.krTaxRate=f.krTaxRate; global.costOf=f.costOf; global.capGainTax=f.capGainTax; }
+/* 리버스 지원 분할 목록도 파일에서 그대로 떼어 온다 — 여기서 다시 적으면 어긋난다 */
+{ const m=bt.match(/const REV_DIVS=\[[^\]]*\];\s*\nconst revSupported=[^\n]*/);
+  if(!m) throw new Error('REV_DIVS/revSupported 를 backtest.html에서 못 찾음');
+  const f=new Function(m[0]+'\nreturn {REV_DIVS,revSupported};')();
+  global.REV_DIVS=f.REV_DIVS; global.revSupported=f.revSupported; }
 let btSrc=extractFn(bt,'function runIM(days,tkr,cap,divs,targetPct,compound')+'\n'+extractFn(bt,'function runVR(days,tkr,params)');
 function inject(before, after, label){
   const p=btSrc.split(before);
@@ -3185,15 +3190,27 @@ console.log('\n[69] VR 예약주문 — 앱 체결기와 같은 규칙');
   ok('예약주문이 기본이다', /let vrFill='ladder';/.test(bt) && /data-v="ladder" class="active"/.test(bt));
   ok('예전 종가 방식도 고를 수 있다', /data-v="close"/.test(bt) && /!== 'close'/.test(vsrc));
   // 차수 값이 같은 식인가 — 매도는 상단÷보유, 매수는 하단÷보유
-  ok('앱 매도 차수 = 상단 ÷ 보유', /const p=up\/qty; if\(!\(row\.high>=p\)\) break;/.test(app));
-  ok('앱 매수 차수 = 하단 ÷ 보유', /const p=lo\/qty; if\(!\(row\.low<=p\)\) break;/.test(app));
+  /* 앱 쪽 사다리는 이제 공용 함수 하나다 — 과거 재생·모의 체결이 둘 다 이걸 부른다.
+     예전엔 vrSimForward 안에 직접 적혀 있었고 vrReplay 는 아예 다른(옛) 방식이었다. */
+  const lad=extractFn(idx,'function vrLadder(S, P, bar)');
+  ok('앱 사다리가 공용 함수다', !!lad
+     && /function vrSimForward\(\)/.test(idx) && /vrLadder\(St, \{band:\(st\.band\|\|15\)\/100/.test(idx)
+     && /vrLadder\(St, \{band, poolLimit, FEE\}, row\)/.test(idx));
+  ok('앱 매도 차수 = 상단 ÷ 보유', /const p=up\/q; if\(!\(hi>=p\)\) break;/.test(lad));
+  ok('앱 매수 차수 = 하단 ÷ 보유', /const p=dn\/q; if\(!\(lo<=p\)\) break;/.test(lad));
   ok('백테 매도 차수도 같은 식', /const p=up\/q; if\(!\(hi>=p\)\) break;/.test(vsrc));
   ok('백테 매수 차수도 같은 식', /const p=dn\/q; if\(!\(lo2<=p\)\) break;/.test(vsrc));
   ok('둘 다 매도를 먼저 돈다 (판 돈이 그날 매수 재원)',
-     app.indexOf('row.high>=p') < app.indexOf('row.low<=p') && vsrc.indexOf('hi>=p') < vsrc.indexOf('lo2<=p'));
+     lad.indexOf('hi>=p') < lad.indexOf('lo<=p') && vsrc.indexOf('hi>=p') < vsrc.indexOf('lo2<=p'));
   ok('하루 매수 한도 = 그날 시작 Pool × 모드한도',
-     /const budget=Math\.max\(0, pool\*\(st\.mode\|\|0\.75\)\);/.test(app)
+     /const budget=Math\.max\(0, S\.pool\*P\.poolLimit\);/.test(lad)
      && /const budget=Math\.max\(0, pool\*poolLimit\)/.test(vsrc));
+  ok('과거 재생에 옛 10거래일 방식이 안 남아 있다',
+     !/INTERVAL=10/.test(idx) && !/i%INTERVAL!==0/.test(idx));
+  ok('앱·백테 사이클 길이가 같다',
+     (idx.match(/const CYC_DAYS=(\d+);/)||[])[1] === (vsrc.match(/const VR_CYC_DAYS=(\d+);/)||[])[1]);
+  ok('앱 기준일 계산도 공용 함수', /function vrNextDue\(s\)/.test(idx)
+     && (idx.match(/vrNextDue\(/g)||[]).length>=4);
 
   /* 말이 아니라 값으로 — 같은 (상단·하단·보유·고가·저가·한도)를 주고
      앱 규칙과 백테 사다리가 같은 체결을 내는지 맞춰 본다. */
@@ -3573,6 +3590,140 @@ console.log('\n[72] 리버스 — 상태머신·별지점·gap');
      /if\(revOn && !inRev && \(st\.div-c\.T\)<1 && c\.qty>0\)\{ inRev=true; revDay1=true; \}/.test(idx)
      && /const day1=revDay1; revDay1=false;/.test(idx));
   ok('옛 reverseTraded 추론이 사라졌다', !/reverseTraded/.test(idx) && !/inReverseNow/.test(idx));
+}
+
+/* ════ 73. VR — 백테와 과거 재생이 같은 거래를 내는가 ════
+   같은 전략을 두 군데가 각자 구현하면 반드시 갈라진다. 실제로 백테는 예약주문 사다리로
+   고쳤는데 과거 재생만 옛 '10거래일 종가 리밸런싱' 으로 남아, 같은 종목·같은 설정인데
+   두 화면의 결과가 달랐다. 이제 둘 다 vrLadder·vrNextDue 를 쓴다 — 값으로 확인한다.
+   비교: V 갱신 날짜 · 체결 날짜 · 매수/매도 · 체결가 · 수량 · Pool · 보유수량 · 최종 평가금. */
+console.log('\n[73] VR — 백테 == 과거 재생 (거래 로그 대조)');
+{
+  const T=DAYS.SOXL?'SOXL':'TQQQ', D0=DAYS[T];
+  ok('대조에 쓸 데이터가 있다', !!D0 && D0.length>300);
+  if(D0){
+    // ── 앱 쪽: 공용 엔진(vrLadder·vrNextDue)만 떼어 과거 재생과 같은 순서로 굴린다
+    const lad=extractFn(idx,'function vrLadder(S, P, bar)');
+    const nx =extractFn(idx,'function vrNextDue(s)');
+    const cyc=(idx.match(/const CYC_DAYS=(\d+);/)||[])[1];
+    const appEng=new Function('CYC_DAYS', nx+'\n'+lad+'\nreturn {vrLadder,vrNextDue};')(+cyc);
+    const appRun=(days, P)=>{
+      let shares=0, pool=P.startPool||0, V=0, avg=0, totalWd=0, cycN=0, due=null, first=true;
+      const log=[], cycDates=[];
+      for(const d of days){
+        const bar={date:d, close:M[T][d][C], high:M[T][d][HI], low:M[T][d][LO]};
+        if(!(bar.close>0)) continue;
+        if(first){
+          // vrReplay 의 first 분기와 같은 순서 — 적립식은 initAmt 가 아니라 'Pool+적립금' 으로 산다
+          const buyInt=(amt)=>{ const q=Math.floor(amt/(1+P.FEE)/bar.close); if(!(q>0)) return 0;
+            const spend=q*bar.close, fee=spend*P.FEE;
+            avg=bar.close; shares+=q; return spend+fee; };
+          if(P.mode===0.75){ pool+=P.contrib; pool-=buyInt(pool); }
+          else { pool+=P.initAmt-buyInt(P.initAmt); }
+          V=shares*bar.close; first=false; due=appEng.vrNextDue(d); continue;
+        }
+        let g=0;
+        while(due && d>=due && g++<10){
+          const cv=shares*bar.close, add=P.mode===0.75?P.contrib:P.mode===0.25?-P.withdraw:0;
+          V=(P.formula==='skill'&&V>0)? V+pool/P.G+(cv-V)/(2*Math.sqrt(P.G))+add : V+pool/P.G+add;
+          V=Math.max(V,0);
+          if(P.mode===0.75) pool+=P.contrib;
+          else if(P.mode===0.25){ const wd=Math.min(P.withdraw,pool); pool-=wd; totalWd+=wd; }
+          cycN++; cycDates.push(d); due=appEng.vrNextDue(due);
+        }
+        const St={shares:Math.floor(shares+1e-9), pool, avg, V};
+        const fills=appEng.vrLadder(St, {band:P.band, poolLimit:P.mode, FEE:P.FEE}, bar);
+        for(const f of fills){
+          if(f.type==='sell') pool+=f.net; else pool-=f.cost;
+          log.push(`${d} ${f.type} ${f.price.toFixed(6)} x1`);
+        }
+        shares=St.shares; avg=St.avg;
+      }
+      const lc=M[T][days[days.length-1]][C];
+      return {log, cycDates, pool, shares, fin:shares*lc+pool+totalWd, cycN};
+    };
+    // ── 백테 쪽: runVR 에 같은 훅을 넣어 거래 로그를 받아 낸다
+    let vsrc2=extractFn(bt,'function runVR(days,tkr,params)');
+    const h1='pool+=_vsellQ(1,p); sells++;', h2='pool-=_vbuyQ(1,p); spent+=cost; buys++;';
+    const h3='if(isCyc){\n      if(first){';
+    ok('백테 훅 자리 확인', vsrc2.includes(h1)&&vsrc2.includes(h2)&&vsrc2.includes(h3));
+    // _ladder 안에는 날짜가 없다 — 부르기 직전에 넣어 준다
+    const h4='if(LADDER && !first){ const row=M[tkr][d];';
+    ok('날짜 훅 자리 확인', vsrc2.includes(h4));
+    vsrc2=vsrc2.replace(h1, "__VLOG('sell',p); "+h1)
+               .replace(h2, "__VLOG('buy',p); "+h2)
+               .replace(h3, "if(isCyc){ if(!first) __VCYC(d);\n      if(first){")
+               .replace(h4, "if(LADDER && !first){ __VDAY=d; const row=M[tkr][d];");
+    let blog=[], bcyc=[];
+    global.__VDAY='';
+    global.__VLOG=(t2,p)=>blog.push(`${global.__VDAY} ${t2} ${p.toFixed(6)} x1`);
+    global.__VCYC=d=>bcyc.push(d);
+    const btRun=new Function('return ('+vsrc2.replace(/^function \w+\(/,'function (')+')')();
+
+    let bad=null, checked=0;
+    for(const [mode,nm] of [[0.5,'거치'],[0.75,'적립'],[0.25,'인출']])
+    for(const formula of ['basic','skill']){
+      const P={initAmt:10000, contrib:mode===0.75?80:0, withdraw:mode===0.25?50:0,
+               G:10, band:0.15, mode, formula, FEE:0, startPool:mode===0.5?0:10000};
+      blog=[]; bcyc=[];
+      const b=btRun(D0, T, {initAmt:P.initAmt, contrib:P.contrib, withdraw:P.withdraw, G:P.G,
+        bandPct:15, mode, formula, startV:0, startPool:P.startPool, costOn:false, fill:'ladder'});
+      const a=appRun(D0, P);
+      checked++;
+      const cmp=[
+        ['V 갱신 날짜', JSON.stringify(a.cycDates), JSON.stringify(bcyc)],
+        ['거래 로그',   JSON.stringify(a.log),      JSON.stringify(blog)],
+        ['보유수량',    a.shares.toFixed(6),        b.shares.toFixed(6)],
+        ['Pool',        a.pool.toFixed(4),          b.pool.toFixed(4)],
+        ['최종 평가금', a.fin.toFixed(4),           b.final.toFixed(4)],
+      ];
+      for(const [what,x,y] of cmp){
+        if(x!==y && !bad){
+          const dx=(()=>{ try{ const A=JSON.parse(x),B=JSON.parse(y);
+            if(Array.isArray(A)){ for(let i=0;i<Math.max(A.length,B.length);i++)
+              if(A[i]!==B[i]) return `${i}번째: 앱 ${A[i]} / 백테 ${B[i]} (앱 ${A.length}건 · 백테 ${B.length}건)`; }
+          }catch(e){} return `앱 ${x} / 백테 ${y}`; })();
+          bad=`${nm}·${formula} ${what} — ${dx}`;
+        }
+      }
+    }
+    ok('여섯 조합을 실제로 돌렸다', checked===6, String(checked));
+    ok('백테와 과거 재생이 같은 거래를 낸다', !bad, bad||'');
+    delete global.__VLOG; delete global.__VCYC; delete global.__VDAY;
+  }
+}
+
+/* ════ 74. 리버스는 규칙이 있는 분할에서만 ════
+   문서에 실린 리버스 규칙은 20분할(보유÷10·T×0.9)과 40분할(보유÷20·T×0.95) 둘뿐이다.
+   예전엔 'div>=40 이 아니면 20분할 규칙' 이라 10·30분할이 20분할 값을 그대로 썼다 —
+   근거 없는 값을 공식 전략처럼 돌린 셈이다. */
+console.log('\n[74] 리버스 — 규칙이 있는 분할(20·40)에서만');
+{
+  ok('앱·백테가 같은 목록을 쓴다',
+     JSON.stringify(REV_DIVS)==='[20,40]'
+     && /const REV_DIVS=\[20,40\];/.test(idx) && /const REV_DIVS=\[20,40\];/.test(bt));
+  ok('백테 두 엔진이 분할수를 본다',
+     (bt.match(/&&imReverse&&revSupported\(divs\);/g)||[]).length===2);
+  ok('앱 진입 판정도 분할수를 본다',
+     /revSupported\(st\.div\) && revState==='NORMAL'/.test(idx));
+  ok('규칙 없는 분할이면 화면에서도 잠근다',
+     /function syncRevSeg\(\)/.test(idx) && /function syncRevUI\(\)/.test(bt)
+     && /리버스 규칙이 문서에 없어 적용하지 않습니다/.test(idx)
+     && /리버스 규칙이 문서에 없어 적용하지 않습니다/.test(bt));
+  ok('변형 표시에도 이유가 뜬다', /분할\(리버스 규칙 미수록\)/.test(bt));
+  // 값으로 — 10·30분할은 리버스를 켜도 결과가 안 바뀌어야 한다
+  { const T=DAYS.SOXL?'SOXL':'TQQQ', D0=DAYS[T];
+    let bad=null;
+    for(const div of [10,20,30,40]){
+      global.imReverse=false; const a=runIM(D0,T,10000,div,IM_OFFICIAL[T]||20,true);
+      global.imReverse=true;  const b=runIM(D0,T,10000,div,IM_OFFICIAL[T]||20,true);
+      const same=near(a.final,b.final,1e-9);
+      const want=!revSupported(div);          // 규칙 없는 분할이면 ON/OFF 가 같아야 한다
+      if(same!==want && !bad)
+        bad=`${div}분할: ON/OFF ${same?'같음':'다름'} (기대 ${want?'같음':'다름'}) — ${a.final.toFixed(0)} vs ${b.final.toFixed(0)}`;
+    }
+    global.imReverse=false;
+    ok('10·30분할은 리버스를 켜도 안 돌고 20·40분할은 돈다', !bad, bad||''); }
 }
 
 console.log(`\n════ 결과: ${pass} PASS / ${fail} FAIL ${fail===0?'— ALL PASS ★':'— 배포 금지, 위 ✗ 항목 수정 필요'} ════`);

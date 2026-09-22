@@ -318,7 +318,7 @@ td:first-child{text-align:left;}
   <div class="brand">
     <div>
       <div class="logo">Backtest</div>
-      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v1.181</span></h1>
+      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v1.182</span></h1>
     </div>
   </div>
   <div class="hright">
@@ -453,6 +453,7 @@ document.addEventListener('click',function(e){ var m=document.getElementById('jk
         <button data-r="1" title="원금 소진(T&gt;분할−1) 후 리버스 무한매도 모드 진입 — 라오어 공식 V4.0. 급락 저점에서 분할 매도 후 반등 시 재매수">켬</button>
       </div>
     </div>
+    <div class="ctrl s-im hide" style="flex-basis:100%"><span id="imRevNote" style="font-size:10px;color:var(--gold)"></span></div>
     <div class="ctrl s-im hide"><label>리버스 gap % <span style="font-size:9px;color:var(--dim)">별지점 아래 · 앱과 같은 값</span></label>
       <input type="number" id="imRevGapIn" value="2.5" min="0.1" max="20" step="0.1" style="width:72px"></div>
     <div class="ctrl s-im hide"><label>재투자</label>
@@ -1307,7 +1308,16 @@ function _ivsSync(){ const off=(typeof ivsMode!=='undefined'&&ivsMode==='fix');
 document.getElementById('ivsMode').onclick=e=>{if(e.target.dataset.m){document.querySelectorAll('#ivsMode button').forEach(b=>b.classList.remove('active'));e.target.classList.add('active');ivsMode=e.target.dataset.m;_ivsSync();if(dataLoaded&&(strat==='ivs'||strat==='all'))run();}};
 document.getElementById('ivsPair').onclick=e=>{if(e.target.dataset.p){document.querySelectorAll('#ivsPair button').forEach(b=>b.classList.remove('active'));e.target.classList.add('active');ivsPair=e.target.dataset.p;if(dataLoaded&&(strat==='ivs'||strat==='all'))run();}};
 document.getElementById('vrCost').onclick=e=>{if(e.target.dataset.x){document.querySelectorAll('#vrCost button').forEach(b=>b.classList.remove('active'));e.target.classList.add('active');vrCostOn=e.target.dataset.x==='1';if(dataLoaded)run();}};
-document.getElementById('imDiv').onclick=e=>{if(e.target.dataset.d){document.querySelectorAll('#imDiv button').forEach(b=>b.classList.remove('active'));e.target.classList.add('active');imDiv=+e.target.dataset.d;if(dataLoaded)run();}};
+document.getElementById('imDiv').onclick=e=>{if(e.target.dataset.d){document.querySelectorAll('#imDiv button').forEach(b=>b.classList.remove('active'));e.target.classList.add('active');imDiv=+e.target.dataset.d;syncRevUI();if(dataLoaded)run();}};
+/* 리버스 규칙이 없는 분할(10·30)에서는 세그를 잠근다 — 켜 봐야 엔진이 무시하므로
+   켜진 것처럼 보이게 두면 화면이 거짓말을 한다 */
+function syncRevUI(){
+  const el=document.getElementById('imRev'); if(!el) return;
+  const on=revSupported(imDiv);
+  el.style.opacity=on?'1':'0.4'; el.style.pointerEvents=on?'':'none';
+  const n=document.getElementById('imRevNote');
+  if(n) n.textContent = on ? '' : `⚠ ${imDiv}분할은 리버스 규칙이 문서에 없어 적용하지 않습니다 (20·40분할만)`;
+}
 // 전체 비교: 투입 모드(일시금/적립)
 document.getElementById('allMode').onclick=e=>{if(e.target.dataset.m){document.querySelectorAll('#allMode button').forEach(b=>b.classList.remove('active'));e.target.classList.add('active');if(dataLoaded&&strat==='all')run();}};
 // ──── 결과 목록: 헤더(타이틀) 클릭 정렬 · 클릭마다 오름/내림 토글 ────
@@ -1428,6 +1438,14 @@ let vrFill='ladder';
    예전엔 세그가 숫자 하나뿐이라 TQQQ 도 20%로 돌아갔다 — 앱 기본(15%)과 어긋났고,
    실측 TQQQ 40분할 복리 152.8%(20%) vs 142.4%(15%) 로 결과가 실제로 달랐다. */
 const IM_OFFICIAL={TQQQ:15, SOXL:20};
+/* 리버스 규칙(무한매도 보유÷N · T 갱신 배율)이 문서에 실린 분할수는 20·40 둘뿐이다.
+     20분할 — 보유÷10 · 매도 T×0.9  · 매수 T+(20−T)×0.25
+     40분할 — 보유÷20 · 매도 T×0.95 · 매수 T+(40−T)×0.25
+   10·30분할에는 이 값이 정의돼 있지 않다. 예전엔 'div>=40 이면 40분할 규칙, 아니면
+   20분할 규칙' 으로 갈라서 10·30분할이 20분할 값을 그대로 썼는데, 근거 없는 값을
+   공식 전략처럼 돌린 셈이다. 규칙이 없는 분할에서는 리버스를 켜지 않는다. */
+const REV_DIVS=[20,40];
+const revSupported=d=>REV_DIVS.includes(+d);
 const IM_TGT_AUTO=0;   // 세그의 '공식' — 숫자 하나로 못 박지 않고 종목마다 갈라 쓴다는 뜻
 let imTarget=IM_TGT_AUTO;   // 익절%. 별%base·리버스 복귀조건도 함께 결정 (통합 규약)
 const imTgtFor=t=>(imTarget>0?imTarget:(IM_OFFICIAL[t]||20));   // 엔진에 들어가는 실제 익절%
@@ -1455,6 +1473,7 @@ document.getElementById('vrFillSeg').onclick=e=>{if(e.target.dataset.v){document
   if(el) el.onchange=()=>{ const v=+el.value; imRevGap=(isFinite(v)&&v>0)?Math.min(20,v):2.5; el.value=imRevGap; if(dataLoaded)run(); }; }
 document.getElementById('imFillSeg').onclick=e=>{if(e.target.dataset.f){document.querySelectorAll('#imFillSeg button').forEach(b=>b.classList.remove('active'));e.target.classList.add('active');imFill=e.target.dataset.f;if(dataLoaded)run();}};
 syncMaCtrl();   // 초기: V4.0이므로 국면선 비활성 표시
+syncRevUI();
 
 /* ════════ 모멘텀 로테이션 (상대모멘텀 + 200일선 절대모멘텀 필터) ════════
    매월 첫 거래일에 직전 N개월 수익률 1위 매수, 1위 유지면 홀드/바뀌면 갈아타기.
@@ -2125,7 +2144,7 @@ function runIM(days,tkr,cap,divs,targetPct,compound=true){
     //   1회분 = 잔금/(분할−T) 이므로  1회분 > 잔금 ⟺ (분할−T) < 1 ⟺ T > 분할−1.
     // 일단 들어가면 T가 매도로 줄어도 리버스 유지, 종료는 오직 '가격 회복' 또는 '전량 매도'로만 판정.
     // 리버스 OFF(기본): 진입선을 무력화 → 원금 소진 후엔 일반모드의 후반전 별지점 손절 쿼터매도로만 방어(홀드).
-    const _revOn=(typeof imReverse!=='undefined')&&imReverse;
+    const _revOn=(typeof imReverse!=='undefined')&&imReverse&&revSupported(divs);
     if(_revOn && !inReverse && (divs-T)<1 && shares>0){ inReverse=true; reverseDay1=true; }
 
     if(inReverse && shares>0 && avg>0){
@@ -2445,7 +2464,7 @@ function runIM50(days,tkr,cap,divs,targetPct,compound=true){
     closeHist.push(c); if(closeHist.length>5) closeHist.shift();
     const gr=!!GM.ready[d];
     const g =!!GM.gate[d];
-    const _revOn=(typeof imReverse!=='undefined')&&imReverse;   // runIM과 같은 조건 (A/B가 공정하려면 필수)
+    const _revOn=(typeof imReverse!=='undefined')&&imReverse&&revSupported(divs);   // runIM과 같은 조건 (A/B가 공정하려면 필수)
     if(_revOn && !inReverse && (divs-T)<1 && shares>0){ inReverse=true; reverseDay1=true; }
 
     if(inReverse && shares>0 && avg>0){
@@ -3127,7 +3146,8 @@ function imVariant(tkrs){
   const v=[];
   const list=[].concat(tkrs||[]).filter(Boolean);
   if(list.length && list.some(t=>!IM_OFFICIAL[t])) v.push('비공식 종목');
-  if(typeof imReverse!=='undefined' && !imReverse) v.push('리버스 OFF');
+  if(typeof imDiv!=='undefined' && !revSupported(imDiv)) v.push(imDiv+'분할(리버스 규칙 미수록)');
+  else if(typeof imReverse!=='undefined' && !imReverse) v.push('리버스 OFF');
   if(typeof imTarget!=='undefined' && imTarget>0) v.push('익절 '+imTarget+'% 고정');
   if(typeof imRevGap!=='undefined' && Math.abs(imRevGap-2.5)>1e-9) v.push('리버스 gap '+imRevGap+'%');
   if(typeof imTgtDyn!=='undefined' && imTgtDyn) v.push('익절 조절 ON');
