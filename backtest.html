@@ -2966,6 +2966,11 @@ function runIM50(days,tkr,cap,divs,targetPct,compound=true,bigOverride){
 
 
 // ──── 전략 3: VR 5.0 ────
+function vrNextVValue(V,pool,G,ev,formula,addCycle){
+  V=+V||0; pool=+pool||0; G=Math.max(1,+G||10); ev=+ev||0; addCycle=+addCycle||0;
+  const corr=(formula==='skill'&&V>0)?(ev-V)/(2*Math.sqrt(G)):0;
+  return Math.max(0,V+pool/G+corr+addCycle);
+}
 /* ── VR 사이클 엔진 (파일 한 곳) ───────────────────────────────────────
    사이클은 거래일 수가 아니라 달력으로 센다 — 운영 앱과 같은 규약(CYC_DAYS=14).
    10거래일은 늘 14일이 아니다. 휴장이 낄 때마다 어긋나 6년이면 150회 vs 156회가 되고,
