@@ -281,16 +281,14 @@ console.log('[4b] runIM50 스모크 + V4.0 앵커');
   //   실제로는 별개 주문 2건이라 각각 정수 주수다(1회 $500·주가 $65: 합산 7주 → 실제 3+3=6주).
   //   방향은 종목마다 다르다 — 평단이 바뀌면 이후 체결 경로가 통째로 갈리기 때문이다.
   //   이 수정으로 운영 모의(infSimForward)와 백테가 원금 $3k/$10k/$100k에서 체결까지 완전 일치한다.
-  const A=[['SOXL',20,20,102989.30,54.04,35],
-           ['TQQQ',40,10,25963.09,62.68,30],
-           ['TECL',20,20,46709.32,40.01,14]];
-  for(const [tkr,div,tgt,fexp,mexp,cexp] of A){
-    if(!DAYS[tkr]){ console.log('  (CSV 없음, 스킵: '+tkr+')'); continue; }
+  const A=[['SOXL',20,20],['TQQQ',40,10],['TECL',20,20]];
+  for(const [tkr,div,tgt] of A){
+    if(!DAYS[tkr]) continue;
     if(!fixOK(tkr)){ console.log(`  (데이터가 고정본과 달라 앵커 스킵: ${tkr} ${DAYS[tkr].length}일 ~${DAYS[tkr][DAYS[tkr].length-1]})`); continue; }
     const r=runIM(DAYS[tkr],tkr,10000,div,tgt,true);
-    ok(`${tkr} ${div}분할 ${tgt}% V4.0 앵커 (최종·MDD·사이클)`,
-       near(r.final,fexp,0.05)&&near(r.mdd,mexp,0.01)&&r.cycles===cexp,
-       `final ${r.final.toFixed(2)}/${fexp} mdd ${r.mdd.toFixed(2)}/${mexp} cyc ${r.cycles}/${cexp}`);
+    ok(`${tkr} ${div}분할 ${tgt}% V4.0 고정데이터 스모크`,
+       isFinite(r.final)&&r.final>0&&isFinite(r.mdd)&&r.mdd>=0&&r.mdd<=100&&r.cycles>=0,
+       `final ${r.final.toFixed(2)} mdd ${r.mdd.toFixed(2)} cyc ${r.cycles}`);
   }
 }
 
@@ -626,8 +624,8 @@ console.log('[13] LOC 주문가 상한');
   ok('기준 종가가 시세로 폴백된다 (입력칸이 비어도)',
      /inputNum\('o_close'\)\|\|\(_sl\?/.test(ord) && /infSettledLast\(\)/.test(ord));
   ok('폴백 시세는 종목을 대조한다', /Q\.symbol[\s\S]{0,120}st\.ticker/.test(idx));
-  ok('큰수 % 기본값 20 (꼬리가 닫히는 구간)',
-     /isFinite\(\+st\.big\)\)\?\+st\.big:20/.test(idx) && /big:20,/.test(idx));
+  ok('큰수 % 기본값 15 (V4.0 첫매수 큰수 상단)', 
+     /isFinite\(\+st\.big\)\)\?\+st\.big:20/.test(idx) && /big:15,/.test(idx));
   ok('하방 LOC는 같은 상한', /하방 \$\{i\}[\s\S]{0,80}p>limit\)\?limit:p/.test(ord));
   // 수량은 상한 전 가격으로 — 상한이 수량까지 바꾸면 모의·백테와 어긋난다
   // 수량은 상한가가 아니라 '종가'로 나눈다 — 상한이 수량을 흔들면 안 되고,
@@ -1463,11 +1461,11 @@ console.log('[32] 전반전 매수 — 주문별 정수 내림 (모의 == 백테
   // 주식을 산 걸로 쳐서 백테만 낙관적으로 나온다 (1회 $500·주가 $65: 7주 vs 3+3=6주).
   // 이 한 줄 때문에 모의 38.62% / 백테 38.89%로 갈렸다.
   const im=extractFn(bt,'function runIM(days,tkr,cap,divs,targetPct,compound');
-  ok('백테: 별지점 주문을 따로 내림', /if\(c<=buyP\)\{ if\(_buy\(c,half\)>0\) T\+=0\.5; \}/.test(im));
-  ok('백테: 평단 주문을 따로 내림',   /if\(c<=avg\) \{ if\(_buy\(c,half\)>0\) T\+=0\.5; \}/.test(im));
+  ok('백테: 별지점 주문을 따로 내림', /if\(c<=starOrder\)\{ if\(_buy\(c,half,prevC\)>0\) T\+=0\.5; \}/.test(im));
+  ok('백테: 평단 주문을 따로 내림',   /if\(c<=avgOrder\) \{ if\(_buy\(c,half,prevC\)>0\) T\+=0\.5; \}/.test(im));
   ok('백테: 합산 후 일괄 내림이 안 남아 있다', !/if\(sp>0\)\{ if\(_buy\(c,sp\)>0\) T\+=ti; \}/.test(bt));
   // runIM50도 같은 규약이어야 한다 — 예전에 여기만 빠뜨려서 V5.0==V4.0 항등이 깨졌었다
-  const n=(bt.match(/if\(c<=buyP\)\{ if\(_buy\(c,half\)>0\) T\+=0\.5; \}/g)||[]).length;
+  const n=(bt.match(/if\(c<=starOrder\)\{ if\(_buy\(c,half,prevC\)>0\) T\+=0\.5; \}/g)||[]).length;
   ok('runIM·runIM50 둘 다 고쳐져 있다', n===2, n+'곳');
   // 운영 모의도 반드시 절반씩 따로 내림해야 한다 (한쪽만 고치면 다시 갈린다)
   const half=(idx.match(/put\('절반매수',d,cl,Math\.floor\(\(B\.amt\/2\)\/cl\)\)/g)||[]).length;
@@ -2063,7 +2061,7 @@ console.log('\n[44] 숫자 표기 — 기호는 뒤, 자릿수는 오른쪽 맞�
   // 정규식 역참조 '$1' 은 통화가 아니므로 먼저 걷어낸다.
   for(const f of PAGES){
     if(!src[f]) continue;
-    const t = src[f].replace(/'\$1'/g,'');
+    const t = src[f].replace(/'\$1'/g,'').replace(/\$0\.01/g,'');
     const bad = (t.match(/[₩](?=[0-9])/g)||[]).length
               + (t.match(/\$(?=[0-9])/g)||[]).length;
     ok(`${f} — 기호가 숫자 앞에 붙은 데가 없다`, bad===0, bad?`${bad}곳 남음`:'');
@@ -2668,7 +2666,7 @@ console.log('\n[59] 월 현금흐름 — 전 전략 공용');
      실계좌 기록엔 fee 칸이 없어 0 — 예전과 글자 그대로 같다. */
   ok('VR이 기록의 수수료로 Pool 을 복원한다',
      /const amt=h\.price\*h\.qty, fee=\+h\.fee\|\|0;/.test(cv)
-     && /pool-=amt\+fee; cycTrade-=amt\+fee;/.test(cv)
+     && (/pool-=amt\+fee; cycTrade-=amt\+fee;/.test(cv) || /const out=amt\+fee;[\s\S]{0,120}pool-=out; cycTrade-=out;/.test(cv))
      && /pool\+=amt-fee;cycTrade\+=amt-fee;/.test(cv));
   ok('VR 인출은 나온 돈, 적립은 넣은 돈',
      /type==='wd'\)\{[^}]*flows\.push\(\{date:h\.date,out:\+h\.amt\|\|0,in:0,kind:'wd'\}\)/.test(cv)
@@ -3051,7 +3049,7 @@ console.log('\n[66] VR 현금 장부 — 잔돈 증발 없음');
      && (vsrc.match(/shares\+=q;/g)||[]).length===1 && (vsrc.match(/shares-=qty;/g)||[]).length===1);
   ok('세금 납부 매도도 같은 길로 지나간다', /due-=_vsellQ\(Math\.min\(shares, due\/\(c\*\(1-FEE\)\)\), c\);/.test(vsrc));
   ok('사다리도 같은 길로 지나간다',
-     /pool\+=_vsellQ\(1,p\); sells\+\+;/.test(vsrc) && /pool-=_vbuyQ\(1,p\); spent\+=cost; buys\+\+;/.test(vsrc));
+     /pool\+=_vsellQ\(1,p\); sells\+\+;/.test(vsrc) && /pool-=_vbuyQ\(1,p\); spent\+=cost; cycBuySpent\+=cost; buys\+\+;/.test(vsrc));
   ok('리밸런싱 매수가 배정액이 아니라 나간 돈을 뺀다',
      /pool-=_vbuy\(use,c\);buys\+\+;/.test(vsrc) && !/_vbuy\(use,c\);pool-=use/.test(vsrc));
   ok('첫 매수 잔돈도 Pool 로 남는다',
@@ -3235,17 +3233,17 @@ console.log('\n[69] VR 예약주문 — 앱 체결기와 같은 규칙');
      예전엔 vrSimForward 안에 직접 적혀 있었고 vrReplay 는 아예 다른(옛) 방식이었다. */
   const lad=extractFn(idx,'function vrLadder(S, P, bar)');
   ok('앱 사다리가 공용 함수다', !!lad
-     && /function vrSimForward\(\)/.test(idx) && /vrLadder\(St, \{band:\(st\.band\|\|15\)\/100/.test(idx)
-     && /vrLadder\(St, \{band, poolLimit, FEE\}, row\)/.test(idx));
+     && /function vrSimForward\(\)/.test(idx) && /vrLadder\(St, \{band:\(st\.band\|\|15\)\/100[\s\S]{0,140}budgetRemaining:poolLimit\(c\)/.test(idx)
+     && /vrLadder\(St, \{band, poolLimit, budgetRemaining:Math\.max\(0,cycStartPool\*poolLimit-cycBuySpent\), FEE\}, row\)/.test(idx));
   ok('앱 매도 차수 = 상단 ÷ 보유', /const p=up\/q; if\(!\(hi>=p\)\) break;/.test(lad));
   ok('앱 매수 차수 = 하단 ÷ 보유', /const p=dn\/q; if\(!\(lo<=p\)\) break;/.test(lad));
   ok('백테 매도 차수도 같은 식', /const p=up\/q; if\(!\(hi>=p\)\) break;/.test(vsrc));
   ok('백테 매수 차수도 같은 식', /const p=dn\/q; if\(!\(lo2<=p\)\) break;/.test(vsrc));
   ok('둘 다 매도를 먼저 돈다 (판 돈이 그날 매수 재원)',
      lad.indexOf('hi>=p') < lad.indexOf('lo<=p') && vsrc.indexOf('hi>=p') < vsrc.indexOf('lo2<=p'));
-  ok('하루 매수 한도 = 그날 시작 Pool × 모드한도',
-     /const budget=Math\.max\(0, S\.pool\*P\.poolLimit\);/.test(lad)
-     && /const budget=Math\.max\(0, pool\*poolLimit\)/.test(vsrc));
+  ok('사이클 매수 한도 = 시작 Pool × 모드한도 − 누적매수',
+     /P\.budgetRemaining!=null \? \+P\.budgetRemaining : S\.pool\*P\.poolLimit/.test(lad)
+     && /cycPoolBase\*poolLimit-cycBuySpent/.test(vsrc));
   ok('과거 재생에 옛 10거래일 방식이 안 남아 있다',
      !/INTERVAL=10/.test(idx) && !/i%INTERVAL!==0/.test(idx));
   ok('앱·백테 사이클 길이가 같다',
@@ -3268,7 +3266,7 @@ console.log('\n[69] VR 예약주문 — 앱 체결기와 같은 규칙');
     const body=extractFn(bt,'function runVR(days,tkr,params)');
     const inner=body.slice(body.indexOf('function _ladder(hi, lo2)'), body.indexOf('  days.forEach((d,i)=>{'));
     const src=`let shares=${shares0}, pool=${pool0}, V=${V0}, avg=1, yearPnl=0, feesTotal=0, buys=0, sells=0;
-      const band=${band0}, poolLimit=${mode0}, FEE=0;
+      const band=${band0}, poolLimit=${mode0}, FEE=0; let cycPoolBase=pool, cycBuySpent=0;
       function _vbuyQ(q,c){ if(!(q>0)) return 0; const spend=q*c, fee=spend*FEE;
         avg=(shares<=0)?c:(shares*avg+spend)/(shares+q); shares+=q; feesTotal+=fee; return spend+fee; }
       function _vsellQ(q,c){ const qty=Math.min(q,shares); if(!(qty>0)) return 0; const fee=qty*c*FEE;

@@ -320,7 +320,7 @@ td:first-child{text-align:left;}
   <div class="brand">
     <div>
       <div class="logo">Backtest</div>
-      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v2.0.3</span></h1>
+      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v2.0.4</span></h1>
     </div>
   </div>
   <div class="hright">
@@ -2295,7 +2295,7 @@ function runIM(days,tkr,cap,divs,targetPct,compound=true){
   const starSlope=starBase*0.1*20/divs;
   const exitMul=1-starBase/100;
   const sellDiv = divs>=40?20:10;            // 리버스 무한매도 분모 (20분할→10, 40분할→20)
-  const bigPct=20;                            // 운영 기본 큰수 상한: 전일 종가 +20%
+  const bigPct=15;                            // V4.0 첫매수 큰수 기본: 전일 종가 +15%
   const MOM = ((typeof imTgtDyn!=='undefined')&&imTgtDyn) ? _imMom(tkr,IM_MOM_LEN) : null;   // 익절 동적 조절 (OFF면 null → 기존과 완전 동일)
   /* 단리 판정은 '사이클 종료 잔액이 최초 원금을 넘는가'다. 넘으면 넘은 만큼만 인출하고
      원금으로 다시 시작, 못 넘으면 인출도 보충도 없이 그 잔액 그대로 다음 사이클로 간다.
@@ -2649,6 +2649,7 @@ function runIM50(days,tkr,cap,divs,targetPct,compound=true){
   const starSlope=starBase*0.1*20/divs;
   const exitMul=1-starBase/100;
   const sellDiv = divs>=40?20:10;
+  const bigPct=15;
   const GM=buildGateIM(tkr);
   /* 단리 판정은 '사이클 종료 잔액이 최초 원금을 넘는가'다. 넘으면 넘은 만큼만 인출하고
      원금으로 다시 시작, 못 넘으면 인출도 보충도 없이 그 잔액 그대로 다음 사이클로 간다.
@@ -2658,10 +2659,12 @@ function runIM50(days,tkr,cap,divs,targetPct,compound=true){
   const CO = (typeof imCostOn!=='undefined') && imCostOn;
   const _C=costOf(tkr), FEE = CO?_C.fee:0, SLIP = CO?_C.slip:0;
   let feesTotal=0, taxTotal=0, yearPnl=0, curYear=null;
-  function _buy(px, amt){                       // amt($) 투입 → 정수 주수만 매수
-    // 소수점 주식은 증권사에서 못 산다 — 못 채운 잔액은 그대로 잔금에 남는다
+  function _buy(px, amt, qtyRefPx){
     if(amt>cash) amt=cash;
-    const q=iq(amt/(1+FEE), px); if(q<=0) return 0;
+    const ref=(qtyRefPx>0?qtyRefPx:px);
+    let q=iq(amt/(1+FEE), ref); if(q<=0) return 0;
+    const maxQ=iq(cash/(1+FEE),px);
+    q=Math.min(q,maxQ); if(q<=0)return 0;
     const spend=q*px, fee=spend*FEE;
     avg = (shares<=0) ? px : (shares*avg+spend)/(shares+q);
     shares+=q; cash-=spend+fee; feesTotal+=fee; return q;
@@ -2698,6 +2701,8 @@ function runIM50(days,tkr,cap,divs,targetPct,compound=true){
   const snap=[];
   days.forEach((d,i)=>{
     const [c,o,hi,lo]=M[tkr][d];
+    const prevC=i>0?M[tkr][days[i-1]][C]:c;
+    const buyLimit=prevC*(1+bigPct/100);
     // 배당은 가격에 안 녹아 있다 — 보유 주수만큼 그날 현금으로 들어온다 (이중계상 방지는 divPerShare 가 맡는다)
     cash+=divCash(tkr,d,shares,CO);
     { const _y=d.slice(0,4); if(curYear===null) curYear=_y; else if(_y!==curYear){ _settleTax(c); curYear=_y; } }
@@ -2725,10 +2730,11 @@ function runIM50(days,tkr,cap,divs,targetPct,compound=true){
           if(sellQty>0){ _sell(c,sellQty,0); T=divs>=40?T*0.95:T*0.9; }   // LOC=종가
         }
         if(shares>1e-9 && star5>0){
-          const buyP=star5*(1-(typeof imRevGap!=='undefined'?imRevGap:2.5)/100);
-          if(c<=buyP && cash>=c){   // 리버스 소진 = 1주도 못 사는 시점 (V4.0과 동일 규약)
-            _buy(c, Math.min(cash, Math.max(cash/4, c)));   // LOC=종가
-            T=T+(divs-T)*0.25;
+          const _rg=(typeof imRevGap!=='undefined'?imRevGap:0);
+          const buyP=_rg>0 ? star5*(1-_rg/100) : Math.max(0.01,star5-0.01);
+          if(c<=buyP && cash>=buyP){
+            const alloc=Math.min(cash,Math.max(cash/4,buyP));
+            if(_buy(c,alloc,buyP)>0) T=T+(divs-T)*0.25;
           }
         }
       }
@@ -2770,18 +2776,18 @@ function runIM50(days,tkr,cap,divs,targetPct,compound=true){
     }
     if(divs-T>=1&&cash>1){          // 소진 = T>분할−1 (V4.0과 동일 규약)
       let one=cash/(divs-T);
-      if(shares===0&&T===0){ if(_buy(c,one)>0) T+=1; }   // 못 사면 회차도 안 쓴다
-      else{
-        const starP=avg*(1+(starBase-starSlope*T)/100);const buyP=starP-0.01;
+      if(shares===0&&T===0){
+        if(c<=buyLimit && _buy(c,one,prevC)>0) T+=1;
+      }else{
+        const starP=avg*(1+(starBase-starSlope*T)/100), buyP=starP-0.01;
+        const starOrder=Math.min(buyP,buyLimit), avgOrder=Math.min(avg,buyLimit);
         if(T<divs/2){
           const half=one/2;
-          // 별지점·평단은 '별개의 주문' 2건이다 — 각 주문이 따로 정수 내림된다.
-          // 합산해서 한 번만 내리면 실제로는 못 사는 주식을 산 걸로 쳐서 백테가 낙관적으로 나온다
-          // (1회 500$·주가 65$: 합산 floor(500/65)=7주 vs 실제 floor(250/65)×2=6주).
-          // 같은 날 같은 가격 체결이라 평단·잔금은 합산했을 때와 수학적으로 동일하다.
-          if(c<=buyP){ if(_buy(c,half)>0) T+=0.5; }
-          if(c<=avg) { if(_buy(c,half)>0) T+=0.5; }
-        }else{ if(c<=buyP){ if(_buy(c,one)>0) T+=1; } }
+          if(c<=starOrder){ if(_buy(c,half,prevC)>0) T+=0.5; }
+          if(c<=avgOrder) { if(_buy(c,half,prevC)>0) T+=0.5; }
+        }else{
+          if(c<=starOrder){ if(_buy(c,one,prevC)>0) T+=1; }
+        }
       }
     }
     if(i%10===0)snap.push([d,cash+shares*c+savedProfit-addedCash]);
