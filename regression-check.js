@@ -3124,8 +3124,8 @@ console.log('\n[66] VR 현금 장부 — 잔돈 증발 없음');
   /* 사다리는 이제 공용 엔진(vrOrderPlan)이 수량을 내고, 백테는 그 체결을 자기 장부
      (_vsellQ·_vbuyQ — 세무 원가·수수료)로만 적용한다. 주식이 움직이는 길은 그대로 둘이다. */
   ok('체결도 같은 길로 지나간다',
-     /if\(f\.type==='sell'\)\{ pool\+=_vsellQ\(f\.qty, f\.price\); cycSellFilled\+=f\.qty; sells\+\+; \}/.test(vsrc)
-     && /else \{ pool-=_vbuyQ\(f\.qty, f\.price\); cycBuySpent\+=f\.cost; cycBuyFilled\+=f\.qty; buys\+\+; \}/.test(vsrc));
+     /if\(f\.type==='sell'\)\{ pool\+=_vsellQ\(f\.qty, f\.price\); sells\+\+; \}/.test(vsrc)
+     && /else \{ pool-=_vbuyQ\(f\.qty, f\.price\); cycBuySpent\+=f\.cost; buys\+\+; \}/.test(vsrc));
   ok('리밸런싱 매수가 배정액이 아니라 나간 돈을 뺀다',
      /pool-=_vbuy\(use,c\);buys\+\+;/.test(vsrc) && !/_vbuy\(use,c\);pool-=use/.test(vsrc));
   ok('첫 매수 잔돈도 Pool 로 남는다',
@@ -4115,12 +4115,12 @@ console.log('\n[75] VR 장부 — 저장 전 == 저장 후');
       const w=vr2.slice(vr2.indexOf('while(due && d>=due'));
       const iAdd=w.indexOf('pool+=contrib;'), iSet=w.indexOf('cycStartPool=pool;');
       return iAdd>0 && iSet>iAdd; })());
-  ok('모의 체결도 같은 수수료·고정차수 규약', /const _F=\(typeof IVS_FEE!=='undefined'\)\?IVS_FEE:0\.0025;/.test(idx)
-     && /budgetRemaining:poolLimit\(c\), FEE:_F, model:vrModelOf\(st\),[\s\S]{0,160}baseShares:c\.cycBaseQty, sellFilled:c\.cycSellFilled, buyFilled:c\.cycBuyFilled, maxTiers:20/.test(idx));
+  ok('모의 체결도 같은 수수료·공식 모델 규약', /const _F=\(typeof IVS_FEE!=='undefined'\)\?IVS_FEE:0\.0025;/.test(idx)
+     && /budgetRemaining:poolLimit\(c\), FEE:_F, model:vrModelOf\(st\)/.test(idx));
   /* 사이클 매수한도는 '그 사이클 시작 Pool × 비중 − 이미 쓴 돈' 이다. 세 갈래(모의체결·
      과거재생·백테)가 각자 세면 갈린다 — 실제로 매도 대금이 같은 사이클 한도를 늘렸다. */
-  ok('사다리가 남은 한도를 넘겨받는다',
-     /const budget=Math\.max\(0,P\.budgetRemaining!=null\?\+P\.budgetRemaining:S\.pool\*P\.poolLimit\);/.test(idx));
+  ok('공식 VR 체결기가 남은 매수한도를 넘겨받는다',
+     /const budget=Math\.max\(0,\s*P\.budgetRemaining!=null\s*\?\s*\+P\.budgetRemaining\s*:\s*S\.pool\*P\.poolLimit\);/.test(idx));
   ok('세 갈래가 모두 남은 한도를 넘긴다', (()=>{
        const sim=extractFn(idx,'function vrSimForward()'), rep=extractFn(idx,'function vrReplay()'), vr=extractFn(bt,'function runVR(days,tkr,params)');
        return (sim.match(/budgetRemaining:/g)||[]).length===1
