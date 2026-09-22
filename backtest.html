@@ -879,6 +879,28 @@ const VR_TICKERS=STRAT_TICKERS;
 const MA_TICKERS=STRAT_TICKERS;
 
 let M={};
+/* ── 지표 워밍업 창 ──────────────────────────────────────────────────
+   200일선·σ 룩백 같은 지표는 선택 시작일 이전 데이터를 본다. 그런데 M 에
+   과거가 얼마나 들어 있는지는 '직전에 어떤 기간을 실행했는지'에 달려 있었다.
+   2015~2026 을 돌린 뒤 2021~2026 으로 좁히면, 처음부터 2021~2026 을 돌린
+   것과 같은 구간인데도 워밍업 깊이가 달라 결과가 갈렸다.
+   창을 못박아 그 의존을 끊는다 — 엔진은 [WARM_FROM, WARM_TO] 밖을 보지 않는다.
+   매매·현금흐름·CAGR·MDD 는 여전히 사용자가 고른 start~end 만 쓴다(days). */
+const WARMUP_CAL_DAYS=450;   // 달력일. 200거래일(≈290일)에 휴일·연휴 여유를 더한 값
+function warmStartOf(start){
+  const d=new Date(start+'T00:00:00Z');
+  d.setUTCDate(d.getUTCDate()-WARMUP_CAL_DAYS);
+  return d.toISOString().slice(0,10);
+}
+let WARM_FROM='', WARM_TO='';   // 이번 실행의 지표 창 (비어 있으면 자르지 않는다)
+function dtsOf(tkr){
+  const D=(typeof srcOf==='function')?srcOf(tkr):M[tkr];
+  if(!D) return [];
+  const ks=Object.keys(D);
+  return (WARM_FROM||WARM_TO)
+    ? ks.filter(d=>(!WARM_FROM||d>=WARM_FROM)&&(!WARM_TO||d<=WARM_TO)).sort()
+    : ks.sort();
+}
 let strat='dca';
 let dcaFreq='daily', dcaPeriodMode='common', imDiv=20;
 let imReverse=false;   // V4.0 리버스 무한매도 (원금소진 후) — 기본 OFF (20분할 백테 상 리버스가 저점 손절 후 V반등을 놓쳐 불리)
@@ -1847,7 +1869,7 @@ function runDCA1(tkr,days,totalAmt,costOn){
 //   워밍업은 로딩된 전체 이력을 사용 (선택 기간 앞 데이터 활용, 룩어헤드 없음)
 function _dcaMA(t,N){
   const D=srcOf(t); if(!D) return {};
-  const ds=Object.keys(D).sort(), out={}; let s=0; const buf=[];
+  const ds=dtsOf(t), out={}; let s=0; const buf=[];
   for(let i=0;i<ds.length;i++){ const p=D[ds[i]]?.[C]??0; buf.push(p); s+=p;
     if(buf.length>N) s-=buf.shift();
     out[ds[i]] = buf.length===N ? s/N : null; }
@@ -2062,7 +2084,7 @@ function usableTickersDca(start,end,tickers){ const use=[],skip=[]; tickers.forE
 const IM_MOM_LEN=20, IM_MOM_TH=8, IM_MOM_CAP=30;
 function _imMom(tkr,L){
   const D=M[tkr]; if(!D) return {};
-  const ds=Object.keys(D).sort(), out={};
+  const ds=dtsOf(tkr), out={};
   for(let i=0;i<ds.length;i++){ const p=i-1, q=i-1-L;
     out[ds[i]] = (p>=0&&q>=0&&D[ds[q]][C]>0) ? (D[ds[p]][C]/D[ds[q]][C]-1)*100 : null; }
   return out;
@@ -2326,7 +2348,7 @@ function runIM30(days,tkr,cap,divs,targetPct,compound=true){
 // 필터: 'nobuy'=200일선 아래선 추가매수 금지(물타기 차단·기본) · 'exit'=200선 아래 전량 현금 · 'none'=무필터.
 function runStdev(days,tkr,cap,N,g,filter,costOn){
   const CO=costOn, FEE=CO?costOf(tkr).fee:0;
-  const dts=Object.keys(M[tkr]).sort(), gi={}; dts.forEach((d,i)=>gi[d]=i);
+  const dts=dtsOf(tkr), gi={}; dts.forEach((d,i)=>gi[d]=i);
   const cl=dts.map(d=>M[tkr][d][C]);
   const ma200=Array(cl.length).fill(null); { let s=0; for(let i=0;i<cl.length;i++){ s+=cl[i]; if(i>=200)s-=cl[i-200]; if(i>=199)ma200[i]=s/200; } }
   const ma=Array(cl.length).fill(null), sd=Array(cl.length).fill(null);
@@ -2376,7 +2398,7 @@ function runStdev(days,tkr,cap,N,g,filter,costOn){
 function buildGateIM(tkr, shortMA){
   // V5.0 국면: 합성 1배지수 > 200일선 AND > 단기이평(20/30/50일) — 둘 다 위여야 상승국면
   const SM = shortMA || (typeof imShortMA!=='undefined' ? imShortMA : 30);
-  const dts=Object.keys(M[tkr]).sort();
+  const dts=dtsOf(tkr);
   const lev=(typeof META!=='undefined'&&META[tkr]&&META[tkr].lev)?META[tkr].lev:((tkr==='QLD'||tkr==='USD')?2:3);
   const gate={}, ready={}, synMap={};
   const syn=[]; let s=0; const buf=[];      // 200일 합
@@ -2764,7 +2786,7 @@ function _maOpt(opt){
 }
 /* 보유/대피 신호 시계열 — 상태(직전 보유 여부)에 따라 매수·매도 조건을 다르게 적용. 워밍업 전은 보유. */
 function _maAbove(tkr,N,SHORT,BUY,SELL){
-  const dts=Object.keys(M[tkr]).sort(), lev=(META[tkr]&&META[tkr].lev)||3;
+  const dts=dtsOf(tkr), lev=(META[tkr]&&META[tkr].lev)||3;
   const above={}; const buf=[],sbuf=[]; let s=0,ss=0,syn=100,prev=null,pa=true;
   for(let i=0;i<dts.length;i++){
     if(prev!==null){ const r=M[tkr][dts[i]][C]/M[tkr][prev][C]-1; syn=syn*(1+r/lev); }
@@ -2868,7 +2890,7 @@ const KR_RATE={2005:.033,2006:.043,2007:.048,2008:.048,2009:.021,
 const parkRate=(y,tkr)=>isKRW(tkr) ? (KR_RATE[y] ?? 0.025) : (TBILL_RATE[y] ?? 0.04);
 const SGOV_RATE={2010:.001,2011:.001,2012:.001,2013:.001,2014:.001,2015:.002,2016:.004,2017:.010,2018:.019,2019:.022,2020:.004,2021:.001,2022:.017,2023:.050,2024:.052,2025:.045,2026:.043};
 function _asapInd(tkr){
-  const dts=Object.keys(M[tkr]).sort(), cl=dts.map(d=>M[tkr][d][C]), N=cl.length;
+  const dts=dtsOf(tkr), cl=dts.map(d=>M[tkr][d][C]), N=cl.length;
   const sma=k=>{const o=Array(N).fill(null);let s=0;for(let i=0;i<N;i++){s+=cl[i];if(i>=k)s-=cl[i-k];if(i>=k-1)o[i]=s/k;}return o;};
   const RSI=Array(N).fill(null);{let ag=0,al=0;for(let i=1;i<N;i++){const d=cl[i]-cl[i-1],g=d>0?d:0,l=d<0?-d:0;
     if(i<=14){ag+=g;al+=l;if(i===14){ag/=14;al/=14;RSI[i]=100-100/(1+(al===0?100:ag/al));}}
@@ -3035,7 +3057,7 @@ function runMA200Accum(days,tkr,contribTotal,N,costOn,opt){
 const X1_EXPENSE={SOXX:.0035,SMH:.0035,QQQ:.0020,XLK:.0009,SPY:.0009,EWY:.0059};
 const X1_EXPENSE_DEF=0.0020;
 function _ivsX1(tkr){
-  const dts=Object.keys(M[tkr]).sort(), lev=(META[tkr]&&META[tkr].lev)||3, u=LEV_UNDERLYING[tkr];
+  const dts=dtsOf(tkr), lev=(META[tkr]&&META[tkr].lev)||3, u=LEV_UNDERLYING[tkr];
   const _exp=LEV_EXPENSE[tkr]??LEV_EXPENSE_DEF, _bor=Math.max(0,lev-1);
   const _div=LEV_PRICEIDX[tkr] ? ((IDX_EXTEND[u]||{}).div||0) : 0;
   const _x1=(X1_EXPENSE[u]??X1_EXPENSE_DEF)/252;
@@ -3049,7 +3071,7 @@ function _ivsX1(tkr){
 // 워밍업: 표본이 10일 미만이면 비중을 내지 않는다(=현금). 10~N일 구간은 있는 만큼으로 추정.
 // 로드된 이력 전체를 쓰므로 백테 구간 앞에 데이터가 있으면 자동으로 예열된다.
 function _ivsWeights(tkr,N,s0){
-  const dts=Object.keys(M[tkr]).sort(), n=dts.length, w={};
+  const dts=dtsOf(tkr), n=dts.length, w={};
   const r=new Array(n).fill(0);
   for(let i=1;i<n;i++) r[i]=M[tkr][dts[i]][C]/M[tkr][dts[i-1]][C]-1;
   let s=0,s2=0;
@@ -3064,7 +3086,7 @@ function _ivsWeights(tkr,N,s0){
 function runIVS(days,tkr,cap,s0,N,band,costOn,mode,pair){
   const FIX=(mode==='fix'), X1=(pair==='x1');          // 고정 5:5 · 짝을 1배수로
   const WM = FIX?null:_ivsWeights(tkr,N,s0).w;
-  const dts=Object.keys(M[tkr]).sort(); const gIdx={}; dts.forEach((d,i)=>gIdx[d]=i);
+  const dts=dtsOf(tkr); const gIdx={}; dts.forEach((d,i)=>gIdx[d]=i);
   const P1 = X1?_ivsX1(tkr):null;
   const FEE=costOn?costOf(tkr).fee:0;
   /* 예수금도 공짜가 아니다. '비용 적용'이면 국채 쪽 현실 비용을 같이 문다:
@@ -3392,13 +3414,17 @@ async function run(){
     : strat==='all' ? [...allActive]   // 선택 종목만 로드 (전략×종목 통합 비교)
     : [...vrActive];
   clearLevExt();   // 재로딩 전 반드시 원본 복구 — loadData가 M={}로 갈아엎으므로 RAWM이 낡은 참조로 남으면 안 됨
+  /* 지표 창을 먼저 못박는다. 받아 오는 것도, 엔진이 보는 것도 이 창이다 —
+     둘이 다르면 '넓게 받아 둔 기억' 때문에 같은 기간이 다른 결과를 낸다. */
+  const wStart=warmStartOf(start);
+  WARM_FROM=wStart; WARM_TO=end;
   const missing = wanted.filter(t=>!M[t] || !Object.keys(M[t]||{}).length);
   const needReload=!Object.keys(M).length
-    || (loadedStart && start<loadedStart)
+    || (loadedStart && wStart<loadedStart)
     || (loadedEnd   && end>loadedEnd)
     || missing.length>0;
   if(needReload){
-    const ok=await loadData(start,end);
+    const ok=await loadData(wStart,end);
     if(!ok) return;
   }
 
@@ -3410,7 +3436,7 @@ async function run(){
       showLoadModal('레버리지 기초지수 로딩·합성 중…','상장 전 구간을 1배 기초지수·가격지수로 합성하고 있습니다.');
       await _paint();
     }
-    try{ LAST_EXT = await buildLevExt(wanted, start); applyLevExt(); }
+    try{ LAST_EXT = await buildLevExt(wanted, wStart); applyLevExt(); }
     finally{ hideLoadModal(); }
   } else { clearLevExt(); LAST_EXT={}; }
   renderLevNote(LAST_EXT);                       // 상세는 결과 맨 아래에

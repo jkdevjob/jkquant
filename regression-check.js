@@ -69,6 +69,14 @@ const costSrc=(bt.match(/const COST_FEE=[\s\S]*?function capGainTax\([\s\S]*?\n\
 if(!costSrc) throw new Error('비용·세금 프로필(costOf/capGainTax)을 backtest.html에서 못 찾음');
 { const f=new Function(costSrc+'\nreturn {isKRW,krTaxRate,costOf,capGainTax};')();
   global.isKRW=f.isKRW; global.krTaxRate=f.krTaxRate; global.costOf=f.costOf; global.capGainTax=f.capGainTax; }
+/* 지표 워밍업 창 — 엔진이 [WARM_FROM, WARM_TO] 밖의 날짜를 못 보게 하는 실코드 헬퍼.
+   파일에서 그대로 떼어 온다. WARM_FROM/WARM_TO 는 테스트가 중간에 바꿔야 하므로
+   전역으로 올린다 (new Function 안의 let 은 밖에서 못 바꾼다). */
+const warmSrc=(bt.match(/const WARMUP_CAL_DAYS=[\s\S]*?\n    : ks\.sort\(\);\n\}/)||[''])[0];
+if(!warmSrc) throw new Error('워밍업 창 헬퍼(WARMUP_CAL_DAYS/warmStartOf/dtsOf)를 backtest.html에서 못 찾음');
+global.WARM_FROM=''; global.WARM_TO='';
+{ const f=new Function(warmSrc.replace(/^let WARM_FROM=[^\n]*$/m,'')+'\nreturn {WARMUP_CAL_DAYS,warmStartOf,dtsOf};')();
+  global.WARMUP_CAL_DAYS=f.WARMUP_CAL_DAYS; global.warmStartOf=f.warmStartOf; global.dtsOf=f.dtsOf; }
 /* 리버스 지원 분할 목록도 파일에서 그대로 떼어 온다 — 여기서 다시 적으면 어긋난다 */
 { const m=bt.match(/const REV_DIVS=\[[^\]]*\];\s*\nconst revSupported=[^\n]*/);
   if(!m) throw new Error('REV_DIVS/revSupported 를 backtest.html에서 못 찾음');
@@ -3831,6 +3839,93 @@ console.log('\n[76] 버전 형식 (x.y.z)');
   const top=(idx.match(/id="appVerTop"[^>]*>(v[\d.]+)</)||[])[1];
   const set=(idx.match(/id="appVer">(v[\d.]+)</)||[])[1];
   ok('머리말과 설정창 버전이 같다', !!top && top===set, `머리말 ${top} / 설정창 ${set}`);
+}
+
+/* ════ 77. 워밍업 결정성 ════  (감사 ① · 필수시험 A)
+   200일선·σ 룩백 같은 지표는 선택 시작일 이전 데이터를 본다.
+   그런데 M 에 과거가 얼마나 들어 있는지는 '직전에 어떤 기간을 실행했는지'에
+   달려 있었다 — 2015~2026 을 돌린 뒤 2021~2026 으로 좁히면 재로딩을 안 하니
+   워밍업이 깊고, 처음부터 2021~2026 을 열면 워밍업이 아예 없다.
+   같은 구간인데 결과가 갈렸다. 창(WARM_FROM~WARM_TO)을 못박아 끊는다.
+   여기서는 세 가지 M 으로 같은 엔진을 돌려 값으로 확인한다.                    */
+console.log('\n[77] 워밍업 결정성 (같은 기간이면 언제 돌리든 같은 값)');
+{
+  const helpers=['function srcOf(t)','function divSplit(tkr, days, buys)','function _maOpt(opt)',
+                 'function _maHold(sell,a,b)','function _maEntry(buy,a,b)',
+                 'function _maAbove(tkr,N,SHORT,BUY,SELL)','function _asapInd(tkr)',
+                 'function _ivsWeights(tkr,N,s0)','function _ivsX1(tkr)',
+                 'function _isoWeek(d)','function _dcaFreq(f)','function _dcaHits(days,freq)','function _dcaMA(t,N)'];
+  let pre='var levExt=false, EXTM={}, dcaReinv=true, dcaDipMul=1, maBuy="ma", maSell="ma", maShort=50, maPark="cash";\n';
+  for(const h of helpers){ try{ pre+=extractFn(bt,h)+'\n'; }catch(e){ ok('도우미 추출: '+h, false, e.message); } }
+  const mSg=bt.match(/const SGOV_RATE=\{[^}]*\};/); if(mSg) pre+=mSg[0]+'\n';
+  const mMa=bt.match(/const MA_COND_LBL=\{[^}]*\};/); if(mMa) pre+=mMa[0]+'\n';
+  const mk=(marker)=>{ const src=extractFn(bt,marker);
+    return new Function(pre+'return ('+src.replace(/^function [\w$]+\(/,'function (')+')')(); };
+
+  const T=DAYS.SOXL?'SOXL':'TQQQ', ALL=(DAYS[T]||[]);
+  // 워밍업 오프셋 자체가 고정값인지 — 여기서 미끄러지면 아래 전부 의미 없다
+  ok('warmStartOf 는 선택일에서 고정 일수만 뺀다',
+     warmStartOf('2021-01-01')==='2019-10-09' && warmStartOf('2026-09-22')==='2025-06-29'
+     && WARMUP_CAL_DAYS===450,
+     `${warmStartOf('2021-01-01')} / ${warmStartOf('2026-09-22')} / ${WARMUP_CAL_DAYS}`);
+
+  if(ALL.length<1400){ ok('워밍업 시험용 데이터(1400일 이상)', false, ALL.length+'일'); }
+  else{
+    const MFULL=M[T];
+    const end=ALL[ALL.length-1];
+    const start=ALL[ALL.length-1000];             // 최근 약 4년
+    const wStart=warmStartOf(start);
+    const days=ALL.filter(d=>d>=start&&d<=end);
+    const cut=(from)=>{ const o={}; for(const d of ALL) if(d>=from&&d<=end) o[d]=MFULL[d]; return o; };
+
+    const F={ std:mk('function runStdev(days,tkr,cap,N,g,filter,costOn)'),
+              asap:mk('function runASAP(days,tkr,opt)'),
+              ma:mk('function runMA200(days,tkr,cap,N,costOn,opt)'),
+              ivs:mk('function runIVS(days,tkr,cap,s0,N,band,costOn,mode,pair)'),
+              dca:mk('function _dcaOne(t,days,amt,freq,costOn,dipMul)') };
+    const runAll=()=>({
+      std : F.std(days,T,10000,40,2.5,'exit',true),
+      asap: F.asap(days,T,{base:10,mid:50,deep:100,costOn:true}),
+      ma  : F.ma(days,T,10000,200,true),
+      ivs : F.ivs(days,T,10000,0.45,60,0.10,true,'iv','cash'),
+      dca : F.dca(T,days,10,'daily',true,2) });
+    const sig=r=>Object.keys(r).map(k=>{ const x=r[k]||{};
+      return `${k}:${(+x.final||0).toFixed(6)}/${(+x.mdd||0).toFixed(6)}/${x.trades!=null?x.trades:(x.rebals!=null?x.rebals:'-')}`;
+    }).join(' ');
+
+    // ① 넓게 받아 둔 M (전체 이력) 에서 창만 좁혀 실행 = '2015~2026 돌린 뒤 2021~2026'
+    WARM_FROM=wStart; WARM_TO=end;
+    M[T]=MFULL;      const wide=sig(runAll());
+    // ② 창만큼만 받아 둔 M = '앱을 새로 열고 2021~2026 바로 실행'
+    M[T]=cut(wStart); const fresh=sig(runAll());
+    ok('넓게 로딩한 뒤 좁힌 결과 == 처음부터 좁게 연 결과', wide===fresh,
+       wide===fresh?'':`\n      넓게 ${wide}\n      새로 ${fresh}`);
+
+    // ③ 이 시험이 살아 있는지 — 워밍업이 없으면(옛 fresh load) 실제로 값이 갈린다
+    WARM_FROM=''; WARM_TO='';
+    M[T]=cut(start);  const noWarm=sig(runAll());
+    M[T]=cut(wStart); const withWarm=sig(runAll());
+    ok('워밍업 없이 열면 값이 실제로 달라진다 (창이 필요한 이유)', noWarm!==withWarm,
+       noWarm===withWarm?'같은 값이 나와 이 시험이 죽어 있다':'');
+
+    // ④ 창을 씌우면 전체 이력이 있어도 워밍업만큼만 본다
+    WARM_FROM=wStart; WARM_TO=end;
+    M[T]=MFULL;
+    const seen=dtsOf(T);
+    ok('엔진이 보는 날짜가 창 밖으로 안 나간다',
+       seen.length>0 && seen[0]>=wStart && seen[seen.length-1]<=end,
+       `${seen[0]} ~ ${seen[seen.length-1]}`);
+    ok('창 안에 200거래일 이상 워밍업이 남는다',
+       seen.filter(d=>d<start).length>=200, seen.filter(d=>d<start).length+'일');
+
+    WARM_FROM=''; WARM_TO=''; M[T]=MFULL;      // 뒷 섹션에 영향 없게 되돌린다
+  }
+  // 로더도 같은 창을 받아와야 한다 — 엔진만 좁히면 새로 연 사람은 워밍업이 아예 없다
+  ok('실행이 워밍업 시작일을 먼저 정한다', /const wStart=warmStartOf\(start\);\s*\n\s*WARM_FROM=wStart; WARM_TO=end;/.test(bt));
+  ok('데이터도 워밍업 시작일부터 받는다', /await loadData\(wStart,\s*end\)/.test(bt) && !/await loadData\(start,\s*end\)/.test(bt));
+  ok('재로딩 판정도 워밍업 시작일로 한다', /loadedStart && wStart<loadedStart/.test(bt));
+  ok('레버리지 확장도 워밍업 구간까지 덮는다', /buildLevExt\(wanted,\s*wStart\)/.test(bt));
+  ok('엔진이 전체 이력을 직접 훑지 않는다', !/Object\.keys\(M\[tkr\]\)\.sort\(\)/.test(bt));
 }
 
 console.log(`\n════ 결과: ${pass} PASS / ${fail} FAIL ${fail===0?'— ALL PASS ★':'— 배포 금지, 위 ✗ 항목 수정 필요'} ════`);
