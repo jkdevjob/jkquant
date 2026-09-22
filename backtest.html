@@ -318,7 +318,7 @@ td:first-child{text-align:left;}
   <div class="brand">
     <div>
       <div class="logo">Backtest</div>
-      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v1.182</span></h1>
+      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v1.183</span></h1>
     </div>
   </div>
   <div class="hright">
@@ -2177,11 +2177,12 @@ function runIM(days,tkr,cap,divs,targetPct,compound=true){
         T=0; snap.push([d,cash+savedProfit-addedCash]); peakInvested=Math.max(peakInvested,cap-cash); return; }
       // 가격 회복(종가>평단×exitMul) → 내일부터 일반모드 복귀. T는 그대로 승계.
       // (복귀 후 일반모드에서 1회분도 못 사는 상태가 되면 T>분할−1이라 자동으로 다시 리버스 진입)
-      /* 가격이 회복돼도 아직 소진 상태(T>분할−1)면 살 돈이 없어 일반모드로 갈 수가 없다.
-         T 조건 없이 풀면 다음 날 바로 다시 소진으로 잡혀 새 1일차 무조건매도가 나가고,
-         가격이 복귀선 근처에서 오르내리는 동안 매일 강제로 파는 꼴이 된다.
-         운영 앱 재생기가 쓰던 조건(가격 회복 AND 1회 매수 가능)으로 맞춘다. */
-      if(c>avg*exitMul && (divs-T)>=1){ inReverse=false; }
+      /* 복귀 조건은 '가격 회복' 하나다 — 문서 그대로(TQQQ 종가>평단×0.85 · SOXL>×0.80).
+         T는 그대로 승계하고, 다음 날 일반모드에서 다시 소진이면 리버스로 재진입한다.
+         한때 여기에 '1회 매수가 가능할 때만 복귀' 라는 조건을 덧붙였는데,
+         그건 재진입이 반복되는 걸 막으려고 넣은 내 판단이지 문서 규칙이 아니었다.
+         공식 엔진에 임의 규칙을 섞으면 그 결과를 공식이라 부를 수 없다. */
+      if(c>avg*exitMul){ inReverse=false; }
       if(i%10===0)snap.push([d,cash+shares*c+savedProfit-addedCash]);
       peakInvested=Math.max(peakInvested, cap-cash);
       return;
@@ -2489,11 +2490,12 @@ function runIM50(days,tkr,cap,divs,targetPct,compound=true){
       if(shares<1e-9){ shares=0;avg=0;cycles++; inReverse=false;
         if(compound){} else if(cash>cap){ savedProfit+=cash-cap; cash=cap; }
         T=0; snap.push([d,cash+savedProfit-addedCash]); peakInvested=Math.max(peakInvested,cap-cash); return; }
-      /* 가격이 회복돼도 아직 소진 상태(T>분할−1)면 살 돈이 없어 일반모드로 갈 수가 없다.
-         T 조건 없이 풀면 다음 날 바로 다시 소진으로 잡혀 새 1일차 무조건매도가 나가고,
-         가격이 복귀선 근처에서 오르내리는 동안 매일 강제로 파는 꼴이 된다.
-         운영 앱 재생기가 쓰던 조건(가격 회복 AND 1회 매수 가능)으로 맞춘다. */
-      if(c>avg*exitMul && (divs-T)>=1){ inReverse=false; }
+      /* 복귀 조건은 '가격 회복' 하나다 — 문서 그대로(TQQQ 종가>평단×0.85 · SOXL>×0.80).
+         T는 그대로 승계하고, 다음 날 일반모드에서 다시 소진이면 리버스로 재진입한다.
+         한때 여기에 '1회 매수가 가능할 때만 복귀' 라는 조건을 덧붙였는데,
+         그건 재진입이 반복되는 걸 막으려고 넣은 내 판단이지 문서 규칙이 아니었다.
+         공식 엔진에 임의 규칙을 섞으면 그 결과를 공식이라 부를 수 없다. */
+      if(c>avg*exitMul){ inReverse=false; }
       if(i%10===0)snap.push([d,cash+shares*c+savedProfit-addedCash]);
       peakInvested=Math.max(peakInvested, cap-cash);
       return;
