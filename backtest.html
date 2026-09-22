@@ -320,7 +320,7 @@ td:first-child{text-align:left;}
   <div class="brand">
     <div>
       <div class="logo">Backtest</div>
-      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v2.1.4</span></h1>
+      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v2.2.1</span></h1>
     </div>
   </div>
   <div class="hright">
@@ -510,8 +510,9 @@ document.addEventListener('click',function(e){ var m=document.getElementById('jk
     </div>
     <div class="ctrl s-vr hide"><label>체결 방식 <span style="font-size:9px;color:var(--dim)">앱 매수·매도표와 같게</span></label>
       <div class="seg" id="vrFillSeg">
-        <button data-v="ladder" class="active" title="실전과 같게 — 사이클 첫날 20차수 지정가를 걸어두고 2주 동안 그날 고가·저가에 닿은 차수만 1주씩 체결">예약주문</button>
-        <button data-v="close" title="예전 방식 — 2주에 한 번, 그날 종가에 평가금을 V로 되맞춤">종가 리밸런싱</button>
+        <button data-v="official" class="active" title="공식 VR 5.0 — 평가금이 밴드(V±15%)를 벗어나면 평가금이 V로 돌아오도록 한 번에 조정. 예약주문으로 걸어 두므로 그날 고가·저가에 닿으면 체결된다">공식 (V 복귀)</button>
+        <button data-v="ladder" title="커스텀 — 밴드를 넘어도 한 주씩만 계단으로 움직인다. 공식 VR이 아니다">커스텀 1주 사다리</button>
+        <button data-v="close" title="보수 모델 — 2주에 한 번, 그날 종가에만 평가금을 V로 되맞춤 (장중 체결 없음)">종가 리밸런싱</button>
       </div>
     </div>
     <div class="ctrl s-vr hide vr-accum"><label data-cur="vr">적립금 ($/2주)</label><input type="number" id="vrContrib" value="100" min="10"></div>
@@ -1648,7 +1649,7 @@ let imTgtDyn=false;  // 익절 동적 조절 (20일 상승률) — 기본 OFF
    걸어두고 2주 방치, 그날 고가·저가에 닿은 차수만 1주씩 체결된다.
    'close' = 예전 백테 방식 — 2주에 한 번 그날 종가만 보고 평가금을 V로 되맞춘다.
    운영 앱은 처음부터 예약주문이었다(vrSimForward). 백테만 종가 하나를 보고 있었다. */
-let vrFill='ladder';
+let vrFill='official';   // 공식 VR 5.0 (V 복귀) 가 기본. 'ladder'=커스텀 1주 사다리 · 'close'=종가 리밸런싱
 
 /* 라오어 문서 공식 익절%는 종목별로 다르다 — TQQQ 15 · SOXL 20 (문서 미수록 종목은 20).
    운영 index.html 의 IM_OFFICIAL 과 같은 값이어야 한다. 한쪽만 고치면 같은 종목·같은 설정인데
@@ -2410,10 +2411,22 @@ function imPrevClose(tkr, days, i){
     const d=all[k]; if(d>=d0) continue;
     const r=D[d]; if(r&&r[C]>0) return r[C];
   }
-  return D[d0][C];                       // 앞에 봉이 하나도 없으면 어쩔 수 없이 오늘 종가
+  /* 앞에 봉이 하나도 없으면 '전일 확정 종가' 라는 게 존재하지 않는다.
+     오늘 종가를 대신 쓰면 그날 주문이 오늘 시세를 보고 정해진 셈이다(룩어헤드, 5차 감사 ⑤).
+     0 을 돌려주고, 부르는 쪽이 그날 주문을 아예 만들지 않는다. */
+  return 0;
 }
 const IM_BIG_DEFAULT=15;
 function imBigPct(st){ const v=+((st||{}).big); return isFinite(v)&&v>0 ? v : IM_BIG_DEFAULT; }
+/* 리버스 쿼터매수 주수 — 원문: 둘째날 이후 매수금 = 총 잔금 ÷ 4.
+   배정액으로 1주도 못 사면 그날은 매수가 없다(T도 안 올라간다).
+   예전엔 '잔금 전체로 1주를 살 수 있으면 강제로 1주' 를 넣었는데, 그건
+   '1개 매수가 가능할 때까지 리버스 지속' 이라는 소진 판정을 매수 수량 규칙으로
+   잘못 옮긴 것이다 — 잔금 100·매수가 60 이면 배정액은 25 인데 60 을 썼다.
+   두 규칙은 다르다: 소진 판정은 그대로 두고, 수량은 배정액으로만 센다. */
+function imRevBuyQty(balance, buyPrice){
+  return (balance>0 && buyPrice>0) ? Math.floor((balance/4)/buyPrice) : 0;
+}
 function imBuyQty(alloc, refPx, feeRate){
   const f=1+(feeRate||0);
   return (refPx>0 && alloc>0) ? Math.floor(alloc/f/refPx) : 0;
@@ -2490,6 +2503,7 @@ function runIM(days,tkr,cap,divs,targetPct,compound=true,bigOverride){
   days.forEach((d,i)=>{
     const [c,o,hi,lo]=M[tkr][d];
     const prevC=imPrevClose(tkr,days,i);        // 오늘 주문을 낼 때 알고 있는 마지막 확정 종가
+    if(!(prevC>0)) { snap.push([d,cash+shares*c+savedProfit-addedCash]); return; }   // 전일 종가가 없는 첫 봉 — 주문 없음
     const buyLimit=prevC*(1+bigPct/100);
     // 배당은 가격에 안 녹아 있다 — 보유 주수만큼 그날 현금으로 들어온다 (이중계상 방지는 divPerShare 가 맡는다)
     cash+=divCash(tkr,d,shares,CO);
@@ -2529,7 +2543,7 @@ function runIM(days,tkr,cap,divs,targetPct,compound=true,bigOverride){
           const buyP=_rg>0 ? star5*(1-_rg/100) : Math.max(0.01,star5-0.01);
           // 리버스 소진 = '1개(1주) 매수 불가' 시점 — 1주라도 살 수 있으면 계속 매수
           if(c<=buyP && cash>=buyP){
-            const alloc=Math.min(cash,Math.max(cash/4,buyP));
+            const alloc=imRevBuyQty(cash,buyP)*buyP;          // 원문: 배정액 = 잔금÷4
             if(_buy(c,alloc,buyP)>0) T=T+(divs-T)*0.25;      // 수량은 주문가로 사전 확정, 체결은 종가
           }
         }
@@ -2851,6 +2865,7 @@ function runIM50(days,tkr,cap,divs,targetPct,compound=true,bigOverride){
   days.forEach((d,i)=>{
     const [c,o,hi,lo]=M[tkr][d];
     const prevC=imPrevClose(tkr,days,i);
+    if(!(prevC>0)) { snap.push([d,cash+shares*c+savedProfit-addedCash]); return; }   // 전일 종가가 없는 첫 봉 — 주문 없음
     const buyLimit=prevC*(1+bigPct/100);
     // 배당은 가격에 안 녹아 있다 — 보유 주수만큼 그날 현금으로 들어온다 (이중계상 방지는 divPerShare 가 맡는다)
     cash+=divCash(tkr,d,shares,CO);
@@ -2882,7 +2897,7 @@ function runIM50(days,tkr,cap,divs,targetPct,compound=true,bigOverride){
           const _rg=(typeof imRevGap!=='undefined'?imRevGap:0);
           const buyP=_rg>0 ? star5*(1-_rg/100) : Math.max(0.01,star5-0.01);
           if(c<=buyP && cash>=buyP){
-            const alloc=Math.min(cash,Math.max(cash/4,buyP));
+            const alloc=imRevBuyQty(cash,buyP)*buyP;          // 원문: 배정액 = 잔금÷4
             if(_buy(c,alloc,buyP)>0) T=T+(divs-T)*0.25;
           }
         }
@@ -2975,6 +2990,78 @@ function vrCycleCount(days){
     if(hit) n++; }
   return n;
 }
+/* VR 체결 모델 — 기본은 공식(V 복귀). 'ladder' 를 고르면 커스텀 1주 사다리. */
+const VR_MODEL_DEFAULT='official';
+function vrModelOf(st){ return ((st||{}).vrModel==='ladder') ? 'ladder' : VR_MODEL_DEFAULT; }
+/* ════ VR 주문 체결 엔진 — 공식(V 복귀) · 커스텀(1주 사다리) ════
+   공식 VR 5.0 규칙:
+     상단 = V×(1+band) · 하단 = V×(1−band)
+     평가금이 상단을 넘으면 → 평가금이 V로 돌아오도록 매도
+     평가금이 하단을 밑돌면 → 평가금이 V에 닿도록 매수 (Pool 사용한도까지만)
+     밴드 안이면 거래 없음
+   예약주문으로 옮기면: 매도 트리거가 = 상단 ÷ 보유주수 (이 가격에서 평가금이 상단에 닿는다).
+   그 가격에 걸어 둘 수량 = 보유 − V ÷ 트리거가. 매수도 대칭이다.
+     V=10,000 · 보유 100주 · 밴드 15% → 매도 트리거 115, 수량 100−10,000/115 = 13주
+     → 남은 87주 × 115 = 10,005 ≈ V
+
+   커스텀 '1주 사다리' 는 한 주씩 계단으로 나간다 — 밴드를 넘어도 V로 안 돌아온다.
+   같은 예에서 1주만 팔고 멈춰 평가금이 11,484 로 남는다. 공식과 다른 전략이라
+   기본값이 아니라 커스텀 옵션이고, 화면에도 그렇게 적는다.
+
+   S: {shares, pool, avg, V} — 이 객체를 직접 고친다 (부르는 쪽이 결과를 받아 간다)
+   P: {band, poolLimit, budgetRemaining, FEE, model} — model 미지정이면 'official'
+   반환: [{type:'sell'|'buy', price, qty, net|cost}] — net·cost 는 그 체결 '전체' 금액 */
+function vrOrderPlan(S, P, bar){
+  const out=[];
+  if(!(S.V>0)) return out;
+  const up=S.V*(1+P.band), dn=S.V*(1-P.band);
+  const FEE=P.FEE||0, fee1=1+FEE;
+  /* budgetRemaining이 주어지면 그 값을 최우선으로 쓴다.
+     이 값은 '사이클 시작 Pool × 한도 − 이번 사이클 누적 매수액'이다. */
+  const budget=Math.max(0, P.budgetRemaining!=null ? +P.budgetRemaining : S.pool*P.poolLimit);
+  const hi=bar.high>0?bar.high:bar.close, lo=bar.low>0?bar.low:bar.close;
+  const LADDER=(P.model==='ladder');
+  const _sell=(p,qty)=>{ if(!(qty>=1)) return;
+    const net=p*(1-FEE)*qty; S.shares-=qty; S.pool+=net;
+    out.push({type:'sell', price:p, qty, net}); };
+  const _buy=(p,qty)=>{ if(!(qty>=1)) return;
+    const cost=p*fee1*qty;
+    S.avg=(S.shares<=0)?p:(S.shares*S.avg+p*qty)/(S.shares+qty);
+    S.shares+=qty; S.pool-=cost;
+    out.push({type:'buy', price:p, qty, cost}); };
+
+  if(LADDER){
+    let spent=0;
+    for(let k=0;k<400;k++){
+      const q=Math.floor(S.shares+1e-9); if(q<1) break;
+      const p=up/q; if(!(hi>=p)) break;
+      _sell(p,1);
+    }
+    for(let k=0;k<400;k++){
+      const q=Math.floor(S.shares+1e-9); if(q<1) break;
+      const p=dn/q; if(!(lo<=p)) break;
+      const cost=p*fee1;
+      if(spent+cost>budget+1e-9) break;      // Pool 한도 소진
+      if(cost>S.pool+1e-9) break;            // 현금 부족
+      _buy(p,1); spent+=cost;
+    }
+    return out;
+  }
+
+  /* ── 공식: 밴드를 벗어나면 평가금을 V로 되돌린다 ── */
+  { const q=Math.floor(S.shares+1e-9);
+    if(q>=1){ const p=up/q;
+      if(hi>=p){ const qty=Math.floor(q - S.V/p + 1e-9); _sell(p, Math.min(qty,q)); } } }
+  { const q=Math.floor(S.shares+1e-9);
+    if(q>=1){ const p=dn/q;
+      if(lo<=p && p>0){
+        const want=Math.floor(S.V/p - q + 1e-9);                       // V 까지 채울 수량
+        const cash=Math.min(budget, S.pool);                            // Pool 한도·잔고 중 작은 쪽
+        const afford=Math.floor(cash/(p*fee1) + 1e-9);
+        _buy(p, Math.max(0, Math.min(want, afford)));
+      } } }
+  return out;
+}
 function runVR(days,tkr,params){
   const {contrib=100,G=10,bandPct=15,mode=0.75,formula='basic',initAmt=0,withdraw=0,startV=0,startPool=0,cycStart='',costOn=false}=params||{};
   const band=bandPct/100,poolLimit=mode;
@@ -2983,7 +3070,8 @@ function runVR(days,tkr,params){
   /* 체결 방식 — 'ladder'(기본)는 실전처럼 2주 내내 지정가가 살아 있고,
      'close'는 2주에 한 번 그날 종가에만 되맞추는 예전 방식이다.
      파라미터로 못 박을 수 있고, 안 주면 화면 세그를 따른다. */
-  const LADDER = (params && params.fill!=null ? params.fill : (typeof vrFill!=='undefined'?vrFill:'ladder')) !== 'close';
+  const _vmode = (params && params.model) || (params && params.fill) || (typeof vrFill!=='undefined'?vrFill:VR_MODEL_DEFAULT);
+  const LADDER = _vmode !== 'close';          // 'close' 만 사이클 종가 리밸런싱, 나머지는 예약주문 체결
   const isAccum=mode===0.75, isWd=mode===0.25, isLump=!isAccum;
   let shares=0,pool=startPool||0,V=startV||0,inv=startPool||0,totalWd=0,rebal=0,buys=0,sells=0;
   // ── 비용·세금 (costOn=false면 전부 0 — 기존 산술과 완전 동일) · 규약은 무매·200일선과 같음 ──
@@ -3055,23 +3143,20 @@ function runVR(days,tkr,params){
      예전 방식과 결과가 다르다(그쪽은 2주에 한 번, 그날 종가에만 V로 되맞췄다).
      하루 매수 총액은 그날 시작 Pool × 모드한도(적립75·거치50·인출25%)까지.
      매도를 먼저 도는 것도 운영과 같다 — 판 돈이 그날 매수 재원이 된다. */
-  function _ladder(hi, lo2){
+  /* ── 하루치 체결 — 운영·모의·재생과 '같은 함수'를 부른다 (vrOrderPlan) ──
+     예전엔 여기에 사다리를 따로 적어 뒀다. 같은 규칙이 두 곳에 있으면 한쪽만 고쳐도
+     조용히 갈리므로, 수량 산출은 공용 엔진 한 곳에서만 한다.
+     체결 적용은 백테 장부(_vsellQ·_vbuyQ — 세무 원가·수수료)를 그대로 지난다. */
+  function _ladder(hi, lo2, cl){
     if(!(V>0)) return;
-    const up=V*(1+band), dn=V*(1-band);
-    const budget=Math.max(0, cycPoolBase*poolLimit-cycBuySpent), fee1=1+FEE;
-    let spent=0;
-    for(let k=0;k<400;k++){                       // 매도: 오를수록 다음 차수가 더 높다
-      const q=Math.floor(shares+1e-9); if(q<1) break;
-      const p=up/q; if(!(hi>=p)) break;
-      pool+=_vsellQ(1,p); sells++;
-    }
-    for(let k=0;k<400;k++){                       // 매수: 내릴수록 다음 차수가 더 낮다
-      const q=Math.floor(shares+1e-9); if(q<1) break;
-      const p=dn/q; if(!(lo2<=p)) break;
-      const cost=p*fee1;
-      if(spent+cost>budget+1e-9) break;           // Pool 한도 소진
-      if(cost>pool+1e-9) break;                   // 현금 부족
-      pool-=_vbuyQ(1,p); spent+=cost; cycBuySpent+=cost; buys++;
+    const St={shares:Math.floor(shares+1e-9), pool, avg, V};
+    const fills=vrOrderPlan(St, {band, poolLimit,
+        budgetRemaining:Math.max(0, cycPoolBase*poolLimit-cycBuySpent), FEE,
+        model:(_vmode==='ladder')?'ladder':'official'},
+      {date:'', high:hi, low:lo2, close:(cl>0?cl:hi)});
+    for(const f of fills){
+      if(f.type==='sell'){ pool+=_vsellQ(f.qty, f.price); sells++; }
+      else { pool-=_vbuyQ(f.qty, f.price); cycBuySpent+=f.cost; buys++; }
     }
   }
   days.forEach((d,i)=>{
@@ -3096,7 +3181,7 @@ function runVR(days,tkr,params){
     }
 
     // 먼저 기존 사이클 사다리를 오늘 OHLC에 체결한다.
-    if(LADDER && !first){ const row=M[tkr][d]; _ladder(row[HI]||c, row[LO]||c); }
+    if(LADDER && !first){ const row=M[tkr][d]; _ladder(row[HI]||c, row[LO]||c, c); }
 
     // 그 다음 장 마감 기준으로 새 사이클을 만든다. 새 사다리는 내일부터.
     if(isCyc && !first){
@@ -3781,7 +3866,7 @@ function comboOpts(mode){
   const maParkTxt=(_mo.park==='bill')?'국채대피':'현금대피';
   const maTxt=`${ml}일선·${maCondTxt(_mo.buy,_mo.sell)}·${maParkTxt}`;
   const vG=_stratNum('vrG',10), vB=_stratNum('vrBand',15), vF={basic:'기본공식',skill:'실력공식(실험적 확장 · 원전 미확인)'}[_stratSeg('vrFormula','basic')]||'기본공식';
-  const vFill=(typeof vrFill!=='undefined'&&vrFill==='close')?'종가':'예약주문';
+  const vFill=(typeof vrFill==='undefined')?'공식':(vrFill==='close'?'종가':(vrFill==='ladder'?'커스텀 사다리':'공식'));
   if(mode==='dca'){
     const dipTxt=(typeof dcaDipMul!=='undefined'&&dcaDipMul>1)?`·하락시${dcaDipMul}배`:'';
     const freq={daily:'매일',weekly:'매주',monthly:'매월'}[(typeof dcaFreq!=='undefined'?dcaFreq:'daily')]||'매일';
@@ -4377,7 +4462,7 @@ function renderMultiStrat(type, results, params){
   document.querySelector('.tbl-wrap').classList.remove('hide');
   const stratName=type==='im'?('무한매수법 '+(imEngine==='v22'?'V2.2':imEngine==='v30'?'V3.0':imEngine==='v50'?('V5.0('+imShortMA+'일·하락'+imLoPct+'%)'):'V4.0')+' · 익절 '+imTgtTxt()+imVariantTag(tickers)+(imEngine==='v40'&&imReverse?' · 리버스ON':'')+(imTgtDyn?' · 익절조절(20일상승률)':'')+(imCostOn?' · 비용반영':''))
     :type==='ma'?(maStratName(maLen)+(maCostOn?' · 비용반영':''))
-    :('VR 5.0 · '+(vrFill==='close'?'종가 리밸런싱':'예약주문(2주)')+(vrCostOn?' · 비용반영':''));
+    :('VR 5.0 · '+(vrFill==='close'?'종가 리밸런싱':vrFill==='ladder'?'커스텀 1주 사다리':'공식 V복귀')+(vrCostOn?' · 비용반영':''));
   const pct=x=>(x>=0?'+':'')+x.toFixed(1)+'%';
   const money=(x,t)=>fmtV(x,t||tickers[0]);
 
@@ -4563,7 +4648,7 @@ function renderSingle2(type,r,days){
   const m=META[r.tkr];
   const stratName = type==='im' ? ('무한매수법 '+(imEngine==='v22'?'V2.2':imEngine==='v30'?'V3.0':imEngine==='v50'?('V5.0('+imShortMA+'일)'):'V4.0')
                                    +(r.tgt!=null?' · 익절 '+r.tgt+'%':'')+imVariantTag([r.tkr])) : type==='ma' ? maStratName(r.maLen)
-                   : ('VR 5.0 · '+(vrFill==='close'?'종가 리밸런싱':'예약주문(2주)'));
+                   : ('VR 5.0 · '+(vrFill==='close'?'종가 리밸런싱':vrFill==='ladder'?'커스텀 1주 사다리':'공식 V복귀'));
   const stratShort = type==='im' ? '무한매수법' : type==='ma' ? ((r.maLen||200)+'일선') : 'VR 5.0';
 
   // ── yrs: 실제 날짜 구간 기반 (days.length/252는 월간 데이터 시 오차 큼)
