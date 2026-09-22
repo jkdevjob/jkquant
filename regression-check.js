@@ -114,8 +114,10 @@ inject(`if(sellQty>0){ _sell(c,sellQty,0); T=divs>=40?T*0.95:T*0.9; }   // MOC=�
 `if(sellQty>0){ __LOG('리버스매도',c,sellQty); _sell(c,sellQty,0); T=divs>=40?T*0.95:T*0.9; }   // MOC=종가`,'r1');
 inject(`if(sellQty>0){ _sell(c,sellQty,0); T=divs>=40?T*0.95:T*0.9; }   // LOC=종가`,
 `if(sellQty>0){ __LOG('리버스매도',c,sellQty); _sell(c,sellQty,0); T=divs>=40?T*0.95:T*0.9; }   // LOC=종가`,'r2');
-inject(`_buy(c, Math.min(cash, Math.max(cash/4, c)));   // LOC=종가`,
-`{const __a=Math.min(cash, Math.max(cash/4, c));const __q=_buy(c,__a);if(__q>0)__LOG('리버스매수',c,__q);}   // LOC=종가`,'r3');
+inject(`const alloc=Math.min(cash,Math.max(cash/4,buyP));
+            if(_buy(c,alloc,buyP)>0) T=T+(divs-T)*0.25;      // 수량은 주문가로 사전 확정, 체결은 종가`,
+`const alloc=Math.min(cash,Math.max(cash/4,buyP));
+            {const __q=_buy(c,alloc,buyP);if(__q>0){__LOG('리버스매수',c,__q);T=T+(divs-T)*0.25;}}      // 수량은 주문가로 사전 확정, 체결은 종가`,'r3');
 inject(`{_sell(o>tgt?o:tgt,q3,SLIP);tpHit=true;}`,
 `{const __px=o>tgt?o:tgt;__LOG('지정가매도',__px,q3);_sell(__px,q3,SLIP);tpHit=true;}`,'tp');
 inject(`{_sell(c,sq,0);qtHit=true;}`,
