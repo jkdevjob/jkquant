@@ -6276,40 +6276,36 @@ console.log('\n[100] 5년 플랜·VR 예약주문 동기화');
   ok('플랜: 일반 매수 수량은 공통 배정액 헬퍼 사용', /imBuyQtyPlan\(/.test(pl));
   ok('플랜: rowsOn 하방 LOC 주문도 표시', /st\.rowsOn\?Math\.max\(0,\+st\.rows\|\|0\):0/.test(pl) && /name:'하방 '\+i/.test(pl));
 
-  // ── VR: 실제 함수로 20차 상한·체결차수 비재생·양방향 독립을 값으로 검증.
+  // ── VR 공식 골든: 밴드에 닿으면 평가금을 V 근처로 되돌리는 수량.
   for(const [label,src] of [['운영',idx],['백테',bt]]){
-    const vf=new Function('return ('+extractFn(src,'function vrOrderPlan(S, P, bar)').replace(/^function [\w$]+\(/,'function (')+')')();
-    let S={shares:100,pool:1e9,avg:100,V:10000};
-    let z=vf(S,{band:.15,poolLimit:.5,budgetRemaining:1e9,FEE:0,baseShares:100,sellFilled:0,buyFilled:0,maxTiers:20},
-             {high:1e9,low:1e9,close:100});
-    ok(label+': 한 사이클 예약매도는 최대 20차', z.filter(x=>x.type==='sell').length===20,
-       String(z.filter(x=>x.type==='sell').length));
-    z=vf({shares:80,pool:1e9,avg:100,V:10000},
-         {band:.15,poolLimit:.5,budgetRemaining:1e9,FEE:0,baseShares:100,sellFilled:20,buyFilled:0,maxTiers:20},
-         {high:1e9,low:1e9,close:100});
-    ok(label+': 이미 체결한 20차를 다음 날 재생성하지 않는다', z.filter(x=>x.type==='sell').length===0);
+    const vf=new Function('return ('+extractFn(src,'function vrOrderPlan(S, P, bar)').replace(/^function [\\w$]+\\(/,'function (')+')')();
+    const P0={band:.15,poolLimit:.5,FEE:0};
+    let S={shares:100,pool:100000,avg:90,V:10000};
+    let z=vf(S,{...P0,budgetRemaining:100000},{high:116,low:110,close:116});
+    let sells=z.filter(x=>x.type==='sell');
+    ok(label+': 상단 11,500 · 100주 → 트리거 115', sells.length===1 && near(sells[0].price,115,1e-9), JSON.stringify(sells));
+    ok(label+': 116 도달 시 V 복귀 13주 매도', sells.length===1 && sells[0].qty===13 && S.shares===87,
+       sells.length?String(sells[0].qty):'0');
 
-    S={shares:100,pool:1e9,avg:100,V:10000};
-    z=vf(S,{band:.15,poolLimit:.5,budgetRemaining:1e9,FEE:0,baseShares:100,sellFilled:0,buyFilled:0,maxTiers:20},
-           {high:.01,low:.01,close:.01});
-    ok(label+': 한 사이클 예약매수는 최대 20차', z.filter(x=>x.type==='buy').length===20,
-       String(z.filter(x=>x.type==='buy').length));
-    z=vf({shares:120,pool:1e9,avg:100,V:10000},
-         {band:.15,poolLimit:.5,budgetRemaining:1e9,FEE:0,baseShares:100,sellFilled:0,buyFilled:20,maxTiers:20},
-         {high:.01,low:.01,close:.01});
-    ok(label+': 이미 체결한 매수 20차를 재생성하지 않는다', z.filter(x=>x.type==='buy').length===0);
+    S={shares:100,pool:100000,avg:110,V:10000};
+    z=vf(S,{...P0,budgetRemaining:100000},{high:90,low:84,close:84});
+    let buys=z.filter(x=>x.type==='buy');
+    ok(label+': 하단 8,500 · 100주 → 트리거 85', buys.length===1 && near(buys[0].price,85,1e-9), JSON.stringify(buys));
+    ok(label+': 84 도달 시 V 복귀 17주 매수', buys.length===1 && buys[0].qty===17 && S.shares===117,
+       buys.length?String(buys[0].qty):'0');
 
-    // 5차 매수가 체결돼 현재 105주여도 매도 1차 가격은 사이클 시작 B=100 기준 115여야 한다.
-    z=vf({shares:105,pool:1e9,avg:100,V:10000},
-         {band:.15,poolLimit:.5,budgetRemaining:1e9,FEE:0,baseShares:100,sellFilled:0,buyFilled:5,maxTiers:20},
-         {high:115.01,low:115.01,close:115.01});
-    const s1=z.find(x=>x.type==='sell');
-    ok(label+': 반대편 체결이 있어도 사다리 기준수량은 사이클 시작값 고정',
-       !!s1 && near(s1.price,115,1e-9), s1?String(s1.price):'no fill');
+    S={shares:100,pool:100000,avg:110,V:10000};
+    z=vf(S,{...P0,budgetRemaining:500},{high:90,low:84,close:84});
+    buys=z.filter(x=>x.type==='buy');
+    ok(label+': Pool 한도 500이면 5주까지만', buys.length===1 && buys[0].qty===5 && buys[0].cost<=500+1e-9,
+       JSON.stringify(buys));
   }
+  ok('운영: 기본 VR 모델은 official이고 커스텀 ladder만 명시적으로 선택', 
+     /const VR_MODEL_DEFAULT='official';/.test(idx) && /vrModel==='ladder'/.test(idx));
+  ok('백테: 기본 VR 모델은 official', /const VR_MODEL_DEFAULT='official';/.test(bt));
   ok('운영: 모의 규약 버전 5로 올려 옛 VR 모의 기록을 재생성', /const SIM_RULE_VER=5;/.test(idx));
-  ok('운영·백테: 잘못된 “공식 (V 복귀)” UI 제거', !/공식 \(V 복귀\)/.test(idx) && !/공식 \(V 복귀\)/.test(bt));
-  ok('플랜: 현재 사이클 시작수량과 양쪽 체결차수를 복원', /cycleBaseQty/.test(pl) && /cycleSellFilled/.test(pl) && /cycleBuyFilled/.test(pl));
+  ok('운영 화면이 공식 V 복귀 수량을 설명', /공식 VR: 밴드에 닿으면 1주가 아니라 평가금이 V 근처로/.test(idx));
+  ok('5년 플랜도 공식 상단매도·하단매수 수량을 표시', /name:'공식 상단매도'/.test(pl) && /name:'공식 하단매수'/.test(pl));
 }
 
 console.log(`\n════ 결과: ${pass} PASS / ${fail} FAIL ${fail===0?'— ALL PASS ★':'— 배포 금지, 위 ✗ 항목 수정 필요'} ════`);
