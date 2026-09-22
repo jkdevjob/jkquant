@@ -5937,5 +5937,73 @@ console.log('\n[94] 무매 선택 첫날 — 전일 종가를 워밍업에서 �
      && !/const prevC=i>0\?M\[tkr\]\[days\[i-1\]\]\[C\]:c;/.test(bt));
 }
 
+
+/* ════ 95. VR 자동 사이클 — 진입일 장중엔 안 넘긴다 ════  (4차 감사 ⑩·⑭)
+   vrSimForward 는 장 마감 전 오늘 봉을 빼고 돈다. 그런데 refreshVr 가 그 뒤에
+   vrAutoAdvance 를 부르고, 거기선 du.d===0(오늘이 진입일)이면 장중에도 돌았다.
+   오늘 봉이 아직 없으면 closeOn 이 '이전 거래일 종가' 까지 내려가 잡아 오므로
+     진입일 장중 → 오늘 사다리 미처리 → 어제 종가로 새 V 확정
+   이라는 경로가 열려 있었다. 휴장일이 진입일로 잡혀도 같은 일이 난다. */
+console.log('\n[95] VR 자동 사이클 — 확정 종가가 있는 날에만 넘긴다');
+{
+  const adv=extractFn(idx,'function vrAutoAdvance()');
+  ok('뒤로만 찾는 헬퍼가 있다', /const settledOnOrAfter=\(d, cut\)=>\{/.test(adv));
+  ok('확정 마감일로 자른다', /const _cut=simCutoff\(curOf\(st\)\);/.test(adv));
+  ok('확정 봉이 없으면 넘기지 않는다', /const _bar=settledOnOrAfter\(du\.dueStr, _cut\);\s*\n\s*if\(!_bar\) break;/.test(adv));
+  ok('옛 규약(이전 종가 끌어오기)이 안 남아 있다',
+     !/vrStepCycle\(sess, c, du\.dueStr, closeOn\(du\.dueStr\) \|\| vrLastPrice\(c\)\)/.test(adv));
+
+  /* 값으로 — 헬퍼를 떼어 내 세 경우를 본다 */
+  const F=new Function('dts','closes', `
+    const settledOnOrAfter=(d, cut)=>{
+      for(let i=0;i<dts.length;i++){ const k=dts[i];
+        if(k>=d && k<=cut && closes[k]>0) return {date:k, close:closes[k]}; }
+      return null; };
+    return settledOnOrAfter;`);
+  const dts=['2026-03-10','2026-03-11','2026-03-12','2026-03-16'];   // 3/13 휴장 가정
+  const closes={'2026-03-10':100,'2026-03-11':101,'2026-03-12':102,'2026-03-16':105};
+  const f=F(dts,closes);
+  // ① 진입일이 오늘(3/16)인데 장중이라 확정 마감일이 3/12 → 넘기지 않는다
+  ok('① 진입일 장중이면 null (사이클 진입 0회)', f('2026-03-16','2026-03-12')===null);
+  // ② 장 마감·정산 뒤 확정 마감일이 3/16 이면 그날 종가로 넘긴다
+  { const r=f('2026-03-16','2026-03-16');
+    ok('② 마감 뒤엔 그날 확정 종가로 넘긴다', !!r && r.date==='2026-03-16' && r.close===105,
+       JSON.stringify(r)); }
+  // ③ 진입일이 휴장(3/13)이면 이전 종가(3/12)를 끌어오지 않고 다음 거래일로 미룬다
+  { const r=f('2026-03-13','2026-03-16');
+    ok('③ 휴장 진입일은 다음 거래일 종가', !!r && r.date==='2026-03-16' && r.close===105,
+       JSON.stringify(r));
+    ok('③ 이전 종가(102)를 끌어오지 않는다', !r || r.close!==102, r?String(r.close):'null'); }
+  // ④ 휴장 진입일인데 아직 다음 거래일이 안 굳었으면 미룬다
+  ok('④ 다음 거래일도 아직이면 null', f('2026-03-13','2026-03-12')===null);
+
+  /* 모의체결 쪽은 원래부터 확정 마감일로 자른다 — 두 경로가 같은 기준이어야 한다 */
+  ok('모의체결도 같은 확정 마감 기준',
+     /const cut=_lastSettled\(O, curOf\(st\)\) \|\| simCutoff\(curOf\(st\)\);/
+       .test(extractFn(idx,'function vrSimForward()')));
+}
+
+
+/* ════ 96. VR '자동 진입' 표시 == 실제 동작 ════  (4차 감사 ⑫)
+   vrAutoAdvance 는 !sess.paper 면 바로 빠진다 — 실계좌는 자동 진입이 없다.
+   그런데 사이클 안내 줄은 st.autoCyc 만 보고 '자동 진입' 이라고 적었다.
+   5년플랜이 만든 실계좌 세션처럼 설정만 켜진 경우 화면이 거짓말을 한다. */
+console.log('\n[96] VR 자동 진입 표시 — 실제로 자동인 세션에만');
+{
+  const adv=extractFn(idx,'function vrAutoAdvance()');
+  ok('자동 진입은 모의 세션에서만 돈다', /if\(!sess\.paper \|\| !st\.autoCyc/.test(adv));
+  const now=extractFn(idx,'function renderVrNow()');
+  ok('안내 줄도 모의 여부를 본다',
+     /const du=vrDue\(c\), auto=!!st\.autoCyc && !!curStrat\(\)\.paper;/.test(now),
+     '아직 st.autoCyc 만 보고 자동이라고 적는다');
+  ok('실계좌면 수동임을 적는다', /실계좌는 수동/.test(now));
+  ok('버튼 밑 안내도 갈라 적는다',
+     /curStrat\(\)\.paper\?'⚙️ <b>모의 자동 진입<\/b>/.test(idx) && /⚠ <b>실계좌는 수동 진입<\/b>/.test(idx));
+  ok('5년플랜이 만드는 VR 세션은 자동이 꺼져 있다', (()=>{
+      try{ const pl=require('fs').readFileSync(__dirname+'/plan.html','utf8');
+        return /autoCyc:false/.test(pl) && !/autoCyc:true/.test(pl); }
+      catch(e){ return true; } })(), 'plan.html 이 autoCyc:true 로 만든다');
+}
+
 console.log(`\n════ 결과: ${pass} PASS / ${fail} FAIL ${fail===0?'— ALL PASS ★':'— 배포 금지, 위 ✗ 항목 수정 필요'} ════`);
 process.exit(fail===0?0:1);

@@ -529,7 +529,7 @@ try{ if(localStorage.getItem('qcockpit_hadUser')==='1') document.documentElement
 </div>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.78.1</span></h1></div>
+    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.79.0</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -908,6 +908,7 @@ document.addEventListener('click',function(e){ var m=document.getElementById('jk
         <h3><span class="dot"></span>모의투자 — 오늘까지 체결 확인</h3>
         <button class="fetchbtn" style="width:100%" onclick="vrSimNow()">▶ 지금까지 체결 판정</button>
         <p class="note" style="margin-top:8px">매수·매도표를 <b>지정가로 걸어둔 셈 치고</b>, 마지막 확인일 다음 날부터 오늘까지 하루하루 <b>고가·저가</b>로 닿았는지 판정해 체결된 차수만 기록합니다. 사이클 진입(V 갱신·적립)도 날짜에 맞춰 같이 처리합니다.<br>
+          같은 날 매도·매수가 둘 다 닿으면 <b>매도 → 매수 순서</b>로 가정합니다 — 일봉으로는 어느 쪽이 먼저였는지 알 수 없어 둔 <b>모델 가정</b>입니다.<br>
           모의 세션은 <b>탭을 열 때 자동으로</b> 돌아가니 평소엔 이 버튼을 누를 일이 없습니다. 실계좌 세션은 건드리지 않습니다.</p>
       </div>
     </div>
@@ -999,7 +1000,8 @@ document.addEventListener('click',function(e){ var m=document.getElementById('jk
       <div class="card"><h3><span class="dot"></span>V 갱신 (기본공식 · 오피셜)</h3>
         <div class="formula"><span class="lbl">다음 V</span>V₁ + Pool/G ± 적립금</div>
         <p class="note">라오어 VR 5.0 오피셜 공식입니다. 2주마다 Pool/G만큼 V가 상승하고, 적립식은 +적립금 / 인출식은 −인출금이 반영됩니다.</p>
-        <div class="formula" style="margin-top:10px;opacity:.75"><span class="lbl">실력공식(옵션)</span>V₁ + Pool/G + (E−V₁)/(2√G) ± 적립금</div>
+        <div class="formula" style="margin-top:10px;opacity:.75"><span class="lbl">실력공식(실험적 확장)</span>V₁ + Pool/G + (E−V₁)/(2√G) ± 적립금</div>
+        <p class="note" style="margin-top:6px;color:var(--gold)">⚠ 이 식은 <b>원전 출처를 아직 확인하지 못했습니다</b>. 공개 2차 자료에서 기본식과 75/50/25 규칙은 확인됐지만 이 식의 근거는 확인되지 않았습니다 — <b>실험적 확장</b>으로 두고, 공식(오피셜)과 구분해 표시합니다.</p>
         <p class="note">평가금 E가 V에서 멀어질 때 차이를 일부 반영하는 변형입니다. 오피셜이 아니며, 설정에서 선택할 수 있습니다.</p></div>
       <div class="card"><h3><span class="dot"></span>적립식·거치식·인출식, 뭐가 다른가</h3>
         <p class="note" style="margin-top:0">밴드·사다리·V갱신은 셋 다 똑같고, 아래 <b>3가지만</b> 모드에 따라 바뀝니다.</p>
@@ -1618,7 +1620,7 @@ document.addEventListener('click',function(e){ var m=document.getElementById('jk
   <footer>
     <strong>JK 퀀트</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.78.1</b> · 2026-09-22</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.79.0</b> · 2026-09-22</div>
   </footer>
 </div>
 
@@ -1672,7 +1674,7 @@ document.addEventListener('click',function(e){ var m=document.getElementById('jk
     <div class="seclabel">종목 (티커) <span class="hint" style="color:var(--faint);font-weight:500">6자리 코드면 국내 — 통화가 원화로 바뀝니다</span></div><div class="field tkwrap" style="margin:0 0 8px"><input id="set_vticker" type="text" autocomplete="off" spellcheck="false" placeholder="티커를 입력하세요 — 예: TQQQ, SOXL" oninput="tkSearch('set_vticker')" onfocus="tkSearch('set_vticker')" onblur="tkBlur('set_vticker')"><div class="tklist" id="set_vticker_list"></div></div>
     <div class="seclabel">분배금 <span class="hint" style="color:var(--faint);font-weight:500">현금 수령은 단리 인출과 같은 취급</span></div><div class="seg" id="set_vrdivmode"><button data-v="reinv" class="on">재투자</button><button data-v="cash">현금 수령</button></div>
     <div class="seclabel">운용 모드</div><div class="seg" id="set_vmode"><button data-v="0.75">적립식</button><button data-v="0.5">거치식</button><button data-v="0.25">인출식</button></div>
-    <div class="seclabel">V 갱신 공식</div><div class="seg" id="set_vformula"><button data-v="basic">기본공식</button><button data-v="skill">실력공식</button></div>
+    <div class="seclabel">V 갱신 공식</div><div class="seg" id="set_vformula"><button data-v="basic">기본공식</button><button data-v="skill">실력(실험적)</button></div>
     <div class="seclabel">사이클 진입 <span class="hint" style="color:var(--faint);font-weight:500">V 갱신·적립을 누가 하나</span></div><div class="seg" id="set_vauto"><button data-v="0">직접 확인</button><button data-v="1">자동 진입</button></div>
     <div class="seclabel">파라미터</div>
     <div class="field"><label>G (Gradient) <span class="hint">1~50, 클수록 보수</span></label><input id="set_g" type="number" inputmode="numeric" value="10"></div>
@@ -3751,12 +3753,15 @@ function renderVrNow(){
     verdict=`<div class="oitem" style="background:rgba(245,196,81,.1);justify-content:center"><span class="nm" style="flex:none;color:var(--gold)">⚪ 대기 — 밴드 안 (거래 없는 사이클)</span></div>`;
   }
   // 사이클 안내 — "2주 지난 걸 어떻게 아나"에 답하는 줄. 판단 밑에 항상 붙인다.
-  if(c.V>0){ const du=vrDue(c), auto=!!st.autoCyc;
+  /* '자동 진입' 은 모의 세션에서만 실제로 돈다 — vrAutoAdvance 가 !sess.paper 면 바로 빠진다.
+     실계좌인데 설정만 켜져 있다고 '자동' 이라고 적으면 화면이 실제 동작과 다른 말을 한다
+     (4차 감사 ⑫). 아래 nv_note 는 이미 갈라 적고 있었는데 이 줄만 안 봤다. */
+  if(c.V>0){ const du=vrDue(c), auto=!!st.autoCyc && !!curStrat().paper;
     if(vrAutoNote && curStrat().id===vrAutoNoteSid)
       verdict = `<p class="note" style="margin:0 0 10px;color:var(--vio)">${vrAutoNote}</p>` + verdict;
     if(du){ const md=x=>{const t=x.split('-');return `${+t[1]}/${+t[2]}`;};
       verdict += du.state==='wait'
-        ? `<p class="note" style="margin-top:10px">📅 ${c.curCyc}주차 진행 중 · 다음 사이클 ${auto?'<b>자동</b> 진입':'진입'} <b>${md(du.dueStr)}</b> (${du.d}일 뒤). 그때까지는 밴드를 벗어날 때만 매매합니다.</p>`
+        ? `<p class="note" style="margin-top:10px">📅 ${c.curCyc}주차 진행 중 · 다음 사이클 ${auto?'<b>자동</b> 진입':(st.autoCyc?'진입 <b>(실계좌는 수동)</b>':'진입')} <b>${md(du.dueStr)}</b> (${du.d}일 뒤). 그때까지는 밴드를 벗어날 때만 매매합니다.</p>`
         : `<p class="note" style="margin-top:10px;color:var(--buy)">📅 <b>${du.state==='due'?'오늘이 진입일입니다':`진입일이 ${-du.d}일 지났습니다`}</b> (${md(du.dueStr)}) — 아래 <b>다음 V 미리보기</b>에서 "다음 사이클 진입"을 누르세요.</p>`; } }
   const pill=$('vh_pill'); pill.className='bandpill '+pillCls; pill.textContent=pillTxt;
   $('vh_verdict').innerHTML=verdict;
@@ -3914,7 +3919,8 @@ function computeNextV(c,ev){
 }
 function renderVrNext(){
   const c=computeVr(), st=c.st;
-  $('nv_formula_lbl').textContent= st.formula==='skill'?'실력공식':'기본공식(오피셜)';
+  /* 실력공식은 원전 출처 미확인 — '공식' 이라고 단정하지 않는다 (4차 감사 ⑯) */
+  $('nv_formula_lbl').textContent= st.formula==='skill'?'실력공식(실험적 확장)':'기본공식(오피셜)';
   if(c.V<=0){
     $('nv_v').textContent='첫 매수 후'; $('nv_calc').innerHTML='<span class="lbl">계산</span>첫 매수를 기록하면 V가 설정됩니다';
     $('nv_pool').textContent='—';$('nv_min').textContent='—';$('nv_max').textContent='—';
@@ -3954,6 +3960,14 @@ function enterNextCycle(){
   const ev=vrEval(c)||c.V;
   const r=computeNextV(c,ev);
   const startDate=$('nv_date').value || new Date().toISOString().slice(0,10);
+  /* 공식 VR 은 달력 14일 사이클이다. 진입일 전에 넘기면 공식이 아니라 변형이다 —
+     막지는 않되 '커스텀 조기 진입' 임을 확인받고 기록에도 남긴다 (4차 감사 ⑬). */
+  const _du=vrDue(c);
+  let _early=false;
+  if(_du && _du.state==='wait'){
+    _early=true;
+    if(!confirm(`⚠ 아직 진입일이 아닙니다.\n\n· 공식 진입일 ${_du.dueStr} (${_du.d}일 뒤)\n· 지금 넘기면 공식 2주 사이클이 아니라 커스텀 조기 진입입니다.\n  (사이클 기록에 '조기' 로 남습니다)\n\n그래도 진행할까요?`)) return;
+  }
   const isAccum=st.mode===0.75, isWd=st.mode===0.25; // 거치식(0.5)은 적립금 항상 0
   const sign=r.sign, add=(isAccum||isWd)?(st.add||0):0;
   if(!confirm(`${c.curCyc+1}주차로 진입합니다.\n· 다음 V = ${wn(r.nextV)}\n· ${sign<0?'인출':'적립'} ${wn(add)} ${sign<0?'Pool 차감':'Pool 추가'}\n· 시작일 ${startDate}\n진행할까요?`))return;
@@ -3963,7 +3977,8 @@ function enterNextCycle(){
   const _cycClose=vrLastPrice(c);
   st.cycLog.push({cyc:c.curCyc, from:st.cycStart||null, dates:cycDates(c)||'-', V:+c.V.toFixed(2),
     lo:+c.lo.toFixed(2), up:+c.up.toFixed(2), trade:+c.cycTrade.toFixed(2), startPool:+c.cycStartPool.toFixed(2),
-    E:ev>0?+ev.toFixed(2):null, close:_cycClose>0?+_cycClose.toFixed(4):null});   // 평가금·종가 (사이클 분석 차트용)
+    E:ev>0?+ev.toFixed(2):null, close:_cycClose>0?+_cycClose.toFixed(4):null,
+    early:_early||undefined, due:_du?_du.dueStr:undefined});   // 평가금·종가 (사이클 분석 차트용) · 조기 진입 표시
 
   // 적립/인출 자동 기록 (Pool은 이력에서 재계산되므로 이 거래로만 반영)
   const newCyc=c.curCyc+1;
@@ -7183,13 +7198,30 @@ function vrAutoAdvance(){
   const closeOn=d=>{ if(closes[d]>0) return closes[d];
     for(let i=dts.length-1;i>=0;i--) if(dts[i]<=d) return closes[dts[i]];
     return 0; };
+  /* 진입일 이후 '실제로 존재하는 첫 거래일' 의 확정 종가 (4차 감사 ⑩·⑭).
+     closeOn 은 봉이 없으면 이전 거래일 종가로 내려간다 — 진입일 장중이거나
+     진입일이 휴장이면 '어제 종가로 새 V 확정' 이 되어, 모의체결(vrSimForward)이
+     오늘 사다리를 처리하기도 전에 사이클이 넘어간다. 그래서 뒤로만 찾는다. */
+  const settledOnOrAfter=(d, cut)=>{
+    for(let i=0;i<dts.length;i++){
+      const k=dts[i];
+      if(k>=d && k<=cut && closes[k]>0) return {date:k, close:closes[k]};
+    }
+    return null;
+  };
   _vrAutoBusy=true; let n=0, lastV=0, lastCyc=0;
   try{
     for(let g=0; g<80; g++){
       const c=computeVr();
       if(c.V<=0) break;                                  // 첫 매수 전이면 할 일 없음
       const du=vrDue(c); if(!du || du.d>0) break;         // 아직 진입일 전
-      const r=vrStepCycle(sess, c, du.dueStr, closeOn(du.dueStr) || vrLastPrice(c));
+      /* 진입일 '장중' 에는 넘기지 않는다 — 그날 걸어둔 사다리가 아직 체결 중이고
+         종가도 안 굳었다. 확정된 봉이 실제로 있는 날에만 넘긴다.
+         진입일이 휴장이면 이전 종가를 끌어오지 않고 다음 거래일까지 미룬다. */
+      const _cut=simCutoff(curOf(st));
+      const _bar=settledOnOrAfter(du.dueStr, _cut);
+      if(!_bar) break;                                   // 아직 확정 종가가 없다 → 다음 새로고침에
+      const r=vrStepCycle(sess, c, du.dueStr, _bar.close);
       lastV=r.nextV; lastCyc=r.newCyc; n++;
     }
     if(n>0){ st.cycLog=st.cycLog.slice(-120); sortHist(sess.hist);
@@ -8232,7 +8264,7 @@ function renderStatusline(){
   }else{
     const st=s.settings;
     const mode=st.mode===0.75?'적립식':st.mode===0.5?'거치식':'인출식';
-    html+=`<span>${tickerLabel(st.ticker)} · ${mode} · ±${st.band}% · ${st.formula==='skill'?'실력':'기본'}공식</span>`;
+    html+=`<span>${tickerLabel(st.ticker)} · ${mode} · ±${st.band}% · ${st.formula==='skill'?'실력(실험적)':'기본'}공식</span>`;
   }
   // 설정은 '지금 보고 있는 전략·세션'의 설정이라 상단 헤더보다 상태줄이 맞다
   html+=`<button class="setpill" onclick="openSettings()" title="설정">⚙️ 설정</button>`;
