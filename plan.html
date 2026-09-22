@@ -778,6 +778,8 @@ function paperSessionCount(box,ticker){
 }
 function reverseTPlan(kind,t,div){if(kind==='리버스매도')return div>=40?t*.95:t*.9;if(kind==='리버스매수')return t+(div-t)*.25;return t;}
 function starPctPlan(st,T){const b=(+st.target>0)?+st.target:20;return b-(b*.1*20/(+st.div||20))*T;}
+function imBuyQtyPlan(alloc,refPx,feeRate){const f=1+(feeRate||0);return (refPx>0&&alloc>0)?Math.floor(alloc/f/refPx):0;}
+function imRevBuyQtyPlan(balance,buyPrice){return (balance>0&&buyPrice>0)?Math.floor((balance/4)/buyPrice):0;}
 function calcInfState(sess){
   const st=sess.settings||{},hist=sess.hist||[];let avg=0,qty=0,inv=0,realized=0,T=0,withdrawn=0,saved=0,revState='NORMAL';
   const simple=st.compound===false;
@@ -797,40 +799,53 @@ function calcInfState(sess){
     if(typeof h.tManual==='number'&&!isNaN(h.tManual))T=h.tManual;
     else if(isRev)T=reverseTPlan(kind,T,+st.div||20);
     else T=KIND_T[kind]?KIND_T[kind](T):T;
-    revState=isRev?'REVERSE':'NORMAL';
-    if(qty<=1e-9&&isSellKind(kind)&&!isBuyKind(kind)){
+
+    // 상태를 실제로 바꾸는 이벤트만 리버스 상태를 바꾼다.
+    if(isRev)revState='REVERSE';
+    else if(kind==='리버스복귀')revState='NORMAL';
+    else if(isBuyKind(kind)||isSellKind(kind))revState='NORMAL';
+
+    const soldQty=(h.sellQty!=null)?(+h.sellQty||0):(isSellKind(kind)?(+h.qty||0):0);
+    if(qty<=1e-9&&soldQty>0){
       qty=0;avg=0;T=0;inv=0;revState='NORMAL';
       if(simple){const P0=+st.principal||0,cash=P0+realized-withdrawn-saved;if(cash>P0)saved+=cash-P0;}
     }
   }
   if(st.reverse===true&&revState==='NORMAL'&&qty>0&&((+st.div||20)-T)<1)revState='DAY1';
   const bal=(+st.principal||0)+realized-inv-withdrawn-saved;
-  return {st,avg,qty:Math.max(0,qty),T,bal,withdrawn,saved,outside:withdrawn+saved,reverseActive:st.reverse===true&&revState!=='NORMAL'&&qty>0,reverseDay1:revState==='DAY1'};
+  return {st,avg,qty:Math.max(0,qty),T,bal,withdrawn,saved,outside:withdrawn+saved,revState,
+    reverseActive:st.reverse===true&&revState!=='NORMAL'&&qty>0,reverseDay1:revState==='DAY1'};
 }
 function imOrders(sess,price,rows){
   const c=calcInfState(sess),st=c.st,div=+st.div||20,target=+st.target||20,big=st.big!=null?+st.big:15,slot=div-c.T;
   if(!(price>0))return {state:c,orders:[],note:'확정 종가가 없어 주문을 계산하지 못했습니다.'};
   const orders=[];
   if(c.reverseActive){
-    const sellDiv=div>=40?20:10,sellQty=Math.max(1,Math.floor(c.qty/sellDiv)),quarterBuy=Math.max(0,c.bal/4);
+    const sellDiv=div>=40?20:10,sellQty=Math.floor(c.qty/sellDiv),quarterBuy=Math.max(0,c.bal/4);
     if(c.reverseDay1){
-      orders.push({side:'sell',name:'리버스 1일차 무한매도',price,qty:sellQty,tag:'MOC'});
-      return {state:c,orders,note:'리버스 진입 1일차: 보유÷'+sellDiv+' MOC 매도, 매수 없음.'};
+      if(sellQty>0)orders.push({side:'sell',name:'리버스 1일차 무한매도',price,qty:sellQty,tag:'MOC'});
+      return {state:c,orders,note:sellQty>0?'리버스 진입 1일차: 보유÷'+sellDiv+' MOC 매도, 매수 없음.':'리버스 1일차지만 보유÷'+sellDiv+' 내림이 0주라 오늘 매도 없음.'};
     }
     const rr=(rows||[]).filter(x=>x&&x.close>0).slice(-5);
     if(rr.length<5)return {state:c,orders:[],note:'리버스 주문 계산에 직전 5거래일 확정 종가가 필요합니다.'};
     const star5=rr.reduce((a,x)=>a+(+x.close||0),0)/5,bp=Math.max(.01,star5-.01);
-    orders.push({side:'sell',name:'리버스 무한매도',price:star5,qty:sellQty,tag:'LOC'});
-    const bq=Math.max(Math.floor(quarterBuy/bp),c.bal>=bp?1:0);
+    if(sellQty>0)orders.push({side:'sell',name:'리버스 무한매도',price:star5,qty:sellQty,tag:'LOC'});
+    const bq=imRevBuyQtyPlan(c.bal,bp);
     if(bq>0)orders.push({side:'buy',name:'리버스 쿼터매수',price:bp,qty:bq,tag:'LOC'});
-    return {state:c,orders,note:'리버스 별지점 = 직전 5거래일 종가 평균 '+usd(star5)+' · 매수가는 별지점−$0.01'};
+    return {state:c,orders,note:'리버스 별지점 = 직전 5거래일 종가 평균 '+usd(star5)+' · 매수가는 별지점−$0.01 · 매수금은 잔금÷4'};
   }
   const buy1=slot>=1?c.bal/slot:0,pct=starPctPlan(st,c.T),star=c.avg>0?c.avg*(1+pct/100):price,buyPt=star-.01,limit=price*(1+big/100),half=c.T<div/2;
-  const addBuy=(name,p,alloc)=>{const pp=Math.max(.01,Math.min(p,limit)),q=Math.floor(Math.max(0,alloc)/price);if(q>0)orders.push({side:'buy',name,price:pp,qty:q,tag:'LOC'});};
+  const nRows=st.rowsOn?Math.max(0,+st.rows||0):0,gap=+st.gap||2.5,rq=Math.max(1,+st.rowqty||1);
+  const addBuy=(name,p,alloc,qtyPrice,tag)=>{const pp=Math.max(.01,Math.min(p,limit)),q=imBuyQtyPlan(Math.max(0,alloc),qtyPrice||price,0);if(q>0)orders.push({side:'buy',name,price:pp,qty:q,tag:tag||'LOC'});};
   if(slot>=1&&buy1>0){
-    if(c.avg<=0)addBuy('처음매수',limit,buy1);
-    else if(half){addBuy('별지점 절반매수',buyPt,buy1/2);addBuy('평단 절반매수',c.avg,buy1/2);}
-    else addBuy('별지점 전액매수',buyPt,buy1);
+    if(c.avg<=0){
+      addBuy('처음매수',limit,buy1,price);
+      for(let i=1;i<=nRows;i++){const p=price*(1-gap*i/100);if(p>0)orders.push({side:'buy',name:'하방 '+i+' (-'+(gap*i).toFixed(1)+'%)',price:p,qty:rq,tag:'LOC'});}
+    }else{
+      if(half){addBuy('별지점 절반매수',buyPt,buy1/2,price);addBuy('평단 절반매수',c.avg,buy1/2,price);}
+      else addBuy('별지점 전액매수',buyPt,buy1,price);
+      for(let i=1;i<=nRows;i++){const p=buyPt*(1-gap*i/100);if(p>0)orders.push({side:'buy',name:'하방 '+i+' (-'+(gap*i).toFixed(1)+'%)',price:Math.min(p,limit),qty:rq,tag:'LOC'});}
+    }
   }
   if(c.qty>0&&c.avg>0){
     const q1=Math.floor(c.qty/4);
@@ -844,20 +859,26 @@ function calcVrState(sess){
   const st=sess.settings||{},hist=sess.hist||[];let qty=0,totbuy=0,totsell=0,totdiv=0,totadd=0,totwd=0,buyShares=0,initBuy=0,pool=+st.startpool||0,V=+st.startv||0,cost=0;
   let vSet=V>0,sawBuy=false;const carriedIn=V>0&&!(st.startCyc>0);
   let curCyc=st.startCyc||0,cycleStartPool=pool,cycleBuySpent=0,cycleHasTrade=false,seen=false;
+  let cycleBaseQty=0,cycleSellFilled=0,cycleBuyFilled=0;
   for(const h of hist){
     const hc=h.cyc!=null?+h.cyc:curCyc;
-    if(!seen){curCyc=hc;cycleStartPool=pool;cycleBuySpent=0;seen=true;}
-    else if(hc!==curCyc){curCyc=hc;cycleStartPool=pool;cycleBuySpent=0;cycleHasTrade=false;}
-    if(h.type==='buy'){const amt=(+h.price||0)*(+h.qty||0),fee=+h.fee||0;qty+=+h.qty||0;totbuy+=amt;buyShares+=+h.qty||0;cost+=amt;
-      const isInit=h.init!==undefined?!!h.init:(!sawBuy&&!carriedIn);sawBuy=true;if(!vSet){V=amt;vSet=true;}if(isInit){initBuy+=amt+fee;cycleStartPool=pool;}else{pool-=amt+fee;cycleBuySpent+=amt+fee;cycleHasTrade=true;}}
-    else if(h.type==='sell'){const q=+h.qty||0,amt=(+h.price||0)*q,fee=+h.fee||0,av=qty>0?cost/qty:0;cost-=av*q;qty-=q;if(qty<1e-9){qty=0;cost=0;}totsell+=amt;pool+=amt-fee;cycleHasTrade=true;}
-    else if(h.type==='add'){pool+=+h.amt||0;totadd+=+h.amt||0;if((h.auto||(curCyc===0&&!cycleHasTrade))&&!cycleHasTrade)cycleStartPool=pool;}
+    if(!seen){curCyc=hc;cycleStartPool=pool;cycleBuySpent=0;cycleBaseQty=qty;cycleSellFilled=0;cycleBuyFilled=0;seen=true;}
+    else if(hc!==curCyc){curCyc=hc;cycleStartPool=pool;cycleBuySpent=0;cycleHasTrade=false;cycleBaseQty=qty;cycleSellFilled=0;cycleBuyFilled=0;}
+    if(h.type==='buy'){
+      const amt=(+h.price||0)*(+h.qty||0),fee=+h.fee||0,q=+h.qty||0;qty+=q;totbuy+=amt;buyShares+=q;cost+=amt;
+      const isInit=h.init!==undefined?!!h.init:(!sawBuy&&!carriedIn);sawBuy=true;if(!vSet){V=amt;vSet=true;}
+      if(isInit){initBuy+=amt+fee;cycleStartPool=pool;if(cycleBaseQty<=0)cycleBaseQty=qty;}
+      else{pool-=amt+fee;cycleBuySpent+=amt+fee;cycleHasTrade=true;cycleBuyFilled+=Math.max(0,Math.round(q));}
+    }else if(h.type==='sell'){
+      const q=+h.qty||0,amt=(+h.price||0)*q,fee=+h.fee||0,av=qty>0?cost/qty:0;cost-=av*q;qty-=q;if(qty<1e-9){qty=0;cost=0;}totsell+=amt;pool+=amt-fee;cycleHasTrade=true;cycleSellFilled+=Math.max(0,Math.round(q));
+    }else if(h.type==='add'){pool+=+h.amt||0;totadd+=+h.amt||0;if((h.auto||(curCyc===0&&!cycleHasTrade))&&!cycleHasTrade)cycleStartPool=pool;}
     else if(h.type==='wd'){pool-=+h.amt||0;totwd+=+h.amt||0;if(h.auto&&!cycleHasTrade)cycleStartPool=pool;}
     else if(h.type==='div'){pool+=+h.amt||0;totdiv+=+h.amt||0;}
   }
-  if((+st.startCyc||0)>curCyc){curCyc=+st.startCyc||0;cycleStartPool=pool;cycleBuySpent=0;}
+  if((+st.startCyc||0)>curCyc){curCyc=+st.startCyc||0;cycleStartPool=pool;cycleBuySpent=0;cycleHasTrade=false;cycleBaseQty=qty;cycleSellFilled=0;cycleBuyFilled=0;}
+  if(cycleBaseQty<=0&&qty>0)cycleBaseQty=Math.max(1,Math.round(qty+cycleSellFilled-cycleBuyFilled));
   const avgNom=buyShares>0?totbuy/buyShares:0,up=V*(1+(+st.band||15)/100),lo=V*(1-(+st.band||15)/100);
-  return {st,hist,qty:Math.max(0,qty),pool,V,avgNom,up,lo,curCyc,cycleStartPool,cycleBuySpent};
+  return {st,hist,qty:Math.max(0,qty),pool,V,avgNom,up,lo,curCyc,cycleStartPool,cycleBuySpent,cycleBaseQty,cycleSellFilled,cycleBuyFilled};
 }
 function nextVrDate(s){const t=new Date(s+'T00:00:00Z');t.setUTCDate(t.getUTCDate()+14);while(t.getUTCDay()===0||t.getUTCDay()===6)t.setUTCDate(t.getUTCDate()+1);return t.toISOString().slice(0,10);}
 function resolvePlanVrDue(rows,dueStr,settledDate){
@@ -889,16 +910,22 @@ async function advancePlanVrCycle(){
 function vrCycleStart(c){if(c.st.cycStart)return c.st.cycStart;for(let i=c.hist.length-1;i>=0;i--){const x=c.hist[i];if(x.auto&&(x.type==='add'||x.type==='wd'))return x.date;}const f=c.hist.find(x=>x.type==='buy');return f?f.date:null;}
 function vrOrders(sess,price){
   const c=calcVrState(sess),st=c.st,orders=[];if(!(price>0))return {state:c,orders,note:'확정 종가가 없어 계산하지 못했습니다.'};
-  if(!(c.V>0)&&!(c.qty>0)){const amt=st.initAmt!=null?+st.initAmt:10000,q=Math.floor(amt/price);if(q>0)orders.push({side:'buy',name:'첫 매수',price,qty:q,tag:'초기'});return {state:c,orders,note:'첫 매수 후 V와 사다리가 생성됩니다.'};}
-  const S=Math.floor(c.qty),ev=price*c.qty,cap=Math.max(0,c.cycleStartPool*(+st.mode||.5)),remain=Math.max(0,Math.min(c.pool,cap-c.cycleBuySpent));
-  if(S>0){
-    for(let k=0;k<20;k++){const q=S-k;if(q<1)break;orders.push({side:'sell',name:'예약매도 '+(k+1)+'차',price:c.up/q,qty:1,tag:'예약'});}
+  if(!(c.V>0)&&!(c.qty>0)){const amt=st.initAmt!=null?+st.initAmt:10000,q=Math.floor(amt/price);if(q>0)orders.push({side:'buy',name:'첫 매수',price,qty:q,tag:'초기'});return {state:c,orders,note:'첫 매수 후 V와 20차 예약 사다리가 생성됩니다.'};}
+  const N=20,B=Math.floor(c.cycleBaseQty||c.qty),ev=price*c.qty,cap=Math.max(0,c.cycleStartPool*(+st.mode||.5)),remain=Math.max(0,Math.min(c.pool,cap-c.cycleBuySpent));
+  if(B>0){
+    for(let k=Math.max(1,c.cycleSellFilled+1);k<=Math.min(N,B);k++){
+      const before=B-k+1,p=c.up/before;orders.push({side:'sell',name:'예약매도 '+k+'차',price:p,qty:1,tag:'예약'});
+    }
     let used=0;
-    for(let k=0;k<20;k++){const q=S+k;if(q<1)break;const p=c.lo/q,cost=p*(1+FEE);if(used+cost>remain+1e-9)break;orders.push({side:'buy',name:'예약매수 '+(k+1)+'차',price:p,qty:1,tag:'예약'});used+=cost;}
+    for(let k=Math.max(1,c.cycleBuyFilled+1);k<=N;k++){
+      const before=B+k-1,p=c.lo/before,cost=p*(1+FEE);
+      if(used+cost>remain+1e-9)break;
+      orders.push({side:'buy',name:'예약매수 '+k+'차',price:p,qty:1,tag:'예약'});used+=cost;
+    }
   }
   const cs=vrCycleStart(c),due=cs?nextVrDate(cs):null;
   const bandState=ev>c.up?'상단 예약매도 체결구간':(ev<c.lo?'하단 예약매수 체결구간':'밴드 안');
-  return {state:c,orders,note:(due?'다음 사이클 기준일 '+due+' · ':'')+bandState+' · 시장가로 V까지 별도 보정하지 않음 · 매수한도 '+usd(cap)+' / 사용 '+usd(c.cycleBuySpent)+' / 남음 '+usd(remain)};
+  return {state:c,orders,note:(due?'다음 사이클 기준일 '+due+' · ':'')+bandState+' · 이번 사이클 시작수량 '+B+'주 기준 20차 예약 고정 · 매수한도 '+usd(cap)+' / 사용 '+usd(c.cycleBuySpent)+' / 남음 '+usd(remain)};
 }
 async function fetchPlanQuote(symbol){
   const sym=String(symbol||'').toUpperCase();if(liveQuotes[sym])return liveQuotes[sym];
