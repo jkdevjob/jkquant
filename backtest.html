@@ -320,7 +320,7 @@ td:first-child{text-align:left;}
   <div class="brand">
     <div>
       <div class="logo">Backtest</div>
-      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v1.183.1</span></h1>
+      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v2.0.0</span></h1>
     </div>
   </div>
   <div class="hright">
@@ -954,6 +954,37 @@ let maLen=200, maCostOn=true;                   // 이동평균 기간 200일 �
 let maBuy='ma', maSell='ma', maShort=50, maPark='cash';   // 로테 매수·매도 조건(200선/크로스/둘다/하나만)·단기선·대피처(현금/단기국채)
 let vrCostOn=true;                  // VR: 세금·비용 반영 (무매·200일선과 동일 규약)
 let dcaCostOn=true, allCostOn=true, asapCostOn=true;   // DCA·전체비교·ASAP 비용 반영 (기본 세후 — 전 탭 통일)
+
+/* 하단 고정 문구가 실제 실행 옵션과 어긋나면 안 된다.
+   예전엔 '수수료·세금·환율·배당 미반영'이라고 못 박아 뒀는데, 화면에는 전략마다
+   비용 토글과 배당 처리(복리/단리)가 있다 — 켜 두고도 '미반영'이라고 적혀 있었다.
+   지금 탭의 실제 설정을 읽어 그대로 적는다. */
+const COST_FLAG={dca:()=>dcaCostOn, im:()=>imCostOn, vr:()=>vrCostOn, ma:()=>maCostOn,
+  asap:()=>asapCostOn, std:()=>stdCostOn, ivs:()=>ivsCostOn, all:()=>allCostOn,
+  mom:()=>(typeof momCostOn!=='undefined'?momCostOn:true)};
+function renderFootNote(){
+  const el=document.getElementById('footCost'); if(!el) return;
+  const base='※ 실제 OHLC 종가 기반 백테스트. LOC매수=종가≤주문가 시 체결, 지정가매도=당일 고가≥목표가 시 체결로 근사.';
+  const f=COST_FLAG[strat], on=f?!!f():false;
+  const cost=on
+    ? '<b style="color:var(--gold)">비용 적용</b> — 매매 수수료·양도세(미국 22%, 연 250만원 공제 / 국내 규약 별도)·ETF 보수를 반영합니다.'
+    : '<b>비용 미적용</b> — 수수료·세금·보수를 넣지 않은 총수익 기준입니다.';
+  const div=(strat==='dca'||strat==='all')
+    ? ` · 분배금 <b>${(typeof dcaReinv==='undefined'||dcaReinv)?'재투자(복리)':'현금 수령(단리)'}</b>`
+    : ' · 분배금은 조정종가에 반영된 총수익 기준';
+  /* 어떤 가격으로 체결했는지도 적는다 — 이게 다르면 주수·평단·세금이 통째로 다르다. */
+  const syms=Object.keys(PBASIS||{});
+  const adj=syms.filter(t=>PBASIS[t]!=='trade');
+  const basis = !syms.length ? ''
+    : adj.length
+      ? `<br>※ <b style="color:var(--gold)">가격 기준</b> — ${syms.length-adj.length}종목은 <b>실제 체결가</b>(분할만 소급·배당 미반영)로, `
+        +`<b>${adj.join(' · ')}</b>는 체결가 계열을 못 받아 <b>조정종가</b>(배당 소급 반영)로 굴렸습니다. `
+        +`조정종가 쪽은 주수·평단·양도세가 실제 장부와 다를 수 있습니다.`
+      : `<br>※ <b>가격 기준</b> — 매매는 <b>실제 체결가</b>(분할만 소급·배당 미반영)로, 분배금은 <b>받은 날 현금</b>으로 셉니다`
+        +`${(typeof dcaReinv==='undefined'||dcaReinv)?'(적립·거치는 그날 종가로 재매수)':'(적립·거치는 현금 보유)'}. `
+        +`배당소득세는 비용반영 시 ${(DIV_TAXRATE*100).toFixed(1)}% 가정.`;
+  el.innerHTML=`${base}<br>※ <b>이번 실행</b> — ${cost}${div} · 환율은 반영하지 않습니다(종목 통화 그대로).${basis}`;
+}
 let dcaActive=new Set(TICKERS);
 let chart=null, logY=false, lastRender=null;
 
@@ -1964,36 +1995,6 @@ function noteVrCycAssumed(results){
   const w=document.getElementById('winner'); if(!w) return; w.style.display='';
   w.innerHTML=(w.innerHTML?w.innerHTML+' ':'')
     +'<span style="color:var(--gold);font-size:12px">⚠ 사이클 기준일이 없어 첫 거래일을 기준으로 잡았습니다 — 이어받기라면 \'사이클 기준일\'을 넣으세요</span>';
-}
-/* 하단 고정 문구가 실제 실행 옵션과 어긋나면 안 된다.
-   예전엔 '수수료·세금·환율·배당 미반영'이라고 못 박아 뒀는데, 화면에는 전략마다
-   비용 토글과 배당 처리(복리/단리)가 있다 — 켜 두고도 '미반영'이라고 적혀 있었다.
-   지금 탭의 실제 설정을 읽어 그대로 적는다. */
-const COST_FLAG={dca:()=>dcaCostOn, im:()=>imCostOn, vr:()=>vrCostOn, ma:()=>maCostOn,
-  asap:()=>asapCostOn, std:()=>stdCostOn, ivs:()=>ivsCostOn, all:()=>allCostOn,
-  mom:()=>(typeof momCostOn!=='undefined'?momCostOn:true)};
-function renderFootNote(){
-  const el=document.getElementById('footCost'); if(!el) return;
-  const base='※ 실제 OHLC 종가 기반 백테스트. LOC매수=종가≤주문가 시 체결, 지정가매도=당일 고가≥목표가 시 체결로 근사.';
-  const f=COST_FLAG[strat], on=f?!!f():false;
-  const cost=on
-    ? '<b style="color:var(--gold)">비용 적용</b> — 매매 수수료·양도세(미국 22%, 연 250만원 공제 / 국내 규약 별도)·ETF 보수를 반영합니다.'
-    : '<b>비용 미적용</b> — 수수료·세금·보수를 넣지 않은 총수익 기준입니다.';
-  const div=(strat==='dca'||strat==='all')
-    ? ` · 분배금 <b>${(typeof dcaReinv==='undefined'||dcaReinv)?'재투자(복리)':'현금 수령(단리)'}</b>`
-    : ' · 분배금은 조정종가에 반영된 총수익 기준';
-  /* 어떤 가격으로 체결했는지도 적는다 — 이게 다르면 주수·평단·세금이 통째로 다르다. */
-  const syms=Object.keys(PBASIS||{});
-  const adj=syms.filter(t=>PBASIS[t]!=='trade');
-  const basis = !syms.length ? ''
-    : adj.length
-      ? `<br>※ <b style="color:var(--gold)">가격 기준</b> — ${syms.length-adj.length}종목은 <b>실제 체결가</b>(분할만 소급·배당 미반영)로, `
-        +`<b>${adj.join(' · ')}</b>는 체결가 계열을 못 받아 <b>조정종가</b>(배당 소급 반영)로 굴렸습니다. `
-        +`조정종가 쪽은 주수·평단·양도세가 실제 장부와 다를 수 있습니다.`
-      : `<br>※ <b>가격 기준</b> — 매매는 <b>실제 체결가</b>(분할만 소급·배당 미반영)로, 분배금은 <b>받은 날 현금</b>으로 셉니다`
-        +`${(typeof dcaReinv==='undefined'||dcaReinv)?'(적립·거치는 그날 종가로 재매수)':'(적립·거치는 현금 보유)'}. `
-        +`배당소득세는 비용반영 시 ${(DIV_TAXRATE*100).toFixed(1)}% 가정.`;
-  el.innerHTML=`${base}<br>※ <b>이번 실행</b> — ${cost}${div} · 환율은 반영하지 않습니다(종목 통화 그대로).${basis}`;
 }
 function noteSkipped(skip){
   if(!skip.length) return;
