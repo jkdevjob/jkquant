@@ -808,11 +808,19 @@ const BASE_TICKERS=TICKERS.slice();
 function customTickers(){ return TICKERS.filter(t=>!BASE_TICKERS.includes(t)); }
 
 // 실시간 가격 로딩: 설정 기간을 5년 단위 청크로 분할 요청
-/* 배당·raw 종가 저장소. M[tkr]은 adjclose 기준이라 그대로 두고, 분해용으로만 쓴다. */
-let DIV={}, RAW={};
+/* ── 가격의 역할을 나눈다 ────────────────────────────────────────────
+     M[tkr]     실제 체결가 계열 (분할만 소급, 배당은 안 녹임) — 주수·현금·평단·
+                지정가·고저 체결판정·실현손익·세금은 전부 이것으로 센다.
+     ADJ[tkr]   배당까지 소급 반영한 총수익(adjusted) 종가 — 총수익 비교·분석용.
+     DIVMAP     배당 이벤트(날짜→주당 금액). M 과 같이 쓰면 배당을 딱 한 번 센다.
+     PBASIS     이 종목의 M 이 무엇인가 ('trade' | 'adjusted'). 소스가 체결가를
+                못 주면 조정가로 대체하되, 그 사실을 화면에 적는다 — 조용히 섞지 않는다.
+   예전엔 M 이 adjclose 였다. 배당까지 얹힌 가격에 주수를 세는 셈이라
+   주수·평단·양도세가 실제 장부와 어긋났다(무매·VR은 주수가 다음 주문을 바꾼다). */
+let DIV={}, RAW={}, ADJ={}, DIVMAP={}, PBASIS={};
 async function fetchPrices(startDate, endDate){
   const out={}; const failed=[]; const qual={};
-  DIV={}; RAW={};
+  DIV={}; RAW={}; ADJ={}; DIVMAP={}; PBASIS={};
   const p2end = Math.floor(new Date(endDate).getTime()/1000)+86400;
   const p1start= Math.floor(new Date(startDate).getTime()/1000);
   const chunkSec = 5*365.25*86400|0;
@@ -829,7 +837,7 @@ async function fetchPrices(startDate, endDate){
 
   await Promise.all(TICKERS.map(async t=>{
     try{
-      const allData={}, allDiv={}, allRaw={};
+      const allData={}, allTrade={}, allDiv={}, allRaw={};
       for(const [p1,p2] of chunks){
         try{
           const r=await fetch(`/api/quote?symbol=${t}&range=5y&period1=${p1}&period2=${p2}&div=1`);
@@ -840,6 +848,10 @@ async function fetchPrices(startDate, endDate){
           arr.filter(d=>d&&d.close!=null).forEach(d=>{
             if(!allData[d.date]) allData[d.date]=[d.date,d.close,d.open||d.close,d.high||d.close,d.low||d.close];
           });
+          // 실제 체결가 계열 — 이게 있으면 매매는 전부 이것으로 한다
+          (j.ohlcTrade||[]).filter(d=>d&&d.close>0).forEach(d=>{
+            if(!allTrade[d.date]) allTrade[d.date]=[d.date,d.close,d.open||d.close,d.high||d.close,d.low||d.close];
+          });
           /* 배당·raw 종가는 청크마다 따로 오므로 합쳐 둔다.
              M의 close는 adjclose(배당 재투자 반영)라 총수익은 이미 맞다.
              '분배금 얼마 받았고 그 사이 원금이 얼마나 녹았나'를 따로 보이려면
@@ -848,8 +860,15 @@ async function fetchPrices(startDate, endDate){
           (j.raw||[]).forEach(x=>{ if(x&&x.date&&x.close>0) allRaw[x.date]=+x.close; });
         }catch(e){ console.warn(t,'청크 실패',e.message); }
       }
-      const data=Object.values(allData).sort((a,b)=>a[0]<b[0]?-1:1);
+      const adjRows=Object.values(allData).sort((a,b)=>a[0]<b[0]?-1:1);
+      const trRows =Object.values(allTrade).sort((a,b)=>a[0]<b[0]?-1:1);
+      /* 체결가 계열이 조정가와 같은 날짜를 다 덮을 때만 쓴다. 일부만 덮으면
+         중간에 기준이 바뀌어 수익률이 통째로 틀어진다 — 그럴 바엔 안 쓰는 게 낫다. */
+      const useTrade = trRows.length>=10 && trRows.length===adjRows.length;
+      PBASIS[t]= useTrade ? 'trade' : 'adjusted';
+      const data = useTrade ? trRows : adjRows;
       if(data.length<10){ failed.push(t); return; }
+      ADJ[t]={}; adjRows.forEach(r=>{ ADJ[t][r[0]]=r[1]; });
       const calDays=(new Date(data[data.length-1][0])-new Date(data[0][0]))/864e5;
       // 일봉 여부 실제 감지: 연속 날짜 간격의 중앙값이 4일 이하면 일봉, 아니면 주간/월간 다운샘플 의심
       const gaps=[]; for(let gi=1;gi<data.length;gi++) gaps.push((new Date(data[gi][0])-new Date(data[gi-1][0]))/864e5);
@@ -858,6 +877,7 @@ async function fetchPrices(startDate, endDate){
       qual[t]={n:data.length, daily:medGap<=4, calYrs:calDays/365.25};
       out[t]=data;
       DIV[t]=Object.keys(allDiv).sort().map(d=>({date:d,amount:allDiv[d]}));
+      DIVMAP[t]=allDiv;
       RAW[t]=allRaw;
     }catch(e){ console.warn('로딩 실패:',t,e.message); failed.push(t); }
   }));
@@ -1451,6 +1471,24 @@ let imEngine='v40';   // V5.0 숨김 기간: v40 고정
    양도소득세 22% · 연 250만원 기본공제 · 손익통산(이월없음) · 환율 1,350원/$
    Python 독립구현(cost_engine.py)과 소수점 일치 검증됨. */
 const COST_FEE=0.0025, COST_SLIP=0.0005, COST_TAXRATE=0.22, COST_KRW=1350, COST_DEDUCT=250e4;
+/* 배당소득세 — 예수금 이자와 같은 값을 쓴다(국내 거주자 15.4% 가정).
+   역분산의 예수금 이자에 이미 쓰던 값을 한 곳으로 올린 것이다. 세법을 새로 정하지 않는다. */
+const DIV_TAXRATE=0.154;
+/* ── 배당은 '그날 들어온 현금' 이다 ──────────────────────────────────
+   M 이 실제 체결가(배당 미반영)라서, 보유자에게 배당을 따로 넣지 않으면 총수익이
+   통째로 빠진다. 반대로 조정가(배당 소급 반영)에 배당을 또 더하면 이중계상이다.
+   그래서 M 이 체결가일 때만 값을 낸다 — 이 한 줄이 이중계상을 막는다.
+   회귀가 '배당 없는 종목에서 두 모델이 맞는가 · 배당 종목에서 두 번 안 세는가' 를 검사한다. */
+function divPerShare(tkr, d){
+  if((typeof PBASIS==='undefined') || PBASIS[tkr]!=='trade') return 0;
+  const m=(typeof DIVMAP!=='undefined')&&DIVMAP[tkr]; return (m&&m[d])||0;
+}
+/* 보유 주수에 대해 그날 들어오는 현금. 비용반영이면 배당소득세를 뗀다. */
+function divCash(tkr, d, shares, costOn){
+  const a=divPerShare(tkr,d);
+  if(!(a>0)||!(shares>0)) return 0;
+  return shares*a*(costOn?(1-DIV_TAXRATE):1);
+}
 /* 국내 ETF = KRW. 옛 코드는 6자리 숫자(069500)지만 2024년부터 나온 건
    가운데에 알파벳이 있다(0104N0) — 숫자만 받으면 그런 종목이 달러로 찍힌다.
    야후 접미사(.KS/.KQ)가 붙은 형태도 같은 국내 종목이다. */
@@ -1622,6 +1660,9 @@ async function loadMomData(univKey, start, end, stat){
 function momSMA(series){ const dts=Object.keys(series).sort(); const out={}; const buf=[]; let s=0;
   for(const d of dts){ buf.push(series[d]); s+=series[d]; if(buf.length>200)s-=buf.shift(); out[d]=buf.length===200?s/200:null; } return out; }
 
+/* 이 엔진은 /api/quote 의 series(조정종가=총수익 계열)만 쓴다 — 고저가도 지정가도 없다.
+   배당이 이미 가격에 들어 있으므로 여기서 배당 현금을 또 더하면 이중계상이다.
+   그래서 divCash 를 부르지 않는다. 다른 탭과 가격 기준이 다르다는 뜻이기도 하다. */
 function momentumBacktest(data, tickers, U, cap, lb, filter, costOn){
   const syms=tickers.map(t=>t.sym);
   const taxable={}; tickers.forEach(t=>taxable[t.sym]=t.taxable);
@@ -1927,7 +1968,18 @@ function renderFootNote(){
   const div=(strat==='dca'||strat==='all')
     ? ` · 분배금 <b>${(typeof dcaReinv==='undefined'||dcaReinv)?'재투자(복리)':'현금 수령(단리)'}</b>`
     : ' · 분배금은 조정종가에 반영된 총수익 기준';
-  el.innerHTML=`${base}<br>※ <b>이번 실행</b> — ${cost}${div} · 환율은 반영하지 않습니다(종목 통화 그대로).`;
+  /* 어떤 가격으로 체결했는지도 적는다 — 이게 다르면 주수·평단·세금이 통째로 다르다. */
+  const syms=Object.keys(PBASIS||{});
+  const adj=syms.filter(t=>PBASIS[t]!=='trade');
+  const basis = !syms.length ? ''
+    : adj.length
+      ? `<br>※ <b style="color:var(--gold)">가격 기준</b> — ${syms.length-adj.length}종목은 <b>실제 체결가</b>(분할만 소급·배당 미반영)로, `
+        +`<b>${adj.join(' · ')}</b>는 체결가 계열을 못 받아 <b>조정종가</b>(배당 소급 반영)로 굴렸습니다. `
+        +`조정종가 쪽은 주수·평단·양도세가 실제 장부와 다를 수 있습니다.`
+      : `<br>※ <b>가격 기준</b> — 매매는 <b>실제 체결가</b>(분할만 소급·배당 미반영)로, 분배금은 <b>받은 날 현금</b>으로 셉니다`
+        +`${(typeof dcaReinv==='undefined'||dcaReinv)?'(적립·거치는 그날 종가로 재매수)':'(적립·거치는 현금 보유)'}. `
+        +`배당소득세는 비용반영 시 ${(DIV_TAXRATE*100).toFixed(1)}% 가정.`;
+  el.innerHTML=`${base}<br>※ <b>이번 실행</b> — ${cost}${div} · 환율은 반영하지 않습니다(종목 통화 그대로).${basis}`;
 }
 function noteSkipped(skip){
   if(!skip.length) return;
@@ -1999,9 +2051,18 @@ function _dcaOne(t,days,amt,freq,costOn,dipMul){
   const MUL=(dipMul!=null?dipMul:(typeof dcaDipMul!=='undefined'?dcaDipMul:1));
   const MA=MUL>1?_dcaMA(t,200):null;      // 배수 1이면 계산 생략 (기존과 완전 동일)
   const HIT=_dcaHits(days,freq);        // 달력 기준 적립일 (매일이면 전부 true)
-  let sh=0,inv=0,uvPeak=-Infinity,mdd=0,nDip=0,nBuy=0;const snap=[],uvSnap=[],cf=[];
+  /* 분배금은 가격에 안 녹아 있다(M 은 체결가 계열) — 이벤트로 직접 재현한다.
+       복리 — 배당락일 종가로 곧바로 재매수 (수수료도 문다)
+       단리 — 현금(dcash)으로 쌓아 두고 끝까지 안 굴린다
+     조정가(배당 소급 반영)로 굴리는 종목이면 divPerShare 가 0을 내므로 이중계상이 안 난다. */
+  const REINV=(typeof dcaReinv==='undefined')||dcaReinv!==false;
+  let sh=0,inv=0,dcash=0,nDivDay=0,divTotal=0,uvPeak=-Infinity,mdd=0,nDip=0,nBuy=0;const snap=[],uvSnap=[],cf=[];
   days.forEach((d,i)=>{
     const p=D[d]?.[C]??0;
+    { const dc=divCash(t,d,sh,costOn);
+      if(dc>0){ divTotal+=dc; nDivDay++;
+        if(REINV&&p>0){ const fee=dc*FEE; sh+=(dc-fee)/p; }   // 배당락일 종가로 재매수
+        else dcash+=dc; } }
     if(p>0&&HIT[i]){
       /* 배수 판정도 전일까지의 값으로 — MA[d] 에는 오늘 종가가 들어 있어서
          '오늘 종가가 오늘 200선 아래'를 보고 그 종가에 2~3배로 사는 꼴이었다.
@@ -2013,22 +2074,24 @@ function _dcaOne(t,days,amt,freq,costOn,dipMul){
       const fee=a*FEE;sh+=(a-fee)/p;inv+=a; nBuy++; if(dip)nDip++;
       cf.push([d,a]);                          // 현금흐름(투입 시점·금액) — IRR·평균투입자본용
     }
-    if(p>0&&inv>0){ const uv=sh*p/inv; if(uv>uvPeak)uvPeak=uv; else if(uvPeak>0){ const dd=(uvPeak-uv)/uvPeak; if(dd>mdd)mdd=dd; } }
-    if(i%10===0){ snap.push([d,p>0?sh*p:null]); uvSnap.push([d,(p>0&&inv>0)?sh*p/inv:null]); }
+    if(p>0&&inv>0){ const uv=(sh*p+dcash)/inv; if(uv>uvPeak)uvPeak=uv; else if(uvPeak>0){ const dd=(uvPeak-uv)/uvPeak; if(dd>mdd)mdd=dd; } }
+    if(i%10===0){ snap.push([d,p>0?sh*p+dcash:null]); uvSnap.push([d,(p>0&&inv>0)?(sh*p+dcash)/inv:null]); }
   });
   const last=D[days[days.length-1]]?.[C]??0;
-  let fin=sh*last;
+  let fin=sh*last+dcash;
   const _div=divSplit(t,days,cf.map(x=>[x[0],x[1]*(1-FEE)]));
-  /* 단리 — 분배금을 재투자하지 않고 현금으로 쌓는다. M의 close는 adjclose(재투자 반영)라
-     그대로 쓰면 복리가 된다. 단리일 때만 raw 경로 결과로 갈아끼운다.
-     배당이 없는 종목은 두 경로가 같으므로 아무것도 안 바뀐다. */
+  /* 단리 경로 — M 이 '체결가 계열'이면 위에서 이미 분배금을 이벤트로 재현했으므로
+     여기서 또 갈아끼우면 이중계상이다. 체결가를 못 받아 조정가(adjclose)로 굴리는
+     종목에서만 예전처럼 raw 경로 결과로 대체한다. */
   let _mdd=mdd*100;
-  if(_div && (typeof dcaReinv!=='undefined') && dcaReinv===false){
+  const _basisTrade=(typeof PBASIS!=='undefined') && PBASIS[t]==='trade';
+  if(!_basisTrade && _div && (typeof dcaReinv!=='undefined') && dcaReinv===false){
     fin=_div.priceVal+_div.divCash;
     _mdd=_div.mddCash;
   }
   return {invested:inv,final:fin,ret:inv>0?(fin/inv-1)*100:0,snap,mdd:_mdd,uvSnap,cf,div:_div,
-    dipMul:MUL, dipPct:nBuy?+(nDip/nBuy*100).toFixed(0):0, trades:nBuy, nDip};
+    dipMul:MUL, dipPct:nBuy?+(nDip/nBuy*100).toFixed(0):0, trades:nBuy, nDip,
+    divCashTotal:divTotal, nDivDay, divMode:REINV?'reinv':'cash', endCash:dcash};
 }
 
 /* ──── 레버리지 ETF 기간 확장 (DCA 전용) ────
@@ -2269,6 +2332,8 @@ function runIM(days,tkr,cap,divs,targetPct,compound=true){
   const closeHist=[];                        // 직전 5거래일 종가 (리버스 별지점용, 모드 무관하게 항상 갱신)
   days.forEach((d,i)=>{
     const [c,o,hi,lo]=M[tkr][d];
+    // 배당은 가격에 안 녹아 있다 — 보유 주수만큼 그날 현금으로 들어온다 (이중계상 방지는 divPerShare 가 맡는다)
+    cash+=divCash(tkr,d,shares,CO);
     { const _y=d.slice(0,4); if(curYear===null) curYear=_y; else if(_y!==curYear){ _settleTax(c); curYear=_y; } }
     { const eq=cash+shares*c+savedProfit-addedCash; if(eq>mddPeak)mddPeak=eq; else { const dd=Math.min((mddPeak-eq)/mddPeak,1); if(dd>mdd)mdd=dd; } }
     /* 오늘 종가를 넣기 '전'의 창이 곧 직전 5거래일이다. 넣고 나서 평균을 내면
@@ -2397,6 +2462,8 @@ function runIM22(days,tkr,cap,divs,targetPct,compound=true){
     if(cash<-EPS&&sh>1e-9&&px>0){ const q=Math.min(sh,(-cash)/(px*(1-FEE))); if(q>1e-12) _sell(px,q); }
     if(cash<-EPS){ cash=0; sh=0; avg=0; } else if(cash<0){ cash=0; } };
   days.forEach((d,i)=>{ const [c,o,hi,lo]=M[tkr][d];
+    // 배당은 가격에 안 녹아 있다 — 보유 주수만큼 그날 현금으로 들어온다 (이중계상 방지는 divPerShare 가 맡는다)
+    cash+=divCash(tkr,d,sh,CO);
     { const y=d.slice(0,4); if(cy===null)cy=y; else if(y!==cy){_settle(c);cy=y;} }
     { const eq=cash+sh*c; if(eq>mp)mp=eq; else if(mp>0){const dd=(mp-eq)/mp; if(dd>mdd)mdd=dd;} }
     if(!quarter){
@@ -2438,6 +2505,8 @@ function runIM30(days,tkr,cap,divs,targetPct,compound=true){
     if(cash<-EPS&&sh>1e-9&&px>0){ const q=Math.min(sh,(-cash)/(px*(1-FEE))); if(q>1e-12) _sell(px,q); }
     if(cash<-EPS){ cash=0; sh=0; avg=0; } else if(cash<0){ cash=0; } };
   days.forEach((d,i)=>{ const [c,o,hi,lo]=M[tkr][d];
+    // 배당은 가격에 안 녹아 있다 — 보유 주수만큼 그날 현금으로 들어온다 (이중계상 방지는 divPerShare 가 맡는다)
+    cash+=divCash(tkr,d,sh,CO);
     { const y=d.slice(0,4); if(cy===null)cy=y; else if(y!==cy){_settle(c);cy=y;} }
     { const eq=cash+sh*c; if(eq>mp)mp=eq; else if(mp>0){const dd=(mp-eq)/mp; if(dd>mdd)mdd=dd;} }
     const t=one>0?cum/one:0, sp=base-slope*t, starP=avg*(1+sp/100), take=avg*(1+takePct/100), q0=sh;
@@ -2482,6 +2551,8 @@ function runStdev(days,tkr,cap,N,g,filter,costOn){
     if(cash<-EPS&&sh>1e-9&&px>0){ const q=Math.min(sh,(-cash)/(px*(1-FEE))); if(q>1e-12) _sell(px,q); }
     if(cash<-EPS){ cash=0; sh=0; avg=0; } else if(cash<0){ cash=0; } };
   days.forEach((d,i)=>{ const gx=gi[d], c=cl[gx];
+    // 배당은 가격에 안 녹아 있다 — 보유 주수만큼 그날 현금으로 들어온다 (이중계상 방지는 divPerShare 가 맡는다)
+    cash+=divCash(tkr,d,sh,CO);
     { const y=d.slice(0,4); if(cy===null)cy=y; else if(y!==cy){_settle(c);cy=y;} }
     { const eq=cash+sh*c; if(eq>mp)mp=eq; else if(mp>0){const dd=(mp-eq)/mp; if(dd>mdd)mdd=dd;} }
     /* 신호는 '전일 종가까지'로 만든다. 오늘 종가로 밴드를 정하고 그 종가에 체결하면
@@ -2602,6 +2673,8 @@ function runIM50(days,tkr,cap,divs,targetPct,compound=true){
   const snap=[];
   days.forEach((d,i)=>{
     const [c,o,hi,lo]=M[tkr][d];
+    // 배당은 가격에 안 녹아 있다 — 보유 주수만큼 그날 현금으로 들어온다 (이중계상 방지는 divPerShare 가 맡는다)
+    cash+=divCash(tkr,d,shares,CO);
     { const _y=d.slice(0,4); if(curYear===null) curYear=_y; else if(_y!==curYear){ _settleTax(c); curYear=_y; } }
     { const eq=cash+shares*c+savedProfit-addedCash; if(eq>mddPeak)mddPeak=eq; else { const dd=Math.min((mddPeak-eq)/mddPeak,1); if(dd>mdd)mdd=dd; } }
     /* 오늘 종가를 넣기 '전'의 창이 곧 직전 5거래일이다. 넣고 나서 평균을 내면
@@ -2819,6 +2892,8 @@ function runVR(days,tkr,params){
   }
   days.forEach((d,i)=>{
     const c=M[tkr][d][C];
+    // 배당은 가격에 안 녹아 있다 — 보유 주수만큼 그날 현금으로 들어온다 (이중계상 방지는 divPerShare 가 맡는다)
+    pool+=divCash(tkr,d,shares,costOn);   // VR 은 Pool 이 곧 현금이다
     { const y=d.slice(0,4); if(curYear===null)curYear=y; else if(y!==curYear){_settle(c);curYear=y;} }
     { const eq=shares*c+pool+totalWd; if(eq>mddPeak)mddPeak=eq; else if(mddPeak>0){ const dd=Math.min((mddPeak-eq)/mddPeak,1); if(dd>mdd)mdd=dd; } }
     // 기준일이 지났으면 사이클을 넘긴다 (길게 쉬어 여러 번 밀렸을 수 있으므로 while — 앱과 같다)
@@ -3005,6 +3080,8 @@ function runMA200(days,tkr,cap,N,costOn,opt){
   let interestTotal=0;
   days.forEach((d,i)=>{
     const c=M[tkr][d][C];
+    // 배당은 가격에 안 녹아 있다 — 보유 주수만큼 그날 현금으로 들어온다 (이중계상 방지는 divPerShare 가 맡는다)
+    cash+=divCash(tkr,d,shares,costOn);
     { const y=d.slice(0,4); if(curYear===null)curYear=y; else if(y!==curYear){_settle(c);curYear=y;} }
     // 대피처가 '단기국채'면 현금 보유일에 일할 이자 (T-Bill 연평균, TBILL_RATE)
     if(PARK==='bill'&&cash>0){ const it=cash*parkRate(+d.slice(0,4),tkr)/252; cash+=it; interestTotal+=it; }
@@ -3088,7 +3165,9 @@ function runASAP(days,tkr,opt){
     const g=gi[d], q=g-1, p=g-2;          // q=전일, p=전전일
     const c=cl[g];                        // 체결가만 오늘 종가
     const m200=q>=0?MA200[q]:null, rsi=(q>=0&&RSI[q]!=null)?RSI[q]:50;
-    sgov*=(1+(SGOV_RATE[+d.slice(0,4)]||0.04)/252);   // SGOV 이자
+    sgov*=(1+(SGOV_RATE[+d.slice(0,4)]||0.04)/252);   // 리저브 이자 (T-Bill 근사)
+    // 배당은 가격에 안 녹아 있다 — 보유 주수만큼 그날 현금으로 들어온다 (이중계상 방지는 divPerShare 가 맡는다)
+    sgov+=divCash(tkr,d,sh,o.costOn);                // 배당은 리저브로 들어와 다음 매수 재원이 된다
     if(m200==null){
       /* 지표가 아직 안 섰다(상장 직후 등). 그래도 적립은 계속된다 —
          돈은 들어오는데 장부에 안 잡히면 총투입이 실제보다 작아져 수익률이 부풀려진다.
@@ -3174,18 +3253,27 @@ function runBH(days,tkr,cap,costOn){
      원금 1만$·주가 100$·수수료 0.25% 면 99주(9,900) + 수수료 24.75 → 잔돈 75.25.
      그 75.25가 최종 평가액에서도 MDD에서도 사라져, 거치식이 실제보다 나쁘게 나왔다.
      불변식: 초기자금 = 주식매수액 + 수수료 + 잔돈 (회귀가 값으로 검사한다) */
-  const sh=iq(cap/(1+FEE),p0);                       // 거치도 정수 주수
-  const spend=sh*p0, fee=spend*FEE, cash=cap-spend-fee;
+  let sh=iq(cap/(1+FEE),p0);                         // 거치도 정수 주수
+  const spend=sh*p0, fee=spend*FEE; let cash=cap-spend-fee;
+  /* 분배금은 가격에 안 녹아 있다 — 복리면 배당락일 종가로 재매수, 단리면 현금으로 쌓는다. */
+  const REINV=(typeof dcaReinv==='undefined')||dcaReinv!==false;
+  let divTotal=0;
   let mddPeak=cap,mdd=0; const snap=[];
-  days.forEach((d,i)=>{ const eq=cash+sh*p(d); if(eq>mddPeak)mddPeak=eq; else{const dd=(mddPeak-eq)/mddPeak;if(dd>mdd)mdd=dd;} if(i%10===0)snap.push([d,eq]); });
+  days.forEach((d,i)=>{
+    const px0=p(d);
+    const dc=divCash(tkr,d,sh,costOn);
+    if(dc>0){ divTotal+=dc; if(REINV&&px0>0){ const f2=dc*FEE; sh+=(dc-f2)/px0; } else cash+=dc; }
+    const eq=cash+sh*px0; if(eq>mddPeak)mddPeak=eq; else{const dd=(mddPeak-eq)/mddPeak;if(dd>mdd)mdd=dd;} if(i%10===0)snap.push([d,eq]); });
   let fin=cash+sh*p(days[days.length-1]); snap.push([days[days.length-1],fin]);
   /* 분배금 경로에도 '실제로 주식에 들어간 돈'을 넘긴다 —
      예전엔 cap*(1-FEE) 였다. 수수료 규약(budget/(1+fee))과 어긋나 두 길의 주식수가 달랐다. */
   const _d=divSplit(tkr,days,[[days[0],spend]]);
   let _m=mdd*100;
-  if(_d && (typeof dcaReinv!=='undefined') && dcaReinv===false){ fin=cash+_d.priceVal+_d.divCash; _m=_d.mddCash; }
+  // 체결가 계열이면 위 루프가 이미 분배금을 이벤트로 재현했다 — 또 갈아끼우면 이중계상
+  const _bt=(typeof PBASIS!=='undefined') && PBASIS[tkr]==='trade';
+  if(!_bt && _d && (typeof dcaReinv!=='undefined') && dcaReinv===false){ fin=cash+_d.priceVal+_d.divCash; _m=_d.mddCash; }
   return {invested:cap,final:fin,ret:(fin/cap-1)*100,mdd:_m,snap,div:_d,
-          endCash:cash,endShares:sh,fees:fee};
+          endCash:cash,endShares:sh,fees:fee,divCashTotal:divTotal};
 }
 // 200일선 로테 — 적립형: 매일 균등 적립(총투입=contribTotal) + 전일 신호로 보유/현금. MDD는 단위가치(평가액÷투입) 기준.
 // 매수·매도 조건(16조합)·대피처(현금/단기국채)는 일시금 runMA200과 동일 규약 — 로테 탭 설정을 그대로 따른다.
@@ -3209,6 +3297,8 @@ function runMA200Accum(days,tkr,contribTotal,N,costOn,opt){
     if(cash<-0.01){ cash=0; shares=0; avg=0; } else if(cash<0){ cash=0; }
     taxTotal+=owed-due; }
   days.forEach((d,i)=>{ const c=M[tkr][d][C], g=gIdx[d];
+    // 배당은 가격에 안 녹아 있다 — 보유 주수만큼 그날 현금으로 들어온다 (이중계상 방지는 divPerShare 가 맡는다)
+    cash+=divCash(tkr,d,shares,costOn);
     { const y=d.slice(0,4); if(curYear===null)curYear=y; else if(y!==curYear){_settle(c);curYear=y;} }
     // 대피처가 '단기국채'면 전일까지 쌓인 현금에 일할 이자 (오늘 적립분이 들어오기 전 잔액 기준)
     if(PARK==='bill'&&cash>0){ const it=cash*parkRate(+d.slice(0,4),tkr)/252; cash+=it; interestTotal+=it; }
@@ -3325,6 +3415,10 @@ function runIVS(days,tkr,cap,s0,N,band,costOn,mode,pair){
     taxTotal+=owed-due; }
   days.forEach((d,i)=>{
     const c=M[tkr][d][C], c1=X1?P1[d]:0;
+    // 배당은 가격에 안 녹아 있다 — 보유 주수만큼 그날 현금으로 들어온다 (이중계상 방지는 divPerShare 가 맡는다)
+    // 다리가 둘이면 각자 자기 종목의 배당을 받는다 (1배 짝이 합성이면 divPerShare 가 0을 낸다)
+    cash+=divCash(tkr,d,A.sh,costOn);
+    if(X1 && _p1 && _p1.sym && !_p1.synth) cash+=divCash(_p1.sym,d,B.sh,costOn);
     { const y=d.slice(0,4); if(curYear===null)curYear=y; else if(y!==curYear){_settle(c,c1);curYear=y;} }
     if(cash>0){ const gross=cash*parkRate(+d.slice(0,4),tkr)/252;   // 종목 통화의 단기금리
       const it=gross*(1-CASH_DIVTAX) - cash*CASH_EXP/252; cash+=it; interestTotal+=it; }

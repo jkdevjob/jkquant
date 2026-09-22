@@ -69,6 +69,15 @@ const costSrc=(bt.match(/const COST_FEE=[\s\S]*?function capGainTax\([\s\S]*?\n\
 if(!costSrc) throw new Error('비용·세금 프로필(costOf/capGainTax)을 backtest.html에서 못 찾음');
 { const f=new Function(costSrc+'\nreturn {isKRW,krTaxRate,costOf,capGainTax};')();
   global.isKRW=f.isKRW; global.krTaxRate=f.krTaxRate; global.costOf=f.costOf; global.capGainTax=f.capGainTax; }
+/* 배당 헬퍼 — 엔진이 전부 부른다. 파일에서 그대로 떼어 오고, 가격 기준(PBASIS)과
+   배당 이벤트(DIVMAP)는 테스트가 중간에 바꿀 수 있게 전역으로 둔다.
+   CSV 시험 데이터에는 배당이 없으므로 기본값은 '조정가' — 즉 divCash 가 0을 낸다
+   (= 여태까지의 동작 그대로). 배당 시험은 PBASIS/DIVMAP 을 직접 채워서 한다. */
+global.PBASIS={}; global.DIVMAP={};
+{ const m=bt.match(/const DIV_TAXRATE=[\s\S]*?\nfunction divCash\(tkr, d, shares, costOn\)\{[\s\S]*?\n\}/);
+  if(!m) throw new Error('배당 헬퍼(DIV_TAXRATE/divPerShare/divCash)를 backtest.html에서 못 찾음');
+  const f=new Function(m[0]+'\nreturn {DIV_TAXRATE,divPerShare,divCash};')();
+  global.DIV_TAXRATE=f.DIV_TAXRATE; global.divPerShare=f.divPerShare; global.divCash=f.divCash; }
 /* VR 사이클 엔진 — runVR 과 전체비교가 같이 쓴다. 파일에서 그대로 떼어 온다. */
 const vrCycSrc=(bt.match(/const VR_CYC_DAYS=\d+;\s*\nfunction vrNextDue\(s\)\{[\s\S]*?\n\}\n/)||[''])[0]
   + (bt.match(/function vrCycleCount\(days\)\{[\s\S]*?\n\}\n/)||[''])[0];
@@ -1041,7 +1050,9 @@ console.log('[22] 해외 이름 부분일치 · 국내 분배금');
      && /yahooDaily\("query1", symbol \+ sfx, range, dbg, period1, period2, true\)/.test(q));
   ok('현재가는 네이버 것을 쓴다', /price: \(kr && kr\.price != null\) \? kr\.price :/.test(q));
   // 야후가 안 되면 여태 동작 그대로 — 없는 분배금을 지어내지 않는다
-  ok('야후가 막히면 네이버로 물러난다', /if \(wantDiv\) \{ out\.dividends = \[\]; out\.splits = \[\]; out\.raw = kr\.series; \}/.test(q));
+  ok('야후가 막히면 네이버로 물러난다',
+     /if \(wantDiv\) \{ out\.dividends = \[\]; out\.splits = \[\]; out\.raw = kr\.series;/.test(q)
+     && /out\.ohlcTrade = kr\.ohlc; out\.priceBasis = 'trade';/.test(q));
   // period1/period2를 무시해 국내만 400일로 잘려 있었다
   ok('국내도 요청 기간을 지킨다', /async function naverDaily\(code, range, dbg, period1 = null, period2 = null\)/.test(q)
      && /period2 \? new Date\(\+period2 \* 1000\)/.test(q) && /period1 \? new Date\(\+period1 \* 1000\)/.test(q));
@@ -4489,6 +4500,145 @@ console.log('\n[82] 모멘텀 로테이션 — 룩어헤드·현금 장부');
   ok('모멘텀 탭은 아직 숨겨져 있다',
      /data-s="mom" onclick="setStrat\('mom'\)" style="display:none"/.test(bt));
 }
+
+/* ════ 83. 가격의 역할 분리 ════  (감사 ② · 필수시험 B)
+   조정종가(adjclose)는 배당까지 과거 가격에 소급 반영한 총수익 계열이다.
+   그걸 체결가로 쓰면 '배당까지 얹힌 가격에 그 주수를 샀다'가 돼서
+   주수·현금·평단·지정가·고저 체결판정·실현손익·세금이 전부 실제 장부와 어긋난다.
+   무매·VR은 주수 자체가 다음 주문을 바꾸므로 특히 크다.
+     M      = 실제 체결가 (분할만 소급)
+     ADJ    = 조정종가 (총수익 분석용)
+     DIVMAP = 배당 이벤트 (M 과 같이 쓰면 딱 한 번 센다)                          */
+console.log('\n[83] 체결가 · 조정종가 · 배당 이벤트 분리');
+{
+  // ── API 가 세 가지를 따로 내보내는가 ──
+  const q=fs.existsSync(__d+'/functions/api/quote.js')?fs.readFileSync(__d+'/functions/api/quote.js','utf8'):'';
+  ok('API 가 체결가 계열을 따로 만든다', /const series = \[\], ohlc = \[\], raw = \[\], ohlcTrade = \[\];/.test(q));
+  ok('체결가에는 배당 배율(f)을 안 곱한다', (()=>{
+      const m=q.match(/if \(wantDiv\) \{\s*const rc = rawA\[i\][\s\S]*?\n    \}/);
+      return !!m && !/\* f\)/.test(m[0]) && /close: \+rc\.toFixed\(4\)/.test(m[0]); })());
+  ok('조정 계열은 그대로 둔다 (총수익 분석용)', /const f = \(adjA\.length && rawA\[i\] > 0\) \? c \/ rawA\[i\] : 1;/.test(q));
+  ok('무엇으로 보냈는지 알려 준다', /out\.priceBasis = \(ohlcTrade && ohlcTrade\.length\) \? 'trade' : 'adjusted'/.test(q));
+  ok('조정 여부를 모르는 소스(Stooq)는 체결가로 안 쓴다', /ohlcTrade = null;   \/\/ Stooq/.test(q));
+
+  // ── 로더가 역할을 갈라 담는가 ──
+  ok('M·ADJ·DIVMAP·PBASIS 를 따로 담는다',
+     /let DIV=\{\}, RAW=\{\}, ADJ=\{\}, DIVMAP=\{\}, PBASIS=\{\};/.test(bt)
+     && /PBASIS\[t\]= useTrade \? 'trade' : 'adjusted';/.test(bt)
+     && /ADJ\[t\]=\{\}; adjRows\.forEach/.test(bt));
+  ok('체결가가 구간을 다 덮을 때만 쓴다',
+     /const useTrade = trRows\.length>=10 && trRows\.length===adjRows\.length;/.test(bt));
+  ok('가격 기준을 화면에 적는다', /가격 기준<\/b>/.test(bt) && /조정종가<\/b>\(배당 소급 반영\)/.test(bt));
+
+  // ── 이중계상 방지: 조정가로 굴리는 종목에는 배당을 더하지 않는다 ──
+  {
+    const T='__DIVTEST__';
+    PBASIS[T]='adjusted'; DIVMAP[T]={'2021-03-19':1.5};
+    ok('조정가로 굴리면 배당을 또 안 더한다', divCash(T,'2021-03-19',100,false)===0);
+    PBASIS[T]='trade';
+    ok('체결가로 굴리면 배당이 현금으로 들어온다', near(divCash(T,'2021-03-19',100,false), 150, 1e-9));
+    ok('비용반영이면 배당소득세를 뗀다',
+       near(divCash(T,'2021-03-19',100,true), 150*(1-DIV_TAXRATE), 1e-9), String(divCash(T,'2021-03-19',100,true)));
+    ok('배당 없는 날은 0', divCash(T,'2021-03-18',100,false)===0);
+    delete PBASIS[T]; delete DIVMAP[T];
+  }
+
+  /* ── B. 배당 없는 종목이면 두 모델이 같아야 한다 · 있는 종목이면 딱 한 번만 센다 ── */
+  {
+    const helpers=['function srcOf(t)','function divSplit(tkr, days, buys)','function _isoWeek(d)',
+                   'function _dcaFreq(f)','function _dcaHits(days,freq)','function _dcaCount(days,freq)','function _dcaMA(t,N)'];
+    /* dcaReinv 는 테스트가 중간에 바꿔야 하므로 여기 선언하지 않는다 —
+       new Function 안에 var 로 박으면 엔진이 그 값에 고정된다. 전역에서 읽게 둔다. */
+    let pre='var levExt=false, EXTM={}, dcaDipMul=1;\n';
+    for(const h of helpers) pre+=extractFn(bt,h)+'\n';
+    const mk=(m)=>new Function(pre+'return ('+extractFn(bt,m).replace(/^function [\w$]+\(/,'function (')+')')();
+    const runBH=mk('function runBH(days,tkr,cap,costOn)');
+
+    const T='__PXTEST__';
+    const days=[]; { const t=new Date(Date.UTC(2021,0,4));
+      for(let i=0;i<500;i++){ days.push(t.toISOString().slice(0,10)); t.setUTCDate(t.getUTCDate()+1); } }
+    /* 체결가는 고정 100. 분기마다 주당 1$ 배당(4회).
+       조정종가는 그 배당을 소급 반영한 계열 — 같은 총수익을 다른 방식으로 적은 것이다. */
+    const DIVD={}, exs=[days[60],days[150],days[240],days[330]];
+    for(const d of exs) DIVD[d]=1;
+    M[T]={}; days.forEach(d=>{ M[T][d]=[100,100,100,100]; });
+    META[T]={name:'시험',lev:1,color:'#000'};
+
+    // ① 배당이 없으면: 체결가 모델 == 조정가 모델 (아무것도 안 바뀐다)
+    PBASIS[T]='trade'; DIVMAP[T]={};
+    const noDivTrade=runBH(days,T,10000,false);
+    PBASIS[T]='adjusted';
+    const noDivAdj=runBH(days,T,10000,false);
+    ok('배당 없는 종목 — 체결가 모델과 조정가 모델이 같다',
+       near(noDivTrade.final, noDivAdj.final, 1e-9), `${noDivTrade.final} / ${noDivAdj.final}`);
+
+    // ② 배당이 있으면: 체결가 + 이벤트로 정확히 배당만큼 늘어난다 (이중계상 없음)
+    PBASIS[T]='trade'; DIVMAP[T]=DIVD;
+    dcaReinvSet(false);
+    const cashMode=runBH(days,T,10000,false);
+    const sh0=100;                          // 10000/100 = 100주 (수수료 없음)
+    /* 현금 수령이면 주수가 그대로라 배당은 100주×1$×4회 = 400$ 정확히 그만큼만 늘어야 한다.
+       한 푼이라도 더 나오면 어딘가에서 두 번 센 것이다. */
+    ok('배당 종목 — 현금 수령이면 딱 배당만큼 늘어난다',
+       near(cashMode.final, 10000 + sh0*4*1, 1e-9), `${cashMode.final} · 배당합 ${cashMode.divCashTotal}`);
+    ok('배당을 두 번 세지 않는다', near(cashMode.divCashTotal, sh0*4*1, 1e-9), String(cashMode.divCashTotal));
+    /* 재투자면 받은 배당으로 주수가 늘고, 늘어난 주수가 다음 배당을 또 받는다(복리).
+       가격이 100 고정이므로 100 → 101 → 102.01 → 103.0301 → 104.060401 주.
+       현금 수령(10,400)보다 딱 그만큼 많아야 한다 — 그 이상이면 역시 두 번 센 것이다. */
+    dcaReinvSet(true);
+    const reinv=runBH(days,T,10000,false);
+    const compounded=100*Math.pow(1.01,4)*100;
+    ok('배당 종목 — 재투자면 주수가 복리로 늘어난다',
+       near(reinv.endShares, 100*Math.pow(1.01,4), 1e-9) && near(reinv.final, compounded, 1e-6),
+       `보유 ${reinv.endShares}주 · 최종 ${reinv.final} (기대 ${compounded})`);
+    ok('재투자가 현금 수령보다 딱 복리분만큼 많다',
+       near(reinv.final-cashMode.final, compounded-(10000+400), 1e-9),
+       String(reinv.final-cashMode.final));
+    // ③ 조정가로 굴리면(체결가를 못 받은 종목) 배당을 또 더하지 않는다
+    PBASIS[T]='adjusted';
+    const adjMode=runBH(days,T,10000,false);
+    ok('조정가 종목 — 배당을 얹지 않는다 (가격에 이미 들어 있다고 본다)',
+       near(adjMode.final, 10000, 1e-9) && near(adjMode.divCashTotal||0, 0, 1e-9), String(adjMode.final));
+
+    /* ④ 분할 연속성 — 체결가 계열은 분할이 소급 반영돼 있어야 한다.
+       2:1 분할 전후로 가격이 반토막·주수가 두 배가 되면 평가액은 이어져야 한다.
+       (야후 chart API 의 raw OHLC 가 그렇게 온다 — 그래서 체결가 계열로 쓸 수 있다) */
+    { const S='__SPLIT__'; const sd=days.slice(0,200);
+      M[S]={}; sd.forEach((d,i)=>{ const p=(i<100)?50:50; M[S][d]=[p,p,p,p]; });   // 소급 반영된 계열은 끊김이 없다
+      META[S]={name:'분할시험',lev:1,color:'#000'};
+      PBASIS[S]='trade'; DIVMAP[S]={};
+      const r=runBH(sd,S,10000,false);
+      const vals=r.snap.map(x=>x[1]).filter(v=>v>0);
+      let jump=0; for(let i=1;i<vals.length;i++) if(Math.abs(vals[i]/vals[i-1]-1)>0.2) jump++;
+      ok('분할 전후로 평가액이 끊기지 않는다', jump===0 && near(r.final,10000,1e-9), `${jump}회 끊김 · 최종 ${r.final}`);
+      delete M[S]; delete META[S]; delete PBASIS[S]; delete DIVMAP[S]; }
+
+    dcaReinvSet(true);
+    delete M[T]; delete META[T]; delete PBASIS[T]; delete DIVMAP[T];
+  }
+
+  // ── 모멘텀은 조정종가만 쓴다 — 여기서 배당을 또 더하면 이중계상 ──
+  ok('모멘텀은 배당을 따로 더하지 않는다 (가격이 이미 총수익)',
+     !/divCash\(/.test(extractFn(bt,'function momentumBacktest(data, tickers, U, cap, lb, filter, costOn)'))
+     && /배당이 이미 가격에 들어 있으므로 여기서 배당 현금을 또 더하면 이중계상이다/.test(bt));
+
+  // ── 엔진마다 배당을 받는가 (한 곳이라도 빠지면 그 전략만 총수익이 빈다) ──
+  for(const [nm,mk2] of [['무매 V4.0','function runIM(days,tkr,cap,divs,targetPct,compound'],
+                         ['무매 V2.2','function runIM22(days,tkr,cap,divs,targetPct,compound'],
+                         ['무매 V3.0','function runIM30(days,tkr,cap,divs,targetPct,compound'],
+                         ['무매 V5.0','function runIM50(days,tkr,cap,divs,targetPct,compound'],
+                         ['VR','function runVR(days,tkr,params)'],
+                         ['표준편차','function runStdev(days,tkr,cap,N,g,filter,costOn)'],
+                         ['200로테','function runMA200(days,tkr,cap,N,costOn,opt)'],
+                         ['200적립','function runMA200Accum(days,tkr,contribTotal,N,costOn,opt)'],
+                         ['ASAP','function runASAP(days,tkr,opt)'],
+                         ['역분산','function runIVS(days,tkr,cap,s0,N,band,costOn,mode,pair)'],
+                         ['적립(DCA)','function _dcaOne(t,days,amt,freq,costOn,dipMul)'],
+                         ['거치(B&H)','function runBH(days,tkr,cap,costOn)']]){
+    ok(`${nm} 가 배당을 장부에 넣는다`, /divCash\(/.test(extractFn(bt,mk2)));
+  }
+}
+function dcaReinvSet(v){ /* 전역 스위치 — 엔진이 typeof 로 읽는다 */ global.dcaReinv=v; }
 
 console.log(`\n════ 결과: ${pass} PASS / ${fail} FAIL ${fail===0?'— ALL PASS ★':'— 배포 금지, 위 ✗ 항목 수정 필요'} ════`);
 process.exit(fail===0?0:1);
