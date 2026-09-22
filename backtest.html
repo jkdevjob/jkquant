@@ -320,7 +320,7 @@ td:first-child{text-align:left;}
   <div class="brand">
     <div>
       <div class="logo">Backtest</div>
-      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v2.2.0</span></h1>
+      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v2.2.1</span></h1>
     </div>
   </div>
   <div class="hright">
@@ -2411,7 +2411,10 @@ function imPrevClose(tkr, days, i){
     const d=all[k]; if(d>=d0) continue;
     const r=D[d]; if(r&&r[C]>0) return r[C];
   }
-  return D[d0][C];                       // 앞에 봉이 하나도 없으면 어쩔 수 없이 오늘 종가
+  /* 앞에 봉이 하나도 없으면 '전일 확정 종가' 라는 게 존재하지 않는다.
+     오늘 종가를 대신 쓰면 그날 주문이 오늘 시세를 보고 정해진 셈이다(룩어헤드, 5차 감사 ⑤).
+     0 을 돌려주고, 부르는 쪽이 그날 주문을 아예 만들지 않는다. */
+  return 0;
 }
 const IM_BIG_DEFAULT=15;
 function imBigPct(st){ const v=+((st||{}).big); return isFinite(v)&&v>0 ? v : IM_BIG_DEFAULT; }
@@ -2500,6 +2503,7 @@ function runIM(days,tkr,cap,divs,targetPct,compound=true,bigOverride){
   days.forEach((d,i)=>{
     const [c,o,hi,lo]=M[tkr][d];
     const prevC=imPrevClose(tkr,days,i);        // 오늘 주문을 낼 때 알고 있는 마지막 확정 종가
+    if(!(prevC>0)) { snap.push([d,cash+shares*c+savedProfit-addedCash]); return; }   // 전일 종가가 없는 첫 봉 — 주문 없음
     const buyLimit=prevC*(1+bigPct/100);
     // 배당은 가격에 안 녹아 있다 — 보유 주수만큼 그날 현금으로 들어온다 (이중계상 방지는 divPerShare 가 맡는다)
     cash+=divCash(tkr,d,shares,CO);
@@ -2861,6 +2865,7 @@ function runIM50(days,tkr,cap,divs,targetPct,compound=true,bigOverride){
   days.forEach((d,i)=>{
     const [c,o,hi,lo]=M[tkr][d];
     const prevC=imPrevClose(tkr,days,i);
+    if(!(prevC>0)) { snap.push([d,cash+shares*c+savedProfit-addedCash]); return; }   // 전일 종가가 없는 첫 봉 — 주문 없음
     const buyLimit=prevC*(1+bigPct/100);
     // 배당은 가격에 안 녹아 있다 — 보유 주수만큼 그날 현금으로 들어온다 (이중계상 방지는 divPerShare 가 맡는다)
     cash+=divCash(tkr,d,shares,CO);

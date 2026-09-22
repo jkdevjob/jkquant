@@ -4155,7 +4155,14 @@ console.log('\n[75] VR 장부 — 저장 전 == 저장 후');
     __strat={settings:st, hist};
     const c2=computeVr();
     ok('매도는 수수료를 뺀 순액이 Pool 로', near(c2.pool, 75.25+110-0.275, 1e-9), String(c2.pool));
-    ok('실현손익도 수수료를 뺀다', near(c2.realized, 110-100-0.275, 1e-9), String(c2.realized));
+    /* 취득원가에는 매수 수수료도 들어간다 (5차 감사 ⑥ · 백테 taxLot 과 같은 규약).
+       99주에 24.75 를 물었으니 주당 0.25. 1주를 110 에 팔고 매도수수료 0.275 를 내면
+         실현손익 = 110 − (100 + 0.25) − 0.275 = 9.475
+       예전엔 매수수수료를 빼먹어 9.725 로 0.25 만큼 과대였다. */
+    ok('실현손익이 매수수수료까지 뺀 값', near(c2.realized, 110-(100+24.75/99)-0.275, 1e-9)
+       && near(c2.realized, 9.475, 1e-9), String(c2.realized));
+    ok('옛 규약(매수수수료 제외)보다 주당 매수수수료만큼 작다',
+       near((110-100-0.275) - c2.realized, 24.75/99, 1e-9), String((110-100-0.275)-c2.realized));
     ok('매도 수수료까지 합산', near(c2.fees, 24.75+0.275, 1e-9), String(c2.fees));
     // init 칸이 없는 실계좌 기록은 예전과 같아야 한다 (하위호환)
     __strat={settings:st, hist:[{type:'buy',date:'2026-01-05',price:100,qty:10,cyc:0}]};
@@ -5976,9 +5983,26 @@ console.log('\n[94] 무매 선택 첫날 — 전일 종가를 워밍업에서 �
   const oldPrev=(days,i)=>i>0?M[T][days[i-1]][C]:M[T][days[i]][C];
   ok('옛 규약은 오늘 종가를 따라간다 (그래서 틀렸다)', oldPrev(sel,0)===300, String(oldPrev(sel,0)));
 
-  // 앞에 봉이 하나도 없으면 어쩔 수 없이 오늘 종가 (조용히 깨지지 않게)
+  /* 앞에 봉이 하나도 없으면 '전일 확정 종가' 가 존재하지 않는다 — 오늘 종가로 때우면
+     그날 주문이 오늘 시세를 보고 정해진 셈이다(룩어헤드, 5차 감사 ⑤). 0 을 돌려주고
+     부르는 쪽이 그날 주문을 아예 만들지 않는다. */
   { const only=[all[0]];
-    ok('워밍업이 아예 없으면 오늘 종가로 떨어진다', imPrevClose(T,only,0)===M[T][all[0]][C]); }
+    ok('워밍업이 아예 없으면 0 (오늘 종가로 때우지 않는다)', imPrevClose(T,only,0)===0,
+       String(imPrevClose(T,only,0)));
+    ok('두 엔진이 prevC 없는 날은 주문을 건너뛴다',
+       (bt.match(/if\(!\(prevC>0\)\) \{ snap\.push\(\[d,cash\+shares\*c\+savedProfit-addedCash\]\); return; \}/g)||[]).length===2); }
+  /* 데이터 첫 봉의 종가를 크게 바꿔도 그날 거래가 안 생겨야 한다 (감사 지정 시험) */
+  { const T2='__FIRSTBAR__', ds=['2026-04-01','2026-04-02','2026-04-03'];
+    const run=(firstClose)=>{ M[T2]={};
+      ds.forEach((d,i)=>{ const c=(i===0)?firstClose:100; M[T2][d]=[c,c,c*1.5,c*0.5]; });
+      PBASIS[T2]='trade';
+      const F=new Function('return ('+extractFn(bt,'function runIM(days,tkr,cap,divs,targetPct,compound')
+        .replace(/^function [\w$]+\(/,'function (')+')')();
+      const r=F(ds,T2,10000,20,20,false); delete M[T2]; delete PBASIS[T2];
+      return {tr:r.trades, sh:r.endShares}; };
+    const a1=run(100), a2=run(10), a3=run(1000);
+    ok('첫 봉 종가를 100→10→1000 으로 바꿔도 거래 수가 같다',
+       a1.tr===a2.tr && a1.tr===a3.tr, `${a1.tr} / ${a2.tr} / ${a3.tr}`); }
   delete M[T]; delete PBASIS[T];
 
   ok('두 엔진이 모두 헬퍼를 쓴다',
@@ -6096,6 +6120,116 @@ console.log('\n[97] 무매 리버스 쿼터매수 — 원문 배정액(잔금÷4
   { const src=extractFn(bt,'function runIM(days,tkr,cap,divs,targetPct,compound');
     ok('백테: 0주면 _buy 가 0 을 돌려 T 가 안 오른다',
        /if\(_buy\(c,alloc,buyP\)>0\) T=T\+\(divs-T\)\*0\.25;/.test(src)); }
+}
+
+
+/* ════ 98. 무매 복합거래 사이클 종료 ════  (5차 감사 ④)
+   V4.0 원칙: 보유수량 0 = 사이클 종료.
+   예전 판정은 `qty<=EPS && isSell(kind) && !isBuy(kind)` 라, '1회매수+지정가매도(애프터)'
+   같은 복합거래는 isBuy=true 여서 통째로 걸러졌다 — 3주 보유에 1주 사고 4주 팔아
+   0주가 돼도 사이클이 안 끝나 T·평단이 남았다.
+   반대로 '지정가매도 후 LOC매수' 처럼 최종 보유가 양수면 끝내면 안 된다. */
+console.log('\n[98] 무매 복합거래 — 최종 0주면 사이클 종료');
+{
+  const st={ticker:'SOXL',div:20,target:20,principal:100000,compound:true,reverse:true};
+  const run=(hist)=>{ __strat={settings:st,hist:JSON.parse(JSON.stringify(hist))}; return computeInf(); };
+
+  /* A. 감사 지정: 보유 3주 → 복합(매수 1 · 매도 4) → 최종 0주 → 종료 */
+  { const hist=[
+      {kind:'1회매수', date:'2026-05-01', price:100, qty:3},
+      {kind:'1회매수+지정가매도(애프터)', date:'2026-05-02',
+       buyPrice:100, buyQty:1, sellPrice:130, sellQty:4},
+    ];
+    const c=run(hist);
+    ok('A 최종 보유 0주', c.qty===0, String(c.qty));
+    ok('A 사이클 종료 · T=0', c.T===0, String(c.T));
+    ok('A 평단 0', c.avg===0, String(c.avg));
+    ok('A 상태는 NORMAL', c.revState==='NORMAL', c.revState);
+    ok('A cycleEnd 가 찍힌다', !!c.rows[c.rows.length-1].cycleEnd);
+    /* cycleSeq 는 1부터 센다 — 한 사이클이 끝나면 2가 된다 */
+    ok('A cycleSeq 가 하나 올라간다', c.cycleSeq===run([{kind:'1회매수',date:'2026-05-01',price:100,qty:3}]).cycleSeq+1,
+       String(c.cycleSeq)); }
+
+  /* B. 반대 경우: 매도 뒤 매수로 최종 보유가 양수면 끝내면 안 된다 */
+  { const hist=[
+      {kind:'1회매수', date:'2026-05-01', price:100, qty:4},
+      {kind:'지정가매도+1회매수', date:'2026-05-02',
+       sellPrice:130, sellQty:4, buyPrice:120, buyQty:2},
+    ];
+    const c=run(hist);
+    ok('B 최종 보유가 남는다', c.qty===2, String(c.qty));
+    ok('B 사이클이 안 끝난다', !c.rows[c.rows.length-1].cycleEnd && c.T>0, `T=${c.T}`); }
+
+  /* C. 일반 전량매도는 예전과 같다 */
+  { const hist=[
+      {kind:'1회매수', date:'2026-05-01', price:100, qty:5},
+      {kind:'지정가매도', date:'2026-05-02', price:130, qty:5},
+    ];
+    const c=run(hist);
+    ok('C 일반 전량매도도 종료 · T=0', c.qty===0 && c.T===0 && !!c.rows[1].cycleEnd); }
+
+  /* D. 매수만 있는 날은 종료가 아니다 (매도 수량 0) */
+  { const hist=[{kind:'1회매수', date:'2026-05-01', price:100, qty:0}];
+    const c=run(hist);
+    ok('D 0주 매수는 사이클 종료가 아니다', !c.rows[0].cycleEnd, 'cycleEnd 가 잘못 찍힘'); }
+
+  ok('판정이 종류 이름 목록이 아니라 기록의 sellQty 를 본다',
+     /const _soldQty = \(h\.sellQty!=null\) \? \(\+h\.sellQty\|\|0\) : \(isSell\(h\.kind\) \? \(\+h\.qty\|\|0\) : 0\);/.test(idx)
+     && /if\(qty<=1e-9 && _soldQty>0\)\{/.test(idx));
+  ok('옛 규약(!isBuy 로 복합거래 제외)이 안 남아 있다',
+     !/qty<=1e-9 && isSell\(h\.kind\) && !isBuy\(h\.kind\)/.test(idx));
+}
+
+
+/* ════ 99. VR 적립식 최초 자금 — 세 엔진이 같은 장부로 시작한다 ════  (5차 감사 ③)
+   적립식(mode=0.75)에서
+     runVR      : pool(=startPool+contrib) 으로 첫 매수
+     vrReplay   : 같음
+     vrSimForward : initAmt 로 첫 매수          ← 혼자 달랐다
+   같은 설정인데 모의만 시작 원금이 달라졌고, 재생의 CAGR 분모도 쓰지도 않은 initAmt 를
+   더하고 있었다. 제품 근거(백테 UI 가 적립식에서 초기투자금 칸을 숨긴다)와 다수결에 따라
+   '적립식은 Pool+적립금으로 시작' 으로 통일한다. */
+console.log('\n[99] VR 적립식 최초 자금 — 세 엔진 같은 장부');
+{
+  const FEE=0.0025, px=50, startPool=1000, contrib=200, initAmt=10000;
+  const firstBuy=(amt)=>{ const q=Math.floor(amt/(1+FEE)/px); const spend=q*px, fee=spend*FEE;
+    return {q, spent:spend+fee, left:amt-spend-fee}; };
+
+  // 적립식 배정액 = startPool + contrib = 1200 → 23주 (1200/1.0025/50 = 23.94)
+  const accAmt=startPool+contrib;
+  const A=firstBuy(accAmt);
+  ok('적립식 배정액 = startPool + contrib', near(accAmt,1200,1e-12), String(accAmt));
+  ok('첫 매수 23주', A.q===23, String(A.q));
+  ok('잔돈이 Pool 에 남는다', near(A.left, 1200-23*50-23*50*FEE, 1e-9), String(A.left));
+  ok('초기 투자금으로 사면 다른 값이 된다 (옛 모의)', firstBuy(initAmt).q===199 && firstBuy(initAmt).q!==A.q,
+     String(firstBuy(initAmt).q));
+
+  // 세 경로가 같은 식을 쓰는가
+  const sim=extractFn(idx,'function vrSimForward()');
+  const rep=extractFn(idx,'function vrReplay()');
+  const vr =extractFn(bt,'function runVR(days,tkr,params)');
+  ok('모의체결이 적립식은 Pool+적립금으로 산다',
+     /const _isAccum0=\(\+st\.mode\|\|0\.75\)===0\.75;/.test(sim)
+     && /const amt=_isAccum0 \? \(\(\+st\.startpool\|\|0\)\+\(\+st\.add\|\|0\)\)/.test(sim));
+  ok('모의체결이 모드 무관 initAmt 를 안 쓴다',
+     !/const amt=st\.initAmt!=null\?\+st\.initAmt:10000, q=Math\.floor/.test(sim));
+  ok('과거재생도 적립식은 Pool+적립금', /if\(isAccum\)\{\s*\n\s*pool\+=contrib;[\s\S]{0,180}_buyInt\(pool,c,d,false\)/.test(rep));
+  ok('백테도 적립식은 Pool+적립금',
+     /else\{pool\+=contrib;inv\+=contrib;cf\.push\(\[d,contrib\]\);pool-=_vbuy\(pool,c\);V=shares\*c;\}/.test(vr));
+  ok('거치·인출식은 셋 다 초기 투자금',
+     /\(st\.initAmt!=null\?\+st\.initAmt:10000\)/.test(sim)
+     && /const amt=st\.initAmt!=null\?\+st\.initAmt:10000;/.test(rep)
+     && /if\(isLump\)\{const s=initAmt\|\|10000;/.test(vr));
+
+  /* 재생의 CAGR 분모 — 적립식은 안 쓴 initAmt 를 더하면 안 된다 */
+  ok('적립식 총투입 = 적립금 × (사이클+1)',
+     /const base=isAccum \? contrib\*\(cyc\+1\) : \(st\.initAmt!=null\?\+st\.initAmt:10000\);/.test(rep));
+  ok('옛 분모(initAmt + contrib×cyc)가 안 남아 있다',
+     !/\(st\.initAmt!=null\?\+st\.initAmt:10000\)\+\(isAccum\?contrib\*cyc:0\)/.test(idx));
+  { // 값으로 — 적립 200 · 사이클 5회면 총투입 1,200 (첫 회차 포함 6회)
+    const cyc=5, c2=contrib*(cyc+1);
+    ok('적립 200 · 사이클 5 → 총투입 1,200', c2===1200, String(c2));
+    ok('옛 분모면 11,000 이었다 (쓰지도 않은 초기금 포함)', initAmt+contrib*cyc===11000); }
 }
 
 console.log(`\n════ 결과: ${pass} PASS / ${fail} FAIL ${fail===0?'— ALL PASS ★':'— 배포 금지, 위 ✗ 항목 수정 필요'} ════`);
