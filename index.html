@@ -529,7 +529,7 @@ try{ if(localStorage.getItem('qcockpit_hadUser')==='1') document.documentElement
 </div>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.77.2</span></h1></div>
+    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.77.3</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -901,7 +901,7 @@ document.addEventListener('click',function(e){ var m=document.getElementById('jk
           <div class="field" style="flex:1;margin:0"><label>시작일</label><input id="rp_vr_from" type="date"></div>
           <button class="fetchbtn" style="flex:0 0 auto" onclick="vrReplay()">▶ 재생</button>
         </div>
-        <p class="note" style="margin-top:8px">그날부터 오늘까지 <b>규칙대로</b> 리밸런싱을 만들어 기록에 채웁니다(10거래일마다 V 갱신 → 밴드 밖이면 V로 되맞춤, 백테와 같은 규약).<br>
+        <p class="note" style="margin-top:8px">그날부터 오늘까지 <b>규칙대로</b> 매매를 만들어 기록에 채웁니다(<b>달력 14일</b>마다 V 갱신 · 기준일이 주말이면 다음 영업일 → 사이클 첫날 걸어 둔 매수·매도표가 2주 내내 살아 있고 그날 고가·저가에 닿은 차수만 체결, 백테와 같은 규약).<br>
           <b>기존 기록은 지워집니다.</b> 수수료 0.25%는 물지만 양도세는 넣지 않습니다.</p>
       </div>
       <div class="card" style="margin-top:13px">
@@ -1280,7 +1280,7 @@ document.addEventListener('click',function(e){ var m=document.getElementById('jk
           </div>
           <p class="note" style="margin-top:8px">그날부터 오늘까지 <b>규칙대로</b> 매매를 만들어 기록에 채웁니다(전일 σ → 당일 종가 체결, 밴드 밖일 때만). 백테와 같은 규약이라 <b>몇 년을 기다리지 않고</b> 결과를 볼 수 있습니다.<br>
             <b>기존 기록은 지워집니다.</b> 수수료 0.25%는 물지만 <b>양도세·예수금 이자는 넣지 않습니다</b> — 실제보다 후하게 나옵니다.<br>
-            백테와 대조하면 거래 횟수는 같고 결과가 몇 % 차이 납니다: 백테는 짝을 <b>합성 1배지수</b>로, 여기는 <b>실제로 살 수 있는 1배 ETF</b>로 굴리기 때문입니다(10년에 2~3%).</p>
+            백테도 이제 <b>같은 1배 ETF</b>로 굴립니다(그 구간 시세가 없을 때만 합성으로 대체하고, 그때는 백테 화면에 표시됩니다). 남는 차이는 규약뿐입니다 — 여기는 <b>소수점 주수</b>·예수금 이자 없음, 백테는 <b>정수 주수</b>·예수금 이자 반영.</p>
         </div>
         <p class="note" style="margin-top:8px">예수금 <b>이자·배당</b>이 들어오거나 <b>양도세를 납부</b>했다면 입금·출금으로 남기세요. 그래야 장부가 실제 계좌와 안 벌어집니다.</p>
         <p class="note" style="margin-top:8px">보유 주식수·예수금·평단은 <b>이 기록에서 계산</b>됩니다. 설정에는 초기자금만 넣습니다.<br>
@@ -1618,7 +1618,7 @@ document.addEventListener('click',function(e){ var m=document.getElementById('jk
   <footer>
     <strong>JK 퀀트</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.77.2</b> · 2026-09-21</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.77.3</b> · 2026-09-22</div>
   </footer>
 </div>
 

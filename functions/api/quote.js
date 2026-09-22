@@ -36,7 +36,7 @@ export async function onRequestGet({ request, env }) {
 
   const dbg = [];
   let series = [], ohlc = [], price = null, marketState = null, currency = "USD", src = null, intraday = null;
-  let dividends = null, splits = null, raw = null;
+  let dividends = null, splits = null, raw = null, ohlcTrade = null;
 
   // ── 국내상장 ETF → 네이버 금융 ──
   // 옛 코드는 6자리 숫자(423920), 2024년부터 나온 건 가운데에 알파벳이 있다(0104N0).
@@ -71,7 +71,8 @@ export async function onRequestGet({ request, env }) {
             const out = { symbol, currency: "KRW", src: "yahoo" + sfx, marketState: null, last,
               price: (kr && kr.price != null) ? kr.price : (y.price != null ? y.price : last.close),
               series: y.series, ohlc: y.ohlc, intraday: null,
-              dividends: y.dividends || [], splits: y.splits || [], raw: y.raw || [] };
+              dividends: y.dividends || [], splits: y.splits || [], raw: y.raw || [],
+              ohlcTrade: y.ohlcTrade || [], priceBasis: (y.ohlcTrade && y.ohlcTrade.length) ? 'trade' : 'adjusted' };
             if (debug) out.debug = dbg;
             return new Response(JSON.stringify(out), { headers: JH });
           }
@@ -83,7 +84,9 @@ export async function onRequestGet({ request, env }) {
       const out = { symbol, currency: "KRW", src: "naver", price: kr.price != null ? kr.price : last.close, marketState: null, last, series: kr.series, ohlc: kr.ohlc, intraday: null };
       // 야후에서 배당을 못 받은 경우. 네이버 종가는 분배 반영가라 raw를 같은 값으로 두면
       // 분배 수익 0 — 여태까지의 동작 그대로다. 없는 걸 지어내지는 않는다.
-      if (wantDiv) { out.dividends = []; out.splits = []; out.raw = kr.series; }
+      // 네이버 일봉은 실제 거래가(분배 반영가)다 — 배당 이력이 없으니 그대로 체결가로 쓴다
+      if (wantDiv) { out.dividends = []; out.splits = []; out.raw = kr.series;
+                     out.ohlcTrade = kr.ohlc; out.priceBasis = 'trade'; }
       if (debug) out.debug = dbg;
       return new Response(JSON.stringify(out), { headers: JH });
     }
@@ -107,7 +110,7 @@ export async function onRequestGet({ request, env }) {
       const y = await yahooDaily(realHost, symbol, range, dbg, period1, period2, wantDiv);
       if (y && y.series.length) {
         series = y.series; ohlc = y.ohlc; if (price == null) price = y.price; marketState = y.marketState; currency = y.currency;
-        dividends = y.dividends; splits = y.splits; raw = y.raw;
+        dividends = y.dividends; splits = y.splits; raw = y.raw; ohlcTrade = y.ohlcTrade;
         if (!src) src = "yahoo-" + realHost;
         break;
       }
@@ -119,7 +122,7 @@ export async function onRequestGet({ request, env }) {
     try {
       const s = await stooqDaily(symbol, dbg);
       if (s && s.ohlc && s.ohlc.length) {
-        series = s.series; ohlc = s.ohlc;
+        series = s.series; ohlc = s.ohlc; ohlcTrade = null;   // Stooq 는 조정 여부를 알 수 없다 — 체결가 계열로 못 쓴다
         if (price == null && s.series.length) price = s.series[s.series.length - 1].close;
         src = "stooq";
       }
@@ -144,7 +147,10 @@ export async function onRequestGet({ request, env }) {
   if (price == null) price = last.close;
 
   const out = { symbol, currency, src, price: +(+price).toFixed(4), marketState, last, series, ohlc, intraday };
-  if (wantDiv) { out.dividends = dividends || []; out.splits = splits || []; out.raw = raw || []; }
+  if (wantDiv) { out.dividends = dividends || []; out.splits = splits || []; out.raw = raw || [];
+    /* 실제 체결가 계열. 소스가 못 주면 비워서 보낸다 — 받는 쪽이 '없다'를 알고
+       조정가로 대체하되 그 사실을 화면에 적을 수 있어야 한다. 조용히 섞으면 안 된다. */
+    out.ohlcTrade = ohlcTrade || []; out.priceBasis = (ohlcTrade && ohlcTrade.length) ? 'trade' : 'adjusted'; }
   if (debug) out.debug = dbg;
   return new Response(JSON.stringify(out), { headers: JH });
 }
@@ -178,7 +184,17 @@ async function yahooDaily(host, symbol, range, dbg, period1=null, period2=null, 
   const rawA = q.close || [];
   const closeA = adjA.length ? adjA : rawA;  // adjclose 우선 (DRIP 반영), 없으면 raw close
   const openA = q.open || [], highA = q.high || [], lowA = q.low || [];
-  const series = [], ohlc = [], raw = [];
+  /* ── 가격은 역할이 두 가지다. 섞으면 안 된다 ────────────────────────
+     tradeOhlc  그때 실제로 낼 수 있었던 가격 (분할만 소급, 배당은 안 녹임)
+                → 주수·현금·평단·지정가·고저 체결판정·실현손익·세금은 전부 이것
+     ohlc/series 배당까지 과거 가격에 소급 반영한 총수익(adjusted) 계열
+                → 총수익 비교·지수화 같은 '분석'용
+     dividends   별도 이벤트. tradeOhlc 와 같이 쓰면 배당을 한 번만 센다.
+     야후 chart API 의 indicators.quote 는 분할은 소급 반영돼 있고 배당은 아니다 —
+     그래서 분할 전후 주식수·가격 연속성은 그대로 지켜지면서 배당만 빠진다.
+     adjclose 를 체결가로 쓰면 '배당까지 얹힌 가격에 그 주수를 샀다'가 돼
+     주수·평단·세금이 전부 실제 장부와 어긋난다(무매·VR은 주수가 다음 주문을 바꾼다). */
+  const series = [], ohlc = [], raw = [], ohlcTrade = [];
   for (let i = 0; i < ts.length; i++) {
     const c = closeA[i]; if (c == null) continue;
     const d = new Date(ts[i] * 1000).toISOString().slice(0, 10);
@@ -188,6 +204,14 @@ async function yahooDaily(host, symbol, range, dbg, period1=null, period2=null, 
     // 이전엔 raw O/H/L + adj종가 혼합 → '종가가 고저 밖' 결함, 고가 기준 익절이 과대 체결됐음.
     const f = (adjA.length && rawA[i] > 0) ? c / rawA[i] : 1;
     ohlc.push({ date: d, open: openA[i] != null ? +(openA[i] * f).toFixed(4) : +(+c).toFixed(4), high: highA[i] != null ? +(highA[i] * f).toFixed(4) : +(+c).toFixed(4), low: lowA[i] != null ? +(lowA[i] * f).toFixed(4) : +(+c).toFixed(4), close: +(+c).toFixed(4) });
+    if (wantDiv) {
+      const rc = rawA[i] != null ? +rawA[i] : null;
+      if (rc != null && rc > 0) ohlcTrade.push({ date: d,
+        open:  openA[i] != null ? +(+openA[i]).toFixed(4) : +rc.toFixed(4),
+        high:  highA[i] != null ? +(+highA[i]).toFixed(4) : +rc.toFixed(4),
+        low:   lowA[i]  != null ? +(+lowA[i]).toFixed(4)  : +rc.toFixed(4),
+        close: +rc.toFixed(4) });
+    }
   }
   const meta = res.meta || {};
   let dividends = null, splits = null;
@@ -201,7 +225,7 @@ async function yahooDaily(host, symbol, range, dbg, period1=null, period2=null, 
       .map(v => ({ date: dayOf(v.date), ratio: (+v.numerator || 1) / (+v.denominator || 1) }))
       .sort((a, b) => a.date < b.date ? -1 : 1);
   }
-  return { series, ohlc, raw: wantDiv ? raw : null, dividends, splits,
+  return { series, ohlc, ohlcTrade: wantDiv ? ohlcTrade : null, raw: wantDiv ? raw : null, dividends, splits,
            price: meta.regularMarketPrice != null ? +meta.regularMarketPrice : null,
            marketState: meta.marketState || null, currency: meta.currency || "USD" };
 }
