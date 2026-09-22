@@ -187,7 +187,7 @@ canvas{display:block;width:100%;height:auto}
 
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Morning Scalping</div><h1>JK <span class="v">퀀트</span> 단타 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="scVer">v1.11.0</span></h1></div>
+    <div><div class="kicker">Morning Scalping</div><h1>JK <span class="v">퀀트</span> 단타 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="scVer">v1.12.0</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -301,6 +301,17 @@ canvas{display:block;width:100%;height:auto}
       <span class="sub" id="ob_server_hist_msg"></span>
     </div>
     <div id="ob_server_hist_body"><p class="sub">새로고침을 누르면 오늘 서버 감시 이력을 불러옵니다.</p></div>
+  </div>
+
+  <div class="card">
+    <h3><span class="dot"></span>🧪 누적 시초가 연구 백테스트 <span class="sub" style="font-weight:600">매일 원본 분봉 누적 · 장기 비교</span></h3>
+    <p class="lead">매일 16:10 이후 <b>그날의 Top100 실제 유니버스와 09:00~09:30 KIS 1분봉</b>을 저장하고, 같은 원본으로 현재 규칙과 몇 가지 가설을 다시 계산한다.
+      표본이 적을 때는 전략을 바꾸지 않고 데이터만 쌓는다.</p>
+    <div class="row" style="margin-bottom:8px">
+      <button class="ghostbtn" onclick="loadOpeningResearch()">🔄 누적 백테스트 갱신</button>
+      <span class="sub" id="ob_research_msg">매일 장 마감 후 자동 갱신</span>
+    </div>
+    <div id="ob_research_body"><p class="sub">갱신을 누르면 누적 연구 결과를 불러옵니다.</p></div>
   </div>
 
   <!-- 1bb. 시초가 첫고점 돌파 -->
@@ -1027,6 +1038,50 @@ async function loadServerOpeningHistory(){
       '</tbody></table></div><p class="note">실제 주문 체결 이력이 아니라 서버 전략 신호의 모의 매매 이력입니다.</p>';
   }catch(e){
     msg.textContent='서버 이력 조회 실패';
+    body.innerHTML='<div class="warn">'+esc(e.message||String(e))+'</div>';
+  }
+}
+async function loadOpeningResearch(){
+  const msg=$('ob_research_msg'),body=$('ob_research_body');
+  if(!msg||!body)return;
+  msg.textContent='누적 연구결과 불러오는 중…'; body.innerHTML='';
+  try{
+    const r=await fetch('/api/opening-research',{headers:{'Accept':'application/json'}});
+    const j=await r.json(); if(!r.ok||!j.ok)throw new Error(j.error||('HTTP '+r.status));
+    if(!j.archiveDays){
+      msg.textContent='아직 누적 원본 데이터가 없습니다.';
+      body.innerHTML='<div class="warn">장 마감 후 자동수집이 끝나면 여기에 누적 백테스트가 표시됩니다.</div>';
+      return;
+    }
+    const vars=j.variants||[],base=vars.find(x=>x.params&&x.params.name==='baseline');
+    const s=base&&base.summary||{};
+    msg.textContent=(j.from||'')+' ~ '+(j.to||'')+' · '+j.archiveDays+'거래일 · 기준전략 '+(s.trades||0)+'건';
+    const enough=j.comparisonStatus==='eligible';
+    const info='<div class="warn" style="margin-bottom:10px">'+
+      (enough?'<b>비교 가능 표본 도달:</b> 가설별 결과를 검토할 수 있습니다. 그래도 실전 변경 전에는 기간 분할 검증이 필요합니다.':
+              '<b>표본 수집 중:</b> 20거래일·기준전략 30건 전까지는 가설 순위를 전략 변경 근거로 사용하지 않습니다.')+
+      '</div>';
+    const rows=vars.map(x=>{
+      const p=x.params||{},z=x.summary||{},label={
+        baseline:'현재 기준',top50:'Top50',pb_max_0.5:'눌림≤0.5%',pb_max_0.7:'눌림≤0.7%',
+        amount_1.5:'거래대금≥1.5배',amount_2.0:'거래대금≥2.0배',entry_by_0915:'09:15 이전',
+        gap_2_5:'갭 2~5%',gap_3_7:'갭 3~7%',stop_0.8:'손절 0.8%',tp_1.0:'익절 1.0%',tp_2.0:'익절 2.0%'
+      }[p.name]||p.name||'';
+      const pf=z.profitFactor>=900?'∞':(+z.profitFactor||0).toFixed(2);
+      return '<tr><td><b>'+esc(label)+'</b></td><td>'+((z.trades||0))+'</td><td>'+((z.winRate||0).toFixed(1))+'%</td>'+
+        '<td class="'+((z.avgPnl||0)>=0?'win':'loss')+'">'+((z.avgPnl||0)>=0?'+':'')+(z.avgPnl||0).toFixed(3)+'%</td>'+
+        '<td>'+pf+'</td><td class="'+((z.sumPnl||0)>=0?'win':'loss')+'">'+((z.sumPnl||0)>=0?'+':'')+(z.sumPnl||0).toFixed(2)+'%</td>'+
+        '<td class="loss">'+(z.maxDrawdownSimple||0).toFixed(2)+'%</td></tr>';
+    }).join('');
+    body.innerHTML=info+'<div class="out">'+
+      '<div class="outbox"><div class="ol">누적 거래일</div><div class="ov">'+j.archiveDays+'</div></div>'+
+      '<div class="outbox"><div class="ol">기준 거래</div><div class="ov">'+(s.trades||0)+'</div></div>'+
+      '<div class="outbox"><div class="ol">기준 승률</div><div class="ov">'+((s.winRate||0).toFixed(1))+'%</div></div>'+
+      '<div class="outbox"><div class="ol">기준 평균손익</div><div class="ov '+((s.avgPnl||0)>=0?'good':'bad')+'">'+((s.avgPnl||0)>=0?'+':'')+(s.avgPnl||0).toFixed(3)+'%</div></div>'+
+      '</div><div class="htable-wrap" style="margin-top:10px"><table class="htable"><thead><tr><th>가설</th><th>거래</th><th>승률</th><th>평균손익</th><th>PF</th><th>단순합</th><th>MDD</th></tr></thead><tbody>'+rows+'</tbody></table></div>'+
+      '<p class="note">누적 연구용 모의 결과입니다. 같은 데이터에서 여러 조건을 비교하므로 표본이 충분해도 과최적화를 피하려면 별도 검증기간이 필요합니다.</p>';
+  }catch(e){
+    msg.textContent='누적 연구결과 조회 실패';
     body.innerHTML='<div class="warn">'+esc(e.message||String(e))+'</div>';
   }
 }
