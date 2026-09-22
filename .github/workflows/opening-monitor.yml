@@ -1,0 +1,90 @@
+name: 시초가 서버 자동감시
+
+# 웹페이지를 열지 않아도 동작한다.
+# GitHub Actions는 '시계' 역할만 하고, 종목 선정 계산과 Telegram 전송은
+# Cloudflare Pages Function /api/opening-monitor 가 수행한다.
+#
+# 08:55 KST에 시작해 09:31 KST까지 매분 Top100을 5개 shard로 나눠 검사한다.
+# 기존 AUTOTRADE_KEY를 서버간 인증키로 재사용한다.
+#
+# 필요한 Secret:
+#   GitHub Actions: AUTOTRADE_KEY
+# Cloudflare 환경변수:
+#   AUTOTRADE_KEY (또는 OPENING_MONITOR_KEY)
+#   TELEGRAM_BOT_TOKEN
+#   TELEGRAM_CHAT_ID
+
+on:
+  schedule:
+    - cron: "55 23 * * 0-4"   # 08:55 KST 월~금 (UTC 기준 전날 23:55)
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/opening-monitor.yml"
+      - "functions/api/opening-monitor.js"
+
+concurrency:
+  group: opening-monitor-live
+  cancel-in-progress: false
+
+jobs:
+  monitor:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: 09:00~09:30 서버 감시
+        env:
+          KEY: ${{ secrets.AUTOTRADE_KEY }}
+          BASE: https://jkquant.pages.dev
+        shell: bash
+        run: |
+          if [ -z "$KEY" ]; then
+            echo "AUTOTRADE_KEY GitHub Secret 이 없습니다."
+            exit 1
+          fi
+
+          last=""
+          echo "시초가 자동감시 준비"
+
+          while true; do
+            dow=$(TZ=Asia/Seoul date +%u)
+            raw=$(TZ=Asia/Seoul date +%H%M)
+            hm=$((10#$raw))
+
+            if [ "$dow" -gt 5 ]; then
+              echo "주말 — 종료"
+              exit 0
+            fi
+            if [ "$hm" -gt 931 ]; then
+              echo "09:31 KST 경과 — 종료"
+              exit 0
+            fi
+
+            # workflow 파일 push가 장과 무관한 시간에 일어났으면 장시간 대기하지 않는다.
+            if [ "${{ github.event_name }}" = "push" ] && [ "$hm" -lt 850 ]; then
+              echo "장 전 너무 이른 push — 정규 schedule이 08:55에 시작합니다."
+              exit 0
+            fi
+
+            if [ "$hm" -ge 859 ] && [ "$raw" != "$last" ]; then
+              last="$raw"
+              echo "[$(TZ=Asia/Seoul date '+%F %T KST')] Top100 스캔"
+
+              pids=""
+              for shard in 0 1 2 3 4; do
+                curl -sS --max-time 55 \
+                  -H "x-monitor-key: $KEY" \
+                  "$BASE/api/opening-monitor?shard=$shard&shards=5&limit=100" \
+                  -o "monitor-$shard.json" &
+                pids="$pids $!"
+              done
+              for p in $pids; do wait "$p" || true; done
+
+              for shard in 0 1 2 3 4; do
+                echo "shard $shard: $(cat monitor-$shard.json 2>/dev/null || echo no-response)"
+              done
+            fi
+
+            sleep 5
+          done

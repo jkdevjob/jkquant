@@ -47,7 +47,7 @@ export async function onRequestGet({ request, env }) {
     if (wantMinute) {
       try {
         const m = await naverMinute(symbol, dbg);
-        const out = { symbol, currency: "KRW", src: "naver-minute", minutes: m };
+        const out = { symbol, currency: "KRW", src: "naver-minute", minuteSchema: "close-volume", minutes: m };
         if (debug) out.debug = dbg;
         return new Response(JSON.stringify(out), { headers: JH });
       } catch (e) {
