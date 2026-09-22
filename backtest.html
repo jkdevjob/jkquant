@@ -320,7 +320,7 @@ td:first-child{text-align:left;}
   <div class="brand">
     <div>
       <div class="logo">Backtest</div>
-      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v2.2.2</span></h1>
+      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v2.3.0</span></h1>
     </div>
   </div>
   <div class="hright">
@@ -2991,7 +2991,7 @@ function vrCycleCount(days){
 }
 /* VR 체결 모델 — 기본은 공식 예약 사다리. 'ladder' 를 고르면 커스텀 1주 사다리. */
 const VR_MODEL_DEFAULT='official';
-function vrModelOf(st){ return VR_MODEL_DEFAULT; }
+function vrModelOf(st){ return ((st||{}).vrModel==='ladder') ? 'ladder' : VR_MODEL_DEFAULT; }
 /* ════ VR 주문 체결 엔진 — 공식 예약 사다리 · 커스텀(1주 사다리) ════
    예약 사다리 규칙:
    사이클 시작 보유수량으로 상·하단 밴드 경계에 1주 단위 주문을 매수·매도 각 최대 20차 고정한다.
@@ -3002,28 +3002,53 @@ function vrModelOf(st){ return VR_MODEL_DEFAULT; }
    반환: [{type:'sell'|'buy', price, qty, net|cost}] — net·cost 는 그 체결 '전체' 금액 */
 function vrOrderPlan(S, P, bar){
   const out=[];
-  if(!(S.V>0))return out;
-  const up=S.V*(1+P.band),dn=S.V*(1-P.band),FEE=P.FEE||0,fee1=1+FEE;
-  const budget=Math.max(0,P.budgetRemaining!=null?+P.budgetRemaining:S.pool*P.poolLimit);
+  if(!(S.V>0)) return out;
+  const up=S.V*(1+P.band), dn=S.V*(1-P.band);
+  const FEE=P.FEE||0, fee1=1+FEE;
+  /* budgetRemaining이 주어지면 그 값을 최우선으로 쓴다.
+     이 값은 '사이클 시작 Pool × 한도 − 이번 사이클 누적 매수액'이다. */
+  const budget=Math.max(0, P.budgetRemaining!=null ? +P.budgetRemaining : S.pool*P.poolLimit);
   const hi=bar.high>0?bar.high:bar.close, lo=bar.low>0?bar.low:bar.close;
-  const N=Math.max(1,Math.min(20,+P.maxTiers||20));
-  const B=Math.floor(+P.baseShares||S.shares||0);
-  let sf=Math.max(0,Math.floor(+P.sellFilled||0)),bf=Math.max(0,Math.floor(+P.buyFilled||0));
-  const _sell=(p,qty)=>{if(!(qty>=1)||S.shares+1e-9<qty)return;const net=p*(1-FEE)*qty;S.shares-=qty;S.pool+=net;out.push({type:'sell',price:p,qty,net});};
-  const _buy=(p,qty)=>{if(!(qty>=1))return;const cost=p*fee1*qty;if(cost>S.pool+1e-9)return;S.avg=(S.shares<=0)?p:(S.shares*S.avg+p*qty)/(S.shares+qty);S.shares+=qty;S.pool-=cost;out.push({type:'buy',price:p,qty,cost});};
-  if(B<1)return out;
-  for(let k=sf+1;k<=Math.min(N,B);k++){
-    const before=B-k+1,p=up/before;
-    if(!(hi>=p))break;
-    _sell(p,1); sf++;
+  const LADDER=(P.model==='ladder');
+  const _sell=(p,qty)=>{ if(!(qty>=1)) return;
+    const net=p*(1-FEE)*qty; S.shares-=qty; S.pool+=net;
+    out.push({type:'sell', price:p, qty, net}); };
+  const _buy=(p,qty)=>{ if(!(qty>=1)) return;
+    const cost=p*fee1*qty;
+    S.avg=(S.shares<=0)?p:(S.shares*S.avg+p*qty)/(S.shares+qty);
+    S.shares+=qty; S.pool-=cost;
+    out.push({type:'buy', price:p, qty, cost}); };
+
+  if(LADDER){
+    let spent=0;
+    for(let k=0;k<400;k++){
+      const q=Math.floor(S.shares+1e-9); if(q<1) break;
+      const p=up/q; if(!(hi>=p)) break;
+      _sell(p,1);
+    }
+    for(let k=0;k<400;k++){
+      const q=Math.floor(S.shares+1e-9); if(q<1) break;
+      const p=dn/q; if(!(lo<=p)) break;
+      const cost=p*fee1;
+      if(spent+cost>budget+1e-9) break;      // Pool 한도 소진
+      if(cost>S.pool+1e-9) break;            // 현금 부족
+      _buy(p,1); spent+=cost;
+    }
+    return out;
   }
-  let spent=0;
-  for(let k=bf+1;k<=N;k++){
-    const before=B+k-1,p=dn/before,cost=p*fee1;
-    if(!(lo<=p))break;
-    if(spent+cost>budget+1e-9||cost>S.pool+1e-9)break;
-    _buy(p,1); spent+=cost; bf++;
-  }
+
+  /* ── 공식: 밴드를 벗어나면 평가금을 V로 되돌린다 ── */
+  { const q=Math.floor(S.shares+1e-9);
+    if(q>=1){ const p=up/q;
+      if(hi>=p){ const qty=Math.floor(q - S.V/p + 1e-9); _sell(p, Math.min(qty,q)); } } }
+  { const q=Math.floor(S.shares+1e-9);
+    if(q>=1){ const p=dn/q;
+      if(lo<=p && p>0){
+        const want=Math.floor(S.V/p - q + 1e-9);                       // V 까지 채울 수량
+        const cash=Math.min(budget, S.pool);                            // Pool 한도·잔고 중 작은 쪽
+        const afford=Math.floor(cash/(p*fee1) + 1e-9);
+        _buy(p, Math.max(0, Math.min(want, afford)));
+      } } }
   return out;
 }
 function runVR(days,tkr,params){
