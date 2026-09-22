@@ -120,7 +120,7 @@ th:first-child,td:first-child{text-align:left}
 <body>
 <div class="wrap">
   <div class="top">
-    <div class="brand"><div class="logo">Five Year Plan</div><h1>5년 자산플랜 <span class="ver">v1.3.0</span></h1></div>
+    <div class="brand"><div class="logo">Five Year Plan</div><h1>5년 자산플랜 <span class="ver">v1.3.1</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
       <div class="jkmenu" id="jkmenuWrap">
@@ -361,12 +361,23 @@ function opLocalState(uid){
   for(const k of keys){try{const x=JSON.parse(localStorage.getItem(k)||'null');if(x&&x.inf&&x.vr)return x;}catch(e){}}
   return null;
 }
-function pickOpSession(box,ticker){
+function hasRealOperatingData(sess,kind){
+  if(!sess)return false;
+  const hist=Array.isArray(sess.hist)?sess.hist:[];
+  if(hist.length>0)return true;
+  const st=sess.settings||{};
+  if(kind==='vr'){
+    return (+st.startv||0)>0 || (+st.startpool||0)>0 || (+st.startCyc||0)>0 || !!st.cycStart;
+  }
+  return false;
+}
+function pickOpSession(box,ticker,kind){
   if(!(box&&Array.isArray(box.sessions)))return null;
-  const tt=String(ticker).toUpperCase(),active=box.sessions.find(x=>x.id===box.active);
-  if(active&&!active.paper&&String(active.settings?.ticker||'').toUpperCase()===tt)return active;
-  return box.sessions.find(x=>!x.paper&&String(x.settings?.ticker||'').toUpperCase()===tt)
-      ||box.sessions.find(x=>String(x.settings?.ticker||'').toUpperCase()===tt)||null;
+  const tt=String(ticker).toUpperCase();
+  const cand=box.sessions.filter(x=>String(x.settings?.ticker||'').toUpperCase()===tt && hasRealOperatingData(x,kind));
+  const active=cand.find(x=>x.id===box.active && !x.paper);
+  if(active)return active;
+  return cand.find(x=>!x.paper)||cand[0]||null;
 }
 function reverseTPlan(kind,t,div){if(kind==='리버스매도')return div>=40?t*.95:t*.9;if(kind==='리버스매수')return t+(div-t)*.25;return t;}
 function starPctPlan(st,T){const b=(+st.target>0)?+st.target:20;return b-(b*.1*20/(+st.div||20))*T;}
@@ -559,7 +570,7 @@ async function refreshLive(){
   if(liveBusy)return;liveBusy=true;$('liveRefresh').disabled=true;$('liveSync').textContent='운영데이터와 확정 일봉을 읽는 중…';liveQuotes={};
   try{
     await loadOperatingState(auth.currentUser);
-    const inf=liveState?pickOpSession(liveState.inf,'SOXL'):null,vr=liveState?pickOpSession(liveState.vr,'TQQQ'):null;
+    const inf=liveState?pickOpSession(liveState.inf,'SOXL','inf'):null,vr=liveState?pickOpSession(liveState.vr,'TQQQ','vr'):null;
     const [qs,qv,qqq,qld,sgov]=await Promise.all([
       fetchPlanQuote('SOXL'),fetchPlanQuote('TQQQ'),fetchPlanQuote('QQQ'),
       fetchPlanQuote('QLD').catch(()=>null),fetchPlanQuote('SGOV').catch(()=>null)
@@ -578,7 +589,7 @@ async function refreshLive(){
       if(primary.length)actions.push('SOXL '+primary.length+'건');
     }else{
       setAutoBalanceField('balMM',NaN,'SOXL 실전 세션 없음 · 수동 입력');
-      $('liveInfMeta').textContent='SOXL 실전 세션 없음';$('liveInf').innerHTML=waitHtml('운영 화면에 SOXL 실전 세션을 먼저 만드세요.');
+      $('liveInfMeta').textContent='SOXL 실전 세션 없음';$('liveInf').innerHTML=waitHtml('실제 거래기록이 있는 SOXL 무매 세션이 없습니다.','앱이 자동 만든 빈 기본세션은 제외합니다.');
     }
     if(vr){
       const r=vrOrders(vr,qv.settled.close),c=r.state,st=vr.settings||{},vrValue=c.pool+Math.max(0,c.qty)*qv.settled.close;
@@ -589,7 +600,7 @@ async function refreshLive(){
       if(immediate.length)actions.push('TQQQ VR '+immediate.length+'건');
     }else{
       setAutoBalanceField('balVR',NaN,'TQQQ VR 실전 세션 없음 · 수동 입력');
-      $('liveVrMeta').textContent='TQQQ VR 실전 세션 없음';$('liveVr').innerHTML=waitHtml('운영 화면에 TQQQ VR 실전 세션을 먼저 만드세요.');
+      $('liveVrMeta').textContent='TQQQ VR 실전 세션 없음';$('liveVr').innerHTML=waitHtml('실제 운용기록이 있는 TQQQ VR 세션이 없습니다.','앱이 자동 만든 빈 기본세션은 제외합니다.');
     }
     const qRows=qqq.rows.filter(x=>x.date<=qqq.settled.date),sg=qldSignal(qRows,$('startDate').value);
     $('liveQldMeta').textContent='QQQ '+sg.date+' · 종가 '+usd(sg.close)+' · MA200 '+usd(sg.ma200)+' · RSI '+(sg.rsi||0).toFixed(1)+' · ATH '+sg.dd.toFixed(1)+'%';
