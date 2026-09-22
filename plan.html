@@ -120,7 +120,7 @@ th:first-child,td:first-child{text-align:left}
 <body>
 <div class="wrap">
   <div class="top">
-    <div class="brand"><div class="logo">Five Year Plan</div><h1>5년 자산플랜 <span class="ver">v1.3.1</span></h1></div>
+    <div class="brand"><div class="logo">Five Year Plan</div><h1>5년 자산플랜 <span class="ver">v1.3.2</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
       <div class="jkmenu" id="jkmenuWrap">
@@ -374,10 +374,17 @@ function hasRealOperatingData(sess,kind){
 function pickOpSession(box,ticker,kind){
   if(!(box&&Array.isArray(box.sessions)))return null;
   const tt=String(ticker).toUpperCase();
-  const cand=box.sessions.filter(x=>String(x.settings?.ticker||'').toUpperCase()===tt && hasRealOperatingData(x,kind));
-  const active=cand.find(x=>x.id===box.active && !x.paper);
-  if(active)return active;
-  return cand.find(x=>!x.paper)||cand[0]||null;
+  // 모의세션(paper:true)은 거래이력이 아무리 많아도 실전 플랜에 절대 포함하지 않는다.
+  const cand=box.sessions.filter(x=>!x.paper
+    && String(x.settings?.ticker||'').toUpperCase()===tt
+    && hasRealOperatingData(x,kind));
+  const active=cand.find(x=>x.id===box.active);
+  return active||cand[0]||null;
+}
+function paperSessionCount(box,ticker){
+  if(!(box&&Array.isArray(box.sessions)))return 0;
+  const tt=String(ticker).toUpperCase();
+  return box.sessions.filter(x=>!!x.paper && String(x.settings?.ticker||'').toUpperCase()===tt).length;
 }
 function reverseTPlan(kind,t,div){if(kind==='리버스매도')return div>=40?t*.95:t*.9;if(kind==='리버스매수')return t+(div-t)*.25;return t;}
 function starPctPlan(st,T){const b=(+st.target>0)?+st.target:20;return b-(b*.1*20/(+st.div||20))*T;}
@@ -589,7 +596,9 @@ async function refreshLive(){
       if(primary.length)actions.push('SOXL '+primary.length+'건');
     }else{
       setAutoBalanceField('balMM',NaN,'SOXL 실전 세션 없음 · 수동 입력');
-      $('liveInfMeta').textContent='SOXL 실전 세션 없음';$('liveInf').innerHTML=waitHtml('실제 거래기록이 있는 SOXL 무매 세션이 없습니다.','앱이 자동 만든 빈 기본세션은 제외합니다.');
+      const pn=paperSessionCount(liveState&&liveState.inf,'SOXL');
+      $('liveInfMeta').textContent='SOXL 실전 세션 없음'+(pn?' · 모의 '+pn+'개 제외':'');
+      $('liveInf').innerHTML=waitHtml('실제 거래기록이 있는 SOXL 무매 실전세션이 없습니다.',pn?('모의투자 세션 '+pn+'개는 플랜에서 제외했습니다.'):'빈 기본세션은 제외합니다.');
     }
     if(vr){
       const r=vrOrders(vr,qv.settled.close),c=r.state,st=vr.settings||{},vrValue=c.pool+Math.max(0,c.qty)*qv.settled.close;
@@ -600,7 +609,9 @@ async function refreshLive(){
       if(immediate.length)actions.push('TQQQ VR '+immediate.length+'건');
     }else{
       setAutoBalanceField('balVR',NaN,'TQQQ VR 실전 세션 없음 · 수동 입력');
-      $('liveVrMeta').textContent='TQQQ VR 실전 세션 없음';$('liveVr').innerHTML=waitHtml('실제 운용기록이 있는 TQQQ VR 세션이 없습니다.','앱이 자동 만든 빈 기본세션은 제외합니다.');
+      const pn=paperSessionCount(liveState&&liveState.vr,'TQQQ');
+      $('liveVrMeta').textContent='TQQQ VR 실전 세션 없음'+(pn?' · 모의 '+pn+'개 제외':'');
+      $('liveVr').innerHTML=waitHtml('실제 운용기록이 있는 TQQQ VR 실전세션이 없습니다.',pn?('모의투자 세션 '+pn+'개는 플랜에서 제외했습니다.'):'빈 기본세션은 제외합니다.');
     }
     const qRows=qqq.rows.filter(x=>x.date<=qqq.settled.date),sg=qldSignal(qRows,$('startDate').value);
     $('liveQldMeta').textContent='QQQ '+sg.date+' · 종가 '+usd(sg.close)+' · MA200 '+usd(sg.ma200)+' · RSI '+(sg.rsi||0).toFixed(1)+' · ATH '+sg.dd.toFixed(1)+'%';
