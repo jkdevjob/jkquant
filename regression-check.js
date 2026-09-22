@@ -57,6 +57,7 @@ const idxParts=[
   extractFn(idx,'function computeVr()'),
 ];
 let __strat=null; global.curStrat=()=>__strat;
+global.strategyReinvestDiv=()=>0;   // isolated engine tests: dividend path has its own regression below
 eval(idxParts.join('\n'));
 // eval 안의 const 는 밖으로 안 샌다 — iq/isq 와 같은 이유로 전역에 올린다
 global.IM_OFFICIAL=new Function(idxParts[4]+'\nreturn IM_OFFICIAL;')();
@@ -6349,6 +6350,40 @@ console.log('\n[102] 무매 익절 지정가 체결 — 고가 터치 고정');
   ok('백테 runIM이 공통 헬퍼 사용', /imTpHit\(hi,c,tgt\)/.test(extractFn(bt,'function runIM(')));
   ok('백테 runIM50이 공통 헬퍼 사용', /imTpHit\(hi,c,tgt\)/.test(extractFn(bt,'function runIM50(')));
   ok('백테 화면에 종가 체결 선택지가 없다', !/data-f="close"/.test(bt));
+}
+
+
+/* ════ 103. 무매·VR 가격 기준 — 실제 체결가 + 분배금 별도 ════ */
+console.log('\n[103] 실제 체결가·분배금 — 운영 ↔ 백테 가격 기준');
+{
+  const tradeLoader=extractFn(idx,'async function _fetchTradeDailyRaw(symbol)');
+  ok('무매·VR 전용 로더가 div=1 요청', /range=max&div=1/.test(tradeLoader));
+  ok('전용 로더가 ohlcTrade만 체결가로 사용', /j\.ohlcTrade/.test(tradeLoader) && /j\.priceBasis!=='trade'/.test(tradeLoader));
+  ok('체결가 없으면 adjusted로 조용히 대체하지 않음', /return null/.test(tradeLoader) && !/_fetchDailyRaw\(SYM\)/.test(tradeLoader));
+  ok('무매 통합 로더가 fetchTradeDaily 사용', /const q=await fetchTradeDaily\(st\.ticker\|\|'SOXL'\)/.test(extractFn(idx,'async function loadInfData(force)')));
+  ok('VR 차트·모의가 fetchTradeDaily 사용', /const q=await fetchTradeDaily\(st\.ticker\|\|'TQQQ'\)/.test(extractFn(idx,'async function loadVrChart(force)')));
+  ok('공용 inf·VR 시세 버튼도 fetchTradeDaily 사용', /const q=await fetchTradeDaily\(symbol\)/.test(extractFn(idx,'async function fetchQuote(which)')));
+  ok('lastQuote에 priceBasis·dividends 보존', /priceBasis:q\.priceBasis/.test(idx) && /dividends:q\.dividends/.test(idx));
+
+  const tl=extractFn(idx,'function shareTimeline(hist)');
+  const di=extractFn(idx,'function divIncome(divs, lots, reinv)');
+  const env=new Function(tl+'\n'+di+'\nreturn {shareTimeline,divIncome};')();
+  const hist=[
+    {type:'buy',date:'2026-01-01',price:100,qty:10},
+    {type:'sell',date:'2026-01-03',price:110,qty:4},
+    {type:'buy',date:'2026-01-03',price:110,qty:2}
+  ];
+  const lots=env.shareTimeline(hist);
+  const z=env.divIncome([{date:'2026-01-03',amount:1},{date:'2026-01-04',amount:1}],lots,true);
+  ok('배당락일 당일 거래 전 보유수량으로 배당 계산', near(z.divCash,18,1e-9), String(z.divCash));
+  ok('divIncome가 ex-date 당일 매수/매도를 entitlement에 섞지 않음', /lots\[li\]\.date<d\.date/.test(di));
+
+  const ci=extractFn(idx,'function computeInf()'), cv=extractFn(idx,'function computeVr()');
+  ok('무매 잔금이 명시·미기록 재투자 분배금을 반영', /kind==='배당'/.test(ci) && /strategyReinvestDiv\(st,hist,'inf'\)/.test(ci));
+  ok('VR Pool이 미기록 재투자 분배금을 반영', /strategyReinvestDiv\(st,hist,'vr'\)/.test(cv));
+  ok('무매 모의가 날짜별 배당을 거래 전에 기록', /kind:'배당'/.test(extractFn(idx,'function infSimForward(')) && /divMap\[d\]/.test(extractFn(idx,'function infSimForward(')));
+  ok('VR 모의가 날짜별 배당을 거래 전에 기록', /type:'div'/.test(extractFn(idx,'function vrSimForward()')) && /divMap\[row\.date\]/.test(extractFn(idx,'function vrSimForward()')));
+  ok('VR 과거재생도 날짜별 배당을 Pool에 기록', /type:'div'/.test(extractFn(idx,'function vrReplay()')) && /pool\+=da/.test(extractFn(idx,'function vrReplay()')));
 }
 
 console.log(`\n════ 결과: ${pass} PASS / ${fail} FAIL ${fail===0?'— ALL PASS ★':'— 배포 금지, 위 ✗ 항목 수정 필요'} ════`);
