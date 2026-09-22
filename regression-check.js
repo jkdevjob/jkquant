@@ -64,6 +64,10 @@ const iqSrc=(bt.match(/^const iq=\(amt,px\)=>[^\n]*\nconst isq=\([^\n]*$/m)||[''
 if(!iqSrc) throw new Error('정수 주수 헬퍼(iq/isq)를 backtest.html에서 못 찾음');
 // eval 안의 const는 밖으로 안 새어나간다 — 뒤에 따로 eval하는 엔진(runIM50 등)도 봐야 하니 전역으로 올린다
 { const f=new Function(iqSrc+'\nreturn {iq,isq};')(); global.iq=f.iq; global.isq=f.isq; }
+/* 마지막 해 정산 반복 헬퍼 — 전 엔진이 부른다. 파일에서 그대로 떼어 온다. */
+{ const m=bt.match(/function settleToStable\(settleOnce, peekPnl, rounds\)\{[\s\S]*?\n\}/);
+  if(!m) throw new Error('settleToStable 을 backtest.html에서 못 찾음');
+  global.settleToStable=new Function(m[0]+'\nreturn settleToStable;')(); }
 /* 세무 원가 헬퍼 — 전 엔진이 부른다. 파일에서 그대로 떼어 온다.
    가격 평단(avg)과 세무 원가(taxBasis)는 다르다 — 매수 필요경비가 들어가는 쪽은 후자다. */
 { const m=[/function taxLot\(\)\{[^\n]*\}/, /function lotBuy\(L, qty, px, fee\)\{[^\n]*\}/,
@@ -3448,7 +3452,10 @@ console.log('\n[71] same-close 룩어헤드 탐지');
       let flips=0, checked=0, first='';
       for(let k=300;k<D0.length;k+=step){
         const d=D0[k], orig=M[T][d].slice(), sub=D0.slice(0,k+1);
-        const pick=r=>(r.rebals!=null?r.rebals:r.trades);   // 다리가 여럿이면 '판단 횟수'로
+        /* 세금 강제매도는 신호로 낸 주문이 아니다 — 연말 정산이 현금을 못 대서 파는 것이라
+           마지막 날 종가를 흔들면 당연히 달라진다. 룩어헤드 탐지에서는 빼고 센다.
+           (다리가 여럿이면 '판단 횟수'인 rebals 를 쓴다) */
+        const pick=r=>(r.rebals!=null?r.rebals:(r.sigTrades!=null?r.sigTrades:r.trades));
         const base=pick(run(sub));
         for(const m of [0.7,1.4]){
           const [c,o,h,l]=orig;
@@ -4794,8 +4801,22 @@ console.log('\n[84] 회계 규약 — 예산·잔돈·장부 항등');
      `${buyQty(1000,100,0.0025,false)} / ${buyQty(1000,100,0.0025,true)}`);
   ok('수수료가 0이면 예산 ÷ 가격', near(buyQty(1000,100,0,false),10,1e-12) && buyQty(1000,100,0,true)===10);
   ok('예산이나 가격이 0이면 0주', buyQty(0,100,0.0025,true)===0 && buyQty(1000,0,0.0025,true)===0);
-  ok('옛 규약(budget*(1-fee)/가격)이 안 남아 있다',
-     !/\*\(1-FEE\)\/|\*F\/c/.test(bt), '아직 남아 있음');
+  /* '예산 × (1−수수료)' 꼴이 어디에도 남으면 안 된다 — 표현이 여러 가지라 전부 본다.
+     (매도 대금 계산의 px*(1-FEE) 는 다른 뜻이라 제외한다 — 그건 '팔아서 받는 돈' 이다) */
+  ok('옛 규약(budget*(1-fee)/가격)이 안 남아 있다', (()=>{
+      // 주석에 남은 '예전엔 …' 설명까지 잡으면 안 되니 코드만 본다
+      const code=bt.replace(/\/\*[\s\S]*?\*\//g,'').split('\n').map(l=>l.replace(/\/\/.*$/,'')).join('\n');
+      const bad=[/\*\(1-FEE\)\s*\//, /\*F\/c/, /\(dc-f2\)\/px0/, /x\[1\]\*\(1-FEE\)/,
+                 /amt\*\(1-FEE\)/, /cap\*\(1-FEE\)/, /cash\*FEE,\s*net=cash-fee/];
+      const hit=bad.filter(re=>re.test(code));
+      return hit.length===0; })(), '아직 남아 있음');
+  ok('거치식 매수·배당 재투자가 같은 헬퍼를 쓴다', (()=>{
+      const f=extractFn(bt,'function runBH(days,tkr,cap,costOn)');
+      return (f.match(/buyQty\(/g)||[]).length===2 && /let sh=buyQty\(cap,p0,FEE,true\)/.test(f); })());
+  ok('거치식 fees 가 재투자 수수료까지 포함한다', (()=>{
+      const f=extractFn(bt,'function runBH(days,tkr,cap,costOn)');
+      return /let feesTotal=fee;/.test(f) && /feesTotal\+=q\*px0\*FEE;/.test(f) && /fees:feesTotal/.test(f); })());
+  ok('적립식이 divSplit 에 넘기는 금액도 같은 규약', /cf\.map\(x=>\[x\[0\],x\[1\]\/\(1\+FEE\)\]\)/.test(bt));
   ok('소수 주수 전략도 같은 헬퍼를 쓴다', (()=>{
       for(const m of ['function _dcaOne(t,days,amt,freq,costOn,dipMul)',
                       'function runMA200Accum(days,tkr,contribTotal,N,costOn,opt)',
@@ -5249,6 +5270,195 @@ console.log('\n[86] 단독 역분산 == 전체비교 안의 역분산');
     PBASIS[U]='trade';
     delete M[T]; delete M[U]; delete META[T]; delete META[U];
     delete PBASIS[T]; delete PBASIS[U]; delete DIVMAP[T]; delete DIVMAP[U];
+  }
+}
+
+/* ════ 87. 화면이 실제 모델과 같은 말을 하는가 ════ (3차 감사 ⑦⑨⑩ · 시험 J·M)
+   숫자가 맞아도 설명이 틀리면 사용자가 다른 것을 읽는다. 특히 같은 화면에서
+   앞뒤가 다른 말을 하면(예전 하단 문구가 그랬다) 무엇을 믿을지 알 수 없다.     */
+console.log('\n[87] 설명문 == 실제 모델');
+{
+  // ── ⑦ 배당 지급 시점 — 있는 데이터가 배당락일뿐이라는 사실을 그대로 적는가 ──
+  ok('배당은 배당락일 즉시로 근사한다고 적는다',
+     /배당락일 즉시 지급·재투자 근사/.test(bt) && /payable date\) 데이터가 없어/.test(bt));
+  ok("'받은 날 현금' 같은 단정 표현이 안 남아 있다", !/받은 날 현금/.test(bt));
+  ok('코드 주석도 근사임을 밝힌다', /지급 시점은 '배당락일 즉시' 로 근사한다/.test(bt));
+  /* 값으로 — DIVMAP 의 날짜가 곧 현금 들어오는 날이다 (지급일 지연 없음) */
+  { const T='__DIVDAY__'; PBASIS[T]='trade'; DIVMAP[T]={'2024-03-15':2};
+    ok('배당락일 당일에 현금이 잡힌다', divCash(T,'2024-03-15',10,false)===20);
+    ok('그 전날엔 안 잡힌다', divCash(T,'2024-03-14',10,false)===0);
+    ok('며칠 뒤에도 따로 안 잡힌다 (지급일 지연 모델이 없다)', divCash(T,'2024-03-20',10,false)===0);
+    delete PBASIS[T]; delete DIVMAP[T]; }
+
+  // ── ⑨ 국내 해외형 ETF 세금은 근사 ──
+  ok('국내 ETF 세금이 근사임을 화면에 적는다',
+     (bt.match(/과표기준가격을 반영하지 않은 근사입니다/g)||[]).length>=5);
+  ok('무엇이 실제 규칙인지도 적는다', /매매차익과 과표기준가 증가분 중 작은 쪽이 과세표준/.test(bt));
+  ok('코드 주석에도 근사임을 남긴다', /과표기준가격 이력 데이터가 없다/.test(bt));
+
+  // ── ⑩ 하단 문구가 앞뒤로 다른 말을 하지 않는가 ──
+  { const f=extractFn(bt,'function renderFootNote()');
+    ok('하단에서 분배금 설명을 두 번 하지 않는다',
+       !/분배금은 조정종가에 반영된 총수익 기준/.test(f), '앞뒤 모순 문구가 남아 있음');
+    ok('가격 기준 줄에서 한 번만 설명한다',
+       (f.match(/분배금/g)||[]).length<=3, `분배금 언급 ${(f.match(/분배금/g)||[]).length}회`); }
+  // 낡은 주석 — 지금 코드와 다른 설명이 남아 있으면 안 된다
+  ok("'M의 close는 adjclose' 류 낡은 설명이 안 남아 있다",
+     !/M의 close는 adjclose/.test(bt) && !/M은 총수익/.test(bt));
+  /* 지금은 '실제 1배 ETF 가 먼저, 없을 때만 역산' 이다.
+     화면에 뜨는 문구에서 '역산' 을 말할 땐 그 조건이 같이 적혀 있어야 한다. */
+  ok("'1배수는 레버리지에서 역산' 이 조건 없이 안 남아 있다", (()=>{
+      const ui=[...bt.matchAll(/`[^`]*역산[^`]*`/g)].map(m=>m[0]);
+      return ui.every(t=>/실제로 살 수 있는|실제 1배 ETF|없을 때만|대체/.test(t)); })(),
+     [...bt.matchAll(/`[^`]*역산[^`]*`/g)].map(m=>m[0].slice(0,60)).join(' | '));
+  ok('운영 화면의 안내도 실제 동작과 같다',
+     /백테도 이제 <b>같은 1배 ETF<\/b>로 굴립니다/.test(idx)
+     && !/백테는 짝을 <b>합성 1배지수<\/b>로/.test(idx));
+}
+
+
+/* ════ 88. 마지막 해 정산 · 배당 재투자 회계 ════  (3차 감사 ⑪ · 시험 I·L)
+   세금을 낼 현금이 모자라면 보유분을 판다. 그 매도가 또 과세손익을 만든다 —
+   해가 바뀔 때는 그 몫이 다음 해로 넘어가 걷히지만, 마지막 해에는 넘어갈 다음
+   해가 없다. 그래서 옛 코드(정산 한 번)는 마지막 해에 생긴 세금을 영영 안 걷었다.
+   합성 경로 800개 중 447개에서 실제로 미납이 남았다. 여기서는 그중 하나를
+   고정해 두고 값으로 확인하고, 옛 코드로 되돌리면 미납이 되살아나는지도 같이 본다. */
+console.log('\n[88] 마지막 해 정산 · 배당 재투자 회계');
+{
+  /* ── L-1. settleToStable — 손으로 셀 수 있는 사슬 ── */
+  {
+    let pnl=1000, paid=0, calls=0;
+    // 강제매도가 '낸 세금의 절반'만큼 새 과세손익을 만든다고 두면 사슬이 손으로 계산된다
+    const once=()=>{ calls++; const tax=pnl*0.22; paid+=tax; pnl=tax*0.5; };
+    once();
+    ok('한 번만 정산하면 과세손익이 남는다 (옛 규약)', near(pnl,110,1e-9) && near(paid,220,1e-9),
+       `남은 손익 ${pnl} · 걷은 세금 ${paid}`);
+    pnl=1000; paid=0; calls=0;
+    settleToStable(once, ()=>pnl);
+    ok('수렴할 때까지 돌면 남는 손익이 사라진다', Math.abs(pnl)<1e-4, String(pnl));
+    ok('걷은 세금 = 등비급수 합 (220/0.89)', near(paid, 220*(1-Math.pow(0.11,8))/0.89, 1e-9), String(paid));
+    ok('기본 8회를 넘겨 돌지 않는다', calls===8, String(calls));
+    // 줄어들지 않으면 멈춘다 — 안 그러면 무한루프가 된다
+    let p2=500, c2=0; settleToStable(()=>{c2++;}, ()=>p2);
+    ok('손익이 안 줄면 두 번째에 멈춘다', c2===2, String(c2));
+    let p3=0, c3=0; settleToStable(()=>{c3++; p3=0;}, ()=>p3);
+    ok('낼 게 없으면 한 번으로 끝난다', c3===1, String(c3));
+    let p4=1000, c4=0; settleToStable(()=>{c4++; p4*=0.5;}, ()=>p4, 3);
+    ok('횟수를 지정하면 그만큼만 돈다', c4===3 && near(p4,125,1e-12), `${c4} / ${p4}`);
+  }
+
+  /* ── L-2. 실제 엔진 — 합성 경로에서 미납 세금이 0 이어야 한다 ──
+     LCG 로 만든 결정적 경로(seed 222·1200거래일·원금 200만$·60일선).
+     runMA200 의 반환에 '정산이 끝난 뒤 남은 과세손익'을 끼워 넣어 값을 본다. */
+  {
+    const helpers=['function srcOf(t)','function _maOpt(opt)','function _maHold(sell,a,b)',
+                   'function _maEntry(buy,a,b)','function _maAbove(tkr,N,SHORT,BUY,SELL)'];
+    let pre='var levExt=false, EXTM={}, maBuy="ma", maSell="ma", maShort=50, maPark="cash";\n';
+    for(const h of helpers) pre+=extractFn(bt,h)+'\n';
+    for(const re of [/const MA_COND_LBL=\{[^}]*\};/, /const TBILL_RATE=\{[\s\S]*?\};/, /const KR_RATE=\{[\s\S]*?\};/,
+                     /const parkRate=\(y,tkr\)=>[^\n]*/]){ const m=bt.match(re); if(m) pre+=m[0]+'\n'; }
+    const maSrc=extractFn(bt,'function runMA200(days,tkr,cap,N,costOn,opt)')
+      .replace('return {invested:cap,final:fin,',
+               'return {_resid:yearPnl,_owed:capGainTax(yearPnl,tkr),invested:cap,final:fin,');
+    ok('runMA200 반환에 정산 잔여를 끼울 수 있다', maSrc!==extractFn(bt,'function runMA200(days,tkr,cap,N,costOn,opt)'));
+    // 옛 코드 = 수렴 루프 없이 한 번만 정산
+    const oldSrc=maSrc.replace(/settleToStable\(\(\)=>(_settle\([^;]*?\)), \(\)=>yearPnl\);/,'$1;');
+    ok('옛 규약(정산 1회)으로 되돌린 판을 만들 수 있다', oldSrc!==maSrc);
+    const mk2=(s)=>new Function(pre+'return ('+s.replace(/^function [\w$]+\(/,'function (')+')')();
+    const fNew=mk2(maSrc), fOld=mk2(oldSrc);
+    // 결정적 합성 경로 — 같은 씨앗이면 언제 돌려도 같은 값
+    const T='__LASTYR__';
+    { let st=222>>>0; const rnd=()=>((st=(st*1664525+1013904223)>>>0)/4294967296);
+      let px=20, dt=new Date(Date.UTC(2015,0,2)); M[T]={}; const dd=[];
+      for(let i=0;i<1200;i++){
+        while(dt.getUTCDay()===0||dt.getUTCDay()===6) dt.setUTCDate(dt.getUTCDate()+1);
+        const key=dt.toISOString().slice(0,10); dd.push(key);
+        M[T][key]=[px,px,px*1.01,px*0.99];
+        px=Math.max(0.5, px*(1+(rnd()-0.46)*0.09)); dt.setUTCDate(dt.getUTCDate()+1); }
+      global.__LYDAYS=dd; }
+    PBASIS[T]='trade';
+    const a=fOld(global.__LYDAYS,T,2000000,60,true), b=fNew(global.__LYDAYS,T,2000000,60,true);
+    // 경로가 바뀌면(시세 생성 규칙이 바뀌면) 아래 숫자가 다 틀어진다 — 먼저 붙잡아 둔다
+    ok('합성 경로가 그대로다 (마지막 종가)', near(M[T][global.__LYDAYS[1199]][C], 207.15020470030993, 1e-9),
+       String(M[T][global.__LYDAYS[1199]][C]));
+    ok('옛 코드는 마지막 해 과세손익을 남긴다', near(a._resid, 34016.71559649752, 1e-6), String(a._resid));
+    ok('그만큼 세금이 미납으로 남는다', near(a._owed, 7076.270023822046, 1e-6), String(a._owed));
+    ok('고친 코드는 남은 과세손익이 0', b._resid===0, String(b._resid));
+    ok('고친 코드는 미납 세금이 0', a!==b && b._owed===0, String(b._owed));
+    ok('걷은 세금이 미납분만큼 늘어난다',
+       near(b.tax-a.tax, 7515.9057103054365, 1e-6), `${a.tax} → ${b.tax} (차 ${b.tax-a.tax})`);
+    ok('최종 평가액이 그만큼 줄어든다 (실제로 낸 돈)',
+       near(a.final-b.final, 7534.742566721793, 1e-6), `${a.final} → ${b.final}`);
+    ok('세금을 더 내도 현금은 음수가 아니다', b.endCash>=-1e-6 && b.endShares>=0, `${b.endCash} / ${b.endShares}`);
+    ok('장부 항등은 그대로 (최종 = 현금 + 보유평가)',
+       near(b.final, b.endCash+b.endShares*M[T][global.__LYDAYS[1199]][C], 1e-6));
+    delete M[T]; delete PBASIS[T]; delete global.__LYDAYS;
+  }
+
+  /* ── L-3. 마지막 정산을 쓰는 엔진이 빠짐없이 같은 헬퍼를 쓴다 ── */
+  ok('settleToStable 이 파일 한 곳에 정의돼 있다',
+     (bt.match(/function settleToStable\(settleOnce, peekPnl, rounds\)/g)||[]).length===1);
+  ok('마지막 해 정산이 열 군데 모두 수렴 루프를 쓴다',
+     (bt.match(/settleToStable\(/g)||[]).length===11,
+     `${(bt.match(/settleToStable\(/g)||[]).length}곳 (정의 1 + 호출 10)`);
+  { // 마지막 줄에서 헬퍼 없이 한 번만 부르는 곳이 남으면 안 된다
+    const code=bt.replace(/\/\*[\s\S]*?\*\//g,'').split('\n').map(l=>l.replace(/\/\/.*$/,'')).join('\n');
+    const bare=[...code.matchAll(/\n\s*_settle(Tax)?\((?:M\[tkr\]\[days\[days\.length-1\]\]|lc|cl\[gi)[^\n]*/g)]
+                .map(x=>x[0].trim()).filter(x=>!/settleToStable/.test(x));
+    ok('맨 끝에서 정산을 한 번만 부르는 곳이 없다', bare.length===0, bare.join(' | ')); }
+  ok('세금 강제매도도 세무 원가로 손익을 잰다', (()=>{
+      for(const m of ['function runMA200(days,tkr,cap,N,costOn,opt)',
+                      'function runMA200Accum(days,tkr,contribTotal,N,costOn,opt)']){
+        const f=extractFn(bt,m);
+        if(!/due>1e-9 && shares>0/.test(f)) return false;
+        if(/q\*\(px-avg\)/.test(f)) return false;      // 가격 평단으로 재면 매수수수료가 빠진다
+        if(!/lotSell\(LOT,q,px,fee\)/.test(f)) return false; }
+      return true; })(), '강제매도가 아직 가격 평단을 쓴다');
+
+  /* ── I. 배당 재투자도 공통 매수 규약(buyQty)을 쓰는가 — 값으로 ──
+     '예산 = 매수금 + 수수료' 를 지키면, 재투자한 주수와 늘어난 수수료가
+     배당금에서 정확히 떨어진다. 옛 규약(배당×(1−수수료)÷가격)이면 값이 다르다. */
+  {
+    const helpers=['function srcOf(t)','function divSplit(tkr, days, buys)'];
+    let pre='';
+    for(const h of helpers) pre+=extractFn(bt,h)+'\n';
+    const fBH=new Function(pre+'return ('+extractFn(bt,'function runBH(days,tkr,cap,costOn)')
+                           .replace(/^function [\w$]+\(/,'function (')+')')();
+    const T='__DIVBH__', d1='2024-01-02', d2='2024-06-14', d3='2024-12-31';
+    M[T]={}; M[T][d1]=[100,100,101,99]; M[T][d2]=[125,125,126,124]; M[T][d3]=[150,150,151,149];
+    PBASIS[T]='trade'; DIVMAP[T]={[d2]:3};
+    const days=[d1,d2,d3], FEE=costOf(T).fee;
+    global.dcaReinv=true;
+    const r=fBH(days,T,10000,true);
+    // 1) 최초 매수 — 예산 10000 · 100$ · 수수료 → 정수 주수
+    const sh0=buyQty(10000,100,FEE,true), spend=sh0*100, fee0=spend*FEE;
+    ok('거치 최초 매수가 공통 규약과 같다', sh0===99 && near(fee0, spend*FEE, 1e-12), `${sh0}주`);
+    // 2) 배당 — 세후 현금 = 주수 × 3$ × (1−15.4%)
+    const dc=sh0*3*(1-DIV_TAXRATE);
+    ok('배당 현금이 세후로 들어온다', near(r.divCashTotal, dc, 1e-9), `${r.divCashTotal} / ${dc}`);
+    // 3) 재투자 주수 = buyQty(배당금, 그날 종가, 수수료, 소수)
+    const q=buyQty(dc,125,FEE,false);
+    ok('배당 재투자가 공통 buyQty 로 계산된다', near(r.endShares, sh0+q, 1e-9), `${r.endShares} / ${sh0+q}`);
+    ok('재투자한 돈이 배당금과 정확히 같다 (매수금+수수료)',
+       near(q*125*(1+FEE), dc, 1e-9), `${q*125*(1+FEE)} / ${dc}`);
+    ok('옛 규약(배당×(1−수수료)÷가격)과 다른 값이다',
+       Math.abs(q - dc*(1-FEE)/125) > 1e-9, `${q} vs ${dc*(1-FEE)/125}`);
+    // 4) fees 가 재투자 수수료까지 담는다
+    ok('fees 가 재투자 수수료까지 담는다', near(r.fees, fee0+q*125*FEE, 1e-9), `${r.fees} / ${fee0+q*125*FEE}`);
+    // 5) 장부 항등 — 최종 = 잔돈 + 보유평가, 그리고 잔돈은 안 버린다
+    ok('거치 장부 항등 (최종 = 잔돈 + 보유평가)',
+       near(r.final, r.endCash+r.endShares*150, 1e-9), `${r.final} / ${r.endCash+r.endShares*150}`);
+    ok('원금 = 매수금 + 수수료 + 잔돈', near(spend+fee0+r.endCash, 10000, 1e-9),
+       `${spend}+${fee0}+${r.endCash}`);
+    // 6) 단리(재투자 OFF)면 배당금이 현금으로 남는다
+    global.dcaReinv=false;
+    const r2=fBH(days,T,10000,true);
+    ok('재투자를 끄면 주수가 안 늘고 현금으로 쌓인다',
+       r2.endShares===sh0 && near(r2.endCash, 10000-spend-fee0+dc, 1e-9),
+       `${r2.endShares}주 · 현금 ${r2.endCash}`);
+    ok('재투자 ON 이 OFF 보다 최종이 크다 (주가가 올랐으니)', r.final>r2.final, `${r.final} / ${r2.final}`);
+    global.dcaReinv=true;
+    delete M[T]; delete PBASIS[T]; delete DIVMAP[T];
   }
 }
 
