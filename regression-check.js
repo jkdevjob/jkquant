@@ -92,6 +92,10 @@ if(!iqSrc) throw new Error('정수 주수 헬퍼(iq/isq)를 backtest.html에서 
 { const m=bt.match(/function imRevBuyQty\(balance, buyPrice\)\{[\s\S]*?\n\}/);
   if(!m) throw new Error('imRevBuyQty 를 backtest.html에서 못 찾음');
   global.imRevBuyQty=new Function(m[0]+'\nreturn imRevBuyQty;')(); }
+/* 무매 익절 지정가 체결 — 운영·모의·백테 공통. */
+{ const m=bt.match(/function imTpHit\(hi,close,tgt\)\{[^\n]*\}/);
+  if(!m) throw new Error('imTpHit 를 backtest.html에서 못 찾음');
+  global.imTpHit=new Function(m[0]+'\nreturn imTpHit;')(); }
 /* 무매 매수 주수 헬퍼 — 운영·모의·백테가 같이 쓴다. 파일에서 그대로 떼어 온다. */
 { const m=bt.match(/function imBuyQty\(alloc, refPx, feeRate\)\{[\s\S]*?\n\}/);
   if(!m) throw new Error('imBuyQty 를 backtest.html에서 못 찾음');
@@ -723,7 +727,7 @@ console.log('[14] 체결가 규약');
   ok('모의 쿼터매도는 종가 체결', /put\('쿼터매도',d,cl,/.test(sim));
   /* 지정가 익절은 장 시작 전에 이미 걸어 둔 주문이다. 따라서 당일 고가가 지정가에
      도달하면 체결로 본다. 운영 주문표와 백테 runIM(imFill=high)의 규약과 같아야 한다. */
-  ok('익절 지정가는 고가 터치로 판정', /if\(hi>=tgt && qTp>0\)/.test(sim) && !/if\(cl>=tgt && qTp>0\)/.test(sim));
+  ok('익절 지정가는 공통 고가터치 헬퍼로 판정', /if\(imTpHit\(hi,cl,tgt\) && qTp>0\)/.test(sim));
   ok('익절 체결가는 max(익절가, 시가)', /put\('지정가매도',d,\(op>tgt\?op:tgt\),qTp\)/.test(sim));
   // 규약을 바꾸면 이미 쌓인 모의 기록도 다시 만들어져야 한다 — 설정 지문만으로는 안 걸린다
   ok('체결 규약 판이 모의 지문에 들어간다',
@@ -6329,6 +6333,22 @@ console.log('\n[101] VR V 갱신식 — 공통 헬퍼');
   ok('백테가 공통 헬퍼를 쓴다', /V=vrNextVValue\(V,pool,G,cv,formula,addCycle\)/.test(extractFn(bt,'function runVR(days,tkr,params)')));
   ok('운영 다음 V가 공통 헬퍼를 쓴다', /vrNextVValue\(V,Pool,G,ev,st\.formula,sign\*add\)/.test(extractFn(idx,'function computeNextV(c,ev)')));
   ok('5년플랜 다음 V가 공통 헬퍼를 쓴다', /vrNextVValue\(c\.V,c\.pool,G,ev,st\.formula,sign\*add\)/.test(extractFn(pl,'function calcPlanNextV(c,close)')));
+}
+
+
+/* ════ 102. 무매 익절 지정가 체결 — 운영·모의·백테 동일 ════ */
+console.log('\n[102] 무매 익절 지정가 체결 — 고가 터치 고정');
+{
+  const a=extractFn(idx,'function imTpHit(hi,close,tgt)');
+  const b=extractFn(bt,'function imTpHit(hi,close,tgt)');
+  ok('익절 체결 헬퍼가 운영·백테 동일', a===b);
+  const fn=new Function('return ('+a.replace(/^function [\w$]+\(/,'function (')+')')();
+  ok('고가가 목표 터치면 종가가 낮아도 체결', fn(121,110,120)===true);
+  ok('고가가 목표 미달이면 종가와 무관하게 미체결', fn(119,130,120)===false);
+  ok('모의체결이 공통 헬퍼 사용', /imTpHit\(hi,cl,tgt\)/.test(extractFn(idx,'function infSimForward(')));
+  ok('백테 runIM이 공통 헬퍼 사용', /imTpHit\(hi,c,tgt\)/.test(extractFn(bt,'function runIM(')));
+  ok('백테 runIM50이 공통 헬퍼 사용', /imTpHit\(hi,c,tgt\)/.test(extractFn(bt,'function runIM50(')));
+  ok('백테 화면에 종가 체결 선택지가 없다', !/data-f="close"/.test(bt));
 }
 
 console.log(`\n════ 결과: ${pass} PASS / ${fail} FAIL ${fail===0?'— ALL PASS ★':'— 배포 금지, 위 ✗ 항목 수정 필요'} ════`);
