@@ -187,7 +187,7 @@ canvas{display:block;width:100%;height:auto}
 
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Morning Scalping</div><h1>JK <span class="v">퀀트</span> 단타 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="scVer">v1.14.0</span></h1></div>
+    <div><div class="kicker">Morning Scalping</div><h1>JK <span class="v">퀀트</span> 단타 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="scVer">v1.14.1</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -1083,10 +1083,10 @@ async function loadOpeningResearch(){
 
     const labelOf=name=>({
       baseline:'현재 기준',today_combo_v1:'오늘 개선안 v1',top50:'Top50',
-      pb_max_0.5:'눌림≤0.5%',pb_max_0.7:'눌림≤0.7%',
-      amount_1.5:'거래대금≥1.5배',amount_2.0:'거래대금≥2.0배',
+      'pb_max_0.5':'눌림≤0.5%','pb_max_0.7':'눌림≤0.7%',
+      'amount_1.5':'거래대금≥1.5배','amount_2.0':'거래대금≥2.0배',
       entry_by_0915:'09:15 이전',gap_2_5:'갭 2~5%',gap_3_7:'갭 3~7%',
-      stop_0.8:'손절 0.8%',tp_1.0:'익절 1.0%',tp_2.0:'익절 2.0%'
+      'stop_0.8':'손절 0.8%','tp_1.0':'익절 1.0%','tp_2.0':'익절 2.0%'
     }[name]||name||'');
 
     const vars=j.variants||[],base=vars.find(x=>x.params&&x.params.name==='baseline');
