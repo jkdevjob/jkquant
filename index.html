@@ -529,7 +529,7 @@ try{ if(localStorage.getItem('qcockpit_hadUser')==='1') document.documentElement
 </div>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.77.8</span></h1></div>
+    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.77.9</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -1618,7 +1618,7 @@ document.addEventListener('click',function(e){ var m=document.getElementById('jk
   <footer>
     <strong>JK 퀀트</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.77.8</b> · 2026-09-22</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.77.9</b> · 2026-09-22</div>
   </footer>
 </div>
 
@@ -3339,7 +3339,7 @@ function infSimForward(startFrom){
   const hist=sess.hist||[];
   let from = startFrom || st.simLast || (hist.length ? hist[hist.length-1].date : null);
   if(!from) return null;                                  // 시작일을 정해야 한다
-  const cut=simCutoff(curOf(st));                            // 장중이면 오늘 봉은 안 쓴다
+  const cut=_lastSettled(O, curOf(st)) || simCutoff(curOf(st));   // 실제로 가진 마지막 확정 봉까지만
   from=_clampFrom(from, cut);
   const days=[];
   for(let i=0;i<O.length;i++){ const d=O[i];
@@ -6201,6 +6201,13 @@ function paperStart(sess){ if(!sess) return null;
 /* 시작일이 마지막 종가보다 뒤면(예: '오늘'인데 오늘 종가가 아직 없음) 그 마지막 종가부터 시작한다.
    안 그러면 '오늘 시작'으로 만든 세션이 아무것도 안 만들고 며칠씩 빈 채로 남는다. */
 function _clampFrom(from, lastDate){ return (from && lastDate && from>lastDate) ? lastDate : from; }
+/* 클램프 기준은 '달력상의 마감일'이 아니라 '가진 봉 중 마지막 확정 봉'이어야 한다.
+   simCutoff 는 주말·휴장·시세 지연을 모르는 달력 날짜다. 그 날짜에 봉이 없으면
+   시작일이 그 날로 밀리면서 [시작일, 마감일] 창이 통째로 비고, 첫 매수조차 안 만들어진다 —
+   모의 시작일이 '오늘'(세션 만들기의 기본값)인 세션을 주말·휴장 중에 만들면 그대로 재현된다.
+   결과: 기록 0건 → 모의 성과 목록에 그 세션이 아예 안 나온다.
+   _paperRegen(섀넌·로테·적립·ASAP)은 원래부터 봉 기준으로 클램프하고 있었다 — 여기만 달랐다. */
+function _lastSettled(rows, cur){ const r=settledBars(rows, cur); return r.length?r[r.length-1].date:null; }
 /* confirm/alert를 잠시 막고 실행 — 기존 재생 함수를 조용히 재사용하기 위한 래퍼 */
 function _quiet(fn){ const c=window.confirm, a=window.alert;
   window.confirm=()=>true; window.alert=()=>{};
@@ -6823,8 +6830,13 @@ async function openPaper(){
   if(!body) return;
   if(!rows.length){
     const nPaper=PAPER_TABS.reduce((a,[t])=>a+((S[t]&&S[t].sessions)?S[t].sessions.filter(x=>x.paper).length:0),0);
+    /* '왜 비었는지'를 짚어 준다 — 예전엔 원인과 상관없이 늘 '🔄 자동을 눌러보세요' 였다.
+       시작일이 없는 세션은 🔄 를 눌러도 아무 일도 안 일어난다(재생기가 그대로 되돌아간다). */
+    const noStart=paperSessions().filter(([,x])=>!paperStart(x)).map(([,x])=>x.name);
     body.innerHTML= nPaper
-      ? `<p class="lead">모의 세션 ${nPaper}개가 있지만 아직 기록이 없습니다.<br>시세를 못 불러왔거나 <b>모의 시작일</b>이 비어 있을 수 있습니다. 해당 탭을 한 번 열어 🔄 자동을 눌러보세요.</p>`
+      ? (noStart.length
+          ? `<p class="lead">모의 세션 ${nPaper}개 중 <b>${noStart.length}개</b>에 <b>모의 시작일</b>이 없습니다 — 그래서 한 건도 안 만들어집니다.<br><span style="color:var(--faint)">${noStart.map(n=>String(n).replace(/</g,'&lt;')).join(' · ')}</span><br><br>세션 이름을 <b>더블탭</b>해 시작일을 정하거나, 위 <b>모의 시작일</b> 칸에 날짜를 넣고 <b>전체 적용</b>을 누르세요.</p>`
+          : `<p class="lead">모의 세션 ${nPaper}개가 있지만 아직 기록이 없습니다.<br>시세를 못 불러왔을 수 있습니다 — 해당 탭을 한 번 열어 🔄 자동을 눌러보세요.</p>`)
       : `<p class="lead">모의투자 세션이 없습니다.<br><br>· <b>새로 만들기</b> — 세션바의 <b>+ 세션</b> → <b>모의투자로 만들기</b> 체크 → 시작일 선택<br>· <b>기존 세션을 바꾸기</b> — 세션 이름을 <b>더블탭</b>하면 모의 전환·시작일을 정할 수 있습니다.<br><br>정하고 나면 그 뒤로는 알아서 오늘까지 굴러갑니다.</p>`;
   }else{
     const cur=rows.map(r=>r.price>0).every(Boolean);
@@ -7169,7 +7181,7 @@ function vrSimForward(){
   const O=(lastQuote.vr && String(lastQuote.vr.symbol||'').toUpperCase()===sym && lastQuote.vr.ohlc) ? lastQuote.vr.ohlc : null;
   if(!O||!O.length) return null;
   let c=computeVr();
-  const cut=simCutoff(curOf(st));                            // 장중이면 오늘 봉은 안 쓴다
+  const cut=_lastSettled(O, curOf(st)) || simCutoff(curOf(st));   // 실제로 가진 마지막 확정 봉까지만
   if(c.V<=0 || c.qty<1){
     // 첫 매수도 자동으로 — 모의 시작일 종가에 초기 투자금만큼 산 것으로 시작한다
     const s0=_clampFrom(paperStart(sess), cut); if(!s0) return null;
