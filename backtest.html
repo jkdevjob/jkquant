@@ -462,7 +462,7 @@ document.addEventListener('click',function(e){ var m=document.getElementById('jk
       <button type="button" class="preset-btn" onclick="imPreset()" title="라오어 공식 V4.0 으로 맞춥니다 — 공식 수록 종목(TQQQ·SOXL)만 · 익절 종목별(15/20) · 20분할 · 리버스 ON · 익절조절 OFF · 엔진 V4.0">📄 공식 V4.0</button>
     </div>
     <div class="ctrl s-im hide"><label>리버스 gap % <span style="font-size:9px;color:var(--dim)">별지점 아래 · 앱과 같은 값</span></label>
-      <input type="number" id="imRevGapIn" value="2.5" min="0.1" max="20" step="0.1" style="width:72px"></div>
+      <input type="number" id="imRevGapIn" value="0" min="0" max="20" step="0.1" style="width:72px"></div>
     <div class="ctrl s-im hide"><label>재투자</label>
       <div class="seg" id="imCompound">
         <button data-c="1" title="익절금을 다음 사이클 원금에 합산 — 초장기는 기하급수 폭주">복리</button>
@@ -1430,10 +1430,12 @@ function imPreset(){
   _segPick('imTgtDynSeg','x','0');
   syncRevUI(); _segPick('imRev','r','1');
   imTarget=IM_TGT_AUTO; imTgtDyn=false; imEngine='v40'; imDiv=20; imReverse=true;
+  // 공식 리버스 매수가는 별지점−$0.01 (gap 0). 되돌린 뒤에 돌려야 화면에 공식 결과가 뜬다
+  imRevGap=0; { const rg=document.getElementById('imRevGapIn'); if(rg) rg.value='0'; }
   renderSingle(); buildTickerPick(); syncRevUI();
   if(typeof saveBtState==='function') saveBtState();
   if(dataLoaded) run();
-  alert('공식 V4.0 으로 맞췄습니다.\n\n· 종목 TQQQ · SOXL (문서 수록 종목만)\n· 익절 종목별 TQQQ 15% · SOXL 20%\n· 20분할 · 리버스 ON · 익절조절 OFF · 엔진 V4.0\n\n리버스 gap 은 문서에서 확인되지 않은 값이라 그대로 뒀습니다 (현재 '+imRevGap+'%).');
+  alert('공식 V4.0 으로 맞췄습니다.\n\n· 종목 TQQQ · SOXL (문서 수록 종목만)\n· 익절 종목별 TQQQ 15% · SOXL 20%\n· 20분할 · 리버스 ON · 익절조절 OFF · 엔진 V4.0\n· 리버스 매수: 직전 5일 평균 − $0.01');
 }
 /* Gayed·Bilello 논문 원형 — 200일선 하나, 매수·매도 모두 200선, 대피처는 현금. */
 function maPreset(){
@@ -1673,7 +1675,7 @@ let imFill='high';   // 익절 체결 판정: 'high'=고가 터치(기본·지�
    예전엔 0.975(=2.5%)가 코드에 못 박혀 있었다. 운영 앱은 사용자가 바꿀 수 있는 값이라,
    앱에서 gap 을 바꾸면 운영 주문가와 백테 주문가가 서로 달라졌다.
    앱의 revGap(REV_GAP_DEF=2.5)과 같은 값·같은 식을 쓴다. */
-let imRevGap=2.5;
+let imRevGap=0;
 function syncMaCtrl(){
   const on=(imEngine==='v50'||imEngine==='ab');
   ['imMaCtrl','imLoCtrl'].forEach(id=>{ const el=document.getElementById(id); if(!el)return;
@@ -1688,7 +1690,7 @@ document.getElementById('imLoSeg').onclick=e=>{if(e.target.dataset.l){document.q
 document.getElementById('imTgtSeg').onclick=e=>{if(e.target.dataset.t){document.querySelectorAll('#imTgtSeg button').forEach(b=>b.classList.remove('active'));e.target.classList.add('active');imTarget=+e.target.dataset.t;if(dataLoaded)run();}};
 document.getElementById('vrFillSeg').onclick=e=>{if(e.target.dataset.v){document.querySelectorAll('#vrFillSeg button').forEach(b=>b.classList.remove('active'));e.target.classList.add('active');vrFill=e.target.dataset.v;if(dataLoaded)run();}};
 { const el=document.getElementById('imRevGapIn');
-  if(el) el.onchange=()=>{ const v=+el.value; imRevGap=(isFinite(v)&&v>0)?Math.min(20,v):2.5; el.value=imRevGap; if(dataLoaded)run(); }; }
+  if(el) el.onchange=()=>{ const v=+el.value; imRevGap=(isFinite(v)&&v>=0)?Math.min(20,v):0; el.value=imRevGap; if(dataLoaded)run(); }; }
 document.getElementById('imFillSeg').onclick=e=>{if(e.target.dataset.f){document.querySelectorAll('#imFillSeg button').forEach(b=>b.classList.remove('active'));e.target.classList.add('active');imFill=e.target.dataset.f;if(dataLoaded)run();}};
 syncMaCtrl();   // 초기: V4.0이므로 국면선 비활성 표시
 syncRevUI();
@@ -2396,6 +2398,7 @@ function runIM(days,tkr,cap,divs,targetPct,compound=true){
   const starSlope=starBase*0.1*20/divs;
   const exitMul=1-starBase/100;
   const sellDiv = divs>=40?20:10;            // 리버스 무한매도 분모 (20분할→10, 40분할→20)
+  const bigPct=15;                            // V4.0 첫매수 큰수 기본: 전일 종가 +15%
   const MOM = ((typeof imTgtDyn!=='undefined')&&imTgtDyn) ? _imMom(tkr,IM_MOM_LEN) : null;   // 익절 동적 조절 (OFF면 null → 기존과 완전 동일)
   /* 단리 판정은 '사이클 종료 잔액이 최초 원금을 넘는가'다. 넘으면 넘은 만큼만 인출하고
      원금으로 다시 시작, 못 넘으면 인출도 보충도 없이 그 잔액 그대로 다음 사이클로 간다.
@@ -2406,10 +2409,13 @@ function runIM(days,tkr,cap,divs,targetPct,compound=true){
   const _C=costOf(tkr), FEE = CO?_C.fee:0, SLIP = CO?_C.slip:0;
   let feesTotal=0, taxTotal=0, yearPnl=0, curYear=null;
   const LOT=taxLot();                           // 세무 원가 (가격 평단 avg 와 별도)
-  function _buy(px, amt){                       // amt($) 투입 → 정수 주수만 매수
-    // 소수점 주식은 증권사에서 못 산다 — 못 채운 잔액은 그대로 잔금에 남는다
-    if(amt>cash) amt=cash;                      // V5.0과 같은 규약 (정수라 이 차이가 주 단위로 벌어진다)
-    const q=iq(amt/(1+FEE), px); if(q<=0) return 0;
+  function _buy(px, amt, qtyRefPx){             // 주문수량은 주문 전 알 수 있는 가격으로 확정, 체결은 실제 종가
+    if(amt>cash) amt=cash;
+    const ref=(qtyRefPx>0?qtyRefPx:px);
+    let q=iq(amt/(1+FEE), ref);                // 운영 주문표와 동일: 전일종가/주문가로 수량을 미리 확정
+    if(q<=0) return 0;
+    const maxQ=iq(cash/(1+FEE),px);            // 실제 종가 상승으로 잔금 초과 시 가능한 수량까지만
+    q=Math.min(q,maxQ); if(q<=0)return 0;
     const spend=q*px, fee=spend*FEE;
     avg = (shares<=0) ? px : (shares*avg+spend)/(shares+q);
     lotBuy(LOT,q,px,fee);                       // 세무 원가에는 매수수수료도 들어간다
@@ -2452,6 +2458,8 @@ function runIM(days,tkr,cap,divs,targetPct,compound=true){
   const closeHist=[];                        // 직전 5거래일 종가 (리버스 별지점용, 모드 무관하게 항상 갱신)
   days.forEach((d,i)=>{
     const [c,o,hi,lo]=M[tkr][d];
+    const prevC=i>0?M[tkr][days[i-1]][C]:c;     // 오늘 주문을 낼 때 알고 있는 마지막 확정 종가
+    const buyLimit=prevC*(1+bigPct/100);
     // 배당은 가격에 안 녹아 있다 — 보유 주수만큼 그날 현금으로 들어온다 (이중계상 방지는 divPerShare 가 맡는다)
     cash+=divCash(tkr,d,shares,CO);
     { const _y=d.slice(0,4); if(curYear===null) curYear=_y; else if(_y!==curYear){ _settleTax(c); curYear=_y; } }
@@ -2484,13 +2492,14 @@ function runIM(days,tkr,cap,divs,targetPct,compound=true){
           const sellQty=Math.floor(shares/sellDiv);
           if(sellQty>0){ _sell(c,sellQty,0); T=divs>=40?T*0.95:T*0.9; }   // LOC=종가
         }
-        // 매수: 잔금÷4, 별지점 −2.5% LOC (운용도구 기본 gap%와 동일)
+        // 매수: 잔금÷4, 공식 기본은 별지점−$0.01 LOC (imRevGap>0이면 사용자 변형)
         if(shares>1e-9 && star5>0){
-          const buyP=star5*(1-(typeof imRevGap!=='undefined'?imRevGap:2.5)/100);
+          const _rg=(typeof imRevGap!=='undefined'?imRevGap:0);
+          const buyP=_rg>0 ? star5*(1-_rg/100) : Math.max(0.01,star5-0.01);
           // 리버스 소진 = '1개(1주) 매수 불가' 시점 — 1주라도 살 수 있으면 계속 매수
-          if(c<=buyP && cash>=c){
-            _buy(c, Math.min(cash, Math.max(cash/4, c)));   // LOC=종가 (잔금÷4가 1주에 못 미치면 1주)
-            T=T+(divs-T)*0.25;
+          if(c<=buyP && cash>=buyP){
+            const alloc=Math.min(cash,Math.max(cash/4,buyP));
+            if(_buy(c,alloc,buyP)>0) T=T+(divs-T)*0.25;      // 수량은 주문가로 사전 확정, 체결은 종가
           }
         }
       }
@@ -2537,19 +2546,21 @@ function runIM(days,tkr,cap,divs,targetPct,compound=true){
         T=0;snap.push([d,cash+savedProfit-addedCash]);return;}
     }
     if(divs-T>=1&&cash>1){          // 소진 = T>분할−1 → 남은 회차가 1회 이상일 때만 매수
-      let one=cash/(divs-T);        // 남은 회차 ≥1 이므로 1회분 ≤ 잔금 (별도 상한 불필요)
-      if(shares===0&&T===0){ if(_buy(c,one)>0) T+=1; }   // 못 사면 회차도 안 쓴다
-      else{
-        const starP=avg*(1+(starBase-starSlope*T)/100);const buyP=starP-0.01;
+      let one=cash/(divs-T);
+      if(shares===0&&T===0){
+        // 처음매수: 전일 종가 기준 수량을 정하고, 전일종가+큰수% LOC 안에서만 체결
+        if(c<=buyLimit && _buy(c,one,prevC)>0) T+=1;
+      }else{
+        const starP=avg*(1+(starBase-starSlope*T)/100), buyP=starP-0.01;
+        const starOrder=Math.min(buyP,buyLimit), avgOrder=Math.min(avg,buyLimit);
         if(T<divs/2){
           const half=one/2;
-          // 별지점·평단은 '별개의 주문' 2건이다 — 각 주문이 따로 정수 내림된다.
-          // 합산해서 한 번만 내리면 실제로는 못 사는 주식을 산 걸로 쳐서 백테가 낙관적으로 나온다
-          // (1회 500$·주가 65$: 합산 floor(500/65)=7주 vs 실제 floor(250/65)×2=6주).
-          // 같은 날 같은 가격 체결이라 평단·잔금은 합산했을 때와 수학적으로 동일하다.
-          if(c<=buyP){ if(_buy(c,half)>0) T+=0.5; }
-          if(c<=avg) { if(_buy(c,half)>0) T+=0.5; }
-        }else{ if(c<=buyP){ if(_buy(c,one)>0) T+=1; } }
+          // 주문수량은 전일 확정종가로 미리 정한다. 당일 종가로 수량을 늘리면 same-close 룩어헤드가 된다.
+          if(c<=starOrder){ if(_buy(c,half,prevC)>0) T+=0.5; }
+          if(c<=avgOrder) { if(_buy(c,half,prevC)>0) T+=0.5; }
+        }else{
+          if(c<=starOrder){ if(_buy(c,one,prevC)>0) T+=1; }
+        }
       }
     }
     if(i%10===0)snap.push([d,cash+shares*c+savedProfit-addedCash]);
@@ -2753,6 +2764,7 @@ function runIM50(days,tkr,cap,divs,targetPct,compound=true){
   const starSlope=starBase*0.1*20/divs;
   const exitMul=1-starBase/100;
   const sellDiv = divs>=40?20:10;
+  const bigPct=15;
   const GM=buildGateIM(tkr);
   /* 단리 판정은 '사이클 종료 잔액이 최초 원금을 넘는가'다. 넘으면 넘은 만큼만 인출하고
      원금으로 다시 시작, 못 넘으면 인출도 보충도 없이 그 잔액 그대로 다음 사이클로 간다.
@@ -2763,10 +2775,12 @@ function runIM50(days,tkr,cap,divs,targetPct,compound=true){
   const _C=costOf(tkr), FEE = CO?_C.fee:0, SLIP = CO?_C.slip:0;
   let feesTotal=0, taxTotal=0, yearPnl=0, curYear=null;
   const LOT=taxLot();                           // 세무 원가 (가격 평단 avg 와 별도)
-  function _buy(px, amt){                       // amt($) 투입 → 정수 주수만 매수
-    // 소수점 주식은 증권사에서 못 산다 — 못 채운 잔액은 그대로 잔금에 남는다
+  function _buy(px, amt, qtyRefPx){
     if(amt>cash) amt=cash;
-    const q=iq(amt/(1+FEE), px); if(q<=0) return 0;
+    const ref=(qtyRefPx>0?qtyRefPx:px);
+    let q=iq(amt/(1+FEE), ref); if(q<=0) return 0;
+    const maxQ=iq(cash/(1+FEE),px);
+    q=Math.min(q,maxQ); if(q<=0)return 0;
     const spend=q*px, fee=spend*FEE;
     avg = (shares<=0) ? px : (shares*avg+spend)/(shares+q);
     lotBuy(LOT,q,px,fee);                       // 세무 원가에는 매수수수료도 들어간다
@@ -2805,6 +2819,8 @@ function runIM50(days,tkr,cap,divs,targetPct,compound=true){
   const snap=[];
   days.forEach((d,i)=>{
     const [c,o,hi,lo]=M[tkr][d];
+    const prevC=i>0?M[tkr][days[i-1]][C]:c;
+    const buyLimit=prevC*(1+bigPct/100);
     // 배당은 가격에 안 녹아 있다 — 보유 주수만큼 그날 현금으로 들어온다 (이중계상 방지는 divPerShare 가 맡는다)
     cash+=divCash(tkr,d,shares,CO);
     { const _y=d.slice(0,4); if(curYear===null) curYear=_y; else if(_y!==curYear){ _settleTax(c); curYear=_y; } }
@@ -2832,10 +2848,11 @@ function runIM50(days,tkr,cap,divs,targetPct,compound=true){
           if(sellQty>0){ _sell(c,sellQty,0); T=divs>=40?T*0.95:T*0.9; }   // LOC=종가
         }
         if(shares>1e-9 && star5>0){
-          const buyP=star5*(1-(typeof imRevGap!=='undefined'?imRevGap:2.5)/100);
-          if(c<=buyP && cash>=c){   // 리버스 소진 = 1주도 못 사는 시점 (V4.0과 동일 규약)
-            _buy(c, Math.min(cash, Math.max(cash/4, c)));   // LOC=종가
-            T=T+(divs-T)*0.25;
+          const _rg=(typeof imRevGap!=='undefined'?imRevGap:0);
+          const buyP=_rg>0 ? star5*(1-_rg/100) : Math.max(0.01,star5-0.01);
+          if(c<=buyP && cash>=buyP){
+            const alloc=Math.min(cash,Math.max(cash/4,buyP));
+            if(_buy(c,alloc,buyP)>0) T=T+(divs-T)*0.25;
           }
         }
       }
@@ -2877,18 +2894,18 @@ function runIM50(days,tkr,cap,divs,targetPct,compound=true){
     }
     if(divs-T>=1&&cash>1){          // 소진 = T>분할−1 (V4.0과 동일 규약)
       let one=cash/(divs-T);
-      if(shares===0&&T===0){ if(_buy(c,one)>0) T+=1; }   // 못 사면 회차도 안 쓴다
-      else{
-        const starP=avg*(1+(starBase-starSlope*T)/100);const buyP=starP-0.01;
+      if(shares===0&&T===0){
+        if(c<=buyLimit && _buy(c,one,prevC)>0) T+=1;
+      }else{
+        const starP=avg*(1+(starBase-starSlope*T)/100), buyP=starP-0.01;
+        const starOrder=Math.min(buyP,buyLimit), avgOrder=Math.min(avg,buyLimit);
         if(T<divs/2){
           const half=one/2;
-          // 별지점·평단은 '별개의 주문' 2건이다 — 각 주문이 따로 정수 내림된다.
-          // 합산해서 한 번만 내리면 실제로는 못 사는 주식을 산 걸로 쳐서 백테가 낙관적으로 나온다
-          // (1회 500$·주가 65$: 합산 floor(500/65)=7주 vs 실제 floor(250/65)×2=6주).
-          // 같은 날 같은 가격 체결이라 평단·잔금은 합산했을 때와 수학적으로 동일하다.
-          if(c<=buyP){ if(_buy(c,half)>0) T+=0.5; }
-          if(c<=avg) { if(_buy(c,half)>0) T+=0.5; }
-        }else{ if(c<=buyP){ if(_buy(c,one)>0) T+=1; } }
+          if(c<=starOrder){ if(_buy(c,half,prevC)>0) T+=0.5; }
+          if(c<=avgOrder) { if(_buy(c,half,prevC)>0) T+=0.5; }
+        }else{
+          if(c<=starOrder){ if(_buy(c,one,prevC)>0) T+=1; }
+        }
       }
     }
     if(i%10===0)snap.push([d,cash+shares*c+savedProfit-addedCash]);
@@ -2994,6 +3011,9 @@ function runVR(days,tkr,params){
   }
   const snap=[], cf=[];          // cf = 현금흐름(투입 시점·금액) — IRR·평균투입자본용
   let mddPeak=-Infinity, mdd=0;  // 일별 MDD (총자산 = 주식+Pool+누적인출 기준 — fin과 동일 철학)
+  /* Pool 매수한도는 하루마다 재계산하지 않는다. 한 사이클 시작 Pool을 기준으로 고정하고
+     같은 사이클에서 실제로 매수한 금액을 누적 차감한다. 매도대금은 한도를 늘리지 않는다. */
+  let cycPoolBase=pool, cycBuySpent=0;
   /* ── 하루치 사다리 체결 (예약주문 방식) ──
      실전에서는 사이클 첫날 매수·매도표 20차수를 지정가로 전부 걸어두고 2주 방치한다.
      차수 값은 운영 앱의 표·체결기(vrSimForward)와 같은 식이다:
@@ -3007,7 +3027,7 @@ function runVR(days,tkr,params){
   function _ladder(hi, lo2){
     if(!(V>0)) return;
     const up=V*(1+band), dn=V*(1-band);
-    const budget=Math.max(0, pool*poolLimit), fee1=1+FEE;
+    const budget=Math.max(0, cycPoolBase*poolLimit-cycBuySpent), fee1=1+FEE;
     let spent=0;
     for(let k=0;k<400;k++){                       // 매도: 오를수록 다음 차수가 더 높다
       const q=Math.floor(shares+1e-9); if(q<1) break;
@@ -3020,7 +3040,7 @@ function runVR(days,tkr,params){
       const cost=p*fee1;
       if(spent+cost>budget+1e-9) break;           // Pool 한도 소진
       if(cost>pool+1e-9) break;                   // 현금 부족
-      pool-=_vbuyQ(1,p); spent+=cost; buys++;
+      pool-=_vbuyQ(1,p); spent+=cost; cycBuySpent+=cost; buys++;
     }
   }
   days.forEach((d,i)=>{
@@ -3029,16 +3049,26 @@ function runVR(days,tkr,params){
     pool+=divCash(tkr,d,shares,costOn);   // VR 은 Pool 이 곧 현금이다
     { const y=d.slice(0,4); if(curYear===null)curYear=y; else if(y!==curYear){_settle(c);curYear=y;} }
     { const eq=shares*c+pool+totalWd; if(eq>mddPeak)mddPeak=eq; else if(mddPeak>0){ const dd=Math.min((mddPeak-eq)/mddPeak,1); if(dd>mdd)mdd=dd; } }
-    // 기준일이 지났으면 사이클을 넘긴다 (길게 쉬어 여러 번 밀렸을 수 있으므로 while — 앱과 같다)
+    // 기준일 판정. 핵심 시간축:
+    //   ① 기준일 장중에는 '이전 V'로 2주간 걸어둔 사다리가 그대로 살아 있다.
+    //   ② 장 마감 종가를 확인한 뒤 새 V를 계산한다.
+    //   ③ 새 V 사다리는 다음 거래일부터 유효하다.
+    // 종가로 만든 새 V를 같은 날의 고가/저가에 소급 적용하면 룩어헤드가 된다.
     let isCyc=false;
     if(_vrDue===null){ if(i===0){ isCyc=true; _vrDue=vrNextDue(d); } }
     else { let g2=0; while(d>=_vrDue && g2++<10){ isCyc=true; _vrDue=vrNextDue(_vrDue); } }
-    if(isCyc){
-      if(first){
-        if(isLump){const s=initAmt||10000;inv+=s;cf.push([d,s]);pool+=s-_vbuy(s,c);V=shares*c;}  // 거치식/인출식: 첫매수가=V · 못 산 잔돈은 Pool 로
-        else{pool+=contrib;inv+=contrib;cf.push([d,contrib]);pool-=_vbuy(pool,c);V=shares*c;} // 적립식: 첫매수가=V · 잔돈은 Pool 에 남는다
-        first=false;buys++;rebal++;snap.push([d,shares*c+pool+totalWd]);return;
-      }
+
+    if(first && isCyc){
+      if(isLump){const s=initAmt||10000;inv+=s;cf.push([d,s]);pool+=s-_vbuy(s,c);V=shares*c;}
+      else{pool+=contrib;inv+=contrib;cf.push([d,contrib]);pool-=_vbuy(pool,c);V=shares*c;}
+      first=false;cycPoolBase=pool;cycBuySpent=0;buys++;rebal++;snap.push([d,shares*c+pool+totalWd]);return;
+    }
+
+    // 먼저 기존 사이클 사다리를 오늘 OHLC에 체결한다.
+    if(LADDER && !first){ const row=M[tkr][d]; _ladder(row[HI]||c, row[LO]||c); }
+
+    // 그 다음 장 마감 기준으로 새 사이클을 만든다. 새 사다리는 내일부터.
+    if(isCyc && !first){
       const cv=shares*c;
       const addCycle=isAccum?contrib:isWd?-withdraw:0;
       if(formula==='skill'&&V>0) V=V+pool/G+(cv-V)/(2*Math.sqrt(G))+addCycle;
@@ -3046,6 +3076,8 @@ function runVR(days,tkr,params){
       V=Math.max(V,0);
       if(isAccum){pool+=contrib;inv+=contrib;cf.push([d,contrib]);}
       else if(isWd){const wd=Math.min(withdraw,pool);pool-=wd;totalWd+=wd;}
+      /* 새 사이클의 한도 기준 Pool은 적립/인출을 반영한 직후 금액이다. */
+      cycPoolBase=pool; cycBuySpent=0;
       if(LADDER){ rebal++; }
       else {
         const up=V*(1+band),lo=V*(1-band),cv2=shares*c;
@@ -3054,8 +3086,6 @@ function runVR(days,tkr,params){
         rebal++;
       }
     }
-    // 걸어둔 지정가는 사이클 첫날만이 아니라 2주 내내 살아 있다
-    if(LADDER && !first){ const row=M[tkr][d]; _ladder(row[HI]||c, row[LO]||c); }
     if(isCyc||i===days.length-1)snap.push([d,shares*c+pool+totalWd]);
   });
   const lc=M[tkr][days[days.length-1]][C];
