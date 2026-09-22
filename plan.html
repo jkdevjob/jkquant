@@ -143,7 +143,7 @@ th:first-child,td:first-child{text-align:left}
 <body>
 <div class="wrap">
   <div class="top">
-    <div class="brand"><div class="logo">Five Year Plan</div><h1>5년 자산플랜 <span class="ver">v1.6.0</span></h1></div>
+    <div class="brand"><div class="logo">Five Year Plan</div><h1>5년 자산플랜 <span class="ver">v1.6.1</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
       <div class="jkmenu" id="jkmenuWrap">
@@ -633,9 +633,13 @@ async function createPlanVrSession(opts={}){
   const a=requireInitialCapital();if(!a)return null;
   if(planLinks.vr && linkedOpSession(liveState.vr,'TQQQ',planLinks.vr) && !opts.force)return linkedOpSession(liveState.vr,'TQQQ',planLinks.vr);
   const cap=a.vr,id=planSid('pvr');
+  /* 5년 플랜의 VR 배정액은 '첫 매수 + Pool' 합계다.
+     거치식 기본은 50:50. 실계좌는 체결기록 확인 전에 V가 자동으로 넘어가지 않게 autoCyc OFF. */
+  const initAmt=Math.round(cap*0.50), startPool=Math.max(0,cap-initAmt);
   const sess={id,name:sessionDateName('TQQQ VR'),planManaged:true,settings:{
-    ticker:'TQQQ',mode:.5,formula:'basic',g:10,initAmt:cap,add:0,
-    band:15,startv:0,startpool:0,autoCyc:true,divmode:'reinv'
+    ticker:'TQQQ',mode:.5,formula:'basic',g:10,initAmt,add:0,
+    band:15,startv:0,startpool:startPool,autoCyc:false,divmode:'reinv',
+    planTotalCapital:cap,planInitStockPct:50
   },hist:[]};
   liveState.vr.sessions.push(sess);liveState.vr.active=id;liveState.activeTab='vr';
   planLinks.vr=id;
@@ -720,7 +724,7 @@ function renderSessionSelectors(){
   }
   const inf=linkedOpSession(liveState.inf,'SOXL',planLinks.inf),vr=linkedOpSession(liveState.vr,'TQQQ',planLinks.vr),ss=activeSleeveSession();
   if($('soxlSessionState')){$('soxlSessionState').className='sessionstate '+(inf?'ok':'warn');$('soxlSessionState').textContent=inf?'연동됨 · '+inf.name+' · 초기원금 '+usd(+inf.settings?.principal||0):'연동 세션 없음 · 새 세션을 만들거나 선택하세요.';}
-  if($('tqqqSessionState')){$('tqqqSessionState').className='sessionstate '+(vr?'ok':'warn');$('tqqqSessionState').textContent=vr?'연동됨 · '+vr.name+' · 초기원금 '+usd(+vr.settings?.initAmt||0):'연동 세션 없음 · 모의세션은 제외됩니다.';}
+  if($('tqqqSessionState')){$('tqqqSessionState').className='sessionstate '+(vr?'ok':'warn');$('tqqqSessionState').textContent=vr?'연동됨 · '+vr.name+' · 배정 '+usd((+vr.settings?.planTotalCapital||0)||((+vr.settings?.initAmt||0)+(+vr.settings?.startpool||0)))+' (첫매수 '+usd(+vr.settings?.initAmt||0)+' / Pool '+usd(+vr.settings?.startpool||0)+')':'연동 세션 없음 · 모의세션은 제외됩니다.';}
   if($('sleeveSessionState')){$('sleeveSessionState').className='sessionstate '+(ss?'ok':'warn');$('sleeveSessionState').textContent=ss?'연동됨 · '+ss.name+' · 배정 '+usd(+ss.allocatedCapital||ledgerCalc().cash):'장부 세션 없음 · 먼저 새 세션을 만드세요.';}
 }
 async function selectPlanOpSession(kind,id){
@@ -852,14 +856,13 @@ function vrOrders(sess,price){
   if(!(c.V>0)&&!(c.qty>0)){const amt=st.initAmt!=null?+st.initAmt:10000,q=Math.floor(amt/price);if(q>0)orders.push({side:'buy',name:'첫 매수',price,qty:q,tag:'초기'});return {state:c,orders,note:'첫 매수 후 V와 사다리가 생성됩니다.'};}
   const S=Math.floor(c.qty),ev=price*c.qty,cap=Math.max(0,c.cycleStartPool*(+st.mode||.5)),remain=Math.max(0,Math.min(c.pool,cap-c.cycleBuySpent));
   if(S>0){
-    if(ev>c.up){const q=Math.max(0,Math.round((ev-c.V)/price));if(q>0)orders.push({side:'sell',name:'밴드 상단 초과 즉시매도',price,qty:q,tag:'시장가 기준'});}
-    else if(ev<c.lo){const need=c.V-ev,real=Math.min(need,remain),q=Math.max(0,Math.floor(real/price));if(q>0)orders.push({side:'buy',name:'밴드 하단 이탈 즉시매수',price,qty:q,tag:'Pool 한도'});}
     for(let k=0;k<20;k++){const q=S-k;if(q<1)break;orders.push({side:'sell',name:'예약매도 '+(k+1)+'차',price:c.up/q,qty:1,tag:'예약'});}
     let used=0;
     for(let k=0;k<20;k++){const q=S+k;if(q<1)break;const p=c.lo/q,cost=p*(1+FEE);if(used+cost>remain+1e-9)break;orders.push({side:'buy',name:'예약매수 '+(k+1)+'차',price:p,qty:1,tag:'예약'});used+=cost;}
   }
   const cs=vrCycleStart(c),due=cs?nextVrDate(cs):null;
-  return {state:c,orders,note:(due?'다음 사이클 기준일 '+due+' · ':'')+'이번 사이클 매수한도 '+usd(cap)+' / 사용 '+usd(c.cycleBuySpent)+' / 남음 '+usd(remain)};
+  const bandState=ev>c.up?'상단 예약매도 체결구간':(ev<c.lo?'하단 예약매수 체결구간':'밴드 안');
+  return {state:c,orders,note:(due?'다음 사이클 기준일 '+due+' · ':'')+bandState+' · 시장가로 V까지 별도 보정하지 않음 · 매수한도 '+usd(cap)+' / 사용 '+usd(c.cycleBuySpent)+' / 남음 '+usd(remain)};
 }
 async function fetchPlanQuote(symbol){
   const sym=String(symbol||'').toUpperCase();if(liveQuotes[sym])return liveQuotes[sym];

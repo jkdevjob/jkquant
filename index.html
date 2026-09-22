@@ -529,7 +529,7 @@ try{ if(localStorage.getItem('qcockpit_hadUser')==='1') document.documentElement
 </div>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.77.5</span></h1></div>
+    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.77.6</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -1618,7 +1618,7 @@ document.addEventListener('click',function(e){ var m=document.getElementById('jk
   <footer>
     <strong>JK 퀀트</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.77.5</b> · 2026-09-22</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.77.6</b> · 2026-09-22</div>
   </footer>
 </div>
 
@@ -3663,18 +3663,14 @@ function renderVrNow(){
   } else if(!ev){
     verdict=`<p class="lead">위에 현재가나 평가금을 넣으면 매도·매수·대기 판단이 나옵니다.</p>`;
   } else if(ev>c.up){
-    pillCls='over';pillTxt='상단 돌파';
-    const amt=ev-c.V; const shares=price>0?Math.round(amt/price):0;
-    verdict=`<div class="oitem s"><span class="tag">매도</span><span class="nm">밴드 상단 돌파 → V까지 매도</span><span class="pr">${wn(amt)}</span></div>
-      <p class="note" style="margin-top:8px">약 ${shares}주 매도 (현재가 ${wn(price)} 기준). 받은 현금은 Pool로. <b style="color:var(--gold)">매도가 핵심</b> — 주저 없이.</p>`;
+    pillCls='over';pillTxt='상단 사다리';
+    verdict=`<div class="oitem s"><span class="tag">예약매도</span><span class="nm">상단 사다리 체결 구간</span><span class="pr">표 확인</span></div>
+      <p class="note" style="margin-top:8px">아래 예약매도 사다리 중 현재가가 도달한 차수를 확인하세요. <b>시장가로 V까지 별도 매도하지 않습니다.</b> 실제 체결된 차수만 기록합니다.</p>`;
   } else if(ev<c.lo){
-    pillCls='under';pillTxt='하단 이탈';
-    const need=c.V-ev; const limit=poolLimit(c); const real=Math.min(need,Math.max(0,limit));
-    const shares=price>0?Math.round(real/price):0;
-    verdict=`<div class="oitem b"><span class="tag">매수</span><span class="nm">밴드 하단 이탈 → V까지 매수</span><span class="pr">${wn(real)}</span></div>
-      <p class="note" style="margin-top:8px">약 ${shares}주 매수 (현재가 ${wn(price)} 기준).</p>`;
-    if(need>limit) verdict+=`<p class="note" style="color:var(--gold)">⚠ 필요액 ${wn(need)} > Pool 한도 ${wn(limit)}. 한도만큼만 매수하고 대기.</p>`;
-    if(limit<=0) verdict+=`<p class="note" style="color:var(--gold)">⚠ Pool 한도 소진 — 이번 사이클은 매수 불가, 대기.</p>`;
+    pillCls='under';pillTxt='하단 사다리';
+    const limit=poolLimit(c);
+    verdict=`<div class="oitem b"><span class="tag">예약매수</span><span class="nm">하단 사다리 체결 구간</span><span class="pr">${wn(limit)} 한도</span></div>
+      <p class="note" style="margin-top:8px">아래 예약매수 사다리 중 현재가가 도달한 차수를 확인하세요. <b>시장가로 V까지 별도 매수하지 않습니다.</b> 남은 Pool 한도 안에서 실제 체결된 차수만 기록합니다.</p>`;
   } else {
     pillCls='in';pillTxt='밴드 안';
     verdict=`<div class="oitem" style="background:rgba(245,196,81,.1);justify-content:center"><span class="nm" style="flex:none;color:var(--gold)">⚪ 대기 — 밴드 안 (거래 없는 사이클)</span></div>`;
@@ -3779,8 +3775,8 @@ function renderVrTable(){
   }
   $('sell_lad').innerHTML=`<div class="lxh"><span>차수</span><span>매도가</span><span>잔여수량</span><span>Pool</span></div>`+srows;
   const sell1=c.up/S;                  // 1차 매도가 (가장 먼저 체결)
-  if(ev>c.up && price>0){ const ss=Math.max(0,Math.round((ev-c.V)/price));
-    $('sell_wait').innerHTML=`<div class="firebanner">🔥 이번 사이클 <b>즉시 매도 ${ss}주</b><span class="fb-sub">평가금 ${wn(ev)} > 상단 ${wn(c.up)} — 초과분을 V까지 매도 (시장가). 아래 차수는 더 올라야 체결되는 예약이에요.</span></div>`;
+  if(ev>c.up && price>0){
+    $('sell_wait').innerHTML=`<div class="firebanner">🔥 <b>상단 예약매도 체결 구간</b><span class="fb-sub">현재가 ${wn(price)} · 상단 ${wn(c.up)} — 아래 차수 중 도달한 예약주문만 체결 기록. 시장가로 V까지 추가 매도하지 않습니다.</span></div>`;
   } else $('sell_wait').innerHTML=`⌛ 매도 대기 — 가격이 1차 ${wn(sell1)} 이상으로 오르면 체결<div class="wb-now">현재가 ${wn(price)}</div>`;
   $('lad_state_s').textContent=price>=c.up?'체결 가능':'예약 매매';
   $('lad_stage_s').textContent=c.curCyc+'주차';
@@ -3802,8 +3798,8 @@ function renderVrTable(){
   }
   $('buy_lad').innerHTML=`<div class="lxh"><span>차수</span><span>매수가</span><span>총수량</span><span>Pool</span></div>`+brows;
   const buy1=c.lo/S;                   // 1차 매수가 (가장 먼저 체결)
-  if(ev>0 && ev<c.lo && price>0){ const need=c.V-ev, real=Math.min(need,Math.max(0,limit)), bs=Math.max(0,Math.round(real/price)), capped=need>limit+1e-6;
-    $('buy_wait').innerHTML=`<div class="firebanner">🔥 이번 사이클 <b>즉시 매수 ${bs}주</b><span class="fb-sub">평가금 ${wn(ev)} < 하단 ${wn(c.lo)} — 부족분을 V까지 매수${capped?' (Pool 한도까지만)':''} (시장가). 아래 차수는 더 내려야 체결되는 예약이라 지금 다 살 필요 없어요.</span></div>`;
+  if(ev>0 && ev<c.lo && price>0){
+    $('buy_wait').innerHTML=`<div class="firebanner">🔥 <b>하단 예약매수 체결 구간</b><span class="fb-sub">현재가 ${wn(price)} · 하단 ${wn(c.lo)} — 아래 차수 중 도달한 예약주문만 체결 기록. 시장가로 V까지 추가 매수하지 않습니다.</span></div>`;
   } else $('buy_wait').innerHTML=`⌛ 매수 대기 — 가격이 1차 ${wn(buy1)} 이하로 떨어지면 체결<div class="wb-now">현재가 ${wn(price)}</div>`;
   $('lad_state_b').textContent=price<=c.lo?'체결 가능':'예약 매매';
   $('lad_limit_b').textContent=`한도 ${wn(limit)} / ${wn(c.pool)}`;
