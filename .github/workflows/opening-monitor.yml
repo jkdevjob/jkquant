@@ -1,18 +1,8 @@
 name: 시초가 서버 자동감시
 
 # 웹페이지를 열지 않아도 동작한다.
-# GitHub Actions는 '시계' 역할만 하고, 종목 선정 계산과 Telegram 전송은
-# Cloudflare Pages Function /api/opening-monitor 가 수행한다.
-#
-# 08:55 KST에 시작해 09:31 KST까지 매분 Top100을 5개 shard로 나눠 검사한다.
-# 기존 AUTOTRADE_KEY를 서버간 인증키로 재사용한다.
-#
-# 필요한 Secret:
-#   GitHub Actions: AUTOTRADE_KEY
-# Cloudflare 환경변수:
-#   AUTOTRADE_KEY (또는 OPENING_MONITOR_KEY)
-#   TELEGRAM_BOT_TOKEN
-#   TELEGRAM_CHAT_ID
+# 08:55 KST 시작 → 09:31까지 매분 Top100 감시 → 종료 뒤 일일 결과 Telegram + 이력 영구 저장.
+# 서버 계산은 Cloudflare Pages Function이 담당하고 GitHub Actions는 시계/아카이브 역할을 한다.
 
 on:
   schedule:
@@ -23,6 +13,11 @@ on:
     paths:
       - ".github/workflows/opening-monitor.yml"
       - "functions/api/opening-monitor.js"
+      - "functions/api/opening-summary.js"
+      - "functions/api/_opening.js"
+
+permissions:
+  contents: write
 
 concurrency:
   group: opening-monitor-live
@@ -31,12 +26,19 @@ concurrency:
 jobs:
   monitor:
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 50
     steps:
-      - name: 09:00~09:30 서버 감시
+      - name: 이력 저장 브랜치 체크아웃
+        uses: actions/checkout@v4
+        with:
+          ref: scalping-data
+          fetch-depth: 0
+
+      - name: 시초가 감시 · 일일 요약 · 이력 저장
         env:
           KEY: ${{ secrets.AUTOTRADE_KEY }}
           BASE: https://jkquant.pages.dev
+          EVENT: ${{ github.event_name }}
         shell: bash
         run: |
           if [ -z "$KEY" ]; then
@@ -44,27 +46,124 @@ jobs:
             exit 1
           fi
 
+          archive_daily() {
+            DATE=$(TZ=Asia/Seoul date +%F)
+            OUT="data/opening-history/$DATE.json"
+
+            if [ -f "$OUT" ]; then
+              echo "$OUT 이미 저장됨 — Telegram 일일요약 중복 전송도 생략"
+              return 0
+            fi
+
+            mkdir -p data/opening-history
+            echo "[$(TZ=Asia/Seoul date '+%F %T KST')] 오늘 Top100 매매이력 재구성"
+
+            READY=0
+            for attempt in $(seq 1 12); do
+              pids=""
+              for shard in 0 1 2 3 4; do
+                curl -sS --max-time 60                   -H "x-monitor-key: $KEY"                   "$BASE/api/opening-monitor?serverHistory=1&shard=$shard&shards=5&limit=100"                   -o "history-$shard.json" &
+                pids="$pids $!"
+              done
+              for p in $pids; do wait "$p" || true; done
+
+              READY=1
+              for shard in 0 1 2 3 4; do
+                if ! jq -e '.ok == true and (.trades | type == "array")' "history-$shard.json" >/dev/null 2>&1; then
+                  READY=0
+                  echo "배포 대기/응답 오류 — attempt $attempt, shard $shard"
+                  head -c 180 "history-$shard.json" 2>/dev/null || true
+                  echo
+                  break
+                fi
+              done
+              [ "$READY" = "1" ] && break
+              sleep 10
+            done
+
+            if [ "$READY" != "1" ]; then
+              echo "서버 이력 API가 준비되지 않아 오늘 아카이브 실패"
+              return 1
+            fi
+
+            GEN=$(TZ=Asia/Seoul date --iso-8601=seconds)
+            jq -s --arg gen "$GEN" '
+              {
+                date: .[0].date,
+                generatedAt: $gen,
+                source: "server-opening-monitor",
+                strategy: {
+                  universe: "Top100",
+                  gap: "+2~+7%",
+                  firstHigh: "첫 3분",
+                  initialBreakout: "+0.5% 이상",
+                  pullback: "0.3~1.0%",
+                  support: "시초가 지지",
+                  rebreak: "전고점 재돌파",
+                  volumeRatio: "1.0배 이상",
+                  amountRatio: "1.2배 이상",
+                  stop: "-1%",
+                  takeProfit: "+1.5%",
+                  finalExit: "09:30",
+                  friction: "0.25%"
+                },
+                universeChecked: ([.[].universe] | add),
+                errors: ([.[].errors] | add),
+                trades: ([.[].trades[]] | sort_by(.entryTime, .code))
+              }
+            ' history-0.json history-1.json history-2.json history-3.json history-4.json > "$OUT"
+
+            echo "저장 결과:"
+            jq '{date, universeChecked, errors, tradeCount:(.trades|length), trades}' "$OUT"
+
+            # Telegram 일일 요약 — Cloudflare에 저장된 Bot Token을 그대로 사용
+            STATUS=$(curl -sS --max-time 30 -o summary-response.json -w '%{http_code}'               -X POST               -H "x-monitor-key: $KEY"               -H "content-type: application/json"               --data-binary @"$OUT"               "$BASE/api/opening-summary")
+            echo "Telegram 일일요약 HTTP $STATUS: $(cat summary-response.json 2>/dev/null || true)"
+
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add "$OUT"
+            git commit -m "data: opening history $DATE [skip ci]"
+            git pull --rebase origin scalping-data
+            git push origin scalping-data
+
+            if [ "$STATUS" != "200" ] || ! jq -e '.ok == true' summary-response.json >/dev/null 2>&1; then
+              echo "이력은 저장했지만 Telegram 일일요약 전송 실패"
+              return 1
+            fi
+          }
+
+          dow=$(TZ=Asia/Seoul date +%u)
+          raw=$(TZ=Asia/Seoul date +%H%M)
+          hm=$((10#$raw))
+
+          if [ "$dow" -gt 5 ]; then
+            echo "주말 — 종료"
+            exit 0
+          fi
+
+          # 코드 배포를 장 마감 뒤에 했을 때는 그 push 자체로 오늘 기록을 즉시 백필한다.
+          if [ "$hm" -gt 931 ]; then
+            archive_daily
+            exit $?
+          fi
+
+          # 장과 무관한 이른 시간 push는 정규 08:55 schedule에 맡긴다.
+          if [ "$EVENT" = "push" ] && [ "$hm" -lt 850 ]; then
+            echo "장 전 너무 이른 push — 정규 schedule이 08:55에 시작합니다."
+            exit 0
+          fi
+
           last=""
           echo "시초가 자동감시 준비"
 
           while true; do
-            dow=$(TZ=Asia/Seoul date +%u)
             raw=$(TZ=Asia/Seoul date +%H%M)
             hm=$((10#$raw))
 
-            if [ "$dow" -gt 5 ]; then
-              echo "주말 — 종료"
-              exit 0
-            fi
             if [ "$hm" -gt 931 ]; then
-              echo "09:31 KST 경과 — 종료"
-              exit 0
-            fi
-
-            # workflow 파일 push가 장과 무관한 시간에 일어났으면 장시간 대기하지 않는다.
-            if [ "${{ github.event_name }}" = "push" ] && [ "$hm" -lt 850 ]; then
-              echo "장 전 너무 이른 push — 정규 schedule이 08:55에 시작합니다."
-              exit 0
+              archive_daily
+              exit $?
             fi
 
             if [ "$hm" -ge 859 ] && [ "$raw" != "$last" ]; then
@@ -73,10 +172,7 @@ jobs:
 
               pids=""
               for shard in 0 1 2 3 4; do
-                curl -sS --max-time 55 \
-                  -H "x-monitor-key: $KEY" \
-                  "$BASE/api/opening-monitor?shard=$shard&shards=5&limit=100" \
-                  -o "monitor-$shard.json" &
+                curl -sS --max-time 55                   -H "x-monitor-key: $KEY"                   "$BASE/api/opening-monitor?shard=$shard&shards=5&limit=100"                   -o "monitor-$shard.json" &
                 pids="$pids $!"
               done
               for p in $pids; do wait "$p" || true; done
