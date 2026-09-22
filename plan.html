@@ -240,7 +240,7 @@ th:first-child,td:first-child{text-align:left}
         <button class="btn primary" id="tqqqCreateSession">+ 자동 생성</button>
         <div class="sessionstate" id="tqqqSessionState">모의세션은 목록에서 제외됩니다.</div>
       </div>
-      <div class="todaybox"><h3>📋 오늘 TQQQ VR 실행</h3><div class="sub" id="tqqqTabMeta">실전 세션과 시세를 불러오는 중…</div><div class="liveact" id="tqqqTabActions" style="margin-top:8px"></div></div>
+      <div class="todaybox"><h3>📋 오늘 TQQQ VR 실행</h3><div class="sub" id="tqqqTabMeta">실전 세션과 시세를 불러오는 중…</div><div class="liveact" id="tqqqTabActions" style="margin-top:8px"></div><div class="btnrow" id="vrCycleActionRow" style="display:none"><button class="btn gold" id="vrCycleAdvanceBtn">다음 사이클 진입</button></div></div>
       <div class="rulelist">
         <div class="rule"><span class="num">1</span><div><b>연동된 VR 세션이 없으면 먼저 생성</b><small>플랜에서 직접 만든 세션 또는 직접 선택한 실전세션만 사용합니다. 모의세션은 선택 목록에서 제외합니다.</small></div></div>
         <div class="rule"><span class="num">2</span><div><b>14일 사이클 자동</b><small>사이클 기준일에는 V를 갱신하고, 새 사다리는 다음 거래일부터 적용하는 규칙을 사용합니다.</small></div></div>
@@ -514,7 +514,7 @@ const STAGES={
 };
 
 
-let liveState=null, liveStateSource="", liveBusy=false, liveQuotes={};
+let liveState=null, liveStateSource="", liveBusy=false, liveQuotes={}, pendingVrCycle=null;
 const FEE=0.0025;
 let planLinks={inf:"",vr:"",sleeve:""};
 let sleeveSessions=[];
@@ -859,6 +859,32 @@ function calcVrState(sess){
   return {st,hist,qty:Math.max(0,qty),pool,V,avgNom,up,lo,curCyc,cycleStartPool,cycleBuySpent};
 }
 function nextVrDate(s){const t=new Date(s+'T00:00:00Z');t.setUTCDate(t.getUTCDate()+14);while(t.getUTCDay()===0||t.getUTCDay()===6)t.setUTCDate(t.getUTCDate()+1);return t.toISOString().slice(0,10);}
+function resolvePlanVrDue(rows,dueStr,settledDate){
+  const a=(rows||[]).filter(x=>x&&x.date>=dueStr&&x.date<=settledDate&&+x.close>0).sort((x,y)=>x.date.localeCompare(y.date));
+  return a[0]||null;
+}
+function calcPlanNextV(c,close){
+  const st=c.st||{},G=Math.max(1,+st.g||10),ev=(close>0?close*c.qty:c.V);
+  const isAccum=+st.mode===.75,isWd=+st.mode===.25,add=(isAccum||isWd)?(+st.add||0):0,sign=isWd?-1:1;
+  let nextV=c.V+c.pool/G+sign*add;
+  if(st.formula==='skill'&&c.V>0) nextV+=(ev-c.V)/(2*Math.sqrt(G));
+  return {nextV:Math.max(0,nextV),ev,add,sign};
+}
+async function advancePlanVrCycle(){
+  const vr=liveState?linkedOpSession(liveState.vr,'TQQQ',planLinks.vr):null;
+  if(!vr||!pendingVrCycle){alert('지금 진입할 VR 사이클이 없습니다.');return;}
+  const c=calcVrState(vr),st=vr.settings||{},r=calcPlanNextV(c,pendingVrCycle.close),newCyc=(+st.startCyc||c.curCyc||0)+1;
+  if(!confirm('TQQQ VR 다음 사이클로 진입합니다.\n기준일 '+pendingVrCycle.date+' 종가 '+usd(pendingVrCycle.close)+'\nV '+usd(c.V)+' → '+usd(r.nextV)+'\n진행할까요?'))return;
+  if(r.add>0){
+    vr.hist.push({type:r.sign<0?'wd':'add',date:pendingVrCycle.date,amt:r.add,cyc:newCyc,auto:true,ts:Date.now()});
+  }
+  st.startv=+r.nextV.toFixed(4);st.startCyc=newCyc;st.cycStart=pendingVrCycle.date;
+  if(!Array.isArray(st.cycLog))st.cycLog=[];
+  st.cycLog.push({cyc:newCyc-1,from:null,dates:'플랜 확정',V:+c.V.toFixed(2),lo:+c.lo.toFixed(2),up:+c.up.toFixed(2),E:+r.ev.toFixed(2),close:+pendingVrCycle.close.toFixed(4)});
+  st.cycLog=st.cycLog.slice(-120);
+  pendingVrCycle=null;
+  await saveOperatingState();await cloudSave();await refreshLive();
+}
 function vrCycleStart(c){if(c.st.cycStart)return c.st.cycStart;for(let i=c.hist.length-1;i>=0;i--){const x=c.hist[i];if(x.auto&&(x.type==='add'||x.type==='wd'))return x.date;}const f=c.hist.find(x=>x.type==='buy');return f?f.date:null;}
 function vrOrders(sess,price){
   const c=calcVrState(sess),st=c.st,orders=[];if(!(price>0))return {state:c,orders,note:'확정 종가가 없어 계산하지 못했습니다.'};
@@ -1027,11 +1053,16 @@ async function refreshLive(){
       $('liveVrMeta').textContent=(vr.name||'TQQQ 세션')+' · G'+(st.g||10)+' / ±'+(st.band||15)+'% / '+(st.formula==='skill'?'실력':'기본')+' · V '+usd(c.V)+' · Pool '+usd(c.pool)+' · 운용자산 '+usd(vrValue);
       const immediate=r.orders.filter(o=>o.tag!=='예약'),reserve=r.orders.filter(o=>o.tag==='예약');
       $('liveVr').innerHTML=(immediate.length?immediate.map(orderHtml).join(''):waitHtml('즉시 매매 없음','현재 평가금이 VR 밴드 안입니다.'))+(reserve.length?reserve.map(orderHtml).join(''):'')+waitHtml(r.note);
+      pendingVrCycle=null;
+      const _cs=vrCycleStart(c),_due=_cs?nextVrDate(_cs):null,_dueRow=_due?resolvePlanVrDue(qv.rows,_due,qv.settled.date):null;
+      if(_dueRow){pendingVrCycle={date:_dueRow.date,close:+_dueRow.close,due:_due};$('vrCycleActionRow').style.display='flex';$('vrCycleAdvanceBtn').textContent='사이클 마감 '+_dueRow.date+' → 다음 V 적용';}
+      else $('vrCycleActionRow').style.display='none';
       mirrorStrategyTab('tqqqTabMeta','tqqqTabActions',$('liveVrMeta').textContent,$('liveVr').innerHTML);
       if(immediate.length)actions.push('TQQQ VR '+immediate.length+'건');
     }else{
       setAutoBalanceField('balVR',NaN,'TQQQ VR 실전 세션 없음 · 수동 입력');
       const pn=paperSessionCount(liveState&&liveState.vr,'TQQQ');
+      pendingVrCycle=null;if($('vrCycleActionRow'))$('vrCycleActionRow').style.display='none';
       $('liveVrMeta').textContent='TQQQ VR 연동 세션 없음'+(pn?' · 모의 '+pn+'개 제외':'');
       $('liveVr').innerHTML=waitHtml('5년 플랜에 연동된 TQQQ VR 실전세션이 없습니다.','TQQQ VR 탭에서 세션을 생성하거나 선택하세요.');
       mirrorStrategyTab('tqqqTabMeta','tqqqTabActions',$('liveVrMeta').textContent,$('liveVr').innerHTML);
@@ -1201,6 +1232,7 @@ $("calcBtn").addEventListener("click",()=>{render();refreshLive()});$("setBaseli
 $("createAllPlanSessions").addEventListener("click",createAllPlanSessions);
 $("soxlCreateSession").addEventListener("click",createPlanInfSession);
 $("tqqqCreateSession").addEventListener("click",createPlanVrSession);
+$("vrCycleAdvanceBtn").addEventListener("click",advancePlanVrCycle);
 $("sleeveCreateSession").addEventListener("click",createPlanSleeveSession);
 $("soxlSessionSelect").addEventListener("change",e=>selectPlanOpSession('inf',e.target.value));
 $("tqqqSessionSelect").addEventListener("change",e=>selectPlanOpSession('vr',e.target.value));
