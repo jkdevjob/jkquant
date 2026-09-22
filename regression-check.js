@@ -48,6 +48,7 @@ const idxParts=[
   extractFn(idx,'function reverseT(kind,t,div)'),
   idx.slice(idx.indexOf('function isBuy(k)'), idx.indexOf('\n', idx.indexOf('function isBuy(k)'))),
   idx.slice(idx.indexOf('function isSell(k)'), idx.indexOf('\n', idx.indexOf('function isSell(k)'))),
+  extractFn(idx,'function isAmtKind(k)'),
   idx.slice(idx.indexOf('const IM_OFFICIAL='), idx.indexOf(';', idx.indexOf('const IM_OFFICIAL='))+1),
   extractFn(idx,'function starPct(ticker,div,T,base)'),
   extractFn(idx,'function exitMulOf(base)'),
@@ -57,8 +58,16 @@ const idxParts=[
 ];
 let __strat=null; global.curStrat=()=>__strat;
 eval(idxParts.join('\n'));
+/* 가격 역할 헬퍼 — 체결가 계열인가, 그날 배당이 얼마인가 (자체 점검 N1).
+   실코드에서 그대로 떼어 와야 값이 어긋나지 않는다. */
+{ const src=[ idx.slice(idx.indexOf('const DIV_TAXRATE='), idx.indexOf(';', idx.indexOf('const DIV_TAXRATE='))+1),
+              extractFn(idx,'function isTradeBasis(Q)'), extractFn(idx,'function tradeBars(Q)'),
+              extractFn(idx,'function divPerShareQ(Q, d)'), extractFn(idx,'function divCashQ(Q, d, shares, taxOn)') ].join('\n');
+  const f=new Function(src+'\n'+extractFn(idx,'function divCashOn(st)')
+    +'\nreturn {DIV_TAXRATE,isTradeBasis,tradeBars,divPerShareQ,divCashQ,divCashOn};')();
+  Object.assign(global, f); }
 // eval 안의 const 는 밖으로 안 샌다 — iq/isq 와 같은 이유로 전역에 올린다
-global.IM_OFFICIAL=new Function(idxParts[4]+'\nreturn IM_OFFICIAL;')();
+global.IM_OFFICIAL=new Function(idxParts.find(x=>/^const IM_OFFICIAL=/.test(x))+'\nreturn IM_OFFICIAL;')();
 
 // backtest 엔진 + 거래로그 훅 주입 (실코드에 정확 substring 치환, 각 1회 매치 검증)
 // 정수 주수 헬퍼는 엔진 밖에 있다 — 파일에서 그대로 떼어 와야 실코드와 어긋나지 않는다
@@ -637,11 +646,20 @@ console.log('[12] 종가/실시간가 분리');
   ok('시세 캐시가 정산 경계를 넘으면 무효', /infQuoteCache\.cut===simCutoff\(/.test(idx)
      && /infQuoteCache\.cut=simCutoff\(/.test(idx));
   ok('기록 날짜와 종가 날짜가 어긋나면 경고', /_rd>g\.closeDate/.test(idx));
-  // 무매 시세 로더 3곳 전부 last를 확정 종가로 채운다 (한 곳만 빠져도 그 화면에서 새어 든다)
-  const loaders=idx.match(/lastQuote(?:\.inf|\[which\])\s*=\s*\{[^}]*\}/g)||[];
-  const bad=loaders.filter(t=>/last:\s*q\.last\.close/.test(t));
-  ok('무매 시세 로더가 확정 종가를 저장', loaders.length>=3 && bad.length===0,
+  /* 무매 시세 로더 3곳 전부 last를 확정 종가로 채운다 (한 곳만 빠져도 그 화면에서 새어 든다).
+     예전엔 세 곳이 각자 객체를 손으로 만들었다 — 칸이 늘 때마다 갈라져서, 실제로 배당·
+     가격기준을 떨어뜨려 모의체결이 배당을 영영 못 봤다(브라우저로 재현함).
+     이제 mkLastQuote 한 곳에서만 만든다: 세 곳이 그 함수를 쓰는지, 그리고 그 함수가
+     확정 종가(SL)를 쓰는지 본다. */
+  const loaders=idx.match(/lastQuote(?:\.inf|\[which\])\s*=\s*[^;]*;/g)||[];
+  const bad=loaders.filter(t=>!/mkLastQuote\(q,SL,live\)/.test(t));
+  ok('무매 시세 로더가 한 함수로 만든다', loaders.length>=3 && bad.length===0,
      `로더 ${loaders.length}곳 · 미적용 ${bad.length}곳`);
+  { const mk=extractFn(idx,'function mkLastQuote(q, SL, live)');
+    ok('그 함수가 확정 종가를 저장', /last:\s*SL\.close/.test(mk) && !/last:\s*q\.last\.close/.test(mk));
+    /* 엔진이 보는 칸 — 하나라도 빠지면 그 경로가 조용히 옛 규약으로 돈다 */
+    for(const k of ['days','ohlc','daysAdj','ohlcAdj','dividends','priceBasis'])
+      ok(`시세 한 건이 ${k} 를 들고 다닌다`, new RegExp(k+':').test(mk)); }
   // VR의 last는 반대 용도(평가금용 현재가)다 — 같이 바꾸면 VR 평가금이 어제로 굳는다
   let ev=''; try{ ev=extractFn(idx,'function vrEval(c)'); }catch(e){}
   ok('VR 평가금은 확정 종가로 굳히지 않는다', /quoteOf\('vr'\)|lastQuote\.vr/.test(ev) && !/settledLast\(/.test(ev));
@@ -890,8 +908,8 @@ console.log('[19] 출금 · 복리/단리');
 {
   let ci=''; try{ ci=extractFn(idx,'function computeInf()'); }catch(e){}
   ok('출금 기록을 잔금에서 뺀다', /h\.kind==='출금'/.test(ci) && /withdrawn \+= Math\.max\(0,\+h\.amt\|\|0\)/.test(ci), ci?'':'computeInf 없음');
-  ok('잔금 식에 출금·단리인출 반영', /principal\+realized-inv-withdrawn-saved/.test(ci)
-     && !/principal\+realized-inv-withdrawn-saved\+added/.test(ci));
+  ok('잔금 식에 출금·단리인출·배당 반영', /principal\+realized\+divTotal-inv-withdrawn-saved/.test(ci)
+     && !/\+added/.test(ci));
   /* 단리 판정은 '사이클 종료 잔액이 최초 원금을 넘는가'다.
        넘으면 넘은 만큼만 인출하고 원금으로 다시 시작
        못 넘으면 인출도 보충도 없이 그 잔액 그대로 다음 사이클로
@@ -908,7 +926,7 @@ console.log('[19] 출금 · 복리/단리');
   ok('백테는 넣은 돈을 총자산에서 뺀다', /\+savedProfit-addedCash;/.test(bt));
   ok('단리 판정은 compound===false', /const simple=\(st\.compound===false\)/.test(ci));
   // 입금 자리(added)는 아예 없앴다 — 무매는 나가기만 한다
-  ok('출금·단리인출을 밖으로 낸다', /withdrawn,saved,flows,simple,outside:withdrawn\+saved/.test(ci));
+  ok('출금·단리인출을 밖으로 낸다', /withdrawn,saved,divTotal,flows,simple,outside:withdrawn\+saved/.test(ci));
   ok('무매 반환값에 입금 자리가 없다', !/added:0/.test(ci));
   // 출금이 매매로 잡히면 사이클 종료·T가 오염된다
   ok('출금은 매수·매도가 아니다', /function isBuy\(k\)\{return k==='출금'\?false/.test(idx)
@@ -2853,12 +2871,50 @@ console.log('\n[60] 분배금 현금 수령 — 전 전략');
   /* 끄면(기본) 전부 0 — 기존 세션의 수익률이 한 자리도 안 움직여야 한다 */
   const sd=(()=>{ try{ return extractFn(idx,'function sessDivCash(st, hist, onReady)'); }catch(e){ return ''; } })();
   ok('끄면 전부 0이다', /if\(!divCashOn\(st\)\) return \{divCash:0, nDiv:0, flows:\[\]\};/.test(sd));
-  // 가격 경로를 건드리면 국내 종목 시세 출처까지 바뀐다 — 분배금만 따로 받는다
-  { // 전 탭이 같이 쓰는 가격 fetch에 div=1이 붙으면 국내 종목 시세 출처까지 바뀐다
+  /* 예전엔 '가격 경로에 div=1 을 붙이면 국내 시세 출처가 바뀐다' 며 안 붙였다.
+     그 결과 앱은 조정종가로, 백테는 체결가로 돌아 같은 종목·같은 기간인데
+     주수·평단이 달라졌다(자체 점검 N1). 이제 붙이되, 그때 걱정했던 것들을 검사한다:
+       · 국내 현재가는 그대로 네이버 것을 쓴다
+       · 야후가 안 되면 네이버 일봉을 체결가로 쓴다 (없는 걸 지어내지 않는다) */
+  { const qjs=fs.existsSync(__d+'/functions/api/quote.js')?fs.readFileSync(__d+'/functions/api/quote.js','utf8'):'';
     const fr=(()=>{ try{ return extractFn(idx,'async function _fetchDailyRaw(symbol)'); }catch(e){ return ''; } })();
-    ok('가격 경로를 건드리지 않는다',
-       /_divCache\[K\]='loading';/.test(idx) && /fetchDailyDiv\(K\)/.test(idx)
-       && fr.length>0 && !/div=1/.test(fr)); }
+    ok('가격 경로가 div=1 로 부른다', fr.length>0 && /range=max&div=1/.test(fr)
+       && /return quoteToDaily\(SYM, j\);/.test(fr));
+
+    /* 옮기는 규칙은 순수 함수로 떼어놨다 — 정규식이 아니라 값으로 본다.
+       배당 두 번(0.9·1.1)이 가격에 녹아 조정계열이 체결가보다 2 낮은 픽스처다. */
+    const q2d=new Function('SYM','j', extractFn(idx,'function quoteToDaily(SYM, j)')
+      .replace(/^function quoteToDaily\(SYM, j\)\{/,'').replace(/\}\s*$/,''));
+    const _b=(d,c)=>({date:d,open:c,high:c+1,low:c-1,close:c});
+    const J={ series:[{date:'2024-01-02',close:98},{date:'2024-06-03',close:99},{date:'2024-12-02',close:100}],
+              ohlcTrade:[_b('2024-01-02',100),_b('2024-06-03',101),_b('2024-12-02',100)],
+              ohlc:[_b('2024-01-02',98),_b('2024-06-03',99),_b('2024-12-02',100)],
+              dividends:[{date:'2024-03-15',amount:0.9},{date:'2024-09-13',amount:1.1}],
+              priceBasis:'trade', price:100.5, last:{date:'2024-12-02',close:100}, currency:'USD' };
+    { const R=q2d('TQQQ', J);
+      ok('체결가가 오면 days 가 체결가다', R.days.length===3 && R.days[0].close===100 && R.days[1].close===101,
+         R.days.map(d=>d.close).join('/'));
+      ok('체결가가 오면 ohlc 도 체결가다', R.ohlc && R.ohlc[1].high===102, R.ohlc&&R.ohlc[1].high);
+      ok('조정계열은 daysAdj·ohlcAdj 로 남는다',
+         R.daysAdj.length===3 && R.daysAdj[0].close===98 && R.ohlcAdj[0].close===98,
+         R.daysAdj[0].close+'/'+R.ohlcAdj[0].close);
+      ok('체결가일 때 priceBasis 가 trade 다', R.priceBasis==='trade', R.priceBasis);
+      ok('배당 이벤트가 그대로 실려 온다', R.dividends.length===2 && R.dividends[1].amount===1.1);
+      ok('현재가는 quote.js 가 준 실시간가다', R.price===100.5, R.price); }
+
+    /* 체결가 계열이 없으면(=priceBasis 가 trade 가 아니면) 조정 기준으로 돈다 —
+       없는 걸 지어내지 않고, trade 라고 거짓말도 하지 않는다 */
+    { const R=q2d('TQQQ', Object.assign({}, J, {priceBasis:'total_return', ohlcTrade:null}));
+      ok('체결가가 없으면 조정계열로 돈다', R.days[0].close===98 && R.ohlc[0].close===98,
+         R.days[0].close+'/'+R.ohlc[0].close);
+      ok('그때 priceBasis 를 trade 라 하지 않는다', R.priceBasis==='total_return', R.priceBasis); }
+
+    ok('국내 현재가는 네이버 것을 그대로 쓴다',
+       /price: \(kr && kr\.price != null\) \? kr\.price :/.test(qjs||''));
+    ok('야후가 안 되면 네이버 일봉을 체결가로 쓴다',
+       /out\.ohlcTrade = kr\.ohlc; out\.priceBasis = 'trade';/.test(qjs||''));
+    ok('분배금 전용 경로도 그대로 남아 있다 (현금수령 세션용)',
+       /_divCache\[K\]='loading';/.test(idx) && /fetchDailyDiv\(K\)/.test(idx)); }
   const calls=['renderInfAnal','renderVrAnal','renderMaAnal','renderIvsAnal','renderAsapAnal']
     .filter(f=>new RegExp(`sessDivCash\\([\\s\\S]{0,60}?\\(\\)=>${f}\\(\\)\\)`).test(idx));
   ok('다섯 렌더가 모두 쓴다', calls.length===5, calls.join(','));
@@ -6269,6 +6325,260 @@ console.log('\n[100] 5년 플랜·VR 예약주문 동기화');
   ok('운영: 모의 규약 버전 5로 올려 옛 VR 모의 기록을 재생성', /const SIM_RULE_VER=5;/.test(idx));
   ok('운영·백테: 잘못된 “공식 (V 복귀)” UI 제거', !/공식 \(V 복귀\)/.test(idx) && !/공식 \(V 복귀\)/.test(bt));
   ok('플랜: 현재 사이클 시작수량과 양쪽 체결차수를 복원', /cycleBaseQty/.test(pl) && /cycleSellFilled/.test(pl) && /cycleBuyFilled/.test(pl));
+}
+
+/* ════ 101. 배당이 장부에 남는다 ════  (자체 점검 N1)
+   앱이 조정종가로 돌 때는 배당이 가격에 녹아 있어 따로 셀 게 없었다.
+   체결가 계열로 바꾸면 배당락일에 가격이 그만큼 떨어진 값 그대로 온다 —
+   장부에 안 적으면 그 돈이 통째로 사라진다. 무매엔 배당이라는 칸 자체가 없었다.
+   여기서 값으로 확인한다: 잔금에 더해지되 T·평단·보유·리버스 상태는 그대로여야 한다. */
+console.log('\n[101] 무매 배당 기록 — 잔금만 늘고 나머지는 불변');
+{
+  const st={ticker:'SOXL',div:20,target:20,principal:10000,compound:true,reverse:true};
+  const run=(hist)=>{ __strat={settings:st,hist:JSON.parse(JSON.stringify(hist))}; return computeInf(); };
+  const base=[{kind:'1회매수', date:'2026-01-05', price:100, qty:5}];
+  const withDiv=[...base, {kind:'배당', date:'2026-03-20', amt:37.5, qty:0}];
+
+  const a=run(base), b=run(withDiv);
+  ok('A 잔금이 배당만큼 는다', near(b.bal-a.bal, 37.5, 1e-9), `${a.bal} → ${b.bal}`);
+  ok('A 보유·평단은 그대로', b.qty===a.qty && b.avg===a.avg, `${b.qty}주 / ${b.avg}`);
+  ok('A T는 그대로', b.T===a.T, `${a.T} → ${b.T}`);
+  ok('A 실현손익은 안 는다 (배당은 매매손익이 아니다)', b.realized===a.realized, String(b.realized));
+  ok('A divTotal 로 따로 센다', near(b.divTotal,37.5,1e-9) && a.divTotal===0, String(b.divTotal));
+  ok('A 사이클을 끝내지 않는다', !b.rows[b.rows.length-1].cycleEnd);
+  ok('A 밖으로 나간 돈이 아니다', b.outside===a.outside, String(b.outside));
+
+  /* B. 리버스 상태를 건드리면 안 된다 — 출금 한 줄로 리버스가 풀렸던 것과 같은 종류의 버그다 */
+  { const h=[{kind:'1회매수', date:'2026-01-05', price:100, qty:5, tManual:19.5},
+             {kind:'리버스매도', date:'2026-01-06', price:90, qty:1}];
+    const c1=run(h);
+    const c2=run([...h, {kind:'배당', date:'2026-01-07', amt:10, qty:0}]);
+    ok('B 배당은 리버스 상태를 안 바꾼다', c2.revState===c1.revState && c2.revState==='REVERSE',
+       `${c1.revState} → ${c2.revState}`);
+    ok('B 리버스 표시도 그대로', c2.reverseActive===c1.reverseActive && c2.reverseActive===true); }
+
+  /* C. 배당은 매수·매도가 아니다 — 잡히면 사이클 종료·T가 오염된다 */
+  ok('C 배당은 매수가 아니다', isBuy('배당')===false);
+  ok('C 배당은 매도가 아니다', isSell('배당')===false);
+  ok('C 금액만 있는 기록으로 분류된다', isAmtKind('배당')===true && isAmtKind('출금')===true
+     && isAmtKind('1회매수')===false);
+
+  /* D. 단리: 사이클 종료 잔액 판정에 배당도 들어간다 (계좌에 실제로 들어온 돈이다).
+       원금 10,000 · 5주@100 매수 → 배당 400 → 5주@2,000 전량매도.
+       매도 실현손익 9,500 + 배당 400 = 9,900 초과분이 나가야 한다. */
+  { const st2={...st, compound:false};
+    const h=[{kind:'1회매수', date:'2026-01-05', price:100, qty:5},
+             {kind:'배당',   date:'2026-03-20', amt:400, qty:0},
+             {kind:'지정가매도', date:'2026-06-01', price:2000, qty:5}];
+    __strat={settings:st2, hist:JSON.parse(JSON.stringify(h))};
+    const c=computeInf();
+    ok('D 단리 인출에 배당이 들어간다', near(c.saved, 9900, 1e-9), String(c.saved));
+    ok('D 다음 사이클은 원금으로 다시 시작', near(c.bal, 10000, 1e-9), String(c.bal));
+    /* 배당이 없으면 9,500 만 나간다 — 같은 경로에서 값이 갈리는지 본다 (변이 대조) */
+    __strat={settings:st2, hist:h.filter(x=>x.kind!=='배당')};
+    ok('D 배당을 빼면 인출도 그만큼 준다', near(computeInf().saved, 9500, 1e-9)); }
+
+  /* E. 모의체결이 배당락일마다 스스로 적는다 — 없으면 위 장부가 영영 안 채워진다 */
+  { const f=extractFn(idx,'function infSimForward(startFrom)');
+    ok('E 모의체결이 배당을 적는다', /putDiv\(d\);/.test(f) && /kind:'배당'/.test(f));
+    ok('E 그날 거래보다 먼저 적는다 — 배당은 전날 보유 주수로 받는다',
+       f.indexOf('putDiv(d);') < f.indexOf("put('리버스매도'"));
+    ok('E 현금수령 모드에선 안 적는다 (분배금 카드가 따로 센다)',
+       /if\(divCashOn\(st\) \|\| !isTradeBasis\(Q\)\) return false;/.test(f));
+    /* 조정 기준으로 돌고 있으면 배당이 이미 가격에 들어 있다 — 또 적으면 두 번 센다 */
+    ok('E 조정 기준일 땐 안 적는다', /!isTradeBasis\(Q\)/.test(f)); }
+
+  /* F. 세율 — 앱과 백테가 같은 값을 써야 한다 */
+  { const Q={priceBasis:'trade', ohlc:[{date:'2026-03-20',close:100}],
+             dividends:[{date:'2026-03-20', amount:2}]};
+    ok('F 배당 세후 현금 = 주수 × 주당배당 × (1−세율)',
+       near(divCashQ(Q,'2026-03-20',5,true), 5*2*(1-0.154), 1e-9),
+       String(divCashQ(Q,'2026-03-20',5,true)));
+    ok('F 세금을 끄면 전액', near(divCashQ(Q,'2026-03-20',5,false), 10, 1e-9));
+    ok('F 배당락일이 아니면 0', divCashQ(Q,'2026-03-19',5,true)===0);
+    ok('F 안 들고 있으면 0', divCashQ(Q,'2026-03-20',0,true)===0);
+    ok('F 조정 기준이면 0 — 배당이 이미 가격에 들어 있다',
+       divCashQ({...Q, priceBasis:'total_return'},'2026-03-20',5,true)===0);
+    /* 같은 걸 두 군데서 세면 갈린다 — 앱·백테가 같은 값을 쓰는지 값으로 본다 */
+    const _rate=src=>{ const m=src.match(/const DIV_TAXRATE=([0-9.]+);/); return m?+m[1]:null; };
+    ok('F 앱·백테가 같은 배당세율', _rate(idx)!=null && _rate(idx)===_rate(bt),
+       `${_rate(idx)} / ${_rate(bt)}`);
+    /* 백테 divCash 와 앱 divCashQ 는 같은 식이어야 한다 — 세후 금액이 갈리면 장부가 갈린다 */
+    { const bf=(bt.match(/function divCash\([\s\S]*?\n\}/)||[''])[0];
+      ok('F 백테도 주수 × 주당배당 × (1−세율)', /shares\*a\*\(costOn\?\(1-DIV_TAXRATE\):1\)/.test(bf), bf?'':'divCash 없음'); } }
+}
+
+/* ════ 102. VR 배당 — Pool 로 들어온다 ════  (자체 점검 N1)
+   VR 장부(computeVr)는 type:'div' 를 원래 읽었는데, 그걸 만들어 주는 코드가 없었다
+   (grep 으로 0건). 조정종가로 돌던 시절엔 배당이 가격에 녹아 있어 티가 안 났지만
+   체결가 계열로 바꾸면 그 돈이 통째로 사라진다. 모의체결·과거재생이 스스로 적게 했다. */
+console.log('\n[102] VR 배당 — Pool 입금 · 백테와 같은 규약');
+{
+  const stv={ticker:'TQQQ',mode:0.75,formula:'basic',g:10,add:100,band:15,startv:0,startpool:0,cur:'usd'};
+  const base=[{type:'buy',date:'2026-01-05',price:100,qty:10,fee:0,init:true,cyc:0}];
+  const run=(h)=>{ __strat={settings:stv, hist:JSON.parse(JSON.stringify(h))}; return computeVr(); };
+
+  const a=run(base), b=run([...base,{type:'div',date:'2026-03-20',amt:16.92,cyc:0}]);
+  ok('A 배당이 Pool 로 들어간다', near(b.pool-a.pool, 16.92, 1e-9), `${a.pool} → ${b.pool}`);
+  ok('A 보유 주수는 그대로', b.qty===a.qty, String(b.qty));
+  ok('A V는 그대로', near(b.V,a.V,1e-9), `${a.V} → ${b.V}`);
+  ok('A 이번 사이클 배당으로도 센다', near(b.cycDiv,16.92,1e-9), String(b.cycDiv));
+  /* 실효 평단은 받은 배당만큼 내려간다 — (총매수−총매도−총배당)÷보유 */
+  ok('A 실효 평단이 배당만큼 내려간다', near(a.avgEff-b.avgEff, 16.92/10, 1e-9),
+     `${a.avgEff} → ${b.avgEff}`);
+  ok('A 명목 평단은 그대로', near(b.avgNom,a.avgNom,1e-9), String(b.avgNom));
+
+  /* B. 모의체결·과거재생이 배당을 스스로 적는다 — 없으면 위 장부가 영영 안 채워진다 */
+  { const f=extractFn(idx,'function vrSimForward()');
+    ok('B 모의체결이 배당을 적는다', /putDivV\(row\.date/.test(f) && /type:'div'/.test(f));
+    ok('B 사다리보다 먼저 적는다', f.indexOf('putDivV(row.date') < f.indexOf('const fills=vrOrderPlan'));
+    ok('B 현금수령·조정기준이면 안 적는다',
+       /if\(divCashOn\(st\) \|\| !isTradeBasis\(Qv\)\) return false;/.test(f)); }
+  { const f=extractFn(idx,'function vrReplay()');
+    ok('B 과거재생도 배당을 적는다', /putDivR\(d\);/.test(f) && /type:'div'/.test(f));
+    ok('B 재생기 안 Pool 과 기록을 같이 움직인다', /pool\+=cash; cycDiv\+=cash;/.test(f));
+    ok('B 사이클이 바뀌면 cycDiv 도 리셋 (computeVr 과 같은 규약)',
+       (f.match(/cycTrade=0; cycDiv=0;/g)||[]).length===2);
+    ok('B 현금수령·조정기준이면 안 적는다',
+       /const divOn=!divCashOn\(st\) && isTradeBasis\(q\);/.test(f)); }
+
+  /* C. 앱과 백테가 같은 값을 낸다 — 같은 주수·같은 주당배당이면 세후 현금이 같아야 한다.
+       백테 divCash 를 실코드에서 그대로 떼어 와 앱 divCashQ 와 맞춰 본다. */
+  { const bsrc=[ bt.slice(bt.indexOf('const DIV_TAXRATE='), bt.indexOf(';', bt.indexOf('const DIV_TAXRATE='))+1),
+                 (bt.match(/function divPerShare\(tkr, d\)\{[\s\S]*?\n\}/)||[''])[0],
+                 (bt.match(/function divCash\(tkr, d, shares, costOn\)\{[\s\S]*?\n\}/)||[''])[0] ].join('\n');
+    const btDiv=new Function('PBASIS','DIVMAP', bsrc+'\nreturn divCash;');
+    const f=btDiv({TQQQ:'trade'},{TQQQ:{'2026-03-20':2}});
+    const Q={priceBasis:'trade', dividends:[{date:'2026-03-20',amount:2}]};
+    for(const sh of [1,10,137]){
+      ok(`C ${sh}주 — 앱·백테 세후 배당이 같다`,
+         near(divCashQ(Q,'2026-03-20',sh,true), f('TQQQ','2026-03-20',sh,true), 1e-9),
+         `${divCashQ(Q,'2026-03-20',sh,true)} / ${f('TQQQ','2026-03-20',sh,true)}`); }
+    /* 조정 기준이면 둘 다 0 — 이중계상을 막는 한 줄이 양쪽에 다 있어야 한다 */
+    const f2=btDiv({TQQQ:'total_return'},{TQQQ:{'2026-03-20':2}});
+    ok('C 조정 기준이면 앱·백테 둘 다 0',
+       divCashQ({...Q,priceBasis:'total_return'},'2026-03-20',10,true)===0
+       && f2('TQQQ','2026-03-20',10,true)===0); }
+
+  /* D. 백테 VR 도 사다리보다 먼저 Pool 에 넣는다 — 앱과 순서가 같아야 한다 */
+  { const f=extractFn(bt,'function runVR(days,tkr,params)');
+    ok('D 백테 VR 도 Pool 로 받는다', /pool\+=divCash\(tkr,d,shares,costOn\);/.test(f));
+    /* 앱과 순서가 같아야 한다 — 배당을 먼저 넣고 그 Pool 로 그날 사다리를 돌린다.
+       _ladder 는 루프 위에서 정의되므로 '정의' 가 아니라 '부르는 자리' 를 본다. */
+    ok('D 백테도 사다리보다 먼저 넣는다',
+       f.indexOf('pool+=divCash(') < f.indexOf('_ladder(row[HI]'),
+       `${f.indexOf('pool+=divCash(')} < ${f.indexOf('_ladder(row[HI]')}`); }
+}
+
+/* ════ 103. 모의체결기를 통째로 돌려 본다 ════  (자체 점검 N1 · 검증 ⑩-C)
+   앞 절들은 '코드에 이 글자가 있는가' 를 봤다. 그건 줄 앞에 // 만 붙여도 통과한다 —
+   실제로 putDiv(d) 를 주석 처리해 봤더니 회귀가 초록이었다(변이 시험에서 잡았다).
+   그래서 여기서는 infSimForward 를 실코드 그대로 떼어 와 픽스처로 굴리고, 나온
+   기록을 값으로 본다. 배당이 정말 장부에 남는지는 이 길로만 알 수 있다. */
+console.log('\n[103] 무매 모의체결 — 실엔진을 굴려 배당 기록을 확인');
+{
+  /* 실코드에서 그대로 떼어 온다 — 여기서 다시 구현하면 '시험이 버그를 보호' 하게 된다 */
+  const deps=['function _clampFrom(from, lastDate)','function _lastSettled(rows, cur)',
+              'function imBuy1(c)','function revGapOf(st)','function sortHist(arr)',
+              'function imTgtOf(base, mom)']
+    .map(sig=>extractFn(idx,sig)).join('\n');
+  const simCut=[/function settledBars\(rows,cur\)\{[^\n]*/, /function simCutoff\(cur\)\{[\s\S]*?\n\}/]
+    .map(re=>(idx.match(re)||[''])[0]).join('\n');
+  const imMom=(idx.match(/const IM_MOM_LEN=[^\n]*/)||[''])[0];
+
+  let _saved=0;
+  const run=(sess, Q, startFrom)=>{
+    __strat=sess;
+    const F=new Function('curStrat','computeInf','starPct','exitMulOf','imBuyQty','imRevBuyQty',
+      'imBigPct','divCashOn','isTradeBasis','divCashQ','save','curOf','_exchNow',
+      'MKT_CLOSE_MIN','SETTLE_LAG_MIN','lastQuote',
+      [imMom, simCut, deps, 'let _infSimBusy=false;',
+       extractFn(idx,'function infSimForward(startFrom)'),
+       'return infSimForward;'].join('\n'))(
+      ()=>__strat, computeInf, starPct, exitMulOf, imBuyQty, imRevBuyQty,
+      imBigPct, divCashOn, isTradeBasis, divCashQ, ()=>{_saved++;}, ()=>'usd',
+      ()=>({date:'2026-12-31', min:24*60}), {usd:16*60, krw:15*60+30}, 30, {inf:Q});
+    return F(startFrom);
+  };
+
+  /* 배당락일에 '아무 매매도 안 나는' 날을 만든다 — 그래야 배당 하나만 값으로 읽힌다.
+       평단 100 · T=1 · 20분할 → 별지점 118 · 익절가 120 · 큰수 상한 전일종가×1.15=115
+       종가 116 이면: 116>115 라 매수 없음 · 116<118 이라 쿼터매도 없음 · 고가 116<120 이라 익절 없음 */
+  const bar=(d,c,hi)=>({date:d, open:c, high:(hi!=null?hi:c), low:c, close:c});
+  const O=[bar('2026-01-05',100), bar('2026-01-06',100), bar('2026-01-07',116)];
+  const mkQ=(basis, divs)=>({symbol:'SOXL', ohlc:O, days:O.map(d=>({date:d.date,close:d.close})),
+                       priceBasis:basis, dividends:(divs!==undefined?divs:[{date:'2026-01-07', amount:2}])});
+  const mkSess=(over)=>({paper:true, id:'t1',
+    settings:{ticker:'SOXL', div:20, target:20, principal:10000, compound:true,
+              reverse:false, big:15, simLast:'2026-01-06', ...(over||{})},
+    hist:[{kind:'1회매수', date:'2026-01-05', price:100, qty:5, ts:1}]});
+
+  /* A. 체결가 계열 · 재투자 — 배당락일에 기록이 생기고 잔금이 는다 */
+  { const sess=mkSess(), r=run(sess, mkQ('trade'));
+    const divs=sess.hist.filter(h=>h.kind==='배당');
+    ok('A 배당 기록이 하나 생긴다', divs.length===1, `${divs.length}건`);
+    ok('A 배당락일에 찍힌다', divs.length===1 && divs[0].date==='2026-01-07',
+       divs.length?divs[0].date:'-');
+    /* 5주 × $2 × (1−0.154) = 8.46 */
+    ok('A 금액 = 주수 × 주당배당 × (1−세율)', divs.length===1 && near(divs[0].amt, 8.46, 1e-6),
+       divs.length?String(divs[0].amt):'-');
+    ok('A 그날 매매는 없다 (배당만 본다)',
+       sess.hist.filter(h=>h.date==='2026-01-07' && h.kind!=='배당').length===0,
+       JSON.stringify(sess.hist.map(h=>h.date+':'+h.kind)));
+    ok('A 반환값이 배당 건수를 알린다', r && r.nDiv===1, r?String(r.nDiv):'null');
+    __strat=sess;
+    const c=computeInf();
+    ok('A 잔금에 들어간다', near(c.bal, 10000-500+8.46, 1e-6), String(c.bal));
+    ok('A 보유·평단·T는 그대로', c.qty===5 && near(c.avg,100,1e-9) && near(c.T,1,1e-9),
+       `${c.qty}주 / ${c.avg} / ${c.T}`); }
+
+  /* A'. 배당이 없는 시세면 아무 것도 안 생긴다 — 같은 경로에서 값이 갈리는지 본다 */
+  { const sess=mkSess(); const r=run(sess, mkQ('trade', []));
+    ok("A' 배당 없는 종목이면 기록도 없다",
+       sess.hist.filter(h=>h.kind==='배당').length===0 && r && r.nDiv===0);
+    __strat=sess;
+    ok("A' 잔금도 그대로", near(computeInf().bal, 9500, 1e-9), String(computeInf().bal)); }
+
+  /* B. 조정 기준이면 안 적는다 — 배당이 이미 가격에 들어 있다 (이중계상) */
+  { const sess=mkSess(); run(sess, mkQ('total_return'));
+    ok('B 조정 기준이면 배당 기록이 없다', sess.hist.filter(h=>h.kind==='배당').length===0); }
+
+  /* C. 현금 수령 모드면 안 적는다 — 계좌 밖으로 나가는 돈이라 분배금 카드가 따로 센다 */
+  { const sess=mkSess({divmode:'cash'}); run(sess, mkQ('trade'));
+    ok('C 현금 수령이면 배당 기록이 없다', sess.hist.filter(h=>h.kind==='배당').length===0); }
+
+  /* D. 안 들고 있으면 안 준다 */
+  { const sess=mkSess(); sess.hist=[];
+    run(sess, mkQ('trade'));
+    ok('D 보유 0주면 배당이 없다', sess.hist.filter(h=>h.kind==='배당').length===0,
+       JSON.stringify(sess.hist.map(h=>h.kind))); }
+
+  /* E. 두 번 돌려도 두 번 적지 않는다 — simLast 가 이미 지난 날을 막는다 */
+  { const sess=mkSess(); run(sess, mkQ('trade')); run(sess, mkQ('trade'));
+    ok('E 다시 돌려도 배당은 한 번뿐', sess.hist.filter(h=>h.kind==='배당').length===1,
+       `${sess.hist.filter(h=>h.kind==='배당').length}건`); }
+
+  /* F. 배당이 그날 매수 여력을 키운다 — '배당을 먼저 넣는다' 가 값으로 드러나는 자리다.
+       평단 100 · 10주 · T=10 · 20분할 → 후반전이라 별지점(=평단 100) 전액 매수.
+       배당락일 종가 98 이니 별지점 주문(99.99)에 닿는다.
+       주문수량은 전일 확정 종가(100) 기준이므로 1회매수금이 100 을 넘어야 1주다:
+         배당 없음  잔금 995     → 995/10 = 99.5   → 0주
+         배당 있음  +16.92=1011.92 → 101.192      → 1주                      */
+  { const O2=[bar('2026-01-05',100), bar('2026-01-06',100), bar('2026-01-07',98)];
+    const Q2=(divs)=>({symbol:'SOXL', ohlc:O2, days:O2.map(d=>({date:d.date,close:d.close})),
+              priceBasis:'trade', dividends:divs});
+    const mk=()=>({paper:true, id:'t2',
+      settings:{ticker:'SOXL', div:20, target:20, principal:1995, compound:true,
+                reverse:false, big:15, simLast:'2026-01-06'},
+      hist:[{kind:'1회매수', date:'2026-01-05', price:100, qty:10, tManual:10, ts:1}]});
+    const buys=h=>h.filter(x=>x.date==='2026-01-07' && /매수/.test(x.kind));
+
+    const s1=mk(); run(s1, Q2([{date:'2026-01-07', amount:2}]));
+    ok('F 배당이 먼저 들어와 그날 1주를 산다', buys(s1.hist).length===1 && buys(s1.hist)[0].qty===1,
+       JSON.stringify(s1.hist.filter(h=>h.date==='2026-01-07').map(h=>h.kind+':'+(h.qty!=null?h.qty:h.amt))));
+    const s2=mk(); run(s2, Q2([]));
+    ok('F 배당이 없으면 못 산다', buys(s2.hist).length===0,
+       JSON.stringify(s2.hist.filter(h=>h.date==='2026-01-07').map(h=>h.kind))); }
 }
 
 console.log(`\n════ 결과: ${pass} PASS / ${fail} FAIL ${fail===0?'— ALL PASS ★':'— 배포 금지, 위 ✗ 항목 수정 필요'} ════`);
