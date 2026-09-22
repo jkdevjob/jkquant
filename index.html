@@ -529,7 +529,7 @@ try{ if(localStorage.getItem('qcockpit_hadUser')==='1') document.documentElement
 </div>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.83.0</span></h1></div>
+    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.83.1</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -1620,7 +1620,7 @@ document.addEventListener('click',function(e){ var m=document.getElementById('jk
   <footer>
     <strong>JK 퀀트</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.83.0</b> · 2026-09-22</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.83.1</b> · 2026-09-22</div>
   </footer>
 </div>
 
@@ -6906,6 +6906,45 @@ function paperRaw(tab, sess){
   return {inflow, total, price, sym, qty, qty1, price1, out:_out,
           k: total - qty*price - qty1*price1};
 }
+/* 모의 성과 목록의 '세션' 칸에 적을 주요 설정 — 종목 뒤에 붙는다.
+   예전엔 세션 이름을 적었는데, 이름은 사람이 손으로 붙이는 것이라 설정과 어긋난다.
+   실제로 '40/10' 이라 이름 붙여 놓고 분할만 바꾼 세션이 있었고, 목록만 보면 알 수 없었다.
+   이름은 툴팁에 남긴다 — 어느 세션인지 확인은 거기서 한다.
+   여기 적는 건 '그 전략을 이 세션답게 만드는 값' 뿐이다. 전부 적으면 못 읽는다. */
+function paperOpts(tab, st){
+  const S0=st||{}, cur=curOf(S0), bits=[];
+  const amt=v=>wnCur(+v||0,cur).replace(/\.00\$$/,'$');   // 10.00$ → 10$ (칸이 좁다)
+  if(tab==='inf'){
+    bits.push(`${+S0.div||20}분할`, `익절 ${+S0.target||20}%`);
+    if(S0.engine==='v50') bits.push('V5.0');
+    if(S0.reverse===true) bits.push('리버스');
+    if(S0.tgtDyn===true)  bits.push('익절 동적');
+    if(S0.compound===false) bits.push('단리');
+  }else if(tab==='vr'){
+    const m=+S0.mode||0.75;
+    bits.push(m===0.75?'적립식':m===0.5?'거치식':'인출식',
+              `밴드 ${+S0.band||15}%`, `G${+S0.g||10}`);
+    if(S0.formula==='skill') bits.push('실력공식');
+  }else if(tab==='ivs'){
+    bits.push(S0.mode==='fix'?'고정 5:5':'역분산 1/σ²', `밴드 ${+S0.band||15}%`,
+              S0.park==='cash'?'달러현금':S0.park==='x1'?'1배수':'단기국채');
+  }else if(tab==='ma'){
+    const L={ma:'200선', cross:'크로스', both:'둘다', either:'하나만'}, c=maCond(S0);
+    bits.push(`매수 ${L[c.buy]||c.buy}`, `매도 ${L[c.sell]||c.sell}`,
+              S0.park==='bill'?'단기국채':'현금');
+  }else if(tab==='dca'){
+    const F={day:'매일', week:'매주', month:'매월'};
+    if(S0.mode==='lump') bits.push('거치식');
+    else { bits.push(`${F[S0.freq]||'매월'} ${amt(S0.amount)}`);
+           if(+S0.dipMul>1) bits.push(`하락 ×${+S0.dipMul}`); }
+    if(S0.reinv===false) bits.push('분배금 현금');
+  }else if(tab==='asap'){
+    bits.push(`base ${amt(S0.base!=null?S0.base:10)}`,
+              `mid ${amt(S0.mid!=null?S0.mid:50)}`,
+              `deep ${amt(S0.deep!=null?S0.deep:100)}`);
+  }
+  return bits;
+}
 function paperStat(tab, sess){
   const h=sess.hist||[]; if(!h.length) return null;
   const box=S[tab]; if(!box) return null;
@@ -6931,7 +6970,7 @@ function paperStat(tab, sess){
        인출 =  나간 돈             ÷ 원금         매도해서 계좌 밖으로 뺀 것
      현재 + 인출 = 최종. 단리 세션은 초과익이 계좌 밖으로 빠지므로 이 셋이 크게 갈린다. */
   const outAmt=(_out&&((_out.saved||0)+(_out.withdrawn||0)))||0;
-  return {tab, id:sess.id, name:sess.name, sym, cur:curOf(st), from, to, yrs, spanDays, inflow:base, total,
+  return {tab, id:sess.id, name:sess.name, opts:paperOpts(tab,st), sym, cur:curOf(st), from, to, yrs, spanDays, inflow:base, total,
     ret:(total/base-1)*100, retNow:((total-outAmt)/base-1)*100, retOut:(outAmt/base)*100,
     cagr:(Math.pow(Math.max(total,1)/base,1/yrs)-1)*100, nTrade, price, out:_out, mdd};
 }
@@ -7045,7 +7084,9 @@ async function openPaper(){
       const outTag = outAmt>0
         ? `<span class="cw" style="color:var(--gold)">${O.simple?'단리 인출':'출금'} ${wnCur(outAmt,r.cur)}</span>`
         : (O.simple ? `<span class="cw" style="color:var(--faint)">단리 · 인출 없음</span>` : '');
-      h+=`<tr><td><b class="slink" onclick="gotoSess('${r.tab}','${r.id}')" title="${r.label} 분석으로 이동">${r.label}</b><span class="cw">${String(r.name).replace(/</g,'&lt;')} · ${r.sym}</span>${outTag}</td>
+      /* 세션 이름은 툴팁으로 — 칸에는 종목과 주요 설정을 적는다 (이름은 설정과 어긋날 수 있다) */
+      const _nm=String(r.name||'').replace(/</g,'&lt;').replace(/"/g,'&quot;');
+      h+=`<tr><td><b class="slink" onclick="gotoSess('${r.tab}','${r.id}')" title="${r.label} 분석으로 이동 — ${_nm}">${r.label}</b><span class="cw">${r.sym}${r.opts&&r.opts.length?' · '+r.opts.join(' · '):''}</span>${outTag}</td>
         <td>${per}<span class="cw">${r.nTrade}거래</span></td>`
         + (ok
           ? `<td>${wnCur(r.total,r.cur)}</td>

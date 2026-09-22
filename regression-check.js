@@ -1283,7 +1283,12 @@ console.log('[25] 모의 성과 → 분석 이동');
   // 여섯 탭 모두 '<탭>-anal' 칩이 있어야 id 찾기가 성립한다
   const chips=(idx.match(/class="chip" data-b="[a-z]+-anal">분석</g)||[]).length;
   ok('여섯 탭 모두 분석 칩이 있다', chips===6, chips+'개');
-  ok('누르는 곳 설명도 분석으로', /title="\$\{r\.label\} 분석으로 이동"/.test(idx));
+  /* 툴팁에는 '어디로 가는지' 와 '어느 세션인지' 가 같이 있어야 한다 —
+     칸에서 세션 이름을 뺐으므로(설정과 어긋날 수 있어서) 이름을 확인할 곳이 여기뿐이다 */
+  ok('누르는 곳 설명도 분석으로', /title="\$\{r\.label\} 분석으로 이동 — \$\{_nm\}"/.test(idx));
+  ok('세션 이름은 툴팁에만 (칸에는 종목·설정)',
+     /const _nm=String\(r\.name\|\|''\)\.replace\(\/<\/g,'&lt;'\)/.test(idx)
+     && /<span class="cw">\$\{r\.sym\}\$\{r\.opts&&r\.opts\.length\?' · '\+r\.opts\.join\(' · '\):''\}<\/span>/.test(idx));
   ok('전략 이름을 누르라고 알려 준다', /<b style="color:var\(--vio\)">전략 이름<\/b>을 누르면/.test(idx));
 }
 
@@ -6579,6 +6584,66 @@ console.log('\n[103] 무매 모의체결 — 실엔진을 굴려 배당 기록�
     const s2=mk(); run(s2, Q2([]));
     ok('F 배당이 없으면 못 산다', buys(s2.hist).length===0,
        JSON.stringify(s2.hist.filter(h=>h.date==='2026-01-07').map(h=>h.kind))); }
+}
+
+/* ════ 104. 모의 성과 '세션' 칸 — 이름 대신 종목·주요 설정 ════
+   이름은 사람이 손으로 붙이는 것이라 설정과 어긋난다. '40/10' 이라 써 놓고 분할만
+   바꾼 세션이 실제로 있었고, 목록만 보면 알 길이 없었다. 설정에서 직접 읽는다. */
+console.log('\n[104] 모의 성과 — 세션 칸에 종목·주요 설정');
+{
+  const po=new Function('curOf','wnCur','maCond',
+    extractFn(idx,'function paperOpts(tab, st)')+'\nreturn paperOpts;')(
+    st=>(/^(?:\d{6}|\d{4}[A-Z]\d)(?:\.K[SQ])?$/.test(String((st||{}).ticker||'').toUpperCase())?'krw':'usd'),
+    (v,cur)=>cur==='krw'?Math.round(+v||0).toLocaleString('en-US')+'₩'
+      :(+v||0).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})+'$',
+    new Function('return '+extractFn(idx,'function maCond(st)')+';')());
+  const j=(t,st)=>po(t,st).join(' · ');
+
+  /* A. 무매 — 분할·익절이 설정에서 나온다 (이름과 무관) */
+  ok('A 무매 기본', j('inf',{ticker:'SOXL',div:40,target:10})==='40분할 · 익절 10%',
+     j('inf',{ticker:'SOXL',div:40,target:10}));
+  ok('A 분할을 바꾸면 따라 바뀐다', j('inf',{ticker:'SOXL',div:20,target:10})==='20분할 · 익절 10%',
+     j('inf',{ticker:'SOXL',div:20,target:10}));
+  ok('A 변형 설정만 덧붙는다',
+     j('inf',{ticker:'SOXL',div:20,target:20,reverse:true,tgtDyn:true,compound:false,engine:'v50'})
+     ==='20분할 · 익절 20% · V5.0 · 리버스 · 익절 동적 · 단리',
+     j('inf',{ticker:'SOXL',div:20,target:20,reverse:true,tgtDyn:true,compound:false,engine:'v50'}));
+  ok('A 기본값이면 안 붙인다', j('inf',{ticker:'SOXL',div:20,target:20,reverse:false,compound:true})
+     ==='20분할 · 익절 20%');
+
+  /* B. VR — 운용 모드가 셋 다 제 이름으로 나온다 */
+  ok('B 적립식', j('vr',{ticker:'TQQQ',mode:0.75,band:15,g:10})==='적립식 · 밴드 15% · G10',
+     j('vr',{ticker:'TQQQ',mode:0.75,band:15,g:10}));
+  ok('B 거치식', /^거치식 /.test(j('vr',{ticker:'TQQQ',mode:0.5,band:15,g:10})));
+  ok('B 인출식', /^인출식 /.test(j('vr',{ticker:'TQQQ',mode:0.25,band:15,g:10})));
+  ok('B 실력공식은 덧붙는다', /실력공식$/.test(j('vr',{ticker:'TQQQ',mode:0.75,band:20,g:8,formula:'skill'})));
+  ok('B 밴드·G도 설정에서', j('vr',{ticker:'TQQQ',mode:0.75,band:20,g:8})==='적립식 · 밴드 20% · G8',
+     j('vr',{ticker:'TQQQ',mode:0.75,band:20,g:8}));
+
+  /* C. 섀넌 · 200일선 · 적립 · ASAP */
+  ok('C 섀넌', j('ivs',{ticker:'TQQQ',mode:'iv',band:15,park:'bill'})==='역분산 1/σ² · 밴드 15% · 단기국채',
+     j('ivs',{ticker:'TQQQ',mode:'iv',band:15,park:'bill'}));
+  ok('C 섀넌 고정·1배수', j('ivs',{ticker:'TQQQ',mode:'fix',band:15,park:'x1'})==='고정 5:5 · 밴드 15% · 1배수');
+  ok('C 200일선', j('ma',{ticker:'SOXL',buy:'ma',sell:'ma',park:'cash'})==='매수 200선 · 매도 200선 · 현금',
+     j('ma',{ticker:'SOXL',buy:'ma',sell:'ma',park:'cash'}));
+  ok('C 200일선 크로스', j('ma',{ticker:'SOXL',buy:'cross',sell:'both',park:'bill'})
+     ==='매수 크로스 · 매도 둘다 · 단기국채');
+  ok('C 적립', j('dca',{ticker:'USD',mode:'dca',amount:10,freq:'day'})==='매일 10$',
+     j('dca',{ticker:'USD',mode:'dca',amount:10,freq:'day'}));
+  ok('C 적립 거치식', j('dca',{ticker:'USD',mode:'lump',amount:10,freq:'day'})==='거치식');
+  ok('C 적립 하락배수', /하락 ×2$/.test(j('dca',{ticker:'USD',mode:'dca',amount:50,freq:'month',dipMul:2})));
+  ok('C ASAP', j('asap',{ticker:'SOXL',base:10,mid:50,deep:100})==='base 10$ · mid 50$ · deep 100$',
+     j('asap',{ticker:'SOXL',base:10,mid:50,deep:100}));
+
+  /* D. 국내 종목이면 원화로 적는다 */
+  ok('D 국내 적립은 원화', j('dca',{ticker:'069500',mode:'dca',amount:10000,freq:'month'})==='매월 10,000₩',
+     j('dca',{ticker:'069500',mode:'dca',amount:10000,freq:'month'}));
+
+  /* E. 세션 이름은 한 글자도 안 들어간다 — 이게 이번 변경의 요점이다 */
+  { const st={ticker:'SOXL',div:40,target:10};
+    ok('E 이름을 넣어도 무시한다', j('inf',{...st,name:'내맘대로이름'})==='40분할 · 익절 10%'); }
+  ok('E 렌더도 r.name 을 칸에 안 쓴다',
+     !/<span class="cw">\$\{String\(r\.name\)/.test(idx));
 }
 
 console.log(`\n════ 결과: ${pass} PASS / ${fail} FAIL ${fail===0?'— ALL PASS ★':'— 배포 금지, 위 ✗ 항목 수정 필요'} ════`);
