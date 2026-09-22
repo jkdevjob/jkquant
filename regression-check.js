@@ -3397,8 +3397,16 @@ console.log('\n[71] same-close 룩어헤드 탐지');
        내려앉아 '거래 없음'이 되는 일이 생겨, 룩어헤드가 없는데도 몇 번 걸린다.
        실측(표준편차·SOXL): 옛 코드 80회 중 33회가 바뀌었고, 고친 뒤는 0회다. */
     const CAP=1e7;
+    /* 정수 주수의 사각지대 — 주문 크기는 오늘 종가로 잡는 게 규약이다(마감 직전 MOC).
+       그래서 목표와 현재가 1주값보다 가깝게 붙어 있는 날에는, 종가를 흔들면 주문이
+       0주에서 1주로(또는 그 반대로) 넘어가며 '거래 건수'가 딱 1 바뀐다. 룩어헤드가
+       아니라 내림의 결과다 — 룩어헤드가 전혀 없는 filter='none' 에서도 400회 중 6회 난다.
+       진짜 룩어헤드는 신호 자체가 바뀌므로 건수가 2 이상 움직인다 —
+       실측(표준편차·SOXL·400회): 고친 코드 0회 / same-close 변이 26~30회.
+       그래서 ±1은 내림 몫으로 보고, 그보다 크게 움직이면 잡는다. */
+    const ROUND_TOL=1;
     const scan=(name, run)=>{
-      const step=Math.floor((D0.length-300)/40)||1;
+      const step=Math.floor((D0.length-300)/80)||1;
       let flips=0, checked=0, first='';
       for(let k=300;k<D0.length;k+=step){
         const d=D0[k], orig=M[T][d].slice(), sub=D0.slice(0,k+1);
@@ -3409,7 +3417,7 @@ console.log('\n[71] same-close 룩어헤드 탐지');
           M[T][d]=[c*m,o,Math.max(h,c*m),Math.min(l,c*m)];
           let v; try{ v=pick(run(sub)); } finally{ M[T][d]=orig.slice(); }
           checked++;
-          if(v!==base){ flips++; if(!first) first=`${d} 종가 ×${m} → ${base}건이 ${v}건으로`; }
+          if(Math.abs(v-base)>ROUND_TOL){ flips++; if(!first) first=`${d} 종가 ×${m} → ${base}건이 ${v}건으로`; }
         }
       }
       ok(`${name} — 오늘 종가가 오늘 거래를 바꾸지 않는다`, checked>0 && flips===0,
@@ -3958,6 +3966,103 @@ console.log('\n[77] 워밍업 결정성 (같은 기간이면 언제 돌리든 �
   ok('재로딩 판정도 워밍업 시작일로 한다', /loadedStart && wStart<loadedStart/.test(bt));
   ok('레버리지 확장도 워밍업 구간까지 덮는다', /buildLevExt\(wanted,\s*wStart\)/.test(bt));
   ok('엔진이 전체 이력을 직접 훑지 않는다', !/Object\.keys\(M\[tkr\]\)\.sort\(\)/.test(bt));
+}
+
+/* ════ 78. 표준편차 200일선 필터 — 풀리면 바로 풀려야 한다 ════  (감사 ④ · 필수시험 A~D)
+   필터의 뜻은 이것뿐이다.
+     nobuy — 하락장 '동안' 추가매수 금지
+     exit  — 하락장 '동안' 현금
+   그런데 옛 코드는 막아 놓고도 prevLv 를 갱신해 버려서, 200선 위로 올라온 뒤에도
+   σ레벨이 바뀌기 전까지 거래가 계속 막혀 있었다. 회복 구간을 통째로 놓치는 버그다.
+   합성 시세로 그 전환을 직접 만들어 값으로 확인한다 —
+   ★ 전환 앞뒤로 레벨이 '같아야' 옛 버그가 드러난다. 레벨이 바뀌면 옛 코드도
+     그 김에 재진입해 버려서 아무 문제 없어 보인다.                                */
+console.log('\n[78] 표준편차 필터 — 하락장이 끝나면 바로 되돌아온다');
+{
+  const T='__STDTEST__';
+  const LVN=40, G=2.5;
+  const dayStr=(i)=>{ const t=new Date(Date.UTC(2020,0,1)); t.setUTCDate(t.getUTCDate()+i);
+    return t.toISOString().slice(0,10); };
+  const install=(px)=>{ const days=px.map((_,i)=>dayStr(i));
+    M[T]={}; days.forEach((d,i)=>{ M[T][d]=[px[i],px[i],px[i],px[i]]; });
+    META[T]={name:'시험용',lev:3,color:'#000'}; return days; };
+  const ind=(px)=>{ const n=px.length;
+    const ma200=Array(n).fill(null); { let s=0; for(let i=0;i<n;i++){ s+=px[i]; if(i>=200)s-=px[i-200]; if(i>=199)ma200[i]=s/200; } }
+    const ma=Array(n).fill(null), sd=Array(n).fill(null);
+    { let s=0,q=0; for(let i=0;i<n;i++){ s+=px[i]; q+=px[i]*px[i];
+        if(i>=LVN){s-=px[i-LVN];q-=px[i-LVN]*px[i-LVN];}
+        if(i>=LVN-1){ const m=s/LVN; ma[i]=m; sd[i]=Math.sqrt(Math.max(0,q/LVN-m*m)); } } }
+    const lv=i=>{ if(ma[i]==null)return null; const c=px[i],m=ma[i],v=sd[i];
+      let L=0; for(const t of [m+2*v,m+v,m,m-v,m-2*v]) if(c<t)L++; return L; };
+    const bear=i=>ma200[i]!=null&&px[i]<ma200[i];
+    return {lv,bear}; };
+  // 거래가 난 날을 그대로 받아 오는 계측판 (엔진 원문에 훅만 넣는다)
+  const traceOf=(days,filter,cap)=>{
+    let src=extractFn(bt,'function runStdev(days,tkr,cap,N,g,filter,costOn)');
+    src=src.replace('sh+=q; cash-=spend+fee; trades++; };','sh+=q; cash-=spend+fee; trades++; __ST.push([__SD,"buy",q]); };')
+           .replace('sh-=q; trades++; };','sh-=q; trades++; __ST.push([__SD,"sell",q]); };')
+           .replace('days.forEach((d,i)=>{ const gx=gi[d], c=cl[gx];','days.forEach((d,i)=>{ const gx=gi[d], c=cl[gx]; __SD=d;');
+    global.__ST=[]; global.__SD='';
+    const f=new Function('return ('+src.replace(/^function \w+\(/,'function (')+')')();
+    const r=f(days,T,cap,LVN,G,filter,false);
+    const tr=global.__ST.slice(); delete global.__ST; delete global.__SD;
+    return {r,tr}; };
+
+  /* ── ① 기울기가 일정한 구간 — 밴드 모양이 그대로라 레벨이 붙박이가 된다 ── */
+  {
+    const N=700, px=[];
+    for(let i=0;i<N;i++) px.push(i<300 ? 100+0.3*i : i<400 ? 190-1.0*(i-300) : 90+0.5*(i-400));
+    const days=install(px), A=ind(px);
+    const flips=[]; for(let i=200;i<N-1;i++) if(A.bear(i)!==A.bear(i+1)) flips.push(i+1);
+    ok('① 합성 시세가 200일선을 아래로 한 번, 위로 한 번 넘는다', flips.length===2,
+       flips.map(i=>i+'일차').join(' '));
+    const down=flips[0], up=flips[1];
+    ok('① 전환 앞뒤 σ레벨이 같다 (같아야 옛 버그가 드러난다)',
+       A.lv(up-2)===A.lv(up) && A.lv(up)===A.lv(up+2), `${A.lv(up-2)} / ${A.lv(up)} / ${A.lv(up+2)}`);
+    const runD=days.slice(230);
+    // 신호는 전일 종가로 만든다 → 200선을 넘은 '다음' 거래일에 손이 나간다. 이틀만 본다.
+    const win=i=>[days[i],days[i+1]];
+    const ex=traceOf(runD,'exit',100000), nb=traceOf(runD,'nobuy',100000);
+    const at=(tr,w,kind)=>tr.filter(x=>w.includes(x[0])&&(!kind||x[1]===kind));
+    ok('① exit — 하락장 동안 판다', ex.tr.some(x=>x[1]==='sell'));
+    ok('① exit — 상승장이 끝나자마자 전량 매도 (bull→bear)',
+       at(ex.tr,win(down),'sell').length>0, JSON.stringify(at(ex.tr,win(down))));
+    ok('① exit — 하락장이 끝나자마자 되산다 (레벨이 그대로여도)',
+       at(ex.tr,win(up),'buy').length>0, JSON.stringify(at(ex.tr,win(up))));
+    ok('① nobuy — 하락장이 끝나자마자 목표비중을 다시 본다',
+       at(nb.tr,win(up)).length>0, JSON.stringify(at(nb.tr,win(up))));
+    for(const f of ['none','nobuy','exit']){ const r=traceOf(runD,f,100000).r;
+      ok(`① ${f} 가 유한한 값을 낸다`, isFinite(r.final)&&r.final>0, String(r.final)); }
+    ok('① 회복 뒤 exit 이 현금에 갇혀 있지 않다', ex.r.endShares>0, `보유 ${ex.r.endShares}주`);
+  }
+
+  /* ── ② 출렁이는 구간 — nobuy 가 하락장에서 '막아 둔' 목표비중을 회복 첫날에 채우는가 ──
+     ①처럼 한 방향으로만 움직이면 회복할 때 레벨이 바뀌어 옛 코드도 어쩌다 되산다.
+     레벨이 오르내리다가 필터가 풀리는 날 '막혔을 때와 같은 레벨'로 돌아오는
+     구간이 있어야 버그가 그대로 드러난다 — 실제 시장의 200선 부근 횡보가 그 모양이다. */
+  {
+    const N=760, px=[];
+    for(let i=0;i<N;i++) px.push(i<260 ? 100+0.30*i : i<330 ? 178-1.4*(i-260)
+      : 80+0.25*(i-330)+24*Math.sin(2*Math.PI*(i-330)/50));
+    const days=install(px), A=ind(px);
+    const ups=[]; for(let i=231;i<N;i++) if(A.bear(i-1)&&!A.bear(i)) ups.push(i);
+    ok('② 출렁이는 시세가 200선 위로 여러 번 올라온다', ups.length>=1, ups.length+'회');
+    const u=434;                       // 레벨이 그대로(1)인 채 필터가 풀리는 날
+    ok('② 그 날 앞뒤 레벨이 같다', A.bear(u-1)&&!A.bear(u)&&A.lv(u-1)===A.lv(u),
+       `bear ${A.bear(u-1)}→${A.bear(u)} · lv ${A.lv(u-1)}→${A.lv(u)}`);
+    const runD=days.slice(230);
+    const nb=traceOf(runD,'nobuy',100000);
+    const t=days[u+1];                 // 전일 신호 규약이라 하루 뒤에 손이 나간다
+    const buy=nb.tr.filter(x=>x[0]===t&&x[1]==='buy');
+    ok('② nobuy — 막아 뒀던 목표비중을 필터가 풀린 첫날에 채운다',
+       buy.length>0, `${t} 거래 ${JSON.stringify(nb.tr.filter(x=>x[0]===t))}`);
+  }
+
+  // 코드 쪽 — 전환을 실제로 상태로 들고 있는가
+  ok('하락장 상태를 따로 들고 있다', /let cash=cap,sh=0,avg=0,prevLv=null,prevBear=false/.test(bt));
+  ok('필터가 풀린 날에는 레벨이 같아도 다시 본다', /const unblocked = filtOn && prevBear && !bear;/.test(bt)
+     && /else if\(lv!==prevLv \|\| unblocked\)/.test(bt));
+  delete M[T]; delete META[T];
 }
 
 console.log(`\n════ 결과: ${pass} PASS / ${fail} FAIL ${fail===0?'— ALL PASS ★':'— 배포 금지, 위 ✗ 항목 수정 필요'} ════`);
