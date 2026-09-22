@@ -143,7 +143,7 @@ th:first-child,td:first-child{text-align:left}
 <body>
 <div class="wrap">
   <div class="top">
-    <div class="brand"><div class="logo">Five Year Plan</div><h1>5년 자산플랜 <span class="ver">v1.7.0</span></h1></div>
+    <div class="brand"><div class="logo">Five Year Plan</div><h1>5년 자산플랜 <span class="ver">v1.7.1</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
       <div class="jkmenu" id="jkmenuWrap">
@@ -233,6 +233,7 @@ th:first-child,td:first-child{text-align:left}
         <div class="guidekpi"><div class="k">종목</div><div class="v">TQQQ</div></div>
         <div class="guidekpi"><div class="k">G / 밴드</div><div class="v">G10 / ±15%</div></div>
         <div class="guidekpi"><div class="k">공식 / Pool</div><div class="v">기본공식 / Pool한도 50%</div></div>
+        <div class="guidekpi"><div class="k">초기 배정</div><div class="v">TQQQ 100 / Pool 0</div><div class="sub">5년 플랜 최적화값 · 오피셜 고정값 아님</div></div>
         <div class="guidekpi"><div class="k">목표비중</div><div class="v" id="tqqqTargetPct">30%</div></div>
       </div>
       <div class="sessionbar">
@@ -505,9 +506,9 @@ function mirrorStrategyTab(metaId,actionsId,meta,html){
 const STAGES={
   1:{title:"STEP 1 · 성장 가속",badge:"GROWTH",desc:"5년 종료시점까지 성장과 생존을 함께 최적화하는 단계",main:[30,20,50],sleeve:"QLD/SGOV 슬리브는 평상시 QLD 60 / SGOV 40. 하락장 기준 SGOV를 30/30/20/20으로 QLD에 투입합니다.",
      checks:["SOXL 무매는 V4.0 20분할·익절20%·복리·리버스 ON·큰수15%를 유지합니다.","TQQQ VR은 거치식·기본공식·G10·밴드15·Pool 사용한도 50%를 사용합니다.","QLD/SGOV 슬리브는 60:40에서 시작하고 하락장 투입은 기준 SGOV의 30/30/20/20으로 운용합니다.","월 추가자금은 세 전략축 중 목표비중 대비 가장 부족한 축에 먼저 배분합니다."]},
-  2:{title:"STEP 2 · 수익 보호",badge:"PROTECT",desc:"번 돈을 일부 잠그기 시작하는 단계",main:[20,15,65],sleeve:"QLD/SGOV 슬리브 50% 중 보호기준은 QLD 30% / SGOV 70%입니다. 즉 전체자산 기준 약 QLD 15% / SGOV 35%.",
+  2:{title:"STEP 2 · 수익 보호",badge:"PROTECT",desc:"번 돈을 일부 잠그기 시작하는 단계",main:[20,15,65],sleeve:"QLD/SGOV 슬리브 65%를 보호축으로 사용합니다. STEP 2에서는 신규자금과 익절금을 우선 SGOV 쪽으로 이동합니다.",
      checks:["SOXL 무매와 TQQQ VR 합산 목표를 35% 수준으로 낮춥니다.","매도·익절로 생긴 현금을 우선 SGOV 보호자금으로 이동합니다.","QLD/SGOV 슬리브를 전체의 65%까지 키웁니다.","목표금액 85% 또는 목표일까지 12개월이 되면 STEP 3으로 넘어갑니다."]},
-  3:{title:"STEP 3 · 전환 준비",badge:"TRANSITION",desc:"마지막 폭락에 목표자산을 잃지 않도록 감속하는 단계",main:[10,5,85],sleeve:"QLD/SGOV 슬리브 70% 중 기준은 QLD 약 20% / SGOV 약 50%입니다. 생활비 12~18개월분을 우선 확보합니다.",
+  3:{title:"STEP 3 · 전환 준비",badge:"TRANSITION",desc:"마지막 폭락에 목표자산을 잃지 않도록 감속하는 단계",main:[10,5,85],sleeve:"QLD/SGOV 슬리브 85%를 전환 준비축으로 사용합니다. 목표일이 가까울수록 SGOV·현금성 비중을 우선 확보합니다.",
      checks:["SOXL 무매와 TQQQ VR 합산 목표를 15% 수준까지 낮춥니다.","최소 12개월치 예정 생활비를 SGOV·현금성 자산으로 확보합니다.","목표금액을 달성했다면 추가 수익보다 보호를 우선합니다.","목표일 또는 목표금액 100% 도달 시 STEP 4 현금흐름 구조로 전환합니다."]},
   4:{title:"STEP 4 · 현금흐름",badge:"INCOME",desc:"자산을 오래 유지하면서 생활비를 만드는 단계",main:[10,0,20],sleeve:"기본 현금흐름 구조: 성장ETF 40% / 인컴 30% / SGOV 20% / SOXL 무매 10%. TQQQ VR은 기본안에서 종료합니다.",
      checks:["성장 ETF 40%는 장기 자산성장과 물가 대응 역할입니다.","커버드콜·인컴 30%는 정기 현금흐름을 담당합니다.","SGOV 20%는 생활비 완충과 급락장 강제매도 방지를 담당합니다.","SOXL 무매 10%는 생활비 주력이 아니라 추가 성장·알파 역할로 제한합니다."]}
@@ -930,7 +931,7 @@ function qldSignal(rows,startDate){
     if(bear&&!used[3]&&cross20){used[3]=true;acts.push('회복 2단계 · 20MA↑50MA · SGOV 기준 20% → QLD');}
     if(bear&&crossUp){acts.push('200MA 회복 · QLD/SGOV를 60:40으로 리밸런싱');bear=false;used=[false,false,false,false];}
     if(i===rows.length-1)lastActs=acts;
-    phase=bear?'하락장 순환 중':'상승장 50:50 유지';
+    phase=bear?'하락장 순환 중':'상승장 60:40 유지';
   }
   const i=rows.length-1,dd=pxs[i]/ath[i]-1;
   return {date:rows[i].date,close:pxs[i],ma200:m200[i],rsi:rs[i],dd:dd*100,phase,acts:lastActs};
