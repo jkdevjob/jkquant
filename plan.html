@@ -470,7 +470,7 @@ async function refreshLive(){
     const actions=[];
     if(inf){
       const r=imOrders(inf,qs.settled.close),c=r.state,st=inf.settings||{};
-      const mmValue=Math.max(0,c.bal)+Math.max(0,c.qty)*qs.settled.close;
+      const mmValue=c.bal+Math.max(0,c.qty)*qs.settled.close;
       setAutoBalanceField('balMM',mmValue,(inf.name||'SOXL')+' · '+qs.settled.date+' 종가 평가');
       $('outsideCashNote').textContent=c.outside>0
         ? '무매 단리·출금으로 전략 밖에 빠진 누계 '+usd(c.outside)+' (단리 자동인출 '+usd(c.saved)+' · 직접출금 '+usd(c.withdrawn)+'). 실제 SGOV에 보관 중이면 SGOV 잔고에 직접 포함하세요.'
@@ -483,7 +483,7 @@ async function refreshLive(){
       $('liveInfMeta').textContent='SOXL 실전 세션 없음';$('liveInf').innerHTML=waitHtml('운영 화면에 SOXL 실전 세션을 먼저 만드세요.');
     }
     if(vr){
-      const r=vrOrders(vr,qv.settled.close),c=r.state,st=vr.settings||{},vrValue=Math.max(0,c.pool)+Math.max(0,c.qty)*qv.settled.close;
+      const r=vrOrders(vr,qv.settled.close),c=r.state,st=vr.settings||{},vrValue=c.pool+Math.max(0,c.qty)*qv.settled.close;
       setAutoBalanceField('balVR',vrValue,(vr.name||'TQQQ VR')+' · '+qv.settled.date+' 종가 평가');
       $('liveVrMeta').textContent=(vr.name||'TQQQ 세션')+' · G'+(st.g||10)+' / ±'+(st.band||15)+'% / '+(st.formula==='skill'?'실력':'기본')+' · V '+usd(c.V)+' · Pool '+usd(c.pool)+' · 운용자산 '+usd(vrValue);
       const immediate=r.orders.filter(o=>o.tag!=='예약'),reserve=r.orders.filter(o=>o.tag==='예약');
@@ -582,6 +582,7 @@ function render(){
   localSave();
 }
 function seed(){
+  if(autoBalanceEnabled()){alert("운영장부 자동연동 중에는 SOXL·TQQQ 실제 운용자산을 임의 비중으로 덮어쓰지 않습니다. 자동연동을 끈 뒤 수동 시뮬레이션에서 사용하세요.");return;}
   const total=Math.max(0,num("balMM")+num("balVR")+num("balQLD")+num("balSGOV"))||30000;
   $("balMM").value=Math.round(total*.33);$("balVR").value=Math.round(total*.33);$("balQLD").value=Math.round(total*.17);$("balSGOV").value=Math.round(total*.17);render();
 }
