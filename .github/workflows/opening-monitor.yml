@@ -2,11 +2,11 @@ name: 시초가 서버 자동감시
 
 # 웹페이지를 열지 않아도 동작한다.
 # 08:55 KST 시작 → 09:31까지 매분 Top100 감시 → 종료 뒤 일일 결과 Telegram + 이력 영구 저장.
-# 서버 계산은 Cloudflare Pages Function이 담당하고 GitHub Actions는 시계/아카이브 역할을 한다.
+# 기준전략은 Telegram 알림 대상이고, shadow 전략은 같은 원본으로 병렬 계산해 연구 기록만 남긴다.
 
 on:
   schedule:
-    - cron: "55 23 * * 0-4"   # 08:55 KST 월~금 (UTC 기준 전날 23:55)
+    - cron: "55 23 * * 0-4"   # 08:55 KST 월~금
   workflow_dispatch:
   push:
     branches: [main]
@@ -34,7 +34,7 @@ jobs:
           ref: scalping-data
           fetch-depth: 0
 
-      - name: 시초가 감시 · 일일 요약 · 이력 저장
+      - name: 시초가 감시 · 그림자전략 · 일일요약 · 이력 저장
         env:
           KEY: ${{ secrets.AUTOTRADE_KEY }}
           BASE: https://jkquant.pages.dev
@@ -49,14 +49,20 @@ jobs:
           archive_daily() {
             DATE=$(TZ=Asia/Seoul date +%F)
             OUT="data/opening-history/$DATE.json"
+            SEND_SUMMARY=1
 
+            # 기존 오늘 파일이 예전 형식이면 shadow 데이터만 백필한다.
             if [ -f "$OUT" ]; then
-              echo "$OUT 이미 저장됨 — Telegram 일일요약 중복 전송도 생략"
-              return 0
+              if jq -e '(.shadowVariants | type) == "array" and (.shadowVariants | length) > 0' "$OUT" >/dev/null 2>&1; then
+                echo "$OUT 기준+shadow 이력 이미 저장됨 — 중복 작업 생략"
+                return 0
+              fi
+              echo "$OUT 기존 기준전략 이력 발견 — shadow 이력 추가 백필"
+              SEND_SUMMARY=0
             fi
 
             mkdir -p data/opening-history
-            echo "[$(TZ=Asia/Seoul date '+%F %T KST')] 오늘 Top100 매매이력 재구성"
+            echo "[$(TZ=Asia/Seoul date '+%F %T KST')] 오늘 Top100 기준+shadow 매매이력 재구성"
 
             READY=0
             for attempt in $(seq 1 12); do
@@ -69,10 +75,10 @@ jobs:
 
               READY=1
               for shard in 0 1 2 3 4; do
-                if ! jq -e '.ok == true and (.trades | type == "array")' "history-$shard.json" >/dev/null 2>&1; then
+                if ! jq -e '.ok == true and (.trades | type == "array") and (.shadowVariants | type == "array")' "history-$shard.json" >/dev/null 2>&1; then
                   READY=0
                   echo "배포 대기/응답 오류 — attempt $attempt, shard $shard"
-                  head -c 180 "history-$shard.json" 2>/dev/null || true
+                  head -c 240 "history-$shard.json" 2>/dev/null || true
                   echo
                   break
                 fi
@@ -87,6 +93,7 @@ jobs:
             fi
 
             GEN=$(TZ=Asia/Seoul date --iso-8601=seconds)
+            TMP="$OUT.tmp"
             jq -s --arg gen "$GEN" '
               {
                 date: .[0].date,
@@ -109,25 +116,52 @@ jobs:
                 },
                 universeChecked: ([.[].universe] | add),
                 errors: ([.[].errors] | add),
-                trades: ([.[].trades[]] | sort_by(.entryTime, .code))
+                trades: ([.[].trades[]] | sort_by(.entryTime, .code)),
+                shadowVariants: (
+                  [.[].shadowVariants[]]
+                  | group_by(.name)
+                  | map({
+                      name: .[0].name,
+                      label: .[0].label,
+                      description: .[0].description,
+                      params: .[0].params,
+                      trades: ([.[].trades[]] | sort_by(.entryTime, .code))
+                    })
+                )
               }
-            ' history-0.json history-1.json history-2.json history-3.json history-4.json > "$OUT"
+            ' history-0.json history-1.json history-2.json history-3.json history-4.json > "$TMP"
+            mv "$TMP" "$OUT"
 
             echo "저장 결과:"
-            jq '{date, universeChecked, errors, tradeCount:(.trades|length), trades}' "$OUT"
+            jq '{
+              date,
+              universeChecked,
+              errors,
+              baselineTrades:(.trades|length),
+              shadow:(.shadowVariants|map({name,label,trades:(.trades|length)}))
+            }' "$OUT"
 
-            # Telegram 일일 요약 — Cloudflare에 저장된 Bot Token을 그대로 사용
-            STATUS=$(curl -sS --max-time 30 -o summary-response.json -w '%{http_code}'               -X POST               -H "x-monitor-key: $KEY"               -H "content-type: application/json"               --data-binary @"$OUT"               "$BASE/api/opening-summary")
-            echo "Telegram 일일요약 HTTP $STATUS: $(cat summary-response.json 2>/dev/null || true)"
+            # 새 날짜의 09:31 일일요약만 전송한다. 기존 파일 shadow 백필 때는 중복 Telegram을 보내지 않는다.
+            STATUS=200
+            if [ "$SEND_SUMMARY" = "1" ]; then
+              STATUS=$(curl -sS --max-time 30 -o summary-response.json -w '%{http_code}'                 -X POST                 -H "x-monitor-key: $KEY"                 -H "content-type: application/json"                 --data-binary @"$OUT"                 "$BASE/api/opening-summary")
+              echo "Telegram 일일요약 HTTP $STATUS: $(cat summary-response.json 2>/dev/null || true)"
+            else
+              echo "기존 날짜 shadow 백필 — Telegram 일일요약 재전송 생략"
+            fi
 
             git config user.name "github-actions[bot]"
             git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
             git add "$OUT"
-            git commit -m "data: opening history $DATE [skip ci]"
+            if git diff --cached --quiet; then
+              echo "이력 변경 없음"
+              return 0
+            fi
+            git commit -m "data: opening baseline+shadow $DATE [skip ci]"
             git pull --rebase origin scalping-data
             git push origin scalping-data
 
-            if [ "$STATUS" != "200" ] || ! jq -e '.ok == true' summary-response.json >/dev/null 2>&1; then
+            if [ "$SEND_SUMMARY" = "1" ] && { [ "$STATUS" != "200" ] || ! jq -e '.ok == true' summary-response.json >/dev/null 2>&1; }; then
               echo "이력은 저장했지만 Telegram 일일요약 전송 실패"
               return 1
             fi
@@ -142,20 +176,19 @@ jobs:
             exit 0
           fi
 
-          # 코드 배포를 장 마감 뒤에 했을 때는 그 push 자체로 오늘 기록을 즉시 백필한다.
+          # 장 마감 뒤 코드 배포(push)가 발생하면 오늘 기준+shadow 이력을 즉시 백필한다.
           if [ "$hm" -gt 931 ]; then
             archive_daily
             exit $?
           fi
 
-          # 장과 무관한 이른 시간 push는 정규 08:55 schedule에 맡긴다.
           if [ "$EVENT" = "push" ] && [ "$hm" -lt 850 ]; then
             echo "장 전 너무 이른 push — 정규 schedule이 08:55에 시작합니다."
             exit 0
           fi
 
           last=""
-          echo "시초가 자동감시 준비"
+          echo "시초가 기준전략 + shadow 자동감시 준비"
 
           while true; do
             raw=$(TZ=Asia/Seoul date +%H%M)
@@ -168,7 +201,7 @@ jobs:
 
             if [ "$hm" -ge 859 ] && [ "$raw" != "$last" ]; then
               last="$raw"
-              echo "[$(TZ=Asia/Seoul date '+%F %T KST')] Top100 스캔"
+              echo "[$(TZ=Asia/Seoul date '+%F %T KST')] Top100 기준+shadow 스캔"
 
               pids=""
               for shard in 0 1 2 3 4; do
