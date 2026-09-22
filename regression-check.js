@@ -3469,5 +3469,111 @@ console.log('\n[71] same-close 룩어헤드 탐지');
      && !/P\.sh-=q; due-=q\*px;/.test(ivsS));
 }
 
+/* ════ 72. 리버스 — 상태머신·별지점·gap 을 네 군데가 같은 규칙으로 쓰는가 ════
+   운영 주문표 ↔ computeInf ↔ 백테 runIM ↔ 여기. 리버스는 규칙이 여럿이라 한 군데만
+   어긋나도 실제 주문이 달라진다. 말이 아니라 거래 시퀀스를 만들어 대조한다. */
+console.log('\n[72] 리버스 — 상태머신·별지점·gap');
+{
+  // ── A. 기본값: 리버스는 꺼져 있고, 꺼진 상태는 '변형'으로 표시된다 ──
+  ok('백테 리버스 기본 OFF', /let imReverse=false;/.test(bt));
+  ok('운영 기본 설정에도 reverse 가 없다(=OFF)', !/reverse:true/.test(idx));
+  ok('꺼진 상태를 V4.0 변형으로 표시한다',
+     /if\(typeof imReverse!=='undefined' && !imReverse\) v\.push\('리버스 OFF'\);/.test(bt)
+     && /function imVariantTag\(tkrs\)/.test(bt));
+  ok('두 머리글이 변형 표시를 읽는다', (bt.match(/imVariantTag\(/g)||[]).length>=3);
+
+  // ── B. 별지점: 직전 5거래일 종가 5개 또는 수동 입력, 그 외엔 주문 금지 ──
+  const csp=extractFn(idx,'function calcStarPoint(c)');
+  ok('별지점에 체결가·전일종가·평단 대체가 없다',
+     !/최근 거래/.test(csp) && !/c\.avg/.test(csp) && !/inputNum\('o_close'\)/.test(csp));
+  ok('종가가 딱 5개일 때만 쓴다', /q5\.length===5/.test(csp) && /reduce\(\(s,d\)=>s\+d\.close,0\)\/5/.test(csp));
+  ok('못 뽑으면 이유를 돌려준다', /return \{val:0, src:'', need:/.test(csp));
+  ok('별지점 없으면 주문을 만들지 않는다',
+     /리버스 별지점 계산 불가/.test(idx) && !/star5\|\|c\.avg/.test(idx));
+  { // 값 확인 — 10,20,30,40,50 → 정확히 30
+    const fn=new Function('$','quoteOf',
+      'return ('+csp.replace(/^function \w+\(/,'function (')+')');
+    const days=[10,20,30,40,50].map((v,i)=>({date:'2026-01-0'+(i+1), close:v}));
+    const noMan=()=>({value:''});
+    const r5=fn(noMan, ()=>({days}))({});
+    ok('종가 5개면 정확히 그 평균', near(r5.val,30,1e-12), String(r5.val));
+    const r4=fn(noMan, ()=>({days:days.slice(1)}))({});
+    ok('4개뿐이면 계산 불가', r4.val===0 && !!r4.need, JSON.stringify(r4));
+    const rMan=fn(()=>({value:'42.5'}), ()=>({days}))({});
+    ok('수동 입력이 우선', near(rMan.val,42.5,1e-12) && rMan.src==='수동 입력');
+  }
+
+  // ── C. 재진입 DAY1 — 실제 시퀀스로 돌려 본다 ──
+  {
+    const st={ticker:'SOXL',div:20,target:20,principal:100000,compound:true,reverse:true};
+    const hist=[]; let n=0;
+    const run=()=>{ __strat={settings:st,hist:[...hist]}; return computeInf(); };
+    const add=(kind,price,qty)=>hist.push({kind,date:'2026-01-'+String(++n).padStart(2,'0'),price,qty});
+    for(let i=0;i<19;i++) add('1회매수',100,50);
+    add('절반매수',100,25);
+    let c=run();
+    ok('C1 소진하면 리버스 1일차', c.reverseActive && c.reverseDay1 && c.revState==='DAY1',
+       `T=${c.T} state=${c.revState}`);
+    add('리버스매도',100,Math.max(1,Math.floor(c.qty/10)));
+    c=run();
+    ok('C2 리버스 거래 뒤엔 1일차가 아니다', c.reverseActive && !c.reverseDay1 && c.revState==='REVERSE', c.revState);
+    add('리버스매도',95,Math.max(1,Math.floor(c.qty/10)));
+    add('1회매수',100,40);                       // 가격 회복 → 일반모드 복귀
+    c=run();
+    ok('C3 일반 거래가 들어오면 일반모드', !c.reverseActive && c.revState==='NORMAL',
+       `state=${c.revState} T=${c.T.toFixed(3)}`);
+    add('1회매수',100,40); add('1회매수',100,40); add('절반매수',100,20);   // 재소진
+    c=run();
+    /* 여기가 핵심 — 예전엔 진입 판정(T>분할−1)과 스트릭 리셋(T≥분할)의 임계가 달라
+       19<T<20 으로 되돌아 들어가면 1일차를 건너뛰었다. T=19.295 가 딱 그 구간이다. */
+    ok('C4 재소진하면 반드시 새 1일차', c.reverseActive && c.reverseDay1 && c.revState==='DAY1',
+       `T=${c.T.toFixed(3)} state=${c.revState} — 19<T<20 구간 재진입`);
+    ok('C4 T가 실제로 그 구간이다', c.T>st.div-1 && c.T<st.div, String(c.T));
+    // 전량매도하면 일반모드로 돌아가고 T=0
+    add('지정가매도',200,c.qty); c=run();
+    ok('C5 전량매도 → 일반모드·T=0', !c.reverseActive && c.revState==='NORMAL' && c.T===0,
+       `state=${c.revState} T=${c.T}`);
+  }
+
+  // ── D. reverseGap — 앱과 백테가 같은 값·같은 식 ──
+  const rg=extractFn(idx,'function revGapOf(st)');
+  ok('앱에 리버스 전용 gap 이 있다', !!rg && /const REV_GAP_DEF=2\.5;/.test(idx));
+  ok('앱이 분할매수 줄간격을 리버스에 쓰지 않는다',
+     !/const bp=star5\*\(1-\(st\.gap\|\|2\.5\)\/100\);/.test(idx)
+     && /const bp=star5\*\(1-revGapOf\(st\)\/100\);/.test(idx));
+  ok('백테에 2.5 하드코딩이 없다', !/star5\*0\.975/.test(bt) && /let imRevGap=2\.5;/.test(bt));
+  ok('백테 두 엔진이 같은 식', (bt.match(/star5\*\(1-\(typeof imRevGap!=='undefined'\?imRevGap:2\.5\)\/100\)/g)||[]).length===2);
+  { // 값으로 대조 — 같은 별지점·같은 gap 이면 매수 기준가가 정확히 같아야 한다
+    const def=(idx.match(/const REV_GAP_DEF=([\d.]+);/)||[])[1];
+    const app=new Function('REV_GAP_DEF','return ('+rg.replace(/^function \w+\(/,'function (')+')')(+def);
+    let bad=null;
+    for(const g of [1,2.5,5]){
+      const a=100*(1-app({revGap:g})/100);
+      const b=100*(1-g/100);                       // 백테 식 (imRevGap=g)
+      if(!near(a,b,1e-12)) bad=`gap ${g}: 앱 ${a} vs 백테 ${b}`;
+    }
+    ok('gap 1·2.5·5 에서 매수 기준가가 같다', !bad, bad||'');
+    ok('설정을 비우면 둘 다 2.5', near(app({}),2.5,1e-12) && near(app({revGap:0}),2.5,1e-12));
+  }
+
+  // ── E. 체결 규약 설명문이 코드와 어긋나지 않는다 ──
+  ok('옛 same-close 문구가 남아 있지 않다',
+     !/그날 <b>종가로 만든 지표<\/b>로 판단해 <b>그날 종가에 체결<\/b>/.test(bt)
+     && !/당일 종가로 만든 지표/.test(bt));
+  ok('현재 규약이 적혀 있다',
+     /<b>전일까지 확정된 지표<\/b>로 신호를 정하고 <b>당일 종가에 체결<\/b>/.test(bt)
+     && /미리 걸어 둔 가격<\/b>이 <b>당일 고가·저가<\/b>/.test(bt));
+
+  // ── 네 군데 대조: 복귀 조건이 앱·백테에서 같은가 ──
+  const rIM=extractFn(bt,'function runIM(days,tkr,cap,divs,targetPct,compound');
+  ok('복귀 조건이 앱·백테 같다 (가격 회복 AND 1회 매수 가능)',
+     /if\(c>avg\*exitMul && \(divs-T\)>=1\)\{ inReverse=false; \}/.test(rIM)
+     && /cl > c2\.avg\*exitMulOf\(st\.target\) && \(st\.div-c2\.T\)>=1/.test(idx));
+  ok('운영 재생기도 진입할 때마다 1일차를 세운다',
+     /if\(revOn && !inRev && \(st\.div-c\.T\)<1 && c\.qty>0\)\{ inRev=true; revDay1=true; \}/.test(idx)
+     && /const day1=revDay1; revDay1=false;/.test(idx));
+  ok('옛 reverseTraded 추론이 사라졌다', !/reverseTraded/.test(idx) && !/inReverseNow/.test(idx));
+}
+
 console.log(`\n════ 결과: ${pass} PASS / ${fail} FAIL ${fail===0?'— ALL PASS ★':'— 배포 금지, 위 ✗ 항목 수정 필요'} ════`);
 process.exit(fail===0?0:1);
