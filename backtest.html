@@ -3436,13 +3436,23 @@ function _ivsWeights(tkr,N,s0){
 function _ivsPair1(tkr, days){
   const u=LEV_UNDERLYING[tkr];
   const D=u?srcOf(u):null;
-  if(D && days && days.length){
+  /* '티커가 실제 ETF 다' 와 '그 가격이 실제 체결가다' 는 다른 말이다.
+     로더 갈래에 따라 그 종목이 조정종가로 들어와 있을 수 있다(예전엔 실제로 그랬다).
+     그런 계열을 '실제 1배 ETF 로 굴림 — 운영 화면과 같은 기초가격' 이라고 적으면
+     화면이 거짓말을 한다. PBASIS 가 'trade' 일 때만 실제로 인정한다. */
+  const basis=(typeof PBASIS!=='undefined')?PBASIS[u]:undefined;
+  if(D && basis==='trade' && days && days.length){
     let full=true;
     for(const d of days){ const r=D[d]; if(!r||!(r[C]>0)){ full=false; break; } }
     if(full){ const px={}; for(const d of dtsOf(u)){ const r=D[d]; if(r&&r[C]>0) px[d]=r[C]; }
-              return {px, sym:u, synth:false}; }
+              return {px, sym:u, synth:false, basis:'trade'}; }
   }
-  return {px:_ivsX1(tkr), sym:u||null, synth:true};
+  /* 왜 합성으로 떨어졌는지 남긴다 — 화면이 이유를 그대로 적을 수 있어야 한다.
+       none   그 종목 시세가 아예 없다
+       basis  시세는 있는데 실제 체결가 계열이 아니다 (조정종가·기준 불명)
+       gap    체결가 계열인데 그 구간에 빠진 날이 있다                            */
+  const why = !D ? 'none' : (basis!=='trade' ? 'basis' : 'gap');
+  return {px:_ivsX1(tkr), sym:u||null, synth:true, basis:basis||null, why};
 }
 function runIVS(days,tkr,cap,s0,N,band,costOn,mode,pair){
   const FIX=(mode==='fix'), X1=(pair==='x1');          // 고정 5:5 · 짝을 1배수로
@@ -3521,7 +3531,8 @@ function runIVS(days,tkr,cap,s0,N,band,costOn,mode,pair){
           timeIn:days.length?daysIn/days.length*100:0, expo:days.length?expoSum/days.length*100:0,
           fees:feesTotal,tax:taxTotal,interest:interestTotal,endCash:cash,endShares:A.sh,
           s0:s0*100,volLen:N,band:band*100,mode:FIX?'fix':'iv',pair:X1?'x1':'cash',
-          x1sym:_p1?_p1.sym:null, x1synth:_p1?_p1.synth:false};
+          x1sym:_p1?_p1.sym:null, x1synth:_p1?_p1.synth:false,
+          x1why:_p1?(_p1.why||null):null, x1basis:_p1?(_p1.basis||null):null};
 }
 
 // 종목비교·전체비교 공용: 각 전략 '탭에서 설정한 옵션값'을 그대로 읽어 실행 (DOM 없으면 기본값 폴백).
@@ -3769,7 +3780,7 @@ function renderIVS(results, days, cap){
     return {ticker:t, color:(META[t]&&META[t].color)||'#888', invested:r.invested, final:r.final, ret:r.ret,
             cagr:cg, mdd:r.mdd, mar:r.mdd>0?cg/r.mdd:0, snap:r.snap,
             expo:r.expo, trades:r.trades, interest:r.interest, tax:r.tax,
-            x1sym:r.x1sym, x1synth:r.x1synth}; });
+            x1sym:r.x1sym, x1synth:r.x1synth, x1why:r.x1why, x1basis:r.x1basis}; });
   rows.sort((a,b)=>b.ret-a.ret);
   const costBadge=`<span style="font-size:11px;color:var(--${ivsCostOn?'gold':'dim'})">· ${ivsCostOn?'세후':'세전'}</span>`;
   const FIX=ivsMode==='fix', X1=ivsPair==='x1';
@@ -3793,7 +3804,9 @@ function renderIVS(results, days, cap){
     h+=`<p class="note" style="font-size:11px;margin-top:6px;line-height:1.7;padding:7px 10px;border-radius:7px;background:var(--surf2);color:${syn.length?'var(--gold)':'var(--dim)'}">`
       +(real.length?`✔ <b>실제 1배 ETF</b>로 굴림 — ${real.map(r=>`${r.ticker}→${r.x1sym||'?'}`).join(' · ')} (운영 화면과 같은 기초가격)`:'')
       +(real.length&&syn.length?'<br>':'')
-      +(syn.length?`⚠ <b>합성 1배 대체 사용</b> — ${syn.map(r=>`${r.ticker}${r.x1sym?'→'+r.x1sym:''}`).join(' · ')}: 그 구간에 실제 1배 ETF 시세가 없어 레버리지에서 역산한 계열로 대체했습니다. <b>운영 화면과 결과가 다를 수 있습니다.</b>`:'')
+      +(syn.length?`⚠ <b>합성 1배 대체 사용</b> — ${syn.map(r=>{
+            const why={none:'시세 없음', basis:`가격 기준이 ${r.x1basis==='total_return'?'조정종가':'불명'} — 실제 체결가가 아님`, gap:'구간에 빠진 날 있음'}[r.x1why]||'사유 불명';
+            return `${r.ticker}${r.x1sym?'→'+r.x1sym:''}(${why})`;}).join(' · ')}: 레버리지에서 역산한 계열로 대체했습니다. <b>운영 화면과 결과가 다를 수 있습니다.</b>`:'')
       +`</p>`;
   }
   h+=`<p class="note" style="font-size:11px;color:var(--dim);margin-top:6px;line-height:1.7">신호는 <b>전일 종가</b>까지의 정보만, 체결은 당일 종가(200로테와 같은 규약) · 예수금은 연도별 T-Bill 실측금리로 일할 이자 · <b>${ivsCostOn?'세후':'세전'}</b> — ${ivsCostOn?`레버리지는 ${_costNote(rows.map(r=>r.ticker))}, <b>예수금도 공짜가 아닙니다</b>: 이자에서 배당소득세 15.4%와 국채ETF 보수 0.10%를 빼고 리밸런싱 때 국채 쪽 매매 수수료도 뭅니다(10년창 중앙 CAGR 기준 TQQQ −0.4%p·SOXL −0.8%p)`:'세금·수수료 미반영'}.</p>`;
@@ -3825,6 +3838,25 @@ function renderASAP(results, days, opt){
 
 
 // ──── RUN ────
+/* 전략이 굴러가려면 어떤 시세가 더 있어야 하는가 — 한 곳에서 판단하고 받아 온다.
+   여기 없는 의존성을 UI 분기 안에 숨겨 두면, 다른 탭에서 조용히 빠진다. */
+function strategyNeeds(st, tickers){
+  const need=new Set();
+  const usesIvsX1 = (st==='ivs'||st==='all') && (typeof ivsPair!=='undefined') && ivsPair==='x1';
+  if(usesIvsX1) for(const t of tickers||[]){ const u=LEV_UNDERLYING[t]; if(u) need.add(u); }
+  return [...need];
+}
+async function prepareStrategyData(st, tickers, fromDate){
+  /* 이미 '실제 체결가' 로 들어와 있으면 다시 안 받는다.
+     조정종가로만 들어와 있으면 다시 받는다 — 그래야 '실제 1배 ETF' 로 인정된다. */
+  const need=strategyNeeds(st, tickers).filter(u=>!M[u]||!Object.keys(M[u]).length||PBASIS[u]!=='trade');
+  if(!need.length) return [];
+  showLoadModal('1배 ETF 시세 받는 중…', need.join(' · ')+' — 운영 화면과 같은 기초가격으로 맞춥니다.');
+  await _paint();
+  try{ for(const u of need) await fetchTickerInto(u, fromDate); }
+  finally{ hideLoadModal(); }
+  return need;
+}
 async function run(){
   const start=document.getElementById('dStart').value;
   const end=document.getElementById('dEnd').value;
@@ -3866,6 +3898,13 @@ async function run(){
   } else { clearLevExt(); LAST_EXT={}; }
   renderLevNote(LAST_EXT);                       // 상세는 결과 맨 아래에
 
+  /* ── 전략이 필요로 하는 데이터를 여기서 한꺼번에 준비한다 ──────────────
+     예전엔 '짝=1배수면 1배 ETF 를 먼저 받아 온다' 가 역분산 탭 분기 안에만 있었다.
+     그래서 같은 옵션인데 전체비교 탭에서는 그 선행 로딩이 없어, 레버리지 확장을
+     꺼 두면 전체비교만 합성 1배로 떨어졌다 — 탭에 따라 결과가 달라졌다.
+     데이터 의존성은 UI 분기가 아니라 한 단계에 모은다. */
+  await prepareStrategyData(strat, wanted, wStart);
+
   if(strat==='asap'){
     if(!asapActive.size){alert('종목을 선택하세요.');return;}
     const opt={base:+document.getElementById('asapBase').value||10,mid:+document.getElementById('asapMid').value||50,deep:+document.getElementById('asapDeep').value||100,costOn:asapCostOn};
@@ -3897,16 +3936,7 @@ async function run(){
     const cap=+document.getElementById('ivsCap').value||10000;
     const {use,skip}=usableTickers(start,end,[...ivsActive]);
     if(!use.length){alert('선택 종목 모두 해당 기간 데이터가 없습니다. 날짜를 확인하세요.');return;}
-    /* 짝=1배수면 '실제로 살 수 있는 1배 ETF' 시세가 있어야 운영 화면과 같은 기초가격이 된다.
-       레버리지 확장을 꺼 두면 이게 안 들어와 합성으로 대체되므로 여기서 직접 받는다. */
-    if(ivsPair==='x1'){
-      const need=[...new Set(use.map(t=>LEV_UNDERLYING[t]).filter(u=>u&&(!M[u]||!Object.keys(M[u]).length)))];
-      if(need.length){
-        showLoadModal('1배 ETF 시세 받는 중…', need.join(' · ')+' — 운영 화면과 같은 기초가격으로 맞춥니다.');
-        await _paint();
-        try{ for(const u of need) await fetchTickerInto(u, wStart); } finally{ hideLoadModal(); }
-      }
-    }
+    // 1배 ETF 선행 로딩은 prepareStrategyData 가 맡는다 (전체비교도 같은 단계를 지난다)
     const days=commonDays(start,end,use);
     if(!shortGuard(days.length)) return;
     const results={};

@@ -4336,10 +4336,27 @@ console.log('\n[80] 역분산 1배 짝 — 운영·백테 기초가격 일치');
   })(), '매핑표 불일치');
   ok('백테가 실제 1배 ETF를 먼저 쓴다', /function _ivsPair1\(tkr, days\)/.test(bt)
      && /const _p1 = X1\?_ivsPair1\(tkr,days\):null;/.test(bt));
-  ok('실제 시세가 없을 때만 합성으로 대체한다', /return \{px:_ivsX1\(tkr\), sym:u\|\|null, synth:true\};/.test(bt));
+  ok('실제 시세가 없을 때만 합성으로 대체한다',
+     /return \{px:_ivsX1\(tkr\), sym:u\|\|null, synth:true, basis:basis\|\|null, why\};/.test(bt));
+  /* 티커가 실제 ETF 인 것과 그 가격이 실제 체결가인 것은 다른 문제다 —
+     조정종가로 들어온 계열을 '운영 화면과 같은 기초가격' 이라고 적으면 안 된다. */
+  ok("가격 기준(PBASIS)까지 봐야 '실제 1배' 로 인정한다",
+     /const basis=\(typeof PBASIS!=='undefined'\)\?PBASIS\[u\]:undefined;/.test(bt)
+     && /if\(D && basis==='trade' && days && days\.length\)\{/.test(bt));
   ok('합성 대체를 결과에 표시한다', /합성 1배 대체 사용/.test(bt) && /x1synth/.test(bt));
+  /* 데이터 의존성은 UI 분기가 아니라 한 단계에 모은다 —
+     역분산 탭 안에만 두면 전체비교 탭에서 조용히 빠진다(실제로 그랬다). */
   ok('1배수 짝이면 실제 1배 시세를 먼저 받아 온다',
-     /if\(ivsPair==='x1'\)\{[\s\S]*?fetchTickerInto\(u, wStart\)/.test(bt));
+     /function prepareStrategyData\(st, tickers, fromDate\)/.test(bt)
+     && /await fetchTickerInto\(u, fromDate\)/.test(bt));
+  ok('역분산과 전체비교가 같은 준비 단계를 지난다', (()=>{
+      const f=(bt.match(/function strategyNeeds\(st, tickers\)\{[\s\S]*?\n\}/)||[''])[0];
+      return /\(st==='ivs'\|\|st==='all'\)/.test(f)
+          && (bt.match(/await prepareStrategyData\(strat, wanted, wStart\);/g)||[]).length===1; })());
+  ok('전략 분기 안에 선행 로딩이 안 남아 있다',
+     !/if\(ivsPair==='x1'\)\{[\s\S]{0,400}?fetchTickerInto/.test(bt));
+  ok('조정종가로만 들어와 있으면 다시 받는다',
+     /PBASIS\[u\]!=='trade'/.test(bt));
 
   /* ── 값으로: 같은 1배 시세를 주면 두 엔진이 같은 날 리밸런싱한다 ── */
   const T=DAYS.SOXL?'SOXL':'TQQQ';
@@ -4349,7 +4366,8 @@ console.log('\n[80] 역분산 1배 짝 — 운영·백테 기초가격 일치');
   { const px={}; let v=50;
     ALL.forEach((d,i)=>{ if(i>0){ const r=M[T][ALL[i]][C]/M[T][ALL[i-1]][C]-1; v*=(1+r/3); }
       px[d]=[v,v,v,v]; });
-    M[U]=px; META[U]={name:'시험용 1배',lev:1,color:'#000'}; }
+    M[U]=px; META[U]={name:'시험용 1배',lev:1,color:'#000'};
+    PBASIS[U]='trade'; }      // 실제 체결가 계열로 들어온 상태 (이게 아니면 합성으로 떨어져야 정상)
   // 매핑표를 시험용으로 갈아끼운다 (원문 함수는 그대로 쓰고 표만 바꾼다)
   const pre0='var levExt=false, EXTM={}, LEV_UNDERLYING={'+T+':"'+U+'"};\n'
     +[...['function srcOf(t)','function _ivsWeights(tkr,N,s0)','function _ivsX1(tkr)',
@@ -4371,6 +4389,14 @@ console.log('\n[80] 역분산 1배 짝 — 운영·백테 기초가격 일치');
   const got=pair1(T, days);
   ok('실제 1배 시세가 다 있으면 합성을 안 쓴다', got.synth===false && got.sym===U,
      `synth=${got.synth} sym=${got.sym}`);
+  /* ★ 같은 티커·같은 시세인데 가격 기준만 바꾼다 — 조정종가면 합성으로 떨어져야 한다 */
+  for(const [pb,lbl] of [['total_return','조정종가'],['unknown','기준 불명'],[undefined,'기준 없음']]){
+    if(pb===undefined) delete PBASIS[U]; else PBASIS[U]=pb;
+    const g=pair1(T, days);
+    ok(`1배가 ${lbl} 로 들어오면 '실제' 라고 안 한다`, g.synth===true && g.why==='basis',
+       `synth=${g.synth} why=${g.why}`);
+  }
+  PBASIS[U]='trade';
 
   // 백테 쪽 리밸런싱 날짜
   let bsrc=extractFn(bt,'function runIVS(days,tkr,cap,s0,N,band,costOn,mode,pair)');
@@ -5094,6 +5120,80 @@ async function levScenario(viaHelper){
   ok('무엇을 먹였는지 확장 정보에 남긴다', /inBasis:bs\.basis\|\|LEV_INPUT_BASIS\[under\]\|\|'unknown'/.test(bt));
   ok("PBASIS 가 세 갈래다 (trade/total_return/unknown)",
      /'trade'\s*\n\s*:\s*\(srcs\.length && srcs\.every\(x=>\/\^yahoo\/\.test\(x\)\)\)\s*\?\s*'total_return'\s*\n\s*:\s*'unknown';/.test(bt));
+}
+
+/* ════ 86. 탭이 달라도 같은 전략은 같은 결과 ════  (3차 감사 ④ · 시험 E)
+   '짝=1배수면 실제 1배 ETF 를 먼저 받아 온다' 가 역분산 탭 분기 안에만 있었다.
+   그래서 레버리지 확장을 꺼 두면 단독 역분산은 실제 1배로, 전체비교는 합성 1배로
+   굴러가 같은 옵션인데 탭에 따라 결과가 달랐다. 데이터 준비를 한 단계로 모았으니
+   이제 둘이 같은 값을 내야 한다 — 값으로 확인한다.                                */
+console.log('\n[86] 단독 역분산 == 전체비교 안의 역분산');
+{
+  const T='__CMPTEST__', U='__CMPX1__';
+  const ALL=DAYS.SOXL?DAYS.SOXL.slice(-900):[];
+  ok('대조에 쓸 데이터가 있다', ALL.length>500, String(ALL.length));
+  if(ALL.length>500){
+    // 레버리지와 그 1배 짝 — 둘 다 '실제 체결가' 로 들어와 있는 상태
+    M[T]={}; M[U]={};
+    { let v=50; ALL.forEach((d,i)=>{ const r=M.SOXL[d][C]/M.SOXL[ALL[Math.max(0,i-1)]][C]-1;
+        const p=M.SOXL[d][C]; M[T][d]=[p,p,+(p*1.01).toFixed(6),+(p*0.99).toFixed(6)];
+        if(i>0) v*=(1+r/3); M[U][d]=[v,v,+(v*1.01).toFixed(6),+(v*0.99).toFixed(6)]; }); }
+    META[T]={name:'시험 3배',lev:3,color:'#000'}; META[U]={name:'시험 1배',lev:1,color:'#000'};
+    PBASIS[T]='trade'; PBASIS[U]='trade'; DIVMAP[T]={}; DIVMAP[U]={};
+
+    const helpers=['function srcOf(t)','function divSplit(tkr, days, buys)','function _maOpt(opt)',
+                   'function _maHold(sell,a,b)','function _maEntry(buy,a,b)','function _maAbove(tkr,N,SHORT,BUY,SELL)',
+                   'function _asapInd(tkr)','function _ivsWeights(tkr,N,s0)','function _ivsX1(tkr)',
+                   'function _ivsPair1(tkr, days)','function totalReturnSeries(t)',
+                   'function _isoWeek(d)','function _dcaFreq(f)','function _dcaHits(days,freq)',
+                   'function _dcaCount(days,freq)','function _dcaMA(t,N)','function runBH(days,tkr,cap,costOn)',
+                   'function runStdev(days,tkr,cap,N,g,filter,costOn)','function runMA200(days,tkr,cap,N,costOn,opt)',
+                   'function runMA200Accum(days,tkr,contribTotal,N,costOn,opt)','function runASAP(days,tkr,opt)',
+                   'function runVR(days,tkr,params)','function runIVS(days,tkr,cap,s0,N,band,costOn,mode,pair)',
+                   'function runIM(days,tkr,cap,divs,targetPct,compound',
+                   'function _runOneStrat(key,tkr,cap,days,costOn)'];
+    /* levExt=false · 짝=1배수 — 감사가 지목한 바로 그 조합 */
+    let pre='var levExt=false, EXTM={}, dcaDipMul=1, maBuy="ma", maSell="ma", maShort=50, maPark="cash",'
+           +' imCostOn=true, imDiv=20, imReverse=false, imTarget=0, imEngine="v40", imTgtDyn=false, imRevGap=2.5,'
+           +' imFill="close", stdN=40, stdG=2.5, stdFilter="none", maLen=200,'
+           +' ivsS0=45, ivsN=60, ivsBand=10, ivsMode="iv", ivsPair="x1", dcaFreq="daily", vrFill="ladder",'
+           +' LEV_UNDERLYING={"'+T+'":"'+U+'"};\n'
+           +'function _stratSeg(id,def){return def;} function _stratNum(id,def){return def;}\n'
+           +'function imTgtFor(t){return 20;} function revSupported(d){return d===20||d===40;}\n';
+    for(const h of helpers){ try{ pre+=extractFn(bt,h)+'\n'; }catch(e){ ok('도우미 추출: '+h, false, e.message); } }
+    for(const re of [/const SGOV_RATE=\{[^}]*\};/, /const MA_COND_LBL=\{[^}]*\};/, /const TBILL_RATE=\{[\s\S]*?\};/,
+                     /const KR_RATE=\{[\s\S]*?\};/, /const parkRate=\(y,tkr\)=>[^\n]*/,
+                     /const LEV_SPREAD=[^\n]*/, /const LEV_EXPENSE=\{[^}]*\};/, /const LEV_EXPENSE_DEF=[^\n]*/,
+                     /const LEV_PRICEIDX=\{[^}]*\};/, /const X1_EXPENSE=\{[^}]*\};/, /const X1_EXPENSE_DEF=[^\n]*/,
+                     /const IDX_EXTEND=\{[\s\S]*?\}\s*\};/, /const VR_CYC_DAYS=\d+;/,
+                     /function vrNextDue\(s\)\{[\s\S]*?\n\}/, /function vrCycleCount\(days\)\{[\s\S]*?\n\}/,
+                     /const IM_OFFICIAL=\{[^}]*\};/]){
+      const m=bt.match(re); if(m) pre+=m[0]+'\n'; }
+    const F=new Function(pre+'return {runIVS,_runOneStrat,_ivsPair1};')();
+    const days=ALL.slice(-700), cap=10000;
+    const solo =F.runIVS(days,T,cap,0.45,60,0.10,true,'iv','x1');
+    const combo=F._runOneStrat('ivs',T,cap,days,true);
+    for(const k of ['final','trades','rebals','mdd','x1sym','x1synth','x1why']){
+      const a=solo[k], b=combo[k];
+      ok(`단독 == 전체비교 · ${k}`, (typeof a==='number')?near(a,b,Math.max(1e-9,Math.abs(a)*1e-12)):a===b,
+         `${a} / ${b}`);
+    }
+    ok('실제 1배 ETF 로 굴렀다 (합성 대체 아님)', solo.x1synth===false && solo.x1sym===U,
+       `synth=${solo.x1synth} sym=${solo.x1sym}`);
+    /* 1배를 조정종가로 바꿔 두면 둘 다 함께 합성으로 떨어져야 한다 —
+       한쪽만 떨어지면 탭에 따라 결과가 갈린다는 뜻이다. */
+    PBASIS[U]='total_return';
+    const solo2 =F.runIVS(days,T,cap,0.45,60,0.10,true,'iv','x1');
+    const combo2=F._runOneStrat('ivs',T,cap,days,true);
+    ok('1배 기준이 바뀌면 둘 다 같이 합성으로 떨어진다',
+       solo2.x1synth===true && combo2.x1synth===true && near(solo2.final,combo2.final,1e-9),
+       `단독 synth=${solo2.x1synth} final=${solo2.final} / 전체비교 synth=${combo2.x1synth} final=${combo2.final}`);
+    ok('합성으로 떨어지면 값이 실제로 달라진다 (이 시험이 살아 있다)',
+       Math.abs(solo2.final-solo.final)>1e-6, `${solo.final} → ${solo2.final}`);
+    PBASIS[U]='trade';
+    delete M[T]; delete M[U]; delete META[T]; delete META[U];
+    delete PBASIS[T]; delete PBASIS[U]; delete DIVMAP[T]; delete DIVMAP[U];
+  }
 }
 
 console.log(`\n════ 결과: ${pass} PASS / ${fail} FAIL ${fail===0?'— ALL PASS ★':'— 배포 금지, 위 ✗ 항목 수정 필요'} ════`);
