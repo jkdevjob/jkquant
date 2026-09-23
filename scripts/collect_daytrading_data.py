@@ -18,6 +18,10 @@ from zoneinfo import ZoneInfo
 BASE=os.environ.get("JKQ_BASE_URL","https://jkquant.pages.dev").rstrip("/")
 KST=ZoneInfo("Asia/Seoul")
 WINDOWS=("105900","125900","145900","152000")
+BENCHMARKS=(
+    ("069500","KODEX 200"),
+    ("229200","KODEX 코스닥150"),
+)
 
 def get_json(path,timeout=90):
     req=urllib.request.Request(BASE+path,headers={"Accept":"application/json","User-Agent":"jkquant-daytrade-collector/1.0"})
@@ -110,8 +114,16 @@ def main():
         print(json.dumps(errors[:20],ensure_ascii=False,indent=2),file=sys.stderr)
         return 2
 
+    benchmarks=[]
+    for code,name in BENCHMARKS:
+        bars,err=collect_symbol(code,compact)
+        benchmarks.append({"code":code,"name":name,"bars":bars})
+        if err:
+            errors.append({"rank":0,"code":code,"error":"benchmark: "+err})
+        print(f"BENCH {code} bars={len(bars)}")
+
     payload={
-        "schema":1,
+        "schema":2,
         "date":date,
         "snapshotAt":src.get("snapshotAt"),
         "snapshotHm":int(src.get("snapshotHm") or 1000),
@@ -120,6 +132,7 @@ def main():
         "collectedAt":datetime.now(KST).isoformat(),
         "successful":success,
         "errors":errors,
+        "benchmarks":benchmarks,
         "universe":out_rows,
     }
     out=Path("data")/"daytrading"/date[:4]/f"{date}.json.gz"
