@@ -7540,10 +7540,10 @@ console.log('\n[117] 5년 플랜 v1.9.1 — 두 경로 기본값 · VR 초기 �
      && /VR Skill은 5년 최적화용 커스텀 변형/.test(pl));
 
   const usd=v=>'$'+Math.round(v||0), FEE=.0025;
-  const calcVrState=new Function('return ('+extractFn(pl,'function calcVrState(sess)').replace(/^function [\\w$]+\\(/,'function (')+')')();
+  const calcVrState=new Function('return ('+extractFn(pl,'function calcVrState(sess)').replace(/^function calcVrState\(/,'function (')+')')();
   const vrOrders=new Function('FEE','usd','calcVrState',
     'function nextVrDate(s){return s;} function vrCycleStart(c){return null;} return ('+
-    extractFn(pl,'function vrOrders(sess,price)').replace(/^function [\\w$]+\\(/,'function (')+')')(FEE,usd,calcVrState);
+    extractFn(pl,'function vrOrders(sess,price)').replace(/^function vrOrders\(/,'function (')+')')(FEE,usd,calcVrState);
   const st={ticker:'TECL',mode:.5,formula:'skill',g:150,initAmt:1000,add:0,band:40,startv:0,startpool:100,
             planTotalCapital:1100,planInitStockPct:90,planPresetVersion:3};
   const ord=vrOrders({settings:st,hist:[]},333).orders;
