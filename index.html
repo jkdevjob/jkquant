@@ -529,7 +529,7 @@ try{ if(localStorage.getItem('qcockpit_hadUser')==='1') document.documentElement
 </div>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.85.0</span></h1></div>
+    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.85.1</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -944,7 +944,7 @@ document.addEventListener('click',function(e){ var m=document.getElementById('jk
         <div class="rowline" style="margin-top:4px"><span class="k">현재 수익률 <span class="sub">평가금 + Pool</span></span><span class="val mono" id="vc_ret_now">—</span></div>
         <div class="rowline"><span class="k">실현 수익률 <span class="sub">매도 + 받은 분배금</span></span><span class="val mono" id="vc_ret_real">—</span></div>
         <div class="rowline"><span class="k">누적 수익률 <span class="sub">인출 포함</span></span><span class="val mono" id="vc_ret">—</span></div>
-        <div class="rowline" id="vc_divrow" style="display:none"><span class="k">받은 분배금 <span class="sub">Pool에 남아 있다</span></span><span class="val mono" id="vc_div">—</span></div>
+        <div class="rowline" id="vc_divrow" style="display:none"><span class="k">받은 분배금 <span class="sub">Pool에 남아 있다 · 세후</span></span><span class="val mono" id="vc_div">—</span></div>
         <div class="rowline" style="margin-top:4px"><span class="k">총 매수 / 매도</span><span class="val mono" id="vc_buysell">0$ / 0$</span></div>
         <div class="rowline"><span class="k">명목평단 <span class="hint" style="color:var(--faint)">총매수/수량</span></span><span class="val mono" id="vc_avgnom">—</span></div>
         <div class="rowline"><span class="k">실효평단 <span class="hint" style="color:var(--faint)">(매수−매도−배당)/수량</span></span><span class="val mono" id="vc_avgeff">—</span></div></div>
@@ -1415,8 +1415,8 @@ document.addEventListener('click',function(e){ var m=document.getElementById('jk
         <div class="ar"><span class="ak">평균 단가</span><span class="av" id="dcacct_avg">—</span></div>
         <div class="ar"><span class="ak" id="dcacct_close_k">종가</span><span class="av" id="dcacct_close">—</span></div>
         <div class="ar"><span class="ak">평가금 <span class="sub">주식만</span></span><span class="av" id="dcacct_eval">0$</span></div>
-        <div class="ar" id="dcacct_divrow" style="display:none"><span class="ak">받은 분배금 <span class="sub" id="dcacct_div_sub">누적</span></span><span class="av buy" id="dcacct_div">0$</span></div>
-        <div class="ar" id="dcacct_totrow" style="display:none"><span class="ak">총자산 <span class="sub">주식 + 분배금</span></span><span class="av vio" id="dcacct_tot">0$</span></div>
+        <div class="ar" id="dcacct_divrow" style="display:none"><span class="ak">받은 분배금 <span class="sub" id="dcacct_div_sub">누적 · 세전</span></span><span class="av buy" id="dcacct_div">0$</span></div>
+        <div class="ar" id="dcacct_totrow" style="display:none"><span class="ak">총자산 <span class="sub">주식 + 분배금(세전)</span></span><span class="av vio" id="dcacct_tot">0$</span></div>
         <div class="ar" id="dcacct_pricerow" style="display:none"><span class="ak">가격 수익률 <span class="sub">분배금 제외</span></span><span class="av" id="dcacct_priceret">—</span></div>
         <div class="ar"><span class="ak">적립 횟수 <span class="sub">2배 적립 포함</span></span><span class="av buy" id="dcacct_n">0회</span></div>
       </div>
@@ -1457,8 +1457,8 @@ document.addEventListener('click',function(e){ var m=document.getElementById('jk
       <div class="card"><h3><span class="dot"></span>요약</h3>
         <div class="rowline"><span class="k">총 자산 <span class="sub" id="anaD_total_sub">주식 평가</span></span><span class="val mono" id="anaD_total">0$</span></div>
         <div class="rowline"><span class="k">현재 수익률 <span class="sub">주식만 · 분배금 제외</span></span><span class="val mono" id="anaD_ret_now">—</span></div>
-        <div class="rowline"><span class="k">실현 수익률 <span class="sub">현금으로 받은 분배금</span></span><span class="val mono" id="anaD_ret_real">—</span></div>
-        <div class="rowline"><span class="k">누적 수익률 <span class="sub">분배금 포함</span></span><span class="val mono" id="anaD_ret">—</span></div>
+        <div class="rowline"><span class="k">실현 수익률 <span class="sub">현금으로 받은 분배금 · 세전</span></span><span class="val mono" id="anaD_ret_real">—</span></div>
+        <div class="rowline"><span class="k">누적 수익률 <span class="sub">분배금(세전) 포함</span></span><span class="val mono" id="anaD_ret">—</span></div>
         <div class="rowline"><span class="k">현재 평단</span><span class="val mono" id="anaD_avg">—</span></div>
         <div class="rowline"><span class="k">보유수량</span><span class="val mono" id="anaD_qty">0주</span></div>
         <div class="rowline"><span class="k">매수 횟수</span><span class="val mono" id="anaD_0">—</span></div>
@@ -1623,7 +1623,7 @@ document.addEventListener('click',function(e){ var m=document.getElementById('jk
   <footer>
     <strong>JK 퀀트</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.85.0</b> · 2026-09-23</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.85.1</b> · 2026-09-23</div>
   </footer>
 </div>
 
@@ -1644,7 +1644,7 @@ document.addEventListener('click',function(e){ var m=document.getElementById('jk
   <div id="set_inf">
     <div class="seclabel">종목 (티커) <span class="hint" style="color:var(--faint);font-weight:500">6자리 코드면 국내 — 통화가 원화로 바뀝니다</span></div><div class="field tkwrap" style="margin:0 0 8px"><input id="set_ticker_in" type="text" autocomplete="off" spellcheck="false" placeholder="티커를 입력하세요 — 예: SOXL, TQQQ, 423920" oninput="tkSearch('set_ticker_in')" onfocus="tkSearch('set_ticker_in')" onblur="tkBlur('set_ticker_in')" onchange="onInfTickerChange()"><div class="tklist" id="set_ticker_in_list"></div></div>
     <p class="note" style="margin:-2px 0 8px">TQQQ·SOXL만 라오어 공식. <b>TECL·KORU는 비공식</b>(자체 백테스트). 종목을 고르면 <b>검정으로 확인된 권장 엔진·파라미터가 자동 적용</b>됩니다. 익절%를 바꾸면 별지점·리버스 복귀조건도 함께 바뀝니다.</p>
-    <div class="seclabel">분배금 <span class="hint" style="color:var(--faint);font-weight:500">현금 수령은 단리 인출과 같은 취급</span></div><div class="seg" id="set_infdivmode"><button data-v="reinv" class="on">재투자</button><button data-v="cash">현금 수령</button></div>
+    <div class="seclabel">분배금 <span class="hint" style="color:var(--faint);font-weight:500">현금 수령은 단리 인출과 같은 취급 · 금액은 세전 추정 (재투자는 장부에 세후로 기록)</span></div><div class="seg" id="set_infdivmode"><button data-v="reinv" class="on">재투자</button><button data-v="cash">현금 수령</button></div>
     <div class="seclabel">분할 수</div><div class="seg" id="set_div" onclick="onDivChange()"><button data-v="10">10분할</button><button data-v="20">20분할</button><button data-v="30">30분할</button><button data-v="40">40분할</button></div>
     <div id="set_rev_note" style="font-size:11px;color:var(--gold);margin:-4px 0 6px"></div>
     <div class="seclabel">익절금 처리 <span class="hint" style="color:var(--faint);font-weight:500">사이클이 끝났을 때</span></div>
@@ -1675,7 +1675,7 @@ document.addEventListener('click',function(e){ var m=document.getElementById('jk
   </div>
   <div id="set_vr" style="display:none">
     <div class="seclabel">종목 (티커) <span class="hint" style="color:var(--faint);font-weight:500">6자리 코드면 국내 — 통화가 원화로 바뀝니다</span></div><div class="field tkwrap" style="margin:0 0 8px"><input id="set_vticker" type="text" autocomplete="off" spellcheck="false" placeholder="티커를 입력하세요 — 예: TQQQ, SOXL" oninput="tkSearch('set_vticker')" onfocus="tkSearch('set_vticker')" onblur="tkBlur('set_vticker')"><div class="tklist" id="set_vticker_list"></div></div>
-    <div class="seclabel">분배금 <span class="hint" style="color:var(--faint);font-weight:500">현금 수령은 단리 인출과 같은 취급</span></div><div class="seg" id="set_vrdivmode"><button data-v="reinv" class="on">재투자</button><button data-v="cash">현금 수령</button></div>
+    <div class="seclabel">분배금 <span class="hint" style="color:var(--faint);font-weight:500">현금 수령은 단리 인출과 같은 취급 · 금액은 세전 추정 (재투자는 장부에 세후로 기록)</span></div><div class="seg" id="set_vrdivmode"><button data-v="reinv" class="on">재투자</button><button data-v="cash">현금 수령</button></div>
     <div class="seclabel">운용 모드</div><div class="seg" id="set_vmode"><button data-v="0.75">적립식</button><button data-v="0.5">거치식</button><button data-v="0.25">인출식</button></div>
     <div class="seclabel">체결 모델 <span class="hint" style="color:var(--faint);font-weight:500">밴드를 벗어났을 때 얼마나 움직이나</span></div>
     <div class="seg" id="set_vmodel">
@@ -1692,7 +1692,7 @@ document.addEventListener('click',function(e){ var m=document.getElementById('jk
     <div class="field"><label id="set_startpool_lbl" data-tk="set_vticker">시작 Pool ($)</label><input id="set_startpool" type="text" inputmode="decimal" value="0" oninput="commaInput(this)"></div>
   </div>
   <div id="set_ivs" style="display:none">
-    <div class="seclabel">분배금 <span class="hint" style="color:var(--faint);font-weight:500">현금 수령은 단리 인출과 같은 취급</span></div><div class="seg" id="set_ivsdivmode"><button data-v="reinv" class="on">재투자</button><button data-v="cash">현금 수령</button></div>
+    <div class="seclabel">분배금 <span class="hint" style="color:var(--faint);font-weight:500">현금 수령은 단리 인출과 같은 취급 · 금액은 세전 추정 (재투자는 장부에 세후로 기록)</span></div><div class="seg" id="set_ivsdivmode"><button data-v="reinv" class="on">재투자</button><button data-v="cash">현금 수령</button></div>
     <div class="seclabel">종목 (티커) <span class="hint" style="color:var(--faint);font-weight:500">6자리 코드면 국내 — 통화가 원화로 바뀝니다</span></div>
 <div class="field tkwrap" style="margin:0 0 8px"><input id="set_ivsticker_in" type="text" autocomplete="off" spellcheck="false" placeholder="티커를 입력하세요 — 예: TQQQ, SOXL" oninput="tkSearch('set_ivsticker_in')" onfocus="tkSearch('set_ivsticker_in')" onblur="tkBlur('set_ivsticker_in')"><div class="tklist" id="set_ivsticker_in_list"></div></div>
     <p class="note" style="margin:4px 0 8px">변동성은 <b>레버리지 ETF 자체</b>의 수익률로 계산합니다(합성 1배지수 아님). KORU는 백테상 손실확률 68%라 권하지 않습니다.</p>
@@ -1723,7 +1723,7 @@ document.addEventListener('click',function(e){ var m=document.getElementById('jk
   </div>
 
   <div id="set_ma" style="display:none">
-    <div class="seclabel">분배금 <span class="hint" style="color:var(--faint);font-weight:500">현금 수령은 단리 인출과 같은 취급</span></div><div class="seg" id="set_madivmode"><button data-v="reinv" class="on">재투자</button><button data-v="cash">현금 수령</button></div>
+    <div class="seclabel">분배금 <span class="hint" style="color:var(--faint);font-weight:500">현금 수령은 단리 인출과 같은 취급 · 금액은 세전 추정 (재투자는 장부에 세후로 기록)</span></div><div class="seg" id="set_madivmode"><button data-v="reinv" class="on">재투자</button><button data-v="cash">현금 수령</button></div>
     <div class="seclabel">종목 (티커) <span class="hint" style="color:var(--faint);font-weight:500">6자리 코드면 국내 — 통화가 원화로 바뀝니다</span></div>
 <div class="field tkwrap" style="margin:0 0 8px"><input id="set_maticker_in" type="text" autocomplete="off" spellcheck="false" placeholder="티커를 입력하세요 — 예: SOXL, TQQQ" oninput="tkSearch('set_maticker_in')" onfocus="tkSearch('set_maticker_in')" onblur="tkBlur('set_maticker_in')"><div class="tklist" id="set_maticker_in_list"></div></div>
     <p class="note" style="margin:4px 0 8px">합성 1배지수는 종목 배수로 자동 복원됩니다 (SOXL·TECL·TQQQ·KORU=3배, USD·QLD=2배).</p>
@@ -1761,7 +1761,7 @@ document.addEventListener('click',function(e){ var m=document.getElementById('jk
     <div class="field"><label id="set_dcaamt_lbl" data-tk="set_dcaticker_in">1회 적립액 ($) <span class="hint">배수 1배일 때 금액</span></label><input id="set_dcaamt" type="text" inputmode="decimal" value="10" oninput="commaInput(this)"></div>
     <div class="seclabel">분배금(배당) 처리</div>
     <div class="seg" id="set_dcareinv"><button data-v="cash">현금 수령</button><button data-v="reinv" class="on">재투자</button></div>
-    <p class="note" style="margin:4px 0 8px">배당·분배가 있는 종목이면 자동으로 잡힙니다. <b>현금 수령</b>은 받은 분배금을 따로 쌓아 총자산에 더하고, <b>재투자</b>는 배당락일 종가로 다시 삽니다.</p>
+    <p class="note" style="margin:4px 0 8px">배당·분배가 있는 종목이면 자동으로 잡힙니다. <b>현금 수령</b>은 받은 분배금을 따로 쌓아 총자산에 더하고, <b>재투자</b>는 배당락일 종가로 다시 삽니다. 분배금은 <b>세전</b> 금액으로 셉니다.</p>
     <div id="set_dcaonly2">
     <div class="seclabel">하락 시 배수 <span class="hint" style="color:var(--faint);font-weight:500">종가 ≤ 200일선</span></div>
     <div class="seg" id="set_dcamul"><button data-v="1" class="on">없음(1배)</button><button data-v="1.5">1.5배</button><button data-v="2">2배</button><button data-v="3">3배</button></div>
@@ -1769,7 +1769,7 @@ document.addEventListener('click',function(e){ var m=document.getElementById('jk
     </div>
   </div>
   <div id="set_asap" style="display:none">
-    <div class="seclabel">분배금 <span class="hint" style="color:var(--faint);font-weight:500">현금 수령은 단리 인출과 같은 취급</span></div><div class="seg" id="set_asapdivmode"><button data-v="reinv" class="on">재투자</button><button data-v="cash">현금 수령</button></div>
+    <div class="seclabel">분배금 <span class="hint" style="color:var(--faint);font-weight:500">현금 수령은 단리 인출과 같은 취급 · 금액은 세전 추정 (재투자는 장부에 세후로 기록)</span></div><div class="seg" id="set_asapdivmode"><button data-v="reinv" class="on">재투자</button><button data-v="cash">현금 수령</button></div>
     <div class="seclabel">종목 (티커) <span class="hint" style="color:var(--faint);font-weight:500">6자리 코드면 국내 — 통화가 원화로 바뀝니다</span></div>
 <div class="field tkwrap" style="margin:0 0 8px"><input id="set_asapticker_in" type="text" autocomplete="off" spellcheck="false" placeholder="티커를 입력하세요 — 예: SOXL, TQQQ" oninput="tkSearch('set_asapticker_in')" onfocus="tkSearch('set_asapticker_in')" onblur="tkBlur('set_asapticker_in')"><div class="tklist" id="set_asapticker_in_list"></div></div>
     <p class="note" style="margin:4px 0 8px">ASAP는 SOXL 기준으로 설계됐지만 어떤 레버리지든 200일선·RSI 규칙으로 동작합니다.</p>
@@ -3194,8 +3194,8 @@ function renderInfAnal(){
     const fl=_dv.flows||[], fLast=(fl[fl.length-1]||{}).date||'', hLast=hd[hd.length-1]||'';
     paintCashFlow('a', {flows:fl, base:+st.principal||0, isKrw:isKrwSt(st),
       from:hd[0]||(fl[0]||{}).date, to:(fLast>hLast?fLast:hLast),
-      title:'분배금 현금 수입 <span class="sub" style="font-weight:400">시세 기준 추정</span>',
-      outK:'수령', outSub:'계좌 밖으로 받은 분배금', lastK:'마지막 수령',
+      title:'분배금 현금 수입 <span class="sub" style="font-weight:400">세전 · 시세 기준 추정</span>',
+      outK:'수령', outSub:'계좌 밖으로 받은 분배금 · 세전', lastK:'마지막 수령',
       show:fl.length>0}); }
   renderInfBreak(c);
   $('a_realized').textContent=(c.realized>=0?'+':'')+wn(c.realized);
@@ -4192,10 +4192,10 @@ function renderVrAnal(){
   { const _d2=sessDivCash(st, c.hist, ()=>renderVrAnal());
     const tot=(c.totdiv||0)+_d2.divCash, r=$('vc_divrow'), v=$('vc_div');
     if(r) r.style.display=(tot>0)?'':'none';
-    if(v&&tot>0){ v.textContent=wn(tot)+(_d2.divCash>0?' (추정 포함)':'');
+    if(v&&tot>0){ v.textContent=wn(tot)+(_d2.divCash>0?' (세전 추정 포함)':'');
       v.style.color='var(--buy)';
       const k=v.previousElementSibling&&v.previousElementSibling.querySelector('.sub');
-      if(k) k.textContent=_d2.divCash>0?'현금 수령 — 계좌 밖으로 나갔다':'Pool에 남아 있다'; } }
+      if(k) k.textContent=_d2.divCash>0?'현금 수령 — 계좌 밖으로 나갔다 · 세전 추정':'Pool에 남아 있다 · 세후'; } }
   /* 인출·적립은 계좌 밖 돈의 오고감이다 — 무매 단리와 같은 카드로 보여준다.
      인출식(mode 0.25)이 본질인 전략인데 지금까지 월별로 볼 화면이 없었다. */
   { const _dv=sessDivCash(st, c.hist, ()=>renderVrAnal());
@@ -4205,7 +4205,7 @@ function renderVrAnal(){
       from:hd[0]||(fl[0]||{}).date, to:hd[hd.length-1]||(fl[fl.length-1]||{}).date,
       title:'현금 흐름', outK:'인출', outSub:'Pool에서 빼낸 돈',
       kinds:[{k:'wd', label:'인출', sub:'Pool에서 빼낸 돈'},
-             {k:'div', label:'분배금', sub:'현금으로 받은 것 · 시세 기준 추정'}],
+             {k:'div', label:'분배금', sub:'현금으로 받은 것 · 세전 · 시세 기준 추정'}],
       inK:'적립', inSub:'Pool에 더 넣은 돈', lastK:'마지막 인출',
       show:fl.length>0}); }
 
@@ -4699,8 +4699,8 @@ function renderMaAnal(){
     const hd=h.filter(x=>x&&x.date).map(x=>x.date).sort(), fl=_dv.flows||[];
     paintCashFlow('ana', {flows:fl, base:principal, isKrw:isKrwSt(st),
       from:hd[0]||(fl[0]||{}).date, to:(fl[fl.length-1]||{}).date||hd[hd.length-1],
-      title:'분배금 현금 수입 <span class="sub" style="font-weight:400">시세 기준 추정</span>',
-      outK:'수령', outSub:'계좌 밖으로 받은 분배금', lastK:'마지막 수령',
+      title:'분배금 현금 수입 <span class="sub" style="font-weight:400">세전 · 시세 기준 추정</span>',
+      outK:'수령', outSub:'계좌 밖으로 받은 분배금 · 세전', lastK:'마지막 수령',
       show:fl.length>0}); }
 }
 /* ── 섀넌 분석 (무매 분석과 같은 구성) ── */
@@ -4758,7 +4758,7 @@ function renderIvsAnal(){
       from:hd[0]||(fl[0]||{}).date, to:hd[hd.length-1]||(fl[fl.length-1]||{}).date,
       title:'현금 흐름', outK:'출금', outSub:'계좌에서 빼낸 돈',
       kinds:[{k:'wd', label:'출금', sub:'계좌에서 빼낸 돈'},
-             {k:'div', label:'분배금', sub:'현금으로 받은 것 · 시세 기준 추정'}],
+             {k:'div', label:'분배금', sub:'현금으로 받은 것 · 세전 · 시세 기준 추정'}],
       inK:'입금', inSub:'계좌에 더 넣은 돈', lastK:'마지막 출금',
       show:fl.length>0}); }
 }
@@ -5425,7 +5425,7 @@ function renderDcaNow(){
     ['dcacct_divrow','dcacct_totrow','dcacct_pricerow'].forEach(id=>{const e=$(id); if(e) e.style.display=has?'':'none';});
     if(has){
       $('dcacct_div').textContent=px(p.divCash);
-      $('dcacct_div_sub').textContent=p.reinv?`${p.nDiv}회 · 재투자 ${nfix(p.divShares,4)}주`:`${p.nDiv}회 수령`;
+      $('dcacct_div_sub').textContent=(p.reinv?`${p.nDiv}회 · 재투자 ${nfix(p.divShares,4)}주`:`${p.nDiv}회 수령`)+' · 세전';
       if(c.ready){
         $('dcacct_tot').textContent=px(c.total);
         const pr=c.retPrice;
@@ -5662,7 +5662,7 @@ function renderDcaAnal(){
     const hLast=hd[hd.length-1]||'', fLast=(fl[fl.length-1]||{}).date||'';
     paintCashFlow('anaD', {flows:fl, base:P.inv, isKrw:isKrwSt(c.st),
       from:hd[0]||(fl[0]||{}).date, to:(fLast>hLast?fLast:hLast),
-      title:'분배금 현금 수입', outK:'수령', outSub:'계좌 밖으로 받은 분배금',
+      title:'분배금 현금 수입 <span class="sub" style="font-weight:400">세전</span>', outK:'수령', outSub:'계좌 밖으로 받은 분배금 · 세전',
       lastK:'마지막 수령', show:cash>0}); }
 }
 function renderAsapAnal(){
@@ -5687,8 +5687,8 @@ function renderAsapAnal(){
     const hd=h.filter(x=>x&&x.date).map(x=>x.date).sort(), fl=_dv.flows||[];
     paintCashFlow('anaA', {flows:fl, base:inv, isKrw:isKrwSt(c.st),
       from:hd[0]||(fl[0]||{}).date, to:(fl[fl.length-1]||{}).date||hd[hd.length-1],
-      title:'분배금 현금 수입 <span class="sub" style="font-weight:400">시세 기준 추정</span>',
-      outK:'수령', outSub:'계좌 밖으로 받은 분배금', lastK:'마지막 수령',
+      title:'분배금 현금 수입 <span class="sub" style="font-weight:400">세전 · 시세 기준 추정</span>',
+      outK:'수령', outSub:'계좌 밖으로 받은 분배금 · 세전', lastK:'마지막 수령',
       show:fl.length>0}); }
 }
 function refreshDca(){
@@ -7256,7 +7256,7 @@ async function openPaper(){
         + `<td style="color:var(--dim)">${wnCur(r.inflow,r.cur)}</td></tr>`; });
     h+=`</table></div>`;
     if(!cur) h+=`<p class="note" style="margin-top:8px;color:var(--gold)">⚠ 시세를 못 받은 세션이 있습니다. 그 줄은 수익률을 비워 뒀습니다 — 해당 탭을 한 번 열면 채워집니다.</p>`;
-    h+=`<p class="note" style="margin-top:8px"><b style="color:var(--vio)">전략 이름</b>을 누르면 그 세션의 분석으로 갑니다. · 평가 = 보유 평가금 + 현금 + 계좌 밖으로 뺀 돈(출금·단리 인출) · 투입 = 밖에서 넣은 돈(원금·적립·입금) · <b>MDD</b> = 하루하루 <b>총자산 ÷ 그때까지 넣은 돈</b>의 고점 대비 최대 낙폭(적립금이 상승으로 잡히지 않게 투입으로 나눠 잽니다). 수수료는 전략별 재생 규약을 따르고 <b>양도세는 넣지 않았습니다</b>.</p>`;
+    h+=`<p class="note" style="margin-top:8px"><b style="color:var(--vio)">전략 이름</b>을 누르면 그 세션의 분석으로 갑니다. · 평가 = 보유 평가금 + 현금 + 계좌 밖으로 뺀 돈(출금·단리 인출) · 투입 = 밖에서 넣은 돈(원금·적립·입금) · <b>MDD</b> = 하루하루 <b>총자산 ÷ 그때까지 넣은 돈</b>의 고점 대비 최대 낙폭(적립금이 상승으로 잡히지 않게 투입으로 나눠 잽니다). 수수료는 전략별 재생 규약을 따르고 <b>양도세는 넣지 않았습니다</b>. 분배금은 <b>현금 수령·적립은 세전</b>, 장부에 적는 배당(재투자)은 세후로 셉니다.</p>`;
     if(paperNote) h+=`<p class="note" style="color:var(--vio)">${paperNote}</p>`;
     body.innerHTML=h;
   }
