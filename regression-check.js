@@ -2817,7 +2817,7 @@ console.log('\n[59] 월 현금흐름 — 전 전략 공용');
   /* 받은 분배금 줄이 hist 의 div 기록만 보고 있어, 현금수령으로 8,712$ 를 받고도
      화면엔 '—' 로 비어 있었다. */
   ok('받은 분배금에 추정분도 더한다',
-     /const tot=\(c\.totdiv\|\|0\)\+_d2\.divCash/.test(idx) && /\(추정 포함\)/.test(idx));
+     /const tot=\(c\.totdiv\|\|0\)\+_d2\.divCash/.test(idx) && /\(세전 추정 포함\)/.test(idx));   // 추정분은 세전 (7차 D11)
 
   /* 수익률 셋을 나란히 놓자마자 드러난 것 — 로테는 매수 수수료를 현금에서만 빼고
      평단에는 안 넣고 있었다. 다 청산한 계좌인데 실현(+9.90%)이 현재(+9.83%)보다
@@ -7493,6 +7493,34 @@ console.log('\n[115] 7차 — ASAP 모의 ↔ 백테 (매수일·금액)');
   }
   ok('7차 ASAP 대조가 실제로 돌았다', nRun>=3, String(nRun));
   WARM_FROM=_wf0; WARM_TO=_wt0;
+}
+
+/* ════ 116. 7차 D11 — 분배금 세금: 현금 수령·적립은 세전, 장부 기록은 세후 (화면에 적는다) ════
+   같은 배당인데 재투자(장부 기록 · 세후 15.4%)와 현금 수령 카드·적립(세전)이 15.4% 다르게 보였다.
+   사용자 결정: 계산은 그대로 세전으로 두고, 화면에 '세전' 이라고 적는다. 세전을 지키는 것도 값으로 묶는다. */
+console.log('\n[116] 7차 D11 — 분배금 세전·세후 표기');
+{
+  const divIncomeF=new Function(extractFn(idx,'function divIncome(divs, lots, reinv)')+'\nreturn divIncome;')();
+  const r=divIncomeF([{date:'2024-03-20',amount:1}], [{date:'2024-01-02',q:100}], false);
+  ok('7차 D11 현금 수령 카드 금액은 세전 — 100주 × $1 = $100 (세후면 84.6)', near(r.divCash,100,1e-12), String(r.divCash));
+  const dca=extractFn(idx,'function computeDca()');
+  ok('7차 D11 적립 분배금도 세전 — 보유 × 주당 분배금 그대로',
+     /const cash=\(held\+divShares\)\*\(\+d\.amount\|\|0\);/.test(dca) && !/DIV_TAXRATE/.test(dca));
+  // 장부에 적는 배당은 세후 — 무매·VR·섀넌·로테·ASAP 모두 divCashQ(…, true)
+  const sims=['function infSimForward(startFrom)','function vrSimForward()','function ivsReplay()','function maReplay()','function _paperAsap(sess, from)']
+    .map(sig=>{ try{ return extractFn(idx,sig); }catch(e){ return ''; } });
+  ok('7차 D11 장부에 적는 배당은 세후 (다섯 엔진 모두 divCashQ(…, true))',
+     sims.every(f=>/divCashQ\([^)]*,\s*true\)/.test(f)), sims.map(f=>/divCashQ\([^)]*,\s*true\)/.test(f)?'O':'·').join(''));
+  // 화면 표기
+  ok('7차 D11 분배금 현금 수입 카드 세 곳에 세전', (idx.match(/분배금 현금 수입 <span class="sub" style="font-weight:400">세전 · 시세 기준 추정<\/span>/g)||[]).length===3);
+  ok('7차 D11 현금 흐름 카드(VR·섀넌)의 분배금 칸에 세전', (idx.match(/sub:'현금으로 받은 것 · 세전 · 시세 기준 추정'/g)||[]).length===2);
+  ok('7차 D11 적립 카드·계좌·수익률 줄에 세전',
+     /title:'분배금 현금 수입 <span class="sub" style="font-weight:400">세전<\/span>'/.test(idx)
+     && /\+' · 세전';/.test(idx) && /주식 \+ 분배금\(세전\)/.test(idx) && /현금으로 받은 분배금 · 세전/.test(idx) && /분배금\(세전\) 포함/.test(idx));
+  ok('7차 D11 설정 다섯 곳에 세전 추정 · 재투자는 세후', (idx.match(/현금 수령은 단리 인출과 같은 취급 · 금액은 세전 추정 \(재투자는 장부에 세후로 기록\)/g)||[]).length===5);
+  ok('7차 D11 VR 받은 분배금 — 장부분 세후 · 추정분 세전',
+     /'현금 수령 — 계좌 밖으로 나갔다 · 세전 추정':'Pool에 남아 있다 · 세후'/.test(idx) && /Pool에 남아 있다 · 세후<\/span>/.test(idx));
+  ok('7차 D11 모의 성과 각주', /분배금은 <b>현금 수령·적립은 세전<\/b>, 장부에 적는 배당\(재투자\)은 세후로 셉니다/.test(idx));
 }
 
 console.log(`\n════ 결과: ${pass} PASS / ${fail} FAIL ${fail===0?'— ALL PASS ★':'— 배포 금지, 위 ✗ 항목 수정 필요'} ════`);
