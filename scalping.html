@@ -187,7 +187,7 @@ canvas{display:block;width:100%;height:auto}
 
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Morning Scalping</div><h1>JK <span class="v">퀀트</span> 단타 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="scVer">v1.14.1</span></h1></div>
+    <div><div class="kicker">Morning Scalping</div><h1>JK <span class="v">퀀트</span> 단타 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="scVer">v1.15.0</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -210,6 +210,7 @@ canvas{display:block;width:100%;height:auto}
   <div class="strategy-tabs">
     <button class="strategy-tab on" data-strategy="swing" onclick="showStrategy('swing')">📉 과매도 반등</button>
     <button class="strategy-tab" data-strategy="opening" onclick="showStrategy('opening')">⚡ 시초가 돌파</button>
+    <button class="strategy-tab" data-strategy="daytrading" onclick="showStrategy('daytrading')">📈 데이트레이딩</button>
   </div>
   <div id="strategy_swing" class="strategy-pane on">
     <div class="strategy-head">실시간 감시 → 과거 백테스트 순서</div>
@@ -357,6 +358,49 @@ canvas{display:block;width:100%;height:auto}
     <div id="ar_body"></div>
   </div>
 
+  </div>
+
+  <div id="strategy_daytrading" class="strategy-pane">
+    <div class="strategy-head">10:00 유니버스 고정 → 장중 신호 → 다음 분 시가 모의진입 → 장마감 누적검증</div>
+
+    <div class="card">
+      <h3><span class="dot"></span>📈 데이트레이딩 기준전략 v1 <span class="sub" style="font-weight:600">VWAP 추세 돌파 · 연구/모의 전용</span></h3>
+      <p class="lead">시초가 30분 전략과 분리해서 <b>장중 추세가 이어지는 종목</b>을 찾는다. 아직 검증 전 가설이므로 실제 주문에는 연결하지 않고,
+        기준전략 + 그림자전략을 매일 같은 원본 1분봉으로 병렬 비교한다.</p>
+      <div class="step"><div class="st"><span class="n">1</span>유니버스 고정</div><ul>
+        <li><b>10:00 전후 거래대금 Top100</b>을 그날 파일로 고정한다.</li>
+        <li>장 마감 Top100을 과거 10시에 소급 사용하지 않는다. 늦게 스냅샷되면 <b>스냅샷 이후 신호만</b> 인정한다.</li>
+      </ul></div>
+      <div class="step"><div class="st"><span class="n">2</span>장중 신호</div><ul>
+        <li>기본 신호시간 <b>10:00~14:30</b> · 당일 시가 대비 <b>+1~+8%</b>.</li>
+        <li>종가가 <b>세션 VWAP 위</b>이고 VWAP 10분 기울기 <b>+0.10% 이상</b>.</li>
+        <li><b>직전 20분 고점 돌파</b> + 현재 1분 거래량이 직전 20분 평균의 <b>1.5배 이상</b>.</li>
+      </ul></div>
+      <div class="step"><div class="st"><span class="n">3</span>모의 체결·청산</div><ul>
+        <li>신호는 분봉 마감 뒤 확정하므로 <b>다음 1분봉 시가</b>에 모의 진입한다.</li>
+        <li><b>손절 −1.0% / 익절 +2.0% / 15:10 시간청산</b>, 왕복 마찰비용 0.25% 반영.</li>
+        <li>하루 최대 <b>3건</b>. 같은 시각 신호는 당시 거래량·돌파강도 점수로 정렬한다.</li>
+      </ul></div>
+      <div class="warn"><b>현재 단계:</b> 전략 후보를 만든 첫 단계다. 성과가 좋아 보여도 바로 기준을 바꾸지 않는다.
+        최소 20거래일·30건 전에는 가설 비교를 참고용으로만 보고, 25거래일부터 20일 학습→5일 OOS 워크포워드를 시작한다.</div>
+    </div>
+
+    <div class="card">
+      <h3><span class="dot"></span>🧪 데이트레이딩 누적 연구 <span class="sub" style="font-weight:600">기준 + 그림자 병렬 비교</span></h3>
+      <div class="row" style="margin-bottom:8px">
+        <button class="ghostbtn" onclick="loadDayTradingResearch()">🔄 결과 갱신</button>
+        <span class="sub" id="dt_msg">첫 데이터 수집 대기</span>
+      </div>
+      <div id="dt_body"><p class="sub">오늘 장 종료 뒤 전체 1분봉이 저장되면 기준전략과 그림자전략 결과가 여기에 표시됩니다.</p></div>
+      <p class="note">그림자 후보: 거래량 2배 · 30분 고점 · VWAP 기울기 0.2% · 14:00 이전 · 시가대비 +2% · 손절 0.8% · 익절 1.5%.</p>
+    </div>
+
+    <div class="card">
+      <h3><span class="dot"></span>📼 데이터 수집 규칙 <span class="sub" style="font-weight:600">룩어헤드 방지</span></h3>
+      <p class="lead"><b>09:55/10:00/10:05</b> 백업 스케줄 중 가장 먼저 성공한 Top100 스냅샷 하나를 고정하고,
+        <b>15:35/15:40/15:45</b>에 KIS 과거 1분봉을 09:00~15:20까지 수집한다. 원본과 연구결과는 <b>scalping-data</b> 브랜치에 날짜별 누적된다.</p>
+      <div class="warn">실전 주문 기능은 없다. 신호 생성과 체결은 모두 연구용 모의 계산이며, 동일 봉에서 손절·익절이 둘 다 닿으면 보수적으로 손절을 먼저 적용한다.</div>
+    </div>
   </div>
 
   <!-- 2. 차트 (팝업 모달) -->
@@ -990,8 +1034,71 @@ function showStrategy(name){
   document.querySelectorAll('.strategy-tab').forEach(x=>x.classList.toggle('on',x.dataset.strategy===name));
   const p=$('strategy_'+name); if(p)p.classList.add('on');
   try{localStorage.setItem('jkq_scalp_strategy_tab',name);}catch(e){}
+  if(name==='daytrading') loadDayTradingResearch();
 }
-function restoreStrategy(){let n='swing';try{n=localStorage.getItem('jkq_scalp_strategy_tab')||'swing';}catch(e){} if(n!=='opening')n='swing';showStrategy(n);}
+function restoreStrategy(){
+  let n='swing';
+  try{n=localStorage.getItem('jkq_scalp_strategy_tab')||'swing';}catch(e){}
+  if(!['swing','opening','daytrading'].includes(n))n='swing';
+  showStrategy(n);
+}
+
+async function loadDayTradingResearch(){
+  const msg=$('dt_msg'),body=$('dt_body');
+  if(!msg||!body)return;
+  msg.textContent='데이트레이딩 연구결과 불러오는 중…';
+  try{
+    const r=await fetch('/api/daytrading-research',{headers:{'Accept':'application/json'}});
+    const j=await r.json(); if(!r.ok||!j.ok)throw new Error(j.error||('HTTP '+r.status));
+    if(!j.archiveDays){
+      msg.textContent='첫 원본 데이터 수집 대기';
+      body.innerHTML='<div class="warn">아직 저장된 거래일이 없습니다. 오늘 유니버스 스냅샷 뒤 장 마감 수집이 끝나면 자동으로 시작됩니다.</div>';
+      return;
+    }
+    const labels={
+      baseline:'현재 기준','vol_2.0':'거래량≥2.0배',lookback_30:'직전30분 고점',
+      'vwap_slope_0.2':'VWAP기울기≥0.2%',entry_by_1400:'14:00 이전',
+      session_min_2:'시가대비≥2%', 'stop_0.8':'손절0.8%', 'tp_1.5':'익절1.5%'
+    };
+    const vars=j.variants||[],base=vars.find(x=>x.params&&x.params.name==='baseline'),s=base&&base.summary||{};
+    msg.textContent=(j.from||'')+' ~ '+(j.to||'')+' · '+j.archiveDays+'거래일 · 기준 '+(s.trades||0)+'건';
+
+    const today=j.latestDayTrades||[];
+    let todayHtml='<div style="margin-bottom:12px"><b>📒 최근 거래일 기준전략</b></div>';
+    if(!today.length){
+      todayHtml+='<div class="warn">최근 거래일에는 기준전략 신호가 없었습니다.</div>';
+    }else{
+      todayHtml+='<div class="htable-wrap"><table class="htable"><thead><tr><th>종목</th><th>신호</th><th>진입</th><th>청산</th><th>사유</th><th>손익</th></tr></thead><tbody>'+
+        today.map(x=>'<tr><td><b>'+esc(x.name||x.code)+'</b><div class="sub">'+esc(x.code)+'</div></td>'+
+        '<td>'+String(x.signalTime||'').padStart(4,'0')+'</td>'+
+        '<td>'+String(x.entryTime||'').padStart(4,'0')+' · '+commas(Math.round(x.entryPrice||0))+'</td>'+
+        '<td>'+String(x.exitTime||'').padStart(4,'0')+' · '+commas(Math.round(x.exitPrice||0))+'</td>'+
+        '<td>'+esc(x.reason||'')+'</td><td class="'+((x.pnl||0)>=0?'win':'loss')+'">'+((x.pnl||0)>=0?'+':'')+(x.pnl||0).toFixed(2)+'%</td></tr>').join('')+
+        '</tbody></table></div>';
+    }
+
+    const rows=vars.map(x=>{
+      const p=x.params||{},z=x.summary||{},name=labels[p.name]||p.name||'',pf=z.profitFactor>=900?'∞':(+z.profitFactor||0).toFixed(2);
+      return '<tr><td><b>'+esc(name)+'</b></td><td>'+(z.trades||0)+'</td><td>'+((z.winRate||0).toFixed(1))+'%</td>'+
+        '<td class="'+((z.avgPnl||0)>=0?'win':'loss')+'">'+((z.avgPnl||0)>=0?'+':'')+(z.avgPnl||0).toFixed(3)+'%</td>'+
+        '<td>'+pf+'</td><td class="'+((z.portfolioReturnPct||0)>=0?'win':'loss')+'">'+((z.portfolioReturnPct||0)>=0?'+':'')+(z.portfolioReturnPct||0).toFixed(2)+'%</td>'+
+        '<td class="loss">'+(z.portfolioMddPct||0).toFixed(2)+'%</td></tr>';
+    }).join('');
+
+    const wf=j.walkForward||{},need=Math.max(0,(wf.daysNeededForFirstFold||25)-j.archiveDays);
+    const wfText=wf.status==='collecting'
+      ? '워크포워드 첫 검증까지 '+need+'거래일 더 필요'
+      : ((wf.foldCount||0)+'개 OOS 구간 · '+(wf.oosDays||0)+'검증일');
+
+    body.innerHTML=todayHtml+
+      '<div style="margin:14px 0 8px"><b>🧪 누적 비교</b></div>'+
+      '<div class="htable-wrap"><table class="htable"><thead><tr><th>전략</th><th>거래</th><th>승률</th><th>평균손익</th><th>PF</th><th>포트수익</th><th>MDD</th></tr></thead><tbody>'+rows+'</tbody></table></div>'+
+      '<div class="warn" style="margin-top:10px"><b>'+esc(wfText)+'</b> · 전체기간 성과가 좋아도 OOS 검증 전에는 기준전략을 자동 변경하지 않습니다.</div>';
+  }catch(e){
+    msg.textContent='데이트레이딩 연구결과 조회 실패';
+    body.innerHTML='<div class="warn">'+esc(e.message||String(e))+'</div>';
+  }
+}
 
 /* ══ 시초가 돌파 실시간 감시 ══ */
 let OB_LIVE=false, OB_TIMER=null, OB_BUSY=false, OB_NOTIFIED=new Set(), OB_LAST_MINUTE='', OB_TOP2=null;
