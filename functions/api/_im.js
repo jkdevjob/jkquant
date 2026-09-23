@@ -22,8 +22,17 @@ function reverseT(kind, t, div) {
   if (kind === "리버스매수") return t + (div - t) * 0.25;
   return t;
 }
-const isSell = (k) => k === "출금" ? false : (k.includes("매도") && !k.includes("+1회매수") && !k.includes("+절반매수") ? true : k.includes("매도"));
+/* index.html 의 isBuy·isSell·isAmtKind 와 같은 판정 — 출금·배당은 매매가 아니다 */
+const isSell = (k) => k !== "출금" && k.includes("매도");
 const isBuy = (k) => k === "출금" ? false : (k.includes("매수") && !k.includes("지정가매도") || k === "지정가매도+1회매수" || k === "지정가매도+절반매수" ? k !== "지정가매도" : k.includes("매수"));
+/* 리버스는 규칙이 있는 분할에만 (index.html REV_DIVS 와 같은 목록) */
+export const REV_DIVS = [20, 40];
+const revSupported = (div) => REV_DIVS.includes(+div);
+/* 큰수(주문가 상한) 기본값 — index.html·backtest.html 의 IM_BIG_DEFAULT 와 같은 값.
+   예전엔 여기만 20 이었다: big 을 저장하지 않은 옛 세션은 앱 주문표(15%)와 서버 자동주문(20%)의
+   처음매수 LOC 가격이 달랐다 (실데이터 1,499일 중 269일, 7차 점검 ⑥). */
+export const IM_BIG_DEFAULT = 15;
+export function imBigPct(st) { const v = st && st.big; return (v != null && isFinite(+v) && +v > 0) ? +v : IM_BIG_DEFAULT; }
 
 /* 별% = base − (base×0.1×20/div)×T */
 export function starPct(ticker, div, T, base) {
@@ -38,45 +47,65 @@ export function imBuy1(c) {
   return { amt: c.bal / slot, slot, spent: false };
 }
 
-/* 거래이력에서 지금 상태를 낸다 — index.html computeInf의 순수판.
-   화면용 rows/배지는 뺐다. 자동 주문에 필요한 건 평단·보유·T·잔금·리버스 여부뿐이다. */
+/* 거래이력에서 지금 상태를 낸다 — index.html computeInf 의 순수판.
+   화면용 rows/배지는 뺐다. 자동 주문에 필요한 건 평단·보유·T·잔금·리버스 상태뿐이다.
+   computeInf 와 한 줄씩 같은 규칙이어야 한다 (7차 점검 ⑤) — 예전 판이 4·5차 감사 이전
+   규칙에 멈춰 있어서 이렇게 갈렸다:
+     · 사이클 종료를 '매도 전용 기록으로 0주' 로만 봤다 — 복합거래로 0주가 돼도 안 끝났다 (5차 ④)
+     · 배당 기록을 몰랐다 — 앱보다 잔금·1회매수금이 작게 나왔다 (N1)
+     · 리버스 여부를 '마지막 기록이 리버스인가' 로 봤다 — 리버스 중 출금·배당 한 줄만
+       적어도 일반모드로 보고 일반 주문을 냈다. 상태를 바꾸는 이벤트만 상태를 바꾼다 (4차 ③)
+   회귀가 실데이터 수천 건 이력과 손으로 만든 경계 사례로 두 함수를 맞대 본다. */
 export function imCompute(st, hist) {
   let avg = 0, qty = 0, inv = 0, realized = 0, T = 0;
-  let withdrawn = 0, saved = 0;
+  let withdrawn = 0, saved = 0, divTotal = 0;
   const simple = (st.compound === false);
-  let inReverseNow = false;
+  let revState = "NORMAL";
+  const revEnter = () => {
+    if (st.reverse === true && revSupported(st.div) && revState === "NORMAL" && qty > 1e-9 && (st.div - T) < 1) revState = "DAY1";
+  };
   for (const h of (hist || [])) {
-    const Tbefore = T;
-    const isRev = (h.kind === "리버스매도" || h.kind === "리버스매수");
-    if (h.kind === "지정가매도" || h.kind === "쿼터매도" || h.kind === "리버스매도") {
+    const kind = String(h.kind || "");
+    const isRev = (kind === "리버스매도" || kind === "리버스매수");
+    if (kind === "지정가매도" || kind === "쿼터매도" || kind === "리버스매도") {
       realized += (h.price - avg) * h.qty; qty -= h.qty; inv -= avg * h.qty;
-    } else if (h.kind === "1회매수" || h.kind === "절반매수" || h.kind === "리버스매수") {
+    } else if (kind === "1회매수" || kind === "절반매수" || kind === "리버스매수") {
       const nq = qty + h.qty; avg = nq > 0 ? (avg * qty + h.price * h.qty) / nq : h.price; qty = nq; inv += h.price * h.qty;
-    } else if (h.kind === "출금") {
+    } else if (kind === "출금") {
       withdrawn += Math.max(0, +h.amt || 0);
-    } else if (h.kind.startsWith("지정가매도+") || h.kind.includes("+지정가매도")) {
+    } else if (kind === "배당") {
+      divTotal += Math.max(0, +h.amt || 0);
+    } else if (kind.startsWith("지정가매도+") || kind.includes("+지정가매도")) {
       const sp = +h.sellPrice || 0, sq = +h.sellQty || 0, bp = +h.buyPrice || 0, bq = +h.buyQty || 0;
-      const sellFirst = h.kind.startsWith("지정가매도+");
+      const sellFirst = kind.startsWith("지정가매도+");
       const doSell = () => { if (sq > 0) { realized += (sp - avg) * sq; qty -= sq; inv -= avg * sq; } };
       const doBuy = () => { if (bq > 0) { const nq = qty + bq; avg = nq > 0 ? (avg * qty + bp * bq) / nq : bp; qty = nq; inv += bp * bq; } };
       if (sellFirst) { doSell(); doBuy(); } else { doBuy(); doSell(); }
     }
     if (typeof h.tManual === "number" && !isNaN(h.tManual)) T = h.tManual;
-    else if (isRev) T = reverseT(h.kind, T, st.div);
-    else T = KIND_T[h.kind] ? KIND_T[h.kind](T) : T;
-    inReverseNow = isRev;
-    if (Tbefore < st.div && T >= st.div) { /* 리버스 스트릭 리셋 — 자동주문엔 영향 없음 */ }
-    if (qty <= 1e-9 && isSell(h.kind) && !isBuy(h.kind)) {
-      qty = 0; avg = 0; T = 0; inv = 0; inReverseNow = false;
+    else if (isRev) T = reverseT(kind, T, st.div);
+    else T = KIND_T[kind] ? KIND_T[kind](T) : T;
+    // 상태를 바꾸는 이벤트만 상태를 바꾼다 (출금·배당은 그대로)
+    if (isRev) revState = "REVERSE";
+    else if (kind === "리버스복귀") revState = "NORMAL";
+    else if (isBuy(kind) || isSell(kind)) revState = "NORMAL";
+    // 사이클 종료 — 이 기록에 실제 매도가 있었고 처리 뒤 0주인가 (복합거래는 sellQty 로 말한다)
+    const soldQty = (h.sellQty != null) ? (+h.sellQty || 0) : (isSell(kind) ? (+h.qty || 0) : 0);
+    if (qty <= 1e-9 && soldQty > 0) {
+      qty = 0; avg = 0; T = 0; inv = 0; revState = "NORMAL";
       if (simple) {
-        const cashNow = (+st.principal || 0) + realized - withdrawn - saved;
-        if (cashNow > (+st.principal || 0)) saved += cashNow - (+st.principal || 0);
+        const P0 = +st.principal || 0;
+        const cashNow = P0 + realized + divTotal - withdrawn - saved;
+        if (cashNow > P0) saved += cashNow - P0;
       }
     }
+    revEnter();
   }
-  const reverseActive = (st.reverse === true) && (inReverseNow || (st.div - T < 1)) && qty > 0;
-  const bal = (+st.principal || 0) + realized - inv - withdrawn - saved;
-  return { avg, qty, inv, realized, T, bal, st, reverseActive, withdrawn, saved, simple };
+  revEnter();
+  const reverseActive = (st.reverse === true) && revState !== "NORMAL" && qty > 0;
+  const reverseDay1 = reverseActive && revState === "DAY1";
+  const bal = (+st.principal || 0) + realized + divTotal - inv - withdrawn - saved;
+  return { avg, qty, inv, realized, T, bal, st, revState, reverseActive, reverseDay1, withdrawn, saved, divTotal, simple };
 }
 
 /* ── 확정 종가 ──
@@ -151,14 +180,21 @@ export function imOrders({ st, hist, close, days }) {
   const pct = starPct(st.ticker, st.div, c.T, st.target);
   const star = c.avg > 0 ? c.avg * (1 + pct / 100) : close;
   const buyPt = star - 0.01;
-  const bigPct = (st.big != null && isFinite(+st.big)) ? +st.big : 20;
+  const bigPct = imBigPct(st);
   const limit = close * (1 + bigPct / 100);
   const half = c.T < st.div / 2;
   const rows = st.rowsOn ? Math.max(0, st.rows || 0) : 0, gap = st.gap || 2.5, rq = st.rowqty || 1;
 
   // 매수 — 수량은 늘 '종가'로 나눈다. LOC는 종가에 체결되므로 주문가로 나누면 배정액만큼 못 산다.
+  // 그리고 잔금 안에서만 — 증권사는 '주문가×수량' 을 예약하고 넘으면 주문을 거부한다 (7차 점검 ④).
+  // 두 번째 주문은 앞 주문의 예약금을 뺀 나머지로. index.html renderOrder 와 같은 규약.
   const push = (side, kind, tag, price, qty) => { if (qty >= 1 && price > 0) out.push({ side, kind, tag, price, qty }); };
-  const brow = (kind, price, alloc) => push("buy", kind, "LOC", price, close > 0 ? Math.floor(alloc / close) : 0);
+  let res = Math.max(0, c.bal);
+  const brow = (kind, price, alloc) => {
+    if (!(close > 0) || !(price > 0)) return;
+    const q = Math.min(Math.floor(alloc / close), Math.floor(res / price));
+    if (q >= 1) { push("buy", kind, "LOC", price, q); res -= q * price; }
+  };
   const cap = (p) => (limit > 0 && p > limit) ? limit : p;
 
   if (B1.spent) {

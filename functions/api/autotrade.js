@@ -162,23 +162,36 @@ export async function onRequest({ request, env }) {
       const st = s.settings || {};
       const sym = String(st.ticker || "").toUpperCase();
       row.ticker = sym;
+      /* 통화는 종목코드로 정한다 — 앱(curOf)과 같은 규약 (7차 점검 ⑩).
+         예전엔 st.cur 를 읽었는데 앱은 그 칸을 저장하지 않는다. 늘 비어 있어 국내 종목도
+         미국 장 마감·정산 시각과 미국 주문 창으로 판정했다. */
+      const cur = KRCODE.test(sym.replace(/\.K[SQ]$/, "")) ? "krw" : "usd";
+      row.cur = cur;
 
       /* 확정 종가 — 앱과 같은 시세 경로, 같은 규약.
          마지막 봉을 그냥 쓰면 안 된다. 자동 주문은 마감 20분 전에 도는데
          그 시각 오늘 봉의 close 는 종가가 아니라 장중 현재가다. */
+      /* 앱과 같은 가격 계열로 받는다 (7차 점검 ⑦). 앱은 N1 부터 div=1 로 받아 체결가
+         계열(ohlcTrade)이 있으면 그걸 쓴다 — 서버만 조정종가(series)로 수량·상한을 재면
+         화면에 보이는 주문과 실제로 나가는 주문이 달라진다. 체결가 계열이 없으면 앱처럼 조정 기준.
+         익절 조절(20일 상승률)도 확정된 봉만 쓴다 — 자동 주문은 장 마감 20분 전에 돌아서
+         마지막 봉이 아직 움직이는 오늘 봉이다. 모의·백테는 전일 확정 종가 기준이다. */
       let close = 0, days = null;
       try {
-        const q = await (await fetch(url.origin + "/api/quote?symbol=" + encodeURIComponent(sym) + "&intraday=0")).json();
-        days = q.series || null;
-        const bar = settledLast(q.series || q.ohlc || [], st.cur);
+        const q = await (await fetch(url.origin + "/api/quote?symbol=" + encodeURIComponent(sym) + "&intraday=0&div=1")).json();
+        const tradeOK = q && q.priceBasis === "trade" && Array.isArray(q.ohlcTrade) && q.ohlcTrade.length;
+        const bars = tradeOK ? q.ohlcTrade : (q.series || q.ohlc || []);
+        row.priceBasis = tradeOK ? "trade" : (q.priceBasis || null);
+        const bar = settledLast(bars, cur);
         close = bar ? +bar.close : 0;
         row.closeDate = bar ? bar.date : null;
+        days = bar ? bars.filter((x) => x && x.date <= bar.date && +x.close > 0).map((x) => ({ date: x.date, close: +x.close })) : null;
       } catch (e) { row.skip = "시세 실패: " + (e.message || e); out.sessions.push(row); continue; }
       row.close = close;
       /* 묵은 종가로는 주문하지 않는다. 시세사가 봉을 늦게 올리는 일이 실제로 있는데
          (야후가 9/14 봉을 마감 4시간 뒤에 올렸다) 사람이라면 이상한 걸 알아채지만
          자동 주문은 그대로 내버린다. 낡은 가격으로 낸 주문은 되돌릴 수가 없다. */
-      const stale = staleDays(row.closeDate, st.cur);
+      const stale = staleDays(row.closeDate, cur);
       if (stale > STALE_MAX_DAYS) {
         row.skip = `종가가 ${stale}일 묵었습니다 (${row.closeDate}) — 시세가 안 올라와 건너뜁니다`;
         out.sessions.push(row); continue;
@@ -193,7 +206,7 @@ export async function onRequest({ request, env }) {
       /* 마감 뒤에 도착한 실행은 주문을 내지 않는다. 깃허브 크론은 예정 시각보다
          한두 시간씩 늦게 도는 일이 있는데(실측 1시간 46분·2시간 28분), 그때 낸
          지정가는 그날 체결되지 않고 다음 거래일로 넘어간다. */
-      const win = orderWindow(st.cur);
+      const win = orderWindow(cur);
       if (!win.ok) {
         row.skip = `주문 시간이 아닙니다 — 지금 ${win.now}, 주문 창은 ${win.from}~${win.to} (거래소 시각)`;
         out.sessions.push(row); continue;
