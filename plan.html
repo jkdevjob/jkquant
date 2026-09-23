@@ -195,12 +195,12 @@ th:first-child,td:first-child{text-align:left}
   <div class="plan-panel on" data-ppanel="alpha">
     <div class="guidehero">
       <div class="eyebrow">PATH A · SIMPLE GROWTH + GUARD</div>
-      <h2>TECL 역분산 70% + TQQQ Guard 30%</h2>
+      <h2>TECL 역분산 60% + TQQQ Guard 40%</h2>
       <div class="path-note">시작금 $30,000 기준 · 다른 탭과 합산하는 $60,000 운용이 아니라 같은 원금을 두 방식으로 비교하는 대안입니다.</div>
       <div class="guidegrid">
         <div class="guidekpi"><div class="k">시작금</div><div class="v">$30,000</div></div>
-        <div class="guidekpi"><div class="k">TECL 역분산</div><div class="v">70% · N20 · s0 60%</div><div class="sub">밴드 15%p · 나머지 SGOV</div></div>
-        <div class="guidekpi"><div class="k">TQQQ Guard</div><div class="v">30% · SMA250</div><div class="sub">+3% 진입 / -3% 대피</div></div>
+        <div class="guidekpi"><div class="k">TECL 역분산</div><div class="v">60% · N20 · s0 60%</div><div class="sub">밴드 15%p · 나머지 SGOV</div></div>
+        <div class="guidekpi"><div class="k">TQQQ Guard</div><div class="v">40% · SMA220</div><div class="sub">+5% 진입 / -5% 대피</div></div>
         <div class="guidekpi"><div class="k">대피자산</div><div class="v">SGOV</div><div class="sub">신호가 없으면 거래 없음</div></div>
       </div>
       <div class="todaybox">
@@ -225,13 +225,13 @@ th:first-child,td:first-child{text-align:left}
   <div class="plan-panel" data-ppanel="classic">
     <div class="guidehero">
       <div class="eyebrow">PATH B · INFINITE BUY + VALUE REBALANCING</div>
-      <h2>SOXL 무매 50% + TECL VR 50%</h2>
-      <div class="path-note">시작금 $30,000 기준 · SOXL $15,000 / TECL VR $15,000으로 독립 운용합니다.</div>
+      <h2>SOXL 무매 80% + TECL VR 20%</h2>
+      <div class="path-note">시작금 $30,000 기준 · SOXL $24,000 / TECL VR $6,000으로 독립 운용합니다.</div>
       <div class="guidegrid">
-        <div class="guidekpi"><div class="k">SOXL 무매</div><div class="v">40분할 · 익절 +25%</div><div class="sub">복리 · 리버스 ON · 큰수15%</div></div>
-        <div class="guidekpi"><div class="k">TECL VR</div><div class="v">G100 · ±20%</div><div class="sub">기본공식 · 14일</div></div>
+        <div class="guidekpi"><div class="k">SOXL 무매</div><div class="v">20분할 · 익절 +25%</div><div class="sub">복리 · 리버스 ON · 큰수15%</div></div>
+        <div class="guidekpi"><div class="k">TECL VR</div><div class="v">G150 · ±35%</div><div class="sub">실력공식 · 14일</div></div>
         <div class="guidekpi"><div class="k">VR 초기배정</div><div class="v">TECL 90 / Pool 10</div><div class="sub">Pool 사용한도 50%</div></div>
-        <div class="guidekpi"><div class="k">연구 후보</div><div class="v">하락장 익절 8%</div><div class="sub">운영 V5 엔진 비활성이라 아직 실전 기본에는 미적용</div></div>
+        <div class="guidekpi"><div class="k">운영 엔진</div><div class="v">무매 V4 + VR Skill</div><div class="sub">현재 운영화면에서 그대로 실행 가능한 조합만 기본값에 사용</div></div>
       </div>
       <div class="sessionbar">
         <div class="field"><label>SOXL 무매 실전세션</label><select id="bSoxlSessionSelect"><option value="">세션을 선택하세요</option></select></div>
@@ -548,8 +548,8 @@ const todayISO=()=>{const d=new Date();return new Date(Date.UTC(d.getFullYear(),
 const plusYears=(iso,n)=>{const d=new Date(iso+"T00:00:00Z");d.setUTCFullYear(d.getUTCFullYear()+n);return d.toISOString().slice(0,10)};
 const days=(a,b)=>(new Date(b+"T00:00:00Z")-new Date(a+"T00:00:00Z"))/86400000;
 const PATH_DEFAULTS={
-  alpha:{teclWeight:.70,guardWeight:.30,ivsLook:20,ivsS0:.60,ivsBand:.15,guardMA:250,guardBand:.03},
-  classic:{infWeight:.50,vrWeight:.50,infDiv:40,infTarget:25,infBig:15,vrG:100,vrBand:20,vrStockPct:.90,vrPoolLimit:.50}
+  alpha:{teclWeight:.60,guardWeight:.40,ivsLook:20,ivsS0:.60,ivsBand:.15,guardMA:220,guardBand:.05},
+  classic:{infWeight:.80,vrWeight:.20,infDiv:20,infTarget:25,infBig:15,vrG:150,vrBand:35,vrStockPct:.90,vrPoolLimit:.50}
 };
 
 
@@ -646,7 +646,7 @@ function applyInitialBalances(a){
   }
 }
 function initialPlanAllocation(){
-  const total=num('startCapital'),a=[50,50,0],inf=Math.round(total*.50);
+  const total=num('startCapital'),a=[80,20,0],inf=Math.round(total*.80);
   return {ready:total>0,total,inf,vr:Math.max(0,total-inf),sleeve:0,weights:a};
 }
 function updateInitialAllocationPreview(){
@@ -677,9 +677,9 @@ async function createPlanInfSession(opts={}){
   if(planLinks.inf && linkedOpSession(liveState.inf,'SOXL',planLinks.inf) && !opts.force)return linkedOpSession(liveState.inf,'SOXL',planLinks.inf);
   const cap=a.inf,id=planSid('pinf');
   const sess={id,name:sessionDateName('SOXL'),planManaged:true,settings:{
-    ticker:'SOXL',div:40,target:25,big:15,reverse:true,compound:true,
+    ticker:'SOXL',div:20,target:25,big:15,reverse:true,compound:true,
     rowsOn:false,rows:8,gap:2.5,revGap:0,rowqty:1,principal:cap,
-    divmode:'reinv',engine:'v40',shortMA:30,loPct:8,tgtDyn:false
+    divmode:'reinv',engine:'v40',shortMA:30,loPct:6,tgtDyn:false
   },hist:[]};
   liveState.inf.sessions.push(sess);liveState.inf.active=id;liveState.activeTab='inf';
   planLinks.inf=id;
@@ -696,11 +696,11 @@ async function createPlanVrSession(opts={}){
   const a=requireInitialCapital();if(!a)return null;
   if(planLinks.vr && linkedOpSession(liveState.vr,'TECL',planLinks.vr) && !opts.force)return linkedOpSession(liveState.vr,'TECL',planLinks.vr);
   const cap=a.vr,id=planSid('pvr');
-  /* PATH B 후보값: TECL VR G100 · ±20 · 초기 주식90/Pool10 · Pool 사용한도50%. */
+  /* PATH B 기본값: TECL VR G150 · ±35 · Skill · 초기 주식90/Pool10 · Pool 사용한도50%. */
   const initAmt=Math.round(cap*.90), startPool=Math.max(0,cap-initAmt);
   const sess={id,name:sessionDateName('TECL VR'),planManaged:true,settings:{
-    ticker:'TECL',mode:.5,formula:'basic',g:100,initAmt,add:0,
-    band:20,startv:0,startpool:startPool,autoCyc:false,divmode:'reinv',
+    ticker:'TECL',mode:.5,formula:'skill',g:150,initAmt,add:0,
+    band:35,startv:0,startpool:startPool,autoCyc:false,divmode:'reinv',
     planTotalCapital:cap,planInitStockPct:90
   },hist:[]};
   liveState.vr.sessions.push(sess);liveState.vr.active=id;liveState.activeTab='vr';
@@ -771,16 +771,16 @@ function enforcePlanManagedDefaults(){
   for(const x of liveState.inf.sessions||[]){
     if(x&&x.planManaged&&String(x.settings?.ticker||'').toUpperCase()==='SOXL'){
       const st=x.settings||(x.settings={});
-      if(st.div==null)st.div=40;if(st.target==null)st.target=25;if(st.big==null)st.big=15;
+      if(st.div==null)st.div=20;if(st.target==null)st.target=25;if(st.big==null)st.big=15;
       if(st.reverse==null)st.reverse=true;if(st.compound==null)st.compound=true;
-      if(st.revGap==null)st.revGap=0;if(st.engine==null)st.engine='v40';if(st.loPct==null)st.loPct=8;if(st.tgtDyn==null)st.tgtDyn=false;
+      if(st.revGap==null)st.revGap=0;if(st.engine==null)st.engine='v40';if(st.loPct==null)st.loPct=6;if(st.tgtDyn==null)st.tgtDyn=false;
     }
   }
   for(const x of liveState.vr.sessions||[]){
     if(x&&x.planManaged&&String(x.settings?.ticker||'').toUpperCase()==='TECL'){
       const st=x.settings||(x.settings={});
-      if(st.mode==null)st.mode=.5;if(st.formula==null)st.formula='basic';if(st.g==null)st.g=100;
-      if(st.band==null)st.band=20;st.autoCyc=false;
+      if(st.mode==null)st.mode=.5;if(st.formula==null)st.formula='skill';if(st.g==null)st.g=150;
+      if(st.band==null)st.band=35;st.autoCyc=false;
     }
   }
 }
@@ -937,8 +937,12 @@ function calcVrState(sess){
     if(h.type==='buy'){
       const amt=(+h.price||0)*(+h.qty||0),fee=+h.fee||0,q=+h.qty||0;qty+=q;totbuy+=amt;buyShares+=q;cost+=amt;
       const isInit=h.init!==undefined?!!h.init:(!sawBuy&&!carriedIn);sawBuy=true;if(!vSet){V=amt;vSet=true;}
-      if(isInit){initBuy+=amt+fee;cycleStartPool=pool;if(cycleBaseQty<=0)cycleBaseQty=qty;}
-      else{pool-=amt+fee;cycleBuySpent+=amt+fee;cycleHasTrade=true;cycleBuyFilled+=Math.max(0,Math.round(q));}
+      if(isInit){
+        initBuy+=amt+fee;
+        const initBudget=Math.max(0,+st.initAmt||0);
+        pool+=Math.max(0,initBudget-(amt+fee));
+        cycleStartPool=pool;if(cycleBaseQty<=0)cycleBaseQty=qty;
+      }else{pool-=amt+fee;cycleBuySpent+=amt+fee;cycleHasTrade=true;cycleBuyFilled+=Math.max(0,Math.round(q));}
     }else if(h.type==='sell'){
       const q=+h.qty||0,amt=(+h.price||0)*q,fee=+h.fee||0,av=qty>0?cost/qty:0;cost-=av*q;qty-=q;if(qty<1e-9){qty=0;cost=0;}totsell+=amt;pool+=amt-fee;cycleHasTrade=true;cycleSellFilled+=Math.max(0,Math.round(q));
     }else if(h.type==='add'){pool+=+h.amt||0;totadd+=+h.amt||0;if((h.auto||(curCyc===0&&!cycleHasTrade))&&!cycleHasTrade)cycleStartPool=pool;}
@@ -980,7 +984,7 @@ async function advancePlanVrCycle(){
 function vrCycleStart(c){if(c.st.cycStart)return c.st.cycStart;for(let i=c.hist.length-1;i>=0;i--){const x=c.hist[i];if(x.auto&&(x.type==='add'||x.type==='wd'))return x.date;}const f=c.hist.find(x=>x.type==='buy');return f?f.date:null;}
 function vrOrders(sess,price){
   const c=calcVrState(sess),st=c.st,orders=[];if(!(price>0))return {state:c,orders,note:'확정 종가가 없어 계산하지 못했습니다.'};
-  if(!(c.V>0)&&!(c.qty>0)){const amt=st.initAmt!=null?+st.initAmt:10000,q=Math.floor(amt/price);if(q>0)orders.push({side:'buy',name:'첫 매수',price,qty:q,tag:'초기'});return {state:c,orders,note:'첫 매수 후 V와 20차 예약 사다리가 생성됩니다.'};}
+  if(!(c.V>0)&&!(c.qty>0)){const amt=st.initAmt!=null?+st.initAmt:10000,q=Math.floor(amt/(price*(1+FEE)));if(q>0)orders.push({side:'buy',name:'첫 매수',price,qty:q,tag:'초기'});return {state:c,orders,note:'첫 매수는 수수료 포함 배정금 안에서 계산합니다. 남는 금액은 Pool로 유지하고, 체결 후 V와 20차 예약 사다리가 생성됩니다.'};}
   const N=20,B=Math.floor(c.cycleBaseQty||c.qty),ev=price*c.qty,cap=Math.max(0,c.cycleStartPool*(+st.mode||.5)),remain=Math.max(0,Math.min(c.pool,cap-c.cycleBuySpent));
   if(B>0){
     for(let k=Math.max(1,c.cycleSellFilled+1);k<=Math.min(N,B);k++){
@@ -1043,28 +1047,38 @@ function realizedVol(rows,n){
 }
 function alphaOrderHtml(side,sym,qty,price,note){
   const c=side==='buy'?'buy':'sell',lab=side==='buy'?'매수':'매도';
-  return '<div class="liveitem '+c+'"><strong>'+lab+' · '+sym+' '+qty+'주</strong><small>'+usd(price)+' 기준 · '+(note||'목표비중 조정')+'</small></div>';
+  return '<div class="liveitem '+c+'"><strong>'+lab+' · '+sym+' '+qty+'주</strong><small>현재가 '+usd(price)+' 기준 수량 · MOC/시장가 · '+(note||'목표비중 조정')+'</small></div>';
 }
 function renderAlphaPlan(qTecl,qTqqq,qSgov){
   if(!qTecl||!qTqqq||!qSgov||!qTecl.settled||!qTqqq.settled||!qSgov.settled)return;
   const D=PATH_DEFAULTS.alpha,tr=qTecl.rows.filter(x=>x.date<=qTecl.settled.date),qr=qTqqq.rows.filter(x=>x.date<=qTqqq.settled.date);
   const sigma=realizedVol(tr,D.ivsLook),ma=indicatorSeries(qr.map(x=>x.close),D.guardMA),sma=ma[ma.length-1];
-  const tp=+qTecl.settled.close,qp=+qTqqq.settled.close,sp=+qSgov.settled.close;
+  const tp=(+qTecl.price>0?+qTecl.price:+qTecl.settled.close),qp=(+qTqqq.price>0?+qTqqq.price:+qTqqq.settled.close),sp=(+qSgov.price>0?+qSgov.price:+qSgov.settled.close);
+  const sigQ=+qTqqq.settled.close;
   if(!(sigma>0)||!(sma>0)||!(tp>0)||!(qp>0)||!(sp>0)){if($('alphaMeta'))$('alphaMeta').textContent='지표 계산에 필요한 이력이 부족합니다.';return;}
   const tq=Math.max(0,Math.floor(num('aTeclQty'))),qq=Math.max(0,Math.floor(num('aTqqqQty'))),sq=Math.max(0,Math.floor(num('aSgovQty'))),cash=num('aCash');
   let total=tq*tp+qq*qp+sq*sp+cash;if(!(total>0)){total=30000;$('aCash').value=30000;}
   const w=Math.min(1,(D.ivsS0*D.ivsS0)/(sigma*sigma)),curTeclW=(tq*tp)/total,sleeveNow=curTeclW/Math.max(D.teclWeight,1e-9);
-  const teclHit=tq===0||Math.abs(w-sleeveNow)>D.ivsBand,targetTq=teclHit?Math.max(0,Math.floor(total*D.teclWeight*w/tp)):tq;
-  const upper=sma*(1+D.guardBand),lower=sma*(1-D.guardBand),posOn=qq>0,guard=(qp>upper?'ON':qp<lower?'OFF':(posOn?'ON':'OFF'));
-  const guardFlip=(guard==='ON')!==posOn,targetQq=guardFlip?(guard==='ON'?Math.max(0,Math.floor(total*D.guardWeight/qp)):0):qq;
-  const targetSq=(teclHit||guardFlip||(!tq&&!qq&&!sq))?Math.max(0,Math.floor(Math.max(0,total-targetTq*tp-targetQq*qp)/sp)):sq;
-  const diffs=[['TECL',targetTq-tq,tp,teclHit?'역분산 목표':''],['TQQQ',targetQq-qq,qp,guardFlip?'Guard '+guard:''],['SGOV',targetSq-sq,sp,'잔여 대피자산']],orders=[];
-  diffs.filter(x=>x[1]<0).forEach(x=>orders.push({side:'sell',sym:x[0],qty:-x[1],price:x[2],note:x[3]}));
-  diffs.filter(x=>x[1]>0).forEach(x=>orders.push({side:'buy',sym:x[0],qty:x[1],price:x[2],note:x[3]}));
-  $('alphaMeta').textContent='기준 '+qTecl.settled.date+' · TECL σ20 '+(sigma*100).toFixed(1)+'% → 목표 '+(w*100).toFixed(1)+'% (70% 슬리브 내) · TQQQ '+usd(qp)+' / SMA250 '+usd(sma)+' · Guard '+guard;
+  const teclHit=tq===0||Math.abs(w-sleeveNow)>D.ivsBand,idealTq=teclHit?Math.max(0,Math.floor(total*D.teclWeight*w/tp)):tq;
+  const upper=sma*(1+D.guardBand),lower=sma*(1-D.guardBand),posOn=qq>0,guard=(sigQ>upper?'ON':sigQ<lower?'OFF':(posOn?'ON':'OFF'));
+  const guardFlip=(guard==='ON')!==posOn,idealQq=guardFlip?(guard==='ON'?Math.max(0,Math.floor(total*D.guardWeight/qp)):0):qq;
+  const rebalance=teclHit||guardFlip||(!tq&&!qq&&!sq),idealSq=rebalance?Math.max(0,Math.floor(Math.max(0,total-idealTq*tp-idealQq*qp)/sp)):sq;
+
+  const cur={TECL:tq,TQQQ:qq,SGOV:sq},price={TECL:tp,TQQQ:qp,SGOV:sp},ideal={TECL:idealTq,TQQQ:idealQq,SGOV:idealSq};
+  let available=Math.max(0,cash),orders=[];
+  for(const sym of ['TECL','TQQQ','SGOV']){
+    const q=Math.max(0,cur[sym]-ideal[sym]);
+    if(q>0){orders.push({side:'sell',sym,qty:q,price:price[sym],note:sym==='TQQQ'?'Guard '+guard:'목표비중 조정'});available+=q*price[sym]*(1-FEE);cur[sym]-=q;}
+  }
+  for(const sym of ['TECL','TQQQ','SGOV']){
+    const want=Math.max(0,ideal[sym]-cur[sym]);if(want<=0)continue;
+    const can=Math.max(0,Math.floor(available/(price[sym]*(1+FEE)))),q=Math.min(want,can);
+    if(q>0){orders.push({side:'buy',sym,qty:q,price:price[sym],note:sym==='TQQQ'?'Guard '+guard:(sym==='TECL'?'역분산 목표':'잔여 대피자산')});available-=q*price[sym]*(1+FEE);cur[sym]+=q;}
+  }
+  $('alphaMeta').textContent='신호 '+qTecl.settled.date+' 확정 · TECL σ'+D.ivsLook+' '+(sigma*100).toFixed(1)+'% → 슬리브 목표 '+(w*100).toFixed(1)+'% · TQQQ 확정종가 '+usd(sigQ)+' / SMA'+D.guardMA+' '+usd(sma)+' · Guard '+guard;
   $('alphaActions').innerHTML=orders.length?orders.map(x=>alphaOrderHtml(x.side,x.sym,x.qty,x.price,x.note)).join(''):waitHtml('오늘 주문 없음','TECL 밴드와 TQQQ Guard 모두 유지 구간입니다.');
-  const tw=targetTq*tp/total*100,qw=targetQq*qp/total*100,sw=Math.max(0,100-tw-qw);
-  $('alphaSummary').innerHTML='<b>목표:</b> TECL '+tw.toFixed(1)+'% · TQQQ '+qw.toFixed(1)+'% · SGOV/현금 '+sw.toFixed(1)+'% · 평가액 '+usd(total)+'<br><b>트리거:</b> TECL '+(teclHit?'리밸런싱':'유지')+' · TQQQ '+(guardFlip?'상태전환 '+guard:'유지 '+guard);
+  const post=cur.TECL*tp+cur.TQQQ*qp+cur.SGOV*sp+available,tw=post>0?cur.TECL*tp/post*100:0,qw=post>0?cur.TQQQ*qp/post*100:0,sw=post>0?(cur.SGOV*sp+available)/post*100:0;
+  $('alphaSummary').innerHTML='<b>주문 후 예상:</b> TECL '+tw.toFixed(1)+'% · TQQQ '+qw.toFixed(1)+'% · SGOV/현금 '+sw.toFixed(1)+'% · 평가액 '+usd(post)+'<br><b>트리거:</b> TECL '+(teclHit?'리밸런싱':'유지')+' · TQQQ '+(guardFlip?'상태전환 '+guard:'유지 '+guard)+' · 매도 먼저 실행 후 매수';
 }
 function refreshAlphaFromCache(){if(liveQuotes.TECL&&liveQuotes.TQQQ&&liveQuotes.SGOV)renderAlphaPlan(liveQuotes.TECL,liveQuotes.TQQQ,liveQuotes.SGOV);}
 function ledgerReady(){return sleeveLedger.startQLD>0||sleeveLedger.startSGOV>0||sleeveLedger.startCash!==0||(sleeveLedger.trades||[]).length>0;}
@@ -1362,8 +1376,8 @@ function userBadge(user){
 }
 
 const d=defaults();let saved=null;try{saved=JSON.parse(localStorage.getItem(KEY)||"null")}catch(e){}
+if(saved && saved.aCash===undefined){saved.startCapital=30000;saved.aCash=30000;}
 if(saved && !(Number(saved.startCapital)>0)) saved.startCapital=30000;
-if(saved && saved.aCash===undefined) saved.aCash=30000;
 apply(saved||d);$("slDate").value=todayISO();renderSessionSelectors();renderLedger();render();
 ["startDate","targetDate","startCapital","targetCapital","monthlyAdd","targetIncome","stageMode","balMM","balVR","balQLD","balSGOV","cagrLow","cagrBase","cagrHigh","incomeBasis","incomeYield","sgovYield","extraWithdraw"].forEach(id=>$(id).addEventListener("change",render));
 ["aTeclQty","aTqqqQty","aSgovQty","aCash"].forEach(id=>$(id).addEventListener("change",()=>{localSave();refreshAlphaFromCache();}));
