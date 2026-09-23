@@ -153,7 +153,7 @@ th:first-child,td:first-child{text-align:left}
 <body>
 <div class="wrap">
   <div class="top">
-    <div class="brand"><div class="logo">Five Year Plan</div><h1>5년 자산플랜 <span class="ver">v1.10.2</span></h1></div>
+    <div class="brand"><div class="logo">Five Year Plan</div><h1>5년 자산플랜 <span class="ver">v1.10.3</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
       <div class="jkmenu" id="jkmenuWrap">
@@ -549,7 +549,7 @@ const plusYears=(iso,n)=>{const d=new Date(iso+"T00:00:00Z");d.setUTCFullYear(d.
 const days=(a,b)=>(new Date(b+"T00:00:00Z")-new Date(a+"T00:00:00Z"))/86400000;
 const PATH_DEFAULTS={
   alpha:{teclWeight:.70,guardWeight:.30,ivsLook:20,ivsS0:.60,ivsBand:.15,guardMA:250,guardBand:.03},
-  classic:{infWeight:.80,vrWeight:.20,infDiv:20,infTarget:25,infBig:15,vrG:150,vrBand:40,vrFormula:'skill',vrStockPct:.90,vrPoolLimit:.50}
+  classic:{infWeight:.50,vrWeight:.50,infDiv:20,infTarget:20,infBig:15,vrG:10,vrBand:15,vrFormula:'basic',vrStockPct:.90,vrPoolLimit:.50}
 };
 
 
