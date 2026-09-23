@@ -153,7 +153,7 @@ th:first-child,td:first-child{text-align:left}
 <body>
 <div class="wrap">
   <div class="top">
-    <div class="brand"><div class="logo">Five Year Plan</div><h1>5년 자산플랜 <span class="ver">v1.10.4</span></h1></div>
+    <div class="brand"><div class="logo">Five Year Plan</div><h1>5년 자산플랜 <span class="ver">v1.10.5</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
       <div class="jkmenu" id="jkmenuWrap">
@@ -199,15 +199,15 @@ th:first-child,td:first-child{text-align:left}
       <div class="path-note">시작금 $30,000 기준 · 다른 탭과 합산하는 $60,000 운용이 아니라 같은 원금을 두 방식으로 비교하는 대안입니다.</div>
       <div class="guidegrid">
         <div class="guidekpi"><div class="k">시작금</div><div class="v">$30,000</div></div>
-        <div class="guidekpi"><div class="k">TECL 역분산</div><div class="v">70% · N20 · s0 60%</div><div class="sub">밴드 15%p · 나머지 SGOV</div></div>
-        <div class="guidekpi"><div class="k">TQQQ Guard</div><div class="v">30% · SMA250</div><div class="sub">+3% 진입 / -3% 대피</div></div>
+        <div class="guidekpi"><div class="k">TECL 역분산</div><div class="v">70% · N20 · s0 55%</div><div class="sub">밴드 10%p · 나머지 SGOV</div></div>
+        <div class="guidekpi"><div class="k">TQQQ Guard</div><div class="v">30% · SMA200</div><div class="sub">+1.5% 진입 / -1.5% 대피</div></div>
         <div class="guidekpi"><div class="k">대피자산</div><div class="v">SGOV</div><div class="sub">신호가 없으면 거래 없음</div></div>
       </div>
       <div class="todaybox">
         <h3>📋 오늘 주문 — 이 박스만 보고 주문</h3>
         <div class="sub" id="alphaMeta">TECL·TQQQ·SGOV 확정 일봉을 불러오는 중…</div>
         <div class="path-orders" id="alphaActions"><div class="liveitem wait">시세를 불러오면 주문 수량을 계산합니다.</div></div>
-        <div class="path-summary" id="alphaSummary"><b>원칙:</b> TECL은 목표 변동성 비중과 15%p 이상 벌어질 때만, TQQQ는 Guard 상태가 바뀔 때만 거래합니다.</div>
+        <div class="path-summary" id="alphaSummary"><b>원칙:</b> TECL은 목표 변동성 비중과 10%p 이상 벌어질 때만, TQQQ는 Guard 상태가 바뀔 때만 거래합니다.</div>
       </div>
       <div class="card" style="margin-top:10px;margin-bottom:0">
         <h3>현재 보유수량 · 체결 후 여기만 갱신</h3>
@@ -548,7 +548,7 @@ const todayISO=()=>{const d=new Date();return new Date(Date.UTC(d.getFullYear(),
 const plusYears=(iso,n)=>{const d=new Date(iso+"T00:00:00Z");d.setUTCFullYear(d.getUTCFullYear()+n);return d.toISOString().slice(0,10)};
 const days=(a,b)=>(new Date(b+"T00:00:00Z")-new Date(a+"T00:00:00Z"))/86400000;
 const PATH_DEFAULTS={
-  alpha:{teclWeight:.70,guardWeight:.30,ivsLook:20,ivsS0:.60,ivsBand:.15,guardMA:250,guardBand:.03},
+  alpha:{teclWeight:.70,guardWeight:.30,ivsLook:20,ivsS0:.55,ivsBand:.10,guardMA:200,guardBand:.015},
   classic:{infWeight:.50,vrWeight:.50,infDiv:20,infTarget:20,infBig:15,vrG:10,vrBand:15,vrFormula:'basic',vrStockPct:.90,vrPoolLimit:.50}
 };
 
