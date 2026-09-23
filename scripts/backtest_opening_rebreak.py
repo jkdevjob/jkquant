@@ -121,6 +121,30 @@ def norm_bars(row):
     return a
 
 
+def opening_time_bucket(h):
+    if h <= 910: return "09:03~09:10"
+    if h <= 920: return "09:11~09:20"
+    return "09:21~09:30"
+
+
+def opening_path_metrics(a, entry_i, entry):
+    post=a[entry_i:]
+    if not post or entry<=0:
+        return {}
+    best=max(post,key=lambda z:z["c"])
+    worst=min(post,key=lambda z:z["c"])
+    out={
+        "mfePct":(best["c"]/entry-1)*100,
+        "mfeTime":best["hm"],
+        "maePct":(worst["c"]/entry-1)*100,
+        "maeTime":worst["hm"],
+    }
+    for n in (1,3,5,10):
+        idx=entry_i+n
+        out[f"fwd{n}mPct"]=((a[idx]["c"]/entry-1)*100) if idx<len(a) else None
+    return out
+
+
 def one_trade(day, row, p: Params):
     if int(row.get("rank") or 999999) > p.top_n:
         return None
@@ -174,6 +198,7 @@ def one_trade(day, row, p: Params):
             amt_ratio = (y["c"] * y["v"]) / max(1.0, base_amt)
             if y["c"] > peak and vol_ratio >= p.vol_mult and amt_ratio >= p.amount_mult:
                 entry = y["c"]
+                path = opening_path_metrics(a, j, entry)
                 exit_px = None
                 exit_hm = None
                 reason = None
@@ -201,6 +226,8 @@ def one_trade(day, row, p: Params):
                     "entryPrice": entry,
                     "volRatio": vol_ratio,
                     "amountRatio": amt_ratio,
+                    "timeBucket": opening_time_bucket(y["hm"]),
+                    **path,
                     "exitTime": exit_hm,
                     "exitPrice": exit_px,
                     "reason": reason,
@@ -233,6 +260,41 @@ def summary(trades, days):
         "maxDrawdownSimple": mdd,
         "tradesPerDay": (len(trades) / len(days)) if days else 0.0,
         "estimatedGapTrades": sum(1 for x in trades if x.get("gapEstimated")),
+    }
+
+
+def opening_group_stats(trades, key):
+    groups={}
+    for x in trades:
+        groups.setdefault(str(x.get(key) or "unknown"),[]).append(x)
+    out=[]
+    for name,rows in sorted(groups.items()):
+        pn=[x["pnl"] for x in rows]
+        mf=[x["mfePct"] for x in rows if x.get("mfePct") is not None]
+        ma=[x["maePct"] for x in rows if x.get("maePct") is not None]
+        out.append({
+            "group":name,"trades":len(rows),
+            "winRate":sum(1 for v in pn if v>0)/len(pn)*100 if pn else 0,
+            "avgPnl":statistics.fmean(pn) if pn else 0,
+            "avgMfe":statistics.fmean(mf) if mf else None,
+            "avgMae":statistics.fmean(ma) if ma else None,
+        })
+    return out
+
+
+def opening_diagnostics(trades):
+    path={}
+    for n in (1,3,5,10):
+        k=f"fwd{n}mPct"; vals=[x[k] for x in trades if x.get(k) is not None]
+        path[k]={"n":len(vals),"avg":statistics.fmean(vals) if vals else None,
+                 "median":statistics.median(vals) if vals else None}
+    mf=[x["mfePct"] for x in trades if x.get("mfePct") is not None]
+    ma=[x["maePct"] for x in trades if x.get("maePct") is not None]
+    return {
+        "timeBuckets":opening_group_stats(trades,"timeBucket"),
+        "forwardPath":path,
+        "avgMfe":statistics.fmean(mf) if mf else None,
+        "avgMae":statistics.fmean(ma) if ma else None,
     }
 
 
@@ -352,7 +414,7 @@ def main():
     wf = walk_forward(days, variant_trade_map)
     enough = len(days) >= 20 and len(baseline) >= 30
     report = {
-        "schema": 3,
+        "schema": 4,
         "generatedAt": datetime.now(KST).isoformat(),
         "from": day_labels[0],
         "to": day_labels[-1],
@@ -363,6 +425,7 @@ def main():
         "signalModel": "live-parity-close-only",
         "signalModelNote": "Breakout/peak decisions use 1-minute close to match the current live Naver feed. Full KIS OHLC remains archived for future research.",
         "variants": reports,
+        "diagnostics": opening_diagnostics(baseline),
         "walkForward": wf,
     }
 
@@ -370,7 +433,9 @@ def main():
         json.dump(report, f, ensure_ascii=False, indent=2)
 
     with (OUT / "baseline-trades.csv").open("w", encoding="utf-8", newline="") as f:
-        cols = ["date","rank","code","name","gap","gapEstimated","pullbackPct","entryTime","entryPrice","volRatio","amountRatio","exitTime","exitPrice","reason","pnl"]
+        cols = ["date","rank","code","name","gap","gapEstimated","pullbackPct","entryTime","entryPrice","volRatio","amountRatio",
+                "timeBucket","mfePct","mfeTime","maePct","maeTime","fwd1mPct","fwd3mPct","fwd5mPct","fwd10mPct",
+                "exitTime","exitPrice","reason","pnl"]
         w = csv.DictWriter(f, fieldnames=cols)
         w.writeheader()
         for x in baseline:

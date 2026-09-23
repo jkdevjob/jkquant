@@ -15,6 +15,15 @@ jobs:
       - uses: actions/setup-node@v4
         with: { node-version: '22' }
 
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.12' }
+
+      - name: 연구 Python 문법 검사
+        run: |
+          python -m py_compile scripts/backtest_opening_rebreak.py
+          python -m py_compile scripts/backtest_daytrading.py
+          python -m py_compile scripts/collect_daytrading_data.py
+
       - name: 전략 SSOT 체크 (문서 기준값·규약 불변식)
         run: |
           node -e "
