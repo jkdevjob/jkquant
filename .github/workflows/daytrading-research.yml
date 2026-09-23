@@ -21,6 +21,7 @@ on:
       - "scripts/collect_daytrading_data.py"
       - "scripts/backtest_daytrading.py"
       - "functions/api/daytrading-research.js"
+      - "functions/api/daytrading-summary.js"
       - "scalping.html"
 
 permissions:
@@ -56,6 +57,7 @@ jobs:
         env:
           JKQ_BASE_URL: https://jkquant.pages.dev
           JKQ_UNIVERSE_LIMIT: "100"
+          KEY: ${{ secrets.AUTOTRADE_KEY }}
         shell: bash
         run: |
           set -e
@@ -101,13 +103,20 @@ jobs:
             exit 0
           fi
 
+          NEW_DAY=0
           if [ ! -f "$DAY" ]; then
             python .app/scripts/collect_daytrading_data.py
+            [ -f "$DAY" ] && NEW_DAY=1
           else
             echo "오늘 전일장 분봉 이미 수집됨: $DAY"
           fi
 
           python .app/scripts/backtest_daytrading.py
+
+          if [ "$NEW_DAY" = "1" ] && [ -n "$KEY" ] && [ -f data/daytrading-research/latest.json ]; then
+            STATUS=$(curl -sS --max-time 30 -o day-summary-response.json -w '%{http_code}'               -X POST -H "x-monitor-key: $KEY" -H "content-type: application/json"               --data-binary @data/daytrading-research/latest.json               "https://jkquant.pages.dev/api/daytrading-summary")
+            echo "Telegram 데이트레이딩 일일요약 HTTP $STATUS: $(cat day-summary-response.json 2>/dev/null || true)"
+          fi
 
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"

@@ -24,6 +24,12 @@ jobs:
           python -m py_compile scripts/backtest_daytrading.py
           python -m py_compile scripts/collect_daytrading_data.py
 
+      - name: 데이트레이딩 서버 JS 문법 검사
+        run: |
+          node --input-type=module --check < functions/api/_daytrading.js
+          node --input-type=module --check < functions/api/daytrading-monitor.js
+          node --input-type=module --check < functions/api/daytrading-summary.js
+
       - name: 전략 SSOT 체크 (문서 기준값·규약 불변식)
         run: |
           node -e "
