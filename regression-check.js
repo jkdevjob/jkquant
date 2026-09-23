@@ -2936,7 +2936,7 @@ console.log('\n[60] 분배금 현금 수령 — 전 전략');
     ok('분배금 전용 경로도 그대로 남아 있다 (현금수령 세션용)',
        /_divCache\[K\]='loading';/.test(idx) && /fetchDailyDiv\(K\)/.test(idx)); }
   const calls=['renderInfAnal','renderVrAnal','renderMaAnal','renderIvsAnal','renderAsapAnal']
-    .filter(f=>new RegExp(`sessDivCash\\([\\s\\S]{0,60}?\\(\\)=>${f}\\(\\)\\)`).test(idx));
+    .filter(f=>new RegExp(`(?:sessDivCash|ivsDivCash)\\([\\s\\S]{0,60}?\\(\\)=>${f}\\(\\)\\)`).test(idx));   // 섀넌은 다리별(ivsDivCash · 7차 D8)
   ok('다섯 렌더가 모두 쓴다', calls.length===5, calls.join(','));
   // 시세에서 뽑은 추정이다 — 화면에 밝힌다
   ok('추정이라고 밝힌다', (idx.match(/시세 기준 추정/g)||[]).length>=3);
@@ -3040,7 +3040,7 @@ console.log('\n[63] 나간 돈 — 여섯 전략 같은 규약');
   // 분배금 현금수령은 어느 전략에서 켜도 잡혀야 한다
   /* 적립은 sessDivCash 를 쓰지 않는다 — 자기 칸(reinv)으로 computeDca 가 이미 세고,
      c.total 에 반영해 둔다. 나머지 다섯은 divmode 를 보고 여기서 센다. */
-  const dv=(ps.match(/sessDivCash\(st, (?:h|c\.hist)\)/g)||[]).length;
+  const dv=(ps.match(/(?:sessDivCash|ivsDivCash)\(st, (?:h|c\.hist)\)/g)||[]).length;   // 섀넌은 다리별 (7차 D8)
   ok('나머지 다섯이 분배금을 센다', dv===5, `${dv}곳`);
   ok('적립은 제 방식으로 이미 센다',
      /if\(c\.pos && !c\.pos\.reinv && \(c\.pos\.divCash\|\|0\)>0\)/.test(ps)
@@ -4559,15 +4559,23 @@ console.log('\n[79] 잔돈 보존 · 전체비교 총투입');
    (예수금 이자·국채 쪽 비용·양도세·배당 현금)을 끄고 수수료를 같게 두면 날짜가 그대로 겹쳐야 한다. */
 /* 섀넌 백테 엔진을 운영 재생과 같은 조건으로 — 백테에만 있는 규약을 끄고 수수료를 0.25% 로 못박는다.
    [80]·[112] 가 같이 쓴다. 원문을 한 글자씩 바꾸므로, 원문이 바뀌면 여기서 먼저 터진다. */
-function ivsNeutralSrc(src){
+/* keepDiv — 배당은 남기되 앱처럼 늘 세후로 (앱 divCashQ 는 세금을 늘 뗀다 · 백테는 비용ON 일 때만). 7차 D8 */
+function ivsNeutralSrc(src, keepDiv){
   const inj=(a,b,l)=>{ const p=src.split(a); if(p.length!==2) throw new Error(`섀넌 중화 실패(${l}): ${p.length-1}회 매치`); src=p[0]+b+p[1]; };
   inj(`const FEE=costOn?costOf(tkr).fee:0;`, `const FEE=0.0025;`, 'fee');
   inj(`const LEGFEE=(costOn&&!X1)?costOf(tkr).fee:0;`, `const LEGFEE=0;`, 'legfee');
   inj(`const CASH_DIVTAX=costOn?DIV_TAXRATE:0, CASH_EXP=costOn?0.0010:0;`, `const CASH_DIVTAX=0, CASH_EXP=0;`, 'cashcost');
   inj(`const owed=capGainTax(yearPnl, tkr); let due=owed; yearPnl=0;`, `const owed=0; let due=owed; yearPnl=0;`, 'tax');
   inj(`const gross=cash*parkRate(+d.slice(0,4),tkr)/252;`, `const gross=0;`, 'park');
-  inj(`cash+=divCash(tkr,d,A.sh,costOn);`, ``, 'div');
-  inj(`if(X1 && _p1 && _p1.sym && !_p1.synth) cash+=divCash(_p1.sym,d,B.sh,costOn);`, ``, 'div1');
+  if(keepDiv){
+    inj(`cash+=divCash(tkr,d,A.sh,costOn);`,
+        `{ const __v=divCash(tkr,d,A.sh,true); cash+=__v; if(__v>0&&typeof __LOG!=='undefined') __LOG.push({type:'div',leg:'lev',date:d,amt:__v}); }`, 'div');
+    inj(`if(X1 && _p1 && _p1.sym && !_p1.synth) cash+=divCash(_p1.sym,d,B.sh,costOn);`,
+        `if(X1 && _p1 && _p1.sym && !_p1.synth){ const __v=divCash(_p1.sym,d,B.sh,true); cash+=__v; if(__v>0&&typeof __LOG!=='undefined') __LOG.push({type:'div',leg:'x1',date:d,amt:__v}); }`, 'div1');
+  }else{
+    inj(`cash+=divCash(tkr,d,A.sh,costOn);`, ``, 'div');
+    inj(`if(X1 && _p1 && _p1.sym && !_p1.synth) cash+=divCash(_p1.sym,d,B.sh,costOn);`, ``, 'div1');
+  }
   return src;
 }
 console.log('\n[80] 역분산 1배 짝 — 운영·백테 기초가격 일치');
@@ -7130,44 +7138,67 @@ console.log('\n[110] 7차 ⑧·⑭ — 익절 조절 20일 창 · VR 수동 진�
   }
 }
 
-/* ════ 111. 7차 ⑮ — 섀넌·200일선·ASAP 은 조정종가로 ════
-   N1 이 공용 로더를 체결가로 바꾸면서 세 전략도 같이 체결가를 받았다. 그런데 세 전략의 장부
-   (ivsPos·maLedger·asapPos)에는 배당 칸이 없어, 보유 중 받은 배당이 모의·재생·분석에서
-   통째로 사라졌다 — 제가 만든 회귀다. 배당을 기록으로 받게 하기 전까지(결정 D8)는
-   N1 이전처럼 조정종가(배당이 가격에 녹은 계열)를 쓴다. 무매·VR 은 체결가 그대로다. */
-console.log('\n[111] 7차 ⑮ — 섀넌·200일선·ASAP 가격 계열 (배당 칸 없는 장부)');
+/* ════ 111. 7차 D8 — 섀넌·200일선·ASAP 도 체결가 + 배당 기록 ════
+   7-⑮ 는 이 세 전략을 임시로 조정종가로 돌려 배당을 가격 안에 넣었다. 대신 신호 계열이 백테(체결가)와
+   달라졌다(200일선 신호가 15년에 1~13일 갈림). D8 은 무매·VR 처럼 가격은 체결가, 배당은 배당락일에
+   보유 주수만큼 세후 현금 기록으로 받게 한다 — 백테 runIVS·runMA200·runASAP 과 같은 규약이다.
+   거래 단위 대조(배당 포함)는 [112]·[113]·[115] 가 한다. 여기는 배선과 장부 값. */
+console.log('\n[111] 7차 D8 — 섀넌·200일선·ASAP 체결가 + 배당 기록');
 {
-  const q2d=new Function('SYM','j', extractFn(idx,'function quoteToDaily(SYM, j)')
-    .replace(/^function quoteToDaily\(SYM, j\)\{/,'').replace(/\}\s*$/,''));
-  const adj=new Function(extractFn(idx,'function adjDaily(q)')+'\nreturn adjDaily;')();
-  const dps=new Function(extractFn(idx,'function isTradeBasis(Q)')+'\n'+extractFn(idx,'function divPerShareQ(Q, d)')+'\nreturn divPerShareQ;')();
-  const _b=(d,c)=>({date:d,open:c,high:c+1,low:c-1,close:c});
-  // 배당 두 번(0.9·1.1)이 가격에 녹아 조정계열이 체결가보다 낮은 픽스처 ([60] 과 같은 것)
-  const J={ series:[{date:'2024-01-02',close:98},{date:'2024-06-03',close:99},{date:'2024-12-02',close:100}],
-            ohlcTrade:[_b('2024-01-02',100),_b('2024-06-03',101),_b('2024-12-02',100)],
-            ohlc:[_b('2024-01-02',98),_b('2024-06-03',99),_b('2024-12-02',100)],
-            dividends:[{date:'2024-03-15',amount:0.9},{date:'2024-09-13',amount:1.1}],
-            priceBasis:'trade', price:100.5, last:{date:'2024-12-02',close:100}, currency:'USD' };
-  const Q=q2d('SOXL',J), A=adj(Q);
-  ok('7차 ⑮ 조정 뷰의 days 는 조정종가다', A.days.map(d=>d.close).join('/')==='98/99/100', A.days.map(d=>d.close).join('/'));
-  ok('7차 ⑮ 조정 뷰의 ohlc·last 도 조정계열이다', A.ohlc && A.ohlc[0].close===98 && A.last.close===100 && A.last.date==='2024-12-02',
-     JSON.stringify(A.last));
-  ok('7차 ⑮ 조정 뷰에는 배당을 또 얹지 않는다 (이미 가격에 있다)',
-     A.priceBasis!=='trade' && dps(A,'2024-03-15')===0 && dps(Q,'2024-03-15')===0.9, `${A.priceBasis} ${dps(A,'2024-03-15')}/${dps(Q,'2024-03-15')}`);
-  ok('7차 ⑮ 공용 캐시 객체는 그대로 — 같은 종목을 무매·VR 이 체결가로 쓴다',
-     A!==Q && Q.days[0].close===100 && Q.priceBasis==='trade' && Q.ohlc[1].high===102);
-  ok('7차 ⑮ 현재가·종목·통화는 그대로', A.price===100.5 && A.symbol==='SOXL' && A.currency==='USD');
-  const P={symbol:'X', days:[{date:'2024-01-02',close:5}], last:{date:'2024-01-02',close:5}};
-  ok('7차 ⑮ 조정계열이 없으면(프록시 폴백) 받은 그대로', adj(P)===P && adj(null)===null);
-  // 배선 — 세 로더만 조정 뷰, 무매·VR 은 체결가
-  const L={ma:'async function loadMaData(force)', ivs:'async function loadIvsData(force)', asap:'async function loadAsapData(force)'};
-  const cnt=Object.fromEntries(Object.entries(L).map(([k,sig])=>[k,(extractFn(idx,sig).match(/adjDaily\(await fetchDaily\(/g)||[]).length]));
-  ok('7차 ⑮ 세 로더가 조정 뷰를 쓴다 (섀넌은 1배 짝까지)', cnt.ma===1 && cnt.ivs===2 && cnt.asap===1, JSON.stringify(cnt));
-  ok('7차 ⑮ 세 로더에 체결가 직통 호출이 안 남았다', Object.values(L).every(sig=>!/[^(]await fetchDaily\(/.test(extractFn(idx,sig))));
+  ok('7차 D8 조정 뷰(adjDaily)가 없다 — 세 전략도 체결가', !/adjDaily\(/.test(idx));
+  const L={ma:['async function loadMaData(force)','maQuoteData'], ivs:['async function loadIvsData(force)','ivsQuoteData'],
+           asap:['async function loadAsapData(force)','asapQuoteData']};
+  for(const [k,[sig,v]] of Object.entries(L)){
+    const f=extractFn(idx,sig);
+    ok(`7차 D8 ${k} 로더가 체결가 그대로 받고 배당·가격기준을 싣는다`,
+       /const q=await fetchDaily\(sym\);/.test(f) && new RegExp(v+'=\\{[\\s\\S]{0,260}dividends:q\\.dividends\\|\\|\\[\\], priceBasis:q\\.priceBasis\\|\\|null\\}').test(f)); }
+  ok('7차 D8 섀넌 1배 짝도 배당·가격기준을 싣는다',
+     /dividends:q1\.dividends\|\|\[\], priceBasis:q1\.priceBasis\|\|null\}/.test(extractFn(idx,'async function loadIvsData(force)')));
+  // ── 장부 값 ──
+  { const ivsPosF=new Function('IVS_FEE', extractFn(idx,'function ivsPos(principal,hist)')+'\nreturn ivsPos;')(0.0025);
+    const H=[{type:'buy',leg:'lev',date:'2024-01-02',price:100,qty:10,amt:1000,fee:2.5,ts:1},
+             {type:'div',leg:'lev',sym:'TQQQ',date:'2024-03-20',amt:5,ts:2}];
+    const P=ivsPosF(10000,H);
+    ok('7차 D8 섀넌 장부 — 배당은 현금으로 들어오고 넣은 돈(added)이 아니다',
+       near(P.cash,10000-1002.5+5,1e-9) && P.qty===10 && P.added===0 && near(P.divs,5,1e-12) && near(P.avg,100.25,1e-9),
+       `현금 ${P.cash} 보유 ${P.qty} added ${P.added} divs ${P.divs} 평단 ${P.avg}`); }
+  { const maL=new Function(extractFn(idx,'function maLedger(hist, price, principal)')+'\nreturn maLedger;')();
+    const L2=maL([{type:'in',date:'2024-01-02',price:100,qty:10},{type:'div',date:'2024-03-20',amt:5}], 110, 10000);
+    ok('7차 D8 로테 장부 — 배당은 현금으로, 평단·보유는 그대로',
+       near(L2.cash,10000-1000-2.5+5,1e-9) && L2.qty===10 && near(L2.divs,5,1e-12) && near(L2.total,1100+L2.cash,1e-9),
+       JSON.stringify({cash:L2.cash,qty:L2.qty,divs:L2.divs,total:L2.total})); }
+  { const ap=new Function(extractFn(idx,'function asapPos(hist)')+'\nreturn asapPos;')();
+    const P=ap([{type:'sgov',date:'2024-01-02',amt:100},{type:'buy',date:'2024-01-03',price:20,qty:2.5,amt:50,from:'reserve'},
+                {type:'div',date:'2024-03-20',amt:3}]);
+    ok('7차 D8 ASAP 장부 — 배당은 리저브로, 새로 넣은 돈과 따로 센다',
+       near(P.reserve,53,1e-12) && near(P.divs,3,1e-12) && near(P.shares,2.5,1e-12), JSON.stringify(P)); }
+  { const pr=extractFn(idx,'function paperRaw(tab, sess)');
+    ok('7차 D8 ASAP 투입 원금에 배당이 안 들어간다',
+       /if\(x\.type==='sgov'\) inflow\+=\+x\.amt\|\|0;/.test(pr) && !/x\.type==='div'/.test(pr)); }
+  // ── 현금 수령 세션의 섀넌 분배금 — 다리마다 자기 종목·자기 주수 ──
+  { const f=new Function('divCashOn','divOf','ivsX1Of','divIncome','shareTimeline',
+      extractFn(idx,'function ivsDivCash(st, hist, onReady)')+'\nreturn ivsDivCash;')(
+      global.divCashOn, (t)=>({dividends:[{date:'2024-03-20',amount:t==='TQQQ'?0.1:1.0}]}), ()=>'QQQ',
+      new Function(extractFn(idx,'function divIncome(divs, lots, reinv)')+'\nreturn divIncome;')(),
+      new Function(extractFn(idx,'function shareTimeline(hist)')+'\nreturn shareTimeline;')());
+    const H=[{type:'buy',leg:'lev',date:'2024-01-02',price:50,qty:100},{type:'buy',leg:'x1',date:'2024-01-02',price:400,qty:10}];
+    const r=f({ticker:'TQQQ',divmode:'cash'},H);
+    ok('7차 D8 1배 짝 세션 — 레버리지 배당은 레버리지 주수에만, 1배 배당은 1배 주수에만 (100×0.1 + 10×1.0 = 20)',
+       near(r.divCash,20,1e-12) && r.nDiv===2, JSON.stringify(r));
+    ok('7차 D8 재투자 세션은 0 (장부 기록이 이미 셌다)', f({ticker:'TQQQ',divmode:'reinv'},H).divCash===0); }
+  // ── 화면 ──
+  ok('7차 D8 기록표·수정창에 배당이 있다',
+     /div:\['배당','var\(--gold\)'\]/.test(idx) && /<option value="div">배당 \(세후 · 계좌 안 수입\)<\/option>/.test(idx)
+     && /const LBL=\{in:'진입\(매수\)',out:'청산\(현금\)',div:'배당'\}/.test(idx) && /<option value="div">배당 \(세후\)<\/option>/.test(idx)
+     && /div:'배당 → 리저브'/.test(idx) && /<option value="div">배당 \(리저브 입금 · 세후\)<\/option>/.test(idx));
+  ok('7차 D8 손으로 적는 배당 — 세 전략 모두',
+     /onclick="ivsCash\('div'\)"/.test(idx) && /onclick="maDivRecord\(\)"/.test(idx) && /onclick="asapRecord\('div'\)"/.test(idx));
+  ok('7차 D8 화면 설명문이 체결가 + 세후 배당이라고 적는다',
+     !/가격은 <b>조정종가<\/b>/.test(idx) && (idx.match(/세후 현금<\/b>/g)||[]).length>=2);
+  // 무매·VR 은 원래 체결가 + 배당 — 그대로
   const raw=['async function fetchQuote(which)','async function loadVrChart(force)','async function loadInfData(force)','async function loadInfChart(force)']
     .map(sig=>extractFn(idx,sig));
-  ok('7차 ⑮ 무매·VR 로더는 체결가 그대로 (배당은 기록으로 받는다)', raw.every(src=>!/adjDaily\(/.test(src) && /await fetchDaily\(/.test(src)));
-  ok('7차 ⑮ 화면이 조정종가로 굴린다고 밝힌다', (idx.match(/가격은 <b>조정종가<\/b>\(배당이 가격에 녹은 계열\)로 굴립니다/g)||[]).length===2);
+  ok('7차 D8 무매·VR 로더도 체결가 그대로', raw.every(src=>/await fetchDaily\(/.test(src)));
 }
 
 /* ════ 112. 7차 ⑯ — 섀넌 운영 재생 ↔ 백테 거래 단위 대조 ════
@@ -7181,7 +7212,7 @@ console.log('\n[112] 7차 ⑯ — 섀넌 운영 재생 ↔ 백테 거래 단위 
   const imBQ=new Function(extractFn(idx,'function imBuyQty(alloc, refPx, feeRate)')+'\nreturn imBuyQty;')();
   const ivsPosF=new Function(extractFn(idx,'function ivsPos(principal,hist)')+'\nreturn ivsPos;')();
   const appSrc=extractFn(idx,'function ivsReplay()');
-  let bsrc=ivsNeutralSrc(extractFn(bt,'function runIVS(days,tkr,cap,s0,N,band,costOn,mode,pair)'));
+  let bsrc=ivsNeutralSrc(extractFn(bt,'function runIVS(days,tkr,cap,s0,N,band,costOn,mode,pair)'), true);   // 배당 포함 (7차 D8)
   const inj=(a,b,l)=>{ const p=bsrc.split(a); if(p.length!==2) throw new Error(`[112] 주입 실패(${l}): ${p.length-1}회`); bsrc=p[0]+b+p[1]; };
   inj(`days.forEach((d,i)=>{`, `days.forEach((d,i)=>{ __DD=d;`, 'date');
   inj(`lotBuy(P.lot,q,px,fee+lf); P.sh+=q; cash-=spend+lf;`,
@@ -7200,7 +7231,11 @@ console.log('\n[112] 7차 ⑯ — 섀넌 운영 재생 ↔ 백테 거래 단위 
     +(bt.match(/const X1_EXPENSE_DEF=[^\n]*/)||[''])[0]+'\n'
     +(bt.match(/const IDX_EXTEND=\{[\s\S]*?\}\s*\};/)||[''])[0]+'\n';
   const mkBt=(T,LOG)=>new Function('__LOG', preX(T)+'\nlet __DD=null;\nreturn ('+bsrc.replace(/^function \w+\(/,'function (')+')')(LOG);
-  const runApp=(T,st,from,D1)=>{
+  /* 배당 픽스처 — CSV 시험 데이터엔 배당이 없다. 63거래일마다 종가의 0.4% 를 배당락으로 넣고
+     백테(DIVMAP·PBASIS)와 앱(시세의 dividends·priceBasis)에 똑같이 준다 (7차 D8). */
+  const mkDiv=(sym, from)=>{ const ds=dtsOf(sym), out=[]; ds.forEach((d,i)=>{ if(d>from && i%63===17) out.push({date:d, amount:+(M[sym][d][C]*0.004).toFixed(4)}); });
+    DIVMAP[sym]={}; out.forEach(x=>{ DIVMAP[sym][x.date]=x.amount; }); PBASIS[sym]='trade'; return out; };
+  const runApp=(T,st,from,D1,DV,DV1)=>{
     const Dall=dtsOf(T).map(d=>({date:d, close:M[T][d][C]}));
     const sess={settings:st, hist:[], paper:true};
     const f=new Function('curStrat','$','confirm','alert','simCutoff','curOf','ivsX1Of','IVS_FEE',
@@ -7208,10 +7243,11 @@ console.log('\n[112] 7차 ⑯ — 섀넌 운영 재생 ↔ 백테 거래 단위 
       appSrc+'\nreturn ivsReplay;')(
       ()=>sess, id=>({value: id==='rp_from'?from:''}), ()=>true, ()=>{},
       ()=>'2099-12-31', ()=>'USD', ()=>U, 0.0025,
-      {symbol:T, days:Dall}, D1?{symbol:U, days:D1}:null, ()=>{}, ()=>{}, ()=>{}, null, n=>String(n), imBQ);
+      {symbol:T, days:Dall, dividends:DV||[], priceBasis:'trade'}, D1?{symbol:U, days:D1, dividends:DV1||[], priceBasis:'trade'}:null,
+      ()=>{}, ()=>{}, ()=>{}, null, n=>String(n), imBQ);
     return {ok:f(), hist:sess.hist};
   };
-  const key=x=>`${x.date} ${x.type} ${x.leg} ${(+x.price).toFixed(4)} x${x.qty}`;
+  const key=x=>x.type==='div' ? `${x.date} div ${x.leg} ${(+x.amt).toFixed(9)}` : `${x.date} ${x.type} ${x.leg} ${(+x.price).toFixed(4)} x${x.qty}`;
   const CFG=[['TQQQ',55,40,15,'iv','cash'],['TQQQ',40,60,10,'iv','cash'],['SOXL',55,40,15,'iv','cash'],['SOXL',70,20,20,'iv','cash'],
              ['SOXL',55,40,15,'fix','cash'],['TECL',55,40,15,'iv','cash'],['TECL',45,60,10,'fix','cash'],
              ['SOXL',45,60,10,'iv','x1'],['TQQQ',55,40,15,'fix','x1']];
@@ -7224,26 +7260,37 @@ console.log('\n[112] 7차 ⑯ — 섀넌 운영 재생 ↔ 백테 거래 단위 
       all.forEach((d,i)=>{ if(i>0){ const r=M[T][all[i]][C]/M[T][all[i-1]][C]-1; v*=(1+r/3); } px[d]=[v,v,v,v]; });
       M[U]=px; META[U]={name:'시험용 1배',lev:1,color:'#000'}; PBASIS[U]='trade';
       D1=all.map(d=>({date:d, close:M[U][d][C]})); }
+    const DV=mkDiv(T, from), DV1=X1?mkDiv(U, from):null;
     const LOG=[];
     const r=mkBt(T,LOG)(all.filter(d=>d>=from),T,10000,s0/100,N,band/100,false,mode,pair);
-    const A=runApp(T,{ticker:T,park:X1?'x1':'bill',mode,s0,look:N,band,principal:10000},from,D1);
+    const A=runApp(T,{ticker:T,park:X1?'x1':'bill',mode,s0,look:N,band,principal:10000},from,D1,DV,DV1);
     const H=A.hist;
+    const nDivB=LOG.filter(x=>x.type==='div').length, nDivA=H.filter(x=>x.type==='div').length;
     let diff=-1;
     for(let i=0;i<Math.max(LOG.length,H.length);i++){ if(!LOG[i]||!H[i]||key(LOG[i])!==key(H[i])){ diff=i; break; } }
     const lbl=`${T} s0=${s0}% N=${N} 밴드=${band}% ${mode==='fix'?'고정5:5':'역분산'}${X1?' 짝=1배':''}`;
     ok(`7차 ⑯ ${lbl} — 운영 재생 ↔ 백테 거래 ${LOG.length}건 한 건도 안 다르다`,
        A.ok===true && LOG.length>5 && diff<0 && (!X1 || r.x1synth===false),
        diff<0?`x1synth=${r.x1synth}`:`#${diff} 백테 [${LOG[diff]?key(LOG[diff]):'—'}] 운영 [${H[diff]?key(H[diff]):'—'}]`);
-    const bad=[...LOG,...H].find(x=>!(Number.isInteger(x.qty) && x.qty>=1));
+    ok(`7차 D8 ${lbl} — 배당 기록 ${nDivA}건 (백테 ${nDivB}건)`, nDivA>0 && nDivA===nDivB, `${nDivA}/${nDivB}`);
+    const bad=[...LOG,...H].filter(x=>x.type!=='div').find(x=>!(Number.isInteger(x.qty) && x.qty>=1));
     ok(`7차 ⑯ ${lbl} — 사고판 주수가 전부 1 이상의 정수`, !bad, bad?key(bad):'');
     const P=ivsPosF(10000,H);
     ok(`7차 ⑯ ${lbl} — 운영 장부(ivsPos)의 끝 보유·현금 = 백테`,
        P.qty===r.endShares && near(P.cash,r.endCash,1e-6),
        `보유 ${P.qty}/${r.endShares} 현금 ${P.cash}/${r.endCash}`);
-    if(X1){ delete M[U]; delete META[U]; delete PBASIS[U]; }
+    delete DIVMAP[T]; delete PBASIS[T];
+    if(X1){ delete M[U]; delete META[U]; delete PBASIS[U]; delete DIVMAP[U]; }
     nCfg++;
   }
   ok('7차 ⑯ 대조가 실제로 돌았다 (설정 7개 이상)', nCfg>=7, String(nCfg));
+  { const T='TQQQ'; if(DAYS[T]){ const all=dtsOf(T), from=all[250], DV=mkDiv(T, from);
+      const A=runApp(T,{ticker:T,park:'bill',mode:'iv',s0:55,look:40,band:15,principal:10000,divmode:'cash'},from,null,DV,null);
+      const B=runApp(T,{ticker:T,park:'bill',mode:'iv',s0:55,look:40,band:15,principal:10000},from,null,DV,null);
+      ok('7차 D8 현금 수령 세션은 재생이 배당을 안 적는다 (분배금 카드가 따로 센다)',
+         A.hist.every(x=>x.type!=='div') && B.hist.some(x=>x.type==='div'),
+         `현금수령 ${A.hist.filter(x=>x.type==='div').length}건 · 재투자 ${B.hist.filter(x=>x.type==='div').length}건`);
+      delete DIVMAP[T]; delete PBASIS[T]; } }
   /* 총자산을 더하는 순서까지 백테와 같게 둔다 — 부동소수는 순서가 다르면 끝자리가 달라지고,
      그게 밴드 경계나 주수 내림 경계에 걸리면 어느 날 한 건이 갈린다. 지금 데이터에선 안 걸려도
      나중 데이터에서 걸릴 수 있어 모양으로도 묶어 둔다. */
@@ -7265,7 +7312,9 @@ console.log('\n[113] 7차 ⑰ — 200일선 운영 재생 ↔ 백테 거래 단�
   const inj=(a,b,l)=>{ const p=ms.split(a); if(p.length!==2) throw new Error(`[113] 주입 실패(${l}): ${p.length-1}회`); ms=p[0]+b+p[1]; };
   inj(`const FEE=costOn?costOf(tkr).fee:0;`, `const FEE=0.0025;`, 'fee');
   inj(`const owed=capGainTax(yearPnl, tkr); let due=owed; yearPnl=0;`, `const owed=0; let due=owed; yearPnl=0;`, 'tax');
-  inj(`cash+=divCash(tkr,d,shares,costOn);`, ``, 'div');
+  // 배당은 남기되 앱처럼 늘 세후로 (7차 D8)
+  inj(`cash+=divCash(tkr,d,shares,costOn);`,
+      `{ const __v=divCash(tkr,d,shares,true); cash+=__v; if(__v>0) __LOG.push({type:'div',date:d,amt:__v}); }`, 'div');
   // 매수 훅은 '1주 이상일 때만 거래' 로 감싼 괄호 밖 문장에 건다 — 옛 모양(감싸지 않음)으로 되돌려도
   // 주입은 되고, 그 되돌림은 아래 값 시험(1주도 못 사면 거래 0건)이 잡는다.
   inj(`lotBuy(LOT,q,c,fee); cash-=spend+fee; feesTotal+=fee; trades++;`,
@@ -7280,25 +7329,30 @@ console.log('\n[113] 7차 ⑰ — 200일선 운영 재생 ↔ 백테 거래 단�
   const appSrc=['function maLevOf(t)','function _maHold(sell,a,b)','function _maEntry(buy,a,b)','function maCond(st)',
                 'function computeMa()','function maReplay()','function imBuyQty(alloc, refPx, feeRate)'].map(m=>extractFn(idx,m)).join('\n');
   const maLed=new Function(extractFn(idx,'function maLedger(hist, price, principal)')+'\nreturn maLedger;')();
-  const runApp=(T,Dall,from,st0)=>{
+  const runApp=(T,Dall,from,st0,DV)=>{
     const st=Object.assign({ticker:T, principal:10000, buy:'ma', sell:'ma', park:'cash'}, st0||{});
     const sess={settings:st, hist:[], paper:true};
     const f=new Function('curStrat','$','confirm','alert','simCutoff','curOf','IVS_FEE','maQuoteData',
       'sortHist','save','refreshMa','pushRemote','px', appSrc+'\nreturn maReplay;')(
       ()=>sess, id=>({value: id==='rp_ma_from'?from:''}), ()=>true, ()=>{}, ()=>'2099-12-31', ()=>'USD', 0.0025,
-      {symbol:T, days:Dall, price:0}, ()=>{}, ()=>{}, ()=>{}, null, n=>String(n));
+      {symbol:T, days:Dall, price:0, dividends:DV||[], priceBasis:DV?'trade':null}, ()=>{}, ()=>{}, ()=>{}, null, n=>String(n));
     f(); return sess.hist;
   };
-  const key=x=>`${x.date} ${x.type} ${(+x.price).toFixed(4)} x${x.qty}`;
+  const key=x=>x.type==='div' ? `${x.date} div ${(+x.amt).toFixed(9)}` : `${x.date} ${x.type} ${(+x.price).toFixed(4)} x${x.qty}`;
+  /* 배당 픽스처 (7차 D8) — [112] 와 같은 방식: 63거래일마다 종가의 0.4% */
+  const mkDiv=(sym)=>{ const ds=dtsOf(sym), out=[]; ds.forEach((d,i)=>{ if(i%63===17) out.push({date:d, amount:+(M[sym][d][C]*0.004).toFixed(4)}); });
+    DIVMAP[sym]={}; out.forEach(x=>{ DIVMAP[sym][x.date]=x.amount; }); PBASIS[sym]='trade'; return out; };
   const OPT={buy:'ma', sell:'ma', short:50, park:'cash'};
   let nRun=0;
   for(const T of ['SOXL','TQQQ','TECL']){
     if(!DAYS[T]) continue;
-    const all=dtsOf(T), Dall=all.map(d=>({date:d, close:M[T][d][C]}));
+    const all=dtsOf(T), Dall=all.map(d=>({date:d, close:M[T][d][C]})), DV=mkDiv(T);
     for(const [lbl,fi] of [['이력 첫 봉부터 (워밍업은 보유)',0],['250번째 봉부터',250],['700번째 봉부터',700]]){
       const from=all[fi], LOG=[];
       const r=mkBt(LOG)(all.filter(d=>d>=from),T,10000,200,false,OPT);
-      const H=runApp(T,Dall,from);
+      const H=runApp(T,Dall,from,null,DV);
+      const nDA=H.filter(x=>x.type==='div').length, nDB=LOG.filter(x=>x.type==='div').length;
+      ok(`7차 D8 ${T} ${lbl} — 배당 기록 ${nDA}건 (백테 ${nDB}건)`, nDA>0 && nDA===nDB, `${nDA}/${nDB}`);
       let diff=-1;
       for(let i=0;i<Math.max(LOG.length,H.length);i++){ if(!LOG[i]||!H[i]||key(LOG[i])!==key(H[i])){ diff=i; break; } }
       ok(`7차 ⑰ ${T} ${lbl} — 운영 재생 ↔ 백테 거래 ${LOG.length}건 한 건도 안 다르다`, LOG.length>=1 && diff<0,
@@ -7308,6 +7362,7 @@ console.log('\n[113] 7차 ⑰ — 200일선 운영 재생 ↔ 백테 거래 단�
          L.qty===r.endShares && near(L.cash,r.endCash,1e-6), `보유 ${L.qty}/${r.endShares} 현금 ${L.cash}/${r.endCash}`);
       nRun++;
     }
+    delete DIVMAP[T]; delete PBASIS[T];
   }
   ok('7차 ⑰ 대조가 실제로 돌았다', nRun>=6, String(nRun));
 
@@ -7399,7 +7454,8 @@ console.log('\n[115] 7차 — ASAP 모의 ↔ 백테 (매수일·금액)');
   let as=extractFn(bt,'function runASAP(days,tkr,opt)');
   const inj=(a,b,l,n=1)=>{ const p=as.split(a); if(p.length!==n+1) throw new Error(`[115] 주입 실패(${l}): ${p.length-1}회`); as=p.join(b); };
   inj(`sgov*=(1+(SGOV_RATE[+d.slice(0,4)]||0.04)/252);`, ``, 'sgov');
-  inj(`sgov+=divCash(tkr,d,sh,o.costOn);`, ``, 'div');
+  // 배당은 남기되 앱처럼 늘 세후로 — 리저브로 들어간다 (7차 D8)
+  inj(`sgov+=divCash(tkr,d,sh,o.costOn);`, `{ const __v=divCash(tkr,d,sh,true); sgov+=__v; if(__v>0) __LOG.push({date:d,amt:__v,div:true}); }`, 'div');
   inj(`sh+=buyQty(`, `sh+=__B(d,`, 'buy', 6);
   const preA=['function _asapInd(tkr)'].map(m=>extractFn(bt,m)).join('\n')+'\n';
   const mkBt=(LOG)=>new Function('__LOG', preA
@@ -7407,28 +7463,32 @@ console.log('\n[115] 7차 — ASAP 모의 ↔ 백테 (매수일·금액)');
     +'return ('+as.replace(/^function \w+\(/,'function (')+')')(LOG);
   const pa=extractFn(idx,'function _paperAsap(sess, from)');
   const helpers=[extractFn(idx,'function _asapMA(a,k)'), extractFn(idx,'function _asapRSI(a)')].join('\n');
-  const runApp=(T,Dall,from)=>{
+  const runApp=(T,Dall,from,DV)=>{
     const st={ticker:T, base:10, mid:50, deep:100};
     const sess={settings:st, hist:[]};
     new Function('asapQuoteData','settledBars','curOf','simCutoff','save','_lastTradingDay','_clampFrom',
       helpers+'\n'+pa+'\nreturn _paperAsap;')(
-      {symbol:T, days:Dall}, rows=>rows, ()=>'usd', ()=>'2099-12-31', ()=>{},
+      {symbol:T, days:Dall, dividends:DV||[], priceBasis:DV?'trade':null}, rows=>rows, ()=>'usd', ()=>'2099-12-31', ()=>{},
       days=>(days&&days.length)?days[days.length-1].date:null, (f,l)=>(f&&l&&f>l)?l:f)(sess, from);
-    return sess.hist.filter(h=>h.type==='buy');
+    return sess.hist.filter(h=>h.type==='buy'||h.type==='div').map(h=>({date:h.date, amt:h.amt, div:h.type==='div'}));
   };
+  const mkDiv=(sym)=>{ const ds=dtsOf(sym), out=[]; ds.forEach((d,i)=>{ if(i%63===17) out.push({date:d, amount:+(M[sym][d][C]*0.004).toFixed(4)}); });
+    DIVMAP[sym]={}; out.forEach(x=>{ DIVMAP[sym][x.date]=x.amount; }); PBASIS[sym]='trade'; return out; };
   let nRun=0;
   for(const T of ['SOXL','TQQQ','TECL']){
     if(!DAYS[T]) continue;
     const all=dtsOf(T), Dall=all.map(d=>({date:d, close:M[T][d][C]}));
-    const from=all[260], LOG=[];
+    const from=all[260], LOG=[], DV=mkDiv(T);
     mkBt(LOG)(all.filter(d=>d>=from), T, {base:10, mid:50, deep:100, costOn:false});
-    const H=runApp(T,Dall,from);
+    const H=runApp(T,Dall,from,DV);
     let diff=-1;
     for(let i=0;i<Math.max(LOG.length,H.length);i++){
-      if(!LOG[i]||!H[i]||LOG[i].date!==H[i].date||Math.abs(LOG[i].amt-H[i].amt)>0.006){ diff=i; break; } }
-    ok(`7차 ASAP ${T} — 매수 ${LOG.length}건 모의 ↔ 백테 날짜·금액 한 건도 안 다르다 (리저브 이자·배당·비용 끔)`,
-       LOG.length>10 && diff<0,
-       diff<0?'':`#${diff} 백테 [${LOG[diff]?LOG[diff].date+' '+LOG[diff].amt.toFixed(2):'—'}] 모의 [${H[diff]?H[diff].date+' '+H[diff].amt:'—'}]`);
+      if(!LOG[i]||!H[i]||LOG[i].date!==H[i].date||!!LOG[i].div!==!!H[i].div||Math.abs(LOG[i].amt-H[i].amt)>1e-6){ diff=i; break; } }
+    const nD=H.filter(x=>x.div).length;
+    ok(`7차 ASAP ${T} — 매수·배당 ${LOG.length}건(배당 ${nD}) 모의 ↔ 백테 날짜·금액 한 건도 안 다르다 (리저브 이자·비용 끔 · 배당 세후)`,
+       LOG.length>10 && nD>0 && diff<0,
+       diff<0?'':`#${diff} 백테 [${LOG[diff]?LOG[diff].date+' '+LOG[diff].amt.toFixed(4)+(LOG[diff].div?' 배당':''):'—'}] 모의 [${H[diff]?H[diff].date+' '+(+H[diff].amt).toFixed(4)+(H[diff].div?' 배당':''):'—'}]`);
+    delete DIVMAP[T]; delete PBASIS[T];
     nRun++;
   }
   ok('7차 ASAP 대조가 실제로 돌았다', nRun>=3, String(nRun));

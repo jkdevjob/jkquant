@@ -529,7 +529,7 @@ try{ if(localStorage.getItem('qcockpit_hadUser')==='1') document.documentElement
 </div>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.84.0</span></h1></div>
+    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.85.0</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -1122,6 +1122,7 @@ document.addEventListener('click',function(e){ var m=document.getElementById('jk
     <div class="block" id="ma-hist">
       <div class="card"><h3><span class="dot"></span>내 진입·청산 기록 <span id="ma_rec_count" class="cnt"></span></h3>
         <div class="htable-wrap"><table class="htable" id="ma_rec_tbl"></table></div>
+        <button class="ghostbtn" style="width:100%;margin-top:8px" onclick="maDivRecord()">＋ 배당 기록 (세후)</button>
         <button class="ghostbtn" onclick="clearHist('ma')">기록 전체 삭제</button></div>
       <div class="card" style="margin-top:13px"><h3 style="justify-content:space-between"><span style="display:flex;align-items:center;gap:8px"><span class="dot"></span>신호 전환 이력</span><span class="lh-stage" id="ma_flip_count">—</span></h3>
         <div class="cyc-scroll"><table class="cyctbl" id="ma_flip_tbl"></table></div>
@@ -1133,7 +1134,7 @@ document.addEventListener('click',function(e){ var m=document.getElementById('jk
           <button class="fetchbtn" style="flex:0 0 auto" onclick="maReplay()">▶ 재생</button>
         </div>
         <p class="note" style="margin-top:8px">그날부터 오늘까지 <b>규칙대로</b> 진입·청산을 만들어 기록에 채웁니다(전일 신호 → 당일 종가 전량 체결, 백테와 같은 규약).<br>
-          <b>기존 기록은 지워집니다.</b> 수수료 0.25%는 물지만 양도세·국채 이자는 넣지 않습니다. 가격은 <b>조정종가</b>(배당이 가격에 녹은 계열)로 굴립니다 — 백테는 체결가에 배당을 현금으로 따로 넣습니다.</p>
+          <b>기존 기록은 지워집니다.</b> 수수료 0.25%는 물지만 양도세·국채 이자는 넣지 않습니다. 가격은 <b>체결가</b>이고, 배당은 배당락일에 보유 주수만큼 <b>세후 현금</b>으로 들어옵니다(백테와 같은 규약).</p>
       </div>
     </div>
 
@@ -1271,6 +1272,7 @@ document.addEventListener('click',function(e){ var m=document.getElementById('jk
         <div class="htable-wrap"><table class="htable" id="ivs_rec_tbl"></table></div>
         <div style="display:flex;gap:8px;margin-top:10px">
           <button class="ghostbtn" style="flex:1" onclick="ivsCash('add')">＋ 입금</button>
+          <button class="ghostbtn" style="flex:1" onclick="ivsCash('div')">＋ 배당</button>
           <button class="ghostbtn" style="flex:1" onclick="ivsCash('wd')">－ 출금</button>
         </div>
         <button class="ghostbtn" style="width:100%;margin-top:8px" onclick="ivsSeed()">➕ 시작 보유 등록</button>
@@ -1282,9 +1284,9 @@ document.addEventListener('click',function(e){ var m=document.getElementById('jk
           </div>
           <p class="note" style="margin-top:8px">그날부터 오늘까지 <b>규칙대로</b> 매매를 만들어 기록에 채웁니다(전일 σ → 당일 종가 체결, 밴드 밖일 때만). 백테와 같은 규약이라 <b>몇 년을 기다리지 않고</b> 결과를 볼 수 있습니다.<br>
             <b>기존 기록은 지워집니다.</b> 수수료 0.25%는 물지만 <b>양도세·예수금 이자는 넣지 않습니다</b> — 실제보다 후하게 나옵니다.<br>
-            백테도 이제 <b>같은 1배 ETF</b>로 굴립니다(그 구간 시세가 없을 때만 합성으로 대체하고, 그때는 백테 화면에 표시됩니다). 남는 차이는 규약뿐입니다 — 주수는 양쪽 다 <b>정수</b>이고, 여기는 예수금 이자·양도세가 없으며 가격은 <b>조정종가</b>(배당이 가격에 녹은 계열)로 굴립니다. 백테는 체결가에 배당을 현금으로 따로 넣습니다.</p>
+            백테도 이제 <b>같은 1배 ETF</b>로 굴립니다(그 구간 시세가 없을 때만 합성으로 대체하고, 그때는 백테 화면에 표시됩니다). 남는 차이는 규약뿐입니다 — 주수·가격(체결가)·배당은 백테와 같고(배당락일에 보유 주수만큼 <b>세후 현금</b>, 기록에 '배당' 줄로 남습니다), 여기는 <b>예수금 이자·양도세</b>가 없습니다.</p>
         </div>
-        <p class="note" style="margin-top:8px">예수금 <b>이자·배당</b>이 들어오거나 <b>양도세를 납부</b>했다면 입금·출금으로 남기세요. 그래야 장부가 실제 계좌와 안 벌어집니다.</p>
+        <p class="note" style="margin-top:8px"><b>배당</b>은 ＋배당으로(세후 금액), 예수금 <b>이자</b>·추가 투입은 입금, <b>양도세</b>·인출은 출금으로 남기세요. 배당을 입금으로 적으면 '넣은 돈' 으로 잡혀 수익률이 낮게 나옵니다.</p>
         <p class="note" style="margin-top:8px">보유 주식수·예수금·평단은 <b>이 기록에서 계산</b>됩니다. 설정에는 초기자금만 넣습니다.<br>
           앱 쓰기 전부터 갖고 있던 물량은 <b>시작 보유 등록</b>으로 한 번 넣으시면 됩니다. 기록을 전부 지우면 <b>초기자금만 있는 상태</b>로 돌아갑니다.</p>
         <button class="ghostbtn" onclick="clearHist('ivs')">기록 전체 삭제</button></div>
@@ -1512,6 +1514,7 @@ document.addEventListener('click',function(e){ var m=document.getElementById('jk
           <button class="fetchbtn" id="asap_sgov_btn" style="flex:1;min-width:96px;background:rgba(245,196,81,.12);color:var(--gold);border-color:rgba(245,196,81,.4)" onclick="asapRecord('sgov')">🟡 SGOV 적립</button>
           <button class="fetchbtn" id="asap_buy_btn" style="flex:1;min-width:96px;background:var(--buy-bg);color:var(--buy);border-color:var(--buy-dim)" onclick="asapRecord('buy')">🟢 SOXL 매수</button>
           <button class="fetchbtn" id="asap_sell_btn" style="flex:1;min-width:96px;background:var(--sell-bg);color:var(--sell);border-color:var(--sell-dim)" onclick="asapRecord('sell')">🔴 SOXL 매도</button>
+          <button class="fetchbtn" id="asap_div_btn" style="flex:1;min-width:96px" onclick="asapRecord('div')">💵 배당 → 리저브</button>
         </div>
       </div>
 
@@ -1620,7 +1623,7 @@ document.addEventListener('click',function(e){ var m=document.getElementById('jk
   <footer>
     <strong>JK 퀀트</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.84.0</b> · 2026-09-23</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.85.0</b> · 2026-09-23</div>
   </footer>
 </div>
 
@@ -1895,7 +1898,8 @@ document.addEventListener('click',function(e){ var m=document.getElementById('jk
   <div class="field"><label>구분</label>
     <select id="iv_type" onchange="syncEiUI()">
       <option value="buy">매수</option><option value="sell">매도</option>
-      <option value="add">입금 (이자·배당·추가투입)</option><option value="wd">출금 (세금·인출)</option>
+      <option value="add">입금 (이자·추가투입)</option><option value="wd">출금 (세금·인출)</option>
+      <option value="div">배당 (세후 · 계좌 안 수입)</option>
     </select></div>
   <div class="field" id="iv_legrow"><label>다리</label>
     <select id="iv_leg"><option value="lev">레버리지</option><option value="x1">1배수</option></select></div>
@@ -1933,12 +1937,13 @@ document.addEventListener('click',function(e){ var m=document.getElementById('jk
   <div class="field"><label>날짜</label><input id="em_date" type="date" class="dateinput"></div>
   <div class="field"><label>유형</label>
     <select id="em_type" onchange="emTypeUI(this.value)" style="width:100%;padding:11px;border-radius:10px;border:1px solid var(--line);background:var(--panel2);color:var(--ink);font-size:14px;font-weight:600">
-      <option value="in">진입 (매수)</option><option value="out">청산 (현금)</option>
+      <option value="in">진입 (매수)</option><option value="out">청산 (현금)</option><option value="div">배당 (세후)</option>
     </select></div>
-  <div class="grid2">
+  <div class="grid2" id="em_pqwrap">
     <div class="field"><label>단가 ($)</label><input id="em_price" type="text" inputmode="decimal" oninput="commaInput(this)"></div>
     <div class="field" id="em_qtywrap"><label>수량 (주)</label><input id="em_qty" type="number" inputmode="numeric"></div>
   </div>
+  <div class="field" id="em_amtwrap" style="display:none"><label>배당 금액 ($) <span class="hint">세후 · 계좌에 들어온 돈</span></label><input id="em_amt" type="text" inputmode="decimal" oninput="commaInput(this)"></div>
   <div class="mbtns"><button class="close" onclick="delMaFromEdit()" style="background:var(--sell-bg);color:var(--sell)">삭제</button><button class="save" onclick="saveMaEdit()">저장</button></div>
 </div></div>
 
@@ -1962,7 +1967,7 @@ document.addEventListener('click',function(e){ var m=document.getElementById('jk
   <div class="field"><label>날짜</label><input id="ea_date" type="date" class="dateinput"></div>
   <div class="field"><label>유형</label>
     <select id="ea_type" onchange="eaTypeUI(this.value)" style="width:100%;padding:11px;border-radius:10px;border:1px solid var(--line);background:var(--panel2);color:var(--ink);font-size:14px;font-weight:600">
-      <option value="sgov">SGOV 적립</option><option value="buy">SOXL 매수</option><option value="sell">SOXL 매도</option>
+      <option value="sgov">SGOV 적립</option><option value="buy">SOXL 매수</option><option value="sell">SOXL 매도</option><option value="div">배당 (리저브 입금 · 세후)</option>
     </select></div>
   <div class="field" id="ea_amtwrap"><label>적립 금액 ($)</label><input id="ea_amt" type="text" inputmode="decimal" oninput="commaInput(this)"></div>
   <div class="grid2" id="ea_pqwrap">
@@ -2926,18 +2931,6 @@ function quoteToDaily(SYM, j){
           dividends:j.dividends||[], raw:j.raw||null,
           priceBasis:(tradeOK?'trade':(j.priceBasis||null)),
           intraday:j.intraday||null,currency:j.currency||'USD',src:(j.src||'api')};
-}
-/* 섀넌·200일선·ASAP 이 쓰는 시세 — 조정종가(배당이 가격 안에 녹은 계열)로 돌려준다 (7차 ⑮).
-   세 전략의 장부(ivsPos·maLedger·asapPos)에는 배당 칸이 없다. N1 이 공용 로더를 체결가로
-   바꾸면서 이 셋도 같이 체결가를 받게 됐는데, 배당을 넣어 줄 곳이 없어 보유 중 받은 배당이
-   통째로 사라졌다(모의·과거재생·분석 전부). 배당을 기록으로 받게 하기 전까지는(결정 D8)
-   N1 이전처럼 조정계열로 굴린다. 무매·VR 은 배당을 기록으로 받으므로 체결가를 그대로 쓴다.
-   공용 캐시 객체는 건드리지 않고 새 객체를 낸다 — 같은 종목을 무매 탭이 체결가로 쓰고 있을 수 있다.
-   priceBasis 를 'adjusted' 로 적어 두면 divPerShareQ 가 0 을 내 배당을 또 얹지 않는다. */
-function adjDaily(q){
-  if(!q || !(q.daysAdj && q.daysAdj.length)) return q;
-  const days=q.daysAdj;
-  return Object.assign({}, q, {days, last:days[days.length-1], ohlc:q.ohlcAdj||null, priceBasis:'adjusted'});
 }
 
 async function _fetchDailyRaw(symbol){
@@ -4419,10 +4412,11 @@ async function loadMaData(force){
   const sym=String(st.ticker||'SOXL').toUpperCase();
   if(!force && maQuoteData && String(maQuoteData.symbol||'').toUpperCase()===sym){ renderMaNow(); renderMaHist(); renderMaAnal(); return; }
   if(note){note.className='fetchnote load';note.textContent='종가 이력 불러오는 중…';}
-  const q=adjDaily(await fetchDaily(sym));   // 배당 칸 없는 장부라 조정종가로 (7차 ⑮)
+  const q=await fetchDaily(sym);   // 체결가 + 배당 이벤트 — 배당은 장부 기록으로 받는다 (7차 D8)
   if(S.activeTab!=='ma') return;   // await 사이 탭 전환 가드
   if(q && q.days && q.days.length){
-    maQuoteData={symbol:q.symbol,days:q.days,last:q.last,price:(q.price!=null&&+q.price>0)?+q.price:q.last.close,currency:q.currency||'USD',src:q.src};
+    maQuoteData={symbol:q.symbol,days:q.days,last:q.last,price:(q.price!=null&&+q.price>0)?+q.price:q.last.close,currency:q.currency||'USD',src:q.src,
+                 dividends:q.dividends||[], priceBasis:q.priceBasis||null};   // 배당 기록용 (divCashQ)
     _afterQuote();
     const live=maQuoteData.price;
     if($('ma_price')) $('ma_price').value = nfix(live,2);
@@ -4566,10 +4560,11 @@ function renderMaHist(){
   }
   const hist=curStrat().hist;
   $('ma_rec_count').textContent=hist.length?`(${hist.length}건)`:'';
-  const LBL={in:'진입(매수)',out:'청산(현금)'}, CLS={in:'buy',out:'sell'};
+  const LBL={in:'진입(매수)',out:'청산(현금)',div:'배당'}, CLS={in:'buy',out:'sell'};
   let rows='';
   hist.forEach((h,i)=>{
-    const detail=h.type==='in'?`${px(h.price)}${h.qty?' × '+h.qty+'주':''}`:px(h.price);
+    const detail=h.type==='in'?`${px(h.price)}${h.qty?' × '+h.qty+'주':''}`
+      : h.type==='div'?`${px(h.amt)} <span style="color:var(--faint);font-size:10px">세후</span>`:px(h.price);
     rows=`<tr class="${CLS[h.type]||''}"><td>${dshort(h.date)}</td><td>${LBL[h.type]||h.type}</td><td>${detail}</td><td style="white-space:nowrap"><span class="edit" onclick="editMa(${i})">✎</span> <span class="del" onclick="delMa(${i})">✕</span></td></tr>`+rows;
   });
   $('ma_rec_tbl').innerHTML=`<tr><th>날짜</th><th>유형</th><th>단가</th><th></th></tr>`+(hist.length?rows:`<tr><td class="empty" colspan="4">아직 기록이 없습니다</td></tr>`);
@@ -4589,9 +4584,14 @@ function maReplay(){
   const FEE=(typeof IVS_FEE!=='undefined')?IVS_FEE:0.0025;
   let cash=Math.max(0,st.principal||0), shares=0, rec=[];
   const _cut=simCutoff(curOf(st));                     // 장중이면 오늘 봉은 안 쓴다
+  const divOn=!divCashOn(st);                          // 현금 수령 세션은 분배금 카드가 따로 센다
   for(let i=0;i<D.length;i++){
     if(D[i]<from) continue;
     if(D[i]>_cut) break;
+    /* 배당락일 — 전날 종가 시점의 보유 주수만큼 세후 배당이 현금으로 들어온다 (7차 D8).
+       백테 runMA200 과 같은 자리(그날 신호 체결 전)·같은 식(divCashQ = 백테 divCash). */
+    if(divOn && shares>0){ const dv=divCashQ(maQuoteData, D[i], shares, true);
+      if(dv>0){ cash+=dv; rec.push({type:'div',date:D[i],amt:dv,sim:true,ts:rec.length+1}); } }
     /* 전일 신호로 오늘 종가에 체결한다. 이력 첫 봉(전일이 없음)은 보유로 시작 — computeMa 가
        워밍업을 보유로 두는 것과 같고, 백테 runMA200 도 첫날은 보유다 (7차 ⑰). */
     const want=(i>0 && SEQ[i-1]!=null) ? (SEQ[i-1]==='hold') : true, px0=CL[i];
@@ -4628,8 +4628,16 @@ function maRecord(type){
   alert('기록됨 ✓');
 }
 function delMa(i){ if(!confirm('이 기록을 삭제할까요?'))return; curStrat().hist.splice(i,1); save(); refreshMa(); }
+/* 배당 (7차 D8) — 보유 중 받은 세후 배당. 현금으로 들어와 다음 진입 때 같이 쓴다(백테 runMA200 과 같다). */
+function maDivRecord(){
+  const amt=+unComma(prompt('배당 금액($, 세후)을 입력하세요','0')||''); if(!isFinite(amt)||amt<=0) return;
+  const date=prompt('배당락일 (YYYY-MM-DD)', new Date().toISOString().slice(0,10)); if(!date) return;
+  const h=curStrat().hist; h.push({type:'div',date,amt:+amt,ts:Date.now()}); sortHist(h); save(); refreshMa();
+}
 let editMaIdx=-1;
-function emTypeUI(t){ const w=$('em_qtywrap'); if(w)w.style.display=(t==='in')?'':'none'; }
+function emTypeUI(t){ const w=$('em_qtywrap'); if(w)w.style.display=(t==='in')?'':'none';
+  const pq=$('em_pqwrap'), aw=$('em_amtwrap');
+  if(pq) pq.style.display=(t==='div')?'none':''; if(aw) aw.style.display=(t==='div')?'':'none'; }
 function editMa(i){
   const h=curStrat().hist[i]; if(!h)return;
   editMaIdx=i;
@@ -4637,12 +4645,16 @@ function editMa(i){
   $('em_type').value=h.type; emTypeUI(h.type);
   $('em_price').value=h.price!=null?h.price:'';
   $('em_qty').value=h.qty!=null?h.qty:'';
+  if($('em_amt')) $('em_amt').value=h.amt!=null?h.amt:'';
   $('editMaModal').classList.add('on');
 }
 function closeEditMa(){ $('editMaModal').classList.remove('on'); editMaIdx=-1; }
 function saveMaEdit(){
   if(editMaIdx<0)return; const hist=curStrat().hist, h=hist[editMaIdx]; if(!h){closeEditMa();return;}
   const type=$('em_type').value, date=$('em_date').value||h.date;
+  if(type==='div'){ const amt=+unComma(($('em_amt')||{}).value||'');
+    if(!(amt>0)){alert('배당 금액을 입력하세요');return;}
+    hist[editMaIdx]={ts:h.ts||Date.now(), type:'div', date, amt}; sortHist(hist); save(); refreshMa(); closeEditMa(); return; }
   const price=+unComma($('em_price').value);
   if(!price){alert('단가를 입력하세요');return}
   const rec={ts:h.ts||Date.now(), type, date, price};
@@ -4737,9 +4749,9 @@ function renderIvsAnal(){
   /* 수익률 세 줄 + 입출금 월별 — 무매 분석과 같은 구성.
      분모는 밖에서 넣은 총액(원금 + 추가입금)이라 '누적(출금 포함)'이 출금을 두 번 세지 않는다. */
   { const grossIn=(+st.principal||0)+(c.added||0);
-    const _dv0=sessDivCash(st, h, ()=>renderIvsAnal());
+    const _dv0=ivsDivCash(st, h, ()=>renderIvsAnal());
     paintRet3('anaI', {base:grossIn, now:total, realized:rz+_dv0.divCash, out:(c.withdrawn||0)+_dv0.divCash});
-    const _dv=sessDivCash(st, h, ()=>renderIvsAnal());
+    const _dv=ivsDivCash(st, h, ()=>renderIvsAnal());
     const fl=[...(c.flows||[]), ..._dv.flows].sort((a,b)=>a.date<b.date?-1:1);
     const hd=h.filter(x=>x&&x.date).map(x=>x.date).sort();
     paintCashFlow('anaI', {flows:fl, base:grossIn, isKrw:isKrwSt(st),
@@ -4853,10 +4865,11 @@ async function loadIvsData(force){
   const haveX1=!needX1 || (ivsQuote1 && String(ivsQuote1.symbol||'').toUpperCase()===x1sym);
   if(!force && ivsQuoteData && String(ivsQuoteData.symbol||'').toUpperCase()===sym && haveX1){ renderIvsNow(); renderIvsAnal(); return; }
   if(note){note.className='fetchnote load';note.textContent='종가 이력 불러오는 중…';}
-  const q=adjDaily(await fetchDaily(sym));   // 배당 칸 없는 장부라 조정종가로 (7차 ⑮)
+  const q=await fetchDaily(sym);   // 체결가 + 배당 이벤트 — 배당은 장부 기록으로 받는다 (7차 D8)
   if(S.activeTab!=='ivs') return;   // await 사이 탭 전환 가드
   if(q && q.days && q.days.length){
-    ivsQuoteData={symbol:q.symbol,days:q.days,last:q.last,price:(q.price!=null&&+q.price>0)?+q.price:q.last.close,src:q.src};
+    ivsQuoteData={symbol:q.symbol,days:q.days,last:q.last,price:(q.price!=null&&+q.price>0)?+q.price:q.last.close,src:q.src,
+                  dividends:q.dividends||[], priceBasis:q.priceBasis||null};   // 배당 기록용 (divCashQ)
     _afterQuote();
     if($('ivs_price')) $('ivs_price').value=nfix(ivsQuoteData.price,2);
     let extra='';
@@ -4864,9 +4877,10 @@ async function loadIvsData(force){
     if((st.park||'bill')==='x1'){
       const s1=ivsX1Of(sym);
       if(!(ivsQuote1 && String(ivsQuote1.symbol||'').toUpperCase()===s1) || force){
-        const q1=adjDaily(await fetchDaily(s1));   // 짝도 같은 계열 (7차 ⑮)
+        const q1=await fetchDaily(s1);   // 짝도 체결가 + 배당 (7차 D8)
         ivsQuote1 = (q1&&q1.days&&q1.days.length)
-          ? {symbol:q1.symbol,days:q1.days,last:q1.last,price:(q1.price!=null&&+q1.price>0)?+q1.price:q1.last.close}
+          ? {symbol:q1.symbol,days:q1.days,last:q1.last,price:(q1.price!=null&&+q1.price>0)?+q1.price:q1.last.close,
+             dividends:q1.dividends||[], priceBasis:q1.priceBasis||null}
           : null;
       }
       extra = ivsQuote1 ? ` · ${ivsQuote1.symbol} ${px(ivsQuote1.price)}` : ' · ⚠ 1배수 시세 실패';
@@ -4883,7 +4897,7 @@ function onIvsPrice1(){ const p=inputNum('ivs_price1')||0; if(ivsQuote1&&p>0) iv
 // 포지션을 기록에서 재계산한다 — 설정에는 초기자금만 둔다 (무매·VR과 같은 규약).
 // 이렇게 해야 기록과 계좌가 어긋날 수 없고, 기록을 지우면 초기자금 상태로 되돌아간다.
 function ivsPos(principal,hist){
-  let qty=0,avg=0,qty1=0,avg1=0,cash=Math.max(0,principal||0),realized=0,added=0,withdrawn=0,fees=0;
+  let qty=0,avg=0,qty1=0,avg1=0,cash=Math.max(0,principal||0),realized=0,added=0,withdrawn=0,fees=0,divs=0;
   const flows=[];   // 계좌 밖 돈의 오고감 — 무매 단리 flows와 같은 모양 {date,out,in}
   const yr=new Date().getFullYear(); let pnlYear=0;
   const rows=[];                                   // 레코드별 파생값(실현손익·잔고) — 표에서 쓴다
@@ -4893,6 +4907,8 @@ function ivsPos(principal,hist){
     const r={idx:i,h,pnl:0};
     if(h.type==='add'){ const v=+h.amt||0; cash+=v; added+=v; flows.push({date:h.date,out:0,in:v,kind:'add'}); rows.push(r); continue; }
     if(h.type==='wd'){ const v=+h.amt||0; cash=Math.max(0,cash-v); withdrawn+=v; flows.push({date:h.date,out:v,in:0,kind:'wd'}); rows.push(r); continue; }
+    /* 배당 (7차 D8) — 계좌 안에서 생긴 수입이다. 입금(add)으로 적으면 '넣은 돈' 으로 잡혀 수익률 분모가 커진다. */
+    if(h.type==='div'){ const v=+h.amt||0; cash+=v; divs+=v; rows.push(r); continue; }
     const x1=(h.leg==='x1'), q=+h.qty||0, p=+h.price||0;
     const amt=(h.amt!=null?+h.amt:q*p), fee=+h.fee||0;
     if(!(q>0)){ rows.push(r); continue; }
@@ -4915,7 +4931,7 @@ function ivsPos(principal,hist){
   }
   const pnlByIdx={}, badByIdx={}; let nbad=0;
   rows.forEach(r=>{ pnlByIdx[r.idx]=r.pnl; if(r.bad){ badByIdx[r.idx]=r.bad; nbad++; } });
-  return {qty,avg,qty1,avg1,cash:Math.max(0,cash),realized,pnlYear,added,withdrawn,flows,fees,pnlByIdx,badByIdx,nbad};
+  return {qty,avg,qty1,avg1,cash:Math.max(0,cash),realized,pnlYear,added,withdrawn,divs,flows,fees,pnlByIdx,badByIdx,nbad};
 }
 function computeIvs(){
   const st=curStrat().settings, hist=curStrat().hist||[];
@@ -4927,7 +4943,7 @@ function computeIvs(){
   const days=(ivsQuoteData && String(ivsQuoteData.symbol||'').toUpperCase()===sym && ivsQuoteData.days) ? ivsQuoteData.days : null;
   const out={st,FIX,X1,s0,N,band,sym,sym1,qty,cash,avg,qty1,avg1,ready:false,
              monthly:Math.max(0,st.monthly||0), principal:Math.max(0,st.principal||0),
-             added:P.added, realized:P.realized};
+             added:P.added, realized:P.realized, divs:P.divs||0};
   out.fees=P.fees; out.pnlYear=P.pnlYear; out.year=new Date().getFullYear(); out.pnlByIdx=P.pnlByIdx; out.withdrawn=P.withdrawn; out.flows=P.flows; out.badByIdx=P.badByIdx; out.nbad=P.nbad;
   // 고정 5:5는 변동성을 안 쓰므로 룩백만큼의 이력이 필요 없다
   if(!days || days.length<(FIX?2:N+1)) return out;
@@ -5104,7 +5120,7 @@ function renderIvsNow(){
 function renderIvsHist(){
   const h=curStrat().hist||[], c=computeIvs(), P=c.pnlByIdx||{}, B=c.badByIdx||{};
   $('ivs_rec_count').textContent=h.length?`(${h.length})`:'';
-  const KIND={buy:['매수','var(--buy)'],sell:['매도','var(--sell)'],add:['입금','var(--gold)'],wd:['출금','var(--vio)']};
+  const KIND={buy:['매수','var(--buy)'],sell:['매도','var(--sell)'],add:['입금','var(--gold)'],wd:['출금','var(--vio)'],div:['배당','var(--gold)']};
   const idx=h.map((r,i)=>i).sort((x,y)=>((h[y].date||'').localeCompare(h[x].date||''))||((h[y].ts||0)-(h[x].ts||0)));
   const rows=idx.map(i=>{
     const r=h[i], K=KIND[r.type]||['?','var(--dim)'];
@@ -5162,7 +5178,8 @@ function saveIvsEdit(){
   }else{
     const amt=+unComma($('iv_amt').value);
     if(!(amt>0)){alert('금액을 입력하세요');return;}
-    hist[editIvsIdx]={ts:r.ts||Date.now(),type:t,date,amt,memo:$('iv_memo').value.trim()||undefined};
+    hist[editIvsIdx]={ts:r.ts||Date.now(),type:t,date,amt,memo:$('iv_memo').value.trim()||undefined,
+      ...(t==='div'?{leg:r.leg||'lev', sym:r.sym}:{})};   // 배당은 어느 다리 것인지 남긴다
   }
   sortHist(hist); save(); refreshIvs(); pushRemote&&pushRemote(); closeEditIvs();
 }
@@ -5213,8 +5230,16 @@ function ivsReplay(){
   const _sq=(x,have)=>Math.min(Math.floor(x+1e-9), Math.floor(have+1e-9));
   const _put=(type,leg,s,d,p,q)=>{ const a=q*p, f=a*FEE; cash+=(type==='sell')?(a-f):-(a+f);
     rec.push({type,leg,sym:s,date:d,price:p,qty:q,amt:a,fee:f,sim:true,ts:rec.length+1}); };
+  /* 배당 (7차 D8) — 가격이 체결가라 배당은 가격에 없다. 배당락일에 전날 종가 시점의 보유 주수만큼
+     세후 배당이 예수금으로 들어온다. 백테 runIVS 와 같은 자리(그날 리밸런싱 전)·같은 식(divCashQ = 백테 divCash).
+     다리마다 자기 종목의 배당. 현금 수령 세션은 적지 않는다 — 분배금 카드(ivsDivCash)가 따로 센다.
+     금액은 반올림하지 않는다 — 안에서 쓴 값과 장부가 다시 세는 값이 같아야 한다. */
+  const QL=ivsQuoteData, Q1=X1?ivsQuote1:null, divOn=!divCashOn(st);
   for(const row of days){
     const d=row.date, c=row.close, c1=X1?P1[d]:0;
+    if(divOn){ const dv=divCashQ(QL,d,qty,true), dv1=X1?divCashQ(Q1,d,qty1,true):0;
+      if(dv>0){ cash+=dv; rec.push({type:'div',leg:'lev',sym,date:d,amt:dv,sim:true,ts:rec.length+1}); }
+      if(dv1>0){ cash+=dv1; rec.push({type:'div',leg:'x1',sym:sym1,date:d,amt:dv1,sim:true,ts:rec.length+1}); } }
     const g=idx[d], w = FIX?0.5:(g>0?(W[dt[g-1]]??0):0);
     const eq=cash+qty*c+(X1?qty1*c1:0);           // 더하는 순서까지 백테 runIVS 와 같게 (끝자리까지 같은 값)
     if(eq<=0) break;
@@ -5247,11 +5272,13 @@ function ivsReplay(){
 }
 // 입금·출금 — 이자·배당 수령, 세금 납부, 추가 입금/인출을 장부에 반영
 function ivsCash(kind){
-  const nm=kind==='add'?'입금':'출금';
+  const nm=kind==='add'?'입금':kind==='div'?'배당(세후)':'출금';
   const amt=+prompt(`${nm} 금액($)을 입력하세요`,'0'); if(!isFinite(amt)||amt<=0) return;
-  const memo=prompt(`메모 (예: ${kind==='add'?'예수금 이자, 배당':'양도세 납부, 인출'})`,'')||'';
+  const memo=prompt(`메모 (예: ${kind==='add'?'예수금 이자, 추가 투입':kind==='div'?'분기 분배금':'양도세 납부, 인출'})`,'')||'';
   const date=prompt('날짜 (YYYY-MM-DD)', new Date().toISOString().slice(0,10)); if(!date) return;
-  curStrat().hist.push({type:kind,date,amt:+amt,memo:memo.trim()||undefined,ts:Date.now()});
+  /* 배당은 입금과 다르다 (7차 D8) — 입금은 '넣은 돈' 이라 수익률 분모가 되지만 배당은 계좌 안에서 생긴 수입이다 */
+  const extra=(kind==='div')?{leg:'lev', sym:String(curStrat().settings.ticker||'').toUpperCase()}:{};
+  curStrat().hist.push({type:kind,date,amt:+amt,memo:memo.trim()||undefined,...extra,ts:Date.now()});
   sortHist(curStrat().hist); save(); refreshIvs(); pushRemote&&pushRemote();
 }
 function refreshIvs(){
@@ -5681,13 +5708,15 @@ function _asapRSI(a){ const n=a.length,o=new Array(n).fill(null); let ag=0,al=0;
   return o; }
 // 내 포지션: SOXL 보유·평단 + SGOV 리저브 (적립 +, 리저브매수 −)
 function asapPos(hist){
-  let shares=0,cost=0,reserve=0;
+  let shares=0,cost=0,reserve=0,divs=0;
   (hist||[]).forEach(h=>{
     if(h.type==='sgov'){ reserve+=(+h.amt||0); }
+    // 배당 (7차 D8) — 리저브로 들어오는 계좌 안 수입. 새로 넣은 돈(sgov 적립)과 따로 센다.
+    else if(h.type==='div'){ const a=+h.amt||0; reserve+=a; divs+=a; }
     else if(h.type==='buy'){ const q=+h.qty||0, amt=(h.amt!=null?+h.amt:q*(+h.price||0)); shares+=q; cost+=amt; if(h.from==='reserve')reserve-=amt; }
     else if(h.type==='sell'){ const q=+h.qty||0, avg=shares>0?cost/shares:0; shares-=q; cost-=avg*q; if(shares<1e-9){shares=0;cost=0;} }
   });
-  return {shares,cost,avg:shares>0?cost/shares:0,reserve};
+  return {shares,cost,avg:shares>0?cost/shares:0,reserve,divs};
 }
 function computeAsap(){
   const st=curStrat().settings, hist=curStrat().hist;
@@ -5732,10 +5761,11 @@ async function loadAsapData(force){
   const sym=String(st.ticker||'SOXL').toUpperCase();
   if(!force && asapQuoteData && String(asapQuoteData.symbol||'').toUpperCase()===sym){ renderAsapNow(); renderAsapHist(); renderAsapAnal(); return; }
   if(note){note.className='fetchnote load';note.textContent='종가 이력 불러오는 중…';}
-  const q=adjDaily(await fetchDaily(sym));   // 배당 칸 없는 장부라 조정종가로 (7차 ⑮)
+  const q=await fetchDaily(sym);   // 체결가 + 배당 이벤트 — 배당은 리저브 기록으로 받는다 (7차 D8)
   if(S.activeTab!=='asap') return;   // await 사이 탭 전환 가드
   if(q && q.days && q.days.length){
-    asapQuoteData={symbol:q.symbol,days:q.days,last:q.last,price:(q.price!=null&&+q.price>0)?+q.price:q.last.close,currency:q.currency||'USD',src:q.src};
+    asapQuoteData={symbol:q.symbol,days:q.days,last:q.last,price:(q.price!=null&&+q.price>0)?+q.price:q.last.close,currency:q.currency||'USD',src:q.src,
+                   dividends:q.dividends||[], priceBasis:q.priceBasis||null};   // 배당 기록용 (divCashQ)
     _afterQuote();
     if($('asap_price')) $('asap_price').value=nfix(asapQuoteData.price,2);
     if(note){note.className='fetchnote ok';note.textContent=`✓ ${q.symbol} ${q.last.date} 종가 ${px(q.last.close)} · ${q.days.length}일 이력`;}
@@ -5855,11 +5885,12 @@ function drawAsapChart(c){
 function renderAsapHist(){
   const hist=curStrat().hist;
   $('asap_rec_count').textContent=hist.length?`(${hist.length}건)`:'';
-  const LBL={sgov:'SGOV 적립',buy:'SOXL 매수',sell:'SOXL 매도'}, CLS={sgov:'',buy:'buy',sell:'sell'};
+  const LBL={sgov:'SGOV 적립',buy:'SOXL 매수',sell:'SOXL 매도',div:'배당 → 리저브'}, CLS={sgov:'',buy:'buy',sell:'sell'};
   let rows='';
   hist.forEach((h,i)=>{
     let detail;
     if(h.type==='sgov') detail=px(h.amt);
+    else if(h.type==='div') detail=`${px(h.amt)} <span style="color:var(--faint);font-size:10px">세후</span>`;
     else if(h.type==='buy') detail=`${px(h.price)} × ${nfix(h.qty,3)}주${h.from==='reserve'?' <span style="color:var(--vio);font-size:10px">리저브</span>':''}`;
     else detail=`${px(h.price)} × ${nfix(h.qty,3)}주`;
     rows=`<tr class="${CLS[h.type]||''}"><td>${dshort(h.date)}</td><td>${LBL[h.type]||h.type}</td><td>${detail}</td><td style="white-space:nowrap"><span class="edit" onclick="editAsap(${i})">✎</span> <span class="del" onclick="delAsap(${i})">✕</span></td></tr>`+rows;
@@ -5876,6 +5907,11 @@ function asapRecord(kind){
     if(!amt||amt<=0){alert('적립 금액을 입력하세요.');return;}
     rec={type:'sgov',date,amt:+amt,ts:Date.now()};
     if(!confirm(`SGOV 리저브에 ${px(amt)} 적립\n오늘(${date}) 기록할까요?`))return;
+  }else if(kind==='div'){
+    /* 배당 (7차 D8) — 새로 넣은 돈(sgov 적립)이 아니라 계좌 안 수입이다. 투입 원금에 안 들어간다. */
+    if(!amt||amt<=0){alert('배당 금액(세후)을 입력하세요.');return;}
+    rec={type:'div',date,amt:+amt,ts:Date.now()};
+    if(!confirm(`배당 ${px(amt)} (세후) → 리저브\n오늘(${date}) 기록할까요?`))return;
   }else if(kind==='buy'){
     if(!price||price<=0){alert('먼저 🔄 자동으로 현재가를 불러오거나 입력하세요.');return;}
     if(!amt||amt<=0){alert('매수 금액을 입력하세요.');return;}
@@ -5895,7 +5931,7 @@ function asapRecord(kind){
 }
 function delAsap(i){ if(!confirm('이 기록을 삭제할까요?'))return; curStrat().hist.splice(i,1); save(); refreshAsap(); }
 let editAsapIdx=-1;
-function eaTypeUI(t){ const isSgov=t==='sgov', isBuy=t==='buy';
+function eaTypeUI(t){ const isSgov=(t==='sgov'||t==='div'), isBuy=t==='buy';   // 배당도 금액만 받는다
   if($('ea_amtwrap'))$('ea_amtwrap').style.display=isSgov?'':'none';
   if($('ea_pqwrap'))$('ea_pqwrap').style.display=isSgov?'none':'';
   if($('ea_fromwrap'))$('ea_fromwrap').style.display=isBuy?'':'none'; }
@@ -5913,7 +5949,7 @@ function closeEditAsap(){ $('editAsapModal').classList.remove('on'); editAsapIdx
 function saveAsapEdit(){
   if(editAsapIdx<0)return; const hist=curStrat().hist, h=hist[editAsapIdx]; if(!h){closeEditAsap();return;}
   const type=$('ea_type').value, date=$('ea_date').value||h.date; const rec={ts:h.ts||Date.now(),type,date};
-  if(type==='sgov'){ const amt=+unComma($('ea_amt').value); if(!amt){alert('적립 금액을 입력하세요');return;} rec.amt=amt; }
+  if(type==='sgov'||type==='div'){ const amt=+unComma($('ea_amt').value); if(!amt){alert(type==='div'?'배당 금액을 입력하세요':'적립 금액을 입력하세요');return;} rec.amt=amt; }
   else{ const price=+unComma($('ea_price').value), qty=+unComma($('ea_qty').value);
     if(!price||!qty){alert('단가·수량을 입력하세요');return;} rec.price=price; rec.qty=qty; rec.amt=+(price*qty).toFixed(2);
     if(type==='buy') rec.from=$('ea_from').value||'reserve'; }
@@ -6567,15 +6603,22 @@ function _paperAsap(sess, from){
   const MA5=_asapMA(cl,5), MA20=_asapMA(cl,20), MA50=_asapMA(cl,50), MA200=_asapMA(cl,200), RSI=_asapRSI(cl);
   const base=+st.base||10, mid=+st.mid||50, deep=+st.deep||100;
   const today=simCutoff(curOf(st));
-  const rec=[]; let sgov=0, stage=0, ts=1;
-  const _sgov=(d,a)=>{ if(a>0){ sgov+=a; rec.push({type:'sgov',date:d,amt:+a.toFixed(2),sim:true,ts:ts++}); } };
-  const _buy=(d,c,a,fromRes)=>{ if(!(a>0)||!(c>0))return; const q=a/c;
-    rec.push({type:'buy',date:d,price:+c,qty:+q.toFixed(6),amt:+a.toFixed(2),from:fromRes?'reserve':'new',sim:true,ts:ts++});
+  const rec=[]; let sgov=0, stage=0, ts=1, sh=0;
+  const divOn=!divCashOn(st);                          // 현금 수령 세션은 분배금 카드가 따로 센다
+  /* 기록 금액·주수는 반올림하지 않는다 (7차 D8) — 예전엔 센트·6자리로 잘라 적고 안에서는 안 자른 값으로
+     리저브를 굴려, 장부가 다시 센 리저브와 조금씩 어긋났다. 저장 전 장부 == 저장 후 장부. */
+  const _sgov=(d,a)=>{ if(a>0){ sgov+=a; rec.push({type:'sgov',date:d,amt:a,sim:true,ts:ts++}); } };
+  const _buy=(d,c,a,fromRes)=>{ if(!(a>0)||!(c>0))return; const q=a/c; sh+=q;
+    rec.push({type:'buy',date:d,price:+c,qty:q,amt:a,from:fromRes?'reserve':'new',sim:true,ts:ts++});
     if(fromRes) sgov-=a; };
   /* 지표는 '전일 종가까지'로 만들고 체결만 오늘 종가에 한다 — 백테 runASAP 와 같은 규약.
      오늘 종가로 RSI·이평·교차를 확정한 뒤 같은 종가에 샀다고 치면 낼 수 없는 주문이다. */
   for(let i=2;i<n;i++){ const d=days[i].date; if(d<from||d>today) continue;
     const c=cl[i];                              // 체결가만 오늘 종가
+    /* 배당락일 — 전날 종가 시점 보유분의 세후 배당이 리저브로 들어와 다음 매수 재원이 된다 (7차 D8).
+       백테 runASAP 과 같은 자리(지표 워밍업 판정 전)·같은 식. */
+    if(divOn && sh>0){ const dv=divCashQ(asapQuoteData, d, sh, true);
+      if(dv>0){ sgov+=dv; rec.push({type:'div',date:d,amt:dv,sim:true,ts:ts++}); } }
     const q=i-1, p=i-2;                         // q=전일, p=전전일
     const m200=MA200[q]; if(m200==null) continue;
     const pc=cl[q], down=pc<m200;
@@ -6609,9 +6652,11 @@ const PAPER_TABS=[['inf','무한매수법'],['vr','밸류리밸런싱'],['ivs','
    섀넌과 같은 규약으로 간다 — 기록에 fee가 있으면 그걸 쓰고 없으면 0.25% 기본. */
 function maLedger(hist, price, principal){
   const FEE=(typeof IVS_FEE!=='undefined')?IVS_FEE:0.0025;
-  let qty=0, avg=0, realized=0, totbuy=0, totsell=0, nOut=0, nWin=0, fees=0;
+  let qty=0, avg=0, realized=0, totbuy=0, totsell=0, nOut=0, nWin=0, fees=0, divs=0;
   let cash=+principal||0;
   (hist||[]).forEach(x=>{
+    // 배당 (7차 D8) — 보유 중 받은 세후 배당은 현금으로 들어온다. 매매가 아니라 평단·보유는 그대로.
+    if(x.type==='div'){ const a=+x.amt||0; if(a>0){ cash+=a; divs+=a; } return; }
     const q=+x.qty||0, pr=+x.price||0;
     if(!(q>0)||!(pr>0)) return;
     if(x.type==='in'){
@@ -6633,7 +6678,7 @@ function maLedger(hist, price, principal){
   });
   cash=Math.max(0,cash);
   const invested=price>0?price*qty:0;
-  return {qty,avg,realized,totbuy,totsell,nOut,nWin,invested,cash,fees,total:invested+cash};
+  return {qty,avg,realized,totbuy,totsell,nOut,nWin,invested,cash,fees,divs,total:invested+cash};
 }
 /* 계좌 밖으로 오간 돈을 월 단위로 읽어 준다.
    무매 단리(사이클 초과익)와 적립(현금 수령 분배금)이 같은 함수를 쓴다 —
@@ -6750,6 +6795,16 @@ function sessDivCash(st, hist, onReady){
   return divIncome((q&&q.dividends)||[], shareTimeline(hist), false);
 }
 
+/* 섀넌 현금 수령 분배금 — 다리마다 자기 종목·자기 주수로 센다 (7차 D8).
+   sessDivCash 는 종목 하나만 알아서, 1배 짝 세션에선 레버리지 배당을 두 다리 주수를 합친 것에 곱했다. */
+function ivsDivCash(st, hist, onReady){
+  if(!divCashOn(st)) return {divCash:0, nDiv:0, flows:[]};
+  const H=hist||[], lev=H.filter(x=>(x.leg||'lev')!=='x1'), x1=H.filter(x=>x.leg==='x1');
+  const a=divIncome((divOf(st.ticker, onReady)||{}).dividends||[], shareTimeline(lev), false);
+  if(!x1.length) return a;
+  const b=divIncome((divOf(ivsX1Of(st.ticker), onReady)||{}).dividends||[], shareTimeline(x1), false);
+  return {divCash:a.divCash+b.divCash, nDiv:a.nDiv+b.nDiv, flows:[...a.flows,...b.flows].sort((p,q)=>p.date<q.date?-1:1)};
+}
 /* 그 전략 세션의 분배금 — 시세 캐시에 배당이 있고 종목이 맞을 때만.
    quote가 남의 종목이면 없는 셈 친다(quoteOf와 같은 규약). */
 function sessDiv(sym, quoteData, hist, reinv){
@@ -6967,7 +7022,7 @@ function paperRaw(tab, sess){
         const q1=(ivsQuote1&&String(ivsQuote1.symbol||'').toUpperCase()===s1)?ivsQuote1:null;
         qty1=c.qty1; price1=((q1&&(q1.price>0?q1.price:(q1.last&&q1.last.close)))||c.avg1||0);
         ev += qty1*price1; }
-      const _dv=sessDivCash(st, h);
+      const _dv=ivsDivCash(st, h);
       inflow=(c.principal||0)+(c.added||0);                  // 출금을 빼지 않는다 — 분자에 도로 더하므로
       total=ev + (c.cash||0) + (c.withdrawn||0) + _dv.divCash;
       _out={saved:_dv.divCash, withdrawn:c.withdrawn||0, simple:false};
@@ -7117,6 +7172,7 @@ async function paperFillAll(){
           const have=String(PAPER_CACHESYM[tab]()||'').toUpperCase();
           if(PAPER_LOADERS[tab]) await PAPER_LOADERS[tab](have!==want);   // 종목이 다르면 강제 갱신
           if(divCashOn(sess.settings)) await warmDiv(want);   // 분배금 현금수령 세션은 분배 이력도 미리
+          if(divCashOn(sess.settings) && tab==='ivs' && (sess.settings.park||'bill')==='x1') await warmDiv(ivsX1Of(want));   // 짝 종목 것도
           paperAuto();
           if(tab==='vr') vrSimForward();
           if(tab==='inf') infSimForward((sess.hist||[]).length?null:paperStart(sess));
