@@ -81,6 +81,60 @@ def bars_of(row):
     a.sort(key=lambda z:z["hm"])
     return a
 
+def time_bucket(h):
+    if h < 1100: return "10:00~10:59"
+    if h < 1300: return "11:00~12:59"
+    if h < 1400: return "13:00~13:59"
+    return "14:00+"
+
+
+def bucket_value(v, cuts, labels):
+    for cut,label in zip(cuts,labels):
+        if v < cut: return label
+    return labels[-1]
+
+
+def benchmark_context(day, signal_hm):
+    vals={}
+    for b in day.get("benchmarks") or []:
+        a=bars_of(b)
+        if not a: continue
+        op=a[0]["o"] or a[0]["c"]
+        prior=[x for x in a if x["hm"]<=signal_hm]
+        if op>0 and prior:
+            vals[str(b.get("code") or "")]=(prior[-1]["c"]/op-1)*100
+    k200=vals.get("069500")
+    kq=vals.get("229200")
+    if k200 is None or kq is None:
+        regime="unknown"
+    elif k200>0 and kq>0:
+        regime="both_up"
+    elif k200<0 and kq<0:
+        regime="both_down"
+    else:
+        regime="mixed"
+    return {"marketRegime":regime,"k200Ret":k200,"kosdaq150Ret":kq}
+
+
+def path_metrics(a, entry_i, entry, final_hm):
+    post=[z for z in a[entry_i:] if z["hm"]<=final_hm]
+    if not post or entry<=0:
+        return {}
+    best=max(post,key=lambda z:z["h"])
+    worst=min(post,key=lambda z:z["l"])
+    out={
+        "mfePct":(best["h"]/entry-1)*100,
+        "mfeTime":best["hm"],
+        "maePct":(worst["l"]/entry-1)*100,
+        "maeTime":worst["hm"],
+    }
+    for n in (1,3,5,10,20):
+        idx=entry_i+n
+        key=f"fwd{n}mPct"
+        out[key]=((a[idx]["c"]/entry-1)*100) if idx<len(a) else None
+    return out
+
+
 def first_trade(day,row,p:Params):
     if int(row.get("rank") or 999999)>p.top_n:
         return None
@@ -135,6 +189,8 @@ def first_trade(day,row,p:Params):
 
         breakout=(x["c"]/prior_high-1)*100
         score=vol_ratio*max(0.01,breakout+0.05)*max(0.01,slope+0.05)
+        ctx=benchmark_context(day,x["hm"])
+        path=path_metrics(a,i+1,entry,p.final_exit)
         exit_px=exit_hm=None; reason=None
 
         for z in a[i+1:]:
@@ -167,6 +223,11 @@ def first_trade(day,row,p:Params):
             "entryPrice":entry,"exitTime":exit_hm,"exitPrice":exit_px,"reason":reason,
             "sessionRet":session_ret,"vwap":vw,"vwapSlope":slope,
             "priorHigh":prior_high,"breakoutPct":breakout,"volRatio":vol_ratio,
+            "timeBucket":time_bucket(ent["hm"]),
+            "volRatioBucket":bucket_value(vol_ratio,(1.75,2.5,999),("1.5~1.74","1.75~2.49","2.5+")),
+            "vwapSlopeBucket":bucket_value(slope,(0.2,0.4,999),("0.10~0.19","0.20~0.39","0.40+")),
+            "sessionRetBucket":bucket_value(session_ret,(2,4,999),("1~1.99","2~3.99","4+")),
+            **ctx,**path,
             "score":score,"pnl":pnl,"variant":p.name,
         }
     return None
@@ -214,6 +275,43 @@ def summary(trades,day_labels,max_trades=3):
         "daily":daily,
     }
 
+def group_stats(trades,key):
+    groups={}
+    for x in trades:
+        v=x.get(key)
+        if v is None: v="unknown"
+        groups.setdefault(str(v),[]).append(x)
+    out=[]
+    for name,rows in sorted(groups.items()):
+        pn=[x["pnl"] for x in rows]
+        out.append({
+            "group":name,"trades":len(rows),
+            "winRate":sum(1 for x in pn if x>0)/len(pn)*100 if pn else 0,
+            "avgPnl":statistics.fmean(pn) if pn else 0,
+            "avgMfe":statistics.fmean([x["mfePct"] for x in rows if x.get("mfePct") is not None]) if any(x.get("mfePct") is not None for x in rows) else None,
+            "avgMae":statistics.fmean([x["maePct"] for x in rows if x.get("maePct") is not None]) if any(x.get("maePct") is not None for x in rows) else None,
+        })
+    return out
+
+
+def diagnostics(trades):
+    path={}
+    for n in (1,3,5,10,20):
+        k=f"fwd{n}mPct"; vals=[x[k] for x in trades if x.get(k) is not None]
+        path[k]={"n":len(vals),"avg":statistics.fmean(vals) if vals else None,
+                 "median":statistics.median(vals) if vals else None}
+    return {
+        "timeBuckets":group_stats(trades,"timeBucket"),
+        "marketRegimes":group_stats(trades,"marketRegime"),
+        "volRatioBuckets":group_stats(trades,"volRatioBucket"),
+        "vwapSlopeBuckets":group_stats(trades,"vwapSlopeBucket"),
+        "sessionRetBuckets":group_stats(trades,"sessionRetBucket"),
+        "forwardPath":path,
+        "avgMfe":statistics.fmean([x["mfePct"] for x in trades if x.get("mfePct") is not None]) if any(x.get("mfePct") is not None for x in trades) else None,
+        "avgMae":statistics.fmean([x["maePct"] for x in trades if x.get("maePct") is not None]) if any(x.get("maePct") is not None for x in trades) else None,
+    }
+
+
 def walk_forward(days,trade_map):
     train,test,step=20,5,5
     labels=[d["date"] for d in days]
@@ -253,7 +351,7 @@ def main():
     wf=walk_forward(days,trade_map)
     enough=len(days)>=20 and len(baseline)>=30
     report={
-        "schema":1,"generatedAt":datetime.now(KST).isoformat(),
+        "schema":2,"generatedAt":datetime.now(KST).isoformat(),
         "from":labels[0],"to":labels[-1],"archiveDays":len(days),
         "baselineTradeCount":len(baseline),
         "comparisonStatus":"eligible" if enough else "collecting",
@@ -261,6 +359,7 @@ def main():
         "strategyName":"VWAP 추세 돌파 v1",
         "dataRule":"10:00 intraday Top100 snapshot; signals only after snapshot; next-minute-open entry.",
         "variants":reports,"walkForward":wf,
+        "diagnostics":diagnostics(baseline),
         "latestDayTrades":[x for x in baseline if x["date"]==labels[-1]],
     }
     (OUT/"latest.json").write_text(json.dumps(report,ensure_ascii=False,indent=2),encoding="utf-8")
@@ -268,7 +367,8 @@ def main():
 
     with (OUT/"baseline-trades.csv").open("w",encoding="utf-8",newline="") as f:
         cols=["date","rank","code","name","snapshotHm","signalTime","entryTime","entryPrice","exitTime","exitPrice","reason",
-              "sessionRet","vwapSlope","breakoutPct","volRatio","pnl"]
+              "sessionRet","vwapSlope","breakoutPct","volRatio","timeBucket","marketRegime","k200Ret","kosdaq150Ret",
+              "mfePct","mfeTime","maePct","maeTime","fwd1mPct","fwd3mPct","fwd5mPct","fwd10mPct","fwd20mPct","pnl"]
         w=csv.DictWriter(f,fieldnames=cols); w.writeheader()
         for x in baseline:w.writerow({k:x.get(k) for k in cols})
 
