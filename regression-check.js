@@ -89,13 +89,18 @@ if(!iqSrc) throw new Error('정수 주수 헬퍼(iq/isq)를 backtest.html에서 
 /* VR 주문 체결 엔진 — 사이클 시작 20차 예약 사다리. 앱·백테가 같이 쓴다. */
 { const m=bt.match(/const VR_MODEL_DEFAULT='official';\nfunction vrModelOf\(st\)\{[^\n]*\}\n/);
   const g=bt.match(/function vrOrderPlan\(S, P, bar\)\{[\s\S]*?\n\}/);
-  if(!m||!g) throw new Error('vrOrderPlan/VR_MODEL_DEFAULT 를 backtest.html에서 못 찾음');
-  const f=new Function(m[0]+g[0]+'\nreturn {VR_MODEL_DEFAULT, vrModelOf, vrOrderPlan};')();
-  global.VR_MODEL_DEFAULT=f.VR_MODEL_DEFAULT; global.vrModelOf=f.vrModelOf; global.vrOrderPlan=f.vrOrderPlan; }
+  const t=bt.match(/function vrTiers\(B, sf, bf, up, dn, limit, fee1, N\)\{[\s\S]*?\n\}/);   // 7차 ⑫ 공용 차수 목록
+  if(!m||!g||!t) throw new Error('vrOrderPlan/vrTiers/VR_MODEL_DEFAULT 를 backtest.html에서 못 찾음');
+  const f=new Function(m[0]+t[0]+'\n'+g[0]+'\nreturn {VR_MODEL_DEFAULT, vrModelOf, vrOrderPlan, vrTiers};')();
+  global.VR_MODEL_DEFAULT=f.VR_MODEL_DEFAULT; global.vrModelOf=f.vrModelOf; global.vrOrderPlan=f.vrOrderPlan;
+  global.vrTiers=f.vrTiers; }
 /* 리버스 쿼터매수 주수 헬퍼 — 원문 배정액(잔금÷4). 파일에서 그대로 떼어 온다. */
 { const m=bt.match(/function imRevBuyQty\(balance, buyPrice\)\{[\s\S]*?\n\}/);
   if(!m) throw new Error('imRevBuyQty 를 backtest.html에서 못 찾음');
   global.imRevBuyQty=new Function(m[0]+'\nreturn imRevBuyQty;')(); }
+/* 무매 아침 매수 계획 — runIM·runIM50 이 같이 쓴다 (7차 점검 ②). 따로 올리는 엔진 사본도
+   보도록 전역에 둔다. 파일에서 그대로 떼어 온다. */
+global._imBuyPlan=new Function(extractFn(bt,'function _imBuyPlan(T, avg, shares, cash, divs, starBase, starSlope, buyLimit, prevC, FEE)')+'\nreturn _imBuyPlan;')();
 /* 무매 매수 주수 헬퍼 — 운영·모의·백테가 같이 쓴다. 파일에서 그대로 떼어 온다. */
 { const m=bt.match(/function imBuyQty\(alloc, refPx, feeRate\)\{[\s\S]*?\n\}/);
   if(!m) throw new Error('imBuyQty 를 backtest.html에서 못 찾음');
@@ -157,7 +162,7 @@ global.WARM_FROM=''; global.WARM_TO='';
   if(!m) throw new Error('REV_DIVS/revSupported 를 backtest.html에서 못 찾음');
   const f=new Function(m[0]+'\nreturn {REV_DIVS,revSupported};')();
   global.REV_DIVS=f.REV_DIVS; global.revSupported=f.revSupported; }
-let btSrc=extractFn(bt,'function runIM(days,tkr,cap,divs,targetPct,compound')+'\n'+extractFn(bt,'function runVR(days,tkr,params)');
+let btSrc=extractFn(bt,'function _imBuyPlan(T, avg, shares, cash, divs, starBase, starSlope, buyLimit, prevC, FEE)')+'\n'+extractFn(bt,'function runIM(days,tkr,cap,divs,targetPct,compound')+'\n'+extractFn(bt,'function runVR(days,tkr,params)');
 function inject(before, after, label){
   const p=btSrc.split(before);
   if(p.length!==2) throw new Error(`주입 실패(${label}): ${p.length-1}회 매치 — 코드가 바뀌었으면 이 스크립트의 주입 문자열을 갱신할 것`);
@@ -167,22 +172,15 @@ inject(`if(sellQty>0){ _sell(c,sellQty,0); T=divs>=40?T*0.95:T*0.9; }   // MOC=�
 `if(sellQty>0){ __LOG('리버스매도',c,sellQty); _sell(c,sellQty,0); T=divs>=40?T*0.95:T*0.9; }   // MOC=종가`,'r1');
 inject(`if(sellQty>0){ _sell(c,sellQty,0); T=divs>=40?T*0.95:T*0.9; }   // LOC=종가`,
 `if(sellQty>0){ __LOG('리버스매도',c,sellQty); _sell(c,sellQty,0); T=divs>=40?T*0.95:T*0.9; }   // LOC=종가`,'r2');
-inject(`const alloc=imRevBuyQty(cash,buyP)*buyP;          // 원문: 배정액 = 잔금÷4
-            if(_buy(c,alloc,buyP)>0) T=T+(divs-T)*0.25;      // 수량은 주문가로 사전 확정, 체결은 종가`,
-`const alloc=imRevBuyQty(cash,buyP)*buyP;
-            {const __q=_buy(c,alloc,buyP);if(__q>0){__LOG('리버스매수',c,__q);T=T+(divs-T)*0.25;}}      // 수량은 주문가로 사전 확정, 체결은 종가`,'r3');
+inject(`if(_buyN(c,imRevBuyQty(cash,buyP))>0) T=T+(divs-T)*0.25;      // 수량은 주문가로 사전 확정, 체결은 종가`,
+`{const __q=_buyN(c,imRevBuyQty(cash,buyP));if(__q>0){__LOG('리버스매수',c,__q);T=T+(divs-T)*0.25;}}      // 수량은 주문가로 사전 확정, 체결은 종가`,'r3');
 inject(`{_sell(o>tgt?o:tgt,q3,SLIP);tpHit=true;}`,
 `{const __px=o>tgt?o:tgt;__LOG('지정가매도',__px,q3);_sell(__px,q3,SLIP);tpHit=true;}`,'tp');
 inject(`{_sell(c,sq,0);qtHit=true;}`,
 `{__LOG('쿼터매도',c,sq);_sell(c,sq,0);qtHit=true;}`,'qt');
-inject(`if(c<=buyLimit && _buy(c,one,prevC)>0) T+=1;`,
-`{const __q=(c<=buyLimit)?_buy(c,one,prevC):0;if(__q>0){__LOG('1회매수',c,__q);T+=1;}}`,'fb');
-inject(`if(c<=starOrder){ if(_buy(c,half,prevC)>0) T+=0.5; }`,
-`if(c<=starOrder){ const __q=_buy(c,half,prevC); if(__q>0){__LOG('절반매수',c,__q);T+=0.5;} }`,'hb1');
-inject(`if(c<=avgOrder) { if(_buy(c,half,prevC)>0) T+=0.5; }`,
-`if(c<=avgOrder) { const __q=_buy(c,half,prevC); if(__q>0){__LOG('절반매수',c,__q);T+=0.5;} }`,'hb2');
-inject(`if(c<=starOrder){ if(_buy(c,one,prevC)>0) T+=1; }`,
-`if(c<=starOrder){ const __q=_buy(c,one,prevC); if(__q>0){__LOG('1회매수',c,__q);T+=1;} }`,'bb');
+/* 매수는 아침에 정한 계획(_imBuyPlan)을 한 줄에서 체결한다 (7차 점검 ②) — 거기 하나만 건다 */
+inject(`for(const b of buys){ if(c<=b.lim){ const q=_buyN(c,b.q); if(q>0) T+=b.dT; } }`,
+`for(const b of buys){ if(c<=b.lim){ const q=_buyN(c,b.q); if(q>0){ __LOG(b.kind,c,q); T+=b.dT; } } }`,'buy');
 // 단리에서 밖에서 넣은 돈(addedCash)을 총자산에서 빼게 되면서 이 줄이 바뀌었다
 inject(`const fin=cash+shares*M[tkr][days[days.length-1]][C]+savedProfit-addedCash;`,
 `__FINAL({T,avg,shares,cash,realized,savedProfit,addedCash});
@@ -613,7 +611,7 @@ console.log('[11] 무매 계산 공유');
   let ord=''; try{ ord=extractFn(idx,'function renderOrder()'); }catch(e){}
   ok('매수 주문가 = 별지점 − 0.01', /star-0\.01|star\s*-\s*0\.01/.test(ord));
   let sim=''; try{ sim=extractFn(idx,'function infSimForward(startFrom)'); }catch(e){}
-  ok('모의 체결도 별지점 − 0.01', /star-0\.01|star\s*-\s*0\.01/.test(sim));
+  ok('모의 체결도 별지점 − 0.01', /buyP0=star0-0\.01/.test(sim));
   // 쿼터매도는 보유÷4, 지정가매도는 나머지 (두 곳 규약 동일)
   ok('쿼터매도 = 보유÷4 (주문표·모의 동일)',
      /Math\.floor\(c\.qty\/4\)/.test(ord) && /Math\.floor\(c\.qty\/4\)/.test(sim));
@@ -732,7 +730,8 @@ console.log('[14] 체결가 규약');
   ok('모의도 갭업 체결가 반영', /put\('지정가매도',d,\(op>tgt\?op:tgt\),qTp\)/.test(sim), sim?'':'infSimForward 없음');
   ok('모의가 시가를 봉에서 읽는다', /op=\(row\.open>0\?row\.open:0\)/.test(sim));
   // LOC는 반드시 종가 — 매수·쿼터매도가 종가 아닌 값으로 체결되면 안 된다
-  ok('모의 매수는 종가 체결', /put\('절반매수',d,cl,/.test(sim) && /put\('1회매수',d,cl,/.test(sim));
+  ok('모의 매수는 종가 체결', /for\(const b of buys\)\{ if\(cl<=b\.lim\) put\(b\.kind,d,cl,b\.q\); \}/.test(sim)
+     && /add\('절반매수'/.test(sim) && /add\('1회매수'/.test(sim));
   ok('모의 쿼터매도는 종가 체결', /put\('쿼터매도',d,cl,/.test(sim));
   /* 지정가 익절은 장 시작 전에 이미 걸어 둔 주문이다. 따라서 당일 고가가 지정가에
      도달하면 체결로 본다. 운영 주문표와 백테 runIM(imFill=high)의 규약과 같아야 한다. */
@@ -1547,24 +1546,31 @@ console.log('[32] 전반전 매수 — 주문별 정수 내림 (모의 == 백테
   // 주식을 산 걸로 쳐서 백테만 낙관적으로 나온다 (1회 $500·주가 $65: 7주 vs 3+3=6주).
   // 이 한 줄 때문에 모의 38.62% / 백테 38.89%로 갈렸다.
   const im=extractFn(bt,'function runIM(days,tkr,cap,divs,targetPct,compound');
-  ok('백테: 별지점 주문을 따로 내림', /if\(c<=starOrder\)\{ if\(_buy\(c,half,prevC\)>0\) T\+=0\.5; \}/.test(im));
-  ok('백테: 평단 주문을 따로 내림',   /if\(c<=avgOrder\) \{ if\(_buy\(c,half,prevC\)>0\) T\+=0\.5; \}/.test(im));
+  const plan=extractFn(bt,'function _imBuyPlan(T, avg, shares, cash, divs, starBase, starSlope, buyLimit, prevC, FEE)');
+  /* 7차 ② 이후 두 반주문은 아침 계획(_imBuyPlan)에 따로 들어가 각자 수량을 정하고, 한 줄에서 체결된다 */
+  ok('백테: 별지점 주문을 따로 내림', /add\(starOrder, one\/2, 0\.5, '절반매수'\);/.test(plan));
+  ok('백테: 평단 주문을 따로 내림',   /add\(avgOrder,  one\/2, 0\.5, '절반매수'\);/.test(plan)
+     && /for\(const b of buys\)\{ if\(c<=b\.lim\)\{ const q=_buyN\(c,b\.q\);/.test(im));
   ok('백테: 합산 후 일괄 내림이 안 남아 있다', !/if\(sp>0\)\{ if\(_buy\(c,sp\)>0\) T\+=ti; \}/.test(bt));
   // runIM50도 같은 규약이어야 한다 — 예전에 여기만 빠뜨려서 V5.0==V4.0 항등이 깨졌었다
-  const n=(bt.match(/if\(c<=starOrder\)\{ if\(_buy\(c,half,prevC\)>0\) T\+=0\.5; \}/g)||[]).length;
+  const n=(bt.match(/const buys=_imBuyPlan\(T, avg, shares, cash, divs, starBase, starSlope, buyLimit, prevC, FEE\);/g)||[]).length;
   ok('runIM·runIM50 둘 다 고쳐져 있다', n===2, n+'곳');
   /* 운영 모의도 별지점·평단 두 주문을 따로 수량 계산해야 한다 (한쪽만 고치면 다시 갈린다).
      수량 기준은 당일 종가가 아니라 주문 전 알 수 있는 전일 종가(prevC)다 —
      오늘 종가로 나누면 오늘 싸졌다는 이유로 그날 수량이 늘어난다(룩어헤드, 4차 감사 ②). */
   const sim=extractFn(idx,'function infSimForward(startFrom)');
-  const half=(sim.match(/_qtyBuy\(B\.amt\/2,prevC,cl\)/g)||[]).length;
-  ok('모의: 절반 주문 2건을 전일종가 기준으로 각각 내림', half===2, half+'곳');
-  ok('모의: 첫매수도 전일종가 기준 수량', /_qtyBuy\(B\.amt,prevC,cl\)/.test(sim));
-  ok('모의: 큰수 상한을 넘긴 종가에는 매수하지 않는다', /if\(cl<=buyLimit\)/.test(sim));
+  const half=(sim.match(/add\('절반매수', (starOrder|avgOrder), +B0\.amt\/2\);/g)||[]).length;
+  ok('모의: 절반 주문 2건을 전일종가 기준으로 각각 내림', half===2
+     && /const q=Math\.min\(imBuyQty\(alloc,prevC,0\), imBuyQty\(res,lim,0\)\);/.test(sim), half+'곳');
+  ok('모의: 첫매수도 전일종가 기준 수량', /add\('1회매수', buyLimit, B0\.amt\);/.test(sim));
+  ok('모의: 큰수 상한을 넘긴 종가에는 매수하지 않는다', /Math\.min\(buyP0,buyLimit\)/.test(sim)
+     && /Math\.min\(c\.avg,buyLimit\)/.test(sim) && /if\(cl<=b\.lim\)/.test(sim));
   ok('모의가 오늘 종가로 수량을 세지 않는다',
      !/Math\.floor\(\(B\.amt\/2\)\/cl\)/.test(idx) && !/Math\.floor\(B\.amt\/cl\)/.test(idx));
+  /* 7차 ④ — 잔금 한도는 '아침 잔금 ÷ 주문가' (증권사 예약금 규약). 오늘 종가로 자르면 룩어헤드다 */
   ok('모의 수량도 공통 헬퍼 imBuyQty 로 센다',
-     /Math\.min\(imBuyQty\(alloc,rp,0\), imBuyQty\(Math\.max\(0,cNow\.bal\),fillPx,0\)\)/.test(sim),
+     /const q=Math\.min\(imBuyQty\(alloc,prevC,0\), imBuyQty\(res,lim,0\)\);/.test(sim)
+     && !/fillPx/.test(sim) && !/cNow\.bal/.test(sim),
      '모의가 아직 자기만의 내림식을 쓴다');
 }
 
@@ -1947,9 +1953,14 @@ console.log('[42] 자동 주문 — 브라우저와 서버가 같은 주문을 �
     const need=['function computeInf()','function imBuy1(c)','function starPct(ticker,div,T,base)',
       'function reverseT(kind,t,div)','function oitem(cls,name,tag,price,qty)','function renderOrder()',
       'function imMomNow()','function imTgtOf(base, mom)','function calcStarPoint(c)',
-      'function quoteOf(tab)',
-      'function fmtT(t)','function isSell(k)','function isBuy(k)','function isCx(k)']
-      .map(x=>{ try{ return extractFn(idx,x); }catch(e){ return ''; } }).filter(Boolean).join('\n');
+      'function quoteOf(tab)','function revGapOf(st)','function exitMulOf(base)','function isAmtKind(k)',
+      'function fmtT(t)','function isSell(k)','function isBuy(k)','function isCx(k)',
+      // 7차 ⑧ — 별지점·익절 조절이 확정 봉만 쓴다. 실코드 그대로, 시계만 고정해서 넣는다
+      'function simCutoff(cur)','function settledBars(rows,cur)','function curOf(st)','function isKrCode(t)']
+      .map(x=>{ try{ return extractFn(idx,x); }catch(e){ return ''; } }).filter(Boolean).join('\n')
+      + '\n' + (idx.match(/const KR_CODE_RE=[^\n]*/)||[''])[0]
+      + '\nconst MKT_CLOSE_MIN={usd:16*60, krw:15*60+30}; const SETTLE_LAG_MIN=20;'
+      + "\nfunction _exchNow(cur){ return {date:'2099-12-31', min:23*60}; }";
     const browserOrders=(st,hist,close,days)=>{
       const EL=()=>({textContent:'',innerHTML:'',style:{},value:'',classList:{add(){},remove(){},toggle(){}}});
       return new Function('EL','ST','HIST','DAYS','CLOSE', `
@@ -2030,7 +2041,10 @@ console.log('[42] 자동 주문 — 브라우저와 서버가 같은 주문을 �
        && /SETTLE_LAG_MIN = 20/.test(im)
        && /const MKT_CLOSE_MIN=\{usd:16\*60, krw:15\*60\+30\}/.test(idx)
        && /const SETTLE_LAG_MIN=20/.test(idx));
-    ok('자동 주문이 확정 종가를 쓴다', /settledLast\(q\.series \|\| q\.ohlc \|\| \[\], st\.cur\)/.test(at_||''));
+    /* 7차 ⑦⑩ — 앱과 같은 가격 계열(div=1 · 체결가 우선)과 종목코드로 정한 통화로 확정 종가를 고른다 */
+    ok('자동 주문이 확정 종가를 쓴다', /const bar = settledLast\(bars, cur\);/.test(at_||'')
+       && /const bars = tradeOK \? q\.ohlcTrade : \(q\.series \|\| q\.ohlc \|\| \[\]\);/.test(at_||'')
+       && /&intraday=0&div=1/.test(at_||''));
 
     /* 시세사가 봉을 늦게 올리는 일이 실제로 있다 — 야후가 9/14 봉을 마감 4시간 뒤에 올렸다.
        사람이면 이상한 걸 알아채지만 자동 주문은 낡은 가격으로 그대로 내버린다. */
@@ -2068,7 +2082,8 @@ console.log('[42] 자동 주문 — 브라우저와 서버가 같은 주문을 �
     /* 크론이 늦게 돌면 마감 뒤에 주문이 나간다 — 그날 체결되지 않고 다음 거래일로 넘어간다.
        실측(2026-09-15): 19:40·20:40 UTC 예정이 22:25·23:08 에 돌았다(1시간 46분·2시간 28분 지연). */
     ok('마감 뒤에는 주문하지 않는다',
-       /const win = orderWindow\(st\.cur\);/.test(at) && /주문 시간이 아닙니다 — 지금 \$\{win\.now\}/.test(at));
+       /const win = orderWindow\(cur\);/.test(at) && /주문 시간이 아닙니다 — 지금 \$\{win\.now\}/.test(at)
+       && !/st\.cur\)/.test(at));
     /* 예전엔 부르기만 하면 lastDate 가 찍혀, 늦게 돈 크론이 아무것도 안 내고도
        그날을 소진해 제 시각 실행이 막혔다. */
     ok('한 건도 안 냈으면 오늘을 소진하지 않는다',
@@ -3724,7 +3739,7 @@ console.log('\n[71] same-close 룩어헤드 탐지');
   // 운영 앱도 같은 규약이어야 한다 — 한쪽만 고치면 앱과 백테가 갈린다
   const appIvs=extractFn(idx,'function ivsReplay()');
   ok('운영 섀넌도 전일 종가로 판정',
-     /const eqP = qty\*pc \+ \(X1\?qty1\*pc1:0\) \+ cash;/.test(appIvs)
+     /const eqP = cash \+ qty\*pc \+ \(X1\?qty1\*pc1:0\);/.test(appIvs)
      && !/if\(Math\.abs\(w-qty\*c\/eq\)<=band\) continue;/.test(appIvs));
   const appAsap=extractFn(idx,'function _paperAsap(sess, from)');
   ok('운영 ASAP 도 전일 지표로',
@@ -3776,16 +3791,26 @@ console.log('\n[72] 리버스 — 상태머신·별지점·gap');
   ok('별지점 없으면 주문을 만들지 않는다',
      /리버스 별지점 계산 불가/.test(idx) && !/star5\|\|c\.avg/.test(idx));
   { // 값 확인 — 10,20,30,40,50 → 정확히 30
-    const fn=new Function('$','quoteOf',
+    /* 7차 ⑧ — 확정된 봉만 본다. 확정 경계(CUT)를 밖에서 정해 넣어 '오늘 봉' 을 흉내 낸다 */
+    let CUT='2099-12-31';
+    const fn=new Function('$','quoteOf','settledBars','curOf',
       'return ('+csp.replace(/^function \w+\(/,'function (')+')');
+    const sb=(rows,cur)=>(rows||[]).filter(r=>r.date<=CUT), co=()=>'usd';
     const days=[10,20,30,40,50].map((v,i)=>({date:'2026-01-0'+(i+1), close:v}));
     const noMan=()=>({value:''});
-    const r5=fn(noMan, ()=>({days}))({});
+    const r5=fn(noMan, ()=>({days}), sb, co)({});
     ok('종가 5개면 정확히 그 평균', near(r5.val,30,1e-12), String(r5.val));
-    const r4=fn(noMan, ()=>({days:days.slice(1)}))({});
+    const r4=fn(noMan, ()=>({days:days.slice(1)}), sb, co)({});
     ok('4개뿐이면 계산 불가', r4.val===0 && !!r4.need, JSON.stringify(r4));
-    const rMan=fn(()=>({value:'42.5'}), ()=>({days}))({});
+    const rMan=fn(()=>({value:'42.5'}), ()=>({days}), sb, co)({});
     ok('수동 입력이 우선', near(rMan.val,42.5,1e-12) && rMan.src==='수동 입력');
+    /* 장중: 시세 끝에 아직 움직이는 오늘 봉(1000)이 붙어 있다. 확정 경계는 어제(01-05).
+       예전 코드는 끝 5개(20·30·40·50·1000)를 평균내 228 이 나왔다 — 오늘 현재가가 섞인 별지점이다. */
+    CUT='2026-01-05';
+    const live=[...days, {date:'2026-01-06', close:1000}];
+    const rLive=fn(noMan, ()=>({days:live}), sb, co)({});
+    ok('장중 미확정 오늘 봉은 별지점에 안 섞인다 (7차 ⑧)', near(rLive.val,30,1e-12), String(rLive.val));
+    CUT='2099-12-31';
   }
 
   // ── C. 재진입 DAY1 — 실제 시퀀스로 돌려 본다 ──
@@ -4530,7 +4555,21 @@ console.log('\n[79] 잔돈 보존 · 전체비교 총투입');
    백테(runIVS)는 레버리지에서 역산한 합성 1배지수(_ivsX1)를 썼다. 같은 전략·같은 옵션인데
    기초가격이 다르면 거래 결정 자체가 갈린다 — 화면에도 '10년에 2~3% 차이'라고 적혀 있었다.
    이제 백테도 실제 1배 ETF를 먼저 쓰고, 없을 때만 합성으로 대체하며 그 사실을 표시한다.
-   주수 규약은 서로 다르다(운영=소수점 · 백테=정수)므로, 대조하는 건 '리밸런싱한 날'이다. */
+   대조하는 건 '리밸런싱한 날'이다. 주수는 7차 ⑯ 부터 양쪽 다 정수라, 백테에만 있는 규약
+   (예수금 이자·국채 쪽 비용·양도세·배당 현금)을 끄고 수수료를 같게 두면 날짜가 그대로 겹쳐야 한다. */
+/* 섀넌 백테 엔진을 운영 재생과 같은 조건으로 — 백테에만 있는 규약을 끄고 수수료를 0.25% 로 못박는다.
+   [80]·[112] 가 같이 쓴다. 원문을 한 글자씩 바꾸므로, 원문이 바뀌면 여기서 먼저 터진다. */
+function ivsNeutralSrc(src){
+  const inj=(a,b,l)=>{ const p=src.split(a); if(p.length!==2) throw new Error(`섀넌 중화 실패(${l}): ${p.length-1}회 매치`); src=p[0]+b+p[1]; };
+  inj(`const FEE=costOn?costOf(tkr).fee:0;`, `const FEE=0.0025;`, 'fee');
+  inj(`const LEGFEE=(costOn&&!X1)?costOf(tkr).fee:0;`, `const LEGFEE=0;`, 'legfee');
+  inj(`const CASH_DIVTAX=costOn?DIV_TAXRATE:0, CASH_EXP=costOn?0.0010:0;`, `const CASH_DIVTAX=0, CASH_EXP=0;`, 'cashcost');
+  inj(`const owed=capGainTax(yearPnl, tkr); let due=owed; yearPnl=0;`, `const owed=0; let due=owed; yearPnl=0;`, 'tax');
+  inj(`const gross=cash*parkRate(+d.slice(0,4),tkr)/252;`, `const gross=0;`, 'park');
+  inj(`cash+=divCash(tkr,d,A.sh,costOn);`, ``, 'div');
+  inj(`if(X1 && _p1 && _p1.sym && !_p1.synth) cash+=divCash(_p1.sym,d,B.sh,costOn);`, ``, 'div1');
+  return src;
+}
 console.log('\n[80] 역분산 1배 짝 — 운영·백테 기초가격 일치');
 {
   ok('운영·백테의 1배 매핑표가 같다', (()=>{
@@ -4605,7 +4644,7 @@ console.log('\n[80] 역분산 1배 짝 — 운영·백테 기초가격 일치');
   PBASIS[U]='trade';
 
   // 백테 쪽 리밸런싱 날짜
-  let bsrc=extractFn(bt,'function runIVS(days,tkr,cap,s0,N,band,costOn,mode,pair)');
+  let bsrc=ivsNeutralSrc(extractFn(bt,'function runIVS(days,tkr,cap,s0,N,band,costOn,mode,pair)'));
   ok('백테 리밸런싱 훅 자리 확인', bsrc.includes('      rebals++;'));
   bsrc=bsrc.replace('      rebals++;','      rebals++; __IVD.push(d);');
   global.__IVD=[];
@@ -4640,14 +4679,17 @@ console.log('\n[80] 역분산 1배 짝 — 운영·백테 기초가격 일치');
   /* 백테는 정수 주수라 '밴드를 벗어났지만 1주도 못 사는' 날이 생긴다(운영은 소수점).
      그래서 백테의 리밸런싱 날짜는 운영의 부분집합이어야 한다 — 없는 날이 새로 생기면
      기초가격이 다르다는 뜻이다. */
-  const appSet=new Set(appDays);
+  const appSet=new Set(appDays), btSet=new Set(btDays);
   const hit=btDays.filter(d=>appSet.has(d)).length;
-  /* 완전 일치는 안 된다 — 남는 차이는 기초가격이 아니라 규약 차이다.
-       · 주수: 운영은 소수점, 백테는 정수(밴드를 벗어나도 1주를 못 사는 날이 생긴다)
-       · 예수금: 백테는 T-Bill 일할 이자를 붙이고, 운영 재생은 안 붙인다(화면에 그렇게 적혀 있다)
-     기초가격이 같아졌는지는 '얼마나 겹치는가'로 본다 — 합성일 때보다 확실히 나아야 한다. */
-  ok('운영이 리밸런싱한 날의 대부분을 백테도 잡는다',
-     btDays.length>0 && hit/btDays.length>=0.6,
+  /* 백테에만 있는 규약(예수금 이자·국채 쪽 비용·양도세·배당 현금)을 끄고 수수료를 같게 두면
+     (ivsNeutralSrc) 기초가격만 같으면 날짜가 겹쳐야 한다. 주수는 7차 ⑯ 부터 양쪽 다 정수다.
+     백테 쪽 날짜는 '리밸런싱하기로 한 날' 이라, 밴드를 벗어났지만 어느 다리도 1주를 못 움직인
+     날이 섞일 수 있다 — 그래서 운영 ⊆ 백테 를 보고, 겹치는 비율은 넉넉히 본다. */
+  ok('운영이 거래한 날은 전부 백테도 리밸런싱한 날이다',
+     appDays.length>0 && appDays.every(d=>btSet.has(d)),
+     `운영에만 있는 날 ${appDays.filter(d=>!btSet.has(d)).slice(0,3).join(',')}`);
+  ok('백테가 리밸런싱한 날의 대부분에 운영도 거래했다',
+     btDays.length>0 && hit/btDays.length>=0.9,
      `${hit}/${btDays.length}일 일치 (운영 ${appDays.length}일)`);
 
   /* 합성을 쓰면 실제로 갈린다 — 이 시험이 살아 있다는 증거 */
@@ -5792,17 +5834,19 @@ console.log('\n[91] 무매 주문수량 — 주문 전 아는 가격으로 확�
       const re=/function imBuyQty\(alloc, refPx, feeRate\)\{[\s\S]*?\n\}/;
       const a=(idx.match(re)||[''])[0], b=(bt.match(re)||[''])[0];
       return !!a && a===b; })(), '두 파일의 imBuyQty 가 다르다');
-  ok('운영 주문표가 헬퍼를 쓴다', /const dp=qtyPrice\|\|price, q=imBuyQty\(alloc,dp,0\);/.test(idx));
+  ok('운영 주문표가 헬퍼를 쓴다', /const q=Math\.min\(imBuyQty\(alloc,dp,0\), imBuyQty\(_res,price,0\)\);/.test(idx));
   /* 모의는 _qtyBuy 한 겹을 더 두른다 — 전일종가로 수량을 확정한 뒤 체결가 기준 잔금으로
      한 번 더 자른다(백테 maxQ 와 같은 규약). 그 안쪽 수량 산출은 공통 헬퍼여야 한다. */
   ok('모의체결도 공통 헬퍼로 수량을 센다', (()=>{
       const sim=extractFn(idx,'function infSimForward(startFrom)');
-      const calls=(sim.match(/_qtyBuy\(B\.amt(\/2)?,prevC,cl\)/g)||[]).length;
-      return calls===4 && /imBuyQty\(alloc,rp,0\)/.test(sim) && /imBuyQty\(Math\.max\(0,cNow\.bal\),fillPx,0\)/.test(sim); })(),
+      /* 7차 ④ 이후 수량은 아침 계획(add)이 한 곳에서 정하고, 체결은 그 수량 그대로다 */
+      const calls=(sim.match(/imBuyQty\(alloc,prevC,0\)/g)||[]).length;
+      return calls===1 && /imBuyQty\(res,lim,0\)/.test(sim) && /put\(b\.kind,d,cl,b\.q\)/.test(sim); })(),
      `${((extractFn(idx,'function infSimForward(startFrom)')||'').match(/_qtyBuy\(B\.amt/g)||[]).length}곳`);
+  /* 7차 ④ 이후 수량은 아침 계획(_imBuyPlan)이 헬퍼로 정하고, 체결(_buyN)은 잔금 안전장치만 헬퍼로 본다 */
   ok('백테 두 엔진이 모두 헬퍼를 쓴다',
-     (bt.match(/let q=imBuyQty\(amt, ref, FEE\)/g)||[]).length===2
-     && (bt.match(/const maxQ=imBuyQty\(cash, px, FEE\)/g)||[]).length===2);
+     /const q=Math\.min\(imBuyQty\(alloc, prevC, FEE\), imBuyQty\(res, lim, FEE\)\);/.test(bt)
+     && (bt.match(/q=Math\.min\(Math\.floor\(q\), imBuyQty\(cash, px, FEE\)\);/g)||[]).length===2);
   ok('옛 iq(amt/(1+FEE), ref) 규약이 안 남아 있다', !/iq\(amt\/\(1\+FEE\), ref\)/.test(bt));
 
   /* ── 값으로 — 백테 엔진을 실제로 돌려 수량 기준가가 전일 종가인지 본다 ──
@@ -6139,8 +6183,10 @@ console.log('\n[97] 무매 리버스 쿼터매수 — 원문 배정액(잔금÷4
   ok('운영 주문표가 헬퍼를 쓴다', /\{ const qq=imRevBuyQty\(c\.bal, bp\);/.test(idx));
   ok('모의체결이 헬퍼를 쓴다', /imRevBuyQty\(bal,bp\)/.test(idx));
   ok('기록 기본값도 헬퍼를 쓴다', /'리버스매수':\{price:close, qty:imRevBuyQty\(c\.bal, close\)\}/.test(idx));
+  /* 7차 ① — 주수를 금액으로 되돌렸다 다시 나누면 1주가 사라진다. 주수를 그대로 넘겨야 한다 */
   ok('백테 두 엔진이 헬퍼를 쓴다',
-     (bt.match(/const alloc=imRevBuyQty\(cash,buyP\)\*buyP;/g)||[]).length===2);
+     (bt.match(/_buyN\(c,imRevBuyQty\(cash,buyP\)\)/g)||[]).length===2
+     && !/imRevBuyQty\(cash,buyP\)\*buyP/.test(bt));
   ok('강제 1주가 어디에도 안 남아 있다',
      !/Math\.max\(cash\/4,buyP\)/.test(bt) && !/Math\.max\(bal\/4,bp\)/.test(idx)
      && !/c\.bal>=bp\?1:0/.test(idx) && !/bal>=cl\?1:0/.test(idx) && !/c\.bal>=close\?1:0/.test(idx));
@@ -6149,7 +6195,7 @@ console.log('\n[97] 무매 리버스 쿼터매수 — 원문 배정액(잔금÷4
   /* ── T 불변 — 0주면 매수가 없으니 T 도 안 올라간다 ── */
   { const src=extractFn(bt,'function runIM(days,tkr,cap,divs,targetPct,compound');
     ok('백테: 0주면 _buy 가 0 을 돌려 T 가 안 오른다',
-       /if\(_buy\(c,alloc,buyP\)>0\) T=T\+\(divs-T\)\*0\.25;/.test(src)); }
+       /if\(_buyN\(c,imRevBuyQty\(cash,buyP\)\)>0\) T=T\+\(divs-T\)\*0\.25;/.test(src)); }
 }
 
 
@@ -6273,13 +6319,16 @@ console.log('\n[100] 5년 플랜·VR 예약주문 동기화');
   // ── 무한매수 플랜: 리버스 상태는 출금 같은 비거래 이벤트로 풀리면 안 된다.
   const revF=new Function('return ('+extractFn(pl,'function reverseTPlan').replace(/^function [\w$]+\(/,'function (')+')')();
   const stateSrc=extractFn(pl,'function calcInfState(sess)');
-  const stateF=new Function('KIND_T','isBuyKind','isSellKind','reverseTPlan',
-    'return ('+stateSrc.replace(/^function [\w$]+\(/,'function (')+')')(
-      {'1회매수':t=>t+1,'절반매수':t=>t+0.5,'지정가매도':t=>t*0.25,'쿼터매도':t=>t*0.75},
-      k=>k==='1회매수'||k==='절반매수'||k==='리버스매수'||String(k).includes('+1회매수')||String(k).includes('+절반매수'),
-      k=>k==='지정가매도'||k==='쿼터매도'||k==='리버스매도'||String(k).includes('지정가매도+'),
-      revF
-    );
+  /* 플랜의 실제 정의를 그대로 떼어 넣는다 — 예전엔 KIND_T·매수/매도 판정을 여기서 따로 지어 넣어,
+     플랜 코드가 틀려도 시험은 제 사본으로 통과했다 (7차 점검에서 발견). */
+  const plDefs=[
+    pl.slice(pl.indexOf('const KIND_T='), pl.indexOf(';', pl.indexOf("'절반매수+지정가매도(애프터)'"))+1),
+    (pl.match(/const isBuyKind=[^\n]*/)||[''])[0], (pl.match(/const isSellKind=[^\n]*/)||[''])[0],
+    (pl.match(/const REV_DIVS_PLAN=[^\n]*/)||[''])[0] ].join('\n');
+  ok('플랜 장부 의존 정의를 실코드에서 뗐다', /const KIND_T=/.test(plDefs) && /const isBuyKind=/.test(plDefs)
+     && /const isSellKind=/.test(plDefs) && /const REV_DIVS_PLAN=\[20,40\];/.test(plDefs));
+  const stateF=new Function('reverseTPlan', plDefs+'\n'+
+    'return ('+stateSrc.replace(/^function [\w$]+\(/,'function (')+')')(revF);
   const base={settings:{principal:1000,div:20,target:20,reverse:true,compound:true},hist:[
     {kind:'1회매수',price:10,qty:20,tManual:20},
     {kind:'리버스매도',price:9,qty:2},
@@ -6644,6 +6693,746 @@ console.log('\n[104] 모의 성과 — 세션 칸에 종목·주요 설정');
     ok('E 이름을 넣어도 무시한다', j('inf',{...st,name:'내맘대로이름'})==='40분할 · 익절 10%'); }
   ok('E 렌더도 r.name 을 칸에 안 쓴다',
      !/<span class="cw">\$\{String\(r\.name\)/.test(idx));
+}
+
+/* ════════════════════════════════════════════════════════════════════
+   7차 점검 — 같은 실데이터를 운영·모의·백테에 넣고 거래 단위로 맞대 본다
+   ════════════════════════════════════════════════════════════════════
+   예전 시험은 '코드에 이 글자가 있는가' 와 '앱 == 백테' 를 따로 봤다. 두 엔진이 같은 식으로
+   틀리면 둘 다 초록이었다 — 실제로 모의·백테가 쿼터매도 뒤 같은 종가에 되사는 룩어헤드를
+   함께 갖고 있었고(7차 ②), 실전 체결을 재현해 맞대 보고서야 최종자산 −12%~+20% 차이가 나왔다.
+   여기서는 '실전 흐름' 을 기준으로 삼는다: 아침에 어제까지의 장부로 주문표를 뽑아 그날 봉에
+   체결시키고, 그 결과가 모의·백테와 한 건도 안 다른지 본다. 엔진은 전부 실코드에서 떼어 온다. */
+console.log('\n[105] 7차 — 무매 백테 ↔ 모의 ↔ 운영(주문표→실제 체결) 거래 단위 대조');
+const __P7={};
+{
+  // ── 백테: 날짜 달린 거래로그 (하네스의 __LOG 주입본에서 날짜만 더한다) ──
+  const btD=btSrc.replace(/__LOG\(/g,'__LOGD(d,');
+  let LOGD=[]; global.__LOGD=(d,k,p,q)=>LOGD.push({date:d,kind:k,price:+p,qty:+q});
+  const runIMd=new Function(btD+'\nreturn runIM;')();
+  // ── 모의: infSimForward 실코드 ──
+  const deps=['function _clampFrom(from, lastDate)','function _lastSettled(rows, cur)','function imBuy1(c)',
+    'function revGapOf(st)','function sortHist(arr)','function imTgtOf(base, mom)']
+    .map(sig=>extractFn(idx,sig)).join('\n');
+  const simCut=[/function settledBars\(rows,cur\)\{[^\n]*/, /function simCutoff\(cur\)\{[\s\S]*?\n\}/]
+    .map(re=>(idx.match(re)||[''])[0]).join('\n');
+  const imMom=(idx.match(/const IM_MOM_LEN=[^\n]*/)||[''])[0];
+  const paperRun=(sess,Q,startFrom)=>{
+    __strat=sess;
+    const F=new Function('curStrat','computeInf','starPct','exitMulOf','imBuyQty','imRevBuyQty','imBigPct',
+      'divCashOn','isTradeBasis','divCashQ','save','curOf','_exchNow','MKT_CLOSE_MIN','SETTLE_LAG_MIN','lastQuote',
+      [imMom, simCut, deps, 'let _infSimBusy=false;', extractFn(idx,'function infSimForward(startFrom)'),
+       'return infSimForward;'].join('\n'))(
+      ()=>__strat, computeInf, starPct, exitMulOf, imBuyQty, imRevBuyQty, imBigPct, divCashOn, isTradeBasis, divCashQ,
+      ()=>{}, ()=>'usd', ()=>({date:'2099-12-31', min:24*60}), {usd:16*60, krw:15*60+30}, 30, {inf:Q});
+    return F(startFrom);
+  };
+  const ohlcOf=tk=>DAYS[tk].map(d=>{ const r=M[tk][d]; return {date:d, close:r[C], open:r[O], high:r[HI], low:r[LO]}; });
+  const quoteOfTk=tk=>({symbol:tk, ohlc:ohlcOf(tk), days:DAYS[tk].map(d=>({date:d,close:M[tk][d][C]})), priceBasis:'trade', dividends:[]});
+  // ── 운영: renderOrder 실코드 (한 번만 컴파일하고 상태만 바꿔 부른다) ──
+  const need=['function computeInf()','function imBuy1(c)','function starPct(ticker,div,T,base)','function reverseT(kind,t,div)',
+    'function oitem(cls,name,tag,price,qty)','function renderOrder()','function imMomNow()','function imTgtOf(base, mom)',
+    'function calcStarPoint(c)','function revGapOf(st)','function exitMulOf(base)','function quoteOf(tab)','function fmtT(t)',
+    'function isSell(k)','function isBuy(k)','function isCx(k)','function isAmtKind(k)','function simCutoff(cur)',
+    'function settledBars(rows,cur)','function curOf(st)','function isKrCode(t)']
+    .map(x=>extractFn(idx,x)).join('\n');
+  const KINDSRC=idx.slice(idx.indexOf('const KIND_T='), idx.indexOf('};', idx.indexOf('const KIND_T='))+2);
+  const IMOFF=idx.slice(idx.indexOf('const IM_OFFICIAL='), idx.indexOf(';', idx.indexOf('const IM_OFFICIAL='))+1);
+  const ENV={ST:null, HIST:null, DAYS:null, CLOSE:0};
+  const appOrders=new Function('ENV', `
+    const EL=()=>({textContent:'',innerHTML:'',style:{},value:'',classList:{add(){},remove(){},toggle(){}}});
+    let todayOrders=[];
+    const $=(id)=>(id==='o_close'||id==='o_star5man')?{value:''}:EL();
+    const wn=v=>'$'+(+v||0).toFixed(2), px=wn, inputNum=()=>0;
+    const curStrat=()=>({id:'s',settings:ENV.ST,hist:ENV.HIST});
+    const S={activeTab:'inf'};
+    let infChartData=null, infSimNote='', infSimNoteSid=null, _lastNeedClose=null;
+    const lastQuote={inf:null};
+    ${KINDSRC}
+    ${IMOFF}
+    ${(idx.match(/const KR_CODE_RE=[^\n]*/)||[''])[0]}
+    const MKT_CLOSE_MIN={usd:16*60, krw:15*60+30}, SETTLE_LAG_MIN=20;
+    function _exchNow(cur){ return {date:'2099-12-31', min:23*60}; }
+    const IM_MOM_LEN=20, IM_MOM_TH=8, IM_MOM_CAP=30;
+    ${need}
+    function infSettledLast(){ return {close:ENV.CLOSE}; }
+    function render5day(){} function renderKisPanel(){}
+    return function(){ lastQuote.inf={symbol:ENV.ST.ticker, days:ENV.DAYS, last:ENV.CLOSE}; infChartData=ENV.DAYS;
+                       renderOrder(); return todayOrders; };`)(ENV);
+  const kindOf=(o,rev)=>{
+    if(o.side==='sell') return o.tag==='지정가'?'지정가매도':(rev?'리버스매도':'쿼터매도');
+    if(/쿼터매수/.test(o.name)) return '리버스매수';
+    if(/처음매수|전액/.test(o.name)) return '1회매수';
+    if(/별지점 매수|평단 매수/.test(o.name)) return '절반매수';
+    return '1회매수';
+  };
+  /* 실전 흐름 — 아침에 어제까지의 장부로 주문을 전부 걸고, 그날 봉에서 체결된다.
+       지정가 매도 : 고가 ≥ 가격 → max(시가, 가격) · LOC 매도 : 종가 ≥ 가격 → 종가
+       LOC 매수 : 종가 ≤ 가격 → 종가 · MOC 매도 : 종가.   기록 순서는 시간 순. */
+  const liveRun=(tk,st)=>{
+    const all=DAYS[tk], H=[]; let seq=0;
+    for(let i=1;i<all.length;i++){
+      const d=all[i], [cl,op,hi]=M[tk][d];
+      __strat={settings:{...st},hist:H}; const rev=!!computeInf().reverseActive;
+      ENV.ST={...st}; ENV.HIST=H.slice(); ENV.CLOSE=M[tk][all[i-1]][C];
+      ENV.DAYS=all.slice(0,i).map(x=>({date:x,close:M[tk][x][C]}));
+      const od=appOrders();
+      for(const o of od.filter(o=>o.side==='sell'&&o.tag==='지정가')) if(hi>=o.price) H.push({date:d,kind:'지정가매도',price:+(op>o.price?op:o.price).toFixed(4),qty:o.qty,ts:++seq});
+      for(const o of od.filter(o=>o.side==='sell'&&o.tag!=='지정가')) if(o.tag==='MOC'||cl>=o.price) H.push({date:d,kind:kindOf(o,rev),price:+cl.toFixed(4),qty:o.qty,ts:++seq});
+      for(const o of od.filter(o=>o.side==='buy')) if(cl<=o.price) H.push({date:d,kind:kindOf(o,rev),price:+cl.toFixed(4),qty:o.qty,ts:++seq});
+      __strat={settings:{...st},hist:H}; const c1=computeInf();
+      if(rev && c1.qty>0 && cl>c1.avg*exitMulOf(st.target)) H.push({date:d,kind:'리버스복귀',price:cl,qty:0,ts:++seq});
+    }
+    return H;
+  };
+  Object.assign(__P7,{runIMd, paperRun, quoteOfTk, appOrders, ENV, LOGD:()=>LOGD, setLOGD:v=>{LOGD=v;}});
+  const key=x=>`${x.date} ${x.kind} ${(+x.price).toFixed(4)} x${x.qty}`;
+  const trades=a=>a.filter(h=>h.kind!=='리버스복귀'&&h.kind!=='배당').map(key);
+  const firstDiff=(A,B)=>{ let k=0; while(k<A.length&&k<B.length&&A[k]===B[k]) k++; return (k===A.length&&k===B.length)?-1:k; };
+  const _save={imFill:global.imFill, imCostOn:global.imCostOn, imTgtDyn:global.imTgtDyn, imRevGap:global.imRevGap, imReverse:global.imReverse};
+  global.imFill='high'; global.imCostOn=false; global.imTgtDyn=false; global.imRevGap=0;   // 모의와 같은 모델
+  const CFG=[['SOXL',20,20,true,false,true],['TQQQ',40,15,false,false,false],['SOXL',20,20,true,true,true],['TQQQ',40,15,true,true,false]];
+  for(const [tk,div,tgt,comp,rev,live] of CFG){
+    if(!DAYS[tk]) continue;
+    global.imReverse=rev;
+    const all=DAYS[tk], days=all.slice(1);
+    const st={ticker:tk,div,target:tgt,principal:10000,compound:comp,reverse:rev,big:15,revGap:0,tgtDyn:false,divmode:'reinv',
+              rowsOn:false,rows:8,gap:2.5,rowqty:1};
+    LOGD=[]; runIMd(days, tk, 10000, div, tgt, comp, 15);
+    const B=LOGD.map(key);
+    const sess={paper:true,id:'p',simStart:days[0],settings:{...st},hist:[]};
+    paperRun(sess, quoteOfTk(tk), days[0]);
+    const P=trades(sess.hist);
+    const nm=`${tk} ${div}분할 ${comp?'복리':'단리'} 리버스${rev?'ON':'OFF'}`;
+    const k1=firstDiff(B,P);
+    ok(`${nm} — 백테 ↔ 모의 거래 ${B.length}건 한 건도 안 다르다`, k1<0,
+       k1<0?'':`#${k1} 백테 [${B[k1]||'—'}] 모의 [${P[k1]||'—'}]`);
+    if(live){
+      const L=trades(liveRun(tk,st));
+      const k2=firstDiff(L,P);
+      ok(`${nm} — 운영(주문표→실제 체결) ↔ 모의 거래 ${L.length}건 한 건도 안 다르다`, k2<0,
+         k2<0?'':`#${k2} 운영 [${L[k2]||'—'}] 모의 [${P[k2]||'—'}]`);
+    }
+  }
+  Object.assign(global,_save);
+
+  /* 7차 ② 를 값으로 — 쿼터매도가 체결된 날 같은 종가에 되사면 안 된다.
+     실데이터 SOXL 20분할 2020-09-25: 아침 별지점 14.8030 · 종가 14.9865 → 쿼터매도만.
+     예전 모의·백테는 쿼터매도 뒤 T(9.5→7.125)로 별지점을 15.4992 로 다시 계산해 17주를 되샀다. */
+  { global.imReverse=false; global.imFill='high'; global.imCostOn=false; global.imTgtDyn=false;
+    const tk='SOXL', days=DAYS[tk]?DAYS[tk].slice(1):null;
+    if(days){
+      const sess={paper:true,id:'p',simStart:days[0],settings:{ticker:tk,div:20,target:20,principal:10000,compound:true,
+        reverse:false,big:15,revGap:0,tgtDyn:false,divmode:'reinv'},hist:[]};
+      paperRun(sess, quoteOfTk(tk), days[0]);
+      const day=sess.hist.filter(h=>h.date==='2020-09-25');
+      ok('7차 ② 쿼터매도 날 같은 종가 되사기가 없다 (2020-09-25)',
+         day.some(h=>h.kind==='쿼터매도') && !day.some(h=>/매수/.test(h.kind)), day.map(h=>h.kind+'×'+h.qty).join(' · '));
+      // 전 구간: 같은 날 매도(쿼터·지정가)와 매수가 같은 종가에 동시에 찍힌 날 — 쿼터매도 날엔 0 이어야 한다
+      const byDay={}; sess.hist.forEach(h=>{ (byDay[h.date]=byDay[h.date]||[]).push(h); });
+      const bad=Object.entries(byDay).filter(([d,a])=>a.some(h=>h.kind==='쿼터매도')&&a.some(h=>/매수/.test(h.kind)));
+      ok('7차 ② 6년 전 구간에 쿼터매도+매수 동시 체결 날이 없다', bad.length===0, bad.slice(0,3).map(x=>x[0]).join(','));
+    }
+    Object.assign(global,_save); }
+
+  /* 7차 ③ — 가진 봉의 맨 첫날엔 전일 확정 종가가 없다 → 그날 주문도 없다.
+     예전 모의는 '전일종가 || 오늘종가' 로 오늘 종가를 빌려 첫날부터 샀다(백테는 5차 ⑤ 에서 막음). */
+  { const tk='SOXL';
+    if(DAYS[tk]){
+      const sess={paper:true,id:'p0',simStart:DAYS[tk][0],settings:{ticker:tk,div:20,target:20,principal:10000,compound:true,
+        reverse:false,big:15,revGap:0,tgtDyn:false,divmode:'reinv'},hist:[]};
+      paperRun(sess, quoteOfTk(tk), DAYS[tk][0]);
+      const d0=sess.hist.filter(h=>h.date===DAYS[tk][0]);
+      ok('7차 ③ 첫 봉(전일 종가 없음)에는 주문이 없다', d0.length===0 && sess.hist.length>0,
+         d0.map(h=>h.kind+'×'+h.qty).join(' · ')); } }
+
+  /* 7차 ④ — 수량은 '아침 잔금 ÷ 주문가' 안에서만. 실데이터 TQQQ 40분할 단리 2022-03-16:
+     남은 회차 1.044 · 잔금 253.76 · 별지점 매수 LOC 23.2730. 전일종가 기준이면 11주(예약 256.00 > 잔금)
+     → 증권사 거부. 예전 주문표·서버·플랜은 11주를 냈고, 모의·백테는 '오늘 종가' 로 10주를 잘랐다. */
+  { const tk='TQQQ', D='2022-03-16';
+    if(DAYS[tk] && DAYS[tk].includes(D)){
+      global.imReverse=false;
+      const all=DAYS[tk], days=all.slice(1), i=all.indexOf(D);
+      const st={ticker:tk,div:40,target:15,principal:10000,compound:false,reverse:false,big:15,revGap:0,tgtDyn:false,divmode:'reinv',
+                rowsOn:false,rows:8,gap:2.5,rowqty:1};
+      const sess={paper:true,id:'p4',simStart:days[0],settings:{...st},hist:[]};
+      paperRun(sess, quoteOfTk(tk), days[0]);
+      const hist=sess.hist.filter(h=>h.date<D);
+      __strat={settings:{...st},hist}; const c=computeInf();
+      ENV.ST={...st}; ENV.HIST=hist; ENV.CLOSE=M[tk][all[i-1]][C]; ENV.DAYS=all.slice(0,i).map(x=>({date:x,close:M[tk][x][C]}));
+      const buys=appOrders().filter(o=>o.side==='buy');
+      const reserve=buys.reduce((a,o)=>a+o.qty*o.price,0);
+      ok('7차 ④ 그날 전제 — 남은 회차가 1.1 미만 (한도가 걸리는 날)', (40-c.T)<1.1 && (40-c.T)>=1, String(40-c.T));
+      ok('7차 ④ 주문표 매수 예약금이 잔금을 안 넘는다', reserve<=c.bal+1e-9, `예약 ${reserve.toFixed(2)} · 잔금 ${c.bal.toFixed(2)}`);
+      const filled=sess.hist.filter(h=>h.date===D && /매수/.test(h.kind)).reduce((a,h)=>a+h.qty,0);
+      ok('7차 ④ 모의가 산 주수 = 주문표 주수', filled===buys.filter(o=>M[tk][D][C]<=o.price).reduce((a,o)=>a+o.qty,0),
+         `모의 ${filled} · 주문표 ${buys.map(o=>o.qty).join('+')}`); } }
+}
+
+/* ════ 106. 7차 — 무매 운영 3벌: 앱 주문표 · 서버 자동주문 · 5년 플랜 ════
+   장부(computeInf·imCompute·calcInfState)와 주문(renderOrder·imOrders·플랜 imOrders)을 같은 입력에서 맞댄다.
+   서버 판은 4·5차 감사 이전 규칙에 멈춰 있었다 — 복합거래 0주 종료·배당·리버스 상태·큰수 기본값이 달랐다. */
+console.log('\n[106] 7차 — 무매 운영 3벌 (장부·주문)');
+{
+  const imSrc7=fs.readFileSync(__d+'/functions/api/_im.js','utf8');
+  const SV=new Function(imSrc7.replace(/export /g,'')+'\nreturn {imOrders,imCompute,imBigPct,IM_BIG_DEFAULT,REV_DIVS};')();
+  const pl=fs.readFileSync(__d+'/plan.html','utf8');
+  const PL=new Function([
+    (pl.match(/const usd=v=>[^\n]*/)||[''])[0], (pl.match(/const FEE=[^\n]*/)||[''])[0],
+    pl.slice(pl.indexOf('const KIND_T='), pl.indexOf(';', pl.indexOf("'절반매수+지정가매도(애프터)'"))+1),
+    (pl.match(/const isBuyKind=[^\n]*/)||[''])[0], (pl.match(/const isSellKind=[^\n]*/)||[''])[0],
+    (pl.match(/const REV_DIVS_PLAN=[^\n]*/)||[''])[0],
+    (pl.match(/function reverseTPlan[^\n]*/)||[''])[0], (pl.match(/function starPctPlan[^\n]*/)||[''])[0],
+    (pl.match(/function imBuyQtyPlan[^\n]*/)||[''])[0], (pl.match(/function imRevBuyQtyPlan[^\n]*/)||[''])[0],
+    extractFn(pl,'function calcInfState(sess)'), extractFn(pl,'function imOrders(sess,price,rows)'),
+    'return {imOrders, calcInfState};'].join('\n'))();
+  // 같은 값을 쓰는가 — 큰수 기본값·리버스 지원 분할
+  ok('7차 ⑥ 서버 큰수 기본값 = 앱·백테 (15)', SV.IM_BIG_DEFAULT===IM_BIG_DEFAULT && SV.imBigPct({})===IM_BIG_DEFAULT,
+     `${SV.IM_BIG_DEFAULT} / ${IM_BIG_DEFAULT}`);
+  ok('7차 ⑤ 서버·플랜 리버스 지원 분할 = 앱 (20·40)', JSON.stringify(SV.REV_DIVS)===JSON.stringify(REV_DIVS)
+     && /const REV_DIVS_PLAN=\[20,40\];/.test(pl), JSON.stringify(SV.REV_DIVS));
+  // ── 장부 3벌 — 실데이터 모의 이력의 매 시점(7번째마다) + 출금·배당을 섞어서 ──
+  const F=['avg','qty','T','bal','reverseActive'];
+  const same=(a,b)=>F.every(k=>typeof a[k]==='boolean'?a[k]===b[k]:Math.abs((+a[k]||0)-(+b[k]||0))<=1e-6*Math.max(1,Math.abs(+a[k]||0)));
+  global.imReverse=true;
+  for(const [tk,div,tgt,comp] of [['SOXL',20,20,false],['TQQQ',40,15,true]]){
+    if(!DAYS[tk]) continue;
+    const all=DAYS[tk], days=all.slice(1);
+    const st={ticker:tk,div,target:tgt,principal:10000,compound:comp,reverse:true,big:15,revGap:0,tgtDyn:false,divmode:'reinv'};
+    const sess={paper:true,id:'p',simStart:days[0],settings:{...st},hist:[]};
+    __P7.paperRun(sess, __P7.quoteOfTk(tk), days[0]);
+    const H=[]; let n=0;
+    for(const h of sess.hist){ H.push(h); n++;
+      if(n%97===0) H.push({date:h.date,kind:'배당',amt:12.34,qty:0});
+      if(n%131===0) H.push({date:h.date,kind:'출금',amt:5}); }
+    let dS=0,dP=0,cnt=0,ex='';
+    for(let i=7;i<=H.length;i+=7){ const hh=H.slice(0,i); cnt++;
+      __strat={settings:{...st},hist:hh}; const a=computeInf();
+      const b=SV.imCompute({...st},hh), p=PL.calcInfState({settings:{...st},hist:hh});
+      if(!same(a,b)){ dS++; if(!ex) ex=`#${i} 서버 T=${b.T} bal=${b.bal} vs 앱 T=${a.T} bal=${a.bal}`; }
+      if(!same(a,p)){ dP++; if(!ex) ex=`#${i} 플랜 T=${p.T} bal=${p.bal} vs 앱 T=${a.T} bal=${a.bal}`; } }
+    ok(`${tk} ${div}분할 — 장부 3벌이 ${cnt}개 시점에서 같다 (평단·보유·T·잔금·리버스)`, dS===0&&dP===0,
+       `서버 ${dS} · 플랜 ${dP} ${ex}`);
+  }
+  // ── 경계 사례 — 서버가 예전에 틀리던 자리 ──
+  { const st={ticker:'SOXL',div:20,target:20,principal:10000,compound:true,reverse:true};
+    const C3=(nm,hh,s2)=>{ const S2=s2||st; __strat={settings:{...S2},hist:hh}; const a=computeInf();
+      const b=SV.imCompute({...S2},hh), p=PL.calcInfState({settings:{...S2},hist:hh});
+      ok('7차 ⑤ 경계 — '+nm, same(a,b)&&same(a,p), `앱 T=${a.T} q=${a.qty} 리버스=${a.reverseActive} bal=${a.bal} · 서버 T=${b.T} q=${b.qty} 리버스=${b.reverseActive} bal=${b.bal}`);
+      return {a,b}; };
+    const r1=C3('복합거래로 0주면 사이클 종료 (5차 ④)',[{kind:'1회매수',date:'d1',price:100,qty:3},
+      {kind:'1회매수+지정가매도(애프터)',date:'d2',buyPrice:100,buyQty:1,sellPrice:130,sellQty:4}]);
+    ok('   └ 서버도 T=0 · 보유 0', r1.b.T===0 && r1.b.qty===0, `T=${r1.b.T} q=${r1.b.qty}`);
+    const r2=C3('리버스 중 출금 한 줄로 리버스가 안 풀린다',[{kind:'1회매수',date:'d1',price:10,qty:20,tManual:20},
+      {kind:'리버스매도',date:'d2',price:9,qty:2},{kind:'출금',date:'d3',amt:10}]);
+    ok('   └ 서버도 리버스 유지 → 일반 주문을 안 낸다', r2.b.reverseActive===true
+       && /리버스/.test(SV.imOrders({st:{...st,big:15},hist:[{kind:'1회매수',date:'d1',price:10,qty:20,tManual:20},
+          {kind:'리버스매도',date:'d2',price:9,qty:2},{kind:'출금',date:'d3',amt:10}],close:9,days:[]}).skip||''));
+    const r3=C3('배당은 잔금에 들어간다 (N1)',[{kind:'1회매수',date:'d1',price:100,qty:5},{kind:'배당',date:'d2',amt:37.5,qty:0}]);
+    ok('   └ 서버 잔금도 +37.5', Math.abs(r3.b.bal-(10000-500+37.5))<1e-9, String(r3.b.bal));
+    C3('30분할은 리버스 규칙이 없다',[{kind:'1회매수',date:'d1',price:10,qty:20,tManual:29.5}],{...st,div:30}); }
+  // ── 주문 3벌 — 같은 장부·같은 확정 종가에서 (5거래일마다) ──
+  const norm=o=>`${o.side} ${o.tag||''} ${(+o.price).toFixed(4)} x${o.qty}`;
+  for(const [tk,div,tgt,comp,rev,big] of [['SOXL',20,20,true,true,15],['TQQQ',20,15,true,false,undefined]]){
+    if(!DAYS[tk]) continue;
+    global.imReverse=rev;
+    const all=DAYS[tk], days=all.slice(1);
+    const st={ticker:tk,div,target:tgt,principal:10000,compound:comp,reverse:rev,revGap:0,tgtDyn:false,divmode:'reinv',rowsOn:false,rows:8,gap:2.5,rowqty:1};
+    if(big!==undefined) st.big=big;
+    const sess={paper:true,id:'p',simStart:days[0],settings:{...st},hist:[]};
+    __P7.paperRun(sess, __P7.quoteOfTk(tk), days[0]);
+    let nd=0,dS=0,dP=0,ex='';
+    for(let i=1;i<all.length;i+=5){
+      const d=all[i], hist=sess.hist.filter(h=>h.date<d), close=M[tk][all[i-1]][C];
+      const settled=all.slice(0,i).map(x=>({date:x,close:M[tk][x][C]}));
+      __P7.ENV.ST={...st}; __P7.ENV.HIST=hist; __P7.ENV.CLOSE=close; __P7.ENV.DAYS=settled;
+      const A=__P7.appOrders().map(norm).sort().join(' | ');
+      const sv=SV.imOrders({st:{...st},hist,close,days:settled});
+      const S2=sv.skip?null:sv.orders.map(norm).sort().join(' | ');
+      const P2=PL.imOrders({settings:{...st},hist},close,settled).orders.map(norm).sort().join(' | ');
+      nd++;
+      if(S2!==null && A!==S2){ dS++; if(!ex) ex=`${d} 앱[${A}] 서버[${S2}]`; }
+      if(A!==P2){ dP++; if(!ex) ex=`${d} 앱[${A}] 플랜[${P2}]`; }
+    }
+    ok(`${tk} ${div}분할 리버스${rev?'ON':'OFF'} big=${big===undefined?'없음':big} — 주문 3벌이 ${nd}일 전부 같다`,
+       dS===0&&dP===0, `서버 ${dS}일 · 플랜 ${dP}일 ${ex}`);
+  }
+  global.imReverse=false;
+}
+
+/* ════ 107. 7차 — VR 백테 ↔ 모의 ↔ 과거재생 ════
+   수수료 0.25% · 세금 0 으로 맞추고(모의·재생엔 세금 개념이 없다) 같은 날 시작한다.
+   인출식은 Pool 보다 큰 인출을 모의만 그대로 빼서 음수 Pool 로 갈렸다 (7차 ⑪, 최종 35,699 vs 40,222). */
+console.log('\n[107] 7차 — VR 백테 ↔ 모의 ↔ 과거재생 거래 단위 대조');
+{
+  let vsrc=extractFn(bt,'function runVR(days,tkr,params)');
+  const vinj=(a,b)=>{ const p=vsrc.split(a); if(p.length!==2) throw new Error('VR 주입 실패: '+a.slice(0,40)); vsrc=p[0]+b+p[1]; };
+  vinj(`function _vbuyQ(q,c){ if(!(q>0)) return 0;`, `function _vbuyQ(q,c){ if(!(q>0)) return 0; __VL('buy',q,c);`);
+  vinj(`const qty=Math.min(q,shares); if(!(qty>0)) return 0;`, `const qty=Math.min(q,shares); if(!(qty>0)) return 0; __VL('sell',qty,c);`);
+  vinj(`days.forEach((d,i)=>{\n    const c=M[tkr][d][C];`, `days.forEach((d,i)=>{ __VD=d;\n    const c=M[tkr][d][C];`);
+  let VLOG=[]; global.__VD=''; global.__VL=(t,q,p)=>VLOG.push({date:__VD,type:t,qty:+q,price:+p});
+  const runVRd=new Function(vsrc+'\nreturn runVR;')();
+  const vdeps=['function _clampFrom(from, lastDate)','function _lastSettled(rows, cur)','function sortHist(arr)',
+    'function paperStart(sess)','function vrCycStart(c)','function poolLimit(c)','function vrCycleFlow(c)',
+    'function vrStepCycle(sess, c, dateStr, close)','function cycDates(c)','function vrNextDue(s)',
+    'function vrTiers(B, sf, bf, up, dn, limit, fee1, N)','function vrOrderPlan(S, P, bar)','function vrModelOf(st)',
+    'function simCutoff(cur)','function settledBars(rows,cur)','function divCashOn(st)',
+    'function isTradeBasis(Q)','function divPerShareQ(Q, d)','function divCashQ(Q, d, shares, taxOn)']
+    .map(sig=>extractFn(idx,sig)).join('\n');
+  const vconsts=[(idx.match(/const CYC_DAYS=\d+;/)||[''])[0], (idx.match(/const DIV_TAXRATE=[^;]*;/)||[''])[0],
+    "const VR_MODEL_DEFAULT='official'; const IVS_FEE=0.0025;",
+    "const MKT_CLOSE_MIN={usd:16*60, krw:15*60+30}; const SETTLE_LAG_MIN=20;",
+    "function _exchNow(cur){ return {date:'2099-12-31', min:23*60}; }", "function curOf(st){ return 'usd'; }"].join('\n');
+  const mkVr=(sess,Q,from)=>{ __strat=sess;
+    return new Function('curStrat','computeVr','computeNextV','lastQuote','$','save','refreshVr','pushRemote','wn','px',
+      [vconsts, vdeps, 'let _vrAutoBusy=false, vrLedgerCheck=null;', extractFn(idx,'function vrSimForward()'),
+       extractFn(idx,'function vrReplay()'), 'const confirm=()=>true, alert=()=>{};',
+       'return {vrSimForward, vrReplay, ledger:()=>vrLedgerCheck};'].join('\n'))(
+      ()=>__strat, computeVr, computeNextV, {vr:Q},
+      (id)=>id==='rp_vr_from'?{value:from}:{value:'',textContent:''}, ()=>{}, ()=>{}, null,
+      v=>'$'+(+v).toFixed(2), v=>'$'+(+v).toFixed(2)); };
+  const Qv=tk=>({symbol:tk, ohlc:DAYS[tk].map(d=>{const r=M[tk][d];return {date:d,close:r[C],open:r[O],high:r[HI],low:r[LO]};}),
+                 days:DAYS[tk].map(d=>({date:d,close:M[tk][d][C]})), priceBasis:'trade', dividends:[]});
+  const same1=(a,b)=>a.date===b.date&&a.type===b.type&&a.qty===b.qty&&Math.abs(a.price-b.price)<=1e-5;
+  const diff=(X,Y)=>{ let k=0; while(k<X.length&&k<Y.length&&same1(X[k],Y[k])) k++; return (k===X.length&&k===Y.length)?-1:k; };
+  const K=x=>x?`${x.date} ${x.type} ${(+x.price).toFixed(6)} x${x.qty}`:'—';
+  const _cgt=global.capGainTax; global.capGainTax=()=>0;
+  for(const [tk,mode,formula,G,band,add] of [['TQQQ',0.75,'basic',10,15,100],['TECL',0.5,'skill',20,10,0],['TQQQ',0.25,'basic',10,15,50]]){
+    if(!DAYS[tk]) continue;
+    const all=DAYS[tk], start=all[1], days=all.slice(1);
+    VLOG=[]; const r=runVRd(days, tk, {contrib:add, G, bandPct:band, mode, formula, initAmt:10000, withdraw:add, costOn:true});
+    const B=VLOG.slice();
+    const st={ticker:tk, mode, formula, g:G, initAmt:10000, add, band, startv:0, startpool:0, autoCyc:false, vrModel:'official', divmode:'reinv'};
+    const sP={paper:true,id:'v',simStart:start,settings:{...st},hist:[]}; mkVr(sP,Qv(tk),start).vrSimForward();
+    const P=sP.hist.filter(h=>h.type==='buy'||h.type==='sell').map(h=>({date:h.date,type:h.type,qty:+h.qty,price:+h.price}));
+    __strat=sP; const cP=computeVr();
+    const sR={paper:true,id:'r',simStart:start,settings:{...st},hist:[]}; const eR=mkVr(sR,Qv(tk),start); eR.vrReplay();
+    const R=sR.hist.filter(h=>h.type==='buy'||h.type==='sell').map(h=>({date:h.date,type:h.type,qty:+h.qty,price:+h.price}));
+    __strat=sR; const cR=computeVr();
+    const nm=`${tk} ${mode===0.75?'적립':mode===0.5?'거치':'인출'} ${formula} G${G} 밴드${band}%`;
+    const kP=diff(B,P), kR=diff(B,R);
+    ok(`${nm} — 백테 ↔ 모의 체결 ${B.length}건 같다`, kP<0, kP<0?'':`#${kP} 백테 [${K(B[kP])}] 모의 [${K(P[kP])}]`);
+    ok(`${nm} — 백테 ↔ 과거재생 체결 ${B.length}건 같다`, kR<0, kR<0?'':`#${kR} 백테 [${K(B[kR])}] 재생 [${K(R[kR])}]`);
+    ok(`${nm} — V·Pool 세 곳이 같다`, Math.abs(cP.V-r.V)<=1e-3 && Math.abs(cR.V-r.V)<=1e-3
+       && Math.abs(cP.pool-r.pool)<=1e-3 && Math.abs(cR.pool-r.pool)<=1e-3,
+       `V ${r.V}/${cP.V}/${cR.V} Pool ${r.pool}/${cP.pool}/${cR.pool}`);
+    if(mode===0.25) ok('7차 ⑪ 인출식 Pool 이 음수로 안 간다', sP.hist.every(()=>true) && (()=>{
+        let pool=0, ok_=true; __strat={settings:{...st},hist:[]};
+        for(let i=1;i<=sP.hist.length;i++){ __strat={settings:{...st},hist:sP.hist.slice(0,i)}; if(computeVr().pool<-1e-6){ ok_=false; break; } }
+        return ok_; })());
+  }
+  global.capGainTax=_cgt;
+}
+
+/* ════ 108. 7차 — VR 주문표 = 체결 엔진 (vrTiers 한 곳) ════
+   표는 한도를 넘긴 차수만 건너뛰고 뒤 차수를 '유효' 로 보였는데, 엔진은 첫 초과 차수에서 멈췄다 (7차 ⑫). */
+console.log('\n[108] 7차 — VR 주문표·체결 엔진·5년 플랜이 같은 차수를 건다');
+{
+  const tv=extractFn(idx,'function renderVrTable()');
+  ok('7차 ⑫ 주문표가 vrTiers 로 차수를 받는다', /const LT=vrTiers\(B, sf, bf, c\.up, c\.lo, limit,/.test(tv)
+     && !/for\(let k=bf\+1;k<=N;k\+\+\)/.test(tv) && !/for\(let k=sf\+1;k<=Math\.min\(N,B\);k\+\+\)/.test(tv));
+  ok('7차 ⑫ 체결 엔진도 vrTiers 를 쓴다 (두 파일 같은 몸)',
+     /const L=vrTiers\(B, sf, bf, up, dn, budget, fee1, N\);/.test(extractFn(bt,'function vrOrderPlan(S, P, bar)'))
+     && extractFn(idx,'function vrTiers(B, sf, bf, up, dn, limit, fee1, N)')===extractFn(bt,'function vrTiers(B, sf, bf, up, dn, limit, fee1, N)'));
+  // 값 — 넘친 차수 뒤는 전부 한도 밖이다 (뒤 차수가 싸서 한도에 다시 들어가도)
+  { // B=100, dn=8500 → k차 가격 8500/(99+k) · 수수료 없음. 한도를 1·2차 합 + 3차보다 조금 작게.
+    const p1=8500/100, p2=8500/101, p3=8500/102, p4=8500/103;
+    const lim=p1+p2+p3-0.001;           // 3차는 넘친다 · 4차(더 쌈)는 '남은 한도' 에 들어갈 뻔한다
+    ok('   └ 전제: 3차는 넘치고 4차는 남은 한도에 들어갈 만큼 싸다', lim-(p1+p2) < p3 && p4 <= lim-(p1+p2));
+    const L=vrTiers(100,0,0,11500,8500,lim,1,20);
+    ok('7차 ⑫ 한 차수가 넘치면 그 뒤도 전부 한도 밖', L.buys.length===2 && L.over.length===18 && L.over[0].k===3,
+       `유효 ${L.buys.map(x=>x.k).join(',')} · 밖 ${L.over.slice(0,3).map(x=>x.k).join(',')}…`); }
+  // 5년 플랜 vrOrders 와 같은 목록 — 모의 장부 끝에서
+  { const pl=fs.readFileSync(__d+'/plan.html','utf8');
+    const PLV=new Function([(pl.match(/const usd=v=>[^\n]*/)||[''])[0], (pl.match(/const FEE=[^\n]*/)||[''])[0],
+      extractFn(pl,'function calcVrState(sess)'), (pl.match(/function nextVrDate\(s\)\{[^\n]*/)||[''])[0],
+      (pl.match(/function vrCycleStart\(c\)\{[^\n]*/)||[''])[0], extractFn(pl,'function vrOrders(sess,price)'),
+      'return {vrOrders};'].join('\n'))();
+    const hist=[{type:'buy',date:'2026-01-02',price:50,qty:200,fee:25,init:true,cyc:0},{type:'add',date:'2026-01-02',amt:4000,cyc:0},
+                {type:'sell',date:'2026-01-05',price:57.6,qty:1,fee:0.144,cyc:0},{type:'buy',date:'2026-01-06',price:42.4,qty:3,fee:0.318,cyc:0}];
+    const st={ticker:'TQQQ',mode:0.75,formula:'basic',g:10,initAmt:10000,add:100,band:15,startv:0,startpool:0,cycStart:'2026-01-02'};
+    __strat={settings:st,hist}; const c=computeVr();
+    const lim=Math.max(0,c.cycStartPool*st.mode-c.cycBuySpent);
+    const L=vrTiers(Math.floor(c.cycBaseQty||c.qty), c.cycSellFilled, c.cycBuyFilled, c.up, c.lo, lim, 1.0025, 20);
+    const a=[...L.sells.map(t=>'sell '+t.p.toFixed(6)), ...L.buys.map(t=>'buy '+t.p.toFixed(6))].join('|');
+    const b=PLV.vrOrders({settings:st,hist},50).orders.map(o=>o.side+' '+(+o.price).toFixed(6)).join('|');
+    ok('7차 ⑫ 5년 플랜 주문 = 앱 표 (같은 장부)', a===b, a.length+' / '+b.length); }
+}
+
+/* ════ 109. 7차 — 서버 자동주문·앱 운영의 입력값 ════ */
+console.log('\n[109] 7차 — 서버 자동주문 입력 · 한투 전송 · VR 수동 진입');
+{
+  const at=fs.readFileSync(__d+'/functions/api/autotrade.js','utf8');
+  ok('7차 ⑩ 서버가 통화를 종목코드로 정한다 (앱 curOf 와 같게)',
+     /const cur = KRCODE\.test\(sym\.replace\(\/\\\.K\[SQ\]\$\/, ""\)\) \? "krw" : "usd";/.test(at) && !/st\.cur\)/.test(at));
+  ok('7차 ⑦ 서버가 앱과 같은 가격 계열을 받는다 (div=1 · 체결가 우선)',
+     /&intraday=0&div=1/.test(at) && /const bars = tradeOK \? q\.ohlcTrade : \(q\.series \|\| q\.ohlc \|\| \[\]\);/.test(at));
+  ok('7차 ⑦ 익절 조절 20일 창은 확정 봉까지만', /days = bar \? bars\.filter\(\(x\) => x && x\.date <= bar\.date/.test(at));
+  // 7차 ⑨ — MOC 는 한투로 보내지 않는다 (지정가만 받으므로)
+  { const f=new Function(extractFn(idx,'function kisSendable(o)')+'\nreturn kisSendable;')();
+    ok('7차 ⑨ MOC 주문은 한투 전송 목록에서 빠진다', f({qty:5,price:10,tag:'MOC'})===false && f({qty:5,price:10,tag:'LOC'})===true
+       && f({qty:5,price:10,tag:'지정가'})===true);
+    ok('7차 ⑨ 두 전송 경로가 같은 판정을 쓴다', (idx.match(/todayOrders\.filter\(kisSendable\)/g)||[]).length===2
+       && !/todayOrders\.filter\(o=>o\.qty>0&&o\.price>0\)/.test(idx));
+    ok('7차 ⑨ 리버스 1일차 MOC 가격 자리에 평단을 안 적는다', /oitem\('s',`무한매도 \(보유÷\$\{sellDiv\}\)`,'MOC',close,sellQty\)/.test(idx)
+       && !/'MOC',c\.avg,sellQty/.test(idx)); }
+  // 7차 ⑭ — VR 실력공식 수동 진입 평가금은 진입일 확정 종가
+  { const e=extractFn(idx,'function enterNextCycle()');
+    // 값은 [110] 이 vrEntryEval 로 본다. 여기서는 진입이 확정 봉만 골라 그 함수에 넘기는지만 본다.
+    ok('7차 ⑭ 수동 진입이 확정 봉만 골라 평가금 함수에 넘긴다',
+       /const bars=\(Qv&&Qv\.days\)\?Qv\.days\.filter\(d=>d&&d\.close>0&&d\.date<=cut\):\[\];/.test(e)
+       && /const E0=vrEntryEval\(c, bars, du0\?du0\.dueStr:null, man\), onAfter=E0\.onAfter;/.test(e)
+       && /ev=E0\.ev;/.test(e)
+       && !/vrEval\(/.test(e.replace(/\/\*[\s\S]*?\*\//g,'').replace(/\/\/.*$/gm,'')));   // 주석의 '예전엔 vrEval(…)' 설명은 빼고 코드만
+    ok('7차 ⑪ 수동 진입도 인출은 Pool 안에서만', /const fl=vrCycleFlow\(c\), sign=fl\.sign, add=fl\.amt;/.test(e)); }
+  { const f=new Function(extractFn(idx,'function vrCycleFlow(c)')+'\nreturn vrCycleFlow;')();
+    const st=(mode,add)=>({mode,add});
+    ok('7차 ⑪ 인출식: Pool 1.10 · 인출금 50 → 1.10 만', Math.abs(f({st:st(0.25,50),pool:1.1}).amt-1.1)<1e-12);
+    ok('7차 ⑪ 인출식: Pool 이 음수면 0', f({st:st(0.25,50),pool:-3}).amt===0);
+    ok('7차 ⑪ 적립식은 전액 넣는다', f({st:st(0.75,100),pool:0}).amt===100 && f({st:st(0.75,100),pool:0}).type==='add');
+    ok('7차 ⑪ 거치식은 아무것도 안 움직인다', f({st:st(0.5,100),pool:50}).amt===0); }
+  ok('7차 ⑪ 5년 플랜 진입도 인출은 Pool 안에서만', /const flowAmt=r\.sign<0\?Math\.max\(0,Math\.min\(r\.add,c\.pool\)\):r\.add;/
+     .test(fs.readFileSync(__d+'/plan.html','utf8')));
+  ok('7차 ⑬ VR 기록 자릿수 6 (모의 잔돈·가격·V)', /amt:\+left\.toFixed\(6\),cyc:0,sim:true/.test(idx)
+     && /price:\+f\.price\.toFixed\(6\), qty:f\.qty,/.test(idx) && !/st\.startv=\+r\.nextV\.toFixed\(4\)/.test(idx));
+}
+
+/* ════ 110. 7차 ⑧·⑭ — 변이 시험에서 살아남았던 두 곳을 값으로 ════
+   ⑧ 익절 조절(imMomNow)과 ⑭ VR 수동 진입 평가금은 소스 모양만 보고 있어서, 옛 코드로
+   되돌려도 회귀가 초록불이었다(변이 시험 20건 중 2건 생존). 둘 다 값으로 묶는다. */
+console.log('\n[110] 7차 ⑧·⑭ — 익절 조절 20일 창 · VR 수동 진입 평가금 (값으로)');
+{
+  { const mom=extractFn(idx,'function imMomNow()');
+    let CUT='2099-12-31';
+    const sb=(rows,cur)=>(rows||[]).filter(r=>r.date<=CUT);
+    const mk=(days)=>new Function('quoteOf','curStrat','settledBars','curOf','infChartData','IM_MOM_LEN',
+      'return ('+mom.replace(/^function \w+\(/,'function (')+')')(()=>({days}), ()=>({settings:{}}), sb, ()=>'usd', null, 20);
+    // 1월 1일~21일 확정 종가 100→120 (하루 1씩), 22일은 아직 움직이는 장중 봉 200
+    const days=Array.from({length:21},(_,i)=>({date:'2026-01-'+String(i+1).padStart(2,'0'), close:100+i}));
+    const live=[...days, {date:'2026-01-22', close:200}];
+    CUT='2026-01-21';
+    const m=mk(live)();
+    ok('7차 ⑧ 익절 조절 20일 상승률은 확정 봉까지만 — 장중 봉(200)이 안 섞인다 (120/100 → 20%)', near(m,20,1e-9), String(m));
+    CUT='2099-12-31';
+    const m2=mk(live)();
+    ok('7차 ⑧ 그 봉이 확정되면 그때 들어간다 (200/101)', near(m2,(200/101-1)*100,1e-9), String(m2));
+  }
+  { const f=new Function(extractFn(idx,'function vrEntryEval(c, bars, dueStr, man)')+'\nreturn vrEntryEval;')();
+    const bars=[{date:'2026-03-02',close:10},{date:'2026-03-04',close:11},{date:'2026-03-05',close:12}];
+    const c={qty:10, V:999};
+    const r1=f(c,bars,'2026-03-03',0);
+    ok('7차 ⑭ 진입일(03-03)이 휴장이면 다음 거래일(03-04) 확정 종가 × 보유 = 110', r1.ev===110 && r1.onAfter && r1.onAfter.date==='2026-03-04',
+       JSON.stringify(r1));
+    const r2=f(c,bars,'2026-03-06',0);
+    ok('7차 ⑭ 진입일 봉이 아직 없으면(조기 진입) 마지막 확정 종가 × 보유 = 120', r2.ev===120 && !r2.onAfter, JSON.stringify(r2));
+    ok('7차 ⑭ 손으로 넣은 평가금이 이긴다', f(c,bars,'2026-03-03',500).ev===500);
+    ok('7차 ⑭ 보유가 없거나 확정 봉이 없으면 V', f({qty:0,V:999},bars,'2026-03-03',0).ev===999 && f(c,[],'2026-03-03',0).ev===999);
+  }
+}
+
+/* ════ 111. 7차 ⑮ — 섀넌·200일선·ASAP 은 조정종가로 ════
+   N1 이 공용 로더를 체결가로 바꾸면서 세 전략도 같이 체결가를 받았다. 그런데 세 전략의 장부
+   (ivsPos·maLedger·asapPos)에는 배당 칸이 없어, 보유 중 받은 배당이 모의·재생·분석에서
+   통째로 사라졌다 — 제가 만든 회귀다. 배당을 기록으로 받게 하기 전까지(결정 D8)는
+   N1 이전처럼 조정종가(배당이 가격에 녹은 계열)를 쓴다. 무매·VR 은 체결가 그대로다. */
+console.log('\n[111] 7차 ⑮ — 섀넌·200일선·ASAP 가격 계열 (배당 칸 없는 장부)');
+{
+  const q2d=new Function('SYM','j', extractFn(idx,'function quoteToDaily(SYM, j)')
+    .replace(/^function quoteToDaily\(SYM, j\)\{/,'').replace(/\}\s*$/,''));
+  const adj=new Function(extractFn(idx,'function adjDaily(q)')+'\nreturn adjDaily;')();
+  const dps=new Function(extractFn(idx,'function isTradeBasis(Q)')+'\n'+extractFn(idx,'function divPerShareQ(Q, d)')+'\nreturn divPerShareQ;')();
+  const _b=(d,c)=>({date:d,open:c,high:c+1,low:c-1,close:c});
+  // 배당 두 번(0.9·1.1)이 가격에 녹아 조정계열이 체결가보다 낮은 픽스처 ([60] 과 같은 것)
+  const J={ series:[{date:'2024-01-02',close:98},{date:'2024-06-03',close:99},{date:'2024-12-02',close:100}],
+            ohlcTrade:[_b('2024-01-02',100),_b('2024-06-03',101),_b('2024-12-02',100)],
+            ohlc:[_b('2024-01-02',98),_b('2024-06-03',99),_b('2024-12-02',100)],
+            dividends:[{date:'2024-03-15',amount:0.9},{date:'2024-09-13',amount:1.1}],
+            priceBasis:'trade', price:100.5, last:{date:'2024-12-02',close:100}, currency:'USD' };
+  const Q=q2d('SOXL',J), A=adj(Q);
+  ok('7차 ⑮ 조정 뷰의 days 는 조정종가다', A.days.map(d=>d.close).join('/')==='98/99/100', A.days.map(d=>d.close).join('/'));
+  ok('7차 ⑮ 조정 뷰의 ohlc·last 도 조정계열이다', A.ohlc && A.ohlc[0].close===98 && A.last.close===100 && A.last.date==='2024-12-02',
+     JSON.stringify(A.last));
+  ok('7차 ⑮ 조정 뷰에는 배당을 또 얹지 않는다 (이미 가격에 있다)',
+     A.priceBasis!=='trade' && dps(A,'2024-03-15')===0 && dps(Q,'2024-03-15')===0.9, `${A.priceBasis} ${dps(A,'2024-03-15')}/${dps(Q,'2024-03-15')}`);
+  ok('7차 ⑮ 공용 캐시 객체는 그대로 — 같은 종목을 무매·VR 이 체결가로 쓴다',
+     A!==Q && Q.days[0].close===100 && Q.priceBasis==='trade' && Q.ohlc[1].high===102);
+  ok('7차 ⑮ 현재가·종목·통화는 그대로', A.price===100.5 && A.symbol==='SOXL' && A.currency==='USD');
+  const P={symbol:'X', days:[{date:'2024-01-02',close:5}], last:{date:'2024-01-02',close:5}};
+  ok('7차 ⑮ 조정계열이 없으면(프록시 폴백) 받은 그대로', adj(P)===P && adj(null)===null);
+  // 배선 — 세 로더만 조정 뷰, 무매·VR 은 체결가
+  const L={ma:'async function loadMaData(force)', ivs:'async function loadIvsData(force)', asap:'async function loadAsapData(force)'};
+  const cnt=Object.fromEntries(Object.entries(L).map(([k,sig])=>[k,(extractFn(idx,sig).match(/adjDaily\(await fetchDaily\(/g)||[]).length]));
+  ok('7차 ⑮ 세 로더가 조정 뷰를 쓴다 (섀넌은 1배 짝까지)', cnt.ma===1 && cnt.ivs===2 && cnt.asap===1, JSON.stringify(cnt));
+  ok('7차 ⑮ 세 로더에 체결가 직통 호출이 안 남았다', Object.values(L).every(sig=>!/[^(]await fetchDaily\(/.test(extractFn(idx,sig))));
+  const raw=['async function fetchQuote(which)','async function loadVrChart(force)','async function loadInfData(force)','async function loadInfChart(force)']
+    .map(sig=>extractFn(idx,sig));
+  ok('7차 ⑮ 무매·VR 로더는 체결가 그대로 (배당은 기록으로 받는다)', raw.every(src=>!/adjDaily\(/.test(src) && /await fetchDaily\(/.test(src)));
+  ok('7차 ⑮ 화면이 조정종가로 굴린다고 밝힌다', (idx.match(/가격은 <b>조정종가<\/b>\(배당이 가격에 녹은 계열\)로 굴립니다/g)||[]).length===2);
+}
+
+/* ════ 112. 7차 ⑯ — 섀넌 운영 재생 ↔ 백테 거래 단위 대조 ════
+   같은 시세·같은 설정이면 같은 날 같은 다리를 같은 주수로 사고팔아야 한다. 예전엔 운영 재생이
+   사고팔기 모두 소수점, 백테는 사기만 정수·팔기는 소수점이라 첫 매도부터 주수·잔금이 갈렸다.
+   백테에만 있는 규약(예수금 이자·국채 쪽 비용·양도세·배당 현금)은 끄고 수수료를 같게 둔다
+   (ivsNeutralSrc) — 남는 건 매매 규칙뿐이라 한 건도 달라선 안 된다. */
+console.log('\n[112] 7차 ⑯ — 섀넌 운영 재생 ↔ 백테 거래 단위 대조 (주수 정수)');
+{
+  const _wf0=WARM_FROM, _wt0=WARM_TO; WARM_FROM=''; WARM_TO='';
+  const imBQ=new Function(extractFn(idx,'function imBuyQty(alloc, refPx, feeRate)')+'\nreturn imBuyQty;')();
+  const ivsPosF=new Function(extractFn(idx,'function ivsPos(principal,hist)')+'\nreturn ivsPos;')();
+  const appSrc=extractFn(idx,'function ivsReplay()');
+  let bsrc=ivsNeutralSrc(extractFn(bt,'function runIVS(days,tkr,cap,s0,N,band,costOn,mode,pair)'));
+  const inj=(a,b,l)=>{ const p=bsrc.split(a); if(p.length!==2) throw new Error(`[112] 주입 실패(${l}): ${p.length-1}회`); bsrc=p[0]+b+p[1]; };
+  inj(`days.forEach((d,i)=>{`, `days.forEach((d,i)=>{ __DD=d;`, 'date');
+  inj(`lotBuy(P.lot,q,px,fee+lf); P.sh+=q; cash-=spend+lf;`,
+      `lotBuy(P.lot,q,px,fee+lf); P.sh+=q; cash-=spend+lf; __LOG.push({type:'buy',leg:P===A?'lev':'x1',date:__DD,price:px,qty:q});`, 'buy');
+  inj(`yearPnl+=lotSell(P.lot,q,px,fee+lf); P.sh-=q;`,
+      `yearPnl+=lotSell(P.lot,q,px,fee+lf); P.sh-=q; __LOG.push({type:'sell',leg:P===A?'lev':'x1',date:__DD,price:px,qty:q});`, 'sell');
+  // 1배 짝 — [80] 처럼 '실제 1배 ETF' 자리에 레버리지÷3 누적 계열을 넣는다
+  const U='__X1_112__';
+  const preX=(T)=>'var levExt=false, EXTM={}, LEV_UNDERLYING={'+T+':"'+U+'"};\n'
+    +['function srcOf(t)','function _ivsWeights(tkr,N,s0)','function _ivsX1(tkr)','function _ivsPair1(tkr, days)'].map(m=>extractFn(bt,m)).join('\n')+'\n'
+    +(bt.match(/const LEV_EXPENSE=\{[^}]*\};/)||[''])[0]+'\n'
+    +(bt.match(/const LEV_EXPENSE_DEF=[^\n]*/)||[''])[0]+'\n'
+    +(bt.match(/const LEV_SPREAD=[^\n]*/)||[''])[0]+'\n'
+    +(bt.match(/const LEV_PRICEIDX=\{[^}]*\};/)||[''])[0]+'\n'
+    +(bt.match(/const X1_EXPENSE=\{[^}]*\};/)||[''])[0]+'\n'
+    +(bt.match(/const X1_EXPENSE_DEF=[^\n]*/)||[''])[0]+'\n'
+    +(bt.match(/const IDX_EXTEND=\{[\s\S]*?\}\s*\};/)||[''])[0]+'\n';
+  const mkBt=(T,LOG)=>new Function('__LOG', preX(T)+'\nlet __DD=null;\nreturn ('+bsrc.replace(/^function \w+\(/,'function (')+')')(LOG);
+  const runApp=(T,st,from,D1)=>{
+    const Dall=dtsOf(T).map(d=>({date:d, close:M[T][d][C]}));
+    const sess={settings:st, hist:[], paper:true};
+    const f=new Function('curStrat','$','confirm','alert','simCutoff','curOf','ivsX1Of','IVS_FEE',
+      'ivsQuoteData','ivsQuote1','sortHist','save','refreshIvs','pushRemote','px','imBuyQty',
+      appSrc+'\nreturn ivsReplay;')(
+      ()=>sess, id=>({value: id==='rp_from'?from:''}), ()=>true, ()=>{},
+      ()=>'2099-12-31', ()=>'USD', ()=>U, 0.0025,
+      {symbol:T, days:Dall}, D1?{symbol:U, days:D1}:null, ()=>{}, ()=>{}, ()=>{}, null, n=>String(n), imBQ);
+    return {ok:f(), hist:sess.hist};
+  };
+  const key=x=>`${x.date} ${x.type} ${x.leg} ${(+x.price).toFixed(4)} x${x.qty}`;
+  const CFG=[['TQQQ',55,40,15,'iv','cash'],['TQQQ',40,60,10,'iv','cash'],['SOXL',55,40,15,'iv','cash'],['SOXL',70,20,20,'iv','cash'],
+             ['SOXL',55,40,15,'fix','cash'],['TECL',55,40,15,'iv','cash'],['TECL',45,60,10,'fix','cash'],
+             ['SOXL',45,60,10,'iv','x1'],['TQQQ',55,40,15,'fix','x1']];
+  let nCfg=0;
+  for(const [T,s0,N,band,mode,pair] of CFG){
+    if(!DAYS[T]) continue;
+    const all=dtsOf(T), from=all[250], X1=(pair==='x1');
+    let D1=null;
+    if(X1){ const px={}; let v=50;
+      all.forEach((d,i)=>{ if(i>0){ const r=M[T][all[i]][C]/M[T][all[i-1]][C]-1; v*=(1+r/3); } px[d]=[v,v,v,v]; });
+      M[U]=px; META[U]={name:'시험용 1배',lev:1,color:'#000'}; PBASIS[U]='trade';
+      D1=all.map(d=>({date:d, close:M[U][d][C]})); }
+    const LOG=[];
+    const r=mkBt(T,LOG)(all.filter(d=>d>=from),T,10000,s0/100,N,band/100,false,mode,pair);
+    const A=runApp(T,{ticker:T,park:X1?'x1':'bill',mode,s0,look:N,band,principal:10000},from,D1);
+    const H=A.hist;
+    let diff=-1;
+    for(let i=0;i<Math.max(LOG.length,H.length);i++){ if(!LOG[i]||!H[i]||key(LOG[i])!==key(H[i])){ diff=i; break; } }
+    const lbl=`${T} s0=${s0}% N=${N} 밴드=${band}% ${mode==='fix'?'고정5:5':'역분산'}${X1?' 짝=1배':''}`;
+    ok(`7차 ⑯ ${lbl} — 운영 재생 ↔ 백테 거래 ${LOG.length}건 한 건도 안 다르다`,
+       A.ok===true && LOG.length>5 && diff<0 && (!X1 || r.x1synth===false),
+       diff<0?`x1synth=${r.x1synth}`:`#${diff} 백테 [${LOG[diff]?key(LOG[diff]):'—'}] 운영 [${H[diff]?key(H[diff]):'—'}]`);
+    const bad=[...LOG,...H].find(x=>!(Number.isInteger(x.qty) && x.qty>=1));
+    ok(`7차 ⑯ ${lbl} — 사고판 주수가 전부 1 이상의 정수`, !bad, bad?key(bad):'');
+    const P=ivsPosF(10000,H);
+    ok(`7차 ⑯ ${lbl} — 운영 장부(ivsPos)의 끝 보유·현금 = 백테`,
+       P.qty===r.endShares && near(P.cash,r.endCash,1e-6),
+       `보유 ${P.qty}/${r.endShares} 현금 ${P.cash}/${r.endCash}`);
+    if(X1){ delete M[U]; delete META[U]; delete PBASIS[U]; }
+    nCfg++;
+  }
+  ok('7차 ⑯ 대조가 실제로 돌았다 (설정 7개 이상)', nCfg>=7, String(nCfg));
+  /* 총자산을 더하는 순서까지 백테와 같게 둔다 — 부동소수는 순서가 다르면 끝자리가 달라지고,
+     그게 밴드 경계나 주수 내림 경계에 걸리면 어느 날 한 건이 갈린다. 지금 데이터에선 안 걸려도
+     나중 데이터에서 걸릴 수 있어 모양으로도 묶어 둔다. */
+  ok('7차 ⑯ 운영 재생이 총자산을 백테와 같은 순서로 더한다',
+     /const eq=cash\+qty\*c\+\(X1\?qty1\*c1:0\);/.test(appSrc) && /const eqP = cash \+ qty\*pc \+ \(X1\?qty1\*pc1:0\);/.test(appSrc)
+     && /const eq0=cash\+A\.sh\*c\+B\.sh\*c1;/.test(bsrc) && /const eqP = cash \+ A\.sh\*pc \+ B\.sh\*pc1;/.test(bsrc));
+  WARM_FROM=_wf0; WARM_TO=_wt0;
+}
+
+/* ════ 113. 7차 ⑰ — 200일선 운영 재생 ↔ 백테 거래 단위 대조 ════
+   신호는 둘이 같은 식이다(_maHold/_maEntry · 합성 1배 · 워밍업은 보유). 갈린 건 둘이었다:
+     · 매수 주수 — 운영 (현금−현금×수수료)÷가격, 백테 현금÷(1+수수료)÷가격. 경계에서 1주씩 달랐다
+     · 이력 첫 봉 — 운영은 건너뛰고, 백테는 보유로 시작했다
+   백테에만 있는 양도세·배당 현금을 끄고 수수료를 같게 두면 한 건도 달라선 안 된다. */
+console.log('\n[113] 7차 ⑰ — 200일선 운영 재생 ↔ 백테 거래 단위 대조');
+{
+  const _wf0=WARM_FROM, _wt0=WARM_TO; WARM_FROM=''; WARM_TO='';
+  let ms=extractFn(bt,'function runMA200(days,tkr,cap,N,costOn,opt)');
+  const inj=(a,b,l)=>{ const p=ms.split(a); if(p.length!==2) throw new Error(`[113] 주입 실패(${l}): ${p.length-1}회`); ms=p[0]+b+p[1]; };
+  inj(`const FEE=costOn?costOf(tkr).fee:0;`, `const FEE=0.0025;`, 'fee');
+  inj(`const owed=capGainTax(yearPnl, tkr); let due=owed; yearPnl=0;`, `const owed=0; let due=owed; yearPnl=0;`, 'tax');
+  inj(`cash+=divCash(tkr,d,shares,costOn);`, ``, 'div');
+  // 매수 훅은 '1주 이상일 때만 거래' 로 감싼 괄호 밖 문장에 건다 — 옛 모양(감싸지 않음)으로 되돌려도
+  // 주입은 되고, 그 되돌림은 아래 값 시험(1주도 못 사면 거래 0건)이 잡는다.
+  inj(`lotBuy(LOT,q,c,fee); cash-=spend+fee; feesTotal+=fee; trades++;`,
+      `lotBuy(LOT,q,c,fee); cash-=spend+fee; feesTotal+=fee; trades++; __LOG.push({type:'in',date:d,price:c,qty:q});`, 'in');
+  inj(`const gross=shares*c, fee=gross*FEE; cash+=gross-fee;`,
+      `__LOG.push({type:'out',date:d,price:c,qty:shares}); const gross=shares*c, fee=gross*FEE; cash+=gross-fee;`, 'out');
+  const pre2=['function srcOf(t)','function _maOpt(opt)','function _maHold(sell,a,b)','function _maEntry(buy,a,b)',
+              'function _maAbove(tkr,N,SHORT,BUY,SELL)'].map(m=>extractFn(bt,m)).join('\n')+'\n'
+             +'var levExt=false, EXTM={}, maBuy="ma", maSell="ma", maShort=50, maPark="cash";\n';
+  const mkBt=(LOG)=>new Function('__LOG', pre2+'return ('+ms.replace(/^function \w+\(/,'function (')+')')(LOG);
+  const btPristine=new Function(pre2+'return ('+extractFn(bt,'function runMA200(days,tkr,cap,N,costOn,opt)').replace(/^function \w+\(/,'function (')+')')();
+  const appSrc=['function maLevOf(t)','function _maHold(sell,a,b)','function _maEntry(buy,a,b)','function maCond(st)',
+                'function computeMa()','function maReplay()','function imBuyQty(alloc, refPx, feeRate)'].map(m=>extractFn(idx,m)).join('\n');
+  const maLed=new Function(extractFn(idx,'function maLedger(hist, price, principal)')+'\nreturn maLedger;')();
+  const runApp=(T,Dall,from,st0)=>{
+    const st=Object.assign({ticker:T, principal:10000, buy:'ma', sell:'ma', park:'cash'}, st0||{});
+    const sess={settings:st, hist:[], paper:true};
+    const f=new Function('curStrat','$','confirm','alert','simCutoff','curOf','IVS_FEE','maQuoteData',
+      'sortHist','save','refreshMa','pushRemote','px', appSrc+'\nreturn maReplay;')(
+      ()=>sess, id=>({value: id==='rp_ma_from'?from:''}), ()=>true, ()=>{}, ()=>'2099-12-31', ()=>'USD', 0.0025,
+      {symbol:T, days:Dall, price:0}, ()=>{}, ()=>{}, ()=>{}, null, n=>String(n));
+    f(); return sess.hist;
+  };
+  const key=x=>`${x.date} ${x.type} ${(+x.price).toFixed(4)} x${x.qty}`;
+  const OPT={buy:'ma', sell:'ma', short:50, park:'cash'};
+  let nRun=0;
+  for(const T of ['SOXL','TQQQ','TECL']){
+    if(!DAYS[T]) continue;
+    const all=dtsOf(T), Dall=all.map(d=>({date:d, close:M[T][d][C]}));
+    for(const [lbl,fi] of [['이력 첫 봉부터 (워밍업은 보유)',0],['250번째 봉부터',250],['700번째 봉부터',700]]){
+      const from=all[fi], LOG=[];
+      const r=mkBt(LOG)(all.filter(d=>d>=from),T,10000,200,false,OPT);
+      const H=runApp(T,Dall,from);
+      let diff=-1;
+      for(let i=0;i<Math.max(LOG.length,H.length);i++){ if(!LOG[i]||!H[i]||key(LOG[i])!==key(H[i])){ diff=i; break; } }
+      ok(`7차 ⑰ ${T} ${lbl} — 운영 재생 ↔ 백테 거래 ${LOG.length}건 한 건도 안 다르다`, LOG.length>=1 && diff<0,
+         diff<0?'':`#${diff} 백테 [${LOG[diff]?key(LOG[diff]):'—'}] 운영 [${H[diff]?key(H[diff]):'—'}]`);
+      const lastPx=Dall[Dall.length-1].close, L=maLed(H,lastPx,10000);
+      ok(`7차 ⑰ ${T} ${lbl} — 운영 장부(maLedger)의 끝 보유·현금 = 백테`,
+         L.qty===r.endShares && near(L.cash,r.endCash,1e-6), `보유 ${L.qty}/${r.endShares} 현금 ${L.cash}/${r.endCash}`);
+      nRun++;
+    }
+  }
+  ok('7차 ⑰ 대조가 실제로 돌았다', nRun>=6, String(nRun));
+
+  /* 경계 픽스처 — 가격 99.7503 · 원금 10000 · 수수료 0.25%
+       현금÷1.0025÷가격 = 100.0003 → 100주 (백테 · 이제 운영)
+       (현금−현금×0.0025)÷가격 = 99.9997 → 99주 (예전 운영)
+     첫 봉부터 재생하면 워밍업이 보유라 첫날 산다 — 예전 운영은 첫 봉을 건너뛰어 이튿날 샀다. */
+  { const U='__MA113__', ds=Array.from({length:5},(_,i)=>'2020-01-0'+(i+2));
+    M[U]={}; ds.forEach(d=>{ M[U][d]=[99.7503,99.7503,99.7503,99.7503]; });
+    const Dall=ds.map(d=>({date:d, close:99.7503}));
+    const H=runApp(U,Dall,ds[0]);
+    const LOG=[]; mkBt(LOG)(ds,U,10000,200,false,OPT);
+    ok('7차 ⑰ 경계 — 운영이 첫 봉에 100주를 산다 (백테와 같은 식)', H.length===1 && H[0].date===ds[0] && H[0].qty===100,
+       JSON.stringify(H));
+    ok('7차 ⑰ 경계 — 백테도 첫 봉에 100주', LOG.length===1 && LOG[0].date===ds[0] && LOG[0].qty===100, JSON.stringify(LOG));
+    /* 1주도 못 사는 돈이면 거래가 아니다 — 예전 백테는 보유 신호가 이어지는 동안 0주 '매수'를 매일 1건씩 셌다 */
+    const r0=btPristine(ds,U,50,200,false,OPT);
+    ok('7차 ⑰ 백테 — 1주도 못 사면 거래 0건 · 현금 그대로', r0.trades===0 && r0.endShares===0 && near(r0.endCash,50,1e-12),
+       `거래 ${r0.trades} 보유 ${r0.endShares} 현금 ${r0.endCash}`);
+    delete M[U];
+  }
+  WARM_FROM=_wf0; WARM_TO=_wt0;
+}
+
+/* ════ 114. 7차 ⑱ — 적립(DCA) 모의 ↔ 백테: 하락 배수 판정에 오늘 종가를 쓰지 않는다 ════
+   모의(_paperDca)는 '오늘 종가 ≤ 오늘 200일선' 을 보고 그 종가에 배수로 샀다 — 룩어헤드.
+   백테 _dcaOne 은 1차 감사 때 전일 값으로 고쳤는데 모의가 남아 있었다.
+   같은 시세·같은 설정이면 적립일·배수·금액이 한 건도 달라선 안 된다. */
+console.log('\n[114] 7차 ⑱ — 적립 모의 ↔ 백테 (적립일·배수·금액)');
+{
+  const _wf0=WARM_FROM, _wt0=WARM_TO; WARM_FROM=''; WARM_TO='';
+  let ds=extractFn(bt,'function _dcaOne(t,days,amt,freq,costOn,dipMul)');
+  const inj=(a,b,l)=>{ const p=ds.split(a); if(p.length!==2) throw new Error(`[114] 주입 실패(${l}): ${p.length-1}회`); ds=p[0]+b+p[1]; };
+  inj(`sh+=buyQty(a,p,FEE,false); inv+=a; nBuy++; if(dip)nDip++;`,
+      `sh+=buyQty(a,p,FEE,false); inv+=a; nBuy++; if(dip)nDip++; __LOG.push({date:d,amt:a,mul:dip?MUL:1});`, 'buy');
+  inj(`{ const dc=divCash(t,d,sh,costOn);`, `{ const dc=0;`, 'div');
+  const preD=['function srcOf(t)','function _isoWeek(d)','function _dcaFreq(f)','function _dcaHits(days,freq)','function _dcaMA(t,N)',
+              'function divSplit(tkr, days, buys)'].map(m=>extractFn(bt,m)).join('\n')+'\nvar levExt=false, EXTM={}, dcaReinv=true, dcaDipMul=1;\n';
+  const mkBt=(LOG)=>new Function('__LOG', preD+'return ('+ds.replace(/^function \w+\(/,'function (')+')')(LOG);
+  const pd=extractFn(idx,'function _paperDca(sess, from)');
+  const runApp=(T,Dall,from,st0)=>{
+    const st=Object.assign({ticker:T, mode:'dca', amount:10, freq:'month', dipMul:2}, st0||{});
+    const sess={settings:st, hist:[]};
+    new Function('dcaQuoteData','settledBars','curOf','simCutoff','save','_lastTradingDay','_clampFrom',
+      'const DCA_N_AUTO=200;\n'+pd+'\nreturn _paperDca;')(
+      {symbol:T, days:Dall, raw:[]}, rows=>rows, ()=>'usd', ()=>'2099-12-31', ()=>{},
+      days=>(days&&days.length)?days[days.length-1].date:null, (f,l)=>(f&&l&&f>l)?l:f)(sess, from);
+    return sess.hist;
+  };
+  const FQ={day:'daily', week:'weekly', month:'monthly'};
+  let nRun=0;
+  for(const T of ['SOXL','TQQQ','TECL']){
+    if(!DAYS[T]) continue;
+    const all=dtsOf(T), Dall=all.map(d=>({date:d, close:M[T][d][C]}));
+    for(const fq of ['day','week','month']){
+      const from=all[260], LOG=[];
+      mkBt(LOG)(T, all.filter(d=>d>=from), 10, FQ[fq], false, 2);
+      const H=runApp(T,Dall,from,{freq:fq});
+      const key=x=>`${x.date} ×${x.mul} ${(+x.amt).toFixed(2)}`;
+      let diff=-1;
+      for(let i=0;i<Math.max(LOG.length,H.length);i++){ if(!LOG[i]||!H[i]||key(LOG[i])!==key(H[i])){ diff=i; break; } }
+      const nDip=H.filter(h=>h.mul>1).length;
+      ok(`7차 ⑱ ${T} ${fq} 하락 2배 — 적립 ${LOG.length}회(배수 ${nDip}회) 모의 ↔ 백테 한 건도 안 다르다`,
+         LOG.length>5 && nDip>0 && diff<0,
+         diff<0?'':`#${diff} 백테 [${LOG[diff]?key(LOG[diff]):'—'}] 모의 [${H[diff]?key(H[diff]):'—'}]`);
+      nRun++;
+    }
+  }
+  ok('7차 ⑱ 대조가 실제로 돌았다', nRun>=6, String(nRun));
+  /* 값으로 — 어제까지 200선 위, 오늘 종가가 처음 아래로 내려온 날은 1배다 (배수는 내일부터) */
+  { const ds2=[]; const t0=Date.UTC(2020,0,1);
+    // 천천히 오르는 종가 — 종가가 늘 200선 위에 있다가 203번째 날 처음 아래로 떨어진다
+    for(let i=0;i<203;i++){ const d=new Date(t0+i*864e5).toISOString().slice(0,10); ds2.push({date:d, close:100+i*0.1}); }
+    ds2.push({date:new Date(t0+203*864e5).toISOString().slice(0,10), close:50});   // 오늘 처음 200선 아래
+    ds2.push({date:new Date(t0+204*864e5).toISOString().slice(0,10), close:50});   // 이튿날 (어제가 아래)
+    const H=runApp('X', ds2, ds2[203].date, {freq:'day'});
+    ok('7차 ⑱ 오늘 종가가 처음 200선 아래로 온 날은 1배 · 이튿날부터 2배',
+       H.length===2 && H[0].mul===1 && H[1].mul===2, JSON.stringify(H.map(h=>[h.date,h.mul])));
+  }
+  WARM_FROM=_wf0; WARM_TO=_wt0;
+}
+
+/* ════ 115. 7차 — ASAP 모의 ↔ 백테 (매수일·금액) ════
+   ASAP 모의(_paperAsap)와 백테(runASAP)는 같은 규약이라고 적혀 있다. 확인한다.
+   백테에만 있는 리저브 이자(SGOV)·배당 현금을 끄고 비용을 끈 채(모의는 수수료가 없다) 맞댄다. */
+console.log('\n[115] 7차 — ASAP 모의 ↔ 백테 (매수일·금액)');
+{
+  const _wf0=WARM_FROM, _wt0=WARM_TO; WARM_FROM=''; WARM_TO='';
+  let as=extractFn(bt,'function runASAP(days,tkr,opt)');
+  const inj=(a,b,l,n=1)=>{ const p=as.split(a); if(p.length!==n+1) throw new Error(`[115] 주입 실패(${l}): ${p.length-1}회`); as=p.join(b); };
+  inj(`sgov*=(1+(SGOV_RATE[+d.slice(0,4)]||0.04)/252);`, ``, 'sgov');
+  inj(`sgov+=divCash(tkr,d,sh,o.costOn);`, ``, 'div');
+  inj(`sh+=buyQty(`, `sh+=__B(d,`, 'buy', 6);
+  const preA=['function _asapInd(tkr)'].map(m=>extractFn(bt,m)).join('\n')+'\n';
+  const mkBt=(LOG)=>new Function('__LOG', preA
+    +'const __B=(d,a,c,F,I)=>{ if(a>0) __LOG.push({date:d,amt:a}); return buyQty(a,c,F,I); };\n'
+    +'return ('+as.replace(/^function \w+\(/,'function (')+')')(LOG);
+  const pa=extractFn(idx,'function _paperAsap(sess, from)');
+  const helpers=[extractFn(idx,'function _asapMA(a,k)'), extractFn(idx,'function _asapRSI(a)')].join('\n');
+  const runApp=(T,Dall,from)=>{
+    const st={ticker:T, base:10, mid:50, deep:100};
+    const sess={settings:st, hist:[]};
+    new Function('asapQuoteData','settledBars','curOf','simCutoff','save','_lastTradingDay','_clampFrom',
+      helpers+'\n'+pa+'\nreturn _paperAsap;')(
+      {symbol:T, days:Dall}, rows=>rows, ()=>'usd', ()=>'2099-12-31', ()=>{},
+      days=>(days&&days.length)?days[days.length-1].date:null, (f,l)=>(f&&l&&f>l)?l:f)(sess, from);
+    return sess.hist.filter(h=>h.type==='buy');
+  };
+  let nRun=0;
+  for(const T of ['SOXL','TQQQ','TECL']){
+    if(!DAYS[T]) continue;
+    const all=dtsOf(T), Dall=all.map(d=>({date:d, close:M[T][d][C]}));
+    const from=all[260], LOG=[];
+    mkBt(LOG)(all.filter(d=>d>=from), T, {base:10, mid:50, deep:100, costOn:false});
+    const H=runApp(T,Dall,from);
+    let diff=-1;
+    for(let i=0;i<Math.max(LOG.length,H.length);i++){
+      if(!LOG[i]||!H[i]||LOG[i].date!==H[i].date||Math.abs(LOG[i].amt-H[i].amt)>0.006){ diff=i; break; } }
+    ok(`7차 ASAP ${T} — 매수 ${LOG.length}건 모의 ↔ 백테 날짜·금액 한 건도 안 다르다 (리저브 이자·배당·비용 끔)`,
+       LOG.length>10 && diff<0,
+       diff<0?'':`#${diff} 백테 [${LOG[diff]?LOG[diff].date+' '+LOG[diff].amt.toFixed(2):'—'}] 모의 [${H[diff]?H[diff].date+' '+H[diff].amt:'—'}]`);
+    nRun++;
+  }
+  ok('7차 ASAP 대조가 실제로 돌았다', nRun>=3, String(nRun));
+  WARM_FROM=_wf0; WARM_TO=_wt0;
 }
 
 console.log(`\n════ 결과: ${pass} PASS / ${fail} FAIL ${fail===0?'— ALL PASS ★':'— 배포 금지, 위 ✗ 항목 수정 필요'} ════`);

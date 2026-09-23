@@ -153,7 +153,7 @@ th:first-child,td:first-child{text-align:left}
 <body>
 <div class="wrap">
   <div class="top">
-    <div class="brand"><div class="logo">Five Year Plan</div><h1>5년 자산플랜 <span class="ver">v1.8.0</span></h1></div>
+    <div class="brand"><div class="logo">Five Year Plan</div><h1>5년 자산플랜 <span class="ver">v1.8.1</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
       <div class="jkmenu" id="jkmenuWrap">
@@ -850,8 +850,12 @@ function reverseTPlan(kind,t,div){if(kind==='리버스매도')return div>=40?t*.
 function starPctPlan(st,T){const b=(+st.target>0)?+st.target:20;return b-(b*.1*20/(+st.div||20))*T;}
 function imBuyQtyPlan(alloc,refPx,feeRate){const f=1+(feeRate||0);return (refPx>0&&alloc>0)?Math.floor(alloc/f/refPx):0;}
 function imRevBuyQtyPlan(balance,buyPrice){return (balance>0&&buyPrice>0)?Math.floor((balance/4)/buyPrice):0;}
+/* 무매 장부 — index.html computeInf 와 같은 규칙이어야 한다 (7차 점검 ⑤).
+   배당(N1)·리버스 지원 분할이 빠져 있었다: 배당을 적은 세션은 잔금·1회매수금이 앱보다 작았고,
+   30분할처럼 리버스 규칙이 없는 분할에서도 리버스 주문을 냈다. */
+const REV_DIVS_PLAN=[20,40];
 function calcInfState(sess){
-  const st=sess.settings||{},hist=sess.hist||[];let avg=0,qty=0,inv=0,realized=0,T=0,withdrawn=0,saved=0,revState='NORMAL';
+  const st=sess.settings||{},hist=sess.hist||[];let avg=0,qty=0,inv=0,realized=0,T=0,withdrawn=0,saved=0,divTotal=0,revState='NORMAL';
   const simple=st.compound===false;
   for(const h of hist){
     const kind=String(h.kind||''),isRev=kind==='리버스매도'||kind==='리버스매수';
@@ -860,6 +864,7 @@ function calcInfState(sess){
     }else if(kind==='1회매수'||kind==='절반매수'||kind==='리버스매수'){
       const q=+h.qty||0,nq=qty+q;avg=nq>0?(avg*qty+(+h.price||0)*q)/nq:(+h.price||0);qty=nq;inv+=(+h.price||0)*q;
     }else if(kind==='출금')withdrawn+=Math.max(0,+h.amt||0);
+    else if(kind==='배당')divTotal+=Math.max(0,+h.amt||0);
     else if(kind.startsWith('지정가매도+')||kind.includes('+지정가매도')){
       const sp=+h.sellPrice||0,sq=+h.sellQty||0,bp=+h.buyPrice||0,bq=+h.buyQty||0,sellFirst=kind.startsWith('지정가매도+');
       const ds=()=>{if(sq>0){realized+=(sp-avg)*sq;qty-=sq;inv-=avg*sq;}};
@@ -878,11 +883,12 @@ function calcInfState(sess){
     const soldQty=(h.sellQty!=null)?(+h.sellQty||0):(isSellKind(kind)?(+h.qty||0):0);
     if(qty<=1e-9&&soldQty>0){
       qty=0;avg=0;T=0;inv=0;revState='NORMAL';
-      if(simple){const P0=+st.principal||0,cash=P0+realized-withdrawn-saved;if(cash>P0)saved+=cash-P0;}
+      if(simple){const P0=+st.principal||0,cash=P0+realized+divTotal-withdrawn-saved;if(cash>P0)saved+=cash-P0;}
     }
+    if(st.reverse===true&&REV_DIVS_PLAN.includes(+st.div)&&revState==='NORMAL'&&qty>1e-9&&((+st.div||20)-T)<1)revState='DAY1';
   }
-  if(st.reverse===true&&revState==='NORMAL'&&qty>0&&((+st.div||20)-T)<1)revState='DAY1';
-  const bal=(+st.principal||0)+realized-inv-withdrawn-saved;
+  if(st.reverse===true&&REV_DIVS_PLAN.includes(+st.div)&&revState==='NORMAL'&&qty>0&&((+st.div||20)-T)<1)revState='DAY1';
+  const bal=(+st.principal||0)+realized+divTotal-inv-withdrawn-saved;
   return {st,avg,qty:Math.max(0,qty),T,bal,withdrawn,saved,outside:withdrawn+saved,revState,
     reverseActive:st.reverse===true&&revState!=='NORMAL'&&qty>0,reverseDay1:revState==='DAY1'};
 }
@@ -906,7 +912,12 @@ function imOrders(sess,price,rows){
   }
   const buy1=slot>=1?c.bal/slot:0,pct=starPctPlan(st,c.T),star=c.avg>0?c.avg*(1+pct/100):price,buyPt=star-.01,limit=price*(1+big/100),half=c.T<div/2;
   const nRows=st.rowsOn?Math.max(0,+st.rows||0):0,gap=+st.gap||2.5,rq=Math.max(1,+st.rowqty||1);
-  const addBuy=(name,p,alloc,qtyPrice,tag)=>{const pp=Math.max(.01,Math.min(p,limit)),q=imBuyQtyPlan(Math.max(0,alloc),qtyPrice||price,0);if(q>0)orders.push({side:'buy',name,price:pp,qty:q,tag:tag||'LOC'});};
+  /* 수량은 잔금 안에서만 — 증권사는 '주문가×수량' 을 예약하고 넘으면 거부한다 (7차 점검 ④).
+     앱 주문표·서버 자동주문·모의·백테와 같은 규약. 두 번째 주문은 앞 주문의 예약금을 뺀 나머지로. */
+  let res=Math.max(0,c.bal);
+  const addBuy=(name,p,alloc,qtyPrice,tag)=>{const pp=Math.max(.01,Math.min(p,limit));
+    const q=Math.min(imBuyQtyPlan(Math.max(0,alloc),qtyPrice||price,0), imBuyQtyPlan(res,pp,0));
+    if(q>0){orders.push({side:'buy',name,price:pp,qty:q,tag:tag||'LOC'});res-=q*pp;}};
   if(slot>=1&&buy1>0){
     if(c.avg<=0){
       addBuy('처음매수',limit,buy1,price);
@@ -967,10 +978,13 @@ async function advancePlanVrCycle(){
   if(!vr||!pendingVrCycle){alert('지금 진입할 VR 사이클이 없습니다.');return;}
   const c=calcVrState(vr),st=vr.settings||{},r=calcPlanNextV(c,pendingVrCycle.close),newCyc=(+st.startCyc||c.curCyc||0)+1;
   if(!confirm('TECL VR 다음 사이클로 진입합니다.\n기준일 '+pendingVrCycle.date+' 종가 '+usd(pendingVrCycle.close)+'\nV '+usd(c.V)+' → '+usd(r.nextV)+'\n진행할까요?'))return;
-  if(r.add>0){
-    vr.hist.push({type:r.sign<0?'wd':'add',date:pendingVrCycle.date,amt:r.add,cyc:newCyc,auto:true,ts:Date.now()});
+  /* 인출식은 Pool 에 있는 만큼만 뺀다 (7차 점검 ⑪) — 앱 vrCycleFlow · 백테 runVR · 과거재생과 같은 규약.
+     V 식의 인출 항은 규칙대로 전액이다(calcPlanNextV). */
+  const flowAmt=r.sign<0?Math.max(0,Math.min(r.add,c.pool)):r.add;
+  if(flowAmt>0){
+    vr.hist.push({type:r.sign<0?'wd':'add',date:pendingVrCycle.date,amt:+flowAmt.toFixed(6),cyc:newCyc,auto:true,ts:Date.now()});
   }
-  st.startv=+r.nextV.toFixed(4);st.startCyc=newCyc;st.cycStart=pendingVrCycle.date;
+  st.startv=+r.nextV.toFixed(6);st.startCyc=newCyc;st.cycStart=pendingVrCycle.date;
   if(!Array.isArray(st.cycLog))st.cycLog=[];
   st.cycLog.push({cyc:newCyc-1,from:null,dates:'플랜 확정',V:+c.V.toFixed(2),lo:+c.lo.toFixed(2),up:+c.up.toFixed(2),E:+r.ev.toFixed(2),close:+pendingVrCycle.close.toFixed(4)});
   st.cycLog=st.cycLog.slice(-120);

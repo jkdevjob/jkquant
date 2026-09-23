@@ -320,7 +320,7 @@ td:first-child{text-align:left;}
   <div class="brand">
     <div>
       <div class="logo">Backtest</div>
-      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v2.2.2</span></h1>
+      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v2.3.0</span></h1>
     </div>
   </div>
   <div class="hright">
@@ -2430,6 +2430,35 @@ function imBuyQty(alloc, refPx, feeRate){
   const f=1+(feeRate||0);
   return (refPx>0 && alloc>0) ? Math.floor(alloc/f/refPx) : 0;
 }
+/* 무매 아침 매수 계획 — 오늘 걸 매수 LOC 를 '어제까지의 장부' 로 정한다 (7차 점검 ②).
+   runIM·runIM50 이 같이 쓴다. 운영 주문표 renderOrder 의 일반모드와 같은 가격·배정액이다.
+     처음매수  : 전일종가 × (1+큰수%) LOC · 1회매수금 전액
+     전반전    : 별지점−0.01 LOC · 평단 LOC  (각 1회매수금 ÷ 2, 둘 다 큰수 상한 적용)
+     후반전    : 별지점−0.01 LOC · 1회매수금 전액
+   T>분할−1(소진)이거나 현금이 없으면 빈 배열.
+   수량도 여기서 아침 정보로만 정한다 (7차 점검 ④):
+     q = min( 배정액 ÷ 전일 확정종가 ,  아침 매수가능금액 ÷ 주문가 )
+   증권사는 주문을 받을 때 '주문가 × 수량' 을 매수가능금액에서 예약한다 — 넘으면 주문 자체를
+   거부한다. 예전엔 여기 제한이 없었고(주문표), 모의·백테는 대신 '오늘 종가' 로 잘랐다.
+   오늘 종가는 장 마감 뒤에야 아는 값이라, 셋 다 아침에 아는 값으로 맞춘다.
+   두 번째 주문은 첫 주문의 예약금을 뺀 나머지로 제한한다. */
+function _imBuyPlan(T, avg, shares, cash, divs, starBase, starSlope, buyLimit, prevC, FEE){
+  const out=[];
+  if(!(divs-T>=1 && cash>1)) return out;
+  const one=cash/(divs-T), fee1=1+(FEE||0);
+  let res=cash;                                        // 아침 매수가능금액 (예약할 때마다 준다)
+  const add=(lim, alloc, dT, kind)=>{
+    const q=Math.min(imBuyQty(alloc, prevC, FEE), imBuyQty(res, lim, FEE));
+    if(q>=1){ out.push({lim, q, dT, kind}); res-=q*lim*fee1; } };
+  if(shares===0 && T===0){ add(buyLimit, one, 1, '1회매수'); return out; }
+  const starP=avg*(1+(starBase-starSlope*T)/100), buyP=starP-0.01;
+  const starOrder=Math.min(buyP,buyLimit), avgOrder=Math.min(avg,buyLimit);
+  if(T<divs/2){
+    add(starOrder, one/2, 0.5, '절반매수');
+    add(avgOrder,  one/2, 0.5, '절반매수');
+  }else add(starOrder, one, 1, '1회매수');
+  return out;
+}
 function runIM(days,tkr,cap,divs,targetPct,compound=true,bigOverride){
   // 종목 계열: TQQQ만 TQQQ식(base15/복귀−15%), 그 외 전부 SOXL식(base20/복귀−20%) — index.html과 동일 규약
   // (문서상 TQQQ/SOXL만 오피셜. 복귀 기준은 "T 마지막 쿼터매도 기준과 동일"이므로 base와 반드시 짝이어야 함)
@@ -2452,13 +2481,12 @@ function runIM(days,tkr,cap,divs,targetPct,compound=true,bigOverride){
   const _C=costOf(tkr), FEE = CO?_C.fee:0, SLIP = CO?_C.slip:0;
   let feesTotal=0, taxTotal=0, yearPnl=0, curYear=null;
   const LOT=taxLot();                           // 세무 원가 (가격 평단 avg 와 별도)
-  function _buy(px, amt, qtyRefPx){             // 주문수량은 주문 전 알 수 있는 가격으로 확정, 체결은 실제 종가
-    if(amt>cash) amt=cash;
-    const ref=(qtyRefPx>0?qtyRefPx:px);
-    let q=imBuyQty(amt, ref, FEE);             // 운영 주문표와 같은 헬퍼: 주문 전 아는 가격으로 수량 확정
-    if(q<=0) return 0;
-    const maxQ=imBuyQty(cash, px, FEE);        // 실제 종가 상승으로 잔금 초과 시 가능한 수량까지만
-    q=Math.min(q,maxQ); if(q<=0)return 0;
+  /* 정해진 수량 q 주를 px 에 산다 — 수량은 아침에 이미 정했다(_imBuyPlan · 리버스 쿼터매수).
+     예전엔 '주수×주문가' 로 금액을 만들었다가 _buy 안에서 다시 주문가로 나눴다 —
+     그 왕복에서 250.99999999999997 → 250 처럼 1주가 사라졌다 (7차 점검 ①, 무작위 5.25%).
+     잔금 확인은 안전장치다 — 아침 예약금(주문가×수량) 안이라 종가 체결이면 늘 들어간다. */
+  function _buyN(px, q){
+    q=Math.min(Math.floor(q), imBuyQty(cash, px, FEE)); if(!(q>=1)) return 0;
     const spend=q*px, fee=spend*FEE;
     avg = (shares<=0) ? px : (shares*avg+spend)/(shares+q);
     lotBuy(LOT,q,px,fee);                       // 세무 원가에는 매수수수료도 들어간다
@@ -2542,8 +2570,8 @@ function runIM(days,tkr,cap,divs,targetPct,compound=true,bigOverride){
           const buyP=_rg>0 ? star5*(1-_rg/100) : Math.max(0.01,star5-0.01);
           // 리버스 소진 = '1개(1주) 매수 불가' 시점 — 1주라도 살 수 있으면 계속 매수
           if(c<=buyP && cash>=buyP){
-            const alloc=imRevBuyQty(cash,buyP)*buyP;          // 원문: 배정액 = 잔금÷4
-            if(_buy(c,alloc,buyP)>0) T=T+(divs-T)*0.25;      // 수량은 주문가로 사전 확정, 체결은 종가
+            // 원문: 배정액 = 잔금÷4 → 주문가로 주수를 정하고 그 주수 그대로 산다 (금액으로 되돌리지 않는다)
+            if(_buyN(c,imRevBuyQty(cash,buyP))>0) T=T+(divs-T)*0.25;      // 수량은 주문가로 사전 확정, 체결은 종가
           }
         }
       }
@@ -2565,6 +2593,14 @@ function runIM(days,tkr,cap,divs,targetPct,compound=true,bigOverride){
     }
 
     // ── 일반모드 ──
+    /* 아침 주문 — 오늘 낼 매수 주문은 전부 '어제까지의 장부' 로 정한다 (7차 점검 ②).
+       실전은 장 전에 익절 지정가·쿼터매도 LOC·매수 LOC 를 한꺼번에 걸어 두고, 그날 봉에서
+       각자 체결된다. 예전엔 매도가 체결된 '뒤' 의 T·잔금으로 매수 주문을 다시 계산했다 —
+       쿼터매도로 T 가 ×0.75 되면 별지점이 올라가 방금 판 종가에 도로 사는 주문이 생겼다.
+       장 마감 뒤에야 아는 사실(쿼터매도 체결)로 같은 종가에 주문한 셈이라 룩어헤드다.
+       실측(SOXL 20분할 복리 6년) 최종자산이 실전 체결 재현보다 16.8% 부풀려져 있었다.
+       운영 주문표(renderOrder)·서버 자동주문(imOrders)·모의(infSimForward)와 같은 순서다. */
+    const buys=_imBuyPlan(T, avg, shares, cash, divs, starBase, starSlope, buyLimit, prevC, FEE);
     if(shares>0&&avg>0){
       const starP=avg*(1+(starBase-starSlope*T)/100);
       const tgt=avg*(1+(MOM?_imTgtOf(targetPct,MOM[d]):targetPct)/100);
@@ -2583,30 +2619,15 @@ function runIM(days,tkr,cap,divs,targetPct,compound=true,bigOverride){
       // (index.html KIND_T와 정합: 지정가매도 ×0.25 / 쿼터매도 ×0.75)
       if(tpHit) T*=0.25;
       if(qtHit) T*=0.75;
-      // 전량 매도 → 사이클 리셋 (복리 포함)
+      // 전량 매도 → 사이클 리셋 (복리 포함). 아침에 건 매수 LOC 는 그대로 살아 있으므로
+      // 여기서 하루를 끝내지 않는다 — 체결 조건이 맞으면 새 사이클의 첫 거래가 된다.
       if(shares<1e-9){shares=0;avg=0;cycles++;
         if(compound){ /* 복리: 익절금 포함 현금 그대로 다음 사이클 사용 */ }
         else if(cash>cap){ savedProfit+=cash-cap; cash=cap; }
-        T=0;snap.push([d,cash+savedProfit-addedCash]);return;}
+        T=0;snap.push([d,cash+savedProfit-addedCash]);}
     }
-    if(divs-T>=1&&cash>1){          // 소진 = T>분할−1 → 남은 회차가 1회 이상일 때만 매수
-      let one=cash/(divs-T);
-      if(shares===0&&T===0){
-        // 처음매수: 전일 종가 기준 수량을 정하고, 전일종가+큰수% LOC 안에서만 체결
-        if(c<=buyLimit && _buy(c,one,prevC)>0) T+=1;
-      }else{
-        const starP=avg*(1+(starBase-starSlope*T)/100), buyP=starP-0.01;
-        const starOrder=Math.min(buyP,buyLimit), avgOrder=Math.min(avg,buyLimit);
-        if(T<divs/2){
-          const half=one/2;
-          // 주문수량은 전일 확정종가로 미리 정한다. 당일 종가로 수량을 늘리면 same-close 룩어헤드가 된다.
-          if(c<=starOrder){ if(_buy(c,half,prevC)>0) T+=0.5; }
-          if(c<=avgOrder) { if(_buy(c,half,prevC)>0) T+=0.5; }
-        }else{
-          if(c<=starOrder){ if(_buy(c,one,prevC)>0) T+=1; }
-        }
-      }
-    }
+    // 아침에 건 매수 LOC — 종가가 주문가 이하면 종가에 체결. 수량은 전일 확정종가로 정한다.
+    for(const b of buys){ if(c<=b.lim){ const q=_buyN(c,b.q); if(q>0) T+=b.dT; } }
     if(i%10===0)snap.push([d,cash+shares*c+savedProfit-addedCash]);
     peakInvested=Math.max(peakInvested, cap-cash);
   });
@@ -2819,12 +2840,8 @@ function runIM50(days,tkr,cap,divs,targetPct,compound=true,bigOverride){
   const _C=costOf(tkr), FEE = CO?_C.fee:0, SLIP = CO?_C.slip:0;
   let feesTotal=0, taxTotal=0, yearPnl=0, curYear=null;
   const LOT=taxLot();                           // 세무 원가 (가격 평단 avg 와 별도)
-  function _buy(px, amt, qtyRefPx){
-    if(amt>cash) amt=cash;
-    const ref=(qtyRefPx>0?qtyRefPx:px);
-    let q=imBuyQty(amt, ref, FEE); if(q<=0) return 0;   // 운영·모의와 같은 헬퍼
-    const maxQ=imBuyQty(cash, px, FEE);
-    q=Math.min(q,maxQ); if(q<=0)return 0;
+  function _buyN(px, q){                        // 정해진 수량만 산다 (V4.0 runIM 과 같은 규약 · 7차 점검 ①④)
+    q=Math.min(Math.floor(q), imBuyQty(cash, px, FEE)); if(!(q>=1)) return 0;
     const spend=q*px, fee=spend*FEE;
     avg = (shares<=0) ? px : (shares*avg+spend)/(shares+q);
     lotBuy(LOT,q,px,fee);                       // 세무 원가에는 매수수수료도 들어간다
@@ -2896,8 +2913,7 @@ function runIM50(days,tkr,cap,divs,targetPct,compound=true,bigOverride){
           const _rg=(typeof imRevGap!=='undefined'?imRevGap:0);
           const buyP=_rg>0 ? star5*(1-_rg/100) : Math.max(0.01,star5-0.01);
           if(c<=buyP && cash>=buyP){
-            const alloc=imRevBuyQty(cash,buyP)*buyP;          // 원문: 배정액 = 잔금÷4
-            if(_buy(c,alloc,buyP)>0) T=T+(divs-T)*0.25;
+            if(_buyN(c,imRevBuyQty(cash,buyP))>0) T=T+(divs-T)*0.25;   // 주수 그대로 (V4.0 과 같다 · 7차 ①)
           }
         }
       }
@@ -2915,6 +2931,14 @@ function runIM50(days,tkr,cap,divs,targetPct,compound=true,bigOverride){
       return;
     }
 
+    /* 아침 주문 — 오늘 낼 매수 주문은 전부 '어제까지의 장부' 로 정한다 (7차 점검 ②).
+       실전은 장 전에 익절 지정가·쿼터매도 LOC·매수 LOC 를 한꺼번에 걸어 두고, 그날 봉에서
+       각자 체결된다. 예전엔 매도가 체결된 '뒤' 의 T·잔금으로 매수 주문을 다시 계산했다 —
+       쿼터매도로 T 가 ×0.75 되면 별지점이 올라가 방금 판 종가에 도로 사는 주문이 생겼다.
+       장 마감 뒤에야 아는 사실(쿼터매도 체결)로 같은 종가에 주문한 셈이라 룩어헤드다.
+       실측(SOXL 20분할 복리 6년) 최종자산이 실전 체결 재현보다 16.8% 부풀려져 있었다.
+       운영 주문표(renderOrder)·서버 자동주문(imOrders)·모의(infSimForward)와 같은 순서다. */
+    const buys=_imBuyPlan(T, avg, shares, cash, divs, starBase, starSlope, buyLimit, prevC, FEE);
     if(shares>0&&avg>0){
       const starP=avg*(1+(starBase-starSlope*T)/100);
       // ★ 국면 익절 (V5.0): 워밍업=기본 / 상승국면=기본 / 하락국면=6% 고정(조기탈출)
@@ -2935,24 +2959,9 @@ function runIM50(days,tkr,cap,divs,targetPct,compound=true,bigOverride){
       if(qtHit) T*=0.75;
       if(shares<1e-9){shares=0;avg=0;cycles++;
         if(compound){} else if(cash>cap){ savedProfit+=cash-cap; cash=cap; }
-        T=0;snap.push([d,cash+savedProfit-addedCash]);return;}
+        T=0;snap.push([d,cash+savedProfit-addedCash]);}
     }
-    if(divs-T>=1&&cash>1){          // 소진 = T>분할−1 (V4.0과 동일 규약)
-      let one=cash/(divs-T);
-      if(shares===0&&T===0){
-        if(c<=buyLimit && _buy(c,one,prevC)>0) T+=1;
-      }else{
-        const starP=avg*(1+(starBase-starSlope*T)/100), buyP=starP-0.01;
-        const starOrder=Math.min(buyP,buyLimit), avgOrder=Math.min(avg,buyLimit);
-        if(T<divs/2){
-          const half=one/2;
-          if(c<=starOrder){ if(_buy(c,half,prevC)>0) T+=0.5; }
-          if(c<=avgOrder) { if(_buy(c,half,prevC)>0) T+=0.5; }
-        }else{
-          if(c<=starOrder){ if(_buy(c,one,prevC)>0) T+=1; }
-        }
-      }
-    }
+    for(const b of buys){ if(c<=b.lim){ const q=_buyN(c,b.q); if(q>0) T+=b.dT; } }   // 아침에 건 매수 LOC (V4.0과 동일)
     if(i%10===0)snap.push([d,cash+shares*c+savedProfit-addedCash]);
     peakInvested=Math.max(peakInvested, cap-cash);
   });
@@ -2989,17 +2998,48 @@ function vrCycleCount(days){
     if(hit) n++; }
   return n;
 }
-/* VR 체결 모델 — 기본은 공식 예약 사다리. 'ladder' 를 고르면 커스텀 1주 사다리. */
-const VR_MODEL_DEFAULT='official';
-function vrModelOf(st){ return VR_MODEL_DEFAULT; }
-/* ════ VR 주문 체결 엔진 — 공식 예약 사다리 · 커스텀(1주 사다리) ════
-   예약 사다리 규칙:
-   사이클 시작 보유수량으로 상·하단 밴드 경계에 1주 단위 주문을 매수·매도 각 최대 20차 고정한다.
-   한 번 체결된 차수는 그 사이클에서 다시 생성하지 않으며, 다음 V가 확정될 때 새 사다리를 만든다.
+/* ════ VR 주문 체결 엔진 — 사이클 고정 20차 · 1주 예약 사다리 ════
+   운영 주문표·모의·과거재생·백테·5년 플랜이 모두 이 한 가지 모델로 돈다 (#236 이후).
+     상단 up = V×(1+밴드) · 하단 dn = V×(1−밴드)
+     사이클 시작 보유수량 B 로 사다리를 고정한다 — 사이클 중 체결이 나도 다시 계산하지 않는다
+     매도 k차 = up ÷ (B−k+1)  → 그날 고가 ≥ 가격이면 1주   (k ≤ min(20, B))
+     매수 k차 = dn ÷ (B+k−1)  → 그날 저가 ≤ 가격이면 1주   (사이클 한도 안에서 앞 차수부터)
+     사이클 매수 한도 = 사이클 시작 Pool × 모드한도(적립 75·거치 50·인출 25%) − 이번 사이클 매수액
+     매도를 먼저 돈다 — 판 돈이 그날 매수 재원이 된다. 이미 체결한 차수는 다음 날 다시 걸지 않는다.
+   평가금으로 보면 '밴드를 벗어난 만큼만' 거래한다 — 상단을 넘으면 1주씩 팔아 평가금을 상단에
+   붙이고, 하단 아래면 1주씩 사서 하단에 붙인다. V 까지 한 번에 되돌리지 않는다.
+
+   ⚠ 원문 확인 대기 (7차 점검) — 5차 감사 때 'V 복귀'(한 번에 V 까지 되돌리는 수량) 해석으로
+     바꿨다가(#235) #236 에서 이 사다리로 되돌렸다. 두 해석 중 어느 쪽이 라오어 원문인지는
+     아직 원문으로 대조하지 못했다. 예전 이 자리 주석은 'V 복귀가 공식, 사다리는 커스텀' 이라고
+     적혀 있었는데 코드와 정반대였다 — 7차 점검에서 실제 동작대로 고쳤다.
+     VR_MODEL_DEFAULT·vrModelOf·P.model 은 그때 남은 자리다. 지금 엔진은 모델을 가르지 않는다.
 
    S: {shares, pool, avg, V} — 이 객체를 직접 고친다 (부르는 쪽이 결과를 받아 간다)
-   P: {band, poolLimit, budgetRemaining, FEE, model} — model 미지정이면 'official'
+   P: {band, poolLimit, budgetRemaining, FEE, baseShares, sellFilled, buyFilled, maxTiers}
    반환: [{type:'sell'|'buy', price, qty, net|cost}] — net·cost 는 그 체결 '전체' 금액 */
+const VR_MODEL_DEFAULT='official';
+function vrModelOf(st){ return VR_MODEL_DEFAULT; }
+/* 사이클 사다리 — 이번 사이클에 걸어 둘 매도·매수 차수 (7차 점검 ⑫).
+   주문표(renderVrTable)·체결 엔진(vrOrderPlan)이 이 한 곳에서 차수를 받는다 — 예전엔 둘이
+   각자 계산해서, 표는 한도를 넘긴 차수만 건너뛰고 다음 차수를 '유효' 로 보였는데 엔진은
+   첫 초과 차수에서 멈췄다(표에 있는데 체결은 절대 안 되는 주문).
+     B       사이클 시작 보유수량 · sf/bf 이미 체결한 매도/매수 차수 · N 최대 차수(20)
+     매도 k차 = up ÷ (B−k+1)   (k ≤ min(N,B))
+     매수 k차 = dn ÷ (B+k−1)   — 앞 차수부터 한도(limit)를 쓰고, 넘는 차수에서 멈춘다
+   over 는 한도 밖으로 밀려난 매수 차수다 (표에 '한도 밖' 으로 보여 주기만 한다). */
+function vrTiers(B, sf, bf, up, dn, limit, fee1, N){
+  const sells=[], buys=[], over=[];
+  if(!(B>=1)) return {sells, buys, over};
+  for(let k=sf+1;k<=Math.min(N,B);k++) sells.push({k, p:up/(B-k+1)});
+  let used=0, capped=false;
+  for(let k=bf+1;k<=N;k++){
+    const p=dn/(B+k-1), cost=p*fee1;
+    if(capped||used+cost>limit+1e-9){ capped=true; over.push({k, p, cost}); continue; }
+    buys.push({k, p, cost}); used+=cost;
+  }
+  return {sells, buys, over};
+}
 function vrOrderPlan(S, P, bar){
   const out=[];
   if(!(S.V>0))return out;
@@ -3008,22 +3048,13 @@ function vrOrderPlan(S, P, bar){
   const hi=bar.high>0?bar.high:bar.close, lo=bar.low>0?bar.low:bar.close;
   const N=Math.max(1,Math.min(20,+P.maxTiers||20));
   const B=Math.floor(+P.baseShares||S.shares||0);
-  let sf=Math.max(0,Math.floor(+P.sellFilled||0)),bf=Math.max(0,Math.floor(+P.buyFilled||0));
+  const sf=Math.max(0,Math.floor(+P.sellFilled||0)),bf=Math.max(0,Math.floor(+P.buyFilled||0));
   const _sell=(p,qty)=>{if(!(qty>=1)||S.shares+1e-9<qty)return;const net=p*(1-FEE)*qty;S.shares-=qty;S.pool+=net;out.push({type:'sell',price:p,qty,net});};
   const _buy=(p,qty)=>{if(!(qty>=1))return;const cost=p*fee1*qty;if(cost>S.pool+1e-9)return;S.avg=(S.shares<=0)?p:(S.shares*S.avg+p*qty)/(S.shares+qty);S.shares+=qty;S.pool-=cost;out.push({type:'buy',price:p,qty,cost});};
   if(B<1)return out;
-  for(let k=sf+1;k<=Math.min(N,B);k++){
-    const before=B-k+1,p=up/before;
-    if(!(hi>=p))break;
-    _sell(p,1); sf++;
-  }
-  let spent=0;
-  for(let k=bf+1;k<=N;k++){
-    const before=B+k-1,p=dn/before,cost=p*fee1;
-    if(!(lo<=p))break;
-    if(spent+cost>budget+1e-9||cost>S.pool+1e-9)break;
-    _buy(p,1); spent+=cost; bf++;
-  }
+  const L=vrTiers(B, sf, bf, up, dn, budget, fee1, N);      // 걸어 둔 차수 — 주문표와 같은 목록
+  for(const t of L.sells){ if(!(hi>=t.p))break; _sell(t.p,1); }
+  for(const t of L.buys){ if(!(lo<=t.p))break; if(t.cost>S.pool+1e-9)break; _buy(t.p,1); }
   return out;
 }
 function runVR(days,tkr,params){
@@ -3333,7 +3364,8 @@ function runMA200(days,tkr,cap,N,costOn,opt){
     const want = g>0 ? above[dts[g-1]] : true;             // 전일 신호 (기간 앞 이력 사용, 첫날은 보유 시작)
     if(want && shares===0 && cash>0){
       const q=iq(cash/(1+FEE),c); const spend=q*c, fee=spend*FEE;   // 정수 주수 — 남는 돈은 현금으로
-      shares=q; avg=c; lotBuy(LOT,q,c,fee); cash-=spend+fee; feesTotal+=fee; trades++;
+      // 1주도 못 사면 거래가 아니다 — 예전엔 0주 '매수'를 보유 신호가 이어지는 동안 매일 1건씩 셌다 (7차 ⑰)
+      if(q>0){ shares=q; avg=c; lotBuy(LOT,q,c,fee); cash-=spend+fee; feesTotal+=fee; trades++; }
     }else if(!want && shares>0){
       const gross=shares*c, fee=gross*FEE; cash+=gross-fee;
       const pnl=lotSell(LOT,shares,c,fee); realized+=pnl; yearPnl+=pnl;
@@ -3707,8 +3739,10 @@ function runIVS(days,tkr,cap,s0,N,band,costOn,mode,pair){
       rebals++;   // '리밸런싱하기로 한' 횟수 — 어느 다리가 실제로 움직이는지는 그날 값에 달렸다
       const tA=w*eq0, tB=X1?(1-w)*eq0:0;
       // 매도 먼저 → 매수 (현금 확보 순서)
-      if(A.sh*c>tA){ const q=Math.min(A.sh,(A.sh*c-tA)/c); if(q*c>1) _sell(A,c,q); }
-      if(X1&&B.sh*c1>tB){ const q=Math.min(B.sh,(B.sh*c1-tB)/c1); if(q*c1>1) _sell(B,c1,q); }
+      /* 매도도 정수 주수다 (7차 ⑯) — 사기만 정수로 끊고 팔기는 소수점이라 첫 매도부터
+         보유가 소수점이 되고 운영 재생(ivsReplay)과 주수·잔금이 갈렸다. isq = 내림·보유분 초과 방지. */
+      if(A.sh*c>tA){ const q=isq((A.sh*c-tA)/c, A.sh); if(q>=1) _sell(A,c,q); }
+      if(X1&&B.sh*c1>tB){ const q=isq((B.sh*c1-tB)/c1, B.sh); if(q>=1) _sell(B,c1,q); }
       if(A.sh*c<tA){ const sp=Math.min(cash,tA-A.sh*c); if(sp>1) _buy(A,c,sp); }
       if(X1&&B.sh*c1<tB){ const sp=Math.min(cash,tB-B.sh*c1); if(sp>1) _buy(B,c1,sp); }
     }
