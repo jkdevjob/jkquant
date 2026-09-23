@@ -6,6 +6,10 @@ name: 시초가 서버 자동감시
 
 on:
   schedule:
+    # GitHub scheduled workflow는 지연될 수 있어 10분 전부터 5분 간격 백업 기동.
+    # concurrency가 같은 그룹을 직렬화하므로 정상 실행 중에는 중복 감시가 동시에 돌지 않는다.
+    - cron: "45 23 * * 0-4"   # 08:45 KST 월~금
+    - cron: "50 23 * * 0-4"   # 08:50 KST 월~금
     - cron: "55 23 * * 0-4"   # 08:55 KST 월~금
   workflow_dispatch:
   push:
