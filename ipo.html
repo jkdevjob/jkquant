@@ -765,6 +765,7 @@ let IPO={records:[],feed:[],feedUpdated:0};
 let ipoRecSel=null;                 // 기록 폼에서 선택한 종목
 let ipoEditRecId=null;              // 편집 중인 기록 id (없으면 새 기록)
 let ipoCalY, ipoCalM;               // 캘린더 표시 연/월(0-based)
+let ipoCalPinned=false;             // 사용자가 달을 직접 넘겼는가(자동이동 중지)
 let ipoSelDay=null;                 // 선택한 날짜(YYYY-MM-DD)
 const IPO_BROKERS=['한국투자증권','KB증권','삼성증권','미래에셋증권','NH투자증권','대신증권','신한투자증권','하나증권','키움증권','유진투자증권','IBK투자증권','하이투자증권','SK증권','대신증권'];
 
@@ -824,10 +825,23 @@ function ipoEventMap(){ // dateStr → {sub:[i...], list:[i...]}
   });
   return map;
 }
-function ipoCalMove(delta){ ipoCalM+=delta; if(ipoCalM<0){ipoCalM=11;ipoCalY--;} if(ipoCalM>11){ipoCalM=0;ipoCalY++;} ipoSelDay=null; ipoRenderCal(); }
+function ipoCalMove(delta){ ipoCalPinned=true; ipoCalM+=delta; if(ipoCalM<0){ipoCalM=11;ipoCalY--;} if(ipoCalM>11){ipoCalM=0;ipoCalY++;} ipoSelDay=null; ipoRenderCal(); }
+// 다가오는 공모주가 이번 달에 없으면(예: 전부 다음 달) 가장 가까운 이벤트 달로 자동 이동.
+// 사용자가 달을 직접 넘겼으면(ipoCalPinned) 건드리지 않는다.
+function ipoAutoMonth(){
+  if(ipoCalPinned || !IPO.feed.length) return;
+  const today=todayStr();
+  const dates=[];
+  IPO.feed.forEach(it=>{ if(it.subStart)dates.push(it.subStart); if(it.listDate)dates.push(it.listDate); });
+  if(!dates.length) return;
+  const future=dates.filter(d=>d>=today).sort();
+  const pick=future.length?future[0]:dates.sort()[dates.length-1];
+  const [y,m]=pick.split('-'); ipoCalY=+y; ipoCalM=+m-1;
+}
 function ipoRenderCal(){
   const grid=$('ipo_cal_grid'); if(!grid)return;
   if(ipoCalY==null){ const t=new Date(); ipoCalY=t.getFullYear(); ipoCalM=t.getMonth(); }
+  ipoAutoMonth();
   $('ipo_cal_title').textContent=`${ipoCalY}.${String(ipoCalM+1).padStart(2,'0')}`;
   const map=ipoEventMap();
   const first=new Date(ipoCalY,ipoCalM,1), startDow=first.getDay();
@@ -976,7 +990,13 @@ function ipoRecSearch(q){
   }, 250);
 }
 function ipoRecPick(i){ const it=IPO.feed[i]; ipoRecSel={name:it.name,code:it.code||'',poPrice:it.poPrice||null,broker:it.leadManager||''}; ipoRecFill(); }
-function ipoRecPickStock(k){ const s=ipoStockHits[k]; if(!s)return; ipoRecSel={name:s.name,code:s.code||'',poPrice:null,broker:''}; ipoRecFill(); }
+function ipoFeedByName(name){ return IPO.feed.find(f=>f.name===name) || null; }
+function ipoRecPickStock(k){
+  const s=ipoStockHits[k]; if(!s)return;
+  const f=ipoFeedByName(s.name);   // 피드에 있으면 공모가·주간사 자동 채움
+  ipoRecSel={name:s.name,code:s.code||(f&&f.code)||'',poPrice:(f&&f.poPrice)||null,broker:(f&&f.leadManager)||''};
+  ipoRecFill();
+}
 function ipoRecPickFree(){ const q=($('iprec_search').value||'').trim()||'직접 입력'; ipoRecSel={name:q,code:'',poPrice:null,broker:''}; ipoRecFill(); }
 function ipoRecFill(){
   ipoEditRecId=null;               // 검색으로 새로 고른 것 = 새 기록
