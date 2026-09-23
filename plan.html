@@ -153,7 +153,7 @@ th:first-child,td:first-child{text-align:left}
 <body>
 <div class="wrap">
   <div class="top">
-    <div class="brand"><div class="logo">Five Year Plan</div><h1>5년 자산플랜 <span class="ver">v1.9.0</span></h1></div>
+    <div class="brand"><div class="logo">Five Year Plan</div><h1>5년 자산플랜 <span class="ver">v1.9.1</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
       <div class="jkmenu" id="jkmenuWrap">
@@ -229,9 +229,9 @@ th:first-child,td:first-child{text-align:left}
       <div class="path-note">시작금 $30,000 기준 · SOXL $24,000 / TECL VR $6,000으로 독립 운용합니다. 두 전략은 서로 리밸런싱하지 않습니다.</div>
       <div class="guidegrid">
         <div class="guidekpi"><div class="k">SOXL 무매</div><div class="v">20분할 · 익절 +25%</div><div class="sub">복리 · 리버스 OFF · 큰수15%</div></div>
-        <div class="guidekpi"><div class="k">TECL VR</div><div class="v">G20 · ±30%</div><div class="sub">기본공식 · 14일</div></div>
+        <div class="guidekpi"><div class="k">TECL VR</div><div class="v">G150 · ±40%</div><div class="sub">Skill 공식 · 14일 · 최적화 변형</div></div>
         <div class="guidekpi"><div class="k">VR 초기배정</div><div class="v">TECL 90 / Pool 10</div><div class="sub">Pool 사용한도 50%</div></div>
-        <div class="guidekpi"><div class="k">운용 단순화</div><div class="v">V4 엔진 + 기본 VR</div><div class="sub">검증 미완료 V5 국면 익절은 실전 기본에서 제외</div></div>
+        <div class="guidekpi"><div class="k">운용 엔진</div><div class="v">무매 V4 + VR Skill</div><div class="sub">VR Skill은 5년 최적화용 커스텀 변형 · 오피셜 고정값 아님</div></div>
       </div>
       <div class="sessionbar">
         <div class="field"><label>SOXL 무매 실전세션</label><select id="bSoxlSessionSelect"><option value="">세션을 선택하세요</option></select></div>
@@ -549,7 +549,7 @@ const plusYears=(iso,n)=>{const d=new Date(iso+"T00:00:00Z");d.setUTCFullYear(d.
 const days=(a,b)=>(new Date(b+"T00:00:00Z")-new Date(a+"T00:00:00Z"))/86400000;
 const PATH_DEFAULTS={
   alpha:{teclWeight:.70,guardWeight:.30,ivsLook:20,ivsS0:.60,ivsBand:.15,guardMA:250,guardBand:.03},
-  classic:{infWeight:.50,vrWeight:.50,infDiv:40,infTarget:25,infBig:15,vrG:100,vrBand:20,vrStockPct:.90,vrPoolLimit:.50}
+  classic:{infWeight:.80,vrWeight:.20,infDiv:20,infTarget:25,infBig:15,vrG:150,vrBand:40,vrFormula:'skill',vrStockPct:.90,vrPoolLimit:.50}
 };
 
 
@@ -696,13 +696,13 @@ async function createPlanVrSession(opts={}){
   const a=requireInitialCapital();if(!a)return null;
   if(planLinks.vr && linkedOpSession(liveState.vr,'TECL',planLinks.vr) && !opts.force)return linkedOpSession(liveState.vr,'TECL',planLinks.vr);
   const cap=a.vr,id=planSid('pvr');
-  /* PATH B 기본값: TECL VR G20 · ±30 · 초기 주식90/Pool10 · Pool 사용한도50%.
-     $6,000 슬리브에서도 초기 Pool 약 $600이라 1주 예약매수 여력이 남도록 한 실전 제약 포함값이다. */
+  /* PATH B 5년 최적화 변형: TECL VR Skill G150 · ±40 · 초기 주식90/Pool10 · Pool 사용한도50%.
+     공식 VR 고정값이 아니라 $30,000 플랜의 역사적 롤링 5년 연구 기본값이다. */
   const initAmt=Math.round(cap*.90), startPool=Math.max(0,cap-initAmt);
   const sess={id,name:sessionDateName('TECL VR'),planManaged:true,settings:{
-    ticker:'TECL',mode:.5,formula:'basic',g:20,initAmt,add:0,
-    band:30,startv:0,startpool:startPool,autoCyc:false,divmode:'reinv',
-    planTotalCapital:cap,planInitStockPct:90,planPresetVersion:2
+    ticker:'TECL',mode:.5,formula:'skill',g:150,initAmt,add:0,
+    band:40,startv:0,startpool:startPool,autoCyc:false,divmode:'reinv',
+    planTotalCapital:cap,planInitStockPct:90,planPresetVersion:3
   },hist:[]};
   liveState.vr.sessions.push(sess);liveState.vr.active=id;liveState.activeTab='vr';
   planLinks.vr=id;
@@ -784,13 +784,13 @@ function enforcePlanManagedDefaults(){
   for(const x of liveState.vr.sessions||[]){
     if(x&&x.planManaged&&String(x.settings?.ticker||'').toUpperCase()==='TECL'){
       const st=x.settings||(x.settings={}), empty=!(Array.isArray(x.hist)&&x.hist.length);
-      if(empty && +st.planPresetVersion<2){
+      if(empty && +st.planPresetVersion<3){
         const cap=(+st.planTotalCapital||0)||((+st.initAmt||0)+(+st.startpool||0));
-        Object.assign(st,{mode:.5,formula:'basic',g:20,band:30,autoCyc:false,planInitStockPct:90,planPresetVersion:2});
+        Object.assign(st,{mode:.5,formula:'skill',g:150,band:40,autoCyc:false,planInitStockPct:90,planPresetVersion:3});
         if(cap>0){st.planTotalCapital=cap;st.initAmt=Math.round(cap*.90);st.startpool=Math.max(0,cap-st.initAmt);}
       }else{
-        if(st.mode==null)st.mode=.5;if(st.formula==null)st.formula='basic';if(st.g==null)st.g=20;
-        if(st.band==null)st.band=30;st.autoCyc=false;
+        if(st.mode==null)st.mode=.5;if(st.formula==null)st.formula='skill';if(st.g==null)st.g=150;
+        if(st.band==null)st.band=40;st.autoCyc=false;
       }
     }
   }
@@ -959,8 +959,12 @@ function calcVrState(sess){
     if(h.type==='buy'){
       const amt=(+h.price||0)*(+h.qty||0),fee=+h.fee||0,q=+h.qty||0;qty+=q;totbuy+=amt;buyShares+=q;cost+=amt;
       const isInit=h.init!==undefined?!!h.init:(!sawBuy&&!carriedIn);sawBuy=true;if(!vSet){V=amt;vSet=true;}
-      if(isInit){initBuy+=amt+fee;cycleStartPool=pool;if(cycleBaseQty<=0)cycleBaseQty=qty;}
-      else{pool-=amt+fee;cycleBuySpent+=amt+fee;cycleHasTrade=true;cycleBuyFilled+=Math.max(0,Math.round(q));}
+      if(isInit){
+        initBuy+=amt+fee;
+        const initBudget=Math.max(0,+st.initAmt||0);
+        pool+=Math.max(0,initBudget-(amt+fee));
+        cycleStartPool=pool;if(cycleBaseQty<=0)cycleBaseQty=qty;
+      }else{pool-=amt+fee;cycleBuySpent+=amt+fee;cycleHasTrade=true;cycleBuyFilled+=Math.max(0,Math.round(q));}
     }else if(h.type==='sell'){
       const q=+h.qty||0,amt=(+h.price||0)*q,fee=+h.fee||0,av=qty>0?cost/qty:0;cost-=av*q;qty-=q;if(qty<1e-9){qty=0;cost=0;}totsell+=amt;pool+=amt-fee;cycleHasTrade=true;cycleSellFilled+=Math.max(0,Math.round(q));
     }else if(h.type==='add'){pool+=+h.amt||0;totadd+=+h.amt||0;if((h.auto||(curCyc===0&&!cycleHasTrade))&&!cycleHasTrade)cycleStartPool=pool;}
@@ -1005,7 +1009,7 @@ async function advancePlanVrCycle(){
 function vrCycleStart(c){if(c.st.cycStart)return c.st.cycStart;for(let i=c.hist.length-1;i>=0;i--){const x=c.hist[i];if(x.auto&&(x.type==='add'||x.type==='wd'))return x.date;}const f=c.hist.find(x=>x.type==='buy');return f?f.date:null;}
 function vrOrders(sess,price){
   const c=calcVrState(sess),st=c.st,orders=[];if(!(price>0))return {state:c,orders,note:'확정 종가가 없어 계산하지 못했습니다.'};
-  if(!(c.V>0)&&!(c.qty>0)){const amt=st.initAmt!=null?+st.initAmt:10000,q=Math.floor(amt/price);if(q>0)orders.push({side:'buy',name:'첫 매수',price,qty:q,tag:'초기'});return {state:c,orders,note:'첫 매수 후 V와 20차 예약 사다리가 생성됩니다.'};}
+  if(!(c.V>0)&&!(c.qty>0)){const amt=st.initAmt!=null?+st.initAmt:10000,q=Math.floor(amt/(price*(1+FEE)));if(q>0)orders.push({side:'buy',name:'첫 매수',price,qty:q,tag:'초기'});return {state:c,orders,note:'첫 매수는 수수료 포함 배정금 안에서 계산합니다. 남는 금액은 Pool로 유지하고, 체결 후 V와 20차 예약 사다리가 생성됩니다.'};}
   const N=20,B=Math.floor(c.cycleBaseQty||c.qty),ev=price*c.qty,cap=Math.max(0,c.cycleStartPool*(+st.mode||.5)),remain=Math.max(0,Math.min(c.pool,cap-c.cycleBuySpent));
   if(B>0){
     for(let k=Math.max(1,c.cycleSellFilled+1);k<=Math.min(N,B);k++){
