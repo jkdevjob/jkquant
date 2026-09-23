@@ -1,0 +1,76 @@
+name: 데이트레이딩 서버 자동감시
+
+# 고정된 당일 Top100 스냅샷을 대상으로 10:00~14:30 매분 모의 신호를 감시한다.
+# 기준전략만 Telegram 후보신호를 보내고 shadow는 서버 로그/장마감 연구 비교용이다.
+# 실제 주문은 하지 않는다.
+
+on:
+  schedule:
+    - cron: "50 0 * * 1-5"   # 09:50 KST
+    - cron: "55 0 * * 1-5"   # 09:55 KST backup
+    - cron: "0 1 * * 1-5"    # 10:00 KST backup
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/daytrading-monitor.yml"
+      - "functions/api/daytrading-monitor.js"
+      - "functions/api/_daytrading.js"
+
+concurrency:
+  group: daytrading-monitor-live
+  cancel-in-progress: false
+
+jobs:
+  monitor:
+    runs-on: ubuntu-latest
+    timeout-minutes: 300
+    steps:
+      - name: 데이트레이딩 기준+shadow 장중 감시
+        env:
+          KEY: ${{ secrets.AUTOTRADE_KEY }}
+          BASE: https://jkquant.pages.dev
+          EVENT: ${{ github.event_name }}
+        shell: bash
+        run: |
+          set -e
+          if [ -z "$KEY" ]; then
+            echo "AUTOTRADE_KEY GitHub Secret 이 없습니다."
+            exit 1
+          fi
+
+          dow=$(TZ=Asia/Seoul date +%u)
+          raw=$(TZ=Asia/Seoul date +%H%M)
+          hm=$((10#$raw))
+          if [ "$dow" -gt 5 ]; then echo "주말 — 종료"; exit 0; fi
+
+          # 코드 배포가 장중에 일어나면 즉시 합류하고, 장 밖이면 그냥 끝낸다.
+          if [ "$EVENT" = "push" ] && { [ "$hm" -lt 950 ] || [ "$hm" -gt 1431 ]; }; then
+            echo "장중 감시 시간 밖 push — 종료"
+            exit 0
+          fi
+
+          last=""
+          echo "데이트레이딩 기준전략 + shadow 자동감시 준비"
+          while true; do
+            raw=$(TZ=Asia/Seoul date +%H%M)
+            hm=$((10#$raw))
+            if [ "$hm" -gt 1431 ]; then
+              echo "14:31 이후 — 종료"
+              exit 0
+            fi
+            if [ "$hm" -ge 1000 ] && [ "$raw" != "$last" ]; then
+              last="$raw"
+              echo "[$(TZ=Asia/Seoul date '+%F %T KST')] Top100 데이트레이딩 스캔"
+              pids=""
+              for shard in 0 1 2 3 4; do
+                curl -sS --max-time 55 -H "x-monitor-key: $KEY"                   "$BASE/api/daytrading-monitor?shard=$shard&shards=5"                   -o "day-$shard.json" &
+                pids="$pids $!"
+              done
+              for p in $pids; do wait "$p" || true; done
+              for shard in 0 1 2 3 4; do
+                echo "shard $shard: $(cat day-$shard.json 2>/dev/null || echo no-response)"
+              done
+            fi
+            sleep 5
+          done
