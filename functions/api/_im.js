@@ -28,6 +28,9 @@ const isBuy = (k) => k === "출금" ? false : (k.includes("매수") && !k.includ
 /* 리버스는 규칙이 있는 분할에만 (index.html REV_DIVS 와 같은 목록) */
 export const REV_DIVS = [20, 40];
 const revSupported = (div) => REV_DIVS.includes(+div);
+/* 리버스를 실제로 쓰는가 = 켬 + 규칙이 있는 분할 (index.html revEnabled 와 같은 조건 · 제8차 8-④).
+   장부에 리버스 기록이 남아 있어도 규칙이 없는 분할이면 리버스로 보지 않는다. */
+const revEnabled = (st) => !!st && st.reverse === true && revSupported(st.div);
 /* 큰수(주문가 상한) 기본값 — index.html·backtest.html 의 IM_BIG_DEFAULT 와 같은 값.
    예전엔 여기만 20 이었다: big 을 저장하지 않은 옛 세션은 앱 주문표(15%)와 서버 자동주문(20%)의
    처음매수 LOC 가격이 달랐다 (실데이터 1,499일 중 269일, 7차 점검 ⑥). */
@@ -62,7 +65,7 @@ export function imCompute(st, hist) {
   const simple = (st.compound === false);
   let revState = "NORMAL";
   const revEnter = () => {
-    if (st.reverse === true && revSupported(st.div) && revState === "NORMAL" && qty > 1e-9 && (st.div - T) < 1) revState = "DAY1";
+    if (revEnabled(st) && revState === "NORMAL" && qty > 1e-9 && (st.div - T) < 1) revState = "DAY1";
   };
   for (const h of (hist || [])) {
     const kind = String(h.kind || "");
@@ -102,7 +105,7 @@ export function imCompute(st, hist) {
     revEnter();
   }
   revEnter();
-  const reverseActive = (st.reverse === true) && revState !== "NORMAL" && qty > 0;
+  const reverseActive = revEnabled(st) && revState !== "NORMAL" && qty > 0;
   const reverseDay1 = reverseActive && revState === "DAY1";
   const bal = (+st.principal || 0) + realized + divTotal - inv - withdrawn - saved;
   return { avg, qty, inv, realized, T, bal, st, revState, reverseActive, reverseDay1, withdrawn, saved, divTotal, simple };
@@ -201,14 +204,14 @@ export function imOrders({ st, hist, close, days }) {
     // 원금 소진 — 새 회차 없음. 아래 매도만 낸다.
   } else if (c.avg <= 0) {
     brow("처음매수", close * (1 + bigPct / 100), buy1);
-    for (let i = 1; i <= rows; i++) { const p = close * (1 - gap * i / 100); if (p > 0) push("buy", `하방 ${i}`, "LOC", p, rq); }
+    for (let i = 1; i <= rows; i++) { const p = close * (1 - gap * i / 100); if (p > 0) push("buy", `하방 ${i} (CUSTOM)`, "LOC", p, rq); }
   } else if (half) {
     brow("별지점 매수", cap(buyPt), buy1 / 2);
     brow("평단 매수", cap(c.avg), buy1 / 2);
-    for (let i = 1; i <= rows; i++) { const p = buyPt * (1 - gap * i / 100); if (p > 0) push("buy", `하방 ${i}`, "LOC", cap(p), rq); }
+    for (let i = 1; i <= rows; i++) { const p = buyPt * (1 - gap * i / 100); if (p > 0) push("buy", `하방 ${i} (CUSTOM)`, "LOC", cap(p), rq); }
   } else {
     brow("별지점 매수 (전액)", cap(buyPt), buy1);
-    for (let i = 1; i <= rows; i++) { const p = buyPt * (1 - gap * i / 100); if (p > 0) push("buy", `하방 ${i}`, "LOC", cap(p), rq); }
+    for (let i = 1; i <= rows; i++) { const p = buyPt * (1 - gap * i / 100); if (p > 0) push("buy", `하방 ${i} (CUSTOM)`, "LOC", cap(p), rq); }
   }
 
   // 매도

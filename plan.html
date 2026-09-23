@@ -153,7 +153,7 @@ th:first-child,td:first-child{text-align:left}
 <body>
 <div class="wrap">
   <div class="top">
-    <div class="brand"><div class="logo">Five Year Plan</div><h1>5년 자산플랜 <span class="ver">v1.10.5</span></h1></div>
+    <div class="brand"><div class="logo">Five Year Plan</div><h1>5년 자산플랜 <span class="ver">v1.11.0</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
       <div class="jkmenu" id="jkmenuWrap">
@@ -897,7 +897,7 @@ function calcInfState(sess){
   if(st.reverse===true&&REV_DIVS_PLAN.includes(+st.div)&&revState==='NORMAL'&&qty>0&&((+st.div||20)-T)<1)revState='DAY1';
   const bal=(+st.principal||0)+realized+divTotal-inv-withdrawn-saved;
   return {st,avg,qty:Math.max(0,qty),T,bal,withdrawn,saved,outside:withdrawn+saved,revState,
-    reverseActive:st.reverse===true&&revState!=='NORMAL'&&qty>0,reverseDay1:revState==='DAY1'};
+    reverseActive:st.reverse===true&&REV_DIVS_PLAN.includes(+st.div)&&revState!=='NORMAL'&&qty>0,reverseDay1:revState==='DAY1'};
 }
 function imOrders(sess,price,rows){
   const c=calcInfState(sess),st=c.st,div=+st.div||20,target=+st.target||20,big=st.big!=null?+st.big:15,slot=div-c.T;
@@ -928,11 +928,11 @@ function imOrders(sess,price,rows){
   if(slot>=1&&buy1>0){
     if(c.avg<=0){
       addBuy('처음매수',limit,buy1,price);
-      for(let i=1;i<=nRows;i++){const p=price*(1-gap*i/100);if(p>0)orders.push({side:'buy',name:'하방 '+i+' (-'+(gap*i).toFixed(1)+'%)',price:p,qty:rq,tag:'LOC'});}
+      for(let i=1;i<=nRows;i++){const p=price*(1-gap*i/100);if(p>0)orders.push({side:'buy',name:'하방 '+i+' (-'+(gap*i).toFixed(1)+'%) · CUSTOM(백테·모의 미반영)',price:p,qty:rq,tag:'LOC'});}
     }else{
       if(half){addBuy('별지점 절반매수',buyPt,buy1/2,price);addBuy('평단 절반매수',c.avg,buy1/2,price);}
       else addBuy('별지점 전액매수',buyPt,buy1,price);
-      for(let i=1;i<=nRows;i++){const p=buyPt*(1-gap*i/100);if(p>0)orders.push({side:'buy',name:'하방 '+i+' (-'+(gap*i).toFixed(1)+'%)',price:Math.min(p,limit),qty:rq,tag:'LOC'});}
+      for(let i=1;i<=nRows;i++){const p=buyPt*(1-gap*i/100);if(p>0)orders.push({side:'buy',name:'하방 '+i+' (-'+(gap*i).toFixed(1)+'%) · CUSTOM(백테·모의 미반영)',price:Math.min(p,limit),qty:rq,tag:'LOC'});}
     }
   }
   if(c.qty>0&&c.avg>0){
@@ -973,23 +973,44 @@ function resolvePlanVrDue(rows,dueStr,settledDate){
   const a=(rows||[]).filter(x=>x&&x.date>=dueStr&&x.date<=settledDate&&+x.close>0).sort((x,y)=>x.date.localeCompare(y.date));
   return a[0]||null;
 }
+/* ── VR 사이클 전환 — 다음 V · 다음 Pool · 실제 적립/인출 (제8차 감사 대응 8-②·8-⑦) ──
+   운영 미리보기(computeNextV)·운영 진입(enterNextCycle·vrStepCycle)·과거재생(vrReplay)·
+   백테(runVR)·5년 플랜(calcPlanNextV)이 이 함수의 결과만 쓴다. index·backtest·plan 에
+   글자 그대로 같은 본문이 있고, 회귀가 셋이 한 글자도 안 다른지 본다.
+   예전엔 V 식을 네 곳이 따로 적었다. 7차 ⑪ 에서 '인출은 Pool 안에서만' 을 고칠 때 미리보기만
+   빠져 화면의 다음 Pool 이 실제 진입 결과와 달랐다 (Pool 1.10 · 인출 50 → 미리보기 −48.90, 실제 0).
+     입력  V 이번 사이클 V · pool 사이클 끝 Pool(적립/인출 전) · ev 사이클 끝 평가금
+           G · mode (0.75 적립 · 0.5 거치 · 0.25 인출) · add 요청 적립/인출액 · formula 'basic'|'skill'
+     출력  nextV(0 이상) · nextPool · requested 요청액 · actual 실제 적립/인출액
+           sign(+1 적립 · −1 인출) · type('add'|'wd'|null) · corr 실력공식 보정항 · raw 자르기 전 V
+   인출은 Pool 안에서만 나간다 — actual = min(요청, Pool). 적립은 요청액 전부.
+   V 식의 적립/인출 항은 '요청액' 이다. 요청이 Pool 을 넘을 때 원문(라오어)이 V 식에 무엇을
+   넣는지는 확인하지 못했다 — 지금까지의 동작(요청액)을 그대로 두고 원문 확인 전까지 바꾸지 않는다. */
+function vrCycleTransition(V, pool, ev, G, mode, add, formula){
+  const isAccum=(+mode===0.75), isWd=(+mode===0.25);
+  const requested=(isAccum||isWd)?Math.max(0,+add||0):0;
+  const sign=isWd?-1:1;
+  const actual=isWd?Math.max(0,Math.min(requested,pool)):requested;
+  const corr=(formula==='skill'&&V>0)?(ev-V)/(2*Math.sqrt(G)):0;
+  const raw=V+pool/G+corr+sign*requested;
+  return {nextV:Math.max(0,raw), raw, nextPool:pool+sign*actual, requested, actual, sign, corr,
+          type:requested>0?(isWd?'wd':'add'):null};
+}
 function calcPlanNextV(c,close){
   const st=c.st||{},G=Math.max(1,+st.g||10),ev=(close>0?close*c.qty:c.V);
-  const isAccum=+st.mode===.75,isWd=+st.mode===.25,add=(isAccum||isWd)?(+st.add||0):0,sign=isWd?-1:1;
-  let nextV=c.V+c.pool/G+sign*add;
-  if(st.formula==='skill'&&c.V>0) nextV+=(ev-c.V)/(2*Math.sqrt(G));
-  return {nextV:Math.max(0,nextV),ev,add,sign};
+  const T=vrCycleTransition(c.V, c.pool, ev, G, st.mode, st.add, st.formula);   // 앱·백테와 같은 전환식 (제8차 8-⑦)
+  return {nextV:T.nextV,ev,add:T.requested,actual:T.actual,type:T.type,sign:T.sign,nextPool:T.nextPool};
 }
 async function advancePlanVrCycle(){
   const vr=liveState?linkedOpSession(liveState.vr,'TECL',planLinks.vr):null;
   if(!vr||!pendingVrCycle){alert('지금 진입할 VR 사이클이 없습니다.');return;}
   const c=calcVrState(vr),st=vr.settings||{},r=calcPlanNextV(c,pendingVrCycle.close),newCyc=(+st.startCyc||c.curCyc||0)+1;
   if(!confirm('TECL VR 다음 사이클로 진입합니다.\n기준일 '+pendingVrCycle.date+' 종가 '+usd(pendingVrCycle.close)+'\nV '+usd(c.V)+' → '+usd(r.nextV)+'\n진행할까요?'))return;
-  /* 인출식은 Pool 에 있는 만큼만 뺀다 (7차 점검 ⑪) — 앱 vrCycleFlow · 백테 runVR · 과거재생과 같은 규약.
-     V 식의 인출 항은 규칙대로 전액이다(calcPlanNextV). */
-  const flowAmt=r.sign<0?Math.max(0,Math.min(r.add,c.pool)):r.add;
+  /* 인출식은 Pool 에 있는 만큼만 뺀다 (7차 점검 ⑪) — 실제 액수는 공용 전환식이 낸다 (제8차 8-⑦).
+     V 식의 인출 항은 요청액이다(원문 확인 전까지 지금 동작 유지). */
+  const flowAmt=r.actual;
   if(flowAmt>0){
-    vr.hist.push({type:r.sign<0?'wd':'add',date:pendingVrCycle.date,amt:+flowAmt.toFixed(6),cyc:newCyc,auto:true,ts:Date.now()});
+    vr.hist.push({type:r.type,date:pendingVrCycle.date,amt:+flowAmt.toFixed(6),cyc:newCyc,auto:true,ts:Date.now()});
   }
   st.startv=+r.nextV.toFixed(6);st.startCyc=newCyc;st.cycStart=pendingVrCycle.date;
   if(!Array.isArray(st.cycLog))st.cycLog=[];
@@ -998,37 +1019,98 @@ async function advancePlanVrCycle(){
   pendingVrCycle=null;
   await saveOperatingState();await cloudSave();await refreshLive();
 }
+/* ── 호가 단위 (제8차 감사 대응 P2-9) ──
+   예약 사다리의 값(상단÷수량 등)은 보통 호가에 딱 떨어지지 않는다 (116.1616… · 84.1584…).
+   주문은 호가 단위로만 나가므로, 엔진도 그 가격으로 판정·체결해야 경계일에 실전과 안 갈린다.
+   예전엔 표는 반올림한 값(116.16)을 보여 주고 엔진은 116.1616 으로 판정했다 — 고가 116.16 인 날
+   실전은 체결, 엔진은 미체결이었다.
+     미국 주식·ETF : 1달러 이상 0.01 · 1달러 미만 0.0001 (Reg NMS 612)
+     국내 ETF      : 2,000원 미만 1원 · 이상 5원 (KRX ETF·ETN 호가가격단위)
+   매도는 올리고 매수는 내린다. 매도 k차는 '그 값 이상이어야 평가금이 상단에 닿는' 가격이고,
+   매수 k차는 '그 값 이하여야 하단 밑' 인 가격이다 — 반올림하면 밴드 안쪽 가격에 주문이 나가
+   상단에 못 닿았는데 파는 체결이 생긴다. 주문표·모의·재생·백테·5년 플랜이 이 값을 같이 쓴다. */
+function vrTick(p, cur){ return cur==='krw' ? (p<2000?1:5) : (p<1?0.0001:0.01); }
+function vrTickUp(p, cur){ const t=vrTick(p,cur); return +(Math.ceil(p/t-1e-9)*t).toFixed(4); }
+function vrTickDn(p, cur){ const t=vrTick(p,cur); return +(Math.floor(p/t+1e-9)*t).toFixed(4); }
+function vrTiers(B, sf, bf, up, dn, limit, fee1, N, cur){
+  const sells=[], buys=[], over=[];
+  if(!(B>=1)) return {sells, buys, over};
+  for(let k=sf+1;k<=Math.min(N,B);k++) sells.push({k, p:vrTickUp(up/(B-k+1), cur)});
+  let used=0, capped=false;
+  for(let k=bf+1;k<=N;k++){
+    const p=vrTickDn(dn/(B+k-1), cur), cost=p*fee1;
+    if(!(p>0)) break;                      // 호가 한 칸보다 싼 차수는 걸 수 없다
+    if(capped||used+cost>limit+1e-9){ capped=true; over.push({k, p, cost}); continue; }
+    buys.push({k, p, cost}); used+=cost;
+  }
+  return {sells, buys, over};
+}
 function vrCycleStart(c){if(c.st.cycStart)return c.st.cycStart;for(let i=c.hist.length-1;i>=0;i--){const x=c.hist[i];if(x.auto&&(x.type==='add'||x.type==='wd'))return x.date;}const f=c.hist.find(x=>x.type==='buy');return f?f.date:null;}
 function vrOrders(sess,price){
   const c=calcVrState(sess),st=c.st,orders=[];if(!(price>0))return {state:c,orders,note:'확정 종가가 없어 계산하지 못했습니다.'};
   if(!(c.V>0)&&!(c.qty>0)){const amt=st.initAmt!=null?+st.initAmt:10000,q=Math.floor(amt/(price*(1+FEE)));if(q>0)orders.push({side:'buy',name:'첫 매수',price,qty:q,tag:'초기'});return {state:c,orders,note:'첫 매수는 수수료 포함 배정금 안에서 계산합니다. 남는 금액은 Pool로 유지하고, 체결 후 V와 20차 예약 사다리가 생성됩니다.'};}
   const N=20,B=Math.floor(c.cycleBaseQty||c.qty),ev=price*c.qty,cap=Math.max(0,c.cycleStartPool*(+st.mode||.5)),remain=Math.max(0,Math.min(c.pool,cap-c.cycleBuySpent));
   if(B>0){
-    for(let k=Math.max(1,c.cycleSellFilled+1);k<=Math.min(N,B);k++){
-      const before=B-k+1,p=c.up/before;orders.push({side:'sell',name:'예약매도 '+k+'차',price:p,qty:1,tag:'예약'});
-    }
-    let used=0;
-    for(let k=Math.max(1,c.cycleBuyFilled+1);k<=N;k++){
-      const before=B+k-1,p=c.lo/before,cost=p*(1+FEE);
-      if(used+cost>remain+1e-9)break;
-      orders.push({side:'buy',name:'예약매수 '+k+'차',price:p,qty:1,tag:'예약'});used+=cost;
-    }
+    /* 차수 목록은 앱·백테와 같은 vrTiers 에서 (호가 단위 값 · 제8차 P2-9) — 여기서 다시 세지 않는다 */
+    const L=vrTiers(B, Math.max(0,c.cycleSellFilled), Math.max(0,c.cycleBuyFilled), c.up, c.lo, remain, 1+FEE, N, 'usd');
+    for(const t of L.sells) orders.push({side:'sell',name:'예약매도 '+t.k+'차',price:t.p,qty:1,tag:'예약'});
+    for(const t of L.buys) orders.push({side:'buy',name:'예약매수 '+t.k+'차',price:t.p,qty:1,tag:'예약'});
   }
   const cs=vrCycleStart(c),due=cs?nextVrDate(cs):null;
   const bandState=ev>c.up?'상단 예약매도 체결구간':(ev<c.lo?'하단 예약매수 체결구간':'밴드 안');
   return {state:c,orders,note:(due?'다음 사이클 기준일 '+due+' · ':'')+bandState+' · 이번 사이클 시작수량 '+B+'주 기준 20차 예약 고정 · 매수한도 '+usd(cap)+' / 사용 '+usd(c.cycleBuySpent)+' / 남음 '+usd(remain)};
 }
+/* ── 시세 정규화 — 앱(index.html)과 글자 그대로 같은 함수들 (제8차 감사 대응 8-⑤) ──
+   예전 플랜은 div=1 없이 받아 j.series(조정종가)·j.ohlc(조정봉)를 그대로 썼다. 앱은 체결가(ohlcTrade)로
+   주문·장부를 세므로, 같은 날 같은 종목인데 플랜 주문표의 확정 종가와 리버스 별지점(직전 5거래일 평균)이
+   배당락이 낀 구간에서 앱과 달랐다. 확정 시각도 달랐다(플랜 16:10 · 앱 16:00+20분).
+   이제 같은 응답(div=1)을 같은 함수(quoteToDaily)로 옮기고, 같은 규칙(settledBars)으로 자른다.
+   회귀가 두 파일의 함수 본문·상수가 한 글자도 안 다른지 본다. 지표(σ·이평)도 앱·백테처럼 체결가 계열을 쓴다. */
+function quoteToDaily(SYM, j){
+  const _mk=rows=>rows.map(d=>({date:d.date,close:+d.close})).filter(d=>d.close>0);
+  const daysAdj=_mk(j.series);
+  const tradeOK=!!((j.priceBasis==='trade') && j.ohlcTrade && j.ohlcTrade.length);
+  const days=tradeOK ? _mk(j.ohlcTrade) : daysAdj;
+  const lastAdj=j.last?{date:j.last.date,close:+j.last.close}:daysAdj[daysAdj.length-1];
+  const last=tradeOK ? days[days.length-1] : lastAdj;
+  /* 현재가는 늘 quote.js 가 준 것을 쓴다 — 국내는 네이버 실시간가라 야후 이력보다 새롭다 */
+  const price=(j.price!=null&&+j.price>0)?+j.price:last.close;
+  return {symbol:SYM,last,days,price,marketState:j.marketState||null,
+          ohlc:(tradeOK?j.ohlcTrade:(j.ohlc||null)),
+          ohlcAdj:j.ohlc||null, daysAdj,
+          dividends:j.dividends||[], raw:j.raw||null,
+          priceBasis:(tradeOK?'trade':(j.priceBasis||null)),
+          intraday:j.intraday||null,currency:j.currency||'USD',src:(j.src||'api')};
+}
+const MKT_CLOSE_MIN={usd:16*60, krw:15*60+30};      // 정규장 마감 (거래소 현지시각)
+const SETTLE_LAG_MIN=20;
+function _exchNow(cur){
+  const tz=(cur==='krw')?'Asia/Seoul':'America/New_York';
+  const P=new Intl.DateTimeFormat('en-CA',{timeZone:tz,year:'numeric',month:'2-digit',day:'2-digit',
+            hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).formatToParts(new Date());
+  const g=k=>(P.find(x=>x.type===k)||{}).value;
+  return {date:`${g('year')}-${g('month')}-${g('day')}`, min:(+g('hour'))*60+(+g('minute'))};
+}
+function simCutoff(cur){
+  const n=_exchNow(cur);
+  if(n.min>=(MKT_CLOSE_MIN[cur==='krw'?'krw':'usd'])+SETTLE_LAG_MIN) return n.date;
+  const y=new Date(n.date+'T00:00:00'); y.setDate(y.getDate()-1);
+  return y.toISOString().slice(0,10);
+}
+function settledBars(rows,cur){ const cut=simCutoff(cur); return (rows||[]).filter(r=>r.date<=cut); }
 async function fetchPlanQuote(symbol){
   const sym=String(symbol||'').toUpperCase();if(liveQuotes[sym])return liveQuotes[sym];
-  const r=await fetch('/api/quote?symbol='+encodeURIComponent(sym)+'&range=max',{headers:{Accept:'application/json'}});
+  const r=await fetch('/api/quote?symbol='+encodeURIComponent(sym)+'&range=max&div=1',{headers:{Accept:'application/json'}});
   if(!r.ok)throw new Error(sym+' 시세 HTTP '+r.status);
   const j=await r.json();if(!(j&&j.series&&j.series.length))throw new Error(sym+' 시세 없음');
-  const rows=j.series.map(x=>({date:x.date,close:+x.close})).filter(x=>x.close>0);
-  const ohlc=Array.isArray(j.ohlc)?j.ohlc:[];
-  const nyParts=new Intl.DateTimeFormat('en-CA',{timeZone:'America/New_York',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hour12:false}).formatToParts(new Date());
-  const pv=Object.fromEntries(nyParts.map(x=>[x.type,x.value])),nyDate=pv.year+'-'+pv.month+'-'+pv.day,nyMin=(+pv.hour)*60+(+pv.minute);
-  let settled=rows[rows.length-1];if(settled&&settled.date===nyDate&&nyMin<16*60+10&&rows.length>1)settled=rows[rows.length-2];
-  return liveQuotes[sym]={symbol:sym,rows,ohlc,settled,marketState:j.marketState||'',price:+j.price||settled.close};
+  return liveQuotes[sym]=planQuoteOf(sym,j);
+}
+/* 응답 한 건 → 플랜이 쓰는 모양. 순수 함수라 앱 lastQuote 와 값으로 맞대 볼 수 있다. */
+function planQuoteOf(sym,j,cur){
+  const q=quoteToDaily(sym,j), rows=q.days, sb=settledBars(rows,cur||'usd');
+  const settled=sb.length?sb[sb.length-1]:rows[rows.length-1];
+  return {symbol:sym,rows,ohlc:q.ohlc||[],settled,priceBasis:q.priceBasis,dividends:q.dividends||[],
+          marketState:q.marketState||'',price:q.price||settled.close};
 }
 function indicatorSeries(a,n){const out=Array(a.length).fill(null);let s=0;for(let i=0;i<a.length;i++){s+=a[i];if(i>=n)s-=a[i-n];if(i>=n-1)out[i]=s/n;}return out;}
 function rsiSeries(a,n=14){const out=Array(a.length).fill(null);let ag=0,al=0;for(let i=1;i<a.length;i++){const z=a[i]-a[i-1],g=Math.max(z,0),l=Math.max(-z,0);if(i<=n){ag+=g;al+=l;if(i===n){ag/=n;al/=n;out[i]=100-100/(1+(al===0?100:ag/al));}}else{ag=(ag*(n-1)+g)/n;al=(al*(n-1)+l)/n;out[i]=100-100/(1+(al===0?100:ag/al));}}return out;}

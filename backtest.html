@@ -320,7 +320,7 @@ td:first-child{text-align:left;}
   <div class="brand">
     <div>
       <div class="logo">Backtest</div>
-      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v2.3.0</span></h1>
+      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v2.4.0</span></h1>
     </div>
   </div>
   <div class="hright">
@@ -510,7 +510,7 @@ document.addEventListener('click',function(e){ var m=document.getElementById('jk
     </div>
     <div class="ctrl s-vr hide"><label>체결 방식 <span style="font-size:9px;color:var(--dim)">앱 매수·매도표와 같게</span></label>
       <div class="seg" id="vrFillSeg">
-        <button data-v="official" class="active" title="사이클 시작 보유수량 기준 상·하단 밴드 예약주문을 매수·매도 각 최대 20차 걸고 2주 동안 유지">공식 예약 사다리</button>
+        <button data-v="ladder20" class="active" title="현재 구현 — 사이클 시작 보유수량 기준 상·하단 밴드 예약주문을 매수·매도 각 최대 20차(1주씩) 걸고 2주 동안 유지. 라오어 원문의 주문표 산식은 아직 확인하지 못했습니다 (공식 아님).">20차 예약 사다리 · 원전 확인 필요</button>
         <button data-v="close" title="비교용 보수 모델 — 2주에 한 번 그날 종가만 보고 조정하며 장중 예약체결은 반영하지 않음">종가 리밸런싱(비교)</button>
       </div>
     </div>
@@ -1648,7 +1648,7 @@ let imTgtDyn=false;  // 익절 동적 조절 (20일 상승률) — 기본 OFF
    걸어두고 2주 방치, 그날 고가·저가에 닿은 차수만 1주씩 체결된다.
    'close' = 예전 백테 방식 — 2주에 한 번 그날 종가만 보고 평가금을 V로 되맞춘다.
    운영 앱은 처음부터 예약주문이었다(vrSimForward). 백테만 종가 하나를 보고 있었다. */
-let vrFill='official';   // 기본 = 사이클 시작 시 고정한 20차 예약 사다리. 'close'는 비교용 종가 모델
+let vrFill='ladder20';   // 기본 = 사이클 시작 시 고정한 20차 예약 사다리 (현재 구현 · 원전 확인 필요). 'close'는 비교용 종가 모델
 
 /* 라오어 문서 공식 익절%는 종목별로 다르다 — TQQQ 15 · SOXL 20 (문서 미수록 종목은 20).
    운영 index.html 의 IM_OFFICIAL 과 같은 값이어야 한다. 한쪽만 고치면 같은 종목·같은 설정인데
@@ -2061,6 +2061,28 @@ function noteVrCycAssumed(results){
   const w=document.getElementById('winner'); if(!w) return; w.style.display='';
   w.innerHTML=(w.innerHTML?w.innerHTML+' ':'')
     +'<span style="color:var(--gold);font-size:12px">⚠ 사이클 기준일이 없어 첫 거래일을 기준으로 잡았습니다 — 이어받기라면 \'사이클 기준일\'을 넣으세요</span>';
+}
+/* 같은 봉에서 상·하단 예약이 둘 다 닿은 날 (제8차 감사 대응 P2-10).
+   일봉만으로는 고가·저가 중 무엇이 먼저였는지 모른다 — 그날은 순서가 가정이다 (기본 매도 먼저:
+   판 돈이 그날 매수 재원). 그런 날이 있으면 매수 먼저로도 한 번 더 돌려 최종액 차이를 같이 적는다.
+   숫자가 순서 가정에 얼마나 기대는지 화면에서 바로 보이게 한다. */
+function noteVrBothTouch(results, rerun){
+  const w=document.getElementById('winner'); if(!w) return;
+  const parts=[];
+  for(const [t,r] of Object.entries(results||{})){
+    const res=r&&r.res; if(!res||res.bothDays==null) continue;
+    let s=`${t} ${res.bothDays}일`;
+    if(res.bothDays>0 && typeof rerun==='function'){
+      const alt=rerun(t);
+      if(alt && alt.final>0 && res.final>0){ const d=(alt.final/res.final-1)*100;
+        s+=` (매수 먼저면 최종 ${fmtV(alt.final,t)} · ${d>=0?'+':''}${d.toFixed(2)}%)`; }
+    }
+    parts.push(s);
+  }
+  if(!parts.length) return;
+  w.style.display='';
+  w.innerHTML=(w.innerHTML?w.innerHTML+' ':'')
+    +`<span style="color:var(--dim);font-size:12px">양방향 터치 ${parts.join(' · ')} — 같은 일봉에서 상·하단 예약이 둘 다 닿은 날은 체결 순서를 알 수 없어 매도 먼저로 가정했습니다</span>`;
 }
 function noteSkipped(skip){
   if(!skip.length) return;
@@ -2998,6 +3020,29 @@ function vrCycleCount(days){
     if(hit) n++; }
   return n;
 }
+/* ── VR 사이클 전환 — 다음 V · 다음 Pool · 실제 적립/인출 (제8차 감사 대응 8-②·8-⑦) ──
+   운영 미리보기(computeNextV)·운영 진입(enterNextCycle·vrStepCycle)·과거재생(vrReplay)·
+   백테(runVR)·5년 플랜(calcPlanNextV)이 이 함수의 결과만 쓴다. index·backtest·plan 에
+   글자 그대로 같은 본문이 있고, 회귀가 셋이 한 글자도 안 다른지 본다.
+   예전엔 V 식을 네 곳이 따로 적었다. 7차 ⑪ 에서 '인출은 Pool 안에서만' 을 고칠 때 미리보기만
+   빠져 화면의 다음 Pool 이 실제 진입 결과와 달랐다 (Pool 1.10 · 인출 50 → 미리보기 −48.90, 실제 0).
+     입력  V 이번 사이클 V · pool 사이클 끝 Pool(적립/인출 전) · ev 사이클 끝 평가금
+           G · mode (0.75 적립 · 0.5 거치 · 0.25 인출) · add 요청 적립/인출액 · formula 'basic'|'skill'
+     출력  nextV(0 이상) · nextPool · requested 요청액 · actual 실제 적립/인출액
+           sign(+1 적립 · −1 인출) · type('add'|'wd'|null) · corr 실력공식 보정항 · raw 자르기 전 V
+   인출은 Pool 안에서만 나간다 — actual = min(요청, Pool). 적립은 요청액 전부.
+   V 식의 적립/인출 항은 '요청액' 이다. 요청이 Pool 을 넘을 때 원문(라오어)이 V 식에 무엇을
+   넣는지는 확인하지 못했다 — 지금까지의 동작(요청액)을 그대로 두고 원문 확인 전까지 바꾸지 않는다. */
+function vrCycleTransition(V, pool, ev, G, mode, add, formula){
+  const isAccum=(+mode===0.75), isWd=(+mode===0.25);
+  const requested=(isAccum||isWd)?Math.max(0,+add||0):0;
+  const sign=isWd?-1:1;
+  const actual=isWd?Math.max(0,Math.min(requested,pool)):requested;
+  const corr=(formula==='skill'&&V>0)?(ev-V)/(2*Math.sqrt(G)):0;
+  const raw=V+pool/G+corr+sign*requested;
+  return {nextV:Math.max(0,raw), raw, nextPool:pool+sign*actual, requested, actual, sign, corr,
+          type:requested>0?(isWd?'wd':'add'):null};
+}
 /* ════ VR 주문 체결 엔진 — 사이클 고정 20차 · 1주 예약 사다리 ════
    운영 주문표·모의·과거재생·백테·5년 플랜이 모두 이 한 가지 모델로 돈다 (#236 이후).
      상단 up = V×(1+밴드) · 하단 dn = V×(1−밴드)
@@ -3009,6 +3054,10 @@ function vrCycleCount(days){
    평가금으로 보면 '밴드를 벗어난 만큼만' 거래한다 — 상단을 넘으면 1주씩 팔아 평가금을 상단에
    붙이고, 하단 아래면 1주씩 사서 하단에 붙인다. V 까지 한 번에 되돌리지 않는다.
 
+   ⚠ 원전 확인 필요 — '공식' 이 아니다 (제8차 감사 대응 8-①). 예전엔 이 모델을 'official' ·
+     '공식 예약 사다리' 라고 불렀는데 근거가 없었다. 지금 이름은 '20차 예약 사다리 (현재 구현)' 다.
+     라오어 원문(책·카페)의 주문표 산식은 아직 대조하지 못했다. 'V 복귀' 쪽 문장도 비공식 해설
+     사이트(quantstack — 원저작자와 무관하다고 스스로 밝힌다)의 요약일 뿐 원문 인용이 아니다.
    ⚠ 원문 확인 대기 (7차 점검) — 5차 감사 때 'V 복귀'(한 번에 V 까지 되돌리는 수량) 해석으로
      바꿨다가(#235) #236 에서 이 사다리로 되돌렸다. 두 해석 중 어느 쪽이 라오어 원문인지는
      아직 원문으로 대조하지 못했다. 예전 이 자리 주석은 'V 복귀가 공식, 사다리는 커스텀' 이라고
@@ -3018,7 +3067,7 @@ function vrCycleCount(days){
    S: {shares, pool, avg, V} — 이 객체를 직접 고친다 (부르는 쪽이 결과를 받아 간다)
    P: {band, poolLimit, budgetRemaining, FEE, baseShares, sellFilled, buyFilled, maxTiers}
    반환: [{type:'sell'|'buy', price, qty, net|cost}] — net·cost 는 그 체결 '전체' 금액 */
-const VR_MODEL_DEFAULT='official';
+const VR_MODEL_DEFAULT='ladder20';
 function vrModelOf(st){ return VR_MODEL_DEFAULT; }
 /* 사이클 사다리 — 이번 사이클에 걸어 둘 매도·매수 차수 (7차 점검 ⑫).
    주문표(renderVrTable)·체결 엔진(vrOrderPlan)이 이 한 곳에서 차수를 받는다 — 예전엔 둘이
@@ -3027,14 +3076,29 @@ function vrModelOf(st){ return VR_MODEL_DEFAULT; }
      B       사이클 시작 보유수량 · sf/bf 이미 체결한 매도/매수 차수 · N 최대 차수(20)
      매도 k차 = up ÷ (B−k+1)   (k ≤ min(N,B))
      매수 k차 = dn ÷ (B+k−1)   — 앞 차수부터 한도(limit)를 쓰고, 넘는 차수에서 멈춘다
-   over 는 한도 밖으로 밀려난 매수 차수다 (표에 '한도 밖' 으로 보여 주기만 한다). */
-function vrTiers(B, sf, bf, up, dn, limit, fee1, N){
+   over 는 한도 밖으로 밀려난 매수 차수다 (표에 '한도 밖' 으로 보여 주기만 한다).
+   가격은 호가 단위로 맞춘 값이다 (vrTickUp·vrTickDn — 제8차 P2-9). */
+/* ── 호가 단위 (제8차 감사 대응 P2-9) ──
+   예약 사다리의 값(상단÷수량 등)은 보통 호가에 딱 떨어지지 않는다 (116.1616… · 84.1584…).
+   주문은 호가 단위로만 나가므로, 엔진도 그 가격으로 판정·체결해야 경계일에 실전과 안 갈린다.
+   예전엔 표는 반올림한 값(116.16)을 보여 주고 엔진은 116.1616 으로 판정했다 — 고가 116.16 인 날
+   실전은 체결, 엔진은 미체결이었다.
+     미국 주식·ETF : 1달러 이상 0.01 · 1달러 미만 0.0001 (Reg NMS 612)
+     국내 ETF      : 2,000원 미만 1원 · 이상 5원 (KRX ETF·ETN 호가가격단위)
+   매도는 올리고 매수는 내린다. 매도 k차는 '그 값 이상이어야 평가금이 상단에 닿는' 가격이고,
+   매수 k차는 '그 값 이하여야 하단 밑' 인 가격이다 — 반올림하면 밴드 안쪽 가격에 주문이 나가
+   상단에 못 닿았는데 파는 체결이 생긴다. 주문표·모의·재생·백테·5년 플랜이 이 값을 같이 쓴다. */
+function vrTick(p, cur){ return cur==='krw' ? (p<2000?1:5) : (p<1?0.0001:0.01); }
+function vrTickUp(p, cur){ const t=vrTick(p,cur); return +(Math.ceil(p/t-1e-9)*t).toFixed(4); }
+function vrTickDn(p, cur){ const t=vrTick(p,cur); return +(Math.floor(p/t+1e-9)*t).toFixed(4); }
+function vrTiers(B, sf, bf, up, dn, limit, fee1, N, cur){
   const sells=[], buys=[], over=[];
   if(!(B>=1)) return {sells, buys, over};
-  for(let k=sf+1;k<=Math.min(N,B);k++) sells.push({k, p:up/(B-k+1)});
+  for(let k=sf+1;k<=Math.min(N,B);k++) sells.push({k, p:vrTickUp(up/(B-k+1), cur)});
   let used=0, capped=false;
   for(let k=bf+1;k<=N;k++){
-    const p=dn/(B+k-1), cost=p*fee1;
+    const p=vrTickDn(dn/(B+k-1), cur), cost=p*fee1;
+    if(!(p>0)) break;                      // 호가 한 칸보다 싼 차수는 걸 수 없다
     if(capped||used+cost>limit+1e-9){ capped=true; over.push({k, p, cost}); continue; }
     buys.push({k, p, cost}); used+=cost;
   }
@@ -3052,9 +3116,14 @@ function vrOrderPlan(S, P, bar){
   const _sell=(p,qty)=>{if(!(qty>=1)||S.shares+1e-9<qty)return;const net=p*(1-FEE)*qty;S.shares-=qty;S.pool+=net;out.push({type:'sell',price:p,qty,net});};
   const _buy=(p,qty)=>{if(!(qty>=1))return;const cost=p*fee1*qty;if(cost>S.pool+1e-9)return;S.avg=(S.shares<=0)?p:(S.shares*S.avg+p*qty)/(S.shares+qty);S.shares+=qty;S.pool-=cost;out.push({type:'buy',price:p,qty,cost});};
   if(B<1)return out;
-  const L=vrTiers(B, sf, bf, up, dn, budget, fee1, N);      // 걸어 둔 차수 — 주문표와 같은 목록
-  for(const t of L.sells){ if(!(hi>=t.p))break; _sell(t.p,1); }
-  for(const t of L.buys){ if(!(lo<=t.p))break; if(t.cost>S.pool+1e-9)break; _buy(t.p,1); }
+  const L=vrTiers(B, sf, bf, up, dn, budget, fee1, N, P.cur);   // 걸어 둔 차수 — 주문표와 같은 목록 (호가 단위 값)
+  /* 같은 봉에서 상·하단 차수가 둘 다 닿았는가 (제8차 P2-10). 일봉만으로는 고가·저가 중 무엇이
+     먼저였는지 모른다 — 그날은 순서가 가정이다. 기본은 매도 먼저(판 돈이 그날 매수 재원),
+     P.order==='buy-first' 면 매수 먼저 (백테 민감도 비교용). 부르는 쪽이 out.both 로 그날을 센다. */
+  out.both=!!(L.sells.length && hi>=L.sells[0].p && L.buys.length && lo<=L.buys[0].p);
+  const doSell=()=>{ for(const t of L.sells){ if(!(hi>=t.p))break; _sell(t.p,1); } };
+  const doBuy=()=>{ for(const t of L.buys){ if(!(lo<=t.p))break; if(t.cost>S.pool+1e-9)break; _buy(t.p,1); } };
+  if(P.order==='buy-first'){ doBuy(); doSell(); } else { doSell(); doBuy(); }
   return out;
 }
 function runVR(days,tkr,params){
@@ -3067,6 +3136,9 @@ function runVR(days,tkr,params){
   const _vmode = (params && params.model) || (params && params.fill) || (typeof vrFill!=='undefined'?vrFill:VR_MODEL_DEFAULT);
   const LADDER = _vmode !== 'close';          // 'close' 만 사이클 종가 리밸런싱, 나머지는 예약주문 체결
   const isAccum=mode===0.75, isWd=mode===0.25, isLump=!isAccum;
+  const _vcur=isKRW(tkr)?'krw':'usd';          // 사다리 호가 단위 (제8차 P2-9)
+  const _vorder=(params&&params.order)==='buy-first'?'buy-first':'sell-first';   // 같은 봉 양방향 터치일의 순서 가정 (P2-10)
+  let bothDays=0;                              // 같은 봉에서 상·하단 차수가 둘 다 닿은 날 수
   let shares=0,pool=startPool||0,V=startV||0,inv=startPool||0,totalWd=0,rebal=0,buys=0,sells=0;
   // ── 비용·세금 (costOn=false면 전부 0 — 기존 산술과 완전 동일) · 규약은 무매·200일선과 같음 ──
   //   수수료 0.25% 매수·매도 각 · 양도세 22%(연 250만원 공제, 실현손익만) · 리밸런싱=종가 체결이라 슬리피지 없음
@@ -3147,8 +3219,9 @@ function runVR(days,tkr,params){
     const St={shares:Math.floor(shares+1e-9), pool, avg, V};
     const fills=vrOrderPlan(St, {band, poolLimit,
         budgetRemaining:Math.max(0,cycPoolBase*poolLimit-cycBuySpent),FEE,
-        baseShares:cycBaseShares,sellFilled:cycSellFilled,buyFilled:cycBuyFilled,maxTiers:20},
+        baseShares:cycBaseShares,sellFilled:cycSellFilled,buyFilled:cycBuyFilled,maxTiers:20,cur:_vcur,order:_vorder},
       {date:'',high:hi,low:lo2,close:(cl>0?cl:hi)});
+    if(fills.both) bothDays++;
     for(const f of fills){
       if(f.type==='sell'){ pool+=_vsellQ(f.qty, f.price); cycSellFilled+=f.qty; sells++; }
       else { pool-=_vbuyQ(f.qty, f.price); cycBuySpent+=f.cost; cycBuyFilled+=f.qty; buys++; }
@@ -3180,13 +3253,11 @@ function runVR(days,tkr,params){
 
     // 그 다음 장 마감 기준으로 새 사이클을 만든다. 새 사다리는 내일부터.
     if(isCyc && !first){
-      const cv=shares*c;
-      const addCycle=isAccum?contrib:isWd?-withdraw:0;
-      if(formula==='skill'&&V>0) V=V+pool/G+(cv-V)/(2*Math.sqrt(G))+addCycle;
-      else V=V+pool/G+addCycle;
-      V=Math.max(V,0);
-      if(isAccum){pool+=contrib;inv+=contrib;cf.push([d,contrib]);}
-      else if(isWd){const wd=Math.min(withdraw,pool);pool-=wd;totalWd+=wd;}
+      /* 다음 V·Pool·실제 적립/인출은 공용 전환식 한 곳에서 (제8차 감사 대응 8-⑦) */
+      const TR=vrCycleTransition(V, pool, shares*c, G, mode, isAccum?contrib:isWd?withdraw:0, formula);
+      V=TR.nextV;
+      if(isAccum){pool=TR.nextPool;inv+=TR.actual;cf.push([d,TR.actual]);}
+      else if(isWd){pool=TR.nextPool;totalWd+=TR.actual;}
       /* 새 사이클의 한도 기준 Pool은 적립/인출을 반영한 직후 금액이다. */
       cycPoolBase=pool;cycBuySpent=0;cycBaseShares=Math.floor(shares+1e-9);cycSellFilled=0;cycBuyFilled=0;
       if(LADDER){ rebal++; }
@@ -3206,7 +3277,7 @@ function runVR(days,tkr,params){
   const calYrs=(new Date(days[days.length-1])-new Date(days[0]))/(365.25*864e5);
   return {invested:inv,final:fin,pool,shares,sharesVal:shares*lc,rebal,buys,sells,trades:buys+sells,totalWd,
     ret:inv>0?(fin/inv-1)*100:0,yrs:Math.max(calYrs,0.1),snap,cf,tkr,mdd:mdd*100,fees:feesTotal,tax:taxTotal,
-    V,cycStartAssumed};
+    V,cycStartAssumed,bothDays,order:_vorder};
 }
 
 // ──── 비교/지표 헬퍼 ────
@@ -3769,31 +3840,43 @@ function runIVS(days,tkr,cap,s0,N,band,costOn,mode,pair){
 // 원금은 항상 cap(1$만)으로 정규화 — 전략별 절대 적립금·거치금은 비교 위해 cap 기준으로 환산.
 function _stratSeg(id,def){ if(typeof document==='undefined')return def; const b=document.querySelector('#'+id+' button.active'); return b?String(Object.values(b.dataset)[0]):def; }
 function _stratNum(id,def){ if(typeof document==='undefined')return def; const el=document.getElementById(id); const v=el?+el.value:NaN; return isFinite(v)&&v>0?v:def; }
-/* 공식 V4.0 인가, 변형인가.
-   라오어 문서에 실린 건 TQQQ·SOXL 두 종목이고, 나머지 파라미터에도 문서값이 있다.
-   그 중 하나라도 벗어나면 결과를 '공식 V4.0' 이라고 부르면 안 된다 —
-   같은 이름으로 보이면 사용자가 실험 결과를 문서 결과로 읽는다.
-   리버스는 기본이 꺼져 있는데(백테상 20분할에서 불리) 문서에는 들어 있는 규칙이라,
-   꺼진 상태도 변형으로 센다. */
-function imVariant(tkrs){
-  const v=[];
-  const list=[].concat(tkrs||[]).filter(Boolean);
+/* V4.0 공식인가, 변형(CUSTOM)인가 — 설정 한 벌을 받아 문서에서 벗어난 이유를 돌려준다
+   (제8차 감사 대응 P2-11). index·backtest 에 글자 그대로 같은 본문이 있다 — 앱 주문표의
+   'V4.0 공식 / 변형' 표시와 백테 결과 제목의 'V4.0 변형' 표시가 같은 기준이어야 한다.
+   빈 목록이면 공식, 아니면 변형이다. 백테에서 더 좋았다는 이유로 고른 값도 변형이다 —
+   예: 리버스 OFF(문서의 V4.0 일반모드는 '소진 → 리버스'), 하방 추가 LOC(문서에 없는 주문).
+     cfg: {tickers, div, reverse, revGap, target, tgtDyn, engine, big, rowsOn}
+     target 0·없음 = 종목별 문서값(TQQQ 15 · SOXL 20). big 없음 = 기본 15. */
+function imVariantOf(cfg){
+  const v=[], list=[].concat(cfg.tickers||[]).filter(Boolean), div=+cfg.div||20;
   if(list.length && list.some(t=>!IM_OFFICIAL[t])) v.push('비공식 종목(익절 20%는 확장값)');
   /* 분할수의 근거를 갈라 적는다.
        20·40 — 별% base·기울기·리버스 규칙이 전부 문서에 있다
        30     — 일반모드 분할로는 나오지만 별% 값이 20·40처럼 명시 확인되지 않았다 → 일반화식 추정
        10     — 공식 규칙 자체가 문서에 없다 → 실험 */
-  if(typeof imDiv!=='undefined'){
-    if(+imDiv===10) v.push('10분할(공식 규칙 미수록 · 실험)');
-    else if(+imDiv===30) v.push('30분할(별% 일반화식 · 추정)');
-  }
-  if(typeof imDiv!=='undefined' && !revSupported(imDiv)) v.push('리버스 미적용(그 분할 규칙 미수록)');
-  else if(typeof imReverse!=='undefined' && !imReverse) v.push('리버스 OFF');
-  else if(typeof imRevGap!=='undefined') v.push('리버스 gap '+imRevGap+'%(출처 미확인 · 사용자 설정)');
-  if(typeof imTarget!=='undefined' && imTarget>0) v.push('익절 '+imTarget+'% 고정');
-  if(typeof imTgtDyn!=='undefined' && imTgtDyn) v.push('익절 조절 ON');
-  if(typeof imEngine!=='undefined' && imEngine!=='v40') v.push('엔진 '+imEngine.toUpperCase());
+  if(div===10) v.push('10분할(공식 규칙 미수록 · 실험)');
+  else if(div===30) v.push('30분할(별% 일반화식 · 추정)');
+  if(!revSupported(div)) v.push('리버스 미적용(그 분할 규칙 미수록)');
+  else if(!cfg.reverse) v.push('리버스 OFF');
+  else if(+cfg.revGap>0) v.push('리버스 gap '+(+cfg.revGap)+'%(출처 미확인 · 사용자 설정)');
+  if(+cfg.target>0 && list.some(t=>+cfg.target!==(IM_OFFICIAL[t]||20))) v.push('익절 '+(+cfg.target)+'% 고정');
+  if(cfg.tgtDyn) v.push('익절 조절 ON');
+  if(cfg.engine && cfg.engine!=='v40') v.push('엔진 '+String(cfg.engine).toUpperCase());
+  if(cfg.big!=null && +cfg.big>0 && +cfg.big!==IM_BIG_DEFAULT) v.push('큰수 '+(+cfg.big)+'%');
+  if(cfg.rowsOn) v.push('하방 LOC 추가(CUSTOM · 백테스트/모의 미반영)');
   return v;
+}
+/* 공식 V4.0 인가, 변형인가 — 백테 화면의 현재 선택을 모아 공용 판정(imVariantOf)에 넘긴다.
+   라오어 문서에 실린 건 TQQQ·SOXL 두 종목이고, 나머지 파라미터에도 문서값이 있다.
+   그 중 하나라도 벗어나면 결과를 '공식 V4.0' 이라고 부르면 안 된다 —
+   같은 이름으로 보이면 사용자가 실험 결과를 문서 결과로 읽는다.
+   예전엔 리버스 gap 이 '정의돼 있기만 하면' 변형으로 셌다 — 공식 프리셋(gap 0 = 별지점−$0.01)을
+   눌러도 제목이 'V4.0 변형 (리버스 gap 0%)' 이었다 (제8차 P2-11). 이제 gap>0 일 때만 변형이다. */
+function imVariant(tkrs){
+  return imVariantOf({tickers:tkrs, div:(typeof imDiv!=='undefined'?imDiv:20),
+    reverse:(typeof imReverse!=='undefined'&&imReverse), revGap:(typeof imRevGap!=='undefined'?imRevGap:0),
+    target:(typeof imTarget!=='undefined'?imTarget:0), tgtDyn:(typeof imTgtDyn!=='undefined'&&imTgtDyn),
+    engine:(typeof imEngine!=='undefined'?imEngine:'v40')});
 }
 function imVariantTag(tkrs){
   const v=imVariant(tkrs);
@@ -3857,6 +3940,12 @@ function _runOneStrat(key,tkr,cap,days,costOn){
     default:     return runBH(days,tkr,cap,costOn);   // 'bh'
   }
 }
+/* VR 체결 모델의 이름 — 화면 세 곳(결과 제목·상세 제목·전체비교 머리글)이 이 한 곳을 읽는다.
+   예전엔 세 곳이 각자 '공식 V복귀' 라고 적었다 — 엔진은 20차 사다리를 도는데 제목은 V 복귀였고,
+   어느 쪽도 원문으로 확인된 '공식' 이 아니다 (제8차 감사 대응 8-①). */
+function vrFillLabel(){
+  return (typeof vrFill!=='undefined' && vrFill==='close') ? '종가 리밸런싱(비교)' : '20차 예약 사다리(현재 구현 · 원전 확인 필요)';
+}
 // 전체비교 헤더용: 현재 각 탭 옵션 요약 문자열
 function comboOpts(mode){
   const ml=(typeof maLen!=='undefined'?maLen:200);
@@ -3864,7 +3953,7 @@ function comboOpts(mode){
   const maParkTxt=(_mo.park==='bill')?'국채대피':'현금대피';
   const maTxt=`${ml}일선·${maCondTxt(_mo.buy,_mo.sell)}·${maParkTxt}`;
   const vG=_stratNum('vrG',10), vB=_stratNum('vrBand',15), vF={basic:'기본공식',skill:'실력공식(실험적 확장 · 원전 미확인)'}[_stratSeg('vrFormula','basic')]||'기본공식';
-  const vFill=(typeof vrFill==='undefined')?'공식':(vrFill==='close'?'종가':(vrFill==='ladder'?'커스텀 사다리':'공식'));
+  const vFill=vrFillLabel();
   if(mode==='dca'){
     const dipTxt=(typeof dcaDipMul!=='undefined'&&dcaDipMul>1)?`·하락시${dcaDipMul}배`:'';
     const freq={daily:'매일',weekly:'매주',monthly:'매월'}[(typeof dcaFreq!=='undefined'?dcaFreq:'daily')]||'매일';
@@ -4288,6 +4377,7 @@ async function run(){
     renderMultiStrat('vr',results,{contribUSD,G,band,mode,formula,initAmt,withdraw,startV,startPool,cycStart});
     noteSkipped(vrSkip);
     noteVrCycAssumed(results);
+    noteVrBothTouch(results, t=>runVR(commonD,t,{contrib:contribUSD,G,bandPct:band,mode,formula,initAmt,withdraw,startV,startPool,cycStart,costOn:vrCostOn,order:'buy-first'}));
   }
 }
 
@@ -4460,7 +4550,7 @@ function renderMultiStrat(type, results, params){
   document.querySelector('.tbl-wrap').classList.remove('hide');
   const stratName=type==='im'?('무한매수법 '+(imEngine==='v22'?'V2.2':imEngine==='v30'?'V3.0':imEngine==='v50'?('V5.0('+imShortMA+'일·하락'+imLoPct+'%)'):'V4.0')+' · 익절 '+imTgtTxt()+imVariantTag(tickers)+(imEngine==='v40'&&imReverse?' · 리버스ON':'')+(imTgtDyn?' · 익절조절(20일상승률)':'')+(imCostOn?' · 비용반영':''))
     :type==='ma'?(maStratName(maLen)+(maCostOn?' · 비용반영':''))
-    :('VR 5.0 · '+(vrFill==='close'?'종가 리밸런싱':vrFill==='ladder'?'커스텀 1주 사다리':'공식 V복귀')+(vrCostOn?' · 비용반영':''));
+    :('VR 5.0 · '+vrFillLabel()+(vrCostOn?' · 비용반영':''));
   const pct=x=>(x>=0?'+':'')+x.toFixed(1)+'%';
   const money=(x,t)=>fmtV(x,t||tickers[0]);
 
@@ -4646,7 +4736,7 @@ function renderSingle2(type,r,days){
   const m=META[r.tkr];
   const stratName = type==='im' ? ('무한매수법 '+(imEngine==='v22'?'V2.2':imEngine==='v30'?'V3.0':imEngine==='v50'?('V5.0('+imShortMA+'일)'):'V4.0')
                                    +(r.tgt!=null?' · 익절 '+r.tgt+'%':'')+imVariantTag([r.tkr])) : type==='ma' ? maStratName(r.maLen)
-                   : ('VR 5.0 · '+(vrFill==='close'?'종가 리밸런싱':vrFill==='ladder'?'커스텀 1주 사다리':'공식 V복귀'));
+                   : ('VR 5.0 · '+vrFillLabel());
   const stratShort = type==='im' ? '무한매수법' : type==='ma' ? ((r.maLen||200)+'일선') : 'VR 5.0';
 
   // ── yrs: 실제 날짜 구간 기반 (days.length/252는 월간 데이터 시 오차 큼)

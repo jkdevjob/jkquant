@@ -529,7 +529,7 @@ try{ if(localStorage.getItem('qcockpit_hadUser')==='1') document.documentElement
 </div>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.85.2</span></h1></div>
+    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.86.0</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -707,7 +707,7 @@ document.addEventListener('click',function(e){ var m=document.getElementById('jk
           · <b>쿼터매도 · 매수</b> — LOC라 <b>종가</b>가 조건을 만족하면 종가로 체결<br>
           분봉은 필요 없습니다. 지정가 판정에 쓰이는 건 일봉의 고가뿐입니다.<br>
           모의 세션은 <b>탭을 열 때 자동으로</b> 돌아갑니다. 실계좌 세션은 건드리지 않습니다.
-          별지점 5일평균은 전일까지만 씁니다. 하방 추가 LOC는 판정에서 뺍니다.</p>
+          별지점 5일평균은 전일까지만 씁니다. 하방 추가 LOC(CUSTOM)는 판정에서 뺍니다 — 모의·백테 미반영입니다.</p>
       </div>
     </div>
     <div class="block" id="inf-anal">
@@ -1623,7 +1623,7 @@ document.addEventListener('click',function(e){ var m=document.getElementById('jk
   <footer>
     <strong>JK 퀀트</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.85.2</b> · 2026-09-23</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.86.0</b> · 2026-09-23</div>
   </footer>
 </div>
 
@@ -1665,12 +1665,14 @@ document.addEventListener('click',function(e){ var m=document.getElementById('jk
     <div class="field"><label>목표 수익률 (%) <span class="hint" id="target_hint">별%·지정가매도</span></label><input id="set_target" type="number" inputmode="decimal" value="20"></div>
     <div class="field"><label>큰수 % <span class="hint">LOC 주문가 상한 — 공식 검증 기준 +15%</span></label><input id="set_big" type="number" inputmode="decimal" value="15" min="0" max="40"></div>
     <div class="field"><label id="set_principal_lbl" data-tk="set_ticker_in">원금 ($)</label><input id="set_principal" type="text" inputmode="decimal" value="10000" oninput="commaInput(this)"></div>
-    <div class="rowline" style="border:none;padding:10px 0 6px"><span class="k" style="font-weight:700">하방 LOC 매수 <span style="color:var(--faint);font-weight:400;font-size:11px">급락 대비 추가매수</span></span>
+    <!-- 리버스 gap 은 하방 LOC 와 상관없다 — 예전엔 아래 rows_fields 안에 있어서 하방 LOC 를 꺼 두면 같이 잠겼다 -->
+    <div class="field"><label>리버스 쿼터매수 gap % <span class="hint">0 = 공식(별지점 −$0.01) · 0보다 크면 변형</span></label><input id="set_revgap" type="number" inputmode="decimal" value="0"></div>
+    <div class="rowline" style="border:none;padding:10px 0 6px"><span class="k" style="font-weight:700">하방 LOC 매수 <span style="color:var(--gold);font-weight:700;font-size:11px">CUSTOM</span> <span style="color:var(--faint);font-weight:400;font-size:11px">급락 대비 추가매수</span></span>
       <label class="switch"><input type="checkbox" id="set_rows_on" onchange="toggleRowsField()"><span class="sl2"></span></label></div>
+    <p class="note" style="margin:-2px 0 8px"><b>백테스트/모의 미반영 CUSTOM 주문</b>입니다 (제8차 감사 대응). 라오어 원문에 없는 보조 주문이라 체결돼도 T를 어떻게 바꿀지 규칙이 없고, 모의투자·백테스트 성과에는 들어가지 않습니다. 켜고 운용하면 백테 숫자는 그 운용의 성과가 아닙니다.</p>
     <div class="grid2" id="rows_fields">
       <div class="field"><label>하방 LOC 줄</label><input id="set_rows" type="number" inputmode="numeric" value="8"></div>
       <div class="field"><label>줄 간격 %</label><input id="set_gap" type="number" inputmode="decimal" value="2.5"></div>
-      <div class="field"><label>리버스 쿼터매수 gap % <span class="hint">별지점 아래 몇 % · 백테와 같은 값</span></label><input id="set_revgap" type="number" inputmode="decimal" value="2.5"></div>
     </div>
   </div>
   <div id="set_vr" style="display:none">
@@ -1679,7 +1681,7 @@ document.addEventListener('click',function(e){ var m=document.getElementById('jk
     <div class="seclabel">운용 모드</div><div class="seg" id="set_vmode"><button data-v="0.75">적립식</button><button data-v="0.5">거치식</button><button data-v="0.25">인출식</button></div>
     <div class="seclabel">체결 모델 <span class="hint" style="color:var(--faint);font-weight:500">밴드를 벗어났을 때 얼마나 움직이나</span></div>
     <div class="seg" id="set_vmodel">
-      <button data-v="official" title="VR 예약주문 — 사이클 시작 보유수량 기준으로 상·하단 밴드 경계에 1주씩 최대 20차를 걸고 2주 동안 유지">공식 예약 사다리</button>
+      <button data-v="ladder20" title="현재 구현 — 사이클 시작 보유수량 기준으로 상·하단 밴드 경계에 1주씩 최대 20차를 걸고 2주 동안 유지. 라오어 원문의 주문표 산식은 아직 확인하지 못했습니다 (공식 아님).">20차 예약 사다리 · 원전 확인 필요</button>
     </div>
     <div class="seclabel">V 갱신 공식</div><div class="seg" id="set_vformula"><button data-v="basic">기본공식</button><button data-v="skill">실력(실험적)</button></div>
     <div class="seclabel">사이클 진입 <span class="hint" style="color:var(--faint);font-weight:500">V 갱신·적립을 누가 하나</span></div><div class="seg" id="set_vauto"><button data-v="0">직접 확인</button><button data-v="1">자동 진입</button></div>
@@ -2098,7 +2100,7 @@ function forceV40(){
   }catch(e){}
 }
 function toggleRowsField(){const on=$('set_rows_on')&&$('set_rows_on').checked;const f=$('rows_fields');if(f){f.style.opacity=on?'1':'0.4';f.style.pointerEvents=on?'auto':'none';}}
-function defVrSettings(){return{ticker:'TQQQ',mode:0.75,formula:'basic',g:10,initAmt:10000,add:100,band:15,startv:0,startpool:0,autoCyc:false,vrModel:'official',divmode:'reinv'}}
+function defVrSettings(){return{ticker:'TQQQ',mode:0.75,formula:'basic',g:10,initAmt:10000,add:100,band:15,startv:0,startpool:0,autoCyc:false,vrModel:'ladder20',divmode:'reinv'}}
 function uid(){return 's'+Date.now()+Math.floor(Math.random()*9999)}
 function newInfSession(name){return{id:uid(),name:name||'세션 1',settings:defInfSettings(),hist:[]}}
 function newVrSession(name){return{id:uid(),name:name||'세션 1',settings:defVrSettings(),hist:[]}}
@@ -2251,7 +2253,7 @@ function computeInf(){
      T로 매번 재판정하지 않는 이유는 그대로다 — 첫 MOC매도로 T가 분할−1 밑으로
      떨어져 리버스가 즉시 풀려 버리므로 상태로 들고 간다. */
   let revState='NORMAL';
-  const revEnter=()=>{ if(st.reverse===true && revSupported(st.div) && revState==='NORMAL' && qty>1e-9 && (st.div-T)<1) revState='DAY1'; };
+  const revEnter=()=>{ if(revEnabled(st) && revState==='NORMAL' && qty>1e-9 && (st.div-T)<1) revState='DAY1'; };
   const rows=hist.map(h=>{
     let profit=0;
     const Tbefore=T;
@@ -2331,7 +2333,7 @@ function computeInf(){
      '1회 매수가 불가능해지는 시점' = 잔금 < 잔금/(분할−T) ⟺ T > 분할−1 이고,
      그 판정은 revEnter 한 곳에만 있다 — 여기서 T를 다시 재면 또 두 군데가 된다.
      리버스 OFF(기본): 소진 후에도 일반모드(후반전 별지점 손절 쿼터매도)로 방어. */
-  const reverseActive = (st.reverse===true) && revState!=='NORMAL' && qty>0;
+  const reverseActive = revEnabled(st) && revState!=='NORMAL' && qty>0;
   const reverseDay1   = reverseActive && revState==='DAY1';
   // 가용 잔금 = 원금 + 실현손익 + 배당 − 보유분 투입원가 − 출금 − 단리 인출
   const bal=st.principal+realized+divTotal-inv-withdrawn-saved;
@@ -2496,6 +2498,51 @@ const IM_OFFICIAL={TQQQ:15, SOXL:20};
    백테 REV_DIVS 와 같은 목록이어야 한다. */
 const REV_DIVS=[20,40];
 function revSupported(div){ return REV_DIVS.includes(+div); }
+/* 리버스를 '실제로' 쓰는가 = 켬 + 규칙이 있는 분할 (제8차 감사 대응 8-③·8-④).
+   예전엔 장부(computeInf)의 진입 판정만 분할을 봤고, 모의(infSimForward)·기록시트(sheetInfHTML)·
+   안내문은 st.reverse 만 봤다. 옛 세션·가져오기로 30분할+reverse=true 가 남아 있으면 모의가
+   30분할에 20분할 리버스 규칙(보유÷10 · T×0.9)을 돌렸고, 기록시트엔 없는 리버스 입력칸이 떴다.
+   장부에 리버스 기록이 남아 있어도(분할을 나중에 바꾼 경우) 규칙이 없는 분할이면 리버스가 아니다.
+   이 판정은 여기 한 곳이다 — 서버 _im.js · 플랜 calcInfState · 백테 runIM 도 같은 조건이다. */
+function revEnabled(st){ return !!st && st.reverse===true && revSupported(st.div); }
+/* V4.0 공식인가, 변형(CUSTOM)인가 — 설정 한 벌을 받아 문서에서 벗어난 이유를 돌려준다
+   (제8차 감사 대응 P2-11). index·backtest 에 글자 그대로 같은 본문이 있다 — 앱 주문표의
+   'V4.0 공식 / 변형' 표시와 백테 결과 제목의 'V4.0 변형' 표시가 같은 기준이어야 한다.
+   빈 목록이면 공식, 아니면 변형이다. 백테에서 더 좋았다는 이유로 고른 값도 변형이다 —
+   예: 리버스 OFF(문서의 V4.0 일반모드는 '소진 → 리버스'), 하방 추가 LOC(문서에 없는 주문).
+     cfg: {tickers, div, reverse, revGap, target, tgtDyn, engine, big, rowsOn}
+     target 0·없음 = 종목별 문서값(TQQQ 15 · SOXL 20). big 없음 = 기본 15. */
+function imVariantOf(cfg){
+  const v=[], list=[].concat(cfg.tickers||[]).filter(Boolean), div=+cfg.div||20;
+  if(list.length && list.some(t=>!IM_OFFICIAL[t])) v.push('비공식 종목(익절 20%는 확장값)');
+  /* 분할수의 근거를 갈라 적는다.
+       20·40 — 별% base·기울기·리버스 규칙이 전부 문서에 있다
+       30     — 일반모드 분할로는 나오지만 별% 값이 20·40처럼 명시 확인되지 않았다 → 일반화식 추정
+       10     — 공식 규칙 자체가 문서에 없다 → 실험 */
+  if(div===10) v.push('10분할(공식 규칙 미수록 · 실험)');
+  else if(div===30) v.push('30분할(별% 일반화식 · 추정)');
+  if(!revSupported(div)) v.push('리버스 미적용(그 분할 규칙 미수록)');
+  else if(!cfg.reverse) v.push('리버스 OFF');
+  else if(+cfg.revGap>0) v.push('리버스 gap '+(+cfg.revGap)+'%(출처 미확인 · 사용자 설정)');
+  if(+cfg.target>0 && list.some(t=>+cfg.target!==(IM_OFFICIAL[t]||20))) v.push('익절 '+(+cfg.target)+'% 고정');
+  if(cfg.tgtDyn) v.push('익절 조절 ON');
+  if(cfg.engine && cfg.engine!=='v40') v.push('엔진 '+String(cfg.engine).toUpperCase());
+  if(cfg.big!=null && +cfg.big>0 && +cfg.big!==IM_BIG_DEFAULT) v.push('큰수 '+(+cfg.big)+'%');
+  if(cfg.rowsOn) v.push('하방 LOC 추가(CUSTOM · 백테스트/모의 미반영)');
+  return v;
+}
+/* 이 세션의 규칙 표시 — 주문표 맨 위 '규칙' 줄. 공식이면 'V4.0 공식', 아니면 'V4.0 변형(CUSTOM)'
+   과 벗어난 이유. 앱 기본값(리버스 끔)도 변형이다 — 백테 성적을 보고 고른 값이지 문서값이 아니다. */
+function imRuleOf(st){
+  const S=st||{};
+  return imVariantOf({tickers:[String(S.ticker||'').toUpperCase()], div:S.div, reverse:S.reverse===true,
+    revGap:revGapOf(S), target:S.target, tgtDyn:S.tgtDyn===true, engine:S.engine||'v40', big:S.big, rowsOn:!!S.rowsOn});
+}
+function imRuleTag(st){
+  const v=imRuleOf(st);
+  return v.length ? `<span style="color:var(--gold);font-weight:700">V4.0 변형(CUSTOM)</span> <span style="font-size:11px;color:var(--dim)">${v.join(' · ')}</span>`
+                  : `<span style="color:var(--buy);font-weight:700">V4.0 공식</span> <span style="font-size:11px;color:var(--dim)">문서 규칙 그대로</span>`;
+}
 
 // ★ 통합 규약: 별%base = 익절%(설정값). slope = base×0.1×(20/div).
 //   문서 4케이스 재현: TQQQ 15%→20분할 1.5·40분할 0.75 / SOXL 20%→2.0·1.0
@@ -2574,11 +2621,15 @@ function renderInfNow(){
   $('d_star').textContent=c.avg>0?wn(star):'—';
   $('d_buy1').textContent=B1.spent?`소진 (T>${st.div-1})`:wn(buy1);
   // '소진'은 잔금 0이 아니라 1회 매수가 불가능해졌다는 뜻 — 잔금이 남아도 1회분에 못 미치면 못 산다.
-  $('d_todo').textContent=B1.spent?(`원금 소진 (T=${fmtT(c.T)} > ${st.div-1}). 잔금 ${wn(c.bal)}이 1회분에 못 미쳐 다음 사이클까지 대기. `+(st.reverse===true?'리버스모드 진입 대상입니다.':'매수 없이 후반전 별지점 쿼터매도로만 방어합니다.')):
+  $('d_todo').textContent=B1.spent?(`원금 소진 (T=${fmtT(c.T)} > ${st.div-1}). 잔금 ${wn(c.bal)}이 1회분에 못 미쳐 다음 사이클까지 대기. `+(revEnabled(st)?'리버스모드 진입 대상입니다.':'매수 없이 후반전 별지점 쿼터매도로만 방어합니다.')):
     `${tickerLabel(st.ticker)} ${st.div}분할 · T=${fmtT(c.T)} · ${half?'전반전':'후반전'}. 주문표 탭에서 전일 종가를 넣어 LOC 주문을 확인하세요.`;
 }
 
 /* ── 무한매수법 주문표 (하방 LOC 전체) ── */
+/* 하방 LOC 는 원문에 없는 보조 주문이다 (제8차 감사 대응 8-⑧). 모의(infSimForward)·백테(runIM)는
+   이 주문을 체결시키지 않는다 — 체결 시 T 를 어떻게 바꿀지 규칙이 없어서다. 주문표에 뜨는 순간
+   '백테 숫자가 이 운용의 성과가 아니다' 라는 걸 같이 보여 준다. */
+function imRowsNote(n){ return `<div class="note" style="color:var(--gold)">⚠ 하방 LOC ${n}줄은 <b>백테스트/모의 미반영 CUSTOM 주문</b>입니다 — 체결돼도 T 규칙이 없고 모의·백테 성과에 들어가지 않습니다.</div>`; }
 /* ── 리버스 별지점 = 직전 5거래일 종가 평균 ──
    여기만은 대체값을 두지 않는다. 예전엔 5일 종가가 없으면 '최근 체결가 5건 평균 →
    전일 종가 1개 → 평단'으로 내려갔는데, 셋 다 별지점이 아니다:
@@ -2624,6 +2675,7 @@ function renderOrder(){
   if($('o_t')){ $('o_t').textContent=`${fmtT(c.T)} / ${st.div}`;
     const half=c.T<st.div/2;
     $('o_tsub').textContent = c.reverseActive?'· 리버스' : (half?'· 전반전':'· 후반전'); }
+  if($('o_rule')) $('o_rule').innerHTML=imRuleTag(st);        // V4.0 공식 / 변형(CUSTOM) (제8차 P2-11)
   if($('o_bal')) $('o_bal').textContent=wn(c.bal);
   $('o_buy1').textContent=B1.spent?`소진 (T>${st.div-1})`:wn(buy1);
   $('o_star').textContent=c.avg>0?`${pct.toFixed(2)}% / ${wn(star)}`:'평단 없음(첫 매수)';
@@ -2739,7 +2791,7 @@ function renderOrder(){
       +(B1.slot>0 ? `1회분 ${wn(c.bal/B1.slot)}이 잔금 <b>${wn(c.bal)}</b>을 넘어 매수할 수 없습니다. `
                   : `${st.div}회차를 모두 썼습니다. `)
       +`잔금 <b>${wn(c.bal)}</b>은 다음 사이클까지 대기합니다. `
-      +`${st.reverse===true?'리버스모드 진입 대상입니다.':'아래 <b>쿼터매도</b>로만 방어합니다 (리버스 꺼짐).'}</div>`;
+      +`${revEnabled(st)?'리버스모드 진입 대상입니다.':('아래 <b>쿼터매도</b>로만 방어합니다 ('+(st.reverse===true?st.div+'분할은 리버스 규칙 없음':'리버스 꺼짐')+').')}</div>`;
   }else if(c.avg<=0){
     // 첫 매수: 1회매수금 전액을 종가×큰수에 LOC매수
     // 수량은 예상 체결가(≈전일종가) 기준. LOC는 종가에 체결되므로 큰수가로 나누면 ~큰수%만큼 과소매수됨.
@@ -2748,8 +2800,9 @@ function renderOrder(){
     // 하방 LOC: 종가 기준으로 gap%씩 내려가며 추가
     for(let i=1;i<=rows;i++){
       const p=close*(1-gap*i/100);
-      if(p>0){html+=oitem('b',`하방 ${i} (-${(gap*i).toFixed(1)}%)`,'LOC',p,rq);nBuyRow++;}
+      if(p>0){html+=oitem('b',`하방 ${i} (-${(gap*i).toFixed(1)}%) · CUSTOM`,'LOC',p,rq);nBuyRow++;}
     }
+    if(rows>0) html+=imRowsNote(rows);
   }else{
     const baseP = buyPt; // 하방 LOC 기준점 = 별지점-0.01
     /* 주문가가 증권사 허용폭을 넘을 때 — 상한을 씌워 낸다. 공짜가 아니다.
@@ -2794,8 +2847,9 @@ function renderOrder(){
     // 하방 LOC: 별지점 아래로 gap%씩 내려가며 추가 (큰 하락 대비)
     for(let i=1;i<=rows;i++){
       const p=baseP*(1-gap*i/100);
-      if(p>0)html+=oitem('b',`하방 ${i} (-${(gap*i).toFixed(1)}%)`,'LOC',(limit>0&&p>limit)?limit:p,rq);
+      if(p>0)html+=oitem('b',`하방 ${i} (-${(gap*i).toFixed(1)}%) · CUSTOM`,'LOC',(limit>0&&p>limit)?limit:p,rq);
     }
+    if(rows>0) html+=imRowsNote(rows);
   }
   html+='</div>';
   // 매도 그룹: 쿼터매도 ¼ = 별지점 LOC / 나머지 ¾ = 평단×익절배율 지정가
@@ -3105,6 +3159,17 @@ const esc=v=>String(v==null?'':v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;'
    그래서 보내는 목록에서 빼고, 화면에 증권사 앱에서 직접 내라고 적는다. */
 function kisSendable(o){ return o && o.qty>0 && o.price>0 && o.tag!=='MOC'; }
 function kisManualOnly(){ return todayOrders.filter(o=>o && o.qty>0 && o.tag==='MOC'); }
+/* 한투 주문의 한계 — 'V4.0 완전 자동' 이 아니다 (제8차 감사 대응 8-⑥).
+   백테·모의는 LOC=종가 체결 · 익절 지정가=하루 전체 고가 터치로 센다. 한투로 나가는 주문은
+   그 모델과 다르다 — 세 모델(백테·모의·실주문)이 같은 척하면 안 된다. 주문 화면·세션 설정 두 곳이
+   이 한 문구를 쓴다. */
+function kisAutoLimitsNote(){
+  return `<div class="note" style="margin-top:6px;color:var(--gold)">⚠ <b>V4.0 완전 자동 아님</b> — 한투 주문(이 버튼·서버 자동주문)은 백테·모의와 같은 체결 모델이 아닙니다.<br>`
+    +`· <b>일반모드만 지원</b> — 리버스모드 세션은 서버 자동주문이 건너뜁니다 (리버스 자동주문 미지원)<br>`
+    +`· <b>LOC는 일반 지정가로 근사</b> — 한투 해외주식은 지정가만 받습니다. 백테·모의는 LOC를 종가 체결로 셉니다<br>`
+    +`· <b>체결내역 자동 동기화 없음</b> — 실제 체결은 거래이력에 직접 기록해야 앱 장부가 맞습니다<br>`
+    +`· <b>익절 지정가 유효시간이 백테와 다름</b> — 서버 자동주문은 마감 20분 전(15:40 ET)에 들어갑니다. 백테는 하루 전체 고가가 닿으면 체결로 셉니다</div>`;
+}
 function renderKisPanel(){
   const box=$('o_kis'); if(!box) return;
   const s=curStrat();
@@ -3125,7 +3190,7 @@ function renderKisPanel(){
       +manual.map(o=>`${o.side==='buy'?'매수':'매도'} ${esc(o.name)} ${o.qty}주`).join(' · ')
       +`<br>한투 해외주식은 지정가만 받아 MOC 를 그대로 낼 수 없습니다. 증권사 앱에서 <b>장마감 시장가</b>로 직접 내세요.</div>`
     : '';
-  if(!list.length){ box.innerHTML=manualNote||'<div class="note" style="margin-top:8px">오늘 낼 주문이 없습니다.</div>'; return; }
+  if(!list.length){ box.innerHTML=(manualNote||'<div class="note" style="margin-top:8px">오늘 낼 주문이 없습니다.</div>')+kisAutoLimitsNote(); return; }
   const rows=list.map((o,i)=>`<div class="rowline"><span class="k">${o.side==='buy'?'매수':'매도'} <span class="sub">${esc(o.name)} · ${esc(o.tag)}</span></span>`
     +`<span class="val mono">${wn(o.price)} × ${o.qty}주</span></div>`).join('');
   box.innerHTML=`<div class="card" style="margin-top:10px;border-color:var(--${real?'sell':'buy'}-dim)">
@@ -3136,6 +3201,7 @@ function renderKisPanel(){
       ${manualNote}
       ${MP.market==='us'?`<div class="note" style="margin-top:6px">한투 해외주식은 <b>지정가만</b> 받습니다 — 위 가격 그대로 지정가로 나갑니다.
         LOC·MOC와 체결 조건이 달라 앱 기록과 어긋날 수 있습니다.</div>`:''}
+      ${kisAutoLimitsNote()}
       <button class="fetchbtn" id="o_kis_btn" style="width:100%;margin-top:10px;background:var(--${real?'sell':'buy'}-bg);color:var(--${real?'sell':'buy'});border-color:var(--${real?'sell':'buy'}-dim)"
         onclick="kisSendToday()">📤 ${list.length}건 ${real?'실전 ':''}주문 보내기</button>
       <div class="fetchnote" id="o_kis_note"></div>
@@ -3557,7 +3623,7 @@ function infSimForward(startFrom){
       const bigPct=imBigPct(st);
       const buyLimit=prevC*(1+bigPct/100);
       let c=computeInf();
-      const revOn=(st.reverse===true);
+      const revOn=revEnabled(st);                 // 켬 + 규칙이 있는 분할 (제8차 8-③)
       if(revOn && !inRev && (st.div-c.T)<1 && c.qty>0){ inRev=true; revDay1=true; }   // 소진 → 새 리버스 1일차
 
       if(revOn && inRev && c.qty>0 && c.avg>0){
@@ -3982,7 +4048,7 @@ function renderVrTable(){
     $('lad_state_s').textContent='—';$('lad_state_b').textContent='—';$('lad_stage_s').textContent=c.curCyc+'주차';$('lad_limit_b').textContent=`한도 ${wn(limit)} / ${wn(c.pool)}`;return;
   }
   /* 걸어 둘 차수는 체결 엔진과 같은 한 곳(vrTiers)에서 받는다 (7차 점검 ⑫) */
-  const LT=vrTiers(B, sf, bf, c.up, c.lo, limit, 1+(typeof IVS_FEE!=='undefined'?IVS_FEE:0.0025), N);
+  const LT=vrTiers(B, sf, bf, c.up, c.lo, limit, 1+(typeof IVS_FEE!=='undefined'?IVS_FEE:0.0025), N, curOf(st));   // 호가 단위 값 (제8차 P2-9)
   let srows='',sPool=c.pool;
   for(const t of LT.sells){
     const k=t.k,p=t.p,reached=price>=p;sPool+=p;
@@ -3992,7 +4058,7 @@ function renderVrTable(){
   }
   if(!srows)srows='<div class="lxr" style="justify-content:center;color:var(--faint)">이번 사이클 예약매도 차수 완료</div>';
   $('sell_lad').innerHTML=`<div class="lxh"><span>차수</span><span>매도가</span><span>보유수량</span><span>Pool</span></div>`+srows;
-  const nextSell=sf<Math.min(N,B)?c.up/(B-sf):null;
+  const nextSell=LT.sells.length?LT.sells[0].p:null;          // 표에 걸린 그 가격 (호가 단위)
   $('sell_wait').innerHTML=nextSell
     ? (ev>c.up&&price>0?`<div class="firebanner">🔥 <b>상단 예약매도 체결 구간</b><span class="fb-sub">현재가 ${wn(price)} · 다음 ${sf+1}차 ${wn(nextSell)} — 기존 예약주문만 체결 기록합니다.</span></div>`
       :`⌛ 매도 대기 — 다음 ${sf+1}차 ${wn(nextSell)} 이상<div class="wb-now">현재가 ${wn(price)}</div>`)
@@ -4013,7 +4079,7 @@ function renderVrTable(){
   }
   if(!brows)brows='<div class="lxr" style="justify-content:center;color:var(--faint)">이번 사이클 예약매수 차수 완료</div>';
   $('buy_lad').innerHTML=`<div class="lxh"><span>차수</span><span>매수가</span><span>보유수량</span><span>Pool</span></div>`+brows;
-  const nextBuy=bf<N?c.lo/(B+bf):null;
+  const nextBuy=(LT.buys[0]||LT.over[0]||{}).p||null;
   $('buy_wait').innerHTML=nextBuy
     ? (ev>0&&ev<c.lo&&price>0?`<div class="firebanner">🔥 <b>하단 예약매수 체결 구간</b><span class="fb-sub">현재가 ${wn(price)} · 다음 ${bf+1}차 ${wn(nextBuy)} — 남은 Pool 한도 안에서 기존 예약주문만 체결합니다.</span></div>`
       :`⌛ 매수 대기 — 다음 ${bf+1}차 ${wn(nextBuy)} 이하<div class="wb-now">현재가 ${wn(price)}</div>`)
@@ -4033,23 +4099,42 @@ function quickLadder(type,price){
 }
 
 /* ════════ 다음 V 미리보기 ════════ */
+/* ── VR 사이클 전환 — 다음 V · 다음 Pool · 실제 적립/인출 (제8차 감사 대응 8-②·8-⑦) ──
+   운영 미리보기(computeNextV)·운영 진입(enterNextCycle·vrStepCycle)·과거재생(vrReplay)·
+   백테(runVR)·5년 플랜(calcPlanNextV)이 이 함수의 결과만 쓴다. index·backtest·plan 에
+   글자 그대로 같은 본문이 있고, 회귀가 셋이 한 글자도 안 다른지 본다.
+   예전엔 V 식을 네 곳이 따로 적었다. 7차 ⑪ 에서 '인출은 Pool 안에서만' 을 고칠 때 미리보기만
+   빠져 화면의 다음 Pool 이 실제 진입 결과와 달랐다 (Pool 1.10 · 인출 50 → 미리보기 −48.90, 실제 0).
+     입력  V 이번 사이클 V · pool 사이클 끝 Pool(적립/인출 전) · ev 사이클 끝 평가금
+           G · mode (0.75 적립 · 0.5 거치 · 0.25 인출) · add 요청 적립/인출액 · formula 'basic'|'skill'
+     출력  nextV(0 이상) · nextPool · requested 요청액 · actual 실제 적립/인출액
+           sign(+1 적립 · −1 인출) · type('add'|'wd'|null) · corr 실력공식 보정항 · raw 자르기 전 V
+   인출은 Pool 안에서만 나간다 — actual = min(요청, Pool). 적립은 요청액 전부.
+   V 식의 적립/인출 항은 '요청액' 이다. 요청이 Pool 을 넘을 때 원문(라오어)이 V 식에 무엇을
+   넣는지는 확인하지 못했다 — 지금까지의 동작(요청액)을 그대로 두고 원문 확인 전까지 바꾸지 않는다. */
+function vrCycleTransition(V, pool, ev, G, mode, add, formula){
+  const isAccum=(+mode===0.75), isWd=(+mode===0.25);
+  const requested=(isAccum||isWd)?Math.max(0,+add||0):0;
+  const sign=isWd?-1:1;
+  const actual=isWd?Math.max(0,Math.min(requested,pool)):requested;
+  const corr=(formula==='skill'&&V>0)?(ev-V)/(2*Math.sqrt(G)):0;
+  const raw=V+pool/G+corr+sign*requested;
+  return {nextV:Math.max(0,raw), raw, nextPool:pool+sign*actual, requested, actual, sign, corr,
+          type:requested>0?(isWd?'wd':'add'):null};
+}
+/* 다음 사이클 미리보기·진입이 쓰는 값 — 전부 vrCycleTransition 한 번에서 나온다.
+   미리보기의 다음 Pool 과 진입이 실제로 기록하는 적립/인출액이 같은 계산이라 갈릴 수 없다 (제8차 8-②). */
 function computeNextV(c,ev){
   const st=c.st, V=c.V, Pool=c.pool, G=st.g;
-  const isAccum=st.mode===0.75, isWd=st.mode===0.25; // 거치식(0.5)은 적립금 항상 0
-  const add = (isAccum||isWd) ? (st.add||0) : 0;
-  const sign=isWd?-1:1; // 인출식이면 적립금 자리를 인출(−)로
-  let nextV, calcStr;
-  if(st.formula==='skill' && V>0){
-    const corr=(ev-V)/(2*Math.sqrt(G));
-    nextV=V + Pool/G + corr + sign*add;
-    calcStr=`V₂ = V₁ + Pool/G + (E−V₁)/(2√G) ${sign<0?'−':'+'} 적립금<br>= ${V.toFixed(2)} + ${(Pool/G).toFixed(2)} + ${corr.toFixed(2)} ${sign<0?'−':'+'} ${add} = <b>${nextV.toFixed(2)}</b>`;
-  } else {
-    nextV=V + Pool/G + sign*add;
-    calcStr=`V₂ = V₁ + Pool/G ${sign<0?'−':'+'} 적립금<br>= ${V.toFixed(2)} + ${(Pool/G).toFixed(2)} ${sign<0?'−':'+'} ${add} = <b>${nextV.toFixed(2)}</b>`;
-  }
-  // 다음 Pool = 현재 Pool + 적립(또는 −인출)
-  const nextPool = Pool + sign*add;
-  return {nextV, nextPool, calcStr, sign};
+  const T=vrCycleTransition(V, Pool, ev, G, st.mode, st.add, st.formula);
+  const sg=T.sign<0?'−':'+', add=T.requested;
+  let calcStr = (st.formula==='skill' && V>0)
+    ? `V₂ = V₁ + Pool/G + (E−V₁)/(2√G) ${sg} 적립금<br>= ${V.toFixed(2)} + ${(Pool/G).toFixed(2)} + ${T.corr.toFixed(2)} ${sg} ${add} = <b>${T.nextV.toFixed(2)}</b>`
+    : `V₂ = V₁ + Pool/G ${sg} 적립금<br>= ${V.toFixed(2)} + ${(Pool/G).toFixed(2)} ${sg} ${add} = <b>${T.nextV.toFixed(2)}</b>`;
+  if(T.raw<0) calcStr+=` <span style="color:var(--gold)">(계산값 ${T.raw.toFixed(2)} → 0 미만이라 0)</span>`;
+  if(T.sign<0 && T.actual<T.requested)
+    calcStr+=`<br>인출 요청 ${add} 중 Pool 안에서만 <b>${T.actual.toFixed(2)}</b> — 다음 Pool = ${Pool.toFixed(2)} − ${T.actual.toFixed(2)} = <b>${T.nextPool.toFixed(2)}</b>`;
+  return {nextV:T.nextV, nextPool:T.nextPool, requested:T.requested, actual:T.actual, type:T.type, calcStr, sign:T.sign};
 }
 function renderVrNext(){
   const c=computeVr(), st=c.st;
@@ -4065,7 +4150,7 @@ function renderVrNext(){
   $('nv_assume').innerHTML=`현재 평가금(${wn(ev)})으로 ${c.curCyc}주차 마감 → ${c.curCyc+1}주차 진입 가정`;
   $('nv_v').textContent=wn(r.nextV);
   $('nv_calc').innerHTML=`<span class="lbl">${st.formula==='skill'?'실력공식':'기본공식'}</span>${r.calcStr}`;
-  $('nv_pool').textContent=wn(r.nextPool);
+  $('nv_pool').textContent=wn(r.nextPool)+((r.sign<0&&r.actual<r.requested)?` (인출 ${wn(r.actual)}만 — Pool 한도)`:'');
   $('nv_min').textContent=wn(r.nextV*(1-st.band/100));
   $('nv_max').textContent=wn(r.nextV*(1+st.band/100));
   // 기본 진입일 = 사이클 시작 +14일 (주말이면 다음 영업일)
@@ -4124,8 +4209,8 @@ function enterNextCycle(){
     _early=true;
     if(!confirm(`⚠ 아직 진입일이 아닙니다.\n\n· 공식 진입일 ${_du.dueStr} (${_du.d}일 뒤)\n· 지금 넘기면 공식 2주 사이클이 아니라 커스텀 조기 진입입니다.\n  (사이클 기록에 '조기' 로 남습니다)\n\n그래도 진행할까요?`)) return;
   }
-  const fl=vrCycleFlow(c), sign=fl.sign, add=fl.amt;   // 인출은 Pool 안에서만 (7차 ⑪)
-  if(!confirm(`${c.curCyc+1}주차로 진입합니다.\n· 다음 V = ${wn(r.nextV)}\n· ${sign<0?'인출':'적립'} ${wn(add)} ${sign<0?'Pool 차감':'Pool 추가'}${(sign<0&&add<(+st.add||0))?` (Pool 이 모자라 ${wn(+st.add||0)} 중 ${wn(add)}만)`:''}\n· 시작일 ${startDate}\n진행할까요?`))return;
+  const sign=r.sign, add=r.actual;   // 인출은 Pool 안에서만 (7차 ⑪) — 미리보기와 같은 r 에서 (제8차 8-②)
+  if(!confirm(`${c.curCyc+1}주차로 진입합니다.\n· 다음 V = ${wn(r.nextV)}\n· ${sign<0?'인출':'적립'} ${wn(add)} ${sign<0?'Pool 차감':'Pool 추가'}${(sign<0&&add<r.requested)?` (Pool 이 모자라 ${wn(r.requested)} 중 ${wn(add)}만)`:''}\n· 다음 Pool = ${wn(r.nextPool)}\n· 시작일 ${startDate}\n진행할까요?`))return;
 
   // 사이클 히스토리 적재 (직전 사이클 요약)
   if(!st.cycLog) st.cycLog=[];
@@ -4139,7 +4224,7 @@ function enterNextCycle(){
   const newCyc=c.curCyc+1;
   const h=curStrat().hist;
   if(add>0){
-    h.push({type:fl.type, date:startDate, amt:+add.toFixed(6), cyc:newCyc, ts:Date.now(), auto:true});
+    h.push({type:r.type, date:startDate, amt:+add.toFixed(6), cyc:newCyc, ts:Date.now(), auto:true});
   }
   // V 갱신: startv를 '진입 직후 V 기준선'으로 고정.
   //  → computeVr는 startv>0이면 첫 매수로 V를 덮어쓰지 않으므로(firstBuyDone=true),
@@ -6477,29 +6562,21 @@ function fgLabel(v){
    50 을 빼 −48.90 이 됐고, 그 뒤 매수 한도가 0 이 되고 V 식에 음수 Pool 이 들어갔다
    (TQQQ 인출식 6년: 모의 최종 35,699 vs 백테·과거재생 40,222). 백테 runVR·과거재생 vrReplay 는
    원래부터 min(인출금, Pool) 이었다. V 식의 인출 항은 세 곳 모두 규칙대로 전액이다. */
-function vrCycleFlow(c){
-  const st=c.st, isAccum=st.mode===0.75, isWd=st.mode===0.25;
-  const add=(isAccum||isWd)?(+st.add||0):0;
-  if(!(add>0)) return {type:null, amt:0, sign:isWd?-1:1};
-  if(isWd) return {type:'wd', amt:Math.max(0, Math.min(add, c.pool)), sign:-1};
-  return {type:'add', amt:add, sign:1};
-}
+/* 적립/인출액은 computeNextV(=vrCycleTransition) 가 같이 낸다 — 미리보기·수동 진입·자동 진입이
+   한 계산을 본다 (제8차 8-②). 예전엔 vrCycleFlow 가 따로 있었다. */
 function vrStepCycle(sess, c, dateStr, close){
   const st=sess.settings;
   const ev = close>0 ? close*c.qty : c.V;
   const r=computeNextV(c,ev);
-  const isAccum=st.mode===0.75, isWd=st.mode===0.25;
-  const add=(isAccum||isWd)?(st.add||0):0;
   if(!st.cycLog) st.cycLog=[];
   st.cycLog.push({cyc:c.curCyc, from:st.cycStart||null, dates:cycDates(c)||'-', V:+c.V.toFixed(2),
     lo:+c.lo.toFixed(2), up:+c.up.toFixed(2), trade:+c.cycTrade.toFixed(2),
     startPool:+c.cycStartPool.toFixed(2), E:ev>0?+ev.toFixed(2):null, close:close>0?+close.toFixed(4):null});
   const newCyc=c.curCyc+1;
-  const fl=vrCycleFlow(c);                    // 인출은 Pool 안에서만 (7차 ⑪)
-  if(fl.amt>0) sess.hist.push({type:fl.type, date:dateStr, amt:+fl.amt.toFixed(6), cyc:newCyc,
+  if(r.actual>0) sess.hist.push({type:r.type, date:dateStr, amt:+r.actual.toFixed(6), cyc:newCyc,   // 인출은 Pool 안에서만 (7차 ⑪)
                             ts:Date.now()+st.cycLog.length, auto:true});
   st.startv=+r.nextV.toFixed(6); st.startCyc=newCyc; st.cycStart=dateStr;   // 6자리 (7차 ⑬)
-  return {nextV:r.nextV, newCyc, add, sign:r.sign};
+  return {nextV:r.nextV, newCyc, add:r.requested, actual:r.actual, sign:r.sign};
 }
 /* ════════ 모의투자 자동 운전 ════════
    모의 세션은 '모의 시작일'만 정해두면 어느 탭을 열든 오늘까지 알아서 굴러간다.
@@ -7069,7 +7146,7 @@ function paperOpts(tab, st){
   if(tab==='inf'){
     bits.push(`${+S0.div||20}분할`, `익절 ${+S0.target||20}%`);
     if(S0.engine==='v50') bits.push('V5.0');
-    if(S0.reverse===true) bits.push('리버스');
+    if(revEnabled(S0)) bits.push('리버스');
     if(S0.tgtDyn===true)  bits.push('익절 동적');
     if(S0.compound===false) bits.push('단리');
   }else if(tab==='vr'){
@@ -7536,6 +7613,10 @@ function vrAutoAdvance(){
    평가금으로 보면 '밴드를 벗어난 만큼만' 거래한다 — 상단을 넘으면 1주씩 팔아 평가금을 상단에
    붙이고, 하단 아래면 1주씩 사서 하단에 붙인다. V 까지 한 번에 되돌리지 않는다.
 
+   ⚠ 원전 확인 필요 — '공식' 이 아니다 (제8차 감사 대응 8-①). 예전엔 이 모델을 'official' ·
+     '공식 예약 사다리' 라고 불렀는데 근거가 없었다. 지금 이름은 '20차 예약 사다리 (현재 구현)' 다.
+     라오어 원문(책·카페)의 주문표 산식은 아직 대조하지 못했다. 'V 복귀' 쪽 문장도 비공식 해설
+     사이트(quantstack — 원저작자와 무관하다고 스스로 밝힌다)의 요약일 뿐 원문 인용이 아니다.
    ⚠ 원문 확인 대기 (7차 점검) — 5차 감사 때 'V 복귀'(한 번에 V 까지 되돌리는 수량) 해석으로
      바꿨다가(#235) #236 에서 이 사다리로 되돌렸다. 두 해석 중 어느 쪽이 라오어 원문인지는
      아직 원문으로 대조하지 못했다. 예전 이 자리 주석은 'V 복귀가 공식, 사다리는 커스텀' 이라고
@@ -7545,7 +7626,7 @@ function vrAutoAdvance(){
    S: {shares, pool, avg, V} — 이 객체를 직접 고친다 (부르는 쪽이 결과를 받아 간다)
    P: {band, poolLimit, budgetRemaining, FEE, baseShares, sellFilled, buyFilled, maxTiers}
    반환: [{type:'sell'|'buy', price, qty, net|cost}] — net·cost 는 그 체결 '전체' 금액 */
-const VR_MODEL_DEFAULT='official';
+const VR_MODEL_DEFAULT='ladder20';
 function vrModelOf(st){ return VR_MODEL_DEFAULT; }
 /* 사이클 사다리 — 이번 사이클에 걸어 둘 매도·매수 차수 (7차 점검 ⑫).
    주문표(renderVrTable)·체결 엔진(vrOrderPlan)이 이 한 곳에서 차수를 받는다 — 예전엔 둘이
@@ -7554,14 +7635,29 @@ function vrModelOf(st){ return VR_MODEL_DEFAULT; }
      B       사이클 시작 보유수량 · sf/bf 이미 체결한 매도/매수 차수 · N 최대 차수(20)
      매도 k차 = up ÷ (B−k+1)   (k ≤ min(N,B))
      매수 k차 = dn ÷ (B+k−1)   — 앞 차수부터 한도(limit)를 쓰고, 넘는 차수에서 멈춘다
-   over 는 한도 밖으로 밀려난 매수 차수다 (표에 '한도 밖' 으로 보여 주기만 한다). */
-function vrTiers(B, sf, bf, up, dn, limit, fee1, N){
+   over 는 한도 밖으로 밀려난 매수 차수다 (표에 '한도 밖' 으로 보여 주기만 한다).
+   가격은 호가 단위로 맞춘 값이다 (vrTickUp·vrTickDn — 제8차 P2-9). */
+/* ── 호가 단위 (제8차 감사 대응 P2-9) ──
+   예약 사다리의 값(상단÷수량 등)은 보통 호가에 딱 떨어지지 않는다 (116.1616… · 84.1584…).
+   주문은 호가 단위로만 나가므로, 엔진도 그 가격으로 판정·체결해야 경계일에 실전과 안 갈린다.
+   예전엔 표는 반올림한 값(116.16)을 보여 주고 엔진은 116.1616 으로 판정했다 — 고가 116.16 인 날
+   실전은 체결, 엔진은 미체결이었다.
+     미국 주식·ETF : 1달러 이상 0.01 · 1달러 미만 0.0001 (Reg NMS 612)
+     국내 ETF      : 2,000원 미만 1원 · 이상 5원 (KRX ETF·ETN 호가가격단위)
+   매도는 올리고 매수는 내린다. 매도 k차는 '그 값 이상이어야 평가금이 상단에 닿는' 가격이고,
+   매수 k차는 '그 값 이하여야 하단 밑' 인 가격이다 — 반올림하면 밴드 안쪽 가격에 주문이 나가
+   상단에 못 닿았는데 파는 체결이 생긴다. 주문표·모의·재생·백테·5년 플랜이 이 값을 같이 쓴다. */
+function vrTick(p, cur){ return cur==='krw' ? (p<2000?1:5) : (p<1?0.0001:0.01); }
+function vrTickUp(p, cur){ const t=vrTick(p,cur); return +(Math.ceil(p/t-1e-9)*t).toFixed(4); }
+function vrTickDn(p, cur){ const t=vrTick(p,cur); return +(Math.floor(p/t+1e-9)*t).toFixed(4); }
+function vrTiers(B, sf, bf, up, dn, limit, fee1, N, cur){
   const sells=[], buys=[], over=[];
   if(!(B>=1)) return {sells, buys, over};
-  for(let k=sf+1;k<=Math.min(N,B);k++) sells.push({k, p:up/(B-k+1)});
+  for(let k=sf+1;k<=Math.min(N,B);k++) sells.push({k, p:vrTickUp(up/(B-k+1), cur)});
   let used=0, capped=false;
   for(let k=bf+1;k<=N;k++){
-    const p=dn/(B+k-1), cost=p*fee1;
+    const p=vrTickDn(dn/(B+k-1), cur), cost=p*fee1;
+    if(!(p>0)) break;                      // 호가 한 칸보다 싼 차수는 걸 수 없다
     if(capped||used+cost>limit+1e-9){ capped=true; over.push({k, p, cost}); continue; }
     buys.push({k, p, cost}); used+=cost;
   }
@@ -7579,9 +7675,14 @@ function vrOrderPlan(S, P, bar){
   const _sell=(p,qty)=>{if(!(qty>=1)||S.shares+1e-9<qty)return;const net=p*(1-FEE)*qty;S.shares-=qty;S.pool+=net;out.push({type:'sell',price:p,qty,net});};
   const _buy=(p,qty)=>{if(!(qty>=1))return;const cost=p*fee1*qty;if(cost>S.pool+1e-9)return;S.avg=(S.shares<=0)?p:(S.shares*S.avg+p*qty)/(S.shares+qty);S.shares+=qty;S.pool-=cost;out.push({type:'buy',price:p,qty,cost});};
   if(B<1)return out;
-  const L=vrTiers(B, sf, bf, up, dn, budget, fee1, N);      // 걸어 둔 차수 — 주문표와 같은 목록
-  for(const t of L.sells){ if(!(hi>=t.p))break; _sell(t.p,1); }
-  for(const t of L.buys){ if(!(lo<=t.p))break; if(t.cost>S.pool+1e-9)break; _buy(t.p,1); }
+  const L=vrTiers(B, sf, bf, up, dn, budget, fee1, N, P.cur);   // 걸어 둔 차수 — 주문표와 같은 목록 (호가 단위 값)
+  /* 같은 봉에서 상·하단 차수가 둘 다 닿았는가 (제8차 P2-10). 일봉만으로는 고가·저가 중 무엇이
+     먼저였는지 모른다 — 그날은 순서가 가정이다. 기본은 매도 먼저(판 돈이 그날 매수 재원),
+     P.order==='buy-first' 면 매수 먼저 (백테 민감도 비교용). 부르는 쪽이 out.both 로 그날을 센다. */
+  out.both=!!(L.sells.length && hi>=L.sells[0].p && L.buys.length && lo<=L.buys[0].p);
+  const doSell=()=>{ for(const t of L.sells){ if(!(hi>=t.p))break; _sell(t.p,1); } };
+  const doBuy=()=>{ for(const t of L.buys){ if(!(lo<=t.p))break; if(t.cost>S.pool+1e-9)break; _buy(t.p,1); } };
+  if(P.order==='buy-first'){ doBuy(); doSell(); } else { doSell(); doBuy(); }
   return out;
 }
 /* ── 모의 체결 — 오늘까지 앞으로 굴리기 ──
@@ -7655,7 +7756,7 @@ function vrSimForward(){
       const St={shares:Math.floor(c.qty), pool:c.pool, avg:c.avg||0, V:c.V};
       const _F=(typeof IVS_FEE!=='undefined')?IVS_FEE:0.0025;
       const fills=vrOrderPlan(St, {band:(st.band||15)/100, poolLimit:(st.mode||0.75),
-        budgetRemaining:poolLimit(c), FEE:_F, model:vrModelOf(st),
+        budgetRemaining:poolLimit(c), FEE:_F, model:vrModelOf(st), cur:curOf(st),
         baseShares:c.cycBaseQty, sellFilled:c.cycSellFilled, buyFilled:c.cycBuyFilled, maxTiers:20}, row);
       for(const f of fills){
         // net·cost 는 체결 '전체' 금액이다 — 수수료도 전체로 센다
@@ -7826,7 +7927,7 @@ function vrReplay(){
     // ① 기준일 장중까지는 이전 V로 걸어둔 사다리를 먼저 체결한다.
     const St={shares:Math.floor(shares+1e-9), pool, avg, V};
     const fills=vrOrderPlan(St, {band, poolLimit,
-      budgetRemaining:Math.max(0,cycStartPool*poolLimit-cycBuySpent), FEE, model:vrModelOf(st),
+      budgetRemaining:Math.max(0,cycStartPool*poolLimit-cycBuySpent), FEE, model:vrModelOf(st), cur:curOf(st),
       baseShares:cycBaseQty, sellFilled:cycSellFilled, buyFilled:cycBuyFilled, maxTiers:20}, row);
     for(const f of fills){
       if(f.type==='sell'){ pool+=f.net; cycTrade+=f.net; cycSellFilled+=f.qty;
@@ -7843,14 +7944,12 @@ function vrReplay(){
         lo:+(V*(1-band)).toFixed(2), up:+(V*(1+band)).toFixed(2),
         trade:+cycTrade.toFixed(2), startPool:+cycStartPool.toFixed(2),
         E:+(shares*c).toFixed(2), close:+c.toFixed(4)});
-      const cv=shares*c, addCycle=isAccum?contrib:isWd?-withdraw:0;
-      if(formula==='skill'&&V>0) V=V+pool/G+(cv-V)/(2*Math.sqrt(G))+addCycle;
-      else V=V+pool/G+addCycle;
-      V=Math.max(V,0);
+      const TR=vrCycleTransition(V, pool, shares*c, G, mode, isAccum?contrib:withdraw, formula);   // 공용 전환식 (제8차 8-⑦)
+      V=TR.nextV;
       cyc++; cycTrade=0; cycDiv=0; cycBuySpent=0; cycStartDate=d;cycBaseQty=shares;cycSellFilled=0;cycBuyFilled=0;
-      if(isAccum){ pool+=contrib; rec.push({type:'add',date:d,amt:+contrib,cyc,sim:true,ts:rec.length+1}); }
-      else if(isWd){ const wd=Math.min(withdraw,pool); pool-=wd; totalWd+=wd;
-        if(wd>0) rec.push({type:'wd',date:d,amt:+wd,cyc,sim:true,ts:rec.length+1}); }
+      if(isAccum){ pool=TR.nextPool; rec.push({type:'add',date:d,amt:+TR.actual,cyc,sim:true,ts:rec.length+1}); }
+      else if(isWd){ pool=TR.nextPool; totalWd+=TR.actual;
+        if(TR.actual>0) rec.push({type:'wd',date:d,amt:+TR.actual,cyc,sim:true,ts:rec.length+1}); }
       cycStartPool=pool;
       due=vrNextDue(due);
     }
@@ -7989,7 +8088,7 @@ function sheetInfHTML(today){
   // 추천이 '매수 없음'이면 기록할 거래가 없으므로 '이대로 기록' 버튼을 내린다 (유효한 거래종류가 아님).
   h+=`<div class="reco"><div class="rl"><div class="rt">📌 오늘의 추천</div><div class="rmain">${recoKind}</div><div class="rsub">${recoLine}${recoQty>0?' · 아래에서 직접 선택 · T값 자동 계산':' · 필요하면 아래에서 직접 선택'}</div></div>`
     +(recoQty>0?`<button class="rgo" onclick="sheetPickInf('${recoKind}',${recoPrice||0},${recoQty})">이대로 기록</button>`:'')+`</div>`;
-  const reverse = (st.reverse===true) && c.T>st.div-1 && c.qty>0;
+  const reverse = revEnabled(st) && c.T>st.div-1 && c.qty>0;   // 규칙 없는 분할엔 리버스 입력칸이 없다 (제8차 8-④)
   if(reverse){
     const sellDiv=st.div>=40?20:10;
     h+=`<div class="sheetseclbl" style="color:var(--sell)">리버스모드 (원금 소진 · T>${st.div-1})</div>`;
@@ -8245,7 +8344,8 @@ function renderOrderInline(){
       // 평단 있을 땐 종가 입력 숨김 (별지점·평단 기반으로 충분). 자동조회만 작게 제공.
       h+=`<input id="o_close" type="hidden"><div class="fetchnote" id="o_fetchnote"></div>`;
     }
-    h+=`<div class="rowline"><span class="k">T값 <span class="sub" id="o_tsub"></span></span><span class="val mono" id="o_t">—</span></div>
+    h+=`<div class="rowline"><span class="k">규칙</span><span class="val" id="o_rule" style="text-align:right">—</span></div>
+        <div class="rowline"><span class="k">T값 <span class="sub" id="o_tsub"></span></span><span class="val mono" id="o_t">—</span></div>
         <div class="rowline"><span class="k">잔금</span><span class="val mono" id="o_bal" style="color:var(--vio)">—</span></div>
         <div class="rowline"><span class="k">1회 매수금</span><span class="val mono" id="o_buy1">—</span></div>
         <div class="rowline"><span class="k">별% / 별지점</span><span class="val mono" id="o_star">—</span></div>
@@ -8554,7 +8654,7 @@ async function kisOptUI(){
   box.innerHTML='<p class="note" style="margin:-2px 0 10px">한투 연결 확인 중…</p>';
   const j=await kisConfig(true);
   const ready=(j.ready||[]).includes(mode);
-  let h=`<p class="note" style="margin:-2px 0 6px">이 세션은 <b>${esc(KIS_MODE_LBL[mode]||mode)}</b>로 나갑니다 —`
+  let h=kisAutoLimitsNote()+`<p class="note" style="margin:6px 0 6px">이 세션은 <b>${esc(KIS_MODE_LBL[mode]||mode)}</b>로 나갑니다 —`
     +` 종목 <b>${esc(tk||'?')}</b>이라 ${market==='kr'?'국내':'국외'}, ${paper?'모의투자 세션이라 <b>모의계좌</b>':'실계좌 세션이라 <b>실전계좌</b>'}입니다.</p>`;
   if(!ready){
     // 서버가 뭐가 비었는지 알려준다 — '키가 없다'만 보면 어디를 고쳐야 할지 알 수 없다
@@ -8908,7 +9008,7 @@ function saveSettings(){
     s.settings={...keep, ticker:$('set_vticker').value||'TQQQ',mode:+segGet('set_vmode')||0.75,
       formula:segGet('set_vformula')||'basic',g:inputNum('set_g')||10,add:inputNum('set_add')||100,
       initAmt:Math.max(0,inputNum('set_initamt')||0),autoCyc:segGet('set_vauto')==='1',
-      vrModel:'official',
+      vrModel:'ladder20',
       band:inputNum('set_band')||15,startv:inputNum('set_startv')||0,startpool:inputNum('set_startpool')||0,divmode:segGet('set_vrdivmode')||'reinv'};
   }
   // 모의 세션이면 여기서 바로 다시 만들어 준다 (어긋남 판정은 paperAuto가 지문으로 한다).
