@@ -187,7 +187,7 @@ canvas{display:block;width:100%;height:auto}
 
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Morning Scalping</div><h1>JK <span class="v">퀀트</span> 단타 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="scVer">v1.15.1</span></h1></div>
+    <div><div class="kicker">Morning Scalping</div><h1>JK <span class="v">퀀트</span> 단타 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="scVer">v1.16.0</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -372,7 +372,7 @@ canvas{display:block;width:100%;height:auto}
         <li>장 마감 Top100을 과거 10시에 소급 사용하지 않는다. 늦게 스냅샷되면 <b>스냅샷 이후 신호만</b> 인정한다.</li>
       </ul></div>
       <div class="step"><div class="st"><span class="n">2</span>장중 신호</div><ul>
-        <li>기본 신호시간 <b>10:00~14:30</b> · 당일 시가 대비 <b>+1~+8%</b>.</li>
+        <li>기본 신호시간 <b>10:00~14:30</b> · 실시간과 동일하게 <b>09:00 첫 1분봉 종가</b> 대비 <b>+1~+8%</b>.</li>
         <li>종가가 <b>세션 VWAP 위</b>이고 VWAP 10분 기울기 <b>+0.10% 이상</b>.</li>
         <li><b>직전 20분 고점 돌파</b> + 현재 1분 거래량이 직전 20분 평균의 <b>1.5배 이상</b>.</li>
       </ul></div>
@@ -386,13 +386,21 @@ canvas{display:block;width:100%;height:auto}
     </div>
 
     <div class="card">
+      <h3><span class="dot"></span>📡 데이트레이딩 서버 장중 감시 <span class="sub" style="font-weight:600">10:00~14:30 · 웹을 닫아도 동작</span></h3>
+      <p class="lead">당일 고정 Top100을 대상으로 서버가 <b>매분 기준전략 + 그림자전략</b>을 계산한다.
+        <b>기준전략의 새 후보신호만 Telegram</b>으로 보내고, 다음 1분봉 시가 진입·손익은 장 종료 후 KIS 원본으로 다시 계산한다.</p>
+      <div class="warn"><b>실시간/백테 일치 규칙:</b> 실시간 Naver 분봉은 종가·거래량만 제공하므로 VWAP·20분 고점·세션상승률 판정도 <b>종가+거래량 기준</b>으로 통일했다.
+        실시간 알림은 후보신호일 뿐이며 실제 주문은 하지 않는다.</div>
+    </div>
+
+    <div class="card">
       <h3><span class="dot"></span>🧪 데이트레이딩 누적 연구 <span class="sub" style="font-weight:600">기준 + 그림자 병렬 비교</span></h3>
       <div class="row" style="margin-bottom:8px">
         <button class="ghostbtn" onclick="loadDayTradingResearch()">🔄 결과 갱신</button>
         <span class="sub" id="dt_msg">첫 데이터 수집 대기</span>
       </div>
       <div id="dt_body"><p class="sub">오늘 장 종료 뒤 전체 1분봉이 저장되면 기준전략과 그림자전략 결과가 여기에 표시됩니다.</p></div>
-      <p class="note">그림자 후보: 거래량 2배 · 30분 고점 · VWAP 기울기 0.2% · 14:00 이전 · 시가대비 +2% · 손절 0.8% · 익절 1.5%.</p>
+      <p class="note">그림자 후보: 거래량 2배 · 30분 고점 · VWAP 기울기 0.2% · 14:00 이전 · 09:00 1분봉 대비 +2% · 손절 0.8% · 익절 1.5%.</p>
     </div>
 
     <div class="card">
