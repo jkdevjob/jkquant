@@ -7540,32 +7540,7 @@ console.log('\n[117] 5년 플랜 v1.10.4 — 두 경로 기본값 · VR 초기 �
      && /planInitStockPct:90,planPresetVersion:6/.test(pl)
      && /공식 규칙을 실전 기본값으로 사용/.test(pl));
 
-  const usd=v=>'
-  const ord=vrOrders({settings:st,hist:[]},333).orders;
-  ok('플랜 VR 첫매수 수량은 수수료 포함 initAmt 안에서만 — $1000 @333 → 2주',
-     ord.length===1 && ord[0].qty===2, JSON.stringify(ord));
-
-  const fee=2*333*FEE, left=1000-2*333-fee;
-  const hist=[
-    {type:'buy',date:'2026-01-02',price:333,qty:2,fee,init:true,cyc:0},
-    {type:'add',date:'2026-01-02',amt:left,cyc:0}
-  ];
-  const c=calcVrState({settings:st,hist});
-  ok('VR 첫매수 잔돈은 명시적 add 한 번만 Pool에 남는다',
-     near(c.pool,100+left,1e-9), `Pool ${c.pool} / 기대 ${100+left}`);
-  ok('VR 초기 총자산 보존 — 주식원가+수수료+Pool = startPool+initAmt',
-     near(2*333+fee+c.pool,1100,1e-9), String(2*333+fee+c.pool));
-
-  const vf=extractFn(idx,'function vrFirstBuy()');
-  ok('운영 VR 수동 첫매수도 수수료 포함 수량·fee·init·잔돈 add를 기록한다',
-     /Math\.floor\(amt\/\(pr\*\(1\+F\)\)\)/.test(vf)
-     && /fee:\+fee\.toFixed\(6\),init:true,cyc:0/.test(vf)
-     && /amt:\+left\.toFixed\(6\),cyc:0/.test(vf));
-}
-
-console.log(`\n════ 결과: ${pass} PASS / ${fail} FAIL ${fail===0?'— ALL PASS ★':'— 배포 금지, 위 ✗ 항목 수정 필요'} ════`);
-process.exit(fail===0?0:1);
-+Math.round(v||0), FEE=.0025;
+  const usd=v=>'$'+Math.round(v||0), FEE=.0025;
   const calcVrState=new Function('return ('+extractFn(pl,'function calcVrState(sess)').replace(/^function calcVrState\(/,'function (')+')')();
   const vrOrders=new Function('FEE','usd','calcVrState',
     'function nextVrDate(s){return s;} function vrCycleStart(c){return null;} return ('+
