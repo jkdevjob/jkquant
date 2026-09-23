@@ -6,7 +6,7 @@
 > 범위: 무한매수법·VR 중점 (7-①~⑭) + 섀넌·200일선·적립·ASAP (7-⑮~⑱)
 > 범위 밖: 점검 도중 main 에 들어온 병렬 작업(5년 플랜 두 경로 v1.8.0 — PATH A 'TECL 역분산 + TQQQ Guard' 신규 계산 · 데이트레이딩·시초가)은
 > 이번 대조에 넣지 않았다. 플랜의 무매·VR 경로(PATH B)는 함수가 그대로라 7차 수정이 그대로 얹혔고 회귀가 확인한다.
-> 버전: index.html **v3.85.0** (D8) · backtest.html **v2.3.0** · plan.html **v1.8.1** · 서버 `functions/api/_im.js`·`autotrade.js`
+> 버전: index.html **v3.85.0** (D8) · backtest.html **v2.3.0** · plan.html **v1.9.0** (#247 병렬 작업) · 서버 `functions/api/_im.js`·`autotrade.js`
 > 회귀 **1851 PASS / 0 FAIL** (7차 교차 대조 `[105]`~`[115]` 포함) · strategy-check 22 PASS ·
 > 변이 시험 **47종 전부 빨간불** (7차 35종 + D8 12종 · 첫 판 20종 중 2종이 살아남아 값 시험을 넣고 다시 돌림 — 5장)
 
