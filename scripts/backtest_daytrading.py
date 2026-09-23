@@ -141,7 +141,9 @@ def first_trade(day,row,p:Params):
     a=bars_of(row)
     if len(a)<max(p.lookback,p.slope_n)+3:
         return None
-    day_open=a[0]["o"] or a[0]["c"]
+    # Live Naver minute feed has close+volume only. Use the completed 09:00
+    # minute close as the signal-model session base so historical signals match.
+    day_open=a[0]["c"]
     if day_open<=0:
         return None
 
@@ -149,8 +151,7 @@ def first_trade(day,row,p:Params):
     vwap=[]
     pv=vv=0.0
     for x in a:
-        typical=(x["h"]+x["l"]+x["c"])/3.0
-        pv+=typical*x["v"]; vv+=x["v"]
+        pv+=x["c"]*x["v"]; vv+=x["v"]
         vwap.append(pv/max(vv,1.0))
 
     snapshot_hm=int(day.get("snapshotHm") or 1000)
@@ -166,7 +167,7 @@ def first_trade(day,row,p:Params):
             break
 
         prev=a[i-p.lookback:i]
-        prior_high=max(z["h"] for z in prev)
+        prior_high=max(z["c"] for z in prev)
         avg_vol=sum(z["v"] for z in prev)/len(prev)
         vol_ratio=x["v"]/max(avg_vol,1.0)
         vw=vwap[i]
@@ -351,13 +352,14 @@ def main():
     wf=walk_forward(days,trade_map)
     enough=len(days)>=20 and len(baseline)>=30
     report={
-        "schema":2,"generatedAt":datetime.now(KST).isoformat(),
+        "schema":3,"generatedAt":datetime.now(KST).isoformat(),
         "from":labels[0],"to":labels[-1],"archiveDays":len(days),
         "baselineTradeCount":len(baseline),
         "comparisonStatus":"eligible" if enough else "collecting",
         "comparisonRule":"Preliminary until >=20 trading days and >=30 baseline trades.",
         "strategyName":"VWAP 추세 돌파 v1",
-        "dataRule":"10:00 intraday Top100 snapshot; signals only after snapshot; next-minute-open entry.",
+        "signalModel":"live-parity-close-volume",
+        "dataRule":"10:00 intraday Top100 snapshot; live-parity signal uses minute close+volume and 09:00 minute close as session base; next-minute-open paper entry.",
         "variants":reports,"walkForward":wf,
         "diagnostics":diagnostics(baseline),
         "latestDayTrades":[x for x in baseline if x["date"]==labels[-1]],
