@@ -529,7 +529,7 @@ try{ if(localStorage.getItem('qcockpit_hadUser')==='1') document.documentElement
 </div>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.85.1</span></h1></div>
+    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.85.2</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -1623,7 +1623,7 @@ document.addEventListener('click',function(e){ var m=document.getElementById('jk
   <footer>
     <strong>JK 퀀트</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.85.1</b> · 2026-09-23</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.85.2</b> · 2026-09-23</div>
   </footer>
 </div>
 
@@ -7895,16 +7895,18 @@ function vrFirstBuy(){
   if(!(amt>0)){ alert('설정(⚙️)에서 초기 투자금을 먼저 넣으세요.'); return; }
   const pr=vrLastPrice(c)||0;
   if(!(pr>0)){ alert('먼저 🔄 자동으로 현재가를 불러오거나 직접 입력하세요.'); return; }
-  const qty=Math.floor(amt/pr);
-  if(qty<1){ alert('초기 투자금이 1주 값보다 작습니다.'); return; }
-  const date=new Date().toISOString().slice(0,10);
-  const left=amt-qty*pr;
+  const F=(typeof IVS_FEE!=='undefined')?IVS_FEE:0.0025;
+  const qty=Math.floor(amt/(pr*(1+F)));
+  if(qty<1){ alert('초기 투자금이 수수료 포함 1주 값보다 작습니다.'); return; }
+  const date=new Date().toISOString().slice(0,10), fee=qty*pr*F;
+  const left=amt-qty*pr-fee;
   if(!confirm(`첫 매수 ${tickerLabel(st.ticker)} ${nfix(qty,0)}주 × ${wn(pr)} = ${wn(qty*pr)}\n`
+    +`수수료 ${wn(fee)}\n`
     +(left>0?`남는 ${wn(left)}는 Pool로\n`:'')
-    +`\n이 금액이 0주차 V가 됩니다.\n오늘(${date}) 기록할까요?`)) return;
+    +`\n주식 평가금이 0주차 V가 됩니다.\n오늘(${date}) 기록할까요?`)) return;
   const h=curStrat().hist;
-  h.push({type:'buy',date,price:+pr,qty:+qty,ts:Date.now()});
-  if(left>0) h.push({type:'add',date,amt:+left,ts:Date.now()+1});
+  h.push({type:'buy',date,price:+pr,qty:+qty,fee:+fee.toFixed(6),init:true,cyc:0,ts:Date.now()});
+  if(left>0) h.push({type:'add',date,amt:+left.toFixed(6),cyc:0,ts:Date.now()+1});
   st.cycStart=date;                       // 0주차 시작일 — 여기서부터 2주 뒤가 다음 진입일
   st.simLast=date;                        // 모의 체결은 첫 매수 다음 날부터 판정
   sortHist(h); save(); refreshVr(); pushRemote&&pushRemote();

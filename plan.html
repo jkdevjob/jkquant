@@ -959,12 +959,8 @@ function calcVrState(sess){
     if(h.type==='buy'){
       const amt=(+h.price||0)*(+h.qty||0),fee=+h.fee||0,q=+h.qty||0;qty+=q;totbuy+=amt;buyShares+=q;cost+=amt;
       const isInit=h.init!==undefined?!!h.init:(!sawBuy&&!carriedIn);sawBuy=true;if(!vSet){V=amt;vSet=true;}
-      if(isInit){
-        initBuy+=amt+fee;
-        const initBudget=Math.max(0,+st.initAmt||0);
-        pool+=Math.max(0,initBudget-(amt+fee));
-        cycleStartPool=pool;if(cycleBaseQty<=0)cycleBaseQty=qty;
-      }else{pool-=amt+fee;cycleBuySpent+=amt+fee;cycleHasTrade=true;cycleBuyFilled+=Math.max(0,Math.round(q));}
+      if(isInit){initBuy+=amt+fee;cycleStartPool=pool;if(cycleBaseQty<=0)cycleBaseQty=qty;}
+      else{pool-=amt+fee;cycleBuySpent+=amt+fee;cycleHasTrade=true;cycleBuyFilled+=Math.max(0,Math.round(q));}
     }else if(h.type==='sell'){
       const q=+h.qty||0,amt=(+h.price||0)*q,fee=+h.fee||0,av=qty>0?cost/qty:0;cost-=av*q;qty-=q;if(qty<1e-9){qty=0;cost=0;}totsell+=amt;pool+=amt-fee;cycleHasTrade=true;cycleSellFilled+=Math.max(0,Math.round(q));
     }else if(h.type==='add'){pool+=+h.amt||0;totadd+=+h.amt||0;if((h.auto||(curCyc===0&&!cycleHasTrade))&&!cycleHasTrade)cycleStartPool=pool;}

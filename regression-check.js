@@ -7534,40 +7534,38 @@ console.log('\n[117] 5년 플랜 v1.9.1 — 두 경로 기본값 · VR 초기 �
   ok('PATH B 기본값 — SOXL 80% 20분할 +25% 리버스OFF',
      /const total=num\('startCapital'\),a=\[80,20,0\]/.test(pl)
      && /ticker:'SOXL',div:20,target:25,big:15,reverse:false,compound:true/.test(pl));
-  ok('PATH B TECL VR — Skill G150 ±40 · 초기주식90/Pool10 · v3',
+  ok('PATH B TECL VR — Skill G150 ±40 · 초기주식90\/Pool10 · v3',
      /ticker:'TECL',mode:\.5,formula:'skill',g:150,initAmt,add:0,[\s\S]{0,80}band:40/.test(pl)
      && /planInitStockPct:90,planPresetVersion:3/.test(pl)
      && /VR Skill은 5년 최적화용 커스텀 변형/.test(pl));
 
-  const usd=v=>'
-process.exit(fail===0?0:1);
-+Math.round(v||0);
-  const FEE=.0025;
-  const KIND_T={'1회매수':t=>t+1,'절반매수':t=>t+0.5,'쿼터매도':t=>t*.75,'지정가매도':t=>t*.25,
-    '지정가매도+1회매수':t=>t*.25+1,'지정가매도+절반매수':t=>t*.25+.5,
-    '1회매수+지정가매도(애프터)':t=>t*.25+1,'절반매수+지정가매도(애프터)':t=>t*.25+.5};
-  const isBuyKind=k=>k!=='출금'&&String(k||'').includes('매수');
-  const isSellKind=k=>k!=='출금'&&String(k||'').includes('매도');
-  const REV_DIVS_PLAN=[20,40];
-  const reverseTPlan=(kind,t,div)=>kind==='리버스매도'?(div>=40?t*.95:t*.9):kind==='리버스매수'?t+(div-t)*.25:t;
-  const calcVrState=new Function('return ('+extractFn(pl,'function calcVrState(sess)').replace(/^function [\w$]+\(/,'function (')+')')();
+  const usd=v=>'$'+Math.round(v||0), FEE=.0025;
+  const calcVrState=new Function('return ('+extractFn(pl,'function calcVrState(sess)').replace(/^function [\\w$]+\\(/,'function (')+')')();
   const vrOrders=new Function('FEE','usd','calcVrState',
     'function nextVrDate(s){return s;} function vrCycleStart(c){return null;} return ('+
-    extractFn(pl,'function vrOrders(sess,price)').replace(/^function [\w$]+\(/,'function (')+')')(FEE,usd,calcVrState);
-
+    extractFn(pl,'function vrOrders(sess,price)').replace(/^function [\\w$]+\\(/,'function (')+')')(FEE,usd,calcVrState);
   const st={ticker:'TECL',mode:.5,formula:'skill',g:150,initAmt:1000,add:0,band:40,startv:0,startpool:100,
             planTotalCapital:1100,planInitStockPct:90,planPresetVersion:3};
-  const sess={settings:st,hist:[]}, ord=vrOrders(sess,333).orders;
-  ok('VR 첫매수 수량은 수수료 포함 initAmt 안에서만 — $1000 @333 → 2주',
+  const ord=vrOrders({settings:st,hist:[]},333).orders;
+  ok('플랜 VR 첫매수 수량은 수수료 포함 initAmt 안에서만 — $1000 @333 → 2주',
      ord.length===1 && ord[0].qty===2, JSON.stringify(ord));
-  const fee=2*333*FEE;
-  const h={type:'buy',date:'2026-01-02',price:333,qty:2,fee,init:true,cyc:0};
-  const c=calcVrState({settings:st,hist:[h]});
-  const want=100 + 1000-(2*333+fee);
-  ok('VR 첫매수에서 못 쓴 initAmt 잔돈이 Pool에 남는다',
-     near(c.pool,want,1e-9), `Pool ${c.pool} / 기대 ${want}`);
+
+  const fee=2*333*FEE, left=1000-2*333-fee;
+  const hist=[
+    {type:'buy',date:'2026-01-02',price:333,qty:2,fee,init:true,cyc:0},
+    {type:'add',date:'2026-01-02',amt:left,cyc:0}
+  ];
+  const c=calcVrState({settings:st,hist});
+  ok('VR 첫매수 잔돈은 명시적 add 한 번만 Pool에 남는다',
+     near(c.pool,100+left,1e-9), `Pool ${c.pool} / 기대 ${100+left}`);
   ok('VR 초기 총자산 보존 — 주식원가+수수료+Pool = startPool+initAmt',
      near(2*333+fee+c.pool,1100,1e-9), String(2*333+fee+c.pool));
+
+  const vf=extractFn(idx,'function vrFirstBuy()');
+  ok('운영 VR 수동 첫매수도 수수료 포함 수량·fee·init·잔돈 add를 기록한다',
+     /Math\.floor\(amt\/\(pr\*\(1\+F\)\)\)/.test(vf)
+     && /fee:\+fee\.toFixed\(6\),init:true,cyc:0/.test(vf)
+     && /amt:\+left\.toFixed\(6\),cyc:0/.test(vf));
 }
 
 console.log(`\n════ 결과: ${pass} PASS / ${fail} FAIL ${fail===0?'— ALL PASS ★':'— 배포 금지, 위 ✗ 항목 수정 필요'} ════`);
