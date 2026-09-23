@@ -187,7 +187,7 @@ canvas{display:block;width:100%;height:auto}
 
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Morning Scalping</div><h1>JK <span class="v">퀀트</span> 단타 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="scVer">v1.15.0</span></h1></div>
+    <div><div class="kicker">Morning Scalping</div><h1>JK <span class="v">퀀트</span> 단타 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="scVer">v1.15.1</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -1085,6 +1085,17 @@ async function loadDayTradingResearch(){
         '<td class="loss">'+(z.portfolioMddPct||0).toFixed(2)+'%</td></tr>';
     }).join('');
 
+    const dg=j.diagnostics||{},fp=dg.forwardPath||{};
+    const pct=v=>v==null?'—':((v>=0?'+':'')+(+v).toFixed(2)+'%');
+    const groupTable=(title,arr)=>!arr||!arr.length?'':'<div style="margin:12px 0 6px"><b>'+title+'</b></div><div class="htable-wrap"><table class="htable"><thead><tr><th>구간</th><th>거래</th><th>승률</th><th>평균손익</th><th>MFE</th><th>MAE</th></tr></thead><tbody>'+
+      arr.map(z=>'<tr><td><b>'+esc(z.group)+'</b></td><td>'+z.trades+'</td><td>'+((z.winRate||0).toFixed(1))+'%</td><td class="'+((z.avgPnl||0)>=0?'win':'loss')+'">'+pct(z.avgPnl)+'</td><td>'+pct(z.avgMfe)+'</td><td>'+pct(z.avgMae)+'</td></tr>').join('')+'</tbody></table></div>';
+    const pathRows=[1,3,5,10,20].map(n=>{const z=fp['fwd'+n+'mPct']||{};return '<tr><td>'+n+'분</td><td>'+(z.n||0)+'</td><td class="'+((z.avg||0)>=0?'win':'loss')+'">'+pct(z.avg)+'</td><td>'+pct(z.median)+'</td></tr>';}).join('');
+    const diagHtml='<div style="margin:14px 0 8px"><b>🔬 경로·시장상태 진단</b></div>'+
+      '<div class="out"><div class="outbox"><div class="ol">평균 MFE</div><div class="ov good">'+pct(dg.avgMfe)+'</div></div><div class="outbox"><div class="ol">평균 MAE</div><div class="ov bad">'+pct(dg.avgMae)+'</div></div></div>'+
+      '<div class="htable-wrap" style="margin-top:8px"><table class="htable"><thead><tr><th>진입 후</th><th>표본</th><th>평균</th><th>중앙값</th></tr></thead><tbody>'+pathRows+'</tbody></table></div>'+
+      groupTable('⏱ 진입 시간대',dg.timeBuckets)+groupTable('📊 시장 상태',dg.marketRegimes)+groupTable('🔊 거래량 강도',dg.volRatioBuckets)+groupTable('📐 VWAP 기울기',dg.vwapSlopeBuckets)+groupTable('🚀 시가대비 상승폭',dg.sessionRetBuckets)+
+      '<p class="note">시장 상태는 신호 시점의 KODEX200·KODEX코스닥150 당일 수익률로 분류합니다. 둘 다 상승/both_up · 둘 다 하락/both_down · 엇갈림/mixed.</p>';
+
     const wf=j.walkForward||{},need=Math.max(0,(wf.daysNeededForFirstFold||25)-j.archiveDays);
     const wfText=wf.status==='collecting'
       ? '워크포워드 첫 검증까지 '+need+'거래일 더 필요'
@@ -1093,6 +1104,7 @@ async function loadDayTradingResearch(){
     body.innerHTML=todayHtml+
       '<div style="margin:14px 0 8px"><b>🧪 누적 비교</b></div>'+
       '<div class="htable-wrap"><table class="htable"><thead><tr><th>전략</th><th>거래</th><th>승률</th><th>평균손익</th><th>PF</th><th>포트수익</th><th>MDD</th></tr></thead><tbody>'+rows+'</tbody></table></div>'+
+      diagHtml+
       '<div class="warn" style="margin-top:10px"><b>'+esc(wfText)+'</b> · 전체기간 성과가 좋아도 OOS 검증 전에는 기준전략을 자동 변경하지 않습니다.</div>';
   }catch(e){
     msg.textContent='데이트레이딩 연구결과 조회 실패';
@@ -1221,6 +1233,20 @@ async function loadOpeningResearch(){
       '<div class="outbox"><div class="ol">기준 승률</div><div class="ov">'+((s.winRate||0).toFixed(1))+'%</div></div>'+
       '<div class="outbox"><div class="ol">기준 평균손익</div><div class="ov '+((s.avgPnl||0)>=0?'good':'bad')+'">'+((s.avgPnl||0)>=0?'+':'')+(s.avgPnl||0).toFixed(3)+'%</div></div>'+
       '</div><div class="htable-wrap" style="margin-top:10px"><table class="htable"><thead><tr><th>가설</th><th>거래</th><th>승률</th><th>평균손익</th><th>PF</th><th>단순합</th><th>MDD</th></tr></thead><tbody>'+rows+'</tbody></table></div>';
+
+    const dg=j.diagnostics||{},fp=dg.forwardPath||{},tb=dg.timeBuckets||[];
+    const pct=v=>v==null?'—':((v>=0?'+':'')+(+v).toFixed(2)+'%');
+    const pathRows=[1,3,5,10].map(n=>{
+      const z=fp['fwd'+n+'mPct']||{};
+      return '<tr><td>'+n+'분</td><td>'+(z.n||0)+'</td><td class="'+((z.avg||0)>=0?'win':'loss')+'">'+pct(z.avg)+'</td><td>'+pct(z.median)+'</td></tr>';
+    }).join('');
+    const timeRows=tb.map(z=>'<tr><td><b>'+esc(z.group)+'</b></td><td>'+z.trades+'</td><td>'+((z.winRate||0).toFixed(1))+'%</td><td class="'+((z.avgPnl||0)>=0?'win':'loss')+'">'+pct(z.avgPnl)+'</td><td>'+pct(z.avgMfe)+'</td><td>'+pct(z.avgMae)+'</td></tr>').join('');
+    html+='<div style="margin-top:14px"><b>🔬 경로 진단</b></div>'+
+      '<div class="out" style="margin-top:8px"><div class="outbox"><div class="ol">평균 MFE</div><div class="ov good">'+pct(dg.avgMfe)+'</div></div>'+
+      '<div class="outbox"><div class="ol">평균 MAE</div><div class="ov bad">'+pct(dg.avgMae)+'</div></div></div>'+
+      '<div class="htable-wrap" style="margin-top:8px"><table class="htable"><thead><tr><th>진입 후</th><th>표본</th><th>평균</th><th>중앙값</th></tr></thead><tbody>'+pathRows+'</tbody></table></div>'+
+      (timeRows?'<div class="htable-wrap" style="margin-top:8px"><table class="htable"><thead><tr><th>진입시간</th><th>거래</th><th>승률</th><th>평균손익</th><th>MFE</th><th>MAE</th></tr></thead><tbody>'+timeRows+'</tbody></table></div>':'')+
+      '<p class="note">MFE/MAE와 진입 후 1·3·5·10분 수익경로를 저장해 익절·손절·시간필터를 나중에 데이터로 검증합니다.</p>';
 
     const wf=j.walkForward||{};
     html+='<div style="margin-top:14px"><b>🧭 워크포워드 검증</b></div>';
