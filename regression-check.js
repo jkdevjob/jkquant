@@ -7524,13 +7524,13 @@ console.log('\n[116] 7차 D11 — 분배금 세전·세후 표기');
 }
 
 
-/* ════ 117. 5년 플랜 v1.10.4 — $30k 두 경로 기본값 · VR 첫매수 현금보존 ════ */
-console.log('\n[117] 5년 플랜 v1.10.4 — 두 경로 기본값 · VR 초기 현금보존');
+/* ════ 117. 5년 플랜 v1.10.5 — $30k 두 경로 기본값 · VR 첫매수 현금보존 ════ */
+console.log('\n[117] 5년 플랜 v1.10.5 — 두 경로 기본값 · VR 초기 현금보존');
 {
   const pl=fs.readFileSync(__d+'/plan.html','utf8');
   ok('5년 플랜 시작금 기본값은 $30,000', /startCapital:30000/.test(pl) && /aCash:30000/.test(pl));
-  ok('PATH A 기본값 유지 — TECL 70% N20 s0 60 밴드15 + TQQQ 30% SMA250 ±3',
-     /alpha:\{teclWeight:\.70,guardWeight:\.30,ivsLook:20,ivsS0:\.60,ivsBand:\.15,guardMA:250,guardBand:\.03\}/.test(pl));
+  ok('PATH A 연구 기본값 — TECL 70% N20 s0 55 밴드10 + TQQQ 30% SMA200 ±1.5',
+     /alpha:\{teclWeight:\.70,guardWeight:\.30,ivsLook:20,ivsS0:\.55,ivsBand:\.10,guardMA:200,guardBand:\.015\}/.test(pl));
   ok('PATH B 기본값 — SOXL 50% 20분할 +20% 리버스ON',
      /a=\[50,50,0\],inf=Math\.round\(total\*\.50\)/.test(pl)
      && /classic:\{infWeight:\.50,vrWeight:\.50,infDiv:20,infTarget:20,infBig:15,vrG:10,vrBand:15,vrFormula:'basic'/.test(pl)
