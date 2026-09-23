@@ -1,0 +1,121 @@
+name: 데이트레이딩 연구 자동수집
+
+# 10:00 전후에 그 시점의 거래대금 Top100을 고정하고,
+# 장 종료 뒤 그 유니버스의 09:00~15:20 KIS 1분봉을 수집해 연구 백테스트한다.
+# 실전 주문은 전혀 하지 않는다.
+
+on:
+  schedule:
+    - cron: "55 0 * * 1-5"   # 09:55 KST
+    - cron: "0 1 * * 1-5"    # 10:00 KST
+    - cron: "5 1 * * 1-5"    # 10:05 KST
+    - cron: "35 6 * * 1-5"   # 15:35 KST
+    - cron: "40 6 * * 1-5"   # 15:40 KST
+    - cron: "45 6 * * 1-5"   # 15:45 KST
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/daytrading-research.yml"
+      - "scripts/snapshot_daytrading_universe.py"
+      - "scripts/collect_daytrading_data.py"
+      - "scripts/backtest_daytrading.py"
+      - "functions/api/daytrading-research.js"
+      - "scalping.html"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: daytrading-research
+  cancel-in-progress: false
+
+jobs:
+  research:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: 데이터 브랜치 체크아웃
+        uses: actions/checkout@v4
+        with:
+          ref: scalping-data
+          fetch-depth: 0
+
+      - name: 최신 연구 코드 체크아웃
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          path: .app
+          fetch-depth: 1
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: 유니버스 스냅샷 또는 장마감 수집
+        env:
+          JKQ_BASE_URL: https://jkquant.pages.dev
+          JKQ_UNIVERSE_LIMIT: "100"
+        shell: bash
+        run: |
+          set -e
+          DATE=$(TZ=Asia/Seoul date +%F)
+          YEAR=$(TZ=Asia/Seoul date +%Y)
+          DOW=$(TZ=Asia/Seoul date +%u)
+          RAW=$(TZ=Asia/Seoul date +%H%M)
+          HM=$((10#$RAW))
+          SNAP="data/daytrading-universe/$YEAR/$DATE.json"
+          DAY="data/daytrading/$YEAR/$DATE.json.gz"
+
+          if [ "$DOW" -gt 5 ]; then
+            echo "주말 — 종료"
+            exit 0
+          fi
+
+          # 09:50~14:50에 처음 들어온 실행은 그 시점 유니버스를 고정한다.
+          # 정상일은 09:55/10:00/10:05 중 가장 먼저 성공한 스냅샷 하나만 남는다.
+          if [ "$HM" -ge 950 ] && [ "$HM" -lt 1450 ]; then
+            if [ -f "$SNAP" ]; then
+              echo "오늘 유니버스 스냅샷 이미 존재: $SNAP"
+            else
+              python .app/scripts/snapshot_daytrading_universe.py
+              git config user.name "github-actions[bot]"
+              git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+              git add data/daytrading-universe
+              if ! git diff --cached --quiet; then
+                git commit -m "data: daytrading universe $DATE [skip ci]"
+                git pull --rebase origin scalping-data
+                git push origin scalping-data
+              fi
+            fi
+            exit 0
+          fi
+
+          if [ "$HM" -lt 1530 ]; then
+            echo "스냅샷/장마감 수집 시간 아님 — 종료"
+            exit 0
+          fi
+
+          if [ ! -f "$SNAP" ]; then
+            echo "오늘 유니버스 스냅샷이 없어 데이트레이딩 백테스트를 만들 수 없음"
+            exit 0
+          fi
+
+          if [ ! -f "$DAY" ]; then
+            python .app/scripts/collect_daytrading_data.py
+          else
+            echo "오늘 전일장 분봉 이미 수집됨: $DAY"
+          fi
+
+          python .app/scripts/backtest_daytrading.py
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/daytrading data/daytrading-research
+          if git diff --cached --quiet; then
+            echo "새 데이트레이딩 데이터/연구결과 없음"
+            exit 0
+          fi
+          git commit -m "data: daytrading research $DATE [skip ci]"
+          git pull --rebase origin scalping-data
+          git push origin scalping-data
