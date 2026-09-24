@@ -8678,8 +8678,8 @@ console.log('\n[120] 제11차 — 라오어 정식 무매 V4.0 + VR 원문 기�
      return /V4\.0 완전 자동 아님/.test(t) && /MOC 는 한투로 보내지 않음/.test(t) && /리버스 자동주문 미지원/.test(t) && /LOC는 일반 지정가로 근사/.test(t) && /체결내역 자동 동기화 없음/.test(t); })());
 }
 
-/* ════ 121. 5년 플랜 v1.25.0 — A안 자동운용 화면 ════ */
-console.log('\n[121] 5년 플랜 v1.25.0 — A안 자동운용 화면');
+/* ════ 121. 5년 플랜 v1.26.0 — A안 자동운용 화면 ════ */
+console.log('\n[121] 5년 플랜 v1.26.0 — A안 자동운용 화면');
 {
   const pl=fs.readFileSync(__d+'/plan.html','utf8');
   ok('A안은 수동 재계산·계좌맞추기 없이 체결반영 중심',
@@ -8705,8 +8705,8 @@ console.log('\n[121] 5년 플랜 v1.25.0 — A안 자동운용 화면');
      && /avgTecl:null,avgTqqq:null,avgSgov:null/.test(pl));
 }
 
-/* ════ 122. 5년 플랜 v1.25.0 — 이력 수정·평단 계산 ════ */
-console.log('\n[122] 5년 플랜 v1.25.0 — 이력 수정·평단 계산');
+/* ════ 122. 5년 플랜 v1.26.0 — 이력 수정·평단 계산 ════ */
+console.log('\n[122] 5년 플랜 v1.26.0 — 이력 수정·평단 계산');
 {
   const pl=fs.readFileSync(__d+'/plan.html','utf8');
   ok('거래이력 수정 + 시작잔고 이력 수정 UI 제공',
@@ -8718,7 +8718,7 @@ console.log('\n[122] 5년 플랜 v1.25.0 — 이력 수정·평단 계산');
      && /function alphaOpenBaseEdit\(\)/.test(pl)
      && /function alphaSaveEdit\(\)/.test(pl));
   ok('거래 수정은 날짜·종목·매수매도·수량·체결가와 수수료를 다시 계산',
-     /ce\.date=date;ce\.symbol=sym;ce\.side=side;ce\.qty=q;ce\.price=p;ce\.fee=q\*p\*FEE/.test(pl)
+     /ce\.date=date;ce\.symbol=sym;ce\.side=side;ce\.qty=q;ce\.price=p;ce\.fee=alphaFee\(q,p\);ce\.feeRate=ALPHA_FEE_RATE/.test(pl)
      && /id="alphaEditSymbol"/.test(pl)
      && /id="alphaEditSide"/.test(pl)
      && /id="alphaEditQty"/.test(pl)
@@ -8757,8 +8757,8 @@ console.log('\n[122] 5년 플랜 v1.25.0 — 이력 수정·평단 계산');
   ok('기존 보유 평단이 미등록이면 임의 추정하지 않고 미등록 상태 유지', unknown.tecl===12 && unknown.avgTecl===null, JSON.stringify(unknown));
 }
 
-/* ════ 123. 5년 플랜 v1.25.0 — 실전 표출순서 ════ */
-console.log('\n[123] 5년 플랜 v1.25.0 — 실전 표출순서');
+/* ════ 123. 5년 플랜 v1.26.0 — 실전 표출순서 ════ */
+console.log('\n[123] 5년 플랜 v1.26.0 — 실전 표출순서');
 {
   const pl=fs.readFileSync(__d+'/plan.html','utf8');
   const ids=['alphaOrderSection','alphaAccountSection','alphaHistorySection','alphaEvidenceSection','alphaStrategySection'];
@@ -8777,7 +8777,7 @@ console.log('\n[123] 5년 플랜 v1.25.0 — 실전 표출순서');
      && /<input type="hidden" id="aSgovQty">/.test(pl)
      && /<input type="hidden" id="aCash">/.test(pl));
   ok('새 투자 시작은 평단까지 초기화',
-     /alphaLedger=\{base:\{date:todayISO\(\),tecl:0,tqqq:0,sgov:0,cash:cap,avgTecl:null,avgTqqq:null,avgSgov:null\},events:\[\]\}/.test(pl));
+     /alphaLedger=\{base:\{date:todayISO\(\),tecl:0,tqqq:0,sgov:0,cash:cap,avgTecl:null,avgTqqq:null,avgSgov:null\},events:\[\],feeModel:"toss-us-0\.1-v1"\}/.test(pl));
 }
 
 /* ════ 123. 모의 성과 — 단독 페이지(/paper) ════
@@ -8845,6 +8845,45 @@ console.log('\n[123] 모의 성과 — 단독 페이지(/paper)');
   ok('뒤로 가기로 /paper 에 돌아오면 다시 페이지로 · 문구도 창이 아니라 페이지',
      /window\.addEventListener\('popstate', \(\)=>\{ const on=\/\^\\\/paper\\\/\?\$\/\.test\(location\.pathname\);/.test(idx)
      && /이 페이지를 새로고침하면/.test(idx) && /새로고침하면 재시도합니다/.test(idx) && !/창을 다시 열면 재시도/.test(idx) && !/이 창을 닫았다 다시 열면/.test(idx));
+}
+
+/* ════ 124. 5년 플랜 v1.26.0 — 현재계좌 실시간 평가·현금 정합성 ════ */
+console.log('\n[124] 5년 플랜 v1.26.0 — 현재계좌 실시간 평가·현금 정합성');
+{
+  const pl=fs.readFileSync(__d+'/plan.html','utf8');
+  ok('현재계좌 종목별 평단·현재가·수익률·평가금액을 표시',
+     ['Tecl','Tqqq','Sgov'].every(x=>
+       new RegExp('id="alphaAcct'+x+'Avg"').test(pl)
+       && new RegExp('id="alphaAcct'+x+'Px"').test(pl)
+       && new RegExp('id="alphaAcct'+x+'Pl"').test(pl)
+       && new RegExp('id="alphaAcct'+x+'Mv"').test(pl))
+     && /const accountRows=\[\['TECL','tecl','avgTecl'\],\['TQQQ','tqqq','avgTqqq'\],\['SGOV','sgov','avgSgov'\]\]/.test(pl)
+     && /ret=\(q>0&&px>0&&Number\.isFinite\(avg\)&&avg>0\)\?\(px\/avg-1\)\*100:null/.test(pl));
+  ok('현재계좌 합계 — 보유원가·ETF평가액·평가손익·보유수익률·총자산',
+     /id="alphaCostTotal"/.test(pl)
+     && /id="alphaMarketTotal"/.test(pl)
+     && /id="alphaPnlTotal"/.test(pl)
+     && /id="alphaReturnTotal"/.test(pl)
+     && /id="alphaAssetTotal"/.test(pl)
+     && /const assetTotal=marketTotal\+S\.cash,retTotal=costTotal>0\?pnlTotal\/costTotal\*100:null/.test(pl));
+  ok('시세를 받은 뒤 현재계좌를 다시 렌더링해 최신 current price를 사용',
+     /renderAlphaPlan\(qv,qt,sgov\);\s*renderAlphaLedger\(\);/.test(pl)
+     && /L&&\+L\.price>0\?\+L\.price:\(L&&L\.settled\?\+L\.settled\.close:0\)/.test(pl));
+  ok('A안 실전 수수료는 토스 미국주식 0.1%로 백테스트 FEE 0.25%와 분리',
+     /const FEE=0\.0025;\s*const ALPHA_FEE_RATE=0\.001/.test(pl)
+     && /function alphaFee\(q,p\)/.test(pl)
+     && /gross<=10\?0:Math\.floor\(gross\*ALPHA_FEE_RATE\*100\)\/100/.test(pl)
+     && /feeModel:"toss-us-0\.1-v1"/.test(pl));
+  const feeSrc=extractFn(pl,'function alphaFee(q,p)');
+  const fee=new Function('ALPHA_FEE_RATE',feeSrc+'\nreturn alphaFee;')(.001);
+  ok('토스 수수료 계산 — $10 이하 무료, $2,000 매수는 $2.00', fee(1,10)===0 && near(fee(20,100),2,1e-9), JSON.stringify([fee(1,10),fee(20,100)]));
+  ok('새 체결 저장 시 현금이 음수가 되면 차단하고 기존 음수현금은 화면에 경고',
+     /if\(chk\.cash<-\.005\)\{alert\('현금이 '/.test(pl)
+     && /id="alphaCashWarn"/.test(pl)
+     && /기록된 매수금액\+수수료가 시작 현금을 초과했습니다/.test(pl));
+  ok('기존 0.25% A장부는 v1.26 로딩 때 토스 0.1% 수수료로 1회 마이그레이션',
+     /if\(alphaLedger\.feeModel!=="toss-us-0\.1-v1"\)/.test(pl)
+     && /alphaLedger\.events=alphaLedger\.events\.map\(e=>e&&e\.type==='trade'\?\{\.\.\.e,fee:alphaFee\(e\.qty,e\.price\),feeRate:ALPHA_FEE_RATE\}:e\)/.test(pl));
 }
 
 console.log(`\n════ 결과: ${pass} PASS / ${fail} FAIL ${fail===0?'— ALL PASS ★':'— 배포 금지, 위 ✗ 항목 수정 필요'} ════`);
