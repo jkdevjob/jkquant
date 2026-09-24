@@ -192,7 +192,7 @@ th:first-child,td:first-child{text-align:left}
 <body>
 <div class="wrap">
   <div class="top">
-    <div class="brand"><div class="logo">Five Year Plan</div><h1>5년 자산플랜 <span class="ver">v1.26.1</span></h1></div>
+    <div class="brand"><div class="logo">Five Year Plan</div><h1>5년 자산플랜 <span class="ver">v1.26.2</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
       <div class="jkmenu" id="jkmenuWrap">
@@ -262,13 +262,13 @@ th:first-child,td:first-child{text-align:left}
           <div class="alpha-account-card"><div class="sym">TECL</div><div class="qty" id="alphaAcctTeclQty">0주</div><div class="avg" id="alphaAcctTeclAvg">평단 —</div><div class="livepx" id="alphaAcctTeclPx">현재가 —</div><div class="pl" id="alphaAcctTeclPl">수익률 —</div><div class="mv" id="alphaAcctTeclMv">평가금액 —</div></div>
           <div class="alpha-account-card"><div class="sym">TQQQ</div><div class="qty" id="alphaAcctTqqqQty">0주</div><div class="avg" id="alphaAcctTqqqAvg">평단 —</div><div class="livepx" id="alphaAcctTqqqPx">현재가 —</div><div class="pl" id="alphaAcctTqqqPl">수익률 —</div><div class="mv" id="alphaAcctTqqqMv">평가금액 —</div></div>
           <div class="alpha-account-card"><div class="sym">SGOV</div><div class="qty" id="alphaAcctSgovQty">0주</div><div class="avg" id="alphaAcctSgovAvg">평단 —</div><div class="livepx" id="alphaAcctSgovPx">현재가 —</div><div class="pl" id="alphaAcctSgovPl">수익률 —</div><div class="mv" id="alphaAcctSgovMv">평가금액 —</div></div>
-          <div class="alpha-account-card cash"><div class="sym">현금</div><div class="qty" id="alphaAcctCash">$0</div><div class="avg">체결이력 반영 후 자동 증감</div><div class="livepx">주문 가능 현금 기준</div><div class="pl" id="alphaAcctCashState"></div></div>
+          <div class="alpha-account-card cash"><div class="sym">현금</div><div class="qty" id="alphaAcctCash">$0.00</div><div class="avg">체결이력 반영 후 자동 증감</div><div class="livepx">주문 가능 현금 기준</div><div class="pl" id="alphaAcctCashState"></div></div>
         </div>
         <div class="alpha-account-total">
           <div class="alpha-total-cell"><div class="k">보유원가</div><div class="v" id="alphaCostTotal">—</div></div>
-          <div class="alpha-total-cell"><div class="k">ETF 평가액</div><div class="v" id="alphaMarketTotal">—</div></div>
+          <div class="alpha-total-cell"><div class="k">현재평가액</div><div class="v" id="alphaMarketTotal">—</div></div>
           <div class="alpha-total-cell"><div class="k">평가손익</div><div class="v" id="alphaPnlTotal">—</div></div>
-          <div class="alpha-total-cell"><div class="k">보유 수익률</div><div class="v" id="alphaReturnTotal">—</div></div>
+          <div class="alpha-total-cell"><div class="k">전체 손익률</div><div class="v" id="alphaReturnTotal">—</div></div>
           <div class="alpha-total-cell"><div class="k">총자산 (ETF+현금)</div><div class="v" id="alphaAssetTotal">—</div></div>
         </div>
         <div class="alpha-cash-warn" id="alphaCashWarn" hidden></div>
@@ -686,6 +686,7 @@ const KEY="jkq_5y_plan_v1";
 const $=id=>document.getElementById(id);
 const num=(id,fallback=0)=>{const v=Number($(id).value);return Number.isFinite(v)?v:fallback};
 const usd=v=>"$"+Math.round(v||0).toLocaleString("en-US");
+const usd2=v=>"$"+(Number(v)||0).toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2});
 const pct=v=>(Number(v)||0).toFixed(1)+"%";
 const todayISO=()=>{const d=new Date();return new Date(Date.UTC(d.getFullYear(),d.getMonth(),d.getDate())).toISOString().slice(0,10)};
 const plusYears=(iso,n)=>{const d=new Date(iso+"T00:00:00Z");d.setUTCFullYear(d.getUTCFullYear()+n);return d.toISOString().slice(0,10)};
@@ -1744,7 +1745,7 @@ function alphaSyncInputs(){
   if($('aSgovQty'))$('aSgovQty').value=S.sgov;
   if($('aCash'))$('aCash').value=Number(S.cash.toFixed(2));
 }
-function alphaAvgText(q,avg){return q>0?(Number.isFinite(avg)?'평단 '+usd(avg):'평단가 미등록'):'평단 —';}
+function alphaAvgText(q,avg){return q>0?(Number.isFinite(avg)?'평단 '+usd2(avg):'평단가 미등록'):'평단 —';}
 function renderAlphaLedger(){
   alphaSyncInputs();
   const S=alphaLedgerCalc(),ev=alphaEventList(alphaLedger).reverse(),b=alphaLedger.base||{};
@@ -1752,7 +1753,7 @@ function renderAlphaLedger(){
   if($('alphaAcctTeclQty'))$('alphaAcctTeclQty').textContent=S.tecl+'주';
   if($('alphaAcctTqqqQty'))$('alphaAcctTqqqQty').textContent=S.tqqq+'주';
   if($('alphaAcctSgovQty'))$('alphaAcctSgovQty').textContent=S.sgov+'주';
-  if($('alphaAcctCash'))$('alphaAcctCash').textContent=usd(S.cash);
+  if($('alphaAcctCash'))$('alphaAcctCash').textContent=usd2(S.cash);
   if($('alphaAcctTeclAvg'))$('alphaAcctTeclAvg').textContent=alphaAvgText(S.tecl,S.avgTecl);
   if($('alphaAcctTqqqAvg'))$('alphaAcctTqqqAvg').textContent=alphaAvgText(S.tqqq,S.avgTqqq);
   if($('alphaAcctSgovAvg'))$('alphaAcctSgovAvg').textContent=alphaAvgText(S.sgov,S.avgSgov);
@@ -1765,28 +1766,28 @@ function renderAlphaLedger(){
     const pnl=(q>0&&px>0&&Number.isFinite(avg))?(px-avg)*q:null,ret=(q>0&&px>0&&Number.isFinite(avg)&&avg>0)?(px/avg-1)*100:null;
     if(Number.isFinite(pnl))pnlTotal+=pnl;
     const cap=sym[0]+sym.slice(1).toLowerCase(),pxEl=$('alphaAcct'+cap+'Px'),plEl=$('alphaAcct'+cap+'Pl'),mvEl=$('alphaAcct'+cap+'Mv');
-    if(pxEl)pxEl.textContent=px>0?((L&&L.hasLivePrice?'실시간 ':'확정종가 ')+usd(px)):'현재가 불러오는 중';
-    if(plEl){plEl.textContent=Number.isFinite(ret)?((pnl>=0?'+':'')+usd(pnl)+' · '+(ret>=0?'+':'')+ret.toFixed(2)+'%'):'수익률 —';plEl.className='pl '+(Number.isFinite(pnl)?(pnl>=0?'pos':'neg'):'');}
-    if(mvEl)mvEl.textContent=px>0?'평가금액 '+usd(mv):'평가금액 —';
+    if(pxEl)pxEl.textContent=px>0?((L&&L.hasLivePrice?'실시간 ':'확정종가 ')+usd2(px)):'현재가 불러오는 중';
+    if(plEl){plEl.textContent=Number.isFinite(ret)?((pnl>=0?'+':'')+usd2(pnl)+' · '+(ret>=0?'+':'')+ret.toFixed(2)+'%'):'수익률 —';plEl.className='pl '+(Number.isFinite(pnl)?(pnl>=0?'pos':'neg'):'');}
+    if(mvEl)mvEl.textContent=px>0?'평가금액 '+usd2(mv):'평가금액 —';
   }
   const assetTotal=marketTotal+S.cash,retTotal=costTotal>0?pnlTotal/costTotal*100:null;
-  if($('alphaCostTotal'))$('alphaCostTotal').textContent=knownCost?usd(costTotal):usd(costTotal)+'*';
-  if($('alphaMarketTotal'))$('alphaMarketTotal').textContent=usd(marketTotal);
-  if($('alphaPnlTotal')){$('alphaPnlTotal').textContent=(pnlTotal>=0?'+':'')+usd(pnlTotal);$('alphaPnlTotal').className='v '+(pnlTotal>=0?'pos':'neg');}
+  if($('alphaCostTotal'))$('alphaCostTotal').textContent=knownCost?usd2(costTotal):usd2(costTotal)+'*';
+  if($('alphaMarketTotal'))$('alphaMarketTotal').textContent=usd2(marketTotal);
+  if($('alphaPnlTotal')){$('alphaPnlTotal').textContent=(pnlTotal>=0?'+':'')+usd2(pnlTotal);$('alphaPnlTotal').className='v '+(pnlTotal>=0?'pos':'neg');}
   if($('alphaReturnTotal')){$('alphaReturnTotal').textContent=Number.isFinite(retTotal)?((retTotal>=0?'+':'')+retTotal.toFixed(2)+'%'):'—';$('alphaReturnTotal').className='v '+(Number.isFinite(retTotal)?(retTotal>=0?'pos':'neg'):'');}
-  if($('alphaAssetTotal'))$('alphaAssetTotal').textContent=usd(assetTotal);
-  if($('alphaAcctCashState')){$('alphaAcctCashState').textContent=S.cash<0?'현금 부족 '+usd(Math.abs(S.cash)):'사용가능 '+usd(S.cash);$('alphaAcctCashState').className='pl '+(S.cash<0?'neg':'pos');}
-  if($('alphaCashWarn')){const bad=S.cash<-.005;$('alphaCashWarn').hidden=!bad;if(bad)$('alphaCashWarn').textContent='현금이 '+usd(S.cash)+'입니다. 기록된 매수금액+수수료가 시작 현금을 초과했습니다. 거래이력 또는 시작잔고를 실제 토스 계좌와 맞게 수정하세요.';}
+  if($('alphaAssetTotal'))$('alphaAssetTotal').textContent=usd2(assetTotal);
+  if($('alphaAcctCashState')){$('alphaAcctCashState').textContent=S.cash<0?'현금 부족 '+usd2(Math.abs(S.cash)):'사용가능 '+usd2(S.cash);$('alphaAcctCashState').className='pl '+(S.cash<0?'neg':'pos');}
+  if($('alphaCashWarn')){const bad=S.cash<-.005;$('alphaCashWarn').hidden=!bad;if(bad)$('alphaCashWarn').textContent='현금이 '+usd2(S.cash)+'입니다. 기록된 매수금액+수수료가 시작 현금을 초과했습니다. 거래이력 또는 시작잔고를 실제 토스 계좌와 맞게 수정하세요.';}
   if($('alphaLedgerBody')){
     const rows=ev.map(e=>{
       const actions='<button class="btn" style="min-height:28px;padding:3px 7px;font-size:10px" data-aedit="'+e.id+'">수정</button> <button class="ledger-del" data-aeid="'+e.id+'">✕</button>';
-      if(e.type==='reconcile'){const x=e.snapshot||{};return '<tr><td>'+String(e.date||'')+'</td><td>계좌</td><td class="adjtxt">이전버전 보정</td><td colspan="4">TECL '+(+x.tecl||0)+' · TQQQ '+(+x.tqqq||0)+' · SGOV '+(+x.sgov||0)+' · 현금 '+usd(+x.cash||0)+'</td><td><button class="ledger-del" data-aeid="'+e.id+'">✕</button></td></tr>';}
+      if(e.type==='reconcile'){const x=e.snapshot||{};return '<tr><td>'+String(e.date||'')+'</td><td>계좌</td><td class="adjtxt">이전버전 보정</td><td colspan="4">TECL '+(+x.tecl||0)+' · TQQQ '+(+x.tqqq||0)+' · SGOV '+(+x.sgov||0)+' · 현금 '+usd2(+x.cash||0)+'</td><td><button class="ledger-del" data-aeid="'+e.id+'">✕</button></td></tr>';}
       const gross=(+e.qty||0)*(+e.price||0),buy=e.side==='buy';
-      return '<tr><td>'+String(e.date||'')+'</td><td>'+String(e.symbol||'')+'</td><td class="'+(buy?'buytxt':'selltxt')+'">'+(buy?'매수':'매도')+'</td><td>'+Math.floor(+e.qty||0)+'</td><td>'+usd(+e.price||0)+'</td><td>'+usd(+e.fee||0)+'</td><td>'+usd(gross)+'</td><td>'+actions+'</td></tr>';
+      return '<tr><td>'+String(e.date||'')+'</td><td>'+String(e.symbol||'')+'</td><td class="'+(buy?'buytxt':'selltxt')+'">'+(buy?'매수':'매도')+'</td><td>'+Math.floor(+e.qty||0)+'</td><td>'+usd2(+e.price||0)+'</td><td>'+usd2(+e.fee||0)+'</td><td>'+usd2(gross)+'</td><td>'+actions+'</td></tr>';
     });
-    const baseParts=['TECL '+Math.max(0,Math.floor(+b.tecl||0))+'주'+(Number.isFinite(+b.avgTecl)&&+b.avgTecl>0?' @ '+usd(+b.avgTecl):''),
-      'TQQQ '+Math.max(0,Math.floor(+b.tqqq||0))+'주'+(Number.isFinite(+b.avgTqqq)&&+b.avgTqqq>0?' @ '+usd(+b.avgTqqq):''),
-      'SGOV '+Math.max(0,Math.floor(+b.sgov||0))+'주'+(Number.isFinite(+b.avgSgov)&&+b.avgSgov>0?' @ '+usd(+b.avgSgov):''),'현금 '+usd(+b.cash||0)];
+    const baseParts=['TECL '+Math.max(0,Math.floor(+b.tecl||0))+'주'+(Number.isFinite(+b.avgTecl)&&+b.avgTecl>0?' @ '+usd2(+b.avgTecl):''),
+      'TQQQ '+Math.max(0,Math.floor(+b.tqqq||0))+'주'+(Number.isFinite(+b.avgTqqq)&&+b.avgTqqq>0?' @ '+usd2(+b.avgTqqq):''),
+      'SGOV '+Math.max(0,Math.floor(+b.sgov||0))+'주'+(Number.isFinite(+b.avgSgov)&&+b.avgSgov>0?' @ '+usd2(+b.avgSgov):''),'현금 '+usd2(+b.cash||0)];
     rows.push('<tr><td>'+String(b.date||'')+'</td><td>시작</td><td class="adjtxt">시작잔고</td><td colspan="4">'+baseParts.join(' · ')+'</td><td><button class="btn" style="min-height:28px;padding:3px 7px;font-size:10px" data-abase="1">수정</button></td></tr>');
     $('alphaLedgerBody').innerHTML=rows.join('');
   }
