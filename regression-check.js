@@ -5880,7 +5880,7 @@ console.log('\n[89] 모의투자 — 달력 마감일이 아니라 가진 봉 �
     /* 여기까지 왔다는 건 paperFillAll 이 이미 전 탭·전 세션을 돌린 뒤다.
        '탭에 가서 🔄 를 누르라'는 안내는 틀렸다 — 이 창이 한 번에 굴린다 (사용자 지적). */
     ok('시세 실패에도 탭마다 🔄 를 시키지 않는다',
-       /noStart\.length[\s\S]{0,600}이 창을 닫았다 다시 열면/.test(f)
+       /noStart\.length[\s\S]{0,600}이 페이지를 새로고침하면/.test(f)
        && /탭마다 따로 🔄 를 누를 필요는 없습니다/.test(f));
     ok("빈 표 안내에 '해당 탭을 한 번 열어' 가 안 남아 있다",
        !/해당 탭을 한 번 열어/.test(idx) && !/탭을 한 번 열어주세요/.test(idx)); }
@@ -7807,7 +7807,6 @@ console.log('\n[117] 5년 플랜 v1.19.0 — A 전략설명·리밸런싱 근거
      /alpha:\{teclWeight:\.70,guardWeight:\.30,ivsLook:15,ivsS0:\.55,ivsBand:\.175,guardMA:200,guardBand:\.015\}/.test(pl));
   ok('PATH A 첫날 실행 UI — 초기자금 입력 · 127개 롤링 검증 · 자체 잔고 진행률',
      /id="alphaCapitalInput"/.test(pl)
-     && /id="alphaStartHoldings"/.test(pl)
      && /127개 시작구간/.test(pl)
      && /function alphaPlanTotal\(\)/.test(pl)
      && /activePlanTab==='alpha'\?\(at==null\?num\("startCapital"\):at\)/.test(pl));
@@ -7837,7 +7836,7 @@ console.log('\n[117] 5년 플랜 v1.19.0 — A 전략설명·리밸런싱 근거
      && /signalTotal=startCap;\$\('aCash'\)\.value=startCap/.test(pl)
      && /bInf=Math\.round\(cap\*PATH_DEFAULTS\.classic\.infWeight\),bVr=Math\.max\(0,cap-bInf\)/.test(pl)
      && /\$\("alphaCapitalInput"\)\.addEventListener\("change"/.test(pl)
-     && /if\(virgin\)\$\("aCash"\)\.value=cap/.test(pl)
+     && /if\(virgin\)alphaLedger\.base\.cash=cap/.test(pl)
      && /\$\("startCapital"\)\.value=cap/.test(pl));
   ok('새로고침 시 로컬 초기자금 우선 · 클라우드 예전값이 덮어쓰지 않음',
      /let local=null;try\{local=JSON\.parse\(localStorage\.getItem\(KEY\)\|\|"null"\)\}catch\(e\)\{\}/.test(pl)
@@ -8688,7 +8687,8 @@ console.log('\n[121] 5년 플랜 v1.25.0 — A안 자동운용 화면');
      && !/id="alphaRefresh"/.test(pl)
      && !/id="alphaReconcile"/.test(pl)
      && !/function alphaOpenReconcile\(/.test(pl)
-     && !/오늘 주문 다시 계산/.test(pl));
+     // '오늘 주문 다시 계산' 이 없어야 하는 곳은 A안 패널이다 — B안(클래식) 버튼(classicRefresh)은 그대로 쓴다
+     && (()=>{ const a=(pl.match(/data-ppanel="alpha"[\s\S]*?data-ppanel="classic"/)||[''])[0]; return a.length>1000 && !/오늘 주문 다시 계산/.test(a); })());
   ok('A안 페이지/A탭 진입 시 시세·주문 자동 갱신',
      /id="alphaRefreshTime"/.test(pl)
      && /시세 자동 갱신/.test(pl)
@@ -8778,6 +8778,73 @@ console.log('\n[123] 5년 플랜 v1.25.0 — 실전 표출순서');
      && /<input type="hidden" id="aCash">/.test(pl));
   ok('새 투자 시작은 평단까지 초기화',
      /alphaLedger=\{base:\{date:todayISO\(\),tecl:0,tqqq:0,sgov:0,cash:cap,avgTecl:null,avgTqqq:null,avgSgov:null\},events:\[\]\}/.test(pl));
+}
+
+/* ════ 123. 모의 성과 — 단독 페이지(/paper) ════
+   모달(폭 460px)로 띄우던 모의 성과를 다른 메뉴처럼 주소가 있는 페이지로 옮겼다 (사용자 요청 — 폰에서 표가 가려졌다).
+   계산은 앱 엔진을 그대로 써야 하므로 파일을 따로 두지 않는다: 같은 index.html 이 /paper 에서 전략 화면을 숨기고
+   모의 성과 상자를 본문으로 옮긴다. 채우기는 클라우드 기록을 맞춘 뒤에 한다 — 로컬로 먼저 열린 사이에 채우면
+   그 저장(시각=지금)이 더 최신인 클라우드 기록을 덮을 수 있다. */
+console.log('\n[123] 모의 성과 — 단독 페이지(/paper)');
+{
+  const pages=['index.html','admin.html','backtest.html','ipo.html','plan.html','scalping.html'].map(f=>[f,fs.readFileSync(__d+'/'+f,'utf8')]);
+  ok('메뉴의 모의는 여섯 페이지 모두 /paper 로 간다 (모달 여는 onclick · /?paper=1 링크 없음)',
+     pages.every(([,x])=>/<a href="\/paper"( id="jkPaper")?><span class="mi">🧪<\/span>모의<\/a>/.test(x) && !/href="\/\?paper=1"/.test(x) && !/openPaper\(\);jkMenuClose\(\)/.test(x)),
+     pages.filter(([,x])=>!/<a href="\/paper"/.test(x)).map(([f])=>f).join(','));
+  // 첫 판별 — 머리말 뒤 인라인 코드를 그대로 떼어 가짜 location·history·document 로 돌린다
+  const early=(idx.match(/var APP_TITLE=document\.title;\n[\s\S]*?\n<\/script>/)||[''])[0].replace(/<\/script>$/,'');
+  const runEarly=(path,search)=>{ const cls=new Set(), a={home:new Set(['cur']),paper:new Set()}, calls=[];
+    const loc={pathname:path,search,hash:''};
+    const doc={title:'앱', body:{classList:{add:c=>cls.add(c)}},
+      querySelector:q=>q==='#jkmenuPop a[href="/"]'?{classList:{remove:c=>a.home.delete(c),add:c=>a.home.add(c)}}:null,
+      getElementById:id=>id==='jkPaper'?{classList:{add:c=>a.paper.add(c),remove:c=>a.paper.delete(c)}}:null};
+    const hist={replaceState:(x,y,u)=>{ calls.push(u); const q=u.indexOf('?'); loc.pathname=q<0?u:u.slice(0,q); loc.search=q<0?'':u.slice(q); }};
+    new Function('location','history','document', early)(loc,hist,doc);
+    return {page:cls.has('paperpage'), title:doc.title, homeCur:a.home.has('cur'), paperCur:a.paper.has('cur'), calls}; };
+  const e1=runEarly('/paper',''), e2=runEarly('/','?paper=1'), e3=runEarly('/',''), e4=runEarly('/','?x=1&paper=10');
+  ok('/paper 로 열면 페이지 모드 · 제목 · 메뉴 현재 표시가 모의로',
+     !!early && e1.page && /모의투자 성과/.test(e1.title) && !e1.homeCur && e1.paperCur, JSON.stringify(e1));
+  ok('예전 주소 /?paper=1 은 /paper 로 바꿔 페이지로 연다 · 그냥 / 는 운영 화면 그대로 · paper=10 같은 다른 값은 건드리지 않는다',
+     e2.page && e2.calls.join()==='/paper' && !e3.page && e3.homeCur && !e3.calls.length && !e4.page && !e4.calls.length,
+     JSON.stringify([e2,e3,e4]));
+  // 페이지 모드 켜기/끄기 — 상자를 본문 자리로 옮겼다가 돌려놓는다 (가짜 DOM)
+  { // 가짜 요소 — 같은 id 는 언제나 같은 객체 (동일성 비교가 코드와 같게 된다)
+    const mk=id=>{ const cls=new Set(); const el={id, parentNode:null, innerHTML:'', _cls:cls,
+      classList:{add:c=>cls.add(c), remove:c=>cls.delete(c), toggle:(c,on)=>{ if(on) cls.add(c); else cls.delete(c); }, contains:c=>cls.has(c)},
+      appendChild(ch){ ch.parentNode=el; return ch; }}; return el; };
+    const body=mk('body'), modal=mk('paperModal'), page=mk('paperPage'), pbody=mk('paper_body'), home=mk('home'), jk=mk('jkPaper');
+    body.appendChild(modal); modal.classList.add('on'); home.classList.add('cur');
+    const E={paperModal:modal, paperPage:page, paper_body:pbody, jkPaper:jk};
+    const docF={title:'앱', body, querySelector:q=>q==='#jkmenuPop a[href="/"]'?home:null};
+    const hist=[];
+    const F=new Function('$','document','history','APP_TITLE',
+      [extractFn(idx,'function closePaper()'), extractFn(idx,'function isPaperPage()'), extractFn(idx,'function paperPageMode(on)')].join('\n')
+      +'\nreturn {closePaper, isPaperPage, paperPageMode};')(id=>E[id]||null, docF, {pushState:(a,b,u)=>hist.push(u)}, 'JK 퀀트 — 앱');
+    F.paperPageMode(true);
+    const on1={page:body._cls.has('paperpage'), inPage:modal.parentNode===page, homeCur:home._cls.has('cur'), paperCur:jk._cls.has('cur'), title:docF.title, wait:/기록을 맞추는 중/.test(pbody.innerHTML)};
+    F.closePaper();   // 전략 이름을 누르면 gotoSess 가 부른다 — 페이지에서 나가 운영 화면으로
+    const off1={page:body._cls.has('paperpage'), inBody:modal.parentNode===body, open:modal._cls.has('on'), homeCur:home._cls.has('cur'), paperCur:jk._cls.has('cur'), title:docF.title, hist:hist.join()};
+    ok('페이지 모드 — 상자를 본문 자리로 옮기고 메뉴·제목·대기 문구를 맞춘다',
+       on1.page && on1.inPage && !on1.homeCur && on1.paperCur && /모의투자 성과/.test(on1.title) && on1.wait, JSON.stringify(on1));
+    ok('페이지에서 전략 이름을 누르면 운영 화면으로 나간다 — 주소 / · 상자는 모달 자리로 · 모달로 뜨지 않는다 · 메뉴·제목 되돌림',
+       !off1.page && off1.inBody && !off1.open && off1.homeCur && !off1.paperCur && off1.title==='JK 퀀트 — 앱' && off1.hist==='/', JSON.stringify(off1)); }
+  // 채우기는 클라우드 기록을 맞춘 뒤 한 번 — 로컬로 먼저 연 갈래(openedLocal)에서는 부르지 않는다
+  { const ia=extractFn(idx,'function initAuth()');
+    const iPull=ia.indexOf('pullRemote()'), iAuto=ia.indexOf('paperPageAuto()'), local=(ia.match(/if\(openedLocal\)\{[\s\S]*?\n    \}/)||[''])[0];
+    ok('모의 페이지 채우기는 클라우드 기록을 읽은 뒤 (로컬로 먼저 열 때는 안 한다)',
+       iPull>0 && iAuto>iPull && (ia.match(/paperPageAuto\(\)/g)||[]).length===1 && !!local && !/paperPageAuto/.test(local), `pull ${iPull} · auto ${iAuto}`);
+    const pa=extractFn(idx,'function paperPageAuto()');
+    ok('페이지 채우기는 한 번만 · 페이지가 아닐 때는 안 한다', /if\(!isPaperPage\(\) \|\| window\._paperAutoOpened\) return;/.test(pa) && /window\._paperAutoOpened=true;/.test(pa));
+    ok('예전 자동 열기(/?paper=1 · 모의 세션이 있으면 곧바로)는 없앴다 — 로컬 기록으로 먼저 채우던 길',
+       !/hasPaper && \/\[\?&\]paper=1\//.test(idx) && !/const hasPaper = PAPER_TABS\.some/.test(idx)); }
+  ok('페이지에서는 전략 탭·세션바·상태줄·전략 화면·기록 버튼을 숨기고, 모의 상자는 본문 폭 그대로 · 닫기 버튼 없음',
+     /body\.paperpage \.wrap>\.tabs,body\.paperpage #sessbar,body\.paperpage #statusline,body\.paperpage \.wrap>section,body\.paperpage #fab\{display:none!important\}/.test(idx)
+     && /body\.paperpage #paperModal\{position:static;display:block!important;/.test(idx) && /body\.paperpage #paperModal \.box\{max-width:none;/.test(idx)
+     && /body\.paperpage #paperModal \.mx,body\.paperpage #paperModal \.mbtns\{display:none\}/.test(idx)
+     && idx.indexOf('<div id="paperPage"></div>')>idx.indexOf('id="statusline"') && idx.indexOf('<div id="paperPage"></div>')<idx.indexOf('<section id="inf"'));
+  ok('뒤로 가기로 /paper 에 돌아오면 다시 페이지로 · 문구도 창이 아니라 페이지',
+     /window\.addEventListener\('popstate', \(\)=>\{ const on=\/\^\\\/paper\\\/\?\$\/\.test\(location\.pathname\);/.test(idx)
+     && /이 페이지를 새로고침하면/.test(idx) && /새로고침하면 재시도합니다/.test(idx) && !/창을 다시 열면 재시도/.test(idx) && !/이 창을 닫았다 다시 열면/.test(idx));
 }
 
 console.log(`\n════ 결과: ${pass} PASS / ${fail} FAIL ${fail===0?'— ALL PASS ★':'— 배포 금지, 위 ✗ 항목 수정 필요'} ════`);
