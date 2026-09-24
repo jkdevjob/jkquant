@@ -273,11 +273,6 @@ th:first-child,td:first-child{text-align:left}
         </div>
         <div class="alpha-cash-warn" id="alphaCashWarn" hidden></div>
         <input type="hidden" id="aTeclQty"><input type="hidden" id="aTqqqQty"><input type="hidden" id="aSgovQty"><input type="hidden" id="aCash">
-        <div class="path-holdings" style="margin-top:12px">
-          <div class="field"><label>플랜 시작자금 ($)</label><input type="number" id="alphaCapitalInput" min="1" step="100"></div>
-          <div class="field" style="grid-column:span 3"><label>&nbsp;</label><button class="btn" id="alphaReset" style="width:100%">새 투자 시작</button></div>
-        </div>
-        <div class="path-note" id="alphaCapitalNote">입력한 초기자금 전체를 A안으로 운용합니다.</div>
       </div>
 
       <div class="card" id="alphaHistorySection" style="margin-top:10px;margin-bottom:0">
@@ -314,6 +309,14 @@ th:first-child,td:first-child{text-align:left}
         <div class="table-wrap" style="margin-top:10px">
           <table class="alpha-ledger-table"><thead><tr><th>날짜</th><th>종목</th><th>구분</th><th>수량</th><th>체결가</th><th>수수료</th><th>금액</th><th>관리</th></tr></thead><tbody id="alphaLedgerBody"></tbody></table>
         </div>
+      </div>
+
+      <div class="card" id="alphaResetSection" style="margin-top:10px;margin-bottom:0">
+        <div class="path-holdings">
+          <div class="field"><label>플랜 시작자금 ($)</label><input type="number" id="alphaCapitalInput" min="1" step="100"></div>
+          <div class="field" style="grid-column:span 3"><label>&nbsp;</label><button class="btn" id="alphaReset" style="width:100%">초기화</button></div>
+        </div>
+        <div class="path-note" id="alphaCapitalNote">금액을 입력하고 초기화를 누르면 보유수량·평단·거래이력을 모두 지우고 입력한 금액의 현금만 가진 최초 상태로 돌아갑니다.</div>
       </div>
 
       <div class="todaybox" id="alphaEvidenceSection">
@@ -1862,9 +1865,14 @@ async function alphaDeleteEvent(id){
   alphaLedger=candidate;alphaSyncInputs();renderAlphaLedger();localSave();refreshAlphaFromCache();await cloudSave();
 }
 async function alphaResetLedger(){
-  const cap=Math.max(1,num('startCapital',20000));
-  if(!confirm('A안 거래이력과 보유량을 모두 초기화하고 현금 '+usd(cap)+'에서 새로 시작할까요?'))return;
-  alphaLedger={base:{date:todayISO(),tecl:0,tqqq:0,sgov:0,cash:cap,avgTecl:null,avgTqqq:null,avgSgov:null},events:[],feeModel:"toss-us-0.1-v1"};pendingAlphaOrders=[];alphaCloseFillEditor();alphaCloseEdit();alphaSyncInputs();renderAlphaLedger();localSave();await cloudSave();refreshLive();
+  const cap=Math.max(1,Math.round(Number($('alphaCapitalInput').value)||0));
+  if(!confirm('A안 거래이력과 보유량을 모두 초기화하고 현금 '+usd2(cap)+'에서 처음부터 시작할까요?'))return;
+  $('startCapital').value=cap;
+  $('alphaCapitalInput').value=cap;
+  $('alphaCapitalInput').dataset.dirty='';
+  $('startDate').value=todayISO();
+  alphaLedger={base:{date:todayISO(),tecl:0,tqqq:0,sgov:0,cash:cap,avgTecl:null,avgTqqq:null,avgSgov:null},events:[],feeModel:"toss-us-0.1-v1"};
+  pendingAlphaOrders=[];alphaCloseFillEditor();alphaCloseEdit();alphaSyncInputs();renderAlphaLedger();render();refreshAlphaFromCache();await cloudSave();refreshLive();
 }
 function monthsLeft(){
   const d=Math.max(0,days(todayISO(),$("targetDate").value));return Math.ceil(d/30.4375);
@@ -1914,11 +1922,9 @@ function render(){
   renderLedger();
   renderAlphaLedger();
   const cap=Math.max(1,num('startCapital',20000)),bInf=Math.round(cap*PATH_DEFAULTS.classic.infWeight),bVr=Math.max(0,cap-bInf);
-  if($('alphaCapitalInput')&&document.activeElement!==$('alphaCapitalInput'))$('alphaCapitalInput').value=Math.round(cap);
-  if($('alphaCapitalNote'))$('alphaCapitalNote').textContent='플랜 시작자금 '+usd(cap)+' · 현재 계좌는 아래 거래이력에서 자동 계산합니다.';
+  if($('alphaCapitalInput')&&document.activeElement!==$('alphaCapitalInput')&&!$('alphaCapitalInput').dataset.dirty)$('alphaCapitalInput').value=Math.round(cap);
   if($('classicCapitalNote'))$('classicCapitalNote').textContent='초기자금 '+usd(cap)+' 기준 · SOXL '+usd(bInf)+' (50%) / TECL VR '+usd(bVr)+' (50%)로 독립 배정합니다. 두 전략은 서로 리밸런싱하지 않습니다.';
   if($('alphaStartHoldings'))$('alphaStartHoldings').textContent='TECL 0주 · TQQQ 0주 · SGOV 0주 · 현금 '+usd(cap);
-  if($('alphaReset'))$('alphaReset').textContent='새 투자 시작 · 현금 '+usd(cap);
   const stage=currentStage(),st=STAGES[stage],pg=planProgress();
   document.querySelectorAll(".step").forEach(b=>b.classList.toggle("on",Number(b.dataset.step)===stage));
   if(activePlanTab==='alpha'){
@@ -2029,13 +2035,8 @@ $("alphaFillCancel").addEventListener("click",alphaCloseFillEditor);
 $("alphaEditSave").addEventListener("click",alphaSaveEdit);
 $("alphaEditCancel").addEventListener("click",alphaCloseEdit);
 $("alphaLedgerBody").addEventListener("click",e=>{const bb=e.target.closest("[data-abase]");if(bb){alphaOpenBaseEdit();return;}const eb=e.target.closest("[data-aedit]");if(eb){alphaOpenEdit(eb.dataset.aedit);return;}const db=e.target.closest("[data-aeid]");if(db)alphaDeleteEvent(db.dataset.aeid);});
-$("alphaCapitalInput").addEventListener("change",async()=>{
-  const cap=Math.max(1,Math.round(Number($("alphaCapitalInput").value)||0)),old=Math.max(1,num("startCapital",20000)),S=alphaLedgerCalc();
-  const virgin=S.tecl===0&&S.tqqq===0&&S.sgov===0&&(alphaLedger.events||[]).length===0&&Math.abs(S.cash-old)<1;
-  $("startCapital").value=cap;
-  if(virgin)alphaLedger.base.cash=cap;
-  render();refreshAlphaFromCache();
-  await cloudSave();
+$("alphaCapitalInput").addEventListener("input",()=>{
+  $("alphaCapitalInput").dataset.dirty='1';
 });
 $("alphaReset").addEventListener("click",alphaResetLedger);
 $("classicRefresh").addEventListener("click",refreshLive);
