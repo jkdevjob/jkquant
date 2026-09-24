@@ -112,7 +112,7 @@ if(!iqSrc) throw new Error('정수 주수 헬퍼(iq/isq)를 backtest.html에서 
   if(!m) throw new Error('imRevBuyQty 를 backtest.html에서 못 찾음');
   global.imRevBuyQty=new Function(m[0]+'\nreturn imRevBuyQty;')(); }
 /* 리버스 종료 판정 (제11차 7) — 앱 파일에서 그대로 떼어 전역으로 (운영 주문표 하네스가 부른다) */
-global.imRevExitDue=new Function(extractFn(idx,'function exitMulOf(base)')+'\n'+extractFn(idx,'function imRevExitDue(c, close, target)')+'\nreturn imRevExitDue;')();
+global.imRevExitDue=new Function(extractFn(idx,'function exitMulOf(base)')+'\n'+extractFn(idx,'function imRevExitDue(c, close, target, date)')+'\nreturn imRevExitDue;')();
 /* 별지점 센트 반올림 · 매수점 · 리버스 하루 주문 (제10차 감사 대응) — 백테 파일에서 그대로 떼어 전역으로 */
 { const src=['function imTickRound(p, cur)','function imStarPx(avg, pct, cur)','function imBuyPx(star)','function imRevOrders(o)']
     .map(sig=>extractFn(bt,sig)).join('\n');
@@ -3256,8 +3256,8 @@ console.log('\n[66] VR 현금 장부 — 잔돈 증발 없음');
      && /else \{ pool-=_vbuyQ\(f\.qty, f\.price\); cycBuySpent\+=f\.cost; cycBuyFilled\+=f\.qty; buys\+\+; \}/.test(vsrc));
   ok('리밸런싱 매수가 배정액이 아니라 나간 돈을 뺀다',
      /pool-=_vbuy\(use,c\);buys\+\+;/.test(vsrc) && !/_vbuy\(use,c\);pool-=use/.test(vsrc));
-  ok('첫 매수 잔돈도 Pool 로 남는다',
-     /pool\+=s-_vbuy\(s,c\);/.test(vsrc) && /pool-=_vbuy\(pool,c\);/.test(vsrc) && !/_vbuy\(pool,c\);pool=0;/.test(vsrc));
+  ok('첫 매수 잔돈도 Pool 로 남는다 (적립식도 같은 식 — 제12차 ①)',
+     /pool\+=s-_vbuy\(s,c\);/.test(vsrc) && !/_vbuy\(pool,c\);pool=0;/.test(vsrc));
 
   // 오간 현금을 세어 장부를 맞춰 본다 (실코드에 한 줄씩 덧대기만 한다)
   const a1='feesTotal+=fee; return spend+fee; }', a2='shares-=qty; return qty*c-fee; }';
@@ -4065,12 +4065,12 @@ console.log('\n[73] VR — 백테 == 과거 재생 (거래 로그 대조)');
         const bar={date:d, close:M[T][d][C], open:M[T][d][O], high:M[T][d][HI], low:M[T][d][LO]};   // 앱 vrReplay 는 ohlc 봉(시가 포함)으로 돈다
         if(!(bar.close>0)) continue;
         if(first){
-          // vrReplay 의 first 분기와 같은 순서 — 적립식은 initAmt 가 아니라 'Pool+적립금' 으로 산다
+          // vrReplay 의 first 분기와 같은 규약 — 첫 매수는 모드와 상관없이 초기 투자금 (제12차 ①) · 0 인 적립식만 첫 적립금
           const buyInt=(amt)=>{ const q=Math.floor(amt/(1+P.FEE)/bar.close); if(!(q>0)) return 0;
             const spend=q*bar.close, fee=spend*P.FEE;
             avg=bar.close; shares+=q; return spend+fee; };
-          if(P.mode===0.75){ pool+=P.contrib; pool-=buyInt(pool); }
-          else { pool+=P.initAmt-buyInt(P.initAmt); }
+          const amt0=(P.mode===0.75 && !(P.initAmt>0)) ? P.contrib : P.initAmt;
+          pool+=amt0-buyInt(amt0);
           V=shares*bar.close; first=false; cycStartPool=pool; cycBuySpent=0; cycBaseShares=shares; cycSellFilled=0; cycBuyFilled=0;
           due=appEng.vrNextDue(d); continue;
         }
@@ -4244,9 +4244,10 @@ console.log('\n[75] VR 장부 — 저장 전 == 저장 후');
   ok('재생이 수수료를 기록에 남긴다', /fee:\+fee\.toFixed\(6\)/.test(vr2));
   ok('재생이 초기투입 여부를 기록에 남긴다', /init:!!init/.test(vr2));
   ok('첫 매수 잔돈을 add 로 남긴다', /if\(left>1e-9\)\{ pool\+=left; rec\.push\(\{type:'add'/.test(vr2));
-  ok('적립식은 적립금을 add 로 남기고 Pool 에서 산다',
-     /rec\.push\(\{type:'add',date:d,amt:\+contrib\.toFixed\(6\)/.test(vr2)
-     && /pool-=_buyInt\(pool,c,d,false\);/.test(vr2));
+  ok('적립식도 초기 투자금으로 첫 매수 (초기 투자금 0 이면 첫 적립금) — 제12차 ① · 공용 vrFirstAmt',
+     /const amt=vrFirstAmt\(st\);/.test(vr2)
+     && /const spent=_buyInt\(amt,c,d,true\), left=amt-spent;/.test(vr2)
+     && !/pool-=_buyInt\(pool,c,d,false\);/.test(vr2));
   ok('이어받기 시작이 정수 주수·잔돈 보존', /const c0=D\[0\]\.close, q0=Math\.floor\(V\/c0\);/.test(vr2)
      && /pool\+=V-q0\*c0;/.test(vr2) && !/shares=V\/c0;/.test(vr2));
   ok('이어받기에서도 사이클 기준일을 세운다',
@@ -6414,55 +6415,39 @@ console.log('\n[98] 무매 복합거래 — 최종 0주면 사이클 종료');
 }
 
 
-/* ════ 99. VR 적립식 최초 자금 — 세 엔진이 같은 장부로 시작한다 ════  (5차 감사 ③)
-   적립식(mode=0.75)에서
-     runVR      : pool(=startPool+contrib) 으로 첫 매수
-     vrReplay   : 같음
-     vrSimForward : initAmt 로 첫 매수          ← 혼자 달랐다
-   같은 설정인데 모의만 시작 원금이 달라졌고, 재생의 CAGR 분모도 쓰지도 않은 initAmt 를
-   더하고 있었다. 제품 근거(백테 UI 가 적립식에서 초기투자금 칸을 숨긴다)와 다수결에 따라
-   '적립식은 Pool+적립금으로 시작' 으로 통일한다. */
-console.log('\n[99] VR 적립식 최초 자금 — 세 엔진 같은 장부');
+/* ════ 99. VR 첫 매수 — 모드와 상관없이 초기 투자금 (제12차 ① · 5차 감사 ③ 을 뒤집음) ════
+   5차 감사 ③ 에서 '적립식은 Pool+적립금으로 시작' 으로 통일했었다 (백테 화면이 적립식에서 초기투자금 칸을 숨긴다는 근거).
+   그러면 '5,000$ 시작 + 2주마다 250$' 를 250$ 로 시작하게 된다 — 설정에 넣은 초기 투자금이 조용히 사라진다.
+   운영 화면의 수동 첫 매수는 원래 모드와 상관없이 초기 투자금이었다. 이제 모의·재생·백테도 같다:
+     첫 매수 = 초기 투자금 (잔돈은 Pool) · 시작 Pool 은 Pool 에 그대로 · 적립금은 사이클이 넘어갈 때마다
+     초기 투자금을 0 으로 둔 적립식만 첫 적립금으로 시작한다 (전체비교의 '적립' — 총투입을 적립 횟수로 나눈다)
+   값 시험은 [125] (세 실코드를 같은 입력으로 돌린다). 여기서는 세 곳이 같은 식을 쓰는지 본다. */
+console.log('\n[99] VR 첫 매수 — 초기 투자금 (모의·재생·백테 같은 규약 · 제12차 ①)');
 {
-  const FEE=0.0025, px=50, startPool=1000, contrib=200, initAmt=10000;
-  const firstBuy=(amt)=>{ const q=Math.floor(amt/(1+FEE)/px); const spend=q*px, fee=spend*FEE;
-    return {q, spent:spend+fee, left:amt-spend-fee}; };
-
-  // 적립식 배정액 = startPool + contrib = 1200 → 23주 (1200/1.0025/50 = 23.94)
-  const accAmt=startPool+contrib;
-  const A=firstBuy(accAmt);
-  ok('적립식 배정액 = startPool + contrib', near(accAmt,1200,1e-12), String(accAmt));
-  ok('첫 매수 23주', A.q===23, String(A.q));
-  ok('잔돈이 Pool 에 남는다', near(A.left, 1200-23*50-23*50*FEE, 1e-9), String(A.left));
-  ok('초기 투자금으로 사면 다른 값이 된다 (옛 모의)', firstBuy(initAmt).q===199 && firstBuy(initAmt).q!==A.q,
-     String(firstBuy(initAmt).q));
-
-  // 세 경로가 같은 식을 쓰는가
   const sim=extractFn(idx,'function vrSimForward()');
   const rep=extractFn(idx,'function vrReplay()');
   const vr =extractFn(bt,'function runVR(days,tkr,params)');
-  ok('모의체결이 적립식은 Pool+적립금으로 산다',
-     /const _isAccum0=\(\+st\.mode\|\|0\.75\)===0\.75;/.test(sim)
-     && /const amt=_isAccum0 \? \(\(\+st\.startpool\|\|0\)\+\(\+st\.add\|\|0\)\)/.test(sim));
-  ok('모의체결이 모드 무관 initAmt 를 안 쓴다',
-     !/const amt=st\.initAmt!=null\?\+st\.initAmt:10000, q=Math\.floor/.test(sim));
-  ok('과거재생도 적립식은 Pool+적립금', /if\(isAccum\)\{\s*\n\s*pool\+=contrib;[\s\S]{0,180}_buyInt\(pool,c,d,false\)/.test(rep));
-  ok('백테도 적립식은 Pool+적립금',
-     /else\{pool\+=contrib;inv\+=contrib;cf\.push\(\[d,contrib\]\);pool-=_vbuy\(pool,c\);V=shares\*c;\}/.test(vr));
-  ok('거치·인출식은 셋 다 초기 투자금',
-     /\(st\.initAmt!=null\?\+st\.initAmt:10000\)/.test(sim)
-     && /const amt=st\.initAmt!=null\?\+st\.initAmt:10000;/.test(rep)
-     && /if\(isLump\)\{const s=initAmt\|\|10000;/.test(vr));
-
-  /* 재생의 CAGR 분모 — 적립식은 안 쓴 initAmt 를 더하면 안 된다 */
-  ok('적립식 총투입 = 적립금 × (사이클+1)',
-     /const base=isAccum \? contrib\*\(cyc\+1\) : \(st\.initAmt!=null\?\+st\.initAmt:10000\);/.test(rep));
-  ok('옛 분모(initAmt + contrib×cyc)가 안 남아 있다',
-     !/\(st\.initAmt!=null\?\+st\.initAmt:10000\)\+\(isAccum\?contrib\*cyc:0\)/.test(idx));
-  { // 값으로 — 적립 200 · 사이클 5회면 총투입 1,200 (첫 회차 포함 6회)
-    const cyc=5, c2=contrib*(cyc+1);
-    ok('적립 200 · 사이클 5 → 총투입 1,200', c2===1200, String(c2));
-    ok('옛 분모면 11,000 이었다 (쓰지도 않은 초기금 포함)', initAmt+contrib*cyc===11000); }
+  const vfa=extractFn(idx,'function vrFirstAmt(st)');
+  ok('첫 매수 금액은 한 곳(vrFirstAmt) — 모드와 상관없이 초기 투자금 · 적립식에서 0 이면 첫 적립금 · 모드 기본은 적립식',
+     /const init=\(st&&st\.initAmt!=null\)\?\+st\.initAmt:10000;/.test(vfa)
+     && /return \(\(\+\(st&&st\.mode\)\|\|0\.75\)===0\.75 && !\(init>0\)\) \? \(\+\(st&&st\.add\)\|\|0\) : init;/.test(vfa));
+  ok('모의·재생·운영 첫 매수 버튼·첫 매수 카드가 모두 vrFirstAmt 를 쓴다 (따로 세는 자리 없음)',
+     /const amt=vrFirstAmt\(st\);/.test(sim) && /const amt=vrFirstAmt\(st\);/.test(rep)
+     && /const amt = vrFirstAmt\(st\);/.test(extractFn(idx,'function vrFirstBuy()')) && /const amt = vrFirstAmt\(c\.st\);/.test(idx)
+     && (idx.match(/vrFirstAmt\(/g)||[]).length===5 && !/_isAccum0|_init0/.test(sim) && !/const _init=st\.initAmt/.test(rep));
+  ok('모의 — 옛 식(시작 Pool + 적립금 으로 첫 매수 — 시작 Pool 을 장부가 또 셌다)이 없다',
+     !/const amt=_isAccum0 \? \(\(\+st\.startpool\|\|0\)\+\(\+st\.add\|\|0\)\)/.test(sim));
+  ok('재생 — 첫 매수금을 총투입에 센다 · 모드 기본값이 앱 전체와 같은 적립식(0.75)', /firstAmt=amt;/.test(rep) && /mode=\+st\.mode\|\|0\.75;/.test(rep) && !/mode=\+st\.mode\|\|0\.5;/.test(rep));
+  ok('백테 — 같은 식', /const s=\(isAccum && !\(initAmt>0\)\) \? contrib : \(initAmt\|\|10000\);\s*\n\s*inv\+=s;cf\.push\(\[d,s\]\);pool\+=s-_vbuy\(s,c\);V=shares\*c;/.test(vr)
+     && !/else\{pool\+=contrib;inv\+=contrib;cf\.push\(\[d,contrib\]\);pool-=_vbuy\(pool,c\);/.test(vr));
+  ok('재생 총투입 = 시작 Pool + 이어받은 V + 첫 매수금 + 적립금 × 사이클 전환 (백테 inv 와 같게)',
+     /const base=\(\+st\.startpool\|\|0\) \+ carryIn \+ firstAmt \+ \(isAccum \? contrib\*cyc : 0\);/.test(rep)
+     && !/const base=isAccum \? contrib\*\(cyc\+1\)/.test(rep));
+  ok('백테 화면 — 적립식에서도 초기 투자금 칸을 보이고 0 도 받는다',
+     /document\.querySelectorAll\('\.vr-lump'\)\.forEach\(el=>el\.style\.display=''\);/.test(bt)
+     && /<div class="ctrl s-vr hide vr-lump"><label[^>]*>초기 투자금 \(\$\)<\/label><input type="number" id="vrInitAmt" value="10000" min="0"><\/div>/.test(bt)
+     && /initAmt=\(_ia!=null&&_ia!==''\)\?Math\.max\(0,\+_ia\|\|0\):10000;/.test(bt));
+  ok('앱 설명 — 적립식은 초기 투자금으로 첫 매수 뒤 2주마다 적립', /적립식 — 2주마다 넣으며 불리기/.test(idx) && /<b>초기 투자금으로 첫 매수<\/b>\(0주차 V\)를 한 뒤, 매 사이클\(2주\) 적립금을 Pool에 넣어/.test(idx));
 }
 
 
@@ -6904,7 +6889,7 @@ const __P7={};
   const KINDSRC=idx.slice(idx.indexOf('const KIND_T='), idx.indexOf('};', idx.indexOf('const KIND_T='))+2);
   const IMOFF=idx.slice(idx.indexOf('const IM_OFFICIAL='), idx.indexOf(';', idx.indexOf('const IM_OFFICIAL='))+1);
   /* ENV.EL — 그린 화면(innerHTML)을 시험이 읽을 수 있게 id 별로 남긴다 · ENV.LAST — 시세의 last(장중 현재가)를 확정 종가와 따로 줄 때 */
-  const ENV={ST:null, HIST:null, DAYS:null, CLOSE:0, LAST:null, EL:{}};
+  const ENV={ST:null, HIST:null, DAYS:null, CLOSE:0, CDATE:'', LAST:null, EL:{}};
   const appOrders=new Function('ENV', `
     const EL=()=>({textContent:'',innerHTML:'',style:{},value:'',classList:{add(){},remove(){},toggle(){}}});
     let todayOrders=[];
@@ -6921,7 +6906,7 @@ const __P7={};
     function _exchNow(cur){ return {date:'2099-12-31', min:23*60}; }
     const IM_MOM_LEN=20, IM_MOM_TH=8, IM_MOM_CAP=30;
     ${need}
-    function infSettledLast(){ return {close:ENV.CLOSE}; }
+    function infSettledLast(){ return {close:ENV.CLOSE, date:ENV.CDATE||''}; }   // CDATE — 확정 종가 날짜 (리버스 1일차 판정 · 제12차 ②)
     function render5day(){} function renderKisPanel(){}
     return function(){ ENV.EL={}; lastQuote.inf={symbol:ENV.ST.ticker, days:ENV.DAYS, last:(ENV.LAST!=null?ENV.LAST:ENV.CLOSE)}; infChartData=ENV.DAYS;
                        renderOrder(); return todayOrders; };`)(ENV);
@@ -6940,7 +6925,7 @@ const __P7={};
     for(let i=1;i<all.length;i++){
       const d=all[i], [cl,op,hi]=M[tk][d];
       __strat={settings:{...st},hist:H}; const rev=!!computeInf().reverseActive;
-      ENV.ST={...st}; ENV.HIST=H.slice(); ENV.CLOSE=M[tk][all[i-1]][C];
+      ENV.ST={...st}; ENV.HIST=H.slice(); ENV.CLOSE=M[tk][all[i-1]][C]; ENV.CDATE=all[i-1];
       ENV.DAYS=all.slice(0,i).map(x=>({date:x,close:M[tk][x][C]}));
       const od=appOrders();
       for(const o of od.filter(o=>o.side==='sell'&&o.tag==='지정가')) if(hi>=o.price) H.push({date:d,kind:'지정가매도',price:+(op>o.price?op:o.price).toFixed(4),qty:o.qty,ts:++seq});
@@ -6954,6 +6939,7 @@ const __P7={};
       __strat={settings:{...st},hist:H}; const c1=computeInf();
       if(rev && c1.qty>0 && cl>c1.avg*exitMulOf(st.target)) H.push({date:d,kind:'리버스복귀',price:cl,qty:0,ts:++seq});
     }
+    ENV.CDATE='';   // 확정 종가 날짜를 다음 시험으로 흘리지 않는다
     return H;
   };
   Object.assign(__P7,{runIMd, paperRun, quoteOfTk, appOrders, ENV, liveRun, LOGD:()=>LOGD, setLOGD:v=>{LOGD=v;}});
@@ -7158,7 +7144,7 @@ console.log('\n[107] 7차 — VR 백테 ↔ 모의 ↔ 과거재생 거래 단�
     'function vrStepCycle(sess, c, dateStr, close)','function cycDates(c)','function vrNextDue(s)',
     'function vrTiers(B, sf, bf, up, dn, limit, fee1, N, cur)','function vrOrderPlan(S, P, bar)','function vrModelOf(st)',
     'function simCutoff(cur)','function settledBars(rows,cur)','function divCashOn(st)',
-    'function isTradeBasis(Q)','function divPerShareQ(Q, d)','function divCashQ(Q, d, shares, taxOn)']
+    'function isTradeBasis(Q)','function divPerShareQ(Q, d)','function divCashQ(Q, d, shares, taxOn)','function vrFirstAmt(st)']
     .map(sig=>extractFn(idx,sig)).join('\n');
   const vconsts=[(idx.match(/const CYC_DAYS=\d+;/)||[''])[0], (idx.match(/const DIV_TAXRATE=[^;]*;/)||[''])[0],
     "const VR_MODEL_DEFAULT='ladder'; const IVS_FEE=0.0025;",
@@ -7167,7 +7153,7 @@ console.log('\n[107] 7차 — VR 백테 ↔ 모의 ↔ 과거재생 거래 단�
   const mkVr=(sess,Q,from)=>{ __strat=sess;
     return new Function('curStrat','computeVr','computeNextV','lastQuote','$','save','refreshVr','pushRemote','wn','px',
       [vconsts, vdeps, 'let _vrAutoBusy=false, vrLedgerCheck=null;', extractFn(idx,'function vrSimForward()'),
-       extractFn(idx,'function vrReplay()'), 'const confirm=()=>true, alert=()=>{};',
+       extractFn(idx,'function vrReplay()'), 'const confirm=(m)=>{ if(global.__VRC) global.__VRC(m); return true; }, alert=()=>{};',   // __VRC — 재생 요약(총투입·CAGR)을 시험이 읽는다
        'return {vrSimForward, vrReplay, ledger:()=>vrLedgerCheck};'].join('\n'))(
       ()=>__strat, computeVr, computeNextV, {vr:Q},
       (id)=>id==='rp_vr_from'?{value:from}:{value:'',textContent:''}, ()=>{}, ()=>{}, null,
@@ -7210,7 +7196,7 @@ console.log('\n[107] 7차 — VR 백테 ↔ 모의 ↔ 과거재생 거래 단�
         return ok_; })());
   }
   global.capGainTax=_cgt;
-  Object.assign(__P7,{mkVr});      // 제8차 [118] 골든이 같은 실코드 하네스로 모의·재생을 돌린다
+  Object.assign(__P7,{mkVr, runVRd, Qv});      // 제8차 [118] · 제12차 [125] 가 같은 실코드 하네스로 모의·재생·백테를 돌린다
 }
 
 /* ════ 108. 7차 — VR 주문표 = 체결 엔진 (vrTiers 한 곳) ════
@@ -8423,7 +8409,7 @@ console.log('\n[119] 제10차 — 라오어 V4.0 원문 직접 대조 (SOURCE GO
   { const E=__P7.ENV, st={ticker:'TQQQ',div:20,target:15,principal:10000,compound:true,reverse:true,big:15,revGap:0,tgtDyn:false,divmode:'reinv'};
     const H=[{kind:'1회매수',date:'2026-06-01',price:90,qty:100,tManual:19.5},{kind:'리버스매도',date:'2026-06-02',price:88,qty:10}];   // 평단 90 · 복귀선 76.5
     const days=Array.from({length:8},(_,i)=>({date:'2026-06-0'+(i+1),close:78}));
-    const run=(close,last,hist)=>{ E.ST={...st}; E.HIST=(hist||H).slice(); E.CLOSE=close; E.LAST=last; E.DAYS=days;
+    const run=(close,last,hist)=>{ E.ST={...st}; E.HIST=(hist||H).slice(); E.CLOSE=close; E.CDATE=''; E.LAST=last; E.DAYS=days;
       const od=__P7.appOrders(); const html=(E.EL.o_orders||{}).innerHTML||''; E.LAST=null; return {od,html}; };
     const a=run(80,null);
     /* 제11차 7 — 버튼을 안 눌러도 이번 주문은 일반모드: T = 19.5×0.9 = 17.55 → 후반전 별지점 전액 + 추가 줄 + 쿼터매도 + 지정가 */
@@ -8445,7 +8431,7 @@ console.log('\n[119] 제10차 — 라오어 V4.0 원문 직접 대조 (SOURCE GO
     ok('제10차 P1-7 · 장중 현재가 80 이 복귀선 위여도 확정 종가 70 이면 리버스 주문 (현재가로 판정 안 함)', isRevOd(c.od) && !/리버스 종료/.test(c.html),
        c.od.map(o=>o.name).join(','));
     const d=run(80,null,[H[0]]);
-    ok('제10차 P1-7 · 소진 직후 1일차(아직 리버스 거래 없음)는 복귀 판정 없이 MOC 매도 · 복귀 안내도 없다', d.od.length===1 && d.od[0].tag==='MOC' && d.od[0].side==='sell'
+    ok('제10차 P1-7 · 소진 직후 1일차 — 확정 종가 날짜를 모르고 1일차 거래도 없으면 리버스 전 종가로 보고 판정 없이 MOC 매도 (날짜로 보는 판정은 [125] 제12차 ②)', d.od.length===1 && d.od[0].tag==='MOC' && d.od[0].side==='sell'
        && !/리버스 종료/.test(d.html), d.od.map(o=>o.name+'/'+o.tag).join(','));
     /* 중간 소진 — 원금 1만 · 90×110 매수(잔금 100) · 리버스 첫날 88×11 매도(잔금 1068) · 출금 1000 → 잔금 68 · 잔금÷4 = 17 < 1주(≈70)
        → 보유 99주 ÷10 = 9주 MOC 매도 한 줄 · 쿼터매수 없음. 앱 주문표와 5년 플랜이 같은 주문을 내야 한다. */
@@ -8628,7 +8614,7 @@ console.log('\n[120] 제11차 — 라오어 정식 무매 V4.0 + VR 원문 기�
       (pl.match(/const isBuyKind=[^\n]*/)||[''])[0], (pl.match(/const isSellKind=[^\n]*/)||[''])[0],
       (pl.match(/const REV_DIVS_PLAN=[^\n]*/)||[''])[0],
       (pl.match(/function reverseTPlan[^\n]*/)||[''])[0], (pl.match(/function starPctPlan[^\n]*/)||[''])[0],
-      ...['function exitMulOf(base)','function imRevExitDue(c, close, target)','function calcInfState(sess)','function imOrders(sess,price,rows)'].map(x=>extractFn(pl,x)),
+      ...['function exitMulOf(base)','function imRevExitDue(c, close, target, date)','function calcInfState(sess)','function imOrders(sess,price,rows)'].map(x=>extractFn(pl,x)),
       'return {imOrders};'].join('\n'))();
     const po=PLI11.imOrders({settings:{...st},hist:H.map(h=>({...h}))},80,[]);
     const svk=(sv.orders||[]).map(key).sort(), pok=(po.orders||[]).map(key).sort();
@@ -8637,7 +8623,7 @@ console.log('\n[120] 제11차 — 라오어 정식 무매 V4.0 + VR 원문 기�
        `앱 ${app.join(' ')} | 서버 ${svk.join(' ')} | 플랜 ${pok.join(' ')}`);
     const sv2=SV11.imOrders({st:{...st},hist:H,close:70,days:[]});
     ok('제11차 7 · 복귀선 아래(70 < 76.5)면 서버는 그대로 리버스로 건너뛴다', /리버스/.test(sv2.skip||''));
-    ok('제11차 7 · 판정 함수가 앱·서버·플랜에 글자 그대로 같다', (()=>{ const b=src=>['function exitMulOf(base)','function imRevExitDue(c, close, target)'].map(x=>extractFn(src,x)).join('\n');
+    ok('제11차 7 · 판정 함수가 앱·서버·플랜에 글자 그대로 같다', (()=>{ const b=src=>['function exitMulOf(base)','function imRevExitDue(c, close, target, date)'].map(x=>extractFn(src,x)).join('\n');
        return b(idx)===b(pl) && b(idx)===b(imSrc11); })()); }
 
   /* ── 1 · 기록 시트 — 리버스에서 일반모드 추천(별지점 쿼터매도)을 띄우지 않는다 ── */
@@ -8869,7 +8855,7 @@ console.log('\n[124] 5년 플랜 v1.26.2 — 현재계좌 실시간 평가·현�
      && /id="alphaAssetTotal"/.test(pl)
      && /const assetTotal=marketTotal\+S\.cash,retTotal=costTotal>0\?pnlTotal\/costTotal\*100:null/.test(pl));
   ok('현재계좌 달러 표시는 소수점 둘째자리까지 고정',
-     /const usd2=v=>"\\$"\+\(Number\(v\)\|\|0\)\.toLocaleString\("en-US",\{minimumFractionDigits:2,maximumFractionDigits:2\}\)/.test(pl)
+     /const usd2=v=>"\$"\+\(Number\(v\)\|\|0\)\.toLocaleString\("en-US",\{minimumFractionDigits:2,maximumFractionDigits:2\}\)/.test(pl)
      && /function alphaAvgText\(q,avg\)\{return q>0\?\(Number\.isFinite\(avg\)\?'평단 '\+usd2\(avg\)/.test(pl)
      && /\$\('alphaAcctCash'\)\.textContent=usd2\(S\.cash\)/.test(pl)
      && /\(L&&L\.hasLivePrice\?'실시간 ':'확정종가 '\)\+usd2\(px\)/.test(pl)
@@ -8895,6 +8881,200 @@ console.log('\n[124] 5년 플랜 v1.26.2 — 현재계좌 실시간 평가·현�
   ok('기존 0.25% A장부는 v1.26 로딩 때 토스 0.1% 수수료로 1회 마이그레이션',
      /if\(alphaLedger\.feeModel!=="toss-us-0\.1-v1"\)/.test(pl)
      && /alphaLedger\.events=alphaLedger\.events\.map\(e=>e&&e\.type==='trade'\?\{\.\.\.e,fee:alphaFee\(e\.qty,e\.price\),feeRate:ALPHA_FEE_RATE\}:e\)/.test(pl));
+}
+
+/* ════ 125. 제12차 감사 대응 ════
+   ① VR 적립식도 첫 매수는 초기 투자금 — 예전엔 적립식만 첫 적립금(250$)으로 시작해 '5,000$ 시작 + 2주마다 250$' 를
+      '250$ 시작' 으로 돌렸다. 모의 vrSimForward · 과거재생 vrReplay · 백테 runVR 실코드를 같은 자료로 돌려 값으로 본다.
+   ② 무매 리버스 1일차에도 복귀 판정 — 1일차 MOC 를 치른 날 종가가 복귀선 위면 다음 주문부터 일반모드(하루 만에 끝남).
+      장부에 1일차 거래가 없어도(보유÷10 내림 0주) 소진한 날 뒤의 확정 종가면 판정한다. 소진한 날 종가(리버스 전)로는 안 한다. */
+console.log('\n[125] 제12차 — VR 적립식 첫 매수 · 무매 리버스 1일차 종료');
+{
+  /* ── ① VR 적립식 첫 매수 = 초기 투자금 (실제 엔진 세 경로) ── */
+  const tk=DAYS.TQQQ?'TQQQ':Object.keys(DAYS)[0];
+  const all=DAYS[tk], start=all[1], days=all.slice(1), c0=M[tk][start][C];
+  const FEE=0.0025, qOf=a=>Math.floor(a/(1+FEE)/c0);            // 세 경로가 같은 식으로 내림한다 (수수료 포함)
+  const _cgt=global.capGainTax; global.capGainTax=()=>0;
+  const three=(initAmt, add, startpool)=>{
+    const st={ticker:tk, mode:0.75, formula:'basic', g:10, initAmt, add, band:15, startv:0, startpool:startpool||0, autoCyc:false, vrModel:'ladder', divmode:'reinv'};
+    const L=[]; const svL=global.__VL; global.__VL=(t,q,p)=>L.push({date:global.__VD,type:t,qty:+q,price:+p});
+    const r=__P7.runVRd(days, tk, {contrib:add, G:10, bandPct:15, mode:0.75, formula:'basic', initAmt, withdraw:0, costOn:true, startPool:startpool||0});
+    global.__VL=svL;
+    const sP={paper:true,id:'v124',simStart:start,settings:{...st},hist:[]}; __P7.mkVr(sP,__P7.Qv(tk),start).vrSimForward();
+    __strat=sP; const cP=computeVr();
+    let msgR=''; global.__VRC=m=>{ msgR=String(m); };
+    const sR={paper:true,id:'r124',simStart:start,settings:{...st},hist:[]}; __P7.mkVr(sR,__P7.Qv(tk),start).vrReplay();
+    delete global.__VRC;
+    __strat=sR; const cR=computeVr();
+    const first=h=>(h.find(x=>x.type==='buy')||{});
+    const invR=+((msgR.match(/총투입 \$([\d.]+)/)||[])[1]);   // 재생 요약 확인창의 총투입 (CAGR 의 분모)
+    return {r, L, sP, sR, cP, cR, invR, bP:first(sP.hist), bR:first(sR.hist), bB:L.find(x=>x.type==='buy')||{}};
+  };
+  const A=three(5000, 250, 0);
+  const q5=qOf(5000), q250=qOf(250);
+  ok(`① 적립식 5,000$ 시작 · 250$ 적립 — 첫 매수 ${q5}주 = 5,000$÷(1+수수료)÷${c0} 내림 (모의·재생·백테 셋 다 · 250$ 시작이면 ${q250}주)`,
+     q5>q250 && A.bP.qty===q5 && A.bR.qty===q5 && A.bB.qty===q5 && A.bP.date===start && A.bR.date===start && A.bB.date===start && A.bP.init===true && A.bR.init===true,
+     `모의 ${A.bP.qty} · 재생 ${A.bR.qty} · 백테 ${A.bB.qty} · 기대 ${q5}`);
+  { const spent=q5*c0*(1+FEE), left=5000-spent;
+    const addP=A.sP.hist.find(h=>h.type==='add'&&h.date===start), addR=A.sR.hist.find(h=>h.type==='add'&&h.date===start);
+    ok(`① 첫 매수 잔돈 ${left.toFixed(4)}$ 는 Pool 로 남는다 (모의·재생 둘 다 add 기록)`,
+       !!addP && !!addR && Math.abs(addP.amt-left)<1e-5 && Math.abs(addR.amt-left)<1e-5, JSON.stringify({addP, addR})); }
+  ok(`① 총투입 — 모의·재생 장부 = 재생 요약(CAGR 분모) = 백테 (초기 5,000$ + 적립 250$ × 사이클 · ${A.r.invested.toFixed(2)}$)`,
+     Math.abs(A.cP.netInvested-A.r.invested)<1e-6 && Math.abs(A.cR.netInvested-A.r.invested)<1e-6 && A.r.invested>=5000
+     && Math.abs(A.invR-A.r.invested)<0.006,
+     `모의 ${A.cP.netInvested} · 재생 ${A.cR.netInvested} · 재생 요약 ${A.invR} · 백테 ${A.r.invested}`);
+  ok(`① 적립식 V·Pool 세 경로가 같다 (V ${A.r.V.toFixed(2)} · Pool ${A.r.pool.toFixed(2)})`,
+     Math.abs(A.cP.V-A.r.V)<=1e-3 && Math.abs(A.cR.V-A.r.V)<=1e-3 && Math.abs(A.cP.pool-A.r.pool)<=1e-3 && Math.abs(A.cR.pool-A.r.pool)<=1e-3,
+     `V ${A.r.V}/${A.cP.V}/${A.cR.V} Pool ${A.r.pool}/${A.cP.pool}/${A.cR.pool}`);
+  const Z=three(0, 250, 0);
+  ok(`① 초기 투자금 0 이면 첫 적립금으로 시작 — 첫 매수 ${q250}주 (셋 다) · 총투입도 같다`,
+     Z.bP.qty===q250 && Z.bR.qty===q250 && Z.bB.qty===q250
+     && Math.abs(Z.cP.netInvested-Z.r.invested)<1e-6 && Math.abs(Z.cR.netInvested-Z.r.invested)<1e-6,
+     `모의 ${Z.bP.qty} · 재생 ${Z.bR.qty} · 백테 ${Z.bB.qty} · 총투입 ${Z.cP.netInvested}/${Z.cR.netInvested}/${Z.r.invested}`);
+  const S=three(5000, 250, 1000);
+  { const left=5000-q5*c0*(1+FEE);
+    const s1={...S.sP, hist:S.sP.hist.filter(h=>h.date===start)}; __strat=s1; const c1=computeVr();
+    ok(`① 시작 Pool 1,000$ 가 있어도 첫 매수는 초기 투자금 — 첫날 Pool = 1,000 + 잔돈 ${left.toFixed(4)} (이중 계산 없음) · 총투입 세 경로 같다`,
+       S.bP.qty===q5 && S.bB.qty===q5 && S.bR.qty===q5 && Math.abs(c1.pool-(1000+left))<1e-5
+       && Math.abs(S.cP.netInvested-S.r.invested)<1e-6 && Math.abs(S.cR.netInvested-S.r.invested)<1e-6,
+       `첫날 Pool ${c1.pool} · 총투입 ${S.cP.netInvested}/${S.cR.netInvested}/${S.r.invested}`); }
+  global.capGainTax=_cgt;
+
+  /* 첫 매수 금액 한 곳 — vrFirstAmt 값표 · 운영 첫 매수 버튼도 같은 금액 */
+  { const FA=new Function(extractFn(idx,'function vrFirstAmt(st)')+'\nreturn vrFirstAmt;')();
+    const T=[[{mode:0.75,initAmt:5000,add:250},5000],[{mode:0.75,initAmt:0,add:250},250],[{mode:0.5,initAmt:0,add:250},0],
+             [{mode:0.25,initAmt:0,add:250},0],[{mode:0.5,initAmt:8000,add:0},8000],[{initAmt:0,add:250},250],[{mode:0.75,add:250},10000]];
+    const bad=T.filter(([st,exp])=>FA(st)!==exp);
+    ok('① 첫 매수 금액 값표 7칸 — 적립 5,000/250→5,000 · 적립 0/250→250 · 거치·인출 0→0 · 거치 8,000 · 모드 없음(=적립) 0/250→250 · 초기 없음→10,000',
+       bad.length===0, JSON.stringify(bad));
+    const run=(st,pr)=>{ const sess={settings:{...st},hist:[]}; let msg='';
+      const f=new Function('computeVr','vrLastPrice','alert','confirm','curStrat','tickerLabel','wn','nfix','sortHist','save','refreshVr','pushRemote','vrDue','IVS_FEE',
+        extractFn(idx,'function vrFirstAmt(st)')+'\n'+extractFn(idx,'function vrFirstBuy()')+'\nreturn vrFirstBuy;')(
+        ()=>{ __strat=sess; return computeVr(); }, ()=>pr, m=>{ msg+=m; }, ()=>true, ()=>sess, t=>t, v=>String(v), v=>String(v),
+        ()=>{}, ()=>{}, ()=>{}, null, ()=>null, 0.0025);
+      f(); return {h:sess.hist, msg}; };
+    const base={ticker:'TQQQ',formula:'basic',g:10,band:15,startv:0,startpool:0,autoCyc:false,vrModel:'ladder',divmode:'reinv'};
+    const a=run({...base,mode:0.75,initAmt:0,add:250},50), b=run({...base,mode:0.75,initAmt:5000,add:250},50), z=run({...base,mode:0.5,initAmt:0,add:0},50);
+    const q250=Math.floor(250/(50*1.0025)), q5k=Math.floor(5000/(50*1.0025));
+    ok(`① 운영 첫 매수 버튼 — 적립식 초기 투자금 0 이면 첫 적립금 250$ 로 ${q250}주 · 5,000$ 면 ${q5k}주 · 거치식 0 이면 막는다 (모의·재생·백테와 같은 금액)`,
+       a.h.length>=1 && a.h[0].type==='buy' && a.h[0].qty===q250 && a.h[0].init===true && b.h[0] && b.h[0].qty===q5k
+       && z.h.length===0 && /초기 투자금을 먼저/.test(z.msg), JSON.stringify(a.h[0])+' / '+JSON.stringify(b.h[0])+' / '+z.msg.slice(0,30)); }
+  ok('① 첫 매수 카드 미리보기 수량 = 버튼이 적는 수량 (둘 다 수수료 포함 내림) · 설정 힌트에 옛 규약(보통 적립금과 같게)이 없다',
+     /const qty = pr>0 \? Math\.floor\(amt\/\(pr\*\(1\+F\)\)\) : 0, left=amt-qty\*pr\*\(1\+F\);/.test(idx) && !/const qty = pr>0 \? Math\.floor\(amt\/pr\) : 0;/.test(idx)
+     && !/보통 적립금과 같게/.test(idx) && /첫 매수 금액 · 그 뒤 2주마다 적립금 \(0이면 첫 적립금으로 시작\)/.test(idx));
+
+  /* 보유÷140 은 추정 모델 — 정식 공식으로 올리지 않는다 (제12차: 표들을 잘 재현하는 추정으로 유지) */
+  { const pl=fs.readFileSync(__d+'/plan.html','utf8'), bad=[];
+    for(const [nm,src] of [['index',idx],['backtest',bt],['plan',pl]]){ const L=src.split('\n');
+      L.forEach((ln,i)=>{ if(!/÷\s?140/.test(ln)) return;
+        if(!/추정/.test(ln+(L[i+1]||'')) || /(정식|공식)[^\n]{0,30}÷\s?140|÷\s?140[^\n]{0,30}(정식|공식)/.test(ln)) bad.push(nm+':'+(i+1)); }); }
+    const n=[idx,bt,fs.readFileSync(__d+'/plan.html','utf8')].reduce((a,x)=>a+(x.match(/÷\s?140/g)||[]).length,0);
+    ok(`보유÷140 은 어디서나 '추정' — ${n}곳 전부 · '정식'·'공식' 으로 적힌 곳 없음 (앱·백테·플랜)`, bad.length===0 && n>=10, bad.join(' ')); }
+
+  /* ③ 설명 — 구현과 어긋났던 문구 */
+  { const pl=fs.readFileSync(__d+'/plan.html','utf8');
+    ok('③ 설명 — 무매 요약(주문: LOC·지정가·MOC) · 리버스 복귀(1일차 포함 · 앱·백테) · VR 예약표 줄 수(보유÷140 추정 · 앱 안내·플랜 규칙 3)',
+       !/주문은 무조건 <b>LOC<\/b>/.test(idx) && /매수·쿼터매도는 <b>LOC<\/b>, 익절은 <b>지정가<\/b>, 리버스 1일차·중간 소진만 <b>MOC<\/b>/.test(idx)
+       && /<b>1일차 MOC 날 종가로도 판정<\/b>\(리버스가 하루로 끝날 수 있음\)/.test(idx)
+       && /회복 시 다음날 일반\(1일차 MOC 날 종가도 판정 — 하루로 끝날 수 있음\)/.test(bt)
+       && /밴드 1주 예약표\(보유 210주 이상은 한 줄에 보유÷140 주 — 추정\)를 첫날 걸고 2주 방치/.test(idx)
+       && /가격·수량\(1주씩 · 보유 210주 이상은 한 줄에 보유÷140 주 — 추정\)으로 보여줍니다/.test(pl)); }
+
+  /* ── ② 무매 리버스 1일차 종료 ── */
+  /* 판정 함수 값표 — 평단 90 · TQQQ 15% → 복귀선 76.5 · 소진한 날 2026-06-01 */
+  { const D1={reverseActive:true, reverseDay1:true, revFrom:'2026-06-01', avg:90}, RV={...D1, reverseDay1:false};
+    const t=[[D1,80,'2026-06-01',false,'1일차 · 확정 종가가 소진한 날 것 (리버스 전)'],[D1,80,'2026-06-02',true,'1일차 · 소진 다음 날 종가 80 > 76.5 (1일차 거래 기록 없음)'],
+             [D1,80,'',false,'1일차 · 날짜 모름 → 1일차 거래 기록으로 대신 (없음)'],[D1,76.5,'2026-06-02',false,'1일차 · 종가 = 복귀선 (초과 아님)'],
+             [RV,80,'',true,'1일차 MOC 기록 뒤 · 그날 종가 80 (하루 만에 종료)'],[RV,80,'2026-06-01',true,'리버스 거래 뒤 · 날짜와 무관'],
+             [RV,76,'2026-06-02',false,'리버스 · 76 < 76.5'],[{...RV,reverseActive:false},80,'2026-06-02',false,'리버스 아님']];
+    const bad=t.filter(([c,cl,d,exp])=>imRevExitDue(c,cl,15,d)!==exp);
+    ok('② 복귀 판정 값표 8칸 — 1일차도 판정 · 리버스 전 종가·복귀선 이하·리버스 아님은 아니다', bad.length===0, bad.map(x=>x[4]).join(' / ')); }
+
+  /* 운영 주문표 — 소진 장부에서 1일차 거래가 없는 두 경우와 1일차 MOC 뒤 */
+  { const E=__P7.ENV, st={ticker:'TQQQ',div:20,target:15,principal:10000,compound:true,reverse:true,big:15,revGap:0,tgtDyn:false,divmode:'reinv'};
+    const days=Array.from({length:8},(_,i)=>({date:'2026-06-0'+(i+1),close:78}));
+    const run=(close,cdate,hist)=>{ E.ST={...st}; E.HIST=hist.slice(); E.CLOSE=close; E.CDATE=cdate; E.LAST=null; E.DAYS=days;
+      const od=__P7.appOrders(); const html=(E.EL.o_orders||{}).innerHTML||''; E.CDATE=''; return {od,html}; };
+    const X=[{kind:'1회매수',date:'2026-06-01',price:90,qty:100,tManual:19.5}];   // 평단 90 · 100주 · 복귀선 76.5
+    const a=run(80,'2026-06-01',X);
+    ok('② 소진한 날 종가 80(2026-06-01 · 리버스 전)으로는 판정하지 않는다 — 1일차 MOC 10주 그대로 · 종료 안내 없음',
+       a.od.length===1 && a.od[0].tag==='MOC' && a.od[0].qty===10 && !/리버스 종료/.test(a.html), a.od.map(o=>o.name+'/'+o.qty).join(','));
+    const Y=[...X,{kind:'리버스매도',date:'2026-06-02',price:80,qty:10}];         // 1일차 MOC 10주 @80 → T 17.55
+    const b=run(80,'2026-06-02',Y);
+    ok('② 하루 만에 끝나는 리버스 — 1일차 MOC 뒤 그날 종가 80 > 76.5 → 다음 주문은 일반모드 (T 17.55 · 리버스 주문 없음 · 종료 안내)',
+       b.od.length>0 && !b.od.some(o=>/무한매도|쿼터매수/.test(o.name)) && b.od.some(o=>/별지점 매수/.test(o.name)) && b.od.some(o=>/쿼터매도/.test(o.name))
+       && /리버스 종료/.test(b.html) && /T\(17\.55\)/.test(b.html) && !/새 리버스 1일차/.test(b.html), b.od.map(o=>o.name).join(',')+' '+(b.html.match(/T\([^)]*\)/)||[''])[0]);
+    /* 보유 9주 — 1일차 MOC 가 9÷10 내림 0주라 장부에 리버스 거래가 안 남는다. 그래도 하루가 지났으면 1일차 종가로 판정한다. */
+    const Z9=[{kind:'1회매수',date:'2026-06-01',price:90,qty:9,tManual:19.5}];
+    const c=run(80,'2026-06-02',Z9), d=run(80,'2026-06-01',Z9), e=run(70,'2026-06-02',Z9);
+    ok('② 1일차 매도 0주(보유 9주)라 장부가 1일차에 멈춰도 다음 날 종가 80 > 76.5 면 종료 판정 — T 19.5 라 원문대로 새 리버스 1일차',
+       /리버스 종료/.test(c.html) && /새 리버스 1일차/.test(c.html) && c.od.length===0, c.html.replace(/<[^>]+>/g,' ').replace(/\s+/g,' ').slice(0,160));
+    ok('② 같은 장부 · 소진한 날 종가면 판정 없음 · 다음 날이라도 70 < 76.5 면 판정 없음',
+       !/리버스 종료/.test(d.html) && !/리버스 종료/.test(e.html)); }
+
+  /* 서버 자동주문 · 5년 플랜 — 같은 판정 함수, 확정 종가 날짜를 넘기는지 (가상 복귀 뒤 새 1일차의 revFrom 이 그 날짜다) */
+  { const pl=fs.readFileSync(__d+'/plan.html','utf8'), imSrc=fs.readFileSync(__d+'/functions/api/_im.js','utf8');
+    const SV=new Function(imSrc.replace(/export /g,'')+'\nreturn {imOrders,imCompute,imRevExitDue};')();
+    const PL=new Function([
+      (pl.match(/const usd=v=>[^\n]*/)||[''])[0], (pl.match(/const FEE=[^\n]*/)||[''])[0],
+      pl.slice(pl.indexOf('const KIND_T='), pl.indexOf(';', pl.indexOf("'절반매수+지정가매도(애프터)'"))+1),
+      (pl.match(/const isBuyKind=[^\n]*/)||[''])[0], (pl.match(/const isSellKind=[^\n]*/)||[''])[0],
+      (pl.match(/const REV_DIVS_PLAN=[^\n]*/)||[''])[0],
+      (pl.match(/function reverseTPlan[^\n]*/)||[''])[0], (pl.match(/function starPctPlan[^\n]*/)||[''])[0],
+      ...['function exitMulOf(base)','function imRevExitDue(c, close, target, date)','function calcInfState(sess)','function imOrders(sess,price,rows)'].map(x=>extractFn(pl,x)),
+      'return {imOrders, calcInfState, imRevExitDue};'].join('\n'))();
+    const st={ticker:'TQQQ',div:20,target:15,principal:10000,compound:true,reverse:true,big:15,revGap:0,tgtDyn:false,divmode:'reinv'};
+    const Z9=[{kind:'1회매수',date:'2026-06-01',price:90,qty:9,tManual:19.5}];
+    const bars=d=>[...Array.from({length:4},(_,i)=>({date:'2026-05-2'+(5+i),close:95})),{date:d,close:80}];
+    const cs=SV.imCompute(st,Z9), cp=PL.calcInfState({settings:{...st},hist:Z9});
+    ok('② 서버·플랜 상태머신도 소진한 날을 revFrom 으로 든다 (2026-06-01 · 1일차)',
+       cs.reverseDay1 && cs.revFrom==='2026-06-01' && cp.reverseDay1 && cp.revFrom==='2026-06-01', `${cs.revFrom}/${cp.revFrom}`);
+    const s2=SV.imOrders({st, hist:Z9, close:80, days:bars('2026-06-02')}), s1=SV.imOrders({st, hist:Z9, close:80, days:bars('2026-06-01')});
+    const p2=PL.imOrders({settings:{...st},hist:Z9},80,bars('2026-06-02')), p1=PL.imOrders({settings:{...st},hist:Z9},80,bars('2026-06-01'));
+    ok('② 서버 자동주문 — 다음 날 종가면 복귀 판정(가상 복귀 뒤 새 1일차 · revFrom 2026-06-02) · 소진한 날 종가면 판정 없음 · 둘 다 리버스라 건너뜀',
+       s2.c.revFrom==='2026-06-02' && s1.c.revFrom==='2026-06-01' && /리버스/.test(s2.skip||'') && /리버스/.test(s1.skip||''), `${s2.c.revFrom}/${s1.c.revFrom} ${s2.skip}`);
+    ok('② 5년 플랜 — 같은 판정 (다음 날 종가면 revFrom 2026-06-02 · 소진한 날이면 2026-06-01) · 주문은 1일차 0주라 없음',
+       p2.state.revFrom==='2026-06-02' && p1.state.revFrom==='2026-06-01' && p2.orders.length===0 && p1.orders.length===0, `${p2.state.revFrom}/${p1.state.revFrom}`);
+    const Y=[...Z9.slice(0,0),{kind:'1회매수',date:'2026-06-01',price:90,qty:100,tManual:19.5},{kind:'리버스매도',date:'2026-06-02',price:80,qty:10}];
+    const sy=SV.imOrders({st, hist:Y, close:80, days:bars('2026-06-02')}), py=PL.imOrders({settings:{...st},hist:Y},80,bars('2026-06-02'));
+    ok('② 하루 만에 끝나는 리버스 — 서버·플랜도 1일차 MOC 다음 주문이 일반모드 (서버는 건너뛰지 않고 주문 · 플랜 리버스 아님)',
+       !sy.skip && sy.orders.length>0 && !py.state.reverseActive && py.orders.length>0, `${sy.skip||sy.orders.length} · ${py.orders.length}`); }
+
+  /* ── 세 경로 합성 — 소진 다음 날 크게 반등해 1일차 MOC 종가가 복귀선 위 → 리버스가 하루로 끝난다 ──
+     −2.5%/일 하락으로 소진한 날(D)을 백테로 찾고, D 다음 날을 D 종가의 +35% 로 바꾼 뒤 평평하게 15일. */
+  { const mk=(T0,px)=>{ DAYS[T0]=[]; M[T0]={}; px.forEach((c,i)=>{ const d=new Date(Date.UTC(2021,0,4+i)).toISOString().slice(0,10), c2=+c.toFixed(2);
+      DAYS[T0].push(d); M[T0][d]=[c2,c2,+(c2*1.004).toFixed(2),+(c2*0.996).toFixed(2)]; }); };
+    const key=x=>`${x.date} ${x.kind} ${(+x.price).toFixed(4)} x${x.qty}`;
+    const trades=a=>a.filter(h=>h.kind!=='리버스복귀'&&h.kind!=='배당').map(key);
+    const firstDiff=(A,B)=>{ let k=0; while(k<A.length&&k<B.length&&A[k]===B[k]) k++; return (k===A.length&&k===B.length)?-1:k; };
+    const sv={r:global.imReverse, f:global.imFill, c:global.imCostOn, t:global.imTgtDyn, g:global.imRevGap};
+    Object.assign(global,{imReverse:true, imFill:'high', imCostOn:false, imTgtDyn:false, imRevGap:0});
+    const T0='__SYN12__', dec=[]; { let p=100; for(let i=0;i<60;i++){ dec.push(p); p*=0.975; } }
+    mk(T0,dec); __P7.setLOGD([]); __P7.runIMd(DAYS[T0].slice(1), T0, 10000, 20, 20, true, 15);
+    const r1=__P7.LOGD().find(x=>x.kind==='리버스매도'), iD1=r1?DAYS[T0].indexOf(r1.date):-1;   // 1일차 = 소진 다음 날
+    ok('② 합성 준비 — 하락만으로 소진 → 리버스 1일차 MOC 가 생긴다', iD1>1, r1?r1.date:'없음');
+    if(iD1>1){
+      const px=dec.slice(0,iD1); const up=dec[iD1-1]*1.35; px.push(up); for(let k=0;k<15;k++) px.push(up);
+      mk(T0,px);
+      __P7.setLOGD([]); __P7.runIMd(DAYS[T0].slice(1), T0, 10000, 20, 20, true, 15);
+      const Bk=__P7.LOGD().map(key), Bn=__P7.LOGD().filter(x=>/리버스/.test(x.kind)).length;
+      const st={ticker:T0,div:20,target:20,principal:10000,compound:true,reverse:true,big:15,revGap:0,tgtDyn:false,divmode:'reinv',rows:8,rowqty:1};
+      const sess={paper:true,id:'syn12',simStart:DAYS[T0][1],settings:{...st},hist:[]};
+      __P7.paperRun(sess, __P7.quoteOfTk(T0), DAYS[T0][1]);
+      const Pk=trades(sess.hist), Lh=__P7.liveRun(T0,st), Lk=trades(Lh);
+      const dD1=DAYS[T0][iD1], revs=sess.hist.filter(h=>/리버스매[도수]/.test(h.kind));
+      const back=sess.hist.find(h=>h.kind==='리버스복귀'), after=sess.hist.filter(h=>h.date>dD1 && h.kind!=='배당');
+      __strat={settings:{...st},hist:sess.hist.filter(h=>h.date<=dD1 && h.kind!=='리버스복귀')}; const cD1=computeInf();
+      ok(`② 합성 — 1일차(${dD1}) MOC 종가 ${up.toFixed(2)} > 복귀선 ${(cD1.avg*0.8).toFixed(2)} · 리버스 거래는 그 하루뿐 · 같은 날 복귀 · 다음 거래일부터 일반모드`,
+         revs.length===1 && revs[0].date===dD1 && revs[0].kind==='리버스매도' && !!back && back.date===dD1 && up>cD1.avg*0.8
+         && after.length>0 && after.every(h=>!/리버스/.test(h.kind)) && Bn===1,
+         `리버스 ${revs.map(h=>h.date+' '+h.kind).join(',')} · 복귀 ${back&&back.date} · 이후 ${after.slice(0,3).map(h=>h.kind).join(',')} · 백테 리버스 ${Bn}`);
+      const k1=firstDiff(Bk,Pk), k2=firstDiff(Lk,Pk);
+      ok(`② 합성 — 백테 ↔ 모의 거래 ${Bk.length}건 한 건도 안 다르다 (하루 리버스 포함)`, k1<0, k1<0?'':`#${k1} 백테 [${Bk[k1]||'—'}] 모의 [${Pk[k1]||'—'}]`);
+      ok(`② 합성 — 운영(주문표→실제 체결) ↔ 모의 거래 ${Lk.length}건 한 건도 안 다르다`, k2<0, k2<0?'':`#${k2} 운영 [${Lk[k2]||'—'}] 모의 [${Pk[k2]||'—'}]`);
+    }
+    Object.assign(global,{imReverse:sv.r, imFill:sv.f, imCostOn:sv.c, imTgtDyn:sv.t, imRevGap:sv.g});
+    delete DAYS[T0]; delete M[T0]; }
 }
 
 console.log(`\n════ 결과: ${pass} PASS / ${fail} FAIL ${fail===0?'— ALL PASS ★':'— 배포 금지, 위 ✗ 항목 수정 필요'} ════`);

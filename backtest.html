@@ -320,7 +320,7 @@ td:first-child{text-align:left;}
   <div class="brand">
     <div>
       <div class="logo">Backtest</div>
-      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v2.10.1</span></h1>
+      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v2.11.0</span></h1>
     </div>
   </div>
   <div class="hright">
@@ -521,7 +521,7 @@ document.addEventListener('click',function(e){ var m=document.getElementById('jk
       </div>
     </div>
     <div class="ctrl s-vr hide vr-accum"><label data-cur="vr">적립금 ($/2주)</label><input type="number" id="vrContrib" value="100" min="10"></div>
-    <div class="ctrl s-vr hide vr-lump" style="display:none"><label data-cur="vr">초기 투자금 ($)</label><input type="number" id="vrInitAmt" value="10000" min="100"></div>
+    <div class="ctrl s-vr hide vr-lump"><label data-cur="vr" title="첫 매수에 쓰는 돈 — 거치·인출식은 이 돈으로 시작, 적립식도 이 돈으로 시작한 뒤 2주마다 적립금을 더합니다 (0 이면 적립식은 첫 적립금으로 시작)">초기 투자금 ($)</label><input type="number" id="vrInitAmt" value="10000" min="0"></div>
     <div class="ctrl s-vr hide vr-wd" style="display:none"><label data-cur="vr">2주 인출액 ($)</label><input type="number" id="vrWithdraw" value="100" min="10"></div>
     <div class="ctrl s-vr hide"><label>G값 <span id="vrGGuide" style="font-size:9px;color:var(--dim)" title="라오어 시작 가이드 — 적립식·거치식 G=10, 인출식 G=20 (VR 원문 posts/009). 값을 바꾸지는 않습니다">가이드 10 (적립식)</span></label><input type="number" id="vrG" value="10" min="1" max="50"></div>
     <div class="ctrl s-vr hide"><label>밴드 ±%</label><input type="number" id="vrBand" value="15" min="5" max="30"></div>
@@ -771,7 +771,7 @@ document.addEventListener('click',function(e){ var m=document.getElementById('jk
   <span class="bd">매도</span> 보유 1/4 별지점 쿼터매도(T×0.75) + 3/4 <b>평단+익절% 지정가</b> · 보유 0 시 복리 재시작<br>
   <span class="bd">익절조절</span> (선택) 직전 20거래일 상승률 &gt; <b>+8%</b>면 익절% = <b>min(기본×2, 30%)</b> · 하락 시엔 조절 안 함 — 매수 규칙은 그대로<br>
   <span class="bd">소진</span> 일반모드=<b>1회 매수가 불가능</b>해지는 시점(T&gt;분할−1) · 리버스모드=<b>1개(1주) 매수가 불가능</b>해지는 시점 — 리버스는 T가 분할−1을 넘어도 1주를 살 수 있으면 별지점 아래 매수를 지속<br>
-  <span class="bd">리버스</span> 원금소진 시 무한매도(보유÷10·÷20)+쿼터매수(잔금÷4) · 잔금÷4 로 1주도 못 사면 그날은 MOC 매도(중간 소진) · 종가&gt;평단×(1−15%/20%) 회복 시 다음날 일반모드 복귀<br>
+  <span class="bd">리버스</span> 원금소진 시 무한매도(보유÷10·÷20)+쿼터매수(잔금÷4) · 잔금÷4 로 1주도 못 사면 그날은 MOC 매도(중간 소진) · 종가&gt;평단×(1−15%/20%) 회복 시 다음날 일반(1일차 MOC 날 종가도 판정 — 하루로 끝날 수 있음)모드 복귀<br>
   <span class="bd">재투자</span> 복리=익절금 원금 합산 / 단리=초과익만 인출(손실은 잔고 이월) · <b>장기(5년↑) 비교는 단리 권장</b> — 복리 초장기는 기하급수 폭주<br>
   <span class="bd v5-hidden">V5.0</span><span class="v5-hidden"> 국면 익절 (검증 미완료 · 비활성)</span>
 </div>
@@ -1383,7 +1383,7 @@ document.getElementById('vrMode').onclick=e=>{
   document.querySelectorAll('#vrMode button').forEach(b=>b.classList.remove('active'));e.target.classList.add('active');
   const m=e.target.dataset.m;
   document.querySelectorAll('.vr-accum').forEach(el=>el.style.display=m==='0.75'?'':'none');
-  document.querySelectorAll('.vr-lump').forEach(el=>el.style.display=m!=='0.75'?'':'none');
+  document.querySelectorAll('.vr-lump').forEach(el=>el.style.display='');   // 초기 투자금은 세 모드 모두 쓴다 (제12차 ① — 적립식도 이 돈으로 시작)
   document.querySelectorAll('.vr-wd').forEach(el=>el.style.display=m==='0.25'?'':'none');
   { const gg=document.getElementById('vrGGuide');   // 라오어 시작 가이드 G (적립·거치 10 · 인출 20) — 값은 안 바꾼다 (제11차 10)
     if(gg) gg.textContent='가이드 '+(m==='0.25'?'20 (인출식)':m==='0.5'?'10 (거치식)':'10 (적립식)'); }
@@ -2678,7 +2678,7 @@ function runIM(days,tkr,cap,divs,targetPct,compound=true,bigOverride){
          한때 여기에 '1회 매수가 가능할 때만 복귀' 라는 조건을 덧붙였는데,
          그건 재진입이 반복되는 걸 막으려고 넣은 내 판단이지 문서 규칙이 아니었다.
          공식 엔진에 임의 규칙을 섞으면 그 결과를 공식이라 부를 수 없다. */
-      if(c>avg*exitMul){ inReverse=false; }
+      if(c>avg*exitMul){ inReverse=false; }   // 1일차도 같다 — 1일차 MOC 뒤 그날 종가가 복귀선 위면 리버스는 하루로 끝난다 (제12차 ②)
       if(i%10===0)snap.push([d,cash+shares*c+savedProfit-addedCash]);
       peakInvested=Math.max(peakInvested, cap-cash);
       return;
@@ -3005,7 +3005,7 @@ function runIM50(days,tkr,cap,divs,targetPct,compound=true,bigOverride){
          한때 여기에 '1회 매수가 가능할 때만 복귀' 라는 조건을 덧붙였는데,
          그건 재진입이 반복되는 걸 막으려고 넣은 내 판단이지 문서 규칙이 아니었다.
          공식 엔진에 임의 규칙을 섞으면 그 결과를 공식이라 부를 수 없다. */
-      if(c>avg*exitMul){ inReverse=false; }
+      if(c>avg*exitMul){ inReverse=false; }   // 1일차도 같다 — 1일차 MOC 뒤 그날 종가가 복귀선 위면 리버스는 하루로 끝난다 (제12차 ②)
       if(i%10===0)snap.push([d,cash+shares*c+savedProfit-addedCash]);
       peakInvested=Math.max(peakInvested, cap-cash);
       return;
@@ -3329,8 +3329,12 @@ function runVR(days,tkr,params){
     else { let g2=0; while(d>=_vrDue && g2++<10){ isCyc=true; _vrDue=vrNextDue(_vrDue); } }
 
     if(first && isCyc){
-      if(isLump){const s=initAmt||10000;inv+=s;cf.push([d,s]);pool+=s-_vbuy(s,c);V=shares*c;}
-      else{pool+=contrib;inv+=contrib;cf.push([d,contrib]);pool-=_vbuy(pool,c);V=shares*c;}
+      /* 첫 매수는 모드와 상관없이 초기 투자금(initAmt) — 적립식도 '5,000$ 시작 + 2주마다 250$' 이다 (제12차 ①).
+         예전(5차 감사 ③)엔 적립식만 Pool+적립금으로 샀다: initAmt 를 넣어도 250$ 로 시작했다.
+         초기 투자금을 주지 않은 적립식(전체비교 '적립' — 총투입을 적립 횟수로 나눈다)만 첫 적립금으로 시작한다.
+         시작 Pool 은 Pool 에 그대로 둔다 — 모의(vrSimForward)·과거재생(vrReplay)과 같은 규약. */
+      const s=(isAccum && !(initAmt>0)) ? contrib : (initAmt||10000);
+      inv+=s;cf.push([d,s]);pool+=s-_vbuy(s,c);V=shares*c;
       first=false;cycPoolBase=pool;cycBuySpent=0;cycBaseShares=Math.floor(shares+1e-9);cycSellFilled=0;cycBuyFilled=0;buys++;rebal++;snap.push([d,shares*c+pool+totalWd]);return;
     }
 
@@ -4447,7 +4451,7 @@ async function run(){
     const band=+document.getElementById('vrBand').value||15;
     const mode=+(document.querySelector('#vrMode button.active')?.dataset.m)||0.75;
     const formula=document.querySelector('#vrFormula button.active')?.dataset.f||'basic';
-    const initAmt=+document.getElementById('vrInitAmt')?.value||10000;
+    const _ia=document.getElementById('vrInitAmt')?.value, initAmt=(_ia!=null&&_ia!=='')?Math.max(0,+_ia||0):10000;   // 0 도 뜻이 있다 (적립식 = 첫 적립금으로 시작)
     const withdraw=+document.getElementById('vrWithdraw')?.value||100;
     const startV=+document.getElementById('vrStartV')?.value||0;
     const startPool=+document.getElementById('vrStartPool')?.value||0;

@@ -192,7 +192,7 @@ th:first-child,td:first-child{text-align:left}
 <body>
 <div class="wrap">
   <div class="top">
-    <div class="brand"><div class="logo">Five Year Plan</div><h1>5년 자산플랜 <span class="ver">v1.26.2</span></h1></div>
+    <div class="brand"><div class="logo">Five Year Plan</div><h1>5년 자산플랜 <span class="ver">v1.26.3</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
       <div class="jkmenu" id="jkmenuWrap">
@@ -453,7 +453,7 @@ th:first-child,td:first-child{text-align:left}
       <div class="rulelist">
         <div class="rule"><span class="num">1</span><div><b>연동된 VR 세션이 없으면 먼저 생성</b><small>플랜에서 직접 만든 세션 또는 직접 선택한 실전세션만 사용합니다. 모의세션은 선택 목록에서 제외합니다.</small></div></div>
         <div class="rule"><span class="num">2</span><div><b>14일 사이클 · 장 마감 후 확정</b><small>기준일 장중까지는 기존 V 예약표가 유효합니다. 그날 체결을 기록한 뒤 플랜의 ‘다음 사이클 진입’을 눌러 V를 갱신하며, 새 예약표는 다음 거래일부터 적용합니다.</small></div></div>
-        <div class="rule"><span class="num">3</span><div><b>전체 밴드 1주 예약표를 이 화면에 표시</b><small>사이클 Pool 한도 안의 예약매수·예약매도 전 차수를 가격·수량(1주씩)으로 보여줍니다. 평가금이 밴드 밖이면 닿은 차수가 체결 구간입니다.</small></div></div>
+        <div class="rule"><span class="num">3</span><div><b>전체 밴드 1주 예약표를 이 화면에 표시</b><small>사이클 Pool 한도 안의 예약매수·예약매도 전 차수를 가격·수량(1주씩 · 보유 210주 이상은 한 줄에 보유÷140 주 — 추정)으로 보여줍니다. 평가금이 밴드 밖이면 닿은 차수가 체결 구간입니다.</small></div></div>
         <div class="rule"><span class="num">4</span><div><b>월 적립금은 무조건 VR에 넣지 않음</b><small>전체 플랜에서 목표비중보다 부족할 때만 VR 축을 보충합니다.</small></div></div>
       </div>
       <div class="btnrow"><a href="/" class="btn strategy-link">🏠 VR 운영화면 열기</a><a href="/backtest" class="btn strategy-link">📊 VR 백테스트</a></div>
@@ -1033,7 +1033,7 @@ function imRevOrders(o){
    30분할처럼 리버스 규칙이 없는 분할에서도 리버스 주문을 냈다. */
 const REV_DIVS_PLAN=[20,40];
 function calcInfState(sess){
-  const st=sess.settings||{},hist=sess.hist||[];let avg=0,qty=0,inv=0,realized=0,T=0,withdrawn=0,saved=0,divTotal=0,revState='NORMAL';
+  const st=sess.settings||{},hist=sess.hist||[];let avg=0,qty=0,inv=0,realized=0,T=0,withdrawn=0,saved=0,divTotal=0,revState='NORMAL',revFrom='';
   const simple=st.compound===false;
   for(const h of hist){
     const kind=String(h.kind||''),isRev=kind==='리버스매도'||kind==='리버스매수';
@@ -1063,22 +1063,27 @@ function calcInfState(sess){
       qty=0;avg=0;T=0;inv=0;revState='NORMAL';
       if(simple){const P0=+st.principal||0,cash=P0+realized+divTotal-withdrawn-saved;if(cash>P0)saved+=cash-P0;}
     }
-    if(st.reverse===true&&REV_DIVS_PLAN.includes(+st.div)&&revState==='NORMAL'&&qty>1e-9&&((+st.div||20)-T)<1)revState='DAY1';
+    if(st.reverse===true&&REV_DIVS_PLAN.includes(+st.div)&&revState==='NORMAL'&&qty>1e-9&&((+st.div||20)-T)<1){revState='DAY1';revFrom=h.date||'';}
   }
-  if(st.reverse===true&&REV_DIVS_PLAN.includes(+st.div)&&revState==='NORMAL'&&qty>0&&((+st.div||20)-T)<1)revState='DAY1';
+  if(st.reverse===true&&REV_DIVS_PLAN.includes(+st.div)&&revState==='NORMAL'&&qty>0&&((+st.div||20)-T)<1){revState='DAY1';revFrom='';}
   const bal=(+st.principal||0)+realized+divTotal-inv-withdrawn-saved;
-  return {st,avg,qty:Math.max(0,qty),T,bal,withdrawn,saved,outside:withdrawn+saved,revState,
+  return {st,avg,qty:Math.max(0,qty),T,bal,withdrawn,saved,outside:withdrawn+saved,revState,revFrom,
     reverseActive:st.reverse===true&&REV_DIVS_PLAN.includes(+st.div)&&revState!=='NORMAL'&&qty>0,reverseDay1:revState==='DAY1'};
 }
 function exitMulOf(base){ return 1-((base!=null&&base>0)?base:20)/100; }
-/* 리버스 종료가 확정됐는가 — 원문 리버스 6-(2): 종가가 평단 대비 −15%(TQQQ)·−20%(SOXL) 위로 올라온 것을 확인하면
-   그 다음부터 일반모드. 리버스로 하루 이상 지난 뒤(1일차 아님)의 확정 종가로만 본다 — 모의·백테와 같은 규약.
+/* 리버스 종료가 확정됐는가 — 원문 리버스 6-(2): 리버스로 보낸 날의 확정 종가가 평단 대비 −15%(TQQQ)·−20%(SOXL) 위면
+   그 다음부터 일반모드. 1일차도 예외가 아니다 (제12차 ②) — 1일차 MOC 를 치른 날 종가가 복귀선 위면 다음 주문부터
+   일반모드다. 모의·백테도 1일차 주문 뒤 그날 종가로 판정한다.
+   빼는 건 '리버스가 시작되기 전' 종가 하나다 — 장부가 아직 1일차(DAY1)이고 확정 종가 날짜(date)가 소진한 날(revFrom)을
+   넘지 않으면 그건 일반모드 마지막 날 종가다. 1일차 매도가 0주(보유÷10 내림)라 장부에 리버스 거래가 안 남아도 날짜가
+   넘어가면 1일차 종가로 본다. 날짜를 모르면 1일차 거래가 장부에 있는지로 대신 본다.
    운영 주문표·서버 자동주문·5년 플랜이 같은 글자로 쓴다 (제11차 7): 복귀 기록 버튼을 안 눌러도 다음 주문은 일반모드여야 한다. */
-function imRevExitDue(c, close, target){ return !!(c && c.reverseActive && !c.reverseDay1 && close>0 && c.avg>0 && close>c.avg*exitMulOf(target)); }
+function imRevExitDue(c, close, target, date){ return !!(c && c.reverseActive && (!c.reverseDay1 || !!(date && c.revFrom && date>c.revFrom)) && close>0 && c.avg>0 && close>c.avg*exitMulOf(target)); }
 function imOrders(sess,price,rows){
   let c=calcInfState(sess);
   /* 확정 종가가 복귀선 위면 이번 주문은 일반모드 — 앱 renderOrder·서버와 같은 판정 (제11차 7) */
-  if(imRevExitDue(c,price,(c.st||{}).target)) c=calcInfState({...sess,hist:[...(sess.hist||[]),{date:'',kind:'리버스복귀',price,qty:0,virtual:true}]});
+  const cdate=(rows&&rows.length)?String(rows[rows.length-1].date||''):'';   // rows 의 마지막 봉 = 그 확정 종가 (제12차 ②)
+  if(imRevExitDue(c,price,(c.st||{}).target,cdate)) c=calcInfState({...sess,hist:[...(sess.hist||[]),{date:cdate,kind:'리버스복귀',price,qty:0,virtual:true}]});
   const st=c.st,div=+st.div||20,target=+st.target||20,big=st.big!=null?+st.big:15,slot=div-c.T;
   if(!(price>0))return {state:c,orders:[],note:'확정 종가가 없어 주문을 계산하지 못했습니다.'};
   const orders=[];

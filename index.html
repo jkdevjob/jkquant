@@ -537,7 +537,7 @@ try{ if(localStorage.getItem('qcockpit_hadUser')==='1') document.documentElement
 </div>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.93.0</span></h1></div>
+    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.94.0</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -771,7 +771,7 @@ if(/^\/paper\/?$/.test(location.pathname)){
     </div>
     <div class="block" id="inf-guide">
       <div class="card"><h3><span class="dot"></span>한 줄 요약</h3><p class="lead">TQQQ/SOXL을 매일 조금씩 사면서, 오를 때 팔고 또 사는 것을 반복해 수익을 쌓는 전략.</p>
-        <ul class="clean"><li>종목 <b>TQQQ / SOXL</b>만 · 주문은 무조건 <b>LOC</b></li><li>분할 20(공격)/30/40(안정)</li><li>주간장 사용 금지</li></ul></div>
+        <ul class="clean"><li>공식 종목 <b>TQQQ / SOXL</b> (그 밖 종목은 변형)</li><li>주문 — 매수·쿼터매도는 <b>LOC</b>, 익절은 <b>지정가</b>, 리버스 1일차·중간 소진만 <b>MOC</b></li><li>분할 20(공격)/30/40(안정) · 리버스는 20·40분할만</li><li>주간장 사용 금지</li></ul></div>
       <div class="card"><h3><span class="dot"></span>T값 (회차)</h3>
         <div class="rowline"><span class="k">1회 매수</span><span class="val mono">T+1</span></div>
         <div class="rowline"><span class="k">절반 매수</span><span class="val mono">T+0.5</span></div>
@@ -793,7 +793,7 @@ if(/^\/paper\/?$/.test(location.pathname)){
         <p class="note">하락 시 익절을 <b>낮추는</b> 변형은 20개 조합 전부 실패했습니다(손상이 단조 증가). 올릴 때만 조절하는 비대칭이 핵심입니다.</p></div>
       <div class="card" style="border-color:var(--sell-dim)"><h3><span class="dot" style="background:var(--sell)"></span>리버스모드 <span style="font-size:11px;color:var(--faint);font-weight:500">· 설정에서 켬/끔 (기본 끔)</span></h3>
         <p class="lead">원금 소진 시(20분할 T&gt;19 · 40분할 T&gt;39) 진입. 별지점=직전 5거래일 종가 평균. <b>기본은 끔</b> — 소진 후엔 후반전 별지점 손절 쿼터매도로만 방어(홀드).</p>
-        <ul class="clean"><li>첫날 무조건매도 — 20분할 보유÷10 / 40분할 보유÷20 (내림) MOC, 매수 없음</li><li>이후 매도 직전보유÷10(÷20) 별지점 위 / 매수 잔금÷4 별지점 아래</li><li>T갱신 — 20분할 매도 T×0.9·매수 T+(20−T)×0.25 / 40분할 매도 T×0.95·매수 T+(40−T)×0.25</li><li>복귀 TQQQ 종가&gt;평단×0.85 · SOXL&gt;평단×0.80</li></ul></div>
+        <ul class="clean"><li>첫날 무조건매도 — 20분할 보유÷10 / 40분할 보유÷20 (내림) MOC, 매수 없음</li><li>이후 매도 직전보유÷10(÷20) 별지점 위 / 매수 잔금÷4 별지점 아래</li><li>T갱신 — 20분할 매도 T×0.9·매수 T+(20−T)×0.25 / 40분할 매도 T×0.95·매수 T+(40−T)×0.25</li><li>복귀 TQQQ 종가&gt;평단×0.85 · SOXL&gt;평단×0.80 — <b>1일차 MOC 날 종가로도 판정</b>(리버스가 하루로 끝날 수 있음) · T는 그대로 이어감</li></ul></div>
       <div class="card"><h3><span class="dot"></span>원금 소진 기준</h3>
         <ul class="clean"><li><b>일반모드</b> — <b>1회 매수가 불가능</b>해지는 시점. 1회분 = 잔금÷(분할−T)이므로 남은 회차가 1회 미만(<b>T &gt; 분할−1</b>)이면 1회분이 잔금을 넘어 매수 불가. 잔금이 남아 있어도 부분 매수는 하지 않습니다.</li>
         <li><b>리버스모드</b> — <b>1개(1주) 매수가 불가능</b>해지는 시점. T가 분할−1을 넘어도 <b>1주를 살 수 있으면 별지점 아래에서 매수를 지속</b>합니다.</li></ul>
@@ -1037,12 +1037,12 @@ if(/^\/paper\/?$/.test(location.pathname)){
       <div class="card"><h3><span class="dot"></span>매 사이클 운영 (공통 5단계)</h3>
         <ol class="steps"><li><b>첫 진입</b> 설정에 <b>초기 투자금</b> → 현재 탭 "오늘 할 일 · 첫 매수" 버튼 (첫 매수 금액 = 0주차 V)</li>
           <li><b>현재 탭</b> 현재가/평가금 입력 → 매도·매수·대기 판단</li>
-          <li><b>매수·매도표</b> 밴드 1주 예약표를 첫날 걸고 2주 방치</li>
+          <li><b>매수·매도표</b> 밴드 1주 예약표(보유 210주 이상은 한 줄에 보유÷140 주 — 추정)를 첫날 걸고 2주 방치</li>
           <li><b>체결 기록</b> 실제 체결분을 ＋버튼으로 기록</li>
           <li><b>다음 V</b> 2주 후 "다음 사이클 진입" → V갱신·적립/인출 자동기록. 진입일은 상단 <b>D-day</b>로 알려줍니다</li></ol>
         <p class="note">설정(⚙️)에서 <b>사이클 진입 → 자동</b>을 고르면 5번이 없어집니다. 진입일이 지난 사이클을 앱이 알아서 따라잡아 V를 갱신하고 적립금을 기록합니다. <b>매매는 어떤 경우에도 자동으로 하지 않습니다</b> — 그건 실제 계좌에서 일어나는 일이라 체결된 것만 기록하셔야 합니다.</p></div>
-      <div class="card"><h3><span class="dot"></span>🟢 적립식 — 매달 넣으며 불리기</h3>
-        <p class="note" style="margin-top:0">자산 형성기. 매 사이클 새 현금을 넣어 하락장을 가장 공격적으로 매수(Pool 75%).</p>
+      <div class="card"><h3><span class="dot"></span>🟢 적립식 — 2주마다 넣으며 불리기</h3>
+        <p class="note" style="margin-top:0">자산 형성기. <b>초기 투자금으로 첫 매수</b>(0주차 V)를 한 뒤, 매 사이클(2주) 적립금을 Pool에 넣어 하락장을 가장 공격적으로 매수(Pool 75%). 초기 투자금을 0으로 두면 첫 적립금으로 시작합니다.</p>
         <div class="formula"><span class="lbl">예시</span>V 10,000 · Pool 2,000 · G10 · 적립 100<br>다음 V = 10,000 + 200 + 100 = <b>10,300</b> · Pool 2,100</div>
         <p class="note">하락으로 한도가 소진돼도 다음 사이클 적립금이 새 실탄이 됩니다 → 물타기에 가장 강함.</p></div>
       <div class="card"><h3><span class="dot"></span>🔵 거치식 — 목돈 한 번에 굴리기</h3>
@@ -1644,7 +1644,7 @@ if(/^\/paper\/?$/.test(location.pathname)){
   <footer>
     <strong>JK 퀀트</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.93.0</b> · 2026-09-24</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.94.0</b> · 2026-09-24</div>
   </footer>
 </div>
 
@@ -2268,8 +2268,10 @@ function computeInf(){
      그래서 진입 판정을 한 곳(revEnter)에만 두고 리셋이라는 개념 자체를 없앴다.
      T로 매번 재판정하지 않는 이유는 그대로다 — 첫 MOC매도로 T가 분할−1 밑으로
      떨어져 리버스가 즉시 풀려 버리므로 상태로 들고 간다. */
-  let revState='NORMAL';
-  const revEnter=()=>{ if(revEnabled(st) && revState==='NORMAL' && qty>1e-9 && (st.div-T)<1) revState='DAY1'; };
+  let revState='NORMAL', revFrom='';
+  /* revFrom — 이번 1일차로 들어온 기록의 날짜(소진한 날). 1일차 거래가 장부에 없어도 그 뒤 날짜의 확정 종가면
+     리버스로 하루를 보낸 것이다 — 복귀 판정(imRevExitDue)이 그걸로 '1일차 종가'를 알아본다 (제12차 ②). */
+  const revEnter=(d)=>{ if(revEnabled(st) && revState==='NORMAL' && qty>1e-9 && (st.div-T)<1){ revState='DAY1'; revFrom=d||''; } };
   const rows=hist.map(h=>{
     let profit=0;
     const Tbefore=T;
@@ -2339,7 +2341,7 @@ function computeInf(){
     const balAfter=st.principal+realized+divTotal-inv-withdrawn-saved;
     const pctAfter=starPct(st.ticker,st.div,T,st.target);
     const starAfter=avg>0?avg*(1+pctAfter/100):0;
-    revEnter();   // 이 거래로 소진됐으면 여기서 새 리버스 1일차로 들어간다 (진입 판정은 이 한 곳뿐)
+    revEnter(h.date);   // 이 거래로 소진됐으면 여기서 새 리버스 1일차로 들어간다 (진입 판정은 이 한 곳뿐)
     const row={...h,profit,avgAfter:avg,qtyAfter:qty,Tafter:T,balAfter,pctAfter,starAfter,cycleEnd,cycleSeq,revState};
     if(cycleEnd)cycleSeq++;
     return row;
@@ -2353,7 +2355,7 @@ function computeInf(){
   const reverseDay1   = reverseActive && revState==='DAY1';
   // 가용 잔금 = 원금 + 실현손익 + 배당 − 보유분 투입원가 − 출금 − 단리 인출
   const bal=st.principal+realized+divTotal-inv-withdrawn-saved;
-  return {avg,qty,inv,realized,T,totbuy,totsell,bal,rows,st,cycleSeq,revState,reverseActive,reverseDay1,
+  return {avg,qty,inv,realized,T,totbuy,totsell,bal,rows,st,cycleSeq,revState,reverseActive,reverseDay1,revFrom,
           withdrawn,saved,divTotal,flows,simple,outside:withdrawn+saved};
 }
 
@@ -2651,10 +2653,14 @@ function starPct(ticker,div,T,base){
 }
 // 리버스 복귀 배율 = 1 − base/100 (문서: 복귀 기준 = T 마지막 쿼터매도 기준)
 function exitMulOf(base){ return 1-((base!=null&&base>0)?base:20)/100; }
-/* 리버스 종료가 확정됐는가 — 원문 리버스 6-(2): 종가가 평단 대비 −15%(TQQQ)·−20%(SOXL) 위로 올라온 것을 확인하면
-   그 다음부터 일반모드. 리버스로 하루 이상 지난 뒤(1일차 아님)의 확정 종가로만 본다 — 모의·백테와 같은 규약.
+/* 리버스 종료가 확정됐는가 — 원문 리버스 6-(2): 리버스로 보낸 날의 확정 종가가 평단 대비 −15%(TQQQ)·−20%(SOXL) 위면
+   그 다음부터 일반모드. 1일차도 예외가 아니다 (제12차 ②) — 1일차 MOC 를 치른 날 종가가 복귀선 위면 다음 주문부터
+   일반모드다. 모의·백테도 1일차 주문 뒤 그날 종가로 판정한다.
+   빼는 건 '리버스가 시작되기 전' 종가 하나다 — 장부가 아직 1일차(DAY1)이고 확정 종가 날짜(date)가 소진한 날(revFrom)을
+   넘지 않으면 그건 일반모드 마지막 날 종가다. 1일차 매도가 0주(보유÷10 내림)라 장부에 리버스 거래가 안 남아도 날짜가
+   넘어가면 1일차 종가로 본다. 날짜를 모르면 1일차 거래가 장부에 있는지로 대신 본다.
    운영 주문표·서버 자동주문·5년 플랜이 같은 글자로 쓴다 (제11차 7): 복귀 기록 버튼을 안 눌러도 다음 주문은 일반모드여야 한다. */
-function imRevExitDue(c, close, target){ return !!(c && c.reverseActive && !c.reverseDay1 && close>0 && c.avg>0 && close>c.avg*exitMulOf(target)); }
+function imRevExitDue(c, close, target, date){ return !!(c && c.reverseActive && (!c.reverseDay1 || !!(date && c.revFrom && date>c.revFrom)) && close>0 && c.avg>0 && close>c.avg*exitMulOf(target)); }
 /* 리버스 쿼터매수 gap — 별지점에서 이만큼 아래에 LOC를 건다.
    예전엔 분할매수 '줄 간격 %'(st.gap)을 같이 썼는데, 그건 일반모드 분할매수용이라
    그걸 바꾸면 리버스 주문가까지 따라 움직였다. 게다가 백테는 2.5%가 못 박혀 있어
@@ -2768,7 +2774,7 @@ function renderOrder(){
      버튼으로 남기면 이 안내가 사라진다 — 안 눌러도 일반모드 체결을 기록하면 computeInf 가 복귀로 센다. */
   let revAuto=null;
   { const _slx=infSettledLast(), lc=_slx?+_slx.close:0;
-    if(imRevExitDue(c, lc, st.target)){
+    if(imRevExitDue(c, lc, st.target, _slx&&_slx.date)){
       const H=curStrat().hist, ex=c.avg*exitMulOf(st.target), T0=c.T;
       H.push({date:(_slx&&_slx.date)||'', kind:'리버스복귀', price:lc, qty:0, T:T0, reason:'price-recovery', virtual:true});
       try{ c=computeInf(); } finally{ H.pop(); }
@@ -3690,6 +3696,7 @@ function infSimForward(startFrom){
         const c2=computeInf();
         if(c2.qty<=0) inRev=false;                                   // 전량매도 → 사이클 종료
         /* 복귀 조건은 '가격 회복' 하나다 (문서 그대로) — T는 승계하고, 다시 소진이면 재진입.
+           1일차도 같다 — 1일차 MOC 뒤 그날 종가가 복귀선 위면 리버스는 하루로 끝난다 (제12차 ②).
            복귀를 기록으로 남겨야 저장·새로고침 뒤에도 일반모드가 재현된다 (4차 감사 ③). */
         else if(cl > c2.avg*exitMulOf(st.target)){
           inRev=false;
@@ -3977,16 +3984,20 @@ function renderVrNow(){
   let pillCls='wait',pillTxt='대기',verdict='';
   // 첫 매수 전이면 '오늘 할 일 — 첫 매수' 카드를 띄운다 (로테·섀넌과 같은 흐름)
   { const fc=$('vr_first_card'), vc=$('vh_verdict_card');
-    const amt = c.st.initAmt!=null?+c.st.initAmt:10000;
+    const amt = vrFirstAmt(c.st);
     const pr  = vrLastPrice(c)||0;
     if(fc){
       if(c.V<=0 && !(c.qty>0)){
         fc.style.display=''; if(vc) vc.style.display='none';
-        const qty = pr>0 ? Math.floor(amt/pr) : 0;
+        /* 수량·잔돈은 첫 매수 버튼(vrFirstBuy)과 같은 식 — 수수료 포함 내림. 예전엔 여기만 수수료 없이 나눠
+           경계에서 버튼이 적는 수량보다 1주 많게 보였다 */
+        const F=(typeof IVS_FEE!=='undefined')?IVS_FEE:0.0025;
+        const qty = pr>0 ? Math.floor(amt/(pr*(1+F))) : 0, left=amt-qty*pr*(1+F);
+        const init0=(c.st.initAmt!=null?+c.st.initAmt:10000);
         $('vr_first_body').innerHTML = pr>0
           ? `<div class="oitem b"><span class="tag">매수</span><span class="nm">${tickerLabel(c.st.ticker)} ${nfix(qty,0)}주 · ${wn(qty*pr)}</span><span class="pr">${wn(pr)}</span></div>`
-            +`<p class="note" style="margin-top:8px">초기 투자금 <b>${wn(amt)}</b> ÷ 현재가 <b>${wn(pr)}</b> = <b>${nfix(qty,0)}주</b>`
-            +(amt-qty*pr>0?` · 남는 ${wn(amt-qty*pr)}는 Pool로`:'')+`</p>`
+            +`<p class="note" style="margin-top:8px">${init0>0?'초기 투자금':'첫 적립금(초기 투자금 0)'} <b>${wn(amt)}</b> ÷ (현재가 <b>${wn(pr)}</b> + 수수료) = <b>${nfix(qty,0)}주</b>`
+            +(left>0?` · 남는 ${wn(left)}는 Pool로`:'')+`</p>`
           : `<p class="lead">현재가를 먼저 불러오세요 — 위 🔄 자동을 누르거나 직접 입력하시면 매수 수량을 계산합니다.</p>`;
       } else { fc.style.display='none'; if(vc) vc.style.display=''; }
     } }
@@ -7817,13 +7828,12 @@ function vrSimForward(){
     const s0=_clampFrom(paperStart(sess), cut); if(!s0) return null;
     const row=O.find(d=>d.date>=s0 && d.date<=cut && d.close>0); if(!row) return null;
     const _F0=(typeof IVS_FEE!=='undefined')?IVS_FEE:0.0025;
-    /* 적립식은 '초기 투자금' 이 아니라 'Pool + 이번 회차 적립금' 으로 시작한다 —
-       과거재생(vrReplay)·백테(runVR) 와 같은 규약이다 (5차 감사 ③).
-       예전엔 모드와 상관없이 initAmt 로 샀다: 같은 설정인데 모의만 시작 원금이 달랐다.
-       거치·인출식은 그대로 초기 투자금으로 시작한다. */
-    const _isAccum0=(+st.mode||0.75)===0.75;
-    const amt=_isAccum0 ? ((+st.startpool||0)+(+st.add||0))
-                        : (st.initAmt!=null?+st.initAmt:10000);
+    /* 첫 매수는 모드와 상관없이 초기 투자금(initAmt) — 적립식도 '5,000$ 시작 + 2주마다 250$' 이다 (제12차 ①).
+       예전(5차 감사 ③)엔 적립식만 'Pool + 이번 회차 적립금' 으로 샀다: initAmt 를 넣어도 250$ 로 시작했고,
+       시작 Pool 을 첫 매수에 쓰고도 장부(computeVr)가 그 Pool 을 또 셌다.
+       초기 투자금을 0 으로 둔 적립식만 첫 적립금으로 시작한다. 시작 Pool 은 Pool 에 그대로 둔다 —
+       과거재생(vrReplay)·백테(runVR) 와 같은 규약. */
+    const amt=vrFirstAmt(st);
     const q=Math.floor(amt/(1+_F0)/row.close);
     if(q<1) return null;
     const _fee0=q*row.close*_F0;
@@ -7951,7 +7961,7 @@ function vrReplay(){
   const _cutR=_lastSettled(bars, curOf(st)) || simCutoff(curOf(st));
   const D=bars.filter(d=>d.date>=from && d.date<=_cutR);   // 고가·저가가 있는 '확정' 봉으로만 돈다
   if(D.length<30){ alert('그 시작일부터의 거래일이 너무 적습니다.'); return; }
-  const G=+st.g||10, band=(+st.band||15)/100, mode=+st.mode||0.5;
+  const G=+st.g||10, band=(+st.band||15)/100, mode=+st.mode||0.75;   // 모드 기본값은 앱 전체(defVrSettings·computeVr·모의)와 같은 적립식
   const contrib=+st.add||0, formula=st.formula||'basic';
   const isAccum=(mode===0.75), isWd=(mode===0.25), withdraw=isWd?contrib:0;
   const FEE=(typeof IVS_FEE!=='undefined')?IVS_FEE:0.0025;
@@ -7961,6 +7971,7 @@ function vrReplay(){
   const carry=(+st.startv>0) && !(sess.hist||[]).some(h=>h.sim);
   let shares=0, pool=+st.startpool||0, V=carry?+st.startv:0, avg=0, totalWd=0;
   const rec=[]; let first=(V<=0);
+  let carryIn=V, firstAmt=0;      // 들어온 돈 — 이어받은 V · 첫 매수금 (총투입을 백테 runVR 의 inv 와 같게 센다)
   // 사이클 상태 — 재생이 끝나면 그대로 설정(startv·startCyc·cycStart)과 사이클 기록에 옮겨
   // 사용자가 '이대로 다음 사이클 진입'으로 이어 굴릴 수 있게 한다.
   let cyc=0, cycStartPool=pool, cycTrade=0, cycDiv=0, cycBuySpent=0, cycStartDate=D[0].date;
@@ -8023,14 +8034,12 @@ function vrReplay(){
     const c=row.close, d=row.date; if(!(c>0)) return;
     putDivR(d);                      // 그날 사다리보다 먼저 — 전날 종가 시점의 보유 주수로 받는다
     if(first){
-      if(isAccum){
-        pool+=contrib; rec.push({type:'add',date:d,amt:+contrib.toFixed(6),cyc,sim:true,ts:rec.length+1});
-        pool-=_buyInt(pool,c,d,false);
-      } else {
-        const amt=st.initAmt!=null?+st.initAmt:10000;
-        const spent=_buyInt(amt,c,d,true), left=amt-spent;
-        if(left>1e-9){ pool+=left; rec.push({type:'add',date:d,amt:+left.toFixed(6),cyc,sim:true,ts:rec.length+1}); }
-      }
+      /* 첫 매수는 모드와 상관없이 초기 투자금(initAmt) — 적립식도 '5,000$ 시작 + 2주마다 250$' (제12차 ①).
+         초기 투자금을 0 으로 둔 적립식만 첫 적립금으로 시작한다. 시작 Pool 은 Pool 에 그대로 둔다 (모의·백테와 같은 규약) */
+      const amt=vrFirstAmt(st);
+      firstAmt=amt;
+      const spent=_buyInt(amt,c,d,true), left=amt-spent;
+      if(left>1e-9){ pool+=left; rec.push({type:'add',date:d,amt:+left.toFixed(6),cyc,sim:true,ts:rec.length+1}); }
       V=shares*c;
       first=false; cycStartPool=pool; cycTrade=0; cycDiv=0; cycBuySpent=0; cycStartDate=d; cycBaseQty=shares;cycSellFilled=0;cycBuyFilled=0; due=vrNextDue(d); return;
     }
@@ -8067,9 +8076,9 @@ function vrReplay(){
   });
   const lastPx=D[D.length-1].close, fin=shares*lastPx+pool+totalWd;
   const yrs=(new Date(D[D.length-1].date)-new Date(D[0].date))/(365.25*864e5);
-  /* 총투입금 — 적립식은 initAmt 를 아예 안 썼으므로 분모에 넣으면 안 된다 (5차 감사 ③).
-     첫 매수도 한 회차이므로 적립 횟수는 cyc+1 이다. */
-  const base=isAccum ? contrib*(cyc+1) : (st.initAmt!=null?+st.initAmt:10000);
+  /* 총투입금 = 시작 Pool + 첫 매수금 + 적립금 × 사이클 전환 횟수 (제12차 ① — 적립식도 초기 투자금으로 시작).
+     예전엔 적립식을 '적립금 × (사이클+1)' 로 셌고, 시작 Pool 은 두 모드 모두 빠져 있었다 — 백테 runVR 의 inv 와 같게 센다. */
+  const base=(+st.startpool||0) + carryIn + firstAmt + (isAccum ? contrib*cyc : 0);
   const cagr=yrs>0?(Math.pow(Math.max(fin,1e-9)/Math.max(base,1),1/yrs)-1)*100:0;
   const nTrade=rec.filter(r=>r.type==='buy'||r.type==='sell').length;
   const assumeNote = cycStartAssumed
@@ -8097,11 +8106,18 @@ function vrReplay(){
   save(); refreshVr(); pushRemote&&pushRemote();
   alert(`${rec.length}건 생성됨 ✓ (${cyc}주차 · V ${wn(V)})`);
 }
+/* VR 첫 매수 금액 — 모드와 상관없이 초기 투자금. 적립식도 '초기 투자금으로 시작 + 2주마다 적립금' 이다 (제12차 ①).
+   초기 투자금을 0 으로 둔 적립식만 첫 적립금으로 시작한다. 운영 첫 매수 버튼·첫 매수 카드·모의(vrSimForward)·
+   과거재생(vrReplay)이 이 한 곳을 쓴다 — 백테 runVR 도 같은 규약이다(파일이 달라 같은 식을 따로 적는다). */
+function vrFirstAmt(st){
+  const init=(st&&st.initAmt!=null)?+st.initAmt:10000;
+  return ((+(st&&st.mode)||0.75)===0.75 && !(init>0)) ? (+(st&&st.add)||0) : init;
+}
 // 첫 매수 — 초기 투자금으로 오늘 종가에 산 것으로 기록한다. 이 금액이 0주차 V가 된다.
 function vrFirstBuy(){
   const c=computeVr(), st=c.st;
   if(c.V>0 || c.qty>0){ alert('이미 시작된 세션입니다.'); return; }
-  const amt = st.initAmt!=null?+st.initAmt:10000;
+  const amt = vrFirstAmt(st);   // 적립식에서 초기 투자금 0 이면 첫 적립금 — 모의·재생·백테와 같은 규약
   if(!(amt>0)){ alert('설정(⚙️)에서 초기 투자금을 먼저 넣으세요.'); return; }
   const pr=vrLastPrice(c)||0;
   if(!(pr>0)){ alert('먼저 🔄 자동으로 현재가를 불러오거나 직접 입력하세요.'); return; }
@@ -8999,7 +9015,7 @@ function applyVrModeUI(mode){
   // 초기 투자금은 세 모드 모두 쓴다 — 첫 매수 금액이자 곧 0주차 V가 된다
   const il=$('set_initamt_lbl'), csym=isKrCode(($('set_vticker')||{}).value)?'₩':'$';
   if(il){ il.innerHTML = `초기 투자금 (${csym}) <span class="hint">`
-    + (isLump ? '첫 매수에 넣을 목돈' : '첫 매수 금액 · 보통 적립금과 같게') + '</span>';
+    + (isLump||isWd ? '첫 매수에 넣을 목돈' : '첫 매수 금액 · 그 뒤 2주마다 적립금 (0이면 첫 적립금으로 시작)') + '</span>';
     // innerHTML을 새로 쓰면 라벨 원문 캐시가 날아간다 — 새 글자 노드로 다시 잡게 둔다
     il.childNodes.forEach&&[...il.childNodes].forEach(nd=>{ if(nd.nodeType===3) delete nd.__curBase; }); }
 }
