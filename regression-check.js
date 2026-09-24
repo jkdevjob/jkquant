@@ -7571,18 +7571,26 @@ console.log('\n[116] 7차 D11 — 분배금 세전·세후 표기');
 }
 
 
-/* ════ 117. 5년 플랜 v1.13.0 — $20k A안 실전 기본값 · VR 첫매수 현금보존 ════ */
-console.log('\n[117] 5년 플랜 v1.13.0 — $20k A안 실전 기본값 · VR 초기 현금보존');
+/* ════ 117. 5년 플랜 v1.15.1 — 가변 초기자금 A안 · VR 첫매수 현금보존 ════ */
+console.log('\n[117] 5년 플랜 v1.15.1 — 가변 초기자금 A안 · VR 초기 현금보존');
 {
   const pl=fs.readFileSync(__d+'/plan.html','utf8');
   ok('5년 플랜 시작금 기본값은 $20,000', /startCapital:20000/.test(pl) && /aCash:20000/.test(pl));
   ok('PATH A 롤링5년 기본값 — TECL 65% N20 s0 55 밴드12.5 + TQQQ 35% SMA200 ±1.5',
      /alpha:\{teclWeight:\.65,guardWeight:\.35,ivsLook:20,ivsS0:\.55,ivsBand:\.125,guardMA:200,guardBand:\.015\}/.test(pl));
-  ok('PATH A 첫날 실행 UI — 0/0/0/$20k · 127개 롤링 검증 · 자체 잔고 진행률',
-     /TECL 0주 · TQQQ 0주 · SGOV 0주 · 현금 \$20,000/.test(pl)
+  ok('PATH A 첫날 실행 UI — 초기자금 입력 · 127개 롤링 검증 · 자체 잔고 진행률',
+     /id="alphaCapitalInput"/.test(pl)
+     && /id="alphaStartHoldings"/.test(pl)
      && /127개 시작구간/.test(pl)
      && /function alphaPlanTotal\(\)/.test(pl)
      && /activePlanTab==='alpha'\?\(at==null\?num\("startCapital"\):at\)/.test(pl));
+  ok('초기자금 입력이 A 현금·주문기준과 B 60:40 배정을 자동 변경',
+     /const startCap=Math\.max\(1,num\('startCapital',20000\)\)/.test(pl)
+     && /signalTotal=startCap;\$\('aCash'\)\.value=startCap/.test(pl)
+     && /const cap=Math\.max\(1,num\('startCapital',20000\)\),bInf=Math\.round\(cap\*\.60\),bVr=Math\.max\(0,cap-bInf\)/.test(pl)
+     && /\$\("alphaCapitalInput"\)\.addEventListener\("change"/.test(pl)
+     && /if\(virgin\)\$\("aCash"\)\.value=cap/.test(pl)
+     && /\$\("startCapital"\)\.value=cap/.test(pl));
   ok('PATH B 롤링5년 기본값 — SOXL 60% 20분할 +20% 리버스OFF',
      /a=\[60,40,0\],inf=Math\.round\(total\*\.60\)/.test(pl)
      && /classic:\{infWeight:\.60,vrWeight:\.40,infDiv:20,infTarget:20,infBig:15,infReverse:false,vrG:5,vrBand:30,vrFormula:'basic'/.test(pl)
