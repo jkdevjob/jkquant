@@ -8848,8 +8848,8 @@ console.log('\n[123] 모의 성과 — 단독 페이지(/paper)');
      && /이 페이지를 새로고침하면/.test(idx) && /새로고침하면 재시도합니다/.test(idx) && !/창을 다시 열면 재시도/.test(idx) && !/이 창을 닫았다 다시 열면/.test(idx));
 }
 
-/* ════ 124. 5년 플랜 v1.26.1 — 현재계좌 실시간 평가·현금 정합성 ════ */
-console.log('\n[124] 5년 플랜 v1.26.1 — 현재계좌 실시간 평가·현금 정합성');
+/* ════ 124. 5년 플랜 v1.26.2 — 현재계좌 실시간 평가·현금 정합성 ════ */
+console.log('\n[124] 5년 플랜 v1.26.2 — 현재계좌 실시간 평가·현금 정합성');
 {
   const pl=fs.readFileSync(__d+'/plan.html','utf8');
   ok('현재계좌 종목별 평단·현재가·수익률·평가금액을 표시',
@@ -8860,13 +8860,21 @@ console.log('\n[124] 5년 플랜 v1.26.1 — 현재계좌 실시간 평가·현�
        && new RegExp('id="alphaAcct'+x+'Mv"').test(pl))
      && /const accountRows=\[\['TECL','tecl','avgTecl'\],\['TQQQ','tqqq','avgTqqq'\],\['SGOV','sgov','avgSgov'\]\]/.test(pl)
      && /ret=\(q>0&&px>0&&Number\.isFinite\(avg\)&&avg>0\)\?\(px\/avg-1\)\*100:null/.test(pl));
-  ok('현재계좌 합계 — 보유원가·ETF평가액·평가손익·보유수익률·총자산',
+  ok('현재계좌 합계 — 보유원가·현재평가액·평가손익·현금·총자산·전체손익률',
      /id="alphaCostTotal"/.test(pl)
-     && /id="alphaMarketTotal"/.test(pl)
+     && /<div class="k">현재평가액<\/div><div class="v" id="alphaMarketTotal">/.test(pl)
      && /id="alphaPnlTotal"/.test(pl)
-     && /id="alphaReturnTotal"/.test(pl)
+     && /<div class="k">전체 손익률<\/div><div class="v" id="alphaReturnTotal">/.test(pl)
+     && /id="alphaAcctCash"/.test(pl)
      && /id="alphaAssetTotal"/.test(pl)
      && /const assetTotal=marketTotal\+S\.cash,retTotal=costTotal>0\?pnlTotal\/costTotal\*100:null/.test(pl));
+  ok('현재계좌 달러 표시는 소수점 둘째자리까지 고정',
+     /const usd2=v=>"\\$"\+\(Number\(v\)\|\|0\)\.toLocaleString\("en-US",\{minimumFractionDigits:2,maximumFractionDigits:2\}\)/.test(pl)
+     && /function alphaAvgText\(q,avg\)\{return q>0\?\(Number\.isFinite\(avg\)\?'평단 '\+usd2\(avg\)/.test(pl)
+     && /\$\('alphaAcctCash'\)\.textContent=usd2\(S\.cash\)/.test(pl)
+     && /\(L&&L\.hasLivePrice\?'실시간 ':'확정종가 '\)\+usd2\(px\)/.test(pl)
+     && /'평가금액 '\+usd2\(mv\)/.test(pl)
+     && /\$\('alphaAssetTotal'\)\.textContent=usd2\(assetTotal\)/.test(pl));
   ok('시세를 받은 뒤 현재계좌를 다시 렌더링하고 실시간/확정종가를 구분',
      /renderAlphaPlan\(qv,qt,sgov\);\s*renderAlphaLedger\(\);/.test(pl)
      && /L&&\+L\.price>0\?\+L\.price:\(L&&L\.settled\?\+L\.settled\.close:0\)/.test(pl)
