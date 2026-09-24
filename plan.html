@@ -1782,7 +1782,9 @@ async function alphaSaveEdit(){
 async function alphaDeleteEvent(id){
   const e=(alphaLedger.events||[]).find(x=>String(x.id)===String(id));if(!e)return;
   if(!confirm('이 기록을 삭제하고 이후 잔고를 다시 계산할까요?'))return;
-  alphaLedger.events=(alphaLedger.events||[]).filter(x=>String(x.id)!==String(id));alphaSyncInputs();renderAlphaLedger();localSave();refreshAlphaFromCache();await cloudSave();
+  const candidate=JSON.parse(JSON.stringify(alphaLedger));candidate.events=(candidate.events||[]).filter(x=>String(x.id)!==String(id));
+  const chk=alphaLedgerCalc(candidate);if(chk.invalid){alert('삭제할 수 없습니다. '+chk.error);return;}
+  alphaLedger=candidate;alphaSyncInputs();renderAlphaLedger();localSave();refreshAlphaFromCache();await cloudSave();
 }
 async function alphaResetLedger(){
   const cap=Math.max(1,num('startCapital',20000));
