@@ -178,7 +178,7 @@ th:first-child,td:first-child{text-align:left}
 <body>
 <div class="wrap">
   <div class="top">
-    <div class="brand"><div class="logo">Five Year Plan</div><h1>5년 자산플랜 <span class="ver">v1.23.0</span></h1></div>
+    <div class="brand"><div class="logo">Five Year Plan</div><h1>5년 자산플랜 <span class="ver">v1.24.0</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
       <div class="jkmenu" id="jkmenuWrap">
@@ -229,7 +229,7 @@ th:first-child,td:first-child{text-align:left}
         <div class="guidekpi"><div class="k">대피자산</div><div class="v">SGOV</div><div class="sub">신호가 없으면 거래 없음</div></div>
       </div>
       <div class="path-summary" style="margin-top:10px">
-        <b>오늘부터 시작:</b> 처음이면 아래 보유수량이 <b id="alphaStartHoldings">TECL 0주 · TQQQ 0주 · SGOV 0주 · 현금은 입력한 초기자금</b>인지 확인 → <b>오늘 주문 다시 계산</b> → 위에서부터 표시된 주문을 실행 → 체결 후 실제 보유수량과 현금만 갱신하면 됩니다.<br>
+        <b>오늘부터 시작:</b> 페이지를 열면 시세·신호·오늘 주문이 자동 계산됩니다. 표시된 주문을 실행한 뒤 <b>오늘 주문 체결 반영</b>에서 실제 체결가만 기록하면 보유수량·현금·이력이 자동 갱신됩니다.<br>
         <span class="sub" id="alphaStartState">시작 상태 확인 중…</span>
       </div>
       <div class="path-summary" style="margin-top:8px">
@@ -272,7 +272,7 @@ th:first-child,td:first-child{text-align:left}
       </div>
       <div class="todaybox">
         <h3>📋 오늘 주문 — 이 박스만 보고 주문</h3>
-        <div class="sub" id="alphaMeta">TECL·TQQQ·SGOV 확정 일봉을 불러오는 중…</div>
+        <div class="sub" id="alphaMeta">TECL·TQQQ·SGOV 확정 일봉을 불러오는 중…</div><div class="sub" id="alphaRefreshTime">시세 자동 갱신 중…</div>
         <div class="path-orders" id="alphaActions"><div class="liveitem wait">시세를 불러오면 주문 수량을 계산합니다.</div></div>
         <div class="path-summary" id="alphaSummary"><b>원칙:</b> TECL은 목표 변동성 비중과 17.5%p 이상 벌어질 때만, TQQQ는 Guard 상태가 바뀔 때만 거래합니다.</div>
       </div>
@@ -288,9 +288,7 @@ th:first-child,td:first-child{text-align:left}
           <div class="field"><label>현금 ($)</label><input type="number" id="aCash" step="0.01" readonly></div>
         </div>
         <div class="btnrow">
-          <button class="btn primary" id="alphaRefresh">🔄 오늘 주문 다시 계산</button>
           <button class="btn gold" id="alphaRecordFill" disabled>✅ 오늘 주문 체결 반영</button>
-          <button class="btn" id="alphaReconcile">실제 계좌와 맞추기</button>
           <button class="btn" id="alphaReset">새 투자 시작</button>
         </div>
         <div class="alpha-fill-panel" id="alphaFillPanel" hidden>
@@ -299,17 +297,6 @@ th:first-child,td:first-child{text-align:left}
           </div>
           <div id="alphaFillRows"></div>
           <div class="btnrow"><button class="btn primary" id="alphaFillSave">체결 저장</button><button class="btn" id="alphaFillCancel">취소</button></div>
-        </div>
-        <div class="alpha-reconcile-panel" id="alphaReconcilePanel" hidden>
-          <b>실제 계좌와 맞추기</b>
-          <div class="alpha-ledger-note">토스증권 실제 잔고와 앱이 어긋났을 때만 사용합니다. 기존 이력은 보존하고 이 시점부터 실제 잔고를 새 기준으로 잡습니다.</div>
-          <div class="path-holdings">
-            <div class="field"><label>TECL 실제 주수</label><input type="number" id="alphaRecTecl" min="0" step="1"></div>
-            <div class="field"><label>TQQQ 실제 주수</label><input type="number" id="alphaRecTqqq" min="0" step="1"></div>
-            <div class="field"><label>SGOV 실제 주수</label><input type="number" id="alphaRecSgov" min="0" step="1"></div>
-            <div class="field"><label>실제 현금 ($)</label><input type="number" id="alphaRecCash" step="0.01"></div>
-          </div>
-          <div class="btnrow"><button class="btn primary" id="alphaRecSave">계좌 맞춤 저장</button><button class="btn" id="alphaRecCancel">취소</button></div>
         </div>
         <div class="alpha-reconcile-panel" id="alphaEditPanel" hidden>
           <b>이력 수정</b>
@@ -324,15 +311,6 @@ th:first-child,td:first-child{text-align:left}
               <div class="field"><label>체결가 ($)</label><input type="number" id="alphaEditPrice" min="0.0001" step="0.0001"></div>
             </div>
             <div class="alpha-ledger-note">수수료는 수정한 수량×체결가 기준으로 자동 재계산합니다.</div>
-          </div>
-          <div id="alphaEditReconcile" hidden>
-            <div class="path-holdings">
-              <div class="field"><label>날짜</label><input type="date" id="alphaEditRecDate"></div>
-              <div class="field"><label>TECL 주수</label><input type="number" id="alphaEditRecTecl" min="0" step="1"></div>
-              <div class="field"><label>TQQQ 주수</label><input type="number" id="alphaEditRecTqqq" min="0" step="1"></div>
-              <div class="field"><label>SGOV 주수</label><input type="number" id="alphaEditRecSgov" min="0" step="1"></div>
-              <div class="field"><label>현금 ($)</label><input type="number" id="alphaEditRecCash" step="0.01"></div>
-            </div>
           </div>
           <div class="btnrow"><button class="btn primary" id="alphaEditSave">수정 저장</button><button class="btn" id="alphaEditCancel">취소</button></div>
         </div>
@@ -1471,6 +1449,7 @@ function renderAlphaPlan(qTecl,qTqqq,qSgov){
     const dq=targets[sym]-pos[sym];if(dq>0){const p=pxs[sym],q=Math.min(dq,Math.floor(avail/(p*(1+F))));if(q>0){avail-=q*p*(1+F);orders.push({side:'buy',sym,qty:q,price:p,note:sym==='TECL'?'역분산 목표':sym==='TQQQ'?'Guard '+guard:'잔여 대피자산'});}}
   }
   $('alphaMeta').textContent='신호 '+qTecl.settled.date+' 확정종가 · TECL σ'+D.ivsLook+' '+(sigma*100).toFixed(1)+'% → 목표 '+(w*100).toFixed(1)+'% ('+(D.teclWeight*100).toFixed(0)+'% 슬리브 내) · TQQQ '+usd(qs)+' / SMA'+D.guardMA+' '+usd(sma)+' · Guard '+guard;
+  if($('alphaRefreshTime'))$('alphaRefreshTime').textContent='시세 자동 갱신 · '+new Date().toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
   pendingAlphaOrders=orders.map(o=>({...o}));
   if($('alphaRecordFill')){$('alphaRecordFill').disabled=!orders.length;$('alphaRecordFill').textContent=orders.length?'✅ 오늘 주문 체결 반영 ('+orders.length+'건)':'✅ 오늘 주문 체결 반영';}
   if(!orders.length)alphaCloseFillEditor();
@@ -1711,7 +1690,7 @@ function renderAlphaLedger(){
   if($('alphaLedgerStatus')){$('alphaLedgerStatus').textContent='TECL '+S.tecl+' · TQQQ '+S.tqqq+' · SGOV '+S.sgov+' · 현금 '+usd(S.cash);$('alphaLedgerStatus').className='status-pill '+(S.invalid?'warn':'good');}
   if($('alphaLedgerBody'))$('alphaLedgerBody').innerHTML=ev.length?ev.map(e=>{
     const actions='<button class="btn" style="min-height:28px;padding:3px 7px;font-size:10px" data-aedit="'+e.id+'">수정</button> <button class="ledger-del" data-aeid="'+e.id+'">✕</button>';
-    if(e.type==='reconcile'){const x=e.snapshot||{};return '<tr><td>'+String(e.date||'')+'</td><td>계좌</td><td class="adjtxt">맞춤</td><td colspan="4">TECL '+(+x.tecl||0)+' · TQQQ '+(+x.tqqq||0)+' · SGOV '+(+x.sgov||0)+' · 현금 '+usd(+x.cash||0)+'</td><td>'+actions+'</td></tr>';}
+    if(e.type==='reconcile'){const x=e.snapshot||{};return '<tr><td>'+String(e.date||'')+'</td><td>계좌</td><td class="adjtxt">이전버전 보정</td><td colspan="4">TECL '+(+x.tecl||0)+' · TQQQ '+(+x.tqqq||0)+' · SGOV '+(+x.sgov||0)+' · 현금 '+usd(+x.cash||0)+'</td><td><button class="ledger-del" data-aeid="'+e.id+'">✕</button></td></tr>';}
     const gross=(+e.qty||0)*(+e.price||0),buy=e.side==='buy';
     return '<tr><td>'+String(e.date||'')+'</td><td>'+String(e.symbol||'')+'</td><td class="'+(buy?'buytxt':'selltxt')+'">'+(buy?'매수':'매도')+'</td><td>'+Math.floor(+e.qty||0)+'</td><td>'+usd(+e.price||0)+'</td><td>'+usd(+e.fee||0)+'</td><td>'+usd(gross)+'</td><td>'+actions+'</td></tr>';
   }).join(''):'<tr><td colspan="8" style="text-align:center;color:var(--dim)">아직 체결이력이 없습니다. 기존 보유량은 시작잔고로 보존됩니다.</td></tr>';
@@ -1720,7 +1699,7 @@ function alphaOpenFillEditor(){
   if(!pendingAlphaOrders.length){alert('현재 반영할 주문이 없습니다. 먼저 오늘 주문을 다시 계산하세요.');return;}
   $('alphaFillDate').value=todayISO();
   $('alphaFillRows').innerHTML=pendingAlphaOrders.map((o,i)=>'<div class="alpha-fill-row" data-fill-i="'+i+'"><div class="tag">'+o.sym+'</div><div class="'+(o.side==='buy'?'pos':'neg')+'">'+(o.side==='buy'?'매수':'매도')+'</div><div class="field"><label>실제 수량 (최대 '+o.qty+')</label><input type="number" class="afQty" min="0" max="'+o.qty+'" step="1" value="'+o.qty+'"></div><div class="field"><label>실제 체결가 ($)</label><input type="number" class="afPrice" min="0" step="0.0001" value="'+Number(o.price).toFixed(4)+'"></div></div>').join('');
-  $('alphaFillPanel').hidden=false;$('alphaReconcilePanel').hidden=true;alphaCloseEdit();
+  $('alphaFillPanel').hidden=false;alphaCloseEdit();
 }
 function alphaCloseFillEditor(){if($('alphaFillPanel'))$('alphaFillPanel').hidden=true;}
 async function alphaSaveFills(){
@@ -1739,43 +1718,24 @@ async function alphaSaveFills(){
   if(!events.length){alert('체결된 주문이 없습니다. 미체결이면 저장하지 않아도 됩니다.');return;}
   alphaLedger.events.push(...events);alphaCloseFillEditor();alphaSyncInputs();renderAlphaLedger();localSave();refreshAlphaFromCache();await cloudSave();
 }
-function alphaOpenReconcile(){
-  const S=alphaLedgerCalc();$('alphaRecTecl').value=S.tecl;$('alphaRecTqqq').value=S.tqqq;$('alphaRecSgov').value=S.sgov;$('alphaRecCash').value=Number(S.cash.toFixed(2));
-  $('alphaReconcilePanel').hidden=false;$('alphaFillPanel').hidden=true;alphaCloseEdit();
-}
-function alphaCloseReconcile(){if($('alphaReconcilePanel'))$('alphaReconcilePanel').hidden=true;}
-async function alphaSaveReconcile(){
-  const snapshot={tecl:Math.max(0,Math.floor(num('alphaRecTecl'))),tqqq:Math.max(0,Math.floor(num('alphaRecTqqq'))),sgov:Math.max(0,Math.floor(num('alphaRecSgov'))),cash:num('alphaRecCash')};
-  alphaLedger.events.push({id:Date.now()+'_rec',type:'reconcile',date:todayISO(),snapshot});
-  alphaCloseReconcile();alphaSyncInputs();renderAlphaLedger();localSave();refreshAlphaFromCache();await cloudSave();
-}
 function alphaCloseEdit(){
   alphaEditingId="";
   if($('alphaEditPanel'))$('alphaEditPanel').hidden=true;
 }
 function alphaOpenEdit(id){
-  const e=(alphaLedger.events||[]).find(x=>String(x.id)===String(id));if(!e)return;
+  const e=(alphaLedger.events||[]).find(x=>String(x.id)===String(id));if(!e||e.type!=='trade')return;
   alphaEditingId=String(id);$('alphaEditId').value=alphaEditingId;
-  $('alphaFillPanel').hidden=true;$('alphaReconcilePanel').hidden=true;$('alphaEditPanel').hidden=false;
-  const isTrade=e.type==='trade';$('alphaEditTrade').hidden=!isTrade;$('alphaEditReconcile').hidden=isTrade;
-  if(isTrade){
-    $('alphaEditDate').value=e.date||todayISO();$('alphaEditSymbol').value=String(e.symbol||'TECL').toUpperCase();$('alphaEditSide').value=e.side==='sell'?'sell':'buy';
-    $('alphaEditQty').value=Math.max(1,Math.floor(+e.qty||1));$('alphaEditPrice').value=+e.price||0;
-  }else{
-    const x=e.snapshot||{};$('alphaEditRecDate').value=e.date||todayISO();$('alphaEditRecTecl').value=Math.max(0,Math.floor(+x.tecl||0));$('alphaEditRecTqqq').value=Math.max(0,Math.floor(+x.tqqq||0));$('alphaEditRecSgov').value=Math.max(0,Math.floor(+x.sgov||0));$('alphaEditRecCash').value=Number.isFinite(+x.cash)?+x.cash:0;
-  }
+  $('alphaFillPanel').hidden=true;$('alphaEditPanel').hidden=false;
+  $('alphaEditTrade').hidden=false;
+  $('alphaEditDate').value=e.date||todayISO();$('alphaEditSymbol').value=String(e.symbol||'TECL').toUpperCase();$('alphaEditSide').value=e.side==='sell'?'sell':'buy';
+  $('alphaEditQty').value=Math.max(1,Math.floor(+e.qty||1));$('alphaEditPrice').value=+e.price||0;
 }
 async function alphaSaveEdit(){
-  const id=alphaEditingId||$('alphaEditId').value,e=(alphaLedger.events||[]).find(x=>String(x.id)===String(id));if(!e)return;
+  const id=alphaEditingId||$('alphaEditId').value,e=(alphaLedger.events||[]).find(x=>String(x.id)===String(id));if(!e||e.type!=='trade')return;
   const candidate=JSON.parse(JSON.stringify(alphaLedger)),ce=(candidate.events||[]).find(x=>String(x.id)===String(id));if(!ce)return;
-  if(ce.type==='trade'){
-    const date=$('alphaEditDate').value,sym=$('alphaEditSymbol').value,side=$('alphaEditSide').value,q=Math.max(0,Math.floor(num('alphaEditQty'))),p=num('alphaEditPrice');
-    if(!date||!['TECL','TQQQ','SGOV'].includes(sym)||!['buy','sell'].includes(side)||!(q>0)||!(p>0)){alert('날짜·종목·구분·수량·체결가를 확인하세요.');return;}
-    ce.date=date;ce.symbol=sym;ce.side=side;ce.qty=q;ce.price=p;ce.fee=q*p*FEE;
-  }else if(ce.type==='reconcile'){
-    const date=$('alphaEditRecDate').value;if(!date){alert('날짜를 입력하세요.');return;}
-    ce.date=date;ce.snapshot={tecl:Math.max(0,Math.floor(num('alphaEditRecTecl'))),tqqq:Math.max(0,Math.floor(num('alphaEditRecTqqq'))),sgov:Math.max(0,Math.floor(num('alphaEditRecSgov'))),cash:num('alphaEditRecCash')};
-  }else return;
+  const date=$('alphaEditDate').value,sym=$('alphaEditSymbol').value,side=$('alphaEditSide').value,q=Math.max(0,Math.floor(num('alphaEditQty'))),p=num('alphaEditPrice');
+  if(!date||!['TECL','TQQQ','SGOV'].includes(sym)||!['buy','sell'].includes(side)||!(q>0)||!(p>0)){alert('날짜·종목·구분·수량·체결가를 확인하세요.');return;}
+  ce.date=date;ce.symbol=sym;ce.side=side;ce.qty=q;ce.price=p;ce.fee=q*p*FEE;
   const chk=alphaLedgerCalc(candidate);if(chk.invalid){alert('수정할 수 없습니다. '+chk.error);return;}
   alphaLedger=candidate;alphaCloseEdit();alphaSyncInputs();renderAlphaLedger();localSave();refreshAlphaFromCache();await cloudSave();
 }
@@ -1789,7 +1749,7 @@ async function alphaDeleteEvent(id){
 async function alphaResetLedger(){
   const cap=Math.max(1,num('startCapital',20000));
   if(!confirm('A안 거래이력과 보유량을 모두 초기화하고 현금 '+usd(cap)+'에서 새로 시작할까요?'))return;
-  alphaLedger={base:{date:todayISO(),tecl:0,tqqq:0,sgov:0,cash:cap},events:[]};pendingAlphaOrders=[];alphaCloseFillEditor();alphaCloseReconcile();alphaCloseEdit();alphaSyncInputs();renderAlphaLedger();localSave();await cloudSave();refreshLive();
+  alphaLedger={base:{date:todayISO(),tecl:0,tqqq:0,sgov:0,cash:cap},events:[]};pendingAlphaOrders=[];alphaCloseFillEditor();alphaCloseEdit();alphaSyncInputs();renderAlphaLedger();localSave();await cloudSave();refreshLive();
 }
 function monthsLeft(){
   const d=Math.max(0,days(todayISO(),$("targetDate").value));return Math.ceil(d/30.4375);
@@ -1864,8 +1824,8 @@ function render(){
     : "현재 플랜자산을 확인한 뒤 아래 버튼으로 시작점을 확정하세요.";
   const next={1:["성장 진행 70% 또는 3년 경과","둘 중 하나라도 먼저 오면 수익 보호 시작"],2:["성장 진행 85% 또는 12개월 전","둘 중 하나라도 먼저 오면 전환 준비"],3:["성장 진행 100% 또는 목표일","달성 즉시 현금흐름 구조로 전환"],4:["월 현금흐름·원금 유지 관리","분배율보다 총수익과 인출 지속성을 함께 점검"]}[stage];
   if(activePlanTab==='alpha'){
-    $("nextRule").textContent="오늘 주문표 → 체결 반영 → 자동 잔고 갱신";
-    $("nextNote").textContent="체결가만 기록하면 보유수량·현금·거래이력이 자동으로 이어집니다.";
+    $("nextRule").textContent="페이지 열기 → 오늘 주문 확인 → 체결 반영";
+    $("nextNote").textContent="A탭을 열 때 시세와 주문이 자동 갱신되고, 체결가만 기록하면 잔고·이력이 자동으로 이어집니다.";
   }else{$("nextRule").textContent=next[0];$("nextNote").textContent=next[1];}
 
   if($("soxlTargetPct"))$("soxlTargetPct").textContent=(stage<4?STAGES[stage].main[0]:10)+"%";
@@ -1948,13 +1908,9 @@ if(saved && Number(saved.startCapital)===30000 && Number(saved.aCash)===30000
 }
 apply(saved||d);$("slDate").value=todayISO();renderSessionSelectors();renderLedger();renderAlphaLedger();render();
 ["startDate","targetDate","startCapital","targetCapital","monthlyAdd","targetIncome","stageMode","balMM","balVR","balQLD","balSGOV","cagrLow","cagrBase","cagrHigh","incomeBasis","incomeYield","sgovYield","extraWithdraw"].forEach(id=>$(id).addEventListener("change",render));
-$("alphaRefresh").addEventListener("click",refreshLive);
 $("alphaRecordFill").addEventListener("click",alphaOpenFillEditor);
 $("alphaFillSave").addEventListener("click",alphaSaveFills);
 $("alphaFillCancel").addEventListener("click",alphaCloseFillEditor);
-$("alphaReconcile").addEventListener("click",alphaOpenReconcile);
-$("alphaRecSave").addEventListener("click",alphaSaveReconcile);
-$("alphaRecCancel").addEventListener("click",alphaCloseReconcile);
 $("alphaEditSave").addEventListener("click",alphaSaveEdit);
 $("alphaEditCancel").addEventListener("click",alphaCloseEdit);
 $("alphaLedgerBody").addEventListener("click",e=>{const eb=e.target.closest("[data-aedit]");if(eb){alphaOpenEdit(eb.dataset.aedit);return;}const db=e.target.closest("[data-aeid]");if(db)alphaDeleteEvent(db.dataset.aeid);});
@@ -1992,7 +1948,7 @@ $("slFillPrice").addEventListener("click",()=>{const q=liveQuotes[$("slSymbol").
 $("slSymbol").addEventListener("change",()=>{const q=liveQuotes[$("slSymbol").value];if(q&&q.settled)$("slPrice").value=q.settled.close;});
 $("slBody").addEventListener("click",e=>{const b=e.target.closest("[data-id]");if(b)delLedgerTrade(b.dataset.id);});
 document.querySelectorAll(".step").forEach(b=>b.addEventListener("click",()=>{$("stageMode").value=b.dataset.step;render()}));
-document.querySelectorAll('.plan-tab').forEach(b=>b.addEventListener('click',()=>setPlanTab(b.dataset.ptab)));
+document.querySelectorAll('.plan-tab').forEach(b=>b.addEventListener('click',()=>{setPlanTab(b.dataset.ptab);if(b.dataset.ptab==='alpha')refreshLive();}));
 let initialPlanTab='alpha';try{const x=localStorage.getItem('jkq_plan_tab');if(['alpha','classic'].includes(x))initialPlanTab=x;}catch(e){}
 setPlanTab(initialPlanTab,false);
 $("jkmenuBtn").addEventListener("click",e=>{e.stopPropagation();$("jkmenuPop").hidden=!$("jkmenuPop").hidden});
