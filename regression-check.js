@@ -8847,8 +8847,8 @@ console.log('\n[123] 모의 성과 — 단독 페이지(/paper)');
      && /이 페이지를 새로고침하면/.test(idx) && /새로고침하면 재시도합니다/.test(idx) && !/창을 다시 열면 재시도/.test(idx) && !/이 창을 닫았다 다시 열면/.test(idx));
 }
 
-/* ════ 124. 5년 플랜 v1.26.0 — 현재계좌 실시간 평가·현금 정합성 ════ */
-console.log('\n[124] 5년 플랜 v1.26.0 — 현재계좌 실시간 평가·현금 정합성');
+/* ════ 124. 5년 플랜 v1.26.1 — 현재계좌 실시간 평가·현금 정합성 ════ */
+console.log('\n[124] 5년 플랜 v1.26.1 — 현재계좌 실시간 평가·현금 정합성');
 {
   const pl=fs.readFileSync(__d+'/plan.html','utf8');
   ok('현재계좌 종목별 평단·현재가·수익률·평가금액을 표시',
@@ -8866,9 +8866,11 @@ console.log('\n[124] 5년 플랜 v1.26.0 — 현재계좌 실시간 평가·현�
      && /id="alphaReturnTotal"/.test(pl)
      && /id="alphaAssetTotal"/.test(pl)
      && /const assetTotal=marketTotal\+S\.cash,retTotal=costTotal>0\?pnlTotal\/costTotal\*100:null/.test(pl));
-  ok('시세를 받은 뒤 현재계좌를 다시 렌더링해 최신 current price를 사용',
+  ok('시세를 받은 뒤 현재계좌를 다시 렌더링하고 실시간/확정종가를 구분',
      /renderAlphaPlan\(qv,qt,sgov\);\s*renderAlphaLedger\(\);/.test(pl)
-     && /L&&\+L\.price>0\?\+L\.price:\(L&&L\.settled\?\+L\.settled\.close:0\)/.test(pl));
+     && /L&&\+L\.price>0\?\+L\.price:\(L&&L\.settled\?\+L\.settled\.close:0\)/.test(pl)
+     && /hasLivePrice:j\.price!=null&&\+j\.price>0/.test(pl)
+     && /L&&L\.hasLivePrice\?'실시간 ':'확정종가 '/.test(pl));
   ok('A안 실전 수수료는 토스 미국주식 0.1%로 백테스트 FEE 0.25%와 분리',
      /const FEE=0\.0025;\s*const ALPHA_FEE_RATE=0\.001/.test(pl)
      && /function alphaFee\(q,p\)/.test(pl)
