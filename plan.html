@@ -153,7 +153,7 @@ th:first-child,td:first-child{text-align:left}
 <body>
 <div class="wrap">
   <div class="top">
-    <div class="brand"><div class="logo">Five Year Plan</div><h1>5년 자산플랜 <span class="ver">v1.15.3</span></h1></div>
+    <div class="brand"><div class="logo">Five Year Plan</div><h1>5년 자산플랜 <span class="ver">v1.16.0</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
       <div class="jkmenu" id="jkmenuWrap">
@@ -195,12 +195,12 @@ th:first-child,td:first-child{text-align:left}
   <div class="plan-panel on" data-ppanel="alpha">
     <div class="guidehero">
       <div class="eyebrow">PATH A · SIMPLE GROWTH + GUARD</div>
-      <h2>TECL 역분산 65% + TQQQ Guard 35%</h2>
+      <h2>TECL 역분산 60% + TQQQ Guard 40%</h2>
       <div class="path-note" id="alphaCapitalNote">입력한 초기자금 전체를 A안으로 운용합니다. B안은 같은 원금을 다른 방식으로 비교하는 대안입니다.</div>
       <div class="guidegrid">
         <div class="guidekpi"><div class="k">초기자금 ($)</div><div class="v"><input type="number" id="alphaCapitalInput" min="1" step="100" style="width:100%;min-height:36px;font-size:16px;font-weight:800"></div><div class="sub">금액 변경 시 첫날 현금·주문수량 자동 반영</div></div>
-        <div class="guidekpi"><div class="k">TECL 역분산</div><div class="v">65% · N20 · s0 55%</div><div class="sub">밴드 12.5%p · 나머지 SGOV</div></div>
-        <div class="guidekpi"><div class="k">TQQQ Guard</div><div class="v">35% · SMA200</div><div class="sub">+1.5% 진입 / -1.5% 대피</div></div>
+        <div class="guidekpi"><div class="k">TECL 역분산</div><div class="v">60% · N20 · s0 60%</div><div class="sub">밴드 10%p · 나머지 SGOV</div></div>
+        <div class="guidekpi"><div class="k">TQQQ Guard</div><div class="v">40% · SMA200</div><div class="sub">+1.0% 진입 / -1.0% 대피</div></div>
         <div class="guidekpi"><div class="k">대피자산</div><div class="v">SGOV</div><div class="sub">신호가 없으면 거래 없음</div></div>
       </div>
       <div class="path-summary" style="margin-top:10px">
@@ -208,13 +208,13 @@ th:first-child,td:first-child{text-align:left}
         <span class="sub" id="alphaStartState">시작 상태 확인 중…</span>
       </div>
       <div class="path-summary" style="margin-top:8px">
-        <b>5년 롤링 검증:</b> 127개 시작구간 · 중앙 CAGR 38.7% · 하위 10% CAGR 28.0% · 최악 CAGR 18.4% · 중앙 MDD -37.7% · 최악 MDD -41.7%. <span class="sub">업로드 시세 2010~2026 기준 과거 결과이며 미래 수익을 보장하지 않습니다.</span>
+        <b>5년 롤링 검증:</b> 127개 시작구간 · 중앙 CAGR 39.9% · 하위 10% CAGR 28.0% · 최악 CAGR 19.3% · 중앙 MDD -41.1% · 최악 MDD -42.5%. <span class="sub">업로드 시세 2010~2026 기준 과거 결과이며 미래 수익을 보장하지 않습니다.</span>
       </div>
       <div class="todaybox">
         <h3>📋 오늘 주문 — 이 박스만 보고 주문</h3>
         <div class="sub" id="alphaMeta">TECL·TQQQ·SGOV 확정 일봉을 불러오는 중…</div>
         <div class="path-orders" id="alphaActions"><div class="liveitem wait">시세를 불러오면 주문 수량을 계산합니다.</div></div>
-        <div class="path-summary" id="alphaSummary"><b>원칙:</b> TECL은 목표 변동성 비중과 12.5%p 이상 벌어질 때만, TQQQ는 Guard 상태가 바뀔 때만 거래합니다.</div>
+        <div class="path-summary" id="alphaSummary"><b>원칙:</b> TECL은 목표 변동성 비중과 10%p 이상 벌어질 때만, TQQQ는 Guard 상태가 바뀔 때만 거래합니다.</div>
       </div>
       <div class="card" style="margin-top:10px;margin-bottom:0">
         <h3>현재 보유수량 · 체결 후 여기만 갱신</h3>
@@ -232,12 +232,12 @@ th:first-child,td:first-child{text-align:left}
   <div class="plan-panel" data-ppanel="classic">
     <div class="guidehero">
       <div class="eyebrow">PATH B · INFINITE BUY + VALUE REBALANCING</div>
-      <h2>SOXL 무매 60% + TECL VR 40%</h2>
+      <h2>SOXL 무매 42% + TECL VR 58%</h2>
       <div class="path-note" id="classicCapitalNote">입력한 초기자금을 SOXL 60% / TECL VR 40%로 독립 배정합니다. 두 전략은 서로 리밸런싱하지 않습니다.</div>
       <div class="guidegrid">
         <div class="guidekpi"><div class="k">SOXL 무매</div><div class="v">20분할 · 익절 +20%</div><div class="sub">V4.0 변형 · 복리 · 리버스 OFF · 큰수15%</div></div>
-        <div class="guidekpi"><div class="k">TECL VR</div><div class="v">G5 · ±30%</div><div class="sub">Basic V갱신식 · 거치식 · 14일 · 5년 롤링 기본값</div></div>
-        <div class="guidekpi"><div class="k">VR 초기배정</div><div class="v">TECL 90 / Pool 10</div><div class="sub">Pool 사용한도 50%</div></div>
+        <div class="guidekpi"><div class="k">TECL VR</div><div class="v">G10 · ±30%</div><div class="sub">Basic V갱신식 · 거치식 · 14일 · 강건 기본값</div></div>
+        <div class="guidekpi"><div class="k">VR 초기배정</div><div class="v">TECL 60 / Pool 40</div><div class="sub">Pool 사용한도 50%</div></div>
         <div class="guidekpi"><div class="k">운용 엔진</div><div class="v">무매 V4 + VR 5.0</div><div class="sub">5년 롤링 강건값을 실전 기본값으로 사용 · 원안/연구값은 별도 비교</div></div>
       </div>
       <div class="sessionbar">
@@ -555,8 +555,8 @@ const todayISO=()=>{const d=new Date();return new Date(Date.UTC(d.getFullYear(),
 const plusYears=(iso,n)=>{const d=new Date(iso+"T00:00:00Z");d.setUTCFullYear(d.getUTCFullYear()+n);return d.toISOString().slice(0,10)};
 const days=(a,b)=>(new Date(b+"T00:00:00Z")-new Date(a+"T00:00:00Z"))/86400000;
 const PATH_DEFAULTS={
-  alpha:{teclWeight:.65,guardWeight:.35,ivsLook:20,ivsS0:.55,ivsBand:.125,guardMA:200,guardBand:.015},
-  classic:{infWeight:.60,vrWeight:.40,infDiv:20,infTarget:20,infBig:15,infReverse:false,vrG:5,vrBand:30,vrFormula:'basic',vrStockPct:.90,vrPoolLimit:.50}
+  alpha:{teclWeight:.60,guardWeight:.40,ivsLook:20,ivsS0:.60,ivsBand:.10,guardMA:200,guardBand:.01},
+  classic:{infWeight:.42,vrWeight:.58,infDiv:20,infTarget:20,infBig:15,infReverse:false,vrG:10,vrBand:30,vrFormula:'basic',vrStockPct:.60,vrPoolLimit:.50}
 };
 
 
@@ -654,7 +654,7 @@ function applyInitialBalances(a){
   }
 }
 function initialPlanAllocation(){
-  const entered=num('startCapital'),total=entered>0?entered:20000,a=[60,40,0],inf=Math.round(total*.60);
+  const entered=num('startCapital'),total=entered>0?entered:20000,a=[42,58,0],inf=Math.round(total*PATH_DEFAULTS.classic.infWeight);
   if(entered<=0 && $('startCapital'))$('startCapital').value=20000;
   return {ready:true,total,inf,vr:Math.max(0,total-inf),sleeve:0,weights:a};
 }
@@ -700,13 +700,12 @@ async function createPlanVrSession(opts={}){
   const a=requireInitialCapital();if(!a)return null;
   if(planLinks.vr && linkedOpSession(liveState.vr,'TECL',planLinks.vr) && !opts.force)return linkedOpSession(liveState.vr,'TECL',planLinks.vr);
   const cap=a.vr,id=planSid('pvr');
-  /* PATH B 5년 롤링 기본값: VR 5.0 기본식 · G5 · ±30 · 초기 주식90/Pool10 · Pool 사용한도50%.
-     Skill G4~6 / 밴드28~30은 장기 연구 후보로 유지하되 실전 기본값은 Basic G5·±30을 사용한다. */
-  const initAmt=Math.round(cap*.90), startPool=Math.max(0,cap-initAmt);
+  /* PATH B 강건값: VR 5.0 기본식 · G10 · ±30 · 초기 주식60/Pool40 · Pool 사용한도50%. */
+  const initPct=PATH_DEFAULTS.classic.vrStockPct,initAmt=Math.round(cap*initPct), startPool=Math.max(0,cap-initAmt);
   const sess={id,name:sessionDateName('TECL VR'),planManaged:true,settings:{
-    ticker:'TECL',mode:.5,formula:'basic',g:5,initAmt,add:0,
-    band:30,startv:0,startpool:startPool,autoCyc:false,divmode:'reinv',
-    planTotalCapital:cap,planInitStockPct:90,planPresetVersion:7
+    ticker:'TECL',mode:.5,formula:'basic',g:PATH_DEFAULTS.classic.vrG,initAmt,add:0,
+    band:PATH_DEFAULTS.classic.vrBand,startv:0,startpool:startPool,autoCyc:false,divmode:'reinv',
+    planTotalCapital:cap,planInitStockPct:Math.round(initPct*100),planPresetVersion:8
   },hist:[]};
   liveState.vr.sessions.push(sess);liveState.vr.active=id;liveState.activeTab='vr';
   planLinks.vr=id;
@@ -1483,10 +1482,10 @@ function allocationRows(stage){
 function render(){
   updateInitialAllocationPreview();
   renderLedger();
-  const cap=Math.max(1,num('startCapital',20000)),bInf=Math.round(cap*.60),bVr=Math.max(0,cap-bInf);
+  const cap=Math.max(1,num('startCapital',20000)),bInf=Math.round(cap*PATH_DEFAULTS.classic.infWeight),bVr=Math.max(0,cap-bInf);
   if($('alphaCapitalInput')&&document.activeElement!==$('alphaCapitalInput'))$('alphaCapitalInput').value=Math.round(cap);
   if($('alphaCapitalNote'))$('alphaCapitalNote').textContent='초기자금 '+usd(cap)+' 전체를 A안으로 운용합니다. B안은 같은 원금을 다른 방식으로 비교하는 대안입니다.';
-  if($('classicCapitalNote'))$('classicCapitalNote').textContent='초기자금 '+usd(cap)+' 기준 · SOXL '+usd(bInf)+' / TECL VR '+usd(bVr)+'로 독립 배정합니다. 두 전략은 서로 리밸런싱하지 않습니다.';
+  if($('classicCapitalNote'))$('classicCapitalNote').textContent='초기자금 '+usd(cap)+' 기준 · SOXL '+usd(bInf)+' (42%) / TECL VR '+usd(bVr)+' (58%)로 독립 배정합니다. 두 전략은 서로 리밸런싱하지 않습니다.';
   if($('alphaStartHoldings'))$('alphaStartHoldings').textContent='TECL 0주 · TQQQ 0주 · SGOV 0주 · 현금 '+usd(cap);
   if($('alphaReset'))$('alphaReset').textContent=usd(cap)+' 전액 현금으로 초기화';
   const stage=currentStage(),st=STAGES[stage],pg=planProgress();
@@ -1494,7 +1493,7 @@ function render(){
   if(activePlanTab==='alpha'){
     $("stageTitle").textContent="PATH A · 실전 운용";
     $("stageBadge").textContent="PRIMARY";
-    $("stageDesc").textContent="TECL 역분산 65% + TQQQ Guard 35% · 시작금 "+usd(cap);
+    $("stageDesc").textContent="TECL 역분산 60% + TQQQ Guard 40% · N20 · s0 60% · 시작금 "+usd(cap);
     $("stageSource").textContent="오늘은 아래 주문표만 확인하면 됩니다";
   }else{
     $("stageTitle").textContent=st.title;$("stageBadge").textContent=st.badge;$("stageDesc").textContent=st.desc;
