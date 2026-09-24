@@ -8679,8 +8679,8 @@ console.log('\n[120] 제11차 — 라오어 정식 무매 V4.0 + VR 원문 기�
      return /V4\.0 완전 자동 아님/.test(t) && /MOC 는 한투로 보내지 않음/.test(t) && /리버스 자동주문 미지원/.test(t) && /LOC는 일반 지정가로 근사/.test(t) && /체결내역 자동 동기화 없음/.test(t); })());
 }
 
-/* ════ 121. 5년 플랜 v1.22.0 — A안 체결 장부 자동관리 ════ */
-console.log('\n[121] 5년 플랜 v1.22.0 — A안 체결 장부 자동관리');
+/* ════ 121. 5년 플랜 v1.23.0 — A안 체결 장부 자동관리·이력수정 ════ */
+console.log('\n[121] 5년 플랜 v1.23.0 — A안 체결 장부 자동관리·이력수정');
 {
   const pl=fs.readFileSync(__d+'/plan.html','utf8');
   ok('A안 현재 보유수량은 읽기 전용 · 체결반영/계좌맞춤 버튼 제공',
@@ -8706,8 +8706,9 @@ console.log('\n[121] 5년 플랜 v1.22.0 — A안 체결 장부 자동관리');
      && /alphaLedger\.events\.push\(\{id:Date\.now\(\)\+'_rec',type:'reconcile'/.test(pl)
      && /기존 이력은 보존/.test(pl));
 
-  const calcSrc=extractFn(pl,'function alphaLedgerCalc()');
-  const runCalc=(ledger)=>new Function('alphaLedger',calcSrc+'\nreturn alphaLedgerCalc();')(ledger);
+  const eventSrc=extractFn(pl,'function alphaEventList(ledger=alphaLedger)');
+  const calcSrc=extractFn(pl,'function alphaLedgerCalc(ledger=alphaLedger)');
+  const runCalc=(ledger)=>new Function('alphaLedger',eventSrc+'\n'+calcSrc+'\nreturn alphaLedgerCalc(alphaLedger);')(ledger);
   const S=runCalc({base:{tecl:0,tqqq:0,sgov:0,cash:1000},events:[
     {type:'trade',symbol:'TECL',side:'buy',qty:2,price:100,fee:1},
     {type:'trade',symbol:'TECL',side:'sell',qty:1,price:120,fee:.5},
@@ -8721,6 +8722,48 @@ console.log('\n[121] 5년 플랜 v1.22.0 — A안 체결 장부 자동관리');
      /alphaLedger=\{base:\{date:todayISO\(\),tecl:0,tqqq:0,sgov:0,cash:cap\},events:\[\]\}/.test(pl)
      && /\$\("alphaReset"\)\.addEventListener\("click",alphaResetLedger\)/.test(pl)
      && !/\["aTeclQty","aTqqqQty","aSgovQty","aCash"\]\.forEach\(id=>\$\(id\)\.addEventListener\("change"/.test(pl));
+}
+
+/* ════ 122. 5년 플랜 v1.23.0 — A안 이력 수정 ════ */
+console.log('\n[122] 5년 플랜 v1.23.0 — A안 이력 수정');
+{
+  const pl=fs.readFileSync(__d+'/plan.html','utf8');
+  ok('A안 거래/계좌맞춤 이력에 수정 UI와 저장/취소 배선이 있다',
+     /id="alphaEditPanel"/.test(pl)
+     && /id="alphaEditTrade"/.test(pl)
+     && /id="alphaEditReconcile"/.test(pl)
+     && /data-aedit=/.test(pl)
+     && /function alphaOpenEdit\(id\)/.test(pl)
+     && /function alphaSaveEdit\(\)/.test(pl)
+     && /\$\("alphaEditSave"\)\.addEventListener\("click",alphaSaveEdit\)/.test(pl));
+  ok('거래 수정 — 날짜·종목·매수매도·수량·체결가를 수정하고 수수료 자동 재계산',
+     /ce\.date=date;ce\.symbol=sym;ce\.side=side;ce\.qty=q;ce\.price=p;ce\.fee=q\*p\*FEE/.test(pl)
+     && /id="alphaEditSymbol"/.test(pl)
+     && /id="alphaEditSide"/.test(pl)
+     && /id="alphaEditQty"/.test(pl)
+     && /id="alphaEditPrice"/.test(pl));
+  ok('계좌 맞춤 이력도 날짜·TECL·TQQQ·SGOV·현금을 수정 가능',
+     /ce\.snapshot=\{tecl:Math\.max\(0,Math\.floor\(num\('alphaEditRecTecl'\)\)\),tqqq:Math\.max/.test(pl)
+     && /id="alphaEditRecCash"/.test(pl));
+  ok('이력 계산은 날짜순, 같은 날짜는 원래 입력순으로 안정 정렬',
+     /sort\(\(a,b\)=>String\(a\.date\|\|''\)\.localeCompare\(String\(b\.date\|\|''\)\)\|\|a\._i-b\._i\)/.test(pl));
+  ok('수정/삭제가 과거 보유수량보다 큰 매도를 만들면 저장을 막는다',
+     /if\(q>S\[k\]\)\{S\.invalid=true;S\.error=/.test(pl)
+     && /const chk=alphaLedgerCalc\(candidate\);if\(chk\.invalid\)\{alert\('수정할 수 없습니다\. '/.test(pl)
+     && /const chk=alphaLedgerCalc\(candidate\);if\(chk\.invalid\)\{alert\('삭제할 수 없습니다\. '/.test(pl));
+
+  const eventSrc=extractFn(pl,'function alphaEventList(ledger=alphaLedger)');
+  const calcSrc=extractFn(pl,'function alphaLedgerCalc(ledger=alphaLedger)');
+  const runCalc=ledger=>new Function('alphaLedger',eventSrc+'\n'+calcSrc+'\nreturn alphaLedgerCalc(alphaLedger);')(ledger);
+  const ordered=runCalc({base:{tecl:0,tqqq:0,sgov:0,cash:1000},events:[
+    {id:'2',type:'trade',date:'2026-01-03',symbol:'TECL',side:'sell',qty:1,price:120,fee:0},
+    {id:'1',type:'trade',date:'2026-01-02',symbol:'TECL',side:'buy',qty:2,price:100,fee:0}
+  ]});
+  ok('날짜를 과거로 수정해도 계산은 날짜순 — 1/2 매수 후 1/3 매도 = TECL 1주', ordered.tecl===1 && !ordered.invalid, JSON.stringify(ordered));
+  const bad=runCalc({base:{tecl:0,tqqq:0,sgov:0,cash:1000},events:[
+    {id:'1',type:'trade',date:'2026-01-02',symbol:'TECL',side:'sell',qty:1,price:100,fee:0}
+  ]});
+  ok('수정 검증용 계산기가 당시 보유량 초과 매도를 invalid로 표시', bad.invalid===true && /매도 1주 > 당시 보유 0주/.test(bad.error), JSON.stringify(bad));
 }
 
 console.log(`\n════ 결과: ${pass} PASS / ${fail} FAIL ${fail===0?'— ALL PASS ★':'— 배포 금지, 위 ✗ 항목 수정 필요'} ════`);
