@@ -8679,5 +8679,49 @@ console.log('\n[120] 제11차 — 라오어 정식 무매 V4.0 + VR 원문 기�
      return /V4\.0 완전 자동 아님/.test(t) && /MOC 는 한투로 보내지 않음/.test(t) && /리버스 자동주문 미지원/.test(t) && /LOC는 일반 지정가로 근사/.test(t) && /체결내역 자동 동기화 없음/.test(t); })());
 }
 
+/* ════ 121. 5년 플랜 v1.22.0 — A안 체결 장부 자동관리 ════ */
+console.log('\n[121] 5년 플랜 v1.22.0 — A안 체결 장부 자동관리');
+{
+  const pl=fs.readFileSync(__d+'/plan.html','utf8');
+  ok('A안 현재 보유수량은 읽기 전용 · 체결반영/계좌맞춤 버튼 제공',
+     /id="aTeclQty"[^>]*readonly/.test(pl)
+     && /id="aTqqqQty"[^>]*readonly/.test(pl)
+     && /id="aSgovQty"[^>]*readonly/.test(pl)
+     && /id="aCash"[^>]*readonly/.test(pl)
+     && /id="alphaRecordFill"/.test(pl)
+     && /id="alphaReconcile"/.test(pl));
+  ok('A안 거래장부가 저장 상태에 포함되고 구버전 직접입력 잔고를 시작잔고로 승계',
+     /o\.alphaLedger=JSON\.parse\(JSON\.stringify\(alphaLedger\)\)/.test(pl)
+     && /o&&o\.alphaLedger&&typeof o\.alphaLedger==='object'/.test(pl)
+     && /tecl:Math\.max\(0,Math\.floor\(\+all\.aTeclQty\|\|0\)\)/.test(pl)
+     && /tqqq:Math\.max\(0,Math\.floor\(\+all\.aTqqqQty\|\|0\)\)/.test(pl)
+     && /sgov:Math\.max\(0,Math\.floor\(\+all\.aSgovQty\|\|0\)\)/.test(pl));
+  ok('오늘 주문을 pendingAlphaOrders에 고정하고 체결 수량은 계획 수량 이하만 저장',
+     /pendingAlphaOrders=orders\.map\(o=>\(\{\.\.\.o\}\)\)/.test(pl)
+     && /q>o\.qty/.test(pl)
+     && /미체결은 수량 0/.test(pl)
+     && /alphaLedger\.events\.push\(\.\.\.events\)/.test(pl));
+  ok('실제 계좌 맞추기는 기존 이력을 지우지 않고 reconcile 이벤트로 남김',
+     /type:'reconcile'/.test(pl)
+     && /alphaLedger\.events\.push\(\{id:Date\.now\(\)\+'_rec',type:'reconcile'/.test(pl)
+     && /기존 이력은 보존/.test(pl));
+
+  const calcSrc=extractFn(pl,'function alphaLedgerCalc()');
+  const runCalc=(ledger)=>new Function('alphaLedger',calcSrc+'\nreturn alphaLedgerCalc();')(ledger);
+  const S=runCalc({base:{tecl:0,tqqq:0,sgov:0,cash:1000},events:[
+    {type:'trade',symbol:'TECL',side:'buy',qty:2,price:100,fee:1},
+    {type:'trade',symbol:'TECL',side:'sell',qty:1,price:120,fee:.5},
+    {type:'reconcile',snapshot:{tecl:5,tqqq:6,sgov:7,cash:42}},
+    {type:'trade',symbol:'TQQQ',side:'buy',qty:1,price:10,fee:.1}
+  ]});
+  ok('A 장부 계산 — 매수/매도 후 reconcile 시점부터 새 실제잔고 기준으로 이어짐',
+     S.tecl===5 && S.tqqq===7 && S.sgov===7 && near(S.cash,31.9,1e-9),
+     JSON.stringify(S));
+  ok('새 투자 시작은 A 장부 자체를 초기화하고 직접 입력 필드를 쓰지 않음',
+     /alphaLedger=\{base:\{date:todayISO\(\),tecl:0,tqqq:0,sgov:0,cash:cap\},events:\[\]\}/.test(pl)
+     && /\$\("alphaReset"\)\.addEventListener\("click",alphaResetLedger\)/.test(pl)
+     && !/\["aTeclQty","aTqqqQty","aSgovQty","aCash"\]\.forEach\(id=>\$\(id\)\.addEventListener\("change"/.test(pl));
+}
+
 console.log(`\n════ 결과: ${pass} PASS / ${fail} FAIL ${fail===0?'— ALL PASS ★':'— 배포 금지, 위 ✗ 항목 수정 필요'} ════`);
 process.exit(fail===0?0:1);
