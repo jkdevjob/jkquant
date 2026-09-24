@@ -529,7 +529,7 @@ try{ if(localStorage.getItem('qcockpit_hadUser')==='1') document.documentElement
 </div>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.89.0</span></h1></div>
+    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.90.0</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -879,14 +879,14 @@ document.addEventListener('click',function(e){ var m=document.getElementById('jk
         <div class="lad-head"><div class="lh-l"><h3 style="margin:0"><span class="dot"></span>매도표</h3><span class="badge ok" id="lad_state_s">예약 매매</span></div><span class="lh-stage" id="lad_stage_s">1단계</span></div>
         <div class="waitbox" id="sell_wait"></div>
         <div class="ladx sell" id="sell_lad"></div>
-        <p class="ladnote">매도가 = 상단가치 ÷ 보유수량 · 수량 = 평가금이 V로 돌아올 만큼 (구현 규칙 — 원문은 '밴드 안으로 다시 진입'까지만 적는다). 다음 차수는 판 뒤 수량으로 이어집니다. 첫날 한 번에 걸어두고 도달한 차수만 자동 체결. 행 탭 = 그 차수 수량 그대로 기록.</p>
+        <p class="ladnote">매도가 = 최대값(상단) ÷ 보유수량 · <b>1주씩</b>, 센트 반올림 — 원문 매수표와 같은 규칙을 위쪽에 (원문 매도표는 아직 못 봄). 다음 차수는 판 뒤 수량으로 이어집니다. 첫날 한 번에 걸어두고 도달한 차수만 자동 체결. 행 탭 = 그 차수 1주 기록.</p>
       </div>
       <div class="card">
         <div class="lad-head"><div class="lh-l"><h3 style="margin:0"><span class="dot"></span>매수표</h3><span class="badge ok" id="lad_state_b">예약 매매</span></div><span class="lh-stage" id="lad_limit_b">한도 —</span></div>
         <div class="waitbox" id="buy_wait"></div>
         <div id="buy_warn"></div>
         <div class="ladx buy" id="buy_lad"></div>
-        <p class="ladnote">매수가 = 하단가치 ÷ 보유수량 · 수량 = 평가금이 V에 닿을 만큼 (구현 규칙 — 원문은 '밴드 안으로 다시 진입'까지만 적는다). 첫날 한 번에 걸어두면 도달하는 만큼만 자동 체결. Pool 한도를 넘는 몫은 <b style="color:var(--gold)">!</b> 표시 — 한도 안에서만 삽니다.</p>
+        <p class="ladnote">매수가 = 최소값(하단) ÷ 보유수량 · <b>1주씩</b>, 센트 반올림 — 원문 VR 매수표와 같은 규칙 (예: 하단 8,500 · 100주 → 85.00 · 84.16 · 83.33 …). 첫날 한 번에 걸어두면 도달하는 만큼만 자동 체결. Pool 한도를 넘는 몫은 <b style="color:var(--gold)">!</b> 표시 — 한도 안에서만 삽니다.</p>
       </div>
     </div>
 
@@ -1016,7 +1016,7 @@ document.addEventListener('click',function(e){ var m=document.getElementById('jk
       <div class="card"><h3><span class="dot"></span>매 사이클 운영 (공통 5단계)</h3>
         <ol class="steps"><li><b>첫 진입</b> 설정에 <b>초기 투자금</b> → 현재 탭 "오늘 할 일 · 첫 매수" 버튼 (첫 매수 금액 = 0주차 V)</li>
           <li><b>현재 탭</b> 현재가/평가금 입력 → 매도·매수·대기 판단</li>
-          <li><b>매수·매도표</b> V 복귀 예약표를 첫날 걸고 2주 방치</li>
+          <li><b>매수·매도표</b> 밴드 1주 예약표를 첫날 걸고 2주 방치</li>
           <li><b>체결 기록</b> 실제 체결분을 ＋버튼으로 기록</li>
           <li><b>다음 V</b> 2주 후 "다음 사이클 진입" → V갱신·적립/인출 자동기록. 진입일은 상단 <b>D-day</b>로 알려줍니다</li></ol>
         <p class="note">설정(⚙️)에서 <b>사이클 진입 → 자동</b>을 고르면 5번이 없어집니다. 진입일이 지난 사이클을 앱이 알아서 따라잡아 V를 갱신하고 적립금을 기록합니다. <b>매매는 어떤 경우에도 자동으로 하지 않습니다</b> — 그건 실제 계좌에서 일어나는 일이라 체결된 것만 기록하셔야 합니다.</p></div>
@@ -1623,7 +1623,7 @@ document.addEventListener('click',function(e){ var m=document.getElementById('jk
   <footer>
     <strong>JK 퀀트</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.89.0</b> · 2026-09-24</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.90.0</b> · 2026-09-24</div>
   </footer>
 </div>
 
@@ -1677,7 +1677,7 @@ document.addEventListener('click',function(e){ var m=document.getElementById('jk
     <div class="seclabel">운용 모드</div><div class="seg" id="set_vmode"><button data-v="0.75">적립식</button><button data-v="0.5">거치식</button><button data-v="0.25">인출식</button></div>
     <div class="seclabel">체결 모델 <span class="hint" style="color:var(--faint);font-weight:500">밴드를 벗어났을 때 얼마나 움직이나</span></div>
     <div class="seg" id="set_vmodel">
-      <button data-v="vreturn" title="평가금이 상단(1.15V)을 넘으면 V로 돌아올 만큼 매도, 하단(0.85V) 아래면 V에 닿을 만큼 매수(Pool 한도 안). 사이클 첫날 보유수량으로 2주치 예약표를 고정합니다. 원문(posts/009)은 '밴드를 벗어나면 매수·매도로 다시 밴드 안으로' 까지만 적고 수량 산식은 없습니다 — 원문 예약표를 확인하기 전까지 구현 규칙입니다.">V 복귀 예약표</button>
+      <button data-v="ladder" title="밴드를 벗어나면 1주씩 사고팔아 경계에 붙입니다 — 매수 k차 = 최소값(0.85V) ÷ 보유수량, 매도 k차 = 최대값(1.15V) ÷ 보유수량, 센트 반올림 · 1주씩 · 사이클 Pool 한도 안. 원문 매수표와 같은 규칙입니다(매도표는 같은 규칙을 위로 — 원문 매도표는 아직 못 봄). 사이클 첫날 보유수량으로 2주치 예약표를 고정하고, 표 줄 수 20은 구현값입니다.">밴드 1주 예약표</button>
     </div>
     <div class="seclabel">V 갱신 공식</div><div class="seg" id="set_vformula"><button data-v="basic">기본공식</button><button data-v="skill">실력(실험적)</button></div>
     <div class="seclabel">사이클 진입 <span class="hint" style="color:var(--faint);font-weight:500">V 갱신·적립을 누가 하나</span></div><div class="seg" id="set_vauto"><button data-v="0">직접 확인</button><button data-v="1">자동 진입</button></div>
@@ -2095,7 +2095,7 @@ function forceV40(){
     walk(S);
   }catch(e){}
 }
-function defVrSettings(){return{ticker:'TQQQ',mode:0.75,formula:'basic',g:10,initAmt:10000,add:100,band:15,startv:0,startpool:0,autoCyc:false,vrModel:'vreturn',divmode:'reinv'}}
+function defVrSettings(){return{ticker:'TQQQ',mode:0.75,formula:'basic',g:10,initAmt:10000,add:100,band:15,startv:0,startpool:0,autoCyc:false,vrModel:'ladder',divmode:'reinv'}}
 function uid(){return 's'+Date.now()+Math.floor(Math.random()*9999)}
 function newInfSession(name){return{id:uid(),name:name||'세션 1',settings:defInfSettings(),hist:[]}}
 function newVrSession(name){return{id:uid(),name:name||'세션 1',settings:defVrSettings(),hist:[]}}
@@ -3772,7 +3772,7 @@ function refreshInf(){
    - 다음 V (기본/오피셜)  : V + Pool/G ± 적립금
    - 다음 V (실력공식)     : V + Pool/G + (E−V)/(2√G) ± 적립금
    - 밴드 : V×(1±band)
-   - 예약표 (V 복귀 · 구현 규칙) : 매도가 = V_high / n → 평가금이 V 로 돌아올 만큼 · 매수가 = V_low / n → V 에 닿을 만큼 (vrTiers)
+   - 예약표 (밴드 1주 · 원문 매수표) : 매도가 = V_high / n · 매수가 = V_low / n · 센트 반올림 · 1주씩 (vrTiers)
    - Pool 한도 : (적립 반영) Pool × mode(0.75/0.5/0.25)
 ════════════════════════════════════════════════════════════ */
 
@@ -3976,13 +3976,13 @@ function renderVrNow(){
     verdict=`<p class="lead">위에 현재가나 평가금을 넣으면 매도·매수·대기 판단이 나옵니다.</p>`;
   } else if(ev>c.up){
     pillCls='over';pillTxt='상단 초과';
-    verdict=`<div class="oitem s"><span class="tag">예약매도</span><span class="nm">상단 초과 — V로 돌아올 만큼 매도</span><span class="pr">표 확인</span></div>
-      <p class="note" style="margin-top:8px">아래 예약매도표에서 현재가가 도달한 차수를 확인하세요. 각 차수 수량은 <b>평가금이 V로 돌아오는 만큼</b>입니다. 실제 체결된 차수만 기록합니다.</p>`;
+    verdict=`<div class="oitem s"><span class="tag">예약매도</span><span class="nm">상단 초과 — 매도표대로 1주씩 매도</span><span class="pr">표 확인</span></div>
+      <p class="note" style="margin-top:8px">아래 예약매도표에서 현재가가 도달한 차수를 확인하세요. 차수마다 <b>1주씩</b>입니다 (최대값 ÷ 보유수량). 실제 체결된 차수만 기록합니다.</p>`;
   } else if(ev<c.lo){
     pillCls='under';pillTxt='하단 미만';
     const limit=poolLimit(c);
-    verdict=`<div class="oitem b"><span class="tag">예약매수</span><span class="nm">하단 미만 — V에 닿을 만큼 매수</span><span class="pr">${wn(limit)} 한도</span></div>
-      <p class="note" style="margin-top:8px">아래 예약매수표에서 현재가가 도달한 차수를 확인하세요. 각 차수 수량은 <b>평가금이 V에 닿는 만큼</b>이고, 남은 Pool 한도를 넘으면 한도 안에서만 삽니다. 실제 체결된 차수만 기록합니다.</p>`;
+    verdict=`<div class="oitem b"><span class="tag">예약매수</span><span class="nm">하단 미만 — 매수표대로 1주씩 매수</span><span class="pr">${wn(limit)} 한도</span></div>
+      <p class="note" style="margin-top:8px">아래 예약매수표에서 현재가가 도달한 차수를 확인하세요. 차수마다 <b>1주씩</b>이고 (최소값 ÷ 보유수량), 남은 Pool 한도를 넘는 차수는 사지 않습니다. 실제 체결된 차수만 기록합니다.</p>`;
   } else {
     pillCls='in';pillTxt='밴드 안';
     verdict=`<div class="oitem" style="background:rgba(245,196,81,.1);justify-content:center"><span class="nm" style="flex:none;color:var(--gold)">⚪ 대기 — 밴드 안 (거래 없는 사이클)</span></div>`;
@@ -7624,95 +7624,59 @@ function vrAutoAdvance(){
    그래서 '기준일 계산'과 '사다리 체결' 두 가지를 여기 한 번만 적고
    과거 재생(vrReplay)·모의 체결(vrSimForward)·백테(runVR)가 모두 이 규칙을 쓴다. */
 
-/* ════ VR 주문 체결 엔진 — V 복귀 예약표 (구현 규칙 · 제11차: 원문 posts/009 는 '밴드를 벗어나면 매수·매도로 다시 밴드 안으로' 까지만 — 수량 산식은 원문 예약표 확인 전) ════
-   근거: VR 5.0 운용 절차 (원글 posts/009 · cafe.naver.com/infinitebuying/38944)
-     "평가금이 상단(1.15V)을 초과하면 평가금이 V로 돌아올 만큼 매도 · 하단(0.85V)을 하회하면
-      평가금이 V에 도달할 만큼 매수 (Pool 사용 한도 안) · 2주치 예약주문 가능 · 사이클 첫날 매수표/매도표"
-   사이클 첫날 보유수량 B 와 V 로 표를 고정한다:
-     매도 k차 가격 = 상단 ÷ (그 차수 전 보유) · 수량 = 평가금이 V 에 가장 가까워지는 정수 (반올림)
-     매수 k차 가격 = 하단 ÷ (그 차수 전 보유) · 수량 = 같은 방식 · 사이클 Pool 한도 안에서
-   그날 고가가 매도가 이상이면 그 차수 체결, 저가가 매수가 이하면 체결 (예약 지정가).
-   정리본에 없는 세부(정수 반올림 · 차수 잇기 · 한도 초과 시 가능한 만큼)는 이 구현의 해석이다.
-   예전(#236 ~ v3.86.1)은 1주씩 밴드 경계에 붙이는 20차 사다리였다 — 원문 규칙이 아니라 교체했다. */
-/* ════ (옛 머리 주석) VR 주문 체결 엔진 — 사이클 고정 20차 · 1주 예약 사다리 ════
-   운영 주문표·모의·과거재생·백테·5년 플랜이 모두 이 한 가지 모델로 돈다 (#236 이후).
+/* ════ VR 주문 체결 엔진 — 밴드 1주 예약표 (원문 VR 매수표 · D4 해소) ════
+   근거: 사용자가 준 라오어 원문 VR 매수표 (이미지 · 다섯 줄) — 다섯 줄이 모두 한 식과 센트까지 같다 (숫자는 회귀 [118] SOURCE GOLDEN):
+     매수 k차 = 최소값 ÷ (그 차수 전 보유) 를 센트 반올림 · 1주씩 · Pool 은 그 값만큼 준다.
+   원문 posts/009 의 '벗어나면 다시 밴드 안으로' 와 같은 말이다 —
+   평가금이 밴드 경계에 닿을 때마다 1주씩 사고팔아 경계에 붙인다. V 까지 한 번에 되돌리지 않는다.
      상단 up = V×(1+밴드) · 하단 dn = V×(1−밴드)
-     사이클 시작 보유수량 B 로 사다리를 고정한다 — 사이클 중 체결이 나도 다시 계산하지 않는다
-     매도 k차 = up ÷ (B−k+1)  → 그날 고가 ≥ 가격이면 1주   (k ≤ min(20, B))
-     매수 k차 = dn ÷ (B+k−1)  → 그날 저가 ≤ 가격이면 1주   (사이클 한도 안에서 앞 차수부터)
+     사이클 첫날 보유수량 B 로 표를 고정한다 — 사이클 중 체결이 나도 다시 계산하지 않는다
+     매도 k차 = up ÷ (B−k+1) 반올림 → 그날 고가 ≥ 가격이면 1주   (k ≤ min(20, B))
+     매수 k차 = dn ÷ (B+k−1) 반올림 → 그날 저가 ≤ 가격이면 1주   (사이클 한도 안에서 앞 차수부터)
      사이클 매수 한도 = 사이클 시작 Pool × 모드한도(적립 75·거치 50·인출 25%) − 이번 사이클 매수액
      매도를 먼저 돈다 — 판 돈이 그날 매수 재원이 된다. 이미 체결한 차수는 다음 날 다시 걸지 않는다.
-   평가금으로 보면 '밴드를 벗어난 만큼만' 거래한다 — 상단을 넘으면 1주씩 팔아 평가금을 상단에
-   붙이고, 하단 아래면 1주씩 사서 하단에 붙인다. V 까지 한 번에 되돌리지 않는다.
-
-   ⚠ 원전 확인 필요 — '공식' 이 아니다 (제8차 감사 대응 8-①). 예전엔 이 모델을 'official' ·
-     '공식 예약 사다리' 라고 불렀는데 근거가 없었다. 지금 이름은 '20차 예약 사다리 (현재 구현)' 다.
-     라오어 원문(책·카페)의 주문표 산식은 아직 대조하지 못했다. 'V 복귀' 쪽 문장도 비공식 해설
-     사이트(quantstack — 원저작자와 무관하다고 스스로 밝힌다)의 요약일 뿐 원문 인용이 아니다.
-   ⚠ 원문 확인 대기 (7차 점검) — 5차 감사 때 'V 복귀'(한 번에 V 까지 되돌리는 수량) 해석으로
-     바꿨다가(#235) #236 에서 이 사다리로 되돌렸다. 두 해석 중 어느 쪽이 라오어 원문인지는
-     아직 원문으로 대조하지 못했다. 예전 이 자리 주석은 'V 복귀가 공식, 사다리는 커스텀' 이라고
-     적혀 있었는데 코드와 정반대였다 — 7차 점검에서 실제 동작대로 고쳤다.
-     VR_MODEL_DEFAULT·vrModelOf·P.model 은 그때 남은 자리다. 지금 엔진은 모델을 가르지 않는다.
+   원문에서 확인한 것: 매수표의 가격식·1주·반올림·Pool 차감. 대칭으로 둔 것(가정): 매도표(최대값 ÷ 개수 · 1주 · 반올림).
+   구현값: 표의 줄 수 20 (원문 표는 잘려 있어 몇 줄까지 거는지 모른다).
+   예전 이력 — #236 이 이 1주 사다리였고(가격은 매도 올림·매수 내림 — 제8차 P2-9), #254(v3.87.0)에서 제3자 정리본의
+     '평가금이 V 로 돌아올 만큼' 문장을 따라 V 복귀(여러 주)로 바꿨다가, 원문 매수표로 틀린 것을 확인해 되돌렸다
+     (그 표의 첫 차수는 V 복귀라면 31주, 원문은 1주). 반올림도 원문 표에 맞췄다(내림이면 다섯 줄 중 두 줄이 1센트 낮다).
 
    S: {shares, pool, avg, V} — 이 객체를 직접 고친다 (부르는 쪽이 결과를 받아 간다)
    P: {band, poolLimit, budgetRemaining, FEE, baseShares, sellFilled, buyFilled, maxTiers}
    반환: [{type:'sell'|'buy', price, qty, net|cost}] — net·cost 는 그 체결 '전체' 금액 */
-const VR_MODEL_DEFAULT='vreturn';
+const VR_MODEL_DEFAULT='ladder';
 function vrModelOf(st){ return VR_MODEL_DEFAULT; }
-/* 사이클 사다리 — 이번 사이클에 걸어 둘 매도·매수 차수 (7차 점검 ⑫).
-   주문표(renderVrTable)·체결 엔진(vrOrderPlan)이 이 한 곳에서 차수를 받는다 — 예전엔 둘이
+/* 사이클 예약표 — 이번 사이클에 걸어 둘 매도·매수 차수 (7차 점검 ⑫ · 원문 매수표).
+   주문표(renderVrTable)·체결 엔진(vrOrderPlan)·5년 플랜이 이 한 곳에서 차수를 받는다 — 예전엔 둘이
    각자 계산해서, 표는 한도를 넘긴 차수만 건너뛰고 다음 차수를 '유효' 로 보였는데 엔진은
    첫 초과 차수에서 멈췄다(표에 있는데 체결은 절대 안 되는 주문).
-     B       사이클 시작 보유수량 · sf/bf 이미 체결한 매도/매수 차수 · N 최대 차수(20)
-     매도 k차 = up ÷ (B−k+1)   (k ≤ min(N,B))
-     매수 k차 = dn ÷ (B+k−1)   — 앞 차수부터 한도(limit)를 쓰고, 넘는 차수에서 멈춘다
+     B       사이클 시작 보유수량 · sf/bf 이미 체결한 매도/매수 차수 · N 최대 차수(20 · 구현값)
+     매도 k차 = up ÷ (B−k+1) 반올림 · 1주   (k ≤ min(N,B))
+     매수 k차 = dn ÷ (B+k−1) 반올림 · 1주   — 앞 차수부터 한도(limit)를 쓰고, 넘는 차수부터는 한도 밖
    over 는 한도 밖으로 밀려난 매수 차수다 (표에 '한도 밖' 으로 보여 주기만 한다).
-   가격은 호가 단위로 맞춘 값이다 (vrTickUp·vrTickDn — 제8차 P2-9). */
-/* ── 호가 단위 (제8차 감사 대응 P2-9) ──
-   예약 사다리의 값(상단÷수량 등)은 보통 호가에 딱 떨어지지 않는다 (116.1616… · 84.1584…).
+   차수마다 q:1 을 싣는다 — 받는 쪽(주문표·체결·플랜)이 수량을 차수에서 읽는다. */
+/* ── 호가 단위 (제8차 감사 대응 P2-9 · 원문 매수표로 반올림) ──
+   예약표의 값(하단÷수량 등)은 보통 호가에 딱 떨어지지 않는다 (8500/101 = 84.158… · 11500/99 = 116.161…).
    주문은 호가 단위로만 나가므로, 엔진도 그 가격으로 판정·체결해야 경계일에 실전과 안 갈린다.
-   예전엔 표는 반올림한 값(116.16)을 보여 주고 엔진은 116.1616 으로 판정했다 — 고가 116.16 인 날
-   실전은 체결, 엔진은 미체결이었다.
      미국 주식·ETF : 1달러 이상 0.01 · 1달러 미만 0.0001 (Reg NMS 612)
      국내 ETF      : 2,000원 미만 1원 · 이상 5원 (KRX ETF·ETN 호가가격단위)
-   매도는 올리고 매수는 내린다. 매도 k차는 '그 값 이상이어야 평가금이 상단에 닿는' 가격이고,
-   매수 k차는 '그 값 이하여야 하단 밑' 인 가격이다 — 반올림하면 밴드 안쪽 가격에 주문이 나가
-   상단에 못 닿았는데 파는 체결이 생긴다. 주문표·모의·재생·백테·5년 플랜이 이 값을 같이 쓴다. */
+   예약표 가격은 반올림한다(imTickRound) — 원문 매수표가 반올림으로 적는다 (84.158 → 84.16 · 116.161 → 116.16).
+   제8차 P2-9 에선 '매도 올림 · 매수 내림' 을 규칙 문장에서 끌어냈는데, 원문 표와 다섯 줄 중 두 줄이 1센트씩 어긋났다.
+   vrTickDn(내림)은 무매(아래로 LOC 추가 줄 · 큰수 상한)가 쓴다 · vrTickUp(올림)은 짝으로만 남아 있다(지금 VR·무매 어디서도 안 부른다).
+   주문표·모의·재생·백테·5년 플랜이 같은 값을 쓴다. */
 function vrTick(p, cur){ return cur==='krw' ? (p<2000?1:5) : (p<1?0.0001:0.01); }
 function vrTickUp(p, cur){ const t=vrTick(p,cur); return +(Math.ceil(p/t-1e-9)*t).toFixed(4); }
 function vrTickDn(p, cur){ const t=vrTick(p,cur); return +(Math.floor(p/t+1e-9)*t).toFixed(4); }
 function vrTiers(B, sf, bf, up, dn, limit, fee1, N, cur){
   const sells=[], buys=[], over=[];
   if(!(B>=1)) return {sells, buys, over};
-  const V=(up+dn)/2;                       // up=V(1+밴드) · dn=V(1−밴드)
-  /* 매도표 — 보유 n 주의 평가금이 상단에 닿는 가격 = 상단÷n (호가 올림). 거기서 평가금이 V 로
-     돌아올 만큼(가장 가까운 정수) 판다. 판 뒤 수량으로 다음 차수를 잇는다. */
-  let n=B, cum=0;
-  for(let k=1;k<=N&&n>=1;k++){
-    const p=vrTickUp(up/n, cur), q=Math.min(n, Math.round(n-V/p));
-    if(!(q>=1)) break;
-    const from=cum; cum+=q; n-=q;
-    if(cum<=sf) continue;                  // 이번 사이클에 이미 체결한 차수
-    sells.push({k, p, q:cum-Math.max(from,sf)});   // 일부만 체결된 차수는 남은 수량
-  }
-  /* 매수표 — 평가금이 하단에 닿는 가격 = 하단÷n (호가 내림). 거기서 평가금이 V 에 닿을 만큼 산다.
-     사이클 남은 Pool 한도(limit)를 앞 차수부터 쓴다 — 모자라면 살 수 있는 만큼만 사고 뒤는 한도 밖. */
-  n=B; cum=0; let used=0, capped=false;
-  for(let k=1;k<=N;k++){
-    const p=vrTickDn(dn/n, cur);
+  for(let k=sf+1;k<=Math.min(N,B);k++) sells.push({k, p:imTickRound(up/(B-k+1), cur), q:1});
+  let used=0, capped=false;
+  for(let k=bf+1;k<=N;k++){
+    const p=imTickRound(dn/(B+k-1), cur), cost=p*fee1;
     if(!(p>0)) break;                      // 호가 한 칸보다 싼 차수는 걸 수 없다
-    const q=Math.round(V/p-n);
-    if(!(q>=1)) break;
-    const from=cum; cum+=q; n+=q;
-    if(cum<=bf) continue;
-    let rest=cum-Math.max(from,bf);
-    if(capped){ over.push({k, p, q:rest, cost:p*fee1*rest}); continue; }
-    const aff=Math.floor((limit-used)/(p*fee1)+1e-9);
-    if(aff<rest){ capped=true;
-      if(aff>=1){ buys.push({k, p, q:aff, cost:p*fee1*aff}); used+=p*fee1*aff; rest-=aff; }
-      over.push({k, p, q:rest, cost:p*fee1*rest}); continue; }
-    buys.push({k, p, q:rest, cost:p*fee1*rest}); used+=p*fee1*rest;
+    if(capped||used+cost>limit+1e-9){ capped=true; over.push({k, p, q:1, cost}); continue; }
+    buys.push({k, p, q:1, cost}); used+=cost;
   }
   return {sells, buys, over};
 }
@@ -9014,7 +8978,7 @@ const SIM_KEYS={
    설정 지문만 보면 설정을 안 바꾼 세션은 옛 기록을 그대로 안고 간다 —
    그래서 지문에 규약 판을 같이 넣어, 규약이 바뀌면 전 세션이 다시 만들어지게 한다.
    ※ 체결 규칙을 고칠 때마다 이 숫자를 올릴 것. */
-const SIM_RULE_VER=7;   // 6: VR V 복귀 예약표 · 무매 아래로 LOC 추가 (09-24) · 7: 제10차 — 모의 기록을 새 규칙으로 다시 만든다
+const SIM_RULE_VER=8;   // 6: VR V 복귀 · 무매 아래로 LOC 추가 · 7: 제10차 · 8: VR 원문 매수표 — 밴드 1주 예약표(반올림)로 모의 기록을 다시 만든다
                        // 5: VR 예약 사다리를 사이클 시작 20차 고정으로 통일
 function simSig(tab,st){
   return 'r'+SIM_RULE_VER+'|'+(SIM_KEYS[tab]||[]).map(k=>String(st[k]===undefined?'':st[k])).join('|');
@@ -9083,7 +9047,7 @@ function saveSettings(){
     s.settings={...keep, ticker:$('set_vticker').value||'TQQQ',mode:+segGet('set_vmode')||0.75,
       formula:segGet('set_vformula')||'basic',g:inputNum('set_g')||10,add:inputNum('set_add')||100,
       initAmt:Math.max(0,inputNum('set_initamt')||0),autoCyc:segGet('set_vauto')==='1',
-      vrModel:'vreturn',
+      vrModel:'ladder',
       band:inputNum('set_band')||15,startv:inputNum('set_startv')||0,startpool:inputNum('set_startpool')||0,divmode:segGet('set_vrdivmode')||'reinv'};
   }
   // 모의 세션이면 여기서 바로 다시 만들어 준다 (어긋남 판정은 paperAuto가 지문으로 한다).
