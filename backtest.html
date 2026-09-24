@@ -320,7 +320,7 @@ td:first-child{text-align:left;}
   <div class="brand">
     <div>
       <div class="logo">Backtest</div>
-      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v2.8.0</span></h1>
+      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v2.9.0</span></h1>
     </div>
   </div>
   <div class="hright">
@@ -778,7 +778,7 @@ document.addEventListener('click',function(e){ var m=document.getElementById('jk
 <div class="rules s-vr hide">
   <span class="bd">V 갱신</span> 다음 V = 현재 V + <b>Pool/G</b> + 적립금 · <b>달력 14일</b> 사이클 (기준일이 주말이면 다음 영업일) — 거래일 수가 아니라 달력으로 셉니다<br>
   <span class="bd">밴드</span> 상단 V×(1+밴드) / 하단 V×(1−밴드)<br>
-  <span class="bd">예약주문</span> (기본) 실전 그대로 — 사이클 첫날 <b>매수·매도표 차수를 지정가로 걸고 2주 방치</b>, 그날 <b>고가·저가</b>에 닿은 차수만 체결 — <b>밴드 1주 예약표</b>(원문 VR 매수표): 매수 k차 = 최소값÷보유 · 매도 k차 = 최대값÷보유 · 센트 반올림 · 1주씩 · 매수한도 = 사이클 시작 Pool×모드한도(적립75·거치50·인출25%) · 운영 앱 체결기와 같은 규칙<br>
+  <span class="bd">예약주문</span> (기본) 실전 그대로 — 사이클 첫날 <b>매수·매도표 차수를 지정가로 걸고 2주 방치</b>, 그날 <b>고가·저가</b>에 닿은 차수만 체결(장 시작 때 이미 넘은 차수는 <b>시가</b> — 지정가는 불리하게 체결되지 않는다) — <b>밴드 1주 예약표</b>(원문 VR 매수표): 매수 k차 = 최소값÷보유 · 매도 k차 = 최대값÷보유 · 센트 반올림 · 1주씩 · 매수한도 = 사이클 시작 Pool×모드한도(적립75·거치50·인출25%) · 운영 앱 체결기와 같은 규칙<br>
   <span class="bd">종가</span> (선택) 예전 방식 — 2주에 한 번 그날 <b>종가</b>에만 평가금을 V로 되맞춤. 실제로 내는 주문과 다르므로 비교용으로만<br>
   <span class="bd">매도</span> 평가금>상단 → Pool 로 · <span class="bd">매수</span> 평가금&lt;하단 → 적립후 <b>Pool 75%</b> 한도
 </div>
@@ -1653,7 +1653,7 @@ let imLoPct=6;      // V5.0 하락국면 익절% (조기탈출)
 let imCostOn=true;   // 세금·수수료·슬리피지 반영 (기본 ON)
 let imTgtDyn=false;  // 익절 동적 조절 (20일 상승률) — 기본 OFF
 /* VR 체결 방식. 'ladder'(기본) = 실전 그대로 — 사이클 첫날 매수·매도표(20차수)를 지정가로
-   걸어두고 2주 방치, 그날 고가·저가에 닿은 차수만 1주씩 체결된다.
+   걸어두고 2주 방치, 그날 고가·저가에 닿은 차수만 1주씩 체결된다 (장 시작 때 이미 넘은 차수는 시가에).
    'close' = 예전 백테 방식 — 2주에 한 번 그날 종가만 보고 평가금을 V로 되맞춘다.
    운영 앱은 처음부터 예약주문이었다(vrSimForward). 백테만 종가 하나를 보고 있었다. */
 let vrFill='ladder';   // 기본 = 밴드 1주 예약표 (사이클 첫날 고정 · 원문 VR 매수표). 'close'는 비교용 — 기준일 종가에만 V 로 되맞춤
@@ -3112,6 +3112,11 @@ function vrCycleTransition(V, pool, ev, G, mode, add, formula){
      매수 k차 = dn ÷ (B+k−1) 반올림 → 그날 저가 ≤ 가격이면 1주   (사이클 한도 안에서 앞 차수부터)
      사이클 매수 한도 = 사이클 시작 Pool × 모드한도(적립 75·거치 50·인출 25%) − 이번 사이클 매수액
      매도를 먼저 돈다 — 판 돈이 그날 매수 재원이 된다. 이미 체결한 차수는 다음 날 다시 걸지 않는다.
+   체결가 — 예약 지정가는 장이 열린 뒤 몇 분 지나서 걸린다(라오어 카페 67598 · 본장 기준 78505).
+     그때 이미 지정가보다 유리한 가격이면 그 가격에 체결된다: 매수는 시가 ≤ 지정가면 시가, 매도는 시가 ≥ 지정가면 시가.
+     아니면 장중에 닿은 지정가 그대로. 그래서 체결가는 언제나 그날 저가~고가 안이다.
+     예전엔 언제나 지정가로 적었다 — 시장이 밴드를 크게 벗어난 뒤 새 사이클 줄이 시장과 멀면
+     '고가 8.24 인 날 27.65 에 매수' 같은, 그날 거래된 적 없는 가격의 체결이 생겼다(TQQQ·SOXL 6년 체결의 30~56%).
    원문에서 확인한 것: 매수표의 가격식·1주·반올림·Pool 차감. 대칭으로 둔 것(가정): 매도표(최대값 ÷ 개수 · 1주 · 반올림).
    구현값: 표의 줄 수 20 (원문 표는 잘려 있어 몇 줄까지 거는지 모른다).
    예전 이력 — #236 이 이 1주 사다리였고(가격은 매도 올림·매수 내림 — 제8차 P2-9), #254(v3.87.0)에서 제3자 정리본의
@@ -3163,6 +3168,7 @@ function vrOrderPlan(S, P, bar){
   const up=S.V*(1+P.band),dn=S.V*(1-P.band),FEE=P.FEE||0,fee1=1+FEE;
   const budget=Math.max(0,P.budgetRemaining!=null?+P.budgetRemaining:S.pool*P.poolLimit);
   const hi=bar.high>0?bar.high:bar.close, lo=bar.low>0?bar.low:bar.close;
+  const op=bar.open>0?bar.open:0;      // 예약 지정가가 걸리는 장 시작 직후의 가격 — 없으면 0 (지정가 그대로 체결)
   const N=Math.max(1,Math.min(20,+P.maxTiers||20));
   const B=Math.floor(+P.baseShares||S.shares||0);
   const sf=Math.max(0,Math.floor(+P.sellFilled||0)),bf=Math.max(0,Math.floor(+P.buyFilled||0));
@@ -3174,9 +3180,11 @@ function vrOrderPlan(S, P, bar){
      먼저였는지 모른다 — 그날은 순서가 가정이다. 기본은 매도 먼저(판 돈이 그날 매수 재원),
      P.order==='buy-first' 면 매수 먼저 (백테 민감도 비교용). 부르는 쪽이 out.both 로 그날을 센다. */
   out.both=!!(L.sells.length && hi>=L.sells[0].p && L.buys.length && lo<=L.buys[0].p);
-  const doSell=()=>{ for(const t of L.sells){ if(!(hi>=t.p))break; _sell(t.p,Math.min(t.q,Math.floor(S.shares+1e-9))); } };
+  /* 체결가: 시가가 이미 지정가를 넘었으면 시가(유리한 쪽), 아니면 지정가 — 언제나 그날 저가~고가 안 */
+  const doSell=()=>{ for(const t of L.sells){ if(!(hi>=t.p))break; _sell(op>=t.p?op:t.p, Math.min(t.q,Math.floor(S.shares+1e-9))); } };
   const doBuy=()=>{ for(const t of L.buys){ if(!(lo<=t.p))break;
-    const q=Math.min(t.q, Math.floor(S.pool/(t.p*fee1)+1e-9)); if(q<1)break; _buy(t.p,q); if(q<t.q)break; } };
+    const fp=(op>0&&op<=t.p)?op:t.p;
+    const q=Math.min(t.q, Math.floor(S.pool/(fp*fee1)+1e-9)); if(q<1)break; _buy(fp,q); if(q<t.q)break; } };
   if(P.order==='buy-first'){ doBuy(); doSell(); } else { doSell(); doBuy(); }
   return out;
 }
@@ -3268,13 +3276,13 @@ function runVR(days,tkr,params){
      예전엔 여기에 사다리를 따로 적어 뒀다. 같은 규칙이 두 곳에 있으면 한쪽만 고쳐도
      조용히 갈리므로, 수량 산출은 공용 엔진 한 곳에서만 한다.
      체결 적용은 백테 장부(_vsellQ·_vbuyQ — 세무 원가·수수료)를 그대로 지난다. */
-  function _ladder(hi, lo2, cl){
+  function _ladder(hi, lo2, cl, op){
     if(!(V>0)) return;
     const St={shares:Math.floor(shares+1e-9), pool, avg, V};
     const fills=vrOrderPlan(St, {band, poolLimit,
         budgetRemaining:Math.max(0,cycPoolBase*poolLimit-cycBuySpent),FEE,
         baseShares:cycBaseShares,sellFilled:cycSellFilled,buyFilled:cycBuyFilled,maxTiers:20,cur:_vcur,order:_vorder},
-      {date:'',high:hi,low:lo2,close:(cl>0?cl:hi)});
+      {date:'',open:op,high:hi,low:lo2,close:(cl>0?cl:hi)});
     if(fills.both) bothDays++;
     for(const f of fills){
       if(f.type==='sell'){ pool+=_vsellQ(f.qty, f.price); cycSellFilled+=f.qty; sells++; }
@@ -3303,7 +3311,7 @@ function runVR(days,tkr,params){
     }
 
     // 먼저 기존 사이클 사다리를 오늘 OHLC에 체결한다.
-    if(LADDER && !first){ const row=M[tkr][d]; _ladder(row[HI]||c, row[LO]||c, c); }
+    if(LADDER && !first){ const row=M[tkr][d]; _ladder(row[HI]||c, row[LO]||c, c, row[O]); }
 
     // 그 다음 장 마감 기준으로 새 사이클을 만든다. 새 사다리는 내일부터.
     if(isCyc && !first){

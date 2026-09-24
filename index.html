@@ -529,7 +529,7 @@ try{ if(localStorage.getItem('qcockpit_hadUser')==='1') document.documentElement
 </div>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.90.0</span></h1></div>
+    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.91.0</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -879,14 +879,14 @@ document.addEventListener('click',function(e){ var m=document.getElementById('jk
         <div class="lad-head"><div class="lh-l"><h3 style="margin:0"><span class="dot"></span>매도표</h3><span class="badge ok" id="lad_state_s">예약 매매</span></div><span class="lh-stage" id="lad_stage_s">1단계</span></div>
         <div class="waitbox" id="sell_wait"></div>
         <div class="ladx sell" id="sell_lad"></div>
-        <p class="ladnote">매도가 = 최대값(상단) ÷ 보유수량 · <b>1주씩</b>, 센트 반올림 — 원문 매수표와 같은 규칙을 위쪽에 (원문 매도표는 아직 못 봄). 다음 차수는 판 뒤 수량으로 이어집니다. 첫날 한 번에 걸어두고 도달한 차수만 자동 체결. 행 탭 = 그 차수 1주 기록.</p>
+        <p class="ladnote">매도가 = 최대값(상단) ÷ 보유수량 · <b>1주씩</b>, 센트 반올림 — 원문 매수표와 같은 규칙을 위쪽에 (원문 매도표는 아직 못 봄). 다음 차수는 판 뒤 수량으로 이어집니다. 첫날 한 번에 걸어두고 도달한 차수만 자동 체결 — 장 시작 때 이미 그 위면 시가에 팝니다(지정가보다 비싸게). 행 탭 = 그 차수 1주 기록.</p>
       </div>
       <div class="card">
         <div class="lad-head"><div class="lh-l"><h3 style="margin:0"><span class="dot"></span>매수표</h3><span class="badge ok" id="lad_state_b">예약 매매</span></div><span class="lh-stage" id="lad_limit_b">한도 —</span></div>
         <div class="waitbox" id="buy_wait"></div>
         <div id="buy_warn"></div>
         <div class="ladx buy" id="buy_lad"></div>
-        <p class="ladnote">매수가 = 최소값(하단) ÷ 보유수량 · <b>1주씩</b>, 센트 반올림 — 원문 VR 매수표와 같은 규칙 (예: 하단 8,500 · 100주 → 85.00 · 84.16 · 83.33 …). 첫날 한 번에 걸어두면 도달하는 만큼만 자동 체결. Pool 한도를 넘는 몫은 <b style="color:var(--gold)">!</b> 표시 — 한도 안에서만 삽니다.</p>
+        <p class="ladnote">매수가 = 최소값(하단) ÷ 보유수량 · <b>1주씩</b>, 센트 반올림 — 원문 VR 매수표와 같은 규칙 (예: 하단 8,500 · 100주 → 85.00 · 84.16 · 83.33 …). 첫날 한 번에 걸어두면 도달하는 만큼만 자동 체결 — 장 시작 때 이미 그 아래면 시가에 삽니다(지정가보다 싸게). Pool 한도를 넘는 몫은 <b style="color:var(--gold)">!</b> 표시 — 한도 안에서만 삽니다.</p>
       </div>
     </div>
 
@@ -1623,7 +1623,7 @@ document.addEventListener('click',function(e){ var m=document.getElementById('jk
   <footer>
     <strong>JK 퀀트</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.90.0</b> · 2026-09-24</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.91.0</b> · 2026-09-24</div>
   </footer>
 </div>
 
@@ -7635,6 +7635,11 @@ function vrAutoAdvance(){
      매수 k차 = dn ÷ (B+k−1) 반올림 → 그날 저가 ≤ 가격이면 1주   (사이클 한도 안에서 앞 차수부터)
      사이클 매수 한도 = 사이클 시작 Pool × 모드한도(적립 75·거치 50·인출 25%) − 이번 사이클 매수액
      매도를 먼저 돈다 — 판 돈이 그날 매수 재원이 된다. 이미 체결한 차수는 다음 날 다시 걸지 않는다.
+   체결가 — 예약 지정가는 장이 열린 뒤 몇 분 지나서 걸린다(라오어 카페 67598 · 본장 기준 78505).
+     그때 이미 지정가보다 유리한 가격이면 그 가격에 체결된다: 매수는 시가 ≤ 지정가면 시가, 매도는 시가 ≥ 지정가면 시가.
+     아니면 장중에 닿은 지정가 그대로. 그래서 체결가는 언제나 그날 저가~고가 안이다.
+     예전엔 언제나 지정가로 적었다 — 시장이 밴드를 크게 벗어난 뒤 새 사이클 줄이 시장과 멀면
+     '고가 8.24 인 날 27.65 에 매수' 같은, 그날 거래된 적 없는 가격의 체결이 생겼다(TQQQ·SOXL 6년 체결의 30~56%).
    원문에서 확인한 것: 매수표의 가격식·1주·반올림·Pool 차감. 대칭으로 둔 것(가정): 매도표(최대값 ÷ 개수 · 1주 · 반올림).
    구현값: 표의 줄 수 20 (원문 표는 잘려 있어 몇 줄까지 거는지 모른다).
    예전 이력 — #236 이 이 1주 사다리였고(가격은 매도 올림·매수 내림 — 제8차 P2-9), #254(v3.87.0)에서 제3자 정리본의
@@ -7686,6 +7691,7 @@ function vrOrderPlan(S, P, bar){
   const up=S.V*(1+P.band),dn=S.V*(1-P.band),FEE=P.FEE||0,fee1=1+FEE;
   const budget=Math.max(0,P.budgetRemaining!=null?+P.budgetRemaining:S.pool*P.poolLimit);
   const hi=bar.high>0?bar.high:bar.close, lo=bar.low>0?bar.low:bar.close;
+  const op=bar.open>0?bar.open:0;      // 예약 지정가가 걸리는 장 시작 직후의 가격 — 없으면 0 (지정가 그대로 체결)
   const N=Math.max(1,Math.min(20,+P.maxTiers||20));
   const B=Math.floor(+P.baseShares||S.shares||0);
   const sf=Math.max(0,Math.floor(+P.sellFilled||0)),bf=Math.max(0,Math.floor(+P.buyFilled||0));
@@ -7697,9 +7703,11 @@ function vrOrderPlan(S, P, bar){
      먼저였는지 모른다 — 그날은 순서가 가정이다. 기본은 매도 먼저(판 돈이 그날 매수 재원),
      P.order==='buy-first' 면 매수 먼저 (백테 민감도 비교용). 부르는 쪽이 out.both 로 그날을 센다. */
   out.both=!!(L.sells.length && hi>=L.sells[0].p && L.buys.length && lo<=L.buys[0].p);
-  const doSell=()=>{ for(const t of L.sells){ if(!(hi>=t.p))break; _sell(t.p,Math.min(t.q,Math.floor(S.shares+1e-9))); } };
+  /* 체결가: 시가가 이미 지정가를 넘었으면 시가(유리한 쪽), 아니면 지정가 — 언제나 그날 저가~고가 안 */
+  const doSell=()=>{ for(const t of L.sells){ if(!(hi>=t.p))break; _sell(op>=t.p?op:t.p, Math.min(t.q,Math.floor(S.shares+1e-9))); } };
   const doBuy=()=>{ for(const t of L.buys){ if(!(lo<=t.p))break;
-    const q=Math.min(t.q, Math.floor(S.pool/(t.p*fee1)+1e-9)); if(q<1)break; _buy(t.p,q); if(q<t.q)break; } };
+    const fp=(op>0&&op<=t.p)?op:t.p;
+    const q=Math.min(t.q, Math.floor(S.pool/(fp*fee1)+1e-9)); if(q<1)break; _buy(fp,q); if(q<t.q)break; } };
   if(P.order==='buy-first'){ doBuy(); doSell(); } else { doSell(); doBuy(); }
   return out;
 }
@@ -8978,7 +8986,8 @@ const SIM_KEYS={
    설정 지문만 보면 설정을 안 바꾼 세션은 옛 기록을 그대로 안고 간다 —
    그래서 지문에 규약 판을 같이 넣어, 규약이 바뀌면 전 세션이 다시 만들어지게 한다.
    ※ 체결 규칙을 고칠 때마다 이 숫자를 올릴 것. */
-const SIM_RULE_VER=8;   // 6: VR V 복귀 · 무매 아래로 LOC 추가 · 7: 제10차 · 8: VR 원문 매수표 — 밴드 1주 예약표(반올림)로 모의 기록을 다시 만든다
+const SIM_RULE_VER=9;   // 6: VR V 복귀 · 무매 아래로 LOC 추가 · 7: 제10차 · 8: VR 원문 매수표 — 밴드 1주 예약표(반올림)
+                       // 9: VR 예약 지정가 체결가 — 시가가 이미 넘은 줄은 시가로 (그날 가격 범위 밖 체결 제거)
                        // 5: VR 예약 사다리를 사이클 시작 20차 고정으로 통일
 function simSig(tab,st){
   return 'r'+SIM_RULE_VER+'|'+(SIM_KEYS[tab]||[]).map(k=>String(st[k]===undefined?'':st[k])).join('|');

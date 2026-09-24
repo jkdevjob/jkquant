@@ -3438,7 +3438,7 @@ console.log('\n[69] VR 체결 엔진 — 사이클 고정 20차 예약 사다리
 
   /* 원문 VR 매수표 — 차수마다 1주 · 가격 = 경계값 ÷ 그 차수 전 보유 · 센트 반올림 (#254~v3.89.0 의 'V 복귀' 여러 주를 되돌림) */
   const P0={band:.15,poolLimit:.75,FEE:0,baseShares:100,sellFilled:0,buyFilled:0,maxTiers:20};
-  const bar=(h,l,c)=>({date:'2026-01-05',open:c,high:h,low:l,close:c});
+  const bar=(h,l,c)=>({date:'2026-01-05',open:(h+l)/2,high:h,low:l,close:c});   // 시가 = 고가·저가 가운데 (지정가 체결 시험 — 시가 체결은 ⑨~⑪ 이 따로 본다)
 
   { const S={shares:100,pool:100000,avg:90,V:10000};
     const f=vrOrderPlan(S,{...P0,budgetRemaining:100000},bar(116,110,116));
@@ -3475,6 +3475,46 @@ console.log('\n[69] VR 체결 엔진 — 사이클 고정 20차 예약 사다리
   { const S={shares:100,pool:100000,avg:110,V:10000};
     const f=vrOrderPlan(S,{...P0,budgetRemaining:0},bar(90,1,1));
     ok('⑧ Pool 남은 한도 0이면 매수 0건', f.filter(x=>x.type==='buy').length===0); }
+
+  /* 체결가 — 예약 지정가는 장 시작 몇 분 뒤 걸린다 (라오어 카페 67598: '지정가 74.07 인데 74 보다 아래에서 매수 … 불리하게 걸리는 일은 없고
+     유리하게 되는 경우만'). 시가가 이미 지정가를 넘었으면 시가, 아니면 지정가. 예전엔 언제나 지정가였다. */
+  { const S={shares:100,pool:100000,avg:90,V:10000};
+    const f=vrOrderPlan(S,{...P0,budgetRemaining:100000},{date:'x',open:120,high:121,low:119.5,close:120.5}).filter(x=>x.type==='sell');
+    ok('⑨ 시가 120 으로 갭 상승 — 매도 1~5차(115·116.16·117.35·118.56·119.79)는 시가 120 에 1주씩 · 6차 121.05 는 고가 121 미만이라 미체결',
+       f.length===5 && f.every(x=>x.price===120 && x.qty===1) && S.shares===95, JSON.stringify(f)); }
+  { const S={shares:100,pool:100000,avg:110,V:10000};
+    const f=vrOrderPlan(S,{...P0,budgetRemaining:100000},{date:'x',open:80,high:80.5,low:79,close:79.5}).filter(x=>x.type==='buy');
+    ok('⑩ 시가 80 으로 갭 하락 — 매수 1~7차(85 … 80.19)는 시가 80 · 8차 79.44 는 장중 지정가 · 9차 78.70 은 저가 79 위라 미체결',
+       f.length===8 && f.slice(0,7).every(x=>x.price===80 && x.qty===1) && f[7].price===79.44 && S.shares===108
+       && Math.abs(S.pool-(100000-7*80-79.44))<1e-9, JSON.stringify(f)); }
+  { // 라오어 67598 모양 — 35개째 지정가 74.07 · 장 시작 때 이미 그 아래 → 지정가보다 낮게 산다. 매수표 하단 = 74.07×34 = 2518.38
+    const S={shares:34,pool:10000,avg:80,V:2518.38/0.85};
+    const f=vrOrderPlan(S,{...P0,baseShares:34,budgetRemaining:10000},{date:'x',open:73.6,high:74.5,low:73.2,close:74.2}).filter(x=>x.type==='buy');
+    ok('⑪ 카페 67598 — 35개째 지정가 74.07 인데 시가 73.60 이면 73.60 에 체결 (불리하게는 안 걸린다)',
+       f.length>=1 && f[0].price===73.6 && f.every(x=>x.price<=74.07), JSON.stringify(f.slice(0,3))); }
+  { // 체결가는 언제나 그날 저가~고가 안이다 — 시장이 밴드를 크게 벗어나 줄이 시장과 멀어도 (예전: 고가 8.24 인 날 27.65 매수)
+    const S={shares:100,pool:1e6,avg:30,V:10000};
+    const f=vrOrderPlan(S,{...P0,budgetRemaining:1e6},{date:'x',open:28,high:29,low:27.5,close:28.5});
+    const S2={shares:100,pool:1e6,avg:30,V:10000};
+    const g=vrOrderPlan(S2,{...P0,budgetRemaining:1e6},{date:'x',open:300,high:310,low:295,close:305});
+    ok('⑫ 줄이 시장과 멀어도 체결가는 그날 범위 안 — 급락일 매수 20줄 전부 시가 28 · 급등일 매도 20줄 전부 시가 300',
+       f.filter(x=>x.type==='buy').length===20 && f.every(x=>x.price===28) && g.filter(x=>x.type==='sell').length===20 && g.every(x=>x.price===300),
+       JSON.stringify(f.slice(0,2))+' / '+JSON.stringify(g.slice(0,2))); }
+  { // 살 수 있는지는 실제 체결가로 센다 — Pool 160 · 시가 80: 1차(85)·2차(84.16) 둘 다 80 에 산다 (지정가로 세면 2차에서 84.16 > 80 남음 → 못 산다)
+    const S={shares:100,pool:160,avg:110,V:10000};
+    const f=vrOrderPlan(S,{...P0,budgetRemaining:1e6},{date:'x',open:80,high:80.5,low:79.9,close:80}).filter(x=>x.type==='buy');
+    ok('⑬ Pool 160 · 시가 80 — 1·2차 모두 80 에 1주씩 (남은 Pool 0) · 수량은 실제 체결가로 센다',
+       f.length===2 && f.every(x=>x.price===80 && x.qty===1) && Math.abs(S.pool)<1e-9, JSON.stringify(f)+' pool '+S.pool); }
+  { // 시가가 없는 봉(종가·고저만 있는 옛 자료)은 지정가 그대로 — 시가 0 을 '더 싼 가격' 으로 읽어 0원에 사면 안 된다
+    const S={shares:100,pool:100000,avg:110,V:10000};
+    const f=vrOrderPlan(S,{...P0,budgetRemaining:100000},{date:'x',high:90,low:84.16,close:84.16});
+    const S2={shares:100,pool:100000,avg:90,V:10000};
+    const g=vrOrderPlan(S2,{...P0,budgetRemaining:100000},{date:'x',high:116,low:110,close:116});
+  ok('⑮ 화면 안내 — 매수·매도표와 백테 설명에 \'장 시작 때 이미 넘은 차수는 시가\' 가 적혀 있다',
+     /장 시작 때 이미 그 아래면 시가에 삽니다/.test(idx) && /장 시작 때 이미 그 위면 시가에 팝니다/.test(idx) && /장 시작 때 이미 넘은 차수는 <b>시가<\/b>/.test(bt));
+    ok('⑭ 시가 없는 봉 — 매수 85.00 · 84.16 · 매도 115.00 지정가 그대로 (0원 체결 없음)',
+       f.filter(x=>x.type==='buy').map(x=>x.price).join()==='85,84.16' && g.filter(x=>x.type==='sell').map(x=>x.price).join()==='115',
+       JSON.stringify(f)+' / '+JSON.stringify(g)); }
 
   ok('백테가 사이클 시작수량·양쪽 체결차수를 넘긴다',
      /baseShares:cycBaseShares,sellFilled:cycSellFilled,buyFilled:cycBuyFilled,maxTiers:20/.test(vsrc));
@@ -4003,7 +4043,7 @@ console.log('\n[73] VR — 백테 == 과거 재생 (거래 로그 대조)');
                     due=appEng.vrNextDue(base); }
       }
       for(const d of days){
-        const bar={date:d, close:M[T][d][C], high:M[T][d][HI], low:M[T][d][LO]};
+        const bar={date:d, close:M[T][d][C], open:M[T][d][O], high:M[T][d][HI], low:M[T][d][LO]};   // 앱 vrReplay 는 ohlc 봉(시가 포함)으로 돈다
         if(!(bar.close>0)) continue;
         if(first){
           // vrReplay 의 first 분기와 같은 순서 — 적립식은 initAmt 가 아니라 'Pool+적립금' 으로 산다
@@ -6085,8 +6125,8 @@ console.log('\n[93] VR 과거재생 — 고가·저가 체결 (모의·백테와
     const sim=extractFn(idx,'function vrSimForward()');
     ok('모의체결은 원래부터 OHLC 봉', /lastQuote\.vr\.ohlc\) \? lastQuote\.vr\.ohlc : null/.test(sim));
     const vr=extractFn(bt,'function runVR(days,tkr,params)');
-    ok('백테도 고가·저가로 사다리를 친다',
-       /_ladder\(row\[HI\]\|\|c, row\[LO\]\|\|c, c\)/.test(vr)); }
+    ok('백테도 고가·저가(+시가)로 사다리를 친다',
+       /_ladder\(row\[HI\]\|\|c, row\[LO\]\|\|c, c, row\[O\]\)/.test(vr) && /\{date:'',open:op,high:hi,low:lo2,close:\(cl>0\?cl:hi\)\}/.test(vr)); }
   ok('vrOrderPlan 이 고저 없으면 종가로 떨어지는 건 그대로 (마지막 안전망)',
      /const hi=bar\.high>0\?bar\.high:bar\.close, lo=bar\.low>0\?bar\.low:bar\.close;/.test(idx));
 }
@@ -6477,7 +6517,7 @@ console.log('\n[100] 5년 플랜·VR 예약주문 동기화');
     ok(label+': 반대편 체결이 있어도 사다리 기준수량은 사이클 시작값 고정',
        !!s1 && near(s1.price,115,1e-9), s1?String(s1.price):'no fill');
   }
-  ok('운영: 모의 규약 버전 8로 올려 옛 모의 기록을 재생성 (원문 VR 매수표 — 밴드 1주 예약표 · 반올림)', /const SIM_RULE_VER=8;/.test(idx));
+  ok('운영: 모의 규약 버전 9로 올려 옛 모의 기록을 재생성 (VR 예약 지정가 체결가 — 시가가 이미 넘은 줄은 시가)', /const SIM_RULE_VER=9;/.test(idx));
   ok('운영·백테: 잘못된 “공식 (V 복귀)” UI 제거', !/공식 \(V 복귀\)/.test(idx) && !/공식 \(V 복귀\)/.test(bt));
   ok('플랜: 현재 사이클 시작수량과 양쪽 체결차수를 복원', /cycleBaseQty/.test(pl) && /cycleSellFilled/.test(pl) && /cycleBuyFilled/.test(pl));
 }
@@ -7100,7 +7140,7 @@ console.log('\n[107] 7차 — VR 백테 ↔ 모의 ↔ 과거재생 거래 단�
     'function isTradeBasis(Q)','function divPerShareQ(Q, d)','function divCashQ(Q, d, shares, taxOn)']
     .map(sig=>extractFn(idx,sig)).join('\n');
   const vconsts=[(idx.match(/const CYC_DAYS=\d+;/)||[''])[0], (idx.match(/const DIV_TAXRATE=[^;]*;/)||[''])[0],
-    "const VR_MODEL_DEFAULT='vreturn'; const IVS_FEE=0.0025;",
+    "const VR_MODEL_DEFAULT='ladder'; const IVS_FEE=0.0025;",
     "const MKT_CLOSE_MIN={usd:16*60, krw:15*60+30}; const SETTLE_LAG_MIN=20;",
     "function _exchNow(cur){ return {date:'2099-12-31', min:23*60}; }", "function curOf(st){ return 'usd'; }"].join('\n');
   const mkVr=(sess,Q,from)=>{ __strat=sess;
@@ -7131,6 +7171,13 @@ console.log('\n[107] 7차 — VR 백테 ↔ 모의 ↔ 과거재생 거래 단�
     __strat=sR; const cR=computeVr();
     const nm=`${tk} ${mode===0.75?'적립':mode===0.5?'거치':'인출'} ${formula} G${G} 밴드${band}%`;
     const kP=diff(B,P), kR=diff(B,R);
+    /* 체결가는 그날 저가~고가 안이어야 한다 — 예약 지정가는 시장보다 불리하게 체결되지 않는다 (카페 67598).
+       예전엔 줄이 시장과 멀면 지정가 그대로 적어 이 범위를 벗어났다 (TQQQ 적립 888건 중 390건 · 고가 8.24 인 날 27.65 매수) */
+    const outR=L=>L.filter(x=>{ const r=M[tk][x.date]; if(!r) return true; const hi=r[HI]>0?r[HI]:r[C], lo=r[LO]>0?r[LO]:r[C];
+      return x.price>hi+1e-6 || x.price<lo-1e-6; });
+    const oB=outR(B), oP=outR(P), oR=outR(R);
+    ok(`${nm} — 체결가가 모두 그날 저가~고가 안 (백테 ${B.length} · 모의 ${P.length} · 재생 ${R.length}건)`, oB.length===0 && oP.length===0 && oR.length===0,
+       `범위 밖 백테 ${oB.length} · 모의 ${oP.length} · 재생 ${oR.length} — ${JSON.stringify(oB.slice(0,2))}`);
     ok(`${nm} — 백테 ↔ 모의 체결 ${B.length}건 같다`, kP<0, kP<0?'':`#${kP} 백테 [${K(B[kP])}] 모의 [${K(P[kP])}]`);
     ok(`${nm} — 백테 ↔ 과거재생 체결 ${B.length}건 같다`, kR<0, kR<0?'':`#${kR} 백테 [${K(B[kR])}] 재생 [${K(R[kR])}]`);
     ok(`${nm} — V·Pool 세 곳이 같다`, Math.abs(cP.V-r.V)<=1e-3 && Math.abs(cR.V-r.V)<=1e-3
