@@ -8764,11 +8764,11 @@ console.log('\n[123] 5년 플랜 v1.26.0 — 실전 표출순서');
      && /<input type="hidden" id="aTqqqQty">/.test(pl)
      && /<input type="hidden" id="aSgovQty">/.test(pl)
      && /<input type="hidden" id="aCash">/.test(pl));
-  const pHist=pl.indexOf('id="alphaHistorySection"'),pReset=pl.indexOf('id="alphaResetSection"'),pEvidence=pl.indexOf('id="alphaEvidenceSection"');
-  ok('플랜 시작자금·초기화 컨트롤은 거래이력 아래로 이동',
-     pHist>=0 && pReset>pHist && pEvidence>pReset
+  const pHist=pl.indexOf('id="alphaHistorySection"'),pEvidence=pl.indexOf('id="alphaEvidenceSection"'),pStrategy=pl.indexOf('id="alphaStrategySection"'),pReset=pl.indexOf('id="alphaResetSection"'),pClassic=pl.indexOf('data-ppanel="classic"');
+  ok('플랜 시작자금·초기화 컨트롤은 A안 화면 맨 아래',
+     pHist>=0 && pEvidence>pHist && pStrategy>pEvidence && pReset>pStrategy && pClassic>pReset
      && /id="alphaReset"[^>]*>초기화<\/button>/.test(pl)
-     && /금액을 입력하고 초기화를 누르면/.test(pl), JSON.stringify([pHist,pReset,pEvidence]));
+     && /금액을 입력하고 초기화를 누르면/.test(pl), JSON.stringify([pHist,pEvidence,pStrategy,pReset,pClassic]));
   ok('초기화는 입력금액으로 최초 상태 복원 — 현금만 남기고 수량·평단·이력 제거',
      /const cap=Math\.max\(1,Math\.round\(Number\(\$\('alphaCapitalInput'\)\.value\)\|\|0\)\)/.test(pl)
      && /\$\('startCapital'\)\.value=cap/.test(pl)
@@ -8845,8 +8845,8 @@ console.log('\n[123] 모의 성과 — 단독 페이지(/paper)');
      && /이 페이지를 새로고침하면/.test(idx) && /새로고침하면 재시도합니다/.test(idx) && !/창을 다시 열면 재시도/.test(idx) && !/이 창을 닫았다 다시 열면/.test(idx));
 }
 
-/* ════ 124. 5년 플랜 v1.26.3 — 현재계좌 실시간 평가·초기화 정합성 ════ */
-console.log('\n[124] 5년 플랜 v1.26.3 — 현재계좌 실시간 평가·초기화 정합성');
+/* ════ 124. 5년 플랜 v1.26.4 — 현재계좌 실시간 평가·초기화 정합성 ════ */
+console.log('\n[124] 5년 플랜 v1.26.4 — 현재계좌 실시간 평가·초기화 정합성');
 {
   const pl=fs.readFileSync(__d+'/plan.html','utf8');
   ok('현재계좌 종목별 평단·현재가·수익률·평가금액을 표시',

@@ -192,7 +192,7 @@ th:first-child,td:first-child{text-align:left}
 <body>
 <div class="wrap">
   <div class="top">
-    <div class="brand"><div class="logo">Five Year Plan</div><h1>5년 자산플랜 <span class="ver">v1.26.3</span></h1></div>
+    <div class="brand"><div class="logo">Five Year Plan</div><h1>5년 자산플랜 <span class="ver">v1.26.4</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
       <div class="jkmenu" id="jkmenuWrap">
@@ -311,14 +311,6 @@ th:first-child,td:first-child{text-align:left}
         </div>
       </div>
 
-      <div class="card" id="alphaResetSection" style="margin-top:10px;margin-bottom:0">
-        <div class="path-holdings">
-          <div class="field"><label>플랜 시작자금 ($)</label><input type="number" id="alphaCapitalInput" min="1" step="100"></div>
-          <div class="field" style="grid-column:span 3"><label>&nbsp;</label><button class="btn" id="alphaReset" style="width:100%">초기화</button></div>
-        </div>
-        <div class="path-note" id="alphaCapitalNote">금액을 입력하고 초기화를 누르면 보유수량·평단·거래이력을 모두 지우고 입력한 금액의 현금만 가진 최초 상태로 돌아갑니다.</div>
-      </div>
-
       <div class="todaybox" id="alphaEvidenceSection">
         <h3>4. 🔎 리밸런싱 판단 근거</h3>
         <div class="alpha-evidence-grid">
@@ -364,6 +356,14 @@ th:first-child,td:first-child{text-align:left}
           <b>5년 롤링 검증:</b> 127개 시작구간 · 중앙 CAGR 41.1% · 하위 10% CAGR 29.4% · 최악 CAGR 20.8% · 중앙 MDD -35.5% · 최악 MDD -47.4%.
           <span class="sub">업로드 시세 2010~2026 기준 과거 결과이며 미래 수익을 보장하지 않습니다.</span>
         </div>
+      </div>
+
+      <div class="card" id="alphaResetSection" style="margin-top:10px;margin-bottom:0">
+        <div class="path-holdings">
+          <div class="field"><label>플랜 시작자금 ($)</label><input type="number" id="alphaCapitalInput" min="1" step="100"></div>
+          <div class="field" style="grid-column:span 3"><label>&nbsp;</label><button class="btn" id="alphaReset" style="width:100%">초기화</button></div>
+        </div>
+        <div class="path-note" id="alphaCapitalNote">금액을 입력하고 초기화를 누르면 보유수량·평단·거래이력을 모두 지우고 입력한 금액의 현금만 가진 최초 상태로 돌아갑니다.</div>
       </div>
     </div>
   </div>
