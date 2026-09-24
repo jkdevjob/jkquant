@@ -320,7 +320,7 @@ td:first-child{text-align:left;}
   <div class="brand">
     <div>
       <div class="logo">Backtest</div>
-      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v2.6.0</span></h1>
+      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v2.7.0</span></h1>
     </div>
   </div>
   <div class="hright">
@@ -445,6 +445,12 @@ document.addEventListener('click',function(e){ var m=document.getElementById('jk
         <button data-f="close" title="종가가 목표가 이상일 때만 체결 — 보수적 하한">종가</button>
       </div>
     </div>
+    <div class="ctrl s-im hide"><label>주문가 상한 <span style="font-size:9px;color:var(--dim)">큰수 · 증권사 제약</span></label>
+      <div class="seg" id="imCapSeg">
+        <button data-c="1" class="active" title="실전과 같게 — 별지점·평단 주문가가 전일 종가 +15%(큰수)를 넘으면 그 값으로 낮춰 내고 수량도 그 가격으로 셉니다. 증권사가 현재가 ±20% 밖 주문을 받지 않기 때문입니다(원문: 큰수 매수는 방법론 밖의 실무 장치). 운영 주문표·모의와 같은 주문입니다">적용(실전)</button>
+        <button data-c="0" title="원문 가격 그대로 — 별지점·평단 주문가를 낮추지 않습니다. 증권사에는 그대로 못 거는 가격이 섞일 수 있어 운영·모의와 결과가 다릅니다(비교용). 처음매수 큰수(+15%)는 두 경우 같습니다">끔(원문 가격)</button>
+      </div>
+    </div>
     <div class="ctrl s-im hide"><label>세금·비용</label>
       <div class="seg" id="imCost">
         <button data-x="0" title="비용 없이 순수 전략 성과">미적용</button>
@@ -510,14 +516,14 @@ document.addEventListener('click',function(e){ var m=document.getElementById('jk
     </div>
     <div class="ctrl s-vr hide"><label>체결 방식 <span style="font-size:9px;color:var(--dim)">앱 매수·매도표와 같게</span></label>
       <div class="seg" id="vrFillSeg">
-        <button data-v="vreturn" class="active" title="VR 5.0 정식 — 평가금이 상단을 넘으면 V로 돌아올 만큼 매도, 하단 아래면 V에 닿을 만큼 매수(Pool 한도 안). 사이클 첫날 보유수량으로 2주치 예약표를 고정하고 그날 고가·저가로 체결을 판정합니다.">V 복귀 예약표 (정식)</button>
+        <button data-v="vreturn" class="active" title="평가금이 상단을 넘으면 V로 돌아올 만큼 매도, 하단 아래면 V에 닿을 만큼 매수(Pool 한도 안). 사이클 첫날 보유수량으로 2주치 예약표를 고정하고 그날 고가·저가로 체결을 판정합니다. 원문(posts/009)은 '밴드를 벗어나면 매수·매도로 다시 밴드 안으로' 까지만 적고 수량 산식은 없습니다 — 원문 예약표 확인 전까지 구현 규칙입니다.">V 복귀 예약표</button>
         <button data-v="close" title="비교용 보수 모델 — 2주에 한 번 그날 종가만 보고 조정하며 장중 예약체결은 반영하지 않음">종가 리밸런싱(비교)</button>
       </div>
     </div>
     <div class="ctrl s-vr hide vr-accum"><label data-cur="vr">적립금 ($/2주)</label><input type="number" id="vrContrib" value="100" min="10"></div>
     <div class="ctrl s-vr hide vr-lump" style="display:none"><label data-cur="vr">초기 투자금 ($)</label><input type="number" id="vrInitAmt" value="10000" min="100"></div>
     <div class="ctrl s-vr hide vr-wd" style="display:none"><label data-cur="vr">2주 인출액 ($)</label><input type="number" id="vrWithdraw" value="100" min="10"></div>
-    <div class="ctrl s-vr hide"><label>G값</label><input type="number" id="vrG" value="10" min="1" max="50"></div>
+    <div class="ctrl s-vr hide"><label>G값 <span id="vrGGuide" style="font-size:9px;color:var(--dim)" title="라오어 시작 가이드 — 적립식·거치식 G=10, 인출식 G=20 (VR 원문 posts/009). 값을 바꾸지는 않습니다">가이드 10 (적립식)</span></label><input type="number" id="vrG" value="10" min="1" max="50"></div>
     <div class="ctrl s-vr hide"><label>밴드 ±%</label><input type="number" id="vrBand" value="15" min="5" max="30"></div>
     <div class="ctrl s-vr hide"><label data-cur="vr">시작 V ($)</label><input type="number" id="vrStartV" value="0" min="0" placeholder="0=첫매수가 V"></div>
     <div class="ctrl s-vr hide"><label data-cur="vr">시작 Pool ($)</label><input type="number" id="vrStartPool" value="0" min="0"></div>
@@ -772,7 +778,7 @@ document.addEventListener('click',function(e){ var m=document.getElementById('jk
 <div class="rules s-vr hide">
   <span class="bd">V 갱신</span> 다음 V = 현재 V + <b>Pool/G</b> + 적립금 · <b>달력 14일</b> 사이클 (기준일이 주말이면 다음 영업일) — 거래일 수가 아니라 달력으로 셉니다<br>
   <span class="bd">밴드</span> 상단 V×(1+밴드) / 하단 V×(1−밴드)<br>
-  <span class="bd">예약주문</span> (기본) 실전 그대로 — 사이클 첫날 <b>매수·매도표 차수를 지정가로 걸고 2주 방치</b>, 그날 <b>고가·저가</b>에 닿은 차수만 체결 — VR 5.0 정식 <b>V 복귀</b>: 매도 k차 = 상단÷보유, 평가금이 V로 돌아올 만큼 · 매수 k차 = 하단÷보유, V에 닿을 만큼 · 매수한도 = 사이클 시작 Pool×모드한도(적립75·거치50·인출25%) · 운영 앱 체결기와 같은 규칙<br>
+  <span class="bd">예약주문</span> (기본) 실전 그대로 — 사이클 첫날 <b>매수·매도표 차수를 지정가로 걸고 2주 방치</b>, 그날 <b>고가·저가</b>에 닿은 차수만 체결 — <b>V 복귀</b>(구현 규칙 · 원문은 '밴드 안으로 다시 진입'까지만): 매도 k차 = 상단÷보유, 평가금이 V로 돌아올 만큼 · 매수 k차 = 하단÷보유, V에 닿을 만큼 · 매수한도 = 사이클 시작 Pool×모드한도(적립75·거치50·인출25%) · 운영 앱 체결기와 같은 규칙<br>
   <span class="bd">종가</span> (선택) 예전 방식 — 2주에 한 번 그날 <b>종가</b>에만 평가금을 V로 되맞춤. 실제로 내는 주문과 다르므로 비교용으로만<br>
   <span class="bd">매도</span> 평가금>상단 → Pool 로 · <span class="bd">매수</span> 평가금&lt;하단 → 적립후 <b>Pool 75%</b> 한도
 </div>
@@ -1379,6 +1385,8 @@ document.getElementById('vrMode').onclick=e=>{
   document.querySelectorAll('.vr-accum').forEach(el=>el.style.display=m==='0.75'?'':'none');
   document.querySelectorAll('.vr-lump').forEach(el=>el.style.display=m!=='0.75'?'':'none');
   document.querySelectorAll('.vr-wd').forEach(el=>el.style.display=m==='0.25'?'':'none');
+  { const gg=document.getElementById('vrGGuide');   // 라오어 시작 가이드 G (적립·거치 10 · 인출 20) — 값은 안 바꾼다 (제11차 10)
+    if(gg) gg.textContent='가이드 '+(m==='0.25'?'20 (인출식)':m==='0.5'?'10 (거치식)':'10 (적립식)'); }
   if(dataLoaded)run();
 };
 document.getElementById('vrFormula').onclick=e=>{if(e.target.dataset.f){document.querySelectorAll('#vrFormula button').forEach(b=>b.classList.remove('active'));e.target.classList.add('active');if(dataLoaded)run();}};
@@ -1648,7 +1656,7 @@ let imTgtDyn=false;  // 익절 동적 조절 (20일 상승률) — 기본 OFF
    걸어두고 2주 방치, 그날 고가·저가에 닿은 차수만 1주씩 체결된다.
    'close' = 예전 백테 방식 — 2주에 한 번 그날 종가만 보고 평가금을 V로 되맞춘다.
    운영 앱은 처음부터 예약주문이었다(vrSimForward). 백테만 종가 하나를 보고 있었다. */
-let vrFill='vreturn';   // 기본 = VR 5.0 정식 V 복귀 예약표 (사이클 첫날 고정). 'close'는 비교용 — 기준일 종가에만 V 로 되맞춤
+let vrFill='vreturn';   // 기본 = V 복귀 예약표 (사이클 첫날 고정 · 구현 규칙 — 제11차). 'close'는 비교용 — 기준일 종가에만 V 로 되맞춤
 
 /* 라오어 문서 공식 익절%는 종목별로 다르다 — TQQQ 15 · SOXL 20 (문서 미수록 종목은 20).
    운영 index.html 의 IM_OFFICIAL 과 같은 값이어야 한다. 한쪽만 고치면 같은 종목·같은 설정인데
@@ -1677,6 +1685,13 @@ let imFill='high';   // 익절 체결 판정: 'high'=고가 터치(기본·지�
    앱에서 gap 을 바꾸면 운영 주문가와 백테 주문가가 서로 달라졌다.
    앱의 revGap(REV_GAP_DEF=2.5)과 같은 값·같은 식을 쓴다. */
 let imRevGap=0;
+/* 주문가 상한(큰수 · 증권사 제약) — 원문은 큰수 매수를 '방법론과는 상관 없는' 증권사 ±20% 거부 회피 장치로 적는다 (제11차 4).
+   적용(기본) = 운영 주문표·모의와 같은 실제 주문: 별지점·평단 주문가가 전일 종가+큰수% 를 넘으면 그 값으로 낮춰 내고 수량도 그 가격으로 센다.
+   끔 = 원문 가격 그대로(비교용) — 증권사에 그대로는 못 거는 가격이 섞일 수 있다. 처음매수 큰수(+15%)는 둘 다 같다.
+   어느 쪽인지 결과 제목에 적는다 — 공식 전략 결과에 증권사 제약 가격을 조용히 섞지 않는다. */
+let imBrokerCap=true;
+function imCapTag(){ return (typeof imEngine!=='undefined' && (imEngine==='v40'||imEngine==='v50'))
+  ? ((typeof imBrokerCap==='undefined'||imBrokerCap) ? ' · 주문가 상한 큰수 +'+IM_BIG_DEFAULT+'%(증권사 제약 · 실전 주문)' : ' · 원문 가격(주문가 상한 없음 · 비교용)') : ''; }
 function syncMaCtrl(){
   const on=(imEngine==='v50'||imEngine==='ab');
   ['imMaCtrl','imLoCtrl'].forEach(id=>{ const el=document.getElementById(id); if(!el)return;
@@ -1692,6 +1707,7 @@ document.getElementById('imTgtSeg').onclick=e=>{if(e.target.dataset.t){document.
 document.getElementById('vrFillSeg').onclick=e=>{if(e.target.dataset.v){document.querySelectorAll('#vrFillSeg button').forEach(b=>b.classList.remove('active'));e.target.classList.add('active');vrFill=e.target.dataset.v;if(dataLoaded)run();}};
 { const el=document.getElementById('imRevGapIn');
   if(el) el.onchange=()=>{ const v=+el.value; imRevGap=(isFinite(v)&&v>=0)?Math.min(20,v):0; el.value=imRevGap; if(dataLoaded)run(); }; }
+document.getElementById('imCapSeg').onclick=e=>{if(e.target.dataset.c){document.querySelectorAll('#imCapSeg button').forEach(b=>b.classList.remove('active'));e.target.classList.add('active');imBrokerCap=e.target.dataset.c==='1';if(dataLoaded)run();}};
 document.getElementById('imFillSeg').onclick=e=>{if(e.target.dataset.f){document.querySelectorAll('#imFillSeg button').forEach(b=>b.classList.remove('active'));e.target.classList.add('active');imFill=e.target.dataset.f;if(dataLoaded)run();}};
 syncMaCtrl();   // 초기: V4.0이므로 국면선 비활성 표시
 syncRevUI();
@@ -2526,7 +2542,7 @@ function imBuyOrders(o){
     const p=cap(p0); if(!(p>0)) return; if(p<lo) lo=p;
     const q=Math.min(Math.floor(alloc/f1/p+1e-9)-(have||0), Math.floor(res/f1/p+1e-9));
     if(q>=1){ out.push({kind, name, price:p, q, dT, ladder:false, capped:o.cap>0&&p0>o.cap, orig:p0}); res-=q*p*f1; } };
-  if(o.first) main('처음매수', o.firstPrice, o.buy1, 1, '1회매수');
+  if(o.first) main('처음매수', vrTickDn(o.firstPrice, o.cur), o.buy1, 1, '1회매수');   // 큰수 가격도 호가 내림 (45.93×1.12 = 51.4416 → 51.44)
   else if(o.half){ main('별지점 매수', o.starPrice, o.buy1/2, 0.5, '절반매수');
                    main('평단 매수', o.avg, o.buy1, 0.5, '절반매수', held()); }
   else main('별지점 매수 (전액)', o.starPrice, o.buy1, 1, '1회매수');
@@ -2549,7 +2565,7 @@ function _imBuyPlan(T, avg, shares, cash, divs, starBase, starSlope, buyLimit, p
   const first=(shares===0 && T===0);
   const starP=first?0:imStarPx(avg, starBase-starSlope*T, cur);     // 별지점 센트 반올림 (원문 3-(3) · 제10차)
   return imBuyOrders({first, half:!first&&T<divs/2, buy1:cash/(divs-T), bal:cash, firstPrice:buyLimit, starPrice:imBuyPx(starP),
-                      avg, cap:buyLimit, rows, fee:FEE, cur})
+                      avg, cap:(typeof imBrokerCap==='undefined'||imBrokerCap)?buyLimit:0, rows, fee:FEE, cur})   // 주문가 상한(큰수) — 끄면 원문 가격 (제11차 4)
     .map(o=>({lim:o.price, q:o.q, dT:o.dT, kind:o.kind, ladder:o.ladder}));
 }
 function runIM(days,tkr,cap,divs,targetPct,compound=true,bigOverride){
@@ -3085,7 +3101,7 @@ function vrCycleTransition(V, pool, ev, G, mode, add, formula){
   return {nextV:Math.max(0,raw), raw, nextPool:pool+sign*actual, requested, actual, sign, corr,
           type:requested>0?(isWd?'wd':'add'):null};
 }
-/* ════ VR 주문 체결 엔진 — V 복귀 예약표 (정식 · 사용자 제공 원문 정리본 · 09-24) ════
+/* ════ VR 주문 체결 엔진 — V 복귀 예약표 (구현 규칙 · 제11차: 원문 posts/009 는 '밴드를 벗어나면 매수·매도로 다시 밴드 안으로' 까지만 — 수량 산식은 원문 예약표 확인 전) ════
    근거: VR 5.0 운용 절차 (원글 posts/009 · cafe.naver.com/infinitebuying/38944)
      "평가금이 상단(1.15V)을 초과하면 평가금이 V로 돌아올 만큼 매도 · 하단(0.85V)을 하회하면
       평가금이 V에 도달할 만큼 매수 (Pool 사용 한도 안) · 2주치 예약주문 가능 · 사이클 첫날 매수표/매도표"
@@ -4019,7 +4035,7 @@ function _runOneStrat(key,tkr,cap,days,costOn){
    예전엔 세 곳이 각자 '공식 V복귀' 라고 적었다 — 엔진은 20차 사다리를 도는데 제목은 V 복귀였고,
    어느 쪽도 원문으로 확인된 '공식' 이 아니다 (제8차 감사 대응 8-①). */
 function vrFillLabel(){
-  return (typeof vrFill!=='undefined' && vrFill==='close') ? '종가 리밸런싱(비교)' : 'V 복귀 예약표(정식)';
+  return (typeof vrFill!=='undefined' && vrFill==='close') ? '종가 리밸런싱(비교)' : 'V 복귀 예약표';
 }
 // 전체비교 헤더용: 현재 각 탭 옵션 요약 문자열
 function comboOpts(mode){
@@ -4623,7 +4639,7 @@ function renderMultiStrat(type, results, params){
   document.getElementById('detail').classList.add('hide');
   document.querySelector('.cards').classList.remove('hide');
   document.querySelector('.tbl-wrap').classList.remove('hide');
-  const stratName=type==='im'?('무한매수법 '+(imEngine==='v22'?'V2.2':imEngine==='v30'?'V3.0':imEngine==='v50'?('V5.0('+imShortMA+'일·하락'+imLoPct+'%)'):'V4.0')+' · 익절 '+imTgtTxt()+imVariantTag(tickers)+(imEngine==='v40'&&imReverse?' · 리버스ON':'')+(imTgtDyn?' · 익절조절(20일상승률)':'')+(imCostOn?' · 비용반영':''))
+  const stratName=type==='im'?('무한매수법 '+(imEngine==='v22'?'V2.2':imEngine==='v30'?'V3.0':imEngine==='v50'?('V5.0('+imShortMA+'일·하락'+imLoPct+'%)'):'V4.0')+' · 익절 '+imTgtTxt()+imVariantTag(tickers)+imCapTag()+(imEngine==='v40'&&imReverse?' · 리버스ON':'')+(imTgtDyn?' · 익절조절(20일상승률)':'')+(imCostOn?' · 비용반영':''))
     :type==='ma'?(maStratName(maLen)+(maCostOn?' · 비용반영':''))
     :('VR 5.0 · '+vrFillLabel()+(vrCostOn?' · 비용반영':''));
   const pct=x=>(x>=0?'+':'')+x.toFixed(1)+'%';
@@ -4810,7 +4826,7 @@ function renderSingle2(type,r,days){
   if(logBtns[1]) logBtns[1].classList.add('active');  // '로그' 버튼 활성화
   const m=META[r.tkr];
   const stratName = type==='im' ? ('무한매수법 '+(imEngine==='v22'?'V2.2':imEngine==='v30'?'V3.0':imEngine==='v50'?('V5.0('+imShortMA+'일)'):'V4.0')
-                                   +(r.tgt!=null?' · 익절 '+r.tgt+'%':'')+imVariantTag([r.tkr])) : type==='ma' ? maStratName(r.maLen)
+                                   +(r.tgt!=null?' · 익절 '+r.tgt+'%':'')+imVariantTag([r.tkr])+imCapTag()) : type==='ma' ? maStratName(r.maLen)
                    : ('VR 5.0 · '+vrFillLabel());
   const stratShort = type==='im' ? '무한매수법' : type==='ma' ? ((r.maLen||200)+'일선') : 'VR 5.0';
 
