@@ -143,7 +143,14 @@ th:first-child,td:first-child{text-align:left}
 .alpha-account-card .sym{font-size:11px;color:var(--dim);font-weight:800}
 .alpha-account-card .qty{font-size:18px;font-weight:900;margin-top:3px}
 .alpha-account-card .avg{font-size:11px;color:var(--dim);margin-top:3px}
+.alpha-account-card .livepx{font-size:11px;margin-top:5px}
+.alpha-account-card .pl{font-size:12px;font-weight:850;margin-top:3px}
+.alpha-account-card .mv{font-size:10.5px;color:var(--dim);margin-top:2px}
 .alpha-account-card.cash .qty{color:var(--gold)}
+.alpha-account-total{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-top:9px}
+.alpha-total-cell{background:rgba(139,140,240,.055);border:1px solid var(--border);border-radius:9px;padding:9px}
+.alpha-total-cell .k{font-size:10px;color:var(--dim)}.alpha-total-cell .v{font-size:14px;font-weight:850;margin-top:2px}
+.alpha-cash-warn{margin-top:8px;padding:9px 11px;border:1px solid rgba(248,123,140,.42);background:rgba(248,123,140,.07);border-radius:9px;font-size:11px;color:var(--red)}
 .alpha-base-edit-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:8px}
 .alpha-ledger-note{font-size:10.5px;color:var(--dim);margin-top:3px}
 .alpha-fill-panel,.alpha-reconcile-panel{margin-top:10px;padding:11px;border:1px solid var(--border2);border-radius:10px;background:var(--surf2)}
@@ -171,7 +178,7 @@ th:first-child,td:first-child{text-align:left}
 .alpha-gauge-labels{display:flex;justify-content:space-between;font-size:9px;color:var(--dim);margin-top:3px}
 .path-split{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}
 .path-split .todaybox{margin-top:0}
-@media(max-width:780px){.path-holdings{grid-template-columns:repeat(2,1fr)}.path-split{grid-template-columns:1fr}.alpha-charts{grid-template-columns:1fr}.alpha-evidence-grid{grid-template-columns:repeat(2,1fr)}.alpha-fill-row{grid-template-columns:70px 60px 1fr 1fr}.alpha-account-grid{grid-template-columns:repeat(2,1fr)}.alpha-base-edit-grid{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:780px){.path-holdings{grid-template-columns:repeat(2,1fr)}.path-split{grid-template-columns:1fr}.alpha-charts{grid-template-columns:1fr}.alpha-evidence-grid{grid-template-columns:repeat(2,1fr)}.alpha-fill-row{grid-template-columns:70px 60px 1fr 1fr}.alpha-account-grid{grid-template-columns:repeat(2,1fr)}.alpha-base-edit-grid{grid-template-columns:repeat(2,1fr)}.alpha-account-total{grid-template-columns:repeat(2,1fr)}}
 @media(max-width:780px){
   .hero{grid-template-columns:1fr}.grid4{grid-template-columns:repeat(2,1fr)}.grid3{grid-template-columns:1fr}.steps{grid-template-columns:repeat(2,1fr)}.livegrid{grid-template-columns:1fr}.guidegrid{grid-template-columns:repeat(2,1fr)}
   .kpis{grid-template-columns:repeat(2,1fr)}.cashgrid{grid-template-columns:repeat(2,1fr)}.scenarios{grid-template-columns:1fr}.ledger-summary{grid-template-columns:repeat(2,1fr)}.ledger-form{grid-template-columns:repeat(2,1fr)}
@@ -185,7 +192,7 @@ th:first-child,td:first-child{text-align:left}
 <body>
 <div class="wrap">
   <div class="top">
-    <div class="brand"><div class="logo">Five Year Plan</div><h1>5년 자산플랜 <span class="ver">v1.25.1</span></h1></div>
+    <div class="brand"><div class="logo">Five Year Plan</div><h1>5년 자산플랜 <span class="ver">v1.26.0</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
       <div class="jkmenu" id="jkmenuWrap">
@@ -252,11 +259,19 @@ th:first-child,td:first-child{text-align:left}
           <span class="status-pill good" id="alphaLedgerStatus">자동 계산</span>
         </div>
         <div class="alpha-account-grid">
-          <div class="alpha-account-card"><div class="sym">TECL</div><div class="qty" id="alphaAcctTeclQty">0주</div><div class="avg" id="alphaAcctTeclAvg">평단 —</div></div>
-          <div class="alpha-account-card"><div class="sym">TQQQ</div><div class="qty" id="alphaAcctTqqqQty">0주</div><div class="avg" id="alphaAcctTqqqAvg">평단 —</div></div>
-          <div class="alpha-account-card"><div class="sym">SGOV</div><div class="qty" id="alphaAcctSgovQty">0주</div><div class="avg" id="alphaAcctSgovAvg">평단 —</div></div>
-          <div class="alpha-account-card cash"><div class="sym">현금</div><div class="qty" id="alphaAcctCash">$0</div><div class="avg">체결이력 반영 후 자동 증감</div></div>
+          <div class="alpha-account-card"><div class="sym">TECL</div><div class="qty" id="alphaAcctTeclQty">0주</div><div class="avg" id="alphaAcctTeclAvg">평단 —</div><div class="livepx" id="alphaAcctTeclPx">현재가 —</div><div class="pl" id="alphaAcctTeclPl">수익률 —</div><div class="mv" id="alphaAcctTeclMv">평가금액 —</div></div>
+          <div class="alpha-account-card"><div class="sym">TQQQ</div><div class="qty" id="alphaAcctTqqqQty">0주</div><div class="avg" id="alphaAcctTqqqAvg">평단 —</div><div class="livepx" id="alphaAcctTqqqPx">현재가 —</div><div class="pl" id="alphaAcctTqqqPl">수익률 —</div><div class="mv" id="alphaAcctTqqqMv">평가금액 —</div></div>
+          <div class="alpha-account-card"><div class="sym">SGOV</div><div class="qty" id="alphaAcctSgovQty">0주</div><div class="avg" id="alphaAcctSgovAvg">평단 —</div><div class="livepx" id="alphaAcctSgovPx">현재가 —</div><div class="pl" id="alphaAcctSgovPl">수익률 —</div><div class="mv" id="alphaAcctSgovMv">평가금액 —</div></div>
+          <div class="alpha-account-card cash"><div class="sym">현금</div><div class="qty" id="alphaAcctCash">$0</div><div class="avg">체결이력 반영 후 자동 증감</div><div class="livepx">주문 가능 현금 기준</div><div class="pl" id="alphaAcctCashState"></div></div>
         </div>
+        <div class="alpha-account-total">
+          <div class="alpha-total-cell"><div class="k">보유원가</div><div class="v" id="alphaCostTotal">—</div></div>
+          <div class="alpha-total-cell"><div class="k">ETF 평가액</div><div class="v" id="alphaMarketTotal">—</div></div>
+          <div class="alpha-total-cell"><div class="k">평가손익</div><div class="v" id="alphaPnlTotal">—</div></div>
+          <div class="alpha-total-cell"><div class="k">보유 수익률</div><div class="v" id="alphaReturnTotal">—</div></div>
+          <div class="alpha-total-cell"><div class="k">총자산 (ETF+현금)</div><div class="v" id="alphaAssetTotal">—</div></div>
+        </div>
+        <div class="alpha-cash-warn" id="alphaCashWarn" hidden></div>
         <input type="hidden" id="aTeclQty"><input type="hidden" id="aTqqqQty"><input type="hidden" id="aSgovQty"><input type="hidden" id="aCash">
         <div class="path-holdings" style="margin-top:12px">
           <div class="field"><label>플랜 시작자금 ($)</label><input type="number" id="alphaCapitalInput" min="1" step="100"></div>
@@ -715,10 +730,12 @@ const STAGES={
 
 let liveState=null, liveStateSource="", liveBusy=false, liveQuotes={}, pendingVrCycle=null;
 const FEE=0.0025;
+const ALPHA_FEE_RATE=0.001; // 토스증권 미국주식 표준 0.1% (A안 실전 장부/주문 전용)
+function alphaFee(q,p){const gross=Math.max(0,(+q||0)*(+p||0));return gross<=10?0:Math.floor(gross*ALPHA_FEE_RATE*100)/100;}
 let planLinks={inf:"",vr:"",sleeve:""};
 let sleeveSessions=[];
 let sleeveLedger={startQLD:0,startSGOV:0,startCash:0,trades:[]};
-let alphaLedger={base:{date:"",tecl:0,tqqq:0,sgov:0,cash:20000,avgTecl:null,avgTqqq:null,avgSgov:null},events:[]};
+let alphaLedger={base:{date:"",tecl:0,tqqq:0,sgov:0,cash:20000,avgTecl:null,avgTqqq:null,avgSgov:null},events:[],feeModel:"toss-us-0.1-v1"};
 let pendingAlphaOrders=[], alphaEditingId="";
 const KIND_T={'1회매수':t=>t+1,'절반매수':t=>t+0.5,'쿼터매도':t=>t*0.75,'지정가매도':t=>t*0.25,
   '지정가매도+1회매수':t=>t*0.25+1,'지정가매도+절반매수':t=>t*0.25+0.5,
@@ -1401,7 +1418,7 @@ function alphaWeightHistory(rows,D,count=60){
   return out;
 }
 function alphaOrderHtml(side,sym,qty,price,note){
-  const c=side==='buy'?'buy':'sell',lab=side==='buy'?'매수':'매도',gross=Math.max(0,qty*price),fee=gross*FEE,net=side==='buy'?gross+fee:gross-fee;
+  const c=side==='buy'?'buy':'sell',lab=side==='buy'?'매수':'매도',gross=Math.max(0,qty*price),fee=alphaFee(qty,price),net=side==='buy'?gross+fee:gross-fee;
   const money=side==='buy'
     ? '매수금액 '+usd(gross)+' · 수수료 포함 필요현금 약 '+usd(net)
     : '매도금액 '+usd(gross)+' · 수수료 차감 예상유입 약 '+usd(net);
@@ -1469,13 +1486,13 @@ function renderAlphaPlan(qTecl,qTqqq,qSgov){
   const targetSq=needRebalance?Math.max(0,Math.floor(Math.max(0,signalTotal-targetTq*tp-targetQq*qp)/sp)):sq;
 
   // 수수료까지 예약해 '화면 수량 그대로' 넣었을 때 현금 부족 주문이 되지 않게 매도→위험자산 매수→SGOV 순서로 제한한다.
-  const F=FEE, orders=[];let avail=Math.max(0,cash);
+  const F=ALPHA_FEE_RATE, orders=[];let avail=Math.max(0,cash);
   const pos={TECL:tq,TQQQ:qq,SGOV:sq},pxs={TECL:tp,TQQQ:qp,SGOV:sp},targets={TECL:targetTq,TQQQ:targetQq,SGOV:targetSq};
   for(const sym of ['TECL','TQQQ','SGOV']){
-    const dq=targets[sym]-pos[sym];if(dq<0){const q=-dq,p=pxs[sym];avail+=q*p*(1-F);orders.push({side:'sell',sym,qty:q,price:p,note:sym==='TECL'?'역분산 목표':sym==='TQQQ'?'Guard '+guard:'잔여 대피자산'});}
+    const dq=targets[sym]-pos[sym];if(dq<0){const q=-dq,p=pxs[sym];avail+=q*p-alphaFee(q,p);orders.push({side:'sell',sym,qty:q,price:p,note:sym==='TECL'?'역분산 목표':sym==='TQQQ'?'Guard '+guard:'잔여 대피자산'});}
   }
   for(const sym of ['TECL','TQQQ','SGOV']){
-    const dq=targets[sym]-pos[sym];if(dq>0){const p=pxs[sym],q=Math.min(dq,Math.floor(avail/(p*(1+F))));if(q>0){avail-=q*p*(1+F);orders.push({side:'buy',sym,qty:q,price:p,note:sym==='TECL'?'역분산 목표':sym==='TQQQ'?'Guard '+guard:'잔여 대피자산'});}}
+    const dq=targets[sym]-pos[sym];if(dq>0){const p=pxs[sym],q=Math.min(dq,Math.floor(avail/(p*(1+F))));if(q>0){avail-=q*p+alphaFee(q,p);orders.push({side:'buy',sym,qty:q,price:p,note:sym==='TECL'?'역분산 목표':sym==='TQQQ'?'Guard '+guard:'잔여 대피자산'});}}
   }
   $('alphaMeta').textContent='신호 '+qTecl.settled.date+' 확정종가 · TECL σ'+D.ivsLook+' '+(sigma*100).toFixed(1)+'% → 목표 '+(w*100).toFixed(1)+'% ('+(D.teclWeight*100).toFixed(0)+'% 슬리브 내) · TQQQ '+usd(qs)+' / SMA'+D.guardMA+' '+usd(sma)+' · Guard '+guard;
   if($('alphaRefreshTime'))$('alphaRefreshTime').textContent='시세 자동 갱신 · '+new Date().toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
@@ -1486,14 +1503,14 @@ function renderAlphaPlan(qTecl,qTqqq,qSgov){
   const teclAmt=targetTq*tp,tqqqAmt=targetQq*qp,sgovAmt=targetSq*sp;
   const tw=teclAmt/signalTotal*100,qw=tqqqAmt/signalTotal*100,sw=Math.max(0,100-tw-qw);
   const buyMap={TECL:0,TQQQ:0,SGOV:0},buyFee={TECL:0,TQQQ:0,SGOV:0};
-  for(const o of orders){if(o.side==='buy'){const g=o.qty*o.price;buyMap[o.sym]=(buyMap[o.sym]||0)+g;buyFee[o.sym]=(buyFee[o.sym]||0)+g*FEE;}}
+  for(const o of orders){if(o.side==='buy'){const g=o.qty*o.price;buyMap[o.sym]=(buyMap[o.sym]||0)+g;buyFee[o.sym]=(buyFee[o.sym]||0)+alphaFee(o.qty,o.price);}}
   const totalBuy=buyMap.TECL+buyMap.TQQQ+buyMap.SGOV,totalNeed=totalBuy+buyFee.TECL+buyFee.TQQQ+buyFee.SGOV;
   $('alphaSummary').innerHTML=
     '<b>목표 보유금액:</b> TECL '+usd(teclAmt)+' · TQQQ '+usd(tqqqAmt)+' · SGOV '+usd(sgovAmt)+' · 잔여현금 약 '+usd(Math.max(0,signalTotal-teclAmt-tqqqAmt-sgovAmt))+
     '<br><b>목표비중:</b> TECL '+tw.toFixed(1)+'% · TQQQ '+qw.toFixed(1)+'% · SGOV/현금 '+sw.toFixed(1)+'% · 신호기준 평가액 '+usd(signalTotal)+
     '<br><b>오늘 매수금액:</b> TECL '+usd(buyMap.TECL)+' · TQQQ '+usd(buyMap.TQQQ)+' · SGOV '+usd(buyMap.SGOV)+' · 합계 '+usd(totalBuy)+' · <b>수수료 포함 필요현금 약 '+usd(totalNeed)+'</b>'+
     '<br><b>트리거:</b> TECL '+(teclHit?'리밸런싱':'유지')+' · TQQQ '+(guardFlip?'상태전환 '+guard:'유지 '+guard)+
-    '<br><span class="sub">주문 수량·금액은 현재가와 수수료 0.25%를 반영한 예상치입니다. 주문 직전 새로고침하세요.</span>';
+    '<br><span class="sub">주문 수량·금액은 현재가와 토스증권 미국주식 수수료 0.1%를 반영한 예상치입니다.</span>';
 }
 function refreshAlphaFromCache(){if(liveQuotes.TECL&&liveQuotes.TQQQ&&liveQuotes.SGOV)renderAlphaPlan(liveQuotes.TECL,liveQuotes.TQQQ,liveQuotes.SGOV);}
 function ledgerReady(){return sleeveLedger.startQLD>0||sleeveLedger.startSGOV>0||sleeveLedger.startCash!==0||(sleeveLedger.trades||[]).length>0;}
@@ -1584,6 +1601,7 @@ async function refreshLive(){
     ]);
     const asof=[qs.settled.date,qv.settled.date,qt.settled.date,qqq.settled.date,sgov.settled.date].filter(Boolean).sort()[0];$('liveSync').textContent=liveStateSource+' · 확정 일봉 '+asof+' 기준';
     renderAlphaPlan(qv,qt,sgov);
+    renderAlphaLedger();
     const actions=[],classicActions=[];
     if(inf){
       const srows=qs.rows.filter(x=>x.date<=qs.settled.date);const r=imOrders(inf,qs.settled.close,srows),c=r.state,st=inf.settings||{};
@@ -1649,7 +1667,7 @@ function defaults(){
   const s=todayISO(),t=plusYears(s,5);
   return {startDate:s,targetDate:t,startCapital:20000,targetCapital:150000,monthlyAdd:0,targetIncome:2000,stageMode:"auto",
     aTeclQty:0,aTqqqQty:0,aSgovQty:0,aCash:20000,
-    alphaLedger:{base:{date:s,tecl:0,tqqq:0,sgov:0,cash:20000,avgTecl:null,avgTqqq:null,avgSgov:null},events:[]},
+    alphaLedger:{base:{date:s,tecl:0,tqqq:0,sgov:0,cash:20000,avgTecl:null,avgTqqq:null,avgSgov:null},events:[],feeModel:"toss-us-0.1-v1"},
     balMM:0,balVR:0,balQLD:0,balSGOV:0,cagrLow:8,cagrBase:15,cagrHigh:22,
     incomeBasis:150000,incomeYield:8,sgovYield:4,extraWithdraw:0,autoBalances:true,autoSleeve:true,
     planLinks:{inf:"",vr:"",sleeve:""},sleeveSessions:[],sleeveLedger:{startQLD:0,startSGOV:0,startCash:0,trades:[]}};
@@ -1675,9 +1693,13 @@ function apply(o){
   bindSleeveLedger();
   if(o&&o.alphaLedger&&typeof o.alphaLedger==='object'){
     const al=o.alphaLedger,b=al.base||{};
-    alphaLedger={base:{date:String(b.date||todayISO()),tecl:Math.max(0,Math.floor(+b.tecl||0)),tqqq:Math.max(0,Math.floor(+b.tqqq||0)),sgov:Math.max(0,Math.floor(+b.sgov||0)),cash:Number.isFinite(+b.cash)?+b.cash:Math.max(1,+all.startCapital||20000),avgTecl:Number.isFinite(+b.avgTecl)&&+b.avgTecl>0?+b.avgTecl:null,avgTqqq:Number.isFinite(+b.avgTqqq)&&+b.avgTqqq>0?+b.avgTqqq:null,avgSgov:Number.isFinite(+b.avgSgov)&&+b.avgSgov>0?+b.avgSgov:null},events:Array.isArray(al.events)?al.events:[]};
+    alphaLedger={base:{date:String(b.date||todayISO()),tecl:Math.max(0,Math.floor(+b.tecl||0)),tqqq:Math.max(0,Math.floor(+b.tqqq||0)),sgov:Math.max(0,Math.floor(+b.sgov||0)),cash:Number.isFinite(+b.cash)?+b.cash:Math.max(1,+all.startCapital||20000),avgTecl:Number.isFinite(+b.avgTecl)&&+b.avgTecl>0?+b.avgTecl:null,avgTqqq:Number.isFinite(+b.avgTqqq)&&+b.avgTqqq>0?+b.avgTqqq:null,avgSgov:Number.isFinite(+b.avgSgov)&&+b.avgSgov>0?+b.avgSgov:null},events:Array.isArray(al.events)?al.events:[],feeModel:String(al.feeModel||"")};
+    if(alphaLedger.feeModel!=="toss-us-0.1-v1"){
+      alphaLedger.events=alphaLedger.events.map(e=>e&&e.type==='trade'?{...e,fee:alphaFee(e.qty,e.price),feeRate:ALPHA_FEE_RATE}:e);
+      alphaLedger.feeModel="toss-us-0.1-v1";
+    }
   }else{
-    alphaLedger={base:{date:todayISO(),tecl:Math.max(0,Math.floor(+all.aTeclQty||0)),tqqq:Math.max(0,Math.floor(+all.aTqqqQty||0)),sgov:Math.max(0,Math.floor(+all.aSgovQty||0)),cash:Number.isFinite(+all.aCash)?+all.aCash:Math.max(1,+all.startCapital||20000),avgTecl:null,avgTqqq:null,avgSgov:null},events:[]};
+    alphaLedger={base:{date:todayISO(),tecl:Math.max(0,Math.floor(+all.aTeclQty||0)),tqqq:Math.max(0,Math.floor(+all.aTqqqQty||0)),sgov:Math.max(0,Math.floor(+all.aSgovQty||0)),cash:Number.isFinite(+all.aCash)?+all.aCash:Math.max(1,+all.startCapital||20000),avgTecl:null,avgTqqq:null,avgSgov:null},events:[],feeModel:"toss-us-0.1-v1"};
   }
   Object.entries(all).forEach(([k,v])=>{const el=$(k);if(!el)return;if(el.type==='checkbox')el.checked=(v===true||v==='true');else el.value=v;});
   alphaSyncInputs();
@@ -1694,7 +1716,7 @@ function alphaLedgerCalc(ledger=alphaLedger){
   const S={
     tecl:Math.max(0,Math.floor(+b.tecl||0)),tqqq:Math.max(0,Math.floor(+b.tqqq||0)),sgov:Math.max(0,Math.floor(+b.sgov||0)),
     avgTecl:Number.isFinite(+b.avgTecl)&&+b.avgTecl>0?+b.avgTecl:null,avgTqqq:Number.isFinite(+b.avgTqqq)&&+b.avgTqqq>0?+b.avgTqqq:null,avgSgov:Number.isFinite(+b.avgSgov)&&+b.avgSgov>0?+b.avgSgov:null,
-    cash:Number.isFinite(+b.cash)?+b.cash:0,invalid:false,error:""
+    cash:Number.isFinite(+b.cash)?+b.cash:0,minCash:Number.isFinite(+b.cash)?+b.cash:0,invalid:false,error:""
   };
   for(const e of alphaEventList(ledger)){
     if(e.type==='reconcile'&&e.snapshot){
@@ -1707,10 +1729,10 @@ function alphaLedgerCalc(ledger=alphaLedger){
     if(e.side==='buy'){
       const oldQ=S[k],oldAvg=S[ak];
       S[ak]=oldQ===0?p:(Number.isFinite(oldAvg)?(oldQ*oldAvg+q*p)/(oldQ+q):null);
-      S[k]+=q;S.cash-=q*p+fee;
+      S[k]+=q;S.cash-=q*p+fee;S.minCash=Math.min(S.minCash,S.cash);
     }else if(e.side==='sell'){
       if(q>S[k]){S.invalid=true;S.error=String(e.date||'')+' '+sym+' 매도 '+q+'주 > 당시 보유 '+S[k]+'주';}
-      S[k]=Math.max(0,S[k]-q);if(S[k]===0)S[ak]=null;S.cash+=q*p-fee;
+      S[k]=Math.max(0,S[k]-q);if(S[k]===0)S[ak]=null;S.cash+=q*p-fee;S.minCash=Math.min(S.minCash,S.cash);
     }
   }
   return S;
@@ -1734,6 +1756,27 @@ function renderAlphaLedger(){
   if($('alphaAcctTeclAvg'))$('alphaAcctTeclAvg').textContent=alphaAvgText(S.tecl,S.avgTecl);
   if($('alphaAcctTqqqAvg'))$('alphaAcctTqqqAvg').textContent=alphaAvgText(S.tqqq,S.avgTqqq);
   if($('alphaAcctSgovAvg'))$('alphaAcctSgovAvg').textContent=alphaAvgText(S.sgov,S.avgSgov);
+  const accountRows=[['TECL','tecl','avgTecl'],['TQQQ','tqqq','avgTqqq'],['SGOV','sgov','avgSgov']];
+  let costTotal=0,marketTotal=0,pnlTotal=0,knownCost=true;
+  for(const [sym,qk,ak] of accountRows){
+    const q=S[qk],avg=S[ak],L=liveQuotes[sym],px=L&&+L.price>0?+L.price:(L&&L.settled?+L.settled.close:0),mv=q*px,known=q===0||Number.isFinite(avg);
+    if(q>0&&Number.isFinite(avg))costTotal+=q*avg;else if(q>0)knownCost=false;
+    if(px>0)marketTotal+=mv;
+    const pnl=(q>0&&px>0&&Number.isFinite(avg))?(px-avg)*q:null,ret=(q>0&&px>0&&Number.isFinite(avg)&&avg>0)?(px/avg-1)*100:null;
+    if(Number.isFinite(pnl))pnlTotal+=pnl;
+    const cap=sym[0]+sym.slice(1).toLowerCase(),pxEl=$('alphaAcct'+cap+'Px'),plEl=$('alphaAcct'+cap+'Pl'),mvEl=$('alphaAcct'+cap+'Mv');
+    if(pxEl)pxEl.textContent=px>0?'현재가 '+usd(px):'현재가 불러오는 중';
+    if(plEl){plEl.textContent=Number.isFinite(ret)?((pnl>=0?'+':'')+usd(pnl)+' · '+(ret>=0?'+':'')+ret.toFixed(2)+'%'):'수익률 —';plEl.className='pl '+(Number.isFinite(pnl)?(pnl>=0?'pos':'neg'):'');}
+    if(mvEl)mvEl.textContent=px>0?'평가금액 '+usd(mv):'평가금액 —';
+  }
+  const assetTotal=marketTotal+S.cash,retTotal=costTotal>0?pnlTotal/costTotal*100:null;
+  if($('alphaCostTotal'))$('alphaCostTotal').textContent=knownCost?usd(costTotal):usd(costTotal)+'*';
+  if($('alphaMarketTotal'))$('alphaMarketTotal').textContent=usd(marketTotal);
+  if($('alphaPnlTotal')){$('alphaPnlTotal').textContent=(pnlTotal>=0?'+':'')+usd(pnlTotal);$('alphaPnlTotal').className='v '+(pnlTotal>=0?'pos':'neg');}
+  if($('alphaReturnTotal')){$('alphaReturnTotal').textContent=Number.isFinite(retTotal)?((retTotal>=0?'+':'')+retTotal.toFixed(2)+'%'):'—';$('alphaReturnTotal').className='v '+(Number.isFinite(retTotal)?(retTotal>=0?'pos':'neg'):'');}
+  if($('alphaAssetTotal'))$('alphaAssetTotal').textContent=usd(assetTotal);
+  if($('alphaAcctCashState')){$('alphaAcctCashState').textContent=S.cash<0?'현금 부족 '+usd(Math.abs(S.cash)):'사용가능 '+usd(S.cash);$('alphaAcctCashState').className='pl '+(S.cash<0?'neg':'pos');}
+  if($('alphaCashWarn')){const bad=S.cash<-.005;$('alphaCashWarn').hidden=!bad;if(bad)$('alphaCashWarn').textContent='현금이 '+usd(S.cash)+'입니다. 기록된 매수금액+수수료가 시작 현금을 초과했습니다. 거래이력 또는 시작잔고를 실제 토스 계좌와 맞게 수정하세요.';}
   if($('alphaLedgerBody')){
     const rows=ev.map(e=>{
       const actions='<button class="btn" style="min-height:28px;padding:3px 7px;font-size:10px" data-aedit="'+e.id+'">수정</button> <button class="ledger-del" data-aeid="'+e.id+'">✕</button>';
@@ -1763,12 +1806,14 @@ async function alphaSaveFills(){
     if(q>o.qty){alert(o.sym+' 실제 수량이 주문수량 '+o.qty+'주보다 큽니다.');return;}
     if(q===0)continue;
     if(!(p>0)){alert(o.sym+' 실제 체결가를 입력하세요.');return;}
-    const k=o.sym==='TECL'?'tecl':o.sym==='TQQQ'?'tqqq':'sgov',fee=q*p*FEE;
+    const k=o.sym==='TECL'?'tecl':o.sym==='TQQQ'?'tqqq':'sgov',fee=alphaFee(q,p);
     if(o.side==='sell'&&q>next[k]){alert(o.sym+' 보유수량보다 많이 매도할 수 없습니다.');return;}
     if(o.side==='buy'){next[k]+=q;next.cash-=q*p+fee;}else{next[k]-=q;next.cash+=q*p-fee;}
-    events.push({id:Date.now()+'_'+i,type:'trade',date,symbol:o.sym,side:o.side,qty:q,price:p,fee});
+    events.push({id:Date.now()+'_'+i,type:'trade',date,symbol:o.sym,side:o.side,qty:q,price:p,fee,feeRate:ALPHA_FEE_RATE});
   }
   if(!events.length){alert('체결된 주문이 없습니다. 미체결이면 저장하지 않아도 됩니다.');return;}
+  const candidate=JSON.parse(JSON.stringify(alphaLedger));candidate.events.push(...events);const chk=alphaLedgerCalc(candidate);
+  if(chk.cash<-.005){alert('현금이 '+usd(chk.cash)+'가 되어 저장할 수 없습니다. 실제 체결수량·체결가 또는 시작자금을 확인하세요.');return;}
   alphaLedger.events.push(...events);alphaCloseFillEditor();alphaSyncInputs();renderAlphaLedger();localSave();refreshAlphaFromCache();await cloudSave();
 }
 function alphaCloseEdit(){
@@ -1797,9 +1842,10 @@ async function alphaSaveEdit(){
     const ce=(candidate.events||[]).find(x=>String(x.id)===String(id));if(!ce||ce.type!=='trade')return;
     const date=$('alphaEditDate').value,sym=$('alphaEditSymbol').value,side=$('alphaEditSide').value,q=Math.max(0,Math.floor(num('alphaEditQty'))),p=num('alphaEditPrice');
     if(!date||!['TECL','TQQQ','SGOV'].includes(sym)||!['buy','sell'].includes(side)||!(q>0)||!(p>0)){alert('날짜·종목·구분·수량·체결가를 확인하세요.');return;}
-    ce.date=date;ce.symbol=sym;ce.side=side;ce.qty=q;ce.price=p;ce.fee=q*p*FEE;
+    ce.date=date;ce.symbol=sym;ce.side=side;ce.qty=q;ce.price=p;ce.fee=alphaFee(q,p);ce.feeRate=ALPHA_FEE_RATE;
   }
-  const chk=alphaLedgerCalc(candidate);if(chk.invalid){alert('수정할 수 없습니다. '+chk.error);return;}
+  const curChk=alphaLedgerCalc(alphaLedger),chk=alphaLedgerCalc(candidate);if(chk.invalid){alert('수정할 수 없습니다. '+chk.error);return;}
+  if(chk.cash<-.005 && chk.cash<curChk.cash-.005){alert('수정하면 현금 부족이 더 커져 저장할 수 없습니다. 현재 '+usd(curChk.cash)+' → 수정 후 '+usd(chk.cash));return;}
   alphaLedger=candidate;alphaCloseEdit();alphaSyncInputs();renderAlphaLedger();localSave();refreshAlphaFromCache();await cloudSave();
 }
 async function alphaDeleteEvent(id){
@@ -1812,7 +1858,7 @@ async function alphaDeleteEvent(id){
 async function alphaResetLedger(){
   const cap=Math.max(1,num('startCapital',20000));
   if(!confirm('A안 거래이력과 보유량을 모두 초기화하고 현금 '+usd(cap)+'에서 새로 시작할까요?'))return;
-  alphaLedger={base:{date:todayISO(),tecl:0,tqqq:0,sgov:0,cash:cap,avgTecl:null,avgTqqq:null,avgSgov:null},events:[]};pendingAlphaOrders=[];alphaCloseFillEditor();alphaCloseEdit();alphaSyncInputs();renderAlphaLedger();localSave();await cloudSave();refreshLive();
+  alphaLedger={base:{date:todayISO(),tecl:0,tqqq:0,sgov:0,cash:cap,avgTecl:null,avgTqqq:null,avgSgov:null},events:[],feeModel:"toss-us-0.1-v1"};pendingAlphaOrders=[];alphaCloseFillEditor();alphaCloseEdit();alphaSyncInputs();renderAlphaLedger();localSave();await cloudSave();refreshLive();
 }
 function monthsLeft(){
   const d=Math.max(0,days(todayISO(),$("targetDate").value));return Math.ceil(d/30.4375);
