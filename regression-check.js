@@ -7571,8 +7571,8 @@ console.log('\n[116] 7차 D11 — 분배금 세전·세후 표기');
 }
 
 
-/* ════ 117. 5년 플랜 v1.15.2 — 가변 초기자금 유지 · VR 첫매수 현금보존 ════ */
-console.log('\n[117] 5년 플랜 v1.15.2 — 가변 초기자금 새로고침 유지 · VR 초기 현금보존');
+/* ════ 117. 5년 플랜 v1.15.3 — 종목별 매수금액 표시 · VR 첫매수 현금보존 ════ */
+console.log('\n[117] 5년 플랜 v1.15.3 — 종목별 매수금액 표시 · VR 초기 현금보존');
 {
   const pl=fs.readFileSync(__d+'/plan.html','utf8');
   ok('5년 플랜 시작금 기본값은 $20,000', /startCapital:20000/.test(pl) && /aCash:20000/.test(pl));
@@ -7597,6 +7597,13 @@ console.log('\n[117] 5년 플랜 v1.15.2 — 가변 초기자금 새로고침 �
      && /else if\(local\)\{/.test(pl)
      && /이 기기 저장값 유지/.test(pl)
      && /await cloudSave\(\)/.test(pl));
+  ok('PATH A 주문에 종목별 목표금액·오늘 매수금액·수수료포함 필요현금 표시',
+     /목표 보유금액:/.test(pl)
+     && /오늘 매수금액:/.test(pl)
+     && /수수료 포함 필요현금 약/.test(pl)
+     && /const teclAmt=targetTq\*tp,tqqqAmt=targetQq\*qp,sgovAmt=targetSq\*sp/.test(pl)
+     && /const buyMap=\{TECL:0,TQQQ:0,SGOV:0\}/.test(pl)
+     && /gross=Math\.max\(0,qty\*price\),fee=gross\*FEE/.test(pl));
   ok('PATH B 롤링5년 기본값 — SOXL 60% 20분할 +20% 리버스OFF',
      /a=\[60,40,0\],inf=Math\.round\(total\*\.60\)/.test(pl)
      && /classic:\{infWeight:\.60,vrWeight:\.40,infDiv:20,infTarget:20,infBig:15,infReverse:false,vrG:5,vrBand:30,vrFormula:'basic'/.test(pl)
