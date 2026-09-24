@@ -7817,13 +7817,14 @@ console.log('\n[117] 5년 플랜 v1.19.0 — A 전략설명·리밸런싱 근거
      && /guardClose\.push\(\+qr\[i\]\.close\);guardMa\.push\(mv\)/.test(pl)
      && /오늘 판단: '\+\(needRebalance\?'리밸런싱\/상태조정':'유지'\)/.test(pl)
      && /장중가격은 신호가 아니라 주문수량 추정에만 사용/.test(pl));
-  ok('초기자금 입력이 A 현금·주문기준과 B 50:50 배정을 자동 변경',
+  ok('A 초기자금은 입력만으로 장부를 바꾸지 않고 초기화 때 확정 · B 배정은 확정 startCapital 기준',
      /const startCap=Math\.max\(1,num\('startCapital',20000\)\)/.test(pl)
      && /signalTotal=startCap;\$\('aCash'\)\.value=startCap/.test(pl)
      && /bInf=Math\.round\(cap\*PATH_DEFAULTS\.classic\.infWeight\),bVr=Math\.max\(0,cap-bInf\)/.test(pl)
-     && /\$\("alphaCapitalInput"\)\.addEventListener\("change"/.test(pl)
-     && /if\(virgin\)alphaLedger\.base\.cash=cap/.test(pl)
-     && /\$\("startCapital"\)\.value=cap/.test(pl));
+     && /\$\("alphaCapitalInput"\)\.addEventListener\("input",\(\)=>\{\s*\$\("alphaCapitalInput"\)\.dataset\.dirty='1';\s*\}\)/.test(pl)
+     && !/\$\("alphaCapitalInput"\)\.addEventListener\("change"/.test(pl)
+     && /const cap=Math\.max\(1,Math\.round\(Number\(\$\('alphaCapitalInput'\)\.value\)\|\|0\)\)/.test(pl)
+     && /\$\('startCapital'\)\.value=cap/.test(pl));
   ok('새로고침 시 로컬 초기자금 우선 · 클라우드 예전값이 덮어쓰지 않음',
      /let local=null;try\{local=JSON\.parse\(localStorage\.getItem\(KEY\)\|\|"null"\)\}catch\(e\)\{\}/.test(pl)
      && /if\(!local&&v\)\{/.test(pl)
@@ -8763,8 +8764,18 @@ console.log('\n[123] 5년 플랜 v1.26.0 — 실전 표출순서');
      && /<input type="hidden" id="aTqqqQty">/.test(pl)
      && /<input type="hidden" id="aSgovQty">/.test(pl)
      && /<input type="hidden" id="aCash">/.test(pl));
-  ok('새 투자 시작은 평단까지 초기화',
-     /alphaLedger=\{base:\{date:todayISO\(\),tecl:0,tqqq:0,sgov:0,cash:cap,avgTecl:null,avgTqqq:null,avgSgov:null\},events:\[\],feeModel:"toss-us-0\.1-v1"\}/.test(pl));
+  const pHist=pl.indexOf('id="alphaHistorySection"'),pReset=pl.indexOf('id="alphaResetSection"'),pEvidence=pl.indexOf('id="alphaEvidenceSection"');
+  ok('플랜 시작자금·초기화 컨트롤은 거래이력 아래로 이동',
+     pHist>=0 && pReset>pHist && pEvidence>pReset
+     && /id="alphaReset"[^>]*>초기화<\/button>/.test(pl)
+     && /금액을 입력하고 초기화를 누르면/.test(pl), JSON.stringify([pHist,pReset,pEvidence]));
+  ok('초기화는 입력금액으로 최초 상태 복원 — 현금만 남기고 수량·평단·이력 제거',
+     /const cap=Math\.max\(1,Math\.round\(Number\(\$\('alphaCapitalInput'\)\.value\)\|\|0\)\)/.test(pl)
+     && /\$\('startCapital'\)\.value=cap/.test(pl)
+     && /\$\('startDate'\)\.value=todayISO\(\)/.test(pl)
+     && /alphaLedger=\{base:\{date:todayISO\(\),tecl:0,tqqq:0,sgov:0,cash:cap,avgTecl:null,avgTqqq:null,avgSgov:null\},events:\[\],feeModel:"toss-us-0\.1-v1"\}/.test(pl)
+     && /pendingAlphaOrders=\[\]/.test(pl)
+     && !/새 투자 시작 · 현금/.test(pl));
 }
 
 /* ════ 123. 모의 성과 — 단독 페이지(/paper) ════
@@ -8834,8 +8845,8 @@ console.log('\n[123] 모의 성과 — 단독 페이지(/paper)');
      && /이 페이지를 새로고침하면/.test(idx) && /새로고침하면 재시도합니다/.test(idx) && !/창을 다시 열면 재시도/.test(idx) && !/이 창을 닫았다 다시 열면/.test(idx));
 }
 
-/* ════ 124. 5년 플랜 v1.26.2 — 현재계좌 실시간 평가·현금 정합성 ════ */
-console.log('\n[124] 5년 플랜 v1.26.2 — 현재계좌 실시간 평가·현금 정합성');
+/* ════ 124. 5년 플랜 v1.26.3 — 현재계좌 실시간 평가·초기화 정합성 ════ */
+console.log('\n[124] 5년 플랜 v1.26.3 — 현재계좌 실시간 평가·초기화 정합성');
 {
   const pl=fs.readFileSync(__d+'/plan.html','utf8');
   ok('현재계좌 종목별 평단·현재가·수익률·평가금액을 표시',
