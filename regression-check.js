@@ -7635,8 +7635,8 @@ console.log('\n[116] 7차 D11 — 분배금 세전·세후 표기');
 }
 
 
-/* ════ 117. 5년 플랜 v1.18.0 — 균형성장 A + B · VR 첫매수 현금보존 ════ */
-console.log('\n[117] 5년 플랜 v1.18.0 — 균형성장 A + B · VR 초기 현금보존');
+/* ════ 117. 5년 플랜 v1.19.0 — A 전략설명·리밸런싱 근거 시각화 ════ */
+console.log('\n[117] 5년 플랜 v1.19.0 — A 전략설명·리밸런싱 근거 시각화');
 {
   const pl=fs.readFileSync(__d+'/plan.html','utf8');
   ok('5년 플랜 시작금 기본값은 $20,000', /startCapital:20000/.test(pl) && /aCash:20000/.test(pl));
@@ -7648,6 +7648,27 @@ console.log('\n[117] 5년 플랜 v1.18.0 — 균형성장 A + B · VR 초기 현
      && /127개 시작구간/.test(pl)
      && /function alphaPlanTotal\(\)/.test(pl)
      && /activePlanTab==='alpha'\?\(at==null\?num\("startCapital"\):at\)/.test(pl));
+  ok('PATH A 전략설명 — 역분산 공식·17.5%p 밴드·SMA200 ±1.5 Guard를 텍스트로 노출',
+     /A안 전략 원리/.test(pl)
+     && /w = min\(100%, \(55% ÷ σ15\)²\)/.test(pl)
+     && /17\.5%p/.test(pl)
+     && /SMA200의 \+1\.5%/.test(pl)
+     && /-1\.5%/.test(pl));
+  ok('PATH A 리밸런싱 근거 UI — σ15·목표\/현재·밴드 게이지·Guard 차트·판단문장',
+     /id="alphaSigma"/.test(pl)
+     && /id="alphaTargetW"/.test(pl)
+     && /id="alphaCurrentW"/.test(pl)
+     && /id="alphaTeclGauge"/.test(pl)
+     && /id="alphaWeightChart"/.test(pl)
+     && /id="alphaGuardChart"/.test(pl)
+     && /id="alphaDecision"/.test(pl)
+     && /function alphaSvg\(/.test(pl)
+     && /function alphaWeightHistory\(/.test(pl));
+  ok('PATH A 판단식이 실제 엔진 값과 연결 — TECL gap\/band + TQQQ upper\/lower',
+     /const gap=Math\.abs\(w-sleeveNow\),bandLo=Math\.max\(0,w-D\.ivsBand\),bandHi=Math\.min\(1,w\+D\.ivsBand\)/.test(pl)
+     && /guardClose\.push\(\+qr\[i\]\.close\);guardMa\.push\(mv\)/.test(pl)
+     && /오늘 판단: '\+\(needRebalance\?'리밸런싱\/상태조정':'유지'\)/.test(pl)
+     && /장중가격은 신호가 아니라 주문수량 추정에만 사용/.test(pl));
   ok('초기자금 입력이 A 현금·주문기준과 B 50:50 배정을 자동 변경',
      /const startCap=Math\.max\(1,num\('startCapital',20000\)\)/.test(pl)
      && /signalTotal=startCap;\$\('aCash'\)\.value=startCap/.test(pl)
