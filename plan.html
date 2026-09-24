@@ -153,7 +153,7 @@ th:first-child,td:first-child{text-align:left}
 <body>
 <div class="wrap">
   <div class="top">
-    <div class="brand"><div class="logo">Five Year Plan</div><h1>5년 자산플랜 <span class="ver">v1.15.2</span></h1></div>
+    <div class="brand"><div class="logo">Five Year Plan</div><h1>5년 자산플랜 <span class="ver">v1.15.3</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
       <div class="jkmenu" id="jkmenuWrap">
@@ -1204,8 +1204,11 @@ function realizedVol(rows,n){
   return Math.sqrt(Math.max(v,0)*252);
 }
 function alphaOrderHtml(side,sym,qty,price,note){
-  const c=side==='buy'?'buy':'sell',lab=side==='buy'?'매수':'매도';
-  return '<div class="liveitem '+c+'"><strong>'+lab+' · '+sym+' '+qty+'주</strong><small>현재가 '+usd(price)+' 기준 예상수량 · 실제 체결가는 주문 시점 가격 · '+(note||'목표비중 조정')+'</small></div>';
+  const c=side==='buy'?'buy':'sell',lab=side==='buy'?'매수':'매도',gross=Math.max(0,qty*price),fee=gross*FEE,net=side==='buy'?gross+fee:gross-fee;
+  const money=side==='buy'
+    ? '매수금액 '+usd(gross)+' · 수수료 포함 필요현금 약 '+usd(net)
+    : '매도금액 '+usd(gross)+' · 수수료 차감 예상유입 약 '+usd(net);
+  return '<div class="liveitem '+c+'"><strong>'+lab+' · '+sym+' '+qty+'주 · '+usd(gross)+'</strong><small>'+money+' · 현재가 '+usd(price)+' 기준 예상수량 · 실제 체결가는 주문 시점 가격 · '+(note||'목표비중 조정')+'</small></div>';
 }
 function renderAlphaPlan(qTecl,qTqqq,qSgov){
   if(!qTecl||!qTqqq||!qSgov||!qTecl.settled||!qTqqq.settled||!qSgov.settled)return;
@@ -1241,8 +1244,17 @@ function renderAlphaPlan(qTecl,qTqqq,qSgov){
   }
   $('alphaMeta').textContent='신호 '+qTecl.settled.date+' 확정종가 · TECL σ'+D.ivsLook+' '+(sigma*100).toFixed(1)+'% → 목표 '+(w*100).toFixed(1)+'% ('+(D.teclWeight*100).toFixed(0)+'% 슬리브 내) · TQQQ '+usd(qs)+' / SMA'+D.guardMA+' '+usd(sma)+' · Guard '+guard;
   $('alphaActions').innerHTML=orders.length?orders.map(x=>alphaOrderHtml(x.side,x.sym,x.qty,x.price,x.note)).join(''):waitHtml('오늘 주문 없음','TECL 밴드와 TQQQ Guard 모두 유지 구간입니다.');
-  const tw=targetTq*tp/signalTotal*100,qw=targetQq*qp/signalTotal*100,sw=Math.max(0,100-tw-qw);
-  $('alphaSummary').innerHTML='<b>목표:</b> TECL '+tw.toFixed(1)+'% · TQQQ '+qw.toFixed(1)+'% · SGOV/현금 '+sw.toFixed(1)+'% · 신호기준 평가액 '+usd(signalTotal)+'<br><b>트리거:</b> TECL '+(teclHit?'리밸런싱':'유지')+' · TQQQ '+(guardFlip?'상태전환 '+guard:'유지 '+guard)+'<br><span class="sub">주문 수량은 현재가와 수수료 0.25%를 반영한 예상치입니다. 주문 직전 새로고침하세요.</span>';
+  const teclAmt=targetTq*tp,tqqqAmt=targetQq*qp,sgovAmt=targetSq*sp;
+  const tw=teclAmt/signalTotal*100,qw=tqqqAmt/signalTotal*100,sw=Math.max(0,100-tw-qw);
+  const buyMap={TECL:0,TQQQ:0,SGOV:0},buyFee={TECL:0,TQQQ:0,SGOV:0};
+  for(const o of orders){if(o.side==='buy'){const g=o.qty*o.price;buyMap[o.sym]=(buyMap[o.sym]||0)+g;buyFee[o.sym]=(buyFee[o.sym]||0)+g*FEE;}}
+  const totalBuy=buyMap.TECL+buyMap.TQQQ+buyMap.SGOV,totalNeed=totalBuy+buyFee.TECL+buyFee.TQQQ+buyFee.SGOV;
+  $('alphaSummary').innerHTML=
+    '<b>목표 보유금액:</b> TECL '+usd(teclAmt)+' · TQQQ '+usd(tqqqAmt)+' · SGOV '+usd(sgovAmt)+' · 잔여현금 약 '+usd(Math.max(0,signalTotal-teclAmt-tqqqAmt-sgovAmt))+
+    '<br><b>목표비중:</b> TECL '+tw.toFixed(1)+'% · TQQQ '+qw.toFixed(1)+'% · SGOV/현금 '+sw.toFixed(1)+'% · 신호기준 평가액 '+usd(signalTotal)+
+    '<br><b>오늘 매수금액:</b> TECL '+usd(buyMap.TECL)+' · TQQQ '+usd(buyMap.TQQQ)+' · SGOV '+usd(buyMap.SGOV)+' · 합계 '+usd(totalBuy)+' · <b>수수료 포함 필요현금 약 '+usd(totalNeed)+'</b>'+
+    '<br><b>트리거:</b> TECL '+(teclHit?'리밸런싱':'유지')+' · TQQQ '+(guardFlip?'상태전환 '+guard:'유지 '+guard)+
+    '<br><span class="sub">주문 수량·금액은 현재가와 수수료 0.25%를 반영한 예상치입니다. 주문 직전 새로고침하세요.</span>';
 }
 function refreshAlphaFromCache(){if(liveQuotes.TECL&&liveQuotes.TQQQ&&liveQuotes.SGOV)renderAlphaPlan(liveQuotes.TECL,liveQuotes.TQQQ,liveQuotes.SGOV);}
 function ledgerReady(){return sleeveLedger.startQLD>0||sleeveLedger.startSGOV>0||sleeveLedger.startCash!==0||(sleeveLedger.trades||[]).length>0;}
