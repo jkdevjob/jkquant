@@ -654,8 +654,8 @@ function applyInitialBalances(a){
   }
 }
 function initialPlanAllocation(){
-  const entered=num('startCapital'),total=entered>0?entered:30000,a=[60,40,0],inf=Math.round(total*.60);
-  if(entered<=0 && $('startCapital'))$('startCapital').value=30000;
+  const entered=num('startCapital'),total=entered>0?entered:20000,a=[60,40,0],inf=Math.round(total*.60);
+  if(entered<=0 && $('startCapital'))$('startCapital').value=20000;
   return {ready:true,total,inf,vr:Math.max(0,total-inf),sleeve:0,weights:a};
 }
 function updateInitialAllocationPreview(){
@@ -1166,7 +1166,8 @@ function renderAlphaPlan(qTecl,qTqqq,qSgov){
   const tp=(+qTecl.price>0?+qTecl.price:ts),qp=(+qTqqq.price>0?+qTqqq.price:qs),sp=(+qSgov.price>0?+qSgov.price:ss);
   if(!(sigma>0)||!(sma>0)||!(ts>0)||!(qs>0)||!(ss>0)||!(tp>0)||!(qp>0)||!(sp>0)){if($('alphaMeta'))$('alphaMeta').textContent='지표 계산에 필요한 이력이 부족합니다.';return;}
   const tq=Math.max(0,Math.floor(num('aTeclQty'))),qq=Math.max(0,Math.floor(num('aTqqqQty'))),sq=Math.max(0,Math.floor(num('aSgovQty'))),cash=num('aCash');
-  let signalTotal=tq*ts+qq*qs+sq*ss+cash;if(!(signalTotal>0)){signalTotal=30000;$('aCash').value=30000;}
+  if($('alphaStartState'))$('alphaStartState').textContent=(tq===0&&qq===0&&sq===0&&Math.abs(cash-20000)<1?'신규 시작 상태 · 현금 $20,000에서 오늘 주문을 계산합니다.':'운용 중 · 현재 보유수량/현금을 기준으로 필요한 주문만 표시합니다.');
+  let signalTotal=tq*ts+qq*qs+sq*ss+cash;if(!(signalTotal>0)){signalTotal=20000;$('aCash').value=20000;}
   const w=Math.min(1,(D.ivsS0*D.ivsS0)/(sigma*sigma)),curTeclW=(tq*ts)/signalTotal,sleeveNow=curTeclW/Math.max(D.teclWeight,1e-9);
   const teclHit=tq===0||Math.abs(w-sleeveNow)>D.ivsBand;
   const upper=sma*(1+D.guardBand),lower=sma*(1-D.guardBand),posOn=qq>0,guard=(qs>upper?'ON':qs<lower?'OFF':(posOn?'ON':'OFF'));
@@ -1343,8 +1344,8 @@ async function refreshLive(){
 
 function defaults(){
   const s=todayISO(),t=plusYears(s,5);
-  return {startDate:s,targetDate:t,startCapital:30000,targetCapital:150000,monthlyAdd:0,targetIncome:2000,stageMode:"auto",
-    aTeclQty:0,aTqqqQty:0,aSgovQty:0,aCash:30000,
+  return {startDate:s,targetDate:t,startCapital:20000,targetCapital:150000,monthlyAdd:0,targetIncome:2000,stageMode:"auto",
+    aTeclQty:0,aTqqqQty:0,aSgovQty:0,aCash:20000,
     balMM:0,balVR:0,balQLD:0,balSGOV:0,cagrLow:8,cagrBase:15,cagrHigh:22,
     incomeBasis:150000,incomeYield:8,sgovYield:4,extraWithdraw:0,autoBalances:true,autoSleeve:true,
     planLinks:{inf:"",vr:"",sleeve:""},sleeveSessions:[],sleeveLedger:{startQLD:0,startSGOV:0,startCash:0,trades:[]}};
@@ -1481,7 +1482,7 @@ function setPlanBaseline(){
 }
 function seed(){
   if(autoBalanceEnabled()){alert("운영장부 자동연동 중에는 SOXL·TQQQ 실제 운용자산을 임의 비중으로 덮어쓰지 않습니다. 자동연동을 끈 뒤 수동 시뮬레이션에서 사용하세요.");return;}
-  const total=Math.max(0,num("balMM")+num("balVR")+num("balQLD")+num("balSGOV"))||30000;
+  const total=Math.max(0,num("balMM")+num("balVR")+num("balQLD")+num("balSGOV"))||20000;
   $("balMM").value=Math.round(total*.33);$("balVR").value=Math.round(total*.33);$("balQLD").value=Math.round(total*.17);$("balSGOV").value=Math.round(total*.17);render();
 }
 async function cloudSave(){
@@ -1506,13 +1507,17 @@ function userBadge(user){
 }
 
 const d=defaults();let saved=null;try{saved=JSON.parse(localStorage.getItem(KEY)||"null")}catch(e){}
-if(saved && !(Number(saved.startCapital)>0)) saved.startCapital=30000;
-if(saved && saved.aCash===undefined) saved.aCash=30000;
+if(saved && !(Number(saved.startCapital)>0)) saved.startCapital=20000;
+if(saved && saved.aCash===undefined) saved.aCash=20000;
+if(saved && Number(saved.startCapital)===30000 && Number(saved.aCash)===30000
+   && !(Number(saved.aTeclQty)>0) && !(Number(saved.aTqqqQty)>0) && !(Number(saved.aSgovQty)>0)){
+  saved.startCapital=20000;saved.aCash=20000;
+}
 apply(saved||d);$("slDate").value=todayISO();renderSessionSelectors();renderLedger();render();
 ["startDate","targetDate","startCapital","targetCapital","monthlyAdd","targetIncome","stageMode","balMM","balVR","balQLD","balSGOV","cagrLow","cagrBase","cagrHigh","incomeBasis","incomeYield","sgovYield","extraWithdraw"].forEach(id=>$(id).addEventListener("change",render));
 ["aTeclQty","aTqqqQty","aSgovQty","aCash"].forEach(id=>$(id).addEventListener("change",()=>{localSave();refreshAlphaFromCache();}));
 $("alphaRefresh").addEventListener("click",refreshLive);
-$("alphaReset").addEventListener("click",()=>{$("aTeclQty").value=0;$("aTqqqQty").value=0;$("aSgovQty").value=0;$("aCash").value=30000;localSave();refreshLive();});
+$("alphaReset").addEventListener("click",()=>{$("aTeclQty").value=0;$("aTqqqQty").value=0;$("aSgovQty").value=0;$("aCash").value=20000;localSave();refreshLive();});
 $("classicRefresh").addEventListener("click",refreshLive);
 $("bCreateBoth").addEventListener("click",createClassicPlanSessions);
 $("bSoxlCreate").addEventListener("click",createPlanInfSession);
