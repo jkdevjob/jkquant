@@ -7923,6 +7923,19 @@ console.log('\n[118] 제8차 감사 대응 — SOURCE GOLDEN / ENGINE PARITY');
        /function noteVrBothTouch\(results, rerun\)/.test(bt) && /양방향 터치 \$\{parts\.join\(' · '\)\}/.test(bt)
        && /noteVrBothTouch\(results, t=>runVR\(commonD,t,\{[^}]*order:'buy-first'\}\)\);/.test(bt)); }
 
+  /* ───────── D12 (사용자 결정 · 09-24) — 리버스 기본값은 끔 유지, 대신 'V4.0 변형' 으로 표시 ─────────
+     공식(문서의 V4.0 일반모드)은 '소진 → 리버스' 다. 기본값을 끔으로 두는 건 백테 성적을 본 사용자 선택이라
+     공식처럼 보이면 안 된다 — 기본값은 끔인 채로, 설정·주문표가 그걸 '변형' 이라고 부르는지 값으로 묶는다. */
+  { const d=new Function([(idx.match(/const IM_BIG_DEFAULT=[^\n]*/)||[''])[0], (idx.match(/const REV_GAP_DEF=[^\n]*/)||[''])[0],
+                          extractFn(idx,'function defInfSettings()'), 'return defInfSettings();'].join('\n'))();
+    const R=new Function('IM_OFFICIAL','revSupported','IM_BIG_DEFAULT', (idx.match(/const REV_GAP_DEF=[^\n]*/)||[''])[0]+'\n'
+      +fnOf(idx,['function revGapOf(st)','function imVariantOf(cfg)','function imRuleOf(st)'])+'\nreturn imRuleOf;')(IM_OFFICIAL, revSupported, 15);
+    ok('D12 사용자 결정 — 앱 신규 무매 세션의 리버스 기본값은 끔 (값)', d.reverse!==true, JSON.stringify(d.reverse));
+    ok('D12 — 그 기본값은 주문표 규칙 줄에 V4.0 변형 · 리버스 OFF 로 뜬다 (값)', JSON.stringify(R(d))==='["리버스 OFF"]', JSON.stringify(R(d)));
+    ok('D12 — 설정 안내·백테 버튼이 끔 = V4.0 변형 · 켬 = V4.0 공식으로 적는다',
+       /끔\(기본 · <b>V4\.0 변형<\/b>\)/.test(idx) && /켬\(<b>V4\.0 공식<\/b>\)/.test(idx)
+       && /유리\(기본 · V4\.0 변형 — 문서의 공식 규칙은 켬\)/.test(bt)); }
+
   /* ───────── 7. 문구 — '완전 동일' 이라고 쓰지 않는다 (D9·D10 이 열려 있다) ───────── */
   { const doc=fs.existsSync(__d+'/AUDIT-SELF-REVIEW.md')?fs.readFileSync(__d+'/AUDIT-SELF-REVIEW.md','utf8'):'';
     const bad=[idx,bt,pl,doc].some(s=>/모든 전략[^\n]{0,20}완전 동일|운영·모의·백테 완전 동일/.test(s.replace(/'모든 전략 운영·모의·백테 완전 동일'[^\n]*/g,'')));
