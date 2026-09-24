@@ -7635,20 +7635,20 @@ console.log('\n[116] 7차 D11 — 분배금 세전·세후 표기');
 }
 
 
-/* ════ 117. 5년 플랜 v1.16.0 — 강건 A + 최적 B 배분 · VR 첫매수 현금보존 ════ */
-console.log('\n[117] 5년 플랜 v1.16.0 — 강건 A + 최적 B 배분 · VR 초기 현금보존');
+/* ════ 117. 5년 플랜 v1.18.0 — 균형성장 A + B · VR 첫매수 현금보존 ════ */
+console.log('\n[117] 5년 플랜 v1.18.0 — 균형성장 A + B · VR 초기 현금보존');
 {
   const pl=fs.readFileSync(__d+'/plan.html','utf8');
   ok('5년 플랜 시작금 기본값은 $20,000', /startCapital:20000/.test(pl) && /aCash:20000/.test(pl));
-  ok('PATH A 롤링5년 기본값 — TECL 60% N20 s0 60 밴드10 + TQQQ 40% SMA200 ±1.0',
-     /alpha:\{teclWeight:\.60,guardWeight:\.40,ivsLook:20,ivsS0:\.60,ivsBand:\.10,guardMA:200,guardBand:\.01\}/.test(pl));
+  ok('PATH A 균형성장 — TECL 70% N15 s0 55 밴드17.5 + TQQQ 30% SMA200 ±1.5',
+     /alpha:\{teclWeight:\.70,guardWeight:\.30,ivsLook:15,ivsS0:\.55,ivsBand:\.175,guardMA:200,guardBand:\.015\}/.test(pl));
   ok('PATH A 첫날 실행 UI — 초기자금 입력 · 127개 롤링 검증 · 자체 잔고 진행률',
      /id="alphaCapitalInput"/.test(pl)
      && /id="alphaStartHoldings"/.test(pl)
      && /127개 시작구간/.test(pl)
      && /function alphaPlanTotal\(\)/.test(pl)
      && /activePlanTab==='alpha'\?\(at==null\?num\("startCapital"\):at\)/.test(pl));
-  ok('초기자금 입력이 A 현금·주문기준과 B 42:58 배정을 자동 변경',
+  ok('초기자금 입력이 A 현금·주문기준과 B 50:50 배정을 자동 변경',
      /const startCap=Math\.max\(1,num\('startCapital',20000\)\)/.test(pl)
      && /signalTotal=startCap;\$\('aCash'\)\.value=startCap/.test(pl)
      && /bInf=Math\.round\(cap\*PATH_DEFAULTS\.classic\.infWeight\),bVr=Math\.max\(0,cap-bInf\)/.test(pl)
@@ -7668,14 +7668,15 @@ console.log('\n[117] 5년 플랜 v1.16.0 — 강건 A + 최적 B 배분 · VR �
      && /const teclAmt=targetTq\*tp,tqqqAmt=targetQq\*qp,sgovAmt=targetSq\*sp/.test(pl)
      && /const buyMap=\{TECL:0,TQQQ:0,SGOV:0\}/.test(pl)
      && /gross=Math\.max\(0,qty\*price\),fee=gross\*FEE/.test(pl));
-  ok('PATH B 강건 배분 — SOXL 무매 42% + TECL VR 58%',
-     /a=\[42,58,0\],inf=Math\.round\(total\*PATH_DEFAULTS\.classic\.infWeight\)/.test(pl)
-     && /classic:\{infWeight:\.42,vrWeight:\.58,infDiv:20,infTarget:20,infBig:15,infReverse:false,vrG:10,vrBand:30,vrFormula:'basic'/.test(pl)
-     && /ticker:'SOXL',div:20,target:20,big:15,reverse:false,compound:true/.test(pl));
-  ok('PATH B TECL VR — Basic G10 ±30 · 초기주식60\/Pool40 · v8',
+  ok('PATH B 균형성장 배분 — SOXL 무매 50% + TECL VR 50%',
+     /a=\[50,50,0\],inf=Math\.round\(total\*PATH_DEFAULTS\.classic\.infWeight\)/.test(pl)
+     && /classic:\{infWeight:\.50,vrWeight:\.50,infDiv:20,infTarget:20,infBig:12\.5,infReverse:false,infRows:12,vrG:11,vrBand:35,vrFormula:'basic'/.test(pl)
+     && /ticker:'SOXL',div:PATH_DEFAULTS\.classic\.infDiv,target:PATH_DEFAULTS\.classic\.infTarget,big:PATH_DEFAULTS\.classic\.infBig,reverse:PATH_DEFAULTS\.classic\.infReverse,compound:true/.test(pl)
+     && /rows:PATH_DEFAULTS\.classic\.infRows/.test(pl));
+  ok('PATH B TECL VR — Basic G11 ±35 · 초기주식60\/Pool40 · v9',
      /ticker:'TECL',mode:\.5,formula:'basic',g:PATH_DEFAULTS\.classic\.vrG,initAmt,add:0,[\s\S]{0,100}band:PATH_DEFAULTS\.classic\.vrBand/.test(pl)
-     && /planInitStockPct:Math\.round\(initPct\*100\),planPresetVersion:8/.test(pl)
-     && /PATH B 강건값: VR 5\.0 기본식 · G10 · ±30 · 초기 주식60\/Pool40/.test(pl));
+     && /planInitStockPct:Math\.round\(initPct\*100\),planPresetVersion:9/.test(pl)
+     && /PATH B 균형성장값: VR 5\.0 기본식 · G11 · ±35 · 초기 주식60\/Pool40/.test(pl));
 
   const usd=v=>'$'+Math.round(v||0), FEE=.0025;
   const calcVrState=new Function('return ('+extractFn(pl,'function calcVrState(sess)').replace(/^function calcVrState\(/,'function (')+')')();
