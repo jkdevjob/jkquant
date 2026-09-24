@@ -85,7 +85,7 @@ export function imBuyOrders(o){
     const p=cap(p0); if(!(p>0)) return; if(p<lo) lo=p;
     const q=Math.min(Math.floor(alloc/f1/p+1e-9)-(have||0), Math.floor(res/f1/p+1e-9));
     if(q>=1){ out.push({kind, name, price:p, q, dT, ladder:false, capped:o.cap>0&&p0>o.cap, orig:p0}); res-=q*p*f1; } };
-  if(o.first) main('처음매수', o.firstPrice, o.buy1, 1, '1회매수');
+  if(o.first) main('처음매수', vrTickDn(o.firstPrice, o.cur), o.buy1, 1, '1회매수');   // 큰수 가격도 호가 내림 (45.93×1.12 = 51.4416 → 51.44)
   else if(o.half){ main('별지점 매수', o.starPrice, o.buy1/2, 0.5, '절반매수');
                    main('평단 매수', o.avg, o.buy1, 0.5, '절반매수', held()); }
   else main('별지점 매수 (전액)', o.starPrice, o.buy1, 1, '1회매수');
@@ -235,11 +235,19 @@ export function imMomOf(days) {
 }
 export function imTgtOf(base, mom) { return (mom != null && mom > IM_MOM_TH) ? Math.min(base * 2, IM_MOM_CAP) : base; }
 
+function exitMulOf(base){ return 1-((base!=null&&base>0)?base:20)/100; }
+/* 리버스 종료가 확정됐는가 — 원문 리버스 6-(2): 종가가 평단 대비 −15%(TQQQ)·−20%(SOXL) 위로 올라온 것을 확인하면
+   그 다음부터 일반모드. 리버스로 하루 이상 지난 뒤(1일차 아님)의 확정 종가로만 본다 — 모의·백테와 같은 규약.
+   운영 주문표·서버 자동주문·5년 플랜이 같은 글자로 쓴다 (제11차 7): 복귀 기록 버튼을 안 눌러도 다음 주문은 일반모드여야 한다. */
+function imRevExitDue(c, close, target){ return !!(c && c.reverseActive && !c.reverseDay1 && close>0 && c.avg>0 && close>c.avg*exitMulOf(target)); }
 /* 오늘 낼 주문. index.html renderOrder의 일반모드와 같은 순서·같은 값으로 낸다.
    close = 확정 종가(전일 종가). days = 종가 이력(익절 조절용, 없으면 조절 안 함). */
 export function imOrders({ st, hist, close, days }) {
-  const c = imCompute(st, hist);
+  let c = imCompute(st, hist);
   const out = [];
+  /* 확정 종가가 복귀선 위면 이번 주문은 일반모드 — 장부 끝에 복귀 기록을 가상으로 얹어 다시 센다 (앱 renderOrder 와 같다 · 제11차 7).
+     그래도 T > 분할−1 이면 새 리버스 1일차라 아래에서 건너뛴다(리버스 자동주문 미지원). */
+  if (imRevExitDue(c, close, st.target)) c = imCompute(st, [...(hist || []), { date: "", kind: "리버스복귀", price: close, qty: 0, virtual: true }]);
   if (c.reverseActive) return { orders: out, skip: "리버스모드 — 자동 주문 미지원", c };
   if (!(close > 0)) return { orders: out, skip: "확정 종가 없음", c };
 

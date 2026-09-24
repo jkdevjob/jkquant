@@ -153,7 +153,7 @@ th:first-child,td:first-child{text-align:left}
 <body>
 <div class="wrap">
   <div class="top">
-    <div class="brand"><div class="logo">Five Year Plan</div><h1>5년 자산플랜 <span class="ver">v1.16.0</span></h1></div>
+    <div class="brand"><div class="logo">Five Year Plan</div><h1>5년 자산플랜 <span class="ver">v1.17.0</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
       <div class="jkmenu" id="jkmenuWrap">
@@ -929,8 +929,16 @@ function calcInfState(sess){
   return {st,avg,qty:Math.max(0,qty),T,bal,withdrawn,saved,outside:withdrawn+saved,revState,
     reverseActive:st.reverse===true&&REV_DIVS_PLAN.includes(+st.div)&&revState!=='NORMAL'&&qty>0,reverseDay1:revState==='DAY1'};
 }
+function exitMulOf(base){ return 1-((base!=null&&base>0)?base:20)/100; }
+/* 리버스 종료가 확정됐는가 — 원문 리버스 6-(2): 종가가 평단 대비 −15%(TQQQ)·−20%(SOXL) 위로 올라온 것을 확인하면
+   그 다음부터 일반모드. 리버스로 하루 이상 지난 뒤(1일차 아님)의 확정 종가로만 본다 — 모의·백테와 같은 규약.
+   운영 주문표·서버 자동주문·5년 플랜이 같은 글자로 쓴다 (제11차 7): 복귀 기록 버튼을 안 눌러도 다음 주문은 일반모드여야 한다. */
+function imRevExitDue(c, close, target){ return !!(c && c.reverseActive && !c.reverseDay1 && close>0 && c.avg>0 && close>c.avg*exitMulOf(target)); }
 function imOrders(sess,price,rows){
-  const c=calcInfState(sess),st=c.st,div=+st.div||20,target=+st.target||20,big=st.big!=null?+st.big:15,slot=div-c.T;
+  let c=calcInfState(sess);
+  /* 확정 종가가 복귀선 위면 이번 주문은 일반모드 — 앱 renderOrder·서버와 같은 판정 (제11차 7) */
+  if(imRevExitDue(c,price,(c.st||{}).target)) c=calcInfState({...sess,hist:[...(sess.hist||[]),{date:'',kind:'리버스복귀',price,qty:0,virtual:true}]});
+  const st=c.st,div=+st.div||20,target=+st.target||20,big=st.big!=null?+st.big:15,slot=div-c.T;
   if(!(price>0))return {state:c,orders:[],note:'확정 종가가 없어 주문을 계산하지 못했습니다.'};
   const orders=[];
   if(c.reverseActive){
@@ -1128,7 +1136,7 @@ function imBuyOrders(o){
     const p=cap(p0); if(!(p>0)) return; if(p<lo) lo=p;
     const q=Math.min(Math.floor(alloc/f1/p+1e-9)-(have||0), Math.floor(res/f1/p+1e-9));
     if(q>=1){ out.push({kind, name, price:p, q, dT, ladder:false, capped:o.cap>0&&p0>o.cap, orig:p0}); res-=q*p*f1; } };
-  if(o.first) main('처음매수', o.firstPrice, o.buy1, 1, '1회매수');
+  if(o.first) main('처음매수', vrTickDn(o.firstPrice, o.cur), o.buy1, 1, '1회매수');   // 큰수 가격도 호가 내림 (45.93×1.12 = 51.4416 → 51.44)
   else if(o.half){ main('별지점 매수', o.starPrice, o.buy1/2, 0.5, '절반매수');
                    main('평단 매수', o.avg, o.buy1, 0.5, '절반매수', held()); }
   else main('별지점 매수 (전액)', o.starPrice, o.buy1, 1, '1회매수');
