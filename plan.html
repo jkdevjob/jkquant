@@ -153,7 +153,7 @@ th:first-child,td:first-child{text-align:left}
 <body>
 <div class="wrap">
   <div class="top">
-    <div class="brand"><div class="logo">Five Year Plan</div><h1>5년 자산플랜 <span class="ver">v1.15.1</span></h1></div>
+    <div class="brand"><div class="logo">Five Year Plan</div><h1>5년 자산플랜 <span class="ver">v1.15.2</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
       <div class="jkmenu" id="jkmenuWrap">
@@ -1552,7 +1552,15 @@ async function cloudLoad(user){
   if(!user)return;
   try{
     const snap=await getDoc(doc(db,"users",user.uid)),d=snap.data()||{},v=d.fiveYearPlan;
-    if(v){apply(v);renderSessionSelectors();renderLedger();render();$("saveState").textContent="계정 설정 불러옴";}
+    let local=null;try{local=JSON.parse(localStorage.getItem(KEY)||"null")}catch(e){}
+    // 이 기기에 저장된 5년 플랜이 있으면 사용자가 마지막으로 입력한 로컬 값을 우선한다.
+    // 로컬이 전혀 없는 새 기기에서만 클라우드 fiveYearPlan을 초기값으로 가져온다.
+    if(!local&&v){
+      apply(v);localSave();renderSessionSelectors();renderLedger();render();
+      $("saveState").textContent="계정 설정 불러옴";
+    }else if(local){
+      $("saveState").textContent="이 기기 저장값 유지";
+    }
     if(d.state&&d.state.inf&&d.state.vr){liveState=d.state;liveStateSource="클라우드 운영데이터";}
   }catch(e){}
 }
@@ -1575,12 +1583,13 @@ apply(saved||d);$("slDate").value=todayISO();renderSessionSelectors();renderLedg
 ["startDate","targetDate","startCapital","targetCapital","monthlyAdd","targetIncome","stageMode","balMM","balVR","balQLD","balSGOV","cagrLow","cagrBase","cagrHigh","incomeBasis","incomeYield","sgovYield","extraWithdraw"].forEach(id=>$(id).addEventListener("change",render));
 ["aTeclQty","aTqqqQty","aSgovQty","aCash"].forEach(id=>$(id).addEventListener("change",()=>{localSave();refreshAlphaFromCache();}));
 $("alphaRefresh").addEventListener("click",refreshLive);
-$("alphaCapitalInput").addEventListener("change",()=>{
+$("alphaCapitalInput").addEventListener("change",async()=>{
   const cap=Math.max(1,Math.round(Number($("alphaCapitalInput").value)||0)),old=Math.max(1,num("startCapital",20000));
   const virgin=num("aTeclQty")===0&&num("aTqqqQty")===0&&num("aSgovQty")===0&&(Math.abs(num("aCash")-old)<1||num("aCash")<=0);
   $("startCapital").value=cap;
   if(virgin)$("aCash").value=cap;
-  localSave();render();refreshAlphaFromCache();
+  render();refreshAlphaFromCache();
+  await cloudSave();
 });
 $("alphaReset").addEventListener("click",()=>{
   const cap=Math.max(1,num("startCapital",20000));
