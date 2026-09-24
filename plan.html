@@ -170,7 +170,7 @@ th:first-child,td:first-child{text-align:left}
 <body>
 <div class="wrap">
   <div class="top">
-    <div class="brand"><div class="logo">Five Year Plan</div><h1>5년 자산플랜 <span class="ver">v1.19.0</span></h1></div>
+    <div class="brand"><div class="logo">Five Year Plan</div><h1>5년 자산플랜 <span class="ver">v1.20.0</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
       <div class="jkmenu" id="jkmenuWrap">
@@ -369,7 +369,7 @@ th:first-child,td:first-child{text-align:left}
       <div class="rulelist">
         <div class="rule"><span class="num">1</span><div><b>연동된 VR 세션이 없으면 먼저 생성</b><small>플랜에서 직접 만든 세션 또는 직접 선택한 실전세션만 사용합니다. 모의세션은 선택 목록에서 제외합니다.</small></div></div>
         <div class="rule"><span class="num">2</span><div><b>14일 사이클 · 장 마감 후 확정</b><small>기준일 장중까지는 기존 V 예약표가 유효합니다. 그날 체결을 기록한 뒤 플랜의 ‘다음 사이클 진입’을 눌러 V를 갱신하며, 새 예약표는 다음 거래일부터 적용합니다.</small></div></div>
-        <div class="rule"><span class="num">3</span><div><b>전체 V 복귀 예약표를 이 화면에 표시</b><small>밴드 밖 즉시조정과 함께, 사이클 Pool 한도 내 예약매수·예약매도 전 차수를 가격·수량으로 보여줍니다.</small></div></div>
+        <div class="rule"><span class="num">3</span><div><b>전체 밴드 1주 예약표를 이 화면에 표시</b><small>사이클 Pool 한도 안의 예약매수·예약매도 전 차수를 가격·수량(1주씩)으로 보여줍니다. 평가금이 밴드 밖이면 닿은 차수가 체결 구간입니다.</small></div></div>
         <div class="rule"><span class="num">4</span><div><b>월 적립금은 무조건 VR에 넣지 않음</b><small>전체 플랜에서 목표비중보다 부족할 때만 VR 축을 보충합니다.</small></div></div>
       </div>
       <div class="btnrow"><a href="/" class="btn strategy-link">🏠 VR 운영화면 열기</a><a href="/backtest" class="btn strategy-link">📊 VR 백테스트</a></div>
@@ -1099,50 +1099,28 @@ async function advancePlanVrCycle(){
   pendingVrCycle=null;
   await saveOperatingState();await cloudSave();await refreshLive();
 }
-/* ── 호가 단위 (제8차 감사 대응 P2-9) ──
-   예약 사다리의 값(상단÷수량 등)은 보통 호가에 딱 떨어지지 않는다 (116.1616… · 84.1584…).
+/* ── 호가 단위 (제8차 감사 대응 P2-9 · 원문 매수표로 반올림) ──
+   예약표의 값(하단÷수량 등)은 보통 호가에 딱 떨어지지 않는다 (8500/101 = 84.158… · 11500/99 = 116.161…).
    주문은 호가 단위로만 나가므로, 엔진도 그 가격으로 판정·체결해야 경계일에 실전과 안 갈린다.
-   예전엔 표는 반올림한 값(116.16)을 보여 주고 엔진은 116.1616 으로 판정했다 — 고가 116.16 인 날
-   실전은 체결, 엔진은 미체결이었다.
      미국 주식·ETF : 1달러 이상 0.01 · 1달러 미만 0.0001 (Reg NMS 612)
      국내 ETF      : 2,000원 미만 1원 · 이상 5원 (KRX ETF·ETN 호가가격단위)
-   매도는 올리고 매수는 내린다. 매도 k차는 '그 값 이상이어야 평가금이 상단에 닿는' 가격이고,
-   매수 k차는 '그 값 이하여야 하단 밑' 인 가격이다 — 반올림하면 밴드 안쪽 가격에 주문이 나가
-   상단에 못 닿았는데 파는 체결이 생긴다. 주문표·모의·재생·백테·5년 플랜이 이 값을 같이 쓴다. */
+   예약표 가격은 반올림한다(imTickRound) — 원문 매수표가 반올림으로 적는다 (84.158 → 84.16 · 116.161 → 116.16).
+   제8차 P2-9 에선 '매도 올림 · 매수 내림' 을 규칙 문장에서 끌어냈는데, 원문 표와 다섯 줄 중 두 줄이 1센트씩 어긋났다.
+   vrTickDn(내림)은 무매(아래로 LOC 추가 줄 · 큰수 상한)가 쓴다 · vrTickUp(올림)은 짝으로만 남아 있다(지금 VR·무매 어디서도 안 부른다).
+   주문표·모의·재생·백테·5년 플랜이 같은 값을 쓴다. */
 function vrTick(p, cur){ return cur==='krw' ? (p<2000?1:5) : (p<1?0.0001:0.01); }
 function vrTickUp(p, cur){ const t=vrTick(p,cur); return +(Math.ceil(p/t-1e-9)*t).toFixed(4); }
 function vrTickDn(p, cur){ const t=vrTick(p,cur); return +(Math.floor(p/t+1e-9)*t).toFixed(4); }
 function vrTiers(B, sf, bf, up, dn, limit, fee1, N, cur){
   const sells=[], buys=[], over=[];
   if(!(B>=1)) return {sells, buys, over};
-  const V=(up+dn)/2;                       // up=V(1+밴드) · dn=V(1−밴드)
-  /* 매도표 — 보유 n 주의 평가금이 상단에 닿는 가격 = 상단÷n (호가 올림). 거기서 평가금이 V 로
-     돌아올 만큼(가장 가까운 정수) 판다. 판 뒤 수량으로 다음 차수를 잇는다. */
-  let n=B, cum=0;
-  for(let k=1;k<=N&&n>=1;k++){
-    const p=vrTickUp(up/n, cur), q=Math.min(n, Math.round(n-V/p));
-    if(!(q>=1)) break;
-    const from=cum; cum+=q; n-=q;
-    if(cum<=sf) continue;                  // 이번 사이클에 이미 체결한 차수
-    sells.push({k, p, q:cum-Math.max(from,sf)});   // 일부만 체결된 차수는 남은 수량
-  }
-  /* 매수표 — 평가금이 하단에 닿는 가격 = 하단÷n (호가 내림). 거기서 평가금이 V 에 닿을 만큼 산다.
-     사이클 남은 Pool 한도(limit)를 앞 차수부터 쓴다 — 모자라면 살 수 있는 만큼만 사고 뒤는 한도 밖. */
-  n=B; cum=0; let used=0, capped=false;
-  for(let k=1;k<=N;k++){
-    const p=vrTickDn(dn/n, cur);
+  for(let k=sf+1;k<=Math.min(N,B);k++) sells.push({k, p:imTickRound(up/(B-k+1), cur), q:1});
+  let used=0, capped=false;
+  for(let k=bf+1;k<=N;k++){
+    const p=imTickRound(dn/(B+k-1), cur), cost=p*fee1;
     if(!(p>0)) break;                      // 호가 한 칸보다 싼 차수는 걸 수 없다
-    const q=Math.round(V/p-n);
-    if(!(q>=1)) break;
-    const from=cum; cum+=q; n+=q;
-    if(cum<=bf) continue;
-    let rest=cum-Math.max(from,bf);
-    if(capped){ over.push({k, p, q:rest, cost:p*fee1*rest}); continue; }
-    const aff=Math.floor((limit-used)/(p*fee1)+1e-9);
-    if(aff<rest){ capped=true;
-      if(aff>=1){ buys.push({k, p, q:aff, cost:p*fee1*aff}); used+=p*fee1*aff; rest-=aff; }
-      over.push({k, p, q:rest, cost:p*fee1*rest}); continue; }
-    buys.push({k, p, q:rest, cost:p*fee1*rest}); used+=p*fee1*rest;
+    if(capped||used+cost>limit+1e-9){ capped=true; over.push({k, p, q:1, cost}); continue; }
+    buys.push({k, p, q:1, cost}); used+=cost;
   }
   return {sells, buys, over};
 }
@@ -1208,7 +1186,7 @@ function imRowsOf(st){ const v=(st||{}).rows; return (v!=null&&isFinite(+v)) ? M
 function vrCycleStart(c){if(c.st.cycStart)return c.st.cycStart;for(let i=c.hist.length-1;i>=0;i--){const x=c.hist[i];if(x.auto&&(x.type==='add'||x.type==='wd'))return x.date;}const f=c.hist.find(x=>x.type==='buy');return f?f.date:null;}
 function vrOrders(sess,price){
   const c=calcVrState(sess),st=c.st,orders=[];if(!(price>0))return {state:c,orders,note:'확정 종가가 없어 계산하지 못했습니다.'};
-  if(!(c.V>0)&&!(c.qty>0)){const amt=st.initAmt!=null?+st.initAmt:10000,q=Math.floor(amt/(price*(1+FEE)));if(q>0)orders.push({side:'buy',name:'첫 매수',price,qty:q,tag:'초기'});return {state:c,orders,note:'첫 매수는 수수료 포함 배정금 안에서 계산합니다. 남는 금액은 Pool로 유지하고, 체결 후 V와 V 복귀 예약표가 생성됩니다.'};}
+  if(!(c.V>0)&&!(c.qty>0)){const amt=st.initAmt!=null?+st.initAmt:10000,q=Math.floor(amt/(price*(1+FEE)));if(q>0)orders.push({side:'buy',name:'첫 매수',price,qty:q,tag:'초기'});return {state:c,orders,note:'첫 매수는 수수료 포함 배정금 안에서 계산합니다. 남는 금액은 Pool로 유지하고, 체결 후 V와 밴드 1주 예약표가 생성됩니다.'};}
   const N=20,B=Math.floor(c.cycleBaseQty||c.qty),ev=price*c.qty,cap=Math.max(0,c.cycleStartPool*(+st.mode||.5)),remain=Math.max(0,Math.min(c.pool,cap-c.cycleBuySpent));
   if(B>0){
     /* 차수 목록은 앱·백테와 같은 vrTiers 에서 (호가 단위 값 · 제8차 P2-9) — 여기서 다시 세지 않는다 */
@@ -1218,7 +1196,7 @@ function vrOrders(sess,price){
   }
   const cs=vrCycleStart(c),due=cs?nextVrDate(cs):null;
   const bandState=ev>c.up?'상단 예약매도 체결구간':(ev<c.lo?'하단 예약매수 체결구간':'밴드 안');
-  return {state:c,orders,note:(due?'다음 사이클 기준일 '+due+' · ':'')+bandState+' · 이번 사이클 시작수량 '+B+'주 기준 V 복귀 예약표 · 매수한도 '+usd(cap)+' / 사용 '+usd(c.cycleBuySpent)+' / 남음 '+usd(remain)};
+  return {state:c,orders,note:(due?'다음 사이클 기준일 '+due+' · ':'')+bandState+' · 이번 사이클 시작수량 '+B+'주 기준 밴드 1주 예약표 · 매수한도 '+usd(cap)+' / 사용 '+usd(c.cycleBuySpent)+' / 남음 '+usd(remain)};
 }
 /* ── 시세 정규화 — 앱(index.html)과 글자 그대로 같은 함수들 (제8차 감사 대응 8-⑤) ──
    예전 플랜은 div=1 없이 받아 j.series(조정종가)·j.ohlc(조정봉)를 그대로 썼다. 앱은 체결가(ohlcTrade)로
