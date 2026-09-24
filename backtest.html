@@ -320,7 +320,7 @@ td:first-child{text-align:left;}
   <div class="brand">
     <div>
       <div class="logo">Backtest</div>
-      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v2.4.1</span></h1>
+      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v2.5.0</span></h1>
     </div>
   </div>
   <div class="hright">
@@ -510,7 +510,7 @@ document.addEventListener('click',function(e){ var m=document.getElementById('jk
     </div>
     <div class="ctrl s-vr hide"><label>체결 방식 <span style="font-size:9px;color:var(--dim)">앱 매수·매도표와 같게</span></label>
       <div class="seg" id="vrFillSeg">
-        <button data-v="ladder20" class="active" title="현재 구현 — 사이클 시작 보유수량 기준 상·하단 밴드 예약주문을 매수·매도 각 최대 20차(1주씩) 걸고 2주 동안 유지. 라오어 원문의 주문표 산식은 아직 확인하지 못했습니다 (공식 아님).">20차 예약 사다리 · 원전 확인 필요</button>
+        <button data-v="vreturn" class="active" title="VR 5.0 정식 — 평가금이 상단을 넘으면 V로 돌아올 만큼 매도, 하단 아래면 V에 닿을 만큼 매수(Pool 한도 안). 사이클 첫날 보유수량으로 2주치 예약표를 고정하고 그날 고가·저가로 체결을 판정합니다.">V 복귀 예약표 (정식)</button>
         <button data-v="close" title="비교용 보수 모델 — 2주에 한 번 그날 종가만 보고 조정하며 장중 예약체결은 반영하지 않음">종가 리밸런싱(비교)</button>
       </div>
     </div>
@@ -772,7 +772,7 @@ document.addEventListener('click',function(e){ var m=document.getElementById('jk
 <div class="rules s-vr hide">
   <span class="bd">V 갱신</span> 다음 V = 현재 V + <b>Pool/G</b> + 적립금 · <b>달력 14일</b> 사이클 (기준일이 주말이면 다음 영업일) — 거래일 수가 아니라 달력으로 셉니다<br>
   <span class="bd">밴드</span> 상단 V×(1+밴드) / 하단 V×(1−밴드)<br>
-  <span class="bd">예약주문</span> (기본) 실전 그대로 — 사이클 첫날 <b>매수·매도표 차수를 지정가로 걸고 2주 방치</b>, 그날 <b>고가·저가</b>에 닿은 차수만 1주씩 체결. 매도 k차 = 상단÷보유 · 매수 k차 = 하단÷보유 · 하루 매수한도 = 그날 시작 Pool×모드한도(적립75·거치50·인출25%) · 운영 앱 체결기와 같은 규칙<br>
+  <span class="bd">예약주문</span> (기본) 실전 그대로 — 사이클 첫날 <b>매수·매도표 차수를 지정가로 걸고 2주 방치</b>, 그날 <b>고가·저가</b>에 닿은 차수만 체결 — VR 5.0 정식 <b>V 복귀</b>: 매도 k차 = 상단÷보유, 평가금이 V로 돌아올 만큼 · 매수 k차 = 하단÷보유, V에 닿을 만큼 · 매수한도 = 사이클 시작 Pool×모드한도(적립75·거치50·인출25%) · 운영 앱 체결기와 같은 규칙<br>
   <span class="bd">종가</span> (선택) 예전 방식 — 2주에 한 번 그날 <b>종가</b>에만 평가금을 V로 되맞춤. 실제로 내는 주문과 다르므로 비교용으로만<br>
   <span class="bd">매도</span> 평가금>상단 → Pool 로 · <span class="bd">매수</span> 평가금&lt;하단 → 적립후 <b>Pool 75%</b> 한도
 </div>
@@ -792,7 +792,7 @@ document.addEventListener('click',function(e){ var m=document.getElementById('jk
   ※ 무한매수법 V4.0 · VR 5.0 (라오어). 일봉 근사라 실제 체결과 차이 가능. 과거 성과는 미래를 보장하지 않습니다.<br>
   ※ <b>체결 규약</b> — ASAP·표준편차·역분산·적립 배수 같은 <b>종가 신호</b> 전략은 <b>전일까지 확정된 지표</b>로 신호를 정하고 <b>당일 종가에 체결</b>합니다. 오늘 종가로 신호를 만든 뒤 그 종가에 체결하면 낼 수 없는 주문이 되므로, 신호와 체결 사이에 하루를 둡니다. 운영 페이지의 모의 체결도 같은 규약이라 앱과 백테 숫자가 어긋나지 않습니다.<br>
   ※ <b>예약주문</b> — 무매 별지점·익절 지정가와 VR 매수·매도표는 <b>미리 걸어 둔 가격</b>이 <b>당일 고가·저가</b>에 닿았는지로 체결을 판정합니다. 이건 전날 낸 주문이 오늘 체결되는 것이라 정상입니다.<br>
-  ※ <b>같은 날 양방향 체결</b> — 일봉만으로는 고가와 저가 중 어느 쪽이 먼저였는지 알 수 없습니다. 같은 날 VR 매도 사다리와 매수 사다리가 둘 다 닿으면 <b>매도 → 매수 순서</b>로 가정합니다(판 돈이 그날 매수 재원이 됩니다). 순서를 뒤집으면 결과가 달라질 수 있는 <b>모델 가정</b>입니다.<br>
+  ※ <b>같은 날 양방향 체결</b> — 일봉만으로는 고가와 저가 중 어느 쪽이 먼저였는지 알 수 없습니다. 같은 날 VR 매도표와 매수표가 둘 다 닿으면 <b>매도 → 매수 순서</b>로 가정합니다(판 돈이 그날 매수 재원이 됩니다). 순서를 뒤집으면 결과가 달라질 수 있는 <b>모델 가정</b>입니다.<br>
   <b>JK 퀀트</b> · 학습용 도구
 </div>
 
@@ -1648,7 +1648,7 @@ let imTgtDyn=false;  // 익절 동적 조절 (20일 상승률) — 기본 OFF
    걸어두고 2주 방치, 그날 고가·저가에 닿은 차수만 1주씩 체결된다.
    'close' = 예전 백테 방식 — 2주에 한 번 그날 종가만 보고 평가금을 V로 되맞춘다.
    운영 앱은 처음부터 예약주문이었다(vrSimForward). 백테만 종가 하나를 보고 있었다. */
-let vrFill='ladder20';   // 기본 = 사이클 시작 시 고정한 20차 예약 사다리 (현재 구현 · 원전 확인 필요). 'close'는 비교용 종가 모델
+let vrFill='vreturn';   // 기본 = VR 5.0 정식 V 복귀 예약표 (사이클 첫날 고정). 'close'는 비교용 — 기준일 종가에만 V 로 되맞춤
 
 /* 라오어 문서 공식 익절%는 종목별로 다르다 — TQQQ 15 · SOXL 20 (문서 미수록 종목은 20).
    운영 index.html 의 IM_OFFICIAL 과 같은 값이어야 한다. 한쪽만 고치면 같은 종목·같은 설정인데
@@ -2464,22 +2464,54 @@ function imBuyQty(alloc, refPx, feeRate){
    거부한다. 예전엔 여기 제한이 없었고(주문표), 모의·백테는 대신 '오늘 종가' 로 잘랐다.
    오늘 종가는 장 마감 뒤에야 아는 값이라, 셋 다 아침에 아는 값으로 맞춘다.
    두 번째 주문은 첫 주문의 예약금을 뺀 나머지로 제한한다. */
-function _imBuyPlan(T, avg, shares, cash, divs, starBase, starSlope, buyLimit, prevC, FEE){
-  const out=[];
-  if(!(divs-T>=1 && cash>1)) return out;
-  const one=cash/(divs-T), fee1=1+(FEE||0);
-  let res=cash;                                        // 아침 매수가능금액 (예약할 때마다 준다)
-  const add=(lim, alloc, dT, kind)=>{
-    const q=Math.min(imBuyQty(alloc, prevC, FEE), imBuyQty(res, lim, FEE));
-    if(q>=1){ out.push({lim, q, dT, kind}); res-=q*lim*fee1; } };
-  if(shares===0 && T===0){ add(buyLimit, one, 1, '1회매수'); return out; }
-  const starP=avg*(1+(starBase-starSlope*T)/100), buyP=starP-0.01;
-  const starOrder=Math.min(buyP,buyLimit), avgOrder=Math.min(avg,buyLimit);
-  if(T<divs/2){
-    add(starOrder, one/2, 0.5, '절반매수');
-    add(avgOrder,  one/2, 0.5, '절반매수');
-  }else add(starOrder, one, 1, '1회매수');
+/* ── 무한매수법 V4.0 매수 주문 — 정식 (사용자 제공 V4.0 일반모드 정리본 · posts/043 · 09-24) ──
+   앱 주문표 · 모의 · 서버 자동주문 · 백테 · 5년 플랜이 이 함수 하나로 매수 주문을 만든다 (같은 글자).
+     처음 매수 : 1회매수금 전액을 전일 종가 +큰수% 에 LOC — 수량 = 1회매수금 ÷ 그 주문가
+     전반전    : 1회매수금 절반 별지점(−0.01) LOC · 절반 평단 LOC
+     후반전    : 1회매수금 전액 별지점(−0.01) LOC
+     아래로 LOC 매수 추가 : k번째 = 1회매수금 ÷ (본 주문 수량 + k) 에 1주씩 (호가 내림)
+       원문 예시 — 종가 45.93 → 51.44$ 12개 · 47.53$ 1개 · 44.13$ 1개 (1회매수금 ≈ 617.9$ 로 역산된다)
+       LOC 는 종가에 체결되므로 종가가 낮을수록 같은 1회매수금으로 더 많은 주수를 산다.
+       추가 줄은 같은 회차의 일부다 — T 는 본 주문만 센다 (dT 0).
+   증권사는 주문가×수량을 매수가능금액에서 예약하고 넘으면 거부한다 — 잔금 안에서만 낸다 (7차 점검 ④).
+   주문가가 전일 종가 +큰수% 를 넘으면 그 값으로 낮춰 낸다 (cap · 증권사 가격 제한).
+   줄 수(rows)·호가·수수료 포함 수량은 정리본에 없는 세부다 — 줄 수 기본 8 (imRowsOf).
+     o: {first, half, buy1, bal, firstPrice, starPrice, avg, cap, rows, fee, cur}
+     반환: [{kind:'1회매수'|'절반매수'|'하방', name, price, q, dT, ladder, capped, orig}] */
+function imBuyOrders(o){
+  const out=[], f1=1+(+o.fee||0);
+  if(!(o.buy1>0)) return out;
+  let res=Math.max(0,+o.bal||0);
+  const cap=p=>(o.cap>0&&p>o.cap)?o.cap:p;
+  let lo=Infinity;                                 // 본 주문 중 가장 낮은 주문가 — 추가 줄은 이보다 '아래로'만
+  const main=(name,p0,alloc,dT,kind)=>{
+    const p=cap(p0); if(!(p>0)) return; if(p<lo) lo=p;
+    const q=Math.min(Math.floor(alloc/f1/p+1e-9), Math.floor(res/f1/p+1e-9));
+    if(q>=1){ out.push({kind, name, price:p, q, dT, ladder:false, capped:p<p0, orig:p0}); res-=q*p*f1; } };
+  if(o.first) main('처음매수', o.firstPrice, o.buy1, 1, '1회매수');
+  else if(o.half){ main('별지점 매수', o.starPrice, o.buy1/2, 0.5, '절반매수'); main('평단 매수', o.avg, o.buy1/2, 0.5, '절반매수'); }
+  else main('별지점 매수 (전액)', o.starPrice, o.buy1, 1, '1회매수');
+  const Q=out.reduce((a,x)=>a+x.q,0), n=Math.max(0,Math.floor(+o.rows||0));
+  for(let k=1,m=0;m<n&&k<=n+Q+2;k++){
+    const p=cap(vrTickDn(o.buy1/(Q+k), o.cur));
+    if(!(p>0)) break;
+    if(p>=lo) continue;                            // 전반전엔 ÷(Q+1) 이 별지점 위로 나올 수 있다 — '아래로'가 아니므로 건너뛴다
+    if(res<p*f1-1e-9) break;
+    out.push({kind:'하방', name:'하방 '+k+' (÷'+(Q+k)+')', price:p, q:1, dT:0, ladder:true, capped:false, orig:p}); res-=p*f1; m++;
+  }
   return out;
+}
+/* 아래로 LOC 추가 줄 수 — 설정값, 없으면 기본 8. 0 이면 끈다(변형). 예전 rowsOn(꺼짐 기본) 스위치는 쓰지 않는다. */
+const IM_ROWS_DEFAULT=8;
+function imRowsOf(st){ const v=(st||{}).rows; return (v!=null&&isFinite(+v)) ? Math.max(0,Math.min(20,Math.floor(+v))) : IM_ROWS_DEFAULT; }
+/* 아침 매수 계획 — 정식 주문(imBuyOrders)을 백테 모양으로. 수량·가격·T 가산이 운영과 같은 글자에서 나온다. */
+function _imBuyPlan(T, avg, shares, cash, divs, starBase, starSlope, buyLimit, prevC, FEE, rows, cur){
+  if(!(divs-T>=1 && cash>1)) return [];
+  const first=(shares===0 && T===0);
+  const starP=first?0:avg*(1+(starBase-starSlope*T)/100);
+  return imBuyOrders({first, half:!first&&T<divs/2, buy1:cash/(divs-T), bal:cash, firstPrice:buyLimit, starPrice:starP-0.01,
+                      avg, cap:buyLimit, rows, fee:FEE, cur})
+    .map(o=>({lim:o.price, q:o.q, dT:o.dT, kind:o.kind, ladder:o.ladder}));
 }
 function runIM(days,tkr,cap,divs,targetPct,compound=true,bigOverride){
   // 종목 계열: TQQQ만 TQQQ식(base15/복귀−15%), 그 외 전부 SOXL식(base20/복귀−20%) — index.html과 동일 규약
@@ -2622,7 +2654,7 @@ function runIM(days,tkr,cap,divs,targetPct,compound=true,bigOverride){
        장 마감 뒤에야 아는 사실(쿼터매도 체결)로 같은 종가에 주문한 셈이라 룩어헤드다.
        실측(SOXL 20분할 복리 6년) 최종자산이 실전 체결 재현보다 16.8% 부풀려져 있었다.
        운영 주문표(renderOrder)·서버 자동주문(imOrders)·모의(infSimForward)와 같은 순서다. */
-    const buys=_imBuyPlan(T, avg, shares, cash, divs, starBase, starSlope, buyLimit, prevC, FEE);
+    const buys=_imBuyPlan(T, avg, shares, cash, divs, starBase, starSlope, buyLimit, prevC, FEE, imRowsOf({}), isKRW(tkr)?'krw':'usd');
     if(shares>0&&avg>0){
       const starP=avg*(1+(starBase-starSlope*T)/100);
       const tgt=avg*(1+(MOM?_imTgtOf(targetPct,MOM[d]):targetPct)/100);
@@ -2649,7 +2681,8 @@ function runIM(days,tkr,cap,divs,targetPct,compound=true,bigOverride){
         T=0;snap.push([d,cash+savedProfit-addedCash]);}
     }
     // 아침에 건 매수 LOC — 종가가 주문가 이하면 종가에 체결. 수량은 전일 확정종가로 정한다.
-    for(const b of buys){ if(c<=b.lim){ const q=_buyN(c,b.q); if(q>0) T+=b.dT; } }
+    /* 아래로 LOC 추가 줄은 같은 회차의 일부 — T 는 본 주문만 센다. 본 주문 없이 추가 줄만 체결되면(드묾) 1회로 센다 (모의와 같은 규약) */
+    { let mf=false, lf=false; for(const b of buys){ if(c<=b.lim){ const q=_buyN(c,b.q); if(q>0){ T+=b.dT; if(b.ladder) lf=true; else mf=true; } } } if(lf&&!mf) T+=1; }
     if(i%10===0)snap.push([d,cash+shares*c+savedProfit-addedCash]);
     peakInvested=Math.max(peakInvested, cap-cash);
   });
@@ -2960,7 +2993,7 @@ function runIM50(days,tkr,cap,divs,targetPct,compound=true,bigOverride){
        장 마감 뒤에야 아는 사실(쿼터매도 체결)로 같은 종가에 주문한 셈이라 룩어헤드다.
        실측(SOXL 20분할 복리 6년) 최종자산이 실전 체결 재현보다 16.8% 부풀려져 있었다.
        운영 주문표(renderOrder)·서버 자동주문(imOrders)·모의(infSimForward)와 같은 순서다. */
-    const buys=_imBuyPlan(T, avg, shares, cash, divs, starBase, starSlope, buyLimit, prevC, FEE);
+    const buys=_imBuyPlan(T, avg, shares, cash, divs, starBase, starSlope, buyLimit, prevC, FEE, imRowsOf({}), isKRW(tkr)?'krw':'usd');
     if(shares>0&&avg>0){
       const starP=avg*(1+(starBase-starSlope*T)/100);
       // ★ 국면 익절 (V5.0): 워밍업=기본 / 상승국면=기본 / 하락국면=6% 고정(조기탈출)
@@ -2983,7 +3016,7 @@ function runIM50(days,tkr,cap,divs,targetPct,compound=true,bigOverride){
         if(compound){} else if(cash>cap){ savedProfit+=cash-cap; cash=cap; }
         T=0;snap.push([d,cash+savedProfit-addedCash]);}
     }
-    for(const b of buys){ if(c<=b.lim){ const q=_buyN(c,b.q); if(q>0) T+=b.dT; } }   // 아침에 건 매수 LOC (V4.0과 동일)
+    { let mf=false, lf=false; for(const b of buys){ if(c<=b.lim){ const q=_buyN(c,b.q); if(q>0){ T+=b.dT; if(b.ladder) lf=true; else mf=true; } } } if(lf&&!mf) T+=1; }   // 아침에 건 매수 LOC (V4.0과 동일)
     if(i%10===0)snap.push([d,cash+shares*c+savedProfit-addedCash]);
     peakInvested=Math.max(peakInvested, cap-cash);
   });
@@ -3043,7 +3076,17 @@ function vrCycleTransition(V, pool, ev, G, mode, add, formula){
   return {nextV:Math.max(0,raw), raw, nextPool:pool+sign*actual, requested, actual, sign, corr,
           type:requested>0?(isWd?'wd':'add'):null};
 }
-/* ════ VR 주문 체결 엔진 — 사이클 고정 20차 · 1주 예약 사다리 ════
+/* ════ VR 주문 체결 엔진 — V 복귀 예약표 (정식 · 사용자 제공 원문 정리본 · 09-24) ════
+   근거: VR 5.0 운용 절차 (원글 posts/009 · cafe.naver.com/infinitebuying/38944)
+     "평가금이 상단(1.15V)을 초과하면 평가금이 V로 돌아올 만큼 매도 · 하단(0.85V)을 하회하면
+      평가금이 V에 도달할 만큼 매수 (Pool 사용 한도 안) · 2주치 예약주문 가능 · 사이클 첫날 매수표/매도표"
+   사이클 첫날 보유수량 B 와 V 로 표를 고정한다:
+     매도 k차 가격 = 상단 ÷ (그 차수 전 보유) · 수량 = 평가금이 V 에 가장 가까워지는 정수 (반올림)
+     매수 k차 가격 = 하단 ÷ (그 차수 전 보유) · 수량 = 같은 방식 · 사이클 Pool 한도 안에서
+   그날 고가가 매도가 이상이면 그 차수 체결, 저가가 매수가 이하면 체결 (예약 지정가).
+   정리본에 없는 세부(정수 반올림 · 차수 잇기 · 한도 초과 시 가능한 만큼)는 이 구현의 해석이다.
+   예전(#236 ~ v3.86.1)은 1주씩 밴드 경계에 붙이는 20차 사다리였다 — 원문 규칙이 아니라 교체했다. */
+/* ════ (옛 머리 주석) VR 주문 체결 엔진 — 사이클 고정 20차 · 1주 예약 사다리 ════
    운영 주문표·모의·과거재생·백테·5년 플랜이 모두 이 한 가지 모델로 돈다 (#236 이후).
      상단 up = V×(1+밴드) · 하단 dn = V×(1−밴드)
      사이클 시작 보유수량 B 로 사다리를 고정한다 — 사이클 중 체결이 나도 다시 계산하지 않는다
@@ -3067,7 +3110,7 @@ function vrCycleTransition(V, pool, ev, G, mode, add, formula){
    S: {shares, pool, avg, V} — 이 객체를 직접 고친다 (부르는 쪽이 결과를 받아 간다)
    P: {band, poolLimit, budgetRemaining, FEE, baseShares, sellFilled, buyFilled, maxTiers}
    반환: [{type:'sell'|'buy', price, qty, net|cost}] — net·cost 는 그 체결 '전체' 금액 */
-const VR_MODEL_DEFAULT='ladder20';
+const VR_MODEL_DEFAULT='vreturn';
 function vrModelOf(st){ return VR_MODEL_DEFAULT; }
 /* 사이클 사다리 — 이번 사이클에 걸어 둘 매도·매수 차수 (7차 점검 ⑫).
    주문표(renderVrTable)·체결 엔진(vrOrderPlan)이 이 한 곳에서 차수를 받는다 — 예전엔 둘이
@@ -3094,13 +3137,34 @@ function vrTickDn(p, cur){ const t=vrTick(p,cur); return +(Math.floor(p/t+1e-9)*
 function vrTiers(B, sf, bf, up, dn, limit, fee1, N, cur){
   const sells=[], buys=[], over=[];
   if(!(B>=1)) return {sells, buys, over};
-  for(let k=sf+1;k<=Math.min(N,B);k++) sells.push({k, p:vrTickUp(up/(B-k+1), cur)});
-  let used=0, capped=false;
-  for(let k=bf+1;k<=N;k++){
-    const p=vrTickDn(dn/(B+k-1), cur), cost=p*fee1;
+  const V=(up+dn)/2;                       // up=V(1+밴드) · dn=V(1−밴드)
+  /* 매도표 — 보유 n 주의 평가금이 상단에 닿는 가격 = 상단÷n (호가 올림). 거기서 평가금이 V 로
+     돌아올 만큼(가장 가까운 정수) 판다. 판 뒤 수량으로 다음 차수를 잇는다. */
+  let n=B, cum=0;
+  for(let k=1;k<=N&&n>=1;k++){
+    const p=vrTickUp(up/n, cur), q=Math.min(n, Math.round(n-V/p));
+    if(!(q>=1)) break;
+    const from=cum; cum+=q; n-=q;
+    if(cum<=sf) continue;                  // 이번 사이클에 이미 체결한 차수
+    sells.push({k, p, q:cum-Math.max(from,sf)});   // 일부만 체결된 차수는 남은 수량
+  }
+  /* 매수표 — 평가금이 하단에 닿는 가격 = 하단÷n (호가 내림). 거기서 평가금이 V 에 닿을 만큼 산다.
+     사이클 남은 Pool 한도(limit)를 앞 차수부터 쓴다 — 모자라면 살 수 있는 만큼만 사고 뒤는 한도 밖. */
+  n=B; cum=0; let used=0, capped=false;
+  for(let k=1;k<=N;k++){
+    const p=vrTickDn(dn/n, cur);
     if(!(p>0)) break;                      // 호가 한 칸보다 싼 차수는 걸 수 없다
-    if(capped||used+cost>limit+1e-9){ capped=true; over.push({k, p, cost}); continue; }
-    buys.push({k, p, cost}); used+=cost;
+    const q=Math.round(V/p-n);
+    if(!(q>=1)) break;
+    const from=cum; cum+=q; n+=q;
+    if(cum<=bf) continue;
+    let rest=cum-Math.max(from,bf);
+    if(capped){ over.push({k, p, q:rest, cost:p*fee1*rest}); continue; }
+    const aff=Math.floor((limit-used)/(p*fee1)+1e-9);
+    if(aff<rest){ capped=true;
+      if(aff>=1){ buys.push({k, p, q:aff, cost:p*fee1*aff}); used+=p*fee1*aff; rest-=aff; }
+      over.push({k, p, q:rest, cost:p*fee1*rest}); continue; }
+    buys.push({k, p, q:rest, cost:p*fee1*rest}); used+=p*fee1*rest;
   }
   return {sells, buys, over};
 }
@@ -3121,8 +3185,9 @@ function vrOrderPlan(S, P, bar){
      먼저였는지 모른다 — 그날은 순서가 가정이다. 기본은 매도 먼저(판 돈이 그날 매수 재원),
      P.order==='buy-first' 면 매수 먼저 (백테 민감도 비교용). 부르는 쪽이 out.both 로 그날을 센다. */
   out.both=!!(L.sells.length && hi>=L.sells[0].p && L.buys.length && lo<=L.buys[0].p);
-  const doSell=()=>{ for(const t of L.sells){ if(!(hi>=t.p))break; _sell(t.p,1); } };
-  const doBuy=()=>{ for(const t of L.buys){ if(!(lo<=t.p))break; if(t.cost>S.pool+1e-9)break; _buy(t.p,1); } };
+  const doSell=()=>{ for(const t of L.sells){ if(!(hi>=t.p))break; _sell(t.p,Math.min(t.q,Math.floor(S.shares+1e-9))); } };
+  const doBuy=()=>{ for(const t of L.buys){ if(!(lo<=t.p))break;
+    const q=Math.min(t.q, Math.floor(S.pool/(t.p*fee1)+1e-9)); if(q<1)break; _buy(t.p,q); if(q<t.q)break; } };
   if(P.order==='buy-first'){ doBuy(); doSell(); } else { doSell(); doBuy(); }
   return out;
 }
@@ -3844,8 +3909,8 @@ function _stratNum(id,def){ if(typeof document==='undefined')return def; const e
    (제8차 감사 대응 P2-11). index·backtest 에 글자 그대로 같은 본문이 있다 — 앱 주문표의
    'V4.0 공식 / 변형' 표시와 백테 결과 제목의 'V4.0 변형' 표시가 같은 기준이어야 한다.
    빈 목록이면 공식, 아니면 변형이다. 백테에서 더 좋았다는 이유로 고른 값도 변형이다 —
-   예: 리버스 OFF(문서의 V4.0 일반모드는 '소진 → 리버스'), 하방 추가 LOC(문서에 없는 주문).
-     cfg: {tickers, div, reverse, revGap, target, tgtDyn, engine, big, rowsOn}
+   예: 리버스 OFF(문서의 V4.0 일반모드는 '소진 → 리버스'), 아래로 LOC 추가를 끈 것(0줄).
+     cfg: {tickers, div, reverse, revGap, target, tgtDyn, engine, big, rows}
      target 0·없음 = 종목별 문서값(TQQQ 15 · SOXL 20). big 없음 = 기본 15. */
 function imVariantOf(cfg){
   const v=[], list=[].concat(cfg.tickers||[]).filter(Boolean), div=+cfg.div||20;
@@ -3863,7 +3928,7 @@ function imVariantOf(cfg){
   if(cfg.tgtDyn) v.push('익절 조절 ON');
   if(cfg.engine && cfg.engine!=='v40') v.push('엔진 '+String(cfg.engine).toUpperCase());
   if(cfg.big!=null && +cfg.big>0 && +cfg.big!==IM_BIG_DEFAULT) v.push('큰수 '+(+cfg.big)+'%');
-  if(cfg.rowsOn) v.push('하방 LOC 추가(CUSTOM · 백테스트/모의 미반영)');
+  if(cfg.rows!=null && !(+cfg.rows>0)) v.push('아래로 LOC 추가 끔');
   return v;
 }
 /* 공식 V4.0 인가, 변형인가 — 백테 화면의 현재 선택을 모아 공용 판정(imVariantOf)에 넘긴다.
@@ -3944,7 +4009,7 @@ function _runOneStrat(key,tkr,cap,days,costOn){
    예전엔 세 곳이 각자 '공식 V복귀' 라고 적었다 — 엔진은 20차 사다리를 도는데 제목은 V 복귀였고,
    어느 쪽도 원문으로 확인된 '공식' 이 아니다 (제8차 감사 대응 8-①). */
 function vrFillLabel(){
-  return (typeof vrFill!=='undefined' && vrFill==='close') ? '종가 리밸런싱(비교)' : '20차 예약 사다리(현재 구현 · 원전 확인 필요)';
+  return (typeof vrFill!=='undefined' && vrFill==='close') ? '종가 리밸런싱(비교)' : 'V 복귀 예약표(정식)';
 }
 // 전체비교 헤더용: 현재 각 탭 옵션 요약 문자열
 function comboOpts(mode){

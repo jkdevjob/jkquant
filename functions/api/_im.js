@@ -43,6 +43,51 @@ export function starPct(ticker, div, T, base) {
   return b - (b * 0.1 * 20 / div) * T;
 }
 
+/* ── 무한매수법 V4.0 매수 주문 — 정식 (사용자 제공 V4.0 일반모드 정리본 · posts/043 · 09-24) ──
+   앱 주문표 · 모의 · 서버 자동주문 · 백테 · 5년 플랜이 이 함수 하나로 매수 주문을 만든다 (같은 글자).
+     처음 매수 : 1회매수금 전액을 전일 종가 +큰수% 에 LOC — 수량 = 1회매수금 ÷ 그 주문가
+     전반전    : 1회매수금 절반 별지점(−0.01) LOC · 절반 평단 LOC
+     후반전    : 1회매수금 전액 별지점(−0.01) LOC
+     아래로 LOC 매수 추가 : k번째 = 1회매수금 ÷ (본 주문 수량 + k) 에 1주씩 (호가 내림)
+       원문 예시 — 종가 45.93 → 51.44$ 12개 · 47.53$ 1개 · 44.13$ 1개 (1회매수금 ≈ 617.9$ 로 역산된다)
+       LOC 는 종가에 체결되므로 종가가 낮을수록 같은 1회매수금으로 더 많은 주수를 산다.
+       추가 줄은 같은 회차의 일부다 — T 는 본 주문만 센다 (dT 0).
+   증권사는 주문가×수량을 매수가능금액에서 예약하고 넘으면 거부한다 — 잔금 안에서만 낸다 (7차 점검 ④).
+   주문가가 전일 종가 +큰수% 를 넘으면 그 값으로 낮춰 낸다 (cap · 증권사 가격 제한).
+   줄 수(rows)·호가·수수료 포함 수량은 정리본에 없는 세부다 — 줄 수 기본 8 (imRowsOf).
+     o: {first, half, buy1, bal, firstPrice, starPrice, avg, cap, rows, fee, cur}
+     반환: [{kind:'1회매수'|'절반매수'|'하방', name, price, q, dT, ladder, capped, orig}] */
+export function imBuyOrders(o){
+  const out=[], f1=1+(+o.fee||0);
+  if(!(o.buy1>0)) return out;
+  let res=Math.max(0,+o.bal||0);
+  const cap=p=>(o.cap>0&&p>o.cap)?o.cap:p;
+  let lo=Infinity;                                 // 본 주문 중 가장 낮은 주문가 — 추가 줄은 이보다 '아래로'만
+  const main=(name,p0,alloc,dT,kind)=>{
+    const p=cap(p0); if(!(p>0)) return; if(p<lo) lo=p;
+    const q=Math.min(Math.floor(alloc/f1/p+1e-9), Math.floor(res/f1/p+1e-9));
+    if(q>=1){ out.push({kind, name, price:p, q, dT, ladder:false, capped:p<p0, orig:p0}); res-=q*p*f1; } };
+  if(o.first) main('처음매수', o.firstPrice, o.buy1, 1, '1회매수');
+  else if(o.half){ main('별지점 매수', o.starPrice, o.buy1/2, 0.5, '절반매수'); main('평단 매수', o.avg, o.buy1/2, 0.5, '절반매수'); }
+  else main('별지점 매수 (전액)', o.starPrice, o.buy1, 1, '1회매수');
+  const Q=out.reduce((a,x)=>a+x.q,0), n=Math.max(0,Math.floor(+o.rows||0));
+  for(let k=1,m=0;m<n&&k<=n+Q+2;k++){
+    const p=cap(vrTickDn(o.buy1/(Q+k), o.cur));
+    if(!(p>0)) break;
+    if(p>=lo) continue;                            // 전반전엔 ÷(Q+1) 이 별지점 위로 나올 수 있다 — '아래로'가 아니므로 건너뛴다
+    if(res<p*f1-1e-9) break;
+    out.push({kind:'하방', name:'하방 '+k+' (÷'+(Q+k)+')', price:p, q:1, dT:0, ladder:true, capped:false, orig:p}); res-=p*f1; m++;
+  }
+  return out;
+}
+/* 아래로 LOC 추가 줄 수 — 설정값, 없으면 기본 8. 0 이면 끈다(변형). 예전 rowsOn(꺼짐 기본) 스위치는 쓰지 않는다. */
+const IM_ROWS_DEFAULT=8;
+export function imRowsOf(st){ const v=(st||{}).rows; return (v!=null&&isFinite(+v)) ? Math.max(0,Math.min(20,Math.floor(+v))) : IM_ROWS_DEFAULT; }
+/* 호가 (index.html · backtest.html · plan.html 과 같은 글자) — 아래로 LOC 추가 줄의 가격을 호가 단위로 내린다 */
+function vrTick(p, cur){ return cur==='krw' ? (p<2000?1:5) : (p<1?0.0001:0.01); }
+function vrTickUp(p, cur){ const t=vrTick(p,cur); return +(Math.ceil(p/t-1e-9)*t).toFixed(4); }
+function vrTickDn(p, cur){ const t=vrTick(p,cur); return +(Math.floor(p/t+1e-9)*t).toFixed(4); }
+
 /* 1회 매수금 = 잔금 ÷ (분할−T). 남은 회차가 1회 미만이면 소진. */
 export function imBuy1(c) {
   const slot = (c.st.div || 20) - c.T;
@@ -186,32 +231,15 @@ export function imOrders({ st, hist, close, days }) {
   const bigPct = imBigPct(st);
   const limit = close * (1 + bigPct / 100);
   const half = c.T < st.div / 2;
-  const rows = st.rowsOn ? Math.max(0, st.rows || 0) : 0, gap = st.gap || 2.5, rq = st.rowqty || 1;
+  const cur = /^(?:\d{6}|\d{4}[A-Z]\d)$/.test(String(st.ticker || "").toUpperCase()) ? "krw" : "usd";
 
-  // 매수 — 수량은 늘 '종가'로 나눈다. LOC는 종가에 체결되므로 주문가로 나누면 배정액만큼 못 산다.
-  // 그리고 잔금 안에서만 — 증권사는 '주문가×수량' 을 예약하고 넘으면 주문을 거부한다 (7차 점검 ④).
-  // 두 번째 주문은 앞 주문의 예약금을 뺀 나머지로. index.html renderOrder 와 같은 규약.
+  // 매수 — 앱·모의·백테·플랜과 같은 정식 함수(imBuyOrders). 잔금 안에서만 (7차 점검 ④) · 상한 cap · 아래로 LOC 추가.
   const push = (side, kind, tag, price, qty) => { if (qty >= 1 && price > 0) out.push({ side, kind, tag, price, qty }); };
-  let res = Math.max(0, c.bal);
-  const brow = (kind, price, alloc) => {
-    if (!(close > 0) || !(price > 0)) return;
-    const q = Math.min(Math.floor(alloc / close), Math.floor(res / price));
-    if (q >= 1) { push("buy", kind, "LOC", price, q); res -= q * price; }
-  };
-  const cap = (p) => (limit > 0 && p > limit) ? limit : p;
-
-  if (B1.spent) {
-    // 원금 소진 — 새 회차 없음. 아래 매도만 낸다.
-  } else if (c.avg <= 0) {
-    brow("처음매수", close * (1 + bigPct / 100), buy1);
-    for (let i = 1; i <= rows; i++) { const p = close * (1 - gap * i / 100); if (p > 0) push("buy", `하방 ${i} (CUSTOM)`, "LOC", p, rq); }
-  } else if (half) {
-    brow("별지점 매수", cap(buyPt), buy1 / 2);
-    brow("평단 매수", cap(c.avg), buy1 / 2);
-    for (let i = 1; i <= rows; i++) { const p = buyPt * (1 - gap * i / 100); if (p > 0) push("buy", `하방 ${i} (CUSTOM)`, "LOC", cap(p), rq); }
-  } else {
-    brow("별지점 매수 (전액)", cap(buyPt), buy1);
-    for (let i = 1; i <= rows; i++) { const p = buyPt * (1 - gap * i / 100); if (p > 0) push("buy", `하방 ${i} (CUSTOM)`, "LOC", cap(p), rq); }
+  if (!B1.spent) {
+    const first = !(c.avg > 0);
+    for (const o of imBuyOrders({ first, half: !first && half, buy1, bal: c.bal, firstPrice: close * (1 + bigPct / 100),
+                                  starPrice: buyPt, avg: c.avg, cap: limit, rows: imRowsOf(st), fee: 0, cur }))
+      push("buy", o.name, "LOC", o.price, o.q);
   }
 
   // 매도
