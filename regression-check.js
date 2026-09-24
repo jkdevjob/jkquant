@@ -7542,21 +7542,21 @@ console.log('\n[116] 7차 D11 — 분배금 세전·세후 표기');
 }
 
 
-/* ════ 117. 5년 플랜 v1.10.5 — $30k 두 경로 기본값 · VR 첫매수 현금보존 ════ */
-console.log('\n[117] 5년 플랜 v1.10.5 — 두 경로 기본값 · VR 초기 현금보존');
+/* ════ 117. 5년 플랜 v1.12.0 — $30k 두 경로 롤링5년 기본값 · VR 첫매수 현금보존 ════ */
+console.log('\n[117] 5년 플랜 v1.12.0 — 두 경로 롤링5년 기본값 · VR 초기 현금보존');
 {
   const pl=fs.readFileSync(__d+'/plan.html','utf8');
   ok('5년 플랜 시작금 기본값은 $30,000', /startCapital:30000/.test(pl) && /aCash:30000/.test(pl));
-  ok('PATH A 연구 기본값 — TECL 70% N20 s0 55 밴드10 + TQQQ 30% SMA200 ±1.5',
-     /alpha:\{teclWeight:\.70,guardWeight:\.30,ivsLook:20,ivsS0:\.55,ivsBand:\.10,guardMA:200,guardBand:\.015\}/.test(pl));
-  ok('PATH B 기본값 — SOXL 50% 20분할 +20% 리버스ON',
-     /a=\[50,50,0\],inf=Math\.round\(total\*\.50\)/.test(pl)
-     && /classic:\{infWeight:\.50,vrWeight:\.50,infDiv:20,infTarget:20,infBig:15,vrG:10,vrBand:15,vrFormula:'basic'/.test(pl)
-     && /ticker:'SOXL',div:20,target:20,big:15,reverse:true,compound:true/.test(pl));
-  ok('PATH B TECL VR — Basic G10 ±15 · 초기주식90\/Pool10 · v6',
-     /ticker:'TECL',mode:\.5,formula:'basic',g:10,initAmt,add:0,[\s\S]{0,80}band:15/.test(pl)
-     && /planInitStockPct:90,planPresetVersion:6/.test(pl)
-     && /공식 규칙을 실전 기본값으로 사용/.test(pl));
+  ok('PATH A 롤링5년 기본값 — TECL 70% N20 s0 55 밴드15 + TQQQ 30% SMA200 ±1.0',
+     /alpha:\{teclWeight:\.70,guardWeight:\.30,ivsLook:20,ivsS0:\.55,ivsBand:\.15,guardMA:200,guardBand:\.01\}/.test(pl));
+  ok('PATH B 롤링5년 기본값 — SOXL 60% 20분할 +20% 리버스OFF',
+     /a=\[60,40,0\],inf=Math\.round\(total\*\.60\)/.test(pl)
+     && /classic:\{infWeight:\.60,vrWeight:\.40,infDiv:20,infTarget:20,infBig:15,infReverse:false,vrG:5,vrBand:30,vrFormula:'basic'/.test(pl)
+     && /ticker:'SOXL',div:20,target:20,big:15,reverse:false,compound:true/.test(pl));
+  ok('PATH B TECL VR — Basic G5 ±30 · 초기주식90\/Pool10 · v7',
+     /ticker:'TECL',mode:\.5,formula:'basic',g:5,initAmt,add:0,[\s\S]{0,80}band:30/.test(pl)
+     && /planInitStockPct:90,planPresetVersion:7/.test(pl)
+     && /5년 롤링 강건값을 실전 기본값으로 사용/.test(pl));
 
   const usd=v=>'$'+Math.round(v||0), FEE=.0025;
   const calcVrState=new Function('return ('+extractFn(pl,'function calcVrState(sess)').replace(/^function calcVrState\(/,'function (')+')')();
