@@ -8679,96 +8679,105 @@ console.log('\n[120] 제11차 — 라오어 정식 무매 V4.0 + VR 원문 기�
      return /V4\.0 완전 자동 아님/.test(t) && /MOC 는 한투로 보내지 않음/.test(t) && /리버스 자동주문 미지원/.test(t) && /LOC는 일반 지정가로 근사/.test(t) && /체결내역 자동 동기화 없음/.test(t); })());
 }
 
-/* ════ 121. 5년 플랜 v1.24.0 — A안 체결 장부 자동관리·자동갱신 ════ */
-console.log('\n[121] 5년 플랜 v1.24.0 — A안 체결 장부 자동관리·자동갱신');
+/* ════ 121. 5년 플랜 v1.25.0 — A안 자동운용 화면 ════ */
+console.log('\n[121] 5년 플랜 v1.25.0 — A안 자동운용 화면');
 {
   const pl=fs.readFileSync(__d+'/plan.html','utf8');
-  ok('A안 현재 보유수량은 읽기 전용 · 체결반영만 제공 · 계좌맞추기 제거',
-     /id="aTeclQty"[^>]*readonly/.test(pl)
-     && /id="aTqqqQty"[^>]*readonly/.test(pl)
-     && /id="aSgovQty"[^>]*readonly/.test(pl)
-     && /id="aCash"[^>]*readonly/.test(pl)
-     && /id="alphaRecordFill"/.test(pl)
+  ok('A안은 수동 재계산·계좌맞추기 없이 체결반영 중심',
+     /id="alphaRecordFill"/.test(pl)
+     && !/id="alphaRefresh"/.test(pl)
      && !/id="alphaReconcile"/.test(pl)
-     && !/id="alphaReconcilePanel"/.test(pl));
-  ok('A안 거래장부가 저장 상태에 포함되고 구버전 직접입력 잔고를 시작잔고로 승계',
-     /o\.alphaLedger=JSON\.parse\(JSON\.stringify\(alphaLedger\)\)/.test(pl)
-     && /o&&o\.alphaLedger&&typeof o\.alphaLedger==='object'/.test(pl)
-     && /tecl:Math\.max\(0,Math\.floor\(\+all\.aTeclQty\|\|0\)\)/.test(pl)
-     && /tqqq:Math\.max\(0,Math\.floor\(\+all\.aTqqqQty\|\|0\)\)/.test(pl)
-     && /sgov:Math\.max\(0,Math\.floor\(\+all\.aSgovQty\|\|0\)\)/.test(pl));
-  ok('오늘 주문을 pendingAlphaOrders에 고정하고 체결 수량은 계획 수량 이하만 저장',
+     && !/function alphaOpenReconcile\(/.test(pl)
+     && !/오늘 주문 다시 계산/.test(pl));
+  ok('A안 페이지/A탭 진입 시 시세·주문 자동 갱신',
+     /id="alphaRefreshTime"/.test(pl)
+     && /시세 자동 갱신/.test(pl)
+     && /if\(b\.dataset\.ptab==='alpha'\)refreshLive\(\)/.test(pl));
+  ok('오늘 주문을 pendingAlphaOrders에 고정하고 실제 체결은 계획수량 이하만 저장',
      /pendingAlphaOrders=orders\.map\(o=>\(\{\.\.\.o\}\)\)/.test(pl)
      && /q>o\.qty/.test(pl)
      && /미체결은 수량 0/.test(pl)
      && /alphaLedger\.events\.push\(\.\.\.events\)/.test(pl));
-  ok('A안은 페이지 진입 시 자동 계산 · A탭 재선택 시 시세 자동 갱신 · 수동 재계산 버튼 제거',
-     /id="alphaRefreshTime"/.test(pl)
-     && /시세 자동 갱신/.test(pl)
-     && /if\(b\.dataset\.ptab==='alpha'\)refreshLive\(\)/.test(pl)
-     && !/id="alphaRefresh"/.test(pl)
-     && !/오늘 주문 다시 계산/.test(pl));
-
-  const eventSrc=extractFn(pl,'function alphaEventList(ledger=alphaLedger)');
-  const calcSrc=extractFn(pl,'function alphaLedgerCalc(ledger=alphaLedger)');
-  const runCalc=(ledger)=>new Function('alphaLedger',eventSrc+'\n'+calcSrc+'\nreturn alphaLedgerCalc(alphaLedger);')(ledger);
-  const S=runCalc({base:{tecl:0,tqqq:0,sgov:0,cash:1000},events:[
-    {type:'trade',symbol:'TECL',side:'buy',qty:2,price:100,fee:1},
-    {type:'trade',symbol:'TECL',side:'sell',qty:1,price:120,fee:.5},
-    {type:'reconcile',snapshot:{tecl:5,tqqq:6,sgov:7,cash:42}},
-    {type:'trade',symbol:'TQQQ',side:'buy',qty:1,price:10,fee:.1}
-  ]});
-  ok('A 장부 계산 — 매수/매도 후 reconcile 시점부터 새 실제잔고 기준으로 이어짐',
-     S.tecl===5 && S.tqqq===7 && S.sgov===7 && near(S.cash,31.9,1e-9),
-     JSON.stringify(S));
-  ok('새 투자 시작은 A 장부 자체를 초기화하고 직접 입력 필드를 쓰지 않음',
-     /alphaLedger=\{base:\{date:todayISO\(\),tecl:0,tqqq:0,sgov:0,cash:cap\},events:\[\]\}/.test(pl)
-     && /\$\("alphaReset"\)\.addEventListener\("click",alphaResetLedger\)/.test(pl)
-     && !/\["aTeclQty","aTqqqQty","aSgovQty","aCash"\]\.forEach\(id=>\$\(id\)\.addEventListener\("change"/.test(pl));
+  ok('A 거래장부 저장 + 구버전 직접입력 보유수량을 시작잔고로 승계',
+     /o\.alphaLedger=JSON\.parse\(JSON\.stringify\(alphaLedger\)\)/.test(pl)
+     && /o&&o\.alphaLedger&&typeof o\.alphaLedger==='object'/.test(pl)
+     && /tecl:Math\.max\(0,Math\.floor\(\+all\.aTeclQty\|\|0\)\)/.test(pl)
+     && /avgTecl:null,avgTqqq:null,avgSgov:null/.test(pl));
 }
 
-/* ════ 122. 5년 플랜 v1.24.0 — A안 거래이력 수정 ════ */
-console.log('\n[122] 5년 플랜 v1.24.0 — A안 거래이력 수정');
+/* ════ 122. 5년 플랜 v1.25.0 — 이력 수정·평단 계산 ════ */
+console.log('\n[122] 5년 플랜 v1.25.0 — 이력 수정·평단 계산');
 {
   const pl=fs.readFileSync(__d+'/plan.html','utf8');
-  ok('A안 거래이력에 수정 UI와 저장/취소 배선이 있다',
+  ok('거래이력 수정 + 시작잔고 이력 수정 UI 제공',
      /id="alphaEditPanel"/.test(pl)
      && /id="alphaEditTrade"/.test(pl)
-     && !/id="alphaEditReconcile"/.test(pl)
+     && /id="alphaEditBase"/.test(pl)
      && /data-aedit=/.test(pl)
-     && /function alphaOpenEdit\(id\)/.test(pl)
-     && /function alphaSaveEdit\(\)/.test(pl)
-     && /\$\("alphaEditSave"\)\.addEventListener\("click",alphaSaveEdit\)/.test(pl));
-  ok('거래 수정 — 날짜·종목·매수매도·수량·체결가를 수정하고 수수료 자동 재계산',
+     && /data-abase="1"/.test(pl)
+     && /function alphaOpenBaseEdit\(\)/.test(pl)
+     && /function alphaSaveEdit\(\)/.test(pl));
+  ok('거래 수정은 날짜·종목·매수매도·수량·체결가와 수수료를 다시 계산',
      /ce\.date=date;ce\.symbol=sym;ce\.side=side;ce\.qty=q;ce\.price=p;ce\.fee=q\*p\*FEE/.test(pl)
      && /id="alphaEditSymbol"/.test(pl)
      && /id="alphaEditSide"/.test(pl)
      && /id="alphaEditQty"/.test(pl)
      && /id="alphaEditPrice"/.test(pl));
-  ok('신규 계좌맞춤 생성/수정 UI는 제거하고 거래 이력 수정만 허용',
-     !/function alphaOpenReconcile\(/.test(pl)
-     && !/function alphaSaveReconcile\(/.test(pl)
-     && !/id="alphaEditRecCash"/.test(pl)
-     && /if\(!e\|\|e\.type!=='trade'\)return/.test(pl));
-  ok('이력 계산은 날짜순, 같은 날짜는 원래 입력순으로 안정 정렬',
-     /sort\(\(a,b\)=>String\(a\.date\|\|''\)\.localeCompare\(String\(b\.date\|\|''\)\)\|\|a\._i-b\._i\)/.test(pl));
-  ok('수정/삭제가 과거 보유수량보다 큰 매도를 만들면 저장을 막는다',
-     /if\(q>S\[k\]\)\{S\.invalid=true;S\.error=/.test(pl)
-     && /const chk=alphaLedgerCalc\(candidate\);if\(chk\.invalid\)\{alert\('수정할 수 없습니다\. '/.test(pl)
-     && /const chk=alphaLedgerCalc\(candidate\);if\(chk\.invalid\)\{alert\('삭제할 수 없습니다\. '/.test(pl));
+  ok('시작잔고 수정에서 각 종목 시작수량·평단·현금을 등록 가능',
+     /id="alphaBaseTecl"/.test(pl)
+     && /id="alphaBaseAvgTecl"/.test(pl)
+     && /id="alphaBaseTqqq"/.test(pl)
+     && /id="alphaBaseAvgTqqq"/.test(pl)
+     && /id="alphaBaseSgov"/.test(pl)
+     && /id="alphaBaseAvgSgov"/.test(pl)
+     && /candidate\.base=\{date,tecl,tqqq,sgov,cash,avgTecl:/.test(pl));
+  ok('이력 계산은 날짜순 · 과거 보유량 초과 매도는 수정/삭제 차단',
+     /sort\(\(a,b\)=>String\(a\.date\|\|''\)\.localeCompare\(String\(b\.date\|\|''\)\)\|\|a\._i-b\._i\)/.test(pl)
+     && /if\(q>S\[k\]\)\{S\.invalid=true;S\.error=/.test(pl)
+     && /수정할 수 없습니다/.test(pl)
+     && /삭제할 수 없습니다/.test(pl));
 
   const eventSrc=extractFn(pl,'function alphaEventList(ledger=alphaLedger)');
   const calcSrc=extractFn(pl,'function alphaLedgerCalc(ledger=alphaLedger)');
   const runCalc=ledger=>new Function('alphaLedger',eventSrc+'\n'+calcSrc+'\nreturn alphaLedgerCalc(alphaLedger);')(ledger);
-  const ordered=runCalc({base:{tecl:0,tqqq:0,sgov:0,cash:1000},events:[
-    {id:'2',type:'trade',date:'2026-01-03',symbol:'TECL',side:'sell',qty:1,price:120,fee:0},
-    {id:'1',type:'trade',date:'2026-01-02',symbol:'TECL',side:'buy',qty:2,price:100,fee:0}
+  const avg=runCalc({base:{tecl:10,tqqq:0,sgov:0,cash:5000,avgTecl:100,avgTqqq:null,avgSgov:null},events:[
+    {id:'1',type:'trade',date:'2026-01-02',symbol:'TECL',side:'buy',qty:10,price:120,fee:0},
+    {id:'2',type:'trade',date:'2026-01-03',symbol:'TECL',side:'sell',qty:5,price:130,fee:0}
   ]});
-  ok('날짜를 과거로 수정해도 계산은 날짜순 — 1/2 매수 후 1/3 매도 = TECL 1주', ordered.tecl===1 && !ordered.invalid, JSON.stringify(ordered));
-  const bad=runCalc({base:{tecl:0,tqqq:0,sgov:0,cash:1000},events:[
-    {id:'1',type:'trade',date:'2026-01-02',symbol:'TECL',side:'sell',qty:1,price:100,fee:0}
+  ok('평단 계산 — TECL 10주@$100 + 10주@$120 = $110, 5주 매도 후에도 $110 유지',
+     avg.tecl===15 && near(avg.avgTecl,110,1e-9), JSON.stringify(avg));
+  const resetAvg=runCalc({base:{tecl:2,tqqq:0,sgov:0,cash:1000,avgTecl:100},events:[
+    {id:'1',type:'trade',date:'2026-01-02',symbol:'TECL',side:'sell',qty:2,price:110,fee:0},
+    {id:'2',type:'trade',date:'2026-01-03',symbol:'TECL',side:'buy',qty:3,price:90,fee:0}
   ]});
-  ok('수정 검증용 계산기가 당시 보유량 초과 매도를 invalid로 표시', bad.invalid===true && /매도 1주 > 당시 보유 0주/.test(bad.error), JSON.stringify(bad));
+  ok('전량매도 후 재매수하면 새 평단으로 시작', resetAvg.tecl===3 && near(resetAvg.avgTecl,90,1e-9), JSON.stringify(resetAvg));
+  const unknown=runCalc({base:{tecl:10,tqqq:0,sgov:0,cash:1000,avgTecl:null},events:[
+    {id:'1',type:'trade',date:'2026-01-02',symbol:'TECL',side:'buy',qty:2,price:120,fee:0}
+  ]});
+  ok('기존 보유 평단이 미등록이면 임의 추정하지 않고 미등록 상태 유지', unknown.tecl===12 && unknown.avgTecl===null, JSON.stringify(unknown));
+}
+
+/* ════ 123. 5년 플랜 v1.25.0 — 실전 표출순서 ════ */
+console.log('\n[123] 5년 플랜 v1.25.0 — 실전 표출순서');
+{
+  const pl=fs.readFileSync(__d+'/plan.html','utf8');
+  const ids=['alphaOrderSection','alphaAccountSection','alphaHistorySection','alphaEvidenceSection','alphaStrategySection'];
+  const pos=ids.map(id=>pl.indexOf('id="'+id+'"'));
+  ok('A안 표출 순서 = 오늘주문 → 현재계좌 → 거래이력 → 판단근거 → 전략설명',
+     pos.every(x=>x>=0) && pos.every((x,i)=>i===0||x>pos[i-1]), JSON.stringify(pos));
+  ok('현재계좌는 TECL/TQQQ/SGOV 수량·평단가 + 현금 카드로 표시',
+     /id="alphaAcctTeclQty"/.test(pl) && /id="alphaAcctTeclAvg"/.test(pl)
+     && /id="alphaAcctTqqqQty"/.test(pl) && /id="alphaAcctTqqqAvg"/.test(pl)
+     && /id="alphaAcctSgovQty"/.test(pl) && /id="alphaAcctSgovAvg"/.test(pl)
+     && /id="alphaAcctCash"/.test(pl)
+     && /function alphaAvgText\(q,avg\)/.test(pl));
+  ok('내부 계산용 보유수량 필드는 화면 입력칸이 아니라 hidden',
+     /<input type="hidden" id="aTeclQty">/.test(pl)
+     && /<input type="hidden" id="aTqqqQty">/.test(pl)
+     && /<input type="hidden" id="aSgovQty">/.test(pl)
+     && /<input type="hidden" id="aCash">/.test(pl));
+  ok('새 투자 시작은 평단까지 초기화',
+     /alphaLedger=\{base:\{date:todayISO\(\),tecl:0,tqqq:0,sgov:0,cash:cap,avgTecl:null,avgTqqq:null,avgSgov:null\},events:\[\]\}/.test(pl));
 }
 
 console.log(`\n════ 결과: ${pass} PASS / ${fail} FAIL ${fail===0?'— ALL PASS ★':'— 배포 금지, 위 ✗ 항목 수정 필요'} ════`);
