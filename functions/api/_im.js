@@ -43,38 +43,57 @@ export function starPct(ticker, div, T, base) {
   return b - (b * 0.1 * 20 / div) * T;
 }
 
-/* ── 무한매수법 V4.0 매수 주문 — 정식 (사용자 제공 V4.0 일반모드 정리본 · posts/043 · 09-24) ──
+/* ── 별지점 가격 — 호가(센트) 반올림 (제10차 감사 대응) ──
+   원문 V4.0 일반모드 3-(3): '평단 × (1+별%) = 38.30 × (1+2.8%) = 39.37 $ (반올림)' — 이 값이 매수·매도를 가른다.
+   매수점은 여기서 −0.01 (3-(5)), 매도점(쿼터매도 LOC)은 그대로. 반올림 없이 39.3724 로 두면 종가가 딱 39.37 인 날
+   원문은 쿼터매도가 체결되는데 여기는 아무것도 안 된다. 리버스 별지점(직전 5거래일 평균)도 같은 규약으로 센트에 맞춘다.
+   운영 주문표·모의·백테·서버·5년 플랜이 같은 글자로 쓴다. */
+function imTickRound(p, cur){ const t=vrTick(p,cur); return +(Math.floor(p/t+0.5+1e-9)*t).toFixed(4); }
+function imStarPx(avg, pct, cur){ return avg>0 ? imTickRound(avg*(1+pct/100), cur) : 0; }
+function imBuyPx(star){ return star>0 ? +(star-0.01).toFixed(4) : 0; }
+/* ── 무한매수법 V4.0 매수 주문 — 정식 (라오어 카페 V4.0 일반모드 원문 · 제10차 감사 대응으로 원문 표 세 개에 맞춤) ──
    앱 주문표 · 모의 · 서버 자동주문 · 백테 · 5년 플랜이 이 함수 하나로 매수 주문을 만든다 (같은 글자).
-     처음 매수 : 1회매수금 전액을 전일 종가 +큰수% 에 LOC — 수량 = 1회매수금 ÷ 그 주문가
-     전반전    : 1회매수금 절반 별지점(−0.01) LOC · 절반 평단 LOC
-     후반전    : 1회매수금 전액 별지점(−0.01) LOC
+     처음 매수 : 전일 종가 +큰수%(원문 10~15%) 에 LOC — 수량 = 1회매수금 ÷ 그 주문가 (내림)
+     전반전    : 별지점(−0.01) LOC — 수량 = 1회매수금 절반 ÷ 주문가 (내림)
+                 평단 LOC       — 수량 = 1회매수금 ÷ 평단 (내림) − 별지점 수량
+     후반전    : 별지점(−0.01) LOC — 수량 = 1회매수금 ÷ 주문가 (내림)
      아래로 LOC 매수 추가 : k번째 = 1회매수금 ÷ (본 주문 수량 + k) 에 1주씩 (호가 내림)
-       원문 예시 — 종가 45.93 → 51.44$ 12개 · 47.53$ 1개 · 44.13$ 1개 (1회매수금 ≈ 617.9$ 로 역산된다)
-       LOC 는 종가에 체결되므로 종가가 낮을수록 같은 1회매수금으로 더 많은 주수를 산다.
-       추가 줄은 같은 회차의 일부다 — T 는 본 주문만 센다 (dT 0).
+   원문 표 세 개가 그대로 나온다 (회귀 [119] SOURCE GOLDEN):
+     처음   1회 617.89 · 큰수 51.44                     → 51.44×12 · 47.53×1 · 44.13×1
+     전반전 1회 ≈539.2 · 별지점 78.12 · 평단 69.75      → 78.11×3 · 69.75×4 · 67.40×1 · 59.91×1
+     후반전 1회 ≈568.5 · 별지점 59.55                   → 59.54×9 · 56.85×1 · 51.68×1 · 47.37×1
+   평단 수량을 '절반 ÷ 평단' 으로 세면 3주가 나와 전반전 표의 4주와 다르다 (제10차 P1-2). 표에서 역산하면
+   '평단에 닿으면 1회매수금만큼(1회매수금÷평단 주)을 들고 있게' 가 맞고, 그러면 추가 줄의 첫 가격
+   1회매수금÷(수량+1) 이 늘 평단 아래로 나온다 — 원문의 '아래로' 와도 맞는다.
+   LOC 는 종가에 체결되므로 종가가 낮을수록 같은 1회매수금으로 더 많은 주수를 산다.
+   추가 줄은 같은 회차의 일부다 — T 는 본 주문만 센다 (dT 0).
    증권사는 주문가×수량을 매수가능금액에서 예약하고 넘으면 거부한다 — 잔금 안에서만 낸다 (7차 점검 ④).
-   주문가가 전일 종가 +큰수% 를 넘으면 그 값으로 낮춰 낸다 (cap · 증권사 가격 제한).
-   줄 수(rows)·호가·수수료 포함 수량은 정리본에 없는 세부다 — 줄 수 기본 8 (imRowsOf).
+   주문가가 전일 종가 +큰수% 를 넘으면 그 값(호가 내림)으로 낮춰 낸다 — 원문 '큰수 매수'(증권사 가격 제한 대응).
+   줄 수(rows)는 원문에 없다('…' 로 이어질 뿐) — JKQuant 구현값 기본 8 (imRowsOf). 호가·수수료 포함 수량도 구현 세부다.
      o: {first, half, buy1, bal, firstPrice, starPrice, avg, cap, rows, fee, cur}
      반환: [{kind:'1회매수'|'절반매수'|'하방', name, price, q, dT, ladder, capped, orig}] */
 export function imBuyOrders(o){
   const out=[], f1=1+(+o.fee||0);
   if(!(o.buy1>0)) return out;
   let res=Math.max(0,+o.bal||0);
-  const cap=p=>(o.cap>0&&p>o.cap)?o.cap:p;
+  const capP=o.cap>0 ? vrTickDn(o.cap, o.cur) : 0;
+  const cap=p=>(capP>0&&p>capP)?capP:p;
   let lo=Infinity;                                 // 본 주문 중 가장 낮은 주문가 — 추가 줄은 이보다 '아래로'만
-  const main=(name,p0,alloc,dT,kind)=>{
+  const held=()=>out.reduce((a,x)=>a+x.q,0);
+  /* 본 주문 — 수량 = 배정액 ÷ 주문가 (내림) − 이미 건 수량(have). have 는 전반전 평단 주문에만 있다 */
+  const main=(name,p0,alloc,dT,kind,have)=>{
     const p=cap(p0); if(!(p>0)) return; if(p<lo) lo=p;
-    const q=Math.min(Math.floor(alloc/f1/p+1e-9), Math.floor(res/f1/p+1e-9));
-    if(q>=1){ out.push({kind, name, price:p, q, dT, ladder:false, capped:p<p0, orig:p0}); res-=q*p*f1; } };
+    const q=Math.min(Math.floor(alloc/f1/p+1e-9)-(have||0), Math.floor(res/f1/p+1e-9));
+    if(q>=1){ out.push({kind, name, price:p, q, dT, ladder:false, capped:o.cap>0&&p0>o.cap, orig:p0}); res-=q*p*f1; } };
   if(o.first) main('처음매수', o.firstPrice, o.buy1, 1, '1회매수');
-  else if(o.half){ main('별지점 매수', o.starPrice, o.buy1/2, 0.5, '절반매수'); main('평단 매수', o.avg, o.buy1/2, 0.5, '절반매수'); }
+  else if(o.half){ main('별지점 매수', o.starPrice, o.buy1/2, 0.5, '절반매수');
+                   main('평단 매수', o.avg, o.buy1, 0.5, '절반매수', held()); }
   else main('별지점 매수 (전액)', o.starPrice, o.buy1, 1, '1회매수');
-  const Q=out.reduce((a,x)=>a+x.q,0), n=Math.max(0,Math.floor(+o.rows||0));
+  const Q=held(), n=Math.max(0,Math.floor(+o.rows||0));
   for(let k=1,m=0;m<n&&k<=n+Q+2;k++){
     const p=cap(vrTickDn(o.buy1/(Q+k), o.cur));
     if(!(p>0)) break;
-    if(p>=lo) continue;                            // 전반전엔 ÷(Q+1) 이 별지점 위로 나올 수 있다 — '아래로'가 아니므로 건너뛴다
+    if(p>=lo) continue;                            // 본 주문 최저가 이상은 '아래로'가 아니다 — 건너뛴다 (안전장치)
     if(res<p*f1-1e-9) break;
     out.push({kind:'하방', name:'하방 '+k+' (÷'+(Q+k)+')', price:p, q:1, dT:0, ladder:true, capped:false, orig:p}); res-=p*f1; m++;
   }
@@ -225,13 +244,13 @@ export function imOrders({ st, hist, close, days }) {
   if (!(close > 0)) return { orders: out, skip: "확정 종가 없음", c };
 
   const B1 = imBuy1(c), buy1 = B1.amt;
+  const cur = /^(?:\d{6}|\d{4}[A-Z]\d)$/.test(String(st.ticker || "").toUpperCase()) ? "krw" : "usd";
   const pct = starPct(st.ticker, st.div, c.T, st.target);
-  const star = c.avg > 0 ? c.avg * (1 + pct / 100) : close;
-  const buyPt = star - 0.01;
+  const star = c.avg > 0 ? imStarPx(c.avg, pct, cur) : close;   // 별지점 센트 반올림 — 앱·모의·백테·플랜과 같다 (제10차)
+  const buyPt = imBuyPx(star);
   const bigPct = imBigPct(st);
   const limit = close * (1 + bigPct / 100);
   const half = c.T < st.div / 2;
-  const cur = /^(?:\d{6}|\d{4}[A-Z]\d)$/.test(String(st.ticker || "").toUpperCase()) ? "krw" : "usd";
 
   // 매수 — 앱·모의·백테·플랜과 같은 정식 함수(imBuyOrders). 잔금 안에서만 (7차 점검 ④) · 상한 cap · 아래로 LOC 추가.
   const push = (side, kind, tag, price, qty) => { if (qty >= 1 && price > 0) out.push({ side, kind, tag, price, qty }); };
