@@ -192,7 +192,7 @@ th:first-child,td:first-child{text-align:left}
 <body>
 <div class="wrap">
   <div class="top">
-    <div class="brand"><div class="logo">Five Year Plan</div><h1>5년 자산플랜 <span class="ver">v1.26.0</span></h1></div>
+    <div class="brand"><div class="logo">Five Year Plan</div><h1>5년 자산플랜 <span class="ver">v1.26.1</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
       <div class="jkmenu" id="jkmenuWrap">
@@ -1358,7 +1358,7 @@ function planQuoteOf(sym,j,cur){
   const q=quoteToDaily(sym,j), rows=q.days, sb=settledBars(rows,cur||'usd');
   const settled=sb.length?sb[sb.length-1]:rows[rows.length-1];
   return {symbol:sym,rows,ohlc:q.ohlc||[],settled,priceBasis:q.priceBasis,dividends:q.dividends||[],
-          marketState:q.marketState||'',price:q.price||settled.close};
+          marketState:q.marketState||'',price:q.price||settled.close,hasLivePrice:j.price!=null&&+j.price>0};
 }
 function indicatorSeries(a,n){const out=Array(a.length).fill(null);let s=0;for(let i=0;i<a.length;i++){s+=a[i];if(i>=n)s-=a[i-n];if(i>=n-1)out[i]=s/n;}return out;}
 function rsiSeries(a,n=14){const out=Array(a.length).fill(null);let ag=0,al=0;for(let i=1;i<a.length;i++){const z=a[i]-a[i-1],g=Math.max(z,0),l=Math.max(-z,0);if(i<=n){ag+=g;al+=l;if(i===n){ag/=n;al/=n;out[i]=100-100/(1+(al===0?100:ag/al));}}else{ag=(ag*(n-1)+g)/n;al=(al*(n-1)+l)/n;out[i]=100-100/(1+(al===0?100:ag/al));}}return out;}
@@ -1765,7 +1765,7 @@ function renderAlphaLedger(){
     const pnl=(q>0&&px>0&&Number.isFinite(avg))?(px-avg)*q:null,ret=(q>0&&px>0&&Number.isFinite(avg)&&avg>0)?(px/avg-1)*100:null;
     if(Number.isFinite(pnl))pnlTotal+=pnl;
     const cap=sym[0]+sym.slice(1).toLowerCase(),pxEl=$('alphaAcct'+cap+'Px'),plEl=$('alphaAcct'+cap+'Pl'),mvEl=$('alphaAcct'+cap+'Mv');
-    if(pxEl)pxEl.textContent=px>0?'현재가 '+usd(px):'현재가 불러오는 중';
+    if(pxEl)pxEl.textContent=px>0?((L&&L.hasLivePrice?'실시간 ':'확정종가 ')+usd(px)):'현재가 불러오는 중';
     if(plEl){plEl.textContent=Number.isFinite(ret)?((pnl>=0?'+':'')+usd(pnl)+' · '+(ret>=0?'+':'')+ret.toFixed(2)+'%'):'수익률 —';plEl.className='pl '+(Number.isFinite(pnl)?(pnl>=0?'pos':'neg'):'');}
     if(mvEl)mvEl.textContent=px>0?'평가금액 '+usd(mv):'평가금액 —';
   }
