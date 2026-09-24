@@ -863,7 +863,30 @@ function paperSessionCount(box,ticker){
 function reverseTPlan(kind,t,div){if(kind==='리버스매도')return div>=40?t*.95:t*.9;if(kind==='리버스매수')return t+(div-t)*.25;return t;}
 function starPctPlan(st,T){const b=(+st.target>0)?+st.target:20;return b-(b*.1*20/(+st.div||20))*T;}
 function imBuyQtyPlan(alloc,refPx,feeRate){const f=1+(feeRate||0);return (refPx>0&&alloc>0)?Math.floor(alloc/f/refPx):0;}
-function imRevBuyQtyPlan(balance,buyPrice){return (balance>0&&buyPrice>0)?Math.floor((balance/4)/buyPrice):0;}
+/* 리버스 쿼터매수 주수 — 원문: 둘째날 이후 매수금 = 총 잔금 ÷ 4 (앱·백테와 같은 글자) */
+function imRevBuyQty(balance, buyPrice){
+  return (balance>0 && buyPrice>0) ? Math.floor((balance/4)/buyPrice) : 0;
+}
+/* ── 리버스모드 하루 주문 — V4.0 리버스 원문 (제10차 감사 대응 P0-1) ──
+   운영 주문표 · 모의 · 백테 두 엔진 · 5년 플랜이 같은 글자로 쓴다 (서버 자동주문은 리버스 미지원).
+     1일차         : 보유 ÷10(20분할)·÷20(40분할) 내림 → MOC 매도 · 매수 없음            (원문 2-(1)·3-(1))
+     2일차부터     : 별지점(직전 5거래일 종가 평균) 이상이면 LOC 매도 (직전 보유 ÷10·÷20)   (원문 2-(4))
+                     + 잔금÷4 로 별지점 아래 LOC 매수 (쿼터매수)                             (원문 3-(2))
+     리버스 중간 소진: 잔금÷4 로 1주도 못 사면 그날은 1일차와 같은 MOC 매도 · 매수 없음      (원문 3-(4))
+   예전엔 중간 소진이면 '오늘 매수 없음' 으로 끝내고 별지점 LOC 매도만 걸었다 — 원문은 무조건 매도(MOC)다.
+   매수가 '별지점 −0.01' 은 일반모드 3-(5) 규약을 따른 구현값이다 — 리버스 원문은 '별지점 아래' 까지만 적는다.
+     o: {day1, qty, bal, star5, div, gap}  — star5 는 호가 반올림한 값 · gap>0 은 사용자 변형(별지점 −gap%)
+     반환: {mode:'day1'|'spent'|'normal'|'nostar', sell:{tag,price?,q}|null, buy:{tag,price,q}|null, bp, sellDiv} */
+function imRevOrders(o){
+  const sellDiv=o.div>=40?20:10, sq=Math.floor((+o.qty||0)/sellDiv);
+  const moc=(mode,bp)=>({mode, sell:sq>0?{tag:'MOC', q:sq}:null, buy:null, bp:bp||0, sellDiv});
+  if(o.day1) return moc('day1');
+  if(!(o.star5>0)) return {mode:'nostar', sell:null, buy:null, bp:0, sellDiv};
+  const bp=o.gap>0 ? o.star5*(1-o.gap/100) : Math.max(0.01, imBuyPx(o.star5));
+  const bq=imRevBuyQty(o.bal, bp);
+  if(bq<1) return moc('spent', bp);
+  return {mode:'normal', sell:sq>0?{tag:'LOC', price:o.star5, q:sq}:null, buy:{tag:'LOC', price:bp, q:bq}, bp, sellDiv};
+}
 /* 무매 장부 — index.html computeInf 와 같은 규칙이어야 한다 (7차 점검 ⑤).
    배당(N1)·리버스 지원 분할이 빠져 있었다: 배당을 적은 세션은 잔금·1회매수금이 앱보다 작았고,
    30분할처럼 리버스 규칙이 없는 분할에서도 리버스 주문을 냈다. */
@@ -911,20 +934,20 @@ function imOrders(sess,price,rows){
   if(!(price>0))return {state:c,orders:[],note:'확정 종가가 없어 주문을 계산하지 못했습니다.'};
   const orders=[];
   if(c.reverseActive){
-    const sellDiv=div>=40?20:10,sellQty=Math.floor(c.qty/sellDiv),quarterBuy=Math.max(0,c.bal/4);
-    if(c.reverseDay1){
-      if(sellQty>0)orders.push({side:'sell',name:'리버스 1일차 무한매도',price,qty:sellQty,tag:'MOC'});
-      return {state:c,orders,note:sellQty>0?'리버스 진입 1일차: 보유÷'+sellDiv+' MOC 매도, 매수 없음.':'리버스 1일차지만 보유÷'+sellDiv+' 내림이 0주라 오늘 매도 없음.'};
-    }
+    /* 하루 주문은 imRevOrders 한 곳에서 — 앱·모의·백테와 같은 글자 (제10차 P0-1: 잔금÷4 로 1주도 못 사면 MOC 매도) */
     const rr=(rows||[]).filter(x=>x&&x.close>0).slice(-5);
-    if(rr.length<5)return {state:c,orders:[],note:'리버스 주문 계산에 직전 5거래일 확정 종가가 필요합니다.'};
-    const star5=rr.reduce((a,x)=>a+(+x.close||0),0)/5,bp=Math.max(.01,star5-.01);
-    if(sellQty>0)orders.push({side:'sell',name:'리버스 무한매도',price:star5,qty:sellQty,tag:'LOC'});
-    const bq=imRevBuyQtyPlan(c.bal,bp);
-    if(bq>0)orders.push({side:'buy',name:'리버스 쿼터매수',price:bp,qty:bq,tag:'LOC'});
-    return {state:c,orders,note:'리버스 별지점 = 직전 5거래일 종가 평균 '+usd(star5)+' · 매수가는 별지점−$0.01 · 매수금은 잔금÷4'};
+    if(!c.reverseDay1&&rr.length<5)return {state:c,orders:[],note:'리버스 주문 계산에 직전 5거래일 확정 종가가 필요합니다.'};
+    const star5=c.reverseDay1?0:imTickRound(rr.reduce((a,x)=>a+(+x.close||0),0)/5,'usd');
+    const R=imRevOrders({day1:c.reverseDay1, qty:c.qty, bal:c.bal, star5, div, gap:Math.max(0,+st.revGap||0)});
+    if(R.sell)orders.push({side:'sell',name:R.mode==='day1'?'리버스 1일차 무한매도':(R.mode==='spent'?'리버스 중간 소진 무한매도':'리버스 무한매도'),
+                           price:R.sell.tag==='MOC'?price:R.sell.price,qty:R.sell.q,tag:R.sell.tag});
+    if(R.buy)orders.push({side:'buy',name:'리버스 쿼터매수',price:R.buy.price,qty:R.buy.q,tag:'LOC'});
+    const note=R.mode==='day1'?(R.sell?'리버스 진입 1일차: 보유÷'+R.sellDiv+' MOC 매도, 매수 없음.':'리버스 1일차지만 보유÷'+R.sellDiv+' 내림이 0주라 오늘 매도 없음.')
+      :R.mode==='spent'?'리버스 중간 소진 — 잔금÷4('+usd(c.bal/4)+')로 1주('+usd(R.bp)+')도 못 삽니다. 원문대로 보유÷'+R.sellDiv+' MOC 매도, 매수 없음.'
+      :'리버스 별지점 = 직전 5거래일 종가 평균 '+usd(star5)+' · 매수가는 별지점−$0.01(원문은 \'별지점 아래\' — 구현값) · 매수금은 잔금÷4';
+    return {state:c,orders,note};
   }
-  const buy1=slot>=1?c.bal/slot:0,pct=starPctPlan(st,c.T),star=c.avg>0?c.avg*(1+pct/100):price,buyPt=star-.01,limit=price*(1+big/100),half=c.T<div/2;
+  const buy1=slot>=1?c.bal/slot:0,pct=starPctPlan(st,c.T),star=c.avg>0?imStarPx(c.avg,pct,'usd'):price,buyPt=imBuyPx(star),limit=price*(1+big/100),half=c.T<div/2;
   /* 매수 주문은 앱·모의·서버·백테와 같은 정식 함수(imBuyOrders)에서 — 잔금 안에서만 · 상한 cap · 아래로 LOC 추가 */
   if(slot>=1&&buy1>0){
     const first=!(c.avg>0);
@@ -1063,38 +1086,57 @@ function vrTiers(B, sf, bf, up, dn, limit, fee1, N, cur){
   }
   return {sells, buys, over};
 }
-/* ── 무한매수법 V4.0 매수 주문 — 정식 (사용자 제공 V4.0 일반모드 정리본 · posts/043 · 09-24) ──
+/* ── 별지점 가격 — 호가(센트) 반올림 (제10차 감사 대응) ──
+   원문 V4.0 일반모드 3-(3): '평단 × (1+별%) = 38.30 × (1+2.8%) = 39.37 $ (반올림)' — 이 값이 매수·매도를 가른다.
+   매수점은 여기서 −0.01 (3-(5)), 매도점(쿼터매도 LOC)은 그대로. 반올림 없이 39.3724 로 두면 종가가 딱 39.37 인 날
+   원문은 쿼터매도가 체결되는데 여기는 아무것도 안 된다. 리버스 별지점(직전 5거래일 평균)도 같은 규약으로 센트에 맞춘다.
+   운영 주문표·모의·백테·서버·5년 플랜이 같은 글자로 쓴다. */
+function imTickRound(p, cur){ const t=vrTick(p,cur); return +(Math.floor(p/t+0.5+1e-9)*t).toFixed(4); }
+function imStarPx(avg, pct, cur){ return avg>0 ? imTickRound(avg*(1+pct/100), cur) : 0; }
+function imBuyPx(star){ return star>0 ? +(star-0.01).toFixed(4) : 0; }
+/* ── 무한매수법 V4.0 매수 주문 — 정식 (라오어 카페 V4.0 일반모드 원문 · 제10차 감사 대응으로 원문 표 세 개에 맞춤) ──
    앱 주문표 · 모의 · 서버 자동주문 · 백테 · 5년 플랜이 이 함수 하나로 매수 주문을 만든다 (같은 글자).
-     처음 매수 : 1회매수금 전액을 전일 종가 +큰수% 에 LOC — 수량 = 1회매수금 ÷ 그 주문가
-     전반전    : 1회매수금 절반 별지점(−0.01) LOC · 절반 평단 LOC
-     후반전    : 1회매수금 전액 별지점(−0.01) LOC
+     처음 매수 : 전일 종가 +큰수%(원문 10~15%) 에 LOC — 수량 = 1회매수금 ÷ 그 주문가 (내림)
+     전반전    : 별지점(−0.01) LOC — 수량 = 1회매수금 절반 ÷ 주문가 (내림)
+                 평단 LOC       — 수량 = 1회매수금 ÷ 평단 (내림) − 별지점 수량
+     후반전    : 별지점(−0.01) LOC — 수량 = 1회매수금 ÷ 주문가 (내림)
      아래로 LOC 매수 추가 : k번째 = 1회매수금 ÷ (본 주문 수량 + k) 에 1주씩 (호가 내림)
-       원문 예시 — 종가 45.93 → 51.44$ 12개 · 47.53$ 1개 · 44.13$ 1개 (1회매수금 ≈ 617.9$ 로 역산된다)
-       LOC 는 종가에 체결되므로 종가가 낮을수록 같은 1회매수금으로 더 많은 주수를 산다.
-       추가 줄은 같은 회차의 일부다 — T 는 본 주문만 센다 (dT 0).
+   원문 표 세 개가 그대로 나온다 (회귀 [119] SOURCE GOLDEN):
+     처음   1회 617.89 · 큰수 51.44                     → 51.44×12 · 47.53×1 · 44.13×1
+     전반전 1회 ≈539.2 · 별지점 78.12 · 평단 69.75      → 78.11×3 · 69.75×4 · 67.40×1 · 59.91×1
+     후반전 1회 ≈568.5 · 별지점 59.55                   → 59.54×9 · 56.85×1 · 51.68×1 · 47.37×1
+   평단 수량을 '절반 ÷ 평단' 으로 세면 3주가 나와 전반전 표의 4주와 다르다 (제10차 P1-2). 표에서 역산하면
+   '평단에 닿으면 1회매수금만큼(1회매수금÷평단 주)을 들고 있게' 가 맞고, 그러면 추가 줄의 첫 가격
+   1회매수금÷(수량+1) 이 늘 평단 아래로 나온다 — 원문의 '아래로' 와도 맞는다.
+   LOC 는 종가에 체결되므로 종가가 낮을수록 같은 1회매수금으로 더 많은 주수를 산다.
+   추가 줄은 같은 회차의 일부다 — T 는 본 주문만 센다 (dT 0).
    증권사는 주문가×수량을 매수가능금액에서 예약하고 넘으면 거부한다 — 잔금 안에서만 낸다 (7차 점검 ④).
-   주문가가 전일 종가 +큰수% 를 넘으면 그 값으로 낮춰 낸다 (cap · 증권사 가격 제한).
-   줄 수(rows)·호가·수수료 포함 수량은 정리본에 없는 세부다 — 줄 수 기본 8 (imRowsOf).
+   주문가가 전일 종가 +큰수% 를 넘으면 그 값(호가 내림)으로 낮춰 낸다 — 원문 '큰수 매수'(증권사 가격 제한 대응).
+   줄 수(rows)는 원문에 없다('…' 로 이어질 뿐) — JKQuant 구현값 기본 8 (imRowsOf). 호가·수수료 포함 수량도 구현 세부다.
      o: {first, half, buy1, bal, firstPrice, starPrice, avg, cap, rows, fee, cur}
      반환: [{kind:'1회매수'|'절반매수'|'하방', name, price, q, dT, ladder, capped, orig}] */
 function imBuyOrders(o){
   const out=[], f1=1+(+o.fee||0);
   if(!(o.buy1>0)) return out;
   let res=Math.max(0,+o.bal||0);
-  const cap=p=>(o.cap>0&&p>o.cap)?o.cap:p;
+  const capP=o.cap>0 ? vrTickDn(o.cap, o.cur) : 0;
+  const cap=p=>(capP>0&&p>capP)?capP:p;
   let lo=Infinity;                                 // 본 주문 중 가장 낮은 주문가 — 추가 줄은 이보다 '아래로'만
-  const main=(name,p0,alloc,dT,kind)=>{
+  const held=()=>out.reduce((a,x)=>a+x.q,0);
+  /* 본 주문 — 수량 = 배정액 ÷ 주문가 (내림) − 이미 건 수량(have). have 는 전반전 평단 주문에만 있다 */
+  const main=(name,p0,alloc,dT,kind,have)=>{
     const p=cap(p0); if(!(p>0)) return; if(p<lo) lo=p;
-    const q=Math.min(Math.floor(alloc/f1/p+1e-9), Math.floor(res/f1/p+1e-9));
-    if(q>=1){ out.push({kind, name, price:p, q, dT, ladder:false, capped:p<p0, orig:p0}); res-=q*p*f1; } };
+    const q=Math.min(Math.floor(alloc/f1/p+1e-9)-(have||0), Math.floor(res/f1/p+1e-9));
+    if(q>=1){ out.push({kind, name, price:p, q, dT, ladder:false, capped:o.cap>0&&p0>o.cap, orig:p0}); res-=q*p*f1; } };
   if(o.first) main('처음매수', o.firstPrice, o.buy1, 1, '1회매수');
-  else if(o.half){ main('별지점 매수', o.starPrice, o.buy1/2, 0.5, '절반매수'); main('평단 매수', o.avg, o.buy1/2, 0.5, '절반매수'); }
+  else if(o.half){ main('별지점 매수', o.starPrice, o.buy1/2, 0.5, '절반매수');
+                   main('평단 매수', o.avg, o.buy1, 0.5, '절반매수', held()); }
   else main('별지점 매수 (전액)', o.starPrice, o.buy1, 1, '1회매수');
-  const Q=out.reduce((a,x)=>a+x.q,0), n=Math.max(0,Math.floor(+o.rows||0));
+  const Q=held(), n=Math.max(0,Math.floor(+o.rows||0));
   for(let k=1,m=0;m<n&&k<=n+Q+2;k++){
     const p=cap(vrTickDn(o.buy1/(Q+k), o.cur));
     if(!(p>0)) break;
-    if(p>=lo) continue;                            // 전반전엔 ÷(Q+1) 이 별지점 위로 나올 수 있다 — '아래로'가 아니므로 건너뛴다
+    if(p>=lo) continue;                            // 본 주문 최저가 이상은 '아래로'가 아니다 — 건너뛴다 (안전장치)
     if(res<p*f1-1e-9) break;
     out.push({kind:'하방', name:'하방 '+k+' (÷'+(Q+k)+')', price:p, q:1, dT:0, ladder:true, capped:false, orig:p}); res-=p*f1; m++;
   }
