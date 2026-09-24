@@ -7571,8 +7571,8 @@ console.log('\n[116] 7차 D11 — 분배금 세전·세후 표기');
 }
 
 
-/* ════ 117. 5년 플랜 v1.15.1 — 가변 초기자금 A안 · VR 첫매수 현금보존 ════ */
-console.log('\n[117] 5년 플랜 v1.15.1 — 가변 초기자금 A안 · VR 초기 현금보존');
+/* ════ 117. 5년 플랜 v1.15.2 — 가변 초기자금 유지 · VR 첫매수 현금보존 ════ */
+console.log('\n[117] 5년 플랜 v1.15.2 — 가변 초기자금 새로고침 유지 · VR 초기 현금보존');
 {
   const pl=fs.readFileSync(__d+'/plan.html','utf8');
   ok('5년 플랜 시작금 기본값은 $20,000', /startCapital:20000/.test(pl) && /aCash:20000/.test(pl));
@@ -7591,6 +7591,12 @@ console.log('\n[117] 5년 플랜 v1.15.1 — 가변 초기자금 A안 · VR 초�
      && /\$\("alphaCapitalInput"\)\.addEventListener\("change"/.test(pl)
      && /if\(virgin\)\$\("aCash"\)\.value=cap/.test(pl)
      && /\$\("startCapital"\)\.value=cap/.test(pl));
+  ok('새로고침 시 로컬 초기자금 우선 · 클라우드 예전값이 덮어쓰지 않음',
+     /let local=null;try\{local=JSON\.parse\(localStorage\.getItem\(KEY\)\|\|"null"\)\}catch\(e\)\{\}/.test(pl)
+     && /if\(!local&&v\)\{/.test(pl)
+     && /else if\(local\)\{/.test(pl)
+     && /이 기기 저장값 유지/.test(pl)
+     && /await cloudSave\(\)/.test(pl));
   ok('PATH B 롤링5년 기본값 — SOXL 60% 20분할 +20% 리버스OFF',
      /a=\[60,40,0\],inf=Math\.round\(total\*\.60\)/.test(pl)
      && /classic:\{infWeight:\.60,vrWeight:\.40,infDiv:20,infTarget:20,infBig:15,infReverse:false,vrG:5,vrBand:30,vrFormula:'basic'/.test(pl)
