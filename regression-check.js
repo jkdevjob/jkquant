@@ -8679,17 +8679,18 @@ console.log('\n[120] 제11차 — 라오어 정식 무매 V4.0 + VR 원문 기�
      return /V4\.0 완전 자동 아님/.test(t) && /MOC 는 한투로 보내지 않음/.test(t) && /리버스 자동주문 미지원/.test(t) && /LOC는 일반 지정가로 근사/.test(t) && /체결내역 자동 동기화 없음/.test(t); })());
 }
 
-/* ════ 121. 5년 플랜 v1.23.0 — A안 체결 장부 자동관리·이력수정 ════ */
-console.log('\n[121] 5년 플랜 v1.23.0 — A안 체결 장부 자동관리·이력수정');
+/* ════ 121. 5년 플랜 v1.24.0 — A안 체결 장부 자동관리·자동갱신 ════ */
+console.log('\n[121] 5년 플랜 v1.24.0 — A안 체결 장부 자동관리·자동갱신');
 {
   const pl=fs.readFileSync(__d+'/plan.html','utf8');
-  ok('A안 현재 보유수량은 읽기 전용 · 체결반영/계좌맞춤 버튼 제공',
+  ok('A안 현재 보유수량은 읽기 전용 · 체결반영만 제공 · 계좌맞추기 제거',
      /id="aTeclQty"[^>]*readonly/.test(pl)
      && /id="aTqqqQty"[^>]*readonly/.test(pl)
      && /id="aSgovQty"[^>]*readonly/.test(pl)
      && /id="aCash"[^>]*readonly/.test(pl)
      && /id="alphaRecordFill"/.test(pl)
-     && /id="alphaReconcile"/.test(pl));
+     && !/id="alphaReconcile"/.test(pl)
+     && !/id="alphaReconcilePanel"/.test(pl));
   ok('A안 거래장부가 저장 상태에 포함되고 구버전 직접입력 잔고를 시작잔고로 승계',
      /o\.alphaLedger=JSON\.parse\(JSON\.stringify\(alphaLedger\)\)/.test(pl)
      && /o&&o\.alphaLedger&&typeof o\.alphaLedger==='object'/.test(pl)
@@ -8701,10 +8702,12 @@ console.log('\n[121] 5년 플랜 v1.23.0 — A안 체결 장부 자동관리·�
      && /q>o\.qty/.test(pl)
      && /미체결은 수량 0/.test(pl)
      && /alphaLedger\.events\.push\(\.\.\.events\)/.test(pl));
-  ok('실제 계좌 맞추기는 기존 이력을 지우지 않고 reconcile 이벤트로 남김',
-     /type:'reconcile'/.test(pl)
-     && /alphaLedger\.events\.push\(\{id:Date\.now\(\)\+'_rec',type:'reconcile'/.test(pl)
-     && /기존 이력은 보존/.test(pl));
+  ok('A안은 페이지 진입 시 자동 계산 · A탭 재선택 시 시세 자동 갱신 · 수동 재계산 버튼 제거',
+     /id="alphaRefreshTime"/.test(pl)
+     && /시세 자동 갱신/.test(pl)
+     && /if\(b\.dataset\.ptab==='alpha'\)refreshLive\(\)/.test(pl)
+     && !/id="alphaRefresh"/.test(pl)
+     && !/오늘 주문 다시 계산/.test(pl));
 
   const eventSrc=extractFn(pl,'function alphaEventList(ledger=alphaLedger)');
   const calcSrc=extractFn(pl,'function alphaLedgerCalc(ledger=alphaLedger)');
@@ -8724,14 +8727,14 @@ console.log('\n[121] 5년 플랜 v1.23.0 — A안 체결 장부 자동관리·�
      && !/\["aTeclQty","aTqqqQty","aSgovQty","aCash"\]\.forEach\(id=>\$\(id\)\.addEventListener\("change"/.test(pl));
 }
 
-/* ════ 122. 5년 플랜 v1.23.0 — A안 이력 수정 ════ */
-console.log('\n[122] 5년 플랜 v1.23.0 — A안 이력 수정');
+/* ════ 122. 5년 플랜 v1.24.0 — A안 거래이력 수정 ════ */
+console.log('\n[122] 5년 플랜 v1.24.0 — A안 거래이력 수정');
 {
   const pl=fs.readFileSync(__d+'/plan.html','utf8');
-  ok('A안 거래/계좌맞춤 이력에 수정 UI와 저장/취소 배선이 있다',
+  ok('A안 거래이력에 수정 UI와 저장/취소 배선이 있다',
      /id="alphaEditPanel"/.test(pl)
      && /id="alphaEditTrade"/.test(pl)
-     && /id="alphaEditReconcile"/.test(pl)
+     && !/id="alphaEditReconcile"/.test(pl)
      && /data-aedit=/.test(pl)
      && /function alphaOpenEdit\(id\)/.test(pl)
      && /function alphaSaveEdit\(\)/.test(pl)
@@ -8742,9 +8745,11 @@ console.log('\n[122] 5년 플랜 v1.23.0 — A안 이력 수정');
      && /id="alphaEditSide"/.test(pl)
      && /id="alphaEditQty"/.test(pl)
      && /id="alphaEditPrice"/.test(pl));
-  ok('계좌 맞춤 이력도 날짜·TECL·TQQQ·SGOV·현금을 수정 가능',
-     /ce\.snapshot=\{tecl:Math\.max\(0,Math\.floor\(num\('alphaEditRecTecl'\)\)\),tqqq:Math\.max/.test(pl)
-     && /id="alphaEditRecCash"/.test(pl));
+  ok('신규 계좌맞춤 생성/수정 UI는 제거하고 거래 이력 수정만 허용',
+     !/function alphaOpenReconcile\(/.test(pl)
+     && !/function alphaSaveReconcile\(/.test(pl)
+     && !/id="alphaEditRecCash"/.test(pl)
+     && /if\(!e\|\|e\.type!=='trade'\)return/.test(pl));
   ok('이력 계산은 날짜순, 같은 날짜는 원래 입력순으로 안정 정렬',
      /sort\(\(a,b\)=>String\(a\.date\|\|''\)\.localeCompare\(String\(b\.date\|\|''\)\)\|\|a\._i-b\._i\)/.test(pl));
   ok('수정/삭제가 과거 보유수량보다 큰 매도를 만들면 저장을 막는다',
