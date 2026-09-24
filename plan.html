@@ -153,7 +153,7 @@ th:first-child,td:first-child{text-align:left}
 <body>
 <div class="wrap">
   <div class="top">
-    <div class="brand"><div class="logo">Five Year Plan</div><h1>5년 자산플랜 <span class="ver">v1.15.0</span></h1></div>
+    <div class="brand"><div class="logo">Five Year Plan</div><h1>5년 자산플랜 <span class="ver">v1.15.1</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
       <div class="jkmenu" id="jkmenuWrap">
@@ -1217,8 +1217,9 @@ function renderAlphaPlan(qTecl,qTqqq,qSgov){
   const tp=(+qTecl.price>0?+qTecl.price:ts),qp=(+qTqqq.price>0?+qTqqq.price:qs),sp=(+qSgov.price>0?+qSgov.price:ss);
   if(!(sigma>0)||!(sma>0)||!(ts>0)||!(qs>0)||!(ss>0)||!(tp>0)||!(qp>0)||!(sp>0)){if($('alphaMeta'))$('alphaMeta').textContent='지표 계산에 필요한 이력이 부족합니다.';return;}
   const tq=Math.max(0,Math.floor(num('aTeclQty'))),qq=Math.max(0,Math.floor(num('aTqqqQty'))),sq=Math.max(0,Math.floor(num('aSgovQty'))),cash=num('aCash');
-  if($('alphaStartState'))$('alphaStartState').textContent=(tq===0&&qq===0&&sq===0&&Math.abs(cash-20000)<1?'신규 시작 상태 · 현금 $20,000에서 오늘 주문을 계산합니다.':'운용 중 · 현재 보유수량/현금을 기준으로 필요한 주문만 표시합니다.');
-  let signalTotal=tq*ts+qq*qs+sq*ss+cash;if(!(signalTotal>0)){signalTotal=20000;$('aCash').value=20000;}
+  const startCap=Math.max(1,num('startCapital',20000));
+  if($('alphaStartState'))$('alphaStartState').textContent=(tq===0&&qq===0&&sq===0&&Math.abs(cash-startCap)<1?'신규 시작 상태 · 현금 '+usd(startCap)+'에서 오늘 주문을 계산합니다.':'운용 중 · 현재 보유수량/현금을 기준으로 필요한 주문만 표시합니다.');
+  let signalTotal=tq*ts+qq*qs+sq*ss+cash;if(!(signalTotal>0)){signalTotal=startCap;$('aCash').value=startCap;}
   const w=Math.min(1,(D.ivsS0*D.ivsS0)/(sigma*sigma)),curTeclW=(tq*ts)/signalTotal,sleeveNow=curTeclW/Math.max(D.teclWeight,1e-9);
   const teclHit=tq===0||Math.abs(w-sleeveNow)>D.ivsBand;
   const upper=sma*(1+D.guardBand),lower=sma*(1-D.guardBand),posOn=qq>0,guard=(qs>upper?'ON':qs<lower?'OFF':(posOn?'ON':'OFF'));
@@ -1470,12 +1471,18 @@ function allocationRows(stage){
 function render(){
   updateInitialAllocationPreview();
   renderLedger();
+  const cap=Math.max(1,num('startCapital',20000)),bInf=Math.round(cap*.60),bVr=Math.max(0,cap-bInf);
+  if($('alphaCapitalInput')&&document.activeElement!==$('alphaCapitalInput'))$('alphaCapitalInput').value=Math.round(cap);
+  if($('alphaCapitalNote'))$('alphaCapitalNote').textContent='초기자금 '+usd(cap)+' 전체를 A안으로 운용합니다. B안은 같은 원금을 다른 방식으로 비교하는 대안입니다.';
+  if($('classicCapitalNote'))$('classicCapitalNote').textContent='초기자금 '+usd(cap)+' 기준 · SOXL '+usd(bInf)+' / TECL VR '+usd(bVr)+'로 독립 배정합니다. 두 전략은 서로 리밸런싱하지 않습니다.';
+  if($('alphaStartHoldings'))$('alphaStartHoldings').textContent='TECL 0주 · TQQQ 0주 · SGOV 0주 · 현금 '+usd(cap);
+  if($('alphaReset'))$('alphaReset').textContent=usd(cap)+' 전액 현금으로 초기화';
   const stage=currentStage(),st=STAGES[stage],pg=planProgress();
   document.querySelectorAll(".step").forEach(b=>b.classList.toggle("on",Number(b.dataset.step)===stage));
   if(activePlanTab==='alpha'){
     $("stageTitle").textContent="PATH A · 실전 운용";
     $("stageBadge").textContent="PRIMARY";
-    $("stageDesc").textContent="TECL 역분산 65% + TQQQ Guard 35% · 시작금 $20,000";
+    $("stageDesc").textContent="TECL 역분산 65% + TQQQ Guard 35% · 시작금 "+usd(cap);
     $("stageSource").textContent="오늘은 아래 주문표만 확인하면 됩니다";
   }else{
     $("stageTitle").textContent=st.title;$("stageBadge").textContent=st.badge;$("stageDesc").textContent=st.desc;
@@ -1568,7 +1575,18 @@ apply(saved||d);$("slDate").value=todayISO();renderSessionSelectors();renderLedg
 ["startDate","targetDate","startCapital","targetCapital","monthlyAdd","targetIncome","stageMode","balMM","balVR","balQLD","balSGOV","cagrLow","cagrBase","cagrHigh","incomeBasis","incomeYield","sgovYield","extraWithdraw"].forEach(id=>$(id).addEventListener("change",render));
 ["aTeclQty","aTqqqQty","aSgovQty","aCash"].forEach(id=>$(id).addEventListener("change",()=>{localSave();refreshAlphaFromCache();}));
 $("alphaRefresh").addEventListener("click",refreshLive);
-$("alphaReset").addEventListener("click",()=>{$("aTeclQty").value=0;$("aTqqqQty").value=0;$("aSgovQty").value=0;$("aCash").value=20000;localSave();refreshLive();});
+$("alphaCapitalInput").addEventListener("change",()=>{
+  const cap=Math.max(1,Math.round(Number($("alphaCapitalInput").value)||0)),old=Math.max(1,num("startCapital",20000));
+  const virgin=num("aTeclQty")===0&&num("aTqqqQty")===0&&num("aSgovQty")===0&&(Math.abs(num("aCash")-old)<1||num("aCash")<=0);
+  $("startCapital").value=cap;
+  if(virgin)$("aCash").value=cap;
+  localSave();render();refreshAlphaFromCache();
+});
+$("alphaReset").addEventListener("click",()=>{
+  const cap=Math.max(1,num("startCapital",20000));
+  $("aTeclQty").value=0;$("aTqqqQty").value=0;$("aSgovQty").value=0;$("aCash").value=cap;
+  localSave();refreshLive();
+});
 $("classicRefresh").addEventListener("click",refreshLive);
 $("bCreateBoth").addEventListener("click",createClassicPlanSessions);
 $("bSoxlCreate").addEventListener("click",createPlanInfSession);
