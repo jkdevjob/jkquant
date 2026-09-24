@@ -153,7 +153,7 @@ th:first-child,td:first-child{text-align:left}
 <body>
 <div class="wrap">
   <div class="top">
-    <div class="brand"><div class="logo">Five Year Plan</div><h1>5년 자산플랜 <span class="ver">v1.13.0</span></h1></div>
+    <div class="brand"><div class="logo">Five Year Plan</div><h1>5년 자산플랜 <span class="ver">v1.14.0</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
       <div class="jkmenu" id="jkmenuWrap">
@@ -316,8 +316,8 @@ th:first-child,td:first-child{text-align:left}
       <div class="todaybox"><h3>📋 오늘 TQQQ VR 실행</h3><div class="sub" id="tqqqTabMeta">실전 세션과 시세를 불러오는 중…</div><div class="liveact" id="tqqqTabActions" style="margin-top:8px"></div><div class="btnrow" id="vrCycleActionRow" style="display:none"><button class="btn gold" id="vrCycleAdvanceBtn">다음 사이클 진입</button></div></div>
       <div class="rulelist">
         <div class="rule"><span class="num">1</span><div><b>연동된 VR 세션이 없으면 먼저 생성</b><small>플랜에서 직접 만든 세션 또는 직접 선택한 실전세션만 사용합니다. 모의세션은 선택 목록에서 제외합니다.</small></div></div>
-        <div class="rule"><span class="num">2</span><div><b>14일 사이클 · 장 마감 후 확정</b><small>기준일 장중까지는 기존 V 사다리가 유효합니다. 그날 체결을 기록한 뒤 플랜의 ‘다음 사이클 진입’을 눌러 V를 갱신하며, 새 사다리는 다음 거래일부터 적용합니다.</small></div></div>
-        <div class="rule"><span class="num">3</span><div><b>전체 예약 사다리를 이 화면에 표시</b><small>밴드 밖 즉시조정과 함께, 사이클 Pool 한도 내 예약매수·예약매도 전 차수를 가격·수량으로 보여줍니다.</small></div></div>
+        <div class="rule"><span class="num">2</span><div><b>14일 사이클 · 장 마감 후 확정</b><small>기준일 장중까지는 기존 V 예약표가 유효합니다. 그날 체결을 기록한 뒤 플랜의 ‘다음 사이클 진입’을 눌러 V를 갱신하며, 새 예약표는 다음 거래일부터 적용합니다.</small></div></div>
+        <div class="rule"><span class="num">3</span><div><b>전체 V 복귀 예약표를 이 화면에 표시</b><small>밴드 밖 즉시조정과 함께, 사이클 Pool 한도 내 예약매수·예약매도 전 차수를 가격·수량으로 보여줍니다.</small></div></div>
         <div class="rule"><span class="num">4</span><div><b>월 적립금은 무조건 VR에 넣지 않음</b><small>전체 플랜에서 목표비중보다 부족할 때만 VR 축을 보충합니다.</small></div></div>
       </div>
       <div class="btnrow"><a href="/" class="btn strategy-link">🏠 VR 운영화면 열기</a><a href="/backtest" class="btn strategy-link">📊 VR 백테스트</a></div>
@@ -682,7 +682,7 @@ async function createPlanInfSession(opts={}){
   const cap=a.inf,id=planSid('pinf');
   const sess={id,name:sessionDateName('SOXL'),planManaged:true,settings:{
     ticker:'SOXL',div:20,target:20,big:15,reverse:false,compound:true,
-    rowsOn:false,rows:8,gap:2.5,revGap:0,rowqty:1,principal:cap,
+    rows:8,revGap:0,rowqty:1,principal:cap,
     divmode:'reinv',engine:'v40',shortMA:30,loPct:8,tgtDyn:false,planPresetVersion:7
   },hist:[]};
   liveState.inf.sessions.push(sess);liveState.inf.active=id;liveState.activeTab='inf';
@@ -926,22 +926,12 @@ function imOrders(sess,price,rows){
     return {state:c,orders,note:'리버스 별지점 = 직전 5거래일 종가 평균 '+usd(star5)+' · 매수가는 별지점−$0.01 · 매수금은 잔금÷4'};
   }
   const buy1=slot>=1?c.bal/slot:0,pct=starPctPlan(st,c.T),star=c.avg>0?c.avg*(1+pct/100):price,buyPt=star-.01,limit=price*(1+big/100),half=c.T<div/2;
-  const nRows=st.rowsOn?Math.max(0,+st.rows||0):0,gap=+st.gap||2.5,rq=Math.max(1,+st.rowqty||1);
-  /* 수량은 잔금 안에서만 — 증권사는 '주문가×수량' 을 예약하고 넘으면 거부한다 (7차 점검 ④).
-     앱 주문표·서버 자동주문·모의·백테와 같은 규약. 두 번째 주문은 앞 주문의 예약금을 뺀 나머지로. */
-  let res=Math.max(0,c.bal);
-  const addBuy=(name,p,alloc,qtyPrice,tag)=>{const pp=Math.max(.01,Math.min(p,limit));
-    const q=Math.min(imBuyQtyPlan(Math.max(0,alloc),qtyPrice||price,0), imBuyQtyPlan(res,pp,0));
-    if(q>0){orders.push({side:'buy',name,price:pp,qty:q,tag:tag||'LOC'});res-=q*pp;}};
+  /* 매수 주문은 앱·모의·서버·백테와 같은 정식 함수(imBuyOrders)에서 — 잔금 안에서만 · 상한 cap · 아래로 LOC 추가 */
   if(slot>=1&&buy1>0){
-    if(c.avg<=0){
-      addBuy('처음매수',limit,buy1,price);
-      for(let i=1;i<=nRows;i++){const p=price*(1-gap*i/100);if(p>0)orders.push({side:'buy',name:'하방 '+i+' (-'+(gap*i).toFixed(1)+'%) · CUSTOM(백테·모의 미반영)',price:p,qty:rq,tag:'LOC'});}
-    }else{
-      if(half){addBuy('별지점 절반매수',buyPt,buy1/2,price);addBuy('평단 절반매수',c.avg,buy1/2,price);}
-      else addBuy('별지점 전액매수',buyPt,buy1,price);
-      for(let i=1;i<=nRows;i++){const p=buyPt*(1-gap*i/100);if(p>0)orders.push({side:'buy',name:'하방 '+i+' (-'+(gap*i).toFixed(1)+'%) · CUSTOM(백테·모의 미반영)',price:Math.min(p,limit),qty:rq,tag:'LOC'});}
-    }
+    const first=!(c.avg>0);
+    for(const o of imBuyOrders({first, half:!first&&half, buy1, bal:c.bal, firstPrice:limit, starPrice:buyPt, avg:c.avg,
+                                cap:limit, rows:imRowsOf(st), fee:0, cur:'usd'}))
+      orders.push({side:'buy',name:o.name,price:o.price,qty:o.q,tag:'LOC'});
   }
   if(c.qty>0&&c.avg>0){
     const q1=Math.floor(c.qty/4);
@@ -1043,30 +1033,91 @@ function vrTickDn(p, cur){ const t=vrTick(p,cur); return +(Math.floor(p/t+1e-9)*
 function vrTiers(B, sf, bf, up, dn, limit, fee1, N, cur){
   const sells=[], buys=[], over=[];
   if(!(B>=1)) return {sells, buys, over};
-  for(let k=sf+1;k<=Math.min(N,B);k++) sells.push({k, p:vrTickUp(up/(B-k+1), cur)});
-  let used=0, capped=false;
-  for(let k=bf+1;k<=N;k++){
-    const p=vrTickDn(dn/(B+k-1), cur), cost=p*fee1;
+  const V=(up+dn)/2;                       // up=V(1+밴드) · dn=V(1−밴드)
+  /* 매도표 — 보유 n 주의 평가금이 상단에 닿는 가격 = 상단÷n (호가 올림). 거기서 평가금이 V 로
+     돌아올 만큼(가장 가까운 정수) 판다. 판 뒤 수량으로 다음 차수를 잇는다. */
+  let n=B, cum=0;
+  for(let k=1;k<=N&&n>=1;k++){
+    const p=vrTickUp(up/n, cur), q=Math.min(n, Math.round(n-V/p));
+    if(!(q>=1)) break;
+    const from=cum; cum+=q; n-=q;
+    if(cum<=sf) continue;                  // 이번 사이클에 이미 체결한 차수
+    sells.push({k, p, q:cum-Math.max(from,sf)});   // 일부만 체결된 차수는 남은 수량
+  }
+  /* 매수표 — 평가금이 하단에 닿는 가격 = 하단÷n (호가 내림). 거기서 평가금이 V 에 닿을 만큼 산다.
+     사이클 남은 Pool 한도(limit)를 앞 차수부터 쓴다 — 모자라면 살 수 있는 만큼만 사고 뒤는 한도 밖. */
+  n=B; cum=0; let used=0, capped=false;
+  for(let k=1;k<=N;k++){
+    const p=vrTickDn(dn/n, cur);
     if(!(p>0)) break;                      // 호가 한 칸보다 싼 차수는 걸 수 없다
-    if(capped||used+cost>limit+1e-9){ capped=true; over.push({k, p, cost}); continue; }
-    buys.push({k, p, cost}); used+=cost;
+    const q=Math.round(V/p-n);
+    if(!(q>=1)) break;
+    const from=cum; cum+=q; n+=q;
+    if(cum<=bf) continue;
+    let rest=cum-Math.max(from,bf);
+    if(capped){ over.push({k, p, q:rest, cost:p*fee1*rest}); continue; }
+    const aff=Math.floor((limit-used)/(p*fee1)+1e-9);
+    if(aff<rest){ capped=true;
+      if(aff>=1){ buys.push({k, p, q:aff, cost:p*fee1*aff}); used+=p*fee1*aff; rest-=aff; }
+      over.push({k, p, q:rest, cost:p*fee1*rest}); continue; }
+    buys.push({k, p, q:rest, cost:p*fee1*rest}); used+=p*fee1*rest;
   }
   return {sells, buys, over};
 }
+/* ── 무한매수법 V4.0 매수 주문 — 정식 (사용자 제공 V4.0 일반모드 정리본 · posts/043 · 09-24) ──
+   앱 주문표 · 모의 · 서버 자동주문 · 백테 · 5년 플랜이 이 함수 하나로 매수 주문을 만든다 (같은 글자).
+     처음 매수 : 1회매수금 전액을 전일 종가 +큰수% 에 LOC — 수량 = 1회매수금 ÷ 그 주문가
+     전반전    : 1회매수금 절반 별지점(−0.01) LOC · 절반 평단 LOC
+     후반전    : 1회매수금 전액 별지점(−0.01) LOC
+     아래로 LOC 매수 추가 : k번째 = 1회매수금 ÷ (본 주문 수량 + k) 에 1주씩 (호가 내림)
+       원문 예시 — 종가 45.93 → 51.44$ 12개 · 47.53$ 1개 · 44.13$ 1개 (1회매수금 ≈ 617.9$ 로 역산된다)
+       LOC 는 종가에 체결되므로 종가가 낮을수록 같은 1회매수금으로 더 많은 주수를 산다.
+       추가 줄은 같은 회차의 일부다 — T 는 본 주문만 센다 (dT 0).
+   증권사는 주문가×수량을 매수가능금액에서 예약하고 넘으면 거부한다 — 잔금 안에서만 낸다 (7차 점검 ④).
+   주문가가 전일 종가 +큰수% 를 넘으면 그 값으로 낮춰 낸다 (cap · 증권사 가격 제한).
+   줄 수(rows)·호가·수수료 포함 수량은 정리본에 없는 세부다 — 줄 수 기본 8 (imRowsOf).
+     o: {first, half, buy1, bal, firstPrice, starPrice, avg, cap, rows, fee, cur}
+     반환: [{kind:'1회매수'|'절반매수'|'하방', name, price, q, dT, ladder, capped, orig}] */
+function imBuyOrders(o){
+  const out=[], f1=1+(+o.fee||0);
+  if(!(o.buy1>0)) return out;
+  let res=Math.max(0,+o.bal||0);
+  const cap=p=>(o.cap>0&&p>o.cap)?o.cap:p;
+  let lo=Infinity;                                 // 본 주문 중 가장 낮은 주문가 — 추가 줄은 이보다 '아래로'만
+  const main=(name,p0,alloc,dT,kind)=>{
+    const p=cap(p0); if(!(p>0)) return; if(p<lo) lo=p;
+    const q=Math.min(Math.floor(alloc/f1/p+1e-9), Math.floor(res/f1/p+1e-9));
+    if(q>=1){ out.push({kind, name, price:p, q, dT, ladder:false, capped:p<p0, orig:p0}); res-=q*p*f1; } };
+  if(o.first) main('처음매수', o.firstPrice, o.buy1, 1, '1회매수');
+  else if(o.half){ main('별지점 매수', o.starPrice, o.buy1/2, 0.5, '절반매수'); main('평단 매수', o.avg, o.buy1/2, 0.5, '절반매수'); }
+  else main('별지점 매수 (전액)', o.starPrice, o.buy1, 1, '1회매수');
+  const Q=out.reduce((a,x)=>a+x.q,0), n=Math.max(0,Math.floor(+o.rows||0));
+  for(let k=1,m=0;m<n&&k<=n+Q+2;k++){
+    const p=cap(vrTickDn(o.buy1/(Q+k), o.cur));
+    if(!(p>0)) break;
+    if(p>=lo) continue;                            // 전반전엔 ÷(Q+1) 이 별지점 위로 나올 수 있다 — '아래로'가 아니므로 건너뛴다
+    if(res<p*f1-1e-9) break;
+    out.push({kind:'하방', name:'하방 '+k+' (÷'+(Q+k)+')', price:p, q:1, dT:0, ladder:true, capped:false, orig:p}); res-=p*f1; m++;
+  }
+  return out;
+}
+/* 아래로 LOC 추가 줄 수 — 설정값, 없으면 기본 8. 0 이면 끈다(변형). 예전 rowsOn(꺼짐 기본) 스위치는 쓰지 않는다. */
+const IM_ROWS_DEFAULT=8;
+function imRowsOf(st){ const v=(st||{}).rows; return (v!=null&&isFinite(+v)) ? Math.max(0,Math.min(20,Math.floor(+v))) : IM_ROWS_DEFAULT; }
 function vrCycleStart(c){if(c.st.cycStart)return c.st.cycStart;for(let i=c.hist.length-1;i>=0;i--){const x=c.hist[i];if(x.auto&&(x.type==='add'||x.type==='wd'))return x.date;}const f=c.hist.find(x=>x.type==='buy');return f?f.date:null;}
 function vrOrders(sess,price){
   const c=calcVrState(sess),st=c.st,orders=[];if(!(price>0))return {state:c,orders,note:'확정 종가가 없어 계산하지 못했습니다.'};
-  if(!(c.V>0)&&!(c.qty>0)){const amt=st.initAmt!=null?+st.initAmt:10000,q=Math.floor(amt/(price*(1+FEE)));if(q>0)orders.push({side:'buy',name:'첫 매수',price,qty:q,tag:'초기'});return {state:c,orders,note:'첫 매수는 수수료 포함 배정금 안에서 계산합니다. 남는 금액은 Pool로 유지하고, 체결 후 V와 20차 예약 사다리가 생성됩니다.'};}
+  if(!(c.V>0)&&!(c.qty>0)){const amt=st.initAmt!=null?+st.initAmt:10000,q=Math.floor(amt/(price*(1+FEE)));if(q>0)orders.push({side:'buy',name:'첫 매수',price,qty:q,tag:'초기'});return {state:c,orders,note:'첫 매수는 수수료 포함 배정금 안에서 계산합니다. 남는 금액은 Pool로 유지하고, 체결 후 V와 V 복귀 예약표가 생성됩니다.'};}
   const N=20,B=Math.floor(c.cycleBaseQty||c.qty),ev=price*c.qty,cap=Math.max(0,c.cycleStartPool*(+st.mode||.5)),remain=Math.max(0,Math.min(c.pool,cap-c.cycleBuySpent));
   if(B>0){
     /* 차수 목록은 앱·백테와 같은 vrTiers 에서 (호가 단위 값 · 제8차 P2-9) — 여기서 다시 세지 않는다 */
     const L=vrTiers(B, Math.max(0,c.cycleSellFilled), Math.max(0,c.cycleBuyFilled), c.up, c.lo, remain, 1+FEE, N, 'usd');
-    for(const t of L.sells) orders.push({side:'sell',name:'예약매도 '+t.k+'차',price:t.p,qty:1,tag:'예약'});
-    for(const t of L.buys) orders.push({side:'buy',name:'예약매수 '+t.k+'차',price:t.p,qty:1,tag:'예약'});
+    for(const t of L.sells) orders.push({side:'sell',name:'예약매도 '+t.k+'차',price:t.p,qty:t.q,tag:'예약'});
+    for(const t of L.buys) orders.push({side:'buy',name:'예약매수 '+t.k+'차',price:t.p,qty:t.q,tag:'예약'});
   }
   const cs=vrCycleStart(c),due=cs?nextVrDate(cs):null;
   const bandState=ev>c.up?'상단 예약매도 체결구간':(ev<c.lo?'하단 예약매수 체결구간':'밴드 안');
-  return {state:c,orders,note:(due?'다음 사이클 기준일 '+due+' · ':'')+bandState+' · 이번 사이클 시작수량 '+B+'주 기준 20차 예약 고정 · 매수한도 '+usd(cap)+' / 사용 '+usd(c.cycleBuySpent)+' / 남음 '+usd(remain)};
+  return {state:c,orders,note:(due?'다음 사이클 기준일 '+due+' · ':'')+bandState+' · 이번 사이클 시작수량 '+B+'주 기준 V 복귀 예약표 · 매수한도 '+usd(cap)+' / 사용 '+usd(c.cycleBuySpent)+' / 남음 '+usd(remain)};
 }
 /* ── 시세 정규화 — 앱(index.html)과 글자 그대로 같은 함수들 (제8차 감사 대응 8-⑤) ──
    예전 플랜은 div=1 없이 받아 j.series(조정종가)·j.ohlc(조정봉)를 그대로 썼다. 앱은 체결가(ohlcTrade)로
