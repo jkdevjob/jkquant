@@ -574,6 +574,7 @@ function setPlanTab(name,scroll=true){
   });
   if(scroll) window.scrollTo({top:0,behavior:'smooth'});
   try{localStorage.setItem('jkq_plan_tab',name);}catch(e){}
+  if(typeof render==='function')render();
 }
 function mirrorStrategyTab(metaId,actionsId,meta,html){
   const m=$(metaId),a=$(actionsId);if(m)m.textContent=meta||'';if(a)a.innerHTML=html||waitHtml('데이터 없음');
@@ -1374,8 +1375,17 @@ function localSave(){
 function monthsLeft(){
   const d=Math.max(0,days(todayISO(),$("targetDate").value));return Math.ceil(d/30.4375);
 }
+function alphaPlanTotal(){
+  const tq=Math.max(0,Math.floor(num('aTeclQty'))),qq=Math.max(0,Math.floor(num('aTqqqQty'))),sq=Math.max(0,Math.floor(num('aSgovQty'))),cash=num('aCash');
+  const tp=liveQuotes.TECL&&liveQuotes.TECL.settled?+liveQuotes.TECL.settled.close:0;
+  const qp=liveQuotes.TQQQ&&liveQuotes.TQQQ.settled?+liveQuotes.TQQQ.settled.close:0;
+  const sp=liveQuotes.SGOV&&liveQuotes.SGOV.settled?+liveQuotes.SGOV.settled.close:0;
+  if((tq>0&&!tp)||(qq>0&&!qp)||(sq>0&&!sp)) return null;
+  return cash+tq*tp+qq*qp+sq*sp;
+}
 function planProgress(){
-  const total=num("balMM")+num("balVR")+num("balQLD")+num("balSGOV");
+  const at=activePlanTab==='alpha'?alphaPlanTotal():null;
+  const total=activePlanTab==='alpha'?(at==null?num("startCapital"):at):(num("balMM")+num("balVR")+num("balQLD")+num("balSGOV"));
   const base=num("startCapital"),target=num("targetCapital");
   if(!(base>0) || !(target>base)) return {ready:false,total,base,target,ratio:0};
   const ratio=(total-base)/(target-base);
@@ -1410,17 +1420,27 @@ function render(){
   renderLedger();
   const stage=currentStage(),st=STAGES[stage],pg=planProgress();
   document.querySelectorAll(".step").forEach(b=>b.classList.toggle("on",Number(b.dataset.step)===stage));
-  $("stageTitle").textContent=st.title;$("stageBadge").textContent=st.badge;$("stageDesc").textContent=st.desc;
-  $("stageSource").textContent=$("stageMode").value==="auto"?"현재 자동판정 단계":"현재 수동 고정 단계";
+  if(activePlanTab==='alpha'){
+    $("stageTitle").textContent="PATH A · 실전 운용";
+    $("stageBadge").textContent="PRIMARY";
+    $("stageDesc").textContent="TECL 역분산 65% + TQQQ Guard 35% · 시작금 $20,000";
+    $("stageSource").textContent="오늘은 아래 주문표만 확인하면 됩니다";
+  }else{
+    $("stageTitle").textContent=st.title;$("stageBadge").textContent=st.badge;$("stageDesc").textContent=st.desc;
+    $("stageSource").textContent=$("stageMode").value==="auto"?"현재 자동판정 단계":"현재 수동 고정 단계";
+  }
   const total=pg.total,target=Math.max(1,num("targetCapital",1)),progress=pg.ready?pg.ratio*100:0,remain=monthsLeft();
   $("goalBar").style.width=Math.min(100,Math.max(0,progress))+"%";
-  $("goalPct").textContent=pg.ready?"5년 성장 진행 "+pct(progress):"시작자산 미설정 · STEP 1 유지";
+  $("goalPct").textContent=pg.ready?(activePlanTab==='alpha'?"A안 현재 "+usd(total)+" · 목표 진행 "+pct(progress):"5년 성장 진행 "+pct(progress)):"시작자산 미설정 · STEP 1 유지";
   $("timeText").textContent="목표일까지 약 "+remain+"개월";
   if($("startCapitalSrc")) $("startCapitalSrc").textContent=pg.ready
     ? "시작 "+usd(pg.base)+" → 현재 "+usd(total)+" → 목표 "+usd(pg.target)
     : "현재 플랜자산을 확인한 뒤 아래 버튼으로 시작점을 확정하세요.";
   const next={1:["성장 진행 70% 또는 3년 경과","둘 중 하나라도 먼저 오면 수익 보호 시작"],2:["성장 진행 85% 또는 12개월 전","둘 중 하나라도 먼저 오면 전환 준비"],3:["성장 진행 100% 또는 목표일","달성 즉시 현금흐름 구조로 전환"],4:["월 현금흐름·원금 유지 관리","분배율보다 총수익과 인출 지속성을 함께 점검"]}[stage];
-  $("nextRule").textContent=next[0];$("nextNote").textContent=next[1];
+  if(activePlanTab==='alpha'){
+    $("nextRule").textContent="오늘 주문표 → 체결 → 보유수량 갱신";
+    $("nextNote").textContent="다음 거래일 다시 이 페이지를 열어 같은 순서로 반복합니다.";
+  }else{$("nextRule").textContent=next[0];$("nextNote").textContent=next[1];}
 
   if($("soxlTargetPct"))$("soxlTargetPct").textContent=(stage<4?STAGES[stage].main[0]:10)+"%";
   if($("tqqqTargetPct"))$("tqqqTargetPct").textContent=(stage<4?STAGES[stage].main[1]:0)+"%";
