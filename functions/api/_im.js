@@ -127,9 +127,9 @@ export function imCompute(st, hist) {
   let avg = 0, qty = 0, inv = 0, realized = 0, T = 0;
   let withdrawn = 0, saved = 0, divTotal = 0;
   const simple = (st.compound === false);
-  let revState = "NORMAL";
-  const revEnter = () => {
-    if (revEnabled(st) && revState === "NORMAL" && qty > 1e-9 && (st.div - T) < 1) revState = "DAY1";
+  let revState = "NORMAL", revFrom = "";   // revFrom — 1일차로 들어온 기록의 날짜 (앱 computeInf 와 같다 · 제12차 ②)
+  const revEnter = (d) => {
+    if (revEnabled(st) && revState === "NORMAL" && qty > 1e-9 && (st.div - T) < 1) { revState = "DAY1"; revFrom = d || ""; }
   };
   for (const h of (hist || [])) {
     const kind = String(h.kind || "");
@@ -166,13 +166,13 @@ export function imCompute(st, hist) {
         if (cashNow > P0) saved += cashNow - P0;
       }
     }
-    revEnter();
+    revEnter(h.date);
   }
   revEnter();
   const reverseActive = revEnabled(st) && revState !== "NORMAL" && qty > 0;
   const reverseDay1 = reverseActive && revState === "DAY1";
   const bal = (+st.principal || 0) + realized + divTotal - inv - withdrawn - saved;
-  return { avg, qty, inv, realized, T, bal, st, revState, reverseActive, reverseDay1, withdrawn, saved, divTotal, simple };
+  return { avg, qty, inv, realized, T, bal, st, revState, reverseActive, reverseDay1, revFrom, withdrawn, saved, divTotal, simple };
 }
 
 /* ── 확정 종가 ──
@@ -236,10 +236,14 @@ export function imMomOf(days) {
 export function imTgtOf(base, mom) { return (mom != null && mom > IM_MOM_TH) ? Math.min(base * 2, IM_MOM_CAP) : base; }
 
 function exitMulOf(base){ return 1-((base!=null&&base>0)?base:20)/100; }
-/* 리버스 종료가 확정됐는가 — 원문 리버스 6-(2): 종가가 평단 대비 −15%(TQQQ)·−20%(SOXL) 위로 올라온 것을 확인하면
-   그 다음부터 일반모드. 리버스로 하루 이상 지난 뒤(1일차 아님)의 확정 종가로만 본다 — 모의·백테와 같은 규약.
+/* 리버스 종료가 확정됐는가 — 원문 리버스 6-(2): 리버스로 보낸 날의 확정 종가가 평단 대비 −15%(TQQQ)·−20%(SOXL) 위면
+   그 다음부터 일반모드. 1일차도 예외가 아니다 (제12차 ②) — 1일차 MOC 를 치른 날 종가가 복귀선 위면 다음 주문부터
+   일반모드다. 모의·백테도 1일차 주문 뒤 그날 종가로 판정한다.
+   빼는 건 '리버스가 시작되기 전' 종가 하나다 — 장부가 아직 1일차(DAY1)이고 확정 종가 날짜(date)가 소진한 날(revFrom)을
+   넘지 않으면 그건 일반모드 마지막 날 종가다. 1일차 매도가 0주(보유÷10 내림)라 장부에 리버스 거래가 안 남아도 날짜가
+   넘어가면 1일차 종가로 본다. 날짜를 모르면 1일차 거래가 장부에 있는지로 대신 본다.
    운영 주문표·서버 자동주문·5년 플랜이 같은 글자로 쓴다 (제11차 7): 복귀 기록 버튼을 안 눌러도 다음 주문은 일반모드여야 한다. */
-function imRevExitDue(c, close, target){ return !!(c && c.reverseActive && !c.reverseDay1 && close>0 && c.avg>0 && close>c.avg*exitMulOf(target)); }
+function imRevExitDue(c, close, target, date){ return !!(c && c.reverseActive && (!c.reverseDay1 || !!(date && c.revFrom && date>c.revFrom)) && close>0 && c.avg>0 && close>c.avg*exitMulOf(target)); }
 /* 오늘 낼 주문. index.html renderOrder의 일반모드와 같은 순서·같은 값으로 낸다.
    close = 확정 종가(전일 종가). days = 종가 이력(익절 조절용, 없으면 조절 안 함). */
 export function imOrders({ st, hist, close, days }) {
@@ -247,7 +251,8 @@ export function imOrders({ st, hist, close, days }) {
   const out = [];
   /* 확정 종가가 복귀선 위면 이번 주문은 일반모드 — 장부 끝에 복귀 기록을 가상으로 얹어 다시 센다 (앱 renderOrder 와 같다 · 제11차 7).
      그래도 T > 분할−1 이면 새 리버스 1일차라 아래에서 건너뛴다(리버스 자동주문 미지원). */
-  if (imRevExitDue(c, close, st.target)) c = imCompute(st, [...(hist || []), { date: "", kind: "리버스복귀", price: close, qty: 0, virtual: true }]);
+  const closeDate = (days && days.length) ? String(days[days.length - 1].date || "") : "";   // days 의 마지막 봉 = 그 확정 종가
+  if (imRevExitDue(c, close, st.target, closeDate)) c = imCompute(st, [...(hist || []), { date: closeDate, kind: "리버스복귀", price: close, qty: 0, virtual: true }]);
   if (c.reverseActive) return { orders: out, skip: "리버스모드 — 자동 주문 미지원", c };
   if (!(close > 0)) return { orders: out, skip: "확정 종가 없음", c };
 
