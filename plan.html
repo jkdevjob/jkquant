@@ -153,7 +153,7 @@ th:first-child,td:first-child{text-align:left}
 <body>
 <div class="wrap">
   <div class="top">
-    <div class="brand"><div class="logo">Five Year Plan</div><h1>5년 자산플랜 <span class="ver">v1.14.0</span></h1></div>
+    <div class="brand"><div class="logo">Five Year Plan</div><h1>5년 자산플랜 <span class="ver">v1.15.0</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
       <div class="jkmenu" id="jkmenuWrap">
@@ -196,15 +196,15 @@ th:first-child,td:first-child{text-align:left}
     <div class="guidehero">
       <div class="eyebrow">PATH A · SIMPLE GROWTH + GUARD</div>
       <h2>TECL 역분산 65% + TQQQ Guard 35%</h2>
-      <div class="path-note">시작금 $20,000 기준 · 다른 탭과 합산하는 $40,000 운용이 아니라 같은 원금을 두 방식으로 비교하는 대안입니다.</div>
+      <div class="path-note" id="alphaCapitalNote">입력한 초기자금 전체를 A안으로 운용합니다. B안은 같은 원금을 다른 방식으로 비교하는 대안입니다.</div>
       <div class="guidegrid">
-        <div class="guidekpi"><div class="k">시작금</div><div class="v">$20,000</div><div class="sub">첫날은 전액 현금</div></div>
+        <div class="guidekpi"><div class="k">초기자금 ($)</div><div class="v"><input type="number" id="alphaCapitalInput" min="1" step="100" style="width:100%;min-height:36px;font-size:16px;font-weight:800"></div><div class="sub">금액 변경 시 첫날 현금·주문수량 자동 반영</div></div>
         <div class="guidekpi"><div class="k">TECL 역분산</div><div class="v">65% · N20 · s0 55%</div><div class="sub">밴드 12.5%p · 나머지 SGOV</div></div>
         <div class="guidekpi"><div class="k">TQQQ Guard</div><div class="v">35% · SMA200</div><div class="sub">+1.5% 진입 / -1.5% 대피</div></div>
         <div class="guidekpi"><div class="k">대피자산</div><div class="v">SGOV</div><div class="sub">신호가 없으면 거래 없음</div></div>
       </div>
       <div class="path-summary" style="margin-top:10px">
-        <b>오늘부터 시작:</b> 처음이면 아래 보유수량이 <b>TECL 0주 · TQQQ 0주 · SGOV 0주 · 현금 $20,000</b>인지 확인 → <b>오늘 주문 다시 계산</b> → 위에서부터 표시된 주문을 실행 → 체결 후 실제 보유수량과 현금만 갱신하면 됩니다.<br>
+        <b>오늘부터 시작:</b> 처음이면 아래 보유수량이 <b id="alphaStartHoldings">TECL 0주 · TQQQ 0주 · SGOV 0주 · 현금은 입력한 초기자금</b>인지 확인 → <b>오늘 주문 다시 계산</b> → 위에서부터 표시된 주문을 실행 → 체결 후 실제 보유수량과 현금만 갱신하면 됩니다.<br>
         <span class="sub" id="alphaStartState">시작 상태 확인 중…</span>
       </div>
       <div class="path-summary" style="margin-top:8px">
@@ -224,7 +224,7 @@ th:first-child,td:first-child{text-align:left}
           <div class="field"><label>SGOV 주수</label><input type="number" id="aSgovQty" min="0" step="1"></div>
           <div class="field"><label>현금 ($)</label><input type="number" id="aCash" step="1"></div>
         </div>
-        <div class="btnrow"><button class="btn primary" id="alphaRefresh">🔄 오늘 주문 다시 계산</button><button class="btn" id="alphaReset">$20,000 현금으로 초기화</button></div>
+        <div class="btnrow"><button class="btn primary" id="alphaRefresh">🔄 오늘 주문 다시 계산</button><button class="btn" id="alphaReset">입력 초기자금으로 다시 시작</button></div>
       </div>
     </div>
   </div>
@@ -233,7 +233,7 @@ th:first-child,td:first-child{text-align:left}
     <div class="guidehero">
       <div class="eyebrow">PATH B · INFINITE BUY + VALUE REBALANCING</div>
       <h2>SOXL 무매 60% + TECL VR 40%</h2>
-      <div class="path-note">시작금 $20,000 기준 · SOXL $12,000 / TECL VR $8,000으로 독립 운용합니다. 두 전략은 서로 리밸런싱하지 않습니다.</div>
+      <div class="path-note" id="classicCapitalNote">입력한 초기자금을 SOXL 60% / TECL VR 40%로 독립 배정합니다. 두 전략은 서로 리밸런싱하지 않습니다.</div>
       <div class="guidegrid">
         <div class="guidekpi"><div class="k">SOXL 무매</div><div class="v">20분할 · 익절 +20%</div><div class="sub">V4.0 변형 · 복리 · 리버스 OFF · 큰수15%</div></div>
         <div class="guidekpi"><div class="k">TECL VR</div><div class="v">G5 · ±30%</div><div class="sub">Basic V갱신식 · 거치식 · 14일 · 5년 롤링 기본값</div></div>
