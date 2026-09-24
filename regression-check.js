@@ -7850,7 +7850,8 @@ console.log('\n[117] 5년 플랜 v1.19.0 — A 전략설명·리밸런싱 근거
      && /수수료 포함 필요현금 약/.test(pl)
      && /const teclAmt=targetTq\*tp,tqqqAmt=targetQq\*qp,sgovAmt=targetSq\*sp/.test(pl)
      && /const buyMap=\{TECL:0,TQQQ:0,SGOV:0\}/.test(pl)
-     && /gross=Math\.max\(0,qty\*price\),fee=gross\*FEE/.test(pl));
+     && /gross=Math\.max\(0,qty\*price\),fee=alphaFee\(qty,price\)/.test(pl)
+     && /function alphaFee\(q,p\)\{const gross=Math\.max\(0,\(\+q\|\|0\)\*\(\+p\|\|0\)\);return gross<=10\?0:Math\.floor\(gross\*ALPHA_FEE_RATE\*100\)\/100;\}/.test(pl));
   ok('PATH B 균형성장 배분 — SOXL 무매 50% + TECL VR 50%',
      /a=\[50,50,0\],inf=Math\.round\(total\*PATH_DEFAULTS\.classic\.infWeight\)/.test(pl)
      && /classic:\{infWeight:\.50,vrWeight:\.50,infDiv:20,infTarget:20,infBig:12\.5,infReverse:false,infRows:12,vrG:11,vrBand:35,vrFormula:'basic'/.test(pl)
