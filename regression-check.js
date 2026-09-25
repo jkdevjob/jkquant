@@ -8507,6 +8507,12 @@ console.log('\n[119] 제10차 — 라오어 V4.0 원문 직접 대조 (SOURCE GO
     ok('제10차 P1-5 · 앱·백테 판정이 같은 글자', extractFn(idx,'function imVariantOf(cfg)')===extractFn(bt,'function imVariantOf(cfg)')); }
   ok('운영 기본값 · 큰수 15 / 리버스 gap 0 / 아래로 LOC 3줄을 사용한다',
      /const IM_BIG_DEFAULT=15;/.test(idx) && /const REV_GAP_DEF=0;/.test(idx) && /const IM_ROWS_DEFAULT=3;/.test(idx) && /줄 수 3은 JKQuant 기본값\(원문에 개수 없음\)/.test(idx) && /줄 수 \$\{n\}줄은 <b>JKQuant 구현값<\/b>/.test(idx)
+     && /const INF_DEFAULTS_POLICY_VER=1;/.test(idx)
+     && /function migrateInfOperatingDefaults\(\)/.test(idx)
+     && /st\.big=IM_BIG_DEFAULT;/.test(idx) && /st\.revGap=REV_GAP_DEF;/.test(idx) && /st\.rows=IM_ROWS_DEFAULT;/.test(idx)
+     && /if\(migrateInfOperatingDefaults\(\)\) saveLocal\(\);/.test(idx)
+     && /function migrateLiveInfOperatingDefaults\(\)/.test(pl)
+     && /st\.big=PATH_DEFAULTS\.classic\.infBig;/.test(pl) && /st\.revGap=0;/.test(pl) && /st\.rows=PATH_DEFAULTS\.classic\.infRows;/.test(pl)
      && !/V4\.0 정식 구성입니다/.test(idx) && !/V4\.0 정식 · 1회매수금÷\(수량\+k\) · 0이면/.test(idx)
      && /V4\.0 변형 · 복리 · 리버스 OFF · 큰수15% · 하방3줄/.test(pl)
      && !/큰수12\.5% · 하방12줄/.test(pl));
