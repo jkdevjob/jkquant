@@ -7857,11 +7857,11 @@ console.log('\n[117] 자산플랜 v1.28.0 — 기간마다 완전히 다른 매�
      /<title>JK 퀀트 — 자산플랜<\/title>/.test(pl)
      && /<div class="logo">Asset Plan<\/div><h1>자산플랜 <span class="ver">v\d+\.\d+\.\d+<\/span>/.test(pl)   // 버전은 배포마다 오른다 — 이름만 본다
      && /<a href="\/plan" class="cur"><span class="mi">🧭<\/span>자산플랜<\/a>/.test(pl));
-  ok('PATH A 균형성장 — TECL 70% N15 s0 55 밴드17.5 + TQQQ 30% SMA200 ±1.5',
-     /alpha:\{teclWeight:\.70,guardWeight:\.30,ivsLook:15,ivsS0:\.55,ivsBand:\.175,guardMA:200,guardBand:\.015\}/.test(pl));
+  ok('PATH A 균형성장 — 개선 70/30 · TECL 70% N20 s0 55 밴드10 + TQQQ 30% SMA225 ±1.0',
+     /alpha:\{teclWeight:\.70,guardWeight:\.30,ivsLook:20,ivsS0:\.55,ivsBand:\.10,guardMA:225,guardBand:\.01\}/.test(pl));
   ok('PATH A 첫날 실행 UI — 초기자금 입력 · 127개 롤링 검증 · 자체 잔고 진행률',
      /id="alphaCapitalInput"/.test(pl)
-     && /127개 시작구간/.test(pl)
+     && /137개 시작구간/.test(pl)
      && /function alphaPlanTotal\(\)/.test(pl)
      && /activePlanTab==='alpha'\?\(at==null\?num\("startCapital"\):at\)/.test(pl));
   ok('자산플랜 기간 탭 — 5·10·15·20년 + B안 화면 제거',
@@ -9644,7 +9644,7 @@ console.log('\n[129] 자산플랜 현재가 — 캐시 우회 · 현재계좌 �
   const pt=extractFn(pl,'function alphaPlanTotal()');
   ok('현재가 — quote 요청은 매 새로고침마다 _ts + no-store/no-cache로 브라우저·CDN 캐시를 우회', /_ts='\+Date\.now\(\)/.test(fq) && /cache:'no-store'/.test(fq) && /'Cache-Control':'no-cache'/.test(fq));
   ok('현재계좌 총자산 — liveQuotes.price 우선, 없을 때만 확정종가 fallback', /\+q\.price>0\?\+q\.price/.test(pt) && /q\.settled\?\+q\.settled\.close:0/.test(pt));
-  ok('자산플랜 버전 — 현재가 강제 갱신 v1.31.3', /자산플랜 <span class="ver">v1\.31\.3<\/span>/.test(pl));
+  ok('자산플랜 버전 — 개선 70/30 v1.32.0', /자산플랜 <span class="ver">v1\.32\.0<\/span>/.test(pl));
 }
 
 /* ════ 130. 무매 자동주문 — 크론이 주문 창 안에 떨어진다 · 주문 직전 선점 · 공개 로그 ════
