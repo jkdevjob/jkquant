@@ -53,7 +53,7 @@ function nearest(list,trade,side,used,refHm){
 async function exactCosts(origin,headers,date,row){
   if(!row||!row.orderNo)return 0;
   await sleep(650);
-  const u=origin+"/api/kis?op=orders&env=vts&date="+encodeURIComponent(date.replace(/-/g,""))+
+  const u=origin+"/api/kis?op=orders&env=vts&market=kr&date="+encodeURIComponent(date.replace(/-/g,""))+
     "&code="+encodeURIComponent(row.code||"")+"&odno="+encodeURIComponent(row.orderNo);
   const j=await fetchJson(u,headers);
   return +((j.summary||{}).estimatedCosts)||0;
@@ -68,7 +68,7 @@ export async function onRequestGet({request}){
   try{
     const [internal,kis]=await Promise.all([
       internalTrades(strategy,date),
-      fetchJson(url.origin+"/api/kis?op=orders&env=vts&date="+encodeURIComponent(date.replace(/-/g,"")),headers)
+      fetchJson(url.origin+"/api/kis?op=orders&env=vts&market=kr&date="+encodeURIComponent(date.replace(/-/g,"")),headers)
     ]);
     if(kis.env!=="vts")return json({ok:false,error:"VTS only"},400);
 
