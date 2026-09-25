@@ -149,7 +149,7 @@ pre.rules{background:var(--bg);border:1px solid var(--line);border-radius:10px;p
 
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Admin Console</div><h1>JK <span class="v">퀀트</span> 관리자 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="adVer">v0.3.0</span></h1></div>
+    <div><div class="kicker">Admin Console</div><h1>JK <span class="v">퀀트</span> 관리자 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="adVer">v0.3.1</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -332,6 +332,12 @@ const STRATEGY_DEFAULT_META={
 let strategyDefaults=JSON.parse(JSON.stringify(STRATEGY_DEFAULT_BUILTIN)), defaultsTab='inf';
 
 function cfgClone(v){return JSON.parse(JSON.stringify(v));}
+function mergeStrategyDefaults(src){
+  const out=cfgClone(STRATEGY_DEFAULT_BUILTIN);
+  if(!src||typeof src!=='object')return out;
+  for(const k of Object.keys(out)) if(src[k]&&typeof src[k]==='object') out[k]={...out[k],...src[k]};
+  return out;
+}
 function cfgEq(a,b){return String(a)===String(b);}
 function cfgValToAttr(v){return esc(typeof v==='boolean'?(v?'true':'false'):v);}
 function cfgFieldHtml(tab,f,val){
@@ -385,14 +391,14 @@ function readCurrentDefaultTab(){
 }
 async function loadStrategyDefaultsAdmin(){
   let local=null;try{local=JSON.parse(localStorage.getItem(STRATEGY_DEFAULT_CACHE)||'null')}catch(e){}
-  if(local&&typeof local==='object')strategyDefaults=Object.assign(cfgClone(STRATEGY_DEFAULT_BUILTIN),local);
+  if(local&&typeof local==='object')strategyDefaults=mergeStrategyDefaults(local);
   if(me){
     try{
       const snap=await window.fb.getDoc(window.fb.doc(window.fb.db,'users',me.uid));
       if(snap.exists()){
         const d=snap.data()||{},remote=d.strategyDefaults;
         if(remote&&typeof remote==='object'){
-          strategyDefaults=Object.assign(cfgClone(STRATEGY_DEFAULT_BUILTIN),remote);
+          strategyDefaults=mergeStrategyDefaults(remote);
           try{localStorage.setItem(STRATEGY_DEFAULT_CACHE,JSON.stringify(strategyDefaults));}catch(e){}
         }
       }
