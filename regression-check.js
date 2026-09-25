@@ -1264,7 +1264,7 @@ console.log('[23] 관리자 모드 — 접속 계정·사용자 관리');
      && /cacheStrategyDefaults\(d\.strategyDefaults\)/.test(idx));
   ok('관리자 기본값을 기존 세션에도 적용할 수 있다',
      /function applyDefaultsExistingSessions\(\)/.test(adm)
-     && /현재 기존 세션에도 적용/.test(adm)
+     && /기존 세션 전체에 적용/.test(adm)
      && /sess\.settings=\{\.\.\.prev,\.\.\.cfgClone\(defs\)\}/.test(adm));
   ok('기존 세션 적용 — 실계좌 기록은 보존하고 모의 자동기록만 비운다',
      /if\(sess\.paper\)\{[\s\S]{0,500}?filter\(x=>!\(x&&\(x\.sim\|\|x\.auto\)\)\)/.test(adm)
