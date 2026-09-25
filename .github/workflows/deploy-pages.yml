@@ -1,0 +1,35 @@
+name: Deploy Cloudflare Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Deploy to Cloudflare Pages
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_DEPLOY_HOOK: ${{ secrets.CLOUDFLARE_DEPLOY_HOOK }}
+        run: |
+          set -e
+          if [ -n "$CLOUDFLARE_DEPLOY_HOOK" ]; then
+            echo "Triggering Cloudflare Pages deploy hook"
+            curl -fsS -X POST "$CLOUDFLARE_DEPLOY_HOOK"
+          elif [ -n "$CLOUDFLARE_API_TOKEN" ] && [ -n "$CLOUDFLARE_ACCOUNT_ID" ]; then
+            echo "Deploying directly with Wrangler"
+            npx --yes wrangler@latest pages deploy . --project-name=jkquant --branch=main --commit-dirty=true
+          else
+            echo "::error::Cloudflare deployment credentials are not configured in GitHub Actions secrets."
+            echo "::error::Set CLOUDFLARE_DEPLOY_HOOK, or both CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID."
+            exit 1
+          fi
