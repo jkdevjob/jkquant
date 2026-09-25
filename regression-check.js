@@ -1245,7 +1245,23 @@ console.log('[23] 관리자 모드 — 접속 계정·사용자 관리');
   ok('목록은 마지막 접속 최신순', /rows\.sort\(\(a,b\)=>\(\+b\.lastSeen\|\|0\)-\(\+a\.lastSeen\|\|0\)\)/.test(adm));
   // 기능은 SECTIONS 한 줄 + render 함수 하나로 늘린다
   ok('화면 목록이 한곳에 모여 있다', /const SECTIONS=\[/.test(adm)
-     && /\{id:'users'/.test(adm) && /\{id:'diag'/.test(adm) && /\{id:'rules'/.test(adm));
+     && /\{id:'users'/.test(adm) && /\{id:'defaults'/.test(adm) && /\{id:'diag'/.test(adm) && /\{id:'rules'/.test(adm));
+  ok('관리자에서 여섯 운영전략 기본값을 편집한다',
+     /const STRATEGY_DEFAULT_BUILTIN=\{/.test(adm)
+     && /inf:\{ticker:'SOXL'/.test(adm) && /vr:\{ticker:'TQQQ'/.test(adm)
+     && /ma:\{ticker:'SOXL'/.test(adm) && /ivs:\{ticker:'TQQQ'/.test(adm)
+     && /dca:\{ticker:'USD'/.test(adm) && /asap:\{ticker:'SOXL'/.test(adm)
+     && /function renderDefaults\(el\)/.test(adm) && /async function saveStrategyDefaults\(\)/.test(adm));
+  ok('관리자 기본값은 계정 문서에 merge 저장한다',
+     /doc\(window\.fb\.db,'users',me\.uid\),\{strategyDefaults:strategyDefaults,strategyDefaultsUpdated:Date\.now\(\)\},\{merge:true\}/.test(adm));
+  ok('운영 새 세션이 관리자 기본값을 합친다',
+     /function strategyDefaultOf\(tab,builtin\)/.test(idx)
+     && /strategyDefaultOf\('inf',b\)/.test(idx) && /strategyDefaultOf\('vr',b\)/.test(idx)
+     && /strategyDefaultOf\('ma',b\)/.test(idx) && /strategyDefaultOf\('ivs',b\)/.test(idx)
+     && /strategyDefaultOf\('dca',b\)/.test(idx) && /strategyDefaultOf\('asap',b\)/.test(idx));
+  ok('운영은 로그인 계정의 관리자 기본값을 캐시한다',
+     /d&&d\.strategyDefaults&&typeof d\.strategyDefaults==='object'/.test(idx)
+     && /cacheStrategyDefaults\(d\.strategyDefaults\)/.test(idx));
   ok('관리자 아닌 계정은 문 앞에서 막힌다', /if\(isAdmin\(\)\)\{[\s\S]{0,200}?\$\('gate'\)\.style\.display='none'/.test(adm)
      && /계정에는 관리자 권한이 없습니다/.test(adm));
 
