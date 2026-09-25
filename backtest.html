@@ -320,7 +320,7 @@ td:first-child{text-align:left;}
   <div class="brand">
     <div>
       <div class="logo">Backtest</div>
-      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v2.12.2</span></h1>
+      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v2.12.3</span></h1>
     </div>
   </div>
   <div class="hright">
@@ -439,11 +439,8 @@ document.addEventListener('click',function(e){ var m=document.getElementById('jk
         <button data-x="1" title="직전 20거래일 상승률이 +8%를 넘으면 익절% = min(기본×2, 30%). 내릴 때는 조절하지 않음 — 추세가 살아있을 때만 더 들고 간다">상승률</button>
       </div>
     </div>
-    <div class="ctrl s-im hide"><label>익절 체결 <span style="font-size:9px;color:var(--dim)">지정가 판정</span></label>
-      <div class="seg" id="imFillSeg">
-        <button data-f="high" class="active" title="정규장 일봉 고가가 목표가를 터치하면 체결 — 지정가 주문의 근사 (원문 익절 지정가는 프리장~애프터까지 유효 · 그 체결은 일봉으로 재현 못 함)">고가</button>
-        <button data-f="close" title="종가가 목표가 이상일 때만 체결 — 보수적 하한">종가</button>
-      </div>
+    <div class="ctrl s-im hide"><label>익절 체결 <span style="font-size:9px;color:var(--dim)">지정가매도 고정</span></label>
+      <div style="font-size:11px;color:var(--faint);line-height:1.45;max-width:300px">SOXL +20% 지정가매도. 일봉 백테스트에서는 정규장 고가가 목표가에 닿으면 체결로 봅니다.</div>
     </div>
     <div class="ctrl s-im hide"><label>세금·비용</label>
       <div class="seg" id="imCost">
@@ -1675,7 +1672,7 @@ const imTgtFor=t=>(imTarget>0?imTarget:(IM_OFFICIAL[t]||20));   // 엔진에 들
    그 밖의 종목에 쓰는 20은 문서값이 아니라 '그 외는 SOXL 값을 따른다'는 우리 확장이다 —
    같은 이름으로 보이면 사용자가 실험값을 문서값으로 읽는다. */
 const imTgtTxt=()=>(imTarget>0?imTarget+'%':'TQQQ 15 · SOXL 20 · 그 외 실험값 20');
-let imFill='high';   // 익절 체결 판정: 'high'=고가 터치(기본·지정가 정석) / 'close'=종가 도달(보수적 하한)
+const imFill='high';   // V4.0 익절은 지정가매도 고정 — 일봉 고가가 목표가에 닿으면 체결로 근사
 /* 리버스 쿼터매수 gap — 별지점에서 이만큼 아래에 LOC를 건다.
    예전엔 0.975(=2.5%)가 코드에 못 박혀 있었다. 운영 앱은 사용자가 바꿀 수 있는 값이라,
    앱에서 gap 을 바꾸면 운영 주문가와 백테 주문가가 서로 달라졌다.
@@ -1696,7 +1693,6 @@ document.getElementById('imTgtSeg').onclick=e=>{if(e.target.dataset.t){document.
 document.getElementById('vrFillSeg').onclick=e=>{if(e.target.dataset.v){document.querySelectorAll('#vrFillSeg button').forEach(b=>b.classList.remove('active'));e.target.classList.add('active');vrFill=e.target.dataset.v;if(dataLoaded)run();}};
 { const el=document.getElementById('imRevGapIn');
   if(el) el.onchange=()=>{ const v=+el.value; imRevGap=(isFinite(v)&&v>=0)?Math.min(20,v):0; el.value=imRevGap; if(dataLoaded)run(); }; }
-document.getElementById('imFillSeg').onclick=e=>{if(e.target.dataset.f){document.querySelectorAll('#imFillSeg button').forEach(b=>b.classList.remove('active'));e.target.classList.add('active');imFill=e.target.dataset.f;if(dataLoaded)run();}};
 syncMaCtrl();   // 초기: V4.0이므로 국면선 비활성 표시
 syncRevUI();
 
@@ -2694,7 +2690,7 @@ function runIM(days,tkr,cap,divs,targetPct,compound=true,bigOverride){
       const q3=orig-q1;              // 익절 지정가: 나머지 (운영 모의와 같은 규약)
       let tpHit=false, qtHit=false;
       // ① 익절 지정가매도 (intraday): 고가 >= 익절가
-      const _fillHit=(typeof imFill!=='undefined'&&imFill==='high')?hi:c;   // 익절 판정: '고가'=장중 고가 목표가 터치 시 체결(지정가 정석), '종가'=보수적 하한. imFill 미정의=종가(회귀 앵커 유지)
+      const _fillHit=hi;   // 지정가매도: 정규장 일봉 고가가 목표가에 닿으면 체결로 근사
       // 체결가: 시가가 이미 익절가 위면 지정가 매도는 '시가'에 체결된다(가격개선).
       // tgt로 고정하면 갭업 익절이 통째로 과소계상됐다 — SOXL 20분할 20%에서 익절 42건 중 12건이 갭업.
       if(_fillHit>=tgt&&q3>0){_sell(o>tgt?o:tgt,q3,SLIP);tpHit=true;}   // 지정가매도
@@ -3026,7 +3022,7 @@ function runIM50(days,tkr,cap,divs,targetPct,compound=true,bigOverride){
       const orig=shares;
       const q1=isq(orig/4,orig), q3=orig-q1;   // 정수 주수 (운영 모의와 같은 규약)
       let tpHit=false, qtHit=false;
-      const _fillHit=(typeof imFill!=='undefined'&&imFill==='high')?hi:c;   // 익절 판정: '고가'=장중 고가 목표가 터치 시 체결(지정가 정석), '종가'=보수적 하한. imFill 미정의=종가(회귀 앵커 유지)
+      const _fillHit=hi;   // 지정가매도: 정규장 일봉 고가가 목표가에 닿으면 체결로 근사
       // 체결가: 시가가 이미 익절가 위면 지정가 매도는 '시가'에 체결된다(가격개선).
       // tgt로 고정하면 갭업 익절이 통째로 과소계상됐다 — SOXL 20분할 20%에서 익절 42건 중 12건이 갭업.
       if(_fillHit>=tgt&&q3>0){_sell(o>tgt?o:tgt,q3,SLIP);tpHit=true;}   // 지정가매도
