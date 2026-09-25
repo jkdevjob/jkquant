@@ -537,7 +537,7 @@ try{ if(localStorage.getItem('qcockpit_hadUser')==='1') document.documentElement
 </div>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.97.4</span></h1></div>
+    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.98.0</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -1646,7 +1646,7 @@ if(/^\/paper\/?$/.test(location.pathname)){
   <footer>
     <strong>JK 퀀트</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.97.4</b> · 2026-09-25</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.98.0</b> · 2026-09-25</div>
   </footer>
 </div>
 
@@ -2101,9 +2101,27 @@ const won=v=>Math.round((+v||0)*((typeof liveFX!=='undefined'&&liveFX)?liveFX:FX
  }
 */
 const LS='qcockpit_v2', LS_URL='qcockpit_gsheet';
+const STRATEGY_DEFAULT_CACHE='jkq_strategy_defaults_v1';
 let S=null;
+let STRATEGY_DEFAULTS=(function(){try{const x=JSON.parse(localStorage.getItem(STRATEGY_DEFAULT_CACHE)||'null');return x&&typeof x==='object'?x:{};}catch(e){return {};}})();
 
-function defInfSettings(){return{ticker:'SOXL',div:20,target:20,big:IM_BIG_DEFAULT,rows:IM_ROWS_DEFAULT,revGap:REV_GAP_DEF,rowqty:1,principal:10000,divmode:'reinv',engine:'v40',shortMA:30,loPct:6,tgtDyn:false}}
+/* 관리자 화면에서 정한 운영전략 기본값.
+   저장된 세션은 건드리지 않고 new*Session()이 만드는 새 세션에만 합친다.
+   알 수 없는 키는 받지 않고, null/undefined도 무시해 잘못된 관리자 값이 엔진 상태를 깨뜨리지 않게 한다. */
+function strategyDefaultOf(tab,builtin){
+  const src=STRATEGY_DEFAULTS&&STRATEGY_DEFAULTS[tab], out={...builtin};
+  if(!src||typeof src!=='object')return out;
+  for(const k of Object.keys(builtin)) if(Object.prototype.hasOwnProperty.call(src,k)&&src[k]!=null) out[k]=src[k];
+  return out;
+}
+function cacheStrategyDefaults(v){
+  if(!v||typeof v!=='object')return false;
+  STRATEGY_DEFAULTS=v;
+  try{localStorage.setItem(STRATEGY_DEFAULT_CACHE,JSON.stringify(v));}catch(e){}
+  return true;
+}
+
+function defInfSettings(){return strategyDefaultOf('inf',{ticker:'SOXL',div:20,target:20,big:IM_BIG_DEFAULT,rows:IM_ROWS_DEFAULT,revGap:REV_GAP_DEF,rowqty:1,principal:10000,divmode:'reinv',engine:'v40',shortMA:30,loPct:6,tgtDyn:false,reverse:false,compound:true})}
 // V5.0 숨김 기간: 저장된 세션이 v50이어도 v40으로 강제 (UI가 없어 되돌릴 수 없으므로)
 // 복원 시 이 함수와 load() 안의 호출만 제거하면 된다.
 function forceV40(){
@@ -2118,18 +2136,18 @@ function forceV40(){
     walk(S);
   }catch(e){}
 }
-function defVrSettings(){return{ticker:'TQQQ',mode:0.75,formula:'basic',g:10,initAmt:10000,add:100,band:15,startv:0,startpool:0,autoCyc:false,vrModel:'ladder',divmode:'reinv'}}
+function defVrSettings(){return strategyDefaultOf('vr',{ticker:'TQQQ',mode:0.75,formula:'basic',g:10,initAmt:10000,add:100,band:15,startv:0,startpool:0,autoCyc:false,vrModel:'ladder',divmode:'reinv'})}
 function uid(){return 's'+Date.now()+Math.floor(Math.random()*9999)}
 function newInfSession(name){return{id:uid(),name:name||'세션 1',settings:defInfSettings(),hist:[]}}
 function newVrSession(name){return{id:uid(),name:name||'세션 1',settings:defVrSettings(),hist:[]}}
-function defMaSettings(){return{ticker:'SOXL',buy:'ma',sell:'ma',park:'cash',principal:10000,divmode:'reinv'}}   // 이평 200일 고정 · 매수/매도 조건 16조합
+function defMaSettings(){return strategyDefaultOf('ma',{ticker:'SOXL',buy:'ma',sell:'ma',park:'cash',principal:10000,divmode:'reinv'})}   // 이평 200일 고정 · 매수/매도 조건 16조합
 function newMaSession(name){return{id:uid(),name:name||'세션 1',settings:defMaSettings(),hist:[]}}
-function defAsapSettings(){return{ticker:'SOXL',base:10,mid:50,deep:100,divmode:'reinv'}}
+function defAsapSettings(){return strategyDefaultOf('asap',{ticker:'SOXL',base:10,mid:50,deep:100,divmode:'reinv'})}
 function newAsapSession(name){return{id:uid(),name:name||'내 계좌',settings:defAsapSettings(),hist:[]}}
 /* ── 역분산 비중 (섀넌의 도깨비) ──
    w = min(1,(s0/σ)²) · σ = 최근 look일 실현변동성(연율) · |w−현재비중|>band 일 때만 리밸런싱
    qty/cash/avg 는 '지금 내 계좌 상태'. 리밸런싱 기록 시 자동 갱신되고 설정에서 직접 고칠 수도 있다. */
-function defIvsSettings(){return{ticker:'TQQQ',mode:'iv',s0:55,look:40,band:15,principal:10000,park:'bill',monthly:0,divmode:'reinv'}}
+function defIvsSettings(){return strategyDefaultOf('ivs',{ticker:'TQQQ',mode:'iv',s0:55,look:40,band:15,principal:10000,park:'bill',monthly:0,divmode:'reinv'})}
 function newIvsSession(name){return{id:uid(),name:name||'내 계좌',settings:defIvsSettings(),hist:[]}}
 // 구형식 마이그레이션: 계좌를 설정에 들고 있던 세션을 '초기자금 + 기록' 형식으로 옮긴다.
 // 보유분은 평단으로 매수한 '시작 보유' 기록으로 남겨 포지션이 그대로 재현되게 한다.
@@ -2148,7 +2166,7 @@ function migrateIvsSess(sess){
 }
 function ensureIvsBox(){ if(S&&(!S.ivs||!S.ivs.sessions||!S.ivs.sessions.length)){ const d=newIvsSession('내 계좌'); S.ivs={sessions:[d],active:d.id}; } }
 /* mode: 'dca' 적립식(주기마다 매수) / 'lump' 거치식(시작일에 원금 전액 한 번, 이후 보유) */
-function defDcaSettings(){return{ticker:'USD',mode:'dca',amount:10,freq:'day',dipMul:1,reinv:true}}   // 적립은 divmode 대신 reinv 를 쓴다(칸 이름이 set_dcareinv)
+function defDcaSettings(){return strategyDefaultOf('dca',{ticker:'USD',mode:'dca',amount:10,freq:'day',dipMul:1,reinv:true})}   // 적립은 divmode 대신 reinv 를 쓴다(칸 이름이 set_dcareinv)
 function newDcaSession(name){return{id:uid(),name:name||'내 계좌',settings:defDcaSettings(),hist:[]}}
 
 /* 신규 사용자 기본 상태 (빈 세션 1개씩) */
@@ -2159,7 +2177,7 @@ function freshState(){
   const asapS=newAsapSession('내 계좌');
   const dcaS=newDcaSession('내 계좌');
   const ivsS=newIvsSession('내 계좌');
-  return {activeTab:'inf',inf:{sessions:[infS],active:infS.id},vr:{sessions:[vrS],active:vrS.id},ma:{sessions:[maS],active:maS.id},dca:{sessions:[dcaS],active:dcaS.id},asap:{sessions:[asapS],active:asapS.id},ivs:{sessions:[ivsS],active:ivsS.id}};
+  return {activeTab:'inf',_infDefaultsPolicyVer:INF_DEFAULTS_POLICY_VER,inf:{sessions:[infS],active:infS.id},vr:{sessions:[vrS],active:vrS.id},ma:{sessions:[maS],active:maS.id},dca:{sessions:[dcaS],active:dcaS.id},asap:{sessions:[asapS],active:asapS.id},ivs:{sessions:[ivsS],active:ivsS.id}};
 }
 let curUid=null;           // 로그인한 사용자 uid
 function lsKey(){return curUid?('qcockpit_v2_'+curUid):'qcockpit_v2_guest'}
@@ -9351,6 +9369,7 @@ async function pullRemote(){
     const snap=await window.fb.getDoc(window.fb.doc(window.fb.db,'users',curUid));
     if(snap.exists()){
       const d=snap.data();
+      if(d&&d.strategyDefaults&&typeof d.strategyDefaults==='object') cacheStrategyDefaults(d.strategyDefaults);
       if(d&&validState(d.state)){
         // 신선도 가드: 이 기기의 로컬 저장본이 서버보다 최신이면(오프라인 수정 등) 낡은 서버로 덮지 않고 로컬을 밀어올림
         let local=null; try{local=JSON.parse(localStorage.getItem(lsKey()))}catch(e){}
