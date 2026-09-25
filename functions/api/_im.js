@@ -31,7 +31,7 @@ const revSupported = (div) => REV_DIVS.includes(+div);
 /* 리버스를 실제로 쓰는가 = 켬 + 규칙이 있는 분할 (index.html revEnabled 와 같은 조건 · 제8차 8-④).
    장부에 리버스 기록이 남아 있어도 규칙이 없는 분할이면 리버스로 보지 않는다. */
 const revEnabled = (st) => !!st && st.reverse === true && revSupported(st.div);
-/* 큰수(주문가 상한) 기본값 — index.html·backtest.html 의 IM_BIG_DEFAULT 와 같은 값.
+/* 큰수 기본값 — 처음매수 LOC 가격에 사용. index.html·backtest.html 의 IM_BIG_DEFAULT 와 같은 값.
    예전엔 여기만 20 이었다: big 을 저장하지 않은 옛 세션은 앱 주문표(15%)와 서버 자동주문(20%)의
    처음매수 LOC 가격이 달랐다 (실데이터 1,499일 중 269일, 7차 점검 ⑥). */
 export const IM_BIG_DEFAULT = 15;
@@ -76,26 +76,24 @@ export function imBuyOrders(o){
   const out=[], f1=1+(+o.fee||0);
   if(!(o.buy1>0)) return out;
   let res=Math.max(0,+o.bal||0);
-  const capP=o.cap>0 ? vrTickDn(o.cap, o.cur) : 0;
-  const cap=p=>(capP>0&&p>capP)?capP:p;
-  let lo=Infinity;                                 // 본 주문 중 가장 낮은 주문가 — 추가 줄은 이보다 '아래로'만
+  let lo=Infinity;
   const held=()=>out.reduce((a,x)=>a+x.q,0);
-  /* 본 주문 — 수량 = 배정액 ÷ 주문가 (내림) − 이미 건 수량(have). have 는 전반전 평단 주문에만 있다 */
   const main=(name,p0,alloc,dT,kind,have)=>{
-    const p=cap(p0); if(!(p>0)) return; if(p<lo) lo=p;
+    const p=p0; if(!(p>0)) return; if(p<lo) lo=p;
     const q=Math.min(Math.floor(alloc/f1/p+1e-9)-(have||0), Math.floor(res/f1/p+1e-9));
-    if(q>=1){ out.push({kind, name, price:p, q, dT, ladder:false, capped:o.cap>0&&p0>o.cap, orig:p0}); res-=q*p*f1; } };
-  if(o.first) main('처음매수', vrTickDn(o.firstPrice, o.cur), o.buy1, 1, '1회매수');   // 큰수 가격도 호가 내림 (45.93×1.12 = 51.4416 → 51.44)
+    if(q>=1){ out.push({kind, name, price:p, q, dT, ladder:false}); res-=q*p*f1; }
+  };
+  if(o.first) main('처음매수', vrTickDn(o.firstPrice, o.cur), o.buy1, 1, '1회매수');
   else if(o.half){ main('별지점 매수', o.starPrice, o.buy1/2, 0.5, '절반매수');
                    main('평단 매수', o.avg, o.buy1, 0.5, '절반매수', held()); }
   else main('별지점 매수 (전액)', o.starPrice, o.buy1, 1, '1회매수');
   const Q=held(), n=Math.max(0,Math.floor(+o.rows||0));
   for(let k=1,m=0;m<n&&k<=n+Q+2;k++){
-    const p=cap(vrTickDn(o.buy1/(Q+k), o.cur));
+    const p=vrTickDn(o.buy1/(Q+k), o.cur);
     if(!(p>0)) break;
-    if(p>=lo) continue;                            // 본 주문 최저가 이상은 '아래로'가 아니다 — 건너뛴다 (안전장치)
+    if(p>=lo) continue;
     if(res<p*f1-1e-9) break;
-    out.push({kind:'하방', name:'하방 '+k+' (÷'+(Q+k)+')', price:p, q:1, dT:0, ladder:true, capped:false, orig:p}); res-=p*f1; m++;
+    out.push({kind:'하방', name:'하방 '+k+' (÷'+(Q+k)+')', price:p, q:1, dT:0, ladder:true}); res-=p*f1; m++;
   }
   return out;
 }
@@ -281,12 +279,12 @@ export function imOrders({ st, hist, close, days }) {
   const limit = close * (1 + bigPct / 100);
   const half = c.T < st.div / 2;
 
-  // 매수 — 앱·모의·백테·플랜과 같은 정식 함수(imBuyOrders). 잔금 안에서만 (7차 점검 ④) · 상한 cap · 아래로 LOC 추가.
+  // 매수 — 앱·모의·백테·플랜과 같은 정식 함수(imBuyOrders). 잔금 안에서만 (7차 점검 ④) · 아래로 LOC 추가.
   const push = (side, kind, tag, price, qty) => { if (qty >= 1 && price > 0) out.push({ side, kind, tag, price, qty }); };
   if (!B1.spent) {
     const first = !(c.avg > 0);
     for (const o of imBuyOrders({ first, half: !first && half, buy1, bal: c.bal, firstPrice: close * (1 + bigPct / 100),
-                                  starPrice: buyPt, avg: c.avg, cap: limit, rows: imRowsOf(st), fee: 0, cur }))
+                                  starPrice: buyPt, avg: c.avg, rows: imRowsOf(st), fee: 0, cur }))
       push("buy", o.name, "LOC", o.price, o.q);
   }
 
