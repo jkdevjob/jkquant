@@ -8507,7 +8507,9 @@ console.log('\n[119] 제10차 — 라오어 V4.0 원문 직접 대조 (SOURCE GO
     ok('제10차 P1-5 · 앱·백테 판정이 같은 글자', extractFn(idx,'function imVariantOf(cfg)')===extractFn(bt,'function imVariantOf(cfg)')); }
   ok('운영 기본값 · 큰수 15 / 리버스 gap 0 / 아래로 LOC 3줄을 사용한다',
      /const IM_BIG_DEFAULT=15;/.test(idx) && /const REV_GAP_DEF=0;/.test(idx) && /const IM_ROWS_DEFAULT=3;/.test(idx) && /줄 수 3은 JKQuant 기본값\(원문에 개수 없음\)/.test(idx) && /줄 수 \$\{n\}줄은 <b>JKQuant 구현값<\/b>/.test(idx)
-     && !/V4\.0 정식 구성입니다/.test(idx) && !/V4\.0 정식 · 1회매수금÷\(수량\+k\) · 0이면/.test(idx));
+     && !/V4\.0 정식 구성입니다/.test(idx) && !/V4\.0 정식 · 1회매수금÷\(수량\+k\) · 0이면/.test(idx)
+     && /V4\.0 변형 · 복리 · 리버스 OFF · 큰수15% · 하방3줄/.test(pl)
+     && !/큰수12\.5% · 하방12줄/.test(pl));
   ok('제10차 P2-6 · 리버스 매수 −0.01 을 공식 확정이라 적지 않는다 (주문표·설정·플랜)',
      !/'공식 기본: 별지점 −\$0\.01'/.test(idx) && /원문은 \\'별지점 아래\\' — −0\.01 은 일반모드 규약을 따른 구현값/.test(idx)
      && /0 = 기본\(별지점 −\$0\.01 · 원문은 '별지점 아래'까지만\)/.test(idx) && /원문은 \\'별지점 아래\\' — 구현값/.test(pl));
