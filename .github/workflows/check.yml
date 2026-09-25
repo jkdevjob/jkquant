@@ -76,6 +76,27 @@ jobs:
           console.log('✓ scalping KIS path is explicitly VTS-only');
           NODE
 
+      - name: 서버 자동주문은 paper/VTS 전용인지 검사
+        run: |
+          node - <<'NODE'
+          const fs=require('fs');
+          const a=fs.readFileSync('functions/api/autotrade.js','utf8');
+          let fail=0;
+          const must=[
+            ['if (!s.paper)', 'paper=false 차단'],
+            ['const kisEnv = "vts"', '주문환경 VTS 고정'],
+            ['실계좌 자동주문 차단', '실계좌 차단 사유 기록']
+          ];
+          for(const [needle,label] of must){
+            if(!a.includes(needle)){ console.error('✗ '+label+' 없음'); fail++; }
+          }
+          if(/const\s+kisEnv\s*=\s*s\.paper\s*\?\s*["']vts["']\s*:\s*["']real["']/.test(a)){
+            console.error('✗ paper=false가 real 자동주문으로 이어지는 구형 분기 발견'); fail++;
+          }
+          if(fail)process.exit(1);
+          console.log('✓ server autotrade actual-send path is paper=true / env=vts only');
+          NODE
+
       - name: 전략 SSOT 체크 (문서 기준값·규약 불변식)
         run: |
           node -e "
