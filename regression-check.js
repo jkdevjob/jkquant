@@ -7785,11 +7785,15 @@ console.log('\n[116] 7차 D11 — 분배금 세전·세후 표기');
 }
 
 
-/* ════ 117. 5년 플랜 v1.19.0 — A 전략설명·리밸런싱 근거 시각화 ════ */
-console.log('\n[117] 5년 플랜 v1.19.0 — A 전략설명·리밸런싱 근거 시각화');
+/* ════ 117. 자산플랜 v1.27.0 — 5·10·15·20년 기간전략 + 리밸런싱 근거 ════ */
+console.log('\n[117] 자산플랜 v1.27.0 — 5·10·15·20년 기간전략 + 리밸런싱 근거');
 {
   const pl=fs.readFileSync(__d+'/plan.html','utf8');
   ok('5년 플랜 시작금 기본값은 $20,000', /startCapital:20000/.test(pl) && /aCash:20000/.test(pl));
+  ok('화면 이름은 5년 자산플랜이 아니라 자산플랜',
+     /<title>JK 퀀트 — 자산플랜<\/title>/.test(pl)
+     && /<div class="logo">Asset Plan<\/div><h1>자산플랜 <span class="ver">v1\.27\.0<\/span>/.test(pl)
+     && /<a href="\/plan" class="cur"><span class="mi">🧭<\/span>자산플랜<\/a>/.test(pl));
   ok('PATH A 균형성장 — TECL 70% N15 s0 55 밴드17.5 + TQQQ 30% SMA200 ±1.5',
      /alpha:\{teclWeight:\.70,guardWeight:\.30,ivsLook:15,ivsS0:\.55,ivsBand:\.175,guardMA:200,guardBand:\.015\}/.test(pl));
   ok('PATH A 첫날 실행 UI — 초기자금 입력 · 127개 롤링 검증 · 자체 잔고 진행률',
@@ -7797,12 +7801,24 @@ console.log('\n[117] 5년 플랜 v1.19.0 — A 전략설명·리밸런싱 근거
      && /127개 시작구간/.test(pl)
      && /function alphaPlanTotal\(\)/.test(pl)
      && /activePlanTab==='alpha'\?\(at==null\?num\("startCapital"\):at\)/.test(pl));
-  ok('PATH A 전략설명 — 역분산 공식·17.5%p 밴드·SMA200 ±1.5 Guard를 텍스트로 노출',
-     /A안 전략 원리/.test(pl)
-     && /w = min\(100%, \(55% ÷ σ15\)²\)/.test(pl)
-     && /17\.5%p/.test(pl)
-     && /SMA200의 \+1\.5%/.test(pl)
-     && /-1\.5%/.test(pl));
+  ok('자산플랜 기간 탭 — 5·10·15·20년 + B안 화면 제거',
+     /id="horizonTabs"/.test(pl)
+     && [5,10,15,20].every(y=>new RegExp('data-horizon="'+y+'"').test(pl))
+     && !/data-ptab="classic"[^>]*>/.test(pl)
+     && /data-ppanel="classic" hidden aria-hidden="true" style="display:none"/.test(pl));
+  ok('기간별 매매법 — 장기일수록 3배 최대비중↓ · SGOV 기준여유↑ · 반응속도↓',
+     /5:\{years:5,name:'5년',risk:'최공격',teclWeight:\.70,guardWeight:\.30,ivsLook:15,ivsS0:\.55,ivsBand:\.175,guardMA:200,guardBand:\.015/.test(pl)
+     && /10:\{years:10,name:'10년',risk:'공격',teclWeight:\.60,guardWeight:\.25,ivsLook:20,ivsS0:\.50,ivsBand:\.20,guardMA:200,guardBand:\.020/.test(pl)
+     && /15:\{years:15,name:'15년',risk:'성장',teclWeight:\.50,guardWeight:\.20,ivsLook:30,ivsS0:\.45,ivsBand:\.225,guardMA:200,guardBand:\.025/.test(pl)
+     && /20:\{years:20,name:'20년',risk:'생존성장',teclWeight:\.40,guardWeight:\.15,ivsLook:40,ivsS0:\.40,ivsBand:\.25,guardMA:200,guardBand:\.030/.test(pl)
+     && /function horizonReserve\(D\)\{return Math\.max\(0,1-D\.teclWeight-D\.guardWeight\);\}/.test(pl));
+  ok('기간 선택이 목표일·주문엔진을 실제로 바꿈',
+     /const D=horizonPreset\(\),tr=qTecl\.rows/.test(pl)
+     && /if\(y!==activeHorizon\)horizonRebalancePending=true/.test(pl)
+     && /horizonHit=horizonRebalancePending,needRebalance=teclHit\|\|guardFlip\|\|horizonHit/.test(pl)
+     && /const targetTq=\(teclHit\|\|horizonHit\)\?/.test(pl)
+     && /const targetQq=\(guardFlip\|\|horizonHit\)\?/.test(pl)
+     && /\$\('targetDate'\)\.value=plusYears\(base,y\)/.test(pl));
   ok('PATH A 리밸런싱 근거 UI — σ15·목표\/현재·밴드 게이지·Guard 차트·판단문장',
      /id="alphaSigma"/.test(pl)
      && /id="alphaTargetW"/.test(pl)
@@ -7818,7 +7834,7 @@ console.log('\n[117] 5년 플랜 v1.19.0 — A 전략설명·리밸런싱 근거
      && /guardClose\.push\(\+qr\[i\]\.close\);guardMa\.push\(mv\)/.test(pl)
      && /오늘 판단: '\+\(needRebalance\?'리밸런싱\/상태조정':'유지'\)/.test(pl)
      && /장중가격은 신호가 아니라 주문수량 추정에만 사용/.test(pl));
-  ok('A 초기자금은 입력만으로 장부를 바꾸지 않고 초기화 때 확정 · B 배정은 확정 startCapital 기준',
+  ok('초기자금은 입력만으로 장부를 바꾸지 않고 초기화 때 확정',
      /const startCap=Math\.max\(1,num\('startCapital',20000\)\)/.test(pl)
      && /signalTotal=startCap;\$\('aCash'\)\.value=startCap/.test(pl)
      && /bInf=Math\.round\(cap\*PATH_DEFAULTS\.classic\.infWeight\),bVr=Math\.max\(0,cap-bInf\)/.test(pl)
@@ -7832,7 +7848,7 @@ console.log('\n[117] 5년 플랜 v1.19.0 — A 전략설명·리밸런싱 근거
      && /else if\(local\)\{/.test(pl)
      && /이 기기 저장값 유지/.test(pl)
      && /await cloudSave\(\)/.test(pl));
-  ok('PATH A 주문에 종목별 목표금액·오늘 매수금액·수수료포함 필요현금 표시',
+  ok('자산플랜 주문에 종목별 목표금액·오늘 매수금액·수수료포함 필요현금 표시',
      /목표 보유금액:/.test(pl)
      && /오늘 매수금액:/.test(pl)
      && /수수료 포함 필요현금 약/.test(pl)
