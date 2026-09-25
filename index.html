@@ -537,7 +537,7 @@ try{ if(localStorage.getItem('qcockpit_hadUser')==='1') document.documentElement
 </div>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.94.0</span></h1></div>
+    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.95.0</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -1644,7 +1644,7 @@ if(/^\/paper\/?$/.test(location.pathname)){
   <footer>
     <strong>JK 퀀트</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.94.0</b> · 2026-09-24</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.95.0</b> · 2026-09-24</div>
   </footer>
 </div>
 
@@ -4513,7 +4513,11 @@ function computeMa(){
   let pos='cash', entry=null;
   hist.forEach(h=>{ if(h.type==='in'){pos='hold';entry=h;} else if(h.type==='out'){pos='cash';entry=null;} });
   const sym=String(st.ticker||'SOXL').toUpperCase();
-  const days=(maQuoteData && String(maQuoteData.symbol||'').toUpperCase()===sym && maQuoteData.days) ? maQuoteData.days : null;
+  const _dAll=(maQuoteData && String(maQuoteData.symbol||'').toUpperCase()===sym && maQuoteData.days) ? maQuoteData.days : null;
+  /* 판정은 확정 봉까지만 (제12차 후속) — 장중엔 시세 끝에 아직 움직이는 오늘 봉이 붙어 온다(실측: /api/quote 가 오늘 장중 봉을 준다).
+     백테 runMA200 은 전일 신호로 오늘 종가에 체결한다 — 장중에 열면 마지막 확정 봉(어제)의 신호가 오늘 할 일이다.
+     무매·VR 은 7-⑧·N2 에서 같은 자리를 고쳤다. 현재가(price)는 평가·수량 계산에만 쓴다. */
+  const days=_dAll ? settledBars(_dAll, curOf(st)) : null;
   if(!days || days.length<2) return {st,N,pos,entry,ready:false};
   const lev=maLevOf(sym);
   const closes=days.map(d=>d.close), dates=days.map(d=>d.date);
@@ -4623,6 +4627,7 @@ function renderMaNow(){
     v=`<div class="oitem" style="background:rgba(245,196,81,.1);justify-content:center"><span class="nm" style="flex:none;color:var(--gold)">⏸ 현금 유지 — 신호·포지션 일치 (거래 없음)</span></div>`;
   }
   if(c.warming) v=`<p class="note" style="color:var(--gold)">ⓘ 이력이 ${c.N}일 미만이라 워밍업(보유)으로 간주합니다.</p>`+v;
+  v+=`<p class="note" style="margin-top:8px;color:var(--faint)">ⓘ 신호 기준 <b>${c.lastDate}</b> 확정 종가 · 체결은 그다음 거래일 종가(MOC) — 장중 가격은 신호에 쓰지 않습니다(백테·모의와 같은 규약).</p>`;
   $('ma_verdict').innerHTML=v;
   // 계좌
   $('macct_pos').textContent=c.pos==='hold'?'보유중':'현금';
@@ -4965,7 +4970,10 @@ function computeDca(){
   }
   pos.divCash=divCash; pos.divShares=divShares; pos.nDiv=nDiv; pos.reinv=reinv; pos.flows=divFlows;
 
-  const days=(dcaQuoteData && String(dcaQuoteData.symbol||'').toUpperCase()===sym && dcaQuoteData.days) ? dcaQuoteData.days : null;
+  const _dAll=(dcaQuoteData && String(dcaQuoteData.symbol||'').toUpperCase()===sym && dcaQuoteData.days) ? dcaQuoteData.days : null;
+  /* 배수 판정은 확정 봉까지만 (제12차 후속) — 모의(_paperDca)·백테(_dcaOne)는 '전일 종가 ≤ 전일 200일선' 이면 오늘 배수로 산다.
+     장중에 열면 마지막 확정 봉이 어제다. 예전엔 현재가(장중 실시간)와 오늘 장중 봉이 섞인 200일선을 비교했다. */
+  const days=_dAll ? settledBars(_dAll, curOf(st)) : null;
   if(!days || days.length<2) return {st,sym,lump,mul,amt,pos,ready:false};
   const _rawLast=(dcaQuoteData.raw&&dcaQuoteData.raw.length)?dcaQuoteData.raw[dcaQuoteData.raw.length-1].close:0;
   const closes=days.map(d=>d.close), dates=days.map(d=>d.date), n=closes.length;
@@ -4975,10 +4983,10 @@ function computeDca(){
   const last=n-1, smaNow=sma[last], lastClose=closes[last];
   const price=(dcaQuoteData.price>0?dcaQuoteData.price:lastClose);
   const warming = smaNow==null;
-  // 오늘 배수: 현재가(장중이면 실시간)가 200일선 이하면 배수, 아니면 1배
-  const below = warming ? false : (price<=smaNow);
+  // 오늘 배수: 마지막 확정 종가가 그날 200일선 이하면 배수, 아니면 1배 (현재가는 매수 수량 계산에만)
+  const below = warming ? false : (lastClose<=smaNow);
   const todayMul = (warming||mul<=1) ? 1 : (below?mul:1);
-  const gapPct = smaNow ? (price/smaNow-1)*100 : null;
+  const gapPct = smaNow ? (lastClose/smaNow-1)*100 : null;
   // 배수 전환 이력 (종가 기준)
   const flips=[]; let prev=null;
   for(let i=0;i<n;i++){ if(sma[i]==null)continue; const b=closes[i]<=sma[i];
@@ -5091,7 +5099,11 @@ function computeIvs(){
   const sym=String(st.ticker||'TQQQ').toUpperCase(), sym1=ivsX1Of(sym);
   const P=ivsPos(st.principal,hist);
   const qty=P.qty, cash=P.cash, avg=P.avg, qty1=P.qty1, avg1=P.avg1;
-  const days=(ivsQuoteData && String(ivsQuoteData.symbol||'').toUpperCase()===sym && ivsQuoteData.days) ? ivsQuoteData.days : null;
+  const _dAll=(ivsQuoteData && String(ivsQuoteData.symbol||'').toUpperCase()===sym && ivsQuoteData.days) ? ivsQuoteData.days : null;
+  /* 판정은 확정 봉까지만 (제12차 후속) — 백테 runIVS 는 목표 비중(σ)도, 밴드 이탈도 전일 종가로 정하고
+     체결 금액만 오늘 종가로 잡는다. 장중엔 시세 끝에 움직이는 오늘 봉이 붙어 와서 σ 에 섞이고,
+     이탈 판정도 현재가 비중으로 했다. 이제 판정은 마지막 확정 종가(sigDate) 비중으로, 주문 수량만 현재가로 센다. */
+  const days=_dAll ? settledBars(_dAll, curOf(st)) : null;
   const out={st,FIX,X1,s0,N,band,sym,sym1,qty,cash,avg,qty1,avg1,ready:false,
              monthly:Math.max(0,st.monthly||0), principal:Math.max(0,st.principal||0),
              added:P.added, realized:P.realized, divs:P.divs||0};
@@ -5120,9 +5132,13 @@ function computeIvs(){
   }
   out.price1=price1;
   const eq=qty*price + (X1?qty1*price1:0) + cash; out.eq=eq;
-  out.wNow= eq>0 ? qty*price/eq : 0;
+  out.wNow= eq>0 ? qty*price/eq : 0;                 // 지금 비중(현재가) — 보여 주기용
   out.w1Now= (X1&&eq>0) ? qty1*price1/eq : 0;
-  out.gap=out.w-out.wNow;
+  /* 판정 비중 — 신호 날(sigDate) 확정 종가로 잰다. 짝(1배수)도 그날 종가(없으면 그 전 마지막 확정 종가, 그것도 없으면 현재가) */
+  const close1S = X1 ? (()=>{ const b=(ivsQuote1.days||[]).filter(x=>x&&x.date<=out.sigDate&&x.close>0); return b.length?b[b.length-1].close:price1; })() : 0;
+  const eqS=qty*out.lastClose + (X1?qty1*close1S:0) + cash;
+  out.wSig= eqS>0 ? qty*out.lastClose/eqS : 0;
+  out.gap=out.w-out.wSig;
   out.hit=Math.abs(out.gap)>band;
   // ── 리밸런싱 주문 ──
   // 레버리지: 목표 w·eq 로 맞춘다. 짝=1배수면 나머지 (1−w)·eq 를 1배로 맞춘다.
@@ -5218,13 +5234,14 @@ function renderIvsNow(){
   }
   // 히어로
   $('ivs_pill').className='bandpill '+(c.hit?(c.gap>0?'in':'under'):'wait');
-  $('ivs_pill').textContent=c.hit?(c.gap>0?'매수':'매도'):'밴드 안';
+  /* 체결 방향은 주문이 말한다 — 판정은 확정 종가 비중, 주문 금액은 현재가라 둘이 드물게 반대일 수 있다(백테도 같다) */
+  $('ivs_pill').textContent=c.hit?((c.side?c.side==='buy':c.gap>0)?'매수':'매도'):'밴드 안';
   $('ivs_w_txt').textContent='목표 '+pc(c.w);
   const trend=(c.sigmaPrev!=null)?(c.sigma>c.sigmaPrev?' ↑':(c.sigma<c.sigmaPrev?' ↓':'')):'';
   const sigTxt = c.FIX ? '<b>고정 5:5</b> (σ 미사용)' : `σ <b>${(c.sigma*100).toFixed(1)}%</b>${trend}`;
-  $('ivs_sig_lbl').innerHTML=`${sigTxt} · 목표 <b>${pc(c.w)}</b> · 현재 <b>${pc(c.wNow)}</b> · 차이 <b style="color:${c.hit?'var(--gold)':'var(--faint)'}">${(c.gap>=0?'+':'')}${(c.gap*100).toFixed(1)}%p</b>`;
+  $('ivs_sig_lbl').innerHTML=`${sigTxt} · 목표 <b>${pc(c.w)}</b> · 종가 기준 <b>${pc(c.wSig)}</b> · 차이 <b style="color:${c.hit?'var(--gold)':'var(--faint)'}">${(c.gap>=0?'+':'')}${(c.gap*100).toFixed(1)}%p</b>`;
   $('ivs_sc_mid').textContent='목표 '+pc(c.w);
-  { let p=c.wNow*100; p=Math.max(0,Math.min(100,p)); $('ivs_mark').style.left=p+'%'; }
+  { let p=c.wSig*100; p=Math.max(0,Math.min(100,p)); $('ivs_mark').style.left=p+'%'; }   // 게이지도 판정 비중
   // 오늘 할 일
   let v='';
   if(!c.hit){
@@ -5263,7 +5280,7 @@ function renderIvsNow(){
       `<div class="ar"><span class="ak">지금 가격</span><span class="av">${px(p)}</span></div>
        <div class="ar"><span class="ak">이 위로 오르면 <span class="sub">비중↑ → 매도</span></span><span class="av sell">${up>0?px(up):'—'}${up>0?` <span class="sub">(${pctFrom(up,p)})</span>`:''}</span></div>
        <div class="ar"><span class="ak">이 아래로 내리면 <span class="sub">비중↓ → 매수</span></span><span class="av buy">${dn>0?px(dn):'—'}${dn>0?` <span class="sub">(${pctFrom(dn,p)})</span>`:''}</span></div>
-       <p class="note" style="margin-top:8px">이 범위 안이면 <b>볼 필요가 없습니다.</b> 다만 σ가 변하면 목표 비중도 움직이므로 정확한 값은 아닙니다 — <b>주 1회</b> 정도 확인을 권합니다.</p>`;
+       <p class="note" style="margin-top:8px"><b>종가</b>가 이 범위 안이면 <b>볼 필요가 없습니다.</b> 종가가 밖으로 나가면 그다음 거래일 종가(MOC)에 리밸런싱합니다 — 장중에 잠깐 넘는 건 신호가 아닙니다(백테·모의와 같은 규약). 다만 σ가 변하면 목표 비중도 움직이므로 정확한 값은 아닙니다 — <b>주 1회</b> 정도 확인을 권합니다.</p>`;
   }else{
     $('ivs_trigger').innerHTML='<p class="note">보유 또는 예수금 한쪽이 0이라 트리거 가격을 계산할 수 없습니다. 설정에서 현재 계좌 상태를 입력하세요.</p>';
   }
@@ -5606,7 +5623,7 @@ function renderDcaNow(){
   const gp=c.gapPct;
   $('dca_gap_lbl').innerHTML = c.warming
     ? `이력 ${c.closes.length}일 · 200일선 계산에 ${DCA_N-c.closes.length}일 더 필요`
-    : `종가 ${nfix(price,2)} · 200일선 ${nfix(c.smaNow,2)} · <b style="color:${gp>=0?'var(--buy)':'var(--sell)'}">${gp>=0?'+':''}${gp.toFixed(2)}%</b>`;
+    : `종가 ${nfix(c.lastClose,2)} <span class="sub">(${c.lastDate} 확정)</span> · 200일선 ${nfix(c.smaNow,2)} · <b style="color:${gp>=0?'var(--buy)':'var(--sell)'}">${gp>=0?'+':''}${gp.toFixed(2)}%</b>`;
   let pct=(gp+30)/60*100; pct=Math.max(0,Math.min(100,pct)); $('dg_mark').style.left=pct+'%';
   // 오늘 적립 안내
   const buyAmt=(+st.amount||0)*c.todayMul;
@@ -5873,7 +5890,10 @@ function computeAsap(){
   const st=curStrat().settings, hist=curStrat().hist;
   const sym=String(st.ticker||'SOXL').toUpperCase();
   const pos=asapPos(hist);
-  const days=(asapQuoteData && String(asapQuoteData.symbol||'').toUpperCase()===sym && asapQuoteData.days) ? asapQuoteData.days : null;
+  const _dAll=(asapQuoteData && String(asapQuoteData.symbol||'').toUpperCase()===sym && asapQuoteData.days) ? asapQuoteData.days : null;
+  /* 국면·딥·단계 판정은 확정 봉까지만 (제12차 후속) — 백테 runASAP 은 전일 종가까지의 지표로 정하고 오늘 종가에 체결한다.
+     장중에 열면 마지막 확정 봉이 어제다. 현재가(price)는 평가·수량 계산에만 쓴다. */
+  const days=_dAll ? settledBars(_dAll, curOf(st)) : null;
   if(!days || days.length<2) return {st,sym,pos,ready:false};
   const cl=days.map(d=>d.close), dates=days.map(d=>d.date), n=cl.length;
   const ma5=_asapMA(cl,5),ma20=_asapMA(cl,20),ma50=_asapMA(cl,50),ma200=_asapMA(cl,200),rsi=_asapRSI(cl);
@@ -5984,6 +6004,7 @@ function renderAsapNow(){
       v+=`<p class="note" style="margin-top:8px;color:var(--dim)">리저브 소진 완료 — 상승장 base 적립만 지속</p>`;
     }
   }
+  if(c.ready) v+=`<p class="note" style="margin-top:8px;color:var(--faint)">ⓘ 신호 기준 <b>${c.lastDate}</b> 확정 종가 · 체결은 그다음 거래일 종가(MOC) — 장중 가격은 신호에 쓰지 않습니다(백테·모의와 같은 규약).</p>`;
   $('asap_verdict').innerHTML=v;
   // 금액칸이 비어있을 때만 권장액 자동 입력 (사용자가 입력하면 유지)
   if($('asap_amt') && (!$('asap_amt').value || +unComma($('asap_amt').value)===0) && recAmt>0){ $('asap_amt').value=nfix(recAmt,recAmt>=100?0:2); }
@@ -8858,7 +8879,7 @@ function renderStatusline(){
   }else if(strat==='ivs'){
     const st=s.settings,c=computeIvs();
     html+=`<span>${tickerLabel(st.ticker)} · s0 ${st.s0||55}% · ${st.look||40}일σ · 밴드 ±${st.band||15}%p</span>`;
-    if(c.ready) html+=`<span class="badge ${c.hit?'warn':'ok'}" title="${c.hit?`목표 비중 ${(c.w*100).toFixed(1)}% · 지금 ${(c.wNow*100).toFixed(1)}% — 밴드를 벗어나 오늘 ${c.gap>0?'매수':'매도'}`:'목표 비중과의 차이가 밴드 안 — 오늘은 대기'}">${c.hit?(c.gap>0?'매수 신호':'매도 신호'):'밴드 안'}</span>`;
+    if(c.ready) html+=`<span class="badge ${c.hit?'warn':'ok'}" title="${c.hit?`목표 비중 ${(c.w*100).toFixed(1)}% · ${c.sigDate} 종가 기준 ${(c.wSig*100).toFixed(1)}% — 밴드를 벗어나 오늘 ${(c.side?c.side==='buy':c.gap>0)?'매수':'매도'}`:'목표 비중과의 차이가 밴드 안 — 오늘은 대기'}">${c.hit?(c.gap>0?'매수 신호':'매도 신호'):'밴드 안'}</span>`;
   }else if(strat==='dca'){
     const st=s.settings,c=computeDca();
     // 거치식엔 적립 주기·하락 배수가 없다 — 그대로 찍으면 안 쓰는 규칙이 켜져 있는 것처럼 보인다

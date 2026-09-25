@@ -7587,7 +7587,8 @@ console.log('\n[113] 7차 ⑰ — 200일선 운영 재생 ↔ 백테 거래 단�
   const mkBt=(LOG)=>new Function('__LOG', pre2+'return ('+ms.replace(/^function \w+\(/,'function (')+')')(LOG);
   const btPristine=new Function(pre2+'return ('+extractFn(bt,'function runMA200(days,tkr,cap,N,costOn,opt)').replace(/^function \w+\(/,'function (')+')')();
   const appSrc=['function maLevOf(t)','function _maHold(sell,a,b)','function _maEntry(buy,a,b)','function maCond(st)',
-                'function computeMa()','function maReplay()','function imBuyQty(alloc, refPx, feeRate)'].map(m=>extractFn(idx,m)).join('\n');
+                'function computeMa()','function maReplay()','function imBuyQty(alloc, refPx, feeRate)',
+                'function settledBars(rows,cur)'].map(m=>extractFn(idx,m)).join('\n');   // computeMa 는 확정 봉까지만 쓴다 (제12차 후속)
   const maLed=new Function(extractFn(idx,'function maLedger(hist, price, principal)')+'\nreturn maLedger;')();
   const runApp=(T,Dall,from,st0,DV)=>{
     const st=Object.assign({ticker:T, principal:10000, buy:'ma', sell:'ma', park:'cash'}, st0||{});
@@ -9086,6 +9087,119 @@ console.log('\n[125] 제12차 — VR 적립식 첫 매수 · 무매 리버스 1�
     }
     Object.assign(global,{imReverse:sv.r, imFill:sv.f, imCostOn:sv.c, imTgtDyn:sv.t, imRevGap:sv.g});
     delete DAYS[T0]; delete M[T0]; }
+}
+
+/* ════ 126. 제12차 후속 — 운영 '오늘 할 일' 은 확정 봉으로 판정 (200일선 · 섀넌 · 적립 · ASAP) ════
+   장중엔 /api/quote 시세 끝에 아직 움직이는 오늘 봉이 붙어 온다(실측 — 부록 C N2). 무매·VR 은 7-⑧·N2 에서
+   확정 봉으로 고쳤는데, 이 네 전략의 운영 계산(computeMa·computeIvs·computeDca·computeAsap)은 시세 끝 봉을 그대로 써서
+   장중에 열면 설명·백테·모의의 규약(전일 확정 종가로 판정 · 당일 종가 체결)과 다른 신호를 냈다.
+   전략마다 '오늘 장중 봉이 들어오면 신호가 뒤집히는' 자료를 만들고
+     (가) 장중(확정 기준일 = 어제)이면 판정이 어제 확정 봉 그대로인지
+     (나) 그 봉이 확정되면 판정이 실제로 바뀌는지 — 자료가 민감한지(시험이 헛돌지 않는지)
+     (다) 현재가는 평가·수량에만 쓰는지 를 본다. */
+console.log('\n[126] 제12차 후속 — 운영 오늘 할 일은 확정 봉으로 판정 (200일선 · 섀넌 · 적립 · ASAP)');
+{
+  let CUT='';
+  const base=[(idx.match(/const KR_CODE_RE=[^\n]*/)||[''])[0], extractFn(idx,'function isKrCode(t)'), extractFn(idx,'function curOf(st)'),
+              'function simCutoff(cur){ return __CUT(); }', extractFn(idx,'function settledBars(rows,cur)')].join('\n');
+  const fns=list=>list.map(x=>extractFn(idx,x)).join('\n');
+  const dayOf=i=>new Date(Date.UTC(2025,0,2+i)).toISOString().slice(0,10);
+  /* 260일 완만한 상승(+0.05%/일) — 마지막 확정 봉은 200일선 위. 그다음 날(장중) −30% */
+  const up=Array.from({length:260},(_,i)=>({date:dayOf(i), close:+(50*Math.pow(1.0005,i)).toFixed(4)}));
+  const lastS=up[up.length-1], today={date:dayOf(260), close:+(lastS.close*0.7).toFixed(4)};
+  const withToday=[...up, today];
+  const at=(cut,f)=>{ CUT=cut; try{ return f(); } finally{ CUT=''; } };
+
+  /* ── 200일선 ── */
+  const runMa=(st,Q)=>new Function('curStrat','maQuoteData','__CUT',
+      base+'\n'+fns(['function maLevOf(t)','function _maHold(sell,a,b)','function _maEntry(buy,a,b)','function maCond(st)','function computeMa()'])+'\nreturn computeMa();')(
+      ()=>({settings:st,hist:[]}), Q, ()=>CUT);
+  { const st={ticker:'SOXL',buy:'ma',sell:'ma',principal:10000,park:'cash'};
+    const Q={symbol:'SOXL', days:withToday, price:today.close};
+    const a=at(lastS.date,()=>runMa(st,Q)), b=at(today.date,()=>runMa(st,Q));
+    ok(`200일선 — 장중(오늘 ${today.date} −30% 봉 미확정)엔 어제 확정 봉 신호 '보유' 그대로 · 신호 날짜 ${lastS.date} · 평가는 현재가`,
+       a.ready && a.signal==='hold' && a.lastDate===lastS.date && a.lastClose===lastS.close && a.price===today.close, JSON.stringify({s:a.signal,d:a.lastDate,p:a.price}));
+    ok('200일선 — 그 봉이 확정되면 신호가 현금으로 바뀐다 (자료가 민감하다 — 시험이 헛돌지 않는다)', b.ready && b.signal==='cash' && b.lastDate===today.date, b.signal+' '+b.lastDate); }
+
+  /* ── 적립 (200일선 배수) ── */
+  const runDca=(st,Q)=>new Function('curStrat','dcaQuoteData','__CUT',
+      base+'\n'+(idx.match(/const DCA_N=\d+;/)||[''])[0]+'\n'+fns(['function computeDca()'])+'\nreturn computeDca();')(
+      ()=>({settings:st,hist:[]}), Q, ()=>CUT);
+  { const st={ticker:'USD',mode:'accum',amount:100,dipMul:2,freq:'month'};
+    const Q={symbol:'USD', days:withToday, raw:[], dividends:[], price:today.close};
+    const a=at(lastS.date,()=>runDca(st,Q)), b=at(today.date,()=>runDca(st,Q));
+    ok(`적립 — 장중엔 어제 확정 종가(200일선 위) 기준 1배 · 현재가(−30%)로 배수를 정하지 않는다 · 수량은 현재가`,
+       a.ready && a.todayMul===1 && !a.below && a.lastDate===lastS.date && a.lastClose===lastS.close && a.price===today.close && a.gapPct>0,
+       JSON.stringify({m:a.todayMul,d:a.lastDate,g:a.gapPct&&a.gapPct.toFixed(2)}));
+    ok('적립 — 그 봉이 확정되면 2배 (자료가 민감하다)', b.ready && b.todayMul===2 && b.below===true && b.lastDate===today.date, b.todayMul+' '+b.lastDate); }
+
+  /* ── ASAP ── */
+  const runAsap=(st,Q)=>new Function('curStrat','asapQuoteData','__CUT',
+      base+'\n'+fns(['function _asapMA(a,k)','function _asapRSI(a)','function asapPos(hist)','function computeAsap()'])+'\nreturn computeAsap();')(
+      ()=>({settings:st,hist:[]}), Q, ()=>CUT);
+  { const st={ticker:'SOXL',base:10,mid:50,deep:100};
+    const Q={symbol:'SOXL', days:withToday, price:today.close};
+    const a=at(lastS.date,()=>runAsap(st,Q)), b=at(today.date,()=>runAsap(st,Q));
+    ok('ASAP — 장중엔 어제 확정 봉 기준 상승장 · 오늘 봉(−30%)으로 하락장·딥을 정하지 않는다 · 평가는 현재가',
+       a.ready && a.phase==='up' && a.lastClose===lastS.close && a.price===today.close, JSON.stringify({ph:a.phase,c:a.lastClose,p:a.price}));
+    ok('ASAP — 그 봉이 확정되면 하락장 (자료가 민감하다)', b.ready && b.phase==='down', b.phase); }
+
+  /* ── 섀넌(역분산) ── 목표 비중(σ)도, 밴드 이탈도 확정 종가 · 주문 수량만 현재가 (백테 runIVS 와 같은 규약) */
+  const runIvs=(st,hist,Q)=>new Function('curStrat','ivsQuoteData','ivsQuote1','__CUT','nfix',
+      base+'\n'+(idx.match(/const IVS_FEE=[^\n]*/)||[''])[0]+'\n'+(idx.match(/const IVS_X1=[^\n]*/)||[''])[0]+'\n'
+      +fns(['function ivsX1Of(t)','function ivsPos(principal,hist)','function computeIvs()'])+'\nreturn computeIvs();')(
+      ()=>({settings:st,hist}), Q, null, ()=>CUT, v=>String(v));
+  { /* 하루 +5% / −4.5% 번갈아 — σ 가 s0 보다 커서 목표 비중이 1 아래(밴드 시험이 뜻이 있다) */
+    const vol=[{date:dayOf(0),close:50}]; for(let i=1;i<80;i++) vol.push({date:dayOf(i), close:+(vol[i-1].close*(i%2?1.05:0.955)).toFixed(4)});
+    const vS=vol[vol.length-1], vT={date:dayOf(80), close:+(vS.close*0.4).toFixed(4)};   // 오늘 장중 −60%
+    const st={ticker:'TQQQ',mode:'iv',s0:55,look:40,band:15,park:'bill',principal:10000,monthly:0};
+    const Q={symbol:'TQQQ', days:[...vol, vT], price:vT.close};
+    const z=at(vS.date,()=>runIvs(st,[],Q));                               // 목표 비중(σ)만 먼저 본다
+    const rets=vol.slice(-41).map((d,i,a)=>i?d.close/a[i-1].close-1:null).slice(1);
+    const m=rets.reduce((x,y)=>x+y,0)/40, v2=Math.max(1e-8,(rets.reduce((x,y)=>x+y*y,0)/40-m*m)*252);
+    const q=Math.round(z.w*10000/vS.close), H=[{type:'buy',leg:'lev',date:vS.date,price:vS.close,qty:q,amt:q*vS.close,fee:0,ts:1}];
+    const a=at(vS.date,()=>runIvs(st,H,Q)), b=at(vT.date,()=>runIvs(st,H,Q));
+    ok(`섀넌 — 장중엔 σ·신호 날짜가 어제 확정 봉 것 (σ ${(Math.sqrt(v2)*100).toFixed(1)}% · ${vS.date}) — 오늘 −60% 봉을 σ 에 넣지 않는다`,
+       a.ready && a.sigDate===vS.date && Math.abs(a.sigma-Math.sqrt(v2))<1e-12 && Math.abs(a.w-Math.min(1,0.3025/v2))<1e-12 && a.w<1,
+       JSON.stringify({d:a.sigDate,s:a.sigma,w:a.w}));
+    ok(`섀넌 — 밴드 이탈은 확정 종가 비중으로 판정: 종가 기준 ${(a.wSig*100).toFixed(1)}% ≈ 목표 ${(a.w*100).toFixed(1)}% → 밴드 안 (현재가 비중 ${(a.wNow*100).toFixed(1)}% 는 밖이지만 신호가 아니다)`,
+       !a.hit && Math.abs(a.gap)<0.01 && Math.abs(a.w-a.wNow)>0.15 && Math.abs(a.gap-(a.w-a.wSig))<1e-12, JSON.stringify({hit:a.hit,gap:a.gap,wNow:a.wNow}));
+    ok('섀넌 — 그 봉이 확정되면 σ·신호 날짜가 바뀐다 (자료가 민감하다)', b.ready && b.sigDate===vT.date && b.sigma>a.sigma*1.2, `${b.sigDate} σ ${b.sigma} vs ${a.sigma}`);
+    /* 주문 수량은 현재가 — 확정 종가 비중이 목표보다 25%p 무거워 매도 판정 · 현재가 +10% 로 수량을 잰다 */
+    const q2=Math.round((z.w+0.25)*10000/vS.close), H2=[{type:'buy',leg:'lev',date:vS.date,price:vS.close,qty:q2,amt:q2*vS.close,fee:0,ts:1}];
+    const pLive=+(vS.close*1.1).toFixed(4), Q2={symbol:'TQQQ', days:[...vol,{date:vT.date,close:pLive}], price:pLive};
+    const c=at(vS.date,()=>runIvs(st,H2,Q2));
+    const cash2=10000-q2*vS.close, eqL=q2*pLive+cash2, notional=c.w*eqL-q2*pLive, expQ=Math.min(q2,Math.floor(-notional/pLive));
+    ok(`섀넌 — 판정은 확정 종가(매도 · 종가 기준 ${(c.wSig*100).toFixed(1)}%) · 주문 수량은 현재가 ${pLive} 로 ${expQ}주`,
+       c.hit && c.side==='sell' && c.orderQty===expQ && expQ>0 && Math.abs(c.wSig-q2*vS.close/10000)<1e-12, JSON.stringify({hit:c.hit,side:c.side,q:c.orderQty,exp:expQ})); }
+
+  /* 섀넌 짝=1배수 — 판정 비중은 짝도 신호 날 확정 종가로 잰다 (짝 현재가를 3배로 튀게 해도 판정은 그대로) */
+  { const vol=[{date:dayOf(0),close:50}]; for(let i=1;i<80;i++) vol.push({date:dayOf(i), close:+(vol[i-1].close*(i%2?1.05:0.955)).toFixed(4)});
+    const vS=vol[vol.length-1], tD=dayOf(80);
+    const p1S=100, q1Days=[...vol.map(d=>({date:d.date, close:p1S})), {date:tD, close:p1S*3}];
+    const st={ticker:'TQQQ',mode:'iv',s0:55,look:40,band:15,park:'x1',principal:10000,monthly:0};
+    const Q={symbol:'TQQQ', days:[...vol,{date:tD,close:vS.close}], price:vS.close}, Q1={symbol:'QQQ', days:q1Days, price:p1S*3, last:{close:p1S*3}};
+    const run1=(hist)=>new Function('curStrat','ivsQuoteData','ivsQuote1','__CUT','nfix',
+      base+'\n'+(idx.match(/const IVS_FEE=[^\n]*/)||[''])[0]+'\n'+(idx.match(/const IVS_X1=[^\n]*/)||[''])[0]+'\n'
+      +fns(['function ivsX1Of(t)','function ivsPos(principal,hist)','function computeIvs()'])+'\nreturn computeIvs();')(
+      ()=>({settings:st,hist}), Q, Q1, ()=>CUT, v=>String(v));
+    const z=at(vS.date,()=>run1([]));
+    const q=Math.round(z.w*10000/vS.close), q1=Math.floor((10000-q*vS.close)/p1S);
+    const H=[{type:'buy',leg:'lev',date:vS.date,price:vS.close,qty:q,amt:q*vS.close,fee:0,ts:1},{type:'buy',leg:'x1',date:vS.date,price:p1S,qty:q1,amt:q1*p1S,fee:0,ts:2}];
+    const a=at(vS.date,()=>run1(H));
+    const wExp=q*vS.close/(q*vS.close+q1*p1S+(10000-q*vS.close-q1*p1S));
+    ok(`섀넌 짝=1배수 — 판정 비중은 짝도 ${vS.date} 확정 종가(${p1S})로: ${(a.wSig*100).toFixed(1)}% ≈ 목표 → 밴드 안 (짝 현재가 ${p1S*3} 로 재면 밖)`,
+       a.ready && !a.hit && Math.abs(a.wSig-wExp)<1e-12 && Math.abs(a.w-q*vS.close/(q*vS.close+q1*p1S*3+(10000-q*vS.close-q1*p1S)))>0.15,
+       JSON.stringify({hit:a.hit,wSig:a.wSig,wExp,w:a.w})); }
+
+  /* ── 화면 — 판정 기준을 적고, 섀넌은 판정 비중으로 차이·게이지·배지 ── */
+  ok('화면 — 200일선·ASAP 에 신호 기준 날짜 · 적립 종가는 확정 종가 · 섀넌 차이·게이지·배지는 판정 비중 · 트리거는 종가 기준',
+     /v\+=`<p class="note"[^`]*신호 기준 <b>\$\{c\.lastDate\}<\/b> 확정 종가 · 체결은 그다음 거래일 종가\(MOC\)/.test(extractFn(idx,'function renderMaNow()'))
+     && /if\(c\.ready\) v\+=`<p class="note"[^`]*신호 기준 <b>\$\{c\.lastDate\}<\/b> 확정 종가/.test(extractFn(idx,'function renderAsapNow()'))
+     && /종가 \$\{nfix\(c\.lastClose,2\)\} <span class="sub">\(\$\{c\.lastDate\} 확정\)<\/span>/.test(extractFn(idx,'function renderDcaNow()'))
+     && /종가 기준 <b>\$\{pc\(c\.wSig\)\}<\/b>/.test(extractFn(idx,'function renderIvsNow()')) && /let p=c\.wSig\*100;/.test(extractFn(idx,'function renderIvsNow()'))
+     && /\$\{c\.sigDate\} 종가 기준 \$\{\(c\.wSig\*100\)\.toFixed\(1\)\}%/.test(idx) && /<b>종가<\/b>가 이 범위 안이면/.test(idx)
+     && !/현재 <b>\$\{pc\(c\.wNow\)\}<\/b> · 차이/.test(idx));
 }
 
 console.log(`\n════ 결과: ${pass} PASS / ${fail} FAIL ${fail===0?'— ALL PASS ★':'— 배포 금지, 위 ✗ 항목 수정 필요'} ════`);
