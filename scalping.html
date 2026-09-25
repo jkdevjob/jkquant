@@ -187,7 +187,7 @@ canvas{display:block;width:100%;height:auto}
 
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Morning Scalping</div><h1>JK <span class="v">퀀트</span> 단타 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="scVer">v1.16.3</span></h1></div>
+    <div><div class="kicker">Morning Scalping</div><h1>JK <span class="v">퀀트</span> 단타 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="scVer">v1.16.4</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -1171,6 +1171,8 @@ async function loadVtsReconcile(strategy){
       '<div class="outbox"><div class="ol">매칭률</div><div class="ov">'+Number(s.matchRatePct||0).toFixed(0)+'%</div></div>'+
       '<div class="outbox"><div class="ol">평균 진입 슬리피지 비용</div><div class="ov">'+pct(s.avgEntrySlippageCostPct)+'</div></div>'+
       '<div class="outbox"><div class="ol">평균 청산 슬리피지 비용</div><div class="ov">'+pct(s.avgExitSlippageCostPct)+'</div></div>'+
+      '<div class="outbox"><div class="ol">관측 총 마찰비용</div><div class="ov">'+pct(s.avgObservedExecutionDragPct)+'</div></div>'+
+      '<div class="outbox"><div class="ol">0.25% 가정과 차이</div><div class="ov">'+pct(s.frictionGapVsInternal025Pct)+'</div></div>'+
       '<div class="outbox"><div class="ol">VTS 추정 제비용 합</div><div class="ov">'+won(s.totalBrokerEstimatedCostsWon)+'</div></div>'+
       '</div>'+
       '<div class="htable-wrap"><table class="htable"><thead><tr><th>종목</th><th>내부 진입</th><th>VTS 매수</th><th>진입 슬리피지</th><th>내부 청산</th><th>VTS 매도</th><th>청산 슬리피지</th><th>VTS 추정비용</th><th>VTS 순손익</th></tr></thead><tbody>'+
@@ -1213,11 +1215,16 @@ async function loadVtsResearch(strategy){
       '<div class="outbox"><div class="ol">대조일</div><div class="ov">'+(s.days||0)+'일</div></div>'+
       '<div class="outbox"><div class="ol">완전 매칭</div><div class="ov">'+(s.completeMatches||0)+'건</div></div>'+
       '<div class="outbox"><div class="ol">평균 왕복 슬리피지 비용</div><div class="ov">'+pct(s.avgRoundTripSlippageCostPct)+'</div></div>'+
+      '<div class="outbox"><div class="ol">관측 총 마찰비용</div><div class="ov">'+pct(s.avgObservedExecutionDragPct)+'</div></div>'+
+      '<div class="outbox"><div class="ol">0.25% 가정과 차이</div><div class="ov">'+pct(s.frictionGapVsInternal025Pct)+'</div></div>'+
       '<div class="outbox"><div class="ol">평균 VTS 순손익</div><div class="ov '+((s.avgVtsNetPnlPct||0)>=0?'good':'bad')+'">'+pct(s.avgVtsNetPnlPct)+'</div></div>'+
       '<div class="outbox"><div class="ol">평균 내부 손익</div><div class="ov '+((s.avgInternalPnlPct||0)>=0?'good':'bad')+'">'+pct(s.avgInternalPnlPct)+'</div></div>'+
       '<div class="outbox"><div class="ol">누적 VTS 추정 제비용</div><div class="ov">'+won(s.totalBrokerEstimatedCostsWon)+'</div></div>'+
       '</div>'+
-      '<p class="note">이 통계는 VTS에 이미 존재하는 체결을 읽어서 내부 모의체결과 비교한 값입니다. 실제 실계좌 수수료·체결품질을 의미하지 않습니다.</p>';
+      '<div class="warn" style="margin-top:8px"><b>마찰비용 보정 상태:</b> '+((s.calibrationStatus==='reviewable')?'검토 가능':'표본 수집 중')+
+      ' · 완전매칭 '+(s.calibrationMatches||0)+'건'+
+      ((s.calibrationMatches||0)<20?' · 20건 전에는 내부 0.25% 가정을 자동 변경하지 않습니다.':' · 데이터와 0.25% 가정을 비교할 수 있는 최소 표본에 도달했습니다.')+'</div>'+
+      '<p class="note">관측 총 마찰비용 = 매수 슬리피지 비용 + 매도 슬리피지 비용 + VTS 체결조회 제비용률. 실제 실계좌 수수료·체결품질을 의미하지 않습니다.</p>';
   }catch(e){
     box.innerHTML='<div class="warn">누적 VTS 실행품질 조회 실패: '+esc(e.message||String(e))+'</div>';
   }
