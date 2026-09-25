@@ -2161,7 +2161,11 @@ console.log('[42] 자동 주문 — 브라우저와 서버가 같은 주문을 �
       ok('국내는 국내 마감 기준', M4.orderWindow('krw', t('2026-09-16T05:50:00Z')).ok===true
          && M4.orderWindow('krw', t('2026-09-16T07:00:00Z')).ok===false);
     }
-    ok('세션 종류가 환경을 정한다', /const kisEnv = s\.paper \? "vts" : "real"/.test(at));
+    ok('서버 자동주문은 모의 세션만 VTS로 보낸다',
+       /if \(!s\.paper\)/.test(at)
+       && /실계좌 자동주문 차단/.test(at)
+       && /const kisEnv = "vts"/.test(at)
+       && !/const kisEnv = s\.paper \? "vts" : "real"/.test(at));
     ok('연결 안 한 세션은 건너뛴다', /if \(!s\.kis\)/.test(at));
     ok('서명은 WebCrypto 로 한다', /RSASSA-PKCS1-v1_5/.test(at) && !/require\(/.test(at));
     // 자동 경로가 열려 있으면 키 없는 사이트가 무방비가 된다

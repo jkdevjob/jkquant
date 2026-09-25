@@ -552,7 +552,7 @@ export async function onRequestGet({ request, env }) {
         code:j.msg_cd||"", rateLimited:RATE_LIMITED(j), trId },502);
 
       const rows=(j.output1||[]).map(x=>({
-        orderDate:x.ord_dt||"", orderTime:x.ord_tmd||"", orderNo:x.odno||"",
+        orderDate:x.ord_dt||"", orderTime:x.ord_tmd||"", notifyTime:x.infm_tmd||"", orderNo:x.odno||"",
         originalOrderNo:x.orgn_odno||"", sideCode:x.sll_buy_dvsn_cd||"",
         side:x.sll_buy_dvsn_cd_name||"", code:x.pdno||"", name:x.prdt_name||"",
         orderType:x.ord_dvsn_name||"", orderQty:+x.ord_qty||0, orderPrice:+x.ord_unpr||0,

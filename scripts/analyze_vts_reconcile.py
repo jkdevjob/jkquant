@@ -70,6 +70,12 @@ def summarize(reports,strategy):
         "calibrationMatches":len(complete),
         "totalBrokerEstimatedCostsWon":sum(float(m.get("vtsBrokerEstimatedCosts") or 0) for m in complete),
         "avgBrokerEstimatedCostsWon":avg(m.get("vtsBrokerEstimatedCosts") for m in complete),
+        "avgEntryOrderLagSecApprox":avg(m.get("entryOrderLagSecApprox") for m in matches),
+        "avgExitOrderLagSecApprox":avg(m.get("exitOrderLagSecApprox") for m in matches),
+        "avgBrokerNotifyLagSec":avg(
+            v for m in matches for v in (m.get("entryBrokerNotifyLagSec"),m.get("exitBrokerNotifyLagSec"))
+        ),
+        "delayNote":"order lag is approximate from the internal reference minute start to KIS order time; broker notify lag is KIS ord_tmd→infm_tmd, not exact exchange fill latency.",
     }
 
 def main():

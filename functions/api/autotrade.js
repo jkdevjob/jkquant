@@ -18,7 +18,7 @@
 //   · 주문은 절대 자동 재시도하지 않는다 — 응답이 유실되면 이중 주문이 된다.
 //   · 같은 날 같은 세션에 두 번 내지 않는다 (autotrade/{uid} 의 lastRun 날짜로 막는다).
 //   · 리버스모드 세션은 건너뛴다 — 규칙을 다 옮기지 않았다.
-//   · 실계좌 세션(paper=false)은 KIS_ENV 가 real 이라 진짜 돈이 나간다. dry 로 먼저 확인할 것.
+//   · 자동주문 경로는 VTS 모의투자 세션(paper=true)만 허용한다. paper=false 실계좌 세션은 항상 건너뛴다.
 
 import { imOrders, settledLast, staleDays, STALE_MAX_DAYS, orderWindow } from "./_im.js";
 
@@ -212,8 +212,14 @@ export async function onRequest({ request, env }) {
         out.sessions.push(row); continue;
       }
 
-      // 세션 종류가 환경을 정한다 — 모의 세션은 모의계좌, 실계좌 세션은 실전계좌
-      const kisEnv = s.paper ? "vts" : "real";
+      // 자동주문은 VTS 모의투자만 허용한다. 실계좌 세션은 계산 결과와 무관하게 전송하지 않는다.
+      if (!s.paper) {
+        row.env = "real";
+        row.skip = "실계좌 자동주문 차단 — 이 서버 자동주문은 VTS 모의투자(paper=true)만 허용합니다";
+        out.sessions.push(row);
+        continue;
+      }
+      const kisEnv = "vts";
       row.env = kisEnv;
       /* 아직 어느 번호가 LOC 인지 모른다. 틀렸으면 MOC(장마감 시장가)로 나가서
          정한 값이 아니라 아무 값에나 체결된다. 모르는 번호는 모의계좌에서만 넣어 본다 —
