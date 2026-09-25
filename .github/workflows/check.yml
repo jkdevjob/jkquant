@@ -46,6 +46,10 @@ jobs:
 
       - name: 연구 서버 JS 문법 검사
         run: |
+          node --input-type=module --check < functions/api/_opening.js
+          node --input-type=module --check < functions/api/opening-monitor.js
+          node --input-type=module --check < functions/api/opening-execute.js
+          node --input-type=module --check < functions/api/opening-summary.js
           node --input-type=module --check < functions/api/_daytrading.js
           node --input-type=module --check < functions/api/daytrading-monitor.js
           node --input-type=module --check < functions/api/daytrading-summary.js
@@ -114,6 +118,31 @@ jobs:
           }
           if(fail)process.exit(1);
           console.log('✓ server autotrade actual-send path is paper=true / env=vts only');
+          NODE
+
+      - name: 시초가 VTS 자동병행 안전가드 검사
+        run: |
+          node - <<'NODE'
+          const fs=require('fs');
+          const e=fs.readFileSync('functions/api/opening-execute.js','utf8');
+          const m=fs.readFileSync('functions/api/opening-monitor.js','utf8');
+          const w=fs.readFileSync('.github/workflows/opening-monitor.yml','utf8');
+          let fail=0;
+          const must=[
+            ['body:JSON.stringify({env:"vts"', 'VTS 환경 하드코딩'],
+            ['priceType:"market"', '시장가 모의주문'],
+            ['SCALPING_VTS_AUTO', '긴급 중지 스위치'],
+            ['date!==kstDate()', '과거 날짜 주문 차단'],
+            ['중복 signal_id 차단', 'signal id 중복 방지']
+          ];
+          for(const [needle,label] of must){
+            if(!e.includes(needle)){console.error('✗ '+label+' 없음');fail++;}
+          }
+          if(m.includes('/api/kis?op=order')){console.error('✗ 병렬 shard scanner가 직접 주문 API를 호출함');fail++;}
+          if(!w.includes('/api/opening-execute')){console.error('✗ workflow 직렬 주문 실행기 호출 없음');fail++;}
+          if(/env\s*:\s*["']real["']/.test(e)){console.error('✗ opening-execute에 실전 주문 환경 발견');fail++;}
+          if(fail)process.exit(1);
+          console.log('✓ opening dual execution is serialized / VTS-only / today-only');
           NODE
 
       - name: 전략 SSOT 체크 (문서 기준값·규약 불변식)
