@@ -149,7 +149,7 @@ pre.rules{background:var(--bg);border:1px solid var(--line);border-radius:10px;p
 
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Admin Console</div><h1>JK <span class="v">퀀트</span> 관리자 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="adVer">v0.3.1</span></h1></div>
+    <div><div class="kicker">Admin Console</div><h1>JK <span class="v">퀀트</span> 관리자 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="adVer">v0.4.0</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -354,11 +354,13 @@ function cfgFieldHtml(tab,f,val){
 }
 function renderDefaults(el){
   el.innerHTML='<div class="card"><h3><span class="dot"></span>운영전략 기본값</h3>'
-    +'<p class="lead">각 운영 탭에서 <b>새 세션을 만들 때</b> 들어갈 기본 설정입니다. 이미 운용 중인 세션의 보유·거래기록·설정은 덮어쓰지 않습니다.</p>'
+    +'<p class="lead">각 운영 탭에서 <b>새 세션을 만들 때</b> 들어갈 기본 설정입니다. 아래 버튼으로 현재 로그인한 관리자 계정의 기존 세션에도 같은 값을 적용할 수 있습니다.</p>'
     +'<div class="cfg-tabs" id="cfgTabs"></div><div id="cfgBody"><p class="lead">불러오는 중…</p></div>'
     +'<div class="row" style="margin-top:14px"><button class="prim" onclick="saveStrategyDefaults()">💾 기본값 저장</button>'
-    +'<button class="ghostbtn" onclick="resetStrategyDefaults()">기본값 초기화</button></div>'
+    +'<button class="ghostbtn" onclick="resetStrategyDefaults()">기본값 초기화</button>'
+    +'<button class="ghostbtn" style="border-color:#7b4a20;color:var(--gold)" onclick="applyDefaultsExistingSessions()">현재 기존 세션에도 적용</button></div>'
     +'<div id="cfgStatus" class="cfgstatus"></div>'
+    +'<p class="note"><b>기존 세션 적용</b>: 실계좌의 거래기록은 그대로 두고 설정값만 바꿉니다. 모의투자는 새 설정으로 성과를 다시 계산해야 하므로 기계가 만든 sim/auto 기록만 지운 뒤 운영/모의 페이지에서 자동 재생성합니다. 사람이 직접 넣은 기록은 남깁니다.</p>'
     +'<p class="note">저장값은 이 관리자 계정의 클라우드와 이 브라우저에 같이 저장됩니다. 운영 화면은 브라우저 캐시로 즉시 적용하고 로그인 후 클라우드 값으로 동기화합니다.</p></div>';
   loadStrategyDefaultsAdmin();
 }
@@ -421,6 +423,67 @@ async function saveStrategyDefaults(){
 function resetStrategyDefaults(){
   if(!confirm('모든 운영전략 기본값을 앱 기본값으로 되돌릴까요?'))return;
   strategyDefaults=cfgClone(STRATEGY_DEFAULT_BUILTIN);paintDefaultTabs();saveStrategyDefaults();
+}
+async function applyDefaultsExistingSessions(){
+  if(!isAdmin()||!me)return;
+  readCurrentDefaultTab();
+  const status=$('cfgStatus');
+  if(status){status.className='cfgstatus';status.textContent='기존 세션 확인 중…';}
+  try{
+    const ref=window.fb.doc(window.fb.db,'users',me.uid);
+    const snap=await window.fb.getDoc(ref);
+    if(!snap.exists()) throw new Error('운영 데이터가 없습니다.');
+    const doc=snap.data()||{}, state=doc.state;
+    if(!state||typeof state!=='object') throw new Error('운영 세션 상태를 찾지 못했습니다.');
+    const tabs=['inf','vr','ma','ivs','dca','asap'];
+    let total=0,paper=0,real=0,generated=0;
+    tabs.forEach(tab=>{
+      const box=state[tab], defs=strategyDefaults[tab];
+      if(!box||!Array.isArray(box.sessions)||!defs)return;
+      box.sessions.forEach(sess=>{
+        if(!sess||typeof sess!=='object')return;
+        total++;
+        const prev=sess.settings&&typeof sess.settings==='object'?sess.settings:{};
+        sess.settings={...prev,...cfgClone(defs)};
+        if(sess.paper){
+          paper++;
+          const h=Array.isArray(sess.hist)?sess.hist:[];
+          const kept=h.filter(x=>!(x&&(x.sim||x.auto)));
+          generated+=h.length-kept.length;
+          sess.hist=kept;
+          delete sess.settings.simSig;
+          delete sess.settings.simLast;
+          delete sess.settings.cycStart;
+          delete sess.settings.startCyc;
+          delete sess.settings.cycLog;
+        }else real++;
+      });
+    });
+    if(!total) throw new Error('적용할 기존 세션이 없습니다.');
+    const msg='기존 세션 '+total+'개에 현재 기본값을 적용합니다.\n\n'
+      +'· 실계좌 '+real+'개: 거래기록 보존, 설정만 변경\n'
+      +'· 모의투자 '+paper+'개: 자동생성 기록을 지우고 새 설정으로 다시 계산\n'
+      +'· 사람이 직접 입력한 모의 기록은 보존\n\n'
+      +'종목·원금 같은 값도 기본값으로 바뀝니다. 계속할까요?';
+    if(!confirm(msg)){
+      if(status){status.className='cfgstatus';status.textContent='적용을 취소했습니다.';}
+      return;
+    }
+    const now=Date.now(); state._updated=now;
+    try{
+      localStorage.setItem('qcockpit_v2_'+me.uid,JSON.stringify(state));
+      localStorage.setItem(STRATEGY_DEFAULT_CACHE,JSON.stringify(strategyDefaults));
+    }catch(e){}
+    await window.fb.setDoc(ref,{
+      state,updated:now,strategyDefaults:strategyDefaults,strategyDefaultsUpdated:now
+    },{merge:true});
+    if(status){
+      status.className='cfgstatus ok';
+      status.textContent='✓ 기존 세션 '+total+'개 적용 완료 · 모의 자동기록 '+generated+'건 초기화 · 운영/모의 화면을 열면 새 설정으로 다시 계산됩니다.';
+    }
+  }catch(e){
+    if(status){status.className='cfgstatus err';status.textContent='기존 세션 적용 실패 — '+(e.message||e);}
+  }
 }
 
 // ── 3. 시스템 점검 ───────────────────────────────────────────────────
