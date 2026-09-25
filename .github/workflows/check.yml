@@ -23,12 +23,38 @@ jobs:
           python -m py_compile scripts/backtest_opening_rebreak.py
           python -m py_compile scripts/backtest_daytrading.py
           python -m py_compile scripts/collect_daytrading_data.py
+          python -m py_compile scripts/analyze_vts_reconcile.py
 
-      - name: 데이트레이딩 서버 JS 문법 검사
+      - name: 연구 서버 JS 문법 검사
         run: |
           node --input-type=module --check < functions/api/_daytrading.js
           node --input-type=module --check < functions/api/daytrading-monitor.js
           node --input-type=module --check < functions/api/daytrading-summary.js
+          node --input-type=module --check < functions/api/vts-reconcile.js
+          node --input-type=module --check < functions/api/vts-research.js
+
+      - name: VTS 대조는 읽기전용인지 검사
+        run: |
+          node - <<'NODE'
+          const fs=require('fs');
+          const v=fs.readFileSync('functions/api/vts-reconcile.js','utf8');
+          const k=fs.readFileSync('functions/api/kis.js','utf8');
+          const bad=[
+            ['/api/kis?op=order','주문 API 호출'],
+            ['method:"POST"','POST 호출'],
+            ["method:'POST'",'POST 호출'],
+            ['env=real','실전 환경 조회']
+          ];
+          let fail=0;
+          for(const [needle,label] of bad){
+            if(v.includes(needle)){ console.error('✗ vts-reconcile: '+label+' 발견: '+needle); fail++; }
+          }
+          if(!/if\s*\(isReal\(env\)\)\s*return json\(\{ error: "orders 조회는 이 화면에서 KIS 모의투자\(vts\)만 허용합니다\."/.test(k)){
+            console.error('✗ KIS orders 조회의 real 차단 가드가 없습니다.'); fail++;
+          }
+          if(fail)process.exit(1);
+          console.log('✓ VTS 대조 경로 read-only / VTS-only');
+          NODE
 
       - name: 전략 SSOT 체크 (문서 기준값·규약 불변식)
         run: |
