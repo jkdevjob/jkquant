@@ -1,0 +1,125 @@
+name: KIS VTS 체결대조 자동수집
+
+# 주문을 내지 않는다.
+# 내부 모의체결과 한투 VTS에 이미 존재하는 체결을 읽기전용으로 대조해
+# 슬리피지·제비용 연구자료만 scalping-data에 누적한다.
+
+on:
+  schedule:
+    - cron: "45 0 * * 1-5"   # 09:45 KST — 시초가 대조
+    - cron: "30 7 * * 1-5"   # 16:30 KST — 시초가 + 데이트레이딩
+    - cron: "30 8 * * 1-5"   # 17:30 KST backup
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/vts-reconcile.yml"
+      - "functions/api/vts-reconcile.js"
+      - "functions/api/vts-research.js"
+      - "functions/api/vts-summary.js"
+      - "scripts/analyze_vts_reconcile.py"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: vts-reconcile-readonly
+  cancel-in-progress: false
+
+jobs:
+  reconcile:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: 데이터 브랜치 체크아웃
+        uses: actions/checkout@v4
+        with:
+          ref: scalping-data
+          fetch-depth: 0
+
+      - name: 최신 분석 코드 체크아웃
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          path: .app
+          fetch-depth: 1
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: VTS 체결 읽기전용 대조 및 누적
+        env:
+          KEY: ${{ secrets.AUTOTRADE_KEY }}
+          BASE: https://jkquant.pages.dev
+        shell: bash
+        run: |
+          set -e
+          if [ -z "$KEY" ]; then
+            echo "AUTOTRADE_KEY Secret 없음"
+            exit 1
+          fi
+
+          DATE=$(TZ=Asia/Seoul date +%F)
+          DOW=$(TZ=Asia/Seoul date +%u)
+          RAW=$(TZ=Asia/Seoul date +%H%M)
+          HM=$((10#$RAW))
+          if [ "$DOW" -gt 5 ]; then echo "주말 — 종료"; exit 0; fi
+
+          mkdir -p data/vts-reconcile
+
+          fetch_one() {
+            STRAT="$1"
+            OUT="data/vts-reconcile/$DATE-$STRAT.json"
+            TMP="$OUT.tmp"
+            READY=0
+            for attempt in $(seq 1 12); do
+              STATUS=$(curl -sS --max-time 45 -o "$TMP" -w '%{http_code}'                 -H "x-monitor-key: $KEY"                 "$BASE/api/vts-reconcile?strategy=$STRAT&date=$DATE" || true)
+              if [ "$STATUS" = "200" ] && jq -e '.ok == true and .env == "vts" and .mode == "read-only"' "$TMP" >/dev/null 2>&1; then
+                READY=1
+                break
+              fi
+              echo "$STRAT 대조 대기 attempt $attempt HTTP $STATUS"
+              head -c 260 "$TMP" 2>/dev/null || true
+              echo
+              sleep 10
+            done
+            if [ "$READY" = "1" ]; then
+              mv "$TMP" "$OUT"
+              echo "$STRAT 저장: $(jq -c '{internalTrades,kisOrders,matched:([.matches[]|select(.matched)]|length)}' "$OUT")"
+            else
+              rm -f "$TMP"
+              echo "$STRAT 대조 실패 — 이번 실행에서는 저장하지 않음"
+            fi
+          }
+
+          # 오전에는 시초가만. 16시 이후에는 장중 전략까지 함께 대조한다.
+          if [ "$HM" -ge 940 ]; then fetch_one opening; fi
+          if [ "$HM" -ge 1600 ]; then fetch_one daytrading; fi
+
+          python .app/scripts/analyze_vts_reconcile.py
+
+          # 17시 이후 마지막 백업 실행에서 하루 한 번만 Telegram 요약.
+          MARK="data/vts-reconcile/$DATE-summary-sent.json"
+          if [ "$HM" -ge 1700 ] && [ ! -f "$MARK" ] && [ -f data/vts-research/latest.json ]; then
+            STATUS=$(curl -sS --max-time 30 -o vts-summary-response.json -w '%{http_code}' \
+              -X POST -H "x-monitor-key: $KEY" -H "content-type: application/json" \
+              --data-binary @data/vts-research/latest.json \
+              "$BASE/api/vts-summary" || true)
+            echo "VTS Telegram 요약 HTTP $STATUS: $(cat vts-summary-response.json 2>/dev/null || true)"
+            if [ "$STATUS" = "200" ] && jq -e '.ok == true' vts-summary-response.json >/dev/null 2>&1; then
+              jq -n --arg date "$DATE" --arg sentAt "$(TZ=Asia/Seoul date --iso-8601=seconds)" \
+                '{date:$date,sentAt:$sentAt,source:"vts-reconcile-readonly"}' > "$MARK"
+            fi
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/vts-reconcile data/vts-research
+          if git diff --cached --quiet; then
+            echo "새 VTS 대조자료 없음"
+            exit 0
+          fi
+          git commit -m "data: VTS execution reconciliation $DATE [skip ci]"
+          git pull --rebase origin scalping-data
+          git push origin scalping-data
