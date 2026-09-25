@@ -192,7 +192,7 @@ th:first-child,td:first-child{text-align:left}
 <body>
 <div class="wrap">
   <div class="top">
-    <div class="brand"><div class="logo">Asset Plan</div><h1>자산플랜 <span class="ver">v1.32.1</span></h1></div>
+    <div class="brand"><div class="logo">Asset Plan</div><h1>자산플랜 <span class="ver">v1.32.2</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
       <div class="jkmenu" id="jkmenuWrap">
@@ -1193,11 +1193,10 @@ function imOrders(sess,price,rows){
     return {state:c,orders,note};
   }
   const buy1=slot>=1?c.bal/slot:0,pct=starPctPlan(st,c.T),star=c.avg>0?imStarPx(c.avg,pct,'usd'):price,buyPt=imBuyPx(star),limit=price*(1+big/100),half=c.T<div/2;
-  /* 매수 주문은 앱·모의·서버·백테와 같은 정식 함수(imBuyOrders)에서 — 잔금 안에서만 · 상한 cap · 아래로 LOC 추가 */
+  /* 매수 주문은 앱·모의·서버·백테와 같은 정식 함수(imBuyOrders)에서 — 잔금 안에서만 · 아래로 LOC 추가 */
   if(slot>=1&&buy1>0){
     const first=!(c.avg>0);
-    for(const o of imBuyOrders({first, half:!first&&half, buy1, bal:c.bal, firstPrice:limit, starPrice:buyPt, avg:c.avg,
-                                cap:limit, rows:imRowsOf(st), fee:0, cur:'usd'}))
+    for(const o of imBuyOrders({first, half:!first&&half, buy1, bal:c.bal, firstPrice:limit, starPrice:buyPt, avg:c.avg, rows:imRowsOf(st), fee:0, cur:'usd'}))
       orders.push({side:'buy',name:o.name,price:o.price,qty:o.q,tag:'LOC'});
   }
   if(c.qty>0&&c.avg>0){
@@ -1362,26 +1361,24 @@ function imBuyOrders(o){
   const out=[], f1=1+(+o.fee||0);
   if(!(o.buy1>0)) return out;
   let res=Math.max(0,+o.bal||0);
-  const capP=o.cap>0 ? vrTickDn(o.cap, o.cur) : 0;
-  const cap=p=>(capP>0&&p>capP)?capP:p;
-  let lo=Infinity;                                 // 본 주문 중 가장 낮은 주문가 — 추가 줄은 이보다 '아래로'만
+  let lo=Infinity;
   const held=()=>out.reduce((a,x)=>a+x.q,0);
-  /* 본 주문 — 수량 = 배정액 ÷ 주문가 (내림) − 이미 건 수량(have). have 는 전반전 평단 주문에만 있다 */
   const main=(name,p0,alloc,dT,kind,have)=>{
-    const p=cap(p0); if(!(p>0)) return; if(p<lo) lo=p;
+    const p=p0; if(!(p>0)) return; if(p<lo) lo=p;
     const q=Math.min(Math.floor(alloc/f1/p+1e-9)-(have||0), Math.floor(res/f1/p+1e-9));
-    if(q>=1){ out.push({kind, name, price:p, q, dT, ladder:false, capped:o.cap>0&&p0>o.cap, orig:p0}); res-=q*p*f1; } };
-  if(o.first) main('처음매수', vrTickDn(o.firstPrice, o.cur), o.buy1, 1, '1회매수');   // 큰수 가격도 호가 내림 (45.93×1.12 = 51.4416 → 51.44)
+    if(q>=1){ out.push({kind, name, price:p, q, dT, ladder:false}); res-=q*p*f1; }
+  };
+  if(o.first) main('처음매수', vrTickDn(o.firstPrice, o.cur), o.buy1, 1, '1회매수');
   else if(o.half){ main('별지점 매수', o.starPrice, o.buy1/2, 0.5, '절반매수');
                    main('평단 매수', o.avg, o.buy1, 0.5, '절반매수', held()); }
   else main('별지점 매수 (전액)', o.starPrice, o.buy1, 1, '1회매수');
   const Q=held(), n=Math.max(0,Math.floor(+o.rows||0));
   for(let k=1,m=0;m<n&&k<=n+Q+2;k++){
-    const p=cap(vrTickDn(o.buy1/(Q+k), o.cur));
+    const p=vrTickDn(o.buy1/(Q+k), o.cur);
     if(!(p>0)) break;
-    if(p>=lo) continue;                            // 본 주문 최저가 이상은 '아래로'가 아니다 — 건너뛴다 (안전장치)
+    if(p>=lo) continue;
     if(res<p*f1-1e-9) break;
-    out.push({kind:'하방', name:'하방 '+k+' (÷'+(Q+k)+')', price:p, q:1, dT:0, ladder:true, capped:false, orig:p}); res-=p*f1; m++;
+    out.push({kind:'하방', name:'하방 '+k+' (÷'+(Q+k)+')', price:p, q:1, dT:0, ladder:true}); res-=p*f1; m++;
   }
   return out;
 }
