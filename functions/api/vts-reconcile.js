@@ -85,6 +85,10 @@ export async function onRequestGet({request}){
       const qty=buy&&sell?Math.min(+buy.fillQty||0,+sell.fillQty||0):(+buy?.fillQty||0);
       const gross=buyPx>0&&sellPx>0?(sellPx/buyPx-1)*100:null;
       const costWon=buyCost+sellCost;
+      const brokerCostRate=buyPx>0&&qty>0?costWon/(buyPx*qty)*100:null;
+      const entrySlip=buyPx>0&&entryRef>0?(buyPx/entryRef-1)*100:null;
+      const exitSlip=sellPx>0&&exitRef>0?(exitRef/sellPx-1)*100:null;
+      const observedDrag=buy&&sell&&brokerCostRate!=null?(+entrySlip||0)+(+exitSlip||0)+brokerCostRate:null;
       const net=buyPx>0&&sellPx>0&&qty>0?((sellPx-buyPx)*qty-costWon)/(buyPx*qty)*100:null;
       matches.push({
         code:t.code,name:t.name||t.code,internalEntryTime:t.entryTime,internalEntryPrice:entryRef,
@@ -92,9 +96,10 @@ export async function onRequestGet({request}){
         internalPnl:t.pnl,
         vtsBuy:buy?{orderTime:buy.orderTime,fillQty:buy.fillQty,fillPrice:buy.fillPrice,fillAmount:buy.fillAmount,estimatedCosts:buyCost}:null,
         vtsSell:sell?{orderTime:sell.orderTime,fillQty:sell.fillQty,fillPrice:sell.fillPrice,fillAmount:sell.fillAmount,estimatedCosts:sellCost}:null,
-        entrySlippageCostPct:buyPx>0&&entryRef>0?(buyPx/entryRef-1)*100:null,
-        exitSlippageCostPct:sellPx>0&&exitRef>0?(exitRef/sellPx-1)*100:null,
+        entrySlippageCostPct:entrySlip,
+        exitSlippageCostPct:exitSlip,
         vtsGrossPnlPct:gross,vtsNetPnlPct:net,vtsBrokerEstimatedCosts:costWon,
+        vtsBrokerCostRatePct:brokerCostRate,observedExecutionDragPct:observedDrag,
         matched:!!buy&&(t.exitTime==null||!!sell)
       });
     }
@@ -107,6 +112,9 @@ export async function onRequestGet({request}){
     const exitSlip=matches.map(x=>x.exitSlippageCostPct).filter(Number.isFinite);
     const net=complete.map(x=>x.vtsNetPnlPct).filter(Number.isFinite);
     const internalPnl=complete.map(x=>x.internalPnl).filter(Number.isFinite);
+    const brokerRates=complete.map(x=>x.vtsBrokerCostRatePct).filter(Number.isFinite);
+    const observedDrag=complete.map(x=>x.observedExecutionDragPct).filter(Number.isFinite);
+    const avgDrag=avg(observedDrag);
     return json({ok:true,mode:"read-only",env:"vts",strategy,date,
       note:"KIS VTS existing fills are only compared; no broker order is submitted by this endpoint.",
       internalTrades:internal.length,kisOrders:(kis.orders||[]).length,matches,unmatched,
@@ -119,6 +127,11 @@ export async function onRequestGet({request}){
         avgRoundTripSlippageCostPct:complete.length?avg(complete.map(x=>(+x.entrySlippageCostPct||0)+(+x.exitSlippageCostPct||0))):null,
         avgInternalPnlPct:avg(internalPnl),
         avgVtsNetPnlPct:avg(net),
+        avgBrokerCostRatePct:avg(brokerRates),
+        avgObservedExecutionDragPct:avgDrag,
+        frictionGapVsInternal025Pct:avgDrag==null?null:avgDrag-0.25,
+        calibrationStatus:complete.length>=20?"reviewable":"collecting",
+        calibrationMatches:complete.length,
         totalBrokerEstimatedCostsWon:complete.reduce((s,x)=>s+(+x.vtsBrokerEstimatedCosts||0),0)
       }});
   }catch(e){
