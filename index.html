@@ -537,7 +537,7 @@ try{ if(localStorage.getItem('qcockpit_hadUser')==='1') document.documentElement
 </div>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.99.1</span></h1></div>
+    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.99.2</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -1646,7 +1646,7 @@ if(/^\/paper\/?$/.test(location.pathname)){
   <footer>
     <strong>JK 퀀트</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.99.1</b> · 2026-09-25</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.99.2</b> · 2026-09-25</div>
   </footer>
 </div>
 
@@ -1687,7 +1687,7 @@ if(/^\/paper\/?$/.test(location.pathname)){
     <div class="seclabel v5-hidden">하락국면 익절 % (V5.0)</div><div class="seg v5-hidden" id="set_lopct"><button data-v="4">4%</button><button data-v="6">6%</button><button data-v="8">8%</button><button data-v="10">10%</button></div>
     <p class="note v5-hidden" style="margin:-2px 0 8px">하락국면엔 익절 목표를 낮춰 반등에 빨리 턴다.</p>
     <div class="field"><label>목표 수익률 (%) <span class="hint" id="target_hint">별%·지정가매도</span></label><input id="set_target" type="number" inputmode="decimal" value="20"></div>
-    <div class="field"><label>큰수 % <span class="hint">처음매수가·LOC 주문가 상한 — 원문 전일 종가 +10~15% (기본 15)</span></label><input id="set_big" type="number" inputmode="decimal" value="15" min="0" max="40"></div>
+    <div class="field"><label>큰수 % <span class="hint">처음매수가 — 전일 종가 +BIG% LOC (기본 15)</span></label><input id="set_big" type="number" inputmode="decimal" value="15" min="0" max="40"></div>
     <div class="field"><label id="set_principal_lbl" data-tk="set_ticker_in">원금 ($)</label><input id="set_principal" type="text" inputmode="decimal" value="10000" oninput="commaInput(this)"></div>
     <!-- 리버스 gap 은 하방 LOC 와 상관없다 — 예전엔 아래 rows_fields 안에 있어서 하방 LOC 를 꺼 두면 같이 잠겼다 -->
     <div class="field"><label>리버스 쿼터매수 gap % <span class="hint">0 = 기본(별지점 −$0.01 · 원문은 '별지점 아래'까지만) · 0보다 크면 변형</span></label><input id="set_revgap" type="number" inputmode="decimal" value="0"></div>
@@ -2548,26 +2548,24 @@ function imBuyOrders(o){
   const out=[], f1=1+(+o.fee||0);
   if(!(o.buy1>0)) return out;
   let res=Math.max(0,+o.bal||0);
-  const capP=o.cap>0 ? vrTickDn(o.cap, o.cur) : 0;
-  const cap=p=>(capP>0&&p>capP)?capP:p;
-  let lo=Infinity;                                 // 본 주문 중 가장 낮은 주문가 — 추가 줄은 이보다 '아래로'만
+  let lo=Infinity;
   const held=()=>out.reduce((a,x)=>a+x.q,0);
-  /* 본 주문 — 수량 = 배정액 ÷ 주문가 (내림) − 이미 건 수량(have). have 는 전반전 평단 주문에만 있다 */
   const main=(name,p0,alloc,dT,kind,have)=>{
-    const p=cap(p0); if(!(p>0)) return; if(p<lo) lo=p;
+    const p=p0; if(!(p>0)) return; if(p<lo) lo=p;
     const q=Math.min(Math.floor(alloc/f1/p+1e-9)-(have||0), Math.floor(res/f1/p+1e-9));
-    if(q>=1){ out.push({kind, name, price:p, q, dT, ladder:false, capped:o.cap>0&&p0>o.cap, orig:p0}); res-=q*p*f1; } };
-  if(o.first) main('처음매수', vrTickDn(o.firstPrice, o.cur), o.buy1, 1, '1회매수');   // 큰수 가격도 호가 내림 (45.93×1.12 = 51.4416 → 51.44)
+    if(q>=1){ out.push({kind, name, price:p, q, dT, ladder:false}); res-=q*p*f1; }
+  };
+  if(o.first) main('처음매수', vrTickDn(o.firstPrice, o.cur), o.buy1, 1, '1회매수');
   else if(o.half){ main('별지점 매수', o.starPrice, o.buy1/2, 0.5, '절반매수');
                    main('평단 매수', o.avg, o.buy1, 0.5, '절반매수', held()); }
   else main('별지점 매수 (전액)', o.starPrice, o.buy1, 1, '1회매수');
   const Q=held(), n=Math.max(0,Math.floor(+o.rows||0));
   for(let k=1,m=0;m<n&&k<=n+Q+2;k++){
-    const p=cap(vrTickDn(o.buy1/(Q+k), o.cur));
+    const p=vrTickDn(o.buy1/(Q+k), o.cur);
     if(!(p>0)) break;
-    if(p>=lo) continue;                            // 본 주문 최저가 이상은 '아래로'가 아니다 — 건너뛴다 (안전장치)
+    if(p>=lo) continue;
     if(res<p*f1-1e-9) break;
-    out.push({kind:'하방', name:'하방 '+k+' (÷'+(Q+k)+')', price:p, q:1, dT:0, ladder:true, capped:false, orig:p}); res-=p*f1; m++;
+    out.push({kind:'하방', name:'하방 '+k+' (÷'+(Q+k)+')', price:p, q:1, dT:0, ladder:true}); res-=p*f1; m++;
   }
   return out;
 }
@@ -2943,23 +2941,15 @@ function renderOrder(){
       +`${revEnabled(st)?'리버스모드 진입 대상입니다.':('아래 <b>쿼터매도</b>로만 방어합니다 ('+(st.reverse===true?st.div+'분할은 리버스 규칙 없음':'리버스 꺼짐')+').')}</div>`;
   }else{
     /* 매수 주문은 공용 함수 한 곳에서 (정식 V4.0 — imBuyOrders). 모의·서버·백테·플랜과 같은 글자.
-       주문가가 증권사 허용폭(전일종가 +큰수%)을 넘으면 그 값으로 낮춰 낸다 — 공짜가 아니다:
-       체결조건이 '종가 ≤ 별지점' 에서 '종가 ≤ 상한' 으로 바뀌어 종가가 상한 위로 마감한 날은 못 산다.
-       (실측: 기준 종가 112.79 일 때 +24.5% 인 140.41 매수가 토스에서 거부) */
+       BIG는 처음매수 LOC 가격에만 사용하고, 별지점·평단·하방 LOC 가격은 그대로 낸다. */
     const first=(c.avg<=0);
-    const BO=imBuyOrders({first, half, buy1, bal:c.bal, firstPrice:close*bigMul, starPrice:buyPt, avg:c.avg,
-                          cap:limit, rows, fee:0, cur:curOf(st)});
-    let capN=0, capRef=0, nLad=0;
+    const BO=imBuyOrders({first, half, buy1, bal:c.bal, firstPrice:close*bigMul, starPrice:buyPt, avg:c.avg, rows, fee:0, cur:curOf(st)});
+    let nLad=0;
     for(const o of BO){
       if(o.ladder){ nLad++; html+=oitem('b',o.name,'LOC',o.price,o.q); continue; }
-      if(o.capped){ capN++; if(o.orig>capRef) capRef=o.orig; }
       nBuyRow++;
-      html+=oitem('b',(first?'★ ':'')+o.name+(o.capped?' <span class="hint">↓상한</span>':''),'LOC',o.price,o.q);
+      html+=oitem('b',(first?'★ ':'')+o.name,'LOC',o.price,o.q);
     }
-    if(capN) html+=`<div class="note" style="color:var(--gold)">⚠ 위 ${capN}건은 주문가를 <b>${wn(limit)}</b>(전일종가 +${bigPct}%)로 낮췄습니다. `
-      +`원래 주문가 ${wn(capRef)}은 전일종가에서 ${((capRef/close-1)*100).toFixed(1)}% 위라 증권사가 <b>주문 자체를 거부</b>합니다.<br>`
-      +`공짜는 아닙니다 — 오늘 종가가 ${wn(limit)}를 넘겨 마감하면 사야 할 회차를 <b>건너뜁니다</b>. `
-      +`큰수 %를 높이면 건너뛰는 날은 줄지만, 원문 범위는 <b>전일 종가 +10~15%</b>입니다 — 넘기면 V4.0 변형으로 표시됩니다.</div>`;
     if(!nBuyRow) html+=`<div class="note" style="color:var(--gold)">🚫 <b>본 주문 없음</b> — 오늘 배정액 ${wn(half&&!first?buy1/2:buy1)}이 1주 값에 못 미칩니다.${nLad?' 아래로 LOC 추가 줄만 걸립니다.':''} 잔금 ${wn(c.bal)}.</div>`;
     if(nLad) html+=imRowsNote(nLad);
   }
@@ -3845,8 +3835,7 @@ function infSimForward(startFrom){
           const first=(c.qty<=0 || c.avg<=0), half=!first && c.T<st.div/2;
           const star0=first?0:imStarPx(c.avg,starPct(st.ticker,st.div,c.T,st.target),curOf(st));   // 센트 반올림 (제10차)
           /* 정식 매수 주문 — 운영 주문표와 같은 함수 (imBuyOrders) */
-          buys=imBuyOrders({first, half, buy1:B0.amt, bal:c.bal, firstPrice:buyLimit, starPrice:imBuyPx(star0), avg:c.avg,
-                            cap:buyLimit, rows:imRowsOf(st), fee:0, cur:curOf(st)}).map(o=>({kind:o.kind, lim:o.price, q:o.q, ladder:o.ladder}));
+          buys=imBuyOrders({first, half, buy1:B0.amt, bal:c.bal, firstPrice:buyLimit, starPrice:imBuyPx(star0), avg:c.avg, rows:imRowsOf(st), fee:0, cur:curOf(st)}).map(o=>({kind:o.kind, lim:o.price, q:o.q, ladder:o.ladder}));
         } }
       // ── 일반모드 매도 ──
       if(c.qty>0 && c.avg>0){
