@@ -2963,10 +2963,13 @@ console.log('\n[60] 분배금 현금 수령 — 전 전략');
   const restored=tabs.filter(t=>new RegExp(`segSet\\('set_${t}divmode',st\\.divmode\\|\\|'reinv'\\)`).test(idx));
   ok('설정창에 다시 채운다', restored.length===5, restored.join(','));
 
-  /* 모의 기록을 만드는 규칙이 아니다 — SIM_KEYS에 넣으면 이미 쌓인 모의 세션이
-     전부 '옛 규칙'으로 찍혀 다시 돌게 된다. */
+  /* 분배금 처리도 모의성과를 바꾼다. 재투자면 장부 안에 남고 현금 수령이면 계좌 밖 흐름이므로
+     설정을 바꾸면 기존 자동생성 기록을 새 규칙으로 다시 만들어야 한다. */
   const sk=(idx.match(/const SIM_KEYS=\{[\s\S]*?\n\};/)||[''])[0];
-  ok('모의 지문에는 넣지 않는다', !/divmode/.test(sk));
+  ['inf','vr','ma','ivs','asap'].forEach(t=>{
+    const m=sk.match(new RegExp(t+'\\s*:\\s*\\[([^\\]]+)\\]'));
+    ok(t+' 모의 지문에 divmode 포함', !!m && /'divmode'/.test(m[1]), m?m[1]:'없음');
+  });
 
   // 세는 함수는 하나 — 적립이 쓰던 규약 그대로
   ok('세는 함수는 하나다', (idx.match(/function divIncome\(/g)||[]).length===1
