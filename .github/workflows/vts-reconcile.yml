@@ -16,6 +16,7 @@ on:
       - ".github/workflows/vts-reconcile.yml"
       - "functions/api/vts-reconcile.js"
       - "functions/api/vts-research.js"
+      - "functions/api/vts-summary.js"
       - "scripts/analyze_vts_reconcile.py"
 
 permissions:
@@ -97,6 +98,20 @@ jobs:
           if [ "$HM" -ge 1600 ]; then fetch_one daytrading; fi
 
           python .app/scripts/analyze_vts_reconcile.py
+
+          # 17시 이후 마지막 백업 실행에서 하루 한 번만 Telegram 요약.
+          MARK="data/vts-reconcile/$DATE-summary-sent.json"
+          if [ "$HM" -ge 1700 ] && [ ! -f "$MARK" ] && [ -f data/vts-research/latest.json ]; then
+            STATUS=$(curl -sS --max-time 30 -o vts-summary-response.json -w '%{http_code}' \
+              -X POST -H "x-monitor-key: $KEY" -H "content-type: application/json" \
+              --data-binary @data/vts-research/latest.json \
+              "$BASE/api/vts-summary" || true)
+            echo "VTS Telegram 요약 HTTP $STATUS: $(cat vts-summary-response.json 2>/dev/null || true)"
+            if [ "$STATUS" = "200" ] && jq -e '.ok == true' vts-summary-response.json >/dev/null 2>&1; then
+              jq -n --arg date "$DATE" --arg sentAt "$(TZ=Asia/Seoul date --iso-8601=seconds)" \
+                '{date:$date,sentAt:$sentAt,source:"vts-reconcile-readonly"}' > "$MARK"
+            fi
+          fi
 
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
