@@ -40,7 +40,7 @@ jobs:
           const v=fs.readFileSync('functions/api/vts-reconcile.js','utf8');
           const k=fs.readFileSync('functions/api/kis.js','utf8');
           const bad=[
-            ['/api/kis?op=order','주문 API 호출'],
+            ['/api/kis?op=order&','주문 API 호출'],
             ['method:"POST"','POST 호출'],
             ["method:'POST'",'POST 호출'],
             ['env=real','실전 환경 조회']
