@@ -31,6 +31,13 @@ function brokerNotifyLagSec(orderTime,notifyTime){
   if(d<0)d+=24*3600;
   return d;
 }
+function percentile(a,p){
+  const s=(a||[]).filter(Number.isFinite).slice().sort((x,y)=>x-y);
+  if(!s.length)return null;
+  if(s.length===1)return s[0];
+  const pos=(s.length-1)*p,lo=Math.floor(pos),hi=Math.ceil(pos),w=pos-lo;
+  return s[lo]*(1-w)+s[hi]*w;
+}
 function sideIs(x,want){
   const n=String(x.side||"").toLowerCase(),c=String(x.sideCode||"");
   return want==="buy"?(c==="02"||/매수|buy/.test(n)):(c==="01"||/매도|sell/.test(n));
@@ -117,8 +124,12 @@ export async function onRequestGet({request}){
         code:t.code,name:t.name||t.code,internalEntryTime:t.entryTime,internalEntryPrice:entryRef,
         internalExitTime:t.exitTime,internalExitPrice:exitRef,internalReason:t.reason||"",
         internalPnl:t.pnl,
-        vtsBuy:buy?{orderTime:buy.orderTime,notifyTime:buy.notifyTime,fillQty:buy.fillQty,fillPrice:buy.fillPrice,fillAmount:buy.fillAmount,estimatedCosts:buyCost}:null,
-        vtsSell:sell?{orderTime:sell.orderTime,notifyTime:sell.notifyTime,fillQty:sell.fillQty,fillPrice:sell.fillPrice,fillAmount:sell.fillAmount,estimatedCosts:sellCost}:null,
+        vtsBuy:buy?{orderNo:buy.orderNo,orderTime:buy.orderTime,notifyTime:buy.notifyTime,orderQty:buy.orderQty,
+          fillQty:buy.fillQty,fillPrice:buy.fillPrice,fillAmount:buy.fillAmount,remainingQty:buy.remainingQty,
+          rejectedQty:buy.rejectedQty,canceled:buy.canceled,estimatedCosts:buyCost}:null,
+        vtsSell:sell?{orderNo:sell.orderNo,orderTime:sell.orderTime,notifyTime:sell.notifyTime,orderQty:sell.orderQty,
+          fillQty:sell.fillQty,fillPrice:sell.fillPrice,fillAmount:sell.fillAmount,remainingQty:sell.remainingQty,
+          rejectedQty:sell.rejectedQty,canceled:sell.canceled,estimatedCosts:sellCost}:null,
         entryOrderLagSecApprox:entryOrderLag,exitOrderLagSecApprox:exitOrderLag,
         entryBrokerNotifyLagSec:buyNotifyLag,exitBrokerNotifyLagSec:sellNotifyLag,
         entrySlippageCostPct:entrySlip,
@@ -128,8 +139,10 @@ export async function onRequestGet({request}){
         matched:!!buy&&(t.exitTime==null||!!sell)
       });
     }
-    const unmatched=(kis.orders||[]).filter(x=>!used.has(x.orderNo)).map(x=>({
-      code:x.code,name:x.name,side:x.side,orderTime:x.orderTime,fillQty:x.fillQty,fillPrice:x.fillPrice,orderType:x.orderType
+    const allOrders=kis.orders||[];
+    const unmatched=allOrders.filter(x=>!used.has(x.orderNo)).map(x=>({
+      code:x.code,name:x.name,side:x.side,orderTime:x.orderTime,orderQty:x.orderQty,fillQty:x.fillQty,
+      fillPrice:x.fillPrice,remainingQty:x.remainingQty,rejectedQty:x.rejectedQty,canceled:x.canceled,orderType:x.orderType
     }));
     const complete=matches.filter(x=>x.matched);
     const avg=a=>a.length?a.reduce((s,x)=>s+x,0)/a.length:null;
@@ -142,6 +155,12 @@ export async function onRequestGet({request}){
     const entryLag=matches.map(x=>x.entryOrderLagSecApprox).filter(Number.isFinite);
     const exitLag=matches.map(x=>x.exitOrderLagSecApprox).filter(Number.isFinite);
     const notifyLag=matches.flatMap(x=>[x.entryBrokerNotifyLagSec,x.exitBrokerNotifyLagSec]).filter(Number.isFinite);
+    const roundTripSlip=complete.map(x=>(+x.entrySlippageCostPct||0)+(+x.exitSlippageCostPct||0)).filter(Number.isFinite);
+    const filledOrders=allOrders.filter(x=>+x.fillQty>0);
+    const partialOrders=allOrders.filter(x=>+x.fillQty>0&&+x.remainingQty>0);
+    const unfilledOrders=allOrders.filter(x=>+x.orderQty>0&&!(+x.fillQty>0)&&!x.canceled);
+    const canceledOrders=allOrders.filter(x=>x.canceled);
+    const rejectedQtyTotal=allOrders.reduce((s,x)=>s+(+x.rejectedQty||0),0);
     const avgDrag=avg(observedDrag);
     return json({ok:true,mode:"read-only",env:"vts",strategy,date,
       note:"KIS VTS existing fills are only compared; no broker order is submitted by this endpoint.",
@@ -151,8 +170,14 @@ export async function onRequestGet({request}){
         completeMatches:complete.length,
         matchRatePct:internal.length?complete.length/internal.length*100:0,
         avgEntrySlippageCostPct:avg(entrySlip),
+        medianEntrySlippageCostPct:percentile(entrySlip,0.5),
+        p95EntrySlippageCostPct:percentile(entrySlip,0.95),
         avgExitSlippageCostPct:avg(exitSlip),
-        avgRoundTripSlippageCostPct:complete.length?avg(complete.map(x=>(+x.entrySlippageCostPct||0)+(+x.exitSlippageCostPct||0))):null,
+        medianExitSlippageCostPct:percentile(exitSlip,0.5),
+        p95ExitSlippageCostPct:percentile(exitSlip,0.95),
+        avgRoundTripSlippageCostPct:avg(roundTripSlip),
+        medianRoundTripSlippageCostPct:percentile(roundTripSlip,0.5),
+        p95RoundTripSlippageCostPct:percentile(roundTripSlip,0.95),
         avgInternalPnlPct:avg(internalPnl),
         avgVtsNetPnlPct:avg(net),
         avgBrokerCostRatePct:avg(brokerRates),
@@ -164,7 +189,14 @@ export async function onRequestGet({request}){
         frictionGapVsInternal025Pct:avgDrag==null?null:avgDrag-0.25,
         calibrationStatus:complete.length>=20?"reviewable":"collecting",
         calibrationMatches:complete.length,
-        totalBrokerEstimatedCostsWon:complete.reduce((s,x)=>s+(+x.vtsBrokerEstimatedCosts||0),0)
+        filledOrderCount:filledOrders.length,
+        partialFillOrderCount:partialOrders.length,
+        unfilledOrderCount:unfilledOrders.length,
+        canceledOrderCount:canceledOrders.length,
+        rejectedQtyTotal,
+        totalBrokerEstimatedCostsWon:complete.reduce((s,x)=>s+(+x.vtsBrokerEstimatedCosts||0),0),
+        costSource:"KIS VTS inquire-daily-ccld output2.prsm_tlex_smtl — 당일 조회의 추정 제비용(세금+주문수수료 합계 계열)",
+        executionSource:"KIS VTS simulated fill — 실제 거래소 체결/실계좌 수수료율과 동일하다고 가정하지 않음"
       }});
   }catch(e){
     return json({ok:false,error:String(e.message||e),mode:"read-only",env:"vts"},500);
