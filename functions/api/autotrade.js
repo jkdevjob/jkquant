@@ -206,7 +206,8 @@ export async function onRequest({ request, env }) {
          마지막 봉이 아직 움직이는 오늘 봉이다. 모의·백테는 전일 확정 종가 기준이다. */
       let close = 0, days = null;
       try {
-        const q = await (await fetch(url.origin + "/api/quote?symbol=" + encodeURIComponent(sym) + "&intraday=0&div=1")).json();
+        /* 익절 자동(실험) 세션은 사이클 첫 매수일 전 120거래일 종가가 필요하다 — 사이클이 길면 기본 1년 창을 넘는다 (앱·플랜처럼 전체 기간) */
+        const q = await (await fetch(url.origin + "/api/quote?symbol=" + encodeURIComponent(sym) + "&intraday=0&div=1" + (st.autoTp === true ? "&range=max" : ""))).json();
         const tradeOK = q && q.priceBasis === "trade" && Array.isArray(q.ohlcTrade) && q.ohlcTrade.length;
         const bars = tradeOK ? q.ohlcTrade : (q.series || q.ohlc || []);
         row.priceBasis = tradeOK ? "trade" : (q.priceBasis || null);
