@@ -514,6 +514,63 @@ export async function onRequestGet({ request, env }) {
       const sum = (j.output2 && j.output2[0]) || {};
       return json({ holdings, cash: +sum.dnca_tot_amt || 0, evalTotal: +sum.tot_evlu_amt || 0 });
     }
+    if (op === "orders") {
+      // Read-only order/fill inquiry. Used only to compare manually placed KIS VTS
+      // mock trades with our internal paper fills; it never submits an order.
+      const g = await verifyOwner(request, env);
+      if (!g.ok) return json({ error: g.msg }, 401);
+      if (isReal(env)) return json({ error: "orders 조회는 이 화면에서 KIS 모의투자(vts)만 허용합니다." }, 400);
+      const a = acct(env); if (!a) return json({ error: "KIS_ACCOUNT 형식 오류(예: 12345678-01)" }, 400);
+      const code = String(url.searchParams.get("code") || "").toUpperCase();
+      const odno = String(url.searchParams.get("odno") || "").replace(/\D/g, "");
+      const rawDate = String(url.searchParams.get("date") || "").replace(/\D/g, "");
+      const now = new Intl.DateTimeFormat("en-CA",{timeZone:"Asia/Seoul",year:"numeric",month:"2-digit",day:"2-digit"})
+        .format(new Date()).replace(/-/g,"");
+      const date = /^\d{8}$/.test(rawDate) ? rawDate : now;
+      if (code && !KRCODE.test(code)) return json({ error: "종목코드 오류" }, 400);
+
+      const token = await getToken(env);
+      const qs = new URLSearchParams({
+        CANO:a.cano, ACNT_PRDT_CD:a.prod,
+        INQR_STRT_DT:date, INQR_END_DT:date,
+        SLL_BUY_DVSN_CD:"00", INQR_DVSN:"00", PDNO:code,
+        CCLD_DVSN:"00", ORD_GNO_BRNO:"", ODNO:odno,
+        INQR_DVSN_3:"00", INQR_DVSN_1:"",
+        CTX_AREA_FK100:"", CTX_AREA_NK100:"",
+        EXCG_ID_DVSN_CD:"KRX"
+      });
+      const path="/uapi/domestic-stock/v1/trading/inquire-daily-ccld?"+qs;
+      const headers=(tr)=>({ authorization:"Bearer "+token, appkey:env.KIS_APPKEY, appsecret:env.KIS_APPSECRET, tr_id:tr, custtype:"P" });
+      let j=await readJson(base(env)+path,{headers:headers("VTTC0081R")});
+      let trId="VTTC0081R";
+      if(String(j.rt_cd)!=="0"&&!RATE_LIMITED(j)){
+        await sleep(650);
+        const j2=await readJson(base(env)+path,{headers:headers("VTTC8001R")});
+        if(String(j2.rt_cd)==="0"){j=j2;trId="VTTC8001R";}
+      }
+      if(String(j.rt_cd)!=="0") return json({ error: RATE_LIMITED(j)?"초당 요청 제한 — 잠시 후 다시":(j.msg1||"체결조회 실패"),
+        code:j.msg_cd||"", rateLimited:RATE_LIMITED(j), trId },502);
+
+      const rows=(j.output1||[]).map(x=>({
+        orderDate:x.ord_dt||"", orderTime:x.ord_tmd||"", orderNo:x.odno||"",
+        originalOrderNo:x.orgn_odno||"", sideCode:x.sll_buy_dvsn_cd||"",
+        side:x.sll_buy_dvsn_cd_name||"", code:x.pdno||"", name:x.prdt_name||"",
+        orderType:x.ord_dvsn_name||"", orderQty:+x.ord_qty||0, orderPrice:+x.ord_unpr||0,
+        fillQty:+x.tot_ccld_qty||0, fillPrice:+x.avg_prvs||0, fillAmount:+x.tot_ccld_amt||0,
+        remainingQty:+x.rmn_qty||0, rejectedQty:+x.rjct_qty||0, canceled:String(x.cncl_yn||"")==="Y"
+      }));
+      const s=Array.isArray(j.output2)?(j.output2[0]||{}):(j.output2||{});
+      return json({
+        env:"vts", trId, date, code, orderNo:odno, orders:rows,
+        summary:{
+          totalOrderQty:+s.tot_ord_qty||0,
+          totalFillQty:+s.tot_ccld_qty||0,
+          totalFillAmount:+s.tot_ccld_amt||0,
+          estimatedCosts:+s.prsm_tlex_smtl||0,
+          purchaseAvgPrice:+s.pchs_avg_pric||0
+        }
+      });
+    }
     return json({ error: "알 수 없는 op" }, 400);
   } catch (e) {
     return json({ error: String(e.message || e) }, 502);

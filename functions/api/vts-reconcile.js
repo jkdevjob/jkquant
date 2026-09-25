@@ -1,0 +1,111 @@
+// Read-only KIS VTS reconciliation.
+// It compares internally reconstructed paper trades with fills that already exist in
+// the user's KIS mock account. It never submits, modifies, or cancels an order.
+
+const JH={"Content-Type":"application/json; charset=utf-8","Cache-Control":"no-store"};
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+function json(o,s=200){return new Response(JSON.stringify(o,null,2),{status:s,headers:JH});}
+function kstDate(){
+  return new Intl.DateTimeFormat("en-CA",{timeZone:"Asia/Seoul",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date());
+}
+function hmOfOrder(t){
+  const s=String(t||"").replace(/\D/g,"").padStart(6,"0");
+  return +(s.slice(0,2)+s.slice(2,4));
+}
+function sideIs(x,want){
+  const n=String(x.side||"").toLowerCase(),c=String(x.sideCode||"");
+  return want==="buy"?(c==="02"||/매수|buy/.test(n)):(c==="01"||/매도|sell/.test(n));
+}
+async function fetchJson(url,headers={}){
+  const r=await fetch(url,{headers});
+  const j=await r.json().catch(()=>({}));
+  if(!r.ok)throw new Error(j.error||("HTTP "+r.status));
+  return j;
+}
+function authHeaders(request){
+  const auth=request.headers.get("Authorization")||"";
+  const key=request.headers.get("x-monitor-key")||request.headers.get("x-autotrade-key")||"";
+  const h={"Accept":"application/json"};
+  if(auth)h.Authorization=auth;
+  if(key)h["x-autotrade-key"]=key;
+  return h;
+}
+async function internalTrades(strategy,date){
+  const base="https://raw.githubusercontent.com/jkdevjob/jkquant/scalping-data/data/";
+  let u;
+  if(strategy==="opening")u=base+"opening-history/"+date+".json";
+  else u=base+"daytrading-research/"+date+".json";
+  const r=await fetch(u,{headers:{"Accept":"application/json","User-Agent":"jkquant-vts-reconcile/1.0"},cf:{cacheTtl:30}});
+  if(r.status===404)return [];
+  if(!r.ok)throw new Error("internal history HTTP "+r.status);
+  const j=await r.json();
+  return strategy==="opening"?(j.trades||[]):(j.latestDayTrades||[]);
+}
+function nearest(list,trade,side,used,refHm){
+  const a=list.filter(x=>x.code===trade.code&&sideIs(x,side)&&+x.fillQty>0&&!used.has(x.orderNo))
+    .map(x=>({x,d:Math.abs(hmOfOrder(x.orderTime)-refHm)}))
+    .sort((p,q)=>p.d-q.d);
+  const hit=a[0];
+  if(!hit||hit.d>5)return null;
+  used.add(hit.x.orderNo);
+  return hit.x;
+}
+async function exactCosts(origin,headers,date,row){
+  if(!row||!row.orderNo)return 0;
+  await sleep(650);
+  const u=origin+"/api/kis?op=orders&env=vts&date="+encodeURIComponent(date.replace(/-/g,""))+
+    "&code="+encodeURIComponent(row.code||"")+"&odno="+encodeURIComponent(row.orderNo);
+  const j=await fetchJson(u,headers);
+  return +((j.summary||{}).estimatedCosts)||0;
+}
+export async function onRequestGet({request}){
+  const url=new URL(request.url),strategy=String(url.searchParams.get("strategy")||"opening");
+  const date=String(url.searchParams.get("date")||kstDate());
+  if(!["opening","daytrading"].includes(strategy))return json({ok:false,error:"strategy must be opening/daytrading"},400);
+  const headers=authHeaders(request);
+  if(!headers.Authorization&&!headers["x-autotrade-key"])return json({ok:false,error:"unauthorized"},401);
+
+  try{
+    const [internal,kis]=await Promise.all([
+      internalTrades(strategy,date),
+      fetchJson(url.origin+"/api/kis?op=orders&env=vts&date="+encodeURIComponent(date.replace(/-/g,"")),headers)
+    ]);
+    if(kis.env!=="vts")return json({ok:false,error:"VTS only"},400);
+
+    const used=new Set(),matches=[];
+    for(const t of internal){
+      const buy=nearest(kis.orders||[],t,"buy",used,+t.entryTime||0);
+      const sell=t.exitTime==null?null:nearest(kis.orders||[],t,"sell",used,+t.exitTime||0);
+      const entryRef=+t.entryPrice||0,exitRef=+t.exitPrice||0;
+      let buyCost=0,sellCost=0;
+      if(buy)buyCost=await exactCosts(url.origin,headers,date,buy);
+      if(sell)sellCost=await exactCosts(url.origin,headers,date,sell);
+
+      const buyPx=buy?+buy.fillPrice||0:0,sellPx=sell?+sell.fillPrice||0:0;
+      const qty=buy&&sell?Math.min(+buy.fillQty||0,+sell.fillQty||0):(+buy?.fillQty||0);
+      const gross=buyPx>0&&sellPx>0?(sellPx/buyPx-1)*100:null;
+      const costWon=buyCost+sellCost;
+      const net=buyPx>0&&sellPx>0&&qty>0?((sellPx-buyPx)*qty-costWon)/(buyPx*qty)*100:null;
+      matches.push({
+        code:t.code,name:t.name||t.code,internalEntryTime:t.entryTime,internalEntryPrice:entryRef,
+        internalExitTime:t.exitTime,internalExitPrice:exitRef,internalReason:t.reason||"",
+        internalPnl:t.pnl,
+        vtsBuy:buy?{orderTime:buy.orderTime,fillQty:buy.fillQty,fillPrice:buy.fillPrice,fillAmount:buy.fillAmount,estimatedCosts:buyCost}:null,
+        vtsSell:sell?{orderTime:sell.orderTime,fillQty:sell.fillQty,fillPrice:sell.fillPrice,fillAmount:sell.fillAmount,estimatedCosts:sellCost}:null,
+        entrySlippageCostPct:buyPx>0&&entryRef>0?(buyPx/entryRef-1)*100:null,
+        exitSlippageCostPct:sellPx>0&&exitRef>0?(exitRef/sellPx-1)*100:null,
+        vtsGrossPnlPct:gross,vtsNetPnlPct:net,vtsBrokerEstimatedCosts:costWon,
+        matched:!!buy&&(t.exitTime==null||!!sell)
+      });
+    }
+    const unmatched=(kis.orders||[]).filter(x=>!used.has(x.orderNo)).map(x=>({
+      code:x.code,name:x.name,side:x.side,orderTime:x.orderTime,fillQty:x.fillQty,fillPrice:x.fillPrice,orderType:x.orderType
+    }));
+    return json({ok:true,mode:"read-only",env:"vts",strategy,date,
+      note:"KIS VTS existing fills are only compared; no broker order is submitted by this endpoint.",
+      internalTrades:internal.length,kisOrders:(kis.orders||[]).length,matches,unmatched,
+      dailyBrokerEstimatedCosts:+((kis.summary||{}).estimatedCosts)||0});
+  }catch(e){
+    return json({ok:false,error:String(e.message||e),mode:"read-only",env:"vts"},500);
+  }
+}
