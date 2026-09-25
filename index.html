@@ -537,7 +537,7 @@ try{ if(localStorage.getItem('qcockpit_hadUser')==='1') document.documentElement
 </div>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.97.0</span></h1></div>
+    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.97.1</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -1646,7 +1646,7 @@ if(/^\/paper\/?$/.test(location.pathname)){
   <footer>
     <strong>JK 퀀트</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.97.0</b> · 2026-09-25</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.97.1</b> · 2026-09-25</div>
   </footer>
 </div>
 
@@ -1691,7 +1691,7 @@ if(/^\/paper\/?$/.test(location.pathname)){
     <div class="field"><label id="set_principal_lbl" data-tk="set_ticker_in">원금 ($)</label><input id="set_principal" type="text" inputmode="decimal" value="10000" oninput="commaInput(this)"></div>
     <!-- 리버스 gap 은 하방 LOC 와 상관없다 — 예전엔 아래 rows_fields 안에 있어서 하방 LOC 를 꺼 두면 같이 잠겼다 -->
     <div class="field"><label>리버스 쿼터매수 gap % <span class="hint">0 = 기본(별지점 −$0.01 · 원문은 '별지점 아래'까지만) · 0보다 크면 변형</span></label><input id="set_revgap" type="number" inputmode="decimal" value="0"></div>
-    <div class="field"><label>아래로 LOC 매수 추가 줄 수 <span class="hint">추가 자체는 V4.0 정식 · 1회매수금÷(수량+k) · 줄 수 8은 JKQuant 기본값(원문에 개수 없음) · 0이면 끔(변형)</span></label><input id="set_rows" type="number" inputmode="numeric" value="8" min="0" max="20"></div>
+    <div class="field"><label>아래로 LOC 매수 추가 줄 수 <span class="hint">추가 자체는 V4.0 정식 · 1회매수금÷(수량+k) · 줄 수 3은 JKQuant 기본값(원문에 개수 없음) · 0이면 끔(변형)</span></label><input id="set_rows" type="number" inputmode="numeric" value="3" min="0" max="20"></div>
     <p class="note" style="margin:-2px 0 8px">처음매수·전반전·후반전 모두 본 주문 아래로 1주씩 LOC 를 더 겁니다 (V4.0 정식). 종가가 내려갈수록 같은 1회매수금으로 더 삽니다. 모의·백테·서버 자동주문이 같은 주문을 씁니다.</p>
   </div>
   <div id="set_vr" style="display:none">
@@ -2504,7 +2504,7 @@ function imBuyPx(star){ return star>0 ? +(star-0.01).toFixed(4) : 0; }
    추가 줄은 같은 회차의 일부다 — T 는 본 주문만 센다 (dT 0).
    증권사는 주문가×수량을 매수가능금액에서 예약하고 넘으면 거부한다 — 잔금 안에서만 낸다 (7차 점검 ④).
    주문가가 전일 종가 +큰수% 를 넘으면 그 값(호가 내림)으로 낮춰 낸다 — 원문 '큰수 매수'(증권사 가격 제한 대응).
-   줄 수(rows)는 원문에 없다('…' 로 이어질 뿐) — JKQuant 구현값 기본 8 (imRowsOf). 호가·수수료 포함 수량도 구현 세부다.
+   줄 수(rows)는 원문에 없다('…' 로 이어질 뿐) — JKQuant 구현값 기본 3 (imRowsOf). 호가·수수료 포함 수량도 구현 세부다.
      o: {first, half, buy1, bal, firstPrice, starPrice, avg, cap, rows, fee, cur}
      반환: [{kind:'1회매수'|'절반매수'|'하방', name, price, q, dT, ladder, capped, orig}] */
 function imBuyOrders(o){
@@ -2534,8 +2534,8 @@ function imBuyOrders(o){
   }
   return out;
 }
-/* 아래로 LOC 추가 줄 수 — 설정값, 없으면 기본 8. 0 이면 끈다(변형). 예전 rowsOn(꺼짐 기본) 스위치는 쓰지 않는다. */
-const IM_ROWS_DEFAULT=8;
+/* 아래로 LOC 추가 줄 수 — 설정값, 없으면 기본 3. 0 이면 끈다(변형). 예전 rowsOn(꺼짐 기본) 스위치는 쓰지 않는다. */
+const IM_ROWS_DEFAULT=3;
 function imRowsOf(st){ const v=(st||{}).rows; return (v!=null&&isFinite(+v)) ? Math.max(0,Math.min(20,Math.floor(+v))) : IM_ROWS_DEFAULT; }
 function imBuyQty(alloc, refPx, feeRate){
   const f=1+(feeRate||0);
