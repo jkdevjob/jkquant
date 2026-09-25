@@ -192,7 +192,7 @@ th:first-child,td:first-child{text-align:left}
 <body>
 <div class="wrap">
   <div class="top">
-    <div class="brand"><div class="logo">Asset Plan</div><h1>자산플랜 <span class="ver">v1.32.0</span></h1></div>
+    <div class="brand"><div class="logo">Asset Plan</div><h1>자산플랜 <span class="ver">v1.32.1</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
       <div class="jkmenu" id="jkmenuWrap">
@@ -722,7 +722,7 @@ function renderHorizonCopy(){
     setTxt('alphaKpi3Label','대피자산');setTxt('alphaKpi3Value','SGOV');setTxt('alphaKpi3Sub','미사용 위험예산 보관');
     setTxt('alphaKpi4Label','전략 성격');setTxt('alphaKpi4Value','최공격');setTxt('alphaKpi4Sub','5년 성장 우선');
     if($('alphaExplain'))$('alphaExplain').innerHTML='<strong>5년 매매법 · 개선 70/30 역분산 + Guard</strong><br>TECL 70% 슬리브는 σ20 역분산으로 크기를 조절하고 목표와 10%p 이상 벌어질 때만 리밸런싱합니다. TQQQ 30%는 SMA225 ±1.0% Guard로 ON/OFF하며 남는 금액은 SGOV에 둡니다.';
-    if($('alphaValidation'))$('alphaValidation').innerHTML='<b>5년 롤링 독립 재검증:</b> 137개 시작구간 · 평균 CAGR 48.2% · 중앙 CAGR 47.5% · 하위 10% CAGR 31.5% · 최악 CAGR 23.9% · 중앙 MDD -36.4% · 최악 MDD -37.8%.<span class="sub">업로드 TECL·TQQQ 시세 2010-03-12~2026-07-10 · 신호는 전일 확정종가, 다음 거래일 종가 체결 · 거래비용 0.1% · 대피자산 연 4% 가정.</span><span class="sub">세전 과거 백테스트이며 미래 수익을 보장하지 않습니다. 장기 스트레스 MDD -50% 하드제약 전략은 별도 탐색 중입니다.</span>';
+    if($('alphaValidation'))$('alphaValidation').innerHTML='<b>5년 롤링 독립 재검증:</b> 137개 시작구간 · 평균 CAGR 48.2% · 중앙 CAGR 47.5% · 하위 10% CAGR 31.5% · 최악 CAGR 23.9% · 중앙 MDD -36.4% · 최악 MDD -37.8%.<span class="sub">업로드 TECL·TQQQ 시세 2010-03-12~2026-07-10 · 신호는 전일 확정종가, 다음 거래일 종가 체결 · 거래비용 0.1% · 대피자산 연 4% 가정.</span><span class="sub">세전 과거 백테스트이며 미래 수익을 보장하지 않습니다. 장기 스트레스 MDD -50% 하드제약 탐색은 완료했으며, 실험 후보는 기본값에 아직 반영하지 않았습니다.</span>';
   }else if(y===10){
     setTxt('alphaKpi1Label','상승장 코어');setTxt('alphaKpi1Value','TQQQ 80%');setTxt('alphaKpi1Sub','종가 > SMA250');
     setTxt('alphaKpi2Label','하락장 3단계');setTxt('alphaKpi2Value','20% → 40% → 60%');setTxt('alphaKpi2Sub','RSI40/35/30 + ATH -12/-22/-32%');
