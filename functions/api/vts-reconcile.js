@@ -101,10 +101,26 @@ export async function onRequestGet({request}){
     const unmatched=(kis.orders||[]).filter(x=>!used.has(x.orderNo)).map(x=>({
       code:x.code,name:x.name,side:x.side,orderTime:x.orderTime,fillQty:x.fillQty,fillPrice:x.fillPrice,orderType:x.orderType
     }));
+    const complete=matches.filter(x=>x.matched);
+    const avg=a=>a.length?a.reduce((s,x)=>s+x,0)/a.length:null;
+    const entrySlip=matches.map(x=>x.entrySlippageCostPct).filter(Number.isFinite);
+    const exitSlip=matches.map(x=>x.exitSlippageCostPct).filter(Number.isFinite);
+    const net=complete.map(x=>x.vtsNetPnlPct).filter(Number.isFinite);
+    const internalPnl=complete.map(x=>x.internalPnl).filter(Number.isFinite);
     return json({ok:true,mode:"read-only",env:"vts",strategy,date,
       note:"KIS VTS existing fills are only compared; no broker order is submitted by this endpoint.",
       internalTrades:internal.length,kisOrders:(kis.orders||[]).length,matches,unmatched,
-      dailyBrokerEstimatedCosts:+((kis.summary||{}).estimatedCosts)||0});
+      dailyBrokerEstimatedCosts:+((kis.summary||{}).estimatedCosts)||0,
+      summary:{
+        completeMatches:complete.length,
+        matchRatePct:internal.length?complete.length/internal.length*100:0,
+        avgEntrySlippageCostPct:avg(entrySlip),
+        avgExitSlippageCostPct:avg(exitSlip),
+        avgRoundTripSlippageCostPct:complete.length?avg(complete.map(x=>(+x.entrySlippageCostPct||0)+(+x.exitSlippageCostPct||0))):null,
+        avgInternalPnlPct:avg(internalPnl),
+        avgVtsNetPnlPct:avg(net),
+        totalBrokerEstimatedCostsWon:complete.reduce((s,x)=>s+(+x.vtsBrokerEstimatedCosts||0),0)
+      }});
   }catch(e){
     return json({ok:false,error:String(e.message||e),mode:"read-only",env:"vts"},500);
   }
