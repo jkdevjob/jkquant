@@ -192,7 +192,7 @@ th:first-child,td:first-child{text-align:left}
 <body>
 <div class="wrap">
   <div class="top">
-    <div class="brand"><div class="logo">Asset Plan</div><h1>자산플랜 <span class="ver">v1.30.0</span></h1></div>
+    <div class="brand"><div class="logo">Asset Plan</div><h1>자산플랜 <span class="ver">v1.31.0</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
       <div class="jkmenu" id="jkmenuWrap">
@@ -1430,7 +1430,9 @@ function simCutoff(cur){
 function settledBars(rows,cur){ const cut=simCutoff(cur); return (rows||[]).filter(r=>r.date<=cut); }
 async function fetchPlanQuote(symbol){
   const sym=String(symbol||'').toUpperCase();if(liveQuotes[sym])return liveQuotes[sym];
-  const r=await fetch('/api/quote?symbol='+encodeURIComponent(sym)+'&range=max&div=1',{headers:{Accept:'application/json'}});
+  // 페이지/수동 새로고침 때 브라우저·CDN 캐시를 우회해 그 시점의 현재가를 다시 요청한다.
+  const u='/api/quote?symbol='+encodeURIComponent(sym)+'&range=max&div=1&_ts='+Date.now();
+  const r=await fetch(u,{cache:'no-store',headers:{Accept:'application/json','Cache-Control':'no-cache'}});
   if(!r.ok)throw new Error(sym+' 시세 HTTP '+r.status);
   const j=await r.json();if(!(j&&j.series&&j.series.length))throw new Error(sym+' 시세 없음');
   return liveQuotes[sym]=planQuoteOf(sym,j);
@@ -2069,9 +2071,8 @@ function monthsLeft(){
 }
 function alphaPlanTotal(){
   const tq=Math.max(0,Math.floor(num('aTeclQty'))),qq=Math.max(0,Math.floor(num('aTqqqQty'))),sq=Math.max(0,Math.floor(num('aSgovQty'))),cash=num('aCash');
-  const tp=liveQuotes.TECL&&liveQuotes.TECL.settled?+liveQuotes.TECL.settled.close:0;
-  const qp=liveQuotes.TQQQ&&liveQuotes.TQQQ.settled?+liveQuotes.TQQQ.settled.close:0;
-  const sp=liveQuotes.SGOV&&liveQuotes.SGOV.settled?+liveQuotes.SGOV.settled.close:0;
+  const _px=s=>{const q=liveQuotes[s];return q&&+q.price>0?+q.price:(q&&q.settled?+q.settled.close:0);};
+  const tp=_px('TECL'),qp=_px('TQQQ'),sp=_px('SGOV');
   if((tq>0&&!tp)||(qq>0&&!qp)||(sq>0&&!sp)) return null;
   return cash+tq*tp+qq*qp+sq*sp;
 }

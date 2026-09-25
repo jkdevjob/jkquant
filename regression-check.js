@@ -9578,5 +9578,16 @@ console.log('\n[128] 자산플랜 검증 후속 — 20년 월말 신호 · 장�
      (pl.match(/독립 재현/g)||[]).length>=4 && /MDD 최악 −79\.2%/.test(pl) && /MDD 최악 −98\.7%/.test(pl) && /MDD 최악 −98\.0%/.test(pl) && /MDD 최악 −39\.6%/.test(pl));
 }
 
+/* ════ 129. 자산플랜 현재가 — 페이지 새로고침마다 캐시 우회 + 총자산도 현재가 사용 ════ */
+console.log('\n[129] 자산플랜 현재가 — 캐시 우회 · 현재계좌 총자산');
+{
+  const pl=fs.readFileSync(__d+'/plan.html','utf8');
+  const fq=extractFn(pl,'async function fetchPlanQuote(symbol)');
+  const pt=extractFn(pl,'function alphaPlanTotal()');
+  ok('현재가 — quote 요청은 매 새로고침마다 _ts + no-store/no-cache로 브라우저·CDN 캐시를 우회', /_ts='\+Date\.now\(\)/.test(fq) && /cache:'no-store'/.test(fq) && /'Cache-Control':'no-cache'/.test(fq));
+  ok('현재계좌 총자산 — liveQuotes.price 우선, 없을 때만 확정종가 fallback', /\+q\.price>0\?\+q\.price/.test(pt) && /q\.settled\?\+q\.settled\.close:0/.test(pt));
+  ok('자산플랜 버전 — 현재가 강제 갱신 v1.31.0', /자산플랜 <span class="ver">v1\.31\.0<\/span>/.test(pl));
+}
+
 console.log(`\n════ 결과: ${pass} PASS / ${fail} FAIL ${fail===0?'— ALL PASS ★':'— 배포 금지, 위 ✗ 항목 수정 필요'} ════`);
 process.exit(fail===0?0:1);
