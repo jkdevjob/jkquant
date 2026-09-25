@@ -1262,6 +1262,17 @@ console.log('[23] 관리자 모드 — 접속 계정·사용자 관리');
   ok('운영은 로그인 계정의 관리자 기본값을 캐시한다',
      /d&&d\.strategyDefaults&&typeof d\.strategyDefaults==='object'/.test(idx)
      && /cacheStrategyDefaults\(d\.strategyDefaults\)/.test(idx));
+  ok('관리자 기본값을 기존 세션에도 적용할 수 있다',
+     /function applyDefaultsExistingSessions\(\)/.test(adm)
+     && /현재 기존 세션에도 적용/.test(adm)
+     && /sess\.settings=\{\.\.\.prev,\.\.\.cfgClone\(defs\)\}/.test(adm));
+  ok('기존 세션 적용 — 실계좌 기록은 보존하고 모의 자동기록만 비운다',
+     /if\(sess\.paper\)\{[\s\S]{0,500}?filter\(x=>!\(x&&\(x\.sim\|\|x\.auto\)\)\)/.test(adm)
+     && /delete sess\.settings\.simSig/.test(adm)
+     && /else real\+\+/.test(adm));
+  ok('기존 세션 적용 — 로컬과 클라우드 상태를 같이 갱신한다',
+     /localStorage\.setItem\('qcockpit_v2_'\+me\.uid,JSON\.stringify\(state\)\)/.test(adm)
+     && /state,updated:now,strategyDefaults:strategyDefaults/.test(adm));
   ok('관리자 아닌 계정은 문 앞에서 막힌다', /if\(isAdmin\(\)\)\{[\s\S]{0,200}?\$\('gate'\)\.style\.display='none'/.test(adm)
      && /계정에는 관리자 권한이 없습니다/.test(adm));
 
@@ -1324,6 +1335,18 @@ console.log('[24] 표 밀도 — 한 화면에 더 많이');
   ok('긴 날짜를 직접 찍는 표가 없다', !/<td>\$\{(?:h|r)\.date\|\|'-'\}/.test(idx));
 }
 
+
+/* ════ 24-1. 모의 설정 지문 — 주문에 영향을 주는 무매 설정은 전부 재생성 트리거 ════ */
+console.log('[24-1] 모의 설정 지문 — 무매 주문 설정 변경 시 성과 재계산');
+{
+  const m=idx.match(/inf\s*:\s*\[([^\]]+)\]/);
+  const s=m?m[1]:'';
+  ['ticker','div','target','big','rows','revGap','reverse','tgtDyn','principal','compound','divmode']
+    .forEach(k=>ok('무매 모의 지문에 '+k+' 포함', new RegExp("'"+k+"'").test(s), s));
+  ok('지문이 달라지면 기계 생성 기록만 지운다',
+     /if\(st\.simSig===sig\) return false;/.test(idx)
+     && /filter\(x=>!\(x\.sim\|\|x\.auto\)\)/.test(idx));
+}
 
 /* ════ 25. 모의 성과 → 분석 이동 ════
    성과표에서 눈에 띈 세션을 보려고 탭·세션을 손으로 다시 찾아 들어가야 했다.
