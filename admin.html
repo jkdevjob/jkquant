@@ -448,7 +448,7 @@ async function loadStrategyDefaultsAdmin(){
         if(d.strategyDefaults&&typeof d.strategyDefaults==='object')strategyValues=mergeValues(d.strategyDefaults);
         if(d.strategyDefaultOverrides&&typeof d.strategyDefaultOverrides==='object'){
           strategyOverrides=normalizeOverrides(d.strategyDefaultOverrides);
-          strategyValues=mergeValues({...strategyValues,...strategyOverrides});
+          for(const tab of Object.keys(strategyValues)) strategyValues[tab]={...strategyValues[tab],...(strategyOverrides[tab]||{})};
           try{localStorage.setItem(STRATEGY_DEFAULT_CACHE,JSON.stringify(strategyOverrides));}catch(e){}
         }
       }
