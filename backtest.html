@@ -320,7 +320,7 @@ td:first-child{text-align:left;}
   <div class="brand">
     <div>
       <div class="logo">Backtest</div>
-      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v2.11.0</span></h1>
+      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v2.12.0</span></h1>
     </div>
   </div>
   <div class="hright">
@@ -441,7 +441,7 @@ document.addEventListener('click',function(e){ var m=document.getElementById('jk
     </div>
     <div class="ctrl s-im hide"><label>익절 체결 <span style="font-size:9px;color:var(--dim)">지정가 판정</span></label>
       <div class="seg" id="imFillSeg">
-        <button data-f="high" class="active" title="장중 고가가 목표가를 터치하면 체결 — 지정가 주문의 정석 (조정 OHLC 기준, 낙관 상한)">고가</button>
+        <button data-f="high" class="active" title="정규장 일봉 고가가 목표가를 터치하면 체결 — 지정가 주문의 근사 (원문 익절 지정가는 프리장~애프터까지 유효 · 그 체결은 일봉으로 재현 못 함)">고가</button>
         <button data-f="close" title="종가가 목표가 이상일 때만 체결 — 보수적 하한">종가</button>
       </div>
     </div>
@@ -798,6 +798,8 @@ document.addEventListener('click',function(e){ var m=document.getElementById('jk
   ※ 무한매수법 V4.0 · VR 5.0 (라오어). 일봉 근사라 실제 체결과 차이 가능. 과거 성과는 미래를 보장하지 않습니다.<br>
   ※ <b>체결 규약</b> — ASAP·표준편차·역분산·적립 배수 같은 <b>종가 신호</b> 전략은 <b>전일까지 확정된 지표</b>로 신호를 정하고 <b>당일 종가에 체결</b>합니다. 오늘 종가로 신호를 만든 뒤 그 종가에 체결하면 낼 수 없는 주문이 되므로, 신호와 체결 사이에 하루를 둡니다. 운영 페이지의 모의 체결도 같은 규약이라 앱과 백테 숫자가 어긋나지 않습니다.<br>
   ※ <b>예약주문</b> — 무매 별지점·익절 지정가와 VR 매수·매도표는 <b>미리 걸어 둔 가격</b>이 <b>당일 고가·저가</b>에 닿았는지로 체결을 판정합니다. 이건 전날 낸 주문이 오늘 체결되는 것이라 정상입니다.<br>
+  ※ <b>익절 지정가</b> — 익절 지정가 체결은 정규장 OHLC 고가 기반 근사이며, 원문의 프리장~애프터 체결과 차이가 있을 수 있음. 원문의 익절 지정가는 프리장·본장·애프터까지 유효하지만 과거 자료는 정규장 일봉뿐이라 재현할 수 없는 부분입니다 — 엔진 오류가 아니라 데이터 한계입니다.<br>
+  ※ <b>무매 사이클 종료</b> — 하루 주문을 모두 처리한 뒤 <b>최종 보유가 0주</b>일 때만 사이클이 끝납니다. 익절로 전량 팔린 날 주가가 떨어져 아침에 건 LOC 매수까지 체결되면 원문대로 같은 사이클을 이어 갑니다(T = T×0.25 + 1 · 절반매수면 + 0.5 · 단리 인출 없음).<br>
   ※ <b>같은 날 양방향 체결</b> — 일봉만으로는 고가와 저가 중 어느 쪽이 먼저였는지 알 수 없습니다. 같은 날 VR 매도표와 매수표가 둘 다 닿으면 <b>매도 → 매수 순서</b>로 가정합니다(판 돈이 그날 매수 재원이 됩니다). 순서를 뒤집으면 결과가 달라질 수 있는 <b>모델 가정</b>입니다.<br>
   <b>JK 퀀트</b> · 학습용 도구
 </div>
@@ -2559,6 +2561,12 @@ function imBuyOrders(o){
 /* 아래로 LOC 추가 줄 수 — 설정값, 없으면 기본 8. 0 이면 끈다(변형). 예전 rowsOn(꺼짐 기본) 스위치는 쓰지 않는다. */
 const IM_ROWS_DEFAULT=8;
 function imRowsOf(st){ const v=(st||{}).rows; return (v!=null&&isFinite(+v)) ? Math.max(0,Math.min(20,Math.floor(+v))) : IM_ROWS_DEFAULT; }
+/* ── 무매 사이클 종료 판정 한 곳 (제14차 D15) ──
+   원문: 지정가매도가 체결된 뒤 주가가 크게 떨어져 같은 날 LOC 매수까지 되면 사이클 종료가 아니고 그대로 이어 간다
+   (새 T = 기존 T×0.25 + 1 · 절반매수면 + 0.5). 보유 1~3주는 쿼터가 0주라 익절이 전량을 팔아 장중에 잠깐 0주가 된다.
+   종료는 하루 주문을 모두 처리한 뒤 '그날 매도가 있었고 최종 보유가 0주' 일 때뿐이다.
+   백테(runIM·runIM50) · 앱 장부(computeInf — 운영·모의) · 서버(imCompute) · 5년 플랜(calcInfState)이 같은 글자로 쓴다. */
+function imCycleEnds(soldToday, qtyAtDayEnd){ return !!soldToday && !(qtyAtDayEnd>1e-9); }
 /* 아침 매수 계획 — 정식 주문(imBuyOrders)을 백테 모양으로. 수량·가격·T 가산이 운영과 같은 글자에서 나온다. */
 function _imBuyPlan(T, avg, shares, cash, divs, starBase, starSlope, buyLimit, prevC, FEE, rows, cur){
   if(!(divs-T>=1 && cash>1)) return [];
@@ -2693,6 +2701,7 @@ function runIM(days,tkr,cap,divs,targetPct,compound=true,bigOverride){
        실측(SOXL 20분할 복리 6년) 최종자산이 실전 체결 재현보다 16.8% 부풀려져 있었다.
        운영 주문표(renderOrder)·서버 자동주문(imOrders)·모의(infSimForward)와 같은 순서다. */
     const buys=_imBuyPlan(T, avg, shares, cash, divs, starBase, starSlope, buyLimit, prevC, FEE, imRowsOf({}), isKRW(tkr)?'krw':'usd');
+    let soldToday=false;               // 오늘 매도가 체결됐나 — 사이클 종료는 하루 주문을 다 처리한 뒤에만 판정한다 (제14차 D15)
     if(shares>0&&avg>0){
       const starP=imStarPx(avg, starBase-starSlope*T, isKRW(tkr)?'krw':'usd');   // 별지점 센트 반올림 — 매수 계획(_imBuyPlan)과 같은 값
       const tgt=avg*(1+(MOM?_imTgtOf(targetPct,MOM[d]):targetPct)/100);
@@ -2707,20 +2716,22 @@ function runIM(days,tkr,cap,divs,targetPct,compound=true,bigOverride){
       if(_fillHit>=tgt&&q3>0){_sell(o>tgt?o:tgt,q3,SLIP);tpHit=true;}   // 지정가매도
       // ② 별지점 LOC매도 (at close): 종가 >= 별지점. 원래 1/4 기준 (이미 팔린 것 차감)
       if(c>=starP&&orig>0){const sq=Math.min(q1,shares);if(sq>1e-9){_sell(c,sq,0);qtHit=true;}}   // 쿼터매도 LOC=종가
-      // T값 갱신: 익절(지정가매도)=×0.25, 쿼터매도=×0.75. 둘 다면 전량매도로 아래에서 리셋.
+      // T값 갱신: 익절(지정가매도)=×0.25, 쿼터매도=×0.75. 둘 다면 전량매도 — 종료 판정은 아래 하루 끝에서.
       // (index.html KIND_T와 정합: 지정가매도 ×0.25 / 쿼터매도 ×0.75)
       if(tpHit) T*=0.25;
       if(qtHit) T*=0.75;
-      // 전량 매도 → 사이클 리셋 (복리 포함). 아침에 건 매수 LOC 는 그대로 살아 있으므로
-      // 여기서 하루를 끝내지 않는다 — 체결 조건이 맞으면 새 사이클의 첫 거래가 된다.
-      if(shares<1e-9){shares=0;avg=0;cycles++;
-        if(compound){ /* 복리: 익절금 포함 현금 그대로 다음 사이클 사용 */ }
-        else if(cash>cap){ savedProfit+=cash-cap; cash=cap; }
-        T=0;snap.push([d,cash+savedProfit-addedCash]);}
+      soldToday=tpHit||qtHit;
+      /* 여기서 0주가 돼도 사이클을 끝내지 않는다 (제14차 D15). 아침에 건 매수 LOC 는 그대로 살아 있고,
+         그날 종가에 체결되면 원문대로 같은 사이클이 이어진다 — T = T×0.25 + 1 (절반이면 + 0.5) · 단리 인출 없음. */
     }
     // 아침에 건 매수 LOC — 종가가 주문가 이하면 종가에 체결. 수량은 전일 확정종가로 정한다.
     /* 아래로 LOC 추가 줄은 같은 회차의 일부 — T 는 본 주문만 센다. 본 주문 없이 추가 줄만 체결되면(드묾) 1회로 센다 (모의와 같은 규약) */
     { let mf=false, lf=false; for(const b of buys){ if(c<=b.lim){ const q=_buyN(c,b.q); if(q>0){ T+=b.dT; if(b.ladder) lf=true; else mf=true; } } } if(lf&&!mf) T+=1; }
+    // 사이클 종료 — 하루 주문을 모두 처리한 뒤 '오늘 매도가 있었고 최종 0주' 일 때만 (imCycleEnds · 제14차 D15)
+    if(imCycleEnds(soldToday, shares)){shares=0;avg=0;cycles++;
+      if(compound){ /* 복리: 익절금 포함 현금 그대로 다음 사이클 사용 */ }
+      else if(cash>cap){ savedProfit+=cash-cap; cash=cap; }
+      T=0;snap.push([d,cash+savedProfit-addedCash]);}
     if(i%10===0)snap.push([d,cash+shares*c+savedProfit-addedCash]);
     peakInvested=Math.max(peakInvested, cap-cash);
   });
@@ -3019,6 +3030,7 @@ function runIM50(days,tkr,cap,divs,targetPct,compound=true,bigOverride){
        실측(SOXL 20분할 복리 6년) 최종자산이 실전 체결 재현보다 16.8% 부풀려져 있었다.
        운영 주문표(renderOrder)·서버 자동주문(imOrders)·모의(infSimForward)와 같은 순서다. */
     const buys=_imBuyPlan(T, avg, shares, cash, divs, starBase, starSlope, buyLimit, prevC, FEE, imRowsOf({}), isKRW(tkr)?'krw':'usd');
+    let soldToday=false;               // 오늘 매도가 체결됐나 — 사이클 종료는 하루 끝에서 (V4.0과 동일 · 제14차 D15)
     if(shares>0&&avg>0){
       const starP=imStarPx(avg, starBase-starSlope*T, isKRW(tkr)?'krw':'usd');   // 별지점 센트 반올림 — 매수 계획(_imBuyPlan)과 같은 값
       // ★ 국면 익절 (V5.0): 워밍업=기본 / 상승국면=기본 / 하락국면=6% 고정(조기탈출)
@@ -3037,11 +3049,12 @@ function runIM50(days,tkr,cap,divs,targetPct,compound=true,bigOverride){
       if(c>=starP&&orig>0){const sq=Math.min(q1,shares);if(sq>1e-9){_sell(c,sq,0);qtHit=true;}}   // 쿼터매도 LOC=종가
       if(tpHit) T*=0.25;
       if(qtHit) T*=0.75;
-      if(shares<1e-9){shares=0;avg=0;cycles++;
-        if(compound){} else if(cash>cap){ savedProfit+=cash-cap; cash=cap; }
-        T=0;snap.push([d,cash+savedProfit-addedCash]);}
+      soldToday=tpHit||qtHit;          // 0주가 돼도 여기서 끝내지 않는다 — 하루 끝에서 판정 (V4.0과 동일 · 제14차 D15)
     }
     { let mf=false, lf=false; for(const b of buys){ if(c<=b.lim){ const q=_buyN(c,b.q); if(q>0){ T+=b.dT; if(b.ladder) lf=true; else mf=true; } } } if(lf&&!mf) T+=1; }   // 아침에 건 매수 LOC (V4.0과 동일)
+    if(imCycleEnds(soldToday, shares)){shares=0;avg=0;cycles++;   // 사이클 종료 — 하루 끝 최종 0주일 때만 (V4.0과 동일)
+      if(compound){} else if(cash>cap){ savedProfit+=cash-cap; cash=cap; }
+      T=0;snap.push([d,cash+savedProfit-addedCash]);}
     if(i%10===0)snap.push([d,cash+shares*c+savedProfit-addedCash]);
     peakInvested=Math.max(peakInvested, cap-cash);
   });

@@ -21,6 +21,9 @@ function extractFn(src, marker){
   return src.slice(i, k+1);
 }
 const idx=fs.readFileSync(IDX,'utf8'), bt=fs.readFileSync(BT,'utf8');
+/* 있으면 떼어 오고 없으면 빈 글자 — 공용 판정 함수(제14차)처럼 '없으면 [127] 이 값·글자로 빨간불' 인 것만 쓴다.
+   (그래야 옛 코드에 새 시험을 돌려 수정 전 숫자를 볼 수 있다) */
+function optFn(src, marker){ try{ return extractFn(src, marker); }catch(e){ return ''; } }
 // 관리자 화면은 별도 페이지다 (백테와 같은 구조). 없으면 [23]에서 잡힌다
 const ADM=__d+'/admin.html';
 const SCL=__d+'/scalping.html';
@@ -52,12 +55,18 @@ const idxParts=[
   idx.slice(idx.indexOf('const IM_OFFICIAL='), idx.indexOf(';', idx.indexOf('const IM_OFFICIAL='))+1),
   extractFn(idx,'function starPct(ticker,div,T,base)'),
   extractFn(idx,'function exitMulOf(base)'),
+  optFn(idx,'function imCycleEnds(soldToday, qtyAtDayEnd)'),   // 제14차 D15 — 사이클 종료 판정 한 곳 (앱 사본 · 없으면 [127] 이 빨간불)
+  optFn(idx,'function imDayOpenAfter(hist, i)'),
   extractFn(idx,'function computeInf()'),
   extractFn(idx,'function vrCycleTransition(V, pool, ev, G, mode, add, formula)'),   // 제8차 8-⑦ 공용 전환식
   extractFn(idx,'function computeNextV(c,ev)'),
   extractFn(idx,'function computeVr()'),
 ];
 let __strat=null; global.curStrat=()=>__strat;
+/* 무매 사이클 종료 판정 (제14차 D15) — 따로 떼어 도는 하네스(백테 엔진 사본 · 운영 주문표 · 플랜)가 전역에서 찾는다.
+   백테 사본은 backtest.html 에서, 장부용 하루 판정은 index.html 에서. 네 파일 글자가 같은지는 [127] 이 본다. */
+if(optFn(bt,'function imCycleEnds(soldToday, qtyAtDayEnd)')) global.imCycleEnds=new Function(extractFn(bt,'function imCycleEnds(soldToday, qtyAtDayEnd)')+'\nreturn imCycleEnds;')();
+if(optFn(idx,'function imDayOpenAfter(hist, i)')) global.imDayOpenAfter=new Function(extractFn(idx,'function imDayOpenAfter(hist, i)')+'\nreturn imDayOpenAfter;')();
 eval(idxParts.join('\n'));
 /* 가격 역할 헬퍼 — 체결가 계열인가, 그날 배당이 얼마인가 (자체 점검 N1).
    실코드에서 그대로 떼어 와야 값이 어긋나지 않는다. */
@@ -6407,9 +6416,9 @@ console.log('\n[98] 무매 복합거래 — 최종 0주면 사이클 종료');
     const c=run(hist);
     ok('D 0주 매수는 사이클 종료가 아니다', !c.rows[0].cycleEnd, 'cycleEnd 가 잘못 찍힘'); }
 
-  ok('판정이 종류 이름 목록이 아니라 기록의 sellQty 를 본다',
+  ok('판정이 종류 이름 목록이 아니라 기록의 sellQty 를 본다 (종료는 그날 마지막 매매 줄에서 — 제14차 D15)',
      /const _soldQty = \(h\.sellQty!=null\) \? \(\+h\.sellQty\|\|0\) : \(isSell\(h\.kind\) \? \(\+h\.qty\|\|0\) : 0\);/.test(idx)
-     && /if\(qty<=1e-9 && _soldQty>0\)\{/.test(idx));
+     && /if\(_soldQty>0\) daySold=true;/.test(idx) && /if\(imCycleEnds\(daySold, qty\) && !imDayOpenAfter\(hist, hi\)\)\{/.test(idx));
   ok('옛 규약(!isBuy 로 복합거래 제외)이 안 남아 있다',
      !/qty<=1e-9 && isSell\(h\.kind\) && !isBuy\(h\.kind\)/.test(idx));
 }
@@ -6920,8 +6929,8 @@ const __P7={};
   /* 실전 흐름 — 아침에 어제까지의 장부로 주문을 전부 걸고, 그날 봉에서 체결된다.
        지정가 매도 : 고가 ≥ 가격 → max(시가, 가격) · LOC 매도 : 종가 ≥ 가격 → 종가
        LOC 매수 : 종가 ≤ 가격 → 종가 · MOC 매도 : 종가.   기록 순서는 시간 순. */
-  const liveRun=(tk,st)=>{
-    const all=DAYS[tk], H=[]; let seq=0;
+  const liveRun=(tk,st,H0)=>{               // H0 — 처음 장부 (제14차 Golden 이 '보유 3주 · T 8' 에서 시작한다)
+    const all=DAYS[tk], H=(H0||[]).slice(); let seq=0;
     for(let i=1;i<all.length;i++){
       const d=all[i], [cl,op,hi]=M[tk][d];
       __strat={settings:{...st},hist:H}; const rev=!!computeInf().reverseActive;
@@ -7792,7 +7801,7 @@ console.log('\n[117] 자산플랜 v1.28.0 — 기간마다 완전히 다른 매�
   ok('5년 플랜 시작금 기본값은 $20,000', /startCapital:20000/.test(pl) && /aCash:20000/.test(pl));
   ok('화면 이름은 5년 자산플랜이 아니라 자산플랜',
      /<title>JK 퀀트 — 자산플랜<\/title>/.test(pl)
-     && /<div class="logo">Asset Plan<\/div><h1>자산플랜 <span class="ver">v1\.29\.0<\/span>/.test(pl)
+     && /<div class="logo">Asset Plan<\/div><h1>자산플랜 <span class="ver">v\d+\.\d+\.\d+<\/span>/.test(pl)   // 버전은 배포마다 오른다 — 이름만 본다
      && /<a href="\/plan" class="cur"><span class="mi">🧭<\/span>자산플랜<\/a>/.test(pl));
   ok('PATH A 균형성장 — TECL 70% N15 s0 55 밴드17.5 + TQQQ 30% SMA200 ±1.5',
      /alpha:\{teclWeight:\.70,guardWeight:\.30,ivsLook:15,ivsS0:\.55,ivsBand:\.175,guardMA:200,guardBand:\.015\}/.test(pl));
@@ -9224,6 +9233,265 @@ console.log('\n[126] 제12차 후속 — 운영 오늘 할 일은 확정 봉으�
      && /종가 기준 <b>\$\{pc\(c\.wSig\)\}<\/b>/.test(extractFn(idx,'function renderIvsNow()')) && /let p=c\.wSig\*100;/.test(extractFn(idx,'function renderIvsNow()'))
      && /\$\{c\.sigDate\} 종가 기준 \$\{\(c\.wSig\*100\)\.toFixed\(1\)\}%/.test(idx) && /<b>종가<\/b>가 이 범위 안이면/.test(idx)
      && !/현재 <b>\$\{pc\(c\.wNow\)\}<\/b> · 차이/.test(idx));
+}
+
+/* ════ 127. 제14차 — 무매 전량 익절 뒤 같은 날 LOC 재매수는 사이클 종료가 아니다 (D15) · Source Golden ════
+   원문(V4.0): 지정가매도가 체결된 뒤 주가가 크게 하락하여 같은 날 LOC 매수까지 발생하면 사이클 종료가 아니며
+   그대로 무한매수법을 계속한다 — 지정가매도 후 1회매수 T = T×0.25+1 · 절반매수 T = T×0.25+0.5.
+   보유 1~3주는 쿼터가 floor(보유/4)=0주라 익절 지정가가 전량이다 → 장중에 잠깐 0주가 된다.
+   예전엔 백테(runIM·runIM50)·앱 장부(computeInf — 운영·모의)·서버(imCompute)·플랜(calcInfState)이 그 순간 사이클을 닫고
+   (T=0 · 평단 0 · 사이클 +1 · 단리면 원금 초과분 인출) 아침에 건 LOC 매수를 새 사이클의 첫 거래로 셌다.
+   이제 종료는 하루 주문을 모두 처리한 뒤 '그날 매도가 있었고 최종 보유 0주' 일 때뿐이다 (imCycleEnds · imDayOpenAfter).
+
+   자료 — SOXL식 20분할 · 익절 20% · 평단 100$ 3주 · T 8 · 원금 3,300$ (잔금 3,000$ → 1회매수금 3,000÷12 = 250$)
+     아침 주문(전일 확정 종가 100): 익절 지정가 3주 @120 (쿼터 floor(3/4)=0주) · 별지점 LOC 1주 @103.99 (별% 20−2×8=4 → 104.00−0.01)
+                                   · 평단 LOC 1주 @100 (250÷100 − 1) · 하방 1주 @83.33 …
+     당일 봉: 시가 101 · 고가 125 (익절 체결 @120) · 종가 CL
+       A 종가 99  → 별지점·평단 둘 다 체결 (1회분)  → T = 8×0.25+1 = 3   · 보유 2주 · 평단 99  · 잔금 3,162
+       B 종가 102 → 별지점만 체결 (절반)            → T = 8×0.25+0.5 = 2.5 · 보유 1주 · 평단 102 · 잔금 3,258
+       C 종가 110 → 매수 없음                        → 최종 0주 → 사이클 종료 · T 0 · 평단 0 · 사이클 +1 · 잔금 3,360
+       D 단리 · 종가 99 → A 와 같고 인출 0 · 잔금 3,162 (원금 3,300 으로 되돌리지 않음)
+     (C 단리 — 진짜 종료라 원금 초과분 60 인출 · 잔금 3,300)
+   경로: 백테 V4.0(runIM) · V5.0(runIM50) — 같은 초기상태를 시험용으로 주입 / 모의(infSimForward) / 운영(아침 주문표 → 그날 봉 체결 → 기록)
+         / 5년 플랜(calcInfState) / 서버(imCompute). 앞의 셋은 실코드가 그날 봉에서 스스로 체결하고, 뒤의 둘은 운영 기록을 읽는다. */
+console.log('\n[127] 제14차 — 무매 전량 익절 뒤 같은 날 LOC 재매수는 사이클 종료가 아니다 (D15) · Source Golden');
+{
+  const SIG_END='function imCycleEnds(soldToday, qtyAtDayEnd)', SIG_OPEN='function imDayOpenAfter(hist, i)';
+  const pl=fs.readFileSync(__d+'/plan.html','utf8'), imSrc=fs.readFileSync(__d+'/functions/api/_im.js','utf8');
+  const SV=new Function(imSrc.replace(/export /g,'')+'\nreturn {imCompute, imOrders};')();
+  /* 플랜 — 제 파일의 판정 함수 사본으로 돈다 (전역 사본을 쓰면 플랜 쪽 변이를 못 본다) */
+  const PL=new Function([
+      (pl.match(/const usd=v=>[^\n]*/)||[''])[0], (pl.match(/const FEE=[^\n]*/)||[''])[0],
+      pl.slice(pl.indexOf('const KIND_T='), pl.indexOf(';', pl.indexOf("'절반매수+지정가매도(애프터)'"))+1),
+      (pl.match(/const isBuyKind=[^\n]*/)||[''])[0], (pl.match(/const isSellKind=[^\n]*/)||[''])[0],
+      (pl.match(/const REV_DIVS_PLAN=[^\n]*/)||[''])[0],
+      (pl.match(/function reverseTPlan[^\n]*/)||[''])[0], (pl.match(/function starPctPlan[^\n]*/)||[''])[0],
+      optFn(pl,SIG_END), optFn(pl,SIG_OPEN),
+      ...['function exitMulOf(base)','function imRevExitDue(c, close, target, date)','function calcInfState(sess)','function imOrders(sess,price,rows)'].map(x=>extractFn(pl,x)),
+      'return {calcInfState, imOrders};'].join('\n'))();
+  /* 백테 — 초기상태(보유·평단·T)를 시험용으로 주입한 실코드 사본. 판정 함수는 backtest.html 사본. */
+  const INIT_AT='const LOT=taxLot();', FIN_AT='const fin=cash+shares*M[tkr][days[days.length-1]][C]+savedProfit-addedCash;';
+  const withInit=src=>{ const k=src.indexOf(INIT_AT); if(k<0) throw new Error('주입 실패(제14차 초기상태)');
+    return src.slice(0,k+INIT_AT.length)+' if(global.__IMINIT){ const I=global.__IMINIT; shares=I.shares; avg=I.avg; T=I.T; cash=cap-I.shares*I.avg; lotBuy(LOT,I.shares,I.avg,0); }'+src.slice(k+INIT_AT.length); };
+  const runIMi=new Function(optFn(bt,SIG_END)+'\n'+withInit(btSrc.replace(/__LOG\(/g,'__LOGD(d,'))+'\nreturn runIM;')();
+  const im50=extractFn(bt,'function runIM50(days,tkr,cap,divs,targetPct,compound');
+  if(im50.split(FIN_AT).length!==2) throw new Error('주입 실패(제14차 runIM50 마지막 상태)');
+  const runIM50i=new Function(optFn(bt,SIG_END)+'\n'+extractFn(bt,'function buildGateIM(tkr, shortMA)')+'\n'
+    +withInit(im50.replace(FIN_AT,'__FINAL({T,avg,shares,cash,realized,savedProfit,addedCash});\n  '+FIN_AT))+'\nreturn runIM50;')();
+
+  const TK='__D15__', D0='2026-03-02', D1='2026-03-03';
+  const setBars=(tk,bars)=>{ DAYS[tk]=bars.map(b=>b[0]); M[tk]={}; for(const [d,c,o,h,l] of bars) M[tk][d]=[c,o,h,l]; };
+  const sv={r:global.imReverse, f:global.imFill, c:global.imCostOn, t:global.imTgtDyn, g:global.imRevGap};
+  Object.assign(global,{imReverse:false, imFill:'high', imCostOn:false, imTgtDyn:false, imRevGap:0});
+  const ST=(comp,cap)=>({ticker:TK,div:20,target:20,principal:cap||3300,compound:comp,reverse:false,big:15,revGap:0,tgtDyn:false,divmode:'reinv',rows:8,rowqty:1});
+  const H0=()=>[{kind:'1회매수',date:D0,price:100,qty:3,tManual:8,ts:1}];      // 평단 100 · 3주 · T 8 · 잔금 3,000
+  const key=x=>`${x.date} ${x.kind} ${(+x.price).toFixed(4)} x${x.qty}`;
+  const trades=a=>a.filter(h=>/매수|매도/.test(h.kind)).map(key);
+  const lastRow=c=>(c.rows||[])[(c.rows||[]).length-1]||{};
+  /* 한 경우를 여섯 경로로 — 같은 봉 · 같은 초기상태 */
+  const golden=(cl, comp)=>{
+    setBars(TK,[[D0,100,100,100.4,99.6],[D1,cl,101,125,Math.min(cl,101)-0.5]]);
+    const st=ST(comp);
+    global.__IMINIT={shares:3, avg:100, T:8};
+    __P7.setLOGD([]); finalState=null;
+    const r=runIMi(DAYS[TK], TK, 3300, 20, 20, comp, 15), fB={...finalState}, logB=__P7.LOGD().slice();
+    finalState=null;
+    const r5=runIM50i(DAYS[TK], TK, 3300, 20, 20, comp, 15), f5={...finalState};
+    delete global.__IMINIT;
+    const sess={paper:true,id:'d15',settings:{...st},hist:H0()};
+    __P7.paperRun(sess, __P7.quoteOfTk(TK), null);
+    __strat={settings:{...st},hist:sess.hist}; const cM=computeInf();
+    const H=__P7.liveRun(TK, st, H0());
+    __strat={settings:{...st},hist:H}; const cO=computeInf();
+    const cP=PL.calcInfState({settings:{...st},hist:H}), cS=SV.imCompute({...st},H);
+    return {r, fB, logB, r5, f5, sess, cM, H, cO, cP, cS};
+  };
+  /* 여섯 경로의 최종값 — 보유 · 평단 · T · 잔금 · 인출금 (+ 사이클 수·마지막 줄 종료 표시는 세는 경로만) */
+  const six=g=>[
+    ['백테V4', g.fB.shares, g.fB.avg, g.fB.T, g.fB.cash, g.fB.savedProfit, g.r.cycles],
+    ['백테V5', g.f5.shares, g.f5.avg, g.f5.T, g.f5.cash, g.f5.savedProfit, g.r5.cycles],
+    ['모의',   g.cM.qty, g.cM.avg, g.cM.T, g.cM.bal, g.cM.saved, g.cM.cycleSeq-1],
+    ['운영',   g.cO.qty, g.cO.avg, g.cO.T, g.cO.bal, g.cO.saved, g.cO.cycleSeq-1],
+    ['플랜',   g.cP.qty, g.cP.avg, g.cP.T, g.cP.bal, g.cP.saved, null],
+    ['서버',   g.cS.qty, g.cS.avg, g.cS.T, g.cS.bal, g.cS.saved, null]];
+  const fmt=v=>v==null?'—':(Math.round(v*10000)/10000).toString();
+  const allEq=(g,exp)=>six(g).every(([,q,a,t,b,s,cy])=>Math.abs(q-exp.qty)<1e-9 && Math.abs(a-exp.avg)<1e-9 && Math.abs(t-exp.T)<1e-9
+                                         && Math.abs(b-exp.bal)<1e-6 && Math.abs(s-exp.saved)<1e-6 && (cy==null || cy===exp.cyc));
+  const table=g=>six(g).map(([n,q,a,t,b,s,cy])=>`${n} 보유${fmt(q)} 평단${fmt(a)} T${fmt(t)} 잔금${fmt(b)} 인출${fmt(s)} 사이클${fmt(cy)}`).join(' | ');
+  const show=(nm,g)=>console.log(`    ${nm} → `+six(g).map(([n,q,a,t,b,s,cy])=>`${n} ${fmt(q)}주·평단${fmt(a)}·T${fmt(t)}·잔금${fmt(b)}·인출${fmt(s)}${cy==null?'':'·종료'+cy}`).join(' | '));
+
+  const A=golden(99,true), B=golden(102,true), Cc=golden(110,true), Dd=golden(99,false), Cs=golden(110,false);
+  show('A 보유3/T8/전량TP+1회LOC(종가99)', A); show('B 보유3/T8/전량TP+절반LOC(종가102)', B); show('C 보유3/T8/전량TP·LOC 없음(종가110)', Cc);
+  show('D 단리·전량TP+1회LOC(종가99)', Dd); show('C 단리·LOC 없음(종가110)', Cs);
+
+  /* ── 자료가 맞는지 먼저 — 세 실코드가 그날 봉에서 실제로 전량 익절 + 매수를 냈는가 (시험이 헛돌지 않게) ── */
+  ok('준비 — 세 실코드(백테·모의·운영)가 같은 날 익절 3주 @120 뒤 별지점·평단 LOC 1주씩 @99 를 체결 (A · 거래 한 건도 안 다름)',
+     JSON.stringify(trades(A.logB))===JSON.stringify(trades(A.sess.hist.slice(1))) && JSON.stringify(trades(A.H.slice(1)))===JSON.stringify(trades(A.sess.hist.slice(1)))
+     && JSON.stringify(trades(A.H.slice(1)))===JSON.stringify([`${D1} 지정가매도 120.0000 x3`,`${D1} 절반매수 99.0000 x1`,`${D1} 절반매수 99.0000 x1`]),
+     `백테 ${trades(A.logB)} / 모의 ${trades(A.sess.hist.slice(1))} / 운영 ${trades(A.H.slice(1))}`);
+
+  /* ── A. 전량 TP + 1회 LOC → T 3 · 보유 2 · 종료 아님 · 사이클 증가 없음 · 인출 없음 ── */
+  ok('A 전량TP + 1회LOC — 여섯 경로 모두 최종 보유 2주 · 평단 99 · T 3 (=8×0.25+1) · 잔금 3,162 · 인출 0 · 사이클 +0',
+     allEq(A,{qty:2,avg:99,T:3,bal:3162,saved:0,cyc:0}), table(A));
+  ok('A cycleEnd=false — 운영·모의 장부 그날 마지막 줄 종료 표시 없음 · 백테 사이클 0',
+     !lastRow(A.cM).cycleEnd && !lastRow(A.cO).cycleEnd && A.r.cycles===0 && A.r5.cycles===0 && !A.cM.rows.some(r=>r.cycleEnd));
+  { const tp=A.cO.rows.find(r=>r.kind==='지정가매도');
+    ok('A 장중 0주 줄(익절)은 종료가 아니다 — 보유 0 · 평단 0 · T 2 (=8×0.25) 그대로 · 종료 표시 없음 · 같은 사이클',
+       !!tp && tp.qtyAfter===0 && tp.avgAfter===0 && Math.abs(tp.Tafter-2)<1e-12 && !tp.cycleEnd && tp.cycleSeq===lastRow(A.cO).cycleSeq,
+       JSON.stringify(tp&&{q:tp.qtyAfter,a:tp.avgAfter,T:tp.Tafter,e:tp.cycleEnd})); }
+
+  /* ── B. 전량 TP + 절반 LOC → T 2.5 ── */
+  ok('B 전량TP + 절반LOC — 여섯 경로 모두 T 2.5 (=8×0.25+0.5) · 보유 1주 · 평단 102 · 잔금 3,258 · 인출 0 · 사이클 +0 · cycleEnd=false',
+     allEq(B,{qty:1,avg:102,T:2.5,bal:3258,saved:0,cyc:0}) && !lastRow(B.cM).cycleEnd && !lastRow(B.cO).cycleEnd, table(B));
+
+  /* ── C. 전량 TP 만 → 진짜 종료 ── */
+  ok('C 전량TP · LOC 미체결 — 여섯 경로 모두 최종 보유 0 · T 0 · 평단 0 · 잔금 3,360 · 사이클 +1 · cycleEnd=true',
+     allEq(Cc,{qty:0,avg:0,T:0,bal:3360,saved:0,cyc:1}) && !!lastRow(Cc.cM).cycleEnd && !!lastRow(Cc.cO).cycleEnd, table(Cc));
+
+  /* ── D. 단리 — 같은 날 재매수면 인출·원금 리셋 없음, 진짜 종료면 원금 초과분만 인출 ── */
+  ok('D 단리 · 전량TP + 같은 날 LOC — 여섯 경로 모두 인출 0 · 잔금 3,162 (원금 3,300 으로 리셋 안 함) · T 3 · 사이클 지속',
+     allEq(Dd,{qty:2,avg:99,T:3,bal:3162,saved:0,cyc:0}) && !lastRow(Dd.cO).cycleEnd && (Dd.cO.flows||[]).length===0 && (Dd.cM.flows||[]).length===0, table(Dd));
+  ok('D 단리 · 진짜 종료(LOC 없음)면 예전 규칙 그대로 — 원금 초과분 60 만 인출 · 잔금 3,300 · 사이클 +1 · 인출 기록 한 줄',
+     allEq(Cs,{qty:0,avg:0,T:0,bal:3300,saved:60,cyc:1}) && (Cs.cO.flows||[]).length===1 && Math.abs(Cs.cO.flows[0].out-60)<1e-9, table(Cs));
+
+  /* ── 기록 모양과 무관 — 두 줄(지정가매도 → 1회매수) = 한 줄(복합 '지정가매도+1회매수') ── */
+  { const st=ST(true), two=[...H0(),{kind:'지정가매도',date:D1,price:120,qty:3,ts:2},{kind:'1회매수',date:D1,price:99,qty:2,ts:3}],
+          one=[...H0(),{kind:'지정가매도+1회매수',date:D1,sellPrice:120,sellQty:3,buyPrice:99,buyQty:2,ts:2}];
+    const run=h=>{ __strat={settings:{...st},hist:h}; const c=computeInf(), p=PL.calcInfState({settings:{...st},hist:h}), s=SV.imCompute({...st},h); return [c,p,s]; };
+    const [c2,p2,s2]=run(two), [c1,p1,s1]=run(one);
+    const same=(x,y)=>Math.abs(x.qty-y.qty)<1e-9&&Math.abs(x.avg-y.avg)<1e-9&&Math.abs(x.T-y.T)<1e-9&&Math.abs(x.bal-y.bal)<1e-9&&Math.abs(x.saved-y.saved)<1e-9;
+    ok('기록 모양과 무관 — 익절·매수를 두 줄로 적어도 복합 한 줄과 같다 (앱·플랜·서버 모두 T 3 · 보유 2 · 사이클 지속)',
+       same(c2,c1)&&same(p2,p1)&&same(s2,s1)&&same(c2,p2)&&same(c2,s2)&&Math.abs(c2.T-3)<1e-12&&c2.qty===2&&c2.cycleSeq===c1.cycleSeq&&c2.cycleSeq===1,
+       `두 줄 T${c2.T}/q${c2.qty}/seq${c2.cycleSeq} · 한 줄 T${c1.T}/q${c1.qty}/seq${c1.cycleSeq} · 플랜 ${p2.T} · 서버 ${s2.T}`);
+    /* 같은 날 뒤에 매매가 아닌 줄(출금)만 있으면 그날은 끝난 것 — 종료 */
+    const wd=[...H0(),{kind:'지정가매도',date:D1,price:120,qty:3,ts:2},{kind:'출금',date:D1,amt:10,ts:3}];
+    const [cw,pw,sw]=run(wd);
+    ok('같은 날 뒤 줄이 출금뿐이면 그날 매매는 끝 — 익절 줄에서 종료 (T 0 · 보유 0 · 앱·플랜·서버 같다)',
+       cw.T===0&&cw.qty===0&&cw.cycleSeq===2&&pw.T===0&&sw.T===0&&cw.rows[1].cycleEnd&&!cw.rows[2].cycleEnd, `T ${cw.T}/${pw.T}/${sw.T} seq ${cw.cycleSeq}`);
+    /* 단리 · 종료 뒤 같은 날 배당 — 끝난 사이클의 인출(원금 초과분 60)은 한 번뿐이고, 그 뒤 들어온 배당은 다음 사이클 잔금이다.
+       종료가 그날 두 번 판정되면 배당까지 '초과분' 으로 쓸려 나간다. */
+    { const sts=ST(false), dv=[...H0(),{kind:'지정가매도',date:D1,price:120,qty:3,ts:2},{kind:'배당',date:D1,amt:5,ts:3}];
+      __strat={settings:{...sts},hist:dv}; const ca=computeInf(), pa=PL.calcInfState({settings:{...sts},hist:dv}), sa=SV.imCompute({...sts},dv);
+      ok('단리 · 종료 뒤 같은 날 배당 — 인출은 60 한 번 · 배당 5 는 잔금에 남는다 (앱·플랜·서버 · 잔금 3,305)',
+         [ca,pa,sa].every(x=>Math.abs(x.saved-60)<1e-9 && Math.abs(x.bal-3305)<1e-9) && ca.cycleSeq===2 && (ca.flows||[]).length===1,
+         `인출 ${ca.saved}/${pa.saved}/${sa.saved} · 잔금 ${ca.bal}/${pa.bal}/${sa.bal} · seq ${ca.cycleSeq}`); }
+    /* 다음 날 매수는 새 사이클 — 날짜가 바뀌면 이어 가지 않는다 */
+    const nx=[...H0(),{kind:'지정가매도',date:D1,price:120,qty:3,ts:2},{kind:'1회매수',date:'2026-03-04',price:99,qty:2,ts:3}];
+    const [cn,pn,sn]=run(nx);
+    ok('다음 날 매수는 새 사이클 — 익절 날 종료 · 다음 날 T 1 (0+1) · 앱·플랜·서버 같다',
+       cn.T===1&&cn.cycleSeq===2&&cn.rows[1].cycleEnd&&pn.T===1&&sn.T===1, `T ${cn.T}/${pn.T}/${sn.T}`); }
+
+  /* ── 다음 주문도 같다 — D15 다음 날 아침, 운영 주문표 · 플랜 · 서버가 이어 간 사이클(T 3)로 같은 주문을 낸다 ── */
+  { const st=ST(true), H=A.H, D2='2026-03-04', rows=[{date:D0,close:100},{date:D1,close:99}];
+    const E=__P7.ENV; E.ST={...st}; E.HIST=H.slice(); E.CLOSE=99; E.CDATE=D1; E.LAST=null; E.DAYS=rows;
+    const oA=__P7.appOrders(); E.CDATE='';
+    const oP=PL.imOrders({settings:{...st},hist:H},99,rows).orders, oS=SV.imOrders({st:{...st},hist:H,close:99,days:rows}).orders;
+    const norm=o=>`${o.side} ${o.tag} ${(+o.price).toFixed(2)} x${o.qty}`;
+    const a=oA.map(norm), p=oP.map(norm), s=oS.map(norm);
+    /* T 3 이면 1회매수금 = 3,162÷(20−3) = 186 → 평단 LOC 99 ×1 (186÷99 내림) · 하방 1줄 = 186÷(1+1) = 93.00 · 익절 99×1.2 = 118.80 ×2.
+       새 사이클(T 1)로 셌다면 1회매수금 3,162÷19 = 166.42 → 하방 1줄 83.21 이 된다 — 하방 가격이 T 를 말해 준다. */
+    ok('다음 날 주문 — 운영·플랜·서버가 이어 간 사이클(T 3)로 같은 주문 (1회매수금 186 = 3,162÷17 → 평단 LOC 99 ×1 · 하방 93.00 · 익절 118.80 ×2)',
+       a.length>0 && JSON.stringify(a)===JSON.stringify(p) && JSON.stringify(a)===JSON.stringify(s)
+       && a.includes('buy LOC 99.00 x1') && a.includes('buy LOC 93.00 x1') && a.includes('sell 지정가 118.80 x2') && !a.includes('buy LOC 83.21 x1'),
+       `운영 ${a.join(', ')} / 플랜 ${p.join(', ')} / 서버 ${s.join(', ')}`); }
+
+  /* ── E. 경로 parity — 처음부터 도는 합성 자료에서 D15 가 저절로 생기게 ──
+     SOXL식 20분할 · 원금 3,000 · 첫날 1주 → 평단 LOC 로 하루 1주씩 → 보유 3주에서 고가 120 · 종가 97 (익절 전량 + 평단 LOC)
+     → 이어서 이틀 더 사고 → 갭업으로 전량 익절 · 매수 없음(진짜 종료) → 다음 날 종가 140 이 첫 매수 상한(120×1.15=138) 위라
+     미체결(0주 · 매도 없음 — 종료가 아니다: 사이클을 또 세면 안 된다) → 그다음 날 새 사이클 첫 매수. 복리·단리 둘 다. */
+  { const bars=[[100,100,100.4,99.6],[100,100,100.4,99.6],[99,99.5,99.8,98.8],[98,98.5,98.9,97.8],[97,99,120,96.5],
+                [96,96.5,96.9,95.8],[95.5,95.8,96,95.2],[120,118,121,117],[140,139,140.5,138.5],[139,139.5,139.9,138.6]];
+    const days=bars.map((b,i)=>new Date(Date.UTC(2026,3,1+i)).toISOString().slice(0,10));
+    const TN='__D15N__';
+    for(const comp of [true,false]){
+      setBars(TN, days.map((d,i)=>[d,...bars[i]]));
+      const st={...ST(comp,3000), ticker:TN};
+      __P7.setLOGD([]); finalState=null;
+      const r=__P7.runIMd(DAYS[TN].slice(1), TN, 3000, 20, 20, comp, 15), fB={...finalState}, Bk=__P7.LOGD().map(key);
+      const sess={paper:true,id:'d15n',simStart:DAYS[TN][1],settings:{...st},hist:[]};
+      __P7.paperRun(sess, __P7.quoteOfTk(TN), DAYS[TN][1]);
+      const Pk=trades(sess.hist), H=__P7.liveRun(TN, st), Lk=trades(H);
+      __strat={settings:{...st},hist:sess.hist}; const cM=computeInf();
+      __strat={settings:{...st},hist:H}; const cO=computeInf();
+      const cP=PL.calcInfState({settings:{...st},hist:H}), cS=SV.imCompute({...st},H);
+      const dD=days[4], dayRows=cO.rows.filter(x=>x.date===dD);
+      const tp=dayRows.find(x=>x.kind==='지정가매도'), by=dayRows.filter(x=>/매수/.test(x.kind));
+      const Tpre=(cO.rows[cO.rows.indexOf(tp)-1]||{}).Tafter;
+      const nm=comp?'복리':'단리';
+      ok(`E ${nm} 준비 — ${dD} 익절 ${tp&&tp.qty}주(전량) 뒤 같은 날 매수 ${by.map(x=>x.qty).join('+')}주 · 뒤에 진짜 종료 한 번`,
+         !!tp && tp.qtyAfter===0 && by.length>0 && cO.rows.filter(x=>x.cycleEnd).length===1, JSON.stringify(dayRows.map(x=>[x.kind,x.qty,x.Tafter])));
+      ok(`E ${nm} — 백테 ↔ 모의 ↔ 운영 거래 ${Bk.length}건 한 건도 안 다름`, JSON.stringify(Bk)===JSON.stringify(Pk) && JSON.stringify(Lk)===JSON.stringify(Pk),
+         `백테 ${Bk.length} 모의 ${Pk.length} 운영 ${Lk.length}`);
+      const Texp=Tpre*0.25+by.reduce((a,x)=>a+(x.kind==='1회매수'?1:0.5),0);
+      ok(`E ${nm} — ${dD} T = ${fmt(Tpre)}×0.25 + ${fmt(Texp-Tpre*0.25)} = ${fmt(Texp)} (새 사이클 T 가 아님) · 그날 종료 표시 없음`,
+         Math.abs(by[by.length-1].Tafter-Texp)<1e-12 && !dayRows.some(x=>x.cycleEnd) && Texp>0.5+1e-9, `T ${by.map(x=>x.Tafter)}`);
+      const six2=[['백테V4',fB.shares,fB.avg,fB.T,fB.cash,fB.savedProfit,r.cycles],['모의',cM.qty,cM.avg,cM.T,cM.bal,cM.saved,cM.cycleSeq-1],
+                  ['운영',cO.qty,cO.avg,cO.T,cO.bal,cO.saved,cO.cycleSeq-1],['플랜',cP.qty,cP.avg,cP.T,cP.bal,cP.saved,null],['서버',cS.qty,cS.avg,cS.T,cS.bal,cS.saved,null]];
+      const e=six2[0], eq=six2.every(([,q,a,t,b,s,cy])=>Math.abs(q-e[1])<1e-9&&Math.abs(a-e[2])<1e-9&&Math.abs(t-e[3])<1e-9&&Math.abs(b-e[4])<1e-6&&Math.abs(s-e[5])<1e-6&&(cy==null||cy===e[6]));
+      console.log(`    E ${nm} 최종 → `+six2.map(([n,q,a,t,b,s,cy])=>`${n} ${fmt(q)}주·평단${fmt(a)}·T${fmt(t)}·잔금${fmt(b)}·인출${fmt(s)}${cy==null?'':'·종료'+cy}`).join(' | '));
+      ok(`E ${nm} — 최종 보유·평단·T·잔금·인출금·사이클 수가 다섯 경로 같다 (사이클 ${r.cycles}회 · D15 날은 안 셈)`, eq && r.cycles===1,
+         six2.map(x=>[x[0],...x.slice(1).map(fmt)].join('/')).join(' | '));
+      if(!comp){
+        const fl=cO.flows||[];
+        ok('E 단리 — 인출은 진짜 종료 날 한 번뿐 (D15 날 인출 없음) · 백테 인출금과 같다',
+           fl.length===1 && fl[0].date===days[7] && Math.abs(fl[0].out-fB.savedProfit)<1e-6 && fB.savedProfit>0, JSON.stringify(fl)+' / 백테 '+fB.savedProfit);
+      }
+    }
+    delete DAYS[TN]; delete M[TN]; }
+
+  /* ── 기록 시트 T 미리보기 — 저장 전 == 저장 후 (같은 날 익절 뒤 매수를 적을 때 '0 → 0.5' 가 아니다) ── */
+  { const st=ST(true), EL={};
+    const $=id=>EL[id]||(EL[id]={value:'',checked:false,textContent:''});
+    const CXS=(idx.match(/const CX_KINDS=\[[^\]]*\];/)||[''])[0];
+    const mk=kind=>new Function('$','curStrat','computeInf','reverseT','isAmtKind','SHK',
+      [idxParts[0], CXS, extractFn(idx,'function isCx(k)'), extractFn(idx,'function unComma(s)'), extractFn(idx,'function sortHist(arr)'), extractFn(idx,'function fmtT(t)'),
+       'var shKind=SHK;', optFn(idx,'function sheetTvirtual()'), extractFn(idx,'function sheetTprev()'), 'return sheetTprev;'].join('\n'))(
+       $, ()=>__strat, computeInf, reverseT, isAmtKind, kind);   // idxParts[0] = KIND_T (eval 안의 const 는 밖으로 안 샌다)
+    const hist=[...H0(),{kind:'지정가매도',date:D1,price:120,qty:3,ts:2}];
+    __strat={settings:{...st},hist};
+    const n0=hist.length;
+    EL.sh_date={value:D1}; EL.sh_price={value:'99'}; EL.sh_qty={value:'1'};
+    mk('절반매수')(); const pv=$('sh_tprev').textContent;
+    const keep=hist.length===n0 && !hist.some(h=>h.__preview);
+    hist.push({kind:'절반매수',date:D1,price:99,qty:1,ts:3}); const T1=computeInf().T;
+    ok(`기록 시트 — 같은 날 익절 전량 뒤 절반매수 미리보기 '${pv}' = 저장 뒤 T ${T1} (2 → 2.5 · 사이클 이어짐 안내) · 장부는 그대로`,
+       /^2 → 2\.5 · 같은 날 익절 뒤 매수 — 사이클 종료가 아니라 이어집니다$/.test(pv) && Math.abs(T1-2.5)<1e-12 && keep, pv);
+    const h2=[...H0()]; __strat={settings:{...st},hist:h2};
+    EL.sh_price={value:'120'}; EL.sh_qty={value:'3'};
+    mk('지정가매도')(); const pv2=$('sh_tprev').textContent;
+    h2.push({kind:'지정가매도',date:D1,price:120,qty:3,ts:2}); const T2=computeInf().T;
+    ok(`기록 시트 — 전량 익절을 적을 때 미리보기 '${pv2}' = 저장 뒤 T ${T2} (그날 마지막 줄이면 종료 → 0)`, /^8 → 0$/.test(pv2) && T2===0, pv2); }
+
+  /* ── 한 곳 — 판정 함수가 네 파일에 같은 글자 · 옛 '기록 한 줄 판정' 이 안 남아 있다 ── */
+  { const E4=[idx,bt,pl,imSrc].map(s=>optFn(s,SIG_END)), O3=[idx,pl,imSrc].map(s=>optFn(s,SIG_OPEN));
+    ok('한 곳 — imCycleEnds 가 index·backtest·plan·서버에 글자 그대로 같다 · imDayOpenAfter 가 index·plan·서버에 같다',
+       !!E4[0] && E4.every(x=>x===E4[0]) && !!O3[0] && O3.every(x=>x===O3[0]));
+    const im=extractFn(bt,'function runIM(days,tkr,cap,divs,targetPct,compound'), ci=extractFn(idx,'function computeInf()');
+    ok('한 곳 — 백테 두 엔진은 하루 끝에서 imCycleEnds(soldToday, shares) · 장부 셋은 그날 마지막 매매 줄에서 imCycleEnds && !imDayOpenAfter',
+       (bt.match(/if\(imCycleEnds\(soldToday, shares\)\)\{shares=0;avg=0;cycles\+\+;/g)||[]).length===2
+       && /soldToday=tpHit\|\|qtHit;\s*\/\*/.test(im)
+       && im.indexOf('if(imCycleEnds(soldToday, shares))')>im.indexOf('for(const b of buys)')
+       && /if\(imCycleEnds\(daySold, qty\) && !imDayOpenAfter\(hist, hi\)\)\{/.test(ci)
+       && /if\(imCycleEnds\(daySold,qty\)&&!imDayOpenAfter\(hist,hi\)\)\{/.test(extractFn(pl,'function calcInfState(sess)'))
+       && /if \(imCycleEnds\(daySold, qty\) && !imDayOpenAfter\(H, hi\)\) \{/.test(imSrc));
+    ok('옛 판정이 안 남아 있다 — 매도 직후 0주면 바로 닫던 줄 (백테 두 엔진 · 앱 · 플랜 · 서버)',
+       !/if\(shares<1e-9\)\{shares=0;avg=0;cycles\+\+;/.test(bt) && !/if\(qty<=1e-9 && _soldQty>0\)/.test(idx)
+       && !/if\(qty<=1e-9&&soldQty>0\)/.test(pl) && !/if \(qty <= 1e-9 && soldQty > 0\)/.test(imSrc)
+       && !/새 사이클의 첫 거래가 된다/.test(bt) && !/새 사이클의 첫 거래가 된다/.test(idx)); }
+
+  /* ── 화면 — 사이클 종료 규칙 · 익절 지정가 근사(데이터 한계) ── */
+  ok('화면 — 백테 하단: 익절 지정가 = 정규장 OHLC 고가 근사 · 프리장~애프터 차이 가능(데이터 한계) · 사이클 종료는 하루 끝 최종 0주',
+     /익절 지정가 체결은 정규장 OHLC 고가 기반 근사이며, 원문의 프리장~애프터 체결과 차이가 있을 수 있음/.test(bt)
+     && /엔진 오류가 아니라 데이터 한계/.test(bt) && /하루 주문을 모두 처리한 뒤 <b>최종 보유가 0주<\/b>일 때만 사이클이 끝납니다/.test(bt)
+     && /title="정규장 일봉 고가가 목표가를 터치하면 체결/.test(bt));
+  ok('화면 — 앱: 사이클별 손익 안내 · 모의 체결 안내에 같은 날 익절+매수 규칙과 익절 근사 문구',
+     /그날 기록을 다 처리한 뒤 보유가 0이면 한 사이클이 끝납니다 — 익절로 전량 팔린 날 같은 날 LOC 매수가 체결되면 사이클이 이어집니다/.test(idx)
+     && /<b>같은 날 익절 \+ 매수<\/b> — 익절로 전량 팔린 뒤 종가가 떨어져 매수 LOC 까지 체결되면 사이클 종료가 아니라 이어 갑니다/.test(idx)
+     && /익절 지정가 체결은 정규장 OHLC 고가 기반 근사이며, 원문의 프리장~애프터 체결과 차이가 있을 수 있습니다/.test(idx)
+     && !/전량매도로 보유가 0이 되면 한 사이클이 끝납니다/.test(idx));
+
+  Object.assign(global,{imReverse:sv.r, imFill:sv.f, imCostOn:sv.c, imTgtDyn:sv.t, imRevGap:sv.g});
+  delete DAYS[TK]; delete M[TK];
 }
 
 console.log(`\n════ 결과: ${pass} PASS / ${fail} FAIL ${fail===0?'— ALL PASS ★':'— 배포 금지, 위 ✗ 항목 수정 필요'} ════`);
