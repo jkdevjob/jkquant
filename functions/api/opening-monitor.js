@@ -7,94 +7,6 @@ import { minuteVolume, dailyMeta, rebreakTrade, SHADOW_VARIANTS } from "./_openi
 const JH={"Content-Type":"application/json; charset=utf-8","Cache-Control":"no-store"};
 const FIREBASE_API_KEY_FALLBACK="AIzaSyBzBe9pAttnbDgTlNThWZzNqtAAKxX7Ksw";
 const DEFAULT_OWNERS=["jk82investing@gmail.com"];
-const sleep=ms=>new Promise(r=>setTimeout(r,ms));
-const VTS_ORDER_GAP_MS=2300;
-let _lastVtsOrderAt=0;
-
-function hhmm(t){
-  const s=String(t||"").replace(/\D/g,"").padStart(6,"0").slice(-6);
-  return /^\d{6}$/.test(s)?+s.slice(0,4):0;
-}
-function hmMin(v){const n=+v||0;return Math.floor(n/100)*60+n%100;}
-function sigId(date,x,side){return ["opening",date,x.code,x.entryTime,side].join(":");}
-function vtsBudget(env){
-  const n=+env.SCALPING_VTS_BUDGET;
-  return n>0?Math.floor(n):2000000;
-}
-async function paceVtsOrder(){
-  const wait=_lastVtsOrderAt?VTS_ORDER_GAP_MS-(Date.now()-_lastVtsOrderAt):0;
-  if(wait>0)await sleep(wait);
-  _lastVtsOrderAt=Date.now();
-}
-async function vtsOrder(origin,env,date,x,side,qty){
-  const paperPrice=side==="buy"?+x.entryPrice||0:+x.exitPrice||0;
-  const paperTime=side==="buy"?+x.entryTime||0:+x.exitTime||0;
-  const rec={
-    signalId:sigId(date,x,side),strategy:"opening",date,side,code:x.code,name:x.name||x.code,qty,
-    paper:{time:paperTime,fillPrice:paperPrice,fillModel:"completed 1m close",roundTripCostAssumptionPct:0.25},
-    submittedAt:new Date().toISOString(),vts:{ok:false,orderNo:"",msg:""}
-  };
-  if(!(qty>0)){rec.vts.msg="주문수량 0 — 예산/기준가 확인";return rec;}
-  try{
-    await paceVtsOrder();
-    rec.submittedAt=new Date().toISOString();
-    const r=await fetch(origin+"/api/kis?op=order&internal=1",{
-      method:"POST",
-      headers:{"content-type":"application/json","x-autotrade-key":env.AUTOTRADE_KEY},
-      body:JSON.stringify({env:"vts",side,code:x.code,qty,price:0,priceType:"market"})
-    });
-    const j=await r.json().catch(()=>({}));
-    rec.vts={ok:r.ok&&!!j.ok,orderNo:j.orderNo||"",msg:j.msg||j.error||("HTTP "+r.status),
-      priceType:"market",env:"vts",httpStatus:r.status};
-  }catch(e){rec.vts.msg="VTS 주문 전송 실패: "+String(e.message||e);}
-  return rec;
-}
-async function vtsFilledOpeningQty(origin,env,date,x){
-  try{
-    await sleep(700);
-    const u=origin+"/api/kis?op=orders&env=vts&market=kr&date="+encodeURIComponent(date.replace(/-/g,""))+
-      "&code="+encodeURIComponent(x.code);
-    const r=await fetch(u,{headers:{"x-autotrade-key":env.AUTOTRADE_KEY,"Accept":"application/json"}});
-    const j=await r.json().catch(()=>({}));
-    if(!r.ok)return {qty:0,error:j.error||("HTTP "+r.status)};
-    const ent=hmMin(x.entryTime),orders=j.orders||[];
-    // 같은 종목을 다른 전략/수동으로 보유했더라도 건드리지 않도록
-    // 내부 시초가 진입시각 ±5분의 VTS 매수 체결만 이 전략 물량으로 본다.
-    const buys=orders.filter(o=>String(o.sideCode)==="02"&&+o.fillQty>0&&Math.abs(hmMin(hhmm(o.orderTime))-ent)<=5);
-    const buyQty=buys.reduce((s,o)=>s+(+o.fillQty||0),0);
-    if(!buyQty)return {qty:0,error:"시초가 매수 체결수량 0"};
-    const firstBuy=Math.min(...buys.map(o=>hmMin(hhmm(o.orderTime))).filter(Number.isFinite));
-    const sells=orders.filter(o=>String(o.sideCode)==="01"&&+o.fillQty>0&&hmMin(hhmm(o.orderTime))>=firstBuy);
-    const sold=sells.reduce((s,o)=>s+(+o.fillQty||0),0);
-    return {qty:Math.max(0,buyQty-sold),buyQty,sold};
-  }catch(e){return {qty:0,error:String(e.message||e)};}
-}
-async function dualVtsExecute(origin,env,date,buys,sells){
-  const enabled=String(env.SCALPING_VTS_AUTO||"1")!=="0";
-  const budget=vtsBudget(env),events=[];
-  if(!enabled)return {enabled:false,budget,reason:"SCALPING_VTS_AUTO=0",events};
-  if(!env.AUTOTRADE_KEY)return {enabled:false,budget,reason:"AUTOTRADE_KEY 없음",events};
-  // 내부 모의체결은 rebreakTrade가 이미 만든 entry/exit 가격이다.
-  // 같은 이벤트에 VTS 시장가 주문을 내고, 이후 reconcile에서 VTS 실제 모의체결가와 대조한다.
-  for(const x of buys){
-    const qty=Math.floor(budget/Math.max(1,+x.entryPrice||0));
-    events.push(await vtsOrder(origin,env,date,x,"buy",qty));
-  }
-  for(const x of sells){
-    const pos=await vtsFilledOpeningQty(origin,env,date,x);
-    if(!(pos.qty>0)){
-      events.push({
-        signalId:sigId(date,x,"sell"),strategy:"opening",date,side:"sell",code:x.code,name:x.name||x.code,qty:0,
-        paper:{time:+x.exitTime||0,fillPrice:+x.exitPrice||0,fillModel:"completed 1m close",roundTripCostAssumptionPct:0.25},
-        submittedAt:new Date().toISOString(),
-        vts:{ok:false,orderNo:"",msg:"매도 생략 — "+(pos.error||"이 전략의 VTS 보유수량 없음"),priceType:"market",env:"vts"}
-      });
-      continue;
-    }
-    events.push(await vtsOrder(origin,env,date,x,"sell",pos.qty));
-  }
-  return {enabled:true,budget,events};
-}
 
 function kstNow(){
   const p=new Intl.DateTimeFormat("en-CA",{timeZone:"Asia/Seoul",year:"numeric",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit",second:"2-digit",hour12:false}).formatToParts(new Date());
@@ -205,7 +117,6 @@ export async function onRequestGet({request,env}){
   const url=new URL(request.url);
   const history=url.searchParams.get("history")==="1";
   const serverHistory=url.searchParams.get("serverHistory")==="1";
-  const execute=url.searchParams.get("execute")==="1";
   if(history){
     if(!(await ownerAuthorized(request,env)))return new Response(JSON.stringify({ok:false,error:"unauthorized"}),{status:401,headers:JH});
   }else if(!monitorAuthorized(request,env)){
@@ -238,10 +149,6 @@ export async function onRequestGet({request,env}){
     const buys=res.trades.filter(x=>x.entryTime===now.targetHm);
     const sells=res.trades.filter(x=>x.exitTime===now.targetHm);
     const telegram={buySent:false,sellSent:false,buyMessageId:null,sellMessageId:null};
-    // execute=1 은 GitHub의 정규 장중 감시에서만 붙인다. history/serverHistory 재구성은 주문하지 않는다.
-    // 주문 실패는 신호/Telegram을 중단시키지 않는다 — 모의계좌 실행품질 관측이 목적이다.
-    const vtsExecution=execute?await dualVtsExecute(origin,env,now.date,buys,sells)
-      :{enabled:false,budget:vtsBudget(env),reason:"execute=0",events:[]};
 
     // Telegram은 기준전략만 보낸다. shadow는 연구 기록 전용이라 알림을 섞지 않는다.
     if(buys.length){
@@ -257,7 +164,7 @@ export async function onRequestGet({request,env}){
       ok:true,date:now.date,targetHm:now.targetHm,shard,shards,universe:res.universe,
       buyEvents:buys,sellEvents:sells,trades:res.trades,
       shadowEvents:shadowEvents(res.shadow,now.targetHm),
-      vtsExecution,telegram,errors:res.errors.length
+      telegram,errors:res.errors.length
     }),{headers:JH});
   }catch(e){
     return new Response(JSON.stringify({ok:false,error:String(e.message||e)}),{status:500,headers:JH});
