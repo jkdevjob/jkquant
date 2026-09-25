@@ -537,7 +537,7 @@ try{ if(localStorage.getItem('qcockpit_hadUser')==='1') document.documentElement
 </div>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.97.3</span></h1></div>
+    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.97.4</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -1646,7 +1646,7 @@ if(/^\/paper\/?$/.test(location.pathname)){
   <footer>
     <strong>JK 퀀트</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.97.3</b> · 2026-09-25</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.97.4</b> · 2026-09-25</div>
   </footer>
 </div>
 
@@ -2176,12 +2176,31 @@ function ensureDcaBox(){ if(S&&(!S.dca||!S.dca.sessions||!S.dca.sessions.length)
 function ensureBoxes(){ ensureMaBox(); ensureAsapBox(); ensureDcaBox(); ensureIvsBox();
   if(S&&S.ivs&&S.ivs.sessions) S.ivs.sessions.forEach(migrateIvsSess); }
 
+/* 무매 운영 기본값 15 / 0 / 3 마이그레이션.
+   신규 세션 기본값만 바꾸면 기존 로그인 계정은 Firestore/localStorage의 예전 설정을 계속 보여 준다.
+   이번 정책 버전에서 모든 기존 무매 세션을 딱 한 번 15/0/3으로 맞추고 버전 마커를 남긴다.
+   이후 사용자가 직접 값을 바꾸는 것은 다시 덮어쓰지 않는다. */
+const INF_DEFAULTS_POLICY_VER=1;
+function migrateInfOperatingDefaults(){
+  if(!S||!S.inf||!Array.isArray(S.inf.sessions)) return false;
+  if((+S._infDefaultsPolicyVer||0)>=INF_DEFAULTS_POLICY_VER) return false;
+  for(const x of S.inf.sessions){
+    const st=x&&x.settings; if(!st) continue;
+    st.big=IM_BIG_DEFAULT;
+    st.revGap=REV_GAP_DEF;
+    st.rows=IM_ROWS_DEFAULT;
+  }
+  S._infDefaultsPolicyVer=INF_DEFAULTS_POLICY_VER;
+  return true;
+}
+
 function load(){
   try{S=JSON.parse(localStorage.getItem(lsKey()))}catch(e){S=null}
   if(!validState(S)){S=freshState();saveLocal();}
   if(!S.activeTab)S.activeTab='inf';
   ensureBoxes();
   forceV40();   // V5.0 숨김 기간: 저장된 v50 세션을 v40으로 되돌림
+  if(migrateInfOperatingDefaults()) saveLocal();
 }
 /* 로컬 저장은 실패할 수 있다 — 용량 초과(QuotaExceededError)나 사생활 보호 모드.
    예전에는 여기서 던진 예외가 load() → 로그인 처리까지 타고 올라가서
@@ -9337,10 +9356,16 @@ async function pullRemote(){
         let local=null; try{local=JSON.parse(localStorage.getItem(lsKey()))}catch(e){}
         if(local&&validState(local)&&(local._updated||0)>(d.updated||0)){
           S=local; if(!S.activeTab)S.activeTab='inf'; ensureBoxes();
+          if(migrateInfOperatingDefaults()) saveLocal();
           lastPushedJSON=null; pushRemote();
           return true;
         }
-        S=d.state;if(!S.activeTab)S.activeTab='inf';ensureBoxes();saveLocal();lastPushedJSON=JSON.stringify(S);return true;
+        S=d.state;if(!S.activeTab)S.activeTab='inf';ensureBoxes();
+        const migrated=migrateInfOperatingDefaults();
+        saveLocal();
+        lastPushedJSON=migrated?'':JSON.stringify(S);
+        if(migrated) pushRemote();
+        return true;
       }
     }
   }catch(e){console.error('pull',e);}
@@ -9374,7 +9399,7 @@ function importJSON(e){
       const obj=JSON.parse(ev.target.result);
       if(!obj.inf||!obj.vr||!obj.inf.sessions||!obj.vr.sessions)throw new Error('형식이 올바르지 않습니다');
       if(!confirm('현재 데이터를 불러온 파일로 교체할까요? 지금 데이터는 사라집니다.'))return;
-      S=obj;ensureBoxes();save();
+      S=obj;ensureBoxes();migrateInfOperatingDefaults();save();
       closeSettings();resetSubnav('inf');resetSubnav('vr');refreshAll();pushRemote();
       alert('불러오기 완료');
     }catch(err){alert('불러오기 실패: '+err.message)}
