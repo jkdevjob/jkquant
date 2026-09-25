@@ -6,9 +6,13 @@ name: KIS VTS 체결대조 자동수집
 
 on:
   schedule:
+    # GitHub schedule 지연/누락에 대비해 장마감 뒤 여러 번 읽기전용 백업 대조.
+    # 같은 날짜 파일을 덮어쓰고 Telegram 요약은 marker로 하루 한 번만 보낸다.
     - cron: "45 0 * * 1-5"   # 09:45 KST — 시초가 대조
     - cron: "30 7 * * 1-5"   # 16:30 KST — 시초가 + 데이트레이딩
     - cron: "30 8 * * 1-5"   # 17:30 KST backup
+    - cron: "0 9 * * 1-5"    # 18:00 KST backup
+    - cron: "30 9 * * 1-5"   # 18:30 KST final backup
   workflow_dispatch:
   push:
     branches: [main]
