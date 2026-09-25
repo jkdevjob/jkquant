@@ -187,7 +187,7 @@ canvas{display:block;width:100%;height:auto}
 
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Morning Scalping</div><h1>JK <span class="v">퀀트</span> 단타 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="scVer">v1.16.1</span></h1></div>
+    <div><div class="kicker">Morning Scalping</div><h1>JK <span class="v">퀀트</span> 단타 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="scVer">v1.16.2</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -306,6 +306,17 @@ canvas{display:block;width:100%;height:auto}
   </div>
 
   <div class="card">
+    <h3><span class="dot"></span>🔎 한투 VTS 체결 대조 <span class="sub" style="font-weight:600">읽기전용 · 내부 모의체결 vs 이미 존재하는 모의계좌 체결</span></h3>
+    <p class="lead">오늘 내부 시초가 모의매매와 <b>한국투자 모의투자 계좌에 이미 체결된 주문</b>을 종목·시각으로 대조해
+      진입/청산 슬리피지와 증권사가 응답한 추정 제비용을 비교한다. 이 기능은 <b>주문을 생성·정정·취소하지 않는다.</b></p>
+    <div class="row" style="margin-bottom:8px">
+      <button class="ghostbtn" onclick="loadVtsReconcile('opening')">🔄 VTS 대조</button>
+      <span class="sub" id="ob_vts_msg">수동으로 한투 모의주문을 체결한 뒤 대조할 수 있습니다.</span>
+    </div>
+    <div id="ob_vts_body"></div>
+  </div>
+
+  <div class="card">
     <h3><span class="dot"></span>🧪 누적 시초가 연구 백테스트 <span class="sub" style="font-weight:600">매일 원본 누적 · 워크포워드 검증</span></h3>
     <p class="lead">매일 16:10 이후 <b>그날의 Top100 실제 유니버스와 09:00~09:30 KIS 1분봉</b>을 저장하고, 같은 원본으로 기준전략과 그림자 가설을 다시 계산한다.
       <b>25거래일</b>이 모이면 <b>20일 학습 → 다음 5일 검증</b>의 시간순 워크포워드를 자동 시작하며, 검증 결과만 별도로 집계한다.</p>
@@ -401,6 +412,17 @@ canvas{display:block;width:100%;height:auto}
       </div>
       <div id="dt_body"><p class="sub">오늘 장 종료 뒤 전체 1분봉이 저장되면 기준전략과 그림자전략 결과가 여기에 표시됩니다.</p></div>
       <p class="note">그림자 후보: 거래량 2배 · 30분 고점 · VWAP 기울기 0.2% · 14:00 이전 · 09:00 1분봉 대비 +2% · 손절 0.8% · 익절 1.5%.</p>
+    </div>
+
+    <div class="card">
+      <h3><span class="dot"></span>🔎 한투 VTS 체결 대조 <span class="sub" style="font-weight:600">읽기전용</span></h3>
+      <p class="lead">장마감 내부 데이트레이딩 결과와 <b>한투 모의계좌에 이미 존재하는 체결</b>을 자동 매칭해
+        매수·매도 체결가 차이, 슬리피지, 추정 제비용, VTS 체결 기준 손익을 확인한다.</p>
+      <div class="row" style="margin-bottom:8px">
+        <button class="ghostbtn" onclick="loadVtsReconcile('daytrading')">🔄 VTS 대조</button>
+        <span class="sub" id="dt_vts_msg">주문 전송 없이 조회만 합니다.</span>
+      </div>
+      <div id="dt_vts_body"></div>
     </div>
 
     <div class="card">
@@ -1116,6 +1138,46 @@ async function loadDayTradingResearch(){
       '<div class="warn" style="margin-top:10px"><b>'+esc(wfText)+'</b> · 전체기간 성과가 좋아도 OOS 검증 전에는 기준전략을 자동 변경하지 않습니다.</div>';
   }catch(e){
     msg.textContent='데이트레이딩 연구결과 조회 실패';
+    body.innerHTML='<div class="warn">'+esc(e.message||String(e))+'</div>';
+  }
+}
+
+async function loadVtsReconcile(strategy){
+  const pre=strategy==='opening'?'ob':'dt',msg=$(pre+'_vts_msg'),body=$(pre+'_vts_body');
+  if(!msg||!body)return;
+  if(!me){msg.textContent='로그인이 필요합니다.';return;}
+  msg.textContent='한투 모의계좌 체결내역 읽는 중…';body.innerHTML='';
+  try{
+    const tok=await me.getIdToken();
+    const r=await fetch('/api/vts-reconcile?strategy='+encodeURIComponent(strategy),{
+      headers:{'Authorization':'Bearer '+tok,'Accept':'application/json'}
+    });
+    const j=await r.json().catch(()=>({}));
+    if(!r.ok||!j.ok)throw new Error(j.error||('HTTP '+r.status));
+    const a=j.matches||[],matched=a.filter(x=>x.matched).length;
+    msg.textContent='내부 '+j.internalTrades+'건 · VTS 주문 '+j.kisOrders+'건 · 완전매칭 '+matched+'건';
+    const pct=v=>v==null?'—':((v>=0?'+':'')+(+v).toFixed(3)+'%');
+    const won=v=>v==null?'—':commas(Math.round(+v))+'원';
+    if(!a.length){
+      body.innerHTML='<div class="warn">대조할 내부 모의매매가 없습니다.</div>';
+      return;
+    }
+    body.innerHTML='<div class="htable-wrap"><table class="htable"><thead><tr><th>종목</th><th>내부 진입</th><th>VTS 매수</th><th>진입 슬리피지</th><th>내부 청산</th><th>VTS 매도</th><th>청산 슬리피지</th><th>VTS 추정비용</th><th>VTS 순손익</th></tr></thead><tbody>'+
+      a.map(x=>'<tr><td><b>'+esc(x.name||x.code)+'</b><div class="sub">'+esc(x.code)+'</div></td>'+
+      '<td>'+String(x.internalEntryTime||'').padStart(4,'0')+' · '+won(x.internalEntryPrice)+'</td>'+
+      '<td>'+(x.vtsBuy?String(x.vtsBuy.orderTime||'').slice(0,4)+' · '+won(x.vtsBuy.fillPrice):'—')+'</td>'+
+      '<td class="'+((x.entrySlippageCostPct||0)<=0?'win':'loss')+'">'+pct(x.entrySlippageCostPct)+'</td>'+
+      '<td>'+(x.internalExitTime==null?'—':String(x.internalExitTime).padStart(4,'0')+' · '+won(x.internalExitPrice))+'</td>'+
+      '<td>'+(x.vtsSell?String(x.vtsSell.orderTime||'').slice(0,4)+' · '+won(x.vtsSell.fillPrice):'—')+'</td>'+
+      '<td class="'+((x.exitSlippageCostPct||0)<=0?'win':'loss')+'">'+pct(x.exitSlippageCostPct)+'</td>'+
+      '<td>'+won(x.vtsBrokerEstimatedCosts)+'</td>'+
+      '<td class="'+((x.vtsNetPnlPct||0)>=0?'win':'loss')+'">'+pct(x.vtsNetPnlPct)+'</td></tr>').join('')+
+      '</tbody></table></div>'+
+      '<div class="warn" style="margin-top:10px"><b>읽기전용:</b> 이 표는 한투 VTS에 이미 존재하는 체결만 읽어서 비교합니다. '+
+      '슬리피지 비용은 매수는 VTS체결가−내부기준가, 매도는 내부기준가−VTS체결가 방향으로 계산합니다. '+
+      '증권사 제비용은 KIS 체결조회 응답값을 사용하며 모의투자 조건이 실계좌 수수료와 동일하다고 가정하지 않습니다.</div>';
+  }catch(e){
+    msg.textContent='VTS 대조 실패';
     body.innerHTML='<div class="warn">'+esc(e.message||String(e))+'</div>';
   }
 }
