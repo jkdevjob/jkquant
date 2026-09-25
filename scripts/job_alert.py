@@ -211,12 +211,13 @@ def build_message(new_jobs):
         if len(body) > 220:
             body = body[:217] + '...'
 
+        job_url = escape(job["url"], quote=True)
+        job_title = escape(job["title"] or "제목 없음")
         lines.extend([
-            f'<b>{idx}. {escape(job["title"] or "제목 없음")}</b>',
+            f'<b><a href="{job_url}">{idx}. {job_title}</a></b>',
             f'분류: {escape(tags)}',
             f'내용: {escape(body)}' if body else '내용: 검색 요약 없음',
             f'공부 포인트: {escape(study_hint(job["title"], job["body"]))}',
-            f'<a href="{escape(job["url"], quote=True)}">공고 보기</a>',
             '',
         ])
 
