@@ -69,7 +69,7 @@ function imBuyPx(star){ return star>0 ? +(star-0.01).toFixed(4) : 0; }
    추가 줄은 같은 회차의 일부다 — T 는 본 주문만 센다 (dT 0).
    증권사는 주문가×수량을 매수가능금액에서 예약하고 넘으면 거부한다 — 잔금 안에서만 낸다 (7차 점검 ④).
    주문가가 전일 종가 +큰수% 를 넘으면 그 값(호가 내림)으로 낮춰 낸다 — 원문 '큰수 매수'(증권사 가격 제한 대응).
-   줄 수(rows)는 원문에 없다('…' 로 이어질 뿐) — JKQuant 구현값 기본 8 (imRowsOf). 호가·수수료 포함 수량도 구현 세부다.
+   줄 수(rows)는 원문에 없다('…' 로 이어질 뿐) — JKQuant 구현값 기본 3 (imRowsOf). 호가·수수료 포함 수량도 구현 세부다.
      o: {first, half, buy1, bal, firstPrice, starPrice, avg, cap, rows, fee, cur}
      반환: [{kind:'1회매수'|'절반매수'|'하방', name, price, q, dT, ladder, capped, orig}] */
 export function imBuyOrders(o){
@@ -99,8 +99,8 @@ export function imBuyOrders(o){
   }
   return out;
 }
-/* 아래로 LOC 추가 줄 수 — 설정값, 없으면 기본 8. 0 이면 끈다(변형). 예전 rowsOn(꺼짐 기본) 스위치는 쓰지 않는다. */
-const IM_ROWS_DEFAULT=8;
+/* 아래로 LOC 추가 줄 수 — 설정값, 없으면 기본 3. 0 이면 끈다(변형). 예전 rowsOn(꺼짐 기본) 스위치는 쓰지 않는다. */
+const IM_ROWS_DEFAULT=3;
 export function imRowsOf(st){ const v=(st||{}).rows; return (v!=null&&isFinite(+v)) ? Math.max(0,Math.min(20,Math.floor(+v))) : IM_ROWS_DEFAULT; }
 /* 호가 (index.html · backtest.html · plan.html 과 같은 글자) — 아래로 LOC 추가 줄의 가격을 호가 단위로 내린다 */
 function vrTick(p, cur){ return cur==='krw' ? (p<2000?1:5) : (p<1?0.0001:0.01); }
