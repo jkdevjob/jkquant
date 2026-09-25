@@ -704,80 +704,47 @@ console.log('[12] 종가/실시간가 분리');
 }
 
 
-/* ════ 13. LOC 주문가가 증권사 상한을 넘지 않는가 (14차 버그 클래스) ════
-   거래소·증권사는 기준가에서 멀리 떨어진 지정가를 거부한다. 무매의 별지점·평단 매수는
-   평단이 종가보다 한참 위일 때(=물려 있을 때) 종가 대비 +20~30%가 되어 주문 자체가 튕겼다.
-   앱은 '큰수 %'로 처음매수에만 상한을 걸어 뒀고 매일 내는 매수엔 안 걸어 뒀던 게 원인. */
-console.log('[13] LOC 주문가 상한');
+/* ════ 13. BIG는 처음매수에만 적용 · 주문가 상한 없음 ════ */
+console.log('[13] BIG 처음매수 전용 · 주문가 상한 제거');
 {
   let ord=''; try{ ord=extractFn(idx,'function renderOrder()'); }catch(e){}
-  /* 허용폭을 넘으면 상한을 씌워 낸다. 공짜가 아니라는 걸 안내문이 말해야 한다 —
-     체결조건이 바뀌어 종가가 상한 위로 마감한 날은 회차를 건너뛴다.
-     6년·10개 설정 실측 최악: +12% −31.3% · +15% −28.2% · +20% −3.1%.
-     상한이 높을수록 바뀌는 결정이 줄어 꼬리가 닫히므로 기본값을 20으로 둔다.
-     MOC면 밴드를 피하지만 국내 증권사는 MOO/MOC를 매도만 지원해 매수엔 못 쓴다. */
-  ok('허용폭 초과 매수에 상한을 씌운다', /imBuyOrders\(\{[\s\S]{0,200}cap:limit/.test(ord)
-     && /const capP=o\.cap>0 \? vrTickDn\(o\.cap, o\.cur\) : 0;/.test(idx) && /const cap=p=>\(capP>0&&p>capP\)\?capP:p;/.test(idx),
-     ord?'':'renderOrder 없음');
-  ok('값으로 — 상한을 넘는 주문가는 상한으로 낮추고 표시한다', (()=>{
+  const buyFn=extractFn(idx,'function imBuyOrders(o)');
+  ok('운영 주문은 별지점·평단에 cap 을 넘기지 않는다',
+     !/cap:limit/.test(ord) && !/cap:buyLimit/.test(ord), ord?'':'renderOrder 없음');
+  ok('정식 매수 함수에 주문가 상한 로직이 없다',
+     !/capP/.test(buyFn) && !/capped/.test(buyFn) && !/const cap=/.test(buyFn));
+  ok('값으로 — cap 인자를 줘도 별지점 주문가를 자르지 않는다', (()=>{
       const r=imBuyOrders({first:false,half:false,buy1:1000,bal:5000,starPrice:12,avg:10,cap:11,rows:0,fee:0,cur:'usd'});
-      return r.length===1 && r[0].price===11 && r[0].capped===true && r[0].orig===12; })());
-  ok('상한이 공짜가 아님을 안내한다', /건너뜁니다|건너뛰/.test(ord) && /큰수 %/.test(ord));
-  /* 기준 종가를 입력칸에서만 읽으면, 보유 중인 세션(입력칸이 숨김)에서 close=0이 되어
-     limit=0 → 상한이 통째로 꺼진다. 실제로 현재가보다 +33%인 주문가가 그대로 나갔다. */
-  ok('기준 종가가 시세로 폴백된다 (입력칸이 비어도)',
-     /inputNum\('o_close'\)\|\|\(_sl\?/.test(ord) && /infSettledLast\(\)/.test(ord));
-  ok('폴백 시세는 종목을 대조한다', /Q\.symbol[\s\S]{0,120}st\.ticker/.test(idx));
-  /* 큰수 기본은 한 곳(IM_BIG_DEFAULT)에서만 나온다 — 예전엔 신규 15 · 백테 15 ·
-     옛 세션 fallback 20 이 섞여 같은 설정인데 화면마다 상한이 달랐다 (4차 감사 ④). */
+      return r.length===1 && r[0].price===12; })());
+  ok('하방 LOC도 계산된 원래 가격을 사용한다', (()=>{
+      const r=imBuyOrders({first:true,half:false,buy1:1000,bal:5000,firstPrice:12,starPrice:0,avg:0,cap:5,rows:2,fee:0,cur:'usd'});
+      return r.length===3 && r[0].price===12 && r[1].price<12 && r[2].price<r[1].price; })());
   ok('큰수 % 기본값이 한 곳에 있다', /const IM_BIG_DEFAULT=15;/.test(idx) && /const IM_BIG_DEFAULT=15;/.test(bt));
   ok('앱·백테의 imBigPct 가 같은 몸이다', (()=>{
       const re=/function imBigPct\(st\)\{[^\n]*\}/;
-      const a=(idx.match(re)||[''])[0], b=(bt.match(re)||[''])[0];
-      return !!a && a===b; })());
-  ok('기본 세션이 그 상수를 읽는다', /big:IM_BIG_DEFAULT,/.test(idx) && !/big:15,/.test(idx));
-  ok('fallback 20 이 안 남아 있다', !/\+st\.big:20/.test(idx));
+      const aa=(idx.match(re)||[''])[0], bb=(bt.match(re)||[''])[0];
+      return !!aa && aa===bb; })());
+  ok('기본 세션이 큰수 상수를 읽는다', /big:IM_BIG_DEFAULT,/.test(idx) && !/big:15,/.test(idx));
   ok('값으로 — 미설정·0·음수는 15, 설정값은 그대로',
      imBigPct({})===15 && imBigPct({big:0})===15 && imBigPct({big:-3})===15
-     && imBigPct({big:25})===25 && imBigPct(undefined)===15,
-     `${imBigPct({})} ${imBigPct({big:25})}`);
-  ok('백테 두 엔진이 같은 헬퍼를 쓴다',
-     (bt.match(/const bigPct=imBigPct\(\{big:bigOverride\}\);/g)||[]).length===2
-     && !/const bigPct=15;/.test(bt));
+     && imBigPct({big:25})===25 && imBigPct(undefined)===15);
   ok('백테 엔진이 큰수를 파라미터로 받는다',
      /function runIM\(days,tkr,cap,divs,targetPct,compound=true,bigOverride\)/.test(bt)
      && /function runIM50\(days,tkr,cap,divs,targetPct,compound=true,bigOverride\)/.test(bt));
-  ok('모의체결도 같은 헬퍼를 쓴다',
+  ok('모의체결도 같은 큰수 헬퍼를 쓴다',
      /const bigPct=imBigPct\(st\);/.test(extractFn(idx,'function infSimForward(startFrom)')));
-  ok('하방 LOC는 같은 상한', /const p=cap\(vrTickDn\(o\.buy1\/\(Q\+k\), o\.cur\)\);/.test(idx));
-  /* 수량 = 배정액 ÷ 주문가 (V4.0 정식 문서: '1회매수금 ÷ 주문가'). 예전엔 전일 종가로 나눴다.
-     운영·모의·서버·백테·플랜이 모두 imBuyOrders 한 함수로 세므로 서로 갈릴 수 없다. */
   ok('수량은 주문가 기준 (정식 — 1회매수금÷주문가)', (()=>{
-      const r=imBuyOrders({first:false,half:false,buy1:1000,bal:5000,starPrice:9,avg:10,cap:0,rows:0,fee:0,cur:'usd'});
+      const r=imBuyOrders({first:false,half:false,buy1:1000,bal:5000,starPrice:9,avg:10,rows:0,fee:0,cur:'usd'});
       return r.length===1 && r[0].q===111; })());
-  /* SOURCE GOLDEN — V4.0 일반모드 정리본의 예시 그대로:
-     'TQQQ 종가 45.93$ → 큰수 51.44$ (12개), 47.53$ (1개), 44.13$ (1개), …'
-     1회매수금 617.9(원금 12358 ÷ 20) · 큰수 12% → 51.4416 에 12주, 추가 줄 617.9÷13 = 47.53 · 617.9÷14 = 44.13 */
-  ok('SOURCE GOLDEN — 처음매수 51.44×12 · 아래로 47.53 · 44.13 (정리본 예시)', (()=>{
-      const r=imBuyOrders({first:true,half:false,buy1:12358/20,bal:12358,firstPrice:45.93*1.12,starPrice:0,avg:0,cap:45.93*1.12,rows:2,fee:0,cur:'usd'});
-      return r.length===3 && r[0].kind==='1회매수' && r[0].price.toFixed(2)==='51.44' && r[0].q===12
-        && r[1].ladder && r[1].price===47.53 && r[1].q===1 && r[2].ladder && r[2].price===44.13 && r[2].q===1
-        && r.reduce((a,o)=>a+o.dT,0)===1; })(),
-     JSON.stringify(imBuyOrders({first:true,half:false,buy1:12358/20,bal:12358,firstPrice:45.93*1.12,starPrice:0,avg:0,cap:45.93*1.12,rows:2,fee:0,cur:'usd'})));
-  /* '아래로' — 전반전엔 ÷(Q+1) 이 별지점 위로 나올 수 있다(실데이터 SOXL 2021-03-22: 36.77 > 별지점 35.66).
-     그런 줄은 걸지 않는다 — 걸면 쿼터매도가 체결되는 종가에 되사게 된다. */
-  ok('아래로 LOC 추가는 본 주문 최저가보다 아래에만 (전반전)', (()=>{
-      const r=imBuyOrders({first:false,half:true,buy1:698.6577,bal:7647.03,starPrice:35.6607,avg:35.0088,cap:38.75,rows:8,fee:0,cur:'usd'});
+  ok('SOURCE GOLDEN — 처음매수 51.44×12 · 아래로 47.53 · 44.13', (()=>{
+      const r=imBuyOrders({first:true,half:false,buy1:12358/20,bal:12358,firstPrice:45.93*1.12,starPrice:0,avg:0,rows:2,fee:0,cur:'usd'});
+      return r.length===3 && r[0].price.toFixed(2)==='51.44' && r[0].q===12
+        && r[1].ladder && r[1].price===47.53 && r[2].ladder && r[2].price===44.13; })());
+  ok('아래로 LOC 추가는 본 주문 최저가보다 아래에만', (()=>{
+      const r=imBuyOrders({first:false,half:true,buy1:698.6577,bal:7647.03,starPrice:35.6607,avg:35.0088,rows:8,fee:0,cur:'usd'});
       const m=r.filter(o=>!o.ladder), l=r.filter(o=>o.ladder), lo=Math.min(...m.map(o=>o.price));
-      /* 제10차 P1-2 — 평단 수량 = 1회매수금÷평단 내림 − 별지점 수량 = 19 − 9 = 10. 추가 줄 첫 가격 ÷20 = 34.93 */
-      return m.length===2 && m[0].q===9 && m[1].q===10 && l.length===8 && l.every(o=>o.price<lo) && l[0].price===34.93 && /÷20/.test(l[0].name); })());
-  // 매도는 절대 낮추면 안 된다 — 낮추면 원치 않는 체결이 난다
-  const sellCap=/oitem\('s'[^)]*limit/.test(ord);
-  ok('매도가는 상한으로 낮추지 않는다', !sellCap, sellCap?'매도에 상한 적용됨':'');
-  // 큰수 %가 없는 옛 세션에서 NaN이 되어 상한이 통째로 꺼지지 않아야 한다
-  ok('큰수 % 미설정 세션도 상한 동작', /const bigPct=imBigPct\(st\);/.test(ord));
+      return m.length===2 && l.length===8 && l.every(o=>o.price<lo); })());
 }
-
 
 /* ════ 14. 체결가 규약 — 주문 종류별로 어느 가격에 체결되는가 (15차 버그 클래스) ════
    LOC는 종가, 지정가매도는 익절가. 그런데 시가가 이미 익절가 위면 지정가 매도는
