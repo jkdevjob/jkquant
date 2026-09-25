@@ -25,6 +25,25 @@ jobs:
           python -m py_compile scripts/collect_daytrading_data.py
           python -m py_compile scripts/analyze_vts_reconcile.py
 
+      - name: 데이트레이딩 스냅샷 품질 가드 검사
+        run: |
+          python - <<'PY'
+          from scripts.backtest_daytrading import split_primary_days
+          days=[
+              {"date":"2026-09-01","snapshotHm":955},
+              {"date":"2026-09-02","snapshotHm":1015},
+              {"date":"2026-09-03","snapshotHm":1016},
+              {"date":"2026-09-04","snapshotHm":1349},
+              {"date":"2026-09-05"},
+          ]
+          eligible,excluded=split_primary_days(days)
+          assert [x["date"] for x in eligible]==["2026-09-01","2026-09-02"]
+          assert [x["date"] for x in excluded]==["2026-09-03","2026-09-04","2026-09-05"]
+          assert excluded[0]["reason"]=="late_snapshot"
+          assert excluded[-1]["reason"]=="missing_snapshot_time"
+          print("✓ 10:15 이내만 primary validation에 포함")
+          PY
+
       - name: 연구 서버 JS 문법 검사
         run: |
           node --input-type=module --check < functions/api/_daytrading.js
