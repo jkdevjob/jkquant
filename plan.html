@@ -192,7 +192,7 @@ th:first-child,td:first-child{text-align:left}
 <body>
 <div class="wrap">
   <div class="top">
-    <div class="brand"><div class="logo">Asset Plan</div><h1>자산플랜 <span class="ver">v1.28.0</span></h1></div>
+    <div class="brand"><div class="logo">Asset Plan</div><h1>자산플랜 <span class="ver">v1.29.0</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
       <div class="jkmenu" id="jkmenuWrap">
@@ -693,9 +693,9 @@ const PATH_DEFAULTS={
 };
 const ASSET_STRATEGIES={
   5:{years:5,key:'ivsGuard',name:'5년 · 역분산 + Guard',risk:'최공격',desc:'TECL 역분산 + TQQQ SMA200 Guard'},
-  10:{years:10,key:'trendDip',name:'10년 · 추세 + 폭락 분할매수',risk:'공격',desc:'TQQQ 200일 추세 + RSI/ATH 3단계 폭락매수 + SGOV'},
-  15:{years:15,key:'shannon',name:'15년 · Shannon 밴드 리밸런싱',risk:'균형공격',desc:'TQQQ 50% + SGOV 50% · ±10%p 이탈 때만 원위치'},
-  20:{years:20,key:'dualMomentum',name:'20년 · 월간 듀얼모멘텀',risk:'장기성장',desc:'TECL↔TQQQ 상대·절대 모멘텀 + SGOV 대피'}
+  10:{years:10,key:'trendDip',name:'10년 · 추세 + 폭락 분할매수',risk:'공격',desc:'TQQQ SMA250 + RSI/ATH 3단계 폭락매수 + SGOV'},
+  15:{years:15,key:'shannon',name:'15년 · Shannon 밴드 리밸런싱',risk:'균형공격',desc:'TQQQ 60% + SGOV 40% · 40~80% 밴드 이탈 때 60:40 복원'},
+  20:{years:20,key:'dualMomentum',name:'20년 · 월간 듀얼모멘텀',risk:'장기성장',desc:'TECL↔TQQQ 9M/12M 모멘텀 + 12M 절대모멘텀 + SGOV'}
 };
 let activeHorizon=5,horizonRebalancePending=false;
 try{const hy=Number(localStorage.getItem('jkq_plan_horizon'));if([5,10,15,20].includes(hy))activeHorizon=hy;}catch(e){}
@@ -714,26 +714,26 @@ function renderHorizonCopy(){
     if($('alphaExplain'))$('alphaExplain').innerHTML='<strong>5년 매매법 · 역분산 + Guard</strong><br>TECL 70% 슬리브는 σ15 역분산으로 크기를 조절하고 목표와 17.5%p 이상 벌어질 때만 리밸런싱합니다. TQQQ 30%는 SMA200 ±1.5% Guard로 ON/OFF하며 남는 금액은 SGOV에 둡니다.';
     if($('alphaValidation'))$('alphaValidation').innerHTML='<b>5년 롤링 검증:</b> 127개 시작구간 · 중앙 CAGR 41.1% · 하위 10% CAGR 29.4% · 최악 CAGR 20.8% · 중앙 MDD -35.5% · 최악 MDD -47.4%.<span class="sub">업로드 시세 2010~2026 기준 과거 결과이며 미래 수익을 보장하지 않습니다.</span>';
   }else if(y===10){
-    setTxt('alphaKpi1Label','상승장 코어');setTxt('alphaKpi1Value','TQQQ 70%');setTxt('alphaKpi1Sub','종가 > SMA200');
-    setTxt('alphaKpi2Label','하락장 3단계');setTxt('alphaKpi2Value','20% → 35% → 50%');setTxt('alphaKpi2Sub','RSI35/30/25 + ATH -15/-25/-35%');
+    setTxt('alphaKpi1Label','상승장 코어');setTxt('alphaKpi1Value','TQQQ 80%');setTxt('alphaKpi1Sub','종가 > SMA250');
+    setTxt('alphaKpi2Label','하락장 3단계');setTxt('alphaKpi2Value','20% → 40% → 60%');setTxt('alphaKpi2Sub','RSI40/35/30 + ATH -12/-22/-32%');
     setTxt('alphaKpi3Label','대피자산');setTxt('alphaKpi3Value','SGOV');setTxt('alphaKpi3Sub','하락장 미투입금 보관');
     setTxt('alphaKpi4Label','전략 성격');setTxt('alphaKpi4Value','추세 + 역발상');setTxt('alphaKpi4Sub','상승장은 추종, 폭락은 단계매수');
-    if($('alphaExplain'))$('alphaExplain').innerHTML='<strong>10년 매매법 · TQQQ 추세 + 폭락 분할매수</strong><br>TQQQ 종가가 SMA200 위면 TQQQ 70% / SGOV 30%를 유지합니다. SMA200 아래로 내려가면 일단 위험노출을 줄이고, 같은 하락국면에서 RSI14와 ATH 낙폭이 동시에 깊어질 때 TQQQ 목표를 <b>20% → 35% → 50%</b>로 단계적으로 올립니다. 종가가 SMA200을 회복하면 다시 70% 코어로 복귀합니다.';
-    if($('alphaValidation'))$('alphaValidation').innerHTML='<b>10년 전략:</b> 5년 역분산/Guard와 다른 상태기계입니다. 상승장 추세추종과 하락장 3단계 역발상 매수를 결합합니다.<span class="sub">현재 파라미터는 1차 설계값이며 별도 장기 백테스트로 최적화해야 합니다.</span>';
+    if($('alphaExplain'))$('alphaExplain').innerHTML='<strong>10년 매매법 · TQQQ 추세 + 폭락 분할매수</strong><br>TQQQ 종가가 SMA250 위면 TQQQ 80% / SGOV 20%를 유지합니다. SMA250 아래로 내려가면 일단 위험노출을 줄이고, 같은 하락국면에서 RSI14와 ATH 낙폭이 동시에 깊어질 때 TQQQ 목표를 <b>20% → 40% → 60%</b>로 단계적으로 올립니다. 조건은 RSI <b>40/35/30</b>과 ATH 낙폭 <b>-12/-22/-32%</b>입니다. 종가가 SMA250을 회복하면 다시 80% 코어로 복귀합니다.';
+    if($('alphaValidation'))$('alphaValidation').innerHTML='<b>10년 백테스트 최적값:</b> SMA250 · 상승장 80% · 하락장 20/40/60% · RSI 40/35/30 · ATH -12/-22/-32%.<span class="sub">2010-03-12~2026-07-10 · 수수료 0.1% · 안전자산 0%/4% 민감도. 10년 롤링 76개 시작점의 하위10% CAGR 32.8~34.3%, 최악 CAGR 23.3~24.9%, MDD 약 -54.3%, 최대 회복 약 1.6년.</span>';
   }else if(y===15){
-    setTxt('alphaKpi1Label','기준비중');setTxt('alphaKpi1Value','TQQQ 50%');setTxt('alphaKpi1Sub','SGOV 50%와 쌍');
-    setTxt('alphaKpi2Label','리밸런싱 밴드');setTxt('alphaKpi2Value','40% ~ 60%');setTxt('alphaKpi2Sub','±10%p 이탈 시 50:50 복원');
+    setTxt('alphaKpi1Label','기준비중');setTxt('alphaKpi1Value','TQQQ 60%');setTxt('alphaKpi1Sub','SGOV 40%와 쌍');
+    setTxt('alphaKpi2Label','리밸런싱 밴드');setTxt('alphaKpi2Value','40% ~ 80%');setTxt('alphaKpi2Sub','밴드 이탈 시 60:40 복원');
     setTxt('alphaKpi3Label','예측 신호');setTxt('alphaKpi3Value','사용 안 함');setTxt('alphaKpi3Sub','SMA·RSI·모멘텀 없이 비중만 본다');
     setTxt('alphaKpi4Label','전략 성격');setTxt('alphaKpi4Value','Shannon');setTxt('alphaKpi4Sub','변동성 수확 · 저매수/고매도 자동화');
-    if($('alphaExplain'))$('alphaExplain').innerHTML='<strong>15년 매매법 · Shannon 밴드 리밸런싱</strong><br>TQQQ와 SGOV를 <b>50:50</b>으로 시작합니다. TQQQ 비중이 <b>40% 아래 또는 60% 위</b>로 벗어날 때만 다시 50:50으로 맞춥니다. 시장 방향을 예측하지 않고 변동으로 생긴 비중 차이를 이용해 많이 오른 쪽을 줄이고 덜 오른 쪽을 사는 전략입니다.';
-    if($('alphaValidation'))$('alphaValidation').innerHTML='<b>15년 전략:</b> 추세·RSI·변동성 예측을 쓰지 않는 임계값 리밸런싱입니다.<span class="sub">레버리지 ETF 특성상 장기 MDD가 클 수 있어 밴드·기준비중은 별도 백테스트 대상입니다.</span>';
+    if($('alphaExplain'))$('alphaExplain').innerHTML='<strong>15년 매매법 · Shannon 밴드 리밸런싱</strong><br>TQQQ와 SGOV를 <b>60:40</b>으로 시작합니다. TQQQ 비중이 <b>40% 아래 또는 80% 위</b>로 벗어날 때만 다시 60:40으로 맞춥니다. 시장 방향을 예측하지 않고 변동으로 생긴 비중 차이를 이용해 많이 오른 쪽을 줄이고 덜 오른 쪽을 사는 전략입니다.';
+    if($('alphaValidation'))$('alphaValidation').innerHTML='<b>15년 백테스트 최적값:</b> TQQQ 60% / SGOV 40% · 허용밴드 40~80%.<span class="sub">가용 전체기간 2010-03-12~2026-07-10 · 수수료 0.1% · 안전자산 0%/4% 민감도. CAGR 30.9~32.1%, 10년 롤링 하위10% CAGR 26.3~28.2%, MDD -57.6~-61.6%, 최대 회복 약 2.5년. 실제 15년 독립 시작구간 수가 적어 5·10년 롤링도 함께 사용했습니다.</span>';
   }else{
-    setTxt('alphaKpi1Label','월간 후보');setTxt('alphaKpi1Value','TECL vs TQQQ');setTxt('alphaKpi1Sub','6개월 + 12개월 상대모멘텀');
-    setTxt('alphaKpi2Label','절대모멘텀');setTxt('alphaKpi2Value','12M > 0 + SMA200');setTxt('alphaKpi2Sub','둘 다 탈락하면 SGOV 100%');
-    setTxt('alphaKpi3Label','선정 자산 비중');setTxt('alphaKpi3Value','60%');setTxt('alphaKpi3Sub','나머지 40% SGOV');
+    setTxt('alphaKpi1Label','월간 후보');setTxt('alphaKpi1Value','TECL vs TQQQ');setTxt('alphaKpi1Sub','9개월 30% + 12개월 70% 점수');
+    setTxt('alphaKpi2Label','절대모멘텀');setTxt('alphaKpi2Value','12M > 0');setTxt('alphaKpi2Sub','둘 다 음수면 SGOV 100%');
+    setTxt('alphaKpi3Label','선정 자산 비중');setTxt('alphaKpi3Value','40%');setTxt('alphaKpi3Sub','나머지 60% SGOV');
     setTxt('alphaKpi4Label','전략 성격');setTxt('alphaKpi4Value','Dual Momentum');setTxt('alphaKpi4Sub','월 1회 로테이션 · 추세 없으면 대피');
-    if($('alphaExplain'))$('alphaExplain').innerHTML='<strong>20년 매매법 · 월간 듀얼모멘텀</strong><br>매월 직전 월말 기준으로 TECL과 TQQQ의 <b>6개월·12개월 모멘텀</b>을 비교합니다. 12개월 수익률이 양수이고 SMA200 위인 후보 중 점수가 높은 한 종목만 선택해 <b>60%</b> 보유하고 40%는 SGOV에 둡니다. 두 후보가 모두 절대모멘텀 조건을 통과하지 못하면 SGOV 100%로 대피합니다.';
-    if($('alphaValidation'))$('alphaValidation').innerHTML='<b>20년 전략:</b> 매일 신호를 바꾸지 않고 완전히 다른 월간 상대·절대모멘텀 로테이션을 사용합니다.<span class="sub">실제 20년 레버리지 ETF 이력이 부족하므로 장기 프록시/부트스트랩 검증이 추가로 필요합니다.</span>';
+    if($('alphaExplain'))$('alphaExplain').innerHTML='<strong>20년 매매법 · 월간 듀얼모멘텀</strong><br>매월 직전 월말 기준으로 TECL과 TQQQ의 <b>9개월 모멘텀 30% + 12개월 모멘텀 70%</b> 점수를 비교합니다. <b>12개월 수익률이 양수</b>인 후보만 인정하고, 점수가 높은 한 종목을 <b>40%</b> 보유하며 나머지 60%는 SGOV에 둡니다. 두 후보가 모두 12개월 수익률이 음수면 SGOV 100%로 대피합니다.';
+    if($('alphaValidation'))$('alphaValidation').innerHTML='<b>20년 백테스트 최적값:</b> 9M×30% + 12M×70% · 12M 양수 필터 · 승자 40% / SGOV 60%.<span class="sub">실제 레버리지 ETF 이력이 20년에 못 미쳐 12개월 블록 부트스트랩 160경로×20년으로 보강했습니다. 안전자산 0%/4% 민감도에서 20년 CAGR 하위10% 6.1~9.0%, 중앙 13.4~16.4%, MDD 하위10% -46.6~-40.4%. 실제 가용구간 CAGR 14.4~17.3%, MDD -30.5~-27.2%.</span>';
   }
 }
 function setHorizon(years,refresh=true){
@@ -1500,10 +1500,10 @@ function _latestCompletedMonthIndex(rows,settledDate){
 }
 function _momentumPoint(rows,idx){
   if(idx<252)return null;
-  const p=+rows[idx].close,p126=+rows[idx-126].close,p252=+rows[idx-252].close,ma=indicatorSeries(rows.map(x=>+x.close),200)[idx];
-  if(!(p>0&&p126>0&&p252>0&&ma>0))return null;
-  const m6=p/p126-1,m12=p/p252-1,score=.5*m6+.5*m12;
-  return {date:rows[idx].date,p,m6,m12,score,ma,ok:m12>0&&p>ma};
+  const p=+rows[idx].close,p189=+rows[idx-189].close,p252=+rows[idx-252].close;
+  if(!(p>0&&p189>0&&p252>0))return null;
+  const m9=p/p189-1,m12=p/p252-1,score=.3*m9+.7*m12;
+  return {date:rows[idx].date,p,m9,m12,score,ok:m12>0};
 }
 function renderAlternativePlan(qTecl,qTqqq,qSgov){
   if(!qTecl||!qTqqq||!qSgov||!qTecl.settled||!qTqqq.settled||!qSgov.settled)return;
@@ -1515,41 +1515,41 @@ function renderAlternativePlan(qTecl,qTqqq,qSgov){
   const pxs={TECL:tp,TQQQ:qp,SGOV:sp},pos={TECL:tq,TQQQ:qq,SGOV:sq};
   let targetW={TECL:0,TQQQ:0,SGOV:1},need=false,meta='',decision='',chart1=[],chart2=[],c1='',c2='';
   if(activeHorizon===10){
-    const closes=qr.map(x=>+x.close),ma=indicatorSeries(closes,200),rs=rsiSeries(closes,14),i=qr.length-1,sma=ma[i];
+    const closes=qr.map(x=>+x.close),ma=indicatorSeries(closes,250),rs=rsiSeries(closes,14),i=qr.length-1,sma=ma[i];
     let ath=-Infinity,bearStart=-1,stage=0;
     for(let k=0;k<=i;k++){ath=Math.max(ath,closes[k]);if(k>0&&ma[k]!=null&&ma[k-1]!=null&&closes[k]<ma[k]&&closes[k-1]>=ma[k-1])bearStart=k;}
     const bull=sma>0&&qs>=sma;
-    if(!bull&&bearStart>=0){let mx=-Infinity;for(let k=0;k<bearStart;k++)mx=Math.max(mx,closes[k]);for(let k=bearStart;k<=i;k++){mx=Math.max(mx,closes[k]);const dd=closes[k]/mx-1,r=rs[k];if(r!=null&&r<=35&&dd<=-.15)stage=Math.max(stage,1);if(r!=null&&r<=30&&dd<=-.25)stage=Math.max(stage,2);if(r!=null&&r<=25&&dd<=-.35)stage=Math.max(stage,3);}}
-    const risk=bull?.70:[0,.20,.35,.50][stage];targetW={TECL:0,TQQQ:risk,SGOV:1-risk};
+    if(!bull&&bearStart>=0){let mx=-Infinity;for(let k=0;k<bearStart;k++)mx=Math.max(mx,closes[k]);for(let k=bearStart;k<=i;k++){mx=Math.max(mx,closes[k]);const dd=closes[k]/mx-1,r=rs[k];if(r!=null&&r<=40&&dd<=-.12)stage=Math.max(stage,1);if(r!=null&&r<=35&&dd<=-.22)stage=Math.max(stage,2);if(r!=null&&r<=30&&dd<=-.32)stage=Math.max(stage,3);}}
+    const risk=bull?.80:[0,.20,.40,.60][stage];targetW={TECL:0,TQQQ:risk,SGOV:1-risk};
     const curQ=qq*qs/total;need=tq>0||Math.abs(curQ-risk)>.05||horizonRebalancePending||(!tq&&!qq&&!sq);
     const dd=closes[i]/Math.max(...closes.slice(0,i+1))-1;
-    _setEvidence('SMA200 '+usd(sma),'RSI14 '+(rs[i]!=null?rs[i].toFixed(1):'—'),(dd*100).toFixed(1)+'%','단계 '+stage,['TQQQ 현재 '+(curQ*100).toFixed(1)+'% → 목표 '+(risk*100).toFixed(0)+'%','종가 '+usd(qs)+' / SMA200 '+usd(sma)]);
+    _setEvidence('SMA250 '+usd(sma),'RSI14 '+(rs[i]!=null?rs[i].toFixed(1):'—'),(dd*100).toFixed(1)+'%','단계 '+stage,['TQQQ 현재 '+(curQ*100).toFixed(1)+'% → 목표 '+(risk*100).toFixed(0)+'%','종가 '+usd(qs)+' / SMA200 '+usd(sma)]);
     setTxt('alphaEv1Label','TQQQ 추세');setTxt('alphaEv2Label','과매도');setTxt('alphaEv3Label','ATH 낙폭');setTxt('alphaEv4Label','폭락매수');
-    setTxt('alphaChart1Title','TQQQ RSI14 · 최근 120거래일');setTxt('alphaChart2Title','TQQQ 종가 vs SMA200');
+    setTxt('alphaChart1Title','TQQQ RSI14 · 최근 120거래일');setTxt('alphaChart2Title','TQQQ 종가 vs SMA250');
     const tail=Math.max(0,qr.length-120);chart1=rs.slice(tail).map(x=>x==null?50:x);chart2=closes.slice(tail);c1='RSI14';c2='TQQQ 종가';
-    meta='10년 · TQQQ '+(bull?'상승장 70%':'하락장 단계 '+stage+' · '+Math.round(risk*100)+'%')+' · SGOV '+Math.round((1-risk)*100)+'%';
-    decision=bull?'SMA200 위 상승장이라 TQQQ 70% 코어를 유지합니다.':'SMA200 아래 하락장 · 현재까지 충족한 폭락매수 단계 '+stage+'에 맞춰 TQQQ '+Math.round(risk*100)+'%만 보유합니다.';
+    meta='10년 · TQQQ '+(bull?'상승장 80%':'하락장 단계 '+stage+' · '+Math.round(risk*100)+'%')+' · SGOV '+Math.round((1-risk)*100)+'%';
+    decision=bull?'SMA250 위 상승장이라 TQQQ 80% 코어를 유지합니다.':'SMA250 아래 하락장 · 현재까지 충족한 폭락매수 단계 '+stage+'에 맞춰 TQQQ '+Math.round(risk*100)+'%만 보유합니다.';
   }else if(activeHorizon===15){
-    const cur=qq*qs/total,target=.50,lo=.40,hi=.60;need=tq>0||cur<lo||cur>hi||horizonRebalancePending||(!tq&&!qq&&!sq);
-    targetW=need?{TECL:0,TQQQ:.50,SGOV:.50}:{TECL:0,TQQQ:cur,SGOV:Math.max(0,1-cur)};
-    _setEvidence('50%','40~60%',(cur*100).toFixed(1)+'%',need?'리밸런싱':'유지',['중심 50%에서 '+((cur-.5)*100>=0?'+':'')+((cur-.5)*100).toFixed(1)+'%p','SMA·RSI·모멘텀 사용 안 함']);
+    const cur=qq*qs/total,target=.60,lo=.40,hi=.80;need=tq>0||cur<lo||cur>hi||horizonRebalancePending||(!tq&&!qq&&!sq);
+    targetW=need?{TECL:0,TQQQ:.60,SGOV:.40}:{TECL:0,TQQQ:cur,SGOV:Math.max(0,1-cur)};
+    _setEvidence('60%','40~80%',(cur*100).toFixed(1)+'%',need?'리밸런싱':'유지',['중심 60%에서 '+((cur-.6)*100>=0?'+':'')+((cur-.6)*100).toFixed(1)+'%p','SMA·RSI·모멘텀 사용 안 함']);
     setTxt('alphaEv1Label','TQQQ 중심비중');setTxt('alphaEv2Label','허용 밴드');setTxt('alphaEv3Label','현재 비중');setTxt('alphaEv4Label','판정');
-    setTxt('alphaChart1Title','Shannon 50:50 밴드');setTxt('alphaChart2Title','예측 신호 없음 · 비중만 판정');
-    chart1=[40,50,60,50,40,50,60];chart2=[50,50,50,50,50];c1='40~60% 밴드';c2='중심 50%';
-    meta='15년 · Shannon TQQQ/SGOV 50:50 · 허용밴드 40~60%';
-    decision=need?'TQQQ 비중이 밴드 밖이거나 전략을 전환했으므로 50:50으로 되돌립니다.':'TQQQ 비중이 40~60% 안이므로 아무 것도 하지 않습니다.';
+    setTxt('alphaChart1Title','Shannon 60:40 밴드');setTxt('alphaChart2Title','예측 신호 없음 · 비중만 판정');
+    chart1=[40,60,80,60,40,60,80];chart2=[60,60,60,60,60];c1='40~80% 밴드';c2='중심 60%';
+    meta='15년 · Shannon TQQQ/SGOV 60:40 · 허용밴드 40~80%';
+    decision=need?'TQQQ 비중이 밴드 밖이거나 전략을 전환했으므로 60:40으로 되돌립니다.':'TQQQ 비중이 40~80% 안이므로 아무 것도 하지 않습니다.';
   }else{
     const ti=_latestCompletedMonthIndex(tr,qTecl.settled.date),qi=_latestCompletedMonthIndex(qr,qTqqq.settled.date),tm=_momentumPoint(tr,ti),qm=_momentumPoint(qr,qi);
     let winner='SGOV';if(tm&&tm.ok&&qm&&qm.ok)winner=tm.score>=qm.score?'TECL':'TQQQ';else if(tm&&tm.ok)winner='TECL';else if(qm&&qm.ok)winner='TQQQ';
-    targetW=winner==='TECL'?{TECL:.60,TQQQ:0,SGOV:.40}:winner==='TQQQ'?{TECL:0,TQQQ:.60,SGOV:.40}:{TECL:0,TQQQ:0,SGOV:1};
+    targetW=winner==='TECL'?{TECL:.40,TQQQ:0,SGOV:.60}:winner==='TQQQ'?{TECL:0,TQQQ:.40,SGOV:.60}:{TECL:0,TQQQ:0,SGOV:1};
     const curT=tq*ts/total,curQ=qq*qs/total,desired=winner==='TECL'?curT:winner==='TQQQ'?curQ:0;
-    need=horizonRebalancePending||(winner==='TECL'?(qq>0||Math.abs(curT-.60)>.05):(winner==='TQQQ'?(tq>0||Math.abs(curQ-.60)>.05):(tq>0||qq>0)))||(!tq&&!qq&&!sq);
-    _setEvidence(tm?(tm.score*100).toFixed(1)+'%':'—',qm?(qm.score*100).toFixed(1)+'%':'—',winner,tm&&qm?tm.date:'—',['TECL: 6M '+(tm?(tm.m6*100).toFixed(1):'—')+'% · 12M '+(tm?(tm.m12*100).toFixed(1):'—')+'%','TQQQ: 6M '+(qm?(qm.m6*100).toFixed(1):'—')+'% · 12M '+(qm?(qm.m12*100).toFixed(1):'—')+'%']);
+    need=horizonRebalancePending||(winner==='TECL'?(qq>0||Math.abs(curT-.40)>.05):(winner==='TQQQ'?(tq>0||Math.abs(curQ-.40)>.05):(tq>0||qq>0)))||(!tq&&!qq&&!sq);
+    _setEvidence(tm?(tm.score*100).toFixed(1)+'%':'—',qm?(qm.score*100).toFixed(1)+'%':'—',winner,tm&&qm?tm.date:'—',['TECL: 9M '+(tm?(tm.m9*100).toFixed(1):'—')+'% · 12M '+(tm?(tm.m12*100).toFixed(1):'—')+'%','TQQQ: 9M '+(qm?(qm.m9*100).toFixed(1):'—')+'% · 12M '+(qm?(qm.m12*100).toFixed(1):'—')+'%']);
     setTxt('alphaEv1Label','TECL 모멘텀');setTxt('alphaEv2Label','TQQQ 모멘텀');setTxt('alphaEv3Label','이번달 승자');setTxt('alphaEv4Label','신호 월말');
     setTxt('alphaChart1Title','TECL 월간 모멘텀 점수');setTxt('alphaChart2Title','TQQQ 월간 모멘텀 점수');
-    chart1=tm?[tm.m12*100,tm.m6*100,tm.score*100]:[];chart2=qm?[qm.m12*100,qm.m6*100,qm.score*100]:[];c1='TECL 12M·6M·점수';c2='TQQQ 12M·6M·점수';
+    chart1=tm?[tm.m12*100,tm.m9*100,tm.score*100]:[];chart2=qm?[qm.m12*100,qm.m9*100,qm.score*100]:[];c1='TECL 12M·9M·점수';c2='TQQQ 12M·9M·점수';
     meta='20년 · 직전 월말 Dual Momentum · 승자 '+winner;
-    decision=winner==='SGOV'?'TECL과 TQQQ가 절대모멘텀 조건을 통과하지 못해 SGOV 100%로 대피합니다.':winner+'가 상대·절대모멘텀 승자라 60% 보유하고 SGOV 40%를 유지합니다.';
+    decision=winner==='SGOV'?'TECL과 TQQQ의 12개월 수익률이 모두 음수라 SGOV 100%로 대피합니다.':winner+'가 9M/12M 가중점수 승자라 40% 보유하고 SGOV 60%를 유지합니다.';
   }
   if($('alphaWeightChart'))$('alphaWeightChart').innerHTML=_planWeightSvg(chart1,c1);
   if($('alphaGuardChart'))$('alphaGuardChart').innerHTML=_planWeightSvg(chart2,c2);

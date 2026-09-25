@@ -7792,7 +7792,7 @@ console.log('\n[117] 자산플랜 v1.28.0 — 기간마다 완전히 다른 매�
   ok('5년 플랜 시작금 기본값은 $20,000', /startCapital:20000/.test(pl) && /aCash:20000/.test(pl));
   ok('화면 이름은 5년 자산플랜이 아니라 자산플랜',
      /<title>JK 퀀트 — 자산플랜<\/title>/.test(pl)
-     && /<div class="logo">Asset Plan<\/div><h1>자산플랜 <span class="ver">v1\.28\.0<\/span>/.test(pl)
+     && /<div class="logo">Asset Plan<\/div><h1>자산플랜 <span class="ver">v1\.29\.0<\/span>/.test(pl)
      && /<a href="\/plan" class="cur"><span class="mi">🧭<\/span>자산플랜<\/a>/.test(pl));
   ok('PATH A 균형성장 — TECL 70% N15 s0 55 밴드17.5 + TQQQ 30% SMA200 ±1.5',
      /alpha:\{teclWeight:\.70,guardWeight:\.30,ivsLook:15,ivsS0:\.55,ivsBand:\.175,guardMA:200,guardBand:\.015\}/.test(pl));
@@ -7812,18 +7812,21 @@ console.log('\n[117] 자산플랜 v1.28.0 — 기간마다 완전히 다른 매�
      && /15:\{years:15,key:'shannon'/.test(pl)
      && /20:\{years:20,key:'dualMomentum'/.test(pl)
      && /if\(activeHorizon!==5\)\{renderAlternativePlan/.test(pl));
-  ok('10년 — TQQQ SMA200 추세 + RSI\/ATH 3단계 폭락매수',
-     /r<=35&&dd<=-\.15/.test(pl) && /r<=30&&dd<=-\.25/.test(pl) && /r<=25&&dd<=-\.35/.test(pl)
-     && /const risk=bull\?\.70:\[0,\.20,\.35,\.50\]\[stage\]/.test(pl));
-  ok('15년 — Shannon 50:50 · 40~60% 밴드 밖에서만 복원',
-     /const cur=qq\*qs\/total,target=\.50,lo=\.40,hi=\.60/.test(pl)
-     && /targetW=need\?\{TECL:0,TQQQ:\.50,SGOV:\.50\}/.test(pl)
+  ok('10년 — TQQQ SMA250 추세 + RSI\/ATH 3단계 폭락매수 최적값',
+     /indicatorSeries\(closes,250\)/.test(pl)
+     && /r<=40&&dd<=-\.12/.test(pl) && /r<=35&&dd<=-\.22/.test(pl) && /r<=30&&dd<=-\.32/.test(pl)
+     && /const risk=bull\?\.80:\[0,\.20,\.40,\.60\]\[stage\]/.test(pl));
+  ok('15년 — Shannon 60:40 · 40~80% 밴드 밖에서만 복원 최적값',
+     /const cur=qq\*qs\/total,target=\.60,lo=\.40,hi=\.80/.test(pl)
+     && /targetW=need\?\{TECL:0,TQQQ:\.60,SGOV:\.40\}/.test(pl)
      && /SMA·RSI·모멘텀 사용 안 함/.test(pl));
-  ok('20년 — 직전 월말 TECL\/TQQQ 듀얼모멘텀 + 절대모멘텀 + SGOV',
+  ok('20년 — 직전 월말 9M\/12M 듀얼모멘텀 + 12M 절대모멘텀 + SGOV 최적값',
      /function _latestCompletedMonthIndex/.test(pl)
-     && /const m6=p\/p126-1,m12=p\/p252-1,score=\.5\*m6\+\.5\*m12/.test(pl)
-     && /ok:m12>0&&p>ma/.test(pl)
-     && /winner==='TECL'\?\{TECL:\.60,TQQQ:0,SGOV:\.40\}:winner==='TQQQ'\?\{TECL:0,TQQQ:\.60,SGOV:\.40\}:\{TECL:0,TQQQ:0,SGOV:1\}/.test(pl));
+     && /const m9=p\/p189-1,m12=p\/p252-1,score=\.3\*m9\+\.7\*m12/.test(pl)
+     && /ok:m12>0/.test(pl)
+     && /winner==='TECL'\?\{TECL:\.40,TQQQ:0,SGOV:\.60\}:winner==='TQQQ'\?\{TECL:0,TQQQ:\.40,SGOV:\.60\}:\{TECL:0,TQQQ:0,SGOV:1\}/.test(pl));
+  ok('10·15·20년 최적화 결과 문구가 화면에 고정',
+     /10년 백테스트 최적값/.test(pl) && /15년 백테스트 최적값/.test(pl) && /20년 백테스트 최적값/.test(pl));
   ok('PATH A 리밸런싱 근거 UI — σ15·목표\/현재·밴드 게이지·Guard 차트·판단문장',
      /id="alphaSigma"/.test(pl)
      && /id="alphaTargetW"/.test(pl)
