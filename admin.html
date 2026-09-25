@@ -358,9 +358,14 @@ function renderDefaults(el){
 }
 function paintDefaultTabs(){
   const t=$('cfgTabs'),b=$('cfgBody');if(!t||!b)return;
-  t.innerHTML=Object.entries(STRATEGY_DEFAULT_META).map(([k,m])=>'<button class="'+(k===defaultsTab?'on':'')+'" onclick="defaultsTab=\''+k+'\';paintDefaultTabs()">'+esc(m.name)+'</button>').join('');
+  t.innerHTML=Object.entries(STRATEGY_DEFAULT_META).map(([k,m])=>'<button class="'+(k===defaultsTab?'on':'')+'" onclick="switchDefaultsTab(\''+k+'\')">'+esc(m.name)+'</button>').join('');
   const m=STRATEGY_DEFAULT_META[defaultsTab],v=strategyDefaults[defaultsTab]||STRATEGY_DEFAULT_BUILTIN[defaultsTab];
   b.innerHTML='<div class="cfggrid">'+m.fields.map(f=>cfgFieldHtml(defaultsTab,f,v[f[0]])).join('')+'</div>';
+}
+function switchDefaultsTab(k){
+  if(k===defaultsTab)return;
+  readCurrentDefaultTab();
+  defaultsTab=k;paintDefaultTabs();
 }
 function readCurrentDefaultTab(){
   const m=STRATEGY_DEFAULT_META[defaultsTab],out={...(strategyDefaults[defaultsTab]||{})};
@@ -368,8 +373,9 @@ function readCurrentDefaultTab(){
     const [key,,type,opts]=f,el=$('cfg_'+defaultsTab+'_'+key);if(!el)continue;
     let v=el.value;
     const sample=STRATEGY_DEFAULT_BUILTIN[defaultsTab][key];
-    if(type==='number'||typeof sample==='number')v=Number(v);
-    else if(typeof sample==='boolean')v=(v==='true');
+    if(type==='number'||typeof sample==='number'){
+      const n=Number(v); v=Number.isFinite(n)?n:sample;
+    }else if(typeof sample==='boolean')v=(v==='true');
     if(type==='select'&&opts){
       const hit=opts.find(o=>String(o[0])===String(el.value));if(hit)v=hit[0];
     }
