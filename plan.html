@@ -192,7 +192,7 @@ th:first-child,td:first-child{text-align:left}
 <body>
 <div class="wrap">
   <div class="top">
-    <div class="brand"><div class="logo">Asset Plan</div><h1>자산플랜 <span class="ver">v1.31.2</span></h1></div>
+    <div class="brand"><div class="logo">Asset Plan</div><h1>자산플랜 <span class="ver">v1.31.3</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
       <div class="jkmenu" id="jkmenuWrap">
@@ -818,6 +818,21 @@ function ensureLiveBoxes(){
   if(!Array.isArray(liveState.inf.sessions))liveState.inf.sessions=[];
   if(!liveState.vr)liveState.vr={sessions:[],active:null};
   if(!Array.isArray(liveState.vr.sessions))liveState.vr.sessions=[];
+}
+/* 운영화면과 같은 1회성 무매 설정 마이그레이션 마커를 공유한다.
+   기존 계정/브라우저에 남은 큰수·리버스 gap·하방 LOC 줄 수를 15/0/3으로 한 번 맞춘다. */
+const INF_DEFAULTS_POLICY_VER=1;
+function migrateLiveInfOperatingDefaults(){
+  if(!liveState||!liveState.inf||!Array.isArray(liveState.inf.sessions))return false;
+  if((+liveState._infDefaultsPolicyVer||0)>=INF_DEFAULTS_POLICY_VER)return false;
+  for(const x of liveState.inf.sessions){
+    const st=x&&x.settings;if(!st)continue;
+    st.big=PATH_DEFAULTS.classic.infBig;
+    st.revGap=0;
+    st.rows=PATH_DEFAULTS.classic.infRows;
+  }
+  liveState._infDefaultsPolicyVer=INF_DEFAULTS_POLICY_VER;
+  return true;
 }
 function planEligibleSessions(box,ticker){
   if(!(box&&Array.isArray(box.sessions)))return [];
@@ -1766,7 +1781,9 @@ async function loadOperatingState(user){
   else if(cloud&&cloud.inf&&cloud.vr){liveState=cloud;liveStateSource='클라우드 운영데이터';}
   else if(local){liveState=local;liveStateSource='이 기기 운영데이터';}
   else{liveState=null;liveStateSource='운영데이터 없음';}
-  ensureLiveBoxes();renderSessionSelectors();
+  ensureLiveBoxes();
+  if(migrateLiveInfOperatingDefaults())await saveOperatingState();
+  renderSessionSelectors();
 }
 async function refreshLive(){
   if(liveBusy)return;liveBusy=true;$('liveRefresh').disabled=true;$('liveSync').textContent='운영데이터와 확정 일봉을 읽는 중…';liveQuotes={};
@@ -2203,7 +2220,11 @@ async function cloudLoad(user){
     }else if(local){
       $("saveState").textContent="이 기기 저장값 유지";
     }
-    if(d.state&&d.state.inf&&d.state.vr){liveState=d.state;liveStateSource="클라우드 운영데이터";}
+    if(d.state&&d.state.inf&&d.state.vr){
+      liveState=d.state;liveStateSource="클라우드 운영데이터";
+      ensureLiveBoxes();
+      if(migrateLiveInfOperatingDefaults())await saveOperatingState();
+    }
   }catch(e){}
 }
 function userBadge(user){
