@@ -187,7 +187,7 @@ canvas{display:block;width:100%;height:auto}
 
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Morning Scalping</div><h1>JK <span class="v">퀀트</span> 단타 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="scVer">v1.16.6</span></h1></div>
+    <div><div class="kicker">Morning Scalping</div><h1>JK <span class="v">퀀트</span> 단타 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="scVer">v1.17.0</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -283,7 +283,7 @@ canvas{display:block;width:100%;height:auto}
     <h3><span class="dot"></span>🔥 실시간 시초가 돌파 감시 <span class="sub" style="font-weight:600">갭 + 첫고점 + 눌림 + 재돌파 + 수급</span></h3>
     <p class="lead">첫 3분 고점을 확정한 뒤 <b>최초 돌파 → 0.3~1.0% 눌림 → 시초가 지지 → 전고점 재돌파</b>를 확인하고,
       재돌파 시 <b>1분 거래량과 추정 거래대금이 다시 붙는 종목</b>만 후보로 표시한다. 조건 충족 시 Telegram으로 한 번 알린다.</p>
-    <div class="warn" style="margin-bottom:10px"><b>서버 자동감시:</b> 매 영업일 09:00~09:30에는 웹페이지를 닫아도 Cloudflare 서버가 Top100을 매분 검사한다. <b>기준전략만 Telegram 매수·매도 알림</b>을 보내고, 개선후보들은 같은 시점에 <b>그림자 신호</b>로 병렬 기록한다. 09:31에는 기준전략 결과와 그림자전략 비교를 저장하며, 장기 백테스트에는 매일 누적한다.</div>
+    <div class="warn" style="margin-bottom:10px"><b>서버 자동감시 + VTS 병행체결:</b> 매 영업일 09:00~09:30에는 웹페이지를 닫아도 Cloudflare 서버가 Top100을 매분 검사한다. 기준전략 신호가 발생하면 <b>내부 모의체결 기준값을 기록하면서 한국투자 VTS에 시장가 모의주문도 자동 제출</b>하고 Telegram 매수·매도 알림을 보낸다. 주문은 5개 감시 shard에서 직접 쏘지 않고 한 실행기로 모아 순차 처리해 VTS 호출 제한을 피한다. 개선후보들은 주문하지 않고 그림자 신호로만 병렬 기록한다.</div>
     <div class="row" style="align-items:flex-end;margin-bottom:8px">
       <div class="fld"><label>감시 유니버스</label><select id="ob_live_n"><option>30</option><option selected>50</option><option>100</option></select></div>
       <button class="prim" id="obLiveBtn" onclick="toggleOpeningLive()">▶ 시초가 감시 시작</button>
@@ -306,13 +306,14 @@ canvas{display:block;width:100%;height:auto}
   </div>
 
   <div class="card">
-    <h3><span class="dot"></span>🔎 한투 VTS 체결 대조 <span class="sub" style="font-weight:600">읽기전용 · 내부 모의체결 vs 이미 존재하는 모의계좌 체결</span></h3>
-    <p class="lead">오늘 내부 시초가 모의매매와 <b>한국투자 모의투자 계좌에 이미 체결된 주문</b>을 종목·시각으로 대조해
-      진입/청산 슬리피지와 증권사가 응답한 추정 제비용을 비교한다. 이 기능은 <b>주문을 생성·정정·취소하지 않는다.</b></p>
+    <h3><span class="dot"></span>🔎 한투 VTS 자동 병행체결 대조 <span class="sub" style="font-weight:600">대조 화면은 읽기전용 · 내부 모의체결 vs VTS 모의체결</span></h3>
+    <p class="lead">서버 자동감시가 기준전략 신호에 맞춰 <b>내부 모의체결과 한국투자 VTS 시장가 주문을 병행</b>한다.
+      여기서는 이미 제출된 VTS 주문/체결을 읽어 내부 기준가와 대조해 <b>슬리피지·부분/미체결·KIS 추정 제비용</b>을 측정한다.
+      아래 대조 기능 자체는 <b>주문을 생성·정정·취소하지 않는다.</b></p>
     <div class="row" style="margin-bottom:8px">
       <button class="ghostbtn" onclick="loadVtsReconcile('opening')">🔄 오늘 VTS 대조</button>
       <button class="ghostbtn" onclick="loadVtsResearch('opening')">📊 누적 실행품질</button>
-      <span class="sub" id="ob_vts_msg">한투 VTS에 이미 존재하는 체결만 읽어 비교합니다.</span>
+      <span class="sub" id="ob_vts_msg">자동 제출된 VTS 모의체결을 읽어 내부 모의체결과 비교합니다.</span>
     </div>
     <div id="ob_vts_body"></div>
     <div id="ob_vts_research" style="margin-top:10px"></div>
@@ -1191,6 +1192,9 @@ async function loadVtsReconcile(strategy){
       '<div class="outbox"><div class="ol">매칭률</div><div class="ov">'+Number(s.matchRatePct||0).toFixed(0)+'%</div></div>'+
       '<div class="outbox"><div class="ol">평균 진입 슬리피지 비용</div><div class="ov">'+pct(s.avgEntrySlippageCostPct)+'</div></div>'+
       '<div class="outbox"><div class="ol">평균 청산 슬리피지 비용</div><div class="ov">'+pct(s.avgExitSlippageCostPct)+'</div></div>'+
+      '<div class="outbox"><div class="ol">왕복 슬리피지 중앙값</div><div class="ov">'+pct(s.medianRoundTripSlippageCostPct)+'</div></div>'+
+      '<div class="outbox"><div class="ol">왕복 슬리피지 P95</div><div class="ov">'+pct(s.p95RoundTripSlippageCostPct)+'</div></div>'+
+      '<div class="outbox"><div class="ol">부분/미체결</div><div class="ov">'+Number(s.partialFillOrderCount||0)+' / '+Number(s.unfilledOrderCount||0)+'</div></div>'+
       '<div class="outbox"><div class="ol">관측 총 마찰비용</div><div class="ov">'+pct(s.avgObservedExecutionDragPct)+'</div></div>'+
       '<div class="outbox"><div class="ol">0.25% 가정과 차이</div><div class="ov">'+pct(s.frictionGapVsInternal025Pct)+'</div></div>'+
       '<div class="outbox"><div class="ol">평균 진입 주문지연(근사)</div><div class="ov">'+sec(s.avgEntryOrderLagSecApprox)+'</div></div>'+
@@ -1210,9 +1214,10 @@ async function loadVtsReconcile(strategy){
       '<td>'+won(x.vtsBrokerEstimatedCosts)+'</td>'+
       '<td class="'+((x.vtsNetPnlPct||0)>=0?'win':'loss')+'">'+pct(x.vtsNetPnlPct)+'</td></tr>').join('')+
       '</tbody></table></div>'+
-      '<div class="warn" style="margin-top:10px"><b>읽기전용:</b> 이 표는 한투 VTS에 이미 존재하는 체결만 읽어서 비교합니다. '+
+      '<div class="warn" style="margin-top:10px"><b>측정 해석:</b> 이 표는 한투 VTS에 이미 존재하는 주문/체결만 읽어서 비교합니다. '+
       '슬리피지 비용은 매수는 VTS체결가−내부기준가, 매도는 내부기준가−VTS체결가 방향으로 계산합니다. '+
-      '증권사 제비용은 KIS 체결조회 응답값을 사용하며 모의투자 조건이 실계좌 수수료와 동일하다고 가정하지 않습니다. '+
+      '<b>KIS 제비용은 당일 체결조회가 주는 prsm_tlex_smtl(추정 제비용)을 사용</b>하며, VTS 모의체결과 실계좌의 실제 거래소 체결·수수료율이 동일하다고 가정하지 않습니다. '+
+      '따라서 여기서 검증되는 것은 “내부 모의체결 가정 ↔ KIS VTS 시뮬레이션”의 차이입니다. '+
       '주문지연은 내부 기준 분의 시작시각→KIS 주문시각 근사이며, 주문→통보 지연은 KIS ord_tmd→infm_tmd로 계산합니다. 정확한 거래소 체결 latency는 아닙니다.</div>';
   }catch(e){
     msg.textContent='VTS 대조 실패';
