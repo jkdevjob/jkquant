@@ -537,7 +537,7 @@ try{ if(localStorage.getItem('qcockpit_hadUser')==='1') document.documentElement
 </div>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.98.1</span></h1></div>
+    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.98.2</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -1646,7 +1646,7 @@ if(/^\/paper\/?$/.test(location.pathname)){
   <footer>
     <strong>JK 퀀트</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.98.1</b> · 2026-09-25</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.98.2</b> · 2026-09-25</div>
   </footer>
 </div>
 
@@ -9175,10 +9175,10 @@ const SIM_KEYS={
   // big/rows/revGap 이 빠지면 설정을 바꿔도 옛 모의 기록을 그대로 쓰게 된다.
   inf :['ticker','div','target','big','rows','revGap','reverse','tgtDyn','principal','compound','divmode','engine','shortMA','loPct'],
   vr  :['ticker','mode','formula','g','add','initAmt','autoCyc','band','vrModel','divmode'],
-  ma  :['ticker','buy','sell','park','principal'],
-  ivs :['ticker','mode','s0','look','band','park','principal','monthly'],
+  ma  :['ticker','buy','sell','park','principal','divmode'],
+  ivs :['ticker','mode','s0','look','band','park','principal','monthly','divmode'],
   dca :['ticker','mode','freq','amount','dipMul','reinv'],
-  asap:['ticker','base','mid','deep'],
+  asap:['ticker','base','mid','deep','divmode'],
 };
 /* 기록을 만들 때 쓴 설정의 지문. 이걸 세션에 찍어 두면
    설정 저장·기기 동기화·가져오기 등 어떤 경로로 바뀌어도 어긋난 걸 스스로 안다. */
