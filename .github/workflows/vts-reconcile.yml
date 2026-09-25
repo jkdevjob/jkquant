@@ -75,7 +75,7 @@ jobs:
             READY=0
             for attempt in $(seq 1 12); do
               STATUS=$(curl -sS --max-time 45 -o "$TMP" -w '%{http_code}'                 -H "x-monitor-key: $KEY"                 "$BASE/api/vts-reconcile?strategy=$STRAT&date=$DATE" || true)
-              if [ "$STATUS" = "200" ] && jq -e '.ok == true and .env == "vts" and .mode == "read-only"' "$TMP" >/dev/null 2>&1; then
+              if [ "$STATUS" = "200" ] && jq -e '.ok == true and .env == "vts" and .mode == "read-only" and (.summary | type) == "object"' "$TMP" >/dev/null 2>&1; then
                 READY=1
                 break
               fi
