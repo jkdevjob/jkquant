@@ -7880,7 +7880,7 @@ console.log('\n[117] 자산플랜 v1.28.0 — 기간마다 완전히 다른 매�
      && /function alphaFee\(q,p\)\{const gross=Math\.max\(0,\(\+q\|\|0\)\*\(\+p\|\|0\)\);return gross<=10\?0:Math\.floor\(gross\*ALPHA_FEE_RATE\*100\)\/100;\}/.test(pl));
   ok('PATH B 균형성장 배분 — SOXL 무매 50% + TECL VR 50%',
      /a=\[50,50,0\],inf=Math\.round\(total\*PATH_DEFAULTS\.classic\.infWeight\)/.test(pl)
-     && /classic:\{infWeight:\.50,vrWeight:\.50,infDiv:20,infTarget:20,infBig:12\.5,infReverse:false,infRows:12,vrG:11,vrBand:35,vrFormula:'basic'/.test(pl)
+     && /classic:\{infWeight:\.50,vrWeight:\.50,infDiv:20,infTarget:20,infBig:15,infReverse:false,infRows:3,vrG:11,vrBand:35,vrFormula:'basic'/.test(pl)
      && /ticker:'SOXL',div:PATH_DEFAULTS\.classic\.infDiv,target:PATH_DEFAULTS\.classic\.infTarget,big:PATH_DEFAULTS\.classic\.infBig,reverse:PATH_DEFAULTS\.classic\.infReverse,compound:true/.test(pl)
      && /rows:PATH_DEFAULTS\.classic\.infRows/.test(pl));
   ok('PATH B TECL VR — Basic G11 ±35 · 초기주식60\/Pool40 · v9',
@@ -8505,8 +8505,8 @@ console.log('\n[119] 제10차 — 라오어 V4.0 원문 직접 대조 (SOURCE GO
        V({...base,big:10}).length===0 && V({...base,big:12}).length===0 && V({...base,big:15}).length===0
        && /큰수 9%\(원문 10~15% 밖\)/.test(V({...base,big:9}).join()) && /큰수 20%\(원문 10~15% 밖\)/.test(V({...base,big:20}).join()));
     ok('제10차 P1-5 · 앱·백테 판정이 같은 글자', extractFn(idx,'function imVariantOf(cfg)')===extractFn(bt,'function imVariantOf(cfg)')); }
-  ok('제10차 P1-3 · 아래로 LOC 추가는 정식, 줄 수 8 은 JKQuant 구현값이라고 적는다 (설정·주문표)',
-     /줄 수 8은 JKQuant 기본값\(원문에 개수 없음\)/.test(idx) && /줄 수 \$\{n\}줄은 <b>JKQuant 구현값<\/b>/.test(idx)
+  ok('운영 기본값 · 큰수 15 / 리버스 gap 0 / 아래로 LOC 3줄을 사용한다',
+     /const IM_BIG_DEFAULT=15;/.test(idx) && /const REV_GAP_DEF=0;/.test(idx) && /const IM_ROWS_DEFAULT=3;/.test(idx) && /줄 수 3은 JKQuant 기본값\(원문에 개수 없음\)/.test(idx) && /줄 수 \$\{n\}줄은 <b>JKQuant 구현값<\/b>/.test(idx)
      && !/V4\.0 정식 구성입니다/.test(idx) && !/V4\.0 정식 · 1회매수금÷\(수량\+k\) · 0이면/.test(idx));
   ok('제10차 P2-6 · 리버스 매수 −0.01 을 공식 확정이라 적지 않는다 (주문표·설정·플랜)',
      !/'공식 기본: 별지점 −\$0\.01'/.test(idx) && /원문은 \\'별지점 아래\\' — −0\.01 은 일반모드 규약을 따른 구현값/.test(idx)
