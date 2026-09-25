@@ -5,6 +5,9 @@ on:
     # GitHub Actions cron is UTC. 00:00 UTC = 09:00 KST.
     - cron: "0 0 * * *"
   workflow_dispatch:
+  push:
+    paths:
+      - ".github/job-alert-smoke-trigger"
 
 permissions:
   contents: read
@@ -14,7 +17,43 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  smoke-test:
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Send Telegram smoke test
+        env:
+          AUTOTRADE_KEY: ${{ secrets.AUTOTRADE_KEY }}
+        run: |
+          python - <<'PY'
+          import json
+          import os
+          import urllib.request
+
+          payload = {
+              "text": "✅ <b>jkquant 공고 알림 테스트</b>\n\n<b><a href=\"https://www.jobkorea.co.kr/\">[테스트] 공고명 링크 클릭 테스트</a></b>\n공고 제목을 누르면 해당 공고로 이동하도록 변경했습니다.",
+              "count": 1,
+          }
+          req = urllib.request.Request(
+              "https://jkquant.pages.dev/api/job-alert",
+              data=json.dumps(payload, ensure_ascii=False).encode("utf-8"),
+              headers={
+                  "content-type": "application/json",
+                  "x-monitor-key": os.environ["AUTOTRADE_KEY"],
+              },
+              method="POST",
+          )
+          with urllib.request.urlopen(req, timeout=30) as response:
+              body = response.read().decode("utf-8")
+              print(body)
+              data = json.loads(body)
+              if not data.get("ok"):
+                  raise SystemExit("Telegram smoke test failed: " + body)
+          PY
+
   search-and-notify:
+    if: github.event_name != 'push'
     runs-on: ubuntu-latest
     timeout-minutes: 10
 
