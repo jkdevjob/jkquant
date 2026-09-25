@@ -9,7 +9,6 @@ from html import escape
 from pathlib import Path
 from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
-import requests
 from ddgs import DDGS
 
 CACHE_DIR = Path(".job-alert-cache")
