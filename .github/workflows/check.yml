@@ -57,6 +57,25 @@ jobs:
           console.log('✓ VTS 대조 경로 read-only / VTS-only');
           NODE
 
+      - name: 단타 KIS는 VTS 전용인지 검사
+        run: |
+          node - <<'NODE'
+          const fs=require('fs');
+          const s=fs.readFileSync('scalping.html','utf8');
+          let fail=0;
+          const must=[
+            ["body:JSON.stringify({env:'vts'",'주문 body에 env=vts 명시'],
+            ["if(KIScfg.env!=='vts')",'실계좌 UI 하드블록'],
+            ["/api/kis?op=config&env=vts&market=kr",'VTS config 명시'],
+            ["/api/kis?op=balance&env=vts&market=kr",'VTS balance 명시']
+          ];
+          for(const [needle,label] of must){
+            if(!s.includes(needle)){ console.error('✗ '+label+' 없음'); fail++; }
+          }
+          if(fail)process.exit(1);
+          console.log('✓ scalping KIS path is explicitly VTS-only');
+          NODE
+
       - name: 전략 SSOT 체크 (문서 기준값·규약 불변식)
         run: |
           node -e "
