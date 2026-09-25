@@ -32,6 +32,7 @@ jobs:
           node --input-type=module --check < functions/api/daytrading-summary.js
           node --input-type=module --check < functions/api/vts-reconcile.js
           node --input-type=module --check < functions/api/vts-research.js
+          node --input-type=module --check < functions/api/vts-summary.js
 
       - name: VTS 대조는 읽기전용인지 검사
         run: |
