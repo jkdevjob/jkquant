@@ -5,9 +5,6 @@ on:
     # GitHub Actions cron is UTC. 00:00 UTC = 09:00 KST.
     - cron: "0 0 * * *"
   workflow_dispatch:
-  push:
-    paths:
-      - ".github/job-alert-smoke-trigger"
 
 permissions:
   contents: read
@@ -17,38 +14,7 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  smoke-test:
-    if: github.event_name == 'push'
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    steps:
-      - name: Send Telegram smoke test
-        env:
-          AUTOTRADE_KEY: ${{ secrets.AUTOTRADE_KEY }}
-        run: |
-          if [ -z "$AUTOTRADE_KEY" ]; then
-            echo "AUTOTRADE_KEY Secret 이 없습니다."
-            exit 1
-          fi
-          cat > smoke-payload.json <<'JSON'
-          {
-            "text": "✅ <b>jkquant 공고 알림 테스트</b>\n\n<b><a href=\"https://www.jobkorea.co.kr/\">[테스트] 공고명 링크 클릭 테스트</a></b>\n공고 제목을 누르면 해당 공고로 이동하도록 변경했습니다.",
-            "count": 1
-          }
-          JSON
-          code=$(curl -sS -o smoke-response.json -w '%{http_code}' --max-time 30 \
-            -X POST \
-            -H "x-monitor-key: $AUTOTRADE_KEY" \
-            -H "content-type: application/json" \
-            --data-binary @smoke-payload.json \
-            "https://jkquant.pages.dev/api/job-alert")
-          echo "HTTP $code"
-          cat smoke-response.json || true
-          if [ "$code" != "200" ]; then exit 1; fi
-          jq -e '.ok == true' smoke-response.json >/dev/null
-
   search-and-notify:
-    if: github.event_name != 'push'
     runs-on: ubuntu-latest
     timeout-minutes: 10
 
@@ -72,7 +38,7 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install "ddgs>=9,<10" "requests>=2.32,<3"
+          pip install "ddgs>=9,<10"
 
       - name: Search jobs and send Telegram
         env:
