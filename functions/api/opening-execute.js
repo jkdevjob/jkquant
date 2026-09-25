@@ -1,6 +1,7 @@
 // Cloudflare Pages Function — POST /api/opening-execute
 // 시초가 기준전략 신호를 내부 모의체결 기준값과 함께 기록하면서 KIS VTS 시장가 주문을 순차 전송한다.
 // 실계좌 경로는 없다. 5개 감시 shard가 병렬로 계산한 이벤트를 workflow가 한 번에 모아 이 endpoint로 보낸다.
+// 체결 후 수수료·제세금은 이 endpoint에서 추정하지 않고 vts-reconcile이 KIS 당일 체결조회 응답으로 측정한다.
 
 const JH={"Content-Type":"application/json; charset=utf-8","Cache-Control":"no-store"};
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
