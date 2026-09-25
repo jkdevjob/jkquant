@@ -8891,11 +8891,11 @@ console.log('\n[124] 5년 플랜 v1.26.4 — 현재계좌 실시간 평가·초�
        && new RegExp('id="alphaAcct'+x+'Mv"').test(pl))
      && /const accountRows=\[\['TECL','tecl','avgTecl'\],\['TQQQ','tqqq','avgTqqq'\],\['SGOV','sgov','avgSgov'\]\]/.test(pl)
      && /ret=\(q>0&&px>0&&Number\.isFinite\(avg\)&&avg>0\)\?\(px\/avg-1\)\*100:null/.test(pl));
-  ok('현재계좌 합계 — 보유원가·현재평가액·평가손익·현금·총자산·전체손익률',
+  ok('현재계좌 합계 — 보유원가·현재평가액·평가손익·현금·총자산·평가손익률(보유분 — 매도 뒤 실현분은 안 든다 · [128])',
      /id="alphaCostTotal"/.test(pl)
      && /<div class="k">현재평가액<\/div><div class="v" id="alphaMarketTotal">/.test(pl)
      && /id="alphaPnlTotal"/.test(pl)
-     && /<div class="k">전체 손익률<\/div><div class="v" id="alphaReturnTotal">/.test(pl)
+     && /<div class="k">평가손익률 \(보유분\)<\/div><div class="v" id="alphaReturnTotal">/.test(pl)
      && /id="alphaAcctCash"/.test(pl)
      && /id="alphaAssetTotal"/.test(pl)
      && /const assetTotal=marketTotal\+S\.cash,retTotal=costTotal>0\?pnlTotal\/costTotal\*100:null/.test(pl));
@@ -8903,14 +8903,14 @@ console.log('\n[124] 5년 플랜 v1.26.4 — 현재계좌 실시간 평가·초�
      /const usd2=v=>"\$"\+\(Number\(v\)\|\|0\)\.toLocaleString\("en-US",\{minimumFractionDigits:2,maximumFractionDigits:2\}\)/.test(pl)
      && /function alphaAvgText\(q,avg\)\{return q>0\?\(Number\.isFinite\(avg\)\?'평단 '\+usd2\(avg\)/.test(pl)
      && /\$\('alphaAcctCash'\)\.textContent=usd2\(S\.cash\)/.test(pl)
-     && /\(L&&L\.hasLivePrice\?'실시간 ':'확정종가 '\)\+usd2\(px\)/.test(pl)
+     && /\(L&&L\.hasLivePrice\?\(L\.marketState==='REGULAR'\?'실시간 ':'최근가 '\):'확정종가 '\)\+usd2\(px\)/.test(pl)
      && /'평가금액 '\+usd2\(mv\)/.test(pl)
      && /\$\('alphaAssetTotal'\)\.textContent=usd2\(assetTotal\)/.test(pl));
-  ok('시세를 받은 뒤 현재계좌를 다시 렌더링하고 실시간/확정종가를 구분',
+  ok('시세를 받은 뒤 현재계좌를 다시 렌더링하고 실시간(정규장)/최근가/확정종가를 구분',
      /renderAlphaPlan\(qv,qt,sgov\);\s*renderAlphaLedger\(\);/.test(pl)
      && /L&&\+L\.price>0\?\+L\.price:\(L&&L\.settled\?\+L\.settled\.close:0\)/.test(pl)
      && /hasLivePrice:j\.price!=null&&\+j\.price>0/.test(pl)
-     && /L&&L\.hasLivePrice\?'실시간 ':'확정종가 '/.test(pl));
+     && /L&&L\.hasLivePrice\?\(L\.marketState==='REGULAR'\?'실시간 ':'최근가 '\):'확정종가 '/.test(pl));
   ok('A안 실전 수수료는 토스 미국주식 0.1%로 백테스트 FEE 0.25%와 분리',
      /const FEE=0\.0025;\s*const ALPHA_FEE_RATE=0\.001/.test(pl)
      && /function alphaFee\(q,p\)/.test(pl)
@@ -9492,6 +9492,86 @@ console.log('\n[127] 제14차 — 무매 전량 익절 뒤 같은 날 LOC 재매
 
   Object.assign(global,{imReverse:sv.r, imFill:sv.f, imCostOn:sv.c, imTgtDyn:sv.t, imRevGap:sv.g});
   delete DAYS[TK]; delete M[TK];
+}
+
+/* ════ 128. 자산플랜 검증 후속 — 20년 월말 신호 · 장부 현금 기록(배당·입출금) · 표시 문구 ════
+   ① 20년 듀얼모멘텀은 '직전 월말' 종가로 판정한다. 확정 봉이 그달 마지막 평일이어도 그달을 미완료로 봐서,
+      새 달 첫 봉이 확정될 때까지 하루 늦게 신호를 바꿨다(새 달 첫 거래일 주문이 지지난달 월말 기준).
+   ② 장부에 배당·입금·출금을 적을 곳이 없어 SGOV 분배금만큼 앱 현금이 계좌보다 계속 작았다(20년 플랜은 SGOV 60%).
+      입금은 목표 진행률에서 성장으로 세지 않는다. 삭제도 현금 부족을 키우면 막는다(체결 저장·수정과 같은 규칙).
+   ③ 표시 — 10년 근거 칸이 SMA250 값을 'SMA200' 으로 · '전체 손익률' 은 보유분 평가손익률 · 장이 닫혀도 '실시간'. */
+console.log('\n[128] 자산플랜 검증 후속 — 20년 월말 신호 · 장부 현금 기록 · 표시 문구');
+{
+  const pl=fs.readFileSync(__d+'/plan.html','utf8');
+  /* ① 직전 월말 — 평일 자료를 만들어 확정 봉 날짜마다 어느 달 말을 쓰는지 본다 */
+  { const MF=new Function(optFn(pl,'function _monthDoneAt(dateStr)')+'\n'+extractFn(pl,'function _latestCompletedMonthIndex(rows,settledDate)')+'\nreturn _latestCompletedMonthIndex;')();
+    const rowsTo=last=>{ const out=[], d=new Date('2026-08-24T00:00:00Z'); for(;;){ const s=d.toISOString().slice(0,10); if(s>last) break; if(![0,6].includes(d.getUTCDay())) out.push({date:s,close:100}); d.setUTCDate(d.getUTCDate()+1); } return out; };
+    const at=last=>{ const R=rowsTo(last), i=MF(R,last); return i>=0?R[i].date:null; };
+    const T=[['2026-09-30','2026-09-30','9-30(수) 월말 확정 → 9월 끝'],['2026-09-29','2026-08-31','9-29 → 아직 9월 중 → 8월 말'],
+             ['2026-10-01','2026-09-30','10-01 → 9월 말'],['2026-10-30','2026-10-30','10-30(금) → 다음 평일 11-02 → 10월 끝'],['2026-10-29','2026-09-30','10-29 → 9월 말']];
+    const bad=T.filter(([l,exp])=>at(l)!==exp);
+    ok('① 20년 직전 월말 — 월말 종가가 확정되면 그달이 끝난 달 (9-30 → 9-30 · 9-29 → 8-31 · 10-01 → 9-30 · 10-30(금) → 10-30 · 10-29 → 9-30)',
+       bad.length===0, bad.map(([l,e])=>l+' → '+at(l)+' (기대 '+e+')').join(' / ')); }
+
+  /* ② 장부 계산 — 현금 기록은 현금만 바꾸고, 입출금 순액·배당 합을 따로 든다 */
+  const L0={base:{date:'2026-09-01',tecl:0,tqqq:0,sgov:0,cash:1000},events:[
+    {id:'1',type:'trade',date:'2026-09-02',symbol:'SGOV',side:'buy',qty:5,price:100,fee:0},
+    {id:'2',type:'cash',date:'2026-09-03',kind:'div',amount:3.5},
+    {id:'3',type:'cash',date:'2026-09-04',kind:'dep',amount:1000},
+    {id:'4',type:'cash',date:'2026-09-05',kind:'wd',amount:200},
+    {id:'5',type:'cash',date:'2026-09-05',kind:'div',amount:-7}]};           // 음수·0 은 무시
+  { const LC=new Function(extractFn(pl,'function alphaEventList(ledger=alphaLedger)')+'\n'+extractFn(pl,'function alphaLedgerCalc(ledger=alphaLedger)')+'\nreturn alphaLedgerCalc;')();
+    const c=LC(L0);
+    ok('② 장부 현금 기록 — 배당 +3.5 · 입금 +1,000 · 출금 −200 → 현금 1,303.5 · 입출금 순액 800 · 배당 3.5 · SGOV 5주 · 평단 100 그대로',
+       Math.abs(c.cash-1303.5)<1e-9 && c.netFlow===800 && Math.abs(c.divIn-3.5)<1e-9 && c.sgov===5 && c.avgSgov===100 && !c.invalid,
+       JSON.stringify({cash:c.cash,netFlow:c.netFlow,divIn:c.divIn,sgov:c.sgov})); }
+
+  /* ② 추가 · 삭제 — 실제 함수로 */
+  const mk=(ledger,inp)=>{ const msgs=[], EL={alphaCashDate:{value:inp.date||''},alphaCashKind:{value:inp.kind||'div'},alphaCashAmt:{value:String(inp.amt||'')}};
+    const F=new Function('$','alert','confirm','todayISO','usd2','alphaSyncInputs','renderAlphaLedger','localSave','refreshAlphaFromCache','cloudSave','L0',
+      'let alphaLedger=L0;\n'+extractFn(pl,'function alphaEventList(ledger=alphaLedger)')+'\n'+extractFn(pl,'function alphaLedgerCalc(ledger=alphaLedger)')+'\n'
+      +optFn(pl,'async function alphaAddCashEvent()')+'\n'+extractFn(pl,'async function alphaDeleteEvent(id)')
+      +'\nreturn {add:(typeof alphaAddCashEvent==="function")?alphaAddCashEvent:null, del:alphaDeleteEvent, get:()=>alphaLedger, calc:alphaLedgerCalc};')(
+      id=>EL[id]||(EL[id]={value:''}), m=>msgs.push(String(m)), ()=>true, ()=>'2026-09-25', v=>'$'+(+v).toFixed(2),
+      ()=>{}, ()=>{}, ()=>{}, ()=>{}, async()=>{}, JSON.parse(JSON.stringify(ledger)));
+    return {...F, msgs}; };
+  { const A=mk(L0,{date:'2026-09-06',kind:'div',amt:12.34});
+    if(A.add) A.add();   // 장부 변경·안내는 첫 await 전에 동기로 끝난다 (저장만 비동기)
+    const ev=A.get().events, last=ev[ev.length-1], c=A.calc(A.get());
+    ok('② 현금 기록 추가 — 배당 12.34 한 줄 (type cash · 날짜 · 금액) · 현금 1,315.84',
+       !!A.add && ev.length===L0.events.length+1 && last.type==='cash' && last.kind==='div' && last.amount===12.34 && last.date==='2026-09-06' && Math.abs(c.cash-1315.84)<1e-9,
+       JSON.stringify(last)+' · '+(c&&c.cash));
+    const W=mk(L0,{date:'2026-09-06',kind:'wd',amt:5000});
+    if(W.add) W.add();
+    ok('② 출금이 현금을 넘으면 막는다 (현금 1,303.5 에서 5,000 출금 → 기록 안 됨 · 안내)',
+       !!W.add && W.get().events.length===L0.events.length && W.msgs.some(m=>/출금하면 현금이/.test(m)), W.msgs.join(' / ')); }
+  { const L1={base:{date:'2026-09-01',tecl:0,tqqq:0,sgov:0,cash:100},events:[
+      {id:'d',type:'cash',date:'2026-09-02',kind:'dep',amount:1000},
+      {id:'b',type:'trade',date:'2026-09-03',symbol:'SGOV',side:'buy',qty:10,price:100,fee:0}]};
+    const D=mk(L1,{}); D.del('d');
+    ok('② 삭제도 현금 부족을 키우면 막는다 — 뒤 매수가 기대는 입금 1,000 을 지우면 현금 −900 → 삭제 안 됨 (체결 저장·수정과 같은 규칙)',
+       D.get().events.length===2 && D.msgs.some(m=>/삭제하면 현금이/.test(m)), D.msgs.join(' / '));
+    const D2=mk(L0,{}); D2.del('2');
+    ok('② 문제없는 삭제는 그대로 된다 (배당 3.5 삭제 → 현금 1,300)', D2.get().events.length===L0.events.length-1 && Math.abs(D2.calc(D2.get()).cash-1300)<1e-9); }
+
+  /* ② 목표 진행률 — 입금은 성장이 아니다 */
+  { const PP=new Function('activePlanTab','alphaPlanTotal','num','alphaLedgerCalc',extractFn(pl,'function planProgress()')+'\nreturn planProgress;');
+    const numF=id=>({startCapital:10000,targetCapital:20000,balMM:0,balVR:0,balQLD:0,balSGOV:0}[id]);
+    const pg=PP('alpha',()=>16000,numF,()=>({netFlow:5000}))();
+    ok('② 목표 진행률 — 시작 10,000 + 입금 5,000 에서 현재 16,000 이면 진행 20% (입금을 성장으로 세면 60%)',
+       pg.ready && pg.base===15000 && Math.abs(pg.ratio-0.2)<1e-12, JSON.stringify(pg)); }
+
+  /* ③ 표시 문구 */
+  { const alt=extractFn(pl,'function renderAlternativePlan(qTecl,qTqqq,qSgov)');
+    ok('③ 10년 근거 칸 — SMA250 값을 SMA250 이라고 적는다 (기간전략 엔진에 SMA200 글자 없음)',
+       /'종가 '\+usd\(qs\)\+' \/ SMA250 '\+usd\(sma\)/.test(alt) && !/SMA200/.test(alt)); }
+  ok('③ 계좌 합계 — 손익률 칸은 평가손익률(보유분) · 정규장일 때만 실시간 · 현금 기록 칸과 버튼 연결',
+     /<div class="k">평가손익률 \(보유분\)<\/div><div class="v" id="alphaReturnTotal">/.test(pl) && !/<div class="k">전체 손익률<\/div>/.test(pl)
+     && /L\.marketState==='REGULAR'\?'실시간 ':'최근가 '/.test(extractFn(pl,'function renderAlphaLedger()'))
+     && /id="alphaCashRec"/.test(pl) && /\$\("alphaCashAdd"\)\.addEventListener\("click",alphaAddCashEvent\)/.test(pl)
+     && /if\(e\.type==='cash'\)\{const amt=/.test(extractFn(pl,'function renderAlphaLedger()')));
+  ok('③ 화면 검증 문구 — 기간마다 독립 재현과 2000~2009년 시작 합성 스트레스(5년 −79.2% · 10년 −98.7% · 15년 −98.0% · 20년 −39.6%)',
+     (pl.match(/독립 재현/g)||[]).length>=4 && /MDD 최악 −79\.2%/.test(pl) && /MDD 최악 −98\.7%/.test(pl) && /MDD 최악 −98\.0%/.test(pl) && /MDD 최악 −39\.6%/.test(pl));
 }
 
 console.log(`\n════ 결과: ${pass} PASS / ${fail} FAIL ${fail===0?'— ALL PASS ★':'— 배포 금지, 위 ✗ 항목 수정 필요'} ════`);
