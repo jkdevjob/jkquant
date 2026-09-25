@@ -18,6 +18,11 @@ KST=ZoneInfo("Asia/Seoul")
 DATA=Path("data/daytrading")
 OUT=Path("data/daytrading-research")
 
+# Primary research is meant to use a universe frozen around 10:00 KST.
+# GitHub scheduled jobs can be delayed by hours; those late snapshots are still
+# archived for observation, but must not be mixed into the primary comparison.
+PRIMARY_SNAPSHOT_MAX_HM=1015
+
 @dataclass(frozen=True)
 class Params:
     name:str
@@ -64,6 +69,22 @@ def load_days():
         except Exception as e:
             print("skip",p,e)
     return out
+
+def split_primary_days(all_days):
+    eligible=[]
+    excluded=[]
+    for d in all_days:
+        sh=int(d.get("snapshotHm") or 0)
+        if 0 < sh <= PRIMARY_SNAPSHOT_MAX_HM:
+            eligible.append(d)
+        else:
+            excluded.append({
+                "date":d.get("date"),
+                "snapshotHm":sh or None,
+                "reason":"late_snapshot" if sh else "missing_snapshot_time",
+            })
+    return eligible, excluded
+
 
 def bars_of(row):
     a=[]
@@ -337,35 +358,62 @@ def walk_forward(days,trade_map):
             "oosVariants":[{"name":p.name,"summary":summary(oos[p.name],od,p.max_trades)} for p in VARIANTS]}
 
 def main():
-    days=load_days(); OUT.mkdir(parents=True,exist_ok=True)
-    if not days:
+    all_days=load_days(); OUT.mkdir(parents=True,exist_ok=True)
+    if not all_days:
         print("No day-trading archives yet.")
         return 0
 
-    labels=[d["date"] for d in days]
+    raw_labels=[d["date"] for d in all_days]
+    eligible,excluded=split_primary_days(all_days)
+
+    labels=[d["date"] for d in eligible]
     reports=[]; trade_map={}
     for p in VARIANTS:
-        tr=trades_for_variant(days,p); trade_map[p.name]=tr
+        tr=trades_for_variant(eligible,p); trade_map[p.name]=tr
         reports.append({"params":asdict(p),"summary":summary(tr,labels,p.max_trades)})
 
     baseline=trade_map["baseline"]
-    wf=walk_forward(days,trade_map)
-    enough=len(days)>=20 and len(baseline)>=30
+    wf=walk_forward(eligible,trade_map)
+    enough=len(eligible)>=20 and len(baseline)>=30
+
+    # Late days are kept as observation-only so we can inspect what happened
+    # after the actual snapshot, but they never enter parameter comparison/OOS.
+    latest_raw=all_days[-1]
+    observed_latest=trades_for_variant([latest_raw],VARIANTS[0])
+    latest_eligible_date=labels[-1] if labels else None
     report={
-        "schema":3,"generatedAt":datetime.now(KST).isoformat(),
-        "from":labels[0],"to":labels[-1],"archiveDays":len(days),
+        "schema":4,"generatedAt":datetime.now(KST).isoformat(),
+        "from":raw_labels[0],"to":raw_labels[-1],"archiveDays":len(all_days),
+        "eligibleArchiveDays":len(eligible),
+        "eligibleFrom":labels[0] if labels else None,
+        "eligibleTo":labels[-1] if labels else None,
         "baselineTradeCount":len(baseline),
         "comparisonStatus":"eligible" if enough else "collecting",
-        "comparisonRule":"Preliminary until >=20 trading days and >=30 baseline trades.",
+        "comparisonRule":"Primary comparison uses only snapshots saved by 10:15 KST; preliminary until >=20 eligible trading days and >=30 baseline trades.",
         "strategyName":"VWAP 추세 돌파 v1",
         "signalModel":"live-parity-close-volume",
-        "dataRule":"10:00 intraday Top100 snapshot; live-parity signal uses minute close+volume and 09:00 minute close as session base; next-minute-open paper entry.",
+        "dataRule":"Around-10:00 intraday Top100 snapshot; snapshots after 10:15 are observation-only and excluded from primary comparison/walk-forward; next-minute-open paper entry.",
+        "dataQuality":{
+            "snapshotTarget":"09:55~10:05 KST",
+            "primaryMaxSnapshotHm":PRIMARY_SNAPSHOT_MAX_HM,
+            "rawArchiveDays":len(all_days),
+            "eligibleDays":len(eligible),
+            "excludedDays":len(excluded),
+            "excluded":excluded,
+            "note":"GitHub schedules can be delayed. Late snapshots remain archived but are not allowed to contaminate the primary strategy comparison."
+        },
         "variants":reports,"walkForward":wf,
         "diagnostics":diagnostics(baseline),
-        "latestDayTrades":[x for x in baseline if x["date"]==labels[-1]],
+        "latestDayTrades":[x for x in baseline if x["date"]==latest_eligible_date] if latest_eligible_date else [],
+        "latestObservedDay":{
+            "date":latest_raw.get("date"),
+            "snapshotHm":int(latest_raw.get("snapshotHm") or 0),
+            "primaryEligible":latest_raw in eligible,
+            "trades":observed_latest,
+        },
     }
     (OUT/"latest.json").write_text(json.dumps(report,ensure_ascii=False,indent=2),encoding="utf-8")
-    (OUT/f"{labels[-1]}.json").write_text(json.dumps(report,ensure_ascii=False,indent=2),encoding="utf-8")
+    (OUT/f"{raw_labels[-1]}.json").write_text(json.dumps(report,ensure_ascii=False,indent=2),encoding="utf-8")
 
     with (OUT/"baseline-trades.csv").open("w",encoding="utf-8",newline="") as f:
         cols=["date","rank","code","name","snapshotHm","signalTime","entryTime","entryPrice","exitTime","exitPrice","reason",
@@ -375,9 +423,12 @@ def main():
         for x in baseline:w.writerow({k:x.get(k) for k in cols})
 
     b=next(x for x in reports if x["params"]["name"]=="baseline")
-    print(json.dumps({"days":len(days),"from":labels[0],"to":labels[-1],
+    print(json.dumps({
+      "rawDays":len(all_days),"eligibleDays":len(eligible),"excludedDays":excluded,
+      "from":raw_labels[0],"to":raw_labels[-1],
       "baseline":{k:v for k,v in b["summary"].items() if k!="daily"},
-      "comparisonStatus":report["comparisonStatus"],"walkForwardStatus":wf["status"]},ensure_ascii=False,indent=2))
+      "comparisonStatus":report["comparisonStatus"],"walkForwardStatus":wf["status"]
+    },ensure_ascii=False,indent=2))
     return 0
 
 if __name__=="__main__":

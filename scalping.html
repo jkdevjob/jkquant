@@ -187,7 +187,7 @@ canvas{display:block;width:100%;height:auto}
 
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Morning Scalping</div><h1>JK <span class="v">퀀트</span> 단타 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="scVer">v1.16.5</span></h1></div>
+    <div><div class="kicker">Morning Scalping</div><h1>JK <span class="v">퀀트</span> 단타 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="scVer">v1.16.6</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -433,7 +433,9 @@ canvas{display:block;width:100%;height:auto}
       <h3><span class="dot"></span>📼 데이터 수집 규칙 <span class="sub" style="font-weight:600">룩어헤드 방지</span></h3>
       <p class="lead"><b>09:55/10:00/10:05</b> 백업 스케줄 중 가장 먼저 성공한 Top100 스냅샷 하나를 고정하고,
         <b>15:35/15:40/15:45</b>에 KIS 과거 1분봉을 09:00~15:20까지 수집한다. 원본과 연구결과는 <b>scalping-data</b> 브랜치에 날짜별 누적된다.</p>
-      <div class="warn">실전 주문 기능은 없다. 신호 생성과 체결은 모두 연구용 모의 계산이며, 동일 봉에서 손절·익절이 둘 다 닿으면 보수적으로 손절을 먼저 적용한다.</div>
+      <div class="warn"><b>품질 가드:</b> GitHub 스케줄이 늦어 <b>10:15 이후</b>에 만들어진 유니버스는 원본만 보관하고
+        기준/그림자 누적 성과와 워크포워드에서는 제외한다. 늦은 시점의 거래대금 Top100을 10시 전략에 섞지 않기 위한 룩어헤드·표본오염 방지다.</div>
+      <div class="warn" style="margin-top:8px">실전 주문 기능은 없다. 신호 생성과 체결은 모두 연구용 모의 계산이며, 동일 봉에서 손절·익절이 둘 다 닿으면 보수적으로 손절을 먼저 적용한다.</div>
     </div>
   </div>
 
@@ -1095,7 +1097,16 @@ async function loadDayTradingResearch(){
       session_min_2:'시가대비≥2%', 'stop_0.8':'손절0.8%', 'tp_1.5':'익절1.5%'
     };
     const vars=j.variants||[],base=vars.find(x=>x.params&&x.params.name==='baseline'),s=base&&base.summary||{};
-    msg.textContent=(j.from||'')+' ~ '+(j.to||'')+' · '+j.archiveDays+'거래일 · 기준 '+(s.trades||0)+'건';
+    const dq=j.dataQuality||{},eligibleDays=(j.eligibleArchiveDays==null?j.archiveDays:j.eligibleArchiveDays);
+    msg.textContent=(j.from||'')+' ~ '+(j.to||'')+' · 원본 '+j.archiveDays+'일 · 검증가능 '+eligibleDays+'일 · 기준 '+(s.trades||0)+'건';
+
+    let qualityHtml='';
+    if((dq.excludedDays||0)>0){
+      const ex=(dq.excluded||[]).slice(-5).map(x=>esc(x.date||'')+' '+String(x.snapshotHm||'—').padStart(4,'0')).join(' · ');
+      qualityHtml='<div class="warn" style="margin-bottom:10px"><b>⚠ 유니버스 스냅샷 품질:</b> '+dq.excludedDays+'일은 10:15 이후 또는 시각 누락이라 '+
+        '<b>기준/그림자 성과·워크포워드에서 제외</b>했습니다. 원본은 보관합니다.'+
+        (ex?'<div class="sub" style="margin-top:4px">최근 제외: '+ex+'</div>':'')+'</div>';
+    }
 
     const today=j.latestDayTrades||[];
     let todayHtml='<div style="margin-bottom:12px"><b>📒 최근 거래일 기준전략</b></div>';
@@ -1130,12 +1141,20 @@ async function loadDayTradingResearch(){
       groupTable('⏱ 진입 시간대',dg.timeBuckets)+groupTable('📊 시장 상태',dg.marketRegimes)+groupTable('🔊 거래량 강도',dg.volRatioBuckets)+groupTable('📐 VWAP 기울기',dg.vwapSlopeBuckets)+groupTable('🚀 시가대비 상승폭',dg.sessionRetBuckets)+
       '<p class="note">시장 상태는 신호 시점의 KODEX200·KODEX코스닥150 당일 수익률로 분류합니다. 둘 다 상승/both_up · 둘 다 하락/both_down · 엇갈림/mixed.</p>';
 
-    const wf=j.walkForward||{},need=Math.max(0,(wf.daysNeededForFirstFold||25)-j.archiveDays);
+    const wf=j.walkForward||{},need=Math.max(0,(wf.daysNeededForFirstFold||25)-eligibleDays);
     const wfText=wf.status==='collecting'
       ? '워크포워드 첫 검증까지 '+need+'거래일 더 필요'
       : ((wf.foldCount||0)+'개 OOS 구간 · '+(wf.oosDays||0)+'검증일');
 
-    body.innerHTML=todayHtml+
+    const obs=j.latestObservedDay||{};
+    let observedHtml='';
+    if(obs.date && obs.primaryEligible===false){
+      const ot=obs.trades||[];
+      observedHtml='<div style="margin:14px 0 8px"><b>👀 최근 제외일 관찰용 결과</b> <span class="sub">'+esc(obs.date)+' · 스냅샷 '+String(obs.snapshotHm||'—').padStart(4,'0')+'</span></div>'+
+        '<div class="warn">이 결과는 늦게 고정된 유니버스 이후만 관찰한 값이라 누적 성과에는 넣지 않습니다. 관찰용 거래 '+ot.length+'건.</div>';
+    }
+
+    body.innerHTML=qualityHtml+todayHtml+observedHtml+
       '<div style="margin:14px 0 8px"><b>🧪 누적 비교</b></div>'+
       '<div class="htable-wrap"><table class="htable"><thead><tr><th>전략</th><th>거래</th><th>승률</th><th>평균손익</th><th>PF</th><th>포트수익</th><th>MDD</th></tr></thead><tbody>'+rows+'</tbody></table></div>'+
       diagHtml+
