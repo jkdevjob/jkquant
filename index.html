@@ -537,7 +537,7 @@ try{ if(localStorage.getItem('qcockpit_hadUser')==='1') document.documentElement
 </div>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.99.0</span></h1></div>
+    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.99.1</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -1646,7 +1646,7 @@ if(/^\/paper\/?$/.test(location.pathname)){
   <footer>
     <strong>JK 퀀트</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.99.0</b> · 2026-09-25</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.99.1</b> · 2026-09-25</div>
   </footer>
 </div>
 
@@ -2101,13 +2101,13 @@ const won=v=>Math.round((+v||0)*((typeof liveFX!=='undefined'&&liveFX)?liveFX:FX
  }
 */
 const LS='qcockpit_v2', LS_URL='qcockpit_gsheet';
-const STRATEGY_DEFAULT_CACHE='jkq_strategy_defaults_v1';
+const STRATEGY_DEFAULT_CACHE='jkq_strategy_default_overrides_v2';
 let S=null;
 let STRATEGY_DEFAULTS=(function(){try{const x=JSON.parse(localStorage.getItem(STRATEGY_DEFAULT_CACHE)||'null');return x&&typeof x==='object'?x:{};}catch(e){return {};}})();
 
-/* 관리자 화면에서 정한 운영전략 기본값.
-   저장된 세션은 건드리지 않고 new*Session()이 만드는 새 세션에만 합친다.
-   알 수 없는 키는 받지 않고, null/undefined도 무시해 잘못된 관리자 값이 엔진 상태를 깨뜨리지 않게 한다. */
+/* 관리자 화면에서 체크해 둔 옵션만 운영 기본값으로 덮는다.
+   v1은 전략 전체 설정 한 벌이라 기존 세션 적용 때 종목·원금까지 같이 바뀔 수 있었다.
+   v2는 sparse override라 저장된 키만 new*Session() 기본값에 합친다. */
 function strategyDefaultOf(tab,builtin){
   const src=STRATEGY_DEFAULTS&&STRATEGY_DEFAULTS[tab], out={...builtin};
   if(!src||typeof src!=='object')return out;
@@ -9437,7 +9437,7 @@ async function pullRemote(){
     const snap=await window.fb.getDoc(window.fb.doc(window.fb.db,'users',curUid));
     if(snap.exists()){
       const d=snap.data();
-      if(d&&d.strategyDefaults&&typeof d.strategyDefaults==='object') cacheStrategyDefaults(d.strategyDefaults);
+      if(d&&d.strategyDefaultOverrides&&typeof d.strategyDefaultOverrides==='object') cacheStrategyDefaults(d.strategyDefaultOverrides);
       if(d&&validState(d.state)){
         // 신선도 가드: 이 기기의 로컬 저장본이 서버보다 최신이면(오프라인 수정 등) 낡은 서버로 덮지 않고 로컬을 밀어올림
         let local=null; try{local=JSON.parse(localStorage.getItem(lsKey()))}catch(e){}
