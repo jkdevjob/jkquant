@@ -187,7 +187,7 @@ canvas{display:block;width:100%;height:auto}
 
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Morning Scalping</div><h1>JK <span class="v">퀀트</span> 단타 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="scVer">v1.16.4</span></h1></div>
+    <div><div class="kicker">Morning Scalping</div><h1>JK <span class="v">퀀트</span> 단타 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="scVer">v1.16.5</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -501,7 +501,7 @@ canvas{display:block;width:100%;height:auto}
     </div>
     <div class="warn" id="kis_help" style="display:none">KIS 실주문을 켜려면 Cloudflare Pages → 설정 → 환경 변수에
       <b>KIS_APPKEY · KIS_APPSECRET · KIS_ACCOUNT</b>(예 12345678-01)를 넣으세요. 주문 권한은 <b>OWNER_EMAIL</b>(구글 로그인 이메일)을 그대로 따릅니다.
-      <b>KIS_ENV</b>는 기본 <b>모의투자(vts)</b>이며 실전은 <b>real</b>로 바꿉니다. 키는 서버(환경변수)에만 저장되고 브라우저엔 노출되지 않습니다.</div>
+      이 단타 화면은 <b>국내 모의투자(VTS)만 사용</b>하며 <b>실계좌(real) 주문은 화면 코드에서 차단</b>합니다. 키는 서버(환경변수)에만 저장되고 브라우저엔 노출되지 않습니다.</div>
   </div>
 
   <!-- 3c. KIS 모의투자 이력 -->
@@ -1163,6 +1163,7 @@ async function loadVtsReconcile(strategy){
       (j.internalTrades?' · 매칭률 '+Number(s.matchRatePct||0).toFixed(0)+'%':'');
     const pct=v=>v==null?'—':((v>=0?'+':'')+(+v).toFixed(3)+'%');
     const won=v=>v==null?'—':commas(Math.round(+v))+'원';
+    const sec=v=>v==null?'—':((+v>=0?'+':'')+Math.round(+v)+'초');
     if(!a.length){
       body.innerHTML='<div class="warn">대조할 내부 모의매매가 없습니다.</div>';
       return;
@@ -1173,22 +1174,27 @@ async function loadVtsReconcile(strategy){
       '<div class="outbox"><div class="ol">평균 청산 슬리피지 비용</div><div class="ov">'+pct(s.avgExitSlippageCostPct)+'</div></div>'+
       '<div class="outbox"><div class="ol">관측 총 마찰비용</div><div class="ov">'+pct(s.avgObservedExecutionDragPct)+'</div></div>'+
       '<div class="outbox"><div class="ol">0.25% 가정과 차이</div><div class="ov">'+pct(s.frictionGapVsInternal025Pct)+'</div></div>'+
+      '<div class="outbox"><div class="ol">평균 진입 주문지연(근사)</div><div class="ov">'+sec(s.avgEntryOrderLagSecApprox)+'</div></div>'+
+      '<div class="outbox"><div class="ol">평균 주문→통보 지연</div><div class="ov">'+sec(s.avgBrokerNotifyLagSec)+'</div></div>'+
       '<div class="outbox"><div class="ol">VTS 추정 제비용 합</div><div class="ov">'+won(s.totalBrokerEstimatedCostsWon)+'</div></div>'+
       '</div>'+
-      '<div class="htable-wrap"><table class="htable"><thead><tr><th>종목</th><th>내부 진입</th><th>VTS 매수</th><th>진입 슬리피지</th><th>내부 청산</th><th>VTS 매도</th><th>청산 슬리피지</th><th>VTS 추정비용</th><th>VTS 순손익</th></tr></thead><tbody>'+
+      '<div class="htable-wrap"><table class="htable"><thead><tr><th>종목</th><th>내부 진입</th><th>VTS 매수</th><th>진입 지연</th><th>진입 슬리피지</th><th>내부 청산</th><th>VTS 매도</th><th>청산 지연</th><th>청산 슬리피지</th><th>VTS 추정비용</th><th>VTS 순손익</th></tr></thead><tbody>'+
       a.map(x=>'<tr><td><b>'+esc(x.name||x.code)+'</b><div class="sub">'+esc(x.code)+'</div></td>'+
       '<td>'+String(x.internalEntryTime||'').padStart(4,'0')+' · '+won(x.internalEntryPrice)+'</td>'+
-      '<td>'+(x.vtsBuy?String(x.vtsBuy.orderTime||'').slice(0,4)+' · '+won(x.vtsBuy.fillPrice):'—')+'</td>'+
+      '<td>'+(x.vtsBuy?String(x.vtsBuy.orderTime||'').slice(0,6)+' · '+won(x.vtsBuy.fillPrice):'—')+'</td>'+
+      '<td>'+sec(x.entryOrderLagSecApprox)+'</td>'+
       '<td class="'+((x.entrySlippageCostPct||0)<=0?'win':'loss')+'">'+pct(x.entrySlippageCostPct)+'</td>'+
       '<td>'+(x.internalExitTime==null?'—':String(x.internalExitTime).padStart(4,'0')+' · '+won(x.internalExitPrice))+'</td>'+
-      '<td>'+(x.vtsSell?String(x.vtsSell.orderTime||'').slice(0,4)+' · '+won(x.vtsSell.fillPrice):'—')+'</td>'+
+      '<td>'+(x.vtsSell?String(x.vtsSell.orderTime||'').slice(0,6)+' · '+won(x.vtsSell.fillPrice):'—')+'</td>'+
+      '<td>'+sec(x.exitOrderLagSecApprox)+'</td>'+
       '<td class="'+((x.exitSlippageCostPct||0)<=0?'win':'loss')+'">'+pct(x.exitSlippageCostPct)+'</td>'+
       '<td>'+won(x.vtsBrokerEstimatedCosts)+'</td>'+
       '<td class="'+((x.vtsNetPnlPct||0)>=0?'win':'loss')+'">'+pct(x.vtsNetPnlPct)+'</td></tr>').join('')+
       '</tbody></table></div>'+
       '<div class="warn" style="margin-top:10px"><b>읽기전용:</b> 이 표는 한투 VTS에 이미 존재하는 체결만 읽어서 비교합니다. '+
       '슬리피지 비용은 매수는 VTS체결가−내부기준가, 매도는 내부기준가−VTS체결가 방향으로 계산합니다. '+
-      '증권사 제비용은 KIS 체결조회 응답값을 사용하며 모의투자 조건이 실계좌 수수료와 동일하다고 가정하지 않습니다.</div>';
+      '증권사 제비용은 KIS 체결조회 응답값을 사용하며 모의투자 조건이 실계좌 수수료와 동일하다고 가정하지 않습니다. '+
+      '주문지연은 내부 기준 분의 시작시각→KIS 주문시각 근사이며, 주문→통보 지연은 KIS ord_tmd→infm_tmd로 계산합니다. 정확한 거래소 체결 latency는 아닙니다.</div>';
   }catch(e){
     msg.textContent='VTS 대조 실패';
     body.innerHTML='<div class="warn">'+esc(e.message||String(e))+'</div>';
@@ -1210,6 +1216,7 @@ async function loadVtsResearch(strategy){
     const s=(j.strategies||[]).find(x=>x.strategy===strategy)||{};
     const pct=v=>v==null?'—':((v>=0?'+':'')+(+v).toFixed(3)+'%');
     const won=v=>v==null?'—':commas(Math.round(+v))+'원';
+    const sec=v=>v==null?'—':Math.round(+v)+'초';
     box.innerHTML='<div style="margin:8px 0"><b>📊 누적 VTS 실행품질 · '+esc(j.from||'')+' ~ '+esc(j.to||'')+'</b></div>'+
       '<div class="out">'+
       '<div class="outbox"><div class="ol">대조일</div><div class="ov">'+(s.days||0)+'일</div></div>'+
@@ -1219,6 +1226,8 @@ async function loadVtsResearch(strategy){
       '<div class="outbox"><div class="ol">0.25% 가정과 차이</div><div class="ov">'+pct(s.frictionGapVsInternal025Pct)+'</div></div>'+
       '<div class="outbox"><div class="ol">평균 VTS 순손익</div><div class="ov '+((s.avgVtsNetPnlPct||0)>=0?'good':'bad')+'">'+pct(s.avgVtsNetPnlPct)+'</div></div>'+
       '<div class="outbox"><div class="ol">평균 내부 손익</div><div class="ov '+((s.avgInternalPnlPct||0)>=0?'good':'bad')+'">'+pct(s.avgInternalPnlPct)+'</div></div>'+
+      '<div class="outbox"><div class="ol">평균 진입 주문지연(근사)</div><div class="ov">'+sec(s.avgEntryOrderLagSecApprox)+'</div></div>'+
+      '<div class="outbox"><div class="ol">평균 주문→통보 지연</div><div class="ov">'+sec(s.avgBrokerNotifyLagSec)+'</div></div>'+
       '<div class="outbox"><div class="ol">누적 VTS 추정 제비용</div><div class="ov">'+won(s.totalBrokerEstimatedCostsWon)+'</div></div>'+
       '</div>'+
       '<div class="warn" style="margin-top:8px"><b>마찰비용 보정 상태:</b> '+((s.calibrationStatus==='reviewable')?'검토 가능':'표본 수집 중')+
@@ -1570,8 +1579,8 @@ function renderLiveRebreak(now,rows){
   rows=(rows||[]).slice().sort((a,b)=>(b.amountRatio-a.amountRatio)||(b.volRatio-a.volRatio));
   if(!rows.length){el.innerHTML='<div class="warn">현재 눌림→재돌파 조건을 모두 통과한 종목이 없습니다. 없는 것이 정상입니다.</div>';return;}
   rows.forEach(x=>notifyOpeningEvent('rebreak-'+now.date+'-'+x.code+'-'+x.time,'눌림 재돌파 후보 · '+x.name,'갭 '+(x.gap>=0?'+':'')+x.gap.toFixed(2)+'% · 눌림 -'+x.pullbackPct.toFixed(2)+'% · 거래량 '+x.volRatio.toFixed(2)+'배 · 추정 거래대금 '+x.amountRatio.toFixed(2)+'배'));
-  el.innerHTML='<div class="htable-wrap"><table class="htable"><thead><tr><th>종목</th><th>갭</th><th>눌림</th><th>재돌파가</th><th>거래량</th><th>추정 거래대금</th><th>시각</th><th>상태</th></tr></thead><tbody>'+
-    rows.slice(0,10).map(x=>'<tr onclick="trackOpeningCandidate(\''+esc(x.code)+'\',\''+esc(x.name).replace(/\'/g,'&#39;')+'\')" style="cursor:pointer"><td><b>'+esc(x.name)+'</b><div class="sub">'+esc(x.code)+'</div></td><td class="win">'+(x.gap>=0?'+':'')+x.gap.toFixed(2)+'%</td><td>-'+x.pullbackPct.toFixed(2)+'%</td><td><b>'+commas(Math.round(x.rebreakPrice))+'</b></td><td>'+x.volRatio.toFixed(2)+'배</td><td><b>'+x.amountRatio.toFixed(2)+'배</b><div class="sub">약 '+commas(Math.round(x.estAmount/1000000))+'백만원/분</div></td><td>'+String(x.time).padStart(4,'0')+'</td><td class="win"><b>조건 충족</b></td></tr>').join('')+
+  el.innerHTML='<div class="htable-wrap"><table class="htable"><thead><tr><th>종목</th><th>갭</th><th>눌림</th><th>재돌파가</th><th>거래량</th><th>추정 거래대금</th><th>시각</th><th>상태</th><th>VTS</th></tr></thead><tbody>'+
+    rows.slice(0,10).map(x=>'<tr onclick="trackOpeningCandidate(\''+esc(x.code)+'\',\''+esc(x.name).replace(/\'/g,'&#39;')+'\')" style="cursor:pointer"><td><b>'+esc(x.name)+'</b><div class="sub">'+esc(x.code)+'</div></td><td class="win">'+(x.gap>=0?'+':'')+x.gap.toFixed(2)+'%</td><td>-'+x.pullbackPct.toFixed(2)+'%</td><td><b>'+commas(Math.round(x.rebreakPrice))+'</b></td><td>'+x.volRatio.toFixed(2)+'배</td><td><b>'+x.amountRatio.toFixed(2)+'배</b><div class="sub">약 '+commas(Math.round(x.estAmount/1000000))+'백만원/분</div></td><td>'+String(x.time).padStart(4,'0')+'</td><td class="win"><b>조건 충족</b></td><td><button class="ghostbtn sm" onclick="event.stopPropagation();prepVtsOrder(\''+esc(x.code)+'\','+Math.round(x.rebreakPrice)+',\''+esc(x.name).replace(/\'/g,'&#39;')+'\')">주문값 준비</button></td></tr>').join('')+
     '</tbody></table></div><p class="note">거래대금은 1분 종가×1분 거래량의 추정치입니다. 실제 체결대금과 차이가 날 수 있으며 자동 주문은 하지 않습니다.</p>';
 }
 
@@ -2099,7 +2108,8 @@ function exportLog(){
    · 반자동이다 — 확인창 없이 자동으로 나가는 주문은 만들지 않는다.
    ══════════════════════════════════════════════════════════════════ */
 function kisReady(){
-  if(!KIScfg||!KIScfg.configured){ alert('KIS가 연결되지 않았습니다. 연결 점검을 먼저 눌러보세요.'); return false; }
+  if(!KIScfg||!KIScfg.configured){ alert('KIS VTS가 연결되지 않았습니다. 연결 점검을 먼저 눌러보세요.'); return false; }
+  if(KIScfg.env!=='vts'){ alert('단타 화면은 한국투자 모의투자(VTS)만 허용합니다. 실계좌 주문은 차단되어 있습니다.'); return false; }
   return true;
 }
 function budget(){ const v=+($('k_budget')&&$('k_budget').value); return v>0?v:2000000; }
@@ -2116,7 +2126,7 @@ async function kisSubmit(o){
     const tok=await idToken();
     const r=await fetch('/api/kis?op=order',{method:'POST',
       headers:{'content-type':'application/json','Authorization':'Bearer '+tok},
-      body:JSON.stringify({side:o.side,code:o.code,qty:o.qty,price:o.price,priceType:rec.priceType})});
+      body:JSON.stringify({env:'vts',side:o.side,code:o.code,qty:o.qty,price:o.price,priceType:rec.priceType})});
     const j=await r.json();
     rec.ok=!!j.ok; rec.orderNo=j.orderNo||''; rec.msg=j.msg||j.error||(j.ok?'주문 접수':'주문 실패');
   }catch(e){ rec.msg=String(e.message||e); }
@@ -2234,7 +2244,7 @@ async function kisDiag(){
   $('kisDiagBtn').disabled=true;
   try{
     const hdr={}; try{ if(me) hdr['Authorization']='Bearer '+(await me.getIdToken()); }catch(e){}
-    const j=await (await fetch('/api/kis?op=diag',{headers:hdr})).json();
+    const j=await (await fetch('/api/kis?op=diag&env=vts&market=kr',{headers:hdr})).json();
     if(j.error){ el.innerHTML='<span class="err">'+esc(j.error)+'</span>'; return; }
     el.innerHTML='<div class="diagbox">'+ (j.checks||[]).map(c=>
       `<div class="d"><span class="${c.ok?'ok':'no'}">${c.ok?'✓':'✗'}</span> <b>${esc(c.k)}</b> <span class="det">${esc(c.det||'')}</span></div>`
@@ -2248,10 +2258,10 @@ let KIScfg=null;
 async function kisInit(){
   const st=$('kis_status');
   try{
-    const r=await fetch('/api/kis?op=config'); const j=await r.json(); KIScfg=j;
-    $('kis_env').textContent = j.env==='real'?'· 실전':'· 모의투자';
-    if(j.configured && j.hasOwner){
-      st.innerHTML='<span class="pill good">연결됨 <b>'+(j.env==='real'?'실전':'모의투자')+'</b></span> <span class="sub">주문 가능 · 실제 체결은 증권사 규정을 따릅니다</span>';
+    const r=await fetch('/api/kis?op=config&env=vts&market=kr'); const j=await r.json(); KIScfg=j;
+    $('kis_env').textContent = '· 국내 모의투자(VTS) 전용';
+    if(j.configured && j.hasOwner && j.env==='vts'){
+      st.innerHTML='<span class="pill good">연결됨 <b>국내 모의투자(VTS)</b></span> <span class="sub">이 단타 화면의 실계좌 주문 경로는 차단되어 있습니다</span>';
       $('kis_panel').style.display=''; $('kis_help').style.display='none';
     }else{
       st.innerHTML='<span class="pill bad">미설정</span> <span class="sub">'+(!j.configured?'KIS 키가 없습니다':'주문 허용 계정이 비어 있습니다')+'</span>';
@@ -2263,12 +2273,20 @@ async function kisInit(){
 async function idToken(){ if(!me) throw new Error('로그인이 필요합니다.'); return await me.getIdToken(); }
 function kisFromChart(){
   if(!CUR){ return; }
-  $('k_code').value=CUR.code; $('k_price').value=Math.round(+$('ch_entry').value||CUR.a.price);
-  $('kis_panel').scrollIntoView&&document.getElementById('kis_panel').scrollIntoView({behavior:'smooth',block:'center'});
-  $('kis_msg').textContent='차트 종목을 채웠습니다 — 수량 확인 후 주문하세요.';
+  prepVtsOrder(CUR.code,Math.round(+$('ch_entry').value||CUR.a.price),CUR.name||CUR.code);
+}
+function prepVtsOrder(code,price,name){
+  if(!kisReady())return;
+  $('k_code').value=String(code||'').toUpperCase();
+  $('k_qty').value=1;
+  $('k_price').value=Math.round(+price||0);
+  $('k_mkt').checked=false;
+  const panel=$('kis_panel');
+  if(panel&&panel.scrollIntoView)panel.scrollIntoView({behavior:'smooth',block:'center'});
+  $('kis_msg').textContent=(name||code)+' · VTS 주문값을 준비했습니다. 수량·가격·주문방식을 확인한 뒤 직접 주문 버튼을 누르세요.';
 }
 async function kisOrder(side){
-  if(!KIScfg||!KIScfg.configured){ alert('KIS가 설정되지 않았습니다.'); return; }
+  if(!kisReady()) return;
   const code=($('k_code').value||'').toUpperCase().trim();
   const qty=parseInt($('k_qty').value,10);
   const mkt=$('k_mkt').checked;
@@ -2276,8 +2294,8 @@ async function kisOrder(side){
   if(!code){ alert('종목코드를 넣어주세요.'); return; }
   if(!(qty>0)){ alert('수량을 넣어주세요.'); return; }
   if(!mkt && !(price>0)){ alert('지정가 가격을 넣거나 시장가를 체크하세요.'); return; }
-  const envName=KIScfg.env==='real'?'⚠️ 실전(진짜 돈)':'모의투자';
-  if(!confirm(`[${envName}] ${side==='buy'?'매수':'매도'}\n종목 ${code} · ${qty}주 · ${mkt?'시장가':price.toLocaleString()+'원'}\n\n주문할까요?`)) return;
+  const envName='한국투자 모의투자(VTS)';
+  if(!confirm(`[${envName}] ${side==='buy'?'매수':'매도'}\n종목 ${code} · ${qty}주 · ${mkt?'시장가':price.toLocaleString()+'원'}\n\n모의주문을 전송할까요?`)) return;
   $('kis_msg').textContent='주문 전송 중…';
   const nm=(SCREEN.find(x=>x.code===code)||{}).name || (CUR&&CUR.code===code?CUR.name:'') || code;
   const rec=await kisSubmit({side,code,name:nm,qty,price,priceType:mkt?'market':'limit'});
@@ -2285,11 +2303,11 @@ async function kisOrder(side){
   else { $('kis_msg').innerHTML='<span style="color:var(--sell)">✗ '+esc(rec.msg)+'</span>'; }
 }
 async function kisBalance(){
-  if(!KIScfg||!KIScfg.configured) return;
+  if(!kisReady()) return;
   const el=$('kis_bal'); el.innerHTML='<span class="sub">잔고 조회 중…</span>';
   try{
     const tok=await idToken();
-    const r=await fetch('/api/kis?op=balance',{headers:{'Authorization':'Bearer '+tok}}); const j=await r.json();
+    const r=await fetch('/api/kis?op=balance&env=vts&market=kr',{headers:{'Authorization':'Bearer '+tok}}); const j=await r.json();
     if(j.error){ el.innerHTML='<span class="sub" style="color:var(--sell)">'+esc(j.error)+'</span>'; return; }
     const h=j.holdings||[];
     el.innerHTML=`<div class="row" style="margin-bottom:8px"><span class="pill">예수금 <b>${commas(j.cash)}</b></span><span class="pill">평가총액 <b>${commas(j.evalTotal)}</b></span></div>`
