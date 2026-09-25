@@ -320,7 +320,7 @@ td:first-child{text-align:left;}
   <div class="brand">
     <div>
       <div class="logo">Backtest</div>
-      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v2.12.3</span></h1>
+      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v2.13.0</span></h1>
     </div>
   </div>
   <div class="hright">
@@ -437,6 +437,12 @@ document.addEventListener('click',function(e){ var m=document.getElementById('jk
       <div class="seg" id="imTgtDynSeg" style="align-self:flex-start">
         <button data-x="0" class="active" title="익절%를 고정 (라오어 원안)">끔</button>
         <button data-x="1" title="직전 20거래일 상승률이 +8%를 넘으면 익절% = min(기본×2, 30%). 내릴 때는 조절하지 않음 — 추세가 살아있을 때만 더 들고 간다">상승률</button>
+      </div>
+    </div>
+    <div class="ctrl s-im hide"><label>익절 자동 <span style="font-size:9px;color:var(--gold)">실험 · 원문 아님</span></label>
+      <div class="seg" id="imAutoTpSeg" style="align-self:flex-start">
+        <button data-x="0" class="active" title="익절%를 위 설정값으로 고정 (라오어 원안)">끔</button>
+        <button data-x="1" title="사이클 첫 매수일 전날까지 120거래일 수익률이 0 미만이면 그 사이클 익절 10%, 아니면 20% (별%·복귀선도 같이). 사이클 도중엔 안 바꿉니다. V4.0 엔진에만 적용 · 검증은 SOXL 2010~">120일</button>
       </div>
     </div>
     <div class="ctrl s-im hide"><label>익절 체결 <span style="font-size:9px;color:var(--dim)">지정가매도 고정</span></label>
@@ -1430,8 +1436,9 @@ function imPreset(){
   _segPick('imDiv','d','20');
   _segPick('imTgtSeg','t','0');
   _segPick('imTgtDynSeg','x','0');
+  _segPick('imAutoTpSeg','x','0');
   syncRevUI(); _segPick('imRev','r','1');
-  imTarget=IM_TGT_AUTO; imTgtDyn=false; imEngine='v40'; imDiv=20; imReverse=true;
+  imTarget=IM_TGT_AUTO; imTgtDyn=false; imAutoTp=false; imEngine='v40'; imDiv=20; imReverse=true;
   // 공식 리버스 매수가는 별지점−$0.01 (gap 0). 되돌린 뒤에 돌려야 화면에 공식 결과가 뜬다
   imRevGap=0; { const rg=document.getElementById('imRevGapIn'); if(rg) rg.value='0'; }
   renderSingle(); buildTickerPick(); syncRevUI();
@@ -1645,6 +1652,7 @@ let imShortMA=30;   // V5.0 국면 단기이평 (20/30/50)
 let imLoPct=6;      // V5.0 하락국면 익절% (조기탈출)
 let imCostOn=true;   // 세금·수수료·슬리피지 반영 (기본 ON)
 let imTgtDyn=false;  // 익절 동적 조절 (20일 상승률) — 기본 OFF
+let imAutoTp=false;  // 익절 자동 10/20 (120거래일 수익률 · 실험적 확장 — 원문 아님) — 기본 OFF
 /* VR 체결 방식. 'ladder'(기본) = 실전 그대로 — 사이클 첫날 매수·매도표를 지정가로
    걸어두고 2주 방치, 그날 고가·저가에 닿은 차수만 한 줄씩 체결된다 (장 시작 때 이미 넘은 차수는 시가에 · 줄 수 제한 없음).
    'close' = 예전 백테 방식 — 2주에 한 번 그날 종가만 보고 평가금을 V로 되맞춘다.
@@ -1686,6 +1694,7 @@ function syncMaCtrl(){
 document.getElementById('imEngine').onclick=e=>{if(e.target.dataset.e){document.querySelectorAll('#imEngine button').forEach(b=>b.classList.remove('active'));e.target.classList.add('active');imEngine=e.target.dataset.e;syncMaCtrl();if(dataLoaded)run();}};
 document.getElementById('imShortMASeg').onclick=e=>{if(e.target.dataset.m){document.querySelectorAll('#imShortMASeg button').forEach(b=>b.classList.remove('active'));e.target.classList.add('active');imShortMA=+e.target.dataset.m;if(dataLoaded)run();}};
 document.getElementById('imCost').onclick=e=>{if(e.target.dataset.x){document.querySelectorAll('#imCost button').forEach(b=>b.classList.remove('active'));e.target.classList.add('active');imCostOn=e.target.dataset.x==='1';if(dataLoaded)run();}};
+document.getElementById('imAutoTpSeg').onclick=e=>{if(e.target.dataset.x){document.querySelectorAll('#imAutoTpSeg button').forEach(b=>b.classList.remove('active'));e.target.classList.add('active');imAutoTp=e.target.dataset.x==='1';if(dataLoaded)run();}};
 document.getElementById('imTgtDynSeg').onclick=e=>{if(e.target.dataset.x){document.querySelectorAll('#imTgtDynSeg button').forEach(b=>b.classList.remove('active'));e.target.classList.add('active');imTgtDyn=e.target.dataset.x==='1';if(dataLoaded)run();}};
 document.getElementById('imRev').onclick=e=>{if(e.target.dataset.r){document.querySelectorAll('#imRev button').forEach(b=>b.classList.remove('active'));e.target.classList.add('active');imReverse=e.target.dataset.r==='1';if(dataLoaded)run();}};
 document.getElementById('imLoSeg').onclick=e=>{if(e.target.dataset.l){document.querySelectorAll('#imLoSeg button').forEach(b=>b.classList.remove('active'));e.target.classList.add('active');imLoPct=+e.target.dataset.l;if(dataLoaded)run();}};
@@ -2410,6 +2419,23 @@ function _imMom(tkr,L){
   return out;
 }
 function _imTgtOf(base, mom){ return (mom!=null && mom>IM_MOM_TH) ? Math.min(base*2, IM_MOM_CAP) : base; }
+/* ── 사이클 익절 자동 선택 (실험적 확장 — 원문 V4.0 아님 · 켤 때만) ──
+   사이클 첫 매수일 '전날'까지 확정된 종가로 120거래일 수익률을 잰다 — 0 미만이면 그 사이클 익절 10%, 아니면 20%.
+   정한 값은 그 사이클이 끝날 때까지 간다(별%base·복귀선도 같이 — 통합 규약). 첫 매수 전 아침엔 매일 다시 잰다.
+   근거(SOXL 2010~ 실측): 120일 하락 구간에서 시작한 사이클은 10%가 이겼다 — 앞 절반으로 고른 규칙이 뒤 절반에서도 이겼다.
+   bars 날짜 오름차순 [{date, close}] · date 사이클 첫 매수일(그날 봉은 안 본다 — 룩어헤드 금지). 자료가 모자라면 null.
+   백테 runIM · 앱 장부(computeInf — 운영·모의) · 서버(imCompute) · 5년 플랜(calcInfState)이 같은 글자로 쓴다. */
+const IM_AUTOTP={len:120, lo:10, hi:20};
+function imAutoTP(bars, date){
+  let a=0, b=(bars||[]).length;
+  while(a<b){ const m=(a+b)>>1; if(String(bars[m].date)<date) a=m+1; else b=m; }   // date 보다 앞선 봉 개수
+  const j=a-1;
+  if(j<IM_AUTOTP.len) return null;
+  const x=+bars[j].close, y=+bars[j-IM_AUTOTP.len].close;
+  if(!(x>0&&y>0)) return null;
+  const r=(x/y-1)*100;
+  return {tp:r<0?IM_AUTOTP.lo:IM_AUTOTP.hi, ret:r, asOf:String(bars[j].date)};
+}
 /* 무매 매수 주수 — 한 곳에서만 센다 (운영 주문표 · 모의체결 · 백테 runIM/runIM50 공통).
    주문 수량은 '주문을 내는 시점에 이미 알 수 있는 가격'(전일 확정 종가 또는 주문가)으로 확정한다.
    오늘 종가로 수량을 정하면, 오늘 싸졌다는 이유로 그날 주문수량이 늘어난다 — 룩어헤드다.
@@ -2563,11 +2589,15 @@ function runIM(days,tkr,cap,divs,targetPct,compound=true,bigOverride){
   //   slope = base×0.1×(20/divs)  ← 문서 4케이스(TQQQ 20/40, SOXL 20/40) 전부 재현
   //   exitMul = 1 − base/100      ← 문서 "복귀 기준 = T 마지막 쿼터매도 기준"
   // 익절%를 바꾸면 별지점·복귀조건이 함께 따라가 규칙 정합성이 유지된다.
-  const starBase=targetPct;
-  const starSlope=starBase*0.1*20/divs;
-  const exitMul=1-starBase/100;
+  let starBase=targetPct, curTP=targetPct;   // 익절 자동(실험)이면 사이클마다 바뀐다 — 셋이 함께 움직인다 (통합 규약)
+  let starSlope=starBase*0.1*20/divs;
+  let exitMul=1-starBase/100;
   const bigPct=imBigPct({big:bigOverride});   // 큰수 — 처음매수 LOC 가격 (기본 15)
   const MOM = ((typeof imTgtDyn!=='undefined')&&imTgtDyn) ? _imMom(tkr,IM_MOM_LEN) : null;   // 익절 동적 조절 (OFF면 null → 기존과 완전 동일)
+  /* 익절 자동(실험 · imAutoTP) — 끄면 null 이라 기존과 완전 동일. 판정 봉은 워밍업 창까지 포함한 전체 종가(선택 기간 첫날 전 120거래일도 본다). */
+  const _AD=(typeof srcOf==='function')?srcOf(tkr):M[tkr];
+  const AUTO = ((typeof imAutoTp!=='undefined')&&imAutoTp) ? dtsOf(tkr).map(x=>({date:x, close:_AD[x][C]})) : null;
+  const tpN={};   // 사이클 익절별 사이클 수 (익절 자동일 때만 채운다)
   /* 단리 판정은 '사이클 종료 잔액이 최초 원금을 넘는가'다. 넘으면 넘은 만큼만 인출하고
      원금으로 다시 시작, 못 넘으면 인출도 보충도 없이 그 잔액 그대로 다음 사이클로 간다.
      addedCash 는 밖에서 채워 넣던 흔적이라 이제 늘 0 이다 — 운영 computeInf 와 같은 규약. */
@@ -2680,11 +2710,16 @@ function runIM(days,tkr,cap,divs,targetPct,compound=true,bigOverride){
        장 마감 뒤에야 아는 사실(쿼터매도 체결)로 같은 종가에 주문한 셈이라 룩어헤드다.
        실측(SOXL 20분할 복리 6년) 최종자산이 실전 체결 재현보다 16.8% 부풀려져 있었다.
        운영 주문표(renderOrder)·서버 자동주문(imOrders)·모의(infSimForward)와 같은 순서다. */
+    /* 익절 자동 — 보유 0 · T 0 인 아침(새 사이클 첫 매수 전)마다 이번 사이클 익절%를 다시 정한다. 첫 매수가 체결된 날의 판정이
+       그 사이클 끝까지 간다(같은 날 익절 뒤 LOC 매수로 이어지는 날은 T 가 0 이 아니라 다시 안 잰다 · 제14차 D15). 자료가 모자라면 설정 익절%. */
+    const flat0=!(shares>0) && T===0;
+    if(AUTO && flat0){ const P=imAutoTP(AUTO, d), tp=P?P.tp:targetPct;
+      if(tp!==curTP){ curTP=tp; starBase=tp; starSlope=starBase*0.1*20/divs; exitMul=1-starBase/100; } }
     const buys=_imBuyPlan(T, avg, shares, cash, divs, starBase, starSlope, buyLimit, prevC, FEE, imRowsOf({}), isKRW(tkr)?'krw':'usd');
     let soldToday=false;               // 오늘 매도가 체결됐나 — 사이클 종료는 하루 주문을 다 처리한 뒤에만 판정한다 (제14차 D15)
     if(shares>0&&avg>0){
       const starP=imStarPx(avg, starBase-starSlope*T, isKRW(tkr)?'krw':'usd');   // 별지점 센트 반올림 — 매수 계획(_imBuyPlan)과 같은 값
-      const tgt=avg*(1+(MOM?_imTgtOf(targetPct,MOM[d]):targetPct)/100);
+      const tgt=avg*(1+(MOM?_imTgtOf(curTP,MOM[d]):curTP)/100);   // 이번 사이클 익절% (자동이 꺼져 있으면 targetPct 그대로)
       const orig=shares;              // 하루 시작 시 보유량 기준
       const q1=isq(orig/4,orig);     // 별지점 LOC: 1/4 (내림)
       const q3=orig-q1;              // 익절 지정가: 나머지 (운영 모의와 같은 규약)
@@ -2707,6 +2742,7 @@ function runIM(days,tkr,cap,divs,targetPct,compound=true,bigOverride){
     // 아침에 건 매수 LOC — 종가가 주문가 이하면 종가에 체결. 수량은 전일 확정종가로 정한다.
     /* 아래로 LOC 추가 줄은 같은 회차의 일부 — T 는 본 주문만 센다. 본 주문 없이 추가 줄만 체결되면(드묾) 1회로 센다 (모의와 같은 규약) */
     { let mf=false, lf=false; for(const b of buys){ if(c<=b.lim){ const q=_buyN(c,b.q); if(q>0){ T+=b.dT; if(b.ladder) lf=true; else mf=true; } } } if(lf&&!mf) T+=1; }
+    if(AUTO && flat0 && shares>0) tpN[curTP]=(tpN[curTP]||0)+1;   // 새 사이클이 이 익절%로 시작했다
     // 사이클 종료 — 하루 주문을 모두 처리한 뒤 '오늘 매도가 있었고 최종 0주' 일 때만 (imCycleEnds · 제14차 D15)
     if(imCycleEnds(soldToday, shares)){shares=0;avg=0;cycles++;
       if(compound){ /* 복리: 익절금 포함 현금 그대로 다음 사이클 사용 */ }
@@ -2720,7 +2756,7 @@ function runIM(days,tkr,cap,divs,targetPct,compound=true,bigOverride){
      총자산에서 빼야 원금 대비 성과가 된다. 복리는 addedCash 가 늘 0 이라 그대로다. */
   const fin=cash+shares*M[tkr][days[days.length-1]][C]+savedProfit-addedCash;
   if(fin>mddPeak)mddPeak=fin; else { const dd=Math.min((mddPeak-fin)/mddPeak,1); if(dd>mdd)mdd=dd; }
-  return {invested:cap,peakInvested,final:fin,realized,cycles,added:addedCash,endCash:cash+savedProfit-addedCash,endShares:shares,ret:(fin/cap-1)*100,snap,tkr,tgt:targetPct,mdd:mdd*100,fees:feesTotal,tax:taxTotal};
+  return {invested:cap,peakInvested,final:fin,realized,cycles,added:addedCash,endCash:cash+savedProfit-addedCash,endShares:shares,ret:(fin/cap-1)*100,snap,tkr,tgt:targetPct,mdd:mdd*100,fees:feesTotal,tax:taxTotal,tpN:AUTO?tpN:null};
 }
 
 // ──── 무한매수법 V2.2 (2023 오피셜) — quantstack.app 규칙 재현 ────
@@ -3928,8 +3964,9 @@ function _stratNum(id,def){ if(typeof document==='undefined')return def; const e
    'V4.0 공식 / 변형' 표시와 백테 결과 제목의 'V4.0 변형' 표시가 같은 기준이어야 한다.
    빈 목록이면 공식, 아니면 변형이다. 백테에서 더 좋았다는 이유로 고른 값도 변형이다 —
    예: 리버스 OFF(문서의 V4.0 일반모드는 '소진 → 리버스'), 아래로 LOC 추가를 끈 것(0줄).
-     cfg: {tickers, div, reverse, revGap, target, tgtDyn, engine, big, rows}
-     target 0·없음 = 종목별 문서값(TQQQ 15 · SOXL 20). big 없음 = 기본 15. */
+     cfg: {tickers, div, reverse, revGap, target, tgtDyn, autoTp, engine, big, rows}
+     target 0·없음 = 종목별 문서값(TQQQ 15 · SOXL 20). big 없음 = 기본 15.
+     autoTp — 사이클 익절 자동 10/20(imAutoTP · 실험). 켜면 설정 익절%는 자료가 모자랄 때만 쓰이므로 '고정' 으로 적지 않는다. */
 function imVariantOf(cfg){
   const v=[], list=[].concat(cfg.tickers||[]).filter(Boolean), div=+cfg.div||20;
   if(list.length && list.some(t=>!IM_OFFICIAL[t])) v.push('비공식 종목(익절 20%는 확장값)');
@@ -3942,8 +3979,9 @@ function imVariantOf(cfg){
   if(!revSupported(div)) v.push('리버스 미적용(그 분할 규칙 미수록)');
   else if(!cfg.reverse) v.push('리버스 OFF');
   else if(+cfg.revGap>0) v.push('리버스 gap '+(+cfg.revGap)+'%(출처 미확인 · 사용자 설정)');
-  if(+cfg.target>0 && list.some(t=>+cfg.target!==(IM_OFFICIAL[t]||20))) v.push('익절 '+(+cfg.target)+'% 고정');
+  if(!cfg.autoTp && +cfg.target>0 && list.some(t=>+cfg.target!==(IM_OFFICIAL[t]||20))) v.push('익절 '+(+cfg.target)+'% 고정');
   if(cfg.tgtDyn) v.push('익절 조절 ON');
+  if(cfg.autoTp) v.push('익절 자동 10/20(실험 · 120일 수익률)');
   if(cfg.engine && cfg.engine!=='v40') v.push('엔진 '+String(cfg.engine).toUpperCase());
   /* 큰수 — 원문 5-(1): 처음매수는 전일 종가보다 '일반적으로 10%~15% 정도 위' (제10차 P1-5). 그 범위는 공식, 밖이면 변형 */
   if(cfg.big!=null && +cfg.big>0 && !(+cfg.big>=10 && +cfg.big<=15)) v.push('큰수 '+(+cfg.big)+'%(원문 10~15% 밖)');
@@ -3960,6 +3998,7 @@ function imVariant(tkrs){
   return imVariantOf({tickers:tkrs, div:(typeof imDiv!=='undefined'?imDiv:20),
     reverse:(typeof imReverse!=='undefined'&&imReverse), revGap:(typeof imRevGap!=='undefined'?imRevGap:0),
     target:(typeof imTarget!=='undefined'?imTarget:0), tgtDyn:(typeof imTgtDyn!=='undefined'&&imTgtDyn),
+    autoTp:(typeof imAutoTp!=='undefined'&&imAutoTp&&(typeof imEngine==='undefined'||imEngine==='v40')),
     engine:(typeof imEngine!=='undefined'?imEngine:'v40')});
 }
 function imVariantTag(tkrs){
@@ -4046,7 +4085,7 @@ function comboOpts(mode){
   const eng={v22:'V2.2',v30:'V3.0',v40:'V4.0',v50:'V5.0',ab:'A/B'}[(typeof imEngine!=='undefined'?imEngine:'v40')]||'V4.0';
   const comp=_stratSeg('imCompound','0')!=='0'?'복리':'단리';
   const rev=(typeof imReverse!=='undefined'&&imReverse)?'리버스켬':'리버스끔';
-  const tdy=(typeof imTgtDyn!=='undefined'&&imTgtDyn)?'·익절조절ON':'';
+  const tdy=((typeof imTgtDyn!=='undefined'&&imTgtDyn)?'·익절조절ON':'')+((typeof imAutoTp!=='undefined'&&imAutoTp)?'·익절자동10/20(실험)':'');
   const div=(typeof imDiv!=='undefined'?imDiv:20), tgt=(typeof imTgtTxt!=='undefined'?imTgtTxt():'20%');
   const filt={none:'필터없음',nobuy:'물타기금지',exit:'현금이탈'}[(typeof stdFilter!=='undefined'?stdFilter:'none')]||'필터없음';
   const sN=(typeof stdN!=='undefined'?stdN:40), sG=(typeof stdG!=='undefined'?stdG:2.5);
@@ -4632,7 +4671,7 @@ function renderMultiStrat(type, results, params){
   document.getElementById('detail').classList.add('hide');
   document.querySelector('.cards').classList.remove('hide');
   document.querySelector('.tbl-wrap').classList.remove('hide');
-  const stratName=type==='im'?('무한매수법 '+(imEngine==='v22'?'V2.2':imEngine==='v30'?'V3.0':imEngine==='v50'?('V5.0('+imShortMA+'일·하락'+imLoPct+'%)'):'V4.0')+' · 익절 '+imTgtTxt()+imVariantTag(tickers)+(imEngine==='v40'&&imReverse?' · 리버스ON':'')+(imTgtDyn?' · 익절조절(20일상승률)':'')+(imCostOn?' · 비용반영':''))
+  const stratName=type==='im'?('무한매수법 '+(imEngine==='v22'?'V2.2':imEngine==='v30'?'V3.0':imEngine==='v50'?('V5.0('+imShortMA+'일·하락'+imLoPct+'%)'):'V4.0')+' · 익절 '+imTgtTxt()+imVariantTag(tickers)+(imEngine==='v40'&&imReverse?' · 리버스ON':'')+(imTgtDyn?' · 익절조절(20일상승률)':'')+(imAutoTp&&imEngine==='v40'?' · <span style="color:var(--gold)">익절 자동 10/20(실험 · 120일 수익률)</span>':'')+(imCostOn?' · 비용반영':''))
     :type==='ma'?(maStratName(maLen)+(maCostOn?' · 비용반영':''))
     :('VR 5.0 · '+vrFillLabel()+(vrCostOn?' · 비용반영':''));
   const pct=x=>(x>=0?'+':'')+x.toFixed(1)+'%';
@@ -4891,7 +4930,7 @@ function renderSingle2(type,r,days){
       <div class="metric"><span class="k">MAR (CAGR/MDD)</span><span class="v" style="color:var(--gold)">${(sMDD>0?sCagr/sMDD:0).toFixed(2)}</span></div>
       <div class="metric"><span class="k">기간</span><span class="v">${yrs.toFixed(1)}년</span></div>
       <div class="metric"><span class="k">누적 실현익</span><span class="v">${money(r.realized)}</span></div>
-      <div class="metric"><span class="k">익절 사이클</span><span class="v">${r.cycles}회</span></div>
+      <div class="metric"><span class="k">익절 사이클</span><span class="v">${r.cycles}회${r.tpN?`<span style="display:block;font-size:10px;color:var(--gold)">시작 익절 10%×${r.tpN[10]||0} · 20%×${r.tpN[20]||0} (자동 · 실험)</span>`:''}</span></div>
       <div class="metric"><span class="k">종료 현금 / 주식</span><span class="v" style="font-size:11px">${money(r.endCash)} / ${r.endShares.toFixed(1)}주</span></div>`;
   }else if(type==='ma'){
     stratExtra=`

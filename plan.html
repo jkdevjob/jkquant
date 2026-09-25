@@ -192,7 +192,7 @@ th:first-child,td:first-child{text-align:left}
 <body>
 <div class="wrap">
   <div class="top">
-    <div class="brand"><div class="logo">Asset Plan</div><h1>자산플랜 <span class="ver">v1.32.2</span></h1></div>
+    <div class="brand"><div class="logo">Asset Plan</div><h1>자산플랜 <span class="ver">v1.33.0</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
       <div class="jkmenu" id="jkmenuWrap">
@@ -1117,13 +1117,34 @@ const REV_DIVS_PLAN=[20,40];
 function imCycleEnds(soldToday, qtyAtDayEnd){ return !!soldToday && !(qtyAtDayEnd>1e-9); }
 /* 장부는 하루를 여러 줄로 적는다(익절 한 줄 · 매수 한 줄). hist[i] 뒤에 같은 날짜의 매매 줄이 더 있으면 그날 주문은 아직 다 처리되지 않았다. */
 function imDayOpenAfter(hist, i){ const d=hist[i]&&hist[i].date; if(!d) return false; for(let j=i+1;j<hist.length&&hist[j]&&hist[j].date===d;j++){ if(/매수|매도/.test(String(hist[j].kind||''))) return true; } return false; }
+/* ── 사이클 익절 자동 선택 (실험적 확장 — 원문 V4.0 아님 · 켤 때만) ──
+   사이클 첫 매수일 '전날'까지 확정된 종가로 120거래일 수익률을 잰다 — 0 미만이면 그 사이클 익절 10%, 아니면 20%.
+   정한 값은 그 사이클이 끝날 때까지 간다(별%base·복귀선도 같이 — 통합 규약). 첫 매수 전 아침엔 매일 다시 잰다.
+   근거(SOXL 2010~ 실측): 120일 하락 구간에서 시작한 사이클은 10%가 이겼다 — 앞 절반으로 고른 규칙이 뒤 절반에서도 이겼다.
+   bars 날짜 오름차순 [{date, close}] · date 사이클 첫 매수일(그날 봉은 안 본다 — 룩어헤드 금지). 자료가 모자라면 null.
+   백테 runIM · 앱 장부(computeInf — 운영·모의) · 서버(imCompute) · 5년 플랜(calcInfState)이 같은 글자로 쓴다. */
+const IM_AUTOTP={len:120, lo:10, hi:20};
+function imAutoTP(bars, date){
+  let a=0, b=(bars||[]).length;
+  while(a<b){ const m=(a+b)>>1; if(String(bars[m].date)<date) a=m+1; else b=m; }   // date 보다 앞선 봉 개수
+  const j=a-1;
+  if(j<IM_AUTOTP.len) return null;
+  const x=+bars[j].close, y=+bars[j-IM_AUTOTP.len].close;
+  if(!(x>0&&y>0)) return null;
+  const r=(x/y-1)*100;
+  return {tp:r<0?IM_AUTOTP.lo:IM_AUTOTP.hi, ret:r, asOf:String(bars[j].date)};
+}
 function calcInfState(sess){
   const st=sess.settings||{},hist=sess.hist||[];let avg=0,qty=0,inv=0,realized=0,T=0,withdrawn=0,saved=0,divTotal=0,revState='NORMAL',revFrom='';
   const simple=st.compound===false;
+  /* 익절 자동(실험 · imAutoTP) — 앱 computeInf · 서버 imCompute 와 같은 자리·같은 식. 확정 종가 봉은 imOrders 가 sess.autoBars 로 넘긴다 */
+  const auto=st.autoTp===true,ab=(auto&&sess.autoBars&&sess.autoBars.length)?sess.autoBars:null,tpAt=d=>(auto&&ab&&d)?imAutoTP(ab,d):null;
+  let cycStart='',cycTp=null;
   let day=null,daySold=false;   // 그날 매도가 있었나 — 사이클 종료는 그날 마지막 매매 줄에서만 (앱 computeInf 와 같다 · 제14차 D15)
   for(let hi=0;hi<hist.length;hi++){
     const h=hist[hi];
     if(h.date!==day){day=h.date;daySold=false;}
+    const flat0=!(qty>1e-9)&&T===0;   // 이 줄 전에 사이클이 비어 있었나 — 여기서 사면 새 사이클 첫 매수
     const kind=String(h.kind||''),isRev=kind==='리버스매도'||kind==='리버스매수';
     if(kind==='지정가매도'||kind==='쿼터매도'||kind==='리버스매도'){
       realized+=(+h.price-avg)*(+h.qty||0);qty-=+h.qty||0;inv-=avg*(+h.qty||0);
@@ -1150,15 +1171,17 @@ function calcInfState(sess){
     const soldQty=(h.sellQty!=null)?(+h.sellQty||0):(isSellKind(kind)?(+h.qty||0):0);
     if(soldQty>0)daySold=true;
     if(qty<=1e-9){qty=0;avg=0;inv=0;}
+    if(flat0&&qty>1e-9){cycStart=h.date||'';cycTp=tpAt(cycStart);}
     if(imCycleEnds(daySold,qty)&&!imDayOpenAfter(hist,hi)){
-      T=0;revState='NORMAL';daySold=false;
+      T=0;revState='NORMAL';daySold=false;cycStart='';cycTp=null;
       if(simple){const P0=+st.principal||0,cash=P0+realized+divTotal-withdrawn-saved;if(cash>P0)saved+=cash-P0;}
     }
     if(st.reverse===true&&REV_DIVS_PLAN.includes(+st.div)&&revState==='NORMAL'&&qty>1e-9&&((+st.div||20)-T)<1){revState='DAY1';revFrom=h.date||'';}
   }
   if(st.reverse===true&&REV_DIVS_PLAN.includes(+st.div)&&revState==='NORMAL'&&qty>0&&((+st.div||20)-T)<1){revState='DAY1';revFrom='';}
   const bal=(+st.principal||0)+realized+divTotal-inv-withdrawn-saved;
-  return {st,avg,qty:Math.max(0,qty),T,bal,withdrawn,saved,outside:withdrawn+saved,revState,revFrom,
+  const tpAuto=auto?((qty>1e-9&&cycStart)?cycTp:tpAt('9999-12-31')):null;
+  return {st,avg,qty:Math.max(0,qty),T,bal,withdrawn,saved,outside:withdrawn+saved,revState,revFrom,tp:tpAuto?tpAuto.tp:st.target,tpAuto,cycStart,
     reverseActive:st.reverse===true&&REV_DIVS_PLAN.includes(+st.div)&&revState!=='NORMAL'&&qty>0,reverseDay1:revState==='DAY1'};
 }
 function exitMulOf(base){ return 1-((base!=null&&base>0)?base:20)/100; }
@@ -1171,11 +1194,11 @@ function exitMulOf(base){ return 1-((base!=null&&base>0)?base:20)/100; }
    운영 주문표·서버 자동주문·5년 플랜이 같은 글자로 쓴다 (제11차 7): 복귀 기록 버튼을 안 눌러도 다음 주문은 일반모드여야 한다. */
 function imRevExitDue(c, close, target, date){ return !!(c && c.reverseActive && (!c.reverseDay1 || !!(date && c.revFrom && date>c.revFrom)) && close>0 && c.avg>0 && close>c.avg*exitMulOf(target)); }
 function imOrders(sess,price,rows){
-  let c=calcInfState(sess);
+  let c=calcInfState({...sess,autoBars:rows});   // rows = 확정 종가 봉 — 익절 자동(실험) 판정용
   /* 확정 종가가 복귀선 위면 이번 주문은 일반모드 — 앱 renderOrder·서버와 같은 판정 (제11차 7) */
   const cdate=(rows&&rows.length)?String(rows[rows.length-1].date||''):'';   // rows 의 마지막 봉 = 그 확정 종가 (제12차 ②)
-  if(imRevExitDue(c,price,(c.st||{}).target,cdate)) c=calcInfState({...sess,hist:[...(sess.hist||[]),{date:cdate,kind:'리버스복귀',price,qty:0,virtual:true}]});
-  const st=c.st,div=+st.div||20,target=+st.target||20,big=st.big!=null?+st.big:15,slot=div-c.T;
+  if(imRevExitDue(c,price,c.tp,cdate)) c=calcInfState({...sess,autoBars:rows,hist:[...(sess.hist||[]),{date:cdate,kind:'리버스복귀',price,qty:0,virtual:true}]});
+  const st=c.st,div=+st.div||20,target=+c.tp||20,big=st.big!=null?+st.big:15,slot=div-c.T;   // target = 이번 사이클 익절% (익절 자동이 꺼져 있으면 설정값)
   if(!(price>0))return {state:c,orders:[],note:'확정 종가가 없어 주문을 계산하지 못했습니다.'};
   const orders=[];
   if(c.reverseActive){
@@ -1192,7 +1215,7 @@ function imOrders(sess,price,rows){
       :'리버스 별지점 = 직전 5거래일 종가 평균 '+usd(star5)+' · 매수가는 별지점−$0.01(원문은 \'별지점 아래\' — 구현값) · 매수금은 잔금÷4';
     return {state:c,orders,note};
   }
-  const buy1=slot>=1?c.bal/slot:0,pct=starPctPlan(st,c.T),star=c.avg>0?imStarPx(c.avg,pct,'usd'):price,buyPt=imBuyPx(star),limit=price*(1+big/100),half=c.T<div/2;
+  const buy1=slot>=1?c.bal/slot:0,pct=starPctPlan({...st,target},c.T),star=c.avg>0?imStarPx(c.avg,pct,'usd'):price,buyPt=imBuyPx(star),limit=price*(1+big/100),half=c.T<div/2;
   /* 매수 주문은 앱·모의·서버·백테와 같은 정식 함수(imBuyOrders)에서 — 잔금 안에서만 · 아래로 LOC 추가 */
   if(slot>=1&&buy1>0){
     const first=!(c.avg>0);
@@ -1803,7 +1826,7 @@ async function refreshLive(){
       $('outsideCashNote').textContent=c.outside>0
         ? '무매 단리·출금으로 전략 밖에 빠진 누계 '+usd(c.outside)+' (단리 자동인출 '+usd(c.saved)+' · 직접출금 '+usd(c.withdrawn)+'). 실제 SGOV에 보관 중이면 SGOV 잔고에 직접 포함하세요.'
         : '무매 전략 밖 누적 인출금 없음 · SGOV 실보유액은 현재 SGOV 입력값을 사용합니다.';
-      $('liveInfMeta').textContent=(inf.name||'SOXL 세션')+' · '+(st.div||20)+'분할 / '+(st.target||20)+'% / '+(st.compound===false?'단리':'복리')+' / 큰수 '+(st.big!=null?st.big:15)+'%'+' · T '+c.T.toFixed(2)+' · 보유 '+Math.round(c.qty)+'주 · 운용자산 '+usd(mmValue);
+      $('liveInfMeta').textContent=(inf.name||'SOXL 세션')+' · '+(st.div||20)+'분할 / '+(st.autoTp===true?'익절 자동 '+(c.tp||20)+'%(실험)':(st.target||20)+'%')+' / '+(st.compound===false?'단리':'복리')+' / 큰수 '+(st.big!=null?st.big:15)+'%'+' · T '+c.T.toFixed(2)+' · 보유 '+Math.round(c.qty)+'주 · 운용자산 '+usd(mmValue);
       const primary=r.orders.filter(o=>o.tag!=='예약');$('liveInf').innerHTML=(primary.length?primary.map(orderHtml).join(''):waitHtml('오늘 신규 주문 없음',r.note||'현재 상태에서 실행할 주문이 없습니다.'));
       mirrorStrategyTab('soxlTabMeta','soxlTabActions',$('liveInfMeta').textContent,$('liveInf').innerHTML);
       mirrorStrategyTab('bSoxlMeta','bSoxlActions',$('liveInfMeta').textContent,$('liveInf').innerHTML);

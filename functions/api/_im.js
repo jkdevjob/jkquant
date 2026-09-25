@@ -130,7 +130,7 @@ function imCycleEnds(soldToday, qtyAtDayEnd){ return !!soldToday && !(qtyAtDayEn
 /* 장부는 하루를 여러 줄로 적는다(익절 한 줄 · 매수 한 줄). hist[i] 뒤에 같은 날짜의 매매 줄이 더 있으면 그날 주문은 아직 다 처리되지 않았다. */
 function imDayOpenAfter(hist, i){ const d=hist[i]&&hist[i].date; if(!d) return false; for(let j=i+1;j<hist.length&&hist[j]&&hist[j].date===d;j++){ if(/매수|매도/.test(String(hist[j].kind||''))) return true; } return false; }
 
-export function imCompute(st, hist) {
+export function imCompute(st, hist, days) {
   let avg = 0, qty = 0, inv = 0, realized = 0, T = 0;
   let withdrawn = 0, saved = 0, divTotal = 0;
   const simple = (st.compound === false);
@@ -139,10 +139,16 @@ export function imCompute(st, hist) {
     if (revEnabled(st) && revState === "NORMAL" && qty > 1e-9 && (st.div - T) < 1) { revState = "DAY1"; revFrom = d || ""; }
   };
   const H = hist || [];
+  /* 익절 자동(실험 · imAutoTP) — 사이클 첫 매수일로 그 사이클 익절%를 정한다. 앱 computeInf 와 같은 자리·같은 식.
+     days = 확정 종가 이력 [{date, close}] (autotrade 가 익절 자동 세션이면 전체 기간을 받아 넘긴다). */
+  const auto = (st.autoTp === true), ab = (auto && days && days.length) ? days : null;
+  const tpAt = (d) => (auto && ab && d) ? imAutoTP(ab, d) : null;
+  let cycStart = "", cycTp = null;
   let day = null, daySold = false;   // 그날 매도가 있었나 — 사이클 종료는 그날 마지막 매매 줄에서만 (앱 computeInf 와 같다 · 제14차 D15)
   for (let hi = 0; hi < H.length; hi++) {
     const h = H[hi];
     if (h.date !== day) { day = h.date; daySold = false; }
+    const flat0 = !(qty > 1e-9) && T === 0;   // 이 줄 전에 사이클이 비어 있었나 — 여기서 사면 새 사이클 첫 매수
     const kind = String(h.kind || "");
     const isRev = (kind === "리버스매도" || kind === "리버스매수");
     if (kind === "지정가매도" || kind === "쿼터매도" || kind === "리버스매도") {
@@ -172,8 +178,9 @@ export function imCompute(st, hist) {
     const soldQty = (h.sellQty != null) ? (+h.sellQty || 0) : (isSell(kind) ? (+h.qty || 0) : 0);
     if (soldQty > 0) daySold = true;
     if (qty <= 1e-9) { qty = 0; avg = 0; inv = 0; }
+    if (flat0 && qty > 1e-9) { cycStart = h.date || ""; cycTp = tpAt(cycStart); }
     if (imCycleEnds(daySold, qty) && !imDayOpenAfter(H, hi)) {
-      T = 0; revState = "NORMAL"; daySold = false;
+      T = 0; revState = "NORMAL"; daySold = false; cycStart = ""; cycTp = null;
       if (simple) {
         const P0 = +st.principal || 0;
         const cashNow = P0 + realized + divTotal - withdrawn - saved;
@@ -186,7 +193,9 @@ export function imCompute(st, hist) {
   const reverseActive = revEnabled(st) && revState !== "NORMAL" && qty > 0;
   const reverseDay1 = reverseActive && revState === "DAY1";
   const bal = (+st.principal || 0) + realized + divTotal - inv - withdrawn - saved;
-  return { avg, qty, inv, realized, T, bal, st, revState, reverseActive, reverseDay1, revFrom, withdrawn, saved, divTotal, simple };
+  const tpAuto = auto ? ((qty > 1e-9 && cycStart) ? cycTp : tpAt("9999-12-31")) : null;
+  const tp = tpAuto ? tpAuto.tp : st.target;
+  return { avg, qty, inv, realized, T, bal, st, revState, reverseActive, reverseDay1, revFrom, withdrawn, saved, divTotal, simple, tp, tpAuto, cycStart };
 }
 
 /* ── 확정 종가 ──
@@ -248,6 +257,23 @@ export function imMomOf(days) {
   return (a > 0 && b > 0) ? (a / b - 1) * 100 : null;
 }
 export function imTgtOf(base, mom) { return (mom != null && mom > IM_MOM_TH) ? Math.min(base * 2, IM_MOM_CAP) : base; }
+/* ── 사이클 익절 자동 선택 (실험적 확장 — 원문 V4.0 아님 · 켤 때만) ──
+   사이클 첫 매수일 '전날'까지 확정된 종가로 120거래일 수익률을 잰다 — 0 미만이면 그 사이클 익절 10%, 아니면 20%.
+   정한 값은 그 사이클이 끝날 때까지 간다(별%base·복귀선도 같이 — 통합 규약). 첫 매수 전 아침엔 매일 다시 잰다.
+   근거(SOXL 2010~ 실측): 120일 하락 구간에서 시작한 사이클은 10%가 이겼다 — 앞 절반으로 고른 규칙이 뒤 절반에서도 이겼다.
+   bars 날짜 오름차순 [{date, close}] · date 사이클 첫 매수일(그날 봉은 안 본다 — 룩어헤드 금지). 자료가 모자라면 null.
+   백테 runIM · 앱 장부(computeInf — 운영·모의) · 서버(imCompute) · 5년 플랜(calcInfState)이 같은 글자로 쓴다. */
+const IM_AUTOTP={len:120, lo:10, hi:20};
+export function imAutoTP(bars, date){
+  let a=0, b=(bars||[]).length;
+  while(a<b){ const m=(a+b)>>1; if(String(bars[m].date)<date) a=m+1; else b=m; }   // date 보다 앞선 봉 개수
+  const j=a-1;
+  if(j<IM_AUTOTP.len) return null;
+  const x=+bars[j].close, y=+bars[j-IM_AUTOTP.len].close;
+  if(!(x>0&&y>0)) return null;
+  const r=(x/y-1)*100;
+  return {tp:r<0?IM_AUTOTP.lo:IM_AUTOTP.hi, ret:r, asOf:String(bars[j].date)};
+}
 
 function exitMulOf(base){ return 1-((base!=null&&base>0)?base:20)/100; }
 /* 리버스 종료가 확정됐는가 — 원문 리버스 6-(2): 리버스로 보낸 날의 확정 종가가 평단 대비 −15%(TQQQ)·−20%(SOXL) 위면
@@ -261,18 +287,21 @@ function imRevExitDue(c, close, target, date){ return !!(c && c.reverseActive &&
 /* 오늘 낼 주문. index.html renderOrder의 일반모드와 같은 순서·같은 값으로 낸다.
    close = 확정 종가(전일 종가). days = 종가 이력(익절 조절용, 없으면 조절 안 함). */
 export function imOrders({ st, hist, close, days }) {
-  let c = imCompute(st, hist);
+  let c = imCompute(st, hist, days);
   const out = [];
   /* 확정 종가가 복귀선 위면 이번 주문은 일반모드 — 장부 끝에 복귀 기록을 가상으로 얹어 다시 센다 (앱 renderOrder 와 같다 · 제11차 7).
      그래도 T > 분할−1 이면 새 리버스 1일차라 아래에서 건너뛴다(리버스 자동주문 미지원). */
   const closeDate = (days && days.length) ? String(days[days.length - 1].date || "") : "";   // days 의 마지막 봉 = 그 확정 종가
-  if (imRevExitDue(c, close, st.target, closeDate)) c = imCompute(st, [...(hist || []), { date: closeDate, kind: "리버스복귀", price: close, qty: 0, virtual: true }]);
+  if (imRevExitDue(c, close, c.tp, closeDate)) c = imCompute(st, [...(hist || []), { date: closeDate, kind: "리버스복귀", price: close, qty: 0, virtual: true }], days);
   if (c.reverseActive) return { orders: out, skip: "리버스모드 — 자동 주문 미지원", c };
   if (!(close > 0)) return { orders: out, skip: "확정 종가 없음", c };
+  /* 익절 자동인데 판정 자료가 없으면 보유 중엔 주문하지 않는다 — 설정값으로 낸 익절·별지점 주문은 되돌릴 수 없다.
+     비어 있을 때(첫 매수)는 익절%와 상관없는 큰수 LOC 하나라 그대로 낸다. 앱 주문표는 같은 상태에서 경고를 띄운다. */
+  if (st.autoTp === true && !c.tpAuto && c.qty > 0) return { orders: out, skip: "익절 자동 — 판정 자료(사이클 시작 전날까지 120거래일 종가) 부족", c };
 
   const B1 = imBuy1(c), buy1 = B1.amt;
   const cur = /^(?:\d{6}|\d{4}[A-Z]\d)$/.test(String(st.ticker || "").toUpperCase()) ? "krw" : "usd";
-  const pct = starPct(st.ticker, st.div, c.T, st.target);
+  const pct = starPct(st.ticker, st.div, c.T, c.tp);   // 이번 사이클 익절% 기준 (익절 자동 · 실험 — 꺼져 있으면 설정값)
   const star = c.avg > 0 ? imStarPx(c.avg, pct, cur) : close;   // 별지점 센트 반올림 — 앱·모의·백테·플랜과 같다 (제10차)
   const buyPt = imBuyPx(star);
   const bigPct = imBigPct(st);
@@ -290,8 +319,8 @@ export function imOrders({ st, hist, close, days }) {
 
   // 매도
   if (c.qty > 0) {
-    let effTarget = st.target;
-    if (st.tgtDyn === true) { const m = imMomOf(days); if (m != null) effTarget = imTgtOf(st.target, m); }
+    let effTarget = c.tp;
+    if (st.tgtDyn === true) { const m = imMomOf(days); if (m != null) effTarget = imTgtOf(c.tp, m); }
     const qSell = Math.floor(c.qty / 4);
     if (qSell > 0) push("sell", "쿼터매도 (¼·별지점)", "LOC", star, qSell);
     push("sell", "지정가매도 (나머지)", "지정가", c.avg * (1 + effTarget / 100), c.qty - qSell);
