@@ -2121,7 +2121,7 @@ function cacheStrategyDefaults(v){
   return true;
 }
 
-function defInfSettings(){return strategyDefaultOf('inf',{ticker:'SOXL',div:20,target:20,big:IM_BIG_DEFAULT,rows:IM_ROWS_DEFAULT,revGap:REV_GAP_DEF,rowqty:1,principal:10000,divmode:'reinv',engine:'v40',shortMA:30,loPct:6,tgtDyn:false,reverse:false,compound:true})}
+function defInfSettings(){const b={ticker:'SOXL',div:20,target:20,big:IM_BIG_DEFAULT,rows:IM_ROWS_DEFAULT,revGap:REV_GAP_DEF,rowqty:1,principal:10000,divmode:'reinv',engine:'v40',shortMA:30,loPct:6,tgtDyn:false,reverse:false,compound:true};return typeof strategyDefaultOf==='function'?strategyDefaultOf('inf',b):b}
 // V5.0 숨김 기간: 저장된 세션이 v50이어도 v40으로 강제 (UI가 없어 되돌릴 수 없으므로)
 // 복원 시 이 함수와 load() 안의 호출만 제거하면 된다.
 function forceV40(){
@@ -2136,18 +2136,18 @@ function forceV40(){
     walk(S);
   }catch(e){}
 }
-function defVrSettings(){return strategyDefaultOf('vr',{ticker:'TQQQ',mode:0.75,formula:'basic',g:10,initAmt:10000,add:100,band:15,startv:0,startpool:0,autoCyc:false,vrModel:'ladder',divmode:'reinv'})}
+function defVrSettings(){const b={ticker:'TQQQ',mode:0.75,formula:'basic',g:10,initAmt:10000,add:100,band:15,startv:0,startpool:0,autoCyc:false,vrModel:'ladder',divmode:'reinv'};return typeof strategyDefaultOf==='function'?strategyDefaultOf('vr',b):b}
 function uid(){return 's'+Date.now()+Math.floor(Math.random()*9999)}
 function newInfSession(name){return{id:uid(),name:name||'세션 1',settings:defInfSettings(),hist:[]}}
 function newVrSession(name){return{id:uid(),name:name||'세션 1',settings:defVrSettings(),hist:[]}}
-function defMaSettings(){return strategyDefaultOf('ma',{ticker:'SOXL',buy:'ma',sell:'ma',park:'cash',principal:10000,divmode:'reinv'})}   // 이평 200일 고정 · 매수/매도 조건 16조합
+function defMaSettings(){const b={ticker:'SOXL',buy:'ma',sell:'ma',park:'cash',principal:10000,divmode:'reinv'};return typeof strategyDefaultOf==='function'?strategyDefaultOf('ma',b):b}   // 이평 200일 고정 · 매수/매도 조건 16조합
 function newMaSession(name){return{id:uid(),name:name||'세션 1',settings:defMaSettings(),hist:[]}}
-function defAsapSettings(){return strategyDefaultOf('asap',{ticker:'SOXL',base:10,mid:50,deep:100,divmode:'reinv'})}
+function defAsapSettings(){const b={ticker:'SOXL',base:10,mid:50,deep:100,divmode:'reinv'};return typeof strategyDefaultOf==='function'?strategyDefaultOf('asap',b):b}
 function newAsapSession(name){return{id:uid(),name:name||'내 계좌',settings:defAsapSettings(),hist:[]}}
 /* ── 역분산 비중 (섀넌의 도깨비) ──
    w = min(1,(s0/σ)²) · σ = 최근 look일 실현변동성(연율) · |w−현재비중|>band 일 때만 리밸런싱
    qty/cash/avg 는 '지금 내 계좌 상태'. 리밸런싱 기록 시 자동 갱신되고 설정에서 직접 고칠 수도 있다. */
-function defIvsSettings(){return strategyDefaultOf('ivs',{ticker:'TQQQ',mode:'iv',s0:55,look:40,band:15,principal:10000,park:'bill',monthly:0,divmode:'reinv'})}
+function defIvsSettings(){const b={ticker:'TQQQ',mode:'iv',s0:55,look:40,band:15,principal:10000,park:'bill',monthly:0,divmode:'reinv'};return typeof strategyDefaultOf==='function'?strategyDefaultOf('ivs',b):b}
 function newIvsSession(name){return{id:uid(),name:name||'내 계좌',settings:defIvsSettings(),hist:[]}}
 // 구형식 마이그레이션: 계좌를 설정에 들고 있던 세션을 '초기자금 + 기록' 형식으로 옮긴다.
 // 보유분은 평단으로 매수한 '시작 보유' 기록으로 남겨 포지션이 그대로 재현되게 한다.
@@ -2166,7 +2166,7 @@ function migrateIvsSess(sess){
 }
 function ensureIvsBox(){ if(S&&(!S.ivs||!S.ivs.sessions||!S.ivs.sessions.length)){ const d=newIvsSession('내 계좌'); S.ivs={sessions:[d],active:d.id}; } }
 /* mode: 'dca' 적립식(주기마다 매수) / 'lump' 거치식(시작일에 원금 전액 한 번, 이후 보유) */
-function defDcaSettings(){return strategyDefaultOf('dca',{ticker:'USD',mode:'dca',amount:10,freq:'day',dipMul:1,reinv:true})}   // 적립은 divmode 대신 reinv 를 쓴다(칸 이름이 set_dcareinv)
+function defDcaSettings(){const b={ticker:'USD',mode:'dca',amount:10,freq:'day',dipMul:1,reinv:true};return typeof strategyDefaultOf==='function'?strategyDefaultOf('dca',b):b}   // 적립은 divmode 대신 reinv 를 쓴다(칸 이름이 set_dcareinv)
 function newDcaSession(name){return{id:uid(),name:name||'내 계좌',settings:defDcaSettings(),hist:[]}}
 
 /* 신규 사용자 기본 상태 (빈 세션 1개씩) */
