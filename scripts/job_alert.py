@@ -4,6 +4,7 @@ import os
 import re
 import sys
 import time
+import subprocess
 from html import escape
 from pathlib import Path
 from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
@@ -233,24 +234,46 @@ def send_via_jkquant(message, count):
     if not key:
         raise RuntimeError('AUTOTRADE_KEY GitHub Secret이 필요합니다.')
 
-    response = requests.post(
-        f'{base}/api/job-alert',
-        headers={
-            'x-monitor-key': key,
-            'content-type': 'application/json',
-        },
-        json={
-            'text': message,
-            'count': count,
-        },
-        timeout=30,
+    payload = json.dumps(
+        {'text': message, 'count': count},
+        ensure_ascii=False,
+    ).encode('utf-8')
+
+    proc = subprocess.run(
+        [
+            'curl',
+            '-sS',
+            '--max-time', '30',
+            '-X', 'POST',
+            '-H', f'x-monitor-key: {key}',
+            '-H', 'content-type: application/json',
+            '--data-binary', '@-',
+            '-w', '\n%{http_code}',
+            f'{base}/api/job-alert',
+        ],
+        input=payload,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        check=False,
     )
-    if response.status_code != 200:
+
+    output = proc.stdout.decode('utf-8', errors='replace')
+    stderr = proc.stderr.decode('utf-8', errors='replace')
+    if '\n' not in output:
+        raise RuntimeError(f'job-alert endpoint invalid response: {output[:500]} {stderr[:300]}')
+
+    body, status = output.rsplit('\n', 1)
+    if proc.returncode != 0 or status.strip() != '200':
         raise RuntimeError(
-            f'job-alert endpoint failed: HTTP {response.status_code} {response.text[:500]}'
+            f'job-alert endpoint failed: curl={proc.returncode} HTTP {status.strip()} '
+            f'{body[:500]} {stderr[:300]}'
         )
 
-    data = response.json()
+    try:
+        data = json.loads(body)
+    except json.JSONDecodeError as exc:
+        raise RuntimeError(f'job-alert endpoint invalid JSON: {body[:500]}') from exc
+
     if not data.get('ok'):
         raise RuntimeError(f'job-alert endpoint error: {data}')
 
