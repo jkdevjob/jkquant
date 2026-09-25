@@ -1252,27 +1252,34 @@ console.log('[23] 관리자 모드 — 접속 계정·사용자 관리');
      && /ma:\{ticker:'SOXL'/.test(adm) && /ivs:\{ticker:'TQQQ'/.test(adm)
      && /dca:\{ticker:'USD'/.test(adm) && /asap:\{ticker:'SOXL'/.test(adm)
      && /function renderDefaults\(el\)/.test(adm) && /async function saveStrategyDefaults\(\)/.test(adm));
-  ok('관리자 기본값은 계정 문서에 merge 저장한다',
-     /doc\(window\.fb\.db,'users',me\.uid\),\{strategyDefaults:strategyDefaults,strategyDefaultsUpdated:Date\.now\(\)\},\{merge:true\}/.test(adm));
-  ok('운영 새 세션이 관리자 기본값을 합친다',
+  ok('관리자 기본값은 선택 항목만 sparse override로 merge 저장한다',
+     /strategyDefaultOverrides:strategyOverrides/.test(adm)
+     && /strategyDefaultOverridesUpdated:Date\.now\(\)/.test(adm)
+     && /const STRATEGY_DEFAULT_CACHE='jkq_strategy_default_overrides_v2'/.test(adm));
+  ok('관리자 설정마다 적용 체크박스가 있다',
+     /id="cfg_on_/.test(adm) && /function cfgToggle\(tab,key,on\)/.test(adm)
+     && /선택 항목 기본값 저장/.test(adm));
+  ok('운영 새 세션이 선택된 관리자 기본값만 합친다',
      /function strategyDefaultOf\(tab,builtin\)/.test(idx)
+     && /const STRATEGY_DEFAULT_CACHE='jkq_strategy_default_overrides_v2'/.test(idx)
      && /strategyDefaultOf\('inf',b\)/.test(idx) && /strategyDefaultOf\('vr',b\)/.test(idx)
      && /strategyDefaultOf\('ma',b\)/.test(idx) && /strategyDefaultOf\('ivs',b\)/.test(idx)
      && /strategyDefaultOf\('dca',b\)/.test(idx) && /strategyDefaultOf\('asap',b\)/.test(idx));
-  ok('운영은 로그인 계정의 관리자 기본값을 캐시한다',
-     /d&&d\.strategyDefaults&&typeof d\.strategyDefaults==='object'/.test(idx)
-     && /cacheStrategyDefaults\(d\.strategyDefaults\)/.test(idx));
-  ok('관리자 기본값을 기존 세션에도 적용할 수 있다',
+  ok('운영은 로그인 계정의 선택형 관리자 기본값을 캐시한다',
+     /d&&d\.strategyDefaultOverrides&&typeof d\.strategyDefaultOverrides==='object'/.test(idx)
+     && /cacheStrategyDefaults\(d\.strategyDefaultOverrides\)/.test(idx));
+  ok('기존 세션에는 체크된 옵션만 바꾼다',
      /function applyDefaultsExistingSessions\(\)/.test(adm)
-     && /기존 세션 전체에 적용/.test(adm)
-     && /sess\.settings=\{\.\.\.prev,\.\.\.cfgClone\(defs\)\}/.test(adm));
-  ok('기존 세션 적용 — 실계좌 기록은 보존하고 모의 자동기록만 비운다',
-     /if\(sess\.paper\)\{[\s\S]{0,500}?filter\(x=>!\(x&&\(x\.sim\|\|x\.auto\)\)\)/.test(adm)
-     && /delete sess\.settings\.simSig/.test(adm)
-     && /else real\+\+/.test(adm));
+     && /선택 항목 기존 세션에 적용/.test(adm)
+     && /const changed=keys\.filter\(k=>!cfgEq\(prev\[k\],defs\[k\]\)\)/.test(adm)
+     && /changed\.forEach\(k=>\{next\[k\]=cfgClone\(defs\[k\]\);\}\)/.test(adm));
+  ok('기존 세션 적용 — 값이 실제 바뀐 모의 세션만 자동기록을 다시 만든다',
+     /const affects=changed\.some\(k=>PAPER_AFFECT_KEYS\[tab\]/.test(adm)
+     && /filter\(x=>!\(x&&\(x\.sim\|\|x\.auto\)\)\)/.test(adm)
+     && /delete sess\.settings\.simSig/.test(adm));
   ok('기존 세션 적용 — 로컬과 클라우드 상태를 같이 갱신한다',
      /localStorage\.setItem\('qcockpit_v2_'\+me\.uid,JSON\.stringify\(state\)\)/.test(adm)
-     && /state,updated:now,strategyDefaults:strategyDefaults/.test(adm));
+     && /state,updated:now,strategyDefaultOverrides:strategyOverrides/.test(adm));
   ok('관리자 아닌 계정은 문 앞에서 막힌다', /if\(isAdmin\(\)\)\{[\s\S]{0,200}?\$\('gate'\)\.style\.display='none'/.test(adm)
      && /계정에는 관리자 권한이 없습니다/.test(adm));
 
