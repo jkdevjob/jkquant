@@ -60,6 +60,14 @@ def summarize(reports,strategy):
         "avgInternalPnlPct":avg(m.get("internalPnl") for m in complete),
         "avgVtsGrossPnlPct":avg(m.get("vtsGrossPnlPct") for m in complete),
         "avgVtsNetPnlPct":avg(m.get("vtsNetPnlPct") for m in complete),
+        "avgBrokerCostRatePct":avg(m.get("vtsBrokerCostRatePct") for m in complete),
+        "avgObservedExecutionDragPct":avg(m.get("observedExecutionDragPct") for m in complete),
+        "frictionGapVsInternal025Pct":(
+            avg(m.get("observedExecutionDragPct") for m in complete)-0.25
+            if avg(m.get("observedExecutionDragPct") for m in complete) is not None else None
+        ),
+        "calibrationStatus":"reviewable" if len(complete)>=20 else "collecting",
+        "calibrationMatches":len(complete),
         "totalBrokerEstimatedCostsWon":sum(float(m.get("vtsBrokerEstimatedCosts") or 0) for m in complete),
         "avgBrokerEstimatedCostsWon":avg(m.get("vtsBrokerEstimatedCosts") for m in complete),
     }
