@@ -287,9 +287,13 @@ def main():
     all_seen = seen | {job['url'] for job in jobs}
     save_seen(all_seen)
 
-    # 적합한 신규 공고가 없으면 알림을 보내지 않는다.
     if not new_jobs:
-        print('[INFO] no new matching jobs; Telegram message skipped.')
+        message = (
+            '🔎 <b>대전·세종 Java·AI 공고 확인</b>\n\n'
+            '오늘은 조건에 맞는 신규 공고가 없습니다.'
+        )
+        send_via_jkquant(message, 0)
+        print('[INFO] no new matching jobs; sent empty-result Telegram notification.')
         return
 
     send_via_jkquant(build_message(new_jobs), len(new_jobs))
