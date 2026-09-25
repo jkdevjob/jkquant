@@ -222,12 +222,16 @@ async function usPrice(env, sym, excdHint) {
 }
 
 // 해외 잔고는 거래소별로 따로 물어야 한다 — 세 곳을 합쳐서 준다.
+/* 잔고 조회(3012R)에는 남은 돈이 없다. 예전엔 cash 에 frcr_pchs_amt1(외화'매입'금액 — 보유분을 산 돈)을,
+   evalTotal 에 tot_evlu_pfls_amt(총평가'손익')를 넣어 이름과 뜻이 달랐다. 쓰는 화면이 없어 빼고,
+   남은 돈은 매수가능금액조회(usBuyable)로 따로 받는다. 모의는 초당 2건이라 거래소 사이에 간격을 둔다. */
 async function usBalance(env) {
   const a = acct(env); if (!a) return { error: "KIS_ACCOUNT 형식 오류(예: 12345678-01)" };
   const token = await getToken(env);
   const tr = isReal(env) ? "TTTS3012R" : "VTTS3012R";
-  const holdings = []; let cash = 0, evalTotal = 0; const errs = [];
-  for (const excd of ["NASD", "NYSE", "AMEX"]) {
+  const holdings = []; const errs = [];
+  for (const [i, excd] of ["NASD", "NYSE", "AMEX"].entries()) {
+    if (i) await sleep(550);
     const qs = new URLSearchParams({ CANO: a.cano, ACNT_PRDT_CD: a.prod, OVRS_EXCG_CD: excd,
       TR_CRCY_CD: "USD", CTX_AREA_FK200: "", CTX_AREA_NK200: "" });
     const j = await readJson(base(env) + "/uapi/overseas-stock/v1/trading/inquire-balance?" + qs, {
@@ -239,11 +243,27 @@ async function usBalance(env) {
       code: x.ovrs_pdno, name: x.ovrs_item_name, market: excd,
       qty: +x.ovrs_cblc_qty, avg: +x.pchs_avg_pric, cur: +x.now_pric2, pl: +x.evlu_pfls_rt,
     }));
-    const o2 = (j.output2 && (Array.isArray(j.output2) ? j.output2[0] : j.output2)) || {};
-    evalTotal += +o2.tot_evlu_pfls_amt || 0;
-    if (!cash) cash = +o2.frcr_pchs_amt1 || 0;
   }
-  return { holdings, cash, evalTotal, cur: "USD", errs: errs.length ? errs : undefined };
+  return { holdings, cur: "USD", errs: errs.length ? errs : undefined };
+}
+
+/* 해외 주문가능금액 — '이 계좌에 달러가 있나'. 매수가능금액조회(모의 VTTS3007R · 실전 TTTS3007R)는
+   종목 · 가격을 받아 그 값으로 얼마까지 살 수 있는지 준다. 통합증거금을 안 쓰면 ovrs_ord_psbl_amt
+   (해외주문가능금액), 쓰면 frcr_ord_psbl_amt1(외화주문가능금액1)이 맞는 값이라 둘 다 넘긴다.
+   읽기만 한다 — 주문 엔드포인트는 부르지 않는다. */
+async function usBuyable(env, code, price, excd) {
+  const a = acct(env); if (!a) return { error: "KIS_ACCOUNT 형식 오류(예: 12345678-01)" };
+  const token = await getToken(env);
+  const qs = new URLSearchParams({ CANO: a.cano, ACNT_PRDT_CD: a.prod, OVRS_EXCG_CD: excd,
+    OVRS_ORD_UNPR: (+price).toFixed(2), ITEM_CD: code });
+  const j = await readJson(base(env) + "/uapi/overseas-stock/v1/trading/inquire-psamount?" + qs, {
+    headers: { authorization: "Bearer " + token, appkey: env.KIS_APPKEY, appsecret: env.KIS_APPSECRET,
+      tr_id: isReal(env) ? "TTTS3007R" : "VTTS3007R", custtype: "P" },
+  });
+  if (String(j.rt_cd) !== "0") return { error: RATE_LIMITED(j) ? "초당 요청 제한 — 잠시 후 다시" : (j.msg1 || "주문가능금액 조회 실패") };
+  const o = j.output || {};
+  return { code, price: +price, excd, amt: +o.ovrs_ord_psbl_amt || 0, frcrAmt1: +o.frcr_ord_psbl_amt1 || 0,
+    maxQty: +o.max_ord_psbl_qty || +o.ovrs_max_ord_psbl_qty || 0, exrt: +o.exrt || 0 };
 }
 
 function parseEmails(raw) {
@@ -498,7 +518,16 @@ export async function onRequestGet({ request, env }) {
       if (!g.ok) return json({ error: g.msg }, 401);
       if (String(url.searchParams.get("market") || "").toLowerCase() === "us") {
         const r = await usBalance(env);
-        return r.error ? json(r, 400) : json(r);
+        if (r.error) return json(r, 400);
+        // 종목을 주면 그 종목 현재가로 주문가능금액 · 최대 수량도 같이 준다(앱 '한투 계좌 확인')
+        const code = String(url.searchParams.get("code") || "").toUpperCase();
+        if (USSYM.test(code)) {
+          await sleep(550);
+          const q = await usPrice(env, code);
+          if (q.ok) { await sleep(550); r.buyable = await usBuyable(env, code, q.price, q.market); }
+          else r.buyable = { error: "시세 조회 실패 — " + q.error };
+        }
+        return json(r);
       }
       const a = acct(env); if (!a) return json({ error: "KIS_ACCOUNT 형식 오류(예: 12345678-01)" }, 400);
       const token = await getToken(env);
