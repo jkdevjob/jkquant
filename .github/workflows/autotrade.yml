@@ -8,12 +8,22 @@ name: 무매 자동 주문
 #
 # 시각은 UTC다. 미국 정규장 마감이 16:00 ET —
 #   서머타임(3~11월) 20:00 UTC · 겨울 21:00 UTC.
-# LOC 주문은 마감 전에 들어가 있어야 하므로 그보다 앞선 시각에 낸다.
-
+# 서버는 '마감 1시간 전 ~ 마감'(15:00~16:00 ET) 안에 도착한 실행만 주문을 낸다(_im.js orderWindow).
+#
+# 깃허브 크론은 예정 시각에 돌지 않는다. 실측(2026-09-15 ~ 09-24, 16회): 15:40 ET 예정이
+# 17:50~18:48 ET 에 돌았다 — 2시간 10분~3시간 8분 늦었다. 예전엔 15:40 ET 한 번뿐이라
+# 주문 창과 여유가 20분이었고, 그 열흘 동안 한 번도 주문이 나가지 않았다.
+# 그래서 11:40 ET 부터 30분마다 두드린다(서머타임 기준 · 겨울은 한 시간 앞당겨진다).
+#   · 창 밖에 도착한 실행은 서버가 계산만 하고 버린다 — 주문도 안 내고 날도 안 쓴다.
+#   · 창 안에 처음 도착한 실행이 주문을 낸다. 서버는 첫 주문 직전에 lastDate 를 먼저 찍는다
+#     (방금 읽은 문서가 그대로일 때만 쓰는 조건부 쓰기) — 뒤 실행은 '오늘 이미 실행했습니다'.
+#   · 30분 간격 · 1시간 창이라 지연이 0분부터 4시간 20분(겨울 5시간 20분)까지 하루 한 번 이상 창에 든다
+#     (회귀 [130] 이 서버 orderWindow 로 1분 단위로 잰다).
+#   · 국내 종목 세션은 이 크론으로는 주문 창(14:30~15:30 KST)에 닿지 않는다.
 on:
   schedule:
-    - cron: "40 19 * * 1-5"   # 서머타임 기준 15:40 ET (마감 20분 전)
-    - cron: "40 20 * * 1-5"   # 겨울시간 기준 15:40 ET
+    - cron: "40 15-20 * * 1-5"   # 15:40 · 16:40 · … · 20:40 UTC
+    - cron: "10 16-20 * * 1-5"   # 16:10 · 17:10 · … · 20:10 UTC
   workflow_dispatch:           # 손으로도 돌릴 수 있게
     inputs:
       dry:
@@ -26,9 +36,16 @@ on:
         default: "00"
         options: ["00", "31", "32", "33", "34"]
 
+# 한 번에 하나만 돈다. 밀린 크론이 한꺼번에 풀려도 겹쳐서 주문하지 않게 줄을 세운다
+# (서버의 조건부 쓰기가 한 번 더 막는다). 도는 중인 실행은 끊지 않는다 — 주문 도중에 끊기면 안 된다.
+concurrency:
+  group: autotrade-order
+  cancel-in-progress: false
+
 jobs:
   order:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - name: 자동 주문 호출
         env:
@@ -37,12 +54,35 @@ jobs:
           DVSN: ${{ github.event_name == 'workflow_dispatch' && inputs.ord_dvsn || '00' }}
         run: |
           if [ -z "$KEY" ]; then echo "AUTOTRADE_KEY Secret 이 없습니다"; exit 1; fi
-          # 미국 시장은 하루에 두 번 걸리는 크론 중 한쪽만 실제 마감 20분 전이다.
-          # 서버가 같은 날 두 번째 호출을 lastDate 로 막으므로 그냥 둘 다 부른다.
-          code=$(curl -sS -o resp.json -w '%{http_code}' --max-time 120 \
+          # 주문 한 건에 2초 간격을 둔다 — 세션·주문이 늘어도 끝까지 기다린다(도중에 끊으면 덜 나간다)
+          code=$(curl -sS -o resp.json -w '%{http_code}' --max-time 300 \
             -H "x-autotrade-key: $KEY" \
             "https://jkquant.pages.dev/api/autotrade?dry=$DRY&ordDvsn=$DVSN")
           echo "HTTP $code"
-          cat resp.json
-          # 이미 오늘 돌았으면 성공으로 친다 — 크론이 두 번 걸리는 건 설계다
+          # 저장소가 공개라 이 실행 기록도 누구나 본다. uid · 가격 · 수량은 찍지 않고
+          # 세션마다 무엇이 어떻게 됐는지만 남긴다. 주문을 낸 날의 전체 결과는 Firestore autotrade/{uid}.log 에 있다.
+          node - resp.json <<'NODE' || echo "(응답을 읽지 못했습니다)"
+          const fs = require('fs');
+          const raw = fs.readFileSync(process.argv[2], 'utf8');
+          let o;
+          try { o = JSON.parse(raw); } catch (e) { console.log('(JSON 이 아닌 응답) ' + raw.slice(0, 200)); process.exit(0); }
+          const head = [`at ${o.at}`, `dry ${o.dry}`];
+          if (o.skipped) head.push(o.skipped);
+          if (o.claim) head.push(o.claim);
+          if (o.error) head.push('오류: ' + o.error);
+          head.push(`주문 냄 ${o.marked ? '예' : '아니오'}`);
+          console.log(head.join(' · '));
+          for (const s of o.sessions || []) {
+            const who = `${s.name || ''} ${s.ticker || ''} (${s.paper ? '모의' : '실계좌'})`.replace(/\s+/g, ' ');
+            let what = s.skip || s.sent || '';
+            if (Array.isArray(s.results) && s.results.length) {
+              const okN = s.results.filter((r) => r.ok).length;
+              const msgs = [...new Set(s.results.map((r) => r.msg))];
+              what = `보냄 ${s.results.length} · 접수 ${okN} · ${msgs.join(' / ')}`;
+            }
+            const n = Array.isArray(s.orders) ? ` [주문표 ${s.orders.length}건]` : '';
+            console.log(`  ${who}: ${what}${n}`);
+          }
+          NODE
+          # 창 밖 · 이미 실행 · 낼 주문 없음은 모두 200 이다 — 크론을 여러 번 거는 건 설계다
           if [ "$code" != "200" ]; then exit 1; fi

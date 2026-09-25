@@ -537,7 +537,7 @@ try{ if(localStorage.getItem('qcockpit_hadUser')==='1') document.documentElement
 </div>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.96.0</span></h1></div>
+    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.97.0</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -1646,7 +1646,7 @@ if(/^\/paper\/?$/.test(location.pathname)){
   <footer>
     <strong>JK 퀀트</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.96.0</b> · 2026-09-25</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.97.0</b> · 2026-09-25</div>
   </footer>
 </div>
 
@@ -3244,7 +3244,7 @@ function kisAutoLimitsNote(){
     +`· <b>LOC는 일반 지정가로 근사</b> — 한투 해외주식은 지정가만 받습니다. 백테·모의는 LOC를 종가 체결로 셉니다<br>`
     +`· <b>MOC 는 한투로 보내지 않음</b> — 리버스 1일차·중간 소진의 무조건 매도(MOC)는 증권사 앱에서 장마감 시장가로 직접 내야 합니다<br>`
     +`· <b>체결내역 자동 동기화 없음</b> — 실제 체결은 거래이력에 직접 기록해야 앱 장부가 맞습니다<br>`
-    +`· <b>익절 지정가 유효시간이 백테와 다름</b> — 서버 자동주문은 마감 20분 전(15:40 ET)에 들어갑니다. 백테는 하루 전체 고가가 닿으면 체결로 셉니다</div>`;
+    +`· <b>익절 지정가 유효시간이 백테와 다름</b> — 서버 자동주문은 마감 전 1시간(15:00~16:00 ET) 안에 들어갑니다. 백테는 하루 전체 고가가 닿으면 체결로 셉니다</div>`;
 }
 function renderKisPanel(){
   const box=$('o_kis'); if(!box) return;
