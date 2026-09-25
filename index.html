@@ -537,7 +537,7 @@ try{ if(localStorage.getItem('qcockpit_hadUser')==='1') document.documentElement
 </div>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.95.0</span></h1></div>
+    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.96.0</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -726,7 +726,9 @@ if(/^\/paper\/?$/.test(location.pathname)){
         <p class="note" style="margin-top:8px">주문표를 <b>그대로 걸어둔 셈 치고</b> 하루하루 판정해 체결된 주문만 기록합니다.<br>
           · <b>지정가매도</b> — 그날 <b>고가</b>가 익절가에 닿으면 익절가로 체결<br>
           · <b>쿼터매도 · 매수</b> — LOC라 <b>종가</b>가 조건을 만족하면 종가로 체결<br>
-          분봉은 필요 없습니다. 지정가 판정에 쓰이는 건 일봉의 고가뿐입니다.<br>
+          · <b>같은 날 익절 + 매수</b> — 익절로 전량 팔린 뒤 종가가 떨어져 매수 LOC 까지 체결되면 사이클 종료가 아니라 이어 갑니다(T×0.25+1)<br>
+          분봉은 필요 없습니다. 지정가 판정에 쓰이는 건 일봉의 고가뿐입니다.
+          익절 지정가 체결은 정규장 OHLC 고가 기반 근사이며, 원문의 프리장~애프터 체결과 차이가 있을 수 있습니다.<br>
           모의 세션은 <b>탭을 열 때 자동으로</b> 돌아갑니다. 실계좌 세션은 건드리지 않습니다.
           별지점 5일평균은 전일까지만 씁니다. 아래로 LOC 추가 줄(정식)도 같은 규칙으로 판정합니다.</p>
       </div>
@@ -767,7 +769,7 @@ if(/^\/paper\/?$/.test(location.pathname)){
         <p class="note">매도로 <b>확정된</b> 손익만 셉니다. 손익률은 원금 대비 — 줄을 더하면 그 기간 손익률이 됩니다.</p></div>
       <div class="card"><h3><span class="dot"></span>사이클별 실현손익</h3>
         <div class="htable-wrap"><table class="htable narrow" id="a_bycycle"></table></div>
-        <p class="note">전량매도로 보유가 0이 되면 한 사이클이 끝납니다. 마지막 줄이 <b>진행중</b>이면 아직 안 닫힌 사이클입니다.</p></div>
+        <p class="note">그날 기록을 다 처리한 뒤 보유가 0이면 한 사이클이 끝납니다 — 익절로 전량 팔린 날 같은 날 LOC 매수가 체결되면 사이클이 이어집니다(T×0.25+1). 마지막 줄이 <b>진행중</b>이면 아직 안 닫힌 사이클입니다.</p></div>
     </div>
     <div class="block" id="inf-guide">
       <div class="card"><h3><span class="dot"></span>한 줄 요약</h3><p class="lead">TQQQ/SOXL을 매일 조금씩 사면서, 오를 때 팔고 또 사는 것을 반복해 수익을 쌓는 전략.</p>
@@ -1644,7 +1646,7 @@ if(/^\/paper\/?$/.test(location.pathname)){
   <footer>
     <strong>JK 퀀트</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.95.0</b> · 2026-09-24</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.96.0</b> · 2026-09-25</div>
   </footer>
 </div>
 
@@ -2224,7 +2226,8 @@ function sess(){return curStrat()}
 
 /* ── T값 계산 ── */
 // 단독 '지정가매도'(익절 3/4만 부분체결되고 사이클이 안 끝난 엣지 케이스)는 T×0.25.
-// 복합거래 '지정가매도+매수'가 ×0.25+n인 것과 정합. (보통은 전량매도→사이클 종료로 T가 리셋됨)
+// 복합거래 '지정가매도+매수'가 ×0.25+n인 것과 정합. 전량 익절 뒤 같은 날 LOC 매수를 두 줄(지정가매도 → 1회매수)로
+// 적어도 같다 — 사이클은 하루 끝 최종 보유 0주일 때만 닫히므로(imCycleEnds) 그날 T 가 ×0.25+1 로 이어진다 (제14차 D15).
 const KIND_T={'1회매수':t=>t+1,'절반매수':t=>t+0.5,'쿼터매도':t=>t*0.75,'지정가매도':t=>t*0.25,
   '지정가매도+1회매수':t=>t*0.25+1,'지정가매도+절반매수':t=>t*0.25+0.5,
   '1회매수+지정가매도(애프터)':t=>t*0.25+1,'절반매수+지정가매도(애프터)':t=>t*0.25+0.5};
@@ -2239,6 +2242,15 @@ function isSell(k){return k!=='출금'&&k.includes('매도')}
 /* 체결가·수량이 없고 금액(amt) 하나만 있는 기록 — 매매가 아니라 현금 이동이다.
    출금은 나가고 배당은 들어온다. 둘 다 T·평단·보유·리버스 상태를 건드리지 않는다. */
 function isAmtKind(k){ return k==='출금'||k==='배당'; }
+
+/* ── 무매 사이클 종료 판정 한 곳 (제14차 D15) ──
+   원문: 지정가매도가 체결된 뒤 주가가 크게 떨어져 같은 날 LOC 매수까지 되면 사이클 종료가 아니고 그대로 이어 간다
+   (새 T = 기존 T×0.25 + 1 · 절반매수면 + 0.5). 보유 1~3주는 쿼터가 0주라 익절이 전량을 팔아 장중에 잠깐 0주가 된다.
+   종료는 하루 주문을 모두 처리한 뒤 '그날 매도가 있었고 최종 보유가 0주' 일 때뿐이다.
+   백테(runIM·runIM50) · 앱 장부(computeInf — 운영·모의) · 서버(imCompute) · 5년 플랜(calcInfState)이 같은 글자로 쓴다. */
+function imCycleEnds(soldToday, qtyAtDayEnd){ return !!soldToday && !(qtyAtDayEnd>1e-9); }
+/* 장부는 하루를 여러 줄로 적는다(익절 한 줄 · 매수 한 줄). hist[i] 뒤에 같은 날짜의 매매 줄이 더 있으면 그날 주문은 아직 다 처리되지 않았다. */
+function imDayOpenAfter(hist, i){ const d=hist[i]&&hist[i].date; if(!d) return false; for(let j=i+1;j<hist.length&&hist[j]&&hist[j].date===d;j++){ if(/매수|매도/.test(String(hist[j].kind||''))) return true; } return false; }
 
 /* 누적 계산: 평단/보유/잔금/T/실현손익 */
 function computeInf(){
@@ -2272,7 +2284,9 @@ function computeInf(){
   /* revFrom — 이번 1일차로 들어온 기록의 날짜(소진한 날). 1일차 거래가 장부에 없어도 그 뒤 날짜의 확정 종가면
      리버스로 하루를 보낸 것이다 — 복귀 판정(imRevExitDue)이 그걸로 '1일차 종가'를 알아본다 (제12차 ②). */
   const revEnter=(d)=>{ if(revEnabled(st) && revState==='NORMAL' && qty>1e-9 && (st.div-T)<1){ revState='DAY1'; revFrom=d||''; } };
-  const rows=hist.map(h=>{
+  let day=null, daySold=false;   // 그날 매도가 있었나 — 사이클 종료는 그날 마지막 매매 줄에서만 판정한다 (제14차 D15)
+  const rows=hist.map((h,hi)=>{
+    if(h.date!==day){ day=h.date; daySold=false; }
     let profit=0;
     const Tbefore=T;
     const isRev = (h.kind==='리버스매도'||h.kind==='리버스매수');
@@ -2306,19 +2320,24 @@ function computeInf(){
     else if(h.kind==='리버스복귀') revState='NORMAL';
     else if(isBuy(h.kind)||isSell(h.kind)) revState='NORMAL';   // 일반 매매가 났다 = 이미 복귀한 것
     // 그 밖(출금 등 비매매 기록)은 상태를 건드리지 않는다
-    // ── 사이클 자동 전환: 매도로 보유 0이 되면 T·평단 리셋 (이력·잔금은 유지) ──
+    // ── 사이클 자동 전환: 하루 끝에 보유 0이면 T·평단 리셋 (이력·잔금은 유지) ──
     let cycleEnd=false;
-    /* V4.0 원칙: 보유수량 0 = 사이클 종료. 판정 기준은 '이 거래에 실제 매도가 있었고
-       처리 뒤 보유가 0인가' 이다 (5차 감사 ④).
+    /* V4.0 원칙: 보유수량 0 = 사이클 종료. 판정 기준은 '그날 실제 매도가 있었고
+       그날 기록을 다 처리한 뒤 보유가 0인가' 이다 (5차 감사 ④ · 제14차 D15).
        예전엔 !isBuy(h.kind) 를 달아 복합거래('1회매수+지정가매도(애프터)' 등)를
        통째로 걸러 냈다 — 3주 보유에 1주 사고 4주 팔아 0주가 돼도 사이클이 안 끝났다.
-       반대로 '지정가매도 후 LOC매수' 처럼 최종 보유가 양수면 끝내면 안 된다 — 그건
-       qty<=1e-9 조건이 막는다. 1e-9 톨러런스는 소수 수량의 부동소수점 잔여용(백테와 동일). */
+       반대로 '지정가매도 후 LOC매수' 처럼 최종 보유가 양수면 끝내면 안 된다 — 한 줄(복합)로 적든
+       두 줄(지정가매도 → 1회매수)로 적든 같다. 예전엔 두 줄로 적으면 첫 줄에서 0주라 사이클을 닫고
+       T=0 · 단리 인출까지 한 뒤 매수를 새 사이클 첫 거래로 셌다 — 원문은 T×0.25+1 로 이어 간다 (제14차 D15).
+       그래서 같은 날 뒤에 매매 줄이 더 있으면 그 줄까지 처리한 뒤 판정한다(imDayOpenAfter).
+       1e-9 톨러런스는 소수 수량의 부동소수점 잔여용(백테와 동일). */
     // 복합거래는 sellQty 를 들고 온다 — 기록이 스스로 말하게 한다 (종류 이름 목록에 안 기댄다)
     const _soldQty = (h.sellQty!=null) ? (+h.sellQty||0) : (isSell(h.kind) ? (+h.qty||0) : 0);
-    if(qty<=1e-9 && _soldQty>0){
-      qty=0; avg=0; T=0; inv=0; // 보유·평단·T·투입원가 리셋 (realized 누적은 유지 → 잔금에 반영)
-      cycleEnd=true; revState='NORMAL';
+    if(_soldQty>0) daySold=true;
+    if(qty<=1e-9){ qty=0; avg=0; inv=0; }   // 0주면 평단·투입원가도 0 — T 는 그대로다 (같은 날 LOC 매수가 되면 이어 간다)
+    if(imCycleEnds(daySold, qty) && !imDayOpenAfter(hist, hi)){
+      T=0;                                  // 보유·평단·투입원가는 위에서 0 (realized 누적은 유지 → 잔금에 반영)
+      cycleEnd=true; revState='NORMAL'; daySold=false;   // 그날 매도는 이 종료로 끝났다 — 같은 날 뒤 줄(출금 등)이 또 닫지 않게
       /* 단리 — 판정 기준은 사이클 수익이 아니라 '사이클 종료 잔액이 최초 원금을 넘는가'다.
            넘으면 넘은 만큼만 인출하고 원금으로 다시 시작한다.
            못 넘으면 인출도 없고 채워 넣지도 않는다 — 그 잔액 그대로 다음 사이클로 간다.
@@ -3742,9 +3761,10 @@ function infSimForward(startFrom){
           if(cl>=star && qSell>0 && c3.qty>0) put('쿼터매도',d,cl,Math.min(qSell,c3.qty)); }  // ② 별지점 LOC
       }
       /* ── 아침에 건 매수 LOC — 종가가 주문가 이하면 종가에 체결 ──
-         전량매도로 사이클이 끝난 날에도 아침 주문은 살아 있다. 쿼터매도가 체결되는 종가에선
+         익절로 전량이 팔린 날에도 아침 주문은 살아 있다. 쿼터매도가 체결되는 종가에선
          매수 LOC(별지점−0.01·평단)가 닿을 수 없으므로 실제로 겹치는 건 보유 4주 미만에서
-         익절이 전량을 판 날뿐이다 — 그때 체결되면 새 사이클의 첫 거래가 된다(백테와 같다). */
+         익절이 전량을 판 날뿐이다 — 그때 체결되면 사이클 종료가 아니라 원문대로 같은 사이클이 이어진다
+         (T×0.25+1 · 제14차 D15 · 백테와 같다). 익절 줄과 매수 줄을 따로 적어도 장부(computeInf)가 하루 끝에서 판정한다. */
       /* 아래로 LOC 추가 줄은 같은 회차의 일부다 — 그날 첫 본 주문 기록에 수량을 더한다 (T 는 본 주문만) */
       { const hit=buys.filter(b=>cl<=b.lim), extra=hit.filter(b=>b.ladder).reduce((a,b)=>a+b.q,0), mains=hit.filter(b=>!b.ladder);
         if(mains.length) mains.forEach((b,i)=>put(b.kind,d,cl,b.q+(i===0?extra:0)));
@@ -8328,7 +8348,7 @@ function sheetSelInf(kind){
   document.querySelectorAll('#sheet .kindopt').forEach(o=>o.classList.toggle('sel',o.dataset.kind===kind));
   const sym=(curCurrency()==='krw')?'₩':'$';
   const today=new Date().toISOString().slice(0,10);
-  let f=`<div class="field"><label>날짜</label><input id="sh_date" type="date" value="${today}"></div>`;
+  let f=`<div class="field"><label>날짜</label><input id="sh_date" type="date" value="${today}" onchange="sheetTprev()"></div>`;
   if(isCx(kind)){
     // 복합: 매도 + 매수 각각
     const sellFirst=kind.startsWith('지정가매도');
@@ -8391,14 +8411,36 @@ function sheetSelInf(kind){
 }
 function sheetBackInf(){ $('sheet_form').style.display='none'; shKind=null; document.querySelectorAll('#sheet .kindopt').forEach(o=>o.classList.remove('sel')); $('sheet').scrollTo({top:0,behavior:'smooth'}); }
 function sheetToggleTman(){ const on=$('sh_tman_on').checked; $('sh_tman_wrap').style.display=on?'block':'none'; sheetTprev(); }
+/* 이 기록을 적으면 T 가 어떻게 되나 — 규칙을 여기서 다시 세지 않고, 입력한 값 그대로 장부에 붙여 본 결과를 보여 준다.
+   같은 날 앞 줄이 익절 전량매도면 그 줄이 연 사이클이 이어지므로(제14차 D15) 'T×0.25 → +1' 이 보여야 한다 —
+   지금 장부의 T(그 줄에서 닫힌 0)로 세면 '0 → 1' 로 보이고, 저장하면 다른 값이 된다. 저장 전 == 저장 후. */
+function sheetTvirtual(){
+  if(!shKind||isAmtKind(shKind)) return null;
+  const n=id=>{ const e=$(id); return e?(+unComma(e.value)||0):0; };
+  const date=($('sh_date')&&$('sh_date').value)||new Date().toISOString().slice(0,10);
+  const v={date, kind:shKind, ts:Date.now()+1e6, __preview:true};
+  if(isCx(shKind)){ v.sellPrice=n('sh_s_price'); v.sellQty=n('sh_s_qty'); v.buyPrice=n('sh_b_price'); v.buyQty=n('sh_b_qty');
+    if(!(v.sellQty>0)||!(v.buyQty>0)) return null; }
+  else { v.price=n('sh_price'); v.qty=n('sh_qty'); if(!(v.qty>0)) return null; }
+  const hh=curStrat().hist; let c;
+  hh.push(v); sortHist(hh);
+  try{ c=computeInf(); } finally { const k=hh.indexOf(v); if(k>=0) hh.splice(k,1); }
+  const i=c.rows.findIndex(r=>r.__preview);
+  if(i<0) return null;
+  const from=i>0 ? c.rows[i-1].Tafter : 0;
+  const prevEnd=(computeInf().rows||[]).some(r=>r.cycleEnd && r.date===date);   // 이 기록 없이는 그날 사이클이 닫혀 있었나
+  return {from, to:c.rows[i].Tafter, reopen:prevEnd && !c.rows.some(r=>r.cycleEnd && r.date===date)};
+}
 function sheetTprev(){
   if(!shKind)return;
   const c=computeInf();
-  let nt;
+  let nt, from=c.T, note='';
   if($('sh_tman_on')&&$('sh_tman_on').checked){ const v=parseFloat($('sh_tman').value); nt=isNaN(v)?c.T:v; }
-  else if(shKind==='리버스매도'||shKind==='리버스매수'){ nt=reverseT(shKind,c.T,c.st.div); }
-  else nt=KIND_T[shKind]?KIND_T[shKind](c.T):c.T;
-  const el=$('sh_tprev'); if(el)el.textContent=`${fmtT(c.T)} → ${fmtT(nt)}`;
+  else { const P=sheetTvirtual();
+    if(P){ from=P.from; nt=P.to; if(P.reopen) note=' · 같은 날 익절 뒤 매수 — 사이클 종료가 아니라 이어집니다'; }
+    else if(shKind==='리버스매도'||shKind==='리버스매수'){ nt=reverseT(shKind,c.T,c.st.div); }
+    else nt=KIND_T[shKind]?KIND_T[shKind](c.T):c.T; }
+  const el=$('sh_tprev'); if(el)el.textContent=`${fmtT(from)} → ${fmtT(nt)}${note}`;
 }
 function sheetPickInf(kind,price,qty){
   sheetSelInf(kind);

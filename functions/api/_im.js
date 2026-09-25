@@ -123,6 +123,15 @@ export function imBuy1(c) {
      · 리버스 여부를 '마지막 기록이 리버스인가' 로 봤다 — 리버스 중 출금·배당 한 줄만
        적어도 일반모드로 보고 일반 주문을 냈다. 상태를 바꾸는 이벤트만 상태를 바꾼다 (4차 ③)
    회귀가 실데이터 수천 건 이력과 손으로 만든 경계 사례로 두 함수를 맞대 본다. */
+/* ── 무매 사이클 종료 판정 한 곳 (제14차 D15) ──
+   원문: 지정가매도가 체결된 뒤 주가가 크게 떨어져 같은 날 LOC 매수까지 되면 사이클 종료가 아니고 그대로 이어 간다
+   (새 T = 기존 T×0.25 + 1 · 절반매수면 + 0.5). 보유 1~3주는 쿼터가 0주라 익절이 전량을 팔아 장중에 잠깐 0주가 된다.
+   종료는 하루 주문을 모두 처리한 뒤 '그날 매도가 있었고 최종 보유가 0주' 일 때뿐이다.
+   백테(runIM·runIM50) · 앱 장부(computeInf — 운영·모의) · 서버(imCompute) · 5년 플랜(calcInfState)이 같은 글자로 쓴다. */
+function imCycleEnds(soldToday, qtyAtDayEnd){ return !!soldToday && !(qtyAtDayEnd>1e-9); }
+/* 장부는 하루를 여러 줄로 적는다(익절 한 줄 · 매수 한 줄). hist[i] 뒤에 같은 날짜의 매매 줄이 더 있으면 그날 주문은 아직 다 처리되지 않았다. */
+function imDayOpenAfter(hist, i){ const d=hist[i]&&hist[i].date; if(!d) return false; for(let j=i+1;j<hist.length&&hist[j]&&hist[j].date===d;j++){ if(/매수|매도/.test(String(hist[j].kind||''))) return true; } return false; }
+
 export function imCompute(st, hist) {
   let avg = 0, qty = 0, inv = 0, realized = 0, T = 0;
   let withdrawn = 0, saved = 0, divTotal = 0;
@@ -131,7 +140,11 @@ export function imCompute(st, hist) {
   const revEnter = (d) => {
     if (revEnabled(st) && revState === "NORMAL" && qty > 1e-9 && (st.div - T) < 1) { revState = "DAY1"; revFrom = d || ""; }
   };
-  for (const h of (hist || [])) {
+  const H = hist || [];
+  let day = null, daySold = false;   // 그날 매도가 있었나 — 사이클 종료는 그날 마지막 매매 줄에서만 (앱 computeInf 와 같다 · 제14차 D15)
+  for (let hi = 0; hi < H.length; hi++) {
+    const h = H[hi];
+    if (h.date !== day) { day = h.date; daySold = false; }
     const kind = String(h.kind || "");
     const isRev = (kind === "리버스매도" || kind === "리버스매수");
     if (kind === "지정가매도" || kind === "쿼터매도" || kind === "리버스매도") {
@@ -156,10 +169,13 @@ export function imCompute(st, hist) {
     if (isRev) revState = "REVERSE";
     else if (kind === "리버스복귀") revState = "NORMAL";
     else if (isBuy(kind) || isSell(kind)) revState = "NORMAL";
-    // 사이클 종료 — 이 기록에 실제 매도가 있었고 처리 뒤 0주인가 (복합거래는 sellQty 로 말한다)
+    // 사이클 종료 — 그날 매도가 있었고 그날 기록을 다 처리한 뒤 0주인가 (복합거래는 sellQty 로 말한다 ·
+    // 같은 날 익절 뒤 LOC 매수를 두 줄로 적어도 사이클이 이어진다 — 제14차 D15)
     const soldQty = (h.sellQty != null) ? (+h.sellQty || 0) : (isSell(kind) ? (+h.qty || 0) : 0);
-    if (qty <= 1e-9 && soldQty > 0) {
-      qty = 0; avg = 0; T = 0; inv = 0; revState = "NORMAL";
+    if (soldQty > 0) daySold = true;
+    if (qty <= 1e-9) { qty = 0; avg = 0; inv = 0; }
+    if (imCycleEnds(daySold, qty) && !imDayOpenAfter(H, hi)) {
+      T = 0; revState = "NORMAL"; daySold = false;
       if (simple) {
         const P0 = +st.principal || 0;
         const cashNow = P0 + realized + divTotal - withdrawn - saved;
