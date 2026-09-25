@@ -7785,14 +7785,14 @@ console.log('\n[116] 7차 D11 — 분배금 세전·세후 표기');
 }
 
 
-/* ════ 117. 자산플랜 v1.27.0 — 5·10·15·20년 기간전략 + 리밸런싱 근거 ════ */
-console.log('\n[117] 자산플랜 v1.27.0 — 5·10·15·20년 기간전략 + 리밸런싱 근거');
+/* ════ 117. 자산플랜 v1.28.0 — 기간마다 완전히 다른 매매엔진 ════ */
+console.log('\n[117] 자산플랜 v1.28.0 — 기간마다 완전히 다른 매매엔진');
 {
   const pl=fs.readFileSync(__d+'/plan.html','utf8');
   ok('5년 플랜 시작금 기본값은 $20,000', /startCapital:20000/.test(pl) && /aCash:20000/.test(pl));
   ok('화면 이름은 5년 자산플랜이 아니라 자산플랜',
      /<title>JK 퀀트 — 자산플랜<\/title>/.test(pl)
-     && /<div class="logo">Asset Plan<\/div><h1>자산플랜 <span class="ver">v1\.27\.0<\/span>/.test(pl)
+     && /<div class="logo">Asset Plan<\/div><h1>자산플랜 <span class="ver">v1\.28\.0<\/span>/.test(pl)
      && /<a href="\/plan" class="cur"><span class="mi">🧭<\/span>자산플랜<\/a>/.test(pl));
   ok('PATH A 균형성장 — TECL 70% N15 s0 55 밴드17.5 + TQQQ 30% SMA200 ±1.5',
      /alpha:\{teclWeight:\.70,guardWeight:\.30,ivsLook:15,ivsS0:\.55,ivsBand:\.175,guardMA:200,guardBand:\.015\}/.test(pl));
@@ -7806,19 +7806,24 @@ console.log('\n[117] 자산플랜 v1.27.0 — 5·10·15·20년 기간전략 + �
      && [5,10,15,20].every(y=>new RegExp('data-horizon="'+y+'"').test(pl))
      && !/data-ptab="classic"[^>]*>/.test(pl)
      && /data-ppanel="classic" hidden aria-hidden="true" style="display:none"/.test(pl));
-  ok('기간별 매매법 — 장기일수록 3배 최대비중↓ · SGOV 기준여유↑ · 반응속도↓',
-     /5:\{years:5,name:'5년',risk:'최공격',teclWeight:\.70,guardWeight:\.30,ivsLook:15,ivsS0:\.55,ivsBand:\.175,guardMA:200,guardBand:\.015/.test(pl)
-     && /10:\{years:10,name:'10년',risk:'공격',teclWeight:\.60,guardWeight:\.25,ivsLook:20,ivsS0:\.50,ivsBand:\.20,guardMA:200,guardBand:\.020/.test(pl)
-     && /15:\{years:15,name:'15년',risk:'성장',teclWeight:\.50,guardWeight:\.20,ivsLook:30,ivsS0:\.45,ivsBand:\.225,guardMA:200,guardBand:\.025/.test(pl)
-     && /20:\{years:20,name:'20년',risk:'생존성장',teclWeight:\.40,guardWeight:\.15,ivsLook:40,ivsS0:\.40,ivsBand:\.25,guardMA:200,guardBand:\.030/.test(pl)
-     && /function horizonReserve\(D\)\{return Math\.max\(0,1-D\.teclWeight-D\.guardWeight\);\}/.test(pl));
-  ok('기간 선택이 목표일·주문엔진을 실제로 바꿈',
-     /const D=horizonPreset\(\),tr=qTecl\.rows/.test(pl)
-     && /if\(y!==activeHorizon\)horizonRebalancePending=true/.test(pl)
-     && /horizonHit=horizonRebalancePending,needRebalance=teclHit\|\|guardFlip\|\|horizonHit/.test(pl)
-     && /const targetTq=\(teclHit\|\|horizonHit\)\?/.test(pl)
-     && /const targetQq=\(guardFlip\|\|horizonHit\)\?/.test(pl)
-     && /\$\('targetDate'\)\.value=plusYears\(base,y\)/.test(pl));
+  ok('기간별 전략은 옵션변경이 아니라 서로 다른 엔진',
+     /5:\{years:5,key:'ivsGuard'/.test(pl)
+     && /10:\{years:10,key:'trendDip'/.test(pl)
+     && /15:\{years:15,key:'shannon'/.test(pl)
+     && /20:\{years:20,key:'dualMomentum'/.test(pl)
+     && /if\(activeHorizon!==5\)\{renderAlternativePlan/.test(pl));
+  ok('10년 — TQQQ SMA200 추세 + RSI\/ATH 3단계 폭락매수',
+     /r<=35&&dd<=-\.15/.test(pl) && /r<=30&&dd<=-\.25/.test(pl) && /r<=25&&dd<=-\.35/.test(pl)
+     && /const risk=bull\?\.70:\[0,\.20,\.35,\.50\]\[stage\]/.test(pl));
+  ok('15년 — Shannon 50:50 · 40~60% 밴드 밖에서만 복원',
+     /const cur=qq\*qs\/total,target=\.50,lo=\.40,hi=\.60/.test(pl)
+     && /targetW=need\?\{TECL:0,TQQQ:\.50,SGOV:\.50\}/.test(pl)
+     && /SMA·RSI·모멘텀 사용 안 함/.test(pl));
+  ok('20년 — 직전 월말 TECL\/TQQQ 듀얼모멘텀 + 절대모멘텀 + SGOV',
+     /function _latestCompletedMonthIndex/.test(pl)
+     && /const m6=p\/p126-1,m12=p\/p252-1,score=\.5\*m6\+\.5\*m12/.test(pl)
+     && /ok:m12>0&&p>ma/.test(pl)
+     && /winner==='TECL'\?\{TECL:\.60,TQQQ:0,SGOV:\.40\}:winner==='TQQQ'\?\{TECL:0,TQQQ:\.60,SGOV:\.40\}:\{TECL:0,TQQQ:0,SGOV:1\}/.test(pl));
   ok('PATH A 리밸런싱 근거 UI — σ15·목표\/현재·밴드 게이지·Guard 차트·판단문장',
      /id="alphaSigma"/.test(pl)
      && /id="alphaTargetW"/.test(pl)
