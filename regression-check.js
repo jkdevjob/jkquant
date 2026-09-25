@@ -9644,7 +9644,7 @@ console.log('\n[129] 자산플랜 현재가 — 캐시 우회 · 현재계좌 �
   const pt=extractFn(pl,'function alphaPlanTotal()');
   ok('현재가 — quote 요청은 매 새로고침마다 _ts + no-store/no-cache로 브라우저·CDN 캐시를 우회', /_ts='\+Date\.now\(\)/.test(fq) && /cache:'no-store'/.test(fq) && /'Cache-Control':'no-cache'/.test(fq));
   ok('현재계좌 총자산 — liveQuotes.price 우선, 없을 때만 확정종가 fallback', /\+q\.price>0\?\+q\.price/.test(pt) && /q\.settled\?\+q\.settled\.close:0/.test(pt));
-  ok('자산플랜 버전 — 개선 70/30 v1.32.0', /자산플랜 <span class="ver">v1\.32\.0<\/span>/.test(pl));
+  ok('자산플랜 버전 — 개선 70/30 v1.32.1', /자산플랜 <span class="ver">v1\.32\.1<\/span>/.test(pl));
 }
 
 /* ════ 130. 무매 자동주문 — 크론이 주문 창 안에 떨어진다 · 주문 직전 선점 · 공개 로그 ════
