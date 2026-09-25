@@ -192,7 +192,7 @@ th:first-child,td:first-child{text-align:left}
 <body>
 <div class="wrap">
   <div class="top">
-    <div class="brand"><div class="logo">Asset Plan</div><h1>자산플랜 <span class="ver">v1.29.1</span></h1></div>
+    <div class="brand"><div class="logo">Asset Plan</div><h1>자산플랜 <span class="ver">v1.30.0</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
       <div class="jkmenu" id="jkmenuWrap">
@@ -270,7 +270,7 @@ th:first-child,td:first-child{text-align:left}
           <div class="alpha-total-cell"><div class="k">보유원가</div><div class="v" id="alphaCostTotal">—</div></div>
           <div class="alpha-total-cell"><div class="k">현재평가액</div><div class="v" id="alphaMarketTotal">—</div></div>
           <div class="alpha-total-cell"><div class="k">평가손익</div><div class="v" id="alphaPnlTotal">—</div></div>
-          <div class="alpha-total-cell"><div class="k">전체 손익률</div><div class="v" id="alphaReturnTotal">—</div></div>
+          <div class="alpha-total-cell"><div class="k">평가손익률 (보유분)</div><div class="v" id="alphaReturnTotal">—</div></div>
           <div class="alpha-total-cell"><div class="k">총자산 (ETF+현금)</div><div class="v" id="alphaAssetTotal">—</div></div>
         </div>
         <div class="alpha-cash-warn" id="alphaCashWarn" hidden></div>
@@ -279,6 +279,16 @@ th:first-child,td:first-child{text-align:left}
 
       <div class="card" id="alphaHistorySection" style="margin-top:10px;margin-bottom:0">
         <div class="alpha-account-head"><div><h3 style="margin-bottom:2px">3. 거래이력</h3><div class="alpha-ledger-note">잘못 기록한 체결이나 시작잔고는 여기서 수정합니다. 수정 후 현재 수량·평단·현금을 전체 이력 기준으로 다시 계산합니다.</div></div></div>
+        <div class="alpha-reconcile-panel" id="alphaCashRec">
+          <b>현금 기록 — 배당 · 입금 · 출금</b>
+          <div class="alpha-ledger-note">SGOV 분배금(세후 실제 입금액)과 계좌 입출금을 적어 앱 현금을 토스 계좌와 맞춥니다. 수량·평단은 바뀌지 않고, 입금·출금은 목표 진행률의 시작점에 더해 성장으로 세지 않습니다.</div>
+          <div class="path-holdings">
+            <div class="field"><label>날짜</label><input type="date" id="alphaCashDate"></div>
+            <div class="field"><label>구분</label><select id="alphaCashKind"><option value="div">배당(분배금)</option><option value="dep">입금</option><option value="wd">출금</option></select></div>
+            <div class="field"><label>금액 ($)</label><input type="number" id="alphaCashAmt" min="0.01" step="0.01"></div>
+          </div>
+          <div class="btnrow"><button class="btn" id="alphaCashAdd">현금 기록 추가</button></div>
+        </div>
         <div class="alpha-reconcile-panel" id="alphaEditPanel" hidden>
           <b>이력 수정</b>
           <div class="alpha-ledger-note">저장하면 해당 기록 이후의 보유수량·평단가·현금을 날짜 순서대로 다시 계산합니다.</div>
@@ -712,28 +722,28 @@ function renderHorizonCopy(){
     setTxt('alphaKpi3Label','대피자산');setTxt('alphaKpi3Value','SGOV');setTxt('alphaKpi3Sub','미사용 위험예산 보관');
     setTxt('alphaKpi4Label','전략 성격');setTxt('alphaKpi4Value','최공격');setTxt('alphaKpi4Sub','5년 성장 우선');
     if($('alphaExplain'))$('alphaExplain').innerHTML='<strong>5년 매매법 · 역분산 + Guard</strong><br>TECL 70% 슬리브는 σ15 역분산으로 크기를 조절하고 목표와 17.5%p 이상 벌어질 때만 리밸런싱합니다. TQQQ 30%는 SMA200 ±1.5% Guard로 ON/OFF하며 남는 금액은 SGOV에 둡니다.';
-    if($('alphaValidation'))$('alphaValidation').innerHTML='<b>5년 롤링 검증:</b> 127개 시작구간 · 중앙 CAGR 41.1% · 하위 10% CAGR 29.4% · 최악 CAGR 20.8% · 중앙 MDD -35.5% · 최악 MDD -47.4%.<span class="sub">업로드 시세 2010~2026 기준 과거 결과이며 미래 수익을 보장하지 않습니다.</span>';
+    if($('alphaValidation'))$('alphaValidation').innerHTML='<b>5년 롤링 검증:</b> 127개 시작구간 · 중앙 CAGR 41.1% · 하위 10% CAGR 29.4% · 최악 CAGR 20.8% · 중앙 MDD -35.5% · 최악 MDD -47.4%.<span class="sub">업로드 시세 2010~2026 기준 과거 결과이며 미래 수익을 보장하지 않습니다.</span><span class="sub">세전 · 2010년 이후 강세장 자료만의 결과입니다. 1999년부터 만든 합성 3배 자료(닷컴·금융위기 포함)로 2000~2009년에 시작하면 5년 CAGR 최악 −16.0% · MDD 최악 −79.2% (독립 재현).</span>';
   }else if(y===10){
     setTxt('alphaKpi1Label','상승장 코어');setTxt('alphaKpi1Value','TQQQ 80%');setTxt('alphaKpi1Sub','종가 > SMA250');
     setTxt('alphaKpi2Label','하락장 3단계');setTxt('alphaKpi2Value','20% → 40% → 60%');setTxt('alphaKpi2Sub','RSI40/35/30 + ATH -12/-22/-32%');
     setTxt('alphaKpi3Label','대피자산');setTxt('alphaKpi3Value','SGOV');setTxt('alphaKpi3Sub','하락장 미투입금 보관');
     setTxt('alphaKpi4Label','전략 성격');setTxt('alphaKpi4Value','추세 + 역발상');setTxt('alphaKpi4Sub','상승장은 추종, 폭락은 단계매수');
     if($('alphaExplain'))$('alphaExplain').innerHTML='<strong>10년 매매법 · TQQQ 추세 + 폭락 분할매수</strong><br>TQQQ 종가가 SMA250 위면 TQQQ 80% / SGOV 20%를 유지합니다. SMA250 아래로 내려가면 일단 위험노출을 줄이고, 같은 하락국면에서 RSI14와 ATH 낙폭이 동시에 깊어질 때 TQQQ 목표를 <b>20% → 40% → 60%</b>로 단계적으로 올립니다. 조건은 RSI <b>40/35/30</b>과 ATH 낙폭 <b>-12/-22/-32%</b>입니다. 종가가 SMA250을 회복하면 다시 80% 코어로 복귀합니다.';
-    if($('alphaValidation'))$('alphaValidation').innerHTML='<b>10년 백테스트 최적값:</b> SMA250 · 상승장 80% · 하락장 20/40/60% · RSI 40/35/30 · ATH -12/-22/-32%.<span class="sub">2010-03-12~2026-07-10 · 수수료 0.1% · 안전자산 0%/4% 민감도. 10년 롤링 76개 시작점의 하위10% CAGR 32.8~34.3%, 최악 CAGR 23.3~24.9%, MDD 약 -54.3%, 최대 회복 약 1.6년.</span>';
+    if($('alphaValidation'))$('alphaValidation').innerHTML='<b>10년 백테스트 최적값:</b> SMA250 · 상승장 80% · 하락장 20/40/60% · RSI 40/35/30 · ATH -12/-22/-32%.<span class="sub">2010-03-12~2026-07-10 · 수수료 0.1% · 안전자산 0%/4% 민감도. 10년 롤링 76개 시작점의 하위10% CAGR 32.8~34.3%, 최악 CAGR 23.3~24.9%, MDD 약 -54.3%, 최대 회복 약 1.6년.</span><span class="sub">독립 재현(주문 규칙 그대로): 10년 롤링 하위10% 33.2~34.6% · 최악 24.4~25.4% · MDD −54.2~−54.8%로 위 값과 거의 같습니다. 다만 세전이고 2010년 이후 강세장 자료뿐입니다 — 1999년부터 만든 합성 3배 자료로 2000~2009년에 시작하면 10년 CAGR 최악 −27.7% · MDD 최악 −98.7% (긴 하락장에서 폭락 분할매수가 3배 ETF를 끝까지 삽니다).</span>';
   }else if(y===15){
     setTxt('alphaKpi1Label','기준비중');setTxt('alphaKpi1Value','TQQQ 60%');setTxt('alphaKpi1Sub','SGOV 40%와 쌍');
     setTxt('alphaKpi2Label','리밸런싱 밴드');setTxt('alphaKpi2Value','40% ~ 80%');setTxt('alphaKpi2Sub','밴드 이탈 시 60:40 복원');
     setTxt('alphaKpi3Label','예측 신호');setTxt('alphaKpi3Value','사용 안 함');setTxt('alphaKpi3Sub','SMA·RSI·모멘텀 없이 비중만 본다');
     setTxt('alphaKpi4Label','전략 성격');setTxt('alphaKpi4Value','Shannon');setTxt('alphaKpi4Sub','변동성 수확 · 저매수/고매도 자동화');
     if($('alphaExplain'))$('alphaExplain').innerHTML='<strong>15년 매매법 · Shannon 밴드 리밸런싱</strong><br>TQQQ와 SGOV를 <b>60:40</b>으로 시작합니다. TQQQ 비중이 <b>40% 아래 또는 80% 위</b>로 벗어날 때만 다시 60:40으로 맞춥니다. 시장 방향을 예측하지 않고 변동으로 생긴 비중 차이를 이용해 많이 오른 쪽을 줄이고 덜 오른 쪽을 사는 전략입니다.';
-    if($('alphaValidation'))$('alphaValidation').innerHTML='<b>15년 백테스트 최적값:</b> TQQQ 60% / SGOV 40% · 허용밴드 40~80%.<span class="sub">가용 전체기간 2010-03-12~2026-07-10 · 수수료 0.1% · 안전자산 0%/4% 민감도. CAGR 30.9~32.1%, 10년 롤링 하위10% CAGR 26.3~28.2%, MDD -57.6~-61.6%, 최대 회복 약 2.5년. 실제 15년 독립 시작구간 수가 적어 5·10년 롤링도 함께 사용했습니다.</span>';
+    if($('alphaValidation'))$('alphaValidation').innerHTML='<b>15년 백테스트 최적값:</b> TQQQ 60% / SGOV 40% · 허용밴드 40~80%.<span class="sub">가용 전체기간 2010-03-12~2026-07-10 · 수수료 0.1% · 안전자산 0%/4% 민감도. CAGR 30.9~32.1%, 10년 롤링 하위10% CAGR 26.3~28.2%, MDD -57.6~-61.6%, 최대 회복 약 2.5년. 실제 15년 독립 시작구간 수가 적어 5·10년 롤링도 함께 사용했습니다.</span><span class="sub">독립 재현(주문 규칙 그대로): 전체 CAGR 29.6~30.6% · MDD −58.2~−59.9% (위 값보다 CAGR 1~2%p 낮음). 1999년부터 만든 합성 3배 자료로 2000~2009년에 시작하면 10년 CAGR 최악 −22.3% · MDD 최악 −98.0% (밴드 복원이 떨어지는 3배 ETF를 계속 삽니다).</span>';
   }else{
     setTxt('alphaKpi1Label','월간 후보');setTxt('alphaKpi1Value','TECL vs TQQQ');setTxt('alphaKpi1Sub','9개월 30% + 12개월 70% 점수');
     setTxt('alphaKpi2Label','절대모멘텀');setTxt('alphaKpi2Value','12M > 0');setTxt('alphaKpi2Sub','둘 다 음수면 SGOV 100%');
     setTxt('alphaKpi3Label','선정 자산 비중');setTxt('alphaKpi3Value','40%');setTxt('alphaKpi3Sub','나머지 60% SGOV');
     setTxt('alphaKpi4Label','전략 성격');setTxt('alphaKpi4Value','Dual Momentum');setTxt('alphaKpi4Sub','월 1회 로테이션 · 추세 없으면 대피');
     if($('alphaExplain'))$('alphaExplain').innerHTML='<strong>20년 매매법 · 월간 듀얼모멘텀</strong><br>매월 직전 월말 기준으로 TECL과 TQQQ의 <b>9개월 모멘텀 30% + 12개월 모멘텀 70%</b> 점수를 비교합니다. <b>12개월 수익률이 양수</b>인 후보만 인정하고, 점수가 높은 한 종목을 <b>40%</b> 보유하며 나머지 60%는 SGOV에 둡니다. 두 후보가 모두 12개월 수익률이 음수면 SGOV 100%로 대피합니다.';
-    if($('alphaValidation'))$('alphaValidation').innerHTML='<b>20년 백테스트 최적값:</b> 9M×30% + 12M×70% · 12M 양수 필터 · 승자 40% / SGOV 60%.<span class="sub">실제 레버리지 ETF 이력이 20년에 못 미쳐 12개월 블록 부트스트랩 160경로×20년으로 보강했습니다. 안전자산 0%/4% 민감도에서 20년 CAGR 하위10% 6.1~9.0%, 중앙 13.4~16.4%, MDD 하위10% -46.6~-40.4%. 실제 가용구간 CAGR 14.4~17.3%, MDD -30.5~-27.2%.</span>';
+    if($('alphaValidation'))$('alphaValidation').innerHTML='<b>20년 백테스트 최적값:</b> 9M×30% + 12M×70% · 12M 양수 필터 · 승자 40% / SGOV 60%.<span class="sub">실제 레버리지 ETF 이력이 20년에 못 미쳐 12개월 블록 부트스트랩 160경로×20년으로 보강했습니다. 안전자산 0%/4% 민감도에서 20년 CAGR 하위10% 6.1~9.0%, 중앙 13.4~16.4%, MDD 하위10% -46.6~-40.4%. 실제 가용구간 CAGR 14.4~17.3%, MDD -30.5~-27.2%.</span><span class="sub">독립 재현(주문 규칙 그대로 · 2010-03-12~2026-07-10 · 안전자산 0%/4%): CAGR 12.6~15.5% · MDD −37.5~−39.2% (2020-03 코로나) — 위 실제 가용구간 수치는 재현되지 않았습니다. 1999년부터 만든 합성 3배 자료로 20년 창 81개: CAGR 최악 4.3% · MDD 최악 −39.6% (긴 하락장에서도 버팁니다).</span>';
   }
 }
 function setHorizon(years,refresh=true){
@@ -1507,8 +1517,14 @@ function _setEvidence(a,b,c,d,subs){
   if(subs){setTxt('alphaWeightGap',subs[0]||'');setTxt('alphaGuardGap',subs[1]||'');}
 }
 function _planWeightSvg(values,label){return alphaSvg([{values,color:'#8b8cf0',width:2.2}],{label});}
+/* 직전 월말 = 마지막으로 끝난 달의 마지막 확정 봉. 확정 봉이 그달 마지막 평일이면(다음 평일이 새 달) 그달은 이미 끝났다 —
+   월말 종가가 확정된 뒤 첫 주문(새 달 첫 거래일)부터 새 신호를 쓴다. 예전엔 확정 봉의 달을 늘 미완료로 봐서
+   새 달 첫 봉이 확정될 때까지 하루 늦었다(새 달 첫 거래일 주문이 지지난달 월말 기준). 월말 평일이 휴장이면 예전처럼 하루 늦다. */
+function _monthDoneAt(dateStr){const d=new Date(String(dateStr||'')+'T00:00:00Z');if(isNaN(d))return false;const m=d.getUTCMonth();do{d.setUTCDate(d.getUTCDate()+1);}while(d.getUTCDay()===0||d.getUTCDay()===6);return d.getUTCMonth()!==m;}
 function _latestCompletedMonthIndex(rows,settledDate){
-  const cur=String(settledDate||'').slice(0,7);let i=rows.length-1;
+  let i=rows.length-1;
+  if(i>=0&&String(rows[i].date||'')===String(settledDate||'')&&_monthDoneAt(settledDate))return i;
+  const cur=String(settledDate||'').slice(0,7);
   while(i>=0&&String(rows[i].date||'').slice(0,7)===cur)i--;
   return i;
 }
@@ -1537,7 +1553,7 @@ function renderAlternativePlan(qTecl,qTqqq,qSgov){
     const risk=bull?.80:[0,.20,.40,.60][stage];targetW={TECL:0,TQQQ:risk,SGOV:1-risk};
     const curQ=qq*qs/total;need=tq>0||Math.abs(curQ-risk)>.05||horizonRebalancePending||(!tq&&!qq&&!sq);
     const dd=closes[i]/Math.max(...closes.slice(0,i+1))-1;
-    _setEvidence('SMA250 '+usd(sma),'RSI14 '+(rs[i]!=null?rs[i].toFixed(1):'—'),(dd*100).toFixed(1)+'%','단계 '+stage,['TQQQ 현재 '+(curQ*100).toFixed(1)+'% → 목표 '+(risk*100).toFixed(0)+'%','종가 '+usd(qs)+' / SMA200 '+usd(sma)]);
+    _setEvidence('SMA250 '+usd(sma),'RSI14 '+(rs[i]!=null?rs[i].toFixed(1):'—'),(dd*100).toFixed(1)+'%','단계 '+stage,['TQQQ 현재 '+(curQ*100).toFixed(1)+'% → 목표 '+(risk*100).toFixed(0)+'%','종가 '+usd(qs)+' / SMA250 '+usd(sma)]);
     setTxt('alphaEv1Label','TQQQ 추세');setTxt('alphaEv2Label','과매도');setTxt('alphaEv3Label','ATH 낙폭');setTxt('alphaEv4Label','폭락매수');
     setTxt('alphaChart1Title','TQQQ RSI14 · 최근 120거래일');setTxt('alphaChart2Title','TQQQ 종가 vs SMA250');
     const tail=Math.max(0,qr.length-120);chart1=rs.slice(tail).map(x=>x==null?50:x);chart2=closes.slice(tail);c1='RSI14';c2='TQQQ 종가';
@@ -1877,9 +1893,17 @@ function alphaLedgerCalc(ledger=alphaLedger){
   const S={
     tecl:Math.max(0,Math.floor(+b.tecl||0)),tqqq:Math.max(0,Math.floor(+b.tqqq||0)),sgov:Math.max(0,Math.floor(+b.sgov||0)),
     avgTecl:Number.isFinite(+b.avgTecl)&&+b.avgTecl>0?+b.avgTecl:null,avgTqqq:Number.isFinite(+b.avgTqqq)&&+b.avgTqqq>0?+b.avgTqqq:null,avgSgov:Number.isFinite(+b.avgSgov)&&+b.avgSgov>0?+b.avgSgov:null,
-    cash:Number.isFinite(+b.cash)?+b.cash:0,minCash:Number.isFinite(+b.cash)?+b.cash:0,invalid:false,error:""
+    cash:Number.isFinite(+b.cash)?+b.cash:0,minCash:Number.isFinite(+b.cash)?+b.cash:0,invalid:false,error:"",divIn:0,netFlow:0
   };
   for(const e of alphaEventList(ledger)){
+    /* 현금 기록 — 배당(분배금)·입금·출금. 매매가 아니다: 수량·평단은 그대로, 현금만 바뀐다.
+       netFlow(입금−출금)는 밖에서 넣고 뺀 돈이라 성장이 아니다 — 목표 진행률의 시작점에 더한다. */
+    if(e.type==='cash'){
+      const amt=Math.max(0,+e.amount||0),k=e.kind==='wd'?'wd':e.kind==='dep'?'dep':'div';
+      if(!(amt>0))continue;
+      if(k==='wd'){S.cash-=amt;S.netFlow-=amt;}else{S.cash+=amt;if(k==='dep')S.netFlow+=amt;else S.divIn+=amt;}
+      S.minCash=Math.min(S.minCash,S.cash);continue;
+    }
     if(e.type==='reconcile'&&e.snapshot){
       S.tecl=Math.max(0,Math.floor(+e.snapshot.tecl||0));S.tqqq=Math.max(0,Math.floor(+e.snapshot.tqqq||0));S.sgov=Math.max(0,Math.floor(+e.snapshot.sgov||0));S.cash=Number.isFinite(+e.snapshot.cash)?+e.snapshot.cash:S.cash;
       S.avgTecl=Number.isFinite(+e.snapshot.avgTecl)&&+e.snapshot.avgTecl>0?+e.snapshot.avgTecl:null;S.avgTqqq=Number.isFinite(+e.snapshot.avgTqqq)&&+e.snapshot.avgTqqq>0?+e.snapshot.avgTqqq:null;S.avgSgov=Number.isFinite(+e.snapshot.avgSgov)&&+e.snapshot.avgSgov>0?+e.snapshot.avgSgov:null;continue;
@@ -1926,7 +1950,7 @@ function renderAlphaLedger(){
     const pnl=(q>0&&px>0&&Number.isFinite(avg))?(px-avg)*q:null,ret=(q>0&&px>0&&Number.isFinite(avg)&&avg>0)?(px/avg-1)*100:null;
     if(Number.isFinite(pnl))pnlTotal+=pnl;
     const cap=sym[0]+sym.slice(1).toLowerCase(),pxEl=$('alphaAcct'+cap+'Px'),plEl=$('alphaAcct'+cap+'Pl'),mvEl=$('alphaAcct'+cap+'Mv');
-    if(pxEl)pxEl.textContent=px>0?((L&&L.hasLivePrice?'실시간 ':'확정종가 ')+usd2(px)):'현재가 불러오는 중';
+    if(pxEl)pxEl.textContent=px>0?((L&&L.hasLivePrice?(L.marketState==='REGULAR'?'실시간 ':'최근가 '):'확정종가 ')+usd2(px)):'현재가 불러오는 중';
     if(plEl){plEl.textContent=Number.isFinite(ret)?((pnl>=0?'+':'')+usd2(pnl)+' · '+(ret>=0?'+':'')+ret.toFixed(2)+'%'):'수익률 —';plEl.className='pl '+(Number.isFinite(pnl)?(pnl>=0?'pos':'neg'):'');}
     if(mvEl)mvEl.textContent=px>0?'평가금액 '+usd2(mv):'평가금액 —';
   }
@@ -1941,6 +1965,7 @@ function renderAlphaLedger(){
   if($('alphaLedgerBody')){
     const rows=ev.map(e=>{
       const actions='<button class="btn" style="min-height:28px;padding:3px 7px;font-size:10px" data-aedit="'+e.id+'">수정</button> <button class="ledger-del" data-aeid="'+e.id+'">✕</button>';
+      if(e.type==='cash'){const amt=Math.max(0,+e.amount||0),lab=e.kind==='wd'?'출금':e.kind==='dep'?'입금':'배당';return '<tr><td>'+String(e.date||'')+'</td><td>현금</td><td class="adjtxt">'+lab+'</td><td colspan="4">'+(e.kind==='wd'?'−':'+')+usd2(amt)+'</td><td><button class="ledger-del" data-aeid="'+e.id+'">✕</button></td></tr>';}
       if(e.type==='reconcile'){const x=e.snapshot||{};return '<tr><td>'+String(e.date||'')+'</td><td>계좌</td><td class="adjtxt">이전버전 보정</td><td colspan="4">TECL '+(+x.tecl||0)+' · TQQQ '+(+x.tqqq||0)+' · SGOV '+(+x.sgov||0)+' · 현금 '+usd2(+x.cash||0)+'</td><td><button class="ledger-del" data-aeid="'+e.id+'">✕</button></td></tr>';}
       const gross=(+e.qty||0)*(+e.price||0),buy=e.side==='buy';
       return '<tr><td>'+String(e.date||'')+'</td><td>'+String(e.symbol||'')+'</td><td class="'+(buy?'buytxt':'selltxt')+'">'+(buy?'매수':'매도')+'</td><td>'+Math.floor(+e.qty||0)+'</td><td>'+usd2(+e.price||0)+'</td><td>'+usd2(+e.fee||0)+'</td><td>'+usd2(gross)+'</td><td>'+actions+'</td></tr>';
@@ -2013,8 +2038,21 @@ async function alphaDeleteEvent(id){
   const e=(alphaLedger.events||[]).find(x=>String(x.id)===String(id));if(!e)return;
   if(!confirm('이 기록을 삭제하고 이후 잔고를 다시 계산할까요?'))return;
   const candidate=JSON.parse(JSON.stringify(alphaLedger));candidate.events=(candidate.events||[]).filter(x=>String(x.id)!==String(id));
-  const chk=alphaLedgerCalc(candidate);if(chk.invalid){alert('삭제할 수 없습니다. '+chk.error);return;}
+  const curChk=alphaLedgerCalc(alphaLedger),chk=alphaLedgerCalc(candidate);if(chk.invalid){alert('삭제할 수 없습니다. '+chk.error);return;}
+  if(chk.cash<-.005&&chk.cash<curChk.cash-.005){alert('삭제하면 현금이 '+usd2(chk.cash)+'가 되어 삭제할 수 없습니다. 이 기록에 기대는 뒤 체결을 먼저 확인하세요.');return;}
   alphaLedger=candidate;alphaSyncInputs();renderAlphaLedger();localSave();refreshAlphaFromCache();await cloudSave();
+}
+/* 현금 기록 추가 — SGOV 는 매달 분배금을 준다. 이 기록이 없으면 앱 현금이 토스 계좌보다 계속 작아져
+   주문 수량이 어긋난다(20년 플랜은 SGOV 가 60%). 배당은 세후 실제 입금액 · 입금·출금은 계좌에 들고 난 금액. */
+async function alphaAddCashEvent(){
+  const date=($('alphaCashDate')&&$('alphaCashDate').value)||todayISO(),kind=$('alphaCashKind').value,amt=Math.round((+$('alphaCashAmt').value||0)*100)/100;
+  if(!['div','dep','wd'].includes(kind)||!(amt>0)){alert('구분과 금액을 확인하세요.');return;}
+  const candidate=JSON.parse(JSON.stringify(alphaLedger));candidate.events=Array.isArray(candidate.events)?candidate.events:[];
+  candidate.events.push({id:Date.now()+'_c',type:'cash',date,kind,amount:amt});
+  const curChk=alphaLedgerCalc(alphaLedger),chk=alphaLedgerCalc(candidate);
+  if(chk.invalid){alert('기록할 수 없습니다. '+chk.error);return;}
+  if(chk.cash<-.005&&chk.cash<curChk.cash-.005){alert('출금하면 현금이 '+usd2(chk.cash)+'가 되어 기록할 수 없습니다.');return;}
+  alphaLedger=candidate;$('alphaCashAmt').value='';alphaSyncInputs();renderAlphaLedger();localSave();refreshAlphaFromCache();await cloudSave();
 }
 async function alphaResetLedger(){
   const cap=Math.max(1,Math.round(Number($('alphaCapitalInput').value)||0));
@@ -2040,7 +2078,8 @@ function alphaPlanTotal(){
 function planProgress(){
   const at=activePlanTab==='alpha'?alphaPlanTotal():null;
   const total=activePlanTab==='alpha'?(at==null?num("startCapital"):at):(num("balMM")+num("balVR")+num("balQLD")+num("balSGOV"));
-  const base=num("startCapital"),target=num("targetCapital");
+  const flow=activePlanTab==='alpha'?(alphaLedgerCalc().netFlow||0):0;   // 입금−출금은 번 돈이 아니다 — 시작점에 더한다
+  const base=num("startCapital")+flow,target=num("targetCapital");
   if(!(base>0) || !(target>base)) return {ready:false,total,base,target,ratio:0};
   const ratio=(total-base)/(target-base);
   return {ready:true,total,base,target,ratio};
@@ -2184,6 +2223,7 @@ if(saved && Number(saved.startCapital)===30000 && Number(saved.aCash)===30000
 apply(saved||d);$("slDate").value=todayISO();renderSessionSelectors();renderLedger();renderAlphaLedger();render();
 ["startDate","targetDate","startCapital","targetCapital","monthlyAdd","targetIncome","stageMode","balMM","balVR","balQLD","balSGOV","cagrLow","cagrBase","cagrHigh","incomeBasis","incomeYield","sgovYield","extraWithdraw"].forEach(id=>$(id).addEventListener("change",render));
 $("alphaRecordFill").addEventListener("click",alphaOpenFillEditor);
+$("alphaCashAdd").addEventListener("click",alphaAddCashEvent);if($("alphaCashDate"))$("alphaCashDate").value=todayISO();
 $("alphaFillSave").addEventListener("click",alphaSaveFills);
 $("alphaFillCancel").addEventListener("click",alphaCloseFillEditor);
 $("alphaEditSave").addEventListener("click",alphaSaveEdit);
