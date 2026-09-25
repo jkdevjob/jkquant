@@ -16,7 +16,8 @@
 //
 // 안전 규약
 //   · 주문은 절대 자동 재시도하지 않는다 — 응답이 유실되면 이중 주문이 된다.
-//   · 같은 날 같은 세션에 두 번 내지 않는다 (autotrade/{uid} 의 lastRun 날짜로 막는다).
+//   · 같은 날 두 번 내지 않는다 (autotrade/{uid} 의 lastDate 로 막는다). lastDate 는 첫 주문을
+//     내기 직전에 조건부 쓰기로 먼저 찍는다 — 겹친 실행은 한쪽만 통과하고, 도중에 끊겨도 다시 안 낸다.
 //   · 리버스모드 세션은 건너뛴다 — 규칙을 다 옮기지 않았다.
 //   · 자동주문 경로는 VTS 모의투자 세션(paper=true)만 허용한다. paper=false 실계좌 세션은 항상 건너뛴다.
 
@@ -93,6 +94,32 @@ async function fsSet(tok, pid, path, obj) {
     body: JSON.stringify({ fields }),
   });
 }
+/* 오늘을 먼저 차지한다 — 첫 주문을 내기 직전에 부른다.
+   크론을 30분마다 걸어서(깃허브 크론이 2~3시간씩 늦다) 같은 날 주문 창 안에 실행이 두 번 올 수 있다.
+   끝에서만 lastDate 를 찍으면, 첫 실행이 주문 도중 끊겼을 때 다음 실행이 같은 주문을 또 낸다.
+   그래서 주문 전에 찍는다 — 끊기면 덜 나갈 뿐 두 번 나가지는 않는다.
+   다시 읽어서 오늘 것이면 멈추고, 쓰기는 방금 읽은 판(updateTime)이 그대로일 때만 통과시킨다
+   (문서가 없었으면 '없을 때만 만든다'). 두 실행이 겹쳐도 Firestore 가 한쪽을 거절한다.
+   못 차지하면 — 다른 실행이 먼저 썼든 읽기·쓰기가 실패했든 — 주문을 내지 않는다. */
+async function claimDay(tok, pid, path, today, at) {
+  const r = await fetch(FS(pid, path), { headers: { authorization: "Bearer " + tok } });
+  let cond;
+  if (r.status === 404) cond = "currentDocument.exists=false";
+  else {
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok || !j.updateTime) return { ok: false, why: `실행 기록을 읽지 못했습니다 (${r.status})` };
+    if (unwrap((j.fields || {}).lastDate) === today) return { ok: false, why: "오늘 이미 실행했습니다" };
+    cond = "currentDocument.updateTime=" + encodeURIComponent(j.updateTime);
+  }
+  const w = await fetch(FS(pid, path) + "?" + cond, {
+    method: "PATCH", headers: { authorization: "Bearer " + tok, "content-type": "application/json" },
+    body: JSON.stringify({ fields: { lastDate: wrap(today), lastRun: wrap(at), log: wrap("주문 중 — 끝나면 결과로 바뀝니다") } }),
+  });
+  if (w.ok) return { ok: true };
+  // 조건이 어긋나면 Firestore 는 400(FAILED_PRECONDITION) · 409(ALREADY_EXISTS) 로 거절한다
+  return { ok: false, why: (w.status === 400 || w.status === 409)
+    ? `다른 실행이 먼저 차지했습니다 (${w.status})` : `실행 기록을 쓰지 못했습니다 (${w.status})` };
+}
 // OWNER_EMAIL 로 uid 를 찾는다 — 환경변수를 하나 덜 두려고 profiles 를 훑는다
 async function findUid(tok, pid, email) {
   const r = await fetch(FS(pid, "profiles") + "?pageSize=300", { headers: { authorization: "Bearer " + tok } });
@@ -156,6 +183,7 @@ export async function onRequest({ request, env }) {
     const prev = await fsGet(tok, pid, "autotrade/" + uid);
     if (!dry && prev && prev.lastDate === today) return json({ ...out, skipped: "오늘 이미 실행했습니다", lastDate: today });
 
+    let claimed = false;
     for (const s of state.inf.sessions) {
       const row = { name: s.name, id: s.id, paper: !!s.paper };
       if (!s.kis) { row.skip = "한투 연결 꺼짐"; out.sessions.push(row); continue; }
@@ -169,12 +197,12 @@ export async function onRequest({ request, env }) {
       row.cur = cur;
 
       /* 확정 종가 — 앱과 같은 시세 경로, 같은 규약.
-         마지막 봉을 그냥 쓰면 안 된다. 자동 주문은 마감 20분 전에 도는데
+         마지막 봉을 그냥 쓰면 안 된다. 자동 주문은 마감 전 1시간 안에 도는데
          그 시각 오늘 봉의 close 는 종가가 아니라 장중 현재가다. */
       /* 앱과 같은 가격 계열로 받는다 (7차 점검 ⑦). 앱은 N1 부터 div=1 로 받아 체결가
          계열(ohlcTrade)이 있으면 그걸 쓴다 — 서버만 조정종가(series)로 수량·상한을 재면
          화면에 보이는 주문과 실제로 나가는 주문이 달라진다. 체결가 계열이 없으면 앱처럼 조정 기준.
-         익절 조절(20일 상승률)도 확정된 봉만 쓴다 — 자동 주문은 장 마감 20분 전에 돌아서
+         익절 조절(20일 상승률)도 확정된 봉만 쓴다 — 자동 주문은 장 마감 전에 돌아서
          마지막 봉이 아직 움직이는 오늘 봉이다. 모의·백테는 전일 확정 종가 기준이다. */
       let close = 0, days = null;
       try {
@@ -204,8 +232,9 @@ export async function onRequest({ request, env }) {
       if (!orders.length) { row.skip = "낼 주문 없음"; out.sessions.push(row); continue; }
       if (dry) { row.sent = "드라이런 — 주문 안 냄"; out.sessions.push(row); continue; }
       /* 마감 뒤에 도착한 실행은 주문을 내지 않는다. 깃허브 크론은 예정 시각보다
-         한두 시간씩 늦게 도는 일이 있는데(실측 1시간 46분·2시간 28분), 그때 낸
-         지정가는 그날 체결되지 않고 다음 거래일로 넘어간다. */
+         두세 시간씩 늦게 돈다(2026-09-15~24 실측 2시간 10분~3시간 8분). 그때 낸
+         지정가는 그날 체결되지 않고 다음 거래일로 넘어간다. 창 밖 실행은 계산만 하고
+         날을 쓰지 않는다 — 크론을 30분마다 걸어 두어 창 안에 도착한 실행이 낸다. */
       const win = orderWindow(cur);
       if (!win.ok) {
         row.skip = `주문 시간이 아닙니다 — 지금 ${win.now}, 주문 창은 ${win.from}~${win.to} (거래소 시각)`;
@@ -234,6 +263,13 @@ export async function onRequest({ request, env }) {
         ? `모의는 지정가만 받습니다 — 주문구분 ${ordDvsn} 은 보내지 않고 지정가로 냅니다`
         : `주문구분 ${ordDvsn} 은 아직 실계좌에 보내지 않습니다 — 지정가로 냅니다`;
       row.ordDvsn = dvsn;
+      // 첫 주문 직전에 오늘을 차지한다 — 못 차지하면 이 세션도, 남은 세션도 내지 않는다
+      if (!claimed) {
+        const c = await claimDay(tok, pid, "autotrade/" + uid, today, out.at);
+        if (!c.ok) { row.skip = "주문 직전 확인에서 멈춤 — " + c.why; out.claim = c.why; out.sessions.push(row); break; }
+        claimed = true;
+        out.claim = "오늘 주문 차지";
+      }
       row.results = [];
       for (let i = 0; i < row.orders.length; i++) {
         await paceOrder();                             // 세션이 바뀌어도 간격은 이어진다

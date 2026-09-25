@@ -2178,7 +2178,8 @@ console.log('[42] 자동 주문 — 브라우저와 서버가 같은 주문을 �
   ok('시간을 재는 워크플로가 있다', fs.existsSync(wf));
   if(fs.existsSync(wf)){
     const y=fs.readFileSync(wf,'utf8');
-    ok('평일에만 돈다', /cron: "40 (19|20) \* \* 1-5"/.test(y));
+    // 몇 시에 몇 번 도는지는 [130] 이 주문 창과 맞대 본다
+    ok('평일에만 돈다', /cron: "[^"]+ \* \* 1-5"/.test(y) && [...y.matchAll(/cron: "([^"]+)"/g)].every(m=>/ \* \* 1-5$/.test(m[1])));
     ok('손으로도 돌릴 수 있다', /workflow_dispatch/.test(y));
     ok('손으로 돌릴 땐 드라이런이 기본', /default: true/.test(y));
     ok('주문구분을 손으로 골라 시험할 수 있다', /ord_dvsn:/.test(y) && /ordDvsn=\$DVSN/.test(y));
@@ -9587,6 +9588,171 @@ console.log('\n[129] 자산플랜 현재가 — 캐시 우회 · 현재계좌 �
   ok('현재가 — quote 요청은 매 새로고침마다 _ts + no-store/no-cache로 브라우저·CDN 캐시를 우회', /_ts='\+Date\.now\(\)/.test(fq) && /cache:'no-store'/.test(fq) && /'Cache-Control':'no-cache'/.test(fq));
   ok('현재계좌 총자산 — liveQuotes.price 우선, 없을 때만 확정종가 fallback', /\+q\.price>0\?\+q\.price/.test(pt) && /q\.settled\?\+q\.settled\.close:0/.test(pt));
   ok('자산플랜 버전 — 현재가 강제 갱신 v1.31.0', /자산플랜 <span class="ver">v1\.31\.0<\/span>/.test(pl));
+}
+
+/* ════ 130. 무매 자동주문 — 크론이 주문 창 안에 떨어진다 · 주문 직전 선점 · 공개 로그 ════
+   2026-09-15~24 실측: 15:40 ET 로 걸어 둔 깃허브 크론이 17:50~18:48 ET 에 돌았다(2시간 10분~3시간 8분 지연).
+   주문 창(15:00~16:00 ET)과 여유가 20분뿐이라 그 열흘 동안 정기 실행으로는 한 건도 나가지 않았다.
+   ① 크론을 30분마다 건다 — 서버 orderWindow 를 그대로 써서 지연 1분 단위로 창에 드는지 잰다.
+   ② 그러면 같은 날 창 안 실행이 여러 번 온다 — 첫 주문 직전에 오늘을 조건부 쓰기로 차지한다.
+      실코드(onRequest)를 가짜 Firestore · 시세 · 한투로 돌려 겹침 · 재실행 · 쓰기 실패를 본다.
+   ③ 저장소가 공개라 실행 기록도 공개다 — uid · 가격 · 수량을 찍지 않는다. */
+console.log('\n[130] 무매 자동주문 — 크론이 주문 창 안에 · 주문 직전 선점 · 공개 로그');
+{
+  const {spawnSync}=require('child_process');
+  const imP=__d+'/functions/api/_im.js', atP=__d+'/functions/api/autotrade.js', wfP=__d+'/.github/workflows/autotrade.yml';
+  const im=fs.readFileSync(imP,'utf8'), y=fs.readFileSync(wfP,'utf8');
+  const OW=new Function(im.replace(/export /g,'')+'\nreturn orderWindow;')();
+  // 크론 줄 → 하루 중 예정 시각(UTC 분). 분·시 칸은 숫자 · 쉼표 목록 · a-b 범위 · * 만 쓴다
+  const expand=(f,max)=>f==='*'?Array.from({length:max},(_,i)=>i):f.split(',').flatMap(p=>{ const m=p.match(/^(\d+)-(\d+)$/);
+    if(m){ const a=[]; for(let i=+m[1];i<=+m[2];i++) a.push(i); return a; } return [+p]; });
+  const slots=(crons)=>crons.flatMap(c=>{ const [mi,h]=c.trim().split(/\s+/); return expand(h,24).flatMap(hh=>expand(mi,60).map(mm=>hh*60+mm)); }).sort((a,b)=>a-b);
+  // 지연 d분 — 예정 시각 + d 중 하나라도 서버 주문 창 안이면 그 지연은 덮인다. 처음 못 덮는 d(분)를 돌려준다
+  const firstGap=(sl,day,maxD)=>{ const b=Date.parse(day+'T00:00:00Z');
+    for(let d=0; d<=maxD; d++) if(!sl.some(s=>OW('usd', new Date(b+(s+d)*60e3)).ok)) return d; return null; };
+  const cr=[...y.matchAll(/cron: "([^"]+)"/g)].map(m=>m[1]), sl=slots(cr);
+  ok('① 크론 — 평일 · 하루 11번 · 15:40~20:40 UTC 30분 간격', cr.length>0 && cr.every(c=>/ \* \* 1-5$/.test(c)) && sl.length===11
+     && sl[0]===15*60+40 && sl[sl.length-1]===20*60+40 && sl.every((s,i)=>i===0||s-sl[i-1]===30), cr.join(' | ')+' → '+sl.length+'번');
+  const gS=firstGap(sl,'2026-09-24',600), gW=firstGap(sl,'2026-12-03',600);
+  ok('① 서머타임 — 지연 0분 ~ 4시간 20분 전부 하루 한 번 이상 주문 창(15:00~16:00 ET) 안 (처음 놓치는 지연 261분 · 실측 최대 188분)', gS===261, '처음 놓치는 지연 '+gS+'분');
+  ok('① 겨울 — 지연 0분 ~ 5시간 20분 전부 주문 창 안 (처음 놓치는 지연 321분)', gW===321, '처음 놓치는 지연 '+gW+'분');
+  { // 재는 방법이 옛 크론을 실제로 잡는지 — 옛 두 줄(19:40·20:40 UTC)은 21분만 늦어도 창을 놓쳤다
+    const old=slots(['40 19 * * 1-5','40 20 * * 1-5']), b=Date.parse('2026-09-24T00:00:00Z');
+    ok('① (재는 방법 확인) 옛 크론은 21분 늦으면 놓친다 — 실측 지연 130 · 158 · 188분은 전부 창 밖',
+       firstGap(old,'2026-09-24',600)===21 && [130,158,188].every(d=>!old.some(s=>OW('usd', new Date(b+(s+d)*60e3)).ok))); }
+  ok('① 한 번에 하나만 돈다 — concurrency 그룹 · 도는 중인 실행은 끊지 않는다 · 10분 제한',
+     /\nconcurrency:\n  group: autotrade-order\n  cancel-in-progress: false\n/.test(y) && /\n    timeout-minutes: 10\n/.test(y));
+
+  /* ② 서버 — 실코드 onRequest 를 가짜 Firestore(조건부 쓰기까지) · 시세 · 한투 로 돌린다.
+     비동기라 자식 프로세스에서 돌리고 결과만 받는다. */
+  function __atHarness(){
+    const fs=require('fs'); const IM=process.argv[2], AT=process.argv[3];
+    const body=fs.readFileSync(IM,'utf8').replace(/^export /gm,'')+'\n'+fs.readFileSync(AT,'utf8').replace(/^import [^\n]*\n/m,'').replace(/^export /gm,'')+'\nreturn onRequest;';
+    const W=v=>{ if(v===null||v===undefined) return {nullValue:null}; if(typeof v==='string') return {stringValue:v};
+      if(typeof v==='boolean') return {booleanValue:v}; if(typeof v==='number') return Number.isInteger(v)?{integerValue:String(v)}:{doubleValue:v};
+      if(Array.isArray(v)) return {arrayValue:{values:v.map(W)}}; const f={}; for(const [k,x] of Object.entries(v)) f[k]=W(x); return {mapValue:{fields:f}}; };
+    const U=v=>{ if(!v) return undefined; if('stringValue' in v) return v.stringValue; if('nullValue' in v) return null; return v; };
+    const mkStore=(init)=>{ let tick=0; const m=new Map(); const ut=()=>'2026-09-24T00:00:00.'+String(++tick).padStart(6,'0')+'Z';
+      for(const [p,o] of Object.entries(init||{})){ const f={}; for(const [k,x] of Object.entries(o)) f[k]=W(x); m.set(p,{fields:f,updateTime:ut()}); }
+      const doc=()=>m.get('autotrade/U1');
+      return {m,ut,get lastDate(){ const d=doc(); return d?U(d.fields.lastDate):undefined; },get log(){ const d=doc(); return d?U(d.fields.log):undefined; }}; };
+    const sessions=[
+      {id:'r1',name:'실계좌',paper:false,kis:true,settings:{ticker:'SOXL',div:20,target:20,principal:10000},hist:[]},
+      {id:'p1',name:'모의A',paper:true,kis:true,settings:{ticker:'SOXL',div:20,target:20,principal:10000},hist:[]},
+      {id:'p2',name:'모의B',paper:true,kis:true,settings:{ticker:'TQQQ',div:20,target:15,principal:8000},hist:[]},
+      {id:'p3',name:'꺼짐',paper:true,kis:false,settings:{ticker:'TECL'},hist:[]}];
+    const bars=Array.from({length:66},(_,i)=>{ const d=new Date(Date.UTC(2026,6,20)+i*864e5); return {date:d.toISOString().slice(0,10),close:100+i%7}; })
+      .filter(b=>{ const w=new Date(b.date+'T00:00:00Z').getUTCDay(); return w>0&&w<6; });
+    bars.push({date:'2026-09-24',close:150});      // 오늘 장중 봉 — 확정 전이라 쓰면 안 된다
+    const env={AUTOTRADE_KEY:'K',AUTOTRADE_UID:'U1',
+      FIREBASE_SERVICE_ACCOUNT:JSON.stringify({client_email:'x@y',private_key:'-----BEGIN PRIVATE KEY-----\nAAAA\n-----END PRIVATE KEY-----',project_id:'P'})};
+    // 한 실행 = 모듈을 새로 만든다(격리) · store 는 공유. hooks: gateQuote · failGet · failPatch · barrierAt/barrier
+    const mkRun=(store,log,iso,hooks)=>{
+      const FIX=Date.parse(iso);
+      const FD=class extends Date{ constructor(...a){ if(a.length) super(...a); else super(FIX); } static now(){ return FIX; } };
+      const res=(obj,status=200)=>({status,ok:status>=200&&status<300,json:async()=>obj});
+      const fetchM=async(url,init={})=>{
+        const u=String(url), meth=(init.method||'GET').toUpperCase();
+        if(u.startsWith('https://oauth2.googleapis.com/token')) return res({access_token:'T'});
+        const fm=u.match(/documents\/([^?]+)(?:\?(.*))?$/);
+        if(fm){ const p=decodeURIComponent(fm[1]), q=new URLSearchParams(fm[2]||'');
+          if(meth==='GET'){ log.push({t:'fsget',p});
+            if(p==='autotrade/U1'){ hooks.nGet=(hooks.nGet||0)+1; if(hooks.barrierAt&&hooks.barrierAt(hooks.nGet)) await hooks.barrier(); if(hooks.failGet&&hooks.nGet>1) return res({},500); }
+            const d=store.m.get(p); if(!d) return res({error:{code:404}},404);
+            return res({name:'x/'+p,fields:d.fields,updateTime:d.updateTime}); }
+          if(meth==='PATCH'){ const b=JSON.parse(init.body||'{}'), cur=store.m.get(p);
+            log.push({t:'fspatch',p,cond:q.has('currentDocument.exists')?'exists='+q.get('currentDocument.exists'):q.has('currentDocument.updateTime')?'updateTime':'none'});
+            if(hooks.failPatch&&p==='autotrade/U1') return res({},500);
+            if(q.get('currentDocument.exists')==='false'&&cur) return res({error:{status:'ALREADY_EXISTS'}},409);
+            if(q.has('currentDocument.updateTime')&&(!cur||cur.updateTime!==q.get('currentDocument.updateTime'))) return res({error:{status:'FAILED_PRECONDITION'}},400);
+            store.m.set(p,{fields:b.fields||{},updateTime:store.ut()}); return res({}); } }
+        if(u.includes('/api/quote')){ if(hooks.gateQuote) await hooks.gateQuote; log.push({t:'quote'}); return res({priceBasis:'trade',ohlcTrade:bars}); }
+        if(u.includes('/api/kis?op=order')){ const b=JSON.parse(init.body); log.push({t:'order',run:hooks.name,code:b.code,env:b.env,lastDateAtSend:store.lastDate});
+          return res({ok:true,msg:'주문 접수',orderNo:'N'+log.length}); }
+        throw new Error('예상 못한 호출 '+u); };
+      const cryptoM={subtle:{importKey:async()=>({}),sign:async()=>new ArrayBuffer(8)}};
+      const fastTimeout=(fn)=>{ Promise.resolve().then(fn); return 0; };
+      const onRequest=new Function('fetch','crypto','setTimeout','Date','Response','URL','URLSearchParams','TextEncoder','btoa','atob',body)
+        (fetchM,cryptoM,fastTimeout,FD,Response,URL,URLSearchParams,TextEncoder,btoa,atob);
+      return async(qs)=>{ const r=await onRequest({request:new Request('https://jkquant.pages.dev/api/autotrade?'+qs,{headers:{'x-autotrade-key':'K'}}),env}); return {status:r.status,j:await r.json()}; }; };
+    const IN='2026-09-24T19:30:00Z', users={'users/U1':{state:{inf:{sessions}}}};
+    const cnt=(log,t)=>log.filter(x=>x.t===t).length;
+    (async()=>{
+      const out={};
+      { const st=mkStore(users), log=[]; const r=await mkRun(st,log,IN,{name:'A'})('dry=0');           // S1 창 안 · 오늘 처음
+        const iP=log.findIndex(x=>x.t==='fspatch'), iO=log.findIndex(x=>x.t==='order');
+        out.S1={orders:cnt(log,'order'),envs:[...new Set(log.filter(x=>x.t==='order').map(x=>x.env))].join(),claimFirst:iP>=0&&iO>=0&&iP<iO,
+          firstCond:(log.find(x=>x.t==='fspatch')||{}).cond,lastAtFirstOrder:(log.find(x=>x.t==='order')||{}).lastDateAtSend,lastDate:st.lastDate,
+          logIsResult:/^\[/.test(st.log||''),marked:r.j.marked,claim:r.j.claim||'',realSkip:(r.j.sessions.find(s=>s.id==='r1')||{}).skip||'',
+          sessRes:r.j.sessions.filter(s=>s.results).map(s=>s.id+':'+s.results.length).join(',')};
+        const log2=[]; const r2=await mkRun(st,log2,'2026-09-24T19:45:00Z',{name:'A2'})('dry=0');          // S2 같은 날 다시
+        out.S2={orders:cnt(log2,'order'),skipped:r2.j.skipped||'',patches:cnt(log2,'fspatch')}; }
+      { const st=mkStore(Object.assign({'autotrade/U1':{lastDate:'2026-09-23',lastRun:'x',log:'[]'}},users)), log=[];   // S3 겹친 두 실행 — 같은 판을 읽은 뒤에야 쓰게 붙잡는다
+        let arrived=0, release; const bar=new Promise(r=>release=r);
+        const mkH=(name)=>({name,barrierAt:(n)=>n===2,barrier:async()=>{ arrived++; if(arrived>=2) release(); await bar; }});
+        const [a,b]=await Promise.all([mkRun(st,log,IN,mkH('A'))('dry=0'),mkRun(st,log,IN,mkH('B'))('dry=0')]);
+        out.S3={orders:cnt(log,'order'),runs:new Set(log.filter(x=>x.t==='order').map(x=>x.run)).size,marked:[a.j.marked,b.j.marked].sort().join(),
+          claims:[a.j.claim||'',b.j.claim||''].sort().join('|'),lastDate:st.lastDate}; }
+      { const st=mkStore(users), log=[]; let open; const gate=new Promise(r=>open=r);                    // S4 느린 A 가 시세를 받는 사이 B 가 끝까지
+        const pA=mkRun(st,log,IN,{name:'A',gateQuote:gate})('dry=0'); await new Promise(r=>setImmediate(r));
+        const b=await mkRun(st,log,IN,{name:'B'})('dry=0'); open(); const a=await pA;
+        out.S4={byA:log.filter(x=>x.t==='order'&&x.run==='A').length,byB:log.filter(x=>x.t==='order'&&x.run==='B').length,aClaim:a.j.claim||'',aMarked:a.j.marked,bMarked:b.j.marked}; }
+      { const st=mkStore(users), log=[]; const r=await mkRun(st,log,'2026-09-24T22:43:00Z',{name:'L'})('dry=0');   // S5 창 밖 18:43 ET
+        out.S5={orders:cnt(log,'order'),patches:cnt(log,'fspatch'),lastDate:st.lastDate===undefined?'없음':st.lastDate,marked:r.j.marked,
+          late:r.j.sessions.filter(s=>/주문 시간이 아닙니다/.test(s.skip||'')).length}; }
+      { const st=mkStore(users), log=[]; const r=await mkRun(st,log,IN,{name:'D'})('dry=1');              // S6 드라이런
+        out.S6={orders:cnt(log,'order'),patches:cnt(log,'fspatch'),sent:[...new Set(r.j.sessions.filter(s=>s.sent).map(s=>s.sent))].join()}; }
+      { const st=mkStore(users), log=[]; const r=await mkRun(st,log,IN,{name:'F',failPatch:true})('dry=0');   // S7 차지 쓰기 실패
+        out.S7={orders:cnt(log,'order'),claim:r.j.claim||'',marked:r.j.marked}; }
+      { const st=mkStore(Object.assign({'autotrade/U1':{lastDate:'2026-09-23'}},users)), log=[];            // S8 차지 전 다시 읽기 실패
+        const r=await mkRun(st,log,IN,{name:'G',failGet:true})('dry=0'); out.S8={orders:cnt(log,'order'),claim:r.j.claim||''}; }
+      console.log(JSON.stringify(out));
+    })().catch(e=>console.log(JSON.stringify({error:String(e&&e.stack||e)})));
+  }
+  let H={};
+  { const tmp=path.join(require('os').tmpdir(),'__at_harness_'+process.pid+'.js');
+    fs.writeFileSync(tmp,'('+__atHarness.toString()+')();');
+    const r=spawnSync(process.execPath,[tmp,imP,atP],{encoding:'utf8',timeout:60000});
+    try{ H=JSON.parse((r.stdout||'').trim().split('\n').pop()||'{}'); }catch(e){ H={error:'출력 해석 실패: '+(r.stdout||'').slice(0,200)+(r.stderr||'').slice(0,300)}; }
+    try{ fs.unlinkSync(tmp); }catch(e){} }
+  const J=o=>JSON.stringify(o||H.error||{});
+  const {S1={},S2={},S3={},S4={},S5={},S6={},S7={},S8={}}=H;
+  ok('② 창 안 첫 실행 — 모의 두 세션 9+9건을 VTS 로 · 실계좌 세션은 막힘 · 첫 주문 전에 오늘을 차지(문서가 없을 때만 만든다)',
+     S1.orders===18 && S1.sessRes==='p1:9,p2:9' && S1.envs==='vts' && /실계좌 자동주문 차단/.test(S1.realSkip)
+     && S1.claimFirst===true && S1.firstCond==='exists=false' && S1.claim==='오늘 주문 차지', J(S1));
+  ok('② 첫 주문을 내는 순간 이미 lastDate=오늘 — 도중에 끊겨도 다음 실행이 다시 내지 않는다 · 끝나면 기록은 결과로 바뀐다',
+     S1.lastAtFirstOrder==='2026-09-24' && S1.lastDate==='2026-09-24' && S1.logIsResult===true && S1.marked===true, J(S1));
+  ok('② 같은 날 다시 — 0건 · 오늘 이미 실행했습니다 · 쓰기 없음', S2.orders===0 && S2.skipped==='오늘 이미 실행했습니다' && S2.patches===0, J(S2));
+  ok('② 겹친 두 실행(둘 다 같은 판을 읽은 뒤 씀) — 합쳐 18건(한 번치) · 한쪽만 차지 · 다른 쪽은 "먼저 차지했습니다 (400)"',
+     S3.orders===18 && S3.runs===1 && S3.marked==='false,true' && S3.claims==='다른 실행이 먼저 차지했습니다 (400)|오늘 주문 차지' && S3.lastDate==='2026-09-24', J(S3));
+  ok('② 느린 실행이 시세를 받는 사이 다른 실행이 끝남 — 느린 쪽은 주문 직전에 다시 읽고 멈춘다 (0건 · 다른 쪽 18건)',
+     S4.byA===0 && S4.byB===18 && S4.aClaim==='오늘 이미 실행했습니다' && S4.aMarked===false && S4.bMarked===true, J(S4));
+  ok('② 창 밖(18:43 ET) — 연결된 세 세션 모두 "주문 시간이 아닙니다" · 주문 0 · 쓰기 0 · 날을 안 쓴다(뒤 실행이 낼 수 있게)', S5.orders===0 && S5.patches===0 && S5.lastDate==='없음' && S5.marked===false && S5.late===3, J(S5));
+  ok('② 드라이런 — 주문 0 · 쓰기 0', S6.orders===0 && S6.patches===0 && S6.sent==='드라이런 — 주문 안 냄', J(S6));
+  ok('② 차지하지 못하면 안 낸다 — 쓰기 실패(500) · 다시 읽기 실패(500) 둘 다 0건',
+     S7.orders===0 && S7.claim==='실행 기록을 쓰지 못했습니다 (500)' && S7.marked===false && S8.orders===0 && S8.claim==='실행 기록을 읽지 못했습니다 (500)', J([S7,S8]));
+
+  /* ③ 공개 로그 — 워크플로의 요약 스크립트를 그대로 떼어 표본 응답에 돌린다 */
+  { const m=y.match(/node - resp\.json <<'NODE'[^\n]*\n([\s\S]*?)\n[ \t]*NODE\n/);
+    const script=m?m[1].replace(/^ {10}/gm,''):'';
+    const sample={at:'2026-09-24T19:30:00.000Z',dry:false,uid:'UID-SECRET-123',marked:true,claim:'오늘 주문 차지',sessions:[
+      {name:'실계좌 SOXL',id:'s1',paper:false,skip:'한투 연결 꺼짐'},
+      {name:'20/10',id:'s2',paper:true,ticker:'SOXL',close:146.33,orders:[{side:'buy',kind:'별지점 매수',price:156.37,qty:10},{side:'sell',kind:'지정가매도',price:160.01,qty:40},{side:'buy',kind:'평단 매수',price:145.47,qty:13}],
+        results:[{kind:'별지점 매수',ok:true,msg:'주문 접수',orderNo:'0001234567'},{kind:'지정가매도',ok:false,msg:'모의투자 잔고내역이 없습니다.'},{kind:'평단 매수',ok:true,msg:'주문 접수',orderNo:'0001234568'}]},
+      {name:'20/10',id:'s3',paper:true,ticker:'TQQQ',close:78.58,orders:[{side:'buy',price:84.89,qty:19}],skip:'주문 시간이 아닙니다 — 지금 18:43, 주문 창은 15:00~16:00 (거래소 시각)'}]};
+    const tmp=path.join(require('os').tmpdir(),'__at_resp_'+process.pid+'.json'); fs.writeFileSync(tmp,JSON.stringify(sample));
+    const r=spawnSync(process.execPath,['-',tmp],{input:script,encoding:'utf8'}); const o=r.stdout||'';
+    try{ fs.unlinkSync(tmp); }catch(e){}
+    ok('③ 공개 로그 — 세션마다 결과만 (보냄 3 · 접수 2 · 사유 · 주문표 건수)', !!script && r.status===0
+       && /  20\/10 SOXL \(모의\): 보냄 3 · 접수 2 · 주문 접수 \/ 모의투자 잔고내역이 없습니다\. \[주문표 3건\]/.test(o)
+       && /  실계좌 SOXL \(실계좌\): 한투 연결 꺼짐/.test(o) && /  20\/10 TQQQ \(모의\): 주문 시간이 아닙니다/.test(o) && /오늘 주문 차지 · 주문 냄 예/.test(o),
+       (o||'').slice(0,400)+(r.stderr||'').slice(0,200));
+    ok('③ 공개 로그 — uid · 가격 · 수량 · 주문번호를 찍지 않는다', !!o && !/UID-SECRET-123|156\.37|160\.01|145\.47|84\.89|146\.33|78\.58|000123456|qty/.test(o), o.slice(0,300));
+    ok('③ 응답 원문을 그대로 찍는 줄이 없다', !/^\s*cat resp\.json\s*$/m.test(y)); }
+
+  /* ④ 앱 안내 — 15:40 고정이 아니다 */
+  { const t=new Function(extractFn(idx,'function kisAutoLimitsNote()')+'\nreturn kisAutoLimitsNote;')()();
+    ok('④ 앱 안내 — 서버 자동주문은 마감 전 1시간(15:00~16:00 ET) 안에 들어간다', /서버 자동주문은 마감 전 1시간\(15:00~16:00 ET\) 안에 들어갑니다/.test(t) && !/15:40/.test(t)); }
 }
 
 console.log(`\n════ 결과: ${pass} PASS / ${fail} FAIL ${fail===0?'— ALL PASS ★':'— 배포 금지, 위 ✗ 항목 수정 필요'} ════`);
