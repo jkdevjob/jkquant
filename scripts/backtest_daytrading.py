@@ -70,6 +70,22 @@ def load_days():
             print("skip",p,e)
     return out
 
+def split_primary_days(all_days):
+    eligible=[]
+    excluded=[]
+    for d in all_days:
+        sh=int(d.get("snapshotHm") or 0)
+        if 0 < sh <= PRIMARY_SNAPSHOT_MAX_HM:
+            eligible.append(d)
+        else:
+            excluded.append({
+                "date":d.get("date"),
+                "snapshotHm":sh or None,
+                "reason":"late_snapshot" if sh else "missing_snapshot_time",
+            })
+    return eligible, excluded
+
+
 def bars_of(row):
     a=[]
     for b in row.get("bars") or []:
@@ -348,18 +364,7 @@ def main():
         return 0
 
     raw_labels=[d["date"] for d in all_days]
-    eligible=[]
-    excluded=[]
-    for d in all_days:
-        sh=int(d.get("snapshotHm") or 0)
-        if 0 < sh <= PRIMARY_SNAPSHOT_MAX_HM:
-            eligible.append(d)
-        else:
-            excluded.append({
-                "date":d.get("date"),
-                "snapshotHm":sh or None,
-                "reason":"late_snapshot" if sh else "missing_snapshot_time",
-            })
+    eligible,excluded=split_primary_days(all_days)
 
     labels=[d["date"] for d in eligible]
     reports=[]; trade_map={}
