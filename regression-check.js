@@ -9805,5 +9805,101 @@ console.log('\n[130] 무매 자동주문 — 크론이 주문 창 안에 · 주�
     ok('④ 앱 안내 — 서버 자동주문은 마감 전 1시간(15:00~16:00 ET) 안에 들어간다', /서버 자동주문은 마감 전 1시간\(15:00~16:00 ET\) 안에 들어갑니다/.test(t) && !/15:40/.test(t)); }
 }
 
+/* ════ 131. 한투 계좌 확인 — 읽기 전용 (주문가능금액 · 보유 · 앱 장부 대조) ════
+   09-16 실측: 모의계좌에 달러가 없어 매수는 '주문가능금액이 부족합니다', 보유가 없어 매도는 '잔고내역이 없습니다'.
+   앱에서 보내기 전에 계좌 상태를 보게 한다. 서버는 조회(GET op=balance)만 — 매수가능금액조회(모의 VTTS3007R ·
+   실전 TTTS3007R)를 붙이고, 예전 US 잔고의 cash(= 외화'매입'금액)처럼 이름과 뜻이 다른 칸은 뺐다. */
+console.log('\n[131] 한투 계좌 확인 — 읽기 전용 (주문가능금액 · 보유 · 앱 장부 대조)');
+{
+  const {spawnSync}=require('child_process');
+  const kisP=__d+'/functions/api/kis.js';
+  function __kisHarness(){
+    const fs=require('fs'); const body=fs.readFileSync(process.argv[2],'utf8').replace(/^export /gm,'')+'\nreturn {onRequestGet};';
+    const mk=(scn)=>{
+      const calls=[], sleeps=[];
+      const res=(obj,status=200)=>({status,ok:status>=200&&status<300,json:async()=>obj,text:async()=>JSON.stringify(obj)});
+      const fetchM=async(url,init={})=>{
+        const u=new URL(String(url)), meth=(init.method||'GET').toUpperCase(), h=init.headers||{};
+        const c={host:u.host,path:u.pathname,meth,tr:h.tr_id||'',q:Object.fromEntries(u.searchParams),slept:sleeps.length}; calls.push(c);
+        if(u.pathname==='/oauth2/tokenP') return res({access_token:'TOK'});
+        if(u.pathname.endsWith('/trading/inquire-balance')){
+          const rows=(scn.hold||[]).filter(x=>x.ex===c.q.OVRS_EXCG_CD).map(x=>({ovrs_pdno:x.code,ovrs_item_name:x.code,ovrs_cblc_qty:String(x.qty),pchs_avg_pric:'10',now_pric2:'11',evlu_pfls_rt:'1'}));
+          return res({rt_cd:'0',output1:rows,output2:{frcr_pchs_amt1:'777.00',tot_evlu_pfls_amt:'55.00'}}); }
+        if(u.pathname.endsWith('/quotations/price')){ if(scn.priceFail) return res({rt_cd:'1',msg1:'시세 없음',output:{}});
+          return res({rt_cd:'0',output:{last:c.q.EXCD==='AMS'?'146.33':'0'}}); }
+        if(u.pathname.endsWith('/trading/inquire-psamount')){ if(scn.psErr) return res({rt_cd:'1',msg1:'주문가능금액 조회 오류'});
+          return res({rt_cd:'0',output:{tr_crcy_cd:'USD',ord_psbl_frcr_amt:'0',ovrs_ord_psbl_amt:'100000',frcr_ord_psbl_amt1:'0',max_ord_psbl_qty:'683',exrt:'1390'}}); }
+        if(u.pathname.includes('/trading/order')) return res({rt_cd:'0'});
+        throw new Error('예상 못한 호출 '+u); };
+      const fast=(fn,ms)=>{ sleeps.push(+ms||0); Promise.resolve().then(fn); return 0; };
+      const M=new Function('fetch','setTimeout','caches',body)(fetchM,fast,undefined);
+      const env={AUTOTRADE_KEY:'K',OWNER_EMAIL:'o@x',KIS_VTS_APPKEY:'a',KIS_VTS_APPSECRET:'b',KIS_VTS_ACCOUNT:'12345678-01',
+        KIS_REAL_APPKEY:'ra',KIS_REAL_APPSECRET:'rb',KIS_REAL_ACCOUNT:'87654321-01'};
+      return {calls,sleeps,get:async(qs,key='K')=>{ const r=await M.onRequestGet({request:new Request('https://x.dev/api/kis?'+qs,{headers:key?{'x-autotrade-key':key}:{}}),env}); return {status:r.status,j:await r.json()}; }}; };
+    (async()=>{
+      const out={};
+      { const H=mk({hold:[{ex:'AMEX',code:'SOXL',qty:5},{ex:'NASD',code:'TQQQ',qty:3}]}); const r=await H.get('op=balance&env=vts&market=us&code=SOXL');
+        const ps=H.calls.find(c=>c.path.endsWith('/inquire-psamount'))||{};
+        out.A={status:r.status,keys:Object.keys(r.j).sort().join(','),hold:(r.j.holdings||[]).map(h=>h.code+':'+h.qty).sort().join(','),buy:r.j.buyable,
+          hosts:[...new Set(H.calls.map(c=>c.host))].join(','),bal:H.calls.filter(c=>c.tr==='VTTS3012R').length,psTr:ps.tr||'',ps:ps.q||null,
+          orders:H.calls.filter(c=>c.path.includes('/trading/order')||(c.meth==='POST'&&c.path!=='/oauth2/tokenP')).length,
+          gaps:H.sleeps.filter(ms=>ms>=550).length,psAfterGap:ps.slept>=4}; }
+      { const H=mk({}); await H.get('op=balance&env=real&market=us&code=SOXL');
+        out.R={hosts:[...new Set(H.calls.map(c=>c.host))].join(','),trs:[...new Set(H.calls.map(c=>c.tr).filter(t=>/S30/.test(t)))].sort().join(',')}; }
+      { const H=mk({}); const r=await H.get('op=balance&env=vts&market=us'); out.N={status:r.status,hasBuy:'buyable' in r.j,ps:H.calls.filter(c=>c.path.endsWith('/inquire-psamount')).length}; }
+      { const H=mk({priceFail:true}); const r=await H.get('op=balance&env=vts&market=us&code=SOXL'); out.P={buy:r.j.buyable,ps:H.calls.filter(c=>c.path.endsWith('/inquire-psamount')).length}; }
+      { const H=mk({psErr:true}); const r=await H.get('op=balance&env=vts&market=us&code=SOXL'); out.E={buy:r.j.buyable}; }
+      { const H=mk({}); const r=await H.get('op=balance&env=vts&market=us&code=SOXL',''); out.U={status:r.status,calls:H.calls.length}; }
+      console.log(JSON.stringify(out));
+    })().catch(e=>console.log(JSON.stringify({error:String(e&&e.stack||e)})));
+  }
+  let K={};
+  { const tmp=path.join(require('os').tmpdir(),'__kis_harness_'+process.pid+'.js');
+    fs.writeFileSync(tmp,'('+__kisHarness.toString()+')();');
+    const r=spawnSync(process.execPath,[tmp,kisP],{encoding:'utf8',timeout:60000});
+    try{ K=JSON.parse((r.stdout||'').trim().split('\n').pop()||'{}'); }catch(e){ K={error:'출력 해석 실패: '+(r.stdout||'').slice(0,200)+(r.stderr||'').slice(0,300)}; }
+    try{ fs.unlinkSync(tmp); }catch(e){} }
+  const J=o=>JSON.stringify(o||K.error||{});
+  const {A={},R={},N={},P={},E={},U={}}=K;
+  ok('① 서버 — 모의 · SOXL: 잔고 3거래소(VTTS3012R) + 매수가능금액조회 VTTS3007R(계좌 12345678-01 · AMEX · 146.33 · SOXL) → 주문가능 100,000 · 최대 683주',
+     A.status===200 && A.bal===3 && A.psTr==='VTTS3007R' && JSON.stringify(A.ps)===JSON.stringify({CANO:'12345678',ACNT_PRDT_CD:'01',OVRS_EXCG_CD:'AMEX',OVRS_ORD_UNPR:'146.33',ITEM_CD:'SOXL'})
+     && A.buy && A.buy.amt===100000 && A.buy.maxQty===683 && A.buy.price===146.33 && A.hold==='SOXL:5,TQQQ:3', J(A));
+  ok('① 서버 — 읽기만: 모의 서버에만 · 주문 엔드포인트 0 · POST 0 (토큰 발급 빼고)', A.hosts==='openapivts.koreainvestment.com:29443' && A.orders===0, J(A));
+  ok('① 서버 — 이름과 뜻이 다른 칸(cash = 외화매입금액 · evalTotal = 총평가손익) 없음', A.keys==='buyable,cur,holdings', A.keys);
+  ok('① 서버 — 모의 초당 2건: 거래소 사이 · 시세 앞 · 주문가능 앞에 550ms (4번)', A.gaps===4 && A.psAfterGap===true, J(A));
+  ok('① 서버 — 실전 세션은 실전 서버 · TTTS3007R/TTTS3012R', R.hosts==='openapi.koreainvestment.com:9443' && R.trs==='TTTS3007R,TTTS3012R', J(R));
+  ok('① 서버 — 종목을 안 주면 주문가능금액을 안 부른다 · 시세 실패 · 조회 실패는 buyable.error 로',
+     N.status===200 && N.hasBuy===false && N.ps===0 && P.ps===0 && /^시세 조회 실패 — 시세 없음$/.test((P.buy||{}).error||'') && (E.buy||{}).error==='주문가능금액 조회 오류', J([N,P,E]));
+  ok('① 서버 — 소유자 확인 없이는 401 · 한투 호출 0', U.status===401 && U.calls===0, J(U));
+
+  /* ② 앱 — 결과 화면(순수 함수)을 표본으로 — esc 도 앱 글자 그대로 */
+  { const esc=new Function((idx.match(/const esc=v=>[^\n]*/)||[''])[0]+'\nreturn esc;')();
+    const f=new Function('esc',extractFn(idx,'function wnCur(v,cur)')+'\n'+extractFn(idx,'function kisAcctHTML(j, sym, appQty, market, label, at)')+'\nreturn kisAcctHTML;')(esc);
+    const T=h=>h.replace(/<br>/g,' | ').replace(/<[^>]+>/g,'');
+    const t1=T(f({holdings:[],buyable:{code:'SOXL',price:146.33,amt:0,frcrAmt1:0,maxQty:0}},'SOXL',53,'us','국외 모의투자','14:05'));
+    ok('② 앱 — 달러 0 · 한투 0주 · 앱 장부 53주 → 두 경고(잔고내역 없음 · 주문가능금액 부족 + 리그 안내)',
+       /주문가능 0\.00\$ · SOXL 146\.33\$ 기준 최대 0주/.test(t1) && /SOXL 보유 — 한투 0주 · 앱 장부 53주 ⚠ 다릅니다/.test(t1) && /'잔고내역이 없습니다' 로 거절/.test(t1)
+       && /달러가 없습니다 — 매수는 '주문가능금액이 부족합니다' 로 거절/.test(t1) && /'국내주식 \+ 해외주식' 리그로 신청해야 100,000\$/.test(t1), t1);
+    const t2=T(f({holdings:[{code:'SOXL',qty:53},{code:'TQQQ',qty:10}],buyable:{code:'SOXL',price:146.33,amt:100000,frcrAmt1:0,maxQty:683}},'SOXL',53,'us','국외 모의투자'));
+    ok('② 앱 — 100,000$ · 최대 683주 · 보유 같음 · 다른 보유 TQQQ 10주 · 경고 없음',
+       /주문가능 100,000\.00\$ · SOXL 146\.33\$ 기준 최대 683주/.test(t2) && /한투 53주 · 앱 장부 53주 ✓ 같습니다/.test(t2) && /다른 보유 — TQQQ 10주/.test(t2) && !/⚠/.test(t2), t2);
+    const t3=T(f({holdings:[],buyable:{price:146.33,amt:95000,frcrAmt1:98000.5,maxQty:669}},'SOXL',0,'us','x'));
+    ok('② 앱 — 통합증거금이면 외화주문가능(98,000.50$)을 주문가능으로 · 두 값을 같이 적는다',
+       /\| 주문가능 98,000\.50\$ · SOXL 146\.33\$ 기준 최대 669주/.test(t3) && /해외주문가능 95,000\.00\$ · 외화주문가능 98,000\.50\$ — 통합증거금/.test(t3), t3);
+    const t4=T(f({holdings:[],buyable:{error:'초당 요청 제한 — 잠시 후 다시'},errs:['NYSE: 오류']},'SOXL',0,'us','x'));
+    ok('② 앱 — 조회 실패는 실패라고 · 모르는데 \'달러 없음\' 이라고 하지 않는다',
+       /주문가능금액 조회 실패 — 초당 요청 제한/.test(t4) && /일부 조회 실패 — NYSE: 오류/.test(t4) && !/달러가 없습니다/.test(t4), t4);
+    const t5=T(f({holdings:[{code:'069500',qty:3}],cash:1234567},'069500',3,'kr','국내 모의투자'));
+    ok('② 앱 — 국내는 예수금(원) · 보유 대조', /예수금 1,234,567₩/.test(t5) && /한투 3주 · 앱 장부 3주 ✓ 같습니다/.test(t5), t5);
+    ok('② 앱 — 오류 응답은 조회 실패로', /^한투 계좌 조회 실패 — 로그인이 필요합니다\.$/.test(T(f({error:'로그인이 필요합니다.'},'SOXL',0,'us','x')))); }
+
+  /* ③ 앱 배선 — 두 갈래(오늘 낼 주문 없음 · 주문 카드)에 버튼 · 조회만 부른다 */
+  { const rp=extractFn(idx,'function renderKisPanel()'), ck=extractFn(idx,'async function kisCheckAcct()');
+    ok('③ 주문 화면 두 갈래 모두에 \'한투 계좌 확인\' 칸', (rp.match(/kisAcctBlock\(s,mode\)/g)||[]).length===2 && /onclick="kisCheckAcct\(\)"/.test(extractFn(idx,'function kisAcctBlock(s,mode)')));
+    ok('③ 확인은 조회(GET op=balance · 세션의 환경 · 시장 · 종목)만 — 주문 · POST 없음',
+       /'\/api\/kis\?op=balance&env='\+encodeURIComponent\(MP\.env\)\+'&market='\+encodeURIComponent\(MP\.market\)/.test(ck) && /'&code='\+encodeURIComponent\(sym\)/.test(ck)
+       && !/op=order/.test(ck) && !/POST/.test(ck) && /computeInf\(\)\.qty/.test(ck)); }
+}
+
 console.log(`\n════ 결과: ${pass} PASS / ${fail} FAIL ${fail===0?'— ALL PASS ★':'— 배포 금지, 위 ✗ 항목 수정 필요'} ════`);
 process.exit(fail===0?0:1);

@@ -537,7 +537,7 @@ try{ if(localStorage.getItem('qcockpit_hadUser')==='1') document.documentElement
 </div>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.98.2</span></h1></div>
+    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.99.0</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -1646,7 +1646,7 @@ if(/^\/paper\/?$/.test(location.pathname)){
   <footer>
     <strong>JK 퀀트</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.98.2</b> · 2026-09-25</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.99.0</b> · 2026-09-25</div>
   </footer>
 </div>
 
@@ -3303,7 +3303,7 @@ function renderKisPanel(){
       +manual.map(o=>`${o.side==='buy'?'매수':'매도'} ${esc(o.name)} ${o.qty}주`).join(' · ')
       +`<br>한투 해외주식은 지정가만 받아 MOC 를 그대로 낼 수 없습니다. 증권사 앱에서 <b>장마감 시장가</b>로 직접 내세요.</div>`
     : '';
-  if(!list.length){ box.innerHTML=(manualNote||'<div class="note" style="margin-top:8px">오늘 낼 주문이 없습니다.</div>')+kisAutoLimitsNote(); return; }
+  if(!list.length){ box.innerHTML=(manualNote||'<div class="note" style="margin-top:8px">오늘 낼 주문이 없습니다.</div>')+kisAutoLimitsNote()+kisAcctBlock(s,mode); return; }
   const rows=list.map((o,i)=>`<div class="rowline"><span class="k">${o.side==='buy'?'매수':'매도'} <span class="sub">${esc(o.name)} · ${esc(o.tag)}</span></span>`
     +`<span class="val mono">${wn(o.price)} × ${o.qty}주</span></div>`).join('');
   box.innerHTML=`<div class="card" style="margin-top:10px;border-color:var(--${real?'sell':'buy'}-dim)">
@@ -3318,7 +3318,73 @@ function renderKisPanel(){
       <button class="fetchbtn" id="o_kis_btn" style="width:100%;margin-top:10px;background:var(--${real?'sell':'buy'}-bg);color:var(--${real?'sell':'buy'});border-color:var(--${real?'sell':'buy'}-dim)"
         onclick="kisSendToday()">📤 ${list.length}건 ${real?'실전 ':''}주문 보내기</button>
       <div class="fetchnote" id="o_kis_note"></div>
+      ${kisAcctBlock(s,mode)}
     </div>`;
+}
+/* ── 한투 계좌 확인 — 읽기 전용 ──
+   이 세션이 나가는 계좌(모의/실전 · 국내/국외)의 주문가능금액과 보유를 앱 장부와 나란히 보여 준다.
+   09-16 실측: 모의계좌에 달러가 없어 매수는 '주문가능금액이 부족합니다', 보유가 없어 매도는
+   '잔고내역이 없습니다' 로 전부 거절됐다. 보내기 전에 여기서 본다. 조회(GET op=balance)만 부르고 주문은 내지 않는다.
+   다시 그려도 마지막 결과가 남게 세션별로 기억해 둔다. */
+let kisAcctLast=null;   // {sid, html}
+function kisAcctBlock(s,mode){
+  const keep=(kisAcctLast&&kisAcctLast.sid===s.id)?kisAcctLast.html:'';
+  return `<button class="fetchbtn" id="o_kis_acct_btn" style="width:100%;margin-top:8px" onclick="kisCheckAcct()">🔎 한투 계좌 확인 (읽기 전용 · ${esc(KIS_MODE_LBL[mode]||mode)})</button>`
+    +`<div id="o_kis_acct">${keep}</div>`;
+}
+/* 조회 결과 → 화면. 순수 함수라 회귀가 값으로 본다.
+   j: /api/kis?op=balance 응답 · appQty: 앱 장부 보유 · market: 'us'|'kr' */
+function kisAcctHTML(j, sym, appQty, market, label, at){
+  const cur=market==='us'?'usd':'krw', m=v=>wnCur(v,cur);
+  if(!j||j.error) return `<div class="note" style="margin-top:6px;color:var(--sell)">한투 계좌 조회 실패 — ${esc((j&&j.error)||'응답 없음')}</div>`;
+  const hs=Array.isArray(j.holdings)?j.holdings:[];
+  const mine=hs.find(h=>String(h.code||'').toUpperCase()===sym), kq=mine?(+mine.qty||0):0, aq=+appQty||0;
+  const L=[`<b>한투 계좌</b> · ${esc(label||'')}${at?' · '+esc(at)+' 확인':''}`];
+  let noMoney=false;
+  if(market==='us'){
+    const B=j.buyable||null;
+    if(!B) L.push('주문가능금액 — 종목을 못 받아 조회하지 않았습니다');
+    else if(B.error) L.push(`주문가능금액 조회 실패 — ${esc(B.error)}`);
+    else {
+      const amt=Math.max(+B.amt||0, +B.frcrAmt1||0);
+      noMoney=!(amt>0);
+      L.push(`주문가능 <b>${m(amt)}</b> · ${esc(sym)} ${m(B.price)} 기준 최대 <b>${(+B.maxQty||0).toLocaleString('en-US')}주</b>`
+        +((+B.frcrAmt1>0 && Math.abs(B.frcrAmt1-B.amt)>0.005)?` <span class="sub">(해외주문가능 ${m(B.amt)} · 외화주문가능 ${m(B.frcrAmt1)} — 통합증거금)</span>`:''));
+    }
+  } else {
+    noMoney=!(+j.cash>0);
+    L.push(`예수금 <b>${m(j.cash)}</b>`);
+  }
+  const same=kq===aq;
+  L.push(`${esc(sym)} 보유 — 한투 <b>${kq.toLocaleString('en-US')}주</b> · 앱 장부 <b>${aq.toLocaleString('en-US')}주</b> `
+    +(same?'<span style="color:var(--buy)">✓ 같습니다</span>'
+      :`<span style="color:var(--sell)">⚠ 다릅니다 — 매도는 한투에 있는 만큼만 접수됩니다${kq===0?" (지금은 '잔고내역이 없습니다' 로 거절)":''}</span>`));
+  const others=hs.filter(h=>h!==mine&&(+h.qty||0)>0);
+  if(others.length) L.push('다른 보유 — '+others.map(h=>`${esc(h.code)} ${(+h.qty).toLocaleString('en-US')}주`).join(' · '));
+  if(Array.isArray(j.errs)&&j.errs.length) L.push('<span class="sub">일부 조회 실패 — '+j.errs.map(esc).join(' · ')+'</span>');
+  if(noMoney) L.push(`<span style="color:var(--sell)">⚠ ${market==='us'?'달러가':'예수금이'} 없습니다 — 매수는 '주문가능금액이 부족합니다' 로 거절됩니다.`
+    +(market==='us'?` 한투 모의투자는 '국내주식 + 해외주식' 리그로 신청해야 100,000$ 가 들어옵니다.`:'')+`</span>`);
+  return `<div class="note" style="margin-top:6px;line-height:1.7">${L.join('<br>')}</div>`;
+}
+async function kisCheckAcct(){
+  const s=curStrat(); if(!(s&&s.kis)) return;
+  const out=$('o_kis_acct'), btn=$('o_kis_acct_btn');
+  const sym=String((s.settings||{}).ticker||'').toUpperCase();
+  const mode=kisModeFor(s), MP=kisModeParts(mode);
+  if(btn){ btn.disabled=true; btn.textContent='조회 중…'; }
+  let j;
+  try{
+    const tok=window.fb&&window.fb.auth&&window.fb.auth.currentUser ? await window.fb.auth.currentUser.getIdToken() : '';
+    const q='/api/kis?op=balance&env='+encodeURIComponent(MP.env)+'&market='+encodeURIComponent(MP.market)
+      +(MP.market==='us'?'&code='+encodeURIComponent(sym):'');
+    j=await (await fetch(q,{headers:{'Authorization':'Bearer '+tok}})).json();
+  }catch(e){ j={error:String(e.message||e)}; }
+  let appQty=0; try{ appQty=+computeInf().qty||0; }catch(e){}
+  const at=new Date().toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'});
+  const html=kisAcctHTML(j, sym, appQty, MP.market, KIS_MODE_LBL[mode]||mode, at);
+  kisAcctLast={sid:s.id, html};
+  if(out) out.innerHTML=html;
+  if(btn){ btn.disabled=false; btn.textContent='🔎 다시 확인 (읽기 전용)'; }
 }
 /* 주문을 실제로 보낸다. 무재시도 — 응답이 유실되면 이중 주문이 된다.
    초당 제한(모의 2건)에 걸리지 않게 간격을 둔다. */
