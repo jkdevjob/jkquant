@@ -81,9 +81,12 @@ input[type=text]{background:var(--panel2);border:1px solid var(--line);color:var
 .cfg-tabs button{flex:0 0 auto;padding:8px 11px;border:1px solid var(--line);border-radius:9px;background:var(--panel2);color:var(--dim);font-size:12px;font-weight:700;cursor:pointer}
 .cfg-tabs button.on{border-color:var(--vio);color:var(--vio)}
 .cfggrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
-.cfgfield label{display:block;color:var(--dim);font-size:11px;font-weight:700;margin:0 0 5px}
+.cfgfield label{display:flex;align-items:center;gap:7px;color:var(--dim);font-size:11px;font-weight:700;margin:0 0 5px}
+.cfgfield label input[type=checkbox]{width:auto;accent-color:var(--vio)}
 .cfgfield input,.cfgfield select{width:100%;background:var(--bg);border:1px solid var(--line);color:var(--ink);border-radius:9px;padding:9px 10px;font-size:13px;font-family:inherit}
+.cfgfield input:disabled,.cfgfield select:disabled{opacity:.38;cursor:not-allowed}
 .cfgfield input:focus,.cfgfield select:focus{outline:none;border-color:var(--vio)}
+.cfgfield.on{padding:8px;border:1px solid rgba(139,92,246,.35);border-radius:11px;background:rgba(139,92,246,.05)}
 .cfghelp{font-size:10.5px;color:var(--faint);margin-top:4px;line-height:1.45}
 .cfgstatus{font-size:12px;color:var(--dim);min-height:18px;margin-top:9px}
 .cfgstatus.ok{color:var(--buy)}.cfgstatus.err{color:var(--sell)}
@@ -149,7 +152,7 @@ pre.rules{background:var(--bg);border:1px solid var(--line);border-radius:10px;p
 
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Admin Console</div><h1>JK <span class="v">퀀트</span> 관리자 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="adVer">v0.4.1</span></h1></div>
+    <div><div class="kicker">Admin Console</div><h1>JK <span class="v">퀀트</span> 관리자 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="adVer">v0.5.0</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -277,7 +280,8 @@ async function setBlocked(uid,on,email){
 }
 
 // ── 2. 전략 기본값 ──────────────────────────────────────────────────
-const STRATEGY_DEFAULT_CACHE='jkq_strategy_defaults_v1';
+const STRATEGY_DEFAULT_CACHE='jkq_strategy_default_overrides_v2';
+const STRATEGY_DEFAULT_LEGACY_CACHE='jkq_strategy_defaults_v1';
 const STRATEGY_DEFAULT_BUILTIN={
   inf:{ticker:'SOXL',div:20,target:20,big:15,rows:3,revGap:0,principal:10000,divmode:'reinv',engine:'v40',shortMA:30,loPct:6,tgtDyn:false,reverse:false,compound:true,rowqty:1},
   vr:{ticker:'TQQQ',mode:0.75,formula:'basic',g:10,initAmt:10000,add:100,band:15,startv:0,startpool:0,autoCyc:false,vrModel:'ladder',divmode:'reinv'},
@@ -329,45 +333,76 @@ const STRATEGY_DEFAULT_META={
     ['divmode','분배금','select',[['reinv','재투자'],['cash','현금 수령']]]
   ]}
 };
-let strategyDefaults=JSON.parse(JSON.stringify(STRATEGY_DEFAULT_BUILTIN)), defaultsTab='inf';
+/* 모의성과에 영향을 주는 옵션. 기존 세션에 선택 적용할 때 실제 값이 바뀐 경우에만
+   기계 생성 기록(sim/auto)을 지운다. 사람이 직접 입력한 기록은 보존한다. */
+const PAPER_AFFECT_KEYS={
+  inf:new Set(['ticker','div','target','big','rows','revGap','principal','divmode','reverse','compound','engine','shortMA','loPct','tgtDyn']),
+  vr:new Set(['ticker','mode','formula','g','initAmt','add','band','startv','startpool','autoCyc','vrModel','divmode']),
+  ma:new Set(['ticker','buy','sell','park','principal','divmode']),
+  ivs:new Set(['ticker','mode','s0','look','band','principal','park','monthly','divmode']),
+  dca:new Set(['ticker','mode','amount','freq','dipMul','reinv']),
+  asap:new Set(['ticker','base','mid','deep','divmode'])
+};
+let strategyValues=JSON.parse(JSON.stringify(STRATEGY_DEFAULT_BUILTIN));
+let strategyOverrides={inf:{},vr:{},ma:{},ivs:{},dca:{},asap:{}}, defaultsTab='inf';
 
 function cfgClone(v){return JSON.parse(JSON.stringify(v));}
-function mergeStrategyDefaults(src){
+function mergeValues(src){
   const out=cfgClone(STRATEGY_DEFAULT_BUILTIN);
   if(!src||typeof src!=='object')return out;
   for(const k of Object.keys(out)) if(src[k]&&typeof src[k]==='object') out[k]={...out[k],...src[k]};
   return out;
 }
+function normalizeOverrides(src){
+  const out={inf:{},vr:{},ma:{},ivs:{},dca:{},asap:{}};
+  if(!src||typeof src!=='object')return out;
+  for(const tab of Object.keys(out)){
+    const allowed=STRATEGY_DEFAULT_BUILTIN[tab]||{}, v=src[tab];
+    if(!v||typeof v!=='object')continue;
+    for(const key of Object.keys(v)) if(Object.prototype.hasOwnProperty.call(allowed,key)&&v[key]!=null) out[tab][key]=v[key];
+  }
+  return out;
+}
 function cfgEq(a,b){return String(a)===String(b);}
 function cfgValToAttr(v){return esc(typeof v==='boolean'?(v?'true':'false'):v);}
+function cfgToggle(tab,key,on){
+  const el=$('cfg_'+tab+'_'+key), box=$('cfg_box_'+tab+'_'+key);
+  if(el)el.disabled=!on;
+  if(box)box.classList.toggle('on',!!on);
+}
 function cfgFieldHtml(tab,f,val){
-  const [key,label,type,opts]=f,id='cfg_'+tab+'_'+key;
+  const [key,label,type,opts]=f,id='cfg_'+tab+'_'+key,on=Object.prototype.hasOwnProperty.call(strategyOverrides[tab]||{},key);
   let ctl='';
   if(type==='select'){
-    ctl='<select id="'+id+'">'+opts.map(o=>'<option value="'+cfgValToAttr(o[0])+'"'+(cfgEq(o[0],val)?' selected':'')+'>'+esc(o[1])+'</option>').join('')+'</select>';
+    ctl='<select id="'+id+'"'+(on?'':' disabled')+'>'+opts.map(o=>'<option value="'+cfgValToAttr(o[0])+'"'+(cfgEq(o[0],val)?' selected':'')+'>'+esc(o[1])+'</option>').join('')+'</select>';
   }else if(type==='bool'){
-    ctl='<select id="'+id+'"><option value="false"'+(val===false?' selected':'')+'>끔</option><option value="true"'+(val===true?' selected':'')+'>켬</option></select>';
+    ctl='<select id="'+id+'"'+(on?'':' disabled')+'><option value="false"'+(val===false?' selected':'')+'>끔</option><option value="true"'+(val===true?' selected':'')+'>켬</option></select>';
   }else{
-    ctl='<input id="'+id+'" type="'+(type==='number'?'number':'text')+'" value="'+esc(val)+'"'+(type==='number'?' step="any"':'')+'>';
+    ctl='<input id="'+id+'" type="'+(type==='number'?'number':'text')+'" value="'+esc(val)+'"'+(type==='number'?' step="any"':'')+(on?'':' disabled')+'>';
   }
-  return '<div class="cfgfield"><label>'+esc(label)+'</label>'+ctl+'</div>';
+  return '<div class="cfgfield'+(on?' on':'')+'" id="cfg_box_'+tab+'_'+key+'"><label>'
+    +'<input type="checkbox" id="cfg_on_'+tab+'_'+key+'" '+(on?'checked ':'')+'onchange="cfgToggle(\''+tab+'\',\''+key+'\',this.checked)">'
+    +esc(label)+'</label>'+ctl+'</div>';
 }
 function renderDefaults(el){
   el.innerHTML='<div class="card"><h3><span class="dot"></span>운영전략 기본값</h3>'
-    +'<p class="lead">각 운영 탭에서 <b>새 세션을 만들 때</b> 들어갈 기본 설정입니다. 아래 버튼으로 현재 로그인한 관리자 계정의 기존 세션에도 같은 값을 적용할 수 있습니다.</p>'
+    +'<p class="lead">왼쪽 체크가 켜진 옵션만 <b>관리자 기본값</b>으로 관리합니다. 체크하지 않은 옵션은 새 세션·기존 세션 모두 각자 원래 값을 유지합니다.</p>'
     +'<div class="cfg-tabs" id="cfgTabs"></div><div id="cfgBody"><p class="lead">불러오는 중…</p></div>'
-    +'<div class="row" style="margin-top:14px"><button class="prim" onclick="saveStrategyDefaults()">💾 새 세션 기본값 저장</button>'
-    +'<button class="ghostbtn" onclick="resetStrategyDefaults()">앱 기본값으로 복원</button>'
-    +'<button class="ghostbtn" style="border-color:#7b4a20;color:var(--gold)" onclick="applyDefaultsExistingSessions()">기존 세션 전체에 적용</button></div>'
+    +'<div class="row" style="margin-top:14px"><button class="prim" onclick="saveStrategyDefaults()">💾 선택 항목 기본값 저장</button>'
+    +'<button class="ghostbtn" onclick="clearStrategyDefaults()">관리 항목 전체 해제</button>'
+    +'<button class="ghostbtn" style="border-color:#7b4a20;color:var(--gold)" onclick="applyDefaultsExistingSessions()">선택 항목 기존 세션에 적용</button></div>'
     +'<div id="cfgStatus" class="cfgstatus"></div>'
-    +'<p class="note"><b>기존 세션 적용</b>: 실계좌의 거래기록은 그대로 두고 설정값만 바꿉니다. 모의투자는 새 설정으로 성과를 다시 계산해야 하므로 기계가 만든 sim/auto 기록만 지운 뒤 운영/모의 페이지에서 자동 재생성합니다. 사람이 직접 넣은 기록은 남깁니다.</p>'
-    +'<p class="note">저장값은 이 관리자 계정의 클라우드와 이 브라우저에 같이 저장됩니다. 운영 화면은 브라우저 캐시로 즉시 적용하고 로그인 후 클라우드 값으로 동기화합니다.</p></div>';
+    +'<p class="note">예: 무한매수법에서 <b>큰수·LOC 줄 수</b>만 체크하면 그 두 값만 관리합니다. 종목·원금·분할·익절률 등 체크하지 않은 값은 절대 덮어쓰지 않습니다.</p>'
+    +'<p class="note"><b>기존 세션 적용</b> 시 실제 값이 달라진 모의투자 세션만 자동기록을 초기화해 새 설정으로 다시 계산합니다. 실계좌 거래기록과 사람이 직접 넣은 모의 기록은 보존합니다.</p></div>';
   loadStrategyDefaultsAdmin();
 }
 function paintDefaultTabs(){
   const t=$('cfgTabs'),b=$('cfgBody');if(!t||!b)return;
-  t.innerHTML=Object.entries(STRATEGY_DEFAULT_META).map(([k,m])=>'<button class="'+(k===defaultsTab?'on':'')+'" onclick="switchDefaultsTab(\''+k+'\')">'+esc(m.name)+'</button>').join('');
-  const m=STRATEGY_DEFAULT_META[defaultsTab],v=strategyDefaults[defaultsTab]||STRATEGY_DEFAULT_BUILTIN[defaultsTab];
+  t.innerHTML=Object.entries(STRATEGY_DEFAULT_META).map(([k,m])=>{
+    const n=Object.keys(strategyOverrides[k]||{}).length;
+    return '<button class="'+(k===defaultsTab?'on':'')+'" onclick="switchDefaultsTab(\''+k+'\')">'+esc(m.name)+(n?' · '+n:'')+'</button>';
+  }).join('');
+  const m=STRATEGY_DEFAULT_META[defaultsTab],v=strategyValues[defaultsTab]||STRATEGY_DEFAULT_BUILTIN[defaultsTab];
   b.innerHTML='<div class="cfggrid">'+m.fields.map(f=>cfgFieldHtml(defaultsTab,f,v[f[0]])).join('')+'</div>';
 }
 function switchDefaultsTab(k){
@@ -376,7 +411,7 @@ function switchDefaultsTab(k){
   defaultsTab=k;paintDefaultTabs();
 }
 function readCurrentDefaultTab(){
-  const m=STRATEGY_DEFAULT_META[defaultsTab],out={...(strategyDefaults[defaultsTab]||{})};
+  const m=STRATEGY_DEFAULT_META[defaultsTab],vals={...(strategyValues[defaultsTab]||{})}, over={};
   for(const f of m.fields){
     const [key,,type,opts]=f,el=$('cfg_'+defaultsTab+'_'+key);if(!el)continue;
     let v=el.value;
@@ -387,21 +422,34 @@ function readCurrentDefaultTab(){
     if(type==='select'&&opts){
       const hit=opts.find(o=>String(o[0])===String(el.value));if(hit)v=hit[0];
     }
-    out[key]=v;
+    vals[key]=v;
+    const ck=$('cfg_on_'+defaultsTab+'_'+key);
+    if(ck&&ck.checked)over[key]=v;
   }
-  strategyDefaults[defaultsTab]=out;
+  strategyValues[defaultsTab]=vals;
+  strategyOverrides[defaultsTab]=over;
 }
 async function loadStrategyDefaultsAdmin(){
-  let local=null;try{local=JSON.parse(localStorage.getItem(STRATEGY_DEFAULT_CACHE)||'null')}catch(e){}
-  if(local&&typeof local==='object')strategyDefaults=mergeStrategyDefaults(local);
+  let local=null, legacyLocal=null;
+  try{local=JSON.parse(localStorage.getItem(STRATEGY_DEFAULT_CACHE)||'null')}catch(e){}
+  try{legacyLocal=JSON.parse(localStorage.getItem(STRATEGY_DEFAULT_LEGACY_CACHE)||'null')}catch(e){}
+  if(legacyLocal&&typeof legacyLocal==='object')strategyValues=mergeValues(legacyLocal);
+  if(local&&typeof local==='object'){
+    strategyOverrides=normalizeOverrides(local);
+    strategyValues=mergeValues(strategyOverrides);
+  }
   if(me){
     try{
       const snap=await window.fb.getDoc(window.fb.doc(window.fb.db,'users',me.uid));
       if(snap.exists()){
-        const d=snap.data()||{},remote=d.strategyDefaults;
-        if(remote&&typeof remote==='object'){
-          strategyDefaults=mergeStrategyDefaults(remote);
-          try{localStorage.setItem(STRATEGY_DEFAULT_CACHE,JSON.stringify(strategyDefaults));}catch(e){}
+        const d=snap.data()||{};
+        /* v1의 strategyDefaults는 전체 설정 한 벌이었다. v2에서 그걸 전부 활성화하면 다시
+           '전체가 바뀌는' 문제가 생기므로 값 표시용으로만 읽고 체크는 켜지 않는다. */
+        if(d.strategyDefaults&&typeof d.strategyDefaults==='object')strategyValues=mergeValues(d.strategyDefaults);
+        if(d.strategyDefaultOverrides&&typeof d.strategyDefaultOverrides==='object'){
+          strategyOverrides=normalizeOverrides(d.strategyDefaultOverrides);
+          strategyValues=mergeValues({...strategyValues,...strategyOverrides});
+          try{localStorage.setItem(STRATEGY_DEFAULT_CACHE,JSON.stringify(strategyOverrides));}catch(e){}
         }
       }
     }catch(e){}
@@ -411,23 +459,41 @@ async function loadStrategyDefaultsAdmin(){
 async function saveStrategyDefaults(){
   if(!isAdmin())return;
   readCurrentDefaultTab();
-  const status=$('cfgStatus');if(status){status.className='cfgstatus';status.textContent='저장 중…';}
-  try{localStorage.setItem(STRATEGY_DEFAULT_CACHE,JSON.stringify(strategyDefaults));}catch(e){}
+  const status=$('cfgStatus'), n=Object.values(strategyOverrides).reduce((a,x)=>a+Object.keys(x||{}).length,0);
+  if(status){status.className='cfgstatus';status.textContent='저장 중…';}
+  try{localStorage.setItem(STRATEGY_DEFAULT_CACHE,JSON.stringify(strategyOverrides));}catch(e){}
   try{
-    await window.fb.setDoc(window.fb.doc(window.fb.db,'users',me.uid),{strategyDefaults:strategyDefaults,strategyDefaultsUpdated:Date.now()},{merge:true});
-    if(status){status.className='cfgstatus ok';status.textContent='✓ 저장 완료 · 운영 화면의 신규 세션부터 적용됩니다.';}
+    await window.fb.setDoc(window.fb.doc(window.fb.db,'users',me.uid),{
+      strategyDefaultOverrides:strategyOverrides,strategyDefaultOverridesUpdated:Date.now()
+    },{merge:true});
+    if(status){status.className='cfgstatus ok';status.textContent='✓ '+n+'개 선택 항목 저장 완료 · 새 세션에는 선택된 값만 적용됩니다.';}
+    paintDefaultTabs();
   }catch(e){
     if(status){status.className='cfgstatus err';status.textContent='브라우저에는 저장됐지만 클라우드 저장 실패 — '+(e.message||e);}
   }
 }
-function resetStrategyDefaults(){
-  if(!confirm('모든 운영전략 기본값을 앱 기본값으로 되돌릴까요?'))return;
-  strategyDefaults=cfgClone(STRATEGY_DEFAULT_BUILTIN);paintDefaultTabs();saveStrategyDefaults();
+async function clearStrategyDefaults(){
+  if(!isAdmin())return;
+  if(!confirm('관리자가 강제로 지정한 모든 전략 기본값을 해제할까요?\n이후 새 세션은 앱 기본값을 사용합니다. 기존 세션은 건드리지 않습니다.'))return;
+  strategyOverrides={inf:{},vr:{},ma:{},ivs:{},dca:{},asap:{}};
+  strategyValues=cfgClone(STRATEGY_DEFAULT_BUILTIN);
+  try{localStorage.setItem(STRATEGY_DEFAULT_CACHE,JSON.stringify(strategyOverrides));}catch(e){}
+  try{
+    await window.fb.setDoc(window.fb.doc(window.fb.db,'users',me.uid),{
+      strategyDefaultOverrides:strategyOverrides,strategyDefaultOverridesUpdated:Date.now()
+    },{merge:true});
+    paintDefaultTabs();
+    const status=$('cfgStatus');if(status){status.className='cfgstatus ok';status.textContent='✓ 관리자 기본값을 모두 해제했습니다.';}
+  }catch(e){
+    const status=$('cfgStatus');if(status){status.className='cfgstatus err';status.textContent='관리 해제 저장 실패 — '+(e.message||e);}
+  }
 }
 async function applyDefaultsExistingSessions(){
   if(!isAdmin()||!me)return;
   readCurrentDefaultTab();
+  const selected=Object.values(strategyOverrides).reduce((a,x)=>a+Object.keys(x||{}).length,0);
   const status=$('cfgStatus');
+  if(!selected){if(status){status.className='cfgstatus err';status.textContent='적용할 항목이 없습니다. 먼저 원하는 옵션을 체크하고 저장하세요.';}return;}
   if(status){status.className='cfgstatus';status.textContent='기존 세션 확인 중…';}
   try{
     const ref=window.fb.doc(window.fb.db,'users',me.uid);
@@ -436,35 +502,50 @@ async function applyDefaultsExistingSessions(){
     const doc=snap.data()||{}, state=doc.state;
     if(!state||typeof state!=='object') throw new Error('운영 세션 상태를 찾지 못했습니다.');
     const tabs=['inf','vr','ma','ivs','dca','asap'];
-    let total=0,paper=0,real=0,generated=0;
+    let touched=0,paper=0,real=0,generated=0,changedFields=0,recalcPaper=0;
+    const detail=[];
     tabs.forEach(tab=>{
-      const box=state[tab], defs=strategyDefaults[tab];
-      if(!box||!Array.isArray(box.sessions)||!defs)return;
+      const box=state[tab], defs=strategyOverrides[tab]||{}, keys=Object.keys(defs);
+      if(!box||!Array.isArray(box.sessions)||!keys.length)return;
+      let tabTouched=0;
       box.sessions.forEach(sess=>{
         if(!sess||typeof sess!=='object')return;
-        total++;
         const prev=sess.settings&&typeof sess.settings==='object'?sess.settings:{};
-        sess.settings={...prev,...cfgClone(defs)};
+        const changed=keys.filter(k=>!cfgEq(prev[k],defs[k]));
+        if(!changed.length)return;
+        touched++;tabTouched++;changedFields+=changed.length;
+        const next={...prev}; changed.forEach(k=>{next[k]=cfgClone(defs[k]);});
+        sess.settings=next;
         if(sess.paper){
           paper++;
-          const h=Array.isArray(sess.hist)?sess.hist:[];
-          const kept=h.filter(x=>!(x&&(x.sim||x.auto)));
-          generated+=h.length-kept.length;
-          sess.hist=kept;
-          delete sess.settings.simSig;
-          delete sess.settings.simLast;
-          delete sess.settings.cycStart;
-          delete sess.settings.startCyc;
-          delete sess.settings.cycLog;
+          const affects=changed.some(k=>PAPER_AFFECT_KEYS[tab]&&PAPER_AFFECT_KEYS[tab].has(k));
+          if(affects){
+            recalcPaper++;
+            const h=Array.isArray(sess.hist)?sess.hist:[];
+            const kept=h.filter(x=>!(x&&(x.sim||x.auto)));
+            generated+=h.length-kept.length;
+            sess.hist=kept;
+            delete sess.settings.simSig;delete sess.settings.simLast;
+            delete sess.settings.cycStart;delete sess.settings.startCyc;delete sess.settings.cycLog;
+          }
         }else real++;
       });
+      if(tabTouched)detail.push((STRATEGY_DEFAULT_META[tab]||{}).name+' '+tabTouched+'개');
     });
-    if(!total) throw new Error('적용할 기존 세션이 없습니다.');
-    const msg='기존 세션 '+total+'개에 현재 기본값을 적용합니다.\n\n'
-      +'· 실계좌 '+real+'개: 거래기록 보존, 설정만 변경\n'
-      +'· 모의투자 '+paper+'개: 자동생성 기록을 지우고 새 설정으로 다시 계산\n'
-      +'· 사람이 직접 입력한 모의 기록은 보존\n\n'
-      +'종목·원금 같은 값도 기본값으로 바뀝니다. 계속할까요?';
+    if(!touched) throw new Error('선택 항목이 이미 같은 값이라 바뀔 기존 세션이 없습니다.');
+    const chosen=[];
+    tabs.forEach(tab=>{
+      const ks=Object.keys(strategyOverrides[tab]||{});
+      if(ks.length)chosen.push((STRATEGY_DEFAULT_META[tab]||{}).name+': '+ks.map(k=>{
+        const f=(STRATEGY_DEFAULT_META[tab].fields||[]).find(x=>x[0]===k);return f?f[1]:k;
+      }).join(', '));
+    });
+    const msg='선택한 관리자 기본값만 기존 세션에 적용합니다.\n\n'
+      +chosen.join('\n')+'\n\n'
+      +'변경될 세션 '+touched+'개 ('+detail.join(' · ')+')\n'
+      +'· 실계좌 '+real+'개: 거래기록 보존\n'
+      +'· 모의투자 '+paper+'개 중 재계산 '+recalcPaper+'개\n'
+      +'· 체크하지 않은 옵션은 그대로 유지\n\n계속할까요?';
     if(!confirm(msg)){
       if(status){status.className='cfgstatus';status.textContent='적용을 취소했습니다.';}
       return;
@@ -472,14 +553,14 @@ async function applyDefaultsExistingSessions(){
     const now=Date.now(); state._updated=now;
     try{
       localStorage.setItem('qcockpit_v2_'+me.uid,JSON.stringify(state));
-      localStorage.setItem(STRATEGY_DEFAULT_CACHE,JSON.stringify(strategyDefaults));
+      localStorage.setItem(STRATEGY_DEFAULT_CACHE,JSON.stringify(strategyOverrides));
     }catch(e){}
     await window.fb.setDoc(ref,{
-      state,updated:now,strategyDefaults:strategyDefaults,strategyDefaultsUpdated:now
+      state,updated:now,strategyDefaultOverrides:strategyOverrides,strategyDefaultOverridesUpdated:now
     },{merge:true});
     if(status){
       status.className='cfgstatus ok';
-      status.textContent='✓ 기존 세션 '+total+'개 적용 완료 · 모의 자동기록 '+generated+'건 초기화 · 운영/모의 화면을 열면 새 설정으로 다시 계산됩니다.';
+      status.textContent='✓ '+touched+'개 세션 · '+changedFields+'개 설정 변경 · 모의 자동기록 '+generated+'건 재계산 대기';
     }
   }catch(e){
     if(status){status.className='cfgstatus err';status.textContent='기존 세션 적용 실패 — '+(e.message||e);}
