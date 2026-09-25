@@ -17,6 +17,7 @@ on:
     paths:
       - ".github/workflows/opening-monitor.yml"
       - "functions/api/opening-monitor.js"
+      - "functions/api/opening-execute.js"
       - "functions/api/opening-summary.js"
       - "functions/api/_opening.js"
 
@@ -217,6 +218,22 @@ jobs:
               for shard in 0 1 2 3 4; do
                 echo "shard $shard: $(cat monitor-$shard.json 2>/dev/null || echo no-response)"
               done
+
+              # 계산은 5개 shard 병렬, VTS 주문은 한 endpoint에서 순차 실행한다.
+              # 이렇게 해야 KIS 모의투자 초당 호출제한 때문에 신호 여러 개가 서로 주문을 밀어내지 않는다.
+              jq -s '{
+                date: (map(select(.ok==true and .date!=null)) | .[0].date // ""),
+                buyEvents: [.[].buyEvents[]?],
+                sellEvents: [.[].sellEvents[]?]
+              }' monitor-0.json monitor-1.json monitor-2.json monitor-3.json monitor-4.json > opening-execute-input.json
+
+              ECNT=$(jq '(.buyEvents|length)+(.sellEvents|length)' opening-execute-input.json 2>/dev/null || echo 0)
+              if [ "$ECNT" -gt 0 ]; then
+                STATUS=$(curl -sS --max-time 50 -o opening-execute-response.json -w '%{http_code}' \
+                  -X POST -H "x-monitor-key: $KEY" -H "content-type: application/json" \
+                  --data-binary @opening-execute-input.json "$BASE/api/opening-execute" || true)
+                echo "VTS 자동 병행체결 HTTP $STATUS: $(cat opening-execute-response.json 2>/dev/null || true)"
+              fi
             fi
 
             sleep 5
