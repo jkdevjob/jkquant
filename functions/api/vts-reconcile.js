@@ -8,9 +8,28 @@ function json(o,s=200){return new Response(JSON.stringify(o,null,2),{status:s,he
 function kstDate(){
   return new Intl.DateTimeFormat("en-CA",{timeZone:"Asia/Seoul",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date());
 }
-function hmOfOrder(t){
-  const s=String(t||"").replace(/\D/g,"").padStart(6,"0");
-  return +(s.slice(0,2)+s.slice(2,4));
+function timeParts(t){
+  const s=String(t||"").replace(/\D/g,"").padStart(6,"0").slice(-6);
+  if(!/^\d{6}$/.test(s))return null;
+  const hh=+s.slice(0,2),mm=+s.slice(2,4),ss=+s.slice(4,6);
+  if(hh>23||mm>59||ss>59)return null;
+  return {hh,mm,ss,sec:hh*3600+mm*60+ss,hm:hh*100+mm};
+}
+function hmOfOrder(t){const p=timeParts(t);return p?p.hm:-1;}
+function refMinuteSec(hm){
+  const n=+hm||0,hh=Math.floor(n/100),mm=n%100;
+  return hh*3600+mm*60;
+}
+function signedLagSec(orderTime,refHm){
+  const p=timeParts(orderTime);if(!p||!refHm)return null;
+  return p.sec-refMinuteSec(refHm);
+}
+function brokerNotifyLagSec(orderTime,notifyTime){
+  const a=timeParts(orderTime),b=timeParts(notifyTime);
+  if(!a||!b)return null;
+  let d=b.sec-a.sec;
+  if(d<0)d+=24*3600;
+  return d;
 }
 function sideIs(x,want){
   const n=String(x.side||"").toLowerCase(),c=String(x.sideCode||"");
@@ -82,6 +101,10 @@ export async function onRequestGet({request}){
       if(sell)sellCost=await exactCosts(url.origin,headers,date,sell);
 
       const buyPx=buy?+buy.fillPrice||0:0,sellPx=sell?+sell.fillPrice||0:0;
+      const entryOrderLag=buy?signedLagSec(buy.orderTime,+t.entryTime||0):null;
+      const exitOrderLag=sell?signedLagSec(sell.orderTime,+t.exitTime||0):null;
+      const buyNotifyLag=buy?brokerNotifyLagSec(buy.orderTime,buy.notifyTime):null;
+      const sellNotifyLag=sell?brokerNotifyLagSec(sell.orderTime,sell.notifyTime):null;
       const qty=buy&&sell?Math.min(+buy.fillQty||0,+sell.fillQty||0):(+buy?.fillQty||0);
       const gross=buyPx>0&&sellPx>0?(sellPx/buyPx-1)*100:null;
       const costWon=buyCost+sellCost;
@@ -94,8 +117,10 @@ export async function onRequestGet({request}){
         code:t.code,name:t.name||t.code,internalEntryTime:t.entryTime,internalEntryPrice:entryRef,
         internalExitTime:t.exitTime,internalExitPrice:exitRef,internalReason:t.reason||"",
         internalPnl:t.pnl,
-        vtsBuy:buy?{orderTime:buy.orderTime,fillQty:buy.fillQty,fillPrice:buy.fillPrice,fillAmount:buy.fillAmount,estimatedCosts:buyCost}:null,
-        vtsSell:sell?{orderTime:sell.orderTime,fillQty:sell.fillQty,fillPrice:sell.fillPrice,fillAmount:sell.fillAmount,estimatedCosts:sellCost}:null,
+        vtsBuy:buy?{orderTime:buy.orderTime,notifyTime:buy.notifyTime,fillQty:buy.fillQty,fillPrice:buy.fillPrice,fillAmount:buy.fillAmount,estimatedCosts:buyCost}:null,
+        vtsSell:sell?{orderTime:sell.orderTime,notifyTime:sell.notifyTime,fillQty:sell.fillQty,fillPrice:sell.fillPrice,fillAmount:sell.fillAmount,estimatedCosts:sellCost}:null,
+        entryOrderLagSecApprox:entryOrderLag,exitOrderLagSecApprox:exitOrderLag,
+        entryBrokerNotifyLagSec:buyNotifyLag,exitBrokerNotifyLagSec:sellNotifyLag,
         entrySlippageCostPct:entrySlip,
         exitSlippageCostPct:exitSlip,
         vtsGrossPnlPct:gross,vtsNetPnlPct:net,vtsBrokerEstimatedCosts:costWon,
@@ -114,6 +139,9 @@ export async function onRequestGet({request}){
     const internalPnl=complete.map(x=>x.internalPnl).filter(Number.isFinite);
     const brokerRates=complete.map(x=>x.vtsBrokerCostRatePct).filter(Number.isFinite);
     const observedDrag=complete.map(x=>x.observedExecutionDragPct).filter(Number.isFinite);
+    const entryLag=matches.map(x=>x.entryOrderLagSecApprox).filter(Number.isFinite);
+    const exitLag=matches.map(x=>x.exitOrderLagSecApprox).filter(Number.isFinite);
+    const notifyLag=matches.flatMap(x=>[x.entryBrokerNotifyLagSec,x.exitBrokerNotifyLagSec]).filter(Number.isFinite);
     const avgDrag=avg(observedDrag);
     return json({ok:true,mode:"read-only",env:"vts",strategy,date,
       note:"KIS VTS existing fills are only compared; no broker order is submitted by this endpoint.",
@@ -129,6 +157,10 @@ export async function onRequestGet({request}){
         avgVtsNetPnlPct:avg(net),
         avgBrokerCostRatePct:avg(brokerRates),
         avgObservedExecutionDragPct:avgDrag,
+        avgEntryOrderLagSecApprox:avg(entryLag),
+        avgExitOrderLagSecApprox:avg(exitLag),
+        avgBrokerNotifyLagSec:avg(notifyLag),
+        delayNote:"order lag is approximate from the internal reference minute start to KIS order time; broker notify lag uses KIS ord_tmd→infm_tmd and is not exact exchange fill latency.",
         frictionGapVsInternal025Pct:avgDrag==null?null:avgDrag-0.25,
         calibrationStatus:complete.length>=20?"reviewable":"collecting",
         calibrationMatches:complete.length,
