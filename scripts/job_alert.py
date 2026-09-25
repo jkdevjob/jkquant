@@ -102,10 +102,6 @@ def score_result(title, body, url):
     domain = domain_of(url)
     if any(domain.endswith(d) for d in TRUSTED_DOMAINS):
         score += 5
-    if '서울' in text and not any(t in text for t in LOCATION_TERMS):
-        score -= 10
-    if '경기' in text and not any(t in text for t in LOCATION_TERMS):
-        score -= 10
 
     return score
 
@@ -154,8 +150,7 @@ def load_seen():
 
 def save_seen(urls):
     CACHE_DIR.mkdir(parents=True, exist_ok=True)
-    # 최근 URL만 유지해 캐시가 무한히 커지지 않게 제한한다.
-    trimmed = list(urls)[-2000:]
+    trimmed = sorted(urls)[-2000:]
     SEEN_FILE.write_text(
         json.dumps({'urls': trimmed}, ensure_ascii=False, indent=2),
         encoding='utf-8',
@@ -186,13 +181,13 @@ def search_jobs():
                 if score < 0:
                     continue
 
-                current = merged.get(url)
                 candidate = {
                     'title': title,
                     'body': body,
                     'url': url,
                     'score': score,
                 }
+                current = merged.get(url)
                 if current is None or candidate['score'] > current['score']:
                     merged[url] = candidate
         except Exception as exc:
@@ -201,49 +196,6 @@ def search_jobs():
         time.sleep(0.4)
 
     return sorted(merged.values(), key=lambda x: (-x['score'], x['title']))
-
-
-def split_message(text, limit=3900):
-    if len(text) <= limit:
-        return [text]
-
-    chunks = []
-    current = ''
-    for block in text.split('\n\n'):
-        candidate = block if not current else current + '\n\n' + block
-        if len(candidate) <= limit:
-            current = candidate
-        else:
-            if current:
-                chunks.append(current)
-            current = block
-    if current:
-        chunks.append(current)
-    return chunks
-
-
-def send_telegram(message):
-    token = os.environ.get('TELEGRAM_BOT_TOKEN', '').strip()
-    chat_id = os.environ.get('TELEGRAM_CHAT_ID', '').strip()
-
-    if not token or not chat_id:
-        raise RuntimeError(
-            'TELEGRAM_BOT_TOKEN / TELEGRAM_CHAT_ID GitHub Secrets가 필요합니다.'
-        )
-
-    endpoint = f'https://api.telegram.org/bot{token}/sendMessage'
-    for chunk in split_message(message):
-        response = requests.post(
-            endpoint,
-            json={
-                'chat_id': chat_id,
-                'text': chunk,
-                'parse_mode': 'HTML',
-                'disable_web_page_preview': True,
-            },
-            timeout=20,
-        )
-        response.raise_for_status()
 
 
 def build_message(new_jobs):
@@ -274,6 +226,34 @@ def build_message(new_jobs):
     return '\n'.join(lines).strip()
 
 
+def send_via_jkquant(message, count):
+    base = os.environ.get('JKQUANT_BASE', 'https://jkquant.pages.dev').rstrip('/')
+    key = os.environ.get('AUTOTRADE_KEY', '').strip()
+    if not key:
+        raise RuntimeError('AUTOTRADE_KEY GitHub Secret이 필요합니다.')
+
+    response = requests.post(
+        f'{base}/api/job-alert',
+        headers={
+            'x-monitor-key': key,
+            'content-type': 'application/json',
+        },
+        json={
+            'text': message,
+            'count': count,
+        },
+        timeout=30,
+    )
+    if response.status_code != 200:
+        raise RuntimeError(
+            f'job-alert endpoint failed: HTTP {response.status_code} {response.text[:500]}'
+        )
+
+    data = response.json()
+    if not data.get('ok'):
+        raise RuntimeError(f'job-alert endpoint error: {data}')
+
+
 def main():
     seen = load_seen()
     jobs = search_jobs()
@@ -284,13 +264,13 @@ def main():
     all_seen = seen | {job['url'] for job in jobs}
     save_seen(all_seen)
 
-    # 이전 요구사항 유지: 적합한 신규 공고가 없으면 텔레그램을 보내지 않는다.
+    # 적합한 신규 공고가 없으면 알림을 보내지 않는다.
     if not new_jobs:
         print('[INFO] no new matching jobs; Telegram message skipped.')
         return
 
-    send_telegram(build_message(new_jobs))
-    print('[INFO] Telegram notification sent.')
+    send_via_jkquant(build_message(new_jobs), len(new_jobs))
+    print('[INFO] Telegram notification sent via jkquant Pages Function.')
 
 
 if __name__ == '__main__':
