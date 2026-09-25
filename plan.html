@@ -192,7 +192,7 @@ th:first-child,td:first-child{text-align:left}
 <body>
 <div class="wrap">
   <div class="top">
-    <div class="brand"><div class="logo">Asset Plan</div><h1>자산플랜 <span class="ver">v1.31.0</span></h1></div>
+    <div class="brand"><div class="logo">Asset Plan</div><h1>자산플랜 <span class="ver">v1.31.1</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
       <div class="jkmenu" id="jkmenuWrap">
@@ -699,7 +699,7 @@ const plusYears=(iso,n)=>{const d=new Date(iso+"T00:00:00Z");d.setUTCFullYear(d.
 const days=(a,b)=>(new Date(b+"T00:00:00Z")-new Date(a+"T00:00:00Z"))/86400000;
 const PATH_DEFAULTS={
   alpha:{teclWeight:.70,guardWeight:.30,ivsLook:15,ivsS0:.55,ivsBand:.175,guardMA:200,guardBand:.015},
-  classic:{infWeight:.50,vrWeight:.50,infDiv:20,infTarget:20,infBig:12.5,infReverse:false,infRows:12,vrG:11,vrBand:35,vrFormula:'basic',vrStockPct:.60,vrPoolLimit:.50}
+  classic:{infWeight:.50,vrWeight:.50,infDiv:20,infTarget:20,infBig:15,infReverse:false,infRows:3,vrG:11,vrBand:35,vrFormula:'basic',vrStockPct:.60,vrPoolLimit:.50}
 };
 const ASSET_STRATEGIES={
   5:{years:5,key:'ivsGuard',name:'5년 · 역분산 + Guard',risk:'최공격',desc:'TECL 역분산 + TQQQ SMA200 Guard'},
@@ -886,7 +886,7 @@ async function createPlanInfSession(opts={}){
   const sess={id,name:sessionDateName('SOXL'),planManaged:true,settings:{
     ticker:'SOXL',div:PATH_DEFAULTS.classic.infDiv,target:PATH_DEFAULTS.classic.infTarget,big:PATH_DEFAULTS.classic.infBig,reverse:PATH_DEFAULTS.classic.infReverse,compound:true,
     rows:PATH_DEFAULTS.classic.infRows,revGap:0,rowqty:1,principal:cap,
-    divmode:'reinv',engine:'v40',shortMA:30,loPct:8,tgtDyn:false,planPresetVersion:7
+    divmode:'reinv',engine:'v40',shortMA:30,loPct:8,tgtDyn:false,planPresetVersion:8
   },hist:[]};
   liveState.inf.sessions.push(sess);liveState.inf.active=id;liveState.activeTab='inf';
   planLinks.inf=id;
@@ -978,10 +978,10 @@ function enforcePlanManagedDefaults(){
   for(const x of liveState.inf.sessions||[]){
     if(x&&x.planManaged&&String(x.settings?.ticker||'').toUpperCase()==='SOXL'){
       const st=x.settings||(x.settings={}), empty=!(Array.isArray(x.hist)&&x.hist.length);
-      if(empty && +st.planPresetVersion<7){
-        Object.assign(st,{div:20,target:20,big:15,reverse:false,compound:true,revGap:0,engine:'v40',loPct:8,tgtDyn:false,planPresetVersion:7});
+      if(empty && +st.planPresetVersion<8){
+        Object.assign(st,{div:20,target:20,big:15,reverse:false,compound:true,rows:3,revGap:0,engine:'v40',loPct:8,tgtDyn:false,planPresetVersion:8});
       }else{
-        if(st.div==null)st.div=20;if(st.target==null)st.target=20;if(st.big==null)st.big=15;
+        if(st.div==null)st.div=20;if(st.target==null)st.target=20;if(st.big==null)st.big=15;if(st.rows==null)st.rows=3;
         if(st.reverse==null)st.reverse=false;if(st.compound==null)st.compound=true;
         if(st.revGap==null)st.revGap=0;if(st.engine==null)st.engine='v40';if(st.loPct==null)st.loPct=8;if(st.tgtDyn==null)st.tgtDyn=false;
       }
@@ -990,7 +990,7 @@ function enforcePlanManagedDefaults(){
   for(const x of liveState.vr.sessions||[]){
     if(x&&x.planManaged&&String(x.settings?.ticker||'').toUpperCase()==='TECL'){
       const st=x.settings||(x.settings={}), empty=!(Array.isArray(x.hist)&&x.hist.length);
-      if(empty && +st.planPresetVersion<7){
+      if(empty && +st.planPresetVersion<8){
         const cap=(+st.planTotalCapital||0)||((+st.initAmt||0)+(+st.startpool||0));
         Object.assign(st,{mode:.5,formula:'basic',g:5,band:30,autoCyc:false,planInitStockPct:90,planPresetVersion:7});
         if(cap>0){st.planTotalCapital=cap;st.initAmt=Math.round(cap*.90);st.startpool=Math.max(0,cap-st.initAmt);}
@@ -1340,7 +1340,7 @@ function imBuyPx(star){ return star>0 ? +(star-0.01).toFixed(4) : 0; }
    추가 줄은 같은 회차의 일부다 — T 는 본 주문만 센다 (dT 0).
    증권사는 주문가×수량을 매수가능금액에서 예약하고 넘으면 거부한다 — 잔금 안에서만 낸다 (7차 점검 ④).
    주문가가 전일 종가 +큰수% 를 넘으면 그 값(호가 내림)으로 낮춰 낸다 — 원문 '큰수 매수'(증권사 가격 제한 대응).
-   줄 수(rows)는 원문에 없다('…' 로 이어질 뿐) — JKQuant 구현값 기본 8 (imRowsOf). 호가·수수료 포함 수량도 구현 세부다.
+   줄 수(rows)는 원문에 없다('…' 로 이어질 뿐) — JKQuant 구현값 기본 3 (imRowsOf). 호가·수수료 포함 수량도 구현 세부다.
      o: {first, half, buy1, bal, firstPrice, starPrice, avg, cap, rows, fee, cur}
      반환: [{kind:'1회매수'|'절반매수'|'하방', name, price, q, dT, ladder, capped, orig}] */
 function imBuyOrders(o){
@@ -1370,8 +1370,8 @@ function imBuyOrders(o){
   }
   return out;
 }
-/* 아래로 LOC 추가 줄 수 — 설정값, 없으면 기본 8. 0 이면 끈다(변형). 예전 rowsOn(꺼짐 기본) 스위치는 쓰지 않는다. */
-const IM_ROWS_DEFAULT=8;
+/* 아래로 LOC 추가 줄 수 — 설정값, 없으면 기본 3. 0 이면 끈다(변형). 예전 rowsOn(꺼짐 기본) 스위치는 쓰지 않는다. */
+const IM_ROWS_DEFAULT=3;
 function imRowsOf(st){ const v=(st||{}).rows; return (v!=null&&isFinite(+v)) ? Math.max(0,Math.min(20,Math.floor(+v))) : IM_ROWS_DEFAULT; }
 function vrCycleStart(c){if(c.st.cycStart)return c.st.cycStart;for(let i=c.hist.length-1;i>=0;i--){const x=c.hist[i];if(x.auto&&(x.type==='add'||x.type==='wd'))return x.date;}const f=c.hist.find(x=>x.type==='buy');return f?f.date:null;}
 function vrOrders(sess,price){
