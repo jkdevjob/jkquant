@@ -1633,9 +1633,9 @@ console.log('[32] 전반전 매수 — 주문별 정수 내림 (모의 == 백테
   const n=(bt.match(/const buys=_imBuyPlan\(T, avg, shares, cash, divs, starBase, starSlope, buyLimit, prevC, FEE, imRowsOf\(\{\}\), isKRW\(tkr\)\?'krw':'usd'\);/g)||[]).length;
   ok('runIM·runIM50 둘 다 공용 주문을 쓴다', n===2, n+'곳');
   const sim=extractFn(idx,'function infSimForward(startFrom)');
-  ok('모의: 아침 매수 주문도 공용 imBuyOrders (전일 확정 종가 기준 · 큰수 상한 cap)',
-     /buys=imBuyOrders\(\{first, half, buy1:B0\.amt, bal:c\.bal, firstPrice:buyLimit, starPrice:imBuyPx\(star0\), avg:c\.avg,/.test(sim)
-     && /cap:buyLimit, rows:imRowsOf\(st\)/.test(sim) && /cl<=b\.lim/.test(sim));
+  ok('모의: 아침 매수 주문도 공용 imBuyOrders (전일 확정 종가 기준 · 주문가 상한 없음 — 09-26 규칙)',
+     /buys=imBuyOrders\(\{first, half, buy1:B0\.amt, bal:c\.bal, firstPrice:buyLimit, starPrice:imBuyPx\(star0\), avg:c\.avg, rows:imRowsOf\(st\)/.test(sim)
+     && !/cap:buyLimit/.test(sim) && /cl<=b\.lim/.test(sim));
   ok('모의가 오늘 종가로 수량을 세지 않는다',
      !/Math\.floor\(\(B\.amt\/2\)\/cl\)/.test(idx) && !/Math\.floor\(B\.amt\/cl\)/.test(idx) && !/fillPx/.test(sim) && !/cNow\.bal/.test(sim));
   ok('정식 매수 주문 함수가 index·backtest·plan·서버에 글자 그대로 같다',
@@ -6733,14 +6733,15 @@ console.log('\n[103] 무매 모의체결 — 실엔진을 굴려 배당 기록�
   };
 
   /* 배당락일에 '아무 매매도 안 나는' 날을 만든다 — 그래야 배당 하나만 값으로 읽힌다.
-       평단 100 · T=1 · 20분할 → 별지점 118 · 익절가 120 · 큰수 상한 전일종가×1.15=115
-       종가 116 이면: 116>115 라 매수 없음 · 116<118 이라 쿼터매도 없음 · 고가 116<120 이라 익절 없음 */
+       평단 100 · T=1 · 20분할 → 별지점 118 · 익절가 120. 09-26 부터 주문가 상한이 없어 종가 116 은
+       별지점 매수(117.99)에 닿는다 — 그래서 원금 600(1회 30 · 절반 15)으로 1주도 못 사게 한다.
+       116<118 이라 쿼터매도 없음 · 고가 116<120 이라 익절 없음 */
   const bar=(d,c,hi)=>({date:d, open:c, high:(hi!=null?hi:c), low:c, close:c});
   const O=[bar('2026-01-05',100), bar('2026-01-06',100), bar('2026-01-07',116)];
   const mkQ=(basis, divs)=>({symbol:'SOXL', ohlc:O, days:O.map(d=>({date:d.date,close:d.close})),
                        priceBasis:basis, dividends:(divs!==undefined?divs:[{date:'2026-01-07', amount:2}])});
   const mkSess=(over)=>({paper:true, id:'t1',
-    settings:{ticker:'SOXL', div:20, target:20, principal:10000, compound:true,
+    settings:{ticker:'SOXL', div:20, target:20, principal:600, compound:true,
               reverse:false, big:15, simLast:'2026-01-06', ...(over||{})},
     hist:[{kind:'1회매수', date:'2026-01-05', price:100, qty:5, ts:1}]});
 
@@ -6759,7 +6760,7 @@ console.log('\n[103] 무매 모의체결 — 실엔진을 굴려 배당 기록�
     ok('A 반환값이 배당 건수를 알린다', r && r.nDiv===1, r?String(r.nDiv):'null');
     __strat=sess;
     const c=computeInf();
-    ok('A 잔금에 들어간다', near(c.bal, 10000-500+8.46, 1e-6), String(c.bal));
+    ok('A 잔금에 들어간다', near(c.bal, 600-500+8.46, 1e-6), String(c.bal));
     ok('A 보유·평단·T는 그대로', c.qty===5 && near(c.avg,100,1e-9) && near(c.T,1,1e-9),
        `${c.qty}주 / ${c.avg} / ${c.T}`); }
 
@@ -6768,7 +6769,7 @@ console.log('\n[103] 무매 모의체결 — 실엔진을 굴려 배당 기록�
     ok("A' 배당 없는 종목이면 기록도 없다",
        sess.hist.filter(h=>h.kind==='배당').length===0 && r && r.nDiv===0);
     __strat=sess;
-    ok("A' 잔금도 그대로", near(computeInf().bal, 9500, 1e-9), String(computeInf().bal)); }
+    ok("A' 잔금도 그대로", near(computeInf().bal, 100, 1e-9), String(computeInf().bal)); }
 
   /* B. 조정 기준이면 안 적는다 — 배당이 이미 가격에 들어 있다 (이중계상) */
   { const sess=mkSess(); run(sess, mkQ('total_return'));
@@ -8392,7 +8393,7 @@ console.log('\n[119] 제10차 — 라오어 V4.0 원문 직접 대조 (SOURCE GO
   // 2. 처음매수 (원문 일반모드 5-(1)): 1회 617.89 · 종가 45.93 · 큰수 12% → 51.44
   { const r=imBuyOrders({first:true,half:false,buy1:617.89,bal:617.89*20,firstPrice:45.93*1.12,starPrice:0,avg:0,cap:45.93*1.12,rows:2,fee:0,cur:'usd'});
     G('2 처음매수 — 51.44×12 · 47.53×1 · 44.13×1 (큰수 45.93×1.12 = 51.4416 → 주문가는 센트 내림 51.44)', tbl(r)==='51.44×12 · 47.53×1 · 44.13×1'
-      && r[0].price===51.44 && r[1].price===47.53 && r[2].price===44.13 && r[0].dT===1 && r[0].capped===false && r[1].ladder && r[2].ladder, tbl(r)+' '+r[0].price);
+      && r[0].price===51.44 && r[1].price===47.53 && r[2].price===44.13 && r[0].dT===1 && r[1].ladder && r[2].ladder, tbl(r)+' '+r[0].price);
     const filled=r.filter(o=>44<=o.price).reduce((a,o)=>a+o.q,0);
     G('2 처음매수 — "다음날 44$ 로 종가가 마감되었다면 14개" (LOC 는 종가 ≤ 주문가면 전부 체결)', filled===14, String(filled)); }
   // 3. 전반전 (원문 5-(2)): 별지점 78.12 · 평단 69.75 · 추가 줄 67.40·59.91 → 1회매수금 ≈ 539.2
@@ -8705,23 +8706,14 @@ console.log('\n[120] 제11차 — 라오어 정식 무매 V4.0 + VR 원문 기�
     ok('제11차 1 · 기록 시트 — 리버스 1일차 추천 = 리버스매도 MOC 10주 (별지점 쿼터매도 아님)', /<div class="rmain">리버스매도<\/div>/.test(h1) && /무조건 MOC 10주/.test(h1) && !/<div class="rmain">쿼터매도/.test(h1));
     ok('제11차 1 · 기록 시트 — 리버스 중간 소진 추천 = 리버스매도 MOC 9주', /<div class="rmain">리버스매도<\/div>/.test(h2) && /중간 소진/.test(h2) && /MOC 9주/.test(h2)); }
 
-  /* ── 4 · 큰수 — 백테 결과에 어느 가격인지 적는다 · 끄면 원문 가격으로 돈다 ── */
-  { const tagF=new Function('IM_BIG_DEFAULT', "let imEngine='v40', imBrokerCap=true;\n"+extractFn(bt,'function imCapTag()')+'\nreturn {tag:imCapTag, set:v=>{imBrokerCap=v;}};')(15);
-    const on=tagF.tag(); tagF.set(false); const off=tagF.tag();
-    ok('제11차 4 · 백테 결과 제목 — 적용이면 "주문가 상한 큰수 +15%(증권사 제약)", 끄면 "원문 가격(비교용)"', /주문가 상한 큰수 \+15%\(증권사 제약/.test(on) && /원문 가격\(주문가 상한 없음/.test(off), on+' / '+off);
-    ok('제11차 4 · 기본은 적용(운영·모의와 같은 주문) · 제목 두 곳에 붙는다', /let imBrokerCap=true;/.test(bt) && (bt.match(/imCapTag\(\)/g)||[]).length>=3);
-    const sv={r:global.imReverse,f:global.imFill,c:global.imCostOn,b:global.imBrokerCap};
-    Object.assign(global,{imReverse:true, imFill:'high', imCostOn:false});
-    let a=null,b=null;
-    if(DAYS.SOXL){ global.imBrokerCap=true; a=runIM(DAYS.SOXL.slice(1),'SOXL',10000,40,20,true,15).final; global.imBrokerCap=false; b=runIM(DAYS.SOXL.slice(1),'SOXL',10000,40,20,true,15).final; }
-    Object.assign(global,{imReverse:sv.r, imFill:sv.f, imCostOn:sv.c}); if(sv.b===undefined) delete global.imBrokerCap; else global.imBrokerCap=sv.b;
-    ok('제11차 4 · 원문 가격 모드가 실제로 다른 결과를 낸다 (SOXL 40분할 복리 리버스 켬)', a!=null && Math.abs(a-b)>1, `적용 ${a&&a.toFixed(0)} · 원문 가격 ${b&&b.toFixed(0)}`);
-    const cap=_imBuyPlan(5, 100, 50, 5000, 20, 20, 2, 80*1.15, 80, 0, 0, 'usd');                // 별지점 110 > 상한 92
-    global.imBrokerCap=false; const raw=_imBuyPlan(5, 100, 50, 5000, 20, 20, 2, 80*1.15, 80, 0, 0, 'usd'); delete global.imBrokerCap;
-    ok('제11차 4 · 전략 가격 vs 증권사 주문 가격 — 상한 적용 92.00 · 끄면 원문 별지점 가격 그대로', cap.length>0 && cap[0].lim===92 && raw[0].lim>100, `적용 ${cap.map(o=>o.lim+'×'+o.q)} · 끔 ${raw.map(o=>o.lim+'×'+o.q)}`);
-    /* 처음매수 큰수는 두 모드 모두 실제로 걸 수 있는 센트 가격 — 45.93×1.12 = 51.4416 → 51.44 (상한을 꺼도) */
-    global.imBrokerCap=false; const f0=_imBuyPlan(0, 0, 0, 12357.8, 20, 20, 2, 45.93*1.12, 45.93, 0, 2, 'usd'); delete global.imBrokerCap;
-    ok('제11차 4 · 상한을 꺼도 처음매수가는 51.44 (센트 내림) × 12 · 추가 줄 47.53 · 44.13', f0.length===3 && f0[0].lim===51.44 && f0[0].q===12 && f0[1].lim===47.53 && f0[2].lim===44.13,
+  /* ── 4 · 큰수 — 09-26 규칙 변경(a7c26dc): 주문가 상한 선택을 없애고 큰수는 처음매수 가격에만 쓴다 ([13]) ──
+     예전 이 자리는 상한 켬/끔 두 모드를 봤다. 모드가 없어졌으니 백테도 상한 없이 원문 가격으로 도는지 값으로 본다. */
+  { ok('제11차 4 → 09-26 · 백테에 주문가 상한 선택이 없다 (imBrokerCap · imCapTag · imCapSeg 없음)', !/imBrokerCap|imCapTag|imCapSeg/.test(bt));
+    const raw=_imBuyPlan(5, 100, 50, 5000, 20, 20, 2, 80*1.15, 80, 0, 0, 'usd');                   // 별지점 110 > 예전 상한 92
+    ok('제11차 4 → 09-26 · 별지점 · 평단 주문가를 큰수로 자르지 않는다 (예전 상한 92.00 → 원문 별지점 가격)', raw.length>0 && raw[0].lim>100, raw.map(o=>o.lim+'×'+o.q).join(' · '));
+    /* 처음매수 큰수는 실제로 걸 수 있는 센트 가격 — 45.93×1.12 = 51.4416 → 51.44 */
+    const f0=_imBuyPlan(0, 0, 0, 12357.8, 20, 20, 2, 45.93*1.12, 45.93, 0, 2, 'usd');
+    ok('제11차 4 · 처음매수가는 큰수 51.44 (센트 내림) × 12 · 추가 줄 47.53 · 44.13', f0.length===3 && f0[0].lim===51.44 && f0[0].q===12 && f0[1].lim===47.53 && f0[2].lim===44.13,
        f0.map(o=>o.lim+'×'+o.q).join(' · ')); }
 
   /* ── 8 · 자동주문 한계 — MOC 는 한투로 안 보낸다 ── */
@@ -9512,7 +9504,7 @@ console.log('\n[127] 제14차 — 무매 전량 익절 뒤 같은 날 LOC 재매
   ok('화면 — 백테 하단: 익절 지정가 = 정규장 OHLC 고가 근사 · 프리장~애프터 차이 가능(데이터 한계) · 사이클 종료는 하루 끝 최종 0주',
      /익절 지정가 체결은 정규장 OHLC 고가 기반 근사이며, 원문의 프리장~애프터 체결과 차이가 있을 수 있음/.test(bt)
      && /엔진 오류가 아니라 데이터 한계/.test(bt) && /하루 주문을 모두 처리한 뒤 <b>최종 보유가 0주<\/b>일 때만 사이클이 끝납니다/.test(bt)
-     && /title="정규장 일봉 고가가 목표가를 터치하면 체결/.test(bt));
+     && /정규장 일봉 고가가 목표가에 닿으면 체결로 근사/.test(bt));
   ok('화면 — 앱: 사이클별 손익 안내 · 모의 체결 안내에 같은 날 익절+매수 규칙과 익절 근사 문구',
      /그날 기록을 다 처리한 뒤 보유가 0이면 한 사이클이 끝납니다 — 익절로 전량 팔린 날 같은 날 LOC 매수가 체결되면 사이클이 이어집니다/.test(idx)
      && /<b>같은 날 익절 \+ 매수<\/b> — 익절로 전량 팔린 뒤 종가가 떨어져 매수 LOC 까지 체결되면 사이클 종료가 아니라 이어 갑니다/.test(idx)
@@ -9599,8 +9591,8 @@ console.log('\n[128] 자산플랜 검증 후속 — 20년 월말 신호 · 장�
      && /L\.marketState==='REGULAR'\?'실시간 ':'최근가 '/.test(extractFn(pl,'function renderAlphaLedger()'))
      && /id="alphaCashRec"/.test(pl) && /\$\("alphaCashAdd"\)\.addEventListener\("click",alphaAddCashEvent\)/.test(pl)
      && /if\(e\.type==='cash'\)\{const amt=/.test(extractFn(pl,'function renderAlphaLedger()')));
-  ok('③ 화면 검증 문구 — 기간마다 독립 재현과 2000~2009년 시작 합성 스트레스(5년 −79.2% · 10년 −98.7% · 15년 −98.0% · 20년 −39.6%)',
-     (pl.match(/독립 재현/g)||[]).length>=4 && /MDD 최악 −79\.2%/.test(pl) && /MDD 최악 −98\.7%/.test(pl) && /MDD 최악 −98\.0%/.test(pl) && /MDD 최악 −39\.6%/.test(pl));
+  ok('③ 화면 검증 문구 — 10·15·20년 독립 재현과 2000~2009년 시작 합성 스트레스(10년 −98.7% · 15년 −98.0% · 20년 −39.6% · 5년은 fe11b78 새 파라미터로 바뀜)',
+     (pl.match(/독립 재현/g)||[]).length>=3 && /MDD 최악 −98\.7%/.test(pl) && /MDD 최악 −98\.0%/.test(pl) && /MDD 최악 −39\.6%/.test(pl));
 }
 
 /* ════ 129. 자산플랜 현재가 — 페이지 새로고침마다 캐시 우회 + 총자산도 현재가 사용 ════ */
@@ -9611,7 +9603,7 @@ console.log('\n[129] 자산플랜 현재가 — 캐시 우회 · 현재계좌 �
   const pt=extractFn(pl,'function alphaPlanTotal()');
   ok('현재가 — quote 요청은 매 새로고침마다 _ts + no-store/no-cache로 브라우저·CDN 캐시를 우회', /_ts='\+Date\.now\(\)/.test(fq) && /cache:'no-store'/.test(fq) && /'Cache-Control':'no-cache'/.test(fq));
   ok('현재계좌 총자산 — liveQuotes.price 우선, 없을 때만 확정종가 fallback', /\+q\.price>0\?\+q\.price/.test(pt) && /q\.settled\?\+q\.settled\.close:0/.test(pt));
-  ok('자산플랜 버전 — 개선 70/30 v1.32.1', /자산플랜 <span class="ver">v1\.32\.1<\/span>/.test(pl));
+  ok('자산플랜 버전 — 개선 70/30 이후 버전 표기 (숫자는 올라가므로 x.y.z 형식만 본다)', /자산플랜 <span class="ver">v1\.(3[2-9]|[4-9]\d)\.\d+<\/span>/.test(pl));
 }
 
 /* ════ 130. 무매 자동주문 — 크론이 주문 창 안에 떨어진다 · 주문 직전 선점 · 공개 로그 ════
