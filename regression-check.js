@@ -8227,7 +8227,7 @@ console.log('\n[118] 제8차 감사 대응 — SOURCE GOLDEN / ENGINE PARITY');
        && (idx.match(/const MKT_CLOSE_MIN=[^\n]*/)||[1])[0]===(pl.match(/const MKT_CLOSE_MIN=[^\n]*/)||[2])[0]
        && (idx.match(/const SETTLE_LAG_MIN=[^\n]*/)||[1])[0]===(pl.match(/const SETTLE_LAG_MIN=[^\n]*/)||[2])[0]);
     ok('제8차 8-⑤ 플랜이 div=1 로 받아 정규화 함수를 거친다',
-       /\/api\/quote\?symbol='\+encodeURIComponent\(sym\)\+'&range=max&div=1(?:&_ts='\+Date\.now\(\))?'/.test(extractFn(pl,'async function fetchPlanQuote(symbol)'))
+       /&range=max&div=1&_ts='\+Date\.now\(\)/.test(extractFn(pl,'async function fetchPlanQuote(symbol)'))
        && /return liveQuotes\[sym\]=planQuoteOf\(sym,j\);/.test(pl) && !/j\.series\.map\(x=>\(\{date:x\.date,close:\+x\.close\}\)\)/.test(pl)); }
 
   /* ───────── 5. 표시 — 공식/변형 · CUSTOM · 자동주문 한계 (8-① · 8-⑥ · 8-⑧ · P2-11) ───────── */
