@@ -41,7 +41,7 @@ console.log('[0] 파일 문법');
     const r=spawnSync('node',['--check',tmp],{encoding:'utf8'});
     ok(label+' 메인 스크립트 문법', r.status===0, (r.stderr||'').split('\n')[0]);
   };
-  chk(idx,'index'); chk(bt,'backtest'); if(scl) chk(scl,'scalping');
+  chk(idx,'index'); chk(bt,'backtest'); if(adm) chk(adm,'admin'); if(scl) chk(scl,'scalping');
 }
 
 // index 엔진
@@ -6984,7 +6984,7 @@ const __P7={};
     global.imReverse=rev;
     const all=DAYS[tk], days=all.slice(1);
     const st={ticker:tk,div,target:tgt,principal:10000,compound:comp,reverse:rev,big:15,revGap:0,tgtDyn:false,divmode:'reinv',
-              rows:8,rowqty:1};
+              rows:3,rowqty:1};
     LOGD=[]; runIMd(days, tk, 10000, div, tgt, comp, 15);
     const B=LOGD.map(key);
     const sess={paper:true,id:'p',simStart:days[0],settings:{...st},hist:[]};
@@ -9611,7 +9611,7 @@ console.log('\n[129] 자산플랜 현재가 — 캐시 우회 · 현재계좌 �
   const pt=extractFn(pl,'function alphaPlanTotal()');
   ok('현재가 — quote 요청은 매 새로고침마다 _ts + no-store/no-cache로 브라우저·CDN 캐시를 우회', /_ts='\+Date\.now\(\)/.test(fq) && /cache:'no-store'/.test(fq) && /'Cache-Control':'no-cache'/.test(fq));
   ok('현재계좌 총자산 — liveQuotes.price 우선, 없을 때만 확정종가 fallback', /\+q\.price>0\?\+q\.price/.test(pt) && /q\.settled\?\+q\.settled\.close:0/.test(pt));
-  ok('자산플랜 버전 — 현재가 강제 갱신 v1.31.0', /자산플랜 <span class="ver">v1\.31\.0<\/span>/.test(pl));
+  ok('자산플랜 버전 — 현재가 강제 갱신 v1.31.3', /자산플랜 <span class="ver">v1\.31\.3<\/span>/.test(pl));
 }
 
 /* ════ 130. 무매 자동주문 — 크론이 주문 창 안에 떨어진다 · 주문 직전 선점 · 공개 로그 ════
@@ -9741,16 +9741,16 @@ console.log('\n[130] 무매 자동주문 — 크론이 주문 창 안에 · 주�
     try{ fs.unlinkSync(tmp); }catch(e){} }
   const J=o=>JSON.stringify(o||H.error||{});
   const {S1={},S2={},S3={},S4={},S5={},S6={},S7={},S8={}}=H;
-  ok('② 창 안 첫 실행 — 모의 두 세션 9+9건을 VTS 로 · 실계좌 세션은 막힘 · 첫 주문 전에 오늘을 차지(문서가 없을 때만 만든다)',
-     S1.orders===18 && S1.sessRes==='p1:9,p2:9' && S1.envs==='vts' && /실계좌 자동주문 차단/.test(S1.realSkip)
+  ok('② 창 안 첫 실행 — 기본 하방3줄이라 모의 두 세션 4+4건을 VTS 로 · 실계좌 세션은 막힘 · 첫 주문 전에 오늘을 차지(문서가 없을 때만 만든다)',
+     S1.orders===8 && S1.sessRes==='p1:4,p2:4' && S1.envs==='vts' && /실계좌 자동주문 차단/.test(S1.realSkip)
      && S1.claimFirst===true && S1.firstCond==='exists=false' && S1.claim==='오늘 주문 차지', J(S1));
   ok('② 첫 주문을 내는 순간 이미 lastDate=오늘 — 도중에 끊겨도 다음 실행이 다시 내지 않는다 · 끝나면 기록은 결과로 바뀐다',
      S1.lastAtFirstOrder==='2026-09-24' && S1.lastDate==='2026-09-24' && S1.logIsResult===true && S1.marked===true, J(S1));
   ok('② 같은 날 다시 — 0건 · 오늘 이미 실행했습니다 · 쓰기 없음', S2.orders===0 && S2.skipped==='오늘 이미 실행했습니다' && S2.patches===0, J(S2));
-  ok('② 겹친 두 실행(둘 다 같은 판을 읽은 뒤 씀) — 합쳐 18건(한 번치) · 한쪽만 차지 · 다른 쪽은 "먼저 차지했습니다 (400)"',
-     S3.orders===18 && S3.runs===1 && S3.marked==='false,true' && S3.claims==='다른 실행이 먼저 차지했습니다 (400)|오늘 주문 차지' && S3.lastDate==='2026-09-24', J(S3));
-  ok('② 느린 실행이 시세를 받는 사이 다른 실행이 끝남 — 느린 쪽은 주문 직전에 다시 읽고 멈춘다 (0건 · 다른 쪽 18건)',
-     S4.byA===0 && S4.byB===18 && S4.aClaim==='오늘 이미 실행했습니다' && S4.aMarked===false && S4.bMarked===true, J(S4));
+  ok('② 겹친 두 실행(둘 다 같은 판을 읽은 뒤 씀) — 합쳐 8건(한 번치) · 한쪽만 차지 · 다른 쪽은 "먼저 차지했습니다 (400)"',
+     S3.orders===8 && S3.runs===1 && S3.marked==='false,true' && S3.claims==='다른 실행이 먼저 차지했습니다 (400)|오늘 주문 차지' && S3.lastDate==='2026-09-24', J(S3));
+  ok('② 느린 실행이 시세를 받는 사이 다른 실행이 끝남 — 느린 쪽은 주문 직전에 다시 읽고 멈춘다 (0건 · 다른 쪽 8건)',
+     S4.byA===0 && S4.byB===8 && S4.aClaim==='오늘 이미 실행했습니다' && S4.aMarked===false && S4.bMarked===true, J(S4));
   ok('② 창 밖(18:43 ET) — 연결된 세 세션 모두 "주문 시간이 아닙니다" · 주문 0 · 쓰기 0 · 날을 안 쓴다(뒤 실행이 낼 수 있게)', S5.orders===0 && S5.patches===0 && S5.lastDate==='없음' && S5.marked===false && S5.late===3, J(S5));
   ok('② 드라이런 — 주문 0 · 쓰기 0', S6.orders===0 && S6.patches===0 && S6.sent==='드라이런 — 주문 안 냄', J(S6));
   ok('② 차지하지 못하면 안 낸다 — 쓰기 실패(500) · 다시 읽기 실패(500) 둘 다 0건',
