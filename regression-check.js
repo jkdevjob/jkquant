@@ -67,6 +67,7 @@ const idxParts=[
   extractFn(idx,'function computeVr()'),
 ];
 let __strat=null; global.curStrat=()=>__strat;
+global._infReplayAsOf=''; // extracted replay functions share the application's replay clock
 /* 무매 사이클 종료 판정 (제14차 D15) — 따로 떼어 도는 하네스(백테 엔진 사본 · 운영 주문표 · 플랜)가 전역에서 찾는다.
    백테 사본은 backtest.html 에서, 장부용 하루 판정은 index.html 에서. 네 파일 글자가 같은지는 [127] 이 본다. */
 if(optFn(bt,'function imCycleEnds(soldToday, qtyAtDayEnd)')) global.imCycleEnds=new Function(extractFn(bt,'function imCycleEnds(soldToday, qtyAtDayEnd)')+'\nreturn imCycleEnds;')();
@@ -8449,7 +8450,7 @@ console.log('\n[118] 제8차 감사 대응 — SOURCE GOLDEN / ENGINE PARITY');
     const R=new Function('IM_OFFICIAL','revSupported','IM_BIG_DEFAULT', (idx.match(/const REV_GAP_DEF=[^\n]*/)||[''])[0]+'\n'
       +fnOf(idx,['function revGapOf(st)','function imVariantOf(cfg)','function imRuleOf(st)'])+'\nreturn imRuleOf;')(IM_OFFICIAL, revSupported, 15);
     ok('D12 사용자 결정 — 앱 신규 무매 세션의 리버스 기본값은 끔 (값)', d.reverse!==true, JSON.stringify(d.reverse));
-    ok('D12 — 그 기본값은 주문표 규칙 줄에 V4.0 변형 · 리버스 OFF 로 뜬다 (값)', JSON.stringify(R(d))==='["리버스 OFF"]', JSON.stringify(R(d)));
+    ok('D12 — 그 기본값은 주문표 규칙 줄에 V4.0 변형 · 리버스 OFF 로 뜬다 (값)', JSON.stringify(R(d))==='["리버스 OFF","큰수 20%(원문 10~15% 밖)"]', JSON.stringify(R(d)));
     ok('D12 — 설정 안내·백테 버튼이 끔 = V4.0 변형 · 켬 = V4.0 공식으로 적는다',
        /끔\(기본 · <b>V4\.0 변형<\/b>\)/.test(idx) && /켬\(<b>V4\.0 공식<\/b>\)/.test(idx)
        && /유리\(기본 · V4\.0 변형 — 문서의 공식 규칙은 켬\)/.test(bt)); }
@@ -10006,13 +10007,13 @@ console.log('\n[132] 익절 변환 자동 — 통합 ON/OFF · 룩어헤드 없�
      && bt.includes('>켬</button>')
      && bt.includes("imAutoTp=e.target.dataset.x==='1'"));
 
-  ok('G 모의 규약 버전 13 — M1 모의 재생 룩어헤드 수정으로 기존 자동익절 기록 재생성',/const SIM_RULE_VER=13;/.test(idx));
+  ok('G 모의 규약 버전 14 — MA150 −10% 하향 기준으로 자동익절 모의 기록 재생성',/const SIM_RULE_VER=14;/.test(idx));
   const M1SIG='function imAutoTPM1(bars,cycStart,date,base)',M1CRE=/const IM_AUTOTP_M1=\{[^\n]*\};/;
   const m1body=src=>(src.match(M1CRE)||[''])[0]+'\n'+extractFn(src,M1SIG).replace('export function','function');
   const M1={index:imAutoTPM1,backtest:global.imAutoTPM1,plan:new Function(m1body(pl)+'\nreturn imAutoTPM1;')(),server:new Function(m1body(im)+'\nreturn imAutoTPM1;')()};
-  const m1bars=Array.from({length:190},(_,i)=>({date:D[i],close:i===170?94:100}));
+  const m1bars=Array.from({length:190},(_,i)=>({date:D[i],close:i===170?89:100}));
   for(const [nm,f] of Object.entries(M1)){const base={tp:20,mode:'auto'},before=f(m1bars,D[160],D[170],base),after=f(m1bars,D[160],D[171],base),stay=f(m1bars,D[160],D[171],{tp:10});
-    ok('H '+nm+' — 전날 종가가 MA150의 95% 미만이면 20→10 영구 하향',before.tp===20&&after.tp===10&&after.m1===true&&after.m1AsOf===D[170],JSON.stringify([before,after]));
+    ok('H '+nm+' — 전날 종가가 MA150의 90% 미만이면 20→10 영구 하향',before.tp===20&&after.tp===10&&after.m1===true&&after.m1AsOf===D[170],JSON.stringify([before,after]));
     ok('H '+nm+' — 10% 사이클은 다시 올리지 않는다',stay.tp===10&&!stay.m1,JSON.stringify(stay));}
   ok('I M1 네 파일 판정식 동일',m1body(idx)===m1body(bt)&&m1body(idx)===m1body(pl)&&m1body(idx)===m1body(im));
   const ci=extractFn(idx,'function computeInf()'), sf=extractFn(idx,'function infSimForward(startFrom)');
