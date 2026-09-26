@@ -537,7 +537,7 @@ try{ if(localStorage.getItem('qcockpit_hadUser')==='1') document.documentElement
 </div>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.103.1</span></h1></div>
+    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.103.2</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -1646,7 +1646,7 @@ if(/^\/paper\/?$/.test(location.pathname)){
   <footer>
     <strong>JK 퀀트</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.103.1</b> · 2026-09-26</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.103.2</b> · 2026-09-26</div>
   </footer>
 </div>
 
@@ -2302,6 +2302,10 @@ function isAmtKind(k){ return k==='출금'||k==='배당'; }
 function imCycleEnds(soldToday, qtyAtDayEnd){ return !!soldToday && !(qtyAtDayEnd>1e-9); }
 /* 장부는 하루를 여러 줄로 적는다(익절 한 줄 · 매수 한 줄). hist[i] 뒤에 같은 날짜의 매매 줄이 더 있으면 그날 주문은 아직 다 처리되지 않았다. */
 function imDayOpenAfter(hist, i){ const d=hist[i]&&hist[i].date; if(!d) return false; for(let j=i+1;j<hist.length&&hist[j]&&hist[j].date===d;j++){ if(/매수|매도/.test(String(hist[j].kind||''))) return true; } return false; }
+/* 모의 재생 중 computeInf 가 볼 수 있는 데이터 상한(주문일 자체는 미포함).
+   평소 화면은 빈 값이라 현재까지 확정된 봉 전체를 보지만, infSimForward 가 과거를 하루씩 재생할 때는
+   그 재생일을 넣어 미래 봉을 M1 판정에 섞지 않는다. */
+let _infReplayAsOf='';
 
 /* 누적 계산: 평단/보유/잔금/T/실현손익 */
 function computeInf(){
@@ -2436,7 +2440,8 @@ function computeInf(){
   const bal=st.principal+realized+divTotal-inv-withdrawn-saved;
   /* 이번 사이클 익절% — 보유 중이면 그 사이클 첫 매수일 판정, 비어 있으면 지금까지 확정된 봉으로 잰 '다음 사이클' 판정.
      익절 자동이 꺼져 있거나 판정 자료가 없으면 설정 익절%(tpAuto=null — 주문표가 알린다). 주문표·모의·복귀선이 전부 이 값을 쓴다. */
-  const tpAuto=_auto ? ((qty>1e-9 && cycStart) ? imAutoTPM1(_ab,cycStart,'9999-12-31',cycTp) : tpAt('9999-12-31')) : null;
+  const _asOf=(typeof _infReplayAsOf!=='undefined'&&_infReplayAsOf)?_infReplayAsOf:'9999-12-31';
+  const tpAuto=_auto ? ((qty>1e-9 && cycStart) ? imAutoTPM1(_ab,cycStart,_asOf,cycTp) : tpAt(_asOf)) : null;
   const tp=tpAuto ? tpAuto.tp : st.target;
   return {avg,qty,inv,realized,T,totbuy,totsell,bal,rows,st,cycleSeq,revState,reverseActive,reverseDay1,revFrom,
           withdrawn,saved,divTotal,flows,simple,outside:withdrawn+saved,tp,tpAuto,cycStart};
@@ -3854,6 +3859,7 @@ function infSimForward(startFrom){
   const first = startFrom ? days : days.filter(d=>d.date>from);
   if(!first.length) return null;
 
+  const _prevReplayAsOf=_infReplayAsOf;
   _infSimBusy=true;
   let nBuy=0,nSell=0,seq=0,nCyc0=computeInf().cycleSeq;
   const closeAt=i=>(O[i]&&O[i].close>0)?O[i].close:0;
@@ -3882,6 +3888,7 @@ function infSimForward(startFrom){
     { const c0=computeInf(); inRev=!!c0.reverseActive; revDay1=!!c0.reverseDay1; }
     for(const row of first){
       const cl=row.close, hi=row.high, d=row.date, op=(row.open>0?row.open:0);
+      _infReplayAsOf=d;                     // 오늘 주문은 d 이전 확정 봉까지만 — M1 미래참조 금지
       putDiv(d);                       // 배당락일이면 그날 거래보다 먼저 — 배당은 전날 종가 시점의 보유 주수로 받는다
       /* 전일 확정 종가가 없으면(가진 봉의 맨 첫날) 그날은 주문이 없다 (7차 점검 ③).
          예전엔 '전일종가 || 오늘종가' 로 오늘 종가를 빌려 썼다 — 오늘 시세를 보고 오늘 주문을
@@ -3963,7 +3970,7 @@ function infSimForward(startFrom){
       st.simLast=d;
     }
     sortHist(sess.hist); save();
-  } finally { _infSimBusy=false; }
+  } finally { _infReplayAsOf=_prevReplayAsOf; _infSimBusy=false; }
   const c=computeInf();
   return {nBuy,nSell,nDiv,upto:first[first.length-1].date,
           cyc:c.cycleSeq-nCyc0, T:c.T, qty:c.qty, avg:c.avg, bal:c.bal};
@@ -9489,7 +9496,8 @@ const SIM_KEYS={
    설정 지문만 보면 설정을 안 바꾼 세션은 옛 기록을 그대로 안고 간다 —
    그래서 지문에 규약 판을 같이 넣어, 규약이 바뀌면 전 세션이 다시 만들어지게 한다.
    ※ 체결 규칙을 고칠 때마다 이 숫자를 올릴 것. */
-const SIM_RULE_VER=12;  // 6: VR V 복귀 · 무매 아래로 LOC 추가 · 7: 제10차 · 8: VR 원문 매수표 — 밴드 1주 예약표(반올림)
+const SIM_RULE_VER=13;  // 13: 무매 M1 모의 재생 룩어헤드 제거 — 재생일 이전 봉까지만 판정
+                       // 6: VR V 복귀 · 무매 아래로 LOC 추가 · 7: 제10차 · 8: VR 원문 매수표 — 밴드 1주 예약표(반올림)
                        // 9: VR 예약 지정가 체결가 — 시가가 이미 넘은 줄은 시가로 (그날 가격 범위 밖 체결 제거)
                        // 10: VR 예약표 줄 수 제한(20) 제거 — 원문 긴 매도표·추가 매도표대로 그날 닿는 줄까지
                        // 5: VR 예약 사다리를 사이클 시작 20차 고정으로 통일
