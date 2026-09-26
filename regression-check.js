@@ -1761,7 +1761,7 @@ console.log('[37] 모의 성과 표 — 투입은 맨 오른쪽');
 {
   const op=extractFn(idx,'async function openPaper()');
   // 수익 한 칸이 최종·현재·인출 셋으로 갈렸다 (v3.53)
-  const head=(op.match(/<tr><th>전략 · 세션<\/th>[\s\S]*?<\/tr>/)||[''])[0];
+  const head=(op.match(/<thead><tr>[\s\S]*?전략 · 세션[\s\S]*?<\/tr><\/thead>/)||[''])[0];
   ok('머리글 순서',
      /전략 · 세션[\s\S]*기간[\s\S]*평가[\s\S]*최종[\s\S]*현재[\s\S]*인출[\s\S]*연[\s\S]*투입/.test(head),
      head.slice(0,90));
@@ -1880,6 +1880,23 @@ console.log('[40] 모의 일괄 적용 — 원금과 1회 적립액을 따로');
   ok('투입금도 저장값이 없으면 같은 1억 · 5만원 원화 기준을 쓴다',
      /capitalWon=.*PAPER_DEFAULT_CAPITAL_WON/.test(pw)
      && /addWon=.*PAPER_DEFAULT_ADD_WON/.test(pw));
+}
+
+/* 잘못 저장된 원화값 1회 교정 + 모의 성과 열 정렬 */
+{
+  ok('기존 95,730,000 / 47,861 같은 역산값은 한 번만 1억 / 5만원으로 교정한다',
+     /const PAPER_RAW_WON_MIGRATION=1;/.test(idx)
+     && /pc\.rawWonMigration=PAPER_RAW_WON_MIGRATION/.test(extractFn(idx,'async function paperEnsureCommonWon()')));
+  ok('전체 적용으로 사용자가 바꾼 값은 이후 다시 덮어쓰지 않는다',
+     /S\.paperCommon\.rawWonMigration=PAPER_RAW_WON_MIGRATION/.test(extractFn(idx,'async function applyAllSimStart()')));
+  const ps=extractFn(idx,'function paperSortTable(key,th)');
+  ok('모의 성과 열 제목 클릭은 DOM 행만 정렬하고 재백테스트하지 않는다',
+     /paper_tbody/.test(ps) && /querySelectorAll\('tr'\)/.test(ps) && !/openPaper\(/.test(ps));
+  const op=extractFn(idx,'async function openPaper()');
+  for(const k of ['name','days','total','ret','mdd','now','out','cagr','inflow'])
+    ok('모의 성과 정렬 헤더 '+k, new RegExp("paperSortTable\\('"+k+"',this\\)").test(op));
+  ok('모의 성과 행에 정렬용 원본값 9개를 심는다',
+     ['name','days','total','ret','mdd','now','out','cagr','inflow'].every(k=>op.includes('data-'+k+'=')));
 }
 
 console.log('[41] 한투 모의투자 연결 — 세션 설정과 주문 전송');
@@ -2618,7 +2635,7 @@ console.log('\n[54] 모의 성과 — 최종·현재·인출 세 칸');
      `${fin.toFixed(2)} vs ${(now+wd).toFixed(2)}`);
 
   // 표에 세 칸이 사용자가 말한 순서로 있어야 한다
-  const head=(idx.match(/<tr><th>전략 · 세션<\/th>[\s\S]{0,700}?<\/tr>/)||[''])[0];
+  const head=(idx.match(/<thead><tr>[\s\S]{0,1800}?전략 · 세션[\s\S]{0,1800}?<\/tr><\/thead>/)||[''])[0];
   ok('최종·현재·인출 순으로 놓았다',
      head.indexOf('>최종<')>0 && head.indexOf('>현재<')>head.indexOf('>최종<')
      && head.indexOf('>인출<')>head.indexOf('>현재<'));

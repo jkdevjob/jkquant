@@ -537,7 +537,7 @@ try{ if(localStorage.getItem('qcockpit_hadUser')==='1') document.documentElement
 </div>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.102.2</span></h1></div>
+    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.102.3</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -1646,7 +1646,7 @@ if(/^\/paper\/?$/.test(location.pathname)){
   <footer>
     <strong>JK 퀀트</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.102.2</b> · 2026-09-26</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.102.3</b> · 2026-09-26</div>
   </footer>
 </div>
 
@@ -7582,6 +7582,32 @@ function paperWonRate(r){
   if(!r||r.cur==='krw') return 1;
   return (typeof liveFX!=='undefined'&&liveFX)?liveFX:FX;
 }
+let paperSortKey='', paperSortDir=1;
+function paperSortTable(key,th){
+  const tb=$('paper_tbody'); if(!tb) return;
+  paperSortDir=(paperSortKey===key)?-paperSortDir:1;
+  paperSortKey=key;
+  const rows=[...tb.querySelectorAll('tr')];
+  rows.sort((a,b)=>{
+    const av=a.dataset[key]??'', bv=b.dataset[key]??'';
+    const aMiss=(av===''||av==='undefined'||av==='NaN'), bMiss=(bv===''||bv==='undefined'||bv==='NaN');
+    if(aMiss||bMiss) return aMiss===bMiss?0:(aMiss?1:-1);
+    let c=0;
+    if(key==='name') c=String(av).localeCompare(String(bv),'ko');
+    else{
+      const an=+av,bn=+bv;
+      c=(Number.isFinite(an)&&Number.isFinite(bn))?(an-bn):0;
+    }
+    return c*paperSortDir;
+  });
+  rows.forEach(r=>tb.appendChild(r));
+  const hr=th&&th.parentElement;
+  if(hr) [...hr.children].forEach(h=>{
+    const base=h.dataset.base||h.textContent.replace(/[ ▲▼]+$/,'');
+    h.dataset.base=base;
+    h.textContent=base+(h===th?(paperSortDir>0?' ▲':' ▼'):'');
+  });
+}
 async function openPaper(){
   const body=$('paper_body');
   if(body){ body.innerHTML='<p class="lead">전 전략 모의 세션을 오늘까지 맞추는 중… <span style="color:var(--faint)">시세를 불러오느라 몇 초 걸립니다.</span></p>'; }
@@ -7609,12 +7635,17 @@ async function openPaper(){
       : `<p class="lead">모의투자 세션이 없습니다.<br><br>· <b>새로 만들기</b> — 세션바의 <b>+ 세션</b> → <b>모의투자로 만들기</b> 체크 → 시작일 선택<br>· <b>기존 세션을 바꾸기</b> — 세션 이름을 <b>더블탭</b>하면 모의 전환·시작일을 정할 수 있습니다.<br><br>정하고 나면 그 뒤로는 알아서 오늘까지 굴러갑니다.</p>`;
   }else{
     const cur=rows.map(r=>r.price>0).every(Boolean);
-    let h=`<div class="htable-wrap"><table class="htable narrow"><tr><th>전략 · 세션</th><th>기간</th><th>평가(원)</th>`
-      + `<th title="평가금 + 잔금 + 나간 돈 ÷ 원금. 현재 + 인출 과 정확히 같습니다">최종</th>`
-      + `<th title="최대 낙폭 — 하루하루 '총자산 ÷ 그때까지 넣은 돈'을 재서 고점 대비 가장 깊이 빠진 폭. 적립금이 상승처럼 잡히지 않도록 투입으로 나눠 잽니다">MDD</th>`
-      + `<th title="평가금 + 잔금 ÷ 원금 — 계좌에 지금 남아 있는 것만">현재</th>`
-      + `<th title="매도해서 계좌 밖으로 뺀 돈(단리 적립·출금) ÷ 원금">인출</th>`
-      + `<th>연</th><th>투입(원)</th></tr>`;
+    let h=`<div class="htable-wrap"><table class="htable narrow"><thead><tr>`
+      + `<th style="cursor:pointer" onclick="paperSortTable('name',this)">전략 · 세션</th>`
+      + `<th style="cursor:pointer" onclick="paperSortTable('days',this)">기간</th>`
+      + `<th style="cursor:pointer" onclick="paperSortTable('total',this)">평가(원)</th>`
+      + `<th style="cursor:pointer" onclick="paperSortTable('ret',this)" title="평가금 + 잔금 + 나간 돈 ÷ 원금. 현재 + 인출 과 정확히 같습니다">최종</th>`
+      + `<th style="cursor:pointer" onclick="paperSortTable('mdd',this)" title="최대 낙폭 — 하루하루 '총자산 ÷ 그때까지 넣은 돈'을 재서 고점 대비 가장 깊이 빠진 폭. 적립금이 상승처럼 잡히지 않도록 투입으로 나눠 잽니다">MDD</th>`
+      + `<th style="cursor:pointer" onclick="paperSortTable('now',this)" title="평가금 + 잔금 ÷ 원금 — 계좌에 지금 남아 있는 것만">현재</th>`
+      + `<th style="cursor:pointer" onclick="paperSortTable('out',this)" title="매도해서 계좌 밖으로 뺀 돈(단리 적립·출금) ÷ 원금">인출</th>`
+      + `<th style="cursor:pointer" onclick="paperSortTable('cagr',this)">연</th>`
+      + `<th style="cursor:pointer" onclick="paperSortTable('inflow',this)">투입(원)</th>`
+      + `</tr></thead><tbody id="paper_tbody">`;
     rows.forEach(r=>{ const up=r.ret>=0, ok=r.price>0;
       const days=r.spanDays||Math.round(r.yrs*365.25);
       const per = days<45 ? `${days}일` : `${(days/365.25).toFixed(1)}년`;
@@ -7631,7 +7662,16 @@ async function openPaper(){
         : (O.simple ? `<span class="cw" style="color:var(--faint)">단리 · 인출 없음</span>` : '');
       /* 세션 이름은 툴팁으로 — 칸에는 종목과 주요 설정을 적는다 (이름은 설정과 어긋날 수 있다) */
       const _nm=String(r.name||'').replace(/</g,'&lt;').replace(/"/g,'&quot;');
-      h+=`<tr><td><b class="slink" onclick="gotoSess('${r.tab}','${r.id}')" title="${r.label} 분석으로 이동 — ${_nm}">${r.label}</b><span class="cw">${r.sym}${r.opts&&r.opts.length?' · '+r.opts.join(' · '):''}</span>${outTag}</td>
+      const _sortName=(String(r.label||'')+' '+String(r.sym||'')+' '+String(r.name||''))
+        .replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');
+      const _sortTotal=ok?(+r.total||0)*(+r.wonRate||1):'';
+      const _sortRet=(ok&&Number.isFinite(+r.ret))?+r.ret:'';
+      const _sortMdd=r.mdd&&Number.isFinite(+r.mdd.pct)?-(+r.mdd.pct):'';
+      const _sortNow=(ok&&Number.isFinite(+r.retNow))?+r.retNow:'';
+      const _sortOut=(ok&&Number.isFinite(+r.retOut))?+r.retOut:'';
+      const _sortCagr=(ok&&long&&Number.isFinite(+r.cagr))?+r.cagr:'';
+      const _sortInflow=r.inflowWon!=null?(+r.inflowWon||0):((+r.inflow||0)*(+r.wonRate||1));
+      h+=`<tr data-name="${_sortName}" data-days="${days}" data-total="${_sortTotal}" data-ret="${_sortRet}" data-mdd="${_sortMdd}" data-now="${_sortNow}" data-out="${_sortOut}" data-cagr="${_sortCagr}" data-inflow="${_sortInflow}"><td><b class="slink" onclick="gotoSess('${r.tab}','${r.id}')" title="${r.label} 분석으로 이동 — ${_nm}">${r.label}</b><span class="cw">${r.sym}${r.opts&&r.opts.length?' · '+r.opts.join(' · '):''}</span>${outTag}</td>
         <td>${per}<span class="cw">${r.nTrade}거래</span></td>`
         + (ok
           ? `<td>${paperWon(r.total,r.wonRate)}</td>
@@ -7646,7 +7686,7 @@ async function openPaper(){
           : `<td colspan="6" style="color:var(--gold)">시세 대기 — ${r.sym} 시세를 못 받았습니다. 새로고침하면 재시도합니다</td>`)
         // 투입은 맨 오른쪽 — 눈이 먼저 가야 하는 건 성과(평가·수익·연)다
         + `<td style="color:var(--dim)">${paperInflowText(r)}</td></tr>`; });
-    h+=`</table></div>`;
+    h+=`</tbody></table></div>`;
     if(!cur) h+=`<p class="note" style="margin-top:8px;color:var(--gold)">⚠ 시세를 못 받은 세션이 있습니다. 그 줄은 수익률을 비워 뒀습니다 — 해당 탭을 한 번 열면 채워집니다.</p>`;
     h+=`<p class="note" style="margin-top:8px"><b style="color:var(--vio)">전략 이름</b>을 누르면 그 세션의 분석으로 갑니다. · <b>금액은 모두 원화 표시</b> · 평가·인출 = 현재 USD/KRW · 투입 = 입력한 원화(시작일 환율로 전략 계산) · 평가 = 보유 평가금 + 현금 + 계좌 밖으로 뺀 돈(출금·단리 인출) · 투입 = 밖에서 넣은 돈(원금·적립·입금) · <b>MDD</b> = 하루하루 <b>총자산 ÷ 그때까지 넣은 돈</b>의 고점 대비 최대 낙폭(적립금이 상승으로 잡히지 않게 투입으로 나눠 잽니다). 수수료는 전략별 재생 규약을 따르고 <b>양도세는 넣지 않았습니다</b>. 분배금은 <b>현금 수령·적립은 세전</b>, 장부에 적는 배당(재투자)은 세후로 셉니다.</p>`;
     if(paperNote) h+=`<p class="note" style="color:var(--vio)">${paperNote}</p>`;
@@ -7702,6 +7742,7 @@ function applyPaperAdd(tab, st, won, rate){
    paperCommon(클라우드 저장값)이 있으면 그 값이 우선이고, 비어 있을 때만 로컬 기억값을 쓴다. */
 const PAPER_DEFAULT_CAPITAL_WON=100000000;
 const PAPER_DEFAULT_ADD_WON=50000;
+const PAPER_RAW_WON_MIGRATION=1;
 function paperFormMemoKey(){ return 'jkq_paper_form_'+(curUid||'guest'); }
 function paperFormMemoRead(){
   try{ const v=JSON.parse(localStorage.getItem(paperFormMemoKey())||'null'); return v&&typeof v==='object'?v:{}; }
@@ -7726,13 +7767,25 @@ async function paperEnsureCommonWon(){
   if(!S.paperCommon) S.paperCommon={};
   const pc=S.paperCommon, list=paperSessions();
   let changed=false;
-  if(!(+pc.capitalWon>0)){ pc.capitalWon=PAPER_DEFAULT_CAPITAL_WON; changed=true; }
-  if(!(+pc.addWon>0)){ pc.addWon=PAPER_DEFAULT_ADD_WON; changed=true; }
+  if((+pc.rawWonMigration||0)<PAPER_RAW_WON_MIGRATION){
+    pc.capitalWon=PAPER_DEFAULT_CAPITAL_WON;
+    pc.addWon=PAPER_DEFAULT_ADD_WON;
+    pc.rawWonMigration=PAPER_RAW_WON_MIGRATION;
+    changed=true;
+  }else{
+    if(!(+pc.capitalWon>0)){ pc.capitalWon=PAPER_DEFAULT_CAPITAL_WON; changed=true; }
+    if(!(+pc.addWon>0)){ pc.addWon=PAPER_DEFAULT_ADD_WON; changed=true; }
+  }
   if(!pc.simStart){
     const dates=[...new Set(list.map(([,x])=>x.simStart).filter(Boolean))].sort();
     if(dates.length===1){ pc.simStart=dates[0]; changed=true; }
   }
-  if(changed){ saveLocal(); pushRemote(); }
+  if(changed){
+    try{ localStorage.setItem(paperFormMemoKey(),JSON.stringify({
+      simStart:pc.simStart||'', capitalWon:pc.capitalWon, addWon:pc.addWon
+    })); }catch(e){}
+    saveLocal(); pushRemote();
+  }
   return changed;
 }
 function syncPaperStart(){
@@ -7808,6 +7861,7 @@ async function applyAllSimStart(){
   S.paperCommon.simStart=ns;
   if(cap!=null) S.paperCommon.capitalWon=cap;
   if(add!=null) S.paperCommon.addWon=add;
+  S.paperCommon.rawWonMigration=PAPER_RAW_WON_MIGRATION;
   paperRememberForm();
   list.forEach(([tab,x])=>{
     x.hist=[]; x.simStart=ns;
