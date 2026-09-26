@@ -141,7 +141,7 @@ export function imCompute(st, hist, days) {
   const H = hist || [];
   /* 익절 자동(실험 · imAutoTP) — 사이클 첫 매수일로 그 사이클 익절%를 정한다. 앱 computeInf 와 같은 자리·같은 식.
      days = 확정 종가 이력 [{date, close}] (autotrade 가 익절 자동 세션이면 전체 기간을 받아 넘긴다). */
-  const auto = (st.autoTp === true), mode = autoTpModeOf(st), ab = (auto && days && days.length) ? days : null;
+  const auto = (st.autoTp === true), mode = auto ? autoTpModeOf(st) : "ret120", ab = (auto && days && days.length) ? days : null;
   const tpAt = (d) => (auto && ab && d) ? imAutoTPByMode(ab, d, mode) : null;
   let cycStart = "", cycTp = null;
   let day = null, daySold = false;   // 그날 매도가 있었나 — 사이클 종료는 그날 마지막 매매 줄에서만 (앱 computeInf 와 같다 · 제14차 D15)
