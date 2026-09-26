@@ -730,15 +730,15 @@ console.log('[13] BIG 처음매수 전용 · 주문가 상한 제거');
   ok('하방 LOC도 계산된 원래 가격을 사용한다', (()=>{
       const r=imBuyOrders({first:true,half:false,buy1:1000,bal:5000,firstPrice:12,starPrice:0,avg:0,cap:5,rows:2,fee:0,cur:'usd'});
       return r.length===3 && r[0].price===12 && r[1].price<12 && r[2].price<r[1].price; })());
-  ok('큰수 % 기본값이 한 곳에 있다', /const IM_BIG_DEFAULT=15;/.test(idx) && /const IM_BIG_DEFAULT=15;/.test(bt));
+  ok('큰수 % 기본값이 한 곳에 있다', /const IM_BIG_DEFAULT=20;/.test(idx) && /const IM_BIG_DEFAULT=20;/.test(bt));
   ok('앱·백테의 imBigPct 가 같은 몸이다', (()=>{
       const re=/function imBigPct\(st\)\{[^\n]*\}/;
       const aa=(idx.match(re)||[''])[0], bb=(bt.match(re)||[''])[0];
       return !!aa && aa===bb; })());
-  ok('기본 세션이 큰수 상수를 읽는다', /big:IM_BIG_DEFAULT,/.test(idx) && !/big:15,/.test(idx));
-  ok('값으로 — 미설정·0·음수는 15, 설정값은 그대로',
-     imBigPct({})===15 && imBigPct({big:0})===15 && imBigPct({big:-3})===15
-     && imBigPct({big:25})===25 && imBigPct(undefined)===15);
+  ok('기본 세션이 큰수 상수를 읽는다', /big:IM_BIG_DEFAULT,/.test(idx) && !/big:20,/.test(idx));
+  ok('값으로 — 미설정·0·음수는 20, 설정값은 그대로',
+     imBigPct({})===20 && imBigPct({big:0})===20 && imBigPct({big:-3})===20
+     && imBigPct({big:25})===25 && imBigPct(undefined)===20);
   ok('백테 엔진이 큰수를 파라미터로 받는다',
      /function runIM\(days,tkr,cap,divs,targetPct,compound=true,bigOverride\)/.test(bt)
      && /function runIM50\(days,tkr,cap,divs,targetPct,compound=true,bigOverride\)/.test(bt));
@@ -7171,7 +7171,7 @@ console.log('\n[106] 7차 — 무매 운영 3벌 (장부·주문)');
     extractFn(pl,'function calcInfState(sess)'), extractFn(pl,'function imOrders(sess,price,rows)'),
     'return {imOrders, calcInfState};'].join('\n'))();
   // 같은 값을 쓰는가 — 큰수 기본값·리버스 지원 분할
-  ok('7차 ⑥ 서버 큰수 기본값 = 앱·백테 (15)', SV.IM_BIG_DEFAULT===IM_BIG_DEFAULT && SV.imBigPct({})===IM_BIG_DEFAULT,
+  ok('7차 ⑥ 서버 큰수 기본값 = 앱·백테 (20)', SV.IM_BIG_DEFAULT===IM_BIG_DEFAULT && SV.imBigPct({})===IM_BIG_DEFAULT,
      `${SV.IM_BIG_DEFAULT} / ${IM_BIG_DEFAULT}`);
   ok('7차 ⑤ 서버·플랜 리버스 지원 분할 = 앱 (20·40)', JSON.stringify(SV.REV_DIVS)===JSON.stringify(REV_DIVS)
      && /const REV_DIVS_PLAN=\[20,40\];/.test(pl), JSON.stringify(SV.REV_DIVS));
@@ -7985,7 +7985,7 @@ console.log('\n[117] 자산플랜 v1.28.0 — 기간마다 완전히 다른 매�
      && /function alphaFee\(q,p\)\{const gross=Math\.max\(0,\(\+q\|\|0\)\*\(\+p\|\|0\)\);return gross<=10\?0:Math\.floor\(gross\*ALPHA_FEE_RATE\*100\)\/100;\}/.test(pl));
   ok('PATH B 균형성장 배분 — SOXL 무매 50% + TECL VR 50%',
      /a=\[50,50,0\],inf=Math\.round\(total\*PATH_DEFAULTS\.classic\.infWeight\)/.test(pl)
-     && /classic:\{infWeight:\.50,vrWeight:\.50,infDiv:20,infTarget:20,infBig:15,infReverse:false,infRows:3,vrG:11,vrBand:35,vrFormula:'basic'/.test(pl)
+     && /classic:\{infWeight:\.50,vrWeight:\.50,infDiv:20,infTarget:20,infBig:20,infReverse:false,infRows:3,vrG:11,vrBand:35,vrFormula:'basic'/.test(pl)
      && /ticker:'SOXL',div:PATH_DEFAULTS\.classic\.infDiv,target:PATH_DEFAULTS\.classic\.infTarget,big:PATH_DEFAULTS\.classic\.infBig,reverse:PATH_DEFAULTS\.classic\.infReverse,compound:true/.test(pl)
      && /rows:PATH_DEFAULTS\.classic\.infRows/.test(pl));
   ok('PATH B TECL VR — Basic G11 ±35 · 초기주식60\/Pool40 · v9',
@@ -8610,16 +8610,16 @@ console.log('\n[119] 제10차 — 라오어 V4.0 원문 직접 대조 (SOURCE GO
        V({...base,big:10}).length===0 && V({...base,big:12}).length===0 && V({...base,big:15}).length===0
        && /큰수 9%\(원문 10~15% 밖\)/.test(V({...base,big:9}).join()) && /큰수 20%\(원문 10~15% 밖\)/.test(V({...base,big:20}).join()));
     ok('제10차 P1-5 · 앱·백테 판정이 같은 글자', extractFn(idx,'function imVariantOf(cfg)')===extractFn(bt,'function imVariantOf(cfg)')); }
-  ok('운영 기본값 · 큰수 15 / 리버스 gap 0 / 아래로 LOC 3줄을 사용한다',
-     /const IM_BIG_DEFAULT=15;/.test(idx) && /const REV_GAP_DEF=0;/.test(idx) && /const IM_ROWS_DEFAULT=3;/.test(idx) && /줄 수 3은 JKQuant 기본값\(원문에 개수 없음\)/.test(idx) && /줄 수 \$\{n\}줄은 <b>JKQuant 구현값<\/b>/.test(idx)
-     && /const INF_DEFAULTS_POLICY_VER=1;/.test(idx)
+  ok('운영 기본값 · 큰수 20 / 리버스 gap 0 / 아래로 LOC 3줄을 사용한다',
+     /const IM_BIG_DEFAULT=20;/.test(idx) && /const REV_GAP_DEF=0;/.test(idx) && /const IM_ROWS_DEFAULT=3;/.test(idx) && /줄 수 3은 JKQuant 기본값\(원문에 개수 없음\)/.test(idx) && /줄 수 \$\{n\}줄은 <b>JKQuant 구현값<\/b>/.test(idx)
+     && /const INF_DEFAULTS_POLICY_VER=2;/.test(idx)
      && /function migrateInfOperatingDefaults\(\)/.test(idx)
      && /st\.big=IM_BIG_DEFAULT;/.test(idx) && /st\.revGap=REV_GAP_DEF;/.test(idx) && /st\.rows=IM_ROWS_DEFAULT;/.test(idx)
      && /if\(migrateInfOperatingDefaults\(\)\) saveLocal\(\);/.test(idx)
      && /function migrateLiveInfOperatingDefaults\(\)/.test(pl)
      && /st\.big=PATH_DEFAULTS\.classic\.infBig;/.test(pl) && /st\.revGap=0;/.test(pl) && /st\.rows=PATH_DEFAULTS\.classic\.infRows;/.test(pl)
      && !/V4\.0 정식 구성입니다/.test(idx) && !/V4\.0 정식 · 1회매수금÷\(수량\+k\) · 0이면/.test(idx)
-     && /V4\.0 변형 · 복리 · 리버스 OFF · 큰수15% · 하방3줄/.test(pl)
+     && /V4\.0 변형 · 복리 · 리버스 OFF · 큰수20% · 하방3줄/.test(pl)
      && !/큰수12\.5% · 하방12줄/.test(pl));
   ok('제10차 P2-6 · 리버스 매수 −0.01 을 공식 확정이라 적지 않는다 (주문표·설정·플랜)',
      !/'공식 기본: 별지점 −\$0\.01'/.test(idx) && /원문은 \\'별지점 아래\\' — −0\.01 은 일반모드 규약을 따른 구현값/.test(idx)
