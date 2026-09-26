@@ -537,7 +537,7 @@ try{ if(localStorage.getItem('qcockpit_hadUser')==='1') document.documentElement
 </div>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.100.1</span></h1></div>
+    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.100.2</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -1646,7 +1646,7 @@ if(/^\/paper\/?$/.test(location.pathname)){
   <footer>
     <strong>JK 퀀트</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.100.1</b> · 2026-09-26</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.100.2</b> · 2026-09-26</div>
   </footer>
 </div>
 
@@ -1816,7 +1816,7 @@ if(/^\/paper\/?$/.test(location.pathname)){
   <button class="mx" onclick="closePaper()" aria-label="닫기">✕</button>
   <h3>🧪 모의투자 성과</h3><p>모의로 표시한 세션만 모아 보여줍니다.</p>
   <div class="card" style="padding:16px;margin-bottom:14px">
-    <div style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap">
+    <div style="display:grid;grid-template-columns:minmax(210px,1fr) minmax(210px,1fr) minmax(210px,1fr) 110px;gap:12px;align-items:end">
       <div class="field" style="flex:1 1 210px;margin:0">
         <label style="font-size:12px;margin-bottom:6px">모의 시작일 <span class="hint" id="p_simstart_n"></span></label>
         <input id="p_simstart" type="date">
@@ -1831,7 +1831,7 @@ if(/^\/paper\/?$/.test(location.pathname)){
         <input id="p_addamt" type="text" inputmode="decimal" placeholder="비우면 그대로" oninput="commaInput(this)">
         <div class="hint" id="p_addamt_n" style="margin-top:5px;min-height:16px;line-height:1.35"></div>
       </div>
-      <button class="ghostbtn" style="width:auto;min-width:96px;height:42px;margin:0;padding:0 16px" onclick="applyAllSimStart()">전체 적용</button>
+      <button class="ghostbtn" style="width:110px;height:42px;margin:0;padding:0 14px;align-self:end" onclick="applyAllSimStart()">전체 적용</button>
     </div>
     <div class="note" style="margin-top:12px;line-height:1.7">
       <div><b>전체 적용</b>은 모의 세션의 시작일·금액을 한 번에 맞추고, 기존 모의 기록을 새 시작일부터 다시 계산합니다. <b>실계좌는 변경하지 않습니다.</b></div>
@@ -7644,7 +7644,7 @@ function paperValSummary(fieldOf){
    환율 조회 실패 때만 현재/폴백 환율을 쓰고 ≈ 로 근사임을 표시한다. */
 async function paperValSummaryWon(fieldOf){
   const list=paperSessions().filter(([tab,x])=>fieldOf(tab,(x.settings||{})));
-  if(!list.length) return '해당 세션 없음';
+  if(!list.length) return {text:'해당 세션 없음', detail:''};
   const seen=[];
   for(const [tab,x] of list){
     const st=x.settings||{}, f=fieldOf(tab,st); if(!f) continue;
@@ -7655,14 +7655,16 @@ async function paperValSummaryWon(fieldOf){
       const fx=d ? await fxAt(d) : null;
       const rate=(fx&&fx.rate>0) ? fx.rate : ((typeof liveFX!=='undefined'&&liveFX)?liveFX:FX);
       const approx=(fx&&fx.rate>0)?'':'≈';
-      txt+=` / ${approx}${Math.round(v*rate).toLocaleString('en-US')}₩`;
+      txt+=` ≈ ${approx}${Math.round(v*rate).toLocaleString('en-US')}₩`;
     }
     if(!seen.includes(txt)) seen.push(txt);
   }
   const n=list.length;
-  if(seen.length===1) return `현재 ${seen[0]} · ${n}개`;
-  if(seen.length<=3) return `현재 ${seen.join(' / ')} · ${n}개`;
-  return `현재 여러 값 · ${n}개`;
+  if(seen.length===1) return {text:`현재 ${seen[0]} · ${n}개`, detail:''};
+  return {
+    text:`현재 ${n}개 · 값 ${seen.length}종`,
+    detail:seen.join(' / ')
+  };
 }
 function syncPaperStart(){
   const el=$('p_simstart'); if(!el) return;
@@ -7677,9 +7679,9 @@ function syncPaperStart(){
   const c=$('p_capital'); if(c){ c.value=''; c.disabled=!list.length; }
   const a=$('p_addamt');  if(a){ a.value=''; a.disabled=!list.length; }
   const cn=$('p_capital_n'); if(cn){ cn.textContent=paperValSummary(paperCapField);
-    paperValSummaryWon(paperCapField).then(v=>{ if($('p_capital_n')===cn) cn.textContent=v; }).catch(()=>{}); }
+    paperValSummaryWon(paperCapField).then(v=>{ if($('p_capital_n')===cn){ cn.textContent=v.text; cn.title=v.detail||''; } }).catch(()=>{}); }
   const an=$('p_addamt_n');  if(an){ an.textContent=paperValSummary(paperAddField);
-    paperValSummaryWon(paperAddField).then(v=>{ if($('p_addamt_n')===an) an.textContent=v; }).catch(()=>{}); }
+    paperValSummaryWon(paperAddField).then(v=>{ if($('p_addamt_n')===an){ an.textContent=v.text; an.title=v.detail||''; } }).catch(()=>{}); }
 }
 async function applyAllSimStart(){
   const el=$('p_simstart'); const ns=el&&el.value;
