@@ -32,9 +32,8 @@ const revSupported = (div) => REV_DIVS.includes(+div);
    장부에 리버스 기록이 남아 있어도 규칙이 없는 분할이면 리버스로 보지 않는다. */
 const revEnabled = (st) => !!st && st.reverse === true && revSupported(st.div);
 /* 큰수 기본값 — 처음매수 LOC 가격에 사용. index.html·backtest.html 의 IM_BIG_DEFAULT 와 같은 값.
-   예전엔 여기만 20 이었다: big 을 저장하지 않은 옛 세션은 앱 주문표(15%)와 서버 자동주문(20%)의
-   처음매수 LOC 가격이 달랐다 (실데이터 1,499일 중 269일, 7차 점검 ⑥). */
-export const IM_BIG_DEFAULT = 15;
+   JKQuant 운영 기본은 사용자 결정으로 20%이며, 앱·백테·서버·플랜이 모두 같은 값을 쓴다. */
+export const IM_BIG_DEFAULT = 20;
 export function imBigPct(st) { const v = st && st.big; return (v != null && isFinite(+v) && +v > 0) ? +v : IM_BIG_DEFAULT; }
 
 /* 별% = base − (base×0.1×20/div)×T */
