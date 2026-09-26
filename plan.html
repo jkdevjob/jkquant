@@ -192,7 +192,7 @@ th:first-child,td:first-child{text-align:left}
 <body>
 <div class="wrap">
   <div class="top">
-    <div class="brand"><div class="logo">Asset Plan</div><h1>자산플랜 <span class="ver">v1.33.0</span></h1></div>
+    <div class="brand"><div class="logo">Asset Plan</div><h1>자산플랜 <span class="ver">v1.34.0</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
       <div class="jkmenu" id="jkmenuWrap">
@@ -1134,11 +1134,29 @@ function imAutoTP(bars, date){
   const r=(x/y-1)*100;
   return {tp:r<0?IM_AUTOTP.lo:IM_AUTOTP.hi, ret:r, asOf:String(bars[j].date)};
 }
+function normalizeAutoTpMode(v){return v==='ma150'?'ma150':'ret120';}
+function autoTpModeOf(st){return normalizeAutoTpMode(st&&st.autoTpMode);}
+function autoTpLabel(mode){return normalizeAutoTpMode(mode)==='ma150'?'MA150':'120일 수익률';}
+const IM_AUTOTP_MA150={len:150,lo:10,hi:20};
+function imAutoTPMA150(bars,date){
+  let a=0,b=(bars||[]).length;
+  while(a<b){const m=(a+b)>>1;if(String(bars[m].date)<date)a=m+1;else b=m;}
+  const j=a-1;if(j<IM_AUTOTP_MA150.len-1)return null;
+  let sum=0;
+  for(let i=j-IM_AUTOTP_MA150.len+1;i<=j;i++){const v=+(bars[i]&&bars[i].close);if(!(v>0))return null;sum+=v;}
+  const close=+(bars[j]&&bars[j].close),ma=sum/IM_AUTOTP_MA150.len;
+  if(!(close>0&&ma>0))return null;
+  return {tp:close<ma?IM_AUTOTP_MA150.lo:IM_AUTOTP_MA150.hi,close,ma,asOf:String(bars[j].date),mode:'ma150'};
+}
+function imAutoTPByMode(bars,date,mode){
+  if(normalizeAutoTpMode(mode)==='ma150')return imAutoTPMA150(bars,date);
+  const r=imAutoTP(bars,date);return r?{...r,mode:'ret120'}:null;
+}
 function calcInfState(sess){
   const st=sess.settings||{},hist=sess.hist||[];let avg=0,qty=0,inv=0,realized=0,T=0,withdrawn=0,saved=0,divTotal=0,revState='NORMAL',revFrom='';
   const simple=st.compound===false;
   /* 익절 자동(실험 · imAutoTP) — 앱 computeInf · 서버 imCompute 와 같은 자리·같은 식. 확정 종가 봉은 imOrders 가 sess.autoBars 로 넘긴다 */
-  const auto=st.autoTp===true,ab=(auto&&sess.autoBars&&sess.autoBars.length)?sess.autoBars:null,tpAt=d=>(auto&&ab&&d)?imAutoTP(ab,d):null;
+  const auto=st.autoTp===true,mode=autoTpModeOf(st),ab=(auto&&sess.autoBars&&sess.autoBars.length)?sess.autoBars:null,tpAt=d=>(auto&&ab&&d)?imAutoTPByMode(ab,d,mode):null;
   let cycStart='',cycTp=null;
   let day=null,daySold=false;   // 그날 매도가 있었나 — 사이클 종료는 그날 마지막 매매 줄에서만 (앱 computeInf 와 같다 · 제14차 D15)
   for(let hi=0;hi<hist.length;hi++){
@@ -1826,7 +1844,7 @@ async function refreshLive(){
       $('outsideCashNote').textContent=c.outside>0
         ? '무매 단리·출금으로 전략 밖에 빠진 누계 '+usd(c.outside)+' (단리 자동인출 '+usd(c.saved)+' · 직접출금 '+usd(c.withdrawn)+'). 실제 SGOV에 보관 중이면 SGOV 잔고에 직접 포함하세요.'
         : '무매 전략 밖 누적 인출금 없음 · SGOV 실보유액은 현재 SGOV 입력값을 사용합니다.';
-      $('liveInfMeta').textContent=(inf.name||'SOXL 세션')+' · '+(st.div||20)+'분할 / '+(st.autoTp===true?'익절 자동 '+(c.tp||20)+'%(실험)':(st.target||20)+'%')+' / '+(st.compound===false?'단리':'복리')+' / 큰수 '+(st.big!=null?st.big:15)+'%'+' · T '+c.T.toFixed(2)+' · 보유 '+Math.round(c.qty)+'주 · 운용자산 '+usd(mmValue);
+      $('liveInfMeta').textContent=(inf.name||'SOXL 세션')+' · '+(st.div||20)+'분할 / '+(st.autoTp===true?('익절 자동 '+autoTpLabel(autoTpModeOf(st))+' '+(c.tp||20)+'%(실험)'):(st.target||20)+'%')+' / '+(st.compound===false?'단리':'복리')+' / 큰수 '+(st.big!=null?st.big:15)+'%'+' · T '+c.T.toFixed(2)+' · 보유 '+Math.round(c.qty)+'주 · 운용자산 '+usd(mmValue);
       const primary=r.orders.filter(o=>o.tag!=='예약');$('liveInf').innerHTML=(primary.length?primary.map(orderHtml).join(''):waitHtml('오늘 신규 주문 없음',r.note||'현재 상태에서 실행할 주문이 없습니다.'));
       mirrorStrategyTab('soxlTabMeta','soxlTabActions',$('liveInfMeta').textContent,$('liveInf').innerHTML);
       mirrorStrategyTab('bSoxlMeta','bSoxlActions',$('liveInfMeta').textContent,$('liveInf').innerHTML);
