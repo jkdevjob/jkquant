@@ -537,7 +537,7 @@ try{ if(localStorage.getItem('qcockpit_hadUser')==='1') document.documentElement
 </div>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.101.8</span></h1></div>
+    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.101.9</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -1646,7 +1646,7 @@ if(/^\/paper\/?$/.test(location.pathname)){
   <footer>
     <strong>JK 퀀트</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.101.8</b> · 2026-09-26</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.101.9</b> · 2026-09-26</div>
   </footer>
 </div>
 
@@ -1824,13 +1824,13 @@ if(/^\/paper\/?$/.test(location.pathname)){
       </div>
       <div class="field" style="min-width:0;margin:0">
         <label style="font-size:12px;margin-bottom:6px">원금 <span class="hint">원화 입력</span></label>
-        <input id="p_capital" type="text" inputmode="decimal" placeholder="원화 입력" oninput="commaInput(this)">
+        <input id="p_capital" type="text" inputmode="decimal" placeholder="원화 입력" oninput="commaInput(this);paperRememberForm()">
       </div>
       <div class="field" style="min-width:0;margin:0">
         <label style="font-size:12px;margin-bottom:6px">1회 적립액 <span class="hint">원화 입력</span></label>
-        <input id="p_addamt" type="text" inputmode="decimal" placeholder="원화 입력" oninput="commaInput(this)">
+        <input id="p_addamt" type="text" inputmode="decimal" placeholder="원화 입력" oninput="commaInput(this);paperRememberForm()">
       </div>
-      <div style="display:flex;justify-content:flex-end;align-items:end;min-width:0"><button class="ghostbtn" style="width:100%;max-width:160px;height:42px;margin:0;padding:0 14px" onclick="applyAllSimStart()">전체 적용</button></div>
+      <div style="display:flex;align-items:end;min-width:0;width:100%"><button class="ghostbtn" style="width:100%;height:42px;margin:0;padding:0 14px;font-size:14px;font-weight:700" onclick="applyAllSimStart()">전체 적용</button></div>
     </div>
     <div class="note" style="margin-top:12px;line-height:1.7">
       <div><b>전체 적용</b>은 모의 세션의 시작일·금액을 한 번에 맞추고, 기존 모의 기록을 새 시작일부터 다시 계산합니다. <b>실계좌는 변경하지 않습니다.</b></div>
@@ -7672,6 +7672,25 @@ function applyPaperAdd(tab, st, won, rate){
   st[f]=wonToSess(won,st,rate);
   return true;
 }
+/* 모의 성과 상단 입력값은 전략 적용 전에도 마지막 입력을 기억한다.
+   실제 전략값은 전체 적용을 눌렀을 때만 바뀌고, 여기서는 화면 복원용으로만 쓴다.
+   paperCommon(클라우드 저장값)이 있으면 그 값이 우선이고, 비어 있을 때만 로컬 기억값을 쓴다. */
+function paperFormMemoKey(){ return 'jkq_paper_form_'+(curUid||'guest'); }
+function paperFormMemoRead(){
+  try{ const v=JSON.parse(localStorage.getItem(paperFormMemoKey())||'null'); return v&&typeof v==='object'?v:{}; }
+  catch(e){ return {}; }
+}
+function paperRememberForm(){
+  try{
+    const c=$('p_capital'), a=$('p_addamt'), d=$('p_simstart');
+    const cap=c?+unComma(c.value||''):0, add=a?+unComma(a.value||''):0;
+    localStorage.setItem(paperFormMemoKey(),JSON.stringify({
+      simStart:d&&d.value?d.value:'',
+      capitalWon:cap>0?cap:null,
+      addWon:add>0?add:null
+    }));
+  }catch(e){}
+}
 function syncPaperStart(){
   const el=$('p_simstart'); if(!el) return;
   const list=paperSessions();
@@ -7685,14 +7704,16 @@ function syncPaperStart(){
   }
   const min=paperMinDate(), today=new Date().toISOString().slice(0,10);
   el.min=min; el.max=today;
-  const pc=(S&&S.paperCommon)||{};
-  const common=pc.simStart;
+  const pc=(S&&S.paperCommon)||{}, memo=paperFormMemoRead();
+  const common=pc.simStart||memo.simStart;
   const pick=(common&&common>=min&&common<=today)?common:(uniq.length===1&&uniq[0]>=min?uniq[0]:today);
   el.value=pick;
   el.disabled=!list.length;
   const fmtWonInput=v=>(+v>0)?(+v).toLocaleString('ko-KR',{maximumFractionDigits:2}):'';
-  const c=$('p_capital'); if(c){ c.value=fmtWonInput(pc.capitalWon); c.disabled=!list.length; }
-  const a=$('p_addamt');  if(a){ a.value=fmtWonInput(pc.addWon); a.disabled=!list.length; }
+  const capWon=(+pc.capitalWon>0)?pc.capitalWon:memo.capitalWon;
+  const addWon=(+pc.addWon>0)?pc.addWon:memo.addWon;
+  const c=$('p_capital'); if(c){ c.value=fmtWonInput(capWon); c.disabled=!list.length; }
+  const a=$('p_addamt');  if(a){ a.value=fmtWonInput(addWon); a.disabled=!list.length; }
 }
 async function applyAllSimStart(){
   const el=$('p_simstart'); const ns=el&&el.value;
@@ -7743,6 +7764,7 @@ async function applyAllSimStart(){
   S.paperCommon.simStart=ns;
   if(cap!=null) S.paperCommon.capitalWon=cap;
   if(add!=null) S.paperCommon.addWon=add;
+  paperRememberForm();
   list.forEach(([tab,x])=>{
     x.hist=[]; x.simStart=ns;
     if(x.settings){ delete x.settings.simLast; delete x.settings.cycStart; delete x.settings.startCyc; delete x.settings.cycLog; x.settings.startv=0;
