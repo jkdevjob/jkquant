@@ -6634,7 +6634,8 @@ console.log('\n[100] 5년 플랜·VR 예약주문 동기화');
     ok(label+': 반대편 체결이 있어도 사다리 기준수량은 사이클 시작값 고정',
        !!s1 && near(s1.price,115,1e-9), s1?String(s1.price):'no fill');
   }
-  ok('운영: 모의 규약 버전 11 — 익절 변환 자동 통합규칙 변경으로 자동생성 기록 재생성', /const SIM_RULE_VER=11;/.test(idx));
+  /* 통합규칙 변경은 11 에서 올렸다 — 뒤 변경(M1 = 12)이 또 올려도 깨지지 않게 '11 이상'을 본다. 지금 값은 [G] 가 따로 못 박는다 */
+  ok('운영: 모의 규약 버전 11 이상 — 익절 변환 자동 통합규칙 변경으로 자동생성 기록 재생성', (()=>{ const m=idx.match(/const SIM_RULE_VER=(\d+);/); return !!m && +m[1]>=11; })());
   ok('운영·백테: 잘못된 “공식 (V 복귀)” UI 제거', !/공식 \(V 복귀\)/.test(idx) && !/공식 \(V 복귀\)/.test(bt));
   ok('플랜: 현재 사이클 시작수량과 양쪽 체결차수를 복원', /cycleBaseQty/.test(pl) && /cycleSellFilled/.test(pl) && /cycleBuyFilled/.test(pl));
 }
