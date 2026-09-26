@@ -192,7 +192,7 @@ th:first-child,td:first-child{text-align:left}
 <body>
 <div class="wrap">
   <div class="top">
-    <div class="brand"><div class="logo">Asset Plan</div><h1>자산플랜 <span class="ver">v1.36.0</span></h1></div>
+    <div class="brand"><div class="logo">Asset Plan</div><h1>자산플랜 <span class="ver">v1.36.1</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
       <div class="jkmenu" id="jkmenuWrap">
@@ -377,7 +377,7 @@ th:first-child,td:first-child{text-align:left}
       <h2>SOXL 무매 50% + TECL VR 50%</h2>
       <div class="path-note" id="classicCapitalNote">입력한 초기자금을 SOXL 50% / TECL VR 50%로 독립 배정합니다. 두 전략은 서로 리밸런싱하지 않습니다.</div>
       <div class="guidegrid">
-        <div class="guidekpi"><div class="k">SOXL 무매</div><div class="v">20분할 · 익절 +20%</div><div class="sub">V4.0 변형 · 복리 · 리버스 OFF · 큰수15% · 하방3줄</div></div>
+        <div class="guidekpi"><div class="k">SOXL 무매</div><div class="v">20분할 · 익절 +20%</div><div class="sub">V4.0 변형 · 복리 · 리버스 OFF · 큰수20% · 하방3줄</div></div>
         <div class="guidekpi"><div class="k">TECL VR</div><div class="v">G11 · ±35%</div><div class="sub">Basic V갱신식 · 거치식 · 14일 · 균형성장 기본값</div></div>
         <div class="guidekpi"><div class="k">VR 초기배정</div><div class="v">TECL 60 / Pool 40</div><div class="sub">Pool 사용한도 50%</div></div>
         <div class="guidekpi"><div class="k">운용 엔진</div><div class="v">무매 V4 + VR 5.0</div><div class="sub">5년 롤링 강건값을 실전 기본값으로 사용 · 원안/연구값은 별도 비교</div></div>
@@ -420,7 +420,7 @@ th:first-child,td:first-child{text-align:left}
       <div class="guidegrid">
         <div class="guidekpi"><div class="k">종목</div><div class="v">SOXL</div></div>
         <div class="guidekpi"><div class="k">분할 / 익절</div><div class="v">20분할 / +20%</div></div>
-        <div class="guidekpi"><div class="k">운용</div><div class="v">복리 · 리버스 ON · 큰수 +15%</div></div>
+        <div class="guidekpi"><div class="k">운용</div><div class="v">복리 · 리버스 ON · 큰수 +20%</div></div>
         <div class="guidekpi"><div class="k">목표비중</div><div class="v" id="soxlTargetPct">40%</div></div>
       </div>
       <div class="sessionbar">
@@ -699,7 +699,7 @@ const plusYears=(iso,n)=>{const d=new Date(iso+"T00:00:00Z");d.setUTCFullYear(d.
 const days=(a,b)=>(new Date(b+"T00:00:00Z")-new Date(a+"T00:00:00Z"))/86400000;
 const PATH_DEFAULTS={
   alpha:{teclWeight:.70,guardWeight:.30,ivsLook:20,ivsS0:.55,ivsBand:.10,guardMA:225,guardBand:.01},
-  classic:{infWeight:.50,vrWeight:.50,infDiv:20,infTarget:20,infBig:15,infReverse:false,infRows:3,vrG:11,vrBand:35,vrFormula:'basic',vrStockPct:.60,vrPoolLimit:.50}
+  classic:{infWeight:.50,vrWeight:.50,infDiv:20,infTarget:20,infBig:20,infReverse:false,infRows:3,vrG:11,vrBand:35,vrFormula:'basic',vrStockPct:.60,vrPoolLimit:.50}
 };
 const ASSET_STRATEGIES={
   5:{years:5,key:'ivsGuard',name:'5년 · 역분산 + Guard',risk:'최공격',desc:'TECL 역분산 + TQQQ SMA225 Guard'},
@@ -781,7 +781,7 @@ function mirrorStrategyTab(metaId,actionsId,meta,html){
 
 const STAGES={
   1:{title:"STEP 1 · 성장 가속",badge:"GROWTH",desc:"5년 종료시점까지 성장과 생존을 함께 최적화하는 단계",main:[30,20,50],sleeve:"QLD/SGOV 슬리브는 평상시 QLD 60 / SGOV 40. 하락장 기준 SGOV를 30/30/20/20으로 QLD에 투입합니다.",
-     checks:["SOXL 무매는 20분할·익절20%·복리·리버스 OFF(V4.0 변형)·큰수15%를 사용합니다.","TECL VR은 거치식·Basic V갱신식·G5·밴드30·Pool 사용한도 50%를 사용합니다.","QLD/SGOV 슬리브는 60:40에서 시작하고 하락장 투입은 기준 SGOV의 30/30/20/20으로 운용합니다.","월 추가자금은 세 전략축 중 목표비중 대비 가장 부족한 축에 먼저 배분합니다."]},
+     checks:["SOXL 무매는 20분할·익절20%·복리·리버스 OFF(V4.0 변형)·큰수20%를 사용합니다.","TECL VR은 거치식·Basic V갱신식·G5·밴드30·Pool 사용한도 50%를 사용합니다.","QLD/SGOV 슬리브는 60:40에서 시작하고 하락장 투입은 기준 SGOV의 30/30/20/20으로 운용합니다.","월 추가자금은 세 전략축 중 목표비중 대비 가장 부족한 축에 먼저 배분합니다."]},
   2:{title:"STEP 2 · 수익 보호",badge:"PROTECT",desc:"번 돈을 일부 잠그기 시작하는 단계",main:[20,15,65],sleeve:"QLD/SGOV 슬리브 65%를 보호축으로 사용합니다. STEP 2에서는 신규자금과 익절금을 우선 SGOV 쪽으로 이동합니다.",
      checks:["SOXL 무매와 TQQQ VR 합산 목표를 35% 수준으로 낮춥니다.","매도·익절로 생긴 현금을 우선 SGOV 보호자금으로 이동합니다.","QLD/SGOV 슬리브를 전체의 65%까지 키웁니다.","목표금액 85% 또는 목표일까지 12개월이 되면 STEP 3으로 넘어갑니다."]},
   3:{title:"STEP 3 · 전환 준비",badge:"TRANSITION",desc:"마지막 폭락에 목표자산을 잃지 않도록 감속하는 단계",main:[10,5,85],sleeve:"QLD/SGOV 슬리브 85%를 전환 준비축으로 사용합니다. 목표일이 가까울수록 SGOV·현금성 비중을 우선 확보합니다.",
@@ -820,8 +820,8 @@ function ensureLiveBoxes(){
   if(!Array.isArray(liveState.vr.sessions))liveState.vr.sessions=[];
 }
 /* 운영화면과 같은 1회성 무매 설정 마이그레이션 마커를 공유한다.
-   기존 계정/브라우저에 남은 큰수·리버스 gap·하방 LOC 줄 수를 15/0/3으로 한 번 맞춘다. */
-const INF_DEFAULTS_POLICY_VER=1;
+   기존 계정/브라우저에 남은 큰수·리버스 gap·하방 LOC 줄 수를 20/0/3으로 한 번 맞춘다. */
+const INF_DEFAULTS_POLICY_VER=2;
 function migrateLiveInfOperatingDefaults(){
   if(!liveState||!liveState.inf||!Array.isArray(liveState.inf.sessions))return false;
   if((+liveState._infDefaultsPolicyVer||0)>=INF_DEFAULTS_POLICY_VER)return false;
@@ -1862,7 +1862,7 @@ async function refreshLive(){
       $('outsideCashNote').textContent=c.outside>0
         ? '무매 단리·출금으로 전략 밖에 빠진 누계 '+usd(c.outside)+' (단리 자동인출 '+usd(c.saved)+' · 직접출금 '+usd(c.withdrawn)+'). 실제 SGOV에 보관 중이면 SGOV 잔고에 직접 포함하세요.'
         : '무매 전략 밖 누적 인출금 없음 · SGOV 실보유액은 현재 SGOV 입력값을 사용합니다.';
-      $('liveInfMeta').textContent=(inf.name||'SOXL 세션')+' · '+(st.div||20)+'분할 / '+(st.autoTp===true?('익절 변환 자동 '+autoTpLabel(autoTpModeOf(st))+' '+(c.tp||20)+'%(실험)'):(st.target||20)+'%')+' / '+(st.compound===false?'단리':'복리')+' / 큰수 '+(st.big!=null?st.big:15)+'%'+' · T '+c.T.toFixed(2)+' · 보유 '+Math.round(c.qty)+'주 · 운용자산 '+usd(mmValue);
+      $('liveInfMeta').textContent=(inf.name||'SOXL 세션')+' · '+(st.div||20)+'분할 / '+(st.autoTp===true?('익절 변환 자동 '+autoTpLabel(autoTpModeOf(st))+' '+(c.tp||20)+'%(실험)'):(st.target||20)+'%')+' / '+(st.compound===false?'단리':'복리')+' / 큰수 '+(st.big!=null?st.big:20)+'%'+' · T '+c.T.toFixed(2)+' · 보유 '+Math.round(c.qty)+'주 · 운용자산 '+usd(mmValue);
       const primary=r.orders.filter(o=>o.tag!=='예약');$('liveInf').innerHTML=(primary.length?primary.map(orderHtml).join(''):waitHtml('오늘 신규 주문 없음',r.note||'현재 상태에서 실행할 주문이 없습니다.'));
       mirrorStrategyTab('soxlTabMeta','soxlTabActions',$('liveInfMeta').textContent,$('liveInf').innerHTML);
       mirrorStrategyTab('bSoxlMeta','bSoxlActions',$('liveInfMeta').textContent,$('liveInf').innerHTML);
