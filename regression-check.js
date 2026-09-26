@@ -1588,6 +1588,10 @@ console.log('[30] 모의 시작일 일괄 변경');
   ok('VR은 initAmt', /if\(tab==='vr'\) return 'initAmt';/.test(cf));
   ok('적립·거치는 거치식만', /if\(tab==='dca'\) return \(st&&st\.mode==='lump'\) \? 'amount' : null;/.test(cf));
   ok('ASAP은 원금 개념이 없다', /return null;\s*\/\/ asap/.test(cf));
+  ok('ASAP 전체 적용은 base만 바꾸고 mid/deep는 건드리지 않는다',
+     /if\(tab==='asap'\) return 'base';/.test(extractFn(idx,'function paperAddField(tab, st)'))
+     && !/paperAddField[\s\S]{0,200}mid/.test(extractFn(idx,'function paperAddField(tab, st)'))
+     && !/paperAddField[\s\S]{0,200}deep/.test(extractFn(idx,'function paperAddField(tab, st)')));
   // v3.34부터 금액 칸이 둘(원금·1회 적립액)이라 읽기는 paperReadAmt가 맡는다 — 자세한 건 [40]
   const rd=extractFn(idx,'function paperReadAmt(id, label)');
   ok('원금은 비워두면 안 바꾼다', /if\(!raw\) return null;/.test(rd)
@@ -1827,10 +1831,12 @@ console.log('[40] 모의 일괄 적용 — 원금과 1회 적립액을 따로');
   ok('칸마다 현재값 힌트가 있다', /id="p_capital_n"/.test(idx) && /id="p_addamt_n"/.test(idx));
   const af=extractFn(idx,'function paperAddField(tab, st)');
   ok('적립액 매핑 존재', !!af);
-  ok('적립식만 적립액으로 본다', /mode==='lump'\) \? null : 'amount'/.test(af));
+  ok('적립식과 ASAP base를 1회 적립액으로 본다',
+     /mode==='lump'\) \? null : 'amount'/.test(af)
+     && /if\(tab==='asap'\) return 'base';/.test(af));
   const cf=extractFn(idx,'function paperCapField(tab, st)');
   ok('거치식은 여전히 원금', /mode==='lump'\) \? 'amount' : null/.test(cf));
-  ok('ASAP은 둘 다 아니다', /return null;\s*\/\/ asap/.test(cf) && !/asap/.test(af));
+  ok('ASAP은 원금이 아니라 1회 적립액(base) 대상이다', /return null;\s*\/\/ asap/.test(cf) && /if\(tab==='asap'\) return 'base';/.test(af));
   const vs=extractFn(idx,'function paperValSummary(fieldOf)');
   ok('현재값 요약 함수 존재', !!vs);
   ok('세션 통화로 찍는다', /wnCur\(\+st\[f\]\|\|0, curOf\(st\)\)/.test(vs));
