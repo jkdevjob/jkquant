@@ -537,7 +537,7 @@ try{ if(localStorage.getItem('qcockpit_hadUser')==='1') document.documentElement
 </div>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.102.1</span></h1></div>
+    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.102.2</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -1646,7 +1646,7 @@ if(/^\/paper\/?$/.test(location.pathname)){
   <footer>
     <strong>JK 퀀트</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.102.1</b> · 2026-09-26</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.102.2</b> · 2026-09-26</div>
   </footer>
 </div>
 
@@ -7559,13 +7559,15 @@ function paperInflowWon(tab, sess, inflow){
   const st=(sess&&sess.settings)||{}, v=+inflow||0;
   if(isKrwSt(st)) return v;
   const pc=(S&&S.paperCommon)||{};
+  const capitalWon=(+pc.capitalWon>0)?+pc.capitalWon:PAPER_DEFAULT_CAPITAL_WON;
+  const addWon=(+pc.addWon>0)?+pc.addWon:PAPER_DEFAULT_ADD_WON;
   let rate=0;
   if(!pc.simStart || !sess.simStart || pc.simStart===sess.simStart){
     const cf=paperCapField(tab,st);
-    if(cf && +pc.capitalWon>0 && +st[cf]>0) rate=(+pc.capitalWon)/(+st[cf]);
+    if(cf && +st[cf]>0) rate=capitalWon/(+st[cf]);
     if(!(rate>0)){
       const af=paperAddField(tab,st);
-      if(af && +pc.addWon>0 && +st[af]>0) rate=(+pc.addWon)/(+st[af]);
+      if(af && +st[af]>0) rate=addWon/(+st[af]);
     }
   }
   if(!(rate>0)) rate=+(sess&&sess.paperFxRate)||0;
@@ -7698,6 +7700,8 @@ function applyPaperAdd(tab, st, won, rate){
 /* 모의 성과 상단 입력값은 전략 적용 전에도 마지막 입력을 기억한다.
    실제 전략값은 전체 적용을 눌렀을 때만 바뀌고, 여기서는 화면 복원용으로만 쓴다.
    paperCommon(클라우드 저장값)이 있으면 그 값이 우선이고, 비어 있을 때만 로컬 기억값을 쓴다. */
+const PAPER_DEFAULT_CAPITAL_WON=100000000;
+const PAPER_DEFAULT_ADD_WON=50000;
 function paperFormMemoKey(){ return 'jkq_paper_form_'+(curUid||'guest'); }
 function paperFormMemoRead(){
   try{ const v=JSON.parse(localStorage.getItem(paperFormMemoKey())||'null'); return v&&typeof v==='object'?v:{}; }
@@ -7714,49 +7718,19 @@ function paperRememberForm(){
     }));
   }catch(e){}
 }
-/* 예전 모의 세션은 원화 원본(paperCommon)과 사용 환율(paperFxRate)이 없었다.
-   같은 시작일의 세션이면 그 날짜 환율로 내부 달러값을 원화로 역복원한다.
-   이후부터는 복원값을 paperCommon 에 저장해 입력칸·투입 표시가 같은 원화를 쓴다. */
-function paperLegacyWon(v){
-  const x=+v||0; if(!(x>0)) return 0;
-  const step=x>=10000000?10000:x>=1000000?1000:x>=10000?100:1;
-  const r=Math.round(x/step)*step;
-  return Math.abs(r-x)<=Math.max(2,x*0.0002) ? r : Math.round(x);
-}
-function paperMedian(a){
-  const x=(a||[]).filter(v=>v>0&&isFinite(v)).sort((p,q)=>p-q);
-  if(!x.length) return 0;
-  const m=x.length>>1; return x.length%2?x[m]:(x[m-1]+x[m])/2;
-}
+/* 구버전에는 paperCommon 원화 원본이 없을 수 있다.
+   사용자가 처음 지정한 기준값(원금 1억원 · 1회 적립액 5만원)을 원화 원본으로 채운다.
+   이후 전체 적용에서 사용자가 값을 바꾸면 저장값이 이 기본값보다 우선한다. */
 async function paperEnsureCommonWon(){
   if(!S) return false;
   if(!S.paperCommon) S.paperCommon={};
   const pc=S.paperCommon, list=paperSessions();
-  if(!list.length) return false;
-  const dates=[...new Set(list.map(([,x])=>x.simStart).filter(Boolean))].sort();
-  if(dates.length!==1) return false;
-  const date=dates[0]; let changed=false;
-  if(!pc.simStart){ pc.simStart=date; changed=true; }
-
-  const needUsd=list.some(([,x])=>x.settings && !isKrwSt(x.settings) && !(+x.paperFxRate>0));
-  let fx=null;
-  if(needUsd) fx=await fxAt(date);
-  const caps=[], adds=[];
-  for(const [tab,x] of list){
-    const st=x.settings||{}; let R=isKrwSt(st)?1:(+x.paperFxRate||0);
-    if(!(R>0) && fx && fx.rate>0) R=fx.rate;
-    if(!(R>0)) continue;
-    if(!isKrwSt(st) && !(+x.paperFxRate>0)){ x.paperFxRate=R; changed=true; }
-    const cf=paperCapField(tab,st);
-    if(cf && +st[cf]>0) caps.push(paperLegacyWon((+st[cf])*R));
-    const af=paperAddField(tab,st);
-    if(af && +st[af]>0) adds.push(paperLegacyWon((+st[af])*R));
-  }
-  if(!(+pc.capitalWon>0)){
-    const v=paperMedian(caps); if(v>0){ pc.capitalWon=v; changed=true; }
-  }
-  if(!(+pc.addWon>0)){
-    const v=paperMedian(adds); if(v>0){ pc.addWon=v; changed=true; }
+  let changed=false;
+  if(!(+pc.capitalWon>0)){ pc.capitalWon=PAPER_DEFAULT_CAPITAL_WON; changed=true; }
+  if(!(+pc.addWon>0)){ pc.addWon=PAPER_DEFAULT_ADD_WON; changed=true; }
+  if(!pc.simStart){
+    const dates=[...new Set(list.map(([,x])=>x.simStart).filter(Boolean))].sort();
+    if(dates.length===1){ pc.simStart=dates[0]; changed=true; }
   }
   if(changed){ saveLocal(); pushRemote(); }
   return changed;
@@ -7780,8 +7754,8 @@ function syncPaperStart(){
   el.value=pick;
   el.disabled=!list.length;
   const fmtWonInput=v=>(+v>0)?(+v).toLocaleString('ko-KR',{maximumFractionDigits:2}):'';
-  const capWon=(+pc.capitalWon>0)?pc.capitalWon:memo.capitalWon;
-  const addWon=(+pc.addWon>0)?pc.addWon:memo.addWon;
+  const capWon=(+pc.capitalWon>0)?pc.capitalWon:((+memo.capitalWon>0)?memo.capitalWon:PAPER_DEFAULT_CAPITAL_WON);
+  const addWon=(+pc.addWon>0)?pc.addWon:((+memo.addWon>0)?memo.addWon:PAPER_DEFAULT_ADD_WON);
   const c=$('p_capital'); if(c){ c.value=fmtWonInput(capWon); c.disabled=!list.length; }
   const a=$('p_addamt');  if(a){ a.value=fmtWonInput(addWon); a.disabled=!list.length; }
 }
@@ -7823,7 +7797,7 @@ async function applyAllSimStart(){
   if((cap!=null||add!=null)){
     if(fx){
       msg+=`\n\n입력한 원화값은 그대로 저장합니다. 미국 종목의 전략 계산에만 ${fx.date} 기준 환율 ${fx.rate.toLocaleString('en-US')}원/$을 사용합니다.`;
-      msg+='\n성과 목록은 열 때의 현재 USD/KRW로 원화 표시합니다.';
+      msg+='\n성과 목록의 평가·인출은 현재 USD/KRW, 투입은 입력 원화 그대로 표시합니다.';
     }else{
       msg+='\n※ 전부 국내 종목이라 환산 없이 들어갑니다.';
     }

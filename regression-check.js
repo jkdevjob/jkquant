@@ -1856,22 +1856,30 @@ console.log('[40] 모의 일괄 적용 — 원금과 1회 적립액을 따로');
      && /paperSessions\(\)\.filter\(\(\[,x\]\)=>x\.simStart!==ns\)/.test(ap));
   /* 금액 칸은 원화다. 미국 종목 세션엔 시작일 환율로 환산해 들어가므로
      어떤 환율을 썼는지 묻기 전에 보여야 한다 — 원금이 얼마로 들어갈지가 달라진다. */
-  ok('입력 원화는 그대로 저장하고 내부 계산만 시작일 환율, 목록은 현재 환율이라고 알린다', /입력한 원화값은 그대로 저장합니다/.test(ap) && /전략 계산에만 \$\{fx\.date\} 기준 환율/.test(ap) && /성과 목록은 열 때의 현재 USD\/KRW/.test(ap));
+  ok('입력 원화는 그대로 저장하고 내부 계산만 시작일 환율, 목록은 현재 환율이라고 알린다', /입력한 원화값은 그대로 저장합니다/.test(ap) && /전략 계산에만 \$\{fx\.date\} 기준 환율/.test(ap) && /성과 목록의 평가·인출은 현재 USD\/KRW, 투입은 입력 원화 그대로/.test(ap));
   ok('건너뛴 세션 이름에 조사를 안 붙인다', /건너뛴 세션: /.test(ap) && !/join\(', '\)\}은 금액/.test(ap));
   const rd=extractFn(idx,'function paperReadAmt(id, label)');
   ok('비우면 그대로 둔다', /if\(!raw\) return null;/.test(rd));
 }
 
-/* 기존 모의 세션 원화 복원 — paperCommon 이 없던 구버전 사용자 */
+/* 기존 모의 세션 원화 원본 — 처음 지정한 정확한 값으로 채운다 */
 {
-  const pw=extractFn(idx,'function paperInflowWon(tab, sess, inflow)');
-  ok('기존 세션 원화 복원 함수가 있다', /async function paperEnsureCommonWon\(\)/.test(idx) && /function paperLegacyWon\(v\)/.test(idx));
-  ok('투입 표시는 paperCommon 원화 원본을 시작환율보다 우선한다',
-     pw.indexOf('pc.capitalWon')>=0 && pw.indexOf('sess&&sess.paperFxRate')>pw.indexOf('pc.capitalWon'));
+  ok('모의 성과 기본 원화값은 원금 1억 · 1회 적립액 5만원',
+     /const PAPER_DEFAULT_CAPITAL_WON=100000000;/.test(idx)
+     && /const PAPER_DEFAULT_ADD_WON=50000;/.test(idx));
   const pe=extractFn(idx,'async function paperEnsureCommonWon()');
-  ok('기존 세션은 시작일 환율로 원금·적립액을 역복원하고 저장한다',
-     /fx=await fxAt\(date\)/.test(pe) && /pc\.capitalWon=v/.test(pe) && /pc\.addWon=v/.test(pe)
+  ok('paperCommon이 비어 있으면 추정하지 않고 기본 원화값을 그대로 저장한다',
+     /pc\.capitalWon=PAPER_DEFAULT_CAPITAL_WON/.test(pe)
+     && /pc\.addWon=PAPER_DEFAULT_ADD_WON/.test(pe)
+     && !/fxAt\(/.test(pe)
      && /saveLocal\(\); pushRemote\(\);/.test(pe));
+  const sp=extractFn(idx,'function syncPaperStart()');
+  ok('입력칸도 저장값이 없으면 1억 · 5만원을 그대로 표시한다',
+     /PAPER_DEFAULT_CAPITAL_WON/.test(sp) && /PAPER_DEFAULT_ADD_WON/.test(sp));
+  const pw=extractFn(idx,'function paperInflowWon(tab, sess, inflow)');
+  ok('투입금도 저장값이 없으면 같은 1억 · 5만원 원화 기준을 쓴다',
+     /capitalWon=.*PAPER_DEFAULT_CAPITAL_WON/.test(pw)
+     && /addWon=.*PAPER_DEFAULT_ADD_WON/.test(pw));
 }
 
 console.log('[41] 한투 모의투자 연결 — 세션 설정과 주문 전송');
