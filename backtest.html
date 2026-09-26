@@ -320,7 +320,7 @@ td:first-child{text-align:left;}
   <div class="brand">
     <div>
       <div class="logo">Backtest</div>
-      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v2.15.0</span></h1>
+      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v2.15.1</span></h1>
     </div>
   </div>
   <div class="hright">
@@ -2493,7 +2493,7 @@ function imPrevClose(tkr, days, i){
      0 을 돌려주고, 부르는 쪽이 그날 주문을 아예 만들지 않는다. */
   return 0;
 }
-const IM_BIG_DEFAULT=15;
+const IM_BIG_DEFAULT=20;
 function imBigPct(st){ const v=+((st||{}).big); return isFinite(v)&&v>0 ? v : IM_BIG_DEFAULT; }
 /* 리버스 쿼터매수 주수 — 원문: 둘째날 이후 매수금 = 총 잔금 ÷ 4.
    배정액으로 1주도 못 사면 그날은 매수가 없다(T도 안 올라간다) — 대신 MOC 매도(리버스 중간 소진 · imRevOrders · 제10차).
@@ -2622,7 +2622,7 @@ function runIM(days,tkr,cap,divs,targetPct,compound=true,bigOverride){
   let starBase=targetPct, curTP=targetPct;   // 익절 자동(실험)이면 사이클마다 바뀐다 — 셋이 함께 움직인다 (통합 규약)
   let starSlope=starBase*0.1*20/divs;
   let exitMul=1-starBase/100;
-  const bigPct=imBigPct({big:bigOverride});   // 큰수 — 처음매수 LOC 가격 (기본 15)
+  const bigPct=imBigPct({big:bigOverride});   // 큰수 — 처음매수 LOC 가격 (JKQuant 기본 20)
   const MOM = ((typeof imTgtDyn!=='undefined')&&imTgtDyn) ? _imMom(tkr,IM_MOM_LEN) : null;   // 익절 동적 조절 (OFF면 null → 기존과 완전 동일)
   /* 익절 자동(실험 · imAutoTP) — 끄면 null 이라 기존과 완전 동일. 판정 봉은 워밍업 창까지 포함한 전체 종가(선택 기간 첫날 전 120거래일도 본다). */
   const _AD=(typeof srcOf==='function')?srcOf(tkr):M[tkr];
@@ -2982,7 +2982,7 @@ function runIM50(days,tkr,cap,divs,targetPct,compound=true,bigOverride){
   const starBase=targetPct;
   const starSlope=starBase*0.1*20/divs;
   const exitMul=1-starBase/100;
-  const bigPct=imBigPct({big:bigOverride});   // 큰수 — 처음매수 LOC 가격 (기본 15)
+  const bigPct=imBigPct({big:bigOverride});   // 큰수 — 처음매수 LOC 가격 (JKQuant 기본 20)
   const GM=buildGateIM(tkr);
   /* 단리 판정은 '사이클 종료 잔액이 최초 원금을 넘는가'다. 넘으면 넘은 만큼만 인출하고
      원금으로 다시 시작, 못 넘으면 인출도 보충도 없이 그 잔액 그대로 다음 사이클로 간다.
@@ -3999,7 +3999,7 @@ function _stratNum(id,def){ if(typeof document==='undefined')return def; const e
    빈 목록이면 공식, 아니면 변형이다. 백테에서 더 좋았다는 이유로 고른 값도 변형이다 —
    예: 리버스 OFF(문서의 V4.0 일반모드는 '소진 → 리버스'), 아래로 LOC 추가를 끈 것(0줄).
      cfg: {tickers, div, reverse, revGap, target, tgtDyn, autoTp, engine, big, rows}
-     target 0·없음 = 종목별 문서값(TQQQ 15 · SOXL 20). big 없음 = 기본 15.
+     target 0·없음 = 종목별 문서값(TQQQ 15 · SOXL 20). big 없음 = JKQuant 기본 20.
      autoTp — 사이클 익절 자동 10/20(imAutoTP · 실험). 켜면 설정 익절%는 자료가 모자랄 때만 쓰이므로 '고정' 으로 적지 않는다. */
 function autoTpLabel(mode){return 'MA150+초강세·고변동+M1';}
 function imVariantOf(cfg){
@@ -4477,7 +4477,7 @@ async function run(){
     imUse.forEach(t=>{
       const tgt = imTgtFor(t);
       if(imEngine==='ab'){
-        /* 큰수 상한은 백테에 입력칸이 없다 — 공식 기본(IM_BIG_DEFAULT=15)으로 돈다.
+        /* 큰수 상한은 백테에 입력칸이 없다 — JKQuant 기본(IM_BIG_DEFAULT=20)으로 돈다.
        엔진은 파라미터를 받으므로 나중에 칸이 생기면 그 값만 넘기면 된다. */
     results[t]={res:runIM(commonD,t,cap,imDiv,tgt,compound), res50:runIM50(commonD,t,cap,imDiv,tgt,compound), tgt, days:commonD};
       }else{
