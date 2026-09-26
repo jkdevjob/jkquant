@@ -58,6 +58,8 @@ const idxParts=[
   optFn(idx,'function imCycleEnds(soldToday, qtyAtDayEnd)'),   // 제14차 D15 — 사이클 종료 판정 한 곳 (앱 사본 · 없으면 [127] 이 빨간불)
   optFn(idx,'function imDayOpenAfter(hist, i)'),
   (idx.match(/const IM_AUTOTP=\{[^\n]*\};/)||[''])[0], optFn(idx,'function imAutoTP(bars, date)'),   // 익절 자동(실험) — 장부가 사이클 익절%를 여기서 정한다 (없으면 [132] 가 빨간불)
+  optFn(idx,'function normalizeAutoTpMode(v)'), optFn(idx,'function autoTpModeOf(st)'),
+  (idx.match(/const IM_AUTOTP_MA150=\{[^\n]*\};/)||[''])[0], optFn(idx,'function imAutoTPMA150(bars,date)'), optFn(idx,'function imAutoTPByMode(bars,date,mode)'),
   extractFn(idx,'function computeInf()'),
   extractFn(idx,'function vrCycleTransition(V, pool, ev, G, mode, add, formula)'),   // 제8차 8-⑦ 공용 전환식
   extractFn(idx,'function computeNextV(c,ev)'),
@@ -9887,15 +9889,17 @@ console.log('\n[132] 익절 자동(실험) — 사이클 시작 120거래일 수
   const bdays=(n,start)=>{ const out=[], t=new Date(start+'T00:00:00Z'); while(out.length<n){ const w=t.getUTCDay(); if(w!==0&&w!==6) out.push(t.toISOString().slice(0,10)); t.setUTCDate(t.getUTCDate()+1); } return out; };
   const SIG='function imAutoTP(bars, date)', CRE=/const IM_AUTOTP=\{[^\n]*\};/;
   const body=src=>(src.match(CRE)||[''])[0]+'\n'+extractFn(src,SIG);
-  const SV=new Function(im.replace(/export /g,'')+'\nreturn {imAutoTP,imCompute,imOrders};')();
+  const SV=new Function(im.replace(/export /g,'')+'\nreturn {imAutoTP,imAutoTPMA150,imAutoTPByMode,imCompute,imOrders};')();
   const PL=new Function([
     (pl.match(/const usd=v=>[^\n]*/)||[''])[0], (pl.match(/const FEE=[^\n]*/)||[''])[0],
     pl.slice(pl.indexOf('const KIND_T='), pl.indexOf(';', pl.indexOf("'절반매수+지정가매도(애프터)'"))+1),
     (pl.match(/const isBuyKind=[^\n]*/)||[''])[0], (pl.match(/const isSellKind=[^\n]*/)||[''])[0],
     (pl.match(/const REV_DIVS_PLAN=[^\n]*/)||[''])[0],
     (pl.match(/function reverseTPlan[^\n]*/)||[''])[0], (pl.match(/function starPctPlan[^\n]*/)||[''])[0], body(pl),
+    extractFn(pl,'function normalizeAutoTpMode(v)'), extractFn(pl,'function autoTpModeOf(st)'),
+    (pl.match(/const IM_AUTOTP_MA150=\{[^\n]*\};/)||[''])[0], extractFn(pl,'function imAutoTPMA150(bars,date)'), extractFn(pl,'function imAutoTPByMode(bars,date,mode)'),
     ...['function exitMulOf(base)','function imRevExitDue(c, close, target, date)','function calcInfState(sess)','function imOrders(sess,price,rows)'].map(x=>extractFn(pl,x)),
-    'return {imOrders, calcInfState, imAutoTP};'].join('\n'))();
+    'return {imOrders, calcInfState, imAutoTP, imAutoTPMA150, imAutoTPByMode};'].join('\n'))();
   const F4={index:imAutoTP, backtest:global.imAutoTP, plan:PL.imAutoTP, server:SV.imAutoTP};
   const D=bdays(300,'2020-01-01');
 
@@ -9912,6 +9916,18 @@ console.log('\n[132] 익절 자동(실험) — 사이클 시작 120거래일 수
     }
     ok('A 네 파일(index·backtest·plan·서버) 판정 글자가 같다 — {len:120, lo:10, hi:20}',
        body(idx)===body(bt) && body(idx)===body(pl) && body(idx)===body(im) && /\{len:120, lo:10, hi:20\}/.test(body(idx)));
+  }
+
+  /* ── A2. MA150 판정 — 운영·서버·플랜 세 경로 ── */
+  { const rows=Array.from({length:160},(_,i)=>({date:D[i],close:i<159?100:80}));
+    const date=D[159];
+    const I=imAutoTPByMode(rows,date,'ma150'), S=SV.imAutoTPByMode(rows,date,'ma150'), P=PL.imAutoTPByMode(rows,date,'ma150');
+    ok('A2 MA150 — 사이클 시작 전 거래일 종가가 최근 150일 SMA 아래면 10% · 세 경로 동일',
+       !!I&&I.tp===10&&!!S&&S.tp===10&&!!P&&P.tp===10&&Math.abs(I.ma-S.ma)<1e-12&&Math.abs(I.ma-P.ma)<1e-12, J([I,S,P]));
+    const up=rows.map(x=>({...x,close:100})); up[158].close=120;
+    const I2=imAutoTPByMode(up,D[159],'ma150');
+    ok('A2 MA150 — 전 거래일 종가가 MA150 이상이면 20% · 시작일 봉은 안 본다',
+       !!I2&&I2.tp===20&&I2.asOf===D[158], J(I2));
   }
 
   /* ── B. 백테 runIM — 합성 자료 (비용 끔) ── */
@@ -10031,38 +10047,52 @@ console.log('\n[132] 익절 자동(실험) — 사이클 시작 120거래일 수
      /"&intraday=0&div=1" \+ \(st\.autoTp === true \? "&range=max" : ""\)/.test(atSrc) && atSrc.indexOf('const st = s.settings')<atSrc.indexOf('&range=max'));
 
   /* ── F. 표시 · 설정 ── */
-  { const VO=new Function('IM_OFFICIAL','revSupported', extractFn(idx,'function imVariantOf(cfg)')+'\nreturn imVariantOf;')({TQQQ:15,SOXL:20}, d=>[20,40].includes(+d));
-    const v1=VO({tickers:['SOXL'],div:20,reverse:false,target:10,autoTp:true}), v2=VO({tickers:['SOXL'],div:20,reverse:false,target:10});
-    ok('F1 공식/변형 — 익절 자동이면 \'익절 자동 10/20(실험 · 120일 수익률)\' · 설정 익절%는 \'고정\' 으로 안 적는다 (끄면 \'익절 10% 고정\') · 백테도 같은 글자',
-       v1.includes('익절 자동 10/20(실험 · 120일 수익률)') && !v1.some(x=>/고정/.test(x)) && v2.includes('익절 10% 고정') && !v2.some(x=>/익절 자동/.test(x))
-       && extractFn(idx,'function imVariantOf(cfg)')===extractFn(bt,'function imVariantOf(cfg)') && /autoTp:S\.autoTp===true/.test(extractFn(idx,'function imRuleOf(st)')), J([v1,v2])); }
-  { const BG=new Function((idx.match(CRE)||[''])[0]+'\n'+extractFn(idx,'function imAutoTpBadge(c)')+'\nreturn imAutoTpBadge;')();
+  { const VO=new Function('IM_OFFICIAL','revSupported','autoTpLabel',
+      extractFn(idx,'function imVariantOf(cfg)')+'\nreturn imVariantOf;')({TQQQ:15,SOXL:20}, d=>[20,40].includes(+d), m=>m==='ma150'?'MA150':'120일 수익률');
+    const v1=VO({tickers:['SOXL'],div:20,reverse:false,target:10,autoTp:true,autoTpMode:'ret120'}),
+          vm=VO({tickers:['SOXL'],div:20,reverse:false,target:10,autoTp:true,autoTpMode:'ma150'}),
+          v2=VO({tickers:['SOXL'],div:20,reverse:false,target:10});
+    ok('F1 공식/변형 — 자동 익절 표시가 선택 전략(120일 수익률/MA150)을 구분하고 고정 익절 표시는 숨긴다',
+       v1.includes('익절 자동 10/20(실험 · 120일 수익률)') && vm.includes('익절 자동 10/20(실험 · MA150)')
+       && !v1.some(x=>/고정/.test(x)) && !vm.some(x=>/고정/.test(x)) && v2.includes('익절 10% 고정')
+       && /autoTpMode:autoTpModeOf\(S\)/.test(extractFn(idx,'function imRuleOf(st)')), J([v1,vm,v2])); }
+  { const BG=new Function('autoTpModeOf','autoTpLabel',
+      extractFn(idx,'function imAutoTpBadge(c)')+'\nreturn imAutoTpBadge;')(
+        st=>(st&&st.autoTpMode)==='ma150'?'ma150':'ret120', m=>m==='ma150'?'MA150':'120일 수익률');
     const tx=h=>h.replace(/<[^>]+>/g,'');
-    const b1=tx(BG({st:{autoTp:true,target:20},qty:5,tp:10,tpAuto:{tp:10,ret:-0.99,asOf:D[129]},cycStart:D[130]}));
-    const b2=tx(BG({st:{autoTp:true,target:20},qty:0,tp:20,tpAuto:{tp:20,ret:12,asOf:D[140]},cycStart:''}));
-    const b3=tx(BG({st:{autoTp:true,target:15},qty:5,tp:15,tpAuto:null,cycStart:D[130]}));
+    const b1=tx(BG({st:{autoTp:true,autoTpMode:'ret120',target:20},qty:5,tp:10,tpAuto:{tp:10,ret:-0.99,asOf:D[129]},cycStart:D[130]}));
+    const bm=tx(BG({st:{autoTp:true,autoTpMode:'ma150',target:20},qty:5,tp:10,tpAuto:{tp:10,close:80,ma:100,asOf:D[129]},cycStart:D[130]}));
+    const b2=tx(BG({st:{autoTp:true,autoTpMode:'ret120',target:20},qty:0,tp:20,tpAuto:{tp:20,ret:12,asOf:D[140]},cycStart:''}));
+    const b3=tx(BG({st:{autoTp:true,autoTpMode:'ma150',target:15},qty:5,tp:15,tpAuto:null,cycStart:D[130]}));
     const b4=BG({st:{target:20},qty:5,tp:20,tpAuto:null});
-    ok('F2 주문표 배지 — 이번/다음 사이클 익절 + 근거(120거래일 수익률 · 기준 종가일 · 사이클 시작 · 원문 아님) · 자료 없으면 설정값 + 서버 멈춤 안내 · 끄면 없음',
-       /이번 사이클 익절 10%/.test(b1) && /120거래일 수익률 -1\.0%/.test(b1) && b1.includes(D[129]+' 종가까지') && b1.includes('사이클 시작 '+D[130]) && /원문 V4\.0 아님/.test(b1)
-       && /다음 사이클 익절 20%/.test(b2) && /\+12\.0%/.test(b2) && /설정값 15%/.test(b3) && /서버 자동주문은 이 상태에서 주문을 내지 않습니다/.test(b3) && b4==='', J([b1,b2,b3]));
+    ok('F2 주문표 배지 — 120일/MA150 각각 판정 근거를 표시하고 자료 부족 시 설정값·서버 정지 안내, 끄면 없음',
+       /이번 사이클 익절 10%/.test(b1) && /120거래일 수익률 -1\.0%/.test(b1) && b1.includes(D[129]+' 종가까지')
+       && /MA150/.test(bm) && /종가 80\.00 · MA150 100\.00/.test(bm)
+       && /다음 사이클 익절 20%/.test(b2) && /\+12\.0%/.test(b2)
+       && /설정값 15%/.test(b3) && /서버 자동주문은 이 상태에서 주문을 내지 않습니다/.test(b3) && b4==='', J([b1,bm,b2,b3]));
     const ro=extractFn(idx,'function renderOrder()');
     ok('F2 배지가 주문표 두 갈래(일반·리버스)에 다 붙는다',
        /\$\('o_orders'\)\.innerHTML=\(revAuto\|\|''\)\+simNote\+regBadge\+autoBadge\+tgtBadge\+html;/.test(ro) && /let rh=\(revAuto\|\|''\)\+imAutoTpBadge\(c\);/.test(ro) && /const autoBadge=imAutoTpBadge\(c\);/.test(ro)); }
   { const SS=new Function(idx.slice(idx.indexOf('const SIM_KEYS='), idx.indexOf('};', idx.indexOf('const SIM_KEYS='))+2)+'\n'+(idx.match(/const SIM_RULE_VER=[^;]*;/)||[''])[0]+'\n'
       +(idx.match(/const SIM_OPT_KEYS=[^\n]*/)||[''])[0]+'\n'+extractFn(idx,'function simSig(tab,st)')+'\nreturn {simSig,SIM_KEYS,SIM_RULE_VER};')();
     const st0={ticker:'SOXL',div:20,target:20,big:15,rows:3,revGap:0,reverse:false,tgtDyn:false,principal:10000,compound:true,divmode:'reinv',engine:'v40',shortMA:30,loPct:6};
-    const old='r'+SS.SIM_RULE_VER+'|'+SS.SIM_KEYS.inf.filter(k=>k!=='autoTp').map(k=>String(st0[k]===undefined?'':st0[k])).join('|');
-    ok('F3 모의 지문 — 끈(옛) 세션은 예전과 한 글자도 같다(배포만으로 모의 기록을 다시 안 만든다) · 켜면 달라져 그 세션만 다시 돈다',
-       SS.simSig('inf',st0)===old && SS.simSig('inf',{...st0,autoTp:false})===old && SS.simSig('inf',{...st0,autoTp:true})!==old && SS.SIM_KEYS.inf.includes('autoTp'), SS.simSig('inf',st0)); }
+    const old='r'+SS.SIM_RULE_VER+'|'+SS.SIM_KEYS.inf.filter(k=>k!=='autoTp'&&k!=='autoTpMode').map(k=>String(st0[k]===undefined?'':st0[k])).join('|');
+    const r120=SS.simSig('inf',{...st0,autoTp:true,autoTpMode:'ret120'}), ma150=SS.simSig('inf',{...st0,autoTp:true,autoTpMode:'ma150'});
+    ok('F3 모의 지문 — 자동 익절이 꺼져 있으면 모드값을 무시하고, 켜져 있으면 120일/MA150 변경을 구분해 재계산한다',
+       SS.simSig('inf',st0)===old && SS.simSig('inf',{...st0,autoTp:false,autoTpMode:'ma150'})===old && r120!==ma150
+       && SS.SIM_KEYS.inf.includes('autoTp') && SS.SIM_KEYS.inf.includes('autoTpMode'), J([old,r120,ma150])); }
   ok('F4 백테 — 익절 자동 세그(끔/120일 · 실험 표시) · 누르면 imAutoTp · 공식 프리셋은 끈다 · 결과 제목·요약·변형 판정에 넘긴다 · V4.0 엔진만',
      /<label>익절 자동 <span[^>]*>실험 · 원문 아님<\/span><\/label>\s*<div class="seg" id="imAutoTpSeg"[^>]*>\s*<button data-x="0" class="active"/.test(bt)
      && /imAutoTp=e\.target\.dataset\.x==='1'/.test(bt) && /_segPick\('imAutoTpSeg','x','0'\);/.test(extractFn(bt,'function imPreset()')) && /imAutoTp=false;/.test(extractFn(bt,'function imPreset()'))
      && /\(imAutoTp&&imEngine==='v40'\?' · <span style="color:var\(--gold\)">익절 자동 10\/20\(실험 · 120일 수익률\)<\/span>':''\)/.test(bt)
      && /autoTp:\(typeof imAutoTp!=='undefined'&&imAutoTp&&\(typeof imEngine==='undefined'\|\|imEngine==='v40'\)\)/.test(extractFn(bt,'function imVariant(tkrs)')));
-  ok('F5 앱 설정 — 익절 자동 세그(기본 끔 · 실험 표시) · 열 때 채우고 저장 때 읽는다 · 새 세션 기본 false · 모의 지문 키 · 세션 목록 표시',
-     /id="set_autotp"><button data-v="0" class="on">끔<\/button><button data-v="1">120일 수익률<\/button>/.test(idx) && /segSet\('set_autotp',st\.autoTp===true\?'1':'0'\)/.test(idx)
-     && /autoTp:segGet\('set_autotp'\)==='1'/.test(idx) && /tgtDyn:false,autoTp:false,/.test(extractFn(idx,'function defInfSettings()'))
-     && /'익절 자동10\/20'/.test(idx));
+  ok('F5 앱 설정 — 관리자 선택 전략을 후보로 표시하되 사용자가 선택·저장해야 세션 autoTpMode에 적용한다',
+     /id="set_autotp"><\/div>/.test(idx) && /id="set_autotp_note"/.test(idx)
+     && /syncAutoTpAdminUI\(st\)/.test(extractFn(idx,'function openSettings()'))
+     && /const autoTpSel=segGet\('set_autotp'\)\|\|'off'/.test(extractFn(idx,'function saveSettings()'))
+     && /autoTp:autoTpSel!=='off',autoTpMode:/.test(extractFn(idx,'function saveSettings()'))
+     && /tgtDyn:false,autoTp:false,autoTpMode:'ret120'/.test(extractFn(idx,'function defInfSettings()'))
+     && /관리자 화면에서 바꿔도 기존 세션은 자동 변경되지 않습니다/.test(extractFn(idx,'function syncAutoTpAdminUI(st)')));
   { const AB=new Function('lastQuote','simCutoff','curOf', "let _imAbMemo={q:null,cut:'',bars:null};\n"+extractFn(idx,'function imAutoBars(st)')+'\nreturn imAutoBars;');
     const Q={symbol:'SOXL', days:[{date:'2026-09-23',close:10},{date:'2026-09-24',close:11},{date:'2026-09-25',close:12}]};
     const a=AB({inf:Q},()=>'2026-09-24',()=>'usd')({ticker:'soxl'}), b=AB({inf:Q},()=>'2026-09-24',()=>'usd')({ticker:'TQQQ'}), g=AB({inf:null},()=>'2026-09-24',()=>'usd')({ticker:'SOXL'});
