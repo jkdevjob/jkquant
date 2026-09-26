@@ -141,8 +141,8 @@ export function imCompute(st, hist, days) {
   const H = hist || [];
   /* 익절 자동(실험 · imAutoTP) — 사이클 첫 매수일로 그 사이클 익절%를 정한다. 앱 computeInf 와 같은 자리·같은 식.
      days = 확정 종가 이력 [{date, close}] (autotrade 가 익절 자동 세션이면 전체 기간을 받아 넘긴다). */
-  const auto = (st.autoTp === true), ab = (auto && days && days.length) ? days : null;
-  const tpAt = (d) => (auto && ab && d) ? imAutoTP(ab, d) : null;
+  const auto = (st.autoTp === true), mode = autoTpModeOf(st), ab = (auto && days && days.length) ? days : null;
+  const tpAt = (d) => (auto && ab && d) ? imAutoTPByMode(ab, d, mode) : null;
   let cycStart = "", cycTp = null;
   let day = null, daySold = false;   // 그날 매도가 있었나 — 사이클 종료는 그날 마지막 매매 줄에서만 (앱 computeInf 와 같다 · 제14차 D15)
   for (let hi = 0; hi < H.length; hi++) {
@@ -274,6 +274,26 @@ export function imAutoTP(bars, date){
   const r=(x/y-1)*100;
   return {tp:r<0?IM_AUTOTP.lo:IM_AUTOTP.hi, ret:r, asOf:String(bars[j].date)};
 }
+export function normalizeAutoTpMode(v){ return v==="ma150" ? "ma150" : "ret120"; }
+export function autoTpModeOf(st){ return normalizeAutoTpMode(st && st.autoTpMode); }
+const IM_AUTOTP_MA150={len:150,lo:10,hi:20};
+export function imAutoTPMA150(bars,date){
+  let a=0,b=(bars||[]).length;
+  while(a<b){const m=(a+b)>>1;if(String(bars[m].date)<date)a=m+1;else b=m;}
+  const j=a-1;
+  if(j<IM_AUTOTP_MA150.len-1)return null;
+  let sum=0;
+  for(let i=j-IM_AUTOTP_MA150.len+1;i<=j;i++){
+    const v=+(bars[i]&&bars[i].close); if(!(v>0))return null; sum+=v;
+  }
+  const close=+(bars[j]&&bars[j].close),ma=sum/IM_AUTOTP_MA150.len;
+  if(!(close>0&&ma>0))return null;
+  return {tp:close<ma?IM_AUTOTP_MA150.lo:IM_AUTOTP_MA150.hi,close,ma,asOf:String(bars[j].date),mode:"ma150"};
+}
+export function imAutoTPByMode(bars,date,mode){
+  if(normalizeAutoTpMode(mode)==="ma150")return imAutoTPMA150(bars,date);
+  const r=imAutoTP(bars,date); return r?{...r,mode:"ret120"}:null;
+}
 
 function exitMulOf(base){ return 1-((base!=null&&base>0)?base:20)/100; }
 /* 리버스 종료가 확정됐는가 — 원문 리버스 6-(2): 리버스로 보낸 날의 확정 종가가 평단 대비 −15%(TQQQ)·−20%(SOXL) 위면
@@ -297,7 +317,10 @@ export function imOrders({ st, hist, close, days }) {
   if (!(close > 0)) return { orders: out, skip: "확정 종가 없음", c };
   /* 익절 자동인데 판정 자료가 없으면 보유 중엔 주문하지 않는다 — 설정값으로 낸 익절·별지점 주문은 되돌릴 수 없다.
      비어 있을 때(첫 매수)는 익절%와 상관없는 큰수 LOC 하나라 그대로 낸다. 앱 주문표는 같은 상태에서 경고를 띄운다. */
-  if (st.autoTp === true && !c.tpAuto && c.qty > 0) return { orders: out, skip: "익절 자동 — 판정 자료(사이클 시작 전날까지 120거래일 종가) 부족", c };
+  if (st.autoTp === true && !c.tpAuto && c.qty > 0) {
+    const need=autoTpModeOf(st)==="ma150" ? "사이클 시작 전 거래일까지 150거래일 종가" : "사이클 시작 전날까지 120거래일 종가";
+    return { orders: out, skip: "익절 자동 — 판정 자료("+need+") 부족", c };
+  }
 
   const B1 = imBuy1(c), buy1 = B1.amt;
   const cur = /^(?:\d{6}|\d{4}[A-Z]\d)$/.test(String(st.ticker || "").toUpperCase()) ? "krw" : "usd";
