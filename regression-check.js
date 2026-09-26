@@ -10006,7 +10006,7 @@ console.log('\n[132] 익절 변환 자동 — 통합 ON/OFF · 룩어헤드 없�
      && bt.includes('>켬</button>')
      && bt.includes("imAutoTp=e.target.dataset.x==='1'"));
 
-  ok('G 모의 규약 버전 12 — M1 적용으로 기존 자동익절 모의기록을 새 규칙으로 재생성',/const SIM_RULE_VER=12;/.test(idx));
+  ok('G 모의 규약 버전 13 — M1 모의 재생 룩어헤드 수정으로 기존 자동익절 기록 재생성',/const SIM_RULE_VER=13;/.test(idx));
   const M1SIG='function imAutoTPM1(bars,cycStart,date,base)',M1CRE=/const IM_AUTOTP_M1=\{[^\n]*\};/;
   const m1body=src=>(src.match(M1CRE)||[''])[0]+'\n'+extractFn(src,M1SIG).replace('export function','function');
   const M1={index:imAutoTPM1,backtest:global.imAutoTPM1,plan:new Function(m1body(pl)+'\nreturn imAutoTPM1;')(),server:new Function(m1body(im)+'\nreturn imAutoTPM1;')()};
@@ -10015,6 +10015,12 @@ console.log('\n[132] 익절 변환 자동 — 통합 ON/OFF · 룩어헤드 없�
     ok('H '+nm+' — 전날 종가가 MA150의 95% 미만이면 20→10 영구 하향',before.tp===20&&after.tp===10&&after.m1===true&&after.m1AsOf===D[170],JSON.stringify([before,after]));
     ok('H '+nm+' — 10% 사이클은 다시 올리지 않는다',stay.tp===10&&!stay.m1,JSON.stringify(stay));}
   ok('I M1 네 파일 판정식 동일',m1body(idx)===m1body(bt)&&m1body(idx)===m1body(pl)&&m1body(idx)===m1body(im));
+  const ci=extractFn(idx,'function computeInf()'), sf=extractFn(idx,'function infSimForward(startFrom)');
+  ok('J 모의 재생 M1 — 재생일을 데이터 상한으로 써 미래 봉을 보지 않는다',
+     /const _asOf=\(typeof _infReplayAsOf!==\'undefined\'&&_infReplayAsOf\)\?_infReplayAsOf:\'9999-12-31\'/.test(ci)
+     && /imAutoTPM1\(_ab,cycStart,_asOf,cycTp\)/.test(ci)
+     && /_infReplayAsOf=d;/.test(sf)
+     && /_infReplayAsOf=_prevReplayAsOf/.test(sf));
 }
 
 console.log(`\n════ 결과: ${pass} PASS / ${fail} FAIL ${fail===0?'— ALL PASS ★':'— 배포 금지, 위 ✗ 항목 수정 필요'} ════`);
