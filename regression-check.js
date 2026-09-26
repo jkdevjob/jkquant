@@ -3038,10 +3038,10 @@ console.log('\n[60] 분배금 현금 수령 — 전 전략');
    오늘 환율로 대신하면 3년 전 시작인데 지금 환율로 환산한 원금이 된다. */
 console.log('\n[61] 모의 성과 — 원화로 받아 세션 통화로 환산');
 {
-  ok('칸이 원화라고 적혀 있다', /원금 \(₩\) <span class="hint" id="p_capital_n">/.test(idx)
-     && /1회 적립액 \(₩\) <span class="hint" id="p_addamt_n">/.test(idx));
-  ok('무엇이 환산되는지 적어 뒀다', /국내 종목 세션은 그대로 들어가고, 미국 종목 세션은/.test(idx)
-     && /<b>시작일 환율<\/b>/.test(idx));
+  ok('칸이 원화라고 적혀 있다', /원금 <span class="hint">원화 입력<\/span>/.test(idx)
+     && /1회 적립액 <span class="hint">원화 입력<\/span>/.test(idx)
+     && /id="p_capital_n"/.test(idx) && /id="p_addamt_n"/.test(idx));
+  ok('무엇이 환산되는지 적어 뒀다', /<b>원화로 입력<\/b> · 미국 종목은 <b>시작일 환율<\/b>로 달러 환산/.test(idx));
 
   const w2=(()=>{ try{ return extractFn(idx,'function wonToSess(won, st, rate)'); }catch(e){ return ''; } })();
   ok('환산 함수는 하나다', (idx.match(/function wonToSess\(/g)||[]).length===1 && w2.length>0);
@@ -9919,7 +9919,7 @@ console.log('\n[132] 익절 자동(실험) — 사이클 시작 120거래일 수
   }
 
   /* ── A2. MA150 판정 — 운영·서버·플랜 세 경로 ── */
-  { const rows=Array.from({length:160},(_,i)=>({date:D[i],close:i<159?100:80}));
+  { const rows=Array.from({length:160},(_,i)=>({date:D[i],close:i===158?80:100}));
     const date=D[159];
     const I=imAutoTPByMode(rows,date,'ma150'), S=SV.imAutoTPByMode(rows,date,'ma150'), P=PL.imAutoTPByMode(rows,date,'ma150');
     ok('A2 MA150 — 사이클 시작 전 거래일 종가가 최근 150일 SMA 아래면 10% · 세 경로 동일',
