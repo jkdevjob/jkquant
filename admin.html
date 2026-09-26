@@ -152,7 +152,7 @@ pre.rules{background:var(--bg);border:1px solid var(--line);border-radius:10px;p
 
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Admin Console</div><h1>JK <span class="v">퀀트</span> 관리자 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="adVer">v0.6.0</span></h1></div>
+    <div><div class="kicker">Admin Console</div><h1>JK <span class="v">퀀트</span> 관리자 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="adVer">v0.6.1</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -322,7 +322,7 @@ async function saveAutoTpAdminStrategy(){
     await window.fb.setDoc(window.fb.doc(window.fb.db,'users',me.uid),{
       autoTpAdminStrategy:autoTpAdminStrategy,autoTpAdminStrategyUpdated:Date.now()
     },{merge:true});
-    if(s){s.className='cfgstatus ok';s.textContent='✓ '+AUTO_TP_ADMIN_MODES[autoTpAdminStrategy]+' 저장 완료 · 운영 설정에서 직접 선택해야 실제 적용됩니다.';}
+    if(s){s.className='cfgstatus ok';s.textContent='✓ '+AUTO_TP_ADMIN_MODES[autoTpAdminStrategy]+' 저장 완료 · 무한매수법 운영 설정에서 직접 선택해야 실제 적용됩니다.';}
   }catch(e){
     if(s){s.className='cfgstatus err';s.textContent='브라우저에는 저장됐지만 클라우드 저장 실패 — '+(e.message||e);}
   }
@@ -429,16 +429,19 @@ function cfgFieldHtml(tab,f,val){
     +'<input type="checkbox" id="cfg_on_'+tab+'_'+key+'" '+(on?'checked ':'')+'onchange="cfgToggle(\''+tab+'\',\''+key+'\',this.checked)">'
     +esc(label)+'</label>'+ctl+'</div>';
 }
-function renderDefaults(el){
-  el.innerHTML='<div class="card"><h3><span class="dot"></span>익절률 자동 전략</h3>'
-    +'<p class="lead">운영 설정에 노출할 자동 익절 전략을 하나 선택합니다. <b>여기서 선택만 해서는 실제 매매에 적용되지 않습니다.</b> 운영 화면의 설정에서 다시 선택하고 저장해야 해당 세션에 적용됩니다.</p>'
+function autoTpAdminSectionHtml(){
+  return '<div style="margin:2px 0 18px;padding:14px;border:1px solid var(--line);border-radius:12px;background:rgba(139,124,246,.05)">'
+    +'<div style="font-weight:800;margin-bottom:6px">익절률 자동 전략</div>'
+    +'<p class="lead" style="margin:0 0 10px">무한매수법에서 운영 설정에 노출할 자동 익절 전략을 하나 선택합니다. <b>관리자에서 고른 것만으로 실제 매매에는 적용되지 않습니다.</b> 운영 화면에서 사용자가 다시 선택하고 저장해야 해당 세션에 적용됩니다.</p>'
     +'<div class="cfg-tabs" id="autoTpAdminChoices"></div>'
-    +'<div class="row" style="margin-top:12px"><button class="prim" onclick="saveAutoTpAdminStrategy()">💾 자동 전략 저장</button></div>'
+    +'<div class="row" style="margin-top:10px"><button class="prim" onclick="saveAutoTpAdminStrategy()">💾 자동 전략 저장</button></div>'
     +'<div id="autoTpAdminStatus" class="cfgstatus"></div>'
     +'<p class="note"><b>120일 수익률</b>: 사이클 시작 전 거래일까지 120거래일 수익률 &lt; 0 → 10%, 그 외 20%.<br>'
-    +'<b>MA150</b>: 사이클 시작 전 거래일 종가 &lt; 최근 150거래일 단순이동평균 → 10%, 그 외 20%.</p></div>'
-    +'<div class="card"><h3><span class="dot"></span>운영전략 기본값</h3>'
-    +'<p class="lead">왼쪽 체크가 켜진 옵션만 <b>관리자 기본값</b>으로 관리합니다. 체크하지 않은 옵션은 새 세션·기존 세션 모두 각자 원래 값을 유지합니다.</p>'
+    +'<b>MA150</b>: 사이클 시작 전 거래일 종가 &lt; 최근 150거래일 단순이동평균 → 10%, 그 외 20%.</p></div>';
+}
+function renderDefaults(el){
+  el.innerHTML='<div class="card"><h3><span class="dot"></span>운영전략 기본값</h3>'
+    +'<p class="lead">전략 탭별로 관리합니다. 왼쪽 체크가 켜진 옵션만 <b>관리자 기본값</b>으로 관리하고, 체크하지 않은 옵션은 새 세션·기존 세션 모두 각자 원래 값을 유지합니다.</p>'
     +'<div class="cfg-tabs" id="cfgTabs"></div><div id="cfgBody"><p class="lead">불러오는 중…</p></div>'
     +'<div class="row" style="margin-top:14px"><button class="prim" onclick="saveStrategyDefaults()">💾 선택 항목 기본값 저장</button>'
     +'<button class="ghostbtn" onclick="clearStrategyDefaults()">관리 항목 전체 해제</button>'
@@ -446,9 +449,8 @@ function renderDefaults(el){
     +'<div id="cfgStatus" class="cfgstatus"></div>'
     +'<p class="note">예: 무한매수법에서 <b>큰수·LOC 줄 수</b>만 체크하면 그 두 값만 관리합니다. 종목·원금·분할·익절률 등 체크하지 않은 값은 절대 덮어쓰지 않습니다.</p>'
     +'<p class="note"><b>기존 세션 적용</b> 시 실제 값이 달라진 모의투자 세션만 자동기록을 초기화해 새 설정으로 다시 계산합니다. 실계좌 거래기록과 사람이 직접 넣은 모의 기록은 보존합니다.</p></div>';
-  paintAutoTpAdminStrategy();
-  loadAutoTpAdminStrategy();
   loadStrategyDefaultsAdmin();
+  loadAutoTpAdminStrategy();
 }
 function paintDefaultTabs(){
   const t=$('cfgTabs'),b=$('cfgBody');if(!t||!b)return;
@@ -457,7 +459,9 @@ function paintDefaultTabs(){
     return '<button class="'+(k===defaultsTab?'on':'')+'" onclick="switchDefaultsTab(\''+k+'\')">'+esc(m.name)+(n?' · '+n:'')+'</button>';
   }).join('');
   const m=STRATEGY_DEFAULT_META[defaultsTab],v=strategyValues[defaultsTab]||STRATEGY_DEFAULT_BUILTIN[defaultsTab];
-  b.innerHTML='<div class="cfggrid">'+m.fields.map(f=>cfgFieldHtml(defaultsTab,f,v[f[0]])).join('')+'</div>';
+  const autoHtml=defaultsTab==='inf'?autoTpAdminSectionHtml():'';
+  b.innerHTML=autoHtml+'<div class="cfggrid">'+m.fields.map(f=>cfgFieldHtml(defaultsTab,f,v[f[0]])).join('')+'</div>';
+  if(defaultsTab==='inf')paintAutoTpAdminStrategy();
 }
 function switchDefaultsTab(k){
   if(k===defaultsTab)return;

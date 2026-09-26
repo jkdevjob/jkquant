@@ -6923,6 +6923,8 @@ const __P7={};
     'function calcStarPoint(c)','function revGapOf(st)','function exitMulOf(base)','function quoteOf(tab)','function fmtT(t)',
     'function isSell(k)','function isBuy(k)','function isCx(k)','function isAmtKind(k)','function simCutoff(cur)',
     'function settledBars(rows,cur)','function curOf(st)','function isKrCode(t)','function imRowsNote(n)','function imAutoTpBadge(c)',
+    'function normalizeAutoTpMode(v)','function autoTpModeOf(st)','function autoTpLabel(mode)',
+    'function imAutoTP(bars, date)','function imAutoTPMA150(bars,date)','function imAutoTPByMode(bars,date,mode)',
     'function imRuleTag(st)','function imRuleOf(st)','function imVariantOf(cfg)','function revSupported(div)','function revEnabled(st)']
     .map(x=>extractFn(idx,x)).join('\n');
   const KINDSRC=idx.slice(idx.indexOf('const KIND_T='), idx.indexOf('};', idx.indexOf('const KIND_T='))+2);
@@ -6944,6 +6946,9 @@ const __P7={};
     const MKT_CLOSE_MIN={usd:16*60, krw:15*60+30}, SETTLE_LAG_MIN=20;
     function _exchNow(cur){ return {date:'2099-12-31', min:23*60}; }
     const IM_MOM_LEN=20, IM_MOM_TH=8, IM_MOM_CAP=30;
+    ${(idx.match(/const AUTO_TP_MODE_LABELS=[^\n]*/)||[''])[0]}
+    ${(idx.match(/const IM_AUTOTP=\{[^\n]*\};/)||[''])[0]}
+    ${(idx.match(/const IM_AUTOTP_MA150=\{[^\n]*\};/)||[''])[0]}
     ${need}
     function infSettledLast(){ return {close:ENV.CLOSE, date:ENV.CDATE||''}; }   // CDATE — 확정 종가 날짜 (리버스 1일차 판정 · 제12차 ②)
     function render5day(){} function renderKisPanel(){}
