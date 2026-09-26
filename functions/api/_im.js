@@ -290,7 +290,7 @@ export function autoTpModeOf(st){return "auto";}
 const IM_AUTOTP_MA150=IM_AUTOTP;
 export function imAutoTPMA150(bars,date){return imAutoTP(bars,date);}
 export function imAutoTPByMode(bars,date,mode){return imAutoTP(bars,date);}
-const IM_AUTOTP_M1={maLen:150,below:0.05};
+const IM_AUTOTP_M1={maLen:150,below:0.10};
 export function imAutoTPM1(bars,cycStart,date,base){
   if(!base||base.tp!==20||!cycStart)return base;
   const A=bars||[];let a=0,b=A.length;

@@ -537,7 +537,7 @@ try{ if(localStorage.getItem('qcockpit_hadUser')==='1') document.documentElement
 </div>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.103.2</span></h1></div>
+    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.103.3</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -1646,7 +1646,7 @@ if(/^\/paper\/?$/.test(location.pathname)){
   <footer>
     <strong>JK 퀀트</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.103.2</b> · 2026-09-26</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.103.3</b> · 2026-09-26</div>
   </footer>
 </div>
 
@@ -1696,7 +1696,7 @@ if(/^\/paper\/?$/.test(location.pathname)){
     <div class="field"><label>리버스 쿼터매수 gap % <span class="hint">0 = 기본(별지점 −$0.01 · 원문은 '별지점 아래'까지만) · 0보다 크면 변형</span></label><input id="set_revgap" type="number" inputmode="decimal" value="0"></div>
     <div class="field"><label>아래로 LOC 매수 추가 줄 수 <span class="hint">추가 자체는 V4.0 정식 · 1회매수금÷(수량+k) · 줄 수 3은 JKQuant 기본값(원문에 개수 없음) · 0이면 끔(변형)</span></label><input id="set_rows" type="number" inputmode="numeric" value="3" min="0" max="20"></div>
     <p class="note" style="margin:-2px 0 8px">처음매수·전반전·후반전 모두 본 주문 아래로 1주씩 LOC 를 더 겁니다 (V4.0 정식). 종가가 내려갈수록 같은 1회매수금으로 더 삽니다. 모의·백테·서버 자동주문이 같은 주문을 씁니다.</p>
-    <div class="note" style="margin:10px 0 0;padding:10px;border:1px solid var(--line);border-radius:9px;line-height:1.65"><b>옵션 설명</b><br><b>익절 변환 자동 · 끔</b> — 설정한 목표 수익률을 모든 사이클에 고정 적용합니다.<br><b>익절 변환 자동 · 켬</b> — 사이클 시작 전날 종가가 <b>MA150 아래</b>이거나 <b>120일 수익률 &gt; +100% 이면서 120일 연환산 변동성 &gt; 90%</b>이면 10%, 그 외에는 20%로 시작합니다. 20% 사이클 진행 중 전날 종가가 <b>MA150의 95% 미만</b>이 되면 10%로 한 번 낮추고 다시 20%로 올리지 않습니다.</div>
+    <div class="note" style="margin:10px 0 0;padding:10px;border:1px solid var(--line);border-radius:9px;line-height:1.65"><b>옵션 설명</b><br><b>익절 변환 자동 · 끔</b> — 설정한 목표 수익률을 모든 사이클에 고정 적용합니다.<br><b>익절 변환 자동 · 켬</b> — 사이클 시작 전날 종가가 <b>MA150 아래</b>이거나 <b>120일 수익률 &gt; +100% 이면서 120일 연환산 변동성 &gt; 90%</b>이면 10%, 그 외에는 20%로 시작합니다. 20% 사이클 진행 중 전날 종가가 <b>MA150의 90% 미만 (−10%)</b>이 되면 10%로 한 번 낮추고 다시 20%로 올리지 않습니다.</div>
   </div>
   <div id="set_vr" style="display:none">
     <div class="seclabel">종목 (티커) <span class="hint" style="color:var(--faint);font-weight:500">6자리 코드면 국내 — 통화가 원화로 바뀝니다</span></div><div class="field tkwrap" style="margin:0 0 8px"><input id="set_vticker" type="text" autocomplete="off" spellcheck="false" placeholder="티커를 입력하세요 — 예: TQQQ, SOXL" oninput="tkSearch('set_vticker')" onfocus="tkSearch('set_vticker')" onblur="tkBlur('set_vticker')"><div class="tklist" id="set_vticker_list"></div></div>
@@ -2129,7 +2129,7 @@ function cacheStrategyDefaults(v){
   return true;
 }
 
-const AUTO_TP_MODE_LABELS={auto:'MA150+초강세·고변동+M1'};
+const AUTO_TP_MODE_LABELS={auto:'MA150+초강세·고변동+−10%→10%'};
 function normalizeAutoTpMode(v){return 'auto';}
 function autoTpModeOf(st){return 'auto';}
 function autoTpLabel(mode){return AUTO_TP_MODE_LABELS.auto;}
@@ -2505,7 +2505,7 @@ function imAutoTP(bars, date){
 const IM_AUTOTP_MA150=IM_AUTOTP;
 function imAutoTPMA150(bars,date){return imAutoTP(bars,date);}
 function imAutoTPByMode(bars,date,mode){return imAutoTP(bars,date);}
-const IM_AUTOTP_M1={maLen:150,below:0.05};
+const IM_AUTOTP_M1={maLen:150,below:0.10};
 function imAutoTPM1(bars,cycStart,date,base){
   if(!base||base.tp!==20||!cycStart)return base;
   const A=bars||[];let a=0,b=A.length;
@@ -2887,7 +2887,7 @@ function imAutoTpBadge(c){
   const label=autoTpLabel(),A=c.tpAuto,hold=c.qty>0;
   const need='사이클 시작 전 거래일까지 150거래일 확정 종가(120일 수익률·변동성 포함)';
   if(!A) return `<div style="margin:2px 0 8px;padding:7px 10px;border-radius:8px;font-size:12px;background:rgba(245,196,81,.12);border:1px solid rgba(245,196,81,.32)">⏳ <b style="color:var(--gold)">익절 변환 자동 · ${label}</b> — 판정 자료(${need})가 없어 <b>설정값 ${st.target}%</b>로 계산했습니다. 🔄 자동으로 시세를 불러오세요.${hold?' 서버 자동주문은 이 상태에서 주문을 내지 않습니다.':''}</div>`;
-  const detail=A.m1 ? `M1 전환 ${A.m1AsOf} · 종가 ${(+A.m1Close).toFixed(2)} · MA150 ${(+A.m1Ma).toFixed(2)} · 괴리 ${A.m1Gap.toFixed(1)}% · 20→10% 영구 하향` : `종가 ${(+A.close).toFixed(2)} · MA150 ${(+A.ma).toFixed(2)} · 120일 ${A.ret>=0?'+':''}${A.ret.toFixed(1)}% · 변동성 ${A.vol.toFixed(1)}% · ${A.asOf}까지`;
+  const detail=A.m1 ? `−10% 기준 전환 ${A.m1AsOf} · 종가 ${(+A.m1Close).toFixed(2)} · MA150 ${(+A.m1Ma).toFixed(2)} · 괴리 ${A.m1Gap.toFixed(1)}% · 20→10% 사이클 내 유지` : `종가 ${(+A.close).toFixed(2)} · MA150 ${(+A.ma).toFixed(2)} · 120일 ${A.ret>=0?'+':''}${A.ret.toFixed(1)}% · 변동성 ${A.vol.toFixed(1)}% · ${A.asOf}까지`;
   return `<div style="margin:2px 0 8px;padding:7px 10px;border-radius:8px;font-size:12px;background:rgba(139,124,246,.12);border:1px solid rgba(139,124,246,.32)">🧪 <b style="color:var(--vio)">익절 변환 자동 · ${label}</b> · ${hold?'이번 사이클':'다음 사이클'} 익절 <b>${c.tp}%</b>`
     +`<span style="color:var(--faint)"> (${detail}${hold&&c.cycStart?' · 사이클 시작 '+c.cycStart:''} · 별%·복귀선도 같이 · 원문 V4.0 아님)</span></div>`;
 }
@@ -3797,7 +3797,7 @@ function _exchNow(cur){
 function simCutoff(cur){
   const n=_exchNow(cur);
   if(n.min>=(MKT_CLOSE_MIN[cur==='krw'?'krw':'usd'])+SETTLE_LAG_MIN) return n.date;
-  const y=new Date(n.date+'T00:00:00'); y.setDate(y.getDate()-1);
+  const y=new Date(n.date+'T00:00:00Z'); y.setUTCDate(y.getUTCDate()-1);
   return y.toISOString().slice(0,10);
 }
 function settledBars(rows,cur){ const cut=simCutoff(cur); return (rows||[]).filter(r=>r.date<=cut); }
@@ -9496,7 +9496,8 @@ const SIM_KEYS={
    설정 지문만 보면 설정을 안 바꾼 세션은 옛 기록을 그대로 안고 간다 —
    그래서 지문에 규약 판을 같이 넣어, 규약이 바뀌면 전 세션이 다시 만들어지게 한다.
    ※ 체결 규칙을 고칠 때마다 이 숫자를 올릴 것. */
-const SIM_RULE_VER=13;  // 13: 무매 M1 모의 재생 룩어헤드 제거 — 재생일 이전 봉까지만 판정
+const SIM_RULE_VER=14;  // 14: MA150 −10% → 익절 10% 하향 기준 적용
+                       // 13: 무매 M1 모의 재생 룩어헤드 제거 — 재생일 이전 봉까지만 판정
                        // 6: VR V 복귀 · 무매 아래로 LOC 추가 · 7: 제10차 · 8: VR 원문 매수표 — 밴드 1주 예약표(반올림)
                        // 9: VR 예약 지정가 체결가 — 시가가 이미 넘은 줄은 시가로 (그날 가격 범위 밖 체결 제거)
                        // 10: VR 예약표 줄 수 제한(20) 제거 — 원문 긴 매도표·추가 매도표대로 그날 닿는 줄까지

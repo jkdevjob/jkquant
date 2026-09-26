@@ -192,7 +192,7 @@ th:first-child,td:first-child{text-align:left}
 <body>
 <div class="wrap">
   <div class="top">
-    <div class="brand"><div class="logo">Asset Plan</div><h1>자산플랜 <span class="ver">v1.36.1</span></h1></div>
+    <div class="brand"><div class="logo">Asset Plan</div><h1>자산플랜 <span class="ver">v1.36.2</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
       <div class="jkmenu" id="jkmenuWrap">
@@ -1147,11 +1147,11 @@ function imAutoTP(bars, date){
 }
 function normalizeAutoTpMode(v){return 'auto';}
 function autoTpModeOf(st){return 'auto';}
-function autoTpLabel(mode){return 'MA150+초강세·고변동+M1';}
+function autoTpLabel(mode){return 'MA150+초강세·고변동+−10%→10%';}
 const IM_AUTOTP_MA150=IM_AUTOTP;
 function imAutoTPMA150(bars,date){return imAutoTP(bars,date);}
 function imAutoTPByMode(bars,date,mode){return imAutoTP(bars,date);}
-const IM_AUTOTP_M1={maLen:150,below:0.05};
+const IM_AUTOTP_M1={maLen:150,below:0.10};
 function imAutoTPM1(bars,cycStart,date,base){
   if(!base||base.tp!==20||!cycStart)return base;
   const A=bars||[];let a=0,b=A.length;
@@ -1234,7 +1234,7 @@ function imOrders(sess,price,rows){
   /* 확정 종가가 복귀선 위면 이번 주문은 일반모드 — 앱 renderOrder·서버와 같은 판정 (제11차 7) */
   const cdate=(rows&&rows.length)?String(rows[rows.length-1].date||''):'';   // rows 의 마지막 봉 = 그 확정 종가 (제12차 ②)
   if(imRevExitDue(c,price,c.tp,cdate)) c=calcInfState({...sess,autoBars:rows,hist:[...(sess.hist||[]),{date:cdate,kind:'리버스복귀',price,qty:0,virtual:true}]});
-  const st=c.st,div=+st.div||20,target=+c.tp||20,big=st.big!=null?+st.big:15,slot=div-c.T;   // target = 이번 사이클 익절% (익절 변환 자동이 꺼져 있으면 설정값)
+  const st=c.st,div=+st.div||20,target=+c.tp||20,big=imBigPct(st),slot=div-c.T;   // target = 이번 사이클 익절% (익절 변환 자동이 꺼져 있으면 설정값)
   if(!(price>0))return {state:c,orders:[],note:'확정 종가가 없어 주문을 계산하지 못했습니다.'};
   const orders=[];
   if(c.reverseActive){
@@ -1495,7 +1495,7 @@ function _exchNow(cur){
 function simCutoff(cur){
   const n=_exchNow(cur);
   if(n.min>=(MKT_CLOSE_MIN[cur==='krw'?'krw':'usd'])+SETTLE_LAG_MIN) return n.date;
-  const y=new Date(n.date+'T00:00:00'); y.setDate(y.getDate()-1);
+  const y=new Date(n.date+'T00:00:00Z'); y.setUTCDate(y.getUTCDate()-1);
   return y.toISOString().slice(0,10);
 }
 function settledBars(rows,cur){ const cut=simCutoff(cur); return (rows||[]).filter(r=>r.date<=cut); }
