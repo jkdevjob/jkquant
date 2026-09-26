@@ -1568,7 +1568,7 @@ console.log('[30] 모의 시작일 일괄 변경');
      KEYS.every(k=>new RegExp(`delete x\\.settings\\.${k};`).test(ap)) && /x\.settings\.startv=0;/.test(ap)
      && KEYS.every(k=>new RegExp(`delete t\\.settings\\.${k};`).test(idx)),
      KEYS.filter(k=>!new RegExp(`delete x\\.settings\\.${k};`).test(ap)).join(',')||'ok');
-  ok('지운 자리를 다시 채운다', /save\(\); pushRemote\(\);\s*\n\s*await openPaper\(\);/.test(ap));
+  ok('지운 자리를 다시 채우고 즉시 클라우드 저장한다', /saveLocal\(\);\s*\n\s*await openPaper\(\);/.test(ap) && /await pushRemoteNow\(\)/.test(ap));
   ok('모의가 없으면 알리고 멈춘다', /if\(!list\.length\)\{ alert\('모의 세션이 없습니다\.'\); return; \}/.test(ap));
 
   /* 시작일 하한 3년 — 그 앞은 시세를 하루씩 되짚느라 오래 걸리고,
@@ -1596,7 +1596,7 @@ console.log('[30] 모의 시작일 일괄 변경');
   // 조용히 건너뛰면 '왜 얘만 안 바뀌었지'가 된다
   ok('건너뛴 세션을 이름까지 알린다',
      /건너뜀 \$\{skip\.length\}개 — \$\{skip\.map\(\(\[,x\]\)=>x\.name\)\.join\(', '\)\}/.test(ap)
-     && /paperNote=`금액은 \$\{touched\.size\}개에만 적용했습니다/.test(ap));
+     && /const amountNote=skip\.length\?`금액은 \$\{touched\.size\}개에만 적용했습니다/.test(ap));
 }
 
 
