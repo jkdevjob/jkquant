@@ -537,7 +537,7 @@ try{ if(localStorage.getItem('qcockpit_hadUser')==='1') document.documentElement
 </div>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.101.2</span></h1></div>
+    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.101.3</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -1646,7 +1646,7 @@ if(/^\/paper\/?$/.test(location.pathname)){
   <footer>
     <strong>JK 퀀트</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.101.2</b> · 2026-09-26</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.101.3</b> · 2026-09-26</div>
   </footer>
 </div>
 
@@ -1817,27 +1817,27 @@ if(/^\/paper\/?$/.test(location.pathname)){
   <button class="mx" onclick="closePaper()" aria-label="닫기">✕</button>
   <h3>🧪 모의투자 성과</h3><p>모의로 표시한 세션만 모아 보여줍니다.</p>
   <div class="card" style="padding:16px;margin-bottom:14px">
-    <div style="display:grid;grid-template-columns:minmax(210px,1fr) minmax(210px,1fr) minmax(210px,1fr) 110px;gap:12px;align-items:end">
-      <div class="field" style="flex:1 1 210px;margin:0">
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px;align-items:end">
+      <div class="field" style="min-width:0;margin:0">
         <label style="font-size:12px;margin-bottom:6px">모의 시작일 <span class="hint" id="p_simstart_n"></span></label>
         <input id="p_simstart" type="date">
       </div>
-      <div class="field" style="flex:1 1 210px;margin:0">
+      <div class="field" style="min-width:0;margin:0">
         <label style="font-size:12px;margin-bottom:6px">원금 <span class="hint">원화 입력</span></label>
         <input id="p_capital" type="text" inputmode="decimal" placeholder="비우면 그대로" oninput="commaInput(this)">
         <div class="hint" id="p_capital_n" style="margin-top:5px;min-height:16px;line-height:1.35"></div>
       </div>
-      <div class="field" style="flex:1 1 210px;margin:0">
+      <div class="field" style="min-width:0;margin:0">
         <label style="font-size:12px;margin-bottom:6px">1회 적립액 <span class="hint">원화 입력</span></label>
         <input id="p_addamt" type="text" inputmode="decimal" placeholder="비우면 그대로" oninput="commaInput(this)">
         <div class="hint" id="p_addamt_n" style="margin-top:5px;min-height:16px;line-height:1.35"></div>
       </div>
-      <button class="ghostbtn" style="width:110px;height:42px;margin:0;padding:0 14px;align-self:end" onclick="applyAllSimStart()">전체 적용</button>
+      <div style="display:flex;justify-content:flex-end;align-items:end;min-width:0"><button class="ghostbtn" style="width:100%;max-width:160px;height:42px;margin:0;padding:0 14px" onclick="applyAllSimStart()">전체 적용</button></div>
     </div>
     <div class="note" style="margin-top:12px;line-height:1.7">
       <div><b>전체 적용</b>은 모의 세션의 시작일·금액을 한 번에 맞추고, 기존 모의 기록을 새 시작일부터 다시 계산합니다. <b>실계좌는 변경하지 않습니다.</b></div>
       <div style="margin-top:3px"><b>원금</b> → 무매·이평·섀넌·VR·거치 &nbsp;·&nbsp; <b>1회 적립액</b> → 적립식 &nbsp;·&nbsp; <b>ASAP 제외</b></div>
-      <div style="margin-top:3px"><b>원화로 입력</b> · 미국 종목은 <b>시작일 환율</b>로 달러 환산 · 시작일은 최대 <b>3년 전</b></div>
+      <div style="margin-top:3px"><b>금액은 모두 원화로 표시</b> · 미국 종목은 <b>시작일 환율</b>을 내부 계산에 사용 · 시작일은 최대 <b>3년 전</b></div>
     </div>
   </div>
   <div id="paper_body"></div>
@@ -7554,6 +7554,13 @@ async function paperFillAll(){
   }
   return rows;
 }
+function paperWon(v, rate){return Math.round((+v||0)*(rate||1)).toLocaleString('ko-KR')+'원';}
+async function paperWonRate(r){
+  if(!r||r.cur==='krw') return 1;
+  const d=r.from||'';
+  const fx=d ? await fxAt(d) : null;
+  return (fx&&fx.rate>0) ? fx.rate : ((typeof liveFX!=='undefined'&&liveFX)?liveFX:FX);
+}
 async function openPaper(){
   syncPaperStart();
   const body=$('paper_body');
@@ -7562,6 +7569,7 @@ async function openPaper(){
   const filled=await paperFillAll();
   refreshAll();
   const rows=filled||paperSummary();
+  await Promise.all(rows.map(async r=>{ r.wonRate=await paperWonRate(r); }));
   if(!body) return;
   if(!rows.length){
     const nPaper=PAPER_TABS.reduce((a,[t])=>a+((S[t]&&S[t].sessions)?S[t].sessions.filter(x=>x.paper).length:0),0);
@@ -7578,12 +7586,12 @@ async function openPaper(){
       : `<p class="lead">모의투자 세션이 없습니다.<br><br>· <b>새로 만들기</b> — 세션바의 <b>+ 세션</b> → <b>모의투자로 만들기</b> 체크 → 시작일 선택<br>· <b>기존 세션을 바꾸기</b> — 세션 이름을 <b>더블탭</b>하면 모의 전환·시작일을 정할 수 있습니다.<br><br>정하고 나면 그 뒤로는 알아서 오늘까지 굴러갑니다.</p>`;
   }else{
     const cur=rows.map(r=>r.price>0).every(Boolean);
-    let h=`<div class="htable-wrap"><table class="htable narrow"><tr><th>전략 · 세션</th><th>기간</th><th>평가</th>`
+    let h=`<div class="htable-wrap"><table class="htable narrow"><tr><th>전략 · 세션</th><th>기간</th><th>평가(원)</th>`
       + `<th title="평가금 + 잔금 + 나간 돈 ÷ 원금. 현재 + 인출 과 정확히 같습니다">최종</th>`
       + `<th title="최대 낙폭 — 하루하루 '총자산 ÷ 그때까지 넣은 돈'을 재서 고점 대비 가장 깊이 빠진 폭. 적립금이 상승처럼 잡히지 않도록 투입으로 나눠 잽니다">MDD</th>`
       + `<th title="평가금 + 잔금 ÷ 원금 — 계좌에 지금 남아 있는 것만">현재</th>`
       + `<th title="매도해서 계좌 밖으로 뺀 돈(단리 적립·출금) ÷ 원금">인출</th>`
-      + `<th>연</th><th>투입</th></tr>`;
+      + `<th>연</th><th>투입(원)</th></tr>`;
     rows.forEach(r=>{ const up=r.ret>=0, ok=r.price>0;
       const days=r.spanDays||Math.round(r.yrs*365.25);
       const per = days<45 ? `${days}일` : `${(days/365.25).toFixed(1)}년`;
@@ -7596,14 +7604,14 @@ async function openPaper(){
       const O=r.out||{};
       const outAmt=(O.saved||0)+(O.withdrawn||0);
       const outTag = outAmt>0
-        ? `<span class="cw" style="color:var(--gold)">${O.simple?'단리 인출':'출금'} ${wnCur(outAmt,r.cur)}</span>`
+        ? `<span class="cw" style="color:var(--gold)">${O.simple?'단리 인출':'출금'} ${paperWon(outAmt,r.wonRate)}</span>`
         : (O.simple ? `<span class="cw" style="color:var(--faint)">단리 · 인출 없음</span>` : '');
       /* 세션 이름은 툴팁으로 — 칸에는 종목과 주요 설정을 적는다 (이름은 설정과 어긋날 수 있다) */
       const _nm=String(r.name||'').replace(/</g,'&lt;').replace(/"/g,'&quot;');
       h+=`<tr><td><b class="slink" onclick="gotoSess('${r.tab}','${r.id}')" title="${r.label} 분석으로 이동 — ${_nm}">${r.label}</b><span class="cw">${r.sym}${r.opts&&r.opts.length?' · '+r.opts.join(' · '):''}</span>${outTag}</td>
         <td>${per}<span class="cw">${r.nTrade}거래</span></td>`
         + (ok
-          ? `<td>${wnCur(r.total,r.cur)}</td>
+          ? `<td>${paperWon(r.total,r.wonRate)}</td>
              <td style="color:${up?'var(--buy)':'var(--sell)'};font-weight:700">${up?'+':''}${r.ret.toFixed(1)}%</td>`
              /* MDD는 종가 이력이 있어야 잰다 — 못 재면 0%처럼 보이지 않게 비운다 */
              + `<td style="color:${r.mdd?'var(--sell)':'var(--faint)'}" title="${r.mdd?r.mdd.nDay+'거래일을 하루하루 재봤습니다':'종가 이력이 모자라 못 쟀습니다'}">${r.mdd?'−'+r.mdd.pct.toFixed(1)+'%':'—'}</td>`
@@ -7614,10 +7622,10 @@ async function openPaper(){
              + `<td style="color:${long?(up?'var(--buy)':'var(--sell)'):'var(--faint)'}">${cagr}</td>`
           : `<td colspan="6" style="color:var(--gold)">시세 대기 — ${r.sym} 시세를 못 받았습니다. 새로고침하면 재시도합니다</td>`)
         // 투입은 맨 오른쪽 — 눈이 먼저 가야 하는 건 성과(평가·수익·연)다
-        + `<td style="color:var(--dim)">${wnCur(r.inflow,r.cur)}</td></tr>`; });
+        + `<td style="color:var(--dim)">${paperWon(r.inflow,r.wonRate)}</td></tr>`; });
     h+=`</table></div>`;
     if(!cur) h+=`<p class="note" style="margin-top:8px;color:var(--gold)">⚠ 시세를 못 받은 세션이 있습니다. 그 줄은 수익률을 비워 뒀습니다 — 해당 탭을 한 번 열면 채워집니다.</p>`;
-    h+=`<p class="note" style="margin-top:8px"><b style="color:var(--vio)">전략 이름</b>을 누르면 그 세션의 분석으로 갑니다. · 평가 = 보유 평가금 + 현금 + 계좌 밖으로 뺀 돈(출금·단리 인출) · 투입 = 밖에서 넣은 돈(원금·적립·입금) · <b>MDD</b> = 하루하루 <b>총자산 ÷ 그때까지 넣은 돈</b>의 고점 대비 최대 낙폭(적립금이 상승으로 잡히지 않게 투입으로 나눠 잽니다). 수수료는 전략별 재생 규약을 따르고 <b>양도세는 넣지 않았습니다</b>. 분배금은 <b>현금 수령·적립은 세전</b>, 장부에 적는 배당(재투자)은 세후로 셉니다.</p>`;
+    h+=`<p class="note" style="margin-top:8px"><b style="color:var(--vio)">전략 이름</b>을 누르면 그 세션의 분석으로 갑니다. · <b>금액은 모두 원화 표시</b>(미국 종목은 세션 시작일 환율 사용) · 평가 = 보유 평가금 + 현금 + 계좌 밖으로 뺀 돈(출금·단리 인출) · 투입 = 밖에서 넣은 돈(원금·적립·입금) · <b>MDD</b> = 하루하루 <b>총자산 ÷ 그때까지 넣은 돈</b>의 고점 대비 최대 낙폭(적립금이 상승으로 잡히지 않게 투입으로 나눠 잽니다). 수수료는 전략별 재생 규약을 따르고 <b>양도세는 넣지 않았습니다</b>. 분배금은 <b>현금 수령·적립은 세전</b>, 장부에 적는 배당(재투자)은 세후로 셉니다.</p>`;
     if(paperNote) h+=`<p class="note" style="color:var(--vio)">${paperNote}</p>`;
     body.innerHTML=h;
   }
@@ -7675,22 +7683,20 @@ async function paperValSummaryWon(fieldOf){
   for(const [tab,x] of list){
     const st=x.settings||{}, f=fieldOf(tab,st); if(!f) continue;
     const v=+st[f]||0, cur=curOf(st);
-    let txt=wnCur(v,cur);
+    let won=v, detail='';
     if(cur==='usd'){
       const d=x.simStart||'';
       const fx=d ? await fxAt(d) : null;
       const rate=(fx&&fx.rate>0) ? fx.rate : ((typeof liveFX!=='undefined'&&liveFX)?liveFX:FX);
-      const approx=(fx&&fx.rate>0)?'':'≈';
-      txt+=` ≈ ${approx}${Math.round(v*rate).toLocaleString('en-US')}₩`;
+      won=v*rate;
+      detail=(fx&&fx.rate>0)?`${fx.date||d} 환율 ${rate.toLocaleString('en-US')}원/$`:`현재 환율 ${rate.toLocaleString('en-US')}원/$ 사용`;
     }
-    if(!seen.includes(txt)) seen.push(txt);
+    const txt=`${Math.round(won).toLocaleString('ko-KR')}원`;
+    if(!seen.some(x=>x.txt===txt)) seen.push({txt,detail});
   }
   const n=list.length;
-  if(seen.length===1) return {text:`현재 ${seen[0]} · ${n}개`, detail:''};
-  return {
-    text:`현재 ${n}개 · 값 ${seen.length}종`,
-    detail:seen.join(' / ')
-  };
+  if(seen.length===1) return {text:`현재 ${seen[0].txt} · ${n}개`, detail:seen[0].detail||''};
+  return {text:`현재 ${n}개 · 값 ${seen.length}종`, detail:seen.map(x=>x.txt+(x.detail?' · '+x.detail:'')).join(' / ')};
 }
 function syncPaperStart(){
   const el=$('p_simstart'); if(!el) return;
@@ -7704,9 +7710,9 @@ function syncPaperStart(){
   el.disabled=!list.length;
   const c=$('p_capital'); if(c){ c.value=''; c.disabled=!list.length; }
   const a=$('p_addamt');  if(a){ a.value=''; a.disabled=!list.length; }
-  const cn=$('p_capital_n'); if(cn){ cn.textContent=paperValSummary(paperCapField);
+  const cn=$('p_capital_n'); if(cn){ cn.textContent='현재값 계산 중…';
     paperValSummaryWon(paperCapField).then(v=>{ if($('p_capital_n')===cn){ cn.textContent=v.text; cn.title=v.detail||''; } }).catch(()=>{}); }
-  const an=$('p_addamt_n');  if(an){ an.textContent=paperValSummary(paperAddField);
+  const an=$('p_addamt_n');  if(an){ an.textContent='현재값 계산 중…';
     paperValSummaryWon(paperAddField).then(v=>{ if($('p_addamt_n')===an){ an.textContent=v.text; an.title=v.detail||''; } }).catch(()=>{}); }
 }
 async function applyAllSimStart(){
@@ -7745,10 +7751,8 @@ async function applyAllSimStart(){
   if(add!=null) msg+=`\n1회 적립액 ${add.toLocaleString('en-US')}₩ → ${addHit.length}개 적용`;
   if((cap!=null||add!=null)){
     if(fx){
-      msg+=`\n\n환율 ${fx.date} 기준 ${fx.rate.toLocaleString('en-US')}원/$`;
-      if(cap!=null) msg+=`\n  미국 종목 원금 → ${wonToSess(cap,{},fx.rate).toLocaleString('en-US')}$`;
-      if(add!=null) msg+=`\n  미국 종목 적립액 → ${wonToSess(add,{},fx.rate).toLocaleString('en-US')}$`;
-      msg+='\n  국내 종목은 원화 그대로';
+      msg+=`\n\n미국 종목은 ${fx.date} 기준 환율 ${fx.rate.toLocaleString('en-US')}원/$을 내부 계산에 사용합니다.`;
+      msg+='\n표시 금액은 모두 원화이며 국내 종목은 환산 없이 그대로 사용합니다.';
     }else{
       msg+='\n※ 전부 국내 종목이라 환산 없이 들어갑니다.';
     }

@@ -3041,7 +3041,20 @@ console.log('\n[61] 모의 성과 — 원화로 받아 세션 통화로 환산')
   ok('칸이 원화라고 적혀 있다', /원금 <span class="hint">원화 입력<\/span>/.test(idx)
      && /1회 적립액 <span class="hint">원화 입력<\/span>/.test(idx)
      && /id="p_capital_n"/.test(idx) && /id="p_addamt_n"/.test(idx));
-  ok('무엇이 환산되는지 적어 뒀다', /<b>원화로 입력<\/b> · 미국 종목은 <b>시작일 환율<\/b>로 달러 환산/.test(idx));
+  ok('무엇이 환산되는지 적어 뒀다', /<b>금액은 모두 원화로 표시<\/b> · 미국 종목은 <b>시작일 환율<\/b>을 내부 계산에 사용/.test(idx));
+  ok('모의 성과 상단은 반응형 그리드라 전체 적용 버튼이 카드 밖으로 밀리지 않는다',
+     /grid-template-columns:repeat\(auto-fit,minmax\(210px,1fr\)\)/.test(idx)
+     && /max-width:160px/.test(idx));
+  {
+    const psw=extractFn(idx,'async function paperValSummaryWon(fieldOf)');
+    const op=extractFn(idx,'async function openPaper()');
+    ok('모의 성과 화면 금액은 원화만 표시한다 — 상단 현재값·평가·투입·인출',
+       /toLocaleString\('ko-KR'\)\+'원'/.test(idx)
+       && !/let txt=wnCur\(v,cur\)/.test(psw)
+       && /paperWon\(r\.total,r\.wonRate\)/.test(op)
+       && /paperWon\(r\.inflow,r\.wonRate\)/.test(op)
+       && /paperWon\(outAmt,r\.wonRate\)/.test(op));
+  }
 
   const w2=(()=>{ try{ return extractFn(idx,'function wonToSess(won, st, rate)'); }catch(e){ return ''; } })();
   ok('환산 함수는 하나다', (idx.match(/function wonToSess\(/g)||[]).length===1 && w2.length>0);
