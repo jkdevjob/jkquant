@@ -1588,10 +1588,10 @@ console.log('[30] 모의 시작일 일괄 변경');
   ok('VR은 initAmt', /if\(tab==='vr'\) return 'initAmt';/.test(cf));
   ok('적립·거치는 거치식만', /if\(tab==='dca'\) return \(st&&st\.mode==='lump'\) \? 'amount' : null;/.test(cf));
   ok('ASAP은 원금 개념이 없다', /return null;\s*\/\/ asap/.test(cf));
-  ok('ASAP 전체 적용은 base만 바꾸고 mid/deep는 건드리지 않는다',
-     /if\(tab==='asap'\) return 'base';/.test(extractFn(idx,'function paperAddField(tab, st)'))
-     && !/paperAddField[\s\S]{0,200}mid/.test(extractFn(idx,'function paperAddField(tab, st)'))
-     && !/paperAddField[\s\S]{0,200}deep/.test(extractFn(idx,'function paperAddField(tab, st)')));
+  { const aa=extractFn(idx,'function applyPaperAdd(tab, st, won, rate)');
+    ok('ASAP 전체 적용은 base=1배 · mid=2배 · deep=3배',
+       /st\.base=base;/.test(aa) && /st\.mid=\+\(base\*2\)\.toFixed\(2\)/.test(aa)
+       && /st\.deep=\+\(base\*3\)\.toFixed\(2\)/.test(aa)); }
   // v3.34부터 금액 칸이 둘(원금·1회 적립액)이라 읽기는 paperReadAmt가 맡는다 — 자세한 건 [40]
   const rd=extractFn(idx,'function paperReadAmt(id, label)');
   ok('원금은 비워두면 안 바꾼다', /if\(!raw\) return null;/.test(rd)
@@ -1828,7 +1828,7 @@ console.log('[39] 로그인 진단 — 어디서 막혔는지 화면에서 읽�
 console.log('[40] 모의 일괄 적용 — 원금과 1회 적립액을 따로');
 {
   ok('칸이 둘이다', /id="p_capital"/.test(idx) && /id="p_addamt"/.test(idx));
-  ok('칸마다 현재값 힌트가 있다', /id="p_capital_n"/.test(idx) && /id="p_addamt_n"/.test(idx));
+  ok('원금·1회 적립액 밑에 현재값/개수 표시는 없다', !/id="p_capital_n"/.test(idx) && !/id="p_addamt_n"/.test(idx));
   const af=extractFn(idx,'function paperAddField(tab, st)');
   ok('적립액 매핑 존재', !!af);
   ok('적립식과 ASAP base를 1회 적립액으로 본다',
@@ -1837,24 +1837,17 @@ console.log('[40] 모의 일괄 적용 — 원금과 1회 적립액을 따로');
   const cf=extractFn(idx,'function paperCapField(tab, st)');
   ok('거치식은 여전히 원금', /mode==='lump'\) \? 'amount' : null/.test(cf));
   ok('ASAP은 원금이 아니라 1회 적립액(base) 대상이다', /return null;\s*\/\/ asap/.test(cf) && /if\(tab==='asap'\) return 'base';/.test(af));
-  const vs=extractFn(idx,'function paperValSummary(fieldOf)');
-  ok('현재값 요약 함수 존재', !!vs);
-  ok('세션 통화로 찍는다', /wnCur\(\+st\[f\]\|\|0, curOf\(st\)\)/.test(vs));
-  ok('값이 여러 개면 나열한다', /seen\.join\(' \/ '\)/.test(vs));
-  ok('해당 없으면 그렇게 적는다', /'해당 세션 없음'/.test(vs));
+  ok('세션 달러값을 역환산하는 현재값 요약 함수는 제거했다', !/function paperValSummary\(/.test(idx) && !/function paperValSummaryWon\(/.test(idx));
   const sp=extractFn(idx,'function syncPaperStart()');
   ok('전체 적용 공통 시작일을 저장하고 새로고침 때 우선 표시한다',
      /S&&S\.paperCommon&&S\.paperCommon\.simStart/.test(sp)
      && /const pick=\(common&&common>=min&&common<=today\)\?common/.test(sp));
-  ok('열 때 두 힌트를 원화 요약으로 채운다',
-     /p_capital_n[\s\S]{0,120}paperValSummaryWon\(paperCapField\)/.test(sp)
-     && /p_addamt_n[\s\S]{0,120}paperValSummaryWon\(paperAddField\)/.test(sp));
-  ok('두 칸 다 비우고 연다', /\$\('p_addamt'\)[\s\S]{0,60}value=''/.test(sp));
+  ok('열 때 마지막으로 입력한 원화 원본을 입력칸에 그대로 복원한다', /pc\.capitalWon/.test(sp) && /pc\.addWon/.test(sp) && /toLocaleString\('ko-KR'/.test(sp));
   const ap=extractFn(idx,'async function applyAllSimStart()');
   ok('두 값을 따로 읽는다', /paperReadAmt\('p_capital'/.test(ap) && /paperReadAmt\('p_addamt'/.test(ap));
   ok('잘못된 값이면 멈춘다', /cap===false \|\| add===false/.test(ap));
-  ok('둘 다 따로 적용한다', /paperCapField\(tab,x\.settings\); if\(f\) x\.settings\[f\]=wonToSess\(cap,/.test(ap)
-     && /paperAddField\(tab,x\.settings\); if\(f\) x\.settings\[f\]=wonToSess\(add,/.test(ap));
+  ok('원금과 적립액을 따로 적용하고 ASAP은 1·2·3배 헬퍼를 쓴다', /paperCapField\(tab,x\.settings\); if\(f\) x\.settings\[f\]=wonToSess\(cap,/.test(ap)
+     && /applyPaperAdd\(tab,x\.settings,add,R\)/.test(ap));
   ok('전체 적용은 모든 모의 세션 시작일을 같은 날짜로 강제하고 클라우드 저장 완료까지 기다린다',
      /S\.paperCommon\.simStart=ns/.test(ap)
      && /x\.simStart=ns/.test(ap)
@@ -1862,7 +1855,7 @@ console.log('[40] 모의 일괄 적용 — 원금과 1회 적립액을 따로');
      && /paperSessions\(\)\.filter\(\(\[,x\]\)=>x\.simStart!==ns\)/.test(ap));
   /* 금액 칸은 원화다. 미국 종목 세션엔 시작일 환율로 환산해 들어가므로
      어떤 환율을 썼는지 묻기 전에 보여야 한다 — 원금이 얼마로 들어갈지가 달라진다. */
-  ok('통화 규약을 미리 알린다', /미국 종목은 \$\{fx\.date\} 기준 환율/.test(ap) && /표시 금액은 모두 원화/.test(ap));
+  ok('입력 원화는 그대로 저장하고 내부 계산만 시작일 환율, 목록은 현재 환율이라고 알린다', /입력한 원화값은 그대로 저장합니다/.test(ap) && /전략 계산에만 \$\{fx\.date\} 기준 환율/.test(ap) && /성과 목록은 열 때의 현재 USD\/KRW/.test(ap));
   ok('건너뛴 세션 이름에 조사를 안 붙인다', /건너뛴 세션: /.test(ap) && !/join\(', '\)\}은 금액/.test(ap));
   const rd=extractFn(idx,'function paperReadAmt(id, label)');
   ok('비우면 그대로 둔다', /if\(!raw\) return null;/.test(rd));
@@ -3052,19 +3045,18 @@ console.log('\n[60] 분배금 현금 수령 — 전 전략');
    오늘 환율로 대신하면 3년 전 시작인데 지금 환율로 환산한 원금이 된다. */
 console.log('\n[61] 모의 성과 — 원화로 받아 세션 통화로 환산');
 {
-  ok('칸이 원화라고 적혀 있다', /원금 <span class="hint">원화 입력<\/span>/.test(idx)
+  ok('칸은 원화 입력이고 밑에 환산값/개수 표시는 없다', /원금 <span class="hint">원화 입력<\/span>/.test(idx)
      && /1회 적립액 <span class="hint">원화 입력<\/span>/.test(idx)
-     && /id="p_capital_n"/.test(idx) && /id="p_addamt_n"/.test(idx));
-  ok('무엇이 환산되는지 적어 뒀다', /<b>금액은 모두 원화로 표시<\/b> · 미국 종목은 <b>시작일 환율<\/b>을 내부 계산에 사용/.test(idx));
+     && !/id="p_capital_n"/.test(idx) && !/id="p_addamt_n"/.test(idx));
+  ok('입력 원화 원본과 목록 현재환율 규약을 적어 뒀다', /<b>입력값은 원화 그대로 저장<\/b>/.test(idx) && /<b>성과 목록은 현재 USD\/KRW<\/b>/.test(idx));
   ok('모의 성과 상단은 반응형 그리드라 전체 적용 버튼이 카드 밖으로 밀리지 않는다',
      /grid-template-columns:repeat\(auto-fit,minmax\(210px,1fr\)\)/.test(idx)
      && /max-width:160px/.test(idx));
   {
-    const psw=extractFn(idx,'async function paperValSummaryWon(fieldOf)');
     const op=extractFn(idx,'async function openPaper()');
-    ok('모의 성과 화면 금액은 원화만 표시한다 — 상단 현재값·평가·투입·인출',
-       /toLocaleString\('ko-KR'\)\+'원'/.test(idx)
-       && !/let txt=wnCur\(v,cur\)/.test(psw)
+    const pr=extractFn(idx,'function paperWonRate(r)');
+    ok('모의 성과 목록은 현재 환율을 먼저 받고 평가·투입·인출을 원화로 표시한다',
+       /await loadFX\(\)/.test(op) && /liveFX/.test(pr) && !/fxAt\(/.test(pr)
        && /paperWon\(r\.total,r\.wonRate\)/.test(op)
        && /paperWon\(r\.inflow,r\.wonRate\)/.test(op)
        && /paperWon\(outAmt,r\.wonRate\)/.test(op));
