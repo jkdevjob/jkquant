@@ -283,7 +283,7 @@ export function imAutoTP(bars, date){
   const ss=rs.reduce((s,x)=>s+(x-mean)*(x-mean),0);
   const vol=Math.sqrt(ss/(rs.length-1))*Math.sqrt(252)*100;
   const weak=close<ma,hot=ret>IM_AUTOTP.retHi&&vol>IM_AUTOTP.volHi;
-  return {tp:(weak||hot)?IM_AUTOTP.lo:IM_AUTOTP.hi,close,ma,ret,vol,weak,hot,asOf:String(bars[j].date),mode:"auto"};
+  return {tp:(weak||hot)?IM_AUTOTP.lo:IM_AUTOTP.hi,close,ma,ret,vol,weak,hot,asOf:String(bars[j].date),mode:'auto'};
 }
 export function normalizeAutoTpMode(v){return "auto";}
 export function autoTpModeOf(st){return "auto";}

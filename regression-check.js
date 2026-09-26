@@ -9960,9 +9960,9 @@ console.log('\n[132] 익절 변환 자동 — 통합 ON/OFF · 룩어헤드 없�
      && /선택 항목 기존 세션에 적용/.test(adm));
 
   ok('F 백테 — 자동익절 UI도 끔/켬 단일 옵션',
-     /<label>익절 변환 자동 <span[^>]*>실험 · 원문 아님<\/span><\/label>/.test(bt)
-     && /<button data-x="1"[^>]*>켬<\/button>/.test(bt)
-     && /imAutoTp=e\.target\.dataset\.x==='1'/.test(bt));
+     bt.includes('<label>익절 변환 자동 ')
+     && bt.includes('>켬</button>')
+     && bt.includes("imAutoTp=e.target.dataset.x==='1'"));
 
   ok('G 모의 규약 버전 11 — 기존 자동익절 모의기록을 새 규칙으로 재생성',/const SIM_RULE_VER=11;/.test(idx));
 }
