@@ -537,7 +537,7 @@ try{ if(localStorage.getItem('qcockpit_hadUser')==='1') document.documentElement
 </div>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.101.0</span></h1></div>
+    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.101.1</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -1646,7 +1646,7 @@ if(/^\/paper\/?$/.test(location.pathname)){
   <footer>
     <strong>JK 퀀트</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.101.0</b> · 2026-09-26</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.101.1</b> · 2026-09-26</div>
   </footer>
 </div>
 
@@ -2369,7 +2369,7 @@ function computeInf(){
   const revEnter=(d)=>{ if(revEnabled(st) && revState==='NORMAL' && qty>1e-9 && (st.div-T)<1){ revState='DAY1'; revFrom=d||''; } };
   /* 익절 자동(실험 · imAutoTP) — 사이클 첫 매수일로 그 사이클 익절%를 정한다(그날 봉은 안 본다). 끄면 전부 st.target — 기존과 같다.
      기록에 따로 적지 않는다: 첫 매수일과 확정 종가만으로 언제 다시 세도 같은 값이 나온다(서버·플랜도 같은 식). */
-  const _auto=(st.autoTp===true), _mode=autoTpModeOf(st), _ab=_auto?imAutoBars(st):null;
+  const _auto=(st.autoTp===true), _mode=_auto?autoTpModeOf(st):'ret120', _ab=_auto?imAutoBars(st):null;
   const tpAt=(d)=>(_auto&&_ab&&d)?imAutoTPByMode(_ab,d,_mode):null;
   let cycStart='', cycTp=null;   // 이번 사이클 첫 매수일 · 그날 판정 (익절 자동일 때만 쓴다)
   let day=null, daySold=false;   // 그날 매도가 있었나 — 사이클 종료는 그날 마지막 매매 줄에서만 판정한다 (제14차 D15)
@@ -2791,7 +2791,7 @@ function imVariantOf(cfg){
 function imRuleOf(st){
   const S=st||{};
   return imVariantOf({tickers:[String(S.ticker||'').toUpperCase()], div:S.div, reverse:S.reverse===true,
-    revGap:revGapOf(S), target:S.target, tgtDyn:S.tgtDyn===true, autoTp:S.autoTp===true, autoTpMode:autoTpModeOf(S), engine:S.engine||'v40', big:S.big, rows:imRowsOf(S)});
+    revGap:revGapOf(S), target:S.target, tgtDyn:S.tgtDyn===true, autoTp:S.autoTp===true, autoTpMode:S.autoTp===true?autoTpModeOf(S):'ret120', engine:S.engine||'v40', big:S.big, rows:imRowsOf(S)});
 }
 function imRuleTag(st){
   const v=imRuleOf(st);
