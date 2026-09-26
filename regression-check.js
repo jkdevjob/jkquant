@@ -632,7 +632,7 @@ console.log('[10] 모의 장부 정합');
   ok('모의 기간을 시작일부터 잰다', /sess\.simStart && sess\.simStart<first/.test(stat));
   // 여러 세션을 한 표에 나열하므로 통화는 줄마다 따로
   ok('성과 행에 통화를 실어 보낸다', /cur:curOf\(st\)/.test(stat));
-  ok('성과 표 금액은 원화-only로 찍는다', /paperWon\(r\.inflow,r\.wonRate\)/.test(idx) && /paperWon\(r\.total,r\.wonRate\)/.test(idx));
+  ok('성과 표 금액은 원화-only로 찍는다', /paperInflowText\(r\)/.test(idx) && /paperWon\(r\.total,r\.wonRate\)/.test(idx));
   ok('wn은 wnCur 위에 있다(중복 구현 없음)', /function wn\(v\)\{ return wnCur\(v, curCurrency\(\)\); \}/.test(idx));
 }
 
@@ -1595,7 +1595,7 @@ console.log('[30] 모의 시작일 일괄 변경');
   // v3.34부터 금액 칸이 둘(원금·1회 적립액)이라 읽기는 paperReadAmt가 맡는다 — 자세한 건 [40]
   const rd=extractFn(idx,'function paperReadAmt(id, label)');
   ok('원금은 비워두면 안 바꾼다', /if\(!raw\) return null;/.test(rd)
-     && /if\(cap!=null\)\{ const f=paperCapField\(tab,x\.settings\); if\(f\) x\.settings\[f\]=wonToSess\(cap,x\.settings,R\); \}/.test(ap));
+     && /if\(cap!=null\)/.test(ap) && /paperCapField\(tab,x\.settings\)/.test(ap) && /x\.settings\[f\]=wonToSess\(cap,x\.settings,R\)/.test(ap));
   ok('0 이하는 거부', /if\(!\(v>0\)\)\{ alert\(`\$\{label\}은 0보다 커야 합니다/.test(rd));
   // 조용히 건너뛰면 '왜 얘만 안 바뀌었지'가 된다
   ok('건너뛴 세션을 이름까지 알린다',
@@ -1847,7 +1847,7 @@ console.log('[40] 모의 일괄 적용 — 원금과 1회 적립액을 따로');
   const ap=extractFn(idx,'async function applyAllSimStart()');
   ok('두 값을 따로 읽는다', /paperReadAmt\('p_capital'/.test(ap) && /paperReadAmt\('p_addamt'/.test(ap));
   ok('잘못된 값이면 멈춘다', /cap===false \|\| add===false/.test(ap));
-  ok('원금과 적립액을 따로 적용하고 ASAP은 1·2·3배 헬퍼를 쓴다', /paperCapField\(tab,x\.settings\); if\(f\) x\.settings\[f\]=wonToSess\(cap,/.test(ap)
+  ok('원금과 적립액을 따로 적용하고 ASAP은 1·2·3배 헬퍼를 쓴다', /paperCapField\(tab,x\.settings\)/.test(ap) && /x\.settings\[f\]=wonToSess\(cap,x\.settings,R\)/.test(ap)
      && /applyPaperAdd\(tab,x\.settings,add,R\)/.test(ap));
   ok('전체 적용은 모든 모의 세션 시작일을 같은 날짜로 강제하고 클라우드 저장 완료까지 기다린다',
      /S\.paperCommon\.simStart=ns/.test(ap)
@@ -6594,7 +6594,7 @@ console.log('\n[100] 5년 플랜·VR 예약주문 동기화');
     ok(label+': 반대편 체결이 있어도 사다리 기준수량은 사이클 시작값 고정',
        !!s1 && near(s1.price,115,1e-9), s1?String(s1.price):'no fill');
   }
-  ok('운영: 모의 규약 버전 10으로 올려 옛 모의 기록을 재생성 (VR 예약표 줄 수 제한 제거 · 큰 계좌 한 줄 여러 주)', /const SIM_RULE_VER=10;/.test(idx));
+  ok('운영: 모의 규약 버전 11 — 익절 변환 자동 통합규칙 변경으로 자동생성 기록 재생성', /const SIM_RULE_VER=11;/.test(idx));
   ok('운영·백테: 잘못된 “공식 (V 복귀)” UI 제거', !/공식 \(V 복귀\)/.test(idx) && !/공식 \(V 복귀\)/.test(bt));
   ok('플랜: 현재 사이클 시작수량과 양쪽 체결차수를 복원', /cycleBaseQty/.test(pl) && /cycleSellFilled/.test(pl) && /cycleBuyFilled/.test(pl));
 }
@@ -9914,243 +9914,57 @@ console.log('\n[131] 한투 계좌 확인 — 읽기 전용 (주문가능금액 
 }
 
 /* ════════════════════════════════════════════════════════════════════
-   [132] 익절 자동 (실험적 확장 · 원문 V4.0 아님) — 사이클 첫 매수일 전날까지 120거래일 수익률 < 0 → 10%, 아니면 20%
-   ════════════════════════════════════════════════════════════════════
-   판정은 imAutoTP 하나다(index·backtest·plan·서버 같은 글자). 사이클이 시작할 때 한 번 정하고 끝날 때까지 간다 —
-   별%base·복귀선도 같이 따라간다(통합 규약). 백테 runIM · 앱 장부(computeInf → 주문표·모의) · 서버 imCompute/imOrders ·
-   플랜 calcInfState 가 같은 값을 내는지 값으로 본다. 꺼져 있으면 전부 예전 그대로다(기존 시험 전부가 그걸 본다). */
-console.log('\n[132] 익절 자동(실험) — 사이클 시작 120거래일 수익률 → 10/20 · 사이클 도중 고정 · 룩어헤드 없음 · 5경로 같은 값');
+   [132] 익절 변환 자동 — MA150 약세 OR 120일 초강세·고변동 → 10%, 그 외 20%
+   ════════════════════════════════════════════════════════════════════ */
+console.log('\n[132] 익절 변환 자동 — 통합 ON/OFF · 룩어헤드 없음 · 4경로 동일');
 {
   const im=fs.readFileSync(__d+'/functions/api/_im.js','utf8'), pl=fs.readFileSync(__d+'/plan.html','utf8');
-  const atSrc=fs.readFileSync(__d+'/functions/api/autotrade.js','utf8');
-  const J=JSON.stringify;
-  const bdays=(n,start)=>{ const out=[], t=new Date(start+'T00:00:00Z'); while(out.length<n){ const w=t.getUTCDay(); if(w!==0&&w!==6) out.push(t.toISOString().slice(0,10)); t.setUTCDate(t.getUTCDate()+1); } return out; };
   const SIG='function imAutoTP(bars, date)', CRE=/const IM_AUTOTP=\{[^\n]*\};/;
   const body=src=>(src.match(CRE)||[''])[0]+'\n'+extractFn(src,SIG);
-  const SV=new Function(im.replace(/export /g,'')+'\nreturn {imAutoTP,imAutoTPMA150,imAutoTPByMode,imCompute,imOrders};')();
-  const PL=new Function([
-    (pl.match(/const usd=v=>[^\n]*/)||[''])[0], (pl.match(/const FEE=[^\n]*/)||[''])[0],
-    pl.slice(pl.indexOf('const KIND_T='), pl.indexOf(';', pl.indexOf("'절반매수+지정가매도(애프터)'"))+1),
-    (pl.match(/const isBuyKind=[^\n]*/)||[''])[0], (pl.match(/const isSellKind=[^\n]*/)||[''])[0],
-    (pl.match(/const REV_DIVS_PLAN=[^\n]*/)||[''])[0],
-    (pl.match(/function reverseTPlan[^\n]*/)||[''])[0], (pl.match(/function starPctPlan[^\n]*/)||[''])[0], body(pl),
-    extractFn(pl,'function normalizeAutoTpMode(v)'), extractFn(pl,'function autoTpModeOf(st)'),
-    (pl.match(/const IM_AUTOTP_MA150=\{[^\n]*\};/)||[''])[0], extractFn(pl,'function imAutoTPMA150(bars,date)'), extractFn(pl,'function imAutoTPByMode(bars,date,mode)'),
-    ...['function exitMulOf(base)','function imRevExitDue(c, close, target, date)','function calcInfState(sess)','function imOrders(sess,price,rows)'].map(x=>extractFn(pl,x)),
-    'return {imOrders, calcInfState, imAutoTP, imAutoTPMA150, imAutoTPByMode};'].join('\n'))();
-  const F4={index:imAutoTP, backtest:global.imAutoTP, plan:PL.imAutoTP, server:SV.imAutoTP};
-  const D=bdays(300,'2020-01-01');
-
-  /* ── A. 판정 함수 — 값 (네 벌 다) ── */
-  { const B=arr=>arr.map((c,i)=>({date:D[i],close:c}));
-    const dn=B(Array.from({length:122},(_,i)=>i<=120?100-10*i/120:130));   // 120일 −10% · 그날(121) 봉은 +30% (보면 뒤집힌다)
-    const up=B(Array.from({length:122},(_,i)=>100+10*i/120)), fl=B(Array.from({length:122},()=>100));
-    for(const [nm,f] of Object.entries(F4)){
-      const a=f(dn,D[121]), b=f(up,D[121]), z=f(fl,D[121]);
-      ok(`A ${nm} — 120일 −10% → 10 · +10% → 20 · 0% → 20 · 그날 봉(+30%)은 안 본다`,
-         !!a&&a.tp===10&&Math.abs(a.ret+10)<1e-9&&a.asOf===D[120] && !!b&&b.tp===20&&Math.abs(b.ret-10)<1e-9 && !!z&&z.tp===20&&z.ret===0, J([a,b,z]));
-      ok(`A ${nm} — 자료 모자람: 앞선 봉 120개면 null · 121개면 판정 · 빈 배열·null 도 null`,
-         f(dn,D[120])===null && f(dn,D[121])!==null && f([],D[5])===null && f(null,D[5])===null);
-    }
-    ok('A 네 파일(index·backtest·plan·서버) 판정 글자가 같다 — {len:120, lo:10, hi:20}',
-       body(idx)===body(bt) && body(idx)===body(pl) && body(idx)===body(im) && /\{len:120, lo:10, hi:20\}/.test(body(idx)));
+  const D=[]; { const t=new Date('2020-01-01T00:00:00Z'); while(D.length<220){const w=t.getUTCDay();if(w!==0&&w!==6)D.push(t.toISOString().slice(0,10));t.setUTCDate(t.getUTCDate()+1);} }
+  const F={
+    index:imAutoTP,
+    backtest:global.imAutoTP,
+    plan:new Function(body(pl)+'\nreturn imAutoTP;')(),
+    server:new Function(body(im).replace('export function','function')+'\nreturn imAutoTP;')()
+  };
+  const mk=(fn,n=180)=>Array.from({length:n},(_,i)=>({date:D[i],close:fn(i)}));
+  const weak=mk(i=>i===179?80:100);
+  const calm=mk(i=>100*Math.pow(1.002,i));
+  const hot=mk(i=>100*Math.pow(1.01,i)*(i%2?1.08:0.92));
+  for(const [nm,f] of Object.entries(F)){
+    const a=f(weak,D[180]),b=f(calm,D[180]),c=f(hot,D[180]);
+    ok('A '+nm+' — MA150 아래는 10%',!!a&&a.tp===10&&a.weak===true&&a.asOf===D[179],JSON.stringify(a));
+    ok('A '+nm+' — 평온한 MA150 위는 20%',!!b&&b.tp===20&&!b.weak&&!b.hot,JSON.stringify(b));
+    ok('A '+nm+' — 120일 +100% 초과·연환산 변동성 90% 초과는 10%',!!c&&c.tp===10&&c.hot===true&&c.ret>100&&c.vol>90,JSON.stringify(c));
+    ok('A '+nm+' — 150봉 미만이면 판정하지 않음',f(calm,D[149])===null);
   }
+  ok('B 네 파일 판정식 동일 — 120일 수익률·120일 변동성·MA150 한 함수',
+     body(idx)===body(bt)&&body(idx)===body(pl)&&body(idx)===body(im)
+     && /retHi:100,volHi:90/.test(body(idx))&&/weak=close<ma,hot=ret>IM_AUTOTP\.retHi&&vol>IM_AUTOTP\.volHi/.test(body(idx)));
 
-  /* ── A2. MA150 판정 — 운영·서버·플랜 세 경로 ── */
-  { const rows=Array.from({length:160},(_,i)=>({date:D[i],close:i===158?80:100}));
-    const date=D[159];
-    const I=imAutoTPByMode(rows,date,'ma150'), S=SV.imAutoTPByMode(rows,date,'ma150'), P=PL.imAutoTPByMode(rows,date,'ma150');
-    ok('A2 MA150 — 사이클 시작 전 거래일 종가가 최근 150일 SMA 아래면 10% · 세 경로 동일',
-       !!I&&I.tp===10&&!!S&&S.tp===10&&!!P&&P.tp===10&&Math.abs(I.ma-S.ma)<1e-12&&Math.abs(I.ma-P.ma)<1e-12, J([I,S,P]));
-    const up=rows.map(x=>({...x,close:100})); up[158].close=120;
-    const I2=imAutoTPByMode(up,D[159],'ma150');
-    ok('A2 MA150 — 전 거래일 종가가 MA150 이상이면 20% · 시작일 봉은 안 본다',
-       !!I2&&I2.tp===20&&I2.asOf===D[158], J(I2));
-  }
+  const sameDay=hot.concat([{date:D[180],close:1}]);
+  const before=imAutoTP(hot,D[180]),withToday=imAutoTP(sameDay,D[180]);
+  ok('C 사이클 시작일 당일 봉은 판정에 사용하지 않는다',JSON.stringify(before)===JSON.stringify(withToday),JSON.stringify([before,withToday]));
 
-  /* ── B. 백테 runIM — 합성 자료 (비용 끔) ── */
-  const _sv={imAutoTp:global.imAutoTp, imCostOn:global.imCostOn, imReverse:global.imReverse, imTgtDyn:global.imTgtDyn, imFill:global.imFill, imRevGap:global.imRevGap, WF:global.WARM_FROM, WT:global.WARM_TO};
-  global.imCostOn=false; global.imReverse=false; global.imTgtDyn=false; global.imFill='high'; global.imRevGap=0; global.WARM_FROM=''; global.WARM_TO='';
-  const put=(tk,rows)=>{ M[tk]={}; rows.forEach(([d,c,o,h,l])=>{ M[tk][d]=[c,o,h,l]; }); };
-  /* 로그 주입(__LOG · __FINAL)은 앞 시험이 갈아 끼웠을 수 있다 — 여기서 직접 받고 끝나면 되돌린다 */
-  const _LOG0=global.__LOG, _FIN0=global.__FINAL;
-  const runB=(tk,days,on,tgt=20)=>{ const LG=[]; let FN=null; global.__LOG=(k,p,q)=>LG.push({kind:k,price:+p,qty:+q}); global.__FINAL=s=>{FN=s;};
-    global.imAutoTp=on; try{ const r=runIM(days,tk,10000,20,tgt,true,15); return {r, log:LG, fin:FN}; } finally{ global.__LOG=_LOG0; global.__FINAL=_FIN0; } };
-  { const tk='AT1', rows=[];
-    for(let i=0;i<130;i++){ const c=i===9?101:100; rows.push([D[i],c,c,c,c]); }
-    rows.push([D[130],102,101,102.5,100.5]); rows.push([D[131],104,103,112.3,101]);
-    put(tk,rows); const days=[D[130],D[131]];
-    const on=runB(tk,days,true), off=runB(tk,days,false), tp=on.log.filter(x=>x.kind==='지정가매도');
-    ok('B1 백테 — 첫 매수일 전날까지 120일 −0.99% → 이번 사이클 익절 10%: 첫 매수 4주@102(큰수 115 기준 수량) · 다음 날 고가 112.3 ≥ 102×1.10 → 3주 112.20 지정가매도',
-       tp.length===1 && Math.abs(tp[0].price-112.2)<1e-9 && tp[0].qty===3 && on.log[0].qty===4 && on.log[0].price===102 && J(on.r.tpN)===J({10:1}), J(on.log));
-    ok('B1 백테 — 첫 매수일 종가(102 · 넣으면 +2% → 20%)는 판정에 안 들어간다 · 끄면 20% 라 익절 없음',
-       !off.log.some(x=>x.kind==='지정가매도') && off.r.tpN===null, J(off.log)); }
-  { const tk='AT2', rows=[];
-    for(let i=0;i<130;i++){ const c=50+50*i/129; rows.push([D[i],c,c,c,c]); }
-    rows.push([D[130],100,100,100.5,99.5]);
-    for(let i=131;i<=250;i++){ const c=100-30*(i-130)/120; rows.push([D[i],c,c,c*1.005,c*0.995]); }
-    put(tk,rows); const p1=runB(tk,D.slice(130,251),true), A=p1.fin.avg;
-    rows.push([D[251],A*0.96,A,A*1.15,A*0.95]); put(tk,rows);
-    const d2=D.slice(130,252), on=runB(tk,d2,true), off=runB(tk,d2,false);
-    const mid=imAutoTP(rows.map(r=>({date:r[0],close:r[1]})), D[251]);
-    ok('B2 백테 — 사이클 도중엔 다시 안 잰다: 시작 +87% → 20% · 도중 120일 −30%(다시 재면 10%) · 반등 고가 평단×1.15 에도 익절 없음 · 고정 20% 와 거래 전부 같다',
-       !!mid && mid.tp===10 && p1.fin.shares>0 && !on.log.some(x=>x.kind==='지정가매도') && on.log.length>5 && J(on.log)===J(off.log) && J(on.r.tpN)===J({20:1}),
-       `avg ${A} · ${J(mid)} · ${on.log.length}/${off.log.length} · ${J(on.r.tpN)}`); }
-  if(DAYS.SOXL){ const days=DAYS.SOXL.slice(1), on=runB('SOXL',days,true), off=runB('SOXL',days,false);
-    ok('B3 백테 실데이터(SOXL 2020-09~ · 20분할 복리 · 비용 끔) — 사이클 시작 익절 10×18 · 20×38 · 최종자산 137,557.74$ (고정 20% 104,266.27$)',
-       !!on.r.tpN && on.r.tpN[10]===18 && on.r.tpN[20]===38 && Math.abs(on.r.final-137557.74)<0.01 && Math.abs(off.r.final-104266.27)<0.01, J(on.r.tpN)+' '+on.r.final.toFixed(2)+' vs '+off.r.final.toFixed(2)); }
+  ok('D 앱 설정 — 익절 변환 자동은 끔/켬 두 개뿐',
+     /익절 변환 자동/.test(idx)&&/id="set_autotp"/.test(idx)
+     && /data-v="off" class="on">끔<\/button><button data-v="on">켬<\/button>/.test(idx)
+     && !/data-v="ret120">120일 수익률<\/button>/.test(idx)&&!/data-v="ma150">MA150<\/button>/.test(idx)
+     && /segSet\('set_autotp',st\.autoTp===true\?'on':'off'\)/.test(extractFn(idx,'function openSettings()'))
+     && /autoTp:autoTpSel==='on',autoTpMode:'auto'/.test(extractFn(idx,'function saveSettings()')));
 
-  /* ── C. 앱 장부 computeInf — 사이클 첫 매수일로 정하고 끝까지 간다 ── */
-  const T1=[]; for(let i=0;i<130;i++) T1.push({date:D[i],close:i===9?101:100}); T1.push({date:D[130],close:102});
-  for(let i=131;i<=140;i++) T1.push({date:D[i],close:102+(i-130)});   // 다시 오르는 구간 — 여기서 새로 재면 20
-  const base={ticker:'SOXL',div:20,target:20,principal:10000,compound:true,reverse:false,big:15,revGap:0,tgtDyn:false,divmode:'reinv',rows:3,rowqty:1};
-  const CI=(st,hist,bars)=>{ global.imAutoBars=()=>bars; __strat={id:'t',settings:{...st},hist:hist.map(h=>({...h}))}; try{ return computeInf(); } finally{ global.imAutoBars=()=>null; } };
-  const H1=[{date:D[130],kind:'1회매수',price:102,qty:5}];
-  const H3=[...H1,{date:D[131],kind:'지정가매도',price:112.2,qty:5},{date:D[135],kind:'1회매수',price:106,qty:4}];
-  const H4=[...H1,{date:D[131],kind:'지정가매도',price:112.2,qty:5},{date:D[131],kind:'1회매수',price:104,qty:4}];
-  { const c=CI({...base,autoTp:true},H1,T1), c0=CI({...base,autoTp:true},[],T1), cf=CI(base,H1,T1);
-    ok('C1 앱 장부 — 보유 중: 사이클 첫 매수일 전날까지 −0.99% → 익절 10% · 기록 줄의 별%도 10 기준(9%) · 꺼 두면 20 · 18%',
-       c.tp===10 && c.cycStart===D[130] && !!c.tpAuto && c.tpAuto.asOf===D[129] && Math.abs(c.rows[0].pctAfter-9)<1e-9
-       && cf.tp===20 && cf.tpAuto===null && Math.abs(cf.rows[0].pctAfter-18)<1e-9, J([c.tp,c.cycStart,c.tpAuto,c.rows[0].pctAfter,cf.tp,cf.rows[0].pctAfter]));
-    ok('C2 앱 장부 — 비어 있으면 지금까지 확정된 봉으로 잰 다음 사이클 값 (마지막 봉 +12% → 20)',
-       c0.tp===20 && c0.cycStart==='' && !!c0.tpAuto && c0.tpAuto.asOf===D[140], J(c0.tpAuto)); }
-  { const c=CI({...base,autoTp:true},H3,T1);
-    ok('C3 앱 장부 — 사이클이 끝나면 다음 첫 매수일로 다시 잰다 (1차 10% → 2차 전날까지 +6% → 20%) · 1차 기록 줄 별%는 10 기준 그대로',
-       c.tp===20 && c.cycStart===D[135] && c.rows[1].cycleEnd===true && Math.abs(c.rows[0].pctAfter-9)<1e-9 && Math.abs(c.rows[2].pctAfter-18)<1e-9,
-       J([c.tp,c.cycStart,c.rows.map(r=>r.pctAfter)])); }
-  { const c=CI({...base,autoTp:true},H4,T1);
-    ok('C4 앱 장부 — 같은 날 익절 뒤 LOC 매수로 이어지면(제14차 D15) 같은 사이클 — 다시 안 잰다 (그날 전날까지면 +2% → 20 인데 10 유지)',
-       c.tp===10 && c.cycStart===D[130] && c.qty===4 && !c.rows.some(r=>r.cycleEnd), J([c.tp,c.cycStart,c.qty])); }
-  { const st={...base,ticker:'TQQQ',target:15};
-    const a=CI(st,H1,T1), b=CI({...st,autoTp:true},H1,null), b2=CI({...st,autoTp:true},H1,T1.slice(0,100));
-    ok('C5 앱 장부 — 꺼 두면 설정값(15) · 켰는데 시세가 없거나 120거래일이 안 되면 설정값(15) · tpAuto 없음(주문표가 알린다)',
-       a.tp===15 && a.tpAuto===null && b.tp===15 && b.tpAuto===null && b2.tp===15 && b2.tpAuto===null, J([a.tp,b.tp,b2.tp])); }
+  ok('E 관리자 — 익절 변환 자동을 기본값·기존 세션 일괄적용 대상으로 관리',
+     /\['autoTp','익절 변환 자동','bool'\]/.test(adm)
+     && /inf:new Set\(\['ticker','div','target','autoTp'/.test(adm)
+     && /선택 항목 기존 세션에 적용/.test(adm));
 
-  /* ── D. 실데이터 5경로 — 백테 ↔ 모의 ↔ 운영(주문표 → 실제 체결) 거래 단위 ── */
-  if(DAYS.SOXL && __P7.liveRun){
-    const P=__P7, tk='SOXL', all=DAYS[tk], days=all.slice(1);
-    const key=x=>`${x.date} ${x.kind} ${(+x.price).toFixed(4)} x${x.qty}`;
-    const trades=a=>a.filter(h=>h.kind!=='리버스복귀'&&h.kind!=='배당').map(key);
-    const firstDiff=(A,B)=>{ let k=0; while(k<A.length&&k<B.length&&A[k]===B[k]) k++; return (k===A.length&&k===B.length)?-1:k; };
-    const barsAll=all.map(d=>({date:d,close:M[tk][d][C]}));
-    const st={...base, ticker:tk, autoTp:true};
-    global.imAutoTp=true; P.setLOGD([]); const rb=P.runIMd(days,tk,10000,20,20,true,15); const Bk=P.LOGD().map(key);
-    global.imAutoBars=()=>barsAll;
-    const sess={paper:true,id:'p',simStart:days[0],settings:{...st},hist:[]}; P.paperRun(sess,P.quoteOfTk(tk),days[0]); const Sk=trades(sess.hist);
-    global.imAutoBars=()=>P.ENV.DAYS;   // 운영은 그날까지 확정된 봉만 본다
-    const Lk=trades(P.liveRun(tk,st));
-    global.imAutoBars=()=>null;
-    const k1=firstDiff(Bk,Sk), k2=firstDiff(Lk,Sk);
-    ok(`D 실데이터 SOXL 20분할 복리 리버스 끔 — 백테 ↔ 모의 거래 ${Bk.length}건 한 건도 안 다르다 (사이클 10%×${(rb.tpN||{})[10]||0} · 20%×${(rb.tpN||{})[20]||0})`,
-       k1<0 && !!rb.tpN && rb.tpN[10]>0 && rb.tpN[20]>0, k1<0?'':`#${k1} 백테 [${Bk[k1]||'—'}] 모의 [${Sk[k1]||'—'}]`);
-    ok(`D 운영(주문표 → 실제 체결 · 그날까지 확정 봉만) ↔ 모의 거래 ${Lk.length}건 한 건도 안 다르다`,
-       k2<0 && Lk.length===Sk.length, k2<0?'':`#${k2} 운영 [${Lk[k2]||'—'}] 모의 [${Sk[k2]||'—'}]`);
-    /* 리버스 켬 — 복귀선(평단×(1−익절%))도 사이클 익절을 따른다. 백테 exitMul · 모의 exitMulOf(c2.tp) 가 같은 값이어야 거래가 맞는다 */
-    { global.imReverse=true; P.setLOGD([]); P.runIMd(days,tk,10000,20,20,true,15); const Bk2=P.LOGD().map(key);
-      global.imAutoBars=()=>barsAll; const s2={paper:true,id:'p2',simStart:days[0],settings:{...st,reverse:true},hist:[]}; P.paperRun(s2,P.quoteOfTk(tk),days[0]);
-      global.imAutoBars=()=>null; global.imReverse=false;
-      const Sk2=trades(s2.hist), k3=firstDiff(Bk2,Sk2), nRev=Sk2.filter(x=>/리버스/.test(x)).length, nExit=s2.hist.filter(h=>h.kind==='리버스복귀').length;
-      ok(`D2 리버스 켬 — 백테 ↔ 모의 거래 ${Bk2.length}건 한 건도 안 다르다 (리버스 거래 ${nRev}건 · 복귀 ${nExit}번 · 복귀선도 사이클 익절 기준)`,
-         k3<0 && nRev>0 && nExit>0, k3<0?'':`#${k3} 백테 [${Bk2[k3]||'—'}] 모의 [${Sk2[k3]||'—'}]`); }
-    { global.imAutoBars=()=>barsAll; __strat=sess; const ca=computeInf(); global.imAutoBars=()=>null;
-      const cs=SV.imCompute(st, sess.hist, barsAll), cp=PL.calcInfState({settings:{...st},hist:sess.hist,autoBars:barsAll});
-      ok('E1 서버 imCompute · 플랜 calcInfState — 모의가 만든 장부·같은 봉이면 앱과 같은 사이클 익절 · 첫 매수일 · 근거',
-         cs.tp===ca.tp && cs.cycStart===ca.cycStart && J(cs.tpAuto)===J(ca.tpAuto) && cp.tp===ca.tp && cp.cycStart===ca.cycStart && !!ca.cycStart,
-         J([ca.tp,ca.cycStart,cs.tp,cs.cycStart,cp.tp,cp.cycStart])); }
-  }
+  ok('F 백테 — 자동익절 UI도 끔/켬 단일 옵션',
+     bt.includes('<label>익절 변환 자동 ')
+     && bt.includes('>켬</button>')
+     && bt.includes("imAutoTp=e.target.dataset.x==='1'"));
 
-  /* ── E. 서버 · 앱 주문표 · 플랜 — 같은 상태면 같은 주문 ── */
-  { const st={...base,autoTp:true}, days=T1.slice(0,131), close=102, P=__P7;
-    const so=SV.imOrders({st, hist:H1, close, days});
-    P.ENV.ST={...st}; P.ENV.HIST=H1.map(h=>({...h})); P.ENV.CLOSE=close; P.ENV.CDATE=D[130]; P.ENV.DAYS=days; P.ENV.LAST=null;
-    global.imAutoBars=()=>days; const ao=P.appOrders(); global.imAutoBars=()=>null; P.ENV.CDATE='';
-    const po=PL.imOrders({settings:{...st},hist:H1},close,days);
-    const pick=(a,f)=>(a||[]).find(f)||{};
-    const S1=pick(so.orders,o=>o.tag==='지정가'), A1=pick(ao,o=>o.side==='sell'&&o.tag==='지정가'), P1=pick(po.orders,o=>o.side==='sell'&&o.tag==='지정가');
-    const S2=pick(so.orders,o=>o.side==='sell'&&o.tag==='LOC'), A2=pick(ao,o=>o.side==='sell'&&o.tag==='LOC'), P2=pick(po.orders,o=>o.side==='sell'&&o.tag==='LOC');
-    const near=(x,y)=>Math.abs((+x||0)-y)<0.005;
-    ok('E2 서버·앱 주문표·플랜 — 이번 사이클 익절 10%: 지정가 102×1.10 = 112.20 · 4주 · 쿼터매도 별지점도 10 기준(9%) 111.18 · 1주 (셋 다 같다)',
-       near(S1.price,112.2)&&S1.qty===4 && near(A1.price,112.2)&&A1.qty===4 && near(P1.price,112.2)&&P1.qty===4
-       && near(S2.price,111.18)&&S2.qty===1 && near(A2.price,111.18)&&A2.qty===1 && near(P2.price,111.18)&&P2.qty===1 && !so.skip,
-       J([S1,A1,P1,S2,A2,P2])); }
-  { const st={...base,autoTp:true}, short=T1.slice(0,100);
-    const a=SV.imOrders({st, hist:H1, close:102, days:short}), b=SV.imOrders({st, hist:[], close:102, days:short}), c=SV.imOrders({st:{...base}, hist:H1, close:102, days:short});
-    ok('E3 서버 자동주문 — 익절 자동인데 판정 자료가 없으면 보유 중엔 주문 안 냄(이유 적음) · 비어 있으면 첫 매수는 낸다 · 끈 세션은 상관없다',
-       a.orders.length===0 && /익절 자동/.test(a.skip||'') && !b.skip && b.orders.some(o=>o.side==='buy') && !c.skip && c.orders.some(o=>o.tag==='지정가'),
-       J([a.skip,b.skip,b.orders.length,c.skip,c.orders.length])); }
-  { const st={...base,autoTp:true};
-    const r=[H1,H3,H4].map(H=>[SV.imCompute(st,H,T1).tp, PL.calcInfState({settings:{...st},hist:H,autoBars:T1}).tp, CI(st,H,T1).tp]);
-    ok('E4 세 장부(앱·서버·플랜) — 보유 10 · 새 사이클 20 · D15 이어짐 10 로 같다', J(r)===J([[10,10,10],[20,20,20],[10,10,10]]), J(r)); }
-  ok('E5 autotrade — 익절 자동 세션만 시세를 전체 기간(range=max)으로 받는다 (사이클이 길면 기본 1년 창 밖에 첫 매수일 전 120거래일이 있다)',
-     /"&intraday=0&div=1" \+ \(st\.autoTp === true \? "&range=max" : ""\)/.test(atSrc) && atSrc.indexOf('const st = s.settings')<atSrc.indexOf('&range=max'));
-
-  /* ── F. 표시 · 설정 ── */
-  { const VO=new Function('IM_OFFICIAL','revSupported','autoTpLabel',
-      extractFn(idx,'function imVariantOf(cfg)')+'\nreturn imVariantOf;')({TQQQ:15,SOXL:20}, d=>[20,40].includes(+d), m=>m==='ma150'?'MA150':'120일 수익률');
-    const v1=VO({tickers:['SOXL'],div:20,reverse:false,target:10,autoTp:true,autoTpMode:'ret120'}),
-          vm=VO({tickers:['SOXL'],div:20,reverse:false,target:10,autoTp:true,autoTpMode:'ma150'}),
-          v2=VO({tickers:['SOXL'],div:20,reverse:false,target:10});
-    ok('F1 공식/변형 — 자동 익절 표시가 선택 전략(120일 수익률/MA150)을 구분하고 고정 익절 표시는 숨긴다',
-       v1.includes('익절 자동 10/20(실험 · 120일 수익률)') && vm.includes('익절 자동 10/20(실험 · MA150)')
-       && !v1.some(x=>/고정/.test(x)) && !vm.some(x=>/고정/.test(x)) && v2.includes('익절 10% 고정')
-       && /autoTpMode:S\.autoTp===true\?autoTpModeOf\(S\):'ret120'/.test(extractFn(idx,'function imRuleOf(st)')), J([v1,vm,v2])); }
-  { const BG=new Function('autoTpModeOf','autoTpLabel',
-      extractFn(idx,'function imAutoTpBadge(c)')+'\nreturn imAutoTpBadge;')(
-        st=>(st&&st.autoTpMode)==='ma150'?'ma150':'ret120', m=>m==='ma150'?'MA150':'120일 수익률');
-    const tx=h=>h.replace(/<[^>]+>/g,'');
-    const b1=tx(BG({st:{autoTp:true,autoTpMode:'ret120',target:20},qty:5,tp:10,tpAuto:{tp:10,ret:-0.99,asOf:D[129]},cycStart:D[130]}));
-    const bm=tx(BG({st:{autoTp:true,autoTpMode:'ma150',target:20},qty:5,tp:10,tpAuto:{tp:10,close:80,ma:100,asOf:D[129]},cycStart:D[130]}));
-    const b2=tx(BG({st:{autoTp:true,autoTpMode:'ret120',target:20},qty:0,tp:20,tpAuto:{tp:20,ret:12,asOf:D[140]},cycStart:''}));
-    const b3=tx(BG({st:{autoTp:true,autoTpMode:'ma150',target:15},qty:5,tp:15,tpAuto:null,cycStart:D[130]}));
-    const b4=BG({st:{target:20},qty:5,tp:20,tpAuto:null});
-    ok('F2 주문표 배지 — 120일/MA150 각각 판정 근거를 표시하고 자료 부족 시 설정값·서버 정지 안내, 끄면 없음',
-       /이번 사이클 익절 10%/.test(b1) && /120거래일 수익률 -1\.0%/.test(b1) && b1.includes(D[129]+' 종가까지')
-       && /MA150/.test(bm) && /종가 80\.00 · MA150 100\.00/.test(bm)
-       && /다음 사이클 익절 20%/.test(b2) && /\+12\.0%/.test(b2)
-       && /설정값 15%/.test(b3) && /서버 자동주문은 이 상태에서 주문을 내지 않습니다/.test(b3) && b4==='', J([b1,bm,b2,b3]));
-    const ro=extractFn(idx,'function renderOrder()');
-    ok('F2 배지가 주문표 두 갈래(일반·리버스)에 다 붙는다',
-       /\$\('o_orders'\)\.innerHTML=\(revAuto\|\|''\)\+simNote\+regBadge\+autoBadge\+tgtBadge\+html;/.test(ro) && /let rh=\(revAuto\|\|''\)\+imAutoTpBadge\(c\);/.test(ro) && /const autoBadge=imAutoTpBadge\(c\);/.test(ro)); }
-  { const SS=new Function(idx.slice(idx.indexOf('const SIM_KEYS='), idx.indexOf('};', idx.indexOf('const SIM_KEYS='))+2)+'\n'+(idx.match(/const SIM_RULE_VER=[^;]*;/)||[''])[0]+'\n'
-      +(idx.match(/const SIM_OPT_KEYS=[^\n]*/)||[''])[0]+'\n'+extractFn(idx,'function simSig(tab,st)')+'\nreturn {simSig,SIM_KEYS,SIM_RULE_VER};')();
-    const st0={ticker:'SOXL',div:20,target:20,big:15,rows:3,revGap:0,reverse:false,tgtDyn:false,principal:10000,compound:true,divmode:'reinv',engine:'v40',shortMA:30,loPct:6};
-    const old='r'+SS.SIM_RULE_VER+'|'+SS.SIM_KEYS.inf.filter(k=>k!=='autoTp'&&k!=='autoTpMode').map(k=>String(st0[k]===undefined?'':st0[k])).join('|');
-    const r120=SS.simSig('inf',{...st0,autoTp:true,autoTpMode:'ret120'}), ma150=SS.simSig('inf',{...st0,autoTp:true,autoTpMode:'ma150'});
-    ok('F3 모의 지문 — 자동 익절이 꺼져 있으면 모드값을 무시하고, 켜져 있으면 120일/MA150 변경을 구분해 재계산한다',
-       SS.simSig('inf',st0)===old && SS.simSig('inf',{...st0,autoTp:false,autoTpMode:'ma150'})===old && r120!==ma150
-       && SS.SIM_KEYS.inf.includes('autoTp') && SS.SIM_KEYS.inf.includes('autoTpMode'), J([old,r120,ma150])); }
-  ok('F4 백테 — 익절 자동 세그(끔/120일 · 실험 표시) · 누르면 imAutoTp · 공식 프리셋은 끈다 · 결과 제목·요약·변형 판정에 넘긴다 · V4.0 엔진만',
-     /<label>익절 자동 <span[^>]*>실험 · 원문 아님<\/span><\/label>\s*<div class="seg" id="imAutoTpSeg"[^>]*>\s*<button data-x="0" class="active"/.test(bt)
-     && /imAutoTp=e\.target\.dataset\.x==='1'/.test(bt) && /_segPick\('imAutoTpSeg','x','0'\);/.test(extractFn(bt,'function imPreset()')) && /imAutoTp=false;/.test(extractFn(bt,'function imPreset()'))
-     && /\(imAutoTp&&imEngine==='v40'\?' · <span style="color:var\(--gold\)">익절 자동 10\/20\(실험 · 120일 수익률\)<\/span>':''\)/.test(bt)
-     && /autoTp:\(typeof imAutoTp!=='undefined'&&imAutoTp&&\(typeof imEngine==='undefined'\|\|imEngine==='v40'\)\)/.test(extractFn(bt,'function imVariant(tkrs)')));
-  ok('F5 앱 설정 — 각 무한매수 세션에서 끔/120일 수익률/MA150을 직접 고르고 저장한 모드만 그 세션에 적용한다',
-     /id="set_autotp"/.test(idx)
-     && /data-v="off" class="on">끔<\/button>/.test(idx)
-     && /data-v="ret120">120일 수익률<\/button>/.test(idx)
-     && /data-v="ma150">MA150<\/button>/.test(idx)
-     && /segSet\('set_autotp',st\.autoTp===true\?autoTpModeOf\(st\):'off'\)/.test(extractFn(idx,'function openSettings()'))
-     && /const autoTpSel=segGet\('set_autotp'\)\|\|'off'/.test(extractFn(idx,'function saveSettings()'))
-     && /autoTp:autoTpSel!=='off',autoTpMode:/.test(extractFn(idx,'function saveSettings()'))
-     && /tgtDyn:false,autoTp:false,autoTpMode:'ret120'/.test(extractFn(idx,'function defInfSettings()'))
-     && !/AUTO_TP_ADMIN_CACHE|ADMIN_AUTOTP_STRATEGY|syncAutoTpAdminUI|autoTpAdminStrategy/.test(idx)
-     && !/AUTO_TP_ADMIN_CACHE|autoTpAdminStrategy|autoTpAdminSectionHtml|익절률 자동 전략/.test(adm));
-  { const AB=new Function('lastQuote','simCutoff','curOf', "let _imAbMemo={q:null,cut:'',bars:null};\n"+extractFn(idx,'function imAutoBars(st)')+'\nreturn imAutoBars;');
-    const Q={symbol:'SOXL', days:[{date:'2026-09-23',close:10},{date:'2026-09-24',close:11},{date:'2026-09-25',close:12}]};
-    const a=AB({inf:Q},()=>'2026-09-24',()=>'usd')({ticker:'soxl'}), b=AB({inf:Q},()=>'2026-09-24',()=>'usd')({ticker:'TQQQ'}), g=AB({inf:null},()=>'2026-09-24',()=>'usd')({ticker:'SOXL'});
-    ok('F6 앱 판정 봉 — 확정된 봉만(장중 오늘 봉 제외 · 룩어헤드 금지) · 종목이 다르거나 시세가 없으면 null',
-       !!a && a.length===2 && a[1].date==='2026-09-24' && b===null && g===null, J(a)); }
-  /* ── G. 배선 — 익절%를 쓰는 곳이 전부 장부의 사이클 값(c.tp)을 읽는다 ── */
-  { const ro=extractFn(idx,'function renderOrder()'), sim=extractFn(idx,'function infSimForward(startFrom)');
-    ok('G 운영 주문표 · 모의 · 대시보드 · 기록 시트 · 추천 · 복귀 기록 · 서버 · 플랜이 사이클 익절(c.tp)을 쓴다',
-       /imRevExitDue\(c, lc, c\.tp, /.test(ro) && /const pct=starPct\(st\.ticker,st\.div,c\.T,c\.tp\);/.test(ro) && /let effTarget=c\.tp;/.test(ro) && /const exitPrice = c\.avg\*exitMulOf\(c\.tp\);/.test(ro)
-       && /let eff=c\.tp;/.test(sim) && /exitMulOf\(c2\.tp\)/.test(sim) && /const pct=starPct\(st\.ticker,st\.div,c\.T,c\.tp\);/.test(extractFn(idx,'function renderInfNow()'))
-       && (extractFn(idx,'function sheetInfHTML(today)').match(/starPct\(st\.ticker,st\.div,c\.T,c\.tp\)/g)||[]).length===2
-       && /let eff=c\.tp;/.test(extractFn(idx,'function infSuggest(kind)')) && /exitMulOf\(c\.tp\)/.test(extractFn(idx,'function recordRevExit()'))
-       && /imRevExitDue\(c, close, c\.tp, closeDate\)/.test(im) && /starPct\(st\.ticker, st\.div, c\.T, c\.tp\)/.test(im) && /let effTarget = c\.tp;/.test(im)
-       && /imRevExitDue\(c,price,c\.tp,cdate\)/.test(pl) && /target=\+c\.tp\|\|20/.test(pl) && /starPctPlan\(\{\.\.\.st,target\},c\.T\)/.test(pl)); }
-  Object.assign(global,{imAutoTp:_sv.imAutoTp, imCostOn:_sv.imCostOn, imReverse:_sv.imReverse, imTgtDyn:_sv.imTgtDyn, imFill:_sv.imFill, imRevGap:_sv.imRevGap, WARM_FROM:_sv.WF, WARM_TO:_sv.WT});
-  global.imAutoBars=()=>null;
+  ok('G 모의 규약 버전 11 — 기존 자동익절 모의기록을 새 규칙으로 재생성',/const SIM_RULE_VER=11;/.test(idx));
 }
 
 console.log(`\n════ 결과: ${pass} PASS / ${fail} FAIL ${fail===0?'— ALL PASS ★':'— 배포 금지, 위 ✗ 항목 수정 필요'} ════`);

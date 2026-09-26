@@ -537,7 +537,7 @@ try{ if(localStorage.getItem('qcockpit_hadUser')==='1') document.documentElement
 </div>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.101.10</span></h1></div>
+    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.102.0</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -1646,7 +1646,7 @@ if(/^\/paper\/?$/.test(location.pathname)){
   <footer>
     <strong>JK 퀀트</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.101.10</b> · 2026-09-26</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.102.0</b> · 2026-09-26</div>
   </footer>
 </div>
 
@@ -1676,9 +1676,9 @@ if(/^\/paper\/?$/.test(location.pathname)){
     <div class="seclabel">리버스 <span class="hint" style="color:var(--faint);font-weight:500">원금 소진 후 무한매도 · V4.0</span></div><div class="seg" id="set_reverse"><button data-v="0" class="on">끔</button><button data-v="1">켬</button></div>
     <!-- 기본값 끔은 사용자 결정 (제8차 D12) — 공식이 아니므로 공식처럼 보이지 않게 이름을 붙인다 -->
     <p class="note" style="margin:-2px 0 8px">끔(기본 · <b>V4.0 변형</b>): 원금 소진 후 <b>후반전 별지점 손절 쿼터매도</b>로만 방어(홀드). 켬(<b>V4.0 공식</b>): 소진 후 <b>리버스 무한매도</b> 모드 진입 — 문서의 V4.0 일반모드 규칙입니다. 백테스트상 20분할·급락 후 V반등에서는 끔이 유리해 기본값은 끔이지만, 문서 규칙이 아니라서 주문표에 'V4.0 변형'으로 표시됩니다.</p>
-    <div class="seclabel">익절 자동 <span class="hint" style="color:var(--gold);font-weight:500">실험 · 원문 V4.0 아님</span></div>
-    <div class="seg" id="set_autotp"><button data-v="off" class="on">끔</button><button data-v="ret120">120일 수익률</button><button data-v="ma150">MA150</button></div>
-    <p class="note" id="set_autotp_note" style="margin:-2px 0 8px"><b>120일 수익률</b>: 사이클 시작 전 거래일까지 120거래일 수익률이 0 미만이면 익절 10%, 0 이상이면 20%. <b>MA150</b>: 사이클 시작 전 거래일 종가가 최근 150거래일 단순이동평균보다 낮으면 10%, 같거나 높으면 20%. 사이클 시작 때 정한 익절률은 종료까지 고정되고 별%·복귀선도 같이 바뀝니다.</p>
+    <div class="seclabel">익절 변환 자동 <span class="hint" style="color:var(--gold);font-weight:500">실험 · 원문 V4.0 아님</span></div>
+    <div class="seg" id="set_autotp"><button data-v="off" class="on">끔</button><button data-v="on">켬</button></div>
+    <p class="note" id="set_autotp_note" style="margin:-2px 0 8px"><b>켬</b>: 사이클 시작 전날 종가가 MA150 아래이거나, 최근 120거래일 수익률이 +100%를 넘고 120일 연환산 변동성이 90%를 넘으면 익절 10%, 그 외에는 20%. 사이클 시작 때 한 번 정하고 종료까지 고정하며 별%·복귀선도 같이 바뀝니다.</p>
     <!-- 익절 조절 숨김 — SOXL 전체 −0.6% 열위, MDD가 나빠지는 구간(TECL 31%→62%),
          후반전엔 어차피 무효. 코드는 남기고 UI만 감춘다. 복원 시 tgtdyn-hidden 제거 -->
     <div class="seclabel tgtdyn-hidden">익절 조절 <span class="hint" style="color:var(--faint);font-weight:500">20일 상승률 · 선택</span></div><div class="seg tgtdyn-hidden" id="set_tgtdyn"><button data-v="0" class="on">끔</button><button data-v="1">상승률</button></div>
@@ -1696,6 +1696,7 @@ if(/^\/paper\/?$/.test(location.pathname)){
     <div class="field"><label>리버스 쿼터매수 gap % <span class="hint">0 = 기본(별지점 −$0.01 · 원문은 '별지점 아래'까지만) · 0보다 크면 변형</span></label><input id="set_revgap" type="number" inputmode="decimal" value="0"></div>
     <div class="field"><label>아래로 LOC 매수 추가 줄 수 <span class="hint">추가 자체는 V4.0 정식 · 1회매수금÷(수량+k) · 줄 수 3은 JKQuant 기본값(원문에 개수 없음) · 0이면 끔(변형)</span></label><input id="set_rows" type="number" inputmode="numeric" value="3" min="0" max="20"></div>
     <p class="note" style="margin:-2px 0 8px">처음매수·전반전·후반전 모두 본 주문 아래로 1주씩 LOC 를 더 겁니다 (V4.0 정식). 종가가 내려갈수록 같은 1회매수금으로 더 삽니다. 모의·백테·서버 자동주문이 같은 주문을 씁니다.</p>
+    <div class="note" style="margin:10px 0 0;padding:10px;border:1px solid var(--line);border-radius:9px;line-height:1.65"><b>옵션 설명</b><br><b>익절 변환 자동 · 끔</b> — 설정한 목표 수익률을 모든 사이클에 고정 적용합니다.<br><b>익절 변환 자동 · 켬</b> — 사이클 시작 전날 종가가 <b>MA150 아래</b>이거나 <b>120일 수익률 &gt; +100% 이면서 120일 연환산 변동성 &gt; 90%</b>이면 10%, 그 외에는 20%를 적용합니다. 한번 정한 값은 사이클 종료까지 유지됩니다.</div>
   </div>
   <div id="set_vr" style="display:none">
     <div class="seclabel">종목 (티커) <span class="hint" style="color:var(--faint);font-weight:500">6자리 코드면 국내 — 통화가 원화로 바뀝니다</span></div><div class="field tkwrap" style="margin:0 0 8px"><input id="set_vticker" type="text" autocomplete="off" spellcheck="false" placeholder="티커를 입력하세요 — 예: TQQQ, SOXL" oninput="tkSearch('set_vticker')" onfocus="tkSearch('set_vticker')" onblur="tkBlur('set_vticker')"><div class="tklist" id="set_vticker_list"></div></div>
@@ -2128,12 +2129,12 @@ function cacheStrategyDefaults(v){
   return true;
 }
 
-const AUTO_TP_MODE_LABELS={ret120:'120일 수익률',ma150:'MA150'};
-function normalizeAutoTpMode(v){return v==='ma150'?'ma150':'ret120';}
-function autoTpModeOf(st){return normalizeAutoTpMode(st&&st.autoTpMode);}
-function autoTpLabel(mode){return AUTO_TP_MODE_LABELS[normalizeAutoTpMode(mode)]||AUTO_TP_MODE_LABELS.ret120;}
+const AUTO_TP_MODE_LABELS={auto:'MA150+초강세·고변동'};
+function normalizeAutoTpMode(v){return 'auto';}
+function autoTpModeOf(st){return 'auto';}
+function autoTpLabel(mode){return AUTO_TP_MODE_LABELS.auto;}
 
-function defInfSettings(){const b={ticker:'SOXL',div:20,target:20,big:IM_BIG_DEFAULT,rows:IM_ROWS_DEFAULT,revGap:REV_GAP_DEF,rowqty:1,principal:10000,divmode:'reinv',engine:'v40',shortMA:30,loPct:6,tgtDyn:false,autoTp:false,autoTpMode:'ret120',reverse:false,compound:true};return typeof strategyDefaultOf==='function'?strategyDefaultOf('inf',b):b}
+function defInfSettings(){const b={ticker:'SOXL',div:20,target:20,big:IM_BIG_DEFAULT,rows:IM_ROWS_DEFAULT,revGap:REV_GAP_DEF,rowqty:1,principal:10000,divmode:'reinv',engine:'v40',shortMA:30,loPct:6,tgtDyn:false,autoTp:false,autoTpMode:'auto',reverse:false,compound:true};return typeof strategyDefaultOf==='function'?strategyDefaultOf('inf',b):b}
 // V5.0 숨김 기간: 저장된 세션이 v50이어도 v40으로 강제 (UI가 없어 되돌릴 수 없으므로)
 // 복원 시 이 함수와 load() 안의 호출만 제거하면 된다.
 function forceV40(){
@@ -2473,33 +2474,31 @@ function imAutoBars(st){
    근거(SOXL 2010~ 실측): 120일 하락 구간에서 시작한 사이클은 10%가 이겼다 — 앞 절반으로 고른 규칙이 뒤 절반에서도 이겼다.
    bars 날짜 오름차순 [{date, close}] · date 사이클 첫 매수일(그날 봉은 안 본다 — 룩어헤드 금지). 자료가 모자라면 null.
    백테 runIM · 앱 장부(computeInf — 운영·모의) · 서버(imCompute) · 5년 플랜(calcInfState)이 같은 글자로 쓴다. */
-const IM_AUTOTP={len:120, lo:10, hi:20};
+const IM_AUTOTP={retLen:120,maLen:150,volLen:120,retHi:100,volHi:90,lo:10,hi:20};
 function imAutoTP(bars, date){
-  let a=0, b=(bars||[]).length;
-  while(a<b){ const m=(a+b)>>1; if(String(bars[m].date)<date) a=m+1; else b=m; }   // date 보다 앞선 봉 개수
-  const j=a-1;
-  if(j<IM_AUTOTP.len) return null;
-  const x=+bars[j].close, y=+bars[j-IM_AUTOTP.len].close;
-  if(!(x>0&&y>0)) return null;
-  const r=(x/y-1)*100;
-  return {tp:r<0?IM_AUTOTP.lo:IM_AUTOTP.hi, ret:r, asOf:String(bars[j].date)};
-}
-const IM_AUTOTP_MA150={len:150,lo:10,hi:20};
-function imAutoTPMA150(bars,date){
   let a=0,b=(bars||[]).length;
   while(a<b){const m=(a+b)>>1;if(String(bars[m].date)<date)a=m+1;else b=m;}
   const j=a-1;
-  if(j<IM_AUTOTP_MA150.len-1)return null;
+  if(j<IM_AUTOTP.maLen-1||j<IM_AUTOTP.retLen)return null;
+  const close=+(bars[j]&&bars[j].close),old=+(bars[j-IM_AUTOTP.retLen]&&bars[j-IM_AUTOTP.retLen].close);
+  if(!(close>0&&old>0))return null;
   let sum=0;
-  for(let i=j-IM_AUTOTP_MA150.len+1;i<=j;i++){const v=+(bars[i]&&bars[i].close);if(!(v>0))return null;sum+=v;}
-  const close=+(bars[j]&&bars[j].close),ma=sum/IM_AUTOTP_MA150.len;
-  if(!(close>0&&ma>0))return null;
-  return {tp:close<ma?IM_AUTOTP_MA150.lo:IM_AUTOTP_MA150.hi,close,ma,asOf:String(bars[j].date),mode:'ma150'};
+  for(let i=j-IM_AUTOTP.maLen+1;i<=j;i++){const v=+(bars[i]&&bars[i].close);if(!(v>0))return null;sum+=v;}
+  const ma=sum/IM_AUTOTP.maLen,ret=(close/old-1)*100,rs=[];
+  for(let i=j-IM_AUTOTP.volLen+1;i<=j;i++){
+    const p=+(bars[i-1]&&bars[i-1].close),c=+(bars[i]&&bars[i].close);
+    if(!(p>0&&c>0))return null;
+    rs.push(c/p-1);
+  }
+  const mean=rs.reduce((s,x)=>s+x,0)/rs.length;
+  const ss=rs.reduce((s,x)=>s+(x-mean)*(x-mean),0);
+  const vol=Math.sqrt(ss/(rs.length-1))*Math.sqrt(252)*100;
+  const weak=close<ma,hot=ret>IM_AUTOTP.retHi&&vol>IM_AUTOTP.volHi;
+  return {tp:(weak||hot)?IM_AUTOTP.lo:IM_AUTOTP.hi,close,ma,ret,vol,weak,hot,asOf:String(bars[j].date),mode:'auto'};
 }
-function imAutoTPByMode(bars,date,mode){
-  if(normalizeAutoTpMode(mode)==='ma150')return imAutoTPMA150(bars,date);
-  const r=imAutoTP(bars,date);return r?{...r,mode:'ret120'}:null;
-}
+const IM_AUTOTP_MA150=IM_AUTOTP;
+function imAutoTPMA150(bars,date){return imAutoTP(bars,date);}
+function imAutoTPByMode(bars,date,mode){return imAutoTP(bars,date);}
 
 /* 1회 매수금 = 잔금 ÷ (분할−T).
    ── 소진 기준 (라오어 공지) ──
@@ -2862,13 +2861,11 @@ function renderInfNow(){
 /* 익절 자동(실험) 배지 — 순수 함수(값으로 시험한다). 꺼져 있으면 빈 문자열. */
 function imAutoTpBadge(c){
   const st=(c&&c.st)||{}; if(st.autoTp!==true) return '';
-  const mode=autoTpModeOf(st),label=autoTpLabel(mode),A=c.tpAuto,hold=c.qty>0;
-  const need=mode==='ma150'?'사이클 시작 전 거래일까지 150거래일 확정 종가':'사이클 시작 전날까지 120거래일 확정 종가';
-  if(!A) return `<div style="margin:2px 0 8px;padding:7px 10px;border-radius:8px;font-size:12px;background:rgba(245,196,81,.12);border:1px solid rgba(245,196,81,.32)">⏳ <b style="color:var(--gold)">익절 자동 · ${label}</b> — 판정 자료(${need})가 없어 <b>설정값 ${st.target}%</b>로 계산했습니다. 🔄 자동으로 시세를 불러오세요.${hold?' 서버 자동주문은 이 상태에서 주문을 내지 않습니다.':''}</div>`;
-  const detail=mode==='ma150'
-    ? `종가 ${(+A.close).toFixed(2)} · MA150 ${(+A.ma).toFixed(2)} · ${A.asOf}까지 — 종가&lt;MA150이면 10%, 아니면 20%`
-    : `120거래일 수익률 ${A.ret>=0?'+':''}${A.ret.toFixed(1)}% · ${A.asOf} 종가까지 — 0 미만이면 10%, 아니면 20%`;
-  return `<div style="margin:2px 0 8px;padding:7px 10px;border-radius:8px;font-size:12px;background:rgba(139,124,246,.12);border:1px solid rgba(139,124,246,.32)">🧪 <b style="color:var(--vio)">익절 자동 · ${label}</b> · ${hold?'이번 사이클':'다음 사이클'} 익절 <b>${c.tp}%</b>`
+  const label=autoTpLabel(),A=c.tpAuto,hold=c.qty>0;
+  const need='사이클 시작 전 거래일까지 150거래일 확정 종가(120일 수익률·변동성 포함)';
+  if(!A) return `<div style="margin:2px 0 8px;padding:7px 10px;border-radius:8px;font-size:12px;background:rgba(245,196,81,.12);border:1px solid rgba(245,196,81,.32)">⏳ <b style="color:var(--gold)">익절 변환 자동 · ${label}</b> — 판정 자료(${need})가 없어 <b>설정값 ${st.target}%</b>로 계산했습니다. 🔄 자동으로 시세를 불러오세요.${hold?' 서버 자동주문은 이 상태에서 주문을 내지 않습니다.':''}</div>`;
+  const detail=`종가 ${(+A.close).toFixed(2)} · MA150 ${(+A.ma).toFixed(2)} · 120일 ${A.ret>=0?'+':''}${A.ret.toFixed(1)}% · 변동성 ${A.vol.toFixed(1)}% · ${A.asOf}까지`;
+  return `<div style="margin:2px 0 8px;padding:7px 10px;border-radius:8px;font-size:12px;background:rgba(139,124,246,.12);border:1px solid rgba(139,124,246,.32)">🧪 <b style="color:var(--vio)">익절 변환 자동 · ${label}</b> · ${hold?'이번 사이클':'다음 사이클'} 익절 <b>${c.tp}%</b>`
     +`<span style="color:var(--faint)"> (${detail}${hold&&c.cycStart?' · 사이클 시작 '+c.cycStart:''} · 별%·복귀선도 같이 · 원문 V4.0 아님)</span></div>`;
 }
 function imRowsNote(n){ return `<div class="note">아래로 LOC 매수 추가 — <b>V4.0 정식</b> 주문입니다. 가격은 <b>1회매수금 ÷ (본 주문 수량 + k)</b>, 1주씩. 종가가 내려갈수록 같은 1회매수금으로 더 삽니다 (T 는 본 주문만 셉니다). 줄 수 ${n}줄은 <b>JKQuant 구현값</b>입니다 — 원문 표는 '…' 로 이어질 뿐 개수를 정하지 않습니다. 모의·백테·서버·플랜이 같은 주문을 씁니다.</div>`; }
@@ -9226,7 +9223,7 @@ function openSettings(){
   }else if(S.activeTab==='inf'){
     $('set_inf').style.display='';$('set_vr').style.display='none';
     const st=s.settings, sym=isKrwSt(st)?'₩':'$';
-    $('set_ticker_in').value=st.ticker||'SOXL';segSet('set_div',String(st.div));segSet('set_infdivmode',st.divmode||'reinv');segSet('set_engine',st.engine||'v40');segSet('set_shortma',String(st.shortMA||30));segSet('set_lopct',String(st.loPct||6));segSet('set_reverse',st.reverse===true?'1':'0');segSet('set_compound',st.compound===false?'0':'1');segSet('set_tgtdyn',st.tgtDyn===true?'1':'0');segSet('set_autotp',st.autoTp===true?autoTpModeOf(st):'off');syncShortMaUI(st.engine||'v40');syncTgtNote();syncRevSeg();
+    $('set_ticker_in').value=st.ticker||'SOXL';segSet('set_div',String(st.div));segSet('set_infdivmode',st.divmode||'reinv');segSet('set_engine',st.engine||'v40');segSet('set_shortma',String(st.shortMA||30));segSet('set_lopct',String(st.loPct||6));segSet('set_reverse',st.reverse===true?'1':'0');segSet('set_compound',st.compound===false?'0':'1');segSet('set_tgtdyn',st.tgtDyn===true?'1':'0');segSet('set_autotp',st.autoTp===true?'on':'off');syncShortMaUI(st.engine||'v40');syncTgtNote();syncRevSeg();
     $('set_target').value=st.target;$('set_big').value=st.big;$('set_principal').value=nfix(st.principal,0);
     if($('set_rows'))$('set_rows').value=imRowsOf(st);
     if($('set_revgap'))$('set_revgap').value=revGapOf(st);
@@ -9397,7 +9394,7 @@ const SIM_KEYS={
    설정 지문만 보면 설정을 안 바꾼 세션은 옛 기록을 그대로 안고 간다 —
    그래서 지문에 규약 판을 같이 넣어, 규약이 바뀌면 전 세션이 다시 만들어지게 한다.
    ※ 체결 규칙을 고칠 때마다 이 숫자를 올릴 것. */
-const SIM_RULE_VER=10;  // 6: VR V 복귀 · 무매 아래로 LOC 추가 · 7: 제10차 · 8: VR 원문 매수표 — 밴드 1주 예약표(반올림)
+const SIM_RULE_VER=11;  // 6: VR V 복귀 · 무매 아래로 LOC 추가 · 7: 제10차 · 8: VR 원문 매수표 — 밴드 1주 예약표(반올림)
                        // 9: VR 예약 지정가 체결가 — 시가가 이미 넘은 줄은 시가로 (그날 가격 범위 밖 체결 제거)
                        // 10: VR 예약표 줄 수 제한(20) 제거 — 원문 긴 매도표·추가 매도표대로 그날 닿는 줄까지
                        // 5: VR 예약 사다리를 사이클 시작 20차 고정으로 통일
@@ -9442,7 +9439,7 @@ function saveSettings(){
       target:inputNum('set_target')||20,big:inputNum('set_big')||15,
       reverse:segGet('set_reverse')==='1',compound:segGet('set_compound')!=='0',
       tgtDyn:segGet('set_tgtdyn')==='1',
-      autoTp:autoTpSel!=='off',autoTpMode:autoTpSel==='off'?autoTpModeOf(s.settings):normalizeAutoTpMode(autoTpSel),
+      autoTp:autoTpSel==='on',autoTpMode:'auto',
       rows:imRowsOf({rows:$('set_rows')?$('set_rows').value:undefined}),
       revGap:Math.max(0,Math.min(20,Number(($('set_revgap')||{}).value)||REV_GAP_DEF)),
       rowqty:1,principal:inputNum('set_principal')||10000,divmode:segGet('set_infdivmode')||'reinv',
