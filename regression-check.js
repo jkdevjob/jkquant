@@ -10060,7 +10060,7 @@ console.log('\n[132] 익절 자동(실험) — 사이클 시작 120거래일 수
     ok('F1 공식/변형 — 자동 익절 표시가 선택 전략(120일 수익률/MA150)을 구분하고 고정 익절 표시는 숨긴다',
        v1.includes('익절 자동 10/20(실험 · 120일 수익률)') && vm.includes('익절 자동 10/20(실험 · MA150)')
        && !v1.some(x=>/고정/.test(x)) && !vm.some(x=>/고정/.test(x)) && v2.includes('익절 10% 고정')
-       && /autoTpMode:autoTpModeOf\(S\)/.test(extractFn(idx,'function imRuleOf(st)')), J([v1,vm,v2])); }
+       && /autoTpMode:S\.autoTp===true\?autoTpModeOf\(S\):'ret120'/.test(extractFn(idx,'function imRuleOf(st)')), J([v1,vm,v2])); }
   { const BG=new Function('autoTpModeOf','autoTpLabel',
       extractFn(idx,'function imAutoTpBadge(c)')+'\nreturn imAutoTpBadge;')(
         st=>(st&&st.autoTpMode)==='ma150'?'ma150':'ret120', m=>m==='ma150'?'MA150':'120일 수익률');
