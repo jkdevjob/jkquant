@@ -192,7 +192,7 @@ th:first-child,td:first-child{text-align:left}
 <body>
 <div class="wrap">
   <div class="top">
-    <div class="brand"><div class="logo">Asset Plan</div><h1>자산플랜 <span class="ver">v1.35.0</span></h1></div>
+    <div class="brand"><div class="logo">Asset Plan</div><h1>자산플랜 <span class="ver">v1.36.0</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
       <div class="jkmenu" id="jkmenuWrap">
@@ -1147,10 +1147,28 @@ function imAutoTP(bars, date){
 }
 function normalizeAutoTpMode(v){return 'auto';}
 function autoTpModeOf(st){return 'auto';}
-function autoTpLabel(mode){return 'MA150+초강세·고변동';}
+function autoTpLabel(mode){return 'MA150+초강세·고변동+M1';}
 const IM_AUTOTP_MA150=IM_AUTOTP;
 function imAutoTPMA150(bars,date){return imAutoTP(bars,date);}
 function imAutoTPByMode(bars,date,mode){return imAutoTP(bars,date);}
+const IM_AUTOTP_M1={maLen:150,below:0.05};
+function imAutoTPM1(bars,cycStart,date,base){
+  if(!base||base.tp!==20||!cycStart)return base;
+  const A=bars||[];let a=0,b=A.length;
+  while(a<b){const m=(a+b)>>1;if(String(A[m].date)<String(cycStart))a=m+1;else b=m;}
+  const from=a;a=0;b=A.length;
+  while(a<b){const m=(a+b)>>1;if(String(A[m].date)<String(date))a=m+1;else b=m;}
+  const to=a-1,start=Math.max(from,IM_AUTOTP_M1.maLen-1);
+  if(to<start)return base;
+  let sum=0;
+  for(let k=start-IM_AUTOTP_M1.maLen+1;k<=start;k++){const v=+(A[k]&&A[k].close);if(!(v>0))return base;sum+=v;}
+  for(let i=start;i<=to;i++){
+    if(i>start){const add=+(A[i]&&A[i].close),drop=+(A[i-IM_AUTOTP_M1.maLen]&&A[i-IM_AUTOTP_M1.maLen].close);if(!(add>0&&drop>0))return base;sum+=add-drop;}
+    const close=+(A[i]&&A[i].close),ma=sum/IM_AUTOTP_M1.maLen;
+    if(close<ma*(1-IM_AUTOTP_M1.below))return {...base,tp:10,m1:true,m1AsOf:String(A[i].date),m1Close:close,m1Ma:ma,m1Gap:(close/ma-1)*100};
+  }
+  return base;
+}
 function calcInfState(sess){
   const st=sess.settings||{},hist=sess.hist||[];let avg=0,qty=0,inv=0,realized=0,T=0,withdrawn=0,saved=0,divTotal=0,revState='NORMAL',revFrom='';
   const simple=st.compound===false;
@@ -1161,6 +1179,7 @@ function calcInfState(sess){
   for(let hi=0;hi<hist.length;hi++){
     const h=hist[hi];
     if(h.date!==day){day=h.date;daySold=false;}
+    if(auto&&cycStart&&cycTp&&cycTp.tp===20)cycTp=imAutoTPM1(ab,cycStart,h.date,cycTp);
     const flat0=!(qty>1e-9)&&T===0;   // 이 줄 전에 사이클이 비어 있었나 — 여기서 사면 새 사이클 첫 매수
     const kind=String(h.kind||''),isRev=kind==='리버스매도'||kind==='리버스매수';
     if(kind==='지정가매도'||kind==='쿼터매도'||kind==='리버스매도'){
@@ -1197,7 +1216,7 @@ function calcInfState(sess){
   }
   if(st.reverse===true&&REV_DIVS_PLAN.includes(+st.div)&&revState==='NORMAL'&&qty>0&&((+st.div||20)-T)<1){revState='DAY1';revFrom='';}
   const bal=(+st.principal||0)+realized+divTotal-inv-withdrawn-saved;
-  const tpAuto=auto?((qty>1e-9&&cycStart)?cycTp:tpAt('9999-12-31')):null;
+  const tpAuto=auto?((qty>1e-9&&cycStart)?imAutoTPM1(ab,cycStart,'9999-12-31',cycTp):tpAt('9999-12-31')):null;
   return {st,avg,qty:Math.max(0,qty),T,bal,withdrawn,saved,outside:withdrawn+saved,revState,revFrom,tp:tpAuto?tpAuto.tp:st.target,tpAuto,cycStart,
     reverseActive:st.reverse===true&&REV_DIVS_PLAN.includes(+st.div)&&revState!=='NORMAL'&&qty>0,reverseDay1:revState==='DAY1'};
 }

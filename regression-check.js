@@ -60,6 +60,7 @@ const idxParts=[
   (idx.match(/const IM_AUTOTP=\{[^\n]*\};/)||[''])[0], optFn(idx,'function imAutoTP(bars, date)'),   // 익절 자동(실험) — 장부가 사이클 익절%를 여기서 정한다 (없으면 [132] 가 빨간불)
   optFn(idx,'function normalizeAutoTpMode(v)'), optFn(idx,'function autoTpModeOf(st)'),
   (idx.match(/const IM_AUTOTP_MA150=\{[^\n]*\};/)||[''])[0], optFn(idx,'function imAutoTPMA150(bars,date)'), optFn(idx,'function imAutoTPByMode(bars,date,mode)'),
+  (idx.match(/const IM_AUTOTP_M1=\{[^\n]*\};/)||[''])[0], optFn(idx,'function imAutoTPM1(bars,cycStart,date,base)'),
   extractFn(idx,'function computeInf()'),
   extractFn(idx,'function vrCycleTransition(V, pool, ev, G, mode, add, formula)'),   // 제8차 8-⑦ 공용 전환식
   extractFn(idx,'function computeNextV(c,ev)'),
@@ -72,6 +73,8 @@ if(optFn(bt,'function imCycleEnds(soldToday, qtyAtDayEnd)')) global.imCycleEnds=
 /* 익절 자동(실험) — 백테 엔진 사본(runIM)이 전역에서 찾는다. 네 파일 글자가 같은지는 [132] 가 본다. */
 if(optFn(bt,'function imAutoTP(bars, date)')){ const f=new Function((bt.match(/const IM_AUTOTP=\{[^\n]*\};/)||[''])[0]+'\n'+extractFn(bt,'function imAutoTP(bars, date)')+'\nreturn {IM_AUTOTP,imAutoTP};')();
   global.IM_AUTOTP=f.IM_AUTOTP; global.imAutoTP=f.imAutoTP; }
+if(optFn(bt,'function imAutoTPM1(bars,cycStart,date,base)')){ const f=new Function((bt.match(/const IM_AUTOTP_M1=\{[^\n]*\};/)||[''])[0]+'\n'+extractFn(bt,'function imAutoTPM1(bars,cycStart,date,base)')+'\nreturn {IM_AUTOTP_M1,imAutoTPM1};')();
+  global.IM_AUTOTP_M1=f.IM_AUTOTP_M1; global.imAutoTPM1=f.imAutoTPM1; }
 global.imAutoBars=()=>null;   // 앱 장부가 시세 봉을 받는 자리 — 하네스는 시험마다 갈아 끼운다
 if(optFn(idx,'function imDayOpenAfter(hist, i)')) global.imDayOpenAfter=new Function(extractFn(idx,'function imDayOpenAfter(hist, i)')+'\nreturn imDayOpenAfter;')();
 eval(idxParts.join('\n'));
@@ -6994,7 +6997,7 @@ const __P7={};
     'function isSell(k)','function isBuy(k)','function isCx(k)','function isAmtKind(k)','function simCutoff(cur)',
     'function settledBars(rows,cur)','function curOf(st)','function isKrCode(t)','function imRowsNote(n)','function imAutoTpBadge(c)',
     'function normalizeAutoTpMode(v)','function autoTpModeOf(st)','function autoTpLabel(mode)',
-    'function imAutoTP(bars, date)','function imAutoTPMA150(bars,date)','function imAutoTPByMode(bars,date,mode)',
+    'function imAutoTP(bars, date)','function imAutoTPMA150(bars,date)','function imAutoTPByMode(bars,date,mode)','function imAutoTPM1(bars,cycStart,date,base)',
     'function imRuleTag(st)','function imRuleOf(st)','function imVariantOf(cfg)','function revSupported(div)','function revEnabled(st)']
     .map(x=>extractFn(idx,x)).join('\n');
   const KINDSRC=idx.slice(idx.indexOf('const KIND_T='), idx.indexOf('};', idx.indexOf('const KIND_T='))+2);
@@ -7019,6 +7022,7 @@ const __P7={};
     ${(idx.match(/const AUTO_TP_MODE_LABELS=[^\n]*/)||[''])[0]}
     ${(idx.match(/const IM_AUTOTP=\{[^\n]*\};/)||[''])[0]}
     ${(idx.match(/const IM_AUTOTP_MA150=\{[^\n]*\};/)||[''])[0]}
+    ${(idx.match(/const IM_AUTOTP_M1=\{[^\n]*\};/)||[''])[0]}
     ${need}
     function infSettledLast(){ return {close:ENV.CLOSE, date:ENV.CDATE||''}; }   // CDATE — 확정 종가 날짜 (리버스 1일차 판정 · 제12차 ②)
     function render5day(){} function renderKisPanel(){}
@@ -10001,7 +10005,15 @@ console.log('\n[132] 익절 변환 자동 — 통합 ON/OFF · 룩어헤드 없�
      && bt.includes('>켬</button>')
      && bt.includes("imAutoTp=e.target.dataset.x==='1'"));
 
-  ok('G 모의 규약 버전 11 — 기존 자동익절 모의기록을 새 규칙으로 재생성',/const SIM_RULE_VER=11;/.test(idx));
+  ok('G 모의 규약 버전 12 — M1 적용으로 기존 자동익절 모의기록을 새 규칙으로 재생성',/const SIM_RULE_VER=12;/.test(idx));
+  const M1SIG='function imAutoTPM1(bars,cycStart,date,base)',M1CRE=/const IM_AUTOTP_M1=\{[^\n]*\};/;
+  const m1body=src=>(src.match(M1CRE)||[''])[0]+'\n'+extractFn(src,M1SIG).replace('export function','function');
+  const M1={index:imAutoTPM1,backtest:global.imAutoTPM1,plan:new Function(m1body(pl)+'\nreturn imAutoTPM1;')(),server:new Function(m1body(im)+'\nreturn imAutoTPM1;')()};
+  const m1bars=Array.from({length:190},(_,i)=>({date:D[i],close:i===170?94:100}));
+  for(const [nm,f] of Object.entries(M1)){const base={tp:20,mode:'auto'},before=f(m1bars,D[160],D[170],base),after=f(m1bars,D[160],D[171],base),stay=f(m1bars,D[160],D[171],{tp:10});
+    ok('H '+nm+' — 전날 종가가 MA150의 95% 미만이면 20→10 영구 하향',before.tp===20&&after.tp===10&&after.m1===true&&after.m1AsOf===D[170],JSON.stringify([before,after]));
+    ok('H '+nm+' — 10% 사이클은 다시 올리지 않는다',stay.tp===10&&!stay.m1,JSON.stringify(stay));}
+  ok('I M1 네 파일 판정식 동일',m1body(idx)===m1body(bt)&&m1body(idx)===m1body(pl)&&m1body(idx)===m1body(im));
 }
 
 console.log(`\n════ 결과: ${pass} PASS / ${fail} FAIL ${fail===0?'— ALL PASS ★':'— 배포 금지, 위 ✗ 항목 수정 필요'} ════`);

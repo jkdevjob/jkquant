@@ -148,6 +148,7 @@ export function imCompute(st, hist, days) {
   for (let hi = 0; hi < H.length; hi++) {
     const h = H[hi];
     if (h.date !== day) { day = h.date; daySold = false; }
+    if (auto && cycStart && cycTp && cycTp.tp === 20) cycTp = imAutoTPM1(ab, cycStart, h.date, cycTp);
     const flat0 = !(qty > 1e-9) && T === 0;   // 이 줄 전에 사이클이 비어 있었나 — 여기서 사면 새 사이클 첫 매수
     const kind = String(h.kind || "");
     const isRev = (kind === "리버스매도" || kind === "리버스매수");
@@ -193,7 +194,7 @@ export function imCompute(st, hist, days) {
   const reverseActive = revEnabled(st) && revState !== "NORMAL" && qty > 0;
   const reverseDay1 = reverseActive && revState === "DAY1";
   const bal = (+st.principal || 0) + realized + divTotal - inv - withdrawn - saved;
-  const tpAuto = auto ? ((qty > 1e-9 && cycStart) ? cycTp : tpAt("9999-12-31")) : null;
+  const tpAuto = auto ? ((qty > 1e-9 && cycStart) ? imAutoTPM1(ab, cycStart, "9999-12-31", cycTp) : tpAt("9999-12-31")) : null;
   const tp = tpAuto ? tpAuto.tp : st.target;
   return { avg, qty, inv, realized, T, bal, st, revState, reverseActive, reverseDay1, revFrom, withdrawn, saved, divTotal, simple, tp, tpAuto, cycStart };
 }
@@ -290,6 +291,24 @@ export function autoTpModeOf(st){return "auto";}
 const IM_AUTOTP_MA150=IM_AUTOTP;
 export function imAutoTPMA150(bars,date){return imAutoTP(bars,date);}
 export function imAutoTPByMode(bars,date,mode){return imAutoTP(bars,date);}
+const IM_AUTOTP_M1={maLen:150,below:0.05};
+export function imAutoTPM1(bars,cycStart,date,base){
+  if(!base||base.tp!==20||!cycStart)return base;
+  const A=bars||[];let a=0,b=A.length;
+  while(a<b){const m=(a+b)>>1;if(String(A[m].date)<String(cycStart))a=m+1;else b=m;}
+  const from=a;a=0;b=A.length;
+  while(a<b){const m=(a+b)>>1;if(String(A[m].date)<String(date))a=m+1;else b=m;}
+  const to=a-1,start=Math.max(from,IM_AUTOTP_M1.maLen-1);
+  if(to<start)return base;
+  let sum=0;
+  for(let k=start-IM_AUTOTP_M1.maLen+1;k<=start;k++){const v=+(A[k]&&A[k].close);if(!(v>0))return base;sum+=v;}
+  for(let i=start;i<=to;i++){
+    if(i>start){const add=+(A[i]&&A[i].close),drop=+(A[i-IM_AUTOTP_M1.maLen]&&A[i-IM_AUTOTP_M1.maLen].close);if(!(add>0&&drop>0))return base;sum+=add-drop;}
+    const close=+(A[i]&&A[i].close),ma=sum/IM_AUTOTP_M1.maLen;
+    if(close<ma*(1-IM_AUTOTP_M1.below))return {...base,tp:10,m1:true,m1AsOf:String(A[i].date),m1Close:close,m1Ma:ma,m1Gap:(close/ma-1)*100};
+  }
+  return base;
+}
 
 function exitMulOf(base){ return 1-((base!=null&&base>0)?base:20)/100; }
 /* 리버스 종료가 확정됐는가 — 원문 리버스 6-(2): 리버스로 보낸 날의 확정 종가가 평단 대비 −15%(TQQQ)·−20%(SOXL) 위면

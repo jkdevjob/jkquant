@@ -152,7 +152,7 @@ pre.rules{background:var(--bg);border:1px solid var(--line);border-radius:10px;p
 
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Admin Console</div><h1>JK <span class="v">퀀트</span> 관리자 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="adVer">v0.7.0</span></h1></div>
+    <div><div class="kicker">Admin Console</div><h1>JK <span class="v">퀀트</span> 관리자 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="adVer">v0.8.0</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -403,7 +403,7 @@ function paintDefaultTabs(){
     return '<button class="'+(k===defaultsTab?'on':'')+'" onclick="switchDefaultsTab(\''+k+'\')">'+esc(m.name)+(n?' · '+n:'')+'</button>';
   }).join('');
   const m=STRATEGY_DEFAULT_META[defaultsTab],v=strategyValues[defaultsTab]||STRATEGY_DEFAULT_BUILTIN[defaultsTab];
-  b.innerHTML='<div class="cfggrid">'+m.fields.map(f=>cfgFieldHtml(defaultsTab,f,v[f[0]])).join('')+'</div>'+(defaultsTab==='inf'?'<div class="cfghelp" style="margin-top:10px;padding:9px;border:1px solid var(--line);border-radius:9px"><b>익절 변환 자동 · 끔</b>: 설정한 목표 수익률 고정.<br><b>켬</b>: 사이클 시작 전날 종가가 MA150 아래이거나, 120일 수익률 &gt; +100%이면서 120일 연환산 변동성 &gt; 90%이면 10%, 그 외 20%. 사이클 종료까지 고정.<br>왼쪽 체크 후 저장하면 새 세션 기본값, <b>선택 항목 기존 세션에 적용</b>을 누르면 기존 무매 세션에도 일괄 적용됩니다.</div>':'');
+  b.innerHTML='<div class="cfggrid">'+m.fields.map(f=>cfgFieldHtml(defaultsTab,f,v[f[0]])).join('')+'</div>'+(defaultsTab==='inf'?'<div class="cfghelp" style="margin-top:10px;padding:9px;border:1px solid var(--line);border-radius:9px"><b>익절 변환 자동 · 끔</b>: 설정한 목표 수익률 고정.<br><b>켬</b>: 사이클 시작 전날 종가가 MA150 아래이거나, 120일 수익률 &gt; +100%이면서 120일 연환산 변동성 &gt; 90%이면 10%, 그 외 20%로 시작. 20% 사이클 도중 전날 종가가 MA150의 95% 미만이면 10%로 한 번 낮추고 다시 올리지 않습니다.<br>왼쪽 체크 후 저장하면 새 세션 기본값, <b>선택 항목 기존 세션에 적용</b>을 누르면 기존 무매 세션에도 일괄 적용됩니다.</div>':'');
 }
 function switchDefaultsTab(k){
   if(k===defaultsTab)return;
