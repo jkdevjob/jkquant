@@ -3097,6 +3097,12 @@ console.log('\n[61] 모의 성과 — 원화로 받아 세션 통화로 환산')
      /api\.frankfurter\.dev\/v1\//.test(fx) && /chart\/KRW=X\?interval=1d&period1=/.test(fx));
   ok('휴장일이면 그 이전 값을 쓴다', /if \(d <= date && cl\[i\] > 0\)/.test(fx));
   ok('못 찾으면 502 — 엉뚱한 값을 지어내지 않는다', /no fx for/.test(fx) && /status: 502/.test(fx));
+  ok('성과 목록용 현재 환율은 Yahoo 실시간값을 일일 고시값보다 먼저 쓴다',
+     fx.indexOf('chart/KRW=X?interval=1m&range=1d')>=0
+     && fx.indexOf('chart/KRW=X?interval=1m&range=1d') < fx.indexOf('api.exchangerate.host/latest')
+     && /src: "yahoo-live"/.test(fx));
+  ok('현재 환율 캐시는 60초, 과거 환율은 하루 캐시다',
+     /max-age=60/.test(fx) && /HIST_JH[\s\S]{0,100}max-age=86400/.test(fx));
 }
 
 /* ════ 62. 차트 라벨은 고른 기간을 따라간다 ════
