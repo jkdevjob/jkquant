@@ -1582,7 +1582,7 @@ console.log('[30] 모의 시작일 일괄 변경');
   /* 원금 일괄 — 전략마다 '금액'의 뜻이 달라서 아무 데나 넣으면 안 된다.
      적립식·ASAP의 금액은 '1회 적립액'이라 원금을 밀어넣으면 매 회차마다 그 돈을 산다. */
   let cf=''; try{ cf=extractFn(idx,'function paperCapField(tab, st)'); }catch(e){}
-  ok('원금 칸이 있다', /id="p_capital"/.test(idx) && /비우면 그대로/.test(idx));
+  ok('원금 칸이 있다', /id="p_capital"/.test(idx) && /placeholder="원화 입력"/.test(idx));
   ok('전략별 원금 칸을 가린다', !!cf, cf?'':'paperCapField 없음');
   ok('무매·로테·섀넌은 principal', /if\(tab==='inf'\|\|tab==='ma'\|\|tab==='ivs'\) return 'principal';/.test(cf));
   ok('VR은 initAmt', /if\(tab==='vr'\) return 'initAmt';/.test(cf));
@@ -1840,7 +1840,8 @@ console.log('[40] 모의 일괄 적용 — 원금과 1회 적립액을 따로');
   ok('세션 달러값을 역환산하는 현재값 요약 함수는 제거했다', !/function paperValSummary\(/.test(idx) && !/function paperValSummaryWon\(/.test(idx));
   const sp=extractFn(idx,'function syncPaperStart()');
   ok('전체 적용 공통 시작일을 저장하고 새로고침 때 우선 표시한다',
-     /S&&S\.paperCommon&&S\.paperCommon\.simStart/.test(sp)
+     /const pc=\(S&&S\.paperCommon\)\|\|\{\}/.test(sp)
+     && /const common=pc\.simStart/.test(sp)
      && /const pick=\(common&&common>=min&&common<=today\)\?common/.test(sp));
   ok('열 때 마지막으로 입력한 원화 원본을 입력칸에 그대로 복원한다', /pc\.capitalWon/.test(sp) && /pc\.addWon/.test(sp) && /toLocaleString\('ko-KR'/.test(sp));
   const ap=extractFn(idx,'async function applyAllSimStart()');
@@ -3073,14 +3074,15 @@ console.log('\n[61] 모의 성과 — 원화로 받아 세션 통화로 환산')
   }
   ok('넣을 때 세션 통화로 바꾼다',
      /x\.settings\[f\]=wonToSess\(cap,x\.settings,R\)/.test(idx)
-     && /x\.settings\[f\]=wonToSess\(add,x\.settings,R\)/.test(idx));
+     && /applyPaperAdd\(tab,x\.settings,add,R\)/.test(idx)
+     && /const base=wonToSess\(won,st,rate\)/.test(extractFn(idx,'function applyPaperAdd(tab, st, won, rate)')));
 
   // 시작 시점 환율 — 오늘 값으로 조용히 대신하면 안 된다
   const fa=(()=>{ try{ return extractFn(idx,'async function fxAt(date)'); }catch(e){ return ''; } })();
   ok('시작일 환율을 따로 받는다', /\/api\/fx\?date=\$\{encodeURIComponent\(date\)\}/.test(fa));
   ok('못 받으면 물어본다',
      /환율을 못 받았습니다/.test(idx) && /오늘 환율 \$\{now\.toLocaleString\('en-US'\)\}원으로 환산할까요\?/.test(idx));
-  ok('쓴 환율을 확인창에 적는다', /미국 종목은 \$\{fx\.date\} 기준 환율 \$\{fx\.rate\.toLocaleString\('en-US'\)\}원\/\$을 내부 계산에 사용합니다/.test(idx));
+  ok('쓴 환율을 확인창에 적는다', /전략 계산에만 \$\{fx\.date\} 기준 환율 \$\{fx\.rate\.toLocaleString\('en-US'\)\}원\/\$을 사용합니다/.test(idx));
   ok('국내만 있으면 환율을 안 부른다', /const needUsd=\[\.\.\.capHit,\.\.\.addHit\]\.some\(\(\[,x\]\)=>!isKrwSt\(x\.settings\)\);/.test(idx));
   ok('끝나고도 쓴 환율을 남긴다', /const fxNote = fx \? `미국 종목은 \$\{fx\.date\} 환율/.test(idx));
   ok('전체 적용 즉시 클라우드 저장 함수가 있다',
