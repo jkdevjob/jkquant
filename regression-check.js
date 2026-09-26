@@ -632,7 +632,7 @@ console.log('[10] 모의 장부 정합');
   ok('모의 기간을 시작일부터 잰다', /sess\.simStart && sess\.simStart<first/.test(stat));
   // 여러 세션을 한 표에 나열하므로 통화는 줄마다 따로
   ok('성과 행에 통화를 실어 보낸다', /cur:curOf\(st\)/.test(stat));
-  ok('성과 표가 줄마다 통화로 찍는다', /wnCur\(r\.inflow,r\.cur\)/.test(idx) && /wnCur\(r\.total,r\.cur\)/.test(idx));
+  ok('성과 표 금액은 원화-only로 찍는다', /paperWon\(r\.inflow,r\.wonRate\)/.test(idx) && /paperWon\(r\.total,r\.wonRate\)/.test(idx));
   ok('wn은 wnCur 위에 있다(중복 구현 없음)', /function wn\(v\)\{ return wnCur\(v, curCurrency\(\)\); \}/.test(idx));
 }
 
@@ -1763,9 +1763,9 @@ console.log('[37] 모의 성과 표 — 투입은 맨 오른쪽');
      head.slice(0,90));
   ok('투입이 마지막 머리글', head.lastIndexOf('투입') > head.lastIndexOf('연'));
   // 시세를 못 받은 줄은 평가~연 여섯 칸(평가·최종·MDD·현재·인출·연)을 colspan 으로 덮는다
-  const iSpan=op.indexOf('colspan="6"'), iInflow=op.indexOf('${wnCur(r.inflow,r.cur)}');
+  const iSpan=op.indexOf('colspan="6"'), iInflow=op.indexOf('${paperWon(r.inflow,r.wonRate)}');
   ok('투입 칸이 colspan 뒤에 온다', iSpan>0 && iInflow>iSpan);
-  ok('투입 칸이 한 번만 그려진다', (op.match(/\$\{wnCur\(r\.inflow,r\.cur\)\}/g)||[]).length===1);
+  ok('투입 칸이 한 번만 그려진다', (op.match(/\$\{paperWon\(r\.inflow,r\.wonRate\)\}/g)||[]).length===1);
   ok('각주 설명도 표 순서와 같다', idx.indexOf('평가 = 보유 평가금') < idx.indexOf('투입 = 밖에서 넣은 돈'));
 }
 
@@ -1837,9 +1837,9 @@ console.log('[40] 모의 일괄 적용 — 원금과 1회 적립액을 따로');
   ok('값이 여러 개면 나열한다', /seen\.join\(' \/ '\)/.test(vs));
   ok('해당 없으면 그렇게 적는다', /'해당 세션 없음'/.test(vs));
   const sp=extractFn(idx,'function syncPaperStart()');
-  ok('열 때 두 힌트를 다 채운다',
-     /p_capital_n[\s\S]{0,80}paperValSummary\(paperCapField\)/.test(sp)
-     && /p_addamt_n[\s\S]{0,80}paperValSummary\(paperAddField\)/.test(sp));
+  ok('열 때 두 힌트를 원화 요약으로 채운다',
+     /p_capital_n[\s\S]{0,120}paperValSummaryWon\(paperCapField\)/.test(sp)
+     && /p_addamt_n[\s\S]{0,120}paperValSummaryWon\(paperAddField\)/.test(sp));
   ok('두 칸 다 비우고 연다', /\$\('p_addamt'\)[\s\S]{0,60}value=''/.test(sp));
   const ap=extractFn(idx,'async function applyAllSimStart()');
   ok('두 값을 따로 읽는다', /paperReadAmt\('p_capital'/.test(ap) && /paperReadAmt\('p_addamt'/.test(ap));
@@ -1848,7 +1848,7 @@ console.log('[40] 모의 일괄 적용 — 원금과 1회 적립액을 따로');
      && /paperAddField\(tab,x\.settings\); if\(f\) x\.settings\[f\]=wonToSess\(add,/.test(ap));
   /* 금액 칸은 원화다. 미국 종목 세션엔 시작일 환율로 환산해 들어가므로
      어떤 환율을 썼는지 묻기 전에 보여야 한다 — 원금이 얼마로 들어갈지가 달라진다. */
-  ok('통화 규약을 미리 알린다', /환율 \$\{fx\.date\} 기준/.test(ap) && /국내 종목은 원화 그대로/.test(ap));
+  ok('통화 규약을 미리 알린다', /미국 종목은 \$\{fx\.date\} 기준 환율/.test(ap) && /표시 금액은 모두 원화/.test(ap));
   ok('건너뛴 세션 이름에 조사를 안 붙인다', /건너뛴 세션: /.test(ap) && !/join\(', '\)\}은 금액/.test(ap));
   const rd=extractFn(idx,'function paperReadAmt(id, label)');
   ok('비우면 그대로 둔다', /if\(!raw\) return null;/.test(rd));
@@ -3074,7 +3074,7 @@ console.log('\n[61] 모의 성과 — 원화로 받아 세션 통화로 환산')
   ok('시작일 환율을 따로 받는다', /\/api\/fx\?date=\$\{encodeURIComponent\(date\)\}/.test(fa));
   ok('못 받으면 물어본다',
      /환율을 못 받았습니다/.test(idx) && /오늘 환율 \$\{now\.toLocaleString\('en-US'\)\}원으로 환산할까요\?/.test(idx));
-  ok('쓴 환율을 확인창에 적는다', /환율 \$\{fx\.date\} 기준 \$\{fx\.rate\.toLocaleString\('en-US'\)\}원\/\$/.test(idx));
+  ok('쓴 환율을 확인창에 적는다', /미국 종목은 \$\{fx\.date\} 기준 환율 \$\{fx\.rate\.toLocaleString\('en-US'\)\}원\/\$을 내부 계산에 사용합니다/.test(idx));
   ok('국내만 있으면 환율을 안 부른다', /const needUsd=\[\.\.\.capHit,\.\.\.addHit\]\.some\(\(\[,x\]\)=>!isKrwSt\(x\.settings\)\);/.test(idx));
   ok('끝나고도 쓴 환율을 남긴다', /const fxNote = fx \? `미국 종목은 \$\{fx\.date\} 환율/.test(idx));
 
