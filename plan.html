@@ -192,7 +192,7 @@ th:first-child,td:first-child{text-align:left}
 <body>
 <div class="wrap">
   <div class="top">
-    <div class="brand"><div class="logo">Asset Plan</div><h1>자산플랜 <span class="ver">v1.34.0</span></h1></div>
+    <div class="brand"><div class="logo">Asset Plan</div><h1>자산플랜 <span class="ver">v1.34.1</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
       <div class="jkmenu" id="jkmenuWrap">
@@ -1156,7 +1156,7 @@ function calcInfState(sess){
   const st=sess.settings||{},hist=sess.hist||[];let avg=0,qty=0,inv=0,realized=0,T=0,withdrawn=0,saved=0,divTotal=0,revState='NORMAL',revFrom='';
   const simple=st.compound===false;
   /* 익절 자동(실험 · imAutoTP) — 앱 computeInf · 서버 imCompute 와 같은 자리·같은 식. 확정 종가 봉은 imOrders 가 sess.autoBars 로 넘긴다 */
-  const auto=st.autoTp===true,mode=autoTpModeOf(st),ab=(auto&&sess.autoBars&&sess.autoBars.length)?sess.autoBars:null,tpAt=d=>(auto&&ab&&d)?imAutoTPByMode(ab,d,mode):null;
+  const auto=st.autoTp===true,mode=auto?autoTpModeOf(st):'ret120',ab=(auto&&sess.autoBars&&sess.autoBars.length)?sess.autoBars:null,tpAt=d=>(auto&&ab&&d)?imAutoTPByMode(ab,d,mode):null;
   let cycStart='',cycTp=null;
   let day=null,daySold=false;   // 그날 매도가 있었나 — 사이클 종료는 그날 마지막 매매 줄에서만 (앱 computeInf 와 같다 · 제14차 D15)
   for(let hi=0;hi<hist.length;hi++){
