@@ -537,7 +537,7 @@ try{ if(localStorage.getItem('qcockpit_hadUser')==='1') document.documentElement
 </div>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.101.9</span></h1></div>
+    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.101.10</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -1646,7 +1646,7 @@ if(/^\/paper\/?$/.test(location.pathname)){
   <footer>
     <strong>JK 퀀트</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.101.9</b> · 2026-09-26</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.101.10</b> · 2026-09-26</div>
   </footer>
 </div>
 
@@ -7482,7 +7482,8 @@ function paperStat(tab, sess){
        인출 =  나간 돈             ÷ 원금         매도해서 계좌 밖으로 뺀 것
      현재 + 인출 = 최종. 단리 세션은 초과익이 계좌 밖으로 빠지므로 이 셋이 크게 갈린다. */
   const outAmt=(_out&&((_out.saved||0)+(_out.withdrawn||0)))||0;
-  return {tab, id:sess.id, name:sess.name, opts:paperOpts(tab,st), sym, cur:curOf(st), from, to, yrs, spanDays, inflow:base, total,
+  const inflowWon=paperInflowWon(tab,sess,base);
+  return {tab, id:sess.id, name:sess.name, opts:paperOpts(tab,st), sym, cur:curOf(st), from, to, yrs, spanDays, inflow:base, inflowWon, total,
     ret:(total/base-1)*100, retNow:((total-outAmt)/base-1)*100, retOut:(outAmt/base)*100,
     cagr:(Math.pow(Math.max(total,1)/base,1/yrs)-1)*100, nTrade, price, out:_out, mdd};
 }
@@ -7554,6 +7555,29 @@ async function paperFillAll(){
   return rows;
 }
 function paperWon(v, rate){return Math.round((+v||0)*(rate||1)).toLocaleString('ko-KR')+'원';}
+/* 투입금은 현재 환율로 재평가하지 않는다.
+   전체 적용에서 사용자가 입력한 원화와 시작일 환율의 관계를 복원해,
+   "1억원을 넣었다"면 목록에도 1억원으로 보이게 한다. */
+function paperInflowWon(tab, sess, inflow){
+  const st=(sess&&sess.settings)||{}, v=+inflow||0;
+  if(isKrwSt(st)) return v;
+  const pc=(S&&S.paperCommon)||{};
+  let rate=+(sess&&sess.paperFxRate)||0;
+  if(!(rate>0) && (!pc.simStart || !sess.simStart || pc.simStart===sess.simStart)){
+    const cf=paperCapField(tab,st);
+    if(cf && +pc.capitalWon>0 && +st[cf]>0) rate=(+pc.capitalWon)/(+st[cf]);
+    if(!(rate>0)){
+      const af=paperAddField(tab,st);
+      if(af && +pc.addWon>0 && +st[af]>0) rate=(+pc.addWon)/(+st[af]);
+    }
+  }
+  return rate>0 ? v*rate : null;
+}
+function paperInflowText(r){
+  return r&&r.inflowWon!=null
+    ? Math.round(+r.inflowWon||0).toLocaleString('ko-KR')+'원'
+    : paperWon(r&&r.inflow,r&&r.wonRate);
+}
 function paperWonRate(r){
   if(!r||r.cur==='krw') return 1;
   return (typeof liveFX!=='undefined'&&liveFX)?liveFX:FX;
@@ -7620,10 +7644,10 @@ async function openPaper(){
              + `<td style="color:${long?(up?'var(--buy)':'var(--sell)'):'var(--faint)'}">${cagr}</td>`
           : `<td colspan="6" style="color:var(--gold)">시세 대기 — ${r.sym} 시세를 못 받았습니다. 새로고침하면 재시도합니다</td>`)
         // 투입은 맨 오른쪽 — 눈이 먼저 가야 하는 건 성과(평가·수익·연)다
-        + `<td style="color:var(--dim)">${paperWon(r.inflow,r.wonRate)}</td></tr>`; });
+        + `<td style="color:var(--dim)">${paperInflowText(r)}</td></tr>`; });
     h+=`</table></div>`;
     if(!cur) h+=`<p class="note" style="margin-top:8px;color:var(--gold)">⚠ 시세를 못 받은 세션이 있습니다. 그 줄은 수익률을 비워 뒀습니다 — 해당 탭을 한 번 열면 채워집니다.</p>`;
-    h+=`<p class="note" style="margin-top:8px"><b style="color:var(--vio)">전략 이름</b>을 누르면 그 세션의 분석으로 갑니다. · <b>금액은 모두 원화 표시</b>(미국 종목은 현재 USD/KRW 사용) · 평가 = 보유 평가금 + 현금 + 계좌 밖으로 뺀 돈(출금·단리 인출) · 투입 = 밖에서 넣은 돈(원금·적립·입금) · <b>MDD</b> = 하루하루 <b>총자산 ÷ 그때까지 넣은 돈</b>의 고점 대비 최대 낙폭(적립금이 상승으로 잡히지 않게 투입으로 나눠 잽니다). 수수료는 전략별 재생 규약을 따르고 <b>양도세는 넣지 않았습니다</b>. 분배금은 <b>현금 수령·적립은 세전</b>, 장부에 적는 배당(재투자)은 세후로 셉니다.</p>`;
+    h+=`<p class="note" style="margin-top:8px"><b style="color:var(--vio)">전략 이름</b>을 누르면 그 세션의 분석으로 갑니다. · <b>금액은 모두 원화 표시</b> · 평가·인출 = 현재 USD/KRW · 투입 = 입력한 원화(시작일 환율로 전략 계산) · 평가 = 보유 평가금 + 현금 + 계좌 밖으로 뺀 돈(출금·단리 인출) · 투입 = 밖에서 넣은 돈(원금·적립·입금) · <b>MDD</b> = 하루하루 <b>총자산 ÷ 그때까지 넣은 돈</b>의 고점 대비 최대 낙폭(적립금이 상승으로 잡히지 않게 투입으로 나눠 잽니다). 수수료는 전략별 재생 규약을 따르고 <b>양도세는 넣지 않았습니다</b>. 분배금은 <b>현금 수령·적립은 세전</b>, 장부에 적는 배당(재투자)은 세후로 셉니다.</p>`;
     if(paperNote) h+=`<p class="note" style="color:var(--vio)">${paperNote}</p>`;
     body.innerHTML=h;
   }
@@ -7770,8 +7794,10 @@ async function applyAllSimStart(){
     if(x.settings){ delete x.settings.simLast; delete x.settings.cycStart; delete x.settings.startCyc; delete x.settings.cycLog; x.settings.startv=0;
       // 원화로 받은 금액을 그 세션 통화로 바꿔 넣는다 (국내는 그대로, 미국은 시작일 환율)
       const R=fx?fx.rate:1;
-      if(cap!=null){ const f=paperCapField(tab,x.settings); if(f) x.settings[f]=wonToSess(cap,x.settings,R); }
-      if(add!=null) applyPaperAdd(tab,x.settings,add,R); }
+      let amtTouched=false;
+      if(cap!=null){ const f=paperCapField(tab,x.settings); if(f){ x.settings[f]=wonToSess(cap,x.settings,R); amtTouched=true; } }
+      if(add!=null && applyPaperAdd(tab,x.settings,add,R)) amtTouched=true;
+      if(amtTouched) x.paperFxRate=isKrwSt(x.settings)?1:R; }
   });
   saveLocal();
   await openPaper();          // 지운 자리를 새 시작일로 다시 채우고 표를 새로 그린다
