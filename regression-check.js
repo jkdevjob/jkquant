@@ -1550,7 +1550,7 @@ console.log('[30] 모의 시작일 일괄 변경');
   ok('성과표 위에 있다', /id="p_simstart"/.test(idx)
      && idx.indexOf('id="p_simstart"') < idx.indexOf('id="paper_body"')
      && idx.indexOf('id="paperModal"') < idx.indexOf('id="p_simstart"'));
-  ok('모달 열 때 칸을 맞춘다', /async function openPaper\(\)\{\s*\n\s*syncPaperStart\(\);/.test(idx));
+  ok('모달 열 때 예전 원화값을 복원한 뒤 칸을 맞춘다', /await paperEnsureCommonWon\(\);\s*\n\s*syncPaperStart\(\);/.test(extractFn(idx,'async function openPaper()')));
   let ps='', ap='';
   try{ ps=extractFn(idx,'function paperSessions()'); }catch(e){}
   try{ ap=extractFn(idx,'async function applyAllSimStart()'); }catch(e){}
@@ -1860,6 +1860,18 @@ console.log('[40] 모의 일괄 적용 — 원금과 1회 적립액을 따로');
   ok('건너뛴 세션 이름에 조사를 안 붙인다', /건너뛴 세션: /.test(ap) && !/join\(', '\)\}은 금액/.test(ap));
   const rd=extractFn(idx,'function paperReadAmt(id, label)');
   ok('비우면 그대로 둔다', /if\(!raw\) return null;/.test(rd));
+}
+
+/* 기존 모의 세션 원화 복원 — paperCommon 이 없던 구버전 사용자 */
+{
+  const pw=extractFn(idx,'function paperInflowWon(tab, sess, inflow)');
+  ok('기존 세션 원화 복원 함수가 있다', /async function paperEnsureCommonWon\(\)/.test(idx) && /function paperLegacyWon\(v\)/.test(idx));
+  ok('투입 표시는 paperCommon 원화 원본을 시작환율보다 우선한다',
+     pw.indexOf('pc.capitalWon')>=0 && pw.indexOf('sess&&sess.paperFxRate')>pw.indexOf('pc.capitalWon'));
+  const pe=extractFn(idx,'async function paperEnsureCommonWon()');
+  ok('기존 세션은 시작일 환율로 원금·적립액을 역복원하고 저장한다',
+     /fx=await fxAt\(date\)/.test(pe) && /pc\.capitalWon=v/.test(pe) && /pc\.addWon=v/.test(pe)
+     && /saveLocal\(\); pushRemote\(\);/.test(pe));
 }
 
 console.log('[41] 한투 모의투자 연결 — 세션 설정과 주문 전송');
