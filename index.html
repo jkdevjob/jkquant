@@ -537,7 +537,7 @@ try{ if(localStorage.getItem('qcockpit_hadUser')==='1') document.documentElement
 </div>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.103.3</span></h1></div>
+    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.103.4</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -1646,7 +1646,7 @@ if(/^\/paper\/?$/.test(location.pathname)){
   <footer>
     <strong>JK 퀀트</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.103.3</b> · 2026-09-26</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.103.4</b> · 2026-09-26</div>
   </footer>
 </div>
 
@@ -1696,7 +1696,7 @@ if(/^\/paper\/?$/.test(location.pathname)){
     <div class="field"><label>리버스 쿼터매수 gap % <span class="hint">0 = 기본(별지점 −$0.01 · 원문은 '별지점 아래'까지만) · 0보다 크면 변형</span></label><input id="set_revgap" type="number" inputmode="decimal" value="0"></div>
     <div class="field"><label>아래로 LOC 매수 추가 줄 수 <span class="hint">추가 자체는 V4.0 정식 · 1회매수금÷(수량+k) · 줄 수 3은 JKQuant 기본값(원문에 개수 없음) · 0이면 끔(변형)</span></label><input id="set_rows" type="number" inputmode="numeric" value="3" min="0" max="20"></div>
     <p class="note" style="margin:-2px 0 8px">처음매수·전반전·후반전 모두 본 주문 아래로 1주씩 LOC 를 더 겁니다 (V4.0 정식). 종가가 내려갈수록 같은 1회매수금으로 더 삽니다. 모의·백테·서버 자동주문이 같은 주문을 씁니다.</p>
-    <div class="note" style="margin:10px 0 0;padding:10px;border:1px solid var(--line);border-radius:9px;line-height:1.65"><b>옵션 설명</b><br><b>익절 변환 자동 · 끔</b> — 설정한 목표 수익률을 모든 사이클에 고정 적용합니다.<br><b>익절 변환 자동 · 켬</b> — 사이클 시작 전날 종가가 <b>MA150 아래</b>이거나 <b>120일 수익률 &gt; +100% 이면서 120일 연환산 변동성 &gt; 90%</b>이면 10%, 그 외에는 20%로 시작합니다. 20% 사이클 진행 중 전날 종가가 <b>MA150의 90% 미만 (−10%)</b>이 되면 10%로 한 번 낮추고 다시 20%로 올리지 않습니다.</div>
+    <div class="note" style="margin:10px 0 0;padding:10px;border:1px solid var(--line);border-radius:9px;line-height:1.65"><b>옵션 설명</b><br><b>익절 자동</b></div>
   </div>
   <div id="set_vr" style="display:none">
     <div class="seclabel">종목 (티커) <span class="hint" style="color:var(--faint);font-weight:500">6자리 코드면 국내 — 통화가 원화로 바뀝니다</span></div><div class="field tkwrap" style="margin:0 0 8px"><input id="set_vticker" type="text" autocomplete="off" spellcheck="false" placeholder="티커를 입력하세요 — 예: TQQQ, SOXL" oninput="tkSearch('set_vticker')" onfocus="tkSearch('set_vticker')" onblur="tkBlur('set_vticker')"><div class="tklist" id="set_vticker_list"></div></div>
