@@ -152,7 +152,7 @@ pre.rules{background:var(--bg);border:1px solid var(--line);border-radius:10px;p
 
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Admin Console</div><h1>JK <span class="v">퀀트</span> 관리자 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="adVer">v0.6.2</span></h1></div>
+    <div><div class="kicker">Admin Console</div><h1>JK <span class="v">퀀트</span> 관리자 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="adVer">v0.7.0</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -283,7 +283,7 @@ async function setBlocked(uid,on,email){
 const STRATEGY_DEFAULT_CACHE='jkq_strategy_default_overrides_v2';
 const STRATEGY_DEFAULT_LEGACY_CACHE='jkq_strategy_defaults_v1';
 const STRATEGY_DEFAULT_BUILTIN={
-  inf:{ticker:'SOXL',div:20,target:20,big:15,rows:3,revGap:0,principal:10000,divmode:'reinv',engine:'v40',shortMA:30,loPct:6,tgtDyn:false,reverse:false,compound:true,rowqty:1},
+  inf:{ticker:'SOXL',div:20,target:20,big:15,rows:3,revGap:0,principal:10000,divmode:'reinv',engine:'v40',shortMA:30,loPct:6,tgtDyn:false,autoTp:false,reverse:false,compound:true,rowqty:1},
   vr:{ticker:'TQQQ',mode:0.75,formula:'basic',g:10,initAmt:10000,add:100,band:15,startv:0,startpool:0,autoCyc:false,vrModel:'ladder',divmode:'reinv'},
   ma:{ticker:'SOXL',buy:'ma',sell:'ma',park:'cash',principal:10000,divmode:'reinv'},
   ivs:{ticker:'TQQQ',mode:'iv',s0:55,look:40,band:15,principal:10000,park:'bill',monthly:0,divmode:'reinv'},
@@ -293,7 +293,7 @@ const STRATEGY_DEFAULT_BUILTIN={
 const STRATEGY_DEFAULT_META={
   inf:{name:'무한매수법',fields:[
     ['ticker','종목','text'],['div','분할 수','select',[[10,'10분할'],[20,'20분할'],[30,'30분할'],[40,'40분할']]],
-    ['target','목표 수익률 %','number'],['big','큰수 %','number'],['rows','아래로 LOC 추가 줄 수','number'],
+    ['target','목표 수익률 %','number'],['autoTp','익절 변환 자동','bool'],['big','큰수 %','number'],['rows','아래로 LOC 추가 줄 수','number'],
     ['revGap','리버스 쿼터매수 gap %','number'],['principal','원금','number'],
     ['reverse','리버스','bool'],['compound','익절금 처리','select',[[true,'복리'],[false,'단리']]],
     ['divmode','분배금','select',[['reinv','재투자'],['cash','현금 수령']]]
@@ -336,7 +336,7 @@ const STRATEGY_DEFAULT_META={
 /* 모의성과에 영향을 주는 옵션. 기존 세션에 선택 적용할 때 실제 값이 바뀐 경우에만
    기계 생성 기록(sim/auto)을 지운다. 사람이 직접 입력한 기록은 보존한다. */
 const PAPER_AFFECT_KEYS={
-  inf:new Set(['ticker','div','target','big','rows','revGap','principal','divmode','reverse','compound','engine','shortMA','loPct','tgtDyn']),
+  inf:new Set(['ticker','div','target','autoTp','big','rows','revGap','principal','divmode','reverse','compound','engine','shortMA','loPct','tgtDyn']),
   vr:new Set(['ticker','mode','formula','g','initAmt','add','band','startv','startpool','autoCyc','vrModel','divmode']),
   ma:new Set(['ticker','buy','sell','park','principal','divmode']),
   ivs:new Set(['ticker','mode','s0','look','band','principal','park','monthly','divmode']),
@@ -403,7 +403,7 @@ function paintDefaultTabs(){
     return '<button class="'+(k===defaultsTab?'on':'')+'" onclick="switchDefaultsTab(\''+k+'\')">'+esc(m.name)+(n?' · '+n:'')+'</button>';
   }).join('');
   const m=STRATEGY_DEFAULT_META[defaultsTab],v=strategyValues[defaultsTab]||STRATEGY_DEFAULT_BUILTIN[defaultsTab];
-  b.innerHTML='<div class="cfggrid">'+m.fields.map(f=>cfgFieldHtml(defaultsTab,f,v[f[0]])).join('')+'</div>';
+  b.innerHTML='<div class="cfggrid">'+m.fields.map(f=>cfgFieldHtml(defaultsTab,f,v[f[0]])).join('')+'</div>'+(defaultsTab==='inf'?'<div class="cfghelp" style="margin-top:10px;padding:9px;border:1px solid var(--line);border-radius:9px"><b>익절 변환 자동 · 끔</b>: 설정한 목표 수익률 고정.<br><b>켬</b>: 사이클 시작 전날 종가가 MA150 아래이거나, 120일 수익률 &gt; +100%이면서 120일 연환산 변동성 &gt; 90%이면 10%, 그 외 20%. 사이클 종료까지 고정.<br>왼쪽 체크 후 저장하면 새 세션 기본값, <b>선택 항목 기존 세션에 적용</b>을 누르면 기존 무매 세션에도 일괄 적용됩니다.</div>':'');
 }
 function switchDefaultsTab(k){
   if(k===defaultsTab)return;

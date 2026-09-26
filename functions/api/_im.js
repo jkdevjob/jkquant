@@ -139,8 +139,8 @@ export function imCompute(st, hist, days) {
     if (revEnabled(st) && revState === "NORMAL" && qty > 1e-9 && (st.div - T) < 1) { revState = "DAY1"; revFrom = d || ""; }
   };
   const H = hist || [];
-  /* 익절 자동(실험 · imAutoTP) — 사이클 첫 매수일로 그 사이클 익절%를 정한다. 앱 computeInf 와 같은 자리·같은 식.
-     days = 확정 종가 이력 [{date, close}] (autotrade 가 익절 자동 세션이면 전체 기간을 받아 넘긴다). */
+  /* 익절 변환 자동(실험 · imAutoTP) — 사이클 첫 매수일로 그 사이클 익절%를 정한다. 앱 computeInf 와 같은 자리·같은 식.
+     days = 확정 종가 이력 [{date, close}] (autotrade 가 익절 변환 자동 세션이면 전체 기간을 받아 넘긴다). */
   const auto = (st.autoTp === true), mode = auto ? autoTpModeOf(st) : "ret120", ab = (auto && days && days.length) ? days : null;
   const tpAt = (d) => (auto && ab && d) ? imAutoTPByMode(ab, d, mode) : null;
   let cycStart = "", cycTp = null;
@@ -257,43 +257,39 @@ export function imMomOf(days) {
   return (a > 0 && b > 0) ? (a / b - 1) * 100 : null;
 }
 export function imTgtOf(base, mom) { return (mom != null && mom > IM_MOM_TH) ? Math.min(base * 2, IM_MOM_CAP) : base; }
-/* ── 사이클 익절 자동 선택 (실험적 확장 — 원문 V4.0 아님 · 켤 때만) ──
+/* ── 사이클 익절 변환 자동 선택 (실험적 확장 — 원문 V4.0 아님 · 켤 때만) ──
    사이클 첫 매수일 '전날'까지 확정된 종가로 120거래일 수익률을 잰다 — 0 미만이면 그 사이클 익절 10%, 아니면 20%.
    정한 값은 그 사이클이 끝날 때까지 간다(별%base·복귀선도 같이 — 통합 규약). 첫 매수 전 아침엔 매일 다시 잰다.
    근거(SOXL 2010~ 실측): 120일 하락 구간에서 시작한 사이클은 10%가 이겼다 — 앞 절반으로 고른 규칙이 뒤 절반에서도 이겼다.
    bars 날짜 오름차순 [{date, close}] · date 사이클 첫 매수일(그날 봉은 안 본다 — 룩어헤드 금지). 자료가 모자라면 null.
    백테 runIM · 앱 장부(computeInf — 운영·모의) · 서버(imCompute) · 5년 플랜(calcInfState)이 같은 글자로 쓴다. */
-const IM_AUTOTP={len:120, lo:10, hi:20};
+const IM_AUTOTP={retLen:120,maLen:150,volLen:120,retHi:100,volHi:90,lo:10,hi:20};
 export function imAutoTP(bars, date){
-  let a=0, b=(bars||[]).length;
-  while(a<b){ const m=(a+b)>>1; if(String(bars[m].date)<date) a=m+1; else b=m; }   // date 보다 앞선 봉 개수
-  const j=a-1;
-  if(j<IM_AUTOTP.len) return null;
-  const x=+bars[j].close, y=+bars[j-IM_AUTOTP.len].close;
-  if(!(x>0&&y>0)) return null;
-  const r=(x/y-1)*100;
-  return {tp:r<0?IM_AUTOTP.lo:IM_AUTOTP.hi, ret:r, asOf:String(bars[j].date)};
-}
-export function normalizeAutoTpMode(v){ return v==="ma150" ? "ma150" : "ret120"; }
-export function autoTpModeOf(st){ return normalizeAutoTpMode(st && st.autoTpMode); }
-const IM_AUTOTP_MA150={len:150,lo:10,hi:20};
-export function imAutoTPMA150(bars,date){
   let a=0,b=(bars||[]).length;
   while(a<b){const m=(a+b)>>1;if(String(bars[m].date)<date)a=m+1;else b=m;}
   const j=a-1;
-  if(j<IM_AUTOTP_MA150.len-1)return null;
+  if(j<IM_AUTOTP.maLen-1||j<IM_AUTOTP.retLen)return null;
+  const close=+(bars[j]&&bars[j].close),old=+(bars[j-IM_AUTOTP.retLen]&&bars[j-IM_AUTOTP.retLen].close);
+  if(!(close>0&&old>0))return null;
   let sum=0;
-  for(let i=j-IM_AUTOTP_MA150.len+1;i<=j;i++){
-    const v=+(bars[i]&&bars[i].close); if(!(v>0))return null; sum+=v;
+  for(let i=j-IM_AUTOTP.maLen+1;i<=j;i++){const v=+(bars[i]&&bars[i].close);if(!(v>0))return null;sum+=v;}
+  const ma=sum/IM_AUTOTP.maLen,ret=(close/old-1)*100,rs=[];
+  for(let i=j-IM_AUTOTP.volLen+1;i<=j;i++){
+    const p=+(bars[i-1]&&bars[i-1].close),c=+(bars[i]&&bars[i].close);
+    if(!(p>0&&c>0))return null;
+    rs.push(c/p-1);
   }
-  const close=+(bars[j]&&bars[j].close),ma=sum/IM_AUTOTP_MA150.len;
-  if(!(close>0&&ma>0))return null;
-  return {tp:close<ma?IM_AUTOTP_MA150.lo:IM_AUTOTP_MA150.hi,close,ma,asOf:String(bars[j].date),mode:"ma150"};
+  const mean=rs.reduce((s,x)=>s+x,0)/rs.length;
+  const ss=rs.reduce((s,x)=>s+(x-mean)*(x-mean),0);
+  const vol=Math.sqrt(ss/(rs.length-1))*Math.sqrt(252)*100;
+  const weak=close<ma,hot=ret>IM_AUTOTP.retHi&&vol>IM_AUTOTP.volHi;
+  return {tp:(weak||hot)?IM_AUTOTP.lo:IM_AUTOTP.hi,close,ma,ret,vol,weak,hot,asOf:String(bars[j].date),mode:"auto"};
 }
-export function imAutoTPByMode(bars,date,mode){
-  if(normalizeAutoTpMode(mode)==="ma150")return imAutoTPMA150(bars,date);
-  const r=imAutoTP(bars,date); return r?{...r,mode:"ret120"}:null;
-}
+export function normalizeAutoTpMode(v){return "auto";}
+export function autoTpModeOf(st){return "auto";}
+const IM_AUTOTP_MA150=IM_AUTOTP;
+export function imAutoTPMA150(bars,date){return imAutoTP(bars,date);}
+export function imAutoTPByMode(bars,date,mode){return imAutoTP(bars,date);}
 
 function exitMulOf(base){ return 1-((base!=null&&base>0)?base:20)/100; }
 /* 리버스 종료가 확정됐는가 — 원문 리버스 6-(2): 리버스로 보낸 날의 확정 종가가 평단 대비 −15%(TQQQ)·−20%(SOXL) 위면
@@ -315,16 +311,16 @@ export function imOrders({ st, hist, close, days }) {
   if (imRevExitDue(c, close, c.tp, closeDate)) c = imCompute(st, [...(hist || []), { date: closeDate, kind: "리버스복귀", price: close, qty: 0, virtual: true }], days);
   if (c.reverseActive) return { orders: out, skip: "리버스모드 — 자동 주문 미지원", c };
   if (!(close > 0)) return { orders: out, skip: "확정 종가 없음", c };
-  /* 익절 자동인데 판정 자료가 없으면 보유 중엔 주문하지 않는다 — 설정값으로 낸 익절·별지점 주문은 되돌릴 수 없다.
+  /* 익절 변환 자동인데 판정 자료가 없으면 보유 중엔 주문하지 않는다 — 설정값으로 낸 익절·별지점 주문은 되돌릴 수 없다.
      비어 있을 때(첫 매수)는 익절%와 상관없는 큰수 LOC 하나라 그대로 낸다. 앱 주문표는 같은 상태에서 경고를 띄운다. */
   if (st.autoTp === true && !c.tpAuto && c.qty > 0) {
-    const need=autoTpModeOf(st)==="ma150" ? "사이클 시작 전 거래일까지 150거래일 종가" : "사이클 시작 전날까지 120거래일 종가";
-    return { orders: out, skip: "익절 자동 — 판정 자료("+need+") 부족", c };
+    const need="사이클 시작 전 거래일까지 150거래일 종가(120일 수익률·변동성 포함)";
+    return { orders: out, skip: "익절 변환 자동 — 판정 자료("+need+") 부족", c };
   }
 
   const B1 = imBuy1(c), buy1 = B1.amt;
   const cur = /^(?:\d{6}|\d{4}[A-Z]\d)$/.test(String(st.ticker || "").toUpperCase()) ? "krw" : "usd";
-  const pct = starPct(st.ticker, st.div, c.T, c.tp);   // 이번 사이클 익절% 기준 (익절 자동 · 실험 — 꺼져 있으면 설정값)
+  const pct = starPct(st.ticker, st.div, c.T, c.tp);   // 이번 사이클 익절% 기준 (익절 변환 자동 · 실험 — 꺼져 있으면 설정값)
   const star = c.avg > 0 ? imStarPx(c.avg, pct, cur) : close;   // 별지점 센트 반올림 — 앱·모의·백테·플랜과 같다 (제10차)
   const buyPt = imBuyPx(star);
   const bigPct = imBigPct(st);

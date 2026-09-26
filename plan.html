@@ -192,7 +192,7 @@ th:first-child,td:first-child{text-align:left}
 <body>
 <div class="wrap">
   <div class="top">
-    <div class="brand"><div class="logo">Asset Plan</div><h1>자산플랜 <span class="ver">v1.34.1</span></h1></div>
+    <div class="brand"><div class="logo">Asset Plan</div><h1>자산플랜 <span class="ver">v1.35.0</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
       <div class="jkmenu" id="jkmenuWrap">
@@ -1117,45 +1117,44 @@ const REV_DIVS_PLAN=[20,40];
 function imCycleEnds(soldToday, qtyAtDayEnd){ return !!soldToday && !(qtyAtDayEnd>1e-9); }
 /* 장부는 하루를 여러 줄로 적는다(익절 한 줄 · 매수 한 줄). hist[i] 뒤에 같은 날짜의 매매 줄이 더 있으면 그날 주문은 아직 다 처리되지 않았다. */
 function imDayOpenAfter(hist, i){ const d=hist[i]&&hist[i].date; if(!d) return false; for(let j=i+1;j<hist.length&&hist[j]&&hist[j].date===d;j++){ if(/매수|매도/.test(String(hist[j].kind||''))) return true; } return false; }
-/* ── 사이클 익절 자동 선택 (실험적 확장 — 원문 V4.0 아님 · 켤 때만) ──
+/* ── 사이클 익절 변환 자동 선택 (실험적 확장 — 원문 V4.0 아님 · 켤 때만) ──
    사이클 첫 매수일 '전날'까지 확정된 종가로 120거래일 수익률을 잰다 — 0 미만이면 그 사이클 익절 10%, 아니면 20%.
    정한 값은 그 사이클이 끝날 때까지 간다(별%base·복귀선도 같이 — 통합 규약). 첫 매수 전 아침엔 매일 다시 잰다.
    근거(SOXL 2010~ 실측): 120일 하락 구간에서 시작한 사이클은 10%가 이겼다 — 앞 절반으로 고른 규칙이 뒤 절반에서도 이겼다.
    bars 날짜 오름차순 [{date, close}] · date 사이클 첫 매수일(그날 봉은 안 본다 — 룩어헤드 금지). 자료가 모자라면 null.
    백테 runIM · 앱 장부(computeInf — 운영·모의) · 서버(imCompute) · 5년 플랜(calcInfState)이 같은 글자로 쓴다. */
-const IM_AUTOTP={len:120, lo:10, hi:20};
+const IM_AUTOTP={retLen:120,maLen:150,volLen:120,retHi:100,volHi:90,lo:10,hi:20};
 function imAutoTP(bars, date){
-  let a=0, b=(bars||[]).length;
-  while(a<b){ const m=(a+b)>>1; if(String(bars[m].date)<date) a=m+1; else b=m; }   // date 보다 앞선 봉 개수
-  const j=a-1;
-  if(j<IM_AUTOTP.len) return null;
-  const x=+bars[j].close, y=+bars[j-IM_AUTOTP.len].close;
-  if(!(x>0&&y>0)) return null;
-  const r=(x/y-1)*100;
-  return {tp:r<0?IM_AUTOTP.lo:IM_AUTOTP.hi, ret:r, asOf:String(bars[j].date)};
-}
-function normalizeAutoTpMode(v){return v==='ma150'?'ma150':'ret120';}
-function autoTpModeOf(st){return normalizeAutoTpMode(st&&st.autoTpMode);}
-function autoTpLabel(mode){return normalizeAutoTpMode(mode)==='ma150'?'MA150':'120일 수익률';}
-const IM_AUTOTP_MA150={len:150,lo:10,hi:20};
-function imAutoTPMA150(bars,date){
   let a=0,b=(bars||[]).length;
   while(a<b){const m=(a+b)>>1;if(String(bars[m].date)<date)a=m+1;else b=m;}
-  const j=a-1;if(j<IM_AUTOTP_MA150.len-1)return null;
+  const j=a-1;
+  if(j<IM_AUTOTP.maLen-1||j<IM_AUTOTP.retLen)return null;
+  const close=+(bars[j]&&bars[j].close),old=+(bars[j-IM_AUTOTP.retLen]&&bars[j-IM_AUTOTP.retLen].close);
+  if(!(close>0&&old>0))return null;
   let sum=0;
-  for(let i=j-IM_AUTOTP_MA150.len+1;i<=j;i++){const v=+(bars[i]&&bars[i].close);if(!(v>0))return null;sum+=v;}
-  const close=+(bars[j]&&bars[j].close),ma=sum/IM_AUTOTP_MA150.len;
-  if(!(close>0&&ma>0))return null;
-  return {tp:close<ma?IM_AUTOTP_MA150.lo:IM_AUTOTP_MA150.hi,close,ma,asOf:String(bars[j].date),mode:'ma150'};
+  for(let i=j-IM_AUTOTP.maLen+1;i<=j;i++){const v=+(bars[i]&&bars[i].close);if(!(v>0))return null;sum+=v;}
+  const ma=sum/IM_AUTOTP.maLen,ret=(close/old-1)*100,rs=[];
+  for(let i=j-IM_AUTOTP.volLen+1;i<=j;i++){
+    const p=+(bars[i-1]&&bars[i-1].close),c=+(bars[i]&&bars[i].close);
+    if(!(p>0&&c>0))return null;
+    rs.push(c/p-1);
+  }
+  const mean=rs.reduce((s,x)=>s+x,0)/rs.length;
+  const ss=rs.reduce((s,x)=>s+(x-mean)*(x-mean),0);
+  const vol=Math.sqrt(ss/(rs.length-1))*Math.sqrt(252)*100;
+  const weak=close<ma,hot=ret>IM_AUTOTP.retHi&&vol>IM_AUTOTP.volHi;
+  return {tp:(weak||hot)?IM_AUTOTP.lo:IM_AUTOTP.hi,close,ma,ret,vol,weak,hot,asOf:String(bars[j].date),mode:'auto'};
 }
-function imAutoTPByMode(bars,date,mode){
-  if(normalizeAutoTpMode(mode)==='ma150')return imAutoTPMA150(bars,date);
-  const r=imAutoTP(bars,date);return r?{...r,mode:'ret120'}:null;
-}
+function normalizeAutoTpMode(v){return 'auto';}
+function autoTpModeOf(st){return 'auto';}
+function autoTpLabel(mode){return 'MA150+초강세·고변동';}
+const IM_AUTOTP_MA150=IM_AUTOTP;
+function imAutoTPMA150(bars,date){return imAutoTP(bars,date);}
+function imAutoTPByMode(bars,date,mode){return imAutoTP(bars,date);}
 function calcInfState(sess){
   const st=sess.settings||{},hist=sess.hist||[];let avg=0,qty=0,inv=0,realized=0,T=0,withdrawn=0,saved=0,divTotal=0,revState='NORMAL',revFrom='';
   const simple=st.compound===false;
-  /* 익절 자동(실험 · imAutoTP) — 앱 computeInf · 서버 imCompute 와 같은 자리·같은 식. 확정 종가 봉은 imOrders 가 sess.autoBars 로 넘긴다 */
+  /* 익절 변환 자동(실험 · imAutoTP) — 앱 computeInf · 서버 imCompute 와 같은 자리·같은 식. 확정 종가 봉은 imOrders 가 sess.autoBars 로 넘긴다 */
   const auto=st.autoTp===true,mode=auto?autoTpModeOf(st):'ret120',ab=(auto&&sess.autoBars&&sess.autoBars.length)?sess.autoBars:null,tpAt=d=>(auto&&ab&&d)?imAutoTPByMode(ab,d,mode):null;
   let cycStart='',cycTp=null;
   let day=null,daySold=false;   // 그날 매도가 있었나 — 사이클 종료는 그날 마지막 매매 줄에서만 (앱 computeInf 와 같다 · 제14차 D15)
@@ -1212,11 +1211,11 @@ function exitMulOf(base){ return 1-((base!=null&&base>0)?base:20)/100; }
    운영 주문표·서버 자동주문·5년 플랜이 같은 글자로 쓴다 (제11차 7): 복귀 기록 버튼을 안 눌러도 다음 주문은 일반모드여야 한다. */
 function imRevExitDue(c, close, target, date){ return !!(c && c.reverseActive && (!c.reverseDay1 || !!(date && c.revFrom && date>c.revFrom)) && close>0 && c.avg>0 && close>c.avg*exitMulOf(target)); }
 function imOrders(sess,price,rows){
-  let c=calcInfState({...sess,autoBars:rows});   // rows = 확정 종가 봉 — 익절 자동(실험) 판정용
+  let c=calcInfState({...sess,autoBars:rows});   // rows = 확정 종가 봉 — 익절 변환 자동(실험) 판정용
   /* 확정 종가가 복귀선 위면 이번 주문은 일반모드 — 앱 renderOrder·서버와 같은 판정 (제11차 7) */
   const cdate=(rows&&rows.length)?String(rows[rows.length-1].date||''):'';   // rows 의 마지막 봉 = 그 확정 종가 (제12차 ②)
   if(imRevExitDue(c,price,c.tp,cdate)) c=calcInfState({...sess,autoBars:rows,hist:[...(sess.hist||[]),{date:cdate,kind:'리버스복귀',price,qty:0,virtual:true}]});
-  const st=c.st,div=+st.div||20,target=+c.tp||20,big=st.big!=null?+st.big:15,slot=div-c.T;   // target = 이번 사이클 익절% (익절 자동이 꺼져 있으면 설정값)
+  const st=c.st,div=+st.div||20,target=+c.tp||20,big=st.big!=null?+st.big:15,slot=div-c.T;   // target = 이번 사이클 익절% (익절 변환 자동이 꺼져 있으면 설정값)
   if(!(price>0))return {state:c,orders:[],note:'확정 종가가 없어 주문을 계산하지 못했습니다.'};
   const orders=[];
   if(c.reverseActive){
@@ -1844,7 +1843,7 @@ async function refreshLive(){
       $('outsideCashNote').textContent=c.outside>0
         ? '무매 단리·출금으로 전략 밖에 빠진 누계 '+usd(c.outside)+' (단리 자동인출 '+usd(c.saved)+' · 직접출금 '+usd(c.withdrawn)+'). 실제 SGOV에 보관 중이면 SGOV 잔고에 직접 포함하세요.'
         : '무매 전략 밖 누적 인출금 없음 · SGOV 실보유액은 현재 SGOV 입력값을 사용합니다.';
-      $('liveInfMeta').textContent=(inf.name||'SOXL 세션')+' · '+(st.div||20)+'분할 / '+(st.autoTp===true?('익절 자동 '+autoTpLabel(autoTpModeOf(st))+' '+(c.tp||20)+'%(실험)'):(st.target||20)+'%')+' / '+(st.compound===false?'단리':'복리')+' / 큰수 '+(st.big!=null?st.big:15)+'%'+' · T '+c.T.toFixed(2)+' · 보유 '+Math.round(c.qty)+'주 · 운용자산 '+usd(mmValue);
+      $('liveInfMeta').textContent=(inf.name||'SOXL 세션')+' · '+(st.div||20)+'분할 / '+(st.autoTp===true?('익절 변환 자동 '+autoTpLabel(autoTpModeOf(st))+' '+(c.tp||20)+'%(실험)'):(st.target||20)+'%')+' / '+(st.compound===false?'단리':'복리')+' / 큰수 '+(st.big!=null?st.big:15)+'%'+' · T '+c.T.toFixed(2)+' · 보유 '+Math.round(c.qty)+'주 · 운용자산 '+usd(mmValue);
       const primary=r.orders.filter(o=>o.tag!=='예약');$('liveInf').innerHTML=(primary.length?primary.map(orderHtml).join(''):waitHtml('오늘 신규 주문 없음',r.note||'현재 상태에서 실행할 주문이 없습니다.'));
       mirrorStrategyTab('soxlTabMeta','soxlTabActions',$('liveInfMeta').textContent,$('liveInf').innerHTML);
       mirrorStrategyTab('bSoxlMeta','bSoxlActions',$('liveInfMeta').textContent,$('liveInf').innerHTML);
