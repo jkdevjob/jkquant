@@ -537,7 +537,7 @@ try{ if(localStorage.getItem('qcockpit_hadUser')==='1') document.documentElement
 </div>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.101.1</span></h1></div>
+    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.101.2</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -1646,7 +1646,7 @@ if(/^\/paper\/?$/.test(location.pathname)){
   <footer>
     <strong>JK 퀀트</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.101.1</b> · 2026-09-26</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.101.2</b> · 2026-09-26</div>
   </footer>
 </div>
 
@@ -1676,8 +1676,9 @@ if(/^\/paper\/?$/.test(location.pathname)){
     <div class="seclabel">리버스 <span class="hint" style="color:var(--faint);font-weight:500">원금 소진 후 무한매도 · V4.0</span></div><div class="seg" id="set_reverse"><button data-v="0" class="on">끔</button><button data-v="1">켬</button></div>
     <!-- 기본값 끔은 사용자 결정 (제8차 D12) — 공식이 아니므로 공식처럼 보이지 않게 이름을 붙인다 -->
     <p class="note" style="margin:-2px 0 8px">끔(기본 · <b>V4.0 변형</b>): 원금 소진 후 <b>후반전 별지점 손절 쿼터매도</b>로만 방어(홀드). 켬(<b>V4.0 공식</b>): 소진 후 <b>리버스 무한매도</b> 모드 진입 — 문서의 V4.0 일반모드 규칙입니다. 백테스트상 20분할·급락 후 V반등에서는 끔이 유리해 기본값은 끔이지만, 문서 규칙이 아니라서 주문표에 'V4.0 변형'으로 표시됩니다.</p>
-    <div class="seclabel">익절 자동 <span class="hint" style="color:var(--gold);font-weight:500">관리자 선택 전략 · 원문 V4.0 아님</span></div><div class="seg" id="set_autotp"></div>
-    <p class="note" id="set_autotp_note" style="margin:-2px 0 8px"></p>
+    <div class="seclabel">익절 자동 <span class="hint" style="color:var(--gold);font-weight:500">실험 · 원문 V4.0 아님</span></div>
+    <div class="seg" id="set_autotp"><button data-v="off" class="on">끔</button><button data-v="ret120">120일 수익률</button><button data-v="ma150">MA150</button></div>
+    <p class="note" id="set_autotp_note" style="margin:-2px 0 8px"><b>120일 수익률</b>: 사이클 시작 전 거래일까지 120거래일 수익률이 0 미만이면 익절 10%, 0 이상이면 20%. <b>MA150</b>: 사이클 시작 전 거래일 종가가 최근 150거래일 단순이동평균보다 낮으면 10%, 같거나 높으면 20%. 사이클 시작 때 정한 익절률은 종료까지 고정되고 별%·복귀선도 같이 바뀝니다.</p>
     <!-- 익절 조절 숨김 — SOXL 전체 −0.6% 열위, MDD가 나빠지는 구간(TECL 31%→62%),
          후반전엔 어차피 무효. 코드는 남기고 UI만 감춘다. 복원 시 tgtdyn-hidden 제거 -->
     <div class="seclabel tgtdyn-hidden">익절 조절 <span class="hint" style="color:var(--faint);font-weight:500">20일 상승률 · 선택</span></div><div class="seg tgtdyn-hidden" id="set_tgtdyn"><button data-v="0" class="on">끔</button><button data-v="1">상승률</button></div>
@@ -2110,7 +2111,6 @@ const won=v=>Math.round((+v||0)*((typeof liveFX!=='undefined'&&liveFX)?liveFX:FX
 */
 const LS='qcockpit_v2', LS_URL='qcockpit_gsheet';
 const STRATEGY_DEFAULT_CACHE='jkq_strategy_default_overrides_v2';
-const AUTO_TP_ADMIN_CACHE='jkq_autotp_admin_strategy_v1';
 let S=null;
 let STRATEGY_DEFAULTS=(function(){try{const x=JSON.parse(localStorage.getItem(STRATEGY_DEFAULT_CACHE)||'null');return x&&typeof x==='object'?x:{};}catch(e){return {};}})();
 
@@ -2131,41 +2131,9 @@ function cacheStrategyDefaults(v){
 }
 
 const AUTO_TP_MODE_LABELS={ret120:'120일 수익률',ma150:'MA150'};
-let ADMIN_AUTOTP_STRATEGY=(function(){
-  try{return localStorage.getItem(AUTO_TP_ADMIN_CACHE)==='ma150'?'ma150':'ret120';}catch(e){return 'ret120';}
-})();
 function normalizeAutoTpMode(v){return v==='ma150'?'ma150':'ret120';}
-function cacheAdminAutoTpStrategy(v){
-  ADMIN_AUTOTP_STRATEGY=normalizeAutoTpMode(v);
-  try{localStorage.setItem(AUTO_TP_ADMIN_CACHE,ADMIN_AUTOTP_STRATEGY);}catch(e){}
-  return ADMIN_AUTOTP_STRATEGY;
-}
 function autoTpModeOf(st){return normalizeAutoTpMode(st&&st.autoTpMode);}
 function autoTpLabel(mode){return AUTO_TP_MODE_LABELS[normalizeAutoTpMode(mode)]||AUTO_TP_MODE_LABELS.ret120;}
-function syncAutoTpAdminUI(st){
-  const el=$('set_autotp'), note=$('set_autotp_note'); if(!el)return;
-  const candidate=normalizeAutoTpMode(ADMIN_AUTOTP_STRATEGY);
-  const current=(st&&st.autoTp===true)?autoTpModeOf(st):'off';
-  const modes=['off'];
-  if(current!=='off'&&current!==candidate)modes.push(current);
-  if(!modes.includes(candidate))modes.push(candidate);
-  el.innerHTML=modes.map(m=>{
-    const label=m==='off'?'끔':autoTpLabel(m)+(m===candidate?'':' (현재 적용)');
-    return '<button data-v="'+m+'">'+label+'</button>';
-  }).join('');
-  el.querySelectorAll('button').forEach(b=>{
-    b.onclick=()=>{el.querySelectorAll('button').forEach(x=>x.classList.remove('on'));b.classList.add('on');};
-  });
-  segSet('set_autotp',current==='off'?'off':current);
-  if(note){
-    const adminTxt='<b>관리자 선택: '+autoTpLabel(candidate)+'</b> · 이 버튼을 직접 선택하고 설정을 저장해야 해당 세션에 적용됩니다. 관리자 화면에서 바꿔도 기존 세션은 자동 변경되지 않습니다.<br>';
-    const rule=candidate==='ma150'
-      ? 'MA150: 사이클 <b>첫 매수일 전 거래일 종가가 최근 150거래일 단순이동평균보다 낮으면 10%</b>, 같거나 높으면 <b>20%</b>. 사이클 시작 때 정한 익절률은 종료까지 고정되고 별%·복귀선도 같이 바뀝니다.'
-      : '120일 수익률: 사이클 <b>첫 매수일 전 거래일까지 120거래일 수익률이 0 미만이면 10%</b>, 0 이상이면 <b>20%</b>. 사이클 시작 때 정한 익절률은 종료까지 고정되고 별%·복귀선도 같이 바뀝니다.';
-    const cur=(current!=='off'&&current!==candidate)?'<br><span style="color:var(--gold)">현재 이 세션은 '+autoTpLabel(current)+'이 적용 중입니다. '+autoTpLabel(candidate)+'으로 바꾸려면 관리자 선택 버튼을 누르고 저장하세요.</span>':'';
-    note.innerHTML=adminTxt+rule+cur;
-  }
-}
 
 function defInfSettings(){const b={ticker:'SOXL',div:20,target:20,big:IM_BIG_DEFAULT,rows:IM_ROWS_DEFAULT,revGap:REV_GAP_DEF,rowqty:1,principal:10000,divmode:'reinv',engine:'v40',shortMA:30,loPct:6,tgtDyn:false,autoTp:false,autoTpMode:'ret120',reverse:false,compound:true};return typeof strategyDefaultOf==='function'?strategyDefaultOf('inf',b):b}
 // V5.0 숨김 기간: 저장된 세션이 v50이어도 v40으로 강제 (UI가 없어 되돌릴 수 없으므로)
@@ -9215,7 +9183,7 @@ function openSettings(){
   }else if(S.activeTab==='inf'){
     $('set_inf').style.display='';$('set_vr').style.display='none';
     const st=s.settings, sym=isKrwSt(st)?'₩':'$';
-    $('set_ticker_in').value=st.ticker||'SOXL';segSet('set_div',String(st.div));segSet('set_infdivmode',st.divmode||'reinv');segSet('set_engine',st.engine||'v40');segSet('set_shortma',String(st.shortMA||30));segSet('set_lopct',String(st.loPct||6));segSet('set_reverse',st.reverse===true?'1':'0');segSet('set_compound',st.compound===false?'0':'1');segSet('set_tgtdyn',st.tgtDyn===true?'1':'0');syncAutoTpAdminUI(st);syncShortMaUI(st.engine||'v40');syncTgtNote();syncRevSeg();
+    $('set_ticker_in').value=st.ticker||'SOXL';segSet('set_div',String(st.div));segSet('set_infdivmode',st.divmode||'reinv');segSet('set_engine',st.engine||'v40');segSet('set_shortma',String(st.shortMA||30));segSet('set_lopct',String(st.loPct||6));segSet('set_reverse',st.reverse===true?'1':'0');segSet('set_compound',st.compound===false?'0':'1');segSet('set_tgtdyn',st.tgtDyn===true?'1':'0');segSet('set_autotp',st.autoTp===true?autoTpModeOf(st):'off');syncShortMaUI(st.engine||'v40');syncTgtNote();syncRevSeg();
     $('set_target').value=st.target;$('set_big').value=st.big;$('set_principal').value=nfix(st.principal,0);
     if($('set_rows'))$('set_rows').value=imRowsOf(st);
     if($('set_revgap'))$('set_revgap').value=revGapOf(st);
@@ -9576,7 +9544,6 @@ async function pullRemote(){
     const snap=await window.fb.getDoc(window.fb.doc(window.fb.db,'users',curUid));
     if(snap.exists()){
       const d=snap.data();
-      if(d&&d.autoTpAdminStrategy) cacheAdminAutoTpStrategy(d.autoTpAdminStrategy);
       if(d&&d.strategyDefaultOverrides&&typeof d.strategyDefaultOverrides==='object') cacheStrategyDefaults(d.strategyDefaultOverrides);
       if(d&&validState(d.state)){
         // 신선도 가드: 이 기기의 로컬 저장본이 서버보다 최신이면(오프라인 수정 등) 낡은 서버로 덮지 않고 로컬을 밀어올림

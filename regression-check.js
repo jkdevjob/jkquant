@@ -10091,13 +10091,17 @@ console.log('\n[132] 익절 자동(실험) — 사이클 시작 120거래일 수
      && /imAutoTp=e\.target\.dataset\.x==='1'/.test(bt) && /_segPick\('imAutoTpSeg','x','0'\);/.test(extractFn(bt,'function imPreset()')) && /imAutoTp=false;/.test(extractFn(bt,'function imPreset()'))
      && /\(imAutoTp&&imEngine==='v40'\?' · <span style="color:var\(--gold\)">익절 자동 10\/20\(실험 · 120일 수익률\)<\/span>':''\)/.test(bt)
      && /autoTp:\(typeof imAutoTp!=='undefined'&&imAutoTp&&\(typeof imEngine==='undefined'\|\|imEngine==='v40'\)\)/.test(extractFn(bt,'function imVariant(tkrs)')));
-  ok('F5 앱 설정 — 관리자 선택 전략을 후보로 표시하되 사용자가 선택·저장해야 세션 autoTpMode에 적용한다',
-     /id="set_autotp"><\/div>/.test(idx) && /id="set_autotp_note"/.test(idx)
-     && /syncAutoTpAdminUI\(st\)/.test(extractFn(idx,'function openSettings()'))
+  ok('F5 앱 설정 — 각 무한매수 세션에서 끔/120일 수익률/MA150을 직접 고르고 저장한 모드만 그 세션에 적용한다',
+     /id="set_autotp"/.test(idx)
+     && /data-v="off" class="on">끔<\/button>/.test(idx)
+     && /data-v="ret120">120일 수익률<\/button>/.test(idx)
+     && /data-v="ma150">MA150<\/button>/.test(idx)
+     && /segSet\('set_autotp',st\.autoTp===true\?autoTpModeOf\(st\):'off'\)/.test(extractFn(idx,'function openSettings()'))
      && /const autoTpSel=segGet\('set_autotp'\)\|\|'off'/.test(extractFn(idx,'function saveSettings()'))
      && /autoTp:autoTpSel!=='off',autoTpMode:/.test(extractFn(idx,'function saveSettings()'))
      && /tgtDyn:false,autoTp:false,autoTpMode:'ret120'/.test(extractFn(idx,'function defInfSettings()'))
-     && /관리자 화면에서 바꿔도 기존 세션은 자동 변경되지 않습니다/.test(extractFn(idx,'function syncAutoTpAdminUI(st)')));
+     && !/AUTO_TP_ADMIN_CACHE|ADMIN_AUTOTP_STRATEGY|syncAutoTpAdminUI|autoTpAdminStrategy/.test(idx)
+     && !/AUTO_TP_ADMIN_CACHE|autoTpAdminStrategy|autoTpAdminSectionHtml|익절률 자동 전략/.test(adm));
   { const AB=new Function('lastQuote','simCutoff','curOf', "let _imAbMemo={q:null,cut:'',bars:null};\n"+extractFn(idx,'function imAutoBars(st)')+'\nreturn imAutoBars;');
     const Q={symbol:'SOXL', days:[{date:'2026-09-23',close:10},{date:'2026-09-24',close:11},{date:'2026-09-25',close:12}]};
     const a=AB({inf:Q},()=>'2026-09-24',()=>'usd')({ticker:'soxl'}), b=AB({inf:Q},()=>'2026-09-24',()=>'usd')({ticker:'TQQQ'}), g=AB({inf:null},()=>'2026-09-24',()=>'usd')({ticker:'SOXL'});
