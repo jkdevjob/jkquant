@@ -1837,6 +1837,9 @@ console.log('[40] 모의 일괄 적용 — 원금과 1회 적립액을 따로');
   ok('값이 여러 개면 나열한다', /seen\.join\(' \/ '\)/.test(vs));
   ok('해당 없으면 그렇게 적는다', /'해당 세션 없음'/.test(vs));
   const sp=extractFn(idx,'function syncPaperStart()');
+  ok('전체 적용 공통 시작일을 저장하고 새로고침 때 우선 표시한다',
+     /S&&S\.paperCommon&&S\.paperCommon\.simStart/.test(sp)
+     && /const pick=\(common&&common>=min&&common<=today\)\?common/.test(sp));
   ok('열 때 두 힌트를 원화 요약으로 채운다',
      /p_capital_n[\s\S]{0,120}paperValSummaryWon\(paperCapField\)/.test(sp)
      && /p_addamt_n[\s\S]{0,120}paperValSummaryWon\(paperAddField\)/.test(sp));
@@ -1846,6 +1849,11 @@ console.log('[40] 모의 일괄 적용 — 원금과 1회 적립액을 따로');
   ok('잘못된 값이면 멈춘다', /cap===false \|\| add===false/.test(ap));
   ok('둘 다 따로 적용한다', /paperCapField\(tab,x\.settings\); if\(f\) x\.settings\[f\]=wonToSess\(cap,/.test(ap)
      && /paperAddField\(tab,x\.settings\); if\(f\) x\.settings\[f\]=wonToSess\(add,/.test(ap));
+  ok('전체 적용은 모든 모의 세션 시작일을 같은 날짜로 강제하고 클라우드 저장 완료까지 기다린다',
+     /S\.paperCommon\.simStart=ns/.test(ap)
+     && /x\.simStart=ns/.test(ap)
+     && /await pushRemoteNow\(\)/.test(ap)
+     && /paperSessions\(\)\.filter\(\(\[,x\]\)=>x\.simStart!==ns\)/.test(ap));
   /* 금액 칸은 원화다. 미국 종목 세션엔 시작일 환율로 환산해 들어가므로
      어떤 환율을 썼는지 묻기 전에 보여야 한다 — 원금이 얼마로 들어갈지가 달라진다. */
   ok('통화 규약을 미리 알린다', /미국 종목은 \$\{fx\.date\} 기준 환율/.test(ap) && /표시 금액은 모두 원화/.test(ap));
@@ -3077,6 +3085,9 @@ console.log('\n[61] 모의 성과 — 원화로 받아 세션 통화로 환산')
   ok('쓴 환율을 확인창에 적는다', /미국 종목은 \$\{fx\.date\} 기준 환율 \$\{fx\.rate\.toLocaleString\('en-US'\)\}원\/\$을 내부 계산에 사용합니다/.test(idx));
   ok('국내만 있으면 환율을 안 부른다', /const needUsd=\[\.\.\.capHit,\.\.\.addHit\]\.some\(\(\[,x\]\)=>!isKrwSt\(x\.settings\)\);/.test(idx));
   ok('끝나고도 쓴 환율을 남긴다', /const fxNote = fx \? `미국 종목은 \$\{fx\.date\} 환율/.test(idx));
+  ok('전체 적용 즉시 클라우드 저장 함수가 있다',
+     /async function pushRemoteNow\(\)/.test(idx)
+     && /await window\.fb\.setDoc/.test(extractFn(idx,'async function pushRemoteNow()')));
 
   // 서버: 날짜를 주면 그 날 값, 주말이면 직전 영업일
   const fx=fs.existsSync(__d+'/functions/api/fx.js') ? fs.readFileSync(__d+'/functions/api/fx.js','utf8') : '';
