@@ -7969,7 +7969,8 @@ async function applyAllSimStart(){
   const min=paperMinDate(), today=new Date().toISOString().slice(0,10);
   if(ns<min){ alert(`시작일은 최대 ${PAPER_MAX_YEARS}년 전까지입니다.\n${min} 이후로 골라주세요.`); return; }
   if(ns>today){ alert('시작일을 오늘 이후로 둘 수는 없습니다.'); return; }
-  const list=paperSessions(), plan5=paperPlan5Sessions(), allCount=list.length+plan5.length;
+  const list=paperSessions();
+  const plan5=paperPlan5Sessions(), allCount=list.length+plan5.length;
   if(!allCount){ alert('모의 세션이 없습니다.'); return; }
   const cap=paperReadAmt('p_capital','원금'), add=paperReadAmt('p_addamt','1회 적립액');
   if(cap===false || add===false) return;

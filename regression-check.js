@@ -10139,7 +10139,7 @@ console.log('\n[134] 5년플랜 모의 세션 · /paper 통합');
   ok('E 5년플랜 성과행 클릭은 plan 세션으로 이동',/function gotoPlanPaper\(id\)/.test(idx)&&/paperSession=/.test(idx));
   const allApply=extractFn(idx,'async function applyAllSimStart()');
   ok('E 전체 적용도 5년플랜 시작일·원금·월 적립액을 함께 갱신하고 별도 저장',
-     /const list=paperSessions\(\), plan5=paperPlan5Sessions\(\), allCount=/.test(allApply)
+     /const list=paperSessions\(\);/.test(allApply) && /const plan5=paperPlan5Sessions\(\), allCount=/.test(allApply)
      && /x\.capitalUsd=cw\/R;x\.monthlyUsd=mw\/R/.test(allApply)
      && /savePaperPlan5Now\(\)/.test(allApply));
   ok('E 모의 상단 안내가 5년플랜 적립액은 월 적립이라고 구분',
