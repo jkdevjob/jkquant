@@ -10059,5 +10059,39 @@ console.log('\n[132] 익절 변환 자동 — 통합 ON/OFF · 룩어헤드 없�
      && /_infReplayAsOf=_prevReplayAsOf/.test(sf));
 }
 
+
+/* ════════════════════════════════════════════════════════════════════
+   [133] 모의성과 공통 시작일 · 새 무매 세션 옵션 승계
+   ════════════════════════════════════════════════════════════════════ */
+console.log('\n[133] 새 세션 — 전체 적용 시작일 유지 · 무매 옵션 승계');
+{
+  const prefSrc=extractFn(idx,'function paperPreferredSimStart()');
+  const pref=new Function('paperSessions','paperMinDate','paperFormMemoRead','S',
+    prefSrc+'\nreturn paperPreferredSimStart;');
+  const same=pref(
+    ()=>[['inf',{simStart:'2026-09-01'}],['vr',{simStart:'2026-09-01'}]],
+    ()=>'2023-09-27',()=>({simStart:'2026-06-01'}),{paperCommon:{simStart:'2026-06-01'}}
+  );
+  ok('A 기존 모의 세션이 같은 시작일이면 stale 2026-06-01보다 실제 세션 날짜를 우선',same==='2026-09-01',same);
+
+  const majority=pref(
+    ()=>[['inf',{simStart:'2026-09-01'}],['vr',{simStart:'2026-09-01'}],['ma',{simStart:'2026-09-27'}]],
+    ()=>'2023-09-27',()=>({simStart:'2026-06-01'}),{paperCommon:{simStart:'2026-06-01'}}
+  );
+  ok('A 새 세션 하나가 다른 날짜여도 다수의 기존 시작일을 유지',majority==='2026-09-01',majority);
+
+  const open=extractFn(idx,'function openSess()'), edit=extractFn(idx,'function editSess(id)'), create=extractFn(idx,'async function createSess()');
+  ok('B 새/편집 모의 세션 날짜 기본값은 오늘이 아니라 저장된 공통 시작일',
+     /d\.value=paperPreferredSimStart\(\)/.test(open)
+     && /s\.simStart\|\|paperPreferredSimStart\(\)/.test(edit)
+     && ((create.match(/paperPreferredSimStart\(\)/g)||[]).length>=2));
+
+  ok('C 새 무한매수 세션은 현재 세션 옵션을 복사하되 재생 파생상태는 버린다',
+     /const _srcSess=curStrat\(\)/.test(create)
+     && /JSON\.parse\(JSON\.stringify\(_srcSess\.settings\)\)/.test(create)
+     && /'simLast','cycStart','startCyc','cycLog','simSig'/.test(create)
+     && /s\.settings=\{\.\.\.defInfSettings\(\),\.\.\.cp\}/.test(create));
+}
+
 console.log(`\n════ 결과: ${pass} PASS / ${fail} FAIL ${fail===0?'— ALL PASS ★':'— 배포 금지, 위 ✗ 항목 수정 필요'} ════`);
 process.exit(fail===0?0:1);
