@@ -537,7 +537,7 @@ try{ if(localStorage.getItem('qcockpit_hadUser')==='1') document.documentElement
 </div>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.103.6</span></h1></div>
+    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.103.7</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -1646,7 +1646,7 @@ if(/^\/paper\/?$/.test(location.pathname)){
   <footer>
     <strong>JK 퀀트</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.103.6</b> · 2026-09-26</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.103.7</b> · 2026-09-26</div>
   </footer>
 </div>
 
@@ -7816,6 +7816,29 @@ async function paperEnsureCommonWon(){
   }
   return changed;
 }
+function paperPreferredSimStart(){
+  const min=paperMinDate(), today=new Date().toISOString().slice(0,10);
+  const valid=d=>!!(d&&d>=min&&d<=today);
+  const dates=paperSessions().map(([,x])=>x&&x.simStart).filter(valid);
+  const uniq=[...new Set(dates)].sort();
+  // 전체 적용 뒤 기존 모의 세션이 같은 날짜라면 그 날짜가 가장 강한 진실이다.
+  // paperCommon/local memo에 예전 값(예: 2026-06-01)이 남아 있어도 새 세션이 그 값을 되살리면 안 된다.
+  if(uniq.length===1) return uniq[0];
+  const memo=paperFormMemoRead(), pc=(S&&S.paperCommon)||{};
+  // 혼합 상태에서는 마지막 전체 적용값이 실제 세션 중 하나일 때만 우선한다.
+  if(valid(memo.simStart)&&uniq.includes(memo.simStart)) return memo.simStart;
+  if(valid(pc.simStart)&&uniq.includes(pc.simStart)) return pc.simStart;
+  // 여러 세션이 같은 날짜이고 새 세션 하나만 다른 경우에는 다수 날짜를 유지한다.
+  if(uniq.length){
+    const cnt={}; dates.forEach(d=>cnt[d]=(cnt[d]||0)+1);
+    const rank=Object.entries(cnt).sort((a,b)=>b[1]-a[1]||String(b[0]).localeCompare(String(a[0])));
+    if(rank.length===1 || rank[0][1]>rank[1][1]) return rank[0][0];
+  }
+  // 모의 세션이 없거나 완전히 혼합된 경우에만 영구 저장값을 사용한다.
+  if(valid(pc.simStart)) return pc.simStart;
+  if(valid(memo.simStart)) return memo.simStart;
+  return today;
+}
 function syncPaperStart(){
   const el=$('p_simstart'); if(!el) return;
   const list=paperSessions();
@@ -7842,7 +7865,7 @@ function syncPaperStart(){
     })); }catch(e){}
     saveLocal(); pushRemote();
   }
-  const common=sessionCommon||pc.simStart||memo.simStart;
+  const common=paperPreferredSimStart();
   const pick=(common&&common>=min&&common<=today)?common:today;
   el.value=pick;
   el.disabled=!list.length;
@@ -9154,7 +9177,7 @@ function openSess(){ _sessEditId=null;
   $('sess_name').value=''; const p=$('sess_paper'); if(p)p.checked=false;
   const k=$('sess_kis'); if(k)k.checked=false; kisSyncOwner().then(kisOptUI);
   const w=$('sess_simstart_wrap'); if(w) w.style.display='none';
-  const d=$('sess_simstart'); if(d) d.value=new Date().toISOString().slice(0,10);   // 기본은 오늘 — 지금부터 앞으로 굴린다
+  const d=$('sess_simstart'); if(d) d.value=paperPreferredSimStart();   // 새 세션도 모의성과의 마지막 전체 적용 시작일을 승계
   $('sessModal').classList.add('on'); }
 /* 기존 세션 편집 — 이름·모의 여부·모의 시작일. 세션칩 더블탭으로 연다. */
 function editSess(id){
@@ -9167,7 +9190,7 @@ function editSess(id){
   const p=$('sess_paper'); if(p)p.checked=!!s.paper;
   const k=$('sess_kis'); if(k)k.checked=!!s.kis; kisSyncOwner().then(kisOptUI);
   const w=$('sess_simstart_wrap'); if(w) w.style.display=s.paper?'':'none';
-  const d=$('sess_simstart'); if(d) d.value=s.simStart||new Date().toISOString().slice(0,10);
+  const d=$('sess_simstart'); if(d) d.value=s.simStart||paperPreferredSimStart();
   $('sessModal').classList.add('on');
 }
 /* 한투 연결 상태를 그 자리에서 보여준다.
@@ -9249,7 +9272,7 @@ async function createSess(){
     t.name=n;
     const on=$('sess_paper')&&$('sess_paper').checked;
     if(on){ const sd=$('sess_simstart');
-      const ns=(sd&&sd.value)||new Date().toISOString().slice(0,10);
+      const ns=(sd&&sd.value)||paperPreferredSimStart();
       if(!t.paper || t.simStart!==ns){                // 새로 모의로 바꾸거나 시작일을 옮기면 처음부터 다시 만든다
         if((t.hist||[]).length && !confirm(`'${n}' 세션의 기록 ${t.hist.length}건을 지우고 ${ns}부터 다시 만듭니다.\n계속할까요?`)){ closeSess(); return; }
         t.hist=[]; if(t.settings){ delete t.settings.simLast; delete t.settings.cycStart; delete t.settings.startCyc; delete t.settings.cycLog; t.settings.startv=0; } }
@@ -9264,11 +9287,19 @@ async function createSess(){
     saveLocal(); const cloudSave=pushRemoteNow();
     closeSess(); refreshAll(); await cloudSave; return;
   }
-  // 탭마다 세션 형식이 다르다 — 빠뜨리면 남의 형식(VR) 세션이 들어가 그 탭이 통째로 깨진다
+  // 탭마다 세션 형식이 다르다 — 빠뜨리면 남의 형식(VR) 세션이 들어가 그 탭이 통째로 깨진다.
+  // 무한매수 새 세션은 현재 세션의 옵션을 복사한다. 비교 세션을 추가할 때 큰수·하방LOC·자동익절처럼
+  // 사용자가 바꿨거나 새로 추가된 옵션이 factory 기본값으로 되돌아가 "사라진" 것처럼 보이던 문제를 막는다.
+  const _srcSess=curStrat();
   const s=S.activeTab==='inf'?newInfSession(n):S.activeTab==='ma'?newMaSession(n):S.activeTab==='ivs'?newIvsSession(n)
     :S.activeTab==='dca'?newDcaSession(n):S.activeTab==='asap'?newAsapSession(n):newVrSession(n);
+  if(S.activeTab==='inf'&&_srcSess&&_srcSess.settings){
+    const cp=JSON.parse(JSON.stringify(_srcSess.settings));
+    ['simLast','cycStart','startCyc','cycLog','simSig'].forEach(k=>delete cp[k]);
+    s.settings={...defInfSettings(),...cp};
+  }
   const pp=$('sess_paper'); if(pp&&pp.checked){ s.paper=true;
-    const sd=$('sess_simstart'); s.simStart=(sd&&sd.value)||new Date().toISOString().slice(0,10); }
+    const sd=$('sess_simstart'); s.simStart=(sd&&sd.value)||paperPreferredSimStart(); }
   s.kis=kisOwner && !!($('sess_kis')&&$('sess_kis').checked);
   box.sessions.push(s);box.active=s.id;saveLocal();
   const cloudSave=pushRemoteNow();
