@@ -10146,6 +10146,10 @@ console.log('\n[134] 5년플랜 모의 세션 · /paper 통합');
     const sig=E.orderPlan({teclRows:te,tqqqRows:tq,signalPrices:{TECL:te.at(-1).close,TQQQ:tq.at(-1).close,SGOV:100},
       execPrices:{TECL:100,TQQQ:100,SGOV:100},pos:{TECL:0,TQQQ:0,SGOV:0},cash:10000,startCapital:10000});
     ok('G 빈 계좌 첫 진입은 TECL 역분산 + Guard 규칙으로 목표를 만든다',sig.ready&&sig.targets.TECL>0&&sig.targets.SGOV>=0,JSON.stringify(sig.targets));
+    const liveCfg={teclWeight:.70,guardWeight:.30,ivsLook:20,ivsS0:.55,ivsBand:.10,guardMA:225,guardBand:.01};
+    const live=E.orderPlan({config:liveCfg,teclRows:te,tqqqRows:tq,signalPrices:{TECL:te.at(-1).close,TQQQ:tq.at(-1).close,SGOV:100},
+      execPrices:{TECL:100,TQQQ:100,SGOV:100},pos:{TECL:0,TQQQ:0,SGOV:0},cash:10000,startCapital:10000});
+    ok('G 운영 PATH_DEFAULTS처럼 feeRate가 없는 설정도 공용 기본 수수료로 주문을 만든다',live.orders.some(x=>x.side==='buy'),JSON.stringify(live.orders));
 
     const D=Array.from({length:520},(_,i)=>{const dt=new Date(Date.UTC(2024,0,1));dt.setUTCDate(dt.getUTCDate()+i);return dt;})
       .filter(d=>d.getUTCDay()!==0&&d.getUTCDay()!==6)

@@ -70,10 +70,11 @@ function orderPlan(o){
     const dq=targets[sym]-cur[sym];
     if(dq<0){const q=-dq,p=pxs[sym],f=fee(q,p);avail+=q*p-f;orders.push({side:'sell',sym,qty:q,price:p,fee:f});}
   }
+  const feeRate=(D.feeRate!=null)?D.feeRate:CONFIG.feeRate;
   for(const sym of ['TECL','TQQQ','SGOV']){
     const dq=targets[sym]-cur[sym];
     if(dq>0){
-      const p=pxs[sym],q=Math.min(dq,Math.floor(avail/(p*(1+D.feeRate))));
+      const p=pxs[sym],q=Math.min(dq,Math.floor(avail/(p*(1+feeRate))));
       if(q>0){const f=fee(q,p);avail-=q*p+f;orders.push({side:'buy',sym,qty:q,price:p,fee:f});}
     }
   }
