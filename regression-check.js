@@ -1554,7 +1554,8 @@ console.log('[30] 모의 시작일 일괄 변경');
   ok('성과표 위에 있다', /id="p_simstart"/.test(idx)
      && idx.indexOf('id="p_simstart"') < idx.indexOf('id="paper_body"')
      && idx.indexOf('id="paperModal"') < idx.indexOf('id="p_simstart"'));
-  ok('모달 열 때 예전 원화값을 복원한 뒤 칸을 맞춘다', /await paperEnsureCommonWon\(\);\s*\n\s*syncPaperStart\(\);/.test(extractFn(idx,'async function openPaper()')));
+  ok('모달 열 때 예전 원화값 복원·구버전 시작일 복구 후 칸을 맞춘다',
+     /await paperEnsureCommonWon\(\);[\s\S]*await paperRepairLegacyStarts\(\);[\s\S]*syncPaperStart\(\);/.test(extractFn(idx,'async function openPaper()')));
   let ps='', ap='';
   try{ ps=extractFn(idx,'function paperSessions()'); }catch(e){}
   try{ ap=extractFn(idx,'async function applyAllSimStart()'); }catch(e){}
@@ -1925,7 +1926,7 @@ console.log('[40] 모의 일괄 적용 — 원금과 1회 적립액을 따로');
 
   const ss=extractFn(idx,'function saveSettings()');
   ok('무매 설정 — 기존 settings를 보존한 채 화면 값만 덮어쓴다',
-     /const prev=s\.settings\|\|\{\}/.test(ss) && /s\.settings=\{\.\.\.prev,/.test(ss));
+     /const s=sess\(\), prev=s\.settings\|\|\{\}/.test(ss) && /s\.settings=\{\.\.\.prev,/.test(ss));
   ok('무매 설정 — 큰수 빈값 fallback도 현재 기본 20을 쓴다',
      /big:inputNum\('set_big'\)\|\|IM_BIG_DEFAULT/.test(ss));
   ok('무매 설정 — 저장 직후 디바운스가 아니라 즉시 cloud 저장',
