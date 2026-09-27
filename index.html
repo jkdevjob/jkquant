@@ -7060,7 +7060,7 @@ function replayPlanPaper(sess){
 function paperStatPlan(sess){
   const R=PLAN_PAPER_CACHE[sess&&sess.id],z=R&&R.stats;if(!z)return null;
   const st=sess.settings||{},base=Math.max(1,z.inflow),inflowWon=paperInflowWon('plan',sess,base);
-  return {tab:'plan',id:sess.id,name:sess.name,opts:paperOpts('plan',{...st,horizon:+sess.horizon||+st.horizon||5}),sym:'TECL/TQQQ/SGOV',cur:'usd',
+  return {tab:'plan',id:sess.id,name:sess.name,opts:paperOpts('plan',{...st,horizon:+sess.horizon||+st.horizon||5}),sym:'TECL/TQQQ/SGOV',cur:curOf(st),
     from:z.from,to:z.to,yrs:z.yrs,spanDays:z.spanDays,inflow:base,inflowWon,total:z.total,ret:z.ret,retNow:z.ret,retOut:0,
     cagr:z.cagr,nTrade:z.nTrade,price:1,out:null,mdd:{pct:z.mdd,nDay:z.nDay}};
 }
