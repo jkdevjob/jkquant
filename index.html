@@ -537,7 +537,7 @@ try{ if(localStorage.getItem('qcockpit_hadUser')==='1') document.documentElement
 </div>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.103.5</span></h1></div>
+    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.103.6</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -1646,7 +1646,7 @@ if(/^\/paper\/?$/.test(location.pathname)){
   <footer>
     <strong>JK 퀀트</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.103.5</b> · 2026-09-26</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.103.6</b> · 2026-09-26</div>
   </footer>
 </div>
 
@@ -1821,7 +1821,7 @@ if(/^\/paper\/?$/.test(location.pathname)){
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px;align-items:end">
       <div class="field" style="min-width:0;margin:0">
         <label style="font-size:12px;margin-bottom:6px">모의 시작일 <span class="hint" id="p_simstart_n"></span></label>
-        <input id="p_simstart" type="date">
+        <input id="p_simstart" type="date" onchange="paperRememberForm()">
       </div>
       <div class="field" style="min-width:0;margin:0">
         <label style="font-size:12px;margin-bottom:6px">원금 <span class="hint">원화 입력</span></label>
@@ -2216,11 +2216,14 @@ const INF_DEFAULTS_POLICY_VER=2;
 function migrateInfOperatingDefaults(){
   if(!S||!S.inf||!Array.isArray(S.inf.sessions)) return false;
   if((+S._infDefaultsPolicyVer||0)>=INF_DEFAULTS_POLICY_VER) return false;
+  let changed=false;
   for(const x of S.inf.sessions){
     const st=x&&x.settings; if(!st) continue;
-    st.big=IM_BIG_DEFAULT;
-    st.revGap=REV_GAP_DEF;
-    st.rows=IM_ROWS_DEFAULT;
+    /* 기존 세션에서 사용자가 바꾼 옵션은 절대 덮지 않는다.
+       정책 마커가 없는 옛/다른기기 상태가 다시 들어와도 "없는 값"만 현재 기본값으로 채운다. */
+    if(st.big==null || st.big===''){ st.big=IM_BIG_DEFAULT; changed=true; }
+    if(st.revGap==null || st.revGap===''){ st.revGap=REV_GAP_DEF; changed=true; }
+    if(st.rows==null || st.rows===''){ st.rows=IM_ROWS_DEFAULT; changed=true; }
   }
   S._infDefaultsPolicyVer=INF_DEFAULTS_POLICY_VER;
   return true;
@@ -7827,8 +7830,20 @@ function syncPaperStart(){
   const min=paperMinDate(), today=new Date().toISOString().slice(0,10);
   el.min=min; el.max=today;
   const pc=(S&&S.paperCommon)||{}, memo=paperFormMemoRead();
-  const common=pc.simStart||memo.simStart;
-  const pick=(common&&common>=min&&common<=today)?common:(uniq.length===1&&uniq[0]>=min?uniq[0]:today);
+  /* 실제 모의 세션이 전부 같은 시작일이면 그 값이 진실이다.
+     paperCommon이 예전 값(예: 2026-06-01)으로 남아 있어도 다시 그 날짜를 화면에 덮어쓰지 않는다. */
+  const sessionCommon=(uniq.length===1&&uniq[0]>=min&&uniq[0]<=today)?uniq[0]:'';
+  if(sessionCommon && pc.simStart!==sessionCommon){
+    pc.simStart=sessionCommon;
+    try{ localStorage.setItem(paperFormMemoKey(),JSON.stringify({
+      simStart:sessionCommon,
+      capitalWon:(+pc.capitalWon>0)?pc.capitalWon:((+memo.capitalWon>0)?memo.capitalWon:null),
+      addWon:(+pc.addWon>0)?pc.addWon:((+memo.addWon>0)?memo.addWon:null)
+    })); }catch(e){}
+    saveLocal(); pushRemote();
+  }
+  const common=sessionCommon||pc.simStart||memo.simStart;
+  const pick=(common&&common>=min&&common<=today)?common:today;
   el.value=pick;
   el.disabled=!list.length;
   const fmtWonInput=v=>(+v>0)?(+v).toLocaleString('ko-KR',{maximumFractionDigits:2}):'';
@@ -7899,9 +7914,13 @@ async function applyAllSimStart(){
       if(amtTouched) x.paperFxRate=isKrwSt(x.settings)?1:R; }
   });
   saveLocal();
+  /* 전체 적용 버튼을 누른 순간의 시작일·원금·세션 설정을 먼저 영구 저장한다.
+     재생(openPaper)이 오래 걸리거나 중간에 페이지를 옮겨도 예전 paperCommon 날짜로 돌아가면 안 된다. */
+  const appliedCloudOk=await pushRemoteNow();
   await openPaper();          // 지운 자리를 새 시작일로 다시 채우고 표를 새로 그린다
   saveLocal();
-  const cloudOk=await pushRemoteNow();
+  const replayCloudOk=await pushRemoteNow();
+  const cloudOk=appliedCloudOk||replayCloudOk;
   const dateMiss=paperSessions().filter(([,x])=>x.simStart!==ns);
   if(dateMiss.length){
     paperNote=`⚠ 전체 적용 후 시작일이 안 맞는 세션 ${dateMiss.length}개: ${dateMiss.map(([,x])=>x.name).join(', ')}`;
@@ -9221,7 +9240,7 @@ async function kisOptUI(){
   box.innerHTML=h;
 }
 function closeSess(){$('sessModal').classList.remove('on')}
-function createSess(){
+async function createSess(){
   const box=tabBox();
   const n=$('sess_name').value.trim()||('세션 '+(box.sessions.length+1));
   if(_sessEditId){                                   // 편집 모드 — 이름·모의 여부만 바꾼다
@@ -9242,7 +9261,8 @@ function createSess(){
     // 한투 연결은 모의·실계좌 모두 고를 수 있다 — 다만 종류에 맞는 갈래만 화면에서 열린다
     // 연결 여부만 저장한다 — 어느 갈래로 나갈지는 종목·세션 종류가 정한다
     t.kis=kisOwner && !!($('sess_kis')&&$('sess_kis').checked); delete t.kisMode;
-    save(); closeSess(); refreshAll(); pushRemote(); return;
+    saveLocal(); const cloudSave=pushRemoteNow();
+    closeSess(); refreshAll(); await cloudSave; return;
   }
   // 탭마다 세션 형식이 다르다 — 빠뜨리면 남의 형식(VR) 세션이 들어가 그 탭이 통째로 깨진다
   const s=S.activeTab==='inf'?newInfSession(n):S.activeTab==='ma'?newMaSession(n):S.activeTab==='ivs'?newIvsSession(n)
@@ -9250,7 +9270,10 @@ function createSess(){
   const pp=$('sess_paper'); if(pp&&pp.checked){ s.paper=true;
     const sd=$('sess_simstart'); s.simStart=(sd&&sd.value)||new Date().toISOString().slice(0,10); }
   s.kis=kisOwner && !!($('sess_kis')&&$('sess_kis').checked);
-  box.sessions.push(s);box.active=s.id;save();closeSess();resetSubnav(S.activeTab);refreshAll();pushRemote();
+  box.sessions.push(s);box.active=s.id;saveLocal();
+  const cloudSave=pushRemoteNow();
+  closeSess();resetSubnav(S.activeTab);refreshAll();
+  await cloudSave;
 }
 
 /* ── 상태줄 ── */
@@ -9535,19 +9558,22 @@ function paperSyncSig(tab,sess){
   paperResetGen(sess,sig);
   return true;
 }
-function saveSettings(){
+async function saveSettings(){
   const s=sess();
   if(S.activeTab==='inf'){
+    const prev=s.settings||{};
     const autoTpSel=segGet('set_autotp')||'off';
-    s.settings={ticker:tkVal('set_ticker_in','SOXL'),div:+segGet('set_div')||20,engine:segGet('set_engine')||'v40',shortMA:+segGet('set_shortma')||30,loPct:+segGet('set_lopct')||6,
-      target:inputNum('set_target')||20,big:inputNum('set_big')||15,
+    /* 기존 설정 객체를 유지한 채 화면에서 편집한 키만 덮는다.
+       settings를 새 객체로 갈아끼우면 새로 추가된 옵션·simSig·파생 상태가 설정 저장 한 번에 사라진다. */
+    s.settings={...prev,ticker:tkVal('set_ticker_in','SOXL'),div:+segGet('set_div')||20,engine:segGet('set_engine')||'v40',shortMA:+segGet('set_shortma')||30,loPct:+segGet('set_lopct')||6,
+      target:inputNum('set_target')||20,big:inputNum('set_big')||IM_BIG_DEFAULT,
       reverse:segGet('set_reverse')==='1',compound:segGet('set_compound')!=='0',
       tgtDyn:segGet('set_tgtdyn')==='1',
       autoTp:autoTpSel==='on',autoTpMode:'auto',
       rows:imRowsOf({rows:$('set_rows')?$('set_rows').value:undefined}),
       revGap:Math.max(0,Math.min(20,Number(($('set_revgap')||{}).value)||REV_GAP_DEF)),
       rowqty:1,principal:inputNum('set_principal')||10000,divmode:segGet('set_infdivmode')||'reinv',
-      simLast:(s.settings&&s.settings.simLast)||undefined};   // 모의 체결 진행점은 설정 저장으로 날아가면 안 된다
+      simLast:prev.simLast};   // 모의 체결 진행점은 설정 저장으로 날아가면 안 된다
   }else if(S.activeTab==='ma'){
     s.settings={ticker:tkVal('set_maticker_in','SOXL'),buy:segGet('set_mabuy')||'ma',sell:segGet('set_masell')||'ma',park:segGet('set_mapark')||'cash',principal:inputNum('set_maprincipal')||10000,divmode:segGet('set_madivmode')||'reinv'};
   }else if(S.activeTab==='ivs'){
@@ -9580,7 +9606,10 @@ function saveSettings(){
   // 모의 세션이면 여기서 바로 다시 만들어 준다 (어긋남 판정은 paperAuto가 지문으로 한다).
   // 종목이 바뀌었으면 시세 로더가 끝난 뒤 _afterQuote가 이어서 만든다.
   if(s.paper){ try{ paperAuto(); }catch(e){} }
-  save();closeSettings();refreshAll();pushRemote();
+  saveLocal();
+  const cloudSave=pushRemoteNow();   // 페이지를 바로 옮겨도 옵션/세션 설정이 클라우드에 남게 즉시 저장
+  closeSettings();refreshAll();
+  await cloudSave;
 }
 
 /* ── 탭/서브탭 ── */
