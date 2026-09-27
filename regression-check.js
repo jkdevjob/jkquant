@@ -1853,10 +1853,11 @@ console.log('[40] 모의 일괄 적용 — 원금과 1회 적립액을 따로');
   ok('잘못된 값이면 멈춘다', /cap===false \|\| add===false/.test(ap));
   ok('원금과 적립액을 따로 적용하고 ASAP은 1·2·3배 헬퍼를 쓴다', /paperCapField\(tab,x\.settings\)/.test(ap) && /x\.settings\[f\]=wonToSess\(cap,x\.settings,R\)/.test(ap)
      && /applyPaperAdd\(tab,x\.settings,add,R\)/.test(ap));
-  ok('전체 적용은 모든 모의 세션 시작일을 같은 날짜로 강제하고 클라우드 저장 완료까지 기다린다',
+  ok('전체 적용은 모든 모의 세션 시작일을 같은 날짜로 강제하고 재생 전에 클라우드에 먼저 저장한다',
      /S\.paperCommon\.simStart=ns/.test(ap)
      && /x\.simStart=ns/.test(ap)
-     && /await pushRemoteNow\(\)/.test(ap)
+     && ap.indexOf('await pushRemoteNow()')>=0
+     && ap.indexOf('await pushRemoteNow()')<ap.indexOf('await openPaper()')
      && /paperSessions\(\)\.filter\(\(\[,x\]\)=>x\.simStart!==ns\)/.test(ap));
   /* 금액 칸은 원화다. 미국 종목 세션엔 시작일 환율로 환산해 들어가므로
      어떤 환율을 썼는지 묻기 전에 보여야 한다 — 원금이 얼마로 들어갈지가 달라진다. */
@@ -1901,6 +1902,40 @@ console.log('[40] 모의 일괄 적용 — 원금과 1회 적립액을 따로');
     ok('모의 성과 정렬 헤더 '+k, new RegExp("paperSortTable\\('"+k+"',this\\)").test(op));
   ok('모의 성과 행에 정렬용 원본값 9개를 심는다',
      ['name','days','total','ret','mdd','now','out','cagr','inflow'].every(k=>op.includes('data-'+k+'=')));
+}
+
+
+/* 모의 시작일·무매 옵션 영구저장 — 2026-09-27 회귀
+   전체 적용 직후 긴 재생 중 페이지를 옮겨도 시작일이 예전 cloud 값으로 돌아가면 안 되고,
+   무매 설정 저장이 settings 객체를 갈아끼워 새 옵션을 지우면 안 된다. */
+{
+  const sp=extractFn(idx,'function syncPaperStart()');
+  ok('모의 시작일 — 세션들이 한 날짜면 stale paperCommon보다 세션 날짜를 우선',
+     /const sessionCommon=\(uniq\.length===1/.test(sp)
+     && /const common=sessionCommon\|\|pc\.simStart\|\|memo\.simStart/.test(sp));
+
+  const ap=extractFn(idx,'async function applyAllSimStart()');
+  const p1=ap.indexOf('await pushRemoteNow()'), p2=ap.indexOf('await openPaper()');
+  ok('모의 시작일 — 전체 적용은 재생 전에 즉시 cloud 저장', p1>=0&&p2>=0&&p1<p2, p1+' / '+p2);
+
+  const ss=extractFn(idx,'function saveSettings()');
+  ok('무매 설정 — 기존 settings를 보존한 채 화면 값만 덮어쓴다',
+     /const prev=s\.settings\|\|\{\}/.test(ss) && /s\.settings=\{\.\.\.prev,/.test(ss));
+  ok('무매 설정 — 큰수 빈값 fallback도 현재 기본 20을 쓴다',
+     /big:inputNum\('set_big'\)\|\|IM_BIG_DEFAULT/.test(ss));
+  ok('무매 설정 — 저장 직후 디바운스가 아니라 즉시 cloud 저장',
+     /const cloudSave=pushRemoteNow\(\)/.test(ss) && /await cloudSave/.test(ss));
+
+  const mig=extractFn(idx,'function migrateInfOperatingDefaults()');
+  ok('무매 기본값 마이그레이션 — 사용자가 바꾼 big/revGap/rows를 덮지 않는다',
+     /if\(st\.big==null \|\| st\.big===''/ .test(mig)
+     && /if\(st\.revGap==null \|\| st\.revGap===''/ .test(mig)
+     && /if\(st\.rows==null \|\| st\.rows===''/ .test(mig)
+     && !/st\.big=IM_BIG_DEFAULT;\s*st\.revGap=REV_GAP_DEF;\s*st\.rows=IM_ROWS_DEFAULT;/.test(mig));
+
+  const cs=extractFn(idx,'function createSess()');
+  ok('세션 추가·편집 — 즉시 cloud 저장으로 페이지 이동 전 유실 방지',
+     /pushRemoteNow\(\)/.test(cs) && /await cloudSave/.test(cs));
 }
 
 console.log('[41] 한투 모의투자 연결 — 세션 설정과 주문 전송');
