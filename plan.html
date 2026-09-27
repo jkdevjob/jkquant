@@ -2538,17 +2538,17 @@ $("assetSessionChips").addEventListener("click",e=>{
   const d=e.target.closest("[data-asess-del]");if(d){e.stopPropagation();deleteAssetSession(d.dataset.asessDel);return;}
   const b=e.target.closest("[data-asess]");if(b)selectAssetSession(b.dataset.asess||'');
 });
-$("alphaRecordFill").addEventListener("click",()=>{if(guardAssetPaperEdit())return;alphaOpenFillEditor();});
-$("alphaCashAdd").addEventListener("click",()=>{if(guardAssetPaperEdit())return;alphaAddCashEvent();});if($("alphaCashDate"))$("alphaCashDate").value=todayISO();
-$("alphaFillSave").addEventListener("click",()=>{if(guardAssetPaperEdit())return;alphaSaveFills();});
+$("alphaRecordFill").addEventListener("click",alphaOpenFillEditor);
+$("alphaCashAdd").addEventListener("click",alphaAddCashEvent);if($("alphaCashDate"))$("alphaCashDate").value=todayISO();
+$("alphaFillSave").addEventListener("click",alphaSaveFills);
 $("alphaFillCancel").addEventListener("click",alphaCloseFillEditor);
-$("alphaEditSave").addEventListener("click",()=>{if(guardAssetPaperEdit())return;alphaSaveEdit();});
+$("alphaEditSave").addEventListener("click",alphaSaveEdit);
 $("alphaEditCancel").addEventListener("click",alphaCloseEdit);
 $("alphaLedgerBody").addEventListener("click",e=>{if(assetPaperMode()){guardAssetPaperEdit();return;}const bb=e.target.closest("[data-abase]");if(bb){alphaOpenBaseEdit();return;}const eb=e.target.closest("[data-aedit]");if(eb){alphaOpenEdit(eb.dataset.aedit);return;}const db=e.target.closest("[data-aeid]");if(db)alphaDeleteEvent(db.dataset.aeid);});
 $("alphaCapitalInput").addEventListener("input",()=>{
   $("alphaCapitalInput").dataset.dirty='1';
 });
-$("alphaReset").addEventListener("click",()=>{if(guardAssetPaperEdit())return;alphaResetLedger();});
+$("alphaReset").addEventListener("click",alphaResetLedger);
 $("classicRefresh").addEventListener("click",refreshLive);
 $("bCreateBoth").addEventListener("click",createClassicPlanSessions);
 $("bSoxlCreate").addEventListener("click",createPlanInfSession);
