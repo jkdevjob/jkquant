@@ -1845,11 +1845,12 @@ console.log('[40] 모의 일괄 적용 — 원금과 1회 적립액을 따로');
   ok('ASAP은 원금이 아니라 1회 적립액(base) 대상이다', /return null;\s*\/\/ asap/.test(cf) && /if\(tab==='asap'\) return 'base';/.test(af));
   ok('세션 달러값을 역환산하는 현재값 요약 함수는 제거했다', !/function paperValSummary\(/.test(idx) && !/function paperValSummaryWon\(/.test(idx));
   const sp=extractFn(idx,'function syncPaperStart()');
-  ok('전체 적용 공통 시작일을 저장하되 새로고침 때 실제 세션 상태를 우선 표시한다',
+  ok('전체 적용 공통 시작일은 표시 함수가 역으로 덮어쓰지 않는다',
      /const pc=\(S&&S\.paperCommon\)\|\|\{\}/.test(sp)
-     && /const sessionCommon=\(uniq\.length===1/.test(sp)
      && /const common=paperPreferredSimStart\(\)/.test(sp)
-     && /const pick=\(common&&common>=min&&common<=today\)\?common/.test(sp));
+     && /const pick=\(common&&common>=min&&common<=today\)\?common/.test(sp)
+     && !/pc\.simStart=sessionCommon/.test(sp)
+     && !/saveLocal\(\); pushRemote\(\);/.test(sp));
   ok('열 때 마지막으로 입력한 원화 원본을 입력칸에 그대로 복원한다', /pc\.capitalWon/.test(sp) && /pc\.addWon/.test(sp) && /toLocaleString\('ko-KR'/.test(sp));
   const ap=extractFn(idx,'async function applyAllSimStart()');
   ok('두 값을 따로 읽는다', /paperReadAmt\('p_capital'/.test(ap) && /paperReadAmt\('p_addamt'/.test(ap));
@@ -1913,10 +1914,10 @@ console.log('[40] 모의 일괄 적용 — 원금과 1회 적립액을 따로');
    무매 설정 저장이 settings 객체를 갈아끼워 새 옵션을 지우면 안 된다. */
 {
   const sp=extractFn(idx,'function syncPaperStart()');
-  ok('모의 시작일 — 세션들이 한 날짜면 stale paperCommon보다 세션 날짜를 우선',
-     /const sessionCommon=\(uniq\.length===1/.test(sp)
-     && /if\(sessionCommon && pc\.simStart!==sessionCommon\)/.test(sp)
-     && /const common=paperPreferredSimStart\(\)/.test(sp));
+  ok('모의 시작일 — 세션 상태가 바뀌어도 전체 적용 paperCommon을 역으로 덮지 않는다',
+     /const common=paperPreferredSimStart\(\)/.test(sp)
+     && !/sessionCommon/.test(sp)
+     && !/pc\.simStart=/.test(sp));
 
   const ap=extractFn(idx,'async function applyAllSimStart()');
   const p1=ap.indexOf('await pushRemoteNow()'), p2=ap.indexOf('await openPaper()');
@@ -10076,18 +10077,18 @@ console.log('\n[133] 새 세션 — 전체 적용 시작일 유지 · 무매 옵
     ()=>[['inf',{simStart:'2026-09-01'}],['vr',{simStart:'2026-09-01'}]],
     ()=>'2023-09-27',()=>({simStart:'2026-06-01'}),{paperCommon:{simStart:'2026-06-01'}}
   );
-  ok('A 기존 모의 세션이 같은 시작일이면 stale 2026-06-01보다 실제 세션 날짜를 우선',same==='2026-09-01',same);
+  ok('A 전체 적용 2026-06-01은 세션들이 다른 날짜여도 공통 출발선으로 유지',same==='2026-06-01',same);
 
   const majority=pref(
     ()=>[['inf',{simStart:'2026-09-01'}],['vr',{simStart:'2026-09-01'}],['ma',{simStart:'2026-09-27'}]],
     ()=>'2023-09-27',()=>({simStart:'2026-06-01'}),{paperCommon:{simStart:'2026-06-01'}}
   );
-  ok('A 새 세션 하나가 다른 날짜여도 다수의 기존 시작일을 유지',majority==='2026-09-01',majority);
+  ok('A 세션 다수결도 전체 적용 공통 시작일을 덮지 않는다',majority==='2026-06-01',majority);
 
   const open=extractFn(idx,'function openSess()'), edit=extractFn(idx,'function editSess(id)'), create=extractFn(idx,'async function createSess()');
   ok('B 새/편집 모의 세션 날짜 기본값은 오늘이 아니라 저장된 공통 시작일',
      /d\.value=paperPreferredSimStart\(\)/.test(open)
-     && /s\.simStart\|\|paperPreferredSimStart\(\)/.test(edit)
+     && /paperStart\(s\)\|\|paperPreferredSimStart\(\)/.test(edit)
      && ((create.match(/paperPreferredSimStart\(\)/g)||[]).length>=2));
 
   ok('C 새 무한매수 세션은 현재 세션 옵션을 복사하되 재생 파생상태는 버린다',
@@ -10116,6 +10117,61 @@ console.log('\n[133] 새 세션 — 전체 적용 시작일 유지 · 무매 옵
   ok('E 새 모의 세션은 저장·성과 계산 전에 공통 원화 금액을 심는다',
      /await paperSeedNewSession\(S\.activeTab,s,s\.simStart\)/.test(create)
      && create.indexOf('await paperSeedNewSession')<create.indexOf('box.sessions.push(s)'));
+
+  ok('F 세션 설정 저장은 raw simStart가 아니라 기존 해석 시작일과 비교해 날짜가 안 바뀌면 기록을 지우지 않는다',
+     /const oldStart=t\.paper\?paperStart\(t\):null/.test(create)
+     && /oldStart&&oldStart!==ns/.test(create)
+     && /t\.simStartMode=\(ns===paperPreferredSimStart\(\)\)\?'common':'explicit'/.test(create));
+
+  const pst=extractFn(idx,'function paperStart(sess)');
+  ok('G simStart가 빠진 구버전 세션도 전체 적용 공통 시작일을 먼저 복구한다',
+     /if\(sess\.simStart\) return sess\.simStart/.test(pst)
+     && /if\(sess\.paper && pc\.simStart\) return pc\.simStart/.test(pst));
+}
+
+/* ════════════════════════════════════════════════════════════════════
+   [134] 모의 시작일 — 설정 저장/최근 1일 버그 회귀
+   ════════════════════════════════════════════════════════════════════ */
+console.log('\n[134] 모의 시작일 — 설정 변경으로 오늘 리셋 금지');
+{
+  const ss=extractFn(idx,'function saveSettings()');
+  ok('A 모든 전략 설정 저장이 기존 settings 객체를 보존한다',
+     /const s=sess\(\), prev=s\.settings\|\|\{\}/.test(ss)
+     && ((ss.match(/s\.settings=\{\.\.\.prev,/g)||[]).length>=6),
+     (ss.match(/s\.settings=\{\.\.\.prev,/g)||[]).length+'개');
+  ok('B 설정 저장 함수는 세션 top-level simStart를 쓰지 않는다',
+     !/\.simStart\s*=/.test(ss), (ss.match(/simStart/g)||[]).length+' mentions');
+
+  const prefSrc=extractFn(idx,'function paperPreferredSimStart()');
+  const pref=new Function('paperSessions','paperMinDate','paperFormMemoRead','S',
+    prefSrc+'\nreturn paperPreferredSimStart();');
+  const canonical=pref(
+    ()=>[['inf',{simStart:'2026-09-28'}],['vr',{simStart:'2026-09-28'}],['ma',{simStart:'2026-06-01'}]],
+    ()=>'2023-09-28',()=>({simStart:'2026-09-28'}),{paperCommon:{simStart:'2026-06-01'}}
+  );
+  ok('C 새 세션 기본일은 최근 세션 다수결/로컬메모보다 전체 적용값',canonical==='2026-06-01',canonical);
+
+  const sp=extractFn(idx,'function syncPaperStart()');
+  ok('D 성과창을 여는 것만으로 paperCommon.simStart를 쓰지 않는다',
+     !/paperCommon\.simStart\s*=/.test(sp) && !/pc\.simStart\s*=/.test(sp));
+
+  const repair=extractFn(idx,'async function paperRepairLegacyStarts()');
+  ok('E 과거 1일 버그 자동복구는 explicit 세션을 제외하고 최근 기계기록 2개 이상일 때만',
+     /x\.simStartMode==='explicit'/.test(repair)
+     && /recent\.length>=2/.test(repair)
+     && /every\(h=>h&&\(h\.sim\|\|h\.auto\)\)/.test(repair));
+  ok('F 자동복구는 공통 시작일 환율로 원금/적립액까지 다시 심고 재생 상태를 지운다',
+     /fxAt\(common\)/.test(repair)
+     && /paperSeedCommonAmounts\(tab,x,R,commonWon\)/.test(repair)
+     && /delete st\.simLast/.test(repair)
+     && /delete st\.simSig/.test(repair)
+     && /x\.simStart=common/.test(repair));
+
+  const op=extractFn(idx,'async function openPaper()');
+  ok('G 성과창은 표 계산 전에 구버전 시작일 복구를 끝낸다',
+     op.indexOf('await paperRepairLegacyStarts()')>=0
+     && op.indexOf('await paperRepairLegacyStarts()')<op.indexOf('syncPaperStart()')
+     && op.indexOf('await paperRepairLegacyStarts()')<op.indexOf('await paperFillAll()'));
 }
 
 console.log(`\n════ 결과: ${pass} PASS / ${fail} FAIL ${fail===0?'— ALL PASS ★':'— 배포 금지, 위 ✗ 항목 수정 필요'} ════`);
