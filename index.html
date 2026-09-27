@@ -537,7 +537,7 @@ try{ if(localStorage.getItem('qcockpit_hadUser')==='1') document.documentElement
 </div>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.103.7</span></h1></div>
+    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.103.8</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -1646,7 +1646,7 @@ if(/^\/paper\/?$/.test(location.pathname)){
   <footer>
     <strong>JK 퀀트</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.103.7</b> · 2026-09-26</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.103.8</b> · 2026-09-27</div>
   </footer>
 </div>
 
@@ -7776,6 +7776,44 @@ function paperFormMemoRead(){
   try{ const v=JSON.parse(localStorage.getItem(paperFormMemoKey())||'null'); return v&&typeof v==='object'?v:{}; }
   catch(e){ return {}; }
 }
+/* 새 모의 세션도 성과 상단의 공통 원화 원금/적립액을 그대로 물려받는다.
+   시작일만 맞추고 factory 기본값($10,000 등)을 두면 새 세션이 1일·1거래짜리 다른 출발선으로 보인다. */
+function paperCommonWonValues(){
+  const pc=(S&&S.paperCommon)||{}, memo=paperFormMemoRead();
+  return {
+    capitalWon:(+pc.capitalWon>0)?+pc.capitalWon:((+memo.capitalWon>0)?+memo.capitalWon:PAPER_DEFAULT_CAPITAL_WON),
+    addWon:(+pc.addWon>0)?+pc.addWon:((+memo.addWon>0)?+memo.addWon:PAPER_DEFAULT_ADD_WON)
+  };
+}
+function paperSeedCommonAmounts(tab, sess, rate, common){
+  if(!sess||!sess.settings) return false;
+  const st=sess.settings, R=+rate||1, v=common||paperCommonWonValues();
+  const cf=paperCapField(tab,st), af=paperAddField(tab,st);
+  let touched=false;
+  if(cf && +v.capitalWon>0){ st[cf]=wonToSess(+v.capitalWon,st,R); touched=true; }
+  if(af && +v.addWon>0){ applyPaperAdd(tab,st,+v.addWon,R); touched=true; }
+  if(touched) sess.paperFxRate=isKrwSt(st)?1:R;
+  return touched;
+}
+async function paperSeedNewSession(tab, sess, start){
+  if(!sess||!sess.settings) return true;
+  let R=1;
+  if(!isKrwSt(sess.settings)){
+    const peer=paperSessions().map(([,x])=>x)
+      .find(x=>x&&x.simStart===start&&!isKrwSt(x.settings||{})&&(+x.paperFxRate>0));
+    R=peer?+peer.paperFxRate:0;
+    if(!(R>0)){
+      const fx=await fxAt(start);
+      if(fx&&+fx.rate>0) R=+fx.rate;
+    }
+    if(!(R>0)){
+      alert(start+' 환율을 불러오지 못해 모의 세션을 만들지 않았습니다.\n잠시 후 다시 시도해 주세요.');
+      return false;
+    }
+  }
+  paperSeedCommonAmounts(tab,sess,R);
+  return true;
+}
 function paperRememberForm(){
   try{
     const c=$('p_capital'), a=$('p_addamt'), d=$('p_simstart');
@@ -9299,7 +9337,10 @@ async function createSess(){
     s.settings={...defInfSettings(),...cp};
   }
   const pp=$('sess_paper'); if(pp&&pp.checked){ s.paper=true;
-    const sd=$('sess_simstart'); s.simStart=(sd&&sd.value)||paperPreferredSimStart(); }
+    const sd=$('sess_simstart'); s.simStart=(sd&&sd.value)||paperPreferredSimStart();
+    // 모의 성과의 출발선(시작일 + 원화 원금/적립액)을 세션 생성 순간부터 맞춘다.
+    if(!(await paperSeedNewSession(S.activeTab,s,s.simStart))) return;
+  }
   s.kis=kisOwner && !!($('sess_kis')&&$('sess_kis').checked);
   box.sessions.push(s);box.active=s.id;saveLocal();
   const cloudSave=pushRemoteNow();
