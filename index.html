@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="theme-color" content="#0f1320">
 <title>JK 퀀트 — 무한매수법 · 밸류리밸런싱</title>
+<script src="/plan-session-engine.js"></script>
 <style>
 :root{
   --bg:#0f1320;--panel:#171c2e;--panel2:#1e2540;--line:#2a3354;
@@ -537,7 +538,7 @@ try{ if(localStorage.getItem('qcockpit_hadUser')==='1') document.documentElement
 </div>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.103.9</span></h1></div>
+    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.104.0</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -1646,7 +1647,7 @@ if(/^\/paper\/?$/.test(location.pathname)){
   <footer>
     <strong>JK 퀀트</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.103.9</b> · 2026-09-28</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.104.0</b> · 2026-09-28</div>
   </footer>
 </div>
 
@@ -2190,7 +2191,7 @@ function freshState(){
   const asapS=newAsapSession('내 계좌');
   const dcaS=newDcaSession('내 계좌');
   const ivsS=newIvsSession('내 계좌');
-  return {activeTab:'inf',_infDefaultsPolicyVer:INF_DEFAULTS_POLICY_VER,paperCommon:{},inf:{sessions:[infS],active:infS.id},vr:{sessions:[vrS],active:vrS.id},ma:{sessions:[maS],active:maS.id},dca:{sessions:[dcaS],active:dcaS.id},asap:{sessions:[asapS],active:asapS.id},ivs:{sessions:[ivsS],active:ivsS.id}};
+  return {activeTab:'inf',_infDefaultsPolicyVer:INF_DEFAULTS_POLICY_VER,paperCommon:{},inf:{sessions:[infS],active:infS.id},vr:{sessions:[vrS],active:vrS.id},ma:{sessions:[maS],active:maS.id},dca:{sessions:[dcaS],active:dcaS.id},asap:{sessions:[asapS],active:asapS.id},ivs:{sessions:[ivsS],active:ivsS.id},plan:{sessions:[],activeByHorizon:{}}};
 }
 let curUid=null;           // 로그인한 사용자 uid
 function lsKey(){return curUid?('qcockpit_v2_'+curUid):'qcockpit_v2_guest'}
@@ -2202,9 +2203,14 @@ function ensureMaBox(){ if(S&&(!S.ma||!S.ma.sessions||!S.ma.sessions.length)){ c
 function ensureAsapBox(){ if(S&&(!S.asap||!S.asap.sessions||!S.asap.sessions.length)){ const a=newAsapSession('내 계좌'); S.asap={sessions:[a],active:a.id}; } }
 // 적립(DCA) 탭 마이그레이션: 기존 상태에 dca 박스 추가 (기존 데이터 보존).
 function ensureDcaBox(){ if(S&&(!S.dca||!S.dca.sessions||!S.dca.sessions.length)){ const d=newDcaSession('내 계좌'); S.dca={sessions:[d],active:d.id}; } }
+function ensurePlanBox(){
+  if(!S)return;
+  if(!S.plan||!Array.isArray(S.plan.sessions))S.plan={sessions:[],activeByHorizon:{}};
+  if(!S.plan.activeByHorizon||typeof S.plan.activeByHorizon!=='object')S.plan.activeByHorizon={};
+}
 // S를 통째로 갈아끼우는 모든 경로(load·pullRemote·importJSON)에서 반드시 호출한다.
 // 하나라도 빠뜨리면 그 경로로 들어온 사용자는 해당 탭의 박스가 undefined라 curStrat()이 터진다.
-function ensureBoxes(){ ensureMaBox(); ensureAsapBox(); ensureDcaBox(); ensureIvsBox();
+function ensureBoxes(){ ensureMaBox(); ensureAsapBox(); ensureDcaBox(); ensureIvsBox(); ensurePlanBox();
   if(S&&!S.paperCommon) S.paperCommon={};
   if(S&&S.ivs&&S.ivs.sessions) S.ivs.sessions.forEach(migrateIvsSess); }
 
@@ -7035,7 +7041,29 @@ function _paperAsap(sess, from){
 /* 모의 성과 — 전 전략의 모의 세션을 한 줄씩. "결과만 확인"용.
    compute*()가 활성 탭만 읽으므로 여기서는 기록에서 직접 투입·평가를 뽑는다. */
 const PAPER_TABS=[['inf','무한매수법'],['vr','밸류리밸런싱'],['ivs','섀넌(역분산)'],
-                  ['ma','200일선 로테'],['dca','매수적립'],['asap','ASAP']];
+                  ['ma','200일선 로테'],['dca','매수적립'],['asap','ASAP'],['plan','자산플랜']];
+const PLAN_PAPER_QUOTES={},PLAN_PAPER_CACHE={};
+async function loadPlanPaperData(force){
+  if(force)Object.keys(PLAN_PAPER_QUOTES).forEach(k=>delete PLAN_PAPER_QUOTES[k]);
+  for(const sym of ['TECL','TQQQ','SGOV'])if(!PLAN_PAPER_QUOTES[sym])PLAN_PAPER_QUOTES[sym]=await fetchDaily(sym);
+  return PLAN_PAPER_QUOTES;
+}
+function replayPlanPaper(sess){
+  if(!window.JKPlanSessionEngine||!sess||!sess.settings)return null;
+  const T=PLAN_PAPER_QUOTES.TECL,Q=PLAN_PAPER_QUOTES.TQQQ,G=PLAN_PAPER_QUOTES.SGOV;
+  if(!T||!Q||!G)return null;
+  const R=window.JKPlanSessionEngine.replay({horizon:+sess.horizon||+sess.settings.horizon||5,startDate:sess.simStart,endDate:simCutoff('usd'),
+    principal:+sess.settings.startCapital||+sess.settings.principal||0,monthlyAdd:+sess.settings.monthlyAdd||0,
+    tecl:T.days,tqqq:Q.days,sgov:G.days,teclDiv:T.dividends,tqqqDiv:Q.dividends,sgovDiv:G.dividends});
+  PLAN_PAPER_CACHE[sess.id]=R;return R;
+}
+function paperStatPlan(sess){
+  const R=PLAN_PAPER_CACHE[sess&&sess.id],z=R&&R.stats;if(!z)return null;
+  const st=sess.settings||{},base=Math.max(1,z.inflow),inflowWon=paperInflowWon('plan',sess,base);
+  return {tab:'plan',id:sess.id,name:sess.name,opts:paperOpts('plan',{...st,horizon:+sess.horizon||+st.horizon||5}),sym:'TECL/TQQQ/SGOV',cur:curOf(st),
+    from:z.from,to:z.to,yrs:z.yrs,spanDays:z.spanDays,inflow:base,inflowWon,total:z.total,ret:z.ret,retNow:z.ret,retOut:0,
+    cagr:z.cagr,nTrade:z.nTrade,price:1,out:null,mdd:{pct:z.mdd,nDay:z.nDay}};
+}
 /* 한 세션의 성과. 전략마다 자산 구조가 달라(VR의 초기투입, 적립의 현금 없음 …)
    여기서 장부를 다시 걸으면 반드시 어긋난다 — 실제로 밸류·적립이 틀렸다.
    그래서 탭·세션을 잠깐 그 전략으로 옮겨 그 탭의 compute를 그대로 부른다.
@@ -7488,10 +7516,15 @@ function paperOpts(tab, st){
     bits.push(`base ${amt(S0.base!=null?S0.base:10)}`,
               `mid ${amt(S0.mid!=null?S0.mid:50)}`,
               `deep ${amt(S0.deep!=null?S0.deep:100)}`);
+  }else if(tab==='plan'){
+    const H={5:'역분산+Guard',10:'추세+폭락매수',15:'Shannon 60:40',20:'Dual Momentum'},y=+S0.horizon||5;
+    bits.push(`${y}년 ${H[y]||'자산플랜'}`);
+    if(+S0.monthlyAdd>0)bits.push(`월 ${amt(S0.monthlyAdd)}`);else bits.push('목돈');
   }
   return bits;
 }
 function paperStat(tab, sess){
+  if(tab==='plan')return paperStatPlan(sess);
   const h=sess.hist||[]; if(!h.length) return null;
   const box=S[tab]; if(!box) return null;
   const prevTab=S.activeTab, prevAct=box.active;
@@ -7561,6 +7594,13 @@ async function paperFillAll(){
       if(!targets.length) continue;
       const prevAct=box.active;
       for(const sess of targets){
+        if(tab==='plan'){
+          try{
+            await loadPlanPaperData(false);replayPlanPaper(sess);
+            const r=paperStatPlan(sess);if(r){r.label=label;rows.push(r);}
+          }catch(e){console.error('paperFill',tab,e);}
+          continue;
+        }
         S.activeTab=tab; box.active=sess.id;
         try{
           const want=String((sess.settings&&sess.settings.ticker)||'').toUpperCase();
@@ -7749,6 +7789,7 @@ function paperMinDate(){ const d=new Date(); d.setFullYear(d.getFullYear()-PAPER
 /* 전략마다 '금액'의 뜻이 다르다. 원금(한 번에 넣는 총액)과 같은 뜻인 칸에만 넣는다.
    적립식 amount·ASAP base는 '1회 적립액'이라 원금 칸에서는 건드리지 않는다. */
 function paperCapField(tab, st){
+  if(tab==='plan') return 'startCapital';
   if(tab==='inf'||tab==='ma'||tab==='ivs') return 'principal';
   if(tab==='vr') return 'initAmt';
   if(tab==='dca') return (st&&st.mode==='lump') ? 'amount' : null;   // 거치식만 원금이다
@@ -7757,6 +7798,7 @@ function paperCapField(tab, st){
 /* 적립식의 amount와 ASAP의 base는 '1회 적립액'이다.
    ASAP은 전체 적용 시 base=1배, mid=2배, deep=3배로 함께 맞춘다. */
 function paperAddField(tab, st){
+  if(tab==='plan') return 'monthlyAdd';
   if(tab==='dca') return (st&&st.mode==='lump') ? null : 'amount';
   if(tab==='asap') return 'base';
   return null;
@@ -8098,6 +8140,10 @@ window.addEventListener('popstate', ()=>{ const on=/^\/paper\/?$/.test(location.
    switchSess가 서브탭을 '현재'로 되돌리므로 거래이력 열기는 반드시 그 뒤여야 한다.
    서브탭은 id가 탭마다 다르다(inf-rec·ma-hist…) — 이름으로 찾아 규칙이 바뀌어도 안 깨지게 한다. */
 function gotoSess(tab, id){
+  if(tab==='plan'){
+    const box=S.plan,x=box&&box.sessions&&box.sessions.find(s=>s.id===id);if(!x)return;
+    location.href='/plan?session='+encodeURIComponent(id)+'&horizon='+encodeURIComponent(x.horizon||5);return;
+  }
   const box=S[tab]; if(!box||!box.sessions) return;
   if(!box.sessions.some(x=>x.id===id)) return;
   closePaper();

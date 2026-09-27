@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="theme-color" content="#0f1320">
 <title>JK 퀀트 — 자산플랜</title>
+<script src="/plan-session-engine.js"></script>
 <style>
 :root{
   --bg:#0f1320;--surf:#171c2e;--surf2:#1e2540;--border:#2a3354;--border2:#34406a;
@@ -187,12 +188,28 @@ th:first-child,td:first-child{text-align:left}
   .wrap{padding:14px 10px 55px}.top{align-items:flex-start}.userbadge span{display:none}.grid4{grid-template-columns:1fr}.guidegrid{grid-template-columns:1fr}
   .steps{grid-template-columns:1fr}.alloc-row{grid-template-columns:125px 1fr 46px}.stage-title{font-size:20px}.ledger-summary{grid-template-columns:1fr}.ledger-form{grid-template-columns:1fr}.sessionbar{grid-template-columns:1fr}
 }
+/* 자산플랜 세션 */
+.asset-session-card{padding:12px 14px}.asset-session-head{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.asset-session-chips{display:flex;gap:7px;overflow-x:auto;margin-top:10px;padding-bottom:2px}
+.asset-session-chip{flex:0 0 auto;border:1px solid var(--border2);background:var(--surf2);color:var(--dim);border-radius:999px;padding:8px 11px;font-weight:800;font-size:11px}
+.asset-session-chip.on{background:var(--accent);border-color:var(--accent);color:#fff}
+.asset-session-chip .paper{color:var(--gold);margin-left:4px}.asset-session-chip .x{color:var(--red);margin-left:7px;font-weight:900}
+.asset-session-state{font-size:10.5px;color:var(--dim);margin-top:7px}.asset-session-state.paper{color:var(--gold)}
+.asset-session-modal{position:fixed;inset:0;z-index:500;background:rgba(0,0,0,.68);display:flex;align-items:center;justify-content:center;padding:16px}
+.asset-session-modal[hidden]{display:none}.asset-session-modal .box{width:min(500px,100%);background:var(--surf);border:1px solid var(--border2);border-radius:13px;padding:16px;box-shadow:0 20px 60px rgba(0,0,0,.5)}
+.asset-session-modal .grid{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:12px}
+.asset-session-paper{margin-top:8px;padding:9px 10px;border:1px solid rgba(245,196,81,.25);border-radius:9px;background:rgba(245,196,81,.05)}
+.asset-session-paper-result{margin:10px 0 0;padding:10px;border:1px solid var(--border2);border-radius:9px;background:rgba(139,140,240,.05)}
+.asset-session-paper-result .kpis{margin-top:7px}
+body.asset-paper-mode #alphaRecordFill,body.asset-paper-mode #alphaCashRec,body.asset-paper-mode #alphaResetSection{display:none!important}
+body.asset-paper-mode .ledger-del{display:none!important}
+@media(max-width:480px){.asset-session-modal .grid{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
 <div class="wrap">
   <div class="top">
-    <div class="brand"><div class="logo">Asset Plan</div><h1>자산플랜 <span class="ver">v1.36.2</span></h1></div>
+    <div class="brand"><div class="logo">Asset Plan</div><h1>자산플랜 <span class="ver">v1.37.0</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
       <div class="jkmenu" id="jkmenuWrap">
@@ -232,6 +249,16 @@ th:first-child,td:first-child{text-align:left}
     <button class="horizon-tab" data-horizon="15">15년</button>
     <button class="horizon-tab" data-horizon="20">20년</button>
   </nav>
+
+  <section class="card asset-session-card" id="assetSessionCard">
+    <div class="asset-session-head">
+      <div><h2 style="margin-bottom:2px">세션</h2><div class="sub">전략별로 계좌를 따로 운영할 수 있습니다. 모의 세션은 실제 장부와 분리되고 모의투자 성과에 함께 표시됩니다.</div></div>
+      <button class="btn primary" id="assetSessionAdd">+ 세션</button>
+    </div>
+    <div class="asset-session-chips" id="assetSessionChips"></div>
+    <div class="asset-session-state" id="assetSessionState">현재 투자중 플랜</div>
+    <div class="asset-session-paper-result" id="assetPaperResult" hidden></div>
+  </section>
 
   <div class="plan-panel on" data-ppanel="alpha">
     <div class="guidehero">
@@ -674,6 +701,24 @@ th:first-child,td:first-child{text-align:left}
   </section>
 </div>
 
+<div class="asset-session-modal" id="assetSessionModal" hidden>
+  <div class="box">
+    <div class="asset-session-head">
+      <div><h2 style="margin-bottom:2px">자산플랜 세션 추가</h2><div class="sub" id="assetSessionModalStrategy">현재 전략을 새 세션으로 만듭니다.</div></div>
+      <button class="btn" id="assetSessionClose">닫기</button>
+    </div>
+    <div class="grid">
+      <div class="field" style="grid-column:1/-1"><label>세션 이름</label><input id="assetSessionName" type="text"></div>
+      <div class="field"><label>시작자산 ($)</label><input id="assetSessionCapital" type="number" min="1" step="100"></div>
+      <div class="field"><label>월 추가 투자 ($)</label><input id="assetSessionMonthly" type="number" min="0" step="10"></div>
+      <div class="field"><label>목표자산 ($)</label><input id="assetSessionTarget" type="number" min="1" step="100"></div>
+      <div class="field"><label>세션 종류</label><select id="assetSessionKind"><option value="live">운영 세션</option><option value="paper">모의투자 세션</option></select></div>
+      <div class="field" id="assetSessionStartWrap"><label>모의 시작일</label><input id="assetSessionStart" type="date"></div>
+    </div>
+    <div class="asset-session-paper" id="assetSessionPaperNote">운영 세션은 실제 체결을 직접 기록합니다. 모의투자 세션은 과거 시세로 자동 재생하며 실제 거래이력을 변경하지 않습니다.</div>
+    <div class="btnrow"><button class="btn primary" id="assetSessionCreate">세션 만들기</button><button class="btn" id="assetSessionCancel">취소</button></div>
+  </div>
+</div>
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-app.js";
 import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-auth.js";
@@ -746,16 +791,17 @@ function renderHorizonCopy(){
     if($('alphaValidation'))$('alphaValidation').innerHTML='<b>20년 백테스트 최적값:</b> 9M×30% + 12M×70% · 12M 양수 필터 · 승자 40% / SGOV 60%.<span class="sub">실제 레버리지 ETF 이력이 20년에 못 미쳐 12개월 블록 부트스트랩 160경로×20년으로 보강했습니다. 안전자산 0%/4% 민감도에서 20년 CAGR 하위10% 6.1~9.0%, 중앙 13.4~16.4%, MDD 하위10% -46.6~-40.4%. 실제 가용구간 CAGR 14.4~17.3%, MDD -30.5~-27.2%.</span><span class="sub">독립 재현(주문 규칙 그대로 · 2010-03-12~2026-07-10 · 안전자산 0%/4%): CAGR 12.6~15.5% · MDD −37.5~−39.2% (2020-03 코로나) — 위 실제 가용구간 수치는 재현되지 않았습니다. 1999년부터 만든 합성 3배 자료로 20년 창 81개: CAGR 최악 4.3% · MDD 최악 −39.6% (긴 하락장에서도 버팁니다).</span>';
   }
 }
-function setHorizon(years,refresh=true){
+async function setHorizon(years,refresh=true){
   const y=[5,10,15,20].includes(Number(years))?Number(years):5;
+  const cur=activeAssetSession();if(cur&&!cur.paper)syncActiveAssetSessionFromView();else if(!cur)localSave();
   if(y!==activeHorizon)horizonRebalancePending=true;
   activeHorizon=y;
   try{localStorage.setItem('jkq_plan_horizon',String(y));}catch(e){}
+  await loadActiveAssetSessionView(false);
   const base=$('startDate')&&$('startDate').value?$('startDate').value:todayISO();
   if($('targetDate'))$('targetDate').value=plusYears(base,y);
-  render();
-  refreshAlphaFromCache();
-  if(refresh)refreshLive();
+  renderAssetSessions();render();refreshAlphaFromCache();
+  if(refresh)await refreshLive();
 }
 
 
@@ -818,6 +864,175 @@ function ensureLiveBoxes(){
   if(!Array.isArray(liveState.inf.sessions))liveState.inf.sessions=[];
   if(!liveState.vr)liveState.vr={sessions:[],active:null};
   if(!Array.isArray(liveState.vr.sessions))liveState.vr.sessions=[];
+  if(!liveState.plan)liveState.plan={sessions:[],activeByHorizon:{}};
+  if(!Array.isArray(liveState.plan.sessions))liveState.plan.sessions=[];
+  if(!liveState.plan.activeByHorizon||typeof liveState.plan.activeByHorizon!=='object')liveState.plan.activeByHorizon={};
+}
+/* ── 자산플랜 세션 ─────────────────────────────────────────────
+   현재 투자중 플랜은 기존 fiveYearPlan 저장소를 그대로 쓴다.
+   추가 세션은 운영 state.plan에 따로 저장해 실제 장부와 섞이지 않게 한다. */
+const assetPaperCache={};
+const requestedAssetSessionId=(()=>{try{return new URLSearchParams(location.search).get('session')||'';}catch(e){return '';}})();
+function assetPlanBox(){ensureLiveBoxes();return liveState.plan;}
+function assetSessionList(h=activeHorizon){return assetPlanBox().sessions.filter(x=>x&&+x.horizon===+h);}
+function activeAssetSession(){
+  const b=assetPlanBox(),id=String((b.activeByHorizon||{})[activeHorizon]||'');
+  return b.sessions.find(x=>x.id===id&&+x.horizon===+activeHorizon)||null;
+}
+function assetPaperMode(){const x=activeAssetSession();return !!(x&&x.paper);}
+function cloneObj(v){return JSON.parse(JSON.stringify(v));}
+function assetLedgerSeed(date,cap){
+  return {base:{date:date||todayISO(),tecl:0,tqqq:0,sgov:0,cash:+cap||0,avgTecl:null,avgTqqq:null,avgSgov:null},events:[],feeModel:'toss-us-0.1-v1'};
+}
+function assetSessionSettingsFromView(capOverride){
+  const cap=capOverride!=null?+capOverride:Math.max(1,num('startCapital',20000));
+  return {ticker:'PLAN5',horizon:activeHorizon,startCapital:cap,targetCapital:Math.max(1,num('targetCapital',150000)),monthlyAdd:Math.max(0,num('monthlyAdd',0)),
+    targetIncome:Math.max(0,num('targetIncome',0)),stageMode:String($('stageMode').value||'auto'),
+    startDate:String($('startDate').value||todayISO()),targetDate:String($('targetDate').value||plusYears(todayISO(),activeHorizon)),
+    engine:'asset-plan-v1'};
+}
+function writeAssetSessionLocal(){
+  if(!liveState)return;
+  const ts=Date.now();liveState._updated=ts;
+  const key=auth.currentUser?'qcockpit_v2_'+auth.currentUser.uid:'qcockpit_v2_guest';
+  try{localStorage.setItem(key,JSON.stringify(liveState));}catch(e){}
+}
+function syncActiveAssetSessionFromView(){
+  const x=activeAssetSession();if(!x||x.paper)return false;
+  x.settings=assetSessionSettingsFromView();
+  x.ledger=cloneObj(alphaLedger);
+  x.updatedAt=Date.now();writeAssetSessionLocal();return true;
+}
+function applyAssetSettings(x){
+  const st=(x&&x.settings)||{};
+  $('startCapital').value=Math.max(1,+st.startCapital||20000);
+  $('targetCapital').value=Math.max(1,+st.targetCapital||150000);
+  $('monthlyAdd').value=Math.max(0,+st.monthlyAdd||0);
+  $('targetIncome').value=Math.max(0,+st.targetIncome||0);
+  $('stageMode').value=st.stageMode||'auto';
+  const sd=x&&x.paper?x.simStart:(st.startDate||todayISO());
+  $('startDate').value=sd||todayISO();
+  $('targetDate').value=plusYears($('startDate').value||todayISO(),activeHorizon);
+}
+function restoreCurrentPlanView(){
+  let saved=null;try{saved=JSON.parse(localStorage.getItem(KEY)||'null');}catch(e){}
+  apply(saved||defaults());
+  document.body.classList.remove('asset-paper-mode');
+  const pr=$('assetPaperResult');if(pr){pr.hidden=true;pr.innerHTML='';}
+}
+function assetPaperStatsHtml(x,R){
+  const z=R&&R.stats;if(!z)return '<div class="sub">모의 성과를 계산할 수 없습니다.</div>';
+  const col=z.ret>=0?'var(--green)':'var(--red)';
+  return '<div class="asset-session-head"><div><b>'+String(x.name||'모의 세션').replace(/</g,'&lt;')+'</b><div class="sub">'+z.from+' ~ '+z.to+' · 자동 재생 결과</div></div><a class="btn" href="/paper" style="text-decoration:none">모의투자 성과에서 비교</a></div>'+
+    '<div class="kpis"><div class="kpi"><div class="k">평가액</div><div class="v">'+usd2(z.total)+'</div></div>'+
+    '<div class="kpi"><div class="k">최종 수익률</div><div class="v" style="color:'+col+'">'+(z.ret>=0?'+':'')+z.ret.toFixed(1)+'%</div></div>'+
+    '<div class="kpi"><div class="k">MDD</div><div class="v" style="color:var(--red)">-'+z.mdd.toFixed(1)+'%</div></div>'+
+    '<div class="kpi"><div class="k">CAGR</div><div class="v">'+(z.cagr>=0?'+':'')+z.cagr.toFixed(1)+'%</div></div></div>';
+}
+async function replayAssetPaperSession(x,applyView){
+  if(!x||!x.paper||!window.JKPlanSessionEngine)return null;
+  try{
+    liveQuotes={};
+    const a=await Promise.all([fetchPlanQuote('TECL'),fetchPlanQuote('TQQQ'),fetchPlanQuote('SGOV')]),t=a[0],q=a[1],g=a[2];
+    const end=[t.settled.date,q.settled.date,g.settled.date].sort()[0];
+    const R=window.JKPlanSessionEngine.replay({horizon:+x.horizon,startDate:x.simStart,endDate:end,
+      principal:+x.settings.startCapital||0,monthlyAdd:+x.settings.monthlyAdd||0,
+      tecl:t.rows,tqqq:q.rows,sgov:g.rows,teclDiv:t.dividends,tqqqDiv:q.dividends,sgovDiv:g.dividends});
+    assetPaperCache[x.id]=R;
+    if(applyView){
+      applyAssetSettings(x);
+      alphaLedger=cloneObj(R.ledger||assetLedgerSeed(x.simStart,+x.settings.startCapital||0));
+      alphaSyncInputs();document.body.classList.add('asset-paper-mode');
+      const pr=$('assetPaperResult');if(pr){pr.hidden=false;pr.innerHTML=assetPaperStatsHtml(x,R);}
+      renderAlphaLedger();render();refreshAlphaFromCache();
+    }
+    return R;
+  }catch(e){
+    console.error('asset paper replay',e);
+    const pr=$('assetPaperResult');if(pr){pr.hidden=false;pr.innerHTML='<div class="sub" style="color:var(--gold)">모의 재생 실패 · '+String(e&&e.message||e).replace(/</g,'&lt;')+'</div>';}
+    return null;
+  }
+}
+function renderAssetSessions(){
+  const b=assetPlanBox(),box=$('assetSessionChips'),st=$('assetSessionState');if(!box)return;
+  const list=assetSessionList(),active=activeAssetSession();
+  let h='<button class="asset-session-chip '+(!active?'on':'')+'" data-asess="">현재 투자중</button>';
+  for(const x of list){
+    h+='<button class="asset-session-chip '+(active&&active.id===x.id?'on':'')+'" data-asess="'+String(x.id).replace(/"/g,'&quot;')+'">'+
+      String(x.name||'세션').replace(/</g,'&lt;')+(x.paper?' <span class="paper">모의</span>':'')+
+      '<span class="x" data-asess-del="'+String(x.id).replace(/"/g,'&quot;')+'">×</span></button>';
+  }
+  box.innerHTML=h;
+  if(st){
+    if(!active){st.className='asset-session-state';st.textContent='현재 투자중 · '+horizonStrategy().name;}
+    else if(active.paper){st.className='asset-session-state paper';st.textContent='모의투자 · '+active.simStart+' 시작 · '+horizonStrategy().name;}
+    else{st.className='asset-session-state';st.textContent='운영 세션 · '+horizonStrategy().name;}
+  }
+}
+async function loadActiveAssetSessionView(refresh=true){
+  const x=activeAssetSession();
+  if(!x){
+    restoreCurrentPlanView();renderAssetSessions();render();if(refresh)await refreshLive();return;
+  }
+  applyAssetSettings(x);
+  if(x.paper){
+    renderAssetSessions();await replayAssetPaperSession(x,true);if(refresh)await refreshLive();return;
+  }
+  alphaLedger=cloneObj(x.ledger||assetLedgerSeed((x.settings&&x.settings.startDate)||todayISO(),+(x.settings&&x.settings.startCapital)||20000));
+  alphaSyncInputs();document.body.classList.remove('asset-paper-mode');
+  const pr=$('assetPaperResult');if(pr){pr.hidden=true;pr.innerHTML='';}
+  renderAssetSessions();renderAlphaLedger();render();refreshAlphaFromCache();if(refresh)await refreshLive();
+}
+async function selectAssetSession(id){
+  const cur=activeAssetSession();
+  if(cur&&!cur.paper)syncActiveAssetSessionFromView();
+  else if(!cur)localSave();
+  const b=assetPlanBox();b.activeByHorizon[activeHorizon]=id||'';writeAssetSessionLocal();
+  await loadActiveAssetSessionView(true);
+}
+function openAssetSessionModal(){
+  const list=assetSessionList();
+  $('assetSessionName').value=activeHorizon+'년 세션 '+(list.length+1);
+  $('assetSessionCapital').value=Math.max(1,num('startCapital',20000));
+  $('assetSessionMonthly').value=Math.max(0,num('monthlyAdd',0));
+  $('assetSessionTarget').value=Math.max(1,num('targetCapital',150000));
+  $('assetSessionKind').value='live';
+  const min=new Date();min.setFullYear(min.getFullYear()-3);
+  $('assetSessionStart').min=min.toISOString().slice(0,10);$('assetSessionStart').max=todayISO();$('assetSessionStart').value=$('startDate').value||todayISO();
+  $('assetSessionStartWrap').style.display='none';
+  $('assetSessionModalStrategy').textContent=horizonStrategy().name;
+  $('assetSessionModal').hidden=false;
+}
+function closeAssetSessionModal(){$('assetSessionModal').hidden=true;}
+async function assetFxAt(date){
+  try{const r=await fetch('/api/fx?date='+encodeURIComponent(date),{headers:{Accept:'application/json'}});if(r.ok){const j=await r.json();if(j&&+j.rate>0)return +j.rate;}}catch(e){}
+  return 0;
+}
+async function createAssetSession(){
+  ensureLiveBoxes();
+  const paper=$('assetSessionKind').value==='paper',name=$('assetSessionName').value.trim()||activeHorizon+'년 세션';
+  const cap=+$('assetSessionCapital').value||0,monthly=Math.max(0,+$('assetSessionMonthly').value||0),target=+$('assetSessionTarget').value||0;
+  const start=paper?$('assetSessionStart').value:todayISO();
+  if(!(cap>0)||!(target>0)){alert('시작자산과 목표자산을 확인하세요.');return;}
+  if(paper&&(!start||start<$('assetSessionStart').min||start>todayISO())){alert('모의 시작일은 최근 3년 안에서 골라주세요.');return;}
+  const id=planSid('ap'),fx=paper?await assetFxAt(start):0;
+  if(paper&&!(fx>0)){alert('모의 시작일의 USD/KRW 환율을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.');return;}
+  const settings=assetSessionSettingsFromView(cap);settings.monthlyAdd=monthly;settings.targetCapital=target;settings.startDate=start;settings.targetDate=plusYears(start,activeHorizon);
+  const x={id,name,horizon:activeHorizon,paper,simStart:paper?start:'',paperFxRate:fx||0,createdAt:Date.now(),settings,
+    ledger:paper?null:assetLedgerSeed(start,cap)};
+  assetPlanBox().sessions.push(x);assetPlanBox().activeByHorizon[activeHorizon]=id;
+  await saveOperatingState();closeAssetSessionModal();renderAssetSessions();await loadActiveAssetSessionView(true);
+}
+async function deleteAssetSession(id){
+  const b=assetPlanBox(),x=b.sessions.find(s=>s.id===id);if(!x)return;
+  if(!confirm("'"+(x.name||'세션')+"'을 삭제할까요?\n현재 투자중 플랜과 다른 세션은 그대로입니다."))return;
+  b.sessions=b.sessions.filter(s=>s.id!==id);if(String(b.activeByHorizon[+x.horizon]||'')===id)b.activeByHorizon[+x.horizon]='';
+  delete assetPaperCache[id];writeAssetSessionLocal();await saveOperatingState();restoreCurrentPlanView();renderAssetSessions();render();await refreshLive();
+}
+function guardAssetPaperEdit(){
+  if(!assetPaperMode())return false;
+  alert('모의투자 세션의 거래이력은 과거 시세로 자동 생성됩니다. 직접 수정하지 않습니다.');
+  return true;
 }
 /* 운영화면과 같은 1회성 무매 설정 마이그레이션 마커를 공유한다.
    기존 계정/브라우저에 남은 큰수·리버스 gap·하방 LOC 줄 수를 20/0/3으로 한 번 맞춘다. */
@@ -1839,7 +2054,7 @@ async function loadOperatingState(user){
   else{liveState=null;liveStateSource='운영데이터 없음';}
   ensureLiveBoxes();
   if(migrateLiveInfOperatingDefaults())await saveOperatingState();
-  renderSessionSelectors();
+  renderSessionSelectors();renderAssetSessions();
 }
 async function refreshLive(){
   if(liveBusy)return;liveBusy=true;$('liveRefresh').disabled=true;$('liveSync').textContent='운영데이터와 확정 일봉을 읽는 중…';liveQuotes={};
@@ -1957,6 +2172,12 @@ function apply(o){
   alphaSyncInputs();
 }
 function localSave(){
+  const x=activeAssetSession();
+  if(x){
+    if(!x.paper)syncActiveAssetSessionFromView();
+    if($("saveState"))$("saveState").textContent=(x.paper?"모의 세션 자동 재생":"세션 브라우저 저장 완료")+" · "+new Date().toLocaleTimeString("ko-KR",{hour:"2-digit",minute:"2-digit"});
+    return;
+  }
   try{localStorage.setItem(KEY,JSON.stringify(readForm()));$("saveState").textContent="브라우저 저장 완료 · "+new Date().toLocaleTimeString("ko-KR",{hour:"2-digit",minute:"2-digit"});}catch(e){}
 }
 function alphaEventList(ledger=alphaLedger){
@@ -2259,6 +2480,13 @@ function seed(){
   $("balMM").value=Math.round(total*.33);$("balVR").value=Math.round(total*.33);$("balQLD").value=Math.round(total*.17);$("balSGOV").value=Math.round(total*.17);render();
 }
 async function cloudSave(){
+  const x=activeAssetSession();
+  if(x){
+    if(!x.paper)syncActiveAssetSessionFromView();
+    await saveOperatingState();
+    $("saveState").textContent=x.paper?"모의 세션 저장 완료":"세션 계정 + 브라우저 저장 완료";
+    return;
+  }
   localSave();
   if(!auth.currentUser){$("saveState").textContent="브라우저 저장 완료 · 로그인하면 계정에도 저장";return;}
   try{await setDoc(doc(db,"users",auth.currentUser.uid),{fiveYearPlan:readForm()},{merge:true});$("saveState").textContent="계정 + 브라우저 저장 완료";}catch(e){$("saveState").textContent="브라우저 저장 완료 · 계정 저장 실패";}
@@ -2298,15 +2526,25 @@ if(saved && Number(saved.startCapital)===30000 && Number(saved.aCash)===30000
    && !(Number(saved.aTeclQty)>0) && !(Number(saved.aTqqqQty)>0) && !(Number(saved.aSgovQty)>0)){
   saved.startCapital=20000;saved.aCash=20000;
 }
-apply(saved||d);$("slDate").value=todayISO();renderSessionSelectors();renderLedger();renderAlphaLedger();render();
+apply(saved||d);$("slDate").value=todayISO();renderSessionSelectors();renderLedger();renderAlphaLedger();render();renderAssetSessions();
 ["startDate","targetDate","startCapital","targetCapital","monthlyAdd","targetIncome","stageMode","balMM","balVR","balQLD","balSGOV","cagrLow","cagrBase","cagrHigh","incomeBasis","incomeYield","sgovYield","extraWithdraw"].forEach(id=>$(id).addEventListener("change",render));
+$("assetSessionAdd").addEventListener("click",openAssetSessionModal);
+$("assetSessionClose").addEventListener("click",closeAssetSessionModal);
+$("assetSessionCancel").addEventListener("click",closeAssetSessionModal);
+$("assetSessionCreate").addEventListener("click",createAssetSession);
+$("assetSessionKind").addEventListener("change",()=>{$("assetSessionStartWrap").style.display=$("assetSessionKind").value==='paper'?'':'none';});
+$("assetSessionModal").addEventListener("click",e=>{if(e.target===$("assetSessionModal"))closeAssetSessionModal();});
+$("assetSessionChips").addEventListener("click",e=>{
+  const d=e.target.closest("[data-asess-del]");if(d){e.stopPropagation();deleteAssetSession(d.dataset.asessDel);return;}
+  const b=e.target.closest("[data-asess]");if(b)selectAssetSession(b.dataset.asess||'');
+});
 $("alphaRecordFill").addEventListener("click",alphaOpenFillEditor);
 $("alphaCashAdd").addEventListener("click",alphaAddCashEvent);if($("alphaCashDate"))$("alphaCashDate").value=todayISO();
 $("alphaFillSave").addEventListener("click",alphaSaveFills);
 $("alphaFillCancel").addEventListener("click",alphaCloseFillEditor);
 $("alphaEditSave").addEventListener("click",alphaSaveEdit);
 $("alphaEditCancel").addEventListener("click",alphaCloseEdit);
-$("alphaLedgerBody").addEventListener("click",e=>{const bb=e.target.closest("[data-abase]");if(bb){alphaOpenBaseEdit();return;}const eb=e.target.closest("[data-aedit]");if(eb){alphaOpenEdit(eb.dataset.aedit);return;}const db=e.target.closest("[data-aeid]");if(db)alphaDeleteEvent(db.dataset.aeid);});
+$("alphaLedgerBody").addEventListener("click",e=>{if(assetPaperMode()){guardAssetPaperEdit();return;}const bb=e.target.closest("[data-abase]");if(bb){alphaOpenBaseEdit();return;}const eb=e.target.closest("[data-aedit]");if(eb){alphaOpenEdit(eb.dataset.aedit);return;}const db=e.target.closest("[data-aeid]");if(db)alphaDeleteEvent(db.dataset.aeid);});
 $("alphaCapitalInput").addEventListener("input",()=>{
   $("alphaCapitalInput").dataset.dirty='1';
 });
@@ -2343,7 +2581,19 @@ if($('targetDate'))$('targetDate').value=plusYears($('startDate').value||todayIS
 renderHorizonCopy();
 $("jkmenuBtn").addEventListener("click",e=>{e.stopPropagation();$("jkmenuPop").hidden=!$("jkmenuPop").hidden});
 document.addEventListener("click",e=>{if(!$("jkmenuWrap").contains(e.target))$("jkmenuPop").hidden=true});
-onAuthStateChanged(auth,async user=>{userBadge(user);if(user)await cloudLoad(user);await refreshLive();});
+onAuthStateChanged(auth,async user=>{
+  userBadge(user);if(user)await cloudLoad(user);await refreshLive();
+  if(requestedAssetSessionId){
+    const q=assetPlanBox().sessions.find(x=>x.id===requestedAssetSessionId);
+    if(q&&[5,10,15,20].includes(+q.horizon)){
+      activeHorizon=+q.horizon;assetPlanBox().activeByHorizon[activeHorizon]=q.id;
+      try{localStorage.setItem('jkq_plan_horizon',String(activeHorizon));}catch(e){}
+      writeAssetSessionLocal();renderHorizonCopy();
+    }
+  }
+  renderAssetSessions();
+  await loadActiveAssetSessionView(false);
+});
 </script>
 </body>
 </html>
