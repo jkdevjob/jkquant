@@ -863,6 +863,170 @@ function ensureLiveBoxes(){
   if(!Array.isArray(liveState.inf.sessions))liveState.inf.sessions=[];
   if(!liveState.vr)liveState.vr={sessions:[],active:null};
   if(!Array.isArray(liveState.vr.sessions))liveState.vr.sessions=[];
+  if(!liveState.plan)liveState.plan={sessions:[],activeByHorizon:{}};
+  if(!Array.isArray(liveState.plan.sessions))liveState.plan.sessions=[];
+  if(!liveState.plan.activeByHorizon||typeof liveState.plan.activeByHorizon!=='object')liveState.plan.activeByHorizon={};
+}
+/* ── 자산플랜 세션 ─────────────────────────────────────────────
+   현재 투자중 플랜은 기존 fiveYearPlan 저장소를 그대로 쓴다.
+   추가 세션은 운영 state.plan에 따로 저장해 실제 장부와 섞이지 않게 한다. */
+const assetPaperCache={};
+function assetPlanBox(){ensureLiveBoxes();return liveState.plan;}
+function assetSessionList(h=activeHorizon){return assetPlanBox().sessions.filter(x=>x&&+x.horizon===+h);}
+function activeAssetSession(){
+  const b=assetPlanBox(),id=String((b.activeByHorizon||{})[activeHorizon]||'');
+  return b.sessions.find(x=>x.id===id&&+x.horizon===+activeHorizon)||null;
+}
+function assetPaperMode(){const x=activeAssetSession();return !!(x&&x.paper);}
+function cloneObj(v){return JSON.parse(JSON.stringify(v));}
+function assetLedgerSeed(date,cap){
+  return {base:{date:date||todayISO(),tecl:0,tqqq:0,sgov:0,cash:+cap||0,avgTecl:null,avgTqqq:null,avgSgov:null},events:[],feeModel:'toss-us-0.1-v1'};
+}
+function assetSessionSettingsFromView(capOverride){
+  const cap=capOverride!=null?+capOverride:Math.max(1,num('startCapital',20000));
+  return {startCapital:cap,targetCapital:Math.max(1,num('targetCapital',150000)),monthlyAdd:Math.max(0,num('monthlyAdd',0)),
+    targetIncome:Math.max(0,num('targetIncome',0)),stageMode:String($('stageMode').value||'auto'),
+    startDate:String($('startDate').value||todayISO()),targetDate:String($('targetDate').value||plusYears(todayISO(),activeHorizon)),
+    engine:'asset-plan-v1'};
+}
+function writeAssetSessionLocal(){
+  if(!liveState)return;
+  const ts=Date.now();liveState._updated=ts;
+  const key=auth.currentUser?'qcockpit_v2_'+auth.currentUser.uid:'qcockpit_v2_guest';
+  try{localStorage.setItem(key,JSON.stringify(liveState));}catch(e){}
+}
+function syncActiveAssetSessionFromView(){
+  const x=activeAssetSession();if(!x||x.paper)return false;
+  x.settings=assetSessionSettingsFromView();
+  x.ledger=cloneObj(alphaLedger);
+  x.updatedAt=Date.now();writeAssetSessionLocal();return true;
+}
+function applyAssetSettings(x){
+  const st=(x&&x.settings)||{};
+  $('startCapital').value=Math.max(1,+st.startCapital||20000);
+  $('targetCapital').value=Math.max(1,+st.targetCapital||150000);
+  $('monthlyAdd').value=Math.max(0,+st.monthlyAdd||0);
+  $('targetIncome').value=Math.max(0,+st.targetIncome||0);
+  $('stageMode').value=st.stageMode||'auto';
+  const sd=x&&x.paper?x.simStart:(st.startDate||todayISO());
+  $('startDate').value=sd||todayISO();
+  $('targetDate').value=plusYears($('startDate').value||todayISO(),activeHorizon);
+}
+function restoreCurrentPlanView(){
+  let saved=null;try{saved=JSON.parse(localStorage.getItem(KEY)||'null');}catch(e){}
+  apply(saved||defaults());
+  document.body.classList.remove('asset-paper-mode');
+  const pr=$('assetPaperResult');if(pr){pr.hidden=true;pr.innerHTML='';}
+}
+function assetPaperStatsHtml(x,R){
+  const z=R&&R.stats;if(!z)return '<div class="sub">모의 성과를 계산할 수 없습니다.</div>';
+  const col=z.ret>=0?'var(--green)':'var(--red)';
+  return '<div class="asset-session-head"><div><b>'+String(x.name||'모의 세션').replace(/</g,'&lt;')+'</b><div class="sub">'+z.from+' ~ '+z.to+' · 자동 재생 결과</div></div><a class="btn" href="/paper" style="text-decoration:none">모의투자 성과에서 비교</a></div>'+
+    '<div class="kpis"><div class="kpi"><div class="k">평가액</div><div class="v">'+usd2(z.total)+'</div></div>'+
+    '<div class="kpi"><div class="k">최종 수익률</div><div class="v" style="color:'+col+'">'+(z.ret>=0?'+':'')+z.ret.toFixed(1)+'%</div></div>'+
+    '<div class="kpi"><div class="k">MDD</div><div class="v" style="color:var(--red)">-'+z.mdd.toFixed(1)+'%</div></div>'+
+    '<div class="kpi"><div class="k">CAGR</div><div class="v">'+(z.cagr>=0?'+':'')+z.cagr.toFixed(1)+'%</div></div></div>';
+}
+async function replayAssetPaperSession(x,applyView){
+  if(!x||!x.paper||!window.JKPlanSessionEngine)return null;
+  try{
+    liveQuotes={};
+    const a=await Promise.all([fetchPlanQuote('TECL'),fetchPlanQuote('TQQQ'),fetchPlanQuote('SGOV')]),t=a[0],q=a[1],g=a[2];
+    const end=[t.settled.date,q.settled.date,g.settled.date].sort()[0];
+    const R=window.JKPlanSessionEngine.replay({horizon:+x.horizon,startDate:x.simStart,endDate:end,
+      principal:+x.settings.startCapital||0,monthlyAdd:+x.settings.monthlyAdd||0,
+      tecl:t.rows,tqqq:q.rows,sgov:g.rows,teclDiv:t.dividends,tqqqDiv:q.dividends,sgovDiv:g.dividends});
+    assetPaperCache[x.id]=R;
+    if(applyView){
+      applyAssetSettings(x);
+      alphaLedger=cloneObj(R.ledger||assetLedgerSeed(x.simStart,+x.settings.startCapital||0));
+      alphaSyncInputs();document.body.classList.add('asset-paper-mode');
+      const pr=$('assetPaperResult');if(pr){pr.hidden=false;pr.innerHTML=assetPaperStatsHtml(x,R);}
+      renderAlphaLedger();render();refreshAlphaFromCache();
+    }
+    return R;
+  }catch(e){
+    console.error('asset paper replay',e);
+    const pr=$('assetPaperResult');if(pr){pr.hidden=false;pr.innerHTML='<div class="sub" style="color:var(--gold)">모의 재생 실패 · '+String(e&&e.message||e).replace(/</g,'&lt;')+'</div>';}
+    return null;
+  }
+}
+function renderAssetSessions(){
+  const b=assetPlanBox(),box=$('assetSessionChips'),st=$('assetSessionState');if(!box)return;
+  const list=assetSessionList(),active=activeAssetSession();
+  let h='<button class="asset-session-chip '+(!active?'on':'')+'" data-asess="">현재 투자중</button>';
+  for(const x of list){
+    h+='<button class="asset-session-chip '+(active&&active.id===x.id?'on':'')+'" data-asess="'+String(x.id).replace(/"/g,'&quot;')+'">'+
+      String(x.name||'세션').replace(/</g,'&lt;')+(x.paper?' <span class="paper">모의</span>':'')+
+      '<span class="x" data-asess-del="'+String(x.id).replace(/"/g,'&quot;')+'">×</span></button>';
+  }
+  box.innerHTML=h;
+  if(st){
+    if(!active){st.className='asset-session-state';st.textContent='현재 투자중 · '+horizonStrategy().name;}
+    else if(active.paper){st.className='asset-session-state paper';st.textContent='모의투자 · '+active.simStart+' 시작 · '+horizonStrategy().name;}
+    else{st.className='asset-session-state';st.textContent='운영 세션 · '+horizonStrategy().name;}
+  }
+}
+async function selectAssetSession(id){
+  const cur=activeAssetSession();
+  if(cur&&!cur.paper)syncActiveAssetSessionFromView();
+  else if(!cur)localSave();
+  const b=assetPlanBox();b.activeByHorizon[activeHorizon]=id||'';writeAssetSessionLocal();
+  const x=activeAssetSession();
+  if(!x){
+    restoreCurrentPlanView();renderAssetSessions();render();await refreshLive();return;
+  }
+  applyAssetSettings(x);
+  if(x.paper){
+    renderAssetSessions();await replayAssetPaperSession(x,true);await refreshLive();return;
+  }
+  alphaLedger=cloneObj(x.ledger||assetLedgerSeed(x.settings&&x.settings.startDate,+x.settings?.startCapital||20000));
+  alphaSyncInputs();document.body.classList.remove('asset-paper-mode');
+  const pr=$('assetPaperResult');if(pr){pr.hidden=true;pr.innerHTML='';}
+  renderAssetSessions();renderAlphaLedger();render();await refreshLive();
+}
+function openAssetSessionModal(){
+  const list=assetSessionList();
+  $('assetSessionName').value=activeHorizon+'년 세션 '+(list.length+1);
+  $('assetSessionCapital').value=Math.max(1,num('startCapital',20000));
+  $('assetSessionMonthly').value=Math.max(0,num('monthlyAdd',0));
+  $('assetSessionTarget').value=Math.max(1,num('targetCapital',150000));
+  $('assetSessionKind').value='live';
+  const min=new Date();min.setFullYear(min.getFullYear()-3);
+  $('assetSessionStart').min=min.toISOString().slice(0,10);$('assetSessionStart').max=todayISO();$('assetSessionStart').value=$('startDate').value||todayISO();
+  $('assetSessionStartWrap').style.display='none';
+  $('assetSessionModalStrategy').textContent=horizonStrategy().name;
+  $('assetSessionModal').hidden=false;
+}
+function closeAssetSessionModal(){$('assetSessionModal').hidden=true;}
+async function assetFxAt(date){
+  try{const r=await fetch('/api/fx?date='+encodeURIComponent(date),{headers:{Accept:'application/json'}});if(r.ok){const j=await r.json();if(j&&+j.rate>0)return +j.rate;}}catch(e){}
+  return 0;
+}
+async function createAssetSession(){
+  ensureLiveBoxes();
+  const paper=$('assetSessionKind').value==='paper',name=$('assetSessionName').value.trim()||activeHorizon+'년 세션';
+  const cap=+$('assetSessionCapital').value||0,monthly=Math.max(0,+$('assetSessionMonthly').value||0),target=+$('assetSessionTarget').value||0;
+  const start=paper?$('assetSessionStart').value:todayISO();
+  if(!(cap>0)||!(target>0)){alert('시작자산과 목표자산을 확인하세요.');return;}
+  if(paper&&(!start||start<$('assetSessionStart').min||start>todayISO())){alert('모의 시작일은 최근 3년 안에서 골라주세요.');return;}
+  const id=planSid('ap'),fx=paper?await assetFxAt(start):0;
+  const settings=assetSessionSettingsFromView(cap);settings.monthlyAdd=monthly;settings.targetCapital=target;settings.startDate=start;settings.targetDate=plusYears(start,activeHorizon);
+  const x={id,name,horizon:activeHorizon,paper,simStart:paper?start:'',paperFxRate:fx||0,createdAt:Date.now(),settings,
+    ledger:paper?null:assetLedgerSeed(start,cap)};
+  assetPlanBox().sessions.push(x);assetPlanBox().activeByHorizon[activeHorizon]=id;
+  await saveOperatingState();closeAssetSessionModal();renderAssetSessions();await selectAssetSession(id);
+}
+async function deleteAssetSession(id){
+  const b=assetPlanBox(),x=b.sessions.find(s=>s.id===id);if(!x)return;
+  if(!confirm("'"+(x.name||'세션')+"'을 삭제할까요?\n현재 투자중 플랜과 다른 세션은 그대로입니다."))return;
+  b.sessions=b.sessions.filter(s=>s.id!==id);if(String(b.activeByHorizon[+x.horizon]||'')===id)b.activeByHorizon[+x.horizon]='';
+  delete assetPaperCache[id];await saveOperatingState();await selectAssetSession('');
+}
+function guardAssetPaperEdit(){
+  if(!assetPaperMode())return false;
+  alert('모의투자 세션의 거래이력은 과거 시세로 자동 생성됩니다. 직접 수정하지 않습니다.');
+  return true;
 }
 /* 운영화면과 같은 1회성 무매 설정 마이그레이션 마커를 공유한다.
    기존 계정/브라우저에 남은 큰수·리버스 gap·하방 LOC 줄 수를 20/0/3으로 한 번 맞춘다. */
