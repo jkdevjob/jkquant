@@ -10217,16 +10217,23 @@ console.log('\n[135] 자산플랜 세션 — 운영처럼 세션 + 모의투자 
      /location\.href='\/plan\?session='\+encodeURIComponent\(id\)\+'\&horizon='/.test(extractFn(idx,'function gotoSess(tab, id)'))
      && /requestedAssetSessionId/.test(pl));
 
+  {
+    const {spawnSync}=require('child_process'),os=require('os');
+    const mod=(pl.match(/<script type="module">([\s\S]*?)<\/script>/)||[])[1]||'';
+    const tmp=path.join(os.tmpdir(),'jkq_plan_module_check.mjs');fs.writeFileSync(tmp,mod);
+    const syn=spawnSync(process.execPath,['--check',tmp],{encoding:'utf8'});
+    ok('G 자산플랜 module 스크립트 문법',syn.status===0,(syn.stderr||'').split('\n')[0]);
+  }
   if(!pe){
-    ok('G 자산플랜 공유 모의 엔진 파일 존재',false,'plan-session-engine.js 없음');
+    ok('H 자산플랜 공유 모의 엔진 파일 존재',false,'plan-session-engine.js 없음');
   }else{
     const {spawnSync}=require('child_process');
     const syn=spawnSync(process.execPath,['--check',pePath],{encoding:'utf8'});
-    ok('G 자산플랜 공유 모의 엔진 문법',syn.status===0,(syn.stderr||'').split('\n')[0]);
+    ok('H 자산플랜 공유 모의 엔진 문법',syn.status===0,(syn.stderr||'').split('\n')[0]);
 
     const vm=require('vm'),ctx={};vm.createContext(ctx);vm.runInContext(pe,ctx);
     const E=ctx.JKPlanSessionEngine;
-    ok('H 공유 엔진 replay/stats 노출',!!E&&typeof E.replay==='function'&&typeof E.stats==='function');
+    ok('I 공유 엔진 replay/stats 노출',!!E&&typeof E.replay==='function'&&typeof E.stats==='function');
 
     const rows=[];let d=new Date('2022-01-03T00:00:00Z'),k=0;
     while(rows.length<700){
@@ -10245,11 +10252,11 @@ console.log('\n[135] 자산플랜 세션 — 운영처럼 세션 + 모의투자 
     const start=rows[330].date;
     for(const y of [5,10,15,20]){
       const R=E.replay({horizon:y,startDate:start,principal:10000,monthlyAdd:100,tecl:T,tqqq:Q,sgov:G});
-      ok('I '+y+'년 모의 — NAV/성과/거래 생성',
+      ok('J '+y+'년 모의 — NAV/성과/거래 생성',
          R&&R.stats&&R.nav.length>250&&R.stats.total>0&&R.stats.inflow>10000&&R.stats.nTrade>0,
          JSON.stringify(R&&R.stats));
       const tr=(R&&R.ledger&&R.ledger.events||[]).filter(x=>x.type==='trade');
-      ok('J '+y+'년 모의 — 전일 신호 → 다음 거래일 체결, 거래이력은 운영 장부 형식',
+      ok('K '+y+'년 모의 — 전일 신호 → 다음 거래일 체결, 거래이력은 운영 장부 형식',
          tr.length>0&&tr.every(x=>x.signalDate&&x.signalDate<x.date&&['TECL','TQQQ','SGOV'].includes(x.symbol)&&x.qty>0&&x.price>0),
          JSON.stringify(tr.find(x=>!(x.signalDate&&x.signalDate<x.date))||tr[0]||{}));
     }
