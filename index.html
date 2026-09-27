@@ -537,7 +537,7 @@ try{ if(localStorage.getItem('qcockpit_hadUser')==='1') document.documentElement
 </div>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.103.8</span></h1></div>
+    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.103.9</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -1646,7 +1646,7 @@ if(/^\/paper\/?$/.test(location.pathname)){
   <footer>
     <strong>JK 퀀트</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.103.8</b> · 2026-09-27</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.103.9</b> · 2026-09-28</div>
   </footer>
 </div>
 
@@ -6894,8 +6894,17 @@ function vrStepCycle(sess, c, dateStr, close){
      · 적립·ASAP    — 백테 엔진과 같은 규약으로 새로 만든다(재생성).
    실계좌 세션은 어떤 경우에도 건드리지 않는다. */
 let _paperBusy=false, paperNote='', paperNoteSid=null;
-function paperStart(sess){ if(!sess) return null;
-  return sess.simStart || (sess.hist&&sess.hist.length?sess.hist[0].date:null); }
+function paperStart(sess){
+  if(!sess) return null;
+  if(sess.simStart) return sess.simStart;
+  // '전체 적용'으로 정한 공통 시작일은 세션 설정 변경/재생성보다 상위의 출발선이다.
+  // 예전 세션에 simStart가 빠져 있어도 설정 저장 한 번으로 오늘이 새 시작일이 되면 안 된다.
+  const pc=(S&&S.paperCommon)||{};
+  if(sess.paper && pc.simStart) return pc.simStart;
+  const h=(sess.hist||[]).map(x=>x&&x.date).filter(Boolean).sort();
+  if(h.length) return h[0];
+  return sess.paper ? paperPreferredSimStart() : null;
+}
 /* 시작일이 마지막 종가보다 뒤면(예: '오늘'인데 오늘 종가가 아직 없음) 그 마지막 종가부터 시작한다.
    안 그러면 '오늘 시작'으로 만든 세션이 아무것도 안 만들고 며칠씩 빈 채로 남는다. */
 function _clampFrom(from, lastDate){ return (from && lastDate && from>lastDate) ? lastDate : from; }
@@ -7641,6 +7650,7 @@ async function openPaper(){
   if(body){ body.innerHTML='<p class="lead">전 전략 모의 세션을 오늘까지 맞추는 중… <span style="color:var(--faint)">시세를 불러오느라 몇 초 걸립니다.</span></p>'; }
   $('paperModal').classList.add('on');
   await paperEnsureCommonWon();
+  await paperRepairLegacyStarts();
   syncPaperStart();
   await loadFX();               // 모의성과 목록은 열 때 받은 현재 USD/KRW로 원화 환산
   const filled=await paperFillAll();
@@ -7814,6 +7824,54 @@ async function paperSeedNewSession(tab, sess, start){
   paperSeedCommonAmounts(tab,sess,R);
   return true;
 }
+/* 2026-09-27까지의 버그 복구:
+   공통 시작일이 있는데도 새 세션/세션설정 저장이 최근 날짜(대개 오늘)를 시작일로 굳혀
+   모의성과가 1일로 바뀐 경우가 있었다. 사용자가 명시적으로 다른 날짜를 고른 세션은 건드리지 않고,
+   최근 14일 안에 생긴 '기계 기록만 있는' 불일치가 2개 이상일 때만 공통 시작일로 되돌린다.
+   미국 종목 원금/적립액도 공통 시작일 환율로 다시 심어 날짜만 고치고 금액이 어긋나는 일을 막는다. */
+const PAPER_START_REPAIR_VER=1;
+async function paperRepairLegacyStarts(){
+  if(!S || (+S._paperStartRepairVer||0)>=PAPER_START_REPAIR_VER) return 0;
+  const pc=S.paperCommon||{}, common=String(pc.simStart||'');
+  const min=paperMinDate(), today=new Date().toISOString().slice(0,10);
+  const valid=d=>!!(d&&d>=min&&d<=today);
+  if(!valid(common)){ S._paperStartRepairVer=PAPER_START_REPAIR_VER; saveLocal(); return 0; }
+  const cutD=new Date(today+'T00:00:00Z'); cutD.setUTCDate(cutD.getUTCDate()-14);
+  const cut=cutD.toISOString().slice(0,10);
+  const all=paperSessions();
+  const missing=all.filter(([,x])=>x&&!x.simStart&&x.simStartMode!=='explicit');
+  const recent=all.filter(([,x])=>{
+    if(!x||x.simStartMode==='explicit') return false;
+    const d=String(x.simStart||'');
+    if(!(d>common&&d>=cut&&d<=today)) return false;
+    return (x.hist||[]).every(h=>h&&(h.sim||h.auto));
+  });
+  // 최근 날짜 한 개만 다른 경우는 사용자가 일부러 바꾼 것일 수 있어 자동 교정하지 않는다.
+  const targets=[...missing,...(recent.length>=2?recent:[])];
+  const seen=new Set(), uniq=targets.filter(([,x])=>x&&!seen.has(x.id)&&(seen.add(x.id),true));
+  if(!uniq.length){
+    // 명시적으로 다른 시작일이거나 판별이 애매하면 데이터는 보존한다.
+    S._paperStartRepairVer=PAPER_START_REPAIR_VER; saveLocal(); return 0;
+  }
+  let fx=null;
+  if(uniq.some(([,x])=>!isKrwSt(x.settings||{}))){
+    fx=await fxAt(common);
+    if(!fx||!(+fx.rate>0)) return 0; // 환율을 못 받으면 아무것도 바꾸지 않고 다음에 다시 시도
+  }
+  const commonWon=paperCommonWonValues();
+  for(const [tab,x] of uniq){
+    x.hist=[]; x.simStart=common; x.simStartMode='common';
+    const st=x.settings||{};
+    delete st.simLast; delete st.cycStart; delete st.startCyc; delete st.cycLog; delete st.simSig;
+    if(st.startv!==undefined) st.startv=0;
+    const R=isKrwSt(st)?1:+fx.rate;
+    paperSeedCommonAmounts(tab,x,R,commonWon);
+  }
+  S._paperStartRepairVer=PAPER_START_REPAIR_VER;
+  saveLocal(); await pushRemoteNow();
+  paperNote=`🔧 시작일 오류로 최근 날짜에 묶였던 모의 세션 ${uniq.length}개를 ${common} 기준으로 복구했습니다.`;
+  return uniq.length;
+}
 function paperRememberForm(){
   try{
     const c=$('p_capital'), a=$('p_addamt'), d=$('p_simstart');
@@ -7857,24 +7915,19 @@ async function paperEnsureCommonWon(){
 function paperPreferredSimStart(){
   const min=paperMinDate(), today=new Date().toISOString().slice(0,10);
   const valid=d=>!!(d&&d>=min&&d<=today);
+  const memo=paperFormMemoRead(), pc=(S&&S.paperCommon)||{};
+  // 사용자가 '전체 적용'을 눌러 확정한 값은 세션 추가·설정 변경·자동재생이 절대 덮지 않는다.
+  if(valid(pc.simStart)) return pc.simStart;
+  if(valid(memo.simStart)) return memo.simStart;
+  // 공통값이 없던 구버전 상태만 기존 세션에서 복구한다.
   const dates=paperSessions().map(([,x])=>x&&x.simStart).filter(valid);
   const uniq=[...new Set(dates)].sort();
-  // 전체 적용 뒤 기존 모의 세션이 같은 날짜라면 그 날짜가 가장 강한 진실이다.
-  // paperCommon/local memo에 예전 값(예: 2026-06-01)이 남아 있어도 새 세션이 그 값을 되살리면 안 된다.
   if(uniq.length===1) return uniq[0];
-  const memo=paperFormMemoRead(), pc=(S&&S.paperCommon)||{};
-  // 혼합 상태에서는 마지막 전체 적용값이 실제 세션 중 하나일 때만 우선한다.
-  if(valid(memo.simStart)&&uniq.includes(memo.simStart)) return memo.simStart;
-  if(valid(pc.simStart)&&uniq.includes(pc.simStart)) return pc.simStart;
-  // 여러 세션이 같은 날짜이고 새 세션 하나만 다른 경우에는 다수 날짜를 유지한다.
   if(uniq.length){
     const cnt={}; dates.forEach(d=>cnt[d]=(cnt[d]||0)+1);
     const rank=Object.entries(cnt).sort((a,b)=>b[1]-a[1]||String(b[0]).localeCompare(String(a[0])));
     if(rank.length===1 || rank[0][1]>rank[1][1]) return rank[0][0];
   }
-  // 모의 세션이 없거나 완전히 혼합된 경우에만 영구 저장값을 사용한다.
-  if(valid(pc.simStart)) return pc.simStart;
-  if(valid(memo.simStart)) return memo.simStart;
   return today;
 }
 function syncPaperStart(){
@@ -7891,18 +7944,8 @@ function syncPaperStart(){
   const min=paperMinDate(), today=new Date().toISOString().slice(0,10);
   el.min=min; el.max=today;
   const pc=(S&&S.paperCommon)||{}, memo=paperFormMemoRead();
-  /* 실제 모의 세션이 전부 같은 시작일이면 그 값이 진실이다.
-     paperCommon이 예전 값(예: 2026-06-01)으로 남아 있어도 다시 그 날짜를 화면에 덮어쓰지 않는다. */
-  const sessionCommon=(uniq.length===1&&uniq[0]>=min&&uniq[0]<=today)?uniq[0]:'';
-  if(sessionCommon && pc.simStart!==sessionCommon){
-    pc.simStart=sessionCommon;
-    try{ localStorage.setItem(paperFormMemoKey(),JSON.stringify({
-      simStart:sessionCommon,
-      capitalWon:(+pc.capitalWon>0)?pc.capitalWon:((+memo.capitalWon>0)?memo.capitalWon:null),
-      addWon:(+pc.addWon>0)?pc.addWon:((+memo.addWon>0)?memo.addWon:null)
-    })); }catch(e){}
-    saveLocal(); pushRemote();
-  }
+  /* 이 함수는 표시만 맞춘다. 실제 세션 날짜를 보고 paperCommon을 역으로 고치지 않는다.
+     그 역방향 쓰기 때문에 잘못 생성된 '오늘 시작' 세션이 공통 시작일까지 오늘로 오염시켰다. */
   const common=paperPreferredSimStart();
   const pick=(common&&common>=min&&common<=today)?common:today;
   el.value=pick;
@@ -7965,7 +8008,7 @@ async function applyAllSimStart(){
   S.paperCommon.rawWonMigration=PAPER_RAW_WON_MIGRATION;
   paperRememberForm();
   list.forEach(([tab,x])=>{
-    x.hist=[]; x.simStart=ns;
+    x.hist=[]; x.simStart=ns; x.simStartMode='common';
     if(x.settings){ delete x.settings.simLast; delete x.settings.cycStart; delete x.settings.startCyc; delete x.settings.cycLog; x.settings.startv=0;
       // 원화로 받은 금액을 그 세션 통화로 바꿔 넣는다 (국내는 그대로, 미국은 시작일 환율)
       const R=fx?fx.rate:1;
@@ -9228,7 +9271,7 @@ function editSess(id){
   const p=$('sess_paper'); if(p)p.checked=!!s.paper;
   const k=$('sess_kis'); if(k)k.checked=!!s.kis; kisSyncOwner().then(kisOptUI);
   const w=$('sess_simstart_wrap'); if(w) w.style.display=s.paper?'':'none';
-  const d=$('sess_simstart'); if(d) d.value=s.simStart||paperPreferredSimStart();
+  const d=$('sess_simstart'); if(d) d.value=paperStart(s)||paperPreferredSimStart();
   $('sessModal').classList.add('on');
 }
 /* 한투 연결 상태를 그 자리에서 보여준다.
@@ -9310,11 +9353,13 @@ async function createSess(){
     t.name=n;
     const on=$('sess_paper')&&$('sess_paper').checked;
     if(on){ const sd=$('sess_simstart');
-      const ns=(sd&&sd.value)||paperPreferredSimStart();
-      if(!t.paper || t.simStart!==ns){                // 새로 모의로 바꾸거나 시작일을 옮기면 처음부터 다시 만든다
+      const oldStart=t.paper?paperStart(t):null;
+      const ns=(sd&&sd.value)||oldStart||paperPreferredSimStart();
+      if(!t.paper || (oldStart&&oldStart!==ns) || (!oldStart&&t.simStart!==ns)){ // 날짜를 실제로 바꾼 경우에만 처음부터 다시 만든다
         if((t.hist||[]).length && !confirm(`'${n}' 세션의 기록 ${t.hist.length}건을 지우고 ${ns}부터 다시 만듭니다.\n계속할까요?`)){ closeSess(); return; }
         t.hist=[]; if(t.settings){ delete t.settings.simLast; delete t.settings.cycStart; delete t.settings.startCyc; delete t.settings.cycLog; t.settings.startv=0; } }
       t.paper=true; t.simStart=ns;
+      t.simStartMode=(ns===paperPreferredSimStart())?'common':'explicit';
     }else if(t.paper){
       if(!confirm(`'${n}'을 실계좌로 바꿉니다.\n자동 생성이 멈추고 기록은 그대로 남습니다.\n계속할까요?`)){ closeSess(); return; }
       t.paper=false;
@@ -9337,7 +9382,9 @@ async function createSess(){
     s.settings={...defInfSettings(),...cp};
   }
   const pp=$('sess_paper'); if(pp&&pp.checked){ s.paper=true;
-    const sd=$('sess_simstart'); s.simStart=(sd&&sd.value)||paperPreferredSimStart();
+    const preferred=paperPreferredSimStart(), sd=$('sess_simstart');
+    s.simStart=(sd&&sd.value)||preferred;
+    s.simStartMode=(s.simStart===preferred)?'common':'explicit';
     // 모의 성과의 출발선(시작일 + 원화 원금/적립액)을 세션 생성 순간부터 맞춘다.
     if(!(await paperSeedNewSession(S.activeTab,s,s.simStart))) return;
   }
@@ -9631,9 +9678,8 @@ function paperSyncSig(tab,sess){
   return true;
 }
 async function saveSettings(){
-  const s=sess();
+  const s=sess(), prev=s.settings||{};
   if(S.activeTab==='inf'){
-    const prev=s.settings||{};
     const autoTpSel=segGet('set_autotp')||'off';
     /* 기존 설정 객체를 유지한 채 화면에서 편집한 키만 덮는다.
        settings를 새 객체로 갈아끼우면 새로 추가된 옵션·simSig·파생 상태가 설정 저장 한 번에 사라진다. */
@@ -9647,9 +9693,9 @@ async function saveSettings(){
       rowqty:1,principal:inputNum('set_principal')||10000,divmode:segGet('set_infdivmode')||'reinv',
       simLast:prev.simLast};   // 모의 체결 진행점은 설정 저장으로 날아가면 안 된다
   }else if(S.activeTab==='ma'){
-    s.settings={ticker:tkVal('set_maticker_in','SOXL'),buy:segGet('set_mabuy')||'ma',sell:segGet('set_masell')||'ma',park:segGet('set_mapark')||'cash',principal:inputNum('set_maprincipal')||10000,divmode:segGet('set_madivmode')||'reinv'};
+    s.settings={...prev,ticker:tkVal('set_maticker_in','SOXL'),buy:segGet('set_mabuy')||'ma',sell:segGet('set_masell')||'ma',park:segGet('set_mapark')||'cash',principal:inputNum('set_maprincipal')||10000,divmode:segGet('set_madivmode')||'reinv'};
   }else if(S.activeTab==='ivs'){
-    s.settings={ticker:tkVal('set_ivsticker_in','TQQQ'),mode:segGet('set_ivsmode')||'iv',
+    s.settings={...prev,ticker:tkVal('set_ivsticker_in','TQQQ'),mode:segGet('set_ivsmode')||'iv',
       s0:+segGet('set_ivss0')||55,look:+segGet('set_ivslook')||40,
       band:+segGet('set_ivsband')||15,park:segGet('set_ivspark')||'bill',
       principal:Math.max(0,inputNum('set_ivsprincipal')||0),
@@ -9657,19 +9703,16 @@ async function saveSettings(){
       divmode:segGet('set_ivsdivmode')||'reinv'};
     ivsQuote1=null;   // 짝·종목이 바뀌었을 수 있으니 1배 시세 캐시를 비운다
   }else if(S.activeTab==='dca'){
-    s.settings={ticker:tkVal('set_dcaticker_in','USD'),mode:segGet('set_dcamode')||'dca',
+    s.settings={...prev,ticker:tkVal('set_dcaticker_in','USD'),mode:segGet('set_dcamode')||'dca',
       freq:segGet('set_dcafreq')||'month',
       amount:inputNum('set_dcaamt')||0,dipMul:+segGet('set_dcamul')||1,
       reinv:segGet('set_dcareinv')==='reinv'};
   }else if(S.activeTab==='asap'){
-    s.settings={ticker:tkVal('set_asapticker_in','SOXL'),base:inputNum('set_asapbase')||10,mid:inputNum('set_asapmid')||50,deep:inputNum('set_asapdeep')||100,divmode:segGet('set_asapdivmode')||'reinv'};
+    s.settings={...prev,ticker:tkVal('set_asapticker_in','SOXL'),base:inputNum('set_asapbase')||10,mid:inputNum('set_asapmid')||50,deep:inputNum('set_asapdeep')||100,divmode:segGet('set_asapdivmode')||'reinv'};
   }else{
-    // 사이클 번호·시작일·사이클 기록은 설정창에서 입력하는 값이 아니라 진입 버튼이 쌓은 파생 상태다.
-    // settings를 통째로 갈아끼우면 설정을 한 번 저장할 때마다 주차가 0으로 돌아가고
-    // 사이클 기록 표가 비워졌다. (startv·startpool은 입력칸이 있어 그대로 다시 저장된다.)
-    const prev=s.settings||{}, keep={};
-    ['startCyc','cycStart','cycLog','simLast'].forEach(k=>{ if(prev[k]!==undefined) keep[k]=prev[k]; });
-    s.settings={...keep, ticker:$('set_vticker').value||'TQQQ',mode:+segGet('set_vmode')||0.75,
+    // 파생 상태·지문은 그대로 보존하고 화면에서 편집한 값만 덮는다.
+    // 설정 지문이 달라지면 paperSyncSig가 그 세션의 기계 기록만 안전하게 재생성한다.
+    s.settings={...prev, ticker:$('set_vticker').value||'TQQQ',mode:+segGet('set_vmode')||0.75,
       formula:segGet('set_vformula')||'basic',g:inputNum('set_g')||10,add:inputNum('set_add')||100,
       initAmt:Math.max(0,inputNum('set_initamt')||0),autoCyc:segGet('set_vauto')==='1',
       vrModel:'ladder',
