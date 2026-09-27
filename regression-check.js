@@ -1572,7 +1572,9 @@ console.log('[30] 모의 시작일 일괄 변경');
      KEYS.every(k=>new RegExp(`delete x\\.settings\\.${k};`).test(ap)) && /x\.settings\.startv=0;/.test(ap)
      && KEYS.every(k=>new RegExp(`delete t\\.settings\\.${k};`).test(idx)),
      KEYS.filter(k=>!new RegExp(`delete x\\.settings\\.${k};`).test(ap)).join(',')||'ok');
-  ok('지운 자리를 다시 채우고 즉시 클라우드 저장한다', /saveLocal\(\);\s*\n\s*await openPaper\(\);/.test(ap) && /await pushRemoteNow\(\)/.test(ap));
+  const iSaveAll=ap.indexOf('saveLocal();'), iPushAll=ap.indexOf('await pushRemoteNow()'), iOpenAll=ap.indexOf('await openPaper()');
+  ok('지운 자리를 다시 채우기 전에 로컬·클라우드에 새 출발선을 저장한다',
+     iSaveAll>=0 && iPushAll>iSaveAll && iOpenAll>iPushAll, iSaveAll+' / '+iPushAll+' / '+iOpenAll);
   ok('모의가 없으면 알리고 멈춘다', /if\(!list\.length\)\{ alert\('모의 세션이 없습니다\.'\); return; \}/.test(ap));
 
   /* 시작일 하한 3년 — 그 앞은 시세를 하루씩 되짚느라 오래 걸리고,
@@ -1843,9 +1845,10 @@ console.log('[40] 모의 일괄 적용 — 원금과 1회 적립액을 따로');
   ok('ASAP은 원금이 아니라 1회 적립액(base) 대상이다', /return null;\s*\/\/ asap/.test(cf) && /if\(tab==='asap'\) return 'base';/.test(af));
   ok('세션 달러값을 역환산하는 현재값 요약 함수는 제거했다', !/function paperValSummary\(/.test(idx) && !/function paperValSummaryWon\(/.test(idx));
   const sp=extractFn(idx,'function syncPaperStart()');
-  ok('전체 적용 공통 시작일을 저장하고 새로고침 때 우선 표시한다',
+  ok('전체 적용 공통 시작일을 저장하되 새로고침 때 실제 세션 상태를 우선 표시한다',
      /const pc=\(S&&S\.paperCommon\)\|\|\{\}/.test(sp)
-     && /const common=pc\.simStart/.test(sp)
+     && /const sessionCommon=\(uniq\.length===1/.test(sp)
+     && /const common=paperPreferredSimStart\(\)/.test(sp)
      && /const pick=\(common&&common>=min&&common<=today\)\?common/.test(sp));
   ok('열 때 마지막으로 입력한 원화 원본을 입력칸에 그대로 복원한다', /pc\.capitalWon/.test(sp) && /pc\.addWon/.test(sp) && /toLocaleString\('ko-KR'/.test(sp));
   const ap=extractFn(idx,'async function applyAllSimStart()');
@@ -1912,7 +1915,8 @@ console.log('[40] 모의 일괄 적용 — 원금과 1회 적립액을 따로');
   const sp=extractFn(idx,'function syncPaperStart()');
   ok('모의 시작일 — 세션들이 한 날짜면 stale paperCommon보다 세션 날짜를 우선',
      /const sessionCommon=\(uniq\.length===1/.test(sp)
-     && /const common=sessionCommon\|\|pc\.simStart\|\|memo\.simStart/.test(sp));
+     && /if\(sessionCommon && pc\.simStart!==sessionCommon\)/.test(sp)
+     && /const common=paperPreferredSimStart\(\)/.test(sp));
 
   const ap=extractFn(idx,'async function applyAllSimStart()');
   const p1=ap.indexOf('await pushRemoteNow()'), p2=ap.indexOf('await openPaper()');
@@ -10067,7 +10071,7 @@ console.log('\n[133] 새 세션 — 전체 적용 시작일 유지 · 무매 옵
 {
   const prefSrc=extractFn(idx,'function paperPreferredSimStart()');
   const pref=new Function('paperSessions','paperMinDate','paperFormMemoRead','S',
-    prefSrc+'\nreturn paperPreferredSimStart;');
+    prefSrc+'\nreturn paperPreferredSimStart();');
   const same=pref(
     ()=>[['inf',{simStart:'2026-09-01'}],['vr',{simStart:'2026-09-01'}]],
     ()=>'2023-09-27',()=>({simStart:'2026-06-01'}),{paperCommon:{simStart:'2026-06-01'}}
@@ -10091,6 +10095,27 @@ console.log('\n[133] 새 세션 — 전체 적용 시작일 유지 · 무매 옵
      && /JSON\.parse\(JSON\.stringify\(_srcSess\.settings\)\)/.test(create)
      && /'simLast','cycStart','startCyc','cycLog','simSig'/.test(create)
      && /s\.settings=\{\.\.\.defInfSettings\(\),\.\.\.cp\}/.test(create));
+
+  const seedSrc=extractFn(idx,'function paperSeedCommonAmounts(tab, sess, rate, common)');
+  const seed=new Function('paperCapField','paperAddField','wonToSess','applyPaperAdd','isKrwSt',
+    seedSrc+'\nreturn paperSeedCommonAmounts;')(
+      tab=>tab==='inf'?'principal':null,
+      tab=>tab==='asap'?'base':null,
+      (won,st,rate)=>won/rate,
+      (tab,st,won,rate)=>{ const b=won/rate; st.base=b; st.mid=b*2; st.deep=b*3; return true; },
+      ()=>false
+    );
+  const infSeed={settings:{principal:10000}}, asapSeed={settings:{base:10,mid:20,deep:30}};
+  seed('inf',infSeed,2000,{capitalWon:100000000,addWon:50000});
+  seed('asap',asapSeed,2000,{capitalWon:100000000,addWon:50000});
+  ok('D 새 모의 무매 원금은 factory $10,000이 아니라 공통 1억원을 시작일 환율로 환산',
+     infSeed.settings.principal===50000 && infSeed.paperFxRate===2000, JSON.stringify(infSeed));
+  ok('D 새 모의 ASAP 적립액도 공통 5만원을 1·2·3배로 승계',
+     asapSeed.settings.base===25 && asapSeed.settings.mid===50 && asapSeed.settings.deep===75 && asapSeed.paperFxRate===2000,
+     JSON.stringify(asapSeed));
+  ok('E 새 모의 세션은 저장·성과 계산 전에 공통 원화 금액을 심는다',
+     /await paperSeedNewSession\(S\.activeTab,s,s\.simStart\)/.test(create)
+     && create.indexOf('await paperSeedNewSession')<create.indexOf('box.sessions.push(s)'));
 }
 
 console.log(`\n════ 결과: ${pass} PASS / ${fail} FAIL ${fail===0?'— ALL PASS ★':'— 배포 금지, 위 ✗ 항목 수정 필요'} ════`);
