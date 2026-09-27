@@ -1834,7 +1834,7 @@ if(/^\/paper\/?$/.test(location.pathname)){
       <div style="display:flex;align-items:end;min-width:0;width:100%"><button class="ghostbtn" style="width:100%;height:42px;margin:0;padding:0 14px;font-size:14px;font-weight:700" onclick="applyAllSimStart()">전체 적용</button></div>
     </div>
     <div class="note" style="margin-top:12px;line-height:1.7">
-      <div><b>전체 적용</b>은 모의 세션의 시작일·금액을 한 번에 맞추고, 기존 모의 기록을 새 시작일부터 다시 계산합니다. <b>실계좌는 변경하지 않습니다.</b></div>
+      <div><b>전체 적용</b>은 모의 세션의 시작일·금액을 한 번에 맞추고, 기존 모의 기록을 새 시작일부터 다시 계산합니다. <b>5년플랜은 1회 적립액을 월 적립액으로 적용</b>합니다. <b>실계좌는 변경하지 않습니다.</b></div>
       <div style="margin-top:3px"><b>원금</b> → 무매·이평·섀넌·VR·거치 &nbsp;·&nbsp; <b>1회 적립액</b> → 적립식 · ASAP base×1 / mid×2 / deep×3</div>
       <div style="margin-top:3px"><b>입력값은 원화 그대로 저장</b> · 미국 종목은 계산 내부에서만 시작일 환율 사용 · <b>성과 목록은 현재 USD/KRW</b>로 원화 표시 · 시작일은 최대 <b>3년 전</b></div>
     </div>
@@ -7040,6 +7040,15 @@ function paperPlan5Sessions(){
   const p=paperPlan5State(),a=Array.isArray(p.paperSessions)?p.paperSessions:[];
   return a.filter(x=>x&&x.paper&&x.simStart&&(+x.capitalUsd>0));
 }
+async function savePaperPlan5Now(){
+  const p=paperPlan5State();_paperPlan5State=p;
+  try{localStorage.setItem('jkq_5y_plan_v1',JSON.stringify(p));}catch(e){}
+  if(!curUid||!window.fb||!window.fb.setDoc)return true;
+  try{
+    await window.fb.setDoc(window.fb.doc(window.fb.db,'users',curUid),{fiveYearPlan:p},{merge:true});
+    return true;
+  }catch(e){console.error('plan5 paper save',e);return false;}
+}
 async function paperFillPlan5(){
   const list=paperPlan5Sessions();if(!list.length)return [];
   if(!window.JKPlan5){console.error('plan5 paper: shared engine missing');return [];}
@@ -7879,8 +7888,10 @@ async function paperEnsureCommonWon(){
     if(!(+pc.addWon>0)){ pc.addWon=PAPER_DEFAULT_ADD_WON; changed=true; }
   }
   if(!pc.simStart){
-    const dates=[...new Set(list.map(([,x])=>x.simStart).filter(Boolean))].sort();
-    if(dates.length===1){ pc.simStart=dates[0]; changed=true; }
+    const dates=list.map(([,x])=>x.simStart).filter(Boolean);
+    if(typeof paperPlan5Sessions==='function') paperPlan5Sessions().forEach(x=>{if(x&&x.simStart)dates.push(x.simStart);});
+    const uniq=[...new Set(dates)].sort();
+    if(uniq.length===1){ pc.simStart=uniq[0]; changed=true; }
   }
   if(changed){
     try{ localStorage.setItem(paperFormMemoKey(),JSON.stringify({
@@ -7894,6 +7905,7 @@ function paperPreferredSimStart(){
   const min=paperMinDate(), today=new Date().toISOString().slice(0,10);
   const valid=d=>!!(d&&d>=min&&d<=today);
   const dates=paperSessions().map(([,x])=>x&&x.simStart).filter(valid);
+  if(typeof paperPlan5Sessions==='function') paperPlan5Sessions().forEach(x=>{if(valid(x&&x.simStart))dates.push(x.simStart);});
   const uniq=[...new Set(dates)].sort();
   // 전체 적용 뒤 기존 모의 세션이 같은 날짜라면 그 날짜가 가장 강한 진실이다.
   // paperCommon/local memo에 예전 값(예: 2026-06-01)이 남아 있어도 새 세션이 그 값을 되살리면 안 된다.
@@ -7915,13 +7927,13 @@ function paperPreferredSimStart(){
 }
 function syncPaperStart(){
   const el=$('p_simstart'); if(!el) return;
-  const list=paperSessions();
+  const list=paperSessions(), plan5=paperPlan5Sessions();
   const dates=list.map(([,x])=>x.simStart).filter(Boolean);
-  const uniq=[...new Set(dates)].sort();
+  plan5.forEach(x=>{if(x&&x.simStart)dates.push(x.simStart);});
+  const uniq=[...new Set(dates)].sort(), allN=list.length+plan5.length;
   const n=$('p_simstart_n');
   if(n){
     const mixed=uniq.length>1 ? ` · 시작일 ${uniq.length}종` : '';
-    const allN=list.length+paperPlan5Sessions().length;
     n.textContent=allN?`모의 ${allN}개${mixed}`:'모의 세션 없음';
     n.title=uniq.length>1?uniq.join(' / '):'';
   }
@@ -7943,12 +7955,12 @@ function syncPaperStart(){
   const common=paperPreferredSimStart();
   const pick=(common&&common>=min&&common<=today)?common:today;
   el.value=pick;
-  el.disabled=!list.length;
+  el.disabled=!allN;
   const fmtWonInput=v=>(+v>0)?(+v).toLocaleString('ko-KR',{maximumFractionDigits:2}):'';
   const capWon=(+pc.capitalWon>0)?pc.capitalWon:((+memo.capitalWon>0)?memo.capitalWon:PAPER_DEFAULT_CAPITAL_WON);
   const addWon=(+pc.addWon>0)?pc.addWon:((+memo.addWon>0)?memo.addWon:PAPER_DEFAULT_ADD_WON);
-  const c=$('p_capital'); if(c){ c.value=fmtWonInput(capWon); c.disabled=!list.length; }
-  const a=$('p_addamt');  if(a){ a.value=fmtWonInput(addWon); a.disabled=!list.length; }
+  const c=$('p_capital'); if(c){ c.value=fmtWonInput(capWon); c.disabled=!allN; }
+  const a=$('p_addamt');  if(a){ a.value=fmtWonInput(addWon); a.disabled=!allN; }
 }
 async function applyAllSimStart(){
   const el=$('p_simstart'); const ns=el&&el.value;
@@ -7957,8 +7969,8 @@ async function applyAllSimStart(){
   const min=paperMinDate(), today=new Date().toISOString().slice(0,10);
   if(ns<min){ alert(`시작일은 최대 ${PAPER_MAX_YEARS}년 전까지입니다.\n${min} 이후로 골라주세요.`); return; }
   if(ns>today){ alert('시작일을 오늘 이후로 둘 수는 없습니다.'); return; }
-  const list=paperSessions();
-  if(!list.length){ alert('모의 세션이 없습니다.'); return; }
+  const list=paperSessions(), plan5=paperPlan5Sessions(), allCount=list.length+plan5.length;
+  if(!allCount){ alert('모의 세션이 없습니다.'); return; }
   const cap=paperReadAmt('p_capital','원금'), add=paperReadAmt('p_addamt','1회 적립액');
   if(cap===false || add===false) return;
   if(!S.paperCommon) S.paperCommon={};      // 잘못된 값 — 안내는 안에서 했다
@@ -7966,12 +7978,13 @@ async function applyAllSimStart(){
   const capHit = cap!=null ? list.filter(([tab,x])=>paperCapField(tab,x.settings)) : [];
   const addHit = add!=null ? list.filter(([tab,x])=>paperAddField(tab,x.settings)) : [];
   const touched = new Set([...capHit,...addHit].map(([,x])=>x.id));
+  plan5.forEach(x=>touched.add(x.id));   // 5년플랜은 원금 + 월 적립액 둘 다 의미가 있다
   const skip = (cap!=null||add!=null) ? list.filter(([,x])=>!touched.has(x.id)) : [];
   /* 금액 칸은 원화다. 미국 종목 세션에 넣으려면 시작 시점 환율이 있어야 한다 —
      오늘 환율로 대신하면 3년 전 시작인데 지금 환율로 환산한 원금이 되어 버린다. */
   let fx=null;
-  if(cap!=null || add!=null){
-    const needUsd=[...capHit,...addHit].some(([,x])=>!isKrwSt(x.settings));
+  if(cap!=null || add!=null || plan5.length){
+    const needUsd=plan5.length>0 || [...capHit,...addHit].some(([,x])=>!isKrwSt(x.settings));
     if(needUsd){
       fx=await fxAt(ns);
       if(!fx){
@@ -7982,9 +7995,10 @@ async function applyAllSimStart(){
     }
   }
   const nRec=list.reduce((a,[,x])=>a+((x.hist||[]).length),0);
-  let msg=`모의 세션 ${list.length}개의 시작일을 ${ns}로 바꿉니다.\n기존 기록 ${nRec}건을 지우고 그 날부터 다시 만듭니다.`;
-  if(cap!=null) msg+=`\n\n원금 ${cap.toLocaleString('en-US')}₩ → ${capHit.length}개 적용`;
-  if(add!=null) msg+=`\n1회 적립액 ${add.toLocaleString('en-US')}₩ → ${addHit.length}개 적용`;
+  let msg=`모의 세션 ${allCount}개의 시작일을 ${ns}로 바꿉니다.\n기존 기록 ${nRec}건을 지우고 그 날부터 다시 만듭니다.`;
+  if(plan5.length) msg+=`\n5년플랜 ${plan5.length}개는 저장 기록 없이 같은 규칙으로 즉시 재계산합니다.`;
+  if(cap!=null) msg+=`\n\n원금 ${cap.toLocaleString('en-US')}₩ → ${capHit.length+plan5.length}개 적용`;
+  if(add!=null) msg+=`\n1회 적립액 ${add.toLocaleString('en-US')}₩ → ${addHit.length+plan5.length}개 적용 (5년플랜은 월 적립)`;
   if((cap!=null||add!=null)){
     if(fx){
       msg+=`\n\n입력한 원화값은 그대로 저장합니다. 미국 종목의 전략 계산에만 ${fx.date} 기준 환율 ${fx.rate.toLocaleString('en-US')}원/$을 사용합니다.`;
@@ -8011,17 +8025,29 @@ async function applyAllSimStart(){
       if(add!=null && applyPaperAdd(tab,x.settings,add,R)) amtTouched=true;
       if(amtTouched) x.paperFxRate=isKrwSt(x.settings)?1:R; }
   });
+  if(plan5.length){
+    const R=fx&&fx.rate>0?fx.rate:1;
+    plan5.forEach(x=>{
+      x.simStart=ns;
+      const cw=(cap!=null)?cap:((+x.capitalWon>0)?+x.capitalWon:S.paperCommon.capitalWon);
+      const mw=(add!=null)?add:((+x.monthlyWon>=0)?+x.monthlyWon:S.paperCommon.addWon);
+      x.capitalWon=cw;x.monthlyWon=mw;x.paperFxRate=R;x.capitalUsd=cw/R;x.monthlyUsd=mw/R;x.ruleVer=1;
+    });
+  }
   saveLocal();
   /* 전체 적용 버튼을 누른 순간의 시작일·원금·세션 설정을 먼저 영구 저장한다.
      재생(openPaper)이 오래 걸리거나 중간에 페이지를 옮겨도 예전 paperCommon 날짜로 돌아가면 안 된다. */
   const appliedCloudOk=await pushRemoteNow();
+  const planCloudOk=plan5.length?await savePaperPlan5Now():true;
   await openPaper();          // 지운 자리를 새 시작일로 다시 채우고 표를 새로 그린다
   saveLocal();
   const replayCloudOk=await pushRemoteNow();
-  const cloudOk=appliedCloudOk||replayCloudOk;
+  const cloudOk=(appliedCloudOk||replayCloudOk) && planCloudOk;
   const dateMiss=paperSessions().filter(([,x])=>x.simStart!==ns);
-  if(dateMiss.length){
-    paperNote=`⚠ 전체 적용 후 시작일이 안 맞는 세션 ${dateMiss.length}개: ${dateMiss.map(([,x])=>x.name).join(', ')}`;
+  const planDateMiss=paperPlan5Sessions().filter(x=>x.simStart!==ns);
+  if(dateMiss.length||planDateMiss.length){
+    const bad=[...dateMiss.map(([,x])=>x.name),...planDateMiss.map(x=>x.name)];
+    paperNote=`⚠ 전체 적용 후 시작일이 안 맞는 세션 ${bad.length}개: ${bad.join(', ')}`;
   }else if(!cloudOk){
     paperNote='⚠ 기기에는 적용됐지만 클라우드 저장에 실패했습니다. 동기화 표시를 확인하세요.';
   }

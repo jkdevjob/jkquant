@@ -1567,7 +1567,7 @@ console.log('[30] 모의 시작일 일괄 변경');
   // 실계좌를 건드리면 사람이 넣은 실제 거래가 날아간다 — 되돌릴 방법이 없다
   ok('실계좌는 손대지 않는다', /const list=paperSessions\(\);/.test(ap)
      && /list\.forEach\(\(\[tab,x\]\)=>\{/.test(ap) && !/sessions\.forEach/.test(ap));
-  ok('지우기 전에 묻는다', /let msg=`모의 세션 \$\{list\.length\}개의 시작일을 \$\{ns\}로 바꿉니다/.test(ap)
+  ok('지우기 전에 묻는다', /let msg=`모의 세션 \$\{allCount\}개의 시작일을 \$\{ns\}로 바꿉니다/.test(ap)
      && /기존 기록 \$\{nRec\}건을 지우고/.test(ap) && /if\(!confirm\(msg\)\) return;/.test(ap));
   /* 시작일을 옮기면 그때까지 만든 기록은 옛 시작일 산물이라 통째로 무효다.
      세션 편집(createSess)과 같은 키를 지워야 한다 — 하나라도 남으면 새 시작일과 옛 진행상태가 섞인다. */
@@ -1579,7 +1579,7 @@ console.log('[30] 모의 시작일 일괄 변경');
   const iSaveAll=ap.indexOf('saveLocal();'), iPushAll=ap.indexOf('await pushRemoteNow()'), iOpenAll=ap.indexOf('await openPaper()');
   ok('지운 자리를 다시 채우기 전에 로컬·클라우드에 새 출발선을 저장한다',
      iSaveAll>=0 && iPushAll>iSaveAll && iOpenAll>iPushAll, iSaveAll+' / '+iPushAll+' / '+iOpenAll);
-  ok('모의가 없으면 알리고 멈춘다', /if\(!list\.length\)\{ alert\('모의 세션이 없습니다\.'\); return; \}/.test(ap));
+  ok('모의가 없으면 알리고 멈춘다', /if\(!allCount\)\{ alert\('모의 세션이 없습니다\.'\); return; \}/.test(ap));
 
   /* 시작일 하한 3년 — 그 앞은 시세를 하루씩 되짚느라 오래 걸리고,
      레버리지 ETF는 상장이 얼마 안 된 게 많아 구간이 반쯤 빈다. */
@@ -10137,6 +10137,13 @@ console.log('\n[134] 5년플랜 모의 세션 · /paper 통합');
   ok('D /paper가 fiveYearPlan paperSessions를 읽고 별도 행으로 합친다',
      /function paperPlan5Sessions\(\)/.test(idx)&&/rows\.push\(\.\.\.await paperFillPlan5\(\)\)/.test(idx)&&/label:'5년플랜'/.test(idx));
   ok('E 5년플랜 성과행 클릭은 plan 세션으로 이동',/function gotoPlanPaper\(id\)/.test(idx)&&/paperSession=/.test(idx));
+  const allApply=extractFn(idx,'async function applyAllSimStart()');
+  ok('E 전체 적용도 5년플랜 시작일·원금·월 적립액을 함께 갱신하고 별도 저장',
+     /const list=paperSessions\(\), plan5=paperPlan5Sessions\(\), allCount=/.test(allApply)
+     && /x\.capitalUsd=cw\/R;x\.monthlyUsd=mw\/R/.test(allApply)
+     && /savePaperPlan5Now\(\)/.test(allApply));
+  ok('E 모의 상단 안내가 5년플랜 적립액은 월 적립이라고 구분',
+     /5년플랜은 1회 적립액을 월 적립액으로 적용/.test(idx));
 
   let E=null;
   try{E=new Function('globalThis',p5+'\nreturn globalThis.JKPlan5;')({});}catch(e){}
