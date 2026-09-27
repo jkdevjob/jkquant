@@ -2272,6 +2272,7 @@ function renderAlphaLedger(){
   }
 }
 function alphaOpenFillEditor(){
+  if(guardAssetPaperEdit())return;
   if(!pendingAlphaOrders.length){alert('현재 반영할 주문이 없습니다. A탭을 다시 열어 최신 주문을 확인하세요.');return;}
   $('alphaFillDate').value=todayISO();
   $('alphaFillRows').innerHTML=pendingAlphaOrders.map((o,i)=>'<div class="alpha-fill-row" data-fill-i="'+i+'"><div class="tag">'+o.sym+'</div><div class="'+(o.side==='buy'?'pos':'neg')+'">'+(o.side==='buy'?'매수':'매도')+'</div><div class="field"><label>실제 수량 (최대 '+o.qty+')</label><input type="number" class="afQty" min="0" max="'+o.qty+'" step="1" value="'+o.qty+'"></div><div class="field"><label>실제 체결가 ($)</label><input type="number" class="afPrice" min="0" step="0.0001" value="'+Number(o.price).toFixed(4)+'"></div></div>').join('');
@@ -2279,6 +2280,7 @@ function alphaOpenFillEditor(){
 }
 function alphaCloseFillEditor(){if($('alphaFillPanel'))$('alphaFillPanel').hidden=true;}
 async function alphaSaveFills(){
+  if(guardAssetPaperEdit())return;
   const date=$('alphaFillDate').value||todayISO(),rows=[...$('alphaFillRows').querySelectorAll('[data-fill-i]')],S=alphaLedgerCalc(),next={...S},events=[];
   for(const row of rows){
     const i=Number(row.dataset.fillI),o=pendingAlphaOrders[i];if(!o)continue;
@@ -2301,18 +2303,21 @@ function alphaCloseEdit(){
   if($('alphaEditPanel'))$('alphaEditPanel').hidden=true;
 }
 function alphaOpenBaseEdit(){
+  if(guardAssetPaperEdit())return;
   const b=alphaLedger.base||{};alphaEditingId='__base';$('alphaEditId').value='__base';$('alphaFillPanel').hidden=true;$('alphaEditPanel').hidden=false;$('alphaEditTrade').hidden=true;$('alphaEditBase').hidden=false;
   $('alphaBaseDate').value=b.date||todayISO();$('alphaBaseCash').value=Number.isFinite(+b.cash)?+b.cash:0;
   $('alphaBaseTecl').value=Math.max(0,Math.floor(+b.tecl||0));$('alphaBaseTqqq').value=Math.max(0,Math.floor(+b.tqqq||0));$('alphaBaseSgov').value=Math.max(0,Math.floor(+b.sgov||0));
   $('alphaBaseAvgTecl').value=Number.isFinite(+b.avgTecl)&&+b.avgTecl>0?+b.avgTecl:'';$('alphaBaseAvgTqqq').value=Number.isFinite(+b.avgTqqq)&&+b.avgTqqq>0?+b.avgTqqq:'';$('alphaBaseAvgSgov').value=Number.isFinite(+b.avgSgov)&&+b.avgSgov>0?+b.avgSgov:'';
 }
 function alphaOpenEdit(id){
+  if(guardAssetPaperEdit())return;
   const e=(alphaLedger.events||[]).find(x=>String(x.id)===String(id));if(!e||e.type!=='trade')return;
   alphaEditingId=String(id);$('alphaEditId').value=alphaEditingId;$('alphaFillPanel').hidden=true;$('alphaEditPanel').hidden=false;$('alphaEditTrade').hidden=false;$('alphaEditBase').hidden=true;
   $('alphaEditDate').value=e.date||todayISO();$('alphaEditSymbol').value=String(e.symbol||'TECL').toUpperCase();$('alphaEditSide').value=e.side==='sell'?'sell':'buy';
   $('alphaEditQty').value=Math.max(1,Math.floor(+e.qty||1));$('alphaEditPrice').value=+e.price||0;
 }
 async function alphaSaveEdit(){
+  if(guardAssetPaperEdit())return;
   const id=alphaEditingId||$('alphaEditId').value,candidate=JSON.parse(JSON.stringify(alphaLedger));
   if(id==='__base'){
     const date=$('alphaBaseDate').value||todayISO(),tecl=Math.max(0,Math.floor(num('alphaBaseTecl'))),tqqq=Math.max(0,Math.floor(num('alphaBaseTqqq'))),sgov=Math.max(0,Math.floor(num('alphaBaseSgov'))),cash=num('alphaBaseCash');
@@ -2329,6 +2334,7 @@ async function alphaSaveEdit(){
   alphaLedger=candidate;alphaCloseEdit();alphaSyncInputs();renderAlphaLedger();localSave();refreshAlphaFromCache();await cloudSave();
 }
 async function alphaDeleteEvent(id){
+  if(guardAssetPaperEdit())return;
   const e=(alphaLedger.events||[]).find(x=>String(x.id)===String(id));if(!e)return;
   if(!confirm('이 기록을 삭제하고 이후 잔고를 다시 계산할까요?'))return;
   const candidate=JSON.parse(JSON.stringify(alphaLedger));candidate.events=(candidate.events||[]).filter(x=>String(x.id)!==String(id));
@@ -2339,6 +2345,7 @@ async function alphaDeleteEvent(id){
 /* 현금 기록 추가 — SGOV 는 매달 분배금을 준다. 이 기록이 없으면 앱 현금이 토스 계좌보다 계속 작아져
    주문 수량이 어긋난다(20년 플랜은 SGOV 가 60%). 배당은 세후 실제 입금액 · 입금·출금은 계좌에 들고 난 금액. */
 async function alphaAddCashEvent(){
+  if(guardAssetPaperEdit())return;
   const date=($('alphaCashDate')&&$('alphaCashDate').value)||todayISO(),kind=$('alphaCashKind').value,amt=Math.round((+$('alphaCashAmt').value||0)*100)/100;
   if(!['div','dep','wd'].includes(kind)||!(amt>0)){alert('구분과 금액을 확인하세요.');return;}
   const candidate=JSON.parse(JSON.stringify(alphaLedger));candidate.events=Array.isArray(candidate.events)?candidate.events:[];
@@ -2349,6 +2356,7 @@ async function alphaAddCashEvent(){
   alphaLedger=candidate;$('alphaCashAmt').value='';alphaSyncInputs();renderAlphaLedger();localSave();refreshAlphaFromCache();await cloudSave();
 }
 async function alphaResetLedger(){
+  if(guardAssetPaperEdit())return;
   const cap=Math.max(1,Math.round(Number($('alphaCapitalInput').value)||0));
   if(!confirm('A안 거래이력과 보유량을 모두 초기화하고 현금 '+usd2(cap)+'에서 처음부터 시작할까요?'))return;
   $('startCapital').value=cap;
@@ -2524,8 +2532,18 @@ if(saved && Number(saved.startCapital)===30000 && Number(saved.aCash)===30000
    && !(Number(saved.aTeclQty)>0) && !(Number(saved.aTqqqQty)>0) && !(Number(saved.aSgovQty)>0)){
   saved.startCapital=20000;saved.aCash=20000;
 }
-apply(saved||d);$("slDate").value=todayISO();renderSessionSelectors();renderLedger();renderAlphaLedger();render();
+apply(saved||d);$("slDate").value=todayISO();renderSessionSelectors();renderLedger();renderAlphaLedger();render();renderAssetSessions();
 ["startDate","targetDate","startCapital","targetCapital","monthlyAdd","targetIncome","stageMode","balMM","balVR","balQLD","balSGOV","cagrLow","cagrBase","cagrHigh","incomeBasis","incomeYield","sgovYield","extraWithdraw"].forEach(id=>$(id).addEventListener("change",render));
+$("assetSessionAdd").addEventListener("click",openAssetSessionModal);
+$("assetSessionClose").addEventListener("click",closeAssetSessionModal);
+$("assetSessionCancel").addEventListener("click",closeAssetSessionModal);
+$("assetSessionCreate").addEventListener("click",createAssetSession);
+$("assetSessionKind").addEventListener("change",()=>{$("assetSessionStartWrap").style.display=$("assetSessionKind").value==='paper'?'':'none';});
+$("assetSessionModal").addEventListener("click",e=>{if(e.target===$("assetSessionModal"))closeAssetSessionModal();});
+$("assetSessionChips").addEventListener("click",e=>{
+  const d=e.target.closest("[data-asess-del]");if(d){e.stopPropagation();deleteAssetSession(d.dataset.asessDel);return;}
+  const b=e.target.closest("[data-asess]");if(b)selectAssetSession(b.dataset.asess||'');
+});
 $("alphaRecordFill").addEventListener("click",alphaOpenFillEditor);
 $("alphaCashAdd").addEventListener("click",alphaAddCashEvent);if($("alphaCashDate"))$("alphaCashDate").value=todayISO();
 $("alphaFillSave").addEventListener("click",alphaSaveFills);
@@ -2569,7 +2587,12 @@ if($('targetDate'))$('targetDate').value=plusYears($('startDate').value||todayIS
 renderHorizonCopy();
 $("jkmenuBtn").addEventListener("click",e=>{e.stopPropagation();$("jkmenuPop").hidden=!$("jkmenuPop").hidden});
 document.addEventListener("click",e=>{if(!$("jkmenuWrap").contains(e.target))$("jkmenuPop").hidden=true});
-onAuthStateChanged(auth,async user=>{userBadge(user);if(user)await cloudLoad(user);await refreshLive();});
+onAuthStateChanged(auth,async user=>{
+  userBadge(user);if(user)await cloudLoad(user);await refreshLive();
+  renderAssetSessions();
+  const x=activeAssetSession();
+  if(x)await loadActiveAssetSessionView(false);
+});
 </script>
 </body>
 </html>
