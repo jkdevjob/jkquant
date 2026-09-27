@@ -10175,5 +10175,86 @@ console.log('\n[134] 모의 시작일 — 설정 변경으로 오늘 리셋 금�
      && op.indexOf('await paperRepairLegacyStarts()')<op.indexOf('await paperFillAll()'));
 }
 
+
+/* ════════════════════════════════════════════════════════════════════
+   [135] 자산플랜 세션 — 전략별 운영/모의 · 모의성과 집계
+   ════════════════════════════════════════════════════════════════════ */
+console.log('\n[135] 자산플랜 세션 — 운영처럼 세션 + 모의투자 성과');
+{
+  const pl=fs.readFileSync(__d+'/plan.html','utf8');
+  const pePath=__d+'/plan-session-engine.js', pe=fs.existsSync(pePath)?fs.readFileSync(pePath,'utf8'):'';
+
+  ok('A 자산플랜 5/10/15/20 전략 탭 아래에 공통 세션바와 +세션 모달',
+     /id="assetSessionCard"/.test(pl) && /id="assetSessionChips"/.test(pl)
+     && /id="assetSessionAdd"/.test(pl) && /id="assetSessionModal"/.test(pl)
+     && /data-horizon="5"/.test(pl) && /data-horizon="10"/.test(pl) && /data-horizon="15"/.test(pl) && /data-horizon="20"/.test(pl));
+
+  ok('B 세션은 horizon별 분리되고 현재 투자중 플랜은 기존 저장소와 분리',
+     /filter\(x=>x&&\+x\.horizon===\+h\)/.test(extractFn(pl,'function assetSessionList(h=activeHorizon)'))
+     && /현재 투자중 플랜은 기존 fiveYearPlan 저장소를 그대로 쓴다/.test(pl)
+     && /if\(x\)\{[\s\S]*syncActiveAssetSessionFromView/.test(extractFn(pl,'function localSave()')));
+
+  ok('C 선택한 운영 세션 아래 기존 현재분석·계좌·거래이력·판단근거·전략설명을 그대로 사용',
+     /id="alphaOrderSection"/.test(pl) && /id="alphaAccountSection"/.test(pl)
+     && /id="alphaHistorySection"/.test(pl) && /id="alphaEvidenceSection"/.test(pl)
+     && /id="alphaStrategySection"/.test(pl)
+     && pl.indexOf('id="assetSessionCard"')<pl.indexOf('id="alphaOrderSection"'));
+
+  ok('D 모의 세션은 실제 장부와 분리해 자동재생하고 직접수정 UI를 막는다',
+     /paper\?null:assetLedgerSeed/.test(extractFn(pl,'async function createAssetSession()'))
+     && /JKPlanSessionEngine\.replay/.test(extractFn(pl,'async function replayAssetPaperSession(x,applyView)'))
+     && /asset-paper-mode/.test(pl)
+     && /guardAssetPaperEdit\(\)/.test(pl));
+
+  ok('E 모의성과가 자산플랜을 7번째 전략으로 읽고 원금·월추가금 전체 적용 대상',
+     /\['plan','자산플랜'\]/.test(idx)
+     && /if\(tab==='plan'\) return 'startCapital'/.test(extractFn(idx,'function paperCapField(tab, st)'))
+     && /if\(tab==='plan'\) return 'monthlyAdd'/.test(extractFn(idx,'function paperAddField(tab, st)'))
+     && /function paperStatPlan\(sess\)/.test(idx)
+     && /if\(tab==='plan'\)/.test(extractFn(idx,'async function paperFillAll()')));
+
+  ok('F 모의성과 자산플랜 행을 누르면 해당 horizon/session으로 돌아간다',
+     /location\.href='\/plan\?session='\+encodeURIComponent\(id\)\+'\&horizon='/.test(extractFn(idx,'function gotoSess(tab, id)'))
+     && /requestedAssetSessionId/.test(pl));
+
+  if(!pe){
+    ok('G 자산플랜 공유 모의 엔진 파일 존재',false,'plan-session-engine.js 없음');
+  }else{
+    const {spawnSync}=require('child_process');
+    const syn=spawnSync(process.execPath,['--check',pePath],{encoding:'utf8'});
+    ok('G 자산플랜 공유 모의 엔진 문법',syn.status===0,(syn.stderr||'').split('\n')[0]);
+
+    const vm=require('vm'),ctx={};vm.createContext(ctx);vm.runInContext(pe,ctx);
+    const E=ctx.JKPlanSessionEngine;
+    ok('H 공유 엔진 replay/stats 노출',!!E&&typeof E.replay==='function'&&typeof E.stats==='function');
+
+    const rows=[];let d=new Date('2022-01-03T00:00:00Z'),k=0;
+    while(rows.length<700){
+      const wd=d.getUTCDay();
+      if(wd!==0&&wd!==6){
+        const date=d.toISOString().slice(0,10);
+        rows.push({date,
+          tecl:45*Math.pow(1.00075,k)*(1+.035*Math.sin(k/8)),
+          tqqq:60*Math.pow(1.00065,k)*(1+.018*Math.sin(k/13)),
+          sgov:100*Math.pow(1.00012,k)});
+        k++;
+      }
+      d.setUTCDate(d.getUTCDate()+1);
+    }
+    const T=rows.map(x=>({date:x.date,close:x.tecl})),Q=rows.map(x=>({date:x.date,close:x.tqqq})),G=rows.map(x=>({date:x.date,close:x.sgov}));
+    const start=rows[330].date;
+    for(const y of [5,10,15,20]){
+      const R=E.replay({horizon:y,startDate:start,principal:10000,monthlyAdd:100,tecl:T,tqqq:Q,sgov:G});
+      ok('I '+y+'년 모의 — NAV/성과/거래 생성',
+         R&&R.stats&&R.nav.length>250&&R.stats.total>0&&R.stats.inflow>10000&&R.stats.nTrade>0,
+         JSON.stringify(R&&R.stats));
+      const tr=(R&&R.ledger&&R.ledger.events||[]).filter(x=>x.type==='trade');
+      ok('J '+y+'년 모의 — 전일 신호 → 다음 거래일 체결, 거래이력은 운영 장부 형식',
+         tr.length>0&&tr.every(x=>x.signalDate&&x.signalDate<x.date&&['TECL','TQQQ','SGOV'].includes(x.symbol)&&x.qty>0&&x.price>0),
+         JSON.stringify(tr.find(x=>!(x.signalDate&&x.signalDate<x.date))||tr[0]||{}));
+    }
+  }
+}
+
 console.log(`\n════ 결과: ${pass} PASS / ${fail} FAIL ${fail===0?'— ALL PASS ★':'— 배포 금지, 위 ✗ 항목 수정 필요'} ════`);
 process.exit(fail===0?0:1);
