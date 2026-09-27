@@ -122,7 +122,8 @@ function replay(opt){
   const startIdx=S.dates.findIndex(d=>d>=start);
   if(startIdx<0)return {nav:[],ledger:initialLedger(start,principal),stats:null,error:'시작일 이후 시세 없음'};
 
-  const tma225=sma(S.tqqq,225),tma250=sma(S.tqqq,250),trsi=rsi(S.tqqq,14);\n  const teclRows=S.dates.map((d,k)=>({date:d,close:S.tecl[k]})),tqqqRows=S.dates.map((d,k)=>({date:d,close:S.tqqq[k]}));
+  const tma225=sma(S.tqqq,225),tma250=sma(S.tqqq,250),trsi=rsi(S.tqqq,14);
+  const teclRows=S.dates.map((d,k)=>({date:d,close:S.tecl[k]})),tqqqRows=S.dates.map((d,k)=>({date:d,close:S.tqqq[k]}));
   const div={TECL:mapDiv(opt.teclDiv),TQQQ:mapDiv(opt.tqqqDiv),SGOV:mapDiv(opt.sgovDiv)};
   const ledger=initialLedger(start,principal),pos={TECL:0,TQQQ:0,SGOV:0};
   let cash=principal,inflow=principal,nTrade=0,seq=1,lastMonth=start.slice(0,7),lastDecision=null;
