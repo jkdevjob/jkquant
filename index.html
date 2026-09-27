@@ -7055,7 +7055,7 @@ async function paperFillPlan5(){
       const inflowWon=(+s.capitalWon||0)+z.nMonthly*(+s.monthlyWon||0);
       out.push({tab:'plan5',id:s.id,name:s.name||'5년플랜 모의',label:'5년플랜',sym:'TECL·TQQQ·SGOV',
         opts:['역분산70','Guard30'].concat((+s.monthlyWon||0)>0?['월 '+Math.round(+s.monthlyWon).toLocaleString('ko-KR')+'원']:[]),
-        cur:'usd',from:s.simStart,to:z.to,yrs:z.yrs,spanDays:z.spanDays,inflow:z.inflow,inflowWon,total:z.total,
+        cur:curOf({ticker:'TECL'}),from:s.simStart,to:z.to,yrs:z.yrs,spanDays:z.spanDays,inflow:z.inflow,inflowWon,total:z.total,
         ret:z.ret,retNow:z.ret,retOut:0,cagr:z.cagr,nTrade:z.nTrade,price:1,out:{saved:0,withdrawn:0,simple:false},
         mdd:{pct:z.mdd,nDay:z.snap.length,endTot:z.total}});
     }

@@ -1347,7 +1347,8 @@ console.log('[25] 모의 성과 → 분석 이동');
   /* 줄 전체를 누르게 했더니 숫자를 보려고 짚기만 해도 화면이 넘어갔다 —
      이제 '전략 이름'만 누른다. 줄에는 onclick 이 남아 있으면 안 된다. */
   ok('전략 이름을 누르면 이동',
-     /<b class="slink" onclick="gotoSess\('\$\{r\.tab\}','\$\{r\.id\}'\)"[^>]*>\$\{r\.label\}<\/b>/.test(idx)
+     (/<b class="slink" onclick="gotoSess\('\$\{r\.tab\}','\$\{r\.id\}'\)"[^>]*>\$\{r\.label\}<\/b>/.test(idx)
+      || /<b class="slink" onclick="\$\{paperRowOpen\(r\)\}"[^>]*>\$\{r\.label\}<\/b>/.test(idx))
      && /\.htable \.slink\{/.test(idx));
   ok('줄 전체는 더 이상 안 눌린다', !/<tr class="jump"/.test(idx) && !/\.htable tr\.jump\{/.test(idx));
   ok('눌리는 곳이 폰에서도 짚힌다', /\.htable \.slink\{[^}]*padding:4px 7px/.test(idx)
@@ -8006,7 +8007,7 @@ console.log('\n[117] 자산플랜 v1.28.0 — 기간마다 완전히 다른 매�
      && /장중가격은 신호가 아니라 주문수량 추정에만 사용/.test(pl));
   ok('초기자금은 입력만으로 장부를 바꾸지 않고 초기화 때 확정',
      /const startCap=Math\.max\(1,num\('startCapital',20000\)\)/.test(pl)
-     && /signalTotal=startCap;\$\('aCash'\)\.value=startCap/.test(pl)
+     && /startCapital:startCap,force:horizonRebalancePending/.test(pl)
      && /bInf=Math\.round\(cap\*PATH_DEFAULTS\.classic\.infWeight\),bVr=Math\.max\(0,cap-bInf\)/.test(pl)
      && /\$\("alphaCapitalInput"\)\.addEventListener\("input",\(\)=>\{\s*\$\("alphaCapitalInput"\)\.dataset\.dirty='1';\s*\}\)/.test(pl)
      && !/\$\("alphaCapitalInput"\)\.addEventListener\("change"/.test(pl)
