@@ -791,16 +791,17 @@ function renderHorizonCopy(){
     if($('alphaValidation'))$('alphaValidation').innerHTML='<b>20년 백테스트 최적값:</b> 9M×30% + 12M×70% · 12M 양수 필터 · 승자 40% / SGOV 60%.<span class="sub">실제 레버리지 ETF 이력이 20년에 못 미쳐 12개월 블록 부트스트랩 160경로×20년으로 보강했습니다. 안전자산 0%/4% 민감도에서 20년 CAGR 하위10% 6.1~9.0%, 중앙 13.4~16.4%, MDD 하위10% -46.6~-40.4%. 실제 가용구간 CAGR 14.4~17.3%, MDD -30.5~-27.2%.</span><span class="sub">독립 재현(주문 규칙 그대로 · 2010-03-12~2026-07-10 · 안전자산 0%/4%): CAGR 12.6~15.5% · MDD −37.5~−39.2% (2020-03 코로나) — 위 실제 가용구간 수치는 재현되지 않았습니다. 1999년부터 만든 합성 3배 자료로 20년 창 81개: CAGR 최악 4.3% · MDD 최악 −39.6% (긴 하락장에서도 버팁니다).</span>';
   }
 }
-function setHorizon(years,refresh=true){
+async function setHorizon(years,refresh=true){
   const y=[5,10,15,20].includes(Number(years))?Number(years):5;
+  const cur=activeAssetSession();if(cur&&!cur.paper)syncActiveAssetSessionFromView();else if(!cur)localSave();
   if(y!==activeHorizon)horizonRebalancePending=true;
   activeHorizon=y;
   try{localStorage.setItem('jkq_plan_horizon',String(y));}catch(e){}
+  await loadActiveAssetSessionView(false);
   const base=$('startDate')&&$('startDate').value?$('startDate').value:todayISO();
   if($('targetDate'))$('targetDate').value=plusYears(base,y);
-  render();
-  refreshAlphaFromCache();
-  if(refresh)refreshLive();
+  renderAssetSessions();render();refreshAlphaFromCache();
+  if(refresh)await refreshLive();
 }
 
 
@@ -967,23 +968,26 @@ function renderAssetSessions(){
     else{st.className='asset-session-state';st.textContent='운영 세션 · '+horizonStrategy().name;}
   }
 }
+async function loadActiveAssetSessionView(refresh=true){
+  const x=activeAssetSession();
+  if(!x){
+    restoreCurrentPlanView();renderAssetSessions();render();if(refresh)await refreshLive();return;
+  }
+  applyAssetSettings(x);
+  if(x.paper){
+    renderAssetSessions();await replayAssetPaperSession(x,true);if(refresh)await refreshLive();return;
+  }
+  alphaLedger=cloneObj(x.ledger||assetLedgerSeed((x.settings&&x.settings.startDate)||todayISO(),+(x.settings&&x.settings.startCapital)||20000));
+  alphaSyncInputs();document.body.classList.remove('asset-paper-mode');
+  const pr=$('assetPaperResult');if(pr){pr.hidden=true;pr.innerHTML='';}
+  renderAssetSessions();renderAlphaLedger();render();if(refresh)await refreshLive();
+}
 async function selectAssetSession(id){
   const cur=activeAssetSession();
   if(cur&&!cur.paper)syncActiveAssetSessionFromView();
   else if(!cur)localSave();
   const b=assetPlanBox();b.activeByHorizon[activeHorizon]=id||'';writeAssetSessionLocal();
-  const x=activeAssetSession();
-  if(!x){
-    restoreCurrentPlanView();renderAssetSessions();render();await refreshLive();return;
-  }
-  applyAssetSettings(x);
-  if(x.paper){
-    renderAssetSessions();await replayAssetPaperSession(x,true);await refreshLive();return;
-  }
-  alphaLedger=cloneObj(x.ledger||assetLedgerSeed(x.settings&&x.settings.startDate,+x.settings?.startCapital||20000));
-  alphaSyncInputs();document.body.classList.remove('asset-paper-mode');
-  const pr=$('assetPaperResult');if(pr){pr.hidden=true;pr.innerHTML='';}
-  renderAssetSessions();renderAlphaLedger();render();await refreshLive();
+  await loadActiveAssetSessionView(true);
 }
 function openAssetSessionModal(){
   const list=assetSessionList();
@@ -2048,7 +2052,7 @@ async function loadOperatingState(user){
   else{liveState=null;liveStateSource='운영데이터 없음';}
   ensureLiveBoxes();
   if(migrateLiveInfOperatingDefaults())await saveOperatingState();
-  renderSessionSelectors();
+  renderSessionSelectors();renderAssetSessions();
 }
 async function refreshLive(){
   if(liveBusy)return;liveBusy=true;$('liveRefresh').disabled=true;$('liveSync').textContent='운영데이터와 확정 일봉을 읽는 중…';liveQuotes={};
@@ -2166,6 +2170,12 @@ function apply(o){
   alphaSyncInputs();
 }
 function localSave(){
+  const x=activeAssetSession();
+  if(x){
+    if(!x.paper)syncActiveAssetSessionFromView();
+    if($("saveState"))$("saveState").textContent=(x.paper?"모의 세션 자동 재생":"세션 브라우저 저장 완료")+" · "+new Date().toLocaleTimeString("ko-KR",{hour:"2-digit",minute:"2-digit"});
+    return;
+  }
   try{localStorage.setItem(KEY,JSON.stringify(readForm()));$("saveState").textContent="브라우저 저장 완료 · "+new Date().toLocaleTimeString("ko-KR",{hour:"2-digit",minute:"2-digit"});}catch(e){}
 }
 function alphaEventList(ledger=alphaLedger){
@@ -2468,6 +2478,13 @@ function seed(){
   $("balMM").value=Math.round(total*.33);$("balVR").value=Math.round(total*.33);$("balQLD").value=Math.round(total*.17);$("balSGOV").value=Math.round(total*.17);render();
 }
 async function cloudSave(){
+  const x=activeAssetSession();
+  if(x){
+    if(!x.paper)syncActiveAssetSessionFromView();
+    await saveOperatingState();
+    $("saveState").textContent=x.paper?"모의 세션 저장 완료":"세션 계정 + 브라우저 저장 완료";
+    return;
+  }
   localSave();
   if(!auth.currentUser){$("saveState").textContent="브라우저 저장 완료 · 로그인하면 계정에도 저장";return;}
   try{await setDoc(doc(db,"users",auth.currentUser.uid),{fiveYearPlan:readForm()},{merge:true});$("saveState").textContent="계정 + 브라우저 저장 완료";}catch(e){$("saveState").textContent="브라우저 저장 완료 · 계정 저장 실패";}
