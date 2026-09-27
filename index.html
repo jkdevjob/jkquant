@@ -7777,7 +7777,7 @@ function paperFormMemoRead(){
   catch(e){ return {}; }
 }
 /* 새 모의 세션도 성과 상단의 공통 원화 원금/적립액을 그대로 물려받는다.
-   시작일만 맞추고 factory 기본값($10,000 등)을 두면 새 세션이 1일·1거래짜리 다른 출발선으로 보인다. */
+   시작일만 맞추고 factory 기본값(10,000달러 등)을 두면 새 세션이 1일·1거래짜리 다른 출발선으로 보인다. */
 function paperCommonWonValues(){
   const pc=(S&&S.paperCommon)||{}, memo=paperFormMemoRead();
   return {
