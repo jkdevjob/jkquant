@@ -50,6 +50,19 @@ button{cursor:pointer}
 .sessionbar{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:end;margin-top:10px;padding:10px;background:var(--surf2);border:1px solid var(--border);border-radius:10px}
 .sessionbar .field{min-width:0}.sessionbar select{width:100%}.sessionstate{grid-column:1/-1;font-size:10.5px;color:var(--dim)}
 .sessionstate.ok{color:var(--green)}.sessionstate.warn{color:var(--gold)}
+.plan-paper-sessions{margin:10px 0 12px;padding:10px;background:var(--surf2);border:1px solid var(--border);border-radius:11px}
+.plan-paper-head{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.plan-paper-chips{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+.plan-paper-chip{border:1px solid var(--border2);background:var(--bg);color:var(--text);border-radius:999px;padding:7px 10px;font-size:11px;font-weight:800;cursor:pointer}
+.plan-paper-chip.on{border-color:var(--accent);background:rgba(139,140,240,.13);color:#c9caff}
+.plan-paper-chip.sim:after{content:"모의";margin-left:5px;color:var(--gold);font-size:9px}
+.plan-paper-del{border:0;background:transparent;color:var(--red);cursor:pointer;font-weight:900;margin-left:2px}
+.plan-paper-preview{margin-top:9px;padding:9px 10px;border:1px solid var(--border);border-radius:9px;font-size:11px;line-height:1.65;color:var(--dim)}
+.plan-paper-preview b{color:var(--text)}
+.plan-paper-modal[hidden]{display:none}.plan-paper-modal{position:fixed;inset:0;z-index:90;background:rgba(3,7,18,.78);display:flex;align-items:center;justify-content:center;padding:16px}
+.plan-paper-box{width:min(520px,100%);background:var(--panel);border:1px solid var(--border2);border-radius:14px;padding:16px;box-shadow:0 24px 80px rgba(0,0,0,.45)}
+.plan-paper-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}.plan-paper-grid .wide{grid-column:1/-1}
+@media(max-width:560px){.plan-paper-grid{grid-template-columns:1fr}.plan-paper-grid .wide{grid-column:auto}}
 .todaybox{border:1px solid var(--border2);border-radius:10px;padding:12px;background:rgba(255,255,255,.025);margin-top:10px}
 .todaybox h3{font-size:13px;margin-bottom:7px}
 .status-pill{display:inline-block;border-radius:999px;padding:3px 8px;font-size:10px;font-weight:900;border:1px solid var(--border2);color:var(--dim)}
@@ -192,7 +205,7 @@ th:first-child,td:first-child{text-align:left}
 <body>
 <div class="wrap">
   <div class="top">
-    <div class="brand"><div class="logo">Asset Plan</div><h1>자산플랜 <span class="ver">v1.36.2</span></h1></div>
+    <div class="brand"><div class="logo">Asset Plan</div><h1>자산플랜 <span class="ver">v1.37.0</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
       <div class="jkmenu" id="jkmenuWrap">
@@ -232,6 +245,29 @@ th:first-child,td:first-child{text-align:left}
     <button class="horizon-tab" data-horizon="15">15년</button>
     <button class="horizon-tab" data-horizon="20">20년</button>
   </nav>
+
+  <section class="plan-paper-sessions" id="planPaperSessions">
+    <div class="plan-paper-head"><div><b>5년플랜 세션</b><div class="sub">현재 투자중 계좌는 그대로 두고, 별도 모의 세션만 만들어 모의투자 성과에서 비교합니다.</div></div>
+      <div class="btnrow" style="margin:0"><button class="btn primary" id="planPaperAdd">+ 모의 세션</button><a class="btn" href="/paper" style="text-decoration:none">🧪 모의 성과 보기</a></div></div>
+    <div class="plan-paper-chips" id="planPaperChips"></div>
+    <div class="plan-paper-preview" id="planPaperPreview" hidden></div>
+  </section>
+
+  <div class="plan-paper-modal" id="planPaperModal" hidden>
+    <div class="plan-paper-box">
+      <h3 style="margin:0 0 4px">5년플랜 모의 세션 추가</h3>
+      <div class="sub" style="margin-bottom:10px">현재 5년 전략 규칙(TECL 역분산 70% + TQQQ Guard 30% + SGOV)을 별도 계좌로 과거부터 재생합니다. 실제 운영 장부는 건드리지 않습니다.</div>
+      <div class="plan-paper-grid">
+        <div class="field wide"><label>세션 이름</label><input id="planPaperName" type="text" placeholder="예: 5년플랜 모의 1"></div>
+        <div class="field"><label>모의 시작일</label><input id="planPaperStart" type="date"></div>
+        <div class="field"><label>원금 (원)</label><input id="planPaperCapital" type="number" min="1" step="10000"></div>
+        <div class="field"><label>월 적립액 (원)</label><input id="planPaperMonthly" type="number" min="0" step="10000"></div>
+        <div class="field"><label>전략</label><input value="TECL 역분산 70% + TQQQ Guard 30%" readonly></div>
+      </div>
+      <div class="path-note" style="margin-top:9px">원금·월 적립액은 원화로 저장하고 시작일 USD/KRW로 계산용 달러 금액만 환산합니다. 월 적립금은 매달 첫 공통 거래일에 들어온 외부자금으로 처리합니다.</div>
+      <div class="btnrow" style="justify-content:flex-end"><button class="btn" id="planPaperCancel">취소</button><button class="btn primary" id="planPaperCreate">만들기</button></div>
+    </div>
+  </div>
 
   <div class="plan-panel on" data-ppanel="alpha">
     <div class="guidehero">
@@ -674,6 +710,7 @@ th:first-child,td:first-child{text-align:left}
   </section>
 </div>
 
+<script src="/plan5-engine.js"></script>
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-app.js";
 import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-auth.js";
@@ -708,6 +745,7 @@ const ASSET_STRATEGIES={
   20:{years:20,key:'dualMomentum',name:'20년 · 월간 듀얼모멘텀',risk:'장기성장',desc:'TECL↔TQQQ 9M/12M 모멘텀 + 12M 절대모멘텀 + SGOV'}
 };
 let activeHorizon=5,horizonRebalancePending=false;
+let planPaperList=[],planPaperActive="";
 try{const hy=Number(localStorage.getItem('jkq_plan_horizon'));if([5,10,15,20].includes(hy))activeHorizon=hy;}catch(e){}
 function horizonStrategy(){return ASSET_STRATEGIES[activeHorizon]||ASSET_STRATEGIES[5];}
 function setTxt(id,v){const el=$(id);if(el)el.textContent=v;}
@@ -754,6 +792,7 @@ function setHorizon(years,refresh=true){
   const base=$('startDate')&&$('startDate').value?$('startDate').value:todayISO();
   if($('targetDate'))$('targetDate').value=plusYears(base,y);
   render();
+  renderPlanPaperSessions();
   refreshAlphaFromCache();
   if(refresh)refreshLive();
 }
@@ -812,6 +851,90 @@ function opLocalState(uid){
 }
 
 function planSid(prefix){return prefix+'_'+Date.now().toString(36)+'_'+Math.random().toString(36).slice(2,8);}
+function planPaperMemo(){
+  try{const uid=auth.currentUser&&auth.currentUser.uid||'guest';const x=JSON.parse(localStorage.getItem('jkq_paper_form_'+uid)||'null');return x&&typeof x==='object'?x:{};}catch(e){return {};}
+}
+function planPaperMinDate(){const d=new Date();d.setFullYear(d.getFullYear()-3);return d.toISOString().slice(0,10);}
+function planPaperDefaults(){
+  const memo=planPaperMemo(),today=todayISO(),min=planPaperMinDate();
+  const d=(memo.simStart&&memo.simStart>=min&&memo.simStart<=today)?memo.simStart:today;
+  return {simStart:d,capitalWon:(+memo.capitalWon>0)?+memo.capitalWon:100000000,monthlyWon:(+memo.addWon>=0)?+memo.addWon:50000};
+}
+async function planPaperFxAt(date){
+  try{const r=await fetch('/api/fx?date='+encodeURIComponent(date),{headers:{Accept:'application/json'}});if(r.ok){const j=await r.json();if(j&&+j.rate>0)return +j.rate;}}catch(e){}
+  return 0;
+}
+function openPlanPaperModal(){
+  if(activeHorizon!==5)setHorizon(5,false);
+  const d=planPaperDefaults(),today=todayISO(),min=planPaperMinDate();
+  $('planPaperName').value='5년플랜 모의 '+(planPaperList.length+1);
+  $('planPaperStart').min=min;$('planPaperStart').max=today;$('planPaperStart').value=d.simStart;
+  $('planPaperCapital').value=Math.round(d.capitalWon);$('planPaperMonthly').value=Math.round(d.monthlyWon);
+  $('planPaperModal').hidden=false;
+}
+function closePlanPaperModal(){if($('planPaperModal'))$('planPaperModal').hidden=true;}
+async function createPlanPaperSession(){
+  const name=String($('planPaperName').value||'').trim()||('5년플랜 모의 '+(planPaperList.length+1));
+  const simStart=$('planPaperStart').value,capitalWon=Math.round(+$('planPaperCapital').value||0),monthlyWon=Math.round(+$('planPaperMonthly').value||0);
+  const min=planPaperMinDate(),today=todayISO();
+  if(!simStart||simStart<min||simStart>today){alert('모의 시작일은 '+min+' ~ '+today+' 사이로 선택하세요.');return;}
+  if(!(capitalWon>0)||monthlyWon<0){alert('원금은 0보다 커야 하고 월 적립액은 0 이상이어야 합니다.');return;}
+  $('planPaperCreate').disabled=true;
+  try{
+    const fx=await planPaperFxAt(simStart);
+    if(!(fx>0)){alert(simStart+' 시작일 환율을 불러오지 못했습니다. 모의 세션을 만들지 않았습니다.');return;}
+    const s={id:planSid('p5'),name,paper:true,simStart,capitalWon,monthlyWon,paperFxRate:fx,
+      capitalUsd:capitalWon/fx,monthlyUsd:monthlyWon/fx,createdAt:Date.now(),ruleVer:1,
+      settings:{...PATH_DEFAULTS.alpha}};
+    planPaperList.push(s);planPaperActive=s.id;closePlanPaperModal();renderPlanPaperSessions();refreshPlanPaperPreview();
+    await cloudSave();
+  }finally{$('planPaperCreate').disabled=false;}
+}
+function selectPlanPaper(id){
+  planPaperActive=String(id||'');try{localStorage.setItem('jkq_plan_paper_active',planPaperActive);}catch(e){}
+  renderPlanPaperSessions();refreshPlanPaperPreview();localSave();
+}
+async function deletePlanPaper(id){
+  const s=planPaperList.find(x=>x.id===id);if(!s)return;
+  if(!confirm("'"+s.name+"' 모의 세션을 삭제할까요? 실제 5년플랜 운영 장부는 변경하지 않습니다."))return;
+  planPaperList=planPaperList.filter(x=>x.id!==id);if(planPaperActive===id)planPaperActive='';
+  renderPlanPaperSessions();refreshPlanPaperPreview();await cloudSave();
+}
+function renderPlanPaperSessions(){
+  const box=$('planPaperSessions'),chips=$('planPaperChips');if(!box||!chips)return;
+  box.style.display=activeHorizon===5?'':'none';if(activeHorizon!==5)return;
+  let h='<button class="plan-paper-chip '+(!planPaperActive?'on':'')+'" data-p5sel="">현재 투자중</button>';
+  for(const s of planPaperList){
+    h+='<span><button class="plan-paper-chip sim '+(planPaperActive===s.id?'on':'')+'" data-p5sel="'+s.id+'">'+String(s.name||'모의').replace(/</g,'&lt;')+'</button><button class="plan-paper-del" data-p5del="'+s.id+'" title="삭제">×</button></span>';
+  }
+  chips.innerHTML=h;
+  chips.querySelectorAll('[data-p5sel]').forEach(b=>b.addEventListener('click',()=>selectPlanPaper(b.dataset.p5sel||'')));
+  chips.querySelectorAll('[data-p5del]').forEach(b=>b.addEventListener('click',e=>{e.stopPropagation();deletePlanPaper(b.dataset.p5del);}));
+}
+function planPaperResult(s){
+  if(!s||!window.JKPlan5||!liveQuotes.TECL||!liveQuotes.TQQQ||!liveQuotes.SGOV)return null;
+  return window.JKPlan5.simulate({
+    startDate:s.simStart,capital:+s.capitalUsd||0,monthlyAdd:+s.monthlyUsd||0,endDate:simCutoff('usd'),
+    teclRows:liveQuotes.TECL.rows,tqqqRows:liveQuotes.TQQQ.rows,sgovRows:liveQuotes.SGOV.rows,
+    teclDividends:liveQuotes.TECL.dividends||[],tqqqDividends:liveQuotes.TQQQ.dividends||[],sgovDividends:liveQuotes.SGOV.dividends||[]
+  });
+}
+function refreshPlanPaperPreview(){
+  const p=$('planPaperPreview');if(!p)return;
+  const s=planPaperList.find(x=>x.id===planPaperActive);
+  if(!s){p.hidden=true;p.innerHTML='';return;}
+  p.hidden=false;const r=planPaperResult(s);
+  if(!r){p.innerHTML='<b>'+s.name+'</b> · 시세가 준비되면 모의 결과를 계산합니다. 실제 운영 장부는 아래에 그대로 유지됩니다.';return;}
+  const sg=r.ret>=0?'+':'',cg=r.cagr>=0?'+':'';
+  p.innerHTML='<b>'+s.name+'</b> · '+s.simStart+'~'+r.to+' · 평가 '+usd(r.total)+' · 최종 '+sg+r.ret.toFixed(1)+'% · MDD -'+r.mdd.toFixed(1)+'% · 연 '+cg+r.cagr.toFixed(1)+'% · 매매 '+r.nTrade+'건'
+    +'<br>원금 '+Math.round(s.capitalWon).toLocaleString('ko-KR')+'원'+(s.monthlyWon>0?' · 월 적립 '+Math.round(s.monthlyWon).toLocaleString('ko-KR')+'원':' · 월 적립 없음')
+    +' · <a href="/paper" style="color:var(--accent)">모의투자 성과에서 다른 전략과 비교</a><br><span class="sub">이 모의 세션은 실제 5년플랜 계좌·거래이력과 완전히 분리되어 있습니다.</span>';
+}
+function restorePlanPaperSelection(){
+  let id='';try{id=new URLSearchParams(location.search).get('paperSession')||localStorage.getItem('jkq_plan_paper_active')||'';}catch(e){}
+  if(id&&planPaperList.some(x=>x.id===id))planPaperActive=id;else if(planPaperActive&&!planPaperList.some(x=>x.id===planPaperActive))planPaperActive='';
+}
+
 function ensureLiveBoxes(){
   if(!liveState)liveState={activeTab:'inf'};
   if(!liveState.inf)liveState.inf={sessions:[],active:null};
@@ -1685,11 +1808,13 @@ function renderAlphaPlan(qTecl,qTqqq,qSgov){
   const tq=Math.max(0,Math.floor(num('aTeclQty'))),qq=Math.max(0,Math.floor(num('aTqqqQty'))),sq=Math.max(0,Math.floor(num('aSgovQty'))),cash=num('aCash');
   const startCap=Math.max(1,num('startCapital',20000));
   if($('alphaStartState'))$('alphaStartState').textContent=(tq===0&&qq===0&&sq===0&&Math.abs(cash-startCap)<1?'신규 시작 상태 · 현금 '+usd(startCap)+'에서 오늘 주문을 계산합니다.':'운용 중 · 현재 보유수량/현금을 기준으로 필요한 주문만 표시합니다.');
-  let signalTotal=tq*ts+qq*qs+sq*ss+cash;if(!(signalTotal>0)){signalTotal=startCap;$('aCash').value=startCap;}
-  const w=Math.min(1,(D.ivsS0*D.ivsS0)/(sigma*sigma)),curTeclW=(tq*ts)/signalTotal,sleeveNow=curTeclW/Math.max(D.teclWeight,1e-9);
-  const teclHit=tq===0||Math.abs(w-sleeveNow)>D.ivsBand;
-  const upper=sma*(1+D.guardBand),lower=sma*(1-D.guardBand),posOn=qq>0,guard=(qs>upper?'ON':qs<lower?'OFF':(posOn?'ON':'OFF'));
-  const guardFlip=(guard==='ON')!==posOn,needRebalance=teclHit||guardFlip||horizonRebalancePending||(!tq&&!qq&&!sq);
+  const core=window.JKPlan5&&window.JKPlan5.orderPlan({
+    config:D,teclRows:tr,tqqqRows:qr,signalPrices:{TECL:ts,TQQQ:qs,SGOV:ss},
+    execPrices:{TECL:tp,TQQQ:qp,SGOV:sp},pos:{TECL:tq,TQQQ:qq,SGOV:sq},cash,startCapital:startCap,force:horizonRebalancePending
+  });
+  if(!core||!core.ready){if($('alphaMeta'))$('alphaMeta').textContent='5년 공용 엔진 계산에 필요한 이력이 부족합니다.';return;}
+  const {signalTotal,w,curTeclW,sleeveNow,teclHit,upper,lower,posOn,guard,guardFlip}=core;
+  const needRebalance=core.need;
 
   // 사용자가 주문 판단 근거를 직접 검증할 수 있도록 계산값과 그래프를 함께 노출한다.
   const gap=Math.abs(w-sleeveNow),bandLo=Math.max(0,w-D.ivsBand),bandHi=Math.min(1,w+D.ivsBand);
@@ -1730,19 +1855,9 @@ function renderAlphaPlan(qTecl,qTqqq,qSgov){
   }
 
   // 확정 종가로 정한 목표 금액을 현재가에서 정수 주수로 환산한다.
-  const targetTq=(teclHit||horizonRebalancePending)?Math.max(0,Math.floor(signalTotal*D.teclWeight*w/tp)):tq;
-  const targetQq=(guardFlip||horizonRebalancePending)?(guard==='ON'?Math.max(0,Math.floor(signalTotal*D.guardWeight/qp)):0):qq;
-  const targetSq=needRebalance?Math.max(0,Math.floor(Math.max(0,signalTotal-targetTq*tp-targetQq*qp)/sp)):sq;
-
-  // 수수료까지 예약해 '화면 수량 그대로' 넣었을 때 현금 부족 주문이 되지 않게 매도→위험자산 매수→SGOV 순서로 제한한다.
-  const F=ALPHA_FEE_RATE, orders=[];let avail=Math.max(0,cash);
-  const pos={TECL:tq,TQQQ:qq,SGOV:sq},pxs={TECL:tp,TQQQ:qp,SGOV:sp},targets={TECL:targetTq,TQQQ:targetQq,SGOV:targetSq};
-  for(const sym of ['TECL','TQQQ','SGOV']){
-    const dq=targets[sym]-pos[sym];if(dq<0){const q=-dq,p=pxs[sym];avail+=q*p-alphaFee(q,p);orders.push({side:'sell',sym,qty:q,price:p,note:sym==='TECL'?'역분산 목표':sym==='TQQQ'?'Guard '+guard:'잔여 대피자산'});}
-  }
-  for(const sym of ['TECL','TQQQ','SGOV']){
-    const dq=targets[sym]-pos[sym];if(dq>0){const p=pxs[sym],q=Math.min(dq,Math.floor(avail/(p*(1+F))));if(q>0){avail-=q*p+alphaFee(q,p);orders.push({side:'buy',sym,qty:q,price:p,note:sym==='TECL'?'역분산 목표':sym==='TQQQ'?'Guard '+guard:'잔여 대피자산'});}}
-  }
+  const targetTq=core.targets.TECL,targetQq=core.targets.TQQQ,targetSq=core.targets.SGOV;
+  // 실제 주문과 모의재생이 같은 공용 엔진의 매도→매수 수량을 그대로 쓴다.
+  const orders=core.orders.map(o=>({...o,note:o.sym==='TECL'?'역분산 목표':o.sym==='TQQQ'?'Guard '+guard:'잔여 대피자산'}));
   $('alphaMeta').textContent='신호 '+qTecl.settled.date+' 확정종가 · TECL σ'+D.ivsLook+' '+(sigma*100).toFixed(1)+'% → 목표 '+(w*100).toFixed(1)+'% ('+(D.teclWeight*100).toFixed(0)+'% 슬리브 내) · TQQQ '+usd(qs)+' / SMA'+D.guardMA+' '+usd(sma)+' · Guard '+guard;
   if($('alphaRefreshTime'))$('alphaRefreshTime').textContent='시세 자동 갱신 · '+new Date().toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
   pendingAlphaOrders=orders.map(o=>({...o}));
@@ -1762,7 +1877,7 @@ function renderAlphaPlan(qTecl,qTqqq,qSgov){
     '<br><span class="sub">주문 수량·금액은 현재가와 토스증권 미국주식 수수료 0.1%를 반영한 예상치입니다.</span>';
   if(horizonRebalancePending)horizonRebalancePending=false;
 }
-function refreshAlphaFromCache(){if(liveQuotes.TECL&&liveQuotes.TQQQ&&liveQuotes.SGOV)renderAlphaPlan(liveQuotes.TECL,liveQuotes.TQQQ,liveQuotes.SGOV);}
+function refreshAlphaFromCache(){if(liveQuotes.TECL&&liveQuotes.TQQQ&&liveQuotes.SGOV){renderAlphaPlan(liveQuotes.TECL,liveQuotes.TQQQ,liveQuotes.SGOV);refreshPlanPaperPreview();}}
 function ledgerReady(){return sleeveLedger.startQLD>0||sleeveLedger.startSGOV>0||sleeveLedger.startCash!==0||(sleeveLedger.trades||[]).length>0;}
 function ledgerCalc(){
   let qld=+sleeveLedger.startQLD||0,sgov=+sleeveLedger.startSGOV||0,cash=+sleeveLedger.startCash||0;
@@ -1922,7 +2037,8 @@ function defaults(){
     alphaLedger:{base:{date:s,tecl:0,tqqq:0,sgov:0,cash:20000,avgTecl:null,avgTqqq:null,avgSgov:null},events:[],feeModel:"toss-us-0.1-v1"},
     balMM:0,balVR:0,balQLD:0,balSGOV:0,cagrLow:8,cagrBase:15,cagrHigh:22,
     incomeBasis:150000,incomeYield:8,sgovYield:4,extraWithdraw:0,autoBalances:true,autoSleeve:true,
-    planLinks:{inf:"",vr:"",sleeve:""},sleeveSessions:[],sleeveLedger:{startQLD:0,startSGOV:0,startCash:0,trades:[]}};
+    planLinks:{inf:"",vr:"",sleeve:""},sleeveSessions:[],sleeveLedger:{startQLD:0,startSGOV:0,startCash:0,trades:[]},
+    paperSessions:[],paperActive:""};
 }
 function readForm(){
   const ids=["startDate","targetDate","startCapital","targetCapital","monthlyAdd","targetIncome","stageMode","aTeclQty","aTqqqQty","aSgovQty","aCash","balMM","balVR","balQLD","balSGOV","cagrLow","cagrBase","cagrHigh","incomeBasis","incomeYield","sgovYield","extraWithdraw","autoBalances","autoSleeve"];
@@ -1931,12 +2047,16 @@ function readForm(){
   o.sleeveSessions=JSON.parse(JSON.stringify(sleeveSessions));
   o.sleeveLedger=JSON.parse(JSON.stringify(sleeveLedger));
   o.alphaLedger=JSON.parse(JSON.stringify(alphaLedger));
+  o.paperSessions=JSON.parse(JSON.stringify(planPaperList));
+  o.paperActive=planPaperActive;
   return o;
 }
 function apply(o){
   const all={...defaults(),...o};
   planLinks={inf:String(all.planLinks?.inf||''),vr:String(all.planLinks?.vr||''),sleeve:String(all.planLinks?.sleeve||'')};
   sleeveSessions=Array.isArray(all.sleeveSessions)?all.sleeveSessions:[];
+  planPaperList=Array.isArray(all.paperSessions)?all.paperSessions.filter(x=>x&&x.paper):[];
+  planPaperActive=String(all.paperActive||'');restorePlanPaperSelection();
   // v1.4.x 장부를 최초 1회 세션 구조로 마이그레이션
   if(!sleeveSessions.length&&all.sleeveLedger&&typeof all.sleeveLedger==='object'){
     const old=all.sleeveLedger,hasOld=(+old.startQLD||0)>0||(+old.startSGOV||0)>0||(+old.startCash||0)!==0||(Array.isArray(old.trades)&&old.trades.length);
@@ -1955,6 +2075,7 @@ function apply(o){
   }
   Object.entries(all).forEach(([k,v])=>{const el=$(k);if(!el)return;if(el.type==='checkbox')el.checked=(v===true||v==='true');else el.value=v;});
   alphaSyncInputs();
+  renderPlanPaperSessions();refreshPlanPaperPreview();
 }
 function localSave(){
   try{localStorage.setItem(KEY,JSON.stringify(readForm()));$("saveState").textContent="브라우저 저장 완료 · "+new Date().toLocaleTimeString("ko-KR",{hour:"2-digit",minute:"2-digit"});}catch(e){}
@@ -2311,6 +2432,10 @@ $("alphaCapitalInput").addEventListener("input",()=>{
   $("alphaCapitalInput").dataset.dirty='1';
 });
 $("alphaReset").addEventListener("click",alphaResetLedger);
+$("planPaperAdd").addEventListener("click",openPlanPaperModal);
+$("planPaperCancel").addEventListener("click",closePlanPaperModal);
+$("planPaperCreate").addEventListener("click",createPlanPaperSession);
+$("planPaperModal").addEventListener("click",e=>{if(e.target===$("planPaperModal"))closePlanPaperModal();});
 $("classicRefresh").addEventListener("click",refreshLive);
 $("bCreateBoth").addEventListener("click",createClassicPlanSessions);
 $("bSoxlCreate").addEventListener("click",createPlanInfSession);

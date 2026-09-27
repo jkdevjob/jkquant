@@ -537,7 +537,7 @@ try{ if(localStorage.getItem('qcockpit_hadUser')==='1') document.documentElement
 </div>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.103.8</span></h1></div>
+    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.104.0</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -1646,7 +1646,7 @@ if(/^\/paper\/?$/.test(location.pathname)){
   <footer>
     <strong>JK 퀀트</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.103.8</b> · 2026-09-27</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.104.0</b> · 2026-09-28</div>
   </footer>
 </div>
 
@@ -2010,6 +2010,7 @@ if(/^\/paper\/?$/.test(location.pathname)){
   <div class="mbtns"><button class="close" onclick="delAsapFromEdit()" style="background:var(--sell-bg);color:var(--sell)">삭제</button><button class="save" onclick="saveAsapEdit()">저장</button></div>
 </div></div>
 
+<script src="/plan5-engine.js"></script>
 <script>
 /* ════════ 퀀트 콕핏 — 세션·계산·이력·동기화 ════════ */
 const $=id=>document.getElementById(id);
@@ -7027,6 +7028,40 @@ function _paperAsap(sess, from){
    compute*()가 활성 탭만 읽으므로 여기서는 기록에서 직접 투입·평가를 뽑는다. */
 const PAPER_TABS=[['inf','무한매수법'],['vr','밸류리밸런싱'],['ivs','섀넌(역분산)'],
                   ['ma','200일선 로테'],['dca','매수적립'],['asap','ASAP']];
+/* 5년플랜 모의 세션은 plan.html의 fiveYearPlan.paperSessions에 산다.
+   실제 운영 장부(alphaLedger)와 분리해 읽기만 하고, /paper에서 다른 전략과 같은 표에 합친다. */
+let _paperPlan5State=null;
+function paperPlan5State(){
+  if(_paperPlan5State&&typeof _paperPlan5State==='object')return _paperPlan5State;
+  try{const x=JSON.parse(localStorage.getItem('jkq_5y_plan_v1')||'null');if(x&&typeof x==='object')return x;}catch(e){}
+  return {};
+}
+function paperPlan5Sessions(){
+  const p=paperPlan5State(),a=Array.isArray(p.paperSessions)?p.paperSessions:[];
+  return a.filter(x=>x&&x.paper&&x.simStart&&(+x.capitalUsd>0));
+}
+async function paperFillPlan5(){
+  const list=paperPlan5Sessions();if(!list.length)return [];
+  if(!window.JKPlan5){console.error('plan5 paper: shared engine missing');return [];}
+  try{
+    const [tecl,tqqq,sgov]=await Promise.all([fetchDaily('TECL'),fetchDaily('TQQQ'),fetchDaily('SGOV')]);
+    if(!tecl||!tqqq||!sgov||!tecl.days||!tqqq.days||!sgov.days)return [];
+    const cut=simCutoff('usd'),out=[];
+    for(const s of list){
+      const z=window.JKPlan5.simulate({startDate:s.simStart,capital:+s.capitalUsd,monthlyAdd:+s.monthlyUsd||0,endDate:cut,
+        teclRows:tecl.days,tqqqRows:tqqq.days,sgovRows:sgov.days,
+        teclDividends:tecl.dividends||[],tqqqDividends:tqqq.dividends||[],sgovDividends:sgov.dividends||[]});
+      if(!z)continue;
+      const inflowWon=(+s.capitalWon||0)+z.nMonthly*(+s.monthlyWon||0);
+      out.push({tab:'plan5',id:s.id,name:s.name||'5년플랜 모의',label:'5년플랜',sym:'TECL·TQQQ·SGOV',
+        opts:['역분산70','Guard30'].concat((+s.monthlyWon||0)>0?['월 '+Math.round(+s.monthlyWon).toLocaleString('ko-KR')+'원']:[]),
+        cur:'usd',from:s.simStart,to:z.to,yrs:z.yrs,spanDays:z.spanDays,inflow:z.inflow,inflowWon,total:z.total,
+        ret:z.ret,retNow:z.ret,retOut:0,cagr:z.cagr,nTrade:z.nTrade,price:1,out:{saved:0,withdrawn:0,simple:false},
+        mdd:{pct:z.mdd,nDay:z.snap.length,endTot:z.total}});
+    }
+    return out;
+  }catch(e){console.error('plan5 paper',e);return [];}
+}
 /* 한 세션의 성과. 전략마다 자산 구조가 달라(VR의 초기투입, 적립의 현금 없음 …)
    여기서 장부를 다시 걸으면 반드시 어긋난다 — 실제로 밸류·적립이 틀렸다.
    그래서 탭·세션을 잠깐 그 전략으로 옮겨 그 탭의 compute를 그대로 부른다.
@@ -7569,6 +7604,7 @@ async function paperFillAll(){
       }
       box.active=prevAct;
     }
+    rows.push(...await paperFillPlan5());
   } finally {
     S.activeTab=prevTab;
     PAPER_TABS.forEach(([t])=>{ lastQuote[t]=prevQuote[t]; });
@@ -7649,7 +7685,7 @@ async function openPaper(){
   rows.forEach(r=>{ r.wonRate=paperWonRate(r); });
   if(!body) return;
   if(!rows.length){
-    const nPaper=PAPER_TABS.reduce((a,[t])=>a+((S[t]&&S[t].sessions)?S[t].sessions.filter(x=>x.paper).length:0),0);
+    const nPaper=PAPER_TABS.reduce((a,[t])=>a+((S[t]&&S[t].sessions)?S[t].sessions.filter(x=>x.paper).length:0),0)+paperPlan5Sessions().length;
     /* '왜 비었는지'를 짚어 준다 — 예전엔 원인과 상관없이 늘 '🔄 자동을 눌러보세요' 였다.
        시작일이 없는 세션은 🔄 를 눌러도 아무 일도 안 일어난다(재생기가 그대로 되돌아간다). */
     const noStart=paperSessions().filter(([,x])=>!paperStart(x)).map(([,x])=>x.name);
@@ -7699,7 +7735,7 @@ async function openPaper(){
       const _sortOut=(ok&&Number.isFinite(+r.retOut))?+r.retOut:'';
       const _sortCagr=(ok&&long&&Number.isFinite(+r.cagr))?+r.cagr:'';
       const _sortInflow=r.inflowWon!=null?(+r.inflowWon||0):((+r.inflow||0)*(+r.wonRate||1));
-      h+=`<tr data-name="${_sortName}" data-days="${days}" data-total="${_sortTotal}" data-ret="${_sortRet}" data-mdd="${_sortMdd}" data-now="${_sortNow}" data-out="${_sortOut}" data-cagr="${_sortCagr}" data-inflow="${_sortInflow}"><td><b class="slink" onclick="gotoSess('${r.tab}','${r.id}')" title="${r.label} 분석으로 이동 — ${_nm}">${r.label}</b><span class="cw">${r.sym}${r.opts&&r.opts.length?' · '+r.opts.join(' · '):''}</span>${outTag}</td>
+      h+=`<tr data-name="${_sortName}" data-days="${days}" data-total="${_sortTotal}" data-ret="${_sortRet}" data-mdd="${_sortMdd}" data-now="${_sortNow}" data-out="${_sortOut}" data-cagr="${_sortCagr}" data-inflow="${_sortInflow}"><td><b class="slink" onclick="${paperRowOpen(r)}" title="${r.label} 분석으로 이동 — ${_nm}">${r.label}</b><span class="cw">${r.sym}${r.opts&&r.opts.length?' · '+r.opts.join(' · '):''}</span>${outTag}</td>
         <td>${per}<span class="cw">${r.nTrade}거래</span></td>`
         + (ok
           ? `<td>${paperWon(r.total,r.wonRate)}</td>
@@ -7885,7 +7921,8 @@ function syncPaperStart(){
   const n=$('p_simstart_n');
   if(n){
     const mixed=uniq.length>1 ? ` · 시작일 ${uniq.length}종` : '';
-    n.textContent=list.length?`모의 ${list.length}개${mixed}`:'모의 세션 없음';
+    const allN=list.length+paperPlan5Sessions().length;
+    n.textContent=allN?`모의 ${allN}개${mixed}`:'모의 세션 없음';
     n.title=uniq.length>1?uniq.join(' / '):'';
   }
   const min=paperMinDate(), today=new Date().toISOString().slice(0,10);
@@ -8054,6 +8091,11 @@ window.addEventListener('popstate', ()=>{ const on=/^\/paper\/?$/.test(location.
    순서가 중요하다: 탭 → 세션 → 서브탭.
    switchSess가 서브탭을 '현재'로 되돌리므로 거래이력 열기는 반드시 그 뒤여야 한다.
    서브탭은 id가 탭마다 다르다(inf-rec·ma-hist…) — 이름으로 찾아 규칙이 바뀌어도 안 깨지게 한다. */
+function paperRowOpen(r){return r&&r.tab==='plan5'?"gotoPlanPaper('"+r.id+"')":"gotoSess('"+r.tab+"','"+r.id+"')";}
+function gotoPlanPaper(id){
+  try{localStorage.setItem('jkq_plan_paper_active',String(id||''));}catch(e){}
+  location.href='/plan?paperSession='+encodeURIComponent(String(id||''));
+}
 function gotoSess(tab, id){
   const box=S[tab]; if(!box||!box.sessions) return;
   if(!box.sessions.some(x=>x.id===id)) return;
@@ -9799,6 +9841,7 @@ async function pullRemote(){
     const snap=await window.fb.getDoc(window.fb.doc(window.fb.db,'users',curUid));
     if(snap.exists()){
       const d=snap.data();
+      if(d&&d.fiveYearPlan&&typeof d.fiveYearPlan==='object') _paperPlan5State=d.fiveYearPlan;
       if(d&&d.strategyDefaultOverrides&&typeof d.strategyDefaultOverrides==='object') cacheStrategyDefaults(d.strategyDefaultOverrides);
       if(d&&validState(d.state)){
         // 신선도 가드: 이 기기의 로컬 저장본이 서버보다 최신이면(오프라인 수정 등) 낡은 서버로 덮지 않고 로컬을 밀어올림

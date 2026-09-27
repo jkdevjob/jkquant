@@ -21,6 +21,7 @@ function extractFn(src, marker){
   return src.slice(i, k+1);
 }
 const idx=fs.readFileSync(IDX,'utf8'), bt=fs.readFileSync(BT,'utf8');
+const P5=__d+'/plan5-engine.js', p5=fs.existsSync(P5)?fs.readFileSync(P5,'utf8'):'';
 /* 있으면 떼어 오고 없으면 빈 글자 — 공용 판정 함수(제14차)처럼 '없으면 [127] 이 값·글자로 빨간불' 인 것만 쓴다.
    (그래야 옛 코드에 새 시험을 돌려 수정 전 숫자를 볼 수 있다) */
 function optFn(src, marker){ try{ return extractFn(src, marker); }catch(e){ return ''; } }
@@ -42,6 +43,8 @@ console.log('[0] 파일 문법');
     ok(label+' 메인 스크립트 문법', r.status===0, (r.stderr||'').split('\n')[0]);
   };
   chk(idx,'index'); chk(bt,'backtest'); if(adm) chk(adm,'admin'); if(scl) chk(scl,'scalping');
+  if(p5){const tmp=path.join(require('os').tmpdir(),'__syn_plan5.js');fs.writeFileSync(tmp,p5);const r=spawnSync('node',['--check',tmp],{encoding:'utf8'});ok('plan5 공용 엔진 문법',r.status===0,(r.stderr||'').split('\n')[0]);}
+  else ok('plan5 공용 엔진 문법',false,'plan5-engine.js 없음');
 }
 
 // index 엔진
@@ -10116,6 +10119,50 @@ console.log('\n[133] 새 세션 — 전체 적용 시작일 유지 · 무매 옵
   ok('E 새 모의 세션은 저장·성과 계산 전에 공통 원화 금액을 심는다',
      /await paperSeedNewSession\(S\.activeTab,s,s\.simStart\)/.test(create)
      && create.indexOf('await paperSeedNewSession')<create.indexOf('box.sessions.push(s)'));
+}
+
+
+/* ════════════════════════════════════════════════════════════════════
+   [134] 5년플랜 모의 세션 → 공통 모의성과
+   ════════════════════════════════════════════════════════════════════ */
+console.log('\n[134] 5년플랜 모의 세션 · /paper 통합');
+{
+  const pl5=fs.existsSync(__d+'/plan.html')?fs.readFileSync(__d+'/plan.html','utf8'):'';
+  ok('A plan/index 둘 다 같은 plan5 공용 엔진을 로드',/src="\/plan5-engine\.js"/.test(pl5)&&/src="\/plan5-engine\.js"/.test(idx));
+  ok('B 운영 5년 주문 계산도 공용 엔진 orderPlan을 사용',/window\.JKPlan5&&window\.JKPlan5\.orderPlan/.test(pl5));
+  ok('C 5년플랜 모의 세션은 실제 alphaLedger와 별도 배열로 저장',
+     /paperSessions:\[\],paperActive:""/.test(pl5)&&/o\.paperSessions=JSON\.parse\(JSON\.stringify\(planPaperList\)\)/.test(pl5)
+     && /planPaperList=Array\.isArray\(all\.paperSessions\)/.test(pl5));
+  ok('D /paper가 fiveYearPlan paperSessions를 읽고 별도 행으로 합친다',
+     /function paperPlan5Sessions\(\)/.test(idx)&&/rows\.push\(\.\.\.await paperFillPlan5\(\)\)/.test(idx)&&/label:'5년플랜'/.test(idx));
+  ok('E 5년플랜 성과행 클릭은 plan 세션으로 이동',/function gotoPlanPaper\(id\)/.test(idx)&&/paperSession=/.test(idx));
+
+  let E=null;
+  try{E=new Function('globalThis',p5+'\nreturn globalThis.JKPlan5;')({});}catch(e){}
+  ok('F 공용 엔진 실행 가능',!!E&&typeof E.orderPlan==='function'&&typeof E.simulate==='function');
+  if(E){
+    const mk=(n,base,step=0)=>Array.from({length:n},(_,i)=>({date:new Date(Date.UTC(2024,0,1+i)).toISOString().slice(0,10),close:base+step*i}));
+    const te=mk(240,100,.02), tq=mk(240,100,.08);
+    const sig=E.orderPlan({teclRows:te,tqqqRows:tq,signalPrices:{TECL:te.at(-1).close,TQQQ:tq.at(-1).close,SGOV:100},
+      execPrices:{TECL:100,TQQQ:100,SGOV:100},pos:{TECL:0,TQQQ:0,SGOV:0},cash:10000,startCapital:10000});
+    ok('G 빈 계좌 첫 진입은 TECL 역분산 + Guard 규칙으로 목표를 만든다',sig.ready&&sig.targets.TECL>0&&sig.targets.SGOV>=0,JSON.stringify(sig.targets));
+
+    const D=Array.from({length:520},(_,i)=>{const dt=new Date(Date.UTC(2024,0,1));dt.setUTCDate(dt.getUTCDate()+i);return dt;})
+      .filter(d=>d.getUTCDay()!==0&&d.getUTCDay()!==6)
+      .map((d,i)=>({date:d.toISOString().slice(0,10),close:100+Math.sin(i/9)*2+i*.03}));
+    const Q=D.map((x,i)=>({date:x.date,close:100+i*.08})), S=D.map(x=>({date:x.date,close:100}));
+    const start=D[230].date;
+    const a=E.simulate({startDate:start,capital:10000,monthlyAdd:1000,teclRows:D,tqqqRows:Q,sgovRows:S,endDate:D.at(-1).date});
+    ok('H 월 적립금은 외부 투입으로 따로 세고 수익으로 더하지 않는다',a&&a.nMonthly>0&&near(a.inflow,10000+a.nMonthly*1000,.01),a?JSON.stringify({inflow:a.inflow,n:a.nMonthly}):'null');
+    ok('I 미래 봉을 바꿔도 그 이전 거래는 바뀌지 않는다',(()=>{
+      if(!a)return false;const cut=D[D.length-30].date;
+      const D2=D.map(x=>x.date>cut?{...x,close:x.close*4}:x);
+      const x=E.simulate({startDate:start,capital:10000,monthlyAdd:0,teclRows:D,tqqqRows:Q,sgovRows:S,endDate:cut});
+      const y=E.simulate({startDate:start,capital:10000,monthlyAdd:0,teclRows:D2,tqqqRows:Q,sgovRows:S,endDate:cut});
+      return x&&y&&JSON.stringify(x.hist)===JSON.stringify(y.hist);
+    })());
+    ok('J MDD는 월 적립 자체를 상승으로 세지 않는 단위가치 기준',a&&Number.isFinite(a.mdd)&&a.mdd>=0);
+  }
 }
 
 console.log(`\n════ 결과: ${pass} PASS / ${fail} FAIL ${fail===0?'— ALL PASS ★':'— 배포 금지, 위 ✗ 항목 수정 필요'} ════`);
