@@ -872,6 +872,7 @@ function ensureLiveBoxes(){
    현재 투자중 플랜은 기존 fiveYearPlan 저장소를 그대로 쓴다.
    추가 세션은 운영 state.plan에 따로 저장해 실제 장부와 섞이지 않게 한다. */
 const assetPaperCache={};
+const requestedAssetSessionId=(()=>{try{return new URLSearchParams(location.search).get('session')||'';}catch(e){return '';}})();
 function assetPlanBox(){ensureLiveBoxes();return liveState.plan;}
 function assetSessionList(h=activeHorizon){return assetPlanBox().sessions.filter(x=>x&&+x.horizon===+h);}
 function activeAssetSession(){
@@ -885,7 +886,7 @@ function assetLedgerSeed(date,cap){
 }
 function assetSessionSettingsFromView(capOverride){
   const cap=capOverride!=null?+capOverride:Math.max(1,num('startCapital',20000));
-  return {startCapital:cap,targetCapital:Math.max(1,num('targetCapital',150000)),monthlyAdd:Math.max(0,num('monthlyAdd',0)),
+  return {horizon:activeHorizon,startCapital:cap,targetCapital:Math.max(1,num('targetCapital',150000)),monthlyAdd:Math.max(0,num('monthlyAdd',0)),
     targetIncome:Math.max(0,num('targetIncome',0)),stageMode:String($('stageMode').value||'auto'),
     startDate:String($('startDate').value||todayISO()),targetDate:String($('targetDate').value||plusYears(todayISO(),activeHorizon)),
     engine:'asset-plan-v1'};
@@ -980,7 +981,7 @@ async function loadActiveAssetSessionView(refresh=true){
   alphaLedger=cloneObj(x.ledger||assetLedgerSeed((x.settings&&x.settings.startDate)||todayISO(),+(x.settings&&x.settings.startCapital)||20000));
   alphaSyncInputs();document.body.classList.remove('asset-paper-mode');
   const pr=$('assetPaperResult');if(pr){pr.hidden=true;pr.innerHTML='';}
-  renderAssetSessions();renderAlphaLedger();render();if(refresh)await refreshLive();
+  renderAssetSessions();renderAlphaLedger();render();refreshAlphaFromCache();if(refresh)await refreshLive();
 }
 async function selectAssetSession(id){
   const cur=activeAssetSession();
@@ -1015,17 +1016,18 @@ async function createAssetSession(){
   if(!(cap>0)||!(target>0)){alert('시작자산과 목표자산을 확인하세요.');return;}
   if(paper&&(!start||start<$('assetSessionStart').min||start>todayISO())){alert('모의 시작일은 최근 3년 안에서 골라주세요.');return;}
   const id=planSid('ap'),fx=paper?await assetFxAt(start):0;
+  if(paper&&!(fx>0)){alert('모의 시작일의 USD/KRW 환율을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.');return;}
   const settings=assetSessionSettingsFromView(cap);settings.monthlyAdd=monthly;settings.targetCapital=target;settings.startDate=start;settings.targetDate=plusYears(start,activeHorizon);
   const x={id,name,horizon:activeHorizon,paper,simStart:paper?start:'',paperFxRate:fx||0,createdAt:Date.now(),settings,
     ledger:paper?null:assetLedgerSeed(start,cap)};
   assetPlanBox().sessions.push(x);assetPlanBox().activeByHorizon[activeHorizon]=id;
-  await saveOperatingState();closeAssetSessionModal();renderAssetSessions();await selectAssetSession(id);
+  await saveOperatingState();closeAssetSessionModal();renderAssetSessions();await loadActiveAssetSessionView(true);
 }
 async function deleteAssetSession(id){
   const b=assetPlanBox(),x=b.sessions.find(s=>s.id===id);if(!x)return;
   if(!confirm("'"+(x.name||'세션')+"'을 삭제할까요?\n현재 투자중 플랜과 다른 세션은 그대로입니다."))return;
   b.sessions=b.sessions.filter(s=>s.id!==id);if(String(b.activeByHorizon[+x.horizon]||'')===id)b.activeByHorizon[+x.horizon]='';
-  delete assetPaperCache[id];await saveOperatingState();await selectAssetSession('');
+  delete assetPaperCache[id];writeAssetSessionLocal();await saveOperatingState();restoreCurrentPlanView();renderAssetSessions();render();await refreshLive();
 }
 function guardAssetPaperEdit(){
   if(!assetPaperMode())return false;
@@ -2589,9 +2591,16 @@ $("jkmenuBtn").addEventListener("click",e=>{e.stopPropagation();$("jkmenuPop").h
 document.addEventListener("click",e=>{if(!$("jkmenuWrap").contains(e.target))$("jkmenuPop").hidden=true});
 onAuthStateChanged(auth,async user=>{
   userBadge(user);if(user)await cloudLoad(user);await refreshLive();
+  if(requestedAssetSessionId){
+    const q=assetPlanBox().sessions.find(x=>x.id===requestedAssetSessionId);
+    if(q&&[5,10,15,20].includes(+q.horizon)){
+      activeHorizon=+q.horizon;assetPlanBox().activeByHorizon[activeHorizon]=q.id;
+      try{localStorage.setItem('jkq_plan_horizon',String(activeHorizon));}catch(e){}
+      writeAssetSessionLocal();renderHorizonCopy();
+    }
+  }
   renderAssetSessions();
-  const x=activeAssetSession();
-  if(x)await loadActiveAssetSessionView(false);
+  await loadActiveAssetSessionView(false);
 });
 </script>
 </body>
