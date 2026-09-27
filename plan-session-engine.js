@@ -77,7 +77,7 @@ function addCash(ledger,date,kind,amount,n){
   ledger.events.push({id:evtId(date,n),date,type:'cash',kind,amount:+amount});
 }
 function addTrade(ledger,date,side,sym,qty,price,fee,n,signalDate){
-  ledger.events.push({id:evtId(date,n),date,type:'trade',side,sym,qty,price,fee,feeRate:FEE_RATE,signalDate,sim:true});
+  ledger.events.push({id:evtId(date,n),date,type:'trade',side,symbol:sym,qty,price,fee,feeRate:FEE_RATE,signalDate,sim:true});
 }
 function stats(nav,nTrade){
   if(!nav.length)return null;
@@ -122,7 +122,7 @@ function replay(opt){
   const startIdx=S.dates.findIndex(d=>d>=start);
   if(startIdx<0)return {nav:[],ledger:initialLedger(start,principal),stats:null,error:'시작일 이후 시세 없음'};
 
-  const tma225=sma(S.tqqq,225),tma250=sma(S.tqqq,250),trsi=rsi(S.tqqq,14);
+  const tma225=sma(S.tqqq,225),tma250=sma(S.tqqq,250),trsi=rsi(S.tqqq,14);\n  const teclRows=S.dates.map((d,k)=>({date:d,close:S.tecl[k]})),tqqqRows=S.dates.map((d,k)=>({date:d,close:S.tqqq[k]}));
   const div={TECL:mapDiv(opt.teclDiv),TQQQ:mapDiv(opt.tqqqDiv),SGOV:mapDiv(opt.sgovDiv)};
   const ledger=initialLedger(start,principal),pos={TECL:0,TQQQ:0,SGOV:0};
   let cash=principal,inflow=principal,nTrade=0,seq=1,lastMonth=start.slice(0,7),lastDecision=null;
@@ -197,11 +197,9 @@ function replay(opt){
         }
         meta={horizon,current:cur,center:D.center,lo:D.lo,hi:D.hi};
       }else{
-        const D=DEFAULTS[20],ti=latestCompletedMonthIndex((opt.tecl||[]).filter(x=>mapRows(opt.tqqq).has(String(x.date))&&mapRows(opt.sgov).has(String(x.date))),p);
+        const D=DEFAULTS[20];
         /* 공통 거래일 배열로 월말·모멘텀을 계산한다. */
-        const rows=S.dates.map((d,k)=>({date:d,close:S.tecl[k]}));
-        const qrows=S.dates.map((d,k)=>({date:d,close:S.tqqq[k]}));
-        const mi=latestCompletedMonthIndex(rows,p),tm=momentumPoint(rows,S.tecl,mi),qm=momentumPoint(qrows,S.tqqq,mi);
+        const mi=latestCompletedMonthIndex(teclRows,p),tm=momentumPoint(teclRows,S.tecl,mi),qm=momentumPoint(tqqqRows,S.tqqq,mi);
         let winner='SGOV';
         if(tm&&tm.ok&&qm&&qm.ok)winner=tm.score>=qm.score?'TECL':'TQQQ';else if(tm&&tm.ok)winner='TECL';else if(qm&&qm.ok)winner='TQQQ';
         const curT=pos.TECL*sp.TECL/Math.max(total,1),curQ=pos.TQQQ*sp.TQQQ/Math.max(total,1),first=!pos.TECL&&!pos.TQQQ&&!pos.SGOV;
