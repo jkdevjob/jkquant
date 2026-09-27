@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="theme-color" content="#0f1320">
 <title>JK 퀀트 — 자산플랜</title>
+<script src="/plan-session-engine.js"></script>
 <style>
 :root{
   --bg:#0f1320;--surf:#171c2e;--surf2:#1e2540;--border:#2a3354;--border2:#34406a;
@@ -187,12 +188,28 @@ th:first-child,td:first-child{text-align:left}
   .wrap{padding:14px 10px 55px}.top{align-items:flex-start}.userbadge span{display:none}.grid4{grid-template-columns:1fr}.guidegrid{grid-template-columns:1fr}
   .steps{grid-template-columns:1fr}.alloc-row{grid-template-columns:125px 1fr 46px}.stage-title{font-size:20px}.ledger-summary{grid-template-columns:1fr}.ledger-form{grid-template-columns:1fr}.sessionbar{grid-template-columns:1fr}
 }
+/* 자산플랜 세션 */
+.asset-session-card{padding:12px 14px}.asset-session-head{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.asset-session-chips{display:flex;gap:7px;overflow-x:auto;margin-top:10px;padding-bottom:2px}
+.asset-session-chip{flex:0 0 auto;border:1px solid var(--border2);background:var(--surf2);color:var(--dim);border-radius:999px;padding:8px 11px;font-weight:800;font-size:11px}
+.asset-session-chip.on{background:var(--accent);border-color:var(--accent);color:#fff}
+.asset-session-chip .paper{color:var(--gold);margin-left:4px}.asset-session-chip .x{color:var(--red);margin-left:7px;font-weight:900}
+.asset-session-state{font-size:10.5px;color:var(--dim);margin-top:7px}.asset-session-state.paper{color:var(--gold)}
+.asset-session-modal{position:fixed;inset:0;z-index:500;background:rgba(0,0,0,.68);display:flex;align-items:center;justify-content:center;padding:16px}
+.asset-session-modal[hidden]{display:none}.asset-session-modal .box{width:min(500px,100%);background:var(--surf);border:1px solid var(--border2);border-radius:13px;padding:16px;box-shadow:0 20px 60px rgba(0,0,0,.5)}
+.asset-session-modal .grid{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:12px}
+.asset-session-paper{margin-top:8px;padding:9px 10px;border:1px solid rgba(245,196,81,.25);border-radius:9px;background:rgba(245,196,81,.05)}
+.asset-session-paper-result{margin:10px 0 0;padding:10px;border:1px solid var(--border2);border-radius:9px;background:rgba(139,140,240,.05)}
+.asset-session-paper-result .kpis{margin-top:7px}
+body.asset-paper-mode #alphaRecordFill,body.asset-paper-mode #alphaCashRec,body.asset-paper-mode #alphaResetSection{display:none!important}
+body.asset-paper-mode .ledger-del{display:none!important}
+@media(max-width:480px){.asset-session-modal .grid{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
 <div class="wrap">
   <div class="top">
-    <div class="brand"><div class="logo">Asset Plan</div><h1>자산플랜 <span class="ver">v1.36.2</span></h1></div>
+    <div class="brand"><div class="logo">Asset Plan</div><h1>자산플랜 <span class="ver">v1.37.0</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
       <div class="jkmenu" id="jkmenuWrap">
@@ -232,6 +249,16 @@ th:first-child,td:first-child{text-align:left}
     <button class="horizon-tab" data-horizon="15">15년</button>
     <button class="horizon-tab" data-horizon="20">20년</button>
   </nav>
+
+  <section class="card asset-session-card" id="assetSessionCard">
+    <div class="asset-session-head">
+      <div><h2 style="margin-bottom:2px">세션</h2><div class="sub">전략별로 계좌를 따로 운영할 수 있습니다. 모의 세션은 실제 장부와 분리되고 모의투자 성과에 함께 표시됩니다.</div></div>
+      <button class="btn primary" id="assetSessionAdd">+ 세션</button>
+    </div>
+    <div class="asset-session-chips" id="assetSessionChips"></div>
+    <div class="asset-session-state" id="assetSessionState">현재 투자중 플랜</div>
+    <div class="asset-session-paper-result" id="assetPaperResult" hidden></div>
+  </section>
 
   <div class="plan-panel on" data-ppanel="alpha">
     <div class="guidehero">
@@ -674,6 +701,24 @@ th:first-child,td:first-child{text-align:left}
   </section>
 </div>
 
+<div class="asset-session-modal" id="assetSessionModal" hidden>
+  <div class="box">
+    <div class="asset-session-head">
+      <div><h2 style="margin-bottom:2px">자산플랜 세션 추가</h2><div class="sub" id="assetSessionModalStrategy">현재 전략을 새 세션으로 만듭니다.</div></div>
+      <button class="btn" id="assetSessionClose">닫기</button>
+    </div>
+    <div class="grid">
+      <div class="field" style="grid-column:1/-1"><label>세션 이름</label><input id="assetSessionName" type="text"></div>
+      <div class="field"><label>시작자산 ($)</label><input id="assetSessionCapital" type="number" min="1" step="100"></div>
+      <div class="field"><label>월 추가 투자 ($)</label><input id="assetSessionMonthly" type="number" min="0" step="10"></div>
+      <div class="field"><label>목표자산 ($)</label><input id="assetSessionTarget" type="number" min="1" step="100"></div>
+      <div class="field"><label>세션 종류</label><select id="assetSessionKind"><option value="live">운영 세션</option><option value="paper">모의투자 세션</option></select></div>
+      <div class="field" id="assetSessionStartWrap"><label>모의 시작일</label><input id="assetSessionStart" type="date"></div>
+    </div>
+    <div class="asset-session-paper" id="assetSessionPaperNote">운영 세션은 실제 체결을 직접 기록합니다. 모의투자 세션은 과거 시세로 자동 재생하며 실제 거래이력을 변경하지 않습니다.</div>
+    <div class="btnrow"><button class="btn primary" id="assetSessionCreate">세션 만들기</button><button class="btn" id="assetSessionCancel">취소</button></div>
+  </div>
+</div>
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-app.js";
 import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-auth.js";
