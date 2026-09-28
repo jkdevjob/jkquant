@@ -215,6 +215,13 @@ jobs:
           if(!r.includes('DAY_WORKER')||!r.includes('snapshotHm|tonumber) <= 1015')){
             console.error('✗ 연구 workflow가 Cloudflare 정시 스냅샷을 우선 사용하지 않음'); fail++;
           }
+          const g=fs.readFileSync('.github/workflows/daytrading-monitor.yml','utf8');
+          if(/\bschedule\s*:/.test(g)||/\bpush\s*:/.test(g)){
+            console.error('✗ GitHub 데이트레이딩 monitor에 자동 schedule/push가 남아 있음'); fail++;
+          }
+          if(!g.includes('workflow_dispatch')){
+            console.error('✗ GitHub 데이트레이딩 수동 fallback이 없음'); fail++;
+          }
           if(fail)process.exit(1);
           console.log('✓ daytrading realtime cron / durable snapshot / duplicate guard');
           NODE
@@ -235,6 +242,9 @@ jobs:
           for(const [needle,label] of must){if(!py.includes(needle)){console.error('✗ '+label+' 없음');fail++;}}
           if(!w.includes('10 10 * * 1-5')||!w.includes('10 11 * * 1-5')){
             console.error('✗ 19:10/20:10 KST 야간 연구 schedule 없음'); fail++;
+          }
+          if(!w.includes('seq 1 12')||!w.includes('20:10 backup')){
+            console.error('✗ Pages 배포 지연 시 Telegram 재시도/fallback 없음'); fail++;
           }
           if(/\/api\/kis\?op=order|priceType.*market/.test(py+w)){
             console.error('✗ 야간 연구 경로에서 주문 호출 발견'); fail++;
