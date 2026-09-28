@@ -10271,5 +10271,29 @@ console.log('\n[135] 자산플랜 세션 — 운영처럼 세션 + 모의투자 
   const r=require('child_process').spawnSync(process.execPath,[path.join(__d,'scripts/check-plan-session-settings.cjs')],{encoding:'utf8'});
   ok('자산플랜 세션 설정 수정 · 모드 전환 장부 보존 · 저장 취소 격리',r.status===0,(r.stdout||'')+(r.stderr||''));
 }
+
+/* ════════════════════════════════════════════════════════════════════
+   [136] 모의성과 — 5년 시작일 + 무매 LOC 줄수 식별
+   ════════════════════════════════════════════════════════════════════ */
+console.log('\n[136] 모의성과 5년 비교 + LOC 줄수 표시');
+{
+  const po=extractFn(idx,'function paperOpts(tab, st)');
+  ok('A 모의 시작일을 최대 5년 전까지 허용',
+     /const PAPER_MAX_YEARS=5;/.test(idx) && /시작일은 최대 <b>5년 전<\/b>/.test(idx));
+  ok('B 무매 모의성과 세션 설명에 LOC 줄 수가 표시',
+     /const locRows=imRowsOf\(S0\)/.test(po) && /LOC \$\{locRows\}줄/.test(po) && /'LOC 끔'/.test(po));
+  ok('C 기본 3줄 자체는 바꾸지 않는다 — 연구결과가 원금에 따라 달라 운영 기본을 자동변경하지 않음',
+     /const IM_ROWS_DEFAULT=3;/.test(idx));
+  ok('D 모의성과 설명에도 LOC 줄수 구분을 명시',
+     /무한매수법은 LOC 추가 줄 수까지 세션 설정으로 구분 표시/.test(idx));
+  const F=new Function('imRowsOf',po+'\nreturn paperOpts;')(global.imRowsOf);
+  const a=F('inf',{ticker:'SOXL',div:20,target:20,rows:3,compound:true,reverse:false});
+  const b=F('inf',{ticker:'SOXL',div:20,target:20,rows:10,compound:true,reverse:false});
+  const z=F('inf',{ticker:'SOXL',div:20,target:20,rows:0,compound:true,reverse:false});
+  ok('E 3줄/10줄/0줄 세션이 목록에서 서로 구분된다',
+     a.includes('LOC 3줄') && b.includes('LOC 10줄') && z.includes('LOC 끔'),
+     JSON.stringify({a,b,z}));
+}
+
 console.log(`\n════ 결과: ${pass} PASS / ${fail} FAIL ${fail===0?'— ALL PASS ★':'— 배포 금지, 위 ✗ 항목 수정 필요'} ════`);
 process.exit(fail===0?0:1);
