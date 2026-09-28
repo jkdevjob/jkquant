@@ -10201,7 +10201,7 @@ console.log('\n[135] 자산플랜 세션 — 운영처럼 세션 + 모의투자 
      && pl.indexOf('id="assetSessionCard"')<pl.indexOf('id="alphaOrderSection"'));
 
   ok('D 모의 세션은 실제 장부와 분리해 자동재생하고 직접수정 UI를 막는다',
-     /paper\?null:assetLedgerSeed/.test(extractFn(pl,'async function createAssetSession()'))
+     /JKPlanSessionSettings\.update/.test(extractFn(pl,'async function createAssetSession()'))
      && /JKPlanSessionEngine\.replay/.test(extractFn(pl,'async function replayAssetPaperSession(x,applyView)'))
      && /asset-paper-mode/.test(pl)
      && /guardAssetPaperEdit\(\)/.test(pl));
@@ -10266,6 +10266,10 @@ console.log('\n[135] 자산플랜 세션 — 운영처럼 세션 + 모의투자 
 {
   const r=require('child_process').spawnSync(process.execPath,[path.join(__d,'scripts/check-plan-session-views.cjs')],{encoding:'utf8'});
   ok('자산플랜 세션 상세탭 · 비동기 모의재생 격리 · 삭제 선택 유지',r.status===0,(r.stdout||'')+(r.stderr||''));
+}
+{
+  const r=require('child_process').spawnSync(process.execPath,[path.join(__d,'scripts/check-plan-session-settings.cjs')],{encoding:'utf8'});
+  ok('자산플랜 세션 설정 수정 · 모드 전환 장부 보존 · 저장 취소 격리',r.status===0,(r.stdout||'')+(r.stderr||''));
 }
 console.log(`\n════ 결과: ${pass} PASS / ${fail} FAIL ${fail===0?'— ALL PASS ★':'— 배포 금지, 위 ✗ 항목 수정 필요'} ════`);
 process.exit(fail===0?0:1);
