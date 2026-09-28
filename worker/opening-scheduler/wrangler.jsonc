@@ -1,0 +1,18 @@
+{
+  "$schema": "https://raw.githubusercontent.com/cloudflare/workers-sdk/main/packages/wrangler/config-schema.json",
+  "name": "jkquant-opening-scheduler",
+  "main": "src/index.js",
+  "compatibility_date": "2026-09-28",
+  "workers_dev": true,
+  "vars": {
+    "BASE_URL": "https://jkquant.pages.dev"
+  },
+  "triggers": {
+    "crons": [
+      "5-31 0 * * MON-FRI"
+    ]
+  },
+  "observability": {
+    "enabled": true
+  }
+}
