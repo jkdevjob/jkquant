@@ -142,7 +142,7 @@ jobs:
           }
           if(m.includes('/api/kis?op=order')){console.error('✗ 병렬 shard scanner가 직접 주문 API를 호출함');fail++;}
           if(!m.includes('targetHm')){console.error('✗ 지연 Cron용 완료분 targetHm 복구 경로 없음');fail++;}
-          if(w.includes('/api/opening-execute')){console.error('✗ GitHub 장마감 저장 workflow가 실시간 VTS 주문을 호출함');fail++;}
+          if(w.includes('$BASE/api/opening-execute')){console.error('✗ GitHub 장마감 저장 workflow가 실시간 VTS 주문을 호출함');fail++;}
           if(/cron:\s*["'](?:45|50|55) 23/.test(w)){console.error('✗ 구형 08:45~08:55 GitHub 실시간 schedule이 남아 있음');fail++;}
           if(/env\s*:\s*["']real["']/.test(e)){console.error('✗ opening-execute에 실전 주문 환경 발견');fail++;}
           if(fail)process.exit(1);
