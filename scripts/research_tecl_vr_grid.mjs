@@ -107,8 +107,12 @@ try{
     const bestMedian=[...rows].sort(cmp).slice(0,10);
     const bestP10=[...rows].sort((a,b)=>b.summary.cagrP10-a.summary.cagrP10||b.summary.cagrMedian-a.summary.cagrMedian).slice(0,10);
     const bestWorst=[...rows].sort((a,b)=>b.summary.cagrWorst-a.summary.cagrWorst||b.summary.cagrP10-a.summary.cagrP10).slice(0,10);
+    const bestMdd=[...rows].sort((a,b)=>a.summary.mddWorst-b.summary.mddWorst||b.summary.cagrMedian-a.summary.cagrMedian).slice(0,10);
+    const pareto=rows.filter(a=>!rows.some(b=>b!==a && b.summary.cagrMedian>=a.summary.cagrMedian && b.summary.mddWorst<=a.summary.mddWorst
+      && (b.summary.cagrMedian>a.summary.cagrMedian || b.summary.mddWorst<a.summary.mddWorst)))
+      .sort((a,b)=>a.summary.mddWorst-b.summary.mddWorst);
     report.capital[cap]={plan:p,counts:{all:rows.length,mdd50:mdd50.length,beatsAllUnder50:all.length},
-      bestUnder50:mdd50.slice(0,15),beatsAllUnder50:all.slice(0,15),bestMedian,bestP10,bestWorst,
+      bestUnder50:mdd50.slice(0,15),beatsAllUnder50:all.slice(0,15),bestMedian,bestP10,bestWorst,bestMdd,pareto,
       officialLike:rows.find(x=>x.G===10&&x.band===15&&Math.abs(x.pool-.50)<1e-9)};
   }
   console.log('===TECL_VR_GRID_JSON===');
