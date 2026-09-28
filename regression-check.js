@@ -10286,20 +10286,7 @@ console.log('\n[136] 모의성과 5년 비교 + LOC 줄수 표시');
   ok('D 모의성과 설명에도 LOC 줄수 구분을 명시',
      /무한매수법은 LOC 추가 줄 수까지 세션 설정으로 구분 표시/.test(idx));
   const F=new Function('curOf','wnCur','maCond','revEnabled','imRowsOf',po+'\nreturn paperOpts;')(
-    st=>(/^(?:\\d{6}|\\d{4}[A-Z]\\d)(?:\\.K[SQ])?$/.test(String((st||{}).ticker||'').toUpperCase())?'krw':'usd'),
-    (v,cur)=>cur==='krw'?Math.round(+v||0).toLocaleString('en-US')+'₩'
-      :(+v||0).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})+'
-  ok('E 3줄/10줄/0줄 세션이 목록에서 서로 구분된다',
-     a.includes('LOC 3줄') && b.includes('LOC 10줄') && z.includes('LOC 끔'),
-     JSON.stringify({a,b,z}));
-}
-
-console.log(`\n════ 결과: ${pass} PASS / ${fail} FAIL ${fail===0?'— ALL PASS ★':'— 배포 금지, 위 ✗ 항목 수정 필요'} ════`);
-process.exit(fail===0?0:1);
-,
-    new Function('return '+extractFn(idx,'function maCond(st)')+';')(),
-    ()=>false,
-    global.imRowsOf);
+    ()=>'usd', ()=>'', ()=>({buy:'ma',sell:'ma'}), ()=>false, global.imRowsOf);
   const a=F('inf',{ticker:'SOXL',div:20,target:20,rows:3,compound:true,reverse:false});
   const b=F('inf',{ticker:'SOXL',div:20,target:20,rows:10,compound:true,reverse:false});
   const z=F('inf',{ticker:'SOXL',div:20,target:20,rows:0,compound:true,reverse:false});
