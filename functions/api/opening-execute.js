@@ -7,12 +7,16 @@ const JH={"Content-Type":"application/json; charset=utf-8","Cache-Control":"no-s
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 const KRCODE=/^(?:\d{6}|\d{4}[A-Z]\d)$/;
 const ORDER_GAP_MS=2500;
+const MAX_SIGNAL_AGE_MIN=3;
 let _lastOrderAt=0;
 
 function json(o,s=200){return new Response(JSON.stringify(o,null,2),{status:s,headers:JH});}
-function kstDate(){
-  return new Intl.DateTimeFormat("en-CA",{timeZone:"Asia/Seoul",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date());
+function kstClock(){
+  const p=new Intl.DateTimeFormat("en-CA",{timeZone:"Asia/Seoul",year:"numeric",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit",hour12:false}).formatToParts(new Date());
+  const g=t=>p.find(x=>x.type===t)?.value||"",hh=+g("hour"),mm=+g("minute");
+  return {date:g("year")+"-"+g("month")+"-"+g("day"),hm:hh*100+mm,minuteIndex:hh*60+mm};
 }
+function kstDate(){return kstClock().date;}
 function authorized(request,env){
   const got=request.headers.get("x-monitor-key")||request.headers.get("x-autotrade-key")||"";
   const want=String(env.OPENING_MONITOR_KEY||env.AUTOTRADE_KEY||"").trim();
@@ -27,6 +31,16 @@ function hhmm(t){
   return /^\d{6}$/.test(s)?+s.slice(0,4):0;
 }
 function hmMin(v){const n=+v||0;return Math.floor(n/100)*60+n%100;}
+function eventHm(x,side){return side==="buy"?+x.entryTime||0:+x.exitTime||0;}
+function eventAgeMin(x,side,clock){
+  const hm=eventHm(x,side),m=hm%100;
+  if(Math.floor(hm/100)!==9||m<0||m>59)return Infinity;
+  return clock.minuteIndex-hmMin(hm);
+}
+function freshEvent(x,side,clock){
+  const age=eventAgeMin(x,side,clock);
+  return Number.isFinite(age)&&age>=0&&age<=MAX_SIGNAL_AGE_MIN;
+}
 function signalId(date,x,side){return ["opening",date,String(x.code||""),String(x.entryTime||""),side].join(":");}
 function uniq(rows,side,date){
   const m=new Map();
@@ -112,10 +126,21 @@ export async function onRequestPost({request,env}){
   let b={};
   try{b=await request.json();}catch(e){return json({ok:false,error:"JSON body 오류"},400);}
   const date=String(b.date||"");
-  if(date!==kstDate())return json({ok:false,error:"오늘 장중 신호만 VTS 자동주문할 수 있습니다.",today:kstDate(),date},400);
+  const clock=kstClock();
+  if(date!==clock.date)return json({ok:false,error:"오늘 장중 신호만 VTS 자동주문할 수 있습니다.",today:clock.date,date},400);
 
-  const buys=uniq(b.buyEvents,"buy",date),sells=uniq(b.sellEvents,"sell",date);
-  const amount=budget(env),events=[];
+  const rawBuys=uniq(b.buyEvents,"buy",date),rawSells=uniq(b.sellEvents,"sell",date);
+  const buys=rawBuys.filter(x=>freshEvent(x,"buy",clock));
+  const sells=rawSells.filter(x=>freshEvent(x,"sell",clock));
+  const stale=[
+    ...rawBuys.filter(x=>!freshEvent(x,"buy",clock)).map(x=>({side:"buy",x,ageMin:eventAgeMin(x,"buy",clock)})),
+    ...rawSells.filter(x=>!freshEvent(x,"sell",clock)).map(x=>({side:"sell",x,ageMin:eventAgeMin(x,"sell",clock)}))
+  ];
+  const amount=budget(env),events=stale.map(({side,x,ageMin})=>({
+    signalId:signalId(date,x,side),strategy:"opening",date,side,code:x.code,name:x.name||x.code,qty:0,
+    paper:{time:eventHm(x,side),fillPrice:side==="buy"?+x.entryPrice||0:+x.exitPrice||0,fillModel:"completed 1m close",roundTripCostAssumptionPct:0.25},
+    submittedAt:null,vts:{ok:false,env:"vts",priceType:"market",orderNo:"",staleBlocked:true,msg:"오래된 신호 주문 차단 ("+ageMin+"분 경과, 최대 "+MAX_SIGNAL_AGE_MIN+"분)"}
+  }));
   try{
     for(const x of buys){
       const qty=Math.floor(amount/Math.max(1,+x.entryPrice||0));
@@ -145,9 +170,9 @@ export async function onRequestPost({request,env}){
       events.push(await kisOrder(new URL(request.url).origin,env,"sell",x,pos.qty,date));
     }
     return json({ok:true,enabled:true,mode:"internal-paper+KIS-VTS",date,budget:amount,
-      buyEvents:buys.length,sellEvents:sells.length,events});
+      buyEvents:buys.length,sellEvents:sells.length,staleBlocked:stale.length,maxSignalAgeMin:MAX_SIGNAL_AGE_MIN,events});
   }catch(e){
     // 한 종목 실패가 신호 엔진/Telegram을 멈추게 하지 않도록 endpoint 안에서 격리한다.
-    return json({ok:false,enabled:true,mode:"internal-paper+KIS-VTS",date,budget:amount,events,error:String(e.message||e)},500);
+    return json({ok:false,enabled:true,mode:"internal-paper+KIS-VTS",date,budget:amount,staleBlocked:stale.length,maxSignalAgeMin:MAX_SIGNAL_AGE_MIN,events,error:String(e.message||e)},500);
   }
 }
