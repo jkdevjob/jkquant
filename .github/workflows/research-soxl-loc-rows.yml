@@ -1,0 +1,19 @@
+name: SOXL LOC 추가줄 연구
+on:
+  push:
+    branches: ['research/soxl-loc-rows-20260929']
+jobs:
+  rows:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '22' }
+      - run: |
+          npm install --no-save playwright@1.55.0
+          npx playwright install --with-deps chromium
+      - name: 운영 백테 엔진 LOC 추가줄 0~20 비교
+        env:
+          JKQUANT_URL: https://jkquant.pages.dev
+        run: node scripts/research_soxl_loc_rows.mjs
