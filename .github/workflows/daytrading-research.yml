@@ -26,6 +26,7 @@ on:
       - "scripts/snapshot_daytrading_universe.py"
       - "scripts/collect_daytrading_data.py"
       - "scripts/backtest_daytrading.py"
+      - "worker/daytrading-scheduler/**"
       - "functions/api/daytrading-research.js"
       - "functions/api/daytrading-summary.js"
       - "scalping.html"
@@ -63,6 +64,7 @@ jobs:
         env:
           JKQ_BASE_URL: https://jkquant.pages.dev
           JKQ_UNIVERSE_LIMIT: "100"
+          DAY_WORKER: https://jkquant-daytrading-scheduler.mumae4.workers.dev
           KEY: ${{ secrets.AUTOTRADE_KEY }}
         shell: bash
         run: |
@@ -80,21 +82,50 @@ jobs:
             exit 0
           fi
 
-          # 09:50~14:50에 처음 들어온 실행은 그 시점 유니버스를 고정한다.
-          # 정상일은 오전 백업 스케줄 중 가장 먼저 성공한 스냅샷 하나만 남는다.
-          if [ "$HM" -ge 950 ] && [ "$HM" -lt 1450 ]; then
+          ensure_snapshot() {
             if [ -f "$SNAP" ]; then
               echo "오늘 유니버스 스냅샷 이미 존재: $SNAP"
-            else
-              python .app/scripts/snapshot_daytrading_universe.py
-              git config user.name "github-actions[bot]"
-              git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-              git add data/daytrading-universe
-              if ! git diff --cached --quiet; then
-                git commit -m "data: daytrading universe $DATE [skip ci]"
-                git pull --rebase origin scalping-data
-                git push origin scalping-data
+              return 0
+            fi
+
+            mkdir -p "$(dirname "$SNAP")"
+            TMP="$SNAP.tmp"
+
+            # 1순위: Cloudflare Worker가 09:55 KST에 Durable Object로 고정한 스냅샷.
+            # GitHub schedule이 몇 시간 늦어져도 실제 09:55 자료를 가져오므로 primary 연구가 오염되지 않는다.
+            if [ -n "$KEY" ]; then
+              STATUS=$(curl -sS --max-time 30 -o worker-snapshot.json -w '%{http_code}'                 -H "x-monitor-key: $KEY" "$DAY_WORKER/snapshot?date=$DATE" || true)
+              if [ "$STATUS" = "200" ] && jq -e '.ok == true and .snapshot != null and (.snapshot.universe|length) > 0 and (.snapshot.snapshotHm|tonumber) <= 1015' worker-snapshot.json >/dev/null 2>&1; then
+                jq '.snapshot' worker-snapshot.json > "$TMP"
+                mv "$TMP" "$SNAP"
+                echo "Cloudflare 정시 스냅샷 저장: $(jq -c '{date,snapshotHm,captureSource,count:(.universe|length)}' "$SNAP")"
+                return 0
               fi
+              echo "Cloudflare 스냅샷 아직 없음/오류 HTTP $STATUS"
+            fi
+
+            # 2순위: GitHub 실행 자체가 10:15 이내일 때만 직접 캡처.
+            # 10:15 이후에는 늦은 유니버스를 primary 자료인 것처럼 저장하지 않는다.
+            if [ "$HM" -le 1015 ]; then
+              python .app/scripts/snapshot_daytrading_universe.py
+              [ -f "$SNAP" ] && return 0
+            fi
+
+            rm -f "$TMP"
+            echo "10:15 이내 정시 스냅샷 확보 실패 — 오늘 primary 데이트레이딩 연구는 건너뜀"
+            return 1
+          }
+
+          # 오전/장중 백업 실행은 스냅샷만 scalping-data에 영구 저장한다.
+          if [ "$HM" -ge 950 ] && [ "$HM" -lt 1450 ]; then
+            ensure_snapshot || true
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add data/daytrading-universe
+            if ! git diff --cached --quiet; then
+              git commit -m "data: daytrading universe $DATE [skip ci]"
+              git pull --rebase origin scalping-data
+              git push origin scalping-data
             fi
             exit 0
           fi
@@ -105,7 +136,10 @@ jobs:
           fi
 
           if [ ! -f "$SNAP" ]; then
-            echo "오늘 유니버스 스냅샷이 없어 데이트레이딩 백테스트를 만들 수 없음"
+            ensure_snapshot || true
+          fi
+          if [ ! -f "$SNAP" ]; then
+            echo "정시 유니버스 스냅샷이 없어 오늘 데이트레이딩 primary 백테스트를 만들 수 없음"
             exit 0
           fi
 

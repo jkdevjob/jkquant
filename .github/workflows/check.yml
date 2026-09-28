@@ -24,6 +24,7 @@ jobs:
           python -m py_compile scripts/backtest_daytrading.py
           python -m py_compile scripts/collect_daytrading_data.py
           python -m py_compile scripts/analyze_vts_reconcile.py
+          python -m py_compile scripts/nightly_scalping_research.py
 
       - name: 데이트레이딩 스냅샷 품질 가드 검사
         run: |
@@ -56,7 +57,9 @@ jobs:
           node --input-type=module --check < functions/api/vts-reconcile.js
           node --input-type=module --check < functions/api/vts-research.js
           node --input-type=module --check < functions/api/vts-summary.js
+          node --input-type=module --check < functions/api/nightly-research-summary.js
           node --input-type=module --check < worker/opening-scheduler/src/index.js
+          node --input-type=module --check < worker/daytrading-scheduler/src/index.js
 
       - name: VTS 대조는 읽기전용인지 검사
         run: |
@@ -181,6 +184,63 @@ jobs:
           }
           if(fail)process.exit(1);
           console.log('✓ Cloudflare opening scheduler cron / auth / stale-order guard');
+          NODE
+
+      - name: 데이트레이딩 Cloudflare 정시 스케줄러 안전검사
+        run: |
+          node - <<'NODE'
+          const fs=require('fs');
+          const c=fs.readFileSync('worker/daytrading-scheduler/src/index.js','utf8');
+          const w=JSON.parse(fs.readFileSync('worker/daytrading-scheduler/wrangler.jsonc','utf8'));
+          const m=fs.readFileSync('functions/api/daytrading-monitor.js','utf8');
+          const r=fs.readFileSync('.github/workflows/daytrading-research.yml','utf8');
+          let fail=0;
+          const crons=w.triggers&&w.triggers.crons||[];
+          for(const x of ['55 0 * * MON-FRI','0-59 1-4 * * MON-FRI','0-31 5 * * MON-FRI']){
+            if(!crons.includes(x)){console.error('✗ 데이트레이딩 Cron 누락: '+x);fail++;}
+          }
+          if(!w.durable_objects||!w.migrations||!String(JSON.stringify(w.migrations)).includes('new_sqlite_classes')){
+            console.error('✗ 09:55 스냅샷 Durable Object SQLite 저장소 없음'); fail++;
+          }
+          const must=[
+            ['/api/universe?limit=100','09:55 Top100 캡처'],
+            ['/api/daytrading-monitor','Pages 데이트레이딩 scanner 호출'],
+            ['MAX_SCAN_LAG_MS=3*60*1000','3분 초과 늦은 실시간 스캔 방지'],
+            ['snapshot_missing_or_late','늦은/누락 스냅샷 차단']
+          ];
+          for(const [needle,label] of must){if(!c.includes(needle)){console.error('✗ '+label+' 없음');fail++;}}
+          if(!m.includes('onRequestPost')||!m.includes('targetHm')||!m.includes('claimEvent')){
+            console.error('✗ daytrading-monitor POST/완료분/중복알림 가드 없음'); fail++;
+          }
+          if(!r.includes('DAY_WORKER')||!r.includes('snapshotHm|tonumber) <= 1015')){
+            console.error('✗ 연구 workflow가 Cloudflare 정시 스냅샷을 우선 사용하지 않음'); fail++;
+          }
+          if(fail)process.exit(1);
+          console.log('✓ daytrading realtime cron / durable snapshot / duplicate guard');
+          NODE
+
+      - name: 야간 자동연구는 분석 전용인지 검사
+        run: |
+          node - <<'NODE'
+          const fs=require('fs');
+          const py=fs.readFileSync('scripts/nightly_scalping_research.py','utf8');
+          const w=fs.readFileSync('.github/workflows/nightly-scalping-research.yml','utf8');
+          let fail=0;
+          const must=[
+            ['liveStrategyAutoChange":False','라이브 전략 자동변경 OFF'],
+            ['OPEN_MIN_DAYS=20','시초가 최소 일수'],
+            ['OPEN_MIN_BASE_TRADES=50','시초가 최소 기준거래'],
+            ['autoPromotion":False','자동 승격 OFF']
+          ];
+          for(const [needle,label] of must){if(!py.includes(needle)){console.error('✗ '+label+' 없음');fail++;}}
+          if(!w.includes('10 10 * * 1-5')||!w.includes('10 11 * * 1-5')){
+            console.error('✗ 19:10/20:10 KST 야간 연구 schedule 없음'); fail++;
+          }
+          if(/\/api\/kis\?op=order|priceType.*market/.test(py+w)){
+            console.error('✗ 야간 연구 경로에서 주문 호출 발견'); fail++;
+          }
+          if(fail)process.exit(1);
+          console.log('✓ nightly research is analysis-only / no auto promotion');
           NODE
 
       - name: 전략 SSOT 체크 (문서 기준값·규약 불변식)
