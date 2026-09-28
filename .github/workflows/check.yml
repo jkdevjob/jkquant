@@ -133,7 +133,7 @@ jobs:
             ['body:JSON.stringify({env:"vts"', 'VTS 환경 하드코딩'],
             ['priceType:"market"', '시장가 모의주문'],
             ['SCALPING_VTS_AUTO', '긴급 중지 스위치'],
-            ['date!==kstDate()', '과거 날짜 주문 차단'],
+            ['date!==clock.date', '과거 날짜 주문 차단'],
             ['중복 signal_id 차단', 'signal id 중복 방지'],
             ['MAX_SIGNAL_AGE_MIN=3', '3분 초과 오래된 신호 주문 차단']
           ];
