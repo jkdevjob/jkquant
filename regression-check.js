@@ -1578,9 +1578,8 @@ console.log('[30] 모의 시작일 일괄 변경');
      iSaveAll>=0 && iPushAll>iSaveAll && iOpenAll>iPushAll, iSaveAll+' / '+iPushAll+' / '+iOpenAll);
   ok('모의가 없으면 알리고 멈춘다', /if\(!list\.length\)\{ alert\('모의 세션이 없습니다\.'\); return; \}/.test(ap));
 
-  /* 시작일 하한 3년 — 그 앞은 시세를 하루씩 되짚느라 오래 걸리고,
-     레버리지 ETF는 상장이 얼마 안 된 게 많아 구간이 반쯤 빈다. */
-  ok('3년 하한이 있다', /const PAPER_MAX_YEARS=3;/.test(idx) && /function paperMinDate\(\)/.test(idx));
+  /* 사용자가 5년 비교를 직접 할 수 있도록 모의 시작일 하한을 5년으로 넓힌다. */
+  ok('5년 하한이 있다', /const PAPER_MAX_YEARS=5;/.test(idx) && /function paperMinDate\(\)/.test(idx));
   ok('칸에 min·max를 건다', /el\.min=min; el\.max=today;/.test(idx));
   // min 속성만으로는 못 막는다 — 키보드로 친 날짜는 그대로 들어온다
   ok('코드에서도 막는다', /if\(ns<min\)\{ alert\(`시작일은 최대 \$\{PAPER_MAX_YEARS\}년 전까지입니다/.test(ap)
@@ -6953,16 +6952,16 @@ console.log('\n[104] 모의 성과 — 세션 칸에 종목·주요 설정');
   const j=(t,st)=>po(t,st).join(' · ');
 
   /* A. 무매 — 분할·익절이 설정에서 나온다 (이름과 무관) */
-  ok('A 무매 기본', j('inf',{ticker:'SOXL',div:40,target:10})==='40분할 · 익절 10%',
+  ok('A 무매 기본 — LOC 줄수도 설정에서 표시', j('inf',{ticker:'SOXL',div:40,target:10})==='40분할 · 익절 10% · LOC 3줄',
      j('inf',{ticker:'SOXL',div:40,target:10}));
-  ok('A 분할을 바꾸면 따라 바뀐다', j('inf',{ticker:'SOXL',div:20,target:10})==='20분할 · 익절 10%',
+  ok('A 분할을 바꾸면 따라 바뀐다', j('inf',{ticker:'SOXL',div:20,target:10})==='20분할 · 익절 10% · LOC 3줄',
      j('inf',{ticker:'SOXL',div:20,target:10}));
   ok('A 변형 설정만 덧붙는다',
      j('inf',{ticker:'SOXL',div:20,target:20,reverse:true,tgtDyn:true,compound:false,engine:'v50'})
-     ==='20분할 · 익절 20% · V5.0 · 리버스 · 익절 동적 · 단리',
+     ==='20분할 · 익절 20% · LOC 3줄 · V5.0 · 리버스 · 익절 동적 · 단리',
      j('inf',{ticker:'SOXL',div:20,target:20,reverse:true,tgtDyn:true,compound:false,engine:'v50'}));
-  ok('A 기본값이면 안 붙인다', j('inf',{ticker:'SOXL',div:20,target:20,reverse:false,compound:true})
-     ==='20분할 · 익절 20%');
+  ok('A LOC 줄수는 기본값도 비교 식별을 위해 붙인다', j('inf',{ticker:'SOXL',div:20,target:20,reverse:false,compound:true})
+     ==='20분할 · 익절 20% · LOC 3줄');
 
   /* B. VR — 운용 모드가 셋 다 제 이름으로 나온다 */
   ok('B 적립식', j('vr',{ticker:'TQQQ',mode:0.75,band:15,g:10})==='적립식 · 밴드 15% · G10',
@@ -6994,7 +6993,7 @@ console.log('\n[104] 모의 성과 — 세션 칸에 종목·주요 설정');
 
   /* E. 세션 이름은 한 글자도 안 들어간다 — 이게 이번 변경의 요점이다 */
   { const st={ticker:'SOXL',div:40,target:10};
-    ok('E 이름을 넣어도 무시한다', j('inf',{...st,name:'내맘대로이름'})==='40분할 · 익절 10%'); }
+    ok('E 이름을 넣어도 무시한다', j('inf',{...st,name:'내맘대로이름'})==='40분할 · 익절 10% · LOC 3줄'); }
   ok('E 렌더도 r.name 을 칸에 안 쓴다',
      !/<span class="cw">\$\{String\(r\.name\)/.test(idx));
 }
@@ -10286,7 +10285,21 @@ console.log('\n[136] 모의성과 5년 비교 + LOC 줄수 표시');
      /const IM_ROWS_DEFAULT=3;/.test(idx));
   ok('D 모의성과 설명에도 LOC 줄수 구분을 명시',
      /무한매수법은 LOC 추가 줄 수까지 세션 설정으로 구분 표시/.test(idx));
-  const F=new Function('imRowsOf',po+'\nreturn paperOpts;')(global.imRowsOf);
+  const F=new Function('curOf','wnCur','maCond','revEnabled','imRowsOf',po+'\nreturn paperOpts;')(
+    st=>(/^(?:\\d{6}|\\d{4}[A-Z]\\d)(?:\\.K[SQ])?$/.test(String((st||{}).ticker||'').toUpperCase())?'krw':'usd'),
+    (v,cur)=>cur==='krw'?Math.round(+v||0).toLocaleString('en-US')+'₩'
+      :(+v||0).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})+'
+  ok('E 3줄/10줄/0줄 세션이 목록에서 서로 구분된다',
+     a.includes('LOC 3줄') && b.includes('LOC 10줄') && z.includes('LOC 끔'),
+     JSON.stringify({a,b,z}));
+}
+
+console.log(`\n════ 결과: ${pass} PASS / ${fail} FAIL ${fail===0?'— ALL PASS ★':'— 배포 금지, 위 ✗ 항목 수정 필요'} ════`);
+process.exit(fail===0?0:1);
+,
+    new Function('return '+extractFn(idx,'function maCond(st)')+';')(),
+    ()=>false,
+    global.imRowsOf);
   const a=F('inf',{ticker:'SOXL',div:20,target:20,rows:3,compound:true,reverse:false});
   const b=F('inf',{ticker:'SOXL',div:20,target:20,rows:10,compound:true,reverse:false});
   const z=F('inf',{ticker:'SOXL',div:20,target:20,rows:0,compound:true,reverse:false});
