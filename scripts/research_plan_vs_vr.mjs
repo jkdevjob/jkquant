@@ -99,9 +99,20 @@ try{
 
   const plan=await browser.newPage();
   await plan.goto(BASE+'/plan.html',{waitUntil:'domcontentloaded',timeout:120000});
-  await plan.waitForFunction(()=>typeof fetchPlanQuote==='function'&&window.JKPlanSessionEngine&&typeof window.JKPlanSessionEngine.replay==='function',{timeout:120000});
+  await plan.waitForFunction(()=>window.JKPlanSessionEngine&&typeof window.JKPlanSessionEngine.replay==='function',{timeout:120000});
   const planResults=await plan.evaluate(async ({caps,common,first,last,start2020,windows})=>{
-    const [t,q]=await Promise.all([fetchPlanQuote('TECL'),fetchPlanQuote('TQQQ')]);
+    /* plan.html의 quoteToDaily와 같은 선택 규칙으로 실제 /api/quote(range=max, div=1)를 읽는다.
+       module 내부 함수는 window에 노출되지 않으므로 여기서는 데이터 모양만 동일하게 맞춘다.
+       전략 계산은 window.JKPlanSessionEngine.replay 원본을 그대로 실행한다. */
+    async function getQ(sym){
+      const r=await fetch('/api/quote?symbol='+encodeURIComponent(sym)+'&range=max&div=1&_ts='+Date.now(),{cache:'no-store'});
+      if(!r.ok)throw new Error(sym+' quote HTTP '+r.status);
+      const j=await r.json();
+      const mk=rows=>(rows||[]).map(d=>({date:d.date,close:+d.close})).filter(d=>d.date&&d.close>0);
+      const adj=mk(j.series), tradeOK=!!(j.priceBasis==='trade'&&j.ohlcTrade&&j.ohlcTrade.length);
+      return {rows:tradeOK?mk(j.ohlcTrade):adj,dividends:j.dividends||[],basis:tradeOK?'trade':(j.priceBasis||null)};
+    }
+    const [t,q]=await Promise.all([getQ('TECL'),getQ('TQQQ')]);
     const set=new Set(common);
     const tr=t.rows.filter(x=>set.has(x.date)), qr=q.rows.filter(x=>set.has(x.date));
     const safe=common.map(date=>({date,close:100,open:100,high:100,low:100}));
@@ -115,7 +126,7 @@ try{
     for(const cap of caps){
       out[cap]={full:one(first,last,cap),post2020:one(start2020,last,cap),rolling:windows.map(w=>one(w.start,w.end,cap))};
     }
-    return {out,quoteMeta:{TECL:{first:tr[0]?.date,last:tr.at(-1)?.date,n:tr.length},TQQQ:{first:qr[0]?.date,last:qr.at(-1)?.date,n:qr.length}}};
+    return {out,quoteMeta:{TECL:{first:tr[0]?.date,last:tr.at(-1)?.date,n:tr.length,basis:t.basis},TQQQ:{first:qr[0]?.date,last:qr.at(-1)?.date,n:qr.length,basis:q.basis}}};
   },{caps:CAPS,common,first,last,start2020,windows});
 
   const report={
