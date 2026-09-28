@@ -201,6 +201,10 @@ th:first-child,td:first-child{text-align:left}
 .asset-session-paper{margin-top:8px;padding:9px 10px;border:1px solid rgba(245,196,81,.25);border-radius:9px;background:rgba(245,196,81,.05)}
 .asset-session-paper-result{margin:10px 0 0;padding:10px;border:1px solid var(--border2);border-radius:9px;background:rgba(139,140,240,.05)}
 .asset-session-paper-result .kpis{margin-top:7px}
+.asset-detail-tabs{display:flex;gap:7px;margin:0 0 12px;overflow-x:auto}
+.asset-detail-tab{border:1px solid var(--border2);border-radius:9px;background:var(--surf2);color:var(--dim);padding:10px 16px;font:inherit;font-weight:800;white-space:nowrap;cursor:pointer}
+.asset-detail-tab.on{background:var(--accent);border-color:var(--accent);color:#fff}
+[data-asset-view][hidden]{display:none!important}
 body.asset-paper-mode #alphaRecordFill,body.asset-paper-mode #alphaCashRec,body.asset-paper-mode #alphaResetSection{display:none!important}
 body.asset-paper-mode .ledger-del{display:none!important}
 @media(max-width:480px){.asset-session-modal .grid{grid-template-columns:1fr}}
@@ -209,7 +213,7 @@ body.asset-paper-mode .ledger-del{display:none!important}
 <body>
 <div class="wrap">
   <div class="top">
-    <div class="brand"><div class="logo">Asset Plan</div><h1>자산플랜 <span class="ver">v1.37.0</span></h1></div>
+    <div class="brand"><div class="logo">Asset Plan</div><h1>자산플랜 <span class="ver">v1.38.0</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
       <div class="jkmenu" id="jkmenuWrap">
@@ -257,15 +261,21 @@ body.asset-paper-mode .ledger-del{display:none!important}
     </div>
     <div class="asset-session-chips" id="assetSessionChips"></div>
     <div class="asset-session-state" id="assetSessionState">현재 투자중 플랜</div>
-    <div class="asset-session-paper-result" id="assetPaperResult" hidden></div>
   </section>
+
+  <nav class="asset-detail-tabs" id="assetDetailTabs" role="tablist" aria-label="선택한 세션 상세">
+    <button class="asset-detail-tab on" id="assetAnalysisTab" data-asset-detail="analysis" role="tab" aria-selected="true" aria-controls="alphaOrderSection alphaAccountSection alphaEvidenceSection assetPaperPanel">현재 분석</button>
+    <button class="asset-detail-tab" id="assetHistoryTab" data-asset-detail="history" role="tab" aria-selected="false" tabindex="-1" aria-controls="alphaHistorySection alphaResetSection">거래이력</button>
+    <button class="asset-detail-tab" id="assetExplainTab" data-asset-detail="explain" role="tab" aria-selected="false" tabindex="-1" aria-controls="alphaStrategySection">설명</button>
+  </nav>
 
   <div class="plan-panel on" data-ppanel="alpha">
     <div class="guidehero">
       <div class="eyebrow" id="alphaHorizonEyebrow">5 YEAR · AGGRESSIVE GROWTH + GUARD</div>
       <h2 id="alphaStrategyTitle">5년 · TECL 역분산 70% + TQQQ Guard 30%</h2>
+      <div id="assetPaperPanel" data-asset-view="analysis"><div class="asset-session-paper-result" id="assetPaperResult" hidden></div></div>
 
-      <div class="todaybox" id="alphaOrderSection">
+      <div class="todaybox" id="alphaOrderSection" data-asset-view="analysis">
         <h3>1. 📋 오늘 주문</h3>
         <div class="sub" id="alphaMeta">TECL·TQQQ·SGOV 확정 일봉을 불러오는 중…</div>
         <div class="sub" id="alphaRefreshTime">시세 자동 갱신 중…</div>
@@ -282,7 +292,7 @@ body.asset-paper-mode .ledger-del{display:none!important}
         </div>
       </div>
 
-      <div class="card" id="alphaAccountSection" style="margin-top:10px;margin-bottom:0">
+      <div class="card" id="alphaAccountSection" data-asset-view="analysis" style="margin-top:10px;margin-bottom:0">
         <div class="alpha-account-head">
           <div><h3 style="margin-bottom:2px">2. 현재 계좌</h3><div class="alpha-ledger-note">수량과 평단가는 거래이력에서 자동 계산합니다. 평단은 수수료를 제외한 실제 체결가의 가중평균입니다.</div></div>
           <span class="status-pill good" id="alphaLedgerStatus">자동 계산</span>
@@ -304,8 +314,8 @@ body.asset-paper-mode .ledger-del{display:none!important}
         <input type="hidden" id="aTeclQty"><input type="hidden" id="aTqqqQty"><input type="hidden" id="aSgovQty"><input type="hidden" id="aCash">
       </div>
 
-      <div class="card" id="alphaHistorySection" style="margin-top:10px;margin-bottom:0">
-        <div class="alpha-account-head"><div><h3 style="margin-bottom:2px">3. 거래이력</h3><div class="alpha-ledger-note">잘못 기록한 체결이나 시작잔고는 여기서 수정합니다. 수정 후 현재 수량·평단·현금을 전체 이력 기준으로 다시 계산합니다.</div></div></div>
+      <div class="card" id="alphaHistorySection" data-asset-view="history" hidden style="margin-top:10px;margin-bottom:0">
+        <div class="alpha-account-head"><div><h3 style="margin-bottom:2px">거래이력</h3><div class="alpha-ledger-note" id="assetHistoryNote">잘못 기록한 체결이나 시작잔고는 여기서 수정합니다. 수정 후 현재 수량·평단·현금을 전체 이력 기준으로 다시 계산합니다.</div></div></div>
         <div class="alpha-reconcile-panel" id="alphaCashRec">
           <b>현금 기록 — 배당 · 입금 · 출금</b>
           <div class="alpha-ledger-note">SGOV 분배금(세후 실제 입금액)과 계좌 입출금을 적어 앱 현금을 토스 계좌와 맞춥니다. 수량·평단은 바뀌지 않고, 입금·출금은 목표 진행률의 시작점에 더해 성장으로 세지 않습니다.</div>
@@ -350,8 +360,8 @@ body.asset-paper-mode .ledger-del{display:none!important}
         </div>
       </div>
 
-      <div class="todaybox" id="alphaEvidenceSection">
-        <h3>4. 🔎 리밸런싱 판단 근거</h3>
+      <div class="todaybox" id="alphaEvidenceSection" data-asset-view="analysis">
+        <h3>3. 🔎 리밸런싱 판단 근거</h3>
         <div class="alpha-evidence-grid">
           <div class="alpha-ev"><div class="k" id="alphaEv1Label">TECL σ15</div><div class="v" id="alphaSigma">—</div><div class="s" id="alphaEv1Sub">연환산 실현변동성</div></div>
           <div class="alpha-ev"><div class="k" id="alphaEv2Label">TECL 슬리브 목표 w</div><div class="v" id="alphaTargetW">—</div><div class="s" id="alphaEv2Sub">w=(55%/σ15)², 최대100%</div></div>
@@ -376,8 +386,8 @@ body.asset-paper-mode .ledger-del{display:none!important}
         <div class="alpha-decision" id="alphaDecision"><b>오늘 판단:</b> 지표를 불러오는 중입니다.</div>
       </div>
 
-      <div class="card" id="alphaStrategySection" style="margin-top:10px;margin-bottom:0">
-        <h3>5. 전략 설명</h3>
+      <div class="card" id="alphaStrategySection" data-asset-view="explain" hidden style="margin-top:10px;margin-bottom:0">
+        <h3>전략 설명</h3>
         <div class="guidegrid" style="margin-top:10px">
           <div class="guidekpi"><div class="k" id="alphaKpi1Label">TECL 역분산</div><div class="v" id="alphaKpi1Value">최대 70%</div><div class="sub" id="alphaKpi1Sub">N15 · s0 55% · 밴드 17.5%p</div></div>
           <div class="guidekpi"><div class="k" id="alphaKpi2Label">TQQQ Guard</div><div class="v" id="alphaKpi2Value">최대 30%</div><div class="sub" id="alphaKpi2Sub">SMA200 · ±1.5%</div></div>
@@ -388,7 +398,7 @@ body.asset-paper-mode .ledger-del{display:none!important}
         <div class="path-summary" id="alphaValidation" style="margin-top:8px"></div>
       </div>
 
-      <div class="card" id="alphaResetSection" style="margin-top:10px;margin-bottom:0">
+      <div class="card" id="alphaResetSection" data-asset-view="history" hidden style="margin-top:10px;margin-bottom:0">
         <div class="path-holdings">
           <div class="field"><label>플랜 시작자금 ($)</label><input type="number" id="alphaCapitalInput" min="1" step="100"></div>
           <div class="field" style="grid-column:span 3"><label>&nbsp;</label><button class="btn" id="alphaReset" style="width:100%">초기화</button></div>
@@ -872,6 +882,15 @@ function ensureLiveBoxes(){
    현재 투자중 플랜은 기존 fiveYearPlan 저장소를 그대로 쓴다.
    추가 세션은 운영 state.plan에 따로 저장해 실제 장부와 섞이지 않게 한다. */
 const assetPaperCache={};
+let assetViewRevision=0;
+function setAssetDetail(name){
+  const selected=['analysis','history','explain'].includes(name)?name:'analysis';
+  document.querySelectorAll('[data-asset-detail]').forEach(b=>{
+    const on=b.dataset.assetDetail===selected;
+    b.classList.toggle('on',on);b.setAttribute('aria-selected',String(on));b.tabIndex=on?0:-1;
+  });
+  document.querySelectorAll('[data-asset-view]').forEach(p=>{p.hidden=p.dataset.assetView!==selected;});
+}
 const requestedAssetSessionId=(()=>{try{return new URLSearchParams(location.search).get('session')||'';}catch(e){return '';}})();
 function assetPlanBox(){ensureLiveBoxes();return liveState.plan;}
 function assetSessionList(h=activeHorizon){return assetPlanBox().sessions.filter(x=>x&&+x.horizon===+h);}
@@ -931,6 +950,8 @@ function assetPaperStatsHtml(x,R){
 }
 async function replayAssetPaperSession(x,applyView){
   if(!x||!x.paper||!window.JKPlanSessionEngine)return null;
+  const revision=assetViewRevision;
+  const isCurrent=()=>revision===assetViewRevision&&activeAssetSession()?.id===x.id;
   try{
     liveQuotes={};
     const a=await Promise.all([fetchPlanQuote('TECL'),fetchPlanQuote('TQQQ'),fetchPlanQuote('SGOV')]),t=a[0],q=a[1],g=a[2];
@@ -939,7 +960,7 @@ async function replayAssetPaperSession(x,applyView){
       principal:+x.settings.startCapital||0,monthlyAdd:+x.settings.monthlyAdd||0,
       tecl:t.rows,tqqq:q.rows,sgov:g.rows,teclDiv:t.dividends,tqqqDiv:q.dividends,sgovDiv:g.dividends});
     assetPaperCache[x.id]=R;
-    if(applyView){
+    if(applyView&&isCurrent()){
       applyAssetSettings(x);
       alphaLedger=cloneObj(R.ledger||assetLedgerSeed(x.simStart,+x.settings.startCapital||0));
       alphaSyncInputs();document.body.classList.add('asset-paper-mode');
@@ -949,7 +970,7 @@ async function replayAssetPaperSession(x,applyView){
     return R;
   }catch(e){
     console.error('asset paper replay',e);
-    const pr=$('assetPaperResult');if(pr){pr.hidden=false;pr.innerHTML='<div class="sub" style="color:var(--gold)">모의 재생 실패 · '+String(e&&e.message||e).replace(/</g,'&lt;')+'</div>';}
+    const pr=$('assetPaperResult');if(applyView&&isCurrent()&&pr){pr.hidden=false;pr.innerHTML='<div class="sub" style="color:var(--gold)">모의 재생 실패 · '+String(e&&e.message||e).replace(/</g,'&lt;')+'</div>';}
     return null;
   }
 }
@@ -970,13 +991,19 @@ function renderAssetSessions(){
   }
 }
 async function loadActiveAssetSessionView(refresh=true){
+  const revision=++assetViewRevision;
+  alphaCloseFillEditor();alphaCloseEdit();setAssetDetail('analysis');
   const x=activeAssetSession();
+  $('assetHistoryNote').textContent=x&&x.paper?'모의 시작일부터 확정 일봉까지 자동 재생한 거래이력입니다. 모의 기록은 직접 수정하지 않습니다.':'잘못 기록한 체결이나 시작잔고는 여기서 수정합니다. 수정 후 현재 수량·평단·현금을 전체 이력 기준으로 다시 계산합니다.';
   if(!x){
     restoreCurrentPlanView();renderAssetSessions();render();if(refresh)await refreshLive();return;
   }
   applyAssetSettings(x);
   if(x.paper){
-    renderAssetSessions();await replayAssetPaperSession(x,true);if(refresh)await refreshLive();return;
+    document.body.classList.add('asset-paper-mode');
+    alphaLedger=assetLedgerSeed(x.simStart,+x.settings.startCapital||0);alphaSyncInputs();renderAlphaLedger();
+    const pr=$('assetPaperResult');pr.hidden=false;pr.textContent='모의 거래이력과 성과를 계산하는 중…';
+    renderAssetSessions();await replayAssetPaperSession(x,true);if(refresh&&revision===assetViewRevision)await refreshLive();return;
   }
   alphaLedger=cloneObj(x.ledger||assetLedgerSeed((x.settings&&x.settings.startDate)||todayISO(),+(x.settings&&x.settings.startCapital)||20000));
   alphaSyncInputs();document.body.classList.remove('asset-paper-mode');
@@ -1027,7 +1054,7 @@ async function deleteAssetSession(id){
   const b=assetPlanBox(),x=b.sessions.find(s=>s.id===id);if(!x)return;
   if(!confirm("'"+(x.name||'세션')+"'을 삭제할까요?\n현재 투자중 플랜과 다른 세션은 그대로입니다."))return;
   b.sessions=b.sessions.filter(s=>s.id!==id);if(String(b.activeByHorizon[+x.horizon]||'')===id)b.activeByHorizon[+x.horizon]='';
-  delete assetPaperCache[id];writeAssetSessionLocal();await saveOperatingState();restoreCurrentPlanView();renderAssetSessions();render();await refreshLive();
+  delete assetPaperCache[id];writeAssetSessionLocal();await saveOperatingState();await loadActiveAssetSessionView(true);
 }
 function guardAssetPaperEdit(){
   if(!assetPaperMode())return false;
@@ -2529,6 +2556,13 @@ if(saved && Number(saved.startCapital)===30000 && Number(saved.aCash)===30000
 apply(saved||d);$("slDate").value=todayISO();renderSessionSelectors();renderLedger();renderAlphaLedger();render();renderAssetSessions();
 ["startDate","targetDate","startCapital","targetCapital","monthlyAdd","targetIncome","stageMode","balMM","balVR","balQLD","balSGOV","cagrLow","cagrBase","cagrHigh","incomeBasis","incomeYield","sgovYield","extraWithdraw"].forEach(id=>$(id).addEventListener("change",render));
 $("assetSessionAdd").addEventListener("click",openAssetSessionModal);
+$("assetDetailTabs").addEventListener("click",e=>{const b=e.target.closest('[data-asset-detail]');if(b)setAssetDetail(b.dataset.assetDetail);});
+$("assetDetailTabs").addEventListener("keydown",e=>{
+  const tabs=Array.from(document.querySelectorAll('[data-asset-detail]')),i=tabs.indexOf(e.target);
+  if(i<0||!['ArrowLeft','ArrowRight','Home','End'].includes(e.key))return;
+  e.preventDefault();const n=e.key==='Home'?0:e.key==='End'?tabs.length-1:(i+(e.key==='ArrowRight'?1:-1)+tabs.length)%tabs.length;
+  setAssetDetail(tabs[n].dataset.assetDetail);tabs[n].focus();
+});
 $("assetSessionClose").addEventListener("click",closeAssetSessionModal);
 $("assetSessionCancel").addEventListener("click",closeAssetSessionModal);
 $("assetSessionCreate").addEventListener("click",createAssetSession);
