@@ -6,6 +6,7 @@
 <meta name="theme-color" content="#0f1320">
 <title>JK 퀀트 — 자산플랜</title>
 <script src="/plan-session-engine.js"></script>
+<script src="/plan-session-settings.js"></script>
 <style>
 :root{
   --bg:#0f1320;--surf:#171c2e;--surf2:#1e2540;--border:#2a3354;--border2:#34406a;
@@ -213,7 +214,7 @@ body.asset-paper-mode .ledger-del{display:none!important}
 <body>
 <div class="wrap">
   <div class="top">
-    <div class="brand"><div class="logo">Asset Plan</div><h1>자산플랜 <span class="ver">v1.38.0</span></h1></div>
+    <div class="brand"><div class="logo">Asset Plan</div><h1>자산플랜 <span class="ver">v1.39.0</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
       <div class="jkmenu" id="jkmenuWrap">
@@ -257,14 +258,15 @@ body.asset-paper-mode .ledger-del{display:none!important}
   <section class="card asset-session-card" id="assetSessionCard">
     <div class="asset-session-head">
       <div><h2 style="margin-bottom:2px">세션</h2><div class="sub">전략별로 계좌를 따로 운영할 수 있습니다. 모의 세션은 실제 장부와 분리되고 모의투자 성과에 함께 표시됩니다.</div></div>
-      <button class="btn primary" id="assetSessionAdd">+ 세션</button>
+      <div class="btnrow"><button class="btn" id="assetSessionEdit">⚙ 세션 설정</button><button class="btn primary" id="assetSessionAdd">+ 세션</button></div>
     </div>
     <div class="asset-session-chips" id="assetSessionChips"></div>
     <div class="asset-session-state" id="assetSessionState">현재 투자중 플랜</div>
   </section>
 
   <nav class="asset-detail-tabs" id="assetDetailTabs" role="tablist" aria-label="선택한 세션 상세">
-    <button class="asset-detail-tab on" id="assetAnalysisTab" data-asset-detail="analysis" role="tab" aria-selected="true" aria-controls="alphaOrderSection alphaAccountSection alphaEvidenceSection assetPaperPanel">현재 분석</button>
+    <button class="asset-detail-tab on" id="assetCurrentTab" data-asset-detail="current" role="tab" aria-selected="true" aria-controls="alphaOrderSection alphaAccountSection">현재</button>
+    <button class="asset-detail-tab" id="assetAnalysisTab" data-asset-detail="analysis" role="tab" aria-selected="false" tabindex="-1" aria-controls="alphaEvidenceSection assetPaperPanel">분석</button>
     <button class="asset-detail-tab" id="assetHistoryTab" data-asset-detail="history" role="tab" aria-selected="false" tabindex="-1" aria-controls="alphaHistorySection alphaResetSection">거래이력</button>
     <button class="asset-detail-tab" id="assetExplainTab" data-asset-detail="explain" role="tab" aria-selected="false" tabindex="-1" aria-controls="alphaStrategySection">설명</button>
   </nav>
@@ -273,9 +275,9 @@ body.asset-paper-mode .ledger-del{display:none!important}
     <div class="guidehero">
       <div class="eyebrow" id="alphaHorizonEyebrow">5 YEAR · AGGRESSIVE GROWTH + GUARD</div>
       <h2 id="alphaStrategyTitle">5년 · TECL 역분산 70% + TQQQ Guard 30%</h2>
-      <div id="assetPaperPanel" data-asset-view="analysis"><div class="asset-session-paper-result" id="assetPaperResult" hidden></div></div>
+      <div id="assetPaperPanel" data-asset-view="analysis" hidden><div class="asset-session-paper-result" id="assetPaperResult" hidden></div></div>
 
-      <div class="todaybox" id="alphaOrderSection" data-asset-view="analysis">
+      <div class="todaybox" id="alphaOrderSection" data-asset-view="current">
         <h3>1. 📋 오늘 주문</h3>
         <div class="sub" id="alphaMeta">TECL·TQQQ·SGOV 확정 일봉을 불러오는 중…</div>
         <div class="sub" id="alphaRefreshTime">시세 자동 갱신 중…</div>
@@ -292,7 +294,7 @@ body.asset-paper-mode .ledger-del{display:none!important}
         </div>
       </div>
 
-      <div class="card" id="alphaAccountSection" data-asset-view="analysis" style="margin-top:10px;margin-bottom:0">
+      <div class="card" id="alphaAccountSection" data-asset-view="current" style="margin-top:10px;margin-bottom:0">
         <div class="alpha-account-head">
           <div><h3 style="margin-bottom:2px">2. 현재 계좌</h3><div class="alpha-ledger-note">수량과 평단가는 거래이력에서 자동 계산합니다. 평단은 수수료를 제외한 실제 체결가의 가중평균입니다.</div></div>
           <span class="status-pill good" id="alphaLedgerStatus">자동 계산</span>
@@ -360,7 +362,7 @@ body.asset-paper-mode .ledger-del{display:none!important}
         </div>
       </div>
 
-      <div class="todaybox" id="alphaEvidenceSection" data-asset-view="analysis">
+      <div class="todaybox" id="alphaEvidenceSection" data-asset-view="analysis" hidden>
         <h3>3. 🔎 리밸런싱 판단 근거</h3>
         <div class="alpha-evidence-grid">
           <div class="alpha-ev"><div class="k" id="alphaEv1Label">TECL σ15</div><div class="v" id="alphaSigma">—</div><div class="s" id="alphaEv1Sub">연환산 실현변동성</div></div>
@@ -711,10 +713,10 @@ body.asset-paper-mode .ledger-del{display:none!important}
   </section>
 </div>
 
-<div class="asset-session-modal" id="assetSessionModal" hidden>
+<div class="asset-session-modal" id="assetSessionModal" role="dialog" aria-modal="true" aria-labelledby="assetSessionModalTitle" hidden>
   <div class="box">
     <div class="asset-session-head">
-      <div><h2 style="margin-bottom:2px">자산플랜 세션 추가</h2><div class="sub" id="assetSessionModalStrategy">현재 전략을 새 세션으로 만듭니다.</div></div>
+      <div><h2 id="assetSessionModalTitle" style="margin-bottom:2px">자산플랜 세션 추가</h2><div class="sub" id="assetSessionModalStrategy">현재 전략을 새 세션으로 만듭니다.</div></div>
       <button class="btn" id="assetSessionClose">닫기</button>
     </div>
     <div class="grid">
@@ -723,7 +725,7 @@ body.asset-paper-mode .ledger-del{display:none!important}
       <div class="field"><label>월 추가 투자 ($)</label><input id="assetSessionMonthly" type="number" min="0" step="10"></div>
       <div class="field"><label>목표자산 ($)</label><input id="assetSessionTarget" type="number" min="1" step="100"></div>
       <div class="field"><label>세션 종류</label><select id="assetSessionKind"><option value="live">운영 세션</option><option value="paper">모의투자 세션</option></select></div>
-      <div class="field" id="assetSessionStartWrap"><label>모의 시작일</label><input id="assetSessionStart" type="date"></div>
+      <div class="field" id="assetSessionStartWrap"><label id="assetSessionStartLabel">시작일</label><input id="assetSessionStart" type="date"></div>
     </div>
     <div class="asset-session-paper" id="assetSessionPaperNote">운영 세션은 실제 체결을 직접 기록합니다. 모의투자 세션은 과거 시세로 자동 재생하며 실제 거래이력을 변경하지 않습니다.</div>
     <div class="btnrow"><button class="btn primary" id="assetSessionCreate">세션 만들기</button><button class="btn" id="assetSessionCancel">취소</button></div>
@@ -802,6 +804,7 @@ function renderHorizonCopy(){
   }
 }
 async function setHorizon(years,refresh=true){
+  closeAssetSessionModal();
   const y=[5,10,15,20].includes(Number(years))?Number(years):5;
   const cur=activeAssetSession();if(cur&&!cur.paper)syncActiveAssetSessionFromView();else if(!cur)localSave();
   if(y!==activeHorizon)horizonRebalancePending=true;
@@ -883,8 +886,9 @@ function ensureLiveBoxes(){
    추가 세션은 운영 state.plan에 따로 저장해 실제 장부와 섞이지 않게 한다. */
 const assetPaperCache={};
 let assetViewRevision=0;
+let assetEditingId=null,assetModalHorizon=5,assetModalRevision=0,assetSessionSaving=false;
 function setAssetDetail(name){
-  const selected=['analysis','history','explain'].includes(name)?name:'analysis';
+  const selected=['current','analysis','history','explain'].includes(name)?name:'current';
   document.querySelectorAll('[data-asset-detail]').forEach(b=>{
     const on=b.dataset.assetDetail===selected;
     b.classList.toggle('on',on);b.setAttribute('aria-selected',String(on));b.tabIndex=on?0:-1;
@@ -992,7 +996,7 @@ function renderAssetSessions(){
 }
 async function loadActiveAssetSessionView(refresh=true){
   const revision=++assetViewRevision;
-  alphaCloseFillEditor();alphaCloseEdit();setAssetDetail('analysis');
+  alphaCloseFillEditor();alphaCloseEdit();setAssetDetail('current');
   const x=activeAssetSession();
   $('assetHistoryNote').textContent=x&&x.paper?'모의 시작일부터 확정 일봉까지 자동 재생한 거래이력입니다. 모의 기록은 직접 수정하지 않습니다.':'잘못 기록한 체결이나 시작잔고는 여기서 수정합니다. 수정 후 현재 수량·평단·현금을 전체 이력 기준으로 다시 계산합니다.';
   if(!x){
@@ -1011,6 +1015,7 @@ async function loadActiveAssetSessionView(refresh=true){
   renderAssetSessions();renderAlphaLedger();render();refreshAlphaFromCache();if(refresh)await refreshLive();
 }
 async function selectAssetSession(id){
+  closeAssetSessionModal();
   const cur=activeAssetSession();
   if(cur&&!cur.paper)syncActiveAssetSessionFromView();
   else if(!cur)localSave();
@@ -1018,6 +1023,7 @@ async function selectAssetSession(id){
   await loadActiveAssetSessionView(true);
 }
 function openAssetSessionModal(){
+  assetEditingId=null;assetModalHorizon=activeHorizon;assetModalRevision++;
   const list=assetSessionList();
   $('assetSessionName').value=activeHorizon+'년 세션 '+(list.length+1);
   $('assetSessionCapital').value=Math.max(1,num('startCapital',20000));
@@ -1025,30 +1031,70 @@ function openAssetSessionModal(){
   $('assetSessionTarget').value=Math.max(1,num('targetCapital',150000));
   $('assetSessionKind').value='live';
   const min=new Date();min.setFullYear(min.getFullYear()-3);
-  $('assetSessionStart').min=min.toISOString().slice(0,10);$('assetSessionStart').max=todayISO();$('assetSessionStart').value=$('startDate').value||todayISO();
-  $('assetSessionStartWrap').style.display='none';
+  $('assetSessionStart').min=min.toISOString().slice(0,10);$('assetSessionStart').max=todayISO();$('assetSessionStart').value=todayISO();
+  $('assetSessionName').disabled=false;$('assetSessionKind').disabled=false;
+  $('assetSessionModalTitle').textContent='자산플랜 세션 추가';$('assetSessionCreate').textContent='세션 만들기';
+  syncAssetSessionModal();
   $('assetSessionModalStrategy').textContent=horizonStrategy().name;
   $('assetSessionModal').hidden=false;
 }
-function closeAssetSessionModal(){$('assetSessionModal').hidden=true;}
+function editAssetSession(){
+  const x=activeAssetSession();
+  if(x&&!x.paper)syncActiveAssetSessionFromView();
+  openAssetSessionModal();assetEditingId=x?x.id:'current';
+  const st=x?x.settings:assetSessionSettingsFromView();
+  $('assetSessionName').value=x?x.name:'현재 투자중';
+  $('assetSessionName').disabled=!x;$('assetSessionKind').disabled=!x;
+  $('assetSessionKind').value=x&&x.paper?'paper':'live';
+  $('assetSessionCapital').value=st.startCapital;$('assetSessionMonthly').value=st.monthlyAdd;
+  $('assetSessionTarget').value=st.targetCapital;$('assetSessionStart').value=x&&x.paper?x.simStart:st.startDate;
+  $('assetSessionModalTitle').textContent='자산플랜 세션 설정';$('assetSessionCreate').textContent='변경 저장';
+  syncAssetSessionModal();
+}
+function syncAssetSessionModal(){
+  const paper=$('assetSessionKind').value==='paper';
+  const x=assetEditingId==='current'?{ledger:alphaLedger}:assetPlanBox().sessions.find(s=>s.id===assetEditingId);
+  const locked=!paper&&x&&window.JKPlanSessionSettings.hasLedgerActivity(x.ledger);
+  if(!paper&&x&&x.liveSettings){$('assetSessionCapital').value=x.liveSettings.startCapital;$('assetSessionStart').value=x.liveSettings.startDate;}
+  $('assetSessionCapital').disabled=!!locked;$('assetSessionStart').disabled=!!locked;
+  $('assetSessionStartWrap').style.display='';
+  const min=new Date();min.setFullYear(min.getFullYear()-3);
+  $('assetSessionStart').min=paper?min.toISOString().slice(0,10):'';
+  $('assetSessionStartLabel').textContent=paper?'모의 시작일':'시작일';
+  $('assetSessionPaperNote').textContent=paper?'과거 시세로 거래와 성과를 다시 계산합니다. 모의투자 성과의 자산플랜에서도 비교할 수 있습니다. 실제 거래이력은 보존됩니다.':locked?'기존 거래이력을 유지합니다. 시작자산과 시작일은 거래이력의 시작잔고 수정에서 변경하세요.':'운영 세션은 실제 체결을 직접 기록합니다. 모의에서 운영으로 바꾸면 모의 거래는 가져오지 않습니다.';
+}
+function closeAssetSessionModal(){$('assetSessionModal').hidden=true;assetModalRevision++;assetEditingId=null;}
 async function assetFxAt(date){
   try{const r=await fetch('/api/fx?date='+encodeURIComponent(date),{headers:{Accept:'application/json'}});if(r.ok){const j=await r.json();if(j&&+j.rate>0)return +j.rate;}}catch(e){}
   return 0;
 }
 async function createAssetSession(){
+  if(assetSessionSaving)return;
   ensureLiveBoxes();
-  const paper=$('assetSessionKind').value==='paper',name=$('assetSessionName').value.trim()||activeHorizon+'년 세션';
-  const cap=+$('assetSessionCapital').value||0,monthly=Math.max(0,+$('assetSessionMonthly').value||0),target=+$('assetSessionTarget').value||0;
-  const start=paper?$('assetSessionStart').value:todayISO();
-  if(!(cap>0)||!(target>0)){alert('시작자산과 목표자산을 확인하세요.');return;}
-  if(paper&&(!start||start<$('assetSessionStart').min||start>todayISO())){alert('모의 시작일은 최근 3년 안에서 골라주세요.');return;}
-  const id=planSid('ap'),fx=paper?await assetFxAt(start):0;
-  if(paper&&!(fx>0)){alert('모의 시작일의 USD/KRW 환율을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.');return;}
-  const settings=assetSessionSettingsFromView(cap);settings.monthlyAdd=monthly;settings.targetCapital=target;settings.startDate=start;settings.targetDate=plusYears(start,activeHorizon);
-  const x={id,name,horizon:activeHorizon,paper,simStart:paper?start:'',paperFxRate:fx||0,createdAt:Date.now(),settings,
-    ledger:paper?null:assetLedgerSeed(start,cap)};
-  assetPlanBox().sessions.push(x);assetPlanBox().activeByHorizon[activeHorizon]=id;
-  await saveOperatingState();closeAssetSessionModal();renderAssetSessions();await loadActiveAssetSessionView(true);
+  const revision=assetModalRevision,horizon=assetModalHorizon,id=assetEditingId;
+  const input={paper:$('assetSessionKind').value==='paper',name:$('assetSessionName').value,capital:$('assetSessionCapital').value,monthly:$('assetSessionMonthly').value,target:$('assetSessionTarget').value,start:$('assetSessionStart').value};
+  const box=assetPlanBox(),original=id==='current'?{id,horizon,paper:false,settings:assetSessionSettingsFromView(),ledger:cloneObj(alphaLedger)}:box.sessions.find(x=>x.id===id);
+  if(id&&!original)return;
+  if(original&&original.paper!==input.paper&&!confirm('세션 종류를 변경할까요? 실제 거래이력은 보존하고, 모의 거래는 운영 거래이력에 복사하지 않습니다.'))return;
+  assetSessionSaving=true;$('assetSessionCreate').disabled=true;
+  try{
+    const fx=input.paper?(original&&original.paper&&original.simStart===input.start&&original.paperFxRate>0?original.paperFxRate:await assetFxAt(input.start)):0;
+    if(revision!==assetModalRevision||horizon!==activeHorizon||$('assetSessionModal').hidden)return;
+    if(id&&id!=='current'&&!box.sessions.includes(original))return;
+    const min=new Date();min.setFullYear(min.getFullYear()-3);
+    const seed=original||{id:planSid('ap'),horizon,paper:input.paper,createdAt:Date.now(),settings:assetSessionSettingsFromView(),ledger:null};
+    const x=window.JKPlanSessionSettings.update(seed,input,{today:todayISO(),minStart:min.toISOString().slice(0,10),fx});
+    ++assetViewRevision;
+    if(id==='current'){
+      applyAssetSettings(x);alphaLedger=x.ledger;alphaSyncInputs();localSave();await cloudSave();
+    }else{
+      if(original)box.sessions[box.sessions.indexOf(original)]=x;else box.sessions.push(x);
+      box.activeByHorizon[horizon]=x.id;delete assetPaperCache[x.id];
+      await saveOperatingState();
+    }
+    closeAssetSessionModal();renderAssetSessions();await loadActiveAssetSessionView(true);
+  }catch(e){alert(e.message||String(e));}
+  finally{assetSessionSaving=false;$('assetSessionCreate').disabled=false;}
 }
 async function deleteAssetSession(id){
   const b=assetPlanBox(),x=b.sessions.find(s=>s.id===id);if(!x)return;
@@ -2556,6 +2602,7 @@ if(saved && Number(saved.startCapital)===30000 && Number(saved.aCash)===30000
 apply(saved||d);$("slDate").value=todayISO();renderSessionSelectors();renderLedger();renderAlphaLedger();render();renderAssetSessions();
 ["startDate","targetDate","startCapital","targetCapital","monthlyAdd","targetIncome","stageMode","balMM","balVR","balQLD","balSGOV","cagrLow","cagrBase","cagrHigh","incomeBasis","incomeYield","sgovYield","extraWithdraw"].forEach(id=>$(id).addEventListener("change",render));
 $("assetSessionAdd").addEventListener("click",openAssetSessionModal);
+$("assetSessionEdit").addEventListener("click",editAssetSession);
 $("assetDetailTabs").addEventListener("click",e=>{const b=e.target.closest('[data-asset-detail]');if(b)setAssetDetail(b.dataset.assetDetail);});
 $("assetDetailTabs").addEventListener("keydown",e=>{
   const tabs=Array.from(document.querySelectorAll('[data-asset-detail]')),i=tabs.indexOf(e.target);
@@ -2566,7 +2613,8 @@ $("assetDetailTabs").addEventListener("keydown",e=>{
 $("assetSessionClose").addEventListener("click",closeAssetSessionModal);
 $("assetSessionCancel").addEventListener("click",closeAssetSessionModal);
 $("assetSessionCreate").addEventListener("click",createAssetSession);
-$("assetSessionKind").addEventListener("change",()=>{$("assetSessionStartWrap").style.display=$("assetSessionKind").value==='paper'?'':'none';});
+$("assetSessionKind").addEventListener("change",syncAssetSessionModal);
+$("assetSessionModal").addEventListener("keydown",e=>{if(e.key==='Escape')closeAssetSessionModal();});
 $("assetSessionModal").addEventListener("click",e=>{if(e.target===$("assetSessionModal"))closeAssetSessionModal();});
 $("assetSessionChips").addEventListener("click",e=>{
   const d=e.target.closest("[data-asess-del]");if(d){e.stopPropagation();deleteAssetSession(d.dataset.asessDel);return;}

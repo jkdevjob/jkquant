@@ -11,10 +11,10 @@ function element(dataset={}){return {dataset,hidden:false,classList:{toggle(){}}
 async function main(){
   const tabs=[...html.matchAll(/<button[^>]*data-asset-detail="([^"]+)"[^>]*>/g)].map(m=>element({assetDetail:m[1]}));
   const panels=[...html.matchAll(/<div[^>]*id="([^"]+)"[^>]*data-asset-view="([^"]+)"[^>]*>/g)].map(m=>Object.assign(element({assetView:m[2]}),{id:m[1]}));
-  assert.deepEqual(tabs.map(x=>x.dataset.assetDetail),['analysis','history','explain']);
+  assert.deepEqual(tabs.map(x=>x.dataset.assetDetail),['current','analysis','history','explain']);
   const c=vm.createContext({document:{querySelectorAll:s=>s==='[data-asset-detail]'?tabs:panels}});
   vm.runInContext(fn('function setAssetDetail(name)'),c);
-  for(const [name,ids] of Object.entries({analysis:['assetPaperPanel','alphaOrderSection','alphaAccountSection','alphaEvidenceSection'],history:['alphaHistorySection','alphaResetSection'],explain:['alphaStrategySection']})){
+  for(const [name,ids] of Object.entries({current:['alphaOrderSection','alphaAccountSection'],analysis:['assetPaperPanel','alphaEvidenceSection'],history:['alphaHistorySection','alphaResetSection'],explain:['alphaStrategySection']})){
     c.setAssetDetail(name);
     assert.deepEqual(panels.filter(p=>!p.hidden).map(p=>p.id),ids);
     assert.equal(tabs.filter(t=>t['aria-selected']==='true').length,1);
