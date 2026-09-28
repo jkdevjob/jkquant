@@ -5634,7 +5634,7 @@ async function levScenario(viaHelper){
   process.stdout.write(JSON.stringify(out));
 })().catch(e=>{ process.stdout.write(JSON.stringify({error:e.message, stack:(e.stack||'').split('\\n').slice(0,3).join(' | ')})); process.exit(1); });
 `;
-  const tmp='/tmp/__loader_parity.js';
+  const tmp=path.join(require('os').tmpdir(),'__loader_parity.js');
   fs.writeFileSync(tmp, CHILD);
   const {spawnSync}=require('child_process');
   const r=spawnSync('node',[tmp,BT],{encoding:'utf8',maxBuffer:64*1024*1024});
@@ -10263,5 +10263,9 @@ console.log('\n[135] 자산플랜 세션 — 운영처럼 세션 + 모의투자 
   }
 }
 
+{
+  const r=require('child_process').spawnSync(process.execPath,[path.join(__d,'scripts/check-plan-session-views.cjs')],{encoding:'utf8'});
+  ok('자산플랜 세션 상세탭 · 비동기 모의재생 격리 · 삭제 선택 유지',r.status===0,(r.stdout||'')+(r.stderr||''));
+}
 console.log(`\n════ 결과: ${pass} PASS / ${fail} FAIL ${fail===0?'— ALL PASS ★':'— 배포 금지, 위 ✗ 항목 수정 필요'} ════`);
 process.exit(fail===0?0:1);
