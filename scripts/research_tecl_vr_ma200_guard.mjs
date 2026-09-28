@@ -40,33 +40,33 @@ try{
     src=patchOnce(src,'function runVR(days,tkr,params){','function runVRGuarded(days,tkr,params){','name');
     src=patchOnce(src,
       '  const band=bandPct/100,poolLimit=mode;',
-      \`  const band=bandPct/100,poolLimit=mode;
+      `  const band=bandPct/100,poolLimit=mode;
   const __guardMap=(params&&params.guardMap)||null;
   const __guardScale=(params&&Number.isFinite(+params.guardScale))?Math.max(0,Math.min(1,+params.guardScale)):1;
   const __guardContinue=!(params&&params.guardContinue===false);
-  let __guardPrev=true;\`,
+  let __guardPrev=true;`,
       'guard-vars');
 
     src=patchOnce(src,
       '    const c=M[tkr][d][C];',
-      \`    const c=M[tkr][d][C];
-    const __guardOn=!__guardMap || __guardMap[d]!==false;\`,
+      `    const c=M[tkr][d][C];
+    const __guardOn=!__guardMap || __guardMap[d]!==false;`,
       'daily-signal');
 
     src=patchOnce(src,
       '      inv+=s;cf.push([d,s]);pool+=s-_vbuy(s,c);V=shares*c;',
-      \`      inv+=s;cf.push([d,s]);pool+=s;
+      `      inv+=s;cf.push([d,s]);pool+=s;
       if(__guardOn){ const __spent=_vbuy(s,c); pool-=__spent; V=shares*c; if(__spent>0)buys++; }
-      else { V=s; }\`,
+      else { V=s; }`,
       'initial-buy');
     src=patchOnce(src,
       '      first=false;cycPoolBase=pool;cycBuySpent=0;cycBaseShares=Math.floor(shares+1e-9);cycSellFilled=0;cycBuyFilled=0;buys++;rebal++;snap.push([d,shares*c+pool+totalWd]);return;',
-      \`      first=false;cycPoolBase=pool;cycBuySpent=0;cycBaseShares=Math.floor(shares+1e-9);cycSellFilled=0;cycBuyFilled=0;rebal++;snap.push([d,shares*c+pool+totalWd]);__guardPrev=__guardOn;return;\`,
+      `      first=false;cycPoolBase=pool;cycBuySpent=0;cycBaseShares=Math.floor(shares+1e-9);cycSellFilled=0;cycBuyFilled=0;rebal++;snap.push([d,shares*c+pool+totalWd]);__guardPrev=__guardOn;return;`,
       'initial-tail');
 
     src=patchOnce(src,
       "    // 먼저 기존 사이클 사다리를 오늘 OHLC에 체결한다.\n    if(LADDER && !first){ const row=M[tkr][d]; _ladder(row[HI]||c, row[LO]||c, c, row[O]); }",
-      \`    // MA200 Guard: 전일 확정신호로 오늘 종가에 위험축소/복귀. 그 아래에서는 신규 사다리 매수를 막는다.
+      `    // MA200 Guard: 전일 확정신호로 오늘 종가에 위험축소/복귀. 그 아래에서는 신규 사다리 매수를 막는다.
     if(!first){
       if(!__guardOn && __guardPrev && __guardScale<1 && shares>0){
         const __gross=Math.max(0,shares*c*(1-__guardScale));
@@ -79,7 +79,7 @@ try{
       }
     }
     // 먼저 기존 사이클 사다리를 오늘 OHLC에 체결한다. Guard OFF 중에는 저가를 비활성화해 신규 매수만 막는다.
-    if(LADDER && !first){ const row=M[tkr][d]; _ladder(row[HI]||c, __guardOn?(row[LO]||c):1e99, c, row[O]); }\`,
+    if(LADDER && !first){ const row=M[tkr][d]; _ladder(row[HI]||c, __guardOn?(row[LO]||c):1e99, c, row[O]); }`,
       'ladder-guard');
 
     src=patchOnce(src,
