@@ -1,16 +1,13 @@
-name: 시초가 서버 자동감시
+name: 시초가 장마감 저장
 
-# 웹페이지를 열지 않아도 동작한다.
-# 08:55 KST 시작 → 09:31까지 매분 Top100 감시 → 종료 뒤 일일 결과 Telegram + 이력 영구 저장.
-# 기준전략은 Telegram 알림 대상이고, shadow 전략은 같은 원본으로 병렬 계산해 연구 기록만 남긴다.
+# 09:05~09:31 실시간 감시·Telegram·KIS VTS 주문은 Cloudflare Worker Cron이 담당한다.
+# GitHub Actions는 지연되어도 문제가 없는 장마감 이력 재구성·일일요약·영구저장만 담당한다.
 
 on:
   schedule:
-    # GitHub scheduled workflow는 지연될 수 있어 10분 전부터 5분 간격 백업 기동.
-    # concurrency가 같은 그룹을 직렬화하므로 정상 실행 중에는 중복 감시가 동시에 돌지 않는다.
-    - cron: "45 23 * * 0-4"   # 08:45 KST 월~금
-    - cron: "50 23 * * 0-4"   # 08:50 KST 월~금
-    - cron: "55 23 * * 0-4"   # 08:55 KST 월~금
+    # 09:40 KST 본 실행 + 10:40 KST 백업. GitHub schedule이 늦어져도 과거 09:00~09:30 분봉을 재구성한다.
+    - cron: "40 0 * * 1-5"    # 09:40 KST 월~금
+    - cron: "40 1 * * 1-5"    # 10:40 KST 월~금 backup
   workflow_dispatch:
   push:
     branches: [main]
@@ -25,13 +22,13 @@ permissions:
   contents: write
 
 concurrency:
-  group: opening-monitor-live
+  group: opening-history-archive
   cancel-in-progress: false
 
 jobs:
   monitor:
     runs-on: ubuntu-latest
-    timeout-minutes: 50
+    timeout-minutes: 15
     steps:
       - name: 이력 저장 브랜치 체크아웃
         uses: actions/checkout@v4
@@ -39,11 +36,10 @@ jobs:
           ref: scalping-data
           fetch-depth: 0
 
-      - name: 시초가 감시 · 그림자전략 · 일일요약 · 이력 저장
+      - name: 시초가 기준전략 · 그림자전략 · 일일요약 · 이력 저장
         env:
           KEY: ${{ secrets.AUTOTRADE_KEY }}
           BASE: https://jkquant.pages.dev
-          EVENT: ${{ github.event_name }}
         shell: bash
         run: |
           if [ -z "$KEY" ]; then
@@ -181,60 +177,9 @@ jobs:
             exit 0
           fi
 
-          # 장 마감 뒤 코드 배포(push)가 발생하면 오늘 기준+shadow 이력을 즉시 백필한다.
-          if [ "$hm" -gt 931 ]; then
-            archive_daily
-            exit $?
-          fi
-
-          if [ "$EVENT" = "push" ] && [ "$hm" -lt 850 ]; then
-            echo "장 전 너무 이른 push — 정규 schedule이 08:55에 시작합니다."
+          if [ "$hm" -lt 931 ]; then
+            echo "장마감 전 — 실시간 감시는 Cloudflare Worker가 담당. 09:31 이후 아카이브만 실행합니다."
             exit 0
           fi
 
-          last=""
-          echo "시초가 기준전략 + shadow 자동감시 준비"
-
-          while true; do
-            raw=$(TZ=Asia/Seoul date +%H%M)
-            hm=$((10#$raw))
-
-            if [ "$hm" -gt 931 ]; then
-              archive_daily
-              exit $?
-            fi
-
-            if [ "$hm" -ge 859 ] && [ "$raw" != "$last" ]; then
-              last="$raw"
-              echo "[$(TZ=Asia/Seoul date '+%F %T KST')] Top100 기준+shadow 스캔"
-
-              pids=""
-              for shard in 0 1 2 3 4; do
-                curl -sS --max-time 55                   -H "x-monitor-key: $KEY"                   "$BASE/api/opening-monitor?shard=$shard&shards=5&limit=100"                   -o "monitor-$shard.json" &
-                pids="$pids $!"
-              done
-              for p in $pids; do wait "$p" || true; done
-
-              for shard in 0 1 2 3 4; do
-                echo "shard $shard: $(cat monitor-$shard.json 2>/dev/null || echo no-response)"
-              done
-
-              # 계산은 5개 shard 병렬, VTS 주문은 한 endpoint에서 순차 실행한다.
-              # 이렇게 해야 KIS 모의투자 초당 호출제한 때문에 신호 여러 개가 서로 주문을 밀어내지 않는다.
-              jq -s '{
-                date: (map(select(.ok==true and .date!=null)) | .[0].date // ""),
-                buyEvents: [.[].buyEvents[]?],
-                sellEvents: [.[].sellEvents[]?]
-              }' monitor-0.json monitor-1.json monitor-2.json monitor-3.json monitor-4.json > opening-execute-input.json
-
-              ECNT=$(jq '(.buyEvents|length)+(.sellEvents|length)' opening-execute-input.json 2>/dev/null || echo 0)
-              if [ "$ECNT" -gt 0 ]; then
-                STATUS=$(curl -sS --max-time 50 -o opening-execute-response.json -w '%{http_code}' \
-                  -X POST -H "x-monitor-key: $KEY" -H "content-type: application/json" \
-                  --data-binary @opening-execute-input.json "$BASE/api/opening-execute" || true)
-                echo "VTS 자동 병행체결 HTTP $STATUS: $(cat opening-execute-response.json 2>/dev/null || true)"
-              fi
-            fi
-
-            sleep 5
-          done
+          archive_daily
