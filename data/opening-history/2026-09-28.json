@@ -1,0 +1,169 @@
+{
+  "date": "2026-09-28",
+  "generatedAt": "2026-09-28T10:58:42+09:00",
+  "source": "server-opening-monitor",
+  "strategy": {
+    "universe": "Top100",
+    "gap": "+2~+7%",
+    "firstHigh": "첫 3분",
+    "initialBreakout": "+0.5% 이상",
+    "pullback": "0.3~1.0%",
+    "support": "시초가 지지",
+    "rebreak": "전고점 재돌파",
+    "volumeRatio": "1.0배 이상",
+    "amountRatio": "1.2배 이상",
+    "stop": "-1%",
+    "takeProfit": "+1.5%",
+    "finalExit": "09:30",
+    "friction": "0.25%"
+  },
+  "universeChecked": 100,
+  "errors": 0,
+  "trades": [
+    {
+      "code": "178320",
+      "name": "서진시스템",
+      "gap": 4.680187207488307,
+      "firstHigh": 34750,
+      "peak": 35200,
+      "pullbackPct": 0.7102272727272727,
+      "entryTime": 910,
+      "entryPrice": 35400,
+      "volRatio": 2.182800397219464,
+      "amountRatio": 2.2109051233639203,
+      "estAmount": 1945300800,
+      "exitTime": 914,
+      "exitPrice": 36200,
+      "reason": "익절",
+      "pnl": 2.009887005649719
+    },
+    {
+      "code": "010060",
+      "name": "OCI홀딩스",
+      "gap": 4.842615012106544,
+      "firstHigh": 226000,
+      "peak": 229500,
+      "pullbackPct": 0.6535947712418301,
+      "entryTime": 916,
+      "entryPrice": 230000,
+      "volRatio": 2.079245283018868,
+      "amountRatio": 2.09748427672956,
+      "estAmount": 1394030000,
+      "exitTime": 923,
+      "exitPrice": 227500,
+      "reason": "손절",
+      "pnl": -1.3369565217391353
+    }
+  ],
+  "shadowVariants": [
+    {
+      "name": "amount_1.5",
+      "label": "거래대금≥1.5배",
+      "description": "재돌파 추정 거래대금 배수만 강화",
+      "params": {
+        "amountMult": 1.5
+      },
+      "trades": [
+        {
+          "code": "178320",
+          "name": "서진시스템",
+          "gap": 4.680187207488307,
+          "firstHigh": 34750,
+          "peak": 35200,
+          "pullbackPct": 0.7102272727272727,
+          "entryTime": 910,
+          "entryPrice": 35400,
+          "volRatio": 2.182800397219464,
+          "amountRatio": 2.2109051233639203,
+          "estAmount": 1945300800,
+          "exitTime": 914,
+          "exitPrice": 36200,
+          "reason": "익절",
+          "pnl": 2.009887005649719
+        },
+        {
+          "code": "010060",
+          "name": "OCI홀딩스",
+          "gap": 4.842615012106544,
+          "firstHigh": 226000,
+          "peak": 229500,
+          "pullbackPct": 0.6535947712418301,
+          "entryTime": 916,
+          "entryPrice": 230000,
+          "volRatio": 2.079245283018868,
+          "amountRatio": 2.09748427672956,
+          "estAmount": 1394030000,
+          "exitTime": 923,
+          "exitPrice": 227500,
+          "reason": "손절",
+          "pnl": -1.3369565217391353
+        }
+      ]
+    },
+    {
+      "name": "entry_by_0915",
+      "label": "09:15 이전",
+      "description": "재돌파 진입 시각을 09:15까지로 제한",
+      "params": {
+        "entryCutoff": 915
+      },
+      "trades": [
+        {
+          "code": "178320",
+          "name": "서진시스템",
+          "gap": 4.680187207488307,
+          "firstHigh": 34750,
+          "peak": 35200,
+          "pullbackPct": 0.7102272727272727,
+          "entryTime": 910,
+          "entryPrice": 35400,
+          "volRatio": 2.182800397219464,
+          "amountRatio": 2.2109051233639203,
+          "estAmount": 1945300800,
+          "exitTime": 914,
+          "exitPrice": 36200,
+          "reason": "익절",
+          "pnl": 2.009887005649719
+        }
+      ]
+    },
+    {
+      "name": "pb_max_0.5",
+      "label": "눌림≤0.5%",
+      "description": "눌림 상한만 0.5%로 강화",
+      "params": {
+        "pbMax": 0.5
+      },
+      "trades": [
+        {
+          "code": "010060",
+          "name": "OCI홀딩스",
+          "gap": 4.842615012106544,
+          "firstHigh": 226000,
+          "peak": 229500,
+          "pullbackPct": 0.4357298474945534,
+          "entryTime": 916,
+          "entryPrice": 230000,
+          "volRatio": 1.9047768698931489,
+          "amountRatio": 1.9192044696952226,
+          "estAmount": 1394030000,
+          "exitTime": 923,
+          "exitPrice": 227500,
+          "reason": "손절",
+          "pnl": -1.3369565217391353
+        }
+      ]
+    },
+    {
+      "name": "today_combo_v1",
+      "label": "오늘 개선안 v1",
+      "description": "눌림≤0.5% + 거래대금≥1.5배 + 09:15 이전 진입",
+      "params": {
+        "pbMax": 0.5,
+        "amountMult": 1.5,
+        "entryCutoff": 915
+      },
+      "trades": []
+    }
+  ]
+}
