@@ -1,0 +1,21 @@
+name: TECL-VR MA200 Guard 연구
+on:
+  push:
+    branches:
+      - 'research/tecl-vr-ma200-guard-20260928'
+jobs:
+  guard:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '22' }
+      - name: Playwright 설치
+        run: |
+          npm install --no-save playwright@1.55.0
+          npx playwright install --with-deps chromium
+      - name: 운영 런타임 TECL VR + MA200 Guard
+        env:
+          JKQUANT_URL: https://jkquant.pages.dev
+        run: node scripts/research_tecl_vr_ma200_guard.mjs
