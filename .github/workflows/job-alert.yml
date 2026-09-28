@@ -2,8 +2,9 @@ name: Daejeon Sejong Java AI Job Alert
 
 on:
   schedule:
-    # GitHub Actions cron is UTC. 00:00 UTC = 09:00 KST.
-    - cron: "0 0 * * *"
+    # GitHub Actions는 정각(00분)에 지연이 커질 수 있어 08:55 KST에 미리 기동한다.
+    # 23:55 UTC = 다음 날 08:55 KST.
+    - cron: "55 23 * * *"
   workflow_dispatch:
 
 permissions:
@@ -39,6 +40,20 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install "ddgs>=9,<10"
+
+      - name: Wait until 09:00 KST
+        if: github.event_name == 'schedule'
+        shell: bash
+        run: |
+          while true; do
+            raw=$(TZ=Asia/Seoul date +%H%M)
+            hm=$((10#$raw))
+            if [ "$hm" -ge 900 ]; then
+              break
+            fi
+            echo "[$(TZ=Asia/Seoul date '+%F %T KST')] 09:00까지 대기"
+            sleep 15
+          done
 
       - name: Search jobs and send Telegram
         env:
