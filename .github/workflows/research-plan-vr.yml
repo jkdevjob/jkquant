@@ -1,0 +1,22 @@
+name: 자산플랜-VR 연구비교
+on:
+  push:
+    branches:
+      - 'research/plan-vr-compare-20260928'
+jobs:
+  compare:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Playwright 설치
+        run: |
+          npm install --no-save playwright@1.55.0
+          npx playwright install --with-deps chromium
+      - name: 운영 런타임으로 5년플랜 vs VR 비교
+        env:
+          JKQUANT_URL: https://jkquant.pages.dev
+        run: node scripts/research_plan_vs_vr.mjs
