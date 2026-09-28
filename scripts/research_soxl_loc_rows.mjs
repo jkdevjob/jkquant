@@ -29,15 +29,35 @@ try{
     const b=runIMRows(full,'SOXL',100000,20,20,true,20,3);
     const parity={final:Math.abs(a.final-b.final),mdd:Math.abs(a.mdd-b.mdd),cycles:Math.abs(a.cycles-b.cycles),fees:Math.abs(a.fees-b.fees),tax:Math.abs(a.tax-b.tax)};
     if(parity.final>1e-7||parity.mdd>1e-9||parity.cycles||parity.fees>1e-7||parity.tax>1e-7)throw new Error('parity '+JSON.stringify(parity));
-    const res={meta:{first,last,d2020,n:all.length,basis:PBASIS.SOXL},parity,config:{ticker:'SOXL',div:20,tp:20,compound:true,reverse:false,big:20,costOn:true,rows:ROWS},caps:{}};
+    function addYears(date,n){const x=new Date(date+'T00:00:00Z');x.setUTCFullYear(x.getUTCFullYear()+n);return x.toISOString().slice(0,10);}
+    function pct(a,p){const x=[...a].sort((m,n)=>m-n),k=(x.length-1)*p,f=Math.floor(k),c=Math.ceil(k);return f===c?x[f]:x[f]+(x[c]-x[f])*(k-f);}
+    const starts=[];let pm='';
+    for(const d of all){const m=d.slice(0,7);if(m!==pm){pm=m;if(addYears(d,5)<=last)starts.push(d);}}
+    const windows=starts.map(start=>{const target=addYears(start,5);let end=start;for(const d of all){if(d<start)continue;if(d<=target)end=d;else break;}return {start,end};});
+    const res={meta:{first,last,d2020,n:all.length,basis:PBASIS.SOXL,rollingWindows:windows.length},parity,config:{ticker:'SOXL',div:20,tp:20,compound:true,reverse:false,big:20,costOn:true,rows:ROWS},caps:{}};
     for(const cap of CAPS){
       const one=(days,r)=>{
         const z=runIMRows(days,'SOXL',cap,20,20,true,20,r);
         return {rows:r,from:days[0],to:days.at(-1),final:z.final,ret:z.ret,cagr:(Math.pow(Math.max(z.final,1)/cap,1/Math.max(.05,(new Date(days.at(-1)+'T00:00:00Z')-new Date(days[0]+'T00:00:00Z'))/(365.25*864e5)))-1)*100,mdd:z.mdd,cycles:z.cycles,fees:z.fees,tax:z.tax,endCash:z.endCash,endShares:z.endShares};
       };
       const F=ROWS.map(r=>one(full,r)),P=ROWS.map(r=>one(post,r));
+      const R=ROWS.map(r=>{
+        const arr=windows.map(w=>one(all.filter(d=>d>=w.start&&d<=w.end),r));
+        const cg=arr.map(x=>x.cagr),md=arr.map(x=>x.mdd);
+        return {rows:r,n:arr.length,cagrAvg:cg.reduce((a,b)=>a+b,0)/cg.length,cagrMedian:pct(cg,.5),cagrP10:pct(cg,.1),cagrWorst:Math.min(...cg),cagrBest:Math.max(...cg),mddMedian:pct(md,.5),mddWorst:Math.max(...md),
+          winsVs3:0,raw:arr};
+      });
+      const base3=R.find(x=>x.rows===3);
+      if(base3)for(const x of R){x.winsVs3=x.raw.filter((v,i)=>v.cagr>base3.raw[i].cagr).length;}
+      const compact=R.map(({raw,...x})=>x);
+      const score=x=>x.cagrMedian*3+x.cagrP10*2+x.cagrWorst*2-x.mddWorst*.35;
       const sort=(a,key,desc=true)=>[...a].sort((x,y)=>desc?y[key]-x[key]:x[key]-y[key]);
-      res.caps[cap]={full:F,post2020:P,
+      res.caps[cap]={full:F,post2020:P,rolling:compact,
+        bestRollingScore:[...compact].sort((a,b)=>score(b)-score(a)).slice(0,10),
+        bestRollingMedian:sort(compact,'cagrMedian').slice(0,10),
+        bestRollingP10:sort(compact,'cagrP10').slice(0,10),
+        bestRollingWorst:sort(compact,'cagrWorst').slice(0,10),
+        bestRollingMdd:sort(compact,'mddWorst',false).slice(0,10),
         bestFullFinal:sort(F,'final').slice(0,5),
         bestFullCagr:sort(F,'cagr').slice(0,5),
         bestFullMdd:sort(F,'mdd',false).slice(0,5),
