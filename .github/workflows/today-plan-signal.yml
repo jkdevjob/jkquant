@@ -1,0 +1,16 @@
+name: 오늘 5년플랜 신호
+on:
+  push:
+    branches: ['research/today-plan-signal-20260928']
+jobs:
+  signal:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '22' }
+      - run: |
+          npm install --no-save playwright@1.55.0
+          npx playwright install --with-deps chromium
+      - run: node scripts/today_plan_signal.mjs
