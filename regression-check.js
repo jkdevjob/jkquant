@@ -10295,5 +10295,24 @@ console.log('\n[136] 모의성과 5년 비교 + LOC 줄수 표시');
      JSON.stringify({a,b,z}));
 }
 
+/* ─────────────────────────────────────────────────────────────────────────
+   [137] 폰 화면 가로 넘침 — 주문표 '규칙' 줄 · 전략 탭 줄
+   규칙 줄 값이 한 줄(nowrap)이라 변형 사유가 길면 390px 폰에서 페이지가 791px 로 넓어졌고,
+   브라우저가 화면 전체를 절반 크기로 줄여 보여 줬다(라벨도 '규/칙' 으로 쪼개짐).
+   탭 줄도 작은 글씨가 380px 이하에만 걸려 390·412 폰에서 화면보다 7~30px 넓었다.
+   실측(Chromium 390px): 고치기 전 문서 폭 791 · 고친 뒤 390 = 화면 폭.
+   ───────────────────────────────────────────────────────────────────────── */
+console.log('\n[137] 폰 화면 가로 넘침 — 규칙 줄 줄바꿈 · 탭 줄 폭');
+{
+  const css=idx.slice(idx.indexOf('<style>'), idx.indexOf('</style>'));
+  ok('규칙 줄은 줄바꿈되는 칸(rowline wrapv)',
+     /<div class="rowline wrapv"><span class="k">규칙<\/span><span class="val" id="o_rule"/.test(idx));
+  ok('wrapv — 값은 줄바꿈(white-space:normal · overflow-wrap:anywhere) · 라벨은 안 줄어듦',
+     /\.rowline\.wrapv \.k\{flex-shrink:0\}/.test(css) && /\.rowline\.wrapv \.val\{[^}]*white-space:normal[^}]*min-width:0[^}]*overflow-wrap:anywhere/.test(css));
+  ok('탭 작은 글씨가 430px 이하 폰까지 (380px 기준 폐기)',
+     /@media\(max-width:430px\)\{\.tabs\{gap:5px\}\.tab\{font-size:12px/.test(css) && !/@media\(max-width:380px\)\{\.tabs/.test(css));
+  ok('탭 줄이 넘치면 페이지 대신 탭 줄 안에서만 밀림 (overflow-x:auto)',
+     /\.tabs\{[^}]*overflow-x:auto/.test(css));
+}
 console.log(`\n════ 결과: ${pass} PASS / ${fail} FAIL ${fail===0?'— ALL PASS ★':'— 배포 금지, 위 ✗ 항목 수정 필요'} ════`);
 process.exit(fail===0?0:1);
