@@ -128,11 +128,22 @@ export async function onRequestGet({request,env}){
   const shards=Math.max(1,Math.min(10,parseInt(url.searchParams.get("shards")||"5",10)||5));
   const limit=Math.max(10,Math.min(100,parseInt(url.searchParams.get("limit")||"100",10)||100));
   const origin=url.origin;
+  const targetRaw=url.searchParams.get("targetHm");
+  let liveTargetHm=now.targetHm;
+  if(!history&&!serverHistory&&targetRaw!==null){
+    const requested=parseInt(targetRaw,10);
+    const minute=requested%100;
+    const valid=Number.isFinite(requested)&&Math.floor(requested/100)===9&&minute>=0&&minute<60&&requested>=904&&requested<=930;
+    if(!valid||requested>now.targetHm){
+      return new Response(JSON.stringify({ok:false,error:"invalid_or_unfinished_targetHm",requested,latestCompleted:now.targetHm}),{status:400,headers:JH});
+    }
+    liveTargetHm=requested;
+  }
 
   if(!history&&!serverHistory&&(now.hm<905||now.hm>931)){
     return new Response(JSON.stringify({ok:true,skipped:"outside_market_window",now}),{headers:JH});
   }
-  const cutoffHm=(history||serverHistory)?Math.min(930,now.hm>930?930:now.targetHm):now.targetHm;
+  const cutoffHm=(history||serverHistory)?Math.min(930,now.hm>930?930:now.targetHm):liveTargetHm;
 
   try{
     const res=await scanShard(origin,now,shard,shards,limit,cutoffHm);
@@ -146,24 +157,24 @@ export async function onRequestGet({request,env}){
       }),{headers:JH});
     }
 
-    const buys=res.trades.filter(x=>x.entryTime===now.targetHm);
-    const sells=res.trades.filter(x=>x.exitTime===now.targetHm);
+    const buys=res.trades.filter(x=>x.entryTime===liveTargetHm);
+    const sells=res.trades.filter(x=>x.exitTime===liveTargetHm);
     const telegram={buySent:false,sellSent:false,buyMessageId:null,sellMessageId:null};
 
     // Telegram은 기준전략만 보낸다. shadow는 연구 기록 전용이라 알림을 섞지 않는다.
     if(buys.length){
-      const t=await sendTelegram(env,"시초가 모의 매수 신호 · "+String(now.targetHm).padStart(4,"0"),buyLines(buys));
+      const t=await sendTelegram(env,"시초가 모의 매수 신호 · "+String(liveTargetHm).padStart(4,"0"),buyLines(buys));
       telegram.buySent=true;telegram.buyMessageId=t.messageId||null;
     }
     if(sells.length){
-      const t=await sendTelegram(env,"시초가 모의 매도 신호 · "+String(now.targetHm).padStart(4,"0"),sellLines(sells));
+      const t=await sendTelegram(env,"시초가 모의 매도 신호 · "+String(liveTargetHm).padStart(4,"0"),sellLines(sells));
       telegram.sellSent=true;telegram.sellMessageId=t.messageId||null;
     }
 
     return new Response(JSON.stringify({
-      ok:true,date:now.date,targetHm:now.targetHm,shard,shards,universe:res.universe,
+      ok:true,date:now.date,targetHm:liveTargetHm,shard,shards,universe:res.universe,
       buyEvents:buys,sellEvents:sells,trades:res.trades,
-      shadowEvents:shadowEvents(res.shadow,now.targetHm),
+      shadowEvents:shadowEvents(res.shadow,liveTargetHm),
       telegram,errors:res.errors.length
     }),{headers:JH});
   }catch(e){

@@ -56,6 +56,7 @@ jobs:
           node --input-type=module --check < functions/api/vts-reconcile.js
           node --input-type=module --check < functions/api/vts-research.js
           node --input-type=module --check < functions/api/vts-summary.js
+          node --input-type=module --check < worker/opening-scheduler/src/index.js
 
       - name: VTS 대조는 읽기전용인지 검사
         run: |
@@ -132,17 +133,46 @@ jobs:
             ['body:JSON.stringify({env:"vts"', 'VTS 환경 하드코딩'],
             ['priceType:"market"', '시장가 모의주문'],
             ['SCALPING_VTS_AUTO', '긴급 중지 스위치'],
-            ['date!==kstDate()', '과거 날짜 주문 차단'],
-            ['중복 signal_id 차단', 'signal id 중복 방지']
+            ['date!==clock.date', '과거 날짜 주문 차단'],
+            ['중복 signal_id 차단', 'signal id 중복 방지'],
+            ['MAX_SIGNAL_AGE_MIN=3', '3분 초과 오래된 신호 주문 차단']
           ];
           for(const [needle,label] of must){
             if(!e.includes(needle)){console.error('✗ '+label+' 없음');fail++;}
           }
           if(m.includes('/api/kis?op=order')){console.error('✗ 병렬 shard scanner가 직접 주문 API를 호출함');fail++;}
+          if(!m.includes('targetHm')){console.error('✗ 지연 Cron용 완료분 targetHm 복구 경로 없음');fail++;}
           if(!w.includes('/api/opening-execute')){console.error('✗ workflow 직렬 주문 실행기 호출 없음');fail++;}
           if(/env\s*:\s*["']real["']/.test(e)){console.error('✗ opening-execute에 실전 주문 환경 발견');fail++;}
           if(fail)process.exit(1);
           console.log('✓ opening dual execution is serialized / VTS-only / today-only');
+          NODE
+
+      - name: Cloudflare 시초가 정시 스케줄러 안전검사
+        run: |
+          node - <<'NODE'
+          const fs=require('fs');
+          const c=fs.readFileSync('worker/opening-scheduler/src/index.js','utf8');
+          const w=JSON.parse(fs.readFileSync('worker/opening-scheduler/wrangler.jsonc','utf8'));
+          const d=fs.readFileSync('.github/workflows/deploy-opening-scheduler.yml','utf8');
+          let fail=0;
+          if(!w.triggers||!Array.isArray(w.triggers.crons)||!w.triggers.crons.includes('5-31 0 * * MON-FRI')){
+            console.error('✗ 09:05~09:31 KST weekday Cron이 아닙니다.'); fail++;
+          }
+          const must=[
+            ['/api/opening-monitor','Pages 시초가 scanner 호출'],
+            ['/api/opening-execute','VTS 직렬 실행기 호출'],
+            ['targetHm','예약시각 기준 완료분 복구'],
+            ['MAX_EXEC_LAG_MS=3*60*1000','3분 초과 VTS 실행 방지'],
+            ['MONITOR_KEY','Worker secret 인증']
+          ];
+          for(const [needle,label] of must){
+            if(!c.includes(needle)){console.error('✗ '+label+' 없음');fail++;}
+          }
+          if(!d.includes('secrets.AUTOTRADE_KEY')){console.error('✗ 기존 AUTOTRADE_KEY를 Worker secret으로 전달하지 않음');fail++;}
+          if(/env\s*:\s*["']real["']/.test(c)){console.error('✗ scheduler에 실전 주문 환경 발견');fail++;}
+          if(fail)process.exit(1);
+          console.log('✓ Cloudflare opening scheduler cron / auth / stale-order guard');
           NODE
 
       - name: 전략 SSOT 체크 (문서 기준값·규약 불변식)
