@@ -549,7 +549,7 @@ try{ if(localStorage.getItem('qcockpit_hadUser')==='1') document.documentElement
 </div>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.105.3</span></h1></div>
+    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.105.4</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -1658,7 +1658,7 @@ if(/^\/paper\/?$/.test(location.pathname)){
   <footer>
     <strong>JK 퀀트</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.105.3</b> · 2026-09-29</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.105.4</b> · 2026-09-29</div>
   </footer>
 </div>
 
@@ -2260,7 +2260,26 @@ function load(){
    되고, 사파리는 UTF-16으로 세어 5MB 한도에 두 배 빨리 닿는다.
    로컬 저장이 실패해도 클라우드 저장은 계속돼야 기록을 잃지 않는다. */
 let lsFailed=false;
+function _newerLocalState(){
+  try{
+    const x=JSON.parse(localStorage.getItem(lsKey())||'null');
+    return x&&validState(x)&&(x._updated||0)>(S&&S._updated||0) ? x : null;
+  }catch(e){ return null; }
+}
+/* 여러 탭(/, /paper 등)이 같은 S 전체를 저장한다.
+   오래 열린 탭이 예전 S를 나중에 저장하면 다른 탭에서 방금 입력한 수동 거래까지 통째로 사라질 수 있다.
+   저장 직전 localStorage의 최신 revision을 확인해 오래된 탭의 전체-state overwrite를 차단한다. */
+function _staleStateGuard(where){
+  const newer=_newerLocalState();
+  if(!newer) return false;
+  console.warn('stale state blocked',where,{mine:S&&S._updated,local:newer._updated});
+  try{
+    showLsWarn('다른 탭에 더 최신 기록이 있어 이 탭의 오래된 상태 저장을 막았습니다. 최신 기록을 보호하려면 이 탭을 새로고침하세요.');
+  }catch(e){}
+  return true;
+}
 function saveLocal(){
+  if(_staleStateGuard('local')) return false;
   S._updated=Date.now();
   try{
     localStorage.setItem(lsKey(),JSON.stringify(S));
@@ -2290,7 +2309,7 @@ function showLsWarn(msg){
     document.body.appendChild(d);
   }catch(e){ console.error(msg); }
 }
-function save(){saveLocal();pushRemote();}
+function save(){ if(saveLocal()) pushRemote(); }
 function tabBox(){return S[S.activeTab]}
 function curStrat(){const b=tabBox();return b.sessions.find(x=>x.id===b.active)||b.sessions[0]}
 function sess(){return curStrat()}
@@ -9015,7 +9034,12 @@ function sheetSaveInf(){
     if(!price||!qty){alert('체결가와 수량을 입력하세요');return}
     rec.price=price;rec.qty=qty;
   }
-  hh.push(rec); sortHist(hh); save(); refreshInf(); closeSheet();
+  hh.push(rec); sortHist(hh);
+  /* 수동 체결은 운영 장부의 원본이므로 디바운스(800ms)를 기다리지 않고 즉시 클라우드에도 쓴다.
+     다른 페이지를 바로 열거나 닫아도 오늘 거래가 서버에 남아 있어야 한다. */
+  const localOk=saveLocal();
+  if(localOk) pushRemoteNow();
+  refreshInf(); closeSheet();
 }
 
 /* ── VR 시트 ── */
@@ -9873,6 +9897,21 @@ function setupTabs(){
   });
 }
 
+/* 다른 탭에서 더 최신 상태가 저장되면 현재 탭도 즉시 따라간다.
+   storage 이벤트는 값을 쓴 탭 자신에게는 오지 않고 '다른 탭'에만 오므로 무한루프가 없다. */
+window.addEventListener('storage',e=>{
+  if(!e||e.key!==lsKey()||!e.newValue||!S) return;
+  try{
+    const x=JSON.parse(e.newValue);
+    if(!validState(x)||(x._updated||0)<=(S._updated||0)) return;
+    const keepTab=S.activeTab, keepAct=(S[keepTab]&&S[keepTab].active)||null;
+    S=x; ensureBoxes();
+    if(S[keepTab]){ S.activeTab=keepTab; if(keepAct&&S[keepTab].sessions.some(v=>v.id===keepAct)) S[keepTab].active=keepAct; }
+    lastPushedJSON=JSON.stringify(S);
+    try{ refreshAll(); }catch(err){ console.warn('cross-tab refresh',err); }
+  }catch(err){ console.warn('cross-tab sync',err); }
+});
+
 /* ── Firebase Firestore 동기화 (사용자별) ── */
 let saveTimer=null, lastPushedJSON='';
 function setSync(state){ // 'ok'|'sync'|'err'|null
@@ -9880,10 +9919,12 @@ function setSync(state){ // 'ok'|'sync'|'err'|null
 }
 async function pushRemote(){
   if(!curUid||!window.fb)return;            // 로그인 전엔 로컬만
+  if(_staleStateGuard('cloud-schedule')) return; // 오래된 탭이 최신 클라우드 state를 덮지 못하게
   if(saveTimer)clearTimeout(saveTimer);
   setSync('sync');
   saveTimer=setTimeout(async()=>{
     try{
+      if(_staleStateGuard('cloud-write')){ setSync('ok'); return; }
       const json=JSON.stringify(S);
       if(json===lastPushedJSON){setSync('ok');return;}
       // merge 필수 — 이 문서엔 백테가 쓰는 backtestTickers도 같이 산다.
@@ -9896,6 +9937,7 @@ async function pushRemote(){
 }
 async function pushRemoteNow(){
   if(!curUid||!window.fb) return true;
+  if(_staleStateGuard('cloud-now')) return false;
   if(saveTimer){ clearTimeout(saveTimer); saveTimer=null; }
   setSync('sync');
   try{
