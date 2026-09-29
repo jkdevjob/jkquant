@@ -171,16 +171,27 @@ def opening_path_metrics(a, entry_i, entry):
     if entry <= 0 or entry_i >= len(a):
         return {}
     entry_min = hm_to_minute(a[entry_i]["hm"])
-    post = [z for z in a[entry_i:] if 0 <= hm_to_minute(z["hm"]) - entry_min <= 30]
+    # Entry is the signal minute close. Intrabar high/low from that same minute
+    # happened before the entry, so outcome excursions start from the next bar.
+    post = [z for z in a[entry_i + 1:] if 0 < hm_to_minute(z["hm"]) - entry_min <= 30]
     if not post:
-        return {}
+        return {
+            "outcomeWindowMin":30,
+            "outcomeObservedMin":0,
+            "outcomeWindowComplete":False,
+            "outcomePriceModel":"KIS 1m high/low threshold + close forward mark",
+        }
 
+    observed=max(hm_to_minute(z["hm"]) - entry_min for z in post)
+    complete=observed>=30
     best=max(post,key=lambda z:z["h"] if z["h"]>0 else z["c"])
     worst=min(post,key=lambda z:z["l"] if z["l"]>0 else z["c"])
     best_px=best["h"] if best["h"]>0 else best["c"]
     worst_px=worst["l"] if worst["l"]>0 else worst["c"]
     out={
         "outcomeWindowMin":30,
+        "outcomeObservedMin":min(30,observed),
+        "outcomeWindowComplete":complete,
         "outcomePriceModel":"KIS 1m high/low threshold + close forward mark",
         "mfePct":(best_px/entry-1)*100,
         "mfeTime":best["hm"],
@@ -362,8 +373,9 @@ def opening_group_stats(trades, key):
         pn=[x["pnl"] for x in rows]
         wins=[v for v in pn if v>0]
         losses=[v for v in pn if v<0]
-        mf=[x["mfePct"] for x in rows if x.get("mfePct") is not None]
-        ma=[x["maePct"] for x in rows if x.get("maePct") is not None]
+        complete=[x for x in rows if x.get("outcomeWindowComplete")]
+        mf=[x["mfePct"] for x in complete if x.get("mfePct") is not None]
+        ma=[x["maePct"] for x in complete if x.get("maePct") is not None]
         out.append({
             "group":name,"trades":len(rows),
             "winRate":sum(1 for v in pn if v>0)/len(pn)*100 if pn else 0,
@@ -373,10 +385,11 @@ def opening_group_stats(trades, key):
             "expectancyPct":statistics.fmean(pn) if pn else 0,
             "avgMfe":statistics.fmean(mf) if mf else None,
             "avgMae":statistics.fmean(ma) if ma else None,
-            "plus1HitRate":sum(1 for x in rows if x.get("hitPlus1Time") is not None)/len(rows)*100 if rows else 0,
-            "plus2HitRate":sum(1 for x in rows if x.get("hitPlus2Time") is not None)/len(rows)*100 if rows else 0,
-            "minus1HitRate":sum(1 for x in rows if x.get("hitMinus1Time") is not None)/len(rows)*100 if rows else 0,
-            "minus2HitRate":sum(1 for x in rows if x.get("hitMinus2Time") is not None)/len(rows)*100 if rows else 0,
+            "pathComplete":len(complete),
+            "plus1HitRate":sum(1 for x in complete if x.get("hitPlus1Time") is not None)/len(complete)*100 if complete else 0,
+            "plus2HitRate":sum(1 for x in complete if x.get("hitPlus2Time") is not None)/len(complete)*100 if complete else 0,
+            "minus1HitRate":sum(1 for x in complete if x.get("hitMinus1Time") is not None)/len(complete)*100 if complete else 0,
+            "minus2HitRate":sum(1 for x in complete if x.get("hitMinus2Time") is not None)/len(complete)*100 if complete else 0,
         })
     return out
 
@@ -387,14 +400,15 @@ def opening_diagnostics(trades):
         k=f"fwd{n}mPct"; vals=[x[k] for x in trades if x.get(k) is not None]
         path[k]={"n":len(vals),"avg":statistics.fmean(vals) if vals else None,
                  "median":statistics.median(vals) if vals else None}
-    mf=[x["mfePct"] for x in trades if x.get("mfePct") is not None]
-    ma=[x["maePct"] for x in trades if x.get("maePct") is not None]
-    n=len(trades)
+    complete=[x for x in trades if x.get("outcomeWindowComplete")]
+    mf=[x["mfePct"] for x in complete if x.get("mfePct") is not None]
+    ma=[x["maePct"] for x in complete if x.get("maePct") is not None]
+    n=len(complete)
     threshold={
-        "plus1":{"hits":sum(1 for x in trades if x.get("hitPlus1Time") is not None)},
-        "plus2":{"hits":sum(1 for x in trades if x.get("hitPlus2Time") is not None)},
-        "minus1":{"hits":sum(1 for x in trades if x.get("hitMinus1Time") is not None)},
-        "minus2":{"hits":sum(1 for x in trades if x.get("hitMinus2Time") is not None)},
+        "plus1":{"hits":sum(1 for x in complete if x.get("hitPlus1Time") is not None)},
+        "plus2":{"hits":sum(1 for x in complete if x.get("hitPlus2Time") is not None)},
+        "minus1":{"hits":sum(1 for x in complete if x.get("hitMinus1Time") is not None)},
+        "minus2":{"hits":sum(1 for x in complete if x.get("hitMinus2Time") is not None)},
     }
     for z in threshold.values():
         z["ratePct"]=z["hits"]/n*100 if n else 0.0
@@ -415,7 +429,8 @@ def opening_diagnostics(trades):
         "avgMfe":statistics.fmean(mf) if mf else None,
         "avgMae":statistics.fmean(ma) if ma else None,
         "outcomeWindowMin":30,
-        "outcomeModel":"KIS 1m high/low for MFE/MAE/threshold, close for 5/10/20/30m marks",
+        "pathCompleteTrades":len(complete),
+        "outcomeModel":"KIS 1m high/low from the bar after entry for MFE/MAE/threshold; close for 5/10/20/30m marks",
     }
 
 
@@ -593,6 +608,8 @@ def main():
                 "volumeBucket": x.get("volumeBucket"),
                 "amountBucket": x.get("amountBucket"),
                 "rankBucket": x.get("rankBucket"),
+                "outcomeObservedMin": x.get("outcomeObservedMin"),
+                "outcomeWindowComplete": x.get("outcomeWindowComplete"),
                 "mfePct": x.get("mfePct"),
                 "mfeTime": x.get("mfeTime"),
                 "maePct": x.get("maePct"),
