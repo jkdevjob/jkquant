@@ -115,7 +115,7 @@ def norm_bars(row):
             # 기준전략 비교만큼은 같은 관측정보(close-only)로 맞춘다.
             "signal_h": close,
         }
-        if 900 <= x["hm"] <= 930 and x["c"] > 0:
+        if 900 <= x["hm"] <= 1000 and x["c"] > 0:
             a.append(x)
     a.sort(key=lambda x: x["hm"])
     return a
@@ -127,21 +127,83 @@ def opening_time_bucket(h):
     return "09:21~09:30"
 
 
+def hm_to_minute(h):
+    return (int(h) // 100) * 60 + (int(h) % 100)
+
+
+def opening_gap_bucket(v):
+    if v < 3: return "2~3%"
+    if v < 4: return "3~4%"
+    if v < 5: return "4~5%"
+    return "5~7%"
+
+
+def opening_pullback_bucket(v):
+    if v <= 0.5: return "0.3~0.5%"
+    if v <= 0.7: return "0.5~0.7%"
+    return "0.7~1.0%"
+
+
+def opening_ratio_bucket(v, kind):
+    if kind == "amount":
+        if v < 1.5: return "1.2~1.5x"
+        if v < 2.0: return "1.5~2.0x"
+        return "2.0x+"
+    if v < 1.5: return "1.0~1.5x"
+    if v < 2.0: return "1.5~2.0x"
+    return "2.0x+"
+
+
+def opening_rank_bucket(v):
+    if v <= 20: return "Top1~20"
+    if v <= 50: return "Top21~50"
+    return "Top51~100"
+
+
 def opening_path_metrics(a, entry_i, entry):
-    post=a[entry_i:]
-    if not post or entry<=0:
+    """Label the observed path for 30 minutes after the signal.
+
+    Signal decisions stay close-only for live parity. Outcome labels use archived
+    KIS 1-minute high/low for excursion/threshold touches and close for forward marks.
+    A threshold hit time is minute-level; if both sides are touched inside one minute,
+    this dataset cannot infer which came first.
+    """
+    if entry <= 0 or entry_i >= len(a):
         return {}
-    best=max(post,key=lambda z:z["c"])
-    worst=min(post,key=lambda z:z["c"])
+    entry_min = hm_to_minute(a[entry_i]["hm"])
+    post = [z for z in a[entry_i:] if 0 <= hm_to_minute(z["hm"]) - entry_min <= 30]
+    if not post:
+        return {}
+
+    best=max(post,key=lambda z:z["h"] if z["h"]>0 else z["c"])
+    worst=min(post,key=lambda z:z["l"] if z["l"]>0 else z["c"])
+    best_px=best["h"] if best["h"]>0 else best["c"]
+    worst_px=worst["l"] if worst["l"]>0 else worst["c"]
     out={
-        "mfePct":(best["c"]/entry-1)*100,
+        "outcomeWindowMin":30,
+        "outcomePriceModel":"KIS 1m high/low threshold + close forward mark",
+        "mfePct":(best_px/entry-1)*100,
         "mfeTime":best["hm"],
-        "maePct":(worst["c"]/entry-1)*100,
+        "maePct":(worst_px/entry-1)*100,
         "maeTime":worst["hm"],
+        "hitPlus1Time":None,
+        "hitPlus2Time":None,
+        "hitMinus1Time":None,
+        "hitMinus2Time":None,
     }
-    for n in (1,3,5,10):
-        idx=entry_i+n
-        out[f"fwd{n}mPct"]=((a[idx]["c"]/entry-1)*100) if idx<len(a) else None
+
+    for z in post:
+        high=z["h"] if z["h"]>0 else z["c"]
+        low=z["l"] if z["l"]>0 else z["c"]
+        if out["hitPlus1Time"] is None and (high/entry-1)*100 >= 1.0: out["hitPlus1Time"]=z["hm"]
+        if out["hitPlus2Time"] is None and (high/entry-1)*100 >= 2.0: out["hitPlus2Time"]=z["hm"]
+        if out["hitMinus1Time"] is None and (low/entry-1)*100 <= -1.0: out["hitMinus1Time"]=z["hm"]
+        if out["hitMinus2Time"] is None and (low/entry-1)*100 <= -2.0: out["hitMinus2Time"]=z["hm"]
+
+    for n in (1,3,5,10,20,30):
+        target=entry_min+n
+        z=next((q for q in post if hm_to_minute(q["hm"]) >= target), None)
+        out[f"fwd{n}mPct"]=((z["c"]/entry-1)*100) if z else None
     return out
 
 
@@ -203,6 +265,8 @@ def one_trade(day, row, p: Params):
                 exit_hm = None
                 reason = None
                 for z in a[j + 1 :]:
+                    if z["hm"] > p.final_exit:
+                        break
                     r = (z["c"] / entry - 1) * 100
                     if r <= -p.stop:
                         exit_px, exit_hm, reason = z["c"], z["hm"], "stop"
@@ -216,7 +280,9 @@ def one_trade(day, row, p: Params):
                 pnl = (exit_px / entry - 1) * 100 - p.fee
                 return {
                     "date": day["date"],
+                    "signalSchemaVersion": 2,
                     "strategyVersion": "opening_rebreak_v1",
+                    "strategyParams": asdict(p),
                     "rank": int(row.get("rank") or 0),
                     "code": row.get("code"),
                     "name": row.get("name"),
@@ -242,6 +308,11 @@ def one_trade(day, row, p: Params):
                         "frictionPct": p.fee, "finalExit": p.final_exit,
                     },
                     "timeBucket": opening_time_bucket(y["hm"]),
+                    "gapBucket": opening_gap_bucket(gap),
+                    "pullbackBucket": opening_pullback_bucket(dd),
+                    "volumeBucket": opening_ratio_bucket(vol_ratio, "volume"),
+                    "amountBucket": opening_ratio_bucket(amt_ratio, "amount"),
+                    "rankBucket": opening_rank_bucket(int(row.get("rank") or 0)),
                     **path,
                     "exitTime": exit_hm,
                     "exitPrice": exit_px,
@@ -264,11 +335,15 @@ def summary(trades, days):
         mdd = min(mdd, eq - peak)
     gp = sum(wins)
     gl = -sum(losses)
+    avg=statistics.fmean(pnls) if pnls else 0.0
     return {
         "days": len(days),
         "trades": len(trades),
         "winRate": (len(wins) / len(pnls) * 100) if pnls else 0.0,
-        "avgPnl": statistics.fmean(pnls) if pnls else 0.0,
+        "avgWin": statistics.fmean(wins) if wins else 0.0,
+        "avgLoss": statistics.fmean(losses) if losses else 0.0,
+        "avgPnl": avg,
+        "expectancyPct": avg,
         "medianPnl": statistics.median(pnls) if pnls else 0.0,
         "sumPnl": sum(pnls),
         "profitFactor": (gp / gl) if gl > 0 else (999.0 if gp > 0 else 0.0),
@@ -285,31 +360,62 @@ def opening_group_stats(trades, key):
     out=[]
     for name,rows in sorted(groups.items()):
         pn=[x["pnl"] for x in rows]
+        wins=[v for v in pn if v>0]
+        losses=[v for v in pn if v<0]
         mf=[x["mfePct"] for x in rows if x.get("mfePct") is not None]
         ma=[x["maePct"] for x in rows if x.get("maePct") is not None]
         out.append({
             "group":name,"trades":len(rows),
             "winRate":sum(1 for v in pn if v>0)/len(pn)*100 if pn else 0,
+            "avgWin":statistics.fmean(wins) if wins else 0,
+            "avgLoss":statistics.fmean(losses) if losses else 0,
             "avgPnl":statistics.fmean(pn) if pn else 0,
+            "expectancyPct":statistics.fmean(pn) if pn else 0,
             "avgMfe":statistics.fmean(mf) if mf else None,
             "avgMae":statistics.fmean(ma) if ma else None,
+            "plus1HitRate":sum(1 for x in rows if x.get("hitPlus1Time") is not None)/len(rows)*100 if rows else 0,
+            "plus2HitRate":sum(1 for x in rows if x.get("hitPlus2Time") is not None)/len(rows)*100 if rows else 0,
+            "minus1HitRate":sum(1 for x in rows if x.get("hitMinus1Time") is not None)/len(rows)*100 if rows else 0,
+            "minus2HitRate":sum(1 for x in rows if x.get("hitMinus2Time") is not None)/len(rows)*100 if rows else 0,
         })
     return out
 
 
 def opening_diagnostics(trades):
     path={}
-    for n in (1,3,5,10):
+    for n in (5,10,20,30):
         k=f"fwd{n}mPct"; vals=[x[k] for x in trades if x.get(k) is not None]
         path[k]={"n":len(vals),"avg":statistics.fmean(vals) if vals else None,
                  "median":statistics.median(vals) if vals else None}
     mf=[x["mfePct"] for x in trades if x.get("mfePct") is not None]
     ma=[x["maePct"] for x in trades if x.get("maePct") is not None]
+    n=len(trades)
+    threshold={
+        "plus1":{"hits":sum(1 for x in trades if x.get("hitPlus1Time") is not None)},
+        "plus2":{"hits":sum(1 for x in trades if x.get("hitPlus2Time") is not None)},
+        "minus1":{"hits":sum(1 for x in trades if x.get("hitMinus1Time") is not None)},
+        "minus2":{"hits":sum(1 for x in trades if x.get("hitMinus2Time") is not None)},
+    }
+    for z in threshold.values():
+        z["ratePct"]=z["hits"]/n*100 if n else 0.0
+        z["total"]=n
     return {
         "timeBuckets":opening_group_stats(trades,"timeBucket"),
+        "conditionGroups":{
+            "entryTime":opening_group_stats(trades,"timeBucket"),
+            "gap":opening_group_stats(trades,"gapBucket"),
+            "pullback":opening_group_stats(trades,"pullbackBucket"),
+            "volumeRatio":opening_group_stats(trades,"volumeBucket"),
+            "amountRatio":opening_group_stats(trades,"amountBucket"),
+            "rank":opening_group_stats(trades,"rankBucket"),
+            "strategyVersion":opening_group_stats(trades,"strategyVersion"),
+        },
         "forwardPath":path,
+        "thresholdHits":threshold,
         "avgMfe":statistics.fmean(mf) if mf else None,
         "avgMae":statistics.fmean(ma) if ma else None,
+        "outcomeWindowMin":30,
+        "outcomeModel":"KIS 1m high/low for MFE/MAE/threshold, close for 5/10/20/30m marks",
     }
 
 
@@ -429,7 +535,7 @@ def main():
     wf = walk_forward(days, variant_trade_map)
     enough = len(days) >= 20 and len(baseline) >= 30
     report = {
-        "schema": 4,
+        "schema": 5,
         "generatedAt": datetime.now(KST).isoformat(),
         "from": day_labels[0],
         "to": day_labels[-1],
@@ -438,7 +544,7 @@ def main():
         "comparisonStatus": "eligible" if enough else "collecting",
         "comparisonRule": "Variant comparison is treated as preliminary until >=20 trading days and >=30 baseline trades.",
         "signalModel": "live-parity-close-only",
-        "signalModelNote": "Breakout/peak decisions use 1-minute close to match the current live Naver feed. Full KIS OHLC remains archived for future research.",
+        "signalModelNote": "Signal decisions use 1-minute close to match the live Naver feed. Outcome labels use archived KIS OHLC for 30-minute path diagnostics without changing the strategy exit rule.",
         "variants": reports,
         "diagnostics": opening_diagnostics(baseline),
         "walkForward": wf,
@@ -448,8 +554,12 @@ def main():
         json.dump(report, f, ensure_ascii=False, indent=2)
 
     with (OUT / "baseline-trades.csv").open("w", encoding="utf-8", newline="") as f:
-        cols = ["date","rank","code","name","gap","gapEstimated","pullbackPct","entryTime","entryPrice","volRatio","amountRatio",
-                "timeBucket","mfePct","mfeTime","maePct","maeTime","fwd1mPct","fwd3mPct","fwd5mPct","fwd10mPct",
+        cols = ["date","signalSchemaVersion","strategyVersion","variant","rank","rankBucket","code","name",
+                "gap","gapEstimated","gapBucket","pullbackPct","pullbackBucket","entryTime","entryPrice",
+                "volRatio","volumeBucket","amountRatio","amountBucket","timeBucket",
+                "mfePct","mfeTime","maePct","maeTime",
+                "hitPlus1Time","hitPlus2Time","hitMinus1Time","hitMinus2Time",
+                "fwd5mPct","fwd10mPct","fwd20mPct","fwd30mPct",
                 "exitTime","exitPrice","reason","pnl"]
         w = csv.DictWriter(f, fieldnames=cols)
         w.writeheader()
