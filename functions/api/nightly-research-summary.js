@@ -1,5 +1,5 @@
 // POST /api/nightly-research-summary
-// 시초가 + 데이트레이딩 + KIS VTS 누적 연구결과를 하루 한 번 Telegram으로 요약한다.
+// 시초가 + 데이트레이딩 + 비트코인 + KIS VTS 누적 연구결과를 하루 한 번 Telegram으로 요약한다.
 // 연구 리포트 전용이며 주문/전략 파라미터 변경은 하지 않는다.
 
 const JH={"Content-Type":"application/json; charset=utf-8","Cache-Control":"no-store"};
@@ -31,9 +31,9 @@ export async function onRequestPost({request,env}){
   if(!authorized(request,env))return new Response(JSON.stringify({ok:false,error:"unauthorized"}),{status:401,headers:JH});
   try{
     const j=await request.json();
-    const o=j.opening||{},d=j.daytrading||{},e=j.execution||{};
-    const ob=variant(o,"baseline"),db=variant(d,"baseline");
-    const oc=topCandidate(o),dc=topCandidate(d);
+    const o=j.opening||{},d=j.daytrading||{},c=j.crypto||{},e=j.execution||{};
+    const ob=variant(o,"baseline"),db=variant(d,"baseline"),cb=variant(c,"baseline");
+    const oc=topCandidate(o),dc=topCandidate(d),cc=topCandidate(c);
     const ov=(e.strategies||[]).find(x=>x.strategy==="opening")||{};
     const dv=(e.strategies||[]).find(x=>x.strategy==="daytrading")||{};
     const lines=["🧪 단타 야간 자동연구 · "+String(j.date||"")];
@@ -49,6 +49,12 @@ export async function onRequestPost({request,env}){
     lines.push("비교 "+String(d.comparisonStatus||"collecting")+" · walk-forward "+String(d.walkForwardStatus||"collecting"));
     if(db)lines.push("기준 평균 "+pct(db.avgPnl)+" · 누적 "+pct(db.portfolioReturnPct)+" · MDD "+pct(db.portfolioMddPct));
     if(dc)lines.push("개선안 관찰: "+dc.name+" · 평균손익 우위 "+pct(dc.avgPnlEdgePct)+" · "+dc.status);
+    else lines.push("개선안 관찰: 표본 수집 중");
+
+    lines.push("","[비트코인]");
+    lines.push("유효 "+Number(c.validDays||0)+"일 · 기준 "+Number(cb?.trades||0)+"건 · 평균 "+pct(cb?.avgPnl)+" · 복리 "+pct(cb?.compoundReturnPct));
+    lines.push("일평균 "+pct(cb?.avgDailyReturnPct)+" · +1% 이상 일수비율 "+pct(cb?.target1PctDayRatePct)+" · MDD "+pct(cb?.maxDrawdownPct));
+    if(cc)lines.push("개선안 관찰: "+cc.name+" · 홀드아웃 평균 우위 "+pct(cc.holdoutAvgEdgePct)+" · +1% 일수비율 "+pct(cc.holdoutTarget1PctDayRatePct)+" · "+cc.status);
     else lines.push("개선안 관찰: 표본 수집 중");
 
     lines.push("","[KIS VTS 체결검증]");
