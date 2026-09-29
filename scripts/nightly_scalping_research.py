@@ -220,6 +220,7 @@ def crypto_report():
             "trades":x["trades"],"holdoutTrades":x["holdoutTrades"],
             "target1PctDayRatePct":x["target1PctDayRatePct"],
             "holdoutTarget1PctDayRatePct":x["holdoutTarget1PctDayRatePct"],
+            "oosAvgEdgePct":oos_edge,"oosTrades":oos_trades,
             "mddOk":mdd_ok,
         })
     candidates.sort(key=lambda x:(
@@ -235,6 +236,8 @@ def crypto_report():
         "validDays":int(j.get("validDays") or 0),
         "from":j.get("from"),"to":j.get("to"),
         "comparisonStatus":j.get("comparisonStatus") or "collecting",
+        "walkForwardStatus":wf_status,
+        "walkForwardFolds":int(wf.get("foldCount") or 0),
         "rolling30":j.get("rolling30") or {},
         "variants":rows,"candidates":candidates,
         "autoPromotion":False,
@@ -266,17 +269,24 @@ def soxl_report():
         })
     by={x["name"]:x for x in rows}
     base=by.get("baseline",{"avgPnl":0.0,"maxDrawdownPct":0.0,"holdoutAvgPnl":0.0})
-    eligible=j.get("comparisonStatus")=="reviewable"
+    wf=j.get("walkForward") or {}
+    wf_status=wf.get("status") or "collecting"
+    oos_by={x.get("name"):(x.get("summary") or {}) for x in wf.get("oosVariants") or []}
+    eligible=j.get("comparisonStatus")=="reviewable" and wf_status=="reviewable"
     candidates=[]
     for x in rows:
         if x["name"]=="baseline":
             continue
         all_edge=x["avgPnl"]-base["avgPnl"]
         hold_edge=x["holdoutAvgPnl"]-base["holdoutAvgPnl"]
+        ox=oos_by.get(x["name"],{})
+        ob=oos_by.get("baseline",{})
+        oos_edge=float(ox.get("avgPnl") or 0)-float(ob.get("avgPnl") or 0)
+        oos_trades=int(ox.get("trades") or 0)
         mdd_ok=x["maxDrawdownPct"]>=base["maxDrawdownPct"]-3.0
         review=(
-            eligible and x["trades"]>=30 and x["holdoutTrades"]>=10
-            and all_edge>=0.10 and hold_edge>=0.10 and mdd_ok
+            eligible and x["trades"]>=30 and x["holdoutTrades"]>=10 and oos_trades>=10
+            and all_edge>=0.10 and hold_edge>=0.10 and oos_edge>=0.05 and mdd_ok
         )
         candidates.append({
             "name":x["name"],"status":"review" if review else "collecting",
