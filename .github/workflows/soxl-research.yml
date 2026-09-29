@@ -65,7 +65,9 @@ jobs:
           fi
 
           REPORT="data/soxl-research/latest.json"
-          if [ -f "$REPORT" ]; then
+          if [ "$GITHUB_EVENT_NAME" = "push" ]; then
+            echo "코드 push 실행 — Pages 배포와 경합하지 않도록 Telegram 발송은 다음 정기/수동 실행에서 수행"
+          elif [ -f "$REPORT" ]; then
             DATE=$(jq -r '.to // empty' "$REPORT")
             MARK="data/soxl-research/$DATE-summary-sent.json"
             if [ -n "$DATE" ] && [ ! -f "$MARK" ]; then
