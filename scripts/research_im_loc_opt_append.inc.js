@@ -326,7 +326,7 @@
   addRoll(autoFineGrid.find(x=>x.alpha===1.5&&x.rows===4));
   addRoll(autoFineGrid.find(x=>x.alpha===2.25&&x.rows===10));
   addRoll(autoFineGrid.find(x=>x.alpha===2.5&&x.rows===8));
-  const autoRollCfgs=[...rollMap.values()].slice(0,8);
+  const autoRollCfgs=[...rollMap.values()].slice(0,12);
 
   const autoRollingFinal={};
   for(const cfg of autoRollCfgs) autoRollingFinal[cfg.alpha+'|'+cfg.rows]={};
