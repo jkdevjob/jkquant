@@ -566,6 +566,60 @@ def main():
         for x in baseline:
             w.writerow({k: x.get(k) for k in cols})
 
+    # Compact per-signal outcome archive used to join the exact live alert ledger.
+    # Strategy changes never rewrite the signal's strategyVersion/params; the join key
+    # also includes variant/date/code/entryTime so a later rule cannot silently replace it.
+    outcome_rows = []
+    for variant_name, trades in variant_trade_map.items():
+        for x in trades:
+            outcome_rows.append({
+                "variant": variant_name,
+                "date": x.get("date"),
+                "code": x.get("code"),
+                "name": x.get("name"),
+                "entryTime": x.get("entryTime"),
+                "entryPrice": x.get("entryPrice"),
+                "strategyVersion": x.get("strategyVersion"),
+                "signalSchemaVersion": x.get("signalSchemaVersion"),
+                "strategyParams": x.get("strategyParams"),
+                "gap": x.get("gap"),
+                "pullbackPct": x.get("pullbackPct"),
+                "volRatio": x.get("volRatio"),
+                "amountRatio": x.get("amountRatio"),
+                "rank": x.get("rank"),
+                "timeBucket": x.get("timeBucket"),
+                "gapBucket": x.get("gapBucket"),
+                "pullbackBucket": x.get("pullbackBucket"),
+                "volumeBucket": x.get("volumeBucket"),
+                "amountBucket": x.get("amountBucket"),
+                "rankBucket": x.get("rankBucket"),
+                "mfePct": x.get("mfePct"),
+                "mfeTime": x.get("mfeTime"),
+                "maePct": x.get("maePct"),
+                "maeTime": x.get("maeTime"),
+                "hitPlus1Time": x.get("hitPlus1Time"),
+                "hitPlus2Time": x.get("hitPlus2Time"),
+                "hitMinus1Time": x.get("hitMinus1Time"),
+                "hitMinus2Time": x.get("hitMinus2Time"),
+                "fwd5mPct": x.get("fwd5mPct"),
+                "fwd10mPct": x.get("fwd10mPct"),
+                "fwd20mPct": x.get("fwd20mPct"),
+                "fwd30mPct": x.get("fwd30mPct"),
+                "exitTime": x.get("exitTime"),
+                "exitPrice": x.get("exitPrice"),
+                "reason": x.get("reason"),
+                "pnl": x.get("pnl"),
+            })
+    outcome_rows.sort(key=lambda x: (x["date"] or "", x["variant"] or "", x["entryTime"] or 0, x["code"] or ""))
+    with (OUT / "signal-outcomes.json").open("w", encoding="utf-8") as f:
+        json.dump({
+            "schema": 1,
+            "generatedAt": report["generatedAt"],
+            "from": day_labels[0],
+            "to": day_labels[-1],
+            "records": outcome_rows,
+        }, f, ensure_ascii=False, separators=(",", ":"))
+
     stamp = day_labels[-1]
     with (OUT / f"{stamp}.json").open("w", encoding="utf-8") as f:
         json.dump(report, f, ensure_ascii=False, indent=2)
