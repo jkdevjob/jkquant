@@ -52,7 +52,14 @@ jobs:
         shell: bash
         run: |
           set -e
-          python .app/scripts/collect_soxl_data.py
+          COLLECT_OK=1
+          if [ "$GITHUB_EVENT_NAME" = "push" ]; then
+            echo "코드 push 실행 — Yahoo 외부수집은 건너뛰고 기존 누적자료로 코드/연구만 재검증"
+          elif ! python .app/scripts/collect_soxl_data.py; then
+            COLLECT_OK=0
+            echo "::warning::Yahoo SOXL 수집 실패(예: 429). 기존 누적자료를 보존하고 연구/요약을 계속합니다."
+          fi
+
           CHANGED=0
           if [ -n "$(git status --porcelain -- data/soxl)" ]; then
             CHANGED=1
@@ -61,7 +68,11 @@ jobs:
           if [ "$CHANGED" = "1" ] || [ "$GITHUB_EVENT_NAME" = "push" ] || [ ! -f data/soxl-research/latest.json ]; then
             python .app/scripts/backtest_soxl_intraday.py
           else
-            echo "새 SOXL 원본 없음 — 기존 연구결과 유지"
+            if [ "$COLLECT_OK" = "0" ]; then
+              echo "새 SOXL 원본을 못 받음 — 기존 연구결과 유지"
+            else
+              echo "새 SOXL 원본 없음 — 기존 연구결과 유지"
+            fi
           fi
 
           REPORT="data/soxl-research/latest.json"
