@@ -160,7 +160,7 @@
       const holdGeo=Math.sqrt((scenarios.holdout[10000].final/baseline.holdout[10000].final)*
                               (scenarios.holdout[100000].final/baseline.holdout[100000].final));
       grid.push({alpha,rows:n,geoRatio:geo,minRatio:Math.min(...ratios),maxRatio:Math.max(...ratios),
-        wins,avgMddDelta:mddD.reduce((a,b)=>a+b,0)/mddD.length,trainGeo,holdoutGeo,scenarios});
+        wins,avgMddDelta:mddD.reduce((a,b)=>a+b,0)/mddD.length,trainGeo,holdoutGeo:holdGeo,scenarios});
     }
   }
 
