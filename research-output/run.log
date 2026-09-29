@@ -8,7 +8,7 @@
 
 === IM LOC OPT SUMMARY JSON ===
 {
-  "generatedAt": "2026-09-29T12:45:36.071Z",
+  "generatedAt": "2026-09-29T12:50:44.798Z",
   "data": {
     "endpoint": "https://jkquant.pages.dev/api/quote",
     "symbol": "SOXL",
@@ -1976,6 +1976,14 @@
       {
         "alpha": 1.3,
         "rows": 4
+      },
+      {
+        "alpha": 1.5,
+        "rows": 4
+      },
+      {
+        "alpha": 2.5,
+        "rows": 8
       }
     ],
     "rollingScores": [
@@ -2036,6 +2044,62 @@
         }
       },
       {
+        "alpha": 1.5,
+        "rows": 4,
+        "geoRatio": 1.0369394375587613,
+        "minRatio": 1.0002309922336705,
+        "wins": 8,
+        "trainGeo": 1.026305663859031,
+        "holdoutGeo": 1.076615370563582,
+        "avgMddDelta": -0.6868561670498634,
+        "rollingMinAvg": 0.981214407263801,
+        "rollingGeoAvg": 0.9922430656061195,
+        "rollingMinMedian": 0.9864305568284888,
+        "rollingMinWinRate": 31.654676258992804,
+        "rolling": {
+          "10000": {
+            "y3": {
+              "windows": 163,
+              "wins": 61,
+              "winRate": 37.423312883435585,
+              "avgRatio": 0.9928010775244797,
+              "medianRatio": 0.9910518040091956,
+              "worstRatio": 0.8326308126636768,
+              "bestRatio": 1.2223262627873162
+            },
+            "y5": {
+              "windows": 139,
+              "wins": 44,
+              "winRate": 31.654676258992804,
+              "avgRatio": 0.981214407263801,
+              "medianRatio": 0.9864305568284888,
+              "worstRatio": 0.6802370923763935,
+              "bestRatio": 1.1634918334345532
+            }
+          },
+          "100000": {
+            "y3": {
+              "windows": 163,
+              "wins": 86,
+              "winRate": 52.760736196319016,
+              "avgRatio": 0.9970328693257465,
+              "medianRatio": 1.0001390179338348,
+              "worstRatio": 0.8985303131927422,
+              "bestRatio": 1.0181955054333152
+            },
+            "y5": {
+              "windows": 139,
+              "wins": 76,
+              "winRate": 54.67625899280576,
+              "avgRatio": 0.9980140554905509,
+              "medianRatio": 1.0006102705210662,
+              "worstRatio": 0.8945129926410941,
+              "bestRatio": 1.062269058438905
+            }
+          }
+        }
+      },
+      {
         "alpha": 2.15,
         "rows": 10,
         "geoRatio": 1.0377020457004347,
@@ -2087,6 +2151,62 @@
               "medianRatio": 1.0028406575451971,
               "worstRatio": 0.9418035364311076,
               "bestRatio": 1.071139716369483
+            }
+          }
+        }
+      },
+      {
+        "alpha": 2.5,
+        "rows": 8,
+        "geoRatio": 1.0396097169505059,
+        "minRatio": 0.9966381585446462,
+        "wins": 7,
+        "trainGeo": 1.0223964076486172,
+        "holdoutGeo": 1.0845263102207845,
+        "avgMddDelta": -0.7199590371685334,
+        "rollingMinAvg": 0.9700342714317244,
+        "rollingGeoAvg": 0.9942945982890433,
+        "rollingMinMedian": 0.9554569929810977,
+        "rollingMinWinRate": 27.33812949640288,
+        "rolling": {
+          "10000": {
+            "y3": {
+              "windows": 163,
+              "wins": 57,
+              "winRate": 34.96932515337423,
+              "avgRatio": 0.9981857023383871,
+              "medianRatio": 0.9879727256337095,
+              "worstRatio": 0.8298573069474983,
+              "bestRatio": 1.2046034759600384
+            },
+            "y5": {
+              "windows": 139,
+              "wins": 38,
+              "winRate": 27.33812949640288,
+              "avgRatio": 0.9700342714317244,
+              "medianRatio": 0.9554569929810977,
+              "worstRatio": 0.6909140952671696,
+              "bestRatio": 1.1665832397926565
+            }
+          },
+          "100000": {
+            "y3": {
+              "windows": 163,
+              "wins": 101,
+              "winRate": 61.963190184049076,
+              "avgRatio": 1.0026607312507365,
+              "medianRatio": 1.0024746046165423,
+              "worstRatio": 0.9429708011063159,
+              "bestRatio": 1.046011139239176
+            },
+            "y5": {
+              "windows": 139,
+              "wins": 91,
+              "winRate": 65.46762589928058,
+              "avgRatio": 1.006718131788332,
+              "medianRatio": 1.0050141562645416,
+              "worstRatio": 0.9417494709691993,
+              "bestRatio": 1.0690911451126133
             }
           }
         }
