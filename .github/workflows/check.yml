@@ -54,6 +54,7 @@ jobs:
           node --input-type=module --check < functions/api/_daytrading.js
           node --input-type=module --check < functions/api/daytrading-monitor.js
           node --input-type=module --check < functions/api/daytrading-summary.js
+          node --input-type=module --check < functions/api/daytrading-paper.js
           node --input-type=module --check < functions/api/vts-reconcile.js
           node --input-type=module --check < functions/api/vts-research.js
           node --input-type=module --check < functions/api/vts-summary.js
@@ -196,7 +197,7 @@ jobs:
           const r=fs.readFileSync('.github/workflows/daytrading-research.yml','utf8');
           let fail=0;
           const crons=w.triggers&&w.triggers.crons||[];
-          for(const x of ['55 0 * * MON-FRI','0-59 1-4 * * MON-FRI','0-31 5 * * MON-FRI']){
+          for(const x of ['55 0 * * MON-FRI','0-59 1-4 * * MON-FRI','0-59 5 * * MON-FRI','0-11 6 * * MON-FRI']){
             if(!crons.includes(x)){console.error('✗ 데이트레이딩 Cron 누락: '+x);fail++;}
           }
           if(!w.durable_objects||!w.migrations||!String(JSON.stringify(w.migrations)).includes('new_sqlite_classes')){
@@ -206,7 +207,11 @@ jobs:
             ['/api/universe?limit=100','09:55 Top100 캡처'],
             ['/api/daytrading-monitor','Pages 데이트레이딩 scanner 호출'],
             ['MAX_SCAN_LAG_MS=3*60*1000','3분 초과 늦은 실시간 스캔 방지'],
-            ['snapshot_missing_or_late','늦은/누락 스냅샷 차단']
+            ['snapshot_missing_or_late','늦은/누락 스냅샷 차단'],
+            ['PAPER_MAX_TRADES=3','하루 최대 3건 장중 모의장부'],
+            ['PAPER_FINAL_EXIT_HM=1510','15:10 시간청산'],
+            ['/api/kis?op=minhist&env=vts','KIS VTS 분봉 조회 기반 모의체결'],
+            ['u.pathname==="/paper"','Durable Object 장중 모의장부 조회']
           ];
           for(const [needle,label] of must){if(!c.includes(needle)){console.error('✗ '+label+' 없음');fail++;}}
           if(!m.includes('onRequestPost')||!m.includes('targetHm')||!m.includes('claimEvent')){
@@ -214,6 +219,12 @@ jobs:
           }
           if(!r.includes('DAY_WORKER')||!r.includes('snapshotHm|tonumber) <= 1015')){
             console.error('✗ 연구 workflow가 Cloudflare 정시 스냅샷을 우선 사용하지 않음'); fail++;
+          }
+          if(!r.includes('data/daytrading-live')||!r.includes('/paper?date=$DATE')){
+            console.error('✗ 장마감 연구가 장중 모의장부를 영구 저장하지 않음'); fail++;
+          }
+          if(c.includes('/api/kis?op=order')){
+            console.error('✗ 데이트레이딩 장중 모의장부가 KIS 주문 API를 호출함'); fail++;
           }
           const g=fs.readFileSync('.github/workflows/daytrading-monitor.yml','utf8');
           if(/\bschedule\s*:/.test(g)||/\bpush\s*:/.test(g)){
@@ -223,7 +234,20 @@ jobs:
             console.error('✗ GitHub 데이트레이딩 수동 fallback이 없음'); fail++;
           }
           if(fail)process.exit(1);
-          console.log('✓ daytrading realtime cron / durable snapshot / duplicate guard');
+          const api=fs.readFileSync('functions/api/daytrading-paper.js','utf8');
+          const ui=fs.readFileSync('scalping.html','utf8');
+          const py=fs.readFileSync('scripts/backtest_daytrading.py','utf8');
+          if(!api.includes('ownerAuthorized')||!api.includes('/paper?date=')){
+            console.error('✗ owner-only 장중 모의장부 proxy 없음'); fail++;
+          }
+          if(!ui.includes('loadDayTradingPaper')||!ui.includes('dt_live_body')){
+            console.error('✗ 데이트레이딩 장중 모의장부 UI 없음'); fail++;
+          }
+          if(!py.includes('live_paper_comparison')||!py.includes('livePaperComparison')){
+            console.error('✗ 장중 장부 ↔ 장마감 KIS 재구성 비교 없음'); fail++;
+          }
+          if(fail)process.exit(1);
+          console.log('✓ daytrading realtime cron / durable snapshot / live paper ledger / EOD parity');
           NODE
 
       - name: 야간 자동연구는 분석 전용인지 검사
