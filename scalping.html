@@ -210,7 +210,8 @@ canvas{display:block;width:100%;height:auto}
   <div class="strategy-tabs">
     <button class="strategy-tab on" data-strategy="swing" onclick="showStrategy('swing')">📉 과매도 반등</button>
     <button class="strategy-tab" data-strategy="opening" onclick="showStrategy('opening')">⚡ 시초가 돌파</button>
-    <button class="strategy-tab" data-strategy="daytrading" onclick="showStrategy('daytrading')">📈 데이트레이딩</button>\n    <button class="strategy-tab" data-strategy="crypto" onclick="showStrategy('crypto')">₿ 비트코인</button>
+    <button class="strategy-tab" data-strategy="daytrading" onclick="showStrategy('daytrading')">📈 데이트레이딩</button>
+    <button class="strategy-tab" data-strategy="crypto" onclick="showStrategy('crypto')">₿ 비트코인</button>
   </div>
   <div id="strategy_swing" class="strategy-pane on">
     <div class="strategy-head">실시간 감시 → 과거 백테스트 순서</div>
@@ -1222,7 +1223,8 @@ function showStrategy(name){
   document.querySelectorAll('.strategy-tab').forEach(x=>x.classList.toggle('on',x.dataset.strategy===name));
   const p=$('strategy_'+name); if(p)p.classList.add('on');
   try{localStorage.setItem('jkq_scalp_strategy_tab',name);}catch(e){}
-  if(name==='daytrading') loadDayTradingResearch();\n  if(name==='crypto'){ loadCryptoLive(); loadCryptoResearch(); }
+  if(name==='daytrading') loadDayTradingResearch();
+  if(name==='crypto'){ loadCryptoLive(); loadCryptoResearch(); }
 }
 function restoreStrategy(){
   let n='swing';
