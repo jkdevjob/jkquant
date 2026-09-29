@@ -14,7 +14,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   research:
@@ -30,14 +30,39 @@ jobs:
           node-version: "20"
 
       - name: Run exact-engine LOC optimization
-        run: node scripts/research_im_loc_opt.cjs
+        id: research
+        shell: bash
+        run: |
+          mkdir -p research-output
+          set +e
+          node scripts/research_im_loc_opt.cjs 2>&1 | tee research-output/run.log
+          STATUS=\${PIPESTATUS[0]}
+          echo "$STATUS" > research-output/exit-code.txt
+          exit "$STATUS"
 
-      - name: Show summary
+      - name: Show summary or failure tail
         if: always()
+        shell: bash
         run: |
           if [ -f research-output/im-loc-opt-summary.json ]; then
             cat research-output/im-loc-opt-summary.json
+          else
+            tail -n 160 research-output/run.log || true
           fi
+
+      - name: Persist research output on branch
+        if: always()
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -f research-output
+          if git diff --cached --quiet; then
+            echo "No research output to persist"
+            exit 0
+          fi
+          git commit -m "research: persist LOC optimization output [skip ci]"
+          git push origin HEAD:"research/im-loc-opt-20260929"
 
       - name: Upload research result
         if: always()
