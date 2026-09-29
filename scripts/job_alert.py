@@ -124,6 +124,15 @@ CORE_TERMS = (
     'java', 'jsp', 'spring', 'spring boot', '전자정부', 'egov',
     '백엔드', 'sm', '유지보수', 'si', '프리랜서', '계약직',
 )
+DEV_REQUIRED_TERMS = (
+    'java', 'jsp', 'spring', 'spring boot', '전자정부', 'egov',
+    '백엔드', '웹개발', '서버개발', '소프트웨어개발', '개발자',
+    '시스템개발', '프로그래머', 'node.js', 'nodejs', 'nestjs',
+)
+JUNIOR_ONLY_TERMS = (
+    '2년차 미만', '3년차 미만', '경력 1~2년', '경력1~2년',
+    '경력 1~3년', '경력1~3년', '주니어 전용', '신입 전용', '신입만',
+)
 AI_TERMS = (
     'ai', 'llm', 'rag', 'agent', '생성형', '챗봇', 'spring ai',
     'langchain4j', 'mcp', 'vector', 'embedding',
@@ -301,9 +310,9 @@ def score_java_result(title, body, url):
     if any(term in text for term in EXCLUDE_TERMS):
         return -999
 
-    has_core = any(term in text for term in CORE_TERMS)
+    has_dev = any(term in text for term in DEV_REQUIRED_TERMS)
     has_ai = any(term in text for term in AI_TERMS)
-    if not has_core and not has_ai:
+    if not has_dev and not has_ai:
         return -999
 
     score = 0
@@ -324,6 +333,8 @@ def score_regular_dev_result(title, body, url):
     if any(term in text for term in EXCLUDE_TERMS):
         return -999
     if '정규직' not in text and '정규' not in text:
+        return -999
+    if any(term in text for term in JUNIOR_ONLY_TERMS):
         return -999
     if not any(term in text for term in REGULAR_DEV_TERMS):
         return -999
@@ -516,26 +527,42 @@ def classify_jobs(jobs, scorer):
 
 
 def jobkorea_card_text(anchor):
+    # 한 공고 카드의 경계를 'GI_Read 링크가 1개인 가장 가까운 조상'으로 잡는다.
+    # 검색결과 전체 컨테이너를 읽어 옆 공고의 지역/급여가 섞이는 것을 막는다.
     node = anchor
     fallback = normalize_text(anchor.get_text(' ', strip=True))
-    for _ in range(8):
+
+    for _ in range(10):
         node = getattr(node, 'parent', None)
         if node is None:
             break
+
+        detail_ids = set()
+        for link in node.find_all('a', href=True):
+            match = re.search(r'/Recruit/GI_Read/(\d+)', link.get('href') or '', re.I)
+            if match:
+                detail_ids.add(match.group(1))
+
+        if len(detail_ids) > 1:
+            break
+
         text = normalize_text(node.get_text(' ', strip=True))
-        if not text or len(text) > 2200:
+        if not text or len(text) > 1800:
             continue
-        fallback = text
-        has_location = any(loc in text for loc in LOCATION_TERMS)
-        has_job_meta = any(
-            term in text
-            for term in (
-                '정규직', '계약직', '프리랜서', '경력', '학력',
-                '만원', '월급', '연봉', '상시채용', '마감',
+
+        if len(detail_ids) == 1:
+            fallback = text
+            has_location = any(loc in text for loc in LOCATION_TERMS)
+            has_job_meta = any(
+                term in text
+                for term in (
+                    '정규직', '계약직', '프리랜서', '경력', '학력',
+                    '만원', '월급', '연봉', '상시채용', '마감',
+                )
             )
-        )
-        if has_location and has_job_meta:
-            return text
+            if has_location and has_job_meta:
+                return text
+
     return fallback
 
 
@@ -576,7 +603,11 @@ def collect_jobkorea_direct():
                         continue
 
                     title = normalize_text(anchor.get_text(' ', strip=True))
-                    if not title or len(title) < 2:
+                    if (
+                        not title
+                        or len(title) < 2
+                        or title in {'즉시지원', '홈페이지 지원', '스크랩', '관심기업'}
+                    ):
                         continue
 
                     body = jobkorea_card_text(anchor)
@@ -600,10 +631,12 @@ def collect_jobkorea_direct():
 
                 parsed_links += page_links
                 # 검색 결과 페이지 구조가 바뀐 경우 조용히 '0건'으로 오인하지 않는다.
-                page_text = normalize_text(soup.get_text(' ', strip=True))
-                if ('총 ' in page_text or '채용정보' in page_text) and page_links == 0:
+                raw_has_job_links = bool(
+                    re.search(r'/Recruit/GI_Read/\d+', response.text, re.I)
+                )
+                if raw_has_job_links and page_links == 0:
                     failed_pages += 1
-                    errors.append(f'{query} p{page_no}: 공고 링크 파싱 0건')
+                    errors.append(f'{query} p{page_no}: HTML에는 공고가 있으나 파싱 0건')
             except Exception as exc:
                 failed_pages += 1
                 errors.append(f'{query} p{page_no}: {type(exc).__name__} {exc}')
