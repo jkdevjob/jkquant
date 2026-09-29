@@ -10577,7 +10577,7 @@ console.log('[SCALPING TELEGRAM] 실시간 신호 · 일일 매매/연구 요약
   ok('공통 Telegram API는 서버키 인증 + eventId 중복방지',
      /x-monitor-key/.test(alertApi) && /eventId required/.test(alertApi) && /caches\.default/.test(alertApi));
   ok('공통 Telegram API는 매수/매도만 전송하고 주문 API 없음',
-     /stage==="buy"/.test(alertApi) && /stage==="sell"/.test(alertApi) && !/op=order|opening-execute/.test(alertApi));
+     /\["buy","sell"\]\.includes\(stage\)/.test(alertApi) && /stage==="buy"/.test(alertApi) && !/op=order|opening-execute/.test(alertApi));
   ok('데이트레이딩 ③매수·④매도 상태변화 Telegram',
      /notifyPaperTransitions/.test(dayWorker) && /strategy:"daytrading",stage:"buy"/.test(dayWorker) && /strategy:"daytrading",stage:"sell"/.test(dayWorker));
   ok('BTC·SOXL 1분 서버감시 + 5분봉 기준 신호',
