@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Focused value checks for opening-signal outcome labels."""
 
-from scripts.backtest_opening_rebreak import Params, opening_path_metrics, one_trade
+from backtest_opening_rebreak import Params, opening_path_metrics, one_trade
 
 
 def bar(hm, close=100.0, high=None, low=None, volume=100.0):
@@ -46,9 +46,10 @@ def test_exit_rule_still_stops_at_0930():
             close = 101.0
         elif hm == 904:
             close = 100.5
-        elif hm == 905:
+        elif 905 <= hm <= 930:
             close = 101.2
-            volume = 200.0
+            if hm == 905:
+                volume = 200.0
         elif hm == 931:
             close = 104.0
         bars.append({
@@ -64,7 +65,9 @@ def test_exit_rule_still_stops_at_0930():
     p = Params("baseline", amount_mult=1.0)
     t = one_trade(day, row, p)
     assert t is not None
-    assert t["exitTime"] <= 930
+    assert t["exitTime"] == 930
+    assert t["reason"] == "time_exit"
+    assert t["exitPrice"] == 101.2
     assert t["strategyVersion"] == "opening_rebreak_v1"
     assert t["signalSchemaVersion"] == 2
     assert t["strategyParams"]["name"] == "baseline"
