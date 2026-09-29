@@ -253,6 +253,36 @@ jobs:
           console.log('✓ daytrading realtime cron / durable snapshot / live paper ledger / EOD parity');
           NODE
 
+      - name: 세 단타전략 판단증거 기록 검사
+        run: |
+          node - <<'NODE'
+          const fs=require('fs');
+          const oj=fs.readFileSync('functions/api/_opening.js','utf8');
+          const dj=fs.readFileSync('functions/api/_daytrading.js','utf8');
+          const op=fs.readFileSync('scripts/backtest_opening_rebreak.py','utf8');
+          const dp=fs.readFileSync('scripts/backtest_daytrading.py','utf8');
+          const cp=fs.readFileSync('scripts/backtest_crypto_orb.py','utf8');
+          let fail=0;
+          const checks=[
+            [oj,'opening_rebreak_v1','시초가 live 전략버전'],
+            [oj,'evidence:{','시초가 live 판단증거'],
+            [op,'"strategyVersion": "opening_rebreak_v1"','시초가 확정이력 전략버전'],
+            [op,'"evidence": {','시초가 확정이력 판단증거'],
+            [dj,'daytrading_vwap_breakout_v1','데이트레이딩 live 전략버전'],
+            [dj,'evidence:{','데이트레이딩 live 판단증거'],
+            [dp,'"strategyVersion":"daytrading_vwap_breakout_v1"','데이트레이딩 확정이력 전략버전'],
+            [dp,'"evidence":{','데이트레이딩 확정이력 판단증거'],
+            [cp,'"strategyVersion": "btc_orb_v1"','BTC 전략버전'],
+            [cp,'"evidence": {','BTC 거래 판단증거'],
+            [cp,'baseline-decisions.csv','BTC 무매매일 판단기록']
+          ];
+          for(const [txt,needle,label] of checks){
+            if(!txt.includes(needle)){console.error('✗ '+label+' 없음');fail++;}
+          }
+          if(fail)process.exit(1);
+          console.log('✓ opening/daytrading/bitcoin strategy evidence is retained');
+          NODE
+
       - name: 야간 자동연구는 분석 전용인지 검사
         run: |
           node - <<'NODE'
