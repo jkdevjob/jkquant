@@ -267,8 +267,11 @@ jobs:
             ['autoPromotion":False','자동 승격 OFF']
           ];
           for(const [needle,label] of must){if(!py.includes(needle)){console.error('✗ '+label+' 없음');fail++;}}
-          if(!w.includes('10 10 * * 1-5')||!w.includes('10 11 * * 1-5')){
-            console.error('✗ 19:10/20:10 KST 야간 연구 schedule 없음'); fail++;
+          if(!w.includes('10 10 * * *')||!w.includes('10 11 * * *')){
+            console.error('✗ 매일 19:10/20:10 KST 야간 연구 schedule 없음'); fail++;
+          }
+          if(!py.includes('CRYPTO=Path("data/crypto-research/latest.json")')||!py.includes('"crypto":c')){
+            console.error('✗ 야간 통합연구에 비트코인 축이 없음'); fail++;
           }
           if(!w.includes('seq 1 12')||!w.includes('20:10 backup')){
             console.error('✗ Pages 배포 지연 시 Telegram 재시도/fallback 없음'); fail++;
@@ -334,6 +337,10 @@ jobs:
           ];
           for(const [needle,label] of must){if(!s.includes(needle)){console.error('✗ '+label+' 없음');fail++;}}
           if(!wf.includes('cron: "20 0 * * *"')){console.error('✗ 매일 09:20 KST 수집 schedule 없음');fail++;}
+          const btc=fs.readFileSync('scripts/backtest_crypto_orb.py','utf8');
+          if(!btc.includes('baseline-decisions.csv')||!btc.includes('target1PctDayRatePct')||!btc.includes('"evidence": {')){
+            console.error('✗ BTC 판단증거/무매매일/+1% 목표 지표 기록 없음');fail++;
+          }
           if(/op=order|\/v1\/accounts|authorization\s*:|\bjwt\b/i.test(api)){
             console.error('✗ crypto market proxy에 주문/인증 관련 문자열 발견');fail++;
           }
