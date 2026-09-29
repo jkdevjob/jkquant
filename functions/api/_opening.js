@@ -113,7 +113,10 @@ export function rebreakTrade(rows,meta,cutoffHm=930,overrides={}){
       const volRatio=jv/Math.max(1,baseVol),amountRatio=ja/Math.max(1,baseAmt);
       if(jp>peak&&volRatio>=p.volMult&&amountRatio>=p.amountMult){
         const tr={
+          signalSchemaVersion:2,
           strategyVersion:"opening_rebreak_v1",
+          strategyParams:{...p},
+          decisionReason:"gap+first_breakout+pullback+rebreak+volume+amount_pass",
           gap,firstHigh,peak,pullbackPct:dd,
           entryTime:y.hm,entryPrice:jp,volRatio,amountRatio,estAmount:ja,
           evidence:{
