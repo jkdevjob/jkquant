@@ -260,28 +260,100 @@
   function autoBestScenario(pn,cap){
     return autoGrid.slice().sort((a,b)=>b.scenarios[pn][cap].final-a.scenarios[pn][cap].final)[0];
   }
-  function rollingYearsAuto(cfg,yrs,cap){
-    const span=Math.round(yrs*252), step=21, vals=[];
+  // 2차 정밀탐색: coarse grid에서 강했던 구간을 alpha 0.05 간격으로 다시 훑는다.
+  const fineAlphas=[]; for(let a=1.25;a<=2.75001;a+=0.05) fineAlphas.push(+a.toFixed(2));
+  const fineRows=[3,4,5,6,7,8,9,10];
+  const autoFineGrid=[];
+  for(const alpha of fineAlphas){
+    global.__LOC_ALPHA=alpha;
+    for(const n of fineRows){
+      global.imRowsOf=()=>n; global.imAutoTp=true;
+      const scenarios={}; const ratios=[]; const mddD=[]; let wins=0;
+      for(const pn of scenarioNames){
+        const d=subDays(pn); scenarios[pn]={};
+        for(const cap of caps){
+          const x=run(d,cap), b=autoBaseline[pn][cap];
+          scenarios[pn][cap]=x;
+          const ratio=x.final/b.final;
+          ratios.push(ratio); mddD.push(x.mdd-b.mdd);
+          if(ratio>1+1e-12) wins++;
+        }
+      }
+      const geo=Math.exp(ratios.reduce((a,b)=>a+Math.log(Math.max(b,1e-12)),0)/ratios.length);
+      const trainGeo=Math.sqrt((scenarios.train[10000].final/autoBaseline.train[10000].final)*
+                               (scenarios.train[100000].final/autoBaseline.train[100000].final));
+      const holdGeo=Math.sqrt((scenarios.holdout[10000].final/autoBaseline.holdout[10000].final)*
+                              (scenarios.holdout[100000].final/autoBaseline.holdout[100000].final));
+      autoFineGrid.push({alpha,rows:n,geoRatio:geo,minRatio:Math.min(...ratios),maxRatio:Math.max(...ratios),
+        wins,avgMddDelta:mddD.reduce((a,b)=>a+b,0)/mddD.length,trainGeo,holdoutGeo:holdGeo,scenarios});
+    }
+  }
+  const fineStrict=autoFineGrid.filter(x=>x.wins===8 && x.minRatio>=1 && x.trainGeo>=1 && x.holdoutGeo>=1)
+    .sort((a,b)=>b.geoRatio-a.geoRatio||b.minRatio-a.minRatio);
+  const fineNear=autoFineGrid.filter(x=>x.wins>=7 && x.trainGeo>=1 && x.holdoutGeo>=1)
+    .sort((a,b)=>b.geoRatio-a.geoRatio||b.minRatio-a.minRatio);
+
+  /* Rolling은 같은 창의 baseline을 후보마다 다시 계산하지 않는다.
+     각 창에서 현재값(1,3)을 한 번만 돌린 뒤 후보를 모두 비교한다. */
+  function rollingAutoGroup(cfgs,yrs,cap){
+    const span=Math.round(yrs*252), step=21;
+    const vals=cfgs.map(()=>[]);
     for(let i=0;i+span<=live.days.length;i+=step){
       const d=live.days.slice(i,i+span);
       global.__LOC_ALPHA=1; global.imRowsOf=()=>3; global.imAutoTp=true;
       const b=run(d,cap);
-      global.__LOC_ALPHA=cfg.alpha; global.imRowsOf=()=>cfg.rows; global.imAutoTp=true;
-      const x=run(d,cap);
-      vals.push(x.final/b.final);
+      cfgs.forEach((cfg,j)=>{
+        global.__LOC_ALPHA=cfg.alpha; global.imRowsOf=()=>cfg.rows; global.imAutoTp=true;
+        const x=run(d,cap);
+        vals[j].push(x.final/b.final);
+      });
     }
-    vals.sort((a,b)=>a-b);
-    return {windows:vals.length,wins:vals.filter(x=>x>1).length,
-      winRate:vals.length?vals.filter(x=>x>1).length/vals.length*100:0,
-      avgRatio:vals.reduce((a,b)=>a+b,0)/Math.max(1,vals.length),
-      medianRatio:vals.length?vals[Math.floor(vals.length/2)]:null,
-      worstRatio:vals[0]||null,bestRatio:vals[vals.length-1]||null};
+    return vals.map(v=>{
+      v.sort((a,b)=>a-b);
+      return {windows:v.length,wins:v.filter(x=>x>1).length,
+        winRate:v.length?v.filter(x=>x>1).length/v.length*100:0,
+        avgRatio:v.reduce((a,b)=>a+b,0)/Math.max(1,v.length),
+        medianRatio:v.length?v[Math.floor(v.length/2)]:null,
+        worstRatio:v[0]||null,bestRatio:v[v.length-1]||null};
+    });
   }
-  const autoRollCfg=autoRobust||autoByGeo[0];
-  const autoRolling={};
-  if(autoRollCfg){
-    for(const cap of caps) autoRolling[cap]={y3:rollingYearsAuto(autoRollCfg,3,cap),y5:rollingYearsAuto(autoRollCfg,5,cap)};
+
+  // 정밀탐색 상위 + coarse에서 8/8이었던 단순 후보를 rolling 결선에 올린다.
+  const rollMap=new Map();
+  const addRoll=x=>{ if(x) rollMap.set(x.alpha+'|'+x.rows,x); };
+  fineStrict.slice(0,5).forEach(addRoll);
+  fineNear.slice(0,3).forEach(addRoll);
+  addRoll(autoFineGrid.find(x=>x.alpha===1.5&&x.rows===4));
+  addRoll(autoFineGrid.find(x=>x.alpha===2.25&&x.rows===10));
+  addRoll(autoFineGrid.find(x=>x.alpha===2.5&&x.rows===8));
+  const autoRollCfgs=[...rollMap.values()].slice(0,8);
+
+  const autoRollingFinal={};
+  for(const cfg of autoRollCfgs) autoRollingFinal[cfg.alpha+'|'+cfg.rows]={};
+  for(const cap of caps){
+    for(const yrs of [3,5]){
+      const stats=rollingAutoGroup(autoRollCfgs,yrs,cap);
+      autoRollCfgs.forEach((cfg,i)=>{
+        autoRollingFinal[cfg.alpha+'|'+cfg.rows][cap]=autoRollingFinal[cfg.alpha+'|'+cfg.rows][cap]||{};
+        autoRollingFinal[cfg.alpha+'|'+cfg.rows][cap]['y'+yrs]=stats[i];
+      });
+    }
   }
+  const rollingScores=autoRollCfgs.map(cfg=>{
+    const r=autoRollingFinal[cfg.alpha+'|'+cfg.rows];
+    const avgs=[r[10000].y3.avgRatio,r[10000].y5.avgRatio,r[100000].y3.avgRatio,r[100000].y5.avgRatio];
+    const meds=[r[10000].y3.medianRatio,r[10000].y5.medianRatio,r[100000].y3.medianRatio,r[100000].y5.medianRatio];
+    const wr=[r[10000].y3.winRate,r[10000].y5.winRate,r[100000].y3.winRate,r[100000].y5.winRate];
+    return {alpha:cfg.alpha,rows:cfg.rows,geoRatio:cfg.geoRatio,minRatio:cfg.minRatio,wins:cfg.wins,
+      trainGeo:cfg.trainGeo,holdoutGeo:cfg.holdoutGeo,avgMddDelta:cfg.avgMddDelta,
+      rollingMinAvg:Math.min(...avgs),rollingGeoAvg:Math.exp(avgs.reduce((a,b)=>a+Math.log(Math.max(b,1e-12)),0)/avgs.length),
+      rollingMinMedian:Math.min(...meds),rollingMinWinRate:Math.min(...wr),rolling:r};
+  }).sort((a,b)=>b.rollingMinAvg-a.rollingMinAvg||b.geoRatio-a.geoRatio);
+
+  // 모든 주요기간 8/8 개선 + 네 종류 rolling 평균도 모두 >= 현재값인 후보만 최종 강건 후보.
+  const finalRobust=rollingScores.filter(x=>x.wins===8&&x.minRatio>=1&&x.rollingMinAvg>=1)
+    .sort((a,b)=>b.geoRatio-a.geoRatio||b.rollingMinAvg-a.rollingMinAvg)[0]||null;
+
   global.imAutoTp=false;
 
   function lite(x){
@@ -321,11 +393,18 @@
       bestFull100k:lite(autoBestScenario('full',100000)),
       bestRecent10k:lite(autoBestScenario('recent',10000)),
       bestRecent100k:lite(autoBestScenario('recent',100000)),
-      rollingCandidate:autoRollCfg?{alpha:autoRollCfg.alpha,rows:autoRollCfg.rows}:null,
-      rolling:autoRolling
+      fineAlphaGrid:fineAlphas,
+      fineRows,
+      fineStrictCount:fineStrict.length,
+      fineTop:fineStrict.slice(0,20).map(lite),
+      rollingCandidates:autoRollCfgs.map(x=>({alpha:x.alpha,rows:x.rows})),
+      rollingScores,
+      finalRobust,
+      rolling:autoRollingFinal
     },
     grid:grid.map(lite),
-    autoGrid:autoGrid.map(lite)
+    autoGrid:autoGrid.map(lite),
+    autoFineGrid:autoFineGrid.map(lite)
   };
 
   fs.writeFileSync(path.join(OUTDIR,'im-loc-opt.json'),JSON.stringify(report,null,2));
@@ -357,8 +436,11 @@
       bestRecent100k:lite(autoBestScenario('recent',100000)),
       topGeo:autoByGeo.slice(0,10).map(x=>({alpha:x.alpha,rows:x.rows,geoRatio:x.geoRatio,minRatio:x.minRatio,wins:x.wins,trainGeo:x.trainGeo,holdoutGeo:x.holdoutGeo,avgMddDelta:x.avgMddDelta})),
       topTrain:autoByTrain.slice(0,10).map(x=>({alpha:x.alpha,rows:x.rows,trainGeo:x.trainGeo,holdoutGeo:x.holdoutGeo,geoRatio:x.geoRatio,minRatio:x.minRatio,wins:x.wins})),
-      rollingCandidate:autoRollCfg?{alpha:autoRollCfg.alpha,rows:autoRollCfg.rows}:null,
-      rolling:autoRolling
+      fineStrictCount:fineStrict.length,
+      fineTop:fineStrict.slice(0,10).map(x=>({alpha:x.alpha,rows:x.rows,geoRatio:x.geoRatio,minRatio:x.minRatio,wins:x.wins,trainGeo:x.trainGeo,holdoutGeo:x.holdoutGeo,avgMddDelta:x.avgMddDelta})),
+      rollingCandidates:autoRollCfgs.map(x=>({alpha:x.alpha,rows:x.rows})),
+      rollingScores,
+      finalRobust
     }
   };
   fs.writeFileSync(path.join(OUTDIR,'im-loc-opt-summary.json'),JSON.stringify(summary,null,2));
