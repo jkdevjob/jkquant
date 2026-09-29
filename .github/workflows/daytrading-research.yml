@@ -76,6 +76,7 @@ jobs:
           HM=$((10#$RAW))
           SNAP="data/daytrading-universe/$YEAR/$DATE.json"
           DAY="data/daytrading/$YEAR/$DATE.json.gz"
+          LIVE="data/daytrading-live/$YEAR/$DATE.json"
 
           if [ "$DOW" -gt 5 ]; then
             echo "주말 — 종료"
@@ -151,6 +152,21 @@ jobs:
             echo "오늘 전일장 분봉 이미 수집됨: $DAY"
           fi
 
+          # 장중 Cloudflare Durable Object의 실시간 종이장부도 원본 그대로 보관한다.
+          # 이후 KIS 전체 분봉 재구성 결과와 비교해 장중 장부의 일치 여부를 측정한다.
+          if [ -n "$KEY" ]; then
+            mkdir -p "$(dirname "$LIVE")"
+            STATUS=$(curl -sS --max-time 30 -o live-paper-response.json -w '%{http_code}'               -H "x-monitor-key: $KEY" "$DAY_WORKER/paper?date=$DATE" || true)
+            if [ "$STATUS" = "200" ] && jq -e '.ok == true and .ledger != null and (.ledger.trades | type) == "array"' live-paper-response.json >/dev/null 2>&1; then
+              jq '.ledger' live-paper-response.json > "$LIVE.tmp"
+              mv "$LIVE.tmp" "$LIVE"
+              echo "장중 모의장부 저장: $(jq -c '{date,targetHm,summary}' "$LIVE")"
+            else
+              rm -f "$LIVE.tmp"
+              echo "장중 모의장부 없음/조회 실패 HTTP $STATUS"
+            fi
+          fi
+
           python .app/scripts/backtest_daytrading.py
 
           if [ "$NEW_DAY" = "1" ] && [ -n "$KEY" ] && [ -f data/daytrading-research/latest.json ]; then
@@ -160,7 +176,7 @@ jobs:
 
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add data/daytrading data/daytrading-research
+          git add data/daytrading data/daytrading-live data/daytrading-research
           if git diff --cached --quiet; then
             echo "새 데이트레이딩 데이터/연구결과 없음"
             exit 0
