@@ -72,8 +72,17 @@ export function daySignal(rows,cutoffHm=1430,overrides={}){
     if(!(x.c>priorHigh&&volRatio>=p.volMult))continue;
     const breakoutPct=(x.c/priorHigh-1)*100;
     return {
+      strategyVersion:"daytrading_vwap_breakout_v1",
       signalTime:x.hm,signalPrice:x.c,sessionBase,sessionRet,vwap:vw,vwapSlope:slope,
       priorHigh,breakoutPct,volRatio,
+      evidence:{
+        source:"Naver 1m close/volume",
+        sessionBase,sessionRet,minSessionRet:p.minSessionRet,maxSessionRet:p.maxSessionRet,
+        vwap:vw,vwapSlope:slope,minVwapSlope:p.minVwapSlope,
+        priorHigh,lookback:p.lookback,breakoutPct,
+        volumeRatio:volRatio,requiredVolumeRatio:p.volMult,
+        entryCutoff:p.entryCutoff
+      },
       score:volRatio*Math.max(.01,breakoutPct+.05)*Math.max(.01,slope+.05),
     };
   }
