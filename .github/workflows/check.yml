@@ -66,6 +66,7 @@ jobs:
           node --input-type=module --check < functions/api/crypto.js
           node --input-type=module --check < functions/api/crypto-research.js
           node --input-type=module --check < functions/api/soxl-research.js
+          node --input-type=module --check < functions/api/soxl-bars.js
           node --input-type=module --check < worker/opening-scheduler/src/index.js
           node --input-type=module --check < worker/daytrading-scheduler/src/index.js
 
@@ -367,7 +368,7 @@ jobs:
           let fail=0;
           const must=[
             ['data-strategy="crypto"','비트코인 탭'],
-            ['id="scVer">v1.22.0','단타 버전 1.22.0'],
+            ['id="scVer">v1.22.1','단타 버전 1.22.1'],
             ['다음 5분봉 시가','다음 봉 진입 설명'],
             ['손절 우선','동일봉 보수 청산 설명'],
             ['최근 365일 백필','초기 백필 안내']
@@ -429,10 +430,12 @@ jobs:
           const py=fs.readFileSync('scripts/backtest_soxl_intraday.py','utf8');
           const wf=fs.readFileSync('.github/workflows/soxl-research.yml','utf8');
           const api=fs.readFileSync('functions/api/soxl-research.js','utf8');
+          const barsApi=fs.readFileSync('functions/api/soxl-bars.js','utf8');
+          const collector=fs.readFileSync('scripts/collect_soxl_data.py','utf8');
           let fail=0;
           const must=[
             [ui,'data-strategy="soxl"','SOXL 탭'],
-            [ui,'id="scVer">v1.22.0','단타 버전 1.22.0'],
+            [ui,'id="scVer">v1.22.1','단타 버전 1.22.1'],
             [ui,'다음 5분봉 시가','next-bar 진입 설명'],
             [py,'baseline-decisions.csv','거래/무거래 판단기록'],
             [py,'target1PctDayRatePct','+1% 목표 지표'],
@@ -440,12 +443,16 @@ jobs:
             [py,'"walkForward": wf','walk-forward 결과 저장'],
             [py,'"evidence": {','판단증거'],
             [wf,'15 22 * * 1-5','미국장 종료 후 일일수집'],
-            [wf,'git status --porcelain -- data/soxl','신규 미추적 세션 변경감지']
+            [wf,'git status --porcelain -- data/soxl','신규 미추적 세션 변경감지'],
+            [collector,'https://jkquant.pages.dev/api/soxl-bars','Cloudflare SOXL 프록시 우선'],
+            [collector,'Emergency fallback: direct Yahoo','Yahoo 직접호출은 비상 폴백'],
+            [barsApi,'const symbol="SOXL"','프록시 종목 SOXL 고정'],
+            [barsApi,'interval=5m&range=60d','SOXL 5분봉 60일 프록시']
           ];
           for(const [txt,needle,label] of must){
             if(!txt.includes(needle)){console.error('✗ '+label+' 없음');fail++;}
           }
-          if(/op=order|\/v1\/accounts|\bjwt\b/i.test(api+wf+py)){
+          if(/op=order|\/v1\/accounts|\bjwt\b/i.test(api+barsApi+wf+py+collector)){
             console.error('✗ SOXL 연구 경로에 주문/계좌 인증 문자열 발견');fail++;
           }
           if(fail)process.exit(1);
