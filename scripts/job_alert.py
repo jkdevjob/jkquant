@@ -162,6 +162,7 @@ SHORT_TERM_EXCLUDE_TERMS = (
     '자격증 필수', '면허 필수', '운전면허', '지게차',
     '경력 1년', '경력1년', '경력 2년', '경력2년',
     '간호사', '요양보호사', '전기기사', '현장소장',
+    '2개월', '3개월', '4개월', '5개월', '6개월',
 )
 PRIORITY_TERMS = (
     '프리랜서', '계약직', 'sm', '유지보수', '공공', '정부',
@@ -309,6 +310,8 @@ def score_java_result(title, body, url):
         return -999
     if any(term in text for term in EXCLUDE_TERMS):
         return -999
+    if any(term in text for term in JUNIOR_ONLY_TERMS):
+        return -999
 
     has_dev = any(term in text for term in DEV_REQUIRED_TERMS)
     has_ai = any(term in text for term in AI_TERMS)
@@ -336,7 +339,7 @@ def score_regular_dev_result(title, body, url):
         return -999
     if any(term in text for term in JUNIOR_ONLY_TERMS):
         return -999
-    if not any(term in text for term in REGULAR_DEV_TERMS):
+    if not any(term in text for term in DEV_REQUIRED_TERMS):
         return -999
 
     # 신입 공고라도 경력 지원 가능 문구가 함께 있으면 허용하고,
@@ -566,6 +569,26 @@ def jobkorea_card_text(anchor):
     return fallback
 
 
+def jobkorea_title_quality(title):
+    text = normalize_text(title)
+    lower = text.lower()
+    score = min(len(text), 100)
+
+    reward_terms = (
+        '개발', 'java', 'spring', 'jsp', '백엔드', '프론트', '웹',
+        '채용', '모집', '운영', '유지보수', '엔지니어', 'si', 'sm',
+        'ai', '계약직', '정규직', '프리랜서',
+    )
+    score += 25 * sum(1 for term in reward_terms if term in lower)
+
+    company_markers = ('㈜', '(주)', '주식회사', '관심기업', '벤처기업')
+    if any(marker in text for marker in company_markers):
+        score -= 80
+    if text in {'벤처기업', '중소기업', '강소기업', '외국계'}:
+        score -= 200
+    return score
+
+
 def collect_jobkorea_direct():
     session = requests.Session()
     session.headers.update({
@@ -623,10 +646,21 @@ def collect_jobkorea_direct():
                         'salary': salary_info(title, body),
                         'short_pay': short_term_pay_info(title, body),
                         'source': '잡코리아 직접',
+                        '_title_quality': jobkorea_title_quality(title),
                     }
                     current = jobs.get(url)
-                    if current is None or len(candidate['body']) > len(current['body']):
+                    if current is None:
                         jobs[url] = candidate
+                    else:
+                        if len(candidate['body']) > len(current['body']):
+                            current['body'] = candidate['body']
+                            current['salary'] = salary_info(current['title'], current['body'])
+                            current['short_pay'] = short_term_pay_info(current['title'], current['body'])
+                        if candidate['_title_quality'] > current.get('_title_quality', -9999):
+                            current['title'] = candidate['title']
+                            current['_title_quality'] = candidate['_title_quality']
+                            current['salary'] = salary_info(current['title'], current['body'])
+                            current['short_pay'] = short_term_pay_info(current['title'], current['body'])
                     page_links += 1
 
                 parsed_links += page_links
@@ -659,6 +693,8 @@ def collect_jobkorea_direct():
     for error in errors[:5]:
         print(f'[WARN] jobkorea direct: {error}', file=sys.stderr)
 
+    for job in jobs.values():
+        job.pop('_title_quality', None)
     return list(jobs.values()), status
 
 
