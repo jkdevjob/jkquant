@@ -439,6 +439,7 @@ html.had-user #authgate .bootwait{display:block}
 .cyctbl tr:last-child td{border-bottom:none}
 .cyctbl .cmin{color:var(--vio)}.cyctbl .cmax{color:var(--gold)}.cyctbl .cneg{color:var(--sell)}
 .cw{color:var(--faint);font-size:10px;display:block;font-weight:500;white-space:nowrap;line-height:1.25}
+.paper-opt-more{white-space:normal;margin-top:1px}
 
 /* 진입 버튼 (다음 V) */
 .enterbtn{width:100%;padding:15px;border:none;border-radius:13px;background:linear-gradient(135deg,var(--vio),var(--vio2));color:#fff;font-size:15px;font-weight:800;cursor:pointer;margin-top:12px;-webkit-tap-highlight-color:transparent}
@@ -545,7 +546,7 @@ try{ if(localStorage.getItem('qcockpit_hadUser')==='1') document.documentElement
 </div>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.105.1</span></h1></div>
+    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.105.2</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -1654,7 +1655,7 @@ if(/^\/paper\/?$/.test(location.pathname)){
   <footer>
     <strong>JK 퀀트</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.105.1</b> · 2026-09-29</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.105.2</b> · 2026-09-29</div>
   </footer>
 </div>
 
@@ -7758,7 +7759,14 @@ async function openPaper(){
       const _sortOut=(ok&&Number.isFinite(+r.retOut))?+r.retOut:'';
       const _sortCagr=(ok&&long&&Number.isFinite(+r.cagr))?+r.cagr:'';
       const _sortInflow=r.inflowWon!=null?(+r.inflowWon||0):((+r.inflow||0)*(+r.wonRate||1));
-      h+=`<tr data-name="${_sortName}" data-days="${days}" data-total="${_sortTotal}" data-ret="${_sortRet}" data-mdd="${_sortMdd}" data-now="${_sortNow}" data-out="${_sortOut}" data-cagr="${_sortCagr}" data-inflow="${_sortInflow}"><td><b class="slink" onclick="gotoSess('${r.tab}','${r.id}')" title="${r.label} 분석으로 이동 — ${_nm}">${r.label}</b><span class="cw">${r.sym}${r.opts&&r.opts.length?' · '+r.opts.join(' · '):''}</span>${outTag}</td>
+      /* 전략 설명은 로테이션 수준(주요 옵션 3개)까지만 첫 줄에 둔다.
+         무한매수처럼 옵션이 더 많으면 나머지는 바로 아래 줄로 내려 표 폭을 키우지 않는다. */
+      const _paperOpts=(r.opts||[]).map(x=>String(x));
+      const _paperOptsTop=_paperOpts.slice(0,3);
+      const _paperOptsRest=_paperOpts.slice(3);
+      const _paperOptTopText=_paperOptsTop.length?' · '+_paperOptsTop.join(' · '):'';
+      const _paperOptRestText=_paperOptsRest.length?`<span class="cw paper-opt-more">${_paperOptsRest.join(' · ')}</span>`:'';
+      h+=`<tr data-name="${_sortName}" data-days="${days}" data-total="${_sortTotal}" data-ret="${_sortRet}" data-mdd="${_sortMdd}" data-now="${_sortNow}" data-out="${_sortOut}" data-cagr="${_sortCagr}" data-inflow="${_sortInflow}"><td><b class="slink" onclick="gotoSess('${r.tab}','${r.id}')" title="${r.label} 분석으로 이동 — ${_nm}">${r.label}</b><span class="cw">${r.sym}${_paperOptTopText}</span>${_paperOptRestText}${outTag}</td>
         <td>${per}<span class="cw">${r.nTrade}거래</span></td>`
         + (ok
           ? `<td>${paperWon(r.total,r.wonRate)}</td>
