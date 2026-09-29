@@ -240,12 +240,22 @@ def first_trade(day,row,p:Params):
 
         pnl=(exit_px/entry-1)*100-p.fee
         return {
-            "date":day["date"],"rank":int(row.get("rank") or 0),
+            "date":day["date"],"strategyVersion":"daytrading_vwap_breakout_v1","rank":int(row.get("rank") or 0),
             "code":row.get("code"),"name":row.get("name"),
             "snapshotHm":snapshot_hm,"signalTime":x["hm"],"entryTime":ent["hm"],
             "entryPrice":entry,"exitTime":exit_hm,"exitPrice":exit_px,"reason":reason,
             "sessionRet":session_ret,"vwap":vw,"vwapSlope":slope,
             "priorHigh":prior_high,"breakoutPct":breakout,"volRatio":vol_ratio,
+            "decisionReason":"session+vwap+slope+breakout+volume_pass",
+            "evidence":{
+                "snapshotHm":snapshot_hm,"sessionBase":day_open,
+                "sessionRet":session_ret,"minSessionRet":p.min_session_ret,"maxSessionRet":p.max_session_ret,
+                "vwap":vw,"vwapSlope":slope,"minVwapSlope":p.min_vwap_slope,
+                "priorHigh":prior_high,"lookback":p.lookback,"breakoutPct":breakout,
+                "volumeRatio":vol_ratio,"requiredVolumeRatio":p.vol_mult,
+                "entryCutoff":p.entry_cutoff,"stopPct":p.stop,
+                "takeProfitPct":p.take_profit,"frictionPct":p.fee,"finalExit":p.final_exit,
+            },
             "timeBucket":time_bucket(ent["hm"]),
             "volRatioBucket":bucket_value(vol_ratio,(1.75,2.5,999),("1.5~1.74","1.75~2.49","2.5+")),
             "vwapSlopeBucket":bucket_value(slope,(0.2,0.4,999),("0.10~0.19","0.20~0.39","0.40+")),
@@ -499,7 +509,7 @@ def main():
     (OUT/f"{raw_labels[-1]}.json").write_text(json.dumps(report,ensure_ascii=False,indent=2),encoding="utf-8")
 
     with (OUT/"baseline-trades.csv").open("w",encoding="utf-8",newline="") as f:
-        cols=["date","rank","code","name","snapshotHm","signalTime","entryTime","entryPrice","exitTime","exitPrice","reason",
+        cols=["date","strategyVersion","rank","code","name","snapshotHm","signalTime","entryTime","entryPrice","exitTime","exitPrice","reason",
               "sessionRet","vwapSlope","breakoutPct","volRatio","timeBucket","marketRegime","k200Ret","kosdaq150Ret",
               "mfePct","mfeTime","maePct","maeTime","fwd1mPct","fwd3mPct","fwd5mPct","fwd10mPct","fwd20mPct","pnl"]
         w=csv.DictWriter(f,fieldnames=cols); w.writeheader()
