@@ -10558,7 +10558,7 @@ console.log('[SCALPING FLOW] 단타 공통 흐름 · 모의체결 분리');
      && /VTTS3035R/.test(kis));
   ok('KIS 해외 모의 조회는 전체조회 후 종목 필터', /PDNO:""[\s\S]{0,220}OVRS_EXCG_CD:""/.test(kis)
      && /if\(code\) rows=rows\.filter\(x=>x\.code===code\)/.test(kis));
-  ok('단타 화면 버전 1.23.0', /id="scVer">v1\\.23\\.0<\/span>/.test(sc));
+  ok('단타 화면 버전 1.23.0', /id="scVer">v1\.23\.0<\/span>/.test(sc));
 }
 
 
