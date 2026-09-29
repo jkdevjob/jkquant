@@ -1,0 +1,48 @@
+name: Infinite Buy LOC optimization research
+
+on:
+  push:
+    branches:
+      - "research/im-loc-opt-20260929"
+    paths:
+      - "scripts/research_im_loc_opt.cjs"
+      - "scripts/research_im_loc_opt_append.inc.js"
+      - ".github/workflows/im-loc-opt.yml"
+      - "backtest.html"
+      - "index.html"
+      - "regression-check.js"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  research:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout research branch
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Run exact-engine LOC optimization
+        run: node scripts/research_im_loc_opt.cjs
+
+      - name: Show summary
+        if: always()
+        run: |
+          if [ -f research-output/im-loc-opt-summary.json ]; then
+            cat research-output/im-loc-opt-summary.json
+          fi
+
+      - name: Upload research result
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: im-loc-opt-result
+          path: research-output/
+          if-no-files-found: warn
