@@ -62,6 +62,10 @@ jobs:
         shell: bash
         run: |
           set -e
+          if [ "$GITHUB_EVENT_NAME" = "push" ]; then
+            echo "코드 push 실행 — Pages 배포와 경합하지 않도록 Telegram 발송은 다음 정기/수동 실행에서 수행"
+            exit 0
+          fi
           REPORT="data/crypto-research/latest.json"
           [ -f "$REPORT" ] || { echo "BTC 연구 리포트 없음"; exit 0; }
           DATE=$(jq -r '.to // empty' "$REPORT")
