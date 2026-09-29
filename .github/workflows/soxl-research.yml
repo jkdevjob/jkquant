@@ -51,7 +51,7 @@ jobs:
           set -e
           python .app/scripts/collect_soxl_data.py
           CHANGED=0
-          if ! git diff --quiet -- data/soxl; then
+          if [ -n "$(git status --porcelain -- data/soxl)" ]; then
             CHANGED=1
           fi
 
