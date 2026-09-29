@@ -60,7 +60,7 @@ export async function onRequestPost({request,env}){
     lines.push("","[SOXL]");
     lines.push("유효 "+Number(s.validDays||0)+"일 · 기준 "+Number(sb?.trades||0)+"건 · 평균 "+pct(sb?.avgPnl)+" · 복리 "+pct(sb?.compoundReturnPct));
     lines.push("일평균 "+pct(sb?.avgDailyReturnPct)+" · +1% 이상 일수비율 "+pct(sb?.target1PctDayRatePct)+" · MDD "+pct(sb?.maxDrawdownPct));
-    if(sc)lines.push("개선안 관찰: "+sc.name+" · 홀드아웃 평균 우위 "+pct(sc.holdoutAvgEdgePct)+" · +1% 일수비율 "+pct(sc.holdoutTarget1PctDayRatePct)+" · "+sc.status);
+    if(sc)lines.push("개선안 관찰: "+sc.name+" · 홀드아웃 우위 "+pct(sc.holdoutAvgEdgePct)+" · WF OOS 우위 "+pct(sc.oosAvgEdgePct)+" · +1% 일수비율 "+pct(sc.holdoutTarget1PctDayRatePct)+" · "+sc.status);
     else lines.push("개선안 관찰: 표본 수집 중");
 
     lines.push("","[KIS VTS 체결검증]");
