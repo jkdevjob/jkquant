@@ -278,6 +278,60 @@ function ledgerSummary(ledger){
     realizedAvgPnlPct:pn.length?pn.reduce((s,x)=>s+x,0)/pn.length:null
   };
 }
+
+async function sendScalpingAlert(env,payload){
+  try{
+    const r=await fetch(baseUrl(env)+"/api/scalping-alert",{
+      method:"POST",
+      headers:{"content-type":"application/json","x-monitor-key":env.MONITOR_KEY},
+      body:JSON.stringify(payload)
+    });
+    const j=await r.json().catch(()=>({}));
+    if(!r.ok||!j.ok)throw new Error(j.error||("HTTP "+r.status));
+    return j;
+  }catch(e){
+    console.error(JSON.stringify({type:"telegram_alert_error",strategy:"daytrading",error:String(e.message||e),eventId:payload&&payload.eventId}));
+    return null;
+  }
+}
+function hmLabel(v){return String(v||"").padStart(4,"0");}
+function signedPct(v){const n=Number(v||0);return (n>=0?"+":"")+n.toFixed(2)+"%";}
+function exitLabel(v){
+  return v==="take_profit"?"익절":v==="stop"?"손절":v==="time_exit"?"시간청산":String(v||"청산");
+}
+async function notifyPaperTransitions(env,oldLedger,newLedger){
+  const oldBy=new Map(((oldLedger&&oldLedger.trades)||[]).map(x=>[x.id,x]));
+  for(const x of ((newLedger&&newLedger.trades)||[])){
+    const prev=oldBy.get(x.id);
+    if(!prev){
+      await sendScalpingAlert(env,{
+        strategy:"daytrading",stage:"buy",
+        eventId:"daytrading:"+newLedger.date+":"+x.id+":buy",
+        date:newLedger.date,time:hmLabel(x.signalTime),
+        lines:[
+          (x.name||x.code)+" ("+x.code+")",
+          "신호 "+hmLabel(x.signalTime)+" · 신호가 "+Math.round(x.signalPrice||0).toLocaleString("ko-KR")+"원",
+          "매수: 다음 1분봉 시가 "+hmLabel(x.entryTime)+(x.entryPrice?" · "+Math.round(x.entryPrice).toLocaleString("ko-KR")+"원":" · 진입 대기"),
+          "근거: 점수 "+Number(x.score||0).toFixed(1)+" · 장중수익 "+signedPct(x.sessionRet)+" · VWAP기울기 "+signedPct(x.vwapSlope)+" · 거래량 "+Number(x.volRatio||0).toFixed(2)+"배",
+          "청산계획: 손절 -"+PAPER_STOP_PCT.toFixed(1)+"% · 익절 +"+PAPER_TAKE_PROFIT_PCT.toFixed(1)+"% · "+hmLabel(PAPER_FINAL_EXIT_HM)+" 시간청산"
+        ]
+      });
+    }
+    if(x.status==="closed"&&(!prev||prev.status!=="closed")){
+      await sendScalpingAlert(env,{
+        strategy:"daytrading",stage:"sell",
+        eventId:"daytrading:"+newLedger.date+":"+x.id+":sell:"+String(x.exitTime||""),
+        date:newLedger.date,time:hmLabel(x.exitTime),
+        lines:[
+          (x.name||x.code)+" ("+x.code+") · "+exitLabel(x.reason),
+          "매수 "+hmLabel(x.entryTime)+" · "+Math.round(x.entryPrice||0).toLocaleString("ko-KR")+"원",
+          "매도 "+hmLabel(x.exitTime)+" · "+Math.round(x.exitPrice||0).toLocaleString("ko-KR")+"원",
+          "모의 순손익 "+signedPct(x.pnl)+" · 왕복 마찰비용 "+PAPER_FRICTION_PCT.toFixed(2)+"% 반영"
+        ]
+      });
+    }
+  }
+}
 async function reconcilePaper(env,date,target,candidates){
   const old=await readPaper(env,date);
   const by=new Map(((old&&old.trades)||[]).map(x=>[x.id,x]));
@@ -294,7 +348,9 @@ async function reconcilePaper(env,date,target,candidates){
     trades
   };
   ledger.summary=ledgerSummary(ledger);
-  return writePaper(env,ledger);
+  const saved=await writePaper(env,ledger);
+  await notifyPaperTransitions(env,old,saved);
+  return saved;
 }
 async function advanceExistingPaper(env,date,target){
   const old=await readPaper(env,date);
@@ -309,7 +365,9 @@ async function advanceExistingPaper(env,date,target){
   }
   const ledger={...old,updatedAt:new Date().toISOString(),targetHm:target,trades};
   ledger.summary=ledgerSummary(ledger);
-  return writePaper(env,ledger);
+  const saved=await writePaper(env,ledger);
+  await notifyPaperTransitions(env,old,saved);
+  return saved;
 }
 
 async function runScheduled(controller,env){
