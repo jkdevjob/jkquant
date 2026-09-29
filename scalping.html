@@ -1332,7 +1332,7 @@ async function loadSoxlResearch(){
     }
     const labels={baseline:'기준 OR15',range_5m:'OR 5분',range_30m:'OR 30분','vol_0.8':'거래량 0.8배','vol_1.2':'거래량 1.2배',
       no_vwap:'VWAP 제외','stop_0.8_tp_1.6':'손절0.8/익절1.6','stop_1.5_tp_3.0':'손절1.5/익절3.0',hold_45m:'최대45분',hold_120m:'최대120분'};
-    const vars=j.variants||[],base=vars.find(x=>x.params&&x.params.name==='baseline')||{},st=base.summary||{},hv=(base.validation||{}).holdout||{},roll=j.rolling30||{};
+    const vars=j.variants||[],base=vars.find(x=>x.params&&x.params.name==='baseline')||{},st=base.summary||{},hv=(base.validation||{}).holdout||{},roll=j.rolling30||{},wf=j.walkForward||{};
     msg.textContent=(j.from||'')+' ~ '+(j.to||'')+' · 유효 '+j.validDays+'일 · 기준 '+(st.trades||0)+'건 · '+(j.comparisonStatus==='reviewable'?'비교 가능':'표본 수집 중');
     let h='<div class="out" style="margin-bottom:12px">'+
       '<div class="outbox"><div class="ol">승률</div><div class="ov">'+soxlNum(st.winRate,1)+'%</div></div>'+
@@ -1342,7 +1342,8 @@ async function loadSoxlResearch(){
       '<div class="outbox"><div class="ol">복리</div><div class="ov">'+soxlPct(st.compoundReturnPct)+'</div></div>'+
       '<div class="outbox"><div class="ol">MDD</div><div class="ov">'+soxlPct(st.maxDrawdownPct)+'</div></div></div>';
     h+='<div class="warn"><b>홀드아웃</b> '+(hv.trades||0)+'건 · 평균 '+soxlPct(hv.avgPnl)+' · 복리 '+soxlPct(hv.compoundReturnPct)+
-      (roll.count?' · <b>30일 롤링 최악</b> '+soxlPct(roll.worstCompoundReturnPct):'')+'</div>';
+      (roll.count?' · <b>30일 롤링 최악</b> '+soxlPct(roll.worstCompoundReturnPct):'')+
+      ' · <b>Walk-forward</b> '+esc(wf.status||'collecting')+' / '+Number(wf.foldCount||0)+' folds</div>';
 
     const decisions=(j.latestDecisions||[]).slice().reverse();
     if(decisions.length){
