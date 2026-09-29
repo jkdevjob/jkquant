@@ -63,11 +63,14 @@ jobs:
           node --input-type=module --check < functions/api/vts-research.js
           node --input-type=module --check < functions/api/vts-summary.js
           node --input-type=module --check < functions/api/nightly-research-summary.js
+          node --input-type=module --check < functions/api/scalping-alert.js
+          node --input-type=module --check < functions/api/scalping-daily-summary.js
           node --input-type=module --check < functions/api/crypto.js
           node --input-type=module --check < functions/api/crypto-research.js
           node --input-type=module --check < functions/api/soxl-research.js
           node --input-type=module --check < worker/opening-scheduler/src/index.js
           node --input-type=module --check < worker/daytrading-scheduler/src/index.js
+          node --input-type=module --check < worker/global-intraday-scheduler/src/index.js
 
       - name: VTS 대조는 읽기전용인지 검사
         run: |
