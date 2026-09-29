@@ -1977,11 +1977,34 @@ async function loadOpeningResearch(){
       rows=rows||[]; if(!rows.length)return '';
       return '<div style="margin-top:12px"><b>'+esc(title)+'</b></div><div class="htable-wrap" style="margin-top:6px"><table class="htable"><thead><tr>'+
         '<th>조건</th><th>신호</th><th>승률</th><th>평균이익</th><th>평균손실</th><th>기대값</th><th>MFE</th><th>MAE</th><th>+1% 도달</th><th>-1% 도달</th>'+
-        '</tr></thead><tbody>'+rows.map(z=>'<tr><td><b>'+esc(z.group)+'</b></td><td>'+z.trades+'</td><td>'+rate(z.winRate)+'</td>'+
+        '</tr></thead><tbody>'+rows.map(z=>'<tr><td><b>'+esc(z.group)+'</b></td><td>'+(z.trades!=null?z.trades:(z.signals||0))+'</td><td>'+rate(z.winRate)+'</td>'+
         '<td class="win">'+pct(z.avgWin)+'</td><td class="loss">'+pct(z.avgLoss)+'</td><td class="'+((z.expectancyPct||0)>=0?'win':'loss')+'">'+pct(z.expectancyPct)+'</td>'+
         '<td>'+pct(z.avgMfe)+'</td><td>'+pct(z.avgMae)+'</td><td>'+rate(z.plus1HitRate)+'</td><td>'+rate(z.minus1HitRate)+'</td></tr>').join('')+
         '</tbody></table></div>';
     };
+    const live=j.liveSignals||null;
+    if(live){
+      const lo=live.overall||{};
+      html+='<div style="margin-top:16px"><b>📡 실제 알림 누적 성과</b><div class="sub">Cloudflare 감시에서 실제 발생한 BUY 신호만 집계합니다. 장마감 재구성 백테스트와 섞지 않습니다.</div></div>'+
+        '<div class="out" style="margin-top:8px">'+
+        '<div class="outbox"><div class="ol">실제 신호</div><div class="ov">'+(live.signals||0)+'</div></div>'+
+        '<div class="outbox"><div class="ol">09:30 결과 연결</div><div class="ov">'+(live.labelledSignals||0)+'</div></div>'+
+        '<div class="outbox"><div class="ol">30분 경로 연결</div><div class="ov">'+(live.pathLabelledSignals||0)+'</div></div>'+
+        '<div class="outbox"><div class="ol">알림 전송 실패</div><div class="ov '+((live.deliveryFailures||0)?'bad':'good')+'">'+(live.deliveryFailures||0)+'</div></div>'+
+        '<div class="outbox"><div class="ol">스캔 / 부분스캔</div><div class="ov">'+(live.scanCount||0)+' / '+(live.partialScans||0)+'</div></div>'+
+        '<div class="outbox"><div class="ol">실제 기대값</div><div class="ov '+((lo.expectancyPct||0)>=0?'good':'bad')+'">'+pct(lo.expectancyPct)+'</div></div>'+
+        '</div>'+
+        groupTable('실제 신호 · 전략별',live.byVariant)+
+        groupTable('실제 신호 · 전략 버전별',live.byStrategyVersion)+
+        groupTable('실제 신호 · 진입시간',live.byEntryTime)+
+        groupTable('실제 신호 · 갭 구간',live.byGap)+
+        groupTable('실제 신호 · 눌림 폭',live.byPullback)+
+        groupTable('실제 신호 · 거래량',live.byVolume)+
+        groupTable('실제 신호 · 거래대금',live.byAmount)+
+        groupTable('실제 신호 · 유니버스 순위',live.byRank)+
+        '<p class="note">실제 알림 원본은 날짜별 immutable ledger에 남고, 09:30 전략 손익과 장마감 KIS 30분 경로 라벨을 별도 필드로 연결합니다. 전략 버전을 바꿔도 과거 신호는 새 규칙으로 덮어쓰지 않습니다.</p>';
+    }
+
     html+='<div style="margin-top:14px"><b>🔬 신호 이후 30분 경로 진단</b></div>'+
       '<div class="out" style="margin-top:8px"><div class="outbox"><div class="ol">평균 MFE</div><div class="ov good">'+pct(dg.avgMfe)+'</div></div>'+
       '<div class="outbox"><div class="ol">평균 MAE</div><div class="ov bad">'+pct(dg.avgMae)+'</div></div>'+
