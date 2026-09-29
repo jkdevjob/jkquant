@@ -1,0 +1,45 @@
+name: BTC·SOXL 실시간 단타 알림 스케줄러 배포
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "worker/global-intraday-scheduler/**"
+      - ".github/workflows/deploy-global-intraday-scheduler.yml"
+      - "functions/api/scalping-alert.js"
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Cloudflare 배포 자격증명 확인
+        env:
+          CF_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CF_ACCOUNT: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          MONITOR_KEY: ${{ secrets.AUTOTRADE_KEY }}
+        shell: bash
+        run: |
+          [ -n "$CF_TOKEN" ] || { echo "CLOUDFLARE_API_TOKEN GitHub Secret 없음"; exit 1; }
+          [ -n "$CF_ACCOUNT" ] || { echo "CLOUDFLARE_ACCOUNT_ID GitHub Secret 없음"; exit 1; }
+          [ -n "$MONITOR_KEY" ] || { echo "AUTOTRADE_KEY GitHub Secret 없음"; exit 1; }
+
+      - name: Worker + 1분 Cron 배포
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: npx --yes wrangler@4 deploy --config worker/global-intraday-scheduler/wrangler.jsonc
+
+      - name: Pages와 같은 감시키를 Worker Secret으로 저장
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          MONITOR_KEY: ${{ secrets.AUTOTRADE_KEY }}
+        shell: bash
+        run: printf '%s' "$MONITOR_KEY" | npx --yes wrangler@4 secret put MONITOR_KEY --config worker/global-intraday-scheduler/wrangler.jsonc
