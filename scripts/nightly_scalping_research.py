@@ -23,6 +23,7 @@ from zoneinfo import ZoneInfo
 
 KST=ZoneInfo("Asia/Seoul")
 OPEN=Path("data/opening-history")
+OPEN_OUTCOMES=Path("data/opening-research/signal-outcomes.json")
 DAY=Path("data/daytrading-research/latest.json")
 CRYPTO=Path("data/crypto-research/latest.json")
 SOXL=Path("data/soxl-research/latest.json")
@@ -53,15 +54,111 @@ def stats(rows):
         "sumPnl":sum(pn),
     }
 
+def opening_condition_bucket(name, value):
+    try:
+        v=float(value)
+    except Exception:
+        return "unknown"
+    if name=="gap":
+        if v<3: return "2~3%"
+        if v<4: return "3~4%"
+        if v<5: return "4~5%"
+        return "5~7%"
+    if name=="pullback":
+        if v<=0.5: return "0.3~0.5%"
+        if v<=0.7: return "0.5~0.7%"
+        return "0.7~1.0%"
+    if name=="volume":
+        if v<1.5: return "1.0~1.5x"
+        if v<2.0: return "1.5~2.0x"
+        return "2.0x+"
+    if name=="amount":
+        if v<1.5: return "1.2~1.5x"
+        if v<2.0: return "1.5~2.0x"
+        return "2.0x+"
+    if name=="rank":
+        if v<=20: return "Top1~20"
+        if v<=50: return "Top21~50"
+        return "Top51~100"
+    return str(value)
+
+
+def opening_entry_bucket(hm):
+    h=int(hm or 0)
+    if h<=910: return "09:03~09:10"
+    if h<=920: return "09:11~09:20"
+    return "09:21~09:30"
+
+
+def live_signal_stats(rows):
+    labelled=[x for x in rows if (x.get("reconstructedOutcome") or {}).get("pnl") is not None]
+    pn=[float(x["reconstructedOutcome"]["pnl"]) for x in labelled]
+    wins=[x for x in pn if x>0]
+    losses=[x for x in pn if x<0]
+    path=[x.get("pathOutcome") or {} for x in rows]
+    mf=[float(x["mfePct"]) for x in path if x.get("mfePct") is not None]
+    ma=[float(x["maePct"]) for x in path if x.get("maePct") is not None]
+    def hit(key):
+        return sum(1 for x in path if x.get(key) is not None)
+    n=len(rows)
+    return {
+        "signals":n,
+        "labelled":len(labelled),
+        "pathLabelled":sum(1 for x in path if x.get("mfePct") is not None),
+        "winRate":sum(1 for x in pn if x>0)/len(pn)*100 if pn else 0.0,
+        "avgWin":statistics.fmean(wins) if wins else 0.0,
+        "avgLoss":statistics.fmean(losses) if losses else 0.0,
+        "expectancyPct":statistics.fmean(pn) if pn else 0.0,
+        "avgMfe":statistics.fmean(mf) if mf else None,
+        "avgMae":statistics.fmean(ma) if ma else None,
+        "plus1HitRate":hit("hitPlus1Time")/n*100 if n else 0.0,
+        "plus2HitRate":hit("hitPlus2Time")/n*100 if n else 0.0,
+        "minus1HitRate":hit("hitMinus1Time")/n*100 if n else 0.0,
+        "minus2HitRate":hit("hitMinus2Time")/n*100 if n else 0.0,
+    }
+
+
+def live_group_stats(rows, key_fn):
+    groups={}
+    for x in rows:
+        groups.setdefault(str(key_fn(x) or "unknown"),[]).append(x)
+    return [{"group":k,**live_signal_stats(v)} for k,v in sorted(groups.items())]
+
+
 def opening_report():
     days=[]
     books={}
+    live=[]
+    scan_count=0
+    partial_scans=0
     for p in sorted(OPEN.glob("*.json")):
         j=load_json(p,{}) or {}
         d=str(j.get("date") or p.stem)
         if not d:
             continue
         days.append(d)
+        ledger=j.get("liveSignalLedger") or {}
+        scans=ledger.get("scans") or []
+        scan_count+=len(scans)
+        partial_scans+=sum(1 for x in scans if x.get("partial"))
+        for rec in j.get("signalRecords") or []:
+            if str((rec or {}).get("date") or d)!=d:
+                continue
+            sig=(rec or {}).get("signal") or {}
+            live.append({
+                "signalId":rec.get("signalId"),
+                "date":d,
+                "variant":str(rec.get("variant") or "baseline"),
+                "strategyVersion":str(rec.get("strategyVersion") or sig.get("strategyVersion") or "unknown"),
+                "strategyParams":rec.get("strategyParams") or sig.get("strategyParams"),
+                "alertDelivery":rec.get("alertDelivery"),
+                "code":str(rec.get("code") or sig.get("code") or ""),
+                "name":rec.get("name") or sig.get("name"),
+                "entryTime":sig.get("entryTime"),
+                "signal":sig,
+                "reconstructedOutcome":rec.get("outcome"),
+                "pathOutcome":None,
+            })
         for x in j.get("trades") or []:
             books.setdefault("baseline",[]).append({"date":d,**x})
         for v in j.get("shadowVariants") or []:
@@ -107,6 +204,38 @@ def opening_report():
             "last20Trades":w20["trades"],
         })
     candidates.sort(key=lambda x:(x["status"]!="review",-x["last20AvgEdgePct"],-x["allAvgEdgePct"],x["name"]))
+
+    # Join exact live BUY signals to the richer KIS 30-minute path labels generated later.
+    outcome_data=load_json(OPEN_OUTCOMES,{}) or {}
+    outcome_map={}
+    for x in outcome_data.get("records") or []:
+        key=(str(x.get("date") or ""),str(x.get("variant") or "baseline"),
+             str(x.get("code") or ""),int(x.get("entryTime") or 0))
+        outcome_map[key]=x
+    for x in live:
+        key=(x["date"],x["variant"],x["code"],int(x.get("entryTime") or 0))
+        x["pathOutcome"]=outcome_map.get(key)
+
+    delivery_failures=sum(1 for x in live if (x.get("alertDelivery") or {}).get("error"))
+    live_report={
+        "source":"exact-cloudflare-live-buy-signals",
+        "signals":len(live),
+        "labelledSignals":sum(1 for x in live if (x.get("reconstructedOutcome") or {}).get("pnl") is not None),
+        "pathLabelledSignals":sum(1 for x in live if (x.get("pathOutcome") or {}).get("mfePct") is not None),
+        "deliveryFailures":delivery_failures,
+        "scanCount":scan_count,
+        "partialScans":partial_scans,
+        "overall":live_signal_stats(live),
+        "byVariant":live_group_stats(live,lambda x:x.get("variant")),
+        "byStrategyVersion":live_group_stats(live,lambda x:x.get("strategyVersion")),
+        "byEntryTime":live_group_stats(live,lambda x:opening_entry_bucket(x.get("entryTime"))),
+        "byGap":live_group_stats(live,lambda x:opening_condition_bucket("gap",(x.get("signal") or {}).get("gap"))),
+        "byPullback":live_group_stats(live,lambda x:opening_condition_bucket("pullback",(x.get("signal") or {}).get("pullbackPct"))),
+        "byVolume":live_group_stats(live,lambda x:opening_condition_bucket("volume",(x.get("signal") or {}).get("volRatio"))),
+        "byAmount":live_group_stats(live,lambda x:opening_condition_bucket("amount",(x.get("signal") or {}).get("amountRatio"))),
+        "byRank":live_group_stats(live,lambda x:opening_condition_bucket("rank",(x.get("signal") or {}).get("rank"))),
+        "note":"Exact live signals are never replaced by reconstructed history. 09:30 strategy PnL and later KIS 30-minute path labels remain separate fields.",
+    }
     return {
         "status":"reviewable" if enough else "collecting",
         "archiveDays":len(days),"from":days[0],"to":days[-1],
@@ -117,6 +246,7 @@ def opening_report():
             "autoPromotion":False,
         },
         "variants":variants,"candidates":candidates,
+        "liveSignals":live_report,
     }
 
 def compound_daily(daily):
