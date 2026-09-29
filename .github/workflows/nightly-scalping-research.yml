@@ -1,12 +1,12 @@
 name: 단타 야간 자동연구
 
-# 시초가 + 데이트레이딩 + KIS VTS 체결자료를 하루 한 번 통합 분석한다.
+# 시초가 + 데이트레이딩 + 비트코인 + KIS VTS 체결자료를 하루 한 번 통합 분석한다.
 # 라이브 전략은 자동으로 바꾸지 않고, 충분한 표본이 쌓였을 때 검토 후보만 기록/알림한다.
 
 on:
   schedule:
-    - cron: "10 10 * * 1-5"  # 19:10 KST
-    - cron: "10 11 * * 1-5"  # 20:10 KST backup
+    - cron: "10 10 * * *"    # 19:10 KST · 비트코인은 주말에도 거래
+    - cron: "10 11 * * *"    # 20:10 KST backup
   workflow_dispatch:
   push:
     branches: [main]
@@ -44,7 +44,7 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: 시초가 + 데이트레이딩 + VTS 통합 연구
+      - name: 시초가 + 데이트레이딩 + 비트코인 + VTS 통합 연구
         env:
           KEY: ${{ secrets.AUTOTRADE_KEY }}
           BASE: https://jkquant.pages.dev
@@ -52,9 +52,6 @@ jobs:
         run: |
           set -e
           DATE=$(TZ=Asia/Seoul date +%F)
-          DOW=$(TZ=Asia/Seoul date +%u)
-          [ "$DOW" -le 5 ] || { echo "주말 — 종료"; exit 0; }
-
           python .app/scripts/nightly_scalping_research.py
 
           REPORT="data/nightly-research/latest.json"
