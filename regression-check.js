@@ -1373,7 +1373,7 @@ console.log('[25] 모의 성과 → 분석 이동');
   ok('누르는 곳 설명도 분석으로', /title="\$\{r\.label\} 분석으로 이동 — \$\{_nm\}"/.test(idx));
   ok('세션 이름은 툴팁에만 (칸에는 종목·설정)',
      /const _nm=String\(r\.name\|\|''\)\.replace\(\/<\/g,'&lt;'\)/.test(idx)
-     && /<span class="cw">\$\{r\.sym\}\$\{r\.opts&&r\.opts\.length\?' · '\+r\.opts\.join\(' · '\):''\}<\/span>/.test(idx));
+     && /<span class="cw">\$\{r\.sym\}\$\{_paperOptTopText\}<\/span>\$\{_paperOptRestText\}/.test(idx));
   ok('전략 이름을 누르라고 알려 준다', /<b style="color:var\(--vio\)">전략 이름<\/b>을 누르면/.test(idx));
 }
 

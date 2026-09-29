@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Nightly research rollup for opening + day-trading strategies.
+"""Nightly research rollup for opening + day-trading + bitcoin + SOXL strategies.
 
 Reads immutable/reconstructed paper research from scalping-data and produces a
 single daily research report. It NEVER changes live strategy parameters.
@@ -25,6 +25,7 @@ KST=ZoneInfo("Asia/Seoul")
 OPEN=Path("data/opening-history")
 DAY=Path("data/daytrading-research/latest.json")
 CRYPTO=Path("data/crypto-research/latest.json")
+SOXL=Path("data/soxl-research/latest.json")
 VTS=Path("data/vts-research/latest.json")
 OUT=Path("data/nightly-research")
 
@@ -219,6 +220,7 @@ def crypto_report():
             "trades":x["trades"],"holdoutTrades":x["holdoutTrades"],
             "target1PctDayRatePct":x["target1PctDayRatePct"],
             "holdoutTarget1PctDayRatePct":x["holdoutTarget1PctDayRatePct"],
+            "oosAvgEdgePct":oos_edge,"oosTrades":oos_trades,
             "mddOk":mdd_ok,
         })
     candidates.sort(key=lambda x:(
@@ -234,10 +236,80 @@ def crypto_report():
         "validDays":int(j.get("validDays") or 0),
         "from":j.get("from"),"to":j.get("to"),
         "comparisonStatus":j.get("comparisonStatus") or "collecting",
+        "walkForwardStatus":wf_status,
+        "walkForwardFolds":int(wf.get("foldCount") or 0),
         "rolling30":j.get("rolling30") or {},
         "variants":rows,"candidates":candidates,
         "autoPromotion":False,
         "targetNote":"1% is a research target metric, not a guaranteed daily return."
+    }
+
+
+def soxl_report():
+    j=load_json(SOXL,{}) or {}
+    rows=[]
+    for v in j.get("variants") or []:
+        p=v.get("params") or {}
+        x=v.get("summary") or {}
+        h=(v.get("validation") or {}).get("holdout") or {}
+        rows.append({
+            "name":str(p.get("name") or ""),
+            "trades":int(x.get("trades") or 0),
+            "winRate":float(x.get("winRate") or 0),
+            "avgPnl":float(x.get("avgPnl") or 0),
+            "avgDailyReturnPct":float(x.get("avgDailyReturnPct") or 0),
+            "target1PctDayRatePct":float(x.get("target1PctDayRatePct") or 0),
+            "profitFactor":float(x.get("profitFactor") or 0),
+            "compoundReturnPct":float(x.get("compoundReturnPct") or 0),
+            "maxDrawdownPct":float(x.get("maxDrawdownPct") or 0),
+            "holdoutTrades":int(h.get("trades") or 0),
+            "holdoutAvgPnl":float(h.get("avgPnl") or 0),
+            "holdoutCompoundReturnPct":float(h.get("compoundReturnPct") or 0),
+            "holdoutTarget1PctDayRatePct":float(h.get("target1PctDayRatePct") or 0),
+        })
+    by={x["name"]:x for x in rows}
+    base=by.get("baseline",{"avgPnl":0.0,"maxDrawdownPct":0.0,"holdoutAvgPnl":0.0})
+    wf=j.get("walkForward") or {}
+    wf_status=wf.get("status") or "collecting"
+    oos_by={x.get("name"):(x.get("summary") or {}) for x in wf.get("oosVariants") or []}
+    eligible=j.get("comparisonStatus")=="reviewable" and wf_status=="reviewable"
+    candidates=[]
+    for x in rows:
+        if x["name"]=="baseline":
+            continue
+        all_edge=x["avgPnl"]-base["avgPnl"]
+        hold_edge=x["holdoutAvgPnl"]-base["holdoutAvgPnl"]
+        ox=oos_by.get(x["name"],{})
+        ob=oos_by.get("baseline",{})
+        oos_edge=float(ox.get("avgPnl") or 0)-float(ob.get("avgPnl") or 0)
+        oos_trades=int(ox.get("trades") or 0)
+        mdd_ok=x["maxDrawdownPct"]>=base["maxDrawdownPct"]-3.0
+        review=(
+            eligible and x["trades"]>=30 and x["holdoutTrades"]>=10 and oos_trades>=10
+            and all_edge>=0.10 and hold_edge>=0.10 and oos_edge>=0.05 and mdd_ok
+        )
+        candidates.append({
+            "name":x["name"],"status":"review" if review else "collecting",
+            "allAvgEdgePct":all_edge,"holdoutAvgEdgePct":hold_edge,
+            "trades":x["trades"],"holdoutTrades":x["holdoutTrades"],
+            "target1PctDayRatePct":x["target1PctDayRatePct"],
+            "holdoutTarget1PctDayRatePct":x["holdoutTarget1PctDayRatePct"],
+            "mddOk":mdd_ok,
+        })
+    candidates.sort(key=lambda x:(
+        x["status"]!="review",-x["holdoutAvgEdgePct"],-x["allAvgEdgePct"],
+        -x["holdoutTarget1PctDayRatePct"],x["name"]
+    ))
+    return {
+        "status":"reviewable" if eligible else "collecting",
+        "archiveDays":int(j.get("archiveDays") or 0),
+        "validDays":int(j.get("validDays") or 0),
+        "from":j.get("from"),"to":j.get("to"),
+        "comparisonStatus":j.get("comparisonStatus") or "collecting",
+        "rolling30":j.get("rolling30") or {},
+        "variants":rows,"candidates":candidates,
+        "autoPromotion":False,
+        "targetNote":"Net +1% days are a research metric, not a guaranteed daily return.",
     }
 
 def vts_report():
@@ -262,6 +334,7 @@ def main():
     o=opening_report()
     d=daytrading_report()
     c=crypto_report()
+    sx=soxl_report()
     v=vts_report()
     report={
         "schema":1,
@@ -271,6 +344,7 @@ def main():
         "opening":o,
         "daytrading":d,
         "crypto":c,
+        "soxl":sx,
         "execution":v,
         "guardrail":{
             "liveStrategyAutoChange":False,
@@ -285,6 +359,7 @@ def main():
         "opening":{"status":o["status"],"archiveDays":o["archiveDays"],"reviewCandidates":[x["name"] for x in o["candidates"] if x["status"]=="review"]},
         "daytrading":{"status":d["status"],"eligibleDays":d["eligibleArchiveDays"],"baselineTrades":d["baselineTradeCount"],"reviewCandidates":[x["name"] for x in d["candidates"] if x["status"]=="review"]},
         "crypto":{"status":c["status"],"validDays":c["validDays"],"reviewCandidates":[x["name"] for x in c["candidates"] if x["status"]=="review"]},
+        "soxl":{"status":sx["status"],"validDays":sx["validDays"],"reviewCandidates":[x["name"] for x in sx["candidates"] if x["status"]=="review"]},
         "vts":v["strategies"],
     },ensure_ascii=False,indent=2))
     return 0

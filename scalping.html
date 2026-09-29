@@ -187,7 +187,7 @@ canvas{display:block;width:100%;height:auto}
 
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Morning Scalping</div><h1>JK <span class="v">퀀트</span> 단타 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="scVer">v1.21.0</span></h1></div>
+    <div><div class="kicker">Morning Scalping</div><h1>JK <span class="v">퀀트</span> 단타 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="scVer">v1.22.0</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -212,6 +212,7 @@ canvas{display:block;width:100%;height:auto}
     <button class="strategy-tab" data-strategy="opening" onclick="showStrategy('opening')">⚡ 시초가 돌파</button>
     <button class="strategy-tab" data-strategy="daytrading" onclick="showStrategy('daytrading')">📈 데이트레이딩</button>
     <button class="strategy-tab" data-strategy="crypto" onclick="showStrategy('crypto')">₿ 비트코인</button>
+    <button class="strategy-tab" data-strategy="soxl" onclick="showStrategy('soxl')">⚡ SOXL</button>
   </div>
   <div id="strategy_swing" class="strategy-pane on">
     <div class="strategy-head">실시간 감시 → 과거 백테스트 순서</div>
@@ -510,6 +511,59 @@ canvas{display:block;width:100%;height:auto}
       <div class="warn"><b>데이터 정직성:</b> 현재 진행 중인 UTC 일자는 저장하지 않고 확정된 이전 일자만 사용한다.
         최초에는 최근 365일을 백필하고, 이후에는 최근 2일을 겹쳐 다시 받아 누락·지연을 방지한다.
         원본은 <b>scalping-data/data/crypto</b>, 연구결과는 <b>data/crypto-research</b>에 누적한다.</div>
+    </div>
+  </div>
+
+
+  <div id="strategy_soxl" class="strategy-pane">
+    <div class="strategy-head">SOXL · 미국 정규장 5분봉 · ET · 연구/검증 전용</div>
+    <div class="card">
+      <h3><span class="dot"></span>⚡ SOXL 15분 ORB 기준전략 v1</h3>
+      <p class="lead"><b>09:30~09:45 ET</b> Opening Range를 만든 뒤 11:30 이전 첫 종가 돌파를 본다.
+        종가가 세션 VWAP 위이고 거래량이 직전 확정봉 평균 이상일 때만 신호로 인정하며
+        <b>신호 다음 5분봉 시가</b>에 진입한다.</p>
+      <div class="step"><div class="st"><span class="n">1</span>진입</div><ul>
+        <li>첫 3개 5분봉의 최고가를 OR High로 고정.</li>
+        <li>직전 종가 ≤ OR High, 현재 확정 종가 &gt; OR High.</li>
+        <li>현재 종가 &gt; 누적 VWAP, 거래량 ≥ 직전 최대 6개 확정봉 평균 × 1.0.</li>
+      </ul></div>
+      <div class="step"><div class="st"><span class="n">2</span>청산</div><ul>
+        <li>손절 −1.2% / 익절 +2.4% / 최대 90분 / 하루 최대 1회.</li>
+        <li>같은 봉에서 손절·익절 동시 충족 시 손절 우선.</li>
+        <li>왕복 마찰비용 0.20% 차감.</li>
+      </ul></div>
+      <div class="warn"><b>+1%는 연구 목표 지표</b>다. 일일 수익을 보장하지 않으며 기준전략은 자동 변경하지 않는다.
+        그림자 후보는 OR 5/30분, 거래량 0.8/1.2배, VWAP 제외, 손절·익절/보유시간 변형을 병렬 비교한다.</div>
+    </div>
+
+    <div class="card">
+      <h3><span class="dot"></span>📡 현재 SOXL</h3>
+      <div class="row" style="margin-bottom:8px">
+        <button class="ghostbtn" onclick="loadSoxlLive()">🔄 현재가 갱신</button>
+        <span class="sub" id="soxl_live_msg">탭을 열면 자동 조회</span>
+      </div>
+      <div class="out">
+        <div class="outbox"><div class="ol">현재가</div><div class="ov" id="soxl_price">—</div></div>
+        <div class="outbox"><div class="ol">시장 상태</div><div class="ov" id="soxl_market" style="font-size:14px">—</div></div>
+        <div class="outbox"><div class="ol">정규장 O/H/L/C</div><div class="ov" id="soxl_regular" style="font-size:13px">—</div></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3><span class="dot"></span>🧪 SOXL 누적 연구 <span class="sub" style="font-weight:600">기준 + 그림자 병렬 비교</span></h3>
+      <div class="row" style="margin-bottom:8px">
+        <button class="ghostbtn" onclick="loadSoxlResearch()">🔄 연구결과 갱신</button>
+        <span class="sub" id="soxl_research_msg">첫 데이터 수집 대기</span>
+      </div>
+      <div id="soxl_research_body"><p class="sub">미국장 종료 후 확정 5분봉이 누적되면 결과가 표시됩니다.</p></div>
+      <p class="note">TRADE뿐 아니라 NO TRADE 사유, 신호·VWAP·거래량, 진입/청산, MFE/MAE, 홀드아웃과 30일 롤링 결과를 보관합니다.</p>
+    </div>
+
+    <div class="card">
+      <h3><span class="dot"></span>📼 데이터 감사 규칙</h3>
+      <p class="lead">확정 SOXL 5분봉 원본은 <b>scalping-data/data/soxl/SOXL/5m</b>,
+        결과는 <b>data/soxl-research</b>에 날짜별로 누적한다.
+        매매하지 않은 날도 <b>baseline-decisions.csv</b>에 이유를 남긴다.</p>
     </div>
   </div>
 
@@ -1250,6 +1304,77 @@ async function loadCryptoResearch(){
   }
 }
 
+
+function soxlPct(v){const n=Number(v||0);return (n>=0?'+':'')+n.toFixed(2)+'%';}
+function soxlNum(v,d=2){const n=Number(v);return Number.isFinite(n)?n.toFixed(d):'—';}
+async function loadSoxlLive(){
+  const msg=$('soxl_live_msg'); if(msg)msg.textContent='SOXL 시세 조회 중…';
+  try{
+    const r=await fetch('/api/quote?symbol=SOXL&range=3mo&intraday=1',{headers:{'Accept':'application/json'}});
+    const j=await r.json(); if(!r.ok||j.error)throw new Error(j.error||('HTTP '+r.status));
+    $('soxl_price').textContent=Number(j.price||0)>0?'$'+Number(j.price).toFixed(2):'—';
+    $('soxl_market').textContent=(j.marketState||'—')+' · '+(j.src||'source ?');
+    const x=(j.intraday||{}).regular;
+    $('soxl_regular').textContent=x?('O '+soxlNum(x.o)+' · H '+soxlNum(x.h)+' · L '+soxlNum(x.l)+' · C '+soxlNum(x.c)):'정규장 데이터 없음';
+    if(msg)msg.textContent='갱신 '+new Date().toLocaleTimeString('ko-KR',{hour12:false});
+  }catch(e){if(msg)msg.textContent='조회 실패: '+(e.message||e);}
+}
+async function loadSoxlResearch(){
+  const msg=$('soxl_research_msg'),body=$('soxl_research_body'); if(!msg||!body)return;
+  msg.textContent='SOXL 연구결과 불러오는 중…';
+  try{
+    const r=await fetch('/api/soxl-research',{headers:{'Accept':'application/json'}});
+    const j=await r.json(); if(!r.ok||!j.ok)throw new Error(j.error||('HTTP '+r.status));
+    if(!j.validDays){
+      msg.textContent='첫 자동수집 대기';
+      body.innerHTML='<div class="warn">아직 누적 SOXL 연구파일이 없습니다. 첫 자동수집 후 채워집니다.</div>';
+      return;
+    }
+    const labels={baseline:'기준 OR15',range_5m:'OR 5분',range_30m:'OR 30분','vol_0.8':'거래량 0.8배','vol_1.2':'거래량 1.2배',
+      no_vwap:'VWAP 제외','stop_0.8_tp_1.6':'손절0.8/익절1.6','stop_1.5_tp_3.0':'손절1.5/익절3.0',hold_45m:'최대45분',hold_120m:'최대120분'};
+    const vars=j.variants||[],base=vars.find(x=>x.params&&x.params.name==='baseline')||{},st=base.summary||{},hv=(base.validation||{}).holdout||{},roll=j.rolling30||{},wf=j.walkForward||{};
+    msg.textContent=(j.from||'')+' ~ '+(j.to||'')+' · 유효 '+j.validDays+'일 · 기준 '+(st.trades||0)+'건 · '+(j.comparisonStatus==='reviewable'?'비교 가능':'표본 수집 중');
+    let h='<div class="out" style="margin-bottom:12px">'+
+      '<div class="outbox"><div class="ol">승률</div><div class="ov">'+soxlNum(st.winRate,1)+'%</div></div>'+
+      '<div class="outbox"><div class="ol">거래당 평균</div><div class="ov">'+soxlPct(st.avgPnl)+'</div></div>'+
+      '<div class="outbox"><div class="ol">전체 일평균</div><div class="ov">'+soxlPct(st.avgDailyReturnPct)+'</div></div>'+
+      '<div class="outbox"><div class="ol">+1% 이상 일수</div><div class="ov">'+soxlNum(st.target1PctDayRatePct,1)+'%</div></div>'+
+      '<div class="outbox"><div class="ol">복리</div><div class="ov">'+soxlPct(st.compoundReturnPct)+'</div></div>'+
+      '<div class="outbox"><div class="ol">MDD</div><div class="ov">'+soxlPct(st.maxDrawdownPct)+'</div></div></div>';
+    h+='<div class="warn"><b>홀드아웃</b> '+(hv.trades||0)+'건 · 평균 '+soxlPct(hv.avgPnl)+' · 복리 '+soxlPct(hv.compoundReturnPct)+
+      (roll.count?' · <b>30일 롤링 최악</b> '+soxlPct(roll.worstCompoundReturnPct):'')+
+      ' · <b>Walk-forward</b> '+esc(wf.status||'collecting')+' / '+Number(wf.foldCount||0)+' folds</div>';
+
+    const decisions=(j.latestDecisions||[]).slice().reverse();
+    if(decisions.length){
+      h+='<div style="margin:14px 0 8px"><b>📒 최근 판단이력</b></div><div class="htable-wrap"><table class="htable"><thead><tr><th>날짜</th><th>판단</th><th>근거</th><th>체결</th><th>손익</th></tr></thead><tbody>'+
+        decisions.map(x=>{
+          const traded=x.action==='trade';
+          const evidence=traded?('OR '+soxlNum(x.openingHigh)+' · VWAP '+soxlNum(x.signalVwap)+' · 거래량 '+soxlNum(x.volumeRatio,2)+'x'):
+            ('OR '+soxlNum(x.openingHigh)+' · 최고돌파 '+soxlNum(x.maxCloseVsOpeningHighPct,2)+'% · 최대거래량 '+soxlNum(x.maxVolumeRatio,2)+'x');
+          const path=traded?((x.entryTimeEt||'')+' $'+soxlNum(x.entryPrice)+' → '+(x.exitTimeEt||'')+' $'+soxlNum(x.exitPrice)+' · '+(x.exitReason||'')):'—';
+          return '<tr><td>'+esc(x.date||'')+'</td><td>'+(traded?'TRADE':'NO TRADE')+'</td><td>'+esc(x.decisionReason||'')+'<div class="sub">'+esc(evidence)+'</div></td><td>'+esc(path)+'</td><td>'+(traded?soxlPct(x.pnlPct):'—')+'</td></tr>';
+        }).join('')+'</tbody></table></div>';
+    }
+
+    const trades=(j.latestTrades||[]).slice(-10).reverse();
+    if(trades.length){
+      h+='<div style="margin:14px 0 8px"><b>📈 최근 매매이력</b></div><div class="htable-wrap"><table class="htable"><thead><tr><th>날짜</th><th>신호</th><th>진입</th><th>청산</th><th>MFE/MAE</th><th>순손익</th></tr></thead><tbody>'+
+        trades.map(x=>'<tr><td>'+esc(x.date||'')+'</td><td>'+esc(x.signalTimeEt||'')+'<div class="sub">거래량 '+soxlNum(x.volumeRatio,2)+'x</div></td>'+
+          '<td>'+esc(x.entryTimeEt||'')+' · $'+soxlNum(x.entryPrice)+'</td><td>'+esc(x.exitTimeEt||'')+' · $'+soxlNum(x.exitPrice)+'<div class="sub">'+esc(x.reason||'')+'</div></td>'+
+          '<td>'+soxlPct(x.mfePct)+' / '+soxlPct(x.maePct)+'</td><td>'+soxlPct(x.pnlPct)+'</td></tr>').join('')+'</tbody></table></div>';
+    }
+
+    h+='<div style="margin:14px 0 8px"><b>🧬 기준 + 그림자</b></div><div class="htable-wrap"><table class="htable"><thead><tr><th>규칙</th><th>거래</th><th>승률</th><th>평균</th><th>+1%일</th><th>PF</th><th>복리</th><th>MDD</th><th>홀드아웃 평균</th></tr></thead><tbody>';
+    vars.forEach(v=>{const p=v.params||{},x=v.summary||{},z=(v.validation||{}).holdout||{};
+      h+='<tr><td>'+esc(labels[p.name]||p.name||'—')+'</td><td>'+Number(x.trades||0)+'</td><td>'+soxlNum(x.winRate,1)+'%</td><td>'+soxlPct(x.avgPnl)+'</td>'+
+        '<td>'+soxlNum(x.target1PctDayRatePct,1)+'%</td><td>'+(Number(x.profitFactor)>=999?'∞':soxlNum(x.profitFactor,2))+'</td><td>'+soxlPct(x.compoundReturnPct)+'</td>'+
+        '<td>'+soxlPct(x.maxDrawdownPct)+'</td><td>'+soxlPct(z.avgPnl)+'</td></tr>';});
+    h+='</tbody></table></div><p class="note">성과만 보고 자동 승격하지 않습니다. 표본·홀드아웃·롤링 일관성이 확인된 후보만 검토합니다.</p>';
+    body.innerHTML=h;
+  }catch(e){msg.textContent='SOXL 연구결과 조회 실패';body.innerHTML='<div class="err">'+esc(e.message||e)+'</div>';}
+}
+
 function showStrategy(name){
   document.querySelectorAll('.strategy-pane').forEach(x=>x.classList.remove('on'));
   document.querySelectorAll('.strategy-tab').forEach(x=>x.classList.toggle('on',x.dataset.strategy===name));
@@ -1263,11 +1388,12 @@ function showStrategy(name){
     stopDayTradingPaperAuto();
   }
   if(name==='crypto'){ loadCryptoLive(); loadCryptoResearch(); }
+  if(name==='soxl'){ loadSoxlLive(); loadSoxlResearch(); }
 }
 function restoreStrategy(){
   let n='swing';
   try{n=localStorage.getItem('jkq_scalp_strategy_tab')||'swing';}catch(e){}
-  if(!['swing','opening','daytrading','crypto'].includes(n))n='swing';
+  if(!['swing','opening','daytrading','crypto','soxl'].includes(n))n='swing';
   showStrategy(n);
 }
 

@@ -1,6 +1,6 @@
 name: 단타 야간 자동연구
 
-# 시초가 + 데이트레이딩 + 비트코인 + KIS VTS 체결자료를 하루 한 번 통합 분석한다.
+# 시초가 + 데이트레이딩 + 비트코인 + SOXL + KIS VTS 체결자료를 하루 한 번 통합 분석한다.
 # 라이브 전략은 자동으로 바꾸지 않고, 충분한 표본이 쌓였을 때 검토 후보만 기록/알림한다.
 
 on:
@@ -14,6 +14,7 @@ on:
       - ".github/workflows/nightly-scalping-research.yml"
       - "scripts/nightly_scalping_research.py"
       - "functions/api/nightly-research-summary.js"
+      - "scripts/backtest_soxl_intraday.py"
 
 permissions:
   contents: write
@@ -44,7 +45,7 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: 시초가 + 데이트레이딩 + 비트코인 + VTS 통합 연구
+      - name: 시초가 + 데이트레이딩 + 비트코인 + SOXL + VTS 통합 연구
         env:
           KEY: ${{ secrets.AUTOTRADE_KEY }}
           BASE: https://jkquant.pages.dev
