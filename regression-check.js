@@ -10537,5 +10537,29 @@ console.log('\n[138] 액면분할 — 실제 거래 가격 체결 · 분할일 �
   if(BK.DV===undefined) delete DIVMAP.SOXL; else DIVMAP.SOXL=BK.DV;
   WARM_FROM=BK.WF; WARM_TO=BK.WT; for(const [k,v] of BK.g){ if(v===undefined) delete global[k]; else global[k]=v; }
 }
+
+/* ════ 단타 공통 7단계 UI · BTC 분리 모의 · SOXL 해외 VTS ════ */
+console.log('[SCALPING FLOW] 단타 공통 흐름 · 모의체결 분리');
+{
+  const sc=scl;
+  const kis=fs.existsSync(__d+'/functions/api/kis.js')?fs.readFileSync(__d+'/functions/api/kis.js','utf8'):'';
+  const labels=['📖 전략 설명','🔎 실시간 종목 탐색','🟢 종목 매수 타이밍','🔴 종목 매도 타이밍','📒 매매이력','🧪 매일 검증·분석·개선 기록','🏦 모의투자 매매이력'];
+  const pos=labels.map(x=>sc.indexOf(x));
+  ok('단타 전략탭 공통 7단계 순서', pos.every((x,i)=>x>=0&&(i===0||x>pos[i-1])), pos.join(' → '));
+  ok('5개 전략탭 모두 공통 flow 대상', ['swing','opening','daytrading','crypto','soxl'].every(x=>sc.includes(x+':{strategy:')));
+  ok('로그인 후 공통 flow를 만든 뒤 탭 복원', /setupUnifiedStrategyFlow\(\); restoreStrategy\(\);/.test(sc));
+  ok('BTC 모의는 한국투자와 분리', /id="crypto_paper_body"/.test(sc) && /한국투자증권과 섞지 않는/.test(sc));
+  ok('BTC 매매이력과 모의체결 장부를 별도 표시', /id="crypto_history_body"/.test(sc) && /crypto_paper_body/.test(sc));
+  ok('SOXL 전략 매매이력 별도 표시', /id="soxl_history_body"/.test(sc));
+  ok('SOXL 한투 VTS 이력은 읽기전용 GET', /async function loadSoxlVtsHistory\(\)/.test(sc)
+     && /op=orders&env=vts&market=us&code=SOXL/.test(sc)
+     && !/async function loadSoxlVtsHistory\(\)[\s\S]{0,2500}method:\s*['"]POST['"]/.test(sc));
+  ok('KIS 해외 VTS 주문체결조회 공식 경로/모의 TR', /\/uapi\/overseas-stock\/v1\/trading\/inquire-ccnl/.test(kis)
+     && /VTTS3035R/.test(kis));
+  ok('KIS 해외 모의 조회는 전체조회 후 종목 필터', /PDNO:""[\s\S]{0,220}OVRS_EXCG_CD:""/.test(kis)
+     && /if\(code\) rows=rows\.filter\(x=>x\.code===code\)/.test(kis));
+  ok('단타 화면 버전 1.22.1', /id="scVer">v1\.22\.1<\/span>/.test(sc));
+}
+
 console.log(`\n════ 결과: ${pass} PASS / ${fail} FAIL ${fail===0?'— ALL PASS ★':'— 배포 금지, 위 ✗ 항목 수정 필요'} ════`);
 process.exit(fail===0?0:1);

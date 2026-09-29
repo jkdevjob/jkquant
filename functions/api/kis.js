@@ -555,7 +555,59 @@ export async function onRequestGet({ request, env }) {
       const rawDate = String(url.searchParams.get("date") || "").replace(/\D/g, "");
       const now = new Intl.DateTimeFormat("en-CA",{timeZone:"Asia/Seoul",year:"numeric",month:"2-digit",day:"2-digit"})
         .format(new Date()).replace(/-/g,"");
-      const date = /^\d{8}$/.test(rawDate) ? rawDate : now;
+      const market = String(url.searchParams.get("market") || "kr").toLowerCase();
+      const nyDate = new Intl.DateTimeFormat("en-CA",{timeZone:"America/New_York",year:"numeric",month:"2-digit",day:"2-digit"})
+        .format(new Date()).replace(/-/g,"");
+      const date = /^\d{8}$/.test(rawDate) ? rawDate : (market === "us" ? nyDate : now);
+
+      if (market === "us") {
+        if (code && !USSYM.test(code)) return json({ error: "미국 종목코드 오류" }, 400);
+        const token = await getToken(env);
+        // KIS 해외주식 주문체결내역. 모의계좌는 PDNO/거래소 필터 전체조회만 허용되어
+        // 전체를 읽은 뒤 SOXL 같은 요청 종목은 서버에서 안전하게 거른다.
+        const qs = new URLSearchParams({
+          CANO:a.cano, ACNT_PRDT_CD:a.prod,
+          PDNO:"", ORD_STRT_DT:date, ORD_END_DT:date,
+          SLL_BUY_DVSN:"00", CCLD_NCCS_DVSN:"00", OVRS_EXCG_CD:"",
+          SORT_SQN:"DS", ORD_DT:"", ORD_GNO_BRNO:"", ODNO:odno,
+          CTX_AREA_NK200:"", CTX_AREA_FK200:""
+        });
+        const path="/uapi/overseas-stock/v1/trading/inquire-ccnl?"+qs;
+        const trId="VTTS3035R";
+        const j=await readJson(base(env)+path,{headers:{
+          authorization:"Bearer "+token, appkey:env.KIS_APPKEY, appsecret:env.KIS_APPSECRET,
+          tr_id:trId, custtype:"P"
+        }});
+        if(String(j.rt_cd)!=="0") return json({ error: RATE_LIMITED(j)?"초당 요청 제한 — 잠시 후 다시":(j.msg1||"해외 체결조회 실패"),
+          code:j.msg_cd||"", rateLimited:RATE_LIMITED(j), trId },502);
+        let rows=(j.output||[]).map(x=>({
+          orderDate:x.ord_dt||"", orderTime:x.ord_tmd||x.ord_tmd1||"", notifyTime:x.infm_tmd||"",
+          orderNo:x.odno||"", originalOrderNo:x.orgn_odno||"",
+          sideCode:x.sll_buy_dvsn_cd||x.sll_buy_dvsn||"",
+          side:x.sll_buy_dvsn_name||x.sll_buy_dvsn_cd_name||"",
+          code:String(x.pdno||x.ovrs_pdno||"").toUpperCase(),
+          name:x.prdt_name||x.ovrs_item_name||"",
+          market:x.ovrs_excg_cd||x.tr_mket_name||"",
+          orderType:x.ord_dvsn_name||x.prcs_stat_name||"",
+          orderQty:+x.ft_ord_qty||+x.ord_qty||0,
+          orderPrice:+x.ft_ord_unpr3||+x.ovrs_ord_unpr||+x.ord_unpr||0,
+          fillQty:+x.ft_ccld_qty||+x.tot_ccld_qty||0,
+          fillPrice:+x.ft_ccld_unpr3||+x.avg_prvs||+x.ccld_unpr||0,
+          fillAmount:+x.ft_ccld_amt3||+x.tot_ccld_amt||0,
+          remainingQty:+x.nccs_qty||+x.rmn_qty||0,
+          rejectedQty:+x.rjct_qty||0,
+          canceled:String(x.rvse_cncl_dvsn_name||x.cncl_yn||"").includes("취소")||String(x.cncl_yn||"")==="Y"
+        }));
+        if(code) rows=rows.filter(x=>x.code===code);
+        return json({env:"vts",market:"us",trId,date,code,orderNo:odno,orders:rows,
+          summary:{
+            totalOrderQty:rows.reduce((s,x)=>s+x.orderQty,0),
+            totalFillQty:rows.reduce((s,x)=>s+x.fillQty,0),
+            totalFillAmount:rows.reduce((s,x)=>s+x.fillAmount,0)
+          }
+        });
+      }
+
       if (code && !KRCODE.test(code)) return json({ error: "종목코드 오류" }, 400);
 
       const token = await getToken(env);
