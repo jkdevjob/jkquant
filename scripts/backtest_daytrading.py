@@ -16,6 +16,7 @@ from zoneinfo import ZoneInfo
 
 KST=ZoneInfo("Asia/Seoul")
 DATA=Path("data/daytrading")
+LIVE=Path("data/daytrading-live")
 OUT=Path("data/daytrading-research")
 
 # Primary research is meant to use a universe frozen around 10:00 KST.
@@ -239,12 +240,22 @@ def first_trade(day,row,p:Params):
 
         pnl=(exit_px/entry-1)*100-p.fee
         return {
-            "date":day["date"],"rank":int(row.get("rank") or 0),
+            "date":day["date"],"strategyVersion":"daytrading_vwap_breakout_v1","rank":int(row.get("rank") or 0),
             "code":row.get("code"),"name":row.get("name"),
             "snapshotHm":snapshot_hm,"signalTime":x["hm"],"entryTime":ent["hm"],
             "entryPrice":entry,"exitTime":exit_hm,"exitPrice":exit_px,"reason":reason,
             "sessionRet":session_ret,"vwap":vw,"vwapSlope":slope,
             "priorHigh":prior_high,"breakoutPct":breakout,"volRatio":vol_ratio,
+            "decisionReason":"session+vwap+slope+breakout+volume_pass",
+            "evidence":{
+                "snapshotHm":snapshot_hm,"sessionBase":day_open,
+                "sessionRet":session_ret,"minSessionRet":p.min_session_ret,"maxSessionRet":p.max_session_ret,
+                "vwap":vw,"vwapSlope":slope,"minVwapSlope":p.min_vwap_slope,
+                "priorHigh":prior_high,"lookback":p.lookback,"breakoutPct":breakout,
+                "volumeRatio":vol_ratio,"requiredVolumeRatio":p.vol_mult,
+                "entryCutoff":p.entry_cutoff,"stopPct":p.stop,
+                "takeProfitPct":p.take_profit,"frictionPct":p.fee,"finalExit":p.final_exit,
+            },
             "timeBucket":time_bucket(ent["hm"]),
             "volRatioBucket":bucket_value(vol_ratio,(1.75,2.5,999),("1.5~1.74","1.75~2.49","2.5+")),
             "vwapSlopeBucket":bucket_value(slope,(0.2,0.4,999),("0.10~0.19","0.20~0.39","0.40+")),
@@ -357,6 +368,84 @@ def walk_forward(days,trade_map):
             "archiveDays":len(labels),"foldCount":len(folds),"oosDays":len(od),"folds":folds,
             "oosVariants":[{"name":p.name,"summary":summary(oos[p.name],od,p.max_trades)} for p in VARIANTS]}
 
+def live_paper_comparison(date,reconstructed):
+    """Compare the server-side intraday paper ledger with end-of-day KIS reconstruction.
+
+    The live ledger is observation evidence, not a replacement for the canonical
+    end-of-day backtest. Matching uses code + signalTime so differences in selection,
+    entry fill, exit path, or PnL remain visible instead of being silently reconciled.
+    """
+    p=LIVE/date[:4]/f"{date}.json"
+    if not p.exists():
+        return {"status":"missing","date":date,"liveTrades":0,"reconstructedTrades":len(reconstructed),"matched":0,"rows":[]}
+    try:
+        live=json.loads(p.read_text(encoding="utf-8"))
+    except Exception as e:
+        return {"status":"error","date":date,"error":str(e),"liveTrades":0,"reconstructedTrades":len(reconstructed),"matched":0,"rows":[]}
+
+    lt=live.get("trades") or []
+    def key(x):
+        return (str(x.get("code") or ""),int(x.get("signalTime") or 0))
+    lm={key(x):x for x in lt}
+    rm={key(x):x for x in reconstructed}
+    keys=sorted(set(lm)|set(rm),key=lambda z:(z[1],z[0]))
+    rows=[]
+    abs_entry=[];abs_exit=[];abs_pnl=[]
+    exact=0
+    for k in keys:
+        a=lm.get(k); b=rm.get(k)
+        row={"code":k[0],"signalTime":k[1],"liveOnly":a is not None and b is None,"reconstructedOnly":b is not None and a is None}
+        if a:
+            row.update({
+                "name":a.get("name") or k[0],"liveStatus":a.get("status"),
+                "liveEntryTime":a.get("entryTime"),"liveEntryPrice":a.get("entryPrice"),
+                "liveExitTime":a.get("exitTime"),"liveExitPrice":a.get("exitPrice"),
+                "liveReason":a.get("reason"),"livePnl":a.get("pnl"),
+            })
+        if b:
+            row.update({
+                "name":row.get("name") or b.get("name") or k[0],
+                "reconstructedEntryTime":b.get("entryTime"),"reconstructedEntryPrice":b.get("entryPrice"),
+                "reconstructedExitTime":b.get("exitTime"),"reconstructedExitPrice":b.get("exitPrice"),
+                "reconstructedReason":b.get("reason"),"reconstructedPnl":b.get("pnl"),
+            })
+        if a and b:
+            ap=a.get("entryPrice"); bp=b.get("entryPrice")
+            ax=a.get("exitPrice"); bx=b.get("exitPrice")
+            if ap and bp:
+                row["entryDiffPct"]=(float(ap)/float(bp)-1)*100
+                abs_entry.append(abs(row["entryDiffPct"]))
+            if ax and bx:
+                row["exitDiffPct"]=(float(ax)/float(bx)-1)*100
+                abs_exit.append(abs(row["exitDiffPct"]))
+            if a.get("pnl") is not None and b.get("pnl") is not None:
+                row["pnlDiffPctPoint"]=float(a["pnl"])-float(b["pnl"])
+                abs_pnl.append(abs(row["pnlDiffPctPoint"]))
+            same=(
+                int(a.get("entryTime") or 0)==int(b.get("entryTime") or 0)
+                and int(a.get("exitTime") or 0)==int(b.get("exitTime") or 0)
+                and str(a.get("reason") or "")==str(b.get("reason") or "")
+                and (row.get("entryDiffPct") is not None and abs(row["entryDiffPct"])<0.001)
+                and (row.get("exitDiffPct") is not None and abs(row["exitDiffPct"])<0.001)
+            )
+            row["exactPathMatch"]=same
+            exact+=1 if same else 0
+        rows.append(row)
+
+    matched=sum(1 for k in keys if k in lm and k in rm)
+    return {
+        "status":"available","date":date,
+        "liveUpdatedAt":live.get("updatedAt"),"liveTargetHm":live.get("targetHm"),
+        "liveTrades":len(lt),"reconstructedTrades":len(reconstructed),"matched":matched,
+        "exactPathMatches":exact,
+        "avgAbsEntryDiffPct":statistics.fmean(abs_entry) if abs_entry else None,
+        "avgAbsExitDiffPct":statistics.fmean(abs_exit) if abs_exit else None,
+        "avgAbsPnlDiffPctPoint":statistics.fmean(abs_pnl) if abs_pnl else None,
+        "rows":rows,
+        "note":"Live ledger is archived evidence; canonical research remains the end-of-day KIS reconstruction."
+    }
+
+
 def main():
     all_days=load_days(); OUT.mkdir(parents=True,exist_ok=True)
     if not all_days:
@@ -411,12 +500,16 @@ def main():
             "primaryEligible":latest_raw in eligible,
             "trades":observed_latest,
         },
+        "livePaperComparison":live_paper_comparison(
+            latest_raw.get("date"),
+            [x for x in baseline if x.get("date")==latest_raw.get("date")]
+        ),
     }
     (OUT/"latest.json").write_text(json.dumps(report,ensure_ascii=False,indent=2),encoding="utf-8")
     (OUT/f"{raw_labels[-1]}.json").write_text(json.dumps(report,ensure_ascii=False,indent=2),encoding="utf-8")
 
     with (OUT/"baseline-trades.csv").open("w",encoding="utf-8",newline="") as f:
-        cols=["date","rank","code","name","snapshotHm","signalTime","entryTime","entryPrice","exitTime","exitPrice","reason",
+        cols=["date","strategyVersion","rank","code","name","snapshotHm","signalTime","entryTime","entryPrice","exitTime","exitPrice","reason",
               "sessionRet","vwapSlope","breakoutPct","volRatio","timeBucket","marketRegime","k200Ret","kosdaq150Ret",
               "mfePct","mfeTime","maePct","maeTime","fwd1mPct","fwd3mPct","fwd5mPct","fwd10mPct","fwd20mPct","pnl"]
         w=csv.DictWriter(f,fieldnames=cols); w.writeheader()

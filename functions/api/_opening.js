@@ -113,8 +113,18 @@ export function rebreakTrade(rows,meta,cutoffHm=930,overrides={}){
       const volRatio=jv/Math.max(1,baseVol),amountRatio=ja/Math.max(1,baseAmt);
       if(jp>peak&&volRatio>=p.volMult&&amountRatio>=p.amountMult){
         const tr={
+          strategyVersion:"opening_rebreak_v1",
           gap,firstHigh,peak,pullbackPct:dd,
           entryTime:y.hm,entryPrice:jp,volRatio,amountRatio,estAmount:ja,
+          evidence:{
+            source:"Naver 1m close/volume + daily open/prevClose",
+            gapPct:gap,gapMin:p.gapMin,gapMax:p.gapMax,
+            firstHigh,peak,pullbackPct:dd,pullbackMin:p.pbMin,pullbackMax:p.pbMax,
+            rebreakClose:jp,volumeRatio:volRatio,requiredVolumeRatio:p.volMult,
+            amountRatio,requiredAmountRatio:p.amountMult,
+            entryCutoff:p.entryCutoff,stopPct:p.stop,takeProfitPct:p.takeProfit,
+            frictionPct:p.fee,finalExit:p.finalExit
+          },
           exitTime:null,exitPrice:null,reason:null,pnl:null,
         };
 

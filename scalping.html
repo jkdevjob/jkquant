@@ -187,7 +187,7 @@ canvas{display:block;width:100%;height:auto}
 
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Morning Scalping</div><h1>JK <span class="v">퀀트</span> 단타 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="scVer">v1.20.0</span></h1></div>
+    <div><div class="kicker">Morning Scalping</div><h1>JK <span class="v">퀀트</span> 단타 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="scVer">v1.21.0</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -401,11 +401,23 @@ canvas{display:block;width:100%;height:auto}
     </div>
 
     <div class="card">
-      <h3><span class="dot"></span>📡 데이트레이딩 서버 장중 감시 <span class="sub" style="font-weight:600">10:00~14:30 · 웹을 닫아도 동작</span></h3>
-      <p class="lead">당일 고정 Top100을 대상으로 서버가 <b>매분 기준전략 + 그림자전략</b>을 계산한다.
-        <b>기준전략의 새 후보신호만 Telegram</b>으로 보내고, 다음 1분봉 시가 진입·손익은 장 종료 후 KIS 원본으로 다시 계산한다.</p>
-      <div class="warn"><b>실시간/백테 일치 규칙:</b> 실시간 Naver 분봉은 종가·거래량만 제공하므로 VWAP·20분 고점·세션상승률 판정도 <b>종가+거래량 기준</b>으로 통일했다.
-        실시간 알림은 후보신호일 뿐이며 실제 주문은 하지 않는다.</div>
+      <h3><span class="dot"></span>📡 데이트레이딩 서버 장중 감시 <span class="sub" style="font-weight:600">10:00~14:30 신호 · 15:10까지 모의청산</span></h3>
+      <p class="lead">당일 고정 Top100을 대상으로 Cloudflare가 <b>매분 기준전략 + 그림자전략</b>을 계산한다.
+        기준전략은 하루 최대 3건을 장중 서버 모의장부에 고정하고, <b>다음 1분봉 시가 모의진입 → −1%/+2% → 15:10 시간청산</b>까지 추적한다.</p>
+      <div class="warn"><b>실시간/백테 일치 규칙:</b> 신호판정은 Naver 종가+거래량, 장중 모의 체결·청산은 <b>KIS 1분봉 O/H/L/C 조회</b>를 사용한다.
+        증권사 주문은 전혀 보내지 않는다. 장마감에는 KIS 전체 분봉으로 다시 재구성해 장중 장부와 차이를 자동 비교한다.</div>
+    </div>
+
+    <div class="card">
+      <h3><span class="dot"></span>📒 오늘 장중 모의 매매이력 <span class="sub" style="font-weight:600">서버 지속 · 1분 자동갱신 · 주문 없음</span></h3>
+      <p class="lead">웹페이지를 닫아도 Cloudflare Durable Object에 오늘 장부가 유지된다. 신호가 과거에 이미 발생했더라도
+        서버가 다시 시작되면 당일 신호를 복구해 KIS 과거 1분봉으로 <b>진입·손절·익절 경로를 재구성</b>한다.</p>
+      <div class="row" style="margin-bottom:8px">
+        <button class="ghostbtn" onclick="loadDayTradingPaper()">🔄 장중 이력 새로고침</button>
+        <span class="sub" id="dt_live_msg">오늘 서버 장부 불러오는 중…</span>
+      </div>
+      <div id="dt_live_body"><p class="sub">데이트레이딩 탭을 열면 자동으로 갱신됩니다.</p></div>
+      <p class="note">장중 장부는 즉시 관찰용입니다. 장마감 후 저장되는 KIS 전체 분봉 재구성 결과가 연구용 확정 이력이며, 둘의 진입·청산·손익 차이도 누적합니다.</p>
     </div>
 
     <div class="card">
@@ -1191,12 +1203,32 @@ async function loadCryptoResearch(){
       '<div class="outbox"><div class="ol">Profit Factor</div><div class="ov">'+(Number(s.profitFactor)>=999?'∞':btcNum(s.profitFactor,2))+'</div></div>'+
       '<div class="outbox"><div class="ol">복리 누적</div><div class="ov '+(Number(s.compoundReturnPct)>0?'good':Number(s.compoundReturnPct)<0?'bad':'mid')+'">'+btcPct(s.compoundReturnPct)+'</div></div>'+
       '<div class="outbox"><div class="ol">MDD</div><div class="ov bad">'+btcPct(s.maxDrawdownPct)+'</div></div>'+
+      '<div class="outbox"><div class="ol">전체 일평균</div><div class="ov '+(Number(s.avgDailyReturnPct)>0?'good':Number(s.avgDailyReturnPct)<0?'bad':'mid')+'">'+btcPct(s.avgDailyReturnPct)+'</div></div>'+
+      '<div class="outbox"><div class="ol">순 +1% 이상 일수</div><div class="ov">'+btcNum(s.target1PctDayRatePct,1)+'%</div></div>'+
       '</div>';
 
     h+='<div class="warn" style="margin-bottom:10px"><b>홀드아웃 30%</b> · '+(hv.trades||0)+'건 · 승률 '+btcNum(hv.winRate,1)+'% · 평균 '+btcPct(hv.avgPnl)+
       ' · 복리 '+btcPct(hv.compoundReturnPct)+
       (roll.count?'<br><b>30일 롤링</b> · 최악 '+btcPct(roll.worstCompoundReturnPct)+' · 평균 '+btcPct(roll.avgCompoundReturnPct)+' · 최근 '+btcPct((roll.latest||{}).compoundReturnPct):'')+
       '</div>';
+
+    const recent=(j.latestTrades||[]).slice(-10).reverse();
+    if(recent.length){
+      h+='<div style="margin:14px 0 8px"><b>📒 최근 비트코인 매매이력 · 판단 증거</b></div>'+
+        '<div class="htable-wrap"><table class="htable"><thead><tr><th>날짜</th><th>신호/근거</th><th>진입</th><th>청산</th><th>사유</th><th>순손익</th></tr></thead><tbody>'+
+        recent.map(x=>'<tr><td>'+esc(x.date||'')+'</td>'+
+          '<td>'+esc(x.signalTimeKst||'')+
+          '<div class="sub">OR고점 '+Number(x.openingHigh||0).toLocaleString('ko-KR')+
+          ' · 신호 '+Number(x.signalClose||0).toLocaleString('ko-KR')+
+          ' · VWAP '+Number(x.signalVwap||0).toLocaleString('ko-KR')+
+          ' · 거래량 '+btcNum(x.volumeRatio,2)+'x</div></td>'+
+          '<td>'+esc(x.entryTimeKst||'')+' · '+Number(x.entryPrice||0).toLocaleString('ko-KR')+'</td>'+
+          '<td>'+esc(x.exitTimeKst||'')+' · '+Number(x.exitPrice||0).toLocaleString('ko-KR')+'</td>'+
+          '<td>'+esc(x.reason||'')+'</td>'+
+          '<td class="'+(Number(x.pnlPct)>=0?'win':'loss')+'">'+btcPct(x.pnlPct)+'</td></tr>').join('')+
+        '</tbody></table></div>'+
+        '<p class="note">원본 5분봉과 전략 버전·임계값은 서버 연구파일에 함께 보관됩니다. 거래가 없던 날도 baseline-decisions.csv에 no_trade로 남깁니다.</p>';
+    }
 
     h+='<div class="htable-wrap"><table class="htable"><thead><tr><th>규칙</th><th>거래</th><th>승률</th><th>평균</th><th>PF</th><th>복리</th><th>MDD</th><th>홀드아웃 평균</th></tr></thead><tbody>';
     vars.forEach(v=>{
@@ -1223,7 +1255,13 @@ function showStrategy(name){
   document.querySelectorAll('.strategy-tab').forEach(x=>x.classList.toggle('on',x.dataset.strategy===name));
   const p=$('strategy_'+name); if(p)p.classList.add('on');
   try{localStorage.setItem('jkq_scalp_strategy_tab',name);}catch(e){}
-  if(name==='daytrading') loadDayTradingResearch();
+  if(name==='daytrading'){
+    loadDayTradingPaper();
+    loadDayTradingResearch();
+    startDayTradingPaperAuto();
+  }else{
+    stopDayTradingPaperAuto();
+  }
   if(name==='crypto'){ loadCryptoLive(); loadCryptoResearch(); }
 }
 function restoreStrategy(){
@@ -1231,6 +1269,72 @@ function restoreStrategy(){
   try{n=localStorage.getItem('jkq_scalp_strategy_tab')||'swing';}catch(e){}
   if(!['swing','opening','daytrading','crypto'].includes(n))n='swing';
   showStrategy(n);
+}
+
+let DT_PAPER_TIMER=null;
+function startDayTradingPaperAuto(){
+  if(DT_PAPER_TIMER)return;
+  DT_PAPER_TIMER=setInterval(()=>{
+    const p=$('strategy_daytrading');
+    if(p&&p.classList.contains('on'))loadDayTradingPaper(true);
+  },60000);
+}
+function stopDayTradingPaperAuto(){
+  if(DT_PAPER_TIMER){clearInterval(DT_PAPER_TIMER);DT_PAPER_TIMER=null;}
+}
+async function loadDayTradingPaper(silent=false){
+  const msg=$('dt_live_msg'),body=$('dt_live_body');
+  if(!msg||!body)return;
+  if(!me){msg.textContent='로그인이 필요합니다.';return;}
+  if(!silent){msg.textContent='오늘 장중 모의장부 불러오는 중…';body.innerHTML='';}
+  try{
+    const tok=await me.getIdToken();
+    const r=await fetch('/api/daytrading-paper',{headers:{'Authorization':'Bearer '+tok,'Accept':'application/json'}});
+    const j=await r.json().catch(()=>({}));
+    if(!r.ok||!j.ok)throw new Error(j.error||('HTTP '+r.status));
+    const l=j.ledger;
+    if(!l){
+      msg.textContent='오늘 서버 장부 준비 중';
+      body.innerHTML='<div class="warn">아직 오늘 기준전략 신호가 없거나 Cloudflare 장부가 첫 스캔 전입니다. 신호가 없으면 0건이 정상입니다.</div>';
+      return;
+    }
+    const a=l.trades||[],sum=l.summary||{};
+    const updated=l.updatedAt?new Date(l.updatedAt).toLocaleTimeString('ko-KR',{hour12:false}):'—';
+    msg.textContent='선정 '+(sum.selected||a.length)+'건 · 진입대기 '+(sum.pending||0)+' · 보유 '+(sum.open||0)+' · 청산 '+(sum.closed||0)+' · '+updated+' 갱신';
+
+    const pct=v=>v==null?'—':((+v>=0?'+':'')+(+v).toFixed(2)+'%');
+    const money=v=>v==null?'—':commas(Math.round(+v));
+    const status=x=>x.status==='pending'?'진입대기':x.status==='open'?'보유중':x.status==='closed'?'청산':'—';
+    let html='<div class="out" style="margin-bottom:10px">'+
+      '<div class="outbox"><div class="ol">오늘 선정</div><div class="ov">'+(sum.selected||a.length)+'/3</div></div>'+
+      '<div class="outbox"><div class="ol">보유중</div><div class="ov">'+(sum.open||0)+'</div></div>'+
+      '<div class="outbox"><div class="ol">청산완료</div><div class="ov">'+(sum.closed||0)+'</div></div>'+
+      '<div class="outbox"><div class="ol">실현손익 단순합</div><div class="ov '+((sum.realizedPnlSumPct||0)>=0?'good':'bad')+'">'+pct(sum.realizedPnlSumPct||0)+'</div></div>'+
+      '</div>';
+    if(!a.length){
+      html+='<div class="warn">현재까지 기준전략을 통과한 종목이 없습니다. 장중 0건도 정상 결과로 기록됩니다.</div>';
+    }else{
+      html+='<div class="htable-wrap"><table class="htable"><thead><tr><th>종목</th><th>신호</th><th>상태</th><th>진입</th><th>현재/청산</th><th>사유</th><th>손익</th></tr></thead><tbody>'+
+        a.map(x=>{
+          const pl=x.status==='closed'?x.pnl:x.unrealizedPnl;
+          const reason=x.reason==='stop'?'손절':x.reason==='take_profit'?'익절':x.reason==='time_exit'?'시간청산':x.status==='open'?'추적중':'다음분 시가대기';
+          return '<tr><td><b>'+esc(x.name||x.code)+'</b><div class="sub">'+esc(x.code)+'</div></td>'+
+            '<td>'+String(x.signalTime||'').padStart(4,'0')+'<div class="sub">'+money(x.signalPrice)+'</div></td>'+
+            '<td><span class="sig '+(x.status==='open'?'watch':x.status==='closed'?'on':'off')+'">'+status(x)+'</span></td>'+
+            '<td>'+String(x.entryTime||'').padStart(4,'0')+' · '+money(x.entryPrice)+'</td>'+
+            '<td>'+(x.status==='closed'?String(x.exitTime||'').padStart(4,'0')+' · '+money(x.exitPrice):money(x.currentPrice))+'</td>'+
+            '<td>'+reason+(x.lastError?'<div class="sub">'+esc(x.lastError)+'</div>':'')+'</td>'+
+            '<td class="'+(pl==null?'':+pl>=0?'win':'loss')+'">'+pct(pl)+'</td></tr>';
+        }).join('')+'</tbody></table></div>';
+    }
+    html+='<p class="note">손익에는 왕복 마찰비용 '+Number(l.frictionPct||0.25).toFixed(2)+'%를 반영합니다. 장중 미실현손익도 같은 비용을 보수적으로 선반영합니다.</p>';
+    body.innerHTML=html;
+  }catch(e){
+    if(!silent){
+      msg.textContent='장중 모의장부 조회 실패';
+      body.innerHTML='<div class="warn">'+esc(e.message||String(e))+'</div>';
+    }
+  }
 }
 
 async function loadDayTradingResearch(){
@@ -1269,11 +1373,37 @@ async function loadDayTradingResearch(){
     }else{
       todayHtml+='<div class="htable-wrap"><table class="htable"><thead><tr><th>종목</th><th>신호</th><th>진입</th><th>청산</th><th>사유</th><th>손익</th></tr></thead><tbody>'+
         today.map(x=>'<tr><td><b>'+esc(x.name||x.code)+'</b><div class="sub">'+esc(x.code)+'</div></td>'+
-        '<td>'+String(x.signalTime||'').padStart(4,'0')+'</td>'+
+        '<td>'+String(x.signalTime||'').padStart(4,'0')+
+        '<div class="sub">세션 '+fmt(x.sessionRet,2)+'% · VWAP기울기 '+fmt(x.vwapSlope,2)+'% · 거래량 '+fmt(x.volRatio,2)+'x</div></td>'+
         '<td>'+String(x.entryTime||'').padStart(4,'0')+' · '+commas(Math.round(x.entryPrice||0))+'</td>'+
         '<td>'+String(x.exitTime||'').padStart(4,'0')+' · '+commas(Math.round(x.exitPrice||0))+'</td>'+
         '<td>'+esc(x.reason||'')+'</td><td class="'+((x.pnl||0)>=0?'win':'loss')+'">'+((x.pnl||0)>=0?'+':'')+(x.pnl||0).toFixed(2)+'%</td></tr>').join('')+
         '</tbody></table></div>';
+    }
+
+    const cmp=j.livePaperComparison||{};
+    let parityHtml='';
+    if(cmp.status==='available'){
+      const cp=v=>v==null?'—':((+v>=0?'+':'')+(+v).toFixed(3)+'%');
+      const cr=cmp.rows||[];
+      parityHtml='<div style="margin:14px 0 8px"><b>🔁 장중 모의장부 ↔ 장마감 KIS 재구성</b></div>'+
+        '<div class="out">'+
+        '<div class="outbox"><div class="ol">장중 장부</div><div class="ov">'+(cmp.liveTrades||0)+'건</div></div>'+
+        '<div class="outbox"><div class="ol">장마감 확정</div><div class="ov">'+(cmp.reconstructedTrades||0)+'건</div></div>'+
+        '<div class="outbox"><div class="ol">신호 매칭</div><div class="ov">'+(cmp.matched||0)+'건</div></div>'+
+        '<div class="outbox"><div class="ol">경로 완전일치</div><div class="ov">'+(cmp.exactPathMatches||0)+'건</div></div>'+
+        '</div>';
+      if(cr.length){
+        parityHtml+='<div class="htable-wrap" style="margin-top:8px"><table class="htable"><thead><tr><th>종목</th><th>신호</th><th>장중 진입</th><th>확정 진입</th><th>장중 청산</th><th>확정 청산</th><th>손익차</th></tr></thead><tbody>'+
+          cr.map(x=>'<tr><td><b>'+esc(x.name||x.code)+'</b></td><td>'+String(x.signalTime||'').padStart(4,'0')+'</td>'+
+          '<td>'+(x.liveEntryPrice==null?'—':String(x.liveEntryTime||'').padStart(4,'0')+' · '+commas(Math.round(x.liveEntryPrice)))+'</td>'+
+          '<td>'+(x.reconstructedEntryPrice==null?'—':String(x.reconstructedEntryTime||'').padStart(4,'0')+' · '+commas(Math.round(x.reconstructedEntryPrice)))+'</td>'+
+          '<td>'+(x.liveExitPrice==null?'—':String(x.liveExitTime||'').padStart(4,'0')+' · '+commas(Math.round(x.liveExitPrice)))+'</td>'+
+          '<td>'+(x.reconstructedExitPrice==null?'—':String(x.reconstructedExitTime||'').padStart(4,'0')+' · '+commas(Math.round(x.reconstructedExitPrice)))+'</td>'+
+          '<td class="'+((x.pnlDiffPctPoint||0)===0?'':Math.abs(x.pnlDiffPctPoint||0)<0.05?'win':'loss')+'">'+cp(x.pnlDiffPctPoint)+'</td></tr>').join('')+
+          '</tbody></table></div>';
+      }
+      parityHtml+='<p class="note">장중 장부는 관찰 증거, 장마감 KIS 전체 분봉 재구성은 연구용 확정값입니다. 차이가 있으면 숨기지 않고 그대로 누적합니다.</p>';
     }
 
     const rows=vars.map(x=>{
@@ -1308,7 +1438,7 @@ async function loadDayTradingResearch(){
         '<div class="warn">이 결과는 늦게 고정된 유니버스 이후만 관찰한 값이라 누적 성과에는 넣지 않습니다. 관찰용 거래 '+ot.length+'건.</div>';
     }
 
-    body.innerHTML=qualityHtml+todayHtml+observedHtml+
+    body.innerHTML=qualityHtml+todayHtml+parityHtml+observedHtml+
       '<div style="margin:14px 0 8px"><b>🧪 누적 비교</b></div>'+
       '<div class="htable-wrap"><table class="htable"><thead><tr><th>전략</th><th>거래</th><th>승률</th><th>평균손익</th><th>PF</th><th>포트수익</th><th>MDD</th></tr></thead><tbody>'+rows+'</tbody></table></div>'+
       diagHtml+
@@ -1464,7 +1594,8 @@ async function loadServerOpeningHistory(){
       baseHtml='<div class="warn">오늘 기준전략(+2~7% 갭 → 첫3분 고점 → 눌림 → 재돌파 → 수급)을 모두 통과한 종목이 없습니다.</div>';
     }else{
       baseHtml='<div class="htable-wrap"><table class="htable"><thead><tr><th>종목</th><th>매수</th><th>매수가</th><th>매도</th><th>매도가</th><th>사유</th><th>손익</th></tr></thead><tbody>'+
-        trades.map(x=>'<tr><td><b>'+esc(x.name||x.code)+'</b><div class="sub">'+esc(x.code)+'</div></td>'+
+        trades.map(x=>'<tr><td><b>'+esc(x.name||x.code)+'</b><div class="sub">'+esc(x.code)+'</div>'+
+        '<div class="sub">갭 '+fmt(x.gap,2)+'% · 눌림 '+fmt(x.pullbackPct,2)+'% · 거래량 '+fmt(x.volRatio,2)+'x · 대금 '+fmt(x.amountRatio,2)+'x</div></td>'+
         '<td>'+String(x.entryTime||'').padStart(4,'0')+'</td><td>'+commas(Math.round(x.entryPrice||0))+'</td>'+
         '<td>'+(x.exitTime==null?'—':String(x.exitTime).padStart(4,'0'))+'</td><td>'+(x.exitPrice==null?'—':commas(Math.round(x.exitPrice)))+'</td>'+
         '<td>'+(x.reason||'진행 중')+'</td><td class="'+(x.pnl==null?'':x.pnl>=0?'win':'loss')+'">'+(x.pnl==null?'—':(x.pnl>=0?'+':'')+x.pnl.toFixed(2)+'%')+'</td></tr>').join('')+

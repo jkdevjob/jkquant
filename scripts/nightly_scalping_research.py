@@ -24,6 +24,7 @@ from zoneinfo import ZoneInfo
 KST=ZoneInfo("Asia/Seoul")
 OPEN=Path("data/opening-history")
 DAY=Path("data/daytrading-research/latest.json")
+CRYPTO=Path("data/crypto-research/latest.json")
 VTS=Path("data/vts-research/latest.json")
 OUT=Path("data/nightly-research")
 
@@ -173,6 +174,72 @@ def daytrading_report():
         "autoPromotion":False,
     }
 
+def crypto_report():
+    j=load_json(CRYPTO,{}) or {}
+    rows=[]
+    for v in j.get("variants") or []:
+        p=v.get("params") or {}
+        s=v.get("summary") or {}
+        h=(v.get("validation") or {}).get("holdout") or {}
+        rows.append({
+            "name":str(p.get("name") or ""),
+            "trades":int(s.get("trades") or 0),
+            "winRate":float(s.get("winRate") or 0),
+            "avgPnl":float(s.get("avgPnl") or 0),
+            "avgDailyReturnPct":float(s.get("avgDailyReturnPct") or 0),
+            "target1PctDayRatePct":float(s.get("target1PctDayRatePct") or 0),
+            "profitFactor":float(s.get("profitFactor") or 0),
+            "compoundReturnPct":float(s.get("compoundReturnPct") or 0),
+            "maxDrawdownPct":float(s.get("maxDrawdownPct") or 0),
+            "holdoutTrades":int(h.get("trades") or 0),
+            "holdoutAvgPnl":float(h.get("avgPnl") or 0),
+            "holdoutCompoundReturnPct":float(h.get("compoundReturnPct") or 0),
+            "holdoutTarget1PctDayRatePct":float(h.get("target1PctDayRatePct") or 0),
+        })
+    by={x["name"]:x for x in rows}
+    base=by.get("baseline",{
+        "avgPnl":0.0,"maxDrawdownPct":0.0,"holdoutAvgPnl":0.0,
+        "target1PctDayRatePct":0.0,"holdoutTarget1PctDayRatePct":0.0
+    })
+    eligible=j.get("comparisonStatus")=="reviewable"
+    candidates=[]
+    for x in rows:
+        if x["name"]=="baseline":
+            continue
+        all_edge=x["avgPnl"]-base["avgPnl"]
+        hold_edge=x["holdoutAvgPnl"]-base["holdoutAvgPnl"]
+        mdd_ok=x["maxDrawdownPct"]>=base["maxDrawdownPct"]-2.0
+        review=(
+            eligible and x["trades"]>=50 and x["holdoutTrades"]>=20
+            and all_edge>=0.05 and hold_edge>=0.05 and mdd_ok
+        )
+        candidates.append({
+            "name":x["name"],"status":"review" if review else "collecting",
+            "allAvgEdgePct":all_edge,"holdoutAvgEdgePct":hold_edge,
+            "trades":x["trades"],"holdoutTrades":x["holdoutTrades"],
+            "target1PctDayRatePct":x["target1PctDayRatePct"],
+            "holdoutTarget1PctDayRatePct":x["holdoutTarget1PctDayRatePct"],
+            "mddOk":mdd_ok,
+        })
+    candidates.sort(key=lambda x:(
+        x["status"]!="review",
+        -x["holdoutAvgEdgePct"],
+        -x["allAvgEdgePct"],
+        -x["holdoutTarget1PctDayRatePct"],
+        x["name"]
+    ))
+    return {
+        "status":"reviewable" if eligible else "collecting",
+        "archiveDays":int(j.get("archiveDays") or 0),
+        "validDays":int(j.get("validDays") or 0),
+        "from":j.get("from"),"to":j.get("to"),
+        "comparisonStatus":j.get("comparisonStatus") or "collecting",
+        "rolling30":j.get("rolling30") or {},
+        "variants":rows,"candidates":candidates,
+        "autoPromotion":False,
+        "targetNote":"1% is a research target metric, not a guaranteed daily return."
+    }
+
 def vts_report():
     j=load_json(VTS,{}) or {}
     out=[]
@@ -194,6 +261,7 @@ def main():
     now=datetime.now(KST)
     o=opening_report()
     d=daytrading_report()
+    c=crypto_report()
     v=vts_report()
     report={
         "schema":1,
@@ -202,6 +270,7 @@ def main():
         "mode":"nightly-research-no-auto-promotion",
         "opening":o,
         "daytrading":d,
+        "crypto":c,
         "execution":v,
         "guardrail":{
             "liveStrategyAutoChange":False,
@@ -215,6 +284,7 @@ def main():
         "date":report["date"],
         "opening":{"status":o["status"],"archiveDays":o["archiveDays"],"reviewCandidates":[x["name"] for x in o["candidates"] if x["status"]=="review"]},
         "daytrading":{"status":d["status"],"eligibleDays":d["eligibleArchiveDays"],"baselineTrades":d["baselineTradeCount"],"reviewCandidates":[x["name"] for x in d["candidates"] if x["status"]=="review"]},
+        "crypto":{"status":c["status"],"validDays":c["validDays"],"reviewCandidates":[x["name"] for x in c["candidates"] if x["status"]=="review"]},
         "vts":v["strategies"],
     },ensure_ascii=False,indent=2))
     return 0
