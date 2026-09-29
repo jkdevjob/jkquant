@@ -2309,7 +2309,7 @@ function showLsWarn(msg){
     document.body.appendChild(d);
   }catch(e){ console.error(msg); }
 }
-function save(){ saveLocal(); pushRemote(); }
+function save(){saveLocal();pushRemote();}
 function tabBox(){return S[S.activeTab]}
 function curStrat(){const b=tabBox();return b.sessions.find(x=>x.id===b.active)||b.sessions[0]}
 function sess(){return curStrat()}
