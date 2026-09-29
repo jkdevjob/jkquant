@@ -10558,9 +10558,57 @@ console.log('[SCALPING FLOW] 단타 공통 흐름 · 모의체결 분리');
      && /VTTS3035R/.test(kis));
   ok('KIS 해외 모의 조회는 전체조회 후 종목 필터', /PDNO:""[\s\S]{0,220}OVRS_EXCG_CD:""/.test(kis)
      && /if\(code\) rows=rows\.filter\(x=>x\.code===code\)/.test(kis));
-  ok('단타 화면 버전 1.23.2', /id="scVer">v1\.23\.2<\/span>/.test(sc));
+  ok('단타 화면 버전 1.24.0', /id="scVer">v1\.24\.0<\/span>/.test(sc));
 }
 
+
+/* ════ 시초가 실시간 신호 원본 누적 · 사후 성과 라벨 ════ */
+console.log('[OPENING SIGNAL LEARNING] 실시간 ledger · 30분 사후라벨 · 조건별 통계');
+{
+  const ow=fs.readFileSync(__d+'/worker/opening-scheduler/src/index.js','utf8');
+  const wr=fs.readFileSync(__d+'/worker/opening-scheduler/wrangler.jsonc','utf8');
+  const om=fs.readFileSync(__d+'/functions/api/opening-monitor.js','utf8');
+  const oy=fs.readFileSync(__d+'/.github/workflows/opening-monitor.yml','utf8');
+  const col=fs.readFileSync(__d+'/scripts/collect_scalping_data.py','utf8');
+  const btpy=fs.readFileSync(__d+'/scripts/backtest_opening_rebreak.py','utf8');
+
+  ok('시초가 실시간 신호는 Durable Object append-only ledger에 먼저 누적',
+     /export class OpeningSignalStore extends DurableObject/.test(ow)
+     && /SIGNAL_STORE/.test(ow) && /async function appendLedger/.test(ow)
+     && /liveSignalLedger/.test(oy));
+  ok('실시간 ledger는 기준+그림자 BUY/SELL을 strategyVersion과 함께 보존',
+     /variant,"buy"/.test(ow) && /variant,"sell"/.test(ow)
+     && /strategyVersion/.test(ow) && /shadow_strategy_not_notified/.test(ow));
+  ok('Telegram 실패가 신호를 없애지 않고 VTS 실행만 안전하게 보류',
+     /telegram\.buyError/.test(om) && /telegram\.sellError/.test(om)
+     && /alert_delivery_failed/.test(ow) && /signal_archive_failed/.test(ow));
+  ok('시초가 Worker에 Durable Object binding/migration 존재',
+     /"name": "SIGNAL_STORE"/.test(wr)
+     && /"new_sqlite_classes": \[\s*"OpeningSignalStore"\s*\]/.test(wr));
+  ok('장마감 아카이브는 실시간 BUY 신호와 재구성 최종성과를 signalRecords로 연결',
+     /signalRecords/.test(oy) && /finaltrade\(/.test(oy)
+     && /alertDelivery/.test(oy) && /outcome: finaltrade/.test(oy));
+  ok('원본 분봉은 10:00까지 수집해 09:30 이후 30분 경로를 보존',
+     /"hour": "100000"/.test(col) && /<= "100000"/.test(col)
+     && /09:00~10:00/.test(col));
+  ok('사후라벨은 5·10·20·30분 + MFE/MAE + ±1/±2% 최초도달을 저장',
+     /for n in \(1,3,5,10,20,30\)/.test(btpy)
+     && /hitPlus1Time/.test(btpy) && /hitPlus2Time/.test(btpy)
+     && /hitMinus1Time/.test(btpy) && /hitMinus2Time/.test(btpy)
+     && /fwd30mPct/.test(btpy));
+  ok('10:00 데이터가 추가돼도 실제 전략 청산은 final_exit 이후를 보지 않는다',
+     /if z\["hm"\] > p\.final_exit:\s*\n\s*break/.test(btpy));
+  ok('조건별 기대값 비교는 시간·갭·눌림·거래량·대금·순위·전략버전을 모두 집계',
+     /"conditionGroups"/.test(btpy)
+     && /"strategyVersion":opening_group_stats/.test(btpy)
+     && /"gap":opening_group_stats/.test(btpy)
+     && /"amountRatio":opening_group_stats/.test(btpy));
+  ok('단타 화면에 30분 경로와 조건별 성과/전략버전 비교 표시',
+     /신호 이후 30분 경로 진단/.test(scl)
+     && /조건별 실제 성과/.test(scl)
+     && /groupTable\('전략 버전'/.test(scl)
+     && /id="scVer">v1\.24\.0<\/span>/.test(scl));
+}
 
 /* ════ 단타 Telegram ③④ 실시간 + ⑤⑥ 일일 연구 ════ */
 console.log('[SCALPING TELEGRAM] 실시간 신호 · 일일 매매/연구 요약');
@@ -10598,7 +10646,7 @@ console.log('[SCALPING TELEGRAM] 실시간 신호 · 일일 매매/연구 요약
   const cr=cr0>=0&&cr1>cr0?nightly.slice(cr0,cr1):'';
   ok('BTC 야간연구는 실제 70/30 holdout 모델만 참조',
      /validationModel":"70\/30 holdout \+ rolling30"/.test(cr) && !/oos_edge|oos_trades|wf_status/.test(cr));
-  ok('단타 화면 버전 1.23.2', /id="scVer">v1\.23\.2<\/span>/.test(scl));
+  ok('단타 화면 버전 1.24.0', /id="scVer">v1\.24\.0<\/span>/.test(scl));
 }
 
 console.log(`\n════ 결과: ${pass} PASS / ${fail} FAIL ${fail===0?'— ALL PASS ★':'— 배포 금지, 위 ✗ 항목 수정 필요'} ════`);
