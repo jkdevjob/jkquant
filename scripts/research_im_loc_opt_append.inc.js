@@ -220,6 +220,70 @@
   }
   global.imAutoTp=false;
 
+  // Full alpha x row grid again with current automatic TP/M10 enabled.
+  const autoBaseline={};
+  global.__LOC_ALPHA=1; global.imRowsOf=()=>3; global.imAutoTp=true;
+  for(const pn of scenarioNames){
+    const d=subDays(pn); autoBaseline[pn]={};
+    for(const cap of caps) autoBaseline[pn][cap]=run(d,cap);
+  }
+  const autoGrid=[];
+  for(const alpha of alphas){
+    global.__LOC_ALPHA=alpha;
+    for(const n of rowGrid){
+      global.imRowsOf=()=>n; global.imAutoTp=true;
+      const scenarios={}; const ratios=[]; const mddD=[]; let wins=0;
+      for(const pn of scenarioNames){
+        const d=subDays(pn); scenarios[pn]={};
+        for(const cap of caps){
+          const x=run(d,cap), b=autoBaseline[pn][cap];
+          scenarios[pn][cap]=x;
+          const ratio=x.final/b.final;
+          ratios.push(ratio); mddD.push(x.mdd-b.mdd);
+          if(ratio>1+1e-12) wins++;
+        }
+      }
+      const geo=Math.exp(ratios.reduce((a,b)=>a+Math.log(Math.max(b,1e-12)),0)/ratios.length);
+      const trainGeo=Math.sqrt((scenarios.train[10000].final/autoBaseline.train[10000].final)*
+                               (scenarios.train[100000].final/autoBaseline.train[100000].final));
+      const holdGeo=Math.sqrt((scenarios.holdout[10000].final/autoBaseline.holdout[10000].final)*
+                              (scenarios.holdout[100000].final/autoBaseline.holdout[100000].final));
+      autoGrid.push({alpha,rows:n,geoRatio:geo,minRatio:Math.min(...ratios),maxRatio:Math.max(...ratios),
+        wins,avgMddDelta:mddD.reduce((a,b)=>a+b,0)/mddD.length,trainGeo,holdoutGeo:holdGeo,scenarios});
+    }
+  }
+  const autoByGeo=autoGrid.slice().sort((a,b)=>b.geoRatio-a.geoRatio||b.minRatio-a.minRatio);
+  const autoByMin=autoGrid.slice().sort((a,b)=>b.minRatio-a.minRatio||b.geoRatio-a.geoRatio);
+  const autoByTrain=autoGrid.slice().sort((a,b)=>b.trainGeo-a.trainGeo||b.holdoutGeo-a.holdoutGeo);
+  const autoEligible=autoGrid.filter(x=>x.trainGeo>=1 && x.holdoutGeo>=1 && x.wins>=6);
+  const autoRobust=autoEligible.slice().sort((a,b)=>b.geoRatio-a.geoRatio||b.minRatio-a.minRatio)[0]||null;
+  function autoBestScenario(pn,cap){
+    return autoGrid.slice().sort((a,b)=>b.scenarios[pn][cap].final-a.scenarios[pn][cap].final)[0];
+  }
+  function rollingYearsAuto(cfg,yrs,cap){
+    const span=Math.round(yrs*252), step=21, vals=[];
+    for(let i=0;i+span<=live.days.length;i+=step){
+      const d=live.days.slice(i,i+span);
+      global.__LOC_ALPHA=1; global.imRowsOf=()=>3; global.imAutoTp=true;
+      const b=run(d,cap);
+      global.__LOC_ALPHA=cfg.alpha; global.imRowsOf=()=>cfg.rows; global.imAutoTp=true;
+      const x=run(d,cap);
+      vals.push(x.final/b.final);
+    }
+    vals.sort((a,b)=>a-b);
+    return {windows:vals.length,wins:vals.filter(x=>x>1).length,
+      winRate:vals.length?vals.filter(x=>x>1).length/vals.length*100:0,
+      avgRatio:vals.reduce((a,b)=>a+b,0)/Math.max(1,vals.length),
+      medianRatio:vals.length?vals[Math.floor(vals.length/2)]:null,
+      worstRatio:vals[0]||null,bestRatio:vals[vals.length-1]||null};
+  }
+  const autoRollCfg=autoRobust||autoByGeo[0];
+  const autoRolling={};
+  if(autoRollCfg){
+    for(const cap of caps) autoRolling[cap]={y3:rollingYearsAuto(autoRollCfg,3,cap),y5:rollingYearsAuto(autoRollCfg,5,cap)};
+  }
+  global.imAutoTp=false;
+
   function lite(x){
     return {alpha:x.alpha,rows:x.rows,geoRatio:x.geoRatio,minRatio:x.minRatio,maxRatio:x.maxRatio,wins:x.wins,
       avgMddDelta:x.avgMddDelta,trainGeo:x.trainGeo,holdoutGeo:x.holdoutGeo,scenarios:x.scenarios};
@@ -246,7 +310,22 @@
     },
     rolling,
     autoTpCheck,
-    grid:grid.map(lite)
+    autoOptimization:{
+      baseline:autoBaseline,
+      eligibleCount:autoEligible.length,
+      robust:autoRobust?lite(autoRobust):null,
+      topGeo:autoByGeo.slice(0,15).map(lite),
+      topMin:autoByMin.slice(0,15).map(lite),
+      topTrain:autoByTrain.slice(0,15).map(lite),
+      bestFull10k:lite(autoBestScenario('full',10000)),
+      bestFull100k:lite(autoBestScenario('full',100000)),
+      bestRecent10k:lite(autoBestScenario('recent',10000)),
+      bestRecent100k:lite(autoBestScenario('recent',100000)),
+      rollingCandidate:autoRollCfg?{alpha:autoRollCfg.alpha,rows:autoRollCfg.rows}:null,
+      rolling:autoRolling
+    },
+    grid:grid.map(lite),
+    autoGrid:autoGrid.map(lite)
   };
 
   fs.writeFileSync(path.join(OUTDIR,'im-loc-opt.json'),JSON.stringify(report,null,2));
@@ -266,7 +345,21 @@
     topGeo:byGeo.slice(0,10).map(x=>({alpha:x.alpha,rows:x.rows,geoRatio:x.geoRatio,minRatio:x.minRatio,wins:x.wins,trainGeo:x.trainGeo,holdoutGeo:x.holdoutGeo,avgMddDelta:x.avgMddDelta})),
     topTrain:byTrain.slice(0,10).map(x=>({alpha:x.alpha,rows:x.rows,trainGeo:x.trainGeo,holdoutGeo:x.holdoutGeo,geoRatio:x.geoRatio,minRatio:x.minRatio,wins:x.wins})),
     rolling:rolling[robust.alpha+'|'+robust.rows],
-    autoTpCheck:autoTpCheck.map(x=>({alpha:x.alpha,rows:x.rows,full10k:x.scenarios.full[10000],recent10k:x.scenarios.recent[10000],holdout10k:x.scenarios.holdout[10000]}))
+    fixedEligibleCount:eligible.length,
+    autoTpCheck:autoTpCheck.map(x=>({alpha:x.alpha,rows:x.rows,full10k:x.scenarios.full[10000],recent10k:x.scenarios.recent[10000],holdout10k:x.scenarios.holdout[10000]})),
+    autoOptimization:{
+      baseline:{full10k:autoBaseline.full[10000],full100k:autoBaseline.full[100000],recent10k:autoBaseline.recent[10000],recent100k:autoBaseline.recent[100000]},
+      eligibleCount:autoEligible.length,
+      robust:autoRobust?lite(autoRobust):null,
+      bestFull10k:lite(autoBestScenario('full',10000)),
+      bestFull100k:lite(autoBestScenario('full',100000)),
+      bestRecent10k:lite(autoBestScenario('recent',10000)),
+      bestRecent100k:lite(autoBestScenario('recent',100000)),
+      topGeo:autoByGeo.slice(0,10).map(x=>({alpha:x.alpha,rows:x.rows,geoRatio:x.geoRatio,minRatio:x.minRatio,wins:x.wins,trainGeo:x.trainGeo,holdoutGeo:x.holdoutGeo,avgMddDelta:x.avgMddDelta})),
+      topTrain:autoByTrain.slice(0,10).map(x=>({alpha:x.alpha,rows:x.rows,trainGeo:x.trainGeo,holdoutGeo:x.holdoutGeo,geoRatio:x.geoRatio,minRatio:x.minRatio,wins:x.wins})),
+      rollingCandidate:autoRollCfg?{alpha:autoRollCfg.alpha,rows:autoRollCfg.rows}:null,
+      rolling:autoRolling
+    }
   };
   fs.writeFileSync(path.join(OUTDIR,'im-loc-opt-summary.json'),JSON.stringify(summary,null,2));
   console.log('\n=== IM LOC OPT SUMMARY JSON ===');
