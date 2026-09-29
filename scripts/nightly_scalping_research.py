@@ -220,7 +220,6 @@ def crypto_report():
             "trades":x["trades"],"holdoutTrades":x["holdoutTrades"],
             "target1PctDayRatePct":x["target1PctDayRatePct"],
             "holdoutTarget1PctDayRatePct":x["holdoutTarget1PctDayRatePct"],
-            "oosAvgEdgePct":oos_edge,"oosTrades":oos_trades,
             "mddOk":mdd_ok,
         })
     candidates.sort(key=lambda x:(
@@ -236,8 +235,7 @@ def crypto_report():
         "validDays":int(j.get("validDays") or 0),
         "from":j.get("from"),"to":j.get("to"),
         "comparisonStatus":j.get("comparisonStatus") or "collecting",
-        "walkForwardStatus":wf_status,
-        "walkForwardFolds":int(wf.get("foldCount") or 0),
+        "validationModel":"70/30 holdout + rolling30",
         "rolling30":j.get("rolling30") or {},
         "variants":rows,"candidates":candidates,
         "autoPromotion":False,
