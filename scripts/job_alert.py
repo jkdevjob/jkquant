@@ -7,8 +7,10 @@ import time
 import subprocess
 from html import escape
 from pathlib import Path
-from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
+from urllib.parse import parse_qsl, urlencode, urljoin, urlsplit, urlunsplit
 
+import requests
+from bs4 import BeautifulSoup
 from ddgs import DDGS
 
 CACHE_DIR = Path(".job-alert-cache")
@@ -93,6 +95,29 @@ SHORT_TERM_QUERIES = [
     'site:albamon.com 대전 단기알바 초보',
     'site:albamon.com 세종 단기알바 초보',
 ]
+
+JOBKOREA_BASE = 'https://www.jobkorea.co.kr'
+JOBKOREA_DIRECT_QUERIES = [
+    '대전 Java', '세종 Java',
+    '대전 Spring', '세종 Spring',
+    '대전 JSP', '세종 JSP',
+    '대전 개발자', '세종 개발자',
+    '대전 백엔드', '세종 백엔드',
+    '대전 웹개발', '세종 웹개발',
+    '대전 시스템개발', '세종 시스템개발',
+    '대전 전자정부', '세종 전자정부',
+    '대전 프리랜서 개발', '세종 프리랜서 개발',
+    '대전 유지보수 개발', '세종 유지보수 개발',
+    '대전 AI 개발자', '세종 AI 개발자',
+    '대전 LLM', '세종 LLM',
+    '대전 RAG', '세종 RAG',
+    '대전 NestJS', '세종 NestJS',
+    '대전 6000만원', '세종 6000만원',
+    '대전 5400만원', '세종 5400만원',
+    '대전 500만원', '세종 500만원',
+    '대전 450만원', '세종 450만원',
+]
+JOBKOREA_PAGES_PER_QUERY = 2
 
 LOCATION_TERMS = ('대전', '세종')
 CORE_TERMS = (
@@ -466,11 +491,164 @@ def search_group(queries, scorer):
     return list(merged.values())
 
 
+def merge_jobs(*groups):
+    merged = {}
+    for group in groups:
+        for job in group:
+            current = merged.get(job['url'])
+            if current is None or job.get('score', 0) > current.get('score', 0):
+                merged[job['url']] = job
+    return list(merged.values())
+
+
+def classify_jobs(jobs, scorer):
+    result = []
+    for job in jobs:
+        score = scorer(job['title'], job['body'], job['url'])
+        if score < 0:
+            continue
+        item = dict(job)
+        item['score'] = score
+        item['salary'] = salary_info(item['title'], item['body'])
+        item['short_pay'] = short_term_pay_info(item['title'], item['body'])
+        result.append(item)
+    return result
+
+
+def jobkorea_card_text(anchor):
+    node = anchor
+    fallback = normalize_text(anchor.get_text(' ', strip=True))
+    for _ in range(8):
+        node = getattr(node, 'parent', None)
+        if node is None:
+            break
+        text = normalize_text(node.get_text(' ', strip=True))
+        if not text or len(text) > 2200:
+            continue
+        fallback = text
+        has_location = any(loc in text for loc in LOCATION_TERMS)
+        has_job_meta = any(
+            term in text
+            for term in (
+                '정규직', '계약직', '프리랜서', '경력', '학력',
+                '만원', '월급', '연봉', '상시채용', '마감',
+            )
+        )
+        if has_location and has_job_meta:
+            return text
+    return fallback
+
+
+def collect_jobkorea_direct():
+    session = requests.Session()
+    session.headers.update({
+        'User-Agent': (
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) '
+            'AppleWebKit/537.36 (KHTML, like Gecko) '
+            'Chrome/154.0.0.0 Safari/537.36'
+        ),
+        'Accept-Language': 'ko-KR,ko;q=0.9,en;q=0.7',
+    })
+
+    jobs = {}
+    ok_pages = 0
+    failed_pages = 0
+    parsed_links = 0
+    errors = []
+
+    for query in JOBKOREA_DIRECT_QUERIES:
+        for page_no in range(1, JOBKOREA_PAGES_PER_QUERY + 1):
+            try:
+                response = session.get(
+                    f'{JOBKOREA_BASE}/Search',
+                    params={'stext': query, 'Page_No': page_no},
+                    timeout=20,
+                )
+                response.raise_for_status()
+                ok_pages += 1
+
+                soup = BeautifulSoup(response.text, 'html.parser')
+                page_links = 0
+                for anchor in soup.find_all('a', href=True):
+                    href = anchor.get('href') or ''
+                    match = re.search(r'/Recruit/GI_Read/(\d+)', href, re.I)
+                    if not match:
+                        continue
+
+                    title = normalize_text(anchor.get_text(' ', strip=True))
+                    if not title or len(title) < 2:
+                        continue
+
+                    body = jobkorea_card_text(anchor)
+                    if not any(loc in body for loc in LOCATION_TERMS):
+                        continue
+
+                    url = f'{JOBKOREA_BASE}/Recruit/GI_Read/{match.group(1)}'
+                    candidate = {
+                        'title': title,
+                        'body': body,
+                        'url': url,
+                        'score': 0,
+                        'salary': salary_info(title, body),
+                        'short_pay': short_term_pay_info(title, body),
+                        'source': '잡코리아 직접',
+                    }
+                    current = jobs.get(url)
+                    if current is None or len(candidate['body']) > len(current['body']):
+                        jobs[url] = candidate
+                    page_links += 1
+
+                parsed_links += page_links
+                # 검색 결과 페이지 구조가 바뀐 경우 조용히 '0건'으로 오인하지 않는다.
+                page_text = normalize_text(soup.get_text(' ', strip=True))
+                if ('총 ' in page_text or '채용정보' in page_text) and page_links == 0:
+                    failed_pages += 1
+                    errors.append(f'{query} p{page_no}: 공고 링크 파싱 0건')
+            except Exception as exc:
+                failed_pages += 1
+                errors.append(f'{query} p{page_no}: {type(exc).__name__} {exc}')
+
+            time.sleep(0.15)
+
+    status = {
+        'ok': ok_pages > 0 and parsed_links > 0,
+        'ok_pages': ok_pages,
+        'failed_pages': failed_pages,
+        'parsed_jobs': len(jobs),
+        'parsed_links': parsed_links,
+        'errors': errors[:5],
+    }
+    print(
+        f'[INFO] jobkorea_direct ok={status["ok"]} ok_pages={ok_pages} '
+        f'failed_pages={failed_pages} parsed_jobs={len(jobs)} '
+        f'parsed_links={parsed_links}'
+    )
+    for error in errors[:5]:
+        print(f'[WARN] jobkorea direct: {error}', file=sys.stderr)
+
+    return list(jobs.values()), status
+
+
 def search_jobs():
-    java_jobs = search_group(JAVA_AI_QUERIES, score_java_result)
-    regular_dev_jobs = search_group(REGULAR_DEV_QUERIES, score_regular_dev_result)
-    salary_jobs = search_group(SALARY_QUERIES, score_salary_result)
-    short_term_jobs = search_group(SHORT_TERM_QUERIES, score_short_term_result)
+    direct_jobs, jobkorea_status = collect_jobkorea_direct()
+
+    # 검색엔진은 보조 수단으로 유지하고, 잡코리아 직접 수집 결과를 우선 합친다.
+    java_jobs = merge_jobs(
+        classify_jobs(direct_jobs, score_java_result),
+        search_group(JAVA_AI_QUERIES, score_java_result),
+    )
+    regular_dev_jobs = merge_jobs(
+        classify_jobs(direct_jobs, score_regular_dev_result),
+        search_group(REGULAR_DEV_QUERIES, score_regular_dev_result),
+    )
+    salary_jobs = merge_jobs(
+        classify_jobs(direct_jobs, score_salary_result),
+        search_group(SALARY_QUERIES, score_salary_result),
+    )
+    short_term_jobs = merge_jobs(
+        classify_jobs(direct_jobs, score_short_term_result),
+        search_group(SHORT_TERM_QUERIES, score_short_term_result),
+    )
 
     java_jobs.sort(key=lambda x: (-x['score'], x['title']))
     regular_dev_jobs.sort(key=lambda x: (-x['score'], x['title']))
@@ -488,7 +666,7 @@ def search_jobs():
             x['title'],
         )
     )
-    return java_jobs, regular_dev_jobs, salary_jobs, short_term_jobs
+    return java_jobs, regular_dev_jobs, salary_jobs, short_term_jobs, jobkorea_status
 
 
 def short_body(body, limit=190):
@@ -603,11 +781,25 @@ def append_short_term_section(lines, jobs):
         lines.extend([f'※ 일급/시급 우선 상위 10건 표시 / 추가 {len(jobs) - 10}건', ''])
 
 
-def build_message(java_jobs, salary_500, salary_450, regular_dev_jobs, short_term_jobs):
+def build_message(
+    java_jobs, salary_500, salary_450, regular_dev_jobs, short_term_jobs,
+    jobkorea_status,
+):
     lines = [
         '🔎 <b>대전·세종 일자리 알림</b>',
         '',
     ]
+
+    if jobkorea_status.get('ok'):
+        lines.extend([
+            f'✅ 잡코리아 직접 수집: 후보 {jobkorea_status.get("parsed_jobs", 0)}건 확인',
+            '',
+        ])
+    else:
+        lines.extend([
+            '⚠️ <b>잡코리아 직접 수집 실패</b> — 신규 없음으로 간주하지 않습니다.',
+            '',
+        ])
 
     append_java_section(lines, java_jobs)
     append_salary_section(lines, '② 🔥 <b>월 500만 이상 · 직종무관</b>', salary_500)
@@ -671,7 +863,7 @@ def send_via_jkquant(message, count):
 
 def main():
     seen = load_seen()
-    java_jobs, regular_dev_jobs, salary_jobs, short_term_jobs = search_jobs()
+    java_jobs, regular_dev_jobs, salary_jobs, short_term_jobs, jobkorea_status = search_jobs()
 
     new_java = [job for job in java_jobs if job['url'] not in seen]
     java_urls = {job['url'] for job in java_jobs}
@@ -704,7 +896,6 @@ def main():
         java_urls
         | regular_urls
         | {job['url'] for job in salary_jobs}
-        | {job['url'] for job in short_term_jobs}
     )
     new_short_term = [
         job for job in short_term_jobs
@@ -724,8 +915,11 @@ def main():
         | {job['url'] for job in java_jobs}
         | {job['url'] for job in regular_dev_jobs}
         | {job['url'] for job in salary_jobs}
+        | {job['url'] for job in short_term_jobs}
     )
-    save_seen(all_seen)
+
+    if os.environ.get('JOB_ALERT_DRY_RUN') != '1':
+        save_seen(all_seen)
 
     total_new = (
         len(new_java) + len(new_regular_dev)
@@ -733,11 +927,20 @@ def main():
         + len(new_short_term)
     )
     message = build_message(
-        new_java, salary_500, salary_450, new_regular_dev, new_short_term
+        new_java, salary_500, salary_450, new_regular_dev, new_short_term,
+        jobkorea_status,
     )
 
     if total_new == 0:
-        message += '\n\n오늘은 다섯 조건 모두 신규 공고가 없습니다.'
+        if jobkorea_status.get('ok'):
+            message += '\n\n오늘은 다섯 조건 모두 신규 공고가 없습니다.'
+        else:
+            message += '\n\n잡코리아 수집이 실패해 오늘 결과를 0건으로 확정하지 않았습니다.'
+
+    if os.environ.get('JOB_ALERT_DRY_RUN') == '1':
+        print('[INFO] DRY RUN: Telegram send skipped.')
+        print(message[:6000])
+        return
 
     send_via_jkquant(message, total_new)
     print('[INFO] Telegram job notification sent via jkquant Pages Function.')
