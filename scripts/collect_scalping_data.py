@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Collect one Korean trading day's 09:00~09:30 1-minute bars for the top-100 universe.
+"""Collect one Korean trading day's 09:00~10:00 1-minute bars for the top-100 universe.
 
 Runs after market close from GitHub Actions.  The universe snapshot is saved with its
 rank so the same data can later compare Top50 vs Top100 without survivor/ranking leakage.
@@ -54,7 +54,7 @@ def daily_meta(code: str, date_iso: str):
 
 
 def minute_history(code: str, date_yyyymmdd: str):
-    qs = urllib.parse.urlencode({"op": "minhist", "code": code, "date": date_yyyymmdd, "hour": "093000"})
+    qs = urllib.parse.urlencode({"op": "minhist", "code": code, "date": date_yyyymmdd, "hour": "100000"})
     last = None
     for attempt in range(4):
         try:
@@ -69,7 +69,7 @@ def minute_history(code: str, date_yyyymmdd: str):
             for b in j.get("bars") or []:
                 t = str(b.get("t") or "")
                 hhmmss = t[-6:] if len(t) >= 6 else ""
-                if "090000" <= hhmmss <= "093000":
+                if "090000" <= hhmmss <= "100000":
                     bars.append({
                         "t": t,
                         "o": float(b.get("o") or 0),
@@ -136,7 +136,7 @@ def main():
 
     # Holiday / no-session day: all symbols have no intraday bars. Do not create an empty dataset.
     if successful == 0:
-        print(f"{date_iso}: no 09:00~09:30 bars found; treating as market holiday/no-session.")
+        print(f"{date_iso}: no 09:00~10:00 bars found; treating as market holiday/no-session.")
         return 0
 
     min_required = max(1, int(len(universe) * 0.90))
@@ -146,7 +146,7 @@ def main():
         return 2
 
     payload = {
-        "schema": 2,
+        "schema": 3,
         "date": date_iso,
         "collectedAt": datetime.now(KST).isoformat(),
         "universeLimit": LIMIT,

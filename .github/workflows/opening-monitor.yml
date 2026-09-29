@@ -39,6 +39,7 @@ jobs:
         env:
           KEY: ${{ secrets.AUTOTRADE_KEY }}
           BASE: https://jkquant.pages.dev
+          OPENING_WORKER: https://jkquant-opening-scheduler.mumae4.workers.dev
         shell: bash
         run: |
           if [ -z "$KEY" ]; then
@@ -51,13 +52,14 @@ jobs:
             OUT="data/opening-history/$DATE.json"
             SEND_SUMMARY=1
 
-            # 기존 오늘 파일이 예전 형식이면 shadow 데이터만 백필한다.
+            # 기준+shadow+실시간 원본 ledger까지 있으면 완성본이다.
+            # 구형 파일은 덮어버리지 않고 같은 날짜의 누락 필드만 재구성/백필한다.
             if [ -f "$OUT" ]; then
-              if jq -e '(.shadowVariants | type) == "array" and (.shadowVariants | length) > 0' "$OUT" >/dev/null 2>&1; then
-                echo "$OUT 기준+shadow 이력 이미 저장됨 — 중복 작업 생략"
+              if jq -e '(.shadowVariants | type) == "array" and (.shadowVariants | length) > 0 and ((.liveSignalLedger.schema // 0) >= 1)' "$OUT" >/dev/null 2>&1; then
+                echo "$OUT 기준+shadow+실시간 신호 ledger 이미 저장됨 — 중복 작업 생략"
                 return 0
               fi
-              echo "$OUT 기존 기준전략 이력 발견 — shadow 이력 추가 백필"
+              echo "$OUT 기존 이력 발견 — 누락된 실시간 ledger/연구 필드 백필"
               SEND_SUMMARY=0
             fi
 
@@ -92,13 +94,37 @@ jobs:
               return 1
             fi
 
+            # Cloudflare 정시 감시에서 실제로 발생한 신호 원본을 별도로 가져온다.
+            # 이 ledger가 없어도 장마감 재구성 이력은 저장하지만, 둘을 같은 자료인 것처럼 섞지 않는다.
+            LIVE_STATUS=$(curl -sS --max-time 30 -o live-ledger.json -w '%{http_code}' \
+              -H "x-monitor-key: $KEY" "$OPENING_WORKER/events?date=$DATE" || true)
+            if [ "$LIVE_STATUS" = "200" ] && jq -e '.ok == true' live-ledger.json >/dev/null 2>&1; then
+              echo "실시간 신호 ledger 조회 성공: $(jq -c '{events:(.ledger.events//[]|length),scans:(.ledger.scans//[]|length)}' live-ledger.json)"
+            else
+              echo "::warning::실시간 신호 ledger 조회 실패 HTTP $LIVE_STATUS — 재구성 이력은 보존"
+              printf '%s\n' '{"ok":false,"ledger":null}' > live-ledger.json
+            fi
+
             GEN=$(TZ=Asia/Seoul date --iso-8601=seconds)
             TMP="$OUT.tmp"
-            jq -s --arg gen "$GEN" '
+            jq -s --slurpfile live live-ledger.json --arg gen "$GEN" '
+              . as $parts
+              | ($live[0].ledger // null) as $ledger
+              | def finaltrade($variant; $code; $entryTime):
+                  if $variant == "baseline" then
+                    ([ $parts[].trades[] | select(.code == $code and .entryTime == $entryTime) ][0] // null)
+                  else
+                    ([ $parts[].shadowVariants[]
+                       | select(.name == $variant)
+                       | .trades[]
+                       | select(.code == $code and .entryTime == $entryTime) ][0] // null)
+                  end;
               {
-                date: .[0].date,
+                schema: 3,
+                date: $parts[0].date,
                 generatedAt: $gen,
                 source: "server-opening-monitor",
+                liveSource: "cloudflare-opening-scheduler-durable-ledger",
                 strategy: {
                   universe: "Top100",
                   gap: "+2~+7%",
@@ -114,11 +140,11 @@ jobs:
                   finalExit: "09:30",
                   friction: "0.25%"
                 },
-                universeChecked: ([.[].universe] | add),
-                errors: ([.[].errors] | add),
-                trades: ([.[].trades[]] | sort_by(.entryTime, .code)),
+                universeChecked: ([$parts[].universe] | add),
+                errors: ([$parts[].errors] | add),
+                trades: ([$parts[].trades[]] | sort_by(.entryTime, .code)),
                 shadowVariants: (
-                  [.[].shadowVariants[]]
+                  [$parts[].shadowVariants[]]
                   | group_by(.name)
                   | map({
                       name: .[0].name,
@@ -127,6 +153,33 @@ jobs:
                       params: .[0].params,
                       trades: ([.[].trades[]] | sort_by(.entryTime, .code))
                     })
+                ),
+                liveSignalLedger: $ledger,
+                signalRecords: (
+                  if $ledger == null then []
+                  else [
+                    $ledger.events[]
+                    | select(.stage == "buy")
+                    | . as $e
+                    | {
+                        signalId: $e.id,
+                        date: $e.date,
+                        targetHm: $e.targetHm,
+                        capturedAt: $e.capturedAt,
+                        strategy: $e.strategy,
+                        strategyVersion: $e.strategyVersion,
+                        signalSchemaVersion: $e.signalSchemaVersion,
+                        variant: $e.variant,
+                        code: $e.code,
+                        name: $e.name,
+                        strategyParams: $e.strategyParams,
+                        decisionReason: $e.decisionReason,
+                        alertDelivery: $e.alertDelivery,
+                        signal: $e.signal,
+                        outcome: finaltrade($e.variant; $e.code; $e.signal.entryTime)
+                      }
+                  ]
+                  end
                 )
               }
             ' history-0.json history-1.json history-2.json history-3.json history-4.json > "$TMP"
@@ -138,6 +191,8 @@ jobs:
               universeChecked,
               errors,
               baselineTrades:(.trades|length),
+              liveSignals:(.signalRecords|length),
+              liveScans:(.liveSignalLedger.scans//[]|length),
               shadow:(.shadowVariants|map({name,label,trades:(.trades|length)}))
             }' "$OUT"
 

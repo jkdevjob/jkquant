@@ -14,5 +14,21 @@
   },
   "observability": {
     "enabled": true
-  }
+  },
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "SIGNAL_STORE",
+        "class_name": "OpeningSignalStore"
+      }
+    ]
+  },
+  "migrations": [
+    {
+      "tag": "v1",
+      "new_sqlite_classes": [
+        "OpeningSignalStore"
+      ]
+    }
+  ]
 }

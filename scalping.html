@@ -152,7 +152,7 @@ canvas{display:block;width:100%;height:auto}
 #gbtn svg{width:20px;height:20px}
 #gate .gnote{color:var(--faint);font-size:11.5px;margin-top:18px;line-height:1.6}
 
-/* unified strategy flow v1.23.2 */
+/* unified strategy flow v1.24.0 */
 .strategy-flow{display:flex;flex-direction:column;gap:18px;margin-top:12px}
 .flow-section{border-top:1px solid var(--line);padding-top:12px}
 .flow-section:first-child{border-top:0;padding-top:0}
@@ -203,7 +203,7 @@ canvas{display:block;width:100%;height:auto}
 
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Morning Scalping</div><h1>JK <span class="v">퀀트</span> 단타 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="scVer">v1.23.2</span></h1></div>
+    <div><div class="kicker">Morning Scalping</div><h1>JK <span class="v">퀀트</span> 단타 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="scVer">v1.24.0</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -313,9 +313,10 @@ canvas{display:block;width:100%;height:auto}
   </div>
 
   <div class="card">
-    <h3><span class="dot"></span>📒 오늘 서버 매매 이력 <span class="sub" style="font-weight:600">09:31 영구 저장 · 웹을 닫아도 유지</span></h3>
-    <p class="lead">서버의 눌림→재돌파 신호를 기준으로 <b>매수 시점</b>과 이후 <b>손절 −1% · 익절 +1.5% · 미청산 시 09:30 청산</b>을 같은 규칙으로 다시 계산한다.
-      분봉은 종가 체결 근사이며 손익은 왕복 마찰비용 <b>0.25%</b>를 반영한다. 장 종료 후에는 같은 결과를 <b>scalping-data 서버 아카이브</b>에 날짜별로 저장한다.</p>
+    <h3><span class="dot"></span>📒 오늘 서버 매매 이력 <span class="sub" style="font-weight:600">실시간 신호 원본 + 09:31 사후결과 영구 저장</span></h3>
+    <p class="lead">Cloudflare 정시 감시가 만든 <b>기준·그림자 신호를 발생 시점 그대로 먼저 누적</b>하고, 장 종료 후 같은 종목의
+      <b>손절 −1% · 익절 +1.5% · 미청산 시 09:30 청산</b> 결과를 연결한다. Telegram 전송 실패나 VTS 미체결이 있어도 신호 원본은 버리지 않는다.
+      화면의 즉시 조회는 서버 재구성 결과이며, 영구 아카이브에는 실시간 원본과 재구성 결과를 구분해서 함께 저장한다.</p>
     <div class="row" style="margin-bottom:8px">
       <button class="ghostbtn" onclick="loadServerOpeningHistory()">🔄 오늘 이력 새로고침</button>
       <span class="sub" id="ob_server_hist_msg"></span>
@@ -339,7 +340,8 @@ canvas{display:block;width:100%;height:auto}
 
   <div class="card">
     <h3><span class="dot"></span>🧪 누적 시초가 연구 백테스트 <span class="sub" style="font-weight:600">매일 원본 누적 · 워크포워드 검증</span></h3>
-    <p class="lead">매일 16:10 이후 <b>그날의 Top100 실제 유니버스와 09:00~09:30 KIS 1분봉</b>을 저장하고, 같은 원본으로 기준전략과 그림자 가설을 다시 계산한다.
+    <p class="lead">매일 16:10 이후 <b>그날의 Top100 실제 유니버스와 09:00~10:00 KIS 1분봉</b>을 저장한다. 진입 규칙과 09:30 청산 규칙은 그대로 두고,
+      신호 뒤 <b>5·10·20·30분 수익률, MFE/MAE, ±1%·±2% 최초 도달시각</b>을 사후 라벨로 붙여 조건별 기대값을 누적한다.
       <b>25거래일</b>이 모이면 <b>20일 학습 → 다음 5일 검증</b>의 시간순 워크포워드를 자동 시작하며, 검증 결과만 별도로 집계한다.</p>
     <div class="row" style="margin-bottom:8px">
       <button class="ghostbtn" onclick="loadOpeningResearch()">🔄 누적 백테스트 갱신</button>
@@ -1963,19 +1965,61 @@ async function loadOpeningResearch(){
       '<div class="outbox"><div class="ol">기준 평균손익</div><div class="ov '+((s.avgPnl||0)>=0?'good':'bad')+'">'+((s.avgPnl||0)>=0?'+':'')+(s.avgPnl||0).toFixed(3)+'%</div></div>'+
       '</div><div class="htable-wrap" style="margin-top:10px"><table class="htable"><thead><tr><th>가설</th><th>거래</th><th>승률</th><th>평균손익</th><th>PF</th><th>단순합</th><th>MDD</th></tr></thead><tbody>'+rows+'</tbody></table></div>';
 
-    const dg=j.diagnostics||{},fp=dg.forwardPath||{},tb=dg.timeBuckets||[];
+    const dg=j.diagnostics||{},fp=dg.forwardPath||{},cg=dg.conditionGroups||{},hits=dg.thresholdHits||{};
     const pct=v=>v==null?'—':((v>=0?'+':'')+(+v).toFixed(2)+'%');
-    const pathRows=[1,3,5,10].map(n=>{
+    const rate=v=>v==null?'—':(+v).toFixed(1)+'%';
+    const pathRows=[5,10,20,30].map(n=>{
       const z=fp['fwd'+n+'mPct']||{};
       return '<tr><td>'+n+'분</td><td>'+(z.n||0)+'</td><td class="'+((z.avg||0)>=0?'win':'loss')+'">'+pct(z.avg)+'</td><td>'+pct(z.median)+'</td></tr>';
     }).join('');
-    const timeRows=tb.map(z=>'<tr><td><b>'+esc(z.group)+'</b></td><td>'+z.trades+'</td><td>'+((z.winRate||0).toFixed(1))+'%</td><td class="'+((z.avgPnl||0)>=0?'win':'loss')+'">'+pct(z.avgPnl)+'</td><td>'+pct(z.avgMfe)+'</td><td>'+pct(z.avgMae)+'</td></tr>').join('');
-    html+='<div style="margin-top:14px"><b>🔬 경로 진단</b></div>'+
+    const hitBox=(label,z,cls)=>'<div class="outbox"><div class="ol">'+label+'</div><div class="ov '+cls+'">'+rate((z||{}).ratePct)+'</div><div class="sub">'+((z||{}).hits||0)+'/'+((z||{}).total||0)+'</div></div>';
+    const groupTable=(title,rows)=>{
+      rows=rows||[]; if(!rows.length)return '';
+      return '<div style="margin-top:12px"><b>'+esc(title)+'</b></div><div class="htable-wrap" style="margin-top:6px"><table class="htable"><thead><tr>'+
+        '<th>조건</th><th>신호</th><th>승률</th><th>평균이익</th><th>평균손실</th><th>기대값</th><th>MFE</th><th>MAE</th><th>+1% 도달</th><th>-1% 도달</th>'+
+        '</tr></thead><tbody>'+rows.map(z=>'<tr><td><b>'+esc(z.group)+'</b></td><td>'+(z.trades!=null?z.trades:(z.signals||0))+'</td><td>'+rate(z.winRate)+'</td>'+
+        '<td class="win">'+pct(z.avgWin)+'</td><td class="loss">'+pct(z.avgLoss)+'</td><td class="'+((z.expectancyPct||0)>=0?'win':'loss')+'">'+pct(z.expectancyPct)+'</td>'+
+        '<td>'+pct(z.avgMfe)+'</td><td>'+pct(z.avgMae)+'</td><td>'+rate(z.plus1HitRate)+'</td><td>'+rate(z.minus1HitRate)+'</td></tr>').join('')+
+        '</tbody></table></div>';
+    };
+    const live=j.liveSignals||null;
+    if(live){
+      const lo=live.overall||{};
+      html+='<div style="margin-top:16px"><b>📡 실제 알림 누적 성과</b><div class="sub">Cloudflare 감시에서 실제 발생한 BUY 신호만 집계합니다. 장마감 재구성 백테스트와 섞지 않습니다.</div></div>'+
+        '<div class="out" style="margin-top:8px">'+
+        '<div class="outbox"><div class="ol">실제 신호</div><div class="ov">'+(live.signals||0)+'</div></div>'+
+        '<div class="outbox"><div class="ol">09:30 결과 연결</div><div class="ov">'+(live.labelledSignals||0)+'</div></div>'+
+        '<div class="outbox"><div class="ol">30분 경로 연결</div><div class="ov">'+(live.pathLabelledSignals||0)+'</div></div>'+
+        '<div class="outbox"><div class="ol">알림 전송 실패</div><div class="ov '+((live.deliveryFailures||0)?'bad':'good')+'">'+(live.deliveryFailures||0)+'</div></div>'+
+        '<div class="outbox"><div class="ol">스캔 / 부분스캔</div><div class="ov">'+(live.scanCount||0)+' / '+(live.partialScans||0)+'</div></div>'+
+        '<div class="outbox"><div class="ol">실제 기대값</div><div class="ov '+((lo.expectancyPct||0)>=0?'good':'bad')+'">'+pct(lo.expectancyPct)+'</div></div>'+
+        '</div>'+
+        groupTable('실제 신호 · 전략별',live.byVariant)+
+        groupTable('실제 신호 · 전략 버전별',live.byStrategyVersion)+
+        groupTable('실제 신호 · 진입시간',live.byEntryTime)+
+        groupTable('실제 신호 · 갭 구간',live.byGap)+
+        groupTable('실제 신호 · 눌림 폭',live.byPullback)+
+        groupTable('실제 신호 · 거래량',live.byVolume)+
+        groupTable('실제 신호 · 거래대금',live.byAmount)+
+        groupTable('실제 신호 · 유니버스 순위',live.byRank)+
+        '<p class="note">실제 알림 원본은 날짜별 immutable ledger에 남고, 09:30 전략 손익과 장마감 KIS 30분 경로 라벨을 별도 필드로 연결합니다. 전략 버전을 바꿔도 과거 신호는 새 규칙으로 덮어쓰지 않습니다.</p>';
+    }
+
+    html+='<div style="margin-top:14px"><b>🔬 신호 이후 30분 경로 진단</b></div>'+
       '<div class="out" style="margin-top:8px"><div class="outbox"><div class="ol">평균 MFE</div><div class="ov good">'+pct(dg.avgMfe)+'</div></div>'+
-      '<div class="outbox"><div class="ol">평균 MAE</div><div class="ov bad">'+pct(dg.avgMae)+'</div></div></div>'+
+      '<div class="outbox"><div class="ol">평균 MAE</div><div class="ov bad">'+pct(dg.avgMae)+'</div></div>'+
+      hitBox('+1% 최초도달',hits.plus1,'good')+hitBox('+2% 최초도달',hits.plus2,'good')+
+      hitBox('-1% 최초도달',hits.minus1,'bad')+hitBox('-2% 최초도달',hits.minus2,'bad')+'</div>'+
       '<div class="htable-wrap" style="margin-top:8px"><table class="htable"><thead><tr><th>진입 후</th><th>표본</th><th>평균</th><th>중앙값</th></tr></thead><tbody>'+pathRows+'</tbody></table></div>'+
-      (timeRows?'<div class="htable-wrap" style="margin-top:8px"><table class="htable"><thead><tr><th>진입시간</th><th>거래</th><th>승률</th><th>평균손익</th><th>MFE</th><th>MAE</th></tr></thead><tbody>'+timeRows+'</tbody></table></div>':'')+
-      '<p class="note">MFE/MAE와 진입 후 1·3·5·10분 수익경로를 저장해 익절·손절·시간필터를 나중에 데이터로 검증합니다.</p>';
+      '<div style="margin-top:16px"><b>🧩 조건별 실제 성과</b><div class="sub">한 조건에서만 좋아 보이는지, 주변 구간에서도 기대값이 유지되는지 비교합니다.</div></div>'+
+      groupTable('진입시간',cg.entryTime)+
+      groupTable('갭 구간',cg.gap)+
+      groupTable('눌림 폭',cg.pullback)+
+      groupTable('거래량 배수',cg.volumeRatio)+
+      groupTable('거래대금 배수',cg.amountRatio)+
+      groupTable('유니버스 순위',cg.rank)+
+      groupTable('전략 버전',cg.strategyVersion)+
+      '<p class="note">신호 판정은 기존처럼 1분 종가 기준이며 전략의 손절·익절·09:30 청산 규칙도 바꾸지 않습니다. 사후 분석만 KIS 1분 O/H/L을 사용해 MFE/MAE·±1/±2% 터치와 5·10·20·30분 종가 수익률을 누적합니다.</p>';
 
     const wf=j.walkForward||{};
     html+='<div style="margin-top:14px"><b>🧭 워크포워드 검증</b></div>';
