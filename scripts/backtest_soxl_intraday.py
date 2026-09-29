@@ -84,10 +84,12 @@ def load_days():
 
 def valid_day(day):
     bars = sorted(day.get("bars") or [], key=lambda x: x.get("tEt") or "")
-    if len(bars) < 30:
-        return False, "too_few_bars"
+    if len(bars) < 70:
+        return False, "too_few_regular_bars"
     if et_hm(bars[0].get("tEt")) != 930:
         return False, "missing_0930_bar"
+    if et_hm(bars[-1].get("tEt")) < 1555:
+        return False, "incomplete_or_early_close_session"
     return True, ""
 
 
