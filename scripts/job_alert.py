@@ -27,8 +27,6 @@ JAVA_AI_QUERIES = [
     '세종 Java AI LLM RAG 생성형AI 채용',
     '대전 Java AI Agent Spring AI LangChain4j 채용',
     '세종 Java AI Agent Spring AI LangChain4j 채용',
-    'site:jobkorea.co.kr 대전 Java JSP Spring',
-    'site:jobkorea.co.kr 세종 Java JSP Spring',
     'site:saramin.co.kr 대전 Java Spring 프리랜서',
     'site:saramin.co.kr 세종 Java Spring 프리랜서',
     'site:imjob.co.kr 대전 Java 프로젝트',
@@ -46,8 +44,6 @@ REGULAR_DEV_QUERIES = [
     '세종 웹개발 시스템개발 정규직',
     '대전 AI LLM RAG 개발자 정규직',
     '세종 AI LLM RAG 개발자 정규직',
-    'site:jobkorea.co.kr 대전 개발자 정규직 Java Spring',
-    'site:jobkorea.co.kr 세종 개발자 정규직 Java Spring',
     'site:saramin.co.kr 대전 개발자 정규직 Java Spring',
     'site:saramin.co.kr 세종 개발자 정규직 Java Spring',
     'site:wanted.co.kr 대전 백엔드 개발자',
@@ -65,10 +61,6 @@ SALARY_QUERIES = [
     '세종 월급 500만원 채용',
     '대전 월급 450만원 채용',
     '세종 월급 450만원 채용',
-    'site:jobkorea.co.kr 대전 연봉 6000',
-    'site:jobkorea.co.kr 세종 연봉 6000',
-    'site:jobkorea.co.kr 대전 연봉 5400',
-    'site:jobkorea.co.kr 세종 연봉 5400',
     'site:saramin.co.kr 대전 연봉 6000',
     'site:saramin.co.kr 세종 연봉 6000',
     'site:saramin.co.kr 대전 연봉 5400',
@@ -116,6 +108,10 @@ JOBKOREA_DIRECT_QUERIES = [
     '대전 5400만원', '세종 5400만원',
     '대전 500만원', '세종 500만원',
     '대전 450만원', '세종 450만원',
+    '대전 단기 알바', '세종 단기 알바',
+    '대전 포장 단기', '세종 포장 단기',
+    '대전 경력무관 알바', '세종 경력무관 알바',
+    '대전 전산보조 단기', '세종 전산보조 단기',
 ]
 JOBKOREA_PAGES_PER_QUERY = 2
 
@@ -619,6 +615,7 @@ def collect_jobkorea_direct():
 
                 soup = BeautifulSoup(response.text, 'html.parser')
                 page_links = 0
+                page_parsed_detail_links = 0
                 for anchor in soup.find_all('a', href=True):
                     href = anchor.get('href') or ''
                     match = re.search(r'/Recruit/GI_Read/(\d+)', href, re.I)
@@ -633,6 +630,7 @@ def collect_jobkorea_direct():
                     ):
                         continue
 
+                    page_parsed_detail_links += 1
                     body = jobkorea_card_text(anchor)
                     if not any(loc in body for loc in LOCATION_TERMS):
                         continue
@@ -668,9 +666,9 @@ def collect_jobkorea_direct():
                 raw_has_job_links = bool(
                     re.search(r'/Recruit/GI_Read/\d+', response.text, re.I)
                 )
-                if raw_has_job_links and page_links == 0:
+                if raw_has_job_links and page_parsed_detail_links == 0:
                     failed_pages += 1
-                    errors.append(f'{query} p{page_no}: HTML에는 공고가 있으나 파싱 0건')
+                    errors.append(f'{query} p{page_no}: HTML에는 공고가 있으나 링크 파싱 0건')
             except Exception as exc:
                 failed_pages += 1
                 errors.append(f'{query} p{page_no}: {type(exc).__name__} {exc}')
@@ -876,7 +874,7 @@ def build_message(
     append_regular_dev_section(lines, regular_dev_jobs)
     append_short_term_section(lines, short_term_jobs)
 
-    lines.append('※ 같은 공고는 Java/AI → 개발자 정규직 → 급여 → 단기알바 순으로 한 번만 표시합니다.')
+    lines.append('※ 같은 공고는 개발자 정규직 → Java/AI → 급여 → 단기알바 순으로 한 번만 표시합니다.')
     return '\n'.join(lines).strip()
 
 
@@ -934,15 +932,19 @@ def main():
     seen = load_seen()
     java_jobs, regular_dev_jobs, salary_jobs, short_term_jobs, jobkorea_status = search_jobs()
 
-    new_java = [job for job in java_jobs if job['url'] not in seen]
-    java_urls = {job['url'] for job in java_jobs}
-
-    # Java/AI와 겹치는 정규직 공고는 Java/AI 구역에 우선 표시한다.
+    # 정규직 개발자는 별도 ④ 구역에 우선 표시한다.
     new_regular_dev = [
         job for job in regular_dev_jobs
-        if job['url'] not in seen and job['url'] not in java_urls
+        if job['url'] not in seen
     ]
     regular_urls = {job['url'] for job in regular_dev_jobs}
+
+    # Java/AI 구역은 정규직 개발자와 중복되지 않게 프로젝트/계약/AI 중심으로 표시한다.
+    new_java = [
+        job for job in java_jobs
+        if job['url'] not in seen and job['url'] not in regular_urls
+    ]
+    java_urls = {job['url'] for job in java_jobs}
 
     # 급여 공고는 Java/AI 및 개발자 정규직에 나온 공고를 제외한다.
     new_salary = [
