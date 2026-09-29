@@ -21,6 +21,7 @@ jobs:
       - name: 연구 Python 문법 검사
         run: |
           python -m py_compile scripts/backtest_opening_rebreak.py
+          python -m py_compile scripts/test_opening_signal_labels.py
           python -m py_compile scripts/backtest_daytrading.py
           python -m py_compile scripts/collect_daytrading_data.py
           python -m py_compile scripts/analyze_vts_reconcile.py
@@ -48,6 +49,9 @@ jobs:
           assert excluded[-1]["reason"]=="missing_snapshot_time"
           print("✓ 10:15 이내만 primary validation에 포함")
           PY
+
+      - name: 시초가 사후라벨 값 검사
+        run: python scripts/test_opening_signal_labels.py
 
       - name: 연구 서버 JS 문법 검사
         run: |
