@@ -151,6 +151,22 @@ canvas{display:block;width:100%;height:auto}
 #gbtn{display:inline-flex;align-items:center;gap:10px;background:#fff;color:#1f1f1f;border:none;border-radius:12px;padding:13px 20px;font-size:15px;font-weight:700;cursor:pointer;width:100%;justify-content:center}
 #gbtn svg{width:20px;height:20px}
 #gate .gnote{color:var(--faint);font-size:11.5px;margin-top:18px;line-height:1.6}
+
+/* unified strategy flow v1.22.1 */
+.strategy-flow{display:flex;flex-direction:column;gap:18px;margin-top:12px}
+.flow-section{border-top:1px solid var(--line);padding-top:12px}
+.flow-section:first-child{border-top:0;padding-top:0}
+.flow-title{display:flex;align-items:center;gap:9px;font-size:14px;font-weight:800;color:var(--text);margin:0 0 9px}
+.flow-num{display:inline-flex;width:25px;height:25px;align-items:center;justify-content:center;border-radius:8px;background:var(--panel2);border:1px solid var(--line);font-size:12px}
+.flow-body{display:flex;flex-direction:column;gap:10px}
+.flow-body>.card{margin:0}
+.flow-timing-state{display:inline-block;padding:3px 7px;border-radius:7px;font-size:11px;font-weight:800;background:var(--panel2);border:1px solid var(--line);margin-right:6px}
+.flow-timing-main{font-size:14px;font-weight:750;line-height:1.55}
+.flow-timing-detail{font-size:12px;color:var(--dim);line-height:1.55;margin-top:5px}
+.flow-map{display:flex;gap:5px;overflow-x:auto;padding:0 0 7px;margin-bottom:4px}
+.flow-chip{white-space:nowrap;font-size:11px;color:var(--dim);border:1px solid var(--line);background:var(--panel);border-radius:999px;padding:5px 8px}
+@media(max-width:640px){.flow-title{font-size:13px}.flow-chip{font-size:10.5px}}
+
 </style>
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-app.js";
@@ -187,7 +203,7 @@ canvas{display:block;width:100%;height:auto}
 
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Morning Scalping</div><h1>JK <span class="v">퀀트</span> 단타 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="scVer">v1.22.0</span></h1></div>
+    <div><div class="kicker">Morning Scalping</div><h1>JK <span class="v">퀀트</span> 단타 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="scVer">v1.22.1</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -1267,23 +1283,28 @@ async function loadCryptoResearch(){
       '</div>';
 
     const recent=(j.latestTrades||[]).slice(-10).reverse();
+    const ch=$('crypto_history_body'), cp=$('crypto_paper_body');
+    let recentHtml='';
     if(recent.length){
-      h+='<div style="margin:14px 0 8px"><b>📒 최근 비트코인 매매이력 · 판단 증거</b></div>'+
-        '<div class="htable-wrap"><table class="htable"><thead><tr><th>날짜</th><th>신호/근거</th><th>진입</th><th>청산</th><th>사유</th><th>순손익</th></tr></thead><tbody>'+
-        recent.map(x=>'<tr><td>'+esc(x.date||'')+'</td>'+
-          '<td>'+esc(x.signalTimeKst||'')+
-          '<div class="sub">OR고점 '+Number(x.openingHigh||0).toLocaleString('ko-KR')+
-          ' · 신호 '+Number(x.signalClose||0).toLocaleString('ko-KR')+
-          ' · VWAP '+Number(x.signalVwap||0).toLocaleString('ko-KR')+
-          ' · 거래량 '+btcNum(x.volumeRatio,2)+'x</div></td>'+
+      recentHtml='<div class="htable-wrap"><table class="htable"><thead><tr><th>날짜</th><th>신호/근거</th><th>진입</th><th>청산</th><th>사유</th><th>순손익</th></tr></thead><tbody>'+
+        recent.map(x=>'<tr><td>'+esc(x.date||'')+'</td><td>'+esc(x.signalTimeKst||'')+
+          '<div class="sub">OR고점 '+Number(x.openingHigh||0).toLocaleString('ko-KR')+' · 신호 '+Number(x.signalClose||0).toLocaleString('ko-KR')+
+          ' · VWAP '+Number(x.signalVwap||0).toLocaleString('ko-KR')+' · 거래량 '+btcNum(x.volumeRatio,2)+'x</div></td>'+
           '<td>'+esc(x.entryTimeKst||'')+' · '+Number(x.entryPrice||0).toLocaleString('ko-KR')+'</td>'+
           '<td>'+esc(x.exitTimeKst||'')+' · '+Number(x.exitPrice||0).toLocaleString('ko-KR')+'</td>'+
-          '<td>'+esc(x.reason||'')+'</td>'+
-          '<td class="'+(Number(x.pnlPct)>=0?'win':'loss')+'">'+btcPct(x.pnlPct)+'</td></tr>').join('')+
-        '</tbody></table></div>'+
-        '<p class="note">원본 5분봉과 전략 버전·임계값은 서버 연구파일에 함께 보관됩니다. 거래가 없던 날도 baseline-decisions.csv에 no_trade로 남깁니다.</p>';
+          '<td>'+esc(x.reason||'')+'</td><td class="'+(Number(x.pnlPct)>=0?'win':'loss')+'">'+btcPct(x.pnlPct)+'</td></tr>').join('')+
+        '</tbody></table></div><p class="note">원본 5분봉·전략버전·판단근거를 함께 보관합니다.</p>';
+    }else recentHtml='<div class="warn">최근 확정 매매가 없습니다. NO TRADE도 연구 데이터로 유지합니다.</div>';
+    if(ch)ch.innerHTML=recentHtml;
+    if(cp)cp.innerHTML=recentHtml+'<p class="note">한국투자 계좌와 분리된 JKQuant BTC 모의체결입니다. 실거래소 주문은 전송하지 않습니다.</p>';
+    const last=recent[0];
+    if(last){
+      setTimingBoard('crypto','buy','최근 확정 신호',esc(last.date||'')+' '+esc(last.signalTimeKst||'')+' · '+Number(last.entryPrice||0).toLocaleString('ko-KR')+'원',
+        'OR '+Number(last.openingHigh||0).toLocaleString('ko-KR')+' · VWAP '+Number(last.signalVwap||0).toLocaleString('ko-KR')+' · 거래량 '+btcNum(last.volumeRatio,2)+'x');
+      setTimingBoard('crypto','sell','최근 확정 청산',esc(last.exitTimeKst||'')+' · '+Number(last.exitPrice||0).toLocaleString('ko-KR')+'원 · '+esc(last.reason||''),
+        '순손익 '+btcPct(last.pnlPct));
     }
-
+    setReviewLog('crypto','<b>'+(j.to||'최근')+'</b> · 유효 '+j.validDays+'일 · 기준 '+(s.trades||0)+'건 · 승률 '+btcNum(s.winRate,1)+'% · 거래당 '+btcPct(s.avgPnl)+'<br><span class="sub">기준전략은 자동 변경하지 않고 그림자 후보·홀드아웃·30일 롤링을 계속 비교합니다.</span>');
     h+='<div class="htable-wrap"><table class="htable"><thead><tr><th>규칙</th><th>거래</th><th>승률</th><th>평균</th><th>PF</th><th>복리</th><th>MDD</th><th>홀드아웃 평균</th></tr></thead><tbody>';
     vars.forEach(v=>{
       const p=v.params||{}, x=v.summary||{}, z=(v.validation||{}).holdout||{};
@@ -1319,6 +1340,24 @@ async function loadSoxlLive(){
     if(msg)msg.textContent='갱신 '+new Date().toLocaleTimeString('ko-KR',{hour12:false});
   }catch(e){if(msg)msg.textContent='조회 실패: '+(e.message||e);}
 }
+
+async function loadSoxlVtsHistory(){
+  const msg=$('soxl_vts_msg'),body=$('soxl_vts_body'); if(!msg||!body)return;
+  if(!me){msg.textContent='로그인이 필요합니다.';return;}
+  msg.textContent='한국투자 해외 VTS 체결 조회 중…'; body.innerHTML='';
+  try{
+    const tok=await me.getIdToken();
+    const r=await fetch('/api/kis?op=orders&env=vts&market=us&code=SOXL',{headers:{'Authorization':'Bearer '+tok,'Accept':'application/json'}});
+    const j=await r.json().catch(()=>({})); if(!r.ok||j.error)throw new Error(j.error||('HTTP '+r.status));
+    const a=j.orders||[]; msg.textContent=(j.date||'')+' · SOXL '+a.length+'건 · '+(j.trId||'');
+    if(!a.length){body.innerHTML='<div class="warn">조회일에 SOXL 한국투자 해외 VTS 주문/체결이 없습니다.</div>';return;}
+    const side=x=>x.side||((String(x.sideCode)==='01')?'매도':(String(x.sideCode)==='02')?'매수':'—');
+    body.innerHTML='<div class="htable-wrap"><table class="htable"><thead><tr><th>시각</th><th>구분</th><th>주문</th><th>체결</th><th>잔량</th><th>주문번호</th></tr></thead><tbody>'+
+      a.map(x=>'<tr><td>'+esc(x.orderTime||'')+'</td><td><b>'+esc(side(x))+'</b></td><td>'+Number(x.orderQty||0)+'주 · $'+soxlNum(x.orderPrice)+'</td><td>'+Number(x.fillQty||0)+'주 · $'+soxlNum(x.fillPrice)+'</td><td>'+Number(x.remainingQty||0)+'</td><td>'+esc(x.orderNo||'')+'</td></tr>').join('')+
+      '</tbody></table></div><p class="note">읽기전용 조회입니다. 이 카드에서 주문·정정·취소를 보내지 않습니다.</p>';
+  }catch(e){msg.textContent='SOXL VTS 조회 실패';body.innerHTML='<div class="warn">'+esc(e.message||String(e))+'</div>';}
+}
+
 async function loadSoxlResearch(){
   const msg=$('soxl_research_msg'),body=$('soxl_research_body'); if(!msg||!body)return;
   msg.textContent='SOXL 연구결과 불러오는 중…';
@@ -1346,25 +1385,28 @@ async function loadSoxlResearch(){
       ' · <b>Walk-forward</b> '+esc(wf.status||'collecting')+' / '+Number(wf.foldCount||0)+' folds</div>';
 
     const decisions=(j.latestDecisions||[]).slice().reverse();
-    if(decisions.length){
-      h+='<div style="margin:14px 0 8px"><b>📒 최근 판단이력</b></div><div class="htable-wrap"><table class="htable"><thead><tr><th>날짜</th><th>판단</th><th>근거</th><th>체결</th><th>손익</th></tr></thead><tbody>'+
-        decisions.map(x=>{
-          const traded=x.action==='trade';
-          const evidence=traded?('OR '+soxlNum(x.openingHigh)+' · VWAP '+soxlNum(x.signalVwap)+' · 거래량 '+soxlNum(x.volumeRatio,2)+'x'):
-            ('OR '+soxlNum(x.openingHigh)+' · 최고돌파 '+soxlNum(x.maxCloseVsOpeningHighPct,2)+'% · 최대거래량 '+soxlNum(x.maxVolumeRatio,2)+'x');
-          const path=traded?((x.entryTimeEt||'')+' $'+soxlNum(x.entryPrice)+' → '+(x.exitTimeEt||'')+' $'+soxlNum(x.exitPrice)+' · '+(x.exitReason||'')):'—';
-          return '<tr><td>'+esc(x.date||'')+'</td><td>'+(traded?'TRADE':'NO TRADE')+'</td><td>'+esc(x.decisionReason||'')+'<div class="sub">'+esc(evidence)+'</div></td><td>'+esc(path)+'</td><td>'+(traded?soxlPct(x.pnlPct):'—')+'</td></tr>';
-        }).join('')+'</tbody></table></div>';
-    }
-
     const trades=(j.latestTrades||[]).slice(-10).reverse();
-    if(trades.length){
-      h+='<div style="margin:14px 0 8px"><b>📈 최근 매매이력</b></div><div class="htable-wrap"><table class="htable"><thead><tr><th>날짜</th><th>신호</th><th>진입</th><th>청산</th><th>MFE/MAE</th><th>순손익</th></tr></thead><tbody>'+
-        trades.map(x=>'<tr><td>'+esc(x.date||'')+'</td><td>'+esc(x.signalTimeEt||'')+'<div class="sub">거래량 '+soxlNum(x.volumeRatio,2)+'x</div></td>'+
-          '<td>'+esc(x.entryTimeEt||'')+' · $'+soxlNum(x.entryPrice)+'</td><td>'+esc(x.exitTimeEt||'')+' · $'+soxlNum(x.exitPrice)+'<div class="sub">'+esc(x.reason||'')+'</div></td>'+
-          '<td>'+soxlPct(x.mfePct)+' / '+soxlPct(x.maePct)+'</td><td>'+soxlPct(x.pnlPct)+'</td></tr>').join('')+'</tbody></table></div>';
+    const sh=$('soxl_history_body');
+    let decisionHtml='';
+    if(decisions.length){
+      decisionHtml='<div style="margin-bottom:8px"><b>최근 판단이력</b></div><div class="htable-wrap"><table class="htable"><thead><tr><th>날짜</th><th>판단</th><th>근거</th><th>체결</th><th>손익</th></tr></thead><tbody>'+
+        decisions.map(x=>{const traded=x.action==='trade';const evidence=traded?('OR '+soxlNum(x.openingHigh)+' · VWAP '+soxlNum(x.signalVwap)+' · 거래량 '+soxlNum(x.volumeRatio,2)+'x'):('OR '+soxlNum(x.openingHigh)+' · 최고돌파 '+soxlNum(x.maxCloseVsOpeningHighPct,2)+'% · 최대거래량 '+soxlNum(x.maxVolumeRatio,2)+'x');const path=traded?((x.entryTimeEt||'')+' $'+soxlNum(x.entryPrice)+' → '+(x.exitTimeEt||'')+' $'+soxlNum(x.exitPrice)+' · '+(x.exitReason||'')):'—';return '<tr><td>'+esc(x.date||'')+'</td><td>'+(traded?'TRADE':'NO TRADE')+'</td><td>'+esc(x.decisionReason||'')+'<div class="sub">'+esc(evidence)+'</div></td><td>'+esc(path)+'</td><td>'+(traded?soxlPct(x.pnlPct):'—')+'</td></tr>';}).join('')+
+        '</tbody></table></div>';
     }
-
+    let tradeHtml='';
+    if(trades.length){
+      tradeHtml='<div style="margin:14px 0 8px"><b>최근 매매이력</b></div><div class="htable-wrap"><table class="htable"><thead><tr><th>날짜</th><th>신호</th><th>진입</th><th>청산</th><th>MFE/MAE</th><th>순손익</th></tr></thead><tbody>'+
+        trades.map(x=>'<tr><td>'+esc(x.date||'')+'</td><td>'+esc(x.signalTimeEt||'')+'<div class="sub">거래량 '+soxlNum(x.volumeRatio,2)+'x</div></td><td>'+esc(x.entryTimeEt||'')+' · $'+soxlNum(x.entryPrice)+'</td><td>'+esc(x.exitTimeEt||'')+' · $'+soxlNum(x.exitPrice)+'<div class="sub">'+esc(x.reason||'')+'</div></td><td>'+soxlPct(x.mfePct)+' / '+soxlPct(x.maePct)+'</td><td>'+soxlPct(x.pnlPct)+'</td></tr>').join('')+
+        '</tbody></table></div>';
+    }
+    if(sh)sh.innerHTML=(decisionHtml||'<div class="warn">최근 판단이력이 없습니다.</div>')+tradeHtml;
+    const ld=decisions[0],lt=trades[0];
+    if(ld&&ld.action==='trade'){
+      setTimingBoard('soxl','buy','최근 TRADE',esc(ld.date||'')+' '+esc(ld.entryTimeEt||'')+' · $'+soxlNum(ld.entryPrice),
+        esc(ld.decisionReason||'')+' · OR '+soxlNum(ld.openingHigh)+' · VWAP '+soxlNum(ld.signalVwap)+' · 거래량 '+soxlNum(ld.volumeRatio,2)+'x');
+    }else if(ld) setTimingBoard('soxl','buy','최근 NO TRADE',esc(ld.date||'')+' · 매수 없음',esc(ld.decisionReason||''));
+    if(lt) setTimingBoard('soxl','sell','최근 청산',esc(lt.exitTimeEt||'')+' · $'+soxlNum(lt.exitPrice)+' · '+esc(lt.reason||''),'순손익 '+soxlPct(lt.pnlPct)+' · MFE/MAE '+soxlPct(lt.mfePct)+' / '+soxlPct(lt.maePct));
+    setReviewLog('soxl','<b>'+(j.to||'최근')+'</b> · 유효 '+j.validDays+'일 · 기준 '+(st.trades||0)+'건 · 승률 '+soxlNum(st.winRate,1)+'% · 거래당 '+soxlPct(st.avgPnl)+'<br><span class="sub">홀드아웃·30일 롤링·Walk-forward와 그림자전략을 병렬 검증하며 기준전략은 자동 승격하지 않습니다.</span>');
     h+='<div style="margin:14px 0 8px"><b>🧬 기준 + 그림자</b></div><div class="htable-wrap"><table class="htable"><thead><tr><th>규칙</th><th>거래</th><th>승률</th><th>평균</th><th>+1%일</th><th>PF</th><th>복리</th><th>MDD</th><th>홀드아웃 평균</th></tr></thead><tbody>';
     vars.forEach(v=>{const p=v.params||{},x=v.summary||{},z=(v.validation||{}).holdout||{};
       h+='<tr><td>'+esc(labels[p.name]||p.name||'—')+'</td><td>'+Number(x.trades||0)+'</td><td>'+soxlNum(x.winRate,1)+'%</td><td>'+soxlPct(x.avgPnl)+'</td>'+
@@ -1373,6 +1415,124 @@ async function loadSoxlResearch(){
     h+='</tbody></table></div><p class="note">성과만 보고 자동 승격하지 않습니다. 표본·홀드아웃·롤링 일관성이 확인된 후보만 검토합니다.</p>';
     body.innerHTML=h;
   }catch(e){msg.textContent='SOXL 연구결과 조회 실패';body.innerHTML='<div class="err">'+esc(e.message||e)+'</div>';}
+}
+
+
+const FLOW_STEPS=[
+  ['strategy','📖 전략 설명'],
+  ['search','🔎 실시간 종목 탐색'],
+  ['buy','🟢 종목 매수 타이밍'],
+  ['sell','🔴 종목 매도 타이밍 · 익절/손절'],
+  ['history','📒 매매이력'],
+  ['review','🧪 매일 검증·분석·개선 기록'],
+  ['paper','🏦 모의투자 매매이력']
+];
+function flowCard(title,body,id){
+  const d=document.createElement('div'); d.className='card'; if(id)d.id=id;
+  d.innerHTML='<h3><span class="dot"></span>'+title+'</h3>'+body; return d;
+}
+function flowDirectCard(pane,needle){
+  return Array.from(pane.children).find(x=>x.classList&&x.classList.contains('card')&&((x.querySelector('h3')||{}).textContent||'').includes(needle))||null;
+}
+function flowPut(body,card,used){ if(card&&!used.has(card)){used.add(card);body.appendChild(card);} }
+function flowTimingDefault(name,side){
+  const x={
+    swing:{
+      buy:['중지','현재 과매도 반등 전략은 장기 재검증 실패 상태라 신규 매수 신호를 운영하지 않습니다.','스크리닝은 관찰용으로만 유지합니다.'],
+      sell:['대기','운영 전략이 중지 상태입니다.','기존 종이거래 포지션이 있으면 아래 보유 포지션 카드에서 관리합니다.']
+    },
+    opening:{
+      buy:['대기','09:03 이후 첫 3분 고점 → 눌림 → 재돌파 + 수급 조건을 실시간 감시합니다.','조건을 모두 통과한 첫 후보의 종목·가격·근거를 여기에 표시합니다.'],
+      sell:['대기','진입 후 손절 −1% · 익절 +1.5% · 09:30 시간청산을 추적합니다.','실제 체결/청산은 서버 매매이력에 확정 기록됩니다.']
+    },
+    daytrading:{
+      buy:['대기','10:00~14:30 기준전략 신호를 기다립니다.','신호 선정 후 다음 1분봉 시가를 모의 진입가로 사용합니다.'],
+      sell:['대기','보유 포지션의 손절 −1% · 익절 +2% · 15:10 시간청산을 추적합니다.','장중 장부와 장마감 KIS 재구성을 따로 보존합니다.']
+    },
+    crypto:{
+      buy:['대기','KRW-BTC 09시 ORB 기준전략의 확정 신호를 기다립니다.','한국투자와 분리된 BTC 연구/모의 엔진의 최근 확정 판단을 표시합니다.'],
+      sell:['대기','BTC 기준전략의 익절·손절·시간청산 결과를 추적합니다.','실거래소 주문 없이 독립 모의체결로 기록합니다.']
+    },
+    soxl:{
+      buy:['대기','SOXL 15분 ORB 기준전략의 확정 신호를 기다립니다.','최근 판단과 OR·VWAP·거래량 근거를 여기에 표시합니다.'],
+      sell:['대기','진입 후 기준전략의 익절·손절·시간청산을 추적합니다.','연구 장부와 한국투자 해외 VTS 실제 모의체결을 분리해 비교합니다.']
+    }
+  }; return x[name][side];
+}
+function setTimingBoard(name,side,state,main,detail){
+  const el=$(name+'_'+side+'_timing'); if(!el)return;
+  el.innerHTML='<div class="flow-timing-main"><span class="flow-timing-state">'+esc(state||'대기')+'</span>'+main+'</div>'+
+    (detail?'<div class="flow-timing-detail">'+detail+'</div>':'');
+}
+function setReviewLog(name,html){
+  const el=$(name+'_review_log'); if(el)el.innerHTML=html;
+}
+function setupUnifiedStrategyFlow(){
+  const cfg={
+    swing:{strategy:[],search:['🔎 전체 스크리닝'],history:[],review:['🧪 백테스트'],paper:[]},
+    opening:{strategy:['⚡ 시초가 첫고점 돌파'],search:['🔥 실시간 시초가 돌파 감시'],history:['📒 오늘 서버 매매 이력'],review:['🧪 누적 시초가 연구 백테스트','📼 분봉 아카이브'],paper:['🔎 한투 VTS 자동 병행체결 대조']},
+    daytrading:{strategy:['📈 데이트레이딩 기준전략'],search:['📡 데이트레이딩 서버 장중 감시'],history:['📒 오늘 장중 모의 매매이력'],review:['🧪 데이트레이딩 누적 연구','📼 데이터 수집 규칙'],paper:['🔎 한투 VTS 체결 대조']},
+    crypto:{strategy:['₿ 비트코인 09시 ORB 기준전략'],search:['📡 현재 KRW-BTC'],history:[],review:['🧪 누적 비트코인 연구','📼 데이터 수집 규칙'],paper:[]},
+    soxl:{strategy:['⚡ SOXL 15분 ORB 기준전략'],search:['📡 현재 SOXL'],history:[],review:['🧪 SOXL 누적 연구','📼 데이터 감사 규칙'],paper:[]}
+  };
+  Object.keys(cfg).forEach(name=>{
+    const pane=$('strategy_'+name); if(!pane||pane.dataset.flowReady==='1')return;
+    pane.dataset.flowReady='1';
+    const head=Array.from(pane.children).find(x=>x.classList&&x.classList.contains('strategy-head'));
+    if(head)head.textContent='전략 설명 → 실시간 탐색 → 매수 → 매도 → 매매이력 → 검증/개선 → 모의투자';
+    const map=document.createElement('div'); map.className='flow-map';
+    map.innerHTML=FLOW_STEPS.map((x,i)=>'<span class="flow-chip">'+(i+1)+'. '+x[1].replace(/^[^ ]+ /,'')+'</span>').join('');
+    if(head)head.insertAdjacentElement('afterend',map); else pane.prepend(map);
+    const flow=document.createElement('div'); flow.className='strategy-flow';
+    map.insertAdjacentElement('afterend',flow);
+    const used=new Set(), bodies={};
+    FLOW_STEPS.forEach((x,i)=>{
+      const sec=document.createElement('section'); sec.className='flow-section'; sec.dataset.flow=x[0];
+      sec.innerHTML='<div class="flow-title"><span class="flow-num">'+(i+1)+'</span>'+x[1]+'</div><div class="flow-body"></div>';
+      bodies[x[0]]=sec.querySelector('.flow-body'); flow.appendChild(sec);
+    });
+    if(name==='swing'){
+      bodies.strategy.appendChild(flowCard('📖 과매도 반등 전략 상태',
+        '<p class="lead"><b>볼린저 하단 이탈 + RSI&lt;40</b> 과매도 반등 가설입니다. 장기 포트폴리오 재검증에서 유의성이 확인되지 않아 현재는 <b>관찰/연구 전용</b>입니다.</p>'));
+    }
+    for(const step of ['strategy','search','history','review','paper']){
+      (cfg[name][step]||[]).forEach(n=>flowPut(bodies[step],flowDirectCard(pane,n),used));
+    }
+    for(const side of ['buy','sell']){
+      const d=flowTimingDefault(name,side);
+      const card=flowCard(side==='buy'?'🟢 현재 매수 판단':'🔴 현재 매도 판단',
+        '<div id="'+name+'_'+side+'_timing"></div>');
+      bodies[side].appendChild(card);
+      setTimeout(()=>setTimingBoard(name,side,d[0],d[1],d[2]),0);
+    }
+    if(name==='crypto'){
+      bodies.history.appendChild(flowCard('📒 BTC 전략 매매이력',
+        '<div id="crypto_history_body"><p class="sub">연구결과를 불러오면 최근 확정 매매가 표시됩니다.</p></div>'));
+      bodies.paper.appendChild(flowCard('₿ BTC 독립 모의투자 매매이력',
+        '<p class="lead">한국투자증권과 섞지 않는 <b>JKQuant BTC 독립 모의체결 장부</b>입니다. 실거래소 주문은 보내지 않습니다.</p><div id="crypto_paper_body"><p class="sub">최근 기준전략 모의체결을 불러오는 중…</p></div>'));
+    }
+    if(name==='soxl'){
+      bodies.history.appendChild(flowCard('📒 SOXL 전략 매매이력',
+        '<div id="soxl_history_body"><p class="sub">연구결과를 불러오면 TRADE/NO TRADE 판단과 최근 체결이 표시됩니다.</p></div>'));
+      bodies.paper.appendChild(flowCard('🏦 한국투자증권 해외 VTS · SOXL 체결이력',
+        '<div class="row" style="margin-bottom:8px"><button class="ghostbtn" onclick="loadSoxlVtsHistory()">🔄 SOXL VTS 체결 새로고침</button><span class="sub" id="soxl_vts_msg">읽기전용 · 주문 생성 없음</span></div><div id="soxl_vts_body"></div>'));
+    }
+    const reviewCard=flowCard('📝 전략 검증·개선 기록',
+      '<div id="'+name+'_review_log"><p class="sub">누적 연구를 불러오면 현재 검증상태와 기준/그림자 전략 상태를 기록합니다.</p></div>');
+    bodies.review.prepend(reviewCard);
+    // 기존 카드 중 분류되지 않은 것은 검증/연구 아래에 보존한다.
+    Array.from(pane.children).filter(x=>x.classList&&x.classList.contains('card')&&!used.has(x)).forEach(x=>{used.add(x);bodies.review.appendChild(x);});
+  });
+  // 과매도 반등의 기존 공용 도구는 이 전략 탭 안으로 이동해 다른 탭에 섞이지 않게 한다.
+  const sw=$('strategy_swing');
+  if(sw){
+    const body=step=>sw.querySelector('.flow-section[data-flow="'+step+'"] .flow-body');
+    const move=(id,step)=>{const e=$(id),card=e&&e.closest('.card');if(card&&body(step)&&!body(step).contains(card))body(step).appendChild(card);};
+    move('ruleBody','strategy'); move('pos_body','sell'); move('log_body','history');
+    move('verifyBody','review'); move('c_r','review');
+    move('kis_panel','paper'); move('klog_body','paper');
+    setReviewLog('swing','<b>현재 상태: 연구 전용</b><br><span class="sub">8년 포트폴리오 재검증에서 통계적 유의성이 확인되지 않아 기준전략으로 승격하지 않습니다. 새 가설은 백테스트/OOS 검증 뒤 별도 버전으로 기록합니다.</span>');
+  }
 }
 
 function showStrategy(name){
@@ -1388,7 +1548,7 @@ function showStrategy(name){
     stopDayTradingPaperAuto();
   }
   if(name==='crypto'){ loadCryptoLive(); loadCryptoResearch(); }
-  if(name==='soxl'){ loadSoxlLive(); loadSoxlResearch(); }
+  if(name==='soxl'){ loadSoxlLive(); loadSoxlResearch(); loadSoxlVtsHistory(); }
 }
 function restoreStrategy(){
   let n='swing';
@@ -1425,6 +1585,12 @@ async function loadDayTradingPaper(silent=false){
       return;
     }
     const a=l.trades||[],sum=l.summary||{};
+    const pending=(a||[]).find(x=>x.status==='pending'),open=(a||[]).find(x=>x.status==='open'),closed=(a||[]).filter(x=>x.status==='closed').slice(-1)[0];
+    if(pending) setTimingBoard('daytrading','buy','진입대기','<b>'+esc(pending.name||pending.code)+'</b> · 신호 '+String(pending.signalTime||'').padStart(4,'0'),'다음 1분봉 시가 모의진입 대기 · 신호가 '+commas(Math.round(pending.signalPrice||0))+'원');
+    else setTimingBoard('daytrading','buy','대기','현재 진입대기 신호가 없습니다.','10:00~14:30 서버 기준전략을 계속 감시합니다.');
+    if(open) setTimingBoard('daytrading','sell','보유중','<b>'+esc(open.name||open.code)+'</b> · 진입 '+commas(Math.round(open.entryPrice||0))+'원','손절 '+commas(Math.round((open.entryPrice||0)*.99))+' · 익절 '+commas(Math.round((open.entryPrice||0)*1.02))+' · 15:10 시간청산');
+    else if(closed) setTimingBoard('daytrading','sell','최근 청산','<b>'+esc(closed.name||closed.code)+'</b> · '+(closed.reason||'청산'),'손익 '+((closed.pnl||0)>=0?'+':'')+Number(closed.pnl||0).toFixed(2)+'%');
+    else setTimingBoard('daytrading','sell','대기','현재 보유 포지션이 없습니다.','진입 후 −1%/+2%/15:10 규칙을 표시합니다.');
     const updated=l.updatedAt?new Date(l.updatedAt).toLocaleTimeString('ko-KR',{hour12:false}):'—';
     msg.textContent='선정 '+(sum.selected||a.length)+'건 · 진입대기 '+(sum.pending||0)+' · 보유 '+(sum.open||0)+' · 청산 '+(sum.closed||0)+' · '+updated+' 갱신';
 
@@ -1483,6 +1649,7 @@ async function loadDayTradingResearch(){
     const vars=j.variants||[],base=vars.find(x=>x.params&&x.params.name==='baseline'),s=base&&base.summary||{};
     const dq=j.dataQuality||{},eligibleDays=(j.eligibleArchiveDays==null?j.archiveDays:j.eligibleArchiveDays);
     msg.textContent=(j.from||'')+' ~ '+(j.to||'')+' · 원본 '+j.archiveDays+'일 · 검증가능 '+eligibleDays+'일 · 기준 '+(s.trades||0)+'건';
+    setReviewLog('daytrading','<b>'+(j.to||'최근')+'</b> · 검증가능 '+eligibleDays+'일 · 기준 '+(s.trades||0)+'건 · 승률 '+Number(s.winRate||0).toFixed(1)+'% · 평균 '+((s.avgPnl||0)>=0?'+':'')+Number(s.avgPnl||0).toFixed(3)+'%<br><span class="sub">장중 장부↔장마감 재구성 차이와 그림자전략·워크포워드 결과를 함께 누적합니다.</span>');
 
     let qualityHtml='';
     if((dq.excludedDays||0)>0){
@@ -1772,6 +1939,7 @@ async function loadOpeningResearch(){
     const vars=j.variants||[],base=vars.find(x=>x.params&&x.params.name==='baseline');
     const s=base&&base.summary||{};
     msg.textContent=(j.from||'')+' ~ '+(j.to||'')+' · '+j.archiveDays+'거래일 · 기준전략 '+(s.trades||0)+'건';
+    setReviewLog('opening','<b>'+(j.to||'최근')+'</b> · 누적 '+j.archiveDays+'거래일 · 기준 '+(s.trades||0)+'건 · 승률 '+Number(s.winRate||0).toFixed(1)+'% · 평균 '+((s.avgPnl||0)>=0?'+':'')+Number(s.avgPnl||0).toFixed(3)+'%<br><span class="sub">그림자 후보와 워크포워드를 계속 비교하고 기준전략 변경은 검증 후 버전 기록으로 남깁니다.</span>');
 
     const enough=j.comparisonStatus==='eligible';
     const info='<div class="warn" style="margin-bottom:10px">'+
@@ -2009,9 +2177,14 @@ function liveRebreakFeature(a,meta){
 }
 function renderLiveRebreak(now,rows){
   const el=$('ob_rebreak_body'); if(!el)return;
-  if(now.hm<903){el.innerHTML='<p class="sub">첫 3분 고점을 확정하는 중입니다.</p>';return;}
+  if(now.hm<903){el.innerHTML='<p class="sub">첫 3분 고점을 확정하는 중입니다.</p>';setTimingBoard('opening','buy','관찰 중','첫 3분 고점을 확정하는 중입니다.','09:03 이후 눌림→재돌파와 수급을 검사합니다.');return;}
   rows=(rows||[]).slice().sort((a,b)=>(b.amountRatio-a.amountRatio)||(b.volRatio-a.volRatio));
-  if(!rows.length){el.innerHTML='<div class="warn">현재 눌림→재돌파 조건을 모두 통과한 종목이 없습니다. 없는 것이 정상입니다.</div>';return;}
+  if(!rows.length){el.innerHTML='<div class="warn">현재 눌림→재돌파 조건을 모두 통과한 종목이 없습니다. 없는 것이 정상입니다.</div>';setTimingBoard('opening','buy','대기','현재 매수 조건 충족 종목이 없습니다.','갭·눌림·재돌파·거래량·거래대금 조건을 계속 감시합니다.');setTimingBoard('opening','sell','대기','보유/진입 후보가 없습니다.','신호 발생 후 손절 −1% · 익절 +1.5% · 09:30 시간청산을 표시합니다.');return;}
+  const lead=rows[0];
+  setTimingBoard('opening','buy','매수 후보','<b>'+esc(lead.name)+'</b> · '+commas(Math.round(lead.rebreakPrice))+'원 · '+String(lead.time).padStart(4,'0'),
+    '갭 '+fmt(lead.gap,2)+'% · 눌림 '+fmt(lead.pullbackPct,2)+'% · 거래량 '+fmt(lead.volRatio,2)+'x · 대금 '+fmt(lead.amountRatio,2)+'x');
+  setTimingBoard('opening','sell','진입 후 관리','익절 '+commas(Math.round(lead.rebreakPrice*1.015))+'원 · 손절 '+commas(Math.round(lead.rebreakPrice*.99))+'원',
+    '기준전략: +1.5% 익절 / −1% 손절 / 09:30 미청산 시 시간청산');
   rows.forEach(x=>notifyOpeningEvent('rebreak-'+now.date+'-'+x.code+'-'+x.time,'눌림 재돌파 후보 · '+x.name,'갭 '+(x.gap>=0?'+':'')+x.gap.toFixed(2)+'% · 눌림 -'+x.pullbackPct.toFixed(2)+'% · 거래량 '+x.volRatio.toFixed(2)+'배 · 추정 거래대금 '+x.amountRatio.toFixed(2)+'배'));
   el.innerHTML='<div class="htable-wrap"><table class="htable"><thead><tr><th>종목</th><th>갭</th><th>눌림</th><th>재돌파가</th><th>거래량</th><th>추정 거래대금</th><th>시각</th><th>상태</th><th>VTS</th></tr></thead><tbody>'+
     rows.slice(0,10).map(x=>'<tr onclick="trackOpeningCandidate(\''+esc(x.code)+'\',\''+esc(x.name).replace(/\'/g,'&#39;')+'\')" style="cursor:pointer"><td><b>'+esc(x.name)+'</b><div class="sub">'+esc(x.code)+'</div></td><td class="win">'+(x.gap>=0?'+':'')+x.gap.toFixed(2)+'%</td><td>-'+x.pullbackPct.toFixed(2)+'%</td><td><b>'+commas(Math.round(x.rebreakPrice))+'</b></td><td>'+x.volRatio.toFixed(2)+'배</td><td><b>'+x.amountRatio.toFixed(2)+'배</b><div class="sub">약 '+commas(Math.round(x.estAmount/1000000))+'백만원/분</div></td><td>'+String(x.time).padStart(4,'0')+'</td><td class="win"><b>조건 충족</b></td><td><button class="ghostbtn sm" onclick="event.stopPropagation();prepVtsOrder(\''+esc(x.code)+'\','+Math.round(x.rebreakPrice)+',\''+esc(x.name).replace(/\'/g,'&#39;')+'\')">주문값 준비</button></td></tr>').join('')+
@@ -2795,7 +2968,7 @@ function boot(){
     PKEY='jkq_scalp_pos_'+user.uid; LKEY='jkq_scalp_log_'+user.uid; AKEY='jkq_scalp_arch_'+user.uid;
     KKEY='jkq_scalp_kis_'+user.uid; THKEY='jkq_scalp_top2_hist_'+user.uid;
     $('log_owner').textContent='· '+(user.displayName||user.email||'');
-    loadAll(); loadArch(); recalc(); renderPos(); renderLog(); renderKlog(); renderArch(); restoreStrategy(); kisInit(); archAuto();
+    loadAll(); loadArch(); recalc(); renderPos(); renderLog(); renderKlog(); renderArch(); setupUnifiedStrategyFlow(); restoreStrategy(); kisInit(); archAuto();
     await cloudLoad(); renderKlog(); renderPos();
   });
 }
