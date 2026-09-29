@@ -35,8 +35,9 @@ jobs:
         run: |
           mkdir -p research-output
           set +e
+          set -o pipefail
           node scripts/research_im_loc_opt.cjs 2>&1 | tee research-output/run.log
-          STATUS=\${PIPESTATUS[0]}
+          STATUS=$?
           echo "$STATUS" > research-output/exit-code.txt
           exit "$STATUS"
 
