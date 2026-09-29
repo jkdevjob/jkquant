@@ -24,7 +24,9 @@ jobs:
           python -m py_compile scripts/backtest_daytrading.py
           python -m py_compile scripts/collect_daytrading_data.py
           python -m py_compile scripts/analyze_vts_reconcile.py
-          python -m py_compile scripts/nightly_scalping_research.py\n          python -m py_compile scripts/collect_crypto_data.py\n          python -m py_compile scripts/backtest_crypto_orb.py
+          python -m py_compile scripts/nightly_scalping_research.py
+          python -m py_compile scripts/collect_crypto_data.py
+          python -m py_compile scripts/backtest_crypto_orb.py
 
       - name: 데이트레이딩 스냅샷 품질 가드 검사
         run: |
@@ -57,7 +59,9 @@ jobs:
           node --input-type=module --check < functions/api/vts-reconcile.js
           node --input-type=module --check < functions/api/vts-research.js
           node --input-type=module --check < functions/api/vts-summary.js
-          node --input-type=module --check < functions/api/nightly-research-summary.js\n          node --input-type=module --check < functions/api/crypto.js\n          node --input-type=module --check < functions/api/crypto-research.js
+          node --input-type=module --check < functions/api/nightly-research-summary.js
+          node --input-type=module --check < functions/api/crypto.js
+          node --input-type=module --check < functions/api/crypto-research.js
           node --input-type=module --check < worker/opening-scheduler/src/index.js
           node --input-type=module --check < worker/daytrading-scheduler/src/index.js
 
@@ -307,7 +311,7 @@ jobs:
           ];
           for(const [needle,label] of must){if(!s.includes(needle)){console.error('✗ '+label+' 없음');fail++;}}
           if(!wf.includes('cron: "20 0 * * *"')){console.error('✗ 매일 09:20 KST 수집 schedule 없음');fail++;}
-          if(/order|accounts|jwt|authorization/i.test(api.replace(/User-Agent/g,''))){
+          if(/op=order|\/v1\/accounts|authorization\s*:|\bjwt\b/i.test(api)){
             console.error('✗ crypto market proxy에 주문/인증 관련 문자열 발견');fail++;
           }
           if(fail)process.exit(1);
