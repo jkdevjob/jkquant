@@ -182,6 +182,17 @@ global.PBASIS={}; global.DIVMAP={};
   if(!m) throw new Error('배당 헬퍼(DIV_TAXRATE/divPerShare/divCash)를 backtest.html에서 못 찾음');
   const f=new Function(m[0]+'\nreturn {DIV_TAXRATE,divPerShare,divCash};')();
   global.DIV_TAXRATE=f.DIV_TAXRATE; global.divPerShare=f.divPerShare; global.divCash=f.divCash; }
+/* 액면분할 — 그날 단위(unitOf)·실제 거래 봉(tradeBar)·분할 배수(splitRatio)·분할일 보유 조정(splitHold).
+   정수 주수 엔진이 전부 부른다. 파일에서 그대로 떼어 오고, 분할 목록(SPLITS)과 스위치(SPLIT_TRADE)·
+   합성 경계(levExt/EXTM/LEV_REALSTART)는 테스트가 바꿀 수 있게 전역으로 둔다.
+   기본은 분할 없음 — 단위 1 이라 여태까지의 동작 그대로다. 분할 시험은 SPLITS 를 직접 채워서 한다. */
+global.SPLITS={}; global.SPLIT_TRADE=true; global.LEV_REALSTART={};
+if(typeof global.levExt==='undefined') global.levExt=false;
+if(typeof global.EXTM==='undefined') global.EXTM={};
+{ const m=bt.match(/function unitOf\(t, d\)\{[\s\S]*?\nfunction splitHold\(r, sh, avg, lot\)\{[\s\S]*?\n\}/);
+  if(!m) throw new Error('분할 헬퍼(unitOf/tradeBar/splitRatio/splitHold)를 backtest.html에서 못 찾음');
+  const f=new Function(m[0]+'\nreturn {unitOf,tradeBar,splitRatio,splitHold};')();
+  global.unitOf=f.unitOf; global.tradeBar=f.tradeBar; global.splitRatio=f.splitRatio; global.splitHold=f.splitHold; }
 /* VR 사이클 엔진 — runVR 과 전체비교가 같이 쓴다. 파일에서 그대로 떼어 온다. */
 const vrCycSrc=(bt.match(/const VR_CYC_DAYS=\d+;\s*\nfunction vrNextDue\(s\)\{[\s\S]*?\n\}\n/)||[''])[0]
   + (bt.match(/function vrCycleCount\(days\)\{[\s\S]*?\n\}\n/)||[''])[0];
@@ -230,9 +241,10 @@ inject(`{ let mf=false, lf=false; for(const b of buys){ if(c<=b.lim){ const q=_b
 `{ let mf=false, lf=false, __ex=0, __m=[]; for(const b of buys){ if(c<=b.lim){ const q=_buyN(c,b.q); if(q>0){ T+=b.dT; if(b.ladder){ lf=true; __ex+=q; } else { mf=true; __m.push([b.kind,q]); } } } }
   if(__m.length) __m.forEach((m,i)=>__LOG(m[0],c,m[1]+(i===0?__ex:0))); else if(__ex>0) __LOG('1회매수',c,__ex);`,'buy');
 // 단리에서 밖에서 넣은 돈(addedCash)을 총자산에서 빼게 되면서 이 줄이 바뀌었다
-inject(`const fin=cash+shares*M[tkr][days[days.length-1]][C]+savedProfit-addedCash;`,
+/* 기준점은 줄 앞머리만 — 평가 가격 식까지 넣으면 그 식을 되돌리는 변이가 값 시험이 아니라 주입 실패로 죽는다 */
+inject(`const fin=cash+shares*`,
 `__FINAL({T,avg,shares,cash,realized,savedProfit,addedCash});
-  const fin=cash+shares*M[tkr][days[days.length-1]][C]+savedProfit-addedCash;`,'fin');
+  const fin=cash+shares*`,'fin');
 let tradeLog=[], finalState=null;
 global.__LOG=(k,p,q)=>tradeLog.push({kind:k,price:p,qty:q});
 global.__FINAL=s=>finalState=s;
@@ -4261,12 +4273,12 @@ console.log('\n[73] VR — 백테 == 과거 재생 (거래 로그 대조)');
     ok('백테 훅 자리 확인', vsrc2.includes(h1)&&vsrc2.includes(h2)&&vsrc2.includes(h3),
        [['매도',h1],['매수',h2],['사이클',h3]].filter(([,h])=>!vsrc2.includes(h)).map(([n])=>n).join(' · '));
     // _ladder 안에는 날짜가 없다 — 부르기 직전에 넣어 준다
-    const h4='if(LADDER && !first){ const row=M[tkr][d];';
+    const h4='if(LADDER && !first){ const row=tradeBar(tkr,d);';
     ok('날짜 훅 자리 확인', vsrc2.includes(h4));
     vsrc2=vsrc2.replace(h1, "if(f.type==='sell'){ __VLOG('sell',f.price,f.qty); pool+=_vsellQ(f.qty, f.price); cycSellFilled+=f.qty; sells++; }")
                .replace(h2, "else { __VLOG('buy',f.price,f.qty); pool-=_vbuyQ(f.qty, f.price); cycBuySpent+=f.cost; cycBuyFilled+=f.qty; buys++; }")
                .replace(h3, "if(isCyc && !first){ __VCYC(d);")
-               .replace(h4, "if(LADDER && !first){ __VDAY=d; const row=M[tkr][d];");
+               .replace(h4, "if(LADDER && !first){ __VDAY=d; const row=tradeBar(tkr,d);");
     let blog=[], bcyc=[];
     global.__VDAY='';
     global.__VLOG=(t2,p,q)=>blog.push(`${global.__VDAY} ${t2} ${p.toFixed(6)} x${q}`);
@@ -4631,7 +4643,7 @@ console.log('\n[78] 표준편차 필터 — 하락장이 끝나면 바로 되돌
     let src=extractFn(bt,'function runStdev(days,tkr,cap,N,g,filter,costOn)');
     src=src.replace('sh+=q; cash-=spend+fee; trades++; };','sh+=q; cash-=spend+fee; trades++; __ST.push([__SD,"buy",q]); };')
            .replace('sh-=q; trades++; };','sh-=q; trades++; __ST.push([__SD,"sell",q]); };')
-           .replace('days.forEach((d,i)=>{ const gx=gi[d], c=cl[gx];','days.forEach((d,i)=>{ const gx=gi[d], c=cl[gx]; __SD=d;');
+           .replace('days.forEach((d,i)=>{ const gx=gi[d], _u=unitOf(tkr,d), c=cl[gx]*_u;','days.forEach((d,i)=>{ const gx=gi[d], _u=unitOf(tkr,d), c=cl[gx]*_u; __SD=d;');
     global.__ST=[]; global.__SD='';
     const f=new Function('return ('+src.replace(/^function \w+\(/,'function (')+')')();
     const r=f(days,T,cap,LVN,G,filter,false);
@@ -4835,13 +4847,13 @@ function ivsNeutralSrc(src, keepDiv){
   inj(`const owed=capGainTax(yearPnl, tkr); let due=owed; yearPnl=0;`, `const owed=0; let due=owed; yearPnl=0;`, 'tax');
   inj(`const gross=cash*parkRate(+d.slice(0,4),tkr)/252;`, `const gross=0;`, 'park');
   if(keepDiv){
-    inj(`cash+=divCash(tkr,d,A.sh,costOn);`,
-        `{ const __v=divCash(tkr,d,A.sh,true); cash+=__v; if(__v>0&&typeof __LOG!=='undefined') __LOG.push({type:'div',leg:'lev',date:d,amt:__v}); }`, 'div');
-    inj(`if(X1 && _p1 && _p1.sym && !_p1.synth) cash+=divCash(_p1.sym,d,B.sh,costOn);`,
-        `if(X1 && _p1 && _p1.sym && !_p1.synth){ const __v=divCash(_p1.sym,d,B.sh,true); cash+=__v; if(__v>0&&typeof __LOG!=='undefined') __LOG.push({type:'div',leg:'x1',date:d,amt:__v}); }`, 'div1');
+    inj(`cash+=divCash(tkr,d,A.sh*uA,costOn);`,
+        `{ const __v=divCash(tkr,d,A.sh*uA,true); cash+=__v; if(__v>0&&typeof __LOG!=='undefined') __LOG.push({type:'div',leg:'lev',date:d,amt:__v}); }`, 'div');
+    inj(`if(X1 && _p1 && _p1.sym && !_p1.synth) cash+=divCash(_p1.sym,d,B.sh*uB,costOn);`,
+        `if(X1 && _p1 && _p1.sym && !_p1.synth){ const __v=divCash(_p1.sym,d,B.sh*uB,true); cash+=__v; if(__v>0&&typeof __LOG!=='undefined') __LOG.push({type:'div',leg:'x1',date:d,amt:__v}); }`, 'div1');
   }else{
-    inj(`cash+=divCash(tkr,d,A.sh,costOn);`, ``, 'div');
-    inj(`if(X1 && _p1 && _p1.sym && !_p1.synth) cash+=divCash(_p1.sym,d,B.sh,costOn);`, ``, 'div1');
+    inj(`cash+=divCash(tkr,d,A.sh*uA,costOn);`, ``, 'div');
+    inj(`if(X1 && _p1 && _p1.sym && !_p1.synth) cash+=divCash(_p1.sym,d,B.sh*uB,costOn);`, ``, 'div1');
   }
   return src;
 }
@@ -5176,7 +5188,7 @@ console.log('\n[83] 체결가 · 조정종가 · 배당 이벤트 분리');
 
   // ── 로더가 역할을 갈라 담는가 ──
   ok('M·ADJ·DIVMAP·PBASIS 를 따로 담는다',
-     /let DIV=\{\}, RAW=\{\}, ADJ=\{\}, DIVMAP=\{\}, PBASIS=\{\};/.test(bt)
+     /let DIV=\{\}, RAW=\{\}, ADJ=\{\}, DIVMAP=\{\}, PBASIS=\{\}, SPLITS=\{\};/.test(bt)
      && /PBASIS\[sym\] = useTrade \? 'trade'/.test(bt)
      && /ADJ\[sym\]=\{\}; adjRows\.forEach/.test(bt));
   ok('체결가가 구간을 다 덮을 때만 쓴다',
@@ -6360,7 +6372,7 @@ console.log('\n[94] 무매 선택 첫날 — 전일 종가를 워밍업에서 �
   delete M[T]; delete PBASIS[T];
 
   ok('두 엔진이 모두 헬퍼를 쓴다',
-     (bt.match(/const prevC=imPrevClose\(tkr,days,i\);/g)||[]).length===2
+     (bt.match(/const prevC=imPrevClose\(tkr,days,i\)\*_u;/g)||[]).length===2   // 오늘 단위(분할)로 바꿔 쓴다
      && !/const prevC=i>0\?M\[tkr\]\[days\[i-1\]\]\[C\]:c;/.test(bt));
 }
 
@@ -6816,7 +6828,7 @@ console.log('\n[102] VR 배당 — Pool 입금 · 백테와 같은 규약');
 
   /* D. 백테 VR 도 사다리보다 먼저 Pool 에 넣는다 — 앱과 순서가 같아야 한다 */
   { const f=extractFn(bt,'function runVR(days,tkr,params)');
-    ok('D 백테 VR 도 Pool 로 받는다', /pool\+=divCash\(tkr,d,shares,costOn\);/.test(f));
+    ok('D 백테 VR 도 Pool 로 받는다', /pool\+=divCash\(tkr,d,shares\*_u,costOn\);/.test(f));
     /* 앱과 순서가 같아야 한다 — 배당을 먼저 넣고 그 Pool 로 그날 사다리를 돌린다.
        _ladder 는 루프 위에서 정의되므로 '정의' 가 아니라 '부르는 자리' 를 본다. */
     ok('D 백테도 사다리보다 먼저 넣는다',
@@ -7295,7 +7307,7 @@ console.log('\n[107] 7차 — VR 백테 ↔ 모의 ↔ 과거재생 거래 단�
   const vinj=(a,b)=>{ const p=vsrc.split(a); if(p.length!==2) throw new Error('VR 주입 실패: '+a.slice(0,40)); vsrc=p[0]+b+p[1]; };
   vinj(`function _vbuyQ(q,c){ if(!(q>0)) return 0;`, `function _vbuyQ(q,c){ if(!(q>0)) return 0; __VL('buy',q,c);`);
   vinj(`const qty=Math.min(q,shares); if(!(qty>0)) return 0;`, `const qty=Math.min(q,shares); if(!(qty>0)) return 0; __VL('sell',qty,c);`);
-  vinj(`days.forEach((d,i)=>{\n    const c=M[tkr][d][C];`, `days.forEach((d,i)=>{ __VD=d;\n    const c=M[tkr][d][C];`);
+  vinj(`days.forEach((d,i)=>{\n    const _u=unitOf(tkr,d);`, `days.forEach((d,i)=>{ __VD=d;\n    const _u=unitOf(tkr,d);`);
   let VLOG=[]; global.__VD=''; global.__VL=(t,q,p)=>VLOG.push({date:__VD,type:t,qty:+q,price:+p});
   const runVRd=new Function(vsrc+'\nreturn runVR;')();
   const vdeps=['function _clampFrom(from, lastDate)','function _lastSettled(rows, cur)','function sortHist(arr)',
@@ -7733,8 +7745,8 @@ console.log('\n[113] 7차 ⑰ — 200일선 운영 재생 ↔ 백테 거래 단�
   inj(`const FEE=costOn?costOf(tkr).fee:0;`, `const FEE=0.0025;`, 'fee');
   inj(`const owed=capGainTax(yearPnl, tkr); let due=owed; yearPnl=0;`, `const owed=0; let due=owed; yearPnl=0;`, 'tax');
   // 배당은 남기되 앱처럼 늘 세후로 (7차 D8)
-  inj(`cash+=divCash(tkr,d,shares,costOn);`,
-      `{ const __v=divCash(tkr,d,shares,true); cash+=__v; if(__v>0) __LOG.push({type:'div',date:d,amt:__v}); }`, 'div');
+  inj(`cash+=divCash(tkr,d,shares*_u,costOn);`,
+      `{ const __v=divCash(tkr,d,shares*_u,true); cash+=__v; if(__v>0) __LOG.push({type:'div',date:d,amt:__v}); }`, 'div');
   // 매수 훅은 '1주 이상일 때만 거래' 로 감싼 괄호 밖 문장에 건다 — 옛 모양(감싸지 않음)으로 되돌려도
   // 주입은 되고, 그 되돌림은 아래 값 시험(1주도 못 사면 거래 0건)이 잡는다.
   inj(`lotBuy(LOT,q,c,fee); cash-=spend+fee; feesTotal+=fee; trades++;`,
@@ -9420,7 +9432,7 @@ console.log('\n[127] 제14차 — 무매 전량 익절 뒤 같은 날 LOC 재매
       ...['function exitMulOf(base)','function imRevExitDue(c, close, target, date)','function calcInfState(sess)','function imOrders(sess,price,rows)'].map(x=>extractFn(pl,x)),
       'return {calcInfState, imOrders};'].join('\n'))();
   /* 백테 — 초기상태(보유·평단·T)를 시험용으로 주입한 실코드 사본. 판정 함수는 backtest.html 사본. */
-  const INIT_AT='const LOT=taxLot();', FIN_AT='const fin=cash+shares*M[tkr][days[days.length-1]][C]+savedProfit-addedCash;';
+  const INIT_AT='const LOT=taxLot();', FIN_AT='const fin=cash+shares*tradeBar(tkr,days[days.length-1])[C]+savedProfit-addedCash;';
   const withInit=src=>{ const k=src.indexOf(INIT_AT); if(k<0) throw new Error('주입 실패(제14차 초기상태)');
     return src.slice(0,k+INIT_AT.length)+' if(global.__IMINIT){ const I=global.__IMINIT; shares=I.shares; avg=I.avg; T=I.T; cash=cap-I.shares*I.avg; lotBuy(LOT,I.shares,I.avg,0); }'+src.slice(k+INIT_AT.length); };
   const runIMi=new Function(optFn(bt,SIG_END)+'\n'+withInit(btSrc.replace(/__LOG\(/g,'__LOGD(d,'))+'\nreturn runIM;')();
@@ -10313,6 +10325,217 @@ console.log('\n[137] 폰 화면 가로 넘침 — 규칙 줄 줄바꿈 · 탭 �
      /@media\(max-width:430px\)\{\.tabs\{gap:5px\}\.tab\{font-size:12px/.test(css) && !/@media\(max-width:380px\)\{\.tabs/.test(css));
   ok('탭 줄이 넘치면 페이지 대신 탭 줄 안에서만 밀림 (overflow-x:auto)',
      /\.tabs\{[^}]*overflow-x:auto/.test(css));
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   [138] 액면분할 — 체결은 그날의 실제 거래 가격, 지표는 분할 보정 종가
+   /api/quote 체결가는 분할을 되돌린 가격이라 2010년 SOXL 이 0.66$(실제 약 40$)로 나왔다. 정수 주수 ·
+   1주짜리 줄 · 센트 호가가 실제와 달라, 출시일~ 무매 하방 LOC 0줄→3줄 차이가 분할 보정가로는 0.2%p 안에
+   묻혔다(실제 가격 +0.2~2.0%p). 정수 주수 엔진은 이제 tradeBar(= M × 그날 단위)로 체결하고, 분할일에
+   splitHold 로 보유 주수·평단·세무 원가를 맞춘다. 지표·신호는 M(분할 보정) 그대로.
+   골든(C)은 '고치기 전 원본 엔진 + 시세·배당을 실제 가격으로 바꾸고 분할일 조정만 따로 붙인 독립 재현' 에서
+   뽑았다 — testdata/SOXL.csv 전체(2020-09-08~2026-08-27) · 2021-03-02 15:1 · 2020-12-22 배당 0.05(분할 보정).
+   ───────────────────────────────────────────────────────────────────────── */
+console.log('\n[138] 액면분할 — 실제 거래 가격 체결 · 분할일 보유 조정 · 지표는 분할 보정');
+{
+  const BK={SPLITS:global.SPLITS, ST:global.SPLIT_TRADE, LR:global.LEV_REALSTART, LE:global.levExt, EX:global.EXTM,
+            PB:PBASIS.SOXL, DV:DIVMAP.SOXL, WF:WARM_FROM, WT:WARM_TO,
+            g:['imReverse','imEngine','imTgtDyn','imAutoTp','imCostOn'].map(k=>[k,global[k]])};
+  const near9=(a,b)=>Math.abs(a-b)<1e-9;
+
+  // ── A. 헬퍼 값 ──
+  global.SPLIT_TRADE=true; global.levExt=false; global.EXTM={}; global.LEV_REALSTART={};
+  M.XS={'2021-01-04':[1,1.1,1.2,0.9],'2021-01-05':[2,2,2,2],'2021-01-06':[2,2,2,2],'2021-01-07':[2,2,2,2],'2021-01-08':[3,3,3,3]};
+  global.SPLITS={XS:{'2021-01-05':4,'2021-01-08':3}};
+  ok('A unitOf — 그날 뒤에 올 분할 배수의 곱 (분할일 당일은 분할 뒤 단위)',
+     unitOf('XS','2021-01-04')===12 && unitOf('XS','2021-01-05')===3 && unitOf('XS','2021-01-07')===3 && unitOf('XS','2021-01-08')===1,
+     ['2021-01-04','2021-01-05','2021-01-07','2021-01-08'].map(d=>unitOf('XS',d)).join('/'));
+  { const b=tradeBar('XS','2021-01-04');
+    ok('A tradeBar — 종가·시가·고가·저가 네 값 모두 × 단위', near9(b[0],12)&&near9(b[1],13.2)&&near9(b[2],14.4)&&near9(b[3],10.8), JSON.stringify(b)); }
+  ok('A splitRatio — 전날 단위 ÷ 오늘 단위 (분할 없는 날·첫날 1)',
+     splitRatio('XS','2021-01-04','2021-01-05')===4 && splitRatio('XS','2021-01-07','2021-01-08')===3
+     && splitRatio('XS','2021-01-05','2021-01-06')===1 && splitRatio('XS',undefined,'2021-01-05')===1);
+  global.SPLIT_TRADE=false;
+  ok('A 스위치를 끄면 예전처럼 분할 보정가 그대로 (단위 1)', unitOf('XS','2021-01-04')===1 && splitRatio('XS','2021-01-04','2021-01-05')===1
+     && tradeBar('XS','2021-01-04')===M.XS['2021-01-04']);
+  global.SPLIT_TRADE=true;
+  global.levExt=true; global.EXTM={XS:M.XS}; global.LEV_REALSTART={XS:'2021-01-05'};
+  ok('A 상장 전 합성 구간은 단위 1 · 실데이터 첫날에 병합 한 번으로 넘어간다',
+     unitOf('XS','2021-01-04')===1 && unitOf('XS','2021-01-05')===3 && near9(splitRatio('XS','2021-01-04','2021-01-05'),1/3));
+  global.levExt=false; global.EXTM={}; global.LEV_REALSTART={};
+  { const L={qty:10,basis:1003}, S=splitHold(4,10,100,L);
+    ok('A splitHold — 주수×4 · 평단÷4 · 세무 원가 수량×4 (취득가액 합계는 그대로)', S.sh===40&&S.avg===25&&L.qty===40&&L.basis===1003, JSON.stringify({S,L})); }
+  { const S=splitHold(1,7,5,null); ok('A splitHold — 분할 없는 날은 그대로', S.sh===7&&S.avg===5); }
+  { const L={qty:25,basis:500}, S=splitHold(0.1,25,20,L);
+    ok('A splitHold — 병합(r<1)도 같은 식 · 1주 미만은 들고 간다(매매가 아니라 수수료·세금 없음)',
+       near9(S.sh,2.5)&&near9(S.avg,200)&&near9(L.qty,2.5)&&L.basis===500, JSON.stringify({S,L})); }
+  delete M.XS;
+
+  // ── B. 데이터층 — 분할 이벤트를 받아 체결가 계열일 때만 쓴다 ──
+  { const E={M:{},ADJ:{},DIVMAP:{},DIV:{},RAW:{},PBASIS:{},SPLITS:{}};
+    const src=['function newPriceBag()','function absorbQuote(bag, j)','function commitPriceBag(sym, bag)'].map(m=>extractFn(bt,m)).join('\n');
+    const f=new Function(...Object.keys(E), src+'\nreturn {newPriceBag,absorbQuote,commitPriceBag};')(...Object.values(E));
+    const mk=n=>Array.from({length:n},(_,i)=>({date:new Date(Date.UTC(2021,0,4+i)).toISOString().slice(0,10),open:10,high:11,low:9,close:10}));
+    const b1=f.newPriceBag(); f.absorbQuote(b1,{ohlc:mk(12),ohlcTrade:mk(12),splits:[{date:'2021-01-08',ratio:15},{date:'2021-01-10',ratio:1}],src:'yahoo'});
+    f.commitPriceBag('XQ',b1);
+    ok('B 분할 이벤트를 받아 SPLITS 에 담는다 (배수 1은 버린다)', E.PBASIS.XQ==='trade' && JSON.stringify(E.SPLITS.XQ)==='{"2021-01-08":15}', JSON.stringify(E.SPLITS.XQ));
+    const b2=f.newPriceBag(); f.absorbQuote(b2,{ohlc:mk(12),splits:[{date:'2021-01-08',ratio:15}],src:'yahoo'});
+    f.commitPriceBag('XA',b2);
+    ok('B 체결가가 아닌 종목(조정가로 대체)엔 분할을 쓰지 않는다', E.PBASIS.XA!=='trade' && JSON.stringify(E.SPLITS.XA)==='{}', `${E.PBASIS.XA} ${JSON.stringify(E.SPLITS.XA)}`); }
+  ok('B 새로 받을 때 분할 목록도 비운다', /M=\{\}; DIV=\{\}; RAW=\{\}; ADJ=\{\}; DIVMAP=\{\}; PBASIS=\{\}; SPLITS=\{\};/.test(bt));
+  ok('B 합성 확장의 실데이터 첫날을 적어 두고, 되돌릴 때 비운다',
+     /LEV_REALSTART\[t\]=realStart;/.test(extractFn(bt,'async function buildLevExt(tickers, start)'))
+     && /function clearLevExt\(\)\{[^\n]*RAWM=\{\}; EXTM=\{\}; LEV_REALSTART=\{\}; \}/.test(bt));
+
+  // ── C. 엔진 골든 — 독립 재현과 같은 값 (무매 V4.0 · VR · V2.2 · V3.0) ──
+  global.SPLITS={SOXL:{'2021-03-02':15}}; global.SPLIT_TRADE=true;
+  PBASIS.SOXL='trade'; DIVMAP.SOXL={'2020-12-22':0.05}; WARM_FROM=''; WARM_TO='';
+  global.imReverse=false; global.imEngine='v40'; global.imTgtDyn=false; global.imAutoTp=false; global.imCostOn=true;
+  const D=DAYS.SOXL;
+  ok('C 시험 자료가 분할일(2021-03-02)을 지난다', D&&D[0]<'2021-03-02'&&D[D.length-1]>'2021-03-02'&&D.includes('2021-03-02'), D&&`${D[0]}~${D[D.length-1]}`);
+  const vrP=cap=>({initAmt:cap,G:10,bandPct:15,mode:0.5,formula:'basic',startV:0,startPool:0,costOn:true});
+  const im22f=new Function('return ('+extractFn(bt,'function runIM22(days,tkr,cap,divs,targetPct,compound').replace(/^function \w+\(/,'function (')+')')();
+  const im30f=new Function('return ('+extractFn(bt,'function runIM30(days,tkr,cap,divs,targetPct,compound').replace(/^function \w+\(/,'function (')+')')();
+  const G={ im:[[1e4,56094.914808,53.758838,295],[1e5,565607.115092,54.553236,2932]],
+            vr:[[1e4,73028.732097,89.3477,588],[1e5,697466.663218,89.429686,5648.259369]],
+            im22:[[1e4,21666.696739,42.299559,29],[1e5,245678.373338,34.220593,376]],
+            im30:[[1e4,23008.304686,42.847591,117.25],[1e5,277338.233306,24.911322,1435.75]] };
+  const RUN={ im:cap=>{const r=runIM(D,'SOXL',cap,20,20,true,20); return [r.final,r.mdd,r.endShares];},
+              vr:cap=>{const r=runVR(D,'SOXL',vrP(cap)); return [r.final,r.mdd,r.shares];},
+              im22:cap=>{const r=im22f(D,'SOXL',cap,20,20,true); return [r.final,r.mdd,r.endShares];},
+              im30:cap=>{const r=im30f(D,'SOXL',cap,20,20,true); return [r.final,r.mdd,r.endShares];} };
+  const NAME={im:'무매 V4.0',vr:'VR 거치',im22:'무매 V2.2',im30:'무매 V3.0'};
+  for(const k of Object.keys(G)) for(const [cap,f0,m0,s0] of G[k]){
+    const [f,m,sh]=RUN[k](cap);
+    ok(`C ${NAME[k]} ${cap/1e4}만$ — 독립 재현 골든 ${f0} · MDD ${m0} · 끝 주수 ${s0}`,
+       Math.abs(f-f0)<1e-5 && Math.abs(m-m0)<1e-5 && Math.abs(sh-s0)<1e-5, `${f.toFixed(6)} · ${m.toFixed(6)} · ${sh}`); }
+  /* 분할 전에 끝나는 구간(2021-02-26 · 단위 15) — 마지막 날 평가·정산이 실제 거래 가격인지. V2.2·V3.0 은 1만$ 면 끝에 주식이
+     거의 없어 10만$ 로 본다. VR 이어받기(시작 V · 단위 15 에서 정수 주수)도 여기서 본다 */
+  { const PRE=D.filter(d=>d<'2021-02-27');
+    const P=[['무매 V4.0 1만$',()=>{const r=runIM(PRE,'SOXL',1e4,20,20,true,20); return [r.final,r.mdd,r.endShares];},12020.427166,6.48744,2],
+             ['VR 거치 1만$',()=>{const r=runVR(PRE,'SOXL',vrP(1e4)); return [r.final,r.mdd,r.shares];},22809.681489,18.323156,27],
+             ['무매 V2.2 10만$',()=>{const r=im22f(PRE,'SOXL',1e5,20,20,true); return [r.final,r.mdd,r.endShares];},115043.721559,9.595826,65],
+             ['무매 V3.0 10만$',()=>{const r=im30f(PRE,'SOXL',1e5,20,20,true); return [r.final,r.mdd,r.endShares];},129187.544704,10.264222,77],
+             ['VR 이어받기(시작 V 5,000$ · Pool 5,000$) 전 구간',()=>{const r=runVR(D,'SOXL',{initAmt:0,G:10,bandPct:15,mode:0.5,formula:'basic',startV:5000,startPool:5000,cycStart:D[0],costOn:true}); return [r.final,r.mdd,r.shares];},67491.561457,88.818602,496]];
+    for(const [nm,fn,f0,m0,s0] of P){ const [f,m,sh]=fn();
+      ok(`C ${nm}${nm.includes('전 구간')?'':' · 분할 전에 끝나는 구간'} — 독립 재현 골든 ${f0} · MDD ${m0} · 끝 주수 ${s0}`,
+         Math.abs(f-f0)<1e-5 && Math.abs(m-m0)<1e-5 && Math.abs(sh-s0)<1e-5, `${f.toFixed(6)} · ${m.toFixed(6)} · ${sh}`); } }
+  { global.SPLIT_TRADE=false; const a=runIM(D,'SOXL',1e4,20,20,true,20).final, v=runVR(D,'SOXL',vrP(1e4)).final; global.SPLIT_TRADE=true;
+    ok('C 스위치를 끄면 옛 값으로 — 시나리오가 분할을 실제로 지난다 (무매 59,864.23 · VR 73,034.87)',
+       Math.abs(a-59864.229138)<1e-5 && Math.abs(v-73034.867806)<1e-5, `${a.toFixed(6)} · ${v.toFixed(6)}`); }
+
+  // ── D. 가치 보존 — 원금이 아주 크면 정수 반올림이 사라지므로 분할 반영을 켜든 끄든 같아야 한다 ──
+  //   (분할일 조정·체결 단위·배당 단위·마지막 날 평가가 하나라도 어긋나면 값이 크게 갈린다)
+  { const UX='XU1';
+    { const px={}; let v=50; D.forEach((d,i)=>{ if(i>0){ const r=M.SOXL[D[i]][C]/M.SOXL[D[i-1]][C]-1; v*=(1+r/3); } px[d]=[v,v,v,v]; });
+      M[UX]=px; PBASIS[UX]='trade'; DIVMAP[UX]={'2021-01-15':0.2}; global.SPLITS[UX]={'2021-06-01':3}; }
+    const preI='var levExt=false, EXTM={}, LEV_UNDERLYING={SOXL:"'+UX+'"};\n'
+      +['function srcOf(t)','function _ivsWeights(tkr,N,s0)','function _ivsX1(tkr)','function _ivsPair1(tkr, days)'].map(m=>extractFn(bt,m)).join('\n')+'\n'
+      +['LEV_EXPENSE=\\{[^}]*\\};','LEV_EXPENSE_DEF=[^\\n]*','LEV_SPREAD=[^\\n]*','LEV_PRICEIDX=\\{[^}]*\\};','X1_EXPENSE=\\{[^}]*\\};','X1_EXPENSE_DEF=[^\\n]*',
+        'TBILL_RATE=\\{[\\s\\S]*?\\};','KR_RATE=\\{[\\s\\S]*?\\};','parkRate=\\(y,tkr\\)=>[^\\n]*'].map(x=>(bt.match(new RegExp('const '+x))||[''])[0]).join('\n')+'\n';
+    const ivsF=new Function(preI+'return ('+extractFn(bt,'function runIVS(days,tkr,cap,s0,N,band,costOn,mode,pair)').replace(/^function \w+\(/,'function (')+')')();
+    const preM=['function srcOf(t)','function _maOpt(opt)','function _maHold(sell,a,b)','function _maEntry(buy,a,b)',
+                'function _maAbove(tkr,N,SHORT,BUY,SELL)','function divSplit(tkr, days, buys)'].map(m=>extractFn(bt,m)).join('\n')+'\n'
+               +(bt.match(/const TBILL_RATE=\{[\s\S]*?\};/)||[''])[0]+'\n'+(bt.match(/const KR_RATE=\{[\s\S]*?\};/)||[''])[0]+'\n'
+               +(bt.match(/const parkRate=\(y,tkr\)=>[^\n]*/)||[''])[0]+'\n'
+               +'var levExt=false, EXTM={}, maBuy="ma", maSell="ma", maShort=50, maPark="cash";\n';
+    global.META=global.META||{}; global.META.SOXL=global.META.SOXL||{lev:3};
+    const maF=new Function(preM+'return ('+extractFn(bt,'function runMA200(days,tkr,cap,N,costOn,opt)').replace(/^function \w+\(/,'function (')+')')();
+    const bhF=new Function(['function srcOf(t)','function divSplit(tkr, days, buys)'].map(m=>extractFn(bt,m)).join('\n')+'\nreturn ('
+                +extractFn(bt,'function runBH(days,tkr,cap,costOn)').replace(/^function [\w$]+\(/,'function (')+')')();
+    const stdF=new Function('return ('+extractFn(bt,'function runStdev(days,tkr,cap,N,g,filter,costOn)').replace(/^function \w+\(/,'function (')+')')();
+    global.dcaReinv=true;
+    const E2={ '거치':(d,c)=>bhF(d,'SOXL',c,true), '200일선':(d,c)=>maF(d,'SOXL',c,200,true,{buy:'ma',sell:'ma',park:'cash'}),
+               '표준편차':(d,c)=>stdF(d,'SOXL',c,40,2.5,'nobuy',true),
+               '섀넌(국채)':(d,c)=>ivsF(d,'SOXL',c,0.55,40,0.15,true,'iv','cash'),
+               '섀넌(1배 짝 · 짝도 분할)':(d,c)=>ivsF(d,'SOXL',c,0.55,40,0.20,true,'iv','x1') };
+    const PRE=D.filter(d=>d<'2021-02-27');
+    for(const [nm,fn] of Object.entries(E2)) for(const [wn,DD] of [['전 구간',D],['분할 전에 끝나는 구간',PRE]]){
+      global.SPLIT_TRADE=true; const a=fn(DD,1e9); global.SPLIT_TRADE=false; const b=fn(DD,1e9); global.SPLIT_TRADE=true;
+      const rel=Math.abs(a.final-b.final)/b.final;
+      ok(`D ${nm} · ${wn} — 원금 10억$ 면 분할 반영을 켜든 끄든 같다 (차이 1e-6 미만)`, rel<1e-6, `${a.final.toFixed(2)} vs ${b.final.toFixed(2)} (${rel.toExponential(2)})`); }
+    delete M[UX]; delete PBASIS[UX]; delete DIVMAP[UX];
+  }
+
+  // ── E. 무매 — 전일 종가·직전 5일 종가를 오늘 단위로 (분할 앞뒤 평평한 시세) ──
+  { const T2='XH', dd=[]; M[T2]={};
+    for(let i=0;i<30;i++){ const d=new Date(Date.UTC(2021,1,1+i)).toISOString().slice(0,10); const w=new Date(d+'T12:00:00Z').getUTCDay(); if(w===0||w===6) continue; dd.push(d); M[T2][d]=[1,1,1,1]; }
+    const sd=dd[10]; global.SPLITS={[T2]:{[sd]:4}}; PBASIS[T2]='trade';
+    let src=extractFn(bt,'function runIM(days,tkr,cap,divs,targetPct,compound');
+    const h='closeHist.push(c); if(closeHist.length>5) closeHist.shift();';
+    ok('E 무매 직전 5일 종가 훅 자리', src.includes(h));
+    src=src.replace(h, h+' __IMH.push([d,prev5,prevC,c]);');
+    global.__IMH=[]; const f=new Function('return ('+src.replace(/^function \w+\(/,'function (')+')')();
+    f(dd,T2,10000,20,20,true,20);
+    const H=global.__IMH.slice(); delete global.__IMH;
+    const badPrev=H.filter(x=>x[0]!==dd[0]&&!near9(x[2],x[3]));
+    ok('E 전일 종가가 늘 오늘 단위 — 분할 전(단위 4)에도 · 분할일에도', H.length>=dd.length-1 && badPrev.length===0,
+       badPrev.slice(0,3).map(x=>x.join(' ')).join(' | '));
+    const bad5=H.filter(x=>dd.indexOf(x[0])>=5&&!near9(x[1],x[3]));
+    ok('E 직전 5일 종가(리버스 별지점)도 분할일에 오늘 단위로 바뀐다', bad5.length===0, bad5.slice(0,3).map(x=>x.join(' ')).join(' | '));
+    delete M[T2]; delete PBASIS[T2]; }
+
+  // ── F. 모양 — 숨긴 V5.0 도 V4.0 과 같은 조정 · 소수 주수 엔진은 분할과 무관 ──
+  { const im=extractFn(bt,'function runIM(days,tkr,cap,divs,targetPct,compound'), im50=extractFn(bt,'function runIM50(days,tkr,cap,divs,targetPct,compound');
+    const hk=/if\(_r!==1\)\{ const S=splitHold\(_r,shares,avg,LOT\); shares=S\.sh; avg=S\.avg; for\(let k=0;k<closeHist\.length;k\+\+\) closeHist\[k\]\/=_r; \} \}/;
+    ok('F V5.0(숨김)도 V4.0 과 같은 분할일 조정·체결 단위', hk.test(im)&&hk.test(im50)
+       && /const \[c,o,hi,lo\]=tradeBar\(tkr,d\);/.test(im50) && /cash\+=divCash\(tkr,d,shares\*_u,CO\);/.test(im50)); }
+  for(const m of ['function runMA200Accum(days,tkr,contribTotal,N,costOn,opt)','function runASAP(days,tkr,opt)','function _dcaOne(t,days,amt,freq,costOn,dipMul)']){
+    ok(`F 소수 주수 엔진은 분할 보정가 그대로 (${m.slice(9,m.indexOf('('))})`, !/tradeBar|unitOf|splitHold/.test(extractFn(bt,m))); }
+
+  // ── G. 쌍둥이 — 분할이 구간 뒤에 있으면(단위 4 고정) 가격을 처음부터 4배로 넣은 쌍둥이와 값이 똑같아야 한다 ──
+  //   체결·주문가·평가·배당·마지막 정산(세금 강제매도) 어디서든 분할 보정가(M)를 그대로 쓰면 갈린다.
+  //   시세: 1년 안에 30일 +5%(익절 → 실현이익) · 40일 −4%(현금 소진) → 마지막 정산에서 세금 강제매도가 난다.
+  { const dts=[]; for(let d=new Date(Date.UTC(2021,0,4)); dts.length<70; d.setUTCDate(d.getUTCDate()+1)){ const w=d.getUTCDay(); if(w!==0&&w!==6) dts.push(d.toISOString().slice(0,10)); }
+    const px=[]; { let c=10; for(let i=0;i<dts.length;i++){ const o=i?px[i-1][0]:c; c=i<30?c*1.05:c*0.96; px.push([c,o,Math.max(o,c)*1.01,Math.min(o,c)*0.99]); } }
+    const mk=(k,sc)=>{ M[k]={}; dts.forEach((d,i)=>M[k][d]=px[i].map(x=>x*sc)); PBASIS[k]='trade'; };
+    mk('XT',1); mk('XT4',4); DIVMAP.XT={[dts[30]]:0.05}; DIVMAP.XT4={[dts[30]]:0.2};
+    { M.XU={}; M.XU2={}; let v=50; dts.forEach((d,i)=>{ if(i) v*=1+(px[i][0]/px[i-1][0]-1)/3; M.XU[d]=[v,v,v,v]; M.XU2[d]=[2*v,2*v,2*v,2*v]; });
+      PBASIS.XU='trade'; PBASIS.XU2='trade'; }
+    global.SPLITS={XT:{'2021-12-31':4}, XU:{'2021-12-31':2}}; global.SPLIT_TRADE=true;
+    global.META=global.META||{}; global.META.XT={lev:3}; global.META.XT4={lev:3};
+    const preT='var levExt=false, EXTM={}, LEV_UNDERLYING={XT:"XU",XT4:"XU2"};\n'
+      +['function srcOf(t)','function _ivsWeights(tkr,N,s0)','function _ivsX1(tkr)','function _ivsPair1(tkr, days)'].map(m=>extractFn(bt,m)).join('\n')+'\n'
+      +['LEV_EXPENSE=\\{[^}]*\\};','LEV_EXPENSE_DEF=[^\\n]*','LEV_SPREAD=[^\\n]*','LEV_PRICEIDX=\\{[^}]*\\};','X1_EXPENSE=\\{[^}]*\\};','X1_EXPENSE_DEF=[^\\n]*',
+        'TBILL_RATE=\\{[\\s\\S]*?\\};','KR_RATE=\\{[\\s\\S]*?\\};','parkRate=\\(y,tkr\\)=>[^\\n]*'].map(x=>(bt.match(new RegExp('const '+x))||[''])[0]).join('\n')+'\n';
+    const ivsT=new Function(preT+'return ('+extractFn(bt,'function runIVS(days,tkr,cap,s0,N,band,costOn,mode,pair)').replace(/^function \w+\(/,'function (')+')')();
+    const preM2=['function srcOf(t)','function _maOpt(opt)','function _maHold(sell,a,b)','function _maEntry(buy,a,b)',
+                 'function _maAbove(tkr,N,SHORT,BUY,SELL)','function divSplit(tkr, days, buys)'].map(m=>extractFn(bt,m)).join('\n')+'\n'
+                 +'var levExt=false, EXTM={}, maBuy="ma", maSell="ma", maShort=50, maPark="cash";\n';
+    const maT=new Function(preM2+'return ('+extractFn(bt,'function runMA200(days,tkr,cap,N,costOn,opt)').replace(/^function \w+\(/,'function (')+')')();
+    const bhT=new Function(['function srcOf(t)','function divSplit(tkr, days, buys)'].map(m=>extractFn(bt,m)).join('\n')+'\nreturn ('
+                +extractFn(bt,'function runBH(days,tkr,cap,costOn)').replace(/^function [\w$]+\(/,'function (')+')')();
+    const stdT=new Function('return ('+extractFn(bt,'function runStdev(days,tkr,cap,N,g,filter,costOn)').replace(/^function \w+\(/,'function (')+')')();
+    const pick=r=>[r.final,r.mdd];
+    const TW={ '무매 V4.0':k=>pick(runIM(dts,k,1e6,20,20,true,20)), '무매 V2.2':k=>pick(im22f(dts,k,1e6,20,20,true)), '무매 V3.0':k=>pick(im30f(dts,k,1e6,20,20,true)),
+               'VR 거치':k=>pick(runVR(dts,k,vrP(1e6))), '200일선':k=>pick(maT(dts,k,1e6,20,true,{buy:'ma',sell:'ma',park:'cash'})),
+               '표준편차':k=>pick(stdT(dts,k,1e6,20,2.5,'none',true)), '섀넌(국채)':k=>pick(ivsT(dts,k,1e6,0.55,20,0.10,true,'iv','cash')),
+               '섀넌(1배 짝)':k=>pick(ivsT(dts,k,1e6,0.55,20,0.10,true,'iv','x1')), '거치':k=>pick(bhT(dts,k,1e6,true)) };
+    for(const [nm,fn] of Object.entries(TW)){ const a=fn('XT'), b=fn('XT4');
+      ok(`G ${nm} — 분할이 구간 뒤(단위 4)면 4배 쌍둥이와 똑같다`, Math.abs(a[0]-b[0])<1e-6*Math.max(1,b[0]) && Math.abs(a[1]-b[1])<1e-9,
+         `${a[0].toFixed(6)} / ${b[0].toFixed(6)} · MDD ${a[1].toFixed(6)} / ${b[1].toFixed(6)}`); }
+    /* 쌍둥이 시세가 마지막 정산 강제매도 길을 실제로 지나는가 — 무매 V4.0 원금 100만$ */
+    { let src=extractFn(bt,'function runIM(days,tkr,cap,divs,targetPct,compound');
+      const h='if(q>1e-12) _sell(px, q, 0);';
+      ok('G 쌍둥이 시세 — 무매 강제매도 훅 자리', src.includes(h));
+      global.__FS=0; const f=new Function('return ('+src.replace(h,'if(q>1e-12){ __FS++; _sell(px, q, 0); }').replace(/^function \w+\(/,'function (')+')')();
+      f(dts,'XT',1e6,20,20,true,20);
+      ok('G 쌍둥이 시세가 마지막 정산에서 세금 강제매도를 낸다 (그 가격까지 본다)', global.__FS>0, `강제매도 ${global.__FS}회`); delete global.__FS; }
+    /* V2.2·V3.0 은 1회 매수금이 원금÷분할로 고정이라 번 돈이 늘 현금으로 남는다 — 마지막 정산 강제매도가 사실상 안 난다.
+       그래서 그 가격은 모양으로 본다: 마지막 정산가 = 마지막 평가와 같은 실제 거래 가격 (V5.0·200일선도 같이) */
+    for(const m of ['function runIM22(days,tkr,cap,divs,targetPct,compound','function runIM30(days,tkr,cap,divs,targetPct,compound',
+                    'function runIM50(days,tkr,cap,divs,targetPct,compound','function runMA200(days,tkr,cap,N,costOn,opt)']){
+      const b=extractFn(bt,m);
+      ok(`G 마지막 정산가도 실제 거래 가격 (${m.slice(9,m.indexOf('('))})`,
+         /settleToStable\(\(\)=>_settle(Tax)?\(tradeBar\(tkr,days\[days\.length-1\]\)\[C\]\), \(\)=>yearPnl\);/.test(b)); }
+    for(const k of ['XT','XT4','XU','XU2']){ delete M[k]; delete PBASIS[k]; delete DIVMAP[k]; }
+  }
+
+  // 되돌림
+  global.SPLITS=BK.SPLITS; global.SPLIT_TRADE=BK.ST; global.LEV_REALSTART=BK.LR; global.levExt=BK.LE; global.EXTM=BK.EX;
+  if(BK.PB===undefined) delete PBASIS.SOXL; else PBASIS.SOXL=BK.PB;
+  if(BK.DV===undefined) delete DIVMAP.SOXL; else DIVMAP.SOXL=BK.DV;
+  WARM_FROM=BK.WF; WARM_TO=BK.WT; for(const [k,v] of BK.g){ if(v===undefined) delete global[k]; else global[k]=v; }
 }
 console.log(`\n════ 결과: ${pass} PASS / ${fail} FAIL ${fail===0?'— ALL PASS ★':'— 배포 금지, 위 ✗ 항목 수정 필요'} ════`);
 process.exit(fail===0?0:1);
