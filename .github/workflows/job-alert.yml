@@ -17,7 +17,7 @@ concurrency:
 jobs:
   search-and-notify:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
 
     steps:
       - name: Checkout
@@ -39,7 +39,7 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install "ddgs>=9,<10"
+          pip install "ddgs>=9,<10" "requests>=2.32,<3" "beautifulsoup4>=4.12,<5"
 
       - name: Wait until 09:00 KST
         if: github.event_name == 'schedule'
