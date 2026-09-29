@@ -27,6 +27,8 @@ jobs:
           python -m py_compile scripts/nightly_scalping_research.py
           python -m py_compile scripts/collect_crypto_data.py
           python -m py_compile scripts/backtest_crypto_orb.py
+          python -m py_compile scripts/collect_soxl_data.py
+          python -m py_compile scripts/backtest_soxl_intraday.py
 
       - name: 데이트레이딩 스냅샷 품질 가드 검사
         run: |
@@ -63,6 +65,7 @@ jobs:
           node --input-type=module --check < functions/api/nightly-research-summary.js
           node --input-type=module --check < functions/api/crypto.js
           node --input-type=module --check < functions/api/crypto-research.js
+          node --input-type=module --check < functions/api/soxl-research.js
           node --input-type=module --check < worker/opening-scheduler/src/index.js
           node --input-type=module --check < worker/daytrading-scheduler/src/index.js
 
@@ -253,7 +256,7 @@ jobs:
           console.log('✓ daytrading realtime cron / durable snapshot / live paper ledger / EOD parity');
           NODE
 
-      - name: 세 단타전략 판단증거 기록 검사
+      - name: 네 단타전략 판단증거 기록 검사
         run: |
           node - <<'NODE'
           const fs=require('fs');
@@ -262,6 +265,7 @@ jobs:
           const op=fs.readFileSync('scripts/backtest_opening_rebreak.py','utf8');
           const dp=fs.readFileSync('scripts/backtest_daytrading.py','utf8');
           const cp=fs.readFileSync('scripts/backtest_crypto_orb.py','utf8');
+          const sp=fs.readFileSync('scripts/backtest_soxl_intraday.py','utf8');
           let fail=0;
           const checks=[
             [oj,'opening_rebreak_v1','시초가 live 전략버전'],
@@ -274,13 +278,16 @@ jobs:
             [dp,'"evidence":{','데이트레이딩 확정이력 판단증거'],
             [cp,'"strategyVersion": "btc_orb_v1"','BTC 전략버전'],
             [cp,'"evidence": {','BTC 거래 판단증거'],
-            [cp,'baseline-decisions.csv','BTC 무매매일 판단기록']
+            [cp,'baseline-decisions.csv','BTC 무매매일 판단기록'],
+            [sp,'"strategyVersion": "soxl_orb_v1"','SOXL 전략버전'],
+            [sp,'"evidence": {','SOXL 거래 판단증거'],
+            [sp,'baseline-decisions.csv','SOXL 거래/무매매 판단기록']
           ];
           for(const [txt,needle,label] of checks){
             if(!txt.includes(needle)){console.error('✗ '+label+' 없음');fail++;}
           }
           if(fail)process.exit(1);
-          console.log('✓ opening/daytrading/bitcoin strategy evidence is retained');
+          console.log('✓ opening/daytrading/bitcoin/SOXL strategy evidence is retained');
           NODE
 
       - name: 야간 자동연구는 분석 전용인지 검사
@@ -360,7 +367,7 @@ jobs:
           let fail=0;
           const must=[
             ['data-strategy="crypto"','비트코인 탭'],
-            ['id="scVer">v1.21.0','단타 버전 1.21.0'],
+            ['id="scVer">v1.22.0','단타 버전 1.22.0'],
             ['다음 5분봉 시가','다음 봉 진입 설명'],
             ['손절 우선','동일봉 보수 청산 설명'],
             ['최근 365일 백필','초기 백필 안내']
@@ -376,6 +383,70 @@ jobs:
           }
           if(fail)process.exit(1);
           console.log('✓ bitcoin research tab/data path is read-only');
+          NODE
+
+      - name: SOXL 단타 연구 불변식 검사
+        run: |
+          python - <<'PY'
+          from scripts.backtest_soxl_intraday import Params, evaluate_day
+
+          def bar(hm,o,h,l,c,v):
+              hh=hm//100
+              mm=hm%100
+              return {"tEt":f"2026-09-01T{hh:02d}:{mm:02d}:00-04:00","o":o,"h":h,"l":l,"c":c,"v":v}
+
+          bars=[
+              bar(930,100,101,99.5,100.2,100),
+              bar(935,100.2,101.5,100,101.0,100),
+              bar(940,101.0,102.0,100.8,101.5,100),
+              bar(945,101.5,103.5,101.4,103.0,220),
+              bar(950,103.2,106.0,101.0,103.5,180),
+          ]
+          hm=955
+          while len(bars)<35:
+              bars.append(bar(hm,103.5,103.7,103.2,103.5,100))
+              mm=hm%100+5
+              hh=hm//100
+              if mm>=60:
+                  hh+=1
+                  mm-=60
+              hm=hh*100+mm
+
+          day={"sessionDateEt":"2026-09-01","bars":bars}
+          t,d=evaluate_day(day,Params("baseline"))
+          assert t is not None,(t,d)
+          assert t["signalTimeEt"]=="09:45",t
+          assert t["entryTimeEt"]=="09:50",t
+          assert t["reason"]=="stop_same_bar",t
+          assert t["pnlPct"] < -1.2,t
+          assert d["action"]=="trade",d
+          print("✓ SOXL next-bar entry / same-bar stop-first / evidence")
+          PY
+
+          node - <<'NODE'
+          const fs=require('fs');
+          const ui=fs.readFileSync('scalping.html','utf8');
+          const py=fs.readFileSync('scripts/backtest_soxl_intraday.py','utf8');
+          const wf=fs.readFileSync('.github/workflows/soxl-research.yml','utf8');
+          const api=fs.readFileSync('functions/api/soxl-research.js','utf8');
+          let fail=0;
+          const must=[
+            [ui,'data-strategy="soxl"','SOXL 탭'],
+            [ui,'id="scVer">v1.22.0','단타 버전 1.22.0'],
+            [ui,'다음 5분봉 시가','next-bar 진입 설명'],
+            [py,'baseline-decisions.csv','거래/무거래 판단기록'],
+            [py,'target1PctDayRatePct','+1% 목표 지표'],
+            [py,'"evidence": {','판단증거'],
+            [wf,'15 22 * * 1-5','미국장 종료 후 일일수집']
+          ];
+          for(const [txt,needle,label] of must){
+            if(!txt.includes(needle)){console.error('✗ '+label+' 없음');fail++;}
+          }
+          if(/op=order|\/v1\/accounts|\bjwt\b/i.test(api+wf+py)){
+            console.error('✗ SOXL 연구 경로에 주문/계좌 인증 문자열 발견');fail++;
+          }
+          if(fail)process.exit(1);
+          console.log('✓ SOXL research path is read-only / audited');
           NODE
 
       - name: 전략 SSOT 체크 (문서 기준값·규약 불변식)
