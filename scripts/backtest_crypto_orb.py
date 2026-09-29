@@ -205,14 +205,17 @@ def trade_for_day(day, p: Params):
 
     signal_bar = bars[signal_i]
     exit_bar = bars[exit_i]
+    signal_close = float(signal_bar.get("c") or 0)
+    signal_prev_close = float(bars[signal_i - 1].get("c") or 0)
     return {
         "date": day.get("sessionDateUtc"),
+        "strategyVersion": "btc_orb_v1",
         "signalTimeKst": kst_hm(signal_bar.get("tKst")),
         "entryTimeKst": kst_hm(entry_bar.get("tKst")),
         "exitTimeKst": kst_hm(exit_bar.get("tKst")),
         "openingHigh": or_high,
         "openingLow": or_low,
-        "signalClose": float(signal_bar.get("c") or 0),
+        "signalClose": signal_close,
         "signalVwap": signal_vwap,
         "volumeRatio": signal_vol_ratio,
         "entryPrice": entry,
@@ -222,6 +225,28 @@ def trade_for_day(day, p: Params):
         "frictionPct": friction,
         "pnlPct": net,
         "variant": p.name,
+        "evidence": {
+            "source": "Upbit public 5m OHLCV",
+            "rangeBars": p.range_bars,
+            "openingHigh": or_high,
+            "openingLow": or_low,
+            "openingRangeBaseVolume": base_vol,
+            "signalClose": signal_close,
+            "previousClose": signal_prev_close,
+            "freshBreakout": signal_close > or_high and signal_prev_close <= or_high,
+            "signalVwap": signal_vwap,
+            "closeAboveVwap": (signal_close > signal_vwap) if signal_vwap is not None else None,
+            "volumeRatio": signal_vol_ratio,
+            "requiredVolumeRatio": p.volume_mult,
+            "entryCutoffUtcMinute": p.entry_cutoff_min,
+            "entryRule": "next_5m_open",
+            "stopPct": p.stop_pct,
+            "takeProfitPct": p.take_profit_pct,
+            "maxHoldBars": p.max_hold_bars,
+            "feeRoundTripPct": p.fee_round_trip_pct,
+            "slippageRoundTripPct": p.slippage_round_trip_pct,
+            "sameBarConflictRule": "stop_first",
+        },
     }
 
 
@@ -242,12 +267,19 @@ def summary(trades, day_labels):
         if peak > 0:
             mdd = min(mdd, (equity / peak - 1.0) * 100.0)
 
+    traded_dates = {x["date"] for x in trades}
+    target1 = sum(1 for x in pnls if x >= 1.0)
     return {
         "days": len(day_labels),
         "trades": len(trades),
         "signalRatePct": (len(trades) / len(day_labels) * 100.0) if day_labels else 0.0,
+        "noTradeDays": max(0, len(day_labels) - len(traded_dates)),
         "winRate": (len(wins) / len(pnls) * 100.0) if pnls else 0.0,
         "avgPnl": statistics.fmean(pnls) if pnls else 0.0,
+        "avgDailyReturnPct": (sum(pnls) / len(day_labels)) if day_labels else 0.0,
+        "positiveDayRatePct": (len(wins) / len(day_labels) * 100.0) if day_labels else 0.0,
+        "target1PctDayCount": target1,
+        "target1PctDayRatePct": (target1 / len(day_labels) * 100.0) if day_labels else 0.0,
         "medianPnl": statistics.median(pnls) if pnls else 0.0,
         "sumPnl": sum(pnls),
         "compoundReturnPct": (equity - 1.0) * 100.0,
@@ -345,7 +377,7 @@ def main():
 
     baseline = variant_trades["baseline"]
     report = {
-        "schema": 1,
+        "schema": 2,
         "generatedAt": datetime.now(KST).isoformat(),
         "market": "KRW-BTC",
         "unitMinutes": 5,
@@ -357,6 +389,7 @@ def main():
         "invalidDays": invalid,
         "comparisonStatus": "reviewable" if len(valid) >= 90 else "collecting",
         "comparisonRule": "Research comparison only. No automatic strategy promotion or live order connection.",
+        "auditRule": "Raw OHLCV + strategy version + observed signal features + thresholds + entry/exit reason are retained for reproducibility.",
         "executionModel": "signal on completed 5m candle; enter next candle open; same-candle stop/target conflict resolves to stop",
         "frictionModel": "0.10% round-trip fee + 0.04% round-trip slippage assumption",
         "variants": reports,
@@ -369,7 +402,7 @@ def main():
 
     with (OUT / "baseline-trades.csv").open("w", encoding="utf-8", newline="") as f:
         cols = [
-            "date","signalTimeKst","entryTimeKst","exitTimeKst","openingHigh","openingLow",
+            "date","strategyVersion","signalTimeKst","entryTimeKst","exitTimeKst","openingHigh","openingLow",
             "signalClose","signalVwap","volumeRatio","entryPrice","exitPrice","reason",
             "grossPnlPct","frictionPct","pnlPct",
         ]
@@ -380,6 +413,37 @@ def main():
 
     with (OUT / f"{labels[-1]}.json").open("w", encoding="utf-8") as f:
         json.dump(report, f, ensure_ascii=False, indent=2)
+
+    # One row per session, including no-trade days. This is the compact audit
+    # trail for "why did the strategy trade / not trade on that date?" Raw bars
+    # remain the source of truth and allow the exact decision to be reconstructed.
+    by_date = {x["date"]: x for x in baseline}
+    with (OUT / "baseline-decisions.csv").open("w", encoding="utf-8", newline="") as f:
+        cols = [
+            "date","strategyVersion","action","decisionReason","signalTimeKst","entryTimeKst","exitTimeKst",
+            "openingHigh","openingLow","signalClose","signalVwap","volumeRatio",
+            "entryPrice","exitPrice","exitReason","pnlPct"
+        ]
+        w = csv.DictWriter(f, fieldnames=cols)
+        w.writeheader()
+        for d in labels:
+            t = by_date.get(d)
+            if t:
+                w.writerow({
+                    "date":d,"strategyVersion":t.get("strategyVersion"),"action":"trade",
+                    "decisionReason":"fresh_breakout+volume+vwap_pass",
+                    "signalTimeKst":t.get("signalTimeKst"),"entryTimeKst":t.get("entryTimeKst"),
+                    "exitTimeKst":t.get("exitTimeKst"),"openingHigh":t.get("openingHigh"),
+                    "openingLow":t.get("openingLow"),"signalClose":t.get("signalClose"),
+                    "signalVwap":t.get("signalVwap"),"volumeRatio":t.get("volumeRatio"),
+                    "entryPrice":t.get("entryPrice"),"exitPrice":t.get("exitPrice"),
+                    "exitReason":t.get("reason"),"pnlPct":t.get("pnlPct"),
+                })
+            else:
+                w.writerow({
+                    "date":d,"strategyVersion":"btc_orb_v1","action":"no_trade",
+                    "decisionReason":"no_qualified_breakout_before_cutoff_after_volume_vwap_filters",
+                })
 
     base = next(x for x in reports if x["params"]["name"] == "baseline")
     print(json.dumps({
