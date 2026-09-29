@@ -25,19 +25,58 @@ ROOT = Path("data") / "soxl" / SYMBOL / "5m"
 NY = ZoneInfo("America/New_York")
 UTC = timezone.utc
 UA = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/124 Safari/537.36"
+PROXY_URL = os.environ.get("JKQ_SOXL_PROXY_URL", "https://jkquant.pages.dev/api/soxl-bars")
+
+
+def request_proxy():
+    """Fetch fixed SOXL 5m data through JKQuant's Cloudflare edge.
+
+    The GitHub-hosted runner IP pool is frequently throttled by Yahoo. The
+    Cloudflare endpoint is read-only and fixed to SOXL, so this is only a
+    transport path for the same source data, not a different market-data model.
+    """
+    last = None
+    for attempt in range(10):
+        try:
+            req = urllib.request.Request(PROXY_URL, headers={
+                "User-Agent": UA,
+                "Accept": "application/json",
+            })
+            with urllib.request.urlopen(req, timeout=30) as r:
+                j = json.loads(r.read().decode("utf-8"))
+            res = j.get("result") if isinstance(j, dict) else None
+            if j.get("ok") and res and (res.get("timestamp") or []):
+                return res, "cloudflare-" + str(j.get("sourceHost") or "yahoo")
+            last = RuntimeError(str(j.get("error") or "proxy empty result"))
+        except urllib.error.HTTPError as e:
+            last = e
+            if e.code not in (404, 429, 500, 502, 503, 504):
+                break
+        except Exception as e:
+            last = e
+        # A merge-triggered workflow can start before Cloudflare Pages finishes
+        # deploying the new endpoint. Retry that short deployment race here.
+        time.sleep(min(15.0, 2.0 + attempt * 2.0))
+    return None, last
 
 
 def request_chart():
+    res, proxy_error = request_proxy()
+    if res:
+        return res, proxy_error
+
+    # Emergency fallback: direct Yahoo. This may be throttled on GitHub-hosted
+    # runner IPs, but remains useful for local/manual runs.
     q = urllib.parse.urlencode({
         "interval": "5m",
         "range": "60d",
         "includePrePost": "false",
         "events": "div,splits",
     })
-    last = None
+    last = proxy_error
     for host in ("query1.finance.yahoo.com", "query2.finance.yahoo.com"):
         url = f"https://{host}/v8/finance/chart/{urllib.parse.quote(SYMBOL)}?{q}"
-        for attempt in range(5):
+        for attempt in range(3):
             try:
                 req = urllib.request.Request(url, headers={
                     "User-Agent": UA,
@@ -56,8 +95,8 @@ def request_chart():
                     raise
             except Exception as e:
                 last = e
-            time.sleep(min(8.0, 0.8 * (2 ** attempt)))
-    raise RuntimeError(f"Yahoo chart request failed: {last}")
+            time.sleep(min(6.0, 1.0 * (2 ** attempt)))
+    raise RuntimeError(f"SOXL chart request failed (proxy + direct Yahoo): {last}")
 
 
 def deterministic_gzip_json(path: Path, payload: dict) -> bool:
@@ -137,7 +176,7 @@ def main():
             "sessionDateEt": d,
             "timezone": "America/New_York",
             "unitMinutes": 5,
-            "source": "Yahoo Finance public chart endpoint",
+            "source": "Yahoo Finance chart data via JKQuant Cloudflare proxy/direct fallback",
             "sourceHost": host,
             "regularSessionOnly": True,
             "bars": bars,
