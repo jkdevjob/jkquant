@@ -399,6 +399,67 @@ def rolling_baseline(days, trades, window=30):
     }
 
 
+
+def walk_forward(days, trade_map, train_days=30, test_days=10, step_days=10):
+    labels = [x["sessionDateEt"] for x in days]
+    need = train_days + test_days
+    if len(labels) < need:
+        return {
+            "status": "collecting",
+            "trainDays": train_days,
+            "testDays": test_days,
+            "stepDays": step_days,
+            "foldCount": 0,
+            "daysNeededForFirstFold": need,
+            "folds": [],
+            "oosVariants": [],
+        }
+
+    folds = []
+    oos = {p.name: [] for p in VARIANTS}
+    oos_days = []
+    for start in range(0, len(labels) - need + 1, step_days):
+        train = labels[start:start + train_days]
+        test = labels[start + train_days:start + need]
+        tr_set = set(train)
+        te_set = set(test)
+        oos_days.extend(test)
+        variants = []
+        for p in VARIANTS:
+            rows = trade_map[p.name]
+            tr = [x for x in rows if x["date"] in tr_set]
+            te = [x for x in rows if x["date"] in te_set]
+            oos[p.name].extend(te)
+            variants.append({
+                "name": p.name,
+                "train": summary(tr, train),
+                "test": summary(te, test),
+            })
+        folds.append({
+            "fold": len(folds) + 1,
+            "trainFrom": train[0],
+            "trainTo": train[-1],
+            "testFrom": test[0],
+            "testTo": test[-1],
+            "variants": variants,
+        })
+
+    unique_oos_days = sorted(set(oos_days))
+    return {
+        "status": "reviewable" if len(folds) >= 3 else "early",
+        "trainDays": train_days,
+        "testDays": test_days,
+        "stepDays": step_days,
+        "foldCount": len(folds),
+        "oosDays": len(unique_oos_days),
+        "folds": folds,
+        "oosVariants": [
+            {"name": p.name, "summary": summary(oos[p.name], unique_oos_days)}
+            for p in VARIANTS
+        ],
+    }
+
+
 def main():
     all_days = load_days()
     OUT.mkdir(parents=True, exist_ok=True)
@@ -439,7 +500,8 @@ def main():
 
     baseline = trade_map["baseline"]
     base_decisions = decision_map["baseline"]
-    comparison_ready = len(valid) >= 60 and len(baseline) >= 25
+    wf = walk_forward(valid, trade_map)
+    comparison_ready = len(valid) >= 60 and len(baseline) >= 25 and wf["status"] == "reviewable"
 
     report = {
         "schema": 1,
@@ -461,6 +523,7 @@ def main():
         "dataWindowNote": "Yahoo 5m source backfills a rolling recent window; the scalping-data archive grows prospectively beyond it.",
         "targetNote": "Net +1% days are tracked as a research target metric, not a guaranteed daily return.",
         "variants": reports,
+        "walkForward": wf,
         "rolling30": rolling_baseline(valid, baseline, 30),
         "latestTrades": baseline[-20:],
         "latestDecisions": base_decisions[-10:],
@@ -501,6 +564,8 @@ def main():
         "baseline": base["summary"],
         "holdout": base["validation"]["holdout"],
         "rolling30": report["rolling30"],
+        "walkForwardStatus": wf["status"],
+        "walkForwardFolds": wf["foldCount"],
         "comparisonStatus": report["comparisonStatus"],
     }, ensure_ascii=False, indent=2))
     return 0
