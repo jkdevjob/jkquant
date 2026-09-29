@@ -72,11 +72,11 @@ async function scanShard(origin,now,shard,shards,limit,cutoffHm){
         if(!meta)continue;
 
         const base=rebreakTrade(rows,meta,cutoffHm);
-        if(base)trades.push({code:u.code,name:u.name||u.code,...base});
+        if(base)trades.push({code:u.code,name:u.name||u.code,variant:"baseline",...base});
 
         for(const v of SHADOW_VARIANTS){
           const tr=rebreakTrade(rows,meta,cutoffHm,v.params);
-          if(tr)shadow[v.name].trades.push({code:u.code,name:u.name||u.code,...tr});
+          if(tr)shadow[v.name].trades.push({code:u.code,name:u.name||u.code,variant:v.name,...tr});
         }
       }catch(e){
         errors.push({code:u.code,error:String(e.message||e).slice(0,120)});
@@ -159,16 +159,21 @@ export async function onRequestGet({request,env}){
 
     const buys=res.trades.filter(x=>x.entryTime===liveTargetHm);
     const sells=res.trades.filter(x=>x.exitTime===liveTargetHm);
-    const telegram={buySent:false,sellSent:false,buyMessageId:null,sellMessageId:null};
+    const telegram={buySent:false,sellSent:false,buyMessageId:null,sellMessageId:null,buyError:null,sellError:null};
 
-    // Telegram은 기준전략만 보낸다. shadow는 연구 기록 전용이라 알림을 섞지 않는다.
+    // Telegram 전송 실패가 신호 원본 자체를 지우지 않게 한다.
+    // 스케줄러가 응답을 먼저 영구 보관하고, 알림 실패가 있으면 VTS 실행은 안전하게 건너뛴다.
     if(buys.length){
-      const t=await sendTelegram(env,"시초가 모의 매수 신호 · "+String(liveTargetHm).padStart(4,"0"),buyLines(buys));
-      telegram.buySent=true;telegram.buyMessageId=t.messageId||null;
+      try{
+        const t=await sendTelegram(env,"시초가 모의 매수 신호 · "+String(liveTargetHm).padStart(4,"0"),buyLines(buys));
+        telegram.buySent=true;telegram.buyMessageId=t.messageId||null;
+      }catch(e){telegram.buyError=String(e.message||e).slice(0,240);}
     }
     if(sells.length){
-      const t=await sendTelegram(env,"시초가 모의 매도 신호 · "+String(liveTargetHm).padStart(4,"0"),sellLines(sells));
-      telegram.sellSent=true;telegram.sellMessageId=t.messageId||null;
+      try{
+        const t=await sendTelegram(env,"시초가 모의 매도 신호 · "+String(liveTargetHm).padStart(4,"0"),sellLines(sells));
+        telegram.sellSent=true;telegram.sellMessageId=t.messageId||null;
+      }catch(e){telegram.sellError=String(e.message||e).slice(0,240);}
     }
 
     return new Response(JSON.stringify({
