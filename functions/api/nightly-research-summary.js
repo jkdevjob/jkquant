@@ -38,6 +38,11 @@ export async function onRequestPost({request,env}){
     const dv=(e.strategies||[]).find(x=>x.strategy==="daytrading")||{};
     const lines=["🧪 단타 야간 자동연구 · "+String(j.date||"")];
 
+    lines.push("","[과매도 반등]");
+    lines.push("③/④ 실시간 매수·매도: 중지 · 장기 재검증 실패로 운영 신호를 내지 않음");
+    lines.push("⑤ 매매이력: 신규 운영매매 0건");
+    lines.push("⑥ 검증기록: 관찰/연구 전용 상태 유지 · 새 가설은 OOS 검증 뒤 별도 버전으로만 추가");
+
     lines.push("","[시초가]");
     lines.push("누적 "+Number(o.archiveDays||0)+"일 · 기준 "+Number(ob?.windows?.all?.trades||0)+"건 · 평균 "+pct(ob?.windows?.all?.avgPnl));
     lines.push("최근20일 평균 "+pct(ob?.windows?.last20?.avgPnl)+" · 상태 "+String(o.status||"collecting"));
