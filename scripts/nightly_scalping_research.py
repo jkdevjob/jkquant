@@ -96,21 +96,23 @@ def live_signal_stats(rows):
     wins=[x for x in pn if x>0]
     losses=[x for x in pn if x<0]
     path=[x.get("pathOutcome") or {} for x in rows]
-    mf=[float(x["mfePct"]) for x in path if x.get("mfePct") is not None]
-    ma=[float(x["maePct"]) for x in path if x.get("maePct") is not None]
+    complete=[x for x in path if x.get("outcomeWindowComplete")]
+    mf=[float(x["mfePct"]) for x in complete if x.get("mfePct") is not None]
+    ma=[float(x["maePct"]) for x in complete if x.get("maePct") is not None]
     def hit(key):
-        return sum(1 for x in path if x.get(key) is not None)
-    n=len(rows)
+        return sum(1 for x in complete if x.get(key) is not None)
+    n=len(complete)
     return {
-        "signals":n,
+        "signals":len(rows),
         "labelled":len(labelled),
-        "pathLabelled":sum(1 for x in path if x.get("mfePct") is not None),
+        "pathLabelled":len(complete),
         "winRate":sum(1 for x in pn if x>0)/len(pn)*100 if pn else 0.0,
         "avgWin":statistics.fmean(wins) if wins else 0.0,
         "avgLoss":statistics.fmean(losses) if losses else 0.0,
         "expectancyPct":statistics.fmean(pn) if pn else 0.0,
         "avgMfe":statistics.fmean(mf) if mf else None,
         "avgMae":statistics.fmean(ma) if ma else None,
+        "pathComplete":n,
         "plus1HitRate":hit("hitPlus1Time")/n*100 if n else 0.0,
         "plus2HitRate":hit("hitPlus2Time")/n*100 if n else 0.0,
         "minus1HitRate":hit("hitMinus1Time")/n*100 if n else 0.0,
@@ -221,7 +223,7 @@ def opening_report():
         "source":"exact-cloudflare-live-buy-signals",
         "signals":len(live),
         "labelledSignals":sum(1 for x in live if (x.get("reconstructedOutcome") or {}).get("pnl") is not None),
-        "pathLabelledSignals":sum(1 for x in live if (x.get("pathOutcome") or {}).get("mfePct") is not None),
+        "pathLabelledSignals":sum(1 for x in live if (x.get("pathOutcome") or {}).get("outcomeWindowComplete")),
         "deliveryFailures":delivery_failures,
         "scanCount":scan_count,
         "partialScans":partial_scans,
