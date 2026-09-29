@@ -25,6 +25,8 @@ jobs:
           python -m py_compile scripts/collect_daytrading_data.py
           python -m py_compile scripts/analyze_vts_reconcile.py
           python -m py_compile scripts/nightly_scalping_research.py
+          python -m py_compile scripts/collect_crypto_data.py
+          python -m py_compile scripts/backtest_crypto_orb.py
 
       - name: 데이트레이딩 스냅샷 품질 가드 검사
         run: |
@@ -58,6 +60,8 @@ jobs:
           node --input-type=module --check < functions/api/vts-research.js
           node --input-type=module --check < functions/api/vts-summary.js
           node --input-type=module --check < functions/api/nightly-research-summary.js
+          node --input-type=module --check < functions/api/crypto.js
+          node --input-type=module --check < functions/api/crypto-research.js
           node --input-type=module --check < worker/opening-scheduler/src/index.js
           node --input-type=module --check < worker/daytrading-scheduler/src/index.js
 
@@ -251,6 +255,67 @@ jobs:
           }
           if(fail)process.exit(1);
           console.log('✓ nightly research is analysis-only / no auto promotion');
+          NODE
+
+
+      - name: 비트코인 단타 연구 불변식 검사
+        run: |
+          python - <<'PY'
+          from scripts.backtest_crypto_orb import Params, trade_for_day
+
+          def bar(utc, kst, o, h, l, c, v):
+              return {"tUtc":f"2026-09-01T{utc}:00","tKst":f"2026-09-01T{kst}:00",
+                      "o":o,"h":h,"l":l,"c":c,"v":v,"amount":c*v}
+
+          # 09:05 신호 -> 반드시 09:10 시가 진입. 진입봉에서 손절/익절이 모두
+          # 닿으면 보수적으로 손절 우선이어야 한다.
+          day={"sessionDateUtc":"2026-09-01","bars":[
+              bar("00:00","09:00",99.5,100.0,99.0,99.8,100),
+              bar("00:05","09:05",99.8,101.2,99.7,101.0,200),
+              bar("00:10","09:10",101.2,102.5,100.0,101.5,180),
+          ] + [
+              bar(f"{(15+i*5)//60:02d}:{(15+i*5)%60:02d}", f"{9+(15+i*5)//60:02d}:{(15+i*5)%60:02d}",
+                  101.5,101.7,101.3,101.5,100)
+              for i in range(55)
+          ]}
+          # valid_day requires a full-ish archive, so pad the remainder of the UTC day.
+          while len(day["bars"]) < 270:
+              i=len(day["bars"])
+              m=i*5
+              utc=f"{m//60:02d}:{m%60:02d}"
+              km=(m+9*60)%(24*60)
+              kst=f"{km//60:02d}:{km%60:02d}"
+              day["bars"].append(bar(utc,kst,101.5,101.7,101.3,101.5,100))
+
+          t=trade_for_day(day,Params("baseline"))
+          assert t is not None
+          assert t["signalTimeKst"]=="09:05", t
+          assert t["entryTimeKst"]=="09:10", t
+          assert t["reason"]=="stop_same_bar", t
+          assert t["pnlPct"] < -0.5, t
+          print("✓ BTC ORB next-bar entry / same-candle stop-first")
+          PY
+
+          node - <<'NODE'
+          const fs=require('fs');
+          const s=fs.readFileSync('scalping.html','utf8');
+          const api=fs.readFileSync('functions/api/crypto.js','utf8');
+          const wf=fs.readFileSync('.github/workflows/crypto-research.yml','utf8');
+          let fail=0;
+          const must=[
+            ['data-strategy="crypto"','비트코인 탭'],
+            ['id="scVer">v1.20.0','단타 버전 1.20.0'],
+            ['다음 5분봉 시가','다음 봉 진입 설명'],
+            ['손절 우선','동일봉 보수 청산 설명'],
+            ['최근 365일 백필','초기 백필 안내']
+          ];
+          for(const [needle,label] of must){if(!s.includes(needle)){console.error('✗ '+label+' 없음');fail++;}}
+          if(!wf.includes('cron: "20 0 * * *"')){console.error('✗ 매일 09:20 KST 수집 schedule 없음');fail++;}
+          if(/op=order|\/v1\/accounts|authorization\s*:|\bjwt\b/i.test(api)){
+            console.error('✗ crypto market proxy에 주문/인증 관련 문자열 발견');fail++;
+          }
+          if(fail)process.exit(1);
+          console.log('✓ bitcoin research tab/data path is read-only');
           NODE
 
       - name: 전략 SSOT 체크 (문서 기준값·규약 불변식)
