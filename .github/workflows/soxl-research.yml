@@ -1,0 +1,74 @@
+name: SOXL 단타 연구 자동수집
+
+# 미국 정규장 종료 뒤 SOXL 5분봉을 누적하고, 기준전략 + 그림자 변형을 같은 원본으로 재검증한다.
+# 연구 전용이며 주문 API를 호출하지 않는다.
+
+on:
+  schedule:
+    - cron: "15 22 * * 1-5"
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/soxl-research.yml"
+      - "scripts/collect_soxl_data.py"
+      - "scripts/backtest_soxl_intraday.py"
+      - "functions/api/soxl-research.js"
+      - "scalping.html"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: soxl-research
+  cancel-in-progress: false
+
+jobs:
+  research:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: 데이터 브랜치 체크아웃
+        uses: actions/checkout@v4
+        with:
+          ref: scalping-data
+          fetch-depth: 0
+
+      - name: 최신 연구 코드 체크아웃
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          path: .app
+          fetch-depth: 1
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: SOXL 5분봉 수집 + 누적 연구
+        shell: bash
+        run: |
+          set -e
+          python .app/scripts/collect_soxl_data.py
+          CHANGED=0
+          if ! git diff --quiet -- data/soxl; then
+            CHANGED=1
+          fi
+
+          if [ "$CHANGED" = "1" ] || [ "$GITHUB_EVENT_NAME" = "push" ] || [ ! -f data/soxl-research/latest.json ]; then
+            python .app/scripts/backtest_soxl_intraday.py
+          else
+            echo "새 SOXL 원본 없음 — 기존 연구결과 유지"
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/soxl data/soxl-research
+          if git diff --cached --quiet; then
+            echo "새 SOXL 데이터/연구결과 없음"
+            exit 0
+          fi
+          DATE=$(TZ=America/New_York date +%F)
+          git commit -m "data: SOXL intraday research $DATE [skip ci]"
+          git pull --rebase origin scalping-data
+          git push origin scalping-data
