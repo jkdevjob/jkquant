@@ -24,6 +24,7 @@ from zoneinfo import ZoneInfo
 KST=ZoneInfo("Asia/Seoul")
 OPEN=Path("data/opening-history")
 OPEN_OUTCOMES=Path("data/opening-research/signal-outcomes.json")
+OPEN_RESEARCH=Path("data/opening-research/latest.json")
 DAY=Path("data/daytrading-research/latest.json")
 CRYPTO=Path("data/crypto-research/latest.json")
 SOXL=Path("data/soxl-research/latest.json")
@@ -174,13 +175,31 @@ def opening_report():
     if not days:
         return {"status":"collecting","archiveDays":0,"variants":[],"candidates":[]}
 
+    opening_research=load_json(OPEN_RESEARCH,{}) or {}
+    design_map={
+        str(v.get("params",{}).get("name") or ""):set(v.get("designedFrom") or [])
+        for v in opening_research.get("variants") or []
+    }
+    # Backward-compatible metadata for old archives/research generated before designedFrom existed.
+    design_map.setdefault("today_combo_v1",set()).add("2026-09-22")
+
     windows={"last5":set(days[-5:]),"last20":set(days[-20:]),"all":set(days)}
     variants=[]
     for name,rows in sorted(books.items(),key=lambda z:(z[0]!="baseline",z[0])):
+        designed=design_map.get(name,set())
+        eval_rows=[x for x in rows if x.get("date") not in designed]
         w={}
+        raw_w={}
         for key,dates in windows.items():
-            w[key]=stats([x for x in rows if x["date"] in dates])
-        variants.append({"name":name,"windows":w})
+            w[key]=stats([x for x in eval_rows if x["date"] in dates])
+            raw_w[key]=stats([x for x in rows if x["date"] in dates])
+        variants.append({
+            "name":name,
+            "designedFrom":sorted(designed),
+            "excludedDesignedFromTrades":len(rows)-len(eval_rows),
+            "rawWindows":raw_w,
+            "windows":w,
+        })
 
     by={v["name"]:v for v in variants}
     base=by.get("baseline",{"windows":{"last20":stats([]),"all":stats([])}})
@@ -249,6 +268,12 @@ def opening_report():
         },
         "variants":variants,"candidates":candidates,
         "liveSignals":live_report,
+        "multipleTesting":opening_research.get("multipleTesting") or {"K":13,"method":"Bonferroni OOS"},
+        "walkForward":opening_research.get("walkForward") or {},
+        "adoptionRule":(opening_research.get("walkForward") or {}).get("adoptionRule") or {
+            "autoPromotion":False,
+            "note":"OOS edge>0 + eligible folds majority + Bonferroni-adjusted p<0.05",
+        },
     }
 
 def compound_daily(daily):
