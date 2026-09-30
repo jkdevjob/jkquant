@@ -570,6 +570,12 @@ def evaluation_trades(name, trades):
     return [x for x in trades if x.get("date") not in designed]
 
 
+def exact_sign_test_p_ge(wins, total):
+    if total <= 0:
+        return 1.0
+    return sum(math.comb(total, k) for k in range(wins, total + 1)) / (2 ** total)
+
+
 def walk_forward(days, variant_trade_map):
     """Chronological 20d train -> 5d test walk-forward.
 
@@ -633,14 +639,50 @@ def walk_forward(days, variant_trade_map):
         ])
     oos_days = sorted(set(oos_days))
 
+    oos_summary={}
     for p in VARIANTS:
+        z=summary(oos_by_variant[p.name], oos_days)
+        oos_summary[p.name]=z
         oos.append({
             "name": p.name,
-            "summary": summary(oos_by_variant[p.name], oos_days),
+            "summary": z,
+        })
+
+    baseline_oos=oos_summary.get("baseline") or summary([], oos_days)
+    adoption=[]
+    for p in VARIANTS:
+        if p.name=="baseline":
+            continue
+        eligible_folds=0
+        beat_folds=0
+        for fold in folds:
+            by_name={x["name"]:x for x in fold["variants"]}
+            b=(by_name.get("baseline") or {}).get("test") or {}
+            v=(by_name.get(p.name) or {}).get("test") or {}
+            if int(b.get("trades") or 0)<=0 or int(v.get("trades") or 0)<=0:
+                continue
+            eligible_folds+=1
+            if float(v.get("avgPnl") or 0)>float(b.get("avgPnl") or 0):
+                beat_folds+=1
+        p_raw=exact_sign_test_p_ge(beat_folds,eligible_folds)
+        p_corrected=min(1.0,p_raw*MULTIPLE_TESTING_K)
+        oz=oos_summary.get(p.name) or summary([],oos_days)
+        edge=float(oz.get("avgPnl") or 0)-float(baseline_oos.get("avgPnl") or 0)
+        majority=eligible_folds>0 and beat_folds>eligible_folds/2
+        adoption.append({
+            "name":p.name,
+            "oosAvgEdgePct":edge,
+            "eligibleFolds":eligible_folds,
+            "beatsBaselineFolds":beat_folds,
+            "beatsBaselineMajority":majority,
+            "signTestP":p_raw,
+            "bonferroniP":p_corrected,
+            "K":MULTIPLE_TESTING_K,
+            "adoptionEligible":bool(len(folds)>=3 and edge>0 and majority and p_corrected<0.05),
         })
 
     return {
-        "status": "reviewable" if len(folds) >= 3 else "early",
+        "status": "reviewable" if len(folds) >= 3 else ("early" if folds else "collecting"),
         "trainDays": train_days,
         "testDays": test_days,
         "stepDays": step_days,
@@ -649,7 +691,22 @@ def walk_forward(days, variant_trade_map):
         "oosDays": len(oos_days),
         "folds": folds,
         "oosVariants": oos,
-        "note": "Out-of-sample only. No strategy is automatically promoted from this result.",
+        "adoptionChecks": adoption,
+        "multipleTesting": {
+            "method":"Bonferroni-adjusted one-sided exact sign test on OOS fold wins",
+            "K":MULTIPLE_TESTING_K,
+            "alpha":0.05,
+        },
+        "adoptionRule": {
+            "precommitted":True,
+            "requirements":[
+                "OOS average PnL edge versus baseline > 0",
+                "variant beats baseline in more than half of eligible OOS folds",
+                "Bonferroni-adjusted sign-test p < 0.05",
+            ],
+            "autoPromotion":False,
+        },
+        "note": "Out-of-sample only. Designed-from dates are excluded before this function. No strategy is automatically promoted.",
     }
 
 
