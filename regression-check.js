@@ -1554,7 +1554,7 @@ console.log('[29] 단타 화면의 성과 주장 정정');
      /거래 단위 t값은 부풀려진다/.test(md) && /마찰 희석 곡선/.test(md));
   // 코드 주석도 정정됐는지
   ok('PICK 주석이 정정됐다', /const PICK=65;[^\n]*대조군을 못 이겼다/.test(sc));
-  ok('levelsOf 주석이 정정됐다', /고정 퍼센트 목표는 18절에서 유의하게 나쁘다/.test(sc));
+  ok('폐기 참고전략 레벨은 ATR(14) 2x/4x이고 고정 % 폴백이 없다', /function levelsOf\(entry,atr14\)/.test(sc) && /REF_ATR_STOP_MULT=2, REF_ATR_TGT_MULT=4/.test(sc) && /ATR 없음 — 레벨 계산 불가/.test(sc));
   // 문서에 근거가 남아 있어야 한다
   ok('SCALPING.md 15절에 정정 근거', /거래 단위 t값은 부풀려진다/.test(md) && /t=4\.69/.test(md));
   ok('SCALPING.md 에 마찰 희석 곡선', /마찰 희석 곡선/.test(md));
@@ -10569,7 +10569,7 @@ console.log('[SCALPING FLOW] 단타 공통 흐름 · 모의체결 분리');
      && /VTTS3035R/.test(kis));
   ok('KIS 해외 모의 조회는 전체조회 후 종목 필터', /PDNO:""[\s\S]{0,220}OVRS_EXCG_CD:""/.test(kis)
      && /if\(code\) rows=rows\.filter\(x=>x\.code===code\)/.test(kis));
-  ok('단타 화면 버전 1.26.0', /id="scVer">v1\.26\.0<\/span>/.test(sc));
+  ok('단타 화면 버전 1.26.1', /id="scVer">v1\.26\.1<\/span>/.test(sc));
 }
 
 
@@ -10744,8 +10744,43 @@ console.log('[SCALPING TELEGRAM] 실시간 신호 · 일일 매매/연구 요약
   const cr=cr0>=0&&cr1>cr0?nightly.slice(cr0,cr1):'';
   ok('BTC 야간연구는 실제 70/30 holdout 모델만 참조',
      /validationModel":"70\/30 holdout \+ rolling30"/.test(cr) && !/oos_edge|oos_trades|wf_status/.test(cr));
-  ok('단타 화면 버전 1.26.0', /id="scVer">v1\.26\.0<\/span>/.test(scl));
+  ok('단타 화면 버전 1.26.1', /id="scVer">v1\.26\.1<\/span>/.test(scl));
 }
 
+
+/* ════ SCALPING B-6. 폐기 참고전략 ATR 레벨 · A-3 실행비용 값 시험 ════ */
+console.log('\n[SCALPING B-6] ATR(14) 레벨 · 실행비용 통합');
+{
+  ok('B-6 상수 = ATR14 / 손절2x / 목표4x / 고정0.23% / VTS30건 / fallback2.5틱',
+     /const REF_ATR_LEN=14, REF_ATR_STOP_MULT=2, REF_ATR_TGT_MULT=4;/.test(scl)
+     && /OPENING_FIXED_FRICTION_PCT=0\.23, OPENING_VTS_MIN_MATCHES=30, OPENING_FALLBACK_TICKS_PER_SIDE=2\.5/.test(scl));
+  const src=[
+    'const REF_ATR_LEN=14, REF_ATR_STOP_MULT=2, REF_ATR_TGT_MULT=4;',
+    'const OPENING_FIXED_FRICTION_PCT=0.23, OPENING_VTS_MIN_MATCHES=30, OPENING_FALLBACK_TICKS_PER_SIDE=2.5;',
+    'let OPENING_FRICTION_CAL={completeMatches:0,observedRoundTripSlippagePct:null};',
+    extractFn(scl,'function referenceAtr14('),
+    extractFn(scl,'function openingKrTickSize('),
+    extractFn(scl,'function openingFrictionPct('),
+    extractFn(scl,'function levelsOf('),
+    'const BT={hold:5,minAmt:50};',
+    extractFn(scl,'function btSimOne('),
+    'return {referenceAtr14,openingFrictionPct,levelsOf,btSimOne};'
+  ].join('\n');
+  const e=new Function(src)();
+  const bars=Array.from({length:16},()=>({open:15000,high:15000.5,low:14999.5,close:15000}));
+  bars[15]={open:15000,high:15000.2,low:14997.5,close:15000};
+  const atr=e.referenceAtr14(bars,15), lv=e.levelsOf(15000,atr);
+  ok('ATR14 실제값 1원 → 손절 14,998 / 목표 15,004', near(atr,1,1e-12) && lv && near(lv.stop,14998,1e-12) && near(lv.tgt,15004,1e-12), JSON.stringify({atr,lv}));
+  ok('ATR 없으면 레벨 없음 — 고정 -4%/+6% 폴백 금지', e.levelsOf(15000,null)===null);
+  const fb=e.openingFrictionPct(15000,{completeMatches:29,observedRoundTripSlippagePct:0.42});
+  const obs=e.openingFrictionPct(15000,{completeMatches:30,observedRoundTripSlippagePct:0.42});
+  ok('A-3 비용: 29건은 2.5틱 fallback 0.563333%, 30건은 VTS 0.65%', near(fb,0.5633333333333334,1e-12) && near(obs,0.65,1e-12), `${fb}/${obs}`);
+  const tr=e.btSimOne(bars,14);
+  ok('참고 백테스트도 전일까지 ATR + A-3 비용을 실제 사용', tr && tr.days===1 && near(tr.atr14,1,1e-12) && near(tr.fee,0.5633333333333334,1e-12) && near(tr.pnl,-0.5766666666666658,1e-9), JSON.stringify(tr));
+  ok('0.5% 하드코딩 비용 경로가 남지 않음', !/fee:0\.5/.test(scl) && !/pct:\(r\.price-b\.px\)\/b\.px\*100-0\.5/.test(scl)
+     && (scl.match(/fee:openingFrictionPct\(p\.entry\)/g)||[]).length===2
+     && /const fee=openingFrictionPct\(en\)/.test(scl)
+     && /pct:\(r\.price-b\.px\)\/b\.px\*100-openingFrictionPct\(b\.px\)/.test(scl));
+}
 console.log(`\n════ 결과: ${pass} PASS / ${fail} FAIL ${fail===0?'— ALL PASS ★':'— 배포 금지, 위 ✗ 항목 수정 필요'} ════`);
 process.exit(fail===0?0:1);
