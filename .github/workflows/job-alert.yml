@@ -2,9 +2,12 @@ name: Daejeon Sejong Java AI Job Alert
 
 on:
   schedule:
-    # GitHub Actions는 정각(00분)에 지연이 커질 수 있어 08:55 KST에 미리 기동한다.
-    # 23:55 UTC = 다음 날 08:55 KST.
-    - cron: "55 23 * * *"
+    # GitHub Scheduled Actions 지연/누락에 대비해 4번 기동한다.
+    # 실제 발송은 scripts/job_alert.py의 KST 일일 가드로 하루 1회만 수행한다.
+    - cron: "40 23 * * *"  # 08:40 KST
+    - cron: "50 23 * * *"  # 08:50 KST
+    - cron: "0 0 * * *"    # 09:00 KST
+    - cron: "10 0 * * *"   # 09:10 KST
   workflow_dispatch:
 
 permissions:
