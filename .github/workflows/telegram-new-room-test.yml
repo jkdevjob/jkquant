@@ -26,7 +26,8 @@ jobs:
             body=$(printf "%s" "$out" | head -n -1)
             code=$(printf "%s" "$out" | tail -n 1)
             echo "HTTP $code $body"
-            if [ "$code" = "200" ]; then
+            if [ "$code" = "200" ] && printf "%s" "$body" | grep -q '"chatId"'; then
+              echo "새 그룹 chat_id 확인 완료"
               exit 0
             fi
             sleep 15
