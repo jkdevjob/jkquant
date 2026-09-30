@@ -27,9 +27,9 @@ function splitText(text,limit=3900){
   return chunks;
 }
 
-async function sendTelegram(env,text){
+async function sendTelegramToChat(env,text,targetChatId){
   const token=String(env.TELEGRAM_BOT_TOKEN||"").trim();
-  const chatId=String(env.TELEGRAM_CHAT_ID||"").trim();
+  const chatId=String(targetChatId||env.TELEGRAM_CHAT_ID||"").trim();
   if(!token||!chatId)throw new Error("Telegram 환경변수 없음");
 
   const ids=[];
@@ -51,6 +51,28 @@ async function sendTelegram(env,text){
   return ids;
 }
 
+async function findLatestGroupChat(env){
+  const token=String(env.TELEGRAM_BOT_TOKEN||"").trim();
+  if(!token)throw new Error("Telegram bot token 없음");
+  const current=String(env.TELEGRAM_CHAT_ID||"").trim();
+  const r=await fetch("https://api.telegram.org/bot"+token+"/getUpdates?limit=100&timeout=0");
+  const j=await r.json().catch(()=>({}));
+  if(!r.ok||!j.ok)throw new Error("Telegram getUpdates 실패: "+(j.description||r.status));
+  const chats=[];
+  for(const u of (j.result||[])){
+    const msg=u.message||u.channel_post||u.edited_message||null;
+    const chat=msg&&msg.chat;
+    if(!chat)continue;
+    const type=String(chat.type||"");
+    const id=String(chat.id||"");
+    if((type==="group"||type==="supergroup")&&id&&id!==current){
+      chats.push({id,title:String(chat.title||""),updateId:Number(u.update_id||0)});
+    }
+  }
+  chats.sort((a,b)=>b.updateId-a.updateId);
+  return chats[0]||null;
+}
+
 export async function onRequestPost({request,env}){
   if(!authorized(request,env)){
     return new Response(JSON.stringify({ok:false,error:"unauthorized"}),{status:401,headers:JH});
@@ -58,6 +80,17 @@ export async function onRequestPost({request,env}){
 
   try{
     const body=await request.json();
+
+    if(body.action==="test-latest-group"){
+      const chat=await findLatestGroupChat(env);
+      if(!chat){
+        return new Response(JSON.stringify({ok:false,error:"새 Telegram 그룹 업데이트를 찾지 못했습니다."}),{status:404,headers:JH});
+      }
+      const text=String(body.text||"✅ JKQuant 새 프로젝트방 테스트 메시지입니다.").trim();
+      const messageIds=await sendTelegramToChat(env,text,chat.id);
+      return new Response(JSON.stringify({ok:true,chatId:chat.id,title:chat.title,messageIds}),{headers:JH});
+    }
+
     const text=String(body.text||"").trim();
     const count=Number(body.count||0);
     if(!text){
@@ -67,7 +100,7 @@ export async function onRequestPost({request,env}){
       return new Response(JSON.stringify({ok:false,error:"text too long"}),{status:400,headers:JH});
     }
 
-    const messageIds=await sendTelegram(env,text);
+    const messageIds=await sendTelegramToChat(env,text);
     return new Response(JSON.stringify({ok:true,count,messageIds}),{headers:JH});
   }catch(e){
     return new Response(JSON.stringify({ok:false,error:String(e.message||e)}),{status:500,headers:JH});
