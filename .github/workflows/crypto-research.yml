@@ -2,7 +2,7 @@ name: 비트코인 단타 연구 데이터
 
 # Upbit KRW-BTC 5분봉을 UTC 일자 단위로 저장한다.
 # UTC 00:00 = KST 09:00 이므로 파일 한 개가 연구용 09:00 세션 경계와 정확히 맞는다.
-# 최초 실행은 최근 365일을 백필하고, 이후에는 최근 2일을 겹쳐 받아 누락을 방지한다.
+# 최초 실행은 D-3 설계기간(2023-07~)을 덮도록 최근 1200일을 백필하고, 이후에는 최근 2일을 겹쳐 받아 누락을 방지한다.
 # 데이터와 연구 결과는 scalping-data 브랜치에만 누적한다.
 
 on:
@@ -49,7 +49,7 @@ jobs:
         env:
           JKQ_CRYPTO_MARKET: KRW-BTC
           JKQ_CRYPTO_UNIT: "5"
-          JKQ_CRYPTO_BACKFILL_DAYS: "365"
+          JKQ_CRYPTO_BACKFILL_DAYS: "1200"
         run: python .app/scripts/collect_crypto_data.py
 
       - name: 09시 ORB 누적 연구 백테스트
