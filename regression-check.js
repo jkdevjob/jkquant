@@ -1467,7 +1467,8 @@ console.log('[28] KIS 모의투자 실행 · 주문 이력');
   const sc=fs.existsSync(__d+'/scalping.html')?fs.readFileSync(__d+'/scalping.html','utf8'):'';
   const kis=fs.existsSync(__d+'/functions/api/kis.js')?fs.readFileSync(__d+'/functions/api/kis.js','utf8'):'';
 
-  ok('이력 카드가 있다', /id="klog_sum"/.test(sc) && /id="klog_body"/.test(sc));
+  ok('구형 공용 KIS 주문이력 카드는 활성 화면에서 제거',
+     !/id="klog_sum"/.test(sc) && !/id="klog_body"/.test(sc));
   ok('목록에서 바로 KIS 매수', /onclick="event\.stopPropagation\(\);kisBuyPick\('/.test(sc));
   ok('KIS 포지션은 KIS 로 청산', /\$\{p\.kis\?`<button class="ghostbtn sm danger" onclick="kisSellPos\(\$\{i\}\)"/.test(sc));
 
@@ -1542,18 +1543,16 @@ console.log('[29] 단타 화면의 성과 주장 정정');
   ok('경고가 돈을 넣지 말라고 말한다', /이걸 근거로 실제 돈을 넣지 마라/.test(sc));
   // 5일 이상에서 신호가 대조군보다 나쁘다는 사실(15.3)
   ok('장기 보유에서 더 나쁘다는 사실을 적었다', /대조군보다 나쁘다/.test(sc) && /−1\.729/.test(sc));
-  // 검증 기록 카드
-  ok('검증 기록 카드가 있다', /id="verifyBody"/.test(sc) && /검증 기록 — 무엇이 안 되는지/.test(sc));
-  ok('검증 기록이 주요 결과를 담는다',
-     /21개 주장 중 확인 1개/.test(sc) && /76개 조건 전수조사 생존 0개/.test(sc)
-     && /36칸 중 유의한 플러스 0개/.test(sc));
-  ok('반복 확인된 교훈을 적었다',
-     /매일 왕복 시 마찰만 연 126%/.test(sc) && /날짜 단위로 세라/.test(sc));
+  // 폐기된 과매도 반등용 공용 검증 UI는 화면에서 제거하고 근거는 문서에 보존한다.
+  ok('구형 공용 검증 기록 카드는 활성 화면에서 제거',
+     !/id="verifyBody"/.test(sc) && !/검증 기록 — 무엇이 안 되는지/.test(sc));
+  const md=fs.existsSync(__d+'/SCALPING.md')?fs.readFileSync(__d+'/SCALPING.md','utf8'):'';
+  ok('폐기 전략의 검증 근거는 문서에 보존',
+     /거래 단위 t값은 부풀려진다/.test(md) && /마찰 희석 곡선/.test(md));
   // 코드 주석도 정정됐는지
   ok('PICK 주석이 정정됐다', /const PICK=65;[^\n]*대조군을 못 이겼다/.test(sc));
   ok('levelsOf 주석이 정정됐다', /고정 퍼센트 목표는 18절에서 유의하게 나쁘다/.test(sc));
   // 문서에 근거가 남아 있어야 한다
-  const md=fs.existsSync(__d+'/SCALPING.md')?fs.readFileSync(__d+'/SCALPING.md','utf8'):'';
   ok('SCALPING.md 15절에 정정 근거', /거래 단위 t값은 부풀려진다/.test(md) && /t=4\.69/.test(md));
   ok('SCALPING.md 에 마찰 희석 곡선', /마찰 희석 곡선/.test(md));
 }
@@ -10564,7 +10563,7 @@ console.log('[SCALPING FLOW] 단타 공통 흐름 · 모의체결 분리');
      && /VTTS3035R/.test(kis));
   ok('KIS 해외 모의 조회는 전체조회 후 종목 필터', /PDNO:""[\s\S]{0,220}OVRS_EXCG_CD:""/.test(kis)
      && /if\(code\) rows=rows\.filter\(x=>x\.code===code\)/.test(kis));
-  ok('단타 화면 버전 1.25.1', /id="scVer">v1\.25\.1<\/span>/.test(sc));
+  ok('단타 화면 버전 1.25.2', /id="scVer">v1\.25\.2<\/span>/.test(sc));
 }
 
 
@@ -10580,17 +10579,27 @@ console.log('[SCALPING HISTORY] 4전략 누적 매매이력 · 과매도 반등 
      && /soxl-research\/baseline-trades\.csv/.test(hapi));
   ok('누적 이력 API는 읽기전용이며 주문 경로가 없다',
      !/op=order|opening-execute|method:\s*["']POST["']|kisOrder\(/.test(hapi));
-  ok('누적 이력 화면은 전체·7일·30일·날짜지정과 100건 페이지 조회',
-     /<option value="all">전체<\/option>/.test(sc)
-     && /<option value="7">최근 7일<\/option>/.test(sc)
-     && /<option value="30">최근 30일<\/option>/.test(sc)
+  ok('누적 이력 화면은 6개월 기본 + 1/3/6/12개월·전체·날짜지정과 100건 페이지 조회',
+     /<option value="30">1개월<\/option>/.test(sc)
+     && /<option value="90">3개월<\/option>/.test(sc)
+     && /<option value="180" selected>6개월<\/option>/.test(sc)
+     && /<option value="365">1년<\/option>/.test(sc)
+     && /<option value="all">전체<\/option>/.test(sc)
      && /<option value="custom">날짜 지정<\/option>/.test(sc)
-     && /pageSize:'100'/.test(sc));
+     && /pageSize:'100'/.test(sc)
+     && /\.value\|\|'180'/.test(sc)
+     && /parseInt\(range,10\)/.test(hapi));
   ok('누적 이력 공통 컬럼은 날짜·종목·전략버전·신호·진입·청산·사유·손익',
      /<th>날짜<\/th><th>종목<\/th><th>전략버전<\/th><th>신호<\/th><th>진입<\/th><th>청산<\/th><th>사유<\/th><th>손익<\/th>/.test(sc));
   ok('오늘 시초가/데이트레이딩 장부는 실시간 탐색에 남고 5번은 누적 이력',
      /opening:\{strategy:\['⚡ 시초가 첫고점 돌파'\],search:\['🔥 실시간 시초가 돌파 감시','📒 오늘 서버 매매 이력'\],history:\[\]/.test(sc)
      && /daytrading:\{strategy:\['📈 데이트레이딩 기준전략'\],search:\['📡 데이트레이딩 서버 장중 감시','📒 오늘 장중 모의 매매이력'\],history:\[\]/.test(sc));
+  ok('폐기된 과매도 반등 공용 UI는 활성 화면에 노출하지 않음',
+     !/id="pos_body"/.test(sc)
+     && !/id="kis_panel"/.test(sc)
+     && !/id="klog_body"/.test(sc)
+     && !/id="log_body"/.test(sc)
+     && /차트는 조회용입니다/.test(sc));
 }
 
 /* ════ 시초가 실시간 신호 원본 누적 · 사후 성과 라벨 ════ */
@@ -10642,7 +10651,7 @@ console.log('[OPENING SIGNAL LEARNING] 실시간 ledger · 30분 사후라벨 ·
      /신호 이후 30분 경로 진단/.test(scl)
      && /조건별 실제 성과/.test(scl)
      && /groupTable\('전략 버전'/.test(scl)
-     && /id="scVer">v1\.25\.1<\/span>/.test(scl));
+     && /id="scVer">v1\.25\.2<\/span>/.test(scl));
 }
 
 /* ════ 단타 Telegram ③④ 실시간 + ⑤⑥ 일일 연구 ════ */
@@ -10681,7 +10690,7 @@ console.log('[SCALPING TELEGRAM] 실시간 신호 · 일일 매매/연구 요약
   const cr=cr0>=0&&cr1>cr0?nightly.slice(cr0,cr1):'';
   ok('BTC 야간연구는 실제 70/30 holdout 모델만 참조',
      /validationModel":"70\/30 holdout \+ rolling30"/.test(cr) && !/oos_edge|oos_trades|wf_status/.test(cr));
-  ok('단타 화면 버전 1.25.1', /id="scVer">v1\.25\.1<\/span>/.test(scl));
+  ok('단타 화면 버전 1.25.2', /id="scVer">v1\.25\.2<\/span>/.test(scl));
 }
 
 console.log(`\n════ 결과: ${pass} PASS / ${fail} FAIL ${fail===0?'— ALL PASS ★':'— 배포 금지, 위 ✗ 항목 수정 필요'} ════`);
