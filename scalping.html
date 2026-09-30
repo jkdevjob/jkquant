@@ -152,7 +152,7 @@ canvas{display:block;width:100%;height:auto}
 #gbtn svg{width:20px;height:20px}
 #gate .gnote{color:var(--faint);font-size:11.5px;margin-top:18px;line-height:1.6}
 
-/* unified strategy flow v1.25.3 */
+/* unified strategy flow v1.26.0 */
 .strategy-flow{display:flex;flex-direction:column;gap:18px;margin-top:12px}
 .flow-section{border-top:1px solid var(--line);padding-top:12px}
 .flow-section:first-child{border-top:0;padding-top:0}
@@ -166,6 +166,14 @@ canvas{display:block;width:100%;height:auto}
 .flow-map{display:flex;gap:5px;overflow-x:auto;padding:0 0 7px;margin-bottom:4px}
 .flow-chip{white-space:nowrap;font-size:11px;color:var(--dim);border:1px solid var(--line);background:var(--panel);border-radius:999px;padding:5px 8px}
 @media(max-width:640px){.flow-title{font-size:13px}.flow-chip{font-size:10.5px}}
+.strategy-scorecard{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0 12px;padding:10px 12px;border:1px solid var(--line);border-radius:12px;background:var(--panel)}
+.strategy-scorecard .metric{min-width:96px;padding:6px 8px;border-radius:8px;background:var(--panel2)}
+.strategy-scorecard .mk{font-size:10.5px;color:var(--faint)}
+.strategy-scorecard .mv{font-size:13px;font-weight:800;margin-top:2px}
+.strategy-scorecard .progress{flex:1;min-width:190px}
+.strategy-scorecard .bar{height:5px;background:var(--line);border-radius:999px;overflow:hidden;margin-top:5px}
+.strategy-scorecard .bar>i{display:block;height:100%;background:currentColor}
+
 
 </style>
 <script type="module">
@@ -203,7 +211,7 @@ canvas{display:block;width:100%;height:auto}
 
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Morning Scalping</div><h1>JK <span class="v">퀀트</span> 단타 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="scVer">v1.25.3</span></h1></div>
+    <div><div class="kicker">Morning Scalping</div><h1>JK <span class="v">퀀트</span> 단타 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="scVer">v1.26.0</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -228,9 +236,11 @@ canvas{display:block;width:100%;height:auto}
     <button class="strategy-tab" data-strategy="daytrading" onclick="showStrategy('daytrading')">📈 데이트레이딩</button>
     <button class="strategy-tab" data-strategy="crypto" onclick="showStrategy('crypto')">₿ 비트코인</button>
     <button class="strategy-tab" data-strategy="soxl" onclick="showStrategy('soxl')">⚡ SOXL</button>
+    <button class="strategy-tab" data-strategy="reference" onclick="showStrategy('reference')">📚 참고</button>
   </div>
   <div id="strategy_swing" class="strategy-pane" style="display:none">
-    <div class="strategy-head">실시간 감시 → 과거 백테스트 순서</div>
+    <div class="strategy-head">📚 폐기된 전략 참고자료 · 활성 기준전략과 분리</div>
+    <div class="warn" style="margin-bottom:12px"><b>참고 전용:</b> 이 탭은 검증에서 살아남지 못한 과매도 반등 연구를 보존한 곳입니다. 현재 4개 활성 단타전략의 신호·주문·성과와 섞어 해석하지 않습니다.</div>
 
   <!-- 1. 전체 스크리닝 -->
   <div class="card">
@@ -1368,6 +1378,76 @@ async function loadScalpingHistory(name,page=1){
   }
 }
 
+
+const STRATEGY_RESEARCH_API={
+  opening:'/api/opening-research',
+  daytrading:'/api/daytrading-research',
+  crypto:'/api/crypto-research',
+  soxl:'/api/soxl-research'
+};
+const STRATEGY_LABEL={opening:'시초가',daytrading:'데이트레이딩',crypto:'비트코인',soxl:'SOXL'};
+const STRATEGY_SCORE_CACHE={};
+
+function baselineResearchSummary(j){
+  const v=(j.variants||[]).find(x=>(x.params&&x.params.name==='baseline')||x.name==='baseline');
+  return (v&&((v.summary)||((v.windows||{}).all)))||{};
+}
+function scoreDays(name,j){
+  if(name==='daytrading')return Number(j.eligibleArchiveDays==null?j.archiveDays:j.eligibleArchiveDays)||0;
+  if(name==='crypto'||name==='soxl')return Number(j.validDays==null?j.archiveDays:j.validDays)||0;
+  return Number(j.archiveDays)||0;
+}
+function scoreFmt(v,d=2){
+  const n=Number(v); return Number.isFinite(n)?((n>=0?'+':'')+n.toFixed(d)+'%'):'—';
+}
+function renderStrategyScorecard(name,model){
+  const el=$('strategy_score_'+name); if(!el)return;
+  const z=model||{}, days=Number(z.days)||0,trades=Number(z.trades)||0;
+  const win=Number(z.winRate),avg=Number(z.avgPnl),aw=Number(z.avgWin),al=Number(z.avgLoss);
+  const rr=Number.isFinite(aw)&&aw>0&&Number.isFinite(al)&&al<0?aw/Math.abs(al):null;
+  const need=rr&&rr>0?100/(1+rr):null;
+  const edge=Number.isFinite(win)&&need!=null?win-need:null;
+  const dp=Math.min(100,days/20*100),tp=Math.min(100,trades/30*100);
+  const ready=days>=20&&trades>=30;
+  el.innerHTML=
+    '<div class="metric"><div class="mk">기준전략 누적</div><div class="mv">'+trades+'건</div></div>'+
+    '<div class="metric"><div class="mk">승률</div><div class="mv">'+(Number.isFinite(win)?win.toFixed(1)+'%':'—')+'</div></div>'+
+    '<div class="metric"><div class="mk">거래당</div><div class="mv '+(avg>=0?'win':'loss')+'">'+scoreFmt(avg,3)+'</div></div>'+
+    '<div class="metric"><div class="mk">필요승률</div><div class="mv">'+(need==null?'—':need.toFixed(1)+'%')+'</div></div>'+
+    '<div class="metric"><div class="mk">엣지</div><div class="mv '+(edge==null?'':edge>=0?'win':'loss')+'">'+(edge==null?'—':(edge>=0?'+':'')+edge.toFixed(1)+'%p')+'</div></div>'+
+    '<div class="metric progress"><div class="mk">'+(ready?'표본 기준 도달':'수집중')+' · '+Math.min(days,20)+'/20일 · '+Math.min(trades,30)+'/30건</div>'+
+      '<div class="bar" title="20거래일 진행률"><i style="width:'+dp+'%"></i></div>'+
+      '<div class="bar" title="30거래 진행률"><i style="width:'+tp+'%"></i></div></div>';
+}
+async function loadStrategyScorecard(name){
+  const el=$('strategy_score_'+name); if(!el||!STRATEGY_RESEARCH_API[name])return null;
+  el.innerHTML='<span class="sub">기준전략 누적 성과 불러오는 중…</span>';
+  try{
+    const [rr,hr]=await Promise.all([
+      fetch(STRATEGY_RESEARCH_API[name],{headers:{Accept:'application/json'}}),
+      fetch('/api/scalping-history?strategy='+encodeURIComponent(name)+'&range=all&page=1&pageSize=20',{headers:{Accept:'application/json'}})
+    ]);
+    const j=await rr.json(),h=await hr.json();
+    if(!rr.ok||!j.ok)throw new Error(j.error||('HTTP '+rr.status));
+    const rs=baselineResearchSummary(j),hs=(h&&h.summary)||{};
+    const model={
+      name,days:scoreDays(name,j),
+      trades:Number(rs.trades==null?hs.trades:rs.trades)||0,
+      winRate:Number(rs.winRate==null?hs.winRate:rs.winRate),
+      avgPnl:Number(rs.avgPnl==null?hs.avgPnl:rs.avgPnl),
+      avgWin:Number(hs.avgWin),
+      avgLoss:Number(hs.avgLoss),
+      research:j,history:h
+    };
+    STRATEGY_SCORE_CACHE[name]=model;
+    renderStrategyScorecard(name,model);
+    return model;
+  }catch(e){
+    el.innerHTML='<span class="sub">점수표 조회 실패 · '+esc(e.message||String(e))+'</span>';
+    return null;
+  }
+}
+
 function setupUnifiedStrategyFlow(){
   const cfg={
     opening:{strategy:['⚡ 시초가 첫고점 돌파'],search:['🔥 실시간 시초가 돌파 감시','📒 오늘 서버 매매 이력'],history:[],review:['🧪 누적 시초가 연구 백테스트','📼 분봉 아카이브'],paper:['🔎 한투 VTS 자동 병행체결 대조']},
@@ -1380,9 +1460,12 @@ function setupUnifiedStrategyFlow(){
     pane.dataset.flowReady='1';
     const head=Array.from(pane.children).find(x=>x.classList&&x.classList.contains('strategy-head'));
     if(head)head.textContent='전략 설명 → 실시간 탐색 → 매수 → 매도 → 매매이력 → 검증/개선 → 모의투자';
+    const score=document.createElement('div'); score.className='strategy-scorecard'; score.id='strategy_score_'+name;
+    score.innerHTML='<span class="sub">기준전략 누적 성과 불러오는 중…</span>';
+    if(head)head.insertAdjacentElement('afterend',score); else pane.prepend(score);
     const map=document.createElement('div'); map.className='flow-map';
     map.innerHTML=FLOW_STEPS.map((x,i)=>'<span class="flow-chip">'+(i+1)+'. '+x[1].replace(/^[^ ]+ /,'')+'</span>').join('');
-    if(head)head.insertAdjacentElement('afterend',map); else pane.prepend(map);
+    score.insertAdjacentElement('afterend',map);
     const flow=document.createElement('div'); flow.className='strategy-flow';
     map.insertAdjacentElement('afterend',flow);
     const used=new Set(), bodies={};
@@ -1415,17 +1498,19 @@ function setupUnifiedStrategyFlow(){
     bodies.review.prepend(reviewCard);
     // 기존 카드 중 분류되지 않은 것은 검증/연구 아래에 보존한다.
     Array.from(pane.children).filter(x=>x.classList&&x.classList.contains('card')&&!used.has(x)).forEach(x=>{used.add(x);bodies.review.appendChild(x);});
+    void loadStrategyScorecard(name);
   });
 }
 
 function showStrategy(name){
-  const active=['opening','daytrading','crypto','soxl'];
+  const active=['opening','daytrading','crypto','soxl','reference'];
   if(!active.includes(name))name='opening';
   document.querySelectorAll('.strategy-pane').forEach(x=>x.classList.remove('on'));
   document.querySelectorAll('.strategy-tab').forEach(x=>x.classList.toggle('on',x.dataset.strategy===name));
-  const p=$('strategy_'+name); if(p)p.classList.add('on');
+  const paneId=name==='reference'?'strategy_swing':'strategy_'+name;
+  const p=$(paneId); if(p)p.classList.add('on');
   try{localStorage.setItem('jkq_scalp_strategy_tab',name);}catch(e){}
-  loadScalpingHistory(name,1);
+  if(name!=='reference'){loadScalpingHistory(name,1);void loadStrategyScorecard(name);}
   if(name==='daytrading'){
     loadDayTradingPaper();
     loadDayTradingResearch();
@@ -1437,7 +1522,7 @@ function showStrategy(name){
 function restoreStrategy(){
   let n='opening';
   try{n=localStorage.getItem('jkq_scalp_strategy_tab')||'opening';}catch(e){}
-  if(!['opening','daytrading','crypto','soxl'].includes(n))n='opening';
+  if(!['opening','daytrading','crypto','soxl','reference'].includes(n))n='opening';
   showStrategy(n);
 }
 
