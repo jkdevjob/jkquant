@@ -237,3 +237,41 @@ jobs:
           fi
 
           archive_daily
+
+          # 날짜별 서버 매매이력을 화면 조회용 누적 CSV로 다시 만든다.
+          # 연구 백테스트 CSV와 분리해, 장마감 서버 아카이브에 실제로 남은 날짜/거래를 그대로 보여준다.
+          OUTCSV="data/opening-history/baseline-trades.csv"
+          TMP="$OUTCSV.tmp"
+          printf '%s\n' 'date,strategyVersion,code,name,entryTime,entryPrice,exitTime,exitPrice,reason,pnl' > "$TMP"
+          for f in data/opening-history/????-??-??.json; do
+            [ -f "$f" ] || continue
+            jq -r '
+              .date as $d
+              | .trades[]?
+              | [
+                  $d,
+                  (.strategyVersion // "opening_rebreak_v1"),
+                  (.code // ""),
+                  (.name // .code // ""),
+                  (.entryTime // ""),
+                  (.entryPrice // ""),
+                  (.exitTime // ""),
+                  (.exitPrice // ""),
+                  (.reason // ""),
+                  (.pnl // "")
+                ]
+              | @csv
+            ' "$f" >> "$TMP"
+          done
+          mv "$TMP" "$OUTCSV"
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add "$OUTCSV"
+          if ! git diff --cached --quiet; then
+            git commit -m "data: rebuild cumulative opening trades [skip ci]"
+            git pull --rebase origin scalping-data
+            git push origin scalping-data
+          else
+            echo "누적 시초가 매매 CSV 변경 없음"
+          fi

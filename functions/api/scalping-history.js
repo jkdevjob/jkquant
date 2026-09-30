@@ -6,7 +6,7 @@ const JH={"Content-Type":"application/json; charset=utf-8","Cache-Control":"no-s
 const RAW="https://raw.githubusercontent.com/jkdevjob/jkquant/scalping-data/data/";
 
 const SOURCES={
-  opening:{path:"opening-research/baseline-trades.csv",market:"KR",pnl:"pnl"},
+  opening:{path:"opening-history/baseline-trades.csv",market:"KR",pnl:"pnl"},
   daytrading:{path:"daytrading-research/baseline-trades.csv",market:"KR",pnl:"pnl"},
   crypto:{path:"crypto-research/baseline-trades.csv",market:"KRW-BTC",pnl:"pnlPct"},
   soxl:{path:"soxl-research/baseline-trades.csv",market:"US",pnl:"pnlPct"}
