@@ -74,6 +74,54 @@ VARIANTS = [
 ]
 
 
+def tick_size(px: float, market: str = "") -> float:
+    table = TICK_KOSDAQ if "KOSDAQ" in str(market or "").upper() else TICK_KOSPI
+    for upper, size in table:
+        if px < upper:
+            return float(size)
+    return float(table[-1][1])
+
+
+def load_friction_calibration():
+    """Use cumulative VTS round-trip slippage only after >=30 complete opening matches.
+
+    Before then, use the precommitted fallback from the v2 improvement spec:
+    fixed tax+commission 0.23% + 2.5 ticks per side.
+    """
+    base = {
+        "modelVersion": "opening_cost_v2",
+        "fixedCostPct": FIXED_COST_PCT,
+        "minVtsMatches": VTS_MIN_MATCHES,
+        "defaultSlipTicksPerSide": DEFAULT_SLIP_TICKS_PER_SIDE,
+        "completeMatches": 0,
+        "avgRoundTripSlippageCostPct": None,
+        "source": "tick_fallback_2.5_each_side",
+    }
+    try:
+        j = json.loads(VTS.read_text(encoding="utf-8"))
+        row = next((x for x in (j.get("strategies") or []) if x.get("strategy") == "opening"), None)
+        if row:
+            n = int(row.get("completeMatches") or 0)
+            slip = row.get("avgRoundTripSlippageCostPct")
+            base["completeMatches"] = n
+            base["avgRoundTripSlippageCostPct"] = float(slip) if slip is not None else None
+            if n >= VTS_MIN_MATCHES and base["avgRoundTripSlippageCostPct"] is not None:
+                base["source"] = "vts_observed_round_trip"
+    except Exception:
+        pass
+    return base
+
+
+def opening_friction_pct(px: float, market: str, calibration=None) -> float:
+    c = calibration or load_friction_calibration()
+    if c.get("source") == "vts_observed_round_trip" and c.get("avgRoundTripSlippageCostPct") is not None:
+        return FIXED_COST_PCT + float(c["avgRoundTripSlippageCostPct"])
+    if not (px > 0):
+        return FIXED_COST_PCT
+    slip = 2.0 * DEFAULT_SLIP_TICKS_PER_SIDE * tick_size(px, market) / px * 100.0
+    return FIXED_COST_PCT + slip
+
+
 def hm(t: str) -> int:
     s = str(t or "")
     if len(s) >= 6 and s[-6:].isdigit():
