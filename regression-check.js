@@ -10816,11 +10816,27 @@ console.log('[GAPDOWN D-1 / DIP24 D-3] 연구용 모의체결 경로 안전장�
   ok('KIS 예상체결가 조회는 GET 읽기전용(op=expected, FHKST01010200)',
      /if \(op === "expected"\)/.test(kis)&&/tr_id: "FHKST01010200"/.test(kis)
      &&kis.indexOf('op === "expected"')<kis.indexOf('export async function onRequestPost'));
-  ok('Worker: 08:56/15:21/15:40 cron + 매 단계 응답을 gapdown ledger 에 먼저 저장 + 일부 조회 시 주문 없음',
-     /"56 23 \* \* SUN-THU"/.test(wr)&&/"21 6 \* \* MON-FRI"/.test(wr)&&/"40 6 \* \* MON-FRI"/.test(wr)
-     &&/const GAPDOWN_CRON=\{preopen:"56 23 \* \* SUN-THU",close:"21 6 \* \* MON-FRI",reconcile:"40 6 \* \* MON-FRI"\}/.test(ow)
-     &&/gapdownRecord\(env,date,"quote",q,ms\)/.test(ow)&&/gapdown_quote_partial/.test(ow)
-     &&/if\(Object\.values\(GAPDOWN_CRON\)\.includes\(controller\.cron\)\)ctx\.waitUntil\(runGapdown/.test(ow));
+  { // cron 한 줄(무료 요금제 계정당 5개 한도) → 한 주 전체 예약시각을 scheduleRoute 로 돌려 실제 할 일을 센다
+    const crons=JSON.parse(wr).triggers.crons;
+    const fnSrc=ow.slice(ow.indexOf('export function scheduleRoute('),ow.indexOf('\n}\n',ow.indexOf('export function scheduleRoute('))+2).replace('export ','');
+    const route=new Function(fnSrc+'\nreturn scheduleRoute;')();
+    const expand=(f,max)=>f==='*'?Array.from({length:max},(_,i)=>i):f.split(',').flatMap(x=>{const m=x.match(/^(\d+)-(\d+)$/);if(!m)return [+x];const a=[];for(let i=+m[1];i<=+m[2];i++)a.push(i);return a;});
+    const count={};
+    for(let d=0;d<7;d++)for(const c of crons){const [mi,h]=c.split(' ');for(const hh of expand(h,24))for(const mm of expand(mi,60)){
+      const ms=Date.parse('2026-10-04T00:00:00Z')+d*864e5+(hh*60+mm)*6e4;       // 2026-10-04 = 일요일(UTC)
+      const r=route(ms);if(r)count[r]=(count[r]||0)+1;}}
+    const r0=route(Date.parse('2026-10-04T23:56:00Z')),r1=route(Date.parse('2026-10-03T23:56:00Z'));  // 월 08:56 KST / 일 08:56 KST
+    ok('Worker cron 한 줄 + 한국시각 라우팅: 한 주에 시초가 스캔 27분×5일, 08:56·15:21·15:40 각 5번, 주말 0번',
+       crons.length===1&&count.opening===135&&count.gapdown_preopen===5&&count.gapdown_close===5&&count.gapdown_reconcile===5
+       &&Object.keys(count).length===4&&r0==='gapdown_preopen'&&r1===null
+       &&route(Date.parse('2026-10-05T06:21:00Z'))==='gapdown_close'&&route(Date.parse('2026-10-05T06:40:00Z'))==='gapdown_reconcile'
+       &&route(Date.parse('2026-10-05T00:05:00Z'))==='opening'&&route(Date.parse('2026-10-05T00:31:00Z'))==='opening'
+       &&route(Date.parse('2026-10-05T06:31:00Z'))===null,JSON.stringify(count));
+  }
+  ok('Worker: 매 단계 응답을 gapdown ledger 에 먼저 저장 + 일부 조회 시 주문 없음 + 라우팅으로만 실행',
+     /gapdownRecord\(env,date,"quote",q,ms\)/.test(ow)&&/gapdown_quote_partial/.test(ow)
+     &&/if\(route==="opening"\)ctx\.waitUntil\(runMinute\(controller,env\)\);/.test(ow)
+     &&/else if\(route&&route\.startsWith\("gapdown_"\)\)ctx\.waitUntil\(runGapdown\(route\.slice\(8\),controller,env\)\);/.test(ow));
   ok('Worker: 오후 매도·조회는 아침 매수 접수 성공 종목만',
      /o\.side==="buy"&&o\.vts&&o\.vts\.ok/.test(ow));
   ok('연구 workflow: KIS 호출·주문 없음 + 실측 원본은 날짜별 한 번만 저장(덮어쓰기 없음) + 16시 전 저장 안 함',

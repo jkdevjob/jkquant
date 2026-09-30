@@ -243,7 +243,19 @@ async function runMinute(controller,env){
 // ── D-1 시초가 갭하락 과매도(opening_gapdown_v1) 연구용 모의체결 ──
 // 08:56 예상체결가 조회(40종목씩 순차) → 규칙 선택 + 장전 동시호가 VTS 매수 → 15:21 종가 동시호가 VTS 매도 → 15:40 체결 조회.
 // 매 단계 응답 원본을 별도 ledger(gapdown:날짜)에 먼저 쌓는다. 주문 호출은 재시도하지 않는다.
-const GAPDOWN_CRON={preopen:"56 23 * * SUN-THU",close:"21 6 * * MON-FRI",reconcile:"40 6 * * MON-FRI"};
+// Workers 무료 요금제는 계정 전체 cron 5개가 한도라 이 Worker 는 cron 한 줄만 쓴다(wrangler.jsonc).
+// "5-31,40,56 0,6,23 * * *" 로 필요한 시각을 모두 덮고, 실제로 할 일은 한국시각으로 여기서 고른다.
+export function scheduleRoute(ms){
+  const p=new Intl.DateTimeFormat("en-US",{timeZone:"Asia/Seoul",weekday:"short",hour:"2-digit",minute:"2-digit",hourCycle:"h23"}).formatToParts(new Date(ms));
+  const g=t=>p.find(x=>x.type===t)?.value||"";
+  if(g("weekday")==="Sat"||g("weekday")==="Sun")return null;
+  const hm=+g("hour")*100+ +g("minute");
+  if(hm>=905&&hm<=931)return "opening";
+  if(hm===856)return "gapdown_preopen";
+  if(hm===1521)return "gapdown_close";
+  if(hm===1540)return "gapdown_reconcile";
+  return null;
+}
 const GAPDOWN_PARTS=2;
 async function gapdownCall(env,body){
   const r=await fetch(baseUrl(env)+"/api/opening-gapdown",{
@@ -267,11 +279,11 @@ export function gapdownPicksFromLedger(ledger){
   // 매수 주문이 접수된 종목만 오후에 다룬다. 접수 실패 종목은 보유가 없다.
   return orders.filter(o=>o&&o.side==="buy"&&o.vts&&o.vts.ok).map(o=>({code:o.code,name:o.name||o.code}));
 }
-async function runGapdown(controller,env){
+async function runGapdown(stage,controller,env){
   if(!env.MONITOR_KEY||!env.SIGNAL_STORE)throw new Error("MONITOR_KEY/SIGNAL_STORE missing");
   const ms=Number(controller.scheduledTime)||Date.now();
   const date=kstParts(ms).date;
-  if(controller.cron===GAPDOWN_CRON.preopen){
+  if(stage==="preopen"){
     const parts=[];
     for(let part=0;part<GAPDOWN_PARTS;part++){
       let q;
@@ -297,7 +309,6 @@ async function runGapdown(controller,env){
     console.log(JSON.stringify({type:"gapdown_preopen",date,picks:(res.picks||[]).length,orders:(res.orders||[]).length,reason:res.decisionReason||res.error||""}));
     return;
   }
-  const stage=controller.cron===GAPDOWN_CRON.close?"close":"reconcile";
   let ledger=null;
   try{ledger=await readLedger(env,date,"gapdown");}catch(e){ledger=null;}
   const picks=gapdownPicksFromLedger(ledger);
@@ -312,8 +323,9 @@ async function runGapdown(controller,env){
 
 export default {
   async scheduled(controller,env,ctx){
-    if(Object.values(GAPDOWN_CRON).includes(controller.cron))ctx.waitUntil(runGapdown(controller,env));
-    else ctx.waitUntil(runMinute(controller,env));
+    const route=scheduleRoute(Number(controller.scheduledTime)||Date.now());
+    if(route==="opening")ctx.waitUntil(runMinute(controller,env));
+    else if(route&&route.startsWith("gapdown_"))ctx.waitUntil(runGapdown(route.slice(8),controller,env));
   },
   async fetch(request,env){
     const u=new URL(request.url);
