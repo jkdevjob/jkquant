@@ -21,12 +21,14 @@ export async function onRequestGet(){
       return new Response(JSON.stringify({
         ok:true,status:"collecting",archiveDays:0,variants:[],
         liveSignals:(nightly&&nightly.opening&&nightly.opening.liveSignals)||null,
+        shadowStrategies:(nightly&&nightly.opening&&nightly.opening.shadowStrategies)||[],
         liveSignalsAsOf:(nightly&&nightly.generatedAt)||null
       }),{headers:JH});
     }
     return new Response(JSON.stringify({
       ok:true,...base,
       liveSignals:(nightly&&nightly.opening&&nightly.opening.liveSignals)||null,
+      shadowStrategies:(nightly&&nightly.opening&&nightly.opening.shadowStrategies)||[],
       liveSignalsAsOf:(nightly&&nightly.generatedAt)||null
     }),{headers:JH});
   }catch(e){
