@@ -8,6 +8,7 @@ import tempfile
 
 ROOT = Path(__file__).resolve().parent
 mutants = [
+    ('checkpoint time budget', 'opening_backfill.py', 'if DEADLINE is not None and time.monotonic() >= DEADLINE:', 'if False:'),
     ('market-hours guard', 'opening_backfill.py', 'if 830 <= hm <= 1540:', 'if False:'),
     ('turnover rank', 'opening_backfill.py', "(-r['amount'], r['code'])", "(-r['cap'], r['code'])"),
     ('overnight price', 'backtest_opening_rebreak.py', "float(next_open['price']) if valid else None", "t['entryPrice'] if valid else None"),

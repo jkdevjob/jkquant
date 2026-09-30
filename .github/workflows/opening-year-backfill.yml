@@ -4,6 +4,7 @@ on:
   schedule:
     - cron: '45 7 * * *'
     - cron: '10 12 * * *'
+    - cron: '30 17 * * *' # 02:30 KST: use the remaining off-hours window
   push:
     branches: [main]
     paths: ['.github/workflows/opening-year-backfill.yml']
@@ -27,7 +28,7 @@ jobs:
       - name: 과거 Top100 재개 (매 요청마다 장중 차단)
         id: collect
         continue-on-error: true
-        run: python .app/scripts/collect_scalping_data.py --backfill --start 2025-09-30 --end 2026-09-30 --max-days 25
+        run: python .app/scripts/collect_scalping_data.py --backfill --start 2025-09-30 --end 2026-09-30 --max-seconds 14400
       - name: 완전 수집 시에만 1년 전체 연구 재계산
         env:
           JKQ_RESEARCH_DATA: data/scalping-backfill/archives

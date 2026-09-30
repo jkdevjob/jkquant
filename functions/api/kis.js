@@ -38,6 +38,9 @@ const JH = {
 };
 const FIREBASE_API_KEY_FALLBACK = "AIzaSyBzBe9pAttnbDgTlNThWZzNqtAAKxX7Ksw"; // 공개 웹 키
 const KRCODE = /^(?:\d{6}|\d{4}[A-Z]\d)$/;
+// Historical KRX preferred shares can end in a letter (e.g. 45014K).
+// Broaden only the read-only minute archive route; order validation is unchanged.
+function validMinuteHistoryCode(code){ return KRCODE.test(code)||/^\d{5}[A-Z]$/.test(code); }
 // 미국 티커. 국내 6자리와 겹치지 않으므로 code 하나로 국내/해외를 가른다.
 const USSYM = /^[A-Z]{1,5}$/;
 /* 같은 거래소인데 시세와 주문이 쓰는 코드가 다르다 — KIS 문서가 그렇게 돼 있다.
@@ -459,7 +462,7 @@ export async function onRequestGet({ request, env }) {
       const code = String(url.searchParams.get("code") || "").toUpperCase();
       const date = String(url.searchParams.get("date") || "").replace(/\D/g, "");   // YYYYMMDD
       const hour = String(url.searchParams.get("hour") || "093000").replace(/\D/g, "");
-      if (!KRCODE.test(code)) return json({ error: "종목코드가 올바르지 않습니다." }, 400);
+      if (!validMinuteHistoryCode(code)) return json({ error: "종목코드가 올바르지 않습니다." }, 400);
       if (!/^\d{8}$/.test(date)) return json({ error: "날짜는 YYYYMMDD 형식입니다." }, 400);
       const token = await getToken(env);
       const qs = new URLSearchParams({ FID_COND_MRKT_DIV_CODE: "J", FID_INPUT_ISCD: code,
