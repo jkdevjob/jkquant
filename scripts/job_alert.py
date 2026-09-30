@@ -5,8 +5,10 @@ import re
 import sys
 import time
 import subprocess
+from datetime import datetime
 from html import escape
 from pathlib import Path
+from zoneinfo import ZoneInfo
 from urllib.parse import parse_qsl, urlencode, urljoin, urlsplit, urlunsplit
 
 import requests
@@ -15,6 +17,7 @@ from ddgs import DDGS
 
 CACHE_DIR = Path(".job-alert-cache")
 SEEN_FILE = CACHE_DIR / "seen.json"
+SENT_FILE = CACHE_DIR / "last_sent_date.txt"
 
 JAVA_AI_QUERIES = [
     '대전 Java JSP Spring 프리랜서 프로젝트',
@@ -437,6 +440,24 @@ def study_hint(title, body):
     if not hints:
         hints = ['Spring Boot', 'REST API']
     return ', '.join(dict.fromkeys(hints[:3]))
+
+
+def today_kst():
+    return datetime.now(ZoneInfo('Asia/Seoul')).date().isoformat()
+
+
+def already_sent_today():
+    if not SENT_FILE.exists():
+        return False
+    try:
+        return SENT_FILE.read_text(encoding='utf-8').strip() == today_kst()
+    except Exception:
+        return False
+
+
+def mark_sent_today():
+    CACHE_DIR.mkdir(parents=True, exist_ok=True)
+    SENT_FILE.write_text(today_kst(), encoding='utf-8')
 
 
 def load_seen():
@@ -929,6 +950,11 @@ def send_via_jkquant(message, count):
 
 
 def main():
+    force = os.environ.get('FORCE_JOB_ALERT') == '1'
+    if not force and already_sent_today():
+        print(f'[INFO] already sent today ({today_kst()} KST); skipping duplicate run.')
+        return
+
     seen = load_seen()
     java_jobs, regular_dev_jobs, salary_jobs, short_term_jobs, jobkorea_status = search_jobs()
 
@@ -989,9 +1015,6 @@ def main():
         | {job['url'] for job in short_term_jobs}
     )
 
-    if os.environ.get('JOB_ALERT_DRY_RUN') != '1':
-        save_seen(all_seen)
-
     total_new = (
         len(new_java) + len(new_regular_dev)
         + len(salary_500) + len(salary_450)
@@ -1014,7 +1037,9 @@ def main():
         return
 
     send_via_jkquant(message, total_new)
-    print('[INFO] Telegram job notification sent via jkquant Pages Function.')
+    save_seen(all_seen)
+    mark_sent_today()
+    print(f'[INFO] Telegram job notification sent via jkquant Pages Function. sent_date={today_kst()}')
 
 
 if __name__ == '__main__':
