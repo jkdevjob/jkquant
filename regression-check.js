@@ -10549,6 +10549,10 @@ console.log('[SCALPING FLOW] 단타 공통 흐름 · 모의체결 분리');
   ok('활성 단타 4개 전략탭 모두 공통 flow 대상', ['opening','daytrading','crypto','soxl'].every(x=>sc.includes(x+':{strategy:')));
   ok('검증 실패 과매도 반등 탭은 운영 UI에서 제거', !/data-strategy="swing"/.test(sc) && /id="strategy_swing" class="strategy-pane" style="display:none"/.test(sc));
   ok('로그인 후 공통 flow를 만든 뒤 탭 복원', /setupUnifiedStrategyFlow\(\); restoreStrategy\(\);/.test(sc));
+  ok('단타 flow/showStrategy 함수는 한 번만 정의되어 중복 재배치가 없다',
+     (sc.match(/function setupUnifiedStrategyFlow\(\)\{/g)||[]).length===1
+     && (sc.match(/function showStrategy\(name\)\{/g)||[]).length===1);
+
   ok('BTC 모의는 한국투자와 분리', /id="crypto_paper_body"/.test(sc) && /한국투자증권과 섞지 않는/.test(sc));
   ok('4개 활성전략 매매이력은 공통 누적 API/페이지 조회', /function loadScalpingHistory\(name,page=1\)/.test(sc)
      && /\/api\/scalping-history\?/.test(sc) && /cumulativeHistoryCard\(name\)/.test(sc));
@@ -10560,7 +10564,7 @@ console.log('[SCALPING FLOW] 단타 공통 흐름 · 모의체결 분리');
      && /VTTS3035R/.test(kis));
   ok('KIS 해외 모의 조회는 전체조회 후 종목 필터', /PDNO:""[\s\S]{0,220}OVRS_EXCG_CD:""/.test(kis)
      && /if\(code\) rows=rows\.filter\(x=>x\.code===code\)/.test(kis));
-  ok('단타 화면 버전 1.25.0', /id="scVer">v1\.25\.0<\/span>/.test(sc));
+  ok('단타 화면 버전 1.25.1', /id="scVer">v1\.25\.1<\/span>/.test(sc));
 }
 
 
@@ -10570,7 +10574,7 @@ console.log('[SCALPING HISTORY] 4전략 누적 매매이력 · 과매도 반등 
   const sc=scl;
   const hapi=fs.readFileSync(__d+'/functions/api/scalping-history.js','utf8');
   ok('누적 이력 API는 시초가·데이트레이딩·BTC·SOXL baseline CSV를 공통 조회',
-     /opening-research\/baseline-trades\.csv/.test(hapi)
+     /opening-history\/baseline-trades\.csv/.test(hapi)
      && /daytrading-research\/baseline-trades\.csv/.test(hapi)
      && /crypto-research\/baseline-trades\.csv/.test(hapi)
      && /soxl-research\/baseline-trades\.csv/.test(hapi));
@@ -10638,7 +10642,7 @@ console.log('[OPENING SIGNAL LEARNING] 실시간 ledger · 30분 사후라벨 ·
      /신호 이후 30분 경로 진단/.test(scl)
      && /조건별 실제 성과/.test(scl)
      && /groupTable\('전략 버전'/.test(scl)
-     && /id="scVer">v1\.25\.0<\/span>/.test(scl));
+     && /id="scVer">v1\.25\.1<\/span>/.test(scl));
 }
 
 /* ════ 단타 Telegram ③④ 실시간 + ⑤⑥ 일일 연구 ════ */
@@ -10677,7 +10681,7 @@ console.log('[SCALPING TELEGRAM] 실시간 신호 · 일일 매매/연구 요약
   const cr=cr0>=0&&cr1>cr0?nightly.slice(cr0,cr1):'';
   ok('BTC 야간연구는 실제 70/30 holdout 모델만 참조',
      /validationModel":"70\/30 holdout \+ rolling30"/.test(cr) && !/oos_edge|oos_trades|wf_status/.test(cr));
-  ok('단타 화면 버전 1.25.0', /id="scVer">v1\.25\.0<\/span>/.test(scl));
+  ok('단타 화면 버전 1.25.1', /id="scVer">v1\.25\.1<\/span>/.test(scl));
 }
 
 console.log(`\n════ 결과: ${pass} PASS / ${fail} FAIL ${fail===0?'— ALL PASS ★':'— 배포 금지, 위 ✗ 항목 수정 필요'} ════`);
