@@ -45,6 +45,11 @@ jobs:
         with:
           python-version: "3.12"
 
+      - name: SOXL · SOXX 전체 일봉 수집
+        env:
+          JKQ_SOXL_DAILY_ONLY: "1"
+        run: python .app/scripts/collect_soxl_data.py
+
       - name: SOXL 5분봉 수집 + 누적 연구
         env:
           KEY: ${{ secrets.AUTOTRADE_KEY }}
