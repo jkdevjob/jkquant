@@ -539,14 +539,35 @@ def opening_diagnostics(trades):
     }
 
 
-def trades_for_days(days, p: Params):
+def trades_for_days(days, p: Params, calibration=None):
     out = []
     for day in days:
         for row in day.get("universe") or []:
-            t = one_trade(day, row, p)
+            t = one_trade(day, row, p, calibration=calibration)
             if t:
                 out.append(t)
     return out
+
+
+def project_exit_model(trades, model):
+    out=[]
+    for x in trades:
+        m=(x.get("exitModels") or {}).get(model)
+        if not m:
+            continue
+        y={**x}
+        y["exitModel"]=model
+        y["exitTime"]=m.get("exitTime")
+        y["exitPrice"]=m.get("exitPrice")
+        y["reason"]=m.get("reason")
+        y["pnl"]=m.get("pnl")
+        out.append(y)
+    return out
+
+
+def evaluation_trades(name, trades):
+    designed=set((VARIANT_META.get(name) or {}).get("designedFrom") or [])
+    return [x for x in trades if x.get("date") not in designed]
 
 
 def walk_forward(days, variant_trade_map):
