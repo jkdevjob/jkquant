@@ -1911,15 +1911,19 @@ async function loadOpeningResearch(){
     setReviewLog('opening','<b>'+(j.to||'최근')+'</b> · 누적 '+j.archiveDays+'거래일 · 기준 '+(s.trades||0)+'건 · 승률 '+Number(s.winRate||0).toFixed(1)+'% · 평균 '+((s.avgPnl||0)>=0?'+':'')+Number(s.avgPnl||0).toFixed(3)+'%<br><span class="sub">그림자 후보와 워크포워드를 계속 비교하고 기준전략 변경은 검증 후 버전 기록으로 남깁니다.</span>');
 
     const enough=j.comparisonStatus==='eligible';
+    const mt=j.multipleTesting||{},fr=j.frictionModel||{},em=j.exitModelComparison||{};
     const info='<div class="warn" style="margin-bottom:10px">'+
       (enough?'<b>누적 비교 표본 도달:</b> 가설별 누적 결과를 볼 수 있습니다. 실전 기준전략 변경은 워크포워드 검증과 별도로 판단합니다.':
               '<b>누적 표본 수집 중:</b> 20거래일·기준전략 30건 전까지 누적 가설 결과는 참고용입니다.')+
+      '<div class="sub" style="margin-top:5px">다중검정 보정 K='+(mt.K||13)+' · 그림자전략 설계에 사용한 날짜는 해당 변형의 평가표본에서 제외 · 자동 승격 없음</div>'+
       '</div>';
 
     const rows=vars.map(x=>{
       const p=x.params||{},z=x.summary||{},label=labelOf(p.name);
       const pf=z.profitFactor>=900?'∞':(+z.profitFactor||0).toFixed(2);
-      return '<tr><td><b>'+esc(label)+'</b></td><td>'+((z.trades||0))+'</td><td>'+((z.winRate||0).toFixed(1))+'%</td>'+
+      const designed=x.designedFrom||[];
+      const designNote=designed.length?'<div class="sub">설계일 제외 '+designed.map(esc).join(', ')+'</div>':'';
+      return '<tr><td><b>'+esc(label)+'</b>'+designNote+'</td><td>'+((z.trades||0))+'</td><td>'+((z.winRate||0).toFixed(1))+'%</td>'+
         '<td class="'+((z.avgPnl||0)>=0?'win':'loss')+'">'+((z.avgPnl||0)>=0?'+':'')+(z.avgPnl||0).toFixed(3)+'%</td>'+
         '<td>'+pf+'</td><td class="'+((z.sumPnl||0)>=0?'win':'loss')+'">'+((z.sumPnl||0)>=0?'+':'')+(z.sumPnl||0).toFixed(2)+'%</td>'+
         '<td class="loss">'+(z.maxDrawdownSimple||0).toFixed(2)+'%</td></tr>';
@@ -1931,6 +1935,16 @@ async function loadOpeningResearch(){
       '<div class="outbox"><div class="ol">기준 승률</div><div class="ov">'+((s.winRate||0).toFixed(1))+'%</div></div>'+
       '<div class="outbox"><div class="ol">기준 평균손익</div><div class="ov '+((s.avgPnl||0)>=0?'good':'bad')+'">'+((s.avgPnl||0)>=0?'+':'')+(s.avgPnl||0).toFixed(3)+'%</div></div>'+
       '</div><div class="htable-wrap" style="margin-top:10px"><table class="htable"><thead><tr><th>가설</th><th>거래</th><th>승률</th><th>평균손익</th><th>PF</th><th>단순합</th><th>MDD</th></tr></thead><tbody>'+rows+'</tbody></table></div>';
+
+    const closeM=em.close||{},lowhighM=em.lowhigh||{};
+    html+='<div style="margin-top:14px"><b>⚖️ 청산 모델 · 마찰 감사</b></div>'+
+      '<div class="out" style="margin-top:8px">'+
+      '<div class="outbox"><div class="ol">close 평균손익</div><div class="ov '+((closeM.avgPnl||0)>=0?'good':'bad')+'">'+scoreFmt(closeM.avgPnl,3)+'</div></div>'+
+      '<div class="outbox"><div class="ol">low/high 평균손익</div><div class="ov '+((lowhighM.avgPnl||0)>=0?'good':'bad')+'">'+scoreFmt(lowhighM.avgPnl,3)+'</div></div>'+
+      '<div class="outbox"><div class="ol">low/high − close</div><div class="ov '+((em.avgPnlDifferenceLowhighMinusClosePct||0)>=0?'good':'bad')+'">'+scoreFmt(em.avgPnlDifferenceLowhighMinusClosePct,3)+'</div></div>'+
+      '<div class="outbox"><div class="ol">현재 마찰 모델</div><div class="ov" style="font-size:12px">'+esc(fr.source||'—')+'</div><div class="sub">VTS 매칭 '+(fr.completeMatches||0)+' / 30</div></div>'+
+      '</div>'+
+      '<p class="note">신호와 진입은 기존 종가 기준 그대로입니다. low/high는 KIS 1분 O/H/L을 이용한 연구용 청산 모델이며 같은 1분 안에 손절·익절이 모두 닿으면 손절 우선입니다. 마찰은 0.23% 고정비용 + '+((fr.source||'').indexOf('vts_')===0?'VTS 실측 왕복 슬리피지':'2.5틱/편도 fallback')+'입니다.</p>';
 
     const dg=j.diagnostics||{},fp=dg.forwardPath||{},cg=dg.conditionGroups||{},hits=dg.thresholdHits||{};
     const pct=v=>v==null?'—':((v>=0?'+':'')+(+v).toFixed(2)+'%');
@@ -2002,7 +2016,10 @@ async function loadOpeningResearch(){
           '<td>'+pf+'</td><td class="'+((z.sumPnl||0)>=0?'win':'loss')+'">'+((z.sumPnl||0)>=0?'+':'')+(z.sumPnl||0).toFixed(2)+'%</td>'+
           '<td class="loss">'+(z.maxDrawdownSimple||0).toFixed(2)+'%</td></tr>';
       }).join('');
-      html+='<div class="warn" style="margin-top:8px"><b>'+((wf.status==='reviewable')?'워크포워드 검토 가능':'초기 워크포워드')+':</b> '+(wf.foldCount||0)+'개 구간 · 검증 '+(wf.oosDays||0)+'거래일. 각 구간은 20일 학습 → 다음 5일 검증이며 검증구간끼리는 겹치지 않습니다. 결과로 기준전략을 자동 변경하지 않습니다.</div>'+
+      const checks=wf.adoptionChecks||[];
+      const eligibleN=checks.filter(x=>x.adoptionEligible).length;
+      html+='<div class="warn" style="margin-top:8px"><b>'+((wf.status==='reviewable')?'워크포워드 검토 가능':'초기 워크포워드')+':</b> '+(wf.foldCount||0)+'개 구간 · 검증 '+(wf.oosDays||0)+'거래일. 각 구간은 20일 학습 → 다음 5일 검증이며 검증구간끼리는 겹치지 않습니다. '+
+        '사전 기준은 OOS 엣지>0 + 폴드 과반 우위 + Bonferroni K='+(mt.K||13)+' 보정 p<0.05이며 현재 충족 후보 '+eligibleN+'개입니다. <b>충족해도 자동 변경하지 않습니다.</b></div>'+
         '<div class="htable-wrap" style="margin-top:8px"><table class="htable"><thead><tr><th>OOS 전략</th><th>거래</th><th>승률</th><th>평균손익</th><th>PF</th><th>단순합</th><th>MDD</th></tr></thead><tbody>'+wfRows+'</tbody></table></div>';
     }
 
