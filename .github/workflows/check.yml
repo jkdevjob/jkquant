@@ -21,7 +21,9 @@ jobs:
       - name: 연구 Python 문법 검사
         run: |
           python -m py_compile scripts/backtest_opening_rebreak.py
+          python -m py_compile scripts/backfill_opening_paths.py
           python -m py_compile scripts/test_opening_signal_labels.py
+          python -m py_compile scripts/mutation_test_opening_engine.py
           python -m py_compile scripts/backtest_daytrading.py
           python -m py_compile scripts/collect_daytrading_data.py
           python -m py_compile scripts/analyze_vts_reconcile.py
@@ -50,8 +52,11 @@ jobs:
           print("✓ 10:15 이내만 primary validation에 포함")
           PY
 
-      - name: 시초가 사후라벨 값 검사
+      - name: 시초가 사후라벨·엔진 값 검사
         run: python scripts/test_opening_signal_labels.py
+
+      - name: 시초가 엔진 변이 시험
+        run: python scripts/mutation_test_opening_engine.py
 
       - name: 연구 서버 JS 문법 검사
         run: |
@@ -375,7 +380,7 @@ jobs:
           let fail=0;
           const must=[
             ['data-strategy="crypto"','비트코인 탭'],
-            ['id="scVer">v1.25.3','단타 버전 1.22.1'],
+            ['id="scVer">v1.26.0','단타 버전 1.22.1'],
             ['다음 5분봉 시가','다음 봉 진입 설명'],
             ['손절 우선','동일봉 보수 청산 설명'],
             ['최근 365일 백필','초기 백필 안내']
@@ -440,7 +445,7 @@ jobs:
           let fail=0;
           const must=[
             [ui,'data-strategy="soxl"','SOXL 탭'],
-            [ui,'id="scVer">v1.25.3','단타 버전 1.22.1'],
+            [ui,'id="scVer">v1.26.0','단타 버전 1.22.1'],
             [ui,'다음 5분봉 시가','next-bar 진입 설명'],
             [py,'baseline-decisions.csv','거래/무거래 판단기록'],
             [py,'target1PctDayRatePct','+1% 목표 지표'],

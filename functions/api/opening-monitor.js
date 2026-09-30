@@ -46,9 +46,17 @@ async function sendTelegram(env,title,lines){
   return {ok:true,messageId:j.result&&j.result.message_id};
 }
 
+async function openingVtsCalibration(origin){
+  try{
+    const j=await fetch(origin+"/api/vts-research",{headers:{"Accept":"application/json"}}).then(r=>r.json());
+    if(!j||!j.ok)return null;
+    return (j.strategies||[]).find(x=>x.strategy==="opening")||null;
+  }catch(e){return null;}
+}
+
 function emptyShadow(){
   return Object.fromEntries(SHADOW_VARIANTS.map(v=>[v.name,{
-    name:v.name,label:v.label,description:v.description,params:v.params,trades:[]
+    name:v.name,label:v.label,description:v.description,params:v.params,designedFrom:v.designedFrom||[],trades:[]
   }]));
 }
 
@@ -56,6 +64,7 @@ async function scanShard(origin,now,shard,shards,limit,cutoffHm){
   const uj=await (await fetch(origin+"/api/universe?limit="+limit)).json();
   const universe=(uj.universe||[]).filter((_,i)=>i%shards===shard);
   const trades=[],shadow=emptyShadow(),errors=[];let idx=0;
+  const frictionCalibration=await openingVtsCalibration(origin);
 
   async function worker(){
     while(idx<universe.length){
@@ -71,11 +80,11 @@ async function scanShard(origin,now,shard,shards,limit,cutoffHm){
         const meta=dailyMeta(dj,now.date);
         if(!meta)continue;
 
-        const base=rebreakTrade(rows,meta,cutoffHm);
+        const base=rebreakTrade(rows,meta,cutoffHm,{frictionCalibration});
         if(base)trades.push({code:u.code,name:u.name||u.code,variant:"baseline",...base});
 
         for(const v of SHADOW_VARIANTS){
-          const tr=rebreakTrade(rows,meta,cutoffHm,v.params);
+          const tr=rebreakTrade(rows,meta,cutoffHm,{...v.params,frictionCalibration});
           if(tr)shadow[v.name].trades.push({code:u.code,name:u.name||u.code,variant:v.name,...tr});
         }
       }catch(e){
@@ -101,12 +110,12 @@ function sellLines(rows){
   return rows.flatMap((x,i)=>[
     (i+1)+". "+x.name+" ("+x.code+")",
     "매도신호 "+String(x.exitTime).padStart(4,"0")+" · "+Math.round(x.exitPrice).toLocaleString("ko-KR")+"원 · "+x.reason,
-    "진입 "+Math.round(x.entryPrice).toLocaleString("ko-KR")+"원 · 비용 0.25% 반영 손익 "+(x.pnl>=0?"+":"")+x.pnl.toFixed(2)+"%"
+    "진입 "+Math.round(x.entryPrice).toLocaleString("ko-KR")+"원 · 비용 "+((x.friction&&x.friction.totalPct)||0).toFixed(2)+"% ("+((x.friction&&x.friction.source)||"unknown")+") · 손익 "+(x.pnl>=0?"+":"")+x.pnl.toFixed(2)+"%"
   ]);
 }
 function shadowEvents(shadow,targetHm){
   return Object.values(shadow).map(v=>({
-    name:v.name,label:v.label,description:v.description,params:v.params,
+    name:v.name,label:v.label,description:v.description,params:v.params,designedFrom:v.designedFrom||[],
     buyEvents:v.trades.filter(x=>x.entryTime===targetHm),
     sellEvents:v.trades.filter(x=>x.exitTime===targetHm),
     trades:v.trades,
