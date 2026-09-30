@@ -24,6 +24,7 @@ SYMBOL = os.environ.get("JKQ_SOXL_SYMBOL", "SOXL").upper()
 SOXX_SYMBOL = "SOXX"
 ROOT = Path("data") / "soxl" / SYMBOL / "5m"
 SOXX_DAILY = Path("data") / "soxl" / SOXX_SYMBOL / "1d" / "series.json.gz"
+SOXL_DAILY = Path("data") / "soxl" / SYMBOL / "1d" / "series.json.gz"
 NY = ZoneInfo("America/New_York")
 UTC = timezone.utc
 UA = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/124 Safari/537.36"
@@ -62,7 +63,7 @@ def request_chart():
     raise RuntimeError(f"Yahoo chart request failed: {last}")
 
 
-def request_soxx_daily():
+def request_daily(symbol):
     q = urllib.parse.urlencode({
         "interval": "1d",
         "range": "max",
@@ -72,7 +73,7 @@ def request_soxx_daily():
     })
     last = None
     for host in ("query1.finance.yahoo.com", "query2.finance.yahoo.com"):
-        url = f"https://{host}/v8/finance/chart/{SOXX_SYMBOL}?{q}"
+        url = f"https://{host}/v8/finance/chart/{symbol}?{q}"
         for attempt in range(5):
             try:
                 req = urllib.request.Request(url, headers={
@@ -103,17 +104,17 @@ def request_soxx_daily():
                 if rows:
                     return {
                         "schema": 1,
-                        "symbol": SOXX_SYMBOL,
+                        "symbol": symbol,
                         "source": "Yahoo Finance public chart endpoint",
                         "sourceHost": host,
                         "adjusted": True,
                         "rows": rows,
                     }
-                raise RuntimeError("SOXX daily rows empty")
+                raise RuntimeError(f"{symbol} daily rows empty")
             except Exception as e:
                 last = e
             time.sleep(min(8.0, 0.8 * (2 ** attempt)))
-    raise RuntimeError(f"Yahoo SOXX daily request failed: {last}")
+    raise RuntimeError(f"Yahoo {symbol} daily request failed: {last}")
 
 
 def deterministic_gzip_json(path: Path, payload: dict) -> bool:
@@ -141,13 +142,21 @@ def hm(dt: datetime) -> int:
 def main():
     res, host = request_chart()
     soxx_written = False
+    soxl_daily_written = False
     soxx_error = None
+    soxl_daily_error = None
     try:
-        soxx_payload = request_soxx_daily()
+        soxx_payload = request_daily(SOXX_SYMBOL)
         soxx_written = deterministic_gzip_json(SOXX_DAILY, soxx_payload)
     except Exception as e:
         soxx_error = str(e)
         print(f"SOXX adjusted daily collection warning: {e}")
+    try:
+        soxl_daily_payload = request_daily(SYMBOL)
+        soxl_daily_written = deterministic_gzip_json(SOXL_DAILY, soxl_daily_payload)
+    except Exception as e:
+        soxl_daily_error = str(e)
+        print(f"SOXL daily collection warning: {e}")
     ts = res.get("timestamp") or []
     q = ((res.get("indicators") or {}).get("quote") or [{}])[0]
     O = q.get("open") or []
@@ -221,6 +230,9 @@ def main():
         "soxxDailyPath": str(SOXX_DAILY),
         "soxxDailyWritten": soxx_written,
         "soxxDailyError": soxx_error,
+        "soxlDailyPath": str(SOXL_DAILY),
+        "soxlDailyWritten": soxl_daily_written,
+        "soxlDailyError": soxl_daily_error,
     }, ensure_ascii=False, indent=2))
     if not groups:
         raise SystemExit("no SOXL regular-session bars returned")
