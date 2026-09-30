@@ -794,11 +794,20 @@ def main():
                 "mfePct","mfeTime","maePct","maeTime",
                 "hitPlus1Time","hitPlus2Time","hitMinus1Time","hitMinus2Time",
                 "fwd5mPct","fwd10mPct","fwd20mPct","fwd30mPct",
-                "exitTime","exitPrice","reason","pnl"]
+                "frictionPct","frictionSource","frictionCalibrationMatches",
+                "exitTime","exitPrice","reason","pnl","lowhighExitTime","lowhighExitPrice","lowhighReason","lowhighPnl"]
         w = csv.DictWriter(f, fieldnames=cols)
         w.writeheader()
         for x in baseline:
-            w.writerow({k: x.get(k) for k in cols})
+            row={k:x.get(k) for k in cols}
+            lh=(x.get("exitModels") or {}).get("lowhigh") or {}
+            row.update({
+                "lowhighExitTime":lh.get("exitTime"),
+                "lowhighExitPrice":lh.get("exitPrice"),
+                "lowhighReason":lh.get("reason"),
+                "lowhighPnl":lh.get("pnl"),
+            })
+            w.writerow(row)
 
     # Compact per-signal outcome archive used to join the exact live alert ledger.
     # Strategy changes never rewrite the signal's strategyVersion/params; the join key
@@ -815,6 +824,8 @@ def main():
                 "entryPrice": x.get("entryPrice"),
                 "strategyVersion": x.get("strategyVersion"),
                 "signalSchemaVersion": x.get("signalSchemaVersion"),
+                "labelVersion": x.get("labelVersion"),
+                "accountingVersion": x.get("accountingVersion"),
                 "strategyParams": x.get("strategyParams"),
                 "gap": x.get("gap"),
                 "pullbackPct": x.get("pullbackPct"),
@@ -841,6 +852,10 @@ def main():
                 "fwd10mPct": x.get("fwd10mPct"),
                 "fwd20mPct": x.get("fwd20mPct"),
                 "fwd30mPct": x.get("fwd30mPct"),
+                "frictionPct": x.get("frictionPct"),
+                "frictionSource": x.get("frictionSource"),
+                "frictionCalibrationMatches": x.get("frictionCalibrationMatches"),
+                "exitModels": x.get("exitModels"),
                 "exitTime": x.get("exitTime"),
                 "exitPrice": x.get("exitPrice"),
                 "reason": x.get("reason"),
