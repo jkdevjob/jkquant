@@ -6,8 +6,8 @@ import tempfile
 from datetime import datetime, timedelta
 from pathlib import Path
 
-import scripts.backtest_crypto_orb as btc
-import scripts.backtest_soxl_intraday as sx
+import backtest_crypto_orb as btc
+import backtest_soxl_intraday as sx
 
 
 def hour_bar(dt, o=100.0, c=100.0):
