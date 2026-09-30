@@ -286,7 +286,7 @@ canvas{display:block;width:100%;height:auto}
   <!-- 1b. 백테스트 -->
   <div class="card">
     <h3><span class="dot"></span>🧪 백테스트 <span class="sub" style="font-weight:600">전략을 과거에 그대로 돌려본다</span></h3>
-    <p class="lead">지금 화면의 규칙(볼린저 하단 이탈 + RSI&lt;40 · 점수≥65 · 다음날 시가 진입 · −4%/+6% · 최대 5일)을
+    <p class="lead">지금 화면의 규칙(볼린저 하단 이탈 + RSI&lt;40 · 점수≥65 · 다음날 시가 진입 · 전일 ATR(14) 손절 2×/목표 4× · 최대 5일)을
       과거 일봉에 그대로 적용해 성과를 낸다. <b>대조군(신호 없이 전종목 매일 진입)</b>과 같이 보여준다 —
       절대값이 아니라 <b>대조군 대비 초과분</b>이 진짜 엣지다.</p>
     <div class="row" style="margin-bottom:8px;align-items:flex-end">
@@ -2798,7 +2798,7 @@ function exportLog(){
 
 /* ══════════════════════════════════════════════════════════════════
    KIS 모의투자 — 전략대로 주문하고, 나간 주문을 전부 기록한다
-   · 수량은 '1회 투입금액 ÷ 현재가'. 손절 −4% / 목표 +6% / 최대 5일은 전략 그대로.
+   · 수량은 '1회 투입금액 ÷ 현재가'. 레벨은 전일까지의 ATR(14)로 손절 2×ATR / 목표 4×ATR / 최대 5일.
    · 주문은 성공이든 실패든 KLOG 에 남긴다. 실패 사유(장 시간 외, 예수금 부족 등)가
      나중에 "왜 그날 안 샀나"를 되짚는 유일한 근거가 된다.
    · 반자동이다 — 확인창 없이 자동으로 나가는 주문은 만들지 않는다.
@@ -2923,7 +2923,7 @@ function renderKlog(){
       </tr>`).join('')
     + `</tbody></table></div><p class="note">여기 '접수'는 <b>주문이 증권사에 들어갔다</b>는 뜻이지 체결됐다는 뜻이 아니다 —
        지정가가 안 닿으면 미체결로 남는다. 실제 보유는 <b>잔고</b> 버튼으로 확인한다.
-       실현손익은 매도를 같은 종목의 먼저 산 물량과 짝지어(FIFO) 마찰 0.5%를 뺀 값이다.</p>`;
+       실현손익은 매도를 같은 종목의 먼저 산 물량과 짝지어(FIFO) A-3 실행비용(VTS 실측 또는 2.5틱/편도 fallback)을 뺀 값이다.</p>`;
 }
 function delKlog(i){ if(!confirm('이 주문 기록을 지울까요? 증권사 주문 자체는 취소되지 않습니다.')) return; KLOG.splice(i,1); saveK(); renderKlog(); }
 function clearKlog(){ if(!KLOG.length) return; if(!confirm('KIS 주문 이력을 전부 지울까요? 증권사 주문은 취소되지 않습니다.')) return; KLOG=[]; saveK(); renderKlog(); }
