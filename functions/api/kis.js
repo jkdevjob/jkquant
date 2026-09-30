@@ -528,6 +528,8 @@ export async function onRequestGet({ request, env }) {
       if (String(j.rt_cd) !== "0") return json({ error: RATE_LIMITED(j) ? "초당 요청 제한 — 잠시 후 다시" : (j.msg1 || "예상체결 조회 실패"),
         rateLimited: RATE_LIMITED(j) }, 502);
       const o1 = j.output1 || {}, o2 = j.output2 || {};
+      // raw=1: 필드명 확인용. 공개 호가·예상체결 시세만 담긴다(계좌·키 정보 없음).
+      if (url.searchParams.get("raw") === "1") return json({ code, output1: o1, output2: o2 });
       const pick = (...ks) => { for (const k of ks) { const v = +(o2[k] ?? o1[k]); if (Number.isFinite(v) && v !== 0) return v; } return 0; };
       return json({ code, expectedPrice: pick("antc_cnpr"), expectedChgPct: pick("antc_cntg_prdy_ctrt"),
         expectedChg: pick("antc_cntg_vrss"), expectedVolume: pick("antc_vol", "antc_cnqn"),
