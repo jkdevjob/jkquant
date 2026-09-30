@@ -5,7 +5,9 @@ import re
 import sys
 import time
 import subprocess
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
+from difflib import SequenceMatcher
 from html import escape
 from pathlib import Path
 from zoneinfo import ZoneInfo
@@ -118,6 +120,56 @@ JOBKOREA_DIRECT_QUERIES = [
 ]
 JOBKOREA_PAGES_PER_QUERY = 2
 
+SARAMIN_BASE = 'https://www.saramin.co.kr'
+SARAMIN_DIRECT_QUERIES = [
+    '대전 Java', '세종 Java',
+    '대전 Spring', '세종 Spring',
+    '대전 개발자', '세종 개발자',
+    '대전 백엔드', '세종 백엔드',
+    '대전 AI 개발자', '세종 AI 개발자',
+    '대전 유지보수 개발', '세종 유지보수 개발',
+    '대전 연봉 6000', '세종 연봉 6000',
+    '대전 월급 500', '세종 월급 500',
+]
+SARAMIN_PAGES_PER_QUERY = 1
+
+SEARCH_SOURCES = {
+    '고용24': 'work24.go.kr',
+    '원티드': 'wanted.co.kr',
+    '점핏': 'jumpit.saramin.co.kr',
+    '커리어': 'career.co.kr',
+    '인크루트': 'incruit.com',
+    '로켓펀치': 'rocketpunch.com',
+    '아이엠잡': 'imjob.co.kr',
+    '링크드인': 'linkedin.com/jobs',
+    '알바몬': 'albamon.com',
+    '알바천국': 'alba.co.kr',
+}
+SOURCE_SEARCH_TERMS = [
+    '대전 Java Spring 개발자',
+    '세종 Java Spring 개발자',
+    '대전 백엔드 AI 개발자',
+    '세종 백엔드 AI 개발자',
+    '대전 연봉 5400 6000 월급 450 500 채용',
+    '세종 연봉 5400 6000 월급 450 500 채용',
+    '대전 단기 알바 초보 경력무관',
+    '세종 단기 알바 초보 경력무관',
+]
+SOURCE_PRIORITY = {
+    '잡코리아': 100,
+    '사람인': 95,
+    '고용24': 90,
+    '원티드': 85,
+    '점핏': 84,
+    '커리어': 80,
+    '인크루트': 78,
+    '로켓펀치': 76,
+    '아이엠잡': 74,
+    '링크드인': 72,
+    '알바몬': 70,
+    '알바천국': 70,
+}
+
 LOCATION_TERMS = ('대전', '세종')
 CORE_TERMS = (
     'java', 'jsp', 'spring', 'spring boot', '전자정부', 'egov',
@@ -177,7 +229,8 @@ EXCLUDE_TERMS = (
 TRUSTED_DOMAINS = (
     'jobkorea.co.kr', 'saramin.co.kr', 'imjob.co.kr', 'work24.go.kr',
     'wanted.co.kr', 'jumpit.saramin.co.kr', 'career.co.kr',
-    'alba.co.kr', 'albamon.com',
+    'alba.co.kr', 'albamon.com', 'incruit.com', 'rocketpunch.com',
+    'linkedin.com',
 )
 
 
@@ -209,6 +262,15 @@ def domain_of(url):
 def is_trusted(url):
     domain = domain_of(url)
     return any(domain.endswith(d) for d in TRUSTED_DOMAINS)
+
+
+def has_target_location(text):
+    text = normalize_text(text or '')
+    return bool(re.search(
+        r'(?<![가-힣A-Za-z0-9])(?:대전(?:광역시)?|세종(?:특별자치시)?)(?![가-힣A-Za-z0-9])',
+        text,
+        re.I,
+    ))
 
 
 def salary_info(title, body):
@@ -305,7 +367,7 @@ def short_term_pay_info(title, body):
 def score_java_result(title, body, url):
     text = f"{title} {body}".lower()
 
-    if not any(term in text for term in LOCATION_TERMS):
+    if not has_target_location(text):
         return -999
     if any(term in text for term in EXCLUDE_TERMS):
         return -999
@@ -330,7 +392,7 @@ def score_java_result(title, body, url):
 def score_regular_dev_result(title, body, url):
     text = f"{title} {body}".lower()
 
-    if not any(term in text for term in LOCATION_TERMS):
+    if not has_target_location(text):
         return -999
     if any(term in text for term in EXCLUDE_TERMS):
         return -999
@@ -356,7 +418,7 @@ def score_regular_dev_result(title, body, url):
 def score_salary_result(title, body, url):
     text = f"{title} {body}".lower()
 
-    if not any(term in text for term in LOCATION_TERMS):
+    if not has_target_location(text):
         return -999
     if any(term in text for term in EXCLUDE_TERMS):
         return -999
@@ -379,7 +441,7 @@ def score_salary_result(title, body, url):
 def score_short_term_result(title, body, url):
     text = f"{title} {body}".lower()
 
-    if not any(term in text for term in LOCATION_TERMS):
+    if not has_target_location(text):
         return -999
     if any(term in text for term in EXCLUDE_TERMS):
         return -999
@@ -472,14 +534,14 @@ def load_seen():
 
 def save_seen(urls):
     CACHE_DIR.mkdir(parents=True, exist_ok=True)
-    trimmed = sorted(urls)[-4000:]
+    trimmed = sorted(urls)[-12000:]
     SEEN_FILE.write_text(
         json.dumps({'urls': trimmed}, ensure_ascii=False, indent=2),
         encoding='utf-8',
     )
 
 
-def search_group(queries, scorer):
+def search_group(queries, scorer, source_name=None):
     merged = {}
     ddgs = DDGS()
 
@@ -510,6 +572,8 @@ def search_group(queries, scorer):
                     'score': score,
                     'salary': salary_info(title, body),
                     'short_pay': short_term_pay_info(title, body),
+                    'source': source_name or domain_of(url),
+                    'sources': [source_name or domain_of(url)],
                 }
                 current = merged.get(url)
                 if current is None or candidate['score'] > current['score']:
@@ -653,7 +717,7 @@ def collect_jobkorea_direct():
 
                     page_parsed_detail_links += 1
                     body = jobkorea_card_text(anchor)
-                    if not any(loc in body for loc in LOCATION_TERMS):
+                    if not has_target_location(body):
                         continue
 
                     url = f'{JOBKOREA_BASE}/Recruit/GI_Read/{match.group(1)}'
@@ -664,7 +728,8 @@ def collect_jobkorea_direct():
                         'score': 0,
                         'salary': salary_info(title, body),
                         'short_pay': short_term_pay_info(title, body),
-                        'source': '잡코리아 직접',
+                        'source': '잡코리아',
+                        'sources': ['잡코리아'],
                         '_title_quality': jobkorea_title_quality(title),
                     }
                     current = jobs.get(url)
@@ -717,37 +782,325 @@ def collect_jobkorea_direct():
     return list(jobs.values()), status
 
 
-def search_jobs():
-    direct_jobs, jobkorea_status = collect_jobkorea_direct()
-    fast_mode = os.environ.get('JOB_ALERT_FAST') == '1'
+def compact_job_title(title):
+    text = normalize_text(title).lower()
+    text = re.sub(r'\[[^\]]*\]|\([^)]*\)', ' ', text)
+    text = re.sub(
+        r'\b(?:채용|모집|공고|정규직|계약직|프리랜서|경력직|경력|신입|즉시지원)\b',
+        ' ',
+        text,
+    )
+    text = re.sub(r'[^0-9a-z가-힣]+', ' ', text)
+    return normalize_text(text)
 
-    if jobkorea_status.get('ok'):
-        # 잡코리아 직접 수집이 정상일 때는 핵심 4개 구역을 직접 데이터로 만든다.
-        # 예전처럼 수십 개 DDGS 쿼리를 매번 직렬 실행하지 않아 15분 타임아웃을 피한다.
-        java_jobs = classify_jobs(direct_jobs, score_java_result)
-        regular_dev_jobs = classify_jobs(direct_jobs, score_regular_dev_result)
-        salary_jobs = classify_jobs(direct_jobs, score_salary_result)
-        short_term_jobs = classify_jobs(direct_jobs, score_short_term_result)
 
-        # 단기알바는 잡코리아 외 알바몬/알바천국 보조검색 가치가 커서,
-        # 일반 실행에서만 최소 4개 쿼리를 추가한다. 즉시발송/복구 시에는 생략한다.
-        if not fast_mode:
-            external_short_queries = [
-                'site:albamon.com 대전 단기알바 초보',
-                'site:albamon.com 세종 단기알바 초보',
-                'site:alba.co.kr 대전 단기알바 초보',
-                'site:alba.co.kr 세종 단기알바 초보',
-            ]
-            short_term_jobs = merge_jobs(
-                short_term_jobs,
-                search_group(external_short_queries, score_short_term_result),
+def title_tokens(title):
+    return {
+        token for token in compact_job_title(title).split()
+        if len(token) >= 2 and token not in {'대전', '세종', '개발자', '채용', '모집'}
+    }
+
+
+def company_hint(title, body):
+    text = f'{title} {body}'
+    patterns = [
+        r'(?:㈜|\(주\)|주식회사)\s*([가-힣A-Za-z0-9&._-]{2,30})',
+        r'([가-힣A-Za-z0-9&._-]{2,30})\s+(?:대전|세종)(?:광역시|특별자치시)?\b',
+    ]
+    for pattern in patterns:
+        m = re.search(pattern, text)
+        if m:
+            return m.group(1).lower()
+    return ''
+
+
+def job_fingerprint(job):
+    title = compact_job_title(job.get('title', ''))
+    company = company_hint(job.get('title', ''), job.get('body', ''))
+    return f'{company}|{title}' if company else title
+
+
+def same_job(a, b):
+    if not has_target_location(f"{a.get('title','')} {a.get('body','')}"):
+        return False
+    if not has_target_location(f"{b.get('title','')} {b.get('body','')}"):
+        return False
+
+    ca = company_hint(a.get('title', ''), a.get('body', ''))
+    cb = company_hint(b.get('title', ''), b.get('body', ''))
+    if ca and cb and ca != cb:
+        return False
+
+    ta = compact_job_title(a.get('title', ''))
+    tb = compact_job_title(b.get('title', ''))
+    if not ta or not tb:
+        return False
+    if ta == tb:
+        return True
+
+    ratio = SequenceMatcher(None, ta, tb).ratio()
+    sa, sb = title_tokens(ta), title_tokens(tb)
+    union = sa | sb
+    jaccard = (len(sa & sb) / len(union)) if union else 0.0
+    return ratio >= 0.90 or (len(sa & sb) >= 3 and jaccard >= 0.78)
+
+
+def merge_duplicate_job(base, incoming):
+    sources = list(dict.fromkeys(
+        (base.get('sources') or [base.get('source')])
+        + (incoming.get('sources') or [incoming.get('source')])
+    ))
+    sources = [s for s in sources if s]
+    base['sources'] = sources
+
+    bp = SOURCE_PRIORITY.get(base.get('source'), 0)
+    ip = SOURCE_PRIORITY.get(incoming.get('source'), 0)
+    if ip > bp:
+        for key in ('title', 'url', 'source'):
+            base[key] = incoming.get(key, base.get(key))
+
+    if len(incoming.get('body', '')) > len(base.get('body', '')):
+        base['body'] = incoming.get('body', '')
+
+    base['salary'] = salary_info(base.get('title', ''), base.get('body', ''))
+    base['short_pay'] = short_term_pay_info(base.get('title', ''), base.get('body', ''))
+    base['score'] = max(base.get('score', 0), incoming.get('score', 0))
+    return base
+
+
+def dedupe_jobs_cross_source(jobs):
+    unique = []
+    by_url = {}
+    for raw in jobs:
+        job = dict(raw)
+        job['url'] = normalize_url(job.get('url', ''))
+        if not job['url']:
+            continue
+        job.setdefault('sources', [job.get('source') or domain_of(job['url'])])
+
+        current = by_url.get(job['url'])
+        if current is not None:
+            merge_duplicate_job(current, job)
+            continue
+
+        duplicate = None
+        for existing in unique:
+            if same_job(existing, job):
+                duplicate = existing
+                break
+        if duplicate is not None:
+            merge_duplicate_job(duplicate, job)
+            by_url[job['url']] = duplicate
+        else:
+            unique.append(job)
+            by_url[job['url']] = job
+    return unique
+
+
+def saramin_card_text(anchor):
+    node = anchor
+    fallback = normalize_text(anchor.get_text(' ', strip=True))
+    for _ in range(10):
+        node = getattr(node, 'parent', None)
+        if node is None:
+            break
+        ids = set()
+        for link in node.find_all('a', href=True):
+            href = link.get('href') or ''
+            m = re.search(r'(?:rec_idx=|/jobs/view\?rec_idx=)(\d+)', href, re.I)
+            if m:
+                ids.add(m.group(1))
+        if len(ids) > 1:
+            break
+        text = normalize_text(node.get_text(' ', strip=True))
+        if not text or len(text) > 1800:
+            continue
+        if len(ids) == 1:
+            fallback = text
+            if has_target_location(text):
+                return text
+    return fallback
+
+
+def collect_saramin_direct():
+    session = requests.Session()
+    session.headers.update({
+        'User-Agent': (
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) '
+            'AppleWebKit/537.36 (KHTML, like Gecko) '
+            'Chrome/154.0.0.0 Safari/537.36'
+        ),
+        'Accept-Language': 'ko-KR,ko;q=0.9,en;q=0.7',
+    })
+
+    jobs = {}
+    ok_pages = 0
+    failed_pages = 0
+    errors = []
+
+    for query in SARAMIN_DIRECT_QUERIES:
+        for page_no in range(1, SARAMIN_PAGES_PER_QUERY + 1):
+            try:
+                response = session.get(
+                    f'{SARAMIN_BASE}/zf_user/search',
+                    params={
+                        'searchword': query,
+                        'recruitPage': page_no,
+                        'recruitPageCount': 40,
+                    },
+                    timeout=20,
+                )
+                response.raise_for_status()
+                ok_pages += 1
+                soup = BeautifulSoup(response.text, 'html.parser')
+
+                for anchor in soup.find_all('a', href=True):
+                    href = anchor.get('href') or ''
+                    m = re.search(r'(?:rec_idx=|/jobs/view\?rec_idx=)(\d+)', href, re.I)
+                    if not m:
+                        continue
+                    title = normalize_text(anchor.get_text(' ', strip=True))
+                    if not title or len(title) < 3:
+                        continue
+                    body = saramin_card_text(anchor)
+                    if not has_target_location(body):
+                        continue
+                    url = f'{SARAMIN_BASE}/zf_user/jobs/view?rec_idx={m.group(1)}'
+                    candidate = {
+                        'title': title,
+                        'body': body,
+                        'url': url,
+                        'score': 0,
+                        'salary': salary_info(title, body),
+                        'short_pay': short_term_pay_info(title, body),
+                        'source': '사람인',
+                        'sources': ['사람인'],
+                    }
+                    current = jobs.get(url)
+                    if current is None or len(candidate['body']) > len(current['body']):
+                        jobs[url] = candidate
+            except Exception as exc:
+                failed_pages += 1
+                errors.append(f'{query} p{page_no}: {type(exc).__name__} {exc}')
+            time.sleep(0.12)
+
+    status = {
+        'ok': ok_pages > 0,
+        'count': len(jobs),
+        'failed_pages': failed_pages,
+        'errors': errors[:3],
+        'mode': '직접',
+    }
+    print(
+        f'[INFO] saramin_direct ok={status["ok"]} ok_pages={ok_pages} '
+        f'failed_pages={failed_pages} parsed_jobs={len(jobs)}'
+    )
+    return list(jobs.values()), status
+
+
+def collect_search_source(source_name, domain):
+    jobs = {}
+    errors = []
+    ddgs = DDGS()
+    for term in SOURCE_SEARCH_TERMS:
+        query = f'site:{domain} {term}'
+        try:
+            results = ddgs.text(
+                query,
+                region='kr-kr',
+                safesearch='moderate',
+                timelimit='m',
+                max_results=10,
             )
-    else:
-        # 잡코리아 직접 수집이 실패했을 때만 기존 검색엔진 경로를 전체 fallback으로 사용한다.
-        java_jobs = search_group(JAVA_AI_QUERIES, score_java_result)
-        regular_dev_jobs = search_group(REGULAR_DEV_QUERIES, score_regular_dev_result)
-        salary_jobs = search_group(SALARY_QUERIES, score_salary_result)
-        short_term_jobs = search_group(SHORT_TERM_QUERIES, score_short_term_result)
+            for item in results or []:
+                title = normalize_text(item.get('title'))
+                body = normalize_text(item.get('body'))
+                url = normalize_url(item.get('href') or item.get('url') or '')
+                if not url or domain not in domain_of(url):
+                    continue
+                if not has_target_location(f'{title} {body}'):
+                    continue
+                candidate = {
+                    'title': title,
+                    'body': body,
+                    'url': url,
+                    'score': 0,
+                    'salary': salary_info(title, body),
+                    'short_pay': short_term_pay_info(title, body),
+                    'source': source_name,
+                    'sources': [source_name],
+                }
+                current = jobs.get(url)
+                if current is None or len(body) > len(current.get('body', '')):
+                    jobs[url] = candidate
+        except Exception as exc:
+            errors.append(f'{term}: {type(exc).__name__}')
+        time.sleep(0.05)
+
+    status = {
+        'ok': len(errors) < len(SOURCE_SEARCH_TERMS),
+        'count': len(jobs),
+        'failed_queries': len(errors),
+        'errors': errors[:2],
+        'mode': '검색',
+    }
+    print(
+        f'[INFO] source={source_name} ok={status["ok"]} '
+        f'jobs={len(jobs)} failed_queries={len(errors)}'
+    )
+    return list(jobs.values()), status
+
+
+def collect_all_sources():
+    jobkorea_jobs, jobkorea_raw = collect_jobkorea_direct()
+    saramin_jobs, saramin_status = collect_saramin_direct()
+
+    statuses = {
+        '잡코리아': {
+            'ok': jobkorea_raw.get('ok', False),
+            'count': jobkorea_raw.get('parsed_jobs', 0),
+            'failed_pages': jobkorea_raw.get('failed_pages', 0),
+            'mode': '직접',
+        },
+        '사람인': saramin_status,
+    }
+    groups = [jobkorea_jobs, saramin_jobs]
+
+    with ThreadPoolExecutor(max_workers=5) as pool:
+        future_map = {
+            pool.submit(collect_search_source, name, domain): name
+            for name, domain in SEARCH_SOURCES.items()
+        }
+        for future in as_completed(future_map):
+            name = future_map[future]
+            try:
+                jobs, status = future.result()
+            except Exception as exc:
+                jobs = []
+                status = {
+                    'ok': False,
+                    'count': 0,
+                    'errors': [f'{type(exc).__name__}: {exc}'],
+                    'mode': '검색',
+                }
+            groups.append(jobs)
+            statuses[name] = status
+
+    merged = dedupe_jobs_cross_source([job for group in groups for job in group])
+    print(
+        f'[INFO] all_sources raw={sum(len(g) for g in groups)} '
+        f'deduped={len(merged)} sources={len(statuses)}'
+    )
+    return merged, statuses
+
+
+def search_jobs():
+    all_jobs, source_statuses = collect_all_sources()
+
+    java_jobs = classify_jobs(all_jobs, score_java_result)
+    regular_dev_jobs = classify_jobs(all_jobs, score_regular_dev_result)
+    salary_jobs = classify_jobs(all_jobs, score_salary_result)
+    short_term_jobs = classify_jobs(all_jobs, score_short_term_result)
 
     java_jobs.sort(key=lambda x: (-x['score'], x['title']))
     regular_dev_jobs.sort(key=lambda x: (-x['score'], x['title']))
@@ -765,7 +1118,7 @@ def search_jobs():
             x['title'],
         )
     )
-    return java_jobs, regular_dev_jobs, salary_jobs, short_term_jobs, jobkorea_status
+    return java_jobs, regular_dev_jobs, salary_jobs, short_term_jobs, source_statuses
 
 
 def short_body(body, limit=190):
@@ -793,6 +1146,9 @@ def append_java_section(lines, jobs):
         if job.get('salary'):
             lines.append(f'급여: {escape(job["salary"]["label"])}')
         lines.append(f'분류: {escape(tags)}')
+        sources = ' / '.join(job.get('sources') or [job.get('source', '')])
+        if sources:
+            lines.append(f'출처: {escape(sources)}')
         if body:
             lines.append(f'내용: {escape(body)}')
         lines.append(f'공부 포인트: {escape(study_hint(job["title"], job["body"]))}')
@@ -819,6 +1175,9 @@ def append_regular_dev_section(lines, jobs):
         lines.append('고용형태: 정규직')
         if job.get('salary'):
             lines.append(f'급여: {escape(job["salary"]["label"])}')
+        sources = ' / '.join(job.get('sources') or [job.get('source', '')])
+        if sources:
+            lines.append(f'출처: {escape(sources)}')
         if body:
             lines.append(f'내용: {escape(body)}')
         lines.append(f'공부 포인트: {escape(study_hint(job["title"], job["body"]))}')
@@ -845,6 +1204,9 @@ def append_salary_section(lines, title, jobs):
         salary_label = salary['label'] if salary else '급여 확인 필요'
         lines.append(f'<b><a href="{job_url}">{idx}. {job_title}</a></b>')
         lines.append(f'급여: {escape(salary_label)}')
+        sources = ' / '.join(job.get('sources') or [job.get('source', '')])
+        if sources:
+            lines.append(f'출처: {escape(sources)}')
         if body:
             lines.append(f'내용: {escape(body)}')
         lines.append('')
@@ -871,6 +1233,9 @@ def append_short_term_section(lines, jobs):
             lines.append(f'급여: {escape(job["short_pay"]["label"])}')
         else:
             lines.append('급여: 공고 확인')
+        sources = ' / '.join(job.get('sources') or [job.get('source', '')])
+        if sources:
+            lines.append(f'출처: {escape(sources)}')
         if body:
             lines.append(f'내용: {escape(body)}')
         lines.append('우선 기준: 하루~1개월 · 초보/무경력 · 일정 조정 용이')
@@ -882,23 +1247,30 @@ def append_short_term_section(lines, jobs):
 
 def build_message(
     java_jobs, salary_500, salary_450, regular_dev_jobs, short_term_jobs,
-    jobkorea_status,
+    source_statuses,
 ):
     lines = [
         '🔎 <b>대전·세종 일자리 알림</b>',
         '',
     ]
 
-    if jobkorea_status.get('ok'):
-        lines.extend([
-            f'✅ 잡코리아 직접 수집: 후보 {jobkorea_status.get("parsed_jobs", 0)}건 확인',
-            '',
-        ])
-    else:
-        lines.extend([
-            '⚠️ <b>잡코리아 직접 수집 실패</b> — 신규 없음으로 간주하지 않습니다.',
-            '',
-        ])
+    ok_sources = [
+        f'{name} {status.get("count", 0)}'
+        for name, status in source_statuses.items()
+        if status.get('ok')
+    ]
+    failed_sources = [
+        name for name, status in source_statuses.items()
+        if not status.get('ok')
+    ]
+    if ok_sources:
+        midpoint = max(1, (len(ok_sources) + 1) // 2)
+        lines.append('✅ 수집: ' + ' · '.join(ok_sources[:midpoint]))
+        if len(ok_sources) > midpoint:
+            lines.append('   ' + ' · '.join(ok_sources[midpoint:]))
+    if failed_sources:
+        lines.append('⚠️ 수집 실패/제한: ' + ' · '.join(failed_sources))
+    lines.append('')
 
     append_java_section(lines, java_jobs)
     append_salary_section(lines, '② 🔥 <b>월 500만 이상 · 직종무관</b>', salary_500)
@@ -960,6 +1332,18 @@ def send_via_jkquant(message, count):
         raise RuntimeError(f'job-alert endpoint error: {data}')
 
 
+def seen_keys_for_job(job):
+    keys = {job.get('url', '')}
+    fp = job_fingerprint(job)
+    if fp:
+        keys.add('fp:' + fp)
+    return {k for k in keys if k}
+
+
+def is_job_seen(job, seen):
+    return bool(seen_keys_for_job(job) & seen)
+
+
 def main():
     force = os.environ.get('FORCE_JOB_ALERT') == '1'
     if not force and already_sent_today():
@@ -967,26 +1351,26 @@ def main():
         return
 
     seen = load_seen()
-    java_jobs, regular_dev_jobs, salary_jobs, short_term_jobs, jobkorea_status = search_jobs()
+    java_jobs, regular_dev_jobs, salary_jobs, short_term_jobs, source_statuses = search_jobs()
 
     # 정규직 개발자는 별도 ④ 구역에 우선 표시한다.
     new_regular_dev = [
         job for job in regular_dev_jobs
-        if job['url'] not in seen
+        if not is_job_seen(job, seen)
     ]
     regular_urls = {job['url'] for job in regular_dev_jobs}
 
     # Java/AI 구역은 정규직 개발자와 중복되지 않게 프로젝트/계약/AI 중심으로 표시한다.
     new_java = [
         job for job in java_jobs
-        if job['url'] not in seen and job['url'] not in regular_urls
+        if not is_job_seen(job, seen) and job['url'] not in regular_urls
     ]
     java_urls = {job['url'] for job in java_jobs}
 
     # 급여 공고는 Java/AI 및 개발자 정규직에 나온 공고를 제외한다.
     new_salary = [
         job for job in salary_jobs
-        if job['url'] not in seen
+        if not is_job_seen(job, seen)
         and job['url'] not in java_urls
         and job['url'] not in regular_urls
     ]
@@ -1007,7 +1391,7 @@ def main():
     )
     new_short_term = [
         job for job in short_term_jobs
-        if job['url'] not in seen and job['url'] not in occupied_urls
+        if not is_job_seen(job, seen) and job['url'] not in occupied_urls
     ]
 
     print(
@@ -1018,13 +1402,13 @@ def main():
         f'new_short_term={len(new_short_term)}'
     )
 
-    all_seen = (
-        seen
-        | {job['url'] for job in java_jobs}
-        | {job['url'] for job in regular_dev_jobs}
-        | {job['url'] for job in salary_jobs}
-        | {job['url'] for job in short_term_jobs}
+    all_current_jobs = (
+        list(java_jobs) + list(regular_dev_jobs)
+        + list(salary_jobs) + list(short_term_jobs)
     )
+    all_seen = set(seen)
+    for job in all_current_jobs:
+        all_seen.update(seen_keys_for_job(job))
 
     total_new = (
         len(new_java) + len(new_regular_dev)
@@ -1033,14 +1417,15 @@ def main():
     )
     message = build_message(
         new_java, salary_500, salary_450, new_regular_dev, new_short_term,
-        jobkorea_status,
+        source_statuses,
     )
 
     if total_new == 0:
-        if jobkorea_status.get('ok'):
-            message += '\n\n오늘은 다섯 조건 모두 신규 공고가 없습니다.'
+        succeeded = sum(1 for status in source_statuses.values() if status.get('ok'))
+        if succeeded >= 2:
+            message += '\n\n오늘은 수집에 성공한 사이트 기준 신규 공고가 없습니다.'
         else:
-            message += '\n\n잡코리아 수집이 실패해 오늘 결과를 0건으로 확정하지 않았습니다.'
+            message += '\n\n수집 성공 사이트가 부족해 오늘 결과를 0건으로 확정하지 않았습니다.'
 
     if os.environ.get('JOB_ALERT_DRY_RUN') == '1':
         print('[INFO] DRY RUN: Telegram send skipped.')
