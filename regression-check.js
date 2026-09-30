@@ -1412,7 +1412,9 @@ console.log('[26] 단타 분봉 — 장 초반 5분 눈금');
   // 1분 종가를 묶어 5분 O/H/L/C를 만든다 (네이버가 O/H/L을 안 주므로)
   ok('5분봉 합성', /function toBars\(min, step\)/.test(sc)
      && /cur\.high=Math\.max\(cur\.high,x\.close\); cur\.low=Math\.min\(cur\.low,x\.close\);/.test(sc));
-  ok('지표도 받은 봉 기준', /return analyze\(\{ohlc:bars, price:bars\[bars\.length-1\]\.close\}\);/.test(sc));
+  ok('볼린저·RSI는 받은 분봉 기준 · ATR만 일봉 전일값 분리', /function analyze\(j,atrBars\)\{[\s\S]{0,220}?const o=j\.ohlc/.test(sc)
+     && /const atr14=referenceAtr14ForCurrent\(Array\.isArray\(atrBars\)\?atrBars:o\);/.test(sc)
+     && /return analyze\(\{ohlc:bars, price:bars\[bars\.length-1\]\.close\},daily\.ohlc\|\|\[\]\);/.test(sc));
 
   // 이게 이번 작업의 요구사항 — 9:00~9:30을 5분마다 끊는다
   ok('9:00~9:30 5분 눈금', /const isMark = t>='09:00' && t<='09:30' && \(\+t\.slice\(3\)%5===0\);/.test(sc));
