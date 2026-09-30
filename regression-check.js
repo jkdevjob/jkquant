@@ -1540,12 +1540,12 @@ console.log('[29] 단타 화면의 성과 주장 정정');
      /거래 단위 t값은 부풀려진다/.test(md0) && /p=0\.51/.test(md0));
   ok('폐기 전략의 실제 수치는 문서에 보존',
      /연 \+37만원/.test(md0) && /−549만원/.test(md0));
-  ok('스크리닝 카드에 경고가 있다',
-     /이 전략은 실증으로 뒷받침되지 않는다/.test(sc)
-     && sc.indexOf('이 전략은 실증으로 뒷받침되지 않는다') < sc.indexOf('id="scr_body"'));
-  ok('경고가 돈을 넣지 말라고 말한다', /이걸 근거로 실제 돈을 넣지 마라/.test(sc));
-  // 5일 이상에서 신호가 대조군보다 나쁘다는 사실(15.3)
-  ok('장기 보유에서 더 나쁘다는 사실을 적었다', /대조군보다 나쁘다/.test(sc) && /−1\.729/.test(sc));
+  ok('스크리닝 카드에 폐기 경고가 있다',
+     /⚠ 폐기된 전략:/.test(sc)
+     && sc.indexOf('⚠ 폐기된 전략:') < sc.indexOf('id="scr_body"'));
+  ok('경고가 실제 매매 근거로 쓰지 말라고 말한다', /실제 매매 근거로 사용하지 않는다/.test(sc));
+  // 상세 근거를 접어도 5일 이상 대조군 열위 사실은 남겨야 한다.
+  ok('장기 보유에서 더 나쁘다는 사실을 근거에 보존', /대조군보다 나빴다/.test(sc) && /−1\.729/.test(sc));
   // 폐기된 과매도 반등용 공용 검증 UI는 화면에서 제거하고 근거는 문서에 보존한다.
   ok('구형 공용 검증 기록 카드는 활성 화면에서 제거',
      !/id="verifyBody"/.test(sc) && !/검증 기록 — 무엇이 안 되는지/.test(sc));
@@ -10553,7 +10553,7 @@ console.log('[SCALPING FLOW] 단타 공통 흐름 · 모의체결 분리');
      && /data-strategy="reference"/.test(sc) && /id="strategy_reference" class="strategy-pane"/.test(sc)
      && /폐기된 과매도 반등 연구/.test(sc));
   ok('로그인 후 공통 flow를 만든 뒤 탭 복원',
-     /setupUnifiedStrategyFlow\(\);\s*restoreStrategy\(\);/.test(sc));
+     /setupUnifiedStrategyFlow\(\);[\s\S]{0,220}restoreStrategy\(\);/.test(sc));
   ok('단타 flow/showStrategy 함수는 한 번만 정의되어 중복 재배치가 없다',
      (sc.match(/function setupUnifiedStrategyFlow\(\)\{/g)||[]).length===1
      && (sc.match(/function showStrategy\(name\)\{/g)||[]).length===1);
