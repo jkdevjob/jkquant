@@ -2,7 +2,7 @@
 // 브라우저 없이 시초가 눌림→재돌파 기준전략을 서버에서 감시하고 Telegram으로 모의 매수/매도 신호를 보낸다.
 // 연구용 shadow 전략은 같은 분봉/같은 엔진으로 동시에 계산하지만 실제 알림/주문에는 영향을 주지 않고 기록만 한다.
 
-import { minuteVolume, dailyMeta, rebreakTrade, SHADOW_VARIANTS } from "./_opening.js";
+import { minuteVolume, dailyMeta, rebreakTrade, selloffShadowTrade, SHADOW_VARIANTS } from "./_opening.js";
 
 const JH={"Content-Type":"application/json; charset=utf-8","Cache-Control":"no-store"};
 const FIREBASE_API_KEY_FALLBACK="AIzaSyBzBe9pAttnbDgTlNThWZzNqtAAKxX7Ksw";
@@ -56,7 +56,8 @@ async function openingVtsCalibration(origin){
 
 function emptyShadow(){
   return Object.fromEntries(SHADOW_VARIANTS.map(v=>[v.name,{
-    name:v.name,label:v.label,description:v.description,params:v.params,designedFrom:v.designedFrom||[],trades:[]
+    name:v.name,kind:v.kind||"rebreak",label:v.label,description:v.description,params:v.params,
+    designedFrom:v.designedFrom||[],evaluationStart:v.evaluationStart||null,backtestExpected:v.backtestExpected||null,trades:[]
   }]));
 }
 
@@ -72,7 +73,7 @@ async function scanShard(origin,now,shard,shards,limit,cutoffHm){
       try{
         const [mj,dj]=await Promise.all([
           fetch(origin+"/api/quote?symbol="+encodeURIComponent(u.code)+"&minute=1").then(r=>r.json()),
-          fetch(origin+"/api/quote?symbol="+encodeURIComponent(u.code)+"&range=5d&intraday=0&div=0").then(r=>r.json())
+          fetch(origin+"/api/quote?symbol="+encodeURIComponent(u.code)+"&range=6mo&intraday=0&div=0").then(r=>r.json())
         ]);
         if(!mj.minutes||!mj.minutes.length||!dj.ohlc||!dj.ohlc.length)continue;
 
@@ -84,7 +85,9 @@ async function scanShard(origin,now,shard,shards,limit,cutoffHm){
         if(base)trades.push({code:u.code,name:u.name||u.code,variant:"baseline",...base});
 
         for(const v of SHADOW_VARIANTS){
-          const tr=rebreakTrade(rows,meta,cutoffHm,{...v.params,frictionCalibration});
+          const tr=v.kind==="selloff_close"
+            ? selloffShadowTrade(dj,now.date,frictionCalibration)
+            : rebreakTrade(rows,meta,cutoffHm,{...v.params,frictionCalibration});
           if(tr)shadow[v.name].trades.push({code:u.code,name:u.name||u.code,variant:v.name,...tr});
         }
       }catch(e){
@@ -94,9 +97,12 @@ async function scanShard(origin,now,shard,shards,limit,cutoffHm){
   }
   await Promise.all([worker(),worker()]);
 
-  const sorter=(a,b)=>a.entryTime-b.entryTime||(b.amountRatio-a.amountRatio)||String(a.code).localeCompare(String(b.code));
+  const sorter=(a,b)=>(+a.entryTime||0)-(+b.entryTime||0)||((+b.amountRatio||0)-(+a.amountRatio||0))||String(a.code).localeCompare(String(b.code));
   trades.sort(sorter);
-  Object.values(shadow).forEach(x=>x.trades.sort(sorter));
+  Object.values(shadow).forEach(x=>{
+    if(x.kind==="selloff_close")x.trades.sort((a,b)=>(+a.gap||0)-(+b.gap||0)||String(a.code).localeCompare(String(b.code)));
+    else x.trades.sort(sorter);
+  });
   return {universe:universe.length,trades,shadow,errors};
 }
 function buyLines(rows){
@@ -115,8 +121,9 @@ function sellLines(rows){
 }
 function shadowEvents(shadow,targetHm){
   return Object.values(shadow).map(v=>({
-    name:v.name,label:v.label,description:v.description,params:v.params,designedFrom:v.designedFrom||[],
-    buyEvents:v.trades.filter(x=>x.entryTime===targetHm),
+    name:v.name,kind:v.kind||"rebreak",label:v.label,description:v.description,params:v.params,designedFrom:v.designedFrom||[],
+    evaluationStart:v.evaluationStart||null,backtestExpected:v.backtestExpected||null,
+    buyEvents:v.trades.filter(x=>(x.shadowEmitTime??x.entryTime)===targetHm),
     sellEvents:v.trades.filter(x=>x.exitTime===targetHm),
     trades:v.trades,
   }));
