@@ -18,6 +18,10 @@ ROOT = Path(os.environ.get('JKQ_BACKFILL_ROOT', 'data/scalping-backfill'))
 LAST_REQUEST = 0.0
 YEAR_FRAMES = {}
 DEADLINE = None
+# Confirmed boundary closures, not inferred from a missing/failed data request.
+# This notice identifies Dec 30 as the last session and Jan 2 as the next opening.
+YEAR_BOUNDARY_NOTICE = 'https://securities.koreainvestment.com/main/customer/notice/Notice.jsp?cmd=TF04ga000002&num=45922'
+CONFIRMED_CLOSURES = {'2025-12-31': YEAR_BOUNDARY_NOTICE, '2026-01-01': YEAR_BOUNDARY_NOTICE}
 
 
 class MarketHours(RuntimeError):
@@ -120,6 +124,9 @@ def public_snapshot(day):
 
 def daily_snapshot(day):
     """KRX actual value traded, unadjusted OHLC, historical membership incl. delistings."""
+    if day in CONFIRMED_CLOSURES:
+        return dict(date=day, source=CONFIRMED_CLOSURES[day], rows=[],
+                    marketStatus='confirmed_closed')
     path = ROOT / 'daily' / f'{day}.json.gz'
     if path.exists():
         with gzip.open(path, 'rt', encoding='utf-8') as f:

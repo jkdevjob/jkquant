@@ -8,6 +8,7 @@ import tempfile
 
 ROOT = Path(__file__).resolve().parent
 mutants = [
+    ('confirmed year boundary', 'opening_backfill.py', 'if day in CONFIRMED_CLOSURES:', 'if False:'),
     ('checkpoint time budget', 'opening_backfill.py', 'if DEADLINE is not None and time.monotonic() >= DEADLINE:', 'if False:'),
     ('market-hours guard', 'opening_backfill.py', 'if 830 <= hm <= 1540:', 'if False:'),
     ('turnover rank', 'opening_backfill.py', "(-r['amount'], r['code'])", "(-r['cap'], r['code'])"),

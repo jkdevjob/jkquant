@@ -7,7 +7,7 @@ on:
     - cron: '30 17 * * *' # 02:30 KST: use the remaining off-hours window
   push:
     branches: [main]
-    paths: ['.github/workflows/opening-year-backfill.yml']
+    paths: ['.github/workflows/opening-year-backfill.yml', 'scripts/opening_backfill.py']
 permissions:
   contents: write
 concurrency:

@@ -27,3 +27,7 @@
 - 전체 manifest가 complete일 때 `data/opening-research-year`로 기준전략과 모든 14개 변형을 재계산한다. 누락이 있으면 1년 완료 결과를 발행하지 않는다.
 - 2026-09-30 로컬 실제 점검: 2025-09-30 100종목 6,067봉. 기준 2건, 평균 비용 후 -1.5156%; hold 2건 -1.5077%. **하루 통합동작 점검일 뿐, 1년 검증 결과가 아니다.**
 - 수익률은 거래당 연구 수익률이다. 동시 포지션·자금 제약을 구현한 포트폴리오 CAGR/MDD가 아니며 maxDrawdownSimple은 누적 거래 수익률 합산의 낙폭이다.
+
+### Year-boundary calendar recovery (v1.27.2)
+
+The 2025 annual archive ends on December 30. Missing CSV files outside annual coverage must not be treated as proof of a holiday. Explicit closures for 2025-12-31 and 2026-01-01 use the [Korea Investment market schedule notice](https://securities.koreainvestment.com/main/customer/notice/Notice.jsp?cmd=TF04ga000002&num=45922), which confirms December 30 as the final session and January 2 as the next opening. Unknown source errors still propagate. The next-open resolver now crosses that boundary without requesting missing holiday files. Tests verify the exact January 2 selection and failure propagation; a mutation removing confirmed closures must fail. Collector fixes on main trigger a checkpoint-resuming run.
