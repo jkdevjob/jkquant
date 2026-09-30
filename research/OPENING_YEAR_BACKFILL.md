@@ -31,3 +31,9 @@
 ### Year-boundary calendar recovery (v1.27.2)
 
 The 2025 annual archive ends on December 30. Missing CSV files outside annual coverage must not be treated as proof of a holiday. Explicit closures for 2025-12-31 and 2026-01-01 use the [Korea Investment market schedule notice](https://securities.koreainvestment.com/main/customer/notice/Notice.jsp?cmd=TF04ga000002&num=45922), which confirms December 30 as the final session and January 2 as the next opening. Unknown source errors still propagate. The next-open resolver now crosses that boundary without requesting missing holiday files. Tests verify the exact January 2 selection and failure propagation; a mutation removing confirmed closures must fail. Collector fixes on main trigger a checkpoint-resuming run.
+
+### Final coverage recovery (v1.27.3)
+
+The official notices confirm 10:00 regular-session opens on [2025-11-13](https://securities.miraeasset.com/bbs/board/message/view.do?categoryId=66&messageId=2335796) and [2026-01-02](https://securities.koreainvestment.com/main/customer/notice/Notice.jsp?cmd=TF04ga000002&num=45922). Collect the actual 10:00-11:00 opening hour for these two sessions, retain original timestamps, and record the schedule source and collection window. The existing research strategy still uses its fixed 09:00 entry schedule: these dates contribute no shifted 10:00 entries. Collecting all raw data does not mean the strategy traded every session. The annual report must disclose the two delayed sessions separately.
+
+Window metadata is stored per symbol so an interrupted upgrade refetches remaining stale symbols. Sparse gaps are still visible; no candles are fabricated. Tests exercise actual-hour filtering, fixed-time research inputs, and partial checkpoint resumption; both regressions are killed by mutations. The historical read-only minhist validator also accepts four digits followed by two uppercase alphanumerics (0220WL); shared order validation remains unchanged.

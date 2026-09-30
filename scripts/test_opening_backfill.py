@@ -20,6 +20,33 @@ def signal_row():
 
 
 class Tests(unittest.TestCase):
+    def test_delayed_open_fetches_actual_hour_without_shifting_strategy(self):
+        for day in ('2025-11-13','2026-01-02'):
+            prefix=day.replace('-','')
+            bars=[dict(t=prefix+t,o=1,h=1,l=1,c=1,v=1) for t in ('090000','100000','100100','110000','110100')]
+            with patch.object(b,'request_json',return_value=dict(bars=bars)) as request:
+                result=b.minute_bars('005930',day)
+                self.assertEqual([x['t'][-6:] for x in result],['100000','100100','110000'])
+                self.assertIn('hour=110000',request.call_args.args[0])
+                self.assertEqual([x['hm'] for x in r.norm_bars(dict(bars=result))],[1000])
+
+    def test_delayed_window_checkpoint_recollects_each_stale_symbol(self):
+        day='2025-11-13'
+        rows=[dict(code=f'{i:06}',amount=100-i,close=1,open=1,prevClose=1,volume=1) for i in range(100)]
+        bar=dict(t='20251113100000',o=1,h=1,l=1,c=1,v=1)
+        # Interrupted upgrade: top-level window already new, only first row refreshed.
+        cached=[dict(x,bars=[bar],sourceRequestComplete=True) for x in rows]
+        cached[0]['collectionWindow']=['100000','110000']
+        with tempfile.TemporaryDirectory() as tmp, patch.object(b,'ROOT',Path(tmp)), \
+                patch.object(b,'daily_snapshot',return_value=dict(rows=rows)), \
+                patch.object(b,'next_session',return_value=None),patch.object(b,'guard'), \
+                patch.object(b,'minute_bars',return_value=[bar]) as fetch:
+            path=Path(tmp)/'archives'/'2025'/f'{day}.json.gz'
+            b.save(path,dict(universe=cached,collectionWindow=['100000','110000']))
+            result=b.collect_day(day,day)
+            self.assertEqual(fetch.call_count,99)
+            self.assertEqual(result['status'],'complete')
+
     def test_year_boundary_resolves_exact_next_session(self):
         jan2 = dict(date='2026-01-02', rows=[dict(code='fixture', volume=1)])
         with tempfile.TemporaryDirectory() as tmp, patch.object(b,'ROOT',Path(tmp)), \
