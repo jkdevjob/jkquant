@@ -64,7 +64,7 @@ SHADOW_STRATEGIES = [
         "name": "btc_24h_drop_v1",
         "label": "24시간 급락 받아주기",
         "designedFrom": ["2023-07~2026-09"],
-        "evaluationStart": "2026-10-01",
+        "evaluationScope": "all_available",
         "ordersAllowed": False,
         "params": {"drop24hPctMax": -5.0, "holdHours": 24, "frictionPct": 0.12},
         "backtestExpected": {
@@ -391,7 +391,6 @@ def shadow_hourly_bars(days):
 def btc_24h_drop_shadow(days, cfg):
     bars = shadow_hourly_bars(days)
     p = cfg["params"]
-    start = cfg["evaluationStart"]
     trades = []
     i = 24
     while i < len(bars) - 23:
@@ -414,9 +413,6 @@ def btc_24h_drop_shadow(days, cfg):
             i += 1
             continue
         drop = (prev / ref - 1.0) * 100.0
-        if entry_date < start:
-            i += 1
-            continue
         if drop <= float(p["drop24hPctMax"]):
             gross = (exit_px / entry - 1.0) * 100.0
             net = gross - float(p["frictionPct"])
@@ -436,7 +432,7 @@ def btc_24h_drop_shadow(days, cfg):
                 "reason": "24h_time_exit",
                 "evidence": {
                     "source": "Upbit public 5m OHLCV aggregated to completed 1h bars",
-                    "evaluationStart": start,
+                    "evaluationScope": "all_available",
                     "drop24hPct": drop,
                     "requiredDropPctMax": p["drop24hPctMax"],
                     "holdHours": p["holdHours"],
@@ -447,14 +443,15 @@ def btc_24h_drop_shadow(days, cfg):
             i += int(p["holdHours"])
         else:
             i += 1
-    eval_days = sorted({x["tKst"][:10] for x in bars if x["tKst"][:10] >= start})
+    eval_days = sorted({x["tKst"][:10] for x in bars})
     sm = summary(trades, eval_days)
     ready = len(eval_days) >= 20 and sm["trades"] >= 30
     return {
         **cfg,
         "evaluationDays": len(eval_days),
         "status": "reviewable" if ready else "collecting",
-        "reviewRule": ">=20 evaluation days and >=30 completed shadow trades; no auto-promotion",
+        "reviewRule": ">=20 stored days and >=30 completed shadow trades; no auto-promotion",
+        "sampleNote": "전체 보유 데이터 재평가 — 설계 표본 포함 가능, OOS 아님",
         "summary": sm,
         "trades": trades,
         "latestTrades": trades[-20:],
