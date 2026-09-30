@@ -21,7 +21,9 @@ from pathlib import Path
 from zoneinfo import ZoneInfo
 
 SYMBOL = os.environ.get("JKQ_SOXL_SYMBOL", "SOXL").upper()
+SOXX_SYMBOL = "SOXX"
 ROOT = Path("data") / "soxl" / SYMBOL / "5m"
+SOXX_DAILY = Path("data") / "soxl" / SOXX_SYMBOL / "1d" / "series.json.gz"
 NY = ZoneInfo("America/New_York")
 UTC = timezone.utc
 UA = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/124 Safari/537.36"
@@ -60,6 +62,60 @@ def request_chart():
     raise RuntimeError(f"Yahoo chart request failed: {last}")
 
 
+def request_soxx_daily():
+    q = urllib.parse.urlencode({
+        "interval": "1d",
+        "range": "max",
+        "includePrePost": "false",
+        "events": "div,splits",
+        "includeAdjustedClose": "true",
+    })
+    last = None
+    for host in ("query1.finance.yahoo.com", "query2.finance.yahoo.com"):
+        url = f"https://{host}/v8/finance/chart/{SOXX_SYMBOL}?{q}"
+        for attempt in range(5):
+            try:
+                req = urllib.request.Request(url, headers={
+                    "User-Agent": UA,
+                    "Accept": "application/json",
+                    "Referer": "https://finance.yahoo.com/",
+                })
+                with urllib.request.urlopen(req, timeout=30) as r:
+                    j = json.loads(r.read().decode("utf-8"))
+                res = ((j.get("chart") or {}).get("result") or [None])[0]
+                if not res:
+                    raise RuntimeError(str((j.get("chart") or {}).get("error") or "empty result"))
+                ts = res.get("timestamp") or []
+                q0 = ((res.get("indicators") or {}).get("quote") or [{}])[0]
+                adj = ((res.get("indicators") or {}).get("adjclose") or [{}])[0].get("adjclose") or []
+                close = q0.get("close") or []
+                rows = []
+                for i, t in enumerate(ts):
+                    c = close[i] if i < len(close) else None
+                    a = adj[i] if i < len(adj) else None
+                    if c is None or a is None:
+                        continue
+                    rows.append({
+                        "date": datetime.fromtimestamp(int(t), UTC).date().isoformat(),
+                        "close": float(c),
+                        "adjClose": float(a),
+                    })
+                if rows:
+                    return {
+                        "schema": 1,
+                        "symbol": SOXX_SYMBOL,
+                        "source": "Yahoo Finance public chart endpoint",
+                        "sourceHost": host,
+                        "adjusted": True,
+                        "rows": rows,
+                    }
+                raise RuntimeError("SOXX daily rows empty")
+            except Exception as e:
+                last = e
+            time.sleep(min(8.0, 0.8 * (2 ** attempt)))
+    raise RuntimeError(f"Yahoo SOXX daily request failed: {last}")
+
+
 def deterministic_gzip_json(path: Path, payload: dict) -> bool:
     raw = (json.dumps(payload, ensure_ascii=False, sort_keys=True, separators=(",", ":")) + "\n").encode("utf-8")
     if path.exists():
@@ -84,6 +140,14 @@ def hm(dt: datetime) -> int:
 
 def main():
     res, host = request_chart()
+    soxx_written = False
+    soxx_error = None
+    try:
+        soxx_payload = request_soxx_daily()
+        soxx_written = deterministic_gzip_json(SOXX_DAILY, soxx_payload)
+    except Exception as e:
+        soxx_error = str(e)
+        print(f"SOXX adjusted daily collection warning: {e}")
     ts = res.get("timestamp") or []
     q = ((res.get("indicators") or {}).get("quote") or [{}])[0]
     O = q.get("open") or []
@@ -154,6 +218,9 @@ def main():
         "writtenCount": len(written),
         "skipped": skipped,
         "archiveDir": str(ROOT),
+        "soxxDailyPath": str(SOXX_DAILY),
+        "soxxDailyWritten": soxx_written,
+        "soxxDailyError": soxx_error,
     }, ensure_ascii=False, indent=2))
     if not groups:
         raise SystemExit("no SOXL regular-session bars returned")
