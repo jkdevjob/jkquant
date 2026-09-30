@@ -176,7 +176,7 @@ def opening_report():
                     "description":v.get("description"),
                     "params":v.get("params") or {},
                     "designedFrom":v.get("designedFrom") or [],
-                    "evaluationStart":v.get("evaluationStart"),
+                    "evaluationScope":v.get("evaluationScope") or "all_available",
                     "backtestExpected":v.get("backtestExpected"),
                 }
             for x in v.get("trades") or []:
@@ -202,7 +202,7 @@ def opening_report():
     for v in variants:
         if v["name"]=="baseline":
             continue
-        if (shadow_meta.get(v["name"]) or {}).get("evaluationStart"):
+        if v["name"] in shadow_meta:
             continue
         a=v["windows"]["all"]; w20=v["windows"]["last20"]
         all_edge=a["avgPnl"]-ball["avgPnl"]
@@ -223,20 +223,19 @@ def opening_report():
 
     shadow_strategies=[]
     for name,meta in sorted(shadow_meta.items()):
-        start=str(meta.get("evaluationStart") or "")
-        if not start:
-            continue
-        eval_days=[d for d in days if d>=start]
-        eval_rows=[x for x in books.get(name,[]) if x.get("date","")>=start]
+        eval_days=days[:]
+        eval_rows=books.get(name,[])[:]
         sm=stats(eval_rows)
         ready=len(eval_days)>=20 and sm["trades"]>=30
         shadow_strategies.append({
             **meta,
+            "evaluationScope":"all_available",
             "evaluationDays":len(eval_days),
             "summary":sm,
             "status":"reviewable" if ready else "collecting",
-            "reviewRule":">=20 evaluation days and >=30 completed shadow trades; no auto-promotion",
+            "reviewRule":">=20 stored days and >=30 completed shadow trades; no auto-promotion",
             "ordersAllowed":False,
+            "sampleNote":"전체 보유 데이터 재평가 — 설계 표본이 포함될 수 있어 OOS로 해석하지 않음",
         })
 
     # Join exact live BUY signals to the richer KIS 30-minute path labels generated later.
