@@ -208,7 +208,7 @@ canvas{display:block;width:100%;height:auto}
 
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Morning Scalping</div><h1>JK <span class="v">퀀트</span> 단타 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="scVer">v1.26.0</span></h1></div>
+    <div><div class="kicker">Morning Scalping</div><h1>JK <span class="v">퀀트</span> 단타 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="scVer">v1.26.1</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -286,7 +286,7 @@ canvas{display:block;width:100%;height:auto}
   <!-- 1b. 백테스트 -->
   <div class="card">
     <h3><span class="dot"></span>🧪 백테스트 <span class="sub" style="font-weight:600">전략을 과거에 그대로 돌려본다</span></h3>
-    <p class="lead">지금 화면의 규칙(볼린저 하단 이탈 + RSI&lt;40 · 점수≥65 · 다음날 시가 진입 · −4%/+6% · 최대 5일)을
+    <p class="lead">지금 화면의 규칙(볼린저 하단 이탈 + RSI&lt;40 · 점수≥65 · 다음날 시가 진입 · 전일 ATR(14) 손절 2×/목표 4× · 최대 5일)을
       과거 일봉에 그대로 적용해 성과를 낸다. <b>대조군(신호 없이 전종목 매일 진입)</b>과 같이 보여준다 —
       절대값이 아니라 <b>대조군 대비 초과분</b>이 진짜 엣지다.</p>
     <div class="row" style="margin-bottom:8px;align-items:flex-end">
@@ -690,16 +690,64 @@ function toBars(min, step){
   }
   return out;
 }
-function analyze(j){
+const REF_ATR_LEN=14, REF_ATR_STOP_MULT=2, REF_ATR_TGT_MULT=4;
+const OPENING_FIXED_FRICTION_PCT=0.23, OPENING_VTS_MIN_MATCHES=30, OPENING_FALLBACK_TICKS_PER_SIDE=2.5;
+let OPENING_FRICTION_CAL={completeMatches:0,observedRoundTripSlippagePct:null};
+
+function referenceAtr14(bars,endExclusive){
+  const a=Array.isArray(bars)?bars:[], end=Math.min(a.length,Math.max(0,endExclusive==null?a.length:+endExclusive||0));
+  if(end<REF_ATR_LEN+1)return null;
+  let sum=0;
+  for(let i=end-REF_ATR_LEN;i<end;i++){
+    const b=a[i],p=a[i-1],hi=+b.high,lo=+b.low,pc=+p.close;
+    if(!(isFinite(hi)&&isFinite(lo)&&isFinite(pc)))return null;
+    sum+=Math.max(hi-lo,Math.abs(hi-pc),Math.abs(lo-pc));
+  }
+  const out=sum/REF_ATR_LEN;
+  return out>0&&isFinite(out)?out:null;
+}
+function referenceAtr14ForCurrent(bars){
+  const a=Array.isArray(bars)?bars:[]; if(!a.length)return null;
+  const today=new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Seoul',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
+  let end=a.length;
+  if(String(a[end-1].date||'').slice(0,10)===today)end--;
+  return referenceAtr14(a,end);
+}
+function openingKrTickSize(price){
+  const p=+price;
+  if(p<2_000)return 1;
+  if(p<5_000)return 5;
+  if(p<20_000)return 10;
+  if(p<50_000)return 50;
+  if(p<200_000)return 100;
+  if(p<500_000)return 500;
+  return 1_000;
+}
+function openingFrictionPct(entryPrice,calibration=OPENING_FRICTION_CAL){
+  const p=+entryPrice,c=calibration||{},n=Number(c.completeMatches||0);
+  const raw=c.observedRoundTripSlippagePct!=null?c.observedRoundTripSlippagePct:c.avgRoundTripSlippageCostPct;
+  const obs=raw==null?NaN:Number(raw);
+  const slip=n>=OPENING_VTS_MIN_MATCHES&&isFinite(obs)?Math.max(0,obs):
+    2*OPENING_FALLBACK_TICKS_PER_SIDE*openingKrTickSize(p)/Math.max(p,1e-9)*100;
+  return OPENING_FIXED_FRICTION_PCT+slip;
+}
+function levelsOf(entry,atr14){
+  const e=+entry,a=+atr14;
+  if(!(e>0&&a>0&&isFinite(e)&&isFinite(a)))return null;
+  const stop=Math.max(0,e-REF_ATR_STOP_MULT*a),tgt=e+REF_ATR_TGT_MULT*a;
+  return {entry:e,atr14:a,stop,tgt,stopPct:(e-stop)/e*100,tgtPct:(tgt/e-1)*100};
+}
+
+function analyze(j,atrBars){
   const o=j.ohlc, cl=o.map(x=>x.close), n=o.length;
   const bb=bbUpper(cl,n-1,20,2), rs=rsiSeries(cl,14), rsi=rs[n-1];
   const last=o[n-1];
   const price = j.price!=null? j.price : last.close;
-  // 거래량비(당일/20일평균) — 점수의 '패닉 물량 감점'에 쓴다
   let volR=1;
-  if(n>=21 && last.vol>0){ let s=0; for(let k=n-20;k<n;k++) s+=(o[k].vol||0); const avg=s/20; if(avg>0) volR=last.vol/avg; }
+  if(n>=21 && last.vol>0){ let z=0; for(let k=n-20;k<n;k++) z+=(o[k].vol||0); const avg=z/20; if(avg>0) volR=last.vol/avg; }
   const chg = n>=2 && cl[n-2]>0 ? (cl[n-1]-cl[n-2])/cl[n-2]*100 : 0;
-  return {price,last,bb,rsi,cl,o,rs,volR,chg,name:j.name};
+  const atr14=referenceAtr14ForCurrent(Array.isArray(atrBars)?atrBars:o);
+  return {price,last,bb,rsi,cl,o,rs,volR,chg,atr14,name:j.name};
 }
 
 /* ══ 저장 (포지션·일지·KIS 이력) ══
@@ -841,7 +889,7 @@ async function runScreen(silent){
     while(idx<uni.length){
       const u=uni[idx++];
       try{ const j=await qFetch(u.code,'3mo'); const a=analyze(j);
-        rows.push({code:u.code,name:u.name||j.name||u.code,market:u.market,amount:u.amount,chg:(a.chg!=null?a.chg:u.chg),volR:a.volR,price:a.price,rsi:a.rsi,bb:a.bb,last:a.last,sig:sig(a)}); }
+        rows.push({code:u.code,name:u.name||j.name||u.code,market:u.market,amount:u.amount,chg:(a.chg!=null?a.chg:u.chg),volR:a.volR,price:a.price,rsi:a.rsi,bb:a.bb,last:a.last,atr14:a.atr14,sig:sig(a)}); }
       catch(e){/* 개별 실패는 건너뛴다 */}
       done++; if(!silent){ bar.style.width=(done/total*100)+'%'; $('scr_msg').textContent=`계산 중… ${done}/${total}`; }
     }
@@ -1949,6 +1997,7 @@ async function loadOpeningResearch(){
       '</div><div class="htable-wrap" style="margin-top:10px"><table class="htable"><thead><tr><th>가설</th><th>거래</th><th>승률</th><th>평균손익</th><th>PF</th><th>단순합</th><th>MDD</th></tr></thead><tbody>'+rows+'</tbody></table></div>';
 
     const em=j.exitModelComparison||{},closeModel=em.close||{},lhModel=em.lowhigh||{},fc=j.frictionCalibration||{},mt=j.multipleTesting||{};
+    OPENING_FRICTION_CAL={completeMatches:Number(fc.completeMatches||0),observedRoundTripSlippagePct:fc.observedRoundTripSlippagePct==null?null:Number(fc.observedRoundTripSlippagePct)};
     const fsrc=fc.source==='vts-observed'?'VTS 실측':'2.5틱/편도 fallback';
     html+='<div style="margin-top:14px"><b>⚙ 엔진 감사 비교</b></div>'+
       '<div class="out" style="margin-top:8px">'+
@@ -2402,15 +2451,17 @@ function runPullbackRebreak(){
 
 
 /* ══ 백테스트 ══ */
-const BT={stop:4,tgt:6,hold:5,fee:0.5,minAmt:50};
+const BT={hold:5,minAmt:50};
 function btSimOne(bars,i){                     // i일 신호 → i+1 시가 진입
   const en=bars[i+1].open; if(!(en>0)) return null;
+  const atr14=referenceAtr14(bars,i+1),L=levelsOf(en,atr14); // 진입 전날까지 확정된 ATR(14)
+  if(!L)return null;                            // ATR 없음 — 고정 % 폴백 금지
+  const fee=openingFrictionPct(en);
   for(let k=1;k<=BT.hold && i+k<bars.length;k++){
     const b=bars[i+k];
-    const lo=(b.low-en)/en*100, hi=(b.high-en)/en*100;
-    if(lo<=-BT.stop) return {pnl:-BT.stop-BT.fee,days:k};      // 보수적: 손절 우선
-    if(hi>=BT.tgt)   return {pnl:BT.tgt-BT.fee,days:k};
-    if(k===BT.hold||i+k===bars.length-1) return {pnl:(b.close-en)/en*100-BT.fee,days:k};
+    if(b.low<=L.stop) return {pnl:(L.stop/en-1)*100-fee,days:k,atr14,fee}; // 보수적: 손절 우선
+    if(b.high>=L.tgt) return {pnl:(L.tgt/en-1)*100-fee,days:k,atr14,fee};
+    if(k===BT.hold||i+k===bars.length-1) return {pnl:(b.close/en-1)*100-fee,days:k,atr14,fee};
   }
   return null;
 }
@@ -2477,7 +2528,7 @@ function renderBacktest(tr,base,from){
   ms.forEach(m=>{const g=pick.filter(t=>t.date.slice(0,7)===m); if(!g.length)return; const a=mean(g.map(t=>t.pnl));
     html+=`<tr><td>${m}</td><td>${g.length}</td><td class="${a>0?'win':'loss'}">${a>=0?'+':''}${a.toFixed(2)}%</td><td>${wr(g.map(t=>t.pnl)).toFixed(0)}%</td></tr>`;});
   html+='</tbody></table></div>';
-  html+='<p class="note">보수적 가정: 일봉이라 손절·익절 도달 순서를 몰라 <b>손절 우선</b>으로 계산(실제는 이보다 나을 수 있음). 마찰 0.5% 반영. 유니버스는 오늘 기준 상위 종목이라 <b>생존편향</b>이 있다.</p>';
+  html+='<p class="note">보수적 가정: 일봉이라 손절·익절 도달 순서를 몰라 <b>손절 우선</b>. 레벨은 진입 전날까지의 ATR(14) 기준 손절 2×ATR / 목표 4×ATR이며 ATR 부족 시 거래를 만들지 않는다. 비용은 A-3과 같은 고정 0.23% + VTS 실측(30건 이상), 그 전에는 2.5틱/편도 fallback. 유니버스는 오늘 기준 상위 종목이라 <b>생존편향</b>이 있다.</p>';
   $('bt_body').innerHTML=html;
 }
 
@@ -2491,24 +2542,22 @@ async function openChart(code,name){
     const a=await loadFor(code); CUR={code,name,a};
     $('ch_title').textContent=`${name} (${code})`;
     drawChart(a);
-    const entry=a.price;
-    $('ch_entry').value = entry>=100?Math.round(entry):+entry.toFixed(2);
-    renderLevels(entry); renderGuide(a);
+    renderLevels(a.price,a.atr14); renderGuide(a);
     if(LIVE) renderScreen();   // 목록에서 선택 행 하이라이트
   }catch(e){ $('ch_title').textContent=`${name} (${code}) — ${e.message||'실패'}`; }
 }
 async function refreshChartLive(){
   if(!CUR) return;
-  try{ const a=await loadFor(CUR.code); CUR.a=a; drawChart(a); renderGuide(a); }
+  try{ const a=await loadFor(CUR.code); CUR.a=a; drawChart(a); renderLevels(a.price,a.atr14); renderGuide(a); }
   catch(e){/* 조용히 무시 */}
 }
 /* 선택된 봉 단위로 받아 온다. 지표(볼린저·RSI)는 받은 봉 기준으로 다시 계산되므로
    분봉에서는 '분봉 기준 신호'가 된다 — 일봉 신호와 같은 뜻이 아니다. */
 async function loadFor(code){
   if(TF==='day'){ return analyze(await qFetch(code,'1y')); }
-  const min=await mFetch(code);
+  const [min,daily]=await Promise.all([mFetch(code),qFetch(code,'1y')]);
   const bars=toBars(min, TF==='5m'?5:1);
-  return analyze({ohlc:bars, price:bars[bars.length-1].close});
+  return analyze({ohlc:bars, price:bars[bars.length-1].close},daily.ohlc||[]);
 }
 function setTF(tf){
   if(TF===tf) return;
@@ -2521,10 +2570,10 @@ function setTF(tf){
 }
 function renderGuide(a){
   const el=$('ch_guide'); if(!el) return;
-  const price=a.price, L=levelsOf(+$('ch_entry').value||price);
+  const price=a.price, L=levelsOf(price,a.atr14);
   let msg, col;
-  if(price<=L.stop){ msg=`🛑 손절가(${commas(L.stop)}) 이탈 — 보유 중이면 청산`; col='var(--sell)'; }
-  else if(price>=L.tgt){ msg=`🎯 목표(${commas(L.tgt)}) 도달 — 익절`; col='var(--buy)'; }
+  if(L&&price<=L.stop){ msg=`🛑 손절가(${commas(L.stop)}) 이탈 — 보유 중이면 청산`; col='var(--sell)'; }
+  else if(L&&price>=L.tgt){ msg=`🎯 목표(${commas(L.tgt)}) 도달 — 익절`; col='var(--buy)'; }
   else if(a.rsi>=60){ msg=`⚠️ RSI ${Math.round(a.rsi)} — 이미 반등했다. 신규 진입 대상 아님`; col='var(--gold)'; }
   else if(a.bb && a.last.low<=a.bb.lo && a.rsi<40){
     const sc=score({bb:a.bb,rsi:a.rsi,last:a.last,price:a.price,chg:a.chg,volR:a.volR,amount:(a.price*(a.last.vol||0)/1e8)});
@@ -2542,16 +2591,17 @@ function chartOpen(){ const o=$('chartOverlay'); return !!o && o.classList.conta
 function openChartModal(){ const o=$('chartOverlay'); if(o){ o.classList.add('on'); o.scrollTop=0; } document.body.classList.add('modal-open'); }
 function closeChart(){ const o=$('chartOverlay'); if(o) o.classList.remove('on'); document.body.classList.remove('modal-open'); CUR=null; }
 document.addEventListener('keydown',e=>{ if(e.key==='Escape'&&chartOpen()) closeChart(); });
-function levelsOf(entry){
-  return {entry, stop:entry*(1-0.04), tgt:entry*1.06};   // ※ 고정 퍼센트 목표는 18절에서 유의하게 나쁘다고 나왔다(t=−3.05)
-}
-function renderLevels(entry){
-  const L=levelsOf(entry);
+function renderLevels(entry,atr14){
+  const L=levelsOf(entry,atr14);
+  if(!L){
+    $('ch_levels').innerHTML='<div class="warn"><b>ATR 없음 — 레벨 계산 불가</b><br><span class="sub">고정 −4%/+6%로 폴백하지 않습니다.</span></div>';
+    return;
+  }
   $('ch_levels').innerHTML=
-     `<div class="lv entry"><div class="l">진입 지정가</div><div class="v">${commas(L.entry)}</div></div>`
-    +`<div class="lv stop"><div class="l">손절 (−4%)</div><div class="v">${commas(L.stop)}</div></div>`
-    +`<div class="lv tgt"><div class="l">목표 (+6%)</div><div class="v">${commas(L.tgt)}</div></div>`
-    +`<div class="lv"><div class="l">보유</div><div class="v" style="font-size:12px;color:var(--dim);font-weight:600">최대 5일 · 미달 시 종가청산</div></div>`;
+     `<div class="lv entry"><div class="l">진입 기준가</div><div class="v">${commas(L.entry)}</div></div>`
+    +`<div class="lv stop"><div class="l">손절 (−2×ATR · −${L.stopPct.toFixed(2)}%)</div><div class="v">${commas(L.stop)}</div></div>`
+    +`<div class="lv tgt"><div class="l">목표 (+4×ATR · +${L.tgtPct.toFixed(2)}%)</div><div class="v">${commas(L.tgt)}</div></div>`
+    +`<div class="lv"><div class="l">ATR(14) · 전일까지</div><div class="v" style="font-size:12px;color:var(--dim);font-weight:600">${commas(L.atr14)} · 최대 5일</div></div>`;
 }
 function drawChart(a){
   const cv=$('chart'), dpr=window.devicePixelRatio||1;
@@ -2630,9 +2680,9 @@ function drawChart(a){
     o.forEach((c,i)=>{ const y=Y(c.close); i?ctx.lineTo(X(i),y):ctx.moveTo(X(i),y); }); ctx.stroke();
   }
   // 진입/손절/목표 라인
-  const entry=+$('ch_entry').value||a.price; const L=levelsOf(entry);
+  const entry=a.price,L=levelsOf(entry,a.atr14);
   const hline=(v,col,txt)=>{ if(v<lo||v>hi) return; const y=Y(v); ctx.strokeStyle=col; ctx.setLineDash([4,3]); ctx.lineWidth=1; ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(cssW-padR,y); ctx.stroke(); ctx.setLineDash([]); ctx.fillStyle=col; ctx.fillText(txt,2,y-2); };
-  hline(L.tgt,'rgba(54,211,153,.8)','목표'); hline(L.entry,'rgba(245,196,81,.9)','진입'); hline(L.stop,'rgba(248,123,140,.8)','손절');
+  if(L){hline(L.tgt,'rgba(54,211,153,.8)','목표'); hline(L.entry,'rgba(245,196,81,.9)','진입'); hline(L.stop,'rgba(248,123,140,.8)','손절');}
   // RSI 패널
   ctx.strokeStyle='#22284a'; ctx.beginPath(); ctx.moveTo(0,rsiTop); ctx.lineTo(cssW-padR,rsiTop); ctx.stroke();
   const RY=v=>rsiTop+(100-v)/100*rsiH;
@@ -2645,15 +2695,15 @@ document.getElementById('ch_tf').addEventListener('click',e=>{
   const b=e.target.closest('button'); if(b&&b.dataset.tf) setTF(b.dataset.tf);
 });
 window.addEventListener('resize',()=>{ if(CUR) drawChart(CUR.a); });
-document.addEventListener('input',e=>{ if(e.target&&e.target.id==='ch_entry'&&CUR){ renderLevels(+e.target.value||CUR.a.price); renderGuide(CUR.a); drawChart(CUR.a); } });
 
 /* ══ 모의투자(페이퍼) ══ */
 function paperEnter(code){
   const s=SCREEN.find(x=>x.code===code); if(!s) return;
   if(POS.some(p=>p.code===code)){ alert(s.name+' 은(는) 이미 보유 중입니다. (종목당 동시 1포지션)'); return; }
-  const en=s.price, L=levelsOf(en);
-  if(!confirm(`[모의투자] ${s.name} 진입\n진입 ${commas(en)} · 손절 ${commas(L.stop)}(−4%) · 목표 ${commas(L.tgt)}(+6%)\n최대 5일 보유\n\n기록할까요?`)) return;
-  POS.unshift({code,name:s.name,entry:en,stop:L.stop,tgt:L.tgt,cur:en,ts:Date.now(),score:s.score});
+  const en=s.price,L=levelsOf(en,s.atr14);
+  if(!L){alert('ATR 없음 — 레벨 계산 불가. 고정 %로 대체하지 않습니다.');return;}
+  if(!confirm(`[모의투자] ${s.name} 진입\n진입 ${commas(en)} · 손절 ${commas(L.stop)}(−2×ATR) · 목표 ${commas(L.tgt)}(+4×ATR)\n최대 5일 보유\n\n기록할까요?`)) return;
+  POS.unshift({code,name:s.name,entry:en,stop:L.stop,tgt:L.tgt,atr14:L.atr14,cur:en,ts:Date.now(),score:s.score});
   saveP(); renderPos();
   window.scrollTo({top:$('pos_body').getBoundingClientRect().top+window.scrollY-80,behavior:'smooth'});
 }
@@ -2661,9 +2711,9 @@ function paperEnter(code){
 /* ══ 포지션 ══ */
 function enterPos(){
   if(!CUR){ return; }
-  const entry=+$('ch_entry').value; if(!(entry>0)){ alert('진입가를 확인해주세요.'); return; }
-  const L=levelsOf(entry);
-  POS.unshift({code:CUR.code,name:CUR.name,entry,stop:L.stop,tgt:L.tgt,cur:entry,ts:Date.now()});
+  const entry=CUR&&CUR.a?+CUR.a.price:0; if(!(entry>0)){ alert('진입가를 확인해주세요.'); return; }
+  const L=levelsOf(entry,CUR.a.atr14); if(!L){alert('ATR 없음 — 레벨 계산 불가.');return;}
+  POS.unshift({code:CUR.code,name:CUR.name,entry,stop:L.stop,tgt:L.tgt,atr14:L.atr14,cur:entry,ts:Date.now()});
   saveP(); renderPos();
   if(chartOpen()) closeChart();
   window.scrollTo({top:$('pos_body').getBoundingClientRect().top+window.scrollY-80,behavior:'smooth'});
@@ -2679,7 +2729,7 @@ function closePos(i){
   const def = p.cur||p.entry;
   const ex=prompt(`${p.name} 청산가를 입력하세요.`, def>=100?Math.round(def):def);
   if(ex==null) return; const out=+ex; if(!(out>0)){ alert('청산가가 올바르지 않습니다.'); return; }
-  LOG.unshift({date:new Date().toISOString().slice(0,10),tkr:p.name,trig:'스크린',in:p.entry,out,fee:0.5,note:'포지션 청산'});
+  LOG.unshift({date:new Date().toISOString().slice(0,10),tkr:p.name,trig:'스크린',in:p.entry,out,fee:openingFrictionPct(p.entry),note:'포지션 청산'});
   saveL(); POS.splice(i,1); saveP(); renderPos(); renderLog();
 }
 function renderPos(){
@@ -2748,7 +2798,7 @@ function exportLog(){
 
 /* ══════════════════════════════════════════════════════════════════
    KIS 모의투자 — 전략대로 주문하고, 나간 주문을 전부 기록한다
-   · 수량은 '1회 투입금액 ÷ 현재가'. 손절 −4% / 목표 +6% / 최대 5일은 전략 그대로.
+   · 수량은 '1회 투입금액 ÷ 현재가'. 레벨은 전일까지의 ATR(14)로 손절 2×ATR / 목표 4×ATR / 최대 5일.
    · 주문은 성공이든 실패든 KLOG 에 남긴다. 실패 사유(장 시간 외, 예수금 부족 등)가
      나중에 "왜 그날 안 샀나"를 되짚는 유일한 근거가 된다.
    · 반자동이다 — 확인창 없이 자동으로 나가는 주문은 만들지 않는다.
@@ -2785,12 +2835,13 @@ async function kisBuyPick(code){
   if(!kisReady()) return;
   const s=SCREEN.find(x=>x.code===code); if(!s) return;
   if(POS.some(p=>p.code===code)){ alert(s.name+' 은(는) 이미 보유 중입니다. (전략상 종목당 동시 1포지션)'); return; }
-  const px=Math.round(s.price), L=levelsOf(px), qty=Math.floor(budget()/px);
+  const px=Math.round(s.price),L=levelsOf(px,s.atr14),qty=Math.floor(budget()/px);
+  if(!L){alert('ATR 없음 — 레벨 계산 불가. KIS 주문값을 만들지 않습니다.');return;}
   if(!(qty>0)){ alert(`1회 투입금액(${commas(budget())}원)이 ${s.name} 1주(${commas(px)}원)보다 적습니다.`); return; }
   const envName=(KIScfg.env==='real')?'⚠️ 실전(진짜 돈)':'모의투자';
   if(!confirm(`[${envName}] ${s.name} 매수\n`
     +`지정가 ${commas(px)}원 × ${qty}주 = ${commas(px*qty)}원\n\n`
-    +`전략 기준\n  손절 ${commas(L.stop)}원 (−4%)\n  목표 ${commas(L.tgt)}원 (+6%)\n  최대 5일 보유\n  점수 ${s.score}\n\n주문할까요?`)) return;
+    +`전략 기준\n  손절 ${commas(L.stop)}원 (−2×ATR)\n  목표 ${commas(L.tgt)}원 (+4×ATR)\n  ATR14 ${commas(L.atr14)}\n  최대 5일 보유\n  점수 ${s.score}\n\n주문할까요?`)) return;
   const rec=await kisSubmit({side:'buy',code,name:s.name,qty,price:px,score:s.score,plan:{stop:L.stop,tgt:L.tgt}});
   if(rec.ok){
     POS.unshift({code,name:s.name,entry:px,stop:L.stop,tgt:L.tgt,cur:px,ts:Date.now(),score:s.score,kis:true,qty,orderNo:rec.orderNo});
@@ -2815,7 +2866,7 @@ async function kisSellPos(i){
     +`진입 ${commas(p.entry)} → 현재 ${commas(px)} · ${pl>=0?'+':''}${fmt(pl,2)}%\n\n주문할까요?`)) return;
   const rec=await kisSubmit({side:'sell',code:p.code,name:p.name,qty,price:px,plan:{stop:p.stop,tgt:p.tgt}});
   if(rec.ok){
-    LOG.unshift({date:new Date().toISOString().slice(0,10),tkr:p.name,trig:'스크린',in:p.entry,out:px,fee:0.5,note:'KIS 모의투자 · '+why});
+    LOG.unshift({date:new Date().toISOString().slice(0,10),tkr:p.name,trig:'스크린',in:p.entry,out:px,fee:openingFrictionPct(p.entry),note:'KIS 모의투자 · '+why});
     saveL(); POS.splice(i,1); saveP(); renderPos(); renderLog(); kisBalance();
     alert(`매도 주문이 접수됐습니다.\n주문번호 ${rec.orderNo||'—'}`);
   } else {
@@ -2833,7 +2884,7 @@ function klogRealized(){
     while(left>0 && q.length){
       const b=q[0], take=Math.min(left,b.qty);
       done.push({code:r.code,name:r.name,qty:take,inPx:b.px,outPx:r.price,ts:r.ts,
-                 pct:(r.price-b.px)/b.px*100-0.5, amt:(r.price-b.px)*take});   // 마찰 0.5% 차감
+                 pct:(r.price-b.px)/b.px*100-openingFrictionPct(b.px), amt:(r.price-b.px)*take});
       b.qty-=take; left-=take; if(b.qty<=0) q.shift();
     }
   });
@@ -2872,7 +2923,7 @@ function renderKlog(){
       </tr>`).join('')
     + `</tbody></table></div><p class="note">여기 '접수'는 <b>주문이 증권사에 들어갔다</b>는 뜻이지 체결됐다는 뜻이 아니다 —
        지정가가 안 닿으면 미체결로 남는다. 실제 보유는 <b>잔고</b> 버튼으로 확인한다.
-       실현손익은 매도를 같은 종목의 먼저 산 물량과 짝지어(FIFO) 마찰 0.5%를 뺀 값이다.</p>`;
+       실현손익은 매도를 같은 종목의 먼저 산 물량과 짝지어(FIFO) A-3 실행비용(VTS 실측 또는 2.5틱/편도 fallback)을 뺀 값이다.</p>`;
 }
 function delKlog(i){ if(!confirm('이 주문 기록을 지울까요? 증권사 주문 자체는 취소되지 않습니다.')) return; KLOG.splice(i,1); saveK(); renderKlog(); }
 function clearKlog(){ if(!KLOG.length) return; if(!confirm('KIS 주문 이력을 전부 지울까요? 증권사 주문은 취소되지 않습니다.')) return; KLOG=[]; saveK(); renderKlog(); }
@@ -2919,7 +2970,7 @@ async function kisInit(){
 async function idToken(){ if(!me) throw new Error('로그인이 필요합니다.'); return await me.getIdToken(); }
 function kisFromChart(){
   if(!CUR){ return; }
-  prepVtsOrder(CUR.code,Math.round(+$('ch_entry').value||CUR.a.price),CUR.name||CUR.code);
+  prepVtsOrder(CUR.code,Math.round(CUR.a.price),CUR.name||CUR.code);
 }
 function prepVtsOrder(code,price,name){
   if(!kisReady())return;
