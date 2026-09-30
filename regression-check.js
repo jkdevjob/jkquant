@@ -10677,8 +10677,9 @@ console.log('[OPENING SIGNAL LEARNING] 실시간 ledger · 30분 사후라벨 ·
   ok('실시간 ledger는 기준+그림자 BUY/SELL을 strategyVersion과 함께 보존',
      /liveEvent\(date,target,"buy","baseline"/.test(ow)
      && /liveEvent\(date,target,"sell","baseline"/.test(ow)
-     && /liveEvent\(date,target,"buy",String\(v\.name/.test(ow)
-     && /liveEvent\(date,target,"sell",String\(v\.name/.test(ow)
+     && /shadow\.push\(\{stage:"buy",v,x\}\)/.test(ow)
+     && /shadow\.push\(\{stage:"sell",v,x\}\)/.test(ow)
+     && /liveEvent\(date,target,stage,String\(v\.name/.test(ow)
      && /strategyVersion:signal\.strategyVersion/.test(ow)
      && /shadow_strategy_not_notified/.test(ow));
   ok('Telegram 실패가 신호를 없애지 않고 VTS 실행만 안전하게 보류',
