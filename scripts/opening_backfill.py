@@ -17,13 +17,20 @@ KST = timezone(timedelta(hours=9))
 ROOT = Path(os.environ.get('JKQ_BACKFILL_ROOT', 'data/scalping-backfill'))
 LAST_REQUEST = 0.0
 YEAR_FRAMES = {}
+DEADLINE = None
 
 
 class MarketHours(RuntimeError):
     pass
 
 
+class TimeBudget(MarketHours):
+    pass
+
+
 def guard(now=None):
+    if DEADLINE is not None and time.monotonic() >= DEADLINE:
+        raise TimeBudget('Backfill time budget reached; resume from saved checkpoints')
     now = now or datetime.now(KST)
     hm = now.astimezone(KST).hour * 100 + now.astimezone(KST).minute
     if 830 <= hm <= 1540:
@@ -247,12 +254,17 @@ def collect_day(day, last_day):
 
 
 def main(argv=None):
+    global DEADLINE
     parser = argparse.ArgumentParser()
     today = datetime.now(KST).date()
     parser.add_argument('--start', default=(today-timedelta(days=365)).isoformat())
     parser.add_argument('--end', default=today.isoformat())
     parser.add_argument('--max-days', type=int, default=366)
+    parser.add_argument('--max-seconds', type=int, default=14400)
     args = parser.parse_args(argv)
+    if args.max_seconds <= 0:
+        parser.error('max-seconds must be positive')
+    DEADLINE = time.monotonic() + args.max_seconds
     start, end = date.fromisoformat(args.start), date.fromisoformat(args.end)
     if start > end or end > today:
         parser.error('Require start <= end <= today')
@@ -283,7 +295,7 @@ def main(argv=None):
         missing = [d for d in expected if manifest['dates'].get(d, {}).get('status') not in ('complete','no_session')]
         manifest.update(status='complete' if not missing else 'incomplete', unresolvedDates=missing)
     except MarketHours as e:
-        manifest.update(status='paused_market_hours', reason=str(e))
+        manifest.update(status='paused_time_budget' if isinstance(e, TimeBudget) else 'paused_market_hours', reason=str(e))
     save(manifest_path, manifest)
     print(json.dumps(dict(status=manifest['status'], unresolved=len(manifest.get('unresolvedDates', []))), ensure_ascii=False), flush=True)
     return 0 if manifest['status'] == 'complete' else 2

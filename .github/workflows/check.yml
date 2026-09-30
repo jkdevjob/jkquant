@@ -38,6 +38,7 @@ jobs:
           python scripts/test_opening_backfill.py
           python scripts/mutation_test_opening_backfill.py
           node scripts/test_opening_hold.mjs
+          node scripts/test_kis_history_codes.mjs
 
       - name: 데이트레이딩 스냅샷 품질 가드 검사
         run: |
@@ -389,7 +390,7 @@ jobs:
           let fail=0;
           const must=[
             ['data-strategy="crypto"','비트코인 탭'],
-            ['id="scVer">v1.27.0','단타 버전 1.27.0'],
+            ['id="scVer">v1.27.1','단타 버전 1.27.1'],
             ['다음 5분봉 시가','다음 봉 진입 설명'],
             ['손절 우선','동일봉 보수 청산 설명'],
             ['최근 365일 백필','초기 백필 안내']
@@ -454,7 +455,7 @@ jobs:
           let fail=0;
           const must=[
             [ui,'data-strategy="soxl"','SOXL 탭'],
-            [ui,'id="scVer">v1.27.0','단타 버전 1.27.0'],
+            [ui,'id="scVer">v1.27.1','단타 버전 1.27.1'],
             [ui,'다음 5분봉 시가','next-bar 진입 설명'],
             [py,'baseline-decisions.csv','거래/무거래 판단기록'],
             [py,'target1PctDayRatePct','+1% 목표 지표'],

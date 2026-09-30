@@ -20,6 +20,12 @@ def signal_row():
 
 
 class Tests(unittest.TestCase):
+    def test_budget_stops_before_another_network_request(self):
+        with patch.object(b,'DEADLINE',0), patch.object(b.urllib.request,'urlopen') as network:
+            with self.assertRaises(b.TimeBudget):
+                b.request_bytes('https://example.com')
+            network.assert_not_called()
+
     def test_market_guard_boundaries_and_weekends(self):
         for hour, minute, blocked in [(8,29,False),(8,30,True),(15,40,True),(15,41,False)]:
             for day in (25,26):
