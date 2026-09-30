@@ -1,7 +1,10 @@
 #!/usr/bin/env python3
 """Focused value checks for opening-signal outcome labels."""
 
-from backtest_opening_rebreak import Params, opening_diagnostics, opening_path_metrics, one_trade
+from backtest_opening_rebreak import (
+    Params, opening_diagnostics, opening_friction, opening_path_metrics,
+    one_trade, simulate_exit
+)
 from backfill_opening_paths import merge_bars
 
 
@@ -129,9 +132,44 @@ def test_backfill_merge_preserves_existing_and_extends():
     assert out[-1]["t"].endswith("100000"), out
 
 
+def test_parallel_exit_models_stop_first():
+    rows = [
+        bar(905, 100.0, high=100.0, low=100.0),
+        # Both thresholds touched, but close recovered. low/high model must choose stop first.
+        bar(906, 100.0, high=102.0, low=98.0),
+        bar(930, 100.0, high=100.2, low=99.8),
+    ]
+    p = Params("baseline", stop=1.0, take_profit=1.5)
+    friction = {"totalPct": 0.0}
+    close = simulate_exit(rows, 0, 100.0, p, friction, "close")
+    lowhigh = simulate_exit(rows, 0, 100.0, p, friction, "lowhigh")
+    assert close["reason"] == "time_exit", close
+    assert close["exitPrice"] == 100.0, close
+    assert lowhigh["reason"] == "stop", lowhigh
+    assert lowhigh["exitTime"] == 906, lowhigh
+    assert abs(lowhigh["exitPrice"] - 99.0) < 1e-9, lowhigh
+
+
+def test_friction_fallback_and_vts_threshold():
+    fallback = opening_friction(15000, {"completeMatches": 0, "observedRoundTripSlippagePct": None})
+    assert fallback["source"] == "2.5tick-fallback", fallback
+    assert abs(fallback["fixedPct"] - 0.23) < 1e-12, fallback
+    assert abs(fallback["slippagePct"] - (5 * 10 / 15000 * 100)) < 1e-12, fallback
+    assert abs(fallback["totalPct"] - 0.5633333333333334) < 1e-9, fallback
+
+    too_small = opening_friction(15000, {"completeMatches": 29, "observedRoundTripSlippagePct": 0.42})
+    assert too_small["source"] == "2.5tick-fallback", too_small
+
+    calibrated = opening_friction(15000, {"completeMatches": 30, "observedRoundTripSlippagePct": 0.42})
+    assert calibrated["source"] == "vts-observed", calibrated
+    assert abs(calibrated["totalPct"] - 0.65) < 1e-12, calibrated
+
+
 if __name__ == "__main__":
     test_path_labels()
     test_exit_rule_still_stops_at_0930()
     test_archived_trade_has_complete_30m_path()
     test_backfill_merge_preserves_existing_and_extends()
+    test_parallel_exit_models_stop_first()
+    test_friction_fallback_and_vts_threshold()
     print("opening signal labels: PASS")
