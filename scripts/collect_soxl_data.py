@@ -89,6 +89,9 @@ def request_daily(symbol):
                 ts = res.get("timestamp") or []
                 q0 = ((res.get("indicators") or {}).get("quote") or [{}])[0]
                 adj = ((res.get("indicators") or {}).get("adjclose") or [{}])[0].get("adjclose") or []
+                open_ = q0.get("open") or []
+                high = q0.get("high") or []
+                low = q0.get("low") or []
                 close = q0.get("close") or []
                 rows = []
                 for i, t in enumerate(ts):
@@ -96,8 +99,14 @@ def request_daily(symbol):
                     a = adj[i] if i < len(adj) else None
                     if c is None or a is None:
                         continue
+                    o = open_[i] if i < len(open_) else None
+                    h = high[i] if i < len(high) else None
+                    l = low[i] if i < len(low) else None
                     rows.append({
                         "date": datetime.fromtimestamp(int(t), UTC).date().isoformat(),
+                        "open": float(o if o is not None else c),
+                        "high": float(h if h is not None else c),
+                        "low": float(l if l is not None else c),
                         "close": float(c),
                         "adjClose": float(a),
                     })
