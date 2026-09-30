@@ -20,6 +20,21 @@ def signal_row():
 
 
 class Tests(unittest.TestCase):
+    def test_year_boundary_resolves_exact_next_session(self):
+        jan2 = dict(date='2026-01-02', rows=[dict(code='fixture', volume=1)])
+        with tempfile.TemporaryDirectory() as tmp, patch.object(b,'ROOT',Path(tmp)), \
+                patch.dict(b.os.environ, {'KRX_COOKIE':''}), \
+                patch.object(b,'public_snapshot',return_value=jan2) as read:
+            self.assertEqual(b.next_session('2025-12-30','2026-01-05'),jan2)
+            read.assert_called_once_with('2026-01-02')
+
+    def test_unknown_source_failure_is_not_a_holiday(self):
+        with tempfile.TemporaryDirectory() as tmp, patch.object(b,'ROOT',Path(tmp)), \
+                patch.dict(b.os.environ, {'KRX_COOKIE':''}), \
+                patch.object(b,'public_snapshot',side_effect=RuntimeError('source unavailable')):
+            with self.assertRaisesRegex(RuntimeError,'source unavailable'):
+                b.daily_snapshot('2026-01-05')
+
     def test_budget_stops_before_another_network_request(self):
         with patch.object(b,'DEADLINE',0), patch.object(b.urllib.request,'urlopen') as network:
             with self.assertRaises(b.TimeBudget):
