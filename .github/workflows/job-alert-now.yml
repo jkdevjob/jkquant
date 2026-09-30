@@ -1,9 +1,7 @@
-name: Job Alert Immediate Send
+name: Job Alert Manual Recovery
 
 on:
-  push:
-    paths:
-      - ".github/workflows/job-alert-now.yml"
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -15,7 +13,7 @@ concurrency:
 jobs:
   send-now:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 10
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -38,7 +36,7 @@ jobs:
           python -m pip install --upgrade pip
           pip install "ddgs>=9,<10" "requests>=2.32,<3" "beautifulsoup4>=4.12,<5"
 
-      - name: Send today's job alert
+      - name: Send job alert manually
         env:
           AUTOTRADE_KEY: ${{ secrets.AUTOTRADE_KEY }}
           JKQUANT_BASE: https://jkquant.pages.dev
