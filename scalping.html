@@ -166,6 +166,11 @@ canvas{display:block;width:100%;height:auto}
 .flow-map{display:flex;gap:5px;overflow-x:auto;padding:0 0 7px;margin-bottom:4px}
 .flow-chip{white-space:nowrap;font-size:11px;color:var(--dim);border:1px solid var(--line);background:var(--panel);border-radius:999px;padding:5px 8px}
 @media(max-width:640px){.flow-title{font-size:13px}.flow-chip{font-size:10.5px}}
+.strategy-scoreline{margin:10px 0 12px;padding:9px 12px;border:1px solid var(--line);border-radius:10px;background:var(--panel);font-size:12px;line-height:1.55}
+.strategy-scoreline.good{border-color:rgba(72,199,142,.45)}
+.strategy-scoreline.bad{border-color:rgba(255,99,132,.45)}
+.strategy-scoreline .muted{color:var(--dim)}
+
 
 </style>
 <script type="module">
@@ -228,9 +233,10 @@ canvas{display:block;width:100%;height:auto}
     <button class="strategy-tab" data-strategy="daytrading" onclick="showStrategy('daytrading')">📈 데이트레이딩</button>
     <button class="strategy-tab" data-strategy="crypto" onclick="showStrategy('crypto')">₿ 비트코인</button>
     <button class="strategy-tab" data-strategy="soxl" onclick="showStrategy('soxl')">⚡ SOXL</button>
+    <button class="strategy-tab" data-strategy="reference" onclick="showStrategy('reference')">📚 참고(폐기된 전략)</button>
   </div>
-  <div id="strategy_swing" class="strategy-pane" style="display:none">
-    <div class="strategy-head">실시간 감시 → 과거 백테스트 순서</div>
+  <div id="strategy_reference" class="strategy-pane">
+    <div class="strategy-head">📚 폐기된 과매도 반등 연구 · 운영전략 아님 · 참고/감사용</div>
 
   <!-- 1. 전체 스크리닝 -->
   <div class="card">
@@ -1368,6 +1374,61 @@ async function loadScalpingHistory(name,page=1){
   }
 }
 
+const SCORE_APIS={
+  opening:'/api/opening-research',
+  daytrading:'/api/daytrading-research',
+  crypto:'/api/crypto-research',
+  soxl:'/api/soxl-research'
+};
+function baselineVariant(j){
+  return (j.variants||[]).find(x=>(x.params&&x.params.name==='baseline')||x.name==='baseline')||null;
+}
+function scoreRequiredWin(name,j,v,s){
+  const aw=Number(s.avgWin),al=Number(s.avgLoss);
+  if(Number.isFinite(aw)&&aw>0&&Number.isFinite(al)&&al<0){
+    return Math.abs(al)/(aw+Math.abs(al))*100;
+  }
+  const p=(v&&v.params)||{};
+  let stop=Number(p.stop??p.stop_pct),tp=Number(p.take_profit??p.take_profit_pct);
+  let cost=Number(p.fee??p.fee_round_trip_pct??0)+Number(p.slippage_round_trip_pct??0);
+  if(name==='opening'){
+    const f=j.frictionCalibration||{};
+    cost=Number(f.fixedPct||0.23);
+    const c=j.exitModelComparison&&j.exitModelComparison.close;
+    if(c&&Number(c.avgWin)>0&&Number(c.avgLoss)<0)
+      return Math.abs(Number(c.avgLoss))/(Number(c.avgWin)+Math.abs(Number(c.avgLoss)))*100;
+  }
+  if(!(stop>0&&tp>0))return null;
+  const win=Math.max(.0001,tp-cost),loss=stop+cost;
+  return loss/(win+loss)*100;
+}
+function renderScoreline(name,j){
+  const el=$('score_'+name); if(!el)return;
+  const v=baselineVariant(j),s0=(v&&v.summary)||{};
+  const s=(name==='opening'&&j.exitModelComparison&&j.exitModelComparison.close)||s0;
+  const n=Number(s.trades||0),wr=Number(s.winRate||0),avg=Number(s.avgPnl||s.expectancyPct||0);
+  const req=scoreRequiredWin(name,j,v,s);
+  const edge=req==null?null:wr-req;
+  const days=Number(j.eligibleArchiveDays==null?j.archiveDays:j.eligibleArchiveDays)||0;
+  const progress=days<20?'수집중 '+days+'/20일':'검증 '+days+'일';
+  const sign=x=>(x>=0?'+':'')+x.toFixed(2)+'%';
+  el.className='strategy-scoreline '+(avg>=0?'good':'bad');
+  el.innerHTML='<b>기준전략 누적 '+n+'건</b> · 승률 <b>'+wr.toFixed(1)+'%</b> · 거래당 <b>'+sign(avg)+'</b>'+
+    (req==null?'':' · 필요승률 <b>'+req.toFixed(1)+'%</b> · 엣지 <b class="'+((edge||0)>=0?'win':'loss')+'">'+sign(edge||0)+'</b>')+
+    ' <span class="muted">['+progress+']</span>';
+}
+async function loadStrategyScorecard(name){
+  if(!SCORE_APIS[name])return;
+  const el=$('score_'+name); if(el)el.innerHTML='<span class="muted">기준전략 성과 불러오는 중…</span>';
+  try{
+    const r=await fetch(SCORE_APIS[name],{headers:{Accept:'application/json'}});
+    const j=await r.json(); if(!r.ok||!j.ok)throw new Error(j.error||('HTTP '+r.status));
+    renderScoreline(name,j);
+  }catch(e){
+    if(el)el.innerHTML='<span class="muted">성과 집계 대기 · '+esc(e.message||String(e))+'</span>';
+  }
+}
+
 function setupUnifiedStrategyFlow(){
   const cfg={
     opening:{strategy:['⚡ 시초가 첫고점 돌파'],search:['🔥 실시간 시초가 돌파 감시','📒 오늘 서버 매매 이력'],history:[],review:['🧪 누적 시초가 연구 백테스트','📼 분봉 아카이브'],paper:['🔎 한투 VTS 자동 병행체결 대조']},
@@ -1380,6 +1441,11 @@ function setupUnifiedStrategyFlow(){
     pane.dataset.flowReady='1';
     const head=Array.from(pane.children).find(x=>x.classList&&x.classList.contains('strategy-head'));
     if(head)head.textContent='전략 설명 → 실시간 탐색 → 매수 → 매도 → 매매이력 → 검증/개선 → 모의투자';
+    if(!$('score_'+name)){
+      const score=document.createElement('div'); score.id='score_'+name; score.className='strategy-scoreline';
+      score.innerHTML='<span class="muted">기준전략 성과 불러오는 중…</span>';
+      if(head)head.insertAdjacentElement('afterend',score); else pane.prepend(score);
+    }
     const map=document.createElement('div'); map.className='flow-map';
     map.innerHTML=FLOW_STEPS.map((x,i)=>'<span class="flow-chip">'+(i+1)+'. '+x[1].replace(/^[^ ]+ /,'')+'</span>').join('');
     if(head)head.insertAdjacentElement('afterend',map); else pane.prepend(map);
@@ -1420,12 +1486,13 @@ function setupUnifiedStrategyFlow(){
 
 function showStrategy(name){
   const active=['opening','daytrading','crypto','soxl'];
-  if(!active.includes(name))name='opening';
+  const tabs=[...active,'reference'];
+  if(!tabs.includes(name))name='opening';
   document.querySelectorAll('.strategy-pane').forEach(x=>x.classList.remove('on'));
   document.querySelectorAll('.strategy-tab').forEach(x=>x.classList.toggle('on',x.dataset.strategy===name));
   const p=$('strategy_'+name); if(p)p.classList.add('on');
   try{localStorage.setItem('jkq_scalp_strategy_tab',name);}catch(e){}
-  loadScalpingHistory(name,1);
+  if(active.includes(name)){ loadScalpingHistory(name,1); loadStrategyScorecard(name); }
   if(name==='daytrading'){
     loadDayTradingPaper();
     loadDayTradingResearch();
@@ -1437,7 +1504,7 @@ function showStrategy(name){
 function restoreStrategy(){
   let n='opening';
   try{n=localStorage.getItem('jkq_scalp_strategy_tab')||'opening';}catch(e){}
-  if(!['opening','daytrading','crypto','soxl'].includes(n))n='opening';
+  if(!['opening','daytrading','crypto','soxl','reference'].includes(n))n='opening';
   showStrategy(n);
 }
 
