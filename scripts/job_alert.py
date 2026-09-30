@@ -719,24 +719,35 @@ def collect_jobkorea_direct():
 
 def search_jobs():
     direct_jobs, jobkorea_status = collect_jobkorea_direct()
+    fast_mode = os.environ.get('JOB_ALERT_FAST') == '1'
 
-    # 검색엔진은 보조 수단으로 유지하고, 잡코리아 직접 수집 결과를 우선 합친다.
-    java_jobs = merge_jobs(
-        classify_jobs(direct_jobs, score_java_result),
-        search_group(JAVA_AI_QUERIES, score_java_result),
-    )
-    regular_dev_jobs = merge_jobs(
-        classify_jobs(direct_jobs, score_regular_dev_result),
-        search_group(REGULAR_DEV_QUERIES, score_regular_dev_result),
-    )
-    salary_jobs = merge_jobs(
-        classify_jobs(direct_jobs, score_salary_result),
-        search_group(SALARY_QUERIES, score_salary_result),
-    )
-    short_term_jobs = merge_jobs(
-        classify_jobs(direct_jobs, score_short_term_result),
-        search_group(SHORT_TERM_QUERIES, score_short_term_result),
-    )
+    if jobkorea_status.get('ok'):
+        # 잡코리아 직접 수집이 정상일 때는 핵심 4개 구역을 직접 데이터로 만든다.
+        # 예전처럼 수십 개 DDGS 쿼리를 매번 직렬 실행하지 않아 15분 타임아웃을 피한다.
+        java_jobs = classify_jobs(direct_jobs, score_java_result)
+        regular_dev_jobs = classify_jobs(direct_jobs, score_regular_dev_result)
+        salary_jobs = classify_jobs(direct_jobs, score_salary_result)
+        short_term_jobs = classify_jobs(direct_jobs, score_short_term_result)
+
+        # 단기알바는 잡코리아 외 알바몬/알바천국 보조검색 가치가 커서,
+        # 일반 실행에서만 최소 4개 쿼리를 추가한다. 즉시발송/복구 시에는 생략한다.
+        if not fast_mode:
+            external_short_queries = [
+                'site:albamon.com 대전 단기알바 초보',
+                'site:albamon.com 세종 단기알바 초보',
+                'site:alba.co.kr 대전 단기알바 초보',
+                'site:alba.co.kr 세종 단기알바 초보',
+            ]
+            short_term_jobs = merge_jobs(
+                short_term_jobs,
+                search_group(external_short_queries, score_short_term_result),
+            )
+    else:
+        # 잡코리아 직접 수집이 실패했을 때만 기존 검색엔진 경로를 전체 fallback으로 사용한다.
+        java_jobs = search_group(JAVA_AI_QUERIES, score_java_result)
+        regular_dev_jobs = search_group(REGULAR_DEV_QUERIES, score_regular_dev_result)
+        salary_jobs = search_group(SALARY_QUERIES, score_salary_result)
+        short_term_jobs = search_group(SHORT_TERM_QUERIES, score_short_term_result)
 
     java_jobs.sort(key=lambda x: (-x['score'], x['title']))
     regular_dev_jobs.sort(key=lambda x: (-x['score'], x['title']))
