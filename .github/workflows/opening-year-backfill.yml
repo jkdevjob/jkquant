@@ -1,0 +1,55 @@
+name: 시초가 과거 1년 Top100 백필
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '45 7 * * *'
+    - cron: '10 12 * * *'
+  push:
+    branches: [main]
+    paths: ['.github/workflows/opening-year-backfill.yml']
+permissions:
+  contents: write
+concurrency:
+  group: opening-year-backfill
+  cancel-in-progress: false
+jobs:
+  backfill:
+    runs-on: ubuntu-latest
+    timeout-minutes: 330
+    steps:
+      - uses: actions/checkout@v4
+        with: {ref: scalping-data, fetch-depth: 0}
+      - uses: actions/checkout@v4
+        with: {ref: main, path: .app}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.12'}
+      - run: pip install pandas pyarrow
+      - name: 과거 Top100 재개 (매 요청마다 장중 차단)
+        id: collect
+        continue-on-error: true
+        run: python .app/scripts/collect_scalping_data.py --backfill --start 2025-09-30 --end 2026-09-30 --max-days 25
+      - name: 완전 수집 시에만 1년 전체 연구 재계산
+        env:
+          JKQ_RESEARCH_DATA: data/scalping-backfill/archives
+          JKQ_RESEARCH_OUT: data/opening-research-year
+        run: |
+          if python -c "import json; assert json.load(open('data/scalping-backfill/manifest.json'))['status']=='complete'"; then
+            python .app/scripts/backtest_opening_rebreak.py
+          else
+            echo '백필 진행/누락 있음 — 1년 검증 완료로 표시하지 않음'
+          fi
+      - name: 날짜별 체크포인트 보존
+        if: always()
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          mkdir -p data/scalping-backfill data/opening-research-year
+          git add -- data/scalping-backfill data/opening-research-year ':!data/scalping-backfill/sources'
+          if ! git diff --cached --quiet; then
+            git commit -m 'data: historical Top100 backfill checkpoint [skip ci]'
+            git pull --rebase origin scalping-data
+            git push origin scalping-data
+          fi
+      - name: 미완료 상태 표시
+        if: steps.collect.outcome == 'failure'
+        run: echo 'Incomplete batch is checkpointed; next scheduled run resumes missing dates.'

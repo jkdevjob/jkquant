@@ -86,6 +86,9 @@ def minute_history(code: str, date_yyyymmdd: str):
 
 
 def main():
+    if '--backfill' in sys.argv:
+        from opening_backfill import main as backfill
+        return backfill([x for x in sys.argv[1:] if x != '--backfill'])
     now = datetime.now(KST)
     date_iso = os.environ.get("JKQ_DATE", now.strftime("%Y-%m-%d"))
     date_compact = date_iso.replace("-", "")

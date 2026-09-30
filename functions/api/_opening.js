@@ -21,6 +21,14 @@ export const OPENING_BASE_PARAMS=Object.freeze({
 // 하루 결과로 기준전략을 바꾸지 않고, 장중에는 그림자 신호로만 병렬 기록한다.
 export const SHADOW_VARIANTS=Object.freeze([
   {
+    name:"hold_to_next_open",
+    designedFrom:["2025-09-01/2026-09-30"],
+    evaluationStart:"2026-10-01",
+    label:"다음 거래일 시가 청산",
+    description:"기준전략과 같은 진입 · 중간 손절/익절 없이 다음 거래일 시가까지 보유 · 연구 전용",
+    params:{exitPolicy:"next_session_open"},
+  },
+  {
     name:"today_combo_v1",
     designedFrom:["2026-09-22"],
     label:"오늘 개선안 v1",
@@ -171,6 +179,15 @@ export function rebreakTrade(rows,meta,cutoffHm=930,overrides={}){
           exitTime:null,exitPrice:null,reason:null,pnl:null,
         };
 
+        if(p.exitPolicy==="next_session_open"){
+          tr.strategyVersion="opening_hold_to_next_open_v1";
+          tr.evidence.exitPolicy="next_session_open";
+          tr.evidence.stopPct=null;tr.evidence.takeProfitPct=null;tr.evidence.finalExit=null;
+          tr.reason="다음 거래일 시가 대기";
+          tr.outcomeStatus="pending_next_open";
+          tr.friction=friction;
+          return tr;
+        }
         for(let k=j+1;k<a.length;k++){
           const r=(a[k].close/jp-1)*100;
           if(r<=-p.stop){tr.exitTime=a[k].hm;tr.exitPrice=a[k].close;tr.reason="손절";break;}
