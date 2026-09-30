@@ -14,7 +14,6 @@ export const OPENING_BASE_PARAMS=Object.freeze({
   entryCutoff:930,
   stop:1,
   takeProfit:1.5,
-  fee:.25,
   finalExit:930,
 });
 
@@ -47,6 +46,39 @@ export const SHADOW_VARIANTS=Object.freeze([
   },
 ]);
 
+export const OPENING_FIXED_FRICTION_PCT=.23;
+export const OPENING_VTS_MIN_MATCHES=30;
+export const OPENING_FALLBACK_TICKS_PER_SIDE=2.5;
+
+export function openingKrTickSize(price){
+  const p=+price||0;
+  if(p<2000)return 1;
+  if(p<5000)return 5;
+  if(p<20000)return 10;
+  if(p<50000)return 50;
+  if(p<200000)return 100;
+  if(p<500000)return 500;
+  return 1000;
+}
+export function openingFriction(entryPrice,calibration=null){
+  const c=calibration||{},n=+c.completeMatches||0,obs=c.avgRoundTripSlippageCostPct;
+  let slippagePct,source,tickSize=null;
+  if(n>=OPENING_VTS_MIN_MATCHES&&obs!=null&&Number.isFinite(+obs)){
+    slippagePct=Math.max(0,+obs);source="vts-observed";
+  }else{
+    tickSize=openingKrTickSize(entryPrice);
+    slippagePct=(2*OPENING_FALLBACK_TICKS_PER_SIDE*tickSize/Math.max(+entryPrice||0,1e-9))*100;
+    source="2.5tick-fallback";
+  }
+  return {
+    fixedPct:OPENING_FIXED_FRICTION_PCT,slippagePct,
+    totalPct:OPENING_FIXED_FRICTION_PCT+slippagePct,source,
+    completeMatches:n,minMatches:OPENING_VTS_MIN_MATCHES,
+    ticksPerSide:source==="2.5tick-fallback"?OPENING_FALLBACK_TICKS_PER_SIDE:null,
+    tickSize
+  };
+}
+
 export function minuteVolume(rows) {
   const a=(rows||[]).map(x=>({...x})).sort((x,y)=>String(x.t||"").localeCompare(String(y.t||"")));
   let prevDay="",prevCum=0;
@@ -69,7 +101,10 @@ export function dailyMeta(daily,date){
 const hmOf=t=>+String(t||"").slice(11,13)*100 + +String(t||"").slice(14,16);
 
 export function rebreakTrade(rows,meta,cutoffHm=930,overrides={}){
-  const p={...OPENING_BASE_PARAMS,...(overrides||{})};
+  const extra={...(overrides||{})};
+  const frictionCalibration=extra.frictionCalibration||null;
+  delete extra.frictionCalibration;
+  const p={...OPENING_BASE_PARAMS,...extra};
   if(!Array.isArray(rows)||rows.length<p.obs+3||!meta)return null;
 
   const gap=(meta.open/meta.prevClose-1)*100;
@@ -112,6 +147,7 @@ export function rebreakTrade(rows,meta,cutoffHm=930,overrides={}){
       const jp=y.close,jv=y.vol,ja=jp*jv;
       const volRatio=jv/Math.max(1,baseVol),amountRatio=ja/Math.max(1,baseAmt);
       if(jp>peak&&volRatio>=p.volMult&&amountRatio>=p.amountMult){
+        const friction=openingFriction(jp,frictionCalibration);
         const tr={
           signalSchemaVersion:2,
           strategyVersion:"opening_rebreak_v1",
@@ -126,7 +162,7 @@ export function rebreakTrade(rows,meta,cutoffHm=930,overrides={}){
             rebreakClose:jp,volumeRatio:volRatio,requiredVolumeRatio:p.volMult,
             amountRatio,requiredAmountRatio:p.amountMult,
             entryCutoff:p.entryCutoff,stopPct:p.stop,takeProfitPct:p.takeProfit,
-            frictionPct:p.fee,finalExit:p.finalExit
+            frictionPct:friction.totalPct,frictionModel:friction,finalExit:p.finalExit
           },
           exitTime:null,exitPrice:null,reason:null,pnl:null,
         };
@@ -140,7 +176,10 @@ export function rebreakTrade(rows,meta,cutoffHm=930,overrides={}){
           const b=a.filter(x=>x.hm<=p.finalExit).slice(-1)[0];
           if(b){tr.exitTime=b.hm;tr.exitPrice=b.close;tr.reason="09:30 청산";}
         }
-        if(tr.exitPrice!=null)tr.pnl=(tr.exitPrice/tr.entryPrice-1)*100-p.fee;
+        if(tr.exitPrice!=null){
+          tr.friction=friction;
+          tr.pnl=(tr.exitPrice/tr.entryPrice-1)*100-friction.totalPct;
+        }
         return tr;
       }
     }
