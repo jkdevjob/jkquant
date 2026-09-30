@@ -44,6 +44,8 @@ jobs:
         with:
           python-version: "3.12"
 
+      - run: pip install pandas pyarrow
+
       - name: 오늘 Top100 09:00~10:00 분봉 수집
         env:
           JKQ_BASE_URL: https://jkquant.pages.dev
@@ -63,17 +65,20 @@ jobs:
         run: python .app/scripts/backfill_opening_paths.py
 
       - name: 누적 시초가 연구 백테스트
-        run: python .app/scripts/backtest_opening_rebreak.py
+        run: |
+          python .app/scripts/backfill_opening_next_open.py
+          python .app/scripts/backtest_opening_rebreak.py
 
       - name: 데이터와 연구결과 저장
         run: |
-          if git diff --quiet -- data/scalping data/opening-research && [ -z "$(git status --porcelain data/scalping data/opening-research)" ]; then
+          if git diff --quiet -- data/scalping data/opening-research data/opening-next-open && [ -z "$(git status --porcelain data/scalping data/opening-research data/opening-next-open)" ]; then
             echo "새 데이터/연구결과 없음"
             exit 0
           fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add data/scalping data/opening-research
+          if [ -d data/opening-next-open ]; then git add data/opening-next-open; fi
           git commit -m "data: scalping research $(TZ=Asia/Seoul date +%F) [skip ci]"
           git pull --rebase origin scalping-data
           git push origin scalping-data

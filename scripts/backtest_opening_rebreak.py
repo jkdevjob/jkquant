@@ -13,6 +13,8 @@ import csv
 import gzip
 import json
 import math
+import os
+import hashlib
 import statistics
 from dataclasses import dataclass, asdict
 from datetime import datetime
@@ -20,8 +22,8 @@ from pathlib import Path
 from zoneinfo import ZoneInfo
 
 KST = ZoneInfo("Asia/Seoul")
-DATA = Path("data/scalping")
-OUT = Path("data/opening-research")
+DATA = Path(os.environ.get("JKQ_RESEARCH_DATA", "data/scalping"))
+OUT = Path(os.environ.get("JKQ_RESEARCH_OUT", "data/opening-research"))
 VTS_DATA = Path("data/vts-research/latest.json")
 
 # Execution-cost research model (A-3). Signal/exit thresholds remain strategy params.
@@ -46,10 +48,12 @@ class Params:
     stop: float = 1.0
     take_profit: float = 1.5
     final_exit: int = 930
+    exit_policy: str = "intraday"
 
 
 VARIANTS = [
     Params("baseline"),
+    Params("hold_to_next_open", exit_policy="next_session_open"),
     Params("today_combo_v1", pb_max=0.5, amount_mult=1.5, entry_cutoff=915),
     Params("top50", top_n=50),
     Params("pb_max_0.5", pb_max=0.5),
@@ -67,12 +71,15 @@ VARIANTS = [
 VARIANT_DESIGNED_FROM = {
     p.name: ["2026-09-22"] for p in VARIANTS if p.name != "baseline"
 }
-MULTIPLE_TEST_K = 13
+VARIANT_DESIGNED_FROM["hold_to_next_open"] = ["2025-09-01/2026-09-30"]
+MULTIPLE_TEST_K = len(VARIANTS)
 MULTIPLE_TEST_ALPHA = 0.05
 ADOPTION_RULE = "OOS edge > 0 and variant beats baseline in a majority of completed OOS folds; no auto-promotion."
 
 
 def evaluation_trades(name, trades):
+    if name == "hold_to_next_open":
+        return [x for x in trades if x.get("date", "") >= "2026-10-01"]
     designed = set(VARIANT_DESIGNED_FROM.get(name) or [])
     return [x for x in trades if x.get("date") not in designed]
 
@@ -93,6 +100,12 @@ def load_days():
             with gzip.open(p, "rt", encoding="utf-8") as f:
                 j = json.load(f)
             if j.get("date") and j.get("universe"):
+                supplement = DATA.parent / 'opening-next-open' / (j['date'] + '.json')
+                if supplement.exists():
+                    extra = json.loads(supplement.read_text(encoding='utf-8'))
+                    for row in j['universe']:
+                        if row['code'] in extra.get('records', {}):
+                            row['nextOpen'] = extra['records'][row['code']]
                 out.append(j)
         except Exception as e:
             print("skip", p, e)
@@ -464,15 +477,35 @@ def summary(trades, days, exit_model="close"):
     losses = [x for x in pnls if x < 0]
     eq = peak = mdd = 0.0
     for x in sorted(trades, key=lambda z: (z["date"], z["entryTime"], z["code"] or "")):
-        eq += x["pnl"]
+        value = model_pnl(x)
+        if value is None:
+            continue
+        eq += value
         peak = max(peak, eq)
         mdd = min(mdd, eq - peak)
     gp = sum(wins)
     gl = -sum(losses)
     avg=statistics.fmean(pnls) if pnls else 0.0
+    daily = {}
+    for trade in trades:
+        value = model_pnl(trade)
+        if value is not None:
+            daily.setdefault(trade['date'], []).append(value)
+    daily_means = [statistics.fmean(daily[d]) for d in sorted(daily)]
+    sd = statistics.stdev(daily_means) if len(daily_means) > 1 else 0
+    midpoint = len(days)//2
+    first = set(days[:midpoint])
+    front = [model_pnl(t) for t in trades if t['date'] in first and model_pnl(t) is not None]
+    back = [model_pnl(t) for t in trades if t['date'] not in first and model_pnl(t) is not None]
     return {
         "days": len(days),
-        "trades": len(trades),
+        "trades": len(pnls),
+        "signals": len(trades),
+        "pending": len(trades)-len(pnls),
+        "signalDays": len(daily),
+        "dateMeanT": statistics.fmean(daily_means)/(sd/math.sqrt(len(daily_means))) if sd else None,
+        "firstHalfAvgPnl": statistics.fmean(front) if front else None,
+        "secondHalfAvgPnl": statistics.fmean(back) if back else None,
         "winRate": (len(wins) / len(pnls) * 100) if pnls else 0.0,
         "avgWin": statistics.fmean(wins) if wins else 0.0,
         "avgLoss": statistics.fmean(losses) if losses else 0.0,
@@ -482,7 +515,7 @@ def summary(trades, days, exit_model="close"):
         "sumPnl": sum(pnls),
         "profitFactor": (gp / gl) if gl > 0 else (999.0 if gp > 0 else 0.0),
         "maxDrawdownSimple": mdd,
-        "tradesPerDay": (len(trades) / len(days)) if days else 0.0,
+        "tradesPerDay": (len(pnls) / len(days)) if days else 0.0,
         "estimatedGapTrades": sum(1 for x in trades if x.get("gapEstimated")),
     }
 
@@ -563,8 +596,29 @@ def trades_for_days(days, p: Params, friction_calibration=None):
         for row in day.get("universe") or []:
             t = one_trade(day, row, p, friction_calibration)
             if t:
+                if p.exit_policy == "next_session_open":
+                    t = hold_to_next_open(t, row.get("nextOpen"))
                 out.append(t)
     return out
+
+
+def hold_to_next_open(trade, next_open):
+    """Reuse the exact baseline entry; only change exit. Missing/suspended next session stays pending."""
+    t = dict(trade)
+    t.update(strategyVersion="opening_hold_to_next_open_v1", exitPolicy="next_session_open",
+             outcomeStatus="pending_next_open", exitDate=None)
+    t['evidence'] = dict(t['evidence'], exitPolicy='next_session_open', stopPct=None, takeProfitPct=None, finalExit=None)
+    valid = (next_open and next_open.get('date', '') > t['date'] and float(next_open.get('price') or 0) > 0)
+    price = float(next_open['price']) if valid else None
+    pnl = (price/t['entryPrice']-1)*100-t['friction']['totalPct'] if valid else None
+    reason = '다음 거래일 시가 청산' if valid else '다음 거래일 시가 대기'
+    model = dict(exitTime=900 if valid else None, exitPrice=price, pnl=pnl, reason=reason)
+    t.update(model)
+    t.update(exitModel='next_session_open', exitModels={'close': dict(model), 'lowhigh': dict(model)},
+             lowHighExitTime=model['exitTime'], lowHighExitPrice=price, lowHighPnl=pnl, lowHighReason=reason)
+    if valid:
+        t.update(exitDate=next_open['date'], outcomeStatus='complete', exitSource=next_open.get('source'))
+    return t
 
 
 def walk_forward(days, variant_trade_map):
@@ -603,8 +657,8 @@ def walk_forward(days, variant_trade_map):
         fv = []
         for p in VARIANTS:
             all_trades = evaluation_trades(p.name, variant_trade_map.get(p.name, []))
-            train_trades = [x for x in all_trades if x["date"] in train_set]
-            test_trades = [x for x in all_trades if x["date"] in test_set]
+            train_trades = [x for x in all_trades if x["date"] in train_set and (x.get('exitDate') or x['date']) <= train_dates[-1]]
+            test_trades = [x for x in all_trades if x["date"] in test_set and (x.get('exitDate') or x['date']) <= test_dates[-1]]
             oos_by_variant[p.name].extend(test_trades)
             fv.append({
                 "name": p.name,
@@ -696,13 +750,16 @@ def main():
         trades = trades_for_days(days, p, friction_calibration)
         variant_trade_map[p.name] = trades
         eval_trades = evaluation_trades(p.name, trades)
-        eval_days = [d for d in day_labels if d not in set(VARIANT_DESIGNED_FROM.get(p.name) or [])]
+        eval_days = [d for d in day_labels if d not in set(VARIANT_DESIGNED_FROM.get(p.name) or [])
+                     and (p.name != 'hold_to_next_open' or d >= '2026-10-01')]
         s = summary(eval_trades, eval_days)
         reports.append({
             "params": asdict(p),
             "designedFrom": VARIANT_DESIGNED_FROM.get(p.name, []),
             "excludedDesignDates": VARIANT_DESIGNED_FROM.get(p.name, []),
             "rawSummary": summary(trades, day_labels),
+            "evaluationStart": "2026-10-01" if p.name == "hold_to_next_open" else None,
+            "historicalStatus": "design-sample-only" if p.name == "hold_to_next_open" else "retrospective",
             "summary": s,
         })
         if p.name == "baseline":
@@ -716,6 +773,8 @@ def main():
         "from": day_labels[0],
         "to": day_labels[-1],
         "archiveDays": len(days),
+        "universeTiming": sorted(set(d.get('universeTiming', 'original-archive') for d in days)),
+        "historicalUniverseWarning": "Same-day closing turnover is ex-post information. Historical reconstruction is not proof of an executable morning universe.",
         "baselineTradeCount": len(baseline),
         "comparisonStatus": "eligible" if enough else "collecting",
         "comparisonRule": "Variant comparison is preliminary until >=20 trading days and >=30 baseline trades. Each variant's design date is excluded.",
@@ -800,6 +859,10 @@ def main():
                 "fwd20mPct": x.get("fwd20mPct"),
                 "fwd30mPct": x.get("fwd30mPct"),
                 "exitTime": x.get("exitTime"),
+                "exitDate": x.get("exitDate"),
+                "exitPolicy": x.get("exitPolicy"),
+                "exitSource": x.get("exitSource"),
+                "outcomeStatus": x.get("outcomeStatus"),
                 "exitPrice": x.get("exitPrice"),
                 "reason": x.get("reason"),
                 "pnl": x.get("pnl"),
@@ -812,6 +875,16 @@ def main():
                 "lowHighPnl": x.get("lowHighPnl"),
             })
     outcome_rows.sort(key=lambda x: (x["date"] or "", x["variant"] or "", x["entryTime"] or 0, x["code"] or ""))
+    previous_path = OUT / 'signal-outcomes.json'
+    if previous_path.exists():
+        previous = previous_path.read_bytes()
+        prior_records = json.loads(previous).get('records', [])
+        if prior_records != outcome_rows:
+            revisions = OUT / 'revisions'
+            revisions.mkdir(exist_ok=True)
+            revision = revisions / (hashlib.sha256(previous).hexdigest() + '.json')
+            if not revision.exists():
+                revision.write_bytes(previous)
     with (OUT / "signal-outcomes.json").open("w", encoding="utf-8") as f:
         json.dump({
             "schema": 1,
