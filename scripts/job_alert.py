@@ -299,7 +299,7 @@ def salary_info(title, body):
     for pattern in annual_patterns:
         for m in re.finditer(pattern, text):
             low = float(m.group(1))
-            if 2400 <= low <= 50000:
+            if 2400 <= low <= 15000:
                 candidates.append({
                     'monthly': low / 12.0,
                     'annual': low,
@@ -312,7 +312,7 @@ def salary_info(title, body):
     )
     for m in korean_thousand:
         low = float(m.group(1)) * 1000
-        if 2400 <= low <= 50000:
+        if 2400 <= low <= 15000:
             candidates.append({
                 'monthly': low / 12.0,
                 'annual': low,
@@ -415,6 +415,23 @@ def score_regular_dev_result(title, body, url):
     return score
 
 
+def salary_is_plausible(title, body, salary):
+    if salary is None:
+        return False
+    text = f'{title} {body}'.lower()
+    annual = salary.get('annual', 0)
+
+    # 일반 채용공고에서 연 1.5억원을 넘는 '만원' 표기는 자릿수/구분자 파싱 오류인 경우가 많다.
+    if annual > 15000:
+        return False
+
+    # 시급/일급 숫자를 월급으로 오인한 경우를 막는다.
+    if salary.get('monthly', 0) > 3000:
+        return False
+
+    return True
+
+
 def score_salary_result(title, body, url):
     text = f"{title} {body}".lower()
 
@@ -424,7 +441,7 @@ def score_salary_result(title, body, url):
         return -999
 
     salary = salary_info(title, body)
-    if salary is None or salary['monthly'] < 450:
+    if not salary_is_plausible(title, body, salary) or salary['monthly'] < 450:
         return -999
 
     if not is_trusted(url) and not any(term in text for term in JOB_TERMS):
