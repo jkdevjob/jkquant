@@ -59,6 +59,23 @@ VARIANTS = [
     Params("entry_by_10", entry_cutoff_min=60),  # UTC 01:00 == KST 10:00
 ]
 
+SHADOW_STRATEGIES = [
+    {
+        "name": "btc_24h_drop_v1",
+        "label": "24시간 급락 받아주기",
+        "designedFrom": ["2023-07~2026-09"],
+        "evaluationStart": "2026-10-01",
+        "ordersAllowed": False,
+        "params": {"drop24hPctMax": -5.0, "holdHours": 24, "frictionPct": 0.12},
+        "backtestExpected": {
+            "trades": 52, "avgPnlPct": 0.93, "winRatePct": 58.0, "t": 1.76,
+            "firstHalfAvgPct": 1.57, "secondHalfAvgPct": 0.30,
+            "sample": "Upbit KRW-BTC 1h · 2023-07~2026-09",
+        },
+        "note": "연 약 17회 수준이라 30건까지 약 2년 예상. 기준전략/주문과 분리된 그림자 전용.",
+    }
+]
+
 
 def utc_minute(t: str) -> int:
     s = str(t or "")
@@ -346,6 +363,104 @@ def rolling_baseline(days, trades, window=30):
     }
 
 
+
+def shadow_hourly_bars(days):
+    by_ts = {}
+    for day in days:
+        for b in day.get("bars") or []:
+            t = str(b.get("tKst") or "")
+            if len(t) < 13:
+                continue
+            key = t[:13]
+            row = by_ts.get(key)
+            if row is None:
+                by_ts[key] = {
+                    "tKst": key + ":00:00",
+                    "o": float(b.get("o") or 0),
+                    "h": float(b.get("h") or 0),
+                    "l": float(b.get("l") or 0),
+                    "c": float(b.get("c") or 0),
+                }
+            else:
+                row["h"] = max(row["h"], float(b.get("h") or 0))
+                row["l"] = min(row["l"], float(b.get("l") or 0))
+                row["c"] = float(b.get("c") or 0)
+    return [by_ts[k] for k in sorted(by_ts)]
+
+
+def btc_24h_drop_shadow(days, cfg):
+    bars = shadow_hourly_bars(days)
+    p = cfg["params"]
+    start = cfg["evaluationStart"]
+    trades = []
+    i = 24
+    while i < len(bars) - 23:
+        entry_date = bars[i]["tKst"][:10]
+        try:
+            prev_dt = datetime.fromisoformat(bars[i - 25]["tKst"])
+            exit_dt = datetime.fromisoformat(bars[i + 23]["tKst"])
+            entry_dt = datetime.fromisoformat(bars[i]["tKst"])
+        except Exception:
+            i += 1
+            continue
+        if (entry_dt - prev_dt).total_seconds() != 25 * 3600 or (exit_dt - entry_dt).total_seconds() != 23 * 3600:
+            i += 1
+            continue
+        ref = float(bars[i - 25]["c"] or 0)
+        prev = float(bars[i - 1]["c"] or 0)
+        entry = float(bars[i]["o"] or 0)
+        exit_px = float(bars[i + 23]["c"] or 0)
+        if min(ref, prev, entry, exit_px) <= 0:
+            i += 1
+            continue
+        drop = (prev / ref - 1.0) * 100.0
+        if entry_date < start:
+            i += 1
+            continue
+        if drop <= float(p["drop24hPctMax"]):
+            gross = (exit_px / entry - 1.0) * 100.0
+            net = gross - float(p["frictionPct"])
+            trades.append({
+                "date": entry_date,
+                "strategyVersion": "btc_24h_drop_shadow_v1",
+                "variant": cfg["name"],
+                "signalTimeKst": bars[i - 1]["tKst"][11:16],
+                "entryTimeKst": bars[i]["tKst"][11:16],
+                "exitTimeKst": bars[i + 23]["tKst"][11:16],
+                "entryPrice": entry,
+                "exitPrice": exit_px,
+                "drop24hPct": drop,
+                "grossPnlPct": gross,
+                "frictionPct": float(p["frictionPct"]),
+                "pnlPct": net,
+                "reason": "24h_time_exit",
+                "evidence": {
+                    "source": "Upbit public 5m OHLCV aggregated to completed 1h bars",
+                    "evaluationStart": start,
+                    "drop24hPct": drop,
+                    "requiredDropPctMax": p["drop24hPctMax"],
+                    "holdHours": p["holdHours"],
+                    "entryRule": "next completed 1h bar open",
+                    "exitRule": "24h horizon close",
+                },
+            })
+            i += int(p["holdHours"])
+        else:
+            i += 1
+    eval_days = sorted({x["tKst"][:10] for x in bars if x["tKst"][:10] >= start})
+    sm = summary(trades, eval_days)
+    ready = len(eval_days) >= 20 and sm["trades"] >= 30
+    return {
+        **cfg,
+        "evaluationDays": len(eval_days),
+        "status": "reviewable" if ready else "collecting",
+        "reviewRule": ">=20 evaluation days and >=30 completed shadow trades; no auto-promotion",
+        "summary": sm,
+        "trades": trades,
+        "latestTrades": trades[-20:],
+    }
+
+
 def main():
     all_days = load_days()
     OUT.mkdir(parents=True, exist_ok=True)
@@ -393,6 +508,7 @@ def main():
         "executionModel": "signal on completed 5m candle; enter next candle open; same-candle stop/target conflict resolves to stop",
         "frictionModel": "0.10% round-trip fee + 0.04% round-trip slippage assumption",
         "variants": reports,
+        "shadowStrategies": [btc_24h_drop_shadow(valid, cfg) for cfg in SHADOW_STRATEGIES],
         "rolling30": rolling_baseline(valid, baseline, 30),
         "latestTrades": baseline[-20:],
     }
