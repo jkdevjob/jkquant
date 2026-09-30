@@ -22,6 +22,14 @@ DEADLINE = None
 # This notice identifies Dec 30 as the last session and Jan 2 as the next opening.
 YEAR_BOUNDARY_NOTICE = 'https://securities.koreainvestment.com/main/customer/notice/Notice.jsp?cmd=TF04ga000002&num=45922'
 CONFIRMED_CLOSURES = {'2025-12-31': YEAR_BOUNDARY_NOTICE, '2026-01-01': YEAR_BOUNDARY_NOTICE}
+DELAYED_OPENS = {
+    '2025-11-13': 'https://securities.miraeasset.com/bbs/board/message/view.do?categoryId=66&messageId=2335796',
+    '2026-01-02': YEAR_BOUNDARY_NOTICE,
+}
+
+
+def collection_window(day):
+    return ('100000', '110000') if day in DELAYED_OPENS else ('090000', '100000')
 
 
 class MarketHours(RuntimeError):
@@ -177,7 +185,8 @@ def next_session(day, last_day):
 
 def minute_bars(code, day):
     from collect_scalping_data import BASE
-    qs = urllib.parse.urlencode(dict(op='minhist', code=code, date=day.replace('-', ''), hour='100000'))
+    start_time, end_time = collection_window(day)
+    qs = urllib.parse.urlencode(dict(op='minhist', code=code, date=day.replace('-', ''), hour=end_time))
     for attempt in range(4):
         try:
             j = request_json(BASE + '/api/kis?' + qs)
@@ -194,7 +203,7 @@ def minute_bars(code, day):
         raise RuntimeError(str(j['error']))
     prefix = day.replace('-', '')
     bars = {b['t']: b for b in j.get('bars', [])
-            if b.get('t', '').startswith(prefix) and '090000' <= b['t'][-6:] <= '100000'
+            if b.get('t', '').startswith(prefix) and start_time <= b['t'][-6:] <= end_time
             and all(float(b.get(k) or 0) > 0 for k in ('o', 'h', 'l', 'c'))}
     return [bars[t] for t in sorted(bars)]
 
@@ -212,6 +221,7 @@ def collect_day(day, last_day):
         with gzip.open(path, 'rt', encoding='utf-8') as f:
             old = json.load(f)
     cached = {r['code']: r for r in old.get('universe', [])}
+    window = list(collection_window(day))
     nxt = next_session(day, last_day)
     next_rows = {r['code']: r for r in nxt['rows']} if nxt else {}
     rows = []
@@ -219,13 +229,16 @@ def collect_day(day, last_day):
     payload = dict(schema=4, date=day, universeLimit=100, universeSource='KRX historical daily turnover',
         universeTiming='same-day-close', lookaheadWarning='Ex-post EOD universe, not tradable morning membership',
         source='historical-reconstruction', collectedAt=datetime.now(KST).isoformat(), complete=False, universe=rows)
+    payload.update(collectionWindow=window, sessionScheduleSource=DELAYED_OPENS.get(day),
+        strategyWindowStatus='outside_fixed_0900_entry_window' if day in DELAYED_OPENS else 'regular')
     for item in universe:
         guard()
         row = dict(item)
         previous = cached.get(item['code'], {})
+        window_changed = day in DELAYED_OPENS and previous.get('collectionWindow') != window
         bars = previous.get('bars', [])
         # KIS can omit no-trade/VI minutes. Keep gaps visible, never invent flat candles.
-        if not bars or (not previous.get('sourceRequestComplete') and
+        if window_changed or not bars or (not previous.get('sourceRequestComplete') and
                         any(e.get('code') == item['code'] for e in old.get('errors', []))):
             try:
                 bars = minute_bars(item['code'], day)
@@ -239,6 +252,7 @@ def collect_day(day, last_day):
         else:
             row['sourceRequestComplete'] = True
         row['bars'] = bars
+        row['collectionWindow'] = window if row.get('sourceRequestComplete') else previous.get('collectionWindow')
         row['observedMinutes'] = len(bars)
         row['missingMinuteCount'] = 61-len(bars)
         row['gap'] = (row['open']/row['prevClose']-1)*100 if row['prevClose'] > 0 else None
