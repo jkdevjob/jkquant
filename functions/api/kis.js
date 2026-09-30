@@ -516,6 +516,24 @@ export async function onRequestGet({ request, env }) {
       return json({ code, price: +o.stck_prpr, open: +o.stck_oprc, high: +o.stck_hgpr, low: +o.stck_lwpr,
         chgRate: +o.prdy_ctrt, volume: +o.acml_vol });
     }
+    // 동시호가 예상체결가 (08:30~09:00 · 15:20~15:30). 시초가 갭하락 연구(D-1)가 09:00 전에 갭을 판단하는 값이다.
+    // op=price 와 같은 공개 시세 조회라 주문·계좌 정보가 없다. 응답 필드명이 문서마다 달라 output1/2 를 모두 본다.
+    if (op === "expected") {
+      const code = String(url.searchParams.get("code") || "").toUpperCase();
+      if (!KRCODE.test(code)) return json({ error: "종목코드가 올바르지 않습니다." }, 400);
+      const token = await getToken(env);
+      const j = await readJson(base(env) + "/uapi/domestic-stock/v1/quotations/inquire-asking-price-exp-ccn?fid_cond_mrkt_div_code=J&fid_input_iscd=" + code, {
+        headers: { authorization: "Bearer " + token, appkey: env.KIS_APPKEY, appsecret: env.KIS_APPSECRET, tr_id: "FHKST01010200", custtype: "P" },
+      });
+      if (String(j.rt_cd) !== "0") return json({ error: RATE_LIMITED(j) ? "초당 요청 제한 — 잠시 후 다시" : (j.msg1 || "예상체결 조회 실패"),
+        rateLimited: RATE_LIMITED(j) }, 502);
+      const o1 = j.output1 || {}, o2 = j.output2 || {};
+      const pick = (...ks) => { for (const k of ks) { const v = +(o2[k] ?? o1[k]); if (Number.isFinite(v) && v !== 0) return v; } return 0; };
+      return json({ code, expectedPrice: pick("antc_cnpr"), expectedChgPct: pick("antc_cntg_prdy_ctrt"),
+        expectedChg: pick("antc_cntg_vrss"), expectedVolume: pick("antc_vol", "antc_cnqn"),
+        basePrice: pick("stck_sdpr"), price: pick("stck_prpr"), open: pick("stck_oprc"),
+        phase: String(o2.antc_mkop_cls_code || o1.antc_mkop_cls_code || ""), time: String(o1.aspr_acpt_hour || "") });
+    }
     if (op === "balance") {
       const g = await verifyOwner(request, env);
       if (!g.ok) return json({ error: g.msg }, 401);

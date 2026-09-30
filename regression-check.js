@@ -10573,7 +10573,7 @@ console.log('[SCALPING FLOW] 단타 공통 흐름 · 모의체결 분리');
      && /VTTS3035R/.test(kis));
   ok('KIS 해외 모의 조회는 전체조회 후 종목 필터', /PDNO:""[\s\S]{0,220}OVRS_EXCG_CD:""/.test(kis)
      && /if\(code\) rows=rows\.filter\(x=>x\.code===code\)/.test(kis));
-  ok('단타 화면 버전 1.27.2', /id="scVer">v1\.27\.2<\/span>/.test(sc));
+  ok('단타 화면 버전 1.28.0', /id="scVer">v1\.28\.0<\/span>/.test(sc));
 }
 
 
@@ -10709,7 +10709,7 @@ console.log('[OPENING SIGNAL LEARNING] 실시간 ledger · 30분 사후라벨 ·
      /신호 이후 30분 경로 진단/.test(scl)
      && /조건별 실제 성과/.test(scl)
      && /groupTable\('전략 버전'/.test(scl)
-     && /id="scVer">v1\.27\.2<\/span>/.test(scl));
+     && /id="scVer">v1\.28\.0<\/span>/.test(scl));
 }
 
 /* ════ 단타 Telegram ③④ 실시간 + ⑤⑥ 일일 연구 ════ */
@@ -10748,7 +10748,7 @@ console.log('[SCALPING TELEGRAM] 실시간 신호 · 일일 매매/연구 요약
   const cr=cr0>=0&&cr1>cr0?nightly.slice(cr0,cr1):'';
   ok('BTC 야간연구는 실제 70/30 holdout 모델만 참조',
      /validationModel":"70\/30 holdout \+ rolling30"/.test(cr) && !/oos_edge|oos_trades|wf_status/.test(cr));
-  ok('단타 화면 버전 1.27.2', /id="scVer">v1\.27\.2<\/span>/.test(scl));
+  ok('단타 화면 버전 1.28.0', /id="scVer">v1\.28\.0<\/span>/.test(scl));
 }
 
 
@@ -10785,6 +10785,60 @@ console.log('\n[SCALPING B-6] ATR(14) 레벨 · 실행비용 통합');
      && (scl.match(/fee:openingFrictionPct\(p\.entry\)/g)||[]).length===2
      && /const fee=openingFrictionPct\(en\)/.test(scl)
      && /pct:\(r\.price-b\.px\)\/b\.px\*100-openingFrictionPct\(b\.px\)/.test(scl));
+}
+/* ════ D-1 시초가 갭하락 과매도 VTS 모의체결 · D-3 BTC 24시간 급락 그림자 ════ */
+console.log('[GAPDOWN D-1 / DIP24 D-3] 연구용 모의체결 경로 안전장치 · 값 시험');
+{
+  const {spawnSync}=require('child_process');
+  const gd=fs.readFileSync(__d+'/functions/api/opening-gapdown.js','utf8');
+  const gr=fs.readFileSync(__d+'/functions/api/_gapdown.js','utf8');
+  const kis=fs.readFileSync(__d+'/functions/api/kis.js','utf8');
+  const ow=fs.readFileSync(__d+'/worker/opening-scheduler/src/index.js','utf8');
+  const wr=fs.readFileSync(__d+'/worker/opening-scheduler/wrangler.jsonc','utf8');
+  const wf=fs.readFileSync(__d+'/.github/workflows/opening-gapdown-research.yml','utf8');
+  const py=fs.readFileSync(__d+'/scripts/backtest_opening_gapdown.py','utf8');
+  const bt=fs.readFileSync(__d+'/scripts/backtest_crypto_orb.py','utf8');
+  const r=spawnSync(process.execPath,[__d+'/scripts/test_opening_gapdown.mjs',__d+'/functions/api'],{encoding:'utf8',timeout:60000});
+  ok('D-1 JS 값 시험(예상갭·선택·명단 신선도·시간창·체결 분리·명단 밖 종목 차단) 통과',
+     r.status===0&&/ALL PASS/.test(r.stdout),(r.stdout+r.stderr).slice(-400));
+  const orderBody=(gd.match(/JSON\.stringify\(\{env:"vts",side,code:x\.code,qty,price:0,priceType:"market"\}\)/g)||[]).length;
+  ok('D-1 주문은 모의투자(vts) 고정 · 실전 경로 없음',
+     orderBody===1&&!/env:\s*"real"|KIS_REAL|TTTC08/.test(gd));
+  ok('D-1 주문 자동 재시도 없음 + signal_id 선점 후 주문',
+     /자동 재시도하지 않음/.test(gd)&&/if\(!\(await claimSignal\(id\)\)\)/.test(gd)
+     &&gd.indexOf('await claimSignal(id)')<gd.indexOf('/api/kis?op=order&internal=1')
+     &&!/for\s*\(let\s+\w+=0;[^)]*\)\s*\{[^}]*op=order/.test(gd));
+  ok('D-1 매수는 08:59:40 전·매도는 15:20~15:28 종가 동시호가 창에서만',
+     /const ORDER_DEADLINE=85940;/.test(gd)&&/if\(stage==="close"\)return hms>=152000&&hms<152800;/.test(gd)
+     &&/if\(!stageWindow\(stage,now\.hms\)\)/.test(gd));
+  ok('D-1 선택 기준값은 전날 밤 명단(rule)에서만 읽는다 — JS 에 -2/-29 하드코딩 없음',
+     /gapdownPicks\(cands,wl\.rule\)/.test(gd)&&!/-2(\.0)?\b|-29/.test(gr.replace(/\/\/.*$/gm,'')));
+  ok('KIS 예상체결가 조회는 GET 읽기전용(op=expected, FHKST01010200)',
+     /if \(op === "expected"\)/.test(kis)&&/tr_id: "FHKST01010200"/.test(kis)
+     &&kis.indexOf('op === "expected"')<kis.indexOf('export async function onRequestPost'));
+  ok('Worker: 08:56/15:21/15:40 cron + 매 단계 응답을 gapdown ledger 에 먼저 저장 + 일부 조회 시 주문 없음',
+     /"56 23 \* \* SUN-THU"/.test(wr)&&/"21 6 \* \* MON-FRI"/.test(wr)&&/"40 6 \* \* MON-FRI"/.test(wr)
+     &&/const GAPDOWN_CRON=\{preopen:"56 23 \* \* SUN-THU",close:"21 6 \* \* MON-FRI",reconcile:"40 6 \* \* MON-FRI"\}/.test(ow)
+     &&/gapdownRecord\(env,date,"quote",q,ms\)/.test(ow)&&/gapdown_quote_partial/.test(ow)
+     &&/if\(Object\.values\(GAPDOWN_CRON\)\.includes\(controller\.cron\)\)ctx\.waitUntil\(runGapdown/.test(ow));
+  ok('Worker: 오후 매도·조회는 아침 매수 접수 성공 종목만',
+     /o\.side==="buy"&&o\.vts&&o\.vts\.ok/.test(ow));
+  ok('연구 workflow: KIS 호출·주문 없음 + 실측 원본은 날짜별 한 번만 저장(덮어쓰기 없음) + 16시 전 저장 안 함',
+     !/api\/(kis|opening-execute|opening-gapdown)/.test(wf)&&/\[ -f "\$OUT" \] && \{ echo "\$OUT 이미 저장됨"; continue; \}/.test(wf)
+     &&/"\$NOW_HM" -lt 1600/.test(wf));
+  ok('연구: 잠정 스냅숏 날짜는 연구 기록·실측 가격에 쓰지 않고 명단에만 쓴다',
+     /for r in rows if r\[0\] <= final_last\}\)/.test(py)&&/if r\[0\] <= final_last:/.test(py));
+  ok('연구: 판정은 설계 이후(2026-10-01~) 표본만 · 대조군(같은 날 무작위 갭하락) 동시 기록',
+     /DESIGN_END = "2026-09-30"/.test(py)&&/CONTROL_random_gapdown/.test(py)&&/skillPairedDays/.test(py));
+  const scl2=fs.readFileSync(__d+'/scalping.html','utf8');
+  const orApi=fs.readFileSync(__d+'/functions/api/opening-research.js','utf8');
+  ok('시초가 탭에 D-1 설계표본·대조군·판정표본·VTS 슬리피지 카드 (읽기전용 API)',
+     /D-1 갭하락 과매도 \(opening_gapdown_v1\)/.test(scl2)&&/const gd=j\.gapdown\|\|null;/.test(scl2)
+     &&/시가 − 예상체결가/.test(scl2)&&/opening-gapdown-research\/latest\.json/.test(orApi)
+     &&!/op=order|method:\s*["']POST["']/.test(orApi));
+  ok('D-3 BTC 그림자: 완료된 시간봉만·다음 시간 시가 진입·24시간 보유·주문 없음',
+     /DIP24_VERSION = "btc_dip24_v1"/.test(bt)&&/hb\[h - one\]\["c"\] \/ hb\[h - one \* \(lb \+ 1\)\]\["c"\]/.test(bt)
+     &&/"orders": "none \(research shadow\)"/.test(bt)&&/designEndKst="2026-09-30"/.test(bt));
 }
 console.log(`\n════ 결과: ${pass} PASS / ${fail} FAIL ${fail===0?'— ALL PASS ★':'— 배포 금지, 위 ✗ 항목 수정 필요'} ════`);
 process.exit(fail===0?0:1);

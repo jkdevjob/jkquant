@@ -208,7 +208,7 @@ canvas{display:block;width:100%;height:auto}
 
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Morning Scalping</div><h1>JK <span class="v">퀀트</span> 단타 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="scVer">v1.27.2</span></h1></div>
+    <div><div class="kicker">Morning Scalping</div><h1>JK <span class="v">퀀트</span> 단타 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="scVer">v1.28.0</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -2081,6 +2081,30 @@ async function loadOpeningResearch(){
       }).join('');
       html+='<div class="warn" style="margin-top:8px"><b>'+((wf.status==='reviewable')?'워크포워드 검토 가능':'초기 워크포워드')+':</b> '+(wf.foldCount||0)+'개 구간 · 검증 '+(wf.oosDays||0)+'거래일. 각 구간은 20일 학습 → 다음 5일 검증이며 검증구간끼리는 겹치지 않습니다. 결과로 기준전략을 자동 변경하지 않습니다.</div>'+
         '<div class="htable-wrap" style="margin-top:8px"><table class="htable"><thead><tr><th>OOS 전략</th><th>거래</th><th>승률</th><th>평균손익</th><th>PF</th><th>단순합</th><th>MDD</th></tr></thead><tbody>'+wfRows+'</tbody></table></div>';
+    }
+
+    const gd=j.gapdown||null;
+    if(gd){
+      const ds=(gd.designSample||{}),st=(ds.strategy||{}),ct=(ds.control||{}),sk=(ds.skillPairedDays||{});
+      const oo=((gd.outOfSample||{}).strategy||{})['1.5t']||{},lv=gd.live||{},wl=gd.watchlist||{};
+      const cell=(z,k)=>{z=(z||{})[k]||{};return z.days?pct(z.dayAvgPnl)+' <span class="sub">t='+(z.tStatDays==null?'—':(+z.tStatDays).toFixed(2))+'</span>':'—';};
+      const m=z=>z&&z.n?pct(z.mean)+' <span class="sub">('+z.n+')</span>':'—';
+      html+='<div style="margin-top:18px"><b>🧪 D-1 갭하락 과매도 (opening_gapdown_v1) · 연구용 VTS 모의체결</b>'+
+        '<div class="sub">전일 RSI(14)&lt;30 + 시가 갭 ≤ −2% → 가장 깊은 3종목 시가(장전 동시호가) 매수 → 종가(종가 동시호가) 매도. Telegram 알림 없음 · 모의투자 주문만.</div></div>'+
+        '<div class="htable-wrap" style="margin-top:8px"><table class="htable"><thead><tr><th>설계 표본 '+esc(gd.from||'')+'~'+esc(gd.designEnd||'')+'</th><th>0틱</th><th>1.5틱</th><th>3틱</th></tr></thead><tbody>'+
+        '<tr><td><b>전략 (하루 평균)</b></td><td>'+cell(st,'0.0t')+'</td><td>'+cell(st,'1.5t')+'</td><td>'+cell(st,'3.0t')+'</td></tr>'+
+        '<tr><td>대조군 (같은 날 무작위 갭하락)</td><td>'+cell(ct,'0.0t')+'</td><td>'+cell(ct,'1.5t')+'</td><td>'+cell(ct,'3.0t')+'</td></tr>'+
+        '<tr><td>선별 실력 (같은 날 차이)</td><td colspan="3">'+(((sk['1.5t']||{}).mean)==null?'—':pct(sk['1.5t'].mean)+' · t='+(+sk['1.5t'].tStat).toFixed(2)+' · '+sk['1.5t'].days+'일')+'</td></tr>'+
+        '</tbody></table></div>'+
+        '<div class="out" style="margin-top:8px">'+
+        '<div class="outbox"><div class="ol">판정용 표본 (10/1~)</div><div class="ov">'+(oo.days||0)+'일</div><div class="sub">20일 이상 · 1.5틱 기준 대조군보다 좋아야 채택</div></div>'+
+        '<div class="outbox"><div class="ol">판정용 하루 평균</div><div class="ov '+((oo.dayAvgPnl||0)>=0?'good':'bad')+'">'+(oo.days?pct(oo.dayAvgPnl):'—')+'</div></div>'+
+        '<div class="outbox"><div class="ol">VTS 실측 거래</div><div class="ov">'+(lv.trades||0)+'</div><div class="sub">'+(lv.days||0)+'일</div></div>'+
+        '<div class="outbox"><div class="ol">시가 − 예상체결가</div><div class="ov" style="font-size:14px">'+m(lv.openVsExpectedPct)+'</div></div>'+
+        '<div class="outbox"><div class="ol">매수 / 매도 슬리피지</div><div class="ov" style="font-size:14px">'+m(lv.buySlipPct)+' / '+m(lv.sellSlipPct)+'</div></div>'+
+        '<div class="outbox"><div class="ol">실측 순손익</div><div class="ov" style="font-size:14px">'+m(lv.realizedNetPct)+'</div><div class="sub">같은 종목 0틱 모델 '+m(lv.modelNet0tPct)+'</div></div>'+
+        '</div>'+
+        '<p class="note">내일 아침 명단 '+(wl.size||0)+'종목 (기준 '+esc(wl.basedOn||'—')+(wl.basedOnStatus==='provisional_snapshot'?', 잠정 스냅숏':'')+'). 연구 통계는 확정 일봉('+esc(gd.finalDataThrough||'—')+'까지)만 씁니다. 슬리피지 = 체결가와 실제 시가·종가 차이(양수 = 비용).</p>';
     }
 
     html+='<p class="note">모든 수치는 연구용 모의 결과입니다. 누적 전체기간 성과와 시간순 OOS 성과를 분리해 보고, 그림자전략을 기준전략으로 자동 승격하지 않습니다.</p>';

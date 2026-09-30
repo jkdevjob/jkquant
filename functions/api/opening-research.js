@@ -13,19 +13,24 @@ async function readRaw(path,required=false){
 
 export async function onRequestGet(){
   try{
-    const [base,nightly]=await Promise.all([
+    const [base,nightly,gapdown]=await Promise.all([
       readRaw("opening-research/latest.json",false),
-      readRaw("nightly-research/latest.json",false)
+      readRaw("nightly-research/latest.json",false),
+      readRaw("opening-gapdown-research/latest.json",false).catch(()=>null)
     ]);
+    // D-1 연구는 화면 요약에 필요한 부분만 싣는다(원본 신호 목록은 scalping-data 에 그대로 있다).
+    const gd=gapdown?{strategyVersion:gapdown.strategyVersion,from:gapdown.from,to:gapdown.to,designEnd:gapdown.designEnd,
+      finalDataThrough:gapdown.finalDataThrough,designSample:gapdown.designSample,outOfSample:gapdown.outOfSample,
+      live:gapdown.live,watchlist:gapdown.watchlist,generatedAt:gapdown.generatedAt}:null;
     if(!base){
       return new Response(JSON.stringify({
-        ok:true,status:"collecting",archiveDays:0,variants:[],
+        ok:true,status:"collecting",archiveDays:0,variants:[],gapdown:gd,
         liveSignals:(nightly&&nightly.opening&&nightly.opening.liveSignals)||null,
         liveSignalsAsOf:(nightly&&nightly.generatedAt)||null
       }),{headers:JH});
     }
     return new Response(JSON.stringify({
-      ok:true,...base,
+      ok:true,...base,gapdown:gd,
       liveSignals:(nightly&&nightly.opening&&nightly.opening.liveSignals)||null,
       liveSignalsAsOf:(nightly&&nightly.generatedAt)||null
     }),{headers:JH});

@@ -1,0 +1,101 @@
+name: 시초가 갭하락 과매도 연구 (D-1)
+
+# opening_gapdown_v1 — 전일 RSI(14)<30 + 시가 갭 ≤ −2% → 시가(장전 동시호가) 매수 → 종가(종가 동시호가) 매도.
+# 1) Worker 원본 ledger(08:56 예상가·VTS 매수 / 15:21 VTS 매도 / 15:40 체결조회)를 날짜별로 한 번만 저장한다.
+# 2) 과거 전종목 일봉(marcap 확정 + fdr 일별 잠정)으로 연구 통계·대조군·실측 연결을 다시 계산한다.
+# 3) 다음 거래일 아침 명단(watchlist.json)을 만든다. 08:56 Worker 가 이 명단만 조회한다.
+# KIS 를 부르지 않으므로(깃허브 원자료만 읽음) 장중 호출 한도와 겹치지 않는다. 주문 없음.
+
+on:
+  schedule:
+    - cron: "40 9 * * 1-5"    # 18:40 KST — 당일 실측 저장 + 명단
+    - cron: "40 14 * * 1-5"   # 23:40 KST — 일별 원자료가 늦게 올라온 날 재계산
+    - cron: "30 22 * * 0-4"   # 07:30 KST 다음 날 — 08:56 전 마지막 명단 갱신
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/opening-gapdown-research.yml"
+      - "scripts/backtest_opening_gapdown.py"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: opening-gapdown-research
+  cancel-in-progress: false
+
+jobs:
+  research:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: 데이터 브랜치 체크아웃
+        uses: actions/checkout@v4
+        with:
+          ref: scalping-data
+          fetch-depth: 0
+
+      - name: 최신 연구 코드 체크아웃
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          path: .app
+          fetch-depth: 1
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: 의존성
+        run: pip install --quiet pandas pyarrow
+
+      - name: 지난 연도 일봉 캐시 (확정된 연도 파일은 바뀌지 않는다)
+        uses: actions/cache@v4
+        with:
+          path: .cache/krx-daily
+          key: krx-daily-v1-${{ github.run_id }}
+          restore-keys: krx-daily-v1-
+
+      - name: 원본 ledger 저장 (날짜별 한 번, 덮어쓰지 않음)
+        env:
+          KEY: ${{ secrets.AUTOTRADE_KEY }}
+          OPENING_WORKER: https://jkquant-opening-scheduler.mumae4.workers.dev
+        shell: bash
+        run: |
+          mkdir -p data/opening-gapdown-live
+          [ -n "$KEY" ] || { echo "::warning::AUTOTRADE_KEY 없음 — ledger 저장 생략"; exit 0; }
+          NOW_HM=$(TZ=Asia/Seoul date +%H%M)
+          for DATE in $(TZ=Asia/Seoul date +%F) $(TZ=Asia/Seoul date -d yesterday +%F); do
+            OUT="data/opening-gapdown-live/$DATE.json"
+            [ -f "$OUT" ] && { echo "$OUT 이미 저장됨"; continue; }
+            # 15:40 체결조회가 끝난 뒤에만 저장한다 (장중 일부만 담긴 사본을 원본으로 굳히지 않는다)
+            if [ "$DATE" = "$(TZ=Asia/Seoul date +%F)" ] && [ "$NOW_HM" -lt 1600 ]; then continue; fi
+            STATUS=$(curl -sS --max-time 30 -o gd-ledger.json -w '%{http_code}' -H "x-monitor-key: $KEY" "$OPENING_WORKER/gapdown?date=$DATE" || true)
+            if [ "$STATUS" = "200" ] && jq -e '.ok == true and (.ledger.events | type == "array") and (.ledger.events | length > 0)' gd-ledger.json >/dev/null 2>&1; then
+              jq --arg at "$(TZ=Asia/Seoul date --iso-8601=seconds)" '. + {archivedAt:$at, source:"cloudflare-opening-scheduler-durable-ledger"}' gd-ledger.json > "$OUT"
+              echo "$OUT 저장: $(jq -c '[.ledger.events[].stage]' "$OUT")"
+            else
+              echo "$DATE ledger 없음/실패 HTTP $STATUS — 휴장·명단 없음일 수 있음"
+            fi
+          done
+
+      - name: 연구 통계 + 실측 연결 + 다음 거래일 명단
+        env:
+          JKQ_GAPDOWN_OUT: data/opening-gapdown-research
+          JKQ_GAPDOWN_LIVE: data/opening-gapdown-live
+          JKQ_GAPDOWN_FROM_YEAR: "2018"
+        run: python .app/scripts/backtest_opening_gapdown.py
+
+      - name: 저장
+        run: |
+          if [ -z "$(git status --porcelain data/opening-gapdown-research data/opening-gapdown-live)" ]; then
+            echo "변경 없음"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/opening-gapdown-research data/opening-gapdown-live
+          git commit -m "data: opening gap-down research $(TZ=Asia/Seoul date '+%F %H:%M') [skip ci]"
+          git pull --rebase origin scalping-data
+          git push origin scalping-data
