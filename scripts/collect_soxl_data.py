@@ -149,7 +149,7 @@ def hm(dt: datetime) -> int:
 
 
 def main():
-    res, host = request_chart()
+    daily_only = os.environ.get("JKQ_SOXL_DAILY_ONLY", "").strip() == "1"
     soxx_written = False
     soxl_daily_written = False
     soxx_error = None
@@ -166,6 +166,20 @@ def main():
     except Exception as e:
         soxl_daily_error = str(e)
         print(f"SOXL daily collection warning: {e}")
+    if daily_only:
+        print(json.dumps({
+            "mode": "daily-only",
+            "soxxDailyPath": str(SOXX_DAILY),
+            "soxxDailyWritten": soxx_written,
+            "soxxDailyError": soxx_error,
+            "soxlDailyPath": str(SOXL_DAILY),
+            "soxlDailyWritten": soxl_daily_written,
+            "soxlDailyError": soxl_daily_error,
+        }, ensure_ascii=False, indent=2))
+        if soxx_error or soxl_daily_error:
+            return 2
+        return 0
+    res, host = request_chart()
     ts = res.get("timestamp") or []
     q = ((res.get("indicators") or {}).get("quote") or [{}])[0]
     O = q.get("open") or []
