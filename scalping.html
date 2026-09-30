@@ -152,7 +152,7 @@ canvas{display:block;width:100%;height:auto}
 #gbtn svg{width:20px;height:20px}
 #gate .gnote{color:var(--faint);font-size:11.5px;margin-top:18px;line-height:1.6}
 
-/* unified strategy flow v1.25.1 */
+/* unified strategy flow v1.25.2 */
 .strategy-flow{display:flex;flex-direction:column;gap:18px;margin-top:12px}
 .flow-section{border-top:1px solid var(--line);padding-top:12px}
 .flow-section:first-child{border-top:0;padding-top:0}
@@ -203,7 +203,7 @@ canvas{display:block;width:100%;height:auto}
 
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Morning Scalping</div><h1>JK <span class="v">퀀트</span> 단타 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="scVer">v1.25.1</span></h1></div>
+    <div><div class="kicker">Morning Scalping</div><h1>JK <span class="v">퀀트</span> 단타 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="scVer">v1.25.2</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -597,178 +597,11 @@ canvas{display:block;width:100%;height:auto}
     <div class="chartbox"><canvas id="chart" width="860" height="420"></canvas></div>
     <div id="ch_guide" style="margin-top:10px;font-size:13px;font-weight:700;line-height:1.5"></div>
     <div class="levels" id="ch_levels" style="margin-top:8px"></div>
-    <div class="row" style="margin-top:12px">
-      <div class="fld" style="flex:0 0 120px"><label>진입가 (지정가)</label><input id="ch_entry" type="number" step="0.01"></div>
-      <button class="ghostbtn buy" onclick="enterPos()">＋ 진입(반자동 기록)</button>
-      <button class="ghostbtn" onclick="kisFromChart()">🔗 KIS 매수창 채우기</button>
-      <span class="sub">손절·목표가 자동 계산 → 아래 '보유 포지션'에서 관리</span>
-    </div>
-    <div class="warn">반자동 도구다 — <b>주문은 확인창을 거쳐야만</b> 나간다. 목록의 <b>🔗KIS</b> 를 누르면
-      계산된 지정가·수량으로 KIS 모의투자 계좌에 실제 주문이 들어가고, 성공·실패가 <b>KIS 모의투자 이력</b>에 남는다.
-      자동으로 알아서 사고파는 기능은 넣지 않았다.</div>
+    <p class="note">차트는 조회용입니다. 주문·포지션 관리는 각 전략의 서버 장부/VTS 영역에서만 처리합니다.</p>
   </div>
   </div>
 
-  <!-- 3. 보유 포지션 -->
-  <div class="card">
-    <h3><span class="dot"></span>💼 보유 포지션 <span class="caret" onclick="refreshPos()">🔄 현재가 갱신</span></h3>
-    <p class="lead">목록의 <b>＋진입</b>(종이거래)이나 <b>🔗KIS</b>(모의투자 실주문)를 누르면 여기에 담기고
-      <b>손절(−4%)·목표(+6%)·보유일수</b>를 추적한다. <span class="sig on" style="padding:0 4px">KIS</span> 표시가 붙은 건
-      증권사에 주문이 나간 포지션이다. 청산하면 아래 일지로 넘어가 승률·기대값이 쌓인다.</p>
-    <div id="pos_body"></div>
-  </div>
-
-  <!-- 3b. KIS 실주문 (모의투자) -->
-  <div class="card">
-    <h3><span class="dot"></span>🔗 KIS 실주문 <span class="sub" id="kis_env" style="font-weight:600"></span> <span class="caret" onclick="kisBalance()">🔄 잔고</span></h3>
-    <div id="kis_status" class="lead">연결 확인 중…</div>
-    <div class="row" style="margin-bottom:10px">
-      <button class="ghostbtn" onclick="kisDiag()" id="kisDiagBtn">🔍 연결 점검</button>
-      <span class="sub">키를 넣은 뒤 눌러보세요 — 어디서 막히는지 항목별로 알려줍니다</span>
-    </div>
-    <div id="kis_diag" style="margin-bottom:10px"></div>
-    <div id="kis_panel" style="display:none">
-      <div class="row" style="margin-bottom:8px">
-        <div class="fld" style="flex:1 1 120px"><label>종목코드</label><input id="k_code" type="text" placeholder="005930"></div>
-        <div class="fld" style="flex:0 0 90px"><label>수량</label><input id="k_qty" type="number" step="1" min="1" placeholder="1"></div>
-        <div class="fld" style="flex:0 0 110px"><label>가격(지정가)</label><input id="k_price" type="number" step="1" placeholder="0"></div>
-        <div class="fld" style="flex:0 0 auto;justify-content:flex-end"><label style="opacity:0">.</label>
-          <label style="font-size:12px;color:var(--dim);display:flex;align-items:center;gap:6px;height:37px"><input id="k_mkt" type="checkbox" style="width:auto"> 시장가</label></div>
-      </div>
-      <div class="row">
-        <button class="ghostbtn buy" onclick="kisOrder('buy')">▲ 매수 주문</button>
-        <button class="ghostbtn danger" onclick="kisOrder('sell')">▼ 매도 주문</button>
-        <span class="sub" id="kis_msg"></span>
-      </div>
-      <div class="row" style="margin-bottom:10px">
-        <div class="fld" style="flex:0 0 150px"><label>1회 투입금액(원)</label><input id="k_budget" type="number" step="100000" min="10000" value="2000000"></div>
-        <span class="sub">스크리닝 목록의 <b>KIS 매수</b>는 이 금액을 현재가로 나눠 수량을 정합니다</span>
-      </div>
-      <div id="kis_bal" style="margin-top:12px"></div>
-    </div>
-    <div class="warn" id="kis_help" style="display:none">KIS 실주문을 켜려면 Cloudflare Pages → 설정 → 환경 변수에
-      <b>KIS_APPKEY · KIS_APPSECRET · KIS_ACCOUNT</b>(예 12345678-01)를 넣으세요. 주문 권한은 <b>OWNER_EMAIL</b>(구글 로그인 이메일)을 그대로 따릅니다.
-      이 단타 화면은 <b>국내 모의투자(VTS)만 사용</b>하며 <b>실계좌(real) 주문은 화면 코드에서 차단</b>합니다. 키는 서버(환경변수)에만 저장되고 브라우저엔 노출되지 않습니다.</div>
-  </div>
-
-  <!-- 3c. KIS 모의투자 이력 -->
-  <div class="card">
-    <h3><span class="dot"></span>📒 KIS 모의투자 이력 <span class="sub" id="klog_env" style="font-weight:600"></span></h3>
-    <p class="lead">증권사에 <b>실제로 나간 주문</b>만 남는다. 종이거래(모의 일지)와 달리 체결 여부·주문번호·실패 사유까지 그대로 기록해
-      전략이 현실에서 어떻게 굴러갔는지 되짚는 근거로 쓴다. 매수와 매도가 짝지어지면 <b>실현손익</b>이 계산된다.</p>
-    <div class="row" id="klog_sum" style="margin-bottom:12px"></div>
-    <div id="klog_body"></div>
-    <div class="row" style="margin-top:12px">
-      <button class="ghostbtn sm" onclick="exportKlog()">⬇ 내보내기(CSV)</button>
-      <button class="ghostbtn sm danger" onclick="clearKlog()">이력 전체 삭제</button>
-      <span class="sub" id="klog_sync"></span>
-    </div>
-  </div>
-
-  <!-- 3d. 검증 기록 -->
-  <div class="card">
-    <h3 onclick="toggleSec('verifyBody',this)"><span class="dot"></span>📉 검증 기록 — 무엇이 안 되는지 <span class="caret">▾</span></h3>
-    <div id="verifyBody">
-    <p class="lead">이 앱을 만들며 아침 단타·스윙 전략을 실제 데이터로 검증한 기록이다.
-      <b>안 되는 것을 아는 게 되는 것을 찾는 것보다 확실했다.</b> 전문은 SCALPING.md 13~23절.</p>
-    <div class="htable-wrap"><table class="htable">
-      <thead><tr><th>검증 대상</th><th>표본</th><th>결과</th></tr></thead>
-      <tbody>
-      <tr><td><b>아침 9:00~9:30 당일청산</b><div class="sub">ORB·갭·VWAP·초반급등 등</div></td>
-          <td>241거래일 실제 1분봉</td><td class="loss">전 신호 마이너스. 대조군 −0.305%/일</td></tr>
-      <tr><td><b>이 앱의 스윙 규칙</b><div class="sub">볼린저하단+RSI&lt;40, −4%/+6%, 5일</div></td>
-          <td>8년 197종목</td><td class="loss">연 +37만원 · 낙폭 −549만원 · <b>p=0.51</b></td></tr>
-      <tr><td><b>캔들 패턴 12종</b><div class="sub">망치·장악·샛별·적삼병 등</div></td>
-          <td>8년 40만봉</td><td class="loss">36칸 중 유의한 플러스 0개</td></tr>
-      <tr><td><b>유튜브 매매법 16개</b><div class="sub">주도테마 대장주·불타기·3분봉 양봉3연속 등</div></td>
-          <td>8년 + 241일 분봉</td><td class="loss">21개 주장 중 확인 1개(퍼센트 목표 금지)</td></tr>
-      <tr><td><b>ETF·인버스·미국시장 조건</b></td><td>8년 2,016일</td>
-          <td class="loss">76개 조건 전수조사 생존 0개</td></tr>
-      <tr><td><b>일일 브리핑(섹터 파급)</b></td><td>8년</td>
-          <td class="loss">미국 1%↑ → 한국 시가에 0.24~0.48% 이미 반영, 장중 잔여 0</td></tr>
-      <tr><td><b>비유동성 20일 보유</b><div class="sub">문헌 기반 · 유일 생존</div></td>
-          <td>6년</td><td class="win">월 +72만원(선정 기여분 29만) · 단타 아님</td></tr>
-      </tbody></table></div>
-    <p class="note"><b>반복해서 확인된 것:</b> ① 매매가 잦을수록 마찰이 이긴다(매일 왕복 시 마찰만 연 126%).
-      ② 뜨거운 것을 쫓는 쪽은 전부 손해였다. ③ 고정 퍼센트 손절·목표는 유의하게 나빴다.
-      ④ 거래 단위로 세면 부풀려진다 — 날짜 단위로 세라.</p>
-    </div>
-  </div>
-
-  <!-- 4. 전략 규칙 -->
-  <div class="card">
-    <h3 onclick="toggleSec('ruleBody',this)"><span class="dot"></span>⚡ 아침 단타 규칙 <span class="caret">▾</span></h3>
-    <div id="ruleBody">
-    <div class="step">
-      <div class="st"><span class="n">1</span>유니버스</div>
-      <ul><li>KOSPI·KOSDAQ <b>거래대금 50억 이상</b> (현금·채권 ETF 제외)</li></ul>
-    </div>
-    <div class="step">
-      <div class="st"><span class="n">2</span>신호 — 과매도 반등</div>
-      <ul><li>일봉 <b>볼린저(20,2) 하단 이탈</b> + <b>RSI(14) &lt; <span class="k">40</span></b></li>
-          <li class="sub">추세추종(밴드상단 돌파)은 올해 실증에서 대조군 대비 −0.09%p로 <b>엣지 0</b> → 폐기</li></ul>
-    </div>
-    <div class="step">
-      <div class="st"><span class="n">3</span>선별 — 점수 ≥ <span class="k">65</span></div>
-      <ul><li>RSI 낮을수록·하단 아래 깊을수록·급락일수록 가점, <b>거래량 급증(2배↑)은 감점</b>(패닉 물량)</li>
-          <li><b>"상위 N개"가 아니라 임계값</b> — 하루 3~4종목, <b>없는 날이 정상</b></li></ul>
-    </div>
-    <div class="step">
-      <div class="st"><span class="n">4</span>진입·청산</div>
-      <ul><li>진입 <b>다음날 시가</b> · 손절 <b>−<span class="k">4%</span></b> · 익절 <b>+<span class="k">6%</span></b> · 최대 <b>5일</b> 보유 후 종가청산</li>
-          <li class="sub">−1%/−2% 타이트 손절은 일중 변동(평균 저가 −3.9%)에 다 털린다 — 실증에서 −2%/+3%만 유일하게 마이너스</li></ul>
-    </div>
-    <div class="step">
-      <div class="st"><span class="n">5</span>리스크</div>
-      <ul><li><b>종목당 동시 1포지션</b> (같은 종목이 연속 신호로 반복 등장)</li></ul>
-    </div>
-    <p class="note" style="border-color:var(--sell)"><b style="color:var(--sell)">⚠ 폐기된 기대치.</b>
-      한때 "평균 +1.72%/거래 · 승률 62%"로 적어뒀으나 <b>거래 단위로 센 오류</b>였다.
-      8년 포트폴리오 회계 재검증 결과는 <b>연 +37만원 · 최대낙폭 −549만원 · p=0.51</b> 이다.
-      <b>이건 3~5일 보유하는 스윙이고, 그마저도 검증되지 않았다.</b> 근거는 SCALPING.md 15절.
-      투자 권유 아님·손실 위험 큼.</p>
-    </div>
-
-  <!-- 5. 손익분기 계산기 -->
-  <div class="card">
-    <h3><span class="dot"></span>🧮 손익분기 계산기</h3>
-    <div class="calcgrid">
-      <div class="fld"><label>익절 % (R)</label><input id="c_r" type="number" step="0.1" value="6.0"></div>
-      <div class="fld"><label>손절 % (L)</label><input id="c_l" type="number" step="0.1" value="4.0"></div>
-      <div class="fld"><label>왕복 마찰 % (c)</label><input id="c_c" type="number" step="0.1" value="0.5"></div>
-      <div class="fld"><label>가정 승률 % (p)</label><input id="c_p" type="number" step="1" value="50"></div>
-    </div>
-    <div class="out">
-      <div class="outbox"><div class="ol">순손익비</div><div class="ov mid" id="o_pay">—</div></div>
-      <div class="outbox"><div class="ol">본전 승률</div><div class="ov mid" id="o_be">—</div></div>
-      <div class="outbox"><div class="ol">1회당 기대값</div><div class="ov" id="o_ev">—</div></div>
-    </div>
-    <p class="note" id="c_msg"></p>
-  </div>
-
-  <!-- 6. 모의매매 일지 -->
-  <div class="card">
-    <h3><span class="dot"></span>🧪 모의매매 일지 <span class="sub" id="log_owner" style="font-weight:600"></span></h3>
-    <p class="lead">규칙대로 종이거래한 결과를 쌓는다. 진입가·청산가만 넣으면 순손익·승패가 자동 계산되고 <b>트리거유형별 기대값</b>이 나온다.</p>
-    <div class="logform">
-      <div class="fld"><label>날짜</label><input id="f_date" type="date"></div>
-      <div class="fld wide"><label>종목</label><input id="f_tkr" type="text" placeholder="예: 한화에어로"></div>
-      <div class="fld"><label>트리거</label>
-        <select id="f_trig"><option value="스크린">스크린</option><option value="ORB">ORB 돌파</option><option value="눌림">갭 눌림목</option><option value="VI">VI 해제</option></select></div>
-      <div class="fld"><label>진입가</label><input id="f_in" type="number" step="0.01"></div>
-      <div class="fld"><label>청산가</label><input id="f_out" type="number" step="0.01"></div>
-      <div class="fld"><label>마찰 %</label><input id="f_fee" type="number" step="0.1" value="0.5"></div>
-      <div class="fld wide"><label>메모(선택)</label><input id="f_note" type="text" placeholder="예: 트레일링 청산"></div>
-      <div class="fld" style="justify-content:flex-end"><button class="prim" onclick="addTrade()">+ 기록</button></div>
-    </div>
-    <div class="row" id="log_sum" style="margin-bottom:12px"></div>
-    <div id="log_by" class="row" style="margin-bottom:12px"></div>
-    <div id="log_body"></div>
-    <div class="row" style="margin-top:12px">
-      <button class="ghostbtn sm" onclick="exportLog()">⬇ 내보내기(CSV)</button>
-      <button class="ghostbtn sm danger" onclick="clearLog()">일지 전체 삭제</button>
-    </div>
-  </div>
+  <!-- 구형 공용 수동매매 UI 제거됨: 보유포지션/KIS 수동주문/KIS일지/검증기록/구형규칙/손익계산기/모의매매일지 -->
 
 </div>
 
@@ -1475,7 +1308,7 @@ function cumulativeHistoryCard(name){
   return flowCard('📚 과거 누적 매매이력',
     '<p class="lead"><b>'+HIST_LABELS[name]+' 기준전략의 전체 확정 매매이력</b>입니다. 오늘 장부와 분리해 누적 원본을 최신순으로 조회합니다.</p>'+
     '<div class="row" style="margin-bottom:8px;align-items:flex-end">'+
-      '<div class="fld"><label>기간</label><select id="hist_'+name+'_range" onchange="'+call+'"><option value="all">전체</option><option value="7">최근 7일</option><option value="30">최근 30일</option><option value="custom">날짜 지정</option></select></div>'+
+      '<div class="fld"><label>기간</label><select id="hist_'+name+'_range" onchange="'+call+'"><option value="30">1개월</option><option value="90">3개월</option><option value="180" selected>6개월</option><option value="365">1년</option><option value="all">전체</option><option value="custom">날짜 지정</option></select></div>'+
       '<div class="fld"><label>시작일</label><input id="hist_'+name+'_from" type="date"></div>'+
       '<div class="fld"><label>종료일</label><input id="hist_'+name+'_to" type="date"></div>'+
       '<button class="ghostbtn" onclick="'+call+'">🔄 조회</button>'+
@@ -1499,7 +1332,7 @@ async function loadScalpingHistory(name,page=1){
   if(!msg||!body)return;
   msg.textContent='누적 이력 조회 중…';
   try{
-    const range=($('hist_'+name+'_range')||{}).value||'all';
+    const range=($('hist_'+name+'_range')||{}).value||'180';
     const q=new URLSearchParams({strategy:name,range:range,page:String(page),pageSize:'100'});
     if(range==='custom'){
       const f=$('hist_'+name+'_from'),t=$('hist_'+name+'_to');
@@ -3058,11 +2891,9 @@ function boot(){
       return;
     }
     $('gate').style.display='none'; $('app').style.display='';
-    PKEY='jkq_scalp_pos_'+user.uid; LKEY='jkq_scalp_log_'+user.uid; AKEY='jkq_scalp_arch_'+user.uid;
-    KKEY='jkq_scalp_kis_'+user.uid; THKEY='jkq_scalp_top2_hist_'+user.uid;
-    $('log_owner').textContent='· '+(user.displayName||user.email||'');
-    loadAll(); loadArch(); recalc(); renderPos(); renderLog(); renderKlog(); renderArch(); setupUnifiedStrategyFlow(); restoreStrategy(); kisInit(); archAuto();
-    await cloudLoad(); renderKlog(); renderPos();
+    // 활성 4개 단타전략만 초기화한다. 폐기된 과매도 반등용 공용 수동매매 UI/장부는 더 이상 실행하지 않는다.
+    setupUnifiedStrategyFlow();
+    restoreStrategy();
   });
 }
 if(window.fb) boot(); else window.addEventListener('fb-ready', boot);
