@@ -2,6 +2,9 @@
 """Focused value tests for SCALPING_IMPROVEMENTS_v2 A-1~A-4."""
 from datetime import date, timedelta
 from pathlib import Path
+from tempfile import TemporaryDirectory
+import json
+import backtest_opening_rebreak as eng
 
 from backtest_opening_rebreak import (
     Params,
@@ -77,6 +80,18 @@ def test_a3_friction_values():
     assert abs(opening_friction_pct(15000,"KOSPI",pre30)-expected)<1e-12
     observed={"source":"vts_observed_round_trip","completeMatches":30,"avgRoundTripSlippageCostPct":0.31}
     assert abs(opening_friction_pct(15000,"KOSPI",observed)-0.54)<1e-12
+
+    # Calibration source itself must not switch before 30 complete VTS matches.
+    old_vts=eng.VTS
+    with TemporaryDirectory() as td:
+        p=Path(td)/"latest.json"; eng.VTS=p
+        p.write_text(json.dumps({"strategies":[{"strategy":"opening","completeMatches":29,"avgRoundTripSlippageCostPct":0.31}]}),encoding="utf-8")
+        c=eng.load_friction_calibration()
+        assert c["source"]=="tick_fallback_2.5_each_side",c
+        p.write_text(json.dumps({"strategies":[{"strategy":"opening","completeMatches":30,"avgRoundTripSlippageCostPct":0.31}]}),encoding="utf-8")
+        c=eng.load_friction_calibration()
+        assert c["source"]=="vts_observed_round_trip",c
+    eng.VTS=old_vts
 
 
 def test_a4_design_exclusion_and_k13():
