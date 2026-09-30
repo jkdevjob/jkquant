@@ -1535,8 +1535,11 @@ console.log('[29] 단타 화면의 성과 주장 정정');
   // 옛 주장이 화면 어디에도 '기대치'로 남아 있으면 안 된다
   ok('“+1.72%·승률 62%”를 기대치로 내세우지 않는다',
      !/올해 실증[^<]{0,40}\+1\.72/.test(sc) && !/실증 기대[^<]{0,60}62%/.test(sc));
-  ok('폐기 사실을 명시한다', /폐기된 기대치/.test(sc) && /거래 단위로 센 오류/.test(sc));
-  ok('실제 수치를 적었다', /연 \+37만원/.test(sc) && /p=0\.51/.test(sc) && /−549만원/.test(sc));
+  const md0=fs.existsSync(__d+'/SCALPING.md')?fs.readFileSync(__d+'/SCALPING.md','utf8'):'';
+  ok('폐기 사실은 문서에 보존',
+     /거래 단위 t값은 부풀려진다/.test(md0) && /p=0\.51/.test(md0));
+  ok('폐기 전략의 실제 수치는 문서에 보존',
+     /연 \+37만원/.test(md0) && /−549만원/.test(md0));
   ok('스크리닝 카드에 경고가 있다',
      /이 전략은 실증으로 뒷받침되지 않는다/.test(sc)
      && sc.indexOf('이 전략은 실증으로 뒷받침되지 않는다') < sc.indexOf('id="scr_body"'));
@@ -1546,7 +1549,7 @@ console.log('[29] 단타 화면의 성과 주장 정정');
   // 폐기된 과매도 반등용 공용 검증 UI는 화면에서 제거하고 근거는 문서에 보존한다.
   ok('구형 공용 검증 기록 카드는 활성 화면에서 제거',
      !/id="verifyBody"/.test(sc) && !/검증 기록 — 무엇이 안 되는지/.test(sc));
-  const md=fs.existsSync(__d+'/SCALPING.md')?fs.readFileSync(__d+'/SCALPING.md','utf8'):'';
+  const md=md0;
   ok('폐기 전략의 검증 근거는 문서에 보존',
      /거래 단위 t값은 부풀려진다/.test(md) && /마찰 희석 곡선/.test(md));
   // 코드 주석도 정정됐는지
@@ -10547,7 +10550,8 @@ console.log('[SCALPING FLOW] 단타 공통 흐름 · 모의체결 분리');
   ok('단타 전략탭 공통 7단계 순서', pos.every((x,i)=>x>=0&&(i===0||x>pos[i-1])), pos.join(' → '));
   ok('활성 단타 4개 전략탭 모두 공통 flow 대상', ['opening','daytrading','crypto','soxl'].every(x=>sc.includes(x+':{strategy:')));
   ok('검증 실패 과매도 반등 탭은 운영 UI에서 제거', !/data-strategy="swing"/.test(sc) && /id="strategy_swing" class="strategy-pane" style="display:none"/.test(sc));
-  ok('로그인 후 공통 flow를 만든 뒤 탭 복원', /setupUnifiedStrategyFlow\(\); restoreStrategy\(\);/.test(sc));
+  ok('로그인 후 공통 flow를 만든 뒤 탭 복원',
+     /setupUnifiedStrategyFlow\(\);\s*restoreStrategy\(\);/.test(sc));
   ok('단타 flow/showStrategy 함수는 한 번만 정의되어 중복 재배치가 없다',
      (sc.match(/function setupUnifiedStrategyFlow\(\)\{/g)||[]).length===1
      && (sc.match(/function showStrategy\(name\)\{/g)||[]).length===1);
