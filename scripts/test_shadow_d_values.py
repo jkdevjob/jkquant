@@ -18,14 +18,14 @@ def hour_bar(dt, o=100.0, c=100.0):
     }
 
 
-def btc_fixture(drop_close=94.0, exit_close=98.7):
+def btc_fixture(drop_close=94.0, entry_open=95.0, exit_close=99.75):
     start=datetime(2026,1,1,0,0,0)
     bars=[]
     for i in range(50):
         o=c=100.0
         if i==24: o=c=drop_close
-        elif i==25: o=c=drop_close
-        elif 25<i<48: o=c=drop_close
+        elif i==25: o=c=entry_open
+        elif 25<i<48: o=c=entry_open
         elif i==48: o=c=exit_close
         bars.append(hour_bar(start+timedelta(hours=i),o,c))
     return [{"sessionDateUtc":"fixture","bars":bars}]
