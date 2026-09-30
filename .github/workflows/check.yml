@@ -21,7 +21,9 @@ jobs:
       - name: 연구 Python 문법 검사
         run: |
           python -m py_compile scripts/backtest_opening_rebreak.py
+          python -m py_compile scripts/backfill_opening_paths.py
           python -m py_compile scripts/test_opening_signal_labels.py
+          python -m py_compile scripts/mutation_test_opening_engine.py
           python -m py_compile scripts/backtest_daytrading.py
           python -m py_compile scripts/collect_daytrading_data.py
           python -m py_compile scripts/analyze_vts_reconcile.py
@@ -50,8 +52,11 @@ jobs:
           print("✓ 10:15 이내만 primary validation에 포함")
           PY
 
-      - name: 시초가 사후라벨 값 검사
+      - name: 시초가 사후라벨·엔진 값 검사
         run: python scripts/test_opening_signal_labels.py
+
+      - name: 시초가 엔진 변이 시험
+        run: python scripts/mutation_test_opening_engine.py
 
       - name: 연구 서버 JS 문법 검사
         run: |
