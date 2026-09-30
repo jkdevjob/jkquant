@@ -46,13 +46,28 @@ async function sendTelegram(env,title,lines){
   return {ok:true,messageId:j.result&&j.result.message_id};
 }
 
+let FRICTION_CACHE={at:0,data:null};
+async function openingExecutionCalibration(origin){
+  const now=Date.now();
+  if(FRICTION_CACHE.data&&now-FRICTION_CACHE.at<5*60*1000)return FRICTION_CACHE.data;
+  let data={completeMatches:0,avgRoundTripSlippageCostPct:null};
+  try{
+    const r=await fetch(origin+"/api/vts-research",{headers:{"Accept":"application/json"}});
+    const j=await r.json();
+    const row=(j.strategies||[]).find(x=>x.strategy==="opening");
+    if(row)data={completeMatches:+row.completeMatches||0,avgRoundTripSlippageCostPct:row.avgRoundTripSlippageCostPct};
+  }catch(e){}
+  FRICTION_CACHE={at:now,data};
+  return data;
+}
+
 function emptyShadow(){
   return Object.fromEntries(SHADOW_VARIANTS.map(v=>[v.name,{
-    name:v.name,label:v.label,description:v.description,params:v.params,trades:[]
+    name:v.name,label:v.label,description:v.description,params:v.params,designedFrom:v.designedFrom||[],trades:[]
   }]));
 }
 
-async function scanShard(origin,now,shard,shards,limit,cutoffHm){
+async function scanShard(origin,now,shard,shards,limit,cutoffHm,executionCalibration){
   const uj=await (await fetch(origin+"/api/universe?limit="+limit)).json();
   const universe=(uj.universe||[]).filter((_,i)=>i%shards===shard);
   const trades=[],shadow=emptyShadow(),errors=[];let idx=0;
@@ -70,12 +85,13 @@ async function scanShard(origin,now,shard,shards,limit,cutoffHm){
         const rows=minuteVolume(mj.minutes).filter(x=>String(x.t||"").slice(0,10)===now.date);
         const meta=dailyMeta(dj,now.date);
         if(!meta)continue;
+        meta.market=u.market||"";
 
-        const base=rebreakTrade(rows,meta,cutoffHm);
+        const base=rebreakTrade(rows,meta,cutoffHm,{},executionCalibration);
         if(base)trades.push({code:u.code,name:u.name||u.code,variant:"baseline",...base});
 
         for(const v of SHADOW_VARIANTS){
-          const tr=rebreakTrade(rows,meta,cutoffHm,v.params);
+          const tr=rebreakTrade(rows,meta,cutoffHm,v.params,executionCalibration);
           if(tr)shadow[v.name].trades.push({code:u.code,name:u.name||u.code,variant:v.name,...tr});
         }
       }catch(e){
@@ -101,12 +117,12 @@ function sellLines(rows){
   return rows.flatMap((x,i)=>[
     (i+1)+". "+x.name+" ("+x.code+")",
     "매도신호 "+String(x.exitTime).padStart(4,"0")+" · "+Math.round(x.exitPrice).toLocaleString("ko-KR")+"원 · "+x.reason,
-    "진입 "+Math.round(x.entryPrice).toLocaleString("ko-KR")+"원 · 비용 0.25% 반영 손익 "+(x.pnl>=0?"+":"")+x.pnl.toFixed(2)+"%"
+    "진입 "+Math.round(x.entryPrice).toLocaleString("ko-KR")+"원 · 비용 "+Number(x.frictionPct||0).toFixed(2)+"%("+String(x.frictionSource||"")+") 반영 손익 "+(x.pnl>=0?"+":"")+x.pnl.toFixed(2)+"%"
   ]);
 }
 function shadowEvents(shadow,targetHm){
   return Object.values(shadow).map(v=>({
-    name:v.name,label:v.label,description:v.description,params:v.params,
+    name:v.name,label:v.label,description:v.description,params:v.params,designedFrom:v.designedFrom||[],
     buyEvents:v.trades.filter(x=>x.entryTime===targetHm),
     sellEvents:v.trades.filter(x=>x.exitTime===targetHm),
     trades:v.trades,
@@ -146,7 +162,8 @@ export async function onRequestGet({request,env}){
   const cutoffHm=(history||serverHistory)?Math.min(930,now.hm>930?930:now.targetHm):liveTargetHm;
 
   try{
-    const res=await scanShard(origin,now,shard,shards,limit,cutoffHm);
+    const executionCalibration=await openingExecutionCalibration(origin);
+    const res=await scanShard(origin,now,shard,shards,limit,cutoffHm,executionCalibration);
 
     if(history||serverHistory){
       return new Response(JSON.stringify({
