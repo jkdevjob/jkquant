@@ -1,9 +1,7 @@
-name: Job Alert Multi-source Dry Run
+name: Job Alert Multi-source Diagnostic
 
 on:
-  push:
-    paths:
-      - ".github/workflows/job-alert-multisource-test.yml"
+  workflow_dispatch:
 
 permissions:
   contents: read
