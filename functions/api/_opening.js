@@ -31,7 +31,8 @@ export function openingTickSize(px,market=""){
 }
 export function openingFriction(px,market="",calibration={}){
   const n=+calibration.completeMatches||0;
-  const observed=Number(calibration.avgRoundTripSlippageCostPct);
+  const rawObserved=calibration.avgRoundTripSlippageCostPct;
+  const observed=rawObserved==null?NaN:Number(rawObserved);
   if(n>=OPENING_VTS_MIN_MATCHES&&Number.isFinite(observed)&&observed>=0){
     return {pct:OPENING_FIXED_COST_PCT+observed,source:"vts_observed_round_trip",completeMatches:n,
       fixedCostPct:OPENING_FIXED_COST_PCT,roundTripSlippagePct:observed};
