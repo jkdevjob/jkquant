@@ -2,7 +2,7 @@
 """Focused value checks for opening-signal outcome labels."""
 
 from backtest_opening_rebreak import (
-    Params, opening_diagnostics, opening_friction, opening_path_metrics,
+    Params, evaluation_trades, opening_diagnostics, opening_friction, opening_path_metrics,
     one_trade, simulate_exit
 )
 from backfill_opening_paths import merge_bars
@@ -165,6 +165,18 @@ def test_friction_fallback_and_vts_threshold():
     assert abs(calibrated["totalPct"] - 0.65) < 1e-12, calibrated
 
 
+def test_shadow_design_date_is_excluded():
+    rows = [
+        {"date": "2026-09-22", "pnl": 9.0},
+        {"date": "2026-09-23", "pnl": 1.0},
+    ]
+    out = evaluation_trades("today_combo_v1", rows)
+    assert [x["date"] for x in out] == ["2026-09-23"], out
+    # Baseline was not designed from that day's result, so its history is untouched.
+    base = evaluation_trades("baseline", rows)
+    assert len(base) == 2, base
+
+
 if __name__ == "__main__":
     test_path_labels()
     test_exit_rule_still_stops_at_0930()
@@ -172,4 +184,5 @@ if __name__ == "__main__":
     test_backfill_merge_preserves_existing_and_extends()
     test_parallel_exit_models_stop_first()
     test_friction_fallback_and_vts_threshold()
+    test_shadow_design_date_is_excluded()
     print("opening signal labels: PASS")
