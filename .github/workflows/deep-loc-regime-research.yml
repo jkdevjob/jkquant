@@ -9,6 +9,10 @@ on:
       - ".github/workflows/deep-loc-regime-research.yml"
   workflow_dispatch:
 
+concurrency:
+  group: deep-loc-regime-research
+  cancel-in-progress: true
+
 permissions:
   contents: read
 
