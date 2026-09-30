@@ -23,11 +23,13 @@ import json
 import statistics
 from dataclasses import dataclass, asdict
 from datetime import datetime
+from bisect import bisect_left
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
 NY = ZoneInfo("America/New_York")
 DATA = Path("data") / "soxl" / "SOXL" / "5m"
+SOXX_DAILY = Path("data") / "soxl" / "SOXX" / "1d" / "series.json.gz"
 OUT = Path("data") / "soxl-research"
 
 
@@ -56,6 +58,23 @@ VARIANTS = [
     Params("stop_1.5_tp_3.0", stop_pct=1.5, take_profit_pct=3.0),
     Params("hold_45m", max_hold_bars=9),
     Params("hold_120m", max_hold_bars=24),
+]
+
+SHADOW_STRATEGIES = [
+    {
+        "name": "soxl_soxx_rsi35_v1",
+        "label": "반도체 과매도 당일 반등",
+        "designedFrom": ["2010-01~2026-09"],
+        "evaluationStart": "2026-10-01",
+        "ordersAllowed": False,
+        "params": {"soxxPrevRsiMax": 35.0, "frictionPct": 0.20, "hold": "same_day"},
+        "backtestExpected": {
+            "trades": 184, "avgPnlPct": 1.030, "winRatePct": 51.0, "t": 1.86,
+            "without2020AvgPct": 0.769, "without2020_2022_2025AvgPct": 0.306,
+            "sample": "SOXL/SOXX · 2010~2026-09",
+        },
+        "note": "위기 때만 작동하는 전략 — 평소엔 신호가 거의 없고 수익도 없다. 5일 보유 금지.",
+    }
 ]
 
 
@@ -100,6 +119,109 @@ def no_trade(date, reason, **extra):
         "action": "no_trade",
         "decisionReason": reason,
         **extra,
+    }
+
+
+def load_soxx_rsi14():
+    if not SOXX_DAILY.exists():
+        return [], {}
+    try:
+        with gzip.open(SOXX_DAILY, "rt", encoding="utf-8") as f:
+            payload = json.load(f)
+    except Exception:
+        return [], {}
+    rows = sorted(payload.get("rows") or [], key=lambda x: str(x.get("date") or ""))
+    out = {}
+    prev = None
+    au = ad = None
+    alpha = 1.0 / 14.0
+    for row in rows:
+        d = str(row.get("date") or "")
+        c = float(row.get("adjClose") or 0)
+        if not d or c <= 0:
+            continue
+        if prev is not None:
+            delta = c - prev
+            up, dn = max(delta, 0.0), max(-delta, 0.0)
+            if au is None:
+                au, ad = up, dn
+            else:
+                au = au * (1.0 - alpha) + up * alpha
+                ad = ad * (1.0 - alpha) + dn * alpha
+            out[d] = 100.0 - 100.0 / (1.0 + au / max(ad, 1e-12)) if ad > 0 else 100.0
+        prev = c
+    return sorted(out), out
+
+
+def soxx_prev_rsi(date, dates, values):
+    i = bisect_left(dates, date) - 1
+    return values.get(dates[i]) if i >= 0 else None
+
+
+def soxl_oversold_shadow(days, cfg, soxx_dates, soxx_rsi):
+    p = cfg["params"]
+    start = cfg["evaluationStart"]
+    eval_days = []
+    trades = []
+    for day in days:
+        date = str(day.get("sessionDateEt") or "")
+        if date < start:
+            continue
+        rsi = soxx_prev_rsi(date, soxx_dates, soxx_rsi)
+        if rsi is None:
+            continue
+        eval_days.append(date)
+        if not (rsi < float(p["soxxPrevRsiMax"])):
+            continue
+        bars = sorted(day.get("bars") or [], key=lambda x: x.get("tEt") or "")
+        if not bars:
+            continue
+        entry = float(bars[0].get("o") or 0)
+        exit_px = float(bars[-1].get("c") or 0)
+        if min(entry, exit_px) <= 0:
+            continue
+        gross = (exit_px / entry - 1.0) * 100.0
+        net = gross - float(p["frictionPct"])
+        mfe = (max(float(x.get("h") or entry) for x in bars) / entry - 1.0) * 100.0
+        mae = (min(float(x.get("l") or entry) for x in bars) / entry - 1.0) * 100.0
+        trades.append({
+            "date": date,
+            "strategyVersion": "soxl_soxx_rsi35_shadow_v1",
+            "variant": cfg["name"],
+            "signalTimeEt": "09:30",
+            "entryTimeEt": "09:30",
+            "exitTimeEt": "16:00",
+            "entryPrice": entry,
+            "exitPrice": exit_px,
+            "soxxPrevRsi14": rsi,
+            "grossPnlPct": gross,
+            "frictionPct": float(p["frictionPct"]),
+            "pnlPct": net,
+            "mfePct": mfe,
+            "maePct": mae,
+            "reason": "same_day_close",
+            "evidence": {
+                "source": "SOXX adjusted daily close RSI(14) + SOXL regular-session 5m OHLCV",
+                "evaluationStart": start,
+                "soxxPrevRsi14": rsi,
+                "requiredRsiBelow": p["soxxPrevRsiMax"],
+                "entryRule": "SOXL regular-session open",
+                "exitRule": "same-day regular-session close",
+                "frictionPct": p["frictionPct"],
+                "overnightHold": False,
+            },
+        })
+    sm = summary(trades, eval_days)
+    ready = len(eval_days) >= 20 and sm["trades"] >= 30
+    return {
+        **cfg,
+        "evaluationDays": len(eval_days),
+        "status": "reviewable" if ready else "collecting",
+        "reviewRule": ">=20 evaluation days and >=30 completed shadow trades; no auto-promotion",
+        "summary": sm,
+        "trades": trades,
+        "latestTrades": trades[-20:],
+        "soxxAdjustedDataAvailable": bool(soxx_dates),
     }
 
 
@@ -483,6 +605,7 @@ def main():
     reports = []
     trade_map = {}
     decision_map = {}
+    soxx_dates, soxx_rsi = load_soxx_rsi14()
 
     for p in VARIANTS:
         trades = []
@@ -525,6 +648,7 @@ def main():
         "dataWindowNote": "Yahoo 5m source backfills a rolling recent window; the scalping-data archive grows prospectively beyond it.",
         "targetNote": "Net +1% days are tracked as a research target metric, not a guaranteed daily return.",
         "variants": reports,
+        "shadowStrategies": [soxl_oversold_shadow(valid, cfg, soxx_dates, soxx_rsi) for cfg in SHADOW_STRATEGIES],
         "walkForward": wf,
         "rolling30": rolling_baseline(valid, baseline, 30),
         "latestTrades": baseline[-20:],
