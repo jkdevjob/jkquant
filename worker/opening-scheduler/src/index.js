@@ -135,7 +135,7 @@ function liveEvent(date,target,stage,variant,x,delivery,variantMeta){
   };
 }
 function collectEvents(date,target,parts){
-  const out=[];
+  const out=[],shadow=[];
   for(const p of parts){
     const tel=p.telegram||{};
     const buyDelivery={channel:"telegram",sent:!!tel.buySent,messageId:tel.buyMessageId||null,error:tel.buyError||null};
@@ -143,10 +143,25 @@ function collectEvents(date,target,parts){
     for(const x of (p.buyEvents||[]))out.push(liveEvent(date,target,"buy","baseline",x,buyDelivery,null));
     for(const x of (p.sellEvents||[]))out.push(liveEvent(date,target,"sell","baseline",x,sellDelivery,null));
     for(const v of (p.shadowEvents||[])){
-      const delivery={channel:"telegram",sent:false,messageId:null,error:null,reason:"shadow_strategy_not_notified"};
-      for(const x of (v.buyEvents||[]))out.push(liveEvent(date,target,"buy",String(v.name||"shadow"),x,delivery,v));
-      for(const x of (v.sellEvents||[]))out.push(liveEvent(date,target,"sell",String(v.name||"shadow"),x,delivery,v));
+      for(const x of (v.buyEvents||[]))shadow.push({stage:"buy",v,x});
+      for(const x of (v.sellEvents||[]))shadow.push({stage:"sell",v,x});
     }
+  }
+  const groups=new Map();
+  for(const q of shadow){
+    const key=[String(q.v.name||"shadow"),q.stage].join(":");
+    if(!groups.has(key))groups.set(key,[]);
+    groups.get(key).push(q);
+  }
+  for(const rows of groups.values()){
+    const v=rows[0].v||{},stage=rows[0].stage;
+    let chosen=rows;
+    if(String(v.name||"")==="opening_selloff_v1"&&stage==="buy"){
+      const max=Math.max(1,+((v.params||{}).maxPicks)||3);
+      chosen=rows.slice().sort((a,b)=>(+a.x.gap||0)-(+b.x.gap||0)||String(a.x.code||"").localeCompare(String(b.x.code||""))).slice(0,max);
+    }
+    const delivery={channel:"telegram",sent:false,messageId:null,error:null,reason:"shadow_strategy_not_notified"};
+    for(const q of chosen)out.push(liveEvent(date,target,stage,String(v.name||"shadow"),q.x,delivery,v));
   }
   return out;
 }
