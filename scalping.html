@@ -1467,7 +1467,10 @@ function setupUnifiedStrategyFlow(){
     }
     const map=document.createElement('div'); map.className='flow-map';
     map.innerHTML=FLOW_STEPS.map((x,i)=>'<span class="flow-chip">'+(i+1)+'. '+x[1].replace(/^[^ ]+ /,'')+'</span>').join('');
-    if(head)head.insertAdjacentElement('afterend',map); else pane.prepend(map);
+    const scoreEl=$('score_'+name);
+    if(scoreEl)scoreEl.insertAdjacentElement('afterend',map);
+    else if(head)head.insertAdjacentElement('afterend',map);
+    else pane.prepend(map);
     const flow=document.createElement('div'); flow.className='strategy-flow';
     map.insertAdjacentElement('afterend',flow);
     const used=new Set(), bodies={};
