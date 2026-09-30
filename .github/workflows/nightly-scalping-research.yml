@@ -13,6 +13,7 @@ on:
     paths:
       - ".github/workflows/nightly-scalping-research.yml"
       - "scripts/nightly_scalping_research.py"
+      - "scripts/backfill_opening_shadow_outcomes.py"
       - "functions/api/nightly-research-summary.js"
       - "scripts/backtest_soxl_intraday.py"
 
@@ -53,6 +54,7 @@ jobs:
         run: |
           set -e
           DATE=$(TZ=Asia/Seoul date +%F)
+          JKQ_BASE_URL="$BASE" python .app/scripts/backfill_opening_shadow_outcomes.py
           python .app/scripts/nightly_scalping_research.py
 
           REPORT="data/nightly-research/latest.json"
@@ -74,7 +76,7 @@ jobs:
 
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add data/nightly-research
+          git add data/nightly-research data/opening-history
           if git diff --cached --quiet; then
             echo "야간 연구결과 변경 없음"
             exit 0

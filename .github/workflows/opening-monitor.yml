@@ -146,13 +146,26 @@ jobs:
                 shadowVariants: (
                   [$parts[].shadowVariants[]]
                   | group_by(.name)
-                  | map({
-                      name: .[0].name,
-                      label: .[0].label,
-                      description: .[0].description,
-                      params: .[0].params,
-                      trades: ([.[].trades[]] | sort_by(.entryTime, .code))
-                    })
+                  | map(
+                      . as $g
+                      | {
+                          name: $g[0].name,
+                          kind: ($g[0].kind // "rebreak"),
+                          label: $g[0].label,
+                          description: $g[0].description,
+                          params: $g[0].params,
+                          designedFrom: ($g[0].designedFrom // []),
+                          evaluationScope: ($g[0].evaluationScope // null),
+                          backtestExpected: ($g[0].backtestExpected // null),
+                          trades: (
+                            [ $g[].trades[] ]
+                            | if $g[0].name == "opening_selloff_v1"
+                              then sort_by(.gap, .code)[:(($g[0].params.maxPicks // 3))]
+                              else sort_by(.entryTime, .code)
+                              end
+                          )
+                        }
+                    )
                 ),
                 liveSignalLedger: $ledger,
                 signalRecords: (

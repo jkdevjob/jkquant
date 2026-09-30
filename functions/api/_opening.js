@@ -48,6 +48,24 @@ export const SHADOW_VARIANTS=Object.freeze([
     description:"재돌파 진입 시각을 09:15까지로 제한",
     params:{entryCutoff:915},
   },
+  {
+    name:"opening_selloff_v1",
+    kind:"selloff_close",
+    designedFrom:["2018-06~2026-09"],
+    evaluationScope:"all_available",
+    label:"시초가 투매 받아주기",
+    description:"전일 RSI(14)<30 + 시가 갭≤−2%를 갭 깊은 순 최대 3종목, 시가→종가 그림자 추적",
+    params:{rsiMax:30,gapMax:-2,gapFloor:-29,minPrevClose:1000,minPrevTurnoverEok:20,maxPicks:3},
+    backtestExpected:{
+      sample:"2,752종목 · 상폐 213 포함 · 2018-06~2026-09",
+      grossAvgPct:0.279,
+      net0TickAvgPct:0.049,
+      net0TickT:0.17,
+      net1_5TickAvgPct:-0.333,
+      net1_5TickT:-1.15,
+      note:"설계기간을 포함해 현재 보유한 전체 데이터로 재평가"
+    },
+  },
 ]);
 
 export const OPENING_FIXED_FRICTION_PCT=.23;
@@ -100,6 +118,57 @@ export function dailyMeta(daily,date){
   const cur=a[i],prev=i>0?a[i-1]:null;
   if(!cur||!prev||!(+cur.open>0)||!(+prev.close>0))return null;
   return {open:+cur.open,prevClose:+prev.close};
+}
+
+export function openingRsi14(daily,date){
+  const a=(daily&&daily.ohlc)||[],i=a.findIndex(x=>x.date===date);
+  if(i<15)return null;
+  const closes=a.slice(0,i).map(x=>+x.close||0);
+  if(closes.some(x=>!(x>0)))return null;
+  let au=0,ad=0;
+  for(let k=1;k<closes.length;k++){
+    const d=closes[k]-closes[k-1],up=Math.max(0,d),dn=Math.max(0,-d);
+    const alpha=k>14?1/14:1/k;
+    au=au*(1-alpha)+up*alpha;
+    ad=ad*(1-alpha)+dn*alpha;
+  }
+  return ad>0?100-100/(1+au/Math.max(ad,1e-12)):100;
+}
+
+export function selloffShadowTrade(daily,date,frictionCalibration=null){
+  const v=SHADOW_VARIANTS.find(x=>x.name==="opening_selloff_v1"),p=v&&v.params;
+  if(!v||!p)return null;
+  const a=(daily&&daily.ohlc)||[],i=a.findIndex(x=>x.date===date);
+  if(i<61)return null; // 상장 60거래일 이상 + 전일 확정 지표
+  const cur=a[i],prev=a[i-1];
+  if(!cur||!prev||!(+cur.open>0)||!(+prev.close>=p.minPrevClose))return null;
+  const prevVol=+prev.vol||0,turnoverEok=(+prev.close||0)*prevVol/1e8;
+  if(!(turnoverEok>=p.minPrevTurnoverEok))return null;
+  const gap=(+cur.open/+prev.close-1)*100;
+  if(!(gap<=p.gapMax&&gap>p.gapFloor))return null;
+  const rsiPrev=openingRsi14(daily,date);
+  if(!(rsiPrev<p.rsiMax))return null;
+  const friction=openingFriction(+cur.open,frictionCalibration);
+  return {
+    signalSchemaVersion:3,
+    strategyVersion:"opening_selloff_shadow_v1",
+    strategyParams:{...p},
+    decisionReason:"prev_rsi14_oversold+opening_gap_down",
+    entryTime:900,shadowEmitTime:904,entryPrice:+cur.open,
+    exitTime:null,exitPrice:null,reason:null,pnl:null,
+    gap,rsiPrev,prevClose:+prev.close,prevTurnoverEok:turnoverEok,
+    friction,
+    evidence:{
+      source:"daily OHLCV; previous-day RSI and turnover only",
+      evaluationScope:v.evaluationScope||"all_available",
+      prevRsi14:rsiPrev,requiredRsiBelow:p.rsiMax,
+      gapPct:gap,requiredGapMax:p.gapMax,gapFloor:p.gapFloor,
+      prevClose:+prev.close,minPrevClose:p.minPrevClose,
+      prevTurnoverEok:turnoverEok,minPrevTurnoverEok:p.minPrevTurnoverEok,
+      entryRule:"09:00 opening auction price",exitRule:"same-day close",
+      maxPicks:p.maxPicks,frictionPct:friction.totalPct,frictionModel:friction
+    }
+  };
 }
 
 const hmOf=t=>+String(t||"").slice(11,13)*100 + +String(t||"").slice(14,16);

@@ -208,7 +208,7 @@ canvas{display:block;width:100%;height:auto}
 
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Morning Scalping</div><h1>JK <span class="v">퀀트</span> 단타 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="scVer">v1.26.1</span></h1></div>
+    <div><div class="kicker">Morning Scalping</div><h1>JK <span class="v">퀀트</span> 단타 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="scVer">v1.27.0</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -520,7 +520,7 @@ canvas{display:block;width:100%;height:auto}
     </div>
 
     <div class="card">
-      <h3><span class="dot"></span>🧪 누적 비트코인 연구 <span class="sub" style="font-weight:600">최근 365일 백필 + 매일 자동 누적</span></h3>
+      <h3><span class="dot"></span>🧪 누적 비트코인 연구 <span class="sub" style="font-weight:600">최근 1200일 백필 + 매일 자동 누적</span></h3>
       <p class="lead">최초 실행 때 최근 약 1년의 확정 5분봉을 가져와 바로 기준전략을 검증하고, 이후 매일 전날 원본을 추가한다.
         기준전략과 변형들은 <b>동일 원본·동일 체결 규칙</b>으로 비교한다.</p>
       <div class="row" style="margin-bottom:8px">
@@ -535,7 +535,7 @@ canvas{display:block;width:100%;height:auto}
       <p class="lead"><b>매일 09:20 KST</b> GitHub Actions가 업비트 공개 API에서 완료된 UTC 전일의 KRW-BTC 5분봉을 저장한다.
         UTC 00:00은 KST 09:00이므로 파일 경계가 연구 세션과 정확히 맞는다.</p>
       <div class="warn"><b>데이터 정직성:</b> 현재 진행 중인 UTC 일자는 저장하지 않고 확정된 이전 일자만 사용한다.
-        최초에는 최근 365일을 백필하고, 이후에는 최근 2일을 겹쳐 다시 받아 누락·지연을 방지한다.
+        최초에는 최근 1200일을 백필하고, 이후에는 최근 2일을 겹쳐 다시 받아 누락·지연을 방지한다.
         원본은 <b>scalping-data/data/crypto</b>, 연구결과는 <b>data/crypto-research</b>에 누적한다.</div>
     </div>
   </div>
@@ -1145,7 +1145,7 @@ async function loadCryptoResearch(){
     if(!r.ok||!j.ok)throw new Error(j.error||('HTTP '+r.status));
     if(!j.validDays){
       msg.textContent='첫 자동수집/백필 대기';
-      body.innerHTML='<div class="warn">아직 누적 연구파일이 없습니다. 배포 뒤 첫 비트코인 데이터 workflow가 최근 365일을 백필하면 자동으로 채워집니다.</div>';
+      body.innerHTML='<div class="warn">아직 누적 연구파일이 없습니다. 배포 뒤 첫 비트코인 데이터 workflow가 최근 1200일을 백필하면 자동으로 채워집니다.</div>';
       return;
     }
     const labels={
@@ -1208,6 +1208,12 @@ async function loadCryptoResearch(){
         '<td class="'+(Number(z.avgPnl)>0?'win':Number(z.avgPnl)<0?'loss':'')+'">'+btcPct(z.avgPnl)+'</td></tr>';
     });
     h+='</tbody></table></div>';
+    const btcSh=j.shadowStrategies||[];
+    if(btcSh.length){
+      h+='<div style="margin:14px 0 8px"><b>🧬 D-3 그림자 · 전체 보유 데이터 평가</b></div><div class="htable-wrap"><table class="htable"><thead><tr><th>전략</th><th>평가일</th><th>완료거래</th><th>실측 승률</th><th>실측 평균</th><th>설계 기대치</th><th>상태</th></tr></thead><tbody>'+
+        btcSh.map(q=>{const z=q.summary||{},e=q.backtestExpected||{};return '<tr><td><b>'+esc(q.label||q.name||'')+'</b><div class="sub">직전24h≤−5% → 다음 1h 시가 → 24h 뒤 종가 · 비용0.12% · 주문 없음</div></td><td>'+Number(q.evaluationDays||0)+'/20</td><td>'+Number(z.trades||0)+'/30</td><td>'+btcNum(z.winRate,1)+'%</td><td class="'+(Number(z.avgPnl||0)>=0?'win':'loss')+'">'+btcPct(z.avgPnl)+'</td><td>평균 +'+btcNum(e.avgPnlPct,2)+'% · 승률 '+btcNum(e.winRatePct,0)+'% · t='+btcNum(e.t,2)+'</td><td>'+esc(q.status||'collecting')+'</td></tr>';}).join('')+
+        '</tbody></table></div><div class="warn"><b>그림자 전용:</b> 저장된 전체 기간을 평가합니다. 최근 구간에서 약해진 전략이므로 기대치와 실측을 나란히만 보고 기준전략은 바꾸지 않습니다.</div>';
+    }
     h+='<p class="note">표는 성과순으로 정렬하지 않는다. 기준전략을 고정한 채 주변 규칙의 민감도와 홀드아웃 일관성을 보기 위한 비교표다.</p>';
     body.innerHTML=h;
   }catch(e){
@@ -1303,7 +1309,14 @@ async function loadSoxlResearch(){
       h+='<tr><td>'+esc(labels[p.name]||p.name||'—')+'</td><td>'+Number(x.trades||0)+'</td><td>'+soxlNum(x.winRate,1)+'%</td><td>'+soxlPct(x.avgPnl)+'</td>'+
         '<td>'+soxlNum(x.target1PctDayRatePct,1)+'%</td><td>'+(Number(x.profitFactor)>=999?'∞':soxlNum(x.profitFactor,2))+'</td><td>'+soxlPct(x.compoundReturnPct)+'</td>'+
         '<td>'+soxlPct(x.maxDrawdownPct)+'</td><td>'+soxlPct(z.avgPnl)+'</td></tr>';});
-    h+='</tbody></table></div><p class="note">성과만 보고 자동 승격하지 않습니다. 표본·홀드아웃·롤링 일관성이 확인된 후보만 검토합니다.</p>';
+    h+='</tbody></table></div>';
+    const sxSh=j.shadowStrategies||[];
+    if(sxSh.length){
+      h+='<div style="margin:14px 0 8px"><b>🧬 D-4 그림자 · 전체 보유 데이터 평가</b></div><div class="htable-wrap"><table class="htable"><thead><tr><th>전략</th><th>평가일</th><th>완료거래</th><th>실측 승률</th><th>실측 평균</th><th>설계 기대치</th><th>상태</th></tr></thead><tbody>'+
+        sxSh.map(q=>{const z=q.summary||{},e=q.backtestExpected||{};return '<tr><td><b>'+esc(q.label||q.name||'')+'</b><div class="sub">전일 SOXX 조정종가 RSI&lt;35 → SOXL 시가→당일 종가 · 주문 없음</div></td><td>'+Number(q.evaluationDays||0)+'/20</td><td>'+Number(z.trades||0)+'/30</td><td>'+soxlNum(z.winRate,1)+'%</td><td class="'+(Number(z.avgPnl||0)>=0?'win':'loss')+'">'+soxlPct(z.avgPnl)+'</td><td>평균 +'+soxlNum(e.avgPnlPct,3)+'% · 승률 '+soxlNum(e.winRatePct,0)+'% · t='+soxlNum(e.t,2)+'</td><td>'+esc(q.status||'collecting')+'</td></tr>';}).join('')+
+        '</tbody></table></div><div class="warn"><b>위기 때만 작동하는 전략:</b> 평소엔 신호가 거의 없고 수익도 없습니다. <b>당일 종가 청산만</b> 기록하며 5일 보유나 실제 주문으로 확장하지 않습니다.</div>';
+    }
+    h+='<p class="note">성과만 보고 자동 승격하지 않습니다. 표본·홀드아웃·롤링 일관성이 확인된 후보만 검토합니다.</p>';
     body.innerHTML=h;
   }catch(e){msg.textContent='SOXL 연구결과 조회 실패';body.innerHTML='<div class="err">'+esc(e.message||e)+'</div>';}
 }
@@ -2008,6 +2021,14 @@ async function loadOpeningResearch(){
       '<p class="note">두 청산 모델을 병렬 기록하지만 기준전략 호환 필드는 종가 모델 그대로입니다. 비용은 VTS 완전매칭 30건 전까지 가격별 2.5틱/편도 fallback을 사용합니다.</p>'+
       '<div class="warn" style="margin-top:8px"><b>다중검정 통제:</b> K='+(mt.K||13)+' · '+esc(mt.method||'Bonferroni')+
       ' · 보정 α '+Number(mt.adjustedAlpha||0).toFixed(4)+' · 그림자전략 설계일 2026-09-22는 해당 전략 평가에서 제외. <b>자동 승격 없음.</b></div>';
+
+    const newShadows=j.shadowStrategies||[];
+    if(newShadows.length){
+      html+='<div style="margin-top:14px"><b>🧬 신규 그림자 전략 · 전체 보유 데이터 평가</b></div>'+
+        '<div class="htable-wrap" style="margin-top:6px"><table class="htable"><thead><tr><th>전략</th><th>평가일</th><th>완료거래</th><th>실측 승률</th><th>실측 평균</th><th>설계 백테스트 기대치</th><th>상태</th></tr></thead><tbody>'+
+        newShadows.map(q=>{const z=q.summary||{},e=q.backtestExpected||{};const exp='0틱 '+((+e.net0TickAvgPct||0)>=0?'+':'')+Number(e.net0TickAvgPct||0).toFixed(3)+'% · 1.5틱 '+((+e.net1_5TickAvgPct||0)>=0?'+':'')+Number(e.net1_5TickAvgPct||0).toFixed(3)+'%';return '<tr><td><b>'+esc(q.label||q.name||'')+'</b><div class="sub">전일 RSI&lt;30 · 갭≤−2% · 깊은 갭 최대3 · 시가→종가 · 주문 없음</div></td><td>'+Number(q.evaluationDays||0)+'/20</td><td>'+Number(z.trades||0)+'/30</td><td>'+Number(z.winRate||0).toFixed(1)+'%</td><td class="'+(Number(z.avgPnl||0)>=0?'win':'loss')+'">'+((Number(z.avgPnl||0)>=0?'+':'')+Number(z.avgPnl||0).toFixed(3))+'%</td><td>'+esc(exp)+'</td><td>'+esc(q.status||'collecting')+'</td></tr>';}).join('')+
+        '</tbody></table></div><p class="note"><b>현재 저장된 날짜를 전부 평가합니다.</b> 설계에 사용된 과거 표본이 포함될 수 있으므로 OOS 성과로 해석하지 않으며, 기준전략·Telegram·VTS 주문에는 연결하지 않습니다.</p>';
+    }
 
     const dg=j.diagnostics||{},fp=dg.forwardPath||{},cg=dg.conditionGroups||{},hits=dg.thresholdHits||{};
     const pct=v=>v==null?'—':((v>=0?'+':'')+(+v).toFixed(2)+'%');
