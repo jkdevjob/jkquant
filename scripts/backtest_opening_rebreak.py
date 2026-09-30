@@ -64,6 +64,18 @@ VARIANTS = [
     Params("tp_2.0", take_profit=2.0),
 ]
 
+VARIANT_DESIGNED_FROM = {
+    p.name: ["2026-09-22"] for p in VARIANTS if p.name != "baseline"
+}
+MULTIPLE_TEST_K = 13
+MULTIPLE_TEST_ALPHA = 0.05
+ADOPTION_RULE = "OOS edge > 0 and variant beats baseline in a majority of completed OOS folds; no auto-promotion."
+
+
+def evaluation_trades(name, trades):
+    designed = set(VARIANT_DESIGNED_FROM.get(name) or [])
+    return [x for x in trades if x.get("date") not in designed]
+
 
 def hm(t: str) -> int:
     s = str(t or "")
@@ -590,7 +602,7 @@ def walk_forward(days, variant_trade_map):
 
         fv = []
         for p in VARIANTS:
-            all_trades = variant_trade_map.get(p.name, [])
+            all_trades = evaluation_trades(p.name, variant_trade_map.get(p.name, []))
             train_trades = [x for x in all_trades if x["date"] in train_set]
             test_trades = [x for x in all_trades if x["date"] in test_set]
             oos_by_variant[p.name].extend(test_trades)
@@ -624,6 +636,33 @@ def walk_forward(days, variant_trade_map):
             "summary": summary(oos_by_variant[p.name], oos_days),
         })
 
+    baseline_oos = next((x["summary"] for x in oos if x["name"] == "baseline"), summary([], oos_days))
+    adoption_review = []
+    for item in oos:
+        name = item["name"]
+        if name == "baseline":
+            continue
+        sm = item["summary"]
+        edge = sm["avgPnl"] - baseline_oos["avgPnl"]
+        eligible_folds = 0
+        beats = 0
+        for fold in folds:
+            bm = next((x["test"] for x in fold["variants"] if x["name"] == "baseline"), None)
+            vm = next((x["test"] for x in fold["variants"] if x["name"] == name), None)
+            if bm and vm and bm["trades"] > 0 and vm["trades"] > 0:
+                eligible_folds += 1
+                if vm["avgPnl"] > bm["avgPnl"]:
+                    beats += 1
+        majority = eligible_folds > 0 and beats > eligible_folds / 2
+        adoption_review.append({
+            "name": name,
+            "oosEdgePct": edge,
+            "eligibleFolds": eligible_folds,
+            "beatsBaselineFolds": beats,
+            "majorityFolds": majority,
+            "passesPredeclaredRule": edge > 0 and majority,
+        })
+
     return {
         "status": "reviewable" if len(folds) >= 3 else "early",
         "trainDays": train_days,
@@ -634,7 +673,9 @@ def walk_forward(days, variant_trade_map):
         "oosDays": len(oos_days),
         "folds": folds,
         "oosVariants": oos,
-        "note": "Out-of-sample only. No strategy is automatically promoted from this result.",
+        "adoptionRule": ADOPTION_RULE,
+        "adoptionReview": adoption_review,
+        "note": "Out-of-sample only. Design dates are excluded per variant. No strategy is automatically promoted from this result.",
     }
 
 
@@ -654,8 +695,16 @@ def main():
     for p in VARIANTS:
         trades = trades_for_days(days, p, friction_calibration)
         variant_trade_map[p.name] = trades
-        s = summary(trades, day_labels)
-        reports.append({"params": asdict(p), "summary": s})
+        eval_trades = evaluation_trades(p.name, trades)
+        eval_days = [d for d in day_labels if d not in set(VARIANT_DESIGNED_FROM.get(p.name) or [])]
+        s = summary(eval_trades, eval_days)
+        reports.append({
+            "params": asdict(p),
+            "designedFrom": VARIANT_DESIGNED_FROM.get(p.name, []),
+            "excludedDesignDates": VARIANT_DESIGNED_FROM.get(p.name, []),
+            "rawSummary": summary(trades, day_labels),
+            "summary": s,
+        })
         if p.name == "baseline":
             baseline = trades
 
@@ -669,7 +718,15 @@ def main():
         "archiveDays": len(days),
         "baselineTradeCount": len(baseline),
         "comparisonStatus": "eligible" if enough else "collecting",
-        "comparisonRule": "Variant comparison is treated as preliminary until >=20 trading days and >=30 baseline trades.",
+        "comparisonRule": "Variant comparison is preliminary until >=20 trading days and >=30 baseline trades. Each variant's design date is excluded.",
+        "multipleTesting": {
+            "K": MULTIPLE_TEST_K,
+            "method": "Bonferroni",
+            "alpha": MULTIPLE_TEST_ALPHA,
+            "adjustedAlpha": MULTIPLE_TEST_ALPHA / MULTIPLE_TEST_K,
+            "note": "Diagnostic correction only; no strategy is auto-promoted."
+        },
+        "adoptionRule": ADOPTION_RULE,
         "signalModel": "live-parity-close-only",
         "signalModelNote": "Signal decisions remain 1-minute close based for live parity. Research records close and low/high exit models in parallel; official compatibility fields remain close model.",
         "frictionCalibration": friction_calibration,
