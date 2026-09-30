@@ -57,7 +57,7 @@ async function openingVtsCalibration(origin){
 function emptyShadow(){
   return Object.fromEntries(SHADOW_VARIANTS.map(v=>[v.name,{
     name:v.name,kind:v.kind||"rebreak",label:v.label,description:v.description,params:v.params,
-    designedFrom:v.designedFrom||[],evaluationStart:v.evaluationStart||null,backtestExpected:v.backtestExpected||null,trades:[]
+    designedFrom:v.designedFrom||[],evaluationScope:v.evaluationScope||null,backtestExpected:v.backtestExpected||null,trades:[]
   }]));
 }
 
@@ -122,7 +122,7 @@ function sellLines(rows){
 function shadowEvents(shadow,targetHm){
   return Object.values(shadow).map(v=>({
     name:v.name,kind:v.kind||"rebreak",label:v.label,description:v.description,params:v.params,designedFrom:v.designedFrom||[],
-    evaluationStart:v.evaluationStart||null,backtestExpected:v.backtestExpected||null,
+    evaluationScope:v.evaluationScope||null,backtestExpected:v.backtestExpected||null,
     buyEvents:v.trades.filter(x=>(x.shadowEmitTime??x.entryTime)===targetHm),
     sellEvents:v.trades.filter(x=>x.exitTime===targetHm),
     trades:v.trades,
