@@ -1,0 +1,65 @@
+name: Daejeon Sejong Java AI Job Alert
+
+on:
+  schedule:
+    # GitHub Scheduled Actions 지연/누락에 대비해 4번 기동한다.
+    # 실제 발송은 scripts/job_alert.py의 KST 일일 가드로 하루 1회만 수행한다.
+    - cron: "40 23 * * *"  # 08:40 KST
+    - cron: "50 23 * * *"  # 08:50 KST
+    - cron: "0 0 * * *"    # 09:00 KST
+    - cron: "10 0 * * *"   # 09:10 KST
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: job-alert-telegram
+  cancel-in-progress: false
+
+jobs:
+  search-and-notify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Restore seen-job cache
+        uses: actions/cache@v4
+        with:
+          path: .job-alert-cache
+          key: job-alert-seen-${{ github.run_id }}
+          restore-keys: |
+            job-alert-seen-
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install "ddgs>=9,<10" "requests>=2.32,<3" "beautifulsoup4>=4.12,<5"
+
+      - name: Wait until 09:00 KST
+        if: github.event_name == 'schedule'
+        shell: bash
+        run: |
+          while true; do
+            raw=$(TZ=Asia/Seoul date +%H%M)
+            hm=$((10#$raw))
+            if [ "$hm" -ge 900 ]; then
+              break
+            fi
+            echo "[$(TZ=Asia/Seoul date '+%F %T KST')] 09:00까지 대기"
+            sleep 15
+          done
+
+      - name: Search jobs and send Telegram
+        env:
+          AUTOTRADE_KEY: ${{ secrets.AUTOTRADE_KEY }}
+          JKQUANT_BASE: https://jkquant.pages.dev
+        run: python scripts/job_alert.py

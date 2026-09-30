@@ -1,0 +1,197 @@
+// Cloudflare Pages Function — /api/opening-monitor
+// 브라우저 없이 시초가 눌림→재돌파 기준전략을 서버에서 감시하고 Telegram으로 모의 매수/매도 신호를 보낸다.
+// 연구용 shadow 전략은 같은 분봉/같은 엔진으로 동시에 계산하지만 실제 알림/주문에는 영향을 주지 않고 기록만 한다.
+
+import { minuteVolume, dailyMeta, rebreakTrade, SHADOW_VARIANTS } from "./_opening.js";
+
+const JH={"Content-Type":"application/json; charset=utf-8","Cache-Control":"no-store"};
+const FIREBASE_API_KEY_FALLBACK="AIzaSyBzBe9pAttnbDgTlNThWZzNqtAAKxX7Ksw";
+const DEFAULT_OWNERS=["jk82investing@gmail.com"];
+
+function kstNow(){
+  const p=new Intl.DateTimeFormat("en-CA",{timeZone:"Asia/Seoul",year:"numeric",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit",second:"2-digit",hour12:false}).formatToParts(new Date());
+  const g=t=>p.find(x=>x.type===t)?.value||"",hh=+g("hour"),mm=+g("minute");
+  return {date:g("year")+"-"+g("month")+"-"+g("day"),hm:hh*100+mm,hh,mm,targetHm:mm>0?hh*100+(mm-1):(hh-1)*100+59};
+}
+function monitorAuthorized(request,env){
+  const got=request.headers.get("x-monitor-key")||"";
+  const want=String(env.OPENING_MONITOR_KEY||env.AUTOTRADE_KEY||"").trim();
+  return !!want&&got===want;
+}
+function owners(env){
+  const raw=String(env.OWNER_EMAIL||"").trim();
+  return raw?raw.split(",").map(s=>s.trim().toLowerCase()).filter(Boolean):DEFAULT_OWNERS;
+}
+async function ownerAuthorized(request,env){
+  const auth=request.headers.get("Authorization")||"",idToken=auth.startsWith("Bearer ")?auth.slice(7):"";
+  if(!idToken)return false;
+  try{
+    const key=env.FIREBASE_API_KEY||FIREBASE_API_KEY_FALLBACK;
+    const r=await fetch("https://identitytoolkit.googleapis.com/v1/accounts:lookup?key="+key,{
+      method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({idToken})
+    });
+    const j=await r.json().catch(()=>({})),u=j.users&&j.users[0],email=u?String(u.email||"").toLowerCase():"";
+    return !!email&&owners(env).includes(email);
+  }catch(e){return false;}
+}
+async function sendTelegram(env,title,lines){
+  const token=String(env.TELEGRAM_BOT_TOKEN||"").trim(),chatId=String(env.TELEGRAM_CHAT_ID||"").trim();
+  if(!token||!chatId)throw new Error("Telegram 환경변수 없음");
+  const r=await fetch("https://api.telegram.org/bot"+token+"/sendMessage",{
+    method:"POST",headers:{"content-type":"application/json"},
+    body:JSON.stringify({chat_id:chatId,text:"🔥 "+title+"\n\n"+lines.join("\n"),disable_web_page_preview:true})
+  });
+  const j=await r.json().catch(()=>({}));
+  if(!r.ok||!j.ok)throw new Error("Telegram 전송 실패: "+(j.description||r.status));
+  return {ok:true,messageId:j.result&&j.result.message_id};
+}
+
+async function openingVtsCalibration(origin){
+  try{
+    const j=await fetch(origin+"/api/vts-research",{headers:{"Accept":"application/json"}}).then(r=>r.json());
+    if(!j||!j.ok)return null;
+    return (j.strategies||[]).find(x=>x.strategy==="opening")||null;
+  }catch(e){return null;}
+}
+
+function emptyShadow(){
+  return Object.fromEntries(SHADOW_VARIANTS.map(v=>[v.name,{
+    name:v.name,label:v.label,description:v.description,params:v.params,designedFrom:v.designedFrom||[],trades:[]
+  }]));
+}
+
+async function scanShard(origin,now,shard,shards,limit,cutoffHm){
+  const uj=await (await fetch(origin+"/api/universe?limit="+limit)).json();
+  const universe=(uj.universe||[]).filter((_,i)=>i%shards===shard);
+  const trades=[],shadow=emptyShadow(),errors=[];let idx=0;
+  const frictionCalibration=await openingVtsCalibration(origin);
+
+  async function worker(){
+    while(idx<universe.length){
+      const u=universe[idx++];
+      try{
+        const [mj,dj]=await Promise.all([
+          fetch(origin+"/api/quote?symbol="+encodeURIComponent(u.code)+"&minute=1").then(r=>r.json()),
+          fetch(origin+"/api/quote?symbol="+encodeURIComponent(u.code)+"&range=5d&intraday=0&div=0").then(r=>r.json())
+        ]);
+        if(!mj.minutes||!mj.minutes.length||!dj.ohlc||!dj.ohlc.length)continue;
+
+        const rows=minuteVolume(mj.minutes).filter(x=>String(x.t||"").slice(0,10)===now.date);
+        const meta=dailyMeta(dj,now.date);
+        if(!meta)continue;
+
+        const base=rebreakTrade(rows,meta,cutoffHm,{frictionCalibration});
+        if(base)trades.push({code:u.code,name:u.name||u.code,variant:"baseline",...base});
+
+        for(const v of SHADOW_VARIANTS){
+          const tr=rebreakTrade(rows,meta,cutoffHm,{...v.params,frictionCalibration});
+          if(tr)shadow[v.name].trades.push({code:u.code,name:u.name||u.code,variant:v.name,...tr});
+        }
+      }catch(e){
+        errors.push({code:u.code,error:String(e.message||e).slice(0,120)});
+      }
+    }
+  }
+  await Promise.all([worker(),worker()]);
+
+  const sorter=(a,b)=>a.entryTime-b.entryTime||(b.amountRatio-a.amountRatio)||String(a.code).localeCompare(String(b.code));
+  trades.sort(sorter);
+  Object.values(shadow).forEach(x=>x.trades.sort(sorter));
+  return {universe:universe.length,trades,shadow,errors};
+}
+function buyLines(rows){
+  return rows.flatMap((x,i)=>[
+    (i+1)+". "+x.name+" ("+x.code+")",
+    "매수신호 "+String(x.entryTime).padStart(4,"0")+" · "+Math.round(x.entryPrice).toLocaleString("ko-KR")+"원",
+    "갭 "+(x.gap>=0?"+":"")+x.gap.toFixed(2)+"% · 눌림 -"+x.pullbackPct.toFixed(2)+"% · 거래량 "+x.volRatio.toFixed(2)+"배 · 거래대금 "+x.amountRatio.toFixed(2)+"배"
+  ]);
+}
+function sellLines(rows){
+  return rows.flatMap((x,i)=>[
+    (i+1)+". "+x.name+" ("+x.code+")",
+    "매도신호 "+String(x.exitTime).padStart(4,"0")+" · "+Math.round(x.exitPrice).toLocaleString("ko-KR")+"원 · "+x.reason,
+    "진입 "+Math.round(x.entryPrice).toLocaleString("ko-KR")+"원 · 비용 "+((x.friction&&x.friction.totalPct)||0).toFixed(2)+"% ("+((x.friction&&x.friction.source)||"unknown")+") · 손익 "+(x.pnl>=0?"+":"")+x.pnl.toFixed(2)+"%"
+  ]);
+}
+function shadowEvents(shadow,targetHm){
+  return Object.values(shadow).map(v=>({
+    name:v.name,label:v.label,description:v.description,params:v.params,designedFrom:v.designedFrom||[],
+    buyEvents:v.trades.filter(x=>x.entryTime===targetHm),
+    sellEvents:v.trades.filter(x=>x.exitTime===targetHm),
+    trades:v.trades,
+  }));
+}
+
+export async function onRequestGet({request,env}){
+  const url=new URL(request.url);
+  const history=url.searchParams.get("history")==="1";
+  const serverHistory=url.searchParams.get("serverHistory")==="1";
+  if(history){
+    if(!(await ownerAuthorized(request,env)))return new Response(JSON.stringify({ok:false,error:"unauthorized"}),{status:401,headers:JH});
+  }else if(!monitorAuthorized(request,env)){
+    return new Response(JSON.stringify({ok:false,error:"unauthorized"}),{status:401,headers:JH});
+  }
+
+  const now=kstNow();
+  const shard=Math.max(0,parseInt(url.searchParams.get("shard")||"0",10)||0);
+  const shards=Math.max(1,Math.min(10,parseInt(url.searchParams.get("shards")||"5",10)||5));
+  const limit=Math.max(10,Math.min(100,parseInt(url.searchParams.get("limit")||"100",10)||100));
+  const origin=url.origin;
+  const targetRaw=url.searchParams.get("targetHm");
+  let liveTargetHm=now.targetHm;
+  if(!history&&!serverHistory&&targetRaw!==null){
+    const requested=parseInt(targetRaw,10);
+    const minute=requested%100;
+    const valid=Number.isFinite(requested)&&Math.floor(requested/100)===9&&minute>=0&&minute<60&&requested>=904&&requested<=930;
+    if(!valid||requested>now.targetHm){
+      return new Response(JSON.stringify({ok:false,error:"invalid_or_unfinished_targetHm",requested,latestCompleted:now.targetHm}),{status:400,headers:JH});
+    }
+    liveTargetHm=requested;
+  }
+
+  if(!history&&!serverHistory&&(now.hm<905||now.hm>931)){
+    return new Response(JSON.stringify({ok:true,skipped:"outside_market_window",now}),{headers:JH});
+  }
+  const cutoffHm=(history||serverHistory)?Math.min(930,now.hm>930?930:now.targetHm):liveTargetHm;
+
+  try{
+    const res=await scanShard(origin,now,shard,shards,limit,cutoffHm);
+
+    if(history||serverHistory){
+      return new Response(JSON.stringify({
+        ok:true,date:now.date,cutoffHm,shard,shards,universe:res.universe,
+        trades:res.trades,
+        shadowVariants:Object.values(res.shadow),
+        errors:res.errors.length
+      }),{headers:JH});
+    }
+
+    const buys=res.trades.filter(x=>x.entryTime===liveTargetHm);
+    const sells=res.trades.filter(x=>x.exitTime===liveTargetHm);
+    const telegram={buySent:false,sellSent:false,buyMessageId:null,sellMessageId:null,buyError:null,sellError:null};
+
+    // Telegram 전송 실패가 신호 원본 자체를 지우지 않게 한다.
+    // 스케줄러가 응답을 먼저 영구 보관하고, 알림 실패가 있으면 VTS 실행은 안전하게 건너뛴다.
+    if(buys.length){
+      try{
+        const t=await sendTelegram(env,"시초가 모의 매수 신호 · "+String(liveTargetHm).padStart(4,"0"),buyLines(buys));
+        telegram.buySent=true;telegram.buyMessageId=t.messageId||null;
+      }catch(e){telegram.buyError=String(e.message||e).slice(0,240);}
+    }
+    if(sells.length){
+      try{
+        const t=await sendTelegram(env,"시초가 모의 매도 신호 · "+String(liveTargetHm).padStart(4,"0"),sellLines(sells));
+        telegram.sellSent=true;telegram.sellMessageId=t.messageId||null;
+      }catch(e){telegram.sellError=String(e.message||e).slice(0,240);}
+    }
+
+    return new Response(JSON.stringify({
+      ok:true,date:now.date,targetHm:liveTargetHm,shard,shards,universe:res.universe,
+      buyEvents:buys,sellEvents:sells,trades:res.trades,
+      shadowEvents:shadowEvents(res.shadow,liveTargetHm),
+      telegram,errors:res.errors.length
+    }),{headers:JH});
+  }catch(e){
+    return new Response(JSON.stringify({ok:false,error:String(e.message||e)}),{status:500,headers:JH});
+  }
+}

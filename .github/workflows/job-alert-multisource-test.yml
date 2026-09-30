@@ -1,0 +1,26 @@
+name: Job Alert Multi-source Diagnostic
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  dry-run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install "ddgs>=9,<10" "requests>=2.32,<3" "beautifulsoup4>=4.12,<5"
+      - name: Run multi-source dry-run
+        env:
+          FORCE_JOB_ALERT: "1"
+          JOB_ALERT_DRY_RUN: "1"
+        run: python scripts/job_alert.py

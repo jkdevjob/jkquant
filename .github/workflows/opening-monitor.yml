@@ -1,0 +1,277 @@
+name: 시초가 장마감 저장
+
+# 09:05~09:31 실시간 감시·Telegram·KIS VTS 주문은 Cloudflare Worker Cron이 담당한다.
+# GitHub Actions는 지연되어도 문제가 없는 장마감 이력 재구성·일일요약·영구저장만 담당한다.
+
+on:
+  schedule:
+    # 09:40 KST 본 실행 + 10:40 KST 백업. GitHub schedule이 늦어져도 과거 09:00~09:30 분봉을 재구성한다.
+    - cron: "40 0 * * 1-5"    # 09:40 KST 월~금
+    - cron: "40 1 * * 1-5"    # 10:40 KST 월~금 backup
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/opening-monitor.yml"
+      - "functions/api/opening-monitor.js"
+      - "functions/api/opening-summary.js"
+      - "functions/api/_opening.js"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: opening-history-archive
+  cancel-in-progress: false
+
+jobs:
+  monitor:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: 이력 저장 브랜치 체크아웃
+        uses: actions/checkout@v4
+        with:
+          ref: scalping-data
+          fetch-depth: 0
+
+      - name: 시초가 기준전략 · 그림자전략 · 일일요약 · 이력 저장
+        env:
+          KEY: ${{ secrets.AUTOTRADE_KEY }}
+          BASE: https://jkquant.pages.dev
+          OPENING_WORKER: https://jkquant-opening-scheduler.mumae4.workers.dev
+        shell: bash
+        run: |
+          if [ -z "$KEY" ]; then
+            echo "AUTOTRADE_KEY GitHub Secret 이 없습니다."
+            exit 1
+          fi
+
+          archive_daily() {
+            DATE=$(TZ=Asia/Seoul date +%F)
+            OUT="data/opening-history/$DATE.json"
+            SEND_SUMMARY=1
+
+            # 기준+shadow+실시간 원본 ledger까지 있으면 완성본이다.
+            # 구형 파일은 덮어버리지 않고 같은 날짜의 누락 필드만 재구성/백필한다.
+            if [ -f "$OUT" ]; then
+              if jq -e '(.shadowVariants | type) == "array" and (.shadowVariants | length) > 0 and ((.liveSignalLedger.schema // 0) >= 1)' "$OUT" >/dev/null 2>&1; then
+                echo "$OUT 기준+shadow+실시간 신호 ledger 이미 저장됨 — 중복 작업 생략"
+                return 0
+              fi
+              echo "$OUT 기존 이력 발견 — 누락된 실시간 ledger/연구 필드 백필"
+              SEND_SUMMARY=0
+            fi
+
+            mkdir -p data/opening-history
+            echo "[$(TZ=Asia/Seoul date '+%F %T KST')] 오늘 Top100 기준+shadow 매매이력 재구성"
+
+            READY=0
+            for attempt in $(seq 1 12); do
+              pids=""
+              for shard in 0 1 2 3 4; do
+                curl -sS --max-time 60                   -H "x-monitor-key: $KEY"                   "$BASE/api/opening-monitor?serverHistory=1&shard=$shard&shards=5&limit=100"                   -o "history-$shard.json" &
+                pids="$pids $!"
+              done
+              for p in $pids; do wait "$p" || true; done
+
+              READY=1
+              for shard in 0 1 2 3 4; do
+                if ! jq -e '.ok == true and (.trades | type == "array") and (.shadowVariants | type == "array")' "history-$shard.json" >/dev/null 2>&1; then
+                  READY=0
+                  echo "배포 대기/응답 오류 — attempt $attempt, shard $shard"
+                  head -c 240 "history-$shard.json" 2>/dev/null || true
+                  echo
+                  break
+                fi
+              done
+              [ "$READY" = "1" ] && break
+              sleep 10
+            done
+
+            if [ "$READY" != "1" ]; then
+              echo "서버 이력 API가 준비되지 않아 오늘 아카이브 실패"
+              return 1
+            fi
+
+            # Cloudflare 정시 감시에서 실제로 발생한 신호 원본을 별도로 가져온다.
+            # 이 ledger가 없어도 장마감 재구성 이력은 저장하지만, 둘을 같은 자료인 것처럼 섞지 않는다.
+            LIVE_STATUS=$(curl -sS --max-time 30 -o live-ledger.json -w '%{http_code}' \
+              -H "x-monitor-key: $KEY" "$OPENING_WORKER/events?date=$DATE" || true)
+            if [ "$LIVE_STATUS" = "200" ] && jq -e '.ok == true' live-ledger.json >/dev/null 2>&1; then
+              echo "실시간 신호 ledger 조회 성공: $(jq -c '{events:(.ledger.events//[]|length),scans:(.ledger.scans//[]|length)}' live-ledger.json)"
+            else
+              echo "::warning::실시간 신호 ledger 조회 실패 HTTP $LIVE_STATUS — 재구성 이력은 보존"
+              printf '%s\n' '{"ok":false,"ledger":null}' > live-ledger.json
+            fi
+
+            GEN=$(TZ=Asia/Seoul date --iso-8601=seconds)
+            TMP="$OUT.tmp"
+            jq -s --slurpfile live live-ledger.json --arg gen "$GEN" '
+              . as $parts
+              | ($live[0].ledger // null) as $ledger
+              | def finaltrade($variant; $code; $entryTime):
+                  if $variant == "baseline" then
+                    ([ $parts[].trades[] | select(.code == $code and .entryTime == $entryTime) ][0] // null)
+                  else
+                    ([ $parts[].shadowVariants[]
+                       | select(.name == $variant)
+                       | .trades[]
+                       | select(.code == $code and .entryTime == $entryTime) ][0] // null)
+                  end;
+              {
+                schema: 3,
+                date: $parts[0].date,
+                generatedAt: $gen,
+                source: "server-opening-monitor",
+                liveSource: "cloudflare-opening-scheduler-durable-ledger",
+                strategy: {
+                  universe: "Top100",
+                  gap: "+2~+7%",
+                  firstHigh: "첫 3분",
+                  initialBreakout: "+0.5% 이상",
+                  pullback: "0.3~1.0%",
+                  support: "시초가 지지",
+                  rebreak: "전고점 재돌파",
+                  volumeRatio: "1.0배 이상",
+                  amountRatio: "1.2배 이상",
+                  stop: "-1%",
+                  takeProfit: "+1.5%",
+                  finalExit: "09:30",
+                  friction: "0.25%"
+                },
+                universeChecked: ([$parts[].universe] | add),
+                errors: ([$parts[].errors] | add),
+                trades: ([$parts[].trades[]] | sort_by(.entryTime, .code)),
+                shadowVariants: (
+                  [$parts[].shadowVariants[]]
+                  | group_by(.name)
+                  | map({
+                      name: .[0].name,
+                      label: .[0].label,
+                      description: .[0].description,
+                      params: .[0].params,
+                      trades: ([.[].trades[]] | sort_by(.entryTime, .code))
+                    })
+                ),
+                liveSignalLedger: $ledger,
+                signalRecords: (
+                  if $ledger == null then []
+                  else [
+                    $ledger.events[]
+                    | select(.stage == "buy")
+                    | . as $e
+                    | {
+                        signalId: $e.id,
+                        date: $e.date,
+                        targetHm: $e.targetHm,
+                        capturedAt: $e.capturedAt,
+                        strategy: $e.strategy,
+                        strategyVersion: $e.strategyVersion,
+                        signalSchemaVersion: $e.signalSchemaVersion,
+                        variant: $e.variant,
+                        code: $e.code,
+                        name: $e.name,
+                        strategyParams: $e.strategyParams,
+                        decisionReason: $e.decisionReason,
+                        alertDelivery: $e.alertDelivery,
+                        signal: $e.signal,
+                        outcome: finaltrade($e.variant; $e.code; $e.signal.entryTime)
+                      }
+                  ]
+                  end
+                )
+              }
+            ' history-0.json history-1.json history-2.json history-3.json history-4.json > "$TMP"
+            mv "$TMP" "$OUT"
+
+            echo "저장 결과:"
+            jq '{
+              date,
+              universeChecked,
+              errors,
+              baselineTrades:(.trades|length),
+              liveSignals:(.signalRecords|length),
+              liveScans:(.liveSignalLedger.scans//[]|length),
+              shadow:(.shadowVariants|map({name,label,trades:(.trades|length)}))
+            }' "$OUT"
+
+            # 새 날짜의 09:31 일일요약만 전송한다. 기존 파일 shadow 백필 때는 중복 Telegram을 보내지 않는다.
+            STATUS=200
+            if [ "$SEND_SUMMARY" = "1" ]; then
+              STATUS=$(curl -sS --max-time 30 -o summary-response.json -w '%{http_code}'                 -X POST                 -H "x-monitor-key: $KEY"                 -H "content-type: application/json"                 --data-binary @"$OUT"                 "$BASE/api/opening-summary")
+              echo "Telegram 일일요약 HTTP $STATUS: $(cat summary-response.json 2>/dev/null || true)"
+            else
+              echo "기존 날짜 shadow 백필 — Telegram 일일요약 재전송 생략"
+            fi
+
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add "$OUT"
+            if git diff --cached --quiet; then
+              echo "이력 변경 없음"
+              return 0
+            fi
+            git commit -m "data: opening baseline+shadow $DATE [skip ci]"
+            git pull --rebase origin scalping-data
+            git push origin scalping-data
+
+            if [ "$SEND_SUMMARY" = "1" ] && { [ "$STATUS" != "200" ] || ! jq -e '.ok == true' summary-response.json >/dev/null 2>&1; }; then
+              echo "이력은 저장했지만 Telegram 일일요약 전송 실패"
+              return 1
+            fi
+          }
+
+          dow=$(TZ=Asia/Seoul date +%u)
+          raw=$(TZ=Asia/Seoul date +%H%M)
+          hm=$((10#$raw))
+
+          if [ "$dow" -gt 5 ]; then
+            echo "주말 — 종료"
+            exit 0
+          fi
+
+          if [ "$hm" -lt 931 ]; then
+            echo "장마감 전 — 실시간 감시는 Cloudflare Worker가 담당. 09:31 이후 아카이브만 실행합니다."
+            exit 0
+          fi
+
+          archive_daily
+
+          # 날짜별 서버 매매이력을 화면 조회용 누적 CSV로 다시 만든다.
+          # 연구 백테스트 CSV와 분리해, 장마감 서버 아카이브에 실제로 남은 날짜/거래를 그대로 보여준다.
+          OUTCSV="data/opening-history/baseline-trades.csv"
+          TMP="$OUTCSV.tmp"
+          printf '%s\n' 'date,strategyVersion,code,name,entryTime,entryPrice,exitTime,exitPrice,reason,pnl' > "$TMP"
+          for f in data/opening-history/????-??-??.json; do
+            [ -f "$f" ] || continue
+            jq -r '
+              .date as $d
+              | .trades[]?
+              | [
+                  $d,
+                  (.strategyVersion // "opening_rebreak_v1"),
+                  (.code // ""),
+                  (.name // .code // ""),
+                  (.entryTime // ""),
+                  (.entryPrice // ""),
+                  (.exitTime // ""),
+                  (.exitPrice // ""),
+                  (.reason // ""),
+                  (.pnl // "")
+                ]
+              | @csv
+            ' "$f" >> "$TMP"
+          done
+          mv "$TMP" "$OUTCSV"
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add "$OUTCSV"
+          if ! git diff --cached --quiet; then
+            git commit -m "data: rebuild cumulative opening trades [skip ci]"
+            git pull --rebase origin scalping-data
+            git push origin scalping-data
+          else
+            echo "누적 시초가 매매 CSV 변경 없음"
+          fi

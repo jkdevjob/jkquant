@@ -1,0 +1,915 @@
+#!/usr/bin/env python3
+"""Cumulative research backtest for the opening pullback→rebreak strategy.
+
+Reads immutable daily Top-N minute archives from data/scalping/YYYY/*.json.gz.
+The archive stores each day's actual universe rank, so Top50 vs Top100 can be
+replayed without using today's membership (reduces survivor/ranking leakage).
+
+This is research/paper logic only. It does not place orders.
+"""
+from __future__ import annotations
+
+import csv
+import gzip
+import json
+import math
+import os
+import hashlib
+import statistics
+from dataclasses import dataclass, asdict
+from datetime import datetime
+from pathlib import Path
+from zoneinfo import ZoneInfo
+
+KST = ZoneInfo("Asia/Seoul")
+DATA = Path(os.environ.get("JKQ_RESEARCH_DATA", "data/scalping"))
+OUT = Path(os.environ.get("JKQ_RESEARCH_OUT", "data/opening-research"))
+VTS_DATA = Path("data/vts-research/latest.json")
+
+# Execution-cost research model (A-3). Signal/exit thresholds remain strategy params.
+FIXED_KR_FRICTION_PCT = 0.23
+VTS_MIN_MATCHES = 30
+FALLBACK_TICKS_PER_SIDE = 2.5
+
+
+@dataclass(frozen=True)
+class Params:
+    name: str
+    top_n: int = 100
+    gap_min: float = 2.0
+    gap_max: float = 7.0
+    obs: int = 3
+    min_rise: float = 0.5
+    pb_min: float = 0.3
+    pb_max: float = 1.0
+    vol_mult: float = 1.0
+    amount_mult: float = 1.2
+    entry_cutoff: int = 930
+    stop: float = 1.0
+    take_profit: float = 1.5
+    final_exit: int = 930
+    exit_policy: str = "intraday"
+
+
+VARIANTS = [
+    Params("baseline"),
+    Params("hold_to_next_open", exit_policy="next_session_open"),
+    Params("today_combo_v1", pb_max=0.5, amount_mult=1.5, entry_cutoff=915),
+    Params("top50", top_n=50),
+    Params("pb_max_0.5", pb_max=0.5),
+    Params("pb_max_0.7", pb_max=0.7),
+    Params("amount_1.5", amount_mult=1.5),
+    Params("amount_2.0", amount_mult=2.0),
+    Params("entry_by_0915", entry_cutoff=915),
+    Params("gap_2_5", gap_max=5.0),
+    Params("gap_3_7", gap_min=3.0),
+    Params("stop_0.8", stop=0.8),
+    Params("tp_1.0", take_profit=1.0),
+    Params("tp_2.0", take_profit=2.0),
+]
+
+VARIANT_DESIGNED_FROM = {
+    p.name: ["2026-09-22"] for p in VARIANTS if p.name != "baseline"
+}
+VARIANT_DESIGNED_FROM["hold_to_next_open"] = ["2025-09-01/2026-09-30"]
+MULTIPLE_TEST_K = len(VARIANTS)
+MULTIPLE_TEST_ALPHA = 0.05
+ADOPTION_RULE = "OOS edge > 0 and variant beats baseline in a majority of completed OOS folds; no auto-promotion."
+
+
+def evaluation_trades(name, trades):
+    if name == "hold_to_next_open":
+        return [x for x in trades if x.get("date", "") >= "2026-10-01"]
+    designed = set(VARIANT_DESIGNED_FROM.get(name) or [])
+    return [x for x in trades if x.get("date") not in designed]
+
+
+def hm(t: str) -> int:
+    s = str(t or "")
+    if len(s) >= 6 and s[-6:].isdigit():
+        return int(s[-6:-2])
+    if len(s) >= 16 and s[11:13].isdigit():
+        return int(s[11:13]) * 100 + int(s[14:16])
+    return -1
+
+
+def load_days():
+    out = []
+    for p in sorted(DATA.glob("*/*.json.gz")):
+        try:
+            with gzip.open(p, "rt", encoding="utf-8") as f:
+                j = json.load(f)
+            if j.get("date") and j.get("universe"):
+                supplement = DATA.parent / 'opening-next-open' / (j['date'] + '.json')
+                if supplement.exists():
+                    extra = json.loads(supplement.read_text(encoding='utf-8'))
+                    for row in j['universe']:
+                        if row['code'] in extra.get('records', {}):
+                            row['nextOpen'] = extra['records'][row['code']]
+                out.append(j)
+        except Exception as e:
+            print("skip", p, e)
+    return out
+
+
+def estimate_prev_close(row):
+    """Older schema fallback only.
+
+    v2+ stores prevClose exactly. v1 did not, so estimate it from end-of-day
+    close and quoted daily percent change. Those rows are marked estimated.
+    """
+    pc = float(row.get("prevClose") or 0)
+    if pc > 0:
+        return pc, False
+    close = float(row.get("close") or 0)
+    chg = float(row.get("chg") or 0)
+    den = 1.0 + chg / 100.0
+    if close > 0 and abs(den) > 1e-9:
+        return close / den, True
+    return 0.0, True
+
+
+def norm_bars(row):
+    a = []
+    for b in row.get("bars") or []:
+        close = float(b.get("c") or 0)
+        x = {
+            "hm": hm(b.get("t")),
+            "o": float(b.get("o") or close or 0),
+            "h": float(b.get("h") or close or 0),
+            "l": float(b.get("l") or close or 0),
+            "c": close,
+            "v": float(b.get("v") or 0),
+            # 현재 실시간 서버의 Naver 1분 데이터는 O/H/L이 없어
+            # 돌파/전고점 판정에 분봉 종가를 사용한다. 장기 백테스트도
+            # 기준전략 비교만큼은 같은 관측정보(close-only)로 맞춘다.
+            "signal_h": close,
+        }
+        if 900 <= x["hm"] <= 1000 and x["c"] > 0:
+            a.append(x)
+    a.sort(key=lambda x: x["hm"])
+    return a
+
+
+def opening_time_bucket(h):
+    if h <= 910: return "09:03~09:10"
+    if h <= 920: return "09:11~09:20"
+    return "09:21~09:30"
+
+
+def hm_to_minute(h):
+    return (int(h) // 100) * 60 + (int(h) % 100)
+
+
+def opening_gap_bucket(v):
+    if v < 3: return "2~3%"
+    if v < 4: return "3~4%"
+    if v < 5: return "4~5%"
+    return "5~7%"
+
+
+def opening_pullback_bucket(v):
+    if v <= 0.5: return "0.3~0.5%"
+    if v <= 0.7: return "0.5~0.7%"
+    return "0.7~1.0%"
+
+
+def opening_ratio_bucket(v, kind):
+    if kind == "amount":
+        if v < 1.5: return "1.2~1.5x"
+        if v < 2.0: return "1.5~2.0x"
+        return "2.0x+"
+    if v < 1.5: return "1.0~1.5x"
+    if v < 2.0: return "1.5~2.0x"
+    return "2.0x+"
+
+
+def opening_rank_bucket(v):
+    if v <= 20: return "Top1~20"
+    if v <= 50: return "Top21~50"
+    return "Top51~100"
+
+
+def opening_path_metrics(a, entry_i, entry):
+    """Label the observed path for 30 minutes after the signal.
+
+    Signal decisions stay close-only for live parity. Outcome labels use archived
+    KIS 1-minute high/low for excursion/threshold touches and close for forward marks.
+    A threshold hit time is minute-level; if both sides are touched inside one minute,
+    this dataset cannot infer which came first.
+    """
+    if entry <= 0 or entry_i >= len(a):
+        return {}
+    entry_min = hm_to_minute(a[entry_i]["hm"])
+    # Entry is the signal minute close. Intrabar high/low from that same minute
+    # happened before the entry, so outcome excursions start from the next bar.
+    post = [z for z in a[entry_i + 1:] if 0 < hm_to_minute(z["hm"]) - entry_min <= 30]
+    if not post:
+        return {
+            "outcomeWindowMin":30,
+            "outcomeObservedMin":0,
+            "outcomeWindowComplete":False,
+            "outcomePriceModel":"KIS 1m high/low threshold + close forward mark",
+        }
+
+    observed=max(hm_to_minute(z["hm"]) - entry_min for z in post)
+    complete=observed>=30
+    best=max(post,key=lambda z:z["h"] if z["h"]>0 else z["c"])
+    worst=min(post,key=lambda z:z["l"] if z["l"]>0 else z["c"])
+    best_px=best["h"] if best["h"]>0 else best["c"]
+    worst_px=worst["l"] if worst["l"]>0 else worst["c"]
+    out={
+        "outcomeWindowMin":30,
+        "outcomeObservedMin":min(30,observed),
+        "outcomeWindowComplete":complete,
+        "outcomePriceModel":"KIS 1m high/low threshold + close forward mark",
+        "mfePct":(best_px/entry-1)*100,
+        "mfeTime":best["hm"],
+        "maePct":(worst_px/entry-1)*100,
+        "maeTime":worst["hm"],
+        "hitPlus1Time":None,
+        "hitPlus2Time":None,
+        "hitMinus1Time":None,
+        "hitMinus2Time":None,
+    }
+
+    for z in post:
+        high=z["h"] if z["h"]>0 else z["c"]
+        low=z["l"] if z["l"]>0 else z["c"]
+        if out["hitPlus1Time"] is None and (high/entry-1)*100 >= 1.0: out["hitPlus1Time"]=z["hm"]
+        if out["hitPlus2Time"] is None and (high/entry-1)*100 >= 2.0: out["hitPlus2Time"]=z["hm"]
+        if out["hitMinus1Time"] is None and (low/entry-1)*100 <= -1.0: out["hitMinus1Time"]=z["hm"]
+        if out["hitMinus2Time"] is None and (low/entry-1)*100 <= -2.0: out["hitMinus2Time"]=z["hm"]
+
+    for n in (1,3,5,10,20,30):
+        target=entry_min+n
+        z=next((q for q in post if hm_to_minute(q["hm"]) >= target), None)
+        out[f"fwd{n}mPct"]=((z["c"]/entry-1)*100) if z else None
+    return out
+
+
+def kr_tick_size(price):
+    """Research fallback tick grid for domestic stocks used by the 2.5-tick model.
+
+    This is an execution-cost approximation, not a strategy signal rule.
+    """
+    p = float(price or 0)
+    if p < 2_000: return 1.0
+    if p < 5_000: return 5.0
+    if p < 20_000: return 10.0
+    if p < 50_000: return 50.0
+    if p < 200_000: return 100.0
+    if p < 500_000: return 500.0
+    return 1_000.0
+
+
+def load_vts_friction_calibration():
+    out = {
+        "source": "2.5tick-fallback",
+        "completeMatches": 0,
+        "observedRoundTripSlippagePct": None,
+        "minMatches": VTS_MIN_MATCHES,
+        "fixedPct": FIXED_KR_FRICTION_PCT,
+        "ticksPerSide": FALLBACK_TICKS_PER_SIDE,
+    }
+    try:
+        with VTS_DATA.open("r", encoding="utf-8") as f:
+            j = json.load(f)
+        row = next((x for x in j.get("strategies") or [] if x.get("strategy") == "opening"), None)
+        if row:
+            n = int(row.get("completeMatches") or 0)
+            obs = row.get("avgRoundTripSlippageCostPct")
+            out["completeMatches"] = n
+            out["observedRoundTripSlippagePct"] = float(obs) if obs is not None else None
+            if n >= VTS_MIN_MATCHES and obs is not None and math.isfinite(float(obs)):
+                out["source"] = "vts-observed"
+    except (OSError, ValueError, TypeError, json.JSONDecodeError):
+        pass
+    return out
+
+
+def opening_friction(entry_price, calibration=None):
+    c = dict(calibration or {})
+    n = int(c.get("completeMatches") or 0)
+    obs = c.get("observedRoundTripSlippagePct")
+    if n >= VTS_MIN_MATCHES and obs is not None and math.isfinite(float(obs)):
+        slip = max(0.0, float(obs))
+        source = "vts-observed"
+        tick = None
+    else:
+        tick = kr_tick_size(entry_price)
+        slip = (2.0 * FALLBACK_TICKS_PER_SIDE * tick / max(float(entry_price), 1e-9)) * 100.0
+        source = "2.5tick-fallback"
+    return {
+        "fixedPct": FIXED_KR_FRICTION_PCT,
+        "slippagePct": slip,
+        "totalPct": FIXED_KR_FRICTION_PCT + slip,
+        "source": source,
+        "completeMatches": n,
+        "minMatches": VTS_MIN_MATCHES,
+        "ticksPerSide": FALLBACK_TICKS_PER_SIDE if source == "2.5tick-fallback" else None,
+        "tickSize": tick,
+    }
+
+
+def simulate_exit(a, entry_i, entry, p: Params, friction, exit_model="close"):
+    """Parallel research exits. Official compatibility remains close model.
+
+    lowhigh uses 1-minute low/high threshold touches; if stop and TP both touch
+    inside the same minute, stop wins conservatively.
+    """
+    exit_px = None
+    exit_hm = None
+    reason = None
+    stop_px = entry * (1.0 - p.stop / 100.0)
+    tp_px = entry * (1.0 + p.take_profit / 100.0)
+    for z in a[entry_i + 1:]:
+        if z["hm"] > p.final_exit:
+            break
+        if exit_model == "lowhigh":
+            stop_hit = z["l"] <= stop_px
+            tp_hit = z["h"] >= tp_px
+            if stop_hit:
+                exit_px, exit_hm, reason = stop_px, z["hm"], "stop"
+                break
+            if tp_hit:
+                exit_px, exit_hm, reason = tp_px, z["hm"], "take_profit"
+                break
+        else:
+            rr = (z["c"] / entry - 1.0) * 100.0
+            if rr <= -p.stop:
+                exit_px, exit_hm, reason = z["c"], z["hm"], "stop"
+                break
+            if rr >= p.take_profit:
+                exit_px, exit_hm, reason = z["c"], z["hm"], "take_profit"
+                break
+    if exit_px is None:
+        z = max((q for q in a if q["hm"] <= p.final_exit), key=lambda q: q["hm"], default=a[-1])
+        exit_px, exit_hm, reason = z["c"], z["hm"], "time_exit"
+    pnl = (exit_px / entry - 1.0) * 100.0 - float(friction["totalPct"])
+    return {
+        "exitModel": exit_model,
+        "exitTime": exit_hm,
+        "exitPrice": exit_px,
+        "reason": reason,
+        "pnl": pnl,
+    }
+
+
+def one_trade(day, row, p: Params, friction_calibration=None):
+    if int(row.get("rank") or 999999) > p.top_n:
+        return None
+    a = norm_bars(row)
+    if len(a) < p.obs + 3:
+        return None
+
+    prev_close, estimated_gap = estimate_prev_close(row)
+    day_open = float(row.get("open") or 0) or a[0]["o"] or a[0]["c"]
+    if not (day_open > 0 and prev_close > 0):
+        return None
+    gap = (day_open / prev_close - 1.0) * 100.0
+    if gap < p.gap_min or gap > p.gap_max:
+        return None
+
+    first_high = max(x["signal_h"] for x in a[:p.obs])
+    bi = -1
+    for i in range(p.obs, len(a) - 2):
+        x = a[i]
+        if x["hm"] > p.entry_cutoff:
+            break
+        if x["signal_h"] > first_high and x["c"] >= day_open and (x["c"] / day_open - 1) * 100 >= p.min_rise:
+            bi = i
+            break
+    if bi < 0:
+        return None
+
+    peak = a[bi]["signal_h"]
+    peak_i = bi
+    for i in range(bi + 1, len(a) - 1):
+        x = a[i]
+        if x["signal_h"] > peak:
+            peak = x["signal_h"]
+            peak_i = i
+            continue
+        dd = (peak - x["c"]) / peak * 100
+        if dd < p.pb_min or dd > p.pb_max or x["c"] < day_open:
+            continue
+
+        pull = a[peak_i + 1 : i + 1]
+        if not pull:
+            continue
+        base_vol = sum(y["v"] for y in pull) / len(pull)
+        base_amt = sum(y["c"] * y["v"] for y in pull) / len(pull)
+
+        for j in range(i + 1, len(a)):
+            y = a[j]
+            if y["hm"] > p.entry_cutoff:
+                break
+            vol_ratio = y["v"] / max(1.0, base_vol)
+            amt_ratio = (y["c"] * y["v"]) / max(1.0, base_amt)
+            if y["c"] > peak and vol_ratio >= p.vol_mult and amt_ratio >= p.amount_mult:
+                entry = y["c"]
+                path = opening_path_metrics(a, j, entry)
+                friction = opening_friction(entry, friction_calibration)
+                close_exit = simulate_exit(a, j, entry, p, friction, "close")
+                lowhigh_exit = simulate_exit(a, j, entry, p, friction, "lowhigh")
+                return {
+                    "date": day["date"],
+                    "signalSchemaVersion": 2,
+                    "strategyVersion": "opening_rebreak_v1",
+                    "strategyParams": asdict(p),
+                    "rank": int(row.get("rank") or 0),
+                    "code": row.get("code"),
+                    "name": row.get("name"),
+                    "gap": gap,
+                    "gapEstimated": estimated_gap,
+                    "firstHigh": first_high,
+                    "peak": peak,
+                    "pullbackPct": dd,
+                    "entryTime": y["hm"],
+                    "entryPrice": entry,
+                    "volRatio": vol_ratio,
+                    "amountRatio": amt_ratio,
+                    "decisionReason": "gap+first_breakout+pullback+rebreak+volume+amount_pass",
+                    "evidence": {
+                        "gapPct": gap, "gapMin": p.gap_min, "gapMax": p.gap_max,
+                        "firstHigh": first_high, "peak": peak,
+                        "pullbackPct": dd, "pullbackMin": p.pb_min, "pullbackMax": p.pb_max,
+                        "rebreakClose": y["c"],
+                        "volumeRatio": vol_ratio, "requiredVolumeRatio": p.vol_mult,
+                        "amountRatio": amt_ratio, "requiredAmountRatio": p.amount_mult,
+                        "entryCutoff": p.entry_cutoff,
+                        "stopPct": p.stop, "takeProfitPct": p.take_profit,
+                        "frictionPct": friction["totalPct"], "frictionModel": friction,
+                        "finalExit": p.final_exit,
+                    },
+                    "timeBucket": opening_time_bucket(y["hm"]),
+                    "gapBucket": opening_gap_bucket(gap),
+                    "pullbackBucket": opening_pullback_bucket(dd),
+                    "volumeBucket": opening_ratio_bucket(vol_ratio, "volume"),
+                    "amountBucket": opening_ratio_bucket(amt_ratio, "amount"),
+                    "rankBucket": opening_rank_bucket(int(row.get("rank") or 0)),
+                    **path,
+                    "exitModel": "close",
+                    "exitModels": {"close": close_exit, "lowhigh": lowhigh_exit},
+                    "exitTime": close_exit["exitTime"],
+                    "exitPrice": close_exit["exitPrice"],
+                    "reason": close_exit["reason"],
+                    "pnl": close_exit["pnl"],
+                    "lowHighExitTime": lowhigh_exit["exitTime"],
+                    "lowHighExitPrice": lowhigh_exit["exitPrice"],
+                    "lowHighReason": lowhigh_exit["reason"],
+                    "lowHighPnl": lowhigh_exit["pnl"],
+                    "friction": friction,
+                    "variant": p.name,
+                }
+        break
+    return None
+
+
+def summary(trades, days, exit_model="close"):
+    def model_pnl(x):
+        if exit_model == "lowhigh":
+            return ((x.get("exitModels") or {}).get("lowhigh") or {}).get("pnl")
+        return ((x.get("exitModels") or {}).get("close") or {}).get("pnl", x.get("pnl"))
+    pnls = [v for v in (model_pnl(x) for x in trades) if v is not None]
+    wins = [x for x in pnls if x > 0]
+    losses = [x for x in pnls if x < 0]
+    eq = peak = mdd = 0.0
+    for x in sorted(trades, key=lambda z: (z["date"], z["entryTime"], z["code"] or "")):
+        value = model_pnl(x)
+        if value is None:
+            continue
+        eq += value
+        peak = max(peak, eq)
+        mdd = min(mdd, eq - peak)
+    gp = sum(wins)
+    gl = -sum(losses)
+    avg=statistics.fmean(pnls) if pnls else 0.0
+    daily = {}
+    for trade in trades:
+        value = model_pnl(trade)
+        if value is not None:
+            daily.setdefault(trade['date'], []).append(value)
+    daily_means = [statistics.fmean(daily[d]) for d in sorted(daily)]
+    sd = statistics.stdev(daily_means) if len(daily_means) > 1 else 0
+    midpoint = len(days)//2
+    first = set(days[:midpoint])
+    front = [model_pnl(t) for t in trades if t['date'] in first and model_pnl(t) is not None]
+    back = [model_pnl(t) for t in trades if t['date'] not in first and model_pnl(t) is not None]
+    return {
+        "days": len(days),
+        "trades": len(pnls),
+        "signals": len(trades),
+        "pending": len(trades)-len(pnls),
+        "signalDays": len(daily),
+        "dateMeanT": statistics.fmean(daily_means)/(sd/math.sqrt(len(daily_means))) if sd else None,
+        "firstHalfAvgPnl": statistics.fmean(front) if front else None,
+        "secondHalfAvgPnl": statistics.fmean(back) if back else None,
+        "winRate": (len(wins) / len(pnls) * 100) if pnls else 0.0,
+        "avgWin": statistics.fmean(wins) if wins else 0.0,
+        "avgLoss": statistics.fmean(losses) if losses else 0.0,
+        "avgPnl": avg,
+        "expectancyPct": avg,
+        "medianPnl": statistics.median(pnls) if pnls else 0.0,
+        "sumPnl": sum(pnls),
+        "profitFactor": (gp / gl) if gl > 0 else (999.0 if gp > 0 else 0.0),
+        "maxDrawdownSimple": mdd,
+        "tradesPerDay": (len(pnls) / len(days)) if days else 0.0,
+        "estimatedGapTrades": sum(1 for x in trades if x.get("gapEstimated")),
+    }
+
+
+def opening_group_stats(trades, key):
+    groups={}
+    for x in trades:
+        groups.setdefault(str(x.get(key) or "unknown"),[]).append(x)
+    out=[]
+    for name,rows in sorted(groups.items()):
+        pn=[x["pnl"] for x in rows]
+        wins=[v for v in pn if v>0]
+        losses=[v for v in pn if v<0]
+        complete=[x for x in rows if x.get("outcomeWindowComplete")]
+        mf=[x["mfePct"] for x in complete if x.get("mfePct") is not None]
+        ma=[x["maePct"] for x in complete if x.get("maePct") is not None]
+        out.append({
+            "group":name,"trades":len(rows),
+            "winRate":sum(1 for v in pn if v>0)/len(pn)*100 if pn else 0,
+            "avgWin":statistics.fmean(wins) if wins else 0,
+            "avgLoss":statistics.fmean(losses) if losses else 0,
+            "avgPnl":statistics.fmean(pn) if pn else 0,
+            "expectancyPct":statistics.fmean(pn) if pn else 0,
+            "avgMfe":statistics.fmean(mf) if mf else None,
+            "avgMae":statistics.fmean(ma) if ma else None,
+            "pathComplete":len(complete),
+            "plus1HitRate":sum(1 for x in complete if x.get("hitPlus1Time") is not None)/len(complete)*100 if complete else 0,
+            "plus2HitRate":sum(1 for x in complete if x.get("hitPlus2Time") is not None)/len(complete)*100 if complete else 0,
+            "minus1HitRate":sum(1 for x in complete if x.get("hitMinus1Time") is not None)/len(complete)*100 if complete else 0,
+            "minus2HitRate":sum(1 for x in complete if x.get("hitMinus2Time") is not None)/len(complete)*100 if complete else 0,
+        })
+    return out
+
+
+def opening_diagnostics(trades):
+    path={}
+    for n in (5,10,20,30):
+        k=f"fwd{n}mPct"; vals=[x[k] for x in trades if x.get(k) is not None]
+        path[k]={"n":len(vals),"avg":statistics.fmean(vals) if vals else None,
+                 "median":statistics.median(vals) if vals else None}
+    complete=[x for x in trades if x.get("outcomeWindowComplete")]
+    mf=[x["mfePct"] for x in complete if x.get("mfePct") is not None]
+    ma=[x["maePct"] for x in complete if x.get("maePct") is not None]
+    n=len(complete)
+    threshold={
+        "plus1":{"hits":sum(1 for x in complete if x.get("hitPlus1Time") is not None)},
+        "plus2":{"hits":sum(1 for x in complete if x.get("hitPlus2Time") is not None)},
+        "minus1":{"hits":sum(1 for x in complete if x.get("hitMinus1Time") is not None)},
+        "minus2":{"hits":sum(1 for x in complete if x.get("hitMinus2Time") is not None)},
+    }
+    for z in threshold.values():
+        z["ratePct"]=z["hits"]/n*100 if n else 0.0
+        z["total"]=n
+    return {
+        "timeBuckets":opening_group_stats(trades,"timeBucket"),
+        "conditionGroups":{
+            "entryTime":opening_group_stats(trades,"timeBucket"),
+            "gap":opening_group_stats(trades,"gapBucket"),
+            "pullback":opening_group_stats(trades,"pullbackBucket"),
+            "volumeRatio":opening_group_stats(trades,"volumeBucket"),
+            "amountRatio":opening_group_stats(trades,"amountBucket"),
+            "rank":opening_group_stats(trades,"rankBucket"),
+            "strategyVersion":opening_group_stats(trades,"strategyVersion"),
+        },
+        "forwardPath":path,
+        "thresholdHits":threshold,
+        "avgMfe":statistics.fmean(mf) if mf else None,
+        "avgMae":statistics.fmean(ma) if ma else None,
+        "outcomeWindowMin":30,
+        "pathCompleteTrades":len(complete),
+        "outcomeModel":"KIS 1m high/low from the bar after entry for MFE/MAE/threshold; close for 5/10/20/30m marks",
+    }
+
+
+def trades_for_days(days, p: Params, friction_calibration=None):
+    out = []
+    for day in days:
+        for row in day.get("universe") or []:
+            t = one_trade(day, row, p, friction_calibration)
+            if t:
+                if p.exit_policy == "next_session_open":
+                    t = hold_to_next_open(t, row.get("nextOpen"))
+                out.append(t)
+    return out
+
+
+def hold_to_next_open(trade, next_open):
+    """Reuse the exact baseline entry; only change exit. Missing/suspended next session stays pending."""
+    t = dict(trade)
+    t.update(strategyVersion="opening_hold_to_next_open_v1", exitPolicy="next_session_open",
+             outcomeStatus="pending_next_open", exitDate=None)
+    t['evidence'] = dict(t['evidence'], exitPolicy='next_session_open', stopPct=None, takeProfitPct=None, finalExit=None)
+    valid = (next_open and next_open.get('date', '') > t['date'] and float(next_open.get('price') or 0) > 0)
+    price = float(next_open['price']) if valid else None
+    pnl = (price/t['entryPrice']-1)*100-t['friction']['totalPct'] if valid else None
+    reason = '다음 거래일 시가 청산' if valid else '다음 거래일 시가 대기'
+    model = dict(exitTime=900 if valid else None, exitPrice=price, pnl=pnl, reason=reason)
+    t.update(model)
+    t.update(exitModel='next_session_open', exitModels={'close': dict(model), 'lowhigh': dict(model)},
+             lowHighExitTime=model['exitTime'], lowHighExitPrice=price, lowHighPnl=pnl, lowHighReason=reason)
+    if valid:
+        t.update(exitDate=next_open['date'], outcomeStatus='complete', exitSource=next_open.get('source'))
+    return t
+
+
+def walk_forward(days, variant_trade_map):
+    """Chronological 20d train -> 5d test walk-forward.
+
+    No variant is auto-promoted. This only reports out-of-sample behavior.
+    Test windows are non-overlapping because step=5.
+    """
+    train_days = 20
+    test_days = 5
+    step_days = 5
+    labels = [x["date"] for x in days]
+
+    if len(labels) < train_days + test_days:
+        return {
+            "status": "collecting",
+            "trainDays": train_days,
+            "testDays": test_days,
+            "stepDays": step_days,
+            "archiveDays": len(labels),
+            "daysNeededForFirstFold": train_days + test_days,
+            "folds": [],
+            "oosVariants": [],
+            "note": "Need at least 25 trading days for the first chronological out-of-sample fold.",
+        }
+
+    folds = []
+    oos_by_variant = {p.name: [] for p in VARIANTS}
+
+    for start in range(0, len(labels) - train_days - test_days + 1, step_days):
+        train_dates = labels[start : start + train_days]
+        test_dates = labels[start + train_days : start + train_days + test_days]
+        train_set = set(train_dates)
+        test_set = set(test_dates)
+
+        fv = []
+        for p in VARIANTS:
+            all_trades = evaluation_trades(p.name, variant_trade_map.get(p.name, []))
+            train_trades = [x for x in all_trades if x["date"] in train_set and (x.get('exitDate') or x['date']) <= train_dates[-1]]
+            test_trades = [x for x in all_trades if x["date"] in test_set and (x.get('exitDate') or x['date']) <= test_dates[-1]]
+            oos_by_variant[p.name].extend(test_trades)
+            fv.append({
+                "name": p.name,
+                "train": summary(train_trades, train_dates),
+                "test": summary(test_trades, test_dates),
+            })
+
+        folds.append({
+            "fold": len(folds) + 1,
+            "trainFrom": train_dates[0],
+            "trainTo": train_dates[-1],
+            "testFrom": test_dates[0],
+            "testTo": test_dates[-1],
+            "variants": fv,
+        })
+
+    oos = []
+    oos_days = []
+    for fold in folds:
+        oos_days.extend([
+            d for d in labels
+            if fold["testFrom"] <= d <= fold["testTo"]
+        ])
+    oos_days = sorted(set(oos_days))
+
+    for p in VARIANTS:
+        oos.append({
+            "name": p.name,
+            "summary": summary(oos_by_variant[p.name], oos_days),
+        })
+
+    baseline_oos = next((x["summary"] for x in oos if x["name"] == "baseline"), summary([], oos_days))
+    adoption_review = []
+    for item in oos:
+        name = item["name"]
+        if name == "baseline":
+            continue
+        sm = item["summary"]
+        edge = sm["avgPnl"] - baseline_oos["avgPnl"]
+        eligible_folds = 0
+        beats = 0
+        for fold in folds:
+            bm = next((x["test"] for x in fold["variants"] if x["name"] == "baseline"), None)
+            vm = next((x["test"] for x in fold["variants"] if x["name"] == name), None)
+            if bm and vm and bm["trades"] > 0 and vm["trades"] > 0:
+                eligible_folds += 1
+                if vm["avgPnl"] > bm["avgPnl"]:
+                    beats += 1
+        majority = eligible_folds > 0 and beats > eligible_folds / 2
+        adoption_review.append({
+            "name": name,
+            "oosEdgePct": edge,
+            "eligibleFolds": eligible_folds,
+            "beatsBaselineFolds": beats,
+            "majorityFolds": majority,
+            "passesPredeclaredRule": edge > 0 and majority,
+        })
+
+    return {
+        "status": "reviewable" if len(folds) >= 3 else "early",
+        "trainDays": train_days,
+        "testDays": test_days,
+        "stepDays": step_days,
+        "archiveDays": len(labels),
+        "foldCount": len(folds),
+        "oosDays": len(oos_days),
+        "folds": folds,
+        "oosVariants": oos,
+        "adoptionRule": ADOPTION_RULE,
+        "adoptionReview": adoption_review,
+        "note": "Out-of-sample only. Design dates are excluded per variant. No strategy is automatically promoted from this result.",
+    }
+
+
+def main():
+    days = load_days()
+    OUT.mkdir(parents=True, exist_ok=True)
+    if not days:
+        print("No daily scalping archives yet.")
+        return 0
+
+    reports = []
+    baseline = []
+    friction_calibration = load_vts_friction_calibration()
+    day_labels = [x["date"] for x in days]
+    variant_trade_map = {}
+
+    for p in VARIANTS:
+        trades = trades_for_days(days, p, friction_calibration)
+        variant_trade_map[p.name] = trades
+        eval_trades = evaluation_trades(p.name, trades)
+        eval_days = [d for d in day_labels if d not in set(VARIANT_DESIGNED_FROM.get(p.name) or [])
+                     and (p.name != 'hold_to_next_open' or d >= '2026-10-01')]
+        s = summary(eval_trades, eval_days)
+        reports.append({
+            "params": asdict(p),
+            "designedFrom": VARIANT_DESIGNED_FROM.get(p.name, []),
+            "excludedDesignDates": VARIANT_DESIGNED_FROM.get(p.name, []),
+            "rawSummary": summary(trades, day_labels),
+            "evaluationStart": "2026-10-01" if p.name == "hold_to_next_open" else None,
+            "historicalStatus": "design-sample-only" if p.name == "hold_to_next_open" else "retrospective",
+            "summary": s,
+        })
+        if p.name == "baseline":
+            baseline = trades
+
+    wf = walk_forward(days, variant_trade_map)
+    enough = len(days) >= 20 and len(baseline) >= 30
+    report = {
+        "schema": 6,
+        "generatedAt": datetime.now(KST).isoformat(),
+        "from": day_labels[0],
+        "to": day_labels[-1],
+        "archiveDays": len(days),
+        "universeTiming": sorted(set(d.get('universeTiming', 'original-archive') for d in days)),
+        "historicalUniverseWarning": "Same-day closing turnover is ex-post information. Historical reconstruction is not proof of an executable morning universe.",
+        "baselineTradeCount": len(baseline),
+        "comparisonStatus": "eligible" if enough else "collecting",
+        "comparisonRule": "Variant comparison is preliminary until >=20 trading days and >=30 baseline trades. Each variant's design date is excluded.",
+        "multipleTesting": {
+            "K": MULTIPLE_TEST_K,
+            "method": "Bonferroni",
+            "alpha": MULTIPLE_TEST_ALPHA,
+            "adjustedAlpha": MULTIPLE_TEST_ALPHA / MULTIPLE_TEST_K,
+            "note": "Diagnostic correction only; no strategy is auto-promoted."
+        },
+        "adoptionRule": ADOPTION_RULE,
+        "signalModel": "live-parity-close-only",
+        "signalModelNote": "Signal decisions remain 1-minute close based for live parity. Research records close and low/high exit models in parallel; official compatibility fields remain close model.",
+        "frictionCalibration": friction_calibration,
+        "exitModelComparison": {
+            "officialCompatibilityModel": "close",
+            "close": summary(baseline, day_labels, "close"),
+            "lowhigh": summary(baseline, day_labels, "lowhigh"),
+            "note": "Research comparison only. Baseline signal thresholds are not auto-changed."
+        },
+        "variants": reports,
+        "diagnostics": opening_diagnostics(baseline),
+        "walkForward": wf,
+    }
+
+    with (OUT / "latest.json").open("w", encoding="utf-8") as f:
+        json.dump(report, f, ensure_ascii=False, indent=2)
+
+    with (OUT / "baseline-trades.csv").open("w", encoding="utf-8", newline="") as f:
+        cols = ["date","signalSchemaVersion","strategyVersion","variant","rank","rankBucket","code","name",
+                "gap","gapEstimated","gapBucket","pullbackPct","pullbackBucket","entryTime","entryPrice",
+                "volRatio","volumeBucket","amountRatio","amountBucket","timeBucket",
+                "mfePct","mfeTime","maePct","maeTime",
+                "hitPlus1Time","hitPlus2Time","hitMinus1Time","hitMinus2Time",
+                "fwd5mPct","fwd10mPct","fwd20mPct","fwd30mPct",
+                "exitModel","exitTime","exitPrice","reason","pnl",
+                "lowHighExitTime","lowHighExitPrice","lowHighReason","lowHighPnl"]
+        w = csv.DictWriter(f, fieldnames=cols)
+        w.writeheader()
+        for x in baseline:
+            w.writerow({k: x.get(k) for k in cols})
+
+    # Compact per-signal outcome archive used to join the exact live alert ledger.
+    # Strategy changes never rewrite the signal's strategyVersion/params; the join key
+    # also includes variant/date/code/entryTime so a later rule cannot silently replace it.
+    outcome_rows = []
+    for variant_name, trades in variant_trade_map.items():
+        for x in trades:
+            outcome_rows.append({
+                "variant": variant_name,
+                "date": x.get("date"),
+                "code": x.get("code"),
+                "name": x.get("name"),
+                "entryTime": x.get("entryTime"),
+                "entryPrice": x.get("entryPrice"),
+                "strategyVersion": x.get("strategyVersion"),
+                "signalSchemaVersion": x.get("signalSchemaVersion"),
+                "strategyParams": x.get("strategyParams"),
+                "gap": x.get("gap"),
+                "pullbackPct": x.get("pullbackPct"),
+                "volRatio": x.get("volRatio"),
+                "amountRatio": x.get("amountRatio"),
+                "rank": x.get("rank"),
+                "timeBucket": x.get("timeBucket"),
+                "gapBucket": x.get("gapBucket"),
+                "pullbackBucket": x.get("pullbackBucket"),
+                "volumeBucket": x.get("volumeBucket"),
+                "amountBucket": x.get("amountBucket"),
+                "rankBucket": x.get("rankBucket"),
+                "outcomeObservedMin": x.get("outcomeObservedMin"),
+                "outcomeWindowComplete": x.get("outcomeWindowComplete"),
+                "mfePct": x.get("mfePct"),
+                "mfeTime": x.get("mfeTime"),
+                "maePct": x.get("maePct"),
+                "maeTime": x.get("maeTime"),
+                "hitPlus1Time": x.get("hitPlus1Time"),
+                "hitPlus2Time": x.get("hitPlus2Time"),
+                "hitMinus1Time": x.get("hitMinus1Time"),
+                "hitMinus2Time": x.get("hitMinus2Time"),
+                "fwd5mPct": x.get("fwd5mPct"),
+                "fwd10mPct": x.get("fwd10mPct"),
+                "fwd20mPct": x.get("fwd20mPct"),
+                "fwd30mPct": x.get("fwd30mPct"),
+                "exitTime": x.get("exitTime"),
+                "exitDate": x.get("exitDate"),
+                "exitPolicy": x.get("exitPolicy"),
+                "exitSource": x.get("exitSource"),
+                "outcomeStatus": x.get("outcomeStatus"),
+                "exitPrice": x.get("exitPrice"),
+                "reason": x.get("reason"),
+                "pnl": x.get("pnl"),
+                "exitModel": x.get("exitModel"),
+                "exitModels": x.get("exitModels"),
+                "friction": x.get("friction"),
+                "lowHighExitTime": x.get("lowHighExitTime"),
+                "lowHighExitPrice": x.get("lowHighExitPrice"),
+                "lowHighReason": x.get("lowHighReason"),
+                "lowHighPnl": x.get("lowHighPnl"),
+            })
+    outcome_rows.sort(key=lambda x: (x["date"] or "", x["variant"] or "", x["entryTime"] or 0, x["code"] or ""))
+    previous_path = OUT / 'signal-outcomes.json'
+    if previous_path.exists():
+        previous = previous_path.read_bytes()
+        prior_records = json.loads(previous).get('records', [])
+        if prior_records != outcome_rows:
+            revisions = OUT / 'revisions'
+            revisions.mkdir(exist_ok=True)
+            revision = revisions / (hashlib.sha256(previous).hexdigest() + '.json')
+            if not revision.exists():
+                revision.write_bytes(previous)
+    with (OUT / "signal-outcomes.json").open("w", encoding="utf-8") as f:
+        json.dump({
+            "schema": 1,
+            "generatedAt": report["generatedAt"],
+            "from": day_labels[0],
+            "to": day_labels[-1],
+            "records": outcome_rows,
+        }, f, ensure_ascii=False, separators=(",", ":"))
+
+    stamp = day_labels[-1]
+    with (OUT / f"{stamp}.json").open("w", encoding="utf-8") as f:
+        json.dump(report, f, ensure_ascii=False, indent=2)
+
+    base = next(x for x in reports if x["params"]["name"] == "baseline")
+    print(json.dumps({
+        "days": len(days),
+        "from": day_labels[0],
+        "to": day_labels[-1],
+        "baseline": base["summary"],
+        "comparisonStatus": report["comparisonStatus"],
+        "walkForwardStatus": wf["status"],
+        "walkForwardFolds": wf.get("foldCount", 0),
+    }, ensure_ascii=False, indent=2))
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

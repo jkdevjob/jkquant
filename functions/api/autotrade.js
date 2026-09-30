@@ -1,0 +1,305 @@
+// Cloudflare Pages Function — /api/autotrade
+//
+// 앱을 열지 않아도 무한매수법 세션의 오늘 주문을 한투에 낸다.
+// 브라우저가 켜져 있어야만 주문이 나가던 걸 서버가 대신한다.
+//
+// 흐름: 서비스 계정으로 Firestore에서 세션을 읽는다 → _im.js 로 오늘 주문을 계산한다
+//       → /api/kis 로 주문을 낸다 → 결과를 Firestore(autotrade/{uid})에 남긴다.
+//
+// ── 필요한 환경변수 (Cloudflare Pages → 설정 → 환경 변수) ──
+//   AUTOTRADE_KEY            : 이 엔드포인트를 부를 때 쓰는 비밀 문자열. 아무 문자열이나.
+//                              깃허브 액션에도 같은 값을 Secret 으로 넣는다.
+//   FIREBASE_SERVICE_ACCOUNT : Firebase 콘솔 → 프로젝트 설정 → 서비스 계정 →
+//                              '새 비공개 키 생성' 으로 받은 JSON 전체를 그대로 붙여넣는다.
+//   AUTOTRADE_UID            : (선택) 대상 사용자 uid. 없으면 OWNER_EMAIL 로 profiles 에서 찾는다.
+//   AUTOTRADE_ENABLE         : (선택) "0" 이면 계산만 하고 주문은 내지 않는다(드라이런).
+//
+// 안전 규약
+//   · 주문은 절대 자동 재시도하지 않는다 — 응답이 유실되면 이중 주문이 된다.
+//   · 같은 날 두 번 내지 않는다 (autotrade/{uid} 의 lastDate 로 막는다). lastDate 는 첫 주문을
+//     내기 직전에 조건부 쓰기로 먼저 찍는다 — 겹친 실행은 한쪽만 통과하고, 도중에 끊겨도 다시 안 낸다.
+//   · 리버스모드 세션은 건너뛴다 — 규칙을 다 옮기지 않았다.
+//   · 자동주문 경로는 VTS 모의투자 세션(paper=true)만 허용한다. paper=false 실계좌 세션은 항상 건너뛴다.
+
+import { imOrders, settledLast, staleDays, STALE_MAX_DAYS, orderWindow } from "./_im.js";
+
+const JH = { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store" };
+const json = (o, s = 200) => new Response(JSON.stringify(o, null, 2), { status: s, headers: JH });
+const KRCODE = /^(?:\d{6}|\d{4}[A-Z]\d)$/;
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+/* ── 서비스 계정으로 구글 액세스 토큰을 받는다 ──
+   Workers 에는 Node 의 crypto 가 없다. WebCrypto 로 RS256 JWT 를 직접 서명한다. */
+const b64url = (buf) => btoa(String.fromCharCode(...new Uint8Array(buf)))
+  .replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+const b64urlStr = (s) => b64url(new TextEncoder().encode(s));
+
+async function googleToken(sa, scope) {
+  const now = Math.floor(Date.now() / 1000);
+  const claim = { iss: sa.client_email, scope, aud: "https://oauth2.googleapis.com/token", exp: now + 3600, iat: now };
+  const head = b64urlStr(JSON.stringify({ alg: "RS256", typ: "JWT" }));
+  const body = b64urlStr(JSON.stringify(claim));
+  // PEM → DER (pkcs8)
+  const pem = String(sa.private_key || "").replace(/-----[^-]+-----/g, "").replace(/\s/g, "");
+  const der = Uint8Array.from(atob(pem), (c) => c.charCodeAt(0));
+  const key = await crypto.subtle.importKey("pkcs8", der,
+    { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" }, false, ["sign"]);
+  const sig = await crypto.subtle.sign("RSASSA-PKCS1-v1_5", key, new TextEncoder().encode(head + "." + body));
+  const jwt = head + "." + body + "." + b64url(sig);
+  const r = await fetch("https://oauth2.googleapis.com/token", {
+    method: "POST", headers: { "content-type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({ grant_type: "urn:ietf:params:oauth:grant-type:jwt-bearer", assertion: jwt }),
+  });
+  const j = await r.json().catch(() => ({}));
+  if (!j.access_token) throw new Error("구글 토큰 발급 실패: " + (j.error_description || j.error || r.status));
+  return j.access_token;
+}
+
+/* ── Firestore REST — 타입 붙은 JSON 을 평범한 값으로 푼다 ── */
+function unwrap(v) {
+  if (v == null) return null;
+  if ("nullValue" in v) return null;
+  if ("stringValue" in v) return v.stringValue;
+  if ("booleanValue" in v) return v.booleanValue;
+  if ("integerValue" in v) return +v.integerValue;
+  if ("doubleValue" in v) return +v.doubleValue;
+  if ("timestampValue" in v) return v.timestampValue;
+  if ("arrayValue" in v) return (v.arrayValue.values || []).map(unwrap);
+  if ("mapValue" in v) { const o = {}; for (const [k, x] of Object.entries(v.mapValue.fields || {})) o[k] = unwrap(x); return o; }
+  return null;
+}
+function wrap(v) {
+  if (v === null || v === undefined) return { nullValue: null };
+  if (typeof v === "string") return { stringValue: v };
+  if (typeof v === "boolean") return { booleanValue: v };
+  if (typeof v === "number") return Number.isInteger(v) ? { integerValue: String(v) } : { doubleValue: v };
+  if (Array.isArray(v)) return { arrayValue: { values: v.map(wrap) } };
+  const fields = {}; for (const [k, x] of Object.entries(v)) fields[k] = wrap(x);
+  return { mapValue: { fields } };
+}
+const FS = (pid, path) => `https://firestore.googleapis.com/v1/projects/${pid}/databases/(default)/documents/${path}`;
+
+async function fsGet(tok, pid, path) {
+  const r = await fetch(FS(pid, path), { headers: { authorization: "Bearer " + tok } });
+  if (r.status === 404) return null;
+  const j = await r.json().catch(() => ({}));
+  if (!j.fields) return null;
+  const o = {}; for (const [k, x] of Object.entries(j.fields)) o[k] = unwrap(x);
+  return o;
+}
+async function fsSet(tok, pid, path, obj) {
+  const fields = {}; for (const [k, v] of Object.entries(obj)) fields[k] = wrap(v);
+  await fetch(FS(pid, path), {
+    method: "PATCH", headers: { authorization: "Bearer " + tok, "content-type": "application/json" },
+    body: JSON.stringify({ fields }),
+  });
+}
+/* 오늘을 먼저 차지한다 — 첫 주문을 내기 직전에 부른다.
+   크론을 30분마다 걸어서(깃허브 크론이 2~3시간씩 늦다) 같은 날 주문 창 안에 실행이 두 번 올 수 있다.
+   끝에서만 lastDate 를 찍으면, 첫 실행이 주문 도중 끊겼을 때 다음 실행이 같은 주문을 또 낸다.
+   그래서 주문 전에 찍는다 — 끊기면 덜 나갈 뿐 두 번 나가지는 않는다.
+   다시 읽어서 오늘 것이면 멈추고, 쓰기는 방금 읽은 판(updateTime)이 그대로일 때만 통과시킨다
+   (문서가 없었으면 '없을 때만 만든다'). 두 실행이 겹쳐도 Firestore 가 한쪽을 거절한다.
+   못 차지하면 — 다른 실행이 먼저 썼든 읽기·쓰기가 실패했든 — 주문을 내지 않는다. */
+async function claimDay(tok, pid, path, today, at) {
+  const r = await fetch(FS(pid, path), { headers: { authorization: "Bearer " + tok } });
+  let cond;
+  if (r.status === 404) cond = "currentDocument.exists=false";
+  else {
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok || !j.updateTime) return { ok: false, why: `실행 기록을 읽지 못했습니다 (${r.status})` };
+    if (unwrap((j.fields || {}).lastDate) === today) return { ok: false, why: "오늘 이미 실행했습니다" };
+    cond = "currentDocument.updateTime=" + encodeURIComponent(j.updateTime);
+  }
+  const w = await fetch(FS(pid, path) + "?" + cond, {
+    method: "PATCH", headers: { authorization: "Bearer " + tok, "content-type": "application/json" },
+    body: JSON.stringify({ fields: { lastDate: wrap(today), lastRun: wrap(at), log: wrap("주문 중 — 끝나면 결과로 바뀝니다") } }),
+  });
+  if (w.ok) return { ok: true };
+  // 조건이 어긋나면 Firestore 는 400(FAILED_PRECONDITION) · 409(ALREADY_EXISTS) 로 거절한다
+  return { ok: false, why: (w.status === 400 || w.status === 409)
+    ? `다른 실행이 먼저 차지했습니다 (${w.status})` : `실행 기록을 쓰지 못했습니다 (${w.status})` };
+}
+// OWNER_EMAIL 로 uid 를 찾는다 — 환경변수를 하나 덜 두려고 profiles 를 훑는다
+async function findUid(tok, pid, email) {
+  const r = await fetch(FS(pid, "profiles") + "?pageSize=300", { headers: { authorization: "Bearer " + tok } });
+  const j = await r.json().catch(() => ({}));
+  for (const d of (j.documents || [])) {
+    const e = d.fields && d.fields.email && d.fields.email.stringValue;
+    if (e && e.toLowerCase() === email.toLowerCase()) return d.name.split("/").pop();
+  }
+  return null;
+}
+
+/* 주문 간격은 세션을 넘어서도 이어져야 한다. 예전엔 세션 안에서만 700ms 를 뒀고
+   (for 문의 i 가 세션마다 0 부터 다시 시작한다) 세션이 바뀌는 순간은 간격이 0 이었다.
+   게다가 주문 1건은 hashkey + order 로 API 를 두 번 부른다. 그래서 12건을 내던 날
+   초당 4~6회가 나가 전부 "초당 요청 제한"에 걸렸다 — 한 건도 접수되지 않았다.
+   한투 모의는 초당 2회다. 1건당 2회를 쓰므로 건당 1.2초를 둔다. */
+/* 모의 한도는 초당 2건인데 주문 하나가 hashkey+order 로 이미 2건을 쓴다.
+   1200ms 로는 이웃 주문의 호출이 같은 1초 창에 겹쳤다 — 실측(2026-09-16) 11건 중
+   두 번째 주문 하나가 제한에 걸렸다(첫 주문은 토큰 발급까지 더해 1초에 3건이었다).
+   2000ms 면 한 주문의 두 호출만 한 창에 들어간다. */
+const ORDER_GAP_MS = 2000;
+let _lastOrderAt = 0;
+async function paceOrder() {
+  const wait = _lastOrderAt ? ORDER_GAP_MS - (Date.now() - _lastOrderAt) : 0;
+  if (wait > 0) await sleep(wait);
+  _lastOrderAt = Date.now();
+}
+
+export async function onRequest({ request, env }) {
+  const url = new URL(request.url);
+  // 아무나 주문을 낼 수 없게 막는다. 키는 쿼리나 헤더 어느 쪽으로 줘도 된다.
+  const key = url.searchParams.get("key") || request.headers.get("x-autotrade-key") || "";
+  if (!env.AUTOTRADE_KEY || key !== env.AUTOTRADE_KEY) return json({ error: "권한 없음" }, 401);
+  // dry=1 이면 계산만 하고 주문은 내지 않는다. 환경변수로도 막을 수 있다.
+  const dry = url.searchParams.get("dry") === "1" || String(env.AUTOTRADE_ENABLE || "") === "0";
+  /* 미국 주문구분. 안 주면 지금까지와 같은 "00"(지정가)라서 평소 주문은 아무것도 달라지지 않는다.
+     LOC 가 몇 번인지 알아보려고 손으로 돌릴 때만 ordDvsn=34 처럼 붙여 부른다.
+     거절당하면 /api/kis 가 알아서 "00" 으로 한 번 떨어뜨리고, 무엇으로 나갔는지 기록에 남긴다. */
+  const ordDvsn = ["31", "32", "33", "34"].includes(url.searchParams.get("ordDvsn") || "")
+    ? url.searchParams.get("ordDvsn") : "00";
+
+  let sa;
+  try { sa = JSON.parse(env.FIREBASE_SERVICE_ACCOUNT || "{}"); }
+  catch (e) { return json({ error: "FIREBASE_SERVICE_ACCOUNT 가 JSON 이 아닙니다" }, 400); }
+  if (!sa.client_email || !sa.private_key) return json({ error: "FIREBASE_SERVICE_ACCOUNT 가 없습니다" }, 400);
+  const pid = sa.project_id || "jk-invest";
+
+  const out = { at: new Date().toISOString(), dry, ordDvsn, sessions: [] };
+  try {
+    const tok = await googleToken(sa, "https://www.googleapis.com/auth/datastore");
+    const uid = env.AUTOTRADE_UID || await findUid(tok, pid, String(env.OWNER_EMAIL || "").split(",")[0].trim());
+    if (!uid) return json({ error: "대상 uid 를 찾지 못했습니다 — AUTOTRADE_UID 를 넣어 주세요" }, 400);
+    out.uid = uid;
+
+    const doc = await fsGet(tok, pid, "users/" + uid);
+    const state = doc && doc.state;
+    if (!state || !state.inf || !state.inf.sessions) return json({ ...out, error: "저장된 세션이 없습니다" }, 404);
+
+    // 오늘 이미 돌았으면 다시 내지 않는다 — 이중 주문 방지
+    const today = new Date().toISOString().slice(0, 10);
+    const prev = await fsGet(tok, pid, "autotrade/" + uid);
+    if (!dry && prev && prev.lastDate === today) return json({ ...out, skipped: "오늘 이미 실행했습니다", lastDate: today });
+
+    let claimed = false;
+    for (const s of state.inf.sessions) {
+      const row = { name: s.name, id: s.id, paper: !!s.paper };
+      if (!s.kis) { row.skip = "한투 연결 꺼짐"; out.sessions.push(row); continue; }
+      const st = s.settings || {};
+      const sym = String(st.ticker || "").toUpperCase();
+      row.ticker = sym;
+      /* 통화는 종목코드로 정한다 — 앱(curOf)과 같은 규약 (7차 점검 ⑩).
+         예전엔 st.cur 를 읽었는데 앱은 그 칸을 저장하지 않는다. 늘 비어 있어 국내 종목도
+         미국 장 마감·정산 시각과 미국 주문 창으로 판정했다. */
+      const cur = KRCODE.test(sym.replace(/\.K[SQ]$/, "")) ? "krw" : "usd";
+      row.cur = cur;
+
+      /* 확정 종가 — 앱과 같은 시세 경로, 같은 규약.
+         마지막 봉을 그냥 쓰면 안 된다. 자동 주문은 마감 전 1시간 안에 도는데
+         그 시각 오늘 봉의 close 는 종가가 아니라 장중 현재가다. */
+      /* 앱과 같은 가격 계열로 받는다 (7차 점검 ⑦). 앱은 N1 부터 div=1 로 받아 체결가
+         계열(ohlcTrade)이 있으면 그걸 쓴다 — 서버만 조정종가(series)로 수량·상한을 재면
+         화면에 보이는 주문과 실제로 나가는 주문이 달라진다. 체결가 계열이 없으면 앱처럼 조정 기준.
+         익절 조절(20일 상승률)도 확정된 봉만 쓴다 — 자동 주문은 장 마감 전에 돌아서
+         마지막 봉이 아직 움직이는 오늘 봉이다. 모의·백테는 전일 확정 종가 기준이다. */
+      let close = 0, days = null;
+      try {
+        /* 익절 자동(실험) 세션은 사이클 첫 매수일 전 120거래일 종가가 필요하다 — 사이클이 길면 기본 1년 창을 넘는다 (앱·플랜처럼 전체 기간) */
+        const q = await (await fetch(url.origin + "/api/quote?symbol=" + encodeURIComponent(sym) + "&intraday=0&div=1" + (st.autoTp === true ? "&range=max" : ""))).json();
+        const tradeOK = q && q.priceBasis === "trade" && Array.isArray(q.ohlcTrade) && q.ohlcTrade.length;
+        const bars = tradeOK ? q.ohlcTrade : (q.series || q.ohlc || []);
+        row.priceBasis = tradeOK ? "trade" : (q.priceBasis || null);
+        const bar = settledLast(bars, cur);
+        close = bar ? +bar.close : 0;
+        row.closeDate = bar ? bar.date : null;
+        days = bar ? bars.filter((x) => x && x.date <= bar.date && +x.close > 0).map((x) => ({ date: x.date, close: +x.close })) : null;
+      } catch (e) { row.skip = "시세 실패: " + (e.message || e); out.sessions.push(row); continue; }
+      row.close = close;
+      /* 묵은 종가로는 주문하지 않는다. 시세사가 봉을 늦게 올리는 일이 실제로 있는데
+         (야후가 9/14 봉을 마감 4시간 뒤에 올렸다) 사람이라면 이상한 걸 알아채지만
+         자동 주문은 그대로 내버린다. 낡은 가격으로 낸 주문은 되돌릴 수가 없다. */
+      const stale = staleDays(row.closeDate, cur);
+      if (stale > STALE_MAX_DAYS) {
+        row.skip = `종가가 ${stale}일 묵었습니다 (${row.closeDate}) — 시세가 안 올라와 건너뜁니다`;
+        out.sessions.push(row); continue;
+      }
+      row.staleDays = stale;
+
+      const { orders, skip } = imOrders({ st, hist: s.hist || [], close, days });
+      if (skip) { row.skip = skip; out.sessions.push(row); continue; }
+      row.orders = orders.map((o) => ({ ...o, price: Math.round(o.price * (KRCODE.test(sym) ? 1 : 100)) / (KRCODE.test(sym) ? 1 : 100) }));
+      if (!orders.length) { row.skip = "낼 주문 없음"; out.sessions.push(row); continue; }
+      if (dry) { row.sent = "드라이런 — 주문 안 냄"; out.sessions.push(row); continue; }
+      /* 마감 뒤에 도착한 실행은 주문을 내지 않는다. 깃허브 크론은 예정 시각보다
+         두세 시간씩 늦게 돈다(2026-09-15~24 실측 2시간 10분~3시간 8분). 그때 낸
+         지정가는 그날 체결되지 않고 다음 거래일로 넘어간다. 창 밖 실행은 계산만 하고
+         날을 쓰지 않는다 — 크론을 30분마다 걸어 두어 창 안에 도착한 실행이 낸다. */
+      const win = orderWindow(cur);
+      if (!win.ok) {
+        row.skip = `주문 시간이 아닙니다 — 지금 ${win.now}, 주문 창은 ${win.from}~${win.to} (거래소 시각)`;
+        out.sessions.push(row); continue;
+      }
+
+      // 자동주문은 VTS 모의투자만 허용한다. 실계좌 세션은 계산 결과와 무관하게 전송하지 않는다.
+      if (!s.paper) {
+        row.env = "real";
+        row.skip = "실계좌 자동주문 차단 — 이 서버 자동주문은 VTS 모의투자(paper=true)만 허용합니다";
+        out.sessions.push(row);
+        continue;
+      }
+      const kisEnv = "vts";
+      row.env = kisEnv;
+      /* 아직 어느 번호가 LOC 인지 모른다. 틀렸으면 MOC(장마감 시장가)로 나가서
+         정한 값이 아니라 아무 값에나 체결된다. 모르는 번호는 모의계좌에서만 넣어 본다 —
+         실계좌는 알아낸 뒤에 열어 준다. */
+      /* 2026-09-15 실측: 모의계좌에 34 를 넣으니 한투가 이렇게 답했다 —
+           "모의투자 주문처리가 안되었습니다(지정가만 가능한 상품입니다)" (40650000)
+         모의는 지정가만 받는다. 그러니 모의에 34 를 보내는 건 거절이 확정된 요청을
+         한 번 더 쏘는 것뿐이고, 그만큼 초당 제한만 잡아먹는다(실제로 그래서 그날
+         주문이 전부 제한에 걸렸다). LOC 가 몇 번인지는 실계좌에서만 알 수 있다. */
+      const dvsn = ordDvsn !== "00" ? "00" : ordDvsn;
+      if (dvsn !== ordDvsn) row.dvsnNote = kisEnv === "vts"
+        ? `모의는 지정가만 받습니다 — 주문구분 ${ordDvsn} 은 보내지 않고 지정가로 냅니다`
+        : `주문구분 ${ordDvsn} 은 아직 실계좌에 보내지 않습니다 — 지정가로 냅니다`;
+      row.ordDvsn = dvsn;
+      // 첫 주문 직전에 오늘을 차지한다 — 못 차지하면 이 세션도, 남은 세션도 내지 않는다
+      if (!claimed) {
+        const c = await claimDay(tok, pid, "autotrade/" + uid, today, out.at);
+        if (!c.ok) { row.skip = "주문 직전 확인에서 멈춤 — " + c.why; out.claim = c.why; out.sessions.push(row); break; }
+        claimed = true;
+        out.claim = "오늘 주문 차지";
+      }
+      row.results = [];
+      for (let i = 0; i < row.orders.length; i++) {
+        await paceOrder();                             // 세션이 바뀌어도 간격은 이어진다
+        const o = row.orders[i];
+        try {
+          const r = await fetch(url.origin + "/api/kis?op=order&internal=1", {
+            method: "POST",
+            headers: { "content-type": "application/json", "x-autotrade-key": env.AUTOTRADE_KEY },
+            body: JSON.stringify({ env: kisEnv, side: o.side, code: sym, qty: o.qty, price: o.price, priceType: "limit", ordDvsn: dvsn }),
+          });
+          const j = await r.json().catch(() => ({}));
+          row.results.push({ kind: o.kind, ok: !!j.ok, msg: j.msg || j.error || "응답 없음", orderNo: j.orderNo || "",
+            ordDvsn: j.ordDvsn || "", fellBack: !!j.fellBack, firstTry: j.firstTry || null });
+        } catch (e) {
+          // 재시도하지 않는다 — 응답이 유실된 경우 이미 접수됐을 수 있다
+          row.results.push({ kind: o.kind, ok: false, msg: "전송 실패: " + (e.message || e) });
+        }
+      }
+      out.sessions.push(row);
+    }
+
+    /* 주문을 한 건이라도 냈을 때만 '오늘 했다'로 찍는다. 예전엔 부르기만 하면 찍혀서,
+       늦게 돈 크론이 아무것도 안 내고도 그날을 소진해 제 시각 실행이 막혔다.
+       한 건이라도 냈으면 응답이 유실됐을 수 있으므로 반드시 찍는다(이중 주문 방지). */
+    const tried = out.sessions.some((x) => Array.isArray(x.results) && x.results.length);
+    out.marked = tried;
+    if (!dry && tried) await fsSet(tok, pid, "autotrade/" + uid, { lastDate: today, lastRun: out.at, log: JSON.stringify(out.sessions).slice(0, 8000) });
+    return json(out);
+  } catch (e) {
+    return json({ ...out, error: String(e.message || e) }, 500);
+  }
+}

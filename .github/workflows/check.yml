@@ -4,7 +4,7 @@ name: 검증
 # 사람 기억에 맡기지 않고 여기서 강제한다.
 on:
   push:
-    branches: ['**']
+    branches: [main]
   pull_request:
 
 jobs:
@@ -14,6 +14,466 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with: { node-version: '22' }
+
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.12' }
+
+      - name: 연구 Python 문법 검사
+        run: |
+          python -m py_compile scripts/backtest_opening_rebreak.py
+          python -m py_compile scripts/backfill_opening_paths.py
+          python -m py_compile scripts/test_opening_signal_labels.py
+          python -m py_compile scripts/mutation_test_opening_engine.py
+          python -m py_compile scripts/backtest_daytrading.py
+          python -m py_compile scripts/collect_daytrading_data.py
+          python -m py_compile scripts/analyze_vts_reconcile.py
+          python -m py_compile scripts/nightly_scalping_research.py
+          python -m py_compile scripts/collect_crypto_data.py
+          python -m py_compile scripts/backtest_crypto_orb.py
+          python -m py_compile scripts/collect_soxl_data.py
+          python -m py_compile scripts/backtest_soxl_intraday.py
+
+      - name: 과거 Top100 백필과 다음날 시가 그림자 값 검사
+        run: |
+          python scripts/test_opening_backfill.py
+          python scripts/mutation_test_opening_backfill.py
+          node scripts/test_opening_hold.mjs
+          node scripts/test_kis_history_codes.mjs
+
+      - name: 데이트레이딩 스냅샷 품질 가드 검사
+        run: |
+          python - <<'PY'
+          from scripts.backtest_daytrading import split_primary_days
+          days=[
+              {"date":"2026-09-01","snapshotHm":955},
+              {"date":"2026-09-02","snapshotHm":1015},
+              {"date":"2026-09-03","snapshotHm":1016},
+              {"date":"2026-09-04","snapshotHm":1349},
+              {"date":"2026-09-05"},
+          ]
+          eligible,excluded=split_primary_days(days)
+          assert [x["date"] for x in eligible]==["2026-09-01","2026-09-02"]
+          assert [x["date"] for x in excluded]==["2026-09-03","2026-09-04","2026-09-05"]
+          assert excluded[0]["reason"]=="late_snapshot"
+          assert excluded[-1]["reason"]=="missing_snapshot_time"
+          print("✓ 10:15 이내만 primary validation에 포함")
+          PY
+
+      - name: 시초가 사후라벨·엔진 값 검사
+        run: python scripts/test_opening_signal_labels.py
+
+      - name: 시초가 엔진 변이 시험
+        run: python scripts/mutation_test_opening_engine.py
+
+      - name: 폐기 참고전략 B-6 변이 시험
+        run: node scripts/mutation_test_scalping_b6.js
+
+      - name: 연구 서버 JS 문법 검사
+        run: |
+          node --input-type=module --check < functions/api/_opening.js
+          node --input-type=module --check < functions/api/opening-monitor.js
+          node --input-type=module --check < functions/api/opening-execute.js
+          node --input-type=module --check < functions/api/opening-summary.js
+          node --input-type=module --check < functions/api/_daytrading.js
+          node --input-type=module --check < functions/api/daytrading-monitor.js
+          node --input-type=module --check < functions/api/daytrading-summary.js
+          node --input-type=module --check < functions/api/daytrading-paper.js
+          node --input-type=module --check < functions/api/vts-reconcile.js
+          node --input-type=module --check < functions/api/vts-research.js
+          node --input-type=module --check < functions/api/vts-summary.js
+          node --input-type=module --check < functions/api/nightly-research-summary.js
+          node --input-type=module --check < functions/api/scalping-alert.js
+          node --input-type=module --check < functions/api/scalping-daily-summary.js
+          node --input-type=module --check < functions/api/crypto.js
+          node --input-type=module --check < functions/api/crypto-research.js
+          node --input-type=module --check < functions/api/soxl-research.js
+          node --input-type=module --check < functions/api/scalping-history.js
+          node --input-type=module --check < worker/opening-scheduler/src/index.js
+          node --input-type=module --check < worker/daytrading-scheduler/src/index.js
+          node --input-type=module --check < worker/global-intraday-scheduler/src/index.js
+
+      - name: VTS 대조는 읽기전용인지 검사
+        run: |
+          node - <<'NODE'
+          const fs=require('fs');
+          const v=fs.readFileSync('functions/api/vts-reconcile.js','utf8');
+          const k=fs.readFileSync('functions/api/kis.js','utf8');
+          const bad=[
+            ['/api/kis?op=order&','주문 API 호출'],
+            ['method:"POST"','POST 호출'],
+            ["method:'POST'",'POST 호출'],
+            ['env=real','실전 환경 조회']
+          ];
+          let fail=0;
+          for(const [needle,label] of bad){
+            if(v.includes(needle)){ console.error('✗ vts-reconcile: '+label+' 발견: '+needle); fail++; }
+          }
+          if(!/if\s*\(isReal\(env\)\)\s*return json\(\{ error: "orders 조회는 이 화면에서 KIS 모의투자\(vts\)만 허용합니다\."/.test(k)){
+            console.error('✗ KIS orders 조회의 real 차단 가드가 없습니다.'); fail++;
+          }
+          if(fail)process.exit(1);
+          console.log('✓ VTS 대조 경로 read-only / VTS-only');
+          NODE
+
+      - name: 단타 KIS는 VTS 전용인지 검사
+        run: |
+          node - <<'NODE'
+          const fs=require('fs');
+          const s=fs.readFileSync('scalping.html','utf8');
+          let fail=0;
+          const must=[
+            ["body:JSON.stringify({env:'vts'",'주문 body에 env=vts 명시'],
+            ["if(KIScfg.env!=='vts')",'실계좌 UI 하드블록'],
+            ["/api/kis?op=config&env=vts&market=kr",'VTS config 명시'],
+            ["/api/kis?op=balance&env=vts&market=kr",'VTS balance 명시']
+          ];
+          for(const [needle,label] of must){
+            if(!s.includes(needle)){ console.error('✗ '+label+' 없음'); fail++; }
+          }
+          if(fail)process.exit(1);
+          console.log('✓ scalping KIS path is explicitly VTS-only');
+          NODE
+
+      - name: 서버 자동주문은 paper/VTS 전용인지 검사
+        run: |
+          node - <<'NODE'
+          const fs=require('fs');
+          const a=fs.readFileSync('functions/api/autotrade.js','utf8');
+          let fail=0;
+          const must=[
+            ['if (!s.paper)', 'paper=false 차단'],
+            ['const kisEnv = "vts"', '주문환경 VTS 고정'],
+            ['실계좌 자동주문 차단', '실계좌 차단 사유 기록']
+          ];
+          for(const [needle,label] of must){
+            if(!a.includes(needle)){ console.error('✗ '+label+' 없음'); fail++; }
+          }
+          if(/const\s+kisEnv\s*=\s*s\.paper\s*\?\s*["']vts["']\s*:\s*["']real["']/.test(a)){
+            console.error('✗ paper=false가 real 자동주문으로 이어지는 구형 분기 발견'); fail++;
+          }
+          if(fail)process.exit(1);
+          console.log('✓ server autotrade actual-send path is paper=true / env=vts only');
+          NODE
+
+      - name: 시초가 VTS 자동병행 안전가드 검사
+        run: |
+          node - <<'NODE'
+          const fs=require('fs');
+          const e=fs.readFileSync('functions/api/opening-execute.js','utf8');
+          const m=fs.readFileSync('functions/api/opening-monitor.js','utf8');
+          const w=fs.readFileSync('.github/workflows/opening-monitor.yml','utf8');
+          let fail=0;
+          const must=[
+            ['body:JSON.stringify({env:"vts"', 'VTS 환경 하드코딩'],
+            ['priceType:"market"', '시장가 모의주문'],
+            ['SCALPING_VTS_AUTO', '긴급 중지 스위치'],
+            ['date!==clock.date', '과거 날짜 주문 차단'],
+            ['중복 signal_id 차단', 'signal id 중복 방지'],
+            ['MAX_SIGNAL_AGE_MIN=3', '3분 초과 오래된 신호 주문 차단']
+          ];
+          for(const [needle,label] of must){
+            if(!e.includes(needle)){console.error('✗ '+label+' 없음');fail++;}
+          }
+          if(m.includes('/api/kis?op=order')){console.error('✗ 병렬 shard scanner가 직접 주문 API를 호출함');fail++;}
+          if(!m.includes('targetHm')){console.error('✗ 지연 Cron용 완료분 targetHm 복구 경로 없음');fail++;}
+          if(w.includes('$BASE/api/opening-execute')){console.error('✗ GitHub 장마감 저장 workflow가 실시간 VTS 주문을 호출함');fail++;}
+          if(/cron:\s*["'](?:45|50|55) 23/.test(w)){console.error('✗ 구형 08:45~08:55 GitHub 실시간 schedule이 남아 있음');fail++;}
+          if(/env\s*:\s*["']real["']/.test(e)){console.error('✗ opening-execute에 실전 주문 환경 발견');fail++;}
+          if(fail)process.exit(1);
+          console.log('✓ opening dual execution is serialized / VTS-only / today-only');
+          NODE
+
+      - name: Cloudflare 시초가 정시 스케줄러 안전검사
+        run: |
+          node - <<'NODE'
+          const fs=require('fs');
+          const c=fs.readFileSync('worker/opening-scheduler/src/index.js','utf8');
+          const w=JSON.parse(fs.readFileSync('worker/opening-scheduler/wrangler.jsonc','utf8'));
+          const d=fs.readFileSync('.github/workflows/deploy-opening-scheduler.yml','utf8');
+          let fail=0;
+          if(!w.triggers||!Array.isArray(w.triggers.crons)||!w.triggers.crons.includes('5-31 0 * * MON-FRI')){
+            console.error('✗ 09:05~09:31 KST weekday Cron이 아닙니다.'); fail++;
+          }
+          const must=[
+            ['/api/opening-monitor','Pages 시초가 scanner 호출'],
+            ['/api/opening-execute','VTS 직렬 실행기 호출'],
+            ['targetHm','예약시각 기준 완료분 복구'],
+            ['MAX_EXEC_LAG_MS=3*60*1000','3분 초과 VTS 실행 방지'],
+            ['MONITOR_KEY','Worker secret 인증']
+          ];
+          for(const [needle,label] of must){
+            if(!c.includes(needle)){console.error('✗ '+label+' 없음');fail++;}
+          }
+          if(!d.includes('secrets.AUTOTRADE_KEY')){console.error('✗ 기존 AUTOTRADE_KEY를 Worker secret으로 전달하지 않음');fail++;}
+          if(/env\s*:\s*["']real["']/.test(c)){console.error('✗ scheduler에 실전 주문 환경 발견');fail++;}
+          const a=fs.readFileSync('.github/workflows/opening-monitor.yml','utf8');
+          if(!a.includes('cron: "40 0 * * 1-5"')||!a.includes('cron: "40 1 * * 1-5"')){
+            console.error('✗ GitHub 장마감 이력 백업 schedule이 올바르지 않음'); fail++;
+          }
+          if(a.includes('while true')||a.includes('monitor-$shard.json')){
+            console.error('✗ GitHub workflow에 구형 장중 실시간 루프가 남아 있음'); fail++;
+          }
+          if(fail)process.exit(1);
+          console.log('✓ Cloudflare opening scheduler cron / auth / stale-order guard');
+          NODE
+
+      - name: 데이트레이딩 Cloudflare 정시 스케줄러 안전검사
+        run: |
+          node - <<'NODE'
+          const fs=require('fs');
+          const c=fs.readFileSync('worker/daytrading-scheduler/src/index.js','utf8');
+          const w=JSON.parse(fs.readFileSync('worker/daytrading-scheduler/wrangler.jsonc','utf8'));
+          const m=fs.readFileSync('functions/api/daytrading-monitor.js','utf8');
+          const r=fs.readFileSync('.github/workflows/daytrading-research.yml','utf8');
+          let fail=0;
+          const crons=w.triggers&&w.triggers.crons||[];
+          for(const x of ['55 0 * * MON-FRI','0-59 1-5 * * MON-FRI','0-11 6 * * MON-FRI']){
+            if(!crons.includes(x)){console.error('✗ 데이트레이딩 Cron 누락: '+x);fail++;}
+          }
+          if(!w.durable_objects||!w.migrations||!String(JSON.stringify(w.migrations)).includes('new_sqlite_classes')){
+            console.error('✗ 09:55 스냅샷 Durable Object SQLite 저장소 없음'); fail++;
+          }
+          const must=[
+            ['/api/universe?limit=100','09:55 Top100 캡처'],
+            ['/api/daytrading-monitor','Pages 데이트레이딩 scanner 호출'],
+            ['MAX_SCAN_LAG_MS=3*60*1000','3분 초과 늦은 실시간 스캔 방지'],
+            ['snapshot_missing_or_late','늦은/누락 스냅샷 차단'],
+            ['PAPER_MAX_TRADES=3','하루 최대 3건 장중 모의장부'],
+            ['PAPER_FINAL_EXIT_HM=1510','15:10 시간청산'],
+            ['/api/kis?op=minhist&env=vts','KIS VTS 분봉 조회 기반 모의체결'],
+            ['u.pathname==="/paper"','Durable Object 장중 모의장부 조회']
+          ];
+          for(const [needle,label] of must){if(!c.includes(needle)){console.error('✗ '+label+' 없음');fail++;}}
+          if(!m.includes('onRequestPost')||!m.includes('targetHm')||!m.includes('claimEvent')){
+            console.error('✗ daytrading-monitor POST/완료분/중복알림 가드 없음'); fail++;
+          }
+          if(!r.includes('DAY_WORKER')||!r.includes('snapshotHm|tonumber) <= 1015')){
+            console.error('✗ 연구 workflow가 Cloudflare 정시 스냅샷을 우선 사용하지 않음'); fail++;
+          }
+          if(!r.includes('data/daytrading-live')||!r.includes('/paper?date=$DATE')){
+            console.error('✗ 장마감 연구가 장중 모의장부를 영구 저장하지 않음'); fail++;
+          }
+          if(c.includes('/api/kis?op=order')){
+            console.error('✗ 데이트레이딩 장중 모의장부가 KIS 주문 API를 호출함'); fail++;
+          }
+          const g=fs.readFileSync('.github/workflows/daytrading-monitor.yml','utf8');
+          if(/\bschedule\s*:/.test(g)||/\bpush\s*:/.test(g)){
+            console.error('✗ GitHub 데이트레이딩 monitor에 자동 schedule/push가 남아 있음'); fail++;
+          }
+          if(!g.includes('workflow_dispatch')){
+            console.error('✗ GitHub 데이트레이딩 수동 fallback이 없음'); fail++;
+          }
+          const api=fs.readFileSync('functions/api/daytrading-paper.js','utf8');
+          const ui=fs.readFileSync('scalping.html','utf8');
+          const py=fs.readFileSync('scripts/backtest_daytrading.py','utf8');
+          if(!api.includes('ownerAuthorized')||!api.includes('/paper?date=')){
+            console.error('✗ owner-only 장중 모의장부 proxy 없음'); fail++;
+          }
+          if(!ui.includes('loadDayTradingPaper')||!ui.includes('dt_live_body')){
+            console.error('✗ 데이트레이딩 장중 모의장부 UI 없음'); fail++;
+          }
+          if(!py.includes('live_paper_comparison')||!py.includes('livePaperComparison')){
+            console.error('✗ 장중 장부 ↔ 장마감 KIS 재구성 비교 없음'); fail++;
+          }
+          if(fail)process.exit(1);
+          console.log('✓ daytrading realtime cron / durable snapshot / live paper ledger / EOD parity');
+          NODE
+
+      - name: 네 단타전략 판단증거 기록 검사
+        run: |
+          node - <<'NODE'
+          const fs=require('fs');
+          const oj=fs.readFileSync('functions/api/_opening.js','utf8');
+          const dj=fs.readFileSync('functions/api/_daytrading.js','utf8');
+          const op=fs.readFileSync('scripts/backtest_opening_rebreak.py','utf8');
+          const dp=fs.readFileSync('scripts/backtest_daytrading.py','utf8');
+          const cp=fs.readFileSync('scripts/backtest_crypto_orb.py','utf8');
+          const sp=fs.readFileSync('scripts/backtest_soxl_intraday.py','utf8');
+          let fail=0;
+          const checks=[
+            [oj,'opening_rebreak_v1','시초가 live 전략버전'],
+            [oj,'evidence:{','시초가 live 판단증거'],
+            [op,'"strategyVersion": "opening_rebreak_v1"','시초가 확정이력 전략버전'],
+            [op,'"evidence": {','시초가 확정이력 판단증거'],
+            [dj,'daytrading_vwap_breakout_v1','데이트레이딩 live 전략버전'],
+            [dj,'evidence:{','데이트레이딩 live 판단증거'],
+            [dp,'"strategyVersion":"daytrading_vwap_breakout_v1"','데이트레이딩 확정이력 전략버전'],
+            [dp,'"evidence":{','데이트레이딩 확정이력 판단증거'],
+            [cp,'"strategyVersion": "btc_orb_v1"','BTC 전략버전'],
+            [cp,'"evidence": {','BTC 거래 판단증거'],
+            [cp,'baseline-decisions.csv','BTC 무매매일 판단기록'],
+            [sp,'"strategyVersion": "soxl_orb_v1"','SOXL 전략버전'],
+            [sp,'"evidence": {','SOXL 거래 판단증거'],
+            [sp,'baseline-decisions.csv','SOXL 거래/무매매 판단기록']
+          ];
+          for(const [txt,needle,label] of checks){
+            if(!txt.includes(needle)){console.error('✗ '+label+' 없음');fail++;}
+          }
+          if(fail)process.exit(1);
+          console.log('✓ opening/daytrading/bitcoin/SOXL strategy evidence is retained');
+          NODE
+
+      - name: 야간 자동연구는 분석 전용인지 검사
+        run: |
+          node - <<'NODE'
+          const fs=require('fs');
+          const py=fs.readFileSync('scripts/nightly_scalping_research.py','utf8');
+          const w=fs.readFileSync('.github/workflows/nightly-scalping-research.yml','utf8');
+          let fail=0;
+          const must=[
+            ['liveStrategyAutoChange":False','라이브 전략 자동변경 OFF'],
+            ['OPEN_MIN_DAYS=20','시초가 최소 일수'],
+            ['OPEN_MIN_BASE_TRADES=50','시초가 최소 기준거래'],
+            ['autoPromotion":False','자동 승격 OFF']
+          ];
+          for(const [needle,label] of must){if(!py.includes(needle)){console.error('✗ '+label+' 없음');fail++;}}
+          if(!w.includes('10 10 * * *')||!w.includes('10 11 * * *')){
+            console.error('✗ 매일 19:10/20:10 KST 야간 연구 schedule 없음'); fail++;
+          }
+          if(!py.includes('CRYPTO=Path("data/crypto-research/latest.json")')||!py.includes('"crypto":c')){
+            console.error('✗ 야간 통합연구에 비트코인 축이 없음'); fail++;
+          }
+          if(!w.includes('seq 1 12')||!w.includes('20:10 backup')){
+            console.error('✗ Pages 배포 지연 시 Telegram 재시도/fallback 없음'); fail++;
+          }
+          if(/\/api\/kis\?op=order|priceType.*market/.test(py+w)){
+            console.error('✗ 야간 연구 경로에서 주문 호출 발견'); fail++;
+          }
+          if(fail)process.exit(1);
+          console.log('✓ nightly research is analysis-only / no auto promotion');
+          NODE
+
+
+      - name: 비트코인 단타 연구 불변식 검사
+        run: |
+          python - <<'PY'
+          from scripts.backtest_crypto_orb import Params, trade_for_day
+
+          def bar(utc, kst, o, h, l, c, v):
+              return {"tUtc":f"2026-09-01T{utc}:00","tKst":f"2026-09-01T{kst}:00",
+                      "o":o,"h":h,"l":l,"c":c,"v":v,"amount":c*v}
+
+          # 09:05 신호 -> 반드시 09:10 시가 진입. 진입봉에서 손절/익절이 모두
+          # 닿으면 보수적으로 손절 우선이어야 한다.
+          day={"sessionDateUtc":"2026-09-01","bars":[
+              bar("00:00","09:00",99.5,100.0,99.0,99.8,100),
+              bar("00:05","09:05",99.8,101.2,99.7,101.0,200),
+              bar("00:10","09:10",101.2,102.5,100.0,101.5,180),
+          ] + [
+              bar(f"{(15+i*5)//60:02d}:{(15+i*5)%60:02d}", f"{9+(15+i*5)//60:02d}:{(15+i*5)%60:02d}",
+                  101.5,101.7,101.3,101.5,100)
+              for i in range(55)
+          ]}
+          # valid_day requires a full-ish archive, so pad the remainder of the UTC day.
+          while len(day["bars"]) < 270:
+              i=len(day["bars"])
+              m=i*5
+              utc=f"{m//60:02d}:{m%60:02d}"
+              km=(m+9*60)%(24*60)
+              kst=f"{km//60:02d}:{km%60:02d}"
+              day["bars"].append(bar(utc,kst,101.5,101.7,101.3,101.5,100))
+
+          t=trade_for_day(day,Params("baseline"))
+          assert t is not None
+          assert t["signalTimeKst"]=="09:05", t
+          assert t["entryTimeKst"]=="09:10", t
+          assert t["reason"]=="stop_same_bar", t
+          assert t["pnlPct"] < -0.5, t
+          print("✓ BTC ORB next-bar entry / same-candle stop-first")
+          PY
+
+          node - <<'NODE'
+          const fs=require('fs');
+          const s=fs.readFileSync('scalping.html','utf8');
+          const api=fs.readFileSync('functions/api/crypto.js','utf8');
+          const wf=fs.readFileSync('.github/workflows/crypto-research.yml','utf8');
+          let fail=0;
+          const must=[
+            ['data-strategy="crypto"','비트코인 탭'],
+            ['id="scVer">v1.27.2','단타 버전 1.27.2'],
+            ['다음 5분봉 시가','다음 봉 진입 설명'],
+            ['손절 우선','동일봉 보수 청산 설명'],
+            ['최근 365일 백필','초기 백필 안내']
+          ];
+          for(const [needle,label] of must){if(!s.includes(needle)){console.error('✗ '+label+' 없음');fail++;}}
+          if(!wf.includes('cron: "20 0 * * *"')){console.error('✗ 매일 09:20 KST 수집 schedule 없음');fail++;}
+          const btc=fs.readFileSync('scripts/backtest_crypto_orb.py','utf8');
+          if(!btc.includes('baseline-decisions.csv')||!btc.includes('target1PctDayRatePct')||!btc.includes('"evidence": {')){
+            console.error('✗ BTC 판단증거/무매매일/+1% 목표 지표 기록 없음');fail++;
+          }
+          if(/op=order|\/v1\/accounts|authorization\s*:|\bjwt\b/i.test(api)){
+            console.error('✗ crypto market proxy에 주문/인증 관련 문자열 발견');fail++;
+          }
+          if(fail)process.exit(1);
+          console.log('✓ bitcoin research tab/data path is read-only');
+          NODE
+
+      - name: SOXL 단타 연구 불변식 검사
+        run: |
+          python - <<'PY'
+          from scripts.backtest_soxl_intraday import Params, evaluate_day
+
+          def bar(hm,o,h,l,c,v):
+              hh=hm//100
+              mm=hm%100
+              return {"tEt":f"2026-09-01T{hh:02d}:{mm:02d}:00-04:00","o":o,"h":h,"l":l,"c":c,"v":v}
+
+          bars=[
+              bar(930,100,101,99.5,100.2,100),
+              bar(935,100.2,101.5,100,101.0,100),
+              bar(940,101.0,102.0,100.8,101.5,100),
+              bar(945,101.5,103.5,101.4,103.0,220),
+              bar(950,103.2,106.0,101.0,103.5,180),
+          ]
+          hm=955
+          while len(bars)<78:
+              bars.append(bar(hm,103.5,103.7,103.2,103.5,100))
+              mm=hm%100+5
+              hh=hm//100
+              if mm>=60:
+                  hh+=1
+                  mm-=60
+              hm=hh*100+mm
+
+          day={"sessionDateEt":"2026-09-01","bars":bars}
+          t,d=evaluate_day(day,Params("baseline"))
+          assert t is not None,(t,d)
+          assert t["signalTimeEt"]=="09:45",t
+          assert t["entryTimeEt"]=="09:50",t
+          assert t["reason"]=="stop_same_bar",t
+          assert t["pnlPct"] < -1.2,t
+          assert d["action"]=="trade",d
+          print("✓ SOXL next-bar entry / same-bar stop-first / evidence")
+          PY
+
+          node - <<'NODE'
+          const fs=require('fs');
+          const ui=fs.readFileSync('scalping.html','utf8');
+          const py=fs.readFileSync('scripts/backtest_soxl_intraday.py','utf8');
+          const wf=fs.readFileSync('.github/workflows/soxl-research.yml','utf8');
+          const api=fs.readFileSync('functions/api/soxl-research.js','utf8');
+          let fail=0;
+          const must=[
+            [ui,'data-strategy="soxl"','SOXL 탭'],
+            [ui,'id="scVer">v1.27.2','단타 버전 1.27.2'],
+            [ui,'다음 5분봉 시가','next-bar 진입 설명'],
+            [py,'baseline-decisions.csv','거래/무거래 판단기록'],
+            [py,'target1PctDayRatePct','+1% 목표 지표'],
+            [py,'walk_forward','walk-forward 함수'],
+            [py,'"walkForward": wf','walk-forward 결과 저장'],
+            [py,'"evidence": {','판단증거'],
+            [wf,'15 22 * * 1-5','미국장 종료 후 일일수집'],
+            [wf,'git status --porcelain -- data/soxl','신규 미추적 세션 변경감지']
+          ];
+          for(const [txt,needle,label] of must){
+            if(!txt.includes(needle)){console.error('✗ '+label+' 없음');fail++;}
+          }
+          if(/op=order|\/v1\/accounts|\bjwt\b/i.test(api+wf+py)){
+            console.error('✗ SOXL 연구 경로에 주문/계좌 인증 문자열 발견');fail++;
+          }
+          if(fail)process.exit(1);
+          console.log('✓ SOXL research path is read-only / audited');
+          NODE
 
       - name: 전략 SSOT 체크 (문서 기준값·규약 불변식)
         run: |
@@ -26,3 +486,6 @@ jobs:
 
       - name: 회귀 테스트 (엔진 차분 + UI 배선 + DOM 구조 + 모의 장부)
         run: node regression-check.js index.html backtest.html testdata
+
+      - name: MA150 하향 기준 및 시간대 경계 검증
+        run: node scripts/check-ma150-cutover.cjs

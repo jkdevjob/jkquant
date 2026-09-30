@@ -1,0 +1,186 @@
+name: 데이트레이딩 연구 자동수집
+
+# 10:00 전후에 그 시점의 거래대금 Top100을 고정하고,
+# 장 종료 뒤 그 유니버스의 09:00~15:20 KIS 1분봉을 수집해 연구 백테스트한다.
+# 실전 주문은 전혀 하지 않는다.
+
+on:
+  schedule:
+    # GitHub schedule 지연/누락에 대비해 오전 스냅샷과 장마감 수집을 여러 번 백업한다.
+    # 같은 날짜 파일이 이미 있으면 재수집/중복 Telegram 요약은 하지 않는다.
+    - cron: "55 0 * * 1-5"   # 09:55 KST
+    - cron: "0 1 * * 1-5"    # 10:00 KST
+    - cron: "5 1 * * 1-5"    # 10:05 KST
+    - cron: "15 1 * * 1-5"   # 10:15 KST backup
+    - cron: "30 1 * * 1-5"   # 10:30 KST backup
+    - cron: "35 6 * * 1-5"   # 15:35 KST
+    - cron: "45 6 * * 1-5"   # 15:45 KST backup
+    - cron: "55 6 * * 1-5"   # 15:55 KST backup
+    - cron: "10 7 * * 1-5"   # 16:10 KST backup
+    - cron: "0 8 * * 1-5"    # 17:00 KST final backup
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/daytrading-research.yml"
+      - "scripts/snapshot_daytrading_universe.py"
+      - "scripts/collect_daytrading_data.py"
+      - "scripts/backtest_daytrading.py"
+      - "worker/daytrading-scheduler/**"
+      - "functions/api/daytrading-research.js"
+      - "functions/api/daytrading-summary.js"
+      - "scalping.html"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: daytrading-research
+  cancel-in-progress: false
+
+jobs:
+  research:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: 데이터 브랜치 체크아웃
+        uses: actions/checkout@v4
+        with:
+          ref: scalping-data
+          fetch-depth: 0
+
+      - name: 최신 연구 코드 체크아웃
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          path: .app
+          fetch-depth: 1
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: 유니버스 스냅샷 또는 장마감 수집
+        env:
+          JKQ_BASE_URL: https://jkquant.pages.dev
+          JKQ_UNIVERSE_LIMIT: "100"
+          DAY_WORKER: https://jkquant-daytrading-scheduler.mumae4.workers.dev
+          KEY: ${{ secrets.AUTOTRADE_KEY }}
+        shell: bash
+        run: |
+          set -e
+          DATE=$(TZ=Asia/Seoul date +%F)
+          YEAR=$(TZ=Asia/Seoul date +%Y)
+          DOW=$(TZ=Asia/Seoul date +%u)
+          RAW=$(TZ=Asia/Seoul date +%H%M)
+          HM=$((10#$RAW))
+          SNAP="data/daytrading-universe/$YEAR/$DATE.json"
+          DAY="data/daytrading/$YEAR/$DATE.json.gz"
+          LIVE="data/daytrading-live/$YEAR/$DATE.json"
+
+          if [ "$DOW" -gt 5 ]; then
+            echo "주말 — 종료"
+            exit 0
+          fi
+
+          ensure_snapshot() {
+            if [ -f "$SNAP" ]; then
+              echo "오늘 유니버스 스냅샷 이미 존재: $SNAP"
+              return 0
+            fi
+
+            mkdir -p "$(dirname "$SNAP")"
+            TMP="$SNAP.tmp"
+
+            # 1순위: Cloudflare Worker가 09:55 KST에 Durable Object로 고정한 스냅샷.
+            # GitHub schedule이 몇 시간 늦어져도 실제 09:55 자료를 가져오므로 primary 연구가 오염되지 않는다.
+            if [ -n "$KEY" ]; then
+              STATUS=$(curl -sS --max-time 30 -o worker-snapshot.json -w '%{http_code}'                 -H "x-monitor-key: $KEY" "$DAY_WORKER/snapshot?date=$DATE" || true)
+              if [ "$STATUS" = "200" ] && jq -e '.ok == true and .snapshot != null and (.snapshot.universe|length) > 0 and (.snapshot.snapshotHm|tonumber) <= 1015' worker-snapshot.json >/dev/null 2>&1; then
+                jq '.snapshot' worker-snapshot.json > "$TMP"
+                mv "$TMP" "$SNAP"
+                echo "Cloudflare 정시 스냅샷 저장: $(jq -c '{date,snapshotHm,captureSource,count:(.universe|length)}' "$SNAP")"
+                return 0
+              fi
+              echo "Cloudflare 스냅샷 아직 없음/오류 HTTP $STATUS"
+            fi
+
+            # 2순위: GitHub 실행 자체가 10:15 이내일 때만 직접 캡처.
+            # 10:15 이후에는 늦은 유니버스를 primary 자료인 것처럼 저장하지 않는다.
+            if [ "$HM" -le 1015 ]; then
+              python .app/scripts/snapshot_daytrading_universe.py
+              [ -f "$SNAP" ] && return 0
+            fi
+
+            rm -f "$TMP"
+            echo "10:15 이내 정시 스냅샷 확보 실패 — 오늘 primary 데이트레이딩 연구는 건너뜀"
+            return 1
+          }
+
+          # 오전/장중 백업 실행은 스냅샷만 scalping-data에 영구 저장한다.
+          if [ "$HM" -ge 950 ] && [ "$HM" -lt 1450 ]; then
+            ensure_snapshot || true
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add data/daytrading-universe
+            if ! git diff --cached --quiet; then
+              git commit -m "data: daytrading universe $DATE [skip ci]"
+              git pull --rebase origin scalping-data
+              git push origin scalping-data
+            fi
+            exit 0
+          fi
+
+          if [ "$HM" -lt 1530 ]; then
+            echo "스냅샷/장마감 수집 시간 아님 — 종료"
+            exit 0
+          fi
+
+          if [ ! -f "$SNAP" ]; then
+            ensure_snapshot || true
+          fi
+          if [ ! -f "$SNAP" ]; then
+            echo "정시 유니버스 스냅샷이 없어 오늘 데이트레이딩 primary 백테스트를 만들 수 없음"
+            exit 0
+          fi
+
+          NEW_DAY=0
+          if [ ! -f "$DAY" ]; then
+            python .app/scripts/collect_daytrading_data.py
+            [ -f "$DAY" ] && NEW_DAY=1
+          else
+            echo "오늘 전일장 분봉 이미 수집됨: $DAY"
+          fi
+
+          # 장중 Cloudflare Durable Object의 실시간 종이장부도 원본 그대로 보관한다.
+          # 이후 KIS 전체 분봉 재구성 결과와 비교해 장중 장부의 일치 여부를 측정한다.
+          if [ -n "$KEY" ]; then
+            mkdir -p "$(dirname "$LIVE")"
+            STATUS=$(curl -sS --max-time 30 -o live-paper-response.json -w '%{http_code}'               -H "x-monitor-key: $KEY" "$DAY_WORKER/paper?date=$DATE" || true)
+            if [ "$STATUS" = "200" ] && jq -e '.ok == true and .ledger != null and (.ledger.trades | type) == "array"' live-paper-response.json >/dev/null 2>&1; then
+              jq '.ledger' live-paper-response.json > "$LIVE.tmp"
+              mv "$LIVE.tmp" "$LIVE"
+              echo "장중 모의장부 저장: $(jq -c '{date,targetHm,summary}' "$LIVE")"
+            else
+              rm -f "$LIVE.tmp"
+              echo "장중 모의장부 없음/조회 실패 HTTP $STATUS"
+            fi
+          fi
+
+          python .app/scripts/backtest_daytrading.py
+
+          if [ "$NEW_DAY" = "1" ] && [ -n "$KEY" ] && [ -f data/daytrading-research/latest.json ]; then
+            STATUS=$(curl -sS --max-time 30 -o day-summary-response.json -w '%{http_code}'               -X POST -H "x-monitor-key: $KEY" -H "content-type: application/json"               --data-binary @data/daytrading-research/latest.json               "https://jkquant.pages.dev/api/daytrading-summary")
+            echo "Telegram 데이트레이딩 일일요약 HTTP $STATUS: $(cat day-summary-response.json 2>/dev/null || true)"
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/daytrading data/daytrading-live data/daytrading-research
+          if git diff --cached --quiet; then
+            echo "새 데이트레이딩 데이터/연구결과 없음"
+            exit 0
+          fi
+          git commit -m "data: daytrading research $DATE [skip ci]"
+          git pull --rebase origin scalping-data
+          git push origin scalping-data

@@ -1,0 +1,13 @@
+name: Telegram New Room Diagnostic
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  info:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "Job alert Telegram room is already configured."
