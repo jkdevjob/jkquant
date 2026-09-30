@@ -14,9 +14,32 @@ export const OPENING_BASE_PARAMS=Object.freeze({
   entryCutoff:930,
   stop:1,
   takeProfit:1.5,
-  fee:.25,
+  legacyFeePct:.25,
   finalExit:930,
 });
+
+export const OPENING_FIXED_COST_PCT=.23;
+export const OPENING_VTS_MIN_MATCHES=30;
+export const OPENING_DEFAULT_SLIP_TICKS_PER_SIDE=2.5;
+const TICK_KOSPI=[[2000,1],[5000,5],[20000,10],[50000,50],[200000,100],[500000,500],[Infinity,1000]];
+const TICK_KOSDAQ=[[2000,1],[5000,5],[20000,10],[50000,50],[Infinity,100]];
+
+export function openingTickSize(px,market=""){
+  const t=String(market||"").toUpperCase().includes("KOSDAQ")?TICK_KOSDAQ:TICK_KOSPI;
+  for(const [upper,size] of t)if(px<upper)return size;
+  return t[t.length-1][1];
+}
+export function openingFriction(px,market="",calibration={}){
+  const n=+calibration.completeMatches||0;
+  const observed=Number(calibration.avgRoundTripSlippageCostPct);
+  if(n>=OPENING_VTS_MIN_MATCHES&&Number.isFinite(observed)&&observed>=0){
+    return {pct:OPENING_FIXED_COST_PCT+observed,source:"vts_observed_round_trip",completeMatches:n,
+      fixedCostPct:OPENING_FIXED_COST_PCT,roundTripSlippagePct:observed};
+  }
+  const slip=px>0?2*OPENING_DEFAULT_SLIP_TICKS_PER_SIDE*openingTickSize(px,market)/px*100:0;
+  return {pct:OPENING_FIXED_COST_PCT+slip,source:"tick_fallback_2.5_each_side",completeMatches:n,
+    fixedCostPct:OPENING_FIXED_COST_PCT,roundTripSlippagePct:slip};
+}
 
 // 2026-09-22 첫 실측 결과에서 나온 가설.
 // 하루 결과로 기준전략을 바꾸지 않고, 장중에는 그림자 신호로만 병렬 기록한다.
@@ -26,6 +49,7 @@ export const SHADOW_VARIANTS=Object.freeze([
     label:"오늘 개선안 v1",
     description:"눌림≤0.5% + 거래대금≥1.5배 + 09:15 이전 진입",
     params:{pbMax:.5,amountMult:1.5,entryCutoff:915},
+    designedFrom:["2026-09-22"],
   },
   {
     name:"pb_max_0.5",
@@ -68,7 +92,7 @@ export function dailyMeta(daily,date){
 
 const hmOf=t=>+String(t||"").slice(11,13)*100 + +String(t||"").slice(14,16);
 
-export function rebreakTrade(rows,meta,cutoffHm=930,overrides={}){
+export function rebreakTrade(rows,meta,cutoffHm=930,overrides={},executionCalibration={}){
   const p={...OPENING_BASE_PARAMS,...(overrides||{})};
   if(!Array.isArray(rows)||rows.length<p.obs+3||!meta)return null;
 
@@ -126,7 +150,7 @@ export function rebreakTrade(rows,meta,cutoffHm=930,overrides={}){
             rebreakClose:jp,volumeRatio:volRatio,requiredVolumeRatio:p.volMult,
             amountRatio,requiredAmountRatio:p.amountMult,
             entryCutoff:p.entryCutoff,stopPct:p.stop,takeProfitPct:p.takeProfit,
-            frictionPct:p.fee,finalExit:p.finalExit
+            finalExit:p.finalExit
           },
           exitTime:null,exitPrice:null,reason:null,pnl:null,
         };
@@ -140,7 +164,17 @@ export function rebreakTrade(rows,meta,cutoffHm=930,overrides={}){
           const b=a.filter(x=>x.hm<=p.finalExit).slice(-1)[0];
           if(b){tr.exitTime=b.hm;tr.exitPrice=b.close;tr.reason="09:30 청산";}
         }
-        if(tr.exitPrice!=null)tr.pnl=(tr.exitPrice/tr.entryPrice-1)*100-p.fee;
+        if(tr.exitPrice!=null){
+          const friction=openingFriction(tr.entryPrice,meta.market||"",executionCalibration);
+          tr.accountingVersion="opening_cost_v2";
+          tr.frictionPct=friction.pct;
+          tr.frictionSource=friction.source;
+          tr.frictionCalibrationMatches=friction.completeMatches;
+          tr.evidence.frictionPct=friction.pct;
+          tr.evidence.frictionSource=friction.source;
+          tr.evidence.frictionCalibrationMatches=friction.completeMatches;
+          tr.pnl=(tr.exitPrice/tr.entryPrice-1)*100-friction.pct;
+        }
         return tr;
       }
     }
