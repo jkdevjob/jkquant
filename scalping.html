@@ -152,7 +152,7 @@ canvas{display:block;width:100%;height:auto}
 #gbtn svg{width:20px;height:20px}
 #gate .gnote{color:var(--faint);font-size:11.5px;margin-top:18px;line-height:1.6}
 
-/* unified strategy flow v1.25.3 */
+/* unified strategy flow v1.26.0 */
 .strategy-flow{display:flex;flex-direction:column;gap:18px;margin-top:12px}
 .flow-section{border-top:1px solid var(--line);padding-top:12px}
 .flow-section:first-child{border-top:0;padding-top:0}
@@ -208,7 +208,7 @@ canvas{display:block;width:100%;height:auto}
 
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Morning Scalping</div><h1>JK <span class="v">퀀트</span> 단타 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="scVer">v1.25.3</span></h1></div>
+    <div><div class="kicker">Morning Scalping</div><h1>JK <span class="v">퀀트</span> 단타 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="scVer">v1.26.0</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -235,6 +235,10 @@ canvas{display:block;width:100%;height:auto}
     <button class="strategy-tab" data-strategy="soxl" onclick="showStrategy('soxl')">⚡ SOXL</button>
     <button class="strategy-tab" data-strategy="reference" onclick="showStrategy('reference')">📚 참고(폐기된 전략)</button>
   </div>
+  <div id="strategy_overview" class="card" style="margin-top:10px">
+    <h3><span class="dot"></span>📊 4전략 한눈에 비교 <span class="sub">기준전략 · 성과 순위가 아니라 현재 측정값</span></h3>
+    <div id="strategy_overview_body"><p class="sub">전략 탭을 열면 누적 연구값을 채웁니다.</p></div>
+  </div>
   <div id="strategy_reference" class="strategy-pane">
     <div class="strategy-head">📚 폐기된 과매도 반등 연구 · 운영전략 아님 · 참고/감사용</div>
 
@@ -245,18 +249,17 @@ canvas{display:block;width:100%;height:auto}
       볼린저 하단 이탈 + RSI&lt;40 중 <b>점수 65 이상</b>만. 목록에서 종목을 누르면 팝업으로 차트가 뜬다.
       <span class="sub">⚠ 이 전략은 <b>검증에 실패했다</b> — 8년 재검증에서 p=0.51. 아래 경고를 읽어라 (SCALPING.md 15절)</span></p>
     <div class="warn" style="border-color:var(--sell)">
-      <b style="color:var(--sell)">⚠ 이 전략은 실증으로 뒷받침되지 않는다.</b><br>
-      11절이 보고한 <b>+1.72%/거래·승률 62%</b> 는 <b>1년치를 거래 단위로 센 값</b>이었다.
-      같은 날 잡은 거래들은 서로 독립이 아닌데(하루에 신호가 84개까지 뜬다) 독립으로 세는 바람에 부풀려졌다.
-      <b>8년·197종목·포트폴리오 회계로 다시 재면:</b>
-      <ul style="margin:6px 0 0 0">
-        <li>거래 단위 t=4.69 → <b>포트폴리오 t=0.92, p=0.51</b> (통계적으로 무의미)</li>
-        <li>최고 설정이 <b>연 +37만원인데 최대낙폭 −549만원</b> — 낙폭이 연수익의 15배</li>
-        <li>같은 1년 구간을 포트폴리오로 세면 +1.72%가 아니라 <b>−0.04%/거래, 승률 45%</b></li>
-        <li>보유 5일 이상에서는 이 신호가 <b>대조군보다 나쁘다</b> (−0.049%p → 60일 −1.729%p)</li>
-      </ul>
-      <b>화면의 점수·신호는 참고용 관찰 도구로만 쓰고, 이걸 근거로 실제 돈을 넣지 마라.</b>
-      전체 검증 기록은 SCALPING.md 13~23절에 있다.
+      <b style="color:var(--sell)">⚠ 폐기된 전략:</b> 8년 재검증 p=0.51로 엣지를 확인하지 못했다.<br>
+      최고 설정도 연 +37만원 대비 최대낙폭 −549만원이었다.<br>
+      <b>운영전략이 아니며 실제 매매 근거로 사용하지 않는다.</b>
+      <details style="margin-top:8px"><summary style="cursor:pointer">근거 보기 ▾</summary>
+        <ul style="margin:8px 0 0 18px">
+          <li>거래 단위 t=4.69 → 포트폴리오 t=0.92, p=0.51.</li>
+          <li>같은 1년 구간 포트폴리오: −0.04%/거래, 승률 45%.</li>
+          <li>보유 5일 이상에서도 대조군보다 나빴다(−0.049%p → 60일 −1.729%p).</li>
+          <li>전체 검증 근거는 SCALPING.md 13~35절에 보존한다.</li>
+        </ul>
+      </details>
     </div>
     <div class="row" style="margin-bottom:8px;align-items:flex-end">
       <div class="fld" style="flex:0 0 116px"><label>유니버스 크기</label>
@@ -1374,6 +1377,7 @@ async function loadScalpingHistory(name,page=1){
   }
 }
 
+const SCORE_CACHE={};
 const SCORE_APIS={
   opening:'/api/opening-research',
   daytrading:'/api/daytrading-research',
@@ -1416,6 +1420,21 @@ function renderScoreline(name,j){
   el.innerHTML='<b>기준전략 누적 '+n+'건</b> · 승률 <b>'+wr.toFixed(1)+'%</b> · 거래당 <b>'+sign(avg)+'</b>'+
     (req==null?'':' · 필요승률 <b>'+req.toFixed(1)+'%</b> · 엣지 <b class="'+((edge||0)>=0?'win':'loss')+'">'+sign(edge||0)+'</b>')+
     ' <span class="muted">['+progress+']</span>';
+  SCORE_CACHE[name]={name,trades:n,winRate:wr,avgPnl:avg,required:req,edge,days,progress};
+  renderStrategyOverview();
+}
+function renderStrategyOverview(){
+  const el=$('strategy_overview_body'); if(!el)return;
+  const names={opening:'시초가',daytrading:'데이트레이딩',crypto:'비트코인',soxl:'SOXL'};
+  const rows=['opening','daytrading','crypto','soxl'].map(name=>{
+    const x=SCORE_CACHE[name];
+    if(!x)return '<tr><td><b>'+names[name]+'</b></td><td colspan="6" class="sub">불러오는 중/데이터 없음</td></tr>';
+    const pct=v=>v==null?'—':((v>=0?'+':'')+Number(v).toFixed(2)+'%');
+    return '<tr><td><b>'+names[name]+'</b></td><td>'+x.trades+'</td><td>'+x.winRate.toFixed(1)+'%</td>'+
+      '<td class="'+(x.avgPnl>=0?'win':'loss')+'">'+pct(x.avgPnl)+'</td><td>'+(x.required==null?'—':x.required.toFixed(1)+'%')+'</td>'+
+      '<td class="'+((x.edge||0)>=0?'win':'loss')+'">'+pct(x.edge)+'</td><td>'+esc(x.progress)+'</td></tr>';
+  }).join('');
+  el.innerHTML='<div class="htable-wrap"><table class="htable"><thead><tr><th>전략</th><th>표본</th><th>승률</th><th>거래당</th><th>필요승률</th><th>엣지</th><th>검증상태</th></tr></thead><tbody>'+rows+'</tbody></table></div>';
 }
 async function loadStrategyScorecard(name){
   if(!SCORE_APIS[name])return;
@@ -1431,7 +1450,7 @@ async function loadStrategyScorecard(name){
 
 function setupUnifiedStrategyFlow(){
   const cfg={
-    opening:{strategy:['⚡ 시초가 첫고점 돌파'],search:['🔥 실시간 시초가 돌파 감시','📒 오늘 서버 매매 이력'],history:[],review:['🧪 누적 시초가 연구 백테스트','📼 분봉 아카이브'],paper:['🔎 한투 VTS 자동 병행체결 대조']},
+    opening:{strategy:['🔥 실시간 시초가 돌파 감시'],search:['📒 오늘 서버 매매 이력'],history:[],review:['🧪 누적 시초가 연구 백테스트'],paper:['🔎 한투 VTS 자동 병행체결 대조']},
     daytrading:{strategy:['📈 데이트레이딩 기준전략'],search:['📡 데이트레이딩 서버 장중 감시','📒 오늘 장중 모의 매매이력'],history:[],review:['🧪 데이트레이딩 누적 연구','📼 데이터 수집 규칙'],paper:['🔎 한투 VTS 체결 대조']},
     crypto:{strategy:['₿ 비트코인 09시 ORB 기준전략'],search:['📡 현재 KRW-BTC'],history:[],review:['🧪 누적 비트코인 연구','📼 데이터 수집 규칙'],paper:[]},
     soxl:{strategy:['⚡ SOXL 15분 ORB 기준전략'],search:['📡 현재 SOXL'],history:[],review:['🧪 SOXL 누적 연구','📼 데이터 감사 규칙'],paper:[]}
@@ -1479,6 +1498,18 @@ function setupUnifiedStrategyFlow(){
     const reviewCard=flowCard('📝 전략 검증·개선 기록',
       '<div id="'+name+'_review_log"><p class="sub">누적 연구를 불러오면 현재 검증상태와 기준/그림자 전략 상태를 기록합니다.</p></div>');
     bodies.review.prepend(reviewCard);
+    if(name==='opening'){
+      const oldBreak=flowDirectCard(pane,'⚡ 시초가 첫고점 돌파');
+      const oldArch=flowDirectCard(pane,'📼 분봉 아카이브');
+      if(oldBreak||oldArch){
+        const box=document.createElement('details'); box.className='card';
+        box.innerHTML='<summary style="cursor:pointer;font-weight:800">🗃 구버전·아카이브 <span class="sub">공식 기준전략 아님 · 공식 누적 원천은 KIS 09:00~10:00</span></summary>'+
+          '<p class="note">아래 브라우저 백테스트/아카이브는 과거 구현 참고용입니다. 현재 공식 기준전략은 상단 Cloudflare 실시간 감시이며, 누적 연구 원천은 KIS 분봉입니다.</p>';
+        if(oldBreak){used.add(oldBreak);box.appendChild(oldBreak);}
+        if(oldArch){used.add(oldArch);box.appendChild(oldArch);}
+        bodies.review.appendChild(box);
+      }
+    }
     // 기존 카드 중 분류되지 않은 것은 검증/연구 아래에 보존한다.
     Array.from(pane.children).filter(x=>x.classList&&x.classList.contains('card')&&!used.has(x)).forEach(x=>{used.add(x);bodies.review.appendChild(x);});
   });
@@ -1913,6 +1944,18 @@ async function loadOpeningResearch(){
       '<div class="outbox"><div class="ol">기준 승률</div><div class="ov">'+((s.winRate||0).toFixed(1))+'%</div></div>'+
       '<div class="outbox"><div class="ol">기준 평균손익</div><div class="ov '+((s.avgPnl||0)>=0?'good':'bad')+'">'+((s.avgPnl||0)>=0?'+':'')+(s.avgPnl||0).toFixed(3)+'%</div></div>'+
       '</div><div class="htable-wrap" style="margin-top:10px"><table class="htable"><thead><tr><th>가설</th><th>거래</th><th>승률</th><th>평균손익</th><th>PF</th><th>단순합</th><th>MDD</th></tr></thead><tbody>'+rows+'</tbody></table></div>';
+
+    const em=j.exitModelComparison||{},closeModel=em.close||{},lhModel=em.lowhigh||{},fc=j.frictionCalibration||{},mt=j.multipleTesting||{};
+    const fsrc=fc.source==='vts-observed'?'VTS 실측':'2.5틱/편도 fallback';
+    html+='<div style="margin-top:14px"><b>⚙ 엔진 감사 비교</b></div>'+
+      '<div class="out" style="margin-top:8px">'+
+      '<div class="outbox"><div class="ol">종가 청산 · 공식 호환</div><div class="ov '+((closeModel.avgPnl||0)>=0?'good':'bad')+'">'+((closeModel.avgPnl||0)>=0?'+':'')+Number(closeModel.avgPnl||0).toFixed(3)+'%</div><div class="sub">'+Number(closeModel.trades||0)+'건</div></div>'+
+      '<div class="outbox"><div class="ol">저가/고가 터치 · 연구</div><div class="ov '+((lhModel.avgPnl||0)>=0?'good':'bad')+'">'+((lhModel.avgPnl||0)>=0?'+':'')+Number(lhModel.avgPnl||0).toFixed(3)+'%</div><div class="sub">'+Number(lhModel.trades||0)+'건 · 동일봉 손절우선</div></div>'+
+      '<div class="outbox"><div class="ol">실행비용 원천</div><div class="ov" style="font-size:13px">'+esc(fsrc)+'</div><div class="sub">고정 0.23% · VTS 완전매칭 '+Number(fc.completeMatches||0)+'/30</div></div>'+
+      '</div>'+
+      '<p class="note">두 청산 모델을 병렬 기록하지만 기준전략 호환 필드는 종가 모델 그대로입니다. 비용은 VTS 완전매칭 30건 전까지 가격별 2.5틱/편도 fallback을 사용합니다.</p>'+
+      '<div class="warn" style="margin-top:8px"><b>다중검정 통제:</b> K='+(mt.K||13)+' · '+esc(mt.method||'Bonferroni')+
+      ' · 보정 α '+Number(mt.adjustedAlpha||0).toFixed(4)+' · 그림자전략 설계일 2026-09-22는 해당 전략 평가에서 제외. <b>자동 승격 없음.</b></div>';
 
     const dg=j.diagnostics||{},fp=dg.forwardPath||{},cg=dg.conditionGroups||{},hits=dg.thresholdHits||{};
     const pct=v=>v==null?'—':((v>=0?'+':'')+(+v).toFixed(2)+'%');
@@ -2959,6 +3002,7 @@ function boot(){
     $('gate').style.display='none'; $('app').style.display='';
     // 활성 4개 단타전략만 초기화한다. 폐기된 과매도 반등용 공용 수동매매 UI/장부는 더 이상 실행하지 않는다.
     setupUnifiedStrategyFlow();
+    Promise.all(['opening','daytrading','crypto','soxl'].map(loadStrategyScorecard)).catch(()=>{});
     restoreStrategy();
   });
 }
