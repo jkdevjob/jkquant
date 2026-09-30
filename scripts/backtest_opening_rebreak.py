@@ -280,7 +280,54 @@ def opening_path_metrics(a, entry_i, entry):
     return out
 
 
-def one_trade(day, row, p: Params):
+def compute_exit_models(a, entry_i, entry, p: Params, friction_pct: float):
+    """Return the current close-only accounting plus KIS OHLC trigger accounting.
+
+    lowhigh is research-only. If both stop and target touch in one minute, stop wins.
+    The production signal and official baseline thresholds are not changed.
+    """
+    time_bar=max((q for q in a if q["hm"]<=p.final_exit),key=lambda q:q["hm"],default=a[-1])
+
+    close_px=close_hm=close_reason=None
+    for z in a[entry_i+1:]:
+        if z["hm"]>p.final_exit: break
+        r=(z["c"]/entry-1)*100
+        if r<=-p.stop:
+            close_px,close_hm,close_reason=z["c"],z["hm"],"stop";break
+        if r>=p.take_profit:
+            close_px,close_hm,close_reason=z["c"],z["hm"],"take_profit";break
+    if close_px is None:
+        close_px,close_hm,close_reason=time_bar["c"],time_bar["hm"],"time_exit"
+
+    stop_px=entry*(1-p.stop/100)
+    target_px=entry*(1+p.take_profit/100)
+    lh_px=lh_hm=lh_reason=None
+    for z in a[entry_i+1:]:
+        if z["hm"]>p.final_exit: break
+        low=z["l"] if z["l"]>0 else z["c"]
+        high=z["h"] if z["h"]>0 else z["c"]
+        hit_stop=low<=stop_px
+        hit_target=high>=target_px
+        if hit_stop:
+            lh_px,lh_hm,lh_reason=stop_px,z["hm"],"stop";break
+        if hit_target:
+            lh_px,lh_hm,lh_reason=target_px,z["hm"],"take_profit";break
+    if lh_px is None:
+        lh_px,lh_hm,lh_reason=time_bar["c"],time_bar["hm"],"time_exit"
+
+    def rec(model,px,tm,reason):
+        gross=(px/entry-1)*100
+        return {
+            "exitModel":model,"exitTime":tm,"exitPrice":px,"reason":reason,
+            "grossPnlPct":gross,"frictionPct":friction_pct,"pnl":gross-friction_pct,
+        }
+    return {
+        "close":rec("close",close_px,close_hm,close_reason),
+        "lowhigh":rec("lowhigh",lh_px,lh_hm,lh_reason),
+    }
+
+
+def one_trade(day, row, p: Params, calibration=None):
     if int(row.get("rank") or 999999) > p.top_n:
         return None
     a = norm_bars(row)
