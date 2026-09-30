@@ -146,8 +146,9 @@ def main():
         return 2
 
     payload = {
-        "schema": 3,
+        "schema": 4,
         "date": date_iso,
+        "minuteWindow": {"fromHm": 900, "toHm": 1000, "source": "KIS 1m OHLC"},
         "collectedAt": datetime.now(KST).isoformat(),
         "universeLimit": LIMIT,
         "universeSource": u.get("source") or "",
