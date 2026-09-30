@@ -41,9 +41,13 @@ const result=await page.evaluate(async()=>{
   const RULES=[
     ['A','항상 A'],
     ['B','항상 B'],
+    ['B_q2','항상 B, 단 q>=2일 때만 (그 전 A)'],
     ['ma150','종가>=MA150 때 B'],
     ['ma150_90','종가>=MA150×0.90 때 B'],
+    ['ma150_90_q2','종가>=MA150×0.90 & q>=2 때 B'],
     ['ma150_rise20','MA150이 20거래일 전보다 상승할 때 B'],
+    ['ma150_rise20_q2','MA150상승 & q>=2 때 B'],
+    ['ma150_rise20_q3','MA150상승 & q>=3 때 B'],
     ['ma150_vol90','종가>=MA150 && 변동성120<=90% 때 B'],
     ['ma150_90_vol90','종가>=MA150×0.90 && 변동성120<=90% 때 B'],
     ['ma150_rise_vol90','종가>=MA150 && MA150상승 && 변동성120<=90% 때 B'],
@@ -63,7 +67,9 @@ const result=await page.evaluate(async()=>{
   const calc=(t,cap,a,b,rule)=>{
     const key=[t,cap,a||'',b||'',rule,M[t]===((typeof EXTM!=='undefined')&&EXTM[t])?'x':'r'].join('|');
     if(RC.has(key)) return RC.get(key);
-    imDeepLocRule=rule;
+    const qm=/_q3$/.test(rule)?3:/_q2$/.test(rule)?2:1;
+    const baseRule=rule.replace(/_q[23]$/,'');
+    imDeepLocRule=baseRule; imDeepLocQMin=qm;
     const ds=rangeDays(t,a,b); if(ds.length<2){RC.set(key,null);return null;}
     const tgt=t==='TQQQ'?15:20;
     const r=runIM(ds,t,cap,20,tgt,true,20);
