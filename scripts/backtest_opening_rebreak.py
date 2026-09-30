@@ -22,6 +22,18 @@ from zoneinfo import ZoneInfo
 KST = ZoneInfo("Asia/Seoul")
 DATA = Path("data/scalping")
 OUT = Path("data/opening-research")
+VTS = Path("data/vts-research/latest.json")
+
+FIXED_COST_PCT = 0.23
+VTS_MIN_MATCHES = 30
+DEFAULT_SLIP_TICKS_PER_SIDE = 2.5
+TICK_KOSPI = ((2000,1),(5000,5),(20000,10),(50000,50),(200000,100),(500000,500),(float("inf"),1000))
+TICK_KOSDAQ = ((2000,1),(5000,5),(20000,10),(50000,50),(float("inf"),100))
+
+VARIANT_META = {
+    "today_combo_v1": {"designedFrom": ["2026-09-22"]},
+}
+MULTIPLE_TESTING_K = 13
 
 
 @dataclass(frozen=True)
@@ -40,7 +52,9 @@ class Params:
     stop: float = 1.0
     take_profit: float = 1.5
     final_exit: int = 930
-    fee: float = 0.25
+    # Kept only to identify the historical v1 accounting assumption in old records.
+    # New research PnL uses opening_friction_pct(); signal/entry/exit thresholds are unchanged.
+    legacy_fee_pct: float = 0.25
 
 
 VARIANTS = [
