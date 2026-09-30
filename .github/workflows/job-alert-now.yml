@@ -42,4 +42,5 @@ jobs:
         env:
           AUTOTRADE_KEY: ${{ secrets.AUTOTRADE_KEY }}
           JKQUANT_BASE: https://jkquant.pages.dev
+          JOB_ALERT_FAST: "1"
         run: python scripts/job_alert.py
