@@ -138,7 +138,7 @@ jobs:
                   stop: "-1%",
                   takeProfit: "+1.5%",
                   finalExit: "09:30",
-                  friction: "0.25%"
+                  friction: "opening_cost_v2: 0.23% fixed + VTS observed round-trip (>=30 matches), else 2.5 ticks/side"
                 },
                 universeChecked: ([$parts[].universe] | add),
                 errors: ([$parts[].errors] | add),
@@ -151,6 +151,7 @@ jobs:
                       label: .[0].label,
                       description: .[0].description,
                       params: .[0].params,
+                      designedFrom: (.[0].designedFrom // []),
                       trades: ([.[].trades[]] | sort_by(.entryTime, .code))
                     })
                 ),
