@@ -520,7 +520,7 @@ canvas{display:block;width:100%;height:auto}
     </div>
 
     <div class="card">
-      <h3><span class="dot"></span>🧪 누적 비트코인 연구 <span class="sub" style="font-weight:600">최근 365일 백필 + 매일 자동 누적</span></h3>
+      <h3><span class="dot"></span>🧪 누적 비트코인 연구 <span class="sub" style="font-weight:600">최근 1200일 백필 + 매일 자동 누적</span></h3>
       <p class="lead">최초 실행 때 최근 약 1년의 확정 5분봉을 가져와 바로 기준전략을 검증하고, 이후 매일 전날 원본을 추가한다.
         기준전략과 변형들은 <b>동일 원본·동일 체결 규칙</b>으로 비교한다.</p>
       <div class="row" style="margin-bottom:8px">
@@ -535,7 +535,7 @@ canvas{display:block;width:100%;height:auto}
       <p class="lead"><b>매일 09:20 KST</b> GitHub Actions가 업비트 공개 API에서 완료된 UTC 전일의 KRW-BTC 5분봉을 저장한다.
         UTC 00:00은 KST 09:00이므로 파일 경계가 연구 세션과 정확히 맞는다.</p>
       <div class="warn"><b>데이터 정직성:</b> 현재 진행 중인 UTC 일자는 저장하지 않고 확정된 이전 일자만 사용한다.
-        최초에는 최근 365일을 백필하고, 이후에는 최근 2일을 겹쳐 다시 받아 누락·지연을 방지한다.
+        최초에는 최근 1200일을 백필하고, 이후에는 최근 2일을 겹쳐 다시 받아 누락·지연을 방지한다.
         원본은 <b>scalping-data/data/crypto</b>, 연구결과는 <b>data/crypto-research</b>에 누적한다.</div>
     </div>
   </div>
@@ -1145,7 +1145,7 @@ async function loadCryptoResearch(){
     if(!r.ok||!j.ok)throw new Error(j.error||('HTTP '+r.status));
     if(!j.validDays){
       msg.textContent='첫 자동수집/백필 대기';
-      body.innerHTML='<div class="warn">아직 누적 연구파일이 없습니다. 배포 뒤 첫 비트코인 데이터 workflow가 최근 365일을 백필하면 자동으로 채워집니다.</div>';
+      body.innerHTML='<div class="warn">아직 누적 연구파일이 없습니다. 배포 뒤 첫 비트코인 데이터 workflow가 최근 1200일을 백필하면 자동으로 채워집니다.</div>';
       return;
     }
     const labels={
