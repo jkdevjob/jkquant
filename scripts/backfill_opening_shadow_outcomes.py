@@ -11,7 +11,6 @@ from pathlib import Path
 BASE=os.environ.get("JKQ_BASE_URL","https://jkquant.pages.dev").rstrip("/")
 ROOT=Path("data/opening-history")
 VARIANT="opening_selloff_v1"
-EVAL_START="2026-10-01"
 
 def get_json(path, timeout=45):
     req=urllib.request.Request(BASE+path,headers={"Accept":"application/json","User-Agent":"jkquant-opening-shadow-backfill/1.0"})
@@ -55,8 +54,6 @@ def main():
     for path in sorted(ROOT.glob("*.json")):
         j=json.loads(path.read_text(encoding="utf-8"))
         date=str(j.get("date") or path.stem)
-        if date<EVAL_START:
-            continue
         target=next((v for v in j.get("shadowVariants") or [] if v.get("name")==VARIANT),None)
         if not target:
             continue
@@ -86,7 +83,7 @@ def main():
                     rec["outcome"]=by[key]
             path.write_text(json.dumps(j,ensure_ascii=False,indent=2)+"\n",encoding="utf-8")
             changed+=1
-    print(json.dumps({"variant":VARIANT,"evaluationStart":EVAL_START,"filesChanged":changed,"quotes":len(quote_cache)},ensure_ascii=False))
+    print(json.dumps({"variant":VARIANT,"evaluationScope":"all_available","filesChanged":changed,"quotes":len(quote_cache)},ensure_ascii=False))
     return 0
 
 if __name__=="__main__":
