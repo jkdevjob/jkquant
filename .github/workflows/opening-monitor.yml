@@ -155,7 +155,7 @@ jobs:
                           description: $g[0].description,
                           params: $g[0].params,
                           designedFrom: ($g[0].designedFrom // []),
-                          evaluationStart: ($g[0].evaluationStart // null),
+                          evaluationScope: ($g[0].evaluationScope // null),
                           backtestExpected: ($g[0].backtestExpected // null),
                           trades: (
                             [ $g[].trades[] ]
