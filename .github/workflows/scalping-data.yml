@@ -1,6 +1,6 @@
 name: 단타 분봉 자동수집
 
-# 매 영업일 장 마감 뒤 Top100의 09:00~09:30 KIS 1분봉을 저장한다.
+# 매 영업일 장 마감 뒤 Top100의 09:00~10:00 KIS 1분봉을 저장한다.
 # 원본 데이터는 scalping-data 브랜치에 날짜별로 누적하고,
 # 같은 원본으로 시초가 눌림→재돌파 전략의 누적 연구 백테스트도 매일 갱신한다.
 #
@@ -17,6 +17,7 @@ on:
       - ".github/workflows/scalping-data.yml"
       - "scripts/collect_scalping_data.py"
       - "scripts/backtest_opening_rebreak.py"
+      - "scripts/backfill_opening_paths.py"
 
 permissions:
   contents: write
@@ -43,11 +44,23 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: 오늘 Top100 09:00~09:30 분봉 수집
+      - name: 오늘 Top100 09:00~10:00 분봉 수집
         env:
           JKQ_BASE_URL: https://jkquant.pages.dev
           JKQ_UNIVERSE_LIMIT: "100"
-        run: python .app/scripts/collect_scalping_data.py
+        shell: bash
+        run: |
+          # 코드 push가 장중에 일어나면 그 시점 Top100을 '오늘 장마감 유니버스'로 오염시키지 않는다.
+          if [ "${{ github.event_name }}" = "push" ] && [ "$(TZ=Asia/Seoul date +%H%M)" -lt "1610" ]; then
+            echo "장중 push — 오늘 원본 수집은 16:10 정시 작업에 맡김"
+          else
+            python .app/scripts/collect_scalping_data.py
+          fi
+
+      - name: 기존 시초가 신호의 30분 경로 백필
+        env:
+          JKQ_BASE_URL: https://jkquant.pages.dev
+        run: python .app/scripts/backfill_opening_paths.py
 
       - name: 누적 시초가 연구 백테스트
         run: python .app/scripts/backtest_opening_rebreak.py
