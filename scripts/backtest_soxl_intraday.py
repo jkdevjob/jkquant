@@ -30,6 +30,7 @@ from zoneinfo import ZoneInfo
 NY = ZoneInfo("America/New_York")
 DATA = Path("data") / "soxl" / "SOXL" / "5m"
 SOXX_DAILY = Path("data") / "soxl" / "SOXX" / "1d" / "series.json.gz"
+SOXL_DAILY = Path("data") / "soxl" / "SOXL" / "1d" / "series.json.gz"
 OUT = Path("data") / "soxl-research"
 
 
@@ -122,15 +123,21 @@ def no_trade(date, reason, **extra):
     }
 
 
-def load_soxx_rsi14():
-    if not SOXX_DAILY.exists():
-        return [], {}
+def load_daily_rows(path):
+    if not path.exists():
+        return []
     try:
-        with gzip.open(SOXX_DAILY, "rt", encoding="utf-8") as f:
+        with gzip.open(path, "rt", encoding="utf-8") as f:
             payload = json.load(f)
     except Exception:
+        return []
+    return sorted(payload.get("rows") or [], key=lambda x: str(x.get("date") or ""))
+
+
+def load_soxx_rsi14():
+    rows = load_daily_rows(SOXX_DAILY)
+    if not rows:
         return [], {}
-    rows = sorted(payload.get("rows") or [], key=lambda x: str(x.get("date") or ""))
     out = {}
     prev = None
     au = ad = None
@@ -158,29 +165,29 @@ def soxx_prev_rsi(date, dates, values):
     return values.get(dates[i]) if i >= 0 else None
 
 
-def soxl_oversold_shadow(days, cfg, soxx_dates, soxx_rsi):
+def soxl_oversold_shadow(cfg, soxx_dates, soxx_rsi):
     p = cfg["params"]
+    soxl_rows = load_daily_rows(SOXL_DAILY)
     eval_days = []
     trades = []
-    for day in days:
-        date = str(day.get("sessionDateEt") or "")
+    for row in soxl_rows:
+        date = str(row.get("date") or "")
         rsi = soxx_prev_rsi(date, soxx_dates, soxx_rsi)
         if rsi is None:
+            continue
+        entry = float(row.get("open") or 0)
+        exit_px = float(row.get("close") or 0)
+        if min(entry, exit_px) <= 0:
             continue
         eval_days.append(date)
         if not (rsi < float(p["soxxPrevRsiMax"])):
             continue
-        bars = sorted(day.get("bars") or [], key=lambda x: x.get("tEt") or "")
-        if not bars:
-            continue
-        entry = float(bars[0].get("o") or 0)
-        exit_px = float(bars[-1].get("c") or 0)
-        if min(entry, exit_px) <= 0:
-            continue
+        high = float(row.get("high") or max(entry, exit_px))
+        low = float(row.get("low") or min(entry, exit_px))
         gross = (exit_px / entry - 1.0) * 100.0
         net = gross - float(p["frictionPct"])
-        mfe = (max(float(x.get("h") or entry) for x in bars) / entry - 1.0) * 100.0
-        mae = (min(float(x.get("l") or entry) for x in bars) / entry - 1.0) * 100.0
+        mfe = (high / entry - 1.0) * 100.0
+        mae = (low / entry - 1.0) * 100.0
         trades.append({
             "date": date,
             "strategyVersion": "soxl_soxx_rsi35_shadow_v1",
@@ -198,7 +205,7 @@ def soxl_oversold_shadow(days, cfg, soxx_dates, soxx_rsi):
             "maePct": mae,
             "reason": "same_day_close",
             "evidence": {
-                "source": "SOXX adjusted daily close RSI(14) + SOXL regular-session 5m OHLCV",
+                "source": "SOXX adjusted daily close RSI(14) + SOXL daily OHLC",
                 "evaluationScope": "all_available",
                 "soxxPrevRsi14": rsi,
                 "requiredRsiBelow": p["soxxPrevRsiMax"],
@@ -220,8 +227,8 @@ def soxl_oversold_shadow(days, cfg, soxx_dates, soxx_rsi):
         "trades": trades,
         "latestTrades": trades[-20:],
         "soxxAdjustedDataAvailable": bool(soxx_dates),
+        "soxlDailyDataAvailable": bool(soxl_rows),
     }
-
 
 def evaluate_day(day, p: Params):
     date = day.get("sessionDateEt")
@@ -646,7 +653,7 @@ def main():
         "dataWindowNote": "Yahoo 5m source backfills a rolling recent window; the scalping-data archive grows prospectively beyond it.",
         "targetNote": "Net +1% days are tracked as a research target metric, not a guaranteed daily return.",
         "variants": reports,
-        "shadowStrategies": [soxl_oversold_shadow(valid, cfg, soxx_dates, soxx_rsi) for cfg in SHADOW_STRATEGIES],
+        "shadowStrategies": [soxl_oversold_shadow(cfg, soxx_dates, soxx_rsi) for cfg in SHADOW_STRATEGIES],
         "walkForward": wf,
         "rolling30": rolling_baseline(valid, baseline, 30),
         "latestTrades": baseline[-20:],
