@@ -719,32 +719,68 @@ def main():
 
     reports = []
     baseline = []
+    baseline_raw = []
     day_labels = [x["date"] for x in days]
-    variant_trade_map = {}
+    raw_variant_trade_map = {}
+    evaluation_variant_trade_map = {}
+    calibration = load_friction_calibration()
 
     for p in VARIANTS:
-        trades = trades_for_days(days, p)
-        variant_trade_map[p.name] = trades
-        s = summary(trades, day_labels)
-        reports.append({"params": asdict(p), "summary": s})
+        raw_trades = trades_for_days(days, p, calibration=calibration)
+        eval_trades = evaluation_trades(p.name, raw_trades)
+        raw_variant_trade_map[p.name] = raw_trades
+        evaluation_variant_trade_map[p.name] = eval_trades
+        designed_from=(VARIANT_META.get(p.name) or {}).get("designedFrom") or []
+        reports.append({
+            "params": asdict(p),
+            "designedFrom": designed_from,
+            "excludedDesignedFromTrades": len(raw_trades)-len(eval_trades),
+            "rawSummary": summary(raw_trades, day_labels),
+            "summary": summary(eval_trades, day_labels),
+            "exitModels": {
+                "close": summary(project_exit_model(eval_trades,"close"), day_labels),
+                "lowhigh": summary(project_exit_model(eval_trades,"lowhigh"), day_labels),
+            },
+        })
         if p.name == "baseline":
-            baseline = trades
+            baseline = eval_trades
+            baseline_raw = raw_trades
 
-    wf = walk_forward(days, variant_trade_map)
+    wf = walk_forward(days, evaluation_variant_trade_map)
     enough = len(days) >= 20 and len(baseline) >= 30
+    base_close=summary(project_exit_model(baseline,"close"),day_labels)
+    base_lowhigh=summary(project_exit_model(baseline,"lowhigh"),day_labels)
     report = {
-        "schema": 5,
+        "schema": 6,
         "generatedAt": datetime.now(KST).isoformat(),
         "from": day_labels[0],
         "to": day_labels[-1],
         "archiveDays": len(days),
         "baselineTradeCount": len(baseline),
         "comparisonStatus": "eligible" if enough else "collecting",
-        "comparisonRule": "Variant comparison is treated as preliminary until >=20 trading days and >=30 baseline trades.",
+        "comparisonRule": "Variant comparison is preliminary until >=20 trading days and >=30 baseline trades; designed-from dates are excluded from that variant's evaluation.",
         "signalModel": "live-parity-close-only",
-        "signalModelNote": "Signal decisions use 1-minute close to match the live Naver feed. Outcome labels use archived KIS OHLC for 30-minute path diagnostics without changing the strategy exit rule.",
+        "signalModelNote": "Signal/entry decisions remain close-only for live parity. Research records close and KIS OHLC low/high exits side by side; low/high same-minute ambiguity is stop-first.",
+        "frictionModel": {
+            **calibration,
+            "formula": "0.23% fixed + observed VTS round-trip slippage when >=30 complete opening matches; otherwise 2.5 ticks each side",
+            "currentExamples": {
+                "15000_KOSPI_pct": opening_friction_pct(15000,"KOSPI",calibration),
+                "50000_KOSDAQ_pct": opening_friction_pct(50000,"KOSDAQ",calibration),
+            },
+        },
+        "exitModelComparison": {
+            "close": base_close,
+            "lowhigh": base_lowhigh,
+            "avgPnlDifferenceLowhighMinusClosePct": float(base_lowhigh.get("avgPnl") or 0)-float(base_close.get("avgPnl") or 0),
+            "note": "Descriptive research comparison only; production baseline thresholds are unchanged.",
+        },
+        "multipleTesting": {
+            "K": MULTIPLE_TESTING_K,
+            "method": "Bonferroni-adjusted OOS fold sign test",
+        },
         "variants": reports,
-        "diagnostics": opening_diagnostics(baseline),
+        "diagnostics": opening_diagnostics(baseline_raw),
         "walkForward": wf,
     }
 
@@ -768,7 +804,7 @@ def main():
     # Strategy changes never rewrite the signal's strategyVersion/params; the join key
     # also includes variant/date/code/entryTime so a later rule cannot silently replace it.
     outcome_rows = []
-    for variant_name, trades in variant_trade_map.items():
+    for variant_name, trades in raw_variant_trade_map.items():
         for x in trades:
             outcome_rows.append({
                 "variant": variant_name,
@@ -813,7 +849,8 @@ def main():
     outcome_rows.sort(key=lambda x: (x["date"] or "", x["variant"] or "", x["entryTime"] or 0, x["code"] or ""))
     with (OUT / "signal-outcomes.json").open("w", encoding="utf-8") as f:
         json.dump({
-            "schema": 1,
+            "schema": 2,
+            "labelVersion": "opening_outcome_v2",
             "generatedAt": report["generatedAt"],
             "from": day_labels[0],
             "to": day_labels[-1],
