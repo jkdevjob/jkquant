@@ -130,6 +130,7 @@ def live_group_stats(rows, key_fn):
 def opening_report():
     days=[]
     books={}
+    shadow_meta={}
     live=[]
     scan_count=0
     partial_scans=0
@@ -167,6 +168,17 @@ def opening_report():
             name=str(v.get("name") or "")
             if not name:
                 continue
+            if name not in shadow_meta:
+                shadow_meta[name]={
+                    "name":name,
+                    "kind":v.get("kind"),
+                    "label":v.get("label"),
+                    "description":v.get("description"),
+                    "params":v.get("params") or {},
+                    "designedFrom":v.get("designedFrom") or [],
+                    "evaluationStart":v.get("evaluationStart"),
+                    "backtestExpected":v.get("backtestExpected"),
+                }
             for x in v.get("trades") or []:
                 books.setdefault(name,[]).append({"date":d,**x})
 
@@ -190,6 +202,8 @@ def opening_report():
     for v in variants:
         if v["name"]=="baseline":
             continue
+        if (shadow_meta.get(v["name"]) or {}).get("evaluationStart"):
+            continue
         a=v["windows"]["all"]; w20=v["windows"]["last20"]
         all_edge=a["avgPnl"]-ball["avgPnl"]
         d20_edge=w20["avgPnl"]-b20["avgPnl"]
@@ -206,6 +220,24 @@ def opening_report():
             "last20Trades":w20["trades"],
         })
     candidates.sort(key=lambda x:(x["status"]!="review",-x["last20AvgEdgePct"],-x["allAvgEdgePct"],x["name"]))
+
+    shadow_strategies=[]
+    for name,meta in sorted(shadow_meta.items()):
+        start=str(meta.get("evaluationStart") or "")
+        if not start:
+            continue
+        eval_days=[d for d in days if d>=start]
+        eval_rows=[x for x in books.get(name,[]) if x.get("date","")>=start]
+        sm=stats(eval_rows)
+        ready=len(eval_days)>=20 and sm["trades"]>=30
+        shadow_strategies.append({
+            **meta,
+            "evaluationDays":len(eval_days),
+            "summary":sm,
+            "status":"reviewable" if ready else "collecting",
+            "reviewRule":">=20 evaluation days and >=30 completed shadow trades; no auto-promotion",
+            "ordersAllowed":False,
+        })
 
     # Join exact live BUY signals to the richer KIS 30-minute path labels generated later.
     outcome_data=load_json(OPEN_OUTCOMES,{}) or {}
@@ -248,6 +280,7 @@ def opening_report():
             "autoPromotion":False,
         },
         "variants":variants,"candidates":candidates,
+        "shadowStrategies":shadow_strategies,
         "liveSignals":live_report,
     }
 
