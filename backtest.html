@@ -2662,23 +2662,35 @@ function imRowsOf(st){ const v=(st||{}).rows; return (v!=null&&isFinite(+v)) ? M
    주문일 d 당일 봉은 보지 않고 d 이전 마지막 확정 종가까지만 사용한다.
    A = 공식 JKQuant 1주×3줄, B = α1·2줄·β0.15. 한 사이클에서 정한 모드는 종료까지 유지. */
 let imDeepLocRule='A';
+const IM_DEEP_CACHE=new WeakMap();
+function imDeepLocSeries(tkr){
+  const D=(typeof srcOf==='function')?srcOf(tkr):M[tkr];
+  if(!D) return null;
+  let z=IM_DEEP_CACHE.get(D); if(z) return z;
+  const ds=Object.keys(D).sort(), cl=new Array(ds.length), ps=new Float64Array(ds.length+1),
+        pr=new Float64Array(ds.length+1), pr2=new Float64Array(ds.length+1);
+  for(let i=0;i<ds.length;i++){
+    const c=+(D[ds[i]]&&D[ds[i]][C]); cl[i]=c; ps[i+1]=ps[i]+(c>0?c:0);
+    const r=(i>0&&cl[i-1]>0&&c>0)?c/cl[i-1]-1:0;
+    pr[i+1]=pr[i]+r; pr2[i+1]=pr2[i]+r*r;
+  }
+  z={D,ds,cl,ps,pr,pr2}; IM_DEEP_CACHE.set(D,z); return z;
+}
 function imDeepLocRegime(tkr, date, rule){
   rule=String(rule||'A');
   if(rule==='A'||rule==='B') return {mode:rule,rule,asOf:null};
-  const D=(typeof srcOf==='function')?srcOf(tkr):M[tkr];
-  if(!D) return {mode:'A',rule,reason:'no-data'};
-  const ds=Object.keys(D).filter(d=>d<String(date)).sort(), j=ds.length-1;
+  const Z=imDeepLocSeries(tkr); if(!Z) return {mode:'A',rule,reason:'no-data'};
+  const {ds,cl,ps,pr,pr2}=Z;
+  let a=0,b=ds.length; while(a<b){const m=(a+b)>>1;if(ds[m]<String(date))a=m+1;else b=m;}
+  const j=a-1;
   if(j<149) return {mode:'A',rule,reason:'warmup',asOf:j>=0?ds[j]:null};
-  const px=i=>+(D[ds[i]]&&D[ds[i]][C]);
-  const close=px(j); if(!(close>0)) return {mode:'A',rule,reason:'bad-close',asOf:ds[j]};
-  let sum=0; for(let i=j-149;i<=j;i++){const v=px(i);if(!(v>0))return {mode:'A',rule,reason:'bad-ma',asOf:ds[j]};sum+=v;}
-  const ma150=sum/150;
-  let ma150p=null;
-  if(j>=169){ let z=0; for(let i=j-169;i<=j-20;i++) z+=px(i); ma150p=z/150; }
+  const close=cl[j]; if(!(close>0)) return {mode:'A',rule,reason:'bad-close',asOf:ds[j]};
+  const ma150=(ps[j+1]-ps[j-149])/150;
+  const ma150p=j>=169?(ps[j-19]-ps[j-169])/150:null;   // 20거래일 전 시점의 150일선
   let vol=null;
   if(j>=120){
-    const rs=[]; for(let i=j-119;i<=j;i++){const p=px(i-1),c=px(i);if(!(p>0&&c>0)){rs.length=0;break;}rs.push(c/p-1);}
-    if(rs.length===120){const mean=rs.reduce((a,x)=>a+x,0)/rs.length, ss=rs.reduce((a,x)=>a+(x-mean)*(x-mean),0);vol=Math.sqrt(ss/(rs.length-1))*Math.sqrt(252)*100;}
+    const st=j-119,n=120,sum=pr[j+1]-pr[st],sum2=pr2[j+1]-pr2[st];
+    const v=Math.max(0,(sum2-sum*sum/n)/(n-1)); vol=Math.sqrt(v)*Math.sqrt(252)*100;
   }
   let mode='A';
   if(rule==='ma150') mode=close>=ma150?'B':'A';
