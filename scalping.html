@@ -152,7 +152,7 @@ canvas{display:block;width:100%;height:auto}
 #gbtn svg{width:20px;height:20px}
 #gate .gnote{color:var(--faint);font-size:11.5px;margin-top:18px;line-height:1.6}
 
-/* unified strategy flow v1.25.2 */
+/* unified strategy flow v1.25.3 */
 .strategy-flow{display:flex;flex-direction:column;gap:18px;margin-top:12px}
 .flow-section{border-top:1px solid var(--line);padding-top:12px}
 .flow-section:first-child{border-top:0;padding-top:0}
@@ -203,7 +203,7 @@ canvas{display:block;width:100%;height:auto}
 
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Morning Scalping</div><h1>JK <span class="v">퀀트</span> 단타 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="scVer">v1.25.2</span></h1></div>
+    <div><div class="kicker">Morning Scalping</div><h1>JK <span class="v">퀀트</span> 단타 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="scVer">v1.25.3</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -2873,8 +2873,7 @@ function googleLogin(){ const err=$('gate_err'); if(err) err.textContent=''; win
 function doLogout(){ window.fb.signOut(window.fb.auth); }
 function renderBadge(){ const b=$('userbadge'); if(!b) return; if(!me){ b.innerHTML=''; return; } b.innerHTML=`${me.photoURL?`<img src="${esc(me.photoURL)}" alt="">`:''}<span>${esc(me.displayName||me.email||'')}</span> · <button class="lo" onclick="doLogout()">로그아웃</button>`; }
 function boot(){
-  ['c_r','c_l','c_c','c_p'].forEach(id=>{ const el=$(id); if(el) el.addEventListener('input',recalc); });
-  if(!$('f_date').value) $('f_date').value=new Date().toISOString().slice(0,10);
+  // 구형 공용 계산기/모의매매 DOM은 제거됐으므로 로그인 초기화에서 참조하지 않는다.
   window.fb.onAuthStateChanged(window.fb.auth, async user=>{
     me=user||null; renderBadge();
     if(!user){ stopLive(); stopOpeningLive(); $('gate').style.display='flex'; $('app').style.display='none';
