@@ -61,6 +61,16 @@ jobs:
       - name: 폐기 참고전략 B-6 변이 시험
         run: node scripts/mutation_test_scalping_b6.js
 
+      - name: D절 그림자 전략 값 시험
+        run: |
+          node scripts/test_shadow_d_values.js
+          python scripts/test_shadow_d_values.py
+
+      - name: D절 그림자 전략 변이 시험
+        run: |
+          node scripts/mutation_test_shadow_d.js
+          python scripts/mutation_test_shadow_d.py
+
       - name: 연구 서버 JS 문법 검사
         run: |
           node --input-type=module --check < functions/api/_opening.js
