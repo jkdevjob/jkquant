@@ -23,6 +23,8 @@ try{
 
   const pre=m.openingFriction(15000,"KOSPI",{completeMatches:29,avgRoundTripSlippageCostPct:.31});
   assert(Math.abs(pre.pct-expected)<1e-12,"29 matches must still use fallback");
+  const missing=m.openingFriction(15000,"KOSPI",{completeMatches:30,avgRoundTripSlippageCostPct:null});
+  assert(missing.source==="tick_fallback_2.5_each_side","null observed slippage must stay on fallback");
   const obs=m.openingFriction(15000,"KOSPI",{completeMatches:30,avgRoundTripSlippageCostPct:.31});
   assert(Math.abs(obs.pct-.54)<1e-12,"30 matches must use observed VTS slippage");
   assert(obs.source==="vts_observed_round_trip","observed source");
