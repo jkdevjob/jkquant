@@ -93,6 +93,7 @@ export async function onRequestGet({request}){
 
     let rows=parseCsv(await r.text()).map(x=>normalize(strategy,x)).filter(x=>x.date);
     rows.sort((a,b)=>String(b.date).localeCompare(String(a.date))||String(b.entryTime).localeCompare(String(a.entryTime))||String(a.code).localeCompare(String(b.code)));
+    const total=rows.length;
 
     const range=(u.searchParams.get("range")||"all").toLowerCase();
     let from=u.searchParams.get("from")||"",to=u.searchParams.get("to")||"";
@@ -112,7 +113,7 @@ export async function onRequestGet({request}){
     const avg=a=>a.length?a.reduce((s,x)=>s+x,0)/a.length:0;
 
     return new Response(JSON.stringify({
-      ok:true,strategy,market:src.market,source:src.path,total:parseCsv?filtered:filtered,filtered,
+      ok:true,strategy,market:src.market,source:src.path,total,filtered,
       page,pageSize,pages,trades,
       summary:{
         trades:filtered,
