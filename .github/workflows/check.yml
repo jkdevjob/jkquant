@@ -396,7 +396,7 @@ jobs:
             ['id="scVer">v1.27.0','단타 버전 1.26.1'],
             ['다음 5분봉 시가','다음 봉 진입 설명'],
             ['손절 우선','동일봉 보수 청산 설명'],
-            ['최근 365일 백필','초기 백필 안내']
+            ['최근 1200일 백필','초기 백필 안내']
           ];
           for(const [needle,label] of must){if(!s.includes(needle)){console.error('✗ '+label+' 없음');fail++;}}
           if(!wf.includes('cron: "20 0 * * *"')){console.error('✗ 매일 09:20 KST 수집 schedule 없음');fail++;}
