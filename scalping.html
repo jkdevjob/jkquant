@@ -1471,24 +1471,81 @@ function setReviewLog(name,html){
 const HIST_LABELS={opening:'시초가 돌파',daytrading:'데이트레이딩',crypto:'비트코인',soxl:'SOXL'};
 
 function cumulativeHistoryCard(name){
-  return flowCard('📚 '+HIST_LABELS[name]+' 과거 누적 매매이력',
+  const call="loadScalpingHistory('"+name+"',1)";
+  const body=
     '<p class="lead">오늘 장부가 아니라 <b>누적 연구 원본의 기준전략 전체 체결 이력</b>을 최신순으로 조회합니다. 전략버전이 바뀌어도 과거 거래는 그대로 남습니다.</p>'+
     '<div class="row" style="margin-bottom:8px;align-items:flex-end">'+
-      '<div class="fld"><label>기간</label><select id="hist_'+name+'_range" onchange="loadScalpingHistory(\''+name+'\',1)"><option value="all">전체</option><option value="7">최근 7일</option><option value="30">최근 30일</option><option value="custom">날짜 지정</option></select></div>'+
+      '<div class="fld"><label>기간</label><select id="hist_'+name+'_range" onchange="'+call+'"><option value="all">전체</option><option value="7">최근 7일</option><option value="30">최근 30일</option><option value="custom">날짜 지정</option></select></div>'+
       '<div class="fld"><label>시작일</label><input id="hist_'+name+'_from" type="date"></div>'+
       '<div class="fld"><label>종료일</label><input id="hist_'+name+'_to" type="date"></div>'+
-      '<button class="ghostbtn" onclick="loadScalpingHistory(\''+name+'\',1)">🔄 조회</button>'+
+      '<button class="ghostbtn" onclick="'+call+'">🔄 조회</button>'+
       '<span class="sub" id="hist_'+name+'_msg">과거 이력 불러오는 중…</span>'+
     '</div>'+
     '<div id="hist_'+name+'_sum" class="out" style="margin-bottom:10px"></div>'+
     '<div id="hist_'+name+'_body"><p class="sub">탭을 열면 자동으로 불러옵니다.</p></div>'+
     '<div id="hist_'+name+'_pager" class="row" style="margin-top:10px"></div>'+
-    '<p class="note">시초가·데이트레이딩은 KIS 장마감 재구성 기준, 비트코인·SOXL은 누적 연구 엔진의 기준전략 체결 기준입니다. 실시간 오늘 장부/VTS 이력과는 별도로 보존합니다.</p>');
+    '<p class="note">시초가·데이트레이딩은 KIS 장마감 재구성 기준, 비트코인·SOXL은 누적 연구 엔진의 기준전략 체결 기준입니다. 실시간 오늘 장부/VTS 이력과는 별도로 보존합니다.</p>';
+  return flowCard('📚 '+HIST_LABELS[name]+' 과거 누적 매매이력',body);
 }
 function histPrice(name,v){
   const n=Number(v); if(!Number.isFinite(n))return '—';
   if(name==='crypto')return Math.round(n).toLocaleString('ko-KR')+'원';
-  if(name==='soxl')return '
+  if(name==='soxl')return String.fromCharCode(36)+n.toFixed(2);
+  return Math.round(n).toLocaleString('ko-KR')+'원';
+}
+function histPct(v){
+  const n=Number(v);
+  return Number.isFinite(n)?((n>=0?'+':'')+n.toFixed(2)+'%'):'—';
+}
+async function loadScalpingHistory(name,page=1){
+  const msg=$('hist_'+name+'_msg'),body=$('hist_'+name+'_body'),sum=$('hist_'+name+'_sum'),pager=$('hist_'+name+'_pager');
+  if(!msg||!body)return;
+  msg.textContent='누적 매매이력 조회 중…';
+  try{
+    const rangeEl=$('hist_'+name+'_range'),fromEl=$('hist_'+name+'_from'),toEl=$('hist_'+name+'_to');
+    const range=(rangeEl&&rangeEl.value)||'all';
+    const q=new URLSearchParams({strategy:name,range:range,page:String(page),pageSize:'100'});
+    if(range==='custom'){
+      if(fromEl&&fromEl.value)q.set('from',fromEl.value);
+      if(toEl&&toEl.value)q.set('to',toEl.value);
+    }
+    const r=await fetch('/api/scalping-history?'+q.toString(),{headers:{'Accept':'application/json'}});
+    const j=await r.json();
+    if(!r.ok||!j.ok)throw new Error(j.error||('HTTP '+r.status));
+    const a=j.trades||[],z=j.summary||{};
+    msg.textContent='전체 '+(j.total||0)+'건 · 조회 '+(j.filtered||0)+'건 · '+(j.pages?j.page+'/'+j.pages+'쪽':'0건');
+    if(sum)sum.innerHTML=
+      '<div class="outbox"><div class="ol">조회 거래</div><div class="ov">'+(z.trades||0)+'</div></div>'+
+      '<div class="outbox"><div class="ol">승률</div><div class="ov">'+Number(z.winRate||0).toFixed(1)+'%</div></div>'+
+      '<div class="outbox"><div class="ol">평균손익</div><div class="ov '+((z.avgPnl||0)>=0?'good':'bad')+'">'+histPct(z.avgPnl)+'</div></div>'+
+      '<div class="outbox"><div class="ol">평균이익</div><div class="ov good">'+histPct(z.avgWin)+'</div></div>'+
+      '<div class="outbox"><div class="ol">평균손실</div><div class="ov bad">'+histPct(z.avgLoss)+'</div></div>'+
+      '<div class="outbox"><div class="ol">기간</div><div class="ov" style="font-size:13px">'+esc(z.from||'—')+' ~ '+esc(z.to||'—')+'</div></div>';
+    if(!a.length){
+      body.innerHTML='<div class="warn">'+(j.status==='collecting'?'아직 누적 매매 파일이 생성되지 않았습니다. 첫 연구 수집이 완료되면 자동으로 표시됩니다.':'선택한 기간의 매매이력이 없습니다.')+'</div>';
+    }else{
+      body.innerHTML='<div class="htable-wrap"><table class="htable"><thead><tr><th>날짜</th><th>종목</th><th>전략버전</th><th>신호</th><th>진입</th><th>청산</th><th>사유</th><th>손익</th></tr></thead><tbody>'+
+        a.map(x=>'<tr><td>'+esc(x.date||'')+'</td><td><b>'+esc(x.name||x.code||'')+'</b>'+(x.code&&x.code!==x.name?'<div class="sub">'+esc(x.code)+'</div>':'')+'</td>'+
+          '<td>'+esc(x.strategyVersion||'—')+'</td><td>'+esc(x.signalTime||'—')+'</td>'+
+          '<td>'+esc(x.entryTime||'—')+'<div class="sub">'+histPrice(name,x.entryPrice)+'</div></td>'+
+          '<td>'+esc(x.exitTime||'—')+'<div class="sub">'+histPrice(name,x.exitPrice)+'</div></td>'+
+          '<td>'+esc(x.reason||'—')+'</td><td class="'+(Number(x.pnl)>=0?'win':'loss')+'">'+histPct(x.pnl)+'</td></tr>').join('')+
+        '</tbody></table></div>';
+    }
+    if(pager){
+      const prev=j.page>1?'<button class="ghostbtn sm" onclick="loadScalpingHistory(&quot;'+name+'&quot;,'+(j.page-1)+')">← 이전</button>':'';
+      const next=j.pages&&j.page<j.pages?'<button class="ghostbtn sm" onclick="loadScalpingHistory(&quot;'+name+'&quot;,'+(j.page+1)+')">다음 →</button>':'';
+      pager.innerHTML=prev+'<span class="sub">'+(j.pages?j.page+' / '+j.pages:'')+'</span>'+next;
+    }
+  }catch(e){
+    msg.textContent='누적 매매이력 조회 실패';
+    body.innerHTML='<div class="warn">'+esc(e.message||String(e))+'</div>';
+    if(sum)sum.innerHTML='';
+    if(pager)pager.innerHTML='';
+  }
+}
+
+function setupUnifiedStrategyFlow(){
   const cfg={
     opening:{strategy:['⚡ 시초가 첫고점 돌파'],search:['🔥 실시간 시초가 돌파 감시','📒 오늘 서버 매매 이력'],history:[],review:['🧪 누적 시초가 연구 백테스트','📼 분봉 아카이브'],paper:['🔎 한투 VTS 자동 병행체결 대조']},
     daytrading:{strategy:['📈 데이트레이딩 기준전략'],search:['📡 데이트레이딩 서버 장중 감시','📒 오늘 장중 모의 매매이력'],history:[],review:['🧪 데이트레이딩 누적 연구','📼 데이터 수집 규칙'],paper:['🔎 한투 VTS 체결 대조']},
@@ -1505,7 +1562,7 @@ function histPrice(name,v){
     if(head)head.insertAdjacentElement('afterend',map); else pane.prepend(map);
     const flow=document.createElement('div'); flow.className='strategy-flow';
     map.insertAdjacentElement('afterend',flow);
-    const used=new Set(), bodies={};
+    const used=new Set(),bodies={};
     FLOW_STEPS.forEach((x,i)=>{
       const sec=document.createElement('section'); sec.className='flow-section'; sec.dataset.flow=x[0];
       sec.innerHTML='<div class="flow-title"><span class="flow-num">'+(i+1)+'</span>'+x[1]+'</div><div class="flow-body"></div>';
@@ -1516,8 +1573,7 @@ function histPrice(name,v){
     }
     for(const side of ['buy','sell']){
       const d=flowTimingDefault(name,side);
-      const card=flowCard(side==='buy'?'🟢 현재 매수 판단':'🔴 현재 매도 판단',
-        '<div id="'+name+'_'+side+'_timing"></div>');
+      const card=flowCard(side==='buy'?'🟢 현재 매수 판단':'🔴 현재 매도 판단','<div id="'+name+'_'+side+'_timing"></div>');
       bodies[side].appendChild(card);
       setTimeout(()=>setTimingBoard(name,side,d[0],d[1],d[2]),0);
     }
@@ -1533,19 +1589,8 @@ function histPrice(name,v){
     const reviewCard=flowCard('📝 전략 검증·개선 기록',
       '<div id="'+name+'_review_log"><p class="sub">누적 연구를 불러오면 현재 검증상태와 기준/그림자 전략 상태를 기록합니다.</p></div>');
     bodies.review.prepend(reviewCard);
-    // 기존 카드 중 분류되지 않은 것은 검증/연구 아래에 보존한다.
     Array.from(pane.children).filter(x=>x.classList&&x.classList.contains('card')&&!used.has(x)).forEach(x=>{used.add(x);bodies.review.appendChild(x);});
   });
-  // 과매도 반등의 기존 공용 도구는 이 전략 탭 안으로 이동해 다른 탭에 섞이지 않게 한다.
-  const sw=$('strategy_swing');
-  if(sw){
-    const body=step=>sw.querySelector('.flow-section[data-flow="'+step+'"] .flow-body');
-    const move=(id,step)=>{const e=$(id),card=e&&e.closest('.card');if(card&&body(step)&&!body(step).contains(card))body(step).appendChild(card);};
-    move('ruleBody','strategy'); move('pos_body','sell'); move('log_body','history');
-    move('verifyBody','review'); move('c_r','review');
-    move('kis_panel','paper'); move('klog_body','paper');
-    setReviewLog('swing','<b>현재 상태: 연구 전용</b><br><span class="sub">8년 포트폴리오 재검증에서 통계적 유의성이 확인되지 않아 기준전략으로 승격하지 않습니다. 새 가설은 백테스트/OOS 검증 뒤 별도 버전으로 기록합니다.</span>');
-  }
 }
 
 function showStrategy(name){
