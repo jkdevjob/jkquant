@@ -10549,7 +10549,11 @@ console.log('[SCALPING FLOW] 단타 공통 흐름 · 모의체결 분리');
   const pos=labels.map(x=>sc.indexOf(x));
   ok('단타 전략탭 공통 7단계 순서', pos.every((x,i)=>x>=0&&(i===0||x>pos[i-1])), pos.join(' → '));
   ok('활성 단타 4개 전략탭 모두 공통 flow 대상', ['opening','daytrading','crypto','soxl'].every(x=>sc.includes(x+':{strategy:')));
-  ok('검증 실패 과매도 반등 탭은 운영 UI에서 제거', !/data-strategy="swing"/.test(sc) && /id="strategy_swing" class="strategy-pane" style="display:none"/.test(sc));
+  ok('검증 실패 과매도 반등은 활성전략에서 분리해 참고 탭으로 보존',
+     !/data-strategy="swing"/.test(sc)
+     && /data-strategy="reference"/.test(sc)
+     && /id="strategy_swing" class="strategy-pane"/.test(sc)
+     && /참고 전용/.test(sc));
   ok('로그인 후 공통 flow를 만든 뒤 탭 복원',
      /setupUnifiedStrategyFlow\(\);\s*restoreStrategy\(\);/.test(sc));
   ok('단타 flow/showStrategy 함수는 한 번만 정의되어 중복 재배치가 없다',
@@ -10567,7 +10571,7 @@ console.log('[SCALPING FLOW] 단타 공통 흐름 · 모의체결 분리');
      && /VTTS3035R/.test(kis));
   ok('KIS 해외 모의 조회는 전체조회 후 종목 필터', /PDNO:""[\s\S]{0,220}OVRS_EXCG_CD:""/.test(kis)
      && /if\(code\) rows=rows\.filter\(x=>x\.code===code\)/.test(kis));
-  ok('단타 화면 버전 1.25.3', /id="scVer">v1\.25\.3<\/span>/.test(sc));
+  ok('단타 화면 버전 1.25.3', /id="scVer">v1\.26\.0<\/span>/.test(sc));
 }
 
 
@@ -10596,7 +10600,7 @@ console.log('[SCALPING HISTORY] 4전략 누적 매매이력 · 과매도 반등 
   ok('누적 이력 공통 컬럼은 날짜·종목·전략버전·신호·진입·청산·사유·손익',
      /<th>날짜<\/th><th>종목<\/th><th>전략버전<\/th><th>신호<\/th><th>진입<\/th><th>청산<\/th><th>사유<\/th><th>손익<\/th>/.test(sc));
   ok('오늘 시초가/데이트레이딩 장부는 실시간 탐색에 남고 5번은 누적 이력',
-     /opening:\{strategy:\['⚡ 시초가 첫고점 돌파'\],search:\['🔥 실시간 시초가 돌파 감시','📒 오늘 서버 매매 이력'\],history:\[\]/.test(sc)
+     /opening:\{strategy:\['🔥 실시간 시초가 돌파 감시'\],search:\['📒 오늘 서버 매매 이력'\],history:\[\]/.test(sc)
      && /daytrading:\{strategy:\['📈 데이트레이딩 기준전략'\],search:\['📡 데이트레이딩 서버 장중 감시','📒 오늘 장중 모의 매매이력'\],history:\[\]/.test(sc));
   ok('폐기된 과매도 반등 공용 UI는 활성 화면에 노출하지 않음',
      !/id="pos_body"/.test(sc)
@@ -10649,7 +10653,7 @@ console.log('[OPENING SIGNAL LEARNING] 실시간 ledger · 30분 사후라벨 ·
      && /hitMinus1Time/.test(btpy) && /hitMinus2Time/.test(btpy)
      && /fwd30mPct/.test(btpy));
   ok('10:00 데이터가 추가돼도 실제 전략 청산은 final_exit 이후를 보지 않는다',
-     /if z\["hm"\] > p\.final_exit:\s*\n\s*break/.test(btpy));
+     /if z\["hm"\]\s*>\s*p\.final_exit:\s*break/.test(btpy));
   ok('조건별 기대값 비교는 시간·갭·눌림·거래량·대금·순위·전략버전을 모두 집계',
      /"conditionGroups"/.test(btpy)
      && /"strategyVersion":opening_group_stats/.test(btpy)
@@ -10659,7 +10663,67 @@ console.log('[OPENING SIGNAL LEARNING] 실시간 ledger · 30분 사후라벨 ·
      /신호 이후 30분 경로 진단/.test(scl)
      && /조건별 실제 성과/.test(scl)
      && /groupTable\('전략 버전'/.test(scl)
-     && /id="scVer">v1\.25\.3<\/span>/.test(scl));
+     && /id="scVer">v1\.26\.0<\/span>/.test(scl));
+}
+
+/* ════ SCALPING_IMPROVEMENTS_v2 C1~C7 ════ */
+console.log('[SCALPING IMPROVEMENTS V2] A1~A5 · B1~B5');
+{
+  const py=fs.readFileSync(__d+'/scripts/backtest_opening_rebreak.py','utf8');
+  const backfill=fs.readFileSync(__d+'/scripts/backfill_opening_paths.py','utf8');
+  const col=fs.readFileSync(__d+'/scripts/collect_scalping_data.py','utf8');
+  const oj=fs.readFileSync(__d+'/functions/api/_opening.js','utf8');
+  const om=fs.readFileSync(__d+'/functions/api/opening-monitor.js','utf8');
+  const sc=scl;
+  const md=fs.readFileSync(__d+'/SCALPING.md','utf8');
+  const audit=fs.readFileSync(__d+'/AUDIT-SELF-REVIEW.md','utf8');
+
+  ok('A1 과거 불완전 30분 경로 백필 + 신규 10:00 OHLC 명시',
+     /outcomeWindowComplete/.test(backfill)
+     && /minute_history/.test(backfill)
+     && /"toHm": 1000/.test(col)
+     && /"hour": "100000"/.test(col));
+  ok('A2 close/lowhigh 청산모델 병행 + same-minute stop-first',
+     /def compute_exit_models/.test(py)
+     && /"close":rec\("close"/.test(py)
+     && /"lowhigh":rec\("lowhigh"/.test(py)
+     && /if hit_stop:[\s\S]{0,160}if hit_target:/.test(py)
+     && /exitModelComparison/.test(py));
+  ok('A3 0.23% + VTS30건 또는 2.5틱/편도 마찰',
+     /FIXED_COST_PCT = 0\.23/.test(py)
+     && /VTS_MIN_MATCHES = 30/.test(py)
+     && /DEFAULT_SLIP_TICKS_PER_SIDE = 2\.5/.test(py)
+     && /OPENING_FIXED_COST_PCT=\.23/.test(oj)
+     && /OPENING_VTS_MIN_MATCHES=30/.test(oj)
+     && /OPENING_DEFAULT_SLIP_TICKS_PER_SIDE=2\.5/.test(oj)
+     && /openingExecutionCalibration/.test(om));
+  ok('A4 설계일 제외 + K13 + 자동승격 금지',
+     /"today_combo_v1": \{"designedFrom": \["2026-09-22"\]\}/.test(py)
+     && /MULTIPLE_TESTING_K = 13/.test(py)
+     && /Bonferroni-adjusted/.test(py)
+     && /"autoPromotion":False/.test(py));
+  ok('A5 SCALPING 27~35절과 1차 지시서/research 자료 보존',
+     /## 27\./.test(md) && /## 35\./.test(md)
+     && fs.existsSync(__d+'/SCALPING_IMPROVEMENTS.md')
+     && fs.existsSync(__d+'/research/PHASE0_DATA.md')
+     && fs.existsSync(__d+'/research/PHASE1_HYPOTHESES.md')
+     && fs.existsSync(__d+'/research/probes/probe_fdr.py'));
+  ok('B1 폐기전략은 참고 탭, B2 활성탭 성적표, B3 4전략 한눈에',
+     /data-strategy="reference"/.test(sc)
+     && /strategy-scorecard/.test(sc)
+     && /📊 활성 4전략 한눈에/.test(sc)
+     && /필요승률/.test(sc) && /엣지/.test(sc));
+  ok('B4 시초가 공식 기준전략/구버전 아카이브 구분',
+     /🔥 실시간 시초가 돌파 감시[\s\S]{0,180}공식 기준전략/.test(sc)
+     && /🗄 구버전·아카이브/.test(sc)
+     && /KIS 1분 O\/H\/L 09:00~10:00/.test(sc));
+  ok('B5 폐기전략 경고는 요약+근거 접기',
+     /폐기된 연구전략 — 8년 재검증 p=0\.51/.test(sc)
+     && /근거 보기 ▾/.test(sc));
+  ok('A2/A3 감사 문서 장 존재',
+     /시초가 연구 엔진 v2/.test(audit)
+     && /low\/high/.test(audit)
+     && /2\.5틱/.test(audit));
 }
 
 /* ════ 단타 Telegram ③④ 실시간 + ⑤⑥ 일일 연구 ════ */
@@ -10698,7 +10762,7 @@ console.log('[SCALPING TELEGRAM] 실시간 신호 · 일일 매매/연구 요약
   const cr=cr0>=0&&cr1>cr0?nightly.slice(cr0,cr1):'';
   ok('BTC 야간연구는 실제 70/30 holdout 모델만 참조',
      /validationModel":"70\/30 holdout \+ rolling30"/.test(cr) && !/oos_edge|oos_trades|wf_status/.test(cr));
-  ok('단타 화면 버전 1.25.3', /id="scVer">v1\.25\.3<\/span>/.test(scl));
+  ok('단타 화면 버전 1.25.3', /id="scVer">v1\.26\.0<\/span>/.test(scl));
 }
 
 console.log(`\n════ 결과: ${pass} PASS / ${fail} FAIL ${fail===0?'— ALL PASS ★':'— 배포 금지, 위 ✗ 항목 수정 필요'} ════`);
