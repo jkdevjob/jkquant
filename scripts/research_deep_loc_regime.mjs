@@ -51,17 +51,27 @@ const result=await page.evaluate(async()=>{
   imCostOn=true; imReverse=false; imTgtDyn=false; imAutoTp=false; SPLIT_TRADE=true; levExt=false;
   const iso=d=>d.toISOString().slice(0,10);
   const addYears=(s,n)=>{const d=new Date(s+'T00:00:00Z');d.setUTCFullYear(d.getUTCFullYear()+n);return iso(d);};
-  const allDays=t=>Object.keys(M[t]||{}).sort();
-  const rangeDays=(t,a,b)=>allDays(t).filter(d=>(!a||d>=a)&&(!b||d<=b));
+  const DC=new Map(), RC=new Map();
+  const allDays=t=>{
+    const D=M[t]||{}, c=DC.get(t);
+    if(c&&c.D===D) return c.ds;
+    const ds=Object.keys(D).sort(); DC.set(t,{D,ds}); return ds;
+  };
+  const lb=(A,x)=>{let a=0,b=A.length;while(a<b){const m=(a+b)>>1;if(A[m]<x)a=m+1;else b=m;}return a;};
+  const ub=(A,x)=>{let a=0,b=A.length;while(a<b){const m=(a+b)>>1;if(A[m]<=x)a=m+1;else b=m;}return a;};
+  const rangeDays=(t,a,b)=>{const A=allDays(t),i=a?lb(A,a):0,j=b?ub(A,b):A.length;return A.slice(i,j);};
   const calc=(t,cap,a,b,rule)=>{
+    const key=[t,cap,a||'',b||'',rule,M[t]===((typeof EXTM!=='undefined')&&EXTM[t])?'x':'r'].join('|');
+    if(RC.has(key)) return RC.get(key);
     imDeepLocRule=rule;
-    const ds=rangeDays(t,a,b); if(ds.length<2) return null;
+    const ds=rangeDays(t,a,b); if(ds.length<2){RC.set(key,null);return null;}
     const tgt=t==='TQQQ'?15:20;
     const r=runIM(ds,t,cap,20,tgt,true,20);
     const yrs=(new Date(ds.at(-1)+'T00:00:00Z')-new Date(ds[0]+'T00:00:00Z'))/864e5/365.25;
     const cagr=(r.final>0&&yrs>0)?(Math.pow(r.final/cap,1/yrs)-1)*100:-100;
-    return {start:ds[0],end:ds.at(-1),days:ds.length,final:r.final,cagr,mdd:r.mdd,cycles:r.cycles,
+    const out={start:ds[0],end:ds.at(-1),days:ds.length,final:r.final,cagr,mdd:r.mdd,cycles:r.cycles,
       deepA:r.deepAStarts,deepB:r.deepBStarts,fees:r.fees,tax:r.tax};
+    RC.set(key,out); return out;
   };
   const monthlyWindows=(t,a,b,yrs)=>{
     const ds=rangeDays(t,a,b), firstByMonth=[];
