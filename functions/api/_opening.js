@@ -22,24 +22,28 @@ export const OPENING_BASE_PARAMS=Object.freeze({
 export const SHADOW_VARIANTS=Object.freeze([
   {
     name:"today_combo_v1",
+    designedFrom:["2026-09-22"],
     label:"오늘 개선안 v1",
     description:"눌림≤0.5% + 거래대금≥1.5배 + 09:15 이전 진입",
     params:{pbMax:.5,amountMult:1.5,entryCutoff:915},
   },
   {
     name:"pb_max_0.5",
+    designedFrom:["2026-09-22"],
     label:"눌림≤0.5%",
     description:"눌림 상한만 0.5%로 강화",
     params:{pbMax:.5},
   },
   {
     name:"amount_1.5",
+    designedFrom:["2026-09-22"],
     label:"거래대금≥1.5배",
     description:"재돌파 추정 거래대금 배수만 강화",
     params:{amountMult:1.5},
   },
   {
     name:"entry_by_0915",
+    designedFrom:["2026-09-22"],
     label:"09:15 이전",
     description:"재돌파 진입 시각을 09:15까지로 제한",
     params:{entryCutoff:915},
