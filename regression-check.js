@@ -1483,7 +1483,7 @@ console.log('[28] KIS 모의투자 실행 · 주문 이력');
   ok('매수는 확인창을 거친다', /async function kisBuyPick\(code\)\{[\s\S]{0,900}?if\(!confirm\(/.test(sc));
   ok('매도는 확인창을 거친다', /async function kisSellPos\(i\)\{[\s\S]{0,900}?if\(!confirm\(/.test(sc));
   ok('전략상 종목당 1포지션', /if\(POS\.some\(p=>p\.code===code\)\)\{ alert\(s\.name\+' 은\(는\) 이미 보유 중입니다\. \(전략상 종목당 동시 1포지션\)'\)/.test(sc));
-  ok('수량은 투입금액÷현재가', /const px=Math\.round\(s\.price\), L=levelsOf\(px\), qty=Math\.floor\(budget\(\)\/px\);/.test(sc));
+  ok('수량은 투입금액÷현재가 · 레벨은 종목 ATR 사용', /const px=Math\.round\(s\.price\),L=levelsOf\(px,s\.atr14\),qty=Math\.floor\(budget\(\)\/px\);/.test(sc) && /if\(!L\)\{alert\('ATR 없음 — 레벨 계산 불가/.test(sc));
   ok('손절·목표는 전략 함수에서', /plan:\{stop:L\.stop,tgt:L\.tgt\}/.test(sc));
   ok('보유 5일 경과를 표시', /const over=p\.days!=null&&p\.days>=5;/.test(sc)
      && /over\?' <span class="sig watch">5일경과<\/span>'/.test(sc));
@@ -1498,29 +1498,31 @@ console.log('[28] KIS 모의투자 실행 · 주문 이력');
   let rz=null; try{ rz=extractFn(sc,'function klogRealized()'); }catch(e){}
   ok('실현손익 함수 존재', !!rz, rz?'':'klogRealized 없음');
   if(rz){
-    let KLOG=[]; const mk=new Function('KLOG','"use strict";'+rz+'return klogRealized();');
+    const frConst='const OPENING_FIXED_FRICTION_PCT=0.23, OPENING_VTS_MIN_MATCHES=30, OPENING_FALLBACK_TICKS_PER_SIDE=2.5; let OPENING_FRICTION_CAL={completeMatches:0,observedRoundTripSlippagePct:null};';
+    const fr=extractFn(sc,'function openingKrTickSize(')+extractFn(sc,'function openingFrictionPct(');
+    const mk=new Function('KLOG','"use strict";'+frConst+fr+rz+'return klogRealized();');
     const run=(log)=>mk(log).map(x=>[x.qty,x.inPx,x.outPx,+x.pct.toFixed(2)]);
     const eq=(a,b)=>JSON.stringify(a)===JSON.stringify(b);
-    ok('1매수 1매도 (마찰 0.5% 차감)', eq(run([
-      {ok:1,side:'sell',code:'A',qty:10,price:110,ts:2},
-      {ok:1,side:'buy', code:'A',qty:10,price:100,ts:1}]), [[10,100,110,9.5]]));
+    ok('1매수 1매도 (A-3 fallback 실행비용 차감)', eq(run([
+      {ok:1,side:'sell',code:'A',qty:10,price:16500,ts:2},
+      {ok:1,side:'buy', code:'A',qty:10,price:15000,ts:1}]), [[10,15000,16500,9.44]]));
     ok('분할매수는 먼저 산 것부터', eq(run([
-      {ok:1,side:'buy', code:'A',qty:5,price:100,ts:1},
-      {ok:1,side:'buy', code:'A',qty:5,price:120,ts:2},
-      {ok:1,side:'sell',code:'A',qty:10,price:110,ts:3}]), [[5,100,110,9.5],[5,120,110,-8.83]]));
+      {ok:1,side:'buy', code:'A',qty:5,price:15000,ts:1},
+      {ok:1,side:'buy', code:'A',qty:5,price:18000,ts:2},
+      {ok:1,side:'sell',code:'A',qty:10,price:16500,ts:3}]), [[5,15000,16500,9.44],[5,18000,16500,-8.84]]));
     ok('실패 주문은 손익에서 뺀다', eq(run([
-      {ok:0,side:'buy', code:'A',qty:10,price:100,ts:1},
-      {ok:1,side:'buy', code:'A',qty:10,price:100,ts:2},
-      {ok:1,side:'sell',code:'A',qty:10,price:100,ts:3}]), [[10,100,100,-0.5]]));
-    ok('짝 없는 매도는 세지 않는다', eq(run([{ok:1,side:'sell',code:'A',qty:5,price:100,ts:1}]), []));
+      {ok:0,side:'buy', code:'A',qty:10,price:15000,ts:1},
+      {ok:1,side:'buy', code:'A',qty:10,price:15000,ts:2},
+      {ok:1,side:'sell',code:'A',qty:10,price:15000,ts:3}]), [[10,15000,15000,-0.56]]));
+    ok('짝 없는 매도는 세지 않는다', eq(run([{ok:1,side:'sell',code:'A',qty:5,price:15000,ts:1}]), []));
     ok('부분매도는 판 만큼만', eq(run([
-      {ok:1,side:'buy', code:'A',qty:10,price:100,ts:1},
-      {ok:1,side:'sell',code:'A',qty:4,price:106,ts:2}]), [[4,100,106,5.5]]));
+      {ok:1,side:'buy', code:'A',qty:10,price:15000,ts:1},
+      {ok:1,side:'sell',code:'A',qty:4,price:15900,ts:2}]), [[4,15000,15900,5.44]]));
     ok('종목이 섞여도 각자 짝짓는다', eq(run([
-      {ok:1,side:'buy', code:'A',qty:1,price:100,ts:1},
-      {ok:1,side:'buy', code:'B',qty:1,price:200,ts:2},
-      {ok:1,side:'sell',code:'B',qty:1,price:220,ts:3},
-      {ok:1,side:'sell',code:'A',qty:1,price:90,ts:4}]), [[1,200,220,9.5],[1,100,90,-10.5]]));
+      {ok:1,side:'buy', code:'A',qty:1,price:15000,ts:1},
+      {ok:1,side:'buy', code:'B',qty:1,price:150000,ts:2},
+      {ok:1,side:'sell',code:'B',qty:1,price:165000,ts:3},
+      {ok:1,side:'sell',code:'A',qty:1,price:13500,ts:4}]), [[1,150000,165000,9.44],[1,15000,13500,-10.56]]));
   }
 }
 
