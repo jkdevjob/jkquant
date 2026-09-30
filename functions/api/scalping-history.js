@@ -95,10 +95,10 @@ export async function onRequestGet({request}){
     rows.sort((a,b)=>String(b.date).localeCompare(String(a.date))||String(b.entryTime).localeCompare(String(a.entryTime))||String(a.code).localeCompare(String(b.code)));
     const total=rows.length;
 
-    const range=(u.searchParams.get("range")||"all").toLowerCase();
+    const range=(u.searchParams.get("range")||"180").toLowerCase();
     let from=u.searchParams.get("from")||"",to=u.searchParams.get("to")||"";
-    if(!from&&range==="7")from=dateDaysAgo(7);
-    if(!from&&range==="30")from=dateDaysAgo(30);
+    const rangeDays=parseInt(range,10);
+    if(!from&&Number.isFinite(rangeDays)&&rangeDays>0)from=dateDaysAgo(rangeDays);
     if(from)rows=rows.filter(x=>x.date>=from);
     if(to)rows=rows.filter(x=>x.date<=to);
 
