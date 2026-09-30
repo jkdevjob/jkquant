@@ -1,0 +1,75 @@
+"""Mutations for D-1 opening_gapdown_v1 (Python research + JS live path) and D-3 btc_dip24_v1.
+Each mutant must make test_opening_gapdown.py or test_opening_gapdown.mjs fail. Working files are not edited."""
+from pathlib import Path
+import shutil
+import subprocess
+import sys
+import tempfile
+
+ROOT = Path(__file__).resolve().parent
+API = ROOT.parent / "functions" / "api"
+PY = [
+    ("prev-day RSI (watch)", "backtest_opening_gapdown.py", 'if rsi[i - 1] < PARAMS["rsiMax"]:', 'if rsi[i] < PARAMS["rsiMax"]:'),
+    ("prev-day RSI (signal)", "backtest_opening_gapdown.py", "gapPct=gap, rsiPrev=rsi[i - 1]", "gapPct=gap, rsiPrev=rsi[i]"),
+    ("gap threshold", "backtest_opening_gapdown.py", 'if gap > PARAMS["gapMax"] or gap <= PARAMS["gapFloor"]:', 'if gap > 0 or gap <= PARAMS["gapFloor"]:'),
+    ("limit-down floor", "backtest_opening_gapdown.py", 'if gap > PARAMS["gapMax"] or gap <= PARAMS["gapFloor"]:', 'if gap > PARAMS["gapMax"]:'),
+    ("adjusted chain", "backtest_opening_gapdown.py", "r = chg / base_px if base_px > 0 else 0.0", "r = c / rows[i - 1][4] - 1"),
+    ("risk dept", "backtest_opening_gapdown.py", 'return any(k in dept for k in ("관리종목", "투자주의환기", "정리매매"))', "return False"),
+    ("halt lookback", "backtest_opening_gapdown.py", "if any(rows[j][7] <= 0 for j in", "if False and any(rows[j][7] <= 0 for j in"),
+    ("no-limit lookback", "backtest_opening_gapdown.py", "if any(abs(ret[j]) > 0.305 for j in", "if False and any(abs(ret[j]) > 0.305 for j in"),
+    ("tick cost", "backtest_opening_gapdown.py", "return PARAMS[\"fixedCostPct\"] + 2 * ticks * tick(price) / price * 100", "return PARAMS[\"fixedCostPct\"]"),
+    ("provisional pricing", "backtest_opening_gapdown.py", "if r[0] <= final_last:", "if True:"),
+    ("sell slip sign", "backtest_opening_gapdown.py", "sellSlipPct=(-pct(sf, c) if sf and c else None)", "sellSlipPct=(pct(sf, c) if sf and c else None)"),
+    ("dip threshold", "backtest_crypto_orb.py", 'if chg > DIP24["dropPct"]:', 'if chg > -4.0:'),
+    ("dip overlap", "backtest_crypto_orb.py", "        busy_until = fut[-1] + one\n", "\n"),
+    ("dip lookahead", "backtest_crypto_orb.py", 'chg = (hb[h - one]["c"] / hb[h - one * (lb + 1)]["c"] - 1) * 100', 'chg = (hb[h]["c"] / hb[h - one * lb]["c"] - 1) * 100'),
+    ("dip contiguity", "backtest_crypto_orb.py", "        if not all(x in hb for x in need):\n", "        if False:\n"),
+    ("dip hit minutes", "backtest_crypto_orb.py", "int((hit - entry_t).total_seconds() // 60) + 5", "int((hit - entry_t).total_seconds() // 60)"),
+]
+JS = [
+    ("base price first", "_gapdown.js", "const base=+(q&&q.basePrice)>0?+q.basePrice:+prevClose||0;", "const base=+prevClose||0;"),
+    ("gap floor", "_gapdown.js", "r.expectedGapPct<=gapMax&&r.expectedGapPct>gapFloor", "r.expectedGapPct<=gapMax"),
+    ("deepest first", "_gapdown.js", ".sort((a,b)=>a.expectedGapPct-b.expectedGapPct||", ".sort((a,b)=>b.expectedGapPct-a.expectedGapPct||"),
+    ("stale watchlist", "_gapdown.js", 'if(based<prevWeekday(today))return {ok:false,reason:"watchlist_stale"};', ""),
+    ("buy deadline", "opening-gapdown.js", 'if(stage==="preopen")return hms>=85000&&hms<ORDER_DEADLINE;', 'if(stage==="preopen")return hms>=85000&&hms<93000;'),
+    ("close window", "opening-gapdown.js", 'if(stage==="close")return hms>=152000&&hms<152800;', 'if(stage==="close")return hms>=150000&&hms<152800;'),
+    ("fill split", "opening-gapdown.js", 'buy:agg(fills("02",83000,90000))', 'buy:agg(fills("02",83000,240000))'),
+    ("watchlist whitelist", "opening-gapdown.js", "    if(!w)continue;\n", "    if(!w){out.push({...r});continue;}\n"),
+]
+
+
+def run_py(folder):
+    r = subprocess.run([sys.executable, str(folder / "test_opening_gapdown.py")], capture_output=True, text=True, encoding="utf-8")
+    return r.returncode != 0 and "FAILED (" in r.stderr, r.stderr[-800:]
+
+
+def run_js(folder):
+    r = subprocess.run(["node", str(ROOT / "test_opening_gapdown.mjs"), str(folder)], capture_output=True, text=True, encoding="utf-8")
+    return r.returncode != 0 and "AssertionError" in (r.stderr + r.stdout), (r.stdout + r.stderr)[-800:]
+
+
+for label, filename, before, after in PY:
+    with tempfile.TemporaryDirectory() as tmp:
+        folder = Path(tmp)
+        for name in ("backtest_opening_gapdown.py", "backtest_crypto_orb.py", "test_opening_gapdown.py"):
+            shutil.copy(ROOT / name, folder / name)
+        path = folder / filename
+        src = path.read_text(encoding="utf-8")
+        assert before in src, label + ": target missing"
+        path.write_text(src.replace(before, after, 1), encoding="utf-8")
+        killed, log = run_py(folder)
+        assert killed, label + ": survived\n" + log
+        print("PASS killed:", label)
+for label, filename, before, after in JS:
+    with tempfile.TemporaryDirectory() as tmp:
+        folder = Path(tmp)
+        for name in ("_gapdown.js", "opening-gapdown.js"):
+            shutil.copy(API / name, folder / name)
+        path = folder / filename
+        src = path.read_text(encoding="utf-8")
+        assert before in src, label + ": target missing"
+        path.write_text(src.replace(before, after, 1), encoding="utf-8")
+        killed, log = run_js(folder)
+        assert killed, label + ": survived\n" + log
+        print("PASS killed:", label)
+print("D-1/D-3 mutations: ALL PASS")

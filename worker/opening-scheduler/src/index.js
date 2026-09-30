@@ -84,19 +84,19 @@ export class OpeningSignalStore extends DurableObject {
   }
 }
 
-function store(env,date){
-  return env.SIGNAL_STORE.get(env.SIGNAL_STORE.idFromName(String(date)));
+function store(env,date,kind=""){
+  return env.SIGNAL_STORE.get(env.SIGNAL_STORE.idFromName(kind?kind+":"+String(date):String(date)));
 }
-async function appendLedger(env,payload){
-  const r=await store(env,payload.date).fetch("https://opening-signal.internal/append",{
+async function appendLedger(env,payload,kind=""){
+  const r=await store(env,payload.date,kind).fetch("https://opening-signal.internal/append",{
     method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(payload)
   });
   const j=await r.json().catch(()=>({}));
   if(!r.ok||!j.ok)throw new Error(j.error||("signal store HTTP "+r.status));
   return j;
 }
-async function readLedger(env,date){
-  const r=await store(env,date).fetch("https://opening-signal.internal/ledger");
+async function readLedger(env,date,kind=""){
+  const r=await store(env,date,kind).fetch("https://opening-signal.internal/ledger");
   const j=await r.json().catch(()=>({}));
   if(!r.ok||!j.ok)throw new Error(j.error||("signal store HTTP "+r.status));
   return j.ledger||null;
@@ -240,12 +240,89 @@ async function runMinute(controller,env){
   console.log(JSON.stringify(result));
 }
 
+// ── D-1 시초가 갭하락 과매도(opening_gapdown_v1) 연구용 모의체결 ──
+// 08:56 예상체결가 조회(40종목씩 순차) → 규칙 선택 + 장전 동시호가 VTS 매수 → 15:21 종가 동시호가 VTS 매도 → 15:40 체결 조회.
+// 매 단계 응답 원본을 별도 ledger(gapdown:날짜)에 먼저 쌓는다. 주문 호출은 재시도하지 않는다.
+const GAPDOWN_CRON={preopen:"56 23 * * SUN-THU",close:"21 6 * * MON-FRI",reconcile:"40 6 * * MON-FRI"};
+const GAPDOWN_PARTS=2;
+async function gapdownCall(env,body){
+  const r=await fetch(baseUrl(env)+"/api/opening-gapdown",{
+    method:"POST",headers:{"content-type":"application/json","x-monitor-key":env.MONITOR_KEY},body:JSON.stringify(body)
+  });
+  const j=await r.json().catch(()=>({}));
+  return {httpStatus:r.status,...j};
+}
+async function gapdownRecord(env,date,stage,payload,ms){
+  const p=kstParts(ms);
+  const hm=p.hh*100+p.mm;
+  const event={id:[date,"opening_gapdown",stage,payload&&payload.part!=null?"part"+payload.part:"all"].join(":"),
+    date,capturedAt:new Date().toISOString(),targetHm:hm,strategy:"opening_gapdown",strategyVersion:"opening_gapdown_v1",
+    stage,payload};
+  return appendLedger(env,{scanId:[date,stage,event.id].join(":"),date,scheduledTime:ms,capturedAt:event.capturedAt,
+    targetHm:hm,lagMs:0,partial:false,okShards:1,failed:[],quoteErrors:0,events:[event]},"gapdown");
+}
+export function gapdownPicksFromLedger(ledger){
+  const ev=(ledger&&Array.isArray(ledger.events)?ledger.events:[]).find(e=>e&&e.stage==="preopen");
+  const orders=ev&&ev.payload&&Array.isArray(ev.payload.orders)?ev.payload.orders:[];
+  // 매수 주문이 접수된 종목만 오후에 다룬다. 접수 실패 종목은 보유가 없다.
+  return orders.filter(o=>o&&o.side==="buy"&&o.vts&&o.vts.ok).map(o=>({code:o.code,name:o.name||o.code}));
+}
+async function runGapdown(controller,env){
+  if(!env.MONITOR_KEY||!env.SIGNAL_STORE)throw new Error("MONITOR_KEY/SIGNAL_STORE missing");
+  const ms=Number(controller.scheduledTime)||Date.now();
+  const date=kstParts(ms).date;
+  if(controller.cron===GAPDOWN_CRON.preopen){
+    const parts=[];
+    for(let part=0;part<GAPDOWN_PARTS;part++){
+      let q;
+      try{q=await gapdownCall(env,{stage:"quote",date,part});}
+      catch(e){q={ok:false,error:String(e.message||e)};}
+      q.part=part;
+      parts.push(q);
+      try{await gapdownRecord(env,date,"quote",q,ms);}
+      catch(e){console.error(JSON.stringify({type:"gapdown_archive_failed",stage:"quote",part,error:String(e.message||e)}));return;}
+      if(!q.ok||q.decisionReason||!q.watchlist||(!q.watchlist.truncated&&(part+1)*40>=(q.watchlist.size||0)))break;
+    }
+    if(parts.some(q=>!q.ok)){
+      // 명단 일부만 조회됐으면 주문하지 않는다. 받은 예상가는 위에서 이미 저장했다.
+      console.error(JSON.stringify({type:"gapdown_quote_partial",date,failed:parts.filter(q=>!q.ok).map(q=>q.error||q.httpStatus)}));
+      return;
+    }
+    const candidates=parts.flatMap(q=>Array.isArray(q.candidates)?q.candidates:[]);
+    let res;
+    try{res=await gapdownCall(env,{stage:"preopen",date,candidates});}
+    catch(e){res={ok:false,error:"전송 결과 불명 — 재시도하지 않음: "+String(e.message||e)};}
+    try{await gapdownRecord(env,date,"preopen",res,ms);}
+    catch(e){console.error(JSON.stringify({type:"gapdown_archive_failed",stage:"preopen",error:String(e.message||e)}));}
+    console.log(JSON.stringify({type:"gapdown_preopen",date,picks:(res.picks||[]).length,orders:(res.orders||[]).length,reason:res.decisionReason||res.error||""}));
+    return;
+  }
+  const stage=controller.cron===GAPDOWN_CRON.close?"close":"reconcile";
+  let ledger=null;
+  try{ledger=await readLedger(env,date,"gapdown");}catch(e){ledger=null;}
+  const picks=gapdownPicksFromLedger(ledger);
+  if(!picks.length)return;
+  let res;
+  try{res=await gapdownCall(env,{stage,date,picks});}
+  catch(e){res={ok:false,error:"전송 결과 불명 — 재시도하지 않음: "+String(e.message||e)};}
+  try{await gapdownRecord(env,date,stage,res,ms);}
+  catch(e){console.error(JSON.stringify({type:"gapdown_archive_failed",stage,error:String(e.message||e)}));}
+  console.log(JSON.stringify({type:"gapdown_"+stage,date,positions:(res.positions||[]).length,orders:(res.orders||[]).length}));
+}
+
 export default {
   async scheduled(controller,env,ctx){
-    ctx.waitUntil(runMinute(controller,env));
+    if(Object.values(GAPDOWN_CRON).includes(controller.cron))ctx.waitUntil(runGapdown(controller,env));
+    else ctx.waitUntil(runMinute(controller,env));
   },
   async fetch(request,env){
     const u=new URL(request.url);
+    if(u.pathname==="/gapdown"){
+      if(!authorized(request,env))return json({ok:false,error:"unauthorized"},401);
+      const date=u.searchParams.get("date")||kstParts().date;
+      try{return json({ok:true,date,ledger:await readLedger(env,date,"gapdown")});}
+      catch(e){return json({ok:false,error:String(e.message||e)},500);}
+    }
     if(u.pathname==="/events"){
       if(!authorized(request,env))return json({ok:false,error:"unauthorized"},401);
       const date=u.searchParams.get("date")||kstParts().date;
@@ -255,7 +332,7 @@ export default {
     return json({
       ok:true,
       service:"jkquant-opening-scheduler",
-      schedule:"09:05-09:31 KST weekdays",
+      schedule:"09:05-09:31 KST weekdays · gap-down research 08:56/15:21/15:40",
       mode:"Cloudflare Cron -> Pages opening-monitor -> immutable signal ledger -> KIS VTS",
       signalLedger:"Durable Object /events (authorized)"
     });

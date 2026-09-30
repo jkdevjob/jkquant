@@ -13,6 +13,14 @@ Baseline v1:
 - Net result subtracts 0.10% round-trip fee plus 0.04% slippage assumption.
 
 Research only. No variant is automatically promoted and no orders are placed.
+
+Shadow D-3 btc_dip24_v1 (separate strategy, not an ORB variant; see SCALPING_IMPROVEMENTS_v2.md D-3):
+- Hourly bars built from complete 5m hours (12 bars). At each hour open, look at the trailing
+  24h change close[h-1] / close[h-25] - 1 (both already completed).
+- If <= -5%: buy at that hour's open, sell at the close of the 24th hourly bar (24h hold).
+- Non-overlapping (next check after exit). Any missing hour in the 49h window -> no evaluation.
+- Friction: same 0.10% fee + 0.04% slippage as this tab. Designed on 2023-07..2026-09 hourly data;
+  only signals from 2026-10-01 KST count for the verdict.
 """
 from __future__ import annotations
 
@@ -22,7 +30,7 @@ import json
 import math
 import statistics
 from dataclasses import dataclass, asdict
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
@@ -346,6 +354,117 @@ def rolling_baseline(days, trades, window=30):
     }
 
 
+DIP24_VERSION = "btc_dip24_v1"
+DIP24 = dict(dropPct=-5.0, lookbackHours=24, holdHours=24, feeRoundTripPct=0.10, slippageRoundTripPct=0.04,
+             designEndKst="2026-09-30", designedFrom="Upbit KRW-BTC 1h 2023-07..2026-09: 52 trades, +0.93%/trade, t=1.76")
+
+
+def hourly_bars(days):
+    """Complete UTC hours only: {hour_start_utc(datetime): dict(o,h,l,c,v,bars=[5m...])}."""
+    by = {}
+    for d in days:
+        for b in d.get("bars") or []:
+            try:
+                t = datetime.fromisoformat(str(b["tUtc"])[:19])
+            except Exception:
+                continue
+            by.setdefault(t.replace(minute=0, second=0), []).append((t, b))
+    out = {}
+    for h, v in by.items():
+        v.sort(key=lambda x: x[0])
+        if len(v) != 12 or len({x[0] for x in v}) != 12:
+            continue
+        bs = [x[1] for x in v]
+        out[h] = dict(o=float(bs[0]["o"]), h=max(float(x["h"]) for x in bs), l=min(float(x["l"]) for x in bs),
+                      c=float(bs[-1]["c"]), bars=[(x[0], x[1]) for x in v])
+    return out
+
+
+def dip24_path(entry, path, entry_t):
+    """Post-entry 5m path labels (spec: fwd 5/10/20/30m, MFE/MAE, first hits of +-1/+-2%)."""
+    lab = {}
+    for n in (5, 10, 20, 30):
+        k = n // 5
+        lab[f"fwd{n}mPct"] = (float(path[k - 1][1]["c"]) / entry - 1) * 100 if len(path) >= k else None
+    mfe = max((float(b["h"]) / entry - 1) * 100 for _, b in path)
+    mae = min((float(b["l"]) / entry - 1) * 100 for _, b in path)
+    lab.update(mfePct=mfe, maePct=mae)
+    for name, thr, key in (("Plus1", 1, "h"), ("Plus2", 2, "h"), ("Minus1", -1, "l"), ("Minus2", -2, "l")):
+        hit = next((t for t, b in path if ((float(b[key]) / entry - 1) * 100 >= thr if thr > 0 else (float(b[key]) / entry - 1) * 100 <= thr)), None)
+        lab[f"hit{name}"] = hit is not None
+        # 5분봉이 끝난 시각 기준 (그 봉 안에서 닿았다는 것만 안다)
+        lab[f"hit{name}Time"] = (hit + timedelta(minutes=5, hours=9)).strftime("%Y-%m-%d %H:%M") if hit else None
+        lab[f"hit{name}Min"] = int((hit - entry_t).total_seconds() // 60) + 5 if hit else None
+    return lab
+
+
+def dip24_shadow(days):
+    """Returns (trades, decisions) for btc_dip24_v1. decisions = one row per KST date."""
+    hb = hourly_bars(days)
+    hours = sorted(hb)
+    one = timedelta(hours=1)
+    lb, hold = DIP24["lookbackHours"], DIP24["holdHours"]
+    fric = DIP24["feeRoundTripPct"] + DIP24["slippageRoundTripPct"]
+    trades, per_day = [], {}
+    busy_until = None
+    for h in hours:
+        day = (h + timedelta(hours=9)).strftime("%Y-%m-%d")
+        rec = per_day.setdefault(day, dict(date=day, strategyVersion=DIP24_VERSION, evaluatedHours=0, skippedHours=0,
+                                           min24hChangePct=None, signals=0))
+        if busy_until and h < busy_until:
+            continue
+        need = [h - one * k for k in range(1, lb + 2)]
+        if not all(x in hb for x in need):
+            rec["skippedHours"] += 1
+            continue
+        chg = (hb[h - one]["c"] / hb[h - one * (lb + 1)]["c"] - 1) * 100
+        rec["evaluatedHours"] += 1
+        rec["min24hChangePct"] = chg if rec["min24hChangePct"] is None else min(rec["min24hChangePct"], chg)
+        if chg > DIP24["dropPct"]:
+            continue
+        fut = [h + one * k for k in range(hold)]
+        if not all(x in hb for x in fut):
+            rec["skippedHours"] += 1
+            continue                      # 보유 24시간 중 빠진 시간 — 결과를 모르므로 기록하지 않는다(다음 실행에서 다시 판단)
+        entry = hb[h]["o"]
+        exit_px = hb[fut[-1]]["c"]
+        path = [x for f in fut for x in hb[f]["bars"]]
+        gross = (exit_px / entry - 1) * 100
+        t = dict(date=day, strategy="crypto", variant="dip24", strategyVersion=DIP24_VERSION, signalSchemaVersion=1,
+                 signalTimeKst=(h + timedelta(hours=9)).strftime("%Y-%m-%d %H:%M"),
+                 entryTimeKst=(h + timedelta(hours=9)).strftime("%Y-%m-%d %H:%M"),
+                 exitTimeKst=(fut[-1] + one + timedelta(hours=9)).strftime("%Y-%m-%d %H:%M"),
+                 trailing24hChangePct=chg, entryPrice=entry, exitPrice=exit_px, reason="time_24h",
+                 params=DIP24, decisionReason="trailing_24h_change<=-5%",
+                 grossPnlPct=gross, frictionPct=fric, pnlPct=gross - fric,
+                 sample="design" if day <= DIP24["designEndKst"] else "outOfSample")
+        t.update(dip24_path(entry, path, h))
+        trades.append(t)
+        rec["signals"] += 1
+        busy_until = fut[-1] + one
+    decisions = []
+    for d in sorted(per_day):
+        r = per_day[d]
+        r["action"] = "signal" if r["signals"] else "no_signal"
+        r["decisionReason"] = "" if r["signals"] else ("insufficient_contiguous_hours" if not r["evaluatedHours"] else "no_24h_drop_below_-5%")
+        decisions.append(r)
+    return trades, decisions
+
+
+def dip24_summary(trades):
+    def one(xs):
+        if not xs:
+            return dict(trades=0)
+        v = [x["pnlPct"] for x in xs]
+        sd = statistics.stdev(v) if len(v) > 1 else 0
+        return dict(trades=len(v), winRate=sum(1 for x in v if x > 0) / len(v) * 100, avgPnlPct=statistics.fmean(v),
+                    avgGrossPct=statistics.fmean(x["grossPnlPct"] for x in xs),
+                    tStat=(statistics.fmean(v) / (sd / math.sqrt(len(v)))) if sd > 0 else None,
+                    avgMfePct=statistics.fmean(x["mfePct"] for x in xs), avgMaePct=statistics.fmean(x["maePct"] for x in xs))
+    return dict(all=one(trades), design=one([t for t in trades if t["sample"] == "design"]),
+                outOfSample=one([t for t in trades if t["sample"] == "outOfSample"]))
+
+
 def main():
     all_days = load_days()
     OUT.mkdir(parents=True, exist_ok=True)
@@ -396,6 +515,12 @@ def main():
         "rolling30": rolling_baseline(valid, baseline, 30),
         "latestTrades": baseline[-20:],
     }
+    dip_trades, dip_decisions = dip24_shadow(valid)
+    report["shadowDip24"] = {
+        "strategyVersion": DIP24_VERSION, "params": DIP24, "orders": "none (research shadow)",
+        "verdictRule": "Only signals after designEndKst count. Expect ~17 signals/year, so 30 signals take ~2 years.",
+        "summary": dip24_summary(dip_trades), "latestTrades": dip_trades[-10:],
+    }
 
     with (OUT / "latest.json").open("w", encoding="utf-8") as f:
         json.dump(report, f, ensure_ascii=False, indent=2)
@@ -413,6 +538,19 @@ def main():
 
     with (OUT / f"{labels[-1]}.json").open("w", encoding="utf-8") as f:
         json.dump(report, f, ensure_ascii=False, indent=2)
+
+    if dip_trades:
+        with (OUT / "dip24-trades.csv").open("w", encoding="utf-8", newline="") as f:
+            cols = [k for k in dip_trades[0] if k != "params"]
+            w = csv.DictWriter(f, fieldnames=cols)
+            w.writeheader()
+            for x in dip_trades:
+                w.writerow({k: x.get(k) for k in cols})
+    if dip_decisions:
+        with (OUT / "dip24-decisions.csv").open("w", encoding="utf-8", newline="") as f:
+            w = csv.DictWriter(f, fieldnames=list(dip_decisions[0].keys()))
+            w.writeheader()
+            w.writerows(dip_decisions)
 
     # One row per session, including no-trade days. This is the compact audit
     # trail for "why did the strategy trade / not trade on that date?" Raw bars
@@ -453,6 +591,7 @@ def main():
         "baseline": base["summary"],
         "holdout": base["validation"]["holdout"],
         "rolling30": report["rolling30"],
+        "dip24": report["shadowDip24"]["summary"],
     }, ensure_ascii=False, indent=2))
     return 0
 
