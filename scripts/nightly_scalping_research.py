@@ -403,6 +403,7 @@ def crypto_report():
         "validationModel":"70/30 holdout + rolling30",
         "rolling30":j.get("rolling30") or {},
         "variants":rows,"candidates":candidates,
+        "shadowStrategies":j.get("shadowStrategies") or [],
         "autoPromotion":False,
         "targetNote":"1% is a research target metric, not a guaranteed daily return."
     }
