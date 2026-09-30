@@ -65,7 +65,7 @@ SHADOW_STRATEGIES = [
         "name": "soxl_soxx_rsi35_v1",
         "label": "반도체 과매도 당일 반등",
         "designedFrom": ["2010-01~2026-09"],
-        "evaluationStart": "2026-10-01",
+        "evaluationScope": "all_available",
         "ordersAllowed": False,
         "params": {"soxxPrevRsiMax": 35.0, "frictionPct": 0.20, "hold": "same_day"},
         "backtestExpected": {
@@ -160,13 +160,10 @@ def soxx_prev_rsi(date, dates, values):
 
 def soxl_oversold_shadow(days, cfg, soxx_dates, soxx_rsi):
     p = cfg["params"]
-    start = cfg["evaluationStart"]
     eval_days = []
     trades = []
     for day in days:
         date = str(day.get("sessionDateEt") or "")
-        if date < start:
-            continue
         rsi = soxx_prev_rsi(date, soxx_dates, soxx_rsi)
         if rsi is None:
             continue
@@ -202,7 +199,7 @@ def soxl_oversold_shadow(days, cfg, soxx_dates, soxx_rsi):
             "reason": "same_day_close",
             "evidence": {
                 "source": "SOXX adjusted daily close RSI(14) + SOXL regular-session 5m OHLCV",
-                "evaluationStart": start,
+                "evaluationScope": "all_available",
                 "soxxPrevRsi14": rsi,
                 "requiredRsiBelow": p["soxxPrevRsiMax"],
                 "entryRule": "SOXL regular-session open",
@@ -217,7 +214,8 @@ def soxl_oversold_shadow(days, cfg, soxx_dates, soxx_rsi):
         **cfg,
         "evaluationDays": len(eval_days),
         "status": "reviewable" if ready else "collecting",
-        "reviewRule": ">=20 evaluation days and >=30 completed shadow trades; no auto-promotion",
+        "reviewRule": ">=20 stored days and >=30 completed shadow trades; no auto-promotion",
+        "sampleNote": "전체 보유 데이터 재평가 — 설계 표본 포함 가능, OOS 아님",
         "summary": sm,
         "trades": trades,
         "latestTrades": trades[-20:],
