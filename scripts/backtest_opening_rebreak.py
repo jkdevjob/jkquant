@@ -381,26 +381,15 @@ def one_trade(day, row, p: Params, calibration=None):
             if y["c"] > peak and vol_ratio >= p.vol_mult and amt_ratio >= p.amount_mult:
                 entry = y["c"]
                 path = opening_path_metrics(a, j, entry)
-                exit_px = None
-                exit_hm = None
-                reason = None
-                for z in a[j + 1 :]:
-                    if z["hm"] > p.final_exit:
-                        break
-                    r = (z["c"] / entry - 1) * 100
-                    if r <= -p.stop:
-                        exit_px, exit_hm, reason = z["c"], z["hm"], "stop"
-                        break
-                    if r >= p.take_profit:
-                        exit_px, exit_hm, reason = z["c"], z["hm"], "take_profit"
-                        break
-                if exit_px is None:
-                    z = max((q for q in a if q["hm"] <= p.final_exit), key=lambda q: q["hm"], default=a[-1])
-                    exit_px, exit_hm, reason = z["c"], z["hm"], "time_exit"
-                pnl = (exit_px / entry - 1) * 100 - p.fee
+                cal = calibration or load_friction_calibration()
+                friction = opening_friction_pct(entry, str(row.get("market") or ""), cal)
+                models = compute_exit_models(a, j, entry, p, friction)
+                current = models["close"]
                 return {
                     "date": day["date"],
                     "signalSchemaVersion": 2,
+                    "labelVersion": "opening_outcome_v2",
+                    "accountingVersion": "opening_cost_v2",
                     "strategyVersion": "opening_rebreak_v1",
                     "strategyParams": asdict(p),
                     "rank": int(row.get("rank") or 0),
@@ -425,7 +414,9 @@ def one_trade(day, row, p: Params, calibration=None):
                         "amountRatio": amt_ratio, "requiredAmountRatio": p.amount_mult,
                         "entryCutoff": p.entry_cutoff,
                         "stopPct": p.stop, "takeProfitPct": p.take_profit,
-                        "frictionPct": p.fee, "finalExit": p.final_exit,
+                        "frictionPct": friction, "frictionSource": cal.get("source"),
+                        "frictionCalibrationMatches": int(cal.get("completeMatches") or 0),
+                        "finalExit": p.final_exit,
                     },
                     "timeBucket": opening_time_bucket(y["hm"]),
                     "gapBucket": opening_gap_bucket(gap),
@@ -434,10 +425,15 @@ def one_trade(day, row, p: Params, calibration=None):
                     "amountBucket": opening_ratio_bucket(amt_ratio, "amount"),
                     "rankBucket": opening_rank_bucket(int(row.get("rank") or 0)),
                     **path,
-                    "exitTime": exit_hm,
-                    "exitPrice": exit_px,
-                    "reason": reason,
-                    "pnl": pnl,
+                    "exitModel": "close",
+                    "exitModels": models,
+                    "frictionPct": friction,
+                    "frictionSource": cal.get("source"),
+                    "frictionCalibrationMatches": int(cal.get("completeMatches") or 0),
+                    "exitTime": current["exitTime"],
+                    "exitPrice": current["exitPrice"],
+                    "reason": current["reason"],
+                    "pnl": current["pnl"],
                     "variant": p.name,
                 }
         break
