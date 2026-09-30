@@ -8,6 +8,8 @@ import tempfile
 
 ROOT = Path(__file__).resolve().parent
 mutants = [
+    ('delayed session window', 'opening_backfill.py', "if day in DELAYED_OPENS else", 'if False else'),
+    ('per-symbol window checkpoint', 'opening_backfill.py', "previous.get('collectionWindow') != window", "old.get('collectionWindow') != window"),
     ('confirmed year boundary', 'opening_backfill.py', 'if day in CONFIRMED_CLOSURES:', 'if False:'),
     ('checkpoint time budget', 'opening_backfill.py', 'if DEADLINE is not None and time.monotonic() >= DEADLINE:', 'if False:'),
     ('market-hours guard', 'opening_backfill.py', 'if 830 <= hm <= 1540:', 'if False:'),

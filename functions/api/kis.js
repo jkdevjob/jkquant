@@ -40,7 +40,7 @@ const FIREBASE_API_KEY_FALLBACK = "AIzaSyBzBe9pAttnbDgTlNThWZzNqtAAKxX7Ksw"; // 
 const KRCODE = /^(?:\d{6}|\d{4}[A-Z]\d)$/;
 // Historical KRX preferred shares can end in a letter (e.g. 45014K).
 // Broaden only the read-only minute archive route; order validation is unchanged.
-function validMinuteHistoryCode(code){ return KRCODE.test(code)||/^\d{5}[A-Z]$/.test(code); }
+function validMinuteHistoryCode(code){ return KRCODE.test(code)||/^\d{4}[0-9A-Z]{2}$/.test(code); }
 // 미국 티커. 국내 6자리와 겹치지 않으므로 code 하나로 국내/해외를 가른다.
 const USSYM = /^[A-Z]{1,5}$/;
 /* 같은 거래소인데 시세와 주문이 쓰는 코드가 다르다 — KIS 문서가 그렇게 돼 있다.
