@@ -22,6 +22,12 @@ from zoneinfo import ZoneInfo
 KST = ZoneInfo("Asia/Seoul")
 DATA = Path("data/scalping")
 OUT = Path("data/opening-research")
+VTS_DATA = Path("data/vts-research/latest.json")
+
+# Execution-cost research model (A-3). Signal/exit thresholds remain strategy params.
+FIXED_KR_FRICTION_PCT = 0.23
+VTS_MIN_MATCHES = 30
+FALLBACK_TICKS_PER_SIDE = 2.5
 
 
 @dataclass(frozen=True)
@@ -40,7 +46,6 @@ class Params:
     stop: float = 1.0
     take_profit: float = 1.5
     final_exit: int = 930
-    fee: float = 0.25
 
 
 VARIANTS = [
@@ -218,7 +223,115 @@ def opening_path_metrics(a, entry_i, entry):
     return out
 
 
-def one_trade(day, row, p: Params):
+def kr_tick_size(price):
+    """Research fallback tick grid for domestic stocks used by the 2.5-tick model.
+
+    This is an execution-cost approximation, not a strategy signal rule.
+    """
+    p = float(price or 0)
+    if p < 2_000: return 1.0
+    if p < 5_000: return 5.0
+    if p < 20_000: return 10.0
+    if p < 50_000: return 50.0
+    if p < 200_000: return 100.0
+    if p < 500_000: return 500.0
+    return 1_000.0
+
+
+def load_vts_friction_calibration():
+    out = {
+        "source": "2.5tick-fallback",
+        "completeMatches": 0,
+        "observedRoundTripSlippagePct": None,
+        "minMatches": VTS_MIN_MATCHES,
+        "fixedPct": FIXED_KR_FRICTION_PCT,
+        "ticksPerSide": FALLBACK_TICKS_PER_SIDE,
+    }
+    try:
+        with VTS_DATA.open("r", encoding="utf-8") as f:
+            j = json.load(f)
+        row = next((x for x in j.get("strategies") or [] if x.get("strategy") == "opening"), None)
+        if row:
+            n = int(row.get("completeMatches") or 0)
+            obs = row.get("avgRoundTripSlippageCostPct")
+            out["completeMatches"] = n
+            out["observedRoundTripSlippagePct"] = float(obs) if obs is not None else None
+            if n >= VTS_MIN_MATCHES and obs is not None and math.isfinite(float(obs)):
+                out["source"] = "vts-observed"
+    except (OSError, ValueError, TypeError, json.JSONDecodeError):
+        pass
+    return out
+
+
+def opening_friction(entry_price, calibration=None):
+    c = dict(calibration or {})
+    n = int(c.get("completeMatches") or 0)
+    obs = c.get("observedRoundTripSlippagePct")
+    if n >= VTS_MIN_MATCHES and obs is not None and math.isfinite(float(obs)):
+        slip = max(0.0, float(obs))
+        source = "vts-observed"
+        tick = None
+    else:
+        tick = kr_tick_size(entry_price)
+        slip = (2.0 * FALLBACK_TICKS_PER_SIDE * tick / max(float(entry_price), 1e-9)) * 100.0
+        source = "2.5tick-fallback"
+    return {
+        "fixedPct": FIXED_KR_FRICTION_PCT,
+        "slippagePct": slip,
+        "totalPct": FIXED_KR_FRICTION_PCT + slip,
+        "source": source,
+        "completeMatches": n,
+        "minMatches": VTS_MIN_MATCHES,
+        "ticksPerSide": FALLBACK_TICKS_PER_SIDE if source == "2.5tick-fallback" else None,
+        "tickSize": tick,
+    }
+
+
+def simulate_exit(a, entry_i, entry, p: Params, friction, exit_model="close"):
+    """Parallel research exits. Official compatibility remains close model.
+
+    lowhigh uses 1-minute low/high threshold touches; if stop and TP both touch
+    inside the same minute, stop wins conservatively.
+    """
+    exit_px = None
+    exit_hm = None
+    reason = None
+    stop_px = entry * (1.0 - p.stop / 100.0)
+    tp_px = entry * (1.0 + p.take_profit / 100.0)
+    for z in a[entry_i + 1:]:
+        if z["hm"] > p.final_exit:
+            break
+        if exit_model == "lowhigh":
+            stop_hit = z["l"] <= stop_px
+            tp_hit = z["h"] >= tp_px
+            if stop_hit:
+                exit_px, exit_hm, reason = stop_px, z["hm"], "stop"
+                break
+            if tp_hit:
+                exit_px, exit_hm, reason = tp_px, z["hm"], "take_profit"
+                break
+        else:
+            rr = (z["c"] / entry - 1.0) * 100.0
+            if rr <= -p.stop:
+                exit_px, exit_hm, reason = z["c"], z["hm"], "stop"
+                break
+            if rr >= p.take_profit:
+                exit_px, exit_hm, reason = z["c"], z["hm"], "take_profit"
+                break
+    if exit_px is None:
+        z = max((q for q in a if q["hm"] <= p.final_exit), key=lambda q: q["hm"], default=a[-1])
+        exit_px, exit_hm, reason = z["c"], z["hm"], "time_exit"
+    pnl = (exit_px / entry - 1.0) * 100.0 - float(friction["totalPct"])
+    return {
+        "exitModel": exit_model,
+        "exitTime": exit_hm,
+        "exitPrice": exit_px,
+        "reason": reason,
+        "pnl": pnl,
+    }
+
+
+def one_trade(day, row, p: Params, friction_calibration=None):
     if int(row.get("rank") or 999999) > p.top_n:
         return None
     a = norm_bars(row)
@@ -272,23 +385,9 @@ def one_trade(day, row, p: Params):
             if y["c"] > peak and vol_ratio >= p.vol_mult and amt_ratio >= p.amount_mult:
                 entry = y["c"]
                 path = opening_path_metrics(a, j, entry)
-                exit_px = None
-                exit_hm = None
-                reason = None
-                for z in a[j + 1 :]:
-                    if z["hm"] > p.final_exit:
-                        break
-                    r = (z["c"] / entry - 1) * 100
-                    if r <= -p.stop:
-                        exit_px, exit_hm, reason = z["c"], z["hm"], "stop"
-                        break
-                    if r >= p.take_profit:
-                        exit_px, exit_hm, reason = z["c"], z["hm"], "take_profit"
-                        break
-                if exit_px is None:
-                    z = max((q for q in a if q["hm"] <= p.final_exit), key=lambda q: q["hm"], default=a[-1])
-                    exit_px, exit_hm, reason = z["c"], z["hm"], "time_exit"
-                pnl = (exit_px / entry - 1) * 100 - p.fee
+                friction = opening_friction(entry, friction_calibration)
+                close_exit = simulate_exit(a, j, entry, p, friction, "close")
+                lowhigh_exit = simulate_exit(a, j, entry, p, friction, "lowhigh")
                 return {
                     "date": day["date"],
                     "signalSchemaVersion": 2,
@@ -316,7 +415,8 @@ def one_trade(day, row, p: Params):
                         "amountRatio": amt_ratio, "requiredAmountRatio": p.amount_mult,
                         "entryCutoff": p.entry_cutoff,
                         "stopPct": p.stop, "takeProfitPct": p.take_profit,
-                        "frictionPct": p.fee, "finalExit": p.final_exit,
+                        "frictionPct": friction["totalPct"], "frictionModel": friction,
+                        "finalExit": p.final_exit,
                     },
                     "timeBucket": opening_time_bucket(y["hm"]),
                     "gapBucket": opening_gap_bucket(gap),
@@ -325,18 +425,29 @@ def one_trade(day, row, p: Params):
                     "amountBucket": opening_ratio_bucket(amt_ratio, "amount"),
                     "rankBucket": opening_rank_bucket(int(row.get("rank") or 0)),
                     **path,
-                    "exitTime": exit_hm,
-                    "exitPrice": exit_px,
-                    "reason": reason,
-                    "pnl": pnl,
+                    "exitModel": "close",
+                    "exitModels": {"close": close_exit, "lowhigh": lowhigh_exit},
+                    "exitTime": close_exit["exitTime"],
+                    "exitPrice": close_exit["exitPrice"],
+                    "reason": close_exit["reason"],
+                    "pnl": close_exit["pnl"],
+                    "lowHighExitTime": lowhigh_exit["exitTime"],
+                    "lowHighExitPrice": lowhigh_exit["exitPrice"],
+                    "lowHighReason": lowhigh_exit["reason"],
+                    "lowHighPnl": lowhigh_exit["pnl"],
+                    "friction": friction,
                     "variant": p.name,
                 }
         break
     return None
 
 
-def summary(trades, days):
-    pnls = [x["pnl"] for x in trades]
+def summary(trades, days, exit_model="close"):
+    def model_pnl(x):
+        if exit_model == "lowhigh":
+            return ((x.get("exitModels") or {}).get("lowhigh") or {}).get("pnl")
+        return ((x.get("exitModels") or {}).get("close") or {}).get("pnl", x.get("pnl"))
+    pnls = [v for v in (model_pnl(x) for x in trades) if v is not None]
     wins = [x for x in pnls if x > 0]
     losses = [x for x in pnls if x < 0]
     eq = peak = mdd = 0.0
@@ -434,11 +545,11 @@ def opening_diagnostics(trades):
     }
 
 
-def trades_for_days(days, p: Params):
+def trades_for_days(days, p: Params, friction_calibration=None):
     out = []
     for day in days:
         for row in day.get("universe") or []:
-            t = one_trade(day, row, p)
+            t = one_trade(day, row, p, friction_calibration)
             if t:
                 out.append(t)
     return out
@@ -536,11 +647,12 @@ def main():
 
     reports = []
     baseline = []
+    friction_calibration = load_vts_friction_calibration()
     day_labels = [x["date"] for x in days]
     variant_trade_map = {}
 
     for p in VARIANTS:
-        trades = trades_for_days(days, p)
+        trades = trades_for_days(days, p, friction_calibration)
         variant_trade_map[p.name] = trades
         s = summary(trades, day_labels)
         reports.append({"params": asdict(p), "summary": s})
@@ -550,7 +662,7 @@ def main():
     wf = walk_forward(days, variant_trade_map)
     enough = len(days) >= 20 and len(baseline) >= 30
     report = {
-        "schema": 5,
+        "schema": 6,
         "generatedAt": datetime.now(KST).isoformat(),
         "from": day_labels[0],
         "to": day_labels[-1],
@@ -559,7 +671,14 @@ def main():
         "comparisonStatus": "eligible" if enough else "collecting",
         "comparisonRule": "Variant comparison is treated as preliminary until >=20 trading days and >=30 baseline trades.",
         "signalModel": "live-parity-close-only",
-        "signalModelNote": "Signal decisions use 1-minute close to match the live Naver feed. Outcome labels use archived KIS OHLC for 30-minute path diagnostics without changing the strategy exit rule.",
+        "signalModelNote": "Signal decisions remain 1-minute close based for live parity. Research records close and low/high exit models in parallel; official compatibility fields remain close model.",
+        "frictionCalibration": friction_calibration,
+        "exitModelComparison": {
+            "officialCompatibilityModel": "close",
+            "close": summary(baseline, day_labels, "close"),
+            "lowhigh": summary(baseline, day_labels, "lowhigh"),
+            "note": "Research comparison only. Baseline signal thresholds are not auto-changed."
+        },
         "variants": reports,
         "diagnostics": opening_diagnostics(baseline),
         "walkForward": wf,
@@ -575,7 +694,8 @@ def main():
                 "mfePct","mfeTime","maePct","maeTime",
                 "hitPlus1Time","hitPlus2Time","hitMinus1Time","hitMinus2Time",
                 "fwd5mPct","fwd10mPct","fwd20mPct","fwd30mPct",
-                "exitTime","exitPrice","reason","pnl"]
+                "exitModel","exitTime","exitPrice","reason","pnl",
+                "lowHighExitTime","lowHighExitPrice","lowHighReason","lowHighPnl"]
         w = csv.DictWriter(f, fieldnames=cols)
         w.writeheader()
         for x in baseline:
@@ -626,6 +746,13 @@ def main():
                 "exitPrice": x.get("exitPrice"),
                 "reason": x.get("reason"),
                 "pnl": x.get("pnl"),
+                "exitModel": x.get("exitModel"),
+                "exitModels": x.get("exitModels"),
+                "friction": x.get("friction"),
+                "lowHighExitTime": x.get("lowHighExitTime"),
+                "lowHighExitPrice": x.get("lowHighExitPrice"),
+                "lowHighReason": x.get("lowHighReason"),
+                "lowHighPnl": x.get("lowHighPnl"),
             })
     outcome_rows.sort(key=lambda x: (x["date"] or "", x["variant"] or "", x["entryTime"] or 0, x["code"] or ""))
     with (OUT / "signal-outcomes.json").open("w", encoding="utf-8") as f:
