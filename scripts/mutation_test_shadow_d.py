@@ -27,8 +27,8 @@ def btc_fixture(drop=94.0,entry=95.0,exit_px=99.75):
     for i in range(50):
         o=c=100.0
         if i==24:o=c=drop
-        elif i==25:o=c=entry
-        elif 25<i<48:o=c=entry
+        elif i==25:o,c=entry,100.0
+        elif 25<i<48:o=c=100.0
         elif i==48:o=c=exit_px
         bars.append(hour_bar(start+timedelta(hours=i),o,c))
     return [{"sessionDateUtc":"fixture","bars":bars}]
