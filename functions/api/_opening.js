@@ -52,7 +52,7 @@ export const SHADOW_VARIANTS=Object.freeze([
     name:"opening_selloff_v1",
     kind:"selloff_close",
     designedFrom:["2018-06~2026-09"],
-    evaluationStart:"2026-10-01",
+    evaluationScope:"all_available",
     label:"시초가 투매 받아주기",
     description:"전일 RSI(14)<30 + 시가 갭≤−2%를 갭 깊은 순 최대 3종목, 시가→종가 그림자 추적",
     params:{rsiMax:30,gapMax:-2,gapFloor:-29,minPrevClose:1000,minPrevTurnoverEok:20,maxPicks:3},
@@ -63,7 +63,7 @@ export const SHADOW_VARIANTS=Object.freeze([
       net0TickT:0.17,
       net1_5TickAvgPct:-0.333,
       net1_5TickT:-1.15,
-      note:"설계 표본 기대치이며 2026-10-01 이후 실측만 평가"
+      note:"설계기간을 포함해 현재 보유한 전체 데이터로 재평가"
     },
   },
 ]);
@@ -137,7 +137,7 @@ export function openingRsi14(daily,date){
 
 export function selloffShadowTrade(daily,date,frictionCalibration=null){
   const v=SHADOW_VARIANTS.find(x=>x.name==="opening_selloff_v1"),p=v&&v.params;
-  if(!v||!p||String(date||"")<String(v.evaluationStart||""))return null;
+  if(!v||!p)return null;
   const a=(daily&&daily.ohlc)||[],i=a.findIndex(x=>x.date===date);
   if(i<61)return null; // 상장 60거래일 이상 + 전일 확정 지표
   const cur=a[i],prev=a[i-1];
@@ -160,7 +160,7 @@ export function selloffShadowTrade(daily,date,frictionCalibration=null){
     friction,
     evidence:{
       source:"daily OHLCV; previous-day RSI and turnover only",
-      evaluationStart:v.evaluationStart,
+      evaluationScope:v.evaluationScope||"all_available",
       prevRsi14:rsiPrev,requiredRsiBelow:p.rsiMax,
       gapPct:gap,requiredGapMax:p.gapMax,gapFloor:p.gapFloor,
       prevClose:+prev.close,minPrevClose:p.minPrevClose,
