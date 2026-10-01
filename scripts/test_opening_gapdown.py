@@ -285,6 +285,34 @@ class ClaudeLabTrend(unittest.TestCase):
         ok = {str(i): (2.0 if i % 2 else 0.0) for i in range(25)}
         self.assertEqual(lab.drift_status(ok, {"expectancyPct": 1.0})["code"], "ok")
 
+    def test_soxl_meanrev_next_open_and_max_hold(self):
+        # 200일 평균 위에서 이틀 급락 → 다음 날 시가 매수 → 오른 날 다음 시가 매도. 같은 날 종가로 사고팔지 않는다.
+        rows = [(f"d{i:03d}", 100.0 + i * 0.1, 0, 0, 100.0 + i * 0.1) for i in range(205)]
+        base = rows[-1][4]
+        rows += [("s1", base, 0, 0, base * 0.97),                                         # 급락 → s1 종가에 신호(이날은 매매 없음)
+                 ("b1", base * 0.96, 0, 0, base * 0.94),                                     # 시가 매수, 더 빠짐
+                 ("b2", base * 0.94, 0, 0, base * 0.96),                                     # 오른 날 → 다음 시가 매도
+                 ("x1", base * 0.97, 0, 0, base * 0.99)]
+        p = dict(lab.SOXL_MR)
+        dv, dec, nx = lab.soxl_meanrev(rows, p)
+        by = {r["date"]: r for r in dec}
+        self.assertEqual((by["s1"]["next"], by["s1"]["action"]), ("buy_open", "flat"))
+        self.assertNotIn("s1", dv)
+        self.assertEqual(by["b1"]["action"], "enter")
+        self.assertAlmostEqual(dv["b1"], (0.94 / 0.96 - 1) * 100 - 0.1)
+        self.assertAlmostEqual(dv["b2"], (0.96 / 0.94 - 1) * 100)
+        self.assertEqual(by["b2"]["next"], "sell_open")
+        self.assertEqual(by["x1"]["action"], "exit")
+        self.assertAlmostEqual(dv["x1"], (0.97 / 0.96 - 1) * 100 - 0.1)
+        self.assertEqual(by["x1"]["heldDays"], 2)
+        # 계속 빠지면 5거래일째 종가 뒤 다음 시가에 무조건 판다
+        rows2 = rows[:-3] + [(f"f{k}", base * (0.96 - k * 0.01), 0, 0, base * (0.955 - k * 0.01)) for k in range(7)]
+        dv2, dec2, _ = lab.soxl_meanrev(rows2, p)
+        ex = [r for r in dec2 if r["action"] == "exit"]
+        self.assertEqual(ex[0]["date"], "f5")
+        self.assertEqual(ex[0]["heldDays"], 5)
+        self.assertEqual(max(r["heldDays"] or 0 for r in dec2), 5)
+
     def test_profit_factor(self):
         D = ["2026-10-05", "2026-10-06", "2026-10-07", "2026-10-08", "2026-10-09"]
         z = lab.goal_metrics({D[0]: 3.0, D[1]: -1.0, D[2]: -2.0, D[3]: 1.0}, D)
@@ -306,7 +334,7 @@ class ClaudeLabTrend(unittest.TestCase):
               "daytrading_etf": R(("2026-10-05", "trade", 1.0), ("2026-10-06", "trade", 1.0)),
               "crypto_btc": R(("2026-10-04", "hold", 9.0), ("2026-10-05", "hold", 2.0)),
               "crypto_eth": R(("2026-10-05", "flat", 0.0)),
-              "us_tqqq": R(("2026-10-02", "hold", 7.0), ("2026-10-09", "hold", 3.0)),
+              "us_soxl": R(("2026-10-02", "hold", 7.0), ("2026-10-09", "hold", 3.0)),
               "account": R(("2026-10-05", "trade", 3.0), ("2026-10-06", "trade", 2.0), ("2026-10-04", "trade", 9.0))}
         w = lab.week_summary(sm, "2026-10-09")
         self.assertEqual((w["weekStart"], w["weekEnd"]), ("2026-10-05", "2026-10-11"))
@@ -314,7 +342,7 @@ class ClaudeLabTrend(unittest.TestCase):
         self.assertAlmostEqual(w["parts"]["daytrading_etf"]["contribPct"], 0.3 * 0.5 * 1.0 + 0.3 * 1.0)
         self.assertAlmostEqual(w["parts"]["crypto_btc"]["contribPct"], 0.3 * 0.5 * 2.0)
         self.assertEqual(w["parts"]["crypto_eth"]["tradeDays"], 0)
-        self.assertAlmostEqual(w["parts"]["us_tqqq"]["contribPct"], 0.4 * 3.0)   # 10/2(지난주 금) 제외, 10/9 금 → 10/10 토(이번 주)
+        self.assertAlmostEqual(w["parts"]["us_soxl"]["contribPct"], 0.4 * 3.0)   # 10/2(지난주 금) 제외, 10/9 금 → 10/10 토(이번 주)
         self.assertAlmostEqual(w["account"]["weekPct"], (1.03 * 1.02 - 1) * 100)
         self.assertTrue(w["account"]["hit5"])
         self.assertEqual(w["account"]["plus1Days"], 2)

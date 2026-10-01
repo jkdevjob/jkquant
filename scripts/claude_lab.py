@@ -154,6 +154,66 @@ def trend_daily(rows, p, signal_close=None):
     return dv, decisions, nxt
 
 
+SOXL_MR = dict(version="soxl_rsi2_meanrev_v1", trade="SOXL", rsiMax=20.0, ma=200, maxHoldDays=5, size=1.0, tabSize=0.5,
+               costRoundTripPct=0.20,
+               note="SOXL 단기 과매도 반등(최대 5거래일). 장 마감 확정 종가로 RSI(2)<20 이고 종가 > 200일 평균이면 다음 날 시가 매수 → "
+                    "종가가 전날보다 오른 날이 나오면 그다음 날 시가 매도, 늦어도 5거래일째 종가 뒤 다음 시가 매도. 탭 표시 자금 50%.")
+
+
+def rsi2_at(C, i, n=2):
+    g = l = 0.0
+    for k in range(i - n + 1, i + 1):
+        ch = C[k] - C[k - 1]
+        g += max(ch, 0.0)
+        l += max(-ch, 0.0)
+    return 100.0 if l == 0 else 100 - 100 / (1 + g / l)
+
+
+def soxl_meanrev(rows, p):
+    """rows: (date, open, high, low, close). 판단은 i 일 확정 종가 → 실행은 i+1 일 시가(룩어헤드 없음).
+    보유 중 일 손익: 매수일 = 종가/시가, 이후 = 종가/전일 종가, 매도일 = 시가/전일 종가. 비용은 매수·매도 때 반씩."""
+    D = [r[0] for r in rows]
+    O, C = [r[1] for r in rows], [r[4] for r in rows]
+    n, half, sz = p["ma"], p["costRoundTripPct"] / 2, p["size"]
+    dv, decisions = {}, []
+    pos = None                                     # dict(entry=i, days=n) — 보유 중이면
+    pending = None                                 # "buy" | "sell" — 전날 종가에 정한 오늘 시가 주문
+    for i in range(n, len(rows)):
+        rec = dict(date=D[i], strategyVersion=p["version"], action="flat", pnlPct=None, heldDays=None, entryPrice=None,
+                   close=None, rsi2=None, ma=None, next="")
+        if pending == "sell" and pos:
+            v = ((O[i] / C[i - 1] - 1) * 100 - half) * sz
+            dv[D[i]] = v
+            rec.update(action="exit", pnlPct=v, heldDays=pos["days"])
+            pos = None
+        elif pending == "buy" and not pos:
+            v = ((C[i] / O[i] - 1) * 100 - half) * sz
+            dv[D[i]] = v
+            pos = dict(entry=i, days=1)
+            rec.update(action="enter", pnlPct=v, entryPrice=O[i])
+        elif pos:
+            pos["days"] += 1
+            v = (C[i] / C[i - 1] - 1) * 100 * sz
+            dv[D[i]] = v
+            rec.update(action="hold", pnlPct=v)
+        pending = None
+        ma = sum(C[i - n + 1:i + 1]) / n
+        r2 = rsi2_at(C, i)
+        rec.update(rsi2=r2, ma=ma, close=C[i])
+        if pos:
+            if C[i] > C[i - 1] or pos["days"] >= p["maxHoldDays"]:
+                pending = "sell"
+                rec["next"] = "sell_open" + ("_maxhold" if not C[i] > C[i - 1] else "")
+        elif r2 < p["rsiMax"] and C[i] > ma:
+            pending = "buy"
+            rec["next"] = "buy_open"
+        decisions.append(rec)
+    nxt = dict(basedOn=D[-1], rsi2=decisions[-1]["rsi2"] if decisions else None, ma=decisions[-1]["ma"] if decisions else None,
+               close=C[-1], holding=bool(pos), heldDays=pos["days"] if pos else 0, action=pending or "none",
+               holdNext=pending == "buy" or (bool(pos) and pending != "sell")) if rows else None
+    return dv, decisions, nxt
+
+
 def fetch_us(ticker):
     import FinanceDataReader as fdr
     d = fdr.DataReader(ticker, "2010-01-01")
@@ -254,11 +314,12 @@ def daily_board(report, d1, krx_cal, crypto_full, cal_c):
     g, gv, _ = gpt_daily("crypto")
     add("비트코인", "gpt", "비트코인", ", ".join(gv), g, cp, cl)
     sx = tabs.get("soxl") or {}
-    udec = read_csv(OUT / "tqqq-decisions.csv")
-    sdv = {r["date"]: float(r["pnlPct"]) * US["tabSize"] for r in udec if r.get("pnlPct") not in (None, "", "None")}
+    udec = DECISIONS.get("SOXL") or []
+    sdv = {r["date"]: float(r["pnlPct"]) * SOXL_MR["tabSize"] for r in udec if r.get("pnlPct") not in (None, "", "None")}
     sp, sl = last_two([r["date"] for r in udec])
-    add("SOXL", "claude", "④ TQQQ 200일 추세 (미국 3배)", US["version"], sdv, sp, sl,
-        plan=("보유" if (sx.get("nextSignal") or {}).get("holdNext") else "쉼") + " (미국장 · 자금 50%)")
+    nx = sx.get("nextSignal") or {}
+    plan = {"buy": "다음 미국장 시가 매수", "sell": "다음 미국장 시가 매도"}.get(nx.get("action"), "보유 중" if nx.get("holding") else "쉼 (과매도 신호 없음)")
+    add("SOXL", "claude", "④ SOXL 단기 과매도 반등 (최대 5일)", SOXL_MR["version"], sdv, sp, sl, plan=plan + " · 자금 50%")
     g, gv, _ = gpt_daily("soxl")
     add("SOXL", "gpt", "SOXL", ", ".join(gv), g, sp, sl)
     acct = {r["date"]: r["pnlPct"] for r in (report.get("account") or {}).get("recent", [])}
@@ -279,6 +340,7 @@ DECISIONS = {}
 ROWS = {}
 PAPER = DATA / "claude-paper"
 PAPER_START = "2026-10-01"          # 모의투자 장부 시작일 = 판정용 표본 시작일
+START = {"us_soxl": "2026-10-02"}   # 전략을 채택한 날부터만 장부에 쓴다(그 전 날짜를 재구성해 채우지 않는다)
 
 
 def write_once(path, obj):
@@ -315,9 +377,9 @@ def paper_entries(report, d1, krx_cal, crypto_full, us_full, cal_c):
         out[key] = [(r["date"], dict(r, strategy="③ " + m.split("-")[1] + " 20일 추세 (칸 안 전액)", source="paper-upbit-daily", recordedAt=now,
                                       pnlPct=r.get("pnlPct") or 0.0))
                     for r in DECISIONS.get(m, []) if r["date"] >= PAPER_START]
-    out["us_tqqq"] = [(r["date"], dict(r, strategy="④ TQQQ 200일 추세 (칸 안 전액)", source="paper-us-daily", recordedAt=now,
+    out["us_soxl"] = [(r["date"], dict(r, strategy="④ SOXL 단기 과매도 반등 (칸 안 전액)", source="paper-us-daily", recordedAt=now,
                                        pnlPct=r.get("pnlPct") or 0.0))
-                      for r in DECISIONS.get("TQQQ", []) if r["date"] >= PAPER_START]
+                      for r in DECISIONS.get("SOXL", []) if r["date"] >= START["us_soxl"]]
     kr = combine_same_capital({d: v for d, v in d1.items() if d <= final_kr}, etf)
     acct = account_daily(kr, crypto_full, us_to_kst(us_full), cal_c)
     last_all = min(x for x in (final_kr, max(crypto_full) if crypto_full else "", max(us_to_kst(us_full)) if us_full else "") if x)
@@ -375,7 +437,7 @@ def expectation(report, key):
         src = ((report.get("tabs") or {}).get(tab) or {}).get("claude", {}).get("design")
     elif key == "account":
         src = (report.get("account") or {}).get("design")
-    dec_key = {"crypto_btc": "KRW-BTC", "crypto_eth": "KRW-ETH", "us_tqqq": "TQQQ"}.get(key)
+    dec_key = {"crypto_btc": "KRW-BTC", "crypto_eth": "KRW-ETH", "us_soxl": "SOXL"}.get(key)
     if dec_key and DECISIONS.get(dec_key):
         rows = [r for r in DECISIONS[dec_key] if r["date"] <= DESIGN_END and r.get("pnlPct") is not None and r.get("action") not in ("flat",)]
         v = [float(r["pnlPct"]) for r in rows]
@@ -438,7 +500,7 @@ def etf_variant(code, th):
     return out, [x[0] for x in b]
 
 
-def shadows(per_rows, tq_rows, qq_close):
+def shadows(per_rows, soxl_rows):
     """탭별 그림자 전략 — 주문 없음, 기준전략과 같은 목표 지표로 설계/판정 표본을 나란히 기록한다."""
     out = {}
     try:
@@ -471,10 +533,16 @@ def shadows(per_rows, tq_rows, qq_close):
     except Exception as e:  # noqa: BLE001
         out["crypto"] = [dict(name="error", error=str(e))]
     try:
-        days = [r[0] for r in tq_rows]
-        dv, _, _ = trend_daily(tq_rows, dict(US, ma=150), signal_close=qq_close)
-        out["soxl"] = [dict(name="QQQ 150일 평균", version="tqqq_trend150", rule="QQQ > 150일 평균이면 TQQQ · 손절 −10% · 자금 50%",
-                            **split_metrics({d: v * US["tabSize"] for d, v in dv.items()}, days, 252))]
+        days = [r[0] for r in soxl_rows]
+        res = []
+        for name, ver, kw, rule in (("하루 한정 (다음 날 시가 매도)", "soxl_rsi2_1d", dict(maxHoldDays=1), "같은 신호 · 다음 날 시가에 무조건 매도(보유 하루)"),
+                                    ("RSI(2) < 10", "soxl_rsi2_th10", dict(rsiMax=10.0), "더 깊은 과매도만"),
+                                    ("RSI(2) < 30", "soxl_rsi2_th30", dict(rsiMax=30.0), "더 얕은 과매도까지"),
+                                    ("최대 3일", "soxl_rsi2_max3", dict(maxHoldDays=3), "3거래일 뒤 다음 시가 매도")):
+            dv, _, _ = soxl_meanrev(soxl_rows, dict(SOXL_MR, **kw))
+            res.append(dict(name=name, version=ver, rule=rule + " · 자금 50%",
+                            **split_metrics({d: v * SOXL_MR["tabSize"] for d, v in dv.items()}, days, 252)))
+        out["soxl"] = res
     except Exception as e:  # noqa: BLE001
         out["soxl"] = [dict(name="error", error=str(e))]
     return out
@@ -528,10 +596,10 @@ def week_summary(summary, today):
               "daytrading_etf": lambda d: a["krWeight"] * (0.5 if d in both else 1.0),
               "crypto_btc": lambda d: a["cryptoWeight"] * a["cryptoSize"] * 0.5,
               "crypto_eth": lambda d: a["cryptoWeight"] * a["cryptoSize"] * 0.5,
-              "us_tqqq": lambda d: a["usWeight"] * a["usSize"]}
+              "us_soxl": lambda d: a["usWeight"] * a["usSize"]}
     parts = {}
     for k, w in weight.items():
-        rs = rows(k, 1 if k == "us_tqqq" else 0)
+        rs = rows(k, 1 if k == "us_soxl" else 0)
         eq = 1.0
         for r in rs:
             eq *= 1 + (r.get("pnlPct") or 0.0) / 100
@@ -669,27 +737,30 @@ def main():
         report["tabs"]["crypto"] = dict(error=str(e))
     us_full = {}
     try:
+        sx = fetch_us(SOXL_MR["trade"])
+        sdays = sorted(sx)
+        srows = [(d, *sx[d]) for d in sdays]
+        dv_s, dec_s, nxt_s = soxl_meanrev(srows, SOXL_MR)
+        us_full = dv_s
+        write_csv(OUT / "soxl-mr-decisions.csv", dec_s)
+        DECISIONS["SOXL"] = dec_s
+        ROWS["SOXL"] = srows
+        report["tabs"]["soxl"] = tab_report("soxl", "④ SOXL 단기 과매도 반등 (최대 5일)", SOXL_MR["version"], SOXL_MR["note"],
+                                            {d: v * SOXL_MR["tabSize"] for d, v in dv_s.items()}, sdays, 252,
+                                            extra=dict(nextSignal=nxt_s, params=SOXL_MR))
+    except Exception as e:  # noqa: BLE001
+        report["tabs"]["soxl"] = dict(error=str(e))
+    try:                                           # 옛 ④ TQQQ 추세(여러 날 보유 — 단타 규칙 위반으로 2026-10-02 중단). 기록만 남긴다.
         tq, qq = fetch_us(US["trade"]), fetch_us(US["signal"])
         udays = sorted(d for d in tq if d in qq)
         dv_u, dec_u, nxt_u = trend_daily([(d, *tq[d]) for d in udays], US, signal_close=[qq[d][3] for d in udays])
-        us_full = dv_u
         write_csv(OUT / "tqqq-decisions.csv", dec_u)
         DECISIONS["TQQQ"] = dec_u
         ROWS["TQQQ"] = ([(d, *tq[d]) for d in udays], [qq[d][3] for d in udays])
-        variants = {}
-        try:
-            sx, so = fetch_us("SOXL"), fetch_us("SOXX")
-            sdays = sorted(d for d in sx if d in so)
-            dv_s, dec_s, _ = trend_daily([(d, *sx[d]) for d in sdays], SOXL, signal_close=[so[d][3] for d in sdays])
-            write_csv(OUT / "soxl-decisions.csv", dec_s)
-            variants["soxl_trend50_v1 (SOXL · 자금 25%)"] = goal_metrics({d: v for d, v in dv_s.items() if d <= DESIGN_END}, [d for d in sdays if d <= DESIGN_END], 252)
-        except Exception as e:  # noqa: BLE001
-            variants["soxl_trend50_v1"] = dict(error=str(e))
-        report["tabs"]["soxl"] = tab_report("soxl", "④ TQQQ 200일 추세 + 손절", US["version"], US["note"],
-                                            {d: v * US["tabSize"] for d, v in dv_u.items()}, udays, 252,
-                                            extra=dict(nextSignal=nxt_u, params=US, variants=variants))
+        report["retired"] = dict(tqqq_trend200_v1=dict(reason="여러 날 보유 — 단타 규칙(하루, 최대 5일) 위반으로 2026-10-02 중단",
+                                                     design=goal_metrics({d: v * US["tabSize"] for d, v in dv_u.items() if d <= DESIGN_END}, [d for d in udays if d <= DESIGN_END], 252)))
     except Exception as e:  # noqa: BLE001
-        report["tabs"]["soxl"] = dict(error=str(e))
+        report["retired"] = dict(error=str(e))
     if crypto_full:
         kr = combine_same_capital(d1, etf_daily())
         us_k = us_to_kst(us_full)
@@ -706,7 +777,7 @@ def main():
     except Exception as e:  # noqa: BLE001
         report["paper"] = dict(error=str(e))
     try:
-        report["shadows"] = shadows({m: ROWS[m] for m in CRYPTO["markets"] if m in ROWS}, *(ROWS.get("TQQQ") or ([], [])))
+        report["shadows"] = shadows({m: ROWS[m] for m in CRYPTO["markets"] if m in ROWS}, ROWS.get("SOXL") or [])
     except Exception as e:  # noqa: BLE001
         report["shadows"] = dict(error=str(e))
     try:
