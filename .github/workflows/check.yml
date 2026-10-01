@@ -77,6 +77,9 @@ jobs:
       - name: 데이트레이딩 당일 계좌수익률·매매합계 표시 검사
         run: node scripts/test_daytrading_ui_metrics.mjs
 
+      - name: 단타 탭 단독사용 UI·위험지표 검사
+        run: node scripts/test_scalping_self_contained_ui.mjs
+
       - name: BTC·SOXL 장중 모의장부 저장·표시 검사
         run: node scripts/test_global_paper_ledger.mjs
 
@@ -122,6 +125,7 @@ jobs:
           node --input-type=module --check < functions/api/soxl-research.js
           node --input-type=module --check < functions/api/global-paper.js
           node --input-type=module --check < functions/api/scalping-history.js
+          node --input-type=module --check < functions/api/scalping-review.js
           node --input-type=module --check < functions/api/scalping-daily-results.js
           node --input-type=module --check < functions/api/daily1-shadow.js
           node --input-type=module --check < worker/opening-scheduler/src/index.js
