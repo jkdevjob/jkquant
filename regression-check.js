@@ -10760,7 +10760,7 @@ console.log('[OPENING SIGNAL LEARNING] 실시간 ledger · 30분 사후라벨 ·
      /신호 이후 30분 경로 진단/.test(scl)
      && /조건별 실제 성과/.test(scl)
      && /groupTable\('전략 버전'/.test(scl)
-     && /id="scVer">v1\.30\.3<\/span>/.test(scl));
+     && /id="scVer">v1\.31\.0<\/span>/.test(scl));
 }
 
 /* ════ 단타 Telegram ③④ 실시간 + ⑤⑥ 일일 연구 ════ */
