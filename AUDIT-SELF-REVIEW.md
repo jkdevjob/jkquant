@@ -2391,3 +2391,12 @@ Upbit 5분봉 API는 한 요청의 200개만으로는 자정부터 22시까지�
 - 회귀 +1: 보유 기간 규칙 · 탭에서 TQQQ 제거.
 - 변이 +7(코인 기준선 오늘 고가, 코인 추세 오늘 종가, 코인 손절 제거, 실시간 기준선 오늘 고가, SOXL 같은 세션 실행, SOXL 매수 신호 끔, SOXL 5일 상한 제거): 전체 62/62 탐지.
 - 회귀 2487 ALL PASS.
+
+## 2026-10-02 opening historical price-basis replay (v1.32.1)
+
+- Problem: historical original daily opens/overnight exits mixed with adjusted KIS minute prices. Explicit separate-input annotations now preserve original gap while using authoritative adjusted prices for intraday comparisons and next-market-session exit.
+- Cost review: original-price interval derived from all four authoritative daily OHLC pairs; one-won rounding uncertainty explicit. Evaluate all crossed tick-band endpoints and use maximum cost, retain minimum for sensitivity. Quote grid does not restrict execution-price membership. Model constants passed from existing engine.
+- Preservation: legacy whole-year replay 15,544 records exactly identical. Source rows and minute arrays unchanged. Annotated signals have separate v2 strategy versions and reference filenames. Existing adoption gate stays blocked; no order code modified.
+- Values: 10 new focused tests, existing signal-label tests and 14 backfill tests pass. Three new price-basis behavioral mutations killed; three existing engine mutations killed. Independent annotated replay arithmetic checks all 14 summaries and resolved P&L, historical Top100 membership, baseline/hold entry parity.
+- Open issues: authoritative source interpretation of rounding, sparse opening observations and September 30 final daily totals/ranking. Draft statistics are not validated final performance. Full regression result recorded in PR after completion.
+- Full regression: 2486 PASS / 0 FAIL (latest main 9928a2f). Windows CRLF extraction failures corrected by checkout line-ending normalization; no trading logic changed for those failures.
