@@ -1,0 +1,589 @@
+{
+  "schema": 1,
+  "generatedAt": "2026-10-01T18:32:01.883424+09:00",
+  "designEnd": "2026-09-30",
+  "gate": {
+    "mdd": -25.0,
+    "worstDay": -15.0
+  },
+  "tabs": {
+    "opening": {
+      "claude": {
+        "name": "① D-1 갭하락 과매도 v2",
+        "strategyVersion": "opening_gapdown_v1 (v2 필터)",
+        "rule": "전일 RSI<30 + 시가 갭 −2~−29% 종목이 5개 이상인 날, 가장 깊은 3종목 시가 매수 → 종가 매도",
+        "design": {
+          "days": 2144,
+          "tradeDays": 152,
+          "tradeDaysPerYear": 17.723880597014926,
+          "plus1RateOfTradeDays": 53.94736842105263,
+          "lossDaysPerYear": 6.646455223880596,
+          "tStat": 3.019079911989472,
+          "plus1Days": 82,
+          "plus1DaysPerYear": 9.561567164179104,
+          "plus5Weeks": 19,
+          "plus5WeeksPerYear": 2.2154850746268657,
+          "weeklyAvgPct": 0.39336049334359746,
+          "totalPct": 501.42464437114,
+          "lossDays": 57,
+          "lossDayAvgPct": -3.5132163740225857,
+          "worstDayPct": -18.11551178606366,
+          "mddPct": -25.82853778274714,
+          "cagrPct": 23.269609195744035,
+          "expectancyPct": 1.3304699743160744,
+          "gate": false
+        },
+        "outOfSample": {},
+        "recent": [
+          {
+            "date": "2026-06-04",
+            "pnlPct": 7.882392582787797
+          },
+          {
+            "date": "2026-06-05",
+            "pnlPct": -0.63376251127656
+          },
+          {
+            "date": "2026-06-08",
+            "pnlPct": 3.1945483386029387
+          },
+          {
+            "date": "2026-06-09",
+            "pnlPct": 5.954889064740815
+          },
+          {
+            "date": "2026-06-10",
+            "pnlPct": 0.47116908180081013
+          },
+          {
+            "date": "2026-06-11",
+            "pnlPct": 5.940074891520761
+          },
+          {
+            "date": "2026-06-22",
+            "pnlPct": -0.44733648081825056
+          },
+          {
+            "date": "2026-06-23",
+            "pnlPct": -8.431828967560344
+          },
+          {
+            "date": "2026-06-24",
+            "pnlPct": 5.634073651050342
+          },
+          {
+            "date": "2026-06-26",
+            "pnlPct": -2.7618560643550043
+          },
+          {
+            "date": "2026-06-29",
+            "pnlPct": 17.439624952681232
+          },
+          {
+            "date": "2026-07-08",
+            "pnlPct": -1.2512516589343845
+          },
+          {
+            "date": "2026-07-09",
+            "pnlPct": 1.7048261753201892
+          },
+          {
+            "date": "2026-07-20",
+            "pnlPct": -2.493583686521463
+          },
+          {
+            "date": "2026-07-30",
+            "pnlPct": 3.5353038925165436
+          }
+        ]
+      },
+      "gpt": {
+        "strategyVersions": [
+          "opening_rebreak_v1"
+        ],
+        "trades": 16,
+        "from_": "2026-09-22",
+        "to": "2026-09-30"
+      },
+      "compare": {
+        "window": [
+          "2026-09-22",
+          "2026-09-29"
+        ],
+        "note": "GPT 기준전략 기록이 있는 날짜 구간에서 같은 달력으로 계산",
+        "claude": {
+          "days": 4,
+          "tradeDays": 0,
+          "tradeDaysPerYear": 0.0,
+          "plus1RateOfTradeDays": null,
+          "lossDaysPerYear": 0.0,
+          "tStat": null,
+          "plus1Days": 0,
+          "plus1DaysPerYear": 0.0,
+          "plus5Weeks": 0,
+          "plus5WeeksPerYear": 0.0,
+          "weeklyAvgPct": 0.0,
+          "totalPct": 0.0,
+          "lossDays": 0,
+          "lossDayAvgPct": 0.0,
+          "worstDayPct": 0.0,
+          "mddPct": 0.0,
+          "cagrPct": null,
+          "expectancyPct": null,
+          "gate": false
+        },
+        "gpt": {
+          "days": 4,
+          "tradeDays": 3,
+          "tradeDaysPerYear": 187.5,
+          "plus1RateOfTradeDays": 0.0,
+          "lossDaysPerYear": 125.0,
+          "tStat": -0.740316614619969,
+          "plus1Days": 0,
+          "plus1DaysPerYear": 0.0,
+          "plus5Weeks": 0,
+          "plus5WeeksPerYear": 0.0,
+          "weeklyAvgPct": -0.3271816053208809,
+          "totalPct": -0.6532927326131643,
+          "lossDays": 2,
+          "lossDayAvgPct": -0.49429815508451946,
+          "worstDayPct": -0.6633977882975293,
+          "mddPct": -0.9864389503673632,
+          "cagrPct": null,
+          "expectancyPct": -0.2173770227379157,
+          "gate": false
+        }
+      }
+    },
+    "daytrading": {
+      "claude": {
+        "name": "② 코스닥150 레버리지 하락일 야간",
+        "strategyVersion": "etf_dip_overnight_v1",
+        "rule": "KODEX 코스닥150레버리지가 −3% 이하로 마감한 날 종가 매수 → 다음 날 시가 매도 (거래세 없음)",
+        "design": {
+          "days": 2144,
+          "tradeDays": 397,
+          "tradeDaysPerYear": 46.2919776119403,
+          "plus1RateOfTradeDays": 38.287153652392945,
+          "lossDaysPerYear": 18.423507462686565,
+          "tStat": 2.5195326901287625,
+          "plus1Days": 152,
+          "plus1DaysPerYear": 17.723880597014926,
+          "plus5Weeks": 12,
+          "plus5WeeksPerYear": 1.3992537313432836,
+          "weeklyAvgPct": 0.2802408153246727,
+          "totalPct": 259.2719184718375,
+          "lossDays": 158,
+          "lossDayAvgPct": -1.9874821871911676,
+          "worstDayPct": -13.071765169424747,
+          "mddPct": -23.409473270403335,
+          "cagrPct": 16.08198892586281,
+          "expectancyPct": 0.3635751915676489,
+          "gate": true
+        },
+        "outOfSample": {},
+        "recent": [
+          {
+            "date": "2026-07-15",
+            "pnlPct": 5.453405483405482
+          },
+          {
+            "date": "2026-07-20",
+            "pnlPct": -4.897573371510382
+          },
+          {
+            "date": "2026-07-21",
+            "pnlPct": -0.7756503728251811
+          },
+          {
+            "date": "2026-07-27",
+            "pnlPct": 4.565744680851053
+          },
+          {
+            "date": "2026-07-29",
+            "pnlPct": 1.5905910390848441
+          },
+          {
+            "date": "2026-07-30",
+            "pnlPct": -4.698838219326821
+          },
+          {
+            "date": "2026-07-31",
+            "pnlPct": 13.804951456310672
+          },
+          {
+            "date": "2026-08-19",
+            "pnlPct": -6.319308176100629
+          },
+          {
+            "date": "2026-08-24",
+            "pnlPct": -0.17825796886582654
+          },
+          {
+            "date": "2026-09-02",
+            "pnlPct": -6.156914660831505
+          },
+          {
+            "date": "2026-09-03",
+            "pnlPct": 2.7987461773700293
+          },
+          {
+            "date": "2026-09-04",
+            "pnlPct": 3.4265916398713854
+          },
+          {
+            "date": "2026-09-09",
+            "pnlPct": -0.48662100456621005
+          },
+          {
+            "date": "2026-09-14",
+            "pnlPct": -5.3871428571428615
+          },
+          {
+            "date": "2026-09-15",
+            "pnlPct": -0.9602325581395362
+          }
+        ]
+      },
+      "gpt": {
+        "strategyVersions": [
+          "daytrading_vwap_breakout_v1"
+        ],
+        "trades": 9,
+        "from_": "2026-09-29",
+        "to": "2026-10-01"
+      },
+      "compare": {
+        "window": [
+          "2026-09-29",
+          "2026-09-29"
+        ],
+        "note": "GPT 기준전략 기록이 있는 날짜 구간에서 같은 달력으로 계산",
+        "claude": {
+          "days": 1,
+          "tradeDays": 0,
+          "tradeDaysPerYear": 0.0,
+          "plus1RateOfTradeDays": null,
+          "lossDaysPerYear": 0.0,
+          "tStat": null,
+          "plus1Days": 0,
+          "plus1DaysPerYear": 0.0,
+          "plus5Weeks": 0,
+          "plus5WeeksPerYear": 0.0,
+          "weeklyAvgPct": 0.0,
+          "totalPct": 0.0,
+          "lossDays": 0,
+          "lossDayAvgPct": 0.0,
+          "worstDayPct": 0.0,
+          "mddPct": 0.0,
+          "cagrPct": null,
+          "expectancyPct": null,
+          "gate": false
+        },
+        "gpt": {
+          "days": 1,
+          "tradeDays": 1,
+          "tradeDaysPerYear": 250.0,
+          "plus1RateOfTradeDays": 0.0,
+          "lossDaysPerYear": 250.0,
+          "tStat": null,
+          "plus1Days": 0,
+          "plus1DaysPerYear": 0.0,
+          "plus5Weeks": 0,
+          "plus5WeeksPerYear": 0.0,
+          "weeklyAvgPct": -1.2499999999999956,
+          "totalPct": -1.2499999999999956,
+          "lossDays": 1,
+          "lossDayAvgPct": -1.2500000000000009,
+          "worstDayPct": -1.2500000000000009,
+          "mddPct": -1.2499999999999956,
+          "cagrPct": null,
+          "expectancyPct": -1.2500000000000009,
+          "gate": false
+        }
+      }
+    },
+    "crypto": {
+      "claude": {
+        "name": "③ BTC 20일 추세 + 손절",
+        "strategyVersion": "btc_trend20_v1",
+        "rule": "업비트 KRW-BTC 일봉(09시 기준). 전일 종가 > 20일 평균이면 그날 보유, 09시 시가 대비 −4% 닿으면 손절 후 그날 쉼. 자금 50%.",
+        "design": {
+          "days": 3293,
+          "tradeDays": 1837,
+          "tradeDaysPerYear": 203.61524445794106,
+          "plus1RateOfTradeDays": 17.365269461077844,
+          "lossDaysPerYear": 103.52566049195262,
+          "tStat": 3.9891806843231286,
+          "plus1Days": 319,
+          "plus1DaysPerYear": 35.35833586395384,
+          "plus5Weeks": 38,
+          "plus5WeeksPerYear": 4.211964773762526,
+          "weeklyAvgPct": 0.4711363898973975,
+          "totalPct": 815.0800626971197,
+          "lossDays": 934,
+          "lossDayAvgPct": -0.7673443296449285,
+          "worstDayPct": -2.12,
+          "mddPct": -27.39874637890646,
+          "cagrPct": 27.81130193018162,
+          "expectancyPct": 0.13018969897300778,
+          "gate": false
+        },
+        "outOfSample": {},
+        "recent": [
+          {
+            "date": "2026-09-07",
+            "pnlPct": -0.7737164898041271
+          },
+          {
+            "date": "2026-09-08",
+            "pnlPct": -0.6252669105223096
+          },
+          {
+            "date": "2026-09-09",
+            "pnlPct": -0.035
+          },
+          {
+            "date": "2026-09-19",
+            "pnlPct": 0.07976283852778213
+          },
+          {
+            "date": "2026-09-20",
+            "pnlPct": 0.10773821866800759
+          },
+          {
+            "date": "2026-09-21",
+            "pnlPct": 2.684065637482458
+          },
+          {
+            "date": "2026-09-22",
+            "pnlPct": -0.6288261058886802
+          },
+          {
+            "date": "2026-09-23",
+            "pnlPct": 0.11154345006485489
+          },
+          {
+            "date": "2026-09-24",
+            "pnlPct": -0.3390620147013135
+          },
+          {
+            "date": "2026-09-25",
+            "pnlPct": -0.6362815100502073
+          },
+          {
+            "date": "2026-09-26",
+            "pnlPct": 0.5270242923885005
+          },
+          {
+            "date": "2026-09-27",
+            "pnlPct": -0.17630925950111176
+          },
+          {
+            "date": "2026-09-28",
+            "pnlPct": -0.41633901266928675
+          },
+          {
+            "date": "2026-09-29",
+            "pnlPct": 0.03964862507379596
+          },
+          {
+            "date": "2026-09-30",
+            "pnlPct": 0.06734925651703527
+          }
+        ]
+      },
+      "gpt": {
+        "strategyVersions": [
+          "btc_midnight_orb_v2"
+        ],
+        "trades": 185,
+        "from_": "2025-10-01",
+        "to": "2026-09-30"
+      },
+      "compare": {
+        "window": [
+          "2025-10-01",
+          "2026-09-30"
+        ],
+        "note": "GPT 기준전략 기록이 있는 날짜 구간에서 같은 달력으로 계산",
+        "claude": {
+          "days": 365,
+          "tradeDays": 179,
+          "tradeDaysPerYear": 179.0,
+          "plus1RateOfTradeDays": 9.497206703910614,
+          "lossDaysPerYear": 95.0,
+          "tStat": 0.4868807474781075,
+          "plus1Days": 17,
+          "plus1DaysPerYear": 17.0,
+          "plus5Weeks": 1,
+          "plus5WeeksPerYear": 1.0,
+          "weeklyAvgPct": 0.09285000357059925,
+          "totalPct": 5.041746413907777,
+          "lossDays": 95,
+          "lossDayAvgPct": -0.5415519658221313,
+          "worstDayPct": -2.085,
+          "mddPct": -8.536475917649767,
+          "cagrPct": 5.041746413907777,
+          "expectancyPct": 0.031093698570215357,
+          "gate": true
+        },
+        "gpt": {
+          "days": 365,
+          "tradeDays": 185,
+          "tradeDaysPerYear": 185.0,
+          "plus1RateOfTradeDays": 0.0,
+          "lossDaysPerYear": 131.0,
+          "tStat": -5.549054312412089,
+          "plus1Days": 0,
+          "plus1DaysPerYear": 0.0,
+          "plus5Weeks": 0,
+          "plus5WeeksPerYear": 0.0,
+          "weeklyAvgPct": -0.5676520843251764,
+          "totalPct": -26.044953458799004,
+          "lossDays": 131,
+          "lossDayAvgPct": -0.3608015846891019,
+          "worstDayPct": -0.6400000000000005,
+          "mddPct": -26.96767210755009,
+          "cagrPct": -26.044953458799004,
+          "expectancyPct": -0.1621695101311434,
+          "gate": false
+        }
+      },
+      "nextSignal": {
+        "basedOn": "2026-09-30",
+        "signalClose": 113740000.0,
+        "ma": 110700950.0,
+        "holdNext": true
+      },
+      "params": {
+        "version": "btc_trend20_v1",
+        "ma": 20,
+        "stopPct": 4.0,
+        "size": 0.5,
+        "costRoundTripPct": 0.14,
+        "stopSlipPct": 0.1,
+        "note": "업비트 KRW-BTC 일봉(09시 기준). 전일 종가 > 20일 평균이면 그날 보유, 09시 시가 대비 −4% 닿으면 손절 후 그날 쉼. 자금 50%."
+      }
+    },
+    "soxl": {
+      "claude": {
+        "name": "④ SOXX 50일 추세 SOXL + 손절",
+        "strategyVersion": "soxl_trend50_v1",
+        "rule": "SOXX 종가 > 50일 평균이면 SOXL 보유(종가 기준), 전일 종가(진입일은 시가) 대비 −8% 닿으면 손절. 자금 25%.",
+        "design": {
+          "days": 4165,
+          "tradeDays": 2782,
+          "tradeDaysPerYear": 168.32268907563025,
+          "plus1RateOfTradeDays": 16.822429906542055,
+          "lossDaysPerYear": 81.07563025210084,
+          "tStat": 2.3150716409779113,
+          "plus1Days": 468,
+          "plus1DaysPerYear": 28.31596638655462,
+          "plus5Weeks": 17,
+          "plus5WeeksPerYear": 1.0285714285714285,
+          "weeklyAvgPct": 0.13856268118470627,
+          "totalPct": 231.2613898255923,
+          "lossDays": 1340,
+          "lossDayAvgPct": -0.8198900517822433,
+          "worstDayPct": -2.0999999999999996,
+          "mddPct": -23.016915253706884,
+          "cagrPct": 7.515856798526621,
+          "expectancyPct": 0.04937248342822035,
+          "gate": true
+        },
+        "outOfSample": {},
+        "recent": [
+          {
+            "date": "2026-07-07",
+            "pnlPct": -2.0749999999999997
+          },
+          {
+            "date": "2026-07-08",
+            "pnlPct": 2.4261651202939025
+          },
+          {
+            "date": "2026-07-09",
+            "pnlPct": 2.5211630370383045
+          },
+          {
+            "date": "2026-07-10",
+            "pnlPct": -2.0749999999999997
+          },
+          {
+            "date": "2026-07-13",
+            "pnlPct": -1.347949066614956
+          },
+          {
+            "date": "2026-07-14",
+            "pnlPct": -0.025
+          },
+          {
+            "date": "2026-07-15",
+            "pnlPct": -2.0999999999999996
+          },
+          {
+            "date": "2026-09-21",
+            "pnlPct": 1.8414315902090501
+          },
+          {
+            "date": "2026-09-22",
+            "pnlPct": 1.764955398706708
+          },
+          {
+            "date": "2026-09-23",
+            "pnlPct": -2.0749999999999997
+          },
+          {
+            "date": "2026-09-24",
+            "pnlPct": 1.3940800427999807
+          },
+          {
+            "date": "2026-09-25",
+            "pnlPct": 0.8747343424314991
+          },
+          {
+            "date": "2026-09-28",
+            "pnlPct": -2.0749999999999997
+          },
+          {
+            "date": "2026-09-29",
+            "pnlPct": -0.35063488814387755
+          },
+          {
+            "date": "2026-09-30",
+            "pnlPct": 0.14625860720264838
+          }
+        ]
+      },
+      "gpt": {
+        "strategyVersions": [],
+        "trades": 0,
+        "from_": null,
+        "to": null
+      },
+      "compare": {
+        "window": null,
+        "note": "GPT 기준전략 기록이 있는 날짜 구간에서 같은 달력으로 계산",
+        "claude": null,
+        "gpt": null
+      },
+      "nextSignal": {
+        "basedOn": "2026-09-30",
+        "signalClose": 568.6400146484375,
+        "ma": 528.5916009521484,
+        "holdNext": true
+      },
+      "params": {
+        "version": "soxl_trend50_v1",
+        "ma": 50,
+        "stopPct": 8.0,
+        "size": 0.25,
+        "costRoundTripPct": 0.2,
+        "stopSlipPct": 0.2,
+        "note": "SOXX 종가 > 50일 평균이면 SOXL 보유(종가 기준), 전일 종가(진입일은 시가) 대비 −8% 닿으면 손절. 자금 25%."
+      }
+    }
+  },
+  "note": "모든 수익률은 각 전략 자체 기록의 순수익(수수료·슬리피지 포함). 매매 없는 날 0%. 클로드 ③④ 는 주문 없는 연구 그림자."
+}
