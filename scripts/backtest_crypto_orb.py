@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""Cumulative research backtest for JKQuant bitcoin 09:00 KST ORB.
+"""Cumulative research backtest for JKQuant bitcoin 00:00 KST ORB.
 
-Baseline v1:
+Baseline v2:
 - Upbit KRW-BTC 5-minute candles.
-- 09:00~09:05 KST first-bar high is the opening-range high.
-- First fresh close breakout after the range, no later than 12:00 KST.
+- 00:00~00:05 KST first-bar high is the opening-range high.
+- First fresh close breakout after the range, with the next-bar entry no later than 22:00 KST.
 - Breakout volume >= opening-range average volume * 1.2.
 - Breakout close must be above cumulative session VWAP.
 - Enter at the NEXT 5-minute bar open (no same-bar/lookahead entry).
@@ -45,7 +45,7 @@ class Params:
     range_bars: int = 1
     volume_mult: float = 1.2
     use_vwap: bool = True
-    entry_cutoff_min: int = 180  # UTC 03:00 == KST 12:00
+    entry_cutoff_min: int = 21 * 60 + 55  # 21:55 signal -> 22:00 KST next-bar entry
     stop_pct: float = 0.5
     take_profit_pct: float = 1.0
     max_hold_bars: int = 12      # 60 minutes on 5m bars
@@ -64,11 +64,11 @@ VARIANTS = [
     Params("stop_0.7_tp_1.4", stop_pct=0.7, take_profit_pct=1.4),
     Params("hold_30m", max_hold_bars=6),
     Params("hold_120m", max_hold_bars=24),
-    Params("entry_by_10", entry_cutoff_min=60),  # UTC 01:00 == KST 10:00
+    Params("entry_by_1800", entry_cutoff_min=17 * 60 + 55),  # 17:55 signal -> 18:00 KST entry
 ]
 
 
-def utc_minute(t: str) -> int:
+def minute_of_day(t: str) -> int:
     s = str(t or "")
     try:
         hh = int(s[11:13])
@@ -84,28 +84,38 @@ def kst_hm(t: str) -> str:
 
 
 def load_days():
-    out = []
+    """Rebuild complete KST calendar days from the raw UTC-day archive files."""
+    by_date = {}
     if not DATA.exists():
-        return out
+        return []
     for p in sorted(DATA.glob("*.json.gz")):
         try:
             with gzip.open(p, "rt", encoding="utf-8") as f:
                 j = json.load(f)
-            bars = j.get("bars") or []
-            if j.get("sessionDateUtc") and bars:
-                out.append(j)
+            for b in j.get("bars") or []:
+                tk = str(b.get("tKst") or "")
+                if len(tk) < 16:
+                    continue
+                by_date.setdefault(tk[:10], {})[str(b.get("tUtc") or tk)] = b
         except Exception as e:
             print("skip", p, e)
+
+    out = []
+    for date, rows in sorted(by_date.items()):
+        bars = sorted(rows.values(), key=lambda x: x.get("tUtc") or x.get("tKst") or "")
+        out.append({"sessionDateKst": date, "bars": bars})
     return out
 
 
 def valid_day(day):
     bars = day.get("bars") or []
-    if len(bars) < 270:
+    if len(bars) < 288:
         return False, "too_few_bars"
-    first = bars[0]
-    if utc_minute(first.get("tUtc")) != 0:
-        return False, "missing_utc_0000"
+    first, last = bars[0], bars[-1]
+    if minute_of_day(first.get("tKst")) != 0:
+        return False, "missing_kst_0000"
+    if minute_of_day(last.get("tKst")) != 23 * 60 + 55:
+        return False, "missing_kst_2355"
     return True, ""
 
 
@@ -119,7 +129,7 @@ def trade_for_day(day, p: Params):
         return None
 
     opening = bars[: p.range_bars]
-    if any(utc_minute(x.get("tUtc")) != i * 5 for i, x in enumerate(opening)):
+    if any(minute_of_day(x.get("tKst")) != i * 5 for i, x in enumerate(opening)):
         return None
 
     or_high = max(float(x.get("h") or 0) for x in opening)
@@ -142,7 +152,7 @@ def trade_for_day(day, p: Params):
 
     for i in range(p.range_bars, len(bars) - 1):
         x = bars[i]
-        minute = utc_minute(x.get("tUtc"))
+        minute = minute_of_day(x.get("tKst"))
         if minute < 0:
             continue
         if minute > p.entry_cutoff_min:
@@ -216,8 +226,8 @@ def trade_for_day(day, p: Params):
     signal_close = float(signal_bar.get("c") or 0)
     signal_prev_close = float(bars[signal_i - 1].get("c") or 0)
     return {
-        "date": day.get("sessionDateUtc"),
-        "strategyVersion": "btc_orb_v1",
+        "date": day.get("sessionDateKst"),
+        "strategyVersion": "btc_midnight_orb_v2",
         "signalTimeKst": kst_hm(signal_bar.get("tKst")),
         "entryTimeKst": kst_hm(entry_bar.get("tKst")),
         "exitTimeKst": kst_hm(exit_bar.get("tKst")),
@@ -246,7 +256,7 @@ def trade_for_day(day, p: Params):
             "closeAboveVwap": (signal_close > signal_vwap) if signal_vwap is not None else None,
             "volumeRatio": signal_vol_ratio,
             "requiredVolumeRatio": p.volume_mult,
-            "entryCutoffUtcMinute": p.entry_cutoff_min,
+            "entryCutoffKstMinute": p.entry_cutoff_min,
             "entryRule": "next_5m_open",
             "stopPct": p.stop_pct,
             "takeProfitPct": p.take_profit_pct,
@@ -297,7 +307,7 @@ def summary(trades, day_labels):
 
 
 def split_validation(days, trades):
-    labels = [x["sessionDateUtc"] for x in days]
+    labels = [x["sessionDateKst"] for x in days]
     if len(labels) < 30:
         return {
             "status": "collecting",
@@ -322,7 +332,7 @@ def split_validation(days, trades):
 
 
 def rolling_baseline(days, trades, window=30):
-    labels = [x["sessionDateUtc"] for x in days]
+    labels = [x["sessionDateKst"] for x in days]
     if len(labels) < window:
         return {"windowDays": window, "count": 0}
     by_date = {}
@@ -476,13 +486,13 @@ def main():
         if ok:
             valid.append(d)
         else:
-            invalid.append({"date": d.get("sessionDateUtc"), "reason": reason})
+            invalid.append({"date": d.get("sessionDateKst"), "reason": reason})
 
     if not valid:
         print("No valid crypto archives yet.")
         return 0
 
-    labels = [x["sessionDateUtc"] for x in valid]
+    labels = [x["sessionDateKst"] for x in valid]
     reports = []
     variant_trades = {}
     for p in VARIANTS:
@@ -496,7 +506,7 @@ def main():
 
     baseline = variant_trades["baseline"]
     report = {
-        "schema": 2,
+        "schema": 3,
         "generatedAt": datetime.now(KST).isoformat(),
         "market": "KRW-BTC",
         "unitMinutes": 5,
@@ -509,7 +519,7 @@ def main():
         "comparisonStatus": "reviewable" if len(valid) >= 90 else "collecting",
         "comparisonRule": "Research comparison only. No automatic strategy promotion or live order connection.",
         "auditRule": "Raw OHLCV + strategy version + observed signal features + thresholds + entry/exit reason are retained for reproducibility.",
-        "executionModel": "signal on completed 5m candle; enter next candle open; same-candle stop/target conflict resolves to stop",
+        "executionModel": "KST 00:00 opening range; completed 5m signal; next-candle entry through 22:00 KST; same-candle stop/target conflict resolves to stop",
         "frictionModel": "0.10% round-trip fee + 0.04% round-trip slippage assumption",
         "variants": reports,
         "rolling30": rolling_baseline(valid, baseline, 30),
@@ -579,8 +589,8 @@ def main():
                 })
             else:
                 w.writerow({
-                    "date":d,"strategyVersion":"btc_orb_v1","action":"no_trade",
-                    "decisionReason":"no_qualified_breakout_before_cutoff_after_volume_vwap_filters",
+                    "date":d,"strategyVersion":"btc_midnight_orb_v2","action":"no_trade",
+                    "decisionReason":"no_qualified_breakout_before_2155_kst_after_volume_vwap_filters",
                 })
 
     base = next(x for x in reports if x["params"]["name"] == "baseline")
