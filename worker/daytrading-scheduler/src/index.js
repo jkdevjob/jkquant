@@ -332,6 +332,28 @@ async function notifyPaperTransitions(env,oldLedger,newLedger){
     }
   }
 }
+
+async function sendDaytradingSummary(env,date){
+  const ledger=await readPaper(env,date);
+  const trades=ledger&&Array.isArray(ledger.trades)?ledger.trades:[];
+  const closed=trades.filter(x=>x&&x.status==="closed");
+  const lines=["한국장 종료 후 요약 · 15:35 KST"];
+  if(!trades.length){
+    lines.push("오늘 기준전략 0건 · 조건 충족 거래 없음");
+  }else{
+    let sum=0,w=0,l=0;
+    for(const x of closed){
+      const p=Number(x.pnl||0); sum+=p; if(p>0)w++; else if(p<0)l++;
+      lines.push("• "+(x.name||x.code)+" "+hmLabel(x.entryTime)+"→"+hmLabel(x.exitTime)+" "+signedPct(p));
+    }
+    if(closed.length<trades.length)lines.push("미확정 "+(trades.length-closed.length)+"건 · 장부 상태 확인 필요");
+    lines.push("거래 "+trades.length+"건 · 승 "+w+" · 패 "+l+(closed.length?" · 평균 "+signedPct(sum/closed.length)+" · 단순합 "+signedPct(sum):""));
+  }
+  await sendScalpingAlert(env,{
+    strategy:"daytrading",stage:"summary",eventId:"daytrading:"+date+":session-summary",
+    date,time:"15:35 KST",lines
+  });
+}
 async function reconcilePaper(env,date,target,candidates){
   const old=await readPaper(env,date);
   const by=new Map(((old&&old.trades)||[]).map(x=>[x.id,x]));
@@ -375,6 +397,12 @@ async function runScheduled(controller,env){
   const scheduled=Number(controller.scheduledTime)||Date.now();
   const sched=kstParts(scheduled);
   const lag=Math.max(0,Date.now()-scheduled);
+
+  // 한국장 종료 뒤 한 번만 그날 모의매매 결과를 요약한다.
+  if(sched.hm===1535){
+    await sendDaytradingSummary(env,sched.date);
+    return;
+  }
 
   // 09:55 KST: immutable Top100 snapshot. If it is delayed beyond 10:15,
   // captureSnapshot refuses to create a contaminated primary snapshot.
@@ -428,7 +456,7 @@ export default {
     const u=new URL(request.url);
     if(u.pathname==="/health")return json({
       ok:true,service:"jkquant-daytrading-scheduler",
-      schedule:"09:55 snapshot + 10:00~14:31 signal scans + 14:32~15:11 paper exits",
+      schedule:"09:55 snapshot + 10:00~14:31 signal scans + 14:32~15:11 paper exits + 15:35 summary",
       paper:{maxTrades:PAPER_MAX_TRADES,stopPct:PAPER_STOP_PCT,takeProfitPct:PAPER_TAKE_PROFIT_PCT,finalExit:PAPER_FINAL_EXIT_HM,frictionPct:PAPER_FRICTION_PCT}
     });
     if(u.pathname==="/snapshot"){
