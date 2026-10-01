@@ -1,0 +1,238 @@
+{
+  "ok": true,
+  "date": "2026-10-01",
+  "ledger": {
+    "schema": 1,
+    "date": "2026-10-01",
+    "createdAt": "2026-09-30T23:57:18.028Z",
+    "updatedAt": "2026-09-30T23:57:18.083Z",
+    "scans": [
+      {
+        "id": "2026-10-01:preopen:2026-10-01:opening_gapdown:preopen:all",
+        "scheduledTime": 1790812619000,
+        "capturedAt": "2026-09-30T23:57:18.076Z",
+        "targetHm": 856,
+        "lagMs": 0,
+        "partial": false,
+        "okShards": 1,
+        "failed": [],
+        "quoteErrors": 0,
+        "eventCount": 1
+      },
+      {
+        "id": "2026-10-01:quote:2026-10-01:opening_gapdown:quote:part0",
+        "scheduledTime": 1790812619000,
+        "capturedAt": "2026-09-30T23:57:17.793Z",
+        "targetHm": 856,
+        "lagMs": 0,
+        "partial": false,
+        "okShards": 1,
+        "failed": [],
+        "quoteErrors": 0,
+        "eventCount": 1
+      }
+    ],
+    "events": [
+      {
+        "id": "2026-10-01:opening_gapdown:preopen:all",
+        "date": "2026-10-01",
+        "capturedAt": "2026-09-30T23:57:18.076Z",
+        "targetHm": 856,
+        "strategy": "opening_gapdown",
+        "strategyVersion": "opening_gapdown_v1",
+        "stage": "preopen",
+        "payload": {
+          "httpStatus": 200,
+          "ok": true,
+          "stage": "preopen",
+          "strategyVersion": "opening_gapdown_v1",
+          "date": "2026-10-01",
+          "startedAt": "2026-09-30T23:57:18.058Z",
+          "watchlist": {
+            "basedOn": "2026-09-30",
+            "generatedAt": "2026-10-01T08:32:52.307851+09:00",
+            "size": 8,
+            "rule": {
+              "rsiMax": 30,
+              "gapMax": -2,
+              "gapFloor": -29,
+              "picks": 3
+            },
+            "quotedLimit": 80,
+            "truncated": false
+          },
+          "candidates": 8,
+          "picks": [],
+          "orders": [],
+          "decisionReason": "no_expected_gap_down",
+          "finishedAt": "2026-09-30T23:57:18.072Z"
+        }
+      },
+      {
+        "id": "2026-10-01:opening_gapdown:quote:part0",
+        "date": "2026-10-01",
+        "capturedAt": "2026-09-30T23:57:17.793Z",
+        "targetHm": 856,
+        "strategy": "opening_gapdown",
+        "strategyVersion": "opening_gapdown_v1",
+        "stage": "quote",
+        "payload": {
+          "httpStatus": 200,
+          "ok": true,
+          "stage": "quote",
+          "strategyVersion": "opening_gapdown_v1",
+          "date": "2026-10-01",
+          "part": 0,
+          "startedAt": "2026-09-30T23:57:06.764Z",
+          "watchlist": {
+            "basedOn": "2026-09-30",
+            "generatedAt": "2026-10-01T08:32:52.307851+09:00",
+            "size": 8,
+            "rule": {
+              "rsiMax": 30,
+              "gapMax": -2,
+              "gapFloor": -29,
+              "picks": 3
+            },
+            "quotedLimit": 80,
+            "truncated": false
+          },
+          "candidates": [
+            {
+              "code": "439960",
+              "name": "코스모로보틱스",
+              "market": "KOSDAQ",
+              "rsi14Prev": 18.582,
+              "prevClose": 7520,
+              "prevAmountKrw": 4691162460,
+              "quotedAt": "2026-09-30T23:57:10.603Z",
+              "expectedPrice": 5270,
+              "basePrice": 7520,
+              "expectedChgPct": -29.92,
+              "expectedVolume": 246566,
+              "phase": "311",
+              "expectedGapPct": -29.920212765957444,
+              "error": null
+            },
+            {
+              "code": "145020",
+              "name": "휴젤",
+              "market": "KOSDAQ",
+              "rsi14Prev": 19.431,
+              "prevClose": 178900,
+              "prevAmountKrw": 8411000000,
+              "quotedAt": "2026-09-30T23:57:12.118Z",
+              "expectedPrice": 177700,
+              "basePrice": 179700,
+              "expectedChgPct": -1.11,
+              "expectedVolume": 467,
+              "phase": "311",
+              "expectedGapPct": -1.112966054535336,
+              "error": null
+            },
+            {
+              "code": "475830",
+              "name": "오름테라퓨틱",
+              "market": "KOSDAQ",
+              "rsi14Prev": 20.524,
+              "prevClose": 22150,
+              "prevAmountKrw": 8231059650,
+              "quotedAt": "2026-09-30T23:57:12.947Z",
+              "expectedPrice": 21750,
+              "basePrice": 22150,
+              "expectedChgPct": -1.81,
+              "expectedVolume": 1066,
+              "phase": "311",
+              "expectedGapPct": -1.8058690744920947,
+              "error": null
+            },
+            {
+              "code": "298380",
+              "name": "에이비엘바이오",
+              "market": "KOSDAQ GLOBAL",
+              "rsi14Prev": 20.859,
+              "prevClose": 48600,
+              "prevAmountKrw": 13137423600,
+              "quotedAt": "2026-09-30T23:57:13.750Z",
+              "expectedPrice": 47700,
+              "basePrice": 48500,
+              "expectedChgPct": -1.65,
+              "expectedVolume": 1512,
+              "phase": "311",
+              "expectedGapPct": -1.6494845360824795,
+              "error": null
+            },
+            {
+              "code": "290690",
+              "name": "아리바이오홀딩스",
+              "market": "KOSDAQ",
+              "rsi14Prev": 26.232,
+              "prevClose": 3345,
+              "prevAmountKrw": 12751870238,
+              "quotedAt": "2026-09-30T23:57:14.585Z",
+              "expectedPrice": 3425,
+              "basePrice": 3425,
+              "expectedChgPct": 0,
+              "expectedVolume": 2799,
+              "phase": "311",
+              "expectedGapPct": 0,
+              "error": null
+            },
+            {
+              "code": "271560",
+              "name": "오리온",
+              "market": "KOSPI",
+              "rsi14Prev": 26.585,
+              "prevClose": 107000,
+              "prevAmountKrw": 13857357800,
+              "quotedAt": "2026-09-30T23:57:15.406Z",
+              "expectedPrice": 106900,
+              "basePrice": 106900,
+              "expectedChgPct": 0,
+              "expectedVolume": 390,
+              "phase": "311",
+              "expectedGapPct": 0,
+              "error": null
+            },
+            {
+              "code": "298020",
+              "name": "효성티앤씨",
+              "market": "KOSPI",
+              "rsi14Prev": 27.559,
+              "prevClose": 279500,
+              "prevAmountKrw": 5876821750,
+              "quotedAt": "2026-09-30T23:57:16.416Z",
+              "expectedPrice": 278500,
+              "basePrice": 279000,
+              "expectedChgPct": -0.18,
+              "expectedVolume": 17,
+              "phase": "311",
+              "expectedGapPct": -0.17921146953404632,
+              "error": null
+            },
+            {
+              "code": "034220",
+              "name": "LG디스플레이",
+              "market": "KOSPI",
+              "rsi14Prev": 29.682,
+              "prevClose": 8320,
+              "prevAmountKrw": 19611866650,
+              "quotedAt": "2026-09-30T23:57:17.240Z",
+              "expectedPrice": 8310,
+              "basePrice": 8330,
+              "expectedChgPct": -0.24,
+              "expectedVolume": 13162,
+              "phase": "311",
+              "expectedGapPct": -0.24009603841537164,
+              "error": null
+            }
+          ],
+          "decisionReason": "",
+          "finishedAt": "2026-09-30T23:57:17.790Z"
+        }
+      }
+    ]
+  },
+  "archivedAt": "2026-10-01T17:44:25+09:00",
+  "source": "cloudflare-opening-scheduler-durable-ledger"
+}
