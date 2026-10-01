@@ -184,6 +184,18 @@ canvas{display:block;width:100%;height:auto}
 .strategy-scoreline.bad{border-color:rgba(255,99,132,.45)}
 .strategy-scoreline .muted{color:var(--dim)}
 
+.strategy-cockpit{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:8px;margin:10px 0 12px}
+.cockpit-box{background:var(--panel);border:1px solid var(--line);border-radius:11px;padding:10px 11px;min-width:0}
+.cockpit-box.wide{grid-column:span 2}
+.cockpit-label{font-size:10.5px;color:var(--faint);font-weight:800;margin-bottom:4px}
+.cockpit-value{font-size:14px;font-weight:850;line-height:1.35;word-break:keep-all}
+.cockpit-detail{font-size:11px;color:var(--dim);line-height:1.45;margin-top:4px}
+.cockpit-box.good{border-color:rgba(72,199,142,.45)}
+.cockpit-box.bad{border-color:rgba(255,99,132,.45)}
+.cockpit-box.watch{border-color:rgba(245,190,70,.4)}
+@media(max-width:980px){.strategy-cockpit{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:640px){.strategy-cockpit{grid-template-columns:repeat(2,minmax(0,1fr))}.cockpit-box.wide{grid-column:span 2}}
+
 
 </style>
 <script type="module">
@@ -221,7 +233,7 @@ canvas{display:block;width:100%;height:auto}
 
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Morning Scalping</div><h1>JK <span class="v">퀀트</span> 단타 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="scVer">v1.31.2<//span></h1></div>
+    <div><div class="kicker">Morning Scalping</div><h1>JK <span class="v">퀀트</span> 단타 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="scVer">v1.31.3<///span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -1340,13 +1352,14 @@ async function loadSoxlResearch(){
 
 
 const FLOW_STEPS=[
-  ['strategy','📖 전략 설명'],
-  ['search','🔎 실시간 종목 탐색'],
-  ['buy','🟢 종목 매수 타이밍'],
-  ['sell','🔴 종목 매도 타이밍 · 익절/손절'],
-  ['history','📒 매매이력'],
-  ['review','🧪 매일 검증·분석·개선 기록'],
-  ['paper','🏦 모의투자 매매이력']
+  ['strategy','📖 전략 · 종목선정 규칙'],
+  ['search','🔎 오늘 종목 선정 · 감시'],
+  ['buy','🟢 매수 타이밍'],
+  ['sell','🔴 매도 · 손절 · 리스크'],
+  ['today','📒 오늘 모의매매 · 손익'],
+  ['review','🧪 그림자 · 매일 검증 · 개선'],
+  ['history','📚 누적 모의매매 이력'],
+  ['paper','🔍 실행품질 · VTS 대조']
 ];
 function flowCard(title,body,id){
   const d=document.createElement('div'); d.className='card'; if(id)d.id=id;
@@ -1415,6 +1428,8 @@ async function loadDailyStrategyResults(force){
     const r=await fetch('/api/scalping-daily-results',{headers:{Accept:'application/json'},cache:'no-store'});
     const j=await r.json(); if(!r.ok||!j.ok)throw new Error(j.error||('HTTP '+r.status));
     const rows=(j.strategies||[]).map(z=>{
+      DAILY_RESULT_CACHE[z.strategy]=z;
+      renderStrategyCockpit(z.strategy);
       const nm=DAILY_RESULT_LABELS[z.strategy]||z.label||z.strategy;
       return '<div class="daily-result-card">'+
         '<div class="daily-result-title"><span>'+nm+'</span><button onclick="showStrategy(\''+z.strategy+'\')">전략 보기 →</button></div>'+
@@ -1543,6 +1558,7 @@ function renderScoreline(name,j){
     ' <span class="muted">['+progress+']</span>';
   SCORE_CACHE[name]={name,trades:n,winRate:wr,avgPnl:avg,required:req,edge,days,progress};
   renderStrategyOverview();
+  renderStrategyCockpit(name);
 }
 function renderStrategyOverview(){
   const el=$('strategy_overview_body'); if(!el)return;
@@ -1569,29 +1585,64 @@ async function loadStrategyScorecard(name){
   }
 }
 
+const STRATEGY_UI_META={
+  opening:{version:'opening_rebreak_v1',market:'KOSPI/KOSDAQ Top100',selection:'09:00~09:30 · 갭 + 첫3분 고점 + 눌림 + 재돌파 + 수급',execution:'내부 모의 + KIS VTS 모의 병행',risk:'−1.0% / +1.5% / 09:30 시간청산'},
+  daytrading:{version:'daytrading_vwap_breakout_v1',market:'10시 전후 거래대금 Top100',selection:'10:00~14:30 · VWAP 추세 + 20분 고점돌파 + 거래량',execution:'서버 내부 모의만 · 주문 없음',risk:'−1.0% / +2.0% / 15:10 시간청산 · 최대3건'},
+  crypto:{version:'btc_midnight_orb_v2',market:'Upbit KRW-BTC',selection:'00:00 ORB · 첫 고점 재돌파 + 거래량 + VWAP · 22:00까지',execution:'JKQuant 독립 모의만 · 주문 없음',risk:'−0.5% / +1.0% / 최대60분 · 1슬롯'},
+  soxl:{version:'soxl_orb_v1',market:'SOXL · 미국 정규장',selection:'09:30~09:45 ET OR · 11:30 이전 첫 돌파 + VWAP + 거래량',execution:'JKQuant 연구 모의 · VTS는 별도 대조',risk:'−1.2% / +2.4% / 최대90분 · 1슬롯'}
+};
+const DAILY_RESULT_CACHE={};
+function cockpitPct(v){
+  const n=Number(v);return Number.isFinite(n)?((n>=0?'+':'')+n.toFixed(2)+'%'):'—';
+}
+function renderStrategyCockpit(name){
+  const el=$('cockpit_'+name); if(!el)return;
+  const m=STRATEGY_UI_META[name]||{},d=DAILY_RESULT_CACHE[name]||{},cur=d.current||null;
+  const sc=SCORE_CACHE[name]||null;
+  const sh=DAILY1_CACHE&&DAILY1_CACHE.strategies&&DAILY1_CACHE.strategies[name]||null;
+  const o=sh&&sh.outOfSample||null;
+  const src=DAILY1_CACHE&&DAILY1_CACHE.latestSourceDates&&DAILY1_CACHE.latestSourceDates[name]||'—';
+  const todayRet=cur?Number(cur.returnPct):null,todayTrades=cur?Number(cur.trades||0):0;
+  const hit=todayRet!=null&&Number.isFinite(todayRet)&&todayRet>=1;
+  const reviewDays=o?Number(o.days||0):0,reviewTrades=o?Number(o.trades||0):0;
+  const reviewReady=reviewDays>=20&&reviewTrades>=20;
+  const shadowStatus=sh?(reviewReady?'검토 가능':('수집 '+reviewDays+'/20일 · '+reviewTrades+'/20건')):'그림자 로딩';
+  el.innerHTML=
+    '<div class="cockpit-box wide"><div class="cockpit-label">기준전략 · 운영모드</div><div class="cockpit-value">'+esc(m.version||'—')+'</div><div class="cockpit-detail">'+esc(m.execution||'')+'</div></div>'+
+    '<div class="cockpit-box wide"><div class="cockpit-label">시장 · 종목선정</div><div class="cockpit-value">'+esc(m.market||'—')+'</div><div class="cockpit-detail">'+esc(m.selection||'')+'</div></div>'+
+    '<div class="cockpit-box"><div class="cockpit-label">매도 · 리스크</div><div class="cockpit-value">'+esc(m.risk||'—')+'</div><div class="cockpit-detail">필터·손절·익절은 목표 맞추려고 자동 완화하지 않음</div></div>'+
+    '<div class="cockpit-box '+(todayRet==null?'watch':todayRet>=0?'good':'bad')+'"><div class="cockpit-label">오늘 기준전략</div><div class="cockpit-value">'+(cur?cockpitPct(todayRet):'확정 대기')+'</div><div class="cockpit-detail">'+(cur?(esc(cur.date||'')+' · '+todayTrades+'건 · '+(hit?'+1% 달성':todayTrades?'목표 미달':'거래 없음')):'최근 세션 결과 불러오는 중')+'</div></div>'+
+    '<div class="cockpit-box '+(sc&&sc.avgPnl>=0?'good':sc?'bad':'watch')+'"><div class="cockpit-label">기준전략 누적 검증</div><div class="cockpit-value">'+(sc?(sc.trades+'건 · 승률 '+sc.winRate.toFixed(1)+'%'):'불러오는 중')+'</div><div class="cockpit-detail">'+(sc?('거래당 '+cockpitPct(sc.avgPnl)+' · '+esc(sc.progress)):'워크포워드/누적 연구 대기')+'</div></div>'+
+    '<div class="cockpit-box '+(reviewReady?'good':'watch')+'"><div class="cockpit-label">그림자 prospective</div><div class="cockpit-value">'+shadowStatus+'</div><div class="cockpit-detail">'+(o?('일평균 '+cockpitPct(o.avgDailyReturnPct)+' · PF '+Number(o.profitFactor||0).toFixed(2)+' · +1%일 '+Number(o.plus1Days||0)):'2026-10-01 이후 고정 규칙 모의')+'</div></div>'+
+    '<div class="cockpit-box"><div class="cockpit-label">데이터 최신성</div><div class="cockpit-value">'+esc(src||'—')+'</div><div class="cockpit-detail">오늘 매매/미거래 근거는 아래 ‘오늘 모의매매’와 ‘현재 매수 판단’에서 확인</div></div>';
+}
+
 function setupUnifiedStrategyFlow(){
   const cfg={
-    opening:{strategy:['🔥 실시간 시초가 돌파 감시'],search:['📒 오늘 장중 모의 매매이력'],history:[],review:['🧪 누적 시초가 연구 백테스트'],paper:['🔎 한투 VTS 자동 병행체결 대조']},
-    daytrading:{strategy:['📈 데이트레이딩 기준전략'],search:['📡 데이트레이딩 서버 장중 감시','📒 오늘 장중 모의 매매이력'],history:[],review:['🧪 데이트레이딩 누적 연구','📼 데이터 수집 규칙'],paper:['🔎 한투 VTS 체결 대조']},
-    crypto:{strategy:['₿ 비트코인 00시 ORB 기준전략 v2'],search:['📡 현재 KRW-BTC','📒 오늘 장중 모의 매매이력'],history:[],review:['🧪 누적 비트코인 연구','📼 데이터 수집 규칙'],paper:[]},
-    soxl:{strategy:['⚡ SOXL 15분 ORB 기준전략'],search:['📡 현재 SOXL','📒 오늘 장중 모의 매매이력'],history:[],review:['🧪 SOXL 누적 연구','📼 데이터 감사 규칙'],paper:[]}
+    opening:{strategy:['🔥 실시간 시초가 돌파 감시'],search:[],today:['📒 오늘 장중 모의 매매이력'],history:[],review:['🧪 누적 시초가 연구 백테스트'],paper:['🔎 한투 VTS 자동 병행체결 대조']},
+    daytrading:{strategy:['📈 데이트레이딩 기준전략'],search:['📡 데이트레이딩 서버 장중 감시'],today:['📒 오늘 장중 모의 매매이력'],history:[],review:['🧪 데이트레이딩 누적 연구','📼 데이터 수집 규칙'],paper:['🔎 한투 VTS 체결 대조']},
+    crypto:{strategy:['₿ 비트코인 00시 ORB 기준전략 v2'],search:['📡 현재 KRW-BTC'],today:['📒 오늘 장중 모의 매매이력'],history:[],review:['🧪 누적 비트코인 연구','📼 데이터 수집 규칙'],paper:[]},
+    soxl:{strategy:['⚡ SOXL 15분 ORB 기준전략'],search:['📡 현재 SOXL'],today:['📒 오늘 장중 모의 매매이력'],history:[],review:['🧪 SOXL 누적 연구','📼 데이터 감사 규칙'],paper:[]}
   };
   Object.keys(cfg).forEach(name=>{
     const pane=$('strategy_'+name); if(!pane||pane.dataset.flowReady==='1')return;
     pane.dataset.flowReady='1';
     const head=Array.from(pane.children).find(x=>x.classList&&x.classList.contains('strategy-head'));
-    if(head)head.textContent='전략 설명 → 실시간 탐색 → 매수 → 매도 → 매매이력 → 검증/개선 → 모의투자';
+    if(head)head.textContent='전략/선정 → 오늘 감시 → 매수 → 매도/리스크 → 오늘 모의손익 → 그림자/검증 → 누적이력 → 실행품질';
     if(!$('score_'+name)){
       const score=document.createElement('div'); score.id='score_'+name; score.className='strategy-scoreline';
       score.innerHTML='<span class="muted">기준전략 성과 불러오는 중…</span>';
       if(head)head.insertAdjacentElement('afterend',score); else pane.prepend(score);
     }
+    const cockpit=document.createElement('div'); cockpit.id='cockpit_'+name; cockpit.className='strategy-cockpit';
+    const scoreEl=$('score_'+name);
+    if(scoreEl)scoreEl.insertAdjacentElement('afterend',cockpit);
+    else if(head)head.insertAdjacentElement('afterend',cockpit);
+    else pane.prepend(cockpit);
+    renderStrategyCockpit(name);
     const map=document.createElement('div'); map.className='flow-map';
     map.innerHTML=FLOW_STEPS.map((x,i)=>'<span class="flow-chip">'+(i+1)+'. '+x[1].replace(/^[^ ]+ /,'')+'</span>').join('');
-    const scoreEl=$('score_'+name);
-    if(scoreEl)scoreEl.insertAdjacentElement('afterend',map);
-    else if(head)head.insertAdjacentElement('afterend',map);
-    else pane.prepend(map);
+    cockpit.insertAdjacentElement('afterend',map);
     const flow=document.createElement('div'); flow.className='strategy-flow';
     map.insertAdjacentElement('afterend',flow);
     const used=new Set(), bodies={};
@@ -1600,7 +1651,7 @@ function setupUnifiedStrategyFlow(){
       sec.innerHTML='<div class="flow-title"><span class="flow-num">'+(i+1)+'</span>'+x[1]+'</div><div class="flow-body"></div>';
       bodies[x[0]]=sec.querySelector('.flow-body'); flow.appendChild(sec);
     });
-    for(const step of ['strategy','search','history','review','paper']){
+    for(const step of ['strategy','search','today','review','history','paper']){
       (cfg[name][step]||[]).forEach(n=>flowPut(bodies[step],flowDirectCard(pane,n),used));
     }
     for(const side of ['buy','sell']){
@@ -1682,6 +1733,7 @@ function renderDaily1Strategy(name,x){
     '</tbody></table></div>'+
     '<div class="warn" style="margin-top:8px">'+(last?('최근 모의: <b>'+esc(last.date||'')+'</b> · '+esc(last.code||last.name||'')+' · '+d1pct(last.pnlPct)+' · '+esc(last.reason||'')):'아직 확정된 모의 거래가 없습니다.')+'</div>'+
     '<p class="note">'+esc(x.reviewPolicy||'')+'</p>';
+  renderStrategyCockpit(name);
 }
 function renderDaily1Overview(rep){
   const el=$('daily1_overview');if(!el)return;
@@ -1713,7 +1765,7 @@ async function loadDaily1Shadow(force=false){
         return null;
       }
       DAILY1_CACHE=j.report;
-      Object.keys(j.report.strategies||{}).forEach(n=>renderDaily1Strategy(n,j.report.strategies[n]));
+      Object.keys(j.report.strategies||{}).forEach(n=>{renderDaily1Strategy(n,j.report.strategies[n]);renderStrategyCockpit(n);});
       renderDaily1Overview(j.report);
       return j.report;
     }catch(e){
