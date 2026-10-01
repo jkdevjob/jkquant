@@ -43,6 +43,7 @@ jobs:
           python -m py_compile scripts/backtest_soxl_intraday.py
           python -m py_compile scripts/daily1_shadow_lab.py
           python -m py_compile scripts/test_daily1_shadow.py
+          python -m py_compile scripts/claude_lab.py
 
       - name: 일 +1% 그림자 전략 값·룩어헤드 검사
         run: python scripts/test_daily1_shadow.py
@@ -131,6 +132,8 @@ jobs:
           node --input-type=module --check < functions/api/scalping-review.js
           node --input-type=module --check < functions/api/scalping-daily-results.js
           node --input-type=module --check < functions/api/daily1-shadow.js
+          node --input-type=module --check < functions/api/claude-live.js
+          node --input-type=module --check < functions/api/claude-telegram.js
           node --input-type=module --check < worker/opening-scheduler/src/index.js
           node --input-type=module --check < worker/daytrading-scheduler/src/index.js
           node --input-type=module --check < worker/global-intraday-scheduler/src/index.js
