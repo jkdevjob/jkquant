@@ -20,6 +20,7 @@ from dataclasses import dataclass, asdict
 from datetime import datetime
 from pathlib import Path
 from zoneinfo import ZoneInfo
+from opening_basis_cost import cost_range, overnight_basis_status
 
 KST = ZoneInfo("Asia/Seoul")
 DATA = Path(os.environ.get("JKQ_RESEARCH_DATA", "data/scalping"))
@@ -288,7 +289,7 @@ def load_vts_friction_calibration():
     return out
 
 
-def opening_friction(entry_price, calibration=None):
+def opening_friction(entry_price, calibration=None, basis_reference=None):
     c = dict(calibration or {})
     n = int(c.get("completeMatches") or 0)
     obs = c.get("observedRoundTripSlippagePct")
@@ -300,7 +301,7 @@ def opening_friction(entry_price, calibration=None):
         tick = kr_tick_size(entry_price)
         slip = (2.0 * FALLBACK_TICKS_PER_SIDE * tick / max(float(entry_price), 1e-9)) * 100.0
         source = "2.5tick-fallback"
-    return {
+    result = {
         "fixedPct": FIXED_KR_FRICTION_PCT,
         "slippagePct": slip,
         "totalPct": FIXED_KR_FRICTION_PCT + slip,
@@ -310,6 +311,15 @@ def opening_friction(entry_price, calibration=None):
         "ticksPerSide": FALLBACK_TICKS_PER_SIDE if source == "2.5tick-fallback" else None,
         "tickSize": tick,
     }
+    if basis_reference:
+        bounds = cost_range(entry_price, basis_reference['originalPriceFactorBounds'],
+                            fixed_pct=FIXED_KR_FRICTION_PCT, ticks_per_side=FALLBACK_TICKS_PER_SIDE)
+        result['originalPriceCostBounds'] = bounds
+        if source == '2.5tick-fallback':
+            result.update(totalPct=bounds['totalCostPctMax'],
+                          slippagePct=bounds['totalCostPctMax']-FIXED_KR_FRICTION_PCT,
+                          tickSize=None, source='original-price-bounded-2.5tick')
+    return result
 
 
 def simulate_exit(a, entry_i, entry, p: Params, friction, exit_model="close"):
@@ -368,6 +378,13 @@ def one_trade(day, row, p: Params, friction_calibration=None):
     if not (day_open > 0 and prev_close > 0):
         return None
     gap = (day_open / prev_close - 1.0) * 100.0
+    basis_reference = row.get('priceBasisReference')
+    if basis_reference:
+        if abs(gap-float(basis_reference['originalGapPct'])) > 1e-9:
+            raise ValueError('Original gap reference changed')
+        day_open = float(basis_reference['adjusted']['stck_oprc'])
+        if day_open <= 0:
+            raise ValueError('Missing authoritative adjusted daily open')
     if gap < p.gap_min or gap > p.gap_max:
         return None
 
@@ -410,13 +427,18 @@ def one_trade(day, row, p: Params, friction_calibration=None):
             if y["c"] > peak and vol_ratio >= p.vol_mult and amt_ratio >= p.amount_mult:
                 entry = y["c"]
                 path = opening_path_metrics(a, j, entry)
-                friction = opening_friction(entry, friction_calibration)
+                try:
+                    friction = opening_friction(entry, friction_calibration, basis_reference)
+                except ValueError as exc:
+                    raise ValueError(f"{day['date']} {row.get('code')} {p.name} entry={entry}: {exc}") from exc
                 close_exit = simulate_exit(a, j, entry, p, friction, "close")
                 lowhigh_exit = simulate_exit(a, j, entry, p, friction, "lowhigh")
                 return {
                     "date": day["date"],
                     "signalSchemaVersion": 2,
-                    "strategyVersion": "opening_rebreak_v1",
+                    "strategyVersion": "opening_rebreak_basis_v2" if basis_reference else "opening_rebreak_v1",
+                    **({"inputPriceBasis": "KIS-adjusted-with-original-gap-and-cost-bounds",
+                        "basisReferenceFiles": [basis_reference['originalFile'], basis_reference['adjustedFile']]} if basis_reference else {}),
                     "strategyParams": asdict(p),
                     "rank": int(row.get("rank") or 0),
                     "code": row.get("code"),
@@ -597,7 +619,20 @@ def trades_for_days(days, p: Params, friction_calibration=None):
             t = one_trade(day, row, p, friction_calibration)
             if t:
                 if p.exit_policy == "next_session_open":
-                    t = hold_to_next_open(t, row.get("nextOpen"))
+                    next_open = row.get('nextOpen')
+                    basis_reference = row.get('priceBasisReference')
+                    if basis_reference:
+                        ref = basis_reference['nextMarketSession']
+                        next_open = None
+                        reference_status = overnight_basis_status(basis_reference)
+                        if reference_status == 'same_basis_reference_available' and row.get('nextOpenStatus') != 'corporate_action_review':
+                            stamp = ref['date']
+                            next_open = dict(date=f'{stamp[:4]}-{stamp[4:6]}-{stamp[6:]}',
+                                price=float(ref['adjusted']['stck_oprc']), source='KIS adjusted daily authoritative reference')
+                    t = hold_to_next_open(t, next_open)
+                    if basis_reference:
+                        t['strategyVersion'] = 'opening_hold_to_next_open_basis_v2'
+                        t['nextOpenReferenceStatus'] = reference_status
                 out.append(t)
     return out
 
@@ -875,6 +910,9 @@ def main():
                 "entryTime": x.get("entryTime"),
                 "entryPrice": x.get("entryPrice"),
                 "strategyVersion": x.get("strategyVersion"),
+                **({"inputPriceBasis": x['inputPriceBasis'],
+                    "basisReferenceFiles": x['basisReferenceFiles'],
+                    "nextOpenReferenceStatus": x.get('nextOpenReferenceStatus')} if x.get('inputPriceBasis') else {}),
                 "signalSchemaVersion": x.get("signalSchemaVersion"),
                 "strategyParams": x.get("strategyParams"),
                 "gap": x.get("gap"),

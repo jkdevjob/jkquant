@@ -50,6 +50,8 @@ jobs:
       - name: 과거 Top100 백필과 다음날 시가 그림자 값 검사
         run: |
           python scripts/test_opening_backfill.py
+          python scripts/test_opening_basis_cost.py
+          python scripts/mutation_test_opening_basis.py
           python scripts/mutation_test_opening_backfill.py
           node scripts/test_opening_hold.mjs
           node scripts/test_kis_history_codes.mjs
