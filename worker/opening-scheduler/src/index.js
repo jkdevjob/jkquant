@@ -249,6 +249,11 @@ export function claudeMorningDue(ms){
   const p=kstParts(ms);
   return p.hh===9&&p.mm===5;
 }
+// 토요일 09:05 — 금요일 밤(23:40) 장부로 이번 주 결과를 보낸다(코인 금요일 하루는 토 09시에 끝나 다음 주 계산에 들어감).
+export function claudeWeeklyDue(ms){
+  const p=kstParts(ms),wd=new Date(Date.parse(p.date+"T00:00:00Z")).getUTCDay();
+  return wd===6&&p.hh===9&&p.mm===5;
+}
 export function scheduleRoute(ms){
   const p=new Intl.DateTimeFormat("en-US",{timeZone:"Asia/Seoul",weekday:"short",hour:"2-digit",minute:"2-digit",hourCycle:"h23"}).formatToParts(new Date(ms));
   const g=t=>p.find(x=>x.type===t)?.value||"";
@@ -370,6 +375,7 @@ export default {
     const route=scheduleRoute(at);
     // 09:05 KST 매일(주말 포함 — 코인은 쉬지 않는다): 코인 하루 마감·미국 지난 세션 결과 알림
     if(claudeMorningDue(at))ctx.waitUntil(claudeTelegram(env,kstParts(at).date,"morning"));
+    if(claudeWeeklyDue(at))ctx.waitUntil(claudeTelegram(env,kstParts(at).date,"weekly"));
     if(route==="opening")ctx.waitUntil(runMinute(controller,env));
     else if(route&&route.startsWith("gapdown_"))ctx.waitUntil(runGapdown(route.slice(8),controller,env));
   },

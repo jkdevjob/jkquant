@@ -285,6 +285,40 @@ class ClaudeLabTrend(unittest.TestCase):
         ok = {str(i): (2.0 if i % 2 else 0.0) for i in range(25)}
         self.assertEqual(lab.drift_status(ok, {"expectancyPct": 1.0})["code"], "ok")
 
+    def test_profit_factor(self):
+        D = ["2026-10-05", "2026-10-06", "2026-10-07", "2026-10-08", "2026-10-09"]
+        z = lab.goal_metrics({D[0]: 3.0, D[1]: -1.0, D[2]: -2.0, D[3]: 1.0}, D)
+        self.assertAlmostEqual(z["profitFactor"], 4.0 / 3.0)
+        self.assertIsNone(lab.goal_metrics({D[0]: 1.0}, D[:1])["profitFactor"])
+
+    def test_promotion_waits_then_needs_better_and_safe(self):
+        off = {"tradeDays": 30, "totalPct": 5.0, "plus1Days": 6, "mddPct": -8.0, "gate": True}
+        self.assertEqual(lab.promotion(off, {"tradeDays": 19, "totalPct": 50.0, "plus1Days": 9, "mddPct": -1.0, "gate": True})["code"], "collecting")
+        self.assertEqual(lab.promotion(off, {"tradeDays": 20, "totalPct": 9.0, "plus1Days": 6, "mddPct": -12.0, "gate": True})["code"], "candidate")
+        self.assertEqual(lab.promotion(off, {"tradeDays": 20, "totalPct": 9.0, "plus1Days": 5, "mddPct": -8.0, "gate": True})["code"], "keep")
+        self.assertEqual(lab.promotion(off, {"tradeDays": 20, "totalPct": 9.0, "plus1Days": 7, "mddPct": -14.0, "gate": True})["code"], "keep")
+        self.assertEqual(lab.promotion(off, {"tradeDays": 25, "totalPct": 9.0, "plus1Days": 7, "mddPct": -8.0, "gate": False})["code"], "keep")
+        self.assertEqual(lab.promotion(off, {"tradeDays": 25, "totalPct": 5.0, "plus1Days": 7, "mddPct": -8.0, "gate": True})["code"], "keep")
+
+    def test_week_summary_weights_and_us_shift(self):
+        R = lambda *xs: {"rows": [{"date": d, "action": ac, "pnlPct": v} for d, ac, v in xs]}
+        sm = {"opening_d1v2": R(("2026-10-05", "trade", 2.0), ("2026-10-06", "no_trade", 0.0)),
+              "daytrading_etf": R(("2026-10-05", "trade", 1.0), ("2026-10-06", "trade", 1.0)),
+              "crypto_btc": R(("2026-10-04", "hold", 9.0), ("2026-10-05", "hold", 2.0)),
+              "crypto_eth": R(("2026-10-05", "flat", 0.0)),
+              "us_tqqq": R(("2026-10-02", "hold", 7.0), ("2026-10-09", "hold", 3.0)),
+              "account": R(("2026-10-05", "trade", 3.0), ("2026-10-06", "trade", 2.0), ("2026-10-04", "trade", 9.0))}
+        w = lab.week_summary(sm, "2026-10-09")
+        self.assertEqual((w["weekStart"], w["weekEnd"]), ("2026-10-05", "2026-10-11"))
+        self.assertAlmostEqual(w["parts"]["opening_d1v2"]["contribPct"], 0.3 * 0.5 * 2.0)
+        self.assertAlmostEqual(w["parts"]["daytrading_etf"]["contribPct"], 0.3 * 0.5 * 1.0 + 0.3 * 1.0)
+        self.assertAlmostEqual(w["parts"]["crypto_btc"]["contribPct"], 0.3 * 0.5 * 2.0)
+        self.assertEqual(w["parts"]["crypto_eth"]["tradeDays"], 0)
+        self.assertAlmostEqual(w["parts"]["us_tqqq"]["contribPct"], 0.4 * 3.0)   # 10/2(지난주 금) 제외, 10/9 금 → 10/10 토(이번 주)
+        self.assertAlmostEqual(w["account"]["weekPct"], (1.03 * 1.02 - 1) * 100)
+        self.assertTrue(w["account"]["hit5"])
+        self.assertEqual(w["account"]["plus1Days"], 2)
+
     def test_review_flags_order_failures_and_streaks(self):
         rep = {"paper": {"summary": {"opening_d1v2": {"status": {"code": "below", "text": "x"}, "lossStreak": 4}}}, "daily": {"rows": []}}
         old = lab.read_json

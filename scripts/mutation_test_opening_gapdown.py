@@ -39,6 +39,9 @@ PY = [
     ("paper overwrite", "claude_lab.py", "    if path.exists():\n        return False\n", "\n"),
     ("drift too early", "claude_lab.py", "if n < 20 or not exp", "if n < 1 or not exp"),
     ("gpt same window", "claude_lab.py", "window = [d for d in cal if start and d >= start]", "window = list(cal)"),
+    ("promotion too early", "claude_lab.py", "    if n < PROMOTE_MIN_TRADE_DAYS:\n", "    if n < 1:\n"),
+    ("promotion ignores mdd", "claude_lab.py", "and s_mdd >= o_mdd - 5:", ":"),
+    ("week kr overlap not split", "claude_lab.py", '"opening_d1v2": lambda d: a["krWeight"] * (0.5 if d in both else 1.0),', '"opening_d1v2": lambda d: a["krWeight"],'),
     ("dip hit minutes", "backtest_crypto_orb.py", "int((hit - entry_t).total_seconds() // 60) + 5", "int((hit - entry_t).total_seconds() // 60)"),
 ]
 JS = [
@@ -57,6 +60,11 @@ JS = [
     ("live coin stop", "claude-live.js", 'status:!hold?"쉼(평균 아래)":low<=stop?"손절":"보유중"', 'status:!hold?"쉼(평균 아래)":"보유중"'),
     ("telegram no-trade hidden", "claude-telegram.js", 'else L.push("① 갭하락 과매도 — 매매 없음 ("+(dec.reason||"조건 맞는 종목 없음")+")");', ''),
     ("coin yesterday lookahead", "claude-live.js", "const h=coinHoldToday(c.slice(1),ma);", "const h=coinHoldToday(c,ma);"),
+    ("telegram weekly stale shown", "claude-telegram.js", "||(extra.weekStart&&w.weekStart!==extra.weekStart)", ""),
+    ("telegram weekly keep as candidate", "claude-telegram.js", 'if(x.promotion&&x.promotion.code==="candidate")cand.push', 'if(x.promotion)cand.push'),
+    ("today tab return is sum", "claude-live.js", "tabPct=v.length?sum/v.length:0;", "tabPct=sum;"),
+    ("today kr not split", "claude-live.js", "if(o&&d&&!o.noTrade&&!d.noTrade)for", "if(false)for"),
+    ("today failed order counted", "claude-live.js", 'const ok=rows.filter(r=>r.status!=="주문 실패");', "const ok=rows;"),
     ("watchlist whitelist", "opening-gapdown.js", "    if(!w)continue;\n", "    if(!w){out.push({...r});continue;}\n"),
 ]
 

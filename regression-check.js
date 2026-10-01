@@ -10896,6 +10896,19 @@ console.log('[GAPDOWN D-1 / DIP24 D-3] 연구용 모의체결 경로 안전장�
        &&route(Date.parse('2026-10-05T00:05:00Z'))==='opening'&&route(Date.parse('2026-10-05T00:31:00Z'))==='opening'
        &&route(Date.parse('2026-10-05T06:31:00Z'))===null,JSON.stringify(count));
   }
+  { // 주간 Telegram: 같은 cron 한 줄의 한 주 예약시각 중 토요일 09:05 KST 한 번만
+    const crons=JSON.parse(wr).triggers.crons;
+    const kp=ow.slice(ow.indexOf('function kstParts('),ow.indexOf('\n}\n',ow.indexOf('function kstParts('))+2);
+    const wf2=ow.slice(ow.indexOf('export function claudeWeeklyDue('),ow.indexOf('\n}\n',ow.indexOf('export function claudeWeeklyDue('))+2).replace('export ','');
+    const due=new Function(kp+wf2+'\nreturn claudeWeeklyDue;')();
+    const expand=(f,max)=>f==='*'?Array.from({length:max},(_,i)=>i):f.split(',').flatMap(x=>{const m=x.match(/^(\d+)-(\d+)$/);if(!m)return [+x];const a=[];for(let i=+m[1];i<=+m[2];i++)a.push(i);return a;});
+    const hits=[];
+    for(let d=0;d<7;d++)for(const c of crons){const [mi,h]=c.split(' ');for(const hh of expand(h,24))for(const mm of expand(mi,60)){
+      const ms=Date.parse('2026-10-04T00:00:00Z')+d*864e5+(hh*60+mm)*6e4;if(due(ms))hits.push(new Date(ms).toISOString());}}
+    ok('클로드 주간 Telegram: 한 주에 토요일 09:05 KST 딱 한 번 · Worker 가 weekly 로 호출',
+       hits.length===1&&hits[0]==='2026-10-10T00:05:00.000Z'
+       &&/if\(claudeWeeklyDue\(at\)\)ctx\.waitUntil\(claudeTelegram\(env,kstParts\(at\)\.date,"weekly"\)\);/.test(ow),JSON.stringify(hits));
+  }
   ok('Worker: 매 단계 응답을 gapdown ledger 에 먼저 저장 + 일부 조회 시 주문 없음 + 라우팅으로만 실행',
      /gapdownRecord\(env,date,"quote",q,ms\)/.test(ow)&&/gapdown_quote_partial/.test(ow)
      &&/if\(route==="opening"\)ctx\.waitUntil\(runMinute\(controller,env\)\);/.test(ow)
@@ -10927,10 +10940,19 @@ console.log('[GAPDOWN D-1 / DIP24 D-3] 연구용 모의체결 경로 안전장�
        /function authorized\(request,env\)/.test(tg)&&/claim\("claude:"\+date\+":"\+kind\)/.test(tg)&&!/op=order|opening-execute|kisOrder/.test(tg)
        &&/await claudeTelegram\(env,date,"preopen"\);/.test(ow)&&/await claudeTelegram\(env,date,stage==="close"\?"etfbuy":"close"\);/.test(ow)
        &&/if\(claudeMorningDue\(at\)\)ctx\.waitUntil\(claudeTelegram\(env,kstParts\(at\)\.date,"morning"\)\);/.test(ow));
-    ok('단타(클로드) 탭 구성: 전략 설명·오늘 매매이력·다음 계획·그림자·목표/GPT 비교·누적 이력·매일 검증 + 상태 줄',
-       /function tabPage\(tab,T,gd,et,wl\)/.test(scl2)&&/docCard\(tab\)\+liveCard\(tab\)\+planCard\(tab,T,wl\)/.test(scl2)
-       &&/html\+=shadowCard\(tab\)\+paperCard\(tab\)\+reviewCard\(tab\);/.test(scl2)&&/body\.innerHTML=statusBar\(\)\+html;/.test(scl2)
+    ok('단타(클로드) 탭 구성: 운영판 → ①규칙 ②오늘 선정 ③매수 ④매도·리스크 ⑤오늘 장중 매매 ⑥그림자·검증 ⑦누적 ⑧실행품질 + 상태 줄 + 1분 자동 갱신',
+       /function tabPage\(tab,T,gd,et,wl\)/.test(scl2)&&/opsBoard\(tab\)\+docCard\(tab\)\+planCard\(tab,T,wl\)\+buyCard\(tab\)\+sellCard\(tab\)\+liveCard\(tab\)/.test(scl2)
+       &&/html\+=shadowCard\(tab\)\+reviewCard\(tab\)\+paperCard\(tab\);/.test(scl2)
+       &&['① 전략 · 종목 선정 규칙','② 오늘 종목 선정 · 감시','③ 매수 타이밍','④ 매도 · 손절 · 리스크','⑤ 오늘 장중 모의 매매이력','⑥ 그림자 전략','⑦ 누적 모의 매매이력','⑧ 실행 품질'].every(x=>scl2.includes(x))
+       &&/setInterval\(function\(\)\{if\(!document\.hidden\)loadLive\(\)\},60000\)/.test(scl2)
+       &&/out\.tabs\[k\]\.today=todaySummary\(k,out\.tabs\[k\],now\.hm\);\n\s*applyKrSplit\(out\.tabs\);/.test(fs.readFileSync(__d+'/functions/api/claude-live.js','utf8'))&&/body\.innerHTML=statusBar\(\)\+html;/.test(scl2)
        &&['opening','daytrading','crypto','soxl'].every(k=>new RegExp('\\b'+k+':\\{title:').test(scl2)));
+  }
+  { const lp=fs.readFileSync(__d+'/scripts/claude_lab.py','utf8');
+    ok('그림자 교체 후보: 판정 표본 매매 20일 이상 · 자동 교체 없음(표시만) · 화면 ⭐ 표시 + 이번 주 결과 카드(오늘·전체 탭)',
+       /PROMOTE_MIN_TRADE_DAYS = 20/.test(lp)&&/attach_promotions\(report\)/.test(lp)&&/report\["week"\] = week_summary\(/.test(lp)
+       &&!/CRYPTO\[[^\]]+\] = |US\[[^\]]+\] = /.test(lp.slice(lp.indexOf('def promotion('),lp.indexOf('def week_summary(')))
+       &&/function promoBadge\(pr\)/.test(scl2)&&/function weekCard\(\)/.test(scl2)&&(scl2.match(/weekCard\(\)/g)||[]).length===3);
   }
   ok('클로드 모의투자 장부: 날짜별 한 번만 쓰기 · 요약은 장부 값만 · 화면 누적표 · workflow 저장',
      /def write_once\(path, obj\):\n[\s\S]{0,200}if path\.exists\(\):\n\s*return False/.test(fs.readFileSync(__d+'/scripts/claude_lab.py','utf8'))
