@@ -28,35 +28,38 @@ UA = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/124 Safari/537.3
 
 
 def request_chart():
-    q = urllib.parse.urlencode({
-        "interval": "5m",
-        "range": "60d",
-        "includePrePost": "false",
-        "events": "div,splits",
-    })
     last = None
-    for host in ("query1.finance.yahoo.com", "query2.finance.yahoo.com"):
-        url = f"https://{host}/v8/finance/chart/{urllib.parse.quote(SYMBOL)}?{q}"
-        for attempt in range(5):
-            try:
-                req = urllib.request.Request(url, headers={
-                    "User-Agent": UA,
-                    "Accept": "application/json",
-                    "Referer": "https://finance.yahoo.com/",
-                })
-                with urllib.request.urlopen(req, timeout=30) as r:
-                    j = json.loads(r.read().decode("utf-8"))
-                res = ((j.get("chart") or {}).get("result") or [None])[0]
-                if res:
-                    return res, host
-                last = RuntimeError(str((j.get("chart") or {}).get("error") or "empty result"))
-            except urllib.error.HTTPError as e:
-                last = e
-                if e.code not in (401, 429, 500, 502, 503, 504):
-                    raise
-            except Exception as e:
-                last = e
-            time.sleep(min(8.0, 0.8 * (2 ** attempt)))
+    # 60d를 먼저 시도하되 Yahoo가 장중 제한/429를 걸면 5d로 축소해
+    # 최소 최근 세션이라도 반드시 부트스트랩할 수 있게 한다.
+    for range_value in ("60d", "5d"):
+        q = urllib.parse.urlencode({
+            "interval": "5m",
+            "range": range_value,
+            "includePrePost": "false",
+            "events": "div,splits",
+        })
+        for host in ("query1.finance.yahoo.com", "query2.finance.yahoo.com"):
+            url = f"https://{host}/v8/finance/chart/{urllib.parse.quote(SYMBOL)}?{q}"
+            for attempt in range(5):
+                try:
+                    req = urllib.request.Request(url, headers={
+                        "User-Agent": UA,
+                        "Accept": "application/json",
+                        "Referer": "https://finance.yahoo.com/",
+                    })
+                    with urllib.request.urlopen(req, timeout=30) as r:
+                        j = json.loads(r.read().decode("utf-8"))
+                    res = ((j.get("chart") or {}).get("result") or [None])[0]
+                    if res:
+                        return res, host, range_value
+                    last = RuntimeError(str((j.get("chart") or {}).get("error") or "empty result"))
+                except urllib.error.HTTPError as e:
+                    last = e
+                    if e.code not in (401, 422, 429, 500, 502, 503, 504):
+                        raise
+                except Exception as e:
+                    last = e
+                time.sleep(min(8.0, 0.8 * (2 ** attempt)))
     raise RuntimeError(f"Yahoo chart request failed: {last}")
 
 
@@ -83,7 +86,7 @@ def hm(dt: datetime) -> int:
 
 
 def main():
-    res, host = request_chart()
+    res, host, source_range = request_chart()
     ts = res.get("timestamp") or []
     q = ((res.get("indicators") or {}).get("quote") or [{}])[0]
     O = q.get("open") or []
@@ -139,6 +142,7 @@ def main():
             "unitMinutes": 5,
             "source": "Yahoo Finance public chart endpoint",
             "sourceHost": host,
+            "sourceRange": source_range,
             "regularSessionOnly": True,
             "bars": bars,
         }
@@ -149,6 +153,7 @@ def main():
     print(json.dumps({
         "symbol": SYMBOL,
         "sourceHost": host,
+        "sourceRange": source_range,
         "sessionsSeen": len(groups),
         "written": written,
         "writtenCount": len(written),
