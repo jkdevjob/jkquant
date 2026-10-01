@@ -305,6 +305,13 @@ export default {
   async fetch(request,env){
     const u=new URL(request.url);
     if(u.pathname==="/health")return json({ok:true,service:"jkquant-global-intraday-scheduler",schedule:"every minute",strategies:["crypto","soxl"],crypto:{strategyVersion:BTC_STRATEGY_VERSION,openingRange:"00:00~00:05 KST",newEntryThrough:"22:00 KST",exitTrackingThrough:"23:05 KST"},soxl:{symbol:"SOXL",strategyVersion:SOXL_STRATEGY_VERSION,openingRange:"09:30~09:45 ET",newEntryThrough:"11:30 ET",paperTrackingThrough:"16:05 ET",overnight:false},mode:"research-paper-alert-no-order"});
+    if(u.pathname==="/bars"){
+      if(!authorized(request,env))return json({ok:false,error:"unauthorized"},401);
+      const strategy=String(u.searchParams.get("strategy")||"").toLowerCase();
+      if(strategy!=="soxl")return json({ok:false,error:"unsupported strategy"},400);
+      const bars=await fetchSoxl();
+      return json({ok:true,strategy:"soxl",symbol:"SOXL",source:"Yahoo via Cloudflare Worker",fetchedAt:new Date().toISOString(),bars});
+    }
     if(u.pathname==="/paper"){
       if(!authorized(request,env))return json({ok:false,error:"unauthorized"},401);
       const strategy=String(u.searchParams.get("strategy")||"").toLowerCase();
