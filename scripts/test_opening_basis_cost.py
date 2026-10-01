@@ -56,6 +56,10 @@ class BasisCostTests(unittest.TestCase):
         x = cost_range(168600, dict(status='identical_ohlc'))
         self.assertAlmostEqual(x['totalCostPctMax'], .23 + 500/168600*100)
 
+    def test_cost_parameters_come_from_engine_configuration(self):
+        x = cost_range(10000, dict(status='identical_ohlc'),fixed_pct=.5,ticks_per_side=1)
+        self.assertAlmostEqual(x['totalCostPctMax'],.7)
+
     def test_tenfold_adjustment_uses_original_cost_band(self):
         x = cost_range(25350, dict(status='bounded_rounding_hypothesis', lower=9.9996, upper=10.0004))
         expected = .23 + 25/2535*100
