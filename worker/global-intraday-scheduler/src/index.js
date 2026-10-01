@@ -1,3 +1,5 @@
+import { DurableObject } from "cloudflare:workers";
+
 // Cloudflare Worker — BTC + SOXL intraday research signal scheduler
 // Every minute, but signals are based only on completed 5m strategy bars.
 // It sends Telegram research/paper alerts through Pages /api/scalping-alert.
