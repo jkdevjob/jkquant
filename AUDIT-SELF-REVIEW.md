@@ -2032,7 +2032,23 @@ const D=bars.filter(d=>d.date>=from);   // 상한이 없다
 
 **확인 못 한 것.** KIS 예상체결 응답 필드명(`antc_cnpr`·`stck_sdpr`)과 모의투자의 장전·종가 동시호가 시장가 접수 여부는 이 환경에서 KIS 에 직접 닿지 않아 배포 후 첫 거래일에만 확인된다. 필드가 비면 주문 없이 `expected_price_missing` 으로 기록되고, 접수가 거절되면 거절 메시지가 원본에 남는다(재시도 없음). Pages 요청당 외부호출 50건 한도를 가정해 40종목씩 나눴다.
 
+### 추가 — D-1 v2 "시장 투매 강도" 필터 (2026-10-01)
 
-## Historical opening price-basis validation (v1.28.2)
+변형 목록을 먼저 적고(보유 다음날 시가·다음날 종가 · 통과 종목 ≥3 · ≥5 · 갭 −5% 이하 · 갭 −2~−5% · 5종목) 설계 2018~2022 / 검증 2023~2026-09로 나눠 1.5틱에서 비교했다.
+두 구간 모두 양수인 것은 **통과 종목 수 ≥3**(+0.66% t=1.46 / +1.43% t=2.88)과 **≥5**(+1.19% t=1.91 / +1.52% t=2.51)뿐이다. 보유 연장·종목 수 확대·갭 구간 나누기는 한쪽 구간에서 음수라 버렸다.
+
+≥5의 강건성 점검:
+- 임계값을 1→15로 올리면 하루 평균이 −0.05→+0.57→+0.96→+1.15→+1.33→+2.05(≥7)→+3.08%(≥15)로 거의 단조 증가한다.
+- 9개 연도 모두 양수다(+0.12~+4.37%).
+- 같은 날 무작위 갭하락 3종목은 −0.42%라 선별 실력이 +1.75%p (t=4.77)다.
+- 같은 날 시장 전체 시가→종가는 +0.08%라 시장 반등만으로는 설명되지 않는다.
+- 0틱에서 +1.71%, 3틱에서 +0.96%다.
+- 최악의 날은 −18.1%이고, 연 17일 정도 매매한다.
+
+운영 쪽은 매일 v1 주문을 그대로 내서 체결을 재고, preopen 원본에 `breadth.qualified`·`v2Signal`을 남겨 v2를 가른다. 동시호가 체결이라 과거 일봉 결과가 실제 체결과 거의 같다. 실측으로 확인할 것은 예상체결가와 실제 시가의 차이 하나뿐이다.
+값 시험 JS 1개, 회귀 1개를 더했고, 변이(기준 5→1)를 탐지한다.
+
+
+## Historical opening price-basis validation (v1.29.1)
 
 Observed daily/minute opening-price ratios such as 22700/2270 invalidate mixed-source performance interpretation. The research report now compares the exact opening minute (including delayed session schedules) with stored daily open. A greater than 1% discrepancy blocks comparison/adoption; missing opening observations remain unverified. This is a diagnostic threshold, not a correction factor or proof that smaller discrepancies are safe. Corporate-action and volume basis still require source verification. No raw bars, prices, signal records, versions, or numeric results are changed. Pre-gate statistical adoption decisions remain recorded; effective adoption is disabled on mismatched/unverified data. Both dated and latest reports carry the gate, and validation.json is regenerated. Tests cover 10x mismatch, delayed session, missing opening minute, nonmutation of inputs/statistics, and disabled adoption. Mutations removing mismatch detection or the gate must fail. All work uses stored archives during market hours; no orders or backfill requests.

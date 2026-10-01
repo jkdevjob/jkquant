@@ -208,7 +208,7 @@ canvas{display:block;width:100%;height:auto}
 
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Morning Scalping</div><h1>JK <span class="v">퀀트</span> 단타 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="scVer">v1.28.2</span></h1></div>
+    <div><div class="kicker">Morning Scalping</div><h1>JK <span class="v">퀀트</span> 단타 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="scVer">v1.29.1</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -2094,6 +2094,10 @@ async function loadOpeningResearch(){
         '<div class="htable-wrap" style="margin-top:8px"><table class="htable"><thead><tr><th>설계 표본 '+esc(gd.from||'')+'~'+esc(gd.designEnd||'')+'</th><th>0틱</th><th>1.5틱</th><th>3틱</th></tr></thead><tbody>'+
         '<tr><td><b>전략 (하루 평균)</b></td><td>'+cell(st,'0.0t')+'</td><td>'+cell(st,'1.5t')+'</td><td>'+cell(st,'3.0t')+'</td></tr>'+
         '<tr><td>대조군 (같은 날 무작위 갭하락)</td><td>'+cell(ct,'0.0t')+'</td><td>'+cell(ct,'1.5t')+'</td><td>'+cell(ct,'3.0t')+'</td></tr>'+
+        (((gd.breadthFilter||{}).variants)?Object.entries(gd.breadthFilter.variants).map(([k,v])=>{
+          const z=(v.designSample||{}).strategy||{};
+          return '<tr><td><b>v2 · 통과 종목 '+esc(k.replace('min',''))+'개 이상인 날만</b></td><td>'+cell(z,'0.0t')+'</td><td>'+cell(z,'1.5t')+'</td><td>'+cell(z,'3.0t')+'</td></tr>';
+        }).join(''):'')+
         '<tr><td>선별 실력 (같은 날 차이)</td><td colspan="3">'+(((sk['1.5t']||{}).mean)==null?'—':pct(sk['1.5t'].mean)+' · t='+(+sk['1.5t'].tStat).toFixed(2)+' · '+sk['1.5t'].days+'일')+'</td></tr>'+
         '</tbody></table></div>'+
         '<div class="out" style="margin-top:8px">'+
