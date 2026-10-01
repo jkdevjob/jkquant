@@ -75,36 +75,8 @@ jobs:
             fi
           fi
 
-          REPORT="data/soxl-research/latest.json"
-          if [ "$GITHUB_EVENT_NAME" = "push" ]; then
-            echo "코드 push 실행 — Pages 배포와 경합하지 않도록 Telegram 발송은 다음 정기/수동 실행에서 수행"
-          elif [ -f "$REPORT" ]; then
-            DATE=$(jq -r '.to // empty' "$REPORT")
-            MARK="data/soxl-research/$DATE-summary-sent.json"
-            if [ -n "$DATE" ] && [ ! -f "$MARK" ]; then
-              if [ -z "$KEY" ]; then
-                echo "AUTOTRADE_KEY GitHub Secret 없음"
-                exit 1
-              fi
-              SENT=0
-              for attempt in $(seq 1 6); do
-                STATUS=$(curl -sS --max-time 30 -o soxl-summary-response.json -w '%{http_code}' \
-                  -X POST -H "x-monitor-key: $KEY" -H "content-type: application/json" \
-                  --data-binary @"$REPORT" "$BASE/api/scalping-daily-summary?strategy=soxl" || true)
-                echo "SOXL Telegram attempt $attempt HTTP $STATUS: $(cat soxl-summary-response.json 2>/dev/null || true)"
-                if [ "$STATUS" = "200" ] && jq -e '.ok == true' soxl-summary-response.json >/dev/null 2>&1; then
-                  jq -n --arg date "$DATE" --arg sentAt "$(TZ=Asia/Seoul date --iso-8601=seconds)" \
-                    '{date:$date,sentAt:$sentAt,strategy:"soxl",sections:[5,6]}' > "$MARK"
-                  SENT=1
-                  break
-                fi
-                sleep 10
-              done
-              [ "$SENT" = "1" ] || { echo "SOXL Telegram 전송 실패"; exit 1; }
-            else
-              echo "SOXL Telegram 이미 전송됨 또는 기준일 없음"
-            fi
-          fi
+          # SOXL 종료요약은 global-intraday-scheduler가 16:05 ET에 전송한다.
+          # 연구 workflow는 누적 데이터와 검증결과만 저장한다.
 
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
