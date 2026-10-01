@@ -52,6 +52,9 @@ JS = [
     ("etf drop sign", "opening-gapdown.js", "if(dropPct>ETF_RULE.dropMaxPct)return", "if(dropPct<ETF_RULE.dropMaxPct)return"),
     ("etf buy window", "opening-gapdown.js", 'if(stage==="etf_buy")return hms>=152000&&hms<152800;', 'if(stage==="etf_buy")return hms>=150000&&hms<152800;'),
     ("etf fill split", "opening-gapdown.js", 'return {closeBuy:agg(f("02",151500,240000)),openSell:agg(f("01",83000,90000))};', 'return {closeBuy:agg(f("02",0,240000)),openSell:agg(f("01",0,240000))};'),
+    ("live fill over expected", "claude-live.js", "const buy=bf||p.expectedPrice||null", "const buy=p.expectedPrice||bf||null"),
+    ("live coin ma lookahead", "claude-live.js", "slice(1,1+ma)", "slice(0,ma)"),
+    ("live coin stop", "claude-live.js", 'status:!hold?"쉼(평균 아래)":low<=stop?"손절":"보유중"', 'status:!hold?"쉼(평균 아래)":"보유중"'),
     ("watchlist whitelist", "opening-gapdown.js", "    if(!w)continue;\n", "    if(!w){out.push({...r});continue;}\n"),
 ]
 
@@ -81,7 +84,7 @@ for label, filename, before, after in PY:
 for label, filename, before, after in JS:
     with tempfile.TemporaryDirectory() as tmp:
         folder = Path(tmp)
-        for name in ("_gapdown.js", "opening-gapdown.js"):
+        for name in ("_gapdown.js", "opening-gapdown.js", "claude-live.js"):
             shutil.copy(API / name, folder / name)
         path = folder / filename
         src = path.read_text(encoding="utf-8")
