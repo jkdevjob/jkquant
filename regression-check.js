@@ -10553,9 +10553,11 @@ console.log('[SCALPING FLOW] 단타 공통 흐름 · 모의체결 분리');
   const pos=labels.map(x=>sc.indexOf(x));
   ok('단타 전략탭 공통 7단계 순서', pos.every((x,i)=>x>=0&&(i===0||x>pos[i-1])), pos.join(' → '));
   ok('활성 단타 4개 전략탭 모두 공통 flow 대상', ['opening','daytrading','crypto','soxl'].every(x=>sc.includes(x+':{strategy:')));
-  ok('검증 실패 과매도 반등은 운영전략에서 분리된 참고 탭', !/data-strategy="swing"/.test(sc)
-     && /data-strategy="reference"/.test(sc) && /id="strategy_reference" class="strategy-pane"/.test(sc)
-     && /폐기된 과매도 반등 연구/.test(sc));
+  ok('폐기 참고 페이지는 제거하고 전일·당일 통합 페이지가 시초가 앞에 위치',
+     !/data-strategy="reference"/.test(sc) && !/id="strategy_reference"/.test(sc)
+     && /data-strategy="daily"[^>]*>📅 전일·당일/.test(sc)
+     && sc.indexOf('data-strategy="daily"') < sc.indexOf('data-strategy="opening"')
+     && /id="strategy_daily" class="strategy-pane on"/.test(sc));
   ok('로그인 후 공통 flow를 만든 뒤 탭 복원',
      /setupUnifiedStrategyFlow\(\);[\s\S]{0,220}restoreStrategy\(\);/.test(sc));
   ok('단타 flow/showStrategy 함수는 한 번만 정의되어 중복 재배치가 없다',
@@ -10573,7 +10575,7 @@ console.log('[SCALPING FLOW] 단타 공통 흐름 · 모의체결 분리');
      && /VTTS3035R/.test(kis));
   ok('KIS 해외 모의 조회는 전체조회 후 종목 필터', /PDNO:""[\s\S]{0,220}OVRS_EXCG_CD:""/.test(kis)
      && /if\(code\) rows=rows\.filter\(x=>x\.code===code\)/.test(kis));
-  ok('단타 화면 버전 1.30.1', /id="scVer">v1\.30\.1<\/span>/.test(sc));
+  ok('단타 화면 버전 1.30.2', /id="scVer">v1\.30\.2<\/span>/.test(sc));
 }
 
 
@@ -10582,6 +10584,7 @@ console.log('[SCALPING HISTORY] 4전략 누적 매매이력 · 과매도 반등 
 {
   const sc=scl;
   const hapi=fs.readFileSync(__d+'/functions/api/scalping-history.js','utf8');
+  const dapi=fs.readFileSync(__d+'/functions/api/scalping-daily-results.js','utf8');
   ok('누적 이력 API는 시초가·데이트레이딩·BTC·SOXL baseline CSV를 공통 조회',
      /opening-history\/baseline-trades\.csv/.test(hapi)
      && /daytrading-research\/baseline-trades\.csv/.test(hapi)
@@ -10589,6 +10592,16 @@ console.log('[SCALPING HISTORY] 4전략 누적 매매이력 · 과매도 반등 
      && /soxl-research\/baseline-trades\.csv/.test(hapi));
   ok('누적 이력 API는 읽기전용이며 주문 경로가 없다',
      !/op=order|opening-execute|method:\s*["']POST["']|kisOrder\(/.test(hapi));
+  ok('전일·당일 통합 API는 4개 활성전략 결과만 읽기전용으로 집계',
+     /opening-history\//.test(dapi)
+     && /daytrading-research\/latest\.json/.test(dapi)
+     && /crypto-research\/baseline-decisions\.csv/.test(dapi)
+     && /soxl-research\/baseline-decisions\.csv/.test(dapi)
+     && !/op=order|opening-execute|method:\s*["']POST["']/.test(dapi));
+  ok('전일·당일 화면은 통합 API를 사용하고 일 +1% 달성 여부를 표시',
+     /\/api\/scalping-daily-results/.test(sc)
+     && /function loadDailyStrategyResults\(force\)/.test(sc)
+     && /\+1% 달성/.test(sc));
   ok('누적 이력 화면은 6개월 기본 + 1/3/6/12개월·전체·날짜지정과 100건 페이지 조회',
      /<option value="30">1개월<\/option>/.test(sc)
      && /<option value="90">3개월<\/option>/.test(sc)
@@ -10709,7 +10722,7 @@ console.log('[OPENING SIGNAL LEARNING] 실시간 ledger · 30분 사후라벨 ·
      /신호 이후 30분 경로 진단/.test(scl)
      && /조건별 실제 성과/.test(scl)
      && /groupTable\('전략 버전'/.test(scl)
-     && /id="scVer">v1\.30\.1<\/span>/.test(scl));
+     && /id="scVer">v1\.30\.2<\/span>/.test(scl));
 }
 
 /* ════ 단타 Telegram ③④ 실시간 + ⑤⑥ 일일 연구 ════ */
@@ -10748,7 +10761,7 @@ console.log('[SCALPING TELEGRAM] 실시간 신호 · 일일 매매/연구 요약
   const cr=cr0>=0&&cr1>cr0?nightly.slice(cr0,cr1):'';
   ok('BTC 야간연구는 실제 70/30 holdout 모델만 참조',
      /validationModel":"70\/30 holdout \+ rolling30"/.test(cr) && !/oos_edge|oos_trades|wf_status/.test(cr));
-  ok('단타 화면 버전 1.30.1', /id="scVer">v1\.30\.1<\/span>/.test(scl));
+  ok('단타 화면 버전 1.30.2', /id="scVer">v1\.30\.2<\/span>/.test(scl));
 }
 
 
