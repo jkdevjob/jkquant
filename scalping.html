@@ -221,7 +221,7 @@ canvas{display:block;width:100%;height:auto}
 
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Morning Scalping</div><h1>JK <span class="v">퀀트</span> 단타 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="scVer">v1.30.4</span></h1></div>
+    <div><div class="kicker">Morning Scalping</div><h1>JK <span class="v">퀀트</span> 단타 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="scVer">v1.31.0</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -491,6 +491,13 @@ canvas{display:block;width:100%;height:auto}
     </div>
 
     <div class="card">
+      <h3><span class="dot"></span>📒 오늘 장중 모의 매매이력 <span class="sub" style="font-weight:600">서버 지속 · 1분 자동갱신 · 주문 없음</span></h3>
+      <p class="lead">Cloudflare 서버가 오늘 BTC 기준전략의 <b>신호 → 다음 5분봉 시가 진입 → 손절/익절/시간청산</b>을 계속 재구성해 저장합니다. 실거래소 주문은 보내지 않으며, 진행 중 포지션도 현재 모의손익을 표시합니다.</p>
+      <div class="row" style="margin-bottom:8px"><button class="ghostbtn" onclick="loadGlobalPaper('crypto')">🔄 장중 이력 새로고침</button><span class="sub" id="crypto_live_paper_msg">오늘 서버 장부 불러오는 중…</span></div>
+      <div id="crypto_live_paper_body"><p class="sub">비트코인 탭을 열면 자동으로 갱신됩니다.</p></div>
+      <p class="note">1슬롯 전략이므로 매매 순손익과 계좌수익률이 같습니다. 확정 연구결과는 아래 누적 연구에서 별도로 검증합니다.</p>
+    </div>
+    <div class="card">
       <h3><span class="dot"></span>🧪 누적 비트코인 연구 <span class="sub" style="font-weight:600">최근 365일 백필 + 매일 자동 누적</span></h3>
       <p class="lead">최초 실행 때 최근 약 1년의 확정 5분봉을 가져와 바로 기준전략을 검증하고, 이후 매일 전날 원본을 추가한다.
         기준전략과 변형들은 <b>동일 원본·동일 체결 규칙</b>으로 비교한다.</p>
@@ -546,6 +553,13 @@ canvas{display:block;width:100%;height:auto}
       </div>
     </div>
 
+    <div class="card">
+      <h3><span class="dot"></span>📒 오늘 장중 모의 매매이력 <span class="sub" style="font-weight:600">서버 지속 · 1분 자동갱신 · 주문 없음</span></h3>
+      <p class="lead">Cloudflare 서버가 미국 정규장 기준전략의 <b>OR 돌파 → 다음 5분봉 시가 진입 → 손절/익절/시간청산</b>을 계속 재구성해 저장합니다. 한국투자 VTS 주문과는 별개의 JKQuant 연구용 모의장부입니다.</p>
+      <div class="row" style="margin-bottom:8px"><button class="ghostbtn" onclick="loadGlobalPaper('soxl')">🔄 장중 이력 새로고침</button><span class="sub" id="soxl_live_paper_msg">오늘 서버 장부 불러오는 중…</span></div>
+      <div id="soxl_live_paper_body"><p class="sub">SOXL 탭을 열면 자동으로 갱신됩니다.</p></div>
+      <p class="note">1슬롯 전략이므로 매매 순손익과 계좌수익률이 같습니다. VTS 체결이력은 별도 대조용이며 이 장부는 주문을 생성하지 않습니다.</p>
+    </div>
     <div class="card">
       <h3><span class="dot"></span>🧪 SOXL 누적 연구 <span class="sub" style="font-weight:600">기준 + 그림자 병렬 비교</span></h3>
       <div class="row" style="margin-bottom:8px">
@@ -1514,8 +1528,8 @@ function setupUnifiedStrategyFlow(){
   const cfg={
     opening:{strategy:['🔥 실시간 시초가 돌파 감시'],search:['📒 오늘 서버 매매 이력'],history:[],review:['🧪 누적 시초가 연구 백테스트'],paper:['🔎 한투 VTS 자동 병행체결 대조']},
     daytrading:{strategy:['📈 데이트레이딩 기준전략'],search:['📡 데이트레이딩 서버 장중 감시','📒 오늘 장중 모의 매매이력'],history:[],review:['🧪 데이트레이딩 누적 연구','📼 데이터 수집 규칙'],paper:['🔎 한투 VTS 체결 대조']},
-    crypto:{strategy:['₿ 비트코인 00시 ORB 기준전략 v2'],search:['📡 현재 KRW-BTC'],history:[],review:['🧪 누적 비트코인 연구','📼 데이터 수집 규칙'],paper:[]},
-    soxl:{strategy:['⚡ SOXL 15분 ORB 기준전략'],search:['📡 현재 SOXL'],history:[],review:['🧪 SOXL 누적 연구','📼 데이터 감사 규칙'],paper:[]}
+    crypto:{strategy:['₿ 비트코인 00시 ORB 기준전략 v2'],search:['📡 현재 KRW-BTC','📒 오늘 장중 모의 매매이력'],history:[],review:['🧪 누적 비트코인 연구','📼 데이터 수집 규칙'],paper:[]},
+    soxl:{strategy:['⚡ SOXL 15분 ORB 기준전략'],search:['📡 현재 SOXL','📒 오늘 장중 모의 매매이력'],history:[],review:['🧪 SOXL 누적 연구','📼 데이터 감사 규칙'],paper:[]}
   };
   Object.keys(cfg).forEach(name=>{
     const pane=$('strategy_'+name); if(!pane||pane.dataset.flowReady==='1')return;
