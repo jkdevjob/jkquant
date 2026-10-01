@@ -208,7 +208,7 @@ canvas{display:block;width:100%;height:auto}
 
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Morning Scalping</div><h1>JK <span class="v">퀀트</span> 단타 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="scVer">v1.29.2</span></h1></div>
+    <div><div class="kicker">Morning Scalping</div><h1>JK <span class="v">퀀트</span> 단타 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="scVer">v1.29.3</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -483,23 +483,24 @@ canvas{display:block;width:100%;height:auto}
 
 
   <div id="strategy_crypto" class="strategy-pane">
-    <div class="strategy-head">Upbit KRW-BTC · 5분봉 · 09:00 KST 기준 · 연구/검증 전용</div>
+    <div class="strategy-head">Upbit KRW-BTC · 5분봉 · 00:00 KST 기준 · 신규진입 22:00까지 · 연구/검증 전용</div>
 
     <div class="card">
-      <h3><span class="dot"></span>₿ 비트코인 09시 ORB 기준전략 v1 <span class="sub" style="font-weight:600">고정 규칙부터 검증</span></h3>
-      <p class="lead">업비트의 일별 기준이 바뀌는 <b>09:00 KST</b>를 세션 시작으로 보고, 첫 5분 범위를 돌파하는 흐름을 검증한다.
+      <h3><span class="dot"></span>₿ 비트코인 00시 ORB 기준전략 v2 <span class="sub" style="font-weight:600">00:00~22:00 감시</span></h3>
+      <p class="lead">비트코인은 24시간 거래되므로 <b>KST 00:00</b>를 연구 세션 시작으로 잡고, 자정 첫 5분 범위를 돌파하는 흐름을 <b>22:00 신규진입까지</b> 감시한다.
         전략을 데이터에 맞춰 자동 변경하지 않고 <b>기준전략 + 그림자 변형</b>을 같은 원본으로 계속 비교한다.</p>
       <div class="step"><div class="st"><span class="n">1</span>관찰</div><ul>
-        <li><b>09:00~09:05</b> 첫 5분봉의 고점을 Opening Range High로 고정한다.</li>
+        <li><b>00:00~00:05</b> 첫 5분봉의 고점을 Opening Range High로 고정한다.</li>
         <li>첫 봉이 끝나기 전에는 신호를 만들지 않는다.</li>
       </ul></div>
       <div class="step"><div class="st"><span class="n">2</span>진입 신호</div><ul>
-        <li>12:00 이전에 종가가 첫 고점을 <b>처음 재돌파</b>하고, 직전 봉 종가는 아직 고점 이하여야 한다.</li>
+        <li><b>21:55 KST 신호봉까지</b> 종가가 첫 고점을 처음 재돌파하고, 직전 봉 종가는 아직 고점 이하여야 한다. 다음 봉 진입은 최대 <b>22:00</b>.</li>
         <li>돌파봉 거래량 ≥ 첫 5분봉 거래량의 <b>1.2배</b>, 종가 > 세션 누적 <b>VWAP</b>.</li>
         <li>신호봉이 끝난 뒤 <b>다음 5분봉 시가</b>에 진입한다. 같은 봉을 보고 같은 봉에 들어가는 룩어헤드는 금지한다.</li>
       </ul></div>
       <div class="step"><div class="st"><span class="n">3</span>청산</div><ul>
         <li><b>손절 −0.5% / 익절 +1.0% / 최대 60분</b>.</li>
+        <li>22:00 진입이 발생하면 해당 포지션의 청산과 Telegram 매도 메시지는 최대 60분 동안 계속 추적한다.</li>
         <li>한 캔들 안에서 손절·익절이 모두 닿으면 보수적으로 <b>손절 우선</b>.</li>
         <li>왕복 수수료 <b>0.10%</b> + 왕복 슬리피지 가정 <b>0.04%</b> = 총 마찰비용 0.14% 차감.</li>
       </ul></div>
@@ -534,7 +535,7 @@ canvas{display:block;width:100%;height:auto}
     <div class="card">
       <h3><span class="dot"></span>📼 데이터 수집 규칙 <span class="sub" style="font-weight:600">24시간 시장 · 확정봉만 저장</span></h3>
       <p class="lead"><b>매일 09:20 KST</b> GitHub Actions가 업비트 공개 API에서 완료된 UTC 전일의 KRW-BTC 5분봉을 저장한다.
-        UTC 00:00은 KST 09:00이므로 파일 경계가 연구 세션과 정확히 맞는다.</p>
+        연구 백테스트에서는 인접한 UTC 원본 파일을 합쳐 <b>KST 00:00~23:55 달력일</b>로 다시 묶는다.</p>
       <div class="warn"><b>데이터 정직성:</b> 현재 진행 중인 UTC 일자는 저장하지 않고 확정된 이전 일자만 사용한다.
         최초에는 최근 365일을 백필하고, 이후에는 최근 2일을 겹쳐 다시 받아 누락·지연을 방지한다.
         원본은 <b>scalping-data/data/crypto</b>, 연구결과는 <b>data/crypto-research</b>에 누적한다.</div>
@@ -1342,7 +1343,7 @@ function flowTimingDefault(name,side){
       sell:['대기','보유 포지션의 손절 −1% · 익절 +2% · 15:10 시간청산을 추적합니다.','장중 장부와 장마감 KIS 재구성을 따로 보존합니다.']
     },
     crypto:{
-      buy:['대기','KRW-BTC 09시 ORB 기준전략의 확정 신호를 기다립니다.','한국투자와 분리된 BTC 연구/모의 엔진의 최근 확정 판단을 표시합니다.'],
+      buy:['대기','KRW-BTC 00시 ORB 기준전략을 22:00 신규진입까지 감시합니다.','한국투자와 분리된 BTC 연구/모의 엔진의 최근 확정 판단을 표시합니다.'],
       sell:['대기','BTC 기준전략의 익절·손절·시간청산 결과를 추적합니다.','실거래소 주문 없이 독립 모의체결로 기록합니다.']
     },
     soxl:{
@@ -1501,7 +1502,7 @@ function setupUnifiedStrategyFlow(){
   const cfg={
     opening:{strategy:['🔥 실시간 시초가 돌파 감시'],search:['📒 오늘 서버 매매 이력'],history:[],review:['🧪 누적 시초가 연구 백테스트'],paper:['🔎 한투 VTS 자동 병행체결 대조']},
     daytrading:{strategy:['📈 데이트레이딩 기준전략'],search:['📡 데이트레이딩 서버 장중 감시','📒 오늘 장중 모의 매매이력'],history:[],review:['🧪 데이트레이딩 누적 연구','📼 데이터 수집 규칙'],paper:['🔎 한투 VTS 체결 대조']},
-    crypto:{strategy:['₿ 비트코인 09시 ORB 기준전략'],search:['📡 현재 KRW-BTC'],history:[],review:['🧪 누적 비트코인 연구','📼 데이터 수집 규칙'],paper:[]},
+    crypto:{strategy:['₿ 비트코인 00시 ORB 기준전략 v2'],search:['📡 현재 KRW-BTC'],history:[],review:['🧪 누적 비트코인 연구','📼 데이터 수집 규칙'],paper:[]},
     soxl:{strategy:['⚡ SOXL 15분 ORB 기준전략'],search:['📡 현재 SOXL'],history:[],review:['🧪 SOXL 누적 연구','📼 데이터 감사 규칙'],paper:[]}
   };
   Object.keys(cfg).forEach(name=>{
