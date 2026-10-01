@@ -877,6 +877,7 @@ def search_group(queries, scorer, source_name=None):
             for item in results or []:
                 title = normalize_text(item.get('title'))
                 body = normalize_text(item.get('body'))
+                title = normalize_search_result_title(source_name, title, body)
                 url = normalize_url(item.get('href') or item.get('url') or '')
                 if not url:
                     continue
@@ -1345,6 +1346,37 @@ def collect_saramin_direct():
     )
     direct_jobs = enrich_jobs_from_details(list(jobs.values()))
     return direct_jobs, status
+
+
+
+def normalize_search_result_title(source_name, title, body):
+    title = normalize_text(title)
+    body = normalize_text(body)
+
+    # 고용24 검색결과는 문서 제목이 '채용정보 상세 | ...'로 내려오는 경우가 있다.
+    # 이때 검색 스니펫의 첫 실제 공고명을 제목으로 사용한다.
+    if source_name == '고용24' and (
+        '채용정보 상세' in title
+        or '일자리 찾기' in title
+        or '채용정보 상세검색' in title
+    ):
+        text = re.sub(
+            r'^[A-Z][a-z]{2}\s+\d{1,2},\s+\d{4}\s*[·-]\s*',
+            '',
+            body,
+        )
+        patterns = [
+            r'(?:채용시까지|상시채용|오늘마감|마감임박|D-\d+)\s+(.+?)\s+\[[^\]]+\]\s+\d+\s*명',
+            r'(?:채용시까지|상시채용|오늘마감|마감임박|D-\d+)\s+(.+?)(?=\s+\d+\s*명\b)',
+        ]
+        for pattern in patterns:
+            m = re.search(pattern, text, re.I)
+            if m:
+                candidate = normalize_text(m.group(1))
+                if 3 <= len(candidate) <= 180:
+                    return candidate
+
+    return clean_detail_title(title) or title
 
 
 def collect_search_source(source_name, domain):
