@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "generatedAt": "2026-10-01T18:32:01.883424+09:00",
+  "generatedAt": "2026-10-01T18:55:30.481669+09:00",
   "designEnd": "2026-09-30",
   "gate": {
     "mdd": -25.0,
@@ -305,91 +305,91 @@
     },
     "crypto": {
       "claude": {
-        "name": "③ BTC 20일 추세 + 손절",
-        "strategyVersion": "btc_trend20_v1",
-        "rule": "업비트 KRW-BTC 일봉(09시 기준). 전일 종가 > 20일 평균이면 그날 보유, 09시 시가 대비 −4% 닿으면 손절 후 그날 쉼. 자금 50%.",
+        "name": "③ BTC+ETH 20일 추세 + 손절",
+        "strategyVersion": "crypto_trend20_v2",
+        "rule": "업비트 BTC·ETH 일봉(09시 기준) 각각: 전일 종가 > 20일 평균이면 그날 보유, 09시 시가 대비 −4% 닿으면 손절 후 그날 쉼. 두 코인 반반, 자금 60%.",
         "design": {
           "days": 3293,
-          "tradeDays": 1837,
-          "tradeDaysPerYear": 203.61524445794106,
-          "plus1RateOfTradeDays": 17.365269461077844,
-          "lossDaysPerYear": 103.52566049195262,
-          "tStat": 3.9891806843231286,
-          "plus1Days": 319,
-          "plus1DaysPerYear": 35.35833586395384,
-          "plus5Weeks": 38,
-          "plus5WeeksPerYear": 4.211964773762526,
-          "weeklyAvgPct": 0.4711363898973975,
-          "totalPct": 815.0800626971197,
-          "lossDays": 934,
-          "lossDayAvgPct": -0.7673443296449285,
-          "worstDayPct": -2.12,
-          "mddPct": -27.39874637890646,
-          "cagrPct": 27.81130193018162,
-          "expectancyPct": 0.13018969897300778,
-          "gate": false
+          "tradeDays": 2038,
+          "tradeDaysPerYear": 225.8943212875797,
+          "plus1RateOfTradeDays": 20.510304219823354,
+          "lossDaysPerYear": 114.8314606741573,
+          "tStat": 4.393563291706623,
+          "plus1Days": 418,
+          "plus1DaysPerYear": 46.33161251138779,
+          "plus5Weeks": 53,
+          "plus5WeeksPerYear": 5.874582447616155,
+          "weeklyAvgPct": 0.5973562154984791,
+          "totalPct": 1553.001204017622,
+          "lossDays": 1036,
+          "lossDayAvgPct": -0.8953603475555116,
+          "worstDayPct": -2.544,
+          "mddPct": -23.446355278413133,
+          "cagrPct": 36.469259051731086,
+          "expectancyPct": 0.14935538598740802,
+          "gate": true
         },
         "outOfSample": {},
         "recent": [
           {
-            "date": "2026-09-07",
-            "pnlPct": -0.7737164898041271
+            "date": "2026-09-13",
+            "pnlPct": -0.5587892898719427
           },
           {
-            "date": "2026-09-08",
-            "pnlPct": -0.6252669105223096
+            "date": "2026-09-14",
+            "pnlPct": -0.021
           },
           {
-            "date": "2026-09-09",
-            "pnlPct": -0.035
+            "date": "2026-09-15",
+            "pnlPct": -1.272
           },
           {
             "date": "2026-09-19",
-            "pnlPct": 0.07976283852778213
+            "pnlPct": 0.23688290614103358
           },
           {
             "date": "2026-09-20",
-            "pnlPct": 0.10773821866800759
+            "pnlPct": 0.25652279771916087
           },
           {
             "date": "2026-09-21",
-            "pnlPct": 2.684065637482458
+            "pnlPct": 2.7461122202899713
           },
           {
             "date": "2026-09-22",
-            "pnlPct": -0.6288261058886802
+            "pnlPct": -0.8645161108175548
           },
           {
             "date": "2026-09-23",
-            "pnlPct": 0.11154345006485489
+            "pnlPct": -0.0061456484996536
           },
           {
             "date": "2026-09-24",
-            "pnlPct": -0.3390620147013135
+            "pnlPct": -0.34179857615665443
           },
           {
             "date": "2026-09-25",
-            "pnlPct": -0.6362815100502073
+            "pnlPct": -0.6025375078289796
           },
           {
             "date": "2026-09-26",
-            "pnlPct": 0.5270242923885005
+            "pnlPct": 0.5468570795517169
           },
           {
             "date": "2026-09-27",
-            "pnlPct": -0.17630925950111176
+            "pnlPct": -0.35101716333009514
           },
           {
             "date": "2026-09-28",
-            "pnlPct": -0.41633901266928675
+            "pnlPct": -0.1509023087004735
           },
           {
             "date": "2026-09-29",
-            "pnlPct": 0.03964862507379596
+            "pnlPct": -0.0994309782963565
           },
           {
             "date": "2026-09-30",
-            "pnlPct": 0.06734925651703527
+            "pnlPct": 0.16413790144940155
           }
         ]
       },
@@ -409,23 +409,23 @@
         "note": "GPT 기준전략 기록이 있는 날짜 구간에서 같은 달력으로 계산",
         "claude": {
           "days": 365,
-          "tradeDays": 179,
-          "tradeDaysPerYear": 179.0,
-          "plus1RateOfTradeDays": 9.497206703910614,
-          "lossDaysPerYear": 95.0,
-          "tStat": 0.4868807474781075,
-          "plus1Days": 17,
-          "plus1DaysPerYear": 17.0,
+          "tradeDays": 195,
+          "tradeDaysPerYear": 195.0,
+          "plus1RateOfTradeDays": 12.82051282051282,
+          "lossDaysPerYear": 106.0,
+          "tStat": 0.04796268228530961,
+          "plus1Days": 25,
+          "plus1DaysPerYear": 25.0,
           "plus5Weeks": 1,
           "plus5WeeksPerYear": 1.0,
-          "weeklyAvgPct": 0.09285000357059925,
-          "totalPct": 5.041746413907777,
-          "lossDays": 95,
-          "lossDayAvgPct": -0.5415519658221313,
-          "worstDayPct": -2.085,
-          "mddPct": -8.536475917649767,
-          "cagrPct": 5.041746413907777,
-          "expectancyPct": 0.031093698570215357,
+          "weeklyAvgPct": -0.010240869942268471,
+          "totalPct": -0.5413234364629593,
+          "lossDays": 106,
+          "lossDayAvgPct": -0.7385438784519379,
+          "worstDayPct": -2.502,
+          "mddPct": -15.397195122402286,
+          "cagrPct": -0.5413234364629593,
+          "expectancyPct": 0.004041704412954467,
           "gate": true
         },
         "gpt": {
@@ -450,20 +450,56 @@
           "gate": false
         }
       },
-      "nextSignal": {
-        "basedOn": "2026-09-30",
-        "signalClose": 113740000.0,
-        "ma": 110700950.0,
-        "holdNext": true
+      "nextSignals": {
+        "KRW-BTC": {
+          "basedOn": "2026-09-30",
+          "signalClose": 113740000.0,
+          "ma": 110700950.0,
+          "holdNext": true
+        },
+        "KRW-ETH": {
+          "basedOn": "2026-09-30",
+          "signalClose": 3652000.0,
+          "ma": 3554150.0,
+          "holdNext": true
+        }
       },
       "params": {
-        "version": "btc_trend20_v1",
+        "version": "crypto_trend20_v2",
+        "markets": [
+          "KRW-BTC",
+          "KRW-ETH"
+        ],
         "ma": 20,
         "stopPct": 4.0,
-        "size": 0.5,
+        "size": 1.0,
+        "tabSize": 0.6,
         "costRoundTripPct": 0.14,
         "stopSlipPct": 0.1,
-        "note": "업비트 KRW-BTC 일봉(09시 기준). 전일 종가 > 20일 평균이면 그날 보유, 09시 시가 대비 −4% 닿으면 손절 후 그날 쉼. 자금 50%."
+        "note": "업비트 BTC·ETH 일봉(09시 기준) 각각: 전일 종가 > 20일 평균이면 그날 보유, 09시 시가 대비 −4% 닿으면 손절 후 그날 쉼. 두 코인 반반, 자금 60%."
+      },
+      "variants": {
+        "btc_trend20_v1 (BTC 단독 50%)": {
+          "days": 3293,
+          "tradeDays": 1837,
+          "tradeDaysPerYear": 203.61524445794106,
+          "plus1RateOfTradeDays": 17.365269461077844,
+          "lossDaysPerYear": 103.52566049195262,
+          "tStat": 3.9891806843231286,
+          "plus1Days": 319,
+          "plus1DaysPerYear": 35.35833586395384,
+          "plus5Weeks": 38,
+          "plus5WeeksPerYear": 4.211964773762526,
+          "weeklyAvgPct": 0.4711363898973975,
+          "totalPct": 815.0800626971197,
+          "lossDays": 934,
+          "lossDayAvgPct": -0.7673443296449285,
+          "worstDayPct": -2.12,
+          "mddPct": -27.39874637890646,
+          "cagrPct": 27.81130193018162,
+          "expectancyPct": 0.13018969897300778,
+          "gate": false
+        }
       }
     },
     "soxl": {
@@ -585,5 +621,245 @@
       }
     }
   },
-  "note": "모든 수익률은 각 전략 자체 기록의 순수익(수수료·슬리피지 포함). 매매 없는 날 0%. 클로드 ③④ 는 주문 없는 연구 그림자."
+  "note": "모든 수익률은 각 전략 자체 기록의 순수익(수수료·슬리피지 포함). 매매 없는 날 0%. 클로드 ③④ 는 주문 없는 연구 그림자.",
+  "account": {
+    "plan": {
+      "krWeight": 0.5,
+      "cryptoWeight": 0.5,
+      "cryptoSize": 1.0,
+      "note": "같은 원금: 국내 칸 50%(① D-1 v2 + ② ETF 야간, 같은 날이면 반반) + 코인 칸 50%(BTC+ETH 반반 추세, 칸 안에서 전액)."
+    },
+    "design": {
+      "days": 3293,
+      "tradeDays": 2260,
+      "tradeDaysPerYear": 250.5010628606134,
+      "plus1RateOfTradeDays": 20.353982300884958,
+      "lossDaysPerYear": 120.48436076525964,
+      "tStat": 6.082848848322629,
+      "plus1Days": 460,
+      "plus1DaysPerYear": 50.98694199817795,
+      "plus5Weeks": 53,
+      "plus5WeeksPerYear": 5.874582447616155,
+      "weeklyAvgPct": 0.819585369329423,
+      "totalPct": 4573.596445281911,
+      "lossDays": 1087,
+      "lossDayAvgPct": -0.8150717444773957,
+      "worstDayPct": -5.849602397687457,
+      "mddPct": -17.986487453573407,
+      "cagrPct": 53.13205380697064,
+      "expectancyPct": 0.18003289391277286,
+      "gate": true
+    },
+    "outOfSample": {},
+    "lastYear": {
+      "days": 365,
+      "tradeDays": 232,
+      "tradeDaysPerYear": 232.0,
+      "plus1RateOfTradeDays": 17.67241379310345,
+      "lossDaysPerYear": 112.0,
+      "tStat": 1.933855798083694,
+      "plus1Days": 41,
+      "plus1DaysPerYear": 41.0,
+      "plus5Weeks": 4,
+      "plus5WeeksPerYear": 4.0,
+      "weeklyAvgPct": 0.7986606838957799,
+      "totalPct": 52.441203184160344,
+      "lossDays": 112,
+      "lossDayAvgPct": -0.8131350880649153,
+      "worstDayPct": -5.849602397687457,
+      "mddPct": -7.527793970322394,
+      "cagrPct": 52.441203184160344,
+      "expectancyPct": 0.1932927155406261,
+      "gate": true
+    },
+    "recent": [
+      {
+        "date": "2026-09-06",
+        "pnlPct": 0.3595309384846479
+      },
+      {
+        "date": "2026-09-07",
+        "pnlPct": -0.627874896961661
+      },
+      {
+        "date": "2026-09-08",
+        "pnlPct": -0.4748753431667585
+      },
+      {
+        "date": "2026-09-09",
+        "pnlPct": -0.27831050228310505
+      },
+      {
+        "date": "2026-09-12",
+        "pnlPct": 0.018932526960067378
+      },
+      {
+        "date": "2026-09-13",
+        "pnlPct": -0.4656577415599522
+      },
+      {
+        "date": "2026-09-14",
+        "pnlPct": -2.711071428571431
+      },
+      {
+        "date": "2026-09-15",
+        "pnlPct": -1.5401162790697682
+      },
+      {
+        "date": "2026-09-19",
+        "pnlPct": 0.19740242178419465
+      },
+      {
+        "date": "2026-09-20",
+        "pnlPct": 0.21376899809930072
+      },
+      {
+        "date": "2026-09-21",
+        "pnlPct": 2.2884268502416427
+      },
+      {
+        "date": "2026-09-22",
+        "pnlPct": -0.7204300923479623
+      },
+      {
+        "date": "2026-09-23",
+        "pnlPct": -0.005121373749711333
+      },
+      {
+        "date": "2026-09-24",
+        "pnlPct": -0.284832146797212
+      },
+      {
+        "date": "2026-09-25",
+        "pnlPct": -0.502114589857483
+      },
+      {
+        "date": "2026-09-26",
+        "pnlPct": 0.4557142329597641
+      },
+      {
+        "date": "2026-09-27",
+        "pnlPct": -0.2925143027750793
+      },
+      {
+        "date": "2026-09-28",
+        "pnlPct": -0.12575192391706125
+      },
+      {
+        "date": "2026-09-29",
+        "pnlPct": -0.08285914858029708
+      },
+      {
+        "date": "2026-09-30",
+        "pnlPct": 0.13678158454116796
+      }
+    ]
+  },
+  "daily": {
+    "generatedAt": "2026-10-01T18:56:17.804518+09:00",
+    "today": "2026-10-01",
+    "finalKrDaily": "2026-09-29",
+    "rows": [
+      {
+        "group": "시초가",
+        "side": "claude",
+        "name": "① D-1 갭하락 과매도 v2",
+        "version": "opening_gapdown_v1",
+        "prevDate": "2026-09-30",
+        "lastDate": "2026-10-01",
+        "prev": "pending",
+        "last": "no_trade",
+        "plan": "명단 6종목 · 08:56 예상갭 확인 (통과 5종목 이상일 때 v2 매매)"
+      },
+      {
+        "group": "시초가",
+        "side": "gpt",
+        "name": "시초가 돌파",
+        "version": "opening_rebreak_v1",
+        "prevDate": "2026-09-30",
+        "lastDate": "2026-10-01",
+        "prev": -0.7632057658653377,
+        "last": "no_trade",
+        "plan": null
+      },
+      {
+        "group": "데이트레이딩",
+        "side": "claude",
+        "name": "② 코스닥150 레버리지 하락일 야간",
+        "version": "etf_dip_overnight_v1",
+        "prevDate": "2026-09-30",
+        "lastDate": "2026-10-01",
+        "prev": "no_trade",
+        "last": "no_trade",
+        "plan": "15:21 예상 종가 −3% 이하면 종가 매수 → 다음 날 시가 매도"
+      },
+      {
+        "group": "데이트레이딩",
+        "side": "gpt",
+        "name": "데이트레이딩",
+        "version": "daytrading_vwap_breakout_v1",
+        "prevDate": "2026-09-30",
+        "lastDate": "2026-10-01",
+        "prev": -1.2500000000000009,
+        "last": 0.7500000000000046,
+        "plan": null
+      },
+      {
+        "group": "비트코인",
+        "side": "claude",
+        "name": "③ BTC+ETH 20일 추세",
+        "version": "crypto_trend20_v2",
+        "prevDate": "2026-09-29",
+        "lastDate": "2026-09-30",
+        "prev": -0.0994309782963565,
+        "last": 0.16413790144940155,
+        "plan": "BTC 보유 · ETH 보유"
+      },
+      {
+        "group": "비트코인",
+        "side": "gpt",
+        "name": "비트코인",
+        "version": "btc_midnight_orb_v2",
+        "prevDate": "2026-09-29",
+        "lastDate": "2026-09-30",
+        "prev": 0.09698568358874182,
+        "last": -0.14441879578977346,
+        "plan": null
+      },
+      {
+        "group": "SOXL",
+        "side": "claude",
+        "name": "④ SOXX 50일 추세 SOXL",
+        "version": "soxl_trend50_v1",
+        "prevDate": "2026-09-29",
+        "lastDate": "2026-09-30",
+        "prev": -0.35063488814387755,
+        "last": 0.14625860720264838,
+        "plan": "보유 (미국장)"
+      },
+      {
+        "group": "SOXL",
+        "side": "gpt",
+        "name": "SOXL",
+        "version": "",
+        "prevDate": "2026-09-29",
+        "lastDate": "2026-09-30",
+        "prev": "no_trade",
+        "last": "no_trade",
+        "plan": null
+      },
+      {
+        "group": "전체",
+        "side": "claude",
+        "name": "🏦 전체 계좌 (국내 50% + 코인 50%)",
+        "version": "account",
+        "prevDate": "2026-09-29",
+        "lastDate": "2026-09-30",
+        "prev": -0.08285914858029708,
+        "last": 0.13678158454116796,
+        "plan": null
+      }
+    ],
+    "note": "시장마다 자기 거래일 기준. ① 은 확정 일봉으로만 계산해 하루 늦게 채워질 수 있음(pending). 숫자는 순손익 %."
+  }
 }
