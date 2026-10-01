@@ -1412,7 +1412,11 @@ function mondayYmd(){
   return new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Seoul',year:'numeric',month:'2-digit',day:'2-digit'}).format(d);
 }
 function simpleTradeSum(a,key='pnl'){
-  const pn=(a||[]).map(x=>Number(x&&x[key])).filter(Number.isFinite);
+  const pn=(a||[]).map(x=>{
+    const v=x&&x[key];
+    if(v===null||v===undefined||v==='')return null;
+    const n=Number(v);return Number.isFinite(n)?n:null;
+  }).filter(Number.isFinite);
   const sum=pn.reduce((v,x)=>v+x,0),wins=pn.filter(x=>x>0).length,losses=pn.filter(x=>x<0).length;
   return {trades:(a||[]).length,closed:pn.length,wins,losses,sum,avg:pn.length?sum/pn.length:0};
 }
@@ -1461,7 +1465,8 @@ function globalPaperPeriod(x,fallbackDate){
     const label=x.state==='market_closed'?'휴장':x.finalized?'NO TRADE 확정':'현재까지 거래 없음/진행 중';
     return {date,stats:simpleTradeSum([]),status:label+(x.session?' · '+x.session:'')};
   }
-  const row={pnl:Number(tr.pnl)},closed=Number.isFinite(row.pnl)?[row]:[];
+  const p=tr.pnl===null||tr.pnl===undefined||tr.pnl===''?null:Number(tr.pnl);
+  const row={pnl:p},closed=Number.isFinite(p)?[row]:[];
   const st=simpleTradeSum(closed);st.trades=1;
   const state=x.state==='closed'?'청산완료':x.state==='open'?'보유중':'진입대기';
   const path=(tr.entryTime||'')+(tr.exitTime?' → '+tr.exitTime:'');
