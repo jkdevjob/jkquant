@@ -41,6 +41,17 @@ const KRCODE = /^(?:\d{6}|\d{4}[A-Z]\d)$/;
 // Historical KRX preferred shares can end in a letter (e.g. 45014K).
 // Broaden only the read-only minute archive route; order validation is unchanged.
 function validMinuteHistoryCode(code){ return KRCODE.test(code)||/^\d{4}[0-9A-Z]{2}$/.test(code); }
+function dailyHistoryQuery(params, now=Date.now()){
+  const kst=new Date(now+9*3600000), hm=kst.getUTCHours()*100+kst.getUTCMinutes();
+  if(hm>=830&&hm<=1540)return {error:'Historical reference lookup paused: 08:30~15:40 KST',status:409};
+  const code=String(params.get('code')||'').toUpperCase(), start=params.get('start')||'', end=params.get('end')||'', adjustment=params.get('adjustment');
+  const stamp=s=>/^\d{8}$/.test(s)?Date.parse(s.slice(0,4)+'-'+s.slice(4,6)+'-'+s.slice(6,8)+'T00:00:00Z'):NaN;
+  const a=stamp(start),b=stamp(end),valid=s=>Number.isFinite(stamp(s))&&new Date(stamp(s)).toISOString().slice(0,10).replace(/-/g,'')===s;
+  if(!validMinuteHistoryCode(code)||!valid(start)||!valid(end)||a>b||b-a>99*86400000||!['0','1'].includes(adjustment)||end>kst.toISOString().slice(0,10).replace(/-/g,''))
+    return {error:'Require valid code, YYYYMMDD dates (max 100 calendar days), and adjustment=0 (adjusted) or 1 (original)',status:400};
+  return {code,start,end,adjustment,query:new URLSearchParams({FID_COND_MRKT_DIV_CODE:'J',FID_INPUT_ISCD:code,
+    FID_INPUT_DATE_1:start,FID_INPUT_DATE_2:end,FID_PERIOD_DIV_CODE:'D',FID_ORG_ADJ_PRC:adjustment})};
+}
 // 미국 티커. 국내 6자리와 겹치지 않으므로 code 하나로 국내/해외를 가른다.
 const USSYM = /^[A-Z]{1,5}$/;
 /* 같은 거래소인데 시세와 주문이 쓰는 코드가 다르다 — KIS 문서가 그렇게 돼 있다.
@@ -458,6 +469,19 @@ export async function onRequestGet({ request, env }) {
     // 과거 날짜의 1분봉. 네이버는 7거래일이 한계라 9:00~9:30 을 몇 달치 검증할 방법이 없었다.
     // KIS 는 날짜를 지정해 그 시각까지의 분봉 120개를 준다 — 아침 30분이면 한 번에 다 들어온다.
     // op=price 와 같은 공개 시세라 별도 인증을 두지 않는다.
+    if (op === "dayhist") {
+      const q=dailyHistoryQuery(url.searchParams);
+      if(q.error)return json({error:q.error},q.status);
+      const token=await getToken(env);
+      const afterToken=dailyHistoryQuery(url.searchParams);
+      if(afterToken.error)return json({error:afterToken.error},afterToken.status);
+      const j=await readJson(base(env)+'/uapi/domestic-stock/v1/quotations/inquire-daily-itemchartprice?'+q.query,{
+        headers:{authorization:'Bearer '+token,appkey:env.KIS_APPKEY,appsecret:env.KIS_APPSECRET,tr_id:'FHKST03010100',custtype:'P'}});
+      if(String(j.rt_cd)!=='0')return json({error:j.msg1||'Daily reference lookup failed',code:j.msg_cd||''},502);
+      return json({code:q.code,start:q.start,end:q.end,adjustment:q.adjustment,
+        priceBasis:q.adjustment==='1'?'original':'adjusted',source:'KIS/FHKST03010100',
+        output1:j.output1||{},output2:j.output2||[]});
+    }
     if (op === "minhist") {
       const code = String(url.searchParams.get("code") || "").toUpperCase();
       const date = String(url.searchParams.get("date") || "").replace(/\D/g, "");   // YYYYMMDD
