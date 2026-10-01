@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "generatedAt": "2026-10-01T18:55:30.481669+09:00",
+  "generatedAt": "2026-10-01T20:21:35.921393+09:00",
   "designEnd": "2026-09-30",
   "gate": {
     "mdd": -25.0,
@@ -504,10 +504,126 @@
     },
     "soxl": {
       "claude": {
-        "name": "④ SOXX 50일 추세 SOXL + 손절",
-        "strategyVersion": "soxl_trend50_v1",
-        "rule": "SOXX 종가 > 50일 평균이면 SOXL 보유(종가 기준), 전일 종가(진입일은 시가) 대비 −8% 닿으면 손절. 자금 25%.",
+        "name": "④ TQQQ 200일 추세 + 손절",
+        "strategyVersion": "tqqq_trend200_v1",
+        "rule": "QQQ 종가 > 200일 평균이면 TQQQ 보유(종가 기준), 전일 종가(진입일은 시가) 대비 −10% 닿으면 손절. 탭 표시는 자금 50%. SOXL 은 변동성이 너무 커 TQQQ 로 바꿨다(SOXL 안은 참고로 같이 계산).",
         "design": {
+          "days": 4184,
+          "tradeDays": 3385,
+          "tradeDaysPerYear": 203.87667304015295,
+          "plus1RateOfTradeDays": 24.992614475627768,
+          "lossDaysPerYear": 90.46462715105162,
+          "tStat": 3.485170187711959,
+          "plus1Days": 846,
+          "plus1DaysPerYear": 50.95411089866156,
+          "plus5Weeks": 51,
+          "plus5WeeksPerYear": 3.0717017208413,
+          "weeklyAvgPct": 0.3179827370966004,
+          "totalPct": 1478.2250395543426,
+          "lossDays": 1502,
+          "lossDayAvgPct": -1.183694541489507,
+          "worstDayPct": -5.1499999999999995,
+          "mddPct": -24.848829711272092,
+          "cagrPct": 18.07692925910478,
+          "expectancyPct": 0.09384566191758538,
+          "gate": true
+        },
+        "outOfSample": {},
+        "recent": [
+          {
+            "date": "2026-09-10",
+            "pnlPct": -1.6352228284270243
+          },
+          {
+            "date": "2026-09-11",
+            "pnlPct": 1.2787200519252973
+          },
+          {
+            "date": "2026-09-14",
+            "pnlPct": -1.2045693385418443
+          },
+          {
+            "date": "2026-09-15",
+            "pnlPct": -0.9888806002451511
+          },
+          {
+            "date": "2026-09-16",
+            "pnlPct": 0.02209041135694534
+          },
+          {
+            "date": "2026-09-17",
+            "pnlPct": 2.539376514605518
+          },
+          {
+            "date": "2026-09-18",
+            "pnlPct": 0.8826016984542107
+          },
+          {
+            "date": "2026-09-21",
+            "pnlPct": 4.315806941866828
+          },
+          {
+            "date": "2026-09-22",
+            "pnlPct": 1.2165746292236213
+          },
+          {
+            "date": "2026-09-23",
+            "pnlPct": -1.3423222317134775
+          },
+          {
+            "date": "2026-09-24",
+            "pnlPct": -0.05085292863596935
+          },
+          {
+            "date": "2026-09-25",
+            "pnlPct": 0.6490179557766984
+          },
+          {
+            "date": "2026-09-28",
+            "pnlPct": -1.608038698283415
+          },
+          {
+            "date": "2026-09-29",
+            "pnlPct": 0.2725844781633846
+          },
+          {
+            "date": "2026-09-30",
+            "pnlPct": 0.36793164314565807
+          }
+        ]
+      },
+      "gpt": {
+        "strategyVersions": [],
+        "trades": 0,
+        "from_": null,
+        "to": null
+      },
+      "compare": {
+        "window": null,
+        "note": "GPT 기준전략 기록이 있는 날짜 구간에서 같은 달력으로 계산",
+        "claude": null,
+        "gpt": null
+      },
+      "nextSignal": {
+        "basedOn": "2026-09-30",
+        "signalClose": 739.77001953125,
+        "ma": 667.2667993164063,
+        "holdNext": true
+      },
+      "params": {
+        "version": "tqqq_trend200_v1",
+        "trade": "TQQQ",
+        "signal": "QQQ",
+        "ma": 200,
+        "stopPct": 10.0,
+        "size": 1.0,
+        "tabSize": 0.5,
+        "costRoundTripPct": 0.2,
+        "stopSlipPct": 0.1,
+        "note": "QQQ 종가 > 200일 평균이면 TQQQ 보유(종가 기준), 전일 종가(진입일은 시가) 대비 −10% 닿으면 손절. 탭 표시는 자금 50%. SOXL 은 변동성이 너무 커 TQQQ 로 바꿨다(SOXL 안은 참고로 같이 계산)."
+      },
+      "variants": {
+        "soxl_trend50_v1 (SOXL · 자금 25%)": {
           "days": 4165,
           "tradeDays": 2782,
           "tradeDaysPerYear": 168.32268907563025,
@@ -527,236 +643,148 @@
           "cagrPct": 7.515856798526621,
           "expectancyPct": 0.04937248342822035,
           "gate": true
-        },
-        "outOfSample": {},
-        "recent": [
-          {
-            "date": "2026-07-07",
-            "pnlPct": -2.0749999999999997
-          },
-          {
-            "date": "2026-07-08",
-            "pnlPct": 2.4261651202939025
-          },
-          {
-            "date": "2026-07-09",
-            "pnlPct": 2.5211630370383045
-          },
-          {
-            "date": "2026-07-10",
-            "pnlPct": -2.0749999999999997
-          },
-          {
-            "date": "2026-07-13",
-            "pnlPct": -1.347949066614956
-          },
-          {
-            "date": "2026-07-14",
-            "pnlPct": -0.025
-          },
-          {
-            "date": "2026-07-15",
-            "pnlPct": -2.0999999999999996
-          },
-          {
-            "date": "2026-09-21",
-            "pnlPct": 1.8414315902090501
-          },
-          {
-            "date": "2026-09-22",
-            "pnlPct": 1.764955398706708
-          },
-          {
-            "date": "2026-09-23",
-            "pnlPct": -2.0749999999999997
-          },
-          {
-            "date": "2026-09-24",
-            "pnlPct": 1.3940800427999807
-          },
-          {
-            "date": "2026-09-25",
-            "pnlPct": 0.8747343424314991
-          },
-          {
-            "date": "2026-09-28",
-            "pnlPct": -2.0749999999999997
-          },
-          {
-            "date": "2026-09-29",
-            "pnlPct": -0.35063488814387755
-          },
-          {
-            "date": "2026-09-30",
-            "pnlPct": 0.14625860720264838
-          }
-        ]
-      },
-      "gpt": {
-        "strategyVersions": [],
-        "trades": 0,
-        "from_": null,
-        "to": null
-      },
-      "compare": {
-        "window": null,
-        "note": "GPT 기준전략 기록이 있는 날짜 구간에서 같은 달력으로 계산",
-        "claude": null,
-        "gpt": null
-      },
-      "nextSignal": {
-        "basedOn": "2026-09-30",
-        "signalClose": 568.6400146484375,
-        "ma": 528.5916009521484,
-        "holdNext": true
-      },
-      "params": {
-        "version": "soxl_trend50_v1",
-        "ma": 50,
-        "stopPct": 8.0,
-        "size": 0.25,
-        "costRoundTripPct": 0.2,
-        "stopSlipPct": 0.2,
-        "note": "SOXX 종가 > 50일 평균이면 SOXL 보유(종가 기준), 전일 종가(진입일은 시가) 대비 −8% 닿으면 손절. 자금 25%."
+        }
       }
     }
   },
   "note": "모든 수익률은 각 전략 자체 기록의 순수익(수수료·슬리피지 포함). 매매 없는 날 0%. 클로드 ③④ 는 주문 없는 연구 그림자.",
   "account": {
     "plan": {
-      "krWeight": 0.5,
-      "cryptoWeight": 0.5,
+      "krWeight": 0.3,
+      "cryptoWeight": 0.3,
+      "usWeight": 0.4,
       "cryptoSize": 1.0,
-      "note": "같은 원금: 국내 칸 50%(① D-1 v2 + ② ETF 야간, 같은 날이면 반반) + 코인 칸 50%(BTC+ETH 반반 추세, 칸 안에서 전액)."
+      "usSize": 1.0,
+      "note": "같은 원금: 국내 30%(① D-1 v2 + ② ETF 야간, 같은 날이면 반반) + 코인 30%(BTC+ETH 반반 추세, 칸 안 전액) + 미국 40%(TQQQ 200일 추세, 칸 안 전액)."
     },
     "design": {
       "days": 3293,
-      "tradeDays": 2260,
-      "tradeDaysPerYear": 250.5010628606134,
-      "plus1RateOfTradeDays": 20.353982300884958,
-      "lossDaysPerYear": 120.48436076525964,
-      "tStat": 6.082848848322629,
-      "plus1Days": 460,
-      "plus1DaysPerYear": 50.98694199817795,
-      "plus5Weeks": 53,
-      "plus5WeeksPerYear": 5.874582447616155,
-      "weeklyAvgPct": 0.819585369329423,
-      "totalPct": 4573.596445281911,
-      "lossDays": 1087,
-      "lossDayAvgPct": -0.8150717444773957,
-      "worstDayPct": -5.849602397687457,
-      "mddPct": -17.986487453573407,
-      "cagrPct": 53.13205380697064,
-      "expectancyPct": 0.18003289391277286,
+      "tradeDays": 2810,
+      "tradeDaysPerYear": 311.46371090191315,
+      "plus1RateOfTradeDays": 22.206405693950177,
+      "lossDaysPerYear": 139.5490434254479,
+      "tStat": 5.5837781499470855,
+      "plus1Days": 624,
+      "plus1DaysPerYear": 69.16489523231095,
+      "plus5Weeks": 52,
+      "plus5WeeksPerYear": 5.7637412693592465,
+      "weeklyAvgPct": 0.8255815404655475,
+      "totalPct": 4706.361917173072,
+      "lossDays": 1259,
+      "lossDayAvgPct": -0.9498055436956749,
+      "worstDayPct": -6.496286922576449,
+      "mddPct": -22.08145524279832,
+      "cagrPct": 53.608242113698545,
+      "expectancyPct": 0.1477260689821835,
       "gate": true
     },
     "outOfSample": {},
     "lastYear": {
       "days": 365,
-      "tradeDays": 232,
-      "tradeDaysPerYear": 232.0,
-      "plus1RateOfTradeDays": 17.67241379310345,
-      "lossDaysPerYear": 112.0,
-      "tStat": 1.933855798083694,
-      "plus1Days": 41,
-      "plus1DaysPerYear": 41.0,
-      "plus5Weeks": 4,
-      "plus5WeeksPerYear": 4.0,
-      "weeklyAvgPct": 0.7986606838957799,
-      "totalPct": 52.441203184160344,
-      "lossDays": 112,
-      "lossDayAvgPct": -0.8131350880649153,
-      "worstDayPct": -5.849602397687457,
-      "mddPct": -7.527793970322394,
-      "cagrPct": 52.441203184160344,
-      "expectancyPct": 0.1932927155406261,
+      "tradeDays": 317,
+      "tradeDaysPerYear": 317.0,
+      "plus1RateOfTradeDays": 23.34384858044164,
+      "lossDaysPerYear": 148.0,
+      "tStat": 1.4842040350062882,
+      "plus1Days": 74,
+      "plus1DaysPerYear": 74.0,
+      "plus5Weeks": 6,
+      "plus5WeeksPerYear": 6.0,
+      "weeklyAvgPct": 0.7017211816249036,
+      "totalPct": 44.86229352504352,
+      "lossDays": 148,
+      "lossDayAvgPct": -1.0640519003599078,
+      "worstDayPct": -4.24644145661517,
+      "mddPct": -14.073480467221454,
+      "cagrPct": 44.86229352504352,
+      "expectancyPct": 0.12881132160311395,
       "gate": true
     },
     "recent": [
       {
-        "date": "2026-09-06",
-        "pnlPct": 0.3595309384846479
-      },
-      {
-        "date": "2026-09-07",
-        "pnlPct": -0.627874896961661
-      },
-      {
-        "date": "2026-09-08",
-        "pnlPct": -0.4748753431667585
-      },
-      {
-        "date": "2026-09-09",
-        "pnlPct": -0.27831050228310505
+        "date": "2026-09-11",
+        "pnlPct": -1.3081782627416194
       },
       {
         "date": "2026-09-12",
-        "pnlPct": 0.018932526960067378
+        "pnlPct": 1.0343355577162783
       },
       {
         "date": "2026-09-13",
-        "pnlPct": -0.4656577415599522
+        "pnlPct": -0.2793946449359713
       },
       {
         "date": "2026-09-14",
-        "pnlPct": -2.711071428571431
+        "pnlPct": -1.6266428571428584
       },
       {
         "date": "2026-09-15",
-        "pnlPct": -1.5401162790697682
+        "pnlPct": -1.8877252382753364
+      },
+      {
+        "date": "2026-09-16",
+        "pnlPct": -0.7911044801961209
+      },
+      {
+        "date": "2026-09-17",
+        "pnlPct": 0.01767232908555627
+      },
+      {
+        "date": "2026-09-18",
+        "pnlPct": 2.0315012116844144
       },
       {
         "date": "2026-09-19",
-        "pnlPct": 0.19740242178419465
+        "pnlPct": 0.8245228118338853
       },
       {
         "date": "2026-09-20",
-        "pnlPct": 0.21376899809930072
+        "pnlPct": 0.12826139885958043
       },
       {
         "date": "2026-09-21",
-        "pnlPct": 2.2884268502416427
+        "pnlPct": 1.3730561101449856
       },
       {
         "date": "2026-09-22",
-        "pnlPct": -0.7204300923479623
+        "pnlPct": 3.020387498084686
       },
       {
         "date": "2026-09-23",
-        "pnlPct": -0.005121373749711333
+        "pnlPct": 0.9701868791290702
       },
       {
         "date": "2026-09-24",
-        "pnlPct": -0.284832146797212
+        "pnlPct": -1.2447570734491094
       },
       {
         "date": "2026-09-25",
-        "pnlPct": -0.502114589857483
+        "pnlPct": -0.3419510968232653
       },
       {
         "date": "2026-09-26",
-        "pnlPct": 0.4557142329597641
+        "pnlPct": 0.7926429043972172
       },
       {
         "date": "2026-09-27",
-        "pnlPct": -0.2925143027750793
+        "pnlPct": -0.17550858166504757
       },
       {
         "date": "2026-09-28",
-        "pnlPct": -0.12575192391706125
+        "pnlPct": -0.07545115435023675
       },
       {
         "date": "2026-09-29",
-        "pnlPct": -0.08285914858029708
+        "pnlPct": -1.3361464477749103
       },
       {
         "date": "2026-09-30",
-        "pnlPct": 0.13678158454116796
+        "pnlPct": 0.30013653325540846
       }
     ]
   },
   "daily": {
-    "generatedAt": "2026-10-01T18:56:17.804518+09:00",
+    "generatedAt": "2026-10-01T20:22:23.634860+09:00",
     "today": "2026-10-01",
     "finalKrDaily": "2026-09-29",
     "rows": [
@@ -769,7 +797,7 @@
         "lastDate": "2026-10-01",
         "prev": "pending",
         "last": "no_trade",
-        "plan": "명단 6종목 · 08:56 예상갭 확인 (통과 5종목 이상일 때 v2 매매)"
+        "plan": "명단 9종목 · 08:56 예상갭 확인 (통과 5종목 이상일 때 v2 매매)"
       },
       {
         "group": "시초가",
@@ -829,13 +857,13 @@
       {
         "group": "SOXL",
         "side": "claude",
-        "name": "④ SOXX 50일 추세 SOXL",
-        "version": "soxl_trend50_v1",
+        "name": "④ TQQQ 200일 추세 (미국 3배)",
+        "version": "tqqq_trend200_v1",
         "prevDate": "2026-09-29",
         "lastDate": "2026-09-30",
-        "prev": -0.35063488814387755,
-        "last": 0.14625860720264838,
-        "plan": "보유 (미국장)"
+        "prev": 0.2725844781633846,
+        "last": 0.36793164314565807,
+        "plan": "보유 (미국장 · 자금 50%)"
       },
       {
         "group": "SOXL",
@@ -851,12 +879,12 @@
       {
         "group": "전체",
         "side": "claude",
-        "name": "🏦 전체 계좌 (국내 50% + 코인 50%)",
+        "name": "🏦 전체 계좌 (국내 30% · 코인 30% · 미국 40%)",
         "version": "account",
         "prevDate": "2026-09-29",
         "lastDate": "2026-09-30",
-        "prev": -0.08285914858029708,
-        "last": 0.13678158454116796,
+        "prev": -1.3361464477749103,
+        "last": 0.30013653325540846,
         "plan": null
       }
     ],
