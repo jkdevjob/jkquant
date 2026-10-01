@@ -38,13 +38,13 @@ export async function onRequestPost({request,env}){
     const b=await request.json();
     const strategy=clean(b.strategy,30).toLowerCase(),stage=clean(b.stage,20).toLowerCase();
     if(!LABELS[strategy])return json({ok:false,error:"unknown strategy"},400);
-    if(!["buy","sell"].includes(stage))return json({ok:false,error:"unknown stage"},400);
+    if(!["buy","sell","summary"].includes(stage))return json({ok:false,error:"unknown stage"},400);
     const eventId=clean(b.eventId,220);
     if(!eventId)return json({ok:false,error:"eventId required"},400);
     if(!(await claim(eventId)))return json({ok:true,duplicate:true,eventId});
 
-    const icon=stage==="buy"?"🟢":"🔴";
-    const action=stage==="buy"?"매수 타이밍":"매도 타이밍";
+    const icon=stage==="buy"?"🟢":stage==="sell"?"🔴":"📊";
+    const action=stage==="buy"?"매수 타이밍":stage==="sell"?"매도 타이밍":"전략 종료 요약";
     const when=[clean(b.date,20),clean(b.time,20)].filter(Boolean).join(" ");
     const lines=Array.isArray(b.lines)?b.lines.map(x=>clean(x,500)).filter(Boolean).slice(0,16):[];
     const msg=[
@@ -53,7 +53,7 @@ export async function onRequestPost({request,env}){
       "",
       ...lines,
       "",
-      "JKQuant 기준전략 모의/연구 신호"
+      stage==="summary"?"JKQuant 기준전략 세션 종료 결과":"JKQuant 기준전략 모의/연구 신호"
     ].filter((x,i,a)=>!(x===""&&a[i-1]==="")).join("\n");
     const id=await telegram(env,msg);
     return json({ok:true,eventId,messageId:id});
