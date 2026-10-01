@@ -3,7 +3,9 @@ import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 const __dirname=path.dirname(fileURLToPath(import.meta.url));
 globalThis.DurableObject=class {};
-const mod=await import('../worker/global-intraday-scheduler/src/index.js');
+let workerSrc=fs.readFileSync(path.join(__dirname,'..','worker/global-intraday-scheduler/src/index.js'),'utf8');
+workerSrc=workerSrc.replace('import { DurableObject } from "cloudflare:workers";','const DurableObject=globalThis.DurableObject;');
+const mod=await import('data:text/javascript;base64,'+Buffer.from(workerSrc).toString('base64'));
 
 function near(a,b,tol=1e-9){return Math.abs(Number(a)-Number(b))<=tol;}
 let fail=0;
