@@ -275,6 +275,7 @@ def read_json(path):
 
 
 DECISIONS = {}
+ROWS = {}
 PAPER = DATA / "claude-paper"
 PAPER_START = "2026-10-01"          # 모의투자 장부 시작일 = 판정용 표본 시작일
 
@@ -345,7 +346,17 @@ def write_paper(report, d1, krx_cal, crypto_full, us_full, cal_c):
         cal = [r["date"] for r in recs]
         z = goal_metrics(vals, cal, 365 if key.startswith(("crypto", "account")) else 250) if cal else {}
         exp = expectation(report, key)
-        summary[key] = dict(days=len(cal), first=cal[0] if cal else None, last=cal[-1] if cal else None,
+        cum, peak, dd, rows_out, streak = 1.0, 1.0, 0.0, [], 0
+        for r in recs:
+            v = float(r.get("pnlPct") or 0.0) if r.get("action") not in ("no_trade", "flat") else 0.0
+            cum *= 1 + v / 100
+            peak = max(peak, cum)
+            dd = cum / peak - 1
+            streak = streak + 1 if v < 0 else (0 if v > 0 else streak)
+            rows_out.append(dict(date=r["date"], action=r.get("action"), pnlPct=v, cumPct=(cum - 1) * 100,
+                                 note=r.get("decisionReason") or r.get("signalClose") and f"종가 {r.get('signalClose')}" or ""))
+        summary[key] = dict(rows=rows_out[-60:], currentDrawdownPct=dd * 100, lossStreak=streak,
+                            days=len(cal), first=cal[0] if cal else None, last=cal[-1] if cal else None,
                             tradeDays=len(vals), plus1Days=sum(1 for v in vals.values() if v >= 1),
                             totalPct=z.get("totalPct"), mddPct=z.get("mddPct"), worstDayPct=z.get("worstDayPct"),
                             avgTradePct=statistics.fmean(vals.values()) if vals else None, expected=exp,
@@ -385,6 +396,130 @@ def drift_status(vals, exp):
     if zscore < -2:
         return dict(code="below", text=f"기대보다 낮음 (z={zscore:.1f}) — 규칙 점검", z=zscore)
     return dict(code="ok", text=f"기대 범위 (z={zscore:.1f})", z=zscore)
+
+
+CHANGELOG = [
+    dict(date="2026-10-01", tab="opening", version="opening_gapdown_v1", text="① D-1 갭하락 과매도 시작 — KIS 모의투자 매일 주문(측정용)."),
+    dict(date="2026-10-01", tab="opening", version="v2 필터", text="통과 5종목 이상(시장 투매일)만 v2 매매로 판정 — 8년 하루 +1.33%, 9개 연도 모두 양수."),
+    dict(date="2026-10-01", tab="daytrading", version="etf_dip_overnight_v1", text="② 코스닥150 레버리지 −3% 하락일 종가 매수 → 다음날 시가 매도 시작."),
+    dict(date="2026-10-01", tab="crypto", version="crypto_trend20_v2", text="③ BTC 단독 → BTC+ETH 반반(+1% 달성일 35→46일/년)."),
+    dict(date="2026-10-01", tab="soxl", version="tqqq_trend200_v1", text="④ SOXL 대신 TQQQ 200일 추세(SOXL 은 손실 기준 지키면 연 +7%)."),
+    dict(date="2026-10-01", tab="all", version="account 30/30/40", text="전체 계좌 국내 30%·코인 30%·미국 40% — +1% 달성일 69일/년, MDD −22%."),
+]
+REVIEW = DATA / "claude-lab" / "review"
+
+
+def split_metrics(dv, cal, per):
+    return dict(design=goal_metrics({d: v for d, v in dv.items() if d <= DESIGN_END}, [d for d in cal if d <= DESIGN_END], per),
+                outOfSample=goal_metrics({d: v for d, v in dv.items() if d > DESIGN_END}, [d for d in cal if d > DESIGN_END], per))
+
+
+def d1_variant(minq):
+    q = {r["date"]: int(r.get("rsiPassed") or 0) for r in read_csv(DATA / "opening-gapdown-research/decisions.csv")}
+    by = {}
+    for r in read_csv(DATA / "opening-gapdown-research/signals.csv"):
+        by.setdefault(r["date"], []).append(float(r["pnl"]))
+    return {d: statistics.fmean(v) for d, v in by.items() if q.get(d, 0) >= minq}, sorted(q)
+
+
+def etf_variant(code, th):
+    import FinanceDataReader as fdr
+    today = datetime.now(KST).strftime("%Y-%m-%d")
+    d = fdr.DataReader(code, "2016-01-01")
+    b = [(str(i)[:10], float(r["Open"]), float(r["Close"])) for i, r in d.iterrows() if float(r["Open"]) > 0 and str(i)[:10] < today]
+    out = {}
+    for i in range(1, len(b) - 1):
+        chg = (b[i][2] / b[i - 1][2] - 1) * 100
+        if abs(chg) < 35 and chg <= th:
+            tick = 5 if b[i][2] >= 2000 else 1
+            out[b[i + 1][0]] = (b[i + 1][1] / b[i][2] - 1) * 100 - (0.03 + 2 * tick / b[i][2] * 100)
+    return out, [x[0] for x in b]
+
+
+def shadows(per_rows, tq_rows, qq_close):
+    """탭별 그림자 전략 — 주문 없음, 기준전략과 같은 목표 지표로 설계/판정 표본을 나란히 기록한다."""
+    out = {}
+    try:
+        v1, cal = d1_variant(1)
+        v3, _ = d1_variant(3)
+        out["opening"] = [dict(name="v1 · 매일(통과 1개 이상)", version="opening_gapdown_v1", rule="v2 필터 없이 조건 맞는 날 매일 3종목", **split_metrics(v1, cal, 250)),
+                          dict(name="v2 · 통과 3개 이상", version="opening_gapdown_v2_min3", rule="통과 종목 3개 이상인 날만", **split_metrics(v3, cal, 250))]
+    except Exception as e:  # noqa: BLE001
+        out["opening"] = [dict(name="error", error=str(e))]
+    try:
+        e2, c2 = etf_variant("233740", -2.0)
+        e4, _ = etf_variant("233740", -4.0)
+        k3, ck = etf_variant("122630", -3.0)
+        out["daytrading"] = [dict(name="코스닥150 레버리지 −2% 기준", version="etf_dip_overnight_th2", rule="−2% 이하 마감이면 매수", **split_metrics(e2, [d for d in c2 if d >= "2018-04-01"], 250)),
+                             dict(name="코스닥150 레버리지 −4% 기준", version="etf_dip_overnight_th4", rule="−4% 이하 마감이면 매수", **split_metrics(e4, [d for d in c2 if d >= "2018-04-01"], 250)),
+                             dict(name="코스피200 레버리지 −3% 기준", version="etf_dip_overnight_k200", rule="KODEX 레버리지(122630) −3% 이하 마감이면 매수", **split_metrics(k3, [d for d in ck if d >= "2018-04-01"], 250))]
+    except Exception as e:  # noqa: BLE001
+        out["daytrading"] = [dict(name="error", error=str(e))]
+    try:
+        cal_c = sorted({r[0] for rows in per_rows.values() for r in rows})
+        res = []
+        for name, ver, ma, stop in (("평균 50일", "crypto_trend50", 50, 4.0), ("손절 −3%", "crypto_trend20_stop3", 20, 3.0)):
+            per = {}
+            for m, rows in per_rows.items():
+                dv, _, _ = trend_daily(rows, dict(CRYPTO, ma=ma, stopPct=stop))
+                per[m] = (dv, None)
+            b = {d: v * CRYPTO["tabSize"] for d, v in basket(per, cal_c).items()}
+            res.append(dict(name=name, version=ver, rule=f"BTC+ETH 반반 · {ma}일 평균 · 손절 −{stop:g}% · 자금 60%", **split_metrics(b, cal_c, 365)))
+        out["crypto"] = res
+    except Exception as e:  # noqa: BLE001
+        out["crypto"] = [dict(name="error", error=str(e))]
+    try:
+        days = [r[0] for r in tq_rows]
+        dv, _, _ = trend_daily(tq_rows, dict(US, ma=150), signal_close=qq_close)
+        out["soxl"] = [dict(name="QQQ 150일 평균", version="tqqq_trend150", rule="QQQ > 150일 평균이면 TQQQ · 손절 −10% · 자금 50%",
+                            **split_metrics({d: v * US["tabSize"] for d, v in dv.items()}, days, 252))]
+    except Exception as e:  # noqa: BLE001
+        out["soxl"] = [dict(name="error", error=str(e))]
+    return out
+
+
+def review_entry(report):
+    """매일 검증·분석 기록 — 날짜별 한 번만 쓴다(저녁 첫 실행 기준). 자동 점검 결과 + 판단 근거."""
+    today = datetime.now(KST).strftime("%Y-%m-%d")
+    paper = (report.get("paper") or {}).get("summary") or {}
+    led = read_json(DATA / "opening-gapdown-live" / f"{today}.json") or {}
+    ev = {e.get("stage"): e.get("payload") or {} for e in ((led.get("ledger") or {}).get("events") or []) if e}
+    issues = []
+    for st_name in ("preopen", "close", "etf_buy", "etf_sell"):
+        for o in (ev.get(st_name) or {}).get("orders") or ([(ev.get(st_name) or {}).get("order")] if (ev.get(st_name) or {}).get("order") else []):
+            if o and not ((o.get("vts") or {}).get("ok")):
+                issues.append(f"{st_name} 주문 실패: {o.get('code')} {(o.get('vts') or {}).get('msg', '')}")
+    if datetime.now(KST).weekday() < 5 and not led:
+        issues.append("오늘 ①② 원본 기록 없음(휴장일이 아니면 점검)")
+    for k, v in paper.items():
+        if (v.get("status") or {}).get("code") == "below":
+            issues.append(f"{k}: 실측이 기대보다 낮음 — 규칙 점검")
+        if (v.get("lossStreak") or 0) >= 4:
+            issues.append(f"{k}: {v['lossStreak']}일 연속 손실")
+    tabs = {}
+    for r in (report.get("daily") or {}).get("rows", []):
+        if r.get("side") == "claude":
+            tabs[r["group"]] = dict(name=r["name"], date=r.get("lastDate"), result=r.get("last"), plan=r.get("plan"))
+    pre = ev.get("preopen") or {}
+    return dict(date=today, writtenAt=datetime.now(KST).isoformat(), tabs=tabs,
+                opening=dict(reason=pre.get("decisionReason"), picks=[p.get("name") for p in pre.get("picks") or []],
+                             breadth=(pre.get("breadth") or {}).get("qualified")),
+                etf=dict(buy=(ev.get("etf_buy") or {}).get("decisionReason"), drop=(ev.get("etf_buy") or {}).get("dropPct")),
+                paper={k: dict(tradeDays=v.get("tradeDays"), totalPct=v.get("totalPct"), status=(v.get("status") or {}).get("text"))
+                       for k, v in paper.items()},
+                issues=issues, verdict="문제 없음" if not issues else f"점검 필요 {len(issues)}건")
+
+
+def write_review(report):
+    e = review_entry(report)
+    if datetime.now(KST).hour >= 16:                     # 장 마감 뒤 첫 실행만 그날 기록으로 남긴다
+        write_once(REVIEW / f"{e['date']}.json", e)
+    out = []
+    for f in sorted(REVIEW.glob("*.json"))[-20:] if REVIEW.exists() else []:
+        j = read_json(f)
+        if j:
+            out.append(j)
+    return dict(today=e, history=list(reversed(out)))
 
 
 def us_to_kst(dv):
@@ -451,6 +586,7 @@ def main():
             cal_c |= {r[0] for r in rows}
             write_csv(OUT / f"{m.split('-')[1].lower()}-decisions.csv", dec_m)
             DECISIONS[m] = dec_m
+            ROWS[m] = rows
         cal_c = sorted(cal_c)
         crypto_full = basket(per, cal_c)                     # 코인 칸 안에서 전액(두 코인 반반)
         tab_dv = {d: v * CRYPTO["tabSize"] for d, v in crypto_full.items()}
@@ -468,6 +604,7 @@ def main():
         us_full = dv_u
         write_csv(OUT / "tqqq-decisions.csv", dec_u)
         DECISIONS["TQQQ"] = dec_u
+        ROWS["TQQQ"] = ([(d, *tq[d]) for d in udays], [qq[d][3] for d in udays])
         variants = {}
         try:
             sx, so = fetch_us("SOXL"), fetch_us("SOXX")
@@ -497,6 +634,15 @@ def main():
         report["paper"] = write_paper(report, d1, krx_cal, crypto_full, locals().get("us_full") or {}, locals().get("cal_c") or [])
     except Exception as e:  # noqa: BLE001
         report["paper"] = dict(error=str(e))
+    try:
+        report["shadows"] = shadows({m: ROWS[m] for m in CRYPTO["markets"] if m in ROWS}, *(ROWS.get("TQQQ") or ([], [])))
+    except Exception as e:  # noqa: BLE001
+        report["shadows"] = dict(error=str(e))
+    report["changelog"] = CHANGELOG
+    try:
+        report["review"] = write_review(report)
+    except Exception as e:  # noqa: BLE001
+        report["review"] = dict(error=str(e))
     (OUT / "latest.json").write_text(json.dumps(report, ensure_ascii=False, indent=2, default=str), encoding="utf-8")
     print(json.dumps({k: (v.get("compare") if isinstance(v, dict) else v) for k, v in report["tabs"].items()}, ensure_ascii=False, default=str)[:3000])
     return 0

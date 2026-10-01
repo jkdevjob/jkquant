@@ -98,6 +98,18 @@ export function coinHoldToday(candles,ma=20){
   const avg=done.reduce((a,b)=>a+b,0)/ma;
   return {hold:done[0]>avg,prevClose:done[0],ma:avg,basedOn:String(candles[1].candle_date_time_kst||"").slice(0,10)};
 }
+// 어제(09시~오늘 09시) 확정 결과: candles[1] 이 어제 봉, 그 판단은 candles[2..21] 종가로 한다.
+export function coinDayResult(candles,ma=20){
+  const c=Array.isArray(candles)?candles:[];
+  if(c.length<ma+2)return null;
+  const h=coinHoldToday(c.slice(1),ma);
+  const d=c[1],open=+d.opening_price,low=+d.low_price,close=+d.trade_price;
+  if(!h)return null;
+  if(!h.hold)return {date:String(d.candle_date_time_kst||"").slice(0,10),hold:false,pnlPct:0,action:"쉼"};
+  const stopped=low<=open*(1-COIN_STOP/100);
+  return {date:String(d.candle_date_time_kst||"").slice(0,10),hold:true,action:stopped?"손절":"보유",
+    pnlPct:stopped?(-COIN_STOP-COIN_STOP_SLIP-COIN_COST):pct(close,open)};
+}
 export function coinRow(market,lastDec,tick,today){
   const hold=lastDec&&String(lastDec.hold)!=="0";
   if(!tick)return {code:market,name:market.replace("KRW-",""),status:"시세 없음"};
