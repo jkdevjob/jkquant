@@ -10660,12 +10660,14 @@ console.log('[SCALPING IMPROVEMENTS V2] 경로·엔진·비용·그림자·UI');
      /VARIANT_DESIGNED_FROM/.test(py) && /MULTIPLE_TEST_K = len\(VARIANTS\)/.test(py)
      && /passesPredeclaredRule/.test(py) && /no auto-promotion/i.test(py)
      && /designedFrom:\["2026-09-22"\]/.test(oj));
-  ok('B-1 폐기전략 참고탭 분리 + B-2 기준전략 scoreline',
-     /data-strategy="reference"/.test(sc) && /strategy-scoreline/.test(sc)
+  ok('B-1 폐기 참고페이지 제거 + B-2 기준전략 scoreline',
+     !/data-strategy="reference"/.test(sc) && !/id="strategy_reference"/.test(sc)
+     && /data-strategy="daily"/.test(sc) && /strategy-scoreline/.test(sc)
      && /기준전략 누적/.test(sc) && /필요승률/.test(sc) && /엣지/.test(sc));
-  ok('B-3 4전략 비교 + B-4 구버전 접기 + B-5 경고 3줄/근거접기',
-     /4전략 한눈에 비교/.test(sc) && /구버전·아카이브/.test(sc)
-     && /근거 보기 ▾/.test(sc) && /운영전략이 아니며 실제 매매 근거/.test(sc));
+  ok('B-3 4전략 누적 비교 + B-4 구버전 접기 + B-5 폐기페이지 비노출',
+     /4전략 누적 상태/.test(sc) && /구버전·아카이브/.test(sc)
+     && !/폐기된 과매도 반등 연구/.test(sc)
+     && !/운영전략이 아니며 실제 매매 근거/.test(sc));
   ok('A-5 연구 문서 27~35 및 개선/연구파일 복원',
      /## 27\./.test(fs.readFileSync(__d+'/SCALPING.md','utf8'))
      && fs.existsSync(__d+'/SCALPING_IMPROVEMENTS.md')
