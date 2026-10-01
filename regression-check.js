@@ -10746,8 +10746,8 @@ console.log('[SCALPING TELEGRAM] 실시간 신호 · 일일 매매/연구 요약
      !/\/api\/kis\?op=order|opening-execute|method:"POST"[\s\S]{0,100}order/.test(globalWorker));
   ok('BTC·SOXL Worker 배포는 MONITOR_KEY Secret만 전달',
      /secret put MONITOR_KEY/.test(globalDeploy) && !/TELEGRAM_BOT_TOKEN|TELEGRAM_CHAT_ID/.test(globalDeploy));
-  ok('BTC 종료요약은 23:05 KST에 실시간 Worker가 전송',
-     /async function summarizeBtc/.test(globalWorker) && /k\.hm!==2305/.test(globalWorker)
+  ok('BTC 종료요약은 22:05 KST에 실시간 Worker가 전송',
+     /async function summarizeBtc/.test(globalWorker) && /k\.hm!==2205/.test(globalWorker)
      && /strategy:"crypto",stage:"summary"/.test(globalWorker));
   ok('SOXL 종료요약은 미국장 종료 16:05 ET에 DST 대응 전송',
      /async function summarizeSoxl/.test(globalWorker) && /n\.hm!==1605/.test(globalWorker)
