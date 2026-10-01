@@ -9,7 +9,7 @@
   ],
   "historicalUniverseWarning": "Same-day closing turnover is ex-post information. Historical reconstruction is not proof of an executable morning universe.",
   "baselineTradeCount": 1404,
-  "comparisonStatus": "eligible",
+  "comparisonStatus": "data_review_required",
   "comparisonRule": "Variant comparison is preliminary until >=20 trading days and >=30 baseline trades. Each variant's design date is excluded.",
   "multipleTesting": {
     "K": 14,
@@ -30048,5 +30048,25 @@
       }
     ],
     "note": "Out-of-sample only. Design dates are excluded per variant. No strategy is automatically promoted from this result."
+  },
+  "validation": {
+    "status": "blocked_price_basis_mismatch",
+    "checkedAt": "2026-10-01T00:15:01.385830+00:00",
+    "arithmeticReplayExact": true,
+    "replayedRecords": 15544,
+    "affectedBaselineSignals": 43,
+    "exact0900OpenMismatchedSymbolDates": 1277,
+    "affectedSymbols": 72,
+    "thresholdPct": 1,
+    "example": {
+      "date": "2026-02-09",
+      "code": "011930",
+      "dailyOpen": 2270,
+      "minuteOpen": 22700,
+      "entryPrice": 25350,
+      "nextDailyOpen": 2460
+    },
+    "reason": "Daily and minute prices are on inconsistent scales. Corporate-action adjustment is suspected but not yet verified. Raw rankings and stored records are preserved. Existing performance metrics must not be used for strategy adoption.",
+    "nextAction": "Verify original/adjusted price conventions and reconcile prices and volume before rerunning all variants. No backfill market-data requests during 08:30-15:40 KST."
   }
 }
