@@ -2056,3 +2056,30 @@ Observed daily/minute opening-price ratios such as 22700/2270 invalidate mixed-s
 ## Historical daily basis reference (v1.29.2)
 
 GET /api/kis?op=dayhist&code=011930&start=20260202&end=20260216&adjustment=1 returns original KIS daily output1/output2 for price and volume reconciliation; adjustment=0 requests adjusted prices. Based on the official KIS FHKST03010100 sample, FID_ORG_ADJ_PRC=1 is original and 0 adjusted. Require explicit basis and valid ordered dates, at most 100 calendar days, no future endpoint. Both the client and server forbid historical reference requests 08:30-15:40 KST. Authentication-token and quotation GET are the only upstream requests; shared order validators/routes remain untouched. Mock tests verify both price flags, raw volume preservation, invalid dates/range/code, exact market-hour boundaries, and zero upstream calls when blocked. Mutation tests remove the guard or force the original-price flag and must fail. This adds a diagnostic source only; no historical prices or returns are automatically rescaled.
+
+
+## BTC 기준전략 v2 — 00:00 KST 세션 / 22:00 신규진입 (v1.29.3, 2026-10-01)
+
+사용자 지시에 따라 비트코인 기준전략의 감시 시간을 기존 09:00 기준 단축 세션에서 **KST 00:00 시작 · 22:00 신규진입 마감**으로 바꿨다. 기존 BTC ORB의 신호 구조(첫 5분 고점 돌파 + 거래량 + VWAP, 다음 5분봉 시가 진입)와 손절·익절·보유시간·비용 규칙은 유지한다. 새 규칙은 `btc_midnight_orb_v2`로 별도 버전 표기해 과거 v1과 혼동하지 않는다.
+
+### 운영 모의감시
+- Opening Range: **00:00~00:05 KST** 첫 완료 5분봉.
+- 신규 신호 마지막 봉: **21:55 KST**. 다음 5분봉 시가가 22:00이므로 신규진입은 22:00까지다.
+- 22:00보다 늦은 다음 봉 진입은 만들지 않는다.
+- 청산은 기존과 동일하게 손절 −0.5%, 익절 +1.0%, 최대 60분, 같은 봉에서 둘 다 닿으면 손절 우선, 왕복 마찰 0.14%.
+- 22:00 진입분의 청산 Telegram을 놓치지 않도록 서버 감시는 **23:05 KST까지** 유지한다. 이 시간대에는 신규진입을 늘리는 것이 아니라 이미 발견한 당일 첫 기준전략 거래의 청산 상태만 재구성한다.
+- Telegram event id에 `btc_midnight_orb_v2`를 넣어 과거 v1 알림 캐시와 충돌하지 않게 했다.
+
+### Upbit 분봉 조회 경계
+Upbit 5분봉 API는 한 요청의 200개만으로는 자정부터 22시까지의 264개 이상 봉을 확보할 수 없다. 따라서 운영 Worker는 목표 KST 날짜의 00:00 봉을 찾을 때까지 최대 3페이지를 뒤로 넘기고, timestamp로 중복 제거한 뒤 시간순으로 정렬한다. 단순히 감시 시간만 늘리고 200개 제한을 그대로 두는 오류를 방지했다.
+
+### 누적 연구
+원본 아카이브는 기존처럼 UTC 일자 단위 파일을 그대로 보존한다. 연구 엔진만 인접 UTC 파일의 `tKst`를 합쳐 **KST 00:00~23:55 달력일 288봉**으로 재구성한다. primary 기준전략은 21:55 신호 → 22:00 다음 봉 진입까지 허용하며 결과에 `strategyVersion=btc_midnight_orb_v2`를 남긴다.
+
+### 값·경계 시험
+- JS 운영 엔진: 00:00 OR 생성, 일반 조기 신호, **21:55 신호 → 22:00 진입 허용**, **22:00 신호 → 22:05 진입 거부**를 값으로 확인한다.
+- Python 연구 엔진: 완전한 KST 288봉 세션, 21:55→22:00 경계, 22:00 이후 신규진입 거부, 00:00 봉 누락 세션 거부를 확인한다.
+- CI에서 두 시험을 별도 단계로 실행하고 기존 전체 회귀도 그대로 수행한다.
+
+### 데이트레이딩 일일요약 표시 수정
+같은 작업에서 Telegram의 혼동도 수정했다. 위의 `기준전략 N건`은 **당일 거래 수**, 아래의 변형별 N건은 **누적 연구 거래 수**인데 기존 문구가 이를 명확히 구분하지 않았다. 아래 제목을 `누적/그림자 비교 · 오늘 매매건수 아님 · 누적 N거래일`로 바꾸고 각 행에도 `누적 N건`을 표시한다. 계산식이나 과거 결과 숫자는 바꾸지 않았다.
