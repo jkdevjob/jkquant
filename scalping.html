@@ -1428,7 +1428,7 @@ function dayCard(label,date,st,status){
 function strategyDailyCard(name,title,prev,current,extra){
   const p=prev||{},c=current||{};
   return '<div class="card daily-strategy-card"><h3><span class="dot"></span>'+title+'</h3>'+
-    '<div class="daily-period-grid">'+dayCard('전일/직전 확정',p.date,p.stats,p.status)+dayCard('당일/현재',c.date,c.stats,c.status)+'</div>'+
+    '<div class="daily-period-grid">'+dayCard('전일',p.date,p.stats,p.status)+dayCard('당일',c.date,c.stats,c.status)+'</div>'+
     (extra?'<p class="note">'+extra+'</p>':'')+'</div>';
 }
 async function overviewHistory(name){
