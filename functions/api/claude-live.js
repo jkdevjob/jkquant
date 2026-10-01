@@ -2,11 +2,13 @@
 // 단타(클로드) 탭별 "오늘 모의 매매이력" (장중 실시간). 읽기 전용 — 주문 경로 없음.
 //  ① 시초가 · ② 데이트레이딩: opening-scheduler Worker 의 오늘 gapdown ledger(KIS 모의투자 주문·체결 원본)를
 //     서버에서 감시키로 읽어 가격·시각·손익만 돌려준다(주문번호·수량·키는 내보내지 않는다).
-//  ③ 코인 · ④ 미국: 전날 확정 판단(scalping-data claude-lab/*-decisions.csv)과 현재 시세로 오늘 손익을 계산한다.
+//  ③ 코인: 전날 확정 판단과 현재 시세로 오늘 손익을 계산한다.
+//  ④ SOXL: global-intraday-scheduler의 SOXL 5분봉 당일 모의장부를 읽는다.
 // 확정 결과는 밤 workflow 의 모의투자 장부(claude-paper)가 따로 남긴다. 이 응답은 화면 표시용이다.
 
 const JH={"Content-Type":"application/json; charset=utf-8","Cache-Control":"no-store"};
 const WORKER="https://jkquant-opening-scheduler.mumae4.workers.dev";
+const GLOBAL_WORKER="https://jkquant-global-intraday-scheduler.mumae4.workers.dev";
 const RAW="https://raw.githubusercontent.com/jkdevjob/jkquant/scalping-data/data/";
 const KR_COST=0.23, ETF_COST=0.13, COIN_COST=0.14, US_COST=0.20;   // 왕복 비용 %(연구와 같은 값)
 const COIN_STOP=4.0, COIN_STOP_SLIP=0.1, COIN_TAB_SIZE=0.6;
@@ -26,6 +28,16 @@ async function ledger(env,date){
     const r=await fetch(WORKER+"/gapdown?date="+encodeURIComponent(date),{headers:{"x-monitor-key":key}});
     const j=await r.json().catch(()=>({}));
     return r.ok&&j.ok?j.ledger:null;
+  }catch(e){return null;}
+}
+async function globalPaper(env,strategy,date=""){
+  const key=String(env.DAYTRADING_MONITOR_KEY||env.OPENING_MONITOR_KEY||env.AUTOTRADE_KEY||"").trim();
+  if(!key)return null;
+  try{
+    const q=new URLSearchParams({strategy}); if(date)q.set("date",date);
+    const r=await fetch(GLOBAL_WORKER+"/paper?"+q.toString(),{headers:{"x-monitor-key":key,"Accept":"application/json"}});
+    const j=await r.json().catch(()=>({}));
+    return r.ok&&j.ok?j:null;
   }catch(e){return null;}
 }
 function stages(l){
@@ -134,8 +146,8 @@ export function todaySummary(tab,t,hm){
     trades=rows.filter(r=>r.hold).length;tabPct=t.basketPct==null?0:t.basketPct;
     why=rows.map(r=>r.name+" "+(r.hold?(r.status||"보유"):"쉼(전날 종가 < 20일 평균)")).join(" · ")||"시세 없음";
   }else if(tab==="soxl"){
-    const u=rows[0]||{};trades=u.hold?1:0;tabPct=u.pnlPct==null?0:u.pnlPct;
-    why=u.hold==null?"판단 없음(밤 계산 점검)":u.hold?"QQQ 종가 > 200일 평균 — TQQQ 보유 ("+(u.session||"")+")":"QQQ 종가 < 200일 평균 — 쉼";
+    trades=rows.filter(r=>r.buyPrice!=null).length;tabPct=sum;
+    why=rows.length?rows.map(r=>"SOXL "+(r.status||"추적")+" · "+(r.note||"")).join(" · "):(t.note||"SOXL 파워아워 조건 미충족 — 매매 없음");
   }
   const w=ACCOUNT_WEIGHT[tab]||0;
   return {tabPct,sumPct:sum,trades,accountPct:tabPct*w,weight:w,noTrade:trades===0,why};
@@ -172,7 +184,7 @@ export async function onRequestGet({request,env}){
     out.tabs.daytrading={rows:etfRows(st,pst,prev&&prev.date,prices["233740"]),ledgerFound:!!lt,
       note:"전날 −3% 이하 마감이면 15:21 종가 매수 → 다음 거래일 08:59 시가 매도."};
     // ③
-    const [btcDec,ethDec,tq]=await Promise.all([csvLast("claude-lab/btc-decisions.csv",1),csvLast("claude-lab/eth-decisions.csv",1),csvLast("claude-lab/tqqq-decisions.csv",2)]);
+    const [btcDec,ethDec]=await Promise.all([csvLast("claude-lab/btc-decisions.csv",1),csvLast("claude-lab/eth-decisions.csv",1)]);
     let ticks={};
     try{const r=await fetch("https://api.upbit.com/v1/ticker?markets=KRW-BTC,KRW-ETH",{headers:{Accept:"application/json"}});for(const t of await r.json())ticks[t.market]=t;}catch(e){}
     const lab=await fetch(RAW+"claude-lab/latest.json?t="+Date.now()).then(r=>r.ok?r.json():null).catch(()=>null);
@@ -186,17 +198,16 @@ export async function onRequestGet({request,env}){
     const basket=coins.reduce((s,c)=>s+(c.pnlPct||0),0)/2;
     out.tabs.crypto={rows:coins,basketPct:basket,tabPct:basket*COIN_TAB_SIZE,
       note:"업비트 하루는 09:00 시작. 전날 종가가 20일 평균 위면 09:00 시가로 보유, 시가 대비 −4% 닿으면 손절. 두 코인 반반, 탭 표시 자금 60%."};
-    // ④
-    const us=await quote(origin,"TQQQ");
-    const un=((lab&&lab.tabs&&lab.tabs.soxl)||{}).nextSignal||null;
-    const lastUs=tq[tq.length-1]||null;
-    const ohlc=(us&&us.ohlc)||[],prevClose=ohlc.length?ohlc[ohlc.length-1].close:null;
-    const intra=us&&us.intraday,livePx=intra&&(intra.regular||intra.pre||intra.post)?(intra.regular||intra.post||intra.pre).c:null;
-    out.tabs.soxl={rows:[{code:"TQQQ",name:"TQQQ",hold:un?un.holdNext:null,status:un?(un.holdNext?"보유중":"쉼(200일 평균 아래)"):"판단 없음",
-      lastSession:lastUs?{date:lastUs.date,pnlPct:lastUs.pnlPct===""?null:+lastUs.pnlPct,action:lastUs.action}:null,
-      prevClose,nowPrice:livePx,pnlPct:un&&un.holdNext&&livePx&&prevClose?pct(livePx,prevClose):null,
-      session:intra&&intra.regular?"정규장":intra&&intra.pre?"프리마켓":intra&&intra.post?"애프터마켓":"장 마감"}],
-      note:"QQQ 종가가 200일 평균 위면 TQQQ 보유, −10% 손절. 미국장 결과는 한국시각 다음 날 아침에 확정."};
+    // ④ SOXL — global intraday worker의 당일 5분봉 모의장부
+    const [us,sp]=await Promise.all([quote(origin,"SOXL"),globalPaper(env,"soxl")]);
+    const led=sp&&sp.ledger||null,tr=(led&&led.trades&&led.trades[0])||null;
+    const intra=us&&us.intraday,livePx=intra&&(intra.regular||intra.pre||intra.post)?(intra.regular||intra.post||intra.pre).c:(us&&us.price)||null;
+    const status=!tr?"매매 없음":tr.status==="pending"?"진입대기":tr.status==="open"?"보유중":"청산";
+    const note=!tr?"파워아워 조건 미충족 또는 장부 생성 대기":tr.reason==="take_profit"?"익절":tr.reason==="stop"||tr.reason==="stop_same_bar"?"손절":tr.reason==="time_exit"?"시간청산":"추적중";
+    out.tabs.soxl={rows:tr?[{code:"SOXL",name:"SOXL",buyTime:tr.entryTime?tr.entryTime+" ET":null,buyPrice:tr.entryPrice,
+      sellTime:tr.exitTime?tr.exitTime+" ET":null,sellPrice:tr.exitPrice,nowPrice:tr.currentPrice||livePx,status,
+      pnlPct:tr.pnlPct,realized:tr.status==="closed",note}]:[],
+      ledgerFound:!!led,note:"SOXL만 매매 · 파워아워 조건 신호 → 다음 5분봉 진입 · −1%/+2% · 늦어도 15:55 ET 당일청산."};
     for(const k of Object.keys(ACCOUNT_WEIGHT))if(out.tabs[k])out.tabs[k].today=todaySummary(k,out.tabs[k],now.hm);
     applyKrSplit(out.tabs);
     return json(out);

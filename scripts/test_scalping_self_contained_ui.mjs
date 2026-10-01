@@ -44,7 +44,7 @@ function riskProbe(src){
   }catch(e){return false;}
 }
 
-ok(/id="scVer">v1\.32\.0<\/span>/.test(ui),'scalping UI version is v1.32.0');
+ok(/id="scVer">v1\.33\.0<\/span>/.test(ui),'scalping UI version is v1.33.0');
 const labels=['📖 전략 · 종목선정 규칙','🔎 오늘 종목 선정 · 감시','🟢 매수 타이밍','🔴 매도 · 손절 · 리스크','📒 오늘 모의매매 · 손익','🗓 다음 계획','🧪 그림자 · 매일 검증 · 개선','📚 누적 모의매매 이력','🔍 실행품질 · VTS 대조'];
 const pos=labels.map(x=>ui.indexOf(x));
 ok(pos.every((x,i)=>x>=0&&(i===0||x>pos[i-1])),'nine-step self-contained tab order');

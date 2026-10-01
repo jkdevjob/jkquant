@@ -142,8 +142,8 @@ t("telegram: each kind says what happened, no-trade is explicit", () => {
   const none = TG.compose("preopen", "2026-10-02", { tabs: { opening: { rows: [], decision: { reason: "no_expected_gap_down" } } } });
   assert.ok(none.includes("매매 없음 (no_expected_gap_down)"));
   const mo = TG.compose("morning", "2026-10-02", null, { coins: [{ name: "BTC", y: { action: "보유", pnlPct: 1 }, today: true }, { name: "ETH", y: { action: "손절", pnlPct: -4.24 }, today: false }],
-                                                         us: { date: "2026-10-01", action: "hold", pnlPct: 1.2, holdNext: true } });
-  assert.ok(mo.includes("BTC 어제 보유 +1.00%") && mo.includes("ETH 어제 손절 -4.24%") && mo.includes("코인 칸 어제 -1.62%") && mo.includes("오늘 밤 보유"));
+                                                         us: { date: "2026-10-01", action: "trade", pnlPct: 1.2 } });
+  assert.ok(mo.includes("BTC 어제 보유 +1.00%") && mo.includes("ETH 어제 손절 -4.24%") && mo.includes("코인 칸 어제 -1.62%") && mo.includes("④ SOXL 지난 세션") && mo.includes("파워아워 조건 감시"));
 });
 t("coin yesterday result uses the day before for its decision", () => {
   const c = [{ trade_price: 1 }, { trade_price: 106, opening_price: 100, low_price: 99, candle_date_time_kst: "2026-10-01T09:00:00" },
@@ -159,10 +159,10 @@ t("coin yesterday result uses the day before for its decision", () => {
 t("telegram weekly: account week, +5% check, contributions, shadow candidates, stale guard", () => {
   assert.equal(TG.mondayOf("2026-10-10"), "2026-10-05"); assert.equal(TG.mondayOf("2026-10-05"), "2026-10-05"); assert.equal(TG.mondayOf("2026-10-11"), "2026-10-05");
   const lab = { week: { weekStart: "2026-10-05", asOf: "2026-10-09", account: { weekPct: 5.06, hit5: true, plus1Days: 2, days: 5 },
-                        parts: { opening_d1v2: { contribPct: 0.3, weekPct: 2, tradeDays: 1 }, us_tqqq: { contribPct: 1.2, weekPct: 3, tradeDays: 1, through: "2026-10-08" } } },
+                        parts: { opening_d1v2: { contribPct: 0.3, weekPct: 2, tradeDays: 1 }, us_soxl: { contribPct: 1.2, weekPct: 3, tradeDays: 1, through: "2026-10-08" } } },
                 shadows: { crypto: [{ name: "평균 50일", promotion: { code: "candidate", text: "교체 후보 — x" } }, { name: "손절 −3%", promotion: { code: "keep", text: "기준 유지" } }] } };
   const w = TG.compose("weekly", "2026-10-10", null, { lab, weekStart: "2026-10-05" });
-  assert.ok(w.includes("🏦 전체 계좌 +5.06% · 목표 +5% 달성 ✅") && w.includes("④ TQQQ +1.20% (+3.0%, 매매 1일 · ~2026-10-08)"));
+  assert.ok(w.includes("🏦 전체 계좌 +5.06% · 목표 +5% 달성 ✅") && w.includes("④ SOXL +1.20% (+3.0%, 매매 1일 · ~2026-10-08)"));
   assert.ok(w.includes("③ 평균 50일 — 교체 후보") && !w.includes("손절 −3% —"));
   const stale = TG.compose("weekly", "2026-10-17", null, { lab, weekStart: "2026-10-12" });
   assert.ok(stale.includes("⚠️ 이번 주 장부 요약이 없습니다") && !stale.includes("달성 ✅"));
@@ -182,9 +182,9 @@ t("today summary: tab return vs per-trade sum, account share, no-trade reason", 
   assert.equal(LV.todaySummary("daytrading", { rows: [] }, 1400).why, "15:21 판단 전");
   const c = LV.todaySummary("crypto", { rows: [{ name: "BTC", hold: true, status: "보유중", pnlPct: 2 }, { name: "ETH", hold: false, pnlPct: 0 }], basketPct: 1 }, 1000);
   near(c.tabPct, 1); near(c.sumPct, 2); near(c.accountPct, 0.3); assert.equal(c.trades, 1); assert.ok(c.why.includes("ETH 쉼"));
-  const u = LV.todaySummary("soxl", { rows: [{ hold: false, pnlPct: null }] }, 1000);
-  assert.equal(u.trades, 0); assert.equal(u.tabPct, 0); assert.ok(u.why.includes("쉼"));
-  near(LV.todaySummary("soxl", { rows: [{ hold: true, pnlPct: 2, session: "정규장" }] }, 2300).accountPct, 0.8);
+  const u = LV.todaySummary("soxl", { rows: [], note: "SOXL 파워아워 조건 미충족 — 매매 없음" }, 1000);
+  assert.equal(u.trades, 0); assert.equal(u.tabPct, 0); assert.ok(u.why.includes("조건 미충족"));
+  near(LV.todaySummary("soxl", { rows: [{ buyPrice: 100, status: "청산", pnlPct: 2, note: "익절" }] }, 2300).accountPct, 0.8);
   const T2 = { opening: { today: { tabPct: 2, noTrade: false, weight: 0.3, accountPct: 0.6 } }, daytrading: { today: { tabPct: 1, noTrade: false, weight: 0.3, accountPct: 0.3 } } };
   LV.applyKrSplit(T2); near(T2.opening.today.accountPct, 0.3); near(T2.daytrading.today.accountPct, 0.15);
   const T3 = { opening: { today: { tabPct: 2, noTrade: false, weight: 0.3, accountPct: 0.6 } }, daytrading: { today: { tabPct: 0, noTrade: true, weight: 0.3, accountPct: 0 } } };

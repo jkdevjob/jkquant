@@ -1,0 +1,19 @@
+{
+  "schema": 1,
+  "defaultMaxHoldingTradingDays": 1,
+  "absoluteMaxHoldingTradingDays": 5,
+  "stockStrategies": {
+    "opening": {
+      "maxHoldingTradingDays": 1
+    },
+    "daytrading": {
+      "maxHoldingTradingDays": 1
+    },
+    "soxl": {
+      "tradeSymbol": "SOXL",
+      "maxHoldingTradingDays": 1,
+      "allowTradeSymbolSubstitution": false
+    }
+  },
+  "note": "Research-only exceptional swing candidates may use up to 5 trading days after explicit OOS review; 6+ trading days are prohibited in the scalping project."
+}
