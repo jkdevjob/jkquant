@@ -10573,7 +10573,7 @@ console.log('[SCALPING FLOW] 단타 공통 흐름 · 모의체결 분리');
      && /VTTS3035R/.test(kis));
   ok('KIS 해외 모의 조회는 전체조회 후 종목 필터', /PDNO:""[\s\S]{0,220}OVRS_EXCG_CD:""/.test(kis)
      && /if\(code\) rows=rows\.filter\(x=>x\.code===code\)/.test(kis));
-  ok('단타 화면 버전 1.28.1', /id="scVer">v1\.28\.1<\/span>/.test(sc));
+  ok('단타 화면 버전 1.29.0', /id="scVer">v1\.29\.0<\/span>/.test(sc));
 }
 
 
@@ -10709,7 +10709,7 @@ console.log('[OPENING SIGNAL LEARNING] 실시간 ledger · 30분 사후라벨 ·
      /신호 이후 30분 경로 진단/.test(scl)
      && /조건별 실제 성과/.test(scl)
      && /groupTable\('전략 버전'/.test(scl)
-     && /id="scVer">v1\.28\.1<\/span>/.test(scl));
+     && /id="scVer">v1\.29\.0<\/span>/.test(scl));
 }
 
 /* ════ 단타 Telegram ③④ 실시간 + ⑤⑥ 일일 연구 ════ */
@@ -10748,7 +10748,7 @@ console.log('[SCALPING TELEGRAM] 실시간 신호 · 일일 매매/연구 요약
   const cr=cr0>=0&&cr1>cr0?nightly.slice(cr0,cr1):'';
   ok('BTC 야간연구는 실제 70/30 holdout 모델만 참조',
      /validationModel":"70\/30 holdout \+ rolling30"/.test(cr) && !/oos_edge|oos_trades|wf_status/.test(cr));
-  ok('단타 화면 버전 1.28.1', /id="scVer">v1\.28\.1<\/span>/.test(scl));
+  ok('단타 화면 버전 1.29.0', /id="scVer">v1\.29\.0<\/span>/.test(scl));
 }
 
 
@@ -10852,6 +10852,12 @@ console.log('[GAPDOWN D-1 / DIP24 D-3] 연구용 모의체결 경로 안전장�
      /D-1 갭하락 과매도 \(opening_gapdown_v1\)/.test(scl2)&&/const gd=j\.gapdown\|\|null;/.test(scl2)
      &&/시가 − 예상체결가/.test(scl2)&&/opening-gapdown-research\/latest\.json/.test(orApi)
      &&!/op=order|method:\s*["']POST["']/.test(orApi));
+  ok('D-1 v2: 통과 종목 수(시장 투매 강도) 기록 · 기준 5 · 연구 변형 3·5 · 화면 표시',
+     /const qualified=gapdownPicks\(cands,\{\.\.\.wl\.rule,picks:1e9\}\)\.length;/.test(gd)
+     &&/const BREADTH_V2_MIN=5;/.test(gd)&&/v2Signal:qualified>=BREADTH_V2_MIN/.test(gd)
+     &&/BREADTH_MIN = \[3, 5\]/.test(py)&&/qualified\.get\(r\["date"\], 0\) >= k/.test(py)
+     &&/rsiPassed=sum\(1 for x in cands if x\["rsiPrev"\] < PARAMS\["rsiMax"\]\)/.test(py)
+     &&/v2 · 통과 종목/.test(scl2)&&/breadthFilter:gapdown\.breadthFilter/.test(orApi));
   ok('D-3 BTC 그림자: 완료된 시간봉만·다음 시간 시가 진입·24시간 보유·주문 없음',
      /DIP24_VERSION = "btc_dip24_v1"/.test(bt)&&/hb\[h - one\]\["c"\] \/ hb\[h - one \* \(lb \+ 1\)\]\["c"\]/.test(bt)
      &&/"orders": "none \(research shadow\)"/.test(bt)&&/designEndKst="2026-09-30"/.test(bt));

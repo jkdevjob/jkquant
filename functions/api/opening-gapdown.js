@@ -18,6 +18,7 @@ const QUOTE_GAP_MS=550;         // KIS 모의투자 초당 2건 한도 안쪽
 const ORDER_GAP_MS=2500;
 const QUOTE_DEADLINE=85915;     // 08:59:15 이후엔 시세를 더 받지 않는다
 const ORDER_DEADLINE=85940;     // 08:59:40 이후엔 매수 주문을 내지 않는다 (09:00 체결 전 접수 보장)
+const BREADTH_V2_MIN=5;        // 연구 BREADTH_MIN 중 기본값 — 과거 8년 하루 +1.33%(1.5틱, t=3.0), 9개 연도 모두 양수
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 let _lastOrderAt=0;
 
@@ -175,6 +176,9 @@ async function preopen(origin,env,date,rows){
   const cands=sanitizeCandidates(rows,wl);
   out.candidates=cands.length;
   const picks=gapdownPicks(cands,wl.rule);
+  // v2 판단 근거: 오늘 조건(갭 범위)을 통과한 종목 수 = 시장 투매 강도. 주문은 v1 그대로 매일 내서 체결을 재고, v2 는 이 값으로 가른다.
+  const qualified=gapdownPicks(cands,{...wl.rule,picks:1e9}).length;
+  out.breadth={qualified,v2MinQualified:BREADTH_V2_MIN,v2Signal:qualified>=BREADTH_V2_MIN};
   out.picks=picks.map(x=>({code:x.code,name:x.name,expectedPrice:x.expectedPrice,basePrice:x.basePrice,expectedGapPct:x.expectedGapPct,rsi14Prev:x.rsi14Prev}));
   if(!picks.length){out.decisionReason=cands.some(x=>x.expectedGapPct!==null)?"no_expected_gap_down":"no_expected_prices";return out;}
   out.decisionReason="rsi14_prev<30+expected_gap<=-2%+deepest3";
