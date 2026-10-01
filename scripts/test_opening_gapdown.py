@@ -271,6 +271,20 @@ class ClaudeLabTrend(unittest.TestCase):
         self.assertAlmostEqual(a["2026-01-06"], 0.3 * 1.0 + 0.3 * -1.0 + 0.4 * 2.0)
         self.assertAlmostEqual(a["2026-01-07"], 0.3 * 3.0)
 
+    def test_paper_ledger_is_write_once(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            f = Path(tmp) / "k" / "2026-10-02.json"
+            self.assertTrue(lab.write_once(f, {"pnlPct": 1.0}))
+            self.assertFalse(lab.write_once(f, {"pnlPct": -5.0}))           # 두 번째는 쓰지 않는다
+            self.assertEqual(json.loads(f.read_text())["pnlPct"], 1.0)
+
+    def test_drift_status_waits_then_flags(self):
+        self.assertEqual(lab.drift_status({str(i): 1.0 for i in range(19)}, {"expectancyPct": 1.0})["code"], "collecting")
+        bad = {str(i): (-1.0 if i % 2 else -0.5) for i in range(25)}
+        self.assertEqual(lab.drift_status(bad, {"expectancyPct": 1.0})["code"], "below")
+        ok = {str(i): (2.0 if i % 2 else 0.0) for i in range(25)}
+        self.assertEqual(lab.drift_status(ok, {"expectancyPct": 1.0})["code"], "ok")
+
     def test_daily_board_cells(self):
         self.assertEqual(lab.cell({"a": 1.5}, "a"), 1.5)
         self.assertEqual(lab.cell({"a": 1.5}, "b"), "no_trade")              # 기록 없는 날은 손실이 아니라 매매 없음

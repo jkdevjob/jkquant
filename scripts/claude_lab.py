@@ -274,6 +274,119 @@ def read_json(path):
         return None
 
 
+DECISIONS = {}
+PAPER = DATA / "claude-paper"
+PAPER_START = "2026-10-01"          # 모의투자 장부 시작일 = 판정용 표본 시작일
+
+
+def write_once(path, obj):
+    """모의투자 장부는 날짜별로 한 번만 쓴다. 이미 있으면 절대 덮어쓰지 않는다(규칙을 바꿔도 과거 기록은 그대로)."""
+    if path.exists():
+        return False
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(obj, ensure_ascii=False, indent=2, default=str), encoding="utf-8")
+    return True
+
+
+def paper_entries(report, d1, krx_cal, crypto_full, us_full, cal_c):
+    """{전략키: [(날짜, 기록)]} — 결과가 확정된 날만. 기록 = 그날 판단 근거 + 순손익(매매 없으면 0, action=no_trade)."""
+    now = datetime.now(KST).isoformat()
+    out = {}
+    final_kr = max(krx_cal) if krx_cal else ""
+    gd = read_json(DATA / "opening-gapdown-research/latest.json") or {}
+    live_d1 = {}
+    for t in gd.get("liveTrades") or []:
+        live_d1.setdefault(t.get("date"), []).append(t)
+    out["opening_d1v2"] = [(d, dict(date=d, strategy="① D-1 갭하락 과매도 v2", strategyVersion="opening_gapdown_v1+v2filter",
+                                    action="trade" if d in d1 else "no_trade", pnlPct=d1.get(d, 0.0), source="kis-vts+final-daily-bars",
+                                    liveFills=live_d1.get(d, []), recordedAt=now))
+                           for d in krx_cal if PAPER_START <= d <= final_kr]
+    etf = etf_daily()
+    etf_live = {r.get("exitDate"): r for r in ((read_json(DATA / "etf-overnight-research/latest.json") or {}).get("live") or {}).get("rows", [])}
+    etf_cal = sorted(set(etf) | set(krx_cal))
+    last_etf = max(etf) if etf else ""
+    out["daytrading_etf"] = [(d, dict(date=d, strategy="② 코스닥150 레버리지 하락일 야간", strategyVersion="etf_dip_overnight_v1",
+                                      action="trade" if d in etf else "no_trade", pnlPct=etf.get(d, 0.0), source="kis-vts+daily-bars",
+                                      live=etf_live.get(d), recordedAt=now))
+                             for d in etf_cal if PAPER_START <= d <= max(last_etf, final_kr)]
+    for key, m in (("crypto_btc", "KRW-BTC"), ("crypto_eth", "KRW-ETH")):
+        out[key] = [(r["date"], dict(r, strategy="③ " + m.split("-")[1] + " 20일 추세 (칸 안 전액)", source="paper-upbit-daily", recordedAt=now,
+                                      pnlPct=r.get("pnlPct") or 0.0))
+                    for r in DECISIONS.get(m, []) if r["date"] >= PAPER_START]
+    out["us_tqqq"] = [(r["date"], dict(r, strategy="④ TQQQ 200일 추세 (칸 안 전액)", source="paper-us-daily", recordedAt=now,
+                                       pnlPct=r.get("pnlPct") or 0.0))
+                      for r in DECISIONS.get("TQQQ", []) if r["date"] >= PAPER_START]
+    kr = combine_same_capital({d: v for d, v in d1.items() if d <= final_kr}, etf)
+    acct = account_daily(kr, crypto_full, us_to_kst(us_full), cal_c)
+    last_all = min(x for x in (final_kr, max(crypto_full) if crypto_full else "", max(us_to_kst(us_full)) if us_full else "") if x)
+    out["account"] = [(d, dict(date=d, strategy="🏦 전체 계좌", plan=ACCOUNT, pnlPct=acct.get(d, 0.0),
+                               action="trade" if d in acct else "no_trade", recordedAt=now))
+                      for d in cal_c if PAPER_START <= d <= last_all]
+    return out
+
+
+EXPECT = {"opening_d1v2": ("opening", 250), "daytrading_etf": ("daytrading", 250), "account": (None, 365)}
+
+
+def write_paper(report, d1, krx_cal, crypto_full, us_full, cal_c):
+    entries = paper_entries(report, d1, krx_cal, crypto_full, us_full, cal_c)
+    written = 0
+    summary = {}
+    for key, rows in entries.items():
+        for d, rec in rows:
+            written += write_once(PAPER / key / f"{d}.json", rec)
+        # 요약은 장부 파일(처음 쓴 값)만으로 계산한다 — 다시 계산한 값으로 바꾸지 않는다
+        recs = []
+        for f in sorted((PAPER / key).glob("*.json")) if (PAPER / key).exists() else []:
+            j = read_json(f)
+            if j:
+                recs.append(j)
+        vals = {r["date"]: float(r.get("pnlPct") or 0.0) for r in recs if r.get("action") not in ("no_trade", "flat")}
+        cal = [r["date"] for r in recs]
+        z = goal_metrics(vals, cal, 365 if key.startswith(("crypto", "account")) else 250) if cal else {}
+        exp = expectation(report, key)
+        summary[key] = dict(days=len(cal), first=cal[0] if cal else None, last=cal[-1] if cal else None,
+                            tradeDays=len(vals), plus1Days=sum(1 for v in vals.values() if v >= 1),
+                            totalPct=z.get("totalPct"), mddPct=z.get("mddPct"), worstDayPct=z.get("worstDayPct"),
+                            avgTradePct=statistics.fmean(vals.values()) if vals else None, expected=exp,
+                            status=drift_status(vals, exp))
+    return dict(start=PAPER_START, newFiles=written, summary=summary,
+                rule="날짜별 장부 파일은 한 번만 쓰고 덮어쓰지 않는다. 요약은 장부 파일 값으로만 계산한다.")
+
+
+def expectation(report, key):
+    """설계 표본에서 기대하는 매매일 평균 손익과 표준편차(판정 비교용)."""
+    tab = {"opening_d1v2": "opening", "daytrading_etf": "daytrading"}.get(key)
+    src = None
+    if tab:
+        src = ((report.get("tabs") or {}).get(tab) or {}).get("claude", {}).get("design")
+    elif key == "account":
+        src = (report.get("account") or {}).get("design")
+    dec_key = {"crypto_btc": "KRW-BTC", "crypto_eth": "KRW-ETH", "us_tqqq": "TQQQ"}.get(key)
+    if dec_key and DECISIONS.get(dec_key):
+        rows = [r for r in DECISIONS[dec_key] if r["date"] <= DESIGN_END and r.get("pnlPct") is not None and r.get("action") not in ("flat",)]
+        v = [float(r["pnlPct"]) for r in rows]
+        if v:
+            yrs = len(DECISIONS[dec_key]) / (365 if dec_key.startswith("KRW") else 252)
+            return dict(expectancyPct=statistics.fmean(v), plus1DaysPerYear=sum(1 for x in v if x >= 1) / yrs, tradeDaysPerYear=len(v) / yrs)
+    if not src:
+        return None
+    return dict(expectancyPct=src.get("expectancyPct"), plus1DaysPerYear=src.get("plus1DaysPerYear"), tradeDaysPerYear=src.get("tradeDaysPerYear"))
+
+
+def drift_status(vals, exp):
+    """실측이 기대에서 벗어났는지. 매매일 20일 전에는 판단하지 않는다."""
+    n = len(vals)
+    if n < 20 or not exp or exp.get("expectancyPct") is None:
+        return dict(code="collecting", text=f"매매일 {n}/20 — 판단 전")
+    v = list(vals.values())
+    m, sd = statistics.fmean(v), statistics.stdev(v)
+    zscore = (m - exp["expectancyPct"]) / (sd / math.sqrt(n)) if sd > 0 else 0.0
+    if zscore < -2:
+        return dict(code="below", text=f"기대보다 낮음 (z={zscore:.1f}) — 규칙 점검", z=zscore)
+    return dict(code="ok", text=f"기대 범위 (z={zscore:.1f})", z=zscore)
+
+
 def us_to_kst(dv):
     """미국 거래일 d 의 손익은 한국시각 다음 날 아침에 확정된다 — 계좌 합산은 한국 날짜로."""
     return {(date.fromisoformat(d) + timedelta(days=1)).isoformat(): v for d, v in dv.items()}
@@ -337,6 +450,7 @@ def main():
             per[m], nexts[m] = (dv_m, {r[0] for r in rows}), nxt_m
             cal_c |= {r[0] for r in rows}
             write_csv(OUT / f"{m.split('-')[1].lower()}-decisions.csv", dec_m)
+            DECISIONS[m] = dec_m
         cal_c = sorted(cal_c)
         crypto_full = basket(per, cal_c)                     # 코인 칸 안에서 전액(두 코인 반반)
         tab_dv = {d: v * CRYPTO["tabSize"] for d, v in crypto_full.items()}
@@ -353,6 +467,7 @@ def main():
         dv_u, dec_u, nxt_u = trend_daily([(d, *tq[d]) for d in udays], US, signal_close=[qq[d][3] for d in udays])
         us_full = dv_u
         write_csv(OUT / "tqqq-decisions.csv", dec_u)
+        DECISIONS["TQQQ"] = dec_u
         variants = {}
         try:
             sx, so = fetch_us("SOXL"), fetch_us("SOXX")
@@ -378,6 +493,10 @@ def main():
                                  lastYear=goal_metrics({d: v for d, v in acct.items() if d >= "2025-10-01" and d <= DESIGN_END}, [d for d in acal if "2025-10-01" <= d <= DESIGN_END], 365),
                                  recent=[dict(date=d, pnlPct=acct[d]) for d in sorted(acct)[-20:]])
     report["daily"] = daily_board(report, d1, krx_cal, crypto_full, locals().get("cal_c") or [])
+    try:
+        report["paper"] = write_paper(report, d1, krx_cal, crypto_full, locals().get("us_full") or {}, locals().get("cal_c") or [])
+    except Exception as e:  # noqa: BLE001
+        report["paper"] = dict(error=str(e))
     (OUT / "latest.json").write_text(json.dumps(report, ensure_ascii=False, indent=2, default=str), encoding="utf-8")
     print(json.dumps({k: (v.get("compare") if isinstance(v, dict) else v) for k, v in report["tabs"].items()}, ensure_ascii=False, default=str)[:3000])
     return 0
