@@ -45,7 +45,7 @@ def test_daytrading():
     bars=minute_bars(date)
     by={int(x["t"][-6:-2]):x for x in bars}
     # Build positive session then a VWAP dip/reclaim at 10:06.
-    for h,c in [(1000,100.8),(1001,100.9),(1002,101.0),(1003,101.1),(1004,101.2),(1005,100.5),(1006,101.6),(1007,101.7)]:
+    for h,c in [(1000,100.8),(1001,100.9),(1002,101.0),(1003,101.1),(1004,101.2),(1005,99.8),(1006,101.6),(1007,101.7)]:
         z=by[h];z.update(o=c,h=c+.1,l=c-.1,c=c,v=300 if h==1006 else 100)
     by[1008].update(o=101.8,h=103.6,l=101.7,c=103.3,v=100)
     bench=minute_bars(date)
