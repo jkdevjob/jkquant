@@ -1,11 +1,12 @@
 name: SOXL 단타 연구 자동수집
 
 # 미국 정규장 종료 뒤 SOXL 5분봉을 누적하고, 기준전략 + 그림자 변형을 같은 원본으로 재검증한다.
+# 21:15 UTC = KST 06:15. 미국 서머타임/표준시 모두 정규장 종료 뒤 실행된다.
 # 연구 전용이며 주문 API를 호출하지 않는다.
 
 on:
   schedule:
-    - cron: "15 22 * * 1-5"
+    - cron: "15 21 * * 1-5"
   workflow_dispatch:
   push:
     branches: [main]
@@ -53,8 +54,12 @@ jobs:
         run: |
           set -e
           COLLECT_OK=1
-          if [ "$GITHUB_EVENT_NAME" = "push" ]; then
-            echo "코드 push 실행 — Yahoo 외부수집은 건너뛰고 기존 누적자료로 코드/연구만 재검증"
+          HAVE_ARCHIVE=0
+          if find data/soxl/SOXL/5m -maxdepth 1 -name '*.json.gz' -print -quit 2>/dev/null | grep -q .; then
+            HAVE_ARCHIVE=1
+          fi
+          if [ "$GITHUB_EVENT_NAME" = "push" ] && [ "$HAVE_ARCHIVE" = "1" ]; then
+            echo "코드 push 실행 — 기존 SOXL 아카이브가 있어 외부수집은 건너뛰고 코드/연구만 재검증"
           elif ! python .app/scripts/collect_soxl_data.py; then
             COLLECT_OK=0
             echo "::warning::Yahoo SOXL 수집 실패(예: 429). 기존 누적자료를 보존하고 연구/요약을 계속합니다."
