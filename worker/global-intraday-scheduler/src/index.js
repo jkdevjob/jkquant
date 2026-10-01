@@ -12,6 +12,8 @@ const BTC_LAST_ENTRY_HM=2200;
 const BTC_EXIT_TRACK_END_HM=2305; // 22:00 진입의 최대 60분 청산까지 추적
 const BTC_STRATEGY_VERSION="btc_midnight_orb_v2";
 const SOXL_STRATEGY_VERSION="soxl_orb_v1";
+const SOXL_LAST_SIGNAL_HM=1130;
+const SOXL_PAPER_TRACK_END_HM=1605;
 function json(o,status=200){return new Response(JSON.stringify(o),{status,headers:{"content-type":"application/json; charset=utf-8","cache-control":"no-store"}});}
 function authorized(request,env){const got=request.headers.get("x-monitor-key")||"";return !!env.MONITOR_KEY&&got===env.MONITOR_KEY;}
 
@@ -206,7 +208,7 @@ function soxlTrade(bars,now,date){
   for(const x of opening){const tp=(x.h+x.l+x.c)/3;pv+=tp*x.v;cv+=x.v;}
   for(let i=3;i<a.length;i++){
     const x=a[i];
-    if(x.hm>1130)break;
+    if(x.hm>SOXL_LAST_SIGNAL_HM)break;
     if(!barCompleted(x.ms,now))break;
     const typical=(x.h+x.l+x.c)/3;pv+=typical*x.v;cv+=x.v;
     const vwap=cv>0?pv/cv:0,prev=a[i-1];
@@ -264,7 +266,7 @@ async function runBtc(env,now){
 }
 async function runSoxl(env,now){
   const n=parts(now,"America/New_York");
-  if(["Sat","Sun"].includes(n.weekday)||n.hm<945||n.hm>1330)return;
+  if(["Sat","Sun"].includes(n.weekday)||n.hm<945||n.hm>SOXL_PAPER_TRACK_END_HM)return;
   const t=soxlTrade(await fetchSoxl(),now,n.date);
   await writePaper(env,paperLedger("soxl",n.date,t,{currency:"USD",timezone:"America/New_York",version:SOXL_STRATEGY_VERSION,friction:.20}));
   if(!t||t.waiting)return;
@@ -296,13 +298,13 @@ async function run(env){
   const out=await Promise.allSettled([runBtc(env,now),runSoxl(env,now)]);
   out.forEach((x,i)=>{if(x.status==="rejected")console.error(JSON.stringify({type:"global_intraday_error",strategy:i===0?"crypto":"soxl",error:String(x.reason&&x.reason.message||x.reason)}));});
 }
-export {btcTrade,soxlTrade,paperLedger,BTC_OPEN_HM,BTC_LAST_SIGNAL_HM,BTC_LAST_ENTRY_HM,BTC_EXIT_TRACK_END_HM,BTC_STRATEGY_VERSION,SOXL_STRATEGY_VERSION};
+export {btcTrade,soxlTrade,paperLedger,BTC_OPEN_HM,BTC_LAST_SIGNAL_HM,BTC_LAST_ENTRY_HM,BTC_EXIT_TRACK_END_HM,BTC_STRATEGY_VERSION,SOXL_STRATEGY_VERSION,SOXL_LAST_SIGNAL_HM,SOXL_PAPER_TRACK_END_HM};
 
 export default {
   async scheduled(controller,env,ctx){ctx.waitUntil(run(env));},
   async fetch(request,env){
     const u=new URL(request.url);
-    if(u.pathname==="/health")return json({ok:true,service:"jkquant-global-intraday-scheduler",schedule:"every minute",strategies:["crypto","soxl"],crypto:{strategyVersion:BTC_STRATEGY_VERSION,openingRange:"00:00~00:05 KST",newEntryThrough:"22:00 KST",exitTrackingThrough:"23:05 KST"},mode:"research-paper-alert-no-order"});
+    if(u.pathname==="/health")return json({ok:true,service:"jkquant-global-intraday-scheduler",schedule:"every minute",strategies:["crypto","soxl"],crypto:{strategyVersion:BTC_STRATEGY_VERSION,openingRange:"00:00~00:05 KST",newEntryThrough:"22:00 KST",exitTrackingThrough:"23:05 KST"},soxl:{symbol:"SOXL",strategyVersion:SOXL_STRATEGY_VERSION,openingRange:"09:30~09:45 ET",newEntryThrough:"11:30 ET",paperTrackingThrough:"16:05 ET",overnight:false},mode:"research-paper-alert-no-order"});
     if(u.pathname==="/paper"){
       if(!authorized(request,env))return json({ok:false,error:"unauthorized"},401);
       const strategy=String(u.searchParams.get("strategy")||"").toLowerCase();
