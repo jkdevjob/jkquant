@@ -47,6 +47,8 @@ PY = [
     ("coin stop removed", "claude_lab.py", "if any(x[2] <= stop for x in bars[k:]):", "if False:"),
     ("soxl buy signal off", "claude_lab.py", "        elif r2 < p[\"rsiMax\"] and C[i] > ma:\n            pending = \"buy\"", "        elif r2 < p[\"rsiMax\"] and C[i] > ma and False:\n            pending = \"buy\""),
     ("soxl max hold ignored", "claude_lab.py", 'if C[i] > C[i - 1] or pos["days"] >= p["maxHoldDays"]:', 'if C[i] > C[i - 1]:'),
+    ("ledger pending as no-trade", "claude_lab.py", 'for d in kr_days if d > final_kr and d >= st("opening_d1v2") and d1_live_status(d) == "no_trade"]', 'for d in kr_days if d > final_kr and d >= st("opening_d1v2")]'),
+    ("account ignores kr settle", "claude_lab.py", "    ends = [kr_settled_through(final_kr, etf_to, kr_days, st(\"account\")),", "    ends = [\"9999\","),
     ("dip hit minutes", "backtest_crypto_orb.py", "int((hit - entry_t).total_seconds() // 60) + 5", "int((hit - entry_t).total_seconds() // 60)"),
 ]
 JS = [

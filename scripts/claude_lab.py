@@ -372,6 +372,13 @@ def d1_live_status(d):
     return "pending"
 
 
+def d1_live_reason(d):
+    j = read_json(DATA / "opening-gapdown-live" / f"{d}.json") or {}
+    pre = next((e.get("payload") or {} for e in ((j.get("ledger") or {}).get("events") or []) if e and e.get("stage") == "preopen"), {})
+    q = (pre.get("breadth") or {}).get("qualified")
+    return pre.get("decisionReason") or (f"통과 {q}종목 < 5 (v2 매매일 아님)" if q is not None else "")
+
+
 def cell(series, d, final_through=None, live=None):
     """그날 결과: 숫자(순손익 %) · "no_trade"(신호 없음) · "pending"(확정 일봉 전) · None(날짜 없음)."""
     if d is None:
@@ -442,7 +449,7 @@ DECISIONS = {}
 ROWS = {}
 PAPER = DATA / "claude-paper"
 PAPER_START = "2026-10-01"          # 모의투자 장부 시작일 = 판정용 표본 시작일
-START = {"us_soxl": "2026-10-02", "coin_bo_btc": "2026-10-02", "coin_bo_eth": "2026-10-02"}   # 전략을 채택한 날부터만 장부에 쓴다(그 전 날짜를 재구성해 채우지 않는다)
+START = {"us_soxl": "2026-10-02", "coin_bo_btc": "2026-10-02", "coin_bo_eth": "2026-10-02", "account": "2026-10-02"}   # 전략을 채택한 날부터만 장부에 쓴다(그 전 날짜를 재구성해 채우지 않는다)
 
 
 def write_once(path, obj):
@@ -454,8 +461,24 @@ def write_once(path, obj):
     return True
 
 
-def paper_entries(report, d1, krx_cal, crypto_full, us_full, cal_c):
-    """{전략키: [(날짜, 기록)]} — 결과가 확정된 날만. 기록 = 그날 판단 근거 + 순손익(매매 없으면 0, action=no_trade)."""
+CAL = {}                            # 시장별 확정 달력: etf(233740 일봉 날짜) · coin(끝난 업비트 하루) · us(SOXL 세션)
+
+
+def kr_settled_through(d1_final, etf_to, kr_days, start):
+    """국내 ①② 가 둘 다 확정된 마지막 '달력' 날짜. ① = 확정 일봉 또는 VTS 원본이 '매매 없음'으로 끝낸 날, ② = ETF 일봉 확정일.
+    첫 미확정 거래일 전날까지(주말 포함). 전부 확정이면 마지막 거래일."""
+    days = [d for d in kr_days if d >= start]
+    for d in days:
+        ok1 = d <= d1_final or d1_live_status(d) == "no_trade"
+        if not (ok1 and d <= etf_to):
+            return (date.fromisoformat(d) - timedelta(days=1)).isoformat()
+    return days[-1] if days else (date.fromisoformat(start) - timedelta(days=1)).isoformat()
+
+
+def paper_entries(report, d1, krx_cal, crypto_full, us_full, cal_c, start=None):
+    """{전략키: [(날짜, 기록)]} — 결과가 확정된 날만. 기록 = 그날 판단 근거 + 순손익(매매 없으면 0, action=no_trade).
+    start 를 주면 채택일(START)을 무시하고 그날부터 같은 규칙으로 재구성한다(주간 재구성용 — 장부에는 쓰지 않는다)."""
+    st = (lambda k: start) if start else (lambda k: max(PAPER_START, START.get(k, PAPER_START)))
     now = datetime.now(KST).isoformat()
     out = {}
     final_kr = max(krx_cal) if krx_cal else ""
@@ -463,32 +486,54 @@ def paper_entries(report, d1, krx_cal, crypto_full, us_full, cal_c):
     live_d1 = {}
     for t in gd.get("liveTrades") or []:
         live_d1.setdefault(t.get("date"), []).append(t)
-    out["opening_d1v2"] = [(d, dict(date=d, strategy="① D-1 갭하락 과매도 v2", strategyVersion="opening_gapdown_v1+v2filter",
-                                    action="trade" if d in d1 else "no_trade", pnlPct=d1.get(d, 0.0), source="kis-vts+final-daily-bars",
-                                    liveFills=live_d1.get(d, []), recordedAt=now))
-                           for d in krx_cal if PAPER_START <= d <= final_kr]
+    etf_meta = read_json(DATA / "etf-overnight-research/latest.json") or {}
+    etf_to = etf_meta.get("to") or final_kr
+    kr_days = sorted(set(CAL.get("etf") or []) | set(krx_cal))
+    o1 = [(d, dict(date=d, strategy="① D-1 갭하락 과매도 v2", strategyVersion="opening_gapdown_v1+v2filter",
+                   action="trade" if d in d1 else "no_trade", pnlPct=d1.get(d, 0.0), source="kis-vts+final-daily-bars",
+                   liveFills=live_d1.get(d, []), recordedAt=now))
+          for d in krx_cal if st("opening_d1v2") <= d <= final_kr]
+    # 확정 일봉 전이라도 VTS 원본이 '매매 없음'으로 끝낸 날은 바로 기록한다(매매가 없었으니 가격을 기다릴 이유가 없다)
+    o1 += [(d, dict(date=d, strategy="① D-1 갭하락 과매도 v2", strategyVersion="opening_gapdown_v1+v2filter", action="no_trade", pnlPct=0.0,
+                    source="kis-vts-ledger", decisionReason=d1_live_reason(d), recordedAt=now))
+           for d in kr_days if d > final_kr and d >= st("opening_d1v2") and d1_live_status(d) == "no_trade"]
+    out["opening_d1v2"] = sorted(o1)
     etf = etf_daily()
-    etf_live = {r.get("exitDate"): r for r in ((read_json(DATA / "etf-overnight-research/latest.json") or {}).get("live") or {}).get("rows", [])}
-    etf_cal = sorted(set(etf) | set(krx_cal))
-    last_etf = max(etf) if etf else ""
+    etf_live = {r.get("exitDate"): r for r in (etf_meta.get("live") or {}).get("rows", [])}
     out["daytrading_etf"] = [(d, dict(date=d, strategy="② 코스닥150 레버리지 하락일 야간", strategyVersion="etf_dip_overnight_v1",
                                       action="trade" if d in etf else "no_trade", pnlPct=etf.get(d, 0.0), source="kis-vts+daily-bars",
                                       live=etf_live.get(d), recordedAt=now))
-                             for d in etf_cal if PAPER_START <= d <= max(last_etf, final_kr)]
+                             for d in kr_days if st("daytrading_etf") <= d <= etf_to]
     for key, m in (("coin_bo_btc", "KRW-BTC"), ("coin_bo_eth", "KRW-ETH")):
         out[key] = [(r["date"], dict(r, strategy="③ " + m.split("-")[1] + " 어제 고가 돌파 하루 단타 (칸 안 전액)", source="paper-upbit-hourly", recordedAt=now,
                                       pnlPct=r.get("pnlPct") or 0.0, action=r["action"] if r["action"] in ("trade", "stop") else "no_trade"))
-                    for r in DECISIONS.get(m, []) if r["date"] >= START[key]]
+                    for r in DECISIONS.get(m, []) if r["date"] >= st(key)]
     out["us_soxl"] = [(r["date"], dict(r, strategy="④ SOXL 단기 과매도 반등 (칸 안 전액)", source="paper-us-daily", recordedAt=now,
                                        pnlPct=r.get("pnlPct") or 0.0))
-                      for r in DECISIONS.get("SOXL", []) if r["date"] >= START["us_soxl"]]
-    kr = combine_same_capital({d: v for d, v in d1.items() if d <= final_kr}, etf)
+                      for r in DECISIONS.get("SOXL", []) if r["date"] >= st("us_soxl")]
+    kr = combine_same_capital({d: v for d, v in d1.items() if d <= final_kr}, {d: v for d, v in etf.items() if d <= etf_to})
     acct = account_daily(kr, crypto_full, us_to_kst(us_full), cal_c)
-    last_all = min(x for x in (final_kr, max(crypto_full) if crypto_full else "", max(us_to_kst(us_full)) if us_full else "") if x)
+    # 계좌는 세 시장이 다 확정된 날까지만 — 각 시장의 '달력' 끝(매매한 마지막 날이 아니라)으로 잰다
+    ends = [kr_settled_through(final_kr, etf_to, kr_days, st("account")),
+            (CAL.get("coin") or [""])[-1],
+            (date.fromisoformat(CAL["us"][-1]) + timedelta(days=1)).isoformat() if CAL.get("us") else ""]
+    last_all = min(ends) if all(ends) else ""
     out["account"] = [(d, dict(date=d, strategy="🏦 전체 계좌", plan=ACCOUNT, pnlPct=acct.get(d, 0.0),
                                action="trade" if d in acct else "no_trade", recordedAt=now))
-                      for d in cal_c if PAPER_START <= d <= last_all]
+                      for d in cal_c if st("account") <= d <= last_all]
     return out
+
+
+def week_recon(report, d1, krx_cal, crypto_full, us_full, cal_c, today):
+    """이번 주(월~) 규칙대로 재구성 — 장부(채택일부터)가 비어 있는 동안 보여 주는 참고값. 장부에는 쓰지 않는다."""
+    t = date.fromisoformat(today)
+    mon = (t - timedelta(days=t.weekday())).isoformat()
+    ent = paper_entries(report, d1, krx_cal, crypto_full, us_full, cal_c, start=(date.fromisoformat(mon) - timedelta(days=1)).isoformat())
+    pseudo = {k: {"rows": [dict(date=d, action=r.get("action"), pnlPct=(r.get("pnlPct") or 0.0) if r.get("action") not in ("no_trade", "flat") else 0.0)
+                           for d, r in rows]} for k, rows in ent.items()}
+    w = week_summary(pseudo, today)
+    w.update(source="reconstructed", note="규칙대로 다시 계산한 값(모의 장부 아님). 새 전략 채택일(10/2) 전 날짜도 같은 규칙으로 계산했다. 확정된 날만.")
+    return w
 
 
 EXPECT = {"opening_d1v2": ("opening", 250), "daytrading_etf": ("daytrading", 250), "account": (None, 365)}
@@ -520,7 +565,7 @@ def write_paper(report, d1, krx_cal, crypto_full, us_full, cal_c):
             streak = streak + 1 if v < 0 else (0 if v > 0 else streak)
             rows_out.append(dict(date=r["date"], action=r.get("action"), pnlPct=v, cumPct=(cum - 1) * 100,
                                  note=r.get("decisionReason") or r.get("signalClose") and f"종가 {r.get('signalClose')}" or ""))
-        summary[key] = dict(rows=rows_out[-60:], currentDrawdownPct=dd * 100, lossStreak=streak,
+        summary[key] = dict(rows=rows_out[-60:], currentDrawdownPct=dd * 100, lossStreak=streak, start=max(PAPER_START, START.get(key, PAPER_START)),
                             days=len(cal), first=cal[0] if cal else None, last=cal[-1] if cal else None,
                             tradeDays=len(vals), plus1Days=sum(1 for v in vals.values() if v >= 1),
                             winDays=sum(1 for v in vals.values() if v > 0), profitFactor=z.get("profitFactor"),
@@ -835,6 +880,7 @@ def main():
             DECISIONS[m] = dec_m
             ROWS[m] = H
         cal_c = sorted(cal_c)
+        CAL["coin"] = cal_c
         crypto_full = basket(per, cal_c)                     # 코인 칸 안에서 전액(두 코인 반반)
         tab_dv = {d: v * COIN_BO["tabSize"] for d, v in crypto_full.items()}
         report["tabs"]["crypto"] = tab_report("crypto", "③ BTC·ETH 어제 고가 돌파 하루 단타", COIN_BO["version"], COIN_BO["note"], tab_dv, cal_c, 365,
@@ -845,6 +891,7 @@ def main():
     try:
         sx = fetch_us(SOXL_MR["trade"])
         sdays = sorted(sx)
+        CAL["us"] = sdays
         srows = [(d, *sx[d]) for d in sdays]
         dv_s, dec_s, nxt_s = soxl_meanrev(srows, SOXL_MR)
         us_full = dv_s
@@ -877,6 +924,10 @@ def main():
                                  outOfSample=goal_metrics({d: v for d, v in acct.items() if d > DESIGN_END}, [d for d in acal if d > DESIGN_END], 365),
                                  lastYear=goal_metrics({d: v for d, v in acct.items() if d >= "2025-10-01" and d <= DESIGN_END}, [d for d in acal if "2025-10-01" <= d <= DESIGN_END], 365),
                                  recent=[dict(date=d, pnlPct=acct[d]) for d in sorted(acct)[-20:]])
+    try:
+        CAL["etf"] = etf_variant("233740", -3.0)[1]          # 국내 거래일 달력(ETF 일봉은 당일 저녁 확정)
+    except Exception:  # noqa: BLE001
+        CAL["etf"] = []
     report["daily"] = daily_board(report, d1, krx_cal, crypto_full, locals().get("cal_c") or [])
     try:
         report["paper"] = write_paper(report, d1, krx_cal, crypto_full, locals().get("us_full") or {}, locals().get("cal_c") or [])
@@ -892,6 +943,8 @@ def main():
         report["promotionError"] = str(e)
     try:
         report["week"] = week_summary(((report.get("paper") or {}).get("summary") or {}), datetime.now(KST).strftime("%Y-%m-%d"))
+        report["weekRecon"] = week_recon(report, d1, krx_cal, crypto_full, locals().get("us_full") or {}, locals().get("cal_c") or [],
+                                         datetime.now(KST).strftime("%Y-%m-%d"))
     except Exception as e:  # noqa: BLE001
         report["week"] = dict(error=str(e))
     report["changelog"] = CHANGELOG

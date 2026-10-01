@@ -2400,3 +2400,22 @@ Upbit 5분봉 API는 한 요청의 200개만으로는 자정부터 22시까지�
 - Values: 10 new focused tests, existing signal-label tests and 14 backfill tests pass. Three new price-basis behavioral mutations killed; three existing engine mutations killed. Independent annotated replay arithmetic checks all 14 summaries and resolved P&L, historical Top100 membership, baseline/hold entry parity.
 - Open issues: authoritative source interpretation of rounding, sparse opening observations and September 30 final daily totals/ranking. Draft statistics are not validated final performance. Full regression result recorded in PR after completion.
 - Full regression: 2486 PASS / 0 FAIL (latest main 9928a2f). Windows CRLF extraction failures corrected by checkout line-ending normalization; no trading logic changed for those failures.
+
+### 추가 — 오늘 탭이 비어 보이던 문제 (v2.3.1, 2026-10-02)
+
+원인:
+- 국내 확정 일봉(marcap)이 9/29 까지라 ①② 장부가 10/1 을 못 썼다. 실제로는 10/1 ① 은 VTS 원본에 '매매 없음'(예상 갭 해당 없음), ② 는 시작 전이었다.
+- 계좌 장부는 세 시장 중 가장 늦은 날까지만 쓰는데, '매매한 마지막 날'로 재서 SOXL 처럼 쉬는 날이 많은 칸이 계좌를 막을 수 있었다.
+- ③④ 새 전략은 채택일(10/2)부터라 첫 결과가 10/3 에 나온다.
+
+고침:
+- ① 은 VTS 원본이 '매매 없음'으로 끝낸 날을 확정 일봉 없이 바로 기록한다(가격이 필요 없다).
+- ② 는 ETF 자기 일봉 확정일(`etf-overnight-research.to`)과 233740 거래일 달력으로 기록한다.
+- 계좌는 시장별 '달력' 끝(국내 확정일 · 끝난 업비트 하루 · 마지막 SOXL 세션+1일)의 최솟값까지 기록하고, 채택일 10/2 부터 시작한다.
+- 장부가 비어 있는 동안 이번 주 카드는 같은 규칙으로 재구성한 값을 '규칙대로 재구성' 표시와 함께 보인다(장부에는 쓰지 않는다).
+- 빈 장부에는 언제부터 채워지는지 적었다.
+
+시험:
+- Python 값 시험 +1: 원본 '매매 없음' 즉시 기록, 9/30 은 기다림, 계좌는 국내 미확정이면 기다림.
+- 변이 +2(원본 대기를 매매 없음으로, 계좌가 국내 확정 무시): 전체 64/64.
+- 회귀 2487 ALL PASS.
