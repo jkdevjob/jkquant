@@ -218,6 +218,46 @@ async function runSoxl(env,now){
     });
   }
 }
+function paperTradeView(kind,t,date){
+  if(!t)return {date,state:"no_trade",trade:null};
+  if(t.waiting)return {date,state:"signal_waiting_entry",trade:null};
+  const exit=t.exit||null;
+  const net=exit?(pct(exit.price,t.entryPrice)-t.friction):null;
+  return {
+    date,state:exit?"closed":"open",
+    trade:{
+      code:kind==="crypto"?"KRW-BTC":"SOXL",
+      entryTime:t.entry&&t.entry.time||"",
+      entryPrice:t.entryPrice||null,
+      exitTime:exit&&exit.bar&&exit.bar.time||"",
+      exitPrice:exit&&exit.price||null,
+      reason:exit&&exit.reason||"",
+      pnl:Number.isFinite(net)?net:null
+    }
+  };
+}
+async function currentStatus(now=Date.now()){
+  const k=parts(now,"Asia/Seoul"),n=parts(now,"America/New_York");
+  let crypto={date:k.date,state:"unavailable",trade:null},soxl={date:n.date,state:"unavailable",trade:null};
+  try{
+    const t=btcTrade(await fetchBtc(k.date),now,k.date);
+    crypto=paperTradeView("crypto",t,k.date);
+    crypto.session="00:00~22:00 KST";
+    crypto.finalized=k.hm>BTC_EXIT_TRACK_END_HM;
+  }catch(e){crypto.error=String(e.message||e);}
+  try{
+    if(!["Sat","Sun"].includes(n.weekday)){
+      const t=soxlTrade(await fetchSoxl(),now,n.date);
+      soxl=paperTradeView("soxl",t,n.date);
+      soxl.session="09:30~16:00 ET";
+      soxl.finalized=n.hm>=1600;
+    }else{
+      soxl={date:n.date,state:"market_closed",trade:null,session:"09:30~16:00 ET",finalized:true};
+    }
+  }catch(e){soxl.error=String(e.message||e);}
+  return {ok:true,generatedAt:new Date(now).toISOString(),crypto,soxl};
+}
+
 async function run(env){
   if(!env.MONITOR_KEY)throw new Error("MONITOR_KEY secret missing");
   const now=Date.now();
@@ -231,6 +271,7 @@ export default {
   async fetch(request,env){
     const u=new URL(request.url);
     if(u.pathname==="/health")return new Response(JSON.stringify({ok:true,service:"jkquant-global-intraday-scheduler",schedule:"every minute",strategies:["crypto","soxl"],crypto:{strategyVersion:BTC_STRATEGY_VERSION,openingRange:"00:00~00:05 KST",newEntryThrough:"22:00 KST",exitTrackingThrough:"23:05 KST"},mode:"research-paper-alert-no-order"}),{headers:{"content-type":"application/json","cache-control":"no-store"}});
+    if(u.pathname==="/status")return new Response(JSON.stringify(await currentStatus()),{headers:{"content-type":"application/json","cache-control":"no-store"}});
     return new Response("not found",{status:404});
   }
 };
