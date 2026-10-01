@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-from scripts.backtest_crypto_orb import Params, trade_for_day, valid_day
+from backtest_crypto_orb import Params, trade_for_day, valid_day
 
 DATE="2026-10-01"
 
