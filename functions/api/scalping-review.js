@@ -1,5 +1,5 @@
 // Cloudflare Pages Function — GET /api/scalping-review?strategy=opening|daytrading|crypto|soxl&limit=7
-// Recent immutable nightly research records from scalping-data.
+// Recent dated nightly research records from scalping-data.
 // Read-only: no order path, no strategy mutation.
 
 const JH={"Content-Type":"application/json; charset=utf-8","Cache-Control":"no-store"};
