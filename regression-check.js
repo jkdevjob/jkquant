@@ -10578,9 +10578,42 @@ console.log('[SCALPING FLOW] 단타 공통 흐름 · 모의체결 분리');
      && /VTTS3035R/.test(kis));
   ok('KIS 해외 모의 조회는 전체조회 후 종목 필터', /PDNO:""[\s\S]{0,220}OVRS_EXCG_CD:""/.test(kis)
      && /if\(code\) rows=rows\.filter\(x=>x\.code===code\)/.test(kis));
-  ok('단타 화면 버전 1.30.2', /id="scVer">v1\.30\.2<\/span>/.test(sc));
+  ok('단타 화면 버전 1.30.3', /id="scVer">v1\.30\.3<\/span>/.test(sc));
 }
 
+
+/* ════ 일 +1% 그림자전략 — 4탭 prospective paper ════ */
+console.log('[DAILY1 SHADOW] 4탭 +1% 후보 · prospective 모의연구');
+{
+  const sc=scl;
+  const py=fs.readFileSync(__d+'/scripts/daily1_shadow_lab.py','utf8');
+  const api=fs.readFileSync(__d+'/functions/api/daily1-shadow.js','utf8');
+  const wf=fs.readFileSync(__d+'/.github/workflows/daily1-shadow-research.yml','utf8');
+  ok('4탭에 서로 다른 +1% 그림자 전략버전이 고정돼 있다',
+     /opening_gapdown_reclaim_v1/.test(py)
+     && /day_rs_vwap_reclaim_v1/.test(py)
+     && /btc_flush_reclaim_v1/.test(py)
+     && /soxl_power_hour_v1/.test(py)
+     && /PAPER_START = "2026-10-01"/.test(py));
+  ok('그림자 전략은 완료봉 신호→다음 봉 시가·손절우선·비용 반영',
+     /entryTime/.test(py) && /sim_exit/.test(py)
+     && /if hit_s:/.test(py) && /friction/.test(py)
+     && /next-bar-open fill/.test(py));
+  ok('그림자 연구는 자동 승격/실전 주문 없이 prospective 기록만 한다',
+     /No automatic promotion/.test(py)
+     && !/op=order|kisOrder\(|env\s*=\s*["']real["']/.test(py+api+wf));
+  ok('그림자 자동연구는 오전·한국장 종료후 하루 두 차례 누적',
+     /45 0 \* \* \*/.test(wf) && /30 8 \* \* 1-5/.test(wf)
+     && /scalping-data/.test(wf) && /data\/daily1-shadow/.test(wf));
+  ok('그림자 조회 API는 읽기전용 latest.json 경로',
+     /data\/daily1-shadow\/latest\.json/.test(api)
+     && !/method:\s*["']POST["']|op=order/.test(api));
+  ok('단타 각 탭과 전일·당일 화면에 +1% 그림자 결과가 표시된다',
+     /function setupDaily1ShadowCards\(\)/.test(sc)
+     && /id="daily1_/.test(sc)
+     && /\/api\/daily1-shadow/.test(sc)
+     && /4후보 연구용 25% 균등 바스켓/.test(sc));
+}
 
 /* ════ 단타 4전략 과거 누적 매매이력 ════ */
 console.log('[SCALPING HISTORY] 4전략 누적 매매이력 · 과매도 반등 운영탭 제거');
@@ -10727,7 +10760,7 @@ console.log('[OPENING SIGNAL LEARNING] 실시간 ledger · 30분 사후라벨 ·
      /신호 이후 30분 경로 진단/.test(scl)
      && /조건별 실제 성과/.test(scl)
      && /groupTable\('전략 버전'/.test(scl)
-     && /id="scVer">v1\.30\.2<\/span>/.test(scl));
+     && /id="scVer">v1\.30\.3<\/span>/.test(scl));
 }
 
 /* ════ 단타 Telegram ③④ 실시간 + ⑤⑥ 일일 연구 ════ */
@@ -10766,7 +10799,7 @@ console.log('[SCALPING TELEGRAM] 실시간 신호 · 일일 매매/연구 요약
   const cr=cr0>=0&&cr1>cr0?nightly.slice(cr0,cr1):'';
   ok('BTC 야간연구는 실제 70/30 holdout 모델만 참조',
      /validationModel":"70\/30 holdout \+ rolling30"/.test(cr) && !/oos_edge|oos_trades|wf_status/.test(cr));
-  ok('단타 화면 버전 1.30.2', /id="scVer">v1\.30\.2<\/span>/.test(scl));
+  ok('단타 화면 버전 1.30.3', /id="scVer">v1\.30\.3<\/span>/.test(scl));
 }
 
 

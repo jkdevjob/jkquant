@@ -21,7 +21,7 @@ CACHE_DIR = Path(".job-alert-cache")
 SEEN_FILE = CACHE_DIR / "seen.json"
 SENT_FILE = CACHE_DIR / "last_sent_date.txt"
 ARCHIVE_FILE = Path("data/job_archive.json")
-ARCHIVE_DAYS = 30
+ARCHIVE_DAYS = 180
 
 JAVA_AI_QUERIES = [
     '대전 Java JSP Spring 프리랜서 프로젝트',
@@ -252,6 +252,281 @@ TRUSTED_DOMAINS = (
 
 def normalize_text(value):
     return re.sub(r'\s+', ' ', (value or '')).strip()
+
+
+
+INVALID_COMPANY_EXACT = {
+    '대전', '세종', '대전광역시', '세종특별자치시',
+    '입사지원', '홈페이지 지원', '즉시지원', '스크랩', '관심기업',
+    '채용', '모집', '경력', '신입', '정규직', '계약직',
+    '하반기', '상반기', '수정일', '등록일', '채용시',
+    '지원', '지원하기', '벤처기업', '중소기업', '중견기업',
+    '대기업', '외국계', '공공기관',
+}
+GENERIC_JOB_TITLES = {
+    '입사지원', '홈페이지 지원', '즉시지원', '스크랩', '관심기업',
+    '채용', '모집', '채용공고', '공고', '상세보기',
+}
+DETAIL_HEADERS = {
+    'User-Agent': (
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) '
+        'AppleWebKit/537.36 (KHTML, like Gecko) '
+        'Chrome/154.0.0.0 Safari/537.36'
+    ),
+    'Accept-Language': 'ko-KR,ko;q=0.9,en;q=0.7',
+}
+
+
+def clean_company_name(value, title=''):
+    text = normalize_text(value)
+    if not text:
+        return ''
+    text = re.sub(r'^\s*기업정보\s*[:：]?\s*', '', text)
+    text = re.sub(r'\s+(?:관심기업|채용중\s*\d+\s*)$', '', text)
+    text = text.strip('[]{}<>|·•-–— ')
+    if not text or len(text) < 2 or len(text) > 60:
+        return ''
+    if text in INVALID_COMPANY_EXACT:
+        return ''
+    if re.fullmatch(r'(?:대전|세종)(?:광역시|특별자치시)?', text):
+        return ''
+    if re.search(r'^(?:D-\d+|~\s*\d{1,2}/\d{1,2})$', text, re.I):
+        return ''
+    if re.fullmatch(r'[\d,.]+\s*(?:원|만원|억원)(?:\s*~.*)?', text):
+        return ''
+    if any(token in text for token in ('입사지원', '홈페이지 지원', '즉시지원', '스크랩', '수정일')):
+        return ''
+    if title and normalize_text(title) == text:
+        return ''
+    return text
+
+
+def is_generic_job_title(value):
+    text = normalize_text(value)
+    if not text or len(text) < 3:
+        return True
+    if text in GENERIC_JOB_TITLES:
+        return True
+    if any(token in text for token in (
+        '채용정보 상세',
+        '채용정보 상세검색',
+        '일자리 찾기',
+    )):
+        return True
+    if re.fullmatch(r'(?:입사지원|홈페이지\s*지원|즉시지원|스크랩|관심기업)(?:\s*\d+)?', text):
+        return True
+    return False
+
+
+def clean_detail_title(value, company=''):
+    text = normalize_text(value)
+    if not text:
+        return ''
+    text = re.sub(
+        r'\s*(?:[-|｜]\s*)?(?:사람인|잡코리아(?:\s*헤드헌팅)?).*$', 
+        '', 
+        text,
+        flags=re.I,
+    ).strip()
+    text = re.sub(
+        r'^(?:벤처기업|중소기업|중견기업|대기업|외국계|공공기관)\s*[:：]\s*',
+        '',
+        text,
+    ).strip()
+    company = clean_company_name(company)
+    if company:
+        prefixes = [
+            f'[{company}]',
+            f'[{company.replace("(주)", "").replace("㈜", "").strip()}]',
+        ]
+        for prefix in prefixes:
+            if prefix != '[]' and text.startswith(prefix):
+                text = normalize_text(text[len(prefix):])
+                break
+    return '' if is_generic_job_title(text) else text
+
+
+def _walk_jsonld(value):
+    if isinstance(value, dict):
+        yield value
+        for child in value.values():
+            yield from _walk_jsonld(child)
+    elif isinstance(value, list):
+        for child in value:
+            yield from _walk_jsonld(child)
+
+
+def extract_detail_identity(html, source=''):
+    soup = BeautifulSoup(html or '', 'html.parser')
+    title = ''
+    company = ''
+
+    # schema.org JobPosting을 최우선으로 사용한다.
+    for script in soup.find_all('script'):
+        typ = (script.get('type') or '').lower()
+        if 'ld+json' not in typ:
+            continue
+        raw = script.string or script.get_text() or ''
+        if not raw.strip():
+            continue
+        try:
+            data = json.loads(raw)
+        except Exception:
+            continue
+        for obj in _walk_jsonld(data):
+            obj_type = obj.get('@type')
+            types = obj_type if isinstance(obj_type, list) else [obj_type]
+            if not any(str(t).lower() == 'jobposting' for t in types if t):
+                continue
+            candidate_title = normalize_text(obj.get('title') or obj.get('name') or '')
+            org = obj.get('hiringOrganization') or obj.get('hiring_organization') or {}
+            if isinstance(org, dict):
+                candidate_company = normalize_text(org.get('name') or '')
+            elif isinstance(org, str):
+                candidate_company = normalize_text(org)
+            else:
+                candidate_company = ''
+            candidate_company = clean_company_name(candidate_company, candidate_title)
+            candidate_title = clean_detail_title(candidate_title, candidate_company)
+            if candidate_title:
+                title = candidate_title
+            if candidate_company:
+                company = candidate_company
+            if title and company:
+                return title, company
+
+    # og:title / <title>의 "[회사] 공고제목 - 사이트명" 패턴을 보조로 사용한다.
+    page_titles = []
+    og = soup.find('meta', attrs={'property': 'og:title'})
+    if og and og.get('content'):
+        page_titles.append(normalize_text(og.get('content')))
+    if soup.title and soup.title.string:
+        page_titles.append(normalize_text(soup.title.string))
+
+    for page_title in page_titles:
+        m = re.match(r'^\[([^\[\]]{2,80})\]\s*(.+)$', page_title)
+        if m:
+            candidate_company = clean_company_name(m.group(1))
+            candidate_title = clean_detail_title(m.group(2), candidate_company)
+            if candidate_company and not company:
+                company = candidate_company
+            if candidate_title and not title:
+                title = candidate_title
+        elif not title:
+            candidate_title = clean_detail_title(page_title)
+            if candidate_title and len(candidate_title) <= 180:
+                title = candidate_title
+
+    selector_sets = {
+        '사람인': {
+            'title': ('.jv_header .tit_job', '.tit_job', 'h1'),
+            'company': ('.jv_header .company a', '.jv_header .company', '.company_name a', '.company_name'),
+        },
+        '잡코리아': {
+            'title': ('h1', '.titReadArea h3', '.recruit-info-title', '.tbRow h3'),
+            'company': ('.coName', '.company-name', '.recruit-company-name', '.devTplCoName'),
+        },
+    }
+    selectors = selector_sets.get(source, {})
+    if not title:
+        for selector in selectors.get('title', ()):
+            node = soup.select_one(selector)
+            candidate = clean_detail_title(node.get_text(' ', strip=True) if node else '')
+            if candidate:
+                title = candidate
+                break
+    if not company:
+        for selector in selectors.get('company', ()):
+            node = soup.select_one(selector)
+            candidate = clean_company_name(node.get_text(' ', strip=True) if node else '', title)
+            if candidate:
+                company = candidate
+                break
+
+    return title, company
+
+
+def title_from_card_body(body):
+    text = normalize_text(body)
+    if not text:
+        return ''
+
+    # 고용24/DDGS 스니펫: "Sep 7, 2026 · 채용시까지 실제 공고명 [기관] 1명 ..."
+    # 형태에서 실제 공고명을 복구한다.
+    work24 = re.sub(
+        r'^[A-Z][a-z]{2}\s+\d{1,2},\s+\d{4}\s*[·-]\s*',
+        '',
+        text,
+    )
+    for pattern in (
+        r'(?:채용시까지|상시채용|오늘마감|마감임박|D-\d+)\s+(.+?)\s+\[[^\]]+\]\s+\d+\s*명',
+        r'(?:채용시까지|상시채용|오늘마감|마감임박|D-\d+)\s+(.+?)(?=\s+\d+\s*명\b)',
+    ):
+        m = re.search(pattern, work24, re.I)
+        if m:
+            candidate = normalize_text(m.group(1))
+            if 3 <= len(candidate) <= 180 and not is_generic_job_title(candidate):
+                return candidate
+
+    if '스크랩' in text:
+        before = normalize_text(text.split('스크랩', 1)[0])
+        if before and len(before) <= 180 and not is_generic_job_title(before):
+            return before
+    return ''
+
+
+def fetch_job_identity(job):
+    item = dict(job)
+    try:
+        response = requests.get(
+            item.get('url', ''),
+            headers=DETAIL_HEADERS,
+            timeout=15,
+        )
+        if response.ok and response.text:
+            detail_title, detail_company = extract_detail_identity(
+                response.text,
+                item.get('source', ''),
+            )
+            if detail_title:
+                item['title'] = detail_title
+            if detail_company:
+                item['company'] = detail_company
+    except Exception as exc:
+        item['_identity_error'] = type(exc).__name__
+
+    if is_generic_job_title(item.get('title', '')):
+        fallback_title = title_from_card_body(item.get('body', ''))
+        if fallback_title:
+            item['title'] = fallback_title
+
+    explicit_company = clean_company_name(
+        item.get('company', ''),
+        item.get('title', ''),
+    )
+    if explicit_company:
+        item['company'] = explicit_company
+    else:
+        item.pop('company', None)
+    return item
+
+
+def enrich_jobs_from_details(jobs, workers=8):
+    jobs = list(jobs or [])
+    if not jobs:
+        return jobs
+    enriched = []
+    failures = 0
+    with ThreadPoolExecutor(max_workers=workers) as pool:
+        for item in pool.map(fetch_job_identity, jobs):
+            if item.pop('_identity_error', None):
+                failures += 1
+            enriched.append(item)
+    print(
+        f'[INFO] detail_identity enriched={len(enriched)} '
+        f'failures={failures}'
+    )
+    return enriched
 
 
 def normalize_url(url):
@@ -626,6 +901,7 @@ def search_group(queries, scorer, source_name=None):
             for item in results or []:
                 title = normalize_text(item.get('title'))
                 body = normalize_text(item.get('body'))
+                title = normalize_search_result_title(source_name, title, body)
                 url = normalize_url(item.get('href') or item.get('url') or '')
                 if not url:
                     continue
@@ -846,9 +1122,11 @@ def collect_jobkorea_direct():
     for error in errors[:5]:
         print(f'[WARN] jobkorea direct: {error}', file=sys.stderr)
 
-    for job in jobs.values():
+    direct_jobs = list(jobs.values())
+    for job in direct_jobs:
         job.pop('_title_quality', None)
-    return list(jobs.values()), status
+    direct_jobs = enrich_jobs_from_details(direct_jobs)
+    return direct_jobs, status
 
 
 def compact_job_title(title):
@@ -871,21 +1149,32 @@ def title_tokens(title):
 
 
 def company_hint(title, body):
-    text = f'{title} {body}'
+    text = normalize_text(f'{title} {body}')
     patterns = [
-        r'(?:㈜|\(주\)|주식회사)\s*([가-힣A-Za-z0-9&._-]{2,30})',
-        r'([가-힣A-Za-z0-9&._-]{2,30})\s+(?:대전|세종)(?:광역시|특별자치시)?\b',
+        r'(?:\(주\)|주식회사)\s*([가-힣A-Za-z0-9&._-]{2,40})',
+        r'([가-힣A-Za-z0-9&._-]{2,40})\s*㈜',
     ]
     for pattern in patterns:
         m = re.search(pattern, text)
         if m:
-            return m.group(1).lower()
+            candidate = clean_company_name(m.group(1), title)
+            if candidate:
+                return candidate
+
+    m = re.match(r'^\[([^\]]{2,40})\]', normalize_text(title))
+    if m:
+        candidate = clean_company_name(m.group(1), title='')
+        if candidate and candidate not in {'대전', '세종', '서울', '경기', '충남', '충북'}:
+            return candidate
     return ''
 
 
 def job_fingerprint(job):
     title = compact_job_title(job.get('title', ''))
-    company = company_hint(job.get('title', ''), job.get('body', ''))
+    company = (
+        clean_company_name(job.get('company', ''), job.get('title', ''))
+        or company_hint(job.get('title', ''), job.get('body', ''))
+    )
     return f'{company}|{title}' if company else title
 
 
@@ -895,8 +1184,14 @@ def same_job(a, b):
     if not has_target_location(f"{b.get('title','')} {b.get('body','')}"):
         return False
 
-    ca = company_hint(a.get('title', ''), a.get('body', ''))
-    cb = company_hint(b.get('title', ''), b.get('body', ''))
+    ca = (
+        clean_company_name(a.get('company', ''), a.get('title', ''))
+        or company_hint(a.get('title', ''), a.get('body', ''))
+    )
+    cb = (
+        clean_company_name(b.get('company', ''), b.get('title', ''))
+        or company_hint(b.get('title', ''), b.get('body', ''))
+    )
     if ca and cb and ca != cb:
         return False
 
@@ -925,8 +1220,17 @@ def merge_duplicate_job(base, incoming):
     bp = SOURCE_PRIORITY.get(base.get('source'), 0)
     ip = SOURCE_PRIORITY.get(incoming.get('source'), 0)
     if ip > bp:
-        for key in ('title', 'url', 'source'):
-            base[key] = incoming.get(key, base.get(key))
+        for key in ('title', 'url', 'source', 'company'):
+            if incoming.get(key):
+                base[key] = incoming.get(key, base.get(key))
+
+    if not clean_company_name(base.get('company', ''), base.get('title', '')):
+        incoming_company = clean_company_name(
+            incoming.get('company', ''),
+            incoming.get('title', ''),
+        )
+        if incoming_company:
+            base['company'] = incoming_company
 
     if len(incoming.get('body', '')) > len(base.get('body', '')):
         base['body'] = incoming.get('body', '')
@@ -1064,7 +1368,39 @@ def collect_saramin_direct():
         f'[INFO] saramin_direct ok={status["ok"]} ok_pages={ok_pages} '
         f'failed_pages={failed_pages} parsed_jobs={len(jobs)}'
     )
-    return list(jobs.values()), status
+    direct_jobs = enrich_jobs_from_details(list(jobs.values()))
+    return direct_jobs, status
+
+
+
+def normalize_search_result_title(source_name, title, body):
+    title = normalize_text(title)
+    body = normalize_text(body)
+
+    # 고용24 검색결과는 문서 제목이 '채용정보 상세 | ...'로 내려오는 경우가 있다.
+    # 이때 검색 스니펫의 첫 실제 공고명을 제목으로 사용한다.
+    if source_name == '고용24' and (
+        '채용정보 상세' in title
+        or '일자리 찾기' in title
+        or '채용정보 상세검색' in title
+    ):
+        text = re.sub(
+            r'^[A-Z][a-z]{2}\s+\d{1,2},\s+\d{4}\s*[·-]\s*',
+            '',
+            body,
+        )
+        patterns = [
+            r'(?:채용시까지|상시채용|오늘마감|마감임박|D-\d+)\s+(.+?)\s+\[[^\]]+\]\s+\d+\s*명',
+            r'(?:채용시까지|상시채용|오늘마감|마감임박|D-\d+)\s+(.+?)(?=\s+\d+\s*명\b)',
+        ]
+        for pattern in patterns:
+            m = re.search(pattern, text, re.I)
+            if m:
+                candidate = normalize_text(m.group(1))
+                if 3 <= len(candidate) <= 180:
+                    return candidate
+
+    return clean_detail_title(title) or title
 
 
 def collect_search_source(source_name, domain):
@@ -1244,14 +1580,22 @@ def archive_entry(job, existing=None):
         posted = old_posted
         posted_source = old.get('dateSource') or posted_source
 
-    company = company_hint(job.get('title', ''), job.get('body', '')) or old.get('company', '')
+    company = (
+        clean_company_name(job.get('company', ''), job.get('title', ''))
+        or company_hint(job.get('title', ''), job.get('body', ''))
+        or clean_company_name(old.get('company', ''), job.get('title', ''))
+    )
     body = normalize_text(job.get('body', ''))
     if len(body) > 900:
         body = body[:897] + '...'
 
     entry = {
-        'id': old.get('id') or job_fingerprint(job) or normalize_url(job.get('url', '')),
-        'title': job.get('title', '') or old.get('title', ''),
+        'id': normalize_url(job.get('url', '')) or old.get('id') or job_fingerprint(job),
+        'title': (
+            clean_detail_title(job.get('title', ''), company)
+            or clean_detail_title(old.get('title', ''), company)
+            or '제목 없음'
+        ),
         'company': company,
         'body': body or old.get('body', ''),
         'url': normalize_url(job.get('url', '')) or old.get('url', ''),
@@ -1269,6 +1613,35 @@ def archive_entry(job, existing=None):
     if not entry['categories'] and old.get('categories'):
         entry['categories'] = old['categories']
     return entry
+
+
+
+def sanitize_archive_identity(item):
+    out = dict(item or {})
+    raw_title = normalize_text(out.get('title', ''))
+    raw_body = normalize_text(out.get('body', ''))
+    company = (
+        clean_company_name(out.get('company', ''), raw_title)
+        or company_hint(raw_title, raw_body)
+    )
+    title = clean_detail_title(raw_title, company)
+    if is_generic_job_title(title):
+        title = title_from_card_body(raw_body) or ''
+    out['title'] = title or raw_title or '제목 없음'
+    out['company'] = company
+    if out.get('url'):
+        out['id'] = normalize_url(out.get('url', '')) or out.get('id', '')
+    return out
+
+
+def archive_identity_needs_refresh(item):
+    title = normalize_text((item or {}).get('title', ''))
+    company = clean_company_name((item or {}).get('company', ''), title)
+    if is_generic_job_title(title):
+        return True
+    if not company:
+        return True
+    return False
 
 
 def load_job_archive():
@@ -1312,10 +1685,29 @@ def save_job_archive(all_jobs, source_statuses):
         if old:
             used_old_ids.add(id(old))
 
-    # 오늘 검색에 안 잡힌 공고도 30일 동안은 웹 아카이브에 유지한다.
-    for old in old_jobs:
-        if id(old) not in used_old_ids:
-            merged.append(old)
+    # 오늘 검색에 안 잡힌 기존 공고도 보관기간 동안 유지하되,
+    # 과거에 잘못 저장된 제목/업체명은 원문 상세페이지로 다시 교정한다.
+    unseen_old = [
+        old for old in old_jobs
+        if id(old) not in used_old_ids
+    ]
+    refresh_targets = [
+        old for old in unseen_old
+        if archive_identity_needs_refresh(old) and old.get('url')
+    ]
+    refreshed_by_url = {}
+    if refresh_targets:
+        refreshed = enrich_jobs_from_details(refresh_targets, workers=6)
+        refreshed_by_url = {
+            normalize_url(item.get('url', '')): item
+            for item in refreshed
+            if item.get('url')
+        }
+
+    for old in unseen_old:
+        url = normalize_url(old.get('url', ''))
+        candidate = refreshed_by_url.get(url, old)
+        merged.append(sanitize_archive_identity(candidate))
 
     # 사이트가 달라도 같은 공고는 하나로 합친다.
     result = []
