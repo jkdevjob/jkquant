@@ -10805,6 +10805,7 @@ console.log('[SCALPING TELEGRAM] 실시간 신호 · 일일 매매/연구 요약
   ok('SOXL ⑤⑥ 일일 Telegram 연결',
      /scalping-daily-summary\?strategy=soxl/.test(soxlYml) && /sections:\[5,6\]/.test(soxlYml));
   const soxlPy=fs.readFileSync(__d+'/scripts/backtest_soxl_intraday.py','utf8');
+  const soxlCollector=fs.readFileSync(__d+'/scripts/collect_soxl_data.py','utf8');
   const soxlDoc=fs.readFileSync(__d+'/SOXL_SCALPING.md','utf8');
   const holdBars=[...soxlPy.matchAll(/max_hold_bars\s*(?::\s*int)?\s*=\s*(\d+)/g)].map(x=>Number(x[1]));
   ok('SOXL 실제 매매대상은 SOXL only이고 QQQ/TQQQ로 대체하지 않는다',
@@ -10824,7 +10825,8 @@ console.log('[SCALPING TELEGRAM] 실시간 신호 · 일일 매매/연구 요약
   ok('SOXL 정기수집은 미국장 종료 뒤 21:15 UTC이며 최초 아카이브는 push에서도 백필',
      /cron: "15 21 \* \* 1-5"/.test(soxlYml)
      && /HAVE_ARCHIVE=0/.test(soxlYml)
-     && /collect_soxl_data\.py/.test(soxlYml));
+     && /collect_soxl_data\.py/.test(soxlYml)
+     && /for range_value in \("60d", "5d"\)/.test(soxlCollector));
   ok('일일 요약 API는 TRADE/NO TRADE + 검증기록을 모두 포함',
      /⑤ 오늘 매매이력/.test(dailyApi) && /⑥ 검증·분석 기록/.test(dailyApi) && /NO TRADE/.test(dailyApi));
   const cr0=nightly.indexOf('def crypto_report():');
