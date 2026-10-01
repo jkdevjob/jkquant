@@ -46,7 +46,7 @@ GPT_FILES = {
     "opening": ("opening-history/baseline-trades.csv", "pnl"),
     "daytrading": ("daytrading-research/baseline-trades.csv", "pnl"),
     "crypto": ("crypto-research/baseline-trades.csv", "pnlPct"),
-    "soxl": ("soxl-research/baseline-trades.csv", "pnl"),
+    "soxl": ("soxl-research/baseline-trades.csv", "pnlPct"),
 }
 
 
