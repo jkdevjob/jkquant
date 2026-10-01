@@ -219,7 +219,7 @@ canvas{display:block;width:100%;height:auto}
 
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Morning Scalping</div><h1>JK <span class="v">퀀트</span> 단타 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="scVer">v1.30.1</span></h1></div>
+    <div><div class="kicker">Morning Scalping</div><h1>JK <span class="v">퀀트</span> 단타 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="scVer">v1.30.2</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -1440,14 +1440,32 @@ async function overviewHistory(name){
 function groupedByDate(a){
   const m=new Map(); for(const x of (a||[])){const d=String(x.date||'');if(!d)continue;if(!m.has(d))m.set(d,[]);m.get(d).push(x);} return m;
 }
+function prevSessionDate(sessionDate,name){
+  const d=new Date(sessionDate+'T12:00:00Z');
+  do{d.setUTCDate(d.getUTCDate()-1);}
+  while(name!=='crypto'&&(d.getUTCDay()===0||d.getUTCDay()===6));
+  return d.toISOString().slice(0,10);
+}
 function confirmedPeriods(name,trades,sessionDate){
-  const m=groupedByDate(trades),dates=[...m.keys()].sort();
-  const today=m.get(sessionDate)||[];
-  const prevDates=dates.filter(d=>d<sessionDate),prevDate=prevDates.length?prevDates[prevDates.length-1]:'';
+  const m=groupedByDate(trades),prevDate=prevSessionDate(sessionDate,name);
+  const today=m.get(sessionDate)||[],prev=m.get(prevDate)||[];
   return {
-    prev:{date:prevDate,stats:simpleTradeSum(m.get(prevDate)||[]),status:prevDate?'확정 이력':'확정 이력 없음'},
+    prev:{date:prevDate,stats:simpleTradeSum(prev),status:prev.length?'확정 이력':'확정 거래 없음 · 휴장/NO TRADE/수집대기 가능'},
     today:{date:sessionDate,stats:simpleTradeSum(today),status:today.length?'확정 이력':'아직 확정 이력 없음'}
   };
+}
+function globalPaperPeriod(x,fallbackDate){
+  if(!x)return null;
+  const date=String(x.date||fallbackDate||''),tr=x.trade;
+  if(!tr){
+    const label=x.state==='market_closed'?'휴장':x.finalized?'NO TRADE 확정':'현재까지 거래 없음/진행 중';
+    return {date,stats:simpleTradeSum([]),status:label+(x.session?' · '+x.session:'')};
+  }
+  const row={pnl:Number(tr.pnl)},closed=Number.isFinite(row.pnl)?[row]:[];
+  const st=simpleTradeSum(closed);st.trades=1;
+  const state=x.state==='closed'?'청산완료':x.state==='open'?'보유중':'진입대기';
+  const path=(tr.entryTime||'')+(tr.exitTime?' → '+tr.exitTime:'');
+  return {date,stats:st,status:state+(path?' · '+path:'')+(x.session?' · '+x.session:'')};
 }
 async function openingTodayLive(date){
   if(!me)return null;
@@ -1487,12 +1505,15 @@ async function loadDailyOverview(){
     };
     const live=await Promise.all([
       openingTodayLive(kst).catch(()=>null),
-      daytradingTodayLive(kst).catch(()=>null)
+      daytradingTodayLive(kst).catch(()=>null),
+      fetch('/api/global-intraday-status',{headers:{Accept:'application/json'}}).then(async r=>{const j=await r.json();return r.ok&&j.ok?j:null;}).catch(()=>null)
     ]);
     if(live[0])periods.opening.today=live[0];
     if(live[1])periods.daytrading.today=live[1];
-    if(!periods.crypto.today.stats.trades)periods.crypto.today.status='00:00~22:00 세션 · 확정 결과는 연구 수집 후 표시';
-    if(!periods.soxl.today.stats.trades)periods.soxl.today.status='미국 정규장 세션 · 확정 결과 수집 후 표시';
+    if(live[2]&&live[2].crypto)periods.crypto.today=globalPaperPeriod(live[2].crypto,kst)||periods.crypto.today;
+    else if(!periods.crypto.today.stats.trades)periods.crypto.today.status='00:00~22:00 세션 · 실시간 상태 조회 대기';
+    if(live[2]&&live[2].soxl)periods.soxl.today=globalPaperPeriod(live[2].soxl,et)||periods.soxl.today;
+    else if(!periods.soxl.today.stats.trades)periods.soxl.today.status='미국 정규장 세션 · 실시간 상태 조회 대기';
 
     grid.innerHTML=
       strategyDailyCard('opening','⚡ 시초가',periods.opening.prev,periods.opening.today,'기준전략만 집계 · 그림자/누적 연구 수치 제외')+
