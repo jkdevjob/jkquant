@@ -140,7 +140,7 @@ function renderList(){
     var cats=(j.categories||[]).map(function(c){return '<span class="tag '+tagClass(c)+'">'+esc(CAT_LABEL[c]||c)+"</span>"}).join("");
     var loc=(j.locations||[]).map(function(x){return '<span class="tag">'+esc(x)+"</span>"}).join("");
     var salary=j.salary&&j.salary.label?'<span class="tag pay">'+esc(j.salary.label)+"</span>":"";
-    var company=j.company?'<span class="company-inline">'+esc(j.company)+"</span>":"";
+    var company='<span class="company-inline">'+esc((j.company||"").trim()||"업체 비공개")+"</span>";
     var dateLabel=j.postedDate?fmtDate(j.postedDate)+" · "+esc(j.dateSource||"등록일"):fmtDate(j.firstSeen)+" · 최초수집";
     return '<article class="card"><div class="cardtop"><div class="titleline"><a class="title" href="'+esc(j.url)+'" target="_blank" rel="noopener">'+esc(j.title||"제목 없음")+'</a>'+company+'</div><div class="date">'+dateLabel+'</div></div><div class="meta">'+cats+loc+salary+'</div>'+(j.body?'<div class="desc">'+esc(j.body)+"</div>":"")+'<div class="src">출처: '+esc((j.sources||[]).join(" / ")||j.source||"-")+" · 마지막 확인 "+esc(j.lastSeen||"-")+"</div></article>"
   }).join("");
