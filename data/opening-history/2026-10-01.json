@@ -1,0 +1,408 @@
+{
+  "schema": 3,
+  "date": "2026-10-01",
+  "generatedAt": "2026-10-01T15:31:04+09:00",
+  "source": "server-opening-monitor",
+  "liveSource": "cloudflare-opening-scheduler-durable-ledger",
+  "strategy": {
+    "universe": "Top100",
+    "gap": "+2~+7%",
+    "firstHigh": "첫 3분",
+    "initialBreakout": "+0.5% 이상",
+    "pullback": "0.3~1.0%",
+    "support": "시초가 지지",
+    "rebreak": "전고점 재돌파",
+    "volumeRatio": "1.0배 이상",
+    "amountRatio": "1.2배 이상",
+    "stop": "-1%",
+    "takeProfit": "+1.5%",
+    "finalExit": "09:30",
+    "friction": "0.25%"
+  },
+  "universeChecked": 100,
+  "errors": 0,
+  "trades": [],
+  "shadowVariants": [
+    {
+      "name": "amount_1.5",
+      "label": "거래대금≥1.5배",
+      "description": "재돌파 추정 거래대금 배수만 강화",
+      "params": {
+        "amountMult": 1.5
+      },
+      "trades": []
+    },
+    {
+      "name": "entry_by_0915",
+      "label": "09:15 이전",
+      "description": "재돌파 진입 시각을 09:15까지로 제한",
+      "params": {
+        "entryCutoff": 915
+      },
+      "trades": []
+    },
+    {
+      "name": "hold_to_next_open",
+      "label": "다음 거래일 시가 청산",
+      "description": "기준전략과 같은 진입 · 중간 손절/익절 없이 다음 거래일 시가까지 보유 · 연구 전용",
+      "params": {
+        "exitPolicy": "next_session_open"
+      },
+      "trades": []
+    },
+    {
+      "name": "pb_max_0.5",
+      "label": "눌림≤0.5%",
+      "description": "눌림 상한만 0.5%로 강화",
+      "params": {
+        "pbMax": 0.5
+      },
+      "trades": []
+    },
+    {
+      "name": "today_combo_v1",
+      "label": "오늘 개선안 v1",
+      "description": "눌림≤0.5% + 거래대금≥1.5배 + 09:15 이전 진입",
+      "params": {
+        "pbMax": 0.5,
+        "amountMult": 1.5,
+        "entryCutoff": 915
+      },
+      "trades": []
+    }
+  ],
+  "liveSignalLedger": {
+    "schema": 1,
+    "date": "2026-10-01",
+    "createdAt": "2026-10-01T00:06:38.389Z",
+    "updatedAt": "2026-10-01T00:32:03.520Z",
+    "scans": [
+      {
+        "id": "1790813159000:904:full",
+        "scheduledTime": 1790813159000,
+        "capturedAt": "2026-10-01T00:06:38.090Z",
+        "targetHm": 904,
+        "lagMs": 12895,
+        "partial": false,
+        "okShards": 5,
+        "failed": [],
+        "quoteErrors": 0,
+        "eventCount": 0
+      },
+      {
+        "id": "1790813219000:905:full",
+        "scheduledTime": 1790813219000,
+        "capturedAt": "2026-10-01T00:07:21.315Z",
+        "targetHm": 905,
+        "lagMs": 7282,
+        "partial": false,
+        "okShards": 5,
+        "failed": [],
+        "quoteErrors": 0,
+        "eventCount": 0
+      },
+      {
+        "id": "1790813279000:906:full",
+        "scheduledTime": 1790813279000,
+        "capturedAt": "2026-10-01T00:08:23.816Z",
+        "targetHm": 906,
+        "lagMs": 3996,
+        "partial": false,
+        "okShards": 5,
+        "failed": [],
+        "quoteErrors": 0,
+        "eventCount": 0
+      },
+      {
+        "id": "1790813339000:907:full",
+        "scheduledTime": 1790813339000,
+        "capturedAt": "2026-10-01T00:09:27.759Z",
+        "targetHm": 907,
+        "lagMs": 6281,
+        "partial": false,
+        "okShards": 5,
+        "failed": [],
+        "quoteErrors": 0,
+        "eventCount": 0
+      },
+      {
+        "id": "1790813399000:908:full",
+        "scheduledTime": 1790813399000,
+        "capturedAt": "2026-10-01T00:10:18.734Z",
+        "targetHm": 908,
+        "lagMs": 5488,
+        "partial": false,
+        "okShards": 5,
+        "failed": [],
+        "quoteErrors": 0,
+        "eventCount": 0
+      },
+      {
+        "id": "1790813459000:909:full",
+        "scheduledTime": 1790813459000,
+        "capturedAt": "2026-10-01T00:11:40.307Z",
+        "targetHm": 909,
+        "lagMs": 18685,
+        "partial": false,
+        "okShards": 5,
+        "failed": [],
+        "quoteErrors": 0,
+        "eventCount": 0
+      },
+      {
+        "id": "1790813519000:910:full",
+        "scheduledTime": 1790813519000,
+        "capturedAt": "2026-10-01T00:12:18.129Z",
+        "targetHm": 910,
+        "lagMs": 5191,
+        "partial": false,
+        "okShards": 5,
+        "failed": [],
+        "quoteErrors": 0,
+        "eventCount": 0
+      },
+      {
+        "id": "1790813579000:911:full",
+        "scheduledTime": 1790813579000,
+        "capturedAt": "2026-10-01T00:13:28.206Z",
+        "targetHm": 911,
+        "lagMs": 7187,
+        "partial": false,
+        "okShards": 5,
+        "failed": [],
+        "quoteErrors": 0,
+        "eventCount": 0
+      },
+      {
+        "id": "1790813639000:912:full",
+        "scheduledTime": 1790813639000,
+        "capturedAt": "2026-10-01T00:14:19.164Z",
+        "targetHm": 912,
+        "lagMs": 4788,
+        "partial": false,
+        "okShards": 5,
+        "failed": [],
+        "quoteErrors": 0,
+        "eventCount": 0
+      },
+      {
+        "id": "1790813699000:913:full",
+        "scheduledTime": 1790813699000,
+        "capturedAt": "2026-10-01T00:15:26.337Z",
+        "targetHm": 913,
+        "lagMs": 5484,
+        "partial": false,
+        "okShards": 5,
+        "failed": [],
+        "quoteErrors": 0,
+        "eventCount": 0
+      },
+      {
+        "id": "1790813759000:914:full",
+        "scheduledTime": 1790813759000,
+        "capturedAt": "2026-10-01T00:16:44.252Z",
+        "targetHm": 914,
+        "lagMs": 22984,
+        "partial": false,
+        "okShards": 5,
+        "failed": [],
+        "quoteErrors": 0,
+        "eventCount": 0
+      },
+      {
+        "id": "1790813819000:915:full",
+        "scheduledTime": 1790813819000,
+        "capturedAt": "2026-10-01T00:17:17.048Z",
+        "targetHm": 915,
+        "lagMs": 5094,
+        "partial": false,
+        "okShards": 5,
+        "failed": [],
+        "quoteErrors": 0,
+        "eventCount": 0
+      },
+      {
+        "id": "1790813879000:916:full",
+        "scheduledTime": 1790813879000,
+        "capturedAt": "2026-10-01T00:18:27.066Z",
+        "targetHm": 916,
+        "lagMs": 6794,
+        "partial": false,
+        "okShards": 5,
+        "failed": [],
+        "quoteErrors": 0,
+        "eventCount": 0
+      },
+      {
+        "id": "1790813939000:917:full",
+        "scheduledTime": 1790813939000,
+        "capturedAt": "2026-10-01T00:19:20.995Z",
+        "targetHm": 917,
+        "lagMs": 6691,
+        "partial": false,
+        "okShards": 5,
+        "failed": [],
+        "quoteErrors": 0,
+        "eventCount": 0
+      },
+      {
+        "id": "1790813999000:918:full",
+        "scheduledTime": 1790813999000,
+        "capturedAt": "2026-10-01T00:20:21.740Z",
+        "targetHm": 918,
+        "lagMs": 3896,
+        "partial": false,
+        "okShards": 5,
+        "failed": [],
+        "quoteErrors": 0,
+        "eventCount": 0
+      },
+      {
+        "id": "1790814059000:919:full",
+        "scheduledTime": 1790814059000,
+        "capturedAt": "2026-10-01T00:21:44.840Z",
+        "targetHm": 919,
+        "lagMs": 22894,
+        "partial": false,
+        "okShards": 5,
+        "failed": [],
+        "quoteErrors": 0,
+        "eventCount": 0
+      },
+      {
+        "id": "1790814119000:920:full",
+        "scheduledTime": 1790814119000,
+        "capturedAt": "2026-10-01T00:22:20.338Z",
+        "targetHm": 920,
+        "lagMs": 7891,
+        "partial": false,
+        "okShards": 5,
+        "failed": [],
+        "quoteErrors": 0,
+        "eventCount": 0
+      },
+      {
+        "id": "1790814179000:921:full",
+        "scheduledTime": 1790814179000,
+        "capturedAt": "2026-10-01T00:23:28.471Z",
+        "targetHm": 921,
+        "lagMs": 5885,
+        "partial": false,
+        "okShards": 5,
+        "failed": [],
+        "quoteErrors": 0,
+        "eventCount": 0
+      },
+      {
+        "id": "1790814239000:922:full",
+        "scheduledTime": 1790814239000,
+        "capturedAt": "2026-10-01T00:24:17.954Z",
+        "targetHm": 922,
+        "lagMs": 5090,
+        "partial": false,
+        "okShards": 5,
+        "failed": [],
+        "quoteErrors": 0,
+        "eventCount": 0
+      },
+      {
+        "id": "1790814299000:923:full",
+        "scheduledTime": 1790814299000,
+        "capturedAt": "2026-10-01T00:25:28.219Z",
+        "targetHm": 923,
+        "lagMs": 6682,
+        "partial": false,
+        "okShards": 5,
+        "failed": [],
+        "quoteErrors": 0,
+        "eventCount": 0
+      },
+      {
+        "id": "1790814359000:924:full",
+        "scheduledTime": 1790814359000,
+        "capturedAt": "2026-10-01T00:26:35.861Z",
+        "targetHm": 924,
+        "lagMs": 14284,
+        "partial": false,
+        "okShards": 5,
+        "failed": [],
+        "quoteErrors": 0,
+        "eventCount": 0
+      },
+      {
+        "id": "1790814419000:925:full",
+        "scheduledTime": 1790814419000,
+        "capturedAt": "2026-10-01T00:27:18.281Z",
+        "targetHm": 925,
+        "lagMs": 5888,
+        "partial": false,
+        "okShards": 5,
+        "failed": [],
+        "quoteErrors": 0,
+        "eventCount": 0
+      },
+      {
+        "id": "1790814479000:926:full",
+        "scheduledTime": 1790814479000,
+        "capturedAt": "2026-10-01T00:28:24.384Z",
+        "targetHm": 926,
+        "lagMs": 3891,
+        "partial": false,
+        "okShards": 5,
+        "failed": [],
+        "quoteErrors": 0,
+        "eventCount": 0
+      },
+      {
+        "id": "1790814539000:927:full",
+        "scheduledTime": 1790814539000,
+        "capturedAt": "2026-10-01T00:29:26.364Z",
+        "targetHm": 927,
+        "lagMs": 4892,
+        "partial": false,
+        "okShards": 5,
+        "failed": [],
+        "quoteErrors": 0,
+        "eventCount": 0
+      },
+      {
+        "id": "1790814599000:928:full",
+        "scheduledTime": 1790814599000,
+        "capturedAt": "2026-10-01T00:30:19.862Z",
+        "targetHm": 928,
+        "lagMs": 2984,
+        "partial": false,
+        "okShards": 5,
+        "failed": [],
+        "quoteErrors": 0,
+        "eventCount": 0
+      },
+      {
+        "id": "1790814659000:929:full",
+        "scheduledTime": 1790814659000,
+        "capturedAt": "2026-10-01T00:31:47.188Z",
+        "targetHm": 929,
+        "lagMs": 25094,
+        "partial": false,
+        "okShards": 5,
+        "failed": [],
+        "quoteErrors": 0,
+        "eventCount": 0
+      },
+      {
+        "id": "1790814719000:930:full",
+        "scheduledTime": 1790814719000,
+        "capturedAt": "2026-10-01T00:32:03.510Z",
+        "targetHm": 930,
+        "lagMs": 4488,
+        "partial": false,
+        "okShards": 5,
+        "failed": [],
+        "quoteErrors": 0,
+        "eventCount": 0
+      }
+    ],
+    "events": []
+  },
+  "signalRecords": []
+}
