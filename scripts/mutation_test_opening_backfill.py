@@ -8,6 +8,8 @@ import tempfile
 
 ROOT = Path(__file__).resolve().parent
 mutants = [
+    ('price basis mismatch', 'backtest_opening_rebreak.py', 'if abs(ratio - 1) > 0.01000000001:', 'if False:'),
+    ('price basis adoption gate', 'backtest_opening_rebreak.py', "if validation['status'] in ('blocked_price_basis_mismatch', 'unverified_opening_observation'):", 'if False:'),
     ('delayed session window', 'opening_backfill.py', "if day in DELAYED_OPENS else", 'if False else'),
     ('per-symbol window checkpoint', 'opening_backfill.py', "previous.get('collectionWindow') != window", "old.get('collectionWindow') != window"),
     ('confirmed year boundary', 'opening_backfill.py', 'if day in CONFIRMED_CLOSURES:', 'if False:'),

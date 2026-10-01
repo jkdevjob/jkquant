@@ -32,10 +32,11 @@ export async function onRequestPost({request,env}){
       lines.push("• "+(x.name||x.code)+" "+String(x.entryTime||"").padStart(4,"0")+"→"+String(x.exitTime||"").padStart(4,"0")+" "+signed(x.pnl));
     }
     lines.push("");
-    lines.push("누적/그림자 비교");
+    const cumDays=Math.max(0,...vars.map(v=>Number((v.summary||{}).days||0)));
+    lines.push("누적/그림자 비교 · 오늘 매매건수 아님"+(cumDays?" · 누적 "+cumDays+"거래일":""));
     for(const v of vars){
       const n=v.params&&v.params.name||"",s=v.summary||{};
-      lines.push("• "+n+" · "+(s.trades||0)+"건 · 승률 "+Number(s.winRate||0).toFixed(1)+"% · 평균 "+signed(s.avgPnl));
+      lines.push("• "+n+" · 누적 "+(s.trades||0)+"건 · 승률 "+Number(s.winRate||0).toFixed(1)+"% · 평균 "+signed(s.avgPnl));
     }
     const id=await telegram(env,lines.join("\n"));
     return new Response(JSON.stringify({ok:true,messageId:id,count:today.length}),{headers:JH});

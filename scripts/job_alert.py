@@ -6,7 +6,7 @@ import sys
 import time
 import subprocess
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from datetime import datetime
+from datetime import date, datetime, timedelta
 from difflib import SequenceMatcher
 from html import escape
 from pathlib import Path
@@ -20,6 +20,8 @@ from ddgs import DDGS
 CACHE_DIR = Path(".job-alert-cache")
 SEEN_FILE = CACHE_DIR / "seen.json"
 SENT_FILE = CACHE_DIR / "last_sent_date.txt"
+ARCHIVE_FILE = Path("data/job_archive.json")
+ARCHIVE_DAYS = 30
 
 JAVA_AI_QUERIES = [
     '대전 Java JSP Spring 프리랜서 프로젝트',
@@ -224,7 +226,21 @@ JOB_TERMS = (
     '경력', '신입', '직원', '사원', '현장', '개발자', '기사',
 )
 EXCLUDE_TERMS = (
-    '신입만', '신입 전용', '인턴만', '마감되었습니다', '채용마감',
+    '인턴만', '마감되었습니다', '채용마감',
+)
+
+ENTRY_ONLY_EXPLICIT_TERMS = (
+    '신입만', '신입 전용', '신입전용', '신입사원만',
+    '신입 공채', '신입공채', '신입사원 공개채용', '신입사원 채용',
+)
+CAREER_ALLOWED_PATTERNS = (
+    r'신입\s*[·ㆍ/,+&]\s*경력',
+    r'신입\s*(?:및|또는)\s*경력',
+    r'경력\s*무관',
+    r'경력직',
+    r'경력자',
+    r'경력\s*\d+\s*년',
+    r'경력\s*(?:이상|지원|우대)',
 )
 TRUSTED_DOMAINS = (
     'jobkorea.co.kr', 'saramin.co.kr', 'imjob.co.kr', 'work24.go.kr',
@@ -364,12 +380,44 @@ def short_term_pay_info(title, body):
     return max(candidates, key=lambda x: x['sort_value'])
 
 
+def is_entry_only(title, body):
+    title_text = normalize_text(title).lower()
+    body_text = normalize_text(body).lower()
+    text = f'{title_text} {body_text}'
+
+    # '신입·경력', '경력무관', '경력직' 등 경력자 지원 가능 신호가 있으면 허용한다.
+    career_allowed = any(
+        re.search(pattern, text, re.I)
+        for pattern in CAREER_ALLOWED_PATTERNS
+    )
+    if career_allowed:
+        return False
+
+    # 명시적인 신입 전용 문구는 제외한다.
+    if any(term in text for term in ENTRY_ONLY_EXPLICIT_TERMS):
+        return True
+
+    # 제목 자체가 '[신입]', '(신입)', '신입 개발자/엔지니어/사원 채용' 형태이고
+    # 본문에도 경력자 지원 가능 신호가 없으면 신입 전용으로 본다.
+    if re.search(r'(?:^|[\[\(\s])신입(?:[\]\)\s]|$)', title_text):
+        if re.search(
+            r'신입\s*(?:사원|개발자|엔지니어|직원|채용|모집|공채)',
+            title_text,
+            re.I,
+        ) or re.search(r'^\s*[\[\(]?신입[\]\)]?', title_text, re.I):
+            return True
+
+    return False
+
+
 def score_java_result(title, body, url):
     text = f"{title} {body}".lower()
 
     if not has_target_location(text):
         return -999
     if any(term in text for term in EXCLUDE_TERMS):
+        return -999
+    if is_entry_only(title, body):
         return -999
     if any(term in text for term in JUNIOR_ONLY_TERMS):
         return -999
@@ -395,6 +443,8 @@ def score_regular_dev_result(title, body, url):
     if not has_target_location(text):
         return -999
     if any(term in text for term in EXCLUDE_TERMS):
+        return -999
+    if is_entry_only(title, body):
         return -999
     if '정규직' not in text and '정규' not in text:
         return -999
@@ -438,6 +488,8 @@ def score_salary_result(title, body, url):
     if not has_target_location(text):
         return -999
     if any(term in text for term in EXCLUDE_TERMS):
+        return -999
+    if is_entry_only(title, body):
         return -999
 
     salary = salary_info(title, body)
@@ -1111,6 +1163,230 @@ def collect_all_sources():
     return merged, statuses
 
 
+def parse_job_posted_date(title, body):
+    text = normalize_text(f'{title} {body}')
+    patterns = [
+        (r'(?:등록일|수정일|게시일|공고일|시작일)\s*[:：]?\s*(20\d{2})[./-](\d{1,2})[./-](\d{1,2})', 4),
+        (r'(?:등록일|수정일|게시일|공고일|시작일)\s*[:：]?\s*(\d{2})[./-](\d{1,2})[./-](\d{1,2})', 2),
+    ]
+    dates = []
+    for pattern, year_digits in patterns:
+        for m in re.finditer(pattern, text, re.I):
+            try:
+                year = int(m.group(1))
+                if year_digits == 2:
+                    year += 2000
+                d = date(year, int(m.group(2)), int(m.group(3)))
+                if date.today() - timedelta(days=370) <= d <= date.today() + timedelta(days=2):
+                    dates.append(d)
+            except Exception:
+                pass
+    if dates:
+        return max(dates).isoformat(), '등록/수정일'
+
+    # 검색 스니펫에 'N일 전'만 있는 경우도 가능한 범위에서 환산한다.
+    m = re.search(r'(\d{1,2})\s*일\s*전', text)
+    if m:
+        days = int(m.group(1))
+        if 0 <= days <= 30:
+            return (date.today() - timedelta(days=days)).isoformat(), '검색표시'
+    if '오늘' in text and any(term in text for term in ('등록', '수정', '게시')):
+        return date.today().isoformat(), '검색표시'
+    return '', ''
+
+
+def archive_categories(job):
+    cats = []
+    title, body, url = job.get('title', ''), job.get('body', ''), job.get('url', '')
+    if score_java_result(title, body, url) >= 0:
+        cats.append('java_ai')
+    if score_regular_dev_result(title, body, url) >= 0:
+        cats.append('regular_dev')
+
+    sal = salary_info(title, body)
+    if score_salary_result(title, body, url) >= 0 and sal:
+        if sal['monthly'] >= 500:
+            cats.append('salary500')
+        elif sal['monthly'] >= 450:
+            cats.append('salary450')
+
+    if score_short_term_result(title, body, url) >= 0:
+        cats.append('short_term')
+    return cats
+
+
+def archive_locations(job):
+    text = normalize_text(f"{job.get('title', '')} {job.get('body', '')}")
+    out = []
+    if re.search(r'(?<![가-힣A-Za-z0-9])대전(?:광역시)?(?![가-힣A-Za-z0-9])', text):
+        out.append('대전')
+    if re.search(r'(?<![가-힣A-Za-z0-9])세종(?:특별자치시)?(?![가-힣A-Za-z0-9])', text):
+        out.append('세종')
+    return out
+
+
+def archive_entry(job, existing=None):
+    today = today_kst()
+    posted, posted_source = parse_job_posted_date(job.get('title', ''), job.get('body', ''))
+    old = existing or {}
+
+    salary = salary_info(job.get('title', ''), job.get('body', ''))
+    short_pay = short_term_pay_info(job.get('title', ''), job.get('body', ''))
+    sources = list(dict.fromkeys(
+        (old.get('sources') or [])
+        + (job.get('sources') or [job.get('source') or domain_of(job.get('url', ''))])
+    ))
+    sources = [x for x in sources if x]
+
+    first_seen = old.get('firstSeen') or today
+    old_posted = old.get('postedDate') or ''
+    if old_posted and (not posted or old_posted < posted):
+        posted = old_posted
+        posted_source = old.get('dateSource') or posted_source
+
+    company = company_hint(job.get('title', ''), job.get('body', '')) or old.get('company', '')
+    body = normalize_text(job.get('body', ''))
+    if len(body) > 900:
+        body = body[:897] + '...'
+
+    entry = {
+        'id': old.get('id') or job_fingerprint(job) or normalize_url(job.get('url', '')),
+        'title': job.get('title', '') or old.get('title', ''),
+        'company': company,
+        'body': body or old.get('body', ''),
+        'url': normalize_url(job.get('url', '')) or old.get('url', ''),
+        'source': job.get('source') or old.get('source', ''),
+        'sources': sources,
+        'locations': archive_locations(job) or old.get('locations', []),
+        'categories': archive_categories(job),
+        'salary': salary,
+        'shortPay': short_pay,
+        'postedDate': posted or old_posted,
+        'dateSource': posted_source or old.get('dateSource', '') or '수집일',
+        'firstSeen': first_seen,
+        'lastSeen': today,
+    }
+    if not entry['categories'] and old.get('categories'):
+        entry['categories'] = old['categories']
+    return entry
+
+
+def load_job_archive():
+    if not ARCHIVE_FILE.exists():
+        return {'updatedAt': '', 'rangeDays': ARCHIVE_DAYS, 'jobs': []}
+    try:
+        data = json.loads(ARCHIVE_FILE.read_text(encoding='utf-8'))
+        if not isinstance(data, dict) or not isinstance(data.get('jobs'), list):
+            raise ValueError('invalid archive')
+        return data
+    except Exception as exc:
+        print(f'[WARN] job archive load failed: {exc}', file=sys.stderr)
+        return {'updatedAt': '', 'rangeDays': ARCHIVE_DAYS, 'jobs': []}
+
+
+def save_job_archive(all_jobs, source_statuses):
+    ARCHIVE_FILE.parent.mkdir(parents=True, exist_ok=True)
+    previous = load_job_archive()
+    old_jobs = previous.get('jobs', [])
+
+    # URL과 공고 fingerprint 양쪽으로 기존 항목을 찾는다.
+    by_url = {}
+    by_fp = {}
+    for old in old_jobs:
+        if old.get('url'):
+            by_url[normalize_url(old['url'])] = old
+        if old.get('id'):
+            by_fp[old['id']] = old
+
+    merged = []
+    used_old_ids = set()
+    for job in all_jobs:
+        cats = archive_categories(job)
+        if not cats:
+            continue
+        url = normalize_url(job.get('url', ''))
+        fp = job_fingerprint(job)
+        old = by_url.get(url) or by_fp.get(fp)
+        entry = archive_entry(job, old)
+        merged.append(entry)
+        if old:
+            used_old_ids.add(id(old))
+
+    # 오늘 검색에 안 잡힌 공고도 30일 동안은 웹 아카이브에 유지한다.
+    for old in old_jobs:
+        if id(old) not in used_old_ids:
+            merged.append(old)
+
+    # 사이트가 달라도 같은 공고는 하나로 합친다.
+    result = []
+    for item in merged:
+        duplicate = None
+        probe = {
+            'title': item.get('title', ''),
+            'body': item.get('body', ''),
+            'url': item.get('url', ''),
+        }
+        for existing in result:
+            ex_probe = {
+                'title': existing.get('title', ''),
+                'body': existing.get('body', ''),
+                'url': existing.get('url', ''),
+            }
+            if normalize_url(item.get('url', '')) == normalize_url(existing.get('url', '')) or same_job(ex_probe, probe):
+                duplicate = existing
+                break
+        if duplicate is None:
+            result.append(item)
+        else:
+            duplicate['sources'] = list(dict.fromkeys(
+                (duplicate.get('sources') or []) + (item.get('sources') or [])
+            ))
+            if item.get('postedDate', '') > duplicate.get('postedDate', ''):
+                duplicate['postedDate'] = item.get('postedDate', '')
+                duplicate['dateSource'] = item.get('dateSource', '')
+            duplicate['lastSeen'] = max(duplicate.get('lastSeen', ''), item.get('lastSeen', ''))
+            duplicate['firstSeen'] = min(
+                x for x in [duplicate.get('firstSeen', ''), item.get('firstSeen', '')] if x
+            )
+            duplicate['categories'] = list(dict.fromkeys(
+                (duplicate.get('categories') or []) + (item.get('categories') or [])
+            ))
+
+    cutoff = date.today() - timedelta(days=ARCHIVE_DAYS)
+    kept = []
+    for item in result:
+        effective = item.get('postedDate') or item.get('firstSeen') or today_kst()
+        try:
+            d = date.fromisoformat(effective)
+        except Exception:
+            d = date.today()
+        if d >= cutoff:
+            kept.append(item)
+
+    kept.sort(
+        key=lambda x: (
+            x.get('postedDate') or x.get('firstSeen') or '',
+            x.get('lastSeen') or '',
+            x.get('title') or '',
+        ),
+        reverse=True,
+    )
+    payload = {
+        'updatedAt': datetime.now(ZoneInfo('Asia/Seoul')).isoformat(timespec='seconds'),
+        'rangeDays': ARCHIVE_DAYS,
+        'cutoffDate': cutoff.isoformat(),
+        'sourceStatuses': source_statuses,
+        'count': len(kept),
+        'jobs': kept,
+    }
+    ARCHIVE_FILE.write_text(
+        json.dumps(payload, ensure_ascii=False, indent=2),
+        encoding='utf-8',
+    )
+    print(f'[INFO] job_archive saved={len(kept)} cutoff={cutoff.isoformat()} path={ARCHIVE_FILE}')
+    return len(kept)
+
+
 def search_jobs():
     all_jobs, source_statuses = collect_all_sources()
 
@@ -1135,7 +1411,7 @@ def search_jobs():
             x['title'],
         )
     )
-    return java_jobs, regular_dev_jobs, salary_jobs, short_term_jobs, source_statuses
+    return all_jobs, java_jobs, regular_dev_jobs, salary_jobs, short_term_jobs, source_statuses
 
 
 def short_body(body, limit=190):
@@ -1296,6 +1572,8 @@ def build_message(
     append_short_term_section(lines, short_term_jobs)
 
     lines.append('※ 같은 공고는 개발자 정규직 → Java/AI → 급여 → 단기알바 순으로 한 번만 표시합니다.')
+    lines.append('')
+    lines.append('🔗 <a href="https://jkquant.pages.dev/job">최근 30일 전체 공고 보기</a>')
     return '\n'.join(lines).strip()
 
 
@@ -1363,12 +1641,18 @@ def is_job_seen(job, seen):
 
 def main():
     force = os.environ.get('FORCE_JOB_ALERT') == '1'
-    if not force and already_sent_today():
+    archive_only = os.environ.get('JOB_ALERT_ARCHIVE_ONLY') == '1'
+    if not archive_only and not force and already_sent_today():
         print(f'[INFO] already sent today ({today_kst()} KST); skipping duplicate run.')
         return
 
     seen = load_seen()
-    java_jobs, regular_dev_jobs, salary_jobs, short_term_jobs, source_statuses = search_jobs()
+    all_jobs, java_jobs, regular_dev_jobs, salary_jobs, short_term_jobs, source_statuses = search_jobs()
+    archive_count = save_job_archive(all_jobs, source_statuses)
+
+    if archive_only:
+        print(f'[INFO] ARCHIVE ONLY: {archive_count} jobs stored; Telegram skipped.')
+        return
 
     # 정규직 개발자는 별도 ④ 구역에 우선 표시한다.
     new_regular_dev = [

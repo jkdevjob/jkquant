@@ -30,6 +30,7 @@ jobs:
           python -m py_compile scripts/nightly_scalping_research.py
           python -m py_compile scripts/collect_crypto_data.py
           python -m py_compile scripts/backtest_crypto_orb.py
+          python -m py_compile scripts/test_crypto_midnight_orb.py
           python -m py_compile scripts/collect_soxl_data.py
           python -m py_compile scripts/backtest_soxl_intraday.py
 
@@ -39,6 +40,7 @@ jobs:
           python scripts/mutation_test_opening_backfill.py
           node scripts/test_opening_hold.mjs
           node scripts/test_kis_history_codes.mjs
+          node scripts/test_kis_daily_basis.mjs
 
       - name: 데이트레이딩 스냅샷 품질 가드 검사
         run: |
@@ -74,6 +76,11 @@ jobs:
           python scripts/test_opening_gapdown.py
           node scripts/test_opening_gapdown.mjs functions/api
           python scripts/mutation_test_opening_gapdown.py
+
+      - name: BTC 00:00~22:00 기준전략 값·경계 시험
+        run: |
+          python scripts/test_crypto_midnight_orb.py
+          node scripts/test_btc_intraday.mjs
 
       - name: 연구 서버 JS 문법 검사
         run: |
@@ -310,7 +317,7 @@ jobs:
             [dj,'evidence:{','데이트레이딩 live 판단증거'],
             [dp,'"strategyVersion":"daytrading_vwap_breakout_v1"','데이트레이딩 확정이력 전략버전'],
             [dp,'"evidence":{','데이트레이딩 확정이력 판단증거'],
-            [cp,'"strategyVersion": "btc_orb_v1"','BTC 전략버전'],
+            [cp,'"strategyVersion": "btc_midnight_orb_v2"','BTC 전략버전'],
             [cp,'"evidence": {','BTC 거래 판단증거'],
             [cp,'baseline-decisions.csv','BTC 무매매일 판단기록'],
             [sp,'"strategyVersion": "soxl_orb_v1"','SOXL 전략버전'],
@@ -360,37 +367,30 @@ jobs:
           python - <<'PY'
           from scripts.backtest_crypto_orb import Params, trade_for_day
 
-          def bar(utc, kst, o, h, l, c, v):
-              return {"tUtc":f"2026-09-01T{utc}:00","tKst":f"2026-09-01T{kst}:00",
+          def bar(kst, o, h, l, c, v):
+              return {"tUtc":f"2026-09-01T{kst}:00","tKst":f"2026-09-01T{kst}:00",
                       "o":o,"h":h,"l":l,"c":c,"v":v,"amount":c*v}
 
-          # 09:05 신호 -> 반드시 09:10 시가 진입. 진입봉에서 손절/익절이 모두
+          # v2: 00:05 신호 -> 반드시 00:10 시가 진입. 진입봉에서 손절/익절이 모두
           # 닿으면 보수적으로 손절 우선이어야 한다.
-          day={"sessionDateUtc":"2026-09-01","bars":[
-              bar("00:00","09:00",99.5,100.0,99.0,99.8,100),
-              bar("00:05","09:05",99.8,101.2,99.7,101.0,200),
-              bar("00:10","09:10",101.2,102.5,100.0,101.5,180),
-          ] + [
-              bar(f"{(15+i*5)//60:02d}:{(15+i*5)%60:02d}", f"{9+(15+i*5)//60:02d}:{(15+i*5)%60:02d}",
-                  101.5,101.7,101.3,101.5,100)
-              for i in range(55)
-          ]}
-          # valid_day requires a full-ish archive, so pad the remainder of the UTC day.
-          while len(day["bars"]) < 270:
-              i=len(day["bars"])
+          bars=[]
+          for i in range(288):
               m=i*5
-              utc=f"{m//60:02d}:{m%60:02d}"
-              km=(m+9*60)%(24*60)
-              kst=f"{km//60:02d}:{km%60:02d}"
-              day["bars"].append(bar(utc,kst,101.5,101.7,101.3,101.5,100))
+              kst=f"{m//60:02d}:{m%60:02d}"
+              bars.append(bar(kst,101.5,101.7,101.3,101.5,100))
+          bars[0]=bar("00:00",99.5,100.0,99.0,99.8,100)
+          bars[1]=bar("00:05",99.8,101.2,99.7,101.0,200)
+          bars[2]=bar("00:10",101.2,102.5,100.0,101.5,180)
+          day={"sessionDateKst":"2026-09-01","bars":bars}
 
           t=trade_for_day(day,Params("baseline"))
           assert t is not None
-          assert t["signalTimeKst"]=="09:05", t
-          assert t["entryTimeKst"]=="09:10", t
+          assert t["strategyVersion"]=="btc_midnight_orb_v2", t
+          assert t["signalTimeKst"]=="00:05", t
+          assert t["entryTimeKst"]=="00:10", t
           assert t["reason"]=="stop_same_bar", t
           assert t["pnlPct"] < -0.5, t
-          print("✓ BTC ORB next-bar entry / same-candle stop-first")
+          print("✓ BTC midnight ORB next-bar entry / same-candle stop-first")
           PY
 
           node - <<'NODE'
@@ -402,6 +402,8 @@ jobs:
           const must=[
             ['data-strategy="crypto"','비트코인 탭'],
             ['id="scVer">v1.30.0','단타 버전 1.30.0'],
+            ['비트코인 00시 ORB 기준전략 v2','BTC 00시 기준전략 설명'],
+            ['22:00 신규진입','BTC 22시 신규진입 설명'],
             ['다음 5분봉 시가','다음 봉 진입 설명'],
             ['손절 우선','동일봉 보수 청산 설명'],
             ['최근 365일 백필','초기 백필 안내']
