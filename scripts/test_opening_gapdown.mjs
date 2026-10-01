@@ -26,6 +26,10 @@ t("picks = 3 deepest gaps in (-29, -2], ties by code", () => {
   assert.deepEqual(G.gapdownPicks(rows, rule).map(x => x.code), ["000040", "000050", "000060"]);
   assert.deepEqual(G.gapdownPicks(rows, { ...rule, picks: 0 }), []);
 });
+t("v2 breadth = every name inside the gap band (not capped at 3)", () => {
+  const rows = [-1, -2, -3, -4, -5, -6, -30].map((g, i) => ({ code: "00001" + i, expectedGapPct: g }));
+  assert.equal(G.gapdownPicks(rows, { ...rule, picks: 1e9 }).length, 5);
+});
 t("watchlist must be based on the previous weekday", () => {
   const wl = { strategyVersion: "opening_gapdown_v1", basedOn: "2026-10-02", rule, names: [] };
   assert.equal(G.watchlistUsable(wl, "2026-10-05").ok, true);            // 금 → 월

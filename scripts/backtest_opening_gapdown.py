@@ -49,6 +49,9 @@ DESIGN_END = "2026-09-30"          # rule designed on data up to here; verdict u
 STRATEGY_VERSION = "opening_gapdown_v1"
 SCHEMA = 1
 
+# v2 (2026-10-01): 같은 날 조건을 통과한 종목 수(시장 투매 강도)가 많을 때만 산다. 임계값 3·5 는 결과를 보기 전에
+# 변형 목록에 적어 둔 값이고, 설계 2018~2022 / 검증 2023~2026-09 두 구간 모두 1.5틱에서 양수였다(감사 문서 참조).
+BREADTH_MIN = [3, 5]
 PARAMS = dict(rsiMax=30.0, gapMax=-2.0, gapFloor=-29.0, minPrevClose=1000, minPrevAmount=2e9,
               minHistory=60, haltLookback=20, noLimitLookback=10, picks=3, entry="open_auction", exit="close_auction",
               fixedCostPct=0.23, slipTicksPerSide=[0.0, 1.5, 3.0], primarySlipTicks=1.5)
@@ -390,6 +393,17 @@ def main():
         "byYear": {y: stats([r for r in sig if r["date"][:4] == y]) for y in sorted({r["date"][:4] for r in sig})},
         "latestSignals": sig[-15:],
     }
+    qualified = {x["date"]: x["rsiPassed"] for x in decisions}
+    report["breadthFilter"] = {
+        "note": "v2 후보: 그날 RSI<30·갭하락 조건 통과 종목 수 >= K 인 날만 매매. 판정은 designEnd 이후 표본만.",
+        "variants": {f"min{k}": {
+            "designSample": section([r for r in design if qualified.get(r["date"], 0) >= k],
+                                    [r for r in ctl if r["date"] <= DESIGN_END and qualified.get(r["date"], 0) >= k]),
+            "outOfSample": section([r for r in oos if qualified.get(r["date"], 0) >= k],
+                                   [r for r in ctl if r["date"] > DESIGN_END and qualified.get(r["date"], 0) >= k]),
+            "byYear": {y: stats([r for r in sig if r["date"][:4] == y and qualified.get(r["date"], 0) >= k])
+                       for y in sorted({r["date"][:4] for r in sig})},
+        } for k in BREADTH_MIN}}
     live = live_trades(by, final_last)
     report["live"] = live_summary(live)
     report["liveTrades"] = live[-30:]

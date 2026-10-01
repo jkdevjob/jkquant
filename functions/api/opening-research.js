@@ -21,7 +21,7 @@ export async function onRequestGet(){
     // D-1 연구는 화면 요약에 필요한 부분만 싣는다(원본 신호 목록은 scalping-data 에 그대로 있다).
     const gd=gapdown?{strategyVersion:gapdown.strategyVersion,from:gapdown.from,to:gapdown.to,designEnd:gapdown.designEnd,
       finalDataThrough:gapdown.finalDataThrough,designSample:gapdown.designSample,outOfSample:gapdown.outOfSample,
-      live:gapdown.live,watchlist:gapdown.watchlist,generatedAt:gapdown.generatedAt}:null;
+      live:gapdown.live,watchlist:gapdown.watchlist,generatedAt:gapdown.generatedAt,breadthFilter:gapdown.breadthFilter||null}:null;
     if(!base){
       return new Response(JSON.stringify({
         ok:true,status:"collecting",archiveDays:0,variants:[],gapdown:gd,
