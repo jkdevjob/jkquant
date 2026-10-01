@@ -66,6 +66,9 @@ jobs:
           print("✓ 10:15 이내만 primary validation에 포함")
           PY
 
+      - name: 데이트레이딩 당일 계좌수익률·매매합계 표시 검사
+        run: node scripts/test_daytrading_ui_metrics.mjs
+
       - name: 시초가 사후라벨·엔진 값 검사
         run: python scripts/test_opening_signal_labels.py
 
