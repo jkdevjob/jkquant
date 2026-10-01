@@ -733,6 +733,47 @@ def walk_forward(days, variant_trade_map):
     }
 
 
+def price_basis_validation(days):
+    """Compare stored opening observations without rescaling or deleting any records."""
+    checked = unverified = 0
+    mismatches = []
+    for day in days:
+        if day.get('universeTiming') != 'same-day-close':
+            continue
+        opening_hm = int((day.get('collectionWindow') or ['090000'])[0][:4])
+        for row in day.get('universe', []):
+            bars = sorted(row.get('bars') or [], key=lambda b: b.get('t', ''))
+            daily_open = float(row.get('open') or 0)
+            minute_open = float(bars[0].get('o') or 0) if bars else 0
+            if not bars or hm(bars[0].get('t')) != opening_hm or daily_open <= 0 or minute_open <= 0:
+                unverified += 1
+                continue
+            checked += 1
+            ratio = minute_open / daily_open
+            if abs(ratio - 1) > 0.01000000001:
+                mismatches.append(dict(date=day['date'], code=row['code'], dailyOpen=daily_open,
+                    minuteOpen=minute_open, ratio=ratio))
+    status = ('blocked_price_basis_mismatch' if mismatches else
+              'unverified_opening_observation' if unverified else
+              'observed_open_consistent' if checked else 'not_applicable')
+    return dict(status=status, checkedSymbolDates=checked, unverifiedSymbolDates=unverified,
+                mismatchedSymbolDates=len(mismatches), thresholdPct=1, mismatches=mismatches,
+                note='Opening-price screen only, not proof of corporate-action or volume consistency. '
+                     'No prices are rescaled and no signals are removed. Resolve source conventions before adoption.')
+
+
+def apply_price_basis_gate(report, validation):
+    report['validation'] = validation
+    if validation['status'] in ('blocked_price_basis_mismatch', 'unverified_opening_observation'):
+        report['comparisonStatus'] = 'data_review_required'
+        wf = report['walkForward']
+        wf['status'] = 'data_review_required'
+        for item in wf.get('adoptionReview', []):
+            item['statisticalRuleBeforeDataValidation'] = item.get('passesPredeclaredRule', False)
+            item['passesPredeclaredRule'] = False
+            item['dataValidationPassed'] = False
+
+
 def main():
     days = load_days()
     OUT.mkdir(parents=True, exist_ok=True)
@@ -800,6 +841,9 @@ def main():
         "walkForward": wf,
     }
 
+    apply_price_basis_gate(report, price_basis_validation(days))
+    with (OUT / "validation.json").open("w", encoding="utf-8") as f:
+        json.dump(report['validation'], f, ensure_ascii=False, indent=2)
     with (OUT / "latest.json").open("w", encoding="utf-8") as f:
         json.dump(report, f, ensure_ascii=False, indent=2)
 

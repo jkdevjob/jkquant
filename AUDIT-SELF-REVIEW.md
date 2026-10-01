@@ -2047,3 +2047,8 @@ const D=bars.filter(d=>d.date>=from);   // 상한이 없다
 
 운영 쪽은 매일 v1 주문을 그대로 내서 체결을 재고, preopen 원본에 `breadth.qualified`·`v2Signal`을 남겨 v2를 가른다. 동시호가 체결이라 과거 일봉 결과가 실제 체결과 거의 같다. 실측으로 확인할 것은 예상체결가와 실제 시가의 차이 하나뿐이다.
 값 시험 JS 1개, 회귀 1개를 더했고, 변이(기준 5→1)를 탐지한다.
+
+
+## Historical opening price-basis validation (v1.29.1)
+
+Observed daily/minute opening-price ratios such as 22700/2270 invalidate mixed-source performance interpretation. The research report now compares the exact opening minute (including delayed session schedules) with stored daily open. A greater than 1% discrepancy blocks comparison/adoption; missing opening observations remain unverified. This is a diagnostic threshold, not a correction factor or proof that smaller discrepancies are safe. Corporate-action and volume basis still require source verification. No raw bars, prices, signal records, versions, or numeric results are changed. Pre-gate statistical adoption decisions remain recorded; effective adoption is disabled on mismatched/unverified data. Both dated and latest reports carry the gate, and validation.json is regenerated. Tests cover 10x mismatch, delayed session, missing opening minute, nonmutation of inputs/statistics, and disabled adoption. Mutations removing mismatch detection or the gate must fail. All work uses stored archives during market hours; no orders or backfill requests.

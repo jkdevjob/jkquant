@@ -20,6 +20,29 @@ def signal_row():
 
 
 class Tests(unittest.TestCase):
+    def test_price_basis_mismatch_blocks_adoption_without_changing_records(self):
+        days=[dict(date='2026-02-09',universeTiming='same-day-close',universe=[dict(
+            code='011930',open=2270,bars=[dict(t='20260209090000',o=22700)])])]
+        before=copy.deepcopy(days)
+        validation=r.price_basis_validation(days)
+        self.assertEqual(validation['status'],'blocked_price_basis_mismatch')
+        self.assertEqual(validation['mismatches'][0]['ratio'],10)
+        report=dict(comparisonStatus='eligible',variants=[dict(avgPnl=1.2)],walkForward=dict(
+            status='reviewable',adoptionReview=[dict(passesPredeclaredRule=True)]))
+        r.apply_price_basis_gate(report,validation)
+        self.assertEqual(report['comparisonStatus'],'data_review_required')
+        self.assertFalse(report['walkForward']['adoptionReview'][0]['passesPredeclaredRule'])
+        self.assertTrue(report['walkForward']['adoptionReview'][0]['statisticalRuleBeforeDataValidation'])
+        self.assertEqual(report['variants'],[dict(avgPnl=1.2)])
+        self.assertEqual(days,before)
+
+    def test_price_basis_missing_open_not_assumed_valid_and_delayed_open_checked(self):
+        day=dict(date='2025-11-13',universeTiming='same-day-close',collectionWindow=['100000','110000'],
+            universe=[dict(code='005930',open=100,bars=[dict(t='20251113100015',o=100)])])
+        self.assertEqual(r.price_basis_validation([day])['status'],'observed_open_consistent')
+        day['universe'][0]['bars'][0]['t']='20251113100100'
+        self.assertEqual(r.price_basis_validation([day])['status'],'unverified_opening_observation')
+
     def test_delayed_open_fetches_actual_hour_without_shifting_strategy(self):
         for day in ('2025-11-13','2026-01-02'):
             prefix=day.replace('-','')
