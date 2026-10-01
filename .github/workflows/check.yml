@@ -506,7 +506,9 @@ jobs:
             [py,'walk_forward','walk-forward 함수'],
             [py,'"walkForward": wf','walk-forward 결과 저장'],
             [py,'"evidence": {','판단증거'],
-            [wf,'15 22 * * 1-5','미국장 종료 후 일일수집'],
+            [wf,'10 20 * * 1-5','미국장 종료 후 DST 일일수집'],
+            [wf,'10 21 * * 1-5','미국장 종료 후 표준시간 일일수집'],
+            [wf,'"$NY_HM" -lt 1605','미국장 종료 전 수집 차단'],
             [wf,'git status --porcelain -- data/soxl','신규 미추적 세션 변경감지']
           ];
           for(const [txt,needle,label] of must){
