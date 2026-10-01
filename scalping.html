@@ -1737,6 +1737,8 @@ async function loadDayTradingPaper(silent=false){
       return;
     }
     const a=l.trades||[],sum=l.summary||{};
+    const livePn=a.map(x=>x.status==='closed'?Number(x.pnl):x.status==='open'?Number(x.unrealizedPnl):null).filter(Number.isFinite);
+    const liveTradeSum=livePn.reduce((a,b)=>a+b,0),liveSlots=Number(l.maxTrades||3)||3,liveAccount=liveTradeSum/liveSlots;
     const pending=(a||[]).find(x=>x.status==='pending'),open=(a||[]).find(x=>x.status==='open'),closed=(a||[]).filter(x=>x.status==='closed').slice(-1)[0];
     if(pending) setTimingBoard('daytrading','buy','진입대기','<b>'+esc(pending.name||pending.code)+'</b> · 신호 '+String(pending.signalTime||'').padStart(4,'0'),'다음 1분봉 시가 모의진입 대기 · 신호가 '+commas(Math.round(pending.signalPrice||0))+'원');
     else setTimingBoard('daytrading','buy','대기','현재 진입대기 신호가 없습니다.','10:00~14:30 서버 기준전략을 계속 감시합니다.');
@@ -1750,10 +1752,11 @@ async function loadDayTradingPaper(silent=false){
     const money=v=>v==null?'—':commas(Math.round(+v));
     const status=x=>x.status==='pending'?'진입대기':x.status==='open'?'보유중':x.status==='closed'?'청산':'—';
     let html='<div class="out" style="margin-bottom:10px">'+
-      '<div class="outbox"><div class="ol">오늘 선정</div><div class="ov">'+(sum.selected||a.length)+'/3</div></div>'+
+      '<div class="outbox"><div class="ol">오늘 계좌수익률</div><div class="ov '+(liveAccount>=0?'good':'bad')+'">'+pct(liveAccount)+'</div><div class="sub">'+liveSlots+'슬롯 동일비중 · 미사용 슬롯 현금</div></div>'+
+      '<div class="outbox"><div class="ol">개별 매매 수익률 합계</div><div class="ov '+(liveTradeSum>=0?'good':'bad')+'">'+pct(liveTradeSum)+'</div><div class="sub">청산+보유 현재손익 합계</div></div>'+
+      '<div class="outbox"><div class="ol">오늘 선정</div><div class="ov">'+(sum.selected||a.length)+'/'+liveSlots+'</div></div>'+
       '<div class="outbox"><div class="ol">보유중</div><div class="ov">'+(sum.open||0)+'</div></div>'+
       '<div class="outbox"><div class="ol">청산완료</div><div class="ov">'+(sum.closed||0)+'</div></div>'+
-      '<div class="outbox"><div class="ol">실현손익 단순합</div><div class="ov '+((sum.realizedPnlSumPct||0)>=0?'good':'bad')+'">'+pct(sum.realizedPnlSumPct||0)+'</div></div>'+
       '</div>';
     if(!a.length){
       html+='<div class="warn">현재까지 기준전략을 통과한 종목이 없습니다. 장중 0건도 정상 결과로 기록됩니다.</div>';
@@ -2052,11 +2055,17 @@ async function loadServerOpeningHistory(){
 
     msg.textContent='오늘 기준 '+trades.length+'건 · 그림자 '+shadows.length+'개 전략 · Top100 서버 재구성';
 
+    const basePn=trades.map(x=>Number(x.pnl)).filter(Number.isFinite);
+    const baseSum=basePn.reduce((a,b)=>a+b,0),baseAccount=basePn.length?baseSum/basePn.length:0;
     let baseHtml='';
     if(!trades.length){
       baseHtml='<div class="warn">오늘 기준전략(+2~7% 갭 → 첫3분 고점 → 눌림 → 재돌파 → 수급)을 모두 통과한 종목이 없습니다.</div>';
     }else{
-      baseHtml='<div class="htable-wrap"><table class="htable"><thead><tr><th>종목</th><th>매수</th><th>매수가</th><th>매도</th><th>매도가</th><th>사유</th><th>손익</th></tr></thead><tbody>'+
+      baseHtml='<div class="out" style="margin-bottom:10px">'+
+        '<div class="outbox"><div class="ol">오늘 계좌수익률</div><div class="ov '+(baseAccount>=0?'good':'bad')+'">'+(baseAccount>=0?'+':'')+baseAccount.toFixed(2)+'%</div><div class="sub">동일비중 평균 · '+basePn.length+'건</div></div>'+
+        '<div class="outbox"><div class="ol">개별 매매 수익률 합계</div><div class="ov '+(baseSum>=0?'good':'bad')+'">'+(baseSum>=0?'+':'')+baseSum.toFixed(2)+'%</div><div class="sub">매매이력 단순 합계 · 계좌수익률 아님</div></div>'+
+        '</div>'+
+        '<div class="htable-wrap"><table class="htable"><thead><tr><th>종목</th><th>매수</th><th>매수가</th><th>매도</th><th>매도가</th><th>사유</th><th>손익</th></tr></thead><tbody>'+
         trades.map(x=>'<tr><td><b>'+esc(x.name||x.code)+'</b><div class="sub">'+esc(x.code)+'</div>'+
         '<div class="sub">갭 '+fmt(x.gap,2)+'% · 눌림 '+fmt(x.pullbackPct,2)+'% · 거래량 '+fmt(x.volRatio,2)+'x · 대금 '+fmt(x.amountRatio,2)+'x</div></td>'+
         '<td>'+String(x.entryTime||'').padStart(4,'0')+'</td><td>'+commas(Math.round(x.entryPrice||0))+'</td>'+
