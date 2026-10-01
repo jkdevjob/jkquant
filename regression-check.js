@@ -10566,6 +10566,19 @@ console.log('[SCALPING FLOW] 단타 공통 흐름 · 모의체결 분리');
   ok('BTC 모의는 한국투자와 분리', /id="crypto_paper_body"/.test(sc) && /한국투자증권과 섞지 않는/.test(sc));
   ok('4개 활성전략 매매이력은 공통 누적 API/페이지 조회', /function loadScalpingHistory\(name,page=1\)/.test(sc)
      && /\/api\/scalping-history\?/.test(sc) && /cumulativeHistoryCard\(name\)/.test(sc));
+  const globalStatus=fs.readFileSync(__d+'/functions/api/global-intraday-status.js','utf8');
+  const globalWorker=fs.readFileSync(__d+'/worker/global-intraday-scheduler/src/index.js','utf8');
+  ok('전체전략 첫 페이지는 전일·당일 4전략과 일1%/주5% 진행률 표시',
+     /id="strategy_all" class="strategy-pane on"/.test(sc)
+     && /전일\/직전 확정/.test(sc) && /당일\/현재/.test(sc)
+     && /all_today_goal/.test(sc) && /all_week_goal/.test(sc)
+     && /loadDailyOverview/.test(sc));
+  ok('BTC·SOXL 당일 현황은 읽기전용 실시간 status 경로 사용',
+     /\/api\/global-intraday-status/.test(sc)
+     && /WORKER\+"\/status"/.test(globalStatus)
+     && /u\.pathname==="\/status"/.test(globalWorker)
+     && /currentStatus/.test(globalWorker)
+     && !/op=order|opening-execute|kisOrder\(/.test(globalStatus));
   ok('SOXL 한투 VTS 이력은 누적 전략이력과 분리', /id="soxl_vts_body"/.test(sc));
   ok('SOXL 한투 VTS 이력은 읽기전용 GET', /async function loadSoxlVtsHistory\(\)/.test(sc)
      && /op=orders&env=vts&market=us&code=SOXL/.test(sc)
