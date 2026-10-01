@@ -16,14 +16,15 @@ main{padding:22px 0 70px}.hero{display:flex;gap:12px;justify-content:space-betwe
 .stat{display:flex;gap:7px;flex-wrap:wrap}.pill{border:1px solid var(--border);background:var(--surf);border-radius:999px;padding:6px 9px;color:var(--dim);font-size:11px}.pill b{color:var(--text)}
 .tabs{display:flex;gap:7px;overflow-x:auto;padding-bottom:8px;margin-bottom:10px}.tab{flex:0 0 auto;border:1px solid var(--border);background:var(--surf);color:var(--dim);border-radius:999px;padding:8px 12px;font-weight:800;font-size:12px;cursor:pointer}.tab.on{background:var(--accent);border-color:var(--accent);color:white}
 .filters{display:grid;grid-template-columns:minmax(180px,2fr) repeat(5,minmax(105px,1fr));gap:8px;background:var(--surf);border:1px solid var(--border);border-radius:12px;padding:11px;margin-bottom:11px}
-.filters input,.filters select,.filter2 input{width:100%;background:var(--surf2);color:var(--text);border:1px solid var(--border);border-radius:8px;padding:9px 10px;outline:none}.filters input:focus,.filters select:focus,.filter2 input:focus{border-color:var(--accent)}
-.filter2{display:grid;grid-template-columns:1fr 1fr auto;gap:8px;align-items:center;margin:-3px 0 13px}.btn{border:1px solid var(--border);background:var(--surf2);color:var(--text);border-radius:8px;padding:8px 12px;font-weight:800;cursor:pointer}
+.filters input,.filters select,.filters .btn{width:100%;height:44px;min-height:44px;background:var(--surf2);color:var(--text);border:1px solid var(--border);border-radius:8px;padding:0 10px;outline:none}.filters input:focus,.filters select:focus{border-color:var(--accent)}
+.filters input[type="date"]{display:block;line-height:1.2;color-scheme:dark;-webkit-appearance:none;appearance:none}.filters input[type="date"]::-webkit-date-and-time-value{text-align:left;margin:0}.filters input[type="date"]::-webkit-calendar-picker-indicator{opacity:.8}
+.btn{border:1px solid var(--border);background:var(--surf2);color:var(--text);border-radius:8px;padding:0 12px;font-weight:800;cursor:pointer}
 .summary{display:flex;justify-content:space-between;gap:12px;align-items:center;margin:8px 0 11px;color:var(--dim);font-size:12px}.cards{display:grid;gap:9px}.card{background:var(--surf);border:1px solid var(--border);border-radius:12px;padding:13px}.card:hover{border-color:var(--border2)}
 .cardtop{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}.title{font-size:15px;font-weight:900;line-height:1.4;text-decoration:none}.title:hover{color:var(--gold)}.date{font-size:11px;color:var(--faint);white-space:nowrap}
 .meta{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}.tag{font-size:10.5px;padding:3px 7px;border-radius:999px;background:var(--surf2);color:var(--dim);border:1px solid var(--border)}.tag.hot{color:var(--gold)}.tag.ai{color:#aeb0ff}.tag.reg{color:var(--green)}.tag.pay{color:#ffadbe}
 .desc{margin-top:9px;color:var(--dim);font-size:12px;line-height:1.6}.src{margin-top:8px;color:var(--faint);font-size:11px}.empty,.loading{padding:45px 18px;text-align:center;color:var(--dim);background:var(--surf);border:1px solid var(--border);border-radius:12px}.more{display:flex;justify-content:center;margin-top:14px}.warn{padding:9px 11px;border-radius:9px;background:rgba(248,123,140,.08);border:1px solid rgba(248,123,140,.25);color:#ffb3be;font-size:11px;margin-bottom:10px}
-@media(max-width:850px){.hero{align-items:flex-start;flex-direction:column}.filters{grid-template-columns:1fr 1fr}.filters .search{grid-column:1/-1}.filter2{grid-template-columns:1fr 1fr}.filter2 .btn{grid-column:1/-1}}
-@media(max-width:560px){.wrap{padding:0 11px}.filters{grid-template-columns:1fr}.filters .search{grid-column:auto}.filter2{grid-template-columns:1fr}.filter2 .btn{grid-column:auto}.cardtop{display:block}.date{margin-top:4px}.hero h2{font-size:20px}}
+@media(max-width:850px){.hero{align-items:flex-start;flex-direction:column}.filters{grid-template-columns:1fr 1fr}.filters .search{grid-column:1/-1}}
+@media(max-width:560px){.wrap{padding:0 11px}.filters{grid-template-columns:1fr}.filters .search{grid-column:auto}.cardtop{display:block}.date{margin-top:4px}.hero h2{font-size:20px}}
 </style>
 </head>
 <body>
@@ -65,8 +66,10 @@ main{padding:22px 0 70px}.hero{display:flex;gap:12px;justify-content:space-betwe
     <select id="source"><option value="">모든 출처</option></select>
     <select id="sort"><option value="latest" selected>최신순</option><option value="oldest">오래된순</option><option value="title">제목순</option></select>
     <select id="pageSize"><option value="50" selected>50개씩</option><option value="100">100개씩</option><option value="200">200개씩</option></select>
+    <input type="date" id="fromDate" aria-label="시작일">
+    <input type="date" id="toDate" aria-label="종료일">
+    <button class="btn" onclick="resetFilters()">필터 초기화</button>
   </div>
-  <div class="filter2"><input type="date" id="fromDate"><input type="date" id="toDate"><button class="btn" onclick="resetFilters()">필터 초기화</button></div>
   <div class="summary"><span id="resultText">불러오는 중…</span><span>날짜 없음은 최초 수집일 기준</span></div>
   <div id="list" class="cards"><div class="loading">공고 데이터를 불러오는 중입니다.</div></div>
   <div class="more"><button class="btn" id="moreBtn" onclick="showMore()" hidden>더 보기</button></div>
