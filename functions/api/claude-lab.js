@@ -1,6 +1,6 @@
 // Cloudflare Pages Function — GET /api/claude-lab
-// 클로드 전략 페이지(/claude) 전용 조회. 읽기 전용 — 주문·계좌 경로 없음.
-// ① opening_gapdown_v1/v2 (D-1 갭하락 과매도) · ② etf_dip_overnight_v1 (코스닥150 레버리지 하락일 야간)
+// 단타(클로드) 페이지(/claude) 전용 조회. 읽기 전용 — 주문·계좌 경로 없음.
+// 탭 4개(시초가·데이트레이딩·비트코인·SOXL) 클로드 전략 + GPT 기준전략 같은 기간 비교(claude-lab/latest.json)
 // 연구 결과와 VTS 실측은 scalping-data 브랜치의 이 전략 전용 폴더에서만 읽는다.
 
 const JH={"Content-Type":"application/json; charset=utf-8","Cache-Control":"no-store"};
@@ -15,10 +15,11 @@ async function readRaw(path){
 
 export async function onRequestGet(){
   try{
-    const [gd,etf,wl]=await Promise.all([
+    const [gd,etf,wl,lab]=await Promise.all([
       readRaw("opening-gapdown-research/latest.json"),
       readRaw("etf-overnight-research/latest.json"),
-      readRaw("opening-gapdown-research/watchlist.json")
+      readRaw("opening-gapdown-research/watchlist.json"),
+      readRaw("claude-lab/latest.json")
     ]);
     return new Response(JSON.stringify({
       ok:true,
@@ -27,6 +28,7 @@ export async function onRequestGet(){
         live:gd.live,liveTrades:gd.liveTrades||[],watchlist:gd.watchlist}:null,
       etf:etf?{rule:etf.rule,designEnd:etf.designEnd,gate:etf.gate,generatedAt:etf.generatedAt,etf:etf.etf,d1v2:etf.d1v2,
         portfolio:etf.portfolio,live:etf.live,latestSignals:etf.latestSignals||[]}:null,
+      lab:lab||null,
       watchlist:wl?{basedOn:wl.basedOn,basedOnStatus:wl.basedOnStatus,names:(wl.names||[]).slice(0,80)}:null
     }),{headers:JH});
   }catch(e){

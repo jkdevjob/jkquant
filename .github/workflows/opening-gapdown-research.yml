@@ -18,6 +18,7 @@ on:
       - ".github/workflows/opening-gapdown-research.yml"
       - "scripts/backtest_opening_gapdown.py"
       - "scripts/backtest_etf_overnight.py"
+      - "scripts/claude_lab.py"
 
 permissions:
   contents: write
@@ -95,15 +96,20 @@ jobs:
           JKQ_GAPDOWN_LIVE: data/opening-gapdown-live
         run: python .app/scripts/backtest_etf_overnight.py
 
+      - name: 단타(클로드) 탭별 전략 + GPT 기준전략 같은 기간 비교
+        env:
+          JKQ_DATA: data
+        run: python .app/scripts/claude_lab.py
+
       - name: 저장
         run: |
-          if [ -z "$(git status --porcelain data/opening-gapdown-research data/opening-gapdown-live data/etf-overnight-research)" ]; then
+          if [ -z "$(git status --porcelain data/opening-gapdown-research data/opening-gapdown-live data/etf-overnight-research data/claude-lab)" ]; then
             echo "변경 없음"
             exit 0
           fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add data/opening-gapdown-research data/opening-gapdown-live data/etf-overnight-research
+          git add data/opening-gapdown-research data/opening-gapdown-live data/etf-overnight-research data/claude-lab
           git commit -m "data: opening gap-down research $(TZ=Asia/Seoul date '+%F %H:%M') [skip ci]"
           git pull --rebase origin scalping-data
           git push origin scalping-data

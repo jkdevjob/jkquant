@@ -11,6 +11,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import backtest_opening_gapdown as g  # noqa: E402
 import backtest_crypto_orb as c  # noqa: E402
 import backtest_etf_overnight as e  # noqa: E402
+import claude_lab as lab  # noqa: E402
 
 
 def days(n, start="2026-01-01"):
@@ -228,6 +229,47 @@ class EtfOvernight(unittest.TestCase):
     def test_portfolio_is_one_capital_base(self):
         p = e.combine({"a": 2.0, "b": 1.0}, {"b": 3.0, "c": -1.0})
         self.assertEqual(p, {"a": 2.0, "b": 2.0, "c": -1.0})              # 같은 날 둘 다면 반씩, 합산(4%) 아님
+
+
+def trend_rows(closes, lows=None):
+    ds = days(len(closes))
+    return [(d, (closes[i - 1] if i else c), max(c, closes[i - 1] if i else c), (lows[i] if lows else min(c, closes[i - 1] if i else c)), c)
+            for i, (d, c) in enumerate(zip(ds, closes))]
+
+
+class ClaudeLabTrend(unittest.TestCase):
+    P = dict(version="t", ma=3, stopPct=4.0, size=0.5, costRoundTripPct=0.14, stopSlipPct=0.1)
+
+    def test_enter_on_day_after_close_above_ma_and_size(self):
+        closes = [100, 100, 100, 100, 103, 104]            # 4번째 날 종가 103 > 3일 평균(101) → 5번째 날 보유
+        dv, dec, nxt = lab.trend_daily(trend_rows(closes), self.P)
+        d = days(6)
+        self.assertNotIn(d[4], dv)                         # 103 이 된 날은 아직 신호 전 (룩어헤드 없음)
+        self.assertAlmostEqual(dv[d[5]], ((104 / 103 - 1) * 100 - 0.07) * 0.5)   # 시가(=전일 종가) 진입, 비용 절반, 투입 50%
+        self.assertTrue(nxt["holdNext"])
+
+    def test_today_close_never_changes_todays_decision(self):
+        dv, _, _ = lab.trend_daily(trend_rows([100, 100, 100, 100, 103, 130]), self.P)
+        self.assertIn(days(6)[5], dv)                      # 오늘 종가 130 이 평균을 끌어올려도 오늘 보유 판단은 그대로
+
+    def test_stop_caps_loss(self):
+        closes = [100, 100, 100, 104, 103]
+        lows = [100, 100, 100, 104, 99]                    # 시가 104 대비 저가 -4.8%
+        dv, dec, _ = lab.trend_daily(trend_rows(closes, lows), self.P)
+        self.assertAlmostEqual(dv[days(5)[4]], (-4.0 - 0.1 - 0.07 - 0.07) * 0.5)
+        self.assertEqual(dec[-1]["action"], "stop")
+
+    def test_gpt_compare_uses_gpt_window_only(self):
+        old = lab.gpt_daily
+        lab.gpt_daily = lambda tab: ({"2026-01-07": -1.0}, ["gpt_v1"], 1)
+        try:
+            cal = ["2026-01-05", "2026-01-06", "2026-01-07", "2026-01-08"]
+            r = lab.tab_report("x", "n", "v", "r", {"2026-01-05": 5.0, "2026-01-08": 1.0}, cal, 250)
+        finally:
+            lab.gpt_daily = old
+        self.assertEqual(r["compare"]["window"], ["2026-01-07", "2026-01-08"])
+        self.assertAlmostEqual(r["compare"]["claude"]["totalPct"], 1.0)     # 01-05 의 +5% 는 GPT 기록 전이라 빼고 비교
+        self.assertAlmostEqual(r["compare"]["gpt"]["totalPct"], -1.0)
 
 
 if __name__ == "__main__":
