@@ -33,6 +33,11 @@ jobs:
           python -m py_compile scripts/test_crypto_midnight_orb.py
           python -m py_compile scripts/collect_soxl_data.py
           python -m py_compile scripts/backtest_soxl_intraday.py
+          python -m py_compile scripts/daily1_shadow_lab.py
+          python -m py_compile scripts/test_daily1_shadow.py
+
+      - name: 일 +1% 그림자 전략 값·룩어헤드 검사
+        run: python scripts/test_daily1_shadow.py
 
       - name: 과거 Top100 백필과 다음날 시가 그림자 값 검사
         run: |
@@ -103,6 +108,7 @@ jobs:
           node --input-type=module --check < functions/api/soxl-research.js
           node --input-type=module --check < functions/api/scalping-history.js
           node --input-type=module --check < functions/api/scalping-daily-results.js
+          node --input-type=module --check < functions/api/daily1-shadow.js
           node --input-type=module --check < worker/opening-scheduler/src/index.js
           node --input-type=module --check < worker/daytrading-scheduler/src/index.js
           node --input-type=module --check < worker/global-intraday-scheduler/src/index.js
@@ -402,7 +408,7 @@ jobs:
           let fail=0;
           const must=[
             ['data-strategy="crypto"','비트코인 탭'],
-            ['id="scVer">v1.30.2','단타 버전 1.30.2'],
+            ['id="scVer">v1.30.3','단타 버전 1.30.3'],
             ['비트코인 00시 ORB 기준전략 v2','BTC 00시 기준전략 설명'],
             ['22:00 신규진입','BTC 22시 신규진입 설명'],
             ['다음 5분봉 시가','다음 봉 진입 설명'],
@@ -469,7 +475,7 @@ jobs:
           let fail=0;
           const must=[
             [ui,'data-strategy="soxl"','SOXL 탭'],
-            [ui,'id="scVer">v1.30.2','단타 버전 1.30.2'],
+            [ui,'id="scVer">v1.30.3','단타 버전 1.30.3'],
             [ui,'다음 5분봉 시가','next-bar 진입 설명'],
             [py,'baseline-decisions.csv','거래/무거래 판단기록'],
             [py,'target1PctDayRatePct','+1% 목표 지표'],
