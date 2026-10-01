@@ -208,7 +208,7 @@ canvas{display:block;width:100%;height:auto}
 
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Morning Scalping</div><h1>JK <span class="v">퀀트</span> 단타 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="scVer">v1.29.3</span></h1></div>
+    <div><div class="kicker">Morning Scalping</div><h1>JK <span class="v">퀀트</span> 단타 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="scVer">v1.30.0</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -2110,6 +2110,19 @@ async function loadOpeningResearch(){
         '<div class="outbox"><div class="ol">매수 / 매도 슬리피지</div><div class="ov" style="font-size:14px">'+m(lv.buySlipPct)+' / '+m(lv.sellSlipPct)+'</div></div>'+
         '<div class="outbox"><div class="ol">실측 순손익</div><div class="ov" style="font-size:14px">'+m(lv.realizedNetPct)+'</div><div class="sub">같은 종목 0틱 모델 '+m(lv.modelNet0tPct)+'</div></div>'+
         '</div>'+
+        (()=>{
+          const eo=gd.etfOvernight; if(!eo)return '';
+          const n=(v,dg=1)=>v==null?'—':(+v).toFixed(dg);
+          const row=(label,z)=>{z=z||{};return '<tr><td><b>'+label+'</b></td><td>'+n(z.tradeDaysPerYear,0)+'</td><td class="win">'+n(z.plus1DaysPerYear,0)+'</td><td>'+n(z.plus5WeeksPerYear)+'</td>'+
+            '<td>'+(z.weeklyAvgPct==null?'—':pct(z.weeklyAvgPct))+'</td><td class="loss">'+(z.lossDayAvgPct==null?'—':pct(z.lossDayAvgPct))+' / '+(z.worstDayPct==null?'—':pct(z.worstDayPct))+'</td>'+
+            '<td class="loss">'+n(z.mddPct,0)+'%</td><td>'+(z.gate?'✅':'❌')+'</td></tr>';};
+          return '<div style="margin-top:12px"><b>🎯 목표 지표 — 하루 +1%·주 +5% (순수익, 매매 없는 날 0%)</b>'+
+            '<div class="sub">① D-1 v2 + ② 코스닥150 레버리지 −3% 하락일 종가매수→다음날 시가매도(ETF, 거래세 없음). 같은 원금 — 같은 날 둘 다면 반씩. 거르기: 기대값&gt;0 · MDD ≥ '+n((eo.gate||{}).mdd,0)+'% · 최악일 ≥ '+n((eo.gate||{}).worstDay,0)+'%</div></div>'+
+            '<div class="htable-wrap" style="margin-top:6px"><table class="htable"><thead><tr><th>설계 표본</th><th>매매일/년</th><th>+1%↑일/년</th><th>+5%↑주/년</th><th>주평균</th><th>손실일 평균/최악</th><th>MDD</th><th>통과</th></tr></thead><tbody>'+
+            row('① D-1 v2',(eo.d1v2||{}).design)+row('② ETF 하락일 야간',(eo.etf||{}).design)+row('①+② 포트폴리오',(eo.portfolio||{}).design)+
+            row('①+② 판정용 (10/1~)',(eo.portfolio||{}).outOfSample)+'</tbody></table></div>'+
+            '<p class="note">② VTS 실측 '+(((eo.live||{}).trades)||0)+'건 — 15:21 예상 종가가 −3% 이하면 종가 동시호가 모의 매수, 다음날 08:56 장전 동시호가 모의 매도.</p>';
+        })()+
         '<p class="note">내일 아침 명단 '+(wl.size||0)+'종목 (기준 '+esc(wl.basedOn||'—')+(wl.basedOnStatus==='provisional_snapshot'?', 잠정 스냅숏':'')+'). 연구 통계는 확정 일봉('+esc(gd.finalDataThrough||'—')+'까지)만 씁니다. 슬리피지 = 체결가와 실제 시가·종가 차이(양수 = 비용).</p>';
     }
 

@@ -17,6 +17,7 @@ on:
     paths:
       - ".github/workflows/opening-gapdown-research.yml"
       - "scripts/backtest_opening_gapdown.py"
+      - "scripts/backtest_etf_overnight.py"
 
 permissions:
   contents: write
@@ -48,7 +49,7 @@ jobs:
           python-version: "3.12"
 
       - name: 의존성
-        run: pip install --quiet pandas pyarrow
+        run: pip install --quiet pandas pyarrow finance-datareader
 
       - name: 지난 연도 일봉 캐시 (확정된 연도 파일은 바뀌지 않는다)
         uses: actions/cache@v4
@@ -87,15 +88,22 @@ jobs:
           JKQ_GAPDOWN_FROM_YEAR: "2018"
         run: python .app/scripts/backtest_opening_gapdown.py
 
+      - name: ② ETF 하락일 야간 연구 + ①+② 목표지표(+1% 일·+5% 주)
+        env:
+          JKQ_ETF_OUT: data/etf-overnight-research
+          JKQ_GAPDOWN_OUT: data/opening-gapdown-research
+          JKQ_GAPDOWN_LIVE: data/opening-gapdown-live
+        run: python .app/scripts/backtest_etf_overnight.py
+
       - name: 저장
         run: |
-          if [ -z "$(git status --porcelain data/opening-gapdown-research data/opening-gapdown-live)" ]; then
+          if [ -z "$(git status --porcelain data/opening-gapdown-research data/opening-gapdown-live data/etf-overnight-research)" ]; then
             echo "변경 없음"
             exit 0
           fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add data/opening-gapdown-research data/opening-gapdown-live
+          git add data/opening-gapdown-research data/opening-gapdown-live data/etf-overnight-research
           git commit -m "data: opening gap-down research $(TZ=Asia/Seoul date '+%F %H:%M') [skip ci]"
           git pull --rebase origin scalping-data
           git push origin scalping-data

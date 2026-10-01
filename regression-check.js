@@ -10573,7 +10573,7 @@ console.log('[SCALPING FLOW] 단타 공통 흐름 · 모의체결 분리');
      && /VTTS3035R/.test(kis));
   ok('KIS 해외 모의 조회는 전체조회 후 종목 필터', /PDNO:""[\s\S]{0,220}OVRS_EXCG_CD:""/.test(kis)
      && /if\(code\) rows=rows\.filter\(x=>x\.code===code\)/.test(kis));
-  ok('단타 화면 버전 1.29.3', /id="scVer">v1\.29\.3<\/span>/.test(sc));
+  ok('단타 화면 버전 1.30.0', /id="scVer">v1\.30\.0<\/span>/.test(sc));
 }
 
 
@@ -10709,7 +10709,7 @@ console.log('[OPENING SIGNAL LEARNING] 실시간 ledger · 30분 사후라벨 ·
      /신호 이후 30분 경로 진단/.test(scl)
      && /조건별 실제 성과/.test(scl)
      && /groupTable\('전략 버전'/.test(scl)
-     && /id="scVer">v1\.29\.3<\/span>/.test(scl));
+     && /id="scVer">v1\.30\.0<\/span>/.test(scl));
 }
 
 /* ════ 단타 Telegram ③④ 실시간 + ⑤⑥ 일일 연구 ════ */
@@ -10748,7 +10748,7 @@ console.log('[SCALPING TELEGRAM] 실시간 신호 · 일일 매매/연구 요약
   const cr=cr0>=0&&cr1>cr0?nightly.slice(cr0,cr1):'';
   ok('BTC 야간연구는 실제 70/30 holdout 모델만 참조',
      /validationModel":"70\/30 holdout \+ rolling30"/.test(cr) && !/oos_edge|oos_trades|wf_status/.test(cr));
-  ok('단타 화면 버전 1.29.3', /id="scVer">v1\.29\.3<\/span>/.test(scl));
+  ok('단타 화면 버전 1.30.0', /id="scVer">v1\.30\.0<\/span>/.test(scl));
 }
 
 
@@ -10858,6 +10858,23 @@ console.log('[GAPDOWN D-1 / DIP24 D-3] 연구용 모의체결 경로 안전장�
      &&/BREADTH_MIN = \[3, 5\]/.test(py)&&/qualified\.get\(r\["date"\], 0\) >= k/.test(py)
      &&/rsiPassed=sum\(1 for x in cands if x\["rsiPrev"\] < PARAMS\["rsiMax"\]\)/.test(py)
      &&/v2 · 통과 종목/.test(scl2)&&/breadthFilter:gapdown\.breadthFilter/.test(orApi));
+  { // ② ETF 하락일 야간 — Worker 가 전날 매수일을 고르는 규칙을 실제 함수로 값 시험
+    const src=ow.slice(ow.indexOf('export function etfBuyDateFromLedgers('),ow.indexOf('\n}\n',ow.indexOf('export function etfBuyDateFromLedgers('))+2).replace('export ','');
+    const pick=new Function(src+'\nreturn etfBuyDateFromLedgers;')();
+    const L=(date,ok,has=true)=>({date,events:has?[{stage:'etf_buy',payload:{order:ok==null?null:{side:'buy',vts:{ok}}}}]:[{stage:'quote'}]});
+    ok('② Worker: 가장 최근 거래일 매수 성공분만 다음날 매도 대상 (실패·미매수·기록없음 구분)',
+       pick([L('2026-10-02',true)])==='2026-10-02' && pick([L('2026-10-02',false)])===null && pick([L('2026-10-02',null)])===null
+       && pick([L('2026-10-02',true,false),L('2026-10-01',true)])==='2026-10-01' && pick([])===null);
+  }
+  ok('② ETF: 주문은 공용 vtsOrder(모의투자 고정·signal_id 선점·재시도 없음) · 15:21 매수/08:56 매도/15:40 조회 연결',
+     /out\.order=await vtsOrder\(origin,env,date,"buy",\{code:ETF_RULE\.code/.test(gd)
+     &&/out\.order=await vtsOrder\(origin,env,date,"sell",\{code:ETF_RULE\.code/.test(gd)
+     &&/if\(buyDate\)await runEtf\(env,date,"etf_sell",ms,\{buyDate\}\);/.test(ow)
+     &&/await runEtf\(env,date,stage==="close"\?"etf_buy":"etf_reconcile",ms\);/.test(ow)
+     &&/backtest_etf_overnight\.py/.test(wf)&&/finance-datareader/.test(wf));
+  ok('목표 지표 화면: +1% 달성일·+5% 달성주·손실일·MDD·거르기 통과 · 같은 원금 반반 합산',
+     /목표 지표 — 하루 \+1%·주 \+5%/.test(scl2)&&/같은 날 둘 다면 반씩/.test(scl2)
+     &&/etfOvernight:etf\?/.test(orApi));
   ok('D-3 BTC 그림자: 완료된 시간봉만·다음 시간 시가 진입·24시간 보유·주문 없음',
      /DIP24_VERSION = "btc_dip24_v1"/.test(bt)&&/hb\[h - one\]\["c"\] \/ hb\[h - one \* \(lb \+ 1\)\]\["c"\]/.test(bt)
      &&/"orders": "none \(research shadow\)"/.test(bt)&&/designEndKst="2026-09-30"/.test(bt));

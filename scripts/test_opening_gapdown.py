@@ -10,6 +10,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import backtest_opening_gapdown as g  # noqa: E402
 import backtest_crypto_orb as c  # noqa: E402
+import backtest_etf_overnight as e  # noqa: E402
 
 
 def days(n, start="2026-01-01"):
@@ -196,6 +197,37 @@ class Dip24(unittest.TestCase):
         self.assertTrue(t["hitPlus2"])                   # 다음 시간 첫 5분봉 97 → +2.1%
         self.assertEqual(t["hitPlus2Min"], 65)
         self.assertFalse(t["hitMinus1"])
+
+
+class EtfOvernight(unittest.TestCase):
+    def test_signal_threshold_and_next_open_exit(self):
+        bars = [("2026-01-01", 100, 100), ("2026-01-02", 99, 97.0), ("2026-01-05", 98.5, 99), ("2026-01-06", 99, 96.1), ("2026-01-07", 97, 97)]
+        s = e.signals(bars)
+        self.assertEqual([x["signalDate"] for x in s], ["2026-01-02"])     # -3.0% 은 들어가고 -2.93% 는 아니다
+        x = s[0]
+        self.assertEqual(x["exitDate"], "2026-01-05")
+        self.assertAlmostEqual(x["grossPnl"], (98.5 / 97 - 1) * 100)
+        self.assertAlmostEqual(x["frictionPct"], 0.03 + 2 * 1 / 97 * 100)
+
+    def test_goal_metrics_count_no_trade_days_as_zero(self):
+        cal = ["2026-01-05", "2026-01-06", "2026-01-07", "2026-01-08", "2026-01-09"]
+        m = e.goal_metrics({"2026-01-05": 1.5, "2026-01-07": -2.0, "2026-01-09": 4.0}, cal)
+        self.assertEqual(m["tradeDays"], 3)
+        self.assertAlmostEqual(m["plus1DaysPerYear"], 2 / (5 / 250))
+        self.assertAlmostEqual(m["lossDayAvgPct"], -2.0)
+        self.assertAlmostEqual(m["worstDayPct"], -2.0)
+        self.assertAlmostEqual(m["plus5WeeksPerYear"], 0 / (5 / 250))      # 1.015*0.98*1.04 = +3.4% < 5%
+        self.assertAlmostEqual(m["mddPct"], -2.0)
+        self.assertTrue(m["gate"])
+
+    def test_weekly_average_includes_idle_weeks(self):
+        cal = ["2026-01-05", "2026-01-06", "2026-01-12", "2026-01-13"]       # 두 주, 매매는 첫 주 하루
+        m = e.goal_metrics({"2026-01-05": 10.0}, cal)
+        self.assertAlmostEqual(m["weeklyAvgPct"], (1.10 ** 0.5 - 1) * 100)
+
+    def test_portfolio_is_one_capital_base(self):
+        p = e.combine({"a": 2.0, "b": 1.0}, {"b": 3.0, "c": -1.0})
+        self.assertEqual(p, {"a": 2.0, "b": 2.0, "c": -1.0})              # 같은 날 둘 다면 반씩, 합산(4%) 아님
 
 
 if __name__ == "__main__":

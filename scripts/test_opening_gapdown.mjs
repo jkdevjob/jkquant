@@ -76,4 +76,28 @@ t("candidates from the worker are limited to the watchlist and re-priced", () =>
 t("signal ids are per date/code/side (dedupe key)", () => {
   assert.equal(F.signalId("2026-10-01", "000010", "buy"), "gapdown:2026-10-01:000010:buy");
 });
+t("② ETF: drop vs base price, windows, fills split, ids", () => {
+  near(F.etfDropPct({ expectedPrice: 9700, basePrice: 10000 }), -3);
+  assert.equal(F.etfDropPct({ expectedPrice: 0, basePrice: 10000 }), null);
+  assert.equal(F.ETF_RULE.dropMaxPct, -3);
+  assert.equal(F.etfDecision(-3).signal, true);
+  assert.equal(F.etfDecision(-2.99).signal, false);
+  assert.equal(F.etfDecision(-7).signal, true);
+  assert.equal(F.etfDecision(null).decisionReason, "expected_price_missing");
+  assert.equal(F.ETF_RULE.code, "233740");
+  assert.equal(F.stageWindow("etf_buy", 152100), true);
+  assert.equal(F.stageWindow("etf_buy", 151900), false);
+  assert.equal(F.stageWindow("etf_buy", 152800), false);
+  assert.equal(F.stageWindow("etf_sell", 85600), true);
+  assert.equal(F.stageWindow("etf_sell", 85940), false);
+  const f = F.etfFills([
+    { sideCode: "02", orderTime: "152105", fillQty: 30, fillAmount: 300000 },
+    { sideCode: "02", orderTime: "100000", fillQty: 5, fillAmount: 50000 },     // 다른 매수
+    { sideCode: "01", orderTime: "085630", fillQty: 30, fillAmount: 306000 },
+    { sideCode: "01", orderTime: "093000", fillQty: 3, fillAmount: 30000 },     // 다른 매도
+  ]);
+  assert.equal(f.closeBuy.qty, 30); assert.equal(f.closeBuy.avgPrice, 10000);
+  assert.equal(f.openSell.qty, 30); assert.equal(f.openSell.avgPrice, 10200);
+  assert.equal(F.etfSignalId("2026-10-01", "sell"), "etf_dip:2026-10-01:233740:sell");
+});
 console.log(`opening gap-down JS: ${n} ALL PASS`);
