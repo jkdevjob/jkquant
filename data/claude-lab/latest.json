@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "generatedAt": "2026-10-02T06:25:47.255071+09:00",
+  "generatedAt": "2026-10-02T08:40:17.310422+09:00",
   "designEnd": "2026-09-30",
   "gate": {
     "mdd": -25.0,
@@ -808,7 +808,7 @@
     ]
   },
   "daily": {
-    "generatedAt": "2026-10-02T06:35:53.206742+09:00",
+    "generatedAt": "2026-10-02T08:40:24.411418+09:00",
     "today": "2026-10-02",
     "finalKrDaily": "2026-09-29",
     "rows": [
@@ -916,22 +916,31 @@
   },
   "paper": {
     "start": "2026-10-01",
-    "newFiles": 0,
+    "newFiles": 2,
     "summary": {
       "opening_d1v2": {
-        "rows": [],
+        "rows": [
+          {
+            "date": "2026-10-01",
+            "action": "no_trade",
+            "pnlPct": 0.0,
+            "cumPct": 0.0,
+            "note": "no_expected_gap_down"
+          }
+        ],
         "currentDrawdownPct": 0.0,
         "lossStreak": 0,
-        "days": 0,
-        "first": null,
-        "last": null,
+        "start": "2026-10-01",
+        "days": 1,
+        "first": "2026-10-01",
+        "last": "2026-10-01",
         "tradeDays": 0,
         "plus1Days": 0,
         "winDays": 0,
         "profitFactor": null,
-        "totalPct": null,
-        "mddPct": null,
-        "worstDayPct": null,
+        "totalPct": 0.0,
+        "mddPct": 0.0,
+        "worstDayPct": 0.0,
         "avgTradePct": null,
         "expected": {
           "expectancyPct": 1.3304699743160744,
@@ -944,19 +953,28 @@
         }
       },
       "daytrading_etf": {
-        "rows": [],
+        "rows": [
+          {
+            "date": "2026-10-01",
+            "action": "no_trade",
+            "pnlPct": 0.0,
+            "cumPct": 0.0,
+            "note": ""
+          }
+        ],
         "currentDrawdownPct": 0.0,
         "lossStreak": 0,
-        "days": 0,
-        "first": null,
-        "last": null,
+        "start": "2026-10-01",
+        "days": 1,
+        "first": "2026-10-01",
+        "last": "2026-10-01",
         "tradeDays": 0,
         "plus1Days": 0,
         "winDays": 0,
         "profitFactor": null,
-        "totalPct": null,
-        "mddPct": null,
-        "worstDayPct": null,
+        "totalPct": 0.0,
+        "mddPct": 0.0,
+        "worstDayPct": 0.0,
         "avgTradePct": null,
         "expected": {
           "expectancyPct": 0.3635751915676489,
@@ -972,6 +990,7 @@
         "rows": [],
         "currentDrawdownPct": 0.0,
         "lossStreak": 0,
+        "start": "2026-10-02",
         "days": 0,
         "first": null,
         "last": null,
@@ -997,6 +1016,7 @@
         "rows": [],
         "currentDrawdownPct": 0.0,
         "lossStreak": 0,
+        "start": "2026-10-02",
         "days": 0,
         "first": null,
         "last": null,
@@ -1022,6 +1042,7 @@
         "rows": [],
         "currentDrawdownPct": 0.0,
         "lossStreak": 0,
+        "start": "2026-10-02",
         "days": 0,
         "first": null,
         "last": null,
@@ -1047,6 +1068,7 @@
         "rows": [],
         "currentDrawdownPct": 0.0,
         "lossStreak": 0,
+        "start": "2026-10-02",
         "days": 0,
         "first": null,
         "last": null,
@@ -1658,20 +1680,20 @@
     },
     "parts": {
       "opening_d1v2": {
-        "days": 0,
+        "days": 1,
         "tradeDays": 0,
         "plus1Days": 0,
         "weekPct": 0.0,
-        "contribPct": 0,
-        "through": null
+        "contribPct": 0.0,
+        "through": "2026-10-01"
       },
       "daytrading_etf": {
-        "days": 0,
+        "days": 1,
         "tradeDays": 0,
         "plus1Days": 0,
         "weekPct": 0.0,
-        "contribPct": 0,
-        "through": null
+        "contribPct": 0.0,
+        "through": "2026-10-01"
       },
       "coin_bo_btc": {
         "days": 0,
@@ -1699,6 +1721,72 @@
       }
     },
     "note": "장부에 확정된 날만. 코인 하루는 09시 기준, 미국은 한국 날짜(다음 날 아침)로 센다. 기여도는 계좌 비중을 곱한 단순합."
+  },
+  "weekRecon": {
+    "weekStart": "2026-09-28",
+    "weekEnd": "2026-10-04",
+    "asOf": "2026-10-02",
+    "account": {
+      "days": 2,
+      "plus1Days": 0,
+      "weekPct": -1.158051022252915,
+      "through": "2026-09-29",
+      "daily": [
+        {
+          "date": "2026-09-28",
+          "pnlPct": 0.0
+        },
+        {
+          "date": "2026-09-29",
+          "pnlPct": -1.1580510222529157
+        }
+      ],
+      "hit5": false
+    },
+    "parts": {
+      "opening_d1v2": {
+        "days": 3,
+        "tradeDays": 0,
+        "plus1Days": 0,
+        "weekPct": 0.0,
+        "contribPct": 0.0,
+        "through": "2026-10-01"
+      },
+      "daytrading_etf": {
+        "days": 4,
+        "tradeDays": 0,
+        "plus1Days": 0,
+        "weekPct": 0.0,
+        "contribPct": 0.0,
+        "through": "2026-10-01"
+      },
+      "coin_bo_btc": {
+        "days": 3,
+        "tradeDays": 1,
+        "plus1Days": 0,
+        "weekPct": -0.7666097720370524,
+        "contribPct": -0.1149914658055585,
+        "through": "2026-09-30"
+      },
+      "coin_bo_eth": {
+        "days": 3,
+        "tradeDays": 1,
+        "plus1Days": 0,
+        "weekPct": -1.625571577354945,
+        "contribPct": -0.24383573660324243,
+        "through": "2026-09-30"
+      },
+      "us_soxl": {
+        "days": 4,
+        "tradeDays": 1,
+        "plus1Days": 0,
+        "weekPct": -2.285538214124183,
+        "contribPct": -0.9142152856496732,
+        "through": "2026-10-01"
+      }
+    },
+    "note": "규칙대로 다시 계산한 값(모의 장부 아님). 새 전략 채택일(10/2) 전 날짜도 같은 규칙으로 계산했다. 확정된 날만.",
+    "source": "reconstructed"
   },
   "changelog": [
     {
@@ -1759,7 +1847,7 @@
   "review": {
     "today": {
       "date": "2026-10-02",
-      "writtenAt": "2026-10-02T06:35:59.445843+09:00",
+      "writtenAt": "2026-10-02T08:40:30.926845+09:00",
       "tabs": {
         "시초가": {
           "name": "① D-1 갭하락 과매도 v2",
@@ -1804,12 +1892,12 @@
       "paper": {
         "opening_d1v2": {
           "tradeDays": 0,
-          "totalPct": null,
+          "totalPct": 0.0,
           "status": "매매일 0/20 — 판단 전"
         },
         "daytrading_etf": {
           "tradeDays": 0,
-          "totalPct": null,
+          "totalPct": 0.0,
           "status": "매매일 0/20 — 판단 전"
         },
         "coin_bo_btc": {
