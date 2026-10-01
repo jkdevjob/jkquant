@@ -110,6 +110,42 @@ export function coinDayResult(candles,ma=20){
   return {date:String(d.candle_date_time_kst||"").slice(0,10),hold:true,action:stopped?"손절":"보유",
     pnlPct:stopped?(-COIN_STOP-COIN_STOP_SLIP-COIN_COST):pct(close,open)};
 }
+// 탭별 오늘 요약 — 칸 수익률(칸 자금 기준) · 개별 매매 합계 · 거래 수 · 계좌 기여 · 오늘 왜 매매했는지/안 했는지 한 줄
+export const ACCOUNT_WEIGHT={opening:0.3,daytrading:0.3,crypto:0.3,soxl:0.4};
+const GAP_REASON={no_expected_gap_down:"명단 종목 중 예상 갭 −2%~−29% 인 종목 없음",no_expected_prices:"08:56 예상체결가를 못 받음(점검)",
+  watchlist_stale:"명단이 오래됨 — 밤 계산 점검",watchlist_invalid:"명단 파일 오류 — 점검",watchlist_not_before_today:"명단 기준일 오류 — 점검",watchlist_rule_missing:"명단 규칙 없음 — 점검"};
+export function todaySummary(tab,t,hm){
+  t=t||{};
+  const rows=t.rows||[],v=rows.filter(r=>r.pnlPct!=null).map(r=>r.pnlPct),sum=v.reduce((a,b)=>a+b,0);
+  let tabPct=0,trades=0,why="";
+  if(tab==="opening"){
+    const ok=rows.filter(r=>r.status!=="주문 실패");trades=ok.length;tabPct=v.length?sum/v.length:0;
+    const d=t.decision,b=d&&d.breadth;
+    if(rows.length)why=(b&&b.v2Signal?"v2 매매일(통과 "+b.qualified+"종목) — ":"측정용 매수(v2 매매일 아님"+(b?": 통과 "+b.qualified+"<5":"")+") — ")+"갭 깊은 "+rows.length+"종목 모의 매수"+(rows.length>ok.length?" · 주문 실패 "+(rows.length-ok.length)+"건":"");
+    else if(!d)why=hm<856?"08:56 판단 전":"오늘 판단 기록 없음(휴장일이 아니면 점검)";
+    else why=GAP_REASON[d.reason]||("매매 없음 — "+(d.reason||"조건 맞는 종목 없음"));
+  }else if(tab==="daytrading"){
+    trades=rows.filter(r=>r.buyPrice!=null&&r.status!=="주문 실패").length;tabPct=sum;
+    const today=rows.find(r=>String(r.buyTime||"").startsWith("오늘")),none=rows.find(r=>r.status==="매매 없음");
+    const held=rows.find(r=>String(r.sellTime||"").includes("오늘"));
+    why=(held?"전날 종가 매수분 오늘 시가 매도("+held.status+") · ":"")+
+      (today?"오늘 종가 매수("+today.status+")":none?"오늘 매수 없음 — "+none.note:hm<1521?"15:21 판단 전":"오늘 판단 기록 없음");
+  }else if(tab==="crypto"){
+    trades=rows.filter(r=>r.hold).length;tabPct=t.basketPct==null?0:t.basketPct;
+    why=rows.map(r=>r.name+" "+(r.hold?(r.status||"보유"):"쉼(전날 종가 < 20일 평균)")).join(" · ")||"시세 없음";
+  }else if(tab==="soxl"){
+    const u=rows[0]||{};trades=u.hold?1:0;tabPct=u.pnlPct==null?0:u.pnlPct;
+    why=u.hold==null?"판단 없음(밤 계산 점검)":u.hold?"QQQ 종가 > 200일 평균 — TQQQ 보유 ("+(u.session||"")+")":"QQQ 종가 < 200일 평균 — 쉼";
+  }
+  const w=ACCOUNT_WEIGHT[tab]||0;
+  return {tabPct,sumPct:sum,trades,accountPct:tabPct*w,weight:w,noTrade:trades===0,why};
+}
+// 국내 칸(30%)은 ①②가 같은 날 둘 다 매매하면 반씩 쓴다(백테 combine_same_capital 과 같은 규칙)
+export function applyKrSplit(tabs){
+  const o=tabs.opening&&tabs.opening.today,d=tabs.daytrading&&tabs.daytrading.today;
+  if(o&&d&&!o.noTrade&&!d.noTrade)for(const q of [o,d]){q.weight=ACCOUNT_WEIGHT.opening/2;q.accountPct=q.tabPct*q.weight;q.krShared=true;}
+  return tabs;
+}
 export function coinRow(market,lastDec,tick,today){
   const hold=lastDec&&String(lastDec.hold)!=="0";
   if(!tick)return {code:market,name:market.replace("KRW-",""),status:"시세 없음"};
@@ -161,6 +197,8 @@ export async function onRequestGet({request,env}){
       prevClose,nowPrice:livePx,pnlPct:un&&un.holdNext&&livePx&&prevClose?pct(livePx,prevClose):null,
       session:intra&&intra.regular?"정규장":intra&&intra.pre?"프리마켓":intra&&intra.post?"애프터마켓":"장 마감"}],
       note:"QQQ 종가가 200일 평균 위면 TQQQ 보유, −10% 손절. 미국장 결과는 한국시각 다음 날 아침에 확정."};
+    for(const k of Object.keys(ACCOUNT_WEIGHT))if(out.tabs[k])out.tabs[k].today=todaySummary(k,out.tabs[k],now.hm);
+    applyKrSplit(out.tabs);
     return json(out);
   }catch(e){
     return json({ok:false,error:String(e.message||e)},502);

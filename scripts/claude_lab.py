@@ -83,7 +83,8 @@ def goal_metrics(daily, calendar, per_year=250):
                lossDays=len(loss), lossDayAvgPct=statistics.fmean(loss) if loss else 0.0,
                worstDayPct=min(vals) if vals else 0.0, mddPct=mdd * 100,
                cagrPct=(eq ** (1 / yrs) - 1) * 100 if yrs >= 0.5 else None,
-               expectancyPct=statistics.fmean(vals) if vals else None)
+               expectancyPct=statistics.fmean(vals) if vals else None,
+               profitFactor=(sum(v for v in vals if v > 0) / -sum(loss)) if loss else None)
     out["gate"] = bool(vals) and out["expectancyPct"] > 0 and out["mddPct"] >= GATE["mdd"] and out["worstDayPct"] >= GATE["worstDay"]
     return out
 
@@ -358,6 +359,7 @@ def write_paper(report, d1, krx_cal, crypto_full, us_full, cal_c):
         summary[key] = dict(rows=rows_out[-60:], currentDrawdownPct=dd * 100, lossStreak=streak,
                             days=len(cal), first=cal[0] if cal else None, last=cal[-1] if cal else None,
                             tradeDays=len(vals), plus1Days=sum(1 for v in vals.values() if v >= 1),
+                            winDays=sum(1 for v in vals.values() if v > 0), profitFactor=z.get("profitFactor"),
                             totalPct=z.get("totalPct"), mddPct=z.get("mddPct"), worstDayPct=z.get("worstDayPct"),
                             avgTradePct=statistics.fmean(vals.values()) if vals else None, expected=exp,
                             status=drift_status(vals, exp))
@@ -476,6 +478,75 @@ def shadows(per_rows, tq_rows, qq_close):
     except Exception as e:  # noqa: BLE001
         out["soxl"] = [dict(name="error", error=str(e))]
     return out
+
+
+PROMOTE_MIN_TRADE_DAYS = 20
+
+
+def promotion(official, shadow):
+    """그림자 → 교체 후보 판정. 판정용 표본(10/1~)에서만 본다. 자동으로 바꾸지 않는다 — 후보 표시만 하고 사람이 검토한다."""
+    sh, off = shadow or {}, official or {}
+    n = sh.get("tradeDays") or 0
+    if n < PROMOTE_MIN_TRADE_DAYS:
+        return dict(code="collecting", text=f"판정 표본 매매 {n}/{PROMOTE_MIN_TRADE_DAYS}일 — 판단 전")
+    if not sh.get("gate"):
+        return dict(code="keep", text="판정 표본 손실 기준 미달 — 기준 유지")
+    s_tot, o_tot = sh.get("totalPct") or 0.0, off.get("totalPct") or 0.0
+    s_p1, o_p1 = sh.get("plus1Days") or 0, off.get("plus1Days") or 0
+    s_mdd, o_mdd = sh.get("mddPct") or 0.0, off.get("mddPct") or 0.0
+    if s_tot > o_tot and s_p1 >= o_p1 and s_mdd >= o_mdd - 5:
+        return dict(code="candidate", text=f"교체 후보 — 누적 {s_tot:+.1f}% vs 기준 {o_tot:+.1f}%, +1%일 {s_p1} vs {o_p1} (검토 후 새 버전)")
+    return dict(code="keep", text=f"기준 유지 — 누적 {s_tot:+.1f}% vs 기준 {o_tot:+.1f}%")
+
+
+def attach_promotions(report):
+    for tab, rows in (report.get("shadows") or {}).items():
+        off = (((report.get("tabs") or {}).get(tab) or {}).get("claude") or {}).get("outOfSample")
+        for x in rows if isinstance(rows, list) else []:
+            if not x.get("error"):
+                x["promotion"] = promotion(off, x.get("outOfSample"))
+
+
+def week_summary(summary, today):
+    """이번 주(월~일, 한국 날짜) 모의투자 결과 — 장부 요약 행만 쓴다. 기여도 = 계좌 비중 × 그날 손익의 단순합(%p)."""
+    t = date.fromisoformat(today)
+    mon = (t - timedelta(days=t.weekday())).isoformat()
+    sun = (t - timedelta(days=t.weekday()) + timedelta(days=6)).isoformat()
+    a = ACCOUNT
+
+    def rows(k, shift=0):
+        out = []
+        for r in (summary.get(k) or {}).get("rows") or []:
+            d = (date.fromisoformat(r["date"]) + timedelta(days=shift)).isoformat()
+            if mon <= d <= sun:
+                out.append(dict(r, kst=d))
+        return out
+
+    traded = lambda r: r.get("action") not in ("no_trade", "flat")
+    both = {r["kst"] for r in rows("opening_d1v2") if traded(r)} & {r["kst"] for r in rows("daytrading_etf") if traded(r)}
+    weight = {"opening_d1v2": lambda d: a["krWeight"] * (0.5 if d in both else 1.0),
+              "daytrading_etf": lambda d: a["krWeight"] * (0.5 if d in both else 1.0),
+              "crypto_btc": lambda d: a["cryptoWeight"] * a["cryptoSize"] * 0.5,
+              "crypto_eth": lambda d: a["cryptoWeight"] * a["cryptoSize"] * 0.5,
+              "us_tqqq": lambda d: a["usWeight"] * a["usSize"]}
+    parts = {}
+    for k, w in weight.items():
+        rs = rows(k, 1 if k == "us_tqqq" else 0)
+        eq = 1.0
+        for r in rs:
+            eq *= 1 + (r.get("pnlPct") or 0.0) / 100
+        parts[k] = dict(days=len(rs), tradeDays=sum(1 for r in rs if traded(r)), plus1Days=sum(1 for r in rs if (r.get("pnlPct") or 0) >= 1),
+                        weekPct=(eq - 1) * 100, contribPct=sum(w(r["kst"]) * (r.get("pnlPct") or 0.0) for r in rs),
+                        through=rs[-1]["date"] if rs else None)
+    ar = rows("account")
+    eq = 1.0
+    for r in ar:
+        eq *= 1 + (r.get("pnlPct") or 0.0) / 100
+    acct = dict(days=len(ar), plus1Days=sum(1 for r in ar if (r.get("pnlPct") or 0) >= 1), weekPct=(eq - 1) * 100,
+                through=ar[-1]["date"] if ar else None, daily=[dict(date=r["date"], pnlPct=r.get("pnlPct")) for r in ar])
+    acct["hit5"] = acct["weekPct"] >= 5
+    return dict(weekStart=mon, weekEnd=sun, asOf=today, account=acct, parts=parts,
+                note="장부에 확정된 날만. 코인 하루는 09시 기준, 미국은 한국 날짜(다음 날 아침)로 센다. 기여도는 계좌 비중을 곱한 단순합.")
 
 
 def review_entry(report):
@@ -638,6 +709,14 @@ def main():
         report["shadows"] = shadows({m: ROWS[m] for m in CRYPTO["markets"] if m in ROWS}, *(ROWS.get("TQQQ") or ([], [])))
     except Exception as e:  # noqa: BLE001
         report["shadows"] = dict(error=str(e))
+    try:
+        attach_promotions(report)
+    except Exception as e:  # noqa: BLE001
+        report["promotionError"] = str(e)
+    try:
+        report["week"] = week_summary(((report.get("paper") or {}).get("summary") or {}), datetime.now(KST).strftime("%Y-%m-%d"))
+    except Exception as e:  # noqa: BLE001
+        report["week"] = dict(error=str(e))
     report["changelog"] = CHANGELOG
     try:
         report["review"] = write_review(report)

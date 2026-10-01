@@ -4,12 +4,15 @@
 //   morning  09:05  ③ 코인 어제(09~09시) 결과 + 오늘 보유 · ④ 미국 지난 세션 결과 + 오늘 밤 보유
 //   etfbuy   15:21  ② 오늘 종가 매수 판단
 //   close    15:40  ① 오늘 확정 손익 · ② 결과 · 탭별 오늘 요약
+//   weekly   토 09:05  이번 주 장부 확정분 — 계좌 주간 손익 · +5% 달성 · 탭별 기여 · 그림자 교체 후보
 // 같은 날짜·종류는 한 번만 보낸다. Telegram 실패가 주문·기록을 막지 않는다(Worker 가 기록 뒤에 부른다).
 import { coinHoldToday, coinDayResult } from "./claude-live.js";
 
 const JH={"Content-Type":"application/json; charset=utf-8","Cache-Control":"no-store"};
 const RAW="https://raw.githubusercontent.com/jkdevjob/jkquant/scalping-data/data/";
-const KINDS=["preopen","morning","etfbuy","close"];
+const KINDS=["preopen","morning","etfbuy","close","weekly"];
+const PART={opening_d1v2:"① 시초가",daytrading_etf:"② ETF 야간",crypto_btc:"③ BTC",crypto_eth:"③ ETH",us_tqqq:"④ TQQQ"};
+const TABN={opening:"①",daytrading:"②",crypto:"③",soxl:"④"};
 function json(o,s=200){return new Response(JSON.stringify(o),{status:s,headers:JH});}
 function authorized(request,env){
   const got=request.headers.get("x-monitor-key")||"";
@@ -71,10 +74,29 @@ export function compose(kind,date,live,extra={}){
     L.push("② 오늘 종가 매수: "+(nb?(nb.status==="매매 없음"?"없음":nb.status):"없음"));
     const cr=(T.crypto||{}).tabPct,us=(((T.soxl||{}).rows||[])[0]||{}).pnlPct;
     L.push("③ 코인(09시~지금) "+p(cr)+" · ④ TQQQ "+(us==null?"장 시작 전":p(us)));
+  }else if(kind==="weekly"){
+    const lab=extra.lab||{},w=lab.week||{},a=w.account||{};
+    L.push("🤖 [클로드 단타] 주간 결과 "+(w.weekStart||"?")+" ~ "+(w.asOf||"?"));
+    if(!w.weekStart||w.error||(extra.weekStart&&w.weekStart!==extra.weekStart))L.push("⚠️ 이번 주 장부 요약이 없습니다 — 밤 계산을 확인하세요");
+    else{
+      L.push("🏦 전체 계좌 "+p(a.weekPct)+" · 목표 +5% "+(a.hit5?"달성 ✅":"미달")+" · +1% 달성일 "+(a.plus1Days||0)+"/"+(a.days||0)+"일");
+      L.push("탭별 기여 (계좌 비중 반영, %p · 칸 안 주간 손익):");
+      for(const k of Object.keys(PART)){const z=(w.parts||{})[k]||{};
+        L.push(" · "+PART[k]+" "+p(z.contribPct)+" ("+p(z.weekPct,1)+", 매매 "+(z.tradeDays||0)+"일"+(z.through?" · ~"+z.through:"")+")");}
+    }
+    const cand=[];
+    for(const [tab,rows] of Object.entries(lab.shadows||{}))for(const x of (Array.isArray(rows)?rows:[]))
+      if(x.promotion&&x.promotion.code==="candidate")cand.push((TABN[tab]||tab)+" "+x.name+" — "+x.promotion.text);
+    L.push(cand.length?"🧪 그림자 교체 후보:\n · "+cand.join("\n · "):"🧪 그림자 교체 후보 없음 (판정 표본 매매 20일 이상 + 기준보다 나을 때만 표시)");
   }
   L.push("");
   L.push("모의투자 기록 · 자세히: jkquant.pages.dev/claude");
   return L.join("\n");
+}
+
+export function mondayOf(date){
+  const d=new Date(date+"T00:00:00Z"),w=(d.getUTCDay()+6)%7;
+  return new Date(d.getTime()-w*86400000).toISOString().slice(0,10);
 }
 
 export async function onRequestPost({request,env}){
@@ -99,6 +121,10 @@ export async function onRequestPost({request,env}){
       const row=Object.fromEntries(h.map((k,i)=>[k,last[i]]));
       const nx=((lab&&lab.tabs&&lab.tabs.soxl)||{}).nextSignal;
       extra.us={date:row.date,action:row.action,pnlPct:row.pnlPct===""||row.pnlPct==null?null:+row.pnlPct,holdNext:nx?nx.holdNext:null};
+    }
+    if(kind==="weekly"){
+      extra.lab=await fetch(RAW+"claude-lab/latest.json?t="+Date.now()).then(r=>r.ok?r.json():null).catch(()=>null);
+      extra.weekStart=mondayOf(date);
     }
     const text=compose(kind,date,live,extra);
     const id=await send(env,text);

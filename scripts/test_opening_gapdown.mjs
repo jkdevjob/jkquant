@@ -156,4 +156,38 @@ t("coin yesterday result uses the day before for its decision", () => {
   const y2 = LV.coinDayResult(c2);
   assert.equal(y2.hold, true); assert.equal(y2.action, "보유"); near(y2.pnlPct, -10);
 });
+t("telegram weekly: account week, +5% check, contributions, shadow candidates, stale guard", () => {
+  assert.equal(TG.mondayOf("2026-10-10"), "2026-10-05"); assert.equal(TG.mondayOf("2026-10-05"), "2026-10-05"); assert.equal(TG.mondayOf("2026-10-11"), "2026-10-05");
+  const lab = { week: { weekStart: "2026-10-05", asOf: "2026-10-09", account: { weekPct: 5.06, hit5: true, plus1Days: 2, days: 5 },
+                        parts: { opening_d1v2: { contribPct: 0.3, weekPct: 2, tradeDays: 1 }, us_tqqq: { contribPct: 1.2, weekPct: 3, tradeDays: 1, through: "2026-10-08" } } },
+                shadows: { crypto: [{ name: "평균 50일", promotion: { code: "candidate", text: "교체 후보 — x" } }, { name: "손절 −3%", promotion: { code: "keep", text: "기준 유지" } }] } };
+  const w = TG.compose("weekly", "2026-10-10", null, { lab, weekStart: "2026-10-05" });
+  assert.ok(w.includes("🏦 전체 계좌 +5.06% · 목표 +5% 달성 ✅") && w.includes("④ TQQQ +1.20% (+3.0%, 매매 1일 · ~2026-10-08)"));
+  assert.ok(w.includes("③ 평균 50일 — 교체 후보") && !w.includes("손절 −3% —"));
+  const stale = TG.compose("weekly", "2026-10-17", null, { lab, weekStart: "2026-10-12" });
+  assert.ok(stale.includes("⚠️ 이번 주 장부 요약이 없습니다") && !stale.includes("달성 ✅"));
+});
+t("today summary: tab return vs per-trade sum, account share, no-trade reason", () => {
+  const op = LV.todaySummary("opening", { rows: [{ pnlPct: 3, status: "청산" }, { pnlPct: -1, status: "청산" }, { pnlPct: 1, status: "청산" }],
+                                          decision: { breadth: { qualified: 6, v2Signal: true } } }, 1600);
+  near(op.tabPct, 1); near(op.sumPct, 3); near(op.accountPct, 0.3); assert.equal(op.trades, 3); assert.ok(op.why.startsWith("v2 매매일(통과 6종목)"));
+  const m = LV.todaySummary("opening", { rows: [{ pnlPct: 2, status: "보유중" }, { pnlPct: null, status: "주문 실패" }], decision: { breadth: { qualified: 2, v2Signal: false } } }, 1000);
+  near(m.tabPct, 2); assert.equal(m.trades, 1); assert.ok(m.why.includes("측정용 매수") && m.why.includes("주문 실패 1건"));
+  const z = LV.todaySummary("opening", { rows: [], decision: { reason: "no_expected_gap_down" } }, 1000);
+  assert.equal(z.tabPct, 0); assert.equal(z.sumPct, 0); assert.ok(z.noTrade); assert.ok(z.why.includes("예상 갭 −2%~−29% 인 종목 없음"));
+  assert.equal(LV.todaySummary("opening", { rows: [] }, 850).why, "08:56 판단 전");
+  const e = LV.todaySummary("daytrading", { rows: [{ buyPrice: 100, sellTime: "오늘 09:00 시가", status: "청산", pnlPct: 1.5 },
+                                                  { status: "매매 없음", note: "15:21 예상 하락 -1.00% (기준 −3% 이하)" }] }, 1600);
+  near(e.tabPct, 1.5); assert.equal(e.trades, 1); assert.ok(e.why.includes("시가 매도(청산)") && e.why.includes("오늘 매수 없음"));
+  assert.equal(LV.todaySummary("daytrading", { rows: [] }, 1400).why, "15:21 판단 전");
+  const c = LV.todaySummary("crypto", { rows: [{ name: "BTC", hold: true, status: "보유중", pnlPct: 2 }, { name: "ETH", hold: false, pnlPct: 0 }], basketPct: 1 }, 1000);
+  near(c.tabPct, 1); near(c.sumPct, 2); near(c.accountPct, 0.3); assert.equal(c.trades, 1); assert.ok(c.why.includes("ETH 쉼"));
+  const u = LV.todaySummary("soxl", { rows: [{ hold: false, pnlPct: null }] }, 1000);
+  assert.equal(u.trades, 0); assert.equal(u.tabPct, 0); assert.ok(u.why.includes("쉼"));
+  near(LV.todaySummary("soxl", { rows: [{ hold: true, pnlPct: 2, session: "정규장" }] }, 2300).accountPct, 0.8);
+  const T2 = { opening: { today: { tabPct: 2, noTrade: false, weight: 0.3, accountPct: 0.6 } }, daytrading: { today: { tabPct: 1, noTrade: false, weight: 0.3, accountPct: 0.3 } } };
+  LV.applyKrSplit(T2); near(T2.opening.today.accountPct, 0.3); near(T2.daytrading.today.accountPct, 0.15);
+  const T3 = { opening: { today: { tabPct: 2, noTrade: false, weight: 0.3, accountPct: 0.6 } }, daytrading: { today: { tabPct: 0, noTrade: true, weight: 0.3, accountPct: 0 } } };
+  LV.applyKrSplit(T3); near(T3.opening.today.accountPct, 0.6);
+});
 console.log(`opening gap-down JS: ${n} ALL PASS`);
