@@ -7,7 +7,7 @@
   crypto     ③ BTC+ETH 20일 추세 + 하루 손절 −4% · 반반 · 투입 60% — crypto_trend20_v2 (이 파일)
              (v1 BTC 단독 50% 는 비교용으로 같이 계산한다)
 전체 계좌안: 국내 30% + 코인 30% + 미국 40% (각 칸 안에서 전액) — 같은 원금 기준 일 손익(미국은 한국 다음 날로).
-  soxl       ④ TQQQ 200일 추세 + 손절 −10% · 탭 표시 50% — tqqq_trend200_v1 (SOXL 안 soxl_trend50_v1 은 참고)
+  soxl       ④ SOXL 파워아워 추세 지속 · 당일 15:55 ET 강제청산 — soxl_power_hour_v1 결과 사용
 
 목표 지표(사용자 기준 2026-10-01): +1% 달성일/년 · +5% 달성주/년 · 주평균 · 손실일 평균/최악 · MDD.
 순수익, 매매 없는 날 0%. 거르기: 기대값>0 · MDD≥-25% · 최악일≥-15%.
@@ -39,12 +39,9 @@ CRYPTO = dict(version="crypto_trend20_v2", markets=["KRW-BTC", "KRW-ETH"], ma=20
               costRoundTripPct=0.14, stopSlipPct=0.1,
               note="업비트 BTC·ETH 일봉(09시 기준) 각각: 전일 종가 > 20일 평균이면 그날 보유, 09시 시가 대비 −4% 닿으면 손절 후 그날 쉼. 두 코인 반반, 자금 60%.")
 ACCOUNT = dict(krWeight=0.3, cryptoWeight=0.3, usWeight=0.4, cryptoSize=1.0, usSize=1.0,
-               note="같은 원금: 국내 30%(① D-1 v2 + ② ETF 야간, 같은 날이면 반반) + 코인 30%(BTC+ETH 반반 추세, 칸 안 전액) + 미국 40%(TQQQ 200일 추세, 칸 안 전액).")
-US = dict(version="tqqq_trend200_v1", trade="TQQQ", signal="QQQ", ma=200, stopPct=10.0, size=1.0, tabSize=0.5,
-          costRoundTripPct=0.20, stopSlipPct=0.1,
-          note="QQQ 종가 > 200일 평균이면 TQQQ 보유(종가 기준), 전일 종가(진입일은 시가) 대비 −10% 닿으면 손절. 탭 표시는 자금 50%. SOXL 은 변동성이 너무 커 TQQQ 로 바꿨다(SOXL 안은 참고로 같이 계산).")
-SOXL = dict(version="soxl_trend50_v1", ma=50, stopPct=8.0, size=0.25, costRoundTripPct=0.20, stopSlipPct=0.2,
-            note="SOXX 종가 > 50일 평균이면 SOXL 보유(종가 기준), 전일 종가(진입일은 시가) 대비 −8% 닿으면 손절. 자금 25%.")
+               note="같은 원금: 국내 30%(① D-1 v2 + ② ETF 야간, 같은 날이면 반반) + 코인 30%(BTC+ETH 반반 추세, 칸 안 전액) + 미국 40%(SOXL 파워아워 당일청산, 칸 안 전액).")
+US = dict(version="soxl_power_hour_v1", trade="SOXL", tabSize=1.0, maxHoldingDays=1,
+          note="SOXL만 매매. 첫30분 강세 + 파워아워 VWAP/직전3봉 고점/거래량 조건 → 다음 5분봉 시가 진입 · 손절 −1% · 익절 +2% · 15:55 ET 강제청산.")
 GPT_FILES = {
     "opening": ("opening-history/baseline-trades.csv", "pnl"),
     "daytrading": ("daytrading-research/baseline-trades.csv", "pnl"),
@@ -219,7 +216,7 @@ def cell(series, d, final_through=None, live=None):
     return series[d] if d in series else "no_trade"
 
 
-def daily_board(report, d1, krx_cal, crypto_full, cal_c):
+def daily_board(report, d1, krx_cal, crypto_full, cal_c, us_full):
     """📅 오늘 탭: 모든 전략의 전일·당일 결과 + 오늘 신호. 시장마다 자기 달력의 마지막 두 거래일."""
     today = datetime.now(KST).strftime("%Y-%m-%d")
     try:
@@ -253,14 +250,11 @@ def daily_board(report, d1, krx_cal, crypto_full, cal_c):
         plan=" · ".join(f"{m.split('-')[1]} {'보유' if n.get('holdNext') else '쉼'}" for m, n in nx.items()))
     g, gv, _ = gpt_daily("crypto")
     add("비트코인", "gpt", "비트코인", ", ".join(gv), g, cp, cl)
-    sx = tabs.get("soxl") or {}
-    udec = read_csv(OUT / "tqqq-decisions.csv")
-    sdv = {r["date"]: float(r["pnlPct"]) * US["tabSize"] for r in udec if r.get("pnlPct") not in (None, "", "None")}
-    sp, sl = last_two([r["date"] for r in udec])
-    add("SOXL", "claude", "④ TQQQ 200일 추세 (미국 3배)", US["version"], sdv, sp, sl,
-        plan=("보유" if (sx.get("nextSignal") or {}).get("holdNext") else "쉼") + " (미국장 · 자금 50%)")
+    sp, sl = last_two(sorted(us_full))
+    add("SOXL", "claude", "④ SOXL 파워아워 추세 지속", US["version"], us_full, sp, sl,
+        plan="15:00~15:20 ET 조건 감시 → 신호 다음 5분봉 진입 → 늦어도 15:55 ET 전량 청산")
     g, gv, _ = gpt_daily("soxl")
-    add("SOXL", "gpt", "SOXL", ", ".join(gv), g, sp, sl)
+    add("SOXL", "gpt", "SOXL ORB", ", ".join(gv), g, sp, sl)
     acct = {r["date"]: r["pnlPct"] for r in (report.get("account") or {}).get("recent", [])}
     ap, al = last_two(sorted(set(cal_c) | set(kr_cal)), upto=max(acct) if acct else None)
     add("전체", "claude", "🏦 전체 계좌 (국내 30% · 코인 30% · 미국 40%)", "account", acct, ap, al)
@@ -273,6 +267,25 @@ def read_json(path):
         return json.loads(path.read_text(encoding="utf-8"))
     except Exception:  # noqa: BLE001
         return None
+
+
+def soxl_power_hour_daily():
+    """daily1-shadow의 SOXL 파워아워 전략을 Claude SOXL 탭의 공식 연구 series로 사용한다.
+
+    SOXL만 매매하며 모든 포지션은 같은 미국 정규장 15:55 ET까지 청산된다.
+    반환: (daily_pct, calendar, detail_by_date, strategy_meta)
+    """
+    j = read_json(DATA / "daily1-shadow" / "latest.json") or {}
+    x = ((j.get("strategies") or {}).get("soxl") or {})
+    detail = {}
+    for bucket in ("design", "outOfSample"):
+        for r in ((x.get(bucket) or {}).get("daily") or []):
+            d = r.get("date")
+            if not d:
+                continue
+            detail[d] = dict(date=d, returnPct=float(r.get("returnPct") or 0.0), trades=int(r.get("trades") or 0))
+    daily = {d: z["returnPct"] for d, z in detail.items()}
+    return daily, sorted(detail), detail, x
 
 
 DECISIONS = {}
@@ -315,9 +328,11 @@ def paper_entries(report, d1, krx_cal, crypto_full, us_full, cal_c):
         out[key] = [(r["date"], dict(r, strategy="③ " + m.split("-")[1] + " 20일 추세 (칸 안 전액)", source="paper-upbit-daily", recordedAt=now,
                                       pnlPct=r.get("pnlPct") or 0.0))
                     for r in DECISIONS.get(m, []) if r["date"] >= PAPER_START]
-    out["us_tqqq"] = [(r["date"], dict(r, strategy="④ TQQQ 200일 추세 (칸 안 전액)", source="paper-us-daily", recordedAt=now,
-                                       pnlPct=r.get("pnlPct") or 0.0))
-                      for r in DECISIONS.get("TQQQ", []) if r["date"] >= PAPER_START]
+    _, _, soxl_detail, _ = soxl_power_hour_daily()
+    out["us_soxl"] = [(d, dict(date=d, strategy="④ SOXL 파워아워 추세 지속", strategyVersion=US["version"],
+                                      action="trade" if z.get("trades") else "no_trade", pnlPct=z.get("returnPct") or 0.0,
+                                      source="daily1-shadow-soxl-5m", holdingPolicy="same_session", recordedAt=now))
+                      for d, z in sorted(soxl_detail.items()) if d >= PAPER_START]
     kr = combine_same_capital({d: v for d, v in d1.items() if d <= final_kr}, etf)
     acct = account_daily(kr, crypto_full, us_to_kst(us_full), cal_c)
     last_all = min(x for x in (final_kr, max(crypto_full) if crypto_full else "", max(us_to_kst(us_full)) if us_full else "") if x)
@@ -369,13 +384,13 @@ def write_paper(report, d1, krx_cal, crypto_full, us_full, cal_c):
 
 def expectation(report, key):
     """설계 표본에서 기대하는 매매일 평균 손익과 표준편차(판정 비교용)."""
-    tab = {"opening_d1v2": "opening", "daytrading_etf": "daytrading"}.get(key)
+    tab = {"opening_d1v2": "opening", "daytrading_etf": "daytrading", "us_soxl": "soxl"}.get(key)
     src = None
     if tab:
         src = ((report.get("tabs") or {}).get(tab) or {}).get("claude", {}).get("design")
     elif key == "account":
         src = (report.get("account") or {}).get("design")
-    dec_key = {"crypto_btc": "KRW-BTC", "crypto_eth": "KRW-ETH", "us_tqqq": "TQQQ"}.get(key)
+    dec_key = {"crypto_btc": "KRW-BTC", "crypto_eth": "KRW-ETH"}.get(key)
     if dec_key and DECISIONS.get(dec_key):
         rows = [r for r in DECISIONS[dec_key] if r["date"] <= DESIGN_END and r.get("pnlPct") is not None and r.get("action") not in ("flat",)]
         v = [float(r["pnlPct"]) for r in rows]
@@ -405,7 +420,7 @@ CHANGELOG = [
     dict(date="2026-10-01", tab="opening", version="v2 필터", text="통과 5종목 이상(시장 투매일)만 v2 매매로 판정 — 8년 하루 +1.33%, 9개 연도 모두 양수."),
     dict(date="2026-10-01", tab="daytrading", version="etf_dip_overnight_v1", text="② 코스닥150 레버리지 −3% 하락일 종가 매수 → 다음날 시가 매도 시작."),
     dict(date="2026-10-01", tab="crypto", version="crypto_trend20_v2", text="③ BTC 단독 → BTC+ETH 반반(+1% 달성일 35→46일/년)."),
-    dict(date="2026-10-01", tab="soxl", version="tqqq_trend200_v1", text="④ SOXL 대신 TQQQ 200일 추세(SOXL 은 손실 기준 지키면 연 +7%)."),
+    dict(date="2026-10-02", tab="soxl", version="soxl_power_hour_v1", text="④ SOXL 탭을 SOXL 전용 파워아워 당일청산 전략으로 교체. TQQQ 대체 및 장기보유 제거."),
     dict(date="2026-10-01", tab="all", version="account 30/30/40", text="전체 계좌 국내 30%·코인 30%·미국 40% — +1% 달성일 69일/년, MDD −22%."),
 ]
 REVIEW = DATA / "claude-lab" / "review"
@@ -471,10 +486,9 @@ def shadows(per_rows, tq_rows, qq_close):
     except Exception as e:  # noqa: BLE001
         out["crypto"] = [dict(name="error", error=str(e))]
     try:
-        days = [r[0] for r in tq_rows]
-        dv, _, _ = trend_daily(tq_rows, dict(US, ma=150), signal_close=qq_close)
-        out["soxl"] = [dict(name="QQQ 150일 평균", version="tqqq_trend150", rule="QQQ > 150일 평균이면 TQQQ · 손절 −10% · 자금 50%",
-                            **split_metrics({d: v * US["tabSize"] for d, v in dv.items()}, days, 252))]
+        sdv, scal, _, meta = soxl_power_hour_daily()
+        out["soxl"] = [dict(name=(meta.get("name") or "SOXL 파워아워"), version=(meta.get("version") or US["version"]),
+                            rule=(meta.get("rule") or US["note"]), **split_metrics(sdv, scal, 252))]
     except Exception as e:  # noqa: BLE001
         out["soxl"] = [dict(name="error", error=str(e))]
     return out
@@ -528,10 +542,10 @@ def week_summary(summary, today):
               "daytrading_etf": lambda d: a["krWeight"] * (0.5 if d in both else 1.0),
               "crypto_btc": lambda d: a["cryptoWeight"] * a["cryptoSize"] * 0.5,
               "crypto_eth": lambda d: a["cryptoWeight"] * a["cryptoSize"] * 0.5,
-              "us_tqqq": lambda d: a["usWeight"] * a["usSize"]}
+              "us_soxl": lambda d: a["usWeight"] * a["usSize"]}
     parts = {}
     for k, w in weight.items():
-        rs = rows(k, 1 if k == "us_tqqq" else 0)
+        rs = rows(k, 1 if k == "us_soxl" else 0)
         eq = 1.0
         for r in rs:
             eq *= 1 + (r.get("pnlPct") or 0.0) / 100
@@ -669,25 +683,12 @@ def main():
         report["tabs"]["crypto"] = dict(error=str(e))
     us_full = {}
     try:
-        tq, qq = fetch_us(US["trade"]), fetch_us(US["signal"])
-        udays = sorted(d for d in tq if d in qq)
-        dv_u, dec_u, nxt_u = trend_daily([(d, *tq[d]) for d in udays], US, signal_close=[qq[d][3] for d in udays])
-        us_full = dv_u
-        write_csv(OUT / "tqqq-decisions.csv", dec_u)
-        DECISIONS["TQQQ"] = dec_u
-        ROWS["TQQQ"] = ([(d, *tq[d]) for d in udays], [qq[d][3] for d in udays])
-        variants = {}
-        try:
-            sx, so = fetch_us("SOXL"), fetch_us("SOXX")
-            sdays = sorted(d for d in sx if d in so)
-            dv_s, dec_s, _ = trend_daily([(d, *sx[d]) for d in sdays], SOXL, signal_close=[so[d][3] for d in sdays])
-            write_csv(OUT / "soxl-decisions.csv", dec_s)
-            variants["soxl_trend50_v1 (SOXL · 자금 25%)"] = goal_metrics({d: v for d, v in dv_s.items() if d <= DESIGN_END}, [d for d in sdays if d <= DESIGN_END], 252)
-        except Exception as e:  # noqa: BLE001
-            variants["soxl_trend50_v1"] = dict(error=str(e))
-        report["tabs"]["soxl"] = tab_report("soxl", "④ TQQQ 200일 추세 + 손절", US["version"], US["note"],
-                                            {d: v * US["tabSize"] for d, v in dv_u.items()}, udays, 252,
-                                            extra=dict(nextSignal=nxt_u, params=US, variants=variants))
+        us_full, ucal, _, umeta = soxl_power_hour_daily()
+        if not ucal:
+            raise RuntimeError("SOXL intraday archive/shadow result not ready")
+        report["tabs"]["soxl"] = tab_report("soxl", umeta.get("name") or "④ SOXL 파워아워 추세 지속",
+                                            umeta.get("version") or US["version"], umeta.get("rule") or US["note"],
+                                            us_full, ucal, 252, extra=dict(params=US, source="daily1-shadow/soxl"))
     except Exception as e:  # noqa: BLE001
         report["tabs"]["soxl"] = dict(error=str(e))
     if crypto_full:
@@ -700,13 +701,13 @@ def main():
                                  outOfSample=goal_metrics({d: v for d, v in acct.items() if d > DESIGN_END}, [d for d in acal if d > DESIGN_END], 365),
                                  lastYear=goal_metrics({d: v for d, v in acct.items() if d >= "2025-10-01" and d <= DESIGN_END}, [d for d in acal if "2025-10-01" <= d <= DESIGN_END], 365),
                                  recent=[dict(date=d, pnlPct=acct[d]) for d in sorted(acct)[-20:]])
-    report["daily"] = daily_board(report, d1, krx_cal, crypto_full, locals().get("cal_c") or [])
+    report["daily"] = daily_board(report, d1, krx_cal, crypto_full, locals().get("cal_c") or [], locals().get("us_full") or {})
     try:
         report["paper"] = write_paper(report, d1, krx_cal, crypto_full, locals().get("us_full") or {}, locals().get("cal_c") or [])
     except Exception as e:  # noqa: BLE001
         report["paper"] = dict(error=str(e))
     try:
-        report["shadows"] = shadows({m: ROWS[m] for m in CRYPTO["markets"] if m in ROWS}, *(ROWS.get("TQQQ") or ([], [])))
+        report["shadows"] = shadows({m: ROWS[m] for m in CRYPTO["markets"] if m in ROWS}, [], [])
     except Exception as e:  # noqa: BLE001
         report["shadows"] = dict(error=str(e))
     try:
