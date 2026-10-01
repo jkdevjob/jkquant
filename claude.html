@@ -31,7 +31,7 @@ table.doc td{padding:6px 6px}
 </head>
 <body>
 <header><div class="wrap"><div class="htop">
-  <div class="brand"><div class="kicker">JK QUANT · CLAUDE</div><h1>🤖 단타 <span class="v">(클로드)</span> <span class="ver" id="clVer">v2.2.0</span></h1></div>
+  <div class="brand"><div class="kicker">JK QUANT · CLAUDE</div><h1>🤖 단타 <span class="v">(클로드)</span> <span class="ver" id="clVer">v2.3.0</span></h1></div>
   <div class="jkmenu" id="jkmenuWrap">
     <button class="jkmenu-btn" aria-label="메뉴" onclick="jkMenuToggle(event)">三</button>
     <div class="jkmenu-pop" id="jkmenuPop" hidden>
@@ -104,11 +104,12 @@ var DOC={
     risk:"자금 60%(탭 표시). 최악일 −2.5% 안팎, 과거 MDD −23%.",money:"전체 계좌의 코인 칸(30%) 안에서는 두 코인 반반 전액.",
     proof:"2018-04~2026-09: +1% 달성일 46일/년, +5% 달성주 5.9주/년, 연복리 +37%. 평균 10~50일 × 손절 −3~−6% 20개 조합 모두 +1% 달성일 42~48일.",
     times:"09:00 판단 · 텔레그램 09:05(어제 결과·오늘 보유)"},
-  soxl:{title:"④ TQQQ 200일 추세 (미국)",what:"나스닥이 장기 상승 흐름(200일 평균 위)일 때만 나스닥 3배 ETF 를 들고, 크게 빠지면 끊는다. SOXL 은 너무 출렁여서 손실 기준을 지키면 수익이 거의 없다.",
-    pick:"TQQQ 하나(판단은 QQQ 로).",buy:"QQQ 종가가 200일 평균 위면 다음 미국장에 보유(첫날은 시가).",sell:"QQQ 종가가 평균 아래면 정리. 전일 종가(첫날은 시가) 대비 −10% 닿으면 손절.",
-    risk:"자금 50%(탭 표시). 과거 MDD −25%. 평균 기간에 따라 MDD 가 −25~−40% 로 흔들림 — 지켜볼 항목.",money:"전체 계좌의 미국 칸(40%) 안에서 전액.",
-    proof:"2011~2026: +1% 달성일 51~54일/년(자금 50%), 200일 평균은 널리 쓰는 기준.",
-    times:"미국장 마감 후 확정 · 텔레그램 09:05(지난 세션 결과·오늘 밤 보유)"}
+  soxl:{title:"④ SOXL 파워아워 추세 지속",what:"SOXL이 장 초반 강했고 오후에도 힘이 남아 있을 때만 파워아워 재가속을 노리는 당일 단타 전략이다.",
+    pick:"매매 종목은 SOXL 하나. 다른 ETF로 대체하지 않는다.",buy:"첫 30분 +1% 이상 · 14:30~15:00 +0.5% 이상 · 15:00~15:20 VWAP 위 + 직전3봉 고점 돌파 + 거래량 1.1배를 모두 만족하면 다음 5분봉 시가 진입.",
+    sell:"손절 −1% · 익절 +2% · 늦어도 15:55 ET 전량 청산. 다음 날로 넘기지 않는다.",
+    risk:"기본 보유는 같은 미국장 안에서 종료. SOXL 탭의 매매 종목은 SOXL 고정.",money:"전체 계좌의 미국 칸(40%) 안에서 전액.",
+    proof:"2026-10-01 이후 prospective 모의와 누적 SOXL 5분봉으로 검증한다. 표본이 부족한 동안은 연구전략이며 자동 승격하지 않는다.",
+    times:"15:00~15:20 ET 신호 감시 · 진입 후 손절/익절/15:55 강제청산 · 장 종료 후 결과 확정"}
 };
 function sec(title,inner,open,id){return "<details class='card sec'"+(open?" open":"")+(id?" id='"+id+"'":"")+"><summary><h3 style='display:inline'>"+title+"</h3></summary><div style='margin-top:8px'>"+inner+"</div></details>"}
 function docRow(k,v){return "<tr><td style='width:96px;color:var(--gold);font-weight:800;vertical-align:top'>"+k+"</td><td style='white-space:normal;text-align:left'>"+esc(v)+"</td></tr>"}
@@ -118,9 +119,9 @@ function buyCard(tab){var d=DOC[tab];if(!d)return "";
   return sec("③ 매수 타이밍","<div class='tw'><table class='board doc'><tbody>"+docRow("매수",d.buy)+docRow("시간표",d.times)+"</tbody></table></div>",true);}
 function sellCard(tab){var d=DOC[tab];if(!d)return "";
   return sec("④ 매도 · 손절 · 리스크","<div class='tw'><table class='board doc'><tbody>"+docRow("매도",d.sell)+docRow("위험 관리",d.risk)+"</tbody></table></div><p class='note'>목표(+1%/일 · +5%/주)를 맞추려고 기준·손절을 임의로 바꾸지 않습니다. 바꿀 때는 그림자 전략으로 먼저 검증합니다.</p>",true);}
-var EXEC={opening:"KIS 모의투자(VTS) 실제 주문 · 체결 조회",daytrading:"KIS 모의투자(VTS) 실제 주문 · 체결 조회",crypto:"주문 없음 — 업비트 일봉 모의 장부",soxl:"주문 없음 — 미국 일봉 모의 장부"};
-var MARKET={opening:"코스피·코스닥 보통주 (전일 RSI<30 명단)",daytrading:"KODEX 코스닥150레버리지 233740",crypto:"업비트 KRW-BTC · KRW-ETH",soxl:"TQQQ (판단 QQQ)"};
-var WEEKKEY={opening:["opening_d1v2"],daytrading:["daytrading_etf"],crypto:["crypto_btc","crypto_eth"],soxl:["us_tqqq"]};
+var EXEC={opening:"KIS 모의투자(VTS) 실제 주문 · 체결 조회",daytrading:"KIS 모의투자(VTS) 실제 주문 · 체결 조회",crypto:"주문 없음 — 업비트 일봉 모의 장부",soxl:"주문 없음 — SOXL 5분봉 당일 모의 장부"};
+var MARKET={opening:"코스피·코스닥 보통주 (전일 RSI<30 명단)",daytrading:"KODEX 코스닥150레버리지 233740",crypto:"업비트 KRW-BTC · KRW-ETH",soxl:"SOXL"};
+var WEEKKEY={opening:["opening_d1v2"],daytrading:["daytrading_etf"],crypto:["crypto_btc","crypto_eth"],soxl:["us_soxl"]};
 // 탭 맨 위 운영판 — 기준전략 · 오늘 · 왜 · 누적 · 그림자 판정 표본 · 이번 주 · 데이터 날짜
 function opsBoard(tab){
   var t=((J.lab||{}).tabs||{})[tab]||{},c=t.claude||{},lt=(LIVE&&LIVE.tabs&&LIVE.tabs[tab])||{},td=lt.today;
@@ -158,7 +159,7 @@ function promoBadge(pr){
 function weekCard(){
   var w=(J.lab||{}).week;if(!w)return "";
   if(w.error)return "<div class='card'><h3>🗓 이번 주 결과</h3><div class='warn'>"+esc(w.error)+"</div></div>";
-  var a=w.account||{},P=w.parts||{},N={opening_d1v2:"① 시초가 (국내)",daytrading_etf:"② ETF 야간 (국내)",crypto_btc:"③ BTC",crypto_eth:"③ ETH",us_tqqq:"④ TQQQ (미국)"};
+  var a=w.account||{},P=w.parts||{},N={opening_d1v2:"① 시초가 (국내)",daytrading_etf:"② ETF 야간 (국내)",crypto_btc:"③ BTC",crypto_eth:"③ ETH",us_soxl:"④ SOXL (미국)"};
   var rows=Object.keys(N).map(function(k){var z=P[k]||{};return "<tr><td class='nm'>"+esc(N[k])+"</td><td class='"+cls(z.contribPct)+"'><b>"+pct(z.contribPct)+"</b></td><td class='"+cls(z.weekPct)+"'>"+pct(z.weekPct,1)+"</td><td>"+(z.tradeDays||0)+"<span class='sub'>/"+(z.days||0)+"일</span></td><td class='sub'>"+(z.through?esc(z.through.slice(5)):"—")+"</td></tr>"}).join("");
   var cand=[];Object.keys((J.lab||{}).shadows||{}).forEach(function(t){var r=J.lab.shadows[t];(Array.isArray(r)?r:[]).forEach(function(x){if(x.promotion&&x.promotion.code==="candidate")cand.push(x.name+" — "+x.promotion.text)})});
   return "<div class='card'><h3>🗓 이번 주 결과 ("+esc((w.weekStart||"").slice(5))+" ~ "+esc((w.asOf||"").slice(5))+")</h3><div class='sub'>"+esc(w.note||"")+" 매주 토요일 09:05 텔레그램으로도 보냅니다.</div>"+
@@ -174,8 +175,8 @@ function shadowCard(tab){
   var rules=sh.filter(function(x){return x.rule}).map(function(x){return "<li><b>"+esc(x.name)+"</b> — "+esc(x.rule)+" <span class='sub'>("+esc(x.version||"")+")</span>"+promoBadge(x.promotion)+"</li>"}).join("");
   return sec("⑥ 그림자 전략 · 교체 판정","<div class='sub'>기준전략과 같은 기준으로 나란히 기록하는 비교용 전략(주문 없음). 판정용 표본(10/1~)에서 매매 20일 이상 쌓이고 기준보다 나으면 ⭐ 교체 후보로 표시하고, 검토 후에만 새 버전으로 바꿉니다(자동 교체 없음).</div><ul class='sub' style='margin:6px 0 0 18px;padding:0'>"+rules+"</ul>"+goalTable("설계 표본",rows)+goalTable("판정용 (10/1~)",oos),false);
 }
-var PKEYS={opening:["opening_d1v2"],daytrading:["daytrading_etf"],crypto:["crypto_btc","crypto_eth"],soxl:["us_tqqq"]};
-var PNAME={opening_d1v2:"① D-1 v2",daytrading_etf:"② ETF 야간",crypto_btc:"BTC (칸 전액)",crypto_eth:"ETH (칸 전액)",us_tqqq:"TQQQ (칸 전액)",account:"🏦 전체 계좌"};
+var PKEYS={opening:["opening_d1v2"],daytrading:["daytrading_etf"],crypto:["crypto_btc","crypto_eth"],soxl:["us_soxl"]};
+var PNAME={opening_d1v2:"① D-1 v2",daytrading_etf:"② ETF 야간",crypto_btc:"BTC (칸 전액)",crypto_eth:"ETH (칸 전액)",us_soxl:"SOXL (칸 전액)",account:"🏦 전체 계좌"};
 function paperCard(tab){
   var sm=((J.lab||{}).paper||{}).summary||{};
   var html=(PKEYS[tab]||[]).map(function(k){var z=sm[k]||{},rows=(z.rows||[]).slice().reverse();
@@ -263,7 +264,7 @@ function render(){
       var tot=["opening","daytrading","crypto","soxl"].reduce(function(a,tb){var q=(L[tb]||{}).today;return a+(q?q.accountPct:0)},0);
       html+="<div class='card'><h3>⏱ 지금 장중 손익 (클로드, 모의)</h3><div class='sub'>칸 수익률 = 그 칸 자금 기준, 계좌 = 전체 계좌 비중 반영(국내 30% — ①② 같은 날이면 반씩 · 코인 30% · 미국 40%). 현재가 기준이며 확정 결과는 저녁 장부로 남습니다. "+kstTime(LIVE.asOf)+" 기준 · 1분마다 갱신</div>"+
         "<div class='why'>🏦 오늘 계좌 합계(장중 추정) <span class='"+cls(tot)+"'>"+pct(tot)+"</span></div><div class='kpis'>"+
-        k("① 시초가","opening")+k("② 데이트레이딩","daytrading")+k("③ 코인 BTC·ETH","crypto")+k("④ 미국 TQQQ","soxl")+"</div></div>";
+        k("① 시초가","opening")+k("② 데이트레이딩","daytrading")+k("③ 코인 BTC·ETH","crypto")+k("④ 미국 SOXL","soxl")+"</div></div>";
     }
     html+=weekCard();
     var dl=lab.daily||{},rs=dl.rows||[];
@@ -278,12 +279,12 @@ function render(){
     html+="<div class='card'><h3>📅 전일 · 당일 결과 — 모든 전략</h3><div class='sub'>숫자는 순손익 %. 시장마다 자기 마지막 두 거래일(코인은 09시 기준 하루). 갱신 "+esc((dl.generatedAt||"").slice(0,16).replace("T"," "))+"</div>"+
       "<div class='tw'><table class='board'><thead><tr><th>전략 · 오늘 계획</th><th>전일</th><th>당일</th></tr></thead><tbody>"+(rows||"<tr><td colspan='3' class='sub'>아직 기록이 없습니다.</td></tr>")+"</tbody></table></div>"+
       "<p class='note'>"+esc(dl.note||"")+" 결과는 매일 저녁(18:40·23:40)과 아침 07:30 에 다시 계산됩니다.</p></div>";
-    var pp=(lab.paper||{}),sm=pp.summary||{},NM={opening_d1v2:"① D-1 갭하락 과매도 v2",daytrading_etf:"② 코스닥150 레버리지 하락일 야간",crypto_btc:"③ BTC 20일 추세 (칸 전액)",crypto_eth:"③ ETH 20일 추세 (칸 전액)",us_tqqq:"④ TQQQ 200일 추세 (칸 전액)",account:"🏦 전체 계좌"};
+    var pp=(lab.paper||{}),sm=pp.summary||{},NM={opening_d1v2:"① D-1 갭하락 과매도 v2",daytrading_etf:"② 코스닥150 레버리지 하락일 야간",crypto_btc:"③ BTC 20일 추세 (칸 전액)",crypto_eth:"③ ETH 20일 추세 (칸 전액)",us_soxl:"④ SOXL 파워아워 (칸 전액)",account:"🏦 전체 계좌"};
     var prow=Object.keys(NM).map(function(k){var z=sm[k]||{},e=z.expected||{},st=z.status||{};
       return "<tr><td class='nm'>"+esc(NM[k])+"<div class='sub'>"+(z.first?esc(z.first)+" ~ "+esc(z.last):"기록 시작 전")+"</div></td><td>"+(z.tradeDays||0)+"<span class='sub'>/"+(z.days||0)+"일</span></td><td class='win'>"+(z.plus1Days||0)+"</td>"+
         "<td class='"+cls(z.totalPct)+"'><b>"+(z.totalPct==null?"—":pct(z.totalPct,1))+"</b></td><td>"+(z.avgTradePct==null?"—":pct(z.avgTradePct))+"<div class='sub'>기대 "+pct(e.expectancyPct)+"</div></td><td style='white-space:normal;min-width:110px'>"+
         "<span class='"+(st.code==="below"?"loss":st.code==="ok"?"win":"sub")+"'>"+esc(st.text||"")+"</span></td></tr>"}).join("");
-    html+="<div class='card'><h3>📒 모의투자 누적 ("+esc(pp.start||"2026-10-01")+"~)</h3><div class='sub'>날짜별 장부는 한 번만 쓰고 덮어쓰지 않습니다. 국내는 KIS 모의투자 체결, 코인·미국은 일봉 모의 체결입니다. 매매일 20일이 쌓이면 기대(설계 표본)와 비교해 벗어나면 '규칙 점검'으로 표시합니다.</div>"+
+    html+="<div class='card'><h3>📒 모의투자 누적 ("+esc(pp.start||"2026-10-01")+"~)</h3><div class='sub'>날짜별 장부는 한 번만 쓰고 덮어쓰지 않습니다. 국내는 KIS 모의투자 체결, 코인은 일봉 모의, 미국은 SOXL 5분봉 당일 모의입니다. 매매일 20일이 쌓이면 기대(설계 표본)와 비교해 벗어나면 '규칙 점검'으로 표시합니다.</div>"+
       (pp.error?"<div class='warn'>"+esc(pp.error)+"</div>":"")+
       "<div class='tw'><table class='board'><thead><tr><th>전략</th><th>매매일</th><th>+1%↑</th><th>누적</th><th>매매일 평균</th><th>상태</th></tr></thead><tbody>"+prow+"</tbody></table></div></div>";
   }else if(TAB==="opening"||TAB==="daytrading"||TAB==="crypto"||TAB==="soxl"){
@@ -336,10 +337,6 @@ function liveCard(tab){
       "<td style='white-space:normal;text-align:left;font-size:12px'>매수 "+buy+(sell?"<br>"+sell:"")+"</td>"+
       "<td><b class='"+cls(x.pnlPct)+"'>"+(x.pnlPct==null?"—":pct(x.pnlPct))+"</b><div class='sub'>"+(x.realized?"확정":(x.pnlPct==null?"":"현재가"))+"</div></td></tr>";
   }).join("");
-  if(tab==="soxl"){var u=rows[0]||{},ls=u.lastSession;
-    return head+"<div class='kpis'><div class='kpi'><div class='l'>TQQQ 상태</div><div class='v'>"+esc(u.status||"")+"</div><div class='sub'>"+esc(u.session||"")+(u.nowPrice?" · 현재 "+won(u.nowPrice):"")+(u.prevClose?" · 전일 "+won(u.prevClose):"")+"</div></div>"+
-      "<div class='kpi'><div class='l'>지금 손익 (전일 종가 대비)</div><div class='v "+cls(u.pnlPct)+"'>"+(u.pnlPct==null?"—":pct(u.pnlPct))+"</div></div>"+
-      "<div class='kpi'><div class='l'>마지막 확정 세션 "+esc(ls?ls.date:"")+"</div><div class='v "+cls(ls&&ls.pnlPct)+"'>"+(ls&&ls.pnlPct!=null?pct(ls.pnlPct):"—")+"</div><div class='sub'>"+esc(ls?ls.action:"")+" · 칸 전액 기준</div></div></div></div>";}
   return head+"<div class='tw'><table class='board'><thead><tr><th>종목 · 상태</th><th style='text-align:left'>매수 → 매도</th><th>손익(순)</th></tr></thead><tbody>"+body+"</tbody></table></div></div>";
 }
 async function load(){
