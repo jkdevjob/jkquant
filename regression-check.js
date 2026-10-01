@@ -10855,7 +10855,8 @@ console.log('[GAPDOWN D-1 / DIP24 D-3] 연구용 모의체결 경로 안전장�
      &&['index.html','plan.html','backtest.html','scalping.html','ipo.html','job.html','admin.html','claude.html']
        .every(f=>/<a href="\/scalping"[^>]*><span class="mi">⚡<\/span>단타<\/a>\s*\n\s*<a href="\/claude"[^>]*><span class="mi">🤖<\/span>단타\(클로드\)<\/a>/.test(fs.readFileSync(__d+'/'+f,'utf8'))));
   ok('단타(클로드) 탭이 GPT 단타와 같은 4개(시초가·데이트레이딩·비트코인·SOXL) + 합산 · 탭마다 GPT 같은 기간 비교',
-     ['opening','daytrading','crypto','soxl','all'].every(t=>new RegExp('data-tab="'+t+'"').test(scl2))
+     ['today','opening','daytrading','crypto','soxl','all'].every(t=>new RegExp('data-tab="'+t+'"').test(scl2))
+     &&scl2.indexOf('data-tab="today"')<scl2.indexOf('data-tab="opening"')&&/var J=null,TAB="today";/.test(scl2)
      &&/function vsTable\(t\)/.test(scl2)&&/vsRow\("🤖 클로드",c\.claude\)\+vsRow\("GPT · "/.test(scl2)
      &&/readRaw\("claude-lab\/latest\.json"\)/.test(orApi)&&/claude_lab\.py/.test(wf));
   ok('클로드 전략 화면: 설계·판정 목표지표 · 규칙 · 실측 · 명단 · ① 상세 (읽기전용 API)',

@@ -259,6 +259,18 @@ class ClaudeLabTrend(unittest.TestCase):
         self.assertAlmostEqual(dv[days(5)[4]], (-4.0 - 0.1 - 0.07 - 0.07) * 0.5)
         self.assertEqual(dec[-1]["action"], "stop")
 
+    def test_crypto_basket_fixed_share_idle_coin_is_cash(self):
+        per = {"A": ({"d1": 2.0, "d2": 1.0}, {"d1", "d2"}), "B": ({"d2": 3.0}, {"d1", "d2"})}
+        b = lab.basket(per, ["d1", "d2"])
+        self.assertEqual(b, {"d1": 1.0, "d2": 2.0})        # d1: B 는 쉬므로 A 몫만(2%/2), 평균으로 부풀리지 않는다
+
+    def test_daily_board_cells(self):
+        self.assertEqual(lab.cell({"a": 1.5}, "a"), 1.5)
+        self.assertEqual(lab.cell({"a": 1.5}, "b"), "no_trade")              # 기록 없는 날은 손실이 아니라 매매 없음
+        self.assertEqual(lab.cell({}, "c", final_through="b"), "pending")     # 확정 일봉 전
+        self.assertEqual(lab.cell({}, "c", final_through="b", live=lambda d: "no_trade"), "no_trade")
+        self.assertEqual(lab.last_two(["d1", "d2", "d3"]), ["d2", "d3"])
+
     def test_gpt_compare_uses_gpt_window_only(self):
         old = lab.gpt_daily
         lab.gpt_daily = lambda tab: ({"2026-01-07": -1.0}, ["gpt_v1"], 1)

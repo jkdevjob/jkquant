@@ -19,14 +19,15 @@ main{padding:22px 0 70px}.hero h2{font-size:23px;margin:0 0 3px}.sub{color:var(-
 .win{color:var(--green)}.loss{color:var(--red)}.good{color:var(--green)}.bad{color:var(--red)}.note{color:var(--faint);font-size:11.5px;margin-top:8px}
 .rule{background:var(--surf2);border:1px solid var(--border);border-radius:10px;padding:10px;margin-top:8px;font-size:13px}.rule b{color:var(--gold)}
 .tabs{display:flex;gap:7px;overflow-x:auto;padding:4px 0 8px;margin-top:14px}.tab{flex:0 0 auto;border:1px solid var(--border);background:var(--surf);color:var(--dim);border-radius:999px;padding:8px 13px;font-weight:800;font-size:13px;cursor:pointer}.tab.on{background:var(--accent);border-color:var(--accent);color:#fff}
-.vs td:first-child{font-weight:800}.tag{display:inline-block;font-size:10.5px;padding:2px 7px;border-radius:999px;border:1px solid var(--border);color:var(--dim);margin-left:6px}
+.vs td:first-child{font-weight:800}
+table.board{min-width:0}table.board td.nm{white-space:normal;min-width:150px}table.board td,table.board th{padding:7px 6px}.tag{display:inline-block;font-size:10.5px;padding:2px 7px;border-radius:999px;border:1px solid var(--border);color:var(--dim);margin-left:6px}
 .loading{padding:40px;text-align:center;color:var(--dim)}.warn{padding:9px 11px;border-radius:9px;background:rgba(248,123,140,.08);border:1px solid rgba(248,123,140,.25);color:#ffb3be;font-size:12px}
 @media(max-width:560px){.wrap{padding:0 11px}.hero h2{font-size:20px}.kpi .v{font-size:17px}}
 </style>
 </head>
 <body>
 <header><div class="wrap"><div class="htop">
-  <div class="brand"><div class="kicker">JK QUANT · CLAUDE</div><h1>🤖 단타 <span class="v">(클로드)</span> <span class="ver" id="clVer">v1.1.0</span></h1></div>
+  <div class="brand"><div class="kicker">JK QUANT · CLAUDE</div><h1>🤖 단타 <span class="v">(클로드)</span> <span class="ver" id="clVer">v1.3.0</span></h1></div>
   <div class="jkmenu" id="jkmenuWrap">
     <button class="jkmenu-btn" aria-label="메뉴" onclick="jkMenuToggle(event)">三</button>
     <div class="jkmenu-pop" id="jkmenuPop" hidden>
@@ -49,11 +50,12 @@ main{padding:22px 0 70px}.hero h2{font-size:23px;margin:0 0 3px}.sub{color:var(-
     <div class="sub">GPT 단타와 같은 4개 탭에 클로드 전략을 하나씩 두고, 같은 기간으로 GPT 기준전략과 비교합니다. 모든 수익률은 수수료·세금·슬리피지를 뺀 순수익, 매매 없는 날은 0%로 셉니다.</div>
   </div>
   <div class="tabs" id="tabs">
-    <button class="tab on" data-tab="opening" onclick="showTab('opening')">⚡ 시초가</button>
+    <button class="tab on" data-tab="today" onclick="showTab('today')">📅 오늘</button>
+    <button class="tab" data-tab="opening" onclick="showTab('opening')">⚡ 시초가</button>
     <button class="tab" data-tab="daytrading" onclick="showTab('daytrading')">📈 데이트레이딩</button>
     <button class="tab" data-tab="crypto" onclick="showTab('crypto')">₿ 비트코인</button>
     <button class="tab" data-tab="soxl" onclick="showTab('soxl')">⚡ SOXL</button>
-    <button class="tab" data-tab="all" onclick="showTab('all')">🎯 합산</button>
+    <button class="tab" data-tab="all" onclick="showTab('all')">🎯 전체 계좌</button>
   </div>
   <div id="body"><div class="loading">불러오는 중…</div></div>
 </div></main>
@@ -78,7 +80,7 @@ function goalTable(title,rows){
 }
 function dayCell(z,k){z=((z||{})[k])||{};return z.days?"<span class='"+cls(z.dayAvgPnl)+"'>"+pct(z.dayAvgPnl)+"</span> <span class='sub'>t="+num(z.tStatDays,2)+" · "+z.days+"일</span>":"—"}
 
-var J=null,TAB="opening";
+var J=null,TAB="today";
 function showTab(t){TAB=t;document.querySelectorAll(".tab").forEach(function(b){b.classList.toggle("on",b.getAttribute("data-tab")===t)});try{localStorage.setItem("clTab",t)}catch(e){}render()}
 // 클로드 vs GPT — 같은 날짜 구간·같은 달력
 function vsRow(label,z){
@@ -100,13 +102,27 @@ function claudeCard(t,extra){
     "<div class='card'><h3>⚖️ GPT 기준전략과 비교</h3>"+vsTable(t)+"</div>";
 }
 function nextSig(t,unit){
+  if(t.nextSignals)return "<div class='kpis'>"+Object.keys(t.nextSignals).map(function(m){var n=t.nextSignals[m];return "<div class='kpi'><div class='l'>"+esc(m.replace("KRW-",""))+" 다음 "+unit+" ("+esc(n.basedOn)+" 종가 기준)</div><div class='v "+(n.holdNext?"good":"")+"'>"+(n.holdNext?"보유":"쉼")+"</div><div class='sub'>종가 "+Math.round(n.signalClose).toLocaleString()+" · 평균 "+Math.round(n.ma).toLocaleString()+"</div></div>"}).join("")+"</div>";
   var n=t.nextSignal;if(!n)return "";
   return "<div class='kpis'><div class='kpi'><div class='l'>다음 "+unit+" 신호 ("+esc(n.basedOn)+" 종가 기준)</div><div class='v "+(n.holdNext?"good":"")+"'>"+(n.holdNext?"보유":"쉼")+"</div><div class='sub'>종가 "+Math.round(n.signalClose).toLocaleString()+" · 평균 "+Math.round(n.ma).toLocaleString()+"</div></div></div>";
 }
 function render(){
   var body=document.getElementById("body");if(!J)return;
   var gd=J.gapdown||{},et=J.etf||{},wl=J.watchlist||{},lab=J.lab||{tabs:{}},T=lab.tabs||{},html="";
-  if(TAB==="opening"){
+  if(TAB==="today"){
+    var dl=lab.daily||{},rs=dl.rows||[];
+    var v=function(x){if(x==null)return "<span class='sub'>—</span>";if(x==="no_trade")return "<span class='sub'>매매 없음</span>";if(x==="pending")return "<span class='sub'>확정 대기</span>";return "<b class='"+cls(x)+"'>"+pct(x)+"</b>"};
+    var md=function(d){return d?esc(d.slice(5).replace("-","/")):"—"};
+    var grp="",rows="";
+    rs.forEach(function(x){
+      if(x.group!==grp){grp=x.group;rows+="<tr><td colspan='3' style='background:var(--surf2);color:var(--gold);font-weight:800'>"+esc(grp)+"</td></tr>"}
+      rows+="<tr><td class='nm'>"+(x.side==="claude"?"🤖 ":"<span class='sub'>GPT</span> ")+esc(x.name)+(x.plan?"<div class='sub'>오늘: "+esc(x.plan)+"</div>":"")+"</td>"+
+        "<td>"+v(x.prev)+"<div class='sub'>"+md(x.prevDate)+"</div></td><td>"+v(x.last)+"<div class='sub'>"+md(x.lastDate)+"</div></td></tr>";
+    });
+    html+="<div class='card'><h3>📅 전일 · 당일 결과 — 모든 전략</h3><div class='sub'>숫자는 순손익 %. 시장마다 자기 마지막 두 거래일(코인은 09시 기준 하루). 갱신 "+esc((dl.generatedAt||"").slice(0,16).replace("T"," "))+"</div>"+
+      "<div class='tw'><table class='board'><thead><tr><th>전략 · 오늘 계획</th><th>전일</th><th>당일</th></tr></thead><tbody>"+(rows||"<tr><td colspan='3' class='sub'>아직 기록이 없습니다.</td></tr>")+"</tbody></table></div>"+
+      "<p class='note'>"+esc(dl.note||"")+" 결과는 매일 저녁(18:40·23:40)과 아침 07:30 에 다시 계산됩니다.</p></div>";
+  }else if(TAB==="opening"){
     var t=T.opening||{};
     var names=(wl.names||[]).map(function(x){return esc(x.name)+" <span class='sub'>RSI "+num(x.rsi14,1)+"</span>"}).join(" · ");
     html+=claudeCard(t,"<div class='sub' style='margin-top:8px'>다음 거래일 명단 ("+esc(wl.basedOn||"—")+" 기준, "+((wl.names||[]).length)+"종목): "+(names||"없음")+"</div>");
@@ -124,7 +140,8 @@ function render(){
     html+="<div class='card'><h3>📡 모의체결 실측 (KIS 모의투자)</h3>"+(erows?"<div class='tw'><table><thead><tr><th>매수 → 매도</th><th>예상 하락</th><th>매수 슬립</th><th>매도 슬립</th><th>실측 순손익</th><th>모델 순손익</th></tr></thead><tbody>"+erows+"</tbody></table></div>":"<p class='note'>아직 매수 신호가 난 날이 없습니다.</p>")+"</div>";
   }else if(TAB==="crypto"){
     var t3=T.crypto||{};html+=t3.error?"<div class='warn'>"+esc(t3.error)+"</div>":claudeCard(t3,nextSig(t3,"하루(09시~)"));
-    html+="<p class='note'>업비트에는 모의투자가 없어 주문 없이 일봉으로 매일 기록합니다(판단·손익은 claude-lab/btc-decisions.csv).</p>";
+    var vv=t3.variants||{};html+=Object.keys(vv).length?"<div class='card'><h3>참고 — 이전 안</h3>"+goalTable("설계 표본",Object.keys(vv).map(function(k){return goalRow(k,vv[k])}).join(""))+"<p class='note'>BTC 단독보다 BTC+ETH 반반이 +1% 달성일이 많고(35→46일/년) 앞·뒤 구간 모두 낫습니다. 최근 1년은 ETH 가 약해 BTC 단독보다 낮았습니다.</p></div>":"";
+    html+="<p class='note'>업비트에는 모의투자가 없어 주문 없이 일봉으로 매일 기록합니다(판단·손익은 claude-lab/btc-decisions.csv · eth-decisions.csv).</p>";
   }else if(TAB==="soxl"){
     var t4=T.soxl||{};html+=t4.error?"<div class='warn'>"+esc(t4.error)+"</div>":claudeCard(t4,nextSig(t4,"미국장"));
     html+="<p class='note'>후보 중 손실 기준(MDD −25%)을 넘지 않는 것이 이 전략뿐이었고, 수익은 약합니다(연 +7% 수준). 주문 없이 기록만 합니다.</p>";
@@ -134,7 +151,18 @@ function render(){
       "<div class='kpis'><div class='kpi'><div class='l'>+1% 달성일/년</div><div class='v good'>"+num(p.plus1DaysPerYear,0)+"일</div></div><div class='kpi'><div class='l'>+5% 달성주/년</div><div class='v'>"+num(p.plus5WeeksPerYear)+"주</div></div><div class='kpi'><div class='l'>주 평균</div><div class='v "+(p.weeklyAvgPct>=0?"good":"bad")+"'>"+pct(p.weeklyAvgPct)+"</div></div><div class='kpi'><div class='l'>최악의 날 · MDD</div><div class='v bad'>"+pct(p.worstDayPct,1)+" · "+mddTxt(p.mddPct)+"</div></div></div>"+
       goalTable("설계 표본",goalRow("① D-1 v2",(et.d1v2||{}).design)+goalRow("② ETF 하락일 야간",(et.etf||{}).design)+goalRow("①+② 포트폴리오",pf.design))+
       goalTable("판정용 (10/1~)",goalRow("① D-1 v2",(et.d1v2||{}).outOfSample)+goalRow("② ETF 하락일 야간",(et.etf||{}).outOfSample)+goalRow("①+② 포트폴리오",pf.outOfSample))+
-      "<p class='note'>③ BTC · ④ SOXL 은 업비트·달러 계좌가 따로 필요해 같은 원금 합산에서 뺐습니다.</p></div>";
+      "<p class='note'>④ SOXL 은 약해서 합산에서 뺐습니다.</p></div>";
+    var ac=lab.account;
+    if(ac){
+      var q=ac.design||{},ly=ac.lastYear||{};
+      html="<div class='card'><h3>🏦 전체 계좌안 — 국내 50% + 코인 50%</h3><div class='sub'>"+esc((ac.plan||{}).note||"")+" 매일 같은 원금 기준 손익.</div>"+
+        "<div class='kpis'><div class='kpi'><div class='l'>+1% 달성일/년</div><div class='v good'>"+num(q.plus1DaysPerYear,0)+"일</div><div class='sub'>최근 1년 "+(ly.plus1Days||0)+"일</div></div>"+
+        "<div class='kpi'><div class='l'>+5% 달성주/년</div><div class='v'>"+num(q.plus5WeeksPerYear)+"주</div><div class='sub'>최근 1년 "+(ly.plus5Weeks||0)+"주</div></div>"+
+        "<div class='kpi'><div class='l'>주 평균</div><div class='v good'>"+pct(q.weeklyAvgPct)+"</div><div class='sub'>최근 1년 누적 "+pct(ly.totalPct,1)+"</div></div>"+
+        "<div class='kpi'><div class='l'>최악의 날 · MDD</div><div class='v bad'>"+pct(q.worstDayPct,1)+" · "+mddTxt(q.mddPct)+"</div><div class='sub'>최근 1년 MDD "+mddTxt(ly.mddPct)+"</div></div></div>"+
+        goalTable("전체 계좌",goalRow("설계 표본 (2018~2026-09)",ac.design)+goalRow("최근 1년 (25-10~26-09)",ac.lastYear)+goalRow("판정용 (10/1~)",ac.outOfSample))+
+        "<p class='note'>국내 칸은 KIS 모의투자로 매일 체결을 재고, 코인 칸은 업비트 일봉으로 기록합니다. 실전 전환은 승인 후에만 엽니다.</p></div>"+html;
+    }
   }
   body.innerHTML=html;
 }
