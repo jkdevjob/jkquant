@@ -279,11 +279,36 @@ export function gapdownPicksFromLedger(ledger){
   // 매수 주문이 접수된 종목만 오후에 다룬다. 접수 실패 종목은 보유가 없다.
   return orders.filter(o=>o&&o.side==="buy"&&o.vts&&o.vts.ok).map(o=>({code:o.code,name:o.name||o.code}));
 }
+// ② ETF 전략: 전날(공휴일·주말이면 최대 5일 전) ledger 에서 접수 성공한 etf_buy 를 찾는다.
+export function etfBuyDateFromLedgers(ledgers){
+  for(const l of (Array.isArray(ledgers)?ledgers:[])){
+    const ev=(l&&Array.isArray(l.events)?l.events:[]).find(e=>e&&e.stage==="etf_buy");
+    const o=ev&&ev.payload&&ev.payload.order;
+    if(o&&o.side==="buy"&&o.vts&&o.vts.ok)return String(l.date);
+    if(ev)return null;   // 가장 최근 거래일 기록이 '매수 없음'이면 더 거슬러 가지 않는다
+  }
+  return null;
+}
+async function runEtf(env,date,stage,ms,extra={}){
+  let res;
+  try{res=await gapdownCall(env,{stage,date,...extra});}
+  catch(e){res={ok:false,error:"전송 결과 불명 — 재시도하지 않음: "+String(e.message||e)};}
+  try{await gapdownRecord(env,date,stage,res,ms);}
+  catch(e){console.error(JSON.stringify({type:"gapdown_archive_failed",stage,error:String(e.message||e)}));}
+  console.log(JSON.stringify({type:stage,date,signal:res.signal,reason:res.decisionReason||res.error||""}));
+}
 async function runGapdown(stage,controller,env){
   if(!env.MONITOR_KEY||!env.SIGNAL_STORE)throw new Error("MONITOR_KEY/SIGNAL_STORE missing");
   const ms=Number(controller.scheduledTime)||Date.now();
   const date=kstParts(ms).date;
   if(stage==="preopen"){
+    const prev=[];
+    for(let k=1;k<=5;k++){
+      const d=kstParts(ms-k*864e5).date;
+      try{const l=await readLedger(env,d,"gapdown");if(l)prev.push(l);}catch(e){}
+    }
+    const buyDate=etfBuyDateFromLedgers(prev);
+    if(buyDate)await runEtf(env,date,"etf_sell",ms,{buyDate});
     const parts=[];
     for(let part=0;part<GAPDOWN_PARTS;part++){
       let q;
@@ -312,13 +337,16 @@ async function runGapdown(stage,controller,env){
   let ledger=null;
   try{ledger=await readLedger(env,date,"gapdown");}catch(e){ledger=null;}
   const picks=gapdownPicksFromLedger(ledger);
-  if(!picks.length)return;
-  let res;
-  try{res=await gapdownCall(env,{stage,date,picks});}
-  catch(e){res={ok:false,error:"전송 결과 불명 — 재시도하지 않음: "+String(e.message||e)};}
-  try{await gapdownRecord(env,date,stage,res,ms);}
-  catch(e){console.error(JSON.stringify({type:"gapdown_archive_failed",stage,error:String(e.message||e)}));}
-  console.log(JSON.stringify({type:"gapdown_"+stage,date,positions:(res.positions||[]).length,orders:(res.orders||[]).length}));
+  if(picks.length){
+    let res;
+    try{res=await gapdownCall(env,{stage,date,picks});}
+    catch(e){res={ok:false,error:"전송 결과 불명 — 재시도하지 않음: "+String(e.message||e)};}
+    try{await gapdownRecord(env,date,stage,res,ms);}
+    catch(e){console.error(JSON.stringify({type:"gapdown_archive_failed",stage,error:String(e.message||e)}));}
+    console.log(JSON.stringify({type:"gapdown_"+stage,date,positions:(res.positions||[]).length,orders:(res.orders||[]).length}));
+  }
+  // ② ETF: 15:21 종가 매수 판단(매일) · 15:40 체결 조회(매일)
+  await runEtf(env,date,stage==="close"?"etf_buy":"etf_reconcile",ms);
 }
 
 export default {

@@ -5,6 +5,9 @@
 //   stage=preopen   ~08:59:40    Worker 가 모은 예상가로 갭 계산 → 가장 깊은 갭 3종목을 장전 동시호가 시장가 매수
 //   stage=close     15:20~15:28  이 전략이 아침에 산 체결수량만 종가 동시호가 시장가 매도
 //   stage=reconcile 15:35~       매수·매도 실제 체결가 조회 (주문 없음)
+//   stage=etf_buy   15:20~15:28  ② 코스닥150 레버리지(233740) 예상 종가가 기준가 대비 −3% 이하면 종가 동시호가 시장가 매수
+//   stage=etf_sell  08:50~08:59:40 ② 전날 이 전략이 산 수량만 장전 동시호가 시장가 매도
+//   stage=etf_reconcile 15:35~   ② 오늘 매도·매수 체결가 조회 (주문 없음)
 // 목적은 수익이 아니라 측정이다: 예상체결가 대 실제 시가, 실제 체결가 대 시가·종가(슬리피지)를 매 건 남긴다.
 // 호출자는 opening-scheduler Worker 이고, Worker 가 응답 전체를 Durable Object 원본 ledger 에 먼저 저장한다.
 // 주문은 절대 자동 재시도하지 않는다.
@@ -40,6 +43,9 @@ function budget(env){
 }
 // 단계별 허용 시간창. 창 밖 호출은 아무 주문도 내지 않고 거절한다.
 export function stageWindow(stage,hms){
+  if(stage==="etf_sell")return hms>=85000&&hms<ORDER_DEADLINE;
+  if(stage==="etf_buy")return hms>=152000&&hms<152800;
+  if(stage==="etf_reconcile")return hms>=153500&&hms<235959;
   if(stage==="quote")return hms>=85000&&hms<QUOTE_DEADLINE;
   if(stage==="preopen")return hms>=85000&&hms<ORDER_DEADLINE;
   if(stage==="close")return hms>=152000&&hms<152800;
@@ -64,9 +70,9 @@ async function paceOrder(){
   if(wait>0)await sleep(wait);
   _lastOrderAt=Date.now();
 }
-async function vtsOrder(origin,env,date,side,x,qty){
-  const id=signalId(date,x.code,side);
-  const rec={signalId:id,strategy:"opening_gapdown",strategyVersion:GAPDOWN_VERSION,date,side,code:x.code,name:x.name||x.code,qty,
+async function vtsOrder(origin,env,date,side,x,qty,meta={}){
+  const id=meta.id||signalId(date,x.code,side);
+  const rec={signalId:id,strategy:meta.strategy||"opening_gapdown",strategyVersion:meta.version||GAPDOWN_VERSION,date,side,code:x.code,name:x.name||x.code,qty,
     submittedAt:null,vts:{ok:false,env:"vts",priceType:"market",orderNo:"",msg:""}};
   if(!(qty>0)){rec.vts.msg="주문수량 0 — 예산/예상가 확인";return rec;}
   if(!(await claimSignal(id))){rec.vts.msg="중복 signal_id 차단";rec.vts.duplicateBlocked=true;return rec;}
@@ -216,6 +222,71 @@ async function closeOrReconcile(origin,env,date,stage,picks){
   return out;
 }
 
+// ── ② etf_dip_overnight_v1: 코스닥150 레버리지 하락일 종가 매수 → 다음 거래일 시가 매도 ──
+// 과거 2018-04~2026-09: 하루 −3% 이하인 날 연 45회, 평균 +0.40%(t=2.8), 9개 연도 중 8개 양수, 기준을 −2→−6% 로
+// 바꾸면 +0.23→+0.98% 로 단조 증가. ETF 라 증권거래세가 없다(왕복 비용 약 0.1%). D-1 과 시간이 겹치지 않는다.
+export const ETF_RULE=Object.freeze({code:"233740",name:"KODEX 코스닥150레버리지",dropMaxPct:-3,version:"etf_dip_overnight_v1",budgetMultiple:3});
+export function etfDropPct(q){
+  const px=+(q&&q.expectedPrice)||0,base=+(q&&q.basePrice)||0;
+  return px>0&&base>0?(px/base-1)*100:null;
+}
+export function etfDecision(dropPct){
+  if(dropPct===null||!Number.isFinite(dropPct))return {signal:false,decisionReason:"expected_price_missing"};
+  if(dropPct>ETF_RULE.dropMaxPct)return {signal:false,decisionReason:"no_signal_drop_above_-3%"};
+  return {signal:true,decisionReason:"expected_close_vs_base<=-3%"};
+}
+export function etfSignalId(buyDate,side){return ["etf_dip",buyDate,ETF_RULE.code,side].join(":");}
+// 매수는 15:15 이후(종가 동시호가) 접수분, 매도는 09:00 전(장전 동시호가) 접수분만 이 전략 물량으로 센다.
+export function etfFills(rows){
+  const f=(side,from,to)=>(Array.isArray(rows)?rows:[]).filter(o=>String(o.sideCode)===side&&+o.fillQty>0&&hms6(o.orderTime)>=from&&hms6(o.orderTime)<to);
+  const agg=list=>{
+    const qty=list.reduce((s,o)=>s+(+o.fillQty||0),0);
+    const amt=list.reduce((s,o)=>s+(+o.fillAmount||(+o.fillQty||0)*(+o.fillPrice||0)),0);
+    return {qty,avgPrice:qty?amt/qty:null,orderNos:list.map(o=>o.orderNo),orderTimes:list.map(o=>o.orderTime)};
+  };
+  return {closeBuy:agg(f("02",151500,240000)),openSell:agg(f("01",83000,90000))};
+}
+async function etfBuy(origin,env,date){
+  const out={stage:"etf_buy",strategy:"etf_dip_overnight",strategyVersion:ETF_RULE.version,date,code:ETF_RULE.code,
+    rule:ETF_RULE,startedAt:new Date().toISOString(),quote:null,dropPct:null,signal:false,order:null,decisionReason:""};
+  let q;
+  try{q=await quote(origin,ETF_RULE.code);}catch(e){out.decisionReason="quote_failed: "+String(e.message||e);return out;}
+  out.quote={expectedPrice:q.expectedPrice||null,basePrice:q.basePrice||null,expectedChgPct:q.expectedChgPct,phase:q.phase||"",time:q.time||""};
+  out.dropPct=etfDropPct(q);
+  Object.assign(out,etfDecision(out.dropPct));
+  if(!out.signal)return out;
+  if(String(env.SCALPING_VTS_AUTO||"1")==="0"){out.ordersSkipped="SCALPING_VTS_AUTO=0";return out;}
+  if(!env.AUTOTRADE_KEY){out.ordersSkipped="AUTOTRADE_KEY 없음";return out;}
+  const qty=Math.floor(budget(env)*ETF_RULE.budgetMultiple/Math.max(1,+q.expectedPrice||0));
+  out.order=await vtsOrder(origin,env,date,"buy",{code:ETF_RULE.code,name:ETF_RULE.name},qty,
+    {id:etfSignalId(date,"buy"),strategy:"etf_dip_overnight",version:ETF_RULE.version});
+  return out;
+}
+async function etfSell(origin,env,date,buyDate){
+  const out={stage:"etf_sell",strategy:"etf_dip_overnight",strategyVersion:ETF_RULE.version,date,buyDate,code:ETF_RULE.code,
+    startedAt:new Date().toISOString(),boughtQty:0,alreadySoldQty:0,order:null,decisionReason:""};
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(String(buyDate||""))||buyDate>=date||(Date.parse(date)-Date.parse(buyDate))/864e5>5){
+    out.decisionReason="buy_date_invalid";return out;
+  }
+  try{
+    out.boughtQty=etfFills(await orders(origin,env,buyDate,ETF_RULE.code)).closeBuy.qty;
+    await sleep(700);
+    out.alreadySoldQty=etfFills(await orders(origin,env,date,ETF_RULE.code)).openSell.qty;
+  }catch(e){out.decisionReason="체결조회 실패: "+String(e.message||e);return out;}
+  const qty=Math.max(0,out.boughtQty-out.alreadySoldQty);
+  if(!(qty>0)){out.decisionReason="no_position";return out;}
+  await sleep(1200);
+  out.decisionReason="next_open_exit";
+  out.order=await vtsOrder(origin,env,date,"sell",{code:ETF_RULE.code,name:ETF_RULE.name},qty,
+    {id:etfSignalId(buyDate,"sell"),strategy:"etf_dip_overnight",version:ETF_RULE.version});
+  return out;
+}
+async function etfReconcile(origin,env,date){
+  const out={stage:"etf_reconcile",strategy:"etf_dip_overnight",strategyVersion:ETF_RULE.version,date,code:ETF_RULE.code,fills:null};
+  try{out.fills=etfFills(await orders(origin,env,date,ETF_RULE.code));}catch(e){out.error="체결조회 실패: "+String(e.message||e);}
+  return out;
+}
+
 export async function onRequestPost({request,env}){
   if(!authorized(request,env))return json({ok:false,error:"unauthorized"},401);
   let b={};
@@ -232,6 +303,9 @@ export async function onRequestPost({request,env}){
       return json({ok:true,...await quotePart(origin,date,part),finishedAt:new Date().toISOString()});
     }
     if(stage==="preopen")return json({ok:true,...await preopen(origin,env,date,b.candidates),finishedAt:new Date().toISOString()});
+    if(stage==="etf_buy")return json({ok:true,...await etfBuy(origin,env,date),finishedAt:new Date().toISOString()});
+    if(stage==="etf_sell")return json({ok:true,...await etfSell(origin,env,date,String(b.buyDate||"")),finishedAt:new Date().toISOString()});
+    if(stage==="etf_reconcile")return json({ok:true,...await etfReconcile(origin,env,date),finishedAt:new Date().toISOString()});
     const picks=(Array.isArray(b.picks)?b.picks:[]).slice(0,5);
     return json({ok:true,...await closeOrReconcile(origin,env,date,stage,picks),finishedAt:new Date().toISOString()});
   }catch(e){

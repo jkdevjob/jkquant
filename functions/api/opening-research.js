@@ -13,15 +13,17 @@ async function readRaw(path,required=false){
 
 export async function onRequestGet(){
   try{
-    const [base,nightly,gapdown]=await Promise.all([
+    const [base,nightly,gapdown,etf]=await Promise.all([
       readRaw("opening-research/latest.json",false),
       readRaw("nightly-research/latest.json",false),
-      readRaw("opening-gapdown-research/latest.json",false).catch(()=>null)
+      readRaw("opening-gapdown-research/latest.json",false).catch(()=>null),
+      readRaw("etf-overnight-research/latest.json",false).catch(()=>null)
     ]);
     // D-1 연구는 화면 요약에 필요한 부분만 싣는다(원본 신호 목록은 scalping-data 에 그대로 있다).
     const gd=gapdown?{strategyVersion:gapdown.strategyVersion,from:gapdown.from,to:gapdown.to,designEnd:gapdown.designEnd,
       finalDataThrough:gapdown.finalDataThrough,designSample:gapdown.designSample,outOfSample:gapdown.outOfSample,
-      live:gapdown.live,watchlist:gapdown.watchlist,generatedAt:gapdown.generatedAt,breadthFilter:gapdown.breadthFilter||null}:null;
+      live:gapdown.live,watchlist:gapdown.watchlist,generatedAt:gapdown.generatedAt,breadthFilter:gapdown.breadthFilter||null,
+      etfOvernight:etf?{rule:etf.rule,designEnd:etf.designEnd,gate:etf.gate,etf:etf.etf,d1v2:etf.d1v2,portfolio:etf.portfolio,live:etf.live,generatedAt:etf.generatedAt}:null}:null;
     if(!base){
       return new Response(JSON.stringify({
         ok:true,status:"collecting",archiveDays:0,variants:[],gapdown:gd,

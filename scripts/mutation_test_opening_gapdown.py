@@ -24,6 +24,10 @@ PY = [
     ("dip overlap", "backtest_crypto_orb.py", "        busy_until = fut[-1] + one\n", "\n"),
     ("dip lookahead", "backtest_crypto_orb.py", 'chg = (hb[h - one]["c"] / hb[h - one * (lb + 1)]["c"] - 1) * 100', 'chg = (hb[h]["c"] / hb[h - one * lb]["c"] - 1) * 100'),
     ("dip contiguity", "backtest_crypto_orb.py", "        if not all(x in hb for x in need):\n", "        if False:\n"),
+    ("etf threshold", "backtest_etf_overnight.py", 'if abs(chg) > 35 or chg > RULE["dropMaxPct"]:', 'if abs(chg) > 35 or chg > -2.0:'),
+    ("etf exit next open", "backtest_etf_overnight.py", "gross = (nxt[1] / cur[2] - 1) * 100", "gross = (nxt[2] / cur[2] - 1) * 100"),
+    ("portfolio double count", "backtest_etf_overnight.py", "out[d] = (a[d] + b[d]) / 2", "out[d] = a[d] + b[d]"),
+    ("no-trade days dropped", "backtest_etf_overnight.py", "r = [daily.get(d, 0.0) for d in cal]", "r = [daily[d] for d in cal if d in daily]"),
     ("dip hit minutes", "backtest_crypto_orb.py", "int((hit - entry_t).total_seconds() // 60) + 5", "int((hit - entry_t).total_seconds() // 60)"),
 ]
 JS = [
@@ -34,6 +38,9 @@ JS = [
     ("buy deadline", "opening-gapdown.js", 'if(stage==="preopen")return hms>=85000&&hms<ORDER_DEADLINE;', 'if(stage==="preopen")return hms>=85000&&hms<93000;'),
     ("close window", "opening-gapdown.js", 'if(stage==="close")return hms>=152000&&hms<152800;', 'if(stage==="close")return hms>=150000&&hms<152800;'),
     ("fill split", "opening-gapdown.js", 'buy:agg(fills("02",83000,90000))', 'buy:agg(fills("02",83000,240000))'),
+    ("etf drop sign", "opening-gapdown.js", "if(dropPct>ETF_RULE.dropMaxPct)return", "if(dropPct<ETF_RULE.dropMaxPct)return"),
+    ("etf buy window", "opening-gapdown.js", 'if(stage==="etf_buy")return hms>=152000&&hms<152800;', 'if(stage==="etf_buy")return hms>=150000&&hms<152800;'),
+    ("etf fill split", "opening-gapdown.js", 'return {closeBuy:agg(f("02",151500,240000)),openSell:agg(f("01",83000,90000))};', 'return {closeBuy:agg(f("02",0,240000)),openSell:agg(f("01",0,240000))};'),
     ("watchlist whitelist", "opening-gapdown.js", "    if(!w)continue;\n", "    if(!w){out.push({...r});continue;}\n"),
 ]
 
@@ -51,7 +58,7 @@ def run_js(folder):
 for label, filename, before, after in PY:
     with tempfile.TemporaryDirectory() as tmp:
         folder = Path(tmp)
-        for name in ("backtest_opening_gapdown.py", "backtest_crypto_orb.py", "test_opening_gapdown.py"):
+        for name in ("backtest_opening_gapdown.py", "backtest_crypto_orb.py", "backtest_etf_overnight.py", "test_opening_gapdown.py"):
             shutil.copy(ROOT / name, folder / name)
         path = folder / filename
         src = path.read_text(encoding="utf-8")
