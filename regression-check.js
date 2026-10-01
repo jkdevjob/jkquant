@@ -1793,8 +1793,8 @@ console.log('[37] 모의 성과 표 — 투입은 맨 오른쪽');
      /전략 · 세션[\s\S]*기간[\s\S]*평가[\s\S]*최종[\s\S]*현재[\s\S]*인출[\s\S]*연[\s\S]*투입/.test(head),
      head.slice(0,90));
   ok('투입이 마지막 머리글', head.lastIndexOf('투입') > head.lastIndexOf('연'));
-  // 시세를 못 받은 줄은 평가~연 여섯 칸(평가·최종·MDD·현재·인출·연)을 colspan 으로 덮는다
-  const iSpan=op.indexOf('colspan="6"'), iInflow=op.indexOf('${paperInflowText(r)}');
+  // 시세를 못 받은 줄은 평가~연 일곱 칸(평가·최종·MDD·MAR·현재·인출·연)을 colspan 으로 덮는다 (MAR 칸 추가 bb5465e)
+  const iSpan=op.indexOf('colspan="7"'), iInflow=op.indexOf('${paperInflowText(r)}');
   ok('투입 칸이 colspan 뒤에 온다', iSpan>0 && iInflow>iSpan);
   ok('투입 칸이 한 번만 그려진다', (op.match(/\$\{paperInflowText\(r\)\}/g)||[]).length===1);
   ok('각주 설명도 표 순서와 같다', idx.indexOf('평가 = 보유 평가금') < idx.indexOf('투입 = 밖에서 넣은 돈'));
@@ -2713,7 +2713,7 @@ console.log('\n[54] 모의 성과 — 최종·현재·인출 세 칸');
      /outAmt>0\?\(r\.retNow>=0\?'var\(--buy\)':'var\(--sell\)'\):'var\(--faint\)'/.test(idx)
      && /\$\{outAmt>0\?'\+'\+r\.retOut\.toFixed\(1\)\+'%':'—'\}/.test(idx));
   // 시세를 못 받은 줄은 평가~연 다섯 칸을 덮어야 한다
-  ok('시세 대기 줄이 칸 수를 맞춘다', /<td colspan="6" style="color:var\(--gold\)">시세 대기/.test(idx));
+  ok('시세 대기 줄이 칸 수를 맞춘다', /<td colspan="7" style="color:var\(--gold\)">시세 대기/.test(idx));
 }
 
 /* ════ 55. 단리 현금 흐름 — 출금·입금·합계와 월 수입 ════
