@@ -10833,6 +10833,14 @@ console.log('[SCALPING TELEGRAM] 실시간 신호 · 일일 매매/연구 요약
      && /request_worker_chart/.test(soxlCollector)
      && /\/bars\?strategy=soxl/.test(soxlCollector)
      && /u\.pathname==="\/bars"/.test(globalWorker));
+  const kisApi=fs.readFileSync(__d+'/functions/api/kis.js','utf8');
+  ok('SOXL 연구는 KIS 공식 해외주식 5분봉을 1순위 읽기전용 원천으로 사용',
+     /HHDFS76950200/.test(kisApi)
+     && /inquire-time-itemchartprice/.test(kisApi)
+     && /op === "usmin"/.test(kisApi)
+     && /internalMarketReadAuthorized/.test(kisApi)
+     && /request_kis_chart/.test(soxlCollector)
+     && !/op=order/.test(soxlCollector));
   ok('일일 요약 API는 TRADE/NO TRADE + 검증기록을 모두 포함',
      /⑤ 오늘 매매이력/.test(dailyApi) && /⑥ 검증·분석 기록/.test(dailyApi) && /NO TRADE/.test(dailyApi));
   const cr0=nightly.indexOf('def crypto_report():');
