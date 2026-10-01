@@ -80,3 +80,39 @@ for(const [name,mutate] of uiMuts){
   }else console.log('✓ UI mutation killed: '+name);
 }
 console.log('✓ opening/daytrading/crypto/SOXL have unified today paper-history UI');
+
+
+function strategyCockpitProbe(text){
+  const must=[
+    "const STRATEGY_UI_META={",
+    "function renderStrategyCockpit(name)",
+    "['today','📒 오늘 모의매매 · 손익']",
+    "['review','🧪 그림자 · 매일 검증 · 개선']",
+    "['history','📚 누적 모의매매 이력']",
+    "필터·손절·익절은 목표 맞추려고 자동 완화하지 않음",
+    "그림자 prospective",
+    "데이터 최신성"
+  ];
+  if(must.some(x=>!text.includes(x)))return false;
+  const cfg=text.slice(text.indexOf('const cfg={'),text.indexOf('Object.keys(cfg)',text.indexOf('const cfg={')));
+  for(const name of ['opening','daytrading','crypto','soxl']){
+    if(!cfg.includes(name+':'))return false;
+    if(!cfg.includes("today:['📒 오늘 장중 모의 매매이력']"))return false;
+  }
+  return true;
+}
+if(!strategyCockpitProbe(src)){
+  console.error('✗ strategy cockpit / decision-first flow missing');
+  process.exit(1);
+}
+const cockpitMuts=[
+  ['today paper history must have its own flow step',x=>x.replace("['today','📒 오늘 모의매매 · 손익']", "['today','기타']")],
+  ['filters must not be loosened to chase target',x=>x.replace('필터·손절·익절은 목표 맞추려고 자동 완화하지 않음','')]
+];
+for(const [name,mutate] of cockpitMuts){
+  if(strategyCockpitProbe(mutate(src))){
+    console.error('✗ cockpit mutation survived: '+name);
+    process.exit(1);
+  }else console.log('✓ cockpit mutation killed: '+name);
+}
+console.log('✓ strategy cockpit covers rules / today / shadow / validation / history / freshness');
