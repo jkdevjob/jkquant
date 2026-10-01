@@ -10650,9 +10650,10 @@ console.log('[SCALPING HISTORY] 4전략 누적 매매이력 · 과매도 반등 
      && /parseInt\(range,10\)/.test(hapi));
   ok('누적 이력 공통 컬럼은 날짜·종목·전략버전·신호·진입·청산·사유·손익',
      /<th>날짜<\/th><th>종목<\/th><th>전략버전<\/th><th>신호<\/th><th>진입<\/th><th>청산<\/th><th>사유<\/th><th>손익<\/th>/.test(sc));
-  ok('오늘 장중 모의장부는 공통 5번(today)으로 분리되고 7번은 누적 이력',
-     /opening:\{strategy:\['🔥 실시간 시초가 돌파 감시'\],search:\[\],today:\['📒 오늘 장중 모의 매매이력'\],history:\[\]/.test(sc)
+  ok('오늘 장중 모의장부는 공통 5번(today), 시초가 실시간 감시는 2번(search), 7번은 누적 이력',
+     /opening:\{strategy:\[\],search:\['🔥 실시간 시초가 돌파 감시'\],today:\['📒 오늘 장중 모의 매매이력'\],history:\[\]/.test(sc)
      && /daytrading:\{strategy:\['📈 데이트레이딩 기준전략'\],search:\['📡 데이트레이딩 서버 장중 감시'\],today:\['📒 오늘 장중 모의 매매이력'\],history:\[\]/.test(sc)
+     && /if\(!bodies\.strategy\.children\.length\)[\s\S]{0,800}📖 기준전략 요약/.test(sc)
      && /for\(const step of \['strategy','search','today','review','history','paper'\]\)/.test(sc));
   ok('폐기된 과매도 반등 공용 UI는 활성 화면에 노출하지 않음',
      !/id="pos_body"/.test(sc)
