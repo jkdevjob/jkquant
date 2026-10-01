@@ -221,7 +221,7 @@ canvas{display:block;width:100%;height:auto}
 
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Morning Scalping</div><h1>JK <span class="v">퀀트</span> 단타 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="scVer">v1.30.3</span></h1></div>
+    <div><div class="kicker">Morning Scalping</div><h1>JK <span class="v">퀀트</span> 단타 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="scVer">v1.30.4</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -1767,6 +1767,17 @@ async function loadDayTradingPaper(silent=false){
   }
 }
 
+function dayTradingTodayMetrics(summary,trades,date){
+  const rows=summary&&Array.isArray(summary.daily)?summary.daily:[];
+  const day=rows.find(x=>String(x.date||'')===String(date||''))||null;
+  const vals=(trades||[]).map(x=>Number(x.pnl)).filter(Number.isFinite);
+  const tradeSumPct=vals.reduce((a,b)=>a+b,0);
+  const accountReturnPct=day&&Number.isFinite(Number(day.returnPct))
+    ? Number(day.returnPct)
+    : (vals.length?tradeSumPct/vals.length:0);
+  return {date:date||'',trades:vals.length,accountReturnPct,tradeSumPct};
+}
+
 async function loadDayTradingResearch(){
   const msg=$('dt_msg'),body=$('dt_body');
   if(!msg||!body)return;
@@ -1798,11 +1809,18 @@ async function loadDayTradingResearch(){
     }
 
     const today=j.latestDayTrades||[];
-    let todayHtml='<div style="margin-bottom:12px"><b>📒 최근 거래일 기준전략</b></div>';
+    const latestDate=(today[0]&&today[0].date)||j.to||'';
+    const todayMetrics=dayTradingTodayMetrics(s,today,latestDate);
+    const todayPct=v=>((v||0)>=0?'+':'')+Number(v||0).toFixed(2)+'%';
+    let todayHtml='<div style="margin-bottom:12px"><b>📒 최근 거래일 기준전략</b> <span class="sub">'+esc(latestDate||'')+'</span></div>';
     if(!today.length){
       todayHtml+='<div class="warn">최근 거래일에는 기준전략 신호가 없었습니다.</div>';
     }else{
-      todayHtml+='<div class="htable-wrap"><table class="htable"><thead><tr><th>종목</th><th>신호</th><th>진입</th><th>청산</th><th>사유</th><th>손익</th></tr></thead><tbody>'+
+      todayHtml+='<div class="out" style="margin-bottom:10px">'+
+        '<div class="outbox"><div class="ol">오늘 계좌수익률</div><div class="ov '+(todayMetrics.accountReturnPct>=0?'good':'bad')+'">'+todayPct(todayMetrics.accountReturnPct)+'</div><div class="sub">동일비중 평균 · '+todayMetrics.trades+'건</div></div>'+
+        '<div class="outbox"><div class="ol">개별 매매 수익률 합계</div><div class="ov '+(todayMetrics.tradeSumPct>=0?'good':'bad')+'">'+todayPct(todayMetrics.tradeSumPct)+'</div><div class="sub">매매이력 단순 합계 · 계좌수익률 아님</div></div>'+
+        '</div>'+
+        '<div class="htable-wrap"><table class="htable"><thead><tr><th>종목</th><th>신호</th><th>진입</th><th>청산</th><th>사유</th><th>손익</th></tr></thead><tbody>'+
         today.map(x=>'<tr><td><b>'+esc(x.name||x.code)+'</b><div class="sub">'+esc(x.code)+'</div></td>'+
         '<td>'+String(x.signalTime||'').padStart(4,'0')+
         '<div class="sub">세션 '+fmt(x.sessionRet,2)+'% · VWAP기울기 '+fmt(x.vwapSlope,2)+'% · 거래량 '+fmt(x.volRatio,2)+'x</div></td>'+
