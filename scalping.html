@@ -1619,7 +1619,7 @@ function renderStrategyCockpit(name){
 
 function setupUnifiedStrategyFlow(){
   const cfg={
-    opening:{strategy:['🔥 실시간 시초가 돌파 감시'],search:[],today:['📒 오늘 장중 모의 매매이력'],history:[],review:['🧪 누적 시초가 연구 백테스트'],paper:['🔎 한투 VTS 자동 병행체결 대조']},
+    opening:{strategy:[],search:['🔥 실시간 시초가 돌파 감시'],today:['📒 오늘 장중 모의 매매이력'],history:[],review:['🧪 누적 시초가 연구 백테스트'],paper:['🔎 한투 VTS 자동 병행체결 대조']},
     daytrading:{strategy:['📈 데이트레이딩 기준전략'],search:['📡 데이트레이딩 서버 장중 감시'],today:['📒 오늘 장중 모의 매매이력'],history:[],review:['🧪 데이트레이딩 누적 연구','📼 데이터 수집 규칙'],paper:['🔎 한투 VTS 체결 대조']},
     crypto:{strategy:['₿ 비트코인 00시 ORB 기준전략 v2'],search:['📡 현재 KRW-BTC'],today:['📒 오늘 장중 모의 매매이력'],history:[],review:['🧪 누적 비트코인 연구','📼 데이터 수집 규칙'],paper:[]},
     soxl:{strategy:['⚡ SOXL 15분 ORB 기준전략'],search:['📡 현재 SOXL'],today:['📒 오늘 장중 모의 매매이력'],history:[],review:['🧪 SOXL 누적 연구','📼 데이터 감사 규칙'],paper:[]}
@@ -1653,6 +1653,14 @@ function setupUnifiedStrategyFlow(){
     });
     for(const step of ['strategy','search','today','review','history','paper']){
       (cfg[name][step]||[]).forEach(n=>flowPut(bodies[step],flowDirectCard(pane,n),used));
+    }
+    if(!bodies.strategy.children.length){
+      const m=STRATEGY_UI_META[name]||{};
+      bodies.strategy.appendChild(flowCard('📖 기준전략 요약',
+        '<div class="out">'+
+        '<div class="outbox"><div class="ol">전략버전</div><div class="ov" style="font-size:14px">'+esc(m.version||'—')+'</div></div>'+
+        '<div class="outbox"><div class="ol">시장/유니버스</div><div class="ov" style="font-size:14px">'+esc(m.market||'—')+'</div></div>'+
+        '</div><p class="lead" style="margin-top:9px"><b>종목선정:</b> '+esc(m.selection||'')+'<br><b>청산/리스크:</b> '+esc(m.risk||'')+'<br><b>운영:</b> '+esc(m.execution||'')+'</p>'));
     }
     for(const side of ['buy','sell']){
       const d=flowTimingDefault(name,side);
