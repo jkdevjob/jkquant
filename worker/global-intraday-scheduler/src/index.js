@@ -221,9 +221,9 @@ async function runSoxl(env,now){
 
 async function summarizeBtc(env,now){
   const k=parts(now,"Asia/Seoul");
-  if(k.hm!==2305)return;
+  if(k.hm!==2205)return;
   const t=btcTrade(await fetchBtc(k.date),now,k.date);
-  const lines=["세션 00:00~22:00 KST · 신규진입 마감 22:00 · 청산추적 종료 23:05"];
+  const lines=["세션 00:00~22:00 KST · 신규진입 마감 22:00 · 22:05 종료요약"];
   if(t&&t.entry&&t.exit){
     const gross=pct(t.exit.price,t.entryPrice),net=gross-t.friction;
     lines.push(
@@ -238,7 +238,7 @@ async function summarizeBtc(env,now){
   }
   await alert(env,{
     strategy:"crypto",stage:"summary",eventId:"crypto:"+BTC_STRATEGY_VERSION+":"+k.date+":session-summary",
-    date:k.date,time:"23:05 KST",lines
+    date:k.date,time:"22:05 KST",lines
   });
 }
 
@@ -282,7 +282,7 @@ export default {
   async scheduled(controller,env,ctx){ctx.waitUntil(run(env));},
   async fetch(request,env){
     const u=new URL(request.url);
-    if(u.pathname==="/health")return new Response(JSON.stringify({ok:true,service:"jkquant-global-intraday-scheduler",schedule:"every minute",strategies:["crypto","soxl"],summaries:{crypto:"23:05 KST",soxl:"16:05 America/New_York (05:05/06:05 KST DST-aware)"},crypto:{strategyVersion:BTC_STRATEGY_VERSION,openingRange:"00:00~00:05 KST",newEntryThrough:"22:00 KST",exitTrackingThrough:"23:05 KST"},mode:"research-paper-alert-no-order"}),{headers:{"content-type":"application/json","cache-control":"no-store"}});
+    if(u.pathname==="/health")return new Response(JSON.stringify({ok:true,service:"jkquant-global-intraday-scheduler",schedule:"every minute",strategies:["crypto","soxl"],summaries:{crypto:"22:05 KST (new-entry session end)",soxl:"16:05 America/New_York (05:05/06:05 KST DST-aware)"},crypto:{strategyVersion:BTC_STRATEGY_VERSION,openingRange:"00:00~00:05 KST",newEntryThrough:"22:00 KST",exitTrackingThrough:"23:05 KST"},mode:"research-paper-alert-no-order"}),{headers:{"content-type":"application/json","cache-control":"no-store"}});
     return new Response("not found",{status:404});
   }
 };
