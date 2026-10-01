@@ -27,7 +27,12 @@ PY = [
     ("etf threshold", "backtest_etf_overnight.py", 'if abs(chg) > 35 or chg > RULE["dropMaxPct"]:', 'if abs(chg) > 35 or chg > -2.0:'),
     ("etf exit next open", "backtest_etf_overnight.py", "gross = (nxt[1] / cur[2] - 1) * 100", "gross = (nxt[2] / cur[2] - 1) * 100"),
     ("portfolio double count", "backtest_etf_overnight.py", "out[d] = (a[d] + b[d]) / 2", "out[d] = a[d] + b[d]"),
-    ("no-trade days dropped", "backtest_etf_overnight.py", "r = [daily.get(d, 0.0) for d in cal]", "r = [daily[d] for d in cal if d in daily]"),
+    ("no-trade days dropped", "claude_lab.py", "    for d in cal:\n        x = daily.get(d, 0.0)", "    for d in [c for c in cal if c in daily]:\n        x = daily[d]"),
+    ("btc trend lookahead", "claude_lab.py", "ma = sum(S[i - n:i]) / n", "ma = sum(S[i - n + 1:i + 1]) / n"),
+    ("btc trend signal day", "claude_lab.py", "hold = 1 if S[i - 1] > ma else 0", "hold = 1 if S[i] > ma else 0"),
+    ("trend stop", "claude_lab.py", 'if (L[i] / ref - 1) * 100 <= -p["stopPct"]:', 'if False:'),
+    ("trend sizing", "claude_lab.py", 'dv[D[i]] = ((C[i] / ref - 1) * 100 - cost) * p["size"]', 'dv[D[i]] = ((C[i] / ref - 1) * 100 - cost)'),
+    ("gpt same window", "claude_lab.py", "window = [d for d in cal if start and d >= start]", "window = list(cal)"),
     ("dip hit minutes", "backtest_crypto_orb.py", "int((hit - entry_t).total_seconds() // 60) + 5", "int((hit - entry_t).total_seconds() // 60)"),
 ]
 JS = [
@@ -58,7 +63,7 @@ def run_js(folder):
 for label, filename, before, after in PY:
     with tempfile.TemporaryDirectory() as tmp:
         folder = Path(tmp)
-        for name in ("backtest_opening_gapdown.py", "backtest_crypto_orb.py", "backtest_etf_overnight.py", "test_opening_gapdown.py"):
+        for name in ("backtest_opening_gapdown.py", "backtest_crypto_orb.py", "backtest_etf_overnight.py", "claude_lab.py", "test_opening_gapdown.py"):
             shutil.copy(ROOT / name, folder / name)
         path = folder / filename
         src = path.read_text(encoding="utf-8")

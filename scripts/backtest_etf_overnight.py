@@ -73,37 +73,11 @@ def signals(rows):
 
 
 def goal_metrics(daily, calendar):
-    """daily: {date: net %} realised that day; calendar: every trading day (no-trade days count as 0%)."""
-    cal = sorted(set(calendar))
-    if not cal:
-        return {}
-    yrs = len(cal) / 250
-    traded = [d for d in cal if d in daily]
-    r = [daily.get(d, 0.0) for d in cal]
-    eq = pk = 1.0
-    mdd = 0.0
-    wk = {}
-    for d, x in zip(cal, r):
-        eq *= 1 + x / 100
-        pk = max(pk, eq)
-        mdd = min(mdd, eq / pk - 1)
-        k = date.fromisoformat(d).isocalendar()[:2]
-        wk[k] = wk.get(k, 1.0) * (1 + x / 100)
-    vals = [daily[d] for d in traded]
-    loss = [v for v in vals if v < 0]
-    out = dict(
-        tradingDays=len(cal), tradeDays=len(traded), tradeDaysPerYear=len(traded) / yrs,
-        plus1DaysPerYear=sum(1 for v in vals if v >= 1) / yrs,
-        plus1RateOfTradeDays=(sum(1 for v in vals if v >= 1) / len(vals) * 100) if vals else None,
-        plus5WeeksPerYear=sum(1 for v in wk.values() if v >= 1.05) / yrs,
-        weeklyAvgPct=(eq ** (1 / len(wk)) - 1) * 100 if wk else None,
-        lossDaysPerYear=len(loss) / yrs, lossDayAvgPct=statistics.fmean(loss) if loss else 0.0,
-        worstDayPct=min(vals) if vals else 0.0, cagrPct=(eq ** (1 / yrs) - 1) * 100, mddPct=mdd * 100,
-        expectancyPct=statistics.fmean(vals) if vals else None,
-        tStat=(statistics.fmean(vals) / (statistics.stdev(vals) / math.sqrt(len(vals)))) if len(vals) > 2 and statistics.stdev(vals) > 0 else None,
-    )
-    out["gate"] = bool(vals) and out["expectancyPct"] > 0 and out["mddPct"] >= GATE["mdd"] and out["worstDayPct"] >= GATE["worstDay"]
-    return out
+    """목표 지표는 claude_lab.goal_metrics 하나로 센다(같은 걸 두 군데서 세지 않는다)."""
+    import sys
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+    from claude_lab import goal_metrics as gm
+    return gm(daily, calendar, 250)
 
 
 def d1_v2_daily():

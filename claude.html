@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>클로드 전략 — JK Quant</title>
+<title>단타(클로드) — JK Quant</title>
 <style>
 :root{--bg:#0f1320;--surf:#171c2e;--surf2:#1e2540;--border:#2a3354;--border2:#34406a;--text:#e8ecf7;--dim:#9aa6c9;--faint:#6f7ba0;--accent:#d9825b;--green:#36d399;--red:#f87b8c;--gold:#f5c451}
 *{box-sizing:border-box}html,body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Pretendard","Segoe UI",sans-serif}body{font-size:14px;line-height:1.55}a{color:inherit}
@@ -15,16 +15,18 @@
 main{padding:22px 0 70px}.hero h2{font-size:23px;margin:0 0 3px}.sub{color:var(--dim);font-size:12px}
 .card{background:var(--surf);border:1px solid var(--border);border-radius:12px;padding:14px;margin-top:12px}.card h3{margin:0 0 4px;font-size:16px}
 .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin-top:10px}.kpi{background:var(--surf2);border:1px solid var(--border);border-radius:10px;padding:10px}.kpi .l{font-size:11px;color:var(--dim)}.kpi .v{font-size:20px;font-weight:900;margin-top:2px}
-.tw{overflow-x:auto;margin-top:8px}table{border-collapse:collapse;width:100%;min-width:640px;font-size:12.5px}th,td{border-bottom:1px solid var(--border);padding:7px 8px;text-align:right;white-space:nowrap}th{color:var(--dim);font-weight:700}td:first-child,th:first-child{text-align:left}
+.tw{overflow-x:auto;margin-top:8px}table{border-collapse:collapse;width:100%;min-width:560px;font-size:12.5px}th,td{border-bottom:1px solid var(--border);padding:7px 8px;text-align:right;white-space:nowrap}th{color:var(--dim);font-weight:700}td:first-child,th:first-child{text-align:left}
 .win{color:var(--green)}.loss{color:var(--red)}.good{color:var(--green)}.bad{color:var(--red)}.note{color:var(--faint);font-size:11.5px;margin-top:8px}
 .rule{background:var(--surf2);border:1px solid var(--border);border-radius:10px;padding:10px;margin-top:8px;font-size:13px}.rule b{color:var(--gold)}
+.tabs{display:flex;gap:7px;overflow-x:auto;padding:4px 0 8px;margin-top:14px}.tab{flex:0 0 auto;border:1px solid var(--border);background:var(--surf);color:var(--dim);border-radius:999px;padding:8px 13px;font-weight:800;font-size:13px;cursor:pointer}.tab.on{background:var(--accent);border-color:var(--accent);color:#fff}
+.vs td:first-child{font-weight:800}.tag{display:inline-block;font-size:10.5px;padding:2px 7px;border-radius:999px;border:1px solid var(--border);color:var(--dim);margin-left:6px}
 .loading{padding:40px;text-align:center;color:var(--dim)}.warn{padding:9px 11px;border-radius:9px;background:rgba(248,123,140,.08);border:1px solid rgba(248,123,140,.25);color:#ffb3be;font-size:12px}
 @media(max-width:560px){.wrap{padding:0 11px}.hero h2{font-size:20px}.kpi .v{font-size:17px}}
 </style>
 </head>
 <body>
 <header><div class="wrap"><div class="htop">
-  <div class="brand"><div class="kicker">JK QUANT · CLAUDE</div><h1>🤖 클로드 <span class="v">전략</span> <span class="ver" id="clVer">v1.0.0</span></h1></div>
+  <div class="brand"><div class="kicker">JK QUANT · CLAUDE</div><h1>🤖 단타 <span class="v">(클로드)</span> <span class="ver" id="clVer">v1.1.0</span></h1></div>
   <div class="jkmenu" id="jkmenuWrap">
     <button class="jkmenu-btn" aria-label="메뉴" onclick="jkMenuToggle(event)">三</button>
     <div class="jkmenu-pop" id="jkmenuPop" hidden>
@@ -32,10 +34,10 @@ main{padding:22px 0 70px}.hero h2{font-size:23px;margin:0 0 3px}.sub{color:var(-
       <a href="/plan"><span class="mi">🧭</span>자산플랜</a>
       <a href="/backtest"><span class="mi">📊</span>백테</a>
       <a href="/scalping"><span class="mi">⚡</span>단타</a>
+      <a href="/claude" class="cur"><span class="mi">🤖</span>단타(클로드)</a>
       <a href="/paper"><span class="mi">🧪</span>모의</a>
       <a href="/ipo"><span class="mi">🎯</span>공모주</a>
       <a href="/job"><span class="mi">💼</span>JOB</a>
-      <a href="/claude" class="cur"><span class="mi">🤖</span>클로드 전략</a>
       <a href="/admin"><span class="mi">👤</span>관리자</a>
     </div>
   </div>
@@ -44,7 +46,14 @@ main{padding:22px 0 70px}.hero h2{font-size:23px;margin:0 0 3px}.sub{color:var(-
 <main><div class="wrap">
   <div class="hero">
     <h2>목표: 하루 +1% · 주 +5%</h2>
-    <div class="sub">클로드가 만든 전략만 모은 페이지입니다. GPT 단타 탭과 데이터·코드가 섞이지 않습니다. 모든 수익률은 수수료·세금·슬리피지를 뺀 순수익, 매매 없는 날은 0%로 셉니다.</div>
+    <div class="sub">GPT 단타와 같은 4개 탭에 클로드 전략을 하나씩 두고, 같은 기간으로 GPT 기준전략과 비교합니다. 모든 수익률은 수수료·세금·슬리피지를 뺀 순수익, 매매 없는 날은 0%로 셉니다.</div>
+  </div>
+  <div class="tabs" id="tabs">
+    <button class="tab on" data-tab="opening" onclick="showTab('opening')">⚡ 시초가</button>
+    <button class="tab" data-tab="daytrading" onclick="showTab('daytrading')">📈 데이트레이딩</button>
+    <button class="tab" data-tab="crypto" onclick="showTab('crypto')">₿ 비트코인</button>
+    <button class="tab" data-tab="soxl" onclick="showTab('soxl')">⚡ SOXL</button>
+    <button class="tab" data-tab="all" onclick="showTab('all')">🎯 합산</button>
   </div>
   <div id="body"><div class="loading">불러오는 중…</div></div>
 </div></main>
@@ -55,64 +64,87 @@ document.addEventListener("click",function(e){var m=document.getElementById("jkm
 function esc(s){return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;")}
 function pct(v,d){if(v==null||!isFinite(v))return "—";v=+v;return (v>=0?"+":"")+v.toFixed(d==null?2:d)+"%"}
 function num(v,d){return v==null||!isFinite(v)?"—":(+v).toFixed(d==null?1:d)}
+function mddTxt(v){return v==null||!isFinite(v)?"—":(+v).toFixed(0)+"%"}
 function cls(v){return v==null?"":(v>=0?"win":"loss")}
 
 // 목표 지표 한 줄 — 거르기(기대값>0 · MDD · 최악일)를 통과해야 달성 빈도를 믿는다
 function goalRow(label,z){
   z=z||{};
-  return "<tr><td><b>"+esc(label)+"</b></td><td>"+num(z.tradeDaysPerYear,0)+"</td><td class='win'><b>"+num(z.plus1DaysPerYear,0)+"</b></td><td>"+num(z.plus5WeeksPerYear)+"</td>"+
-    "<td class='"+cls(z.weeklyAvgPct)+"'>"+pct(z.weeklyAvgPct)+"</td><td class='loss'>"+pct(z.lossDayAvgPct)+" / "+pct(z.worstDayPct,1)+"</td>"+
-    "<td class='loss'>"+num(z.mddPct,0)+"%</td><td class='"+cls(z.cagrPct)+"'>"+pct(z.cagrPct,0)+"</td><td>"+(z.tradeDays?(z.gate?"✅":"❌"):"—")+"</td></tr>";
+  return "<tr><td><b>"+esc(label)+"</b></td><td class='win'><b>"+num(z.plus1DaysPerYear,0)+"</b></td><td>"+num(z.plus5WeeksPerYear)+"</td><td class='loss'>"+mddTxt(z.mddPct)+"</td><td class='"+cls(z.weeklyAvgPct)+"'>"+pct(z.weeklyAvgPct)+"</td><td class='loss'>"+pct(z.lossDayAvgPct)+" / "+pct(z.worstDayPct,1)+"</td>"+
+    "<td class='"+cls(z.cagrPct)+"'>"+pct(z.cagrPct,0)+"</td><td>"+num(z.tradeDaysPerYear,0)+"</td><td>"+(z.tradeDays?(z.gate?"✅":"❌"):"—")+"</td></tr>";
 }
 function goalTable(title,rows){
-  return "<div class='tw'><table><thead><tr><th>"+esc(title)+"</th><th>매매일/년</th><th>+1%↑일/년</th><th>+5%↑주/년</th><th>주평균</th><th>손실일 평균 / 최악</th><th>MDD</th><th>연복리</th><th>통과</th></tr></thead><tbody>"+rows+"</tbody></table></div>";
+  return "<div class='tw'><table><thead><tr><th>"+esc(title)+"</th><th>+1%↑일/년</th><th>+5%↑주/년</th><th>MDD</th><th>주평균</th><th>손실일 평균 / 최악</th><th>연복리</th><th>매매일/년</th><th>통과</th></tr></thead><tbody>"+rows+"</tbody></table></div>";
 }
 function dayCell(z,k){z=((z||{})[k])||{};return z.days?"<span class='"+cls(z.dayAvgPnl)+"'>"+pct(z.dayAvgPnl)+"</span> <span class='sub'>t="+num(z.tStatDays,2)+" · "+z.days+"일</span>":"—"}
 
+var J=null,TAB="opening";
+function showTab(t){TAB=t;document.querySelectorAll(".tab").forEach(function(b){b.classList.toggle("on",b.getAttribute("data-tab")===t)});try{localStorage.setItem("clTab",t)}catch(e){}render()}
+// 클로드 vs GPT — 같은 날짜 구간·같은 달력
+function vsRow(label,z){
+  if(!z)return "<tr><td>"+esc(label)+"</td><td colspan='8' class='sub'>기록 없음</td></tr>";
+  return "<tr><td>"+esc(label)+"</td><td class='"+cls(z.totalPct)+"'><b>"+pct(z.totalPct,1)+"</b></td><td class='win'><b>"+z.plus1Days+"</b></td><td class='loss'>"+mddTxt(z.mddPct)+"</td><td>"+z.plus5Weeks+"</td><td class='loss'>"+pct(z.worstDayPct,1)+"</td><td class='"+cls(z.weeklyAvgPct)+"'>"+pct(z.weeklyAvgPct)+"</td><td>"+z.tradeDays+"</td><td>"+(z.tradeDays?(z.gate?"✅":"❌"):"—")+"</td></tr>";
+}
+function vsTable(t){
+  var c=t.compare||{},g=t.gpt||{};
+  if(!c.window)return "<p class='note'>GPT 기준전략 기록이 아직 없어 비교 구간이 없습니다.</p>";
+  return "<div class='sub'>같은 기간 "+esc(c.window[0])+" ~ "+esc(c.window[1])+"</div><div class='tw vs'><table><thead><tr><th>전략</th><th>누적</th><th>+1%↑일</th><th>MDD</th><th>+5%↑주</th><th>최악일</th><th>주평균</th><th>매매일</th><th>통과</th></tr></thead><tbody>"+
+    vsRow("🤖 클로드",c.claude)+vsRow("GPT · "+((g.strategyVersions||[]).join(", ")||"기준전략"),c.gpt)+"</tbody></table></div>"+
+    "<p class='note'>GPT 기록 "+(g.trades||0)+"건(자체 기록 순손익, 같은 날 여러 건이면 평균). 기간이 짧으면 숫자가 흔들리니 누적일수를 같이 보세요.</p>";
+}
+function claudeCard(t,extra){
+  var c=t.claude||{};
+  return "<div class='card'><h3>🤖 "+esc(c.name||"")+"<span class='tag'>"+esc(c.strategyVersion||"")+"</span></h3><div class='rule'>"+esc(c.rule||"")+"</div>"+(extra||"")+
+    goalTable("목표 지표",goalRow("설계 표본 (~"+esc(J.lab.designEnd||"")+")",c.design)+goalRow("판정용 (10/1~)",c.outOfSample))+
+    "<p class='note'>설계 표본은 규칙을 만들 때 본 기간이라 판정에 쓰지 않습니다.</p></div>"+
+    "<div class='card'><h3>⚖️ GPT 기준전략과 비교</h3>"+vsTable(t)+"</div>";
+}
+function nextSig(t,unit){
+  var n=t.nextSignal;if(!n)return "";
+  return "<div class='kpis'><div class='kpi'><div class='l'>다음 "+unit+" 신호 ("+esc(n.basedOn)+" 종가 기준)</div><div class='v "+(n.holdNext?"good":"")+"'>"+(n.holdNext?"보유":"쉼")+"</div><div class='sub'>종가 "+Math.round(n.signalClose).toLocaleString()+" · 평균 "+Math.round(n.ma).toLocaleString()+"</div></div></div>";
+}
+function render(){
+  var body=document.getElementById("body");if(!J)return;
+  var gd=J.gapdown||{},et=J.etf||{},wl=J.watchlist||{},lab=J.lab||{tabs:{}},T=lab.tabs||{},html="";
+  if(TAB==="opening"){
+    var t=T.opening||{};
+    var names=(wl.names||[]).map(function(x){return esc(x.name)+" <span class='sub'>RSI "+num(x.rsi14,1)+"</span>"}).join(" · ");
+    html+=claudeCard(t,"<div class='sub' style='margin-top:8px'>다음 거래일 명단 ("+esc(wl.basedOn||"—")+" 기준, "+((wl.names||[]).length)+"종목): "+(names||"없음")+"</div>");
+    var lv=gd.live||{};
+    var rows=(gd.liveTrades||[]).slice().reverse().map(function(x){return "<tr><td>"+esc(x.date)+"</td><td>"+esc(x.name||x.code)+"</td><td>"+pct(x.expectedGapPct)+"</td><td>"+pct(x.actualGapPct)+"</td><td>"+pct(x.buySlipPct)+"</td><td>"+pct(x.sellSlipPct)+"</td><td class='"+cls(x.realizedNetPct)+"'>"+pct(x.realizedNetPct)+"</td><td>"+(x.buyOrderOk?"접수":"<span class='loss'>"+esc(x.buyOrderMsg||"실패")+"</span>")+"</td></tr>"}).join("");
+    html+="<div class='card'><h3>📡 모의체결 실측 (KIS 모의투자)</h3><div class='kpis'><div class='kpi'><div class='l'>실측 거래</div><div class='v'>"+(lv.trades||0)+"건</div></div><div class='kpi'><div class='l'>시가 − 예상체결가</div><div class='v'>"+pct((lv.openVsExpectedPct||{}).mean)+"</div></div><div class='kpi'><div class='l'>매수 / 매도 슬리피지</div><div class='v' style='font-size:15px'>"+pct((lv.buySlipPct||{}).mean)+" / "+pct((lv.sellSlipPct||{}).mean)+"</div></div><div class='kpi'><div class='l'>실측 순손익</div><div class='v'>"+pct((lv.realizedNetPct||{}).mean)+"</div></div></div>"+
+      (rows?"<div class='tw'><table><thead><tr><th>날짜</th><th>종목</th><th>예상 갭</th><th>실제 갭</th><th>매수 슬립</th><th>매도 슬립</th><th>순손익</th><th>주문</th></tr></thead><tbody>"+rows+"</tbody></table></div>":"<p class='note'>아직 매수 신호가 난 날이 없습니다. 조건에 맞는 갭하락 종목이 없으면 주문하지 않습니다.</p>")+"</div>";
+    var ds=gd.designSample||{},st=ds.strategy||{},ct=ds.control||{},sk=(ds.skillPairedDays||{})["1.5t"]||{},bf=(gd.breadthFilter||{}).variants||{};
+    var bfr=Object.keys(bf).map(function(k){var z=(bf[k].designSample||{}).strategy||{};return "<tr><td><b>v2 · 통과 "+esc(k.replace("min",""))+"개 이상</b></td><td>"+dayCell(z,"0.0t")+"</td><td>"+dayCell(z,"1.5t")+"</td><td>"+dayCell(z,"3.0t")+"</td></tr>"}).join("");
+    html+="<div class='card'><h3>🔬 상세 — 하루 평균 순손익 (설계 표본, 3종목)</h3><div class='tw'><table><thead><tr><th>슬리피지 가정</th><th>0틱</th><th>1.5틱</th><th>3틱</th></tr></thead><tbody><tr><td>v1 · 매일</td><td>"+dayCell(st,"0.0t")+"</td><td>"+dayCell(st,"1.5t")+"</td><td>"+dayCell(st,"3.0t")+"</td></tr>"+bfr+"<tr><td>대조군 · 같은 날 무작위 갭하락</td><td>"+dayCell(ct,"0.0t")+"</td><td>"+dayCell(ct,"1.5t")+"</td><td>"+dayCell(ct,"3.0t")+"</td></tr></tbody></table></div><p class='note'>선별 실력(같은 날 대조군과의 차이, 1.5틱): "+pct(sk.mean)+" · t="+num(sk.tStat,2)+" · "+(sk.days||0)+"일.</p></div>";
+  }else if(TAB==="daytrading"){
+    var t2=T.daytrading||{},el=et.live||{};
+    html+=claudeCard(t2,"<div class='sub' style='margin-top:8px'>15:21 예상 종가가 −3% 이하면 종가 동시호가 모의 매수 → 다음 거래일 08:56 장전 동시호가 모의 매도. 데이트레이딩 탭의 장중 매매와 달리 하룻밤 보유입니다.</div>");
+    var erows=((el.rows)||[]).slice().reverse().map(function(x){return "<tr><td>"+esc(x.signalDate)+" → "+esc(x.exitDate||"—")+"</td><td>"+pct(x.expectedDropPct)+"</td><td>"+pct(x.buySlipPct)+"</td><td>"+pct(x.sellSlipPct)+"</td><td class='"+cls(x.realizedNetPct)+"'>"+pct(x.realizedNetPct)+"</td><td>"+pct(x.modelNetPct)+"</td></tr>"}).join("");
+    html+="<div class='card'><h3>📡 모의체결 실측 (KIS 모의투자)</h3>"+(erows?"<div class='tw'><table><thead><tr><th>매수 → 매도</th><th>예상 하락</th><th>매수 슬립</th><th>매도 슬립</th><th>실측 순손익</th><th>모델 순손익</th></tr></thead><tbody>"+erows+"</tbody></table></div>":"<p class='note'>아직 매수 신호가 난 날이 없습니다.</p>")+"</div>";
+  }else if(TAB==="crypto"){
+    var t3=T.crypto||{};html+=t3.error?"<div class='warn'>"+esc(t3.error)+"</div>":claudeCard(t3,nextSig(t3,"하루(09시~)"));
+    html+="<p class='note'>업비트에는 모의투자가 없어 주문 없이 일봉으로 매일 기록합니다(판단·손익은 claude-lab/btc-decisions.csv).</p>";
+  }else if(TAB==="soxl"){
+    var t4=T.soxl||{};html+=t4.error?"<div class='warn'>"+esc(t4.error)+"</div>":claudeCard(t4,nextSig(t4,"미국장"));
+    html+="<p class='note'>후보 중 손실 기준(MDD −25%)을 넘지 않는 것이 이 전략뿐이었고, 수익은 약합니다(연 +7% 수준). 주문 없이 기록만 합니다.</p>";
+  }else{
+    var pf=et.portfolio||{},gate=lab.gate||et.gate||{},p=pf.design||{};
+    html+="<div class='card'><h3>🎯 ①+② 포트폴리오 — 목표 지표</h3><div class='sub'>같은 원금. 같은 날 두 전략이 다 나오면 반씩(수익률을 그냥 더하지 않음). 거르기: 기대값 &gt; 0 · MDD ≥ "+num(gate.mdd,0)+"% · 최악일 ≥ "+num(gate.worstDay,0)+"%</div>"+
+      "<div class='kpis'><div class='kpi'><div class='l'>+1% 달성일/년</div><div class='v good'>"+num(p.plus1DaysPerYear,0)+"일</div></div><div class='kpi'><div class='l'>+5% 달성주/년</div><div class='v'>"+num(p.plus5WeeksPerYear)+"주</div></div><div class='kpi'><div class='l'>주 평균</div><div class='v "+(p.weeklyAvgPct>=0?"good":"bad")+"'>"+pct(p.weeklyAvgPct)+"</div></div><div class='kpi'><div class='l'>최악의 날 · MDD</div><div class='v bad'>"+pct(p.worstDayPct,1)+" · "+mddTxt(p.mddPct)+"</div></div></div>"+
+      goalTable("설계 표본",goalRow("① D-1 v2",(et.d1v2||{}).design)+goalRow("② ETF 하락일 야간",(et.etf||{}).design)+goalRow("①+② 포트폴리오",pf.design))+
+      goalTable("판정용 (10/1~)",goalRow("① D-1 v2",(et.d1v2||{}).outOfSample)+goalRow("② ETF 하락일 야간",(et.etf||{}).outOfSample)+goalRow("①+② 포트폴리오",pf.outOfSample))+
+      "<p class='note'>③ BTC · ④ SOXL 은 업비트·달러 계좌가 따로 필요해 같은 원금 합산에서 뺐습니다.</p></div>";
+  }
+  body.innerHTML=html;
+}
 async function load(){
   var body=document.getElementById("body");
+  try{var t=localStorage.getItem("clTab");if(t)TAB=t}catch(e){}
   try{
     var r=await fetch("/api/claude-lab",{headers:{Accept:"application/json"}});var j=await r.json();
     if(!r.ok||!j.ok)throw new Error(j.error||("HTTP "+r.status));
-    var gd=j.gapdown||{},et=j.etf||{},wl=j.watchlist||{},pf=(et.portfolio||{}),gate=et.gate||{};
-    var html="";
-    var p=pf.design||{};
-    html+="<div class='card'><h3>🎯 ①+② 포트폴리오 — 목표 지표</h3><div class='sub'>같은 원금. 같은 날 두 전략이 다 나오면 반씩 나눕니다(수익률을 그냥 더하지 않습니다). 거르기: 기대값 &gt; 0 · MDD ≥ "+num(gate.mdd,0)+"% · 최악일 ≥ "+num(gate.worstDay,0)+"%</div>"+
-      "<div class='kpis'><div class='kpi'><div class='l'>+1% 달성일/년</div><div class='v good'>"+num(p.plus1DaysPerYear,0)+"일</div></div>"+
-      "<div class='kpi'><div class='l'>+5% 달성주/년</div><div class='v'>"+num(p.plus5WeeksPerYear)+"주</div></div>"+
-      "<div class='kpi'><div class='l'>주 평균</div><div class='v "+(p.weeklyAvgPct>=0?"good":"bad")+"'>"+pct(p.weeklyAvgPct)+"</div></div>"+
-      "<div class='kpi'><div class='l'>최악의 날 · MDD</div><div class='v bad'>"+pct(p.worstDayPct,1)+" · "+num(p.mddPct,0)+"%</div></div></div>"+
-      goalTable("설계 표본 ("+esc(gd.from||"2018")+" ~ "+esc(et.designEnd||"")+")",goalRow("① D-1 v2",(et.d1v2||{}).design)+goalRow("② ETF 하락일 야간",(et.etf||{}).design)+goalRow("①+② 포트폴리오",pf.design))+
-      goalTable("판정용 표본 (2026-10-01 ~)",goalRow("① D-1 v2",(et.d1v2||{}).outOfSample)+goalRow("② ETF 하락일 야간",(et.etf||{}).outOfSample)+goalRow("①+② 포트폴리오",pf.outOfSample))+
-      "<p class='note'>설계 표본은 규칙을 만들 때 본 기간이라 판정에 쓰지 않습니다. 채택 판단은 판정용 표본으로만 합니다.</p></div>";
-
-    html+="<div class='card'><h3>📋 전략 규칙</h3>"+
-      "<div class='rule'><b>① D-1 갭하락 과매도 v2</b> — 전일 RSI(14)&lt;30 + 시가 갭 −2% ~ −29% 인 종목이 그날 <b>5개 이상</b>이면(시장 투매일) 가장 깊은 갭 3종목을 <b>시가(장전 동시호가)</b>에 사서 <b>종가(종가 동시호가)</b>에 판다. 관리종목·거래정지 후·가격제한 밖 구간 제외.<div class='sub'>08:56 예상체결가 조회 → 08:59 전 매수 · 15:21 매도 · 15:40 체결 조회. 실측을 모으려고 모의주문은 v1(통과 1개 이상)으로 매일 낸다.</div></div>"+
-      "<div class='rule'><b>② 코스닥150 레버리지 하락일 야간</b> — KODEX 코스닥150레버리지(233740)가 하루 <b>−3% 이하</b>로 끝나면 <b>종가 동시호가</b>에 사서 <b>다음 날 시가 동시호가</b>에 판다. ETF 라 거래세가 없다.<div class='sub'>15:21 예상 종가 확인 → 매수 · 다음 날 08:56 매도. 과거 8년 연 46회, 평균 +0.40%, 9개 연도 중 8개 양수.</div></div>"+
-      "<p class='note'>현재는 KIS 모의투자(VTS) 주문만 냅니다. 실전 주문은 실측 확인 후 승인을 받아야 열립니다.</p></div>";
-
-    var lv=gd.live||{},el=(et.live||{});
-    html+="<div class='card'><h3>📡 모의체결 실측</h3><div class='sub'>동시호가는 체결가가 곧 시가·종가라 과거 일봉 결과가 실제와 거의 같습니다. 확인할 것은 예상체결가와 실제 시가의 차이, 그리고 체결 슬리피지입니다.</div>"+
-      "<div class='kpis'><div class='kpi'><div class='l'>① 실측 거래</div><div class='v'>"+(lv.trades||0)+"건</div><div class='sub'>"+(lv.days||0)+"일</div></div>"+
-      "<div class='kpi'><div class='l'>① 시가 − 예상체결가</div><div class='v'>"+pct((lv.openVsExpectedPct||{}).mean)+"</div></div>"+
-      "<div class='kpi'><div class='l'>① 매수 / 매도 슬리피지</div><div class='v' style='font-size:15px'>"+pct((lv.buySlipPct||{}).mean)+" / "+pct((lv.sellSlipPct||{}).mean)+"</div></div>"+
-      "<div class='kpi'><div class='l'>① 실측 순손익</div><div class='v'>"+pct((lv.realizedNetPct||{}).mean)+"</div></div>"+
-      "<div class='kpi'><div class='l'>② 실측 거래</div><div class='v'>"+(el.trades||0)+"건</div></div></div>";
-    var rows=(gd.liveTrades||[]).slice().reverse().map(function(x){return "<tr><td>"+esc(x.date)+"</td><td>"+esc(x.name||x.code)+"</td><td>"+pct(x.expectedGapPct)+"</td><td>"+pct(x.actualGapPct)+"</td><td>"+pct(x.buySlipPct)+"</td><td>"+pct(x.sellSlipPct)+"</td><td class='"+cls(x.realizedNetPct)+"'>"+pct(x.realizedNetPct)+"</td><td>"+(x.buyOrderOk?"접수":"<span class='loss'>"+esc(x.buyOrderMsg||"실패")+"</span>")+"</td></tr>"}).join("");
-    var erows=((el.rows)||[]).slice().reverse().map(function(x){return "<tr><td>"+esc(x.signalDate)+" → "+esc(x.exitDate||"—")+"</td><td>"+pct(x.expectedDropPct)+"</td><td>"+pct(x.buySlipPct)+"</td><td>"+pct(x.sellSlipPct)+"</td><td class='"+cls(x.realizedNetPct)+"'>"+pct(x.realizedNetPct)+"</td><td>"+pct(x.modelNetPct)+"</td></tr>"}).join("");
-    html+=(rows?"<div class='tw'><table><thead><tr><th>① 날짜</th><th>종목</th><th>예상 갭</th><th>실제 갭</th><th>매수 슬립</th><th>매도 슬립</th><th>순손익</th><th>주문</th></tr></thead><tbody>"+rows+"</tbody></table></div>":"<p class='note'>① 아직 매수 신호가 난 날이 없습니다(조건에 맞는 갭하락 종목이 없으면 주문하지 않습니다).</p>")+
-      (erows?"<div class='tw'><table><thead><tr><th>② 매수 → 매도</th><th>예상 하락</th><th>매수 슬립</th><th>매도 슬립</th><th>실측 순손익</th><th>모델 순손익</th></tr></thead><tbody>"+erows+"</tbody></table></div>":"<p class='note'>② 아직 매수 신호가 난 날이 없습니다.</p>")+"</div>";
-
-    var names=(wl.names||[]).map(function(x){return esc(x.name)+" <span class='sub'>RSI "+num(x.rsi14,1)+"</span>"}).join(" · ");
-    html+="<div class='card'><h3>🗓 다음 거래일 ① 명단</h3><div class='sub'>기준일 "+esc(wl.basedOn||"—")+(wl.basedOnStatus==="provisional_snapshot"?" (잠정 일봉)":"")+" · "+((wl.names||[]).length)+"종목 — 08:56 예상체결가로 갭이 −2% 이하인지 확인합니다.</div><div style='margin-top:8px;font-size:13px'>"+(names||"명단 없음")+"</div></div>";
-
-    var ds=gd.designSample||{},st=ds.strategy||{},ct=ds.control||{},sk=(ds.skillPairedDays||{})["1.5t"]||{},bf=(gd.breadthFilter||{}).variants||{};
-    var bfr=Object.keys(bf).map(function(k){var z=(bf[k].designSample||{}).strategy||{};return "<tr><td><b>v2 · 통과 "+esc(k.replace("min",""))+"개 이상</b></td><td>"+dayCell(z,"0.0t")+"</td><td>"+dayCell(z,"1.5t")+"</td><td>"+dayCell(z,"3.0t")+"</td></tr>"}).join("");
-    html+="<div class='card'><h3>🔬 ① 상세 — 하루 평균 순손익 (설계 표본, 3종목)</h3><div class='tw'><table><thead><tr><th>슬리피지 가정</th><th>0틱</th><th>1.5틱</th><th>3틱</th></tr></thead><tbody>"+
-      "<tr><td>v1 · 매일</td><td>"+dayCell(st,"0.0t")+"</td><td>"+dayCell(st,"1.5t")+"</td><td>"+dayCell(st,"3.0t")+"</td></tr>"+bfr+
-      "<tr><td>대조군 · 같은 날 무작위 갭하락</td><td>"+dayCell(ct,"0.0t")+"</td><td>"+dayCell(ct,"1.5t")+"</td><td>"+dayCell(ct,"3.0t")+"</td></tr>"+
-      "</tbody></table></div><p class='note'>선별 실력(같은 날 대조군과의 차이, 1.5틱): "+pct(sk.mean)+" · t="+num(sk.tStat,2)+" · "+(sk.days||0)+"일. 확정 일봉 "+esc(gd.finalDataThrough||"—")+"까지.</p></div>";
-    body.innerHTML=html;
+    J=j;showTab(TAB);
   }catch(e){body.innerHTML="<div class='warn'>불러오기 실패: "+esc(e.message||String(e))+"</div>"}
 }
 load();
