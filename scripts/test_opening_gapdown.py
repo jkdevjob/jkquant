@@ -351,6 +351,26 @@ class ClaudeLabTrend(unittest.TestCase):
         _, dec3, _, _ = lab.coin_breakout(H, dict(lab.COIN_BO))
         self.assertEqual({r["date"]: r for r in dec3}[t3]["action"], "flat")
 
+    def test_paper_settles_no_trade_from_ledger_and_account_waits(self):
+        old = (lab.d1_live_status, lab.d1_live_reason, lab.etf_daily, lab.read_json, dict(lab.CAL), dict(lab.DECISIONS))
+        try:
+            lab.d1_live_status = lambda d: "no_trade" if d == "2026-10-01" else "pending"
+            lab.d1_live_reason = lambda d: "no_expected_gap_down"
+            lab.etf_daily = lambda: {}
+            lab.read_json = lambda p: {"to": "2026-10-01"} if "etf-overnight" in str(p) else {}
+            lab.CAL.clear(); lab.CAL.update(etf=["2026-09-29", "2026-09-30", "2026-10-01", "2026-10-02"], coin=["2026-10-03"], us=["2026-10-02"])
+            lab.DECISIONS.clear()
+            out = lab.paper_entries({}, {}, ["2026-09-29"], {}, {}, ["2026-10-01", "2026-10-02", "2026-10-03"])
+            self.assertEqual([d for d, _ in out["opening_d1v2"]], ["2026-10-01"])          # 9/30 은 원본·확정 둘 다 없어 기다린다
+            self.assertEqual(out["opening_d1v2"][0][1]["source"], "kis-vts-ledger")
+            self.assertEqual([d for d, _ in out["daytrading_etf"]], ["2026-10-01"])        # ETF 일봉 확정일까지
+            self.assertEqual(out["account"], [])                                          # 10/2 국내 미확정 → 계좌 기다림
+            self.assertEqual(lab.kr_settled_through("2026-09-29", "2026-10-01", lab.CAL["etf"], "2026-10-01"), "2026-10-01")
+            self.assertEqual(lab.kr_settled_through("2026-09-29", "2026-10-02", lab.CAL["etf"], "2026-09-29"), "2026-09-29")
+        finally:
+            lab.d1_live_status, lab.d1_live_reason, lab.etf_daily, lab.read_json = old[:4]
+            lab.CAL.clear(); lab.CAL.update(old[4]); lab.DECISIONS.clear(); lab.DECISIONS.update(old[5])
+
     def test_profit_factor(self):
         D = ["2026-10-05", "2026-10-06", "2026-10-07", "2026-10-08", "2026-10-09"]
         z = lab.goal_metrics({D[0]: 3.0, D[1]: -1.0, D[2]: -2.0, D[3]: 1.0}, D)

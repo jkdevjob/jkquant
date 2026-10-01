@@ -31,7 +31,7 @@ table.doc td{padding:6px 6px}
 </head>
 <body>
 <header><div class="wrap"><div class="htop">
-  <div class="brand"><div class="kicker">JK QUANT · CLAUDE</div><h1>🤖 단타 <span class="v">(클로드)</span> <span class="ver" id="clVer">v2.3.0</span></h1></div>
+  <div class="brand"><div class="kicker">JK QUANT · CLAUDE</div><h1>🤖 단타 <span class="v">(클로드)</span> <span class="ver" id="clVer">v2.3.1</span></h1></div>
   <div class="jkmenu" id="jkmenuWrap">
     <button class="jkmenu-btn" aria-label="메뉴" onclick="jkMenuToggle(event)">三</button>
     <div class="jkmenu-pop" id="jkmenuPop" hidden>
@@ -156,14 +156,19 @@ function promoBadge(pr){
   return "<div class='"+(pr.code==="candidate"?"win":"sub")+"' style='margin:2px 0 4px'>"+(pr.code==="candidate"?"⭐ ":pr.code==="keep"?"· ":"⏳ ")+esc(pr.text||"")+"</div>";
 }
 function weekCard(){
-  var w=(J.lab||{}).week;if(!w)return "";
+  var w=(J.lab||{}).week,wr=(J.lab||{}).weekRecon,recon=false;if(!w&&!wr)return "";
+  var has=function(x){return x&&!x.error&&((x.account||{}).days||0)>0};        // 계좌 장부가 시작되기 전엔 재구성 값을 보인다
+  if(!has(w)&&has(wr)){w=wr;recon=true}
+  if(!w)return "";
   if(w.error)return "<div class='card'><h3>🗓 이번 주 결과</h3><div class='warn'>"+esc(w.error)+"</div></div>";
   var a=w.account||{},P=w.parts||{},N={opening_d1v2:"① 시초가 (국내)",daytrading_etf:"② ETF 야간 (국내)",coin_bo_btc:"③ BTC",coin_bo_eth:"③ ETH",us_soxl:"④ SOXL (미국)"};
   var rows=Object.keys(N).map(function(k){var z=P[k]||{};return "<tr><td class='nm'>"+esc(N[k])+"</td><td class='"+cls(z.contribPct)+"'><b>"+pct(z.contribPct)+"</b></td><td class='"+cls(z.weekPct)+"'>"+pct(z.weekPct,1)+"</td><td>"+(z.tradeDays||0)+"<span class='sub'>/"+(z.days||0)+"일</span></td><td class='sub'>"+(z.through?esc(z.through.slice(5)):"—")+"</td></tr>"}).join("");
   var cand=[];Object.keys((J.lab||{}).shadows||{}).forEach(function(t){var r=J.lab.shadows[t];(Array.isArray(r)?r:[]).forEach(function(x){if(x.promotion&&x.promotion.code==="candidate")cand.push(x.name+" — "+x.promotion.text)})});
-  return "<div class='card'><h3>🗓 이번 주 결과 ("+esc((w.weekStart||"").slice(5))+" ~ "+esc((w.asOf||"").slice(5))+")</h3><div class='sub'>"+esc(w.note||"")+" 매주 토요일 09:05 텔레그램으로도 보냅니다.</div>"+
+  return "<div class='card'><h3>🗓 이번 주 결과 ("+esc((w.weekStart||"").slice(5))+" ~ "+esc((w.asOf||"").slice(5))+")"+(recon?" <span class='tag'>규칙대로 재구성</span>":"")+"</h3>"+
+    (recon?"<div class='warn' style='margin-top:6px'>모의 장부가 아직 비어 있어(새 전략 채택 10/2) 같은 규칙으로 다시 계산한 값을 보여 줍니다. 장부가 쌓이면 자동으로 장부 값으로 바뀝니다.</div>":"")+
+    "<div class='sub'>"+esc(w.note||"")+" 매주 토요일 09:05 텔레그램으로도 보냅니다.</div>"+
     "<div class='kpis'><div class='kpi'><div class='l'>🏦 계좌 주간</div><div class='v "+cls(a.weekPct)+"'>"+pct(a.weekPct)+"</div><div class='sub'>목표 +5% "+(a.hit5?"달성 ✅":"까지 "+num(Math.max(0,5-(a.weekPct||0)))+"%p")+"</div></div>"+
-    "<div class='kpi'><div class='l'>+1% 달성일</div><div class='v'>"+(a.plus1Days||0)+"<span class='sub'>/"+(a.days||0)+"일</span></div><div class='sub'>장부 확정분</div></div></div>"+
+    "<div class='kpi'><div class='l'>+1% 달성일</div><div class='v'>"+(a.plus1Days||0)+"<span class='sub'>/"+(a.days||0)+"일</span></div><div class='sub'>"+(recon?"재구성 · 확정된 날":"장부 확정분")+"</div></div></div>"+
     "<div class='tw'><table class='board'><thead><tr><th>칸</th><th>계좌 기여</th><th>칸 안 주간</th><th>매매일</th><th>~까지</th></tr></thead><tbody>"+rows+"</tbody></table></div>"+
     "<p class='note'>"+(cand.length?"⭐ 그림자 교체 후보: "+esc(cand.join(" / ")):"그림자 교체 후보 없음 — 판정 표본(10/1~) 매매 20일 이상 + 기준보다 누적이 높고 +1% 달성일이 적지 않고 MDD 가 5%p 넘게 나쁘지 않을 때만 후보로 띄웁니다. 자동으로 바꾸지 않습니다.")+"</p></div>";
 }
@@ -174,6 +179,14 @@ function shadowCard(tab){
   var rules=sh.filter(function(x){return x.rule}).map(function(x){return "<li><b>"+esc(x.name)+"</b> — "+esc(x.rule)+" <span class='sub'>("+esc(x.version||"")+")</span>"+promoBadge(x.promotion)+"</li>"}).join("");
   return sec("⑥ 그림자 전략 · 교체 판정","<div class='sub'>기준전략과 같은 기준으로 나란히 기록하는 비교용 전략(주문 없음). 판정용 표본(10/1~)에서 매매 20일 이상 쌓이고 기준보다 나으면 ⭐ 교체 후보로 표시하고, 검토 후에만 새 버전으로 바꿉니다(자동 교체 없음).</div><ul class='sub' style='margin:6px 0 0 18px;padding:0'>"+rules+"</ul>"+goalTable("설계 표본",rows)+goalTable("판정용 (10/1~)",oos),false);
 }
+// 장부가 빈 이유와 언제 채워지는지
+function emptyNote(k,z){
+  var st=z.start?esc(z.start.slice(5).replace("-","/")):"";
+  var when={coin_bo_btc:"코인 하루(09시~다음 날 09시)가 끝난 뒤 저녁 계산(18:40)에 첫 기록",coin_bo_eth:"코인 하루(09시~다음 날 09시)가 끝난 뒤 저녁 계산(18:40)에 첫 기록",
+    us_soxl:"미국장 마감 뒤 다음 날 아침 계산(07:30)에 첫 기록",account:"국내·코인·미국이 모두 확정된 날부터 기록",
+    opening_d1v2:"확정 일봉이 들어오거나 모의투자 원본이 '매매 없음'으로 끝난 날부터 기록",daytrading_etf:"ETF 일봉이 확정된 날부터 기록"}[k]||"";
+  return "아직 확정된 날이 없습니다 — "+(st?st+" 부터 · ":"")+when+".";
+}
 var PKEYS={opening:["opening_d1v2"],daytrading:["daytrading_etf"],crypto:["coin_bo_btc","coin_bo_eth"],soxl:["us_soxl"]};
 var PNAME={opening_d1v2:"① D-1 v2",daytrading_etf:"② ETF 야간",coin_bo_btc:"BTC (칸 전액)",coin_bo_eth:"ETH (칸 전액)",us_soxl:"SOXL (칸 전액)",account:"🏦 전체 계좌"};
 function paperCard(tab){
@@ -182,7 +195,7 @@ function paperCard(tab){
     var st=z.status||{},risk=(z.lossStreak>=3?"<span class='loss'>"+z.lossStreak+"일 연속 손실</span> · ":"")+(z.currentDrawdownPct<-5?"<span class='loss'>현재 낙폭 "+pct(z.currentDrawdownPct,1)+"</span>":"");
     var tb=rows.map(function(r){return "<tr><td>"+esc(r.date)+"</td><td>"+(r.action==="no_trade"||r.action==="flat"?"<span class='sub'>매매 없음</span>":esc(r.action||""))+"</td><td class='"+cls(r.pnlPct)+"'>"+(r.action==="no_trade"||r.action==="flat"?"—":pct(r.pnlPct))+"</td><td class='"+cls(r.cumPct)+"'>"+pct(r.cumPct)+"</td></tr>"}).join("");
     return "<div style='margin-top:8px'><b>"+esc(PNAME[k]||k)+"</b> <span class='sub'>매매 "+(z.tradeDays||0)+"일 · +1%↑ "+(z.plus1Days||0)+"일 · 누적 "+(z.totalPct==null?"—":pct(z.totalPct,1))+" · "+esc(st.text||"")+"</span> "+risk+
-      (tb?"<div class='tw'><table class='board'><thead><tr><th>날짜</th><th>판단</th><th>손익</th><th>누적</th></tr></thead><tbody>"+tb+"</tbody></table></div>":"<p class='note'>아직 확정된 날이 없습니다(10/1 이후 결과가 확정되는 날부터 쌓임).</p>")+"</div>"}).join("");
+      (tb?"<div class='tw'><table class='board'><thead><tr><th>날짜</th><th>판단</th><th>손익</th><th>누적</th></tr></thead><tbody>"+tb+"</tbody></table></div>":"<p class='note'>"+emptyNote(k,z)+"</p>")+"</div>"}).join("");
   return sec("⑦ 누적 모의 매매이력 (2026-10-01~)","<div class='sub'>날짜별 장부는 한 번만 쓰고 덮어쓰지 않습니다. 매매 없는 날은 손실이 아니라 '매매 없음'.</div>"+html,true);
 }
 function reviewCard(tab){
@@ -282,7 +295,7 @@ function render(){
       "<p class='note'>"+esc(dl.note||"")+" 결과는 매일 저녁(18:40·23:40)과 아침 07:30 에 다시 계산됩니다.</p></div>";
     var pp=(lab.paper||{}),sm=pp.summary||{},NM={opening_d1v2:"① D-1 갭하락 과매도 v2",daytrading_etf:"② 코스닥150 레버리지 하락일 야간",coin_bo_btc:"③ BTC 고가 돌파 하루 단타 (칸 전액)",coin_bo_eth:"③ ETH 고가 돌파 하루 단타 (칸 전액)",us_soxl:"④ SOXL 과매도 반등 ≤5일 (칸 전액)",account:"🏦 전체 계좌"};
     var prow=Object.keys(NM).map(function(k){var z=sm[k]||{},e=z.expected||{},st=z.status||{};
-      return "<tr><td class='nm'>"+esc(NM[k])+"<div class='sub'>"+(z.first?esc(z.first)+" ~ "+esc(z.last):"기록 시작 전")+"</div></td><td>"+(z.tradeDays||0)+"<span class='sub'>/"+(z.days||0)+"일</span></td><td class='win'>"+(z.plus1Days||0)+"</td>"+
+      return "<tr><td class='nm'>"+esc(NM[k])+"<div class='sub'>"+(z.first?esc(z.first)+" ~ "+esc(z.last):"기록 시작 전"+(z.start?" · "+esc(z.start)+" 부터":""))+"</div></td><td>"+(z.tradeDays||0)+"<span class='sub'>/"+(z.days||0)+"일</span></td><td class='win'>"+(z.plus1Days||0)+"</td>"+
         "<td class='"+cls(z.totalPct)+"'><b>"+(z.totalPct==null?"—":pct(z.totalPct,1))+"</b></td><td>"+(z.avgTradePct==null?"—":pct(z.avgTradePct))+"<div class='sub'>기대 "+pct(e.expectancyPct)+"</div></td><td style='white-space:normal;min-width:110px'>"+
         "<span class='"+(st.code==="below"?"loss":st.code==="ok"?"win":"sub")+"'>"+esc(st.text||"")+"</span></td></tr>"}).join("");
     html+="<div class='card'><h3>📒 모의투자 누적 ("+esc(pp.start||"2026-10-01")+"~)</h3><div class='sub'>날짜별 장부는 한 번만 쓰고 덮어쓰지 않습니다. 국내는 KIS 모의투자 체결, 코인·미국은 일봉 모의 체결입니다. 매매일 20일이 쌓이면 기대(설계 표본)와 비교해 벗어나면 '규칙 점검'으로 표시합니다.</div>"+
