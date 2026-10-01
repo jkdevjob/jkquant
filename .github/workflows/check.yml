@@ -69,6 +69,9 @@ jobs:
       - name: 데이트레이딩 당일 계좌수익률·매매합계 표시 검사
         run: node scripts/test_daytrading_ui_metrics.mjs
 
+      - name: BTC·SOXL 장중 모의장부 저장·표시 검사
+        run: node scripts/test_global_paper_ledger.mjs
+
       - name: 시초가 사후라벨·엔진 값 검사
         run: python scripts/test_opening_signal_labels.py
 
@@ -109,6 +112,7 @@ jobs:
           node --input-type=module --check < functions/api/crypto.js
           node --input-type=module --check < functions/api/crypto-research.js
           node --input-type=module --check < functions/api/soxl-research.js
+          node --input-type=module --check < functions/api/global-paper.js
           node --input-type=module --check < functions/api/scalping-history.js
           node --input-type=module --check < functions/api/scalping-daily-results.js
           node --input-type=module --check < functions/api/daily1-shadow.js
@@ -411,7 +415,7 @@ jobs:
           let fail=0;
           const must=[
             ['data-strategy="crypto"','비트코인 탭'],
-            ['id="scVer">v1.30.3','단타 버전 1.30.3'],
+            ['id="scVer">v1.31.0','단타 버전 1.31.0'],
             ['비트코인 00시 ORB 기준전략 v2','BTC 00시 기준전략 설명'],
             ['22:00 신규진입','BTC 22시 신규진입 설명'],
             ['다음 5분봉 시가','다음 봉 진입 설명'],
@@ -478,7 +482,7 @@ jobs:
           let fail=0;
           const must=[
             [ui,'data-strategy="soxl"','SOXL 탭'],
-            [ui,'id="scVer">v1.30.3','단타 버전 1.30.3'],
+            [ui,'id="scVer">v1.31.0','단타 버전 1.31.0'],
             [ui,'다음 5분봉 시가','next-bar 진입 설명'],
             [py,'baseline-decisions.csv','거래/무거래 판단기록'],
             [py,'target1PctDayRatePct','+1% 목표 지표'],
