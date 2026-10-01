@@ -99,6 +99,8 @@ function strategyCockpitProbe(text){
     if(!cfg.includes(name+':'))return false;
     if(!cfg.includes("today:['📒 오늘 장중 모의 매매이력']"))return false;
   }
+  if(!cfg.includes("opening:{strategy:[],search:['🔥 실시간 시초가 돌파 감시']"))return false;
+  if(!text.includes("📖 기준전략 요약"))return false;
   return true;
 }
 if(!strategyCockpitProbe(src)){
