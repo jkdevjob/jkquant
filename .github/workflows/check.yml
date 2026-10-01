@@ -206,8 +206,8 @@ jobs:
           const d=fs.readFileSync('.github/workflows/deploy-opening-scheduler.yml','utf8');
           let fail=0;
           // 무료 요금제 계정당 cron 5개 한도 — 이 Worker 는 한 줄만 쓰고 시각은 scheduleRoute 가 한국시각으로 고른다.
-          if(!w.triggers||!Array.isArray(w.triggers.crons)||w.triggers.crons.length!==1||w.triggers.crons[0]!=='5-31,40,56 0,6,23 * * *'){
-            console.error('✗ opening scheduler cron 은 "5-31,40,56 0,6,23 * * *" 한 줄이어야 합니다.'); fail++;
+          if(!w.triggers||!Array.isArray(w.triggers.crons)||w.triggers.crons.length!==1||w.triggers.crons[0]!=='0,5-31,40,56 0,1,6,23 * * *'){
+            console.error('✗ opening scheduler cron 은 10:00 종료요약을 포함한 한 줄이어야 합니다.'); fail++;
           }
           if(!/if\(hm>=905&&hm<=931\)return "opening";/.test(c)||!/if\(route==="opening"\)ctx\.waitUntil\(runMinute/.test(c)){
             console.error('✗ 09:05~09:31 KST 평일만 시초가 스캔으로 보내는 경로가 없습니다.'); fail++;
@@ -245,7 +245,7 @@ jobs:
           const r=fs.readFileSync('.github/workflows/daytrading-research.yml','utf8');
           let fail=0;
           const crons=w.triggers&&w.triggers.crons||[];
-          for(const x of ['55 0 * * MON-FRI','0-59 1-5 * * MON-FRI','0-11 6 * * MON-FRI']){
+          for(const x of ['55 0 * * MON-FRI','0-59 1-5 * * MON-FRI','0-11,35 6 * * MON-FRI']){
             if(!crons.includes(x)){console.error('✗ 데이트레이딩 Cron 누락: '+x);fail++;}
           }
           if(!w.durable_objects||!w.migrations||!String(JSON.stringify(w.migrations)).includes('new_sqlite_classes')){
@@ -270,6 +270,9 @@ jobs:
           }
           if(!r.includes('data/daytrading-live')||!r.includes('/paper?date=$DATE')){
             console.error('✗ 장마감 연구가 장중 모의장부를 영구 저장하지 않음'); fail++;
+          }
+          if(!c.includes('sched.hm===1535')||!c.includes('strategy:"daytrading",stage:"summary"')){
+            console.error('✗ 데이트레이딩 15:35 종료요약 경로 없음'); fail++;
           }
           if(c.includes('/api/kis?op=order')){
             console.error('✗ 데이트레이딩 장중 모의장부가 KIS 주문 API를 호출함'); fail++;

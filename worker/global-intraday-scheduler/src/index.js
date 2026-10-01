@@ -218,11 +218,63 @@ async function runSoxl(env,now){
     });
   }
 }
+
+async function summarizeBtc(env,now){
+  const k=parts(now,"Asia/Seoul");
+  if(k.hm!==2205)return;
+  const t=btcTrade(await fetchBtc(k.date),now,k.date);
+  const lines=["세션 00:00~22:00 KST · 신규진입 마감 22:00 · 22:05 종료요약"];
+  if(t&&t.entry&&t.exit){
+    const gross=pct(t.exit.price,t.entryPrice),net=gross-t.friction;
+    lines.push(
+      "오늘 기준전략 1건 · "+reasonKo(t.exit.reason),
+      "매수 "+t.entry.time+" · "+money(t.entryPrice,"KRW")+" → 매도 "+t.exit.bar.time+" · "+money(t.exit.price,"KRW"),
+      "오늘 모의 순손익 "+signed(net)+" · 왕복 비용 0.14% 반영"
+    );
+  }else if(t&&t.entry&&!t.exit){
+    lines.push("오늘 기준전략 1건 · 청산 데이터 확정 대기");
+  }else{
+    lines.push("오늘 기준전략 0건 · 조건 충족 거래 없음");
+  }
+  await alert(env,{
+    strategy:"crypto",stage:"summary",eventId:"crypto:"+BTC_STRATEGY_VERSION+":"+k.date+":session-summary",
+    date:k.date,time:"22:05 KST",lines
+  });
+}
+
+async function summarizeSoxl(env,now){
+  const n=parts(now,"America/New_York");
+  if(["Sat","Sun"].includes(n.weekday)||n.hm!==1605)return;
+  const t=soxlTrade(await fetchSoxl(),now,n.date);
+  const lines=["미국 정규장 종료 후 요약 · 16:05 ET"];
+  if(t&&t.entry&&t.exit){
+    const gross=pct(t.exit.price,t.entryPrice),net=gross-t.friction;
+    lines.push(
+      "오늘 기준전략 1건 · "+reasonKo(t.exit.reason),
+      "매수 "+t.entry.time+" ET · "+money(t.entryPrice,"USD")+" → 매도 "+t.exit.bar.time+" ET · "+money(t.exit.price,"USD"),
+      "오늘 모의 순손익 "+signed(net)+" · 왕복 마찰 0.20% 반영"
+    );
+  }else if(t&&t.entry&&!t.exit){
+    lines.push("오늘 기준전략 1건 · 청산 데이터 확정 대기");
+  }else{
+    lines.push("오늘 기준전략 0건 · 조건 충족 거래 없음");
+  }
+  await alert(env,{
+    strategy:"soxl",stage:"summary",eventId:"soxl:"+n.date+":session-summary",
+    date:n.date,time:"16:05 ET",lines
+  });
+}
 async function run(env){
   if(!env.MONITOR_KEY)throw new Error("MONITOR_KEY secret missing");
   const now=Date.now();
-  const out=await Promise.allSettled([runBtc(env,now),runSoxl(env,now)]);
-  out.forEach((x,i)=>{if(x.status==="rejected")console.error(JSON.stringify({type:"global_intraday_error",strategy:i===0?"crypto":"soxl",error:String(x.reason&&x.reason.message||x.reason)}));});
+  const tasks=[
+    ["crypto",runBtc(env,now)],
+    ["soxl",runSoxl(env,now)],
+    ["crypto-summary",summarizeBtc(env,now)],
+    ["soxl-summary",summarizeSoxl(env,now)]
+  ];
+  const out=await Promise.allSettled(tasks.map(x=>x[1]));
+  out.forEach((x,i)=>{if(x.status==="rejected")console.error(JSON.stringify({type:"global_intraday_error",strategy:tasks[i][0],error:String(x.reason&&x.reason.message||x.reason)}));});
 }
 export {btcTrade,BTC_OPEN_HM,BTC_LAST_SIGNAL_HM,BTC_LAST_ENTRY_HM,BTC_EXIT_TRACK_END_HM,BTC_STRATEGY_VERSION};
 
@@ -230,7 +282,7 @@ export default {
   async scheduled(controller,env,ctx){ctx.waitUntil(run(env));},
   async fetch(request,env){
     const u=new URL(request.url);
-    if(u.pathname==="/health")return new Response(JSON.stringify({ok:true,service:"jkquant-global-intraday-scheduler",schedule:"every minute",strategies:["crypto","soxl"],crypto:{strategyVersion:BTC_STRATEGY_VERSION,openingRange:"00:00~00:05 KST",newEntryThrough:"22:00 KST",exitTrackingThrough:"23:05 KST"},mode:"research-paper-alert-no-order"}),{headers:{"content-type":"application/json","cache-control":"no-store"}});
+    if(u.pathname==="/health")return new Response(JSON.stringify({ok:true,service:"jkquant-global-intraday-scheduler",schedule:"every minute",strategies:["crypto","soxl"],summaries:{crypto:"22:05 KST (new-entry session end)",soxl:"16:05 America/New_York (05:05/06:05 KST DST-aware)"},crypto:{strategyVersion:BTC_STRATEGY_VERSION,openingRange:"00:00~00:05 KST",newEntryThrough:"22:00 KST",exitTrackingThrough:"23:05 KST"},mode:"research-paper-alert-no-order"}),{headers:{"content-type":"application/json","cache-control":"no-store"}});
     return new Response("not found",{status:404});
   }
 };

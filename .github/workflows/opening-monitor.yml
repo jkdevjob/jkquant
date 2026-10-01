@@ -50,7 +50,7 @@ jobs:
           archive_daily() {
             DATE=$(TZ=Asia/Seoul date +%F)
             OUT="data/opening-history/$DATE.json"
-            SEND_SUMMARY=1
+            SEND_SUMMARY=0  # 10:00 KST 종료요약은 Cloudflare opening worker가 정확한 시각에 전송
 
             # 기준+shadow+실시간 원본 ledger까지 있으면 완성본이다.
             # 구형 파일은 덮어버리지 않고 같은 날짜의 누락 필드만 재구성/백필한다.
