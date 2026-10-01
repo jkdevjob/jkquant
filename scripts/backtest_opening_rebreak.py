@@ -436,8 +436,9 @@ def one_trade(day, row, p: Params, friction_calibration=None):
                 return {
                     "date": day["date"],
                     "signalSchemaVersion": 2,
-                    "strategyVersion": "opening_rebreak_basis_v2" if basis_reference else "opening_rebreak_v1",
-                    **({"inputPriceBasis": "KIS-adjusted-with-original-gap-and-cost-bounds",
+                    "strategyVersion": "opening_rebreak_v1",
+                    **({"strategyVersion": "opening_rebreak_basis_v2",
+                        "inputPriceBasis": "KIS-adjusted-with-original-gap-and-cost-bounds",
                         "basisReferenceFiles": [basis_reference['originalFile'], basis_reference['adjustedFile']]} if basis_reference else {}),
                     "strategyParams": asdict(p),
                     "rank": int(row.get("rank") or 0),
