@@ -171,6 +171,40 @@ async function persistScan(env,{scheduled,lag,target,kst,parts,failed,partial}){
   return {events:events.length,added:stored.added,total:stored.total,scans:stored.scans};
 }
 
+function signedPct(v){const n=Number(v||0);return (n>=0?"+":"")+n.toFixed(2)+"%";}
+async function sendOpeningSummary(env,date){
+  const ledger=await readLedger(env,date);
+  const events=ledger&&Array.isArray(ledger.events)?ledger.events:[];
+  const buys=events.filter(e=>e&&e.variant==="baseline"&&e.stage==="buy");
+  const sells=events.filter(e=>e&&e.variant==="baseline"&&e.stage==="sell");
+  const lines=["감시 종료 10:00 KST · 실시간 기준전략 결과"];
+  if(!buys.length){
+    lines.push("오늘 기준전략 0건 · 조건 충족 거래 없음");
+  }else{
+    const byCode=new Map(sells.map(e=>[String(e.code||"")+":"+String((e.signal||{}).entryTime||""),e]));
+    let sum=0,n=0,w=0,l=0;
+    for(const b of buys){
+      const sig=b.signal||{};
+      const key=String(b.code||"")+":"+String(sig.entryTime||"");
+      const se=byCode.get(key);
+      const out=se&&se.signal||{};
+      const pnl=Number.isFinite(+out.pnl)?+out.pnl:null;
+      if(pnl!=null){sum+=pnl;n++;if(pnl>0)w++;else if(pnl<0)l++;}
+      lines.push(
+        "• "+String(b.name||b.code||"")+" "+String(sig.entryTime||"")+"→"+String(out.exitTime||"—")+" "+(pnl==null?"진행/기록확인":signedPct(pnl))
+      );
+    }
+    lines.push("거래 "+buys.length+"건 · 승 "+w+" · 패 "+l+(n?" · 평균 "+signedPct(sum/n)+" · 단순합 "+signedPct(sum):""));
+  }
+  const r=await fetch(baseUrl(env)+"/api/scalping-alert",{
+    method:"POST",headers:{"content-type":"application/json","x-monitor-key":env.MONITOR_KEY},
+    body:JSON.stringify({strategy:"opening",stage:"summary",eventId:"opening:"+date+":session-summary",date,time:"10:00 KST",lines})
+  });
+  const j=await r.json().catch(()=>({}));
+  if(!r.ok||!j.ok)throw new Error(j.error||("opening summary HTTP "+r.status));
+  return j;
+}
+
 async function runMinute(controller,env){
   if(!env.MONITOR_KEY)throw new Error("MONITOR_KEY secret missing");
   if(!env.SIGNAL_STORE)throw new Error("SIGNAL_STORE binding missing");
@@ -251,6 +285,7 @@ export function scheduleRoute(ms){
   if(g("weekday")==="Sat"||g("weekday")==="Sun")return null;
   const hm=+g("hour")*100+ +g("minute");
   if(hm>=905&&hm<=931)return "opening";
+  if(hm===1000)return "opening_summary";
   if(hm===856)return "gapdown_preopen";
   if(hm===1521)return "gapdown_close";
   if(hm===1540)return "gapdown_reconcile";
@@ -325,7 +360,10 @@ export default {
   async scheduled(controller,env,ctx){
     const route=scheduleRoute(Number(controller.scheduledTime)||Date.now());
     if(route==="opening")ctx.waitUntil(runMinute(controller,env));
-    else if(route&&route.startsWith("gapdown_"))ctx.waitUntil(runGapdown(route.slice(8),controller,env));
+    else if(route==="opening_summary"){
+      const date=kstParts(Number(controller.scheduledTime)||Date.now()).date;
+      ctx.waitUntil(sendOpeningSummary(env,date).catch(e=>console.error(JSON.stringify({type:"opening_summary_error",date,error:String(e.message||e)}))));
+    }else if(route&&route.startsWith("gapdown_"))ctx.waitUntil(runGapdown(route.slice(8),controller,env));
   },
   async fetch(request,env){
     const u=new URL(request.url);
@@ -344,7 +382,7 @@ export default {
     return json({
       ok:true,
       service:"jkquant-opening-scheduler",
-      schedule:"09:05-09:31 KST weekdays · gap-down research 08:56/15:21/15:40",
+      schedule:"09:05-09:31 KST weekdays · 10:00 opening summary · gap-down research 08:56/15:21/15:40",
       mode:"Cloudflare Cron -> Pages opening-monitor -> immutable signal ledger -> KIS VTS",
       signalLedger:"Durable Object /events (authorized)"
     });
