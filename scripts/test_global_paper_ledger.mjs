@@ -35,7 +35,7 @@ const worker=fs.readFileSync(path.join(__dirname,'..','worker/global-intraday-sc
 const cfg=fs.readFileSync(path.join(__dirname,'..','worker/global-intraday-scheduler/wrangler.jsonc'),'utf8');
 const ui=fs.readFileSync(path.join(__dirname,'..','scalping.html'),'utf8');
 const api=fs.readFileSync(path.join(__dirname,'..','functions/api/global-paper.js'),'utf8');
-ok(worker.includes('class PaperStore extends DurableObject')&&worker.includes('writePaper(env,paperLedger("crypto"')&&worker.includes('writePaper(env,paperLedger("soxl"'),'global worker stores both live paper ledgers');
+ok(worker.includes('import { DurableObject } from "cloudflare:workers";')&&worker.includes('class PaperStore extends DurableObject')&&worker.includes('writePaper(env,paperLedger("crypto"')&&worker.includes('writePaper(env,paperLedger("soxl"'),'global worker imports DurableObject and stores both live paper ledgers');
 ok(cfg.includes('"PAPER_STORE"')&&cfg.includes('"new_sqlite_classes": ["PaperStore"]'),'global worker durable object binding/migration');
 ok(ui.includes("loadGlobalPaper('crypto')")&&ui.includes("loadGlobalPaper('soxl')")&&ui.includes('오늘 계좌수익률')&&ui.includes('개별 매매 수익률 합계'),'all-tab UI exposes live paper metrics');
 ok(api.includes('ownerAuthorized')&&api.includes('x-monitor-key')&&!/op=order|\/v1\/orders|env=real/i.test(api),'global paper API is owner-only read proxy');
