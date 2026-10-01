@@ -4,6 +4,11 @@
 // It NEVER places broker or exchange orders.
 
 const FIVE=5*60*1000;
+const BTC_OPEN_HM=0;
+const BTC_LAST_SIGNAL_HM=2155; // 21:55 신호 -> 22:00 다음 5분봉 시가 진입
+const BTC_LAST_ENTRY_HM=2200;
+const BTC_EXIT_TRACK_END_HM=2305; // 22:00 진입의 최대 60분 청산까지 추적
+const BTC_STRATEGY_VERSION="btc_midnight_orb_v2";
 function baseUrl(env){return String(env.BASE_URL||"https://jkquant.pages.dev").replace(/\/$/,"");}
 function sleep(ms){return new Promise(r=>setTimeout(r,ms));}
 function parts(ms,tz){
@@ -36,29 +41,46 @@ async function alert(env,payload){
 function barCompleted(tMs,now){return Number.isFinite(tMs)&&tMs+FIVE<=now-1500;}
 function pct(a,b){return b>0?(a/b-1)*100:null;}
 
-async function fetchBtc(){
-  const u="https://api.upbit.com/v1/candles/minutes/5?market=KRW-BTC&count=200";
-  const r=await fetch(u,{headers:{"accept":"application/json","user-agent":"jkquant-global-intraday/1.0"}});
-  if(!r.ok)throw new Error("Upbit HTTP "+r.status);
-  const a=await r.json();
-  return (a||[]).map(x=>{
-    const k=String(x.candle_date_time_kst||"");
-    const ms=Date.parse(k+"+09:00");
-    return {ms,date:k.slice(0,10),hm:+k.slice(11,13)*100+(+k.slice(14,16)),time:k.slice(11,16),
-      o:+x.opening_price||0,h:+x.high_price||0,l:+x.low_price||0,c:+x.trade_price||0,v:+x.candle_acc_trade_volume||0};
-  }).sort((a,b)=>a.ms-b.ms);
+async function fetchBtc(targetDate){
+  // Upbit 5분봉은 요청당 최대 200개라 22:00까지 보면 한 페이지로 자정 봉이 잘린다.
+  // targetDate의 00:00 KST 봉을 확보할 때까지 최대 3페이지를 뒤로 넘긴다.
+  const by=new Map();
+  let to="";
+  for(let page=0;page<3;page++){
+    const q=new URLSearchParams({market:"KRW-BTC",count:"200"});
+    if(to)q.set("to",to);
+    const u="https://api.upbit.com/v1/candles/minutes/5?"+q.toString();
+    const r=await fetch(u,{headers:{"accept":"application/json","user-agent":"jkquant-global-intraday/1.1"}});
+    if(!r.ok)throw new Error("Upbit HTTP "+r.status);
+    const a=await r.json();
+    if(!Array.isArray(a)||!a.length)break;
+    let oldest=Infinity;
+    for(const x of a){
+      const k=String(x.candle_date_time_kst||"");
+      const ms=Date.parse(k+"+09:00");
+      if(!Number.isFinite(ms))continue;
+      oldest=Math.min(oldest,ms);
+      by.set(String(ms),{ms,date:k.slice(0,10),hm:+k.slice(11,13)*100+(+k.slice(14,16)),time:k.slice(11,16),
+        o:+x.opening_price||0,h:+x.high_price||0,l:+x.low_price||0,c:+x.trade_price||0,v:+x.candle_acc_trade_volume||0});
+    }
+    if([...by.values()].some(x=>x.date===targetDate&&x.hm===BTC_OPEN_HM))break;
+    if(!Number.isFinite(oldest))break;
+    to=new Date(oldest-1).toISOString();
+    await sleep(120);
+  }
+  return [...by.values()].sort((a,b)=>a.ms-b.ms);
 }
 function btcTrade(bars,now,date){
   const a=bars.filter(x=>x.date===date);
   if(!a.length)return null;
-  const oi=a.findIndex(x=>x.hm===900);
+  const oi=a.findIndex(x=>x.hm===BTC_OPEN_HM);
   if(oi<0)return null;
   const open=a[oi];
   if(!barCompleted(open.ms,now)||!(open.h>0)||!(open.v>0))return null;
   let pv=((open.h+open.l+open.c)/3)*open.v,cv=open.v;
   for(let i=oi+1;i<a.length-0;i++){
     const x=a[i];
-    if(x.hm>1200)break;
+    if(x.hm>BTC_LAST_SIGNAL_HM)break;
     if(!barCompleted(x.ms,now))break;
     const tp=(x.h+x.l+x.c)/3;pv+=tp*x.v;cv+=x.v;
     const vwap=cv>0?pv/cv:0,vr=x.v/open.v;
@@ -67,6 +89,7 @@ function btcTrade(bars,now,date){
     if(!fresh||vr<1.2||!(x.c>vwap))continue;
     const entry=a[i+1];
     if(!entry)return {waiting:true,date,signal:x,opening:open,vwap,vr};
+    if(entry.hm>BTC_LAST_ENTRY_HM)return null;
     const entryPrice=entry.o;
     if(!(entryPrice>0))return null;
     const stop=entryPrice*.995,tpPx=entryPrice*1.01,last=Math.min(a.length-1,i+1+12-1);
@@ -142,24 +165,25 @@ function soxlTrade(bars,now,date){
 }
 async function runBtc(env,now){
   const k=parts(now,"Asia/Seoul");
-  if(k.hm<905||k.hm>1330)return;
-  const t=btcTrade(await fetchBtc(),now,k.date);
+  // 신규 진입은 00:05~22:00 KST. 22:00 진입분은 최대 60분 청산까지 계속 추적한다.
+  if(k.hm<5||k.hm>BTC_EXIT_TRACK_END_HM)return;
+  const t=btcTrade(await fetchBtc(k.date),now,k.date);
   if(!t||t.waiting)return;
   await alert(env,{
-    strategy:"crypto",stage:"buy",eventId:"crypto:"+t.date+":"+t.signal.time+":buy",date:t.date,time:t.entry.time,
+    strategy:"crypto",stage:"buy",eventId:"crypto:"+BTC_STRATEGY_VERSION+":"+t.date+":"+t.signal.time+":buy",date:t.date,time:t.entry.time,
     lines:[
-      "KRW-BTC · 다음 5분봉 시가 "+money(t.entryPrice,"KRW"),
-      "신호 "+t.signal.time+" · OR고점 "+money(t.opening.h,"KRW")+" · VWAP "+money(t.vwap,"KRW")+" · 거래량 "+t.vr.toFixed(2)+"배",
-      "청산계획: 손절 "+money(t.stop,"KRW")+" (-0.50%) · 익절 "+money(t.tp,"KRW")+" (+1.00%) · 최대 60분",
+      "KRW-BTC · 00:00 ORB · 다음 5분봉 시가 "+money(t.entryPrice,"KRW"),
+      "신호 "+t.signal.time+" · 00:00~00:05 OR고점 "+money(t.opening.h,"KRW")+" · VWAP "+money(t.vwap,"KRW")+" · 거래량 "+t.vr.toFixed(2)+"배",
+      "신규진입: 22:00 KST까지 · 손절 "+money(t.stop,"KRW")+" (-0.50%) · 익절 "+money(t.tp,"KRW")+" (+1.00%) · 최대 60분",
       "비용가정: 수수료+슬리피지 왕복 0.14%"
     ]
   });
   if(t.exit){
     const gross=pct(t.exit.price,t.entryPrice),net=gross-t.friction;
     await alert(env,{
-      strategy:"crypto",stage:"sell",eventId:"crypto:"+t.date+":"+t.signal.time+":sell:"+t.exit.bar.time,date:t.date,time:t.exit.bar.time,
+      strategy:"crypto",stage:"sell",eventId:"crypto:"+BTC_STRATEGY_VERSION+":"+t.date+":"+t.signal.time+":sell:"+t.exit.bar.time,date:t.date,time:t.exit.bar.time,
       lines:[
-        "KRW-BTC · "+reasonKo(t.exit.reason),
+        "KRW-BTC · 00:00 ORB · "+reasonKo(t.exit.reason),
         "매수 "+t.entry.time+" · "+money(t.entryPrice,"KRW"),
         "매도 "+t.exit.bar.time+" · "+money(t.exit.price,"KRW"),
         "모의 순손익 "+signed(net)+" · 왕복 비용 0.14% 반영"
@@ -200,11 +224,13 @@ async function run(env){
   const out=await Promise.allSettled([runBtc(env,now),runSoxl(env,now)]);
   out.forEach((x,i)=>{if(x.status==="rejected")console.error(JSON.stringify({type:"global_intraday_error",strategy:i===0?"crypto":"soxl",error:String(x.reason&&x.reason.message||x.reason)}));});
 }
+export {btcTrade,BTC_OPEN_HM,BTC_LAST_SIGNAL_HM,BTC_LAST_ENTRY_HM,BTC_EXIT_TRACK_END_HM,BTC_STRATEGY_VERSION};
+
 export default {
   async scheduled(controller,env,ctx){ctx.waitUntil(run(env));},
   async fetch(request,env){
     const u=new URL(request.url);
-    if(u.pathname==="/health")return new Response(JSON.stringify({ok:true,service:"jkquant-global-intraday-scheduler",schedule:"every minute",strategies:["crypto","soxl"],mode:"research-paper-alert-no-order"}),{headers:{"content-type":"application/json","cache-control":"no-store"}});
+    if(u.pathname==="/health")return new Response(JSON.stringify({ok:true,service:"jkquant-global-intraday-scheduler",schedule:"every minute",strategies:["crypto","soxl"],crypto:{strategyVersion:BTC_STRATEGY_VERSION,openingRange:"00:00~00:05 KST",newEntryThrough:"22:00 KST",exitTrackingThrough:"23:05 KST"},mode:"research-paper-alert-no-order"}),{headers:{"content-type":"application/json","cache-control":"no-store"}});
     return new Response("not found",{status:404});
   }
 };
