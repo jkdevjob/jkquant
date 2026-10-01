@@ -1652,7 +1652,7 @@ function nextPlanText(name){
 }
 function reviewIssueCount(name){
   const r=REVIEW_CACHE[name],z=r&&r.records&&r.records[0];
-  return z&&Array.isArray(z.flags)?z.flags.length:0;
+  return z?Number(z.issueCount||0):0;
 }
 function renderStrategyStatus(name){
   const el=$('status_'+name);if(!el)return;
