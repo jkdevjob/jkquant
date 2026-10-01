@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "generatedAt": "2026-10-01T20:21:35.921393+09:00",
+  "generatedAt": "2026-10-01T20:38:15.594911+09:00",
   "designEnd": "2026-09-30",
   "gate": {
     "mdd": -25.0,
@@ -784,7 +784,7 @@
     ]
   },
   "daily": {
-    "generatedAt": "2026-10-01T20:22:23.634860+09:00",
+    "generatedAt": "2026-10-01T20:38:55.400092+09:00",
     "today": "2026-10-01",
     "finalKrDaily": "2026-09-29",
     "rows": [
@@ -889,5 +889,132 @@
       }
     ],
     "note": "시장마다 자기 거래일 기준. ① 은 확정 일봉으로만 계산해 하루 늦게 채워질 수 있음(pending). 숫자는 순손익 %."
+  },
+  "paper": {
+    "start": "2026-10-01",
+    "newFiles": 0,
+    "summary": {
+      "opening_d1v2": {
+        "days": 0,
+        "first": null,
+        "last": null,
+        "tradeDays": 0,
+        "plus1Days": 0,
+        "totalPct": null,
+        "mddPct": null,
+        "worstDayPct": null,
+        "avgTradePct": null,
+        "expected": {
+          "expectancyPct": 1.3304699743160744,
+          "plus1DaysPerYear": 9.561567164179104,
+          "tradeDaysPerYear": 17.723880597014926
+        },
+        "status": {
+          "code": "collecting",
+          "text": "매매일 0/20 — 판단 전"
+        }
+      },
+      "daytrading_etf": {
+        "days": 0,
+        "first": null,
+        "last": null,
+        "tradeDays": 0,
+        "plus1Days": 0,
+        "totalPct": null,
+        "mddPct": null,
+        "worstDayPct": null,
+        "avgTradePct": null,
+        "expected": {
+          "expectancyPct": 0.3635751915676489,
+          "plus1DaysPerYear": 17.723880597014926,
+          "tradeDaysPerYear": 46.2919776119403
+        },
+        "status": {
+          "code": "collecting",
+          "text": "매매일 0/20 — 판단 전"
+        }
+      },
+      "crypto_btc": {
+        "days": 0,
+        "first": null,
+        "last": null,
+        "tradeDays": 0,
+        "plus1Days": 0,
+        "totalPct": null,
+        "mddPct": null,
+        "worstDayPct": null,
+        "avgTradePct": null,
+        "expected": {
+          "expectancyPct": 0.26037939794601556,
+          "plus1DaysPerYear": 60.1268337408313,
+          "tradeDaysPerYear": 204.92206601466992
+        },
+        "status": {
+          "code": "collecting",
+          "text": "매매일 0/20 — 판단 전"
+        }
+      },
+      "crypto_eth": {
+        "days": 0,
+        "first": null,
+        "last": null,
+        "tradeDays": 0,
+        "plus1Days": 0,
+        "totalPct": null,
+        "mddPct": null,
+        "worstDayPct": null,
+        "avgTradePct": null,
+        "expected": {
+          "expectancyPct": 0.32424665544999687,
+          "plus1DaysPerYear": 62.080146833894155,
+          "tradeDaysPerYear": 184.67727133680023
+        },
+        "status": {
+          "code": "collecting",
+          "text": "매매일 0/20 — 판단 전"
+        }
+      },
+      "us_tqqq": {
+        "days": 0,
+        "first": null,
+        "last": null,
+        "tradeDays": 0,
+        "plus1Days": 0,
+        "totalPct": null,
+        "mddPct": null,
+        "worstDayPct": null,
+        "avgTradePct": null,
+        "expected": {
+          "expectancyPct": 0.18769132383517076,
+          "plus1DaysPerYear": 81.23725834797891,
+          "tradeDaysPerYear": 214.1652021089631
+        },
+        "status": {
+          "code": "collecting",
+          "text": "매매일 0/20 — 판단 전"
+        }
+      },
+      "account": {
+        "days": 0,
+        "first": null,
+        "last": null,
+        "tradeDays": 0,
+        "plus1Days": 0,
+        "totalPct": null,
+        "mddPct": null,
+        "worstDayPct": null,
+        "avgTradePct": null,
+        "expected": {
+          "expectancyPct": 0.1477260689821835,
+          "plus1DaysPerYear": 69.16489523231095,
+          "tradeDaysPerYear": 311.46371090191315
+        },
+        "status": {
+          "code": "collecting",
+          "text": "매매일 0/20 — 판단 전"
+        }
+      }
+    },
+    "rule": "날짜별 장부 파일은 한 번만 쓰고 덮어쓰지 않는다. 요약은 장부 파일 값으로만 계산한다."
   }
 }
