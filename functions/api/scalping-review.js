@@ -79,13 +79,16 @@ export async function onRequestGet({request}){
     const docs=(await Promise.all(files.map(f=>getJson(RAW+f,false)))).filter(Boolean);
     const records=docs.map(root=>{
       const x=root[strategy]||{},b=baseMetrics(strategy,x),c=candMetrics(strategy,x);
+      const fs=flags(strategy,root,x,b,c);
+      const issueCount=fs.filter(v=>!v.includes("수집 중")&&!v.includes("교체 검토 후보")).length;
       return {
         date:root.date||"",
         generatedAt:root.generatedAt||"",
         status:x.status||"collecting",
         baseline:b,
         candidate:c,
-        flags:flags(strategy,root,x,b,c),
+        flags:fs,
+        issueCount,
         autoPromotion:false
       };
     });
