@@ -36,6 +36,8 @@ PY = [
     ("board no-trade as zero", "claude_lab.py", 'return series[d] if d in series else "no_trade"', "return series.get(d, 0.0)"),
     ("us not shifted to kst", "claude_lab.py", "(date.fromisoformat(d) + timedelta(days=1)).isoformat(): v", "d: v"),
     ("account weight", "claude_lab.py", '+ a["usWeight"] * a["usSize"] * us_k.get(d, 0.0)', '+ us_k.get(d, 0.0)'),
+    ("paper overwrite", "claude_lab.py", "    if path.exists():\n        return False\n", "\n"),
+    ("drift too early", "claude_lab.py", "if n < 20 or not exp", "if n < 1 or not exp"),
     ("gpt same window", "claude_lab.py", "window = [d for d in cal if start and d >= start]", "window = list(cal)"),
     ("dip hit minutes", "backtest_crypto_orb.py", "int((hit - entry_t).total_seconds() // 60) + 5", "int((hit - entry_t).total_seconds() // 60)"),
 ]

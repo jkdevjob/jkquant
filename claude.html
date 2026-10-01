@@ -27,7 +27,7 @@ table.board{min-width:0}table.board td.nm{white-space:normal;min-width:150px}tab
 </head>
 <body>
 <header><div class="wrap"><div class="htop">
-  <div class="brand"><div class="kicker">JK QUANT · CLAUDE</div><h1>🤖 단타 <span class="v">(클로드)</span> <span class="ver" id="clVer">v1.4.0</span></h1></div>
+  <div class="brand"><div class="kicker">JK QUANT · CLAUDE</div><h1>🤖 단타 <span class="v">(클로드)</span> <span class="ver" id="clVer">v1.5.0</span></h1></div>
   <div class="jkmenu" id="jkmenuWrap">
     <button class="jkmenu-btn" aria-label="메뉴" onclick="jkMenuToggle(event)">三</button>
     <div class="jkmenu-pop" id="jkmenuPop" hidden>
@@ -122,6 +122,14 @@ function render(){
     html+="<div class='card'><h3>📅 전일 · 당일 결과 — 모든 전략</h3><div class='sub'>숫자는 순손익 %. 시장마다 자기 마지막 두 거래일(코인은 09시 기준 하루). 갱신 "+esc((dl.generatedAt||"").slice(0,16).replace("T"," "))+"</div>"+
       "<div class='tw'><table class='board'><thead><tr><th>전략 · 오늘 계획</th><th>전일</th><th>당일</th></tr></thead><tbody>"+(rows||"<tr><td colspan='3' class='sub'>아직 기록이 없습니다.</td></tr>")+"</tbody></table></div>"+
       "<p class='note'>"+esc(dl.note||"")+" 결과는 매일 저녁(18:40·23:40)과 아침 07:30 에 다시 계산됩니다.</p></div>";
+    var pp=(lab.paper||{}),sm=pp.summary||{},NM={opening_d1v2:"① D-1 갭하락 과매도 v2",daytrading_etf:"② 코스닥150 레버리지 하락일 야간",crypto_btc:"③ BTC 20일 추세 (칸 전액)",crypto_eth:"③ ETH 20일 추세 (칸 전액)",us_tqqq:"④ TQQQ 200일 추세 (칸 전액)",account:"🏦 전체 계좌"};
+    var prow=Object.keys(NM).map(function(k){var z=sm[k]||{},e=z.expected||{},st=z.status||{};
+      return "<tr><td class='nm'>"+esc(NM[k])+"<div class='sub'>"+(z.first?esc(z.first)+" ~ "+esc(z.last):"기록 시작 전")+"</div></td><td>"+(z.tradeDays||0)+"<span class='sub'>/"+(z.days||0)+"일</span></td><td class='win'>"+(z.plus1Days||0)+"</td>"+
+        "<td class='"+cls(z.totalPct)+"'><b>"+(z.totalPct==null?"—":pct(z.totalPct,1))+"</b></td><td>"+(z.avgTradePct==null?"—":pct(z.avgTradePct))+"<div class='sub'>기대 "+pct(e.expectancyPct)+"</div></td><td style='white-space:normal;min-width:110px'>"+
+        "<span class='"+(st.code==="below"?"loss":st.code==="ok"?"win":"sub")+"'>"+esc(st.text||"")+"</span></td></tr>"}).join("");
+    html+="<div class='card'><h3>📒 모의투자 누적 ("+esc(pp.start||"2026-10-01")+"~)</h3><div class='sub'>날짜별 장부는 한 번만 쓰고 덮어쓰지 않습니다. 국내는 KIS 모의투자 체결, 코인·미국은 일봉 모의 체결입니다. 매매일 20일이 쌓이면 기대(설계 표본)와 비교해 벗어나면 '규칙 점검'으로 표시합니다.</div>"+
+      (pp.error?"<div class='warn'>"+esc(pp.error)+"</div>":"")+
+      "<div class='tw'><table class='board'><thead><tr><th>전략</th><th>매매일</th><th>+1%↑</th><th>누적</th><th>매매일 평균</th><th>상태</th></tr></thead><tbody>"+prow+"</tbody></table></div></div>";
   }else if(TAB==="opening"){
     var t=T.opening||{};
     var names=(wl.names||[]).map(function(x){return esc(x.name)+" <span class='sub'>RSI "+num(x.rsi14,1)+"</span>"}).join(" · ");
