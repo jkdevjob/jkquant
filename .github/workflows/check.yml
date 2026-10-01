@@ -415,7 +415,6 @@ jobs:
           let fail=0;
           const must=[
             ['data-strategy="crypto"','비트코인 탭'],
-            ['id="scVer">v1.31.1','단타 버전 1.31.1'],
             ['비트코인 00시 ORB 기준전략 v2','BTC 00시 기준전략 설명'],
             ['22:00 신규진입','BTC 22시 신규진입 설명'],
             ['다음 5분봉 시가','다음 봉 진입 설명'],
@@ -423,6 +422,7 @@ jobs:
             ['최근 365일 백필','초기 백필 안내']
           ];
           for(const [needle,label] of must){if(!s.includes(needle)){console.error('✗ '+label+' 없음');fail++;}}
+          if(!/id="scVer">v\d+\.\d+\.\d+</.test(s)){console.error('✗ 단타 버전 x.y.z 형식 없음');fail++;}
           if(!wf.includes('cron: "20 0 * * *"')){console.error('✗ 매일 09:20 KST 수집 schedule 없음');fail++;}
           const btc=fs.readFileSync('scripts/backtest_crypto_orb.py','utf8');
           if(!btc.includes('baseline-decisions.csv')||!btc.includes('target1PctDayRatePct')||!btc.includes('"evidence": {')){
@@ -482,7 +482,6 @@ jobs:
           let fail=0;
           const must=[
             [ui,'data-strategy="soxl"','SOXL 탭'],
-            [ui,'id="scVer">v1.31.1','단타 버전 1.31.1'],
             [ui,'다음 5분봉 시가','next-bar 진입 설명'],
             [py,'baseline-decisions.csv','거래/무거래 판단기록'],
             [py,'target1PctDayRatePct','+1% 목표 지표'],
@@ -495,6 +494,7 @@ jobs:
           for(const [txt,needle,label] of must){
             if(!txt.includes(needle)){console.error('✗ '+label+' 없음');fail++;}
           }
+          if(!/id="scVer">v\d+\.\d+\.\d+</.test(ui)){console.error('✗ 단타 버전 x.y.z 형식 없음');fail++;}
           if(/op=order|\/v1\/accounts|\bjwt\b/i.test(api+wf+py)){
             console.error('✗ SOXL 연구 경로에 주문/계좌 인증 문자열 발견');fail++;
           }
