@@ -307,6 +307,12 @@ def is_generic_job_title(value):
         return True
     if text in GENERIC_JOB_TITLES:
         return True
+    if any(token in text for token in (
+        '채용정보 상세',
+        '채용정보 상세검색',
+        '일자리 찾기',
+    )):
+        return True
     if re.fullmatch(r'(?:입사지원|홈페이지\s*지원|즉시지원|스크랩|관심기업)(?:\s*\d+)?', text):
         return True
     return False
@@ -444,6 +450,24 @@ def title_from_card_body(body):
     text = normalize_text(body)
     if not text:
         return ''
+
+    # 고용24/DDGS 스니펫: "Sep 7, 2026 · 채용시까지 실제 공고명 [기관] 1명 ..."
+    # 형태에서 실제 공고명을 복구한다.
+    work24 = re.sub(
+        r'^[A-Z][a-z]{2}\s+\d{1,2},\s+\d{4}\s*[·-]\s*',
+        '',
+        text,
+    )
+    for pattern in (
+        r'(?:채용시까지|상시채용|오늘마감|마감임박|D-\d+)\s+(.+?)\s+\[[^\]]+\]\s+\d+\s*명',
+        r'(?:채용시까지|상시채용|오늘마감|마감임박|D-\d+)\s+(.+?)(?=\s+\d+\s*명\b)',
+    ):
+        m = re.search(pattern, work24, re.I)
+        if m:
+            candidate = normalize_text(m.group(1))
+            if 3 <= len(candidate) <= 180 and not is_generic_job_title(candidate):
+                return candidate
+
     if '스크랩' in text:
         before = normalize_text(text.split('스크랩', 1)[0])
         if before and len(before) <= 180 and not is_generic_job_title(before):
