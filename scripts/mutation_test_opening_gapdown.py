@@ -42,6 +42,11 @@ PY = [
     ("promotion too early", "claude_lab.py", "    if n < PROMOTE_MIN_TRADE_DAYS:\n", "    if n < 1:\n"),
     ("promotion ignores mdd", "claude_lab.py", "and s_mdd >= o_mdd - 5:", ":"),
     ("week kr overlap not split", "claude_lab.py", '"opening_d1v2": lambda d: a["krWeight"] * (0.5 if d in both else 1.0),', '"opening_d1v2": lambda d: a["krWeight"],'),
+    ("coin level lookahead", "claude_lab.py", 'level = Dd[pd][1] if p["level"] == "prevhigh"', 'level = Dd[d][1] if p["level"] == "prevhigh"'),
+    ("coin trend lookahead", "claude_lab.py", "        trend = C[i - 1] > ma\n", "        trend = C[i] > ma\n"),
+    ("coin stop removed", "claude_lab.py", "if any(x[2] <= stop for x in bars[k:]):", "if False:"),
+    ("soxl buy signal off", "claude_lab.py", "        elif r2 < p[\"rsiMax\"] and C[i] > ma:\n            pending = \"buy\"", "        elif r2 < p[\"rsiMax\"] and C[i] > ma and False:\n            pending = \"buy\""),
+    ("soxl max hold ignored", "claude_lab.py", 'if C[i] > C[i - 1] or pos["days"] >= p["maxHoldDays"]:', 'if C[i] > C[i - 1]:'),
     ("dip hit minutes", "backtest_crypto_orb.py", "int((hit - entry_t).total_seconds() // 60) + 5", "int((hit - entry_t).total_seconds() // 60)"),
 ]
 JS = [
@@ -57,7 +62,9 @@ JS = [
     ("etf fill split", "opening-gapdown.js", 'return {closeBuy:agg(f("02",151500,240000)),openSell:agg(f("01",83000,90000))};', 'return {closeBuy:agg(f("02",0,240000)),openSell:agg(f("01",0,240000))};'),
     ("live fill over expected", "claude-live.js", "const buy=bf||p.expectedPrice||null", "const buy=p.expectedPrice||bf||null"),
     ("live coin ma lookahead", "claude-live.js", "slice(1,1+ma)", "slice(0,ma)"),
-    ("live coin stop", "claude-live.js", 'status:!hold?"쉼(평균 아래)":low<=stop?"손절":"보유중"', 'status:!hold?"쉼(평균 아래)":"보유중"'),
+    ("live coin stop", "claude-live.js", "const stopped=bars.slice(i).some(x=>+x.low_price<=stop);", "const stopped=false;"),
+    ("live coin level today high", "claude-live.js", "level:+candles[1].high_price", "level:+candles[0].high_price"),
+    ("soxl live same-session", "claude-live.js", "const started=!!(sess&&sess.date>nx.basedOn&&sess.open>0);", "const started=!!(sess&&sess.open>0);"),
     ("telegram no-trade hidden", "claude-telegram.js", 'else L.push("① 갭하락 과매도 — 매매 없음 ("+(dec.reason||"조건 맞는 종목 없음")+")");', ''),
     ("coin yesterday lookahead", "claude-live.js", "const h=coinHoldToday(c.slice(1),ma);", "const h=coinHoldToday(c,ma);"),
     ("telegram weekly stale shown", "claude-telegram.js", "||(extra.weekStart&&w.weekStart!==extra.weekStart)", ""),

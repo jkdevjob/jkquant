@@ -1,7 +1,7 @@
 // Cloudflare Pages Function — POST /api/claude-telegram
 // 단타(클로드) Telegram 알림 — 각 탭 결과가 나오는 시각에 opening-scheduler Worker 가 부른다. 주문을 만들지 않는다.
 //   preopen  08:5x  ① 오늘 매수 종목(또는 매매 없음) · ② 아침 시가 매도
-//   morning  09:05  ③ 코인 어제(09~09시) 결과 + 오늘 보유 · ④ 미국 지난 세션 결과 + 오늘 밤 보유
+//   morning  09:05  ③ 코인 어제 결과 + 오늘 할 일 · ④ SOXL 지난 세션 결과 + 오늘 밤 할 일
 //   etfbuy   15:21  ② 오늘 종가 매수 판단
 //   close    15:40  ① 오늘 확정 손익 · ② 결과 · 탭별 오늘 요약
 //   weekly   토 09:05  이번 주 장부 확정분 — 계좌 주간 손익 · +5% 달성 · 탭별 기여 · 그림자 교체 후보
@@ -11,7 +11,9 @@ import { coinHoldToday, coinDayResult } from "./claude-live.js";
 const JH={"Content-Type":"application/json; charset=utf-8","Cache-Control":"no-store"};
 const RAW="https://raw.githubusercontent.com/jkdevjob/jkquant/scalping-data/data/";
 const KINDS=["preopen","morning","etfbuy","close","weekly"];
-const PART={opening_d1v2:"① 시초가",daytrading_etf:"② ETF 야간",crypto_btc:"③ BTC",crypto_eth:"③ ETH",us_tqqq:"④ TQQQ"};
+const SX_ACT={enter:"시가 매수",hold:"보유",exit:"시가 매도",flat:"쉼"};
+const SX_NEXT={buy:"시가 매수 (과매도 신호)",sell:"시가 매도"};
+const PART={opening_d1v2:"① 시초가",daytrading_etf:"② ETF 야간",crypto_btc:"③ BTC",crypto_eth:"③ ETH",us_soxl:"④ SOXL"};
 const TABN={opening:"①",daytrading:"②",crypto:"③",soxl:"④"};
 function json(o,s=200){return new Response(JSON.stringify(o),{status:s,headers:JH});}
 function authorized(request,env){
@@ -52,10 +54,10 @@ export function compose(kind,date,live,extra={}){
   }else if(kind==="morning"){
     L.push("🤖 [클로드 단타] "+date+" 09:05 코인·미국");
     const cr=extra.coins||[];
-    for(const c of cr)L.push("③ "+c.name+" 어제 "+(c.y?(c.y.action+" "+p(c.y.pnlPct)):"—")+" · 오늘 "+(c.today==null?"—":(c.today?"보유(09:00 시가)":"쉼")));
-    if(cr.length){const avg=cr.reduce((s,c)=>s+((c.y&&c.y.pnlPct)||0),0)/cr.length;L.push("   코인 칸 어제 "+p(avg)+" (탭 자금 60% "+p(avg*0.6)+")");}
+    for(const c of cr)L.push("③ "+c.name+" 어제 "+(c.y?(c.y.action+(c.y.buyTime?" "+c.y.buyTime:"")+" "+p(c.y.pnlPct)):"—")+" · 오늘 "+(c.today==null?"—":(c.today?"어제 고가 "+n(c.level)+" 돌파 시 매수":"쉼(20일 평균 아래)")));
+    if(cr.length){const avg=cr.reduce((s,c)=>s+((c.y&&c.y.pnlPct)||0),0)/cr.length;L.push("   코인 칸 어제 "+p(avg)+" (탭 자금 80% "+p(avg*0.8)+")");}
     const u=extra.us;
-    if(u)L.push("④ TQQQ 지난 세션 "+(u.date||"")+" "+(u.action||"")+" "+p(u.pnlPct)+" (칸 전액) · 오늘 밤 "+(u.holdNext==null?"—":(u.holdNext?"보유":"쉼")));
+    if(u)L.push("④ SOXL 지난 세션 "+(u.date||"")+" "+(SX_ACT[u.action]||u.action||"")+(u.pnlPct==null?"":" "+p(u.pnlPct))+" · 오늘 밤 "+(SX_NEXT[u.next]||(u.holding?"보유 유지":"쉼")));
   }else if(kind==="etfbuy"){
     L.push("🤖 [클로드 단타] "+date+" 15:21 데이트레이딩");
     const buy=(d.rows||[]).find(x=>String(x.buyTime||"").startsWith("오늘"))||(d.rows||[]).find(x=>x.status==="매매 없음");
@@ -73,7 +75,7 @@ export function compose(kind,date,live,extra={}){
     const nb=(d.rows||[]).find(x=>String(x.buyTime||"").startsWith("오늘"));
     L.push("② 오늘 종가 매수: "+(nb?(nb.status==="매매 없음"?"없음":nb.status):"없음"));
     const cr=(T.crypto||{}).tabPct,us=(((T.soxl||{}).rows||[])[0]||{}).pnlPct;
-    L.push("③ 코인(09시~지금) "+p(cr)+" · ④ TQQQ "+(us==null?"장 시작 전":p(us)));
+    L.push("③ 코인(09시~지금) "+p(cr)+" · ④ SOXL "+(us==null?"장 시작 전":p(us)));
   }else if(kind==="weekly"){
     const lab=extra.lab||{},w=lab.week||{},a=w.account||{};
     L.push("🤖 [클로드 단타] 주간 결과 "+(w.weekStart||"?")+" ~ "+(w.asOf||"?"));
@@ -111,16 +113,17 @@ export async function onRequestPost({request,env}){
     const extra={};
     if(kind==="morning"){
       extra.coins=await Promise.all(["KRW-BTC","KRW-ETH"].map(async m=>{
-        try{const c=await (await fetch("https://api.upbit.com/v1/candles/days?market="+m+"&count=23",{headers:{Accept:"application/json"}})).json();
-          const t=coinHoldToday(c);return {name:m.replace("KRW-",""),y:coinDayResult(c),today:t?t.hold:null};}
+        try{const [c,hc]=await Promise.all(["days?market="+m+"&count=23","minutes/60?market="+m+"&count=60"].map(q=>
+            fetch("https://api.upbit.com/v1/candles/"+q,{headers:{Accept:"application/json"}}).then(r=>r.json())));
+          const t=coinHoldToday(c);return {name:m.replace("KRW-",""),y:coinDayResult(c,hc),today:t?t.hold:null,level:t?t.level:null};}
         catch(e){return {name:m.replace("KRW-",""),y:null,today:null};}
       }));
       const lab=await fetch(RAW+"claude-lab/latest.json?t="+Date.now()).then(r=>r.ok?r.json():null).catch(()=>null);
-      const dec=await fetch(RAW+"claude-lab/tqqq-decisions.csv?t="+Date.now()).then(r=>r.ok?r.text():"").catch(()=>"");
+      const dec=await fetch(RAW+"claude-lab/soxl-mr-decisions.csv?t="+Date.now()).then(r=>r.ok?r.text():"").catch(()=>"");
       const ln=dec.trim().split("\n"),h=(ln[0]||"").split(","),last=(ln[ln.length-1]||"").split(",");
       const row=Object.fromEntries(h.map((k,i)=>[k,last[i]]));
       const nx=((lab&&lab.tabs&&lab.tabs.soxl)||{}).nextSignal;
-      extra.us={date:row.date,action:row.action,pnlPct:row.pnlPct===""||row.pnlPct==null?null:+row.pnlPct,holdNext:nx?nx.holdNext:null};
+      extra.us={date:row.date,action:row.action,pnlPct:row.pnlPct===""||row.pnlPct==null?null:+row.pnlPct,next:nx?nx.action:null,holding:nx?nx.holding:null};
     }
     if(kind==="weekly"){
       extra.lab=await fetch(RAW+"claude-lab/latest.json?t="+Date.now()).then(r=>r.ok?r.json():null).catch(()=>null);

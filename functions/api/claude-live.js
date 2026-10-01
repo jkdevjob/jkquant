@@ -9,7 +9,7 @@ const JH={"Content-Type":"application/json; charset=utf-8","Cache-Control":"no-s
 const WORKER="https://jkquant-opening-scheduler.mumae4.workers.dev";
 const RAW="https://raw.githubusercontent.com/jkdevjob/jkquant/scalping-data/data/";
 const KR_COST=0.23, ETF_COST=0.13, COIN_COST=0.14, US_COST=0.20;   // 왕복 비용 %(연구와 같은 값)
-const COIN_STOP=4.0, COIN_STOP_SLIP=0.1, COIN_TAB_SIZE=0.6;
+const COIN_STOP=5.0, COIN_STOP_SLIP=0.1, COIN_ENTRY_SLIP=0.05, COIN_TAB_SIZE=0.8;
 
 function json(o,s=200){return new Response(JSON.stringify(o),{status:s,headers:JH});}
 export function kstToday(ms=Date.now()){
@@ -90,25 +90,42 @@ export function etfRows(todaySt,prevSt,prevDate,nowPrice){
   }
   return rows;
 }
-// ③ 코인: 전날 종가가 20일 평균 위면 오늘 09시 시가에 보유, −4% 닿으면 손절
-// 오늘(09시~) 보유 판단 = 어제까지 확정된 20개 종가의 평균 < 어제 종가. candles: 업비트 일봉 최신순(0 = 진행 중인 오늘).
+// ③ 코인 하루 단타: 어제 확정 종가 > 20일 평균(어제 포함)인 날, 오늘 60분봉 고가가 어제 고가를 넘는 첫 봉에서 매수 → 다음 날 09:00 매도.
+// 추세 판단 = 어제까지 확정된 20개 종가의 평균 < 어제 종가. candles: 업비트 일봉 최신순(0 = 진행 중인 오늘). claude_lab.coin_breakout 과 같은 규칙.
 export function coinHoldToday(candles,ma=20){
   const done=(Array.isArray(candles)?candles:[]).slice(1,1+ma).map(c=>+c.trade_price);
   if(done.length<ma||done.some(x=>!(x>0)))return null;
   const avg=done.reduce((a,b)=>a+b,0)/ma;
-  return {hold:done[0]>avg,prevClose:done[0],ma:avg,basedOn:String(candles[1].candle_date_time_kst||"").slice(0,10)};
+  return {hold:done[0]>avg,prevClose:done[0],ma:avg,level:+candles[1].high_price,basedOn:String(candles[1].candle_date_time_kst||"").slice(0,10)};
 }
-// 어제(09시~오늘 09시) 확정 결과: candles[1] 이 어제 봉, 그 판단은 candles[2..21] 종가로 한다.
-export function coinDayResult(candles,ma=20){
+// day: 그날(09:00 시작) 판단 + 그날 60분봉(오래된 순) → 매수 시각·가격·손절·손익. last: 지금 가격(진행 중) 또는 그날 마지막 봉 종가(확정).
+export function coinBreakoutDay(h,bars,last){
+  if(!h)return null;
+  if(!h.hold)return {hold:false,action:"쉼",status:"쉼 — 어제 종가가 20일 평균 아래",pnlPct:0,level:h.level};
+  const i=(bars||[]).findIndex(b=>+b.high_price>h.level);
+  if(i<0)return {hold:false,action:"돌파 없음",status:"돌파 대기 — 어제 고가 "+Math.round(h.level).toLocaleString("en-US")+" 넘으면 매수",pnlPct:0,level:h.level};
+  const b=bars[i],entry=Math.max(+b.opening_price,h.level)*(1+COIN_ENTRY_SLIP/100),stop=entry*(1-COIN_STOP/100);
+  const stopped=bars.slice(i).some(x=>+x.low_price<=stop);
+  const hm=String(b.candle_date_time_kst||"").slice(11,16);
+  return {hold:true,action:stopped?"손절":"돌파 매수",status:stopped?"손절 (−5%)":"보유중 — "+hm+" 돌파 매수, 다음 09:00 매도",
+    buyTime:hm,buyPrice:entry,stopPrice:stop,level:h.level,stopped,
+    pnlPct:stopped?(-COIN_STOP-COIN_STOP_SLIP-COIN_COST):(last?pct(last,entry)-COIN_COST:null)};
+}
+// 60분봉(최신순) 중 업비트 하루 day(YYYY-MM-DD, 09:00 시작)에 속하고 이미 시작한 봉(진행 중 봉 포함 — 실시간 돌파는 그 순간 일어난다)을 오래된 순으로
+export function barsOfDay(hourly,day,nowMs=Date.now()){
+  const s=Date.parse(day+"T09:00:00+09:00"),e=s+864e5;
+  return (Array.isArray(hourly)?hourly:[]).filter(b=>{const t=Date.parse(String(b.candle_date_time_kst)+"+09:00");return t>=s&&t<e&&t<=nowMs;})
+    .sort((a,b)=>String(a.candle_date_time_kst).localeCompare(String(b.candle_date_time_kst)));
+}
+// 어제(09시~오늘 09시) 확정 결과: candles[1] 이 어제 봉, 그 판단은 candles[2..21] 종가와 candles[2] 고가로 한다.
+export function coinDayResult(candles,hourly,ma=20){
   const c=Array.isArray(candles)?candles:[];
   if(c.length<ma+2)return null;
   const h=coinHoldToday(c.slice(1),ma);
-  const d=c[1],open=+d.opening_price,low=+d.low_price,close=+d.trade_price;
-  if(!h)return null;
-  if(!h.hold)return {date:String(d.candle_date_time_kst||"").slice(0,10),hold:false,pnlPct:0,action:"쉼"};
-  const stopped=low<=open*(1-COIN_STOP/100);
-  return {date:String(d.candle_date_time_kst||"").slice(0,10),hold:true,action:stopped?"손절":"보유",
-    pnlPct:stopped?(-COIN_STOP-COIN_STOP_SLIP-COIN_COST):pct(close,open)};
+  const d=c[1],day=String(d.candle_date_time_kst||"").slice(0,10);
+  const bars=barsOfDay(hourly,day,Infinity);
+  const r=coinBreakoutDay(h,bars,bars.length?+bars[bars.length-1].trade_price:+d.trade_price);
+  return r?{date:day,...r}:null;
 }
 // 탭별 오늘 요약 — 칸 수익률(칸 자금 기준) · 개별 매매 합계 · 거래 수 · 계좌 기여 · 오늘 왜 매매했는지/안 했는지 한 줄
 export const ACCOUNT_WEIGHT={opening:0.3,daytrading:0.3,crypto:0.3,soxl:0.4};
@@ -132,10 +149,10 @@ export function todaySummary(tab,t,hm){
       (today?"오늘 종가 매수("+today.status+")":none?"오늘 매수 없음 — "+none.note:hm<1521?"15:21 판단 전":"오늘 판단 기록 없음");
   }else if(tab==="crypto"){
     trades=rows.filter(r=>r.hold).length;tabPct=t.basketPct==null?0:t.basketPct;
-    why=rows.map(r=>r.name+" "+(r.hold?(r.status||"보유"):"쉼(전날 종가 < 20일 평균)")).join(" · ")||"시세 없음";
+    why=rows.map(r=>r.name+" "+(r.status||"")).join(" · ")||"시세 없음";
   }else if(tab==="soxl"){
-    const u=rows[0]||{};trades=u.hold?1:0;tabPct=u.pnlPct==null?0:u.pnlPct;
-    why=u.hold==null?"판단 없음(밤 계산 점검)":u.hold?"QQQ 종가 > 200일 평균 — TQQQ 보유 ("+(u.session||"")+")":"QQQ 종가 < 200일 평균 — 쉼";
+    const u=rows[0]||{};trades=u.hold||u.realized?1:0;tabPct=u.pnlPct==null?0:u.pnlPct;
+    why=u.hold==null&&!u.realized?"판단 없음(밤 계산 점검)":u.status+(u.session?" · "+u.session:"");
   }
   const w=ACCOUNT_WEIGHT[tab]||0;
   return {tabPct,sumPct:sum,trades,accountPct:tabPct*w,weight:w,noTrade:trades===0,why};
@@ -146,15 +163,35 @@ export function applyKrSplit(tabs){
   if(o&&d&&!o.noTrade&&!d.noTrade)for(const q of [o,d]){q.weight=ACCOUNT_WEIGHT.opening/2;q.accountPct=q.tabPct*q.weight;q.krShared=true;}
   return tabs;
 }
-export function coinRow(market,lastDec,tick,today){
-  const hold=lastDec&&String(lastDec.hold)!=="0";
-  if(!tick)return {code:market,name:market.replace("KRW-",""),status:"시세 없음"};
-  const open=+tick.opening_price,low=+tick.low_price,now=+tick.trade_price,stop=open*(1-COIN_STOP/100);
-  return {code:market,name:market.replace("KRW-",""),hold,buyTime:"09:00",buyPrice:open,nowPrice:now,stopPrice:stop,
-    status:!hold?"쉼(평균 아래)":low<=stop?"손절":"보유중",
-    pnlPct:!hold?0:low<=stop?(-COIN_STOP-COIN_STOP_SLIP-COIN_COST):pct(now,open),realized:hold&&low<=stop,date:today};
+// ④ 지금 상태: 밤 판단(nx.basedOn 종가)보다 뒤 세션이면 그 세션 시가에 할 일이 실행된 것으로 본다(모의).
+export function soxlLive(nx,q,last){
+  const row={code:"SOXL",name:"SOXL",hold:null,status:"판단 없음(밤 계산 점검)",pnlPct:null,realized:false};
+  const ls=last?{date:last.date,pnlPct:last.pnlPct===""||last.pnlPct==null?null:+last.pnlPct,action:last.action}:null;
+  row.lastSession=ls;
+  if(!nx||nx.action===undefined||!(nx.close>0)||!(nx.ma>0))return row;        // 밤 계산이 SOXL 판단을 아직 안 냈으면(옛 형식 포함) 판단 없음
+  const ohlc=(q&&q.ohlc)||[],sess=ohlc[ohlc.length-1]||null,intra=q&&q.intraday;
+  const now=intra&&(intra.regular||intra.post||intra.pre)?(intra.post||intra.regular||intra.pre).c:(q&&q.price)||null;
+  const session=intra&&intra.post?"애프터마켓":intra&&intra.regular?"정규장":intra&&intra.pre?"프리마켓":"장 마감";
+  Object.assign(row,{signalBasedOn:nx.basedOn,rsi2:nx.rsi2,ma200:nx.ma,signalClose:nx.close,nowPrice:now,session});
+  const started=!!(sess&&sess.date>nx.basedOn&&sess.open>0);
+  const half=0.1;
+  if(nx.action==="buy"){
+    row.hold=true;
+    if(started){Object.assign(row,{status:"보유중 (시가 매수)",buyTime:sess.date+" 시가",buyPrice:sess.open,pnlPct:now?pct(now,sess.open)-half:null});}
+    else Object.assign(row,{status:"다음 미국장 시가 매수 예정",buyTime:"다음 미국장 시가"});
+  }else if(nx.action==="sell"){
+    row.hold=false;
+    if(started)Object.assign(row,{status:"청산 (시가 매도)",sellTime:sess.date+" 시가",sellPrice:sess.open,pnlPct:pct(sess.open,nx.close)-half,realized:true});
+    else Object.assign(row,{status:"다음 미국장 시가 매도 예정 ("+nx.heldDays+"일 보유)",sellTime:"다음 미국장 시가",pnlPct:null});
+  }else if(nx.holding){
+    row.hold=true;
+    Object.assign(row,{status:"보유중 "+(nx.heldDays+(started?1:0))+"일째 (최대 5일)",pnlPct:started&&now?pct(now,nx.close):null});
+  }else{
+    row.hold=false;
+    Object.assign(row,{status:"쉼 — "+(nx.close>nx.ma?"과매도 아님 (RSI(2) "+(+nx.rsi2).toFixed(0)+" ≥ 20)":"200일 평균 아래"),pnlPct:0});
+  }
+  return row;
 }
-
 export async function onRequestGet({request,env}){
   const origin=new URL(request.url).origin,now=kstToday(),out={ok:true,asOf:new Date().toISOString(),today:now.date,tabs:{}};
   try{
@@ -172,31 +209,31 @@ export async function onRequestGet({request,env}){
     out.tabs.daytrading={rows:etfRows(st,pst,prev&&prev.date,prices["233740"]),ledgerFound:!!lt,
       note:"전날 −3% 이하 마감이면 15:21 종가 매수 → 다음 거래일 08:59 시가 매도."};
     // ③
-    const [btcDec,ethDec,tq]=await Promise.all([csvLast("claude-lab/btc-decisions.csv",1),csvLast("claude-lab/eth-decisions.csv",1),csvLast("claude-lab/tqqq-decisions.csv",2)]);
     let ticks={};
     try{const r=await fetch("https://api.upbit.com/v1/ticker?markets=KRW-BTC,KRW-ETH",{headers:{Accept:"application/json"}});for(const t of await r.json())ticks[t.market]=t;}catch(e){}
     const lab=await fetch(RAW+"claude-lab/latest.json?t="+Date.now()).then(r=>r.ok?r.json():null).catch(()=>null);
     const coins=await Promise.all(["KRW-BTC","KRW-ETH"].map(async m=>{
-      let d=null;
-      try{const r=await fetch("https://api.upbit.com/v1/candles/days?market="+m+"&count=22",{headers:{Accept:"application/json"}});d=coinHoldToday(await r.json());}catch(e){}
-      const row=coinRow(m,d?{hold:d.hold?1:0}:((m==="KRW-BTC"?btcDec:ethDec)[0]||null),ticks[m],now.date);
-      if(d)Object.assign(row,{signalBasedOn:d.basedOn,signalClose:d.prevClose,ma20:d.ma});
-      return row;
+      const name=m.replace("KRW-","");
+      try{
+        const [dc,hc]=await Promise.all(["days?market="+m+"&count=22","minutes/60?market="+m+"&count=30"].map(q=>
+          fetch("https://api.upbit.com/v1/candles/"+q,{headers:{Accept:"application/json"}}).then(r=>r.json())));
+        const h=coinHoldToday(dc);
+        const day=String((dc[0]||{}).candle_date_time_kst||"").slice(0,10);
+        const t=ticks[m],now=t?+t.trade_price:null;
+        const r=coinBreakoutDay(h,barsOfDay(hc,day),now);
+        return {code:m,name,nowPrice:now,sellTime:"다음 날 09:00",signalBasedOn:h&&h.basedOn,signalClose:h&&h.prevClose,ma20:h&&h.ma,...(r||{status:"판단 없음"}),
+          realized:!!(r&&r.stopped)};
+      }catch(e){return {code:m,name,status:"시세 없음",pnlPct:null};}
     }));
     const basket=coins.reduce((s,c)=>s+(c.pnlPct||0),0)/2;
     out.tabs.crypto={rows:coins,basketPct:basket,tabPct:basket*COIN_TAB_SIZE,
-      note:"업비트 하루는 09:00 시작. 전날 종가가 20일 평균 위면 09:00 시가로 보유, 시가 대비 −4% 닿으면 손절. 두 코인 반반, 탭 표시 자금 60%."};
-    // ④
-    const us=await quote(origin,"TQQQ");
-    const un=((lab&&lab.tabs&&lab.tabs.soxl)||{}).nextSignal||null;
-    const lastUs=tq[tq.length-1]||null;
-    const ohlc=(us&&us.ohlc)||[],prevClose=ohlc.length?ohlc[ohlc.length-1].close:null;
-    const intra=us&&us.intraday,livePx=intra&&(intra.regular||intra.pre||intra.post)?(intra.regular||intra.post||intra.pre).c:null;
-    out.tabs.soxl={rows:[{code:"TQQQ",name:"TQQQ",hold:un?un.holdNext:null,status:un?(un.holdNext?"보유중":"쉼(200일 평균 아래)"):"판단 없음",
-      lastSession:lastUs?{date:lastUs.date,pnlPct:lastUs.pnlPct===""?null:+lastUs.pnlPct,action:lastUs.action}:null,
-      prevClose,nowPrice:livePx,pnlPct:un&&un.holdNext&&livePx&&prevClose?pct(livePx,prevClose):null,
-      session:intra&&intra.regular?"정규장":intra&&intra.pre?"프리마켓":intra&&intra.post?"애프터마켓":"장 마감"}],
-      note:"QQQ 종가가 200일 평균 위면 TQQQ 보유, −10% 손절. 미국장 결과는 한국시각 다음 날 아침에 확정."};
+      note:"업비트 하루는 09:00 시작. 어제 종가가 20일 평균 위인 날만, 어제 고가를 넘는 순간 매수 → 다음 날 09:00 매도(24시간 미만). 매수가 대비 −5% 손절. 두 코인 반반, 탭 표시 자금 80%."};
+    // ④ SOXL 단기 과매도 반등 — 밤 계산(미국장 마감 확정 종가)의 다음 할 일 + 지금 시세
+    const us=await quote(origin,"SOXL");
+    const nx=((lab&&lab.tabs&&lab.tabs.soxl)||{}).nextSignal||null;
+    const sx=await csvLast("claude-lab/soxl-mr-decisions.csv",1);
+    out.tabs.soxl={rows:[soxlLive(nx,us,sx[0]||null)],
+      note:"미국장 마감 확정 종가로 RSI(2)<20 · 200일 평균 위면 다음 미국장 시가 매수 → 오른 날 다음 시가 매도(최대 5일). 결과는 한국시각 다음 날 아침에 확정."};
     for(const k of Object.keys(ACCOUNT_WEIGHT))if(out.tabs[k])out.tabs[k].today=todaySummary(k,out.tabs[k],now.hm);
     applyKrSplit(out.tabs);
     return json(out);
