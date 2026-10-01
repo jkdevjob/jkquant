@@ -224,7 +224,21 @@ JOB_TERMS = (
     '경력', '신입', '직원', '사원', '현장', '개발자', '기사',
 )
 EXCLUDE_TERMS = (
-    '신입만', '신입 전용', '인턴만', '마감되었습니다', '채용마감',
+    '인턴만', '마감되었습니다', '채용마감',
+)
+
+ENTRY_ONLY_EXPLICIT_TERMS = (
+    '신입만', '신입 전용', '신입전용', '신입사원만',
+    '신입 공채', '신입공채', '신입사원 공개채용', '신입사원 채용',
+)
+CAREER_ALLOWED_PATTERNS = (
+    r'신입\s*[·ㆍ/,+&]\s*경력',
+    r'신입\s*(?:및|또는)\s*경력',
+    r'경력\s*무관',
+    r'경력직',
+    r'경력자',
+    r'경력\s*\d+\s*년',
+    r'경력\s*(?:이상|지원|우대)',
 )
 TRUSTED_DOMAINS = (
     'jobkorea.co.kr', 'saramin.co.kr', 'imjob.co.kr', 'work24.go.kr',
@@ -364,12 +378,44 @@ def short_term_pay_info(title, body):
     return max(candidates, key=lambda x: x['sort_value'])
 
 
+def is_entry_only(title, body):
+    title_text = normalize_text(title).lower()
+    body_text = normalize_text(body).lower()
+    text = f'{title_text} {body_text}'
+
+    # '신입·경력', '경력무관', '경력직' 등 경력자 지원 가능 신호가 있으면 허용한다.
+    career_allowed = any(
+        re.search(pattern, text, re.I)
+        for pattern in CAREER_ALLOWED_PATTERNS
+    )
+    if career_allowed:
+        return False
+
+    # 명시적인 신입 전용 문구는 제외한다.
+    if any(term in text for term in ENTRY_ONLY_EXPLICIT_TERMS):
+        return True
+
+    # 제목 자체가 '[신입]', '(신입)', '신입 개발자/엔지니어/사원 채용' 형태이고
+    # 본문에도 경력자 지원 가능 신호가 없으면 신입 전용으로 본다.
+    if re.search(r'(?:^|[\[\(\s])신입(?:[\]\)\s]|$)', title_text):
+        if re.search(
+            r'신입\s*(?:사원|개발자|엔지니어|직원|채용|모집|공채)',
+            title_text,
+            re.I,
+        ) or re.search(r'^\s*[\[\(]?신입[\]\)]?', title_text, re.I):
+            return True
+
+    return False
+
+
 def score_java_result(title, body, url):
     text = f"{title} {body}".lower()
 
     if not has_target_location(text):
         return -999
     if any(term in text for term in EXCLUDE_TERMS):
+        return -999
+    if is_entry_only(title, body):
         return -999
     if any(term in text for term in JUNIOR_ONLY_TERMS):
         return -999
@@ -395,6 +441,8 @@ def score_regular_dev_result(title, body, url):
     if not has_target_location(text):
         return -999
     if any(term in text for term in EXCLUDE_TERMS):
+        return -999
+    if is_entry_only(title, body):
         return -999
     if '정규직' not in text and '정규' not in text:
         return -999
@@ -438,6 +486,8 @@ def score_salary_result(title, body, url):
     if not has_target_location(text):
         return -999
     if any(term in text for term in EXCLUDE_TERMS):
+        return -999
+    if is_entry_only(title, body):
         return -999
 
     salary = salary_info(title, body)
