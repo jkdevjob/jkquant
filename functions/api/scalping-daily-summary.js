@@ -55,7 +55,7 @@ function btcLines(j){
       "근거: VWAP "+Number(latest.signalVwap||0).toLocaleString("ko-KR")+"원 · 거래량 "+num(latest.volumeRatio,2)+"배"
     );
   }else{
-    lines.push("NO TRADE · 확정 5분봉 기준 조건 충족 거래 없음","필터: OR 돌파 + 거래량 1.2배 + VWAP 위 + 12:00 KST 이전");
+    lines.push("NO TRADE · 확정 5분봉 기준 조건 충족 거래 없음","필터: 00:00 OR 돌파 + 거래량 1.2배 + VWAP 위 + 21:55 KST 신호(22:00 진입)까지");
   }
   lines.push("","⑥ 검증·분석 기록");
   lines.push("누적 "+Number(j.validDays||0)+"일 · 거래 "+Number(s.trades||0)+"건 · 승률 "+num(s.winRate,1)+"% · 평균 "+pct(s.avgPnl));
