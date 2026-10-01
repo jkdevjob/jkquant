@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-10-01T20:55:52+09:00",
+  "updatedAt": "2026-10-01T21:01:34+09:00",
   "rangeDays": 180,
   "cutoffDate": "2026-04-04",
   "sourceStatuses": {
@@ -11,10 +11,20 @@
     },
     "사람인": {
       "ok": true,
-      "count": 213,
+      "count": 190,
       "failed_pages": 0,
       "errors": [],
       "mode": "직접"
+    },
+    "인크루트": {
+      "ok": false,
+      "count": 0,
+      "failed_queries": 8,
+      "errors": [
+        "대전 Java Spring 개발자: DDGSException",
+        "세종 Java Spring 개발자: DDGSException"
+      ],
+      "mode": "검색"
     },
     "점핏": {
       "ok": false,
@@ -26,40 +36,62 @@
       ],
       "mode": "검색"
     },
-    "고용24": {
-      "ok": true,
-      "count": 5,
-      "failed_queries": 0,
-      "errors": [],
-      "mode": "검색"
-    },
     "커리어": {
       "ok": true,
-      "count": 0,
-      "failed_queries": 7,
+      "count": 3,
+      "failed_queries": 2,
       "errors": [
-        "세종 Java Spring 개발자: DDGSException",
-        "대전 백엔드 AI 개발자: DDGSException"
+        "대전 Java Spring 개발자: DDGSException",
+        "세종 Java Spring 개발자: DDGSException"
       ],
       "mode": "검색"
     },
     "원티드": {
       "ok": true,
       "count": 0,
-      "failed_queries": 2,
-      "errors": [
-        "대전 연봉 5400 6000 월급 450 500 채용: DDGSException",
-        "세종 연봉 5400 6000 월급 450 500 채용: DDGSException"
-      ],
-      "mode": "검색"
-    },
-    "인크루트": {
-      "ok": false,
-      "count": 0,
-      "failed_queries": 8,
+      "failed_queries": 5,
       "errors": [
         "대전 Java Spring 개발자: DDGSException",
         "세종 Java Spring 개발자: DDGSException"
+      ],
+      "mode": "검색"
+    },
+    "고용24": {
+      "ok": true,
+      "count": 4,
+      "failed_queries": 2,
+      "errors": [
+        "대전 Java Spring 개발자: DDGSException",
+        "세종 Java Spring 개발자: DDGSException"
+      ],
+      "mode": "검색"
+    },
+    "아이엠잡": {
+      "ok": true,
+      "count": 0,
+      "failed_queries": 3,
+      "errors": [
+        "대전 Java Spring 개발자: DDGSException",
+        "대전 단기 알바 초보 경력무관: TimeoutException"
+      ],
+      "mode": "검색"
+    },
+    "링크드인": {
+      "ok": true,
+      "count": 0,
+      "failed_queries": 1,
+      "errors": [
+        "대전 Java Spring 개발자: DDGSException"
+      ],
+      "mode": "검색"
+    },
+    "알바천국": {
+      "ok": true,
+      "count": 1,
+      "failed_queries": 2,
+      "errors": [
+        "대전 Java Spring 개발자: DDGSException",
+        "세종 Java Spring 개발자: TimeoutException"
       ],
       "mode": "검색"
     },
@@ -73,39 +105,18 @@
       ],
       "mode": "검색"
     },
-    "링크드인": {
-      "ok": true,
-      "count": 0,
-      "failed_queries": 0,
-      "errors": [],
-      "mode": "검색"
-    },
-    "아이엠잡": {
+    "알바몬": {
       "ok": false,
       "count": 0,
       "failed_queries": 8,
       "errors": [
-        "대전 Java Spring 개발자: DDGSException",
-        "세종 Java Spring 개발자: DDGSException"
+        "대전 Java Spring 개발자: TimeoutException",
+        "세종 Java Spring 개발자: TimeoutException"
       ],
-      "mode": "검색"
-    },
-    "알바천국": {
-      "ok": true,
-      "count": 1,
-      "failed_queries": 0,
-      "errors": [],
-      "mode": "검색"
-    },
-    "알바몬": {
-      "ok": true,
-      "count": 3,
-      "failed_queries": 0,
-      "errors": [],
       "mode": "검색"
     }
   },
-  "count": 201,
+  "count": 213,
   "jobs": [
     {
       "id": "https://www.jobkorea.co.kr/Recruit/GI_Read/50020163",
@@ -208,11 +219,34 @@
       "lastSeen": "2026-10-01"
     },
     {
-      "id": "https://www.work24.go.kr/wk/a/b/1500/empDetailAuthView.do?wantedAuthNo=K170082609040003&infoTypeCd=VALIDATION&infoTypeGroup=tb_workinfoworknet",
+      "id": "https://yw.work24.go.kr/search?query=it",
+      "title": "청년일경험 포털",
+      "company": "잇뷰",
+      "body": "3 days ago · 대전 IT 응용 소프트웨어 개발 및 공급업 주식회사 잇뷰 (it View Co.,Ltd.) 모집 1명 프로그램 1개 대전 IT 응용 소프트웨어 개발 및 공급업 에어빌리티 주식회사 (Airbil it y Inc.) 모집 1명 프로그램 1개 서울 IT 무인 항공기 및 무인 비행장치 제조업",
+      "url": "https://yw.work24.go.kr/search?query=it",
+      "source": "고용24",
+      "sources": [
+        "고용24"
+      ],
+      "locations": [
+        "대전"
+      ],
+      "categories": [
+        "java_ai"
+      ],
+      "salary": null,
+      "shortPay": null,
+      "postedDate": "",
+      "dateSource": "수집일",
+      "firstSeen": "2026-10-01",
+      "lastSeen": "2026-10-01"
+    },
+    {
+      "id": "https://www.work24.go.kr/wk/a/b/1500/empDetailAuthView.do?wantedAuthNo=KF10902609070001&infoTypeCd=VALIDATION&infoTypeGroup=tb_workinfoworknet",
       "title": "채용정보 상세 | 채용정보 상세검색 | 일자리 찾기 | 채용정보",
       "company": "",
       "body": "Sep 7, 2026 · 채용시까지 FDE 엔지니어 (프론트엔드, 백엔드, 풀스택) 채용 [대전새일 채용대행] 1명 관계없음 학력무관 정규 주 5일 근무 월급 215만원 ~ 215만원 대전광역시 서구 정림동로7번길 요약보기 새창보기 채용시까지 Field AI Solutions Engineer 모집 [대전새일 채용대행]",
-      "url": "https://www.work24.go.kr/wk/a/b/1500/empDetailAuthView.do?wantedAuthNo=K170082609040003&infoTypeCd=VALIDATION&infoTypeGroup=tb_workinfoworknet",
+      "url": "https://www.work24.go.kr/wk/a/b/1500/empDetailAuthView.do?wantedAuthNo=KF10902609070001&infoTypeCd=VALIDATION&infoTypeGroup=tb_workinfoworknet",
       "source": "고용24",
       "sources": [
         "고용24"
@@ -257,6 +291,29 @@
         "annual": 6000.0,
         "label": "연 6,000만원 (월 환산 500만원)"
       },
+      "shortPay": null,
+      "postedDate": "",
+      "dateSource": "수집일",
+      "firstSeen": "2026-10-01",
+      "lastSeen": "2026-10-01"
+    },
+    {
+      "id": "https://www.saramin.co.kr/zf_user/jobs/view?rec_idx=54924639",
+      "title": "임베디드/펌웨어 소프트웨어 개발자 모집 근무지 대전 or 안양(D-31)",
+      "company": "(주)넥스윌",
+      "body": "임베디드/펌웨어 소프트웨어 개발자 모집 근무지 대전 or 안양",
+      "url": "https://www.saramin.co.kr/zf_user/jobs/view?rec_idx=54924639",
+      "source": "사람인",
+      "sources": [
+        "사람인"
+      ],
+      "locations": [
+        "대전"
+      ],
+      "categories": [
+        "java_ai"
+      ],
+      "salary": null,
       "shortPay": null,
       "postedDate": "",
       "dateSource": "수집일",
@@ -452,7 +509,7 @@
       "id": "https://www.saramin.co.kr/zf_user/jobs/view?rec_idx=54682456",
       "title": "솔리드이엔지 클라우드xAI 영업 / 영업지원 / 컨설턴트 모집(D-5)",
       "company": "(주)솔리드이엔지",
-      "body": "솔리드이엔지 클라우드xAI 영업 / 영업지원 / 컨설턴트 모집 스크랩 ~ 10/06(화) 입사지원 대덕구 , 동구 , 서구 , 유성구 , 중구 , 세종 세종특별자치시 경력무관 초대졸↑ 정규직 Java , 유지보수 , Python , Linux , 기술지원 외 수정일 26/10/01",
+      "body": "솔리드이엔지 클라우드xAI 영업 / 영업지원 / 컨설턴트 모집 스크랩 ~ 10/06(화) 입사지원 대덕구 , 동구 , 서구 , 유성구 , 중구 , 세종 세종특별자치시 경력무관 초대졸↑ 정규직 유지보수 , Java , SE(시스템엔지니어) , 기술지원 , IT컨설팅 외 수정일 26/10/01",
       "url": "https://www.saramin.co.kr/zf_user/jobs/view?rec_idx=54682456",
       "source": "사람인",
       "sources": [
@@ -520,33 +577,6 @@
       "lastSeen": "2026-10-01"
     },
     {
-      "id": "https://www.jobkorea.co.kr/Recruit/GI_Read/49996562",
-      "title": "방사선치료기 제어 SW 개발자",
-      "company": "라덱셀",
-      "body": "스크랩 방사선치료기 제어 SW 개발자 라덱셀 대전 유성구 외 1 제약·보건·바이오, 시스템엔지니어 연봉 4,000~10,000만원 홈페이지 지원 경력3년↑",
-      "url": "https://www.jobkorea.co.kr/Recruit/GI_Read/49996562",
-      "source": "잡코리아",
-      "sources": [
-        "잡코리아"
-      ],
-      "locations": [
-        "대전"
-      ],
-      "categories": [
-        "java_ai"
-      ],
-      "salary": {
-        "monthly": 333.3333333333333,
-        "annual": 4000.0,
-        "label": "연 4,000만원 (월 환산 333만원)"
-      },
-      "shortPay": null,
-      "postedDate": "",
-      "dateSource": "수집일",
-      "firstSeen": "2026-10-01",
-      "lastSeen": "2026-10-01"
-    },
-    {
       "id": "https://www.jobkorea.co.kr/Recruit/GI_Read/49971909",
       "title": "로봇 충전기개발 엔지니어",
       "company": "㈜라이온로보틱스",
@@ -572,7 +602,7 @@
     {
       "id": "https://www.jobkorea.co.kr/Recruit/GI_Read/50009844",
       "title": "로봇 백엔드 개발 (세종, 5년)",
-      "company": "",
+      "company": "휴먼코어랩(주)",
       "body": "상여금/인센티브 지급 스크랩 로봇 백엔드 개발 (세종, 5년) 벤처기업 세종 솔루션·SI·CRM·ERP, UI·UX디자이너 연봉 3,000만원~ 즉시 지원 경력5년↑ • 경조사 지원 , 점심 식사 지원 , 성과급 , 복지포인트 , 사내 동호회 지원 , 야간근로수당",
       "url": "https://www.jobkorea.co.kr/Recruit/GI_Read/50009844",
       "source": "잡코리아",
@@ -601,7 +631,7 @@
       "id": "https://www.saramin.co.kr/zf_user/jobs/view?rec_idx=55178291",
       "title": "대전연구소 웹서비스 어플리케이션 개발 담당자 채용",
       "company": "(주)다하미커뮤니케이션즈",
-      "body": "대전연구소 웹서비스 어플리케이션 개발 담당자 채용 스크랩 진행예정 접수예정 대전 중구 경력3년↑ 대졸↑ 정규직 Spring , PostgreSQL , SpringBoot , Ajax , RestAPI 외 수정일 26/10/01",
+      "body": "대전연구소 웹서비스 어플리케이션 개발 담당자 채용 스크랩 진행예정 접수예정 대전 중구 경력3년↑ 대졸↑ 정규직 Spring , SpringBoot , Javascript , MySQL , React 외 수정일 26/10/01",
       "url": "https://www.saramin.co.kr/zf_user/jobs/view?rec_idx=55178291",
       "source": "사람인",
       "sources": [
@@ -742,7 +772,7 @@
       "id": "https://www.saramin.co.kr/zf_user/jobs/view?rec_idx=55178614",
       "title": "공공 부문 소프트웨어 개발자 모집(D-60)",
       "company": "(주)소프트아이텍",
-      "body": "공공 부문 소프트웨어 개발자 모집(계약직) 스크랩 ~ 11/30(월) 입사지원 대전 서구 경력무관 초대졸↑ 계약직 유지보수 , 인터페이스 , SQL , JSP , RDBMS 외 등록일 26/10/01",
+      "body": "공공 부문 소프트웨어 개발자 모집 스크랩 ~ 11/30(월) 입사지원 대전 서구 경력무관 초대졸↑ 정규직 JSP , Java , 웹개발 , 유지보수 , 기술지원 외 등록일 26/10/01",
       "url": "https://www.saramin.co.kr/zf_user/jobs/view?rec_idx=55178614",
       "source": "사람인",
       "sources": [
@@ -752,7 +782,8 @@
         "대전"
       ],
       "categories": [
-        "java_ai"
+        "java_ai",
+        "regular_dev"
       ],
       "salary": null,
       "shortPay": null,
@@ -1085,7 +1116,7 @@
       "id": "https://www.saramin.co.kr/zf_user/jobs/view?rec_idx=55178758",
       "title": "[시차출퇴근제] SW개발/데이터/프로젝트 엔지니어 채용(D-30)",
       "company": "비앤에프테크놀로지(주)",
-      "body": "[시차출퇴근제] SW개발/데이터/프로젝트 엔지니어 채용 스크랩 ~ 10/31(토) 입사지원 대전 유성구 경력무관 고졸↑ 정규직 S/W , AI(인공지능) , 데이터엔지니어 , Python , PostgreSQL 외 등록일 26/10/01",
+      "body": "[시차출퇴근제] SW개발/데이터/프로젝트 엔지니어 채용 스크랩 ~ 10/31(토) 입사지원 대전 유성구 경력무관 고졸↑ 정규직 S/W , AI(인공지능) , 데이터엔지니어 , Python , 데이터분석가 외 등록일 26/10/01",
       "url": "https://www.saramin.co.kr/zf_user/jobs/view?rec_idx=55178758",
       "source": "사람인",
       "sources": [
@@ -1201,11 +1232,11 @@
       "lastSeen": "2026-10-01"
     },
     {
-      "id": "https://www.saramin.co.kr/zf_user/jobs/view?rec_idx=55091940",
-      "title": "[상상스토리/세종] 시스템 개발/유지보수 경력개발자 채용(D-20)",
+      "id": "https://www.saramin.co.kr/zf_user/jobs/view?rec_idx=55091954",
+      "title": "[상상스토리/세종] 시스템 개발·유지보수 프리랜서 개발자 모집(D-20)",
       "company": "상상스토리(주)",
       "body": "[상상스토리/세종] 시스템 개발·유지보수 프리랜서 개발자 모집",
-      "url": "https://www.saramin.co.kr/zf_user/jobs/view?rec_idx=55091940",
+      "url": "https://www.saramin.co.kr/zf_user/jobs/view?rec_idx=55091954",
       "source": "사람인",
       "sources": [
         "사람인"
@@ -1305,7 +1336,8 @@
       "url": "https://www.jobkorea.co.kr/Recruit/GI_Read/49746395",
       "source": "잡코리아",
       "sources": [
-        "잡코리아"
+        "잡코리아",
+        "사람인"
       ],
       "locations": [
         "대전"
@@ -1443,7 +1475,8 @@
       "url": "https://www.jobkorea.co.kr/Recruit/GI_Read/50087972",
       "source": "잡코리아",
       "sources": [
-        "잡코리아"
+        "잡코리아",
+        "사람인"
       ],
       "locations": [
         "대전"
@@ -1595,13 +1628,35 @@
         "대전"
       ],
       "categories": [
-        "java_ai",
-        "regular_dev"
+        "java_ai"
       ],
       "salary": null,
       "shortPay": null,
       "postedDate": "2026-10-01",
       "dateSource": "등록/수정일",
+      "firstSeen": "2026-10-01",
+      "lastSeen": "2026-10-01"
+    },
+    {
+      "id": "https://www.saramin.co.kr/zf_user/jobs/view?rec_idx=54868352",
+      "title": "[경력] 기술연구소-대전 H/W 개발자 채용 공고(D-25)",
+      "company": "(주)솔디펜스",
+      "body": "[경력] 기술연구소-대전 H/W 개발자 채용 공고",
+      "url": "https://www.saramin.co.kr/zf_user/jobs/view?rec_idx=54868352",
+      "source": "사람인",
+      "sources": [
+        "사람인"
+      ],
+      "locations": [
+        "대전"
+      ],
+      "categories": [
+        "java_ai"
+      ],
+      "salary": null,
+      "shortPay": null,
+      "postedDate": "",
+      "dateSource": "수집일",
       "firstSeen": "2026-10-01",
       "lastSeen": "2026-10-01"
     },
@@ -1637,52 +1692,6 @@
       "source": "사람인",
       "sources": [
         "사람인"
-      ],
-      "locations": [
-        "대전"
-      ],
-      "categories": [
-        "java_ai"
-      ],
-      "salary": null,
-      "shortPay": null,
-      "postedDate": "",
-      "dateSource": "수집일",
-      "firstSeen": "2026-10-01",
-      "lastSeen": "2026-10-01"
-    },
-    {
-      "id": "https://www.jobkorea.co.kr/Recruit/GI_Read/49917590",
-      "title": "TechArt·XR·인터랙티브 콘텐츠 R&D 개발자 모집 (대전근무)",
-      "company": "㈜맥앤윕",
-      "body": "스크랩 TechArt·XR·인터랙티브 콘텐츠 R&D 개발자 모집 (대전근무) ㈜맥앤윕 대전 유성구 광고·홍보·전시, 소프트웨어개발자, AI/ML연구원, AI서비스개발자 즉시 지원 경력3년↑",
-      "url": "https://www.jobkorea.co.kr/Recruit/GI_Read/49917590",
-      "source": "잡코리아",
-      "sources": [
-        "잡코리아"
-      ],
-      "locations": [
-        "대전"
-      ],
-      "categories": [
-        "java_ai"
-      ],
-      "salary": null,
-      "shortPay": null,
-      "postedDate": "",
-      "dateSource": "수집일",
-      "firstSeen": "2026-10-01",
-      "lastSeen": "2026-10-01"
-    },
-    {
-      "id": "https://www.jobkorea.co.kr/Recruit/GI_Read/49962335",
-      "title": "SW개발센터 개발자 모집합니다.",
-      "company": "㈜티라로보틱스",
-      "body": "신입 지원 가능 스크랩 [티라로보틱스] SW개발센터 개발자 모집합니다. ㈜티라로보틱스 대전 유성구 외 5 솔루션·SI·CRM·ERP, 시스템엔지니어, 소프트웨어개발자, 기계엔지니어 즉시 지원 신입·경력 • 경조사 지원 , 복지포인트 , 장기근속 포상제도 , 건강검진 지원 , 연차제도 , 업무활동비 지원 , 자유로운 연차 사용",
-      "url": "https://www.jobkorea.co.kr/Recruit/GI_Read/49962335",
-      "source": "잡코리아",
-      "sources": [
-        "잡코리아"
       ],
       "locations": [
         "대전"
@@ -1840,7 +1849,7 @@
       "id": "https://www.saramin.co.kr/zf_user/jobs/view?rec_idx=55174652",
       "title": "AI에이전트 소프트웨어 개발자(D-60)",
       "company": "(주)마젠타로보틱스",
-      "body": "AI에이전트 소프트웨어 개발자 스크랩 ~ 11/30(월) 입사지원 대전 유성구 경력4년↑ 대졸↑ 정규직 S/W , AI(인공지능) , Python , 소프트웨어개발 등록일 26/10/01",
+      "body": "AI에이전트 소프트웨어 개발자 스크랩 ~ 11/30(월) 입사지원 대전 유성구 경력4년↑ 대졸↑ 정규직 S/W , AI(인공지능) , Python , SI·시스템통합 , NI·네트워크통합 외 등록일 26/10/01",
       "url": "https://www.saramin.co.kr/zf_user/jobs/view?rec_idx=55174652",
       "source": "사람인",
       "sources": [
@@ -2170,7 +2179,7 @@
       "id": "https://www.saramin.co.kr/zf_user/jobs/view?rec_idx=55160935",
       "title": "프로젝트관리시스템 백엔드 개발자(Java/Spring)(D-29)",
       "company": "(주)솔루션링크",
-      "body": "[솔루션링크] 프로젝트관리시스템 백엔드 개발자(Java/Spring) 스크랩 ~ 10/30(금) 입사지원 대전 유성구 경력3년↑ 대졸↑ 정규직 Java , JPA , 백엔드/서버개발 , SpringBoot , RestAPI 외 수정일 26/09/30",
+      "body": "[솔루션링크] 프로젝트관리시스템 백엔드 개발자(Java/Spring) 스크랩 ~ 10/30(금) 입사지원 대전 유성구 경력3년↑ 대졸↑ 정규직 SpringBoot , Java , 백엔드/서버개발 , RestAPI , RDBMS 외 수정일 26/09/30",
       "url": "https://www.saramin.co.kr/zf_user/jobs/view?rec_idx=55160935",
       "source": "사람인",
       "sources": [
@@ -2194,7 +2203,7 @@
       "id": "https://www.saramin.co.kr/zf_user/jobs/view?rec_idx=55157740",
       "title": "재미스튜디오 AI Agent 관련 웹 개발자 모집(채용시 마감)",
       "company": "(주)재미스튜디오",
-      "body": "재미스튜디오 AI Agent 관련 웹 개발자 모집 스크랩 채용시 입사지원 대전 유성구 경력무관 학력무관 정규직 유지보수 , 정보보안 , 백엔드/서버개발 , 웹개발 , AI(인공지능) 외 등록일 26/09/30",
+      "body": "재미스튜디오 AI Agent 관련 웹 개발자 모집 스크랩 채용시 입사지원 대전 유성구 경력무관 학력무관 정규직 백엔드/서버개발 , 웹개발 , 프론트엔드 , AI(인공지능) , 유지보수 외 등록일 26/09/30",
       "url": "https://www.saramin.co.kr/zf_user/jobs/view?rec_idx=55157740",
       "source": "사람인",
       "sources": [
@@ -2218,7 +2227,7 @@
       "id": "https://www.saramin.co.kr/zf_user/jobs/view?rec_idx=55158738",
       "title": "㈜리얼타임테크 SW 개발 신입/경력 채용(D-15)",
       "company": "(주)리얼타임테크",
-      "body": "㈜리얼타임테크 SW 개발 신입/경력 채용 스크랩 ~ 10/16(금) 입사지원 대전 유성구 경력무관 학력무관 정규직·전문연구요원 AI(인공지능) , GIS , OLAP , RDBMS , 알고리즘 외 등록일 26/09/30",
+      "body": "㈜리얼타임테크 SW 개발 신입/경력 채용 스크랩 ~ 10/16(금) 입사지원 대전 유성구 경력무관 학력무관 정규직·전문연구요원 백엔드/서버개발 , AI(인공지능) , 딥러닝 , 머신러닝 , 미들웨어 외 등록일 26/09/30",
       "url": "https://www.saramin.co.kr/zf_user/jobs/view?rec_idx=55158738",
       "source": "사람인",
       "sources": [
@@ -2228,7 +2237,8 @@
         "대전"
       ],
       "categories": [
-        "java_ai"
+        "java_ai",
+        "regular_dev"
       ],
       "salary": null,
       "shortPay": null,
@@ -2266,7 +2276,7 @@
       "id": "https://www.saramin.co.kr/zf_user/jobs/view?rec_idx=55164335",
       "title": "[신입 및 경력 채용] 풀스택 개발자(D-29)",
       "company": "주식회사인사이트노바",
-      "body": "[신입 및 경력 채용] 풀스택 개발자 스크랩 ~ 10/30(금) 입사지원 세종특별자치시 경력무관 대졸↑ 정규직 유지보수 , 아키텍쳐 , AI(인공지능) , Redis , PostgreSQL 외 등록일 26/09/30",
+      "body": "[신입 및 경력 채용] 풀스택 개발자 스크랩 ~ 10/30(금) 입사지원 세종특별자치시 경력무관 대졸↑ 정규직 Java , 백엔드/서버개발 , 웹개발 , Javascript , 프론트엔드 외 등록일 26/09/30",
       "url": "https://www.saramin.co.kr/zf_user/jobs/view?rec_idx=55164335",
       "source": "사람인",
       "sources": [
@@ -2315,7 +2325,7 @@
       "id": "https://www.saramin.co.kr/zf_user/jobs/view?rec_idx=55163576",
       "title": "2026년 하반기 각 부문별 신입/경력 채용공고(D-30)",
       "company": "(주)시몬스",
-      "body": "2026년 하반기 각 부문별 신입/경력 채용공고 스크랩 ~ 10/31(토) 홈페이지 지원 서울전체 , 강남구 , 경기 경기전체 , 이천시 , 대구 대구전체 , 대전 대전전체 , 경남 창원시 , 전남광주 전남광주전체 , 전국 전국 , 세종 세종특별자치시 신입·경력 학력무관 정규직 네트워크 , 정보보안 , 백엔드/서버개발 , 인프라 , 품질관리 외 수정일 26/09/30",
+      "body": "2026년 하반기 각 부문별 신입/경력 채용공고 스크랩 ~ 10/31(토) 홈페이지 지원 서울전체 , 강남구 , 경기 경기전체 , 이천시 , 대구 대구전체 , 대전 대전전체 , 경남 창원시 , 전남광주 전남광주전체 , 전국 전국 , 세종 세종특별자치시 신입·경력 학력무관 정규직 백엔드/서버개발 , Python , 정보보안 , 네트워크 , 인프라 외 수정일 26/09/30",
       "url": "https://www.saramin.co.kr/zf_user/jobs/view?rec_idx=55163576",
       "source": "사람인",
       "sources": [
@@ -2388,7 +2398,7 @@
       "id": "https://www.saramin.co.kr/zf_user/jobs/view?rec_idx=55145946",
       "title": "제어팀 개발 담당자 채용(AI 연구 / SCADA)(D-28)",
       "company": "유니슨㈜",
-      "body": "제어팀 개발 담당자 채용(AI 연구 / SCADA) 스크랩 ~ 10/29(목) 입사지원 대전 유성구 경력3년↑ 대졸↑ 정규직 AI(인공지능) , S/W , R&D , AI(인공지능) , Python 외 등록일 26/09/29",
+      "body": "제어팀 개발 담당자 채용(AI 연구 / SCADA) 스크랩 ~ 10/29(목) 입사지원 대전 유성구 경력3년↑ 대졸↑ 정규직 JSP , Java , Javascript , Python , CSS 외 등록일 26/09/29",
       "url": "https://www.saramin.co.kr/zf_user/jobs/view?rec_idx=55145946",
       "source": "사람인",
       "sources": [
@@ -2398,7 +2408,8 @@
         "대전"
       ],
       "categories": [
-        "java_ai"
+        "java_ai",
+        "regular_dev"
       ],
       "salary": null,
       "shortPay": null,
@@ -2789,10 +2800,34 @@
       "lastSeen": "2026-10-01"
     },
     {
+      "id": "https://www.saramin.co.kr/zf_user/jobs/view?rec_idx=55054964",
+      "title": "2026 하반기 신입/경력 수시 채용(D-10)",
+      "company": "(주)엠아이디",
+      "body": "[엠아이디] 2026 하반기 신입/경력 수시 채용 스크랩 ~ 10/11(일) 입사지원 대전 서구 , 유성구 신입·경력 초대졸↑ 정규직 백엔드/서버개발 , 웹개발 , AI(인공지능) , 앱개발 , SI개발 외 수정일 26/09/28",
+      "url": "https://www.saramin.co.kr/zf_user/jobs/view?rec_idx=55054964",
+      "source": "사람인",
+      "sources": [
+        "사람인"
+      ],
+      "locations": [
+        "대전"
+      ],
+      "categories": [
+        "java_ai",
+        "regular_dev"
+      ],
+      "salary": null,
+      "shortPay": null,
+      "postedDate": "2026-09-28",
+      "dateSource": "등록/수정일",
+      "firstSeen": "2026-10-01",
+      "lastSeen": "2026-10-01"
+    },
+    {
       "id": "https://www.saramin.co.kr/zf_user/jobs/view?rec_idx=55135071",
       "title": "(주)피플아이 기반기술개발실 개발1팀 하드웨어 개발자 (신입)(채용시 마감)",
       "company": "(주)피플아이",
-      "body": "(주)피플아이 기반기술개발실 개발1팀 하드웨어 개발자 (경력) 스크랩 채용시 입사지원 대전 유성구 경력5년↑ 학력무관 정규직 FPGA , H/W , 소프트웨어개발 등록일 26/09/28",
+      "body": "(주)피플아이 기반기술개발실 개발1팀 하드웨어 개발자 (신입) 스크랩 채용시 입사지원 대전 유성구 경력무관 학력무관 정규직 FPGA , H/W , 소프트웨어개발 등록일 26/09/28",
       "url": "https://www.saramin.co.kr/zf_user/jobs/view?rec_idx=55135071",
       "source": "사람인",
       "sources": [
@@ -2878,6 +2913,30 @@
       "salary": null,
       "shortPay": null,
       "postedDate": "2026-09-25",
+      "dateSource": "등록/수정일",
+      "firstSeen": "2026-10-01",
+      "lastSeen": "2026-10-01"
+    },
+    {
+      "id": "https://www.saramin.co.kr/zf_user/jobs/view?rec_idx=55115205",
+      "title": "전산팀 수시채용(D-22)",
+      "company": "안국약품(주)",
+      "body": "전산팀 수시채용 스크랩 ~ 10/23(금) 입사지원 서울전체 , 경기 경기전체 , 고양시 , 과천시 , 수원시 영통구 , 화성시 , 대전 중구 , 경북 경북전체 , 포항시 , 전북 전북전체 신입·경력 학력무관 정규직 유지보수 , 백엔드/서버개발 , AI(인공지능) , 기획 , AI(인공지능) 외 수정일 26/09/23",
+      "url": "https://www.saramin.co.kr/zf_user/jobs/view?rec_idx=55115205",
+      "source": "사람인",
+      "sources": [
+        "사람인"
+      ],
+      "locations": [
+        "대전"
+      ],
+      "categories": [
+        "java_ai",
+        "regular_dev"
+      ],
+      "salary": null,
+      "shortPay": null,
+      "postedDate": "2026-09-23",
       "dateSource": "등록/수정일",
       "firstSeen": "2026-10-01",
       "lastSeen": "2026-10-01"
@@ -3052,11 +3111,59 @@
       "lastSeen": "2026-10-01"
     },
     {
+      "id": "https://www.saramin.co.kr/zf_user/jobs/view?rec_idx=50846359",
+      "title": "[NARA SPACE] 각 부문별 직원모집(D-30)",
+      "company": "(주)나라스페이스테크놀로지",
+      "body": "[NARA SPACE] 각 부문별 직원모집 스크랩 ~ 10/31(토) 홈페이지 지원 서울전체 , 강남구 , 구로구 , 마포구 , 영등포구 , 경기 광명시 , 김포시 , 부천시 , 안양시 , 대전 유성구 신입·경력 초대졸↑ 정규직 백엔드/서버개발 , 웹개발 , 프론트엔드 , Javascript , 데이터엔지니어 외 수정일 26/09/22",
+      "url": "https://www.saramin.co.kr/zf_user/jobs/view?rec_idx=50846359",
+      "source": "사람인",
+      "sources": [
+        "사람인"
+      ],
+      "locations": [
+        "대전"
+      ],
+      "categories": [
+        "java_ai",
+        "regular_dev"
+      ],
+      "salary": null,
+      "shortPay": null,
+      "postedDate": "2026-09-22",
+      "dateSource": "등록/수정일",
+      "firstSeen": "2026-10-01",
+      "lastSeen": "2026-10-01"
+    },
+    {
       "id": "https://www.saramin.co.kr/zf_user/jobs/view?rec_idx=55100138",
       "title": "SI 개발자 경력직 모집(D-21)",
       "company": "(주)멀틱스",
-      "body": "SI 개발자 경력직 모집 스크랩 ~ 10/22(목) 입사지원 대전 유성구 경력 5~20년 대졸↑ 정규직 Spring , Java , 웹개발 , iBATIS , Eclipse 외 등록일 26/09/22",
+      "body": "SI 개발자 경력직 모집 스크랩 ~ 10/22(목) 입사지원 대전 유성구 경력 5~20년 대졸↑ 정규직 Spring , Java , 웹개발 , Eclipse , HTML5 외 등록일 26/09/22",
       "url": "https://www.saramin.co.kr/zf_user/jobs/view?rec_idx=55100138",
+      "source": "사람인",
+      "sources": [
+        "사람인"
+      ],
+      "locations": [
+        "대전"
+      ],
+      "categories": [
+        "java_ai",
+        "regular_dev"
+      ],
+      "salary": null,
+      "shortPay": null,
+      "postedDate": "2026-09-22",
+      "dateSource": "등록/수정일",
+      "firstSeen": "2026-10-01",
+      "lastSeen": "2026-10-01"
+    },
+    {
+      "id": "https://www.saramin.co.kr/zf_user/jobs/view?rec_idx=55093014",
+      "title": "2026년 한국가스기술공사 하반기 신입직원 채용공고(D-5)",
+      "company": "(주)한국가스기술공사",
+      "body": "2026년 한국가스기술공사 하반기 신입직원 채용공고 스크랩 ~ 10/06(화) 홈페이지 지원 서울전체 , 경기 경기전체 , 대전 유성구 , 강원 강원전체 , 경남 경남전체 , 경북 경북전체 , 전남광주 전남광주전체 , 충북 충북전체 , 충남 충남전체 , 전국 전국 신입 학력무관 정규직·계약직 백엔드/서버개발 , 앱개발 , 정보보안 , SE(시스템엔지니어) , 정보통신 외 수정일 26/09/22",
+      "url": "https://www.saramin.co.kr/zf_user/jobs/view?rec_idx=55093014",
       "source": "사람인",
       "sources": [
         "사람인"
@@ -3103,7 +3210,7 @@
       "id": "https://www.saramin.co.kr/zf_user/jobs/view?rec_idx=54845281",
       "title": "임베디드 개발자 모집공고(위플랫)(D-1)",
       "company": "(주)위플랫",
-      "body": "임베디드 개발자 모집공고(위플랫) 스크랩 내일마감 입사지원 대전 유성구 경력 3~12년 대졸↑ 정규직 자동화설계 , Python , 정보통신 , 통신설계 , RTOS 외 수정일 26/09/21",
+      "body": "임베디드 개발자 모집공고(위플랫) 스크랩 내일마감 입사지원 대전 유성구 경력 3~12년 대졸↑ 정규직 AI(인공지능) , 정보통신 , Python , 기술연구 , SI개발 외 수정일 26/09/21",
       "url": "https://www.saramin.co.kr/zf_user/jobs/view?rec_idx=54845281",
       "source": "사람인",
       "sources": [
@@ -3242,6 +3349,30 @@
       "lastSeen": "2026-10-01"
     },
     {
+      "id": "https://www.saramin.co.kr/zf_user/jobs/view?rec_idx=55086913",
+      "title": "2026 이노스페이스 신입/경력 수시채용(D-30)",
+      "company": "(주)이노스페이스",
+      "body": "2026 이노스페이스 신입/경력 수시채용 스크랩 ~ 10/31(토) 홈페이지 지원 서울전체 , 서초구 , 경기 경기전체 , 화성시 , 전남광주 고흥군 , 충북 청주시 , 충남 금산군 , 세종 세종특별자치시 신입·경력 학력무관 정규직·계약직 백엔드/서버개발 , Python , 유지보수 , API , 기술지원 외 수정일 26/09/21",
+      "url": "https://www.saramin.co.kr/zf_user/jobs/view?rec_idx=55086913",
+      "source": "사람인",
+      "sources": [
+        "사람인"
+      ],
+      "locations": [
+        "세종"
+      ],
+      "categories": [
+        "java_ai",
+        "regular_dev"
+      ],
+      "salary": null,
+      "shortPay": null,
+      "postedDate": "2026-09-21",
+      "dateSource": "등록/수정일",
+      "firstSeen": "2026-10-01",
+      "lastSeen": "2026-10-01"
+    },
+    {
       "id": "https://www.jobkorea.co.kr/Recruit/GI_Read/50055490",
       "title": "(SI/SM) JAVA 웹 개발자(경력) 모집",
       "company": "㈜에이치지",
@@ -3270,7 +3401,7 @@
       "id": "https://www.saramin.co.kr/zf_user/jobs/view?rec_idx=55075138",
       "title": "'26년 하반기 공개채용(D-10)",
       "company": "(주)코리아디펜스인더스트리",
-      "body": "'26년 하반기 공개채용 스크랩 ~ 10/11(일) 입사지원 대전전체 , 유성구 , 세종 세종특별자치시 신입·경력 대졸↑ 계약직 웹개발 , 백엔드/서버개발 , Spring , SpringBoot , HTML 외 수정일 26/09/21",
+      "body": "'26년 하반기 공개채용 스크랩 ~ 10/11(일) 입사지원 대전전체 , 유성구 , 세종 세종특별자치시 신입·경력 대졸↑ 계약직 Spring , SpringBoot , 백엔드/서버개발 , 웹개발 , 데이터분석가 외 수정일 26/09/21",
       "url": "https://www.saramin.co.kr/zf_user/jobs/view?rec_idx=55075138",
       "source": "사람인",
       "sources": [
@@ -3316,7 +3447,7 @@
       "id": "https://www.saramin.co.kr/zf_user/jobs/view?rec_idx=55071496",
       "title": "풀재택/원격근무 영어소통 개발자 채용 (호주 AI 스타트업)(D-16)",
       "company": "부키피코리아 주식회사",
-      "body": "풀재택/원격근무 영어소통 개발자 채용 (호주 AI 스타트업) 스크랩 ~ 10/17(토) 입사지원 서울전체 , 경기 과천시 , 광주시 , 성남시 , 용인시 , 하남시 , 대구 대구전체 , 대전 대전전체 , 부산 부산전체 , 강원 강원전체 경력8년↑ 학력무관 무기계약직·계약직 유지보수 , 백엔드/서버개발 , 웹개발 , MongoDB , ReactJS 외 수정일 26/09/18",
+      "body": "풀재택/원격근무 영어소통 개발자 채용 (호주 AI 스타트업) 스크랩 ~ 10/17(토) 입사지원 서울전체 , 경기 과천시 , 광주시 , 성남시 , 용인시 , 하남시 , 대구 대구전체 , 대전 대전전체 , 부산 부산전체 , 강원 강원전체 경력8년↑ 학력무관 무기계약직·계약직 백엔드/서버개발 , 웹개발 , 앱개발 , 유지보수 , Javascript 외 수정일 26/09/18",
       "url": "https://www.saramin.co.kr/zf_user/jobs/view?rec_idx=55071496",
       "source": "사람인",
       "sources": [
@@ -3331,6 +3462,35 @@
       "salary": null,
       "shortPay": null,
       "postedDate": "2026-09-18",
+      "dateSource": "등록/수정일",
+      "firstSeen": "2026-10-01",
+      "lastSeen": "2026-10-01"
+    },
+    {
+      "id": "https://www.jobkorea.co.kr/Recruit/GI_Read/49996562",
+      "title": "방사선치료기 제어 SW 개발자",
+      "company": "라덱셀",
+      "body": "스크랩 방사선치료기 제어 SW 개발자 라덱셀 대전 유성구 외 1 제약·보건·바이오, 시스템엔지니어 연봉 4,000~10,000만원 홈페이지 지원 경력3년↑",
+      "url": "https://www.jobkorea.co.kr/Recruit/GI_Read/49996562",
+      "source": "잡코리아",
+      "sources": [
+        "잡코리아",
+        "사람인"
+      ],
+      "locations": [
+        "대전"
+      ],
+      "categories": [
+        "java_ai",
+        "regular_dev"
+      ],
+      "salary": {
+        "monthly": 333.3333333333333,
+        "annual": 4000.0,
+        "label": "연 4,000만원 (월 환산 333만원)"
+      },
+      "shortPay": null,
+      "postedDate": "2026-09-17",
       "dateSource": "등록/수정일",
       "firstSeen": "2026-10-01",
       "lastSeen": "2026-10-01"
@@ -3457,7 +3617,7 @@
       "id": "https://www.saramin.co.kr/zf_user/jobs/view?rec_idx=55045006",
       "title": "[공공부문 응용시스템] Java·JSP 정규직 개발자 (경력)(D-44)",
       "company": "(주)두드림정보",
-      "body": "[공공부문 응용시스템] Java·JSP 정규직 개발자 (경력) 스크랩 ~ 11/14(토) 입사지원 대전 유성구 경력 1~10년 대졸↑ 정규직·인턴직 SI개발 , Java , 프론트엔드 , Spring , 백엔드/서버개발 외 등록일 26/09/15",
+      "body": "[공공부문 응용시스템] Java·JSP 정규직 개발자 (경력) 스크랩 ~ 11/14(토) 입사지원 대전 유성구 경력 1~10년 대졸↑ 정규직·인턴직 Spring , Java , 백엔드/서버개발 , 웹개발 , 프론트엔드 외 등록일 26/09/15",
       "url": "https://www.saramin.co.kr/zf_user/jobs/view?rec_idx=55045006",
       "source": "사람인",
       "sources": [
@@ -3481,7 +3641,7 @@
       "id": "https://www.saramin.co.kr/zf_user/jobs/view?rec_idx=55006637",
       "title": "(주)티켓나라 웹·앱 서비스 개발자(경력) 채용(D-39)",
       "company": "(주)티켓나라",
-      "body": "(주)티켓나라 웹·앱 서비스 개발자(경력) 채용 스크랩 ~ 11/09(월) 입사지원 대전 동구 경력무관 초대졸↑ 정규직 백엔드/서버개발 , 웹개발 , 앱개발 , 소프트웨어개발 수정일 26/09/15",
+      "body": "(주)티켓나라 웹·앱 서비스 개발자(경력) 채용 스크랩 ~ 11/09(월) 입사지원 대전 동구 경력무관 초대졸↑ 정규직 백엔드/서버개발 , 웹개발 , 앱개발 , SI·시스템통합 , 시스템관리 외 수정일 26/09/15",
       "url": "https://www.saramin.co.kr/zf_user/jobs/view?rec_idx=55006637",
       "source": "사람인",
       "sources": [
@@ -3505,7 +3665,7 @@
       "id": "https://www.saramin.co.kr/zf_user/jobs/view?rec_idx=55032174",
       "title": "정보시스템 기술지원, 웹.앱개발外 정규직 채용 - 경력(1년이상)(D-43)",
       "company": "(주)엑소텍",
-      "body": "정보시스템 기술지원, 웹.앱개발外 정규직 채용 - 경력(1년이상) 스크랩 ~ 11/13(금) 입사지원 대전 유성구 신입·경력 학력무관 정규직 유지보수 , SI개발 , 기술지원 , 앱개발 , JSP 외 등록일 26/09/14",
+      "body": "정보시스템 기술지원, 웹.앱개발外 정규직 채용 - 경력(1년이상) 스크랩 ~ 11/13(금) 입사지원 대전 유성구 신입·경력 학력무관 정규직 기술지원 , 앱개발 , 웹개발 , 유지보수 , SI개발 외 등록일 26/09/14",
       "url": "https://www.saramin.co.kr/zf_user/jobs/view?rec_idx=55032174",
       "source": "사람인",
       "sources": [
@@ -3529,7 +3689,7 @@
       "id": "https://www.saramin.co.kr/zf_user/jobs/view?rec_idx=55027584",
       "title": "[AX사업부] AI기반 서비스 & 백엔드 개발 경력자(리더급)(채용시 마감)",
       "company": "(주)플랜아이",
-      "body": "[AX사업부] AI기반 서비스 & 백엔드 개발 경력자(리더급) 스크랩 채용시 입사지원 대전 유성구 경력 7~15년 학력무관 정규직 AI(인공지능) , 소프트웨어개발 수정일 26/09/14",
+      "body": "[AX사업부] AI기반 서비스 & 백엔드 개발 경력자(리더급) 스크랩 채용시 입사지원 대전 유성구 경력 7~15년 학력무관 정규직 AI(인공지능) , SI·시스템통합 , DBMS , 소프트웨어개발 수정일 26/09/14",
       "url": "https://www.saramin.co.kr/zf_user/jobs/view?rec_idx=55027584",
       "source": "사람인",
       "sources": [
@@ -3553,7 +3713,7 @@
       "id": "https://www.saramin.co.kr/zf_user/jobs/view?rec_idx=55027829",
       "title": "[AX사업부] AI 서비스 개발자 (주니어~미들)(채용시 마감)",
       "company": "(주)플랜아이",
-      "body": "[AX사업부] AI 서비스 개발자 (주니어~미들) 스크랩 채용시 입사지원 대전 유성구 경력 7~15년 학력무관 정규직 AI(인공지능) , 소프트웨어개발 수정일 26/09/14",
+      "body": "[AX사업부] AI 서비스 개발자 (주니어~미들) 스크랩 채용시 입사지원 대전 유성구 경력 7~15년 학력무관 정규직 AI(인공지능) , SI·시스템통합 , DBMS , 소프트웨어개발 수정일 26/09/14",
       "url": "https://www.saramin.co.kr/zf_user/jobs/view?rec_idx=55027829",
       "source": "사람인",
       "sources": [
@@ -3648,7 +3808,7 @@
       "id": "https://www.saramin.co.kr/zf_user/jobs/view?rec_idx=54897583",
       "title": "2026년 위성·항공·경영 분야 부문별 신입/경력 채용(D-2)",
       "company": "(주)솔탑",
-      "body": "[솔탑] 2026년 위성·항공·경영 분야 부문별 신입/경력 채용 스크랩 ~ 10/03(토) 입사지원 대전전체 , 유성구 , 세종 세종특별자치시 신입·경력 초대졸↑ 정규직 Java , 웹개발 , 백엔드/서버개발 , Python , 예산관리 외 수정일 26/09/14",
+      "body": "[솔탑] 2026년 위성·항공·경영 분야 부문별 신입/경력 채용 스크랩 ~ 10/03(토) 입사지원 대전전체 , 유성구 , 세종 세종특별자치시 신입·경력 초대졸↑ 정규직 Java , 웹개발 , 백엔드/서버개발 , Python , 앱개발 외 수정일 26/09/14",
       "url": "https://www.saramin.co.kr/zf_user/jobs/view?rec_idx=54897583",
       "source": "사람인",
       "sources": [
@@ -3838,6 +3998,31 @@
       "lastSeen": "2026-10-01"
     },
     {
+      "id": "https://www.jobkorea.co.kr/Recruit/GI_Read/49962335",
+      "title": "SW개발센터 개발자 모집합니다.",
+      "company": "㈜티라로보틱스",
+      "body": "신입 지원 가능 스크랩 [티라로보틱스] SW개발센터 개발자 모집합니다. ㈜티라로보틱스 대전 유성구 외 5 솔루션·SI·CRM·ERP, 시스템엔지니어, 소프트웨어개발자, 기계엔지니어 즉시 지원 신입·경력 • 경조사 지원 , 복지포인트 , 장기근속 포상제도 , 건강검진 지원 , 연차제도 , 업무활동비 지원 , 자유로운 연차 사용",
+      "url": "https://www.jobkorea.co.kr/Recruit/GI_Read/49962335",
+      "source": "잡코리아",
+      "sources": [
+        "잡코리아",
+        "사람인"
+      ],
+      "locations": [
+        "대전"
+      ],
+      "categories": [
+        "java_ai",
+        "regular_dev"
+      ],
+      "salary": null,
+      "shortPay": null,
+      "postedDate": "2026-09-10",
+      "dateSource": "등록/수정일",
+      "firstSeen": "2026-10-01",
+      "lastSeen": "2026-10-01"
+    },
+    {
       "id": "https://www.saramin.co.kr/zf_user/jobs/view?rec_idx=54990645",
       "title": "소상공인시장진흥공단 상주공고(네트워크,보안 운영 유지)(상시 채용)",
       "company": "(주)와이넷",
@@ -3865,7 +4050,7 @@
       "id": "https://www.saramin.co.kr/zf_user/jobs/view?rec_idx=54988012",
       "title": "공고기관 유지관리 DA, DBA, AA, 사업관리 경력직 채용 공고(D-8)",
       "company": "(주)카이시스템",
-      "body": "공고기관 유지관리 DA, DBA, AA, 사업관리 경력직 채용 공고 스크랩 ~ 10/09(금) 입사지원 세종특별자치시 경력3년↑ 학력무관 정규직 백엔드/서버개발 , 유지보수 , 아키텍쳐 , Spring , Apache 외 등록일 26/09/09",
+      "body": "공고기관 유지관리 DA, DBA, AA, 사업관리 경력직 채용 공고 스크랩 ~ 10/09(금) 입사지원 세종특별자치시 경력3년↑ 학력무관 정규직 Spring , 백엔드/서버개발 , Git , 데이터분석가 , 데이터엔지니어 외 등록일 26/09/09",
       "url": "https://www.saramin.co.kr/zf_user/jobs/view?rec_idx=54988012",
       "source": "사람인",
       "sources": [
@@ -3913,7 +4098,7 @@
       "id": "https://www.jobkorea.co.kr/Recruit/GI_Read/49947063",
       "title": "임베디드 분야 자동제어 소프트웨어 개발 인력 채용",
       "company": "(주)한백전자",
-      "body": "신입 지원 가능 스크랩 임베디드 분야 자동제어 소프트웨어 개발 인력 채용 (주)한백전자 대전 유성구 전기·전자·제어, 시스템엔지니어, 소프트웨어개발자, AI/ML엔지니어 즉시 지원 신입·경력",
+      "body": "임베디드 분야 자동제어 소프트웨어 개발 인력 채용 스크랩 ~ 10/08(목) 입사지원 대전 유성구 경력무관 학력무관 정규직 딥러닝 , 임베디드 , 자율주행 , 펌웨어 , AI(인공지능) 외 등록일 26/09/08",
       "url": "https://www.jobkorea.co.kr/Recruit/GI_Read/49947063",
       "source": "잡코리아",
       "sources": [
@@ -3939,6 +4124,30 @@
       "company": "슈어데이터랩(주)",
       "body": "연구개발(백엔드개발자) 채용 스크랩 채용시 입사지원 대전 유성구 경력무관 대졸↑ 정규직 백엔드/서버개발 , 소프트웨어개발 등록일 26/09/08",
       "url": "https://www.saramin.co.kr/zf_user/jobs/view?rec_idx=54979048",
+      "source": "사람인",
+      "sources": [
+        "사람인"
+      ],
+      "locations": [
+        "대전"
+      ],
+      "categories": [
+        "java_ai",
+        "regular_dev"
+      ],
+      "salary": null,
+      "shortPay": null,
+      "postedDate": "2026-09-08",
+      "dateSource": "등록/수정일",
+      "firstSeen": "2026-10-01",
+      "lastSeen": "2026-10-01"
+    },
+    {
+      "id": "https://www.saramin.co.kr/zf_user/jobs/view?rec_idx=54781863",
+      "title": "2026 하반기 신입/경력 채용(D-17)",
+      "company": "슈어소프트테크(주)",
+      "body": "2026 하반기 신입/경력 채용 스크랩 ~ 10/18(일) 입사지원 경기 성남시 수정구 , 대전 유성구 신입·경력 대졸↑ 정규직 백엔드/서버개발 , 프론트엔드 , AI(인공지능) , 유지보수 , 기술지원 외 수정일 26/09/08",
+      "url": "https://www.saramin.co.kr/zf_user/jobs/view?rec_idx=54781863",
       "source": "사람인",
       "sources": [
         "사람인"
@@ -4056,7 +4265,7 @@
       "id": "https://www.saramin.co.kr/zf_user/jobs/view?rec_idx=54934670",
       "title": "[시차출퇴근제] Front-End/Back-End Developer 채용(D-2)",
       "company": "비앤에프테크놀로지(주)",
-      "body": "[시차출퇴근제] Front-End/Back-End Developer 채용 스크랩 ~ 10/03(토) 입사지원 대전 유성구 경력3년↑ 초대졸↑ 정규직 백엔드/서버개발 , 프론트엔드 , 앱개발 , Javascript , 정보통신 외 수정일 26/09/04",
+      "body": "[시차출퇴근제] Front-End/Back-End Developer 채용 스크랩 ~ 10/03(토) 입사지원 대전 유성구 경력3년↑ 초대졸↑ 정규직 백엔드/서버개발 , 프론트엔드 , 앱개발 , Javascript , 데이터엔지니어 외 수정일 26/09/04",
       "url": "https://www.saramin.co.kr/zf_user/jobs/view?rec_idx=54934670",
       "source": "사람인",
       "sources": [
@@ -4072,6 +4281,31 @@
       "salary": null,
       "shortPay": null,
       "postedDate": "2026-09-04",
+      "dateSource": "등록/수정일",
+      "firstSeen": "2026-10-01",
+      "lastSeen": "2026-10-01"
+    },
+    {
+      "id": "https://www.jobkorea.co.kr/Recruit/GI_Read/49917590",
+      "title": "TechArt·XR·인터랙티브 콘텐츠 R&D 개발자 모집 (대전근무)",
+      "company": "㈜맥앤윕",
+      "body": "스크랩 TechArt·XR·인터랙티브 콘텐츠 R&D 개발자 모집 (대전근무) ㈜맥앤윕 대전 유성구 광고·홍보·전시, 소프트웨어개발자, AI/ML연구원, AI서비스개발자 즉시 지원 경력3년↑",
+      "url": "https://www.jobkorea.co.kr/Recruit/GI_Read/49917590",
+      "source": "잡코리아",
+      "sources": [
+        "잡코리아",
+        "사람인"
+      ],
+      "locations": [
+        "대전"
+      ],
+      "categories": [
+        "java_ai",
+        "regular_dev"
+      ],
+      "salary": null,
+      "shortPay": null,
+      "postedDate": "2026-09-03",
       "dateSource": "등록/수정일",
       "firstSeen": "2026-10-01",
       "lastSeen": "2026-10-01"
@@ -4150,7 +4384,7 @@
       "id": "https://www.saramin.co.kr/zf_user/jobs/view?rec_idx=54916279",
       "title": "컴퓨터(서버/네트워크/보안/OA) 엔지니어 (경기/강원/충청/경상)(D-31)",
       "company": "(주)델타시스템",
-      "body": "컴퓨터(서버/네트워크/보안/OA) 엔지니어 (경기/강원/충청/경상) 스크랩 ~ 11/01(일) 입사지원 대전 유성구 경력무관 초대졸↑ 정규직 백엔드/서버개발 , SE(시스템엔지니어) , MySQL , 네트워크 , 정보보안 외 수정일 26/09/02",
+      "body": "컴퓨터(서버/네트워크/보안/OA) 엔지니어 (경기/강원/충청/경상) 스크랩 ~ 11/01(일) 입사지원 대전 유성구 경력무관 초대졸↑ 정규직 백엔드/서버개발 , 정보보안 , SE(시스템엔지니어) , 네트워크 , Windows 외 수정일 26/09/02",
       "url": "https://www.saramin.co.kr/zf_user/jobs/view?rec_idx=54916279",
       "source": "사람인",
       "sources": [
@@ -4174,7 +4408,7 @@
       "id": "https://www.saramin.co.kr/zf_user/jobs/view?rec_idx=54920925",
       "title": "시스템 구축 및 개발, 운영 경력직 채용(D-1)",
       "company": "(주)메타바이오메드",
-      "body": "[메타바이오메드] 시스템 구축 및 개발, 운영 경력직 채용 스크랩 내일마감 입사지원 청주시 상당구 , 청주시 흥덕구 , 청주시 청원구 , 청주시 서원구 , 세종 세종특별자치시 경력 5~10년 대졸↑ 정규직 SI개발 , 개발PM , 유지보수 , 백엔드/서버개발 , AI(인공지능) 외 수정일 26/09/02",
+      "body": "[메타바이오메드] 시스템 구축 및 개발, 운영 경력직 채용 스크랩 내일마감 입사지원 청주시 상당구 , 청주시 흥덕구 , 청주시 청원구 , 청주시 서원구 , 세종 세종특별자치시 경력 5~10년 대졸↑ 정규직 백엔드/서버개발 , AI(인공지능) , 유지보수 , SI개발 , 기술지원 외 수정일 26/09/02",
       "url": "https://www.saramin.co.kr/zf_user/jobs/view?rec_idx=54920925",
       "source": "사람인",
       "sources": [
@@ -4457,6 +4691,30 @@
       "lastSeen": "2026-10-01"
     },
     {
+      "id": "https://www.saramin.co.kr/zf_user/jobs/view?rec_idx=54827233",
+      "title": "(주)하이시큐어 IT 기술지원-정보보안-엔지니어(D-22)",
+      "company": "(주)하이시큐어",
+      "body": "(주)하이시큐어 IT 기술지원-정보보안-엔지니어 스크랩 ~ 10/23(금) 입사지원 대전 서구 경력무관 학력무관 정규직 기술지원 , 백엔드/서버개발 , 웹개발 , 솔루션 , 트러블슈팅 외 등록일 26/08/24",
+      "url": "https://www.saramin.co.kr/zf_user/jobs/view?rec_idx=54827233",
+      "source": "사람인",
+      "sources": [
+        "사람인"
+      ],
+      "locations": [
+        "대전"
+      ],
+      "categories": [
+        "java_ai",
+        "regular_dev"
+      ],
+      "salary": null,
+      "shortPay": null,
+      "postedDate": "2026-08-24",
+      "dateSource": "등록/수정일",
+      "firstSeen": "2026-10-01",
+      "lastSeen": "2026-10-01"
+    },
+    {
       "id": "https://www.saramin.co.kr/zf_user/jobs/view?rec_idx=54811267",
       "title": "[세종시 근무] 솔루션 개발 및 유지보수 (경력무관)(채용시 마감)",
       "company": "크리니티(주)",
@@ -4586,6 +4844,30 @@
       "lastSeen": "2026-10-01"
     },
     {
+      "id": "https://www.saramin.co.kr/zf_user/jobs/view?rec_idx=54783169",
+      "title": "개발 관리자 및 용역/과제 PM(채용시 마감)",
+      "company": "(주)스마트프로",
+      "body": "개발 관리자 및 용역/과제 PM 스크랩 채용시 입사지원 대전 유성구 경력10년↑ 대졸↑ 정규직 C++ , Unreal , 개발PM , 소프트웨어개발 등록일 26/08/19",
+      "url": "https://www.saramin.co.kr/zf_user/jobs/view?rec_idx=54783169",
+      "source": "사람인",
+      "sources": [
+        "사람인"
+      ],
+      "locations": [
+        "대전"
+      ],
+      "categories": [
+        "java_ai",
+        "regular_dev"
+      ],
+      "salary": null,
+      "shortPay": null,
+      "postedDate": "2026-08-19",
+      "dateSource": "등록/수정일",
+      "firstSeen": "2026-10-01",
+      "lastSeen": "2026-10-01"
+    },
+    {
       "id": "https://www.saramin.co.kr/zf_user/jobs/view?rec_idx=54786826",
       "title": "AI 알고리즘 개발자 채용 (의료·헬스케어 SaaS)(D-17)",
       "company": "(주)유비아이리스",
@@ -4613,7 +4895,7 @@
       "id": "https://www.saramin.co.kr/zf_user/jobs/view?rec_idx=54764132",
       "title": "블루시그널 데이터분석 솔루션 백엔드 개발자, 영업담당자 채용(D-16)",
       "company": "(주)블루시그널",
-      "body": "블루시그널 데이터분석 솔루션 백엔드 개발자, 영업담당자 채용 스크랩 ~ 10/17(토) 입사지원 대전 유성구 경력무관 대졸↑ 정규직 백엔드/서버개발 , 기술영업 , 거래처영업 , 고객관리 , 영업 외 수정일 26/08/18",
+      "body": "블루시그널 데이터분석 솔루션 백엔드 개발자, 영업담당자 채용 스크랩 ~ 10/17(토) 입사지원 대전 유성구 경력무관 대졸↑ 정규직 백엔드/서버개발 , 기술영업 , 영업관리 , 영업직 , 솔루션기술영업 외 수정일 26/08/18",
       "url": "https://www.saramin.co.kr/zf_user/jobs/view?rec_idx=54764132",
       "source": "사람인",
       "sources": [
@@ -4637,7 +4919,7 @@
       "id": "https://www.saramin.co.kr/zf_user/jobs/view?rec_idx=54769133",
       "title": "(주)무브먼츠 공간데이터 분석 개발자(위성영상/GIS 기반) 경력 채용 공고(채용시 마감)",
       "company": "(주)무브먼츠",
-      "body": "(주)무브먼츠 공간데이터 분석 개발자(위성영상/GIS 기반) 경력 채용 공고 스크랩 채용시 입사지원 대전 대덕구 경력5년↑ 학력무관 정규직 백엔드/서버개발 , 영상처리 , AWS , Docker , 데이터시각화 외 등록일 26/08/18",
+      "body": "(주)무브먼츠 공간데이터 분석 개발자(위성영상/GIS 기반) 경력 채용 공고 스크랩 채용시 입사지원 대전 대덕구 경력5년↑ 학력무관 정규직 백엔드/서버개발 , 데이터시각화 , 머신러닝 , 영상처리 , GIS 외 등록일 26/08/18",
       "url": "https://www.saramin.co.kr/zf_user/jobs/view?rec_idx=54769133",
       "source": "사람인",
       "sources": [
@@ -4709,7 +4991,7 @@
       "id": "https://www.saramin.co.kr/zf_user/jobs/view?rec_idx=54740373",
       "title": "[대전근무] macOS 개발자 채용(D-11)",
       "company": "(주)엑소스피어랩스",
-      "body": "[대전근무] macOS 개발자 채용 스크랩 ~ 10/12(월) 입사지원 대전 서구 경력무관 학력무관 정규직 MacOS , 정보보안 등록일 26/08/13",
+      "body": "[대전근무] macOS 개발자 채용 스크랩 ~ 10/12(월) 입사지원 대전 서구 경력무관 학력무관 정규직 MacOS , 보안 , 백신 , 정보보안 등록일 26/08/13",
       "url": "https://www.saramin.co.kr/zf_user/jobs/view?rec_idx=54740373",
       "source": "사람인",
       "sources": [
@@ -4733,7 +5015,7 @@
       "id": "https://www.saramin.co.kr/zf_user/jobs/view?rec_idx=54725778",
       "title": "(주)가치소프트 응용소프트웨어 사업부 개발자(D-10)",
       "company": "(주)가치소프트",
-      "body": "(주)가치소프트 응용소프트웨어 사업부 개발자 스크랩 ~ 10/11(일) 입사지원 세종특별자치시 경력1년↑ 대졸↑ 정규직 인터페이스 , OCR , OpenCV , Python , OpenGL 외 등록일 26/08/12",
+      "body": "(주)가치소프트 응용소프트웨어 사업부 개발자 스크랩 ~ 10/11(일) 입사지원 세종특별자치시 경력1년↑ 대졸↑ 정규직 Python , 로봇엔지니어 , 알고리즘 , 컴퓨터비전 , OCR 외 등록일 26/08/12",
       "url": "https://www.saramin.co.kr/zf_user/jobs/view?rec_idx=54725778",
       "source": "사람인",
       "sources": [
@@ -4829,7 +5111,7 @@
       "id": "https://www.saramin.co.kr/zf_user/jobs/view?rec_idx=54650330",
       "title": "(주)레인보우로보틱스 web 백엔드 개발(채용시 마감)",
       "company": "(주)레인보우로보틱스",
-      "body": "(주)레인보우로보틱스 web 백엔드 개발 스크랩 채용시 입사지원 세종특별자치시 경력5년↑ 대졸↑ 정규직 백엔드/서버개발 , 인터페이스 , 웹개발 , 기계 수정일 26/08/07",
+      "body": "(주)레인보우로보틱스 web 백엔드 개발 스크랩 채용시 입사지원 세종특별자치시 경력5년↑ 대졸↑ 정규직 백엔드/서버개발 , 웹개발 , 인터페이스 , 기계 수정일 26/08/07",
       "url": "https://www.saramin.co.kr/zf_user/jobs/view?rec_idx=54650330",
       "source": "사람인",
       "sources": [
@@ -4873,6 +5155,30 @@
       "lastSeen": "2026-10-01"
     },
     {
+      "id": "https://www.saramin.co.kr/zf_user/jobs/view?rec_idx=54666714",
+      "title": "(주)재미스튜디오 AI 엔지니어 채용 공고(채용시 마감)",
+      "company": "(주)재미스튜디오",
+      "body": "(주)재미스튜디오 AI 엔지니어 채용 공고 스크랩 채용시 입사지원 대전 유성구 경력무관 학력무관 정규직 웹개발 , AI(인공지능) , 딥러닝 , 개발PM , 데이터 사이언티스트 외 등록일 26/08/06",
+      "url": "https://www.saramin.co.kr/zf_user/jobs/view?rec_idx=54666714",
+      "source": "사람인",
+      "sources": [
+        "사람인"
+      ],
+      "locations": [
+        "대전"
+      ],
+      "categories": [
+        "java_ai",
+        "regular_dev"
+      ],
+      "salary": null,
+      "shortPay": null,
+      "postedDate": "2026-08-06",
+      "dateSource": "등록/수정일",
+      "firstSeen": "2026-10-01",
+      "lastSeen": "2026-10-01"
+    },
+    {
       "id": "https://www.saramin.co.kr/zf_user/jobs/view?rec_idx=54658892",
       "title": "코아아이티 [공공사업본부] 인공지능 개발자 채용합니다.(채용시 마감)",
       "company": "(주)코아아이티",
@@ -4900,7 +5206,7 @@
       "id": "https://www.saramin.co.kr/zf_user/jobs/view?rec_idx=54662480",
       "title": "서버/백엔드 개발자 채용(5년이상~)(채용시 마감)",
       "company": "(주)무브먼츠",
-      "body": "서버/백엔드 개발자 채용(5년이상~) 스크랩 채용시 입사지원 대전 동구 경력 5~20년 대졸↑ 정규직 백엔드/서버개발 , 소프트웨어개발 등록일 26/08/05",
+      "body": "서버/백엔드 개발자 채용(5년이상~) 스크랩 채용시 입사지원 대전 동구 경력 5~20년 대졸↑ 정규직 백엔드/서버개발 , 솔루션업체 , 소프트웨어개발 등록일 26/08/05",
       "url": "https://www.saramin.co.kr/zf_user/jobs/view?rec_idx=54662480",
       "source": "사람인",
       "sources": [
