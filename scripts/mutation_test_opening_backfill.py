@@ -24,7 +24,7 @@ mutants = [
 for label, filename, before, after in mutants:
     with tempfile.TemporaryDirectory() as tmp:
         folder = Path(tmp)
-        for name in ('opening_backfill.py','collect_scalping_data.py','backtest_opening_rebreak.py','test_opening_backfill.py'):
+        for name in ('opening_backfill.py','collect_scalping_data.py','backtest_opening_rebreak.py','opening_basis_cost.py','test_opening_backfill.py'):
             shutil.copy(ROOT/name, folder/name)
         path = folder/filename
         source = path.read_text(encoding='utf-8')
