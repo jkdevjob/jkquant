@@ -78,6 +78,55 @@ function dateDaysAgo(days){
   return d.toISOString().slice(0,10);
 }
 
+function dailyRisk(rows){
+  const by=new Map();
+  for(const x of rows){
+    if(!x.date||!Number.isFinite(x.pnl))continue;
+    if(!by.has(x.date))by.set(x.date,[]);
+    by.get(x.date).push(x.pnl);
+  }
+  const daily=[...by.entries()].map(([date,a])=>({
+    date,
+    returnPct:a.reduce((s,v)=>s+v,0)/a.length,
+    trades:a.length
+  })).sort((a,b)=>String(a.date).localeCompare(String(b.date)));
+  let eq=1,peak=1,maxDd=0;
+  for(const d of daily){
+    eq*=1+d.returnPct/100;
+    if(eq>peak)peak=eq;
+    const dd=(eq/peak-1)*100;
+    if(dd<maxDd)maxDd=dd;
+  }
+  const currentDd=(eq/peak-1)*100;
+  let lossStreak=0;
+  for(let i=daily.length-1;i>=0;i--){
+    if(daily[i].returnPct<0)lossStreak++;
+    else break;
+  }
+  const latest=daily.length?daily[daily.length-1].date:null;
+  let weekStart=null,weekly=[];
+  if(latest){
+    const d=new Date(latest+"T00:00:00Z");
+    const dow=d.getUTCDay()||7;
+    d.setUTCDate(d.getUTCDate()-(dow-1));
+    weekStart=d.toISOString().slice(0,10);
+    weekly=daily.filter(x=>x.date>=weekStart);
+  }
+  let weekEq=1; for(const d of weekly)weekEq*=1+d.returnPct/100;
+  const weeklyReturnPct=(weekEq-1)*100;
+  return {
+    daily,
+    recentDaily:daily.slice(-5).reverse(),
+    currentDrawdownPct:daily.length?currentDd:0,
+    maxDrawdownPct:daily.length?maxDd:0,
+    lossStreakTradeDays:lossStreak,
+    weekStart,
+    weeklyReturnPct,
+    weeklyTargetPct:5,
+    weeklyTargetGapPct:Math.max(0,5-weeklyReturnPct)
+  };
+}
+
 export async function onRequestGet({request}){
   try{
     const u=new URL(request.url);
@@ -111,6 +160,7 @@ export async function onRequestGet({request}){
     const pn=rows.map(x=>x.pnl).filter(Number.isFinite);
     const wins=pn.filter(x=>x>0),losses=pn.filter(x=>x<0);
     const avg=a=>a.length?a.reduce((s,x)=>s+x,0)/a.length:0;
+    const risk=dailyRisk(rows);
 
     return new Response(JSON.stringify({
       ok:true,strategy,market:src.market,source:src.path,total,filtered,
@@ -121,7 +171,15 @@ export async function onRequestGet({request}){
         winRate:pn.length?wins.length/pn.length*100:0,
         avgPnl:avg(pn),avgWin:avg(wins),avgLoss:avg(losses),
         from:rows.length?rows[rows.length-1].date:null,
-        to:rows.length?rows[0].date:null
+        to:rows.length?rows[0].date:null,
+        currentDrawdownPct:risk.currentDrawdownPct,
+        maxDrawdownPct:risk.maxDrawdownPct,
+        lossStreakTradeDays:risk.lossStreakTradeDays,
+        weekStart:risk.weekStart,
+        weeklyReturnPct:risk.weeklyReturnPct,
+        weeklyTargetPct:risk.weeklyTargetPct,
+        weeklyTargetGapPct:risk.weeklyTargetGapPct,
+        recentDaily:risk.recentDaily
       }
     }),{headers:JH});
   }catch(e){
