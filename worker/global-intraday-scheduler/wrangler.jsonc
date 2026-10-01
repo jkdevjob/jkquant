@@ -7,6 +7,20 @@
   "vars": {
     "BASE_URL": "https://jkquant.pages.dev"
   },
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "PAPER_STORE",
+        "class_name": "PaperStore"
+      }
+    ]
+  },
+  "migrations": [
+    {
+      "tag": "v1",
+      "new_sqlite_classes": ["PaperStore"]
+    }
+  ],
   "triggers": {
     "crons": [
       "* * * * *"

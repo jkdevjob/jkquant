@@ -9,6 +9,70 @@ const BTC_LAST_SIGNAL_HM=2155; // 21:55 신호 -> 22:00 다음 5분봉 시가 �
 const BTC_LAST_ENTRY_HM=2200;
 const BTC_EXIT_TRACK_END_HM=2305; // 22:00 진입의 최대 60분 청산까지 추적
 const BTC_STRATEGY_VERSION="btc_midnight_orb_v2";
+const SOXL_STRATEGY_VERSION="soxl_orb_v1";
+function json(o,status=200){return new Response(JSON.stringify(o),{status,headers:{"content-type":"application/json; charset=utf-8","cache-control":"no-store"}});}
+function authorized(request,env){const got=request.headers.get("x-monitor-key")||"";return !!env.MONITOR_KEY&&got===env.MONITOR_KEY;}
+
+export class PaperStore extends DurableObject{
+  async fetch(request){
+    const u=new URL(request.url);
+    if(request.method==="GET"&&u.pathname==="/paper"){
+      return json({ok:true,ledger:(await this.ctx.storage.get("ledger"))||null});
+    }
+    if(request.method==="POST"&&u.pathname==="/paper"){
+      const ledger=await request.json();
+      if(!ledger||!ledger.strategy||!ledger.date||!Array.isArray(ledger.trades))return json({ok:false,error:"invalid paper ledger"},400);
+      await this.ctx.storage.put("ledger",ledger);
+      return json({ok:true,ledger});
+    }
+    return json({ok:false,error:"not found"},404);
+  }
+}
+function paperStore(env,strategy,date){return env.PAPER_STORE.get(env.PAPER_STORE.idFromName(strategy+":"+date));}
+async function readPaper(env,strategy,date){
+  const r=await paperStore(env,strategy,date).fetch("https://paper.internal/paper");
+  const j=await r.json(); return j.ledger||null;
+}
+async function writePaper(env,ledger){
+  const r=await paperStore(env,ledger.strategy,ledger.date).fetch("https://paper.internal/paper",{
+    method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(ledger)
+  });
+  const j=await r.json(); if(!r.ok||!j.ok)throw new Error(j.error||("paper store HTTP "+r.status)); return j.ledger;
+}
+function paperLedger(strategy,date,t,opts={}){
+  const currency=opts.currency||"USD",timezone=opts.timezone||"UTC",version=opts.version||"",friction=Number(opts.friction||0);
+  let trades=[];
+  if(t){
+    const waiting=!!t.waiting;
+    const current=t.exit?t.exit.bar:(t.currentBar||t.entry||null);
+    const entryPrice=waiting?null:Number(t.entryPrice||0)||null;
+    const exitPrice=t.exit?Number(t.exit.price||0)||null:null;
+    const currentPrice=current?Number(current.c||current.o||0)||null:entryPrice;
+    let gross=null,pnl=null;
+    if(entryPrice&&((exitPrice||currentPrice)>0)){
+      gross=pct(exitPrice||currentPrice,entryPrice);
+      pnl=gross-friction;
+    }
+    trades=[{
+      id:strategy+":"+date+":"+String(t.signal&&t.signal.time||""),
+      strategyVersion:version,status:waiting?"pending":(t.exit?"closed":"open"),
+      signalTime:t.signal&&t.signal.time||null,entryTime:t.entry&&t.entry.time||null,
+      exitTime:t.exit&&t.exit.bar&&t.exit.bar.time||null,
+      entryPrice,exitPrice,currentPrice,
+      reason:t.exit?t.exit.reason:(waiting?"next_bar_open_wait":"tracking"),
+      grossPnlPct:gross,pnlPct:pnl,frictionPct:friction,
+      currency,updatedAt:new Date().toISOString()
+    }];
+  }
+  const live=trades.map(x=>Number(x.pnlPct)).filter(Number.isFinite);
+  const sum=live.reduce((a,b)=>a+b,0);
+  return {
+    schema:1,strategy,date,timezone,strategyVersion:version,mode:"server-live-paper-no-order",
+    updatedAt:new Date().toISOString(),slots:1,frictionPct:friction,trades,
+    summary:{selected:trades.length,pending:trades.filter(x=>x.status==="pending").length,open:trades.filter(x=>x.status==="open").length,
+      closed:trades.filter(x=>x.status==="closed").length,accountReturnPct:sum,tradeSumPct:sum}
+  };
+}
 function baseUrl(env){return String(env.BASE_URL||"https://jkquant.pages.dev").replace(/\/$/,"");}
 function sleep(ms){return new Promise(r=>setTimeout(r,ms));}
 function parts(ms,tz){
@@ -102,7 +166,9 @@ function btcTrade(bars,now,date){
       if(hs){exit={bar:b,price:tpPx,reason:"take_profit"};break;}
       if(k===last)exit={bar:b,price:b.c,reason:"time_exit"};
     }
-    return {date,signal:x,opening:open,vwap,vr,entry,entryPrice,stop,tp:tpPx,exit,friction:.14};
+    const completed=a.slice(i+1,last+1).filter(b=>barCompleted(b.ms,now));
+    const currentBar=exit?exit.bar:(completed.length?completed[completed.length-1]:entry);
+    return {date,signal:x,opening:open,vwap,vr,entry,entryPrice,stop,tp:tpPx,exit,currentBar,friction:.14};
   }
   return null;
 }
@@ -159,7 +225,9 @@ function soxlTrade(bars,now,date){
       if(hs){exit={bar:b,price:tpPx,reason:"take_profit"};break;}
       if(k===last)exit={bar:b,price:b.c,reason:"time_exit"};
     }
-    return {date,signal:x,orHigh,orLow,vwap,vr,entry,entryPrice,stop,tp:tpPx,exit,friction:.20};
+    const completed=a.slice(i+1,last+1).filter(b=>barCompleted(b.ms,now));
+    const currentBar=exit?exit.bar:(completed.length?completed[completed.length-1]:entry);
+    return {date,signal:x,orHigh,orLow,vwap,vr,entry,entryPrice,stop,tp:tpPx,exit,currentBar,friction:.20};
   }
   return null;
 }
@@ -168,6 +236,7 @@ async function runBtc(env,now){
   // 신규 진입은 00:05~22:00 KST. 22:00 진입분은 최대 60분 청산까지 계속 추적한다.
   if(k.hm<5||k.hm>BTC_EXIT_TRACK_END_HM)return;
   const t=btcTrade(await fetchBtc(k.date),now,k.date);
+  await writePaper(env,paperLedger("crypto",k.date,t,{currency:"KRW",timezone:"Asia/Seoul",version:BTC_STRATEGY_VERSION,friction:.14}));
   if(!t||t.waiting)return;
   await alert(env,{
     strategy:"crypto",stage:"buy",eventId:"crypto:"+BTC_STRATEGY_VERSION+":"+t.date+":"+t.signal.time+":buy",date:t.date,time:t.entry.time,
@@ -195,6 +264,7 @@ async function runSoxl(env,now){
   const n=parts(now,"America/New_York");
   if(["Sat","Sun"].includes(n.weekday)||n.hm<945||n.hm>1330)return;
   const t=soxlTrade(await fetchSoxl(),now,n.date);
+  await writePaper(env,paperLedger("soxl",n.date,t,{currency:"USD",timezone:"America/New_York",version:SOXL_STRATEGY_VERSION,friction:.20}));
   if(!t||t.waiting)return;
   await alert(env,{
     strategy:"soxl",stage:"buy",eventId:"soxl:"+t.date+":"+t.signal.time+":buy",date:t.date,time:t.entry.time+" ET",
@@ -224,13 +294,21 @@ async function run(env){
   const out=await Promise.allSettled([runBtc(env,now),runSoxl(env,now)]);
   out.forEach((x,i)=>{if(x.status==="rejected")console.error(JSON.stringify({type:"global_intraday_error",strategy:i===0?"crypto":"soxl",error:String(x.reason&&x.reason.message||x.reason)}));});
 }
-export {btcTrade,BTC_OPEN_HM,BTC_LAST_SIGNAL_HM,BTC_LAST_ENTRY_HM,BTC_EXIT_TRACK_END_HM,BTC_STRATEGY_VERSION};
+export {btcTrade,soxlTrade,paperLedger,BTC_OPEN_HM,BTC_LAST_SIGNAL_HM,BTC_LAST_ENTRY_HM,BTC_EXIT_TRACK_END_HM,BTC_STRATEGY_VERSION,SOXL_STRATEGY_VERSION};
 
 export default {
   async scheduled(controller,env,ctx){ctx.waitUntil(run(env));},
   async fetch(request,env){
     const u=new URL(request.url);
-    if(u.pathname==="/health")return new Response(JSON.stringify({ok:true,service:"jkquant-global-intraday-scheduler",schedule:"every minute",strategies:["crypto","soxl"],crypto:{strategyVersion:BTC_STRATEGY_VERSION,openingRange:"00:00~00:05 KST",newEntryThrough:"22:00 KST",exitTrackingThrough:"23:05 KST"},mode:"research-paper-alert-no-order"}),{headers:{"content-type":"application/json","cache-control":"no-store"}});
-    return new Response("not found",{status:404});
+    if(u.pathname==="/health")return json({ok:true,service:"jkquant-global-intraday-scheduler",schedule:"every minute",strategies:["crypto","soxl"],crypto:{strategyVersion:BTC_STRATEGY_VERSION,openingRange:"00:00~00:05 KST",newEntryThrough:"22:00 KST",exitTrackingThrough:"23:05 KST"},mode:"research-paper-alert-no-order"});
+    if(u.pathname==="/paper"){
+      if(!authorized(request,env))return json({ok:false,error:"unauthorized"},401);
+      const strategy=String(u.searchParams.get("strategy")||"").toLowerCase();
+      if(!["crypto","soxl"].includes(strategy))return json({ok:false,error:"unsupported strategy"},400);
+      const now=Date.now(),tz=strategy==="crypto"?"Asia/Seoul":"America/New_York";
+      const date=String(u.searchParams.get("date")||parts(now,tz).date);
+      return json({ok:true,strategy,date,ledger:await readPaper(env,strategy,date)});
+    }
+    return json({ok:false,error:"not found"},404);
   }
 };
