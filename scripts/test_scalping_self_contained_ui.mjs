@@ -51,7 +51,8 @@ ok(pos.every((x,i)=>x>=0&&(i===0||x>pos[i-1])),'nine-step self-contained tab ord
 for(const needle of [
   'strategy-statusline','function nextPlanText(name)','function renderPlan(name)',
   'currentDrawdownPct','lossStreakTradeDays','weeklyTargetGapPct',
-  '/api/scalping-review?strategy=','교체 검토 조건 확인 중','목표 수익을 맞추기 위해 필터를 완화하지 않습니다.'
+  '/api/scalping-review?strategy=','교체 검토 조건 확인 중','교체 검토 조건 충족',
+  '목표 수익을 맞추기 위해 필터를 완화하지 않습니다.','startStrategyStatusAuto'
 ]) ok(ui.includes(needle),'UI contains '+needle);
 
 ok(riskProbe(hist),'risk engine: equal-weight daily return / drawdown / loss streak / weekly progress');
@@ -63,6 +64,7 @@ ok(!riskProbe(mutStreak),'mutation killed: flat day ends loss streak');
 ok(/data\/nightly-research/.test(review),'daily review API reads dated nightly research');
 ok(/strategy must be opening\|daytrading\|crypto\|soxl/.test(review),'daily review API restricts four strategies');
 ok(!/op=order|opening-execute|kisOrder\(|method:\s*["']POST["']/.test(review),'daily review API is read-only');
+ok(/issueCount/.test(review),'daily review separates actionable issues from info flags');
 ok(/autoPromotion:false/.test(review),'daily review never auto-promotes baseline');
 
 console.log('✓ self-contained scalping tabs: ALL PASS');
