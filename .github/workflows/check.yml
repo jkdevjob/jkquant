@@ -80,6 +80,9 @@ jobs:
       - name: 단타 탭 단독사용 UI·위험지표 검사
         run: node scripts/test_scalping_self_contained_ui.mjs
 
+      - name: SOXL 종목·당일청산·최대보유 정책 검사
+        run: node scripts/test_soxl_scalping_policy.mjs
+
       - name: BTC·SOXL 장중 모의장부 저장·표시 검사
         run: node scripts/test_global_paper_ledger.mjs
 
