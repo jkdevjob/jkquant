@@ -10954,6 +10954,13 @@ console.log('[GAPDOWN D-1 / DIP24 D-3] 연구용 모의체결 경로 안전장�
        &&!/CRYPTO\[[^\]]+\] = |US\[[^\]]+\] = /.test(lp.slice(lp.indexOf('def promotion('),lp.indexOf('def week_summary(')))
        &&/function promoBadge\(pr\)/.test(scl2)&&/function weekCard\(\)/.test(scl2)&&(scl2.match(/weekCard\(\)/g)||[]).length===3);
   }
+  { const lp=fs.readFileSync(__d+'/scripts/claude_lab.py','utf8'),lv=fs.readFileSync(__d+'/functions/api/claude-live.js','utf8');
+    const hold=[...lp.matchAll(/maxHoldDays=(\d+)/g)].map(m=>+m[1]);
+    ok('보유 기간 규칙(하루, 최대 5일): ③ 코인은 그날 24개 봉 안에서 사고 다음 09:00 매도 · ④ SOXL 최대 5거래일 · 옛 여러 날 보유 전략은 탭에서 빠짐',
+       /bars = \[H\[\(s0 \+ timedelta\(hours=k\)\)\.isoformat\(\)\] for k in range\(24\)\]/.test(lp)&&/exitPrice=bars\[-1\]\[3\]/.test(lp)
+       &&hold.length>=2&&hold.every(x=>x>=1&&x<=5)&&/SOXL_MR = dict\(version="soxl_rsi2_meanrev_v1", trade="SOXL"/.test(lp)
+       &&!/TQQQ|tqqq/.test(scl2)&&!/TQQQ|tqqq/.test(lv)&&/report\["tabs"\]\["soxl"\] = tab_report\("soxl", "④ SOXL/.test(lp),JSON.stringify(hold));
+  }
   ok('클로드 모의투자 장부: 날짜별 한 번만 쓰기 · 요약은 장부 값만 · 화면 누적표 · workflow 저장',
      /def write_once\(path, obj\):\n[\s\S]{0,200}if path\.exists\(\):\n\s*return False/.test(fs.readFileSync(__d+'/scripts/claude_lab.py','utf8'))
      &&/모의투자 누적/.test(scl2)&&/data\/claude-paper/.test(wf));

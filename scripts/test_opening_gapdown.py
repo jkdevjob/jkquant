@@ -313,6 +313,44 @@ class ClaudeLabTrend(unittest.TestCase):
         self.assertEqual(ex[0]["heldDays"], 5)
         self.assertEqual(max(r["heldDays"] or 0 for r in dec2), 5)
 
+    def test_coin_breakout_rule_and_lookahead(self):
+        from datetime import datetime, timedelta
+        H = {}
+
+        def day(d, o, hi_at=None, hi=None, lo=None, close=None):
+            s0 = datetime.fromisoformat(d + "T09:00:00")
+            for k in range(24):
+                b = [o, o, o, o]
+                if hi_at is not None and k == hi_at:
+                    b = [o, hi, o, o]
+                if lo is not None and hi_at is not None and k == hi_at + 1:
+                    b = [o, o, lo, o]
+                if k == 23 and close:
+                    b = [o, o, o, close]
+                H[(s0 + timedelta(hours=k)).isoformat()] = b
+        base = datetime(2026, 9, 1)
+        for i in range(21):
+            day((base + timedelta(days=i)).date().isoformat(), 100.0 + i)        # 오르는 흐름, 고가 = 시가
+        t1 = (base + timedelta(days=21)).date().isoformat()
+        day(t1, 119.0, hi_at=5, hi=125.0, close=124.0)                            # 어제 고가 120 → 14시 봉에서 돌파
+        t2 = (base + timedelta(days=22)).date().isoformat()
+        day(t2, 124.0, hi_at=2, hi=130.0, lo=110.0, close=126.0)                  # 돌파 뒤 −5% 아래 → 손절
+        dv, dec, nx, days = lab.coin_breakout(H, dict(lab.COIN_BO))
+        by = {r["date"]: r for r in dec}
+        e = 120.0 * 1.0005                                                        # 봉 시가 119 < 기준 120 → 기준선에 산다
+        self.assertEqual(by[t1]["entryHour"], "14:00")
+        self.assertAlmostEqual(dv[t1], (124.0 / e - 1) * 100 - 0.14)
+        self.assertEqual(by[t2]["action"], "stop")
+        self.assertAlmostEqual(dv[t2], -5 - 0.1 - 0.14)
+        self.assertEqual(nx["basedOn"], t2)
+        self.assertEqual(nx["levelNext"], 130.0)
+        # 어제 종가가 평균 아래면 돌파해도 매매 없음 (t2 다음 날을 하락 흐름으로)
+        t3 = (base + timedelta(days=23)).date().isoformat()
+        day(t2, 124.0, close=90.0)
+        day(t3, 91.0, hi_at=1, hi=200.0, close=150.0)
+        _, dec3, _, _ = lab.coin_breakout(H, dict(lab.COIN_BO))
+        self.assertEqual({r["date"]: r for r in dec3}[t3]["action"], "flat")
+
     def test_profit_factor(self):
         D = ["2026-10-05", "2026-10-06", "2026-10-07", "2026-10-08", "2026-10-09"]
         z = lab.goal_metrics({D[0]: 3.0, D[1]: -1.0, D[2]: -2.0, D[3]: 1.0}, D)
@@ -332,16 +370,16 @@ class ClaudeLabTrend(unittest.TestCase):
         R = lambda *xs: {"rows": [{"date": d, "action": ac, "pnlPct": v} for d, ac, v in xs]}
         sm = {"opening_d1v2": R(("2026-10-05", "trade", 2.0), ("2026-10-06", "no_trade", 0.0)),
               "daytrading_etf": R(("2026-10-05", "trade", 1.0), ("2026-10-06", "trade", 1.0)),
-              "crypto_btc": R(("2026-10-04", "hold", 9.0), ("2026-10-05", "hold", 2.0)),
-              "crypto_eth": R(("2026-10-05", "flat", 0.0)),
+              "coin_bo_btc": R(("2026-10-04", "hold", 9.0), ("2026-10-05", "hold", 2.0)),
+              "coin_bo_eth": R(("2026-10-05", "flat", 0.0)),
               "us_soxl": R(("2026-10-02", "hold", 7.0), ("2026-10-09", "hold", 3.0)),
               "account": R(("2026-10-05", "trade", 3.0), ("2026-10-06", "trade", 2.0), ("2026-10-04", "trade", 9.0))}
         w = lab.week_summary(sm, "2026-10-09")
         self.assertEqual((w["weekStart"], w["weekEnd"]), ("2026-10-05", "2026-10-11"))
         self.assertAlmostEqual(w["parts"]["opening_d1v2"]["contribPct"], 0.3 * 0.5 * 2.0)
         self.assertAlmostEqual(w["parts"]["daytrading_etf"]["contribPct"], 0.3 * 0.5 * 1.0 + 0.3 * 1.0)
-        self.assertAlmostEqual(w["parts"]["crypto_btc"]["contribPct"], 0.3 * 0.5 * 2.0)
-        self.assertEqual(w["parts"]["crypto_eth"]["tradeDays"], 0)
+        self.assertAlmostEqual(w["parts"]["coin_bo_btc"]["contribPct"], 0.3 * 0.5 * 2.0)
+        self.assertEqual(w["parts"]["coin_bo_eth"]["tradeDays"], 0)
         self.assertAlmostEqual(w["parts"]["us_soxl"]["contribPct"], 0.4 * 3.0)   # 10/2(지난주 금) 제외, 10/9 금 → 10/10 토(이번 주)
         self.assertAlmostEqual(w["account"]["weekPct"], (1.03 * 1.02 - 1) * 100)
         self.assertTrue(w["account"]["hit5"])

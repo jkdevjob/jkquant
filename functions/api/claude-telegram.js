@@ -54,8 +54,8 @@ export function compose(kind,date,live,extra={}){
   }else if(kind==="morning"){
     L.push("🤖 [클로드 단타] "+date+" 09:05 코인·미국");
     const cr=extra.coins||[];
-    for(const c of cr)L.push("③ "+c.name+" 어제 "+(c.y?(c.y.action+" "+p(c.y.pnlPct)):"—")+" · 오늘 "+(c.today==null?"—":(c.today?"보유(09:00 시가)":"쉼")));
-    if(cr.length){const avg=cr.reduce((s,c)=>s+((c.y&&c.y.pnlPct)||0),0)/cr.length;L.push("   코인 칸 어제 "+p(avg)+" (탭 자금 60% "+p(avg*0.6)+")");}
+    for(const c of cr)L.push("③ "+c.name+" 어제 "+(c.y?(c.y.action+(c.y.buyTime?" "+c.y.buyTime:"")+" "+p(c.y.pnlPct)):"—")+" · 오늘 "+(c.today==null?"—":(c.today?"어제 고가 "+n(c.level)+" 돌파 시 매수":"쉼(20일 평균 아래)")));
+    if(cr.length){const avg=cr.reduce((s,c)=>s+((c.y&&c.y.pnlPct)||0),0)/cr.length;L.push("   코인 칸 어제 "+p(avg)+" (탭 자금 80% "+p(avg*0.8)+")");}
     const u=extra.us;
     if(u)L.push("④ SOXL 지난 세션 "+(u.date||"")+" "+(SX_ACT[u.action]||u.action||"")+(u.pnlPct==null?"":" "+p(u.pnlPct))+" · 오늘 밤 "+(SX_NEXT[u.next]||(u.holding?"보유 유지":"쉼")));
   }else if(kind==="etfbuy"){
@@ -113,8 +113,9 @@ export async function onRequestPost({request,env}){
     const extra={};
     if(kind==="morning"){
       extra.coins=await Promise.all(["KRW-BTC","KRW-ETH"].map(async m=>{
-        try{const c=await (await fetch("https://api.upbit.com/v1/candles/days?market="+m+"&count=23",{headers:{Accept:"application/json"}})).json();
-          const t=coinHoldToday(c);return {name:m.replace("KRW-",""),y:coinDayResult(c),today:t?t.hold:null};}
+        try{const [c,hc]=await Promise.all(["days?market="+m+"&count=23","minutes/60?market="+m+"&count=60"].map(q=>
+            fetch("https://api.upbit.com/v1/candles/"+q,{headers:{Accept:"application/json"}}).then(r=>r.json())));
+          const t=coinHoldToday(c);return {name:m.replace("KRW-",""),y:coinDayResult(c,hc),today:t?t.hold:null,level:t?t.level:null};}
         catch(e){return {name:m.replace("KRW-",""),y:null,today:null};}
       }));
       const lab=await fetch(RAW+"claude-lab/latest.json?t="+Date.now()).then(r=>r.ok?r.json():null).catch(()=>null);
