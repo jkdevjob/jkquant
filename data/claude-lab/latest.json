@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "generatedAt": "2026-10-01T22:24:57.131373+09:00",
+  "generatedAt": "2026-10-01T22:58:11.635517+09:00",
   "designEnd": "2026-09-30",
   "gate": {
     "mdd": -25.0,
@@ -31,6 +31,7 @@
           "mddPct": -25.82853778274714,
           "cagrPct": 23.269609195744035,
           "expectancyPct": 1.3304699743160744,
+          "profitFactor": 2.0098780017489246,
           "gate": false
         },
         "outOfSample": {},
@@ -130,6 +131,7 @@
           "mddPct": 0.0,
           "cagrPct": null,
           "expectancyPct": null,
+          "profitFactor": null,
           "gate": false
         },
         "gpt": {
@@ -151,6 +153,7 @@
           "mddPct": -0.9864389503673632,
           "cagrPct": null,
           "expectancyPct": -0.2173770227379157,
+          "profitFactor": 0.34034644727508645,
           "gate": false
         }
       }
@@ -179,6 +182,7 @@
           "mddPct": -23.409473270403335,
           "cagrPct": 16.08198892586281,
           "expectancyPct": 0.3635751915676489,
+          "profitFactor": 1.4596469857297056,
           "gate": true
         },
         "outOfSample": {},
@@ -278,6 +282,7 @@
           "mddPct": 0.0,
           "cagrPct": null,
           "expectancyPct": null,
+          "profitFactor": null,
           "gate": false
         },
         "gpt": {
@@ -299,6 +304,7 @@
           "mddPct": -1.2499999999999956,
           "cagrPct": null,
           "expectancyPct": -1.2500000000000009,
+          "profitFactor": 0.0,
           "gate": false
         }
       }
@@ -327,6 +333,7 @@
           "mddPct": -23.446355278413133,
           "cagrPct": 36.469259051731086,
           "expectancyPct": 0.14935538598740802,
+          "profitFactor": 1.3281462576942493,
           "gate": true
         },
         "outOfSample": {},
@@ -426,6 +433,7 @@
           "mddPct": -15.397195122402286,
           "cagrPct": -0.5413234364629593,
           "expectancyPct": 0.004041704412954467,
+          "profitFactor": 1.0100673922908203,
           "gate": true
         },
         "gpt": {
@@ -447,6 +455,7 @@
           "mddPct": -26.96767210755009,
           "cagrPct": -26.044953458799004,
           "expectancyPct": -0.1621695101311434,
+          "profitFactor": 0.36525220451044327,
           "gate": false
         }
       },
@@ -498,6 +507,7 @@
           "mddPct": -27.39874637890646,
           "cagrPct": 27.81130193018162,
           "expectancyPct": 0.13018969897300778,
+          "profitFactor": 1.3336941665879136,
           "gate": false
         }
       }
@@ -526,14 +536,32 @@
           "mddPct": -24.848829711272092,
           "cagrPct": 18.07692925910478,
           "expectancyPct": 0.09384566191758538,
+          "profitFactor": 1.1786747969781972,
           "gate": true
         },
-        "outOfSample": {},
+        "outOfSample": {
+          "days": 1,
+          "tradeDays": 1,
+          "tradeDaysPerYear": 252.0,
+          "plus1RateOfTradeDays": 0.0,
+          "lossDaysPerYear": 0.0,
+          "tStat": null,
+          "plus1Days": 0,
+          "plus1DaysPerYear": 0.0,
+          "plus5Weeks": 0,
+          "plus5WeeksPerYear": 0.0,
+          "weeklyAvgPct": 0.3716531078612473,
+          "totalPct": 0.3716531078612473,
+          "lossDays": 0,
+          "lossDayAvgPct": 0.0,
+          "worstDayPct": 0.3716531078612362,
+          "mddPct": 0.0,
+          "cagrPct": null,
+          "expectancyPct": 0.3716531078612362,
+          "profitFactor": null,
+          "gate": true
+        },
         "recent": [
-          {
-            "date": "2026-09-10",
-            "pnlPct": -1.6352228284270243
-          },
           {
             "date": "2026-09-11",
             "pnlPct": 1.2787200519252973
@@ -589,6 +617,10 @@
           {
             "date": "2026-09-30",
             "pnlPct": 0.36793164314565807
+          },
+          {
+            "date": "2026-10-01",
+            "pnlPct": 0.3716531078612362
           }
         ]
       },
@@ -605,9 +637,9 @@
         "gpt": null
       },
       "nextSignal": {
-        "basedOn": "2026-09-30",
-        "signalClose": 739.77001953125,
-        "ma": 667.2667993164063,
+        "basedOn": "2026-10-01",
+        "signalClose": 741.7999877929688,
+        "ma": 667.9076992797851,
         "holdNext": true
       },
       "params": {
@@ -642,6 +674,7 @@
           "mddPct": -23.016915253706884,
           "cagrPct": 7.515856798526621,
           "expectancyPct": 0.04937248342822035,
+          "profitFactor": 1.1250206300174883,
           "gate": true
         }
       }
@@ -676,6 +709,7 @@
       "mddPct": -22.08145524279832,
       "cagrPct": 53.608242113698545,
       "expectancyPct": 0.1477260689821835,
+      "profitFactor": 1.347138698637384,
       "gate": true
     },
     "outOfSample": {},
@@ -698,6 +732,7 @@
       "mddPct": -14.073480467221454,
       "cagrPct": 44.86229352504352,
       "expectancyPct": 0.12881132160311395,
+      "profitFactor": 1.2592917932219918,
       "gate": true
     },
     "recent": [
@@ -784,7 +819,7 @@
     ]
   },
   "daily": {
-    "generatedAt": "2026-10-01T22:25:41.478371+09:00",
+    "generatedAt": "2026-10-01T22:58:54.348354+09:00",
     "today": "2026-10-01",
     "finalKrDaily": "2026-09-29",
     "rows": [
@@ -859,10 +894,10 @@
         "side": "claude",
         "name": "④ TQQQ 200일 추세 (미국 3배)",
         "version": "tqqq_trend200_v1",
-        "prevDate": "2026-09-29",
-        "lastDate": "2026-09-30",
-        "prev": 0.2725844781633846,
-        "last": 0.36793164314565807,
+        "prevDate": "2026-09-30",
+        "lastDate": "2026-10-01",
+        "prev": 0.36793164314565807,
+        "last": 0.3716531078612362,
         "plan": "보유 (미국장 · 자금 50%)"
       },
       {
@@ -870,8 +905,8 @@
         "side": "gpt",
         "name": "SOXL",
         "version": "",
-        "prevDate": "2026-09-29",
-        "lastDate": "2026-09-30",
+        "prevDate": "2026-09-30",
+        "lastDate": "2026-10-01",
         "prev": "no_trade",
         "last": "no_trade",
         "plan": null
@@ -892,7 +927,7 @@
   },
   "paper": {
     "start": "2026-10-01",
-    "newFiles": 0,
+    "newFiles": 1,
     "summary": {
       "opening_d1v2": {
         "rows": [],
@@ -903,6 +938,8 @@
         "last": null,
         "tradeDays": 0,
         "plus1Days": 0,
+        "winDays": 0,
+        "profitFactor": null,
         "totalPct": null,
         "mddPct": null,
         "worstDayPct": null,
@@ -926,6 +963,8 @@
         "last": null,
         "tradeDays": 0,
         "plus1Days": 0,
+        "winDays": 0,
+        "profitFactor": null,
         "totalPct": null,
         "mddPct": null,
         "worstDayPct": null,
@@ -949,6 +988,8 @@
         "last": null,
         "tradeDays": 0,
         "plus1Days": 0,
+        "winDays": 0,
+        "profitFactor": null,
         "totalPct": null,
         "mddPct": null,
         "worstDayPct": null,
@@ -972,6 +1013,8 @@
         "last": null,
         "tradeDays": 0,
         "plus1Days": 0,
+        "winDays": 0,
+        "profitFactor": null,
         "totalPct": null,
         "mddPct": null,
         "worstDayPct": null,
@@ -987,26 +1030,36 @@
         }
       },
       "us_tqqq": {
-        "rows": [],
+        "rows": [
+          {
+            "date": "2026-10-01",
+            "action": "hold",
+            "pnlPct": 0.7433062157224724,
+            "cumPct": 0.7433062157224724,
+            "note": "종가 739.77001953125"
+          }
+        ],
         "currentDrawdownPct": 0.0,
         "lossStreak": 0,
-        "days": 0,
-        "first": null,
-        "last": null,
-        "tradeDays": 0,
+        "days": 1,
+        "first": "2026-10-01",
+        "last": "2026-10-01",
+        "tradeDays": 1,
         "plus1Days": 0,
-        "totalPct": null,
-        "mddPct": null,
-        "worstDayPct": null,
-        "avgTradePct": null,
+        "winDays": 1,
+        "profitFactor": null,
+        "totalPct": 0.7433062157224724,
+        "mddPct": 0.0,
+        "worstDayPct": 0.7433062157224724,
+        "avgTradePct": 0.7433062157224724,
         "expected": {
           "expectancyPct": 0.18769132383517076,
-          "plus1DaysPerYear": 81.23725834797891,
-          "tradeDaysPerYear": 214.1652021089631
+          "plus1DaysPerYear": 81.21686746987952,
+          "tradeDaysPerYear": 214.11144578313252
         },
         "status": {
           "code": "collecting",
-          "text": "매매일 0/20 — 판단 전"
+          "text": "매매일 1/20 — 판단 전"
         }
       },
       "account": {
@@ -1018,6 +1071,8 @@
         "last": null,
         "tradeDays": 0,
         "plus1Days": 0,
+        "winDays": 0,
+        "profitFactor": null,
         "totalPct": null,
         "mddPct": null,
         "worstDayPct": null,
@@ -1060,9 +1115,14 @@
           "mddPct": -97.14997304067013,
           "cagrPct": -21.609228405094505,
           "expectancyPct": -0.052647723462098436,
+          "profitFactor": 0.977771580784553,
           "gate": false
         },
-        "outOfSample": {}
+        "outOfSample": {},
+        "promotion": {
+          "code": "collecting",
+          "text": "판정 표본 매매 0/20일 — 판단 전"
+        }
       },
       {
         "name": "v2 · 통과 3개 이상",
@@ -1087,9 +1147,14 @@
           "mddPct": -30.008864266560774,
           "cagrPct": 25.480583494277887,
           "expectancyPct": 0.9578388020812089,
+          "profitFactor": 1.676717018363197,
           "gate": false
         },
-        "outOfSample": {}
+        "outOfSample": {},
+        "promotion": {
+          "code": "collecting",
+          "text": "판정 표본 매매 0/20일 — 판단 전"
+        }
       }
     ],
     "daytrading": [
@@ -1116,9 +1181,14 @@
           "mddPct": -30.622992204829245,
           "cagrPct": 13.035610927299611,
           "expectancyPct": 0.2254975726234781,
+          "profitFactor": 1.2913428500290536,
           "gate": false
         },
-        "outOfSample": {}
+        "outOfSample": {},
+        "promotion": {
+          "code": "collecting",
+          "text": "판정 표본 매매 0/20일 — 판단 전"
+        }
       },
       {
         "name": "코스닥150 레버리지 −4% 기준",
@@ -1143,9 +1213,14 @@
           "mddPct": -19.014175024972367,
           "cagrPct": 17.93323181792683,
           "expectancyPct": 0.5849777310667522,
+          "profitFactor": 1.7287658152109484,
           "gate": true
         },
-        "outOfSample": {}
+        "outOfSample": {},
+        "promotion": {
+          "code": "collecting",
+          "text": "판정 표본 매매 0/20일 — 판단 전"
+        }
       },
       {
         "name": "코스피200 레버리지 −3% 기준",
@@ -1170,9 +1245,14 @@
           "mddPct": -40.012381292100144,
           "cagrPct": 8.786135834508713,
           "expectancyPct": 0.4370355166517551,
+          "profitFactor": 1.411440206036213,
           "gate": false
         },
-        "outOfSample": {}
+        "outOfSample": {},
+        "promotion": {
+          "code": "collecting",
+          "text": "판정 표본 매매 0/20일 — 판단 전"
+        }
       }
     ],
     "crypto": [
@@ -1199,9 +1279,14 @@
           "mddPct": -30.18714704618479,
           "cagrPct": 31.85873588986654,
           "expectancyPct": 0.1385527324974363,
+          "profitFactor": 1.2896511499810126,
           "gate": false
         },
-        "outOfSample": {}
+        "outOfSample": {},
+        "promotion": {
+          "code": "collecting",
+          "text": "판정 표본 매매 0/20일 — 판단 전"
+        }
       },
       {
         "name": "손절 −3%",
@@ -1226,9 +1311,14 @@
           "mddPct": -22.722893633217424,
           "cagrPct": 27.78075485601308,
           "expectancyPct": 0.1207447162206527,
+          "profitFactor": 1.268065278421659,
           "gate": true
         },
-        "outOfSample": {}
+        "outOfSample": {},
+        "promotion": {
+          "code": "collecting",
+          "text": "판정 표본 매매 0/20일 — 판단 전"
+        }
       }
     ],
     "soxl": [
@@ -1255,11 +1345,93 @@
           "mddPct": -30.947017597628978,
           "cagrPct": 17.68949663582655,
           "expectancyPct": 0.09165990931926604,
+          "profitFactor": 1.1781713118945394,
           "gate": false
         },
-        "outOfSample": {}
+        "outOfSample": {
+          "days": 1,
+          "tradeDays": 1,
+          "tradeDaysPerYear": 252.0,
+          "plus1RateOfTradeDays": 0.0,
+          "lossDaysPerYear": 0.0,
+          "tStat": null,
+          "plus1Days": 0,
+          "plus1DaysPerYear": 0.0,
+          "plus5Weeks": 0,
+          "plus5WeeksPerYear": 0.0,
+          "weeklyAvgPct": 0.3716531078612473,
+          "totalPct": 0.3716531078612473,
+          "lossDays": 0,
+          "lossDayAvgPct": 0.0,
+          "worstDayPct": 0.3716531078612362,
+          "mddPct": 0.0,
+          "cagrPct": null,
+          "expectancyPct": 0.3716531078612362,
+          "profitFactor": null,
+          "gate": true
+        },
+        "promotion": {
+          "code": "collecting",
+          "text": "판정 표본 매매 1/20일 — 판단 전"
+        }
       }
     ]
+  },
+  "week": {
+    "weekStart": "2026-09-28",
+    "weekEnd": "2026-10-04",
+    "asOf": "2026-10-01",
+    "account": {
+      "days": 0,
+      "plus1Days": 0,
+      "weekPct": 0.0,
+      "through": null,
+      "daily": [],
+      "hit5": false
+    },
+    "parts": {
+      "opening_d1v2": {
+        "days": 0,
+        "tradeDays": 0,
+        "plus1Days": 0,
+        "weekPct": 0.0,
+        "contribPct": 0,
+        "through": null
+      },
+      "daytrading_etf": {
+        "days": 0,
+        "tradeDays": 0,
+        "plus1Days": 0,
+        "weekPct": 0.0,
+        "contribPct": 0,
+        "through": null
+      },
+      "crypto_btc": {
+        "days": 0,
+        "tradeDays": 0,
+        "plus1Days": 0,
+        "weekPct": 0.0,
+        "contribPct": 0,
+        "through": null
+      },
+      "crypto_eth": {
+        "days": 0,
+        "tradeDays": 0,
+        "plus1Days": 0,
+        "weekPct": 0.0,
+        "contribPct": 0,
+        "through": null
+      },
+      "us_tqqq": {
+        "days": 1,
+        "tradeDays": 1,
+        "plus1Days": 0,
+        "weekPct": 0.7433062157224724,
+        "contribPct": 0.29732248628898894,
+        "through": "2026-10-01"
+      }
+    },
+    "note": "장부에 확정된 날만. 코인 하루는 09시 기준, 미국은 한국 날짜(다음 날 아침)로 센다. 기여도는 계좌 비중을 곱한 단순합."
   },
   "changelog": [
     {
@@ -1302,7 +1474,7 @@
   "review": {
     "today": {
       "date": "2026-10-01",
-      "writtenAt": "2026-10-01T22:25:45.460125+09:00",
+      "writtenAt": "2026-10-01T22:58:58.307381+09:00",
       "tabs": {
         "시초가": {
           "name": "① D-1 갭하락 과매도 v2",
@@ -1324,8 +1496,8 @@
         },
         "SOXL": {
           "name": "④ TQQQ 200일 추세 (미국 3배)",
-          "date": "2026-09-30",
-          "result": 0.36793164314565807,
+          "date": "2026-10-01",
+          "result": 0.3716531078612362,
           "plan": "보유 (미국장 · 자금 50%)"
         },
         "전체": {
@@ -1366,9 +1538,9 @@
           "status": "매매일 0/20 — 판단 전"
         },
         "us_tqqq": {
-          "tradeDays": 0,
-          "totalPct": null,
-          "status": "매매일 0/20 — 판단 전"
+          "tradeDays": 1,
+          "totalPct": 0.7433062157224724,
+          "status": "매매일 1/20 — 판단 전"
         },
         "account": {
           "tradeDays": 0,
