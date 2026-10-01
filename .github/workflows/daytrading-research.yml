@@ -169,10 +169,8 @@ jobs:
 
           python .app/scripts/backtest_daytrading.py
 
-          if [ "$NEW_DAY" = "1" ] && [ -n "$KEY" ] && [ -f data/daytrading-research/latest.json ]; then
-            STATUS=$(curl -sS --max-time 30 -o day-summary-response.json -w '%{http_code}'               -X POST -H "x-monitor-key: $KEY" -H "content-type: application/json"               --data-binary @data/daytrading-research/latest.json               "https://jkquant.pages.dev/api/daytrading-summary")
-            echo "Telegram 데이트레이딩 일일요약 HTTP $STATUS: $(cat day-summary-response.json 2>/dev/null || true)"
-          fi
+          # 15:35 KST 종료요약은 Cloudflare daytrading worker가 전송한다.
+          # 이 연구 workflow는 데이터/검증 결과만 저장해 Telegram 중복을 만들지 않는다.
 
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
