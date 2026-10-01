@@ -50,3 +50,33 @@ for(const [name,mutate] of muts){
 }
 if(fail)process.exit(1);
 console.log('✓ daytrading UI metrics: account +0.75%, trade sum +2.25%');
+
+
+function intradayPaperUiProbe(text){
+  const titleCount=(text.match(/<h3><span class="dot"><\/span>📒 오늘 장중 모의 매매이력/g)||[]).length;
+  let auto='',opening='';
+  try{
+    auto=extractFn(text,'function startOpeningPaperAuto(');
+    opening=extractFn(text,'async function loadServerOpeningHistory(');
+  }catch(e){return false;}
+  const autoMinute=auto.includes('loadServerOpeningHistory(true)')&&auto.includes('},60000);');
+  const boxes=opening.indexOf("let baseHtml='<div class=\"out\"");
+  const zero=opening.indexOf('if(!trades.length)');
+  const boxesOnZero=boxes>=0&&zero>=0&&boxes<zero;
+  return titleCount===4&&autoMinute&&boxesOnZero;
+}
+if(!intradayPaperUiProbe(src)){
+  console.error('✗ four strategy tabs must expose unified intraday paper history');
+  process.exit(1);
+}
+const uiMuts=[
+  ['opening paper title must match other tabs',x=>x.replace('📒 오늘 장중 모의 매매이력','📒 오늘 서버 매매 이력')],
+  ['opening paper must auto refresh silently every minute',x=>x.replace('loadServerOpeningHistory(true)','loadServerOpeningHistory(false)')]
+];
+for(const [name,mutate] of uiMuts){
+  if(intradayPaperUiProbe(mutate(src))){
+    console.error('✗ UI mutation survived: '+name);
+    process.exit(1);
+  }else console.log('✓ UI mutation killed: '+name);
+}
+console.log('✓ opening/daytrading/crypto/SOXL have unified today paper-history UI');
