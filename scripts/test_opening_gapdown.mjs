@@ -7,6 +7,7 @@ const dir = path.resolve(process.argv[2] || "functions/api");
 const G = await import(pathToFileURL(path.join(dir, "_gapdown.js")).href);
 const F = await import(pathToFileURL(path.join(dir, "opening-gapdown.js")).href);
 const LV = await import(pathToFileURL(path.join(dir, "claude-live.js")).href);
+const TG = await import(pathToFileURL(path.join(dir, "claude-telegram.js")).href);
 let n = 0;
 const t = (name, fn) => { fn(); n++; };
 const near = (a, b) => assert.ok(Math.abs(a - b) < 1e-9, `${a} != ${b}`);
@@ -127,5 +128,32 @@ t("live ③: hold from yesterday's close vs 20 completed closes; stop caps the d
   const st = LV.coinRow("KRW-BTC", { hold: 1 }, { opening_price: 100, low_price: 95.9, trade_price: 101 });
   near(st.pnlPct, -4 - 0.1 - 0.14); assert.equal(st.status, "손절");
   assert.equal(LV.coinRow("KRW-ETH", { hold: 0 }, { opening_price: 100, low_price: 90, trade_price: 95 }).pnlPct, 0);
+});
+t("telegram: each kind says what happened, no-trade is explicit", () => {
+  const live = { tabs: { opening: { rows: [{ name: "휴젤", buyPrice: 171200, buyPriceKind: "체결", expectedGapPct: -4.2, sellPrice: 174000, pnlPct: 1.41, status: "청산" }],
+                                    decision: { reason: "x", breadth: { qualified: 6, v2Signal: true } } },
+                         daytrading: { rows: [{ status: "매매 없음", note: "15:21 예상 하락 -1.20%" }] },
+                         crypto: { tabPct: 0.4 }, soxl: { rows: [{ pnlPct: null }] } } };
+  const pre = TG.compose("preopen", "2026-10-02", live);
+  assert.ok(pre.includes("모의 매수 1종목") && pre.includes("v2 매매일 예") && pre.includes("휴젤"));
+  const cl = TG.compose("close", "2026-10-02", live);
+  assert.ok(cl.includes("① 갭하락 과매도 +1.41% (1종목 평균") && cl.includes("② 오늘 종가 매수: 없음") && cl.includes("장 시작 전"));
+  assert.ok(TG.compose("etfbuy", "2026-10-02", live).includes("② 매매 없음"));
+  const none = TG.compose("preopen", "2026-10-02", { tabs: { opening: { rows: [], decision: { reason: "no_expected_gap_down" } } } });
+  assert.ok(none.includes("매매 없음 (no_expected_gap_down)"));
+  const mo = TG.compose("morning", "2026-10-02", null, { coins: [{ name: "BTC", y: { action: "보유", pnlPct: 1 }, today: true }, { name: "ETH", y: { action: "손절", pnlPct: -4.24 }, today: false }],
+                                                         us: { date: "2026-10-01", action: "hold", pnlPct: 1.2, holdNext: true } });
+  assert.ok(mo.includes("BTC 어제 보유 +1.00%") && mo.includes("ETH 어제 손절 -4.24%") && mo.includes("코인 칸 어제 -1.62%") && mo.includes("오늘 밤 보유"));
+});
+t("coin yesterday result uses the day before for its decision", () => {
+  const c = [{ trade_price: 1 }, { trade_price: 106, opening_price: 100, low_price: 99, candle_date_time_kst: "2026-10-01T09:00:00" },
+             { trade_price: 120 }, ...Array.from({ length: 19 }, () => ({ trade_price: 100 }))];
+  const y = LV.coinDayResult(c);
+  assert.equal(y.hold, true); near(y.pnlPct, 6); assert.equal(y.date, "2026-10-01");
+  // 어제 봉이 크게 떨어져도 어제 판단은 그 전날 종가(120)로 한다 — 어제 종가(90)를 쓰면 룩어헤드
+  const c2 = [{ trade_price: 1 }, { trade_price: 90, opening_price: 100, low_price: 97, candle_date_time_kst: "2026-10-01T09:00:00" },
+              { trade_price: 120 }, ...Array.from({ length: 19 }, () => ({ trade_price: 100 }))];
+  const y2 = LV.coinDayResult(c2);
+  assert.equal(y2.hold, true); assert.equal(y2.action, "보유"); near(y2.pnlPct, -10);
 });
 console.log(`opening gap-down JS: ${n} ALL PASS`);

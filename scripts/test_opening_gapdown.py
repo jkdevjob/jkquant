@@ -285,6 +285,20 @@ class ClaudeLabTrend(unittest.TestCase):
         ok = {str(i): (2.0 if i % 2 else 0.0) for i in range(25)}
         self.assertEqual(lab.drift_status(ok, {"expectancyPct": 1.0})["code"], "ok")
 
+    def test_review_flags_order_failures_and_streaks(self):
+        rep = {"paper": {"summary": {"opening_d1v2": {"status": {"code": "below", "text": "x"}, "lossStreak": 4}}}, "daily": {"rows": []}}
+        old = lab.read_json
+        lab.read_json = lambda p: {"ledger": {"events": [{"stage": "preopen", "payload": {"orders": [{"code": "000010", "vts": {"ok": False, "msg": "거절"}}], "picks": []}}]}}
+        try:
+            e = lab.review_entry(rep)
+        finally:
+            lab.read_json = old
+        txt = " ".join(e["issues"])
+        self.assertIn("preopen 주문 실패: 000010", txt)
+        self.assertIn("규칙 점검", txt)
+        self.assertIn("4일 연속 손실", txt)
+        self.assertTrue(e["verdict"].startswith("점검 필요"))
+
     def test_daily_board_cells(self):
         self.assertEqual(lab.cell({"a": 1.5}, "a"), 1.5)
         self.assertEqual(lab.cell({"a": 1.5}, "b"), "no_trade")              # 기록 없는 날은 손실이 아니라 매매 없음

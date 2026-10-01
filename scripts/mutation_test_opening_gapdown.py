@@ -55,6 +55,8 @@ JS = [
     ("live fill over expected", "claude-live.js", "const buy=bf||p.expectedPrice||null", "const buy=p.expectedPrice||bf||null"),
     ("live coin ma lookahead", "claude-live.js", "slice(1,1+ma)", "slice(0,ma)"),
     ("live coin stop", "claude-live.js", 'status:!hold?"쉼(평균 아래)":low<=stop?"손절":"보유중"', 'status:!hold?"쉼(평균 아래)":"보유중"'),
+    ("telegram no-trade hidden", "claude-telegram.js", 'else L.push("① 갭하락 과매도 — 매매 없음 ("+(dec.reason||"조건 맞는 종목 없음")+")");', ''),
+    ("coin yesterday lookahead", "claude-live.js", "const h=coinHoldToday(c.slice(1),ma);", "const h=coinHoldToday(c,ma);"),
     ("watchlist whitelist", "opening-gapdown.js", "    if(!w)continue;\n", "    if(!w){out.push({...r});continue;}\n"),
 ]
 
@@ -84,7 +86,7 @@ for label, filename, before, after in PY:
 for label, filename, before, after in JS:
     with tempfile.TemporaryDirectory() as tmp:
         folder = Path(tmp)
-        for name in ("_gapdown.js", "opening-gapdown.js", "claude-live.js"):
+        for name in ("_gapdown.js", "opening-gapdown.js", "claude-live.js", "claude-telegram.js"):
             shutil.copy(API / name, folder / name)
         path = folder / filename
         src = path.read_text(encoding="utf-8")

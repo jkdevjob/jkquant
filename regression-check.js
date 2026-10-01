@@ -10910,6 +10910,16 @@ console.log('[GAPDOWN D-1 / DIP24 D-3] 연구용 모의체결 경로 안전장�
      &&scl2.indexOf('data-tab="today"')<scl2.indexOf('data-tab="opening"')&&/var J=null,TAB="today";/.test(scl2)
      &&/function vsTable\(t\)/.test(scl2)&&/vsRow\("🤖 클로드",c\.claude\)\+vsRow\("GPT · "/.test(scl2)
      &&/readRaw\("claude-lab\/latest\.json"\)/.test(orApi)&&/claude_lab\.py/.test(wf));
+  { const tg=fs.readFileSync(__d+'/functions/api/claude-telegram.js','utf8');
+    ok('클로드 Telegram: 서버키 인증·날짜·종류별 한 번만·주문 경로 없음 · Worker 는 기록 저장 뒤 08:59/09:05/15:21/15:40 에 호출',
+       /function authorized\(request,env\)/.test(tg)&&/claim\("claude:"\+date\+":"\+kind\)/.test(tg)&&!/op=order|opening-execute|kisOrder/.test(tg)
+       &&/await claudeTelegram\(env,date,"preopen"\);/.test(ow)&&/await claudeTelegram\(env,date,stage==="close"\?"etfbuy":"close"\);/.test(ow)
+       &&/if\(claudeMorningDue\(at\)\)ctx\.waitUntil\(claudeTelegram\(env,kstParts\(at\)\.date,"morning"\)\);/.test(ow));
+    ok('단타(클로드) 탭 구성: 전략 설명·오늘 매매이력·다음 계획·그림자·목표/GPT 비교·누적 이력·매일 검증 + 상태 줄',
+       /function tabPage\(tab,T,gd,et,wl\)/.test(scl2)&&/docCard\(tab\)\+liveCard\(tab\)\+planCard\(tab,T,wl\)/.test(scl2)
+       &&/html\+=shadowCard\(tab\)\+paperCard\(tab\)\+reviewCard\(tab\);/.test(scl2)&&/body\.innerHTML=statusBar\(\)\+html;/.test(scl2)
+       &&['opening','daytrading','crypto','soxl'].every(k=>new RegExp('\\b'+k+':\\{title:').test(scl2)));
+  }
   ok('클로드 모의투자 장부: 날짜별 한 번만 쓰기 · 요약은 장부 값만 · 화면 누적표 · workflow 저장',
      /def write_once\(path, obj\):\n[\s\S]{0,200}if path\.exists\(\):\n\s*return False/.test(fs.readFileSync(__d+'/scripts/claude_lab.py','utf8'))
      &&/모의투자 누적/.test(scl2)&&/data\/claude-paper/.test(wf));

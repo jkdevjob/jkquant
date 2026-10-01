@@ -245,6 +245,10 @@ async function runMinute(controller,env){
 // 매 단계 응답 원본을 별도 ledger(gapdown:날짜)에 먼저 쌓는다. 주문 호출은 재시도하지 않는다.
 // Workers 무료 요금제는 계정 전체 cron 5개가 한도라 이 Worker 는 cron 한 줄만 쓴다(wrangler.jsonc).
 // "5-31,40,56 0,6,23 * * *" 로 필요한 시각을 모두 덮고, 실제로 할 일은 한국시각으로 여기서 고른다.
+export function claudeMorningDue(ms){
+  const p=kstParts(ms);
+  return p.hh===9&&p.mm===5;
+}
 export function scheduleRoute(ms){
   const p=new Intl.DateTimeFormat("en-US",{timeZone:"Asia/Seoul",weekday:"short",hour:"2-digit",minute:"2-digit",hourCycle:"h23"}).formatToParts(new Date(ms));
   const g=t=>p.find(x=>x.type===t)?.value||"";
@@ -289,6 +293,15 @@ export function etfBuyDateFromLedgers(ledgers){
   }
   return null;
 }
+// 단타(클로드) Telegram — 기록을 저장한 뒤에 부른다. 실패해도 주문·기록에는 영향이 없다.
+async function claudeTelegram(env,date,kind){
+  try{
+    const r=await fetch(baseUrl(env)+"/api/claude-telegram",{method:"POST",
+      headers:{"content-type":"application/json","x-monitor-key":env.MONITOR_KEY},body:JSON.stringify({kind,date})});
+    const j=await r.json().catch(()=>({}));
+    console.log(JSON.stringify({type:"claude_telegram",kind,date,ok:!!j.ok,duplicate:!!j.duplicate,error:j.error||null}));
+  }catch(e){console.error(JSON.stringify({type:"claude_telegram_failed",kind,date,error:String(e.message||e)}));}
+}
 async function runEtf(env,date,stage,ms,extra={}){
   let res;
   try{res=await gapdownCall(env,{stage,date,...extra});}
@@ -332,6 +345,7 @@ async function runGapdown(stage,controller,env){
     try{await gapdownRecord(env,date,"preopen",res,ms);}
     catch(e){console.error(JSON.stringify({type:"gapdown_archive_failed",stage:"preopen",error:String(e.message||e)}));}
     console.log(JSON.stringify({type:"gapdown_preopen",date,picks:(res.picks||[]).length,orders:(res.orders||[]).length,reason:res.decisionReason||res.error||""}));
+    await claudeTelegram(env,date,"preopen");
     return;
   }
   let ledger=null;
@@ -347,11 +361,15 @@ async function runGapdown(stage,controller,env){
   }
   // ② ETF: 15:21 종가 매수 판단(매일) · 15:40 체결 조회(매일)
   await runEtf(env,date,stage==="close"?"etf_buy":"etf_reconcile",ms);
+  await claudeTelegram(env,date,stage==="close"?"etfbuy":"close");
 }
 
 export default {
   async scheduled(controller,env,ctx){
-    const route=scheduleRoute(Number(controller.scheduledTime)||Date.now());
+    const at=Number(controller.scheduledTime)||Date.now();
+    const route=scheduleRoute(at);
+    // 09:05 KST 매일(주말 포함 — 코인은 쉬지 않는다): 코인 하루 마감·미국 지난 세션 결과 알림
+    if(claudeMorningDue(at))ctx.waitUntil(claudeTelegram(env,kstParts(at).date,"morning"));
     if(route==="opening")ctx.waitUntil(runMinute(controller,env));
     else if(route&&route.startsWith("gapdown_"))ctx.waitUntil(runGapdown(route.slice(8),controller,env));
   },
