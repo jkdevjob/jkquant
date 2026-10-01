@@ -32,6 +32,8 @@ PY = [
     ("btc trend signal day", "claude_lab.py", "hold = 1 if S[i - 1] > ma else 0", "hold = 1 if S[i] > ma else 0"),
     ("trend stop", "claude_lab.py", 'if (L[i] / ref - 1) * 100 <= -p["stopPct"]:', 'if False:'),
     ("trend sizing", "claude_lab.py", 'dv[D[i]] = ((C[i] / ref - 1) * 100 - cost) * p["size"]', 'dv[D[i]] = ((C[i] / ref - 1) * 100 - cost)'),
+    ("basket averages active only", "claude_lab.py", "            out[d] = sum(v) / n", "            out[d] = sum(v) / len(v)"),
+    ("board no-trade as zero", "claude_lab.py", 'return series[d] if d in series else "no_trade"', "return series.get(d, 0.0)"),
     ("gpt same window", "claude_lab.py", "window = [d for d in cal if start and d >= start]", "window = list(cal)"),
     ("dip hit minutes", "backtest_crypto_orb.py", "int((hit - entry_t).total_seconds() // 60) + 5", "int((hit - entry_t).total_seconds() // 60)"),
 ]
