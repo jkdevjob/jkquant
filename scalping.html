@@ -1120,6 +1120,51 @@ async function loadCryptoLive(){
   }
 }
 
+let GLOBAL_PAPER_TIMER=null;
+function stopGlobalPaperAuto(){if(GLOBAL_PAPER_TIMER){clearInterval(GLOBAL_PAPER_TIMER);GLOBAL_PAPER_TIMER=null;}}
+function startGlobalPaperAuto(strategy){
+  stopGlobalPaperAuto();
+  GLOBAL_PAPER_TIMER=setInterval(()=>{const p=$('strategy_'+strategy);if(p&&p.classList.contains('on'))loadGlobalPaper(strategy,true);},60000);
+}
+async function loadGlobalPaper(strategy,silent=false){
+  if(!['crypto','soxl'].includes(strategy))return;
+  const msg=$(strategy+'_live_paper_msg'),body=$(strategy+'_live_paper_body');
+  if(!msg||!body)return;
+  if(!me){msg.textContent='로그인이 필요합니다.';return;}
+  if(!silent){msg.textContent='오늘 장중 모의장부 불러오는 중…';body.innerHTML='';}
+  try{
+    const tok=await me.getIdToken();
+    const r=await fetch('/api/global-paper?strategy='+encodeURIComponent(strategy),{headers:{'Authorization':'Bearer '+tok,'Accept':'application/json'}});
+    const j=await r.json().catch(()=>({}));
+    if(!r.ok||!j.ok)throw new Error(j.error||('HTTP '+r.status));
+    const l=j.ledger;
+    if(!l){msg.textContent='오늘 서버 장부 준비 중';body.innerHTML='<div class="warn">현재까지 기준전략 신호가 없습니다. 신호가 없으면 0건이 정상입니다.</div>';return;}
+    const a=l.trades||[],sum=l.summary||{},x=a[0]||null;
+    const updated=l.updatedAt?new Date(l.updatedAt).toLocaleTimeString('ko-KR',{hour12:false}):'—';
+    msg.textContent=(j.date||l.date||'')+' · '+(sum.selected||a.length)+'건 · '+updated+' 갱신';
+    const pct=v=>v==null?'—':((+v>=0?'+':'')+(+v).toFixed(2)+'%');
+    const price=v=>v==null?'—':(strategy==='crypto'?Math.round(+v).toLocaleString('ko-KR')+'원':'$'+Number(v).toFixed(2));
+    let html='<div class="out" style="margin-bottom:10px">'+
+      '<div class="outbox"><div class="ol">오늘 계좌수익률</div><div class="ov '+((sum.accountReturnPct||0)>=0?'good':'bad')+'">'+pct(sum.accountReturnPct||0)+'</div><div class="sub">1슬롯 기준</div></div>'+
+      '<div class="outbox"><div class="ol">개별 매매 수익률 합계</div><div class="ov '+((sum.tradeSumPct||0)>=0?'good':'bad')+'">'+pct(sum.tradeSumPct||0)+'</div></div>'+
+      '<div class="outbox"><div class="ol">상태</div><div class="ov" style="font-size:14px">'+(x?(x.status==='closed'?'청산완료':x.status==='open'?'보유중':'진입대기'):'신호 없음')+'</div></div>'+
+      '</div>';
+    if(!x){html+='<div class="warn">현재까지 기준전략을 통과한 신호가 없습니다. 0건도 정상 결과입니다.</div>';}
+    else{
+      const pl=x.pnlPct;
+      const reason=x.reason==='stop'||x.reason==='stop_same_bar'?'손절':x.reason==='take_profit'?'익절':x.reason==='time_exit'?'시간청산':x.reason==='tracking'?'추적중':'다음봉 시가대기';
+      html+='<div class="htable-wrap"><table class="htable"><thead><tr><th>전략</th><th>신호</th><th>상태</th><th>진입</th><th>현재/청산</th><th>사유</th><th>순손익</th></tr></thead><tbody>'+
+        '<tr><td><b>'+(strategy==='crypto'?'KRW-BTC':'SOXL')+'</b><div class="sub">'+esc(x.strategyVersion||'')+'</div></td>'+
+        '<td>'+esc(x.signalTime||'—')+'</td><td>'+esc(x.status||'—')+'</td>'+
+        '<td>'+esc(x.entryTime||'—')+' · '+price(x.entryPrice)+'</td>'+
+        '<td>'+esc(x.exitTime||'—')+' · '+price(x.exitPrice==null?x.currentPrice:x.exitPrice)+'</td>'+
+        '<td>'+reason+'</td><td class="'+(pl==null?'':Number(pl)>=0?'win':'loss')+'">'+pct(pl)+'</td></tr>'+
+        '</tbody></table></div>';
+    }
+    html+='<p class="note">서버가 확정봉으로 재구성한 연구용 모의장부입니다. 주문 API와 연결되지 않습니다.</p>';
+    body.innerHTML=html;
+  }catch(e){if(!silent){msg.textContent='장중 모의장부 조회 실패';body.innerHTML='<div class="warn">'+esc(e.message||String(e))+'</div>';}}
+}
 async function loadCryptoResearch(){
   const msg=$('btc_research_msg'), body=$('btc_research_body');
   if(!msg||!body)return;
@@ -1694,13 +1739,15 @@ function showStrategy(name){
     active.forEach(x=>loadStrategyScorecard(x));
   }
   if(active.includes(name)){ loadScalpingHistory(name,1); loadStrategyScorecard(name); loadDaily1Shadow(false); }
+  if(name==='opening')loadServerOpeningHistory();
   if(name==='daytrading'){
     loadDayTradingPaper();
     loadDayTradingResearch();
     startDayTradingPaperAuto();
   }else stopDayTradingPaperAuto();
-  if(name==='crypto'){loadCryptoLive();loadCryptoResearch();}
-  if(name==='soxl'){loadSoxlLive();loadSoxlResearch();loadSoxlVtsHistory();}
+  if(name==='crypto'){loadCryptoLive();loadGlobalPaper('crypto');loadCryptoResearch();startGlobalPaperAuto('crypto');}
+  else if(name==='soxl'){loadSoxlLive();loadGlobalPaper('soxl');loadSoxlResearch();loadSoxlVtsHistory();startGlobalPaperAuto('soxl');}
+  else stopGlobalPaperAuto();
 }
 function restoreStrategy(){
   let n='daily';
