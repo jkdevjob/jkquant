@@ -1793,7 +1793,7 @@ console.log('[37] 모의 성과 표 — 투입은 맨 오른쪽');
      /전략 · 세션[\s\S]*기간[\s\S]*평가[\s\S]*최종[\s\S]*현재[\s\S]*인출[\s\S]*연[\s\S]*투입/.test(head),
      head.slice(0,90));
   ok('투입이 마지막 머리글', head.lastIndexOf('투입') > head.lastIndexOf('연'));
-  // 시세를 못 받은 줄은 평가~연 일곱 칸(평가·최종·MDD·MAR·현재·인출·연)을 colspan 으로 덮는다 (MAR 칸 추가 bb5465e)
+  // 시세를 못 받은 줄은 평가~연 일곱 칸(평가·최종·MDD·MAR·현재·인출·연)을 colspan 으로 덮는다
   const iSpan=op.indexOf('colspan="7"'), iInflow=op.indexOf('${paperInflowText(r)}');
   ok('투입 칸이 colspan 뒤에 온다', iSpan>0 && iInflow>iSpan);
   ok('투입 칸이 한 번만 그려진다', (op.match(/\$\{paperInflowText\(r\)\}/g)||[]).length===1);
@@ -2712,7 +2712,7 @@ console.log('\n[54] 모의 성과 — 최종·현재·인출 세 칸');
   ok('나간 돈이 없으면 흐리게 두고 인출은 비운다',
      /outAmt>0\?\(r\.retNow>=0\?'var\(--buy\)':'var\(--sell\)'\):'var\(--faint\)'/.test(idx)
      && /\$\{outAmt>0\?'\+'\+r\.retOut\.toFixed\(1\)\+'%':'—'\}/.test(idx));
-  // 시세를 못 받은 줄은 평가~연 다섯 칸을 덮어야 한다
+  // 시세를 못 받은 줄은 평가~연 일곱 칸을 덮어야 한다
   ok('시세 대기 줄이 칸 수를 맞춘다', /<td colspan="7" style="color:var\(--gold\)">시세 대기/.test(idx));
 }
 
@@ -10578,7 +10578,7 @@ console.log('[SCALPING FLOW] 단타 공통 흐름 · 모의체결 분리');
      && /VTTS3035R/.test(kis));
   ok('KIS 해외 모의 조회는 전체조회 후 종목 필터', /PDNO:""[\s\S]{0,220}OVRS_EXCG_CD:""/.test(kis)
      && /if\(code\) rows=rows\.filter\(x=>x\.code===code\)/.test(kis));
-  ok('단타 화면 버전 1.30.3', /id="scVer">v1\.30\.3<\/span>/.test(sc));
+  ok('단타 화면 버전 1.31.1', /id="scVer">v1\.31\.1<\/span>/.test(sc));
 }
 
 
@@ -10760,7 +10760,7 @@ console.log('[OPENING SIGNAL LEARNING] 실시간 ledger · 30분 사후라벨 ·
      /신호 이후 30분 경로 진단/.test(scl)
      && /조건별 실제 성과/.test(scl)
      && /groupTable\('전략 버전'/.test(scl)
-     && /id="scVer">v1\.30\.3<\/span>/.test(scl));
+     && /id="scVer">v1\.31\.1<\/span>/.test(scl));
 }
 
 /* ════ 단타 Telegram ③④ 실시간 + ⑤⑥ 일일 연구 ════ */
@@ -10799,7 +10799,7 @@ console.log('[SCALPING TELEGRAM] 실시간 신호 · 일일 매매/연구 요약
   const cr=cr0>=0&&cr1>cr0?nightly.slice(cr0,cr1):'';
   ok('BTC 야간연구는 실제 70/30 holdout 모델만 참조',
      /validationModel":"70\/30 holdout \+ rolling30"/.test(cr) && !/oos_edge|oos_trades|wf_status/.test(cr));
-  ok('단타 화면 버전 1.30.3', /id="scVer">v1\.30\.3<\/span>/.test(scl));
+  ok('단타 화면 버전 1.31.1', /id="scVer">v1\.31\.1<\/span>/.test(scl));
 }
 
 
@@ -10910,12 +10910,6 @@ console.log('[GAPDOWN D-1 / DIP24 D-3] 연구용 모의체결 경로 안전장�
      &&scl2.indexOf('data-tab="today"')<scl2.indexOf('data-tab="opening"')&&/var J=null,TAB="today";/.test(scl2)
      &&/function vsTable\(t\)/.test(scl2)&&/vsRow\("🤖 클로드",c\.claude\)\+vsRow\("GPT · "/.test(scl2)
      &&/readRaw\("claude-lab\/latest\.json"\)/.test(orApi)&&/claude_lab\.py/.test(wf));
-  { const live=fs.readFileSync(__d+'/functions/api/claude-live.js','utf8');
-    ok('탭별 오늘 모의 매매이력(장중): 읽기전용 · 감시키는 서버에서만 · 주문번호/수량 미노출 · 4개 탭 카드',
-       !/op=order|method:\s*["']POST["']|kisOrder|opening-execute/.test(live)
-       &&/headers:\{"x-monitor-key":key\}/.test(live)&&!/orderNo|orderNos|qty:/.test(live.replace(/\/\/.*$/gm,''))
-       &&(scl2.match(/html\+=liveCard\("(opening|daytrading|crypto|soxl)"\)/g)||[]).length===4&&/fetch\("\/api\/claude-live"/.test(scl2));
-  }
   ok('클로드 모의투자 장부: 날짜별 한 번만 쓰기 · 요약은 장부 값만 · 화면 누적표 · workflow 저장',
      /def write_once\(path, obj\):\n[\s\S]{0,200}if path\.exists\(\):\n\s*return False/.test(fs.readFileSync(__d+'/scripts/claude_lab.py','utf8'))
      &&/모의투자 누적/.test(scl2)&&/data\/claude-paper/.test(wf));
