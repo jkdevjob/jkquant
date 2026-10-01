@@ -10547,14 +10547,14 @@ console.log('\n[138] 액면분할 — 실제 거래 가격 체결 · 분할일 �
   WARM_FROM=BK.WF; WARM_TO=BK.WT; for(const [k,v] of BK.g){ if(v===undefined) delete global[k]; else global[k]=v; }
 }
 
-/* ════ 단타 공통 8단계 UI · BTC 분리 모의 · SOXL 해외 VTS ════ */
+/* ════ 단타 공통 9단계 UI · 다음 계획 · BTC 분리 모의 · SOXL 해외 VTS ════ */
 console.log('[SCALPING FLOW] 단타 공통 흐름 · 모의체결 분리');
 {
   const sc=scl;
   const kis=fs.existsSync(__d+'/functions/api/kis.js')?fs.readFileSync(__d+'/functions/api/kis.js','utf8'):'';
-  const labels=['📖 전략 · 종목선정 규칙','🔎 오늘 종목 선정 · 감시','🟢 매수 타이밍','🔴 매도 · 손절 · 리스크','📒 오늘 모의매매 · 손익','🧪 그림자 · 매일 검증 · 개선','📚 누적 모의매매 이력','🔍 실행품질 · VTS 대조'];
+  const labels=['📖 전략 · 종목선정 규칙','🔎 오늘 종목 선정 · 감시','🟢 매수 타이밍','🔴 매도 · 손절 · 리스크','📒 오늘 모의매매 · 손익','🗓 다음 계획','🧪 그림자 · 매일 검증 · 개선','📚 누적 모의매매 이력','🔍 실행품질 · VTS 대조'];
   const pos=labels.map(x=>sc.indexOf(x));
-  ok('단타 전략탭 공통 8단계 순서', pos.every((x,i)=>x>=0&&(i===0||x>pos[i-1])), pos.join(' → '));
+  ok('단타 전략탭 공통 9단계 순서', pos.every((x,i)=>x>=0&&(i===0||x>pos[i-1])), pos.join(' → '));
   ok('활성 단타 4개 전략탭 모두 공통 flow 대상', ['opening','daytrading','crypto','soxl'].every(x=>sc.includes(x+':{strategy:')));
   ok('폐기 참고 페이지는 제거하고 전일·당일 통합 페이지가 시초가 앞에 위치',
      !/data-strategy="reference"/.test(sc) && !/id="strategy_reference"/.test(sc)
@@ -10579,6 +10579,10 @@ console.log('[SCALPING FLOW] 단타 공통 흐름 · 모의체결 분리');
   ok('KIS 해외 모의 조회는 전체조회 후 종목 필터', /PDNO:""[\s\S]{0,220}OVRS_EXCG_CD:""/.test(kis)
      && /if\(code\) rows=rows\.filter\(x=>x\.code===code\)/.test(kis));
   ok('단타 화면 버전 x.y.z', /id="scVer">v\d+\.\d+\.\d+<\/span>/.test(sc));
+  ok('단타 상태줄·다음계획·위험경고·날짜별 검증기록 UI',
+     /strategy-statusline/.test(sc) && /function nextPlanText\(name\)/.test(sc)
+     && /lossStreakTradeDays/.test(sc) && /currentDrawdownPct/.test(sc)
+     && /\/api\/scalping-review\?strategy=/.test(sc));
 }
 
 
@@ -10628,6 +10632,11 @@ console.log('[SCALPING HISTORY] 4전략 누적 매매이력 · 과매도 반등 
      && /soxl-research\/baseline-trades\.csv/.test(hapi));
   ok('누적 이력 API는 읽기전용이며 주문 경로가 없다',
      !/op=order|opening-execute|method:\s*["']POST["']|kisOrder\(/.test(hapi));
+  const rapi=fs.readFileSync(__d+'/functions/api/scalping-review.js','utf8');
+  ok('날짜별 검증기록 API는 읽기전용이며 최근 야간연구만 조회',
+     /data\/nightly-research/.test(rapi)
+     && /strategy must be opening\|daytrading\|crypto\|soxl/.test(rapi)
+     && !/op=order|opening-execute|method:\s*["']POST["']|kisOrder\(/.test(rapi));
   ok('전일·당일 통합 API는 4개 활성전략 결과만 읽기전용으로 집계',
      /opening-history\//.test(dapi)
      && /daytrading-research\/latest\.json/.test(dapi)
@@ -10650,9 +10659,10 @@ console.log('[SCALPING HISTORY] 4전략 누적 매매이력 · 과매도 반등 
      && /parseInt\(range,10\)/.test(hapi));
   ok('누적 이력 공통 컬럼은 날짜·종목·전략버전·신호·진입·청산·사유·손익',
      /<th>날짜<\/th><th>종목<\/th><th>전략버전<\/th><th>신호<\/th><th>진입<\/th><th>청산<\/th><th>사유<\/th><th>손익<\/th>/.test(sc));
-  ok('오늘 장중 모의장부는 공통 5번(today), 시초가 실시간 감시는 2번(search), 7번은 누적 이력',
+  ok('오늘 장중 모의장부는 5번(today), 다음 계획은 6번(plan), 누적 이력은 8번(history)',
      /opening:\{strategy:\[\],search:\['🔥 실시간 시초가 돌파 감시'\],today:\['📒 오늘 장중 모의 매매이력'\],history:\[\]/.test(sc)
      && /daytrading:\{strategy:\['📈 데이트레이딩 기준전략'\],search:\['📡 데이트레이딩 서버 장중 감시'\],today:\['📒 오늘 장중 모의 매매이력'\],history:\[\]/.test(sc)
+     && /bodies\.plan\.appendChild\(flowCard\('🗓 다음 계획'/.test(sc)
      && /if\(!bodies\.strategy\.children\.length\)[\s\S]{0,800}📖 기준전략 요약/.test(sc)
      && /for\(const step of \['strategy','search','today','review','history','paper'\]\)/.test(sc));
   ok('폐기된 과매도 반등 공용 UI는 활성 화면에 노출하지 않음',
