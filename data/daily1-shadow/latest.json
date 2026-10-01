@@ -1,0 +1,2809 @@
+{
+  "schema": 1,
+  "generatedAt": "2026-10-01T20:39:00.726827+09:00",
+  "mode": "prospective-shadow-paper",
+  "paperStart": "2026-10-01",
+  "designEnd": "2026-09-30",
+  "goal": {
+    "dailyNetPct": 1.0,
+    "weeklyNetPct": 5.0
+  },
+  "executionRule": "completed-bar signal -> next-bar-open fill; same-bar stop/target -> stop first; explicit friction; no broker orders",
+  "promotionRule": "No automatic promotion. New version only after prospective review; never rewrite historical rules.",
+  "latestSourceDates": {
+    "opening": "2026-09-30",
+    "daytrading": "2026-10-01",
+    "crypto": "2026-09-30",
+    "soxl": null
+  },
+  "strategies": {
+    "opening": {
+      "strategy": "opening",
+      "version": "opening_gapdown_reclaim_v1",
+      "name": "갭하락 플러시 → VWAP·시초가 재탈환",
+      "rule": "시가 -2~-8% 갭하락 → 첫 5분 추가 하락≥1% → 09:05~09:35 VWAP와 시초가 재탈환 + 거래량 1.2배 → 다음 1분봉 시가 진입 · -0.8%/+1.8% · 10:00 청산",
+      "slots": 2,
+      "paperStart": "2026-10-01",
+      "status": "collecting",
+      "design": {
+        "days": 7,
+        "trades": 4,
+        "tradeDays": 2,
+        "winRatePct": 50.0,
+        "avgTradePnlPct": -0.23609917259112878,
+        "avgDailyReturnPct": -0.06745690645460822,
+        "plus1Days": 0,
+        "plus1DayRatePct": 0.0,
+        "plus5Weeks": 0,
+        "weeklyAvgPct": -0.236099172591131,
+        "lossDayAvgPct": -0.23609917259112878,
+        "worstDayPct": -0.23609917259112878,
+        "profitFactor": 0.7247300448619276,
+        "compoundReturnPct": -0.4716409169892799,
+        "maxDrawdownPct": -0.4716409169892799,
+        "daily": [
+          {
+            "date": "2026-09-21",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-09-22",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-09-23",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-09-24",
+            "returnPct": -0.23609917259112878,
+            "trades": 2
+          },
+          {
+            "date": "2026-09-25",
+            "returnPct": -0.23609917259112878,
+            "trades": 2
+          },
+          {
+            "date": "2026-09-29",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-09-30",
+            "returnPct": 0.0,
+            "trades": 0
+          }
+        ],
+        "plus1DaysPerYear": 0.0,
+        "plus5WeeksPerYear": 0.0
+      },
+      "outOfSample": {
+        "days": 0,
+        "trades": 0,
+        "tradeDays": 0,
+        "winRatePct": 0.0,
+        "avgTradePnlPct": 0.0,
+        "avgDailyReturnPct": 0.0,
+        "plus1Days": 0,
+        "plus1DayRatePct": 0.0,
+        "plus5Weeks": 0,
+        "weeklyAvgPct": 0.0,
+        "lossDayAvgPct": 0.0,
+        "worstDayPct": 0.0,
+        "profitFactor": 0.0,
+        "compoundReturnPct": 0.0,
+        "maxDrawdownPct": 0.0,
+        "daily": [],
+        "plus1DaysPerYear": 0.0,
+        "plus5WeeksPerYear": 0.0
+      },
+      "reviewPolicy": "Rules stay frozen. Review after >=20 prospective days AND >=20 prospective trades; positive daily expectancy, PF>=1.10, MDD>=-15%, worst day>=-8%. No automatic live promotion.",
+      "targetNote": "+1% day / +5% week are research thresholds, not guaranteed returns.",
+      "recentTrades": [
+        {
+          "date": "2026-09-24",
+          "strategy": "opening",
+          "strategyVersion": "opening_gapdown_reclaim_v1",
+          "code": "095610",
+          "name": "테스",
+          "rank": 83,
+          "signalTime": 910,
+          "entryTime": 911,
+          "entryPrice": 153000.0,
+          "gapPct": -6.114885731933295,
+          "flushPct": -1.1842105263157876,
+          "signalVwap": 152841.9613347218,
+          "volumeRatio": 1.8454360184489973,
+          "decisionReason": "gapdown+first5_flush+open_vwap_reclaim+prior3_break+volume",
+          "sample": "design",
+          "exitTime": 918,
+          "exitPrice": 155754.0,
+          "grossPnlPct": 1.8000000000000016,
+          "frictionPct": 0.5567973856209151,
+          "pnlPct": 1.2432026143790864,
+          "reason": "take_profit"
+        },
+        {
+          "date": "2026-09-24",
+          "strategy": "opening",
+          "strategyVersion": "opening_gapdown_reclaim_v1",
+          "code": "278470",
+          "name": "에이피알",
+          "rank": 71,
+          "signalTime": 911,
+          "entryTime": 912,
+          "entryPrice": 364750.0,
+          "gapPct": -2.0325203252032575,
+          "flushPct": -1.2448132780082943,
+          "signalVwap": 360509.0193820764,
+          "volumeRatio": 1.5715162676488643,
+          "decisionReason": "gapdown+first5_flush+open_vwap_reclaim+prior3_break+volume",
+          "sample": "design",
+          "exitTime": 913,
+          "exitPrice": 361832.0,
+          "grossPnlPct": -0.8000000000000007,
+          "frictionPct": 0.9154009595613434,
+          "pnlPct": -1.715400959561344,
+          "reason": "stop"
+        },
+        {
+          "date": "2026-09-25",
+          "strategy": "opening",
+          "strategyVersion": "opening_gapdown_reclaim_v1",
+          "code": "095610",
+          "name": "테스",
+          "rank": 83,
+          "signalTime": 910,
+          "entryTime": 911,
+          "entryPrice": 153000.0,
+          "gapPct": -6.114885731933295,
+          "flushPct": -1.1842105263157876,
+          "signalVwap": 152841.9613347218,
+          "volumeRatio": 1.8454360184489973,
+          "decisionReason": "gapdown+first5_flush+open_vwap_reclaim+prior3_break+volume",
+          "sample": "design",
+          "exitTime": 918,
+          "exitPrice": 155754.0,
+          "grossPnlPct": 1.8000000000000016,
+          "frictionPct": 0.5567973856209151,
+          "pnlPct": 1.2432026143790864,
+          "reason": "take_profit"
+        },
+        {
+          "date": "2026-09-25",
+          "strategy": "opening",
+          "strategyVersion": "opening_gapdown_reclaim_v1",
+          "code": "278470",
+          "name": "에이피알",
+          "rank": 71,
+          "signalTime": 911,
+          "entryTime": 912,
+          "entryPrice": 364750.0,
+          "gapPct": -2.0325203252032575,
+          "flushPct": -1.2448132780082943,
+          "signalVwap": 360509.0193820764,
+          "volumeRatio": 1.5715162676488643,
+          "decisionReason": "gapdown+first5_flush+open_vwap_reclaim+prior3_break+volume",
+          "sample": "design",
+          "exitTime": 913,
+          "exitPrice": 361832.0,
+          "grossPnlPct": -0.8000000000000007,
+          "frictionPct": 0.9154009595613434,
+          "pnlPct": -1.715400959561344,
+          "reason": "stop"
+        }
+      ]
+    },
+    "daytrading": {
+      "strategy": "daytrading",
+      "version": "day_rs_vwap_reclaim_v1",
+      "name": "시장 상대강도 + VWAP 재탈환",
+      "rule": "10:05~14:30 시장대비 상대강도≥1%p · 당일 +0.5~+6% · VWAP 아래→위 재탈환 · 거래량 1.2배 · 직전3분 고점 회복 → 다음 1분봉 시가 · -0.8%/+1.6% · 최대60분/15:10",
+      "slots": 3,
+      "paperStart": "2026-10-01",
+      "status": "collecting",
+      "design": {
+        "days": 2,
+        "trades": 6,
+        "tradeDays": 2,
+        "winRatePct": 33.33333333333333,
+        "avgTradePnlPct": -0.4511337397247644,
+        "avgDailyReturnPct": -0.4511337397247644,
+        "plus1Days": 0,
+        "plus1DayRatePct": 0.0,
+        "plus5Weeks": 0,
+        "weeklyAvgPct": -0.9013358286382833,
+        "lossDayAvgPct": -0.4511337397247644,
+        "worstDayPct": -0.7833333333333338,
+        "profitFactor": 0.203881635779828,
+        "compoundReturnPct": -0.9013358286382833,
+        "maxDrawdownPct": -0.9013358286382833,
+        "daily": [
+          {
+            "date": "2026-09-29",
+            "returnPct": -0.11893414611619502,
+            "trades": 3
+          },
+          {
+            "date": "2026-09-30",
+            "returnPct": -0.7833333333333338,
+            "trades": 3
+          }
+        ],
+        "plus1DaysPerYear": 0.0,
+        "plus5WeeksPerYear": 0.0
+      },
+      "outOfSample": {
+        "days": 1,
+        "trades": 3,
+        "tradeDays": 1,
+        "winRatePct": 66.66666666666666,
+        "avgTradePnlPct": 0.5500000000000007,
+        "avgDailyReturnPct": 0.5500000000000007,
+        "plus1Days": 0,
+        "plus1DayRatePct": 0.0,
+        "plus5Weeks": 0,
+        "weeklyAvgPct": 0.550000000000006,
+        "lossDayAvgPct": 0.0,
+        "worstDayPct": 0.5500000000000007,
+        "profitFactor": 2.5714285714285725,
+        "compoundReturnPct": 0.550000000000006,
+        "maxDrawdownPct": 0.0,
+        "daily": [
+          {
+            "date": "2026-10-01",
+            "returnPct": 0.5500000000000007,
+            "trades": 3
+          }
+        ],
+        "plus1DaysPerYear": 0.0,
+        "plus5WeeksPerYear": 0.0
+      },
+      "reviewPolicy": "Rules stay frozen. Review after >=20 prospective days AND >=20 prospective trades; positive daily expectancy, PF>=1.10, MDD>=-15%, worst day>=-8%. No automatic live promotion.",
+      "targetNote": "+1% day / +5% week are research thresholds, not guaranteed returns.",
+      "recentTrades": [
+        {
+          "date": "2026-09-29",
+          "strategy": "daytrading",
+          "strategyVersion": "day_rs_vwap_reclaim_v1",
+          "code": "003230",
+          "name": "삼양식품",
+          "rank": 100,
+          "signalTime": 1009,
+          "entryTime": 1010,
+          "entryPrice": 1233000.0,
+          "sessionRetPct": 1.6488046166529324,
+          "marketRetPct": -0.3302314115798288,
+          "relativeStrengthPctPoint": 1.9790360282327613,
+          "signalVwap": 1231377.829638273,
+          "volumeRatio": 1.8717139852786542,
+          "decisionReason": "relative_strength+vwap_reclaim+prior3_break+volume",
+          "sample": "design",
+          "exitTime": 1048,
+          "exitPrice": 1223136.0,
+          "grossPnlPct": -0.8000000000000007,
+          "frictionPct": 0.25,
+          "pnlPct": -1.0500000000000007,
+          "reason": "stop"
+        },
+        {
+          "date": "2026-09-29",
+          "strategy": "daytrading",
+          "strategyVersion": "day_rs_vwap_reclaim_v1",
+          "code": "298040",
+          "name": "효성중공업",
+          "rank": 49,
+          "signalTime": 1014,
+          "entryTime": 1015,
+          "entryPrice": 2807000.0,
+          "sessionRetPct": 1.3723365836041834,
+          "marketRetPct": -0.2919850082791775,
+          "relativeStrengthPctPoint": 1.664321591883361,
+          "signalVwap": 2800562.549800797,
+          "volumeRatio": 3.191126279863481,
+          "decisionReason": "relative_strength+vwap_reclaim+prior3_break+volume",
+          "sample": "design",
+          "exitTime": 1114,
+          "exitPrice": 2821000.0,
+          "grossPnlPct": 0.4987531172069737,
+          "frictionPct": 0.25,
+          "pnlPct": 0.24875311720697368,
+          "reason": "time_exit"
+        },
+        {
+          "date": "2026-09-29",
+          "strategy": "daytrading",
+          "strategyVersion": "day_rs_vwap_reclaim_v1",
+          "code": "178320",
+          "name": "서진시스템",
+          "rank": 73,
+          "signalTime": 1014,
+          "entryTime": 1015,
+          "entryPrice": 36000.0,
+          "sessionRetPct": 0.8403361344537785,
+          "marketRetPct": -0.2919850082791775,
+          "relativeStrengthPctPoint": 1.132321142732956,
+          "signalVwap": 35911.69919735921,
+          "volumeRatio": 4.918151435809013,
+          "decisionReason": "relative_strength+vwap_reclaim+prior3_break+volume",
+          "sample": "design",
+          "exitTime": 1114,
+          "exitPrice": 36250.0,
+          "grossPnlPct": 0.694444444444442,
+          "frictionPct": 0.25,
+          "pnlPct": 0.444444444444442,
+          "reason": "time_exit"
+        },
+        {
+          "date": "2026-09-30",
+          "strategy": "daytrading",
+          "strategyVersion": "day_rs_vwap_reclaim_v1",
+          "code": "327260",
+          "name": "RF머트리얼즈",
+          "rank": 39,
+          "signalTime": 1025,
+          "entryTime": 1026,
+          "entryPrice": 51600.0,
+          "sessionRetPct": 1.9646365422396839,
+          "marketRetPct": 0.6987847933423497,
+          "relativeStrengthPctPoint": 1.2658517488973342,
+          "signalVwap": 51702.467531117865,
+          "volumeRatio": 4.073636076947335,
+          "decisionReason": "relative_strength+vwap_reclaim+prior3_break+volume",
+          "sample": "design",
+          "exitTime": 1029,
+          "exitPrice": 51187.2,
+          "grossPnlPct": -0.8000000000000007,
+          "frictionPct": 0.25,
+          "pnlPct": -1.0500000000000007,
+          "reason": "stop"
+        },
+        {
+          "date": "2026-09-30",
+          "strategy": "daytrading",
+          "strategyVersion": "day_rs_vwap_reclaim_v1",
+          "code": "018880",
+          "name": "한온시스템",
+          "rank": 30,
+          "signalTime": 1040,
+          "entryTime": 1041,
+          "entryPrice": 3540.0,
+          "sessionRetPct": 4.424778761061954,
+          "marketRetPct": 0.28496944561376414,
+          "relativeStrengthPctPoint": 4.13980931544819,
+          "signalVwap": 3518.6795730626986,
+          "volumeRatio": 1.5628181807083297,
+          "decisionReason": "relative_strength+vwap_reclaim+prior3_break+volume",
+          "sample": "design",
+          "exitTime": 1053,
+          "exitPrice": 3511.68,
+          "grossPnlPct": -0.8000000000000007,
+          "frictionPct": 0.25,
+          "pnlPct": -1.0500000000000007,
+          "reason": "stop"
+        },
+        {
+          "date": "2026-09-30",
+          "strategy": "daytrading",
+          "strategyVersion": "day_rs_vwap_reclaim_v1",
+          "code": "082740",
+          "name": "한화엔진",
+          "rank": 51,
+          "signalTime": 1051,
+          "entryTime": 1052,
+          "entryPrice": 49400.0,
+          "sessionRetPct": 3.9957939011566745,
+          "marketRetPct": 0.31644201729578714,
+          "relativeStrengthPctPoint": 3.679351883860887,
+          "signalVwap": 49366.73262543945,
+          "volumeRatio": 1.5809232840535432,
+          "decisionReason": "relative_strength+vwap_reclaim+prior3_break+volume",
+          "sample": "design",
+          "exitTime": 1151,
+          "exitPrice": 49400.0,
+          "grossPnlPct": 0.0,
+          "frictionPct": 0.25,
+          "pnlPct": -0.25,
+          "reason": "time_exit"
+        },
+        {
+          "date": "2026-10-01",
+          "strategy": "daytrading",
+          "strategyVersion": "day_rs_vwap_reclaim_v1",
+          "code": "043260",
+          "name": "성호전자",
+          "rank": 28,
+          "signalTime": 1006,
+          "entryTime": 1007,
+          "entryPrice": 27250.0,
+          "sessionRetPct": 3.4220532319391594,
+          "marketRetPct": 1.6265505727646956,
+          "relativeStrengthPctPoint": 1.7955026591744638,
+          "signalVwap": 27056.48345389565,
+          "volumeRatio": 1.7595491139125172,
+          "decisionReason": "relative_strength+vwap_reclaim+prior3_break+volume",
+          "sample": "outOfSample",
+          "exitTime": 1010,
+          "exitPrice": 27032.0,
+          "grossPnlPct": -0.8000000000000007,
+          "frictionPct": 0.25,
+          "pnlPct": -1.0500000000000007,
+          "reason": "stop"
+        },
+        {
+          "date": "2026-10-01",
+          "strategy": "daytrading",
+          "strategyVersion": "day_rs_vwap_reclaim_v1",
+          "code": "232140",
+          "name": "와이씨",
+          "rank": 48,
+          "signalTime": 1010,
+          "entryTime": 1011,
+          "entryPrice": 15270.0,
+          "sessionRetPct": 4.804392587508577,
+          "marketRetPct": 1.6848643609189695,
+          "relativeStrengthPctPoint": 3.1195282265896074,
+          "signalVwap": 15268.018030507545,
+          "volumeRatio": 1.803542037000461,
+          "decisionReason": "relative_strength+vwap_reclaim+prior3_break+volume",
+          "sample": "outOfSample",
+          "exitTime": 1011,
+          "exitPrice": 15514.32,
+          "grossPnlPct": 1.6000000000000014,
+          "frictionPct": 0.25,
+          "pnlPct": 1.3500000000000014,
+          "reason": "take_profit"
+        },
+        {
+          "date": "2026-10-01",
+          "strategy": "daytrading",
+          "strategyVersion": "day_rs_vwap_reclaim_v1",
+          "code": "039030",
+          "name": "이오테크닉스",
+          "rank": 77,
+          "signalTime": 1015,
+          "entryTime": 1016,
+          "entryPrice": 533000.0,
+          "sessionRetPct": 4.093567251461994,
+          "marketRetPct": 1.86945304729762,
+          "relativeStrengthPctPoint": 2.2241142041643736,
+          "signalVwap": 533224.623897631,
+          "volumeRatio": 1.4364466845172468,
+          "decisionReason": "relative_strength+vwap_reclaim+prior3_break+volume",
+          "sample": "outOfSample",
+          "exitTime": 1026,
+          "exitPrice": 541528.0,
+          "grossPnlPct": 1.6000000000000014,
+          "frictionPct": 0.25,
+          "pnlPct": 1.3500000000000014,
+          "reason": "take_profit"
+        }
+      ]
+    },
+    "crypto": {
+      "strategy": "crypto",
+      "version": "btc_flush_reclaim_v1",
+      "name": "BTC 60분 급락 플러시 반등",
+      "rule": "최근 60분 고점 대비 -1.5% 이상 플러시 후 5분봉이 직전봉 고가를 회복 + 거래량 1.5배 → 다음 5분봉 시가 · -0.7%/+1.4% · 최대90분 · 22:00 진입까지",
+      "slots": 1,
+      "paperStart": "2026-10-01",
+      "status": "collecting",
+      "design": {
+        "days": 358,
+        "trades": 21,
+        "tradeDays": 21,
+        "winRatePct": 28.57142857142857,
+        "avgTradePnlPct": -0.3076395528435444,
+        "avgDailyReturnPct": -0.01804589555786154,
+        "plus1Days": 2,
+        "plus1DayRatePct": 0.5586592178770949,
+        "plus5Weeks": 0,
+        "weeklyAvgPct": -0.12305734867650298,
+        "lossDayAvgPct": -0.7314859533592498,
+        "worstDayPct": -0.8400000000000006,
+        "profitFactor": 0.4112048604582875,
+        "compoundReturnPct": -6.317666429862445,
+        "maxDrawdownPct": -6.686664987372515,
+        "daily": [
+          {
+            "date": "2025-09-30",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2025-10-01",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2025-10-02",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2025-10-03",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2025-10-04",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2025-10-05",
+            "returnPct": 0.08640214967697413,
+            "trades": 1
+          },
+          {
+            "date": "2025-10-06",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2025-10-07",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2025-10-08",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2025-10-09",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2025-10-10",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2025-10-11",
+            "returnPct": -0.8400000000000006,
+            "trades": 1
+          },
+          {
+            "date": "2025-10-12",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2025-10-13",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2025-10-14",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2025-10-15",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2025-10-16",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2025-10-17",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2025-10-18",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2025-10-19",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2025-10-20",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2025-10-21",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2025-10-22",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2025-10-23",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2025-10-24",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2025-10-27",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2025-10-28",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2025-10-29",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2025-10-30",
+            "returnPct": -0.8400000000000006,
+            "trades": 1
+          },
+          {
+            "date": "2025-10-31",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2025-11-01",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2025-11-02",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2025-11-03",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2025-11-04",
+            "returnPct": -0.8400000000000006,
+            "trades": 1
+          },
+          {
+            "date": "2025-11-05",
+            "returnPct": 1.2600000000000011,
+            "trades": 1
+          },
+          {
+            "date": "2025-11-06",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2025-11-07",
+            "returnPct": -0.08455408946594234,
+            "trades": 1
+          },
+          {
+            "date": "2025-11-08",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2025-11-09",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2025-11-10",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2025-11-11",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2025-11-12",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2025-11-13",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2025-11-14",
+            "returnPct": -0.8400000000000006,
+            "trades": 1
+          },
+          {
+            "date": "2025-11-15",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2025-11-16",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2025-11-17",
+            "returnPct": 0.6157885226270544,
+            "trades": 1
+          },
+          {
+            "date": "2025-11-18",
+            "returnPct": -0.8400000000000006,
+            "trades": 1
+          },
+          {
+            "date": "2025-11-19",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2025-11-20",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2025-11-21",
+            "returnPct": 1.2600000000000011,
+            "trades": 1
+          },
+          {
+            "date": "2025-11-22",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2025-11-23",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2025-11-24",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2025-11-25",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2025-11-26",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2025-11-27",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2025-11-28",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2025-11-29",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2025-11-30",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2025-12-01",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2025-12-02",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2025-12-03",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2025-12-04",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2025-12-05",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2025-12-06",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2025-12-07",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2025-12-08",
+            "returnPct": -0.8400000000000006,
+            "trades": 1
+          },
+          {
+            "date": "2025-12-09",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2025-12-10",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2025-12-11",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2025-12-12",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2025-12-13",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2025-12-14",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2025-12-15",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2025-12-16",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2025-12-17",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2025-12-18",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2025-12-19",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2025-12-20",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2025-12-21",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2025-12-22",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2025-12-23",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2025-12-24",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2025-12-25",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2025-12-26",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2025-12-27",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2025-12-28",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2025-12-29",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2025-12-30",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-01-02",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-01-03",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-01-04",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-01-05",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-01-06",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-01-07",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-01-08",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-01-09",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-01-10",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-01-11",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-01-12",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-01-13",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-01-14",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-01-15",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-01-16",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-01-17",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-01-18",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-01-19",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-01-20",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-01-21",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-01-22",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-01-23",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-01-24",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-01-25",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-01-26",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-01-27",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-01-28",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-01-29",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-01-30",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-01-31",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-02-01",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-02-02",
+            "returnPct": -0.8400000000000006,
+            "trades": 1
+          },
+          {
+            "date": "2026-02-03",
+            "returnPct": 0.5538421509106618,
+            "trades": 1
+          },
+          {
+            "date": "2026-02-04",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-02-05",
+            "returnPct": -0.8400000000000006,
+            "trades": 1
+          },
+          {
+            "date": "2026-02-06",
+            "returnPct": -0.8400000000000006,
+            "trades": 1
+          },
+          {
+            "date": "2026-02-07",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-02-08",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-02-09",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-02-10",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-02-11",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-02-12",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-02-13",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-02-14",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-02-15",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-02-16",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-02-17",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-02-18",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-02-19",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-02-20",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-02-21",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-02-22",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-02-23",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-02-24",
+            "returnPct": -0.6439885889376095,
+            "trades": 1
+          },
+          {
+            "date": "2026-02-25",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-02-26",
+            "returnPct": -0.8400000000000006,
+            "trades": 1
+          },
+          {
+            "date": "2026-02-27",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-02-28",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-03-01",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-03-02",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-03-03",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-03-04",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-03-05",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-03-06",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-03-07",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-03-08",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-03-09",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-03-10",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-03-11",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-03-12",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-03-13",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-03-14",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-03-15",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-03-16",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-03-17",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-03-18",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-03-19",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-03-20",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-03-21",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-03-22",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-03-23",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-03-24",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-03-25",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-03-26",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-03-27",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-03-28",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-03-29",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-03-30",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-03-31",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-04-01",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-04-02",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-04-03",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-04-04",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-04-05",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-04-06",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-04-07",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-04-08",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-04-09",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-04-10",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-04-11",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-04-14",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-04-15",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-04-16",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-04-17",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-04-18",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-04-19",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-04-20",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-04-21",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-04-22",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-04-23",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-04-24",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-04-25",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-04-26",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-04-27",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-04-28",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-04-29",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-04-30",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-05-01",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-05-02",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-05-03",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-05-04",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-05-05",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-05-06",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-05-07",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-05-08",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-05-09",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-05-10",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-05-11",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-05-12",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-05-13",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-05-14",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-05-15",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-05-16",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-05-17",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-05-18",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-05-19",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-05-20",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-05-21",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-05-22",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-05-23",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-05-24",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-05-25",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-05-26",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-05-27",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-05-28",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-05-29",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-05-30",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-05-31",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-06-01",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-06-02",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-06-03",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-06-04",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-06-05",
+            "returnPct": -0.8400000000000006,
+            "trades": 1
+          },
+          {
+            "date": "2026-06-06",
+            "returnPct": -0.5798115709250083,
+            "trades": 1
+          },
+          {
+            "date": "2026-06-07",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-06-08",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-06-09",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-06-10",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-06-11",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-06-12",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-06-13",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-06-14",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-06-15",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-06-16",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-06-17",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-06-18",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-06-19",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-06-20",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-06-21",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-06-22",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-06-23",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-06-24",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-06-25",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-06-26",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-06-27",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-06-28",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-06-29",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-06-30",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-07-01",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-07-02",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-07-03",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-07-04",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-07-07",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-07-08",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-07-09",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-07-10",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-07-11",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-07-12",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-07-13",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-07-14",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-07-15",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-07-16",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-07-17",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-07-18",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-07-19",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-07-20",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-07-21",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-07-22",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-07-23",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-07-24",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-07-25",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-07-26",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-07-27",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-07-28",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-07-29",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-07-30",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-07-31",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-08-01",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-08-02",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-08-03",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-08-04",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-08-05",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-08-06",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-08-07",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-08-08",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-08-09",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-08-10",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-08-11",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-08-12",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-08-13",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-08-14",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-08-15",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-08-16",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-08-17",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-08-18",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-08-19",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-08-20",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-08-21",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-08-22",
+            "returnPct": 0.7358258674596231,
+            "trades": 1
+          },
+          {
+            "date": "2026-08-23",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-08-24",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-08-25",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-08-26",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-08-27",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-08-28",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-08-29",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-08-30",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-08-31",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-09-01",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-09-02",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-09-03",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-09-04",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-09-05",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-09-06",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-09-07",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-09-08",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-09-09",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-09-10",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-09-11",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-09-12",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-09-13",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-09-14",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-09-15",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-09-16",
+            "returnPct": -0.42393505106018015,
+            "trades": 1
+          },
+          {
+            "date": "2026-09-17",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-09-18",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-09-19",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-09-20",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-09-21",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-09-22",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-09-23",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-09-24",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-09-25",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-09-26",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-09-27",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-09-28",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-09-29",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-09-30",
+            "returnPct": 0.0,
+            "trades": 0
+          }
+        ],
+        "plus1DaysPerYear": 2.0391061452513966,
+        "plus5WeeksPerYear": 0.0
+      },
+      "outOfSample": {
+        "days": 0,
+        "trades": 0,
+        "tradeDays": 0,
+        "winRatePct": 0.0,
+        "avgTradePnlPct": 0.0,
+        "avgDailyReturnPct": 0.0,
+        "plus1Days": 0,
+        "plus1DayRatePct": 0.0,
+        "plus5Weeks": 0,
+        "weeklyAvgPct": 0.0,
+        "lossDayAvgPct": 0.0,
+        "worstDayPct": 0.0,
+        "profitFactor": 0.0,
+        "compoundReturnPct": 0.0,
+        "maxDrawdownPct": 0.0,
+        "daily": [],
+        "plus1DaysPerYear": 0.0,
+        "plus5WeeksPerYear": 0.0
+      },
+      "reviewPolicy": "Rules stay frozen. Review after >=20 prospective days AND >=20 prospective trades; positive daily expectancy, PF>=1.10, MDD>=-15%, worst day>=-8%. No automatic live promotion.",
+      "targetNote": "+1% day / +5% week are research thresholds, not guaranteed returns.",
+      "recentTrades": [
+        {
+          "date": "2025-10-11",
+          "strategy": "crypto",
+          "strategyVersion": "btc_flush_reclaim_v1",
+          "code": "KRW-BTC",
+          "signalTime": 630,
+          "entryTime": 635,
+          "entryPrice": 172000000.0,
+          "flush60mPct": -3.5439119402040364,
+          "volumeRatio": 1.8929143871232217,
+          "reclaimClose": 172000000.0,
+          "decisionReason": "60m_flush+previous_high_reclaim+volume",
+          "sample": "design",
+          "exitTime": 635,
+          "exitPrice": 170796000.0,
+          "grossPnlPct": -0.7000000000000006,
+          "frictionPct": 0.14,
+          "pnlPct": -0.8400000000000006,
+          "reason": "stop"
+        },
+        {
+          "date": "2025-10-30",
+          "strategy": "crypto",
+          "strategyVersion": "btc_flush_reclaim_v1",
+          "code": "KRW-BTC",
+          "signalTime": 1335,
+          "entryTime": 1340,
+          "entryPrice": 164421000.0,
+          "flush60mPct": -1.670042627807844,
+          "volumeRatio": 3.0341069650749835,
+          "reclaimClose": 164421000.0,
+          "decisionReason": "60m_flush+previous_high_reclaim+volume",
+          "sample": "design",
+          "exitTime": 1355,
+          "exitPrice": 163270053.0,
+          "grossPnlPct": -0.7000000000000006,
+          "frictionPct": 0.14,
+          "pnlPct": -0.8400000000000006,
+          "reason": "stop"
+        },
+        {
+          "date": "2025-11-04",
+          "strategy": "crypto",
+          "strategyVersion": "btc_flush_reclaim_v1",
+          "code": "KRW-BTC",
+          "signalTime": 1500,
+          "entryTime": 1505,
+          "entryPrice": 156707000.0,
+          "flush60mPct": -2.5422138836773023,
+          "volumeRatio": 2.039080905387043,
+          "reclaimClose": 156709000.0,
+          "decisionReason": "60m_flush+previous_high_reclaim+volume",
+          "sample": "design",
+          "exitTime": 1540,
+          "exitPrice": 155610051.0,
+          "grossPnlPct": -0.7000000000000006,
+          "frictionPct": 0.14,
+          "pnlPct": -0.8400000000000006,
+          "reason": "stop"
+        },
+        {
+          "date": "2025-11-05",
+          "strategy": "crypto",
+          "strategyVersion": "btc_flush_reclaim_v1",
+          "code": "KRW-BTC",
+          "signalTime": 645,
+          "entryTime": 650,
+          "entryPrice": 148700000.0,
+          "flush60mPct": -2.047698075282822,
+          "volumeRatio": 1.582138914382945,
+          "reclaimClose": 148686000.0,
+          "decisionReason": "60m_flush+previous_high_reclaim+volume",
+          "sample": "design",
+          "exitTime": 700,
+          "exitPrice": 150781800.0,
+          "grossPnlPct": 1.4000000000000012,
+          "frictionPct": 0.14,
+          "pnlPct": 1.2600000000000011,
+          "reason": "take_profit"
+        },
+        {
+          "date": "2025-11-07",
+          "strategy": "crypto",
+          "strategyVersion": "btc_flush_reclaim_v1",
+          "code": "KRW-BTC",
+          "signalTime": 150,
+          "entryTime": 155,
+          "entryPrice": 151499000.0,
+          "flush60mPct": -1.7745840920512457,
+          "volumeRatio": 1.614772649246362,
+          "reclaimClose": 151499000.0,
+          "decisionReason": "60m_flush+previous_high_reclaim+volume",
+          "sample": "design",
+          "exitTime": 320,
+          "exitPrice": 151583000.0,
+          "grossPnlPct": 0.055445910534057674,
+          "frictionPct": 0.14,
+          "pnlPct": -0.08455408946594234,
+          "reason": "time_exit"
+        },
+        {
+          "date": "2025-11-14",
+          "strategy": "crypto",
+          "strategyVersion": "btc_flush_reclaim_v1",
+          "code": "KRW-BTC",
+          "signalTime": 2145,
+          "entryTime": 2150,
+          "entryPrice": 144407000.0,
+          "flush60mPct": -1.8542519560849513,
+          "volumeRatio": 1.604634007825071,
+          "reclaimClose": 144346000.0,
+          "decisionReason": "60m_flush+previous_high_reclaim+volume",
+          "sample": "design",
+          "exitTime": 2220,
+          "exitPrice": 143396151.0,
+          "grossPnlPct": -0.7000000000000006,
+          "frictionPct": 0.14,
+          "pnlPct": -0.8400000000000006,
+          "reason": "stop"
+        },
+        {
+          "date": "2025-11-17",
+          "strategy": "crypto",
+          "strategyVersion": "btc_flush_reclaim_v1",
+          "code": "KRW-BTC",
+          "signalTime": 710,
+          "entryTime": 715,
+          "entryPrice": 139457000.0,
+          "flush60mPct": -1.5156572938343826,
+          "volumeRatio": 2.0852310037458004,
+          "reclaimClose": 139457000.0,
+          "decisionReason": "60m_flush+previous_high_reclaim+volume",
+          "sample": "design",
+          "exitTime": 840,
+          "exitPrice": 140511000.0,
+          "grossPnlPct": 0.7557885226270544,
+          "frictionPct": 0.14,
+          "pnlPct": 0.6157885226270544,
+          "reason": "time_exit"
+        },
+        {
+          "date": "2025-11-18",
+          "strategy": "crypto",
+          "strategyVersion": "btc_flush_reclaim_v1",
+          "code": "KRW-BTC",
+          "signalTime": 1120,
+          "entryTime": 1125,
+          "entryPrice": 135810000.0,
+          "flush60mPct": -1.5574963609898074,
+          "volumeRatio": 1.5978948542363312,
+          "reclaimClose": 135810000.0,
+          "decisionReason": "60m_flush+previous_high_reclaim+volume",
+          "sample": "design",
+          "exitTime": 1200,
+          "exitPrice": 134859330.0,
+          "grossPnlPct": -0.7000000000000006,
+          "frictionPct": 0.14,
+          "pnlPct": -0.8400000000000006,
+          "reason": "stop"
+        },
+        {
+          "date": "2025-11-21",
+          "strategy": "crypto",
+          "strategyVersion": "btc_flush_reclaim_v1",
+          "code": "KRW-BTC",
+          "signalTime": 2130,
+          "entryTime": 2135,
+          "entryPrice": 122867000.0,
+          "flush60mPct": -2.352224351214194,
+          "volumeRatio": 1.691650827694646,
+          "reclaimClose": 122869000.0,
+          "decisionReason": "60m_flush+previous_high_reclaim+volume",
+          "sample": "design",
+          "exitTime": 2140,
+          "exitPrice": 124587138.0,
+          "grossPnlPct": 1.4000000000000012,
+          "frictionPct": 0.14,
+          "pnlPct": 1.2600000000000011,
+          "reason": "take_profit"
+        },
+        {
+          "date": "2025-12-08",
+          "strategy": "crypto",
+          "strategyVersion": "btc_flush_reclaim_v1",
+          "code": "KRW-BTC",
+          "signalTime": 655,
+          "entryTime": 700,
+          "entryPrice": 134813000.0,
+          "flush60mPct": -1.6487223868336898,
+          "volumeRatio": 2.9782570317579675,
+          "reclaimClose": 134814000.0,
+          "decisionReason": "60m_flush+previous_high_reclaim+volume",
+          "sample": "design",
+          "exitTime": 705,
+          "exitPrice": 133869309.0,
+          "grossPnlPct": -0.7000000000000006,
+          "frictionPct": 0.14,
+          "pnlPct": -0.8400000000000006,
+          "reason": "stop"
+        },
+        {
+          "date": "2026-02-02",
+          "strategy": "crypto",
+          "strategyVersion": "btc_flush_reclaim_v1",
+          "code": "KRW-BTC",
+          "signalTime": 1245,
+          "entryTime": 1250,
+          "entryPrice": 112375000.0,
+          "flush60mPct": -3.06731266263065,
+          "volumeRatio": 1.6823685279107417,
+          "reclaimClose": 112372000.0,
+          "decisionReason": "60m_flush+previous_high_reclaim+volume",
+          "sample": "design",
+          "exitTime": 1310,
+          "exitPrice": 111588375.0,
+          "grossPnlPct": -0.7000000000000006,
+          "frictionPct": 0.14,
+          "pnlPct": -0.8400000000000006,
+          "reason": "stop"
+        },
+        {
+          "date": "2026-02-03",
+          "strategy": "crypto",
+          "strategyVersion": "btc_flush_reclaim_v1",
+          "code": "KRW-BTC",
+          "signalTime": 1205,
+          "entryTime": 1210,
+          "entryPrice": 115300000.0,
+          "flush60mPct": -1.6863753213367638,
+          "volumeRatio": 2.1664396473610954,
+          "reclaimClose": 115343000.0,
+          "decisionReason": "60m_flush+previous_high_reclaim+volume",
+          "sample": "design",
+          "exitTime": 1335,
+          "exitPrice": 116100000.0,
+          "grossPnlPct": 0.6938421509106618,
+          "frictionPct": 0.14,
+          "pnlPct": 0.5538421509106618,
+          "reason": "time_exit"
+        },
+        {
+          "date": "2026-02-05",
+          "strategy": "crypto",
+          "strategyVersion": "btc_flush_reclaim_v1",
+          "code": "KRW-BTC",
+          "signalTime": 210,
+          "entryTime": 215,
+          "entryPrice": 108967000.0,
+          "flush60mPct": -1.6557619056297712,
+          "volumeRatio": 3.329754295227455,
+          "reclaimClose": 108888000.0,
+          "decisionReason": "60m_flush+previous_high_reclaim+volume",
+          "sample": "design",
+          "exitTime": 220,
+          "exitPrice": 108204231.0,
+          "grossPnlPct": -0.7000000000000006,
+          "frictionPct": 0.14,
+          "pnlPct": -0.8400000000000006,
+          "reason": "stop"
+        },
+        {
+          "date": "2026-02-06",
+          "strategy": "crypto",
+          "strategyVersion": "btc_flush_reclaim_v1",
+          "code": "KRW-BTC",
+          "signalTime": 220,
+          "entryTime": 225,
+          "entryPrice": 99765000.0,
+          "flush60mPct": -2.633663366336636,
+          "volumeRatio": 2.491255346284079,
+          "reclaimClose": 99765000.0,
+          "decisionReason": "60m_flush+previous_high_reclaim+volume",
+          "sample": "design",
+          "exitTime": 230,
+          "exitPrice": 99066645.0,
+          "grossPnlPct": -0.7000000000000006,
+          "frictionPct": 0.14,
+          "pnlPct": -0.8400000000000006,
+          "reason": "stop"
+        },
+        {
+          "date": "2026-02-24",
+          "strategy": "crypto",
+          "strategyVersion": "btc_flush_reclaim_v1",
+          "code": "KRW-BTC",
+          "signalTime": 1020,
+          "entryTime": 1025,
+          "entryPrice": 94645000.0,
+          "flush60mPct": -1.8901025458950338,
+          "volumeRatio": 1.6896615708873235,
+          "reclaimClose": 94645000.0,
+          "decisionReason": "60m_flush+previous_high_reclaim+volume",
+          "sample": "design",
+          "exitTime": 1150,
+          "exitPrice": 94168000.0,
+          "grossPnlPct": -0.5039885889376094,
+          "frictionPct": 0.14,
+          "pnlPct": -0.6439885889376095,
+          "reason": "time_exit"
+        },
+        {
+          "date": "2026-02-26",
+          "strategy": "crypto",
+          "strategyVersion": "btc_flush_reclaim_v1",
+          "code": "KRW-BTC",
+          "signalTime": 755,
+          "entryTime": 800,
+          "entryPrice": 98547000.0,
+          "flush60mPct": -1.5603349599373484,
+          "volumeRatio": 1.529632638068613,
+          "reclaimClose": 98547000.0,
+          "decisionReason": "60m_flush+previous_high_reclaim+volume",
+          "sample": "design",
+          "exitTime": 840,
+          "exitPrice": 97857171.0,
+          "grossPnlPct": -0.7000000000000006,
+          "frictionPct": 0.14,
+          "pnlPct": -0.8400000000000006,
+          "reason": "stop"
+        },
+        {
+          "date": "2026-06-05",
+          "strategy": "crypto",
+          "strategyVersion": "btc_flush_reclaim_v1",
+          "code": "KRW-BTC",
+          "signalTime": 1505,
+          "entryTime": 1510,
+          "entryPrice": 94036000.0,
+          "flush60mPct": -1.752856662745761,
+          "volumeRatio": 1.5028206931952892,
+          "reclaimClose": 93999000.0,
+          "decisionReason": "60m_flush+previous_high_reclaim+volume",
+          "sample": "design",
+          "exitTime": 1515,
+          "exitPrice": 93377748.0,
+          "grossPnlPct": -0.7000000000000006,
+          "frictionPct": 0.14,
+          "pnlPct": -0.8400000000000006,
+          "reason": "stop"
+        },
+        {
+          "date": "2026-06-06",
+          "strategy": "crypto",
+          "strategyVersion": "btc_flush_reclaim_v1",
+          "code": "KRW-BTC",
+          "signalTime": 110,
+          "entryTime": 115,
+          "entryPrice": 92767000.0,
+          "flush60mPct": -1.6329302205264185,
+          "volumeRatio": 4.010134574208966,
+          "reclaimClose": 92767000.0,
+          "decisionReason": "60m_flush+previous_high_reclaim+volume",
+          "sample": "design",
+          "exitTime": 240,
+          "exitPrice": 92359000.0,
+          "grossPnlPct": -0.43981157092500833,
+          "frictionPct": 0.14,
+          "pnlPct": -0.5798115709250083,
+          "reason": "time_exit"
+        },
+        {
+          "date": "2026-08-22",
+          "strategy": "crypto",
+          "strategyVersion": "btc_flush_reclaim_v1",
+          "code": "KRW-BTC",
+          "signalTime": 1925,
+          "entryTime": 1930,
+          "entryPrice": 104587000.0,
+          "flush60mPct": -1.754352798835468,
+          "volumeRatio": 2.0397743247024995,
+          "reclaimClose": 104587000.0,
+          "decisionReason": "60m_flush+previous_high_reclaim+volume",
+          "sample": "design",
+          "exitTime": 2055,
+          "exitPrice": 105503000.0,
+          "grossPnlPct": 0.8758258674596231,
+          "frictionPct": 0.14,
+          "pnlPct": 0.7358258674596231,
+          "reason": "time_exit"
+        },
+        {
+          "date": "2026-09-16",
+          "strategy": "crypto",
+          "strategyVersion": "btc_flush_reclaim_v1",
+          "code": "KRW-BTC",
+          "signalTime": 350,
+          "entryTime": 355,
+          "entryPrice": 103897000.0,
+          "flush60mPct": -2.437079302389611,
+          "volumeRatio": 1.902218523992593,
+          "reclaimClose": 103896000.0,
+          "decisionReason": "60m_flush+previous_high_reclaim+volume",
+          "sample": "design",
+          "exitTime": 520,
+          "exitPrice": 103602000.0,
+          "grossPnlPct": -0.28393505106018013,
+          "frictionPct": 0.14,
+          "pnlPct": -0.42393505106018015,
+          "reason": "time_exit"
+        }
+      ]
+    },
+    "soxl": {
+      "strategy": "soxl",
+      "version": "soxl_power_hour_v1",
+      "name": "SOXL 파워아워 추세 지속",
+      "rule": "첫30분 +1% 이상 · 14:30~15:00 +0.5% 이상 · 15:00~15:20 VWAP 위 + 직전3봉 고점 돌파 + 거래량 1.1배 → 다음 5분봉 시가 · -1%/+2% · 15:55 청산",
+      "slots": 1,
+      "paperStart": "2026-10-01",
+      "status": "collecting",
+      "design": {
+        "days": 0,
+        "trades": 0,
+        "tradeDays": 0,
+        "winRatePct": 0.0,
+        "avgTradePnlPct": 0.0,
+        "avgDailyReturnPct": 0.0,
+        "plus1Days": 0,
+        "plus1DayRatePct": 0.0,
+        "plus5Weeks": 0,
+        "weeklyAvgPct": 0.0,
+        "lossDayAvgPct": 0.0,
+        "worstDayPct": 0.0,
+        "profitFactor": 0.0,
+        "compoundReturnPct": 0.0,
+        "maxDrawdownPct": 0.0,
+        "daily": [],
+        "plus1DaysPerYear": 0.0,
+        "plus5WeeksPerYear": 0.0
+      },
+      "outOfSample": {
+        "days": 0,
+        "trades": 0,
+        "tradeDays": 0,
+        "winRatePct": 0.0,
+        "avgTradePnlPct": 0.0,
+        "avgDailyReturnPct": 0.0,
+        "plus1Days": 0,
+        "plus1DayRatePct": 0.0,
+        "plus5Weeks": 0,
+        "weeklyAvgPct": 0.0,
+        "lossDayAvgPct": 0.0,
+        "worstDayPct": 0.0,
+        "profitFactor": 0.0,
+        "compoundReturnPct": 0.0,
+        "maxDrawdownPct": 0.0,
+        "daily": [],
+        "plus1DaysPerYear": 0.0,
+        "plus5WeeksPerYear": 0.0
+      },
+      "reviewPolicy": "Rules stay frozen. Review after >=20 prospective days AND >=20 prospective trades; positive daily expectancy, PF>=1.10, MDD>=-15%, worst day>=-8%. No automatic live promotion.",
+      "targetNote": "+1% day / +5% week are research thresholds, not guaranteed returns.",
+      "recentTrades": []
+    }
+  },
+  "equalWeightPortfolio": {
+    "days": 1,
+    "trades": 1,
+    "tradeDays": 1,
+    "winRatePct": 100.0,
+    "avgTradePnlPct": 0.13750000000000018,
+    "avgDailyReturnPct": 0.13750000000000018,
+    "plus1Days": 0,
+    "plus1DayRatePct": 0.0,
+    "plus5Weeks": 0,
+    "weeklyAvgPct": 0.1374999999999904,
+    "lossDayAvgPct": 0.0,
+    "worstDayPct": 0.13750000000000018,
+    "profitFactor": 999.0,
+    "compoundReturnPct": 0.1374999999999904,
+    "maxDrawdownPct": 0.0,
+    "daily": [
+      {
+        "date": "2026-10-01",
+        "returnPct": 0.13750000000000018,
+        "trades": 1
+      }
+    ],
+    "allocation": "research-only equal 25% each; SOXL ET session mapped to next KST date"
+  }
+}
