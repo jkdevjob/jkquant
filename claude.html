@@ -27,7 +27,7 @@ table.board{min-width:0}table.board td.nm{white-space:normal;min-width:150px}tab
 </head>
 <body>
 <header><div class="wrap"><div class="htop">
-  <div class="brand"><div class="kicker">JK QUANT · CLAUDE</div><h1>🤖 단타 <span class="v">(클로드)</span> <span class="ver" id="clVer">v1.5.0</span></h1></div>
+  <div class="brand"><div class="kicker">JK QUANT · CLAUDE</div><h1>🤖 단타 <span class="v">(클로드)</span> <span class="ver" id="clVer">v1.6.0</span></h1></div>
   <div class="jkmenu" id="jkmenuWrap">
     <button class="jkmenu-btn" aria-label="메뉴" onclick="jkMenuToggle(event)">三</button>
     <div class="jkmenu-pop" id="jkmenuPop" hidden>
@@ -110,6 +110,16 @@ function render(){
   var body=document.getElementById("body");if(!J)return;
   var gd=J.gapdown||{},et=J.etf||{},wl=J.watchlist||{},lab=J.lab||{tabs:{}},T=lab.tabs||{},html="";
   if(TAB==="today"){
+    if(LIVE&&!LIVE.error){
+      var L=LIVE.tabs||{},avg=function(rows){var v=(rows||[]).filter(function(x){return x.pnlPct!=null}).map(function(x){return x.pnlPct});return v.length?v.reduce(function(a,b){return a+b},0)/v.length:null};
+      var o=avg((L.opening||{}).rows),d=avg((L.daytrading||{}).rows),c=(L.crypto||{}).tabPct,u=(((L.soxl||{}).rows||[])[0]||{}).pnlPct;
+      var k=function(lbl,v,sub){return "<div class='kpi'><div class='l'>"+lbl+"</div><div class='v "+cls(v)+"'>"+(v==null?"—":pct(v))+"</div><div class='sub'>"+sub+"</div></div>"};
+      html+="<div class='card'><h3>⏱ 지금 장중 손익 (클로드, 모의)</h3><div class='sub'>현재가 기준. 확정 결과는 저녁에 아래 표·장부로 남습니다. "+kstTime(LIVE.asOf)+" 기준</div><div class='kpis'>"+
+        k("① 시초가",o,((L.opening||{}).rows||[]).length?"모의 매수 "+(L.opening.rows.length)+"종목":"오늘 매매 없음")+
+        k("② 데이트레이딩",d,((L.daytrading||{}).rows||[]).filter(function(x){return x.pnlPct!=null}).length?"ETF 오버나잇":"오늘 매매 없음")+
+        k("③ 코인 (자금 60%)",c,"BTC·ETH 09시 기준")+
+        k("④ 미국 TQQQ (자금 50%)",u==null?null:u*0.5,((L.soxl||{}).rows||[{}])[0].session||"")+"</div></div>";
+    }
     var dl=lab.daily||{},rs=dl.rows||[];
     var v=function(x){if(x==null)return "<span class='sub'>—</span>";if(x==="no_trade")return "<span class='sub'>매매 없음</span>";if(x==="pending")return "<span class='sub'>확정 대기</span>";return "<b class='"+cls(x)+"'>"+pct(x)+"</b>"};
     var md=function(d){return d?esc(d.slice(5).replace("-","/")):"—"};
@@ -131,6 +141,7 @@ function render(){
       (pp.error?"<div class='warn'>"+esc(pp.error)+"</div>":"")+
       "<div class='tw'><table class='board'><thead><tr><th>전략</th><th>매매일</th><th>+1%↑</th><th>누적</th><th>매매일 평균</th><th>상태</th></tr></thead><tbody>"+prow+"</tbody></table></div></div>";
   }else if(TAB==="opening"){
+    html+=liveCard("opening");
     var t=T.opening||{};
     var names=(wl.names||[]).map(function(x){return esc(x.name)+" <span class='sub'>RSI "+num(x.rsi14,1)+"</span>"}).join(" · ");
     html+=claudeCard(t,"<div class='sub' style='margin-top:8px'>다음 거래일 명단 ("+esc(wl.basedOn||"—")+" 기준, "+((wl.names||[]).length)+"종목): "+(names||"없음")+"</div>");
@@ -142,15 +153,18 @@ function render(){
     var bfr=Object.keys(bf).map(function(k){var z=(bf[k].designSample||{}).strategy||{};return "<tr><td><b>v2 · 통과 "+esc(k.replace("min",""))+"개 이상</b></td><td>"+dayCell(z,"0.0t")+"</td><td>"+dayCell(z,"1.5t")+"</td><td>"+dayCell(z,"3.0t")+"</td></tr>"}).join("");
     html+="<div class='card'><h3>🔬 상세 — 하루 평균 순손익 (설계 표본, 3종목)</h3><div class='tw'><table><thead><tr><th>슬리피지 가정</th><th>0틱</th><th>1.5틱</th><th>3틱</th></tr></thead><tbody><tr><td>v1 · 매일</td><td>"+dayCell(st,"0.0t")+"</td><td>"+dayCell(st,"1.5t")+"</td><td>"+dayCell(st,"3.0t")+"</td></tr>"+bfr+"<tr><td>대조군 · 같은 날 무작위 갭하락</td><td>"+dayCell(ct,"0.0t")+"</td><td>"+dayCell(ct,"1.5t")+"</td><td>"+dayCell(ct,"3.0t")+"</td></tr></tbody></table></div><p class='note'>선별 실력(같은 날 대조군과의 차이, 1.5틱): "+pct(sk.mean)+" · t="+num(sk.tStat,2)+" · "+(sk.days||0)+"일.</p></div>";
   }else if(TAB==="daytrading"){
+    html+=liveCard("daytrading");
     var t2=T.daytrading||{},el=et.live||{};
     html+=claudeCard(t2,"<div class='sub' style='margin-top:8px'>15:21 예상 종가가 −3% 이하면 종가 동시호가 모의 매수 → 다음 거래일 08:56 장전 동시호가 모의 매도. 데이트레이딩 탭의 장중 매매와 달리 하룻밤 보유입니다.</div>");
     var erows=((el.rows)||[]).slice().reverse().map(function(x){return "<tr><td>"+esc(x.signalDate)+" → "+esc(x.exitDate||"—")+"</td><td>"+pct(x.expectedDropPct)+"</td><td>"+pct(x.buySlipPct)+"</td><td>"+pct(x.sellSlipPct)+"</td><td class='"+cls(x.realizedNetPct)+"'>"+pct(x.realizedNetPct)+"</td><td>"+pct(x.modelNetPct)+"</td></tr>"}).join("");
     html+="<div class='card'><h3>📡 모의체결 실측 (KIS 모의투자)</h3>"+(erows?"<div class='tw'><table><thead><tr><th>매수 → 매도</th><th>예상 하락</th><th>매수 슬립</th><th>매도 슬립</th><th>실측 순손익</th><th>모델 순손익</th></tr></thead><tbody>"+erows+"</tbody></table></div>":"<p class='note'>아직 매수 신호가 난 날이 없습니다.</p>")+"</div>";
   }else if(TAB==="crypto"){
+    html+=liveCard("crypto");
     var t3=T.crypto||{};html+=t3.error?"<div class='warn'>"+esc(t3.error)+"</div>":claudeCard(t3,nextSig(t3,"하루(09시~)"));
     var vv=t3.variants||{};html+=Object.keys(vv).length?"<div class='card'><h3>참고 — 이전 안</h3>"+goalTable("설계 표본",Object.keys(vv).map(function(k){return goalRow(k,vv[k])}).join(""))+"<p class='note'>BTC 단독보다 BTC+ETH 반반이 +1% 달성일이 많고(35→46일/년) 앞·뒤 구간 모두 낫습니다. 최근 1년은 ETH 가 약해 BTC 단독보다 낮았습니다.</p></div>":"";
     html+="<p class='note'>업비트에는 모의투자가 없어 주문 없이 일봉으로 매일 기록합니다(판단·손익은 claude-lab/btc-decisions.csv · eth-decisions.csv).</p>";
   }else if(TAB==="soxl"){
+    html+=liveCard("soxl");
     var t4=T.soxl||{};html+=t4.error?"<div class='warn'>"+esc(t4.error)+"</div>":claudeCard(t4,nextSig(t4,"미국장"));
     var sv=t4.variants||{};html+=Object.keys(sv).length?"<div class='card'><h3>참고 — SOXL 안</h3>"+goalTable("설계 표본",Object.keys(sv).map(function(k){return goalRow(k,sv[k])}).join(""))+"<p class='note'>SOXL 은 하루 변동이 커서 손실 기준(MDD −25%)을 지키면 연 +7% 수준밖에 안 됩니다. 미국 칸은 나스닥 3배(TQQQ)로 바꿨습니다. 200일 평균은 널리 쓰는 기준이라 과거에 맞춘 값이 아닙니다.</p></div>":"";
     html+="<p class='note'>주문 없이 매일 기록합니다(claude-lab/tqqq-decisions.csv). 미국장 결과는 한국시각 다음 날 아침에 확정됩니다.</p>";
@@ -175,6 +189,38 @@ function render(){
   }
   body.innerHTML=html;
 }
+var LIVE=null;
+async function loadLive(){
+  try{var r=await fetch("/api/claude-live",{headers:{Accept:"application/json"}});var j=await r.json();LIVE=(r.ok&&j.ok)?j:{error:j.error||("HTTP "+r.status)};}
+  catch(e){LIVE={error:String(e.message||e)}}
+  render();
+}
+function kstTime(iso){try{return new Date(iso).toLocaleTimeString("ko-KR",{timeZone:"Asia/Seoul",hour:"2-digit",minute:"2-digit",hour12:false})}catch(e){return ""}}
+function won(v){return v==null||!isFinite(v)?"—":(+v>=1000?Math.round(+v).toLocaleString():(+v).toFixed(2))}
+// 탭마다 "오늘 모의 매매이력" — 장중 실시간(현재가 기준 손익)
+function liveCard(tab){
+  if(!LIVE)return "<div class='card'><h3>🕘 오늘 모의 매매이력</h3><div class='sub'>불러오는 중…</div></div>";
+  if(LIVE.error)return "<div class='card'><h3>🕘 오늘 모의 매매이력</h3><div class='warn'>"+esc(LIVE.error)+"</div></div>";
+  var t=(LIVE.tabs||{})[tab]||{},rows=t.rows||[];
+  var head="<div class='card'><h3>🕘 오늘 모의 매매이력 <span class='tag'>"+esc(LIVE.today||"")+" "+kstTime(LIVE.asOf)+" 기준</span> <button class='tab' style='padding:4px 10px;font-size:11px' onclick='loadLive()'>새로고침</button></h3><div class='sub'>"+esc(t.note||"")+"</div>";
+  if(tab==="opening"&&t.decision){
+    var b=t.decision.breadth;head+="<div class='sub' style='margin-top:6px'>08:56 판단: "+esc(t.decision.reason||"")+(b?" · 통과 "+b.qualified+"종목 · v2 매매일 "+(b.v2Signal?"예":"아니오"):"")+"</div>";
+  }
+  if(tab==="crypto"&&t.basketPct!=null)head+="<div class='kpis'><div class='kpi'><div class='l'>오늘 코인 칸 손익 (두 코인 반반)</div><div class='v "+cls(t.basketPct)+"'>"+pct(t.basketPct)+"</div><div class='sub'>탭 표시(자금 60%) "+pct(t.tabPct)+"</div></div></div>";
+  if(!rows.length)return head+"<p class='note'>오늘은 아직 매매가 없습니다"+(tab==="opening"&&!t.ledgerFound?" (08:56 전이거나 오늘 기록 없음)":"")+".</p></div>";
+  var body=rows.map(function(x){
+    var buy=x.buyTime?esc(x.buyTime)+" · "+won(x.buyPrice)+(x.buyPriceKind==="예상"?" (예상)":""):"—";
+    var sell=x.sellPrice?esc(x.sellTime||"")+" · "+won(x.sellPrice):x.stopPrice?"손절선 "+won(x.stopPrice)+(x.nowPrice?" · 현재 "+won(x.nowPrice):""):x.nowPrice?"현재 "+won(x.nowPrice)+(x.sellTime?" · 매도 "+esc(x.sellTime):""):(x.sellTime?esc(x.sellTime):"");
+    return "<tr><td class='nm'><b>"+esc(x.name||x.code)+"</b><div class='sub'>"+esc(x.status||"")+"</div>"+(x.note?"<div class='sub'>"+esc(x.note)+"</div>":"")+"</td>"+
+      "<td style='white-space:normal;text-align:left;font-size:12px'>매수 "+buy+(sell?"<br>"+sell:"")+"</td>"+
+      "<td><b class='"+cls(x.pnlPct)+"'>"+(x.pnlPct==null?"—":pct(x.pnlPct))+"</b><div class='sub'>"+(x.realized?"확정":(x.pnlPct==null?"":"현재가"))+"</div></td></tr>";
+  }).join("");
+  if(tab==="soxl"){var u=rows[0]||{},ls=u.lastSession;
+    return head+"<div class='kpis'><div class='kpi'><div class='l'>TQQQ 상태</div><div class='v'>"+esc(u.status||"")+"</div><div class='sub'>"+esc(u.session||"")+(u.nowPrice?" · 현재 "+won(u.nowPrice):"")+(u.prevClose?" · 전일 "+won(u.prevClose):"")+"</div></div>"+
+      "<div class='kpi'><div class='l'>지금 손익 (전일 종가 대비)</div><div class='v "+cls(u.pnlPct)+"'>"+(u.pnlPct==null?"—":pct(u.pnlPct))+"</div></div>"+
+      "<div class='kpi'><div class='l'>마지막 확정 세션 "+esc(ls?ls.date:"")+"</div><div class='v "+cls(ls&&ls.pnlPct)+"'>"+(ls&&ls.pnlPct!=null?pct(ls.pnlPct):"—")+"</div><div class='sub'>"+esc(ls?ls.action:"")+" · 칸 전액 기준</div></div></div></div>";}
+  return head+"<div class='tw'><table class='board'><thead><tr><th>종목 · 상태</th><th style='text-align:left'>매수 → 매도</th><th>손익(순)</th></tr></thead><tbody>"+body+"</tbody></table></div></div>";
+}
 async function load(){
   var body=document.getElementById("body");
   try{var t=localStorage.getItem("clTab");if(t)TAB=t}catch(e){}
@@ -182,6 +228,7 @@ async function load(){
     var r=await fetch("/api/claude-lab",{headers:{Accept:"application/json"}});var j=await r.json();
     if(!r.ok||!j.ok)throw new Error(j.error||("HTTP "+r.status));
     J=j;showTab(TAB);
+    loadLive();
   }catch(e){body.innerHTML="<div class='warn'>불러오기 실패: "+esc(e.message||String(e))+"</div>"}
 }
 load();

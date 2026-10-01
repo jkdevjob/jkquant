@@ -10877,6 +10877,12 @@ console.log('[GAPDOWN D-1 / DIP24 D-3] 연구용 모의체결 경로 안전장�
      &&scl2.indexOf('data-tab="today"')<scl2.indexOf('data-tab="opening"')&&/var J=null,TAB="today";/.test(scl2)
      &&/function vsTable\(t\)/.test(scl2)&&/vsRow\("🤖 클로드",c\.claude\)\+vsRow\("GPT · "/.test(scl2)
      &&/readRaw\("claude-lab\/latest\.json"\)/.test(orApi)&&/claude_lab\.py/.test(wf));
+  { const live=fs.readFileSync(__d+'/functions/api/claude-live.js','utf8');
+    ok('탭별 오늘 모의 매매이력(장중): 읽기전용 · 감시키는 서버에서만 · 주문번호/수량 미노출 · 4개 탭 카드',
+       !/op=order|method:\s*["']POST["']|kisOrder|opening-execute/.test(live)
+       &&/headers:\{"x-monitor-key":key\}/.test(live)&&!/orderNo|orderNos|qty:/.test(live.replace(/\/\/.*$/gm,''))
+       &&(scl2.match(/html\+=liveCard\("(opening|daytrading|crypto|soxl)"\)/g)||[]).length===4&&/fetch\("\/api\/claude-live"/.test(scl2));
+  }
   ok('클로드 모의투자 장부: 날짜별 한 번만 쓰기 · 요약은 장부 값만 · 화면 누적표 · workflow 저장',
      /def write_once\(path, obj\):\n[\s\S]{0,200}if path\.exists\(\):\n\s*return False/.test(fs.readFileSync(__d+'/scripts/claude_lab.py','utf8'))
      &&/모의투자 누적/.test(scl2)&&/data\/claude-paper/.test(wf));
