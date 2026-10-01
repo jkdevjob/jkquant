@@ -182,9 +182,9 @@ t("today summary: tab return vs per-trade sum, account share, no-trade reason", 
   assert.equal(LV.todaySummary("daytrading", { rows: [] }, 1400).why, "15:21 판단 전");
   const c = LV.todaySummary("crypto", { rows: [{ name: "BTC", hold: true, status: "보유중", pnlPct: 2 }, { name: "ETH", hold: false, pnlPct: 0 }], basketPct: 1 }, 1000);
   near(c.tabPct, 1); near(c.sumPct, 2); near(c.accountPct, 0.3); assert.equal(c.trades, 1); assert.ok(c.why.includes("ETH 쉼"));
-  const u = LV.todaySummary("soxl", { rows: [{ hold: false, pnlPct: null }] }, 1000);
-  assert.equal(u.trades, 0); assert.equal(u.tabPct, 0); assert.ok(u.why.includes("쉼"));
-  near(LV.todaySummary("soxl", { rows: [{ hold: true, pnlPct: 2, session: "정규장" }] }, 2300).accountPct, 0.8);
+  const u = LV.todaySummary("soxl", { rows: [], note: "SOXL 파워아워 조건 미충족 — 매매 없음" }, 1000);
+  assert.equal(u.trades, 0); assert.equal(u.tabPct, 0); assert.ok(u.why.includes("조건 미충족"));
+  near(LV.todaySummary("soxl", { rows: [{ buyPrice: 100, status: "청산", pnlPct: 2, note: "익절" }] }, 2300).accountPct, 0.8);
   const T2 = { opening: { today: { tabPct: 2, noTrade: false, weight: 0.3, accountPct: 0.6 } }, daytrading: { today: { tabPct: 1, noTrade: false, weight: 0.3, accountPct: 0.3 } } };
   LV.applyKrSplit(T2); near(T2.opening.today.accountPct, 0.3); near(T2.daytrading.today.accountPct, 0.15);
   const T3 = { opening: { today: { tabPct: 2, noTrade: false, weight: 0.3, accountPct: 0.6 } }, daytrading: { today: { tabPct: 0, noTrade: true, weight: 0.3, accountPct: 0 } } };
