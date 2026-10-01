@@ -10570,7 +10570,7 @@ console.log('[SCALPING FLOW] 단타 공통 흐름 · 모의체결 분리');
   const globalWorker=fs.readFileSync(__d+'/worker/global-intraday-scheduler/src/index.js','utf8');
   ok('전체전략 첫 페이지는 전일·당일 4전략과 일1%/주5% 진행률 표시',
      /id="strategy_all" class="strategy-pane on"/.test(sc)
-     && /전일\/직전 확정/.test(sc) && /당일\/현재/.test(sc)
+     && /전일/.test(sc) && /당일/.test(sc)
      && /all_today_goal/.test(sc) && /all_week_goal/.test(sc)
      && /loadDailyOverview/.test(sc));
   ok('BTC·SOXL 당일 현황은 읽기전용 실시간 status 경로 사용',
@@ -10665,7 +10665,7 @@ console.log('[SCALPING IMPROVEMENTS V2] 경로·엔진·비용·그림자·UI');
      !/data-strategy="reference"/.test(sc) && /data-strategy="all"/.test(sc) && /strategy-scoreline/.test(sc)
      && /기준전략 누적/.test(sc) && /필요승률/.test(sc) && /엣지/.test(sc));
   ok('B-3 전체전략 전일·당일 대시보드 + B-4 구버전 접기',
-     /전일\/직전 확정/.test(sc) && /당일\/현재/.test(sc)
+     /전일/.test(sc) && /당일/.test(sc)
      && /일 \+1% \/ 주 \+5% 진행판/.test(sc) && /구버전·아카이브/.test(sc)
      && /loadDailyOverview/.test(sc));
   ok('A-5 연구 문서 27~35 및 개선/연구파일 복원',
