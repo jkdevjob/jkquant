@@ -30,6 +30,7 @@ jobs:
           python -m py_compile scripts/nightly_scalping_research.py
           python -m py_compile scripts/collect_crypto_data.py
           python -m py_compile scripts/backtest_crypto_orb.py
+          python -m py_compile scripts/test_crypto_midnight_orb.py
           python -m py_compile scripts/collect_soxl_data.py
           python -m py_compile scripts/backtest_soxl_intraday.py
 
@@ -75,6 +76,11 @@ jobs:
           python scripts/test_opening_gapdown.py
           node scripts/test_opening_gapdown.mjs functions/api
           python scripts/mutation_test_opening_gapdown.py
+
+      - name: BTC 00:00~22:00 기준전략 값·경계 시험
+        run: |
+          python scripts/test_crypto_midnight_orb.py
+          node scripts/test_btc_intraday.mjs
 
       - name: 연구 서버 JS 문법 검사
         run: |
