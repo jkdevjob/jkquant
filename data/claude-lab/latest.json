@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "generatedAt": "2026-10-01T20:38:15.594911+09:00",
+  "generatedAt": "2026-10-01T22:24:57.131373+09:00",
   "designEnd": "2026-09-30",
   "gate": {
     "mdd": -25.0,
@@ -784,7 +784,7 @@
     ]
   },
   "daily": {
-    "generatedAt": "2026-10-01T20:38:55.400092+09:00",
+    "generatedAt": "2026-10-01T22:25:41.478371+09:00",
     "today": "2026-10-01",
     "finalKrDaily": "2026-09-29",
     "rows": [
@@ -895,6 +895,9 @@
     "newFiles": 0,
     "summary": {
       "opening_d1v2": {
+        "rows": [],
+        "currentDrawdownPct": 0.0,
+        "lossStreak": 0,
         "days": 0,
         "first": null,
         "last": null,
@@ -915,6 +918,9 @@
         }
       },
       "daytrading_etf": {
+        "rows": [],
+        "currentDrawdownPct": 0.0,
+        "lossStreak": 0,
         "days": 0,
         "first": null,
         "last": null,
@@ -935,6 +941,9 @@
         }
       },
       "crypto_btc": {
+        "rows": [],
+        "currentDrawdownPct": 0.0,
+        "lossStreak": 0,
         "days": 0,
         "first": null,
         "last": null,
@@ -955,6 +964,9 @@
         }
       },
       "crypto_eth": {
+        "rows": [],
+        "currentDrawdownPct": 0.0,
+        "lossStreak": 0,
         "days": 0,
         "first": null,
         "last": null,
@@ -975,6 +987,9 @@
         }
       },
       "us_tqqq": {
+        "rows": [],
+        "currentDrawdownPct": 0.0,
+        "lossStreak": 0,
         "days": 0,
         "first": null,
         "last": null,
@@ -995,6 +1010,9 @@
         }
       },
       "account": {
+        "rows": [],
+        "currentDrawdownPct": 0.0,
+        "lossStreak": 0,
         "days": 0,
         "first": null,
         "last": null,
@@ -1016,5 +1034,431 @@
       }
     },
     "rule": "날짜별 장부 파일은 한 번만 쓰고 덮어쓰지 않는다. 요약은 장부 파일 값으로만 계산한다."
+  },
+  "shadows": {
+    "opening": [
+      {
+        "name": "v1 · 매일(통과 1개 이상)",
+        "version": "opening_gapdown_v1",
+        "rule": "v2 필터 없이 조건 맞는 날 매일 3종목",
+        "design": {
+          "days": 2144,
+          "tradeDays": 677,
+          "tradeDaysPerYear": 78.94123134328358,
+          "plus1RateOfTradeDays": 41.506646971935005,
+          "lossDaysPerYear": 39.99533582089552,
+          "tStat": -0.19128073441419313,
+          "plus1Days": 281,
+          "plus1DaysPerYear": 32.76585820895522,
+          "plus5Weeks": 62,
+          "plus5WeeksPerYear": 7.229477611940298,
+          "weeklyAvgPct": -0.4558390776740806,
+          "totalPct": -87.60586795995276,
+          "lossDays": 343,
+          "lossDayAvgPct": -4.674827245733651,
+          "worstDayPct": -28.738771929824562,
+          "mddPct": -97.14997304067013,
+          "cagrPct": -21.609228405094505,
+          "expectancyPct": -0.052647723462098436,
+          "gate": false
+        },
+        "outOfSample": {}
+      },
+      {
+        "name": "v2 · 통과 3개 이상",
+        "version": "opening_gapdown_v2_min3",
+        "rule": "통과 종목 3개 이상인 날만",
+        "design": {
+          "days": 2144,
+          "tradeDays": 237,
+          "tradeDaysPerYear": 27.635261194029848,
+          "plus1RateOfTradeDays": 50.63291139240506,
+          "lossDaysPerYear": 11.310634328358208,
+          "tStat": 2.8301860558345058,
+          "plus1Days": 120,
+          "plus1DaysPerYear": 13.992537313432836,
+          "plus5Weeks": 26,
+          "plus5WeeksPerYear": 3.0317164179104474,
+          "weeklyAvgPct": 0.42685763178720304,
+          "totalPct": 600.474479636734,
+          "lossDays": 97,
+          "lossDayAvgPct": -3.4582942266220535,
+          "worstDayPct": -18.11551178606366,
+          "mddPct": -30.008864266560774,
+          "cagrPct": 25.480583494277887,
+          "expectancyPct": 0.9578388020812089,
+          "gate": false
+        },
+        "outOfSample": {}
+      }
+    ],
+    "daytrading": [
+      {
+        "name": "코스닥150 레버리지 −2% 기준",
+        "version": "etf_dip_overnight_th2",
+        "rule": "−2% 이하 마감이면 매수",
+        "design": {
+          "days": 2084,
+          "tradeDays": 536,
+          "tradeDaysPerYear": 64.29942418426103,
+          "plus1RateOfTradeDays": 32.83582089552239,
+          "lossDaysPerYear": 26.75143953934741,
+          "tStat": 1.9722186067509964,
+          "plus1Days": 176,
+          "plus1DaysPerYear": 21.11324376199616,
+          "plus5Weeks": 13,
+          "plus5WeeksPerYear": 1.5595009596928981,
+          "weeklyAvgPct": 0.23031725325592944,
+          "totalPct": 177.7171010612366,
+          "lossDays": 223,
+          "lossDayAvgPct": -1.8603618868425489,
+          "worstDayPct": -13.071765169424747,
+          "mddPct": -30.622992204829245,
+          "cagrPct": 13.035610927299611,
+          "expectancyPct": 0.2254975726234781,
+          "gate": false
+        },
+        "outOfSample": {}
+      },
+      {
+        "name": "코스닥150 레버리지 −4% 기준",
+        "version": "etf_dip_overnight_th4",
+        "rule": "−4% 이하 마감이면 매수",
+        "design": {
+          "days": 2084,
+          "tradeDays": 258,
+          "tradeDaysPerYear": 30.950095969289826,
+          "plus1RateOfTradeDays": 42.248062015503876,
+          "lossDaysPerYear": 11.87619961612284,
+          "tStat": 2.9332197685117363,
+          "plus1Days": 109,
+          "plus1DaysPerYear": 13.07581573896353,
+          "plus5Weeks": 12,
+          "plus5WeeksPerYear": 1.4395393474088292,
+          "weeklyAvgPct": 0.3101670184060934,
+          "totalPct": 295.51172555965854,
+          "lossDays": 99,
+          "lossDayAvgPct": -2.0918755909461813,
+          "worstDayPct": -13.071765169424747,
+          "mddPct": -19.014175024972367,
+          "cagrPct": 17.93323181792683,
+          "expectancyPct": 0.5849777310667522,
+          "gate": true
+        },
+        "outOfSample": {}
+      },
+      {
+        "name": "코스피200 레버리지 −3% 기준",
+        "version": "etf_dip_overnight_k200",
+        "rule": "KODEX 레버리지(122630) −3% 이하 마감이면 매수",
+        "design": {
+          "days": 2084,
+          "tradeDays": 200,
+          "tradeDaysPerYear": 23.99232245681382,
+          "plus1RateOfTradeDays": 39.0,
+          "lossDaysPerYear": 8.157389635316699,
+          "tStat": 1.485658217090056,
+          "plus1Days": 78,
+          "plus1DaysPerYear": 9.357005758157388,
+          "plus5Weeks": 7,
+          "plus5WeeksPerYear": 0.8397312859884837,
+          "weeklyAvgPct": 0.15823440691127288,
+          "totalPct": 101.77953528665498,
+          "lossDays": 68,
+          "lossDayAvgPct": -3.1241443094999335,
+          "worstDayPct": -17.85647632091872,
+          "mddPct": -40.012381292100144,
+          "cagrPct": 8.786135834508713,
+          "expectancyPct": 0.4370355166517551,
+          "gate": false
+        },
+        "outOfSample": {}
+      }
+    ],
+    "crypto": [
+      {
+        "name": "평균 50일",
+        "version": "crypto_trend50",
+        "rule": "BTC+ETH 반반 · 50일 평균 · 손절 −4% · 자금 60%",
+        "design": {
+          "days": 3293,
+          "tradeDays": 1968,
+          "tradeDaysPerYear": 218.13543880959608,
+          "plus1RateOfTradeDays": 21.84959349593496,
+          "lossDaysPerYear": 108.29183115699969,
+          "tStat": 3.997388328808537,
+          "plus1Days": 430,
+          "plus1DaysPerYear": 47.66170665047069,
+          "plus5Weeks": 55,
+          "plus5WeeksPerYear": 6.096264804129972,
+          "weeklyAvgPct": 0.5311530819546606,
+          "totalPct": 1112.30722993431,
+          "lossDays": 977,
+          "lossDayAvgPct": -0.9635413756372981,
+          "worstDayPct": -2.544,
+          "mddPct": -30.18714704618479,
+          "cagrPct": 31.85873588986654,
+          "expectancyPct": 0.1385527324974363,
+          "gate": false
+        },
+        "outOfSample": {}
+      },
+      {
+        "name": "손절 −3%",
+        "version": "crypto_trend20_stop3",
+        "rule": "BTC+ETH 반반 · 20일 평균 · 손절 −3% · 자금 60%",
+        "design": {
+          "days": 3293,
+          "tradeDays": 2007,
+          "tradeDaysPerYear": 222.45824476161553,
+          "plus1RateOfTradeDays": 19.531639262580967,
+          "lossDaysPerYear": 117.04828423929547,
+          "tStat": 3.7054154603879077,
+          "plus1Days": 392,
+          "plus1DaysPerYear": 43.44974187670817,
+          "plus5Weeks": 44,
+          "plus5WeeksPerYear": 4.877011843303977,
+          "weeklyAvgPct": 0.47067637643285476,
+          "totalPct": 813.1088112364598,
+          "lossDays": 1056,
+          "lossDayAvgPct": -0.8560734427181833,
+          "worstDayPct": -1.9439999999999997,
+          "mddPct": -22.722893633217424,
+          "cagrPct": 27.78075485601308,
+          "expectancyPct": 0.1207447162206527,
+          "gate": true
+        },
+        "outOfSample": {}
+      }
+    ],
+    "soxl": [
+      {
+        "name": "QQQ 150일 평균",
+        "version": "tqqq_trend150",
+        "rule": "QQQ > 150일 평균이면 TQQQ · 손절 −10% · 자금 50%",
+        "design": {
+          "days": 4184,
+          "tradeDays": 3391,
+          "tradeDaysPerYear": 204.2380497131931,
+          "plus1RateOfTradeDays": 24.506045414332057,
+          "lossDaysPerYear": 91.30783938814531,
+          "tStat": 3.4683493862329655,
+          "plus1Days": 831,
+          "plus1DaysPerYear": 50.05066921606118,
+          "plus5Weeks": 47,
+          "plus5WeeksPerYear": 2.8307839388145313,
+          "weeklyAvgPct": 0.31168359902815634,
+          "totalPct": 1394.4124361590239,
+          "lossDays": 1516,
+          "lossDayAvgPct": -1.1507215171515617,
+          "worstDayPct": -5.1499999999999995,
+          "mddPct": -30.947017597628978,
+          "cagrPct": 17.68949663582655,
+          "expectancyPct": 0.09165990931926604,
+          "gate": false
+        },
+        "outOfSample": {}
+      }
+    ]
+  },
+  "changelog": [
+    {
+      "date": "2026-10-01",
+      "tab": "opening",
+      "version": "opening_gapdown_v1",
+      "text": "① D-1 갭하락 과매도 시작 — KIS 모의투자 매일 주문(측정용)."
+    },
+    {
+      "date": "2026-10-01",
+      "tab": "opening",
+      "version": "v2 필터",
+      "text": "통과 5종목 이상(시장 투매일)만 v2 매매로 판정 — 8년 하루 +1.33%, 9개 연도 모두 양수."
+    },
+    {
+      "date": "2026-10-01",
+      "tab": "daytrading",
+      "version": "etf_dip_overnight_v1",
+      "text": "② 코스닥150 레버리지 −3% 하락일 종가 매수 → 다음날 시가 매도 시작."
+    },
+    {
+      "date": "2026-10-01",
+      "tab": "crypto",
+      "version": "crypto_trend20_v2",
+      "text": "③ BTC 단독 → BTC+ETH 반반(+1% 달성일 35→46일/년)."
+    },
+    {
+      "date": "2026-10-01",
+      "tab": "soxl",
+      "version": "tqqq_trend200_v1",
+      "text": "④ SOXL 대신 TQQQ 200일 추세(SOXL 은 손실 기준 지키면 연 +7%)."
+    },
+    {
+      "date": "2026-10-01",
+      "tab": "all",
+      "version": "account 30/30/40",
+      "text": "전체 계좌 국내 30%·코인 30%·미국 40% — +1% 달성일 69일/년, MDD −22%."
+    }
+  ],
+  "review": {
+    "today": {
+      "date": "2026-10-01",
+      "writtenAt": "2026-10-01T22:25:45.460125+09:00",
+      "tabs": {
+        "시초가": {
+          "name": "① D-1 갭하락 과매도 v2",
+          "date": "2026-10-01",
+          "result": "no_trade",
+          "plan": "명단 9종목 · 08:56 예상갭 확인 (통과 5종목 이상일 때 v2 매매)"
+        },
+        "데이트레이딩": {
+          "name": "② 코스닥150 레버리지 하락일 야간",
+          "date": "2026-10-01",
+          "result": "no_trade",
+          "plan": "15:21 예상 종가 −3% 이하면 종가 매수 → 다음 날 시가 매도"
+        },
+        "비트코인": {
+          "name": "③ BTC+ETH 20일 추세",
+          "date": "2026-09-30",
+          "result": 0.16413790144940155,
+          "plan": "BTC 보유 · ETH 보유"
+        },
+        "SOXL": {
+          "name": "④ TQQQ 200일 추세 (미국 3배)",
+          "date": "2026-09-30",
+          "result": 0.36793164314565807,
+          "plan": "보유 (미국장 · 자금 50%)"
+        },
+        "전체": {
+          "name": "🏦 전체 계좌 (국내 30% · 코인 30% · 미국 40%)",
+          "date": "2026-09-30",
+          "result": 0.30013653325540846,
+          "plan": null
+        }
+      },
+      "opening": {
+        "reason": "no_expected_gap_down",
+        "picks": [],
+        "breadth": null
+      },
+      "etf": {
+        "buy": null,
+        "drop": null
+      },
+      "paper": {
+        "opening_d1v2": {
+          "tradeDays": 0,
+          "totalPct": null,
+          "status": "매매일 0/20 — 판단 전"
+        },
+        "daytrading_etf": {
+          "tradeDays": 0,
+          "totalPct": null,
+          "status": "매매일 0/20 — 판단 전"
+        },
+        "crypto_btc": {
+          "tradeDays": 0,
+          "totalPct": null,
+          "status": "매매일 0/20 — 판단 전"
+        },
+        "crypto_eth": {
+          "tradeDays": 0,
+          "totalPct": null,
+          "status": "매매일 0/20 — 판단 전"
+        },
+        "us_tqqq": {
+          "tradeDays": 0,
+          "totalPct": null,
+          "status": "매매일 0/20 — 판단 전"
+        },
+        "account": {
+          "tradeDays": 0,
+          "totalPct": null,
+          "status": "매매일 0/20 — 판단 전"
+        }
+      },
+      "issues": [],
+      "verdict": "문제 없음"
+    },
+    "history": [
+      {
+        "date": "2026-10-01",
+        "writtenAt": "2026-10-01T22:25:45.460125+09:00",
+        "tabs": {
+          "시초가": {
+            "name": "① D-1 갭하락 과매도 v2",
+            "date": "2026-10-01",
+            "result": "no_trade",
+            "plan": "명단 9종목 · 08:56 예상갭 확인 (통과 5종목 이상일 때 v2 매매)"
+          },
+          "데이트레이딩": {
+            "name": "② 코스닥150 레버리지 하락일 야간",
+            "date": "2026-10-01",
+            "result": "no_trade",
+            "plan": "15:21 예상 종가 −3% 이하면 종가 매수 → 다음 날 시가 매도"
+          },
+          "비트코인": {
+            "name": "③ BTC+ETH 20일 추세",
+            "date": "2026-09-30",
+            "result": 0.16413790144940155,
+            "plan": "BTC 보유 · ETH 보유"
+          },
+          "SOXL": {
+            "name": "④ TQQQ 200일 추세 (미국 3배)",
+            "date": "2026-09-30",
+            "result": 0.36793164314565807,
+            "plan": "보유 (미국장 · 자금 50%)"
+          },
+          "전체": {
+            "name": "🏦 전체 계좌 (국내 30% · 코인 30% · 미국 40%)",
+            "date": "2026-09-30",
+            "result": 0.30013653325540846,
+            "plan": null
+          }
+        },
+        "opening": {
+          "reason": "no_expected_gap_down",
+          "picks": [],
+          "breadth": null
+        },
+        "etf": {
+          "buy": null,
+          "drop": null
+        },
+        "paper": {
+          "opening_d1v2": {
+            "tradeDays": 0,
+            "totalPct": null,
+            "status": "매매일 0/20 — 판단 전"
+          },
+          "daytrading_etf": {
+            "tradeDays": 0,
+            "totalPct": null,
+            "status": "매매일 0/20 — 판단 전"
+          },
+          "crypto_btc": {
+            "tradeDays": 0,
+            "totalPct": null,
+            "status": "매매일 0/20 — 판단 전"
+          },
+          "crypto_eth": {
+            "tradeDays": 0,
+            "totalPct": null,
+            "status": "매매일 0/20 — 판단 전"
+          },
+          "us_tqqq": {
+            "tradeDays": 0,
+            "totalPct": null,
+            "status": "매매일 0/20 — 판단 전"
+          },
+          "account": {
+            "tradeDays": 0,
+            "totalPct": null,
+            "status": "매매일 0/20 — 판단 전"
+          }
+        },
+        "issues": [],
+        "verdict": "문제 없음"
+      }
+    ]
   }
 }
