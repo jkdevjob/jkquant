@@ -6,8 +6,8 @@
   daytrading ② 코스닥150 레버리지 하락일 야간             — etf_dip_overnight_v1 결과 사용
   crypto     ③ BTC+ETH 20일 추세 + 하루 손절 −4% · 반반 · 투입 60% — crypto_trend20_v2 (이 파일)
              (v1 BTC 단독 50% 는 비교용으로 같이 계산한다)
-전체 계좌안: 국내 ①+② 50% + 코인 50%(코인 칸은 BTC+ETH 반반 전액) — 같은 원금 기준 일 손익.
-  soxl       ④ SOXX 50일 추세 SOXL + 손절 −8% · 투입 25% — soxl_trend50_v1 (이 파일)
+전체 계좌안: 국내 30% + 코인 30% + 미국 40% (각 칸 안에서 전액) — 같은 원금 기준 일 손익(미국은 한국 다음 날로).
+  soxl       ④ TQQQ 200일 추세 + 손절 −10% · 탭 표시 50% — tqqq_trend200_v1 (SOXL 안 soxl_trend50_v1 은 참고)
 
 목표 지표(사용자 기준 2026-10-01): +1% 달성일/년 · +5% 달성주/년 · 주평균 · 손실일 평균/최악 · MDD.
 순수익, 매매 없는 날 0%. 거르기: 기대값>0 · MDD≥-25% · 최악일≥-15%.
@@ -38,8 +38,11 @@ BTC = dict(version="btc_trend20_v1", ma=20, stopPct=4.0, size=0.5, costRoundTrip
 CRYPTO = dict(version="crypto_trend20_v2", markets=["KRW-BTC", "KRW-ETH"], ma=20, stopPct=4.0, size=1.0, tabSize=0.6,
               costRoundTripPct=0.14, stopSlipPct=0.1,
               note="업비트 BTC·ETH 일봉(09시 기준) 각각: 전일 종가 > 20일 평균이면 그날 보유, 09시 시가 대비 −4% 닿으면 손절 후 그날 쉼. 두 코인 반반, 자금 60%.")
-ACCOUNT = dict(krWeight=0.5, cryptoWeight=0.5, cryptoSize=1.0,
-               note="같은 원금: 국내 칸 50%(① D-1 v2 + ② ETF 야간, 같은 날이면 반반) + 코인 칸 50%(BTC+ETH 반반 추세, 칸 안에서 전액).")
+ACCOUNT = dict(krWeight=0.3, cryptoWeight=0.3, usWeight=0.4, cryptoSize=1.0, usSize=1.0,
+               note="같은 원금: 국내 30%(① D-1 v2 + ② ETF 야간, 같은 날이면 반반) + 코인 30%(BTC+ETH 반반 추세, 칸 안 전액) + 미국 40%(TQQQ 200일 추세, 칸 안 전액).")
+US = dict(version="tqqq_trend200_v1", trade="TQQQ", signal="QQQ", ma=200, stopPct=10.0, size=1.0, tabSize=0.5,
+          costRoundTripPct=0.20, stopSlipPct=0.1,
+          note="QQQ 종가 > 200일 평균이면 TQQQ 보유(종가 기준), 전일 종가(진입일은 시가) 대비 −10% 닿으면 손절. 탭 표시는 자금 50%. SOXL 은 변동성이 너무 커 TQQQ 로 바꿨다(SOXL 안은 참고로 같이 계산).")
 SOXL = dict(version="soxl_trend50_v1", ma=50, stopPct=8.0, size=0.25, costRoundTripPct=0.20, stopSlipPct=0.2,
             note="SOXX 종가 > 50일 평균이면 SOXL 보유(종가 기준), 전일 종가(진입일은 시가) 대비 −8% 닿으면 손절. 자금 25%.")
 GPT_FILES = {
@@ -250,16 +253,16 @@ def daily_board(report, d1, krx_cal, crypto_full, cal_c):
     g, gv, _ = gpt_daily("crypto")
     add("비트코인", "gpt", "비트코인", ", ".join(gv), g, cp, cl)
     sx = tabs.get("soxl") or {}
-    sdv = {r["date"]: float(r["pnlPct"]) for r in read_csv(OUT / "soxl-decisions.csv") if r.get("pnlPct") not in (None, "", "None")}
-    scal = [r["date"] for r in read_csv(OUT / "soxl-decisions.csv")]
-    sp, sl = last_two(scal)
-    add("SOXL", "claude", "④ SOXX 50일 추세 SOXL", SOXL["version"], sdv, sp, sl,
-        plan=("보유" if (sx.get("nextSignal") or {}).get("holdNext") else "쉼") + " (미국장)")
+    udec = read_csv(OUT / "tqqq-decisions.csv")
+    sdv = {r["date"]: float(r["pnlPct"]) * US["tabSize"] for r in udec if r.get("pnlPct") not in (None, "", "None")}
+    sp, sl = last_two([r["date"] for r in udec])
+    add("SOXL", "claude", "④ TQQQ 200일 추세 (미국 3배)", US["version"], sdv, sp, sl,
+        plan=("보유" if (sx.get("nextSignal") or {}).get("holdNext") else "쉼") + " (미국장 · 자금 50%)")
     g, gv, _ = gpt_daily("soxl")
     add("SOXL", "gpt", "SOXL", ", ".join(gv), g, sp, sl)
     acct = {r["date"]: r["pnlPct"] for r in (report.get("account") or {}).get("recent", [])}
     ap, al = last_two(sorted(set(cal_c) | set(kr_cal)), upto=max(acct) if acct else None)
-    add("전체", "claude", "🏦 전체 계좌 (국내 50% + 코인 50%)", "account", acct, ap, al)
+    add("전체", "claude", "🏦 전체 계좌 (국내 30% · 코인 30% · 미국 40%)", "account", acct, ap, al)
     return dict(generatedAt=datetime.now(KST).isoformat(), today=today, finalKrDaily=final_kr, rows=rows,
                 note="시장마다 자기 거래일 기준. ① 은 확정 일봉으로만 계산해 하루 늦게 채워질 수 있음(pending). 숫자는 순손익 %.")
 
@@ -269,6 +272,18 @@ def read_json(path):
         return json.loads(path.read_text(encoding="utf-8"))
     except Exception:  # noqa: BLE001
         return None
+
+
+def us_to_kst(dv):
+    """미국 거래일 d 의 손익은 한국시각 다음 날 아침에 확정된다 — 계좌 합산은 한국 날짜로."""
+    return {(date.fromisoformat(d) + timedelta(days=1)).isoformat(): v for d, v in dv.items()}
+
+
+def account_daily(kr, crypto_full, us_k, cal):
+    a = ACCOUNT
+    return {d: a["krWeight"] * kr.get(d, 0.0) + a["cryptoWeight"] * a["cryptoSize"] * crypto_full.get(d, 0.0)
+            + a["usWeight"] * a["usSize"] * us_k.get(d, 0.0)
+            for d in cal if d in kr or d in crypto_full or d in us_k}
 
 
 def gpt_daily(tab):
@@ -331,26 +346,37 @@ def main():
                                                          variants={"btc_trend20_v1 (BTC 단독 50%)": goal_metrics({d: v for d, v in btc_only.items() if d <= DESIGN_END}, [d for d in cal_c if d <= DESIGN_END], 365)}))
     except Exception as e:  # noqa: BLE001
         report["tabs"]["crypto"] = dict(error=str(e))
+    us_full = {}
+    try:
+        tq, qq = fetch_us(US["trade"]), fetch_us(US["signal"])
+        udays = sorted(d for d in tq if d in qq)
+        dv_u, dec_u, nxt_u = trend_daily([(d, *tq[d]) for d in udays], US, signal_close=[qq[d][3] for d in udays])
+        us_full = dv_u
+        write_csv(OUT / "tqqq-decisions.csv", dec_u)
+        variants = {}
+        try:
+            sx, so = fetch_us("SOXL"), fetch_us("SOXX")
+            sdays = sorted(d for d in sx if d in so)
+            dv_s, dec_s, _ = trend_daily([(d, *sx[d]) for d in sdays], SOXL, signal_close=[so[d][3] for d in sdays])
+            write_csv(OUT / "soxl-decisions.csv", dec_s)
+            variants["soxl_trend50_v1 (SOXL · 자금 25%)"] = goal_metrics({d: v for d, v in dv_s.items() if d <= DESIGN_END}, [d for d in sdays if d <= DESIGN_END], 252)
+        except Exception as e:  # noqa: BLE001
+            variants["soxl_trend50_v1"] = dict(error=str(e))
+        report["tabs"]["soxl"] = tab_report("soxl", "④ TQQQ 200일 추세 + 손절", US["version"], US["note"],
+                                            {d: v * US["tabSize"] for d, v in dv_u.items()}, udays, 252,
+                                            extra=dict(nextSignal=nxt_u, params=US, variants=variants))
+    except Exception as e:  # noqa: BLE001
+        report["tabs"]["soxl"] = dict(error=str(e))
     if crypto_full:
         kr = combine_same_capital(d1, etf_daily())
-        acct = {d: ACCOUNT["krWeight"] * kr.get(d, 0.0) + ACCOUNT["cryptoWeight"] * crypto_full.get(d, 0.0) * ACCOUNT["cryptoSize"]
-                for d in cal_c if d in kr or d in crypto_full}
+        us_k = us_to_kst(us_full)
+        acct = account_daily(kr, crypto_full, us_k, cal_c)
         acal = [d for d in cal_c if d >= min(kr)] if kr else cal_c
         report["account"] = dict(plan=ACCOUNT,
                                  design=goal_metrics({d: v for d, v in acct.items() if d <= DESIGN_END}, [d for d in acal if d <= DESIGN_END], 365),
                                  outOfSample=goal_metrics({d: v for d, v in acct.items() if d > DESIGN_END}, [d for d in acal if d > DESIGN_END], 365),
                                  lastYear=goal_metrics({d: v for d, v in acct.items() if d >= "2025-10-01" and d <= DESIGN_END}, [d for d in acal if "2025-10-01" <= d <= DESIGN_END], 365),
                                  recent=[dict(date=d, pnlPct=acct[d]) for d in sorted(acct)[-20:]])
-    try:
-        sx, so = fetch_us("SOXL"), fetch_us("SOXX")
-        days = sorted(d for d in sx if d in so)
-        rows = [(d, *sx[d]) for d in days]
-        dv, dec, nxt = trend_daily(rows, SOXL, signal_close=[so[d][3] for d in days])
-        report["tabs"]["soxl"] = tab_report("soxl", "④ SOXX 50일 추세 SOXL + 손절", SOXL["version"], SOXL["note"], dv, days, 252,
-                                            extra=dict(nextSignal=nxt, params=SOXL))
-        write_csv(OUT / "soxl-decisions.csv", dec)
-    except Exception as e:  # noqa: BLE001
-        report["tabs"]["soxl"] = dict(error=str(e))
     report["daily"] = daily_board(report, d1, krx_cal, crypto_full, locals().get("cal_c") or [])
     (OUT / "latest.json").write_text(json.dumps(report, ensure_ascii=False, indent=2, default=str), encoding="utf-8")
     print(json.dumps({k: (v.get("compare") if isinstance(v, dict) else v) for k, v in report["tabs"].items()}, ensure_ascii=False, default=str)[:3000])

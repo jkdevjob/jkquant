@@ -264,6 +264,13 @@ class ClaudeLabTrend(unittest.TestCase):
         b = lab.basket(per, ["d1", "d2"])
         self.assertEqual(b, {"d1": 1.0, "d2": 2.0})        # d1: B 는 쉬므로 A 몫만(2%/2), 평균으로 부풀리지 않는다
 
+    def test_account_weights_and_us_date_shift(self):
+        us = lab.us_to_kst({"2026-01-05": 2.0})
+        self.assertEqual(us, {"2026-01-06": 2.0})                          # 미국 1/5 장 → 한국 1/6 아침 확정
+        a = lab.account_daily({"2026-01-06": 1.0}, {"2026-01-06": -1.0, "2026-01-07": 3.0}, us, ["2026-01-06", "2026-01-07"])
+        self.assertAlmostEqual(a["2026-01-06"], 0.3 * 1.0 + 0.3 * -1.0 + 0.4 * 2.0)
+        self.assertAlmostEqual(a["2026-01-07"], 0.3 * 3.0)
+
     def test_daily_board_cells(self):
         self.assertEqual(lab.cell({"a": 1.5}, "a"), 1.5)
         self.assertEqual(lab.cell({"a": 1.5}, "b"), "no_trade")              # 기록 없는 날은 손실이 아니라 매매 없음

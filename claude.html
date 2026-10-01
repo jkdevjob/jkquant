@@ -27,7 +27,7 @@ table.board{min-width:0}table.board td.nm{white-space:normal;min-width:150px}tab
 </head>
 <body>
 <header><div class="wrap"><div class="htop">
-  <div class="brand"><div class="kicker">JK QUANT · CLAUDE</div><h1>🤖 단타 <span class="v">(클로드)</span> <span class="ver" id="clVer">v1.3.0</span></h1></div>
+  <div class="brand"><div class="kicker">JK QUANT · CLAUDE</div><h1>🤖 단타 <span class="v">(클로드)</span> <span class="ver" id="clVer">v1.4.0</span></h1></div>
   <div class="jkmenu" id="jkmenuWrap">
     <button class="jkmenu-btn" aria-label="메뉴" onclick="jkMenuToggle(event)">三</button>
     <div class="jkmenu-pop" id="jkmenuPop" hidden>
@@ -144,24 +144,25 @@ function render(){
     html+="<p class='note'>업비트에는 모의투자가 없어 주문 없이 일봉으로 매일 기록합니다(판단·손익은 claude-lab/btc-decisions.csv · eth-decisions.csv).</p>";
   }else if(TAB==="soxl"){
     var t4=T.soxl||{};html+=t4.error?"<div class='warn'>"+esc(t4.error)+"</div>":claudeCard(t4,nextSig(t4,"미국장"));
-    html+="<p class='note'>후보 중 손실 기준(MDD −25%)을 넘지 않는 것이 이 전략뿐이었고, 수익은 약합니다(연 +7% 수준). 주문 없이 기록만 합니다.</p>";
+    var sv=t4.variants||{};html+=Object.keys(sv).length?"<div class='card'><h3>참고 — SOXL 안</h3>"+goalTable("설계 표본",Object.keys(sv).map(function(k){return goalRow(k,sv[k])}).join(""))+"<p class='note'>SOXL 은 하루 변동이 커서 손실 기준(MDD −25%)을 지키면 연 +7% 수준밖에 안 됩니다. 미국 칸은 나스닥 3배(TQQQ)로 바꿨습니다. 200일 평균은 널리 쓰는 기준이라 과거에 맞춘 값이 아닙니다.</p></div>":"";
+    html+="<p class='note'>주문 없이 매일 기록합니다(claude-lab/tqqq-decisions.csv). 미국장 결과는 한국시각 다음 날 아침에 확정됩니다.</p>";
   }else{
     var pf=et.portfolio||{},gate=lab.gate||et.gate||{},p=pf.design||{};
     html+="<div class='card'><h3>🎯 ①+② 포트폴리오 — 목표 지표</h3><div class='sub'>같은 원금. 같은 날 두 전략이 다 나오면 반씩(수익률을 그냥 더하지 않음). 거르기: 기대값 &gt; 0 · MDD ≥ "+num(gate.mdd,0)+"% · 최악일 ≥ "+num(gate.worstDay,0)+"%</div>"+
       "<div class='kpis'><div class='kpi'><div class='l'>+1% 달성일/년</div><div class='v good'>"+num(p.plus1DaysPerYear,0)+"일</div></div><div class='kpi'><div class='l'>+5% 달성주/년</div><div class='v'>"+num(p.plus5WeeksPerYear)+"주</div></div><div class='kpi'><div class='l'>주 평균</div><div class='v "+(p.weeklyAvgPct>=0?"good":"bad")+"'>"+pct(p.weeklyAvgPct)+"</div></div><div class='kpi'><div class='l'>최악의 날 · MDD</div><div class='v bad'>"+pct(p.worstDayPct,1)+" · "+mddTxt(p.mddPct)+"</div></div></div>"+
       goalTable("설계 표본",goalRow("① D-1 v2",(et.d1v2||{}).design)+goalRow("② ETF 하락일 야간",(et.etf||{}).design)+goalRow("①+② 포트폴리오",pf.design))+
       goalTable("판정용 (10/1~)",goalRow("① D-1 v2",(et.d1v2||{}).outOfSample)+goalRow("② ETF 하락일 야간",(et.etf||{}).outOfSample)+goalRow("①+② 포트폴리오",pf.outOfSample))+
-      "<p class='note'>④ SOXL 은 약해서 합산에서 뺐습니다.</p></div>";
+      "<p class='note'>이 표는 국내 ①+② 만입니다. 코인·미국까지 합친 전체 계좌는 위 카드에 있습니다.</p></div>";
     var ac=lab.account;
     if(ac){
       var q=ac.design||{},ly=ac.lastYear||{};
-      html="<div class='card'><h3>🏦 전체 계좌안 — 국내 50% + 코인 50%</h3><div class='sub'>"+esc((ac.plan||{}).note||"")+" 매일 같은 원금 기준 손익.</div>"+
+      html="<div class='card'><h3>🏦 전체 계좌안 — 국내 30% · 코인 30% · 미국 40%</h3><div class='sub'>"+esc((ac.plan||{}).note||"")+" 매일 같은 원금 기준 손익.</div>"+
         "<div class='kpis'><div class='kpi'><div class='l'>+1% 달성일/년</div><div class='v good'>"+num(q.plus1DaysPerYear,0)+"일</div><div class='sub'>최근 1년 "+(ly.plus1Days||0)+"일</div></div>"+
         "<div class='kpi'><div class='l'>+5% 달성주/년</div><div class='v'>"+num(q.plus5WeeksPerYear)+"주</div><div class='sub'>최근 1년 "+(ly.plus5Weeks||0)+"주</div></div>"+
         "<div class='kpi'><div class='l'>주 평균</div><div class='v good'>"+pct(q.weeklyAvgPct)+"</div><div class='sub'>최근 1년 누적 "+pct(ly.totalPct,1)+"</div></div>"+
         "<div class='kpi'><div class='l'>최악의 날 · MDD</div><div class='v bad'>"+pct(q.worstDayPct,1)+" · "+mddTxt(q.mddPct)+"</div><div class='sub'>최근 1년 MDD "+mddTxt(ly.mddPct)+"</div></div></div>"+
         goalTable("전체 계좌",goalRow("설계 표본 (2018~2026-09)",ac.design)+goalRow("최근 1년 (25-10~26-09)",ac.lastYear)+goalRow("판정용 (10/1~)",ac.outOfSample))+
-        "<p class='note'>국내 칸은 KIS 모의투자로 매일 체결을 재고, 코인 칸은 업비트 일봉으로 기록합니다. 실전 전환은 승인 후에만 엽니다.</p></div>"+html;
+        "<p class='note'>국내 칸은 KIS 모의투자로 매일 체결을 재고, 코인·미국 칸은 일봉으로 기록합니다. 비중은 10% 단위 후보 중 손실 기준을 지키며 +1% 달성일이 많은 쪽에서 끝자리가 둥근 값을 골랐습니다(맨 위 값을 고르면 과거에 맞추게 됨). 실전 전환은 승인 후에만 엽니다.</p></div>"+html;
     }
   }
   body.innerHTML=html;
