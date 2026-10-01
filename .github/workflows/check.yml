@@ -1,11 +1,19 @@
 name: 검증
 
-# 배포 전에 반드시 초록이어야 한다. 회귀테스트 헤더의 규약("수정할 때마다 ALL PASS여야 배포")을
-# 사람 기억에 맡기지 않고 여기서 강제한다.
+# 배포 전에 반드시 초록이어야 한다.
+# PR 작업 중 매 커밋마다 검증을 재실행하지 않는다.
+# Draft PR에서 수정/정리를 끝낸 뒤 Ready for review로 전환할 때 1회 검증하고,
+# main 반영 후에는 최종 상태를 다시 1회 검증한다. 필요할 때만 수동 실행할 수 있다.
 on:
   push:
     branches: [main]
   pull_request:
+    types: [ready_for_review]
+  workflow_dispatch:
+
+concurrency:
+  group: check-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 jobs:
   check:
