@@ -10573,7 +10573,7 @@ console.log('[SCALPING FLOW] 단타 공통 흐름 · 모의체결 분리');
      && /VTTS3035R/.test(kis));
   ok('KIS 해외 모의 조회는 전체조회 후 종목 필터', /PDNO:""[\s\S]{0,220}OVRS_EXCG_CD:""/.test(kis)
      && /if\(code\) rows=rows\.filter\(x=>x\.code===code\)/.test(kis));
-  ok('단타 화면 버전 1.30.0', /id="scVer">v1\.30\.0<\/span>/.test(sc));
+  ok('단타 화면 버전 1.30.1', /id="scVer">v1\.30\.1<\/span>/.test(sc));
 }
 
 
@@ -10709,7 +10709,7 @@ console.log('[OPENING SIGNAL LEARNING] 실시간 ledger · 30분 사후라벨 ·
      /신호 이후 30분 경로 진단/.test(scl)
      && /조건별 실제 성과/.test(scl)
      && /groupTable\('전략 버전'/.test(scl)
-     && /id="scVer">v1\.30\.0<\/span>/.test(scl));
+     && /id="scVer">v1\.30\.1<\/span>/.test(scl));
 }
 
 /* ════ 단타 Telegram ③④ 실시간 + ⑤⑥ 일일 연구 ════ */
@@ -10748,7 +10748,7 @@ console.log('[SCALPING TELEGRAM] 실시간 신호 · 일일 매매/연구 요약
   const cr=cr0>=0&&cr1>cr0?nightly.slice(cr0,cr1):'';
   ok('BTC 야간연구는 실제 70/30 holdout 모델만 참조',
      /validationModel":"70\/30 holdout \+ rolling30"/.test(cr) && !/oos_edge|oos_trades|wf_status/.test(cr));
-  ok('단타 화면 버전 1.30.0', /id="scVer">v1\.30\.0<\/span>/.test(scl));
+  ok('단타 화면 버전 1.30.1', /id="scVer">v1\.30\.1<\/span>/.test(scl));
 }
 
 
@@ -10846,18 +10846,24 @@ console.log('[GAPDOWN D-1 / DIP24 D-3] 연구용 모의체결 경로 안전장�
      /for r in rows if r\[0\] <= final_last\}\)/.test(py)&&/if r\[0\] <= final_last:/.test(py));
   ok('연구: 판정은 설계 이후(2026-10-01~) 표본만 · 대조군(같은 날 무작위 갭하락) 동시 기록',
      /DESIGN_END = "2026-09-30"/.test(py)&&/CONTROL_random_gapdown/.test(py)&&/skillPairedDays/.test(py));
-  const scl2=fs.readFileSync(__d+'/scalping.html','utf8');
-  const orApi=fs.readFileSync(__d+'/functions/api/opening-research.js','utf8');
-  ok('시초가 탭에 D-1 설계표본·대조군·판정표본·VTS 슬리피지 카드 (읽기전용 API)',
-     /D-1 갭하락 과매도 \(opening_gapdown_v1\)/.test(scl2)&&/const gd=j\.gapdown\|\|null;/.test(scl2)
-     &&/시가 − 예상체결가/.test(scl2)&&/opening-gapdown-research\/latest\.json/.test(orApi)
-     &&!/op=order|method:\s*["']POST["']/.test(orApi));
+  // 클로드 전략은 GPT 단타 화면과 분리 — /claude 페이지 + /api/claude-lab 에서만 보인다
+  const scl2=fs.readFileSync(__d+'/claude.html','utf8');
+  const orApi=fs.readFileSync(__d+'/functions/api/claude-lab.js','utf8');
+  const gptScl=fs.readFileSync(__d+'/scalping.html','utf8'),gptApi=fs.readFileSync(__d+'/functions/api/opening-research.js','utf8');
+  ok('클로드 전략은 별도 페이지: 단타(GPT) 화면·API 에 D-1/ETF 내용 없음 · 모든 페이지 메뉴에 /claude',
+     !/gapdown|D-1 갭하락|etfOvernight/.test(gptScl)&&!/gapdown|etf-overnight/.test(gptApi)
+     &&['index.html','plan.html','backtest.html','scalping.html','ipo.html','job.html','admin.html','claude.html']
+       .every(f=>/<a href="\/claude"[^>]*><span class="mi">🤖<\/span>클로드 전략<\/a>/.test(fs.readFileSync(__d+'/'+f,'utf8'))));
+  ok('클로드 전략 화면: 설계·판정 목표지표 · 규칙 · 실측 · 명단 · ① 상세 (읽기전용 API)',
+     /opening-gapdown-research\/latest\.json/.test(orApi)&&/etf-overnight-research\/latest\.json/.test(orApi)
+     &&!/op=order|method:\s*["']POST["']/.test(orApi)&&/fetch\("\/api\/claude-lab"/.test(scl2)
+     &&/판정용 표본 \(2026-10-01 ~\)/.test(scl2)&&/id="clVer">v\d+\.\d+\.\d+</.test(scl2));
   ok('D-1 v2: 통과 종목 수(시장 투매 강도) 기록 · 기준 5 · 연구 변형 3·5 · 화면 표시',
      /const qualified=gapdownPicks\(cands,\{\.\.\.wl\.rule,picks:1e9\}\)\.length;/.test(gd)
      &&/const BREADTH_V2_MIN=5;/.test(gd)&&/v2Signal:qualified>=BREADTH_V2_MIN/.test(gd)
      &&/BREADTH_MIN = \[3, 5\]/.test(py)&&/qualified\.get\(r\["date"\], 0\) >= k/.test(py)
      &&/rsiPassed=sum\(1 for x in cands if x\["rsiPrev"\] < PARAMS\["rsiMax"\]\)/.test(py)
-     &&/v2 · 통과 종목/.test(scl2)&&/breadthFilter:gapdown\.breadthFilter/.test(orApi));
+     &&/v2 · 통과 /.test(scl2)&&/breadthFilter:gd\.breadthFilter/.test(orApi));
   { // ② ETF 하락일 야간 — Worker 가 전날 매수일을 고르는 규칙을 실제 함수로 값 시험
     const src=ow.slice(ow.indexOf('export function etfBuyDateFromLedgers('),ow.indexOf('\n}\n',ow.indexOf('export function etfBuyDateFromLedgers('))+2).replace('export ','');
     const pick=new Function(src+'\nreturn etfBuyDateFromLedgers;')();
@@ -10873,8 +10879,8 @@ console.log('[GAPDOWN D-1 / DIP24 D-3] 연구용 모의체결 경로 안전장�
      &&/await runEtf\(env,date,stage==="close"\?"etf_buy":"etf_reconcile",ms\);/.test(ow)
      &&/backtest_etf_overnight\.py/.test(wf)&&/finance-datareader/.test(wf));
   ok('목표 지표 화면: +1% 달성일·+5% 달성주·손실일·MDD·거르기 통과 · 같은 원금 반반 합산',
-     /목표 지표 — 하루 \+1%·주 \+5%/.test(scl2)&&/같은 날 둘 다면 반씩/.test(scl2)
-     &&/etfOvernight:etf\?/.test(orApi));
+     /목표 지표/.test(scl2)&&/같은 날 두 전략이 다 나오면 반씩/.test(scl2)&&/\+1%↑일\/년/.test(scl2)
+     &&/portfolio:etf\.portfolio/.test(orApi));
   ok('D-3 BTC 그림자: 완료된 시간봉만·다음 시간 시가 진입·24시간 보유·주문 없음',
      /DIP24_VERSION = "btc_dip24_v1"/.test(bt)&&/hb\[h - one\]\["c"\] \/ hb\[h - one \* \(lb \+ 1\)\]\["c"\]/.test(bt)
      &&/"orders": "none \(research shadow\)"/.test(bt)&&/designEndKst="2026-09-30"/.test(bt));
