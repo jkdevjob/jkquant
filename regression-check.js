@@ -10827,6 +10827,12 @@ console.log('[SCALPING TELEGRAM] 실시간 신호 · 일일 매매/연구 요약
      && /HAVE_ARCHIVE=0/.test(soxlYml)
      && /collect_soxl_data\.py/.test(soxlYml)
      && /for range_value in \("60d", "5d"\)/.test(soxlCollector));
+  ok('SOXL GitHub 수집은 Yahoo 429 시 Cloudflare 5분봉 폴백을 사용',
+     /JKQ_SOXL_WORKER_URL/.test(soxlYml)
+     && /JKQ_MONITOR_KEY/.test(soxlYml)
+     && /request_worker_chart/.test(soxlCollector)
+     && /\/bars\?strategy=soxl/.test(soxlCollector)
+     && /u\.pathname==="\/bars"/.test(globalWorker));
   ok('일일 요약 API는 TRADE/NO TRADE + 검증기록을 모두 포함',
      /⑤ 오늘 매매이력/.test(dailyApi) && /⑥ 검증·분석 기록/.test(dailyApi) && /NO TRADE/.test(dailyApi));
   const cr0=nightly.indexOf('def crypto_report():');

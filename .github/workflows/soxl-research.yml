@@ -50,6 +50,8 @@ jobs:
         env:
           KEY: ${{ secrets.AUTOTRADE_KEY }}
           BASE: https://jkquant.pages.dev
+          JKQ_SOXL_WORKER_URL: https://jkquant-global-intraday-scheduler.mumae4.workers.dev
+          JKQ_MONITOR_KEY: ${{ secrets.AUTOTRADE_KEY }}
         shell: bash
         run: |
           set -e

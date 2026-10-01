@@ -27,10 +27,53 @@ UTC = timezone.utc
 UA = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/124 Safari/537.36"
 
 
+def request_worker_chart():
+    base = os.environ.get("JKQ_SOXL_WORKER_URL", "").strip().rstrip("/")
+    key = os.environ.get("JKQ_MONITOR_KEY", "").strip()
+    if not base or not key:
+        raise RuntimeError("Cloudflare SOXL fallback not configured")
+    url = base + "/bars?strategy=soxl"
+    req = urllib.request.Request(url, headers={
+        "User-Agent": UA,
+        "Accept": "application/json",
+        "x-monitor-key": key,
+    })
+    with urllib.request.urlopen(req, timeout=30) as r:
+        j = json.loads(r.read().decode("utf-8"))
+    bars = j.get("bars") or []
+    if not j.get("ok") or not bars:
+        raise RuntimeError(str(j.get("error") or "Cloudflare SOXL bars empty"))
+    ts, O, H, L, C, V = [], [], [], [], [], []
+    for b in bars:
+        ms = int(float(b.get("ms") or 0))
+        if ms <= 0 or not float(b.get("c") or 0):
+            continue
+        ts.append(ms // 1000)
+        O.append(float(b.get("o") or b.get("c") or 0))
+        H.append(float(b.get("h") or b.get("c") or 0))
+        L.append(float(b.get("l") or b.get("c") or 0))
+        C.append(float(b.get("c") or 0))
+        V.append(float(b.get("v") or 0))
+    if not ts:
+        raise RuntimeError("Cloudflare SOXL bars had no valid rows")
+    return {
+        "timestamp": ts,
+        "indicators": {"quote": [{
+            "open": O, "high": H, "low": L, "close": C, "volume": V
+        }]},
+    }, "cloudflare-worker", "5d-worker"
+
+
 def request_chart():
     last = None
-    # 60d를 먼저 시도하되 Yahoo가 장중 제한/429를 걸면 5d로 축소해
-    # 최소 최근 세션이라도 반드시 부트스트랩할 수 있게 한다.
+    # GitHub Actions에서는 Cloudflare Worker 경로를 우선 사용한다.
+    # GitHub egress가 Yahoo 429를 받아도 Worker의 시장데이터 경로로 동일 SOXL 5분봉을 확보한다.
+    if os.environ.get("JKQ_SOXL_WORKER_URL") and os.environ.get("JKQ_MONITOR_KEY"):
+        try:
+            return request_worker_chart()
+        except Exception as e:
+            last = e
+    # Worker가 없거나 실패하면 Yahoo 60d → 5d 직접 경로를 순서대로 시도한다.
     for range_value in ("60d", "5d"):
         q = urllib.parse.urlencode({
             "interval": "5m",
