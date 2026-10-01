@@ -1522,8 +1522,12 @@ async function loadDailyOverview(){
       strategyDailyCard('soxl','⚡ SOXL',periods.soxl.prev,periods.soxl.today,'미국 동부시간 세션일 기준');
 
     const todaySum=Object.values(periods).reduce((v,x)=>v+(x.today.stats&&x.today.stats.closed?x.today.stats.sum:0),0);
-    let weekSum=0;
-    for(const n of names)for(const x of by[n])if(String(x.date||'')>=weekFrom&&Number.isFinite(Number(x.pnl)))weekSum+=Number(x.pnl);
+    const sessionDates={opening:kst,daytrading:kst,crypto:kst,soxl:et};
+    let weekSum=todaySum;
+    for(const n of names)for(const x of by[n]){
+      const d=String(x.date||'');
+      if(d>=weekFrom&&d<sessionDates[n]&&Number.isFinite(Number(x.pnl)))weekSum+=Number(x.pnl);
+    }
     const t=$('all_today_sum'),tg=$('all_today_goal'),w=$('all_week_sum'),wg=$('all_week_goal');
     if(t){t.textContent=dailyPct(todaySum);t.className='ov '+(todaySum>=0?'good':'bad');}
     if(tg){tg.textContent=dailyGoal(todaySum,1);tg.className='ov '+(todaySum>=1?'good':'mid');}
