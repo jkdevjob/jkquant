@@ -245,7 +245,7 @@ canvas{display:block;width:100%;height:auto}
 
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Morning Scalping</div><h1>JK <span class="v">퀀트</span> 단타 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="scVer">v1.32.0</span></h1></div>
+    <div><div class="kicker">Morning Scalping</div><h1>JK <span class="v">퀀트</span> 단타 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="scVer">v1.33.0</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -1609,10 +1609,10 @@ async function loadStrategyScorecard(name){
 }
 
 const STRATEGY_UI_META={
-  opening:{version:'opening_rebreak_v1',market:'KOSPI/KOSDAQ Top100',selection:'09:00~09:30 · 갭 + 첫3분 고점 + 눌림 + 재돌파 + 수급',execution:'내부 모의 + KIS VTS 모의 병행',risk:'−1.0% / +1.5% / 09:30 시간청산'},
-  daytrading:{version:'daytrading_vwap_breakout_v1',market:'10시 전후 거래대금 Top100',selection:'10:00~14:30 · VWAP 추세 + 20분 고점돌파 + 거래량',execution:'서버 내부 모의만 · 주문 없음',risk:'−1.0% / +2.0% / 15:10 시간청산 · 최대3건'},
-  crypto:{version:'btc_midnight_orb_v2',market:'Upbit KRW-BTC',selection:'00:00 ORB · 첫 고점 재돌파 + 거래량 + VWAP · 22:00까지',execution:'JKQuant 독립 모의만 · 주문 없음',risk:'−0.5% / +1.0% / 최대60분 · 1슬롯'},
-  soxl:{version:'soxl_orb_v1',market:'SOXL · 미국 정규장',selection:'09:30~09:45 ET OR · 11:30 이전 첫 돌파 + VWAP + 거래량',execution:'JKQuant 연구 모의 · VTS는 별도 대조',risk:'−1.2% / +2.4% / 최대90분 · 1슬롯'}
+  opening:{version:'opening_rebreak_v1',market:'KOSPI/KOSDAQ Top100',selection:'09:00~09:30 · 갭 + 첫3분 고점 + 눌림 + 재돌파 + 수급',execution:'내부 모의 + KIS VTS 모의 병행',risk:'−1.0% / +1.5% / 09:30 시간청산',holding:'당일 청산 · 오버나이트 없음'},
+  daytrading:{version:'daytrading_vwap_breakout_v1',market:'10시 전후 거래대금 Top100',selection:'10:00~14:30 · VWAP 추세 + 20분 고점돌파 + 거래량',execution:'서버 내부 모의만 · 주문 없음',risk:'−1.0% / +2.0% / 15:10 시간청산 · 최대3건',holding:'당일 청산 · 오버나이트 없음'},
+  crypto:{version:'btc_midnight_orb_v2',market:'Upbit KRW-BTC',selection:'00:00 ORB · 첫 고점 재돌파 + 거래량 + VWAP · 22:00까지',execution:'JKQuant 독립 모의만 · 주문 없음',risk:'−0.5% / +1.0% / 최대60분 · 1슬롯',holding:'최대 60분'},
+  soxl:{version:'soxl_orb_v1',market:'SOXL · 미국 정규장',selection:'09:30~09:45 ET OR · 11:30 이전 첫 돌파 + VWAP + 거래량',execution:'SOXL 전용 JKQuant 연구 모의 · VTS는 별도 대조',risk:'−1.2% / +2.4% / 최대90분 · 1슬롯',holding:'SOXL만 매매 · 최대90분 · 당일 청산'}
 };
 const DAILY_RESULT_CACHE={};
 const HISTORY_RISK_CACHE={};
@@ -1698,7 +1698,7 @@ function renderStrategyCockpit(name){
   el.innerHTML=
     '<div class="cockpit-box wide"><div class="cockpit-label">기준전략 · 운영모드</div><div class="cockpit-value">'+esc(m.version||'—')+'</div><div class="cockpit-detail">'+esc(m.execution||'')+'</div></div>'+
     '<div class="cockpit-box wide"><div class="cockpit-label">시장 · 종목선정</div><div class="cockpit-value">'+esc(m.market||'—')+'</div><div class="cockpit-detail">'+esc(m.selection||'')+'</div></div>'+
-    '<div class="cockpit-box"><div class="cockpit-label">매도 · 리스크</div><div class="cockpit-value">'+esc(m.risk||'—')+'</div><div class="cockpit-detail">필터·손절·익절은 목표 맞추려고 자동 완화하지 않음</div></div>'+
+    '<div class="cockpit-box"><div class="cockpit-label">보유기간 · 청산</div><div class="cockpit-value">'+esc(m.holding||'1거래일 이내')+'</div><div class="cockpit-detail">'+esc(m.risk||'—')+' · 6거래일 이상 전략 금지</div></div>'+
     '<div class="cockpit-box '+(todayRet==null?'watch':todayRet>=0?'good':'bad')+'"><div class="cockpit-label">오늘 기준전략</div><div class="cockpit-value">'+(cur?cockpitPct(todayRet):'확정 대기')+'</div><div class="cockpit-detail">'+(cur?(esc(cur.date||'')+' · '+todayTrades+'건 · '+(hit?'+1% 달성':todayTrades?'목표 미달':'거래 없음')):'최근 세션 결과 불러오는 중')+'</div></div>'+
     '<div class="cockpit-box '+(sc&&sc.avgPnl>=0?'good':sc?'bad':'watch')+'"><div class="cockpit-label">기준전략 누적 검증</div><div class="cockpit-value">'+(sc?(sc.trades+'건 · 승률 '+sc.winRate.toFixed(1)+'%'):'불러오는 중')+'</div><div class="cockpit-detail">'+(sc?('거래당 '+cockpitPct(sc.avgPnl)+' · '+esc(sc.progress)):'워크포워드/누적 연구 대기')+'</div></div>'+
     '<div class="cockpit-box '+(reviewReady?'good':'watch')+'"><div class="cockpit-label">그림자 prospective</div><div class="cockpit-value">'+shadowStatus+'</div><div class="cockpit-detail">'+(o?('일평균 '+cockpitPct(o.avgDailyReturnPct)+' · PF '+Number(o.profitFactor||0).toFixed(2)+' · +1%일 '+Number(o.plus1Days||0)):'2026-10-01 이후 고정 규칙 모의')+'</div></div>'+
@@ -1754,7 +1754,7 @@ function setupUnifiedStrategyFlow(){
         '<div class="out">'+
         '<div class="outbox"><div class="ol">전략버전</div><div class="ov" style="font-size:14px">'+esc(m.version||'—')+'</div></div>'+
         '<div class="outbox"><div class="ol">시장/유니버스</div><div class="ov" style="font-size:14px">'+esc(m.market||'—')+'</div></div>'+
-        '</div><p class="lead" style="margin-top:9px"><b>종목선정:</b> '+esc(m.selection||'')+'<br><b>청산/리스크:</b> '+esc(m.risk||'')+'<br><b>운영:</b> '+esc(m.execution||'')+'</p>'));
+        '</div><p class="lead" style="margin-top:9px"><b>종목선정:</b> '+esc(m.selection||'')+'<br><b>보유기간:</b> '+esc(m.holding||'1거래일 이내')+'<br><b>청산/리스크:</b> '+esc(m.risk||'')+'<br><b>운영:</b> '+esc(m.execution||'')+'</p>'));
     }
     for(const side of ['buy','sell']){
       const d=flowTimingDefault(name,side);
