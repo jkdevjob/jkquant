@@ -120,7 +120,7 @@ pre.rules{background:var(--bg);border:1px solid var(--line);border-radius:10px;p
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-app.js";
   import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-auth.js";
-  import { getFirestore, doc, getDoc, setDoc, collection, getDocs } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-firestore.js";
+  import { getFirestore, doc, getDoc, setDoc, collection, getDocs, runTransaction } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-firestore.js";
   const firebaseConfig = {
     apiKey: "AIzaSyBzBe9pAttnbDgTlNThWZzNqtAAKxX7Ksw",
     authDomain: "jk-invest.firebaseapp.com",
@@ -131,7 +131,7 @@ pre.rules{background:var(--bg);border:1px solid var(--line);border-radius:10px;p
   };
   const app = initializeApp(firebaseConfig);
   window.fb = { auth:getAuth(app), db:getFirestore(app), provider:new GoogleAuthProvider(),
-                signInWithPopup, onAuthStateChanged, signOut, doc, getDoc, setDoc, collection, getDocs };
+                signInWithPopup, onAuthStateChanged, signOut, doc, getDoc, setDoc, collection, getDocs, runTransaction };
   window.dispatchEvent(new Event('fb-ready'));
 </script>
 </head>
@@ -152,7 +152,7 @@ pre.rules{background:var(--bg);border:1px solid var(--line);border-radius:10px;p
 
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Admin Console</div><h1>JK <span class="v">퀀트</span> 관리자 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="adVer">v0.8.1</span></h1></div>
+    <div><div class="kicker">Admin Console</div><h1>JK <span class="v">퀀트</span> 관리자 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="adVer">v0.9.0</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -501,8 +501,9 @@ async function applyDefaultsExistingSessions(){
     const ref=window.fb.doc(window.fb.db,'users',me.uid);
     const snap=await window.fb.getDoc(ref);
     if(!snap.exists()) throw new Error('운영 데이터가 없습니다.');
-    const doc=snap.data()||{}, state=doc.state;
-    if(!state||typeof state!=='object') throw new Error('운영 세션 상태를 찾지 못했습니다.');
+    const doc=snap.data()||{}, sourceState=doc.state;
+    if(!sourceState||typeof sourceState!=='object') throw new Error('운영 세션 상태를 찾지 못했습니다.');
+    const sourceStateJson=JSON.stringify(sourceState), state=JSON.parse(sourceStateJson);
     const tabs=['inf','vr','ma','ivs','dca','asap'];
     let touched=0,paper=0,real=0,generated=0,changedFields=0,recalcPaper=0;
     const detail=[];
@@ -553,13 +554,18 @@ async function applyDefaultsExistingSessions(){
       return;
     }
     const now=Date.now(); state._updated=now;
+    await window.fb.runTransaction(window.fb.db,async tx=>{
+      const latest=await tx.get(ref),d=latest.exists()?(latest.data()||{}):{};
+      if(JSON.stringify(d.state)!==sourceStateJson) throw new Error('운영 원장이 다른 기기/탭에서 변경되었습니다. 최신 원장을 다시 불러온 뒤 적용하세요.');
+      const nr=(+d.stateRev||0)+1;
+      tx.set(ref,{
+        state,updated:now,stateRev:nr,strategyDefaultOverrides:strategyOverrides,strategyDefaultOverridesUpdated:now
+      },{merge:true});
+    });
     try{
       localStorage.setItem('qcockpit_v2_'+me.uid,JSON.stringify(state));
       localStorage.setItem(STRATEGY_DEFAULT_CACHE,JSON.stringify(strategyOverrides));
     }catch(e){}
-    await window.fb.setDoc(ref,{
-      state,updated:now,strategyDefaultOverrides:strategyOverrides,strategyDefaultOverridesUpdated:now
-    },{merge:true});
     if(status){
       status.className='cfgstatus ok';
       status.textContent='✓ '+touched+'개 세션 · '+changedFields+'개 설정 변경 · 모의 자동기록 '+generated+'건 재계산 대기';
