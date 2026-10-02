@@ -181,6 +181,10 @@ export async function onRequestGet({request,env}){
 
     const buys=res.trades.filter(x=>x.entryTime===liveTargetHm);
     const sells=res.trades.filter(x=>x.exitTime===liveTargetHm);
+    // 승격 뒤에도 원래 baseline 실시간 신호를 별도 원본으로 계속 남긴다.
+    // 운영 메인과 baseline이 같을 때는 Worker에서 중복 이벤트를 만들지 않는다.
+    const baselineBuyEvents=res.baselineTrades.filter(x=>x.entryTime===liveTargetHm);
+    const baselineSellEvents=res.baselineTrades.filter(x=>x.exitTime===liveTargetHm);
     const telegram={buySent:false,sellSent:false,buyMessageId:null,sellMessageId:null,buyError:null,sellError:null};
 
     // Telegram 전송 실패가 신호 원본 자체를 지우지 않게 한다.
@@ -201,6 +205,7 @@ export async function onRequestGet({request,env}){
     return new Response(JSON.stringify({
       ok:true,date:now.date,targetHm:liveTargetHm,shard,shards,universe:res.universe,mainVariant:res.mainVariant,
       buyEvents:buys,sellEvents:sells,trades:res.trades,
+      baselineBuyEvents,baselineSellEvents,baselineTrades:res.baselineTrades,
       shadowEvents:shadowEvents(res.shadow,liveTargetHm),
       telegram,errors:res.errors.length
     }),{headers:JH});
