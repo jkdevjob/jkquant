@@ -221,6 +221,7 @@ function blankTrade(c,date,params=DAY_EXIT_VARIANTS.baseline){
   return {
     id:String(c.code)+":"+String(c.signalTime),
     date,code:String(c.code||""),name:c.name||c.code,rank:+c.rank||0,
+    mainVariant:String(c.mainVariant||"baseline"),strategyParams:c.strategyParams||null,
     signalTime:+c.signalTime||0,signalPrice:+c.signalPrice||0,score:+c.score||0,
     sessionRet:+c.sessionRet||0,vwapSlope:+c.vwapSlope||0,volRatio:+c.volRatio||0,
     entryTime:addHm(+c.signalTime||0,1),entryPrice:null,status:"pending",
