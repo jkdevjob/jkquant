@@ -8031,10 +8031,15 @@ console.log('\n[117] 자산플랜 v1.28.0 — 기간마다 완전히 다른 매�
      && !/\$\("alphaCapitalInput"\)\.addEventListener\("change"/.test(pl)
      && /const cap=Math\.max\(1,Math\.round\(Number\(\$\('alphaCapitalInput'\)\.value\)\|\|0\)\)/.test(pl)
      && /\$\('startCapital'\)\.value=cap/.test(pl));
-  ok('새로고침 시 로컬 초기자금 우선 · 클라우드 예전값이 덮어쓰지 않음',
+  ok('새로고침 시 정상 로컬은 우선 · 로컬 거래이력 0건이면 클라우드 거래이력을 복구',
      /let local=null;try\{local=JSON\.parse\(localStorage\.getItem\(KEY\)\|\|"null"\)\}catch\(e\)\{\}/.test(pl)
-     && /if\(!local&&v\)\{/.test(pl)
-     && /else if\(local\)\{/.test(pl)
+     && /function planLedgerEventCount\(o\)/.test(pl)
+     && /localEvents===0&&cloudEvents>0/.test(pl)
+     && /KEY\+"_precloud_restore"/.test(pl)
+     && /localSave\(true\)/.test(pl)
+     && /클라우드 거래이력 복구/.test(pl)
+     && /planBootHydrating&&!force&&!x/.test(pl)
+     && /planBootHydrating=false/.test(pl)
      && /이 기기 저장값 유지/.test(pl)
      && /await cloudSave\(\)/.test(pl));
   ok('자산플랜 주문에 종목별 목표금액·오늘 매수금액·수수료포함 필요현금 표시',
