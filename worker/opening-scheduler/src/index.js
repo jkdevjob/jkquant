@@ -171,6 +171,29 @@ async function persistScan(env,{scheduled,lag,target,kst,parts,failed,partial}){
   return {events:events.length,added:stored.added,total:stored.total,scans:stored.scans};
 }
 
+async function sendOpeningCloseSummary(env,date){
+  const parts=[];
+  for(let shard=0;shard<SHARDS;shard++){
+    const u=baseUrl(env)+"/api/opening-monitor?serverHistory=1&shard="+shard+"&shards="+SHARDS+"&limit="+LIMIT;
+    const r=await fetch(u,{headers:{"x-monitor-key":env.MONITOR_KEY,"Accept":"application/json"}});
+    const j=await r.json().catch(()=>({}));
+    if(!r.ok||!j.ok)throw new Error("opening summary shard "+shard+" HTTP "+r.status+" "+String(j.error||""));
+    parts.push(j);
+  }
+  const trades=parts.flatMap(x=>Array.isArray(x.trades)?x.trades:[]).sort((a,b)=>(+a.entryTime||0)-(+b.entryTime||0));
+  const pn=trades.map(x=>Number(x.pnl)).filter(Number.isFinite),wins=pn.filter(x=>x>0).length,losses=pn.filter(x=>x<0).length;
+  const avg=pn.length?pn.reduce((s,x)=>s+x,0)/pn.length:0;
+  const lines=[
+    "후보/진입 "+trades.length+"건 · 청산 "+pn.length+"건 · 미청산 "+Math.max(0,trades.length-pn.length)+"건",
+    "승 "+wins+" · 패 "+losses+" · 승률 "+(pn.length?(wins/pn.length*100).toFixed(1):"0.0")+"%",
+    "실현 평균 순수익률 "+(avg>=0?"+":"")+avg.toFixed(2)+"% · 왕복 마찰비용 0.25% 반영"
+  ];
+  for(const x of trades)lines.push((x.name||x.code)+" · "+String(x.entryTime||"—")+"→"+String(x.exitTime||"—")+" · "+(Number.isFinite(+x.pnl)?((+x.pnl>=0?"+":"")+(+x.pnl).toFixed(2)+"%"):"진행중")+" · "+String(x.reason||""));
+  if(!trades.length)lines.push("오늘 조건 충족 모의거래 없음");
+  const r=await fetch(baseUrl(env)+"/api/scalping-alert",{method:"POST",headers:{"content-type":"application/json","x-monitor-key":env.MONITOR_KEY},body:JSON.stringify({strategy:"opening",stage:"summary",eventId:"opening:"+date+":close-summary",date,time:"09:31 KST",lines})});
+  const j=await r.json().catch(()=>({}));if(!r.ok||!j.ok)throw new Error(j.error||("opening summary HTTP "+r.status));return j;
+}
+
 async function runMinute(controller,env){
   if(!env.MONITOR_KEY)throw new Error("MONITOR_KEY secret missing");
   if(!env.SIGNAL_STORE)throw new Error("SIGNAL_STORE binding missing");
@@ -238,6 +261,7 @@ async function runMinute(controller,env){
   }
 
   console.log(JSON.stringify(result));
+  if(kst.hh===9&&kst.mm===31){ try{await sendOpeningCloseSummary(env,kst.date);}catch(e){console.error(JSON.stringify({type:"opening_close_summary_failed",date:kst.date,error:String(e.message||e)}));} }
 }
 
 // ── D-1 시초가 갭하락 과매도(opening_gapdown_v1) 연구용 모의체결 ──
