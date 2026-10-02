@@ -316,10 +316,19 @@ def soxl_meanrev(rows, p):
     return dv, decisions, nxt
 
 
+def drop_open_session(bars, now_utc=None):
+    """미국장이 아직 안 끝난 오늘 봉(장중 일봉)은 버린다 — 확정 종가로만 판단·장부를 쓴다. 뉴욕 16:15 이후면 그날 봉을 쓴다."""
+    from zoneinfo import ZoneInfo
+    ny = (now_utc or datetime.now(timezone.utc)).astimezone(ZoneInfo("America/New_York"))
+    today = ny.strftime("%Y-%m-%d")
+    closed = (ny.hour, ny.minute) >= (16, 15)
+    return {d: v for d, v in bars.items() if d < today or (d == today and closed)}
+
+
 def fetch_us(ticker):
     import FinanceDataReader as fdr
     d = fdr.DataReader(ticker, "2010-01-01")
-    return {str(i)[:10]: (float(r["Open"]), float(r["High"]), float(r["Low"]), float(r["Close"])) for i, r in d.iterrows() if float(r["Open"]) > 0}
+    return drop_open_session({str(i)[:10]: (float(r["Open"]), float(r["High"]), float(r["Low"]), float(r["Close"])) for i, r in d.iterrows() if float(r["Open"]) > 0})
 
 
 def d1_daily():

@@ -19,11 +19,11 @@ export function kstToday(ms=Date.now()){
 }
 const pct=(a,b)=>a>0&&b>0?(a/b-1)*100:null;
 
-async function ledger(env,date){
+export async function ledger(env,date,path="/gapdown"){
   const key=String(env.OPENING_MONITOR_KEY||env.AUTOTRADE_KEY||"").trim();
   if(!key)return null;
   try{
-    const r=await fetch(WORKER+"/gapdown?date="+encodeURIComponent(date),{headers:{"x-monitor-key":key}});
+    const r=await fetch(WORKER+path+"?date="+encodeURIComponent(date),{headers:{"x-monitor-key":key}});
     const j=await r.json().catch(()=>({}));
     return r.ok&&j.ok?j.ledger:null;
   }catch(e){return null;}
@@ -33,7 +33,7 @@ function stages(l){
   for(const e of (l&&Array.isArray(l.events)?l.events:[]))if(e&&e.stage)m[e.stage]=e.payload||{};
   return m;
 }
-async function quote(origin,sym){
+export async function quote(origin,sym){
   try{
     const r=await fetch(origin+"/api/quote?symbol="+encodeURIComponent(sym)+"&range=5d",{headers:{Accept:"application/json"}});
     const j=await r.json();
@@ -116,16 +116,6 @@ export function barsOfDay(hourly,day,nowMs=Date.now()){
   const s=Date.parse(day+"T09:00:00+09:00"),e=s+864e5;
   return (Array.isArray(hourly)?hourly:[]).filter(b=>{const t=Date.parse(String(b.candle_date_time_kst)+"+09:00");return t>=s&&t<e&&t<=nowMs;})
     .sort((a,b)=>String(a.candle_date_time_kst).localeCompare(String(b.candle_date_time_kst)));
-}
-// 어제(09시~오늘 09시) 확정 결과: candles[1] 이 어제 봉, 그 판단은 candles[2..21] 종가와 candles[2] 고가로 한다.
-export function coinDayResult(candles,hourly,ma=20){
-  const c=Array.isArray(candles)?candles:[];
-  if(c.length<ma+2)return null;
-  const h=coinHoldToday(c.slice(1),ma);
-  const d=c[1],day=String(d.candle_date_time_kst||"").slice(0,10);
-  const bars=barsOfDay(hourly,day,Infinity);
-  const r=coinBreakoutDay(h,bars,bars.length?+bars[bars.length-1].trade_price:+d.trade_price);
-  return r?{date:day,...r}:null;
 }
 // 탭별 오늘 요약 — 칸 수익률(칸 자금 기준) · 개별 매매 합계 · 거래 수 · 계좌 기여 · 오늘 왜 매매했는지/안 했는지 한 줄
 export const ACCOUNT_WEIGHT={opening:0.3,daytrading:0.3,crypto:0.3,soxl:0.4};
@@ -241,6 +231,14 @@ export async function onRequestGet({request,env}){
     const sx=await csvLast("claude-lab/soxl-mr-decisions.csv",1);
     out.tabs.soxl={rows:[soxlLive(nx,us,sx[0]||null)],
       note:"미국장 마감 확정 종가로 RSI(2)<20 · 200일 평균 위면 다음 미국장 시가 매수 → 오른 날 다음 시가 매도(최대 5일). 결과는 한국시각 다음 날 아침에 확정."};
+    // 하루 마감 장부(텔레그램 결과와 같은 원본, Worker Durable Object) — ①② 오늘 · ③ 마지막 한국 00:00 마감 · ④ 마지막 미국장 마감
+    const closedOf=async(k,days)=>{for(const i of days){const d=kstToday(Date.now()-i*864e5).date;const l=await ledger(env,d,"/claude");
+      const e=((l&&l.events)||[]).find(x=>x&&x.id==="close:"+k);if(e)return e.payload;}return null;};
+    const [c1,c2,c3,c4]=await Promise.all([closedOf("opening",[0]),closedOf("daytrading",[0]),closedOf("crypto",[1,2]),closedOf("soxl",[0,1,2,3,4])]);
+    if(out.tabs.opening)out.tabs.opening.closed=c1;
+    if(out.tabs.daytrading)out.tabs.daytrading.closed=c2;
+    if(out.tabs.crypto)out.tabs.crypto.closed=c3;
+    if(out.tabs.soxl)out.tabs.soxl.closed=c4;
     for(const k of Object.keys(ACCOUNT_WEIGHT))if(out.tabs[k])out.tabs[k].today=todaySummary(k,out.tabs[k],now.hm);
     applyKrSplit(out.tabs);
     return json(out);

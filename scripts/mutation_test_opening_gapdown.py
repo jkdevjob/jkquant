@@ -52,6 +52,7 @@ PY = [
     ("fair gpt cost differs", "claude_lab.py", "gpt=_side_summary(days, gby, cost), days=rows)", "gpt=_side_summary(days, gby, cost - 0.14), days=rows)"),
     ("fair window not gpt", "claude_lab.py", "    days = [d for d in cal if start <= d <= min(end, c_last)]\n", "    days = [d for d in cal if d <= min(end, c_last)]\n"),
     ("fair coin slot ignored", "claude_lab.py", "    if all(s is not None for _, s in nets):", "    if False:"),
+    ("us open bar kept", "claude_lab.py", "    return {d: v for d, v in bars.items() if d < today or (d == today and closed)}", "    return dict(bars)"),
     ("dip hit minutes", "backtest_crypto_orb.py", "int((hit - entry_t).total_seconds() // 60) + 5", "int((hit - entry_t).total_seconds() // 60)"),
 ]
 JS = [
@@ -71,13 +72,18 @@ JS = [
     ("live coin level today high", "claude-live.js", "level:+candles[1].high_price", "level:+candles[0].high_price"),
     ("soxl live same-session", "claude-live.js", "const started=!!(sess&&sess.date>nx.basedOn&&sess.open>0);", "const started=!!(sess&&sess.open>0);"),
     ("telegram no-trade hidden", "claude-telegram.js", 'else L.push("① 갭하락 과매도 — 매매 없음 ("+(dec.reason||"조건 맞는 종목 없음")+")");', ''),
-    ("coin yesterday lookahead", "claude-live.js", "const h=coinHoldToday(c.slice(1),ma);", "const h=coinHoldToday(c,ma);"),
     ("telegram weekly stale shown", "claude-telegram.js", "||(extra.weekStart&&w.weekStart!==extra.weekStart)", ""),
     ("telegram weekly keep as candidate", "claude-telegram.js", 'if(x.promotion&&x.promotion.code==="candidate")cand.push', 'if(x.promotion)cand.push'),
     ("today tab return is sum", "claude-live.js", "tabPct=v.length?sum/v.length:0;", "tabPct=sum;"),
     ("today kr not split", "claude-live.js", "if(o&&d&&!o.noTrade&&!d.noTrade)for", "if(false)for"),
     ("today failed order counted", "claude-live.js", 'const ok=rows.filter(r=>r.status!=="주문 실패");', "const ok=rows;"),
     ("today measurement counted", "claude-live.js", "    if(rows.length&&b&&!b.v2Signal){", "    if(false){"),
+    ("day coin uses bars after close", "_claude_day.js", "hourly = (c.hourly || []).filter(b => t(b) + 36e5 <= dayEnd);", "hourly = (c.hourly || []);"),
+    ("day coin realized before day", "_claude_day.js", "if (exitMs >= dayStart && exitMs < dayEnd && (stopBar || bars.length === 24)) {", "if (exitMs < dayEnd && (stopBar || bars.length === 24)) {"),
+    ("day opening measurement counted", "_claude_day.js", "  if (v2) { r.trades = done; r.open = open; }\n  else r.measure = rows;", "  { r.trades = done; r.open = open; }"),
+    ("day opening no cost", "_claude_day.js", "const net = pct(sell.avgPrice, buy.avgPrice) - COST.kr;", "const net = pct(sell.avgPrice, buy.avgPrice);"),
+    ("day soxl holiday ignored", "_claude_day.js", "if (!sess || sess.date !== nyDate) return", "if (!sess) return"),
+    ("day no-trade message skipped", "_claude_day.js", '  } else L.push("거래 없음");', "  }"),
     ("watchlist whitelist", "opening-gapdown.js", "    if(!w)continue;\n", "    if(!w){out.push({...r});continue;}\n"),
 ]
 
@@ -107,7 +113,7 @@ for label, filename, before, after in PY:
 for label, filename, before, after in JS:
     with tempfile.TemporaryDirectory() as tmp:
         folder = Path(tmp)
-        for name in ("_gapdown.js", "opening-gapdown.js", "claude-live.js", "claude-telegram.js"):
+        for name in ("_gapdown.js", "opening-gapdown.js", "claude-live.js", "claude-telegram.js", "_claude_day.js"):
             shutil.copy(API / name, folder / name)
         path = folder / filename
         src = path.read_text(encoding="utf-8")

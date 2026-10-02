@@ -393,6 +393,15 @@ class ClaudeLabTrend(unittest.TestCase):
         finally:
             lab.claude_trades, lab.gpt_trades = old
 
+    def test_us_open_session_dropped(self):
+        from datetime import datetime, timezone
+        bars = {"2026-10-01": 1, "2026-10-02": 2}
+        # 뉴욕 10/2 11:00(장중) → 10/2 봉 버림 · 16:20(마감 뒤) → 씀
+        self.assertEqual(sorted(lab.drop_open_session(bars, datetime(2026, 10, 2, 15, 0, tzinfo=timezone.utc))), ["2026-10-01"])
+        self.assertEqual(sorted(lab.drop_open_session(bars, datetime(2026, 10, 2, 20, 20, tzinfo=timezone.utc))), ["2026-10-01", "2026-10-02"])
+        # 겨울(EST): 20:20 UTC = 뉴욕 15:20 → 아직 장중
+        self.assertEqual(sorted(lab.drop_open_session({"2026-12-01": 1}, datetime(2026, 12, 1, 20, 20, tzinfo=timezone.utc))), [])
+
     def test_profit_factor(self):
         D = ["2026-10-05", "2026-10-06", "2026-10-07", "2026-10-08", "2026-10-09"]
         z = lab.goal_metrics({D[0]: 3.0, D[1]: -1.0, D[2]: -2.0, D[3]: 1.0}, D)
