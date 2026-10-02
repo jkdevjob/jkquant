@@ -5,12 +5,12 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>단타(클로드) — JK Quant</title>
 <style>
-:root{--bg:#0f1320;--surf:#171c2e;--surf2:#1e2540;--border:#2a3354;--border2:#34406a;--text:#e8ecf7;--dim:#9aa6c9;--faint:#6f7ba0;--accent:#d9825b;--green:#36d399;--red:#f87b8c;--gold:#f5c451}
+:root{--bg:#0f1320;--surf:#171c2e;--surf2:#1e2540;--border:#2a3354;--border2:#34406a;--text:#e8ecf7;--dim:#9aa6c9;--faint:#6f7ba0;--accent:#d9825b;--green:#36d399;--red:#f87b8c;--gold:#f5c451;--vio:#8b8cf0}
 *{box-sizing:border-box}html,body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Pretendard","Segoe UI",sans-serif}body{font-size:14px;line-height:1.55}a{color:inherit}
-.wrap{max-width:1180px;margin:0 auto;padding:0 16px}header{border-bottom:1px solid var(--border);background:rgba(15,19,32,.96);position:sticky;top:0;z-index:50;backdrop-filter:blur(10px)}
-.htop{height:64px;display:flex;align-items:center;justify-content:space-between}.brand .kicker{font-size:10px;letter-spacing:.12em;color:var(--accent);font-weight:900}.brand h1{font-size:19px;margin:1px 0 0}.brand .v{color:var(--gold)}.ver{font-size:12px;font-weight:400;color:var(--faint)}
-.jkmenu{position:relative}.jkmenu-btn{height:38px;width:44px;background:var(--surf2);border:1px solid var(--border);color:var(--text);border-radius:8px;font-size:18px;font-weight:700}
-.jkmenu-pop{position:absolute;right:0;top:45px;z-index:100;background:var(--surf);border:1px solid var(--border);border-radius:10px;padding:6px;min-width:166px;box-shadow:0 14px 34px rgba(0,0,0,.45);display:flex;flex-direction:column;gap:2px}
+.wrap{max-width:1180px;margin:0 auto;padding:0 16px}header{padding:20px 0 12px;border-bottom:1px solid var(--border);background:linear-gradient(180deg,#141a2e,var(--bg))}
+.htop{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}.htop>div:first-child{min-width:0}.kicker{font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--faint);font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.htop h1{font-size:22px;font-weight:800;letter-spacing:-.02em;margin:4px 0 0}.htop h1 .v{color:var(--gold)}.ver{font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle}.hright{display:flex;align-items:center;gap:9px;flex-shrink:0}.userbadge{display:flex;align-items:center;gap:7px;font-size:11.5px;color:var(--dim);white-space:nowrap}.userbadge img{width:22px;height:22px;border-radius:50%}.userbadge .lo{color:var(--vio);cursor:pointer;font-weight:700;background:none;border:none;font-size:11.5px;padding:0;white-space:nowrap;font-family:inherit}
+.jkmenu{position:relative;flex-shrink:0}.jkmenu-btn{height:40px;width:46px;display:inline-flex;align-items:center;justify-content:center;background:var(--surf2);border:1px solid var(--border);color:var(--text);border-radius:11px;font-size:19px;font-weight:700;line-height:1;cursor:pointer;letter-spacing:1px}.jkmenu-btn:hover{border-color:var(--vio);color:var(--vio)}
+.jkmenu-pop{position:absolute;right:0;top:47px;z-index:100;background:var(--surf);border:1px solid var(--border);border-radius:10px;padding:6px;min-width:166px;box-shadow:0 14px 34px rgba(0,0,0,.45);display:flex;flex-direction:column;gap:2px}
 .jkmenu-pop[hidden]{display:none}.jkmenu-pop a{display:flex;align-items:center;gap:9px;padding:10px 12px;border-radius:8px;color:var(--dim);text-decoration:none;font-weight:700}.jkmenu-pop a:hover,.jkmenu-pop a.cur{background:var(--surf2);color:var(--text)}.jkmenu-pop a.cur{color:var(--gold)}.mi{width:18px;text-align:center}
 main{padding:22px 0 70px}.hero h2{font-size:23px;margin:0 0 3px}.sub{color:var(--dim);font-size:12px}
 .card{background:var(--surf);border:1px solid var(--border);border-radius:12px;padding:14px;margin-top:12px}.card h3{margin:0 0 4px;font-size:16px}
@@ -30,7 +30,7 @@ table.doc td{padding:6px 6px}
 #gate{position:fixed;inset:0;background:linear-gradient(160deg,#0f1320,#171c2e);z-index:200;display:flex;align-items:center;justify-content:center;padding:24px;text-align:center}
 #gate .gbox{max-width:380px;width:100%}#gate .glogo{font-size:26px;font-weight:800;margin-bottom:6px}#gate .gsub{color:var(--dim);font-size:13px;margin-bottom:24px;line-height:1.6}
 #gbtn{display:inline-flex;align-items:center;gap:10px;background:#fff;color:#1f1f1f;border:none;border-radius:12px;padding:13px 20px;font-size:15px;font-weight:700;cursor:pointer;width:100%;justify-content:center}
-#gate .gnote{color:var(--faint);font-size:11.5px;margin-top:18px}.ubadge{font-size:11px;color:var(--dim);margin-right:8px}.ubadge button{background:none;border:none;color:var(--accent);font-weight:700;cursor:pointer;font-size:11px;padding:0}
+#gate .gnote{color:var(--faint);font-size:11.5px;margin-top:18px}
 </style>
 <script type="module">
   // 소유자만 보는 화면 — 단타(GPT)와 같은 Google 로그인 · /api/owner 판정. 자료 API 도 로그인 토큰 없이는 401.
@@ -51,8 +51,9 @@ table.doc td{padding:6px 6px}
   <div class="gnote"><a href="/" style="color:var(--faint)">← 운영 화면으로</a></div>
 </div></div>
 <header><div class="wrap"><div class="htop">
-  <div class="brand"><div class="kicker">JK QUANT · CLAUDE</div><h1>🤖 단타 <span class="v">(클로드)</span> <span class="ver" id="clVer">v2.9.1</span></h1></div>
-  <div style="display:flex;align-items:center"><span class="ubadge" id="ubadge"></span>
+  <div><div class="kicker">Claude Scalping</div><h1>JK <span class="v">퀀트</span> 단타 <span class="ver" id="clVer">v2.9.3</span></h1></div>
+  <div class="hright">
+    <div class="userbadge" id="userbadge"></div>
   <div class="jkmenu" id="jkmenuWrap">
     <button class="jkmenu-btn" aria-label="메뉴" onclick="jkMenuToggle(event)">三</button>
     <div class="jkmenu-pop" id="jkmenuPop" hidden>
@@ -425,18 +426,6 @@ function render(){
     }
     html+=weekCard();
     html+=trendCard();
-    var dl=lab.daily||{},rs=dl.rows||[];
-    var v=function(x){if(x==null)return "<span class='sub'>—</span>";if(x==="no_trade")return "<span class='sub'>매매 없음</span>";if(x==="pending")return "<span class='sub'>확정 대기</span>";return "<b class='"+cls(x)+"'>"+pct(x)+"</b>"};
-    var md=function(d){return d?esc(d.slice(5).replace("-","/")):"—"};
-    var grp="",rows="";
-    rs.forEach(function(x){
-      if(x.group!==grp){grp=x.group;rows+="<tr><td colspan='3' style='background:var(--surf2);color:var(--gold);font-weight:800'>"+esc(grp)+"</td></tr>"}
-      rows+="<tr><td class='nm'>"+(x.side==="claude"?"🤖 ":"<span class='sub'>GPT</span> ")+esc(x.name)+(x.plan?"<div class='sub'>오늘: "+esc(x.plan)+"</div>":"")+"</td>"+
-        "<td>"+v(x.prev)+"<div class='sub'>"+md(x.prevDate)+"</div></td><td>"+v(x.last)+"<div class='sub'>"+md(x.lastDate)+"</div></td></tr>";
-    });
-    html+="<div class='card'><h3>📅 전일 · 당일 결과 — 모든 전략</h3><div class='sub'>숫자는 순손익 %. 시장마다 자기 마지막 두 거래일(코인은 09시 기준 하루). 갱신 "+esc((dl.generatedAt||"").slice(0,16).replace("T"," "))+"</div>"+
-      "<div class='tw'><table class='board'><thead><tr><th>전략 · 오늘 계획</th><th>전일</th><th>당일</th></tr></thead><tbody>"+(rows||"<tr><td colspan='3' class='sub'>아직 기록이 없습니다.</td></tr>")+"</tbody></table></div>"+
-      "<p class='note'>"+esc(dl.note||"")+" 결과는 매일 저녁(18:40·23:40)과 아침 07:30 에 다시 계산됩니다.</p></div>";
     var pp=(lab.paper||{}),sm=pp.summary||{},NM={opening_d1v2:"① D-1 갭하락 과매도 v2",daytrading_etf:"② 코스닥150 레버리지 하락일 야간",coin_bo_btc:"③ BTC 고가 돌파 하루 단타 (칸 전액)",coin_bo_eth:"③ ETH 고가 돌파 하루 단타 (칸 전액)",us_soxl:"④ SOXL 과매도 반등 ≤5일 (칸 전액)",account:"🏦 전체 계좌"};
     var prow=Object.keys(NM).map(function(k){var z=sm[k]||{},e=z.expected||{},st=z.status||{};
       return "<tr><td class='nm'>"+esc(NM[k])+"<div class='sub'>"+(z.first?esc(z.first)+" ~ "+esc(z.last):"기록 시작 전"+(z.start?" · "+esc(z.start)+" 부터":""))+"</div></td><td>"+(z.tradeDays||0)+"<span class='sub'>/"+(z.days||0)+"일</span></td><td class='win'>"+(z.plus1Days||0)+"</td>"+
@@ -536,14 +525,14 @@ function googleLogin(){var e=document.getElementById("gate_err");e.textContent="
 function doLogout(){window.fb.signOut(window.fb.auth)}
 function boot(){
   window.fb.onAuthStateChanged(window.fb.auth,async function(user){
-    ME=user||null;var ub=document.getElementById("ubadge");
+    ME=user||null;var ub=document.getElementById("userbadge");
     if(!user){if(ub)ub.innerHTML="";J=null;LIVE=null;document.getElementById("body").innerHTML="";gateShow("이 화면은 <b>소유자 계정</b>만 볼 수 있습니다.");return}
     var ok=false;
     try{var r=await fetch("/api/owner",{cache:"no-store",headers:{Authorization:"Bearer "+(await user.getIdToken())}});var j=await r.json();ok=!!j.isOwner}catch(e){}
     if(!ok){gateShow("<b>"+esc(user.email||"")+"</b> 계정에는 접근 권한이 없습니다.");var b=document.getElementById("gbtn");b.textContent="다른 계정으로 로그인";
       b.onclick=function(){window.fb.signOut(window.fb.auth).then(googleLogin)};return}
     document.getElementById("gate").style.display="none";
-    if(ub)ub.innerHTML=esc(user.email||"")+" · <button onclick='doLogout()'>로그아웃</button>";
+    if(ub)ub.innerHTML=(user.photoURL?"<img src=\""+esc(user.photoURL)+"\" alt=\"\">":"")+"<span>"+esc(user.displayName||user.email||"")+"</span> · <button class=\"lo\" onclick=\"doLogout()\">로그아웃</button>";
     load();
   });
 }
