@@ -10960,10 +10960,10 @@ console.log('[GAPDOWN D-1 / DIP24 D-3] 연구용 모의체결 경로 안전장�
   const scl2=fs.readFileSync(__d+'/claude.html','utf8');
   const orApi=fs.readFileSync(__d+'/functions/api/claude-lab.js','utf8');
   const gptScl=fs.readFileSync(__d+'/scalping.html','utf8'),gptApi=fs.readFileSync(__d+'/functions/api/opening-research.js','utf8');
-  ok('단타(클로드)는 별도 페이지: GPT 단타 화면·API 에 클로드 내용 없음 · 모든 페이지 메뉴에서 단타 바로 아래',
+  ok('단타(클로드)는 별도 페이지: GPT 단타 화면·API 에 클로드 내용 없음 · 모든 페이지 메뉴에서 단타(지피티) 바로 아래',
      !/gapdown|D-1 갭하락|etfOvernight|claude-lab/.test(gptScl)&&!/gapdown|etf-overnight|claude-lab/.test(gptApi)
      &&['index.html','plan.html','backtest.html','scalping.html','ipo.html','job.html','admin.html','claude.html']
-       .every(f=>/<a href="\/scalping"[^>]*><span class="mi">⚡<\/span>단타<\/a>\s*\n\s*<a href="\/claude"[^>]*><span class="mi">🤖<\/span>단타\(클로드\)<\/a>/.test(fs.readFileSync(__d+'/'+f,'utf8'))));
+       .every(f=>/<a href="\/scalping"[^>]*><span class="mi">⚡<\/span>단타\(지피티\)<\/a>\s*\n\s*<a href="\/claude"[^>]*><span class="mi">🤖<\/span>단타\(클로드\)<\/a>/.test(fs.readFileSync(__d+'/'+f,'utf8'))));
   ok('단타(클로드) 탭이 GPT 단타와 같은 4개(시초가·데이트레이딩·비트코인·SOXL) + 합산 · 탭마다 GPT 같은 기간 비교',
      ['today','opening','daytrading','crypto','soxl','all'].every(t=>new RegExp('data-tab="'+t+'"').test(scl2))
      &&scl2.indexOf('data-tab="today"')<scl2.indexOf('data-tab="opening"')&&/var J=null,TAB="today";/.test(scl2)

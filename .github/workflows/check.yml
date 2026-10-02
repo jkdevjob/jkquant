@@ -82,6 +82,9 @@ jobs:
       - name: 단타 탭 단독사용 UI·위험지표 검사
         run: node scripts/test_scalping_self_contained_ui.mjs
 
+      - name: GPT·클로드 단타 대결 규칙 값·변이 검사
+        run: node scripts/test_scalping_duel.mjs
+
       - name: BTC·SOXL 장중 모의장부 저장·표시 검사
         run: node scripts/test_global_paper_ledger.mjs
 
@@ -130,6 +133,8 @@ jobs:
           node --input-type=module --check < functions/api/scalping-review.js
           node --input-type=module --check < functions/api/scalping-daily-results.js
           node --input-type=module --check < functions/api/daily1-shadow.js
+          node --input-type=module --check < functions/api/_scalping_duel.js
+          node --input-type=module --check < functions/api/scalping-duel.js
           node --input-type=module --check < worker/opening-scheduler/src/index.js
           node --input-type=module --check < worker/daytrading-scheduler/src/index.js
           node --input-type=module --check < worker/global-intraday-scheduler/src/index.js
