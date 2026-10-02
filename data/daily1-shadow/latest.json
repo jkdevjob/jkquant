@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "generatedAt": "2026-10-02T15:26:37.224193+09:00",
+  "generatedAt": "2026-10-02T20:37:30.789192+09:00",
   "mode": "prospective-shadow-paper",
   "paperStart": "2026-10-01",
   "designEnd": "2026-09-30",
@@ -12,9 +12,9 @@
   "promotionRule": "No automatic promotion. New version only after prospective review; never rewrite historical rules.",
   "latestSourceDates": {
     "opening": "2026-10-01",
-    "daytrading": "2026-10-01",
+    "daytrading": "2026-10-02",
     "crypto": "2026-10-01",
-    "soxl": null
+    "soxl": "2026-10-01"
   },
   "strategies": {
     "opening": {
@@ -267,25 +267,30 @@
         "plus5WeeksPerYear": 0.0
       },
       "outOfSample": {
-        "days": 1,
-        "trades": 3,
-        "tradeDays": 1,
-        "winRatePct": 66.66666666666666,
-        "avgTradePnlPct": 0.5500000000000007,
-        "avgDailyReturnPct": 0.5500000000000007,
+        "days": 2,
+        "trades": 6,
+        "tradeDays": 2,
+        "winRatePct": 50.0,
+        "avgTradePnlPct": -0.05186625194401029,
+        "avgDailyReturnPct": -0.05186625194401029,
         "plus1Days": 0,
         "plus1DayRatePct": 0.0,
         "plus5Weeks": 0,
-        "weeklyAvgPct": 0.550000000000006,
-        "lossDayAvgPct": 0.0,
-        "worstDayPct": 0.5500000000000007,
-        "profitFactor": 2.5714285714285725,
-        "compoundReturnPct": 0.550000000000006,
-        "maxDrawdownPct": 0.0,
+        "weeklyAvgPct": -0.10732803265939284,
+        "lossDayAvgPct": -0.6537325038880213,
+        "worstDayPct": -0.6537325038880213,
+        "profitFactor": 0.9012071391542659,
+        "compoundReturnPct": -0.10732803265939284,
+        "maxDrawdownPct": -0.653732503888016,
         "daily": [
           {
             "date": "2026-10-01",
             "returnPct": 0.5500000000000007,
+            "trades": 3
+          },
+          {
+            "date": "2026-10-02",
+            "returnPct": -0.6537325038880213,
             "trades": 3
           }
         ],
@@ -510,6 +515,78 @@
           "frictionPct": 0.25,
           "pnlPct": 1.3500000000000014,
           "reason": "take_profit"
+        },
+        {
+          "date": "2026-10-02",
+          "strategy": "daytrading",
+          "strategyVersion": "day_rs_vwap_reclaim_v1",
+          "code": "010170",
+          "name": "대한광통신",
+          "rank": 11,
+          "signalTime": 1010,
+          "entryTime": 1011,
+          "entryPrice": 17910.0,
+          "sessionRetPct": 2.5186033199771085,
+          "marketRetPct": 0.8126004980494095,
+          "relativeStrengthPctPoint": 1.706002821927699,
+          "signalVwap": 17898.340574232683,
+          "volumeRatio": 1.3986253612896176,
+          "decisionReason": "relative_strength+vwap_reclaim+prior3_break+volume",
+          "sample": "outOfSample",
+          "exitTime": 1031,
+          "exitPrice": 17766.72,
+          "grossPnlPct": -0.7999999999999896,
+          "frictionPct": 0.25,
+          "pnlPct": -1.0499999999999896,
+          "reason": "stop"
+        },
+        {
+          "date": "2026-10-02",
+          "strategy": "daytrading",
+          "strategyVersion": "day_rs_vwap_reclaim_v1",
+          "code": "036930",
+          "name": "주성엔지니어링",
+          "rank": 14,
+          "signalTime": 1018,
+          "entryTime": 1019,
+          "entryPrice": 248500.0,
+          "sessionRetPct": 2.4691358024691468,
+          "marketRetPct": 1.1098497470498625,
+          "relativeStrengthPctPoint": 1.3592860554192843,
+          "signalVwap": 248790.66291254445,
+          "volumeRatio": 3.5254534015373253,
+          "decisionReason": "relative_strength+vwap_reclaim+prior3_break+volume",
+          "sample": "outOfSample",
+          "exitTime": 1027,
+          "exitPrice": 246512.0,
+          "grossPnlPct": -0.8000000000000007,
+          "frictionPct": 0.25,
+          "pnlPct": -1.0500000000000007,
+          "reason": "stop"
+        },
+        {
+          "date": "2026-10-02",
+          "strategy": "daytrading",
+          "strategyVersion": "day_rs_vwap_reclaim_v1",
+          "code": "086790",
+          "name": "하나금융지주",
+          "rank": 89,
+          "signalTime": 1036,
+          "entryTime": 1037,
+          "entryPrice": 128600.0,
+          "sessionRetPct": 1.09976433621366,
+          "marketRetPct": 0.07837090334907315,
+          "relativeStrengthPctPoint": 1.0213934328645868,
+          "signalVwap": 128501.99780371186,
+          "volumeRatio": 1.7322486025790027,
+          "decisionReason": "relative_strength+vwap_reclaim+prior3_break+volume",
+          "sample": "outOfSample",
+          "exitTime": 1136,
+          "exitPrice": 129100.0,
+          "grossPnlPct": 0.38880248833592645,
+          "frictionPct": 0.25,
+          "pnlPct": 0.13880248833592645,
+          "reason": "time_exit"
         }
       ]
     },
@@ -2772,7 +2849,7 @@
       "paperStart": "2026-10-01",
       "status": "collecting",
       "design": {
-        "days": 0,
+        "days": 4,
         "trades": 0,
         "tradeDays": 0,
         "winRatePct": 0.0,
@@ -2787,12 +2864,33 @@
         "profitFactor": 0.0,
         "compoundReturnPct": 0.0,
         "maxDrawdownPct": 0.0,
-        "daily": [],
+        "daily": [
+          {
+            "date": "2026-09-25",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-09-28",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-09-29",
+            "returnPct": 0.0,
+            "trades": 0
+          },
+          {
+            "date": "2026-09-30",
+            "returnPct": 0.0,
+            "trades": 0
+          }
+        ],
         "plus1DaysPerYear": 0.0,
         "plus5WeeksPerYear": 0.0
       },
       "outOfSample": {
-        "days": 0,
+        "days": 1,
         "trades": 0,
         "tradeDays": 0,
         "winRatePct": 0.0,
@@ -2807,7 +2905,13 @@
         "profitFactor": 0.0,
         "compoundReturnPct": 0.0,
         "maxDrawdownPct": 0.0,
-        "daily": [],
+        "daily": [
+          {
+            "date": "2026-10-01",
+            "returnPct": 0.0,
+            "trades": 0
+          }
+        ],
         "plus1DaysPerYear": 0.0,
         "plus5WeeksPerYear": 0.0
       },
@@ -2817,25 +2921,30 @@
     }
   },
   "equalWeightPortfolio": {
-    "days": 1,
-    "trades": 1,
-    "tradeDays": 1,
+    "days": 2,
+    "trades": 2,
+    "tradeDays": 2,
     "winRatePct": 0.0,
-    "avgTradePnlPct": -0.10509335154826813,
-    "avgDailyReturnPct": -0.10509335154826813,
+    "avgTradePnlPct": -0.13426323876013674,
+    "avgDailyReturnPct": -0.13426323876013674,
     "plus1Days": 0,
     "plus1DayRatePct": 0.0,
     "plus5Weeks": 0,
-    "weeklyAvgPct": -0.10509335154826882,
-    "lossDayAvgPct": -0.10509335154826813,
-    "worstDayPct": -0.10509335154826813,
+    "weeklyAvgPct": -0.2683547201706493,
+    "lossDayAvgPct": -0.13426323876013674,
+    "worstDayPct": -0.16343312597200532,
     "profitFactor": 0.0,
-    "compoundReturnPct": -0.10509335154826882,
-    "maxDrawdownPct": -0.10509335154826882,
+    "compoundReturnPct": -0.2683547201706493,
+    "maxDrawdownPct": -0.2683547201706493,
     "daily": [
       {
         "date": "2026-10-01",
         "returnPct": -0.10509335154826813,
+        "trades": 1
+      },
+      {
+        "date": "2026-10-02",
+        "returnPct": -0.16343312597200532,
         "trades": 1
       }
     ],
