@@ -8036,9 +8036,9 @@ console.log('\n[117] 자산플랜 v1.28.0 — 기간마다 완전히 다른 매�
      && /function planLedgerEventCount\(o\)/.test(pl)
      && /localEvents===0&&cloudEvents>0/.test(pl)
      && /KEY\+"_precloud_restore"/.test(pl)
-     && /localSave\(true\)/.test(pl)
+     && /planForceLocalSave=true;try\{localSave\(\);\}finally\{planForceLocalSave=false;\}/.test(pl)
      && /클라우드 거래이력 복구/.test(pl)
-     && /planBootHydrating&&!force&&!x/.test(pl)
+     && /planBootHydrating&&!planForceLocalSave&&!x/.test(pl)
      && /planBootHydrating=false/.test(pl)
      && /이 기기 저장값 유지/.test(pl)
      && /await cloudSave\(\)/.test(pl));
