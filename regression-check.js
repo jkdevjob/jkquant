@@ -8034,7 +8034,9 @@ console.log('\n[117] 자산플랜 v1.28.0 — 기간마다 완전히 다른 매�
   ok('새로고침 시 정상 로컬은 우선 · 로컬 거래이력 0건이면 클라우드 거래이력을 복구',
      /let local=null;try\{local=JSON\.parse\(localStorage\.getItem\(KEY\)\|\|"null"\)\}catch\(e\)\{\}/.test(pl)
      && /function planLedgerEventCount\(o\)/.test(pl)
-     && /localEvents===0&&cloudEvents>0/.test(pl)
+     && /function planLedgerHasActivity\(o\)/.test(pl)
+     && /!localActive&&cloudActive/.test(pl)
+     && /KEY\+"_cloud_recovery"/.test(pl)
      && /KEY\+"_precloud_restore"/.test(pl)
      && /planForceLocalSave=true;try\{localSave\(\);\}finally\{planForceLocalSave=false;\}/.test(pl)
      && /클라우드 거래이력 복구/.test(pl)
