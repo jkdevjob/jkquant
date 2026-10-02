@@ -2988,7 +2988,7 @@ async function cloudLoad(user){
     }else{
       planStateCloudHydrated=true;
     }
-  }catch(e){planCloudHydrated=false;console.error("plan cloud load",e);}
+  }catch(e){planCloudHydrated=false;console.error("plan cloud load",e);throw e;}
 }
 function userBadge(user){
   const b=$("userbadge");
@@ -3087,9 +3087,16 @@ onAuthStateChanged(auth,async user=>{
     JKAccess.show(acc.state,{user,prof:acc.prof,login:()=>window.planLoginImpl(),logout:()=>signOut(auth),
       retry:()=>location.reload(),saveNote:n=>JKAccess.saveNote(user,planFb,n)}); };
   if(!await JKAccess.admit(user,planFb,{lock:planLock})) return;
-  planGate(true);
-  userBadge(user);await cloudLoad(user);
+  userBadge(user);
+  try{
+    await cloudLoad(user); // Firebase 원장을 먼저 읽은 뒤에만 본문을 연다.
+  }catch(e){
+    planGate(false);
+    const er=$("gerr");if(er)er.textContent='Firebase DB 원장을 불러오지 못했습니다. 브라우저 저장본으로 대신 열지 않습니다.';
+    return;
+  }
   planBootHydrating=false;
+  planGate(true);
   await refreshLive();
   if(requestedAssetSessionId){
     const q=assetPlanBox().sessions.find(x=>x.id===requestedAssetSessionId);
