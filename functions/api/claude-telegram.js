@@ -174,7 +174,7 @@ export async function onRequestPost({request,env}){
   if(!(await claim("claude:"+date+":"+kind)))return json({ok:true,duplicate:true});
   try{
     const origin=new URL(request.url).origin;
-    const live=await fetch(origin+"/api/claude-live",{headers:{Accept:"application/json"}}).then(r=>r.json()).catch(()=>null);
+    const live=await fetch(origin+"/api/claude-live",{headers:{Accept:"application/json","x-monitor-key":String(env.OPENING_MONITOR_KEY||env.AUTOTRADE_KEY||"").trim()}}).then(r=>r.json()).catch(()=>null);
     const extra={};
     if(kind==="duel")extra.duel=b.duel;
     if(kind==="weekly"){

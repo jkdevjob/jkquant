@@ -90,6 +90,10 @@ JS = [
     ("day opening no cost", "_claude_day.js", "const net = pct(sell.avgPrice, buy.avgPrice) - COST.kr;", "const net = pct(sell.avgPrice, buy.avgPrice);"),
     ("day soxl holiday ignored", "_claude_day.js", "if (!sess || sess.date !== nyDate) return", "if (!sess) return"),
     ("day no-trade message skipped", "_claude_day.js", '  } else L.push("거래 없음");', "  }"),
+    ("auth live open", "claude-live.js", 'if(!(await claudeAuthorized(request,env)))return json({ok:false,error:"unauthorized"},401);', ""),
+    ("auth lab open", "claude-lab.js", 'if(!(await claudeAuthorized(request,env)))return new Response', 'if(false)return new Response'),
+    ("auth any token", "_claude_auth.js", "return !!email && ownersOf(env).includes(String(email).toLowerCase());", "return !!email;"),
+    ("auth empty key", "_claude_auth.js", "return !!want && got === want;", "return got === want;"),
     ("watchlist whitelist", "opening-gapdown.js", "    if(!w)continue;\n", "    if(!w){out.push({...r});continue;}\n"),
 ]
 
@@ -119,7 +123,7 @@ for label, filename, before, after in PY:
 for label, filename, before, after in JS:
     with tempfile.TemporaryDirectory() as tmp:
         folder = Path(tmp)
-        for name in ("_gapdown.js", "opening-gapdown.js", "claude-live.js", "claude-telegram.js", "_claude_day.js"):
+        for name in ("_gapdown.js", "opening-gapdown.js", "claude-live.js", "claude-telegram.js", "_claude_day.js", "_claude_auth.js", "claude-lab.js"):
             shutil.copy(API / name, folder / name)
         path = folder / filename
         src = path.read_text(encoding="utf-8")

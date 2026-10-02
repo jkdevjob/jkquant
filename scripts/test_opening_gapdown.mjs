@@ -9,8 +9,11 @@ const F = await import(pathToFileURL(path.join(dir, "opening-gapdown.js")).href)
 const LV = await import(pathToFileURL(path.join(dir, "claude-live.js")).href);
 const TG = await import(pathToFileURL(path.join(dir, "claude-telegram.js")).href);
 const DAY = await import(pathToFileURL(path.join(dir, "_claude_day.js")).href);
+const AUTH = await import(pathToFileURL(path.join(dir, "_claude_auth.js")).href);
+const LAB = await import(pathToFileURL(path.join(dir, "claude-lab.js")).href);
 let n = 0;
-const t = (name, fn) => { fn(); n++; };
+const pending = [];
+const t = (name, fn) => { const r = fn(); if (r && r.then) pending.push(r.then(() => { n++; })); else n++; };
 const near = (a, b) => assert.ok(Math.abs(a - b) < 1e-9, `${a} != ${b}`);
 
 const rule = { gapMax: -2, gapFloor: -29, picks: 3 };
@@ -280,4 +283,19 @@ t("duel telegram: daily summary + empty start", () => {
     && t.includes("③ 비트코인: 10-09 🤖 +0.90% vs -0.30% 🤖 승") && t.includes("④ SOXL: 기록 없음"));
   assert.ok(TG.compose("duel", "2026-10-02", null, { duel: { start: "2026-10-05" } }).includes("아직 같은 날 기록 없음 — 2026-10-05 부터"));
 });
+t("claude auth: owner token or server key only; APIs answer 401 without it", async () => {
+  const env = { OWNER_EMAIL: "me@x.com", OPENING_MONITOR_KEY: "k1" };
+  const req = h => new Request("https://jkquant.pages.dev/api/claude-live", { headers: h });
+  const look = async t => (t === "good" ? "Me@x.com" : "other@y.com");
+  assert.equal(await AUTH.claudeAuthorized(req({ Authorization: "Bearer good" }), env, look), true);
+  assert.equal(await AUTH.claudeAuthorized(req({ Authorization: "Bearer bad" }), env, look), false);
+  assert.equal(await AUTH.claudeAuthorized(req({}), env, look), false);
+  assert.equal(await AUTH.claudeAuthorized(req({ "x-monitor-key": "k1" }), env, look), true);
+  assert.equal(await AUTH.claudeAuthorized(req({ "x-monitor-key": "nope" }), env, look), false);
+  assert.deepEqual(AUTH.ownersOf({}), ["jk82investing@gmail.com"]);
+  assert.equal(await AUTH.claudeAuthorized(req({}), { OWNER_EMAIL: "me@x.com" }, look), false);       // 서버키 미설정이어도 빈 값으로 통과 안 됨
+  assert.equal((await LV.onRequestGet({ request: req({}), env })).status, 401);
+  assert.equal((await LAB.onRequestGet({ request: req({}), env })).status, 401);
+});
+await Promise.all(pending);
 console.log(`opening gap-down JS: ${n} ALL PASS`);

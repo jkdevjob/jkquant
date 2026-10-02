@@ -10990,7 +10990,7 @@ console.log('[GAPDOWN D-1 / DIP24 D-3] 연구용 모의체결 경로 안전장�
        /function tabPage\(tab,T,gd,et,wl\)/.test(scl2)&&/opsBoard\(tab\)\+docCard\(tab\)\+planCard\(tab,T,wl\)\+buyCard\(tab\)\+sellCard\(tab\)\+liveCard\(tab\)/.test(scl2)
        &&/html\+=shadowCard\(tab\)\+reviewCard\(tab\)\+paperCard\(tab\);/.test(scl2)
        &&['① 전략 · 종목 선정 규칙','② 오늘 종목 선정 · 감시','③ 매수 타이밍','④ 매도 · 손절 · 리스크','⑤ 오늘 장중 모의 매매이력','⑥ 그림자 전략','⑦ 누적 모의 매매이력','⑧ 실행 품질'].every(x=>scl2.includes(x))
-       &&/setInterval\(function\(\)\{if\(!document\.hidden\)loadLive\(\)\},60000\)/.test(scl2)
+       &&/setInterval\(function\(\)\{if\(!document\.hidden&&ME\)loadLive\(\)\},60000\)/.test(scl2)
        &&/out\.tabs\[k\]\.today=todaySummary\(k,out\.tabs\[k\],now\.hm\);\n\s*applyKrSplit\(out\.tabs\);/.test(fs.readFileSync(__d+'/functions/api/claude-live.js','utf8'))&&/body\.innerHTML=statusBar\(\)\+html;/.test(scl2)
        &&['opening','daytrading','crypto','soxl'].every(k=>new RegExp('\\b'+k+':\\{title:').test(scl2)));
   }
@@ -11024,6 +11024,13 @@ console.log('[GAPDOWN D-1 / DIP24 D-3] 연구용 모의체결 경로 안전장�
        /DUEL_START = "2026-10-05"/.test(lp)&&/    days = sorted\(mine & theirs\)/.test(lp)&&/report\["duel"\] = duel\(\)/.test(lp)
        &&/data-tab="duel"/.test(scl2)&&/function duelPage\(\)/.test(scl2)&&/\$OPENING_WORKER\/claude\?date=\$DATE/.test(wf)
        &&/\[ "\$HM" -ge 1840 \]/.test(wf)&&/MARK="data\/claude-lab\/duel-sent\/\$D"/.test(wf)&&/claude_lab\.py --duel-payload > duel\.json/.test(wf));
+  }
+  { const lv3=fs.readFileSync(__d+'/functions/api/claude-live.js','utf8'),lb3=fs.readFileSync(__d+'/functions/api/claude-lab.js','utf8'),tg3=fs.readFileSync(__d+'/functions/api/claude-telegram.js','utf8');
+    ok('단타(클로드) 소유자만: Google 로그인 + /api/owner 판정 화면 · 자료 API 는 소유자 토큰/서버키 없으면 401 · 서버끼리 호출은 감시키',
+       /<div id="gate">/.test(scl2)&&/fetch\("\/api\/owner"/.test(scl2)&&/headers:await authHeaders\(\)/.test(scl2)
+       &&/if\(!\(await claudeAuthorized\(request,env\)\)\)return json\(\{ok:false,error:"unauthorized"\},401\);/.test(lv3)
+       &&/if\(!\(await claudeAuthorized\(request,env\)\)\)return new Response/.test(lb3)
+       &&/fetch\(origin\+"\/api\/claude-live",\{headers:\{Accept:"application\/json","x-monitor-key":/.test(tg3));
   }
   ok('클로드 모의투자 장부: 날짜별 한 번만 쓰기 · 요약은 장부 값만 · 화면 누적표 · workflow 저장',
      /def write_once\(path, obj\):\n[\s\S]{0,200}if path\.exists\(\):\n\s*return False/.test(fs.readFileSync(__d+'/scripts/claude_lab.py','utf8'))
