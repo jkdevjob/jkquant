@@ -972,8 +972,8 @@ function activeAssetSession(){
 }
 function assetPaperMode(){const x=activeAssetSession();return !!(x&&x.paper);}
 function cloneObj(v){return JSON.parse(JSON.stringify(v));}
-/* 운영 state와 5년플랜 원장은 timestamps만 보지 않는다.
-   다른 기기/탭의 거래기록을 전부 포함하지 못하는 쓰기는 클라우드에서 차단한다. */
+/* 운영 state와 5년플랜 원장은 Firebase DB가 정본이다.
+   동시 수정은 마지막으로 읽은 DB snapshot을 기준으로 3-way rebase해 서로 다른 변경을 보존한다. */
 function planOpHistoryMap(st){
   const m=new Map(),boxes=['inf','vr','ma','ivs','dca','asap'];
   if(!st||typeof st!=='object')return m;
@@ -2965,9 +2965,7 @@ async function cloudLoad(user){
       if($("saveState"))$("saveState").textContent="Firebase DB 원장 불러옴";
     }else{
       planDbState=null;
-      // DB 원장이 없을 때만 현재 설정 캐시를 사용한다. 캐시에는 거래이력이 없다.
-      let local=null;try{local=planSettingsCacheCopy(JSON.parse(localStorage.getItem(KEY)||'null'));}catch(e){}
-      if(local)apply(local);
+      apply(defaults()); // 로그인 계정은 DB가 없을 때도 브라우저 state를 원장으로 사용하지 않는다.
       if($("saveState"))$("saveState").textContent="Firebase 원장 없음 · 첫 저장 시 DB 생성";
     }
     planRecoveryRender();
@@ -2986,7 +2984,6 @@ async function cloudLoad(user){
     if(opState&&opState.inf&&opState.vr){
       liveState=cloneObj(opState);planStateDbBase=cloneObj(opState);liveStateSource="Firebase 운영 원장";planStateCloudRev=+d.stateV2Rev||0;planStateHistorySig=planOpHistorySig(opState);planStateCloudHydrated=true;
       ensureLiveBoxes();
-      writeAssetSessionLocal(); // 거래이력 제외 설정 캐시만 저장
       if((!d.stateV2||migrateLiveInfOperatingDefaults())&&!planStateConflict)await saveOperatingState();
     }else{
       planStateCloudHydrated=true;
@@ -3001,14 +2998,8 @@ function userBadge(user){
   $("logoutBtn").addEventListener("click",()=>signOut(auth));
 }
 
-const d=defaults();let saved=null;try{saved=planSettingsCacheCopy(JSON.parse(localStorage.getItem(KEY)||"null"))}catch(e){}
-if(saved && !(Number(saved.startCapital)>0)) saved.startCapital=20000;
-if(saved && saved.aCash===undefined) saved.aCash=20000;
-if(saved && Number(saved.startCapital)===30000 && Number(saved.aCash)===30000
-   && !(Number(saved.aTeclQty)>0) && !(Number(saved.aTqqqQty)>0) && !(Number(saved.aSgovQty)>0)){
-  saved.startCapital=20000;saved.aCash=20000;
-}
-apply(saved||d);$("slDate").value=todayISO();renderSessionSelectors();renderLedger();renderAlphaLedger();render();renderAssetSessions();
+const d=defaults();
+apply(d);$("slDate").value=todayISO();renderSessionSelectors();renderLedger();renderAlphaLedger();render();renderAssetSessions();
 ["startDate","targetDate","startCapital","targetCapital","monthlyAdd","targetIncome","stageMode","balMM","balVR","balQLD","balSGOV","cagrLow","cagrBase","cagrHigh","incomeBasis","incomeYield","sgovYield","extraWithdraw"].forEach(id=>$(id).addEventListener("change",render));
 $("assetSessionAdd").addEventListener("click",openAssetSessionModal);
 $("assetSessionEdit").addEventListener("click",editAssetSession);
