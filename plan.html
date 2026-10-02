@@ -196,6 +196,9 @@ th:first-child,td:first-child{text-align:left}
 .asset-session-chip.on{background:var(--accent);border-color:var(--accent);color:#fff}
 .asset-session-chip .paper{color:var(--gold);margin-left:4px}.asset-session-chip .x{color:var(--red);margin-left:7px;font-weight:900}
 .asset-session-state{font-size:10.5px;color:var(--dim);margin-top:7px}.asset-session-state.paper{color:var(--gold)}
+.plan-recovery{margin:-2px 0 12px;padding:12px 14px;border:1px solid rgba(245,196,81,.48);border-radius:12px;background:rgba(245,196,81,.075)}
+.plan-recovery[hidden]{display:none}.plan-recovery b{color:var(--gold)}.plan-recovery .sub{margin-top:4px;line-height:1.55}
+.plan-recovery-controls{display:flex;gap:7px;flex-wrap:wrap;margin-top:9px}.plan-recovery-controls select{min-height:40px;max-width:100%;border:1px solid var(--border2);border-radius:8px;background:var(--bg);color:var(--text);padding:7px 9px}
 .asset-session-modal{position:fixed;inset:0;z-index:500;background:rgba(0,0,0,.68);display:flex;align-items:center;justify-content:center;padding:16px}
 .asset-session-modal[hidden]{display:none}.asset-session-modal .box{width:min(500px,100%);background:var(--surf);border:1px solid var(--border2);border-radius:13px;padding:16px;box-shadow:0 20px 60px rgba(0,0,0,.5)}
 .asset-session-modal .grid{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:12px}
@@ -214,7 +217,7 @@ body.asset-paper-mode .ledger-del{display:none!important}
 <body>
 <div class="wrap">
   <div class="top">
-    <div class="brand"><div class="logo">Asset Plan</div><h1>자산플랜 <span class="ver">v1.39.3</span></h1></div>
+    <div class="brand"><div class="logo">Asset Plan</div><h1>자산플랜 <span class="ver">v1.39.4</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
       <div class="jkmenu" id="jkmenuWrap">
@@ -264,6 +267,17 @@ body.asset-paper-mode .ledger-del{display:none!important}
     </div>
     <div class="asset-session-chips" id="assetSessionChips"></div>
     <div class="asset-session-state" id="assetSessionState">현재 투자중 플랜</div>
+  </section>
+
+  <section class="plan-recovery" id="planRecoveryBox" hidden>
+    <b>🛟 장부 복구 보호모드</b>
+    <div class="sub" id="planRecoveryText">저장된 장부 후보를 확인하고 있습니다.</div>
+    <div class="plan-recovery-controls">
+      <select id="planRecoverySelect" aria-label="복구할 장부 선택"></select>
+      <button class="btn" id="planRecoveryApply">선택 장부 화면에 적용</button>
+      <button class="btn gold" id="planRecoveryConfirm">이 장부로 복구 확정</button>
+    </div>
+    <div class="sub">복구 확정 전에는 현재 투자중 장부를 Firebase에 저장하지 않습니다. 후보를 바꿔 보면서 거래이력을 확인할 수 있습니다.</div>
   </section>
 
   <nav class="asset-detail-tabs" id="assetDetailTabs" role="tablist" aria-label="선택한 세션 상세">
@@ -854,6 +868,7 @@ const STAGES={
 
 let liveState=null, liveStateSource="", liveBusy=false, liveQuotes={}, pendingVrCycle=null;
 let planBootHydrating=true,planForceLocalSave=false;
+let planRecoveryLock=false,planRecoveryCandidates=[],planRecoveryApplied="";
 const FEE=0.0025;
 const ALPHA_FEE_RATE=0.001; // 토스증권 미국주식 표준 0.1% (A안 실전 장부/주문 전용)
 function alphaFee(q,p){const gross=Math.max(0,(+q||0)*(+p||0));return gross<=10?0:Math.floor(gross*ALPHA_FEE_RATE*100)/100;}
@@ -2560,6 +2575,11 @@ function seed(){
 }
 async function cloudSave(){
   const x=activeAssetSession();
+  if(!x&&planRecoveryLock){
+    localSave();
+    if($("saveState"))$("saveState").textContent="복구 보호모드 · Firebase 저장 잠금";
+    return;
+  }
   if(x){
     if(!x.paper)syncActiveAssetSessionFromView();
     await saveOperatingState();
@@ -2579,29 +2599,99 @@ function planLedgerHasActivity(o){
   return planLedgerEventCount(o)>0
     || Math.max(0,+b.tecl||0)>0 || Math.max(0,+b.tqqq||0)>0 || Math.max(0,+b.sgov||0)>0;
 }
+function planRecoveryMeta(o){
+  const events=planLedgerEventCount(o),l=o&&o.alphaLedger;
+  let shares=0,last="";
+  if(l){
+    try{const s=alphaLedgerCalc(l);shares=(+s.tecl||0)+(+s.tqqq||0)+(+s.sgov||0);}catch(e){}
+    for(const e of (Array.isArray(l.events)?l.events:[])){const d=String(e&&e.date||"");if(d>last)last=d;}
+    const bd=String(l.base&&l.base.date||"");if(bd>last)last=bd;
+  }
+  return {events,shares,last,active:events>0||shares>0};
+}
+function planRecoveryScore(o){
+  const m=planRecoveryMeta(o);
+  return m.events*1000000+(m.active?100000:0)+Math.min(99999,m.shares);
+}
+function planRecoveryRead(key){
+  try{return JSON.parse(localStorage.getItem(key)||"null")}catch(e){return null}
+}
+function planRecoverySignature(o){try{return JSON.stringify(o&&o.alphaLedger||null)}catch(e){return ""}}
+function planRecoveryRender(){
+  const box=$("planRecoveryBox"),sel=$("planRecoverySelect"),txt=$("planRecoveryText");if(!box||!sel||!txt)return;
+  box.hidden=!planRecoveryLock;
+  if(!planRecoveryLock)return;
+  sel.innerHTML=planRecoveryCandidates.map((c,i)=>{
+    const m=planRecoveryMeta(c.data);
+    return '<option value="'+i+'" '+(c.name===planRecoveryApplied?'selected':'')+'>'+c.name+' · 거래 '+m.events+'건 · 보유 '+m.shares+'주'+(m.last?' · '+m.last:'')+'</option>';
+  }).join("");
+  const cur=planRecoveryCandidates.find(c=>c.name===planRecoveryApplied),m=cur?planRecoveryMeta(cur.data):{events:0,shares:0,last:""};
+  txt.textContent=(cur?cur.name:"복구 후보")+"를 화면에 적용했습니다 · 거래 "+m.events+"건 · 보유 "+m.shares+"주"+(m.last?" · 마지막 기록 "+m.last:"")+" · Firebase 저장은 잠겨 있습니다.";
+}
+function applyPlanRecoveryCandidate(index){
+  const c=planRecoveryCandidates[Number(index)];if(!c||!c.data)return;
+  apply(cloneObj(c.data));planRecoveryApplied=c.name;planRecoveryLock=true;
+  planForceLocalSave=true;try{localSave();}finally{planForceLocalSave=false;}
+  renderSessionSelectors();renderLedger();renderAlphaLedger();render();refreshAlphaFromCache();planRecoveryRender();
+  if($("saveState"))$("saveState").textContent="복구 보호모드 · "+c.name+" 적용 · Firebase 저장 잠금";
+}
+async function confirmPlanRecovery(){
+  if(!planRecoveryLock)return;
+  if(!auth.currentUser){alert("로그인 후 복구를 확정할 수 있습니다.");return;}
+  if(!confirm("현재 화면의 거래이력을 Firebase 원장으로 복구 확정할까요?\n확정 전 저장본은 브라우저 복구 백업에 남겨 둡니다."))return;
+  const recovered=readForm();
+  try{
+    localStorage.setItem(KEY+"_recovery_confirmed",JSON.stringify(recovered));
+    await setDoc(doc(db,"users",auth.currentUser.uid),{fiveYearPlan:recovered},{merge:true});
+    planRecoveryLock=false;planForceLocalSave=true;try{localSave();}finally{planForceLocalSave=false;}
+    planRecoveryRender();$("saveState").textContent="장부 복구 확정 · 계정 + 브라우저 저장 완료";
+  }catch(e){alert("복구 확정 저장에 실패했습니다. 현재 화면은 유지됩니다.");}
+}
 async function cloudLoad(user){
   if(!user)return;
   try{
     const snap=await getDoc(doc(db,"users",user.uid)),d=snap.data()||{},v=d.fiveYearPlan;
-    let local=null;try{local=JSON.parse(localStorage.getItem(KEY)||"null")}catch(e){}
-    const localEvents=planLedgerEventCount(local),cloudEvents=planLedgerEventCount(v),
-      localActive=planLedgerHasActivity(local),cloudActive=planLedgerHasActivity(v);
-    // 로컬 장부가 비어 버렸는데 클라우드에 거래이력/기존 보유잔고가 남아 있으면 자동 복구한다.
-    // 정상 로컬 장부는 예전 정책대로 로컬을 우선해 사용자가 한 수정/삭제를 되돌리지 않는다.
-    if(v&&(!local||(!localActive&&cloudActive))){
-      try{localStorage.setItem(KEY+"_cloud_recovery",JSON.stringify(v));}catch(e){}
+    const local=planRecoveryRead(KEY),pre=planRecoveryRead(KEY+"_precloud_restore"),
+      oldCloud=planRecoveryRead(KEY+"_cloud_recovery"),prevCloud=planRecoveryRead(KEY+"_cloud_previous");
+    if(v){
+      try{
+        const raw=JSON.stringify(v),latestKey=KEY+"_cloud_latest",old=localStorage.getItem(latestKey);
+        if(old&&old!==raw)localStorage.setItem(KEY+"_cloud_previous",old);
+        localStorage.setItem(latestKey,raw);
+        localStorage.setItem(KEY+"_cloud_recovery",raw);
+      }catch(e){}
+    }
+    const all=[
+      {name:"현재 로컬",data:local},{name:"복구 전 로컬 백업",data:pre},
+      {name:"클라우드 복구 백업",data:oldCloud},{name:"이전 클라우드 스냅샷",data:prevCloud},
+      {name:"Firebase 현재 원장",data:v}
+    ].filter(x=>x.data&&x.data.alphaLedger);
+    const seen=new Set();planRecoveryCandidates=[];
+    for(const x of all){const sig=planRecoverySignature(x.data);if(!sig||seen.has(sig))continue;seen.add(sig);planRecoveryCandidates.push(x);}
+    let best=planRecoveryCandidates[0]||null;
+    for(const x of planRecoveryCandidates)if(!best||planRecoveryScore(x.data)>planRecoveryScore(best.data))best=x;
+    const localSig=planRecoverySignature(local),cloudSig=planRecoverySignature(v),
+      conflict=planRecoveryCandidates.length>1&&(new Set(planRecoveryCandidates.map(x=>planRecoverySignature(x.data))).size>1);
+    if(best&&(conflict||(!local&&best.data))){
       if(local){try{localStorage.setItem(KEY+"_precloud_restore",JSON.stringify(local));}catch(e){}}
-      apply(v);planForceLocalSave=true;try{localSave();}finally{planForceLocalSave=false;}renderSessionSelectors();renderLedger();render();
-      $("saveState").textContent=local&&cloudActive?"클라우드 거래이력 복구 · "+cloudEvents+"건":"계정 설정 불러옴";
+      apply(cloneObj(best.data));planRecoveryApplied=best.name;
+      // 서로 다른 저장본이 발견된 동안에는 화면만 복원하고 Firebase에는 쓰지 않는다.
+      planRecoveryLock=conflict;
+      planForceLocalSave=true;try{localSave();}finally{planForceLocalSave=false;}
+      renderSessionSelectors();renderLedger();renderAlphaLedger();render();
+      if($("saveState"))$("saveState").textContent=planRecoveryLock
+        ?"복구 보호모드 · "+best.name+" 적용 · Firebase 저장 잠금"
+        :(localSig===cloudSig?"계정/브라우저 장부 일치":"계정 설정 불러옴");
     }else if(local){
       $("saveState").textContent="이 기기 저장값 유지";
     }
+    planRecoveryRender();
     if(d.state&&d.state.inf&&d.state.vr){
       liveState=d.state;liveStateSource="클라우드 운영데이터";
       ensureLiveBoxes();
       if(migrateLiveInfOperatingDefaults())await saveOperatingState();
     }
-  }catch(e){}
+  }catch(e){console.error("plan cloud load",e);}
 }
 function userBadge(user){
   const b=$("userbadge");
@@ -2622,6 +2712,8 @@ apply(saved||d);$("slDate").value=todayISO();renderSessionSelectors();renderLedg
 ["startDate","targetDate","startCapital","targetCapital","monthlyAdd","targetIncome","stageMode","balMM","balVR","balQLD","balSGOV","cagrLow","cagrBase","cagrHigh","incomeBasis","incomeYield","sgovYield","extraWithdraw"].forEach(id=>$(id).addEventListener("change",render));
 $("assetSessionAdd").addEventListener("click",openAssetSessionModal);
 $("assetSessionEdit").addEventListener("click",editAssetSession);
+$("planRecoveryApply").addEventListener("click",()=>applyPlanRecoveryCandidate($("planRecoverySelect").value));
+$("planRecoveryConfirm").addEventListener("click",confirmPlanRecovery);
 $("assetDetailTabs").addEventListener("click",e=>{const b=e.target.closest('[data-asset-detail]');if(b)setAssetDetail(b.dataset.assetDetail);});
 $("assetDetailTabs").addEventListener("keydown",e=>{
   const tabs=Array.from(document.querySelectorAll('[data-asset-detail]')),i=tabs.indexOf(e.target);
