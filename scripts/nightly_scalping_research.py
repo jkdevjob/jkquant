@@ -221,7 +221,11 @@ def opening_report():
 
     days=sorted(set(days))
     if not days:
-        return {"status":"collecting","archiveDays":0,"variants":[],"candidates":[]}
+        return {"status":"collecting","archiveDays":0,"variants":[],"candidates":[],"rankingRule":ranking_rule()}
+
+    # Future shadow slots are visible from day zero; real live-forward evidence fills them prospectively.
+    for name in OPENING_SHADOW_NAMES:
+        books.setdefault(name,[])
 
     windows={"last5":set(days[-5:]),"last20":set(days[-20:]),"all":set(days)}
     variants=[]
@@ -246,6 +250,7 @@ def opening_report():
             enough and a["trades"]>=OPEN_MIN_CAND_TRADES and
             all_edge>=OPEN_ALL_EDGE and d20_edge>=OPEN_20D_EDGE
         )
+        score=shadow_score(all_edge,d20_edge,d20_edge,True,a["trades"],OPEN_MIN_CAND_TRADES)
         candidates.append({
             "name":v["name"],
             "status":"review" if review else "collecting",
@@ -253,8 +258,12 @@ def opening_report():
             "last20AvgEdgePct":d20_edge,
             "allTrades":a["trades"],
             "last20Trades":w20["trades"],
+            "researchScore":score["score"],
+            "sampleFactor":score["sampleFactor"],
+            "sampleReady":score["sampleReady"],
+            "scoreParts":score["parts"],
         })
-    candidates.sort(key=lambda x:(x["status"]!="review",-x["last20AvgEdgePct"],-x["allAvgEdgePct"],x["name"]))
+    candidates=rank_candidates(candidates)
 
     # Join exact live BUY signals to the richer KIS 30-minute path labels generated later.
     outcome_data=load_json(OPEN_OUTCOMES,{}) or {}
@@ -297,6 +306,8 @@ def opening_report():
             "autoPromotion":False,
         },
         "variants":variants,"candidates":candidates,
+        "rankingRule":ranking_rule(),
+        "configuredShadowCount":len(OPENING_SHADOW_NAMES),
         "liveSignals":live_report,
     }
 
@@ -326,9 +337,12 @@ def daytrading_report():
             "last20PortfolioReturnPct":compound_daily(daily[-20:]),
         })
     by={x["name"]:x for x in rows}
-    base=by.get("baseline",{"avgPnl":0.0,"profitFactor":0.0,"portfolioMddPct":0.0})
+    base=by.get("baseline",{"avgPnl":0.0,"profitFactor":0.0,"portfolioMddPct":0.0,"last20PortfolioReturnPct":0.0})
     eligible=j.get("comparisonStatus")=="eligible"
-    wf=(j.get("walkForward") or {}).get("status")=="reviewable"
+    wf_obj=j.get("walkForward") or {}
+    wf=wf_obj.get("status")=="reviewable"
+    oos_by={x.get("name"):(x.get("summary") or {}) for x in wf_obj.get("oosVariants") or []}
+    base_oos=oos_by.get("baseline",{})
     candidates=[]
     for x in rows:
         if x["name"]=="baseline":
@@ -336,14 +350,21 @@ def daytrading_report():
         edge=x["avgPnl"]-base["avgPnl"]
         mdd_ok=x["portfolioMddPct"]>=base["portfolioMddPct"]-1.0
         pf_ok=x["profitFactor"]>=base["profitFactor"]
+        ox=oos_by.get(x["name"],{})
+        validation_edge=float(ox.get("avgPnl") or 0)-float(base_oos.get("avgPnl") or 0) if ox and base_oos else 0.0
+        recent_edge=x["last20PortfolioReturnPct"]-base.get("last20PortfolioReturnPct",0.0)
+        risk_ok=mdd_ok and pf_ok
+        score=shadow_score(edge,validation_edge,recent_edge,risk_ok,x["trades"],30)
         review=eligible and wf and x["trades"]>=30 and edge>=0.10 and mdd_ok and pf_ok
         candidates.append({
             "name":x["name"],"status":"review" if review else "collecting",
-            "avgPnlEdgePct":edge,"trades":x["trades"],
-            "last20PortfolioReturnPct":x["last20PortfolioReturnPct"],
+            "avgPnlEdgePct":edge,"validationAvgEdgePct":validation_edge,"trades":x["trades"],
+            "last20PortfolioReturnPct":x["last20PortfolioReturnPct"],"recentEdgePct":recent_edge,
             "mddOk":mdd_ok,"profitFactorOk":pf_ok,
+            "researchScore":score["score"],"sampleFactor":score["sampleFactor"],
+            "sampleReady":score["sampleReady"],"scoreParts":score["parts"],
         })
-    candidates.sort(key=lambda x:(x["status"]!="review",-x["avgPnlEdgePct"],-x["last20PortfolioReturnPct"],x["name"]))
+    candidates=rank_candidates(candidates)
     return {
         "status":"reviewable" if eligible and wf else "collecting",
         "archiveDays":int(j.get("archiveDays") or 0),
@@ -353,6 +374,8 @@ def daytrading_report():
         "walkForwardStatus":(j.get("walkForward") or {}).get("status") or "collecting",
         "from":j.get("from"),"to":j.get("to"),
         "variants":rows,"candidates":candidates,
+        "rankingRule":ranking_rule(),
+        "configuredShadowCount":max(0,len(rows)-1),
         "autoPromotion":False,
     }
 
@@ -391,6 +414,8 @@ def crypto_report():
         all_edge=x["avgPnl"]-base["avgPnl"]
         hold_edge=x["holdoutAvgPnl"]-base["holdoutAvgPnl"]
         mdd_ok=x["maxDrawdownPct"]>=base["maxDrawdownPct"]-2.0
+        recent_edge=x["holdoutCompoundReturnPct"]-base.get("holdoutCompoundReturnPct",0.0)
+        score=shadow_score(all_edge,hold_edge,recent_edge,mdd_ok,x["trades"],50)
         review=(
             eligible and x["trades"]>=50 and x["holdoutTrades"]>=20
             and all_edge>=0.05 and hold_edge>=0.05 and mdd_ok
@@ -401,15 +426,11 @@ def crypto_report():
             "trades":x["trades"],"holdoutTrades":x["holdoutTrades"],
             "target1PctDayRatePct":x["target1PctDayRatePct"],
             "holdoutTarget1PctDayRatePct":x["holdoutTarget1PctDayRatePct"],
-            "mddOk":mdd_ok,
+            "recentEdgePct":recent_edge,"mddOk":mdd_ok,
+            "researchScore":score["score"],"sampleFactor":score["sampleFactor"],
+            "sampleReady":score["sampleReady"],"scoreParts":score["parts"],
         })
-    candidates.sort(key=lambda x:(
-        x["status"]!="review",
-        -x["holdoutAvgEdgePct"],
-        -x["allAvgEdgePct"],
-        -x["holdoutTarget1PctDayRatePct"],
-        x["name"]
-    ))
+    candidates=rank_candidates(candidates)
     return {
         "status":"reviewable" if eligible else "collecting",
         "archiveDays":int(j.get("archiveDays") or 0),
@@ -419,6 +440,8 @@ def crypto_report():
         "validationModel":"70/30 holdout + rolling30",
         "rolling30":j.get("rolling30") or {},
         "variants":rows,"candidates":candidates,
+        "rankingRule":ranking_rule(),
+        "configuredShadowCount":max(0,len(rows)-1),
         "autoPromotion":False,
         "targetNote":"1% is a research target metric, not a guaranteed daily return."
     }
@@ -463,6 +486,9 @@ def soxl_report():
         oos_edge=float(ox.get("avgPnl") or 0)-float(ob.get("avgPnl") or 0)
         oos_trades=int(ox.get("trades") or 0)
         mdd_ok=x["maxDrawdownPct"]>=base["maxDrawdownPct"]-3.0
+        validation_edge=(hold_edge+oos_edge)/2.0 if oos_trades>0 else hold_edge
+        recent_edge=x["holdoutCompoundReturnPct"]-base.get("holdoutCompoundReturnPct",0.0)
+        score=shadow_score(all_edge,validation_edge,recent_edge,mdd_ok,x["trades"],30)
         review=(
             eligible and x["trades"]>=30 and x["holdoutTrades"]>=10 and oos_trades>=10
             and all_edge>=0.10 and hold_edge>=0.10 and oos_edge>=0.05 and mdd_ok
@@ -470,16 +496,16 @@ def soxl_report():
         candidates.append({
             "name":x["name"],"status":"review" if review else "collecting",
             "allAvgEdgePct":all_edge,"holdoutAvgEdgePct":hold_edge,
+            "validationAvgEdgePct":validation_edge,
             "trades":x["trades"],"holdoutTrades":x["holdoutTrades"],
             "target1PctDayRatePct":x["target1PctDayRatePct"],
             "holdoutTarget1PctDayRatePct":x["holdoutTarget1PctDayRatePct"],
             "oosAvgEdgePct":oos_edge,"oosTrades":oos_trades,
-            "mddOk":mdd_ok,
+            "recentEdgePct":recent_edge,"mddOk":mdd_ok,
+            "researchScore":score["score"],"sampleFactor":score["sampleFactor"],
+            "sampleReady":score["sampleReady"],"scoreParts":score["parts"],
         })
-    candidates.sort(key=lambda x:(
-        x["status"]!="review",-x["holdoutAvgEdgePct"],-x["allAvgEdgePct"],
-        -x["holdoutTarget1PctDayRatePct"],x["name"]
-    ))
+    candidates=rank_candidates(candidates)
     return {
         "status":"reviewable" if eligible else "collecting",
         "archiveDays":int(j.get("archiveDays") or 0),
@@ -488,6 +514,8 @@ def soxl_report():
         "comparisonStatus":j.get("comparisonStatus") or "collecting",
         "rolling30":j.get("rolling30") or {},
         "variants":rows,"candidates":candidates,
+        "rankingRule":ranking_rule(),
+        "configuredShadowCount":max(0,len(rows)-1),
         "autoPromotion":False,
         "targetNote":"Net +1% days are a research metric, not a guaranteed daily return.",
     }
