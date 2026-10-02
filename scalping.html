@@ -322,6 +322,7 @@ canvas{display:block;width:100%;height:auto}
 
   <div id="strategy_opening" class="strategy-pane">
     <div class="strategy-head">실시간 시초가 돌파 감시 → 백테스트 → 분봉 아카이브</div>
+    <div id="main_strategy_state_opening" class="strategy-statusline"><span class="status-item">운영 메인 확인 중…</span></div>
 
   <!-- 시초가 돌파 실시간 감시 -->
   <div class="card">
@@ -423,6 +424,7 @@ canvas{display:block;width:100%;height:auto}
 
   <div id="strategy_daytrading" class="strategy-pane">
     <div class="strategy-head">10:00 유니버스 고정 → 장중 신호 → 다음 분 시가 모의진입 → 장마감 누적검증</div>
+    <div id="main_strategy_state_daytrading" class="strategy-statusline"><span class="status-item">운영 메인 확인 중…</span></div>
 
     <div class="card">
       <h3><span class="dot"></span>📈 데이트레이딩 기준전략 v1 <span class="sub" style="font-weight:600">VWAP 추세 돌파 · 연구/모의 전용</span></h3>
@@ -502,6 +504,7 @@ canvas{display:block;width:100%;height:auto}
 
   <div id="strategy_crypto" class="strategy-pane">
     <div class="strategy-head">Upbit KRW-BTC · 5분봉 · 00:00 KST 기준 · 신규진입 22:00까지 · 연구/검증 전용</div>
+    <div id="main_strategy_state_crypto" class="strategy-statusline"><span class="status-item">운영 메인 확인 중…</span></div>
 
     <div class="card">
       <h3><span class="dot"></span>₿ 비트코인 00시 ORB 기준전략 v2 <span class="sub" style="font-weight:600">00:00~22:00 감시</span></h3>
@@ -570,6 +573,7 @@ canvas{display:block;width:100%;height:auto}
 
   <div id="strategy_soxl" class="strategy-pane">
     <div class="strategy-head">SOXL · 미국 정규장 5분봉 · ET · 연구/검증 전용</div>
+    <div id="main_strategy_state_soxl" class="strategy-statusline"><span class="status-item">운영 메인 확인 중…</span></div>
     <div class="card">
       <h3><span class="dot"></span>⚡ SOXL 15분 ORB 기준전략 v1</h3>
       <p class="lead"><b>09:30~09:45 ET</b> Opening Range를 만든 뒤 11:30 이전 첫 종가 돌파를 본다.
@@ -2138,6 +2142,16 @@ function shadowRankPct(v){const n=Number(v);return Number.isFinite(n)?((n>=0?'+'
 function selectedMainVariant(kind){
   return String((((PROMOTION_STATE||{}).configs||{})[kind]||{}).selectedVariant||'baseline');
 }
+function renderMainStrategyState(kind){
+  const el=$('main_strategy_state_'+kind);if(!el)return;
+  const selected=selectedMainVariant(kind),label=selected==='baseline'?'원래 기준전략':((SHADOW_RANK_LABELS[kind]||{})[selected]||selected);
+  const cfg=(((PROMOTION_STATE||{}).configs||{})[kind]||{});
+  const err=(((PROMOTION_STATE||{}).errors||{})[kind]||'');
+  if(err){el.innerHTML='<span class="status-item risk">⚠ 운영 메인 조회 실패</span><span class="status-item">'+esc(err)+'</span>';return;}
+  el.innerHTML='<span class="status-item ok">⭐ 현재 운영 메인: <b>'+esc(label)+'</b></span>'+
+    '<span class="status-item">'+(selected==='baseline'?'원래 기준전략을 사용 중입니다.':'승격된 전략을 사용 중입니다. 아래 원래 기준전략 설명은 연구 비교 기준으로 계속 보존됩니다.')+'</span>'+
+    (cfg.updatedAt?'<span class="status-item">설정 '+esc(new Date(cfg.updatedAt).toLocaleString('ko-KR'))+'</span>':'');
+}
 function promotionAction(kind,x){
   const current=selectedMainVariant(kind);
   if(current===x.name)return '<span class="sig on">⭐ 현재 메인</span>';
@@ -2181,6 +2195,7 @@ async function loadPromotionState(force=false){
     const j=await r.json().catch(()=>({}));
     if(!r.ok||!j.ok)throw new Error(j.error||('HTTP '+r.status));
     PROMOTION_STATE=j;PROMOTION_STATE_AT=now;
+    ['opening','daytrading','crypto','soxl'].forEach(renderMainStrategyState);
     if(SHADOW_RANK_CACHE)Object.entries(SHADOW_RANK_CACHE.rankings||{}).forEach(([k,v])=>renderShadowRanking(k,v));
     return j;
   }catch(e){
