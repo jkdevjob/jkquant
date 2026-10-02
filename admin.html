@@ -152,7 +152,7 @@ pre.rules{background:var(--bg);border:1px solid var(--line);border-radius:10px;p
 
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Admin Console</div><h1>JK <span class="v">퀀트</span> 관리자 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="adVer">v0.9.0</span></h1></div>
+    <div><div class="kicker">Admin Console</div><h1>JK <span class="v">퀀트</span> 관리자 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="adVer">v0.10.0</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -501,7 +501,7 @@ async function applyDefaultsExistingSessions(){
     const ref=window.fb.doc(window.fb.db,'users',me.uid);
     const snap=await window.fb.getDoc(ref);
     if(!snap.exists()) throw new Error('운영 데이터가 없습니다.');
-    const doc=snap.data()||{}, sourceState=doc.state;
+    const doc=snap.data()||{}, sourceState=doc.stateV2||doc.state;
     if(!sourceState||typeof sourceState!=='object') throw new Error('운영 세션 상태를 찾지 못했습니다.');
     const sourceStateJson=JSON.stringify(sourceState), state=JSON.parse(sourceStateJson);
     const tabs=['inf','vr','ma','ivs','dca','asap'];
@@ -555,11 +555,11 @@ async function applyDefaultsExistingSessions(){
     }
     const now=Date.now(); state._updated=now;
     await window.fb.runTransaction(window.fb.db,async tx=>{
-      const latest=await tx.get(ref),d=latest.exists()?(latest.data()||{}):{};
-      if(JSON.stringify(d.state)!==sourceStateJson) throw new Error('운영 원장이 다른 기기/탭에서 변경되었습니다. 최신 원장을 다시 불러온 뒤 적용하세요.');
-      const nr=(+d.stateRev||0)+1;
+      const latest=await tx.get(ref),d=latest.exists()?(latest.data()||{}):{},currentState=d.stateV2||d.state;
+      if(JSON.stringify(currentState)!==sourceStateJson) throw new Error('운영 원장이 다른 기기/탭에서 변경되었습니다. 최신 원장을 다시 불러온 뒤 적용하세요.');
+      const nr=(+d.stateV2Rev||0)+1;
       tx.set(ref,{
-        state,updated:now,stateRev:nr,strategyDefaultOverrides:strategyOverrides,strategyDefaultOverridesUpdated:now
+        stateV2:state,stateV2Updated:now,stateV2Rev:nr,strategyDefaultOverrides:strategyOverrides,strategyDefaultOverridesUpdated:now
       },{merge:true});
     });
     try{
