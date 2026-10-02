@@ -143,7 +143,7 @@ function daytradingLedgerSummary(ledger,date){
   const closed=all.filter(x=>x&&x.status==="closed"&&Number.isFinite(Number(x.pnl)));
   const pn=closed.map(x=>Number(x.pnl)),sum=pn.reduce((s,x)=>s+x,0);
   return {
-    date:String((ledger&&ledger.date)||date),returnPct:pn.length?sum/Math.max(1,Number(ledger&&ledger.maxTrades||3)):0,
+    date:String((ledger&&ledger.date)||date),returnPct:pn.length?sum/pn.length:0,
     sumPnlPct:sum,trades:all.length,wins:pn.filter(x=>x>0).length,losses:pn.filter(x=>x<0).length,
     noTrade:all.length===0,finalized:all.every(x=>x&&x.status==="closed"),
     incomplete:all.some(x=>x&&x.status!=="closed"),source:"daytrading-paper-live",
