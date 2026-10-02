@@ -71,7 +71,14 @@ export class SnapshotStore extends DurableObject {
       const b=await request.json();
       const variant=String(b&&b.variant||"");
       if(!variant||!DAY_EXIT_VARIANTS[variant])return json({ok:false,error:"unsupported variant"},400);
-      const config={schema:1,strategy:"daytrading",selectedVariant:variant,updatedAt:new Date().toISOString(),updatedBy:String(b.updatedBy||"owner"),source:String(b.source||"manual-promotion")};
+      const prev=(await this.ctx.storage.get("strategyConfig"))||{schema:2,strategy:"daytrading",selectedVariant:"baseline",history:[]};
+      const at=new Date().toISOString(),effectiveFrom=String(b&&b.effectiveFrom||"");
+      const entry={at,effectiveFrom,previousVariant:String(prev.selectedVariant||"baseline"),selectedVariant:variant,
+        updatedBy:String(b.updatedBy||"owner"),source:String(b.source||"manual-promotion"),
+        researchScore:Number.isFinite(+b.researchScore)?+b.researchScore:null,rank:Number.isFinite(+b.rank)?+b.rank:null};
+      const history=[...(Array.isArray(prev.history)?prev.history:[]),entry].slice(-50);
+      const config={schema:2,strategy:"daytrading",selectedVariant:variant,previousVariant:String(prev.selectedVariant||"baseline"),
+        effectiveFrom,updatedAt:at,updatedBy:entry.updatedBy,source:entry.source,researchScore:entry.researchScore,rank:entry.rank,history};
       await this.ctx.storage.put("strategyConfig",config);
       return json({ok:true,config});
     }
@@ -150,7 +157,8 @@ async function captureSnapshot(env,date){
   const rows=Array.isArray(j.universe)?j.universe:[];
   if(!r.ok||!rows.length)throw new Error("universe HTTP "+r.status);
   const config=await readStrategyConfig(env);
-  const mainVariant=DAY_EXIT_VARIANTS[config.selectedVariant]?config.selectedVariant:"baseline";
+  const selected=(config.effectiveFrom&&String(date)<String(config.effectiveFrom))?String(config.previousVariant||"baseline"):String(config.selectedVariant||"baseline");
+  const mainVariant=DAY_EXIT_VARIANTS[selected]?selected:"baseline";
   const snapshot={
     schema:2,date,mainVariant,
     snapshotAt:new Date().toISOString(),
