@@ -265,7 +265,7 @@ setTimeout(function(){ var h=document.documentElement; if(h.classList.contains('
 </script>
 <div class="wrap">
   <div class="top">
-    <div class="brand"><div class="logo">Asset Plan</div><h1>자산플랜 <span class="ver">v1.42.1</span></h1></div>
+    <div class="brand"><div class="logo">Asset Plan</div><h1>자산플랜 <span class="ver">v1.42.2</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
       <div class="jkmenu" id="jkmenuWrap">
@@ -917,7 +917,7 @@ const STAGES={
 let liveState=null, liveStateSource="", liveBusy=false, liveQuotes={}, pendingVrCycle=null;
 let planBootHydrating=true,planForceLocalSave=false;
 let planRecoveryLock=false,planRecoveryCandidates=[],planRecoveryApplied="";
-let planStateCloudHydrated=false,planStateCloudRev=0,planStateConflict=false,planStateHistorySig='';
+let planStateCloudHydrated=false,planStateCloudRev=0,planStateConflict=false,planStateHistorySig='',planStateDbBase=null;
 let planCloudHydrated=false,planCloudRev=0,planCloudHistorySig='',planDbState=null;
 const FEE=0.0025;
 const ALPHA_FEE_RATE=0.001; // 토스증권 미국주식 표준 0.1% (A안 실전 장부/주문 전용)
@@ -933,8 +933,8 @@ const KIND_T={'1회매수':t=>t+1,'절반매수':t=>t+0.5,'쿼터매도':t=>t*0.
 const isBuyKind=k=>k!=='출금'&&String(k||'').includes('매수');
 const isSellKind=k=>k!=='출금'&&String(k||'').includes('매도');
 function opLocalState(uid){
-  const keys=uid?['qcockpit_v2_'+uid,'qcockpit_v2_guest']:['qcockpit_v2_guest'];
-  for(const k of keys){try{const x=JSON.parse(localStorage.getItem(k)||'null');if(x&&x.inf&&x.vr)return x;}catch(e){}}
+  if(uid)return null; // 로그인 사용자는 Firebase DB 원장만 사용
+  try{const x=JSON.parse(localStorage.getItem('qcockpit_v2_guest')||'null');if(x&&x.inf&&x.vr)return x;}catch(e){}
   return null;
 }
 
@@ -1069,10 +1069,9 @@ function assetSessionSettingsFromView(capOverride){
     engine:'asset-plan-v1'};
 }
 function writeAssetSessionLocal(){
-  if(!liveState)return;
+  if(!liveState||auth.currentUser)return; // 로그인 계정 원장은 브라우저에 저장하지 않는다.
   const ts=Date.now();liveState._updated=ts;
-  const key=auth.currentUser?'qcockpit_v2_'+auth.currentUser.uid:'qcockpit_v2_guest';
-  try{localStorage.setItem(key,JSON.stringify(planOperatingCacheCopy(liveState)));}catch(e){}
+  try{localStorage.setItem('qcockpit_v2_guest',JSON.stringify(liveState));}catch(e){}
 }
 function syncActiveAssetSessionFromView(){
   const x=activeAssetSession();if(!x||x.paper)return false;
@@ -1093,7 +1092,7 @@ function applyAssetSettings(x){
 }
 function restoreCurrentPlanView(){
   let saved=planDbState?cloneObj(planDbState):null;
-  if(!saved)try{saved=planSettingsCacheCopy(JSON.parse(localStorage.getItem(KEY)||'null'));}catch(e){}
+  if(!auth.currentUser&&!saved)try{saved=JSON.parse(localStorage.getItem(KEY)||'null');}catch(e){}
   apply(saved||defaults());
   document.body.classList.remove('asset-paper-mode');
   const pr=$('assetPaperResult');if(pr){pr.hidden=true;pr.innerHTML='';}
@@ -1290,36 +1289,129 @@ function linkedOpSession(box,ticker,id){
   if(!x||x.paper||String(x.settings?.ticker||'').toUpperCase()!==tt)return null;
   return x;
 }
+function planStableJson(v){
+  const norm=x=>{
+    if(Array.isArray(x))return x.map(norm);
+    if(x&&typeof x==='object'){const o={};Object.keys(x).sort().forEach(k=>o[k]=norm(x[k]));return o;}
+    return x;
+  };
+  try{return JSON.stringify(norm(v));}catch(e){return JSON.stringify(v);}
+}
+function planRecEntries(a){
+  const occ={},out=[];
+  for(const r of (Array.isArray(a)?a:[])){
+    let k=r&&r.id!=null?'id:'+String(r.id):r&&r.ts!=null?'ts:'+String(r.ts):'';
+    if(!k){const sem=planStableJson(r),n=(occ[sem]||0)+1;occ[sem]=n;k='legacy:'+sem+':'+n;}
+    out.push([k,r]);
+  }
+  return out;
+}
+function planRebaseRecords(base,candidate,remote){
+  const B=new Map(planRecEntries(base)),C=new Map(planRecEntries(candidate)),R=new Map(planRecEntries(remote));
+  const order=planRecEntries(remote).map(x=>x[0]);
+  for(const [k] of B)if(!C.has(k))R.delete(k);
+  for(const [k,v] of C){
+    const bv=B.get(k);
+    if(!B.has(k)||planStableJson(v)!==planStableJson(bv)){
+      R.set(k,cloneObj(v));if(!order.includes(k))order.push(k);
+    }
+  }
+  const out=[];for(const k of order)if(R.has(k)){out.push(R.get(k));R.delete(k);}
+  for(const v of R.values())out.push(v);
+  return out;
+}
+function planRebaseOperating(base,candidate,remote){
+  if(!base||!remote)return cloneObj(candidate);
+  const out=cloneObj(remote),boxes=['inf','vr','ma','ivs','dca','asap'];
+  for(const k of Object.keys(candidate))if(!boxes.includes(k)&&k!=='plan')out[k]=cloneObj(candidate[k]);
+  for(const bk of boxes){
+    const B=base[bk]||{},C=candidate[bk]||{},R=remote[bk]||{};
+    if(!out[bk])out[bk]={};
+    for(const k of Object.keys(C))if(k!=='sessions')out[bk][k]=cloneObj(C[k]);
+    const bm=new Map((B.sessions||[]).filter(Boolean).map(x=>[String(x.id||''),x]));
+    const cm=new Map((C.sessions||[]).filter(Boolean).map(x=>[String(x.id||''),x]));
+    const rm=new Map((R.sessions||[]).filter(Boolean).map(x=>[String(x.id||''),cloneObj(x)]));
+    for(const [id] of bm)if(!cm.has(id))rm.delete(id);
+    for(const [id,cs] of cm){
+      const bs=bm.get(id),rs=rm.get(id);
+      if(!bs||!rs){rm.set(id,cloneObj(cs));continue;}
+      const ns=cloneObj(rs);for(const k of Object.keys(cs))if(k!=='hist')ns[k]=cloneObj(cs[k]);
+      ns.hist=planRebaseRecords(bs.hist,cs.hist,rs.hist);rm.set(id,ns);
+    }
+    out[bk].sessions=[...rm.values()];
+  }
+  const Bp=base.plan||{},Cp=candidate.plan||{},Rp=remote.plan||{};
+  if(Cp&&Array.isArray(Cp.sessions)){
+    if(!out.plan)out.plan={};
+    for(const k of Object.keys(Cp))if(k!=='sessions')out.plan[k]=cloneObj(Cp[k]);
+    const bm=new Map((Bp.sessions||[]).filter(Boolean).map(x=>[String(x.id||''),x]));
+    const cm=new Map((Cp.sessions||[]).filter(Boolean).map(x=>[String(x.id||''),x]));
+    const rm=new Map((Rp.sessions||[]).filter(Boolean).map(x=>[String(x.id||''),cloneObj(x)]));
+    for(const [id] of bm)if(!cm.has(id))rm.delete(id);
+    for(const [id,cs] of cm){
+      const bs=bm.get(id),rs=rm.get(id);if(!bs||!rs){rm.set(id,cloneObj(cs));continue;}
+      const ns=cloneObj(rs);for(const k of Object.keys(cs))if(k!=='ledger')ns[k]=cloneObj(cs[k]);
+      if(cs.ledger){
+        ns.ledger=cloneObj(rs.ledger||{});const bl=bs.ledger||{},cl=cs.ledger||{},rl=rs.ledger||{};
+        for(const k of Object.keys(cl))if(k!=='events')ns.ledger[k]=cloneObj(cl[k]);
+        ns.ledger.events=planRebaseRecords(bl.events,cl.events,rl.events);
+      }
+      rm.set(id,ns);
+    }
+    out.plan.sessions=[...rm.values()];
+  }
+  return out;
+}
+function planRebaseFiveYear(base,candidate,remote){
+  if(!base||!remote)return cloneObj(candidate);
+  const out=cloneObj(remote);
+  for(const k of Object.keys(candidate))if(k!=='alphaLedger'&&k!=='sleeveSessions'&&k!=='sleeveLedger')out[k]=cloneObj(candidate[k]);
+
+  const ba=base.alphaLedger||{},ca=candidate.alphaLedger||{},ra=remote.alphaLedger||{};
+  out.alphaLedger=cloneObj(ra);
+  const baseChanged=planStableJson(ca.base)!==planStableJson(ba.base);
+  if(baseChanged||!ra.base)out.alphaLedger.base=cloneObj(ca.base||{});
+  out.alphaLedger.events=planRebaseRecords(ba.events,ca.events,ra.events);
+  if(ca.feeModel!=null)out.alphaLedger.feeModel=ca.feeModel;
+
+  const bm=new Map((base.sleeveSessions||[]).filter(Boolean).map(x=>[String(x.id||''),x]));
+  const cm=new Map((candidate.sleeveSessions||[]).filter(Boolean).map(x=>[String(x.id||''),x]));
+  const rm=new Map((remote.sleeveSessions||[]).filter(Boolean).map(x=>[String(x.id||''),cloneObj(x)]));
+  for(const [id] of bm)if(!cm.has(id))rm.delete(id);
+  for(const [id,cs] of cm){
+    const bs=bm.get(id),rs=rm.get(id);if(!bs||!rs){rm.set(id,cloneObj(cs));continue;}
+    const ns=cloneObj(rs);for(const k of Object.keys(cs))if(k!=='ledger')ns[k]=cloneObj(cs[k]);
+    const bl=bs.ledger||{},cl=cs.ledger||{},rl=rs.ledger||{};
+    ns.ledger=cloneObj(rl);
+    for(const k of Object.keys(cl))if(k!=='trades'){
+      if(planStableJson(cl[k])!==planStableJson(bl[k]))ns.ledger[k]=cloneObj(cl[k]);
+    }
+    ns.ledger.trades=planRebaseRecords(bl.trades,cl.trades,rl.trades);
+    rm.set(id,ns);
+  }
+  out.sleeveSessions=[...rm.values()];
+  out.sleeveLedger=cloneObj(candidate.sleeveLedger||out.sleeveLedger||{});
+  return out;
+}
 async function saveOperatingState(){
   ensureLiveBoxes();
   const ts=Date.now();liveState._updated=ts;
   if(!auth.currentUser)return false;
-  if(!planStateCloudHydrated||planStateConflict){
-    liveStateSource=planStateConflict?'운영 원장 충돌 · 클라우드 저장 잠금':'운영 원장 확인 전 · 클라우드 저장 대기';
-    return false;
-  }
-  const ref=doc(db,'users',auth.currentUser.uid),candidate=cloneObj(liveState);
+  if(!planStateCloudHydrated){liveStateSource='Firebase 운영 원장 확인 전 · 저장 대기';return false;}
+  const ref=doc(db,'users',auth.currentUser.uid);let candidate=cloneObj(liveState);
   try{
     const nextRev=await runTransaction(db,async tx=>{
       const snap=await tx.get(ref),d=snap.exists()?(snap.data()||{}):{};
       const remote=d.stateV2||d.state,rev=+d.stateV2Rev||0;
       const remoteSig=remote?planOpHistorySig(remote):'',remoteChanged=rev!==planStateCloudRev||(planStateHistorySig!==''&&remoteSig!==planStateHistorySig);
-      if(remote&&remoteChanged&&!planOpPreserves(candidate,remote)){
-        const e=new Error('OPERATING_HISTORY_CONFLICT');e.code='history-conflict';throw e;
-      }
-      const nr=rev+1;tx.set(ref,{stateV2:candidate,stateV2Updated:ts,stateV2Rev:nr},{merge:true});return nr;
+      if(remote&&remoteChanged)candidate=planRebaseOperating(planStateDbBase,candidate,remote);
+      candidate._updated=Date.now();
+      const nr=rev+1;tx.set(ref,{stateV2:candidate,stateV2Updated:candidate._updated,stateV2Rev:nr},{merge:true});return nr;
     });
-    planStateCloudRev=+nextRev||planStateCloudRev;planStateHistorySig=planOpHistorySig(liveState);liveStateSource='Firebase DB 저장';
-    writeAssetSessionLocal(); // 거래이력을 제거한 설정 캐시만 브라우저에 남긴다.
+    liveState=candidate;planStateDbBase=cloneObj(candidate);
+    planStateCloudRev=+nextRev||planStateCloudRev;planStateHistorySig=planOpHistorySig(candidate);liveStateSource='Firebase DB 저장';planStateConflict=false;
     return true;
-  }catch(e){
-    console.error('operating save',e);
-    if((e&&e.code==='history-conflict')||String(e&&e.message||e).includes('OPERATING_HISTORY_CONFLICT')){
-      planStateConflict=true;liveStateSource='운영 원장 충돌 · 클라우드 저장 잠금';
-      alert('다른 기기/탭의 최신 거래이력이 감지되어 운영 원장 덮어쓰기를 차단했습니다. 새로고침 후 최신 원장을 확인하세요.');
-    }
-    return false;
-  }
+  }catch(e){console.error('operating save',e);liveStateSource='Firebase DB 저장 실패';return false;}
 }
 function applyInitialBalances(a){
   if(!a)return;
@@ -2312,35 +2404,25 @@ function unlockAutoBalanceFields(){
 function orderHtml(o){const c=o.side==='buy'?'buy':'sell',lab=o.side==='buy'?'매수':'매도';return '<div class="liveitem '+c+'"><strong>'+lab+' · '+o.name+'</strong><small>'+o.tag+' · '+usd(o.price)+' × '+Math.round(o.qty)+'주</small></div>';}
 function waitHtml(t,sub=''){return '<div class="liveitem wait"><strong>'+t+'</strong>'+(sub?'<small>'+sub+'</small>':'')+'</div>';}
 async function loadOperatingState(user){
-  const local=opLocalState(user?.uid),localUpdated=+local?._updated||0;
-  let cloud=null,cloudUpdated=0;planStateCloudHydrated=!user;planStateConflict=false;
-  let legacyCloud=false;
-  if(user){
-    try{
-      const snap=await getDoc(doc(db,'users',user.uid));
-      if(snap.exists()){
-        const d=snap.data()||{},hasV2=!!d.stateV2;
-        cloud=hasV2?d.stateV2:(d.state||null);legacyCloud=!hasV2&&!!cloud;
-        cloudUpdated=hasV2?(+d.stateV2Updated||0):(+d.updated||0);
-        planStateCloudRev=+d.stateV2Rev||0;planStateHistorySig=cloud?planOpHistorySig(cloud):'';
-      }
-      planStateCloudHydrated=true;
-    }catch(e){liveState=local||null;liveStateSource='클라우드 운영원장 확인 실패 · 저장 잠금';planStateCloudHydrated=false;ensureLiveBoxes();renderSessionSelectors();renderAssetSessions();return;}
+  planStateConflict=false;
+  if(!user){
+    liveState=opLocalState();liveStateSource=liveState?'게스트 브라우저 데이터':'운영데이터 없음';planStateCloudHydrated=true;ensureLiveBoxes();return;
   }
-  if(local&&cloud&&cloud.inf&&cloud.vr){
-    const lp=planOpPreserves(local,cloud),cp=planOpPreserves(cloud,local);
-    if(lp&&cp){liveState=localUpdated>=cloudUpdated?local:cloud;liveStateSource=liveState===local?'이 기기 운영데이터':'클라우드 운영데이터';}
-    else if(lp&&!cp){liveState=local;liveStateSource='이 기기 운영데이터 · 미동기화 기록 포함';}
-    else if(cp&&!lp){liveState=cloud;liveStateSource='클라우드 운영데이터 · 더 많은 거래이력';try{localStorage.setItem('qcockpit_v2_'+user.uid,JSON.stringify(cloud));}catch(e){}}
-    else{liveState=cloud;planStateConflict=true;liveStateSource='운영 원장 충돌 · 클라우드 저장 잠금';}
-  }else if(cloud&&cloud.inf&&cloud.vr){liveState=cloud;liveStateSource='클라우드 운영데이터';if(user)try{localStorage.setItem('qcockpit_v2_'+user.uid,JSON.stringify(cloud));}catch(e){}}
-  else if(local){liveState=local;liveStateSource='이 기기 운영데이터';}
-  else{liveState=null;liveStateSource='운영데이터 없음';}
-  ensureLiveBoxes();
-  const migrated=migrateLiveInfOperatingDefaults();
-  // legacy state만 있던 계정도 화면을 연 즉시 stateV2 정본으로 봉인한다.
-  if((migrated||legacyCloud)&&!planStateConflict)await saveOperatingState();
-  renderSessionSelectors();renderAssetSessions();
+  planStateCloudHydrated=false;
+  try{
+    const snap=await getDoc(doc(db,'users',user.uid)),d=snap.exists()?(snap.data()||{}):{},hasV2=!!d.stateV2;
+    const cloud=hasV2?d.stateV2:(d.state||null),legacyCloud=!hasV2&&!!cloud;
+    planStateCloudRev=+d.stateV2Rev||0;planStateHistorySig=cloud?planOpHistorySig(cloud):'';
+    liveState=cloud?cloneObj(cloud):null;planStateDbBase=cloud?cloneObj(cloud):null;
+    liveStateSource=cloud?'Firebase 운영 원장':'Firebase 운영 원장 없음';
+    planStateCloudHydrated=true;ensureLiveBoxes();
+    const migrated=migrateLiveInfOperatingDefaults();
+    if(migrated||legacyCloud)await saveOperatingState();
+    renderSessionSelectors();renderAssetSessions();
+  }catch(e){
+    planStateCloudHydrated=false;liveState=null;planStateDbBase=null;liveStateSource='Firebase 운영 원장 읽기 실패';
+    ensureLiveBoxes();renderSessionSelectors();renderAssetSessions();throw e;
+  }
 }
 async function refreshLive(){
   if(liveBusy)return;liveBusy=true;$('liveRefresh').disabled=true;$('liveSync').textContent='운영데이터와 확정 일봉을 읽는 중…';liveQuotes={};
@@ -2459,16 +2541,14 @@ function apply(o){
 }
 function localSave(){
   const x=activeAssetSession();
-  if(planBootHydrating&&!planForceLocalSave&&!x)return;
-  if(x){
-    if(!x.paper)syncActiveAssetSessionFromView();
-    if($("saveState"))$("saveState").textContent=(x.paper?"모의 세션":"운영 세션")+" · DB 저장 대기";
+  if(auth.currentUser){
+    if(x&&!x.paper)syncActiveAssetSessionFromView();
+    if($("saveState"))$("saveState").textContent="Firebase DB 정본 · 브라우저 원장 저장 안 함";
     return;
   }
-  try{
-    localStorage.setItem(KEY,JSON.stringify(planSettingsCacheCopy(readForm())));
-    if($("saveState"))$("saveState").textContent="설정 캐시 저장 · 거래이력은 Firebase DB 전용";
-  }catch(e){}
+  if(planBootHydrating&&!planForceLocalSave&&!x)return;
+  if(x){if(!x.paper)syncActiveAssetSessionFromView();return;}
+  try{localStorage.setItem(KEY,JSON.stringify(readForm()));}catch(e){}
 }
 function alphaEventList(ledger=alphaLedger){
   return (Array.isArray(ledger&&ledger.events)?ledger.events:[]).map((e,i)=>({...e,_i:i}))
@@ -2791,31 +2871,21 @@ async function cloudSave(){
   }
   if(planRecoveryLock){if($("saveState"))$("saveState").textContent="복구 보호모드 · Firebase 저장 잠금";return false;}
   if(!planCloudHydrated){if($("saveState"))$("saveState").textContent="Firebase 원장 확인 전 · 저장 대기";return false;}
-  const candidate=readForm(),ref=doc(db,"users",auth.currentUser.uid);
+  let candidate=readForm();const ref=doc(db,"users",auth.currentUser.uid);
   try{
     const nextRev=await runTransaction(db,async tx=>{
       const snap=await tx.get(ref),d=snap.exists()?(snap.data()||{}):{};
       const remote=d.fiveYearPlanV2||d.fiveYearPlan,rev=+d.fiveYearPlanV2Rev||0;
       const remoteSig=remote?planHistorySig(remote):'',remoteChanged=rev!==planCloudRev||(planCloudHistorySig!==''&&remoteSig!==planCloudHistorySig);
-      if(remote&&remoteChanged&&!planHistoryPreserves(candidate,remote)){
-        const e=new Error('PLAN_HISTORY_CONFLICT');e.code='history-conflict';throw e;
-      }
+      if(remote&&remoteChanged)candidate=planRebaseFiveYear(planDbState,candidate,remote);
       const nr=rev+1;tx.set(ref,{fiveYearPlanV2:candidate,fiveYearPlanV2Rev:nr,fiveYearPlanV2Updated:Date.now()},{merge:true});return nr;
     });
-    planCloudRev=+nextRev||planCloudRev;planCloudHistorySig=planHistorySig(candidate);planDbState=cloneObj(candidate);
-    localSave(); // 설정 캐시만 저장된다.
+    planCloudRev=+nextRev||planCloudRev;planCloudHistorySig=planHistorySig(candidate);planDbState=cloneObj(candidate);apply(cloneObj(candidate));
     if($("saveState"))$("saveState").textContent="Firebase DB 저장 완료";
     return true;
   }catch(e){
     console.error('plan cloud save',e);
-    if((e&&e.code==='history-conflict')||String(e&&e.message||e).includes('PLAN_HISTORY_CONFLICT')){
-      planRecoveryLock=true;planRecoveryRender();
-      if($("saveState"))$("saveState").textContent="DB에 더 최신 원장 있음 · 저장 중단";
-      alert('DB에 더 최신 거래이력이 있어 저장을 중단했습니다. 새로고침해 Firebase 원장을 다시 불러온 뒤 다시 시도하세요.');
-    }else{
-      if($("saveState"))$("saveState").textContent="Firebase DB 저장 실패";
-      alert('Firebase DB 저장에 실패했습니다. 새로고침하지 말고 다시 저장해 주세요.');
-    }
+    if($("saveState"))$("saveState").textContent="Firebase DB 저장 실패";
     return false;
   }
 }
@@ -2878,7 +2948,7 @@ async function confirmPlanRecovery(){
     });
     planCloudRev=+nextRev||planCloudRev;planCloudHistorySig=planHistorySig(recovered);planCloudHydrated=true;planDbState=cloneObj(recovered);
     planRecoveryLock=false;planForceLocalSave=true;try{localSave();}finally{planForceLocalSave=false;}
-    planRecoveryRender();$("saveState").textContent="장부 복구 확정 · 계정 + 브라우저 저장 완료";
+    planRecoveryRender();$("saveState").textContent="장부 복구 확정 · Firebase DB 저장 완료";
   }catch(e){alert("복구 확정 저장에 실패했습니다. 현재 화면은 유지됩니다.");}
 }
 async function cloudLoad(user){
@@ -2902,11 +2972,19 @@ async function cloudLoad(user){
     }
     planRecoveryRender();
     planCloudHydrated=true;
+    try{
+      localStorage.removeItem(KEY);
+      localStorage.removeItem('qcockpit_v2_'+user.uid);
+      localStorage.removeItem(KEY+"_manual_backup");
+      localStorage.removeItem(KEY+"_cloud_previous");
+      localStorage.removeItem(KEY+"_cloud_recovery");
+      localStorage.removeItem(KEY+"_precloud_restore");
+    }catch(e){}
     if(!hasPlanV2&&v)await cloudSave();
 
     const opState=d.stateV2||d.state;
     if(opState&&opState.inf&&opState.vr){
-      liveState=cloneObj(opState);liveStateSource="Firebase 운영 원장";planStateCloudRev=+d.stateV2Rev||0;planStateHistorySig=planOpHistorySig(opState);planStateCloudHydrated=true;
+      liveState=cloneObj(opState);planStateDbBase=cloneObj(opState);liveStateSource="Firebase 운영 원장";planStateCloudRev=+d.stateV2Rev||0;planStateHistorySig=planOpHistorySig(opState);planStateCloudHydrated=true;
       ensureLiveBoxes();
       writeAssetSessionLocal(); // 거래이력 제외 설정 캐시만 저장
       if((!d.stateV2||migrateLiveInfOperatingDefaults())&&!planStateConflict)await saveOperatingState();
