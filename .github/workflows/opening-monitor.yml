@@ -55,7 +55,7 @@ jobs:
             # 기준+shadow+실시간 원본 ledger까지 있으면 완성본이다.
             # 구형 파일은 덮어버리지 않고 같은 날짜의 누락 필드만 재구성/백필한다.
             if [ -f "$OUT" ]; then
-              if jq -e '(.shadowVariants | type) == "array" and (.shadowVariants | length) > 0 and ((.liveSignalLedger.schema // 0) >= 1)' "$OUT" >/dev/null 2>&1; then
+              if jq -e '(.shadowVariants | type) == "array" and (.shadowVariants | length) > 0 and ((.liveSignalLedger.schema // 0) >= 1) and (.operationalTrades | type) == "array" and (.mainVariant | type) == "string"' "$OUT" >/dev/null 2>&1; then
                 echo "$OUT 기준+shadow+실시간 신호 ledger 이미 저장됨 — 중복 작업 생략"
                 return 0
               fi
@@ -143,6 +143,17 @@ jobs:
                 universeChecked: ([$parts[].universe] | add),
                 errors: ([$parts[].errors] | add),
                 trades: ([$parts[].trades[]] | sort_by(.entryTime, .code)),
+                mainVariant: ($ledger.mainVariant // "baseline"),
+                operationalTrades: (
+                  ($ledger.mainVariant // "baseline") as $main
+                  | if $main == "baseline" then
+                      ([$parts[].trades[]] | sort_by(.entryTime, .code))
+                    else
+                      ([$parts[].shadowVariants[]
+                        | select(.name == $main)
+                        | .trades[]] | sort_by(.entryTime, .code))
+                    end
+                ),
                 shadowVariants: (
                   [$parts[].shadowVariants[]]
                   | group_by(.name)
@@ -191,6 +202,8 @@ jobs:
               universeChecked,
               errors,
               baselineTrades:(.trades|length),
+              mainVariant,
+              operationalTrades:(.operationalTrades|length),
               liveSignals:(.signalRecords|length),
               liveScans:(.liveSignalLedger.scans//[]|length),
               shadow:(.shadowVariants|map({name,label,trades:(.trades|length)}))
