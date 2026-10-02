@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "generatedAt": "2026-10-02T18:56:58.495200+09:00",
+  "generatedAt": "2026-10-02T19:15:22.661986+09:00",
   "designEnd": "2026-09-30",
   "gate": {
     "mdd": -25.0,
@@ -850,7 +850,7 @@
     ]
   },
   "daily": {
-    "generatedAt": "2026-10-02T18:57:04.772765+09:00",
+    "generatedAt": "2026-10-02T19:15:29.123733+09:00",
     "today": "2026-10-02",
     "finalKrDaily": "2026-09-29",
     "rows": [
@@ -2999,6 +2999,196 @@
       "note": "GPT 기준전략 기록이 아직 없습니다."
     }
   },
+  "duel": {
+    "start": "2026-10-05",
+    "rules": "두 쪽 모두 그날 실시간으로 남긴 모의매매 기록만 쓴다(클로드 = Worker 하루 마감 장부, GPT = 자기 기준전략 기록). 같은 시작일(2026-10-05)부터 두 쪽 기록이 다 있는 날만 비교한다. 매매마다 (청산가 ÷ 진입가 − 1)에서 같은 시장 비용표를 뺀다. 하루 손익은 그날 청산된 매매(실현) 기준, 칸 자금 100%. 매매 없는 날 0%. 합계는 4개 탭을 25%씩 같은 원금으로. 하루 승패는 0.01%p 넘게 앞선 쪽이 이김.",
+    "costs": {
+      "opening": 0.25,
+      "daytrading_stock": 0.25,
+      "daytrading_etf": 0.15,
+      "crypto": 0.14,
+      "soxl": 0.2
+    },
+    "tabs": {
+      "opening": {
+        "days": [],
+        "claude": {
+          "tradeDays": 0,
+          "trades": 0,
+          "wins": 0,
+          "losses": 0,
+          "winRate": null,
+          "avgTradePct": null,
+          "totalPct": null,
+          "plus1Days": null,
+          "worstDayPct": null,
+          "mddPct": null,
+          "avgDayPct": null
+        },
+        "gpt": {
+          "tradeDays": 0,
+          "trades": 0,
+          "wins": 0,
+          "losses": 0,
+          "winRate": null,
+          "avgTradePct": null,
+          "totalPct": null,
+          "plus1Days": null,
+          "worstDayPct": null,
+          "mddPct": null,
+          "avgDayPct": null
+        },
+        "record": {
+          "claude": 0,
+          "gpt": 0,
+          "draw": 0
+        },
+        "costPct": {
+          "claude": 0.25,
+          "gpt": 0.25
+        },
+        "gptVersions": [
+          "opening_rebreak_v1"
+        ],
+        "pending": []
+      },
+      "daytrading": {
+        "days": [],
+        "claude": {
+          "tradeDays": 0,
+          "trades": 0,
+          "wins": 0,
+          "losses": 0,
+          "winRate": null,
+          "avgTradePct": null,
+          "totalPct": null,
+          "plus1Days": null,
+          "worstDayPct": null,
+          "mddPct": null,
+          "avgDayPct": null
+        },
+        "gpt": {
+          "tradeDays": 0,
+          "trades": 0,
+          "wins": 0,
+          "losses": 0,
+          "winRate": null,
+          "avgTradePct": null,
+          "totalPct": null,
+          "plus1Days": null,
+          "worstDayPct": null,
+          "mddPct": null,
+          "avgDayPct": null
+        },
+        "record": {
+          "claude": 0,
+          "gpt": 0,
+          "draw": 0
+        },
+        "costPct": {
+          "claude": 0.15,
+          "gpt": 0.25
+        },
+        "gptVersions": [
+          "daytrading_vwap_breakout_v1"
+        ],
+        "pending": []
+      },
+      "crypto": {
+        "days": [],
+        "claude": {
+          "tradeDays": 0,
+          "trades": 0,
+          "wins": 0,
+          "losses": 0,
+          "winRate": null,
+          "avgTradePct": null,
+          "totalPct": null,
+          "plus1Days": null,
+          "worstDayPct": null,
+          "mddPct": null,
+          "avgDayPct": null
+        },
+        "gpt": {
+          "tradeDays": 0,
+          "trades": 0,
+          "wins": 0,
+          "losses": 0,
+          "winRate": null,
+          "avgTradePct": null,
+          "totalPct": null,
+          "plus1Days": null,
+          "worstDayPct": null,
+          "mddPct": null,
+          "avgDayPct": null
+        },
+        "record": {
+          "claude": 0,
+          "gpt": 0,
+          "draw": 0
+        },
+        "costPct": {
+          "claude": 0.14,
+          "gpt": 0.14
+        },
+        "gptVersions": [
+          "btc_midnight_orb_v2"
+        ],
+        "pending": []
+      },
+      "soxl": {
+        "days": [],
+        "claude": {
+          "tradeDays": 0,
+          "trades": 0,
+          "wins": 0,
+          "losses": 0,
+          "winRate": null,
+          "avgTradePct": null,
+          "totalPct": null,
+          "plus1Days": null,
+          "worstDayPct": null,
+          "mddPct": null,
+          "avgDayPct": null
+        },
+        "gpt": {
+          "tradeDays": 0,
+          "trades": 0,
+          "wins": 0,
+          "losses": 0,
+          "winRate": null,
+          "avgTradePct": null,
+          "totalPct": null,
+          "plus1Days": null,
+          "worstDayPct": null,
+          "mddPct": null,
+          "avgDayPct": null
+        },
+        "record": {
+          "claude": 0,
+          "gpt": 0,
+          "draw": 0
+        },
+        "costPct": {
+          "claude": 0.2,
+          "gpt": 0.2
+        },
+        "gptVersions": [],
+        "pending": []
+      }
+    },
+    "total": {
+      "days": [],
+      "record": {
+        "claude": 0,
+        "gpt": 0,
+        "draw": 0
+      },
+      "claude": {},
+      "gpt": {}
+    },
+    "latest": null
+  },
   "changelog": [
     {
       "date": "2026-10-01",
@@ -3058,7 +3248,7 @@
   "review": {
     "today": {
       "date": "2026-10-02",
-      "writtenAt": "2026-10-02T18:57:10.907061+09:00",
+      "writtenAt": "2026-10-02T19:15:34.550838+09:00",
       "tabs": {
         "시초가": {
           "name": "① D-1 갭하락 과매도 v2",
