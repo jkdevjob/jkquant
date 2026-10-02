@@ -182,7 +182,9 @@ t("today summary: tab return vs per-trade sum, account share, no-trade reason", 
   near(op.tabPct, 1); near(op.sumPct, 3); near(op.accountPct, 0.3); assert.equal(op.trades, 3); assert.ok(op.why.startsWith("v2 매매일(통과 6종목)"));
   assert.equal(op.wins, 2); assert.equal(op.losses, 1);
   const m = LV.todaySummary("opening", { rows: [{ pnlPct: 2, status: "보유중" }, { pnlPct: null, status: "주문 실패" }], decision: { breadth: { qualified: 2, v2Signal: false } } }, 1000);
-  near(m.tabPct, 2); assert.equal(m.trades, 1); assert.ok(m.why.includes("측정용 매수") && m.why.includes("주문 실패 1건"));
+  const mf = LV.todaySummary("opening", { rows: [{ pnlPct: 2, status: "보유중", buyPrice: 1 }, { pnlPct: null, status: "주문 실패" }], decision: { breadth: { qualified: 6, v2Signal: true } } }, 1000);
+  near(mf.tabPct, 2); assert.equal(mf.trades, 1); assert.ok(mf.why.includes("주문 실패 1건"));
+  assert.equal(m.tabPct, 0); assert.equal(m.trades, 0); assert.equal(m.accountPct, 0); near(m.measurePct, 2); assert.ok(m.why.includes("측정용 모의 매수") && m.why.includes("칸 수익률에는 안 셈"));
   const z = LV.todaySummary("opening", { rows: [], decision: { reason: "no_expected_gap_down" } }, 1000);
   assert.equal(z.tabPct, 0); assert.equal(z.sumPct, 0); assert.ok(z.noTrade); assert.ok(z.why.includes("예상 갭 −2%~−29% 인 종목 없음"));
   assert.equal(LV.todaySummary("opening", { rows: [] }, 850).why, "08:56 판단 전");

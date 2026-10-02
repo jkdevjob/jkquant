@@ -138,6 +138,11 @@ export function todaySummary(tab,t,hm){
   if(tab==="opening"){
     const ok=rows.filter(r=>r.status!=="주문 실패");trades=ok.length;tabPct=v.length?sum/v.length:0;
     const d=t.decision,b=d&&d.breadth;
+    if(rows.length&&b&&!b.v2Signal){                 // v2 매매일이 아니면 측정용 주문 — 칸 수익률·계좌에 넣지 않는다(장부와 같게)
+      const w=ACCOUNT_WEIGHT[tab];
+      return {tabPct:0,sumPct:0,trades:0,accountPct:0,weight:w,noTrade:true,wins:0,losses:0,measurePct:tabPct,
+        why:"v2 매매일 아님(통과 "+b.qualified+"<5) — 측정용 모의 매수 "+rows.length+"종목 "+(v.length?(tabPct>=0?"+":"")+tabPct.toFixed(2)+"%":"")+" (칸 수익률에는 안 셈)"};
+    }
     if(rows.length)why=(b&&b.v2Signal?"v2 매매일(통과 "+b.qualified+"종목) — ":"측정용 매수(v2 매매일 아님"+(b?": 통과 "+b.qualified+"<5":"")+") — ")+"갭 깊은 "+rows.length+"종목 모의 매수"+(rows.length>ok.length?" · 주문 실패 "+(rows.length-ok.length)+"건":"");
     else if(!d)why=hm<856?"08:56 판단 전":"오늘 판단 기록 없음(휴장일이 아니면 점검)";
     else why=GAP_REASON[d.reason]||("매매 없음 — "+(d.reason||"조건 맞는 종목 없음"));

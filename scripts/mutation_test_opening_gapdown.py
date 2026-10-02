@@ -77,6 +77,7 @@ JS = [
     ("today tab return is sum", "claude-live.js", "tabPct=v.length?sum/v.length:0;", "tabPct=sum;"),
     ("today kr not split", "claude-live.js", "if(o&&d&&!o.noTrade&&!d.noTrade)for", "if(false)for"),
     ("today failed order counted", "claude-live.js", 'const ok=rows.filter(r=>r.status!=="주문 실패");', "const ok=rows;"),
+    ("today measurement counted", "claude-live.js", "    if(rows.length&&b&&!b.v2Signal){", "    if(false){"),
     ("watchlist whitelist", "opening-gapdown.js", "    if(!w)continue;\n", "    if(!w){out.push({...r});continue;}\n"),
 ]
 
