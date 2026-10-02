@@ -531,6 +531,9 @@ jobs:
             process.exit(r.fail?1:0);
           "
 
+      - name: 거래이력 보존 불변식 검사
+        run: node scripts/check-history-preservation.cjs
+
       - name: 회귀 테스트 (엔진 차분 + UI 배선 + DOM 구조 + 모의 장부)
         run: node regression-check.js index.html backtest.html testdata
 
