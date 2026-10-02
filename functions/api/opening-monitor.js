@@ -68,7 +68,7 @@ function mainVariantDef(name){
 async function scanShard(origin,now,shard,shards,limit,cutoffHm,mainVariant="baseline"){
   const uj=await (await fetch(origin+"/api/universe?limit="+limit)).json();
   const universe=(uj.universe||[]).filter((_,i)=>i%shards===shard);
-  const trades=[],shadow=emptyShadow(),errors=[];let idx=0;
+  const trades=[],baselineTrades=[],shadow=emptyShadow(),errors=[];let idx=0;
   const frictionCalibration=await openingVtsCalibration(origin);
   const mainDef=mainVariantDef(mainVariant);
 
@@ -86,8 +86,11 @@ async function scanShard(origin,now,shard,shards,limit,cutoffHm,mainVariant="bas
         const meta=dailyMeta(dj,now.date);
         if(!meta)continue;
 
-        const base=rebreakTrade(rows,meta,cutoffHm,{...mainDef.params,frictionCalibration});
-        if(base)trades.push({code:u.code,name:u.name||u.code,variant:"baseline",mainVariant:mainDef.name,...base});
+        const canonical=rebreakTrade(rows,meta,cutoffHm,{frictionCalibration});
+        if(canonical)baselineTrades.push({code:u.code,name:u.name||u.code,variant:"baseline",mainVariant:"baseline",...canonical});
+
+        const operational=mainDef.name==="baseline"?canonical:rebreakTrade(rows,meta,cutoffHm,{...mainDef.params,frictionCalibration});
+        if(operational)trades.push({code:u.code,name:u.name||u.code,variant:mainDef.name,mainVariant:mainDef.name,...operational});
 
         for(const v of SHADOW_VARIANTS){
           const tr=rebreakTrade(rows,meta,cutoffHm,{...v.params,frictionCalibration});
@@ -102,8 +105,9 @@ async function scanShard(origin,now,shard,shards,limit,cutoffHm,mainVariant="bas
 
   const sorter=(a,b)=>a.entryTime-b.entryTime||(b.amountRatio-a.amountRatio)||String(a.code).localeCompare(String(b.code));
   trades.sort(sorter);
+  baselineTrades.sort(sorter);
   Object.values(shadow).forEach(x=>x.trades.sort(sorter));
-  return {universe:universe.length,trades,shadow,errors,mainVariant:mainDef.name,mainLabel:mainDef.label};
+  return {universe:universe.length,trades,baselineTrades,shadow,errors,mainVariant:mainDef.name,mainLabel:mainDef.label};
 }
 function buyLines(rows){
   return rows.flatMap((x,i)=>[
@@ -168,7 +172,8 @@ export async function onRequestGet({request,env}){
     if(history||serverHistory){
       return new Response(JSON.stringify({
         ok:true,date:now.date,cutoffHm,shard,shards,universe:res.universe,mainVariant:res.mainVariant,
-        trades:res.trades,
+        trades:res.baselineTrades,
+        operationalTrades:res.trades,
         shadowVariants:Object.values(res.shadow),
         errors:res.errors.length
       }),{headers:JH});
