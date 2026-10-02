@@ -214,7 +214,7 @@ body.asset-paper-mode .ledger-del{display:none!important}
 <body>
 <div class="wrap">
   <div class="top">
-    <div class="brand"><div class="logo">Asset Plan</div><h1>자산플랜 <span class="ver">v1.39.2</span></h1></div>
+    <div class="brand"><div class="logo">Asset Plan</div><h1>자산플랜 <span class="ver">v1.39.3</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
       <div class="jkmenu" id="jkmenuWrap">
@@ -2574,18 +2574,25 @@ function planLedgerEventCount(o){
   const l=o&&o.alphaLedger;
   return l&&Array.isArray(l.events)?l.events.length:0;
 }
+function planLedgerHasActivity(o){
+  const l=o&&o.alphaLedger,b=l&&l.base||{};
+  return planLedgerEventCount(o)>0
+    || Math.max(0,+b.tecl||0)>0 || Math.max(0,+b.tqqq||0)>0 || Math.max(0,+b.sgov||0)>0;
+}
 async function cloudLoad(user){
   if(!user)return;
   try{
     const snap=await getDoc(doc(db,"users",user.uid)),d=snap.data()||{},v=d.fiveYearPlan;
     let local=null;try{local=JSON.parse(localStorage.getItem(KEY)||"null")}catch(e){}
-    const localEvents=planLedgerEventCount(local),cloudEvents=planLedgerEventCount(v);
-    // 로컬 장부가 비어 버렸는데 클라우드에 거래이력이 남아 있으면 손실로 보지 않고 자동 복구한다.
-    // 정상 로컬 장부(거래이력 1건 이상)는 예전 정책대로 로컬을 우선해 사용자가 한 수정/삭제를 되돌리지 않는다.
-    if(v&&(!local||(localEvents===0&&cloudEvents>0))){
+    const localEvents=planLedgerEventCount(local),cloudEvents=planLedgerEventCount(v),
+      localActive=planLedgerHasActivity(local),cloudActive=planLedgerHasActivity(v);
+    // 로컬 장부가 비어 버렸는데 클라우드에 거래이력/기존 보유잔고가 남아 있으면 자동 복구한다.
+    // 정상 로컬 장부는 예전 정책대로 로컬을 우선해 사용자가 한 수정/삭제를 되돌리지 않는다.
+    if(v&&(!local||(!localActive&&cloudActive))){
+      try{localStorage.setItem(KEY+"_cloud_recovery",JSON.stringify(v));}catch(e){}
       if(local){try{localStorage.setItem(KEY+"_precloud_restore",JSON.stringify(local));}catch(e){}}
       apply(v);planForceLocalSave=true;try{localSave();}finally{planForceLocalSave=false;}renderSessionSelectors();renderLedger();render();
-      $("saveState").textContent=local&&cloudEvents>0?"클라우드 거래이력 복구 · "+cloudEvents+"건":"계정 설정 불러옴";
+      $("saveState").textContent=local&&cloudActive?"클라우드 거래이력 복구 · "+cloudEvents+"건":"계정 설정 불러옴";
     }else if(local){
       $("saveState").textContent="이 기기 저장값 유지";
     }
