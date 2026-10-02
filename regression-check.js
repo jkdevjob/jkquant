@@ -10219,7 +10219,7 @@ console.log('\n[135] 자산플랜 세션 — 운영처럼 세션 + 모의투자 
   ok('B 세션은 horizon별 분리되고 현재 투자중 플랜은 기존 저장소와 분리',
      /filter\(x=>x&&\+x\.horizon===\+h\)/.test(extractFn(pl,'function assetSessionList(h=activeHorizon)'))
      && /현재 투자중 플랜은 기존 fiveYearPlan 저장소를 그대로 쓴다/.test(pl)
-     && /if\(x\)\{[\s\S]*syncActiveAssetSessionFromView/.test(extractFn(pl,'function localSave(force=false)')));
+     && /if\(x\)\{[\s\S]*syncActiveAssetSessionFromView/.test(extractFn(pl,'function localSave(')));
 
   ok('C 선택한 운영 세션 아래 기존 현재분석·계좌·거래이력·판단근거·전략설명을 그대로 사용',
      /id="alphaOrderSection"/.test(pl) && /id="alphaAccountSection"/.test(pl)
@@ -11043,6 +11043,7 @@ console.log('[GAPDOWN D-1 / DIP24 D-3] 연구용 모의체결 경로 안전장�
      /var NOTRADE=/.test(scl2)&&/td\.noTrade\?k\("오늘 칸 수익률",NOTRADE/.test(scl2)&&/q\.noTrade\?NOTRADE:pct\(q\.tabPct\)/.test(scl2)
      &&/if\(tdy&&tdy\.noTrade\)head\+=/.test(scl2)&&/nt=!\(z\.tradeDays>0\)/.test(scl2)&&/\(nt\?NOTRADE:/.test(scl2)
      &&/x\.claude\.entries\?/.test(scl2)&&/tradeDays=trades\)/.test(fs.readFileSync(__d+'/scripts/claude_lab.py','utf8')));
+  ok('📅 오늘 탭에서 \'전일 · 당일 결과\' 표 삭제(사용자 요청 2026-10-02)', !/전일 · 당일 결과 — 모든 전략/.test(scl2));
   ok('📅 오늘 탭 전략별 누적 수익률 추이: 모의 장부 / 최근 60일 재구성(참고) 따로 · 섞지 않음 · 5색(검증) + 범례',
      /function trendCard\(\)/.test(scl2)&&/html\+=trendCard\(\);/.test(scl2)&&/function paperCurves\(\)/.test(scl2)
      &&/report\["curves"\] = recent_curves\(/.test(fs.readFileSync(__d+'/scripts/claude_lab.py','utf8')));
