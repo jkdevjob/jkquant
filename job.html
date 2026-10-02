@@ -64,6 +64,7 @@ main{padding:22px 0 70px}.hero{display:flex;gap:12px;justify-content:space-betwe
     <input class="search" id="keyword" placeholder="검색어: Java, Spring, 회사명, 업무내용...">
     <select id="period"><option value="30" selected>최근 1개월</option><option value="14">최근 14일</option><option value="7">최근 7일</option><option value="custom">직접 지정</option><option value="all">전체 보관분</option></select>
     <select id="region"><option value="">대전·세종 전체</option><option>대전</option><option>세종</option></select>
+    <select id="employment"><option value="">고용형태 전체</option><option value="regular">정규직</option><option value="nonregular">정규직 외</option></select>
     <select id="source"><option value="">모든 출처</option></select>
     <select id="sort"><option value="latest" selected>최신순</option><option value="oldest">오래된순</option><option value="title">제목순</option></select>
     <select id="pageSize"><option value="50" selected>50개씩</option><option value="100">100개씩</option><option value="200">200개씩</option></select>
@@ -109,7 +110,7 @@ function setDefaultDates(){
 }
 function tagClass(c){return c==="regular_dev"?"reg":c==="java_ai"?"ai":c.indexOf("salary")===0?"pay":c==="short_term"?"hot":""}
 function resetFilters(){
-  document.getElementById("keyword").value="";document.getElementById("region").value="";document.getElementById("source").value="";document.getElementById("sort").value="latest";setDefaultDates();shown=+document.getElementById("pageSize").value||50;applyFilters()
+  document.getElementById("keyword").value="";document.getElementById("region").value="";document.getElementById("employment").value="";document.getElementById("source").value="";document.getElementById("sort").value="latest";setDefaultDates();shown=+document.getElementById("pageSize").value||50;applyFilters()
 }
 function renderSources(){
   var names=[].concat.apply([],DATA.jobs.map(function(j){return j.sources||[]})).filter(Boolean).filter(function(v,i,a){return a.indexOf(v)===i}).sort(function(a,b){return a.localeCompare(b,"ko")});
@@ -117,12 +118,19 @@ function renderSources(){
   var failed=Object.keys(DATA.sourceStatuses||{}).filter(function(k){return !(DATA.sourceStatuses[k]||{}).ok});
   document.getElementById("sourceWarn").innerHTML=failed.length?'<div class="warn">⚠️ 이번 수집에서 제한/실패한 사이트: '+esc(failed.join(" · "))+". 다른 사이트에서 확인된 공고는 정상 표시됩니다.</div>":""
 }
+function isRegularJob(j){
+  var text=[j.title,j.body].join(" ").toLowerCase();
+  return text.indexOf("정규직")>=0||text.indexOf("정규 사원")>=0||text.indexOf("정규사원")>=0
+}
 function applyFilters(){
-  var q=document.getElementById("keyword").value.trim().toLowerCase(),period=document.getElementById("period").value,region=document.getElementById("region").value,source=document.getElementById("source").value,sort=document.getElementById("sort").value,from=document.getElementById("fromDate").value,to=document.getElementById("toDate").value,cutoff=(!from&&/^\d+$/.test(period))?daysAgo(+period):"";
+  var q=document.getElementById("keyword").value.trim().toLowerCase(),period=document.getElementById("period").value,region=document.getElementById("region").value,employment=document.getElementById("employment").value,source=document.getElementById("source").value,sort=document.getElementById("sort").value,from=document.getElementById("fromDate").value,to=document.getElementById("toDate").value,cutoff=(!from&&/^\d+$/.test(period))?daysAgo(+period):"";
   filtered=(DATA.jobs||[]).filter(function(j){
     if(activeCat!=="all"&&(j.categories||[]).indexOf(activeCat)<0)return false;
     var d=effectiveDate(j);if(cutoff&&d&&d<cutoff)return false;if(from&&d&&d<from)return false;if(to&&d&&d>to)return false;
-    if(region&&(j.locations||[]).indexOf(region)<0)return false;if(source&&(j.sources||[]).indexOf(source)<0)return false;
+    if(region&&(j.locations||[]).indexOf(region)<0)return false;
+    if(employment==="regular"&&!isRegularJob(j))return false;
+    if(employment==="nonregular"&&isRegularJob(j))return false;
+    if(source&&(j.sources||[]).indexOf(source)<0)return false;
     if(q){var hay=[j.title,j.company,j.body,(j.sources||[]).join(" "),(j.locations||[]).join(" "),(j.categories||[]).map(function(c){return CAT_LABEL[c]||c}).join(" ")].join(" ").toLowerCase();if(hay.indexOf(q)<0)return false}
     return true
   });
@@ -149,7 +157,7 @@ function renderList(){
 function showMore(){shown+=+document.getElementById("pageSize").value||50;renderList()}
 document.getElementById("tabs").addEventListener("click",function(e){var b=e.target.closest(".tab");if(!b)return;document.querySelectorAll(".tab").forEach(function(x){x.classList.toggle("on",x===b)});activeCat=b.dataset.cat;applyFilters()});
 document.getElementById("period").addEventListener("change",function(){syncDatesFromPeriod();applyFilters()});
-["keyword","region","source","sort","pageSize"].forEach(function(id){var el=document.getElementById(id);el.addEventListener(id==="keyword"?"input":"change",applyFilters)});
+["keyword","region","employment","source","sort","pageSize"].forEach(function(id){var el=document.getElementById(id);el.addEventListener(id==="keyword"?"input":"change",applyFilters)});
 ["fromDate","toDate"].forEach(function(id){document.getElementById(id).addEventListener("change",function(){document.getElementById("period").value="custom";applyFilters()})});
 setDefaultDates();
 (function(){fetch("/data/job_archive.json?ts="+Date.now(),{cache:"no-store"}).then(function(r){if(!r.ok)throw new Error("HTTP "+r.status);return r.json()}).then(function(d){DATA=d||{};DATA.jobs=Array.isArray(DATA.jobs)?DATA.jobs:[];renderSources();var upd=DATA.updatedAt?new Date(DATA.updatedAt):null;document.getElementById("updated").textContent="최근 "+(DATA.rangeDays||30)+"일 · 중복 제거 · "+(upd&&!isNaN(upd)?"업데이트 "+upd.toLocaleString("ko-KR"):"업데이트 준비 중");applyFilters()}).catch(function(e){document.getElementById("list").innerHTML='<div class="empty">JOB 데이터를 아직 준비 중입니다.<br><span class="sub">'+esc(e.message||e)+"</span></div>";document.getElementById("resultText").textContent="데이터 준비 중"})})();
