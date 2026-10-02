@@ -155,7 +155,9 @@ export function todaySummary(tab,t,hm){
     why=u.hold==null&&!u.realized?"판단 없음(밤 계산 점검)":u.status+(u.session?" · "+u.session:"");
   }
   const w=ACCOUNT_WEIGHT[tab]||0;
-  return {tabPct,sumPct:sum,trades,accountPct:tabPct*w,weight:w,noTrade:trades===0,why};
+  const done=rows.filter(r=>r.pnlPct!=null&&(r.buyPrice!=null||r.sellPrice!=null||r.hold===true)&&r.status!=="주문 실패");
+  return {tabPct,sumPct:sum,trades,accountPct:tabPct*w,weight:w,noTrade:trades===0,why,
+    wins:done.filter(r=>r.pnlPct>0).length,losses:done.filter(r=>r.pnlPct<=0).length};
 }
 // 국내 칸(30%)은 ①②가 같은 날 둘 다 매매하면 반씩 쓴다(백테 combine_same_capital 과 같은 규칙)
 export function applyKrSplit(tabs){

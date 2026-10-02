@@ -281,12 +281,12 @@ def soxl_meanrev(rows, p):
     pos = None                                     # dict(entry=i, days=n) — 보유 중이면
     pending = None                                 # "buy" | "sell" — 전날 종가에 정한 오늘 시가 주문
     for i in range(n, len(rows)):
-        rec = dict(date=D[i], strategyVersion=p["version"], action="flat", pnlPct=None, heldDays=None, entryPrice=None,
+        rec = dict(date=D[i], strategyVersion=p["version"], action="flat", pnlPct=None, heldDays=None, entryPrice=None, exitPrice=None,
                    close=None, rsi2=None, ma=None, next="")
         if pending == "sell" and pos:
             v = ((O[i] / C[i - 1] - 1) * 100 - half) * sz
             dv[D[i]] = v
-            rec.update(action="exit", pnlPct=v, heldDays=pos["days"])
+            rec.update(action="exit", pnlPct=v, heldDays=pos["days"], exitPrice=O[i], entryPrice=O[pos["entry"]])
             pos = None
         elif pending == "buy" and not pos:
             v = ((C[i] / O[i] - 1) * 100 - half) * sz
@@ -355,7 +355,7 @@ def combine_same_capital(a, b):
 
 def last_two(cal, upto=None):
     c = [d for d in sorted(set(cal)) if not upto or d <= upto]
-    return c[-2:] if len(c) >= 2 else ([None] + c)[-2:]
+    return ([None, None] + c)[-2:]
 
 
 def d1_live_status(d):
@@ -771,6 +771,125 @@ def week_summary(summary, today):
                 note="장부에 확정된 날만. 코인 하루는 09시 기준, 미국은 한국 날짜(다음 날 아침)로 센다. 기여도는 계좌 비중을 곱한 단순합.")
 
 
+# ── GPT 와 같은 조건 비교: 같은 날짜(청산일) · 같은 시장 데이터 · 같은 비용표 ──
+FAIR_COST = {"opening": 0.25, "daytrading_stock": 0.25, "daytrading_etf": 0.15, "crypto": 0.14, "soxl": 0.20}
+FAIR_NOTE = ("두 전략 모두 매매마다 (청산가 ÷ 진입가 − 1) 총수익에서 같은 시장 같은 비용(왕복)을 뺀다. 하루 손익은 그날 청산한 매매의 "
+             "자금 배분대로(여러 종목이면 균등, 코인은 클로드 두 코인 반반 · GPT 한 종목 전액), 칸 자금 100% 기준. 매매 없는 날 0%.")
+REASON_KO = {"stop": "손절", "take_profit": "익절", "time_exit": "시간 청산", "trade": "다음 09시 청산", "exit": "반등 청산",
+             "close": "종가 청산", "overnight": "다음 시가 청산"}
+
+
+def _gross(e, x):
+    try:
+        e, x = float(e), float(x)
+        return (x / e - 1) * 100 if e > 0 and x > 0 else None
+    except (TypeError, ValueError):
+        return None
+
+
+def claude_trades(tab):
+    """클로드 기준전략 매매 목록: {청산일: [dict(name, entry, exit, reason, gross)]} + 후보 수 {날짜: (후보, 통과)}."""
+    by, cands = {}, {}
+    if tab == "opening":
+        q = {}
+        for r in read_csv(DATA / "opening-gapdown-research/decisions.csv"):
+            q[r["date"]] = int(r.get("rsiPassed") or 0)
+            cands[r["date"]] = (int(r.get("gapDownCandidates") or 0), int(r.get("rsiPassed") or 0))
+        for r in read_csv(DATA / "opening-gapdown-research/signals.csv"):
+            if q.get(r["date"], 0) >= 5 and r.get("grossPnl") not in (None, ""):
+                by.setdefault(r["date"], []).append(dict(name=r.get("name"), entry=float(r["entryPrice"]), exit=float(r["exitPrice"]),
+                                                         reason="종가 청산", gross=float(r["grossPnl"])))
+    elif tab == "daytrading":
+        for r in read_csv(DATA / "etf-overnight-research/signals.csv"):
+            by.setdefault(r["exitDate"], []).append(dict(name="KODEX 코스닥150레버리지", entry=float(r["entryPrice"]), exit=float(r["exitPrice"]),
+                                                         reason="다음 시가 청산", gross=float(r["grossPnl"])))
+    elif tab == "crypto":
+        for m in COIN_BO["markets"]:
+            for r in DECISIONS.get(m, []):
+                d = r["date"]
+                c = cands.get(d, (0, 0))
+                cands[d] = (c[0] + 1, c[1] + (1 if str(r.get("trend")) in ("1", "True") else 0))
+                if r.get("action") in ("trade", "stop") and r.get("entryPrice"):
+                    x = r["exitPrice"] * (1 - COIN_BO["stopSlipPct"] / 100) if r["action"] == "stop" else r["exitPrice"]
+                    exit_day = (date.fromisoformat(d) + timedelta(days=1)).isoformat()      # 다음 날 09:00 청산(손절은 그날 안이지만 같은 업비트 하루)
+                    by.setdefault(exit_day if r["action"] == "trade" else d, []).append(
+                        dict(name=m.replace("KRW-", ""), entry=r["entryPrice"], exit=x, reason="손절" if r["action"] == "stop" else "다음 09시 청산",
+                             gross=_gross(r["entryPrice"], x), slot=0.5))
+    elif tab == "soxl":
+        for r in DECISIONS.get("SOXL", []):
+            cands[r["date"]] = (1, 1 if r.get("next") == "buy_open" else 0)
+            if r.get("action") == "exit" and r.get("exitPrice"):
+                by.setdefault(r["date"], []).append(dict(name="SOXL", entry=r["entryPrice"], exit=r["exitPrice"],
+                                                         reason=f"반등 청산 ({r.get('heldDays')}일)", gross=_gross(r["entryPrice"], r["exitPrice"])))
+    return by, cands
+
+
+def gpt_trades(tab):
+    path = {"opening": "opening-history/baseline-trades.csv", "daytrading": "daytrading-research/baseline-trades.csv",
+            "crypto": "crypto-research/baseline-trades.csv", "soxl": "soxl-research/baseline-trades.csv"}[tab]
+    by, ver = {}, set()
+    for r in read_csv(DATA / path):
+        g = _gross(r.get("entryPrice"), r.get("exitPrice"))
+        if g is None:
+            continue
+        by.setdefault(r["date"], []).append(dict(name=r.get("name") or ("BTC" if tab == "crypto" else r.get("code") or ""),
+                                                 entry=float(r["entryPrice"]), exit=float(r["exitPrice"]),
+                                                 reason=REASON_KO.get(r.get("reason"), r.get("reason") or ""), gross=g))
+        ver.add(r.get("strategyVersion") or "")
+    cands = {}
+    if tab == "crypto":
+        for r in read_csv(DATA / "crypto-research/baseline-decisions.csv"):
+            cands[r["date"]] = (1, 1 if r.get("action") == "trade" else 0)
+    return by, cands, sorted(v for v in ver if v)
+
+
+def _side_day(trades, cost, slots=None):
+    """그날 손익(칸 자금 100%): slot 이 있으면 그 몫(코인 반반), 없으면 균등 평균."""
+    if not trades:
+        return 0.0
+    nets = [(t["gross"] - cost, t.get("slot")) for t in trades]
+    if all(s is not None for _, s in nets):
+        return sum(v * s for v, s in nets)
+    return statistics.fmean(v for v, _ in nets)
+
+
+def _side_summary(days, by, cost):
+    trades = [t for d in days for t in by.get(d, [])]
+    nets = [t["gross"] - cost for t in trades]
+    dv = {d: _side_day(by[d], cost) for d in days if by.get(d)}
+    g = goal_metrics(dv, days, 252) if days else {}
+    return dict(tradeDays=len(dv), trades=len(trades), wins=sum(1 for v in nets if v > 0), losses=sum(1 for v in nets if v <= 0),
+                winRate=(sum(1 for v in nets if v > 0) / len(nets) * 100) if nets else None,
+                avgTradePct=statistics.fmean(nets) if nets else None, totalPct=g.get("totalPct"), plus1Days=g.get("plus1Days"),
+                worstDayPct=g.get("worstDayPct") if dv else None, mddPct=g.get("mddPct"), avgDayPct=statistics.fmean(dv.values()) if dv else None)
+
+
+def fair_compare(tab, calendar):
+    """같은 날짜(GPT 기록이 있는 구간 ∩ 클로드 확정 구간) · 같은 비용표로 두 기준전략을 매매 단위부터 다시 계산한다."""
+    cost = FAIR_COST["opening" if tab == "opening" else "crypto" if tab == "crypto" else "soxl" if tab == "soxl" else "daytrading_stock"]
+    cby, ccand = claude_trades(tab)
+    if tab == "daytrading":
+        cost_c = FAIR_COST["daytrading_etf"]                 # ② 은 ETF(거래세 없음) — 같은 시장의 같은 상품 비용표
+    else:
+        cost_c = cost
+    gby, gcand, gver = gpt_trades(tab)
+    if not gby:
+        return dict(available=False, note="GPT 기준전략 기록이 아직 없습니다.")
+    cal = sorted(set(calendar))
+    start, end = min(gby), max(gby)
+    c_last = max([d for d in cal if d <= end] or [end])
+    days = [d for d in cal if start <= d <= min(end, c_last)]
+    rows = []
+    for d in reversed(days[-20:]):
+        rows.append(dict(date=d,
+                         claude=dict(cands=ccand.get(d), entries=len(cby.get(d, [])), pnlPct=_side_day(cby.get(d, []), cost_c) if cby.get(d) else 0.0,
+                                     trades=[dict(t, net=t["gross"] - cost_c) for t in cby.get(d, [])]),
+                         gpt=dict(cands=gcand.get(d), entries=len(gby.get(d, [])), pnlPct=_side_day(gby.get(d, []), cost) if gby.get(d) else 0.0,
+                                  trades=[dict(t, net=t["gross"] - cost) for t in gby.get(d, [])])))
+    return dict(available=True, window=[days[0], days[-1]] if days else None, costPct=dict(claude=cost_c, gpt=cost), gptVersions=gver,
+                note=FAIR_NOTE, claude=_side_summary(days, cby, cost_c), gpt=_side_summary(days, gby, cost), days=rows)
+
+
 def review_entry(report):
     """매일 검증·분석 기록 — 날짜별 한 번만 쓴다(저녁 첫 실행 기준). 자동 점검 결과 + 판단 근거."""
     today = datetime.now(KST).strftime("%Y-%m-%d")
@@ -947,6 +1066,13 @@ def main():
                                          datetime.now(KST).strftime("%Y-%m-%d"))
     except Exception as e:  # noqa: BLE001
         report["week"] = dict(error=str(e))
+    report["fair"] = {}
+    for tab, cal in (("opening", CAL.get("etf") or krx_cal), ("daytrading", CAL.get("etf") or krx_cal),
+                     ("crypto", [(date.fromisoformat(d) + timedelta(days=1)).isoformat() for d in (CAL.get("coin") or [])]), ("soxl", CAL.get("us") or [])):
+        try:
+            report["fair"][tab] = fair_compare(tab, cal)
+        except Exception as e:  # noqa: BLE001
+            report["fair"][tab] = dict(available=False, error=str(e))
     report["changelog"] = CHANGELOG
     try:
         report["review"] = write_review(report)

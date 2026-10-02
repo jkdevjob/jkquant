@@ -10984,6 +10984,12 @@ console.log('[GAPDOWN D-1 / DIP24 D-3] 연구용 모의체결 경로 안전장�
        &&hold.length>=2&&hold.every(x=>x>=1&&x<=5)&&/SOXL_MR = dict\(version="soxl_rsi2_meanrev_v1", trade="SOXL"/.test(lp)
        &&!/TQQQ|tqqq/.test(scl2)&&!/TQQQ|tqqq/.test(lv)&&/report\["tabs"\]\["soxl"\] = tab_report\("soxl", "④ SOXL/.test(lp),JSON.stringify(hold));
   }
+  { const lp=fs.readFileSync(__d+'/scripts/claude_lab.py','utf8');
+    ok('GPT 와 같은 조건 비교: 같은 비용표 · GPT 기록 구간만 · 매매 단위부터 다시 계산 · 탭마다 ⚖️ 카드(후보→진입→결과→누적)',
+       /FAIR_COST = \{"opening": 0\.25, "daytrading_stock": 0\.25, "daytrading_etf": 0\.15, "crypto": 0\.14, "soxl": 0\.20\}/.test(lp)
+       &&/days = \[d for d in cal if start <= d <= min\(end, c_last\)\]/.test(lp)&&/report\["fair"\]\[tab\] = fair_compare\(tab, cal\)/.test(lp)
+       &&/function fairCard\(tab\)/.test(scl2)&&/liveCard\(tab\)\+fairCard\(tab\)/.test(scl2));
+  }
   ok('클로드 모의투자 장부: 날짜별 한 번만 쓰기 · 요약은 장부 값만 · 화면 누적표 · workflow 저장',
      /def write_once\(path, obj\):\n[\s\S]{0,200}if path\.exists\(\):\n\s*return False/.test(fs.readFileSync(__d+'/scripts/claude_lab.py','utf8'))
      &&/모의투자 누적/.test(scl2)&&/data\/claude-paper/.test(wf));

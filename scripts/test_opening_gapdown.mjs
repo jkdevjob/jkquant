@@ -177,9 +177,10 @@ t("telegram weekly: account week, +5% check, contributions, shadow candidates, s
   assert.ok(stale.includes("⚠️ 이번 주 장부 요약이 없습니다") && !stale.includes("달성 ✅"));
 });
 t("today summary: tab return vs per-trade sum, account share, no-trade reason", () => {
-  const op = LV.todaySummary("opening", { rows: [{ pnlPct: 3, status: "청산" }, { pnlPct: -1, status: "청산" }, { pnlPct: 1, status: "청산" }],
+  const op = LV.todaySummary("opening", { rows: [{ pnlPct: 3, status: "청산", buyPrice: 1 }, { pnlPct: -1, status: "청산", buyPrice: 1 }, { pnlPct: 1, status: "청산", buyPrice: 1 }],
                                           decision: { breadth: { qualified: 6, v2Signal: true } } }, 1600);
   near(op.tabPct, 1); near(op.sumPct, 3); near(op.accountPct, 0.3); assert.equal(op.trades, 3); assert.ok(op.why.startsWith("v2 매매일(통과 6종목)"));
+  assert.equal(op.wins, 2); assert.equal(op.losses, 1);
   const m = LV.todaySummary("opening", { rows: [{ pnlPct: 2, status: "보유중" }, { pnlPct: null, status: "주문 실패" }], decision: { breadth: { qualified: 2, v2Signal: false } } }, 1000);
   near(m.tabPct, 2); assert.equal(m.trades, 1); assert.ok(m.why.includes("측정용 매수") && m.why.includes("주문 실패 1건"));
   const z = LV.todaySummary("opening", { rows: [], decision: { reason: "no_expected_gap_down" } }, 1000);
