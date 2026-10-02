@@ -47,7 +47,7 @@ ok('구버전 client가 revision 없이 쓴 변경도 history fingerprint로 감
 const idxFns=[
   '_histKeyPart','_histStableJson','_histSemanticKey','_histGroupKey',
   '_stateHistoryMap','_historyPreserves','_historyRelation','_historyCount','_historySignature',
-  '_mergeRecordArrays','_mergeHistorySafeState'
+  '_mergeRecordArrays','_repairLegacyMergeDupes','_mergeHistorySafeState'
 ].map(n=>fn(idx,'function '+n+'(')).join('\n');
 const IC=vm.createContext({console,Map,Set,JSON,sortHist:a=>a.sort((x,y)=>String(x.date||'').localeCompare(String(y.date||''))||((x.ts||0)-(y.ts||0)))});
 vm.runInContext(idxFns,IC);
@@ -79,6 +79,12 @@ ok('현재 원장에 없는 identity-less 옛 행을 자동으로 되살리지 �
   const stale={date:'2026-07-31',kind:'절반매수',price:8,qty:1};
   const m=IC._mergeHistorySafeState(mkState([r1]),mkState([r1,stale]));
   return m.inf.sessions[0].hist.length===1&&m.inf.sessions[0].hist[0].ts===1;
+})());
+ok('v3.108.1이 이미 만든 legacy 동일행 중복도 frozen legacy 기준으로 복구',(()=>{
+  const base=mkState([legacyA]);
+  const dup=mkState([legacyA,legacyB,{ts:99,date:'2026-10-03',kind:'1회매수',price:12,qty:1}]);
+  const n=IC._repairLegacyMergeDupes(dup,base),h=dup.inf.sessions[0].hist;
+  return n===1&&h.length===2&&h.filter(x=>!x.ts).length===1&&h.some(x=>x.ts===99);
 })());
 const splitLocal=mkState([r1,{ts:3,date:'2026-09-03',kind:'buy',price:9,qty:1}]);
 const splitRemote=mkState([r1,r2,{ts:4,date:'2026-09-04',kind:'sell',price:12,qty:1}]);
