@@ -316,10 +316,19 @@ def soxl_meanrev(rows, p):
     return dv, decisions, nxt
 
 
+def drop_open_session(bars, now_utc=None):
+    """미국장이 아직 안 끝난 오늘 봉(장중 일봉)은 버린다 — 확정 종가로만 판단·장부를 쓴다. 뉴욕 16:15 이후면 그날 봉을 쓴다."""
+    from zoneinfo import ZoneInfo
+    ny = (now_utc or datetime.now(timezone.utc)).astimezone(ZoneInfo("America/New_York"))
+    today = ny.strftime("%Y-%m-%d")
+    closed = (ny.hour, ny.minute) >= (16, 15)
+    return {d: v for d, v in bars.items() if d < today or (d == today and closed)}
+
+
 def fetch_us(ticker):
     import FinanceDataReader as fdr
     d = fdr.DataReader(ticker, "2010-01-01")
-    return {str(i)[:10]: (float(r["Open"]), float(r["High"]), float(r["Low"]), float(r["Close"])) for i, r in d.iterrows() if float(r["Open"]) > 0}
+    return drop_open_session({str(i)[:10]: (float(r["Open"]), float(r["High"]), float(r["Low"]), float(r["Close"])) for i, r in d.iterrows() if float(r["Open"]) > 0})
 
 
 def d1_daily():
@@ -1092,5 +1101,37 @@ def write_csv(path, rows):
         w.writerows(rows)
 
 
+def us_close_payload(latest, rows, now_utc=None):
+    """미국장 마감 알림 본문 — 방금 끝난 뉴욕 세션이 장부(확정 종가)에 들어갔을 때만. 아니면 None(보내지 않음)."""
+    from zoneinfo import ZoneInfo
+    now = now_utc or datetime.now(timezone.utc)
+    ny = now.astimezone(ZoneInfo("America/New_York"))
+    if (ny.hour, ny.minute) < (16, 15) or not rows:
+        return None
+    last = rows[-1]
+    nx = ((latest.get("tabs") or {}).get("soxl") or {}).get("nextSignal") or {}
+    if last.get("date") != ny.strftime("%Y-%m-%d") or nx.get("basedOn") != last.get("date"):
+        return None
+
+    def f(v):
+        try:
+            return float(v) if v not in (None, "") else None
+        except ValueError:
+            return None
+    return dict(kind="us_close", date=now.astimezone(KST).strftime("%Y-%m-%d"),
+                soxl=dict(last=dict(date=last["date"], action=last.get("action"), pnlPct=f(last.get("pnlPct")), entryPrice=f(last.get("entryPrice")),
+                                    exitPrice=f(last.get("exitPrice")), close=f(last.get("close")), heldDays=f(last.get("heldDays"))),
+                          next=dict(action=nx.get("action"), rsi2=nx.get("rsi2"), ma=nx.get("ma"), close=nx.get("close"),
+                                    holding=nx.get("holding"), heldDays=nx.get("heldDays"), basedOn=nx.get("basedOn"))))
+
+
 if __name__ == "__main__":
+    import sys
+    if "--us-close-payload" in sys.argv:                 # workflow: 미국장 마감 알림 본문만 출력(없으면 실패 코드)
+        pl = us_close_payload(read_json(OUT / "latest.json") or {}, read_csv(OUT / "soxl-mr-decisions.csv"))
+        if not pl:
+            print("미국장 마감 전이거나 오늘 세션이 아직 장부에 없음", file=sys.stderr)
+            raise SystemExit(1)
+        print(json.dumps(pl, ensure_ascii=False))
+        raise SystemExit(0)
     raise SystemExit(main())

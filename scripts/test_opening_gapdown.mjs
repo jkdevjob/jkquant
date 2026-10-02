@@ -218,4 +218,14 @@ t("soxl live: planned open buy/sell executes only in the session after the decis
   const sm = LV.todaySummary("soxl", { rows: [sold] }, 600); assert.equal(sm.trades, 1); near(sm.accountPct, (3 - 0.1) * 0.4);
   assert.equal(LV.todaySummary("soxl", { rows: [flat] }, 600).trades, 0);
 });
+t("telegram us_close + morning ② sell result", () => {
+  const u = TG.compose("us_close", "2026-10-03", null, { soxl: { last: { date: "2026-10-02", action: "exit", pnlPct: 2.1, entryPrice: 140, exitPrice: 146, heldDays: 2 },
+                                                              next: { action: "none", holding: false, rsi2: 70, ma: 120, close: 150 } } });
+  assert.ok(u.includes("2026-10-02 미국장 마감 — ④ SOXL") && u.includes("오늘: 시가 146.00 매도 · 매수가 140.00 · 2일 보유") && u.includes("다음 세션: 쉼 (RSI(2) 70 · 200일 평균 위)"));
+  const b = TG.compose("us_close", "2026-10-03", null, { soxl: { last: { date: "2026-10-02", action: "flat" }, next: { action: "buy", rsi2: 8, ma: 120, close: 130 } } });
+  assert.ok(b.includes("오늘: 매매 없음") && b.includes("다음 세션: 시가 매수 (RSI(2) 8 · 200일 평균 위)"));
+  const live = { tabs: { daytrading: { rows: [{ sellTime: "오늘 09:00 시가", status: "매도 접수", pnlPct: 1.2 }] } } };
+  assert.ok(TG.compose("morning", "2026-10-02", live, { coins: [] }).includes("② ETF 야간 오늘 09:00 시가 매도 +1.20% · 매도 접수"));
+  assert.ok(TG.compose("morning", "2026-10-02", { tabs: {} }, { coins: [] }).includes("② ETF 야간 오늘 아침 매도할 보유분 없음"));
+});
 console.log(`opening gap-down JS: ${n} ALL PASS`);

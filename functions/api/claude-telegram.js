@@ -4,13 +4,14 @@
 //   morning  09:05  ③ 코인 어제 결과 + 오늘 할 일 · ④ SOXL 지난 세션 결과 + 오늘 밤 할 일
 //   etfbuy   15:21  ② 오늘 종가 매수 판단
 //   close    15:40  ① 오늘 확정 손익 · ② 결과 · 탭별 오늘 요약
+//   us_close 미국장 마감 뒤(한국 05:20 / 겨울 06:20, 연구 workflow 가 확정 종가로 계산한 뒤) ④ SOXL 오늘 세션 결과 + 다음 세션 할 일
 //   weekly   토 09:05  이번 주 장부 확정분 — 계좌 주간 손익 · +5% 달성 · 탭별 기여 · 그림자 교체 후보
 // 같은 날짜·종류는 한 번만 보낸다. Telegram 실패가 주문·기록을 막지 않는다(Worker 가 기록 뒤에 부른다).
 import { coinHoldToday, coinDayResult } from "./claude-live.js";
 
 const JH={"Content-Type":"application/json; charset=utf-8","Cache-Control":"no-store"};
 const RAW="https://raw.githubusercontent.com/jkdevjob/jkquant/scalping-data/data/";
-const KINDS=["preopen","morning","etfbuy","close","weekly"];
+const KINDS=["preopen","morning","etfbuy","close","weekly","us_close"];
 const SX_ACT={enter:"시가 매수",hold:"보유",exit:"시가 매도",flat:"쉼"};
 const SX_NEXT={buy:"시가 매수 (과매도 신호)",sell:"시가 매도"};
 const PART={opening_d1v2:"① 시초가",daytrading_etf:"② ETF 야간",crypto_btc:"③ BTC",crypto_eth:"③ ETH",us_soxl:"④ SOXL"};
@@ -56,6 +57,8 @@ export function compose(kind,date,live,extra={}){
     const cr=extra.coins||[];
     for(const c of cr)L.push("③ "+c.name+" 어제 "+(c.y?(c.y.action+(c.y.buyTime?" "+c.y.buyTime:"")+" "+p(c.y.pnlPct)):"—")+" · 오늘 "+(c.today==null?"—":(c.today?"어제 고가 "+n(c.level)+" 돌파 시 매수":"쉼(20일 평균 아래)")));
     if(cr.length){const avg=cr.reduce((s,c)=>s+((c.y&&c.y.pnlPct)||0),0)/cr.length;L.push("   코인 칸 어제 "+p(avg)+" (탭 자금 80% "+p(avg*0.8)+")");}
+    const sold=(d.rows||[]).find(x=>String(x.sellTime||"").includes("오늘"));
+    L.push("② ETF 야간 "+(sold?"오늘 09:00 시가 매도 "+(sold.pnlPct==null?"(체결 대기)":p(sold.pnlPct))+" · "+sold.status+" (체결 확인 15:40)":"오늘 아침 매도할 보유분 없음"));
     const u=extra.us;
     if(u)L.push("④ SOXL 지난 세션 "+(u.date||"")+" "+(SX_ACT[u.action]||u.action||"")+(u.pnlPct==null?"":" "+p(u.pnlPct))+" · 오늘 밤 "+(SX_NEXT[u.next]||(u.holding?"보유 유지":"쉼")));
   }else if(kind==="etfbuy"){
@@ -76,6 +79,16 @@ export function compose(kind,date,live,extra={}){
     L.push("② 오늘 종가 매수: "+(nb?(nb.status==="매매 없음"?"없음":nb.status):"없음"));
     const cr=(T.crypto||{}).tabPct,us=(((T.soxl||{}).rows||[])[0]||{}).pnlPct;
     L.push("③ 코인(09시~지금) "+p(cr)+" · ④ SOXL "+(us==null?"장 시작 전":p(us)));
+  }else if(kind==="us_close"){
+    const sx=extra.soxl||{},last=sx.last||{},nx=sx.next||{};
+    L.push("🤖 [클로드 단타] "+(last.date||date)+" 미국장 마감 — ④ SOXL");
+    const act=last.action;
+    if(act==="enter")L.push("오늘: 시가 "+n(last.entryPrice)+" 매수 → 종가 "+n(last.close)+" "+p(last.pnlPct)+" (보유 1일째)");
+    else if(act==="exit")L.push("오늘: 시가 "+n(last.exitPrice)+" 매도 · 매수가 "+n(last.entryPrice)+" · "+(last.heldDays||"?")+"일 보유 · 오늘 몫 "+p(last.pnlPct));
+    else if(act==="hold")L.push("오늘: 보유 · 종가 "+n(last.close)+" "+p(last.pnlPct));
+    else L.push("오늘: 매매 없음 (보유 없음)");
+    const why="RSI(2) "+(nx.rsi2==null?"—":(+nx.rsi2).toFixed(0))+" · 200일 평균 "+(nx.close>nx.ma?"위":"아래");
+    L.push("다음 세션: "+(nx.action==="buy"?"시가 매수 ("+why+")":nx.action==="sell"?"시가 매도 ("+(nx.heldDays||"?")+"일 보유 · "+(nx.heldDays>=5?"최대 5일":"오른 날")+")":nx.holding?"보유 유지 ("+nx.heldDays+"일째, 최대 5일)":"쉼 ("+why+")"));
   }else if(kind==="weekly"){
     const lab=extra.lab||{},w=lab.week||{},a=w.account||{};
     L.push("🤖 [클로드 단타] 주간 결과 "+(w.weekStart||"?")+" ~ "+(w.asOf||"?"));
@@ -106,6 +119,10 @@ export async function onRequestPost({request,env}){
   let b={};try{b=await request.json();}catch(e){return json({ok:false,error:"JSON body 오류"},400);}
   const kind=String(b.kind||""),date=String(b.date||"");
   if(!KINDS.includes(kind)||!/^\d{4}-\d{2}-\d{2}$/.test(date))return json({ok:false,error:"kind/date 오류"},400);
+  if(kind==="us_close"){                            // 기록을 먼저 확인한다 — 잘못된 요청이 그날 알림 자리를 차지하지 않게
+    const sx=b.soxl||{};
+    if(!sx.last||!sx.next||!/^\d{4}-\d{2}-\d{2}$/.test(String(sx.last.date||"")))return json({ok:false,error:"soxl 결과 없음"},400);
+  }
   if(!(await claim("claude:"+date+":"+kind)))return json({ok:true,duplicate:true});
   try{
     const origin=new URL(request.url).origin;
@@ -125,6 +142,7 @@ export async function onRequestPost({request,env}){
       const nx=((lab&&lab.tabs&&lab.tabs.soxl)||{}).nextSignal;
       extra.us={date:row.date,action:row.action,pnlPct:row.pnlPct===""||row.pnlPct==null?null:+row.pnlPct,next:nx?nx.action:null,holding:nx?nx.holding:null};
     }
+    if(kind==="us_close")extra.soxl=b.soxl;
     if(kind==="weekly"){
       extra.lab=await fetch(RAW+"claude-lab/latest.json?t="+Date.now()).then(r=>r.ok?r.json():null).catch(()=>null);
       extra.weekStart=mondayOf(date);

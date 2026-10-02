@@ -31,7 +31,7 @@ table.doc td{padding:6px 6px}
 </head>
 <body>
 <header><div class="wrap"><div class="htop">
-  <div class="brand"><div class="kicker">JK QUANT · CLAUDE</div><h1>🤖 단타 <span class="v">(클로드)</span> <span class="ver" id="clVer">v2.4.1</span></h1></div>
+  <div class="brand"><div class="kicker">JK QUANT · CLAUDE</div><h1>🤖 단타 <span class="v">(클로드)</span> <span class="ver" id="clVer">v2.5.0</span></h1></div>
   <div class="jkmenu" id="jkmenuWrap">
     <button class="jkmenu-btn" aria-label="메뉴" onclick="jkMenuToggle(event)">三</button>
     <div class="jkmenu-pop" id="jkmenuPop" hidden>
@@ -98,7 +98,7 @@ var DOC={
     pick:"종목은 KODEX 코스닥150레버리지(233740) 하나.",buy:"15:21 예상 종가가 기준가 대비 −3% 이하이면 종가 동시호가 시장가.",sell:"다음 거래일 08:59 장전 동시호가 시장가(시가).",
     risk:"하룻밤 보유. 손절 없음. 최악일 −13%(과거).",money:"①과 같은 날이면 국내 칸을 반씩.",
     proof:"2018-04~2026-09 연 46회, 평균 +0.40%(t=2.8), 기준을 −2→−6% 로 엄격하게 할수록 평균이 커짐, 9개 연도 중 8개 양수.",
-    times:"15:21 매수 판단 · 다음날 08:59 매도 · 15:40 체결 확인 · 텔레그램 15:21/15:40"},
+    times:"15:21 매수 판단 · 다음날 08:59 매도 · 15:40 체결 확인 · 텔레그램 15:21(매수 판단) · 09:05(시가 매도 결과) · 15:40(체결 확정)"},
   crypto:{title:"③ BTC·ETH 어제 고가 돌파 하루 단타 (비트코인)",what:"오르는 흐름(어제 종가가 20일 평균 위)인 날, 가격이 어제 고가를 뚫는 순간 사서 다음 날 09:00 에 판다. 고가 돌파는 그날 매수세가 강하다는 뜻이라 하루 안에 이어지는 경우가 많다. 보유는 24시간을 넘지 않는다.",
     pick:"업비트 BTC·ETH 두 코인, 반반. 업비트 하루 = 09:00~다음날 09:00.",buy:"어제 종가 > 20일 평균인 날만. 오늘 가격이 어제 고가를 넘는 순간 그 가격에 매수(09시에 이미 넘어 있으면 09시 시가). 못 넘으면 그날은 매매 없음.",sell:"다음 날 09:00 에 무조건 매도. 매수가 대비 −5% 닿으면 즉시 손절.",
     risk:"보유 24시간 미만 · 손절 −5% · 탭 표시 자금 80%. 과거 MDD −24%, 최악일 −4.2%.",money:"전체 계좌의 코인 칸(30%) 안에서 두 코인 반반 전액.",
@@ -108,7 +108,7 @@ var DOC={
     pick:"종목은 SOXL 하나. 미국장 마감 확정 종가로 판단: RSI(2) < 20 이고 종가 > 200일 평균.",buy:"신호가 난 다음 미국장 시가(한국시각 22:30, 서머타임 해제 시 23:30).",sell:"종가가 전날 종가보다 오른 날이 나오면 그다음 미국장 시가에 매도. 오르지 않아도 5거래일 종가 뒤 다음 시가에 무조건 매도 — 5일을 넘기지 않음.",
     risk:"손절 대신 최대 5일 보유로 끊는다(과거 손절을 넣으면 오히려 나빠짐). 탭 표시 자금 50%, 과거 MDD −24%, 최악일 −8%(자금 50% 기준).",money:"전체 계좌의 미국 칸(40%) 안에서 전액.",
     proof:"2011~2026-09(설계): 연 25회 매매, 매매일 평균 +0.18%(t=2.7), +1% 달성일 19일/년, 최근 1년 +1% 달성일 37일 · 누적 +49%. 신호 기준 RSI 10~30 어디서나 양수. 하루 한정(다음 날 무조건 매도)은 0 근처라 그림자로만 둔다.",
-    times:"미국장 마감 후 판단(한국 05~06시) · 다음 미국장 시가 매수/매도 · 텔레그램 09:05(지난 세션 결과·오늘 밤 할 일)"}
+    times:"미국장 마감 후 판단(한국 05~06시) · 다음 미국장 시가 매수/매도 · 텔레그램 미국장 마감 직후 05:20(겨울 06:20) — 오늘 세션 결과·다음 세션 할 일"}
 };
 function sec(title,inner,open,id){return "<details class='card sec'"+(open?" open":"")+(id?" id='"+id+"'":"")+"><summary><h3 style='display:inline'>"+title+"</h3></summary><div style='margin-top:8px'>"+inner+"</div></details>"}
 function docRow(k,v){return "<tr><td style='width:96px;color:var(--gold);font-weight:800;vertical-align:top'>"+k+"</td><td style='white-space:normal;text-align:left'>"+esc(v)+"</td></tr>"}
@@ -261,6 +261,7 @@ function statusBar(){
   if(!J)return "";
   var now=new Date(),k=new Date(now.getTime()+9*3600e3),hm=k.getUTCHours()*100+k.getUTCMinutes(),dow=k.getUTCDay();
   var ev=[[856,"① 08:56 예상갭 판단"],[859,"① 08:59 매수"],[905,"③④ 09:05 코인·미국 결과"],[1521,"② 15:21 ETF 판단 · ① 매도"],[1540,"①② 15:40 결과"],[1840,"18:40 장부·검증 기록"],[1925,"19:25 클로드 점검"]];
+  ev.unshift([520,"④ 05:20 SOXL 미국장 마감 알림(겨울 06:20)"]);
   var nx=ev.filter(function(e){return e[0]>hm})[0];var nextTxt=nx?nx[1]:"내일 08:56 ① 판단";
   if(dow===0||dow===6)nextTxt="(주말) 09:05 코인 결과 · 월요일 08:56";
   var iss=(((J.lab||{}).review||{}).today||{}).issues||[];

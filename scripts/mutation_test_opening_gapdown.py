@@ -52,6 +52,9 @@ PY = [
     ("fair gpt cost differs", "claude_lab.py", "gpt=_side_summary(days, gby, cost), days=rows)", "gpt=_side_summary(days, gby, cost - 0.14), days=rows)"),
     ("fair window not gpt", "claude_lab.py", "    days = [d for d in cal if start <= d <= min(end, c_last)]\n", "    days = [d for d in cal if d <= min(end, c_last)]\n"),
     ("fair coin slot ignored", "claude_lab.py", "    if all(s is not None for _, s in nets):", "    if False:"),
+    ("us open bar kept", "claude_lab.py", "    return {d: v for d, v in bars.items() if d < today or (d == today and closed)}", "    return dict(bars)"),
+    ("us_close before close", "claude_lab.py", "    if (ny.hour, ny.minute) < (16, 15) or not rows:", "    if not rows:"),
+    ("us_close stale signal", "claude_lab.py", 'or nx.get("basedOn") != last.get("date"):', ":"),
     ("dip hit minutes", "backtest_crypto_orb.py", "int((hit - entry_t).total_seconds() // 60) + 5", "int((hit - entry_t).total_seconds() // 60)"),
 ]
 JS = [
@@ -78,6 +81,7 @@ JS = [
     ("today kr not split", "claude-live.js", "if(o&&d&&!o.noTrade&&!d.noTrade)for", "if(false)for"),
     ("today failed order counted", "claude-live.js", 'const ok=rows.filter(r=>r.status!=="주문 실패");', "const ok=rows;"),
     ("today measurement counted", "claude-live.js", "    if(rows.length&&b&&!b.v2Signal){", "    if(false){"),
+    ("morning etf sell hidden", "claude-telegram.js", 'L.push("② ETF 야간 "+(sold?', 'if(false)L.push("② ETF 야간 "+(sold?'),
     ("watchlist whitelist", "opening-gapdown.js", "    if(!w)continue;\n", "    if(!w){out.push({...r});continue;}\n"),
 ]
 

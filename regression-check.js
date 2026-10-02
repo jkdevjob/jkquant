@@ -10996,6 +10996,10 @@ console.log('[GAPDOWN D-1 / DIP24 D-3] 연구용 모의체결 경로 안전장�
        &&/days = \[d for d in cal if start <= d <= min\(end, c_last\)\]/.test(lp)&&/report\["fair"\]\[tab\] = fair_compare\(tab, cal\)/.test(lp)
        &&/function fairCard\(tab\)/.test(scl2)&&/liveCard\(tab\)\+fairCard\(tab\)/.test(scl2));
   }
+  ok('클로드 텔레그램 장 마감 시각: ④ SOXL 은 미국장 마감 뒤(05:20 · 겨울 06:20) 확정 종가 계산 후 · ② 시가 매도 결과는 09:05 · 미국 장중 봉은 버림',
+     /cron: "20 20 \* \* 1-5"/.test(wf)&&/cron: "20 21 \* \* 1-5"/.test(wf)&&/claude_lab\.py --us-close-payload > us_close\.json \|\| \{ echo/.test(wf)
+     &&/kind==="us_close"/.test(fs.readFileSync(__d+'/functions/api/claude-telegram.js','utf8'))
+     &&/return drop_open_session\(/.test(fs.readFileSync(__d+'/scripts/claude_lab.py','utf8')));
   ok('클로드 모의투자 장부: 날짜별 한 번만 쓰기 · 요약은 장부 값만 · 화면 누적표 · workflow 저장',
      /def write_once\(path, obj\):\n[\s\S]{0,200}if path\.exists\(\):\n\s*return False/.test(fs.readFileSync(__d+'/scripts/claude_lab.py','utf8'))
      &&/모의투자 누적/.test(scl2)&&/data\/claude-paper/.test(wf));
