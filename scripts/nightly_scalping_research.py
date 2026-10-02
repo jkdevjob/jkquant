@@ -89,7 +89,13 @@ def shadow_score(all_edge, validation_edge, recent_edge, risk_ok, trades, min_tr
     }
 
 def rank_candidates(rows):
-    ranked=sorted(rows,key=lambda x:(-float(x.get("researchScore") or 0),-float(x.get("sampleFactor") or 0),str(x.get("name") or "")))
+    # Zero-evidence placeholders are always last even though their neutral score is 50.
+    ranked=sorted(rows,key=lambda x:(
+        int((x.get("scoreParts") or {}).get("trades") or x.get("trades") or x.get("allTrades") or 0)<=0,
+        -float(x.get("researchScore") or 0),
+        -float(x.get("sampleFactor") or 0),
+        str(x.get("name") or "")
+    ))
     for i,x in enumerate(ranked,1):
         x["rank"]=i
     return ranked
