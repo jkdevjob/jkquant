@@ -19,7 +19,16 @@ export const DAY_SHADOW_VARIANTS=Object.freeze([
   {name:"vwap_slope_0.2",label:"VWAP기울기≥0.2%",params:{minVwapSlope:0.20}},
   {name:"entry_by_1400",label:"14:00 이전",params:{entryCutoff:1400}},
   {name:"session_min_2",label:"세션상승≥2%",params:{minSessionRet:2.0}},
+  {name:"stop_0.8",label:"손절0.8%",params:{stopPct:0.8}},
+  {name:"tp_1.5",label:"익절1.5%",params:{takeProfitPct:1.5}},
+  {name:"vol_1.2",label:"거래량≥1.2배",params:{volMult:1.2}},
+  {name:"lookback_10",label:"직전10분 고점",params:{lookback:10}},
+  {name:"max_trades_1",label:"하루 최대1건",params:{maxTrades:1}},
 ]);
+
+export function dayVariant(name){
+  return DAY_SHADOW_VARIANTS.find(x=>x.name===name)||null;
+}
 
 const hmOf=t=>+String(t||"").slice(11,13)*100 + +String(t||"").slice(14,16);
 
