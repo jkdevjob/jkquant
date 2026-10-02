@@ -10918,9 +10918,14 @@ console.log('[GAPDOWN D-1 / DIP24 D-3] 연구용 모의체결 경로 안전장�
       const ms=Date.parse('2026-10-04T00:00:00Z')+d*864e5+(hh*60+mm)*6e4;       // 2026-10-04 = 일요일(UTC)
       const r=route(ms);if(r)count[r]=(count[r]||0)+1;}}
     const r0=route(Date.parse('2026-10-04T23:56:00Z')),r1=route(Date.parse('2026-10-03T23:56:00Z'));  // 월 08:56 KST / 일 08:56 KST
-    ok('Worker cron 한 줄 + 한국시각 라우팅: 한 주에 시초가 스캔 27분×5일, 08:56·15:21·15:40 각 5번, 주말 0번',
+    ok('Worker cron 한 줄 + 라우팅: 시초가 스캔 27분×5일·08:56·15:21·15:40 각 5번(주말 0) · 클로드 마감: 국내 15:56 재시도 5 · 코인 매일 00:05~00:31 · SOXL 뉴욕 16:05~16:31 평일(서머타임 자동)',
        crons.length===1&&count.opening===135&&count.gapdown_preopen===5&&count.gapdown_close===5&&count.gapdown_reconcile===5
-       &&Object.keys(count).length===4&&r0==='gapdown_preopen'&&r1===null
+       &&count.claude_kr===5&&count.claude_crypto===27*7&&count.claude_soxl===27*5
+       &&Object.keys(count).length===7&&r0==='gapdown_preopen'&&r1===null
+       &&route(Date.parse('2026-10-05T20:05:00Z'))==='claude_soxl'&&route(Date.parse('2026-10-05T21:05:00Z'))===null      // 여름(EDT) 05:05 KST
+       &&route(Date.parse('2026-12-07T21:05:00Z'))==='claude_soxl'&&route(Date.parse('2026-12-07T20:05:00Z'))===null      // 겨울(EST) 06:05 KST
+       &&route(Date.parse('2026-10-09T20:05:00Z'))==='claude_soxl'&&route(Date.parse('2026-10-10T20:05:00Z'))===null      // 금요일 마감(한국 토요일) · 토요일 없음
+       &&route(Date.parse('2026-10-03T15:05:00Z'))==='claude_crypto'&&route(Date.parse('2026-10-03T15:32:00Z'))===null    // 코인은 주말도
        &&route(Date.parse('2026-10-05T06:21:00Z'))==='gapdown_close'&&route(Date.parse('2026-10-05T06:40:00Z'))==='gapdown_reconcile'
        &&route(Date.parse('2026-10-05T00:05:00Z'))==='opening'&&route(Date.parse('2026-10-05T00:31:00Z'))==='opening'
        &&route(Date.parse('2026-10-05T06:31:00Z'))===null,JSON.stringify(count));
@@ -10965,10 +10970,22 @@ console.log('[GAPDOWN D-1 / DIP24 D-3] 연구용 모의체결 경로 안전장�
      &&/function vsTable\(t\)/.test(scl2)&&/vsRow\("🤖 클로드",c\.claude\)\+vsRow\("GPT · "/.test(scl2)
      &&/readRaw\("claude-lab\/latest\.json"\)/.test(orApi)&&/claude_lab\.py/.test(wf));
   { const tg=fs.readFileSync(__d+'/functions/api/claude-telegram.js','utf8');
-    ok('클로드 Telegram: 서버키 인증·날짜·종류별 한 번만·주문 경로 없음 · Worker 는 기록 저장 뒤 08:59/09:05/15:21/15:40 에 호출',
+    ok('클로드 Telegram: 서버키 인증·주문 경로 없음 · 08:56 매수·15:21 판단 알림 · 15:40 체결조회 뒤 ①② 하루 마감 → 전일·당일 요약',
        /function authorized\(request,env\)/.test(tg)&&/claim\("claude:"\+date\+":"\+kind\)/.test(tg)&&!/op=order|opening-execute|kisOrder/.test(tg)
-       &&/await claudeTelegram\(env,date,"preopen"\);/.test(ow)&&/await claudeTelegram\(env,date,stage==="close"\?"etfbuy":"close"\);/.test(ow)
-       &&/if\(claudeMorningDue\(at\)\)ctx\.waitUntil\(claudeTelegram\(env,kstParts\(at\)\.date,"morning"\)\);/.test(ow));
+       &&/await claudeTelegram\(env,date,"preopen"\);/.test(ow)&&/if\(stage==="close"\)await claudeTelegram\(env,date,"etfbuy"\);\n\s*else await claudeKrClose\(env,date,ms\);/.test(ow)
+       &&!/claudeMorningDue/.test(ow));
+    // 하루 마감 알림: 마감 장부를 DO 에 한 번만 저장(먼저 저장된 것이 정본) → 그 장부로 발송 → 보냄·모름 기록(중복 없음) · 거절만 최대 5번 재시도
+    const fnS=ow.slice(ow.indexOf('export function claudeSendState('),ow.indexOf('\n}\n',ow.indexOf('export function claudeSendState('))+2).replace('export ','');
+    const st=new Function('const CLAUDE_TG_MAX_FAILS=5;'+fnS+'\nreturn claudeSendState;')();
+    const ev=(...ids)=>({events:ids.map(id=>({id,payload:id.startsWith('close:')?{v:1}:{}}))});
+    ok('클로드 하루 마감 알림 상태: 장부 정본 · 보냄/모름이면 다시 안 보냄 · 거절은 5번까지 재시도',
+       st(ev('close:crypto'),'crypto').canSend&&st(ev('close:crypto'),'crypto').record.v===1
+       &&!st(ev('close:crypto','tg:crypto:sent'),'crypto').canSend&&!st(ev('close:crypto','tg:crypto:unknown'),'crypto').canSend
+       &&st(ev('close:crypto','tg:crypto:fail:1','tg:crypto:fail:2'),'crypto').canSend
+       &&!st(ev('close:crypto','tg:crypto:fail:1','tg:crypto:fail:2','tg:crypto:fail:3','tg:crypto:fail:4','tg:crypto:fail:5'),'crypto').canSend
+       &&st(ev('tg:soxl:sent'),'crypto').canSend
+       &&/await claudeAppend\(env,date,"close:"\+strategy,"close",c\.result,ms\);\n\s*L=await readLedger\(env,date,"claude"\);s=claudeSendState\(L,strategy\);/.test(ow)
+       &&/res\.ok\?"sent":res\.definite\?"fail:"\+\(s\.fails\+1\):"unknown"/.test(ow));
     ok('단타(클로드) 탭 구성: 운영판 → ①규칙 ②오늘 선정 ③매수 ④매도·리스크 ⑤오늘 장중 매매 ⑥그림자·검증 ⑦누적 ⑧실행품질 + 상태 줄 + 1분 자동 갱신',
        /function tabPage\(tab,T,gd,et,wl\)/.test(scl2)&&/opsBoard\(tab\)\+docCard\(tab\)\+planCard\(tab,T,wl\)\+buyCard\(tab\)\+sellCard\(tab\)\+liveCard\(tab\)/.test(scl2)
        &&/html\+=shadowCard\(tab\)\+reviewCard\(tab\)\+paperCard\(tab\);/.test(scl2)
@@ -10996,10 +11013,12 @@ console.log('[GAPDOWN D-1 / DIP24 D-3] 연구용 모의체결 경로 안전장�
        &&/days = \[d for d in cal if start <= d <= min\(end, c_last\)\]/.test(lp)&&/report\["fair"\]\[tab\] = fair_compare\(tab, cal\)/.test(lp)
        &&/function fairCard\(tab\)/.test(scl2)&&/liveCard\(tab\)\+fairCard\(tab\)/.test(scl2));
   }
-  ok('클로드 텔레그램 장 마감 시각: ④ SOXL 은 미국장 마감 뒤(05:20 · 겨울 06:20) 확정 종가 계산 후 · ② 시가 매도 결과는 09:05 · 미국 장중 봉은 버림',
-     /cron: "20 20 \* \* 1-5"/.test(wf)&&/cron: "20 21 \* \* 1-5"/.test(wf)&&/claude_lab\.py --us-close-payload > us_close\.json \|\| \{ echo/.test(wf)
-     &&/kind==="us_close"/.test(fs.readFileSync(__d+'/functions/api/claude-telegram.js','utf8'))
-     &&/return drop_open_session\(/.test(fs.readFileSync(__d+'/scripts/claude_lab.py','utf8')));
+  { const dy=fs.readFileSync(__d+'/functions/api/_claude_day.js','utf8'),lv2=fs.readFileSync(__d+'/functions/api/claude-live.js','utf8');
+    ok('클로드 하루 마감 장부: 코인은 자정 전에 끝난 봉만 · 업비트 요청도 to=자정 · ① v2 아닌 날 측정용은 손익 제외 · 웹이 같은 마감 장부를 읽음 · 미국 장중 봉 버림',
+       /hourly = \(c\.hourly \|\| \[\]\)\.filter\(b => t\(b\) \+ 36e5 <= dayEnd\)/.test(dy)&&/count=60&to="\+to/.test(fs.readFileSync(__d+'/functions/api/claude-telegram.js','utf8'))
+       &&/if \(v2\) \{ r\.trades = done; r\.open = open; \}\n\s*else r\.measure = rows;/.test(dy)&&/ledger\(env,d,"\/claude"\)/.test(lv2)
+       &&/return drop_open_session\(/.test(fs.readFileSync(__d+'/scripts/claude_lab.py','utf8')));
+  }
   ok('클로드 모의투자 장부: 날짜별 한 번만 쓰기 · 요약은 장부 값만 · 화면 누적표 · workflow 저장',
      /def write_once\(path, obj\):\n[\s\S]{0,200}if path\.exists\(\):\n\s*return False/.test(fs.readFileSync(__d+'/scripts/claude_lab.py','utf8'))
      &&/모의투자 누적/.test(scl2)&&/data\/claude-paper/.test(wf));

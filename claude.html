@@ -31,7 +31,7 @@ table.doc td{padding:6px 6px}
 </head>
 <body>
 <header><div class="wrap"><div class="htop">
-  <div class="brand"><div class="kicker">JK QUANT · CLAUDE</div><h1>🤖 단타 <span class="v">(클로드)</span> <span class="ver" id="clVer">v2.5.0</span></h1></div>
+  <div class="brand"><div class="kicker">JK QUANT · CLAUDE</div><h1>🤖 단타 <span class="v">(클로드)</span> <span class="ver" id="clVer">v2.6.0</span></h1></div>
   <div class="jkmenu" id="jkmenuWrap">
     <button class="jkmenu-btn" aria-label="메뉴" onclick="jkMenuToggle(event)">三</button>
     <div class="jkmenu-pop" id="jkmenuPop" hidden>
@@ -359,8 +359,21 @@ async function loadLive(){
 }
 function kstTime(iso){try{return new Date(iso).toLocaleTimeString("ko-KR",{timeZone:"Asia/Seoul",hour:"2-digit",minute:"2-digit",hour12:false})}catch(e){return ""}}
 function won(v){return v==null||!isFinite(v)?"—":(+v>=1000?Math.round(+v).toLocaleString():(+v).toFixed(2))}
+// 하루 마감 장부 — 텔레그램 결과 메시지와 같은 원본(Worker 에 한 번만 저장된 장부)
+function closedBox(c){
+  if(!c)return "";
+  var cur=c.currency==="USD",M=function(v){if(v==null)return "—";var a=Math.abs(v);return (v>=0?"+":"-")+(cur?"$"+a.toFixed(2):Math.round(a).toLocaleString()+"원")};
+  if(c.status==="holiday")return "<div class='why'>🔒 "+esc(c.date)+" 마감 — 휴장</div>";
+  var tr=(c.trades||[]).map(function(x,i){return "<tr><td style='text-align:left;white-space:normal'>"+(i+1)+". <b>"+esc(x.name)+"</b><div class='sub'>"+esc(x.entryTime)+" "+won(x.entryPrice)+" → "+esc(x.exitTime)+" "+won(x.exitPrice)+" · "+esc(x.reason)+"</div></td><td class='"+cls(x.pnlPct)+"'><b>"+pct(x.pnlPct)+"</b><div class='sub'>"+M(x.pnlAmount)+"</div></td></tr>"}).join("");
+  var op=(c.open||[]).map(function(x){return "<div class='sub'>· 미청산 "+esc(x.name)+" "+esc(x.entryTime)+" "+won(x.entryPrice)+(x.markPrice?" → "+won(x.markPrice):"")+" "+pct(x.pnlPct)+" ("+esc(x.reason)+")</div>"}).join("");
+  return "<div class='card' style='margin-top:8px;border-color:var(--gold)'><h3>🔒 "+esc(c.date)+" 마감 장부 <span class='tag'>텔레그램 결과와 같은 원본</span></h3>"+
+    "<div class='sub'>감시 "+(c.watched||0)+" · 후보 "+(c.candidates||0)+" · 진입 "+(c.entries||0)+" · 청산 "+(c.exits||0)+" · 승 "+(c.wins||0)+" · 패 "+(c.losses||0)+" · 승률 "+(c.winRate==null?"—":num(c.winRate,1)+"%")+" · 미청산 "+(c.open||[]).length+"</div>"+
+    "<div class='why'>실현 "+pct(c.realizedPct)+" · "+M(c.realizedAmount)+" <span class='sub'>(비용 뺀 순손익)</span></div>"+(c.note?"<div class='sub'>"+esc(c.note)+"</div>":"")+(c.warn?"<div class='warn'>"+esc(c.warn)+"</div>":"")+
+    (tr?"<div class='tw'><table class='board'><thead><tr><th style='text-align:left'>종목 · 진입 → 청산 · 사유</th><th>순손익</th></tr></thead><tbody>"+tr+"</tbody></table></div>":"<p class='note'>거래 없음</p>")+op+"</div>";
+}
 // 탭마다 "오늘 모의 매매이력" — 장중 실시간(현재가 기준 손익)
-function liveCard(tab){
+function liveCard(tab){var h=liveCard0(tab),t=(LIVE&&LIVE.tabs||{})[tab]||{};return h+closedBox(t.closed);}
+function liveCard0(tab){
   if(!LIVE)return "<div class='card'><h3>⑤ 오늘 장중 모의 매매이력</h3><div class='sub'>불러오는 중…</div></div>";
   if(LIVE.error)return "<div class='card'><h3>⑤ 오늘 장중 모의 매매이력</h3><div class='warn'>"+esc(LIVE.error)+"</div></div>";
   var t=(LIVE.tabs||{})[tab]||{},rows=t.rows||[];

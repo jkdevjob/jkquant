@@ -402,19 +402,6 @@ class ClaudeLabTrend(unittest.TestCase):
         # 겨울(EST): 20:20 UTC = 뉴욕 15:20 → 아직 장중
         self.assertEqual(sorted(lab.drop_open_session({"2026-12-01": 1}, datetime(2026, 12, 1, 20, 20, tzinfo=timezone.utc))), [])
 
-    def test_us_close_payload_only_after_close_with_today_session(self):
-        from datetime import datetime, timezone
-        rows = [{"date": "2026-10-01", "action": "flat"}, {"date": "2026-10-02", "action": "enter", "pnlPct": "1.5", "entryPrice": "150", "close": "152.25"}]
-        latest = {"tabs": {"soxl": {"nextSignal": {"basedOn": "2026-10-02", "action": "none", "holding": True, "heldDays": 1, "rsi2": 60, "ma": 120, "close": 152.25}}}}
-        after = datetime(2026, 10, 2, 20, 20, tzinfo=timezone.utc)                      # 뉴욕 16:20 · 한국 10/3 05:20
-        pl = lab.us_close_payload(latest, rows, after)
-        self.assertEqual((pl["kind"], pl["date"], pl["soxl"]["last"]["date"]), ("us_close", "2026-10-03", "2026-10-02"))
-        self.assertAlmostEqual(pl["soxl"]["last"]["pnlPct"], 1.5)
-        self.assertIsNone(lab.us_close_payload(latest, rows, datetime(2026, 10, 2, 19, 0, tzinfo=timezone.utc)))    # 마감 전
-        self.assertIsNone(lab.us_close_payload(latest, rows[:1], after))                                              # 오늘 세션 없음(휴장 등)
-        stale = {"tabs": {"soxl": {"nextSignal": {"basedOn": "2026-10-01"}}}}
-        self.assertIsNone(lab.us_close_payload(stale, rows, after))                                                   # 판단이 옛날 것
-
     def test_profit_factor(self):
         D = ["2026-10-05", "2026-10-06", "2026-10-07", "2026-10-08", "2026-10-09"]
         z = lab.goal_metrics({D[0]: 3.0, D[1]: -1.0, D[2]: -2.0, D[3]: 1.0}, D)
