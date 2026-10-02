@@ -1,7 +1,7 @@
 const fs=require('fs'),path=require('path'),vm=require('vm'),assert=require('assert/strict');
 const root=path.join(__dirname,'..');
 const read=p=>fs.readFileSync(path.join(root,p),'utf8');
-const idx=read('index.html'),plan=read('plan.html'),scal=read('scalping.html'),ipo=read('ipo.html');
+const idx=read('index.html'),plan=read('plan.html'),scal=read('scalping.html'),ipo=read('ipo.html'),admin=read('admin.html'),autotrade=read('functions/api/autotrade.js');
 
 function fn(src,marker){
   const start=src.indexOf(marker);assert(start>=0,'missing '+marker);
@@ -31,7 +31,7 @@ function fn(src,marker){
 function ok(name,cond){assert.ok(cond,name);console.log('PASS '+name);}
 
 /* 1. 운영 메인 — 새 기기/다중 탭/구버전 클라이언트 */
-ok('운영 Firebase 쓰기는 transaction + stateRev', idx.includes('runTransaction')&&idx.includes('stateRev:nr'));
+ok('운영 Firebase 쓰기는 transaction + protected stateV2Rev', idx.includes('runTransaction')&&idx.includes('stateV2Rev:nr')&&idx.includes('stateV2:candidate'));
 ok('로그인 사용자는 cloud hydrate 전 fresh state를 local 최신값으로 만들지 않음',
   /if\(!hadValidLocal\)\{[\s\S]*if\(!curUid\)saveLocal\(\);/.test(fn(idx,'function load()')));
 ok('운영 cloud read 실패 중 remote write 잠금',
@@ -67,9 +67,11 @@ ok('자동 시작일 복구도 hist 비운 뒤 즉시 cloud push 안 함',
   resetAt>=0&&repair.slice(resetAt).indexOf('await pushRemoteNow()')<0);
 
 /* 3. 자산플랜 현재원장 + 운영세션 + QLD/SGOV */
-ok('자산플랜 fiveYearPlan 쓰기는 transaction + fiveYearPlanRev',
-  plan.includes('runTransaction')&&plan.includes('fiveYearPlanRev:nr'));
-ok('자산플랜 운영 state도 transaction + stateRev',/stateRev:nr/.test(fn(plan,'async function saveOperatingState()')));
+ok('자산플랜 fiveYearPlan 쓰기는 transaction + protected fiveYearPlanV2Rev',
+  plan.includes('runTransaction')&&plan.includes('fiveYearPlanV2Rev:nr')&&plan.includes('fiveYearPlanV2:candidate'));
+ok('자산플랜 운영 state도 protected stateV2 transaction',
+  /stateV2Rev:nr/.test(fn(plan,'async function saveOperatingState()'))
+  && /stateV2:candidate/.test(fn(plan,'async function saveOperatingState()')));
 ok('자산플랜 cloud 확인 전 fiveYearPlan remote write 금지',
   /if\(!planCloudHydrated\)/.test(fn(plan,'async function cloudSave()')));
 ok('명시적 삭제·초기화 전에 local recovery snapshot',plan.includes('function planManualBackup(reason)')
@@ -104,7 +106,20 @@ ok('KIS 삭제/전체삭제 UI는 원본을 지우지 않음',
   !fn(scal,'function delKlog(i)').includes('splice(')&&!fn(scal,'function clearKlog()').includes('KLOG=[]'));
 ok('단타 로그인은 local+cloud 이력 merge 후 화면 초기화',/loadAll\(\);await cloudLoad\(\);/.test(scal));
 
-/* 5. 공모주 기록 — remote replace 금지 */
+/* 5. 구버전 클라이언트 격리 — canonical field는 V2만 */
+ok('운영 앱은 legacy state를 fallback으로만 읽고 stateV2에만 쓴다',
+  /validState\(d\.stateV2\)\?d\.stateV2:d\.state/.test(idx)
+  && /tx\.set\(ref,\{stateV2:candidate/.test(idx)
+  && !/tx\.set\(ref,\{state:candidate/.test(idx));
+ok('자산플랜도 stateV2/fiveYearPlanV2에만 쓴다',
+  /stateV2:candidate/.test(plan)&&/fiveYearPlanV2:candidate/.test(plan)
+  && !/tx\.set\(ref,\{state:candidate/.test(plan)
+  && !/tx\.set\(ref,\{fiveYearPlan:candidate/.test(plan));
+ok('관리자 기존세션 적용도 protected stateV2만 갱신',
+  /stateV2:state/.test(admin)&&/stateV2Rev:nr/.test(admin)&&!/state,updated:now,stateRev:nr/.test(admin));
+ok('서버 자동주문은 stateV2 정본을 우선 읽음',/doc\.stateV2 \|\| doc\.state/.test(autotrade));
+
+/* 6. 공모주 기록 — remote replace 금지 */
 ok('IPO 기록은 transaction에서 remote+local union',fn(ipo,'function save()').includes('runTransaction')
   && fn(ipo,'function save()').includes('ipoMergeRecords(ipoNorm(old).records,local)'));
 ok('IPO remote load도 replace 대신 merge',fn(ipo,'window.ipoOnRemote=function(remote)').includes('ipoMergeRecords(n.records,IPO.records)'));
