@@ -853,7 +853,7 @@ const STAGES={
 
 
 let liveState=null, liveStateSource="", liveBusy=false, liveQuotes={}, pendingVrCycle=null;
-let planBootHydrating=true;
+let planBootHydrating=true,planForceLocalSave=false;
 const FEE=0.0025;
 const ALPHA_FEE_RATE=0.001; // 토스증권 미국주식 표준 0.1% (A안 실전 장부/주문 전용)
 function alphaFee(q,p){const gross=Math.max(0,(+q||0)*(+p||0));return gross<=10?0:Math.floor(gross*ALPHA_FEE_RATE*100)/100;}
@@ -2247,11 +2247,11 @@ function apply(o){
   Object.entries(all).forEach(([k,v])=>{const el=$(k);if(!el)return;if(el.type==='checkbox')el.checked=(v===true||v==='true');else el.value=v;});
   alphaSyncInputs();
 }
-function localSave(force=false){
+function localSave(){
   const x=activeAssetSession();
   // 첫 화면 렌더가 로그인/클라우드 복구보다 먼저 기본 장부를 저장하면
   // 클라우드에 남아 있는 기존 거래이력을 "로컬 값 있음"으로 가려버린다.
-  if(planBootHydrating&&!force&&!x)return;
+  if(planBootHydrating&&!planForceLocalSave&&!x)return;
   if(x){
     if(!x.paper)syncActiveAssetSessionFromView();
     if($("saveState"))$("saveState").textContent=(x.paper?"모의 세션 자동 재생":"세션 브라우저 저장 완료")+" · "+new Date().toLocaleTimeString("ko-KR",{hour:"2-digit",minute:"2-digit"});
@@ -2584,7 +2584,7 @@ async function cloudLoad(user){
     // 정상 로컬 장부(거래이력 1건 이상)는 예전 정책대로 로컬을 우선해 사용자가 한 수정/삭제를 되돌리지 않는다.
     if(v&&(!local||(localEvents===0&&cloudEvents>0))){
       if(local){try{localStorage.setItem(KEY+"_precloud_restore",JSON.stringify(local));}catch(e){}}
-      apply(v);localSave(true);renderSessionSelectors();renderLedger();render();
+      apply(v);planForceLocalSave=true;try{localSave();}finally{planForceLocalSave=false;}renderSessionSelectors();renderLedger();render();
       $("saveState").textContent=local&&cloudEvents>0?"클라우드 거래이력 복구 · "+cloudEvents+"건":"계정 설정 불러옴";
     }else if(local){
       $("saveState").textContent="이 기기 저장값 유지";
@@ -2678,7 +2678,7 @@ document.addEventListener("click",e=>{if(!$("jkmenuWrap").contains(e.target))$("
 onAuthStateChanged(auth,async user=>{
   userBadge(user);if(user)await cloudLoad(user);
   planBootHydrating=false;
-  if(!user)localSave(true);
+  if(!user){planForceLocalSave=true;try{localSave();}finally{planForceLocalSave=false;}}
   await refreshLive();
   if(requestedAssetSessionId){
     const q=assetPlanBox().sessions.find(x=>x.id===requestedAssetSessionId);
