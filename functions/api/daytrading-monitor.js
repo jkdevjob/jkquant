@@ -4,7 +4,7 @@
 // GitHub/수동 GET은 scalping-data에 저장된 스냅샷을 fallback으로 사용한다.
 // 기준전략만 Telegram 후보신호를 보내며 실제 주문은 하지 않는다.
 
-import { minuteVolume, daySignal, DAY_SHADOW_VARIANTS } from "./_daytrading.js";
+import { minuteVolume, daySignal, DAY_SHADOW_VARIANTS, dayVariant } from "./_daytrading.js";
 
 const JH={"Content-Type":"application/json; charset=utf-8","Cache-Control":"no-store"};
 
@@ -49,6 +49,11 @@ async function snapshot(date,year){
 function emptyShadow(){
   return Object.fromEntries(DAY_SHADOW_VARIANTS.map(v=>[v.name,{name:v.name,label:v.label,params:v.params,signals:[]}]));
 }
+function mainVariantDef(name){
+  const n=String(name||"baseline");
+  if(n==="baseline")return {name:"baseline",label:"원래 기준전략",params:{}};
+  return dayVariant(n)||{name:"baseline",label:"원래 기준전략",params:{}};
+}
 function validTarget(now,requested){
   if(!Number.isFinite(requested))return null;
   const m=requested%100,h=Math.floor(requested/100);
@@ -57,9 +62,10 @@ function validTarget(now,requested){
   return requested;
 }
 
-async function scanShard(origin,now,snap,shard,shards,targetHm){
+async function scanShard(origin,now,snap,shard,shards,targetHm,mainVariant="baseline"){
   const universe=(snap.universe||[]).filter((_,i)=>i%shards===shard);
   const signals=[],shadow=emptyShadow(),errors=[];let idx=0;
+  const mainDef=mainVariantDef(mainVariant);
   async function worker(){
     while(idx<universe.length){
       const u=universe[idx++];
@@ -67,8 +73,8 @@ async function scanShard(origin,now,snap,shard,shards,targetHm){
         const mj=await fetch(origin+"/api/quote?symbol="+encodeURIComponent(u.code)+"&minute=1").then(r=>r.json());
         if(!mj.minutes||!mj.minutes.length)continue;
         const rows=minuteVolume(mj.minutes).filter(x=>String(x.t||"").slice(0,10)===now.date);
-        const base=daySignal(rows,targetHm,{snapshotHm:+snap.snapshotHm||1000});
-        if(base)signals.push({code:u.code,name:u.name||u.code,rank:+u.rank||0,...base});
+        const base=daySignal(rows,targetHm,{snapshotHm:+snap.snapshotHm||1000,...mainDef.params});
+        if(base)signals.push({code:u.code,name:u.name||u.code,rank:+u.rank||0,mainVariant:mainDef.name,strategyParams:mainDef.params,...base});
         for(const v of DAY_SHADOW_VARIANTS){
           const s=daySignal(rows,targetHm,{snapshotHm:+snap.snapshotHm||1000,...v.params});
           if(s)shadow[v.name].signals.push({code:u.code,name:u.name||u.code,rank:+u.rank||0,...s});
@@ -79,7 +85,7 @@ async function scanShard(origin,now,snap,shard,shards,targetHm){
   await Promise.all([worker(),worker(),worker()]);
   const sorter=(a,b)=>a.signalTime-b.signalTime||(b.score-a.score)||a.rank-b.rank;
   signals.sort(sorter);Object.values(shadow).forEach(v=>v.signals.sort(sorter));
-  return {universe:universe.length,signals,shadow,errors};
+  return {universe:universe.length,signals,shadow,errors,mainVariant:mainDef.name,mainParams:mainDef.params};
 }
 
 async function run(request,env,supplied){
@@ -101,8 +107,9 @@ async function run(request,env,supplied){
 
   const shard=Math.max(0,parseInt(body.shard??url.searchParams.get("shard")??"0",10)||0);
   const shards=Math.max(1,Math.min(10,parseInt(body.shards??url.searchParams.get("shards")??"5",10)||5));
+  const mainVariant=mainVariantDef(body.mainVariant??url.searchParams.get("mainVariant")??"baseline").name;
   try{
-    const res=await scanShard(url.origin,now,snap,shard,shards,targetHm);
+    const res=await scanShard(url.origin,now,snap,shard,shards,targetHm,mainVariant);
     const events=res.signals.filter(x=>x.signalTime===targetHm);
     const notify=[];
     for(const x of events){
@@ -120,7 +127,7 @@ async function run(request,env,supplied){
     }
     return new Response(JSON.stringify({
       ok:true,date:now.date,targetHm,snapshotHm:+snap.snapshotHm||null,snapshotSource:snap.captureSource||snap.source||"",
-      shard,shards,universe:res.universe,signalEvents:events,notifiedEvents:notify.length,signals:res.signals,
+      shard,shards,universe:res.universe,mainVariant:res.mainVariant,mainParams:res.mainParams,signalEvents:events,notifiedEvents:notify.length,signals:res.signals,
       shadowEvents:Object.values(res.shadow).map(v=>({...v,signalEvents:v.signals.filter(x=>x.signalTime===targetHm)})),
       telegram:{sent:!!messageId,messageId},errors:res.errors.length
     }),{headers:JH});

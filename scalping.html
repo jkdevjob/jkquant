@@ -260,7 +260,7 @@ canvas{display:block;width:100%;height:auto}
 
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Morning Scalping</div><h1>JK <span class="v">퀀트</span> 단타 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="scVer">v1.36.1</span></h1></div>
+    <div><div class="kicker">Morning Scalping</div><h1>JK <span class="v">퀀트</span> 단타 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="scVer">v1.38.0</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -322,6 +322,7 @@ canvas{display:block;width:100%;height:auto}
 
   <div id="strategy_opening" class="strategy-pane">
     <div class="strategy-head">실시간 시초가 돌파 감시 → 백테스트 → 분봉 아카이브</div>
+    <div id="main_strategy_state_opening" class="strategy-statusline"><span class="status-item">운영 메인 확인 중…</span></div>
 
   <!-- 시초가 돌파 실시간 감시 -->
   <div class="card">
@@ -374,7 +375,7 @@ canvas{display:block;width:100%;height:auto}
       <button class="ghostbtn" onclick="loadOpeningResearch()">🔄 누적 백테스트 갱신</button>
       <span class="sub" id="ob_research_msg">매일 장 마감 후 자동 갱신</span>
     </div>
-    <div id="ob_research_body"><p class="sub">갱신을 누르면 누적 연구 결과를 불러옵니다.</p></div>
+    <div id="ob_research_body"><p class="sub">갱신을 누르면 누적 연구 결과를 불러옵니다.</p></div><div id="shadow_rank_opening" style="margin-top:14px"><p class="sub">그림자 전략 순위를 불러오는 중…</p></div>
   </div>
 
   <!-- 1bb. 시초가 첫고점 돌파 -->
@@ -423,6 +424,7 @@ canvas{display:block;width:100%;height:auto}
 
   <div id="strategy_daytrading" class="strategy-pane">
     <div class="strategy-head">10:00 유니버스 고정 → 장중 신호 → 다음 분 시가 모의진입 → 장마감 누적검증</div>
+    <div id="main_strategy_state_daytrading" class="strategy-statusline"><span class="status-item">운영 메인 확인 중…</span></div>
 
     <div class="card">
       <h3><span class="dot"></span>📈 데이트레이딩 기준전략 v1 <span class="sub" style="font-weight:600">VWAP 추세 돌파 · 연구/모의 전용</span></h3>
@@ -472,8 +474,8 @@ canvas{display:block;width:100%;height:auto}
         <button class="ghostbtn" onclick="loadDayTradingResearch()">🔄 결과 갱신</button>
         <span class="sub" id="dt_msg">첫 데이터 수집 대기</span>
       </div>
-      <div id="dt_body"><p class="sub">오늘 장 종료 뒤 전체 1분봉이 저장되면 기준전략과 그림자전략 결과가 여기에 표시됩니다.</p></div>
-      <p class="note">그림자 후보: 거래량 2배 · 30분 고점 · VWAP 기울기 0.2% · 14:00 이전 · 09:00 1분봉 대비 +2% · 손절 0.8% · 익절 1.5%.</p>
+      <div id="dt_body"><p class="sub">오늘 장 종료 뒤 전체 1분봉이 저장되면 기준전략과 그림자전략 결과가 여기에 표시됩니다.</p></div><div id="shadow_rank_daytrading" style="margin-top:14px"><p class="sub">그림자 전략 순위를 불러오는 중…</p></div>
+      <p class="note">그림자 후보는 항상 최소 10개를 유지합니다. 거래량·돌파기간·VWAP 기울기·진입시각·세션수익·손절/익절·하루 최대거래수 등 서로 다른 축을 병렬 검증합니다.</p>
     </div>
 
     <div class="card">
@@ -502,6 +504,7 @@ canvas{display:block;width:100%;height:auto}
 
   <div id="strategy_crypto" class="strategy-pane">
     <div class="strategy-head">Upbit KRW-BTC · 5분봉 · 00:00 KST 기준 · 신규진입 22:00까지 · 연구/검증 전용</div>
+    <div id="main_strategy_state_crypto" class="strategy-statusline"><span class="status-item">운영 메인 확인 중…</span></div>
 
     <div class="card">
       <h3><span class="dot"></span>₿ 비트코인 00시 ORB 기준전략 v2 <span class="sub" style="font-weight:600">00:00~22:00 감시</span></h3>
@@ -554,7 +557,7 @@ canvas{display:block;width:100%;height:auto}
         <button class="ghostbtn" onclick="loadCryptoResearch()">🔄 연구결과 갱신</button>
         <span class="sub" id="btc_research_msg">첫 데이터 수집 대기</span>
       </div>
-      <div id="btc_research_body"><p class="sub">첫 자동수집이 끝나면 누적 결과가 표시됩니다.</p></div>
+      <div id="btc_research_body"><p class="sub">첫 자동수집이 끝나면 누적 결과가 표시됩니다.</p></div><div id="shadow_rank_crypto" style="margin-top:14px"><p class="sub">그림자 전략 순위를 불러오는 중…</p></div>
     </div>
 
     <div class="card">
@@ -570,6 +573,7 @@ canvas{display:block;width:100%;height:auto}
 
   <div id="strategy_soxl" class="strategy-pane">
     <div class="strategy-head">SOXL · 미국 정규장 5분봉 · ET · 연구/검증 전용</div>
+    <div id="main_strategy_state_soxl" class="strategy-statusline"><span class="status-item">운영 메인 확인 중…</span></div>
     <div class="card">
       <h3><span class="dot"></span>⚡ SOXL 15분 ORB 기준전략 v1</h3>
       <p class="lead"><b>09:30~09:45 ET</b> Opening Range를 만든 뒤 11:30 이전 첫 종가 돌파를 본다.
@@ -615,7 +619,7 @@ canvas{display:block;width:100%;height:auto}
         <button class="ghostbtn" onclick="loadSoxlResearch()">🔄 연구결과 갱신</button>
         <span class="sub" id="soxl_research_msg">첫 데이터 수집 대기</span>
       </div>
-      <div id="soxl_research_body"><p class="sub">미국장 종료 후 확정 5분봉이 누적되면 결과가 표시됩니다.</p></div>
+      <div id="soxl_research_body"><p class="sub">미국장 종료 후 확정 5분봉이 누적되면 결과가 표시됩니다.</p></div><div id="shadow_rank_soxl" style="margin-top:14px"><p class="sub">그림자 전략 순위를 불러오는 중…</p></div>
       <p class="note">TRADE뿐 아니라 NO TRADE 사유, 신호·VWAP·거래량, 진입/청산, MFE/MAE, 홀드아웃과 30일 롤링 결과를 보관합니다.</p>
     </div>
 
@@ -1371,7 +1375,7 @@ async function loadSoxlResearch(){
       return;
     }
     const labels={baseline:'기준 OR15',range_5m:'OR 5분',range_30m:'OR 30분','vol_0.8':'거래량 0.8배','vol_1.2':'거래량 1.2배',
-      no_vwap:'VWAP 제외','stop_0.8_tp_1.6':'손절0.8/익절1.6','stop_1.5_tp_3.0':'손절1.5/익절3.0',hold_45m:'최대45분',hold_120m:'최대120분'};
+      no_vwap:'VWAP 제외','stop_0.8_tp_1.6':'손절0.8/익절1.6','stop_1.5_tp_3.0':'손절1.5/익절3.0',hold_45m:'최대45분',hold_120m:'최대120분',entry_by_1030:'10:30 이전'};
     const vars=j.variants||[],base=vars.find(x=>x.params&&x.params.name==='baseline')||{},st=base.summary||{},hv=(base.validation||{}).holdout||{},roll=j.rolling30||{},wf=j.walkForward||{};
     msg.textContent=(j.from||'')+' ~ '+(j.to||'')+' · 유효 '+j.validDays+'일 · 기준 '+(st.trades||0)+'건 · '+(j.comparisonStatus==='reviewable'?'비교 가능':'표본 수집 중');
     let h='<div class="out" style="margin-bottom:12px">'+
@@ -2126,6 +2130,116 @@ async function loadScalpingDuel(silent=false){
   }catch(e){box.innerHTML='<div class="card"><div class="warn">대결 자료 조회 실패: '+esc(e.message||e)+'</div></div>';}
 }
 
+const SHADOW_RANK_LABELS={
+  opening:{hold_to_next_open:'다음 거래일 시가 청산',today_combo_v1:'오늘 개선안 v1','pb_max_0.5':'눌림≤0.5%','amount_1.5':'거래대금≥1.5배',entry_by_0915:'09:15 이전',entry_by_0920:'09:20 이전',gap_3_6:'갭 3~6%','vol_1.5':'거래량≥1.5배','stop_0.7':'손절0.7%','tp_1.0':'익절1.0%'},
+  daytrading:{'vol_2.0':'거래량≥2.0배',lookback_30:'직전30분 고점','vwap_slope_0.2':'VWAP기울기≥0.2%',entry_by_1400:'14:00 이전',session_min_2:'시가대비≥2%','stop_0.8':'손절0.8%','tp_1.5':'익절1.5%','vol_1.2':'거래량≥1.2배',lookback_10:'직전10분 고점',max_trades_1:'하루 최대1건'},
+  crypto:{no_vwap:'VWAP 제외','vol_1.0':'거래량≥1.0배','vol_1.5':'거래량≥1.5배',range_15m:'OR 15분',range_30m:'OR 30분','stop_0.3_tp_0.6':'손절0.3/익절0.6','stop_0.7_tp_1.4':'손절0.7/익절1.4',hold_30m:'최대30분',hold_120m:'최대120분',entry_by_1800:'18:00 이전'},
+  soxl:{range_5m:'OR 5분',range_30m:'OR 30분','vol_0.8':'거래량0.8배','vol_1.2':'거래량1.2배',no_vwap:'VWAP 제외','stop_0.8_tp_1.6':'손절0.8/익절1.6','stop_1.5_tp_3.0':'손절1.5/익절3.0',hold_45m:'최대45분',hold_120m:'최대120분',entry_by_1030:'10:30 이전'}
+};
+let SHADOW_RANK_CACHE=null,SHADOW_RANK_AT=0;
+let PROMOTION_STATE=null,PROMOTION_STATE_AT=0;
+function shadowRankPct(v){const n=Number(v);return Number.isFinite(n)?((n>=0?'+':'')+n.toFixed(3)+'%'):'—';}
+function selectedMainVariant(kind){
+  return String((((PROMOTION_STATE||{}).configs||{})[kind]||{}).selectedVariant||'baseline');
+}
+function renderMainStrategyState(kind){
+  const el=$('main_strategy_state_'+kind);if(!el)return;
+  const selected=selectedMainVariant(kind),label=selected==='baseline'?'원래 기준전략':((SHADOW_RANK_LABELS[kind]||{})[selected]||selected);
+  const cfg=(((PROMOTION_STATE||{}).configs||{})[kind]||{});
+  const err=(((PROMOTION_STATE||{}).errors||{})[kind]||'');
+  if(err){el.innerHTML='<span class="status-item risk">⚠ 운영 메인 조회 실패</span><span class="status-item">'+esc(err)+'</span>';return;}
+  el.innerHTML='<span class="status-item ok">⭐ 현재 운영 메인: <b>'+esc(label)+'</b></span>'+
+    '<span class="status-item">'+(selected==='baseline'?'원래 기준전략을 사용 중입니다.':'승격된 전략을 사용 중입니다. 아래 원래 기준전략 설명은 연구 비교 기준으로 계속 보존됩니다.')+'</span>'+
+    (cfg.updatedAt?'<span class="status-item">설정 '+esc(new Date(cfg.updatedAt).toLocaleString('ko-KR'))+'</span>':'');
+}
+function promotionAction(kind,x){
+  const current=selectedMainVariant(kind);
+  if(current===x.name)return '<span class="sig on">⭐ 현재 메인</span>';
+  if(x.promotionEligible)return '<button class="ghostbtn buy sm" onclick="promoteShadow(\''+kind+'\',\''+String(x.name).replace(/'/g,"\\'")+'\')">⭐ 메인전략 승격</button>';
+  if(!x.liveCompatible)return '<span class="sub">운영승격 불가</span>';
+  return '<span class="sub">승격조건 대기</span>';
+}
+function renderShadowRanking(kind,data){
+  const el=$('shadow_rank_'+kind);if(!el)return;
+  const rows=(data&&data.rows)||[],rule=data&&data.rankingRule||{},pr=data&&data.promotionRule||{};
+  if(!rows.length){el.innerHTML='<div class="warn">그림자 전략 순위 데이터 수집 중</div>';return;}
+  const label=n=>(SHADOW_RANK_LABELS[kind]||{})[n]||n;
+  const current=selectedMainVariant(kind),currentLabel=current==='baseline'?'원래 기준전략':label(current);
+  const body=rows.map(x=>{
+    const sample=x.trades>0?(x.trades+'건 · '+Math.round((Number(x.sampleFactor)||0)*100)+'%'):'수집대기';
+    const st=x.promotionEligible?'⭐ 승격 가능':x.review?'검토후보':(x.sampleReady?'평가중':'표본수집');
+    const medal=x.rank===1?'🥇 ':x.rank===2?'🥈 ':x.rank===3?'🥉 ':'';
+    return '<tr><td><b>'+medal+x.rank+'</b></td><td><b>'+esc(label(x.name))+'</b><div class="sub">'+esc(x.name)+'</div></td>'+
+      '<td class="'+(Number(x.researchScore)>=50?'win':'loss')+'"><b>'+Number(x.researchScore||0).toFixed(1)+'</b></td>'+
+      '<td>'+sample+'</td><td class="'+(x.allEdgePct>=0?'win':'loss')+'">'+shadowRankPct(x.allEdgePct)+'</td>'+
+      '<td class="'+(x.validationEdgePct>=0?'win':'loss')+'">'+shadowRankPct(x.validationEdgePct)+'</td>'+
+      '<td class="'+(x.recentEdgePct>=0?'win':'loss')+'">'+shadowRankPct(x.recentEdgePct)+'</td>'+
+      '<td>'+(x.riskOk?'✅':'⚠️')+'</td><td>'+st+'</td><td>'+promotionAction(kind,x)+'</td></tr>';
+  }).join('');
+  const revert=current!=='baseline'?'<button class="ghostbtn sm" onclick="promoteShadow(\''+kind+'\',\'baseline\')">↩ 원래 기준전략으로 원복</button>':'';
+  el.innerHTML='<div style="margin:14px 0 7px;display:flex;gap:8px;align-items:center;flex-wrap:wrap"><b>🏁 그림자 전략 순위</b>'+
+    '<span class="pill good">운영 메인 <b>'+esc(currentLabel)+'</b></span>'+revert+
+    '<span class="sub">최소 '+Number(data.minRequired||10)+'개 · 원래 baseline 제외 순위 · '+esc(data.from||'—')+' ~ '+esc(data.to||'—')+'</span></div>'+
+    '<div class="htable-wrap"><table class="htable"><thead><tr><th>순위</th><th>그림자 전략</th><th>점수</th><th>표본</th><th>전체우위</th><th>검증우위</th><th>최근우위</th><th>위험</th><th>상태</th><th>메인전략</th></tr></thead><tbody>'+body+'</tbody></table></div>'+
+    '<div class="warn" style="margin-top:8px"><b>순위점수 '+esc(rule.version||'v1')+':</b> '+esc(rule.formula||'표본수·전체 기대값·검증 기대값·최근 성과·위험을 결합')+
+    '<br><b>승격 버튼:</b> 전략별 검토 기준 + 표본충족 + 위험통과 + 실시간 재현 가능 + 연구점수 '+Number(pr.minScore||60)+'점 이상일 때만 표시합니다. <b>자동승격은 OFF</b>이며 버튼을 눌러야 바뀝니다.'+
+    '<br><span class="sub">표본계수 '+esc(rule.sampleFactor||'min(1, trades/minTrades)')+' · 0건 후보는 항상 맨 아래. 승격해도 이미 시작된 세션은 기존 전략으로 끝나고 다음 새 세션부터 적용됩니다. 원래 연구 baseline은 그대로 보존됩니다.</span></div>';
+}
+async function loadPromotionState(force=false){
+  const now=Date.now();
+  if(!me)return null;
+  if(!force&&PROMOTION_STATE&&now-PROMOTION_STATE_AT<60000)return PROMOTION_STATE;
+  try{
+    const tok=await me.getIdToken();
+    const r=await fetch('/api/scalping-promotion',{cache:'no-store',headers:{'Authorization':'Bearer '+tok,Accept:'application/json'}});
+    const j=await r.json().catch(()=>({}));
+    if(!r.ok||!j.ok)throw new Error(j.error||('HTTP '+r.status));
+    PROMOTION_STATE=j;PROMOTION_STATE_AT=now;
+    ['opening','daytrading','crypto','soxl'].forEach(renderMainStrategyState);
+    if(SHADOW_RANK_CACHE)Object.entries(SHADOW_RANK_CACHE.rankings||{}).forEach(([k,v])=>renderShadowRanking(k,v));
+    return j;
+  }catch(e){
+    console.warn('promotion state',e);
+    return null;
+  }
+}
+async function promoteShadow(kind,variant){
+  if(!me){alert('로그인이 필요합니다.');return;}
+  const label=variant==='baseline'?'원래 기준전략':((SHADOW_RANK_LABELS[kind]||{})[variant]||variant);
+  const verb=variant==='baseline'?'원복':'승격';
+  if(!confirm(label+'을(를) '+verb+'할까요?\n\n현재 진행 중 세션은 그대로 끝내고 다음 새 세션부터 메인전략으로 적용됩니다.'))return;
+  try{
+    const tok=await me.getIdToken();
+    const r=await fetch('/api/scalping-promotion',{
+      method:'POST',headers:{'Authorization':'Bearer '+tok,'content-type':'application/json',Accept:'application/json'},
+      body:JSON.stringify({strategy:kind,variant})
+    });
+    const j=await r.json().catch(()=>({}));
+    if(!r.ok||!j.ok)throw new Error(j.error+(j.reason?' · '+j.reason:'')||('HTTP '+r.status));
+    PROMOTION_STATE=null;PROMOTION_STATE_AT=0;
+    await loadPromotionState(true);
+    alert(label+' '+verb+' 설정 완료\n다음 새 세션부터 메인전략으로 적용됩니다.');
+  }catch(e){alert('메인전략 변경 실패: '+(e.message||e));}
+}
+async function loadShadowRankings(force=false){
+  const now=Date.now();
+  if(!force&&SHADOW_RANK_CACHE&&now-SHADOW_RANK_AT<300000){
+    await loadPromotionState(false);
+    Object.entries(SHADOW_RANK_CACHE.rankings||{}).forEach(([k,v])=>renderShadowRanking(k,v));return;
+  }
+  try{
+    const [rr]=await Promise.all([
+      fetch('/api/scalping-shadow-ranking',{cache:'no-store',headers:{Accept:'application/json'}}),
+      loadPromotionState(false)
+    ]);
+    const j=await rr.json().catch(()=>({}));if(!rr.ok||!j.ok)throw new Error(j.error||('HTTP '+rr.status));
+    SHADOW_RANK_CACHE=j;SHADOW_RANK_AT=now;
+    Object.entries(j.rankings||{}).forEach(([k,v])=>renderShadowRanking(k,v));
+  }catch(e){
+    ['opening','daytrading','crypto','soxl'].forEach(k=>{const el=$('shadow_rank_'+k);if(el)el.innerHTML='<div class="warn">그림자 순위 조회 실패 · '+esc(e.message||e)+'</div>';});
+  }
+}
+
 function showStrategy(name){
   const active=['opening','daytrading','crypto','soxl'];
   const tabs=['daily','duel',...active];
@@ -2140,7 +2254,7 @@ function showStrategy(name){
     loadDaily1Shadow(false);
     active.forEach(x=>loadStrategyScorecard(x));
   }
-  if(active.includes(name)){ loadScalpingHistory(name,1); loadStrategyScorecard(name); loadDaily1Shadow(false); loadScalpingReview(name,false); renderStrategyStatus(name); renderPlan(name); }
+  if(active.includes(name)){ loadScalpingHistory(name,1); loadStrategyScorecard(name); loadDaily1Shadow(false); loadScalpingReview(name,false); loadShadowRankings(false); renderStrategyStatus(name); renderPlan(name); }
   if(name==='opening'){loadServerOpeningHistory();startOpeningPaperAuto();}
   else stopOpeningPaperAuto();
   if(name==='daytrading'){
@@ -2192,9 +2306,9 @@ async function loadDayTradingPaper(silent=false){
     const pending=(a||[]).find(x=>x.status==='pending'),open=(a||[]).find(x=>x.status==='open'),closed=(a||[]).filter(x=>x.status==='closed').slice(-1)[0];
     if(pending) setTimingBoard('daytrading','buy','진입대기','<b>'+esc(pending.name||pending.code)+'</b> · 신호 '+String(pending.signalTime||'').padStart(4,'0'),'다음 1분봉 시가 모의진입 대기 · 신호가 '+commas(Math.round(pending.signalPrice||0))+'원');
     else setTimingBoard('daytrading','buy','대기','현재 진입대기 신호가 없습니다.','10:00~14:30 서버 기준전략을 계속 감시합니다.');
-    if(open) setTimingBoard('daytrading','sell','보유중','<b>'+esc(open.name||open.code)+'</b> · 진입 '+commas(Math.round(open.entryPrice||0))+'원','손절 '+commas(Math.round((open.entryPrice||0)*.99))+' · 익절 '+commas(Math.round((open.entryPrice||0)*1.02))+' · 15:10 시간청산');
+    if(open) setTimingBoard('daytrading','sell','보유중','<b>'+esc(open.name||open.code)+'</b> · 진입 '+commas(Math.round(open.entryPrice||0))+'원','손절 '+commas(Math.round((open.entryPrice||0)*(1-Number(open.stopPct||l.stopPct||1)/100)))+' · 익절 '+commas(Math.round((open.entryPrice||0)*(1+Number(open.takeProfitPct||l.takeProfitPct||2)/100)))+' · 15:10 시간청산');
     else if(closed) setTimingBoard('daytrading','sell','최근 청산','<b>'+esc(closed.name||closed.code)+'</b> · '+(closed.reason||'청산'),'손익 '+((closed.pnl||0)>=0?'+':'')+Number(closed.pnl||0).toFixed(2)+'%');
-    else setTimingBoard('daytrading','sell','대기','현재 보유 포지션이 없습니다.','진입 후 −1%/+2%/15:10 규칙을 표시합니다.');
+    else setTimingBoard('daytrading','sell','대기','현재 보유 포지션이 없습니다.','선택된 메인전략의 손절·익절·15:10 규칙을 표시합니다.');
     const updated=l.updatedAt?new Date(l.updatedAt).toLocaleTimeString('ko-KR',{hour12:false}):'—';
     msg.textContent='선정 '+(sum.selected||a.length)+'건 · 진입대기 '+(sum.pending||0)+' · 보유 '+(sum.open||0)+' · 청산 '+(sum.closed||0)+' · '+updated+' 갱신';
 
@@ -2260,7 +2374,8 @@ async function loadDayTradingResearch(){
     const labels={
       baseline:'현재 기준','vol_2.0':'거래량≥2.0배',lookback_30:'직전30분 고점',
       'vwap_slope_0.2':'VWAP기울기≥0.2%',entry_by_1400:'14:00 이전',
-      session_min_2:'시가대비≥2%', 'stop_0.8':'손절0.8%', 'tp_1.5':'익절1.5%'
+      session_min_2:'시가대비≥2%', 'stop_0.8':'손절0.8%', 'tp_1.5':'익절1.5%',
+      'vol_1.2':'거래량≥1.2배',lookback_10:'직전10분 고점',max_trades_1:'하루 최대1건'
     };
     const vars=j.variants||[],base=vars.find(x=>x.params&&x.params.name==='baseline'),s=base&&base.summary||{};
     const dq=j.dataQuality||{},eligibleDays=(j.eligibleArchiveDays==null?j.archiveDays:j.eligibleArchiveDays);
@@ -2573,8 +2688,8 @@ async function loadOpeningResearch(){
       baseline:'현재 기준',today_combo_v1:'오늘 개선안 v1',top50:'Top50',
       'pb_max_0.5':'눌림≤0.5%','pb_max_0.7':'눌림≤0.7%',
       'amount_1.5':'거래대금≥1.5배','amount_2.0':'거래대금≥2.0배',
-      entry_by_0915:'09:15 이전',gap_2_5:'갭 2~5%',gap_3_7:'갭 3~7%',
-      'stop_0.8':'손절 0.8%','tp_1.0':'익절 1.0%','tp_2.0':'익절 2.0%'
+      entry_by_0915:'09:15 이전',entry_by_0920:'09:20 이전',gap_2_5:'갭 2~5%',gap_3_7:'갭 3~7%',gap_3_6:'갭 3~6%',
+      'vol_1.5':'거래량≥1.5배','stop_0.7':'손절 0.7%','stop_0.8':'손절 0.8%','tp_1.0':'익절 1.0%','tp_2.0':'익절 2.0%'
     }[name]||name||'');
 
     const vars=j.variants||[],base=vars.find(x=>x.params&&x.params.name==='baseline');

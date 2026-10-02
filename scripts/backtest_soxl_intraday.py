@@ -56,6 +56,7 @@ VARIANTS = [
     Params("stop_1.5_tp_3.0", stop_pct=1.5, take_profit_pct=3.0),
     Params("hold_45m", max_hold_bars=9),
     Params("hold_120m", max_hold_bars=24),
+    Params("entry_by_1030", entry_cutoff_hm=1030),
 ]
 
 

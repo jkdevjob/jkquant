@@ -38,6 +38,18 @@ function authorized(request,env){
 export class OpeningSignalStore extends DurableObject {
   async fetch(request){
     const u=new URL(request.url);
+    if(request.method==="GET"&&u.pathname==="/config"){
+      const config=(await this.ctx.storage.get("strategyConfig"))||{schema:1,strategy:"opening",selectedVariant:"baseline",updatedAt:null,updatedBy:null};
+      return json({ok:true,config});
+    }
+    if(request.method==="POST"&&u.pathname==="/config"){
+      const b=await request.json();
+      const variant=String(b&&b.variant||"");
+      if(!variant)return json({ok:false,error:"variant required"},400);
+      const config={schema:1,strategy:"opening",selectedVariant:variant,updatedAt:new Date().toISOString(),updatedBy:String(b.updatedBy||"owner"),source:String(b.source||"manual-promotion")};
+      await this.ctx.storage.put("strategyConfig",config);
+      return json({ok:true,config});
+    }
     if(request.method==="GET"&&u.pathname==="/ledger"){
       const ledger=await this.ctx.storage.get("ledger");
       return json({ok:true,ledger:ledger||null});
@@ -49,8 +61,9 @@ export class OpeningSignalStore extends DurableObject {
       }
       const nowIso=new Date().toISOString();
       const ledger=(await this.ctx.storage.get("ledger"))||{
-        schema:LEDGER_SCHEMA,date:String(b.date),createdAt:nowIso,updatedAt:nowIso,scans:[],events:[]
+        schema:LEDGER_SCHEMA,date:String(b.date),mainVariant:String(b.mainVariant||"baseline"),createdAt:nowIso,updatedAt:nowIso,scans:[],events:[]
       };
+      if(!ledger.mainVariant)ledger.mainVariant=String(b.mainVariant||"baseline");
       if(String(ledger.date)!==String(b.date))return json({ok:false,error:"ledger date mismatch"},409);
 
       const scanId=String(b.scanId||[b.scheduledTime,b.targetHm,b.partial?"partial":"full"].join(":"));
@@ -88,6 +101,24 @@ export class OpeningSignalStore extends DurableObject {
 function store(env,date,kind=""){
   return env.SIGNAL_STORE.get(env.SIGNAL_STORE.idFromName(kind?kind+":"+String(date):String(date)));
 }
+function configStore(env){return env.SIGNAL_STORE.get(env.SIGNAL_STORE.idFromName("__gpt_opening_strategy_config__"));}
+async function readStrategyConfig(env){
+  const r=await configStore(env).fetch("https://opening-signal.internal/config");
+  const j=await r.json().catch(()=>({}));
+  return j.config||{schema:1,strategy:"opening",selectedVariant:"baseline",updatedAt:null};
+}
+async function writeStrategyConfig(env,b){
+  const r=await configStore(env).fetch("https://opening-signal.internal/config",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(b)});
+  const j=await r.json().catch(()=>({}));
+  if(!r.ok||!j.ok)throw new Error(j.error||("config store HTTP "+r.status));
+  return j.config;
+}
+async function mainVariantForDate(env,date){
+  const ledger=await readLedger(env,date).catch(()=>null);
+  if(ledger&&ledger.mainVariant)return String(ledger.mainVariant);
+  const cfg=await readStrategyConfig(env);
+  return String(cfg.selectedVariant||"baseline");
+}
 async function appendLedger(env,payload,kind=""){
   const r=await store(env,payload.date,kind).fetch("https://opening-signal.internal/append",{
     method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(payload)
@@ -103,8 +134,8 @@ async function readLedger(env,date,kind=""){
   return j.ledger||null;
 }
 
-async function scanOne(env,shard,target){
-  const u=baseUrl(env)+"/api/opening-monitor?shard="+shard+"&shards="+SHARDS+"&limit="+LIMIT+"&targetHm="+target;
+async function scanOne(env,shard,target,mainVariant){
+  const u=baseUrl(env)+"/api/opening-monitor?shard="+shard+"&shards="+SHARDS+"&limit="+LIMIT+"&targetHm="+target+"&mainVariant="+encodeURIComponent(mainVariant||"baseline");
   const r=await fetch(u,{headers:{"x-monitor-key":env.MONITOR_KEY,"Accept":"application/json"}});
   const j=await r.json().catch(()=>({}));
   if(!r.ok||!j.ok)throw new Error("shard "+shard+" HTTP "+r.status+" "+String(j.error||j.skipped||""));
@@ -141,8 +172,9 @@ function collectEvents(date,target,parts){
     const tel=p.telegram||{};
     const buyDelivery={channel:"telegram",sent:!!tel.buySent,messageId:tel.buyMessageId||null,error:tel.buyError||null};
     const sellDelivery={channel:"telegram",sent:!!tel.sellSent,messageId:tel.sellMessageId||null,error:tel.sellError||null};
-    for(const x of (p.buyEvents||[]))out.push(liveEvent(date,target,"buy","baseline",x,buyDelivery,null));
-    for(const x of (p.sellEvents||[]))out.push(liveEvent(date,target,"sell","baseline",x,sellDelivery,null));
+    const mainVariant=String(p.mainVariant||"baseline");
+    for(const x of (p.buyEvents||[]))out.push(liveEvent(date,target,"buy",mainVariant,x,buyDelivery,null));
+    for(const x of (p.sellEvents||[]))out.push(liveEvent(date,target,"sell",mainVariant,x,sellDelivery,null));
     for(const v of (p.shadowEvents||[])){
       const delivery={channel:"telegram",sent:false,messageId:null,error:null,reason:"shadow_strategy_not_notified"};
       for(const x of (v.buyEvents||[]))out.push(liveEvent(date,target,"buy",String(v.name||"shadow"),x,delivery,v));
@@ -161,27 +193,28 @@ function telegramFailures(parts){
   return n;
 }
 
-async function persistScan(env,{scheduled,lag,target,kst,parts,failed,partial}){
+async function persistScan(env,{scheduled,lag,target,kst,parts,failed,partial,mainVariant}){
   const events=collectEvents(kst.date,target,parts);
   const quoteErrors=parts.reduce((s,x)=>s+(+x.errors||0),0);
   const scanId=[scheduled,target,partial?"partial":"full"].join(":");
   const stored=await appendLedger(env,{
-    scanId,date:kst.date,scheduledTime:scheduled,capturedAt:new Date().toISOString(),
+    scanId,date:kst.date,mainVariant:String(mainVariant||"baseline"),scheduledTime:scheduled,capturedAt:new Date().toISOString(),
     targetHm:target,lagMs:lag,partial:!!partial,okShards:parts.length,failed,quoteErrors,events
   });
   return {events:events.length,added:stored.added,total:stored.total,scans:stored.scans};
 }
 
 async function sendOpeningCloseSummary(env,date){
+  const mainVariant=await mainVariantForDate(env,date);
   const parts=[];
   for(let shard=0;shard<SHARDS;shard++){
-    const u=baseUrl(env)+"/api/opening-monitor?serverHistory=1&shard="+shard+"&shards="+SHARDS+"&limit="+LIMIT;
+    const u=baseUrl(env)+"/api/opening-monitor?serverHistory=1&shard="+shard+"&shards="+SHARDS+"&limit="+LIMIT+"&mainVariant="+encodeURIComponent(mainVariant);
     const r=await fetch(u,{headers:{"x-monitor-key":env.MONITOR_KEY,"Accept":"application/json"}});
     const j=await r.json().catch(()=>({}));
     if(!r.ok||!j.ok)throw new Error("opening summary shard "+shard+" HTTP "+r.status+" "+String(j.error||""));
     parts.push(j);
   }
-  const trades=parts.flatMap(x=>Array.isArray(x.trades)?x.trades:[]).sort((a,b)=>(+a.entryTime||0)-(+b.entryTime||0));
+  const trades=parts.flatMap(x=>Array.isArray(x.operationalTrades)?x.operationalTrades:(Array.isArray(x.trades)?x.trades:[])).sort((a,b)=>(+a.entryTime||0)-(+b.entryTime||0));
   const pn=trades.map(x=>Number(x.pnl)).filter(Number.isFinite),wins=pn.filter(x=>x>0).length,losses=pn.filter(x=>x<0).length;
   const avg=pn.length?pn.reduce((s,x)=>s+x,0)/pn.length:0;
   const lines=[
@@ -208,13 +241,14 @@ async function runMinute(controller,env){
     return;
   }
 
-  const settled=await Promise.allSettled(Array.from({length:SHARDS},(_,shard)=>scanOne(env,shard,target)));
+  const mainVariant=await mainVariantForDate(env,kst.date);
+  const settled=await Promise.allSettled(Array.from({length:SHARDS},(_,shard)=>scanOne(env,shard,target,mainVariant)));
   const ok=settled.filter(x=>x.status==="fulfilled").map(x=>x.value);
   const failed=settled.filter(x=>x.status==="rejected").map(x=>String(x.reason?.message||x.reason));
 
   let archive=null;
   try{
-    archive=await persistScan(env,{scheduled,lag,target,kst,parts:ok,failed,partial:ok.length!==SHARDS});
+    archive=await persistScan(env,{scheduled,lag,target,kst,parts:ok,failed,partial:ok.length!==SHARDS,mainVariant});
   }catch(e){
     console.error(JSON.stringify({type:"signal_archive_failed",date:kst.date,targetHm:target,error:String(e.message||e)}));
   }
@@ -230,7 +264,7 @@ async function runMinute(controller,env){
   const errors=ok.reduce((s,x)=>s+(+x.errors||0),0);
   const deliveryFailures=telegramFailures(ok);
   const result={
-    type:"opening_scan",date:kst.date,targetHm:target,lagMs:lag,
+    type:"opening_scan",date:kst.date,targetHm:target,lagMs:lag,mainVariant,
     buyEvents:buyEvents.length,sellEvents:sellEvents.length,quoteErrors:errors,
     telegramFailures:deliveryFailures,archive
   };
@@ -485,6 +519,17 @@ export default {
       const date=u.searchParams.get("date")||kstParts().date;
       try{return json({ok:true,date,ledger:await readLedger(env,date)});}
       catch(e){return json({ok:false,error:String(e.message||e)},500);}
+    }
+    if(u.pathname==="/config"){
+      if(!authorized(request,env))return json({ok:false,error:"unauthorized"},401);
+      try{
+        if(request.method==="GET")return json({ok:true,config:await readStrategyConfig(env)});
+        if(request.method==="POST"){
+          const b=await request.json();
+          return json({ok:true,config:await writeStrategyConfig(env,b)});
+        }
+        return json({ok:false,error:"method not allowed"},405);
+      }catch(e){return json({ok:false,error:String(e.message||e)},500);}
     }
     return json({
       ok:true,

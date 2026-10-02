@@ -51,6 +51,9 @@ VARIANTS=[
     Params("session_min_2",min_session_ret=2.0),
     Params("stop_0.8",stop=0.8),
     Params("tp_1.5",take_profit=1.5),
+    Params("vol_1.2",vol_mult=1.2),
+    Params("lookback_10",lookback=10),
+    Params("max_trades_1",max_trades=1),
 ]
 
 def hm(t):
