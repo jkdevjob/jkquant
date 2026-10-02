@@ -32,23 +32,26 @@ function ok(name,cond){assert.ok(cond,name);console.log('PASS '+name);}
 
 /* 1. 운영 메인 — 새 기기/다중 탭/구버전 클라이언트 */
 ok('운영 Firebase 쓰기는 transaction + protected stateV2Rev', idx.includes('runTransaction')&&idx.includes('stateV2Rev:nr')&&idx.includes('stateV2:candidate'));
-ok('로그인 사용자는 cloud hydrate 전 fresh state를 local 최신값으로 만들지 않음',
-  /if\(!hadValidLocal\)\{[\s\S]*if\(!curUid\)saveLocal\(\);/.test(fn(idx,'function load()')));
+ok('로그인 사용자는 브라우저 state를 읽지 않고 DB hydrate 전 fresh 메모리만 사용',
+  /if\(curUid\)\{[\s\S]*S=freshState\(\)/.test(fn(idx,'function load()'))
+  && !/localStorage\.getItem/.test(fn(idx,'function load()').split('if(curUid)')[1].split('return;')[0]));
 ok('운영 cloud read 실패는 원격 덮어쓰기 없이 pending으로 두고 방해 팝업을 띄우지 않음',
   /stateCloudHydrated=false/.test(fn(idx,'async function pullRemote()'))
   && /stateCloudPending=true/.test(fn(idx,'async function pullRemote()'))
   && !idx.includes('⚠️ 거래이력 보호:')
   && !idx.includes('클라우드 저장을 잠갔습니다'));
-ok('운영 원장은 DB revision 충돌 시 stale 이력을 자동 병합하지 않고 저장을 중단',
+ok('운영 원장은 DB revision 변경 시 브라우저 경고 없이 in-memory 3-way rebase 후 transaction 저장',
   /stateCloudHistorySig/.test(idx)
   && /remoteChanged=rev!==stateCloudRev\|\|\(stateCloudHistorySig!==''&&remoteSig!==stateCloudHistorySig\)/.test(fn(idx,'async function _commitStateRemote(where)'))
-  && /REMOTE_HISTORY_CONFLICT/.test(fn(idx,'async function _commitStateRemote(where)'))
-  && !/candidate=_mergeHistorySafeState\(candidate,remote\)/.test(fn(idx,'async function _commitStateRemote(where)')));
+  && /candidate=_rebaseStateOnRemote\(stateDbBase,candidate,remote\)/.test(fn(idx,'async function _commitStateRemote(where)'))
+  && !idx.includes('다른 기기/탭의 최신 거래이력이 감지되어')
+  && !idx.includes('DB에 더 최신 거래이력이 있어'));
 
 const idxFns=[
   '_histKeyPart','_histStableJson','_histSemanticKey','_histGroupKey',
   '_stateHistoryMap','_historyPreserves','_historyRelation','_historyCount','_historySignature',
-  '_mergeRecordArrays','_repairLegacyMergeDupes','_mergeHistorySafeState'
+  '_mergeRecordArrays','_repairLegacyMergeDupes','_mergeHistorySafeState',
+  '_histEntries','_rebaseRecordArray','_rebaseStateOnRemote'
 ].map(n=>fn(idx,'function '+n+'(')).join('\n');
 const IC=vm.createContext({console,Map,Set,JSON,sortHist:a=>a.sort((x,y)=>String(x.date||'').localeCompare(String(y.date||''))||((x.ts||0)-(y.ts||0)))});
 vm.runInContext(idxFns,IC);
@@ -93,13 +96,22 @@ ok('서로 다른 탭에서 추가한 거래는 자동병합 후 하나도 빠�
   const m=IC._mergeHistorySafeState(splitLocal,splitRemote),ts=m.inf.sessions[0].hist.map(x=>x.ts).sort();
   return JSON.stringify(ts)===JSON.stringify([1,2,3,4]);
 })());
+ok('DB 3-way rebase는 다른 탭 추가 + 현재 탭 추가를 모두 보존',(()=>{
+  const base=mkState([r1]),local=mkState([r1,{ts:3,date:'2026-09-03',kind:'buy',price:9,qty:1}]),
+    db=mkState([r1,r2]),m=IC._rebaseStateOnRemote(base,local,db);
+  return JSON.stringify(m.inf.sessions[0].hist.map(x=>x.ts).sort())===JSON.stringify([1,2,3]);
+})());
+ok('DB 3-way rebase는 현재 탭의 명시적 삭제를 다시 살리지 않음',(()=>{
+  const base=mkState([r1,r2]),local=mkState([r1]),db=mkState([r1,r2,{ts:4,date:'2026-09-04',kind:'buy',price:8,qty:1}]),
+    m=IC._rebaseStateOnRemote(base,local,db),ts=m.inf.sessions[0].hist.map(x=>x.ts).sort();
+  return JSON.stringify(ts)===JSON.stringify([1,4]);
+})());
 ok('일반 save는 거래 입력 즉시 Firebase 저장 promise를 반환',
   fn(idx,'function save()').includes('return pushRemoteNow()')
   && fn(idx,'async function pushRemote()').includes('pushRemoteNow()'));
-ok('브라우저 운영 캐시는 거래이력을 제거하고 저장',
-  /function _stateCacheCopy\(st\)/.test(idx)
-  && /b\.sessions\.forEach\(ss=>\{ if\(ss\)ss\.hist=\[\]; \}\)/.test(idx)
-  && /JSON\.stringify\(_stateCacheCopy\(S\)\)/.test(fn(idx,'function saveLocal()')));
+ok('로그인 운영앱은 state를 localStorage에 저장하지 않음',
+  /if\(curUid\)return true/.test(fn(idx,'function saveLocal()'))
+  && /if\(curUid\)return true/.test(fn(idx,'function _writeLocalExact(st)')));
 ok('로그인 후 새로고침은 local 거래이력이 아니라 Firebase remote를 그대로 정본으로 사용',
   /S=JSON\.parse\(JSON\.stringify\(remote\)\)/.test(fn(idx,'async function pullRemote()'))
   && !/_historyRelation\(local,remote\)/.test(fn(idx,'async function pullRemote()')));
@@ -132,10 +144,9 @@ ok('명시적 삭제·초기화 백업은 브라우저 영구저장이 아니라
   && fn(plan,'async function alphaDeleteEvent(id)').includes("planManualBackup('alpha-event-delete:")
   && fn(plan,'async function alphaResetLedger()').includes("planManualBackup('alpha-ledger-reset')"));
 ok('QLD/SGOV 한 건 삭제도 confirm 필수',fn(plan,'async function delLedgerTrade(id)').includes('if(!confirm('));
-ok('5년플랜 브라우저 캐시는 alpha/sleeve 거래이력을 제거',
-  /function planSettingsCacheCopy\(o\)/.test(plan)
-  && /x\.alphaLedger&&Array\.isArray\(x\.alphaLedger\.events\)\)x\.alphaLedger\.events=\[\]/.test(plan)
-  && /x\.sleeveLedger&&Array\.isArray\(x\.sleeveLedger\.trades\)\)x\.sleeveLedger\.trades=\[\]/.test(plan));
+ok('로그인 5년플랜은 원장 state를 localStorage에 쓰지 않음',
+  /if\(auth\.currentUser\)\{[\s\S]*return;/.test(fn(plan,'function localSave()'))
+  && /if\(!liveState\|\|auth\.currentUser\)return/.test(fn(plan,'function writeAssetSessionLocal()')));
 ok('5년플랜 새로고침은 Firebase 현재 원장을 직접 적용하고 과거 로컬 백업을 자동선택하지 않음',
   /apply\(cloneObj\(v\)\)/.test(fn(plan,'async function cloudLoad(user)'))
   && !/planRecoveryScore/.test(fn(plan,'async function cloudLoad(user)'))
@@ -144,14 +155,23 @@ ok('현금/거래 삭제는 DB 응답을 기다리고 실패 시 롤백',
   /const ok=await cloudSave\(\)/.test(fn(plan,'async function alphaDeleteEvent(id)'))
   && /alphaLedger=before/.test(fn(plan,'async function alphaDeleteEvent(id)'))
   && /const ok=await cloudSave\(\)/.test(fn(plan,'async function delLedgerTrade(id)')));
+ok('5년플랜 동시 수정은 팝업 없이 DB 기준 3-way rebase',
+  /candidate=planRebaseFiveYear\(planDbState,candidate,remote\)/.test(fn(plan,'async function cloudSave()'))
+  && /candidate=planRebaseOperating\(planStateDbBase,candidate,remote\)/.test(fn(plan,'async function saveOperatingState()'))
+  && !plan.includes('다른 기기/탭의 최신 거래이력이 감지되어')
+  && !plan.includes('DB에 더 최신 거래이력이 있어'));
+ok('5년플랜 운영 원장 로드는 로그인 시 브라우저 state를 비교하지 않고 Firebase만 사용',
+  /liveState=cloud\?cloneObj\(cloud\):null/.test(fn(plan,'async function loadOperatingState(user)'))
+  && !/planOpPreserves\(local,cloud\)/.test(fn(plan,'async function loadOperatingState(user)')));
 ok('쿼터매도 입력 화면이 보유÷4 내림 수량을 명시',
   /보유 \$\{nfix\(_c0\.qty\|\|0,0\)\}주 → 쿼터매도 \$\{_q\}주 \(보유÷4 내림\)/.test(idx));
 
 const pFns=[
   'planOpHistoryMap','planOpPreserves','planMapSig','planOpHistorySig',
-  'planHistoryMap','planHistoryPreserves','planHistoryRelation','planHistorySig'
+  'planHistoryMap','planHistoryPreserves','planHistoryRelation','planHistorySig',
+  'planStableJson','planRecEntries','planRebaseRecords','planRebaseFiveYear'
 ].map(n=>fn(plan,'function '+n+'(')).join('\n');
-const PC=vm.createContext({console,Map,JSON});
+const PC=vm.createContext({console,Map,JSON,cloneObj:x=>JSON.parse(JSON.stringify(x))});
 vm.runInContext(pFns,PC);
 const pr={alphaLedger:{base:{date:'2026-09-01',tecl:1,tqqq:0,sgov:0,cash:100},events:[{id:'e1',type:'trade',date:'2026-09-02',symbol:'TECL',side:'buy',qty:1,price:10}]},
   sleeveSessions:[{id:'sl1',ledger:{startQLD:0,startSGOV:1,startCash:100,trades:[{id:'t1',date:'2026-09-03',symbol:'SGOV',side:'buy',qty:1,price:100}]}}]};
@@ -159,6 +179,14 @@ const pe={alphaLedger:{base:{date:'2026-09-01',tecl:1,tqqq:0,sgov:0,cash:100},ev
 const pp=JSON.parse(JSON.stringify(pr));pp.alphaLedger.events.push({id:'e2',type:'cash',date:'2026-09-04',kind:'div',amount:1});
 ok('fiveYearPlan 빈/누락 원장은 기존 alpha+sleeve 이력을 보존하지 못함',PC.planHistoryPreserves(pe,pr)===false);
 ok('기존 원장 + 새 이벤트는 기존 이력을 전부 보존',PC.planHistoryPreserves(pp,pr)===true);
+ok('5년플랜 3-way rebase는 다른 탭의 현금기록을 보존하면서 현재 탭 삭제를 유지',(()=>{
+  const base=JSON.parse(JSON.stringify(pr));
+  base.alphaLedger.events.push({id:'cash-old',type:'cash',date:'2026-09-03',kind:'dep',amount:10});
+  const local=JSON.parse(JSON.stringify(base));local.alphaLedger.events=local.alphaLedger.events.filter(x=>x.id!=='cash-old');
+  const db=JSON.parse(JSON.stringify(base));db.alphaLedger.events.push({id:'cash-new',type:'cash',date:'2026-09-04',kind:'div',amount:2});
+  const m=PC.planRebaseFiveYear(base,local,db),ids=m.alphaLedger.events.map(x=>x.id).sort();
+  return JSON.stringify(ids)===JSON.stringify(['e1','cash-new'].sort());
+})());
 
 const opRemote={inf:{sessions:[{id:'s',hist:[r1,r2]}]},vr:{sessions:[]},plan:{sessions:[{id:'p',ledger:{base:{cash:100},events:[{id:'p1',type:'trade'}]}}]}};
 const opLocal=JSON.parse(JSON.stringify(opRemote));opLocal.inf.sessions[0].hist.pop();
