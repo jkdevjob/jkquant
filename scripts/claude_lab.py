@@ -1006,16 +1006,18 @@ def recent_curves(series, today, days=60):
     """📅 오늘 탭 추이 그래프(참고): 최근 days 일 동안 규칙대로 다시 계산한 누적 수익률 — 칸 자금 100%, 계좌는 비중대로.
     모의 장부(실제 기록)와 섞지 않는다. series: {키: (일손익 dict, 그 시장 달력)}"""
     start = (date.fromisoformat(today) - timedelta(days=days)).isoformat()
-    out = {}
+    out, trades = {}, {}
     for k, (dv, cal) in series.items():
-        eq, pts = 1.0, []
+        eq, pts, n = 1.0, [], 0
         for d in sorted(set(cal)):
             if d < start or d > today:
                 continue
             eq *= 1 + dv.get(d, 0.0) / 100
+            n += d in dv
             pts.append(dict(date=d, cumPct=(eq - 1) * 100))
-        out[k] = pts
-    return dict(start=start, source="reconstructed", note="규칙대로 다시 계산한 값(모의 장부 아님) · 칸 자금 100% · 계좌는 국내 30·코인 30·미국 40", series=out)
+        out[k], trades[k] = pts, n
+    return dict(start=start, source="reconstructed", note="규칙대로 다시 계산한 값(모의 장부 아님) · 칸 자금 100% · 계좌는 국내 30·코인 30·미국 40",
+                series=out, tradeDays=trades)
 
 
 def review_entry(report):

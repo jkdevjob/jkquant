@@ -11032,6 +11032,10 @@ console.log('[GAPDOWN D-1 / DIP24 D-3] 연구용 모의체결 경로 안전장�
        &&/if\(!\(await claudeAuthorized\(request,env\)\)\)return new Response/.test(lb3)
        &&/fetch\(origin\+"\/api\/claude-live",\{headers:\{Accept:"application\/json","x-monitor-key":/.test(tg3));
   }
+  ok('매매 없는 날·칸은 0.00% 대신 \'매매 없음\' — 운영판·오늘 탭·⑤ 오늘·이번 주·추이 범례·GPT 대결 날짜별',
+     /var NOTRADE=/.test(scl2)&&/td\.noTrade\?k\("오늘 칸 수익률",NOTRADE/.test(scl2)&&/q\.noTrade\?NOTRADE:pct\(q\.tabPct\)/.test(scl2)
+     &&/if\(tdy&&tdy\.noTrade\)head\+=/.test(scl2)&&/nt=!\(z\.tradeDays>0\)/.test(scl2)&&/\(nt\?NOTRADE:/.test(scl2)
+     &&/x\.claude\.entries\?/.test(scl2)&&/tradeDays=trades\)/.test(fs.readFileSync(__d+'/scripts/claude_lab.py','utf8')));
   ok('📅 오늘 탭 전략별 누적 수익률 추이: 모의 장부 / 최근 60일 재구성(참고) 따로 · 섞지 않음 · 5색(검증) + 범례',
      /function trendCard\(\)/.test(scl2)&&/html\+=trendCard\(\);/.test(scl2)&&/function paperCurves\(\)/.test(scl2)
      &&/report\["curves"\] = recent_curves\(/.test(fs.readFileSync(__d+'/scripts/claude_lab.py','utf8')));

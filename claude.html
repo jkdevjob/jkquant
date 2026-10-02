@@ -51,7 +51,7 @@ table.doc td{padding:6px 6px}
   <div class="gnote"><a href="/" style="color:var(--faint)">← 운영 화면으로</a></div>
 </div></div>
 <header><div class="wrap"><div class="htop">
-  <div class="brand"><div class="kicker">JK QUANT · CLAUDE</div><h1>🤖 단타 <span class="v">(클로드)</span> <span class="ver" id="clVer">v2.9.0</span></h1></div>
+  <div class="brand"><div class="kicker">JK QUANT · CLAUDE</div><h1>🤖 단타 <span class="v">(클로드)</span> <span class="ver" id="clVer">v2.9.1</span></h1></div>
   <div style="display:flex;align-items:center"><span class="ubadge" id="ubadge"></span>
   <div class="jkmenu" id="jkmenuWrap">
     <button class="jkmenu-btn" aria-label="메뉴" onclick="jkMenuToggle(event)">三</button>
@@ -91,6 +91,7 @@ table.doc td{padding:6px 6px}
 function jkMenuToggle(e){if(e)e.stopPropagation();var p=document.getElementById("jkmenuPop");if(p)p.hidden=!p.hidden}
 document.addEventListener("click",function(e){var m=document.getElementById("jkmenuWrap"),p=document.getElementById("jkmenuPop");if(m&&p&&!m.contains(e.target))p.hidden=true});
 function esc(s){return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;")}
+var NOTRADE="<span class='sub' style='font-weight:700'>매매 없음</span>";
 function pct(v,d){if(v==null||!isFinite(v))return "—";v=+v;return (v>=0?"+":"")+v.toFixed(d==null?2:d)+"%"}
 function num(v,d){return v==null||!isFinite(v)?"—":(+v).toFixed(d==null?1:d)}
 function mddTxt(v){return v==null||!isFinite(v)?"—":(+v).toFixed(0)+"%"}
@@ -152,7 +153,8 @@ function opsBoard(tab){
   var sh=(((J.lab||{}).shadows||{})[tab]||[]).filter(function(x){return !x.error});
   var k=function(l,v,sub,c2){return "<div class='kpi'><div class='l'>"+l+"</div><div class='v "+(c2||"")+"' style='font-size:16px'>"+v+"</div>"+(sub?"<div class='sub'>"+sub+"</div>":"")+"</div>"};
   var today=!LIVE?k("오늘","…","불러오는 중"):!td?k("오늘","—",LIVE.error?esc(LIVE.error):"장중 자료 없음"):
-    k("오늘 칸 수익률",pct(td.tabPct),"개별 매매 합계 "+pct(td.sumPct)+" · "+(td.noTrade?"거래 없음":"거래 "+td.trades+"건")+" · 계좌 기여 "+pct(td.accountPct)+" (×"+Math.round(td.weight*100)+"%)",cls(td.tabPct));
+    (td.noTrade?k("오늘 칸 수익률",NOTRADE,"계좌 기여 0 · "+esc(td.why||"")):
+      k("오늘 칸 수익률",pct(td.tabPct),"개별 매매 합계 "+pct(td.sumPct)+" · 거래 "+td.trades+"건 · 계좌 기여 "+pct(td.accountPct)+" (×"+Math.round(td.weight*100)+"%)",cls(td.tabPct)));
   var cum=keys.map(function(kk){var q=sm[kk]||{};return (keys.length>1?esc((PNAME[kk]||kk).split(" ")[0])+" ":"")+"매매 "+(q.tradeDays||0)+"일 · 승 "+(q.tradeDays?Math.round((q.winDays||0)/q.tradeDays*100)+"%":"—")+" · 평균 "+(q.avgTradePct==null?"—":pct(q.avgTradePct))}).join("<br>");
   var shTxt=sh.map(function(x){var o=x.outOfSample||{},pr=x.promotion||{};return (pr.code==="candidate"?"⭐ ":"")+esc(x.name)+": "+(o.tradeDays||0)+"/20일 · 평균 "+pct(o.expectancyPct)+" · PF "+(o.profitFactor==null?"—":num(o.profitFactor))+" · +1%일 "+(o.plus1Days||0)}).join("<br>");
   var rem=acc.weekPct==null?null:Math.max(0,5-acc.weekPct);
@@ -185,7 +187,7 @@ function weekCard(){
   if(!w)return "";
   if(w.error)return "<div class='card'><h3>🗓 이번 주 결과</h3><div class='warn'>"+esc(w.error)+"</div></div>";
   var a=w.account||{},P=w.parts||{},N={opening_d1v2:"① 시초가 (국내)",daytrading_etf:"② ETF 야간 (국내)",coin_bo_btc:"③ BTC",coin_bo_eth:"③ ETH",us_soxl:"④ SOXL (미국)"};
-  var rows=Object.keys(N).map(function(k){var z=P[k]||{};return "<tr><td class='nm'>"+esc(N[k])+"</td><td class='"+cls(z.contribPct)+"'><b>"+pct(z.contribPct)+"</b></td><td class='"+cls(z.weekPct)+"'>"+pct(z.weekPct,1)+"</td><td>"+(z.tradeDays||0)+"<span class='sub'>/"+(z.days||0)+"일</span></td><td class='sub'>"+(z.through?esc(z.through.slice(5)):"—")+"</td></tr>"}).join("");
+  var rows=Object.keys(N).map(function(k){var z=P[k]||{},nt=!(z.tradeDays>0);return "<tr><td class='nm'>"+esc(N[k])+"</td>"+(nt?"<td colspan='2'>"+NOTRADE+"</td>":"<td class='"+cls(z.contribPct)+"'><b>"+pct(z.contribPct)+"</b></td><td class='"+cls(z.weekPct)+"'>"+pct(z.weekPct,1)+"</td>")+"<td>"+(z.tradeDays||0)+"<span class='sub'>/"+(z.days||0)+"일</span></td><td class='sub'>"+(z.through?esc(z.through.slice(5)):"—")+"</td></tr>"}).join("");
   var cand=[];Object.keys((J.lab||{}).shadows||{}).forEach(function(t){var r=J.lab.shadows[t];(Array.isArray(r)?r:[]).forEach(function(x){if(x.promotion&&x.promotion.code==="candidate")cand.push(x.name+" — "+x.promotion.text)})});
   return "<div class='card'><h3>🗓 이번 주 결과 ("+esc((w.weekStart||"").slice(5))+" ~ "+esc((w.asOf||"").slice(5))+")"+(recon?" <span class='tag'>규칙대로 재구성</span>":"")+"</h3>"+
     (recon?"<div class='warn' style='margin-top:6px'>모의 장부가 아직 비어 있어(새 전략 채택 10/2) 같은 규칙으로 다시 계산한 값을 보여 줍니다. 장부가 쌓이면 자동으로 장부 값으로 바뀝니다.</div>":"")+
@@ -201,9 +203,10 @@ var TREND_N={opening_d1v2:"① 시초가",daytrading_etf:"② 데이트레이딩
 var TREND_MODE=null;
 function paperCurves(){
   var sm=((J.lab||{}).paper||{}).summary||{},out={};
-  ["opening_d1v2","daytrading_etf","us_soxl","account"].forEach(function(k){out[k]=((sm[k]||{}).rows||[]).map(function(r){return {date:r.date,cumPct:r.cumPct}})});
-  var b=((sm.coin_bo_btc||{}).rows||[]),e=((sm.coin_bo_eth||{}).rows||[]),m={};b.forEach(function(r){m[r.date]=[r.pnlPct||0,0]});e.forEach(function(r){(m[r.date]=m[r.date]||[0,0])[1]=r.pnlPct||0});
-  var eq=1;out.coin_bo=Object.keys(m).sort().map(function(d){eq*=1+(m[d][0]+m[d][1])/2/100;return {date:d,cumPct:(eq-1)*100}});   // 코인 칸 = 두 코인 반반
+  var tr=function(r){return r.action&&r.action!=="no_trade"&&r.action!=="flat"};
+  ["opening_d1v2","daytrading_etf","us_soxl","account"].forEach(function(k){out[k]=((sm[k]||{}).rows||[]).map(function(r){return {date:r.date,cumPct:r.cumPct,traded:tr(r)}})});
+  var b=((sm.coin_bo_btc||{}).rows||[]),e=((sm.coin_bo_eth||{}).rows||[]),m={};b.forEach(function(r){m[r.date]=[r.pnlPct||0,0,tr(r)]});e.forEach(function(r){var x=(m[r.date]=m[r.date]||[0,0,false]);x[1]=r.pnlPct||0;x[2]=x[2]||tr(r)});
+  var eq=1;out.coin_bo=Object.keys(m).sort().map(function(d){eq*=1+(m[d][0]+m[d][1])/2/100;return {date:d,cumPct:(eq-1)*100,traded:m[d][2]}});   // 코인 칸 = 두 코인 반반
   return out;
 }
 function trendSvg(series){
@@ -220,13 +223,15 @@ function trendSvg(series){
     g+="<polyline fill='none' stroke='"+c+"' stroke-width='2' stroke-linejoin='round' points='"+pts.map(function(p){return x(p.date).toFixed(1)+","+y(p.cumPct).toFixed(1)}).join(" ")+"'/>";
     var many=pts.length>25;                                     // 점이 많으면 점은 숨기고(선만 보이게) 손가락 대는 자리로만 쓴다
     g+=pts.map(function(p,i){var last=i===pts.length-1;return "<circle cx='"+x(p.date).toFixed(1)+"' cy='"+y(p.cumPct).toFixed(1)+"' r='"+(many&&!last?5:4)+"' fill='"+c+"'"+(many&&!last?" fill-opacity='0'":" stroke='var(--surf)' stroke-width='1.5'")+"><title>"+TREND_N[k]+" "+esc(p.date)+" 누적 "+pct(p.cumPct)+"</title></circle>"}).join("")});
-  var leg=keys.map(function(k){var l=series[k][series[k].length-1];return "<span style='display:inline-block;white-space:nowrap;margin-right:10px'><span style='color:"+TREND_C[k]+"'>━</span> "+TREND_N[k]+" <b class='"+cls(l.cumPct)+"'>"+pct(l.cumPct)+"</b></span>"}).join(" ");
+  var leg=keys.map(function(k){var l=series[k][series[k].length-1],nt=!((series[k].tradeDays!=null?series[k].tradeDays:series[k].filter(function(p){return p.traded}).length)>0);
+    return "<span style='display:inline-block;white-space:nowrap;margin-right:10px'><span style='color:"+TREND_C[k]+"'>━</span> "+TREND_N[k]+" "+(nt?NOTRADE:"<b class='"+cls(l.cumPct)+"'>"+pct(l.cumPct)+"</b>")+"</span>"}).join(" ");
   return "<svg viewBox='0 0 "+W+" "+H+"' style='width:100%;max-width:620px;display:block' role='img' aria-label='전략별 누적 수익률 추이'>"+g+"</svg><div class='sub' style='margin-top:4px;line-height:1.9'>"+leg+"</div>";
 }
 function trendCard(){
   var cv=(J.lab||{}).curves||{},pap=paperCurves(),rec=cv.series||{};
   var paperN=Object.keys(pap).reduce(function(a,k){return Math.max(a,(pap[k]||[]).length)},0);
   if(!TREND_MODE)TREND_MODE=paperN>=2?"paper":"recon";
+  var td=cv.tradeDays||{};Object.keys(rec).forEach(function(k){if(rec[k])rec[k].tradeDays=td[k]});
   var sv=trendSvg(TREND_MODE==="paper"?pap:rec);
   var btn=function(m,l){return "<button class='tab"+(TREND_MODE===m?" on":"")+"' style='padding:5px 11px;font-size:12px' onclick='TREND_MODE=\""+m+"\";render()'>"+l+"</button>"};
   var note=TREND_MODE==="paper"?"실제 모의투자 장부(날짜별 한 번 기록) 기준 · 칸 자금 100% · 코인은 두 코인 반반 · 매매 없는 날 0%.":esc(cv.note||"")+" · "+esc(cv.start||"")+" ~";
@@ -274,7 +279,8 @@ function duelPage(){
   // 날짜별
   var dr=days.slice().reverse().map(function(d){var cells=["opening","daytrading","crypto","soxl"].map(function(k){var x=((((D.tabs||{})[k]||{}).days)||[]).find(function(y){return y.date===d.date});
       if(!x)return "<td class='sub'>—</td>";var bc=x.winner==="claude"?DUEL_C:x.winner==="gpt"?DUEL_G:"var(--border)";
-      return "<td style='font-size:11.5px;border-left:3px solid "+bc+"'><span class='"+cls(x.claude.pnlPct)+"'>"+pct(x.claude.pnlPct)+"</span><div class='sub'>"+pct(x.gpt.pnlPct)+"</div></td>"}).join("");
+      var cv=x.claude.entries?"<span class='"+cls(x.claude.pnlPct)+"'>"+pct(x.claude.pnlPct)+"</span>":"<span class='sub'>매매 없음</span>",gv=x.gpt.entries?pct(x.gpt.pnlPct):"매매 없음";
+      return "<td style='font-size:11.5px;border-left:3px solid "+bc+"'>"+cv+"<div class='sub'>"+gv+"</div></td>"}).join("");
     return "<tr><td>"+esc(d.date.slice(5).replace("-","/"))+"<div class='sub'>"+(d.winner==="claude"?"🤖 승":d.winner==="gpt"?"GPT 승":"무")+"</div></td>"+cells+"<td><b class='"+cls(d.claudePct)+"'>"+pct(d.claudePct)+"</b><div class='sub'>"+pct(d.gptPct)+"</div></td></tr>"}).join("");
   html+="<div class='card'><h3>날짜별 — 위: 🤖 클로드 · 아래: GPT</h3><div class='tw'><table class='board'><thead><tr><th>날짜</th><th>①</th><th>②</th><th>③</th><th>④</th><th>합계</th></tr></thead><tbody>"+
     (dr||"<tr><td colspan='6' class='sub'>아직 같은 날 기록 없음</td></tr>")+"</tbody></table></div><p class='note'>칸 왼쪽 막대 = 그날 이긴 쪽(<span style='color:"+DUEL_C+"'>파랑 클로드</span> · <span style='color:"+DUEL_G+"'>주황 GPT</span> · 회색 무승부). 숫자 색은 손익 부호. 각 탭 ⑤ 의 🔒 마감 장부가 클로드 쪽 원본입니다.</p></div>";
@@ -411,7 +417,7 @@ function render(){
   if(TAB==="today"){
     if(LIVE&&!LIVE.error){
       var L=LIVE.tabs||{};
-      var k=function(lbl,tb){var q=(L[tb]||{}).today;return "<div class='kpi'><div class='l'>"+lbl+"</div><div class='v "+cls(q&&q.tabPct)+"'>"+(q?pct(q.tabPct):"—")+"</div><div class='sub'>"+(q?(q.noTrade?"거래 없음":"거래 "+q.trades+"건")+" · 계좌 "+pct(q.accountPct)+"<br>"+esc(q.why):"")+"</div></div>"};
+      var k=function(lbl,tb){var q=(L[tb]||{}).today;return "<div class='kpi'><div class='l'>"+lbl+"</div><div class='v "+(q&&!q.noTrade?cls(q.tabPct):"")+"'>"+(!q?"—":q.noTrade?NOTRADE:pct(q.tabPct))+"</div><div class='sub'>"+(q?(q.noTrade?"":"거래 "+q.trades+"건 · 계좌 "+pct(q.accountPct)+"<br>")+esc(q.why):"")+"</div></div>"};
       var tot=["opening","daytrading","crypto","soxl"].reduce(function(a,tb){var q=(L[tb]||{}).today;return a+(q?q.accountPct:0)},0);
       html+="<div class='card'><h3>⏱ 지금 장중 손익 (클로드, 모의)</h3><div class='sub'>칸 수익률 = 그 칸 자금 기준, 계좌 = 전체 계좌 비중 반영(국내 30% — ①② 같은 날이면 반씩 · 코인 30% · 미국 40%). 현재가 기준이며 확정 결과는 저녁 장부로 남습니다. "+kstTime(LIVE.asOf)+" 기준 · 1분마다 갱신</div>"+
         "<div class='why'>🏦 오늘 계좌 합계(장중 추정) <span class='"+cls(tot)+"'>"+pct(tot)+"</span></div><div class='kpis'>"+
@@ -495,7 +501,8 @@ function liveCard0(tab){
     var b=t.decision.breadth;head+="<div class='sub' style='margin-top:6px'>08:56 판단: "+esc(t.decision.reason||"")+(b?" · 통과 "+b.qualified+"종목 · v2 매매일 "+(b.v2Signal?"예":"아니오"):"")+"</div>";
   }
   if(tab==="crypto"&&t.basketPct!=null)head+="<div class='kpis'><div class='kpi'><div class='l'>오늘 코인 칸 손익 (두 코인 반반)</div><div class='v "+cls(t.basketPct)+"'>"+pct(t.basketPct)+"</div><div class='sub'>탭 표시(자금 80%) "+pct(t.tabPct)+"</div></div></div>";
-  var tdy=t.today;if(tdy)head+="<div class='kpis'><div class='kpi'><div class='l'>오늘 칸 수익률</div><div class='v "+cls(tdy.tabPct)+"'>"+pct(tdy.tabPct)+"</div></div><div class='kpi'><div class='l'>개별 매매 합계</div><div class='v "+cls(tdy.sumPct)+"'>"+pct(tdy.sumPct)+"</div><div class='sub'>"+(tdy.noTrade?"거래 없음":"거래 "+tdy.trades+"건 · 수익 "+(tdy.wins||0)+" · 손실 "+(tdy.losses||0))+"</div></div><div class='kpi'><div class='l'>계좌 기여 (×"+Math.round(tdy.weight*100)+"%)</div><div class='v "+cls(tdy.accountPct)+"'>"+pct(tdy.accountPct)+"</div></div></div>";
+  var tdy=t.today;if(tdy&&tdy.noTrade)head+="<div class='kpis'><div class='kpi'><div class='l'>오늘</div><div class='v'>"+NOTRADE+"</div><div class='sub'>"+esc(tdy.why||"")+"</div></div></div>";
+  else if(tdy)head+="<div class='kpis'><div class='kpi'><div class='l'>오늘 칸 수익률</div><div class='v "+cls(tdy.tabPct)+"'>"+pct(tdy.tabPct)+"</div></div><div class='kpi'><div class='l'>개별 매매 합계</div><div class='v "+cls(tdy.sumPct)+"'>"+pct(tdy.sumPct)+"</div><div class='sub'>"+(tdy.noTrade?"거래 없음":"거래 "+tdy.trades+"건 · 수익 "+(tdy.wins||0)+" · 손실 "+(tdy.losses||0))+"</div></div><div class='kpi'><div class='l'>계좌 기여 (×"+Math.round(tdy.weight*100)+"%)</div><div class='v "+cls(tdy.accountPct)+"'>"+pct(tdy.accountPct)+"</div></div></div>";
   if(!rows.length)return head+"<p class='note'>오늘은 아직 매매가 없습니다"+(tab==="opening"&&!t.ledgerFound?" (08:56 전이거나 오늘 기록 없음)":"")+".</p></div>";
   var body=rows.map(function(x){
     var buy=x.buyTime?esc(x.buyTime)+" · "+won(x.buyPrice)+(x.buyPriceKind==="예상"?" (예상)":""):"—";

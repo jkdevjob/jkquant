@@ -459,6 +459,7 @@ class ClaudeLabTrend(unittest.TestCase):
         self.assertEqual([p["date"] for p in pts], ["2026-09-20", "2026-09-25"])          # 창 밖(9/1)과 미래(10/3) 제외
         self.assertAlmostEqual(pts[-1]["cumPct"], (1.1 * 0.9 - 1) * 100)
         self.assertEqual(c["source"], "reconstructed")
+        self.assertEqual(c["tradeDays"], {"x": 2})
 
     def test_profit_factor(self):
         D = ["2026-10-05", "2026-10-06", "2026-10-07", "2026-10-08", "2026-10-09"]
