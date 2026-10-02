@@ -179,7 +179,8 @@ export async function onRequestGet({request}){
         weeklyReturnPct:risk.weeklyReturnPct,
         weeklyTargetPct:risk.weeklyTargetPct,
         weeklyTargetGapPct:risk.weeklyTargetGapPct,
-        recentDaily:risk.recentDaily
+        recentDaily:risk.recentDaily,
+        dailySeries:risk.daily
       }
     }),{headers:JH});
   }catch(e){
