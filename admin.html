@@ -71,6 +71,7 @@ h1 .v{color:var(--gold)}
 .ghostbtn:hover{border-color:var(--vio);color:var(--vio)}
 .ghostbtn.sm{padding:4px 10px;font-size:11.5px}
 .ghostbtn.danger{border-color:rgba(248,123,140,.4);color:var(--sell)}
+.ghostbtn.ok{border-color:rgba(54,211,153,.45);color:var(--buy)}
 .prim{padding:9px 16px;border-radius:10px;border:none;background:var(--vio2);color:#fff;font-size:12.5px;font-weight:700;cursor:pointer}
 .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 .pill{display:inline-block;background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:3px 9px;font-size:11.5px;color:var(--dim);font-variant-numeric:tabular-nums}
@@ -101,6 +102,9 @@ input[type=text]{background:var(--panel2);border:1px solid var(--line);color:var
 .tag{font-size:10.5px;font-weight:800;padding:1px 6px;border-radius:6px;margin-left:5px;white-space:nowrap}
 .tag.admin{background:rgba(139,140,240,.18);color:var(--vio)}
 .tag.blocked{background:rgba(248,123,140,.15);color:var(--sell)}
+.tag.pending{background:rgba(245,196,81,.15);color:var(--gold)}
+.tag.approved{background:rgba(54,211,153,.14);color:var(--buy)}
+.note-req{color:var(--dim);font-size:11px;margin-top:2px;white-space:normal;max-width:320px}
 .sub{color:var(--faint);font-size:10.5px}
 
 .diag div.d{padding:6px 0;border-bottom:1px solid var(--line);font-size:12px}
@@ -117,6 +121,7 @@ pre.rules{background:var(--bg);border:1px solid var(--line);border-radius:10px;p
 #gbtn svg{width:20px;height:20px}
 #gate .gnote{color:var(--faint);font-size:11.5px;margin-top:18px;line-height:1.6}
 </style>
+<script src="/jk-access.js"></script>
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-app.js";
   import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-auth.js";
@@ -152,7 +157,7 @@ pre.rules{background:var(--bg);border:1px solid var(--line);border-radius:10px;p
 
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Admin Console</div><h1>JK <span class="v">퀀트</span> 관리자 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="adVer">v0.10.0</span></h1></div>
+    <div><div class="kicker">Admin Console</div><h1>JK <span class="v">퀀트</span> 관리자 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="adVer">v0.11.0</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -197,7 +202,7 @@ const isAdmin=()=>!!me && ADMIN_EMAILS.includes(normEmail(me.email));
    기능을 더할 때는 여기 한 줄과 render 함수 하나만 있으면 된다.
    soon:true 면 자리만 잡아두고 눌러도 안 열린다. */
 const SECTIONS=[
-  {id:'users', label:'사용자',   sub:'접속 계정·차단', render:renderUsers},
+  {id:'users', label:'사용자',   sub:'이용 승인·차단', render:renderUsers},
   {id:'defaults', label:'전략 기본값', sub:'운영 탭 신규 세션', render:renderDefaults},
   {id:'diag',  label:'시스템 점검', sub:'API·규칙 상태', render:renderDiag},
   {id:'rules', label:'보안 규칙',  sub:'Firestore',    render:renderRules},
@@ -222,9 +227,16 @@ function fmtWhen(ms){
   const rel = days<=0?'오늘' : days===1?'어제' : days<30?days+'일 전' : Math.floor(days/30)+'개월 전';
   return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}<br><span class="sub">${rel}</span>`;
 }
+/* 이용 상태는 앱이 보는 것과 같은 판정(JKAccess.decide)으로 보여준다 — 목록과 실제가 갈리지 않게.
+   승인 대기 → 승인 · 거절 / 승인 → 승인 취소 · 차단 / 차단 → 차단 해제 */
+const ACC_LABEL={pending:'승인 대기', approved:'승인', admin:'관리자', blocked:'차단됨'};
+const ACC_ORDER={pending:0, admin:1, approved:2, blocked:3};   // 할 일(승인 대기)이 맨 위
+function accState(r){ return window.JKAccess ? JKAccess.decide({email:r.email}, r)
+  : (ADMIN_EMAILS.includes(normEmail(r.email))?'admin':r.blocked?'blocked':r.approved===true?'approved':'pending'); }
 function renderUsers(el){
-  el.innerHTML=`<div class="card"><h3><span class="dot"></span>접속 계정</h3>
-    <p class="lead">이 앱에 로그인한 적이 있는 계정입니다. 차단하면 다음 로그인부터 막힙니다.</p>
+  el.innerHTML=`<div class="card"><h3><span class="dot"></span>이용 승인</h3>
+    <p class="lead">처음 로그인하면 <b>이용 신청</b>이 접수됩니다. <b>승인</b>한 계정만 앱을 열 수 있고,
+      <b>차단</b>은 승인보다 먼저입니다(승인돼 있어도 막힘). 단타 두 화면과 관리자는 승인과 상관없이 나만 봅니다.</p>
     <div class="row" id="u_sum" style="margin-bottom:12px"></div>
     <div id="u_body"><p class="lead">불러오는 중…</p></div>
     <div class="row" style="margin-top:12px"><button class="ghostbtn" onclick="loadUsers()">🔄 새로고침</button></div>
@@ -246,36 +258,57 @@ async function loadUsers(){
     return;
   }
   rows.sort((a,b)=>(+b.lastSeen||0)-(+a.lastSeen||0));
+  rows.forEach(r=>{ r._st=accState(r); });
+  rows.sort((a,b)=>ACC_ORDER[a._st]-ACC_ORDER[b._st]);   // 같은 상태 안에서는 마지막 접속 최신순 그대로(안정 정렬)
   if(!rows.length){
-    body.innerHTML='<p class="lead">아직 기록된 계정이 없습니다.<br><span class="sub">이 기능이 생긴 뒤 로그인한 계정부터 쌓입니다 — 본인도 운영 화면에 한 번 다시 들어가면 잡힙니다.</span></p>';
+    body.innerHTML='<p class="lead">아직 기록된 계정이 없습니다.<br><span class="sub">로그인한 계정부터 쌓입니다 — 본인도 운영 화면에 한 번 다시 들어가면 잡힙니다.</span></p>';
     return;
   }
-  const wk=Date.now()-7*864e5;
+  const wk=Date.now()-7*864e5, cnt=k=>rows.filter(r=>r._st===k).length;
   if(sum) sum.innerHTML=`<span class="pill">전체 <b>${rows.length}</b></span>`
-    +`<span class="pill">최근 7일 <b>${rows.filter(r=>(+r.lastSeen||0)>=wk).length}</b></span>`
-    +`<span class="pill">차단 <b>${rows.filter(r=>r.blocked).length}</b></span>`;
+    +`<span class="pill">승인 대기 <b>${cnt('pending')}</b></span>`
+    +`<span class="pill">승인 <b>${cnt('approved')}</b></span>`
+    +`<span class="pill">차단 <b>${cnt('blocked')}</b></span>`
+    +`<span class="pill">최근 7일 <b>${rows.filter(r=>(+r.lastSeen||0)>=wk).length}</b></span>`;
   body.innerHTML=`<div class="htable-wrap"><table class="htable"><thead><tr>
-      <th>계정</th><th>마지막 접속</th><th>첫 접속</th><th>방문</th><th></th></tr></thead><tbody>`
+      <th>계정</th><th>신청</th><th>마지막 접속</th><th>방문</th><th></th></tr></thead><tbody>`
     + rows.map(r=>{
         const mine=normEmail(r.email)===normEmail(me&&me.email);
-        const adm=ADMIN_EMAILS.includes(normEmail(r.email));
-        const tag = adm?'<span class="tag admin">관리자</span>' : r.blocked?'<span class="tag blocked">차단됨</span>' : '';
-        return `<tr class="${r.blocked?'off':''}">
+        const st=r._st, adm=st==='admin';
+        const tag=`<span class="tag ${st}">${ACC_LABEL[st]}</span>`;
+        /* 이메일·이름은 본인이 쓴 칸이다 — onclick 글자 안에 넣지 않는다(따옴표로 스크립트를 끼워 넣을 수 있다). data- 칸으로만 넘긴다 */
+        const btn=(act,on,label,cls)=>`<button class="ghostbtn sm${cls?' '+cls:''}" data-uact="${act}" data-on="${on?1:0}" data-uid="${esc(r.uid)}" data-email="${esc(r.email)}">${label}</button>`;
+        const acts = st==='pending'  ? btn('approve',true,'승인','ok')+' '+btn('block',true,'거절','danger')
+                   : st==='approved' ? btn('approve',false,'승인 취소')+' '+btn('block',true,'차단','danger')
+                   :                   btn('block',false,'차단 해제');
+        return `<tr class="${st==='blocked'?'off':''}">
           <td><b>${esc(r.email||r.uid)}</b>${mine?'<span class="sub"> (나)</span>':''}${tag}
-              <div class="sub">${esc(r.name||'')}</div></td>
-          <td>${fmtWhen(r.lastSeen)}</td><td>${fmtWhen(r.firstSeen)}</td>
+              <div class="sub">${esc(r.name||'')}</div>${r.reqNote?`<div class="note-req">“${esc(r.reqNote)}”</div>`:''}</td>
+          <td>${fmtWhen(r.requestedAt)}</td><td>${fmtWhen(r.lastSeen)}</td>
           <td>${+r.visits||0}</td>
-          <td>${adm?'<span class="sub">—</span>':
-            `<button class="ghostbtn sm${r.blocked?'':' danger'}" onclick="setBlocked('${esc(r.uid)}',${r.blocked?'false':'true'},'${esc(r.email)}')">${r.blocked?'차단 해제':'차단'}</button>`}</td>
+          <td>${adm?'<span class="sub">—</span>':acts}</td>
         </tr>`;
       }).join('')
     + `</tbody></table></div>
-       <p class="note">차단은 <b>다음 로그인부터</b> 적용됩니다. 이미 열어 둔 화면은 그대로입니다 —
-       확실히 막으려면 <b>보안 규칙</b>을 반영해 주세요.</p>`;
+       <p class="note">승인·취소·차단은 그 계정이 <b>다음에 페이지를 열 때</b> 적용됩니다(열어 둔 화면도 다시 확인되면 덮입니다).
+       차단 해제하면 원래 승인 상태로 돌아갑니다. 데이터까지 확실히 막으려면 <b>보안 규칙</b>을 반영해 주세요.</p>`;
+}
+document.addEventListener('click',e=>{
+  const b=e.target&&e.target.closest&&e.target.closest('[data-uact]'); if(!b) return;
+  const uid=b.getAttribute('data-uid'), on=b.getAttribute('data-on')==='1', email=b.getAttribute('data-email')||'';
+  if(b.getAttribute('data-uact')==='approve') setApproved(uid,on,email); else setBlocked(uid,on,email);
+});
+async function setApproved(uid,on,email){
+  if(!isAdmin()) return;
+  if(!confirm(`${email||uid}\n\n${on?'승인할까요? 이 계정이 앱을 쓸 수 있게 됩니다.':'승인을 취소할까요? 다음에 열 때부터 막힙니다.'}`)) return;
+  try{ await window.fb.setDoc(window.fb.doc(window.fb.db,'profiles',uid),
+         {approved:!!on, approvedAt:Date.now(), approvedBy:normEmail(me&&me.email)},{merge:true}); }
+  catch(e){ alert('바꾸지 못했습니다 — '+(e.message||e)); return; }
+  loadUsers();
 }
 async function setBlocked(uid,on,email){
   if(!isAdmin()) return;
-  if(!confirm(`${email||uid}\n\n${on?'차단':'차단 해제'}할까요?`)) return;
+  if(!confirm(`${email||uid}\n\n${on?'차단할까요? (승인 거절 — 승인돼 있어도 막힙니다)':'차단을 해제할까요?'}`)) return;
   try{ await window.fb.setDoc(window.fb.doc(window.fb.db,'profiles',uid),{blocked:!!on},{merge:true}); }
   catch(e){ alert('바꾸지 못했습니다 — '+(e.message||e)); return; }
   loadUsers();
@@ -646,31 +679,38 @@ service cloud.firestore {
     function isSignedIn()  { return request.auth != null; }
     function isAdmin()     { return isSignedIn() && request.auth.token.email == 'jk82investing@gmail.com'; }
     function isMine(uid)   { return isSignedIn() && request.auth.uid == uid; }
-    function notBlocked()  {
-      return isAdmin() || !exists(/databases/$(database)/documents/profiles/$(request.auth.uid))
-             || get(/databases/$(database)/documents/profiles/$(request.auth.uid)).data.blocked != true;
+    function myProfile()   { return /databases/$(database)/documents/profiles/$(request.auth.uid); }
+    function approved()    {
+      // 관리자가 승인했고 차단되지 않은 계정만. 관리자는 이 검사에서 빠진다(자기를 잠그면 복구 불가)
+      return isAdmin() || (exists(myProfile())
+             && get(myProfile()).data.get('approved', false) == true
+             && get(myProfile()).data.get('blocked', false) != true);
     }
+    // 승인·차단 칸 — 본인이 건드리면 승인제가 무의미해진다. 관리자만 쓴다
+    function adminKeys()   { return ['blocked', 'approved', 'approvedAt', 'approvedBy']; }
+    // 이메일 칸은 로그인한 그 계정 것만 — 남의(관리자) 주소로 신청해 목록을 속이지 못하게
+    function ownEmail()    { return request.resource.data.get('email', request.auth.token.email) == request.auth.token.email; }
 
-    // 거래기록은 남이 못 본다 — 관리자도 마찬가지다
+    // 거래기록은 남이 못 본다 — 관리자도 마찬가지다. 승인 전에는 본인도 못 연다
     match /users/{uid} {
-      allow read, write: if isMine(uid) && notBlocked();
+      allow read, write: if isMine(uid) && approved();
     }
 
     match /profiles/{uid} {
       allow get:  if isMine(uid) || isAdmin();
       allow list: if isAdmin();                       // 사용자 목록은 관리자만
-      // 본인은 접속 기록만 갱신한다. blocked를 스스로 건드리면 차단이 무의미해진다
-      allow create: if isMine(uid) && !('blocked' in request.resource.data);
-      allow update: if isMine(uid)
-                    && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['blocked']);
-      allow write:  if isAdmin();                     // 차단·해제는 관리자만
+      // 본인은 신청·메모·접속 기록만 쓴다
+      allow create: if isMine(uid) && ownEmail() && !request.resource.data.keys().hasAny(adminKeys());
+      allow update: if isMine(uid) && ownEmail()
+                    && !request.resource.data.diff(resource.data).affectedKeys().hasAny(adminKeys());
+      allow write:  if isAdmin();                     // 승인·승인 취소·차단은 관리자만
     }
   }
 }`;
 function renderRules(el){
   el.innerHTML=`<div class="card"><h3><span class="dot"></span>Firestore 보안 규칙</h3>
-    <p class="lead">앱의 차단 기능은 로그인 직후 클라이언트가 스스로 확인하는 수준입니다.
-      앱을 거치지 않고 데이터를 읽는 걸 막으려면, 그리고 <b>사용자 목록을 열려면</b> 이 규칙이 있어야 합니다.</p>
+    <p class="lead">화면의 승인·차단은 로그인 직후 앱이 스스로 확인해 가리는 수준입니다.
+      앱을 거치지 않고 데이터를 읽는 걸 막으려면(<b>승인 안 된 계정은 자기 기록도 못 연다</b>), 그리고 <b>사용자 목록을 열려면</b> 이 규칙이 있어야 합니다.</p>
     <p class="note" style="margin:0 0 10px">Firebase 콘솔 → <b>Firestore Database</b> → <b>규칙</b> 에 붙여넣고 <b>게시</b>를 누르세요.
       저장소의 <b>firestore.rules</b> 와 같은 내용입니다.</p>
     <div class="row"><button class="prim" onclick="copyRules()">📋 복사</button>
@@ -702,6 +742,7 @@ function renderBadge(){
 function boot(){
   window.fb.onAuthStateChanged(window.fb.auth, user=>{
     me=user||null;
+    try{ if(window.JKAccess) JKAccess.setAdmin(isAdmin()); }catch(e){}
     renderBadge();
     if(isAdmin()){
       $('gate').style.display='none';

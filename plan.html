@@ -7,6 +7,7 @@
 <title>JK 퀀트 — 자산플랜</title>
 <script src="/plan-session-engine.js"></script>
 <script src="/plan-session-settings.js"></script>
+<script src="/jk-access.js"></script>
 <style>
 :root{
   --bg:#0f1320;--surf:#171c2e;--surf2:#1e2540;--border:#2a3354;--border2:#34406a;
@@ -245,7 +246,7 @@ try{ if(localStorage.getItem('qcockpit_hadUser')==='1') document.documentElement
   <div class="bootwait"><div class="bw-logo">JK 퀀트 · 자산플랜</div><span class="bw-dot"></span>로그인 확인 중…</div>
   <div class="gbox">
     <div class="glogo">JK <span class="v">퀀트</span></div>
-    <div class="gsub">자산플랜은 로그인해야 볼 수 있습니다.</div>
+    <div class="gsub">자산플랜은 로그인해야 볼 수 있습니다.<br>처음이면 로그인할 때 이용 신청이 접수되고, 관리자가 승인하면 열립니다.</div>
     <button id="gbtn" type="button" onclick="planLogin()">
       <svg viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
       Google로 로그인
@@ -264,7 +265,7 @@ setTimeout(function(){ var h=document.documentElement; if(h.classList.contains('
 </script>
 <div class="wrap">
   <div class="top">
-    <div class="brand"><div class="logo">Asset Plan</div><h1>자산플랜 <span class="ver">v1.41.1</span></h1></div>
+    <div class="brand"><div class="logo">Asset Plan</div><h1>자산플랜 <span class="ver">v1.42.0</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
       <div class="jkmenu" id="jkmenuWrap">
@@ -2969,36 +2970,26 @@ $("jkmenuBtn").addEventListener("click",e=>{e.stopPropagation();$("jkmenuPop").h
 document.addEventListener("click",e=>{if(!$("jkmenuWrap").contains(e.target))$("jkmenuPop").hidden=true});
 /* ── 로그인 게이트 (본문 위 #authgate) ──
    planGate(true) 는 본문을 열고, planGate(false) 는 본문을 숨기고 로그인 상자를 띄운다.
-   차단 계정 확인은 운영 화면(isBlocked)과 같은 규약이다 — profiles/{uid}.blocked 를 보고,
-   관리자는 잠기지 않으며, 확인에 실패하면(오프라인·지연) 로그인까지 막지는 않는다. */
-const PLAN_ADMIN_EMAILS=['jk82investing@gmail.com'];
+   이용 승인(관리자 승인 · 차단)은 jk-access.js 한 곳이 판정한다 — 운영·백테·공모주·JOB 과 같은 글자. */
 function planGate(on){
   const h=document.documentElement;
   if(on){ h.classList.add('authed'); h.classList.remove('had-user'); try{localStorage.setItem('qcockpit_hadUser','1');}catch(e){} return; }
   h.classList.remove('authed'); h.classList.remove('had-user'); try{localStorage.removeItem('qcockpit_hadUser');}catch(e){}
-}
-async function planBlocked(user){
-  if(!user) return true;
-  if(PLAN_ADMIN_EMAILS.includes(String(user.email||'').trim().toLowerCase())) return false;
-  try{
-    const snap=await Promise.race([getDoc(doc(db,'profiles',user.uid)),new Promise((_,rej)=>setTimeout(()=>rej(new Error('timeout')),6000))]);
-    return !!(snap&&snap.exists()&&(snap.data()||{}).blocked);
-  }catch(e){ console.warn('plan profile',e); return false; }
 }
 window.planLoginImpl=()=>{
   const er=$("gerr"); if(er) er.textContent='';
   signInWithPopup(auth,new GoogleAuthProvider()).catch(e=>{ if(!er) return;
     er.textContent=(e&&e.code==='auth/popup-blocked')?'팝업이 막혔습니다 — 브라우저에서 팝업을 허용한 뒤 다시 눌러 주세요.':((e&&e.message)||'로그인 실패'); });
 };
+const planFb={auth,db,doc,getDoc,setDoc};
 onAuthStateChanged(auth,async user=>{
   /* 로그인 전에는 아무것도 열지 않는다 — 본문을 숨기고, 클라우드 장부·시세 로딩도 시작하지 않는다. */
-  if(!user){ planGate(false); userBadge(null); return; }
-  if(await planBlocked(user)){
-    planGate(false);
-    try{ await signOut(auth); }catch(e){}
-    const er=$("gerr"); if(er) er.textContent='이 계정은 사용이 차단되었습니다.';
-    return;
-  }
+  if(!user){ planGate(false); userBadge(null); JKAccess.hide(); JKAccess.setAdmin(false); JKAccess.cacheSet(null); return; }
+  /* 승인된 계정만 연다. 승인 대기·거절·확인 실패면 본문을 열지 않고 그 화면으로 덮는다(열린 뒤 취소돼도 덮는다). */
+  const planLock=acc=>{ planGate(false);
+    JKAccess.show(acc.state,{user,prof:acc.prof,login:()=>window.planLoginImpl(),logout:()=>signOut(auth),
+      retry:()=>location.reload(),saveNote:n=>JKAccess.saveNote(user,planFb,n)}); };
+  if(!await JKAccess.admit(user,planFb,{lock:planLock})) return;
   planGate(true);
   userBadge(user);await cloudLoad(user);
   planBootHydrating=false;

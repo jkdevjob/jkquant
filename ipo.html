@@ -520,11 +520,12 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
 .kst-cell .kl{font-size:10px;color:var(--faint)}
 .kst-cell .kv{font-size:12px;font-weight:700;font-variant-numeric:tabular-nums;margin-top:2px}
 </style>
+<script src="/jk-access.js" data-guard="1"></script>
 </head>
 <body>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Public Offering</div><h1>JK <span class="v">공모주</span> <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v1.2.0</span></h1></div>
+    <div><div class="kicker">Public Offering</div><h1>JK <span class="v">공모주</span> <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v1.3.0</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
       <div class="jkmenu" id="jkmenuWrap">
@@ -724,17 +725,17 @@ window.renderUserBadge = function(user){
     if(auth.currentUser){ signOut(auth); return; }
     signInWithPopup(auth, provider).catch(e=>console.warn("login", e && (e.code||e.message)));
   };
-  onAuthStateChanged(auth, async user => {
-    renderUserBadge(user);
-    if(user){
+  /* 로그인 · 이용 승인 — 승인된 계정만 본문이 열리고 클라우드 기록을 맞춘다 (판정은 jk-access.js 한 곳).
+     승인 전에는 uid 를 비워 두어 기록이 계정으로 올라가지 않는다. */
+  JKAccess.guard({auth, db, doc, getDoc, setDoc, onAuthStateChanged, signInWithPopup, GoogleAuthProvider, signOut}, {
+    onUser: user => { renderUserBadge(user); if(!user) window.ipoFb.uid = null; },
+    onOk: async user => {
       window.ipoFb.uid = user.uid;
       try{
         const snap = await getDoc(doc(db,"users",user.uid));
         const remote = snap.exists() ? (snap.data()||{}).ipo : null;
         if(remote && typeof window.ipoOnRemote==="function") window.ipoOnRemote(remote);
       }catch(e){ console.warn("ipo pull", e); }
-    } else {
-      window.ipoFb.uid = null;
     }
   });
 </script>

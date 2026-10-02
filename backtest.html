@@ -7,6 +7,7 @@
 <title>JK 퀀트 — 백테스트</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="/jk-access.js" data-guard="1"></script>
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-app.js";
 import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-auth.js";
@@ -70,10 +71,10 @@ function loadFromLocalStorage(){
 window.loadFromLocalStorage = loadFromLocalStorage;
 loadFromLocalStorage();
 
-// 로그인 상태 감지
-onAuthStateChanged(auth, async user => {
-  renderUserBadge(user);
-  if (user) await loadCustomTickers(user.uid);
+// 로그인 · 이용 승인 — 승인된 계정만 본문이 열린다 (판정은 jk-access.js 한 곳 · 운영·플랜과 같은 글자)
+JKAccess.guard({auth, db, doc, getDoc, setDoc, onAuthStateChanged, signInWithPopup, GoogleAuthProvider, signOut}, {
+  onUser: user => renderUserBadge(user),
+  onOk:   user => loadCustomTickers(user.uid)
 });
 
 
@@ -320,7 +321,7 @@ td:first-child{text-align:left;}
   <div class="brand">
     <div>
       <div class="logo">Backtest</div>
-      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v2.16.1</span></h1>
+      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v2.17.0</span></h1>
     </div>
   </div>
   <div class="hright">
