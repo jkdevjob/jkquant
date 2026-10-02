@@ -1253,6 +1253,17 @@ async function loadCryptoResearch(){
 
     const recent=(j.latestTrades||[]).slice(-10).reverse();
     const ch=$('crypto_history_body'), cp=$('crypto_paper_body');
+    const cs=j.currentSession||null;
+    let currentHtml='';
+    if(cs){
+      const st=cs.status||'watching', t=cs.trade||null;
+      const label=st==='trade_closed'?'매매 완료':st==='position_open'?'보유중':st==='no_trade'?'매매 없음':'감시중 · 아직 매매 없음';
+      currentHtml='<div class="warn" style="margin-bottom:9px"><b>오늘 '+esc(cs.date||'')+' · '+label+'</b> · 최신봉 '+esc(cs.lastBarKst||'—')+
+        (t?('<br>신호 '+esc(t.signalTimeKst||'—')+' · 진입 '+esc(t.entryTimeKst||'—')+' · '+Number(t.entryPrice||0).toLocaleString('ko-KR')+'원'+
+          (st==='trade_closed'?(' · 순손익 '+btcPct(t.pnlPct)+' · '+esc(t.reason||'')):' · 포지션 추적중')):'')+'</div>';
+    }else{
+      currentHtml='<div class="warn" style="margin-bottom:9px"><b>오늘 데이터 미수집</b> · 매매 없음으로 간주하지 않습니다.</div>';
+    }
     let recentHtml='';
     if(recent.length){
       recentHtml='<div class="htable-wrap"><table class="htable"><thead><tr><th>날짜</th><th>신호/근거</th><th>진입</th><th>청산</th><th>사유</th><th>순손익</th></tr></thead><tbody>'+
@@ -1264,8 +1275,8 @@ async function loadCryptoResearch(){
           '<td>'+esc(x.reason||'')+'</td><td class="'+(Number(x.pnlPct)>=0?'win':'loss')+'">'+btcPct(x.pnlPct)+'</td></tr>').join('')+
         '</tbody></table></div><p class="note">원본 5분봉·전략버전·판단근거를 함께 보관합니다.</p>';
     }else recentHtml='<div class="warn">최근 확정 매매가 없습니다. NO TRADE도 연구 데이터로 유지합니다.</div>';
-    if(ch)ch.innerHTML=recentHtml;
-    if(cp)cp.innerHTML=recentHtml+'<p class="note">한국투자 계좌와 분리된 JKQuant BTC 모의체결입니다. 실거래소 주문은 전송하지 않습니다.</p>';
+    if(ch)ch.innerHTML=currentHtml+recentHtml;
+    if(cp)cp.innerHTML=currentHtml+recentHtml+'<p class="note">한국투자 계좌와 분리된 JKQuant BTC 모의체결입니다. 실거래소 주문은 전송하지 않습니다.</p>';
     const last=recent[0];
     if(last){
       setTimingBoard('crypto','buy','최근 확정 신호',esc(last.date||'')+' '+esc(last.signalTimeKst||'')+' · '+Number(last.entryPrice||0).toLocaleString('ko-KR')+'원',
