@@ -11163,6 +11163,15 @@ console.log('\n[CLAUDE TODAY] 오늘 탭 통일');
      JSON.stringify(s1));
   const fnames=[...ch.matchAll(/(?:^|[;\s}])function ([A-Za-z_$][\w$]*)\(/g)].map(m=>m[1]),dup=fnames.filter((n,i)=>fnames.indexOf(n)!==i);
   ok('클로드 화면 함수 이름 중복 없음(뒤에 선언한 함수가 앞의 것을 덮어쓰지 않게)',dup.length===0,dup.join(','));
+  { let g=null,err='';
+    try{g=new Function('var TREND_C={a:"#3987e5",b:"#d95926"},TREND_N={a:"A",b:"B"},NOTRADE="매매 없음";function esc(s){return String(s)}function cls(v){return v>0?"win":v<0?"loss":""}function pct(v){return (v>=0?"+":"")+(+v).toFixed(2)+"%"}'+grab('trendSvg')+';return trendSvg;')();}catch(e){err=e.message;}
+    const sv=g?g({a:[{date:'2026-09-01',cumPct:0,traded:true},{date:'2026-09-02',cumPct:2},{date:'2026-09-03',cumPct:5}],b:[{date:'2026-09-02',cumPct:-1,traded:true}]}):'';
+    const one=g?g({a:[{date:'2026-09-01',cumPct:0}]}):'x';
+    ok('추이 그래프 = 지피티와 같은 820×300 · 격자 5줄 · 날짜 3개(시작·가운데·끝) · 날짜 1개면 안 그림 / 모의 장부에 매매가 없으면 재구성부터 · 평선 안 그림',
+       /viewBox='0 0 820 300'/.test(sv)&&(sv.match(/stroke='var\(--border\)'/g)||[]).length===5&&/>09-01<\/text>/.test(sv)&&/>09-02<\/text>/.test(sv)&&/>09-03<\/text>/.test(sv)
+       &&/B <b class='loss'>-1\.00%<\/b>/.test(sv)&&one===null
+       &&/TREND_MODE=paperN>=2&&paperTraded\?"paper":"recon"/.test(ch)&&/var sv=TREND_MODE==="paper"&&!paperTraded\?null:/.test(ch),err);
+  }
   ok('③ 코인은 마감 장부(00~24시 KST)와 하루 정의(Upbit 09시)가 달라 건수를 섞지 않는다',
      /cl=z\[0\]==="crypto"\?null:lt\.closed/.test(ch));
 }
