@@ -1298,11 +1298,12 @@ console.log('[23] 관리자 모드 — 접속 계정·사용자 관리');
 
   /* 곁들여 고친 것 — users/{uid}는 운영과 백테가 같이 쓰는 문서다.
      merge 없이 덮어써서 백테의 커스텀 종목이 서버에서 사라지고 있었다. */
-  ok('운영 저장이 백테 종목을 안 지우고 거래이력 revision을 트랜잭션으로 보호한다',
+  ok('운영 저장이 백테 종목을 안 지우고 거래이력을 트랜잭션에서 자동병합한다',
      /runTransaction/.test(idx)
-     && /tx\.set\(ref,\{state:candidate,updated:writeUpdated,stateRev:nr\},\{merge:true\}\)/.test(idx)
-     && /REMOTE_HISTORY_CONFLICT/.test(idx)
-     && /_historyPreserves\(candidate,remote\)/.test(idx));
+     && /tx\.set\(ref,\{stateV2:candidate,stateV2Updated:writeUpdated,stateV2Rev:nr\},\{merge:true\}\)/.test(idx)
+     && /candidate=_mergeHistorySafeState\(candidate,remote\)/.test(idx)
+     && /_historyPreserves\(candidate,remote\)/.test(idx)
+     && !/⚠️ 거래이력 보호:/.test(idx));
 }
 
 
@@ -3204,11 +3205,12 @@ console.log('\n[61] 모의 성과 — 원화로 받아 세션 통화로 환산')
   ok('쓴 환율을 확인창에 적는다', /전략 계산에만 \$\{fx\.date\} 기준 환율 \$\{fx\.rate\.toLocaleString\('en-US'\)\}원\/\$을 사용합니다/.test(idx));
   ok('국내만 있으면 환율을 안 부른다', /const needUsd=\[\.\.\.capHit,\.\.\.addHit\]\.some\(\(\[,x\]\)=>!isKrwSt\(x\.settings\)\);/.test(idx));
   ok('끝나고도 쓴 환율을 남긴다', /const fxNote = fx \? `미국 종목은 \$\{fx\.date\} 환율/.test(idx));
-  ok('클라우드 저장 함수는 transaction + history conflict guard를 탄다',
+  ok('클라우드 저장 함수는 즉시 transaction + history auto-merge를 탄다',
      /async function pushRemoteNow\(\)/.test(idx)
      && /_commitStateRemote\('cloud-now'\)/.test(extractFn(idx,'async function pushRemoteNow()'))
      && /window\.fb\.runTransaction/.test(extractFn(idx,'async function _commitStateRemote(where)'))
-     && /REMOTE_HISTORY_CONFLICT/.test(extractFn(idx,'async function _commitStateRemote(where)')));
+     && /candidate=_mergeHistorySafeState\(candidate,remote\)/.test(extractFn(idx,'async function _commitStateRemote(where)'))
+     && /function save\(\)\{saveLocal\(\);void pushRemoteNow\(\);\}/.test(idx));
 
   // 서버: 날짜를 주면 그 날 값, 주말이면 직전 영업일
   const fx=fs.existsSync(__d+'/functions/api/fx.js') ? fs.readFileSync(__d+'/functions/api/fx.js','utf8') : '';
