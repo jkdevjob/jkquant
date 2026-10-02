@@ -107,20 +107,23 @@ def load_days():
     return out
 
 
-def valid_day(day):
+def valid_day(day, allow_partial=False):
     bars = day.get("bars") or []
-    if len(bars) < 288:
+    if allow_partial:
+        if len(bars) < 2:
+            return False, "too_few_bars"
+    elif len(bars) < 288:
         return False, "too_few_bars"
     first, last = bars[0], bars[-1]
     if minute_of_day(first.get("tKst")) != 0:
         return False, "missing_kst_0000"
-    if minute_of_day(last.get("tKst")) != 23 * 60 + 55:
+    if not allow_partial and minute_of_day(last.get("tKst")) != 23 * 60 + 55:
         return False, "missing_kst_2355"
     return True, ""
 
 
-def trade_for_day(day, p: Params):
-    ok, _ = valid_day(day)
+def trade_for_day(day, p: Params, allow_partial=False):
+    ok, _ = valid_day(day, allow_partial=allow_partial)
     if not ok:
         return None
 
@@ -213,6 +216,16 @@ def trade_for_day(day, p: Params):
             break
 
     if exit_px is None:
+        # 장중 스냅샷에서는 아직 최대 보유시간이 지나지 않은 포지션을
+        # 임의로 시간청산하지 않는다. UI가 "보유중"으로 구분할 수 있게 반환한다.
+        if allow_partial and last_i < entry_i + p.max_hold_bars - 1:
+            return {
+                "date": day.get("sessionDateKst"), "strategyVersion": "btc_midnight_orb_v2",
+                "status": "open", "signalTimeKst": kst_hm(bars[signal_i].get("tKst")),
+                "entryTimeKst": kst_hm(entry_bar.get("tKst")), "entryPrice": entry,
+                "openingHigh": or_high, "openingLow": or_low, "signalVwap": signal_vwap,
+                "volumeRatio": signal_vol_ratio, "variant": p.name
+            }
         exit_i = last_i
         exit_px = float(bars[exit_i].get("c") or 0)
         reason = "time_exit"
@@ -505,6 +518,29 @@ def main():
         })
 
     baseline = variant_trades["baseline"]
+
+    # 오늘 KST 세션은 24시간이 끝나기 전에도 별도 상태로 노출한다.
+    # 확정 백테스트(valid/summary)에는 섞지 않아 prospective 통계를 오염시키지 않는다.
+    today_kst = datetime.now(KST).date().isoformat()
+    partial = next((d for d in all_days if d.get("sessionDateKst") == today_kst), None)
+    current_session = None
+    if partial:
+        bars_now = partial.get("bars") or []
+        t_now = trade_for_day(partial, VARIANTS[0], allow_partial=True)
+        last_hm = kst_hm(bars_now[-1].get("tKst")) if bars_now else ""
+        if t_now:
+            if t_now.get("status") == "open":
+                current_session = {"date": today_kst, "status": "position_open", "trades": 1,
+                                   "lastBarKst": last_hm, "trade": t_now}
+            else:
+                current_session = {"date": today_kst, "status": "trade_closed", "trades": 1,
+                                   "lastBarKst": last_hm, "trade": t_now}
+        else:
+            minute_now = minute_of_day(bars_now[-1].get("tKst")) if bars_now else -1
+            current_session = {"date": today_kst,
+                               "status": "no_trade" if minute_now >= VARIANTS[0].entry_cutoff_min else "watching",
+                               "trades": 0, "lastBarKst": last_hm}
+
     report = {
         "schema": 3,
         "generatedAt": datetime.now(KST).isoformat(),
@@ -524,6 +560,7 @@ def main():
         "variants": reports,
         "rolling30": rolling_baseline(valid, baseline, 30),
         "latestTrades": baseline[-20:],
+        "currentSession": current_session,
     }
     dip_trades, dip_decisions = dip24_shadow(valid)
     report["shadowDip24"] = {

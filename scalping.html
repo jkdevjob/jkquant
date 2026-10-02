@@ -303,6 +303,7 @@ canvas{display:block;width:100%;height:auto}
         <span class="sub" id="daily_results_meta">불러오는 중…</span>
       </div>
       <div id="daily_results_body"><p class="sub">전략별 전일·당일 결과를 불러오는 중…</p></div>
+      <div id="daily_cumulative_chart" style="margin-top:14px"><p class="sub">전략별 누적 수익률 추이를 불러오는 중…</p></div>
       <p class="note">목표 표시는 각 전략 단독 기준 <b>일 +1%</b> 달성 여부입니다. 서로 다른 전략의 수익률은 자금배분이 정해지기 전에는 단순 합산하지 않습니다.<br><b>보유 원칙:</b> 현재 4개 기준전략은 모두 당일청산·오버나이트 금지입니다. 향후 예외 후보도 별도 검증을 거쳐 최대 5거래일까지만 허용하며 6거래일 이상은 단타 전략에서 제외합니다.</p>
     </div>
     <div id="strategy_overview" class="card">
@@ -1252,6 +1253,17 @@ async function loadCryptoResearch(){
 
     const recent=(j.latestTrades||[]).slice(-10).reverse();
     const ch=$('crypto_history_body'), cp=$('crypto_paper_body');
+    const cs=j.currentSession||null;
+    let currentHtml='';
+    if(cs){
+      const st=cs.status||'watching', t=cs.trade||null;
+      const label=st==='trade_closed'?'매매 완료':st==='position_open'?'보유중':st==='no_trade'?'매매 없음':'감시중 · 아직 매매 없음';
+      currentHtml='<div class="warn" style="margin-bottom:9px"><b>오늘 '+esc(cs.date||'')+' · '+label+'</b> · 최신봉 '+esc(cs.lastBarKst||'—')+
+        (t?('<br>신호 '+esc(t.signalTimeKst||'—')+' · 진입 '+esc(t.entryTimeKst||'—')+' · '+Number(t.entryPrice||0).toLocaleString('ko-KR')+'원'+
+          (st==='trade_closed'?(' · 순손익 '+btcPct(t.pnlPct)+' · '+esc(t.reason||'')):' · 포지션 추적중')):'')+'</div>';
+    }else{
+      currentHtml='<div class="warn" style="margin-bottom:9px"><b>오늘 데이터 미수집</b> · 매매 없음으로 간주하지 않습니다.</div>';
+    }
     let recentHtml='';
     if(recent.length){
       recentHtml='<div class="htable-wrap"><table class="htable"><thead><tr><th>날짜</th><th>신호/근거</th><th>진입</th><th>청산</th><th>사유</th><th>순손익</th></tr></thead><tbody>'+
@@ -1263,8 +1275,8 @@ async function loadCryptoResearch(){
           '<td>'+esc(x.reason||'')+'</td><td class="'+(Number(x.pnlPct)>=0?'win':'loss')+'">'+btcPct(x.pnlPct)+'</td></tr>').join('')+
         '</tbody></table></div><p class="note">원본 5분봉·전략버전·판단근거를 함께 보관합니다.</p>';
     }else recentHtml='<div class="warn">최근 확정 매매가 없습니다. NO TRADE도 연구 데이터로 유지합니다.</div>';
-    if(ch)ch.innerHTML=recentHtml;
-    if(cp)cp.innerHTML=recentHtml+'<p class="note">한국투자 계좌와 분리된 JKQuant BTC 모의체결입니다. 실거래소 주문은 전송하지 않습니다.</p>';
+    if(ch)ch.innerHTML=currentHtml+recentHtml;
+    if(cp)cp.innerHTML=currentHtml+recentHtml+'<p class="note">한국투자 계좌와 분리된 JKQuant BTC 모의체결입니다. 실거래소 주문은 전송하지 않습니다.</p>';
     const last=recent[0];
     if(last){
       setTimingBoard('crypto','buy','최근 확정 신호',esc(last.date||'')+' '+esc(last.signalTimeKst||'')+' · '+Number(last.entryPrice||0).toLocaleString('ko-KR')+'원',
@@ -1456,6 +1468,40 @@ function dailyResultCell(x,label){
     '<div class="daily-result-meta">기준전략 '+trades+'건'+(x.wins!=null?' · 승 '+x.wins+' · 패 '+(x.losses||0):'')+'</div>'+
     '<span class="daily-result-goal '+(hit?'hit':'')+'">'+target+'</span></div>';
 }
+const DAILY_CHART_COLORS={opening:'#f5c451',daytrading:'#8b8cf0',crypto:'#36d399',soxl:'#f87b8c'};
+async function renderDailyCumulativeChart(){
+  const el=$('daily_cumulative_chart'); if(!el)return;
+  el.innerHTML='<p class="sub">전략별 누적 수익률 계산 중…</p>';
+  try{
+    const names=['opening','daytrading','crypto','soxl'];
+    const reps=await Promise.all(names.map(async name=>{
+      const r=await fetch('/api/scalping-history?strategy='+name+'&range=all&page=1&pageSize=20',{headers:{Accept:'application/json'},cache:'no-store'});
+      const j=await r.json(); if(!r.ok||!j.ok)throw new Error((j&&j.error)||('HTTP '+r.status));
+      return {name,daily:(j.summary&&j.summary.dailySeries)||[]};
+    }));
+    const dates=[...new Set(reps.flatMap(x=>x.daily.map(d=>d.date)))].sort();
+    if(!dates.length){el.innerHTML='<div class="warn">아직 누적 확정 일별 결과가 없습니다.</div>';return;}
+    const series=reps.map(s=>{
+      const m=new Map(s.daily.map(d=>[d.date,Number(d.returnPct)||0])); let eq=1;
+      return {name:s.name,points:dates.map(date=>{if(m.has(date))eq*=1+m.get(date)/100;return {date,value:(eq-1)*100};})};
+    });
+    const all=[0,...series.flatMap(s=>s.points.map(p=>p.value))];
+    let lo=Math.min(...all),hi=Math.max(...all); if(hi-lo<1){lo-=.5;hi+=.5;} const pad=(hi-lo)*.12;lo-=pad;hi+=pad;
+    const W=820,H=300,P={l:54,r:18,t:22,b:42},x=i=>P.l+(dates.length<2?(W-P.l-P.r)/2:i*(W-P.l-P.r)/(dates.length-1)),y=v=>P.t+(hi-v)*(H-P.t-P.b)/(hi-lo);
+    const grid=Array.from({length:5},(_,i)=>{const v=hi-(hi-lo)*i/4,yy=y(v);return '<line x1="'+P.l+'" y1="'+yy.toFixed(1)+'" x2="'+(W-P.r)+'" y2="'+yy.toFixed(1)+'" stroke="var(--line)" stroke-width="1"/><text x="'+(P.l-8)+'" y="'+(yy+4).toFixed(1)+'" text-anchor="end" fill="var(--faint)" font-size="10">'+(v>=0?'+':'')+v.toFixed(1)+'%</text>';}).join('');
+    const zero=lo<=0&&hi>=0?'<line x1="'+P.l+'" y1="'+y(0).toFixed(1)+'" x2="'+(W-P.r)+'" y2="'+y(0).toFixed(1)+'" stroke="var(--faint)" stroke-dasharray="4 4"/>':'';
+    const lines=series.map(s=>'<polyline fill="none" stroke="'+DAILY_CHART_COLORS[s.name]+'" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" points="'+s.points.map((p,i)=>x(i).toFixed(1)+','+y(p.value).toFixed(1)).join(' ')+'"/>').join('');
+    const dots=series.map(s=>s.points.map((p,i)=>'<circle cx="'+x(i).toFixed(1)+'" cy="'+y(p.value).toFixed(1)+'" r="2.5" fill="'+DAILY_CHART_COLORS[s.name]+'"><title>'+DAILY_RESULT_LABELS[s.name]+' · '+p.date+' · '+dailyResultPct(p.value)+'</title></circle>').join('')).join('');
+    const tickIdx=[...new Set([0,Math.floor((dates.length-1)/2),dates.length-1])];
+    const ticks=tickIdx.map(i=>'<text x="'+x(i).toFixed(1)+'" y="'+(H-16)+'" text-anchor="'+(i===0?'start':i===dates.length-1?'end':'middle')+'" fill="var(--faint)" font-size="10">'+esc(dates[i].slice(5))+'</text>').join('');
+    const legend=series.map(s=>{const last=s.points[s.points.length-1];return '<span style="display:inline-flex;align-items:center;gap:5px"><i style="width:9px;height:9px;border-radius:50%;background:'+DAILY_CHART_COLORS[s.name]+'"></i>'+DAILY_RESULT_LABELS[s.name]+' <b class="'+(last.value>=0?'win':'loss')+'">'+dailyResultPct(last.value)+'</b></span>';}).join('');
+    el.innerHTML='<div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-bottom:8px"><b>📈 전략별 누적 수익률 추이</b><span class="sub">확정 일별 순수익 · 복리 누적</span></div>'+
+      '<div style="overflow-x:auto"><svg viewBox="0 0 '+W+' '+H+'" style="display:block;width:100%;min-width:620px;height:auto" role="img" aria-label="전략별 누적 수익률 추이">'+grid+zero+lines+dots+ticks+'</svg></div>'+
+      '<div class="row" style="gap:12px;margin-top:7px;font-size:11px">'+legend+'</div>'+
+      '<p class="note">각 전략의 확정 일별 계좌수익률을 날짜순으로 복리 누적합니다. 해당 전략이 거래하지 않은 날짜는 직전 누적값을 유지합니다.</p>';
+  }catch(e){el.innerHTML='<div class="warn">누적 수익률 그래프 조회 실패 · '+esc(e.message||String(e))+'</div>';}
+}
+
 async function loadDailyStrategyResults(force){
   const body=$('daily_results_body'),meta=$('daily_results_meta'); if(!body)return;
   if(!force&&body.dataset.loaded==='1')return;
@@ -1476,7 +1522,7 @@ async function loadDailyStrategyResults(force){
     body.innerHTML='<div class="daily-result-list">'+rows+'</div>';
     body.dataset.loaded='1';
     const stamp=String(j.generatedAt||'').replace('T',' ').slice(0,16);
-    meta.textContent='기준일 '+esc(j.kstDate||'')+' · 갱신 '+stamp+(force?' · 새로고침 완료':'');
+    meta.textContent='기준일 '+esc(j.kstDate||'')+' · 갱신 '+stamp+(force?' · 새로고침 완료':'');\n    renderDailyCumulativeChart();
   }catch(e){
     meta.textContent='결과 조회 실패';
     body.innerHTML='<div class="warn">'+esc(e.message||String(e))+'</div>';
