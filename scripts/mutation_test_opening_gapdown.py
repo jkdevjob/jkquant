@@ -49,6 +49,9 @@ PY = [
     ("soxl max hold ignored", "claude_lab.py", 'if C[i] > C[i - 1] or pos["days"] >= p["maxHoldDays"]:', 'if C[i] > C[i - 1]:'),
     ("ledger pending as no-trade", "claude_lab.py", 'for d in kr_days if d > final_kr and d >= st("opening_d1v2") and d1_live_status(d) == "no_trade"]', 'for d in kr_days if d > final_kr and d >= st("opening_d1v2")]'),
     ("account ignores kr settle", "claude_lab.py", "    ends = [kr_settled_through(final_kr, etf_to, kr_days, st(\"account\")),", "    ends = [\"9999\","),
+    ("fair gpt cost differs", "claude_lab.py", "gpt=_side_summary(days, gby, cost), days=rows)", "gpt=_side_summary(days, gby, cost - 0.14), days=rows)"),
+    ("fair window not gpt", "claude_lab.py", "    days = [d for d in cal if start <= d <= min(end, c_last)]\n", "    days = [d for d in cal if d <= min(end, c_last)]\n"),
+    ("fair coin slot ignored", "claude_lab.py", "    if all(s is not None for _, s in nets):", "    if False:"),
     ("dip hit minutes", "backtest_crypto_orb.py", "int((hit - entry_t).total_seconds() // 60) + 5", "int((hit - entry_t).total_seconds() // 60)"),
 ]
 JS = [

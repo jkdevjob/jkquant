@@ -371,6 +371,28 @@ class ClaudeLabTrend(unittest.TestCase):
             lab.d1_live_status, lab.d1_live_reason, lab.etf_daily, lab.read_json = old[:4]
             lab.CAL.clear(); lab.CAL.update(old[4]); lab.DECISIONS.clear(); lab.DECISIONS.update(old[5])
 
+    def test_fair_compare_same_dates_same_cost(self):
+        old = (lab.claude_trades, lab.gpt_trades)
+        try:
+            lab.claude_trades = lambda tab: ({"2026-09-29": [dict(name="BTC", entry=100, exit=102, reason="다음 09시 청산", gross=2.0, slot=0.5)],
+                                              "2026-09-20": [dict(name="BTC", entry=100, exit=110, reason="x", gross=10.0, slot=0.5)]},
+                                             {"2026-09-29": (2, 2)})
+            lab.gpt_trades = lambda tab: ({"2026-09-28": [dict(name="BTC", entry=100, exit=101, reason="익절", gross=1.0)],
+                                           "2026-09-30": [dict(name="BTC", entry=100, exit=99, reason="손절", gross=-1.0)]}, {}, ["gpt_v1"])
+            f = lab.fair_compare("crypto", ["2026-09-20", "2026-09-28", "2026-09-29", "2026-09-30"])
+            self.assertEqual(f["window"], ["2026-09-28", "2026-09-30"])                  # GPT 기록 구간만 — 9/20 클로드 매매는 빠진다
+            self.assertEqual(f["costPct"], {"claude": 0.14, "gpt": 0.14})
+            self.assertEqual(f["claude"]["trades"], 1)
+            self.assertAlmostEqual(f["claude"]["avgTradePct"], 2.0 - 0.14)
+            self.assertAlmostEqual(f["days"][1]["claude"]["pnlPct"], (2.0 - 0.14) * 0.5)  # 코인 한쪽 몫(반)
+            self.assertAlmostEqual(f["gpt"]["avgTradePct"], 0.0 - 0.14)
+            self.assertEqual((f["gpt"]["wins"], f["gpt"]["losses"]), (1, 1))
+            self.assertEqual(f["days"][0]["date"], "2026-09-30")
+            lab.gpt_trades = lambda tab: ({}, {}, [])
+            self.assertFalse(lab.fair_compare("soxl", ["2026-09-30"])["available"])
+        finally:
+            lab.claude_trades, lab.gpt_trades = old
+
     def test_profit_factor(self):
         D = ["2026-10-05", "2026-10-06", "2026-10-07", "2026-10-08", "2026-10-09"]
         z = lab.goal_metrics({D[0]: 3.0, D[1]: -1.0, D[2]: -2.0, D[3]: 1.0}, D)
