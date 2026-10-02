@@ -46,7 +46,7 @@ async function main(){
 
   const box={sessions:[{id:'a',name:'A',horizon:5},{id:'b',name:'B',horizon:5}],activeByHorizon:{5:'a'}};
   let loaded=0;
-  const d=vm.createContext({assetPlanBox:()=>box,confirm:()=>true,assetPaperCache:{},writeAssetSessionLocal:()=>{},saveOperatingState:async()=>{},loadActiveAssetSessionView:async()=>loaded++});
+  const d=vm.createContext({assetPlanBox:()=>box,confirm:()=>true,planManualBackup:()=>{},assetPaperCache:{},writeAssetSessionLocal:()=>{},saveOperatingState:async()=>{},loadActiveAssetSessionView:async()=>loaded++});
   vm.runInContext(fn('async function deleteAssetSession(id)'),d);
   await d.deleteAssetSession('b');assert.equal(box.activeByHorizon[5],'a');assert.equal(loaded,1);
   await d.deleteAssetSession('a');assert.equal(box.activeByHorizon[5],'');assert.equal(loaded,2);
