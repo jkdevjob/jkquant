@@ -1002,6 +1002,22 @@ def duel(start=DUEL_START):
     return dict(start=start, rules=DUEL_RULES, costs=FAIR_COST, tabs=tabs, total=total, latest=dates[-1] if dates else None)
 
 
+def recent_curves(series, today, days=60):
+    """📅 오늘 탭 추이 그래프(참고): 최근 days 일 동안 규칙대로 다시 계산한 누적 수익률 — 칸 자금 100%, 계좌는 비중대로.
+    모의 장부(실제 기록)와 섞지 않는다. series: {키: (일손익 dict, 그 시장 달력)}"""
+    start = (date.fromisoformat(today) - timedelta(days=days)).isoformat()
+    out = {}
+    for k, (dv, cal) in series.items():
+        eq, pts = 1.0, []
+        for d in sorted(set(cal)):
+            if d < start or d > today:
+                continue
+            eq *= 1 + dv.get(d, 0.0) / 100
+            pts.append(dict(date=d, cumPct=(eq - 1) * 100))
+        out[k] = pts
+    return dict(start=start, source="reconstructed", note="규칙대로 다시 계산한 값(모의 장부 아님) · 칸 자금 100% · 계좌는 국내 30·코인 30·미국 40", series=out)
+
+
 def review_entry(report):
     """매일 검증·분석 기록 — 날짜별 한 번만 쓴다(저녁 첫 실행 기준). 자동 점검 결과 + 판단 근거."""
     today = datetime.now(KST).strftime("%Y-%m-%d")
@@ -1160,6 +1176,17 @@ def main():
     except Exception:  # noqa: BLE001
         CAL["etf"] = []
     report["daily"] = daily_board(report, d1, krx_cal, crypto_full, locals().get("cal_c") or [])
+    try:
+        kr_cal = sorted(set(CAL.get("etf") or []) | set(krx_cal))
+        acct_s = account_daily(combine_same_capital(d1, etf_daily()), crypto_full, us_to_kst(locals().get("us_full") or {}), locals().get("cal_c") or [])
+        report["curves"] = recent_curves({"opening_d1v2": (d1, [d for d in kr_cal if d <= max(krx_cal or [""])]),
+                                          "daytrading_etf": (etf_daily(), kr_cal),
+                                          "coin_bo": (crypto_full, locals().get("cal_c") or []),
+                                          "us_soxl": (locals().get("us_full") or {}, CAL.get("us") or []),
+                                          "account": (acct_s, [d for d in (locals().get("cal_c") or []) if acct_s and d <= max(acct_s)])},
+                                         datetime.now(KST).strftime("%Y-%m-%d"))
+    except Exception as e:  # noqa: BLE001
+        report["curves"] = dict(error=str(e))
     try:
         report["paper"] = write_paper(report, d1, krx_cal, crypto_full, locals().get("us_full") or {}, locals().get("cal_c") or [])
     except Exception as e:  # noqa: BLE001

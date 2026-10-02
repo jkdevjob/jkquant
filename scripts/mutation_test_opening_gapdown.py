@@ -59,6 +59,7 @@ PY = [
     ("duel total not equal weight", "claude_lab.py", '        c = sum(0.25 * by[t][d]["claude"]["pnlPct"] for t in DUEL_TABS if d in by[t])', '        c = sum(by[t][d]["claude"]["pnlPct"] for t in DUEL_TABS if d in by[t])'),
     ("kr calendar today intraday", "claude_lab.py", 'return [d for d in days if d < today or (d == today and now.hour >= 16)]', "return list(days)"),
     ("coin night filter off", "claude_lab.py", 'if p.get("lastEntryHour") is not None and (s0 + timedelta(hours=k)).hour >= p["lastEntryHour"] and k < 15:', "if False:"),
+    ("curves include future", "claude_lab.py", "            if d < start or d > today:\n", "            if d < start:\n"),
     ("dip hit minutes", "backtest_crypto_orb.py", "int((hit - entry_t).total_seconds() // 60) + 5", "int((hit - entry_t).total_seconds() // 60)"),
 ]
 JS = [

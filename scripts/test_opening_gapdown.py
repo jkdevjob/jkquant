@@ -452,6 +452,14 @@ class ClaudeLabTrend(unittest.TestCase):
         _, dec2, _, _ = lab.coin_breakout(H, dict(lab.COIN_BO, lastEntryHour=21))
         self.assertEqual({r["date"]: r for r in dec2}[last]["action"], "no_break")
 
+    def test_recent_curves_window_and_compounding(self):
+        c = lab.recent_curves({"x": ({"2026-09-01": 50.0, "2026-09-20": 10.0, "2026-09-25": -10.0}, ["2026-09-01", "2026-09-20", "2026-09-25", "2026-10-03"])},
+                              "2026-10-02", days=20)
+        pts = c["series"]["x"]
+        self.assertEqual([p["date"] for p in pts], ["2026-09-20", "2026-09-25"])          # 창 밖(9/1)과 미래(10/3) 제외
+        self.assertAlmostEqual(pts[-1]["cumPct"], (1.1 * 0.9 - 1) * 100)
+        self.assertEqual(c["source"], "reconstructed")
+
     def test_profit_factor(self):
         D = ["2026-10-05", "2026-10-06", "2026-10-07", "2026-10-08", "2026-10-09"]
         z = lab.goal_metrics({D[0]: 3.0, D[1]: -1.0, D[2]: -2.0, D[3]: 1.0}, D)

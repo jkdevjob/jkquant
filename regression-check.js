@@ -11032,6 +11032,9 @@ console.log('[GAPDOWN D-1 / DIP24 D-3] 연구용 모의체결 경로 안전장�
        &&/if\(!\(await claudeAuthorized\(request,env\)\)\)return new Response/.test(lb3)
        &&/fetch\(origin\+"\/api\/claude-live",\{headers:\{Accept:"application\/json","x-monitor-key":/.test(tg3));
   }
+  ok('📅 오늘 탭 전략별 누적 수익률 추이: 모의 장부 / 최근 60일 재구성(참고) 따로 · 섞지 않음 · 5색(검증) + 범례',
+     /function trendCard\(\)/.test(scl2)&&/html\+=trendCard\(\);/.test(scl2)&&/function paperCurves\(\)/.test(scl2)
+     &&/report\["curves"\] = recent_curves\(/.test(fs.readFileSync(__d+'/scripts/claude_lab.py','utf8')));
   ok('클로드 모의투자 장부: 날짜별 한 번만 쓰기 · 요약은 장부 값만 · 화면 누적표 · workflow 저장',
      /def write_once\(path, obj\):\n[\s\S]{0,200}if path\.exists\(\):\n\s*return False/.test(fs.readFileSync(__d+'/scripts/claude_lab.py','utf8'))
      &&/모의투자 누적/.test(scl2)&&/data\/claude-paper/.test(wf));
