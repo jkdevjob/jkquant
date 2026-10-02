@@ -5,6 +5,7 @@
 const JH={"Content-Type":"application/json; charset=utf-8","Cache-Control":"no-store"};
 const RAW="https://raw.githubusercontent.com/jkdevjob/jkquant/scalping-data/data/";
 const GLOBAL_WORKER_FALLBACK="https://jkquant-global-intraday-scheduler.mumae4.workers.dev";
+const DAYTRADING_WORKER_FALLBACK="https://jkquant-daytrading-scheduler.mumae4.workers.dev";
 
 async function readText(path){
   const r=await fetch(RAW+path,{headers:{"Accept":"text/plain,application/json,text/csv","User-Agent":"jkquant-scalping-daily-results/1.1"}});
@@ -100,30 +101,71 @@ async function openingSessions(){
     const date=shiftIso(today,-back);
     const j=await readJson("opening-history/"+date+".json");
     if(!j)continue;
-    const z=tradeSummary(String(j.date||date),j.trades||[]);
-    z.source="opening-history";
+    const operational=Array.isArray(j.operationalTrades)?j.operationalTrades:(j.trades||[]);
+    const z=tradeSummary(String(j.date||date),operational);
+    z.source=Array.isArray(j.operationalTrades)?"opening-operational-history":"opening-history";
+    z.mainVariant=String(j.mainVariant||"baseline");
     z.generatedAt=j.generatedAt||null;
     out.push(z);
   }
   return out;
 }
-async function daytradingSessions(){
+async function daytradingResearchSessions(){
   const j=await readJson("daytrading-research/latest.json");
   if(!j)return [];
   const base=(j.variants||[]).find(x=>x&&x.params&&x.params.name==="baseline");
   const daily=((base&&base.summary&&base.summary.daily)||[]).slice().sort((a,b)=>String(b.date).localeCompare(String(a.date))).slice(0,2);
   return daily.map(x=>({
-    date:String(x.date||""),
-    returnPct:num(x.returnPct)??0,
-    sumPnlPct:null,
-    trades:Number(x.trades||0),
-    wins:null,
-    losses:null,
-    noTrade:Number(x.trades||0)===0,
-    finalized:true,
-    source:"daytrading-research",
-    generatedAt:j.generatedAt||null
+    date:String(x.date||""),returnPct:num(x.returnPct)??0,sumPnlPct:null,
+    trades:Number(x.trades||0),wins:null,losses:null,noTrade:Number(x.trades||0)===0,
+    finalized:true,source:"daytrading-research",generatedAt:j.generatedAt||null,mainVariant:"baseline"
   }));
+}
+function completedKrCandidates(now=Date.now()){
+  const k=tzParts("Asia/Seoul",now),out=[];
+  let d=(!["Sat","Sun"].includes(k.weekday)&&k.hm>=1535)?k.date:shiftIso(k.date,-1);
+  for(let i=0;i<10&&out.length<4;i++){
+    const wd=weekdayUtc(d);if(wd!==0&&wd!==6)out.push(d);
+    d=shiftIso(d,-1);
+  }
+  return out;
+}
+async function readDaytradingPaper(env,date){
+  const key=globalKey(env);if(!key)throw new Error("daytrading monitor key missing");
+  const worker=String(env.DAYTRADING_WORKER_URL||DAYTRADING_WORKER_FALLBACK).replace(/\/$/,"");
+  const r=await fetch(worker+"/paper?date="+encodeURIComponent(date),{headers:{"Accept":"application/json","x-monitor-key":key}});
+  const j=await r.json().catch(()=>({}));
+  if(!r.ok||!j.ok)throw new Error(j.error||("daytrading worker HTTP "+r.status));
+  return j.ledger||null;
+}
+function daytradingLedgerSummary(ledger,date){
+  const all=Array.isArray(ledger&&ledger.trades)?ledger.trades:[];
+  const closed=all.filter(x=>x&&x.status==="closed"&&Number.isFinite(Number(x.pnl)));
+  const pn=closed.map(x=>Number(x.pnl)),sum=pn.reduce((s,x)=>s+x,0);
+  return {
+    date:String((ledger&&ledger.date)||date),returnPct:pn.length?sum/Math.max(1,Number(ledger&&ledger.maxTrades||3)):0,
+    sumPnlPct:sum,trades:all.length,wins:pn.filter(x=>x>0).length,losses:pn.filter(x=>x<0).length,
+    noTrade:all.length===0,finalized:all.every(x=>x&&x.status==="closed"),
+    incomplete:all.some(x=>x&&x.status!=="closed"),source:"daytrading-paper-live",
+    generatedAt:ledger&&ledger.updatedAt||null,mainVariant:String(ledger&&ledger.mainVariant||"baseline")
+  };
+}
+async function daytradingLiveSessions(env){
+  const out=[];
+  for(const date of completedKrCandidates()){
+    try{
+      const ledger=await readDaytradingPaper(env,date);
+      if(ledger)out.push(daytradingLedgerSummary(ledger,date));
+    }catch(e){}
+    if(out.length>=2)break;
+  }
+  return out;
+}
+async function daytradingSessions(env){
+  let live=[],fallback=[];
+  try{live=await daytradingLiveSessions(env);}catch(e){}
+  try{fallback=await daytradingResearchSessions();}catch(e){}
+  return mergeSessions(live,fallback);
 }
 async function decisionSessions(path,source){
   const t=await readText(path);
@@ -216,7 +258,7 @@ function pair(name,label,marketTime,result){
 export async function onRequestGet({env}){
   const [opening,daytrading,crypto,soxl]=await Promise.all([
     safeSessions(()=>openingSessions()),
-    safeSessions(()=>daytradingSessions()),
+    safeSessions(()=>daytradingSessions(env)),
     safeSessions(()=>liveFirstSessions(env,"crypto","crypto-research/baseline-decisions.csv","crypto-research")),
     safeSessions(()=>liveFirstSessions(env,"soxl","soxl-research/baseline-decisions.csv","soxl-research"))
   ]);
