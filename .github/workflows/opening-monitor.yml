@@ -196,14 +196,10 @@ jobs:
               shadow:(.shadowVariants|map({name,label,trades:(.trades|length)}))
             }' "$OUT"
 
-            # 새 날짜의 09:31 일일요약만 전송한다. 기존 파일 shadow 백필 때는 중복 Telegram을 보내지 않는다.
+            # 09:31 일일요약은 Cloudflare opening scheduler가 실시간 장부 기준으로 전송한다.
+            # 이 09:40/10:40 아카이브 작업에서는 중복 Telegram을 보내지 않는다.
             STATUS=200
-            if [ "$SEND_SUMMARY" = "1" ]; then
-              STATUS=$(curl -sS --max-time 30 -o summary-response.json -w '%{http_code}'                 -X POST                 -H "x-monitor-key: $KEY"                 -H "content-type: application/json"                 --data-binary @"$OUT"                 "$BASE/api/opening-summary")
-              echo "Telegram 일일요약 HTTP $STATUS: $(cat summary-response.json 2>/dev/null || true)"
-            else
-              echo "기존 날짜 shadow 백필 — Telegram 일일요약 재전송 생략"
-            fi
+            echo "Telegram 일일요약은 09:31 Cloudflare scheduler 담당 — 아카이브에서는 전송 생략"
 
             git config user.name "github-actions[bot]"
             git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
@@ -216,10 +212,6 @@ jobs:
             git pull --rebase origin scalping-data
             git push origin scalping-data
 
-            if [ "$SEND_SUMMARY" = "1" ] && { [ "$STATUS" != "200" ] || ! jq -e '.ok == true' summary-response.json >/dev/null 2>&1; }; then
-              echo "이력은 저장했지만 Telegram 일일요약 전송 실패"
-              return 1
-            fi
           }
 
           dow=$(TZ=Asia/Seoul date +%u)
