@@ -228,7 +228,7 @@ canvas{display:block;width:100%;height:auto}
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-app.js";
   import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-auth.js";
-  import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-firestore.js";
+  import { getFirestore, doc, getDoc, setDoc, runTransaction } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-firestore.js";
   const firebaseConfig = {
     apiKey: "AIzaSyBzBe9pAttnbDgTlNThWZzNqtAAKxX7Ksw",
     authDomain: "jk-invest.firebaseapp.com",
@@ -239,7 +239,7 @@ canvas{display:block;width:100%;height:auto}
   };
   const app = initializeApp(firebaseConfig);
   window.fb = { auth:getAuth(app), db:getFirestore(app), provider:new GoogleAuthProvider(),
-                signInWithPopup, onAuthStateChanged, signOut, doc, getDoc, setDoc };
+                signInWithPopup, onAuthStateChanged, signOut, doc, getDoc, setDoc, runTransaction };
   window.dispatchEvent(new Event('fb-ready'));
 </script>
 </head>
@@ -260,7 +260,7 @@ canvas{display:block;width:100%;height:auto}
 
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Morning Scalping</div><h1>JK <span class="v">퀀트</span> 단타 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="scVer">v1.35.4</span></h1></div>
+    <div><div class="kicker">Morning Scalping</div><h1>JK <span class="v">퀀트</span> 단타 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="scVer">v1.36.0</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -801,12 +801,32 @@ function saveTop2Hist(){ try{ localStorage.setItem(THKEY,JSON.stringify(TOP2HIST
 /* ── 클라우드 동기화 ── */
 let _cloudT=null;
 function cloudSave(){                       // 연타로 쓰지 않게 2초 모아서 한 번
-  if(!me||!window.fb||!window.fb.setDoc) return;
+  if(!me||!window.fb||!window.fb.runTransaction) return;
   clearTimeout(_cloudT);
   _cloudT=setTimeout(async()=>{
     try{
-      await window.fb.setDoc(window.fb.doc(window.fb.db,'users',me.uid),
-        { scalp:{ kis:KLOG, pos:POS, top2:TOP2HIST, updated:Date.now() } }, { merge:true });
+      const ref=window.fb.doc(window.fb.db,'users',me.uid);
+      const merged=await window.fb.runTransaction(window.fb.db,async tx=>{
+        const snap=await tx.get(ref),old=snap.exists()&&snap.data()?snap.data().scalp:null;
+        // 실제 주문 이력은 append-only. 다른 기기의 주문을 현재 브라우저가 모른다고 해서 절대 지우지 않는다.
+        const kisBy=new Map();
+        for(const x of [...((old&&Array.isArray(old.kis))?old.kis:[]),...KLOG]){
+          if(!x)continue;const k=x.id!=null?String(x.id):[x.ts,x.date,x.time,x.code,x.side,x.orderNo].join('|');
+          if(!kisBy.has(k))kisBy.set(k,x);
+        }
+        const kis=[...kisBy.values()].sort((a,b)=>(b.ts||0)-(a.ts||0));
+        const topBy=new Map();
+        for(const x of [...((old&&Array.isArray(old.top2))?old.top2:[]),...TOP2HIST]){
+          if(!x||!x.date)continue;const cur=topBy.get(x.date);
+          if(!cur||(+x.updated||0)>=(+cur.updated||0))topBy.set(x.date,x);
+        }
+        const top2=[...topBy.values()].sort((a,b)=>String(b.date).localeCompare(String(a.date)));
+        const pos=POS.length?POS:((old&&Array.isArray(old.pos))?old.pos:[]);
+        const next={kis,pos,top2,updated:Date.now()};
+        tx.set(ref,{scalp:next},{merge:true});return next;
+      });
+      KLOG=merged.kis;TOP2HIST=merged.top2;if(!POS.length&&merged.pos)POS=merged.pos;
+      try{localStorage.setItem(KKEY,JSON.stringify(KLOG));localStorage.setItem(THKEY,JSON.stringify(TOP2HIST));}catch(e){}
       setSync('클라우드 저장됨 · '+new Date().toLocaleTimeString('ko-KR'));
     }catch(e){ setSync('클라우드 저장 실패 — '+(e.message||e), true); }
   },2000);
@@ -3510,8 +3530,8 @@ function renderKlog(){
        지정가가 안 닿으면 미체결로 남는다. 실제 보유는 <b>잔고</b> 버튼으로 확인한다.
        실현손익은 매도를 같은 종목의 먼저 산 물량과 짝지어(FIFO) A-3 실행비용(VTS 실측 또는 2.5틱/편도 fallback)을 뺀 값이다.</p>`;
 }
-function delKlog(i){ if(!confirm('이 주문 기록을 지울까요? 증권사 주문 자체는 취소되지 않습니다.')) return; KLOG.splice(i,1); saveK(); renderKlog(); }
-function clearKlog(){ if(!KLOG.length) return; if(!confirm('KIS 주문 이력을 전부 지울까요? 증권사 주문은 취소되지 않습니다.')) return; KLOG=[]; saveK(); renderKlog(); }
+function delKlog(i){ alert('KIS 주문 이력은 실제 주문 감사기록이라 삭제하지 않습니다. 잘못된 주문도 원본 그대로 보존합니다.'); }
+function clearKlog(){ alert('KIS 주문 이력은 전체 삭제하지 않습니다. 필요하면 CSV로 내보내 확인하세요.'); }
 function exportKlog(){
   if(!KLOG.length){ alert('내보낼 이력이 없습니다.'); return; }
   const rows=KLOG.map(r=>[r.date,r.time||'',r.side,r.code,r.name,r.qty,r.price,r.ok?'접수':'실패',r.orderNo||'',r.env||'',
@@ -3639,6 +3659,8 @@ function boot(){
       return;
     }
     $('gate').style.display='none'; $('app').style.display='';
+    // 주문 감사이력은 로컬과 클라우드를 먼저 합친 뒤 화면을 연다. 빈 로컬이 기존 클라우드 이력을 덮지 않는다.
+    loadAll();await cloudLoad();
     // 활성 4개 단타전략만 초기화한다. 폐기된 과매도 반등용 공용 수동매매 UI/장부는 더 이상 실행하지 않는다.
     setupUnifiedStrategyFlow();
     setupDaily1ShadowCards();
