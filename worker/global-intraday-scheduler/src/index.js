@@ -292,11 +292,35 @@ async function runSoxl(env,now){
     });
   }
 }
+function previousDate(date){const d=new Date(date+"T00:00:00Z");d.setUTCDate(d.getUTCDate()-1);return d.toISOString().slice(0,10);}
+async function sendCloseSummary(env,strategy,date,timeLabel){
+  const ledger=await readPaper(env,strategy,date);
+  const a=ledger&&Array.isArray(ledger.trades)?ledger.trades:[];
+  const closed=a.filter(x=>x.status==="closed"),open=a.filter(x=>x.status==="open"),pending=a.filter(x=>x.status==="pending");
+  const pn=closed.map(x=>Number(x.pnlPct)).filter(Number.isFinite),wins=pn.filter(x=>x>0).length,losses=pn.filter(x=>x<0).length;
+  const avg=pn.length?pn.reduce((s,x)=>s+x,0)/pn.length:0;
+  const friction=Number(ledger&&ledger.frictionPct||0);
+  const lines=[
+    "후보/진입 "+a.length+"건 · 청산 "+closed.length+"건 · 미청산 "+open.length+"건 · 대기 "+pending.length+"건",
+    "승 "+wins+" · 패 "+losses+" · 승률 "+(pn.length?(wins/pn.length*100).toFixed(1):"0.0")+"%",
+    "실현 평균 순수익률 "+signed(avg)+" · 왕복 마찰비용 "+friction.toFixed(2)+"% 반영"
+  ];
+  for(const x of closed)lines.push((strategy==="crypto"?"KRW-BTC":"SOXL")+" · "+String(x.entryTime||"—")+"→"+String(x.exitTime||"—")+" · "+signed(x.pnlPct)+" · "+reasonKo(x.reason));
+  if(!a.length)lines.push("오늘 조건 충족 모의거래 없음");
+  return alert(env,{strategy,stage:"summary",eventId:strategy+":"+date+":close-summary",date,time:timeLabel,lines});
+}
+async function runCloseSummaries(env,now){
+  const k=parts(now,"Asia/Seoul");
+  if(k.hm===5)await sendCloseSummary(env,"crypto",previousDate(k.date),"00:05 KST");
+  const n=parts(now,"America/New_York");
+  if(!["Sat","Sun"].includes(n.weekday)&&n.hm===1605)await sendCloseSummary(env,"soxl",n.date,"16:05 ET");
+}
+
 async function run(env){
   if(!env.MONITOR_KEY)throw new Error("MONITOR_KEY secret missing");
   const now=Date.now();
-  const out=await Promise.allSettled([runBtc(env,now),runSoxl(env,now)]);
-  out.forEach((x,i)=>{if(x.status==="rejected")console.error(JSON.stringify({type:"global_intraday_error",strategy:i===0?"crypto":"soxl",error:String(x.reason&&x.reason.message||x.reason)}));});
+  const out=await Promise.allSettled([runBtc(env,now),runSoxl(env,now),runCloseSummaries(env,now)]);
+  out.forEach((x,i)=>{if(x.status==="rejected")console.error(JSON.stringify({type:"global_intraday_error",strategy:i===0?"crypto":i===1?"soxl":"close-summary",error:String(x.reason&&x.reason.message||x.reason)}));});
 }
 export {btcTrade,soxlTrade,paperLedger,BTC_OPEN_HM,BTC_LAST_SIGNAL_HM,BTC_LAST_ENTRY_HM,BTC_EXIT_TRACK_END_HM,BTC_STRATEGY_VERSION,SOXL_STRATEGY_VERSION,SOXL_LAST_SIGNAL_HM,SOXL_PAPER_TRACK_END_HM};
 
