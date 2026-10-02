@@ -260,7 +260,7 @@ canvas{display:block;width:100%;height:auto}
 
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Morning Scalping</div><h1>JK <span class="v">퀀트</span> 단타 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="scVer">v1.37.0</span></h1></div>
+    <div><div class="kicker">Morning Scalping</div><h1>JK <span class="v">퀀트</span> 단타 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="scVer">v1.38.0</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -2133,36 +2133,91 @@ const SHADOW_RANK_LABELS={
   soxl:{range_5m:'OR 5분',range_30m:'OR 30분','vol_0.8':'거래량0.8배','vol_1.2':'거래량1.2배',no_vwap:'VWAP 제외','stop_0.8_tp_1.6':'손절0.8/익절1.6','stop_1.5_tp_3.0':'손절1.5/익절3.0',hold_45m:'최대45분',hold_120m:'최대120분',entry_by_1030:'10:30 이전'}
 };
 let SHADOW_RANK_CACHE=null,SHADOW_RANK_AT=0;
+let PROMOTION_STATE=null,PROMOTION_STATE_AT=0;
 function shadowRankPct(v){const n=Number(v);return Number.isFinite(n)?((n>=0?'+':'')+n.toFixed(3)+'%'):'—';}
+function selectedMainVariant(kind){
+  return String((((PROMOTION_STATE||{}).configs||{})[kind]||{}).selectedVariant||'baseline');
+}
+function promotionAction(kind,x){
+  const current=selectedMainVariant(kind);
+  if(current===x.name)return '<span class="sig on">⭐ 현재 메인</span>';
+  if(x.promotionEligible)return '<button class="ghostbtn buy sm" onclick="promoteShadow(\''+kind+'\',\''+String(x.name).replace(/'/g,"\\'")+'\')">⭐ 메인전략 승격</button>';
+  if(!x.liveCompatible)return '<span class="sub">운영승격 불가</span>';
+  return '<span class="sub">승격조건 대기</span>';
+}
 function renderShadowRanking(kind,data){
   const el=$('shadow_rank_'+kind);if(!el)return;
-  const rows=(data&&data.rows)||[],rule=data&&data.rankingRule||{};
+  const rows=(data&&data.rows)||[],rule=data&&data.rankingRule||{},pr=data&&data.promotionRule||{};
   if(!rows.length){el.innerHTML='<div class="warn">그림자 전략 순위 데이터 수집 중</div>';return;}
   const label=n=>(SHADOW_RANK_LABELS[kind]||{})[n]||n;
+  const current=selectedMainVariant(kind),currentLabel=current==='baseline'?'원래 기준전략':label(current);
   const body=rows.map(x=>{
     const sample=x.trades>0?(x.trades+'건 · '+Math.round((Number(x.sampleFactor)||0)*100)+'%'):'수집대기';
-    const st=x.review?'검토후보':(x.sampleReady?'평가중':'표본수집');
+    const st=x.promotionEligible?'⭐ 승격 가능':x.review?'검토후보':(x.sampleReady?'평가중':'표본수집');
     const medal=x.rank===1?'🥇 ':x.rank===2?'🥈 ':x.rank===3?'🥉 ':'';
     return '<tr><td><b>'+medal+x.rank+'</b></td><td><b>'+esc(label(x.name))+'</b><div class="sub">'+esc(x.name)+'</div></td>'+
       '<td class="'+(Number(x.researchScore)>=50?'win':'loss')+'"><b>'+Number(x.researchScore||0).toFixed(1)+'</b></td>'+
       '<td>'+sample+'</td><td class="'+(x.allEdgePct>=0?'win':'loss')+'">'+shadowRankPct(x.allEdgePct)+'</td>'+
       '<td class="'+(x.validationEdgePct>=0?'win':'loss')+'">'+shadowRankPct(x.validationEdgePct)+'</td>'+
       '<td class="'+(x.recentEdgePct>=0?'win':'loss')+'">'+shadowRankPct(x.recentEdgePct)+'</td>'+
-      '<td>'+(x.riskOk?'✅':'⚠️')+'</td><td>'+st+'</td></tr>';
+      '<td>'+(x.riskOk?'✅':'⚠️')+'</td><td>'+st+'</td><td>'+promotionAction(kind,x)+'</td></tr>';
   }).join('');
-  el.innerHTML='<div style="margin:14px 0 7px"><b>🏁 그림자 전략 순위</b> <span class="sub">최소 '+Number(data.minRequired||10)+'개 · 기준전략 제외 · '+esc(data.from||'—')+' ~ '+esc(data.to||'—')+'</span></div>'+
-    '<div class="htable-wrap"><table class="htable"><thead><tr><th>순위</th><th>그림자 전략</th><th>점수</th><th>표본</th><th>전체우위</th><th>검증우위</th><th>최근우위</th><th>위험</th><th>상태</th></tr></thead><tbody>'+body+'</tbody></table></div>'+
+  const revert=current!=='baseline'?'<button class="ghostbtn sm" onclick="promoteShadow(\''+kind+'\',\'baseline\')">↩ 원래 기준전략으로 원복</button>':'';
+  el.innerHTML='<div style="margin:14px 0 7px;display:flex;gap:8px;align-items:center;flex-wrap:wrap"><b>🏁 그림자 전략 순위</b>'+
+    '<span class="pill good">운영 메인 <b>'+esc(currentLabel)+'</b></span>'+revert+
+    '<span class="sub">최소 '+Number(data.minRequired||10)+'개 · 원래 baseline 제외 순위 · '+esc(data.from||'—')+' ~ '+esc(data.to||'—')+'</span></div>'+
+    '<div class="htable-wrap"><table class="htable"><thead><tr><th>순위</th><th>그림자 전략</th><th>점수</th><th>표본</th><th>전체우위</th><th>검증우위</th><th>최근우위</th><th>위험</th><th>상태</th><th>메인전략</th></tr></thead><tbody>'+body+'</tbody></table></div>'+
     '<div class="warn" style="margin-top:8px"><b>순위점수 '+esc(rule.version||'v1')+':</b> '+esc(rule.formula||'표본수·전체 기대값·검증 기대값·최근 성과·위험을 결합')+
-    '<br><span class="sub">표본계수 '+esc(rule.sampleFactor||'min(1, trades/minTrades)')+' · 0건 후보는 항상 맨 아래. 이 순위는 연구 우선순위이며 기준전략 자동승격이나 주문에는 연결되지 않습니다.</span></div>';
+    '<br><b>승격 버튼:</b> 전략별 검토 기준 + 표본충족 + 위험통과 + 실시간 재현 가능 + 연구점수 '+Number(pr.minScore||60)+'점 이상일 때만 표시합니다. <b>자동승격은 OFF</b>이며 버튼을 눌러야 바뀝니다.'+
+    '<br><span class="sub">표본계수 '+esc(rule.sampleFactor||'min(1, trades/minTrades)')+' · 0건 후보는 항상 맨 아래. 승격해도 이미 시작된 세션은 기존 전략으로 끝나고 다음 새 세션부터 적용됩니다. 원래 연구 baseline은 그대로 보존됩니다.</span></div>';
+}
+async function loadPromotionState(force=false){
+  const now=Date.now();
+  if(!me)return null;
+  if(!force&&PROMOTION_STATE&&now-PROMOTION_STATE_AT<60000)return PROMOTION_STATE;
+  try{
+    const tok=await me.getIdToken();
+    const r=await fetch('/api/scalping-promotion',{cache:'no-store',headers:{'Authorization':'Bearer '+tok,Accept:'application/json'}});
+    const j=await r.json().catch(()=>({}));
+    if(!r.ok||!j.ok)throw new Error(j.error||('HTTP '+r.status));
+    PROMOTION_STATE=j;PROMOTION_STATE_AT=now;
+    if(SHADOW_RANK_CACHE)Object.entries(SHADOW_RANK_CACHE.rankings||{}).forEach(([k,v])=>renderShadowRanking(k,v));
+    return j;
+  }catch(e){
+    console.warn('promotion state',e);
+    return null;
+  }
+}
+async function promoteShadow(kind,variant){
+  if(!me){alert('로그인이 필요합니다.');return;}
+  const label=variant==='baseline'?'원래 기준전략':((SHADOW_RANK_LABELS[kind]||{})[variant]||variant);
+  const verb=variant==='baseline'?'원복':'승격';
+  if(!confirm(label+'을(를) '+verb+'할까요?\n\n현재 진행 중 세션은 그대로 끝내고 다음 새 세션부터 메인전략으로 적용됩니다.'))return;
+  try{
+    const tok=await me.getIdToken();
+    const r=await fetch('/api/scalping-promotion',{
+      method:'POST',headers:{'Authorization':'Bearer '+tok,'content-type':'application/json',Accept:'application/json'},
+      body:JSON.stringify({strategy:kind,variant})
+    });
+    const j=await r.json().catch(()=>({}));
+    if(!r.ok||!j.ok)throw new Error(j.error+(j.reason?' · '+j.reason:'')||('HTTP '+r.status));
+    PROMOTION_STATE=null;PROMOTION_STATE_AT=0;
+    await loadPromotionState(true);
+    alert(label+' '+verb+' 설정 완료\n다음 새 세션부터 메인전략으로 적용됩니다.');
+  }catch(e){alert('메인전략 변경 실패: '+(e.message||e));}
 }
 async function loadShadowRankings(force=false){
   const now=Date.now();
   if(!force&&SHADOW_RANK_CACHE&&now-SHADOW_RANK_AT<300000){
+    await loadPromotionState(false);
     Object.entries(SHADOW_RANK_CACHE.rankings||{}).forEach(([k,v])=>renderShadowRanking(k,v));return;
   }
   try{
-    const r=await fetch('/api/scalping-shadow-ranking',{cache:'no-store',headers:{Accept:'application/json'}});
-    const j=await r.json().catch(()=>({}));if(!r.ok||!j.ok)throw new Error(j.error||('HTTP '+r.status));
+    const [rr]=await Promise.all([
+      fetch('/api/scalping-shadow-ranking',{cache:'no-store',headers:{Accept:'application/json'}}),
+      loadPromotionState(false)
+    ]);
+    const j=await rr.json().catch(()=>({}));if(!rr.ok||!j.ok)throw new Error(j.error||('HTTP '+rr.status));
     SHADOW_RANK_CACHE=j;SHADOW_RANK_AT=now;
     Object.entries(j.rankings||{}).forEach(([k,v])=>renderShadowRanking(k,v));
   }catch(e){
@@ -2236,9 +2291,9 @@ async function loadDayTradingPaper(silent=false){
     const pending=(a||[]).find(x=>x.status==='pending'),open=(a||[]).find(x=>x.status==='open'),closed=(a||[]).filter(x=>x.status==='closed').slice(-1)[0];
     if(pending) setTimingBoard('daytrading','buy','진입대기','<b>'+esc(pending.name||pending.code)+'</b> · 신호 '+String(pending.signalTime||'').padStart(4,'0'),'다음 1분봉 시가 모의진입 대기 · 신호가 '+commas(Math.round(pending.signalPrice||0))+'원');
     else setTimingBoard('daytrading','buy','대기','현재 진입대기 신호가 없습니다.','10:00~14:30 서버 기준전략을 계속 감시합니다.');
-    if(open) setTimingBoard('daytrading','sell','보유중','<b>'+esc(open.name||open.code)+'</b> · 진입 '+commas(Math.round(open.entryPrice||0))+'원','손절 '+commas(Math.round((open.entryPrice||0)*.99))+' · 익절 '+commas(Math.round((open.entryPrice||0)*1.02))+' · 15:10 시간청산');
+    if(open) setTimingBoard('daytrading','sell','보유중','<b>'+esc(open.name||open.code)+'</b> · 진입 '+commas(Math.round(open.entryPrice||0))+'원','손절 '+commas(Math.round((open.entryPrice||0)*(1-Number(open.stopPct||l.stopPct||1)/100)))+' · 익절 '+commas(Math.round((open.entryPrice||0)*(1+Number(open.takeProfitPct||l.takeProfitPct||2)/100)))+' · 15:10 시간청산');
     else if(closed) setTimingBoard('daytrading','sell','최근 청산','<b>'+esc(closed.name||closed.code)+'</b> · '+(closed.reason||'청산'),'손익 '+((closed.pnl||0)>=0?'+':'')+Number(closed.pnl||0).toFixed(2)+'%');
-    else setTimingBoard('daytrading','sell','대기','현재 보유 포지션이 없습니다.','진입 후 −1%/+2%/15:10 규칙을 표시합니다.');
+    else setTimingBoard('daytrading','sell','대기','현재 보유 포지션이 없습니다.','선택된 메인전략의 손절·익절·15:10 규칙을 표시합니다.');
     const updated=l.updatedAt?new Date(l.updatedAt).toLocaleTimeString('ko-KR',{hour12:false}):'—';
     msg.textContent='선정 '+(sum.selected||a.length)+'건 · 진입대기 '+(sum.pending||0)+' · 보유 '+(sum.open||0)+' · 청산 '+(sum.closed||0)+' · '+updated+' 갱신';
 
