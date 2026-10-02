@@ -1658,7 +1658,7 @@ if(/^\/paper\/?$/.test(location.pathname)){
   <footer>
     <strong>JK 퀀트</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.108.2</b> · 2026-10-02</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.108.2</b> · 2026-10-03</div>
   </footer>
 </div>
 
@@ -2276,6 +2276,29 @@ function _histKeyPart(x){
   if(x&&x.ts!=null)return 'ts:'+String(x.ts);
   return '';
 }
+/* Firestore/JSON을 왕복하면 객체 필드 순서는 달라질 수 있다.
+   예전 거래(ts/id 없음)를 JSON.stringify 원문 순서로 비교하면 같은 거래를 다른 거래로 보고
+   자동 병합하면서 중복시킬 수 있다. 키를 정렬한 canonical JSON으로 비교한다. */
+function _histStableJson(v){
+  const norm=x=>{
+    if(Array.isArray(x))return x.map(norm);
+    if(x&&typeof x==='object'){
+      const o={}; Object.keys(x).sort().forEach(k=>{o[k]=norm(x[k]);}); return o;
+    }
+    return x;
+  };
+  try{return JSON.stringify(norm(v));}catch(e){return JSON.stringify(v);}
+}
+function _histSemanticKey(x){
+  if(!x||typeof x!=='object')return _histStableJson(x);
+  const o={};
+  Object.keys(x).filter(k=>k!=='id'&&k!=='ts').sort().forEach(k=>{o[k]=x[k];});
+  return _histStableJson(o);
+}
+function _histGroupKey(x){
+  x=x||{};
+  return [x.date||'',x.kind||x.type||'',x.symbol||'',x.leg||'',x.side||''].join('|');
+}
 function _stateHistoryMap(st){
   const m=new Map(), boxes=['inf','vr','ma','ivs','dca','asap'];
   if(!st||typeof st!=='object')return m;
@@ -2286,9 +2309,14 @@ function _stateHistoryMap(st){
       const p=bk+'|'+s.id;
       m.set(p+'|@session','1');
       const h=Array.isArray(s.hist)?s.hist:[];
+      const weakOcc={};
       h.forEach((r,i)=>{
-        const k=_histKeyPart(r)||('fallback:'+String(r&&r.date||'')+':'+String(r&&(r.kind||r.type)||'')+':'+i);
-        m.set(p+'|hist|'+k,JSON.stringify(r));
+        let k=_histKeyPart(r);
+        if(!k){
+          const sem=_histSemanticKey(r), n=(weakOcc[sem]||0)+1; weakOcc[sem]=n;
+          k='legacy:'+sem+':'+n;  // 동일 내용의 실제 복수 체결도 occurrence로 보존
+        }
+        m.set(p+'|hist|'+k,_histStableJson(r));
       });
     }
   }
@@ -2299,9 +2327,14 @@ function _stateHistoryMap(st){
       const p='plan|'+s.id; m.set(p+'|@session','1');
       const l=s.ledger||{};
       if(l.base)m.set(p+'|@base',JSON.stringify(l.base));
+      const weakOcc={};
       (Array.isArray(l.events)?l.events:[]).forEach((r,i)=>{
-        const k=_histKeyPart(r)||('fallback:'+String(r&&r.date||'')+':'+String(r&&r.type||'')+':'+i);
-        m.set(p+'|event|'+k,JSON.stringify(r));
+        let k=_histKeyPart(r);
+        if(!k){
+          const sem=_histSemanticKey(r), n=(weakOcc[sem]||0)+1; weakOcc[sem]=n;
+          k='legacy:'+sem+':'+n;
+        }
+        m.set(p+'|event|'+k,_histStableJson(r));
       });
     }
   }
@@ -2326,12 +2359,35 @@ function _writeLocalExact(st){
 /* 저장본이 갈라져도 사용자에게 잠금/복구 절차를 요구하지 않는다.
    현재 탭의 값은 우선하되 다른 저장본에만 있는 거래·세션은 합쳐서 보존한다. */
 function _mergeRecordArrays(preferred,other){
-  const out=(Array.isArray(preferred)?preferred:[]).map(x=>JSON.parse(JSON.stringify(x)));
-  const seen=new Set(out.map(x=>_histKeyPart(x)||('json:'+JSON.stringify(x))));
-  for(const x of (Array.isArray(other)?other:[])){
-    const k=_histKeyPart(x)||('json:'+JSON.stringify(x));
-    if(seen.has(k))continue;
-    out.push(JSON.parse(JSON.stringify(x)));seen.add(k);
+  const P=Array.isArray(preferred)?preferred:[], O=Array.isArray(other)?other:[];
+  if(!P.length) return O.map(x=>JSON.parse(JSON.stringify(x))); // 새 기기/빈 세션은 원격 원장을 그대로 복구
+  const out=P.map(x=>JSON.parse(JSON.stringify(x)));
+  const strong=new Set(), semAny=new Map(), prefGroups=new Map(), otherGroups=new Map();
+  const addGroup=(m,x)=>{const g=_histGroupKey(x); if(!m.has(g))m.set(g,[]); m.get(g).push(x);};
+  P.forEach(x=>{
+    const k=_histKeyPart(x); if(k)strong.add(k);
+    const sem=_histSemanticKey(x); semAny.set(sem,(semAny.get(sem)||0)+1); addGroup(prefGroups,x);
+  });
+  O.forEach(x=>addGroup(otherGroups,x));
+  const otherWeakSeen=new Map();
+  for(const x of O){
+    const k=_histKeyPart(x), sem=_histSemanticKey(x), g=_histGroupKey(x);
+    if(k&&strong.has(k))continue;                         // 같은 id/ts면 preferred가 현재값
+    if(!k){
+      const n=(otherWeakSeen.get(sem)||0)+1; otherWeakSeen.set(sem,n);
+      if(n<=(semAny.get(sem)||0))continue;               // ts/id 없는 같은 거래 — 필드순서와 무관하게 같은 행
+      /* identity 없는 legacy 행은 삭제/수정 여부를 알 수 없다.
+         이미 원장이 있는 preferred에 '다른 내용'의 옛 행을 자동으로 되살리면
+         매수·매도가 중복되어 T/보유/실현손익/사이클 종료가 모두 깨진다.
+         새 기록은 현행 앱에서 항상 ts가 있으므로, unmatched legacy는 preferred를 따른다. */
+      continue;
+    }
+    /* 한쪽만 legacy이고 날짜·종류가 1:1이면 같은 옛 거래를 편집해 ts가 생긴 경우다.
+       preferred를 정본으로 두고 stale 사본을 합치지 않는다. 여러 체결이 있는 날은 추정하지 않는다. */
+    const pg=prefGroups.get(g)||[], og=otherGroups.get(g)||[];
+    if(pg.length===1&&og.length===1&&!_histKeyPart(pg[0]))continue;
+    if(semAny.has(sem)&&pg.some(r=>!_histKeyPart(r)&&_histSemanticKey(r)===sem))continue;
+    out.push(JSON.parse(JSON.stringify(x))); strong.add(k); semAny.set(sem,(semAny.get(sem)||0)+1);
   }
   try{sortHist(out);}catch(e){}
   return out;
@@ -3896,7 +3952,7 @@ function closeEditInf(){ $('editInfModal').classList.remove('on'); editInfIdx=-1
 function saveInfEdit(){
   if(editInfIdx<0)return; const hist=curStrat().hist, h=hist[editInfIdx]; if(!h){closeEditInf();return;}
   const kind=$('ei_kind').value, date=$('ei_date').value||h.date;
-  const rec={ts:h.ts||Date.now(), date, kind};
+  const rec={ts:h.ts||Date.now(), date, kind}; if(h.id!=null)rec.id=h.id; // 기존 안정 ID는 편집해도 유지
   if(isCx(kind)){
     const sp=+unComma($('ei_sprice').value),sq=+$('ei_sqty').value,bp=+unComma($('ei_bprice').value),bq=+$('ei_bqty').value;
     if(!sp||!sq||!bp||!bq){alert('매도·매수 가격과 수량을 모두 입력하세요');return}
