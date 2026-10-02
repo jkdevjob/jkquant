@@ -11,6 +11,12 @@ const CATALOG={
   soxl:["range_5m","range_30m","vol_0.8","vol_1.2","no_vwap","stop_0.8_tp_1.6","stop_1.5_tp_3.0","hold_45m","hold_120m","entry_by_1030"]
 };
 const MIN_TRADES={opening:30,daytrading:30,crypto:50,soxl:30};
+const PROMOTION_MIN_SCORE=60;
+const NON_PROMOTABLE=new Set(["opening:hold_to_next_open"]);
+function isPromotionEligible(kind,row){
+  if(!row||NON_PROMOTABLE.has(kind+":"+String(row.name||"")))return false;
+  return row.review===true&&row.sampleReady===true&&row.riskOk===true&&Number(row.researchScore)>=PROMOTION_MIN_SCORE;
+}
 function json(o,s=200){return new Response(JSON.stringify(o),{status:s,headers:JH});}
 function n(v,d=0){const x=Number(v);return Number.isFinite(x)?x:d;}
 function clamp(v,lo,hi){return Math.max(lo,Math.min(hi,v));}
@@ -33,7 +39,7 @@ function normalize(kind,report){
     const sf=Number.isFinite(Number(x.sampleFactor))?Number(x.sampleFactor):fb.sampleFactor;
     const parts=x.scoreParts||{};
     const trades=n(parts.trades,x.allTrades!=null?x.allTrades:x.trades);
-    return {
+    const row={
       name,status:x.status||"collecting",rank:null,
       researchScore:+score.toFixed(2),sampleFactor:sf,sampleReady:x.sampleReady===true||sf>=1,
       trades,validationTrades:n(x.holdoutTrades,x.oosTrades),
@@ -41,8 +47,11 @@ function normalize(kind,report){
       validationEdgePct:n(x.validationAvgEdgePct,x.holdoutAvgEdgePct!=null?x.holdoutAvgEdgePct:(x.last20AvgEdgePct!=null?x.last20AvgEdgePct:x.oosAvgEdgePct)),
       recentEdgePct:n(x.recentEdgePct,x.last20AvgEdgePct!=null?x.last20AvgEdgePct:x.holdoutAvgEdgePct),
       riskOk:x.mddOk!==false&&x.profitFactorOk!==false,
-      review:x.status==="review"
+      review:x.status==="review",
+      liveCompatible:!NON_PROMOTABLE.has(kind+":"+name)
     };
+    row.promotionEligible=isPromotionEligible(kind,row);
+    return row;
   });
   rows.sort((a,b)=>(a.trades<=0)-(b.trades<=0)||b.researchScore-a.researchScore||b.sampleFactor-a.sampleFactor||a.name.localeCompare(b.name));
   rows.forEach((x,i)=>x.rank=i+1);
@@ -55,6 +64,11 @@ function normalize(kind,report){
       version:"v1",minShadowStrategies:10,
       formula:"50 + sampleFactor × (20·tanh(allEdge/0.20) + 25·tanh(validationEdge/0.20) + 10·tanh(recentEdge/0.75) + 5·riskSign), clipped 0~100",
       sampleFactor:"min(1, trades/minTrades)"
+    },
+    promotionRule:{
+      automatic:false,minScore:PROMOTION_MIN_SCORE,
+      requirements:["strategy-specific review gate","sampleReady","riskOk","liveCompatible","researchScore >= "+PROMOTION_MIN_SCORE],
+      effective:"next-new-session"
     },
     rows
   };
@@ -69,4 +83,4 @@ export async function onRequestGet(){
     return json({ok:true,generatedAt:j.generatedAt||null,date:j.date||null,autoPromotion:false,rankings});
   }catch(e){return json({ok:false,error:String(e.message||e)},502);}
 }
-export {CATALOG,normalize,fallbackScore};
+export {CATALOG,normalize,fallbackScore,isPromotionEligible,PROMOTION_MIN_SCORE,NON_PROMOTABLE};
