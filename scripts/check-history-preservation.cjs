@@ -1,7 +1,7 @@
 const fs=require('fs'),path=require('path'),vm=require('vm'),assert=require('assert/strict');
 const root=path.join(__dirname,'..');
 const read=p=>fs.readFileSync(path.join(root,p),'utf8');
-const idx=read('index.html'),plan=read('plan.html'),scal=read('scalping.html'),ipo=read('ipo.html'),admin=read('admin.html'),autotrade=read('functions/api/autotrade.js');
+const idx=read('index.html'),plan=read('plan.html'),scal=read('scalping.html'),ipo=read('ipo.html'),admin=read('admin.html'),backtest=read('backtest.html'),claude=read('claude.html'),job=read('job.html'),autotrade=read('functions/api/autotrade.js');
 
 function fn(src,marker){
   const start=src.indexOf(marker);assert(start>=0,'missing '+marker);
@@ -184,6 +184,12 @@ ok('자산플랜도 stateV2/fiveYearPlanV2에만 쓴다',
 ok('관리자 기존세션 적용도 protected stateV2만 갱신',
   /stateV2:state/.test(admin)&&/stateV2Rev:nr/.test(admin)&&!/state,updated:now,stateRev:nr/.test(admin));
 ok('서버 자동주문은 stateV2 정본을 우선 읽음',/doc\.stateV2 \|\| doc\.state/.test(autotrade));
+
+/* UI — 브라우저 탭 제목은 전 페이지 동일한 브랜드 prefix */
+for(const [name,src] of [['운영',idx],['자산플랜',plan],['단타',scal],['공모주',ipo],['관리자',admin],['백테스트',backtest],['단타 클로드',claude],['JOB',job]]){
+  const m=src.match(/<title>([^<]+)<\/title>/i);
+  ok(name+' 브라우저 탭 제목은 JK 퀀트 — 메뉴명 형식',!!m&&m[1].startsWith('JK 퀀트 — '));
+}
 
 /* 6. 공모주 기록 — remote replace 금지 */
 ok('IPO 기록은 transaction에서 remote+local union',fn(ipo,'function save()').includes('runTransaction')
