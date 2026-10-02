@@ -260,7 +260,7 @@ canvas{display:block;width:100%;height:auto}
 
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Morning Scalping</div><h1>JK <span class="v">퀀트</span> 단타 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="scVer">v1.35.1</span></h1></div>
+    <div><div class="kicker">Morning Scalping</div><h1>JK <span class="v">퀀트</span> 단타 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="scVer">v1.35.2</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -1522,7 +1522,8 @@ async function loadDailyStrategyResults(force){
     body.innerHTML='<div class="daily-result-list">'+rows+'</div>';
     body.dataset.loaded='1';
     const stamp=String(j.generatedAt||'').replace('T',' ').slice(0,16);
-    meta.textContent='기준일 '+esc(j.kstDate||'')+' · 갱신 '+stamp+(force?' · 새로고침 완료':'');\n    renderDailyCumulativeChart();
+    meta.textContent='기준일 '+esc(j.kstDate||'')+' · 갱신 '+stamp+(force?' · 새로고침 완료':'');
+    renderDailyCumulativeChart();
   }catch(e){
     meta.textContent='결과 조회 실패';
     body.innerHTML='<div class="warn">'+esc(e.message||String(e))+'</div>';
