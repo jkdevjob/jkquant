@@ -53,7 +53,7 @@ table.doc td{padding:6px 6px}
   <div class="gnote"><a href="/" style="color:var(--faint)">← 운영 화면으로</a></div>
 </div></div>
 <header><div class="wrap"><div class="htop">
-  <div><div class="kicker">Claude Scalping</div><h1>JK <span class="v">퀀트</span> 단타 <span class="ver" id="clVer">v2.10.0</span></h1></div>
+  <div><div class="kicker">Claude Scalping</div><h1>JK <span class="v">퀀트</span> 단타 <span class="ver" id="clVer">v2.10.1</span></h1></div>
   <div class="hright">
     <div class="userbadge" id="userbadge"></div>
   <div class="jkmenu" id="jkmenuWrap">
@@ -208,34 +208,36 @@ function paperCurves(){
   var eq=1;out.coin_bo=Object.keys(m).sort().map(function(d){eq*=1+(m[d][0]+m[d][1])/2/100;return {date:d,cumPct:(eq-1)*100,traded:m[d][2]}});   // 코인 칸 = 두 코인 반반
   return out;
 }
-function trendSvg(series){
+function trendSvg(series){                                   // 지피티 단타 오늘 탭 그래프와 같은 크기·격자(날짜 순번 축)
   var keys=Object.keys(TREND_C).filter(function(k){return (series[k]||[]).length});
-  var all=[];keys.forEach(function(k){series[k].forEach(function(p){all.push(p)})});
-  if(all.length<2)return null;
-  var ts=all.map(function(p){return Date.parse(p.date)}),t0=Math.min.apply(null,ts),t1=Math.max.apply(null,ts);if(t1===t0)t1=t0+864e5;
-  var vs=[0].concat(all.map(function(p){return p.cumPct})),lo=Math.min.apply(null,vs),hi=Math.max.apply(null,vs);if(hi-lo<1){hi+=0.5;lo-=0.5}
-  var W=360,H=190,P={l:36,r:8,t:10,b:20},x=function(d){return P.l+(Date.parse(d)-t0)*(W-P.l-P.r)/(t1-t0)},y=function(v){return P.t+(hi-v)*(H-P.t-P.b)/(hi-lo)};
-  var g="<line x1='"+P.l+"' x2='"+(W-P.r)+"' y1='"+y(0).toFixed(1)+"' y2='"+y(0).toFixed(1)+"' stroke='var(--border2)' stroke-width='1'/>"+
-    "<text x='2' y='"+(P.t+8)+"' fill='var(--faint)' font-size='9'>"+pct(hi,1)+"</text><text x='2' y='"+(H-P.b)+"' fill='var(--faint)' font-size='9'>"+pct(lo,1)+"</text>"+
-    "<text x='"+P.l+"' y='"+(H-5)+"' fill='var(--faint)' font-size='9'>"+esc(new Date(t0).toISOString().slice(5,10))+"</text><text x='"+(W-P.r)+"' y='"+(H-5)+"' fill='var(--faint)' font-size='9' text-anchor='end'>"+esc(new Date(t1).toISOString().slice(5,10))+"</text>";
-  keys.forEach(function(k){var pts=series[k],c=TREND_C[k];
-    g+="<polyline fill='none' stroke='"+c+"' stroke-width='2' stroke-linejoin='round' points='"+pts.map(function(p){return x(p.date).toFixed(1)+","+y(p.cumPct).toFixed(1)}).join(" ")+"'/>";
-    var many=pts.length>25;                                     // 점이 많으면 점은 숨기고(선만 보이게) 손가락 대는 자리로만 쓴다
-    g+=pts.map(function(p,i){var last=i===pts.length-1;return "<circle cx='"+x(p.date).toFixed(1)+"' cy='"+y(p.cumPct).toFixed(1)+"' r='"+(many&&!last?5:4)+"' fill='"+c+"'"+(many&&!last?" fill-opacity='0'":" stroke='var(--surf)' stroke-width='1.5'")+"><title>"+TREND_N[k]+" "+esc(p.date)+" 누적 "+pct(p.cumPct)+"</title></circle>"}).join("")});
+  var dset={};keys.forEach(function(k){series[k].forEach(function(p){dset[p.date]=1})});
+  var dates=Object.keys(dset).sort();if(dates.length<2)return null;
+  var di={};dates.forEach(function(d,i){di[d]=i});
+  var vs=[0];keys.forEach(function(k){series[k].forEach(function(p){vs.push(p.cumPct)})});
+  var lo=Math.min.apply(null,vs),hi=Math.max.apply(null,vs);if(hi-lo<1){lo-=.5;hi+=.5}var pad=(hi-lo)*.12;lo-=pad;hi+=pad;
+  var W=820,H=300,P={l:54,r:18,t:22,b:42},n=dates.length,x=function(d){return P.l+di[d]*(W-P.l-P.r)/(n-1)},y=function(v){return P.t+(hi-v)*(H-P.t-P.b)/(hi-lo)};
+  var g="";for(var i=0;i<5;i++){var v=hi-(hi-lo)*i/4,yy=y(v).toFixed(1);g+="<line x1='"+P.l+"' y1='"+yy+"' x2='"+(W-P.r)+"' y2='"+yy+"' stroke='var(--border)' stroke-width='1'/><text x='"+(P.l-8)+"' y='"+(+yy+4)+"' text-anchor='end' fill='var(--faint)' font-size='10'>"+(v>=0?"+":"")+v.toFixed(1)+"%</text>"}
+  if(lo<=0&&hi>=0)g+="<line x1='"+P.l+"' y1='"+y(0).toFixed(1)+"' x2='"+(W-P.r)+"' y2='"+y(0).toFixed(1)+"' stroke='var(--faint)' stroke-dasharray='4 4'/>";
+  [0,Math.floor((n-1)/2),n-1].filter(function(v,i,a){return a.indexOf(v)===i}).forEach(function(i){g+="<text x='"+x(dates[i]).toFixed(1)+"' y='"+(H-16)+"' text-anchor='"+(i===0?"start":i===n-1?"end":"middle")+"' fill='var(--faint)' font-size='10'>"+esc(dates[i].slice(5))+"</text>"});
+  keys.forEach(function(k){var pts=series[k],c=TREND_C[k],many=pts.length>25;
+    g+="<polyline fill='none' stroke='"+c+"' stroke-width='3' stroke-linejoin='round' stroke-linecap='round' points='"+pts.map(function(p){return x(p.date).toFixed(1)+","+y(p.cumPct).toFixed(1)}).join(" ")+"'/>";
+    g+=pts.map(function(p,i){var last=i===pts.length-1;return "<circle cx='"+x(p.date).toFixed(1)+"' cy='"+y(p.cumPct).toFixed(1)+"' r='"+(many&&!last?5:3)+"' fill='"+c+"'"+(many&&!last?" fill-opacity='0'":"")+"><title>"+TREND_N[k]+" · "+esc(p.date)+" · 누적 "+pct(p.cumPct)+"</title></circle>"}).join("")});
   var leg=keys.map(function(k){var l=series[k][series[k].length-1],nt=!((series[k].tradeDays!=null?series[k].tradeDays:series[k].filter(function(p){return p.traded}).length)>0);
-    return "<span style='display:inline-block;white-space:nowrap;margin-right:10px'><span style='color:"+TREND_C[k]+"'>━</span> "+TREND_N[k]+" "+(nt?NOTRADE:"<b class='"+cls(l.cumPct)+"'>"+pct(l.cumPct)+"</b>")+"</span>"}).join(" ");
-  return "<svg viewBox='0 0 "+W+" "+H+"' style='width:100%;max-width:620px;display:block' role='img' aria-label='전략별 누적 수익률 추이'>"+g+"</svg><div class='sub' style='margin-top:4px;line-height:1.9'>"+leg+"</div>";
+    return "<span style='display:inline-flex;align-items:center;gap:5px;white-space:nowrap'><i style='width:10px;height:10px;border-radius:50%;background:"+TREND_C[k]+"'></i>"+TREND_N[k]+" "+(nt?NOTRADE:"<b class='"+cls(l.cumPct)+"'>"+pct(l.cumPct)+"</b>")+"</span>"}).join(" ");
+  return "<div style='overflow-x:auto'><svg viewBox='0 0 "+W+" "+H+"' style='display:block;width:100%;min-width:620px;height:auto' role='img' aria-label='전략별 누적 수익률 추이'>"+g+"</svg></div>"+
+    "<div class='row' style='gap:12px;margin-top:7px;font-size:11px'>"+leg+"</div>";
 }
 function trendBlock(){
   var cv=(J.lab||{}).curves||{},pap=paperCurves(),rec=cv.series||{};
   var paperN=Object.keys(pap).reduce(function(a,k){return Math.max(a,(pap[k]||[]).length)},0);
-  if(!TREND_MODE)TREND_MODE=paperN>=2?"paper":"recon";
+  var paperTraded=Object.keys(pap).some(function(k){return (pap[k]||[]).some(function(p){return p.traded})});
+  if(!TREND_MODE)TREND_MODE=paperN>=2&&paperTraded?"paper":"recon";   // 모의 장부에 매매가 하나도 없으면 0% 평선뿐이라 재구성부터 보인다
   var td=cv.tradeDays||{};Object.keys(rec).forEach(function(k){if(rec[k])rec[k].tradeDays=td[k]});
-  var sv=trendSvg(TREND_MODE==="paper"?pap:rec);
+  var sv=TREND_MODE==="paper"&&!paperTraded?null:trendSvg(TREND_MODE==="paper"?pap:rec);
   var btn=function(m,l){return "<button class='seg"+(TREND_MODE===m?" on":"")+"' onclick='TREND_MODE=\""+m+"\";render()'>"+l+"</button>"};
   var note=TREND_MODE==="paper"?"실제 모의투자 장부(날짜별 한 번 기록) 기준 · 칸 자금 100% · 코인은 두 코인 반반 · 매매 없는 날 0%.":esc(cv.note||"")+" · "+esc(cv.start||"")+" ~";
   return "<div style='display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-bottom:8px'><b>📈 전략별 누적 결과 · 수익률 추이</b><span style='display:flex;gap:6px'>"+btn("paper","모의 장부 (10/1~)")+btn("recon","최근 60일 재구성 (참고)")+"</span></div>"+
-    (sv||"<p class='note'>"+(TREND_MODE==="paper"?"모의 장부에 그릴 만큼 쌓인 날이 아직 없습니다(코인·SOXL·계좌는 10/3 부터). '최근 60일 규칙 재구성'에서 같은 규칙의 최근 흐름을 볼 수 있습니다.":"재구성 자료가 아직 없습니다.")+"</p>")+
+    (sv||"<p class='note'>"+(TREND_MODE==="paper"?(paperN>=2?"모의 장부("+paperN+"일)에 아직 매매가 한 번도 없어 모든 전략이 0%입니다 — 그래프는 첫 매매부터 그립니다.":"모의 장부에 그릴 만큼 쌓인 날이 아직 없습니다(코인·SOXL·계좌는 10/3 부터).")+" '최근 60일 재구성'에서 같은 규칙의 최근 흐름을 볼 수 있습니다.":"재구성 자료가 아직 없습니다.")+"</p>")+
     "<p class='note'>"+note+" 점에 손가락을 대면 날짜별 값이 보입니다.</p>";
 }
 // 🆚 GPT 대결 — 실시간 모의매매 기록끼리, 같은 시작일·같은 비용표. 색: 클로드 = 파랑, GPT = 주황(검증된 2색, 이름표 같이)
