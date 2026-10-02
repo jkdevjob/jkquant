@@ -181,9 +181,16 @@ function collectEvents(date,target,parts){
     const buyDelivery={channel:"telegram",sent:!!tel.buySent,messageId:tel.buyMessageId||null,error:tel.buyError||null};
     const sellDelivery={channel:"telegram",sent:!!tel.sellSent,messageId:tel.sellMessageId||null,error:tel.sellError||null};
     const mainVariant=String(p.mainVariant||"baseline");
-    for(const x of (p.buyEvents||[]))out.push(liveEvent(date,target,"buy",mainVariant,x,buyDelivery,null));
-    for(const x of (p.sellEvents||[]))out.push(liveEvent(date,target,"sell",mainVariant,x,sellDelivery,null));
+    const baselineDelivery=mainVariant==="baseline"?buyDelivery:{channel:"telegram",sent:false,messageId:null,error:null,reason:"canonical_baseline_observation"};
+    const baselineSellDelivery=mainVariant==="baseline"?sellDelivery:{channel:"telegram",sent:false,messageId:null,error:null,reason:"canonical_baseline_observation"};
+    for(const x of (p.baselineBuyEvents||[]))out.push(liveEvent(date,target,"buy","baseline",x,baselineDelivery,null));
+    for(const x of (p.baselineSellEvents||[]))out.push(liveEvent(date,target,"sell","baseline",x,baselineSellDelivery,null));
+    if(mainVariant!=="baseline"){
+      for(const x of (p.buyEvents||[]))out.push(liveEvent(date,target,"buy",mainVariant,x,buyDelivery,null));
+      for(const x of (p.sellEvents||[]))out.push(liveEvent(date,target,"sell",mainVariant,x,sellDelivery,null));
+    }
     for(const v of (p.shadowEvents||[])){
+      if(String(v.name||"shadow")===mainVariant)continue; // 운영 메인 이벤트와 동일 ID 중복 방지
       const delivery={channel:"telegram",sent:false,messageId:null,error:null,reason:"shadow_strategy_not_notified"};
       for(const x of (v.buyEvents||[]))out.push(liveEvent(date,target,"buy",String(v.name||"shadow"),x,delivery,v));
       for(const x of (v.sellEvents||[]))out.push(liveEvent(date,target,"sell",String(v.name||"shadow"),x,delivery,v));
