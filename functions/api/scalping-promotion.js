@@ -71,10 +71,12 @@ export function promotionDecision(strategy,variant,ranking){
 }
 export async function onRequestGet({request,env}){
   const who=await ownerInfo(request,env);if(!who.ok)return json({ok:false,error:who.error},401);
-  try{
-    const pairs=await Promise.all(Object.keys(WORKERS).map(async strategy=>[strategy,await workerConfig(env,strategy)]));
-    return json({ok:true,effective:"next-new-session",autoPromotion:false,configs:Object.fromEntries(pairs)});
-  }catch(e){return json({ok:false,error:String(e.message||e)},502);}
+  const configs={},errors={};
+  await Promise.all(Object.keys(WORKERS).map(async strategy=>{
+    try{configs[strategy]=await workerConfig(env,strategy);}
+    catch(e){errors[strategy]=String(e.message||e);}
+  }));
+  return json({ok:true,effective:"next-new-session",autoPromotion:false,configs,errors});
 }
 export async function onRequestPost({request,env}){
   const who=await ownerInfo(request,env);if(!who.ok)return json({ok:false,error:who.error},401);
