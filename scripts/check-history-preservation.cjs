@@ -39,10 +39,11 @@ ok('운영 cloud read 실패는 원격 덮어쓰기 없이 pending으로 두고 
   && /stateCloudPending=true/.test(fn(idx,'async function pullRemote()'))
   && !idx.includes('⚠️ 거래이력 보호:')
   && !idx.includes('클라우드 저장을 잠갔습니다'));
-ok('구버전 client가 revision 없이 쓴 변경도 history fingerprint로 감지하고 자동 병합',
+ok('운영 원장은 DB revision 충돌 시 stale 이력을 자동 병합하지 않고 저장을 중단',
   /stateCloudHistorySig/.test(idx)
   && /remoteChanged=rev!==stateCloudRev\|\|\(stateCloudHistorySig!==''&&remoteSig!==stateCloudHistorySig\)/.test(fn(idx,'async function _commitStateRemote(where)'))
-  && /candidate=_mergeHistorySafeState\(candidate,remote\)/.test(fn(idx,'async function _commitStateRemote(where)')));
+  && /REMOTE_HISTORY_CONFLICT/.test(fn(idx,'async function _commitStateRemote(where)'))
+  && !/candidate=_mergeHistorySafeState\(candidate,remote\)/.test(fn(idx,'async function _commitStateRemote(where)')));
 
 const idxFns=[
   '_histKeyPart','_histStableJson','_histSemanticKey','_histGroupKey',
@@ -92,9 +93,18 @@ ok('서로 다른 탭에서 추가한 거래는 자동병합 후 하나도 빠�
   const m=IC._mergeHistorySafeState(splitLocal,splitRemote),ts=m.inf.sessions[0].hist.map(x=>x.ts).sort();
   return JSON.stringify(ts)===JSON.stringify([1,2,3,4]);
 })());
-ok('일반 save는 거래 입력 확정 즉시 Firebase 저장 경로를 호출',
-  fn(idx,'function save()').includes('pushRemoteNow()')
+ok('일반 save는 거래 입력 즉시 Firebase 저장 promise를 반환',
+  fn(idx,'function save()').includes('return pushRemoteNow()')
   && fn(idx,'async function pushRemote()').includes('pushRemoteNow()'));
+ok('브라우저 운영 캐시는 거래이력을 제거하고 저장',
+  /function _stateCacheCopy\(st\)/.test(idx)
+  && /b\.sessions\.forEach\(ss=>\{ if\(ss\)ss\.hist=\[\]; \}\)/.test(idx)
+  && /JSON\.stringify\(_stateCacheCopy\(S\)\)/.test(fn(idx,'function saveLocal()')));
+ok('로그인 후 새로고침은 local 거래이력이 아니라 Firebase remote를 그대로 정본으로 사용',
+  /S=JSON\.parse\(JSON\.stringify\(remote\)\)/.test(fn(idx,'async function pullRemote()'))
+  && !/_historyRelation\(local,remote\)/.test(fn(idx,'async function pullRemote()')));
+ok('로그인 사용자는 storage 이벤트로 운영 원장을 갈아끼우지 않음',
+  /if\(curUid\)return/.test(idx.slice(idx.indexOf("window.addEventListener('storage'"),idx.indexOf('/* ── Firebase Firestore',idx.indexOf("window.addEventListener('storage'")))));
 
 /* 2. 모의 기록 재생 — 빈 중간 장부를 cloud에 올리지 않는다 */
 const all=fn(idx,'async function applyAllSimStart()');
@@ -114,12 +124,28 @@ ok('자산플랜 운영 state도 protected stateV2 transaction',
   && /stateV2:candidate/.test(fn(plan,'async function saveOperatingState()')));
 ok('자산플랜 cloud 확인 전 fiveYearPlan remote write 금지',
   /if\(!planCloudHydrated\)/.test(fn(plan,'async function cloudSave()')));
-ok('명시적 삭제·초기화 전에 local recovery snapshot',plan.includes('function planManualBackup(reason)')
-  && fn(plan,'function delLedgerTrade(id)').includes("planManualBackup('sleeve-trade-delete:")
-  && fn(plan,'function resetLedger()').includes("planManualBackup('sleeve-ledger-reset:")
+ok('명시적 삭제·초기화 백업은 브라우저 영구저장이 아니라 메모리만 사용',
+  /let planManualBackupMemory=null/.test(plan)
+  && !fn(plan,'function planManualBackup(reason)').includes('localStorage.setItem')
+  && fn(plan,'async function delLedgerTrade(id)').includes("planManualBackup('sleeve-trade-delete:")
+  && fn(plan,'async function resetLedger()').includes("planManualBackup('sleeve-ledger-reset:")
   && fn(plan,'async function alphaDeleteEvent(id)').includes("planManualBackup('alpha-event-delete:")
   && fn(plan,'async function alphaResetLedger()').includes("planManualBackup('alpha-ledger-reset')"));
-ok('QLD/SGOV 한 건 삭제도 confirm 필수',fn(plan,'function delLedgerTrade(id)').includes('if(!confirm('));
+ok('QLD/SGOV 한 건 삭제도 confirm 필수',fn(plan,'async function delLedgerTrade(id)').includes('if(!confirm('));
+ok('5년플랜 브라우저 캐시는 alpha/sleeve 거래이력을 제거',
+  /function planSettingsCacheCopy\(o\)/.test(plan)
+  && /x\.alphaLedger&&Array\.isArray\(x\.alphaLedger\.events\)\)x\.alphaLedger\.events=\[\]/.test(plan)
+  && /x\.sleeveLedger&&Array\.isArray\(x\.sleeveLedger\.trades\)\)x\.sleeveLedger\.trades=\[\]/.test(plan));
+ok('5년플랜 새로고침은 Firebase 현재 원장을 직접 적용하고 과거 로컬 백업을 자동선택하지 않음',
+  /apply\(cloneObj\(v\)\)/.test(fn(plan,'async function cloudLoad(user)'))
+  && !/planRecoveryScore/.test(fn(plan,'async function cloudLoad(user)'))
+  && !/_cloud_previous|_cloud_recovery|_manual_backup/.test(fn(plan,'async function cloudLoad(user)')));
+ok('현금/거래 삭제는 DB 응답을 기다리고 실패 시 롤백',
+  /const ok=await cloudSave\(\)/.test(fn(plan,'async function alphaDeleteEvent(id)'))
+  && /alphaLedger=before/.test(fn(plan,'async function alphaDeleteEvent(id)'))
+  && /const ok=await cloudSave\(\)/.test(fn(plan,'async function delLedgerTrade(id)')));
+ok('쿼터매도 입력 화면이 보유÷4 내림 수량을 명시',
+  /보유 \$\{nfix\(_c0\.qty\|\|0,0\)\}주 → 쿼터매도 \$\{_q\}주 \(보유÷4 내림\)/.test(idx));
 
 const pFns=[
   'planOpHistoryMap','planOpPreserves','planMapSig','planOpHistorySig',
