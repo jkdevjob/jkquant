@@ -20,11 +20,11 @@ main{padding:22px 0 70px}.hero{display:flex;gap:12px;justify-content:space-betwe
 .filters input[type="date"]{display:block;line-height:1.2;color-scheme:dark;-webkit-appearance:none;appearance:none}.filters input[type="date"]::-webkit-date-and-time-value{text-align:left;margin:0}.filters input[type="date"]::-webkit-calendar-picker-indicator{opacity:.8}
 .btn{border:1px solid var(--border);background:var(--surf2);color:var(--text);border-radius:8px;padding:0 12px;font-weight:800;cursor:pointer}
 .summary{display:flex;justify-content:space-between;gap:12px;align-items:center;margin:8px 0 11px;color:var(--dim);font-size:12px}.cards{display:grid;gap:9px}.card{background:var(--surf);border:1px solid var(--border);border-radius:12px;padding:13px}.card:hover{border-color:var(--border2)}
-.cardtop{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}.titleline{display:flex;align-items:baseline;gap:7px;min-width:0;flex-wrap:wrap}.title{font-size:15px;font-weight:900;line-height:1.4;text-decoration:none}.title:hover{color:var(--gold)}.company-inline{font-size:11px;font-weight:700;color:var(--dim);white-space:nowrap}.date{font-size:11px;color:var(--faint);white-space:nowrap}
+.cardtop{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}.titleline{display:flex;align-items:baseline;gap:7px;min-width:0;flex-wrap:wrap}.title{font-size:15px;font-weight:900;line-height:1.4;text-decoration:none}.title:hover{color:var(--gold)}.company-inline{font-size:11px;font-weight:700;color:var(--dim);white-space:nowrap}.card-actions{display:flex;align-items:center;gap:8px;flex:0 0 auto}.date{font-size:11px;color:var(--faint);white-space:nowrap}.scrap-btn{width:30px;height:30px;border-radius:8px;border:1px solid var(--border);background:var(--surf2);color:var(--faint);cursor:pointer;font-size:17px;line-height:1;display:flex;align-items:center;justify-content:center;padding:0}.scrap-btn:hover{border-color:var(--gold);color:var(--gold)}.scrap-btn.on{color:var(--gold);border-color:rgba(245,196,81,.55);background:rgba(245,196,81,.10)}
 .meta{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}.tag{font-size:10.5px;padding:3px 7px;border-radius:999px;background:var(--surf2);color:var(--dim);border:1px solid var(--border)}.tag.hot{color:var(--gold)}.tag.ai{color:#aeb0ff}.tag.reg{color:var(--green)}.tag.pay{color:#ffadbe}
 .desc{margin-top:9px;color:var(--dim);font-size:12px;line-height:1.6}.src{margin-top:8px;color:var(--faint);font-size:11px}.empty,.loading{padding:45px 18px;text-align:center;color:var(--dim);background:var(--surf);border:1px solid var(--border);border-radius:12px}.more{display:flex;justify-content:center;margin-top:14px}.warn{padding:9px 11px;border-radius:9px;background:rgba(248,123,140,.08);border:1px solid rgba(248,123,140,.25);color:#ffb3be;font-size:11px;margin-bottom:10px}
 @media(max-width:850px){.hero{align-items:flex-start;flex-direction:column}.filters{grid-template-columns:1fr 1fr}.filters .search{grid-column:1/-1}}
-@media(max-width:560px){.wrap{padding:0 11px}.filters{grid-template-columns:1fr}.filters .search{grid-column:auto}.cardtop{display:block}.date{margin-top:4px}.hero h2{font-size:20px}}
+@media(max-width:560px){.wrap{padding:0 11px}.filters{grid-template-columns:1fr}.filters .search{grid-column:auto}.cardtop{display:block}.card-actions{margin-top:7px;justify-content:space-between}.date{margin-top:0}.hero h2{font-size:20px}}
 </style>
 </head>
 <body>
@@ -49,7 +49,7 @@ main{padding:22px 0 70px}.hero{display:flex;gap:12px;justify-content:space-betwe
 <main><div class="wrap">
   <div class="hero">
     <div><h2>최근 30일 채용공고</h2><div class="sub" id="updated">잡코리아·사람인·고용24 등 주요 채용사이트 통합</div></div>
-    <div class="stat"><span class="pill">전체 <b id="totalCnt">-</b></span><span class="pill">조회 <b id="viewCnt">-</b></span><span class="pill">중복 제거</span></div>
+    <div class="stat"><span class="pill">전체 <b id="totalCnt">-</b></span><span class="pill">조회 <b id="viewCnt">-</b></span><span class="pill">스크랩 <b id="scrapCnt">0</b></span><span class="pill">중복 제거</span></div>
   </div>
   <div id="sourceWarn"></div>
   <div class="tabs" id="tabs">
@@ -59,6 +59,7 @@ main{padding:22px 0 70px}.hero{display:flex;gap:12px;justify-content:space-betwe
     <button class="tab" data-cat="salary500">월 500+</button>
     <button class="tab" data-cat="salary450">월 450~499</button>
     <button class="tab" data-cat="short_term">단기알바</button>
+    <button class="tab" data-cat="scrap">★ 스크랩</button>
   </div>
   <div class="filters">
     <input class="search" id="keyword" placeholder="검색어: Java, Spring, 회사명, 업무내용...">
@@ -82,8 +83,50 @@ function jkMenuToggle(e){if(e)e.stopPropagation();var p=document.getElementById(
 function jkMenuClose(){var p=document.getElementById("jkmenuPop");if(p)p.hidden=true}
 document.addEventListener("click",function(e){var m=document.getElementById("jkmenuWrap");if(m&&!m.contains(e.target))jkMenuClose()});
 function esc(s){return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;")}
-var CAT_LABEL={java_ai:"Java·AI",regular_dev:"개발자 정규직",salary500:"월500+",salary450:"월450~499",short_term:"단기알바"};
+var CAT_LABEL={java_ai:"Java·AI",regular_dev:"개발자 정규직",salary500:"월500+",salary450:"월450~499",short_term:"단기알바",scrap:"스크랩"};
 var DATA={jobs:[],sourceStatuses:{}},activeCat="all",shown=50,filtered=[];
+var SCRAP_STORAGE_KEY="jkquant_job_scraps_v1",SCRAPS={};
+function scrapKey(j){return String((j&&j.url)||(j&&j.id)||"").trim()}
+function loadScraps(){
+  try{
+    var raw=localStorage.getItem(SCRAP_STORAGE_KEY);
+    var parsed=raw?JSON.parse(raw):{};
+    SCRAPS=parsed&&typeof parsed==="object"&&!Array.isArray(parsed)?parsed:{}
+  }catch(e){SCRAPS={}}
+}
+function saveScraps(){try{localStorage.setItem(SCRAP_STORAGE_KEY,JSON.stringify(SCRAPS))}catch(e){}}
+function isScrapped(j){var k=scrapKey(j);return !!(k&&SCRAPS[k])}
+function syncScrapSnapshots(){
+  var changed=false;
+  (DATA.jobs||[]).forEach(function(j){
+    var k=scrapKey(j);
+    if(k&&SCRAPS[k]){SCRAPS[k]={savedAt:SCRAPS[k].savedAt||new Date().toISOString(),job:j};changed=true}
+  });
+  if(changed)saveScraps()
+}
+function scrapJobs(){
+  var current={};
+  (DATA.jobs||[]).forEach(function(j){var k=scrapKey(j);if(k)current[k]=j});
+  return Object.keys(SCRAPS).map(function(k){
+    var saved=SCRAPS[k]||{};
+    return current[k]||saved.job||null
+  }).filter(Boolean)
+}
+function renderScrapCount(){
+  var el=document.getElementById("scrapCnt");
+  if(el)el.textContent=Object.keys(SCRAPS).length.toLocaleString()
+}
+function toggleScrapByKey(key){
+  key=String(key||"");
+  if(!key)return;
+  if(SCRAPS[key])delete SCRAPS[key];
+  else{
+    var job=(DATA.jobs||[]).concat(filtered||[]).find(function(j){return scrapKey(j)===key});
+    if(!job)return;
+    SCRAPS[key]={savedAt:new Date().toISOString(),job:job}
+  }
+  saveScraps();renderScrapCount();applyFilters()
+}
 function effectiveDate(j){return j.postedDate||j.firstSeen||""}
 function fmtDate(s){if(!s)return "날짜 미상";var p=s.split("-");return p.length===3?p[0]+"."+p[1]+"."+p[2]:s}
 function kstToday(){var d=new Date(Date.now()+9*3600*1000);return d.toISOString().slice(0,10)}
@@ -124,9 +167,11 @@ function isRegularJob(j){
 }
 function applyFilters(){
   var q=document.getElementById("keyword").value.trim().toLowerCase(),period=document.getElementById("period").value,region=document.getElementById("region").value,employment=document.getElementById("employment").value,source=document.getElementById("source").value,sort=document.getElementById("sort").value,from=document.getElementById("fromDate").value,to=document.getElementById("toDate").value,cutoff=(!from&&/^\d+$/.test(period))?daysAgo(+period):"";
-  filtered=(DATA.jobs||[]).filter(function(j){
-    if(activeCat!=="all"&&(j.categories||[]).indexOf(activeCat)<0)return false;
-    var d=effectiveDate(j);if(cutoff&&d&&d<cutoff)return false;if(from&&d&&d<from)return false;if(to&&d&&d>to)return false;
+  var sourceJobs=activeCat==="scrap"?scrapJobs():(DATA.jobs||[]);
+  filtered=sourceJobs.filter(function(j){
+    if(activeCat!=="all"&&activeCat!=="scrap"&&(j.categories||[]).indexOf(activeCat)<0)return false;
+    if(activeCat==="scrap"&&!isScrapped(j))return false;
+    var d=effectiveDate(j);if(activeCat!=="scrap"){if(cutoff&&d&&d<cutoff)return false;if(from&&d&&d<from)return false;if(to&&d&&d>to)return false}
     if(region&&(j.locations||[]).indexOf(region)<0)return false;
     if(employment==="regular"&&!isRegularJob(j))return false;
     if(employment==="nonregular"&&isRegularJob(j))return false;
@@ -142,7 +187,7 @@ function applyFilters(){
   shown=+document.getElementById("pageSize").value||50;renderList()
 }
 function renderList(){
-  document.getElementById("totalCnt").textContent=DATA.jobs.length.toLocaleString();document.getElementById("viewCnt").textContent=filtered.length.toLocaleString();document.getElementById("resultText").textContent=filtered.length.toLocaleString()+"건 · "+(activeCat==="all"?"전체":CAT_LABEL[activeCat]||activeCat);
+  document.getElementById("totalCnt").textContent=DATA.jobs.length.toLocaleString();document.getElementById("viewCnt").textContent=filtered.length.toLocaleString();renderScrapCount();document.getElementById("resultText").textContent=filtered.length.toLocaleString()+"건 · "+(activeCat==="all"?"전체":CAT_LABEL[activeCat]||activeCat)+(activeCat==="scrap"?" · 이 브라우저에 저장":"");
   var rows=filtered.slice(0,shown),el=document.getElementById("list");if(!rows.length){el.innerHTML='<div class="empty">조건에 맞는 공고가 없습니다.</div>';document.getElementById("moreBtn").hidden=true;return}
   el.innerHTML=rows.map(function(j){
     var cats=(j.categories||[]).map(function(c){return '<span class="tag '+tagClass(c)+'">'+esc(CAT_LABEL[c]||c)+"</span>"}).join("");
@@ -150,17 +195,24 @@ function renderList(){
     var salary=j.salary&&j.salary.label?'<span class="tag pay">'+esc(j.salary.label)+"</span>":"";
     var company='<span class="company-inline">'+esc((j.company||"").trim()||"업체 비공개")+"</span>";
     var dateLabel=j.postedDate?fmtDate(j.postedDate)+" · "+esc(j.dateSource||"등록일"):fmtDate(j.firstSeen)+" · 최초수집";
-    return '<article class="card"><div class="cardtop"><div class="titleline"><a class="title" href="'+esc(j.url)+'" target="_blank" rel="noopener">'+esc(j.title||"제목 없음")+'</a>'+company+'</div><div class="date">'+dateLabel+'</div></div><div class="meta">'+cats+loc+salary+'</div>'+(j.body?'<div class="desc">'+esc(j.body)+"</div>":"")+'<div class="src">출처: '+esc((j.sources||[]).join(" / ")||j.source||"-")+" · 마지막 확인 "+esc(j.lastSeen||"-")+"</div></article>"
+    var key=scrapKey(j),scrapped=isScrapped(j);
+    var scrap='<button class="scrap-btn'+(scrapped?' on':'')+'" type="button" data-scrap-key="'+esc(key)+'" aria-label="'+(scrapped?'스크랩 해제':'스크랩')+'" title="'+(scrapped?'스크랩 해제':'스크랩')+'">'+(scrapped?'★':'☆')+'</button>';
+    return '<article class="card"><div class="cardtop"><div class="titleline"><a class="title" href="'+esc(j.url)+'" target="_blank" rel="noopener">'+esc(j.title||"제목 없음")+'</a>'+company+'</div><div class="card-actions"><div class="date">'+dateLabel+'</div>'+scrap+'</div></div><div class="meta">'+cats+loc+salary+'</div>'+(j.body?'<div class="desc">'+esc(j.body)+"</div>":"")+'<div class="src">출처: '+esc((j.sources||[]).join(" / ")||j.source||"-")+" · 마지막 확인 "+esc(j.lastSeen||"-")+"</div></article>"
   }).join("");
   document.getElementById("moreBtn").hidden=shown>=filtered.length
 }
 function showMore(){shown+=+document.getElementById("pageSize").value||50;renderList()}
+document.getElementById("list").addEventListener("click",function(e){
+  var b=e.target.closest(".scrap-btn");
+  if(!b)return;
+  e.preventDefault();e.stopPropagation();toggleScrapByKey(b.getAttribute("data-scrap-key"))
+});
 document.getElementById("tabs").addEventListener("click",function(e){var b=e.target.closest(".tab");if(!b)return;document.querySelectorAll(".tab").forEach(function(x){x.classList.toggle("on",x===b)});activeCat=b.dataset.cat;applyFilters()});
 document.getElementById("period").addEventListener("change",function(){syncDatesFromPeriod();applyFilters()});
 ["keyword","region","employment","source","sort","pageSize"].forEach(function(id){var el=document.getElementById(id);el.addEventListener(id==="keyword"?"input":"change",applyFilters)});
 ["fromDate","toDate"].forEach(function(id){document.getElementById(id).addEventListener("change",function(){document.getElementById("period").value="custom";applyFilters()})});
-setDefaultDates();
-(function(){fetch("/data/job_archive.json?ts="+Date.now(),{cache:"no-store"}).then(function(r){if(!r.ok)throw new Error("HTTP "+r.status);return r.json()}).then(function(d){DATA=d||{};DATA.jobs=Array.isArray(DATA.jobs)?DATA.jobs:[];renderSources();var upd=DATA.updatedAt?new Date(DATA.updatedAt):null;document.getElementById("updated").textContent="최근 "+(DATA.rangeDays||30)+"일 · 중복 제거 · "+(upd&&!isNaN(upd)?"업데이트 "+upd.toLocaleString("ko-KR"):"업데이트 준비 중");applyFilters()}).catch(function(e){document.getElementById("list").innerHTML='<div class="empty">JOB 데이터를 아직 준비 중입니다.<br><span class="sub">'+esc(e.message||e)+"</span></div>";document.getElementById("resultText").textContent="데이터 준비 중"})})();
+loadScraps();renderScrapCount();setDefaultDates();
+(function(){fetch("/data/job_archive.json?ts="+Date.now(),{cache:"no-store"}).then(function(r){if(!r.ok)throw new Error("HTTP "+r.status);return r.json()}).then(function(d){DATA=d||{};DATA.jobs=Array.isArray(DATA.jobs)?DATA.jobs:[];syncScrapSnapshots();renderSources();var upd=DATA.updatedAt?new Date(DATA.updatedAt):null;document.getElementById("updated").textContent="최근 "+(DATA.rangeDays||30)+"일 · 중복 제거 · "+(upd&&!isNaN(upd)?"업데이트 "+upd.toLocaleString("ko-KR"):"업데이트 준비 중");applyFilters()}).catch(function(e){document.getElementById("list").innerHTML='<div class="empty">JOB 데이터를 아직 준비 중입니다.<br><span class="sub">'+esc(e.message||e)+"</span></div>";document.getElementById("resultText").textContent="데이터 준비 중"})})();
 </script>
 </body>
 </html>
