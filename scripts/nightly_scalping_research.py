@@ -16,6 +16,7 @@ Promotion policy:
 from __future__ import annotations
 
 import json
+import math
 import statistics
 from datetime import datetime
 from pathlib import Path
@@ -35,6 +36,12 @@ OPEN_MIN_BASE_TRADES=50
 OPEN_MIN_CAND_TRADES=30
 OPEN_ALL_EDGE=0.10
 OPEN_20D_EDGE=0.05
+SHADOW_MIN_COUNT=10
+SHADOW_SCORE_VERSION="v1"
+OPENING_SHADOW_NAMES=[
+    "hold_to_next_open","today_combo_v1","pb_max_0.5","amount_1.5","entry_by_0915",
+    "entry_by_0920","gap_3_6","vol_1.5","stop_0.7","tp_1.0",
+]
 
 def load_json(p:Path, default=None):
     try:
@@ -52,6 +59,48 @@ def stats(rows):
         "avgPnl":statistics.fmean(pn),
         "medianPnl":statistics.median(pn),
         "sumPnl":sum(pn),
+    }
+
+def _clip(v, lo, hi):
+    return max(lo,min(hi,float(v)))
+
+def shadow_score(all_edge, validation_edge, recent_edge, risk_ok, trades, min_trades):
+    """0~100 research ranking score. Low samples shrink every edge back toward neutral 50."""
+    min_trades=max(1,int(min_trades or 1))
+    sample_factor=_clip(float(trades or 0)/min_trades,0.0,1.0)
+    all_component=math.tanh(float(all_edge or 0)/0.20)
+    validation_component=math.tanh(float(validation_edge or 0)/0.20)
+    recent_component=math.tanh(float(recent_edge or 0)/0.75)
+    risk_component=1.0 if risk_ok else -1.0
+    raw=50.0+20.0*all_component+25.0*validation_component+10.0*recent_component+5.0*risk_component
+    score=50.0+(raw-50.0)*sample_factor
+    return {
+        "score":round(_clip(score,0.0,100.0),2),
+        "sampleFactor":round(sample_factor,4),
+        "sampleReady":sample_factor>=1.0,
+        "parts":{
+            "allEdgePct":float(all_edge or 0),
+            "validationEdgePct":float(validation_edge or 0),
+            "recentEdgePct":float(recent_edge or 0),
+            "riskOk":bool(risk_ok),
+            "trades":int(trades or 0),
+            "minTrades":min_trades,
+        }
+    }
+
+def rank_candidates(rows):
+    ranked=sorted(rows,key=lambda x:(-float(x.get("researchScore") or 0),-float(x.get("sampleFactor") or 0),str(x.get("name") or "")))
+    for i,x in enumerate(ranked,1):
+        x["rank"]=i
+    return ranked
+
+def ranking_rule():
+    return {
+        "version":SHADOW_SCORE_VERSION,
+        "minShadowStrategies":SHADOW_MIN_COUNT,
+        "formula":"50 + sampleFactor × (20·tanh(allEdge/0.20) + 25·tanh(validationEdge/0.20) + 10·tanh(recentEdge/0.75) + 5·riskSign), clipped 0~100",
+        "sampleFactor":"min(1, trades/minTrades)",
+        "note":"Rank is research triage only. Backtest/reconstruction and live-forward evidence stay separate; baseline is never auto-promoted.",
     }
 
 def opening_condition_bucket(name, value):
