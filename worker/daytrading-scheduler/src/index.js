@@ -73,11 +73,11 @@ export class SnapshotStore extends DurableObject {
       if(!variant||!DAY_EXIT_VARIANTS[variant])return json({ok:false,error:"unsupported variant"},400);
       const prev=(await this.ctx.storage.get("strategyConfig"))||{schema:2,strategy:"daytrading",selectedVariant:"baseline",history:[]};
       const at=new Date().toISOString(),effectiveFrom=String(b&&b.effectiveFrom||"");
-      const entry={at,effectiveFrom,previousVariant:String(prev.selectedVariant||"baseline"),selectedVariant:variant,
+      const entry={at,effectiveFrom,previousVariant:String(b&&b.previousVariant||prev.selectedVariant||"baseline"),selectedVariant:variant,
         updatedBy:String(b.updatedBy||"owner"),source:String(b.source||"manual-promotion"),
         researchScore:Number.isFinite(+b.researchScore)?+b.researchScore:null,rank:Number.isFinite(+b.rank)?+b.rank:null};
       const history=[...(Array.isArray(prev.history)?prev.history:[]),entry].slice(-50);
-      const config={schema:2,strategy:"daytrading",selectedVariant:variant,previousVariant:String(prev.selectedVariant||"baseline"),
+      const config={schema:2,strategy:"daytrading",selectedVariant:variant,previousVariant:entry.previousVariant,
         effectiveFrom,updatedAt:at,updatedBy:entry.updatedBy,source:entry.source,researchScore:entry.researchScore,rank:entry.rank,history};
       await this.ctx.storage.put("strategyConfig",config);
       return json({ok:true,config});
