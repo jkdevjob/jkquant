@@ -50,6 +50,45 @@ async function workerConfig(env,strategy,method="GET",body=null){
   if(!r.ok||!j.ok)throw new Error(j.error||("worker config HTTP "+r.status));
   return j.config||null;
 }
+function dateParts(ms,tz){
+  const p=new Intl.DateTimeFormat("en-CA",{timeZone:tz,year:"numeric",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit",weekday:"short",hour12:false}).formatToParts(new Date(ms));
+  const g=t=>p.find(x=>x.type===t)?.value||"";
+  return {date:g("year")+"-"+g("month")+"-"+g("day"),hm:(+g("hour")||0)*100+(+g("minute")||0),weekday:g("weekday")};
+}
+function shiftDate(date,days){
+  const [y,m,d]=String(date).split("-").map(Number);
+  return new Date(Date.UTC(y,m-1,d+days)).toISOString().slice(0,10);
+}
+function weekday(date){return new Date(String(date)+"T12:00:00Z").getUTCDay();}
+function nextWeekday(date,includeToday){
+  let d=includeToday?date:shiftDate(date,1);
+  for(let i=0;i<8;i++){const w=weekday(d);if(w!==0&&w!==6)return d;d=shiftDate(d,1);}
+  return d;
+}
+export function effectiveFrom(strategy,now=Date.now()){
+  if(strategy==="crypto"){
+    const p=dateParts(now,"Asia/Seoul");
+    return shiftDate(p.date,1);
+  }
+  if(strategy==="opening"||strategy==="daytrading"){
+    const p=dateParts(now,"Asia/Seoul"),wd=!["Sat","Sun"].includes(p.weekday);
+    return nextWeekday(p.date,wd&&p.hm<900);
+  }
+  const p=dateParts(now,"America/New_York"),wd=!["Sat","Sun"].includes(p.weekday);
+  return nextWeekday(p.date,wd&&p.hm<930);
+}
+function sessionDateNow(strategy,now=Date.now()){
+  return dateParts(now,strategy==="soxl"?"America/New_York":"Asia/Seoul").date;
+}
+function activeVariant(config,strategy,now=Date.now()){
+  const c=config||{},selected=String(c.selectedVariant||"baseline"),prev=String(c.previousVariant||"baseline");
+  return c.effectiveFrom&&sessionDateNow(strategy,now)<String(c.effectiveFrom)?prev:selected;
+}
+function decorateConfig(config,strategy,now=Date.now()){
+  const c=config||{selectedVariant:"baseline"};
+  const active=activeVariant(c,strategy,now);
+  return {...c,activeVariant:active,pendingVariant:active!==String(c.selectedVariant||"baseline")?String(c.selectedVariant||"baseline"):null};
+}
 async function latestRanking(strategy){
   const r=await fetch(RAW+"?t="+Date.now(),{headers:{"Accept":"application/json","User-Agent":"jkquant-promotion/1.0"}});
   if(!r.ok)throw new Error("nightly research HTTP "+r.status);
@@ -71,12 +110,13 @@ export function promotionDecision(strategy,variant,ranking){
 }
 export async function onRequestGet({request,env}){
   const who=await ownerInfo(request,env);if(!who.ok)return json({ok:false,error:who.error},401);
-  const configs={},errors={};
+  const configs={},errors={},nextEffectiveFrom={};
   await Promise.all(Object.keys(WORKERS).map(async strategy=>{
-    try{configs[strategy]=await workerConfig(env,strategy);}
+    try{configs[strategy]=decorateConfig(await workerConfig(env,strategy),strategy);}
     catch(e){errors[strategy]=String(e.message||e);}
+    nextEffectiveFrom[strategy]=effectiveFrom(strategy);
   }));
-  return json({ok:true,effective:"next-new-session",autoPromotion:false,configs,errors});
+  return json({ok:true,effective:"next-new-session",autoPromotion:false,configs,errors,nextEffectiveFrom});
 }
 export async function onRequestPost({request,env}){
   const who=await ownerInfo(request,env);if(!who.ok)return json({ok:false,error:who.error},401);
@@ -91,13 +131,18 @@ export async function onRequestPost({request,env}){
       decision=promotionDecision(strategy,variant,ranking);
     }
     if(!decision.ok)return json({ok:false,error:"승격 조건을 충족하지 못했습니다.",reason:decision.reason,ranking},409);
-    const config=await workerConfig(env,strategy,"POST",{
-      variant,updatedBy:who.email,source:variant==="baseline"?"owner-baseline-revert":"owner-promotion-button"
-    });
+    const before=await workerConfig(env,strategy);
+    const from=effectiveFrom(strategy),previousVariant=activeVariant(before,strategy);
+    const row=decision.row||null;
+    const config=decorateConfig(await workerConfig(env,strategy,"POST",{
+      variant,effectiveFrom:from,previousVariant,
+      updatedBy:who.email,source:variant==="baseline"?"owner-baseline-revert":"owner-promotion-button",
+      researchScore:row?row.researchScore:null,rank:row?row.rank:null
+    }),strategy);
     return json({
-      ok:true,strategy,variant,config,researchGeneratedAt:generatedAt,
+      ok:true,strategy,variant,previousVariant,effectiveFrom:from,config,researchGeneratedAt:generatedAt,
       effective:"next-new-session",autoPromotion:false,
-      note:"현재 시작된 세션은 기존 메인전략으로 끝내고 다음 새 세션부터 선택 전략을 메인으로 잠급니다."
+      note:"현재 시작된 세션은 기존 메인전략으로 끝내고 "+from+" 새 세션부터 선택 전략을 메인으로 잠급니다."
     });
   }catch(e){return json({ok:false,error:String(e.message||e)},502);}
 }
