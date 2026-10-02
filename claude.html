@@ -31,7 +31,7 @@ table.doc td{padding:6px 6px}
 </head>
 <body>
 <header><div class="wrap"><div class="htop">
-  <div class="brand"><div class="kicker">JK QUANT · CLAUDE</div><h1>🤖 단타 <span class="v">(클로드)</span> <span class="ver" id="clVer">v2.6.0</span></h1></div>
+  <div class="brand"><div class="kicker">JK QUANT · CLAUDE</div><h1>🤖 단타 <span class="v">(클로드)</span> <span class="ver" id="clVer">v2.7.0</span></h1></div>
   <div class="jkmenu" id="jkmenuWrap">
     <button class="jkmenu-btn" aria-label="메뉴" onclick="jkMenuToggle(event)">三</button>
     <div class="jkmenu-pop" id="jkmenuPop" hidden>
@@ -60,6 +60,7 @@ table.doc td{padding:6px 6px}
     <button class="tab" data-tab="crypto" onclick="showTab('crypto')">₿ 비트코인</button>
     <button class="tab" data-tab="soxl" onclick="showTab('soxl')">⚡ SOXL</button>
     <button class="tab" data-tab="all" onclick="showTab('all')">🎯 전체 계좌</button>
+    <button class="tab" data-tab="duel" onclick="showTab('duel')">🆚 GPT 대결</button>
   </div>
   <div id="body"><div class="loading">불러오는 중…</div></div>
 </div></main>
@@ -171,6 +172,54 @@ function weekCard(){
     "<div class='kpi'><div class='l'>+1% 달성일</div><div class='v'>"+(a.plus1Days||0)+"<span class='sub'>/"+(a.days||0)+"일</span></div><div class='sub'>"+(recon?"재구성 · 확정된 날":"장부 확정분")+"</div></div></div>"+
     "<div class='tw'><table class='board'><thead><tr><th>칸</th><th>계좌 기여</th><th>칸 안 주간</th><th>매매일</th><th>~까지</th></tr></thead><tbody>"+rows+"</tbody></table></div>"+
     "<p class='note'>"+(cand.length?"⭐ 그림자 교체 후보: "+esc(cand.join(" / ")):"그림자 교체 후보 없음 — 판정 표본(10/1~) 매매 20일 이상 + 기준보다 누적이 높고 +1% 달성일이 적지 않고 MDD 가 5%p 넘게 나쁘지 않을 때만 후보로 띄웁니다. 자동으로 바꾸지 않습니다.")+"</p></div>";
+}
+// 🆚 GPT 대결 — 실시간 모의매매 기록끼리, 같은 시작일·같은 비용표. 색: 클로드 = 파랑, GPT = 주황(검증된 2색, 이름표 같이)
+var DUEL_C="#3987e5",DUEL_G="#d95926",DUEL_NAME={opening:"① 시초가",daytrading:"② 데이트레이딩",crypto:"③ 비트코인",soxl:"④ SOXL",total:"🏦 합계(4탭 균등)"};
+function duelChart(rows,id){
+  if(!rows||rows.length<1)return "<p class='note'>아직 같은 날 기록이 없습니다.</p>";
+  var W=340,H=150,P={l:34,r:8,t:10,b:18},vals=[0];rows.forEach(function(r){vals.push(r.cumClaudePct,r.cumGptPct)});
+  var lo=Math.min.apply(null,vals),hi=Math.max.apply(null,vals);if(hi-lo<1){hi+=0.5;lo-=0.5}
+  var n=rows.length,x=function(i){return P.l+(n<2?(W-P.l-P.r)/2:i*(W-P.l-P.r)/(n-1))},y=function(v){return P.t+(hi-v)*(H-P.t-P.b)/(hi-lo)};
+  var line=function(k,c){return "<polyline fill='none' stroke='"+c+"' stroke-width='2' stroke-linejoin='round' points='"+rows.map(function(r,i){return x(i).toFixed(1)+","+y(r[k]).toFixed(1)}).join(" ")+"'/>"+
+    rows.map(function(r,i){return "<circle cx='"+x(i).toFixed(1)+"' cy='"+y(r[k]).toFixed(1)+"' r='4' fill='"+c+"' stroke='var(--surf)' stroke-width='2'><title>"+esc(r.date)+" "+(k==="cumClaudePct"?"클로드":"GPT")+" 누적 "+pct(r[k])+"</title></circle>"}).join("")};
+  var g0=y(0).toFixed(1),last=rows[n-1];
+  return "<svg viewBox='0 0 "+W+" "+H+"' style='width:100%;max-width:560px;display:block' role='img' aria-label='누적 손익 — 클로드 "+pct(last.cumClaudePct)+", GPT "+pct(last.cumGptPct)+"'>"+
+    "<line x1='"+P.l+"' x2='"+(W-P.r)+"' y1='"+g0+"' y2='"+g0+"' stroke='var(--border2)' stroke-width='1'/>"+
+    "<text x='2' y='"+(P.t+8)+"' fill='var(--faint)' font-size='9'>"+pct(hi,1)+"</text><text x='2' y='"+(H-P.b)+"' fill='var(--faint)' font-size='9'>"+pct(lo,1)+"</text>"+
+    "<text x='"+P.l+"' y='"+(H-4)+"' fill='var(--faint)' font-size='9'>"+esc(rows[0].date.slice(5))+"</text><text x='"+(W-P.r)+"' y='"+(H-4)+"' fill='var(--faint)' font-size='9' text-anchor='end'>"+esc(last.date.slice(5))+"</text>"+
+    line("cumGptPct",DUEL_G)+line("cumClaudePct",DUEL_C)+"</svg>"+
+    "<div class='sub' style='margin-top:4px'><span style='color:"+DUEL_C+"'>━</span> 🤖 클로드 "+pct(last.cumClaudePct)+" &nbsp; <span style='color:"+DUEL_G+"'>━</span> GPT "+pct(last.cumGptPct)+"</div>";
+}
+function duelPage(){
+  var D=(J.lab||{}).duel;
+  if(!D)return "<div class='card'><h3>🆚 GPT 대결</h3><p class='note'>밤 계산이 아직 대결 자료를 만들지 않았습니다.</p></div>";
+  if(D.error)return "<div class='card'><h3>🆚 GPT 대결</h3><div class='warn'>"+esc(D.error)+"</div></div>";
+  var T=D.total||{},rec=T.record||{},c=T.claude||{},g=T.gpt||{},days=T.days||[];
+  var html="<div class='card'><h3>🆚 GPT 대결 — "+esc(D.start)+" 부터</h3><div class='sub'>"+esc(D.rules||"")+"</div>";
+  if(!days.length)html+="<div class='warn' style='margin-top:8px'>"+esc(D.start)+" 부터 두 쪽의 실시간 모의매매 기록이 같은 날 쌓이면 여기서 매일 비교합니다. 아직 그런 날이 없습니다.</div>";
+  var b=function(a,bb,hi){return a==null||bb==null||a===bb?["",""]:(hi?a>bb:a<bb)?["win",""]:["","win"]};
+  var row=function(l,a,bb,f,hi){var w=b(a,bb,hi);return "<tr><td style='text-align:left'>"+l+"</td><td class='"+w[0]+"'><b>"+f(a)+"</b></td><td class='"+w[1]+"'><b>"+f(bb)+"</b></td></tr>"};
+  var P1=function(v){return v==null?"—":pct(v,2)},N=function(v){return v==null?"—":String(v)};
+  html+="<div class='kpis'><div class='kpi'><div class='l'>날짜별 승부 (합계)</div><div class='v'>"+(rec.claude||0)+"승 "+(rec.gpt||0)+"패 "+(rec.draw||0)+"무</div><div class='sub'>클로드 기준</div></div>"+
+    "<div class='kpi'><div class='l'>누적 (합계)</div><div class='v' style='font-size:16px'><span style='color:"+DUEL_C+"'>🤖 "+P1(c.totalPct)+"</span> · <span style='color:"+DUEL_G+"'>GPT "+P1(g.totalPct)+"</span></div></div></div>";
+  html+="<div style='margin-top:10px'><b>누적 손익 (합계)</b></div>"+duelChart(days,"total");
+  html+="<div class='tw'><table class='board'><thead><tr><th style='text-align:left'>합계 (4탭 균등)</th><th>🤖 클로드</th><th>GPT</th></tr></thead><tbody>"+
+    row("누적",c.totalPct,g.totalPct,P1,true)+row("+1% 이상 날",c.plus1Days,g.plus1Days,N,true)+row("최악의 날",c.worstDayPct,g.worstDayPct,P1,true)+row("MDD",c.mddPct,g.mddPct,P1,true)+"</tbody></table></div></div>";
+  // 탭별 스코어보드
+  var sb=["opening","daytrading","crypto","soxl"].map(function(k){var t=(D.tabs||{})[k]||{},cc=t.claude||{},gg=t.gpt||{},r=t.record||{};var w=b(cc.totalPct,gg.totalPct,true);
+    return "<tr><td style='text-align:left'>"+DUEL_NAME[k]+"<div class='sub'>"+(t.days||[]).length+"일 · "+(r.claude||0)+"승 "+(r.gpt||0)+"패 "+(r.draw||0)+"무</div></td><td class='"+w[0]+"'><b>"+P1(cc.totalPct)+"</b><div class='sub'>"+(cc.trades||0)+"건 · 승률 "+(cc.winRate==null?"—":num(cc.winRate,0)+"%")+"</div></td><td class='"+w[1]+"'><b>"+P1(gg.totalPct)+"</b><div class='sub'>"+(gg.trades||0)+"건 · 승률 "+(gg.winRate==null?"—":num(gg.winRate,0)+"%")+"</div></td></tr>"}).join("");
+  html+="<div class='card'><h3>탭별 스코어보드</h3><div class='tw'><table class='board'><thead><tr><th style='text-align:left'>탭 · 승부</th><th>🤖 클로드 누적</th><th>GPT 누적</th></tr></thead><tbody>"+sb+"</tbody></table></div>"+
+    "<p class='note'>비용(왕복): 국내 주식 0.25% · ETF 0.15% · 코인 0.14% · 미국 0.20%. 초록 = 더 나은 쪽.</p></div>";
+  // 날짜별
+  var dr=days.slice().reverse().map(function(d){var cells=["opening","daytrading","crypto","soxl"].map(function(k){var x=((((D.tabs||{})[k]||{}).days)||[]).find(function(y){return y.date===d.date});
+      if(!x)return "<td class='sub'>—</td>";var bc=x.winner==="claude"?DUEL_C:x.winner==="gpt"?DUEL_G:"var(--border)";
+      return "<td style='font-size:11.5px;border-left:3px solid "+bc+"'><span class='"+cls(x.claude.pnlPct)+"'>"+pct(x.claude.pnlPct)+"</span><div class='sub'>"+pct(x.gpt.pnlPct)+"</div></td>"}).join("");
+    return "<tr><td>"+esc(d.date.slice(5).replace("-","/"))+"<div class='sub'>"+(d.winner==="claude"?"🤖 승":d.winner==="gpt"?"GPT 승":"무")+"</div></td>"+cells+"<td><b class='"+cls(d.claudePct)+"'>"+pct(d.claudePct)+"</b><div class='sub'>"+pct(d.gptPct)+"</div></td></tr>"}).join("");
+  html+="<div class='card'><h3>날짜별 — 위: 🤖 클로드 · 아래: GPT</h3><div class='tw'><table class='board'><thead><tr><th>날짜</th><th>①</th><th>②</th><th>③</th><th>④</th><th>합계</th></tr></thead><tbody>"+
+    (dr||"<tr><td colspan='6' class='sub'>아직 같은 날 기록 없음</td></tr>")+"</tbody></table></div><p class='note'>칸 왼쪽 막대 = 그날 이긴 쪽(<span style='color:"+DUEL_C+"'>파랑 클로드</span> · <span style='color:"+DUEL_G+"'>주황 GPT</span> · 회색 무승부). 숫자 색은 손익 부호. 각 탭 ⑤ 의 🔒 마감 장부가 클로드 쪽 원본입니다.</p></div>";
+  var pend=[].concat.apply([],["opening","daytrading","crypto","soxl"].map(function(k){return ((((D.tabs||{})[k]||{}).pending)||[]).map(function(p){return DUEL_NAME[k]+" "+p.date+"("+p.missing+" 기록 대기)"})}));
+  if(pend.length)html+="<p class='note'>한쪽 기록만 있는 날(비교에서 뺌): "+esc(pend.join(" · "))+"</p>";
+  return html;
 }
 // ⚖️ GPT 와 같은 조건 비교 — 같은 날짜(청산일) · 같은 시장 데이터 · 같은 비용표, 매매 단위부터 다시 계산
 function fairCard(tab){
@@ -328,6 +377,8 @@ function render(){
     html+="<div class='card'><h3>📒 모의투자 누적 ("+esc(pp.start||"2026-10-01")+"~)</h3><div class='sub'>날짜별 장부는 한 번만 쓰고 덮어쓰지 않습니다. 국내는 KIS 모의투자 체결, 코인·미국은 일봉 모의 체결입니다. 매매일 20일이 쌓이면 기대(설계 표본)와 비교해 벗어나면 '규칙 점검'으로 표시합니다.</div>"+
       (pp.error?"<div class='warn'>"+esc(pp.error)+"</div>":"")+
       "<div class='tw'><table class='board'><thead><tr><th>전략</th><th>매매일</th><th>+1%↑</th><th>누적</th><th>매매일 평균</th><th>상태</th></tr></thead><tbody>"+prow+"</tbody></table></div></div>";
+  }else if(TAB==="duel"){
+    html+=duelPage();
   }else if(TAB==="opening"||TAB==="daytrading"||TAB==="crypto"||TAB==="soxl"){
     html+=tabPage(TAB,T,gd,et,wl);
   }else{
