@@ -25,8 +25,8 @@ for(const [path,kind] of [
   assert.ok(names.filter(x=>x!=="baseline").length>=10,kind+" shadows <10");
 }
 
-const good={name:"good",allAvgEdgePct:.20,holdoutAvgEdgePct:.20,recentEdgePct:.5,trades:50,mddOk:true};
-const bad={name:"bad",allAvgEdgePct:-.20,holdoutAvgEdgePct:-.20,recentEdgePct:-.5,trades:50,mddOk:false};
+const good={name:"vol_1.0",allAvgEdgePct:.20,holdoutAvgEdgePct:.20,recentEdgePct:.5,trades:50,mddOk:true};
+const bad={name:"vol_1.5",allAvgEdgePct:-.20,holdoutAvgEdgePct:-.20,recentEdgePct:-.5,trades:50,mddOk:false};
 const gs=fallbackScore("crypto",good),bs=fallbackScore("crypto",bad);
 assert.ok(gs.score>50 && bs.score<50 && gs.score>bs.score,"score direction broken");
 
@@ -39,7 +39,7 @@ const rep={status:"reviewable",from:"2026-01-01",to:"2026-10-01",candidates:[
 ]};
 const n=normalize("crypto",rep);
 assert.equal(n.rows.length,10);
-assert.equal(n.rows[0].name,"good");
+assert.equal(n.rows[0].name,"vol_1.0");
 assert.ok(n.rows.findIndex(x=>x.trades===0)>0,"zero evidence rows should not lead");
 assert.deepEqual(n.rows.map(x=>x.rank),[1,2,3,4,5,6,7,8,9,10]);
 
