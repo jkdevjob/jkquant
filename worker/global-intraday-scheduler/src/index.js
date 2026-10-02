@@ -59,7 +59,14 @@ export class PaperStore extends DurableObject{
       const b=await request.json(),strategy=String(b&&b.strategy||""),variant=String(b&&b.variant||"");
       const map=strategy==="crypto"?BTC_VARIANTS:strategy==="soxl"?SOXL_VARIANTS:null;
       if(!map||!map[variant])return json({ok:false,error:"unsupported strategy/variant"},400);
-      const config={schema:1,strategy,selectedVariant:variant,updatedAt:new Date().toISOString(),updatedBy:String(b.updatedBy||"owner"),source:String(b.source||"manual-promotion")};
+      const prev=(await this.ctx.storage.get("strategyConfig"))||{schema:2,strategy,selectedVariant:"baseline",history:[]};
+      const at=new Date().toISOString(),effectiveFrom=String(b&&b.effectiveFrom||"");
+      const entry={at,effectiveFrom,previousVariant:String(prev.selectedVariant||"baseline"),selectedVariant:variant,
+        updatedBy:String(b.updatedBy||"owner"),source:String(b.source||"manual-promotion"),
+        researchScore:Number.isFinite(+b.researchScore)?+b.researchScore:null,rank:Number.isFinite(+b.rank)?+b.rank:null};
+      const history=[...(Array.isArray(prev.history)?prev.history:[]),entry].slice(-50);
+      const config={schema:2,strategy,selectedVariant:variant,previousVariant:String(prev.selectedVariant||"baseline"),
+        effectiveFrom,updatedAt:at,updatedBy:entry.updatedBy,source:entry.source,researchScore:entry.researchScore,rank:entry.rank,history};
       await this.ctx.storage.put("strategyConfig",config);
       return json({ok:true,config});
     }
@@ -92,7 +99,8 @@ async function mainVariantForDate(env,strategy,date){
   const ledger=await readPaper(env,strategy,date).catch(()=>null);
   if(ledger&&ledger.mainVariant)return String(ledger.mainVariant);
   const cfg=await readStrategyConfig(env,strategy);
-  return variantParams(strategy,String(cfg.selectedVariant||"baseline")).name;
+  const selected=(cfg.effectiveFrom&&String(date)<String(cfg.effectiveFrom))?String(cfg.previousVariant||"baseline"):String(cfg.selectedVariant||"baseline");
+  return variantParams(strategy,selected).name;
 }
 async function readPaper(env,strategy,date){
   const r=await paperStore(env,strategy,date).fetch("https://paper.internal/paper");
