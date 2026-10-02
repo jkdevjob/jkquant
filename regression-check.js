@@ -11097,5 +11097,22 @@ ok('무매매 확정일은 0.00% 대신 매매없음으로 표시한다',
    /const resultText=x\.noTrade\?'매매없음':dailyResultPct\(r\);/.test(scl)
    &&/x\.noTrade\?'매매없음 · 0\.00% 반영'/.test(scl));
 
+/* ════ 단타(클로드) 머리말 — 지피티 단타와 같은 모양 ════ */
+console.log('\n[CLAUDE HEADER] 머리말 통일');
+{
+  const ch=fs.readFileSync(__d+'/claude.html','utf8'), sh=fs.readFileSync(__d+'/scalping.html','utf8');
+  const hd=(ch.match(/<header>[\s\S]*?<\/header>/)||[''])[0];
+  ok('클로드 머리말이 지피티와 같은 구조(영문 머리 · JK 퀀트 단타 · 사용자 배지 → 메뉴)',
+     /<div class="kicker">Claude Scalping<\/div><h1>JK <span class="v">퀀트<\/span> 단타/.test(hd)
+     &&/<div class="hright">\s*<div class="userbadge" id="userbadge"><\/div>\s*<div class="jkmenu"/.test(hd)
+     &&/<div class="kicker">Morning Scalping<\/div><h1>JK <span class="v">퀀트<\/span> 단타/.test(sh));
+  ok('클로드 사용자 배지 = 사진 · 이름 · 로그아웃(lo), 옛 이메일 글자 배지 없음',
+     /document\.getElementById\("userbadge"\)/.test(ch)
+     &&/user\.photoURL\?"<img src=/.test(ch)&&/esc\(user\.displayName\|\|user\.email\|\|""\)/.test(ch)
+     &&/class=\\"lo\\" onclick=\\"doLogout\(\)\\"/.test(ch)
+     &&!/id="ubadge"|JK QUANT · CLAUDE/.test(ch)
+     &&/\.userbadge img\{width:22px;height:22px;border-radius:50%\}/.test(ch));
+}
+
 console.log(`\n════ 결과: ${pass} PASS / ${fail} FAIL ${fail===0?'— ALL PASS ★':'— 배포 금지, 위 ✗ 항목 수정 필요'} ════`);
 process.exit(fail===0?0:1);
