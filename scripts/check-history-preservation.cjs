@@ -147,10 +147,12 @@ ok('QLD/SGOV 한 건 삭제도 confirm 필수',fn(plan,'async function delLedger
 ok('로그인 5년플랜은 원장 state를 localStorage에 쓰지 않음',
   /if\(auth\.currentUser\)\{[\s\S]*return;/.test(fn(plan,'function localSave()'))
   && /if\(!liveState\|\|auth\.currentUser\)return/.test(fn(plan,'function writeAssetSessionLocal()')));
-ok('5년플랜 새로고침은 Firebase 현재 원장을 직접 적용하고 과거 로컬 백업을 자동선택하지 않음',
+ok('5년플랜 초기 부팅도 저장된 원장 대신 defaults로 시작',
+  /const d=defaults\(\);\s*apply\(d\);/.test(plan));
+ok('5년플랜 새로고침은 Firebase 현재 원장을 직접 적용하고 브라우저 원장을 후보로 읽지 않음',
   /apply\(cloneObj\(v\)\)/.test(fn(plan,'async function cloudLoad(user)'))
-  && !/planRecoveryScore/.test(fn(plan,'async function cloudLoad(user)'))
-  && !/_cloud_previous|_cloud_recovery|_manual_backup/.test(fn(plan,'async function cloudLoad(user)')));
+  && !/planRecoveryScore|planRecoveryRead|manualWrap|oldCloud|prevCloud/.test(fn(plan,'async function cloudLoad(user)'))
+  && /apply\(defaults\(\)\)/.test(fn(plan,'async function cloudLoad(user)')));
 ok('현금/거래 삭제는 DB 응답을 기다리고 실패 시 롤백',
   /const ok=await cloudSave\(\)/.test(fn(plan,'async function alphaDeleteEvent(id)'))
   && /alphaLedger=before/.test(fn(plan,'async function alphaDeleteEvent(id)'))
