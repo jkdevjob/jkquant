@@ -549,7 +549,7 @@ try{ if(localStorage.getItem('qcockpit_hadUser')==='1') document.documentElement
 </div>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.107.0</span></h1></div>
+    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.107.1</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -1660,7 +1660,7 @@ if(/^\/paper\/?$/.test(location.pathname)){
   <footer>
     <strong>JK 퀀트</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.107.0</b> · 2026-10-02</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.107.1</b> · 2026-10-02</div>
   </footer>
 </div>
 
@@ -2272,7 +2272,7 @@ let lsFailed=false;
    timestamps만으로 로컬/클라우드 승자를 정하면 새 기기·오래 열린 탭·다른 기기에서
    "기록이 더 적은데 시각만 최신"인 상태가 전체 state를 덮을 수 있다.
    클라우드 revision + 실제 이력 포함관계를 함께 본다. */
-let stateCloudHydrated=false, stateCloudRev=0, stateCloudConflict=false, stateCloudPending=false;
+let stateCloudHydrated=false, stateCloudRev=0, stateCloudConflict=false, stateCloudPending=false, stateCloudHistorySig='';
 function _histKeyPart(x){
   if(x&&x.id!=null)return 'id:'+String(x.id);
   if(x&&x.ts!=null)return 'ts:'+String(x.ts);
@@ -2319,6 +2319,9 @@ function _historyRelation(a,b){
   return {aPreservesB:ap,bPreservesA:bp,equal:ap&&bp};
 }
 function _historyCount(st){return _stateHistoryMap(st).size;}
+function _historySignature(st){
+  return JSON.stringify([..._stateHistoryMap(st).entries()].sort((a,b)=>String(a[0]).localeCompare(String(b[0]))));
+}
 function _writeLocalExact(st){
   try{localStorage.setItem(lsKey(),JSON.stringify(st));return true;}catch(e){console.error('local exact',e);return false;}
 }
@@ -10000,15 +10003,19 @@ async function _commitStateRemote(where){
   try{
     const nextRev=await window.fb.runTransaction(window.fb.db,async tx=>{
       const snap=await tx.get(ref),d=snap.exists()?(snap.data()||{}):{},remote=d.state,rev=+d.stateRev||0;
-      // 다른 기기/탭이 우리가 마지막으로 본 뒤 썼다면 그쪽 이력을 한 건도 잃지 않는 경우만 자동 쓰기 허용.
-      if(remote&&validState(remote)&&rev!==stateCloudRev&&!_historyPreserves(candidate,remote)){
+      const remoteSig=remote&&validState(remote)?_historySignature(remote):'';
+      // revision이 바뀌었거나, 구버전 클라이언트가 revision 없이 원장을 바꿨더라도
+      // 마지막으로 본 원장과 달라졌으면 현재 후보가 원격 이력을 전부 포함하는지 다시 확인한다.
+      const remoteChanged=rev!==stateCloudRev||(stateCloudHistorySig!==''&&remoteSig!==stateCloudHistorySig);
+      if(remote&&validState(remote)&&remoteChanged&&!_historyPreserves(candidate,remote)){
         const err=new Error('REMOTE_HISTORY_CONFLICT');err.code='history-conflict';throw err;
       }
       const nr=rev+1;
       tx.set(ref,{state:candidate,updated:writeUpdated,stateRev:nr},{merge:true});
       return nr;
     });
-    stateCloudRev=+nextRev||stateCloudRev;stateCloudConflict=false;stateCloudPending=false;
+    stateCloudRev=+nextRev||stateCloudRev;stateCloudHistorySig=_historySignature(S);
+    stateCloudConflict=false;stateCloudPending=false;
     lastPushedJSON=JSON.stringify(S);setSync('ok');return true;
   }catch(e){
     console.error(where,e);
@@ -10046,6 +10053,7 @@ async function pullRemote(){
     let local=null;try{local=JSON.parse(localStorage.getItem(lsKey())||'null')}catch(e){}
     const remote=d&&validState(d.state)?d.state:null;
     stateCloudRev=+d.stateRev||0;
+    stateCloudHistorySig=remote?_historySignature(remote):'';
     if(remote){
       const lvalid=validState(local);
       if(!lvalid){
