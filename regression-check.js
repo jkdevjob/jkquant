@@ -10771,12 +10771,18 @@ console.log('[OPENING SIGNAL LEARNING] 실시간 ledger · 30분 사후라벨 ·
      /export class OpeningSignalStore extends DurableObject/.test(ow)
      && /SIGNAL_STORE/.test(ow) && /async function appendLedger/.test(ow)
      && /liveSignalLedger/.test(oy));
-  ok('실시간 ledger는 기준+그림자 BUY/SELL을 strategyVersion과 함께 보존',
-     /liveEvent\(date,target,"buy","baseline"/.test(ow)
+  ok('실시간 ledger는 기준+운영메인+그림자 BUY/SELL을 strategyVersion과 함께 보존',
+     /baselineBuyEvents/.test(ow)
+     && /baselineSellEvents/.test(ow)
+     && /liveEvent\(date,target,"buy","baseline"/.test(ow)
      && /liveEvent\(date,target,"sell","baseline"/.test(ow)
+     && /mainVariant!=="baseline"/.test(ow)
+     && /liveEvent\(date,target,"buy",mainVariant/.test(ow)
+     && /liveEvent\(date,target,"sell",mainVariant/.test(ow)
      && /liveEvent\(date,target,"buy",String\(v\.name/.test(ow)
      && /liveEvent\(date,target,"sell",String\(v\.name/.test(ow)
      && /strategyVersion:signal\.strategyVersion/.test(ow)
+     && /canonical_baseline_observation/.test(ow)
      && /shadow_strategy_not_notified/.test(ow));
   ok('Telegram 실패가 신호를 없애지 않고 VTS 실행만 안전하게 보류',
      /telegram\.buyError/.test(om) && /telegram\.sellError/.test(om)
@@ -11507,7 +11513,7 @@ console.log('\n[SCALPING TODAY LIVE] BTC·SOXL 실시간 장부 우선 · 부분
   ok('오늘 API는 전략별 실패를 격리해 한 원천 오류가 4전략 전체를 숨기지 않는다',
      /async function safeSessions\(fn\)/.test(dapi)
      &&/safeSessions\(\(\)=>openingSessions\(\)\)/.test(dapi)
-     &&/safeSessions\(\(\)=>daytradingSessions\(\)\)/.test(dapi));
+     &&/safeSessions\(\(\)=>daytradingSessions\(env\)\)/.test(dapi));
   ok('오늘 화면은 실시간 마감 모의장부 사용 여부를 표시한다',
      /global-paper-live/.test(scl) && /실시간 마감 모의장부/.test(scl));
 }
