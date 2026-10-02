@@ -10568,9 +10568,9 @@ console.log('[SCALPING FLOW] 단타 공통 흐름 · 모의체결 분리');
   const pos=labels.map(x=>sc.indexOf(x));
   ok('단타 전략탭 공통 9단계 순서', pos.every((x,i)=>x>=0&&(i===0||x>pos[i-1])), pos.join(' → '));
   ok('활성 단타 4개 전략탭 모두 공통 flow 대상', ['opening','daytrading','crypto','soxl'].every(x=>sc.includes(x+':{strategy:')));
-  ok('폐기 참고 페이지는 제거하고 전일·당일 통합 페이지가 시초가 앞에 위치',
+  ok('폐기 참고 페이지는 제거하고 오늘 통합 페이지가 시초가 앞에 위치',
      !/data-strategy="reference"/.test(sc) && !/id="strategy_reference"/.test(sc)
-     && /data-strategy="daily"[^>]*>📅 전일·당일/.test(sc)
+     && /data-strategy="daily"[^>]*>📅 오늘/.test(sc)
      && sc.indexOf('data-strategy="daily"') < sc.indexOf('data-strategy="opening"')
      && /id="strategy_daily" class="strategy-pane on"/.test(sc));
   ok('로그인 후 공통 flow를 만든 뒤 탭 복원',
@@ -10624,11 +10624,10 @@ console.log('[DAILY1 SHADOW] 4탭 +1% 후보 · prospective 모의연구');
   ok('그림자 조회 API는 읽기전용 latest.json 경로',
      /data\/daily1-shadow\/latest\.json/.test(api)
      && !/method:\s*["']POST["']|op=order/.test(api));
-  ok('단타 각 탭과 전일·당일 화면에 +1% 그림자 결과가 표시된다',
-     /function setupDaily1ShadowCards\(\)/.test(sc)
-     && /id="daily1_/.test(sc)
+  ok('그림자 연구 백엔드는 유지하되 GPT 단타 운영 UI에서는 숨긴다',
+     /function setupDaily1ShadowCards\(\)\{\s*\/\/ 그림자 전략 연구\/수집은 백엔드에서 계속하지만 \/scalping 운영 화면에서는 숨긴다\.\s*\}/.test(sc)
      && /\/api\/daily1-shadow/.test(sc)
-     && /4후보 연구용 25% 균등 바스켓/.test(sc));
+     && !/id="daily1_/.test(sc));
 }
 
 /* ════ 단타 4전략 과거 누적 매매이력 ════ */
@@ -10655,7 +10654,7 @@ console.log('[SCALPING HISTORY] 4전략 누적 매매이력 · 과매도 반등 
      && /crypto-research\/baseline-decisions\.csv/.test(dapi)
      && /soxl-research\/baseline-decisions\.csv/.test(dapi)
      && !/op=order|opening-execute|method:\s*["']POST["']/.test(dapi));
-  ok('전일·당일 화면은 통합 API를 사용하고 일 +1% 달성 여부를 표시',
+  ok('오늘 화면은 통합 API를 사용하고 일 +1% 달성 여부를 표시',
      /\/api\/scalping-daily-results/.test(sc)
      && /function loadDailyStrategyResults\(force\)/.test(sc)
      && /\+1% 달성/.test(sc));
@@ -11085,13 +11084,15 @@ console.log('[GAPDOWN D-1 / DIP24 D-3] 연구용 모의체결 경로 안전장�
      /DIP24_VERSION = "btc_dip24_v1"/.test(bt)&&/hb\[h - one\]\["c"\] \/ hb\[h - one \* \(lb \+ 1\)\]\["c"\]/.test(bt)
      &&/"orders": "none \(research shadow\)"/.test(bt)&&/designEndKst="2026-09-30"/.test(bt));
 }
-/* ════ GPT 단타 전일·당일 누적 그래프 · 매매없음 표시 ════ */
-console.log('\n[SCALPING DAILY TREND] 전일·당일 누적 결과 그래프 · 매매없음');
-ok('GPT 전일·당일 탭에 4전략 누적 수익률 그래프가 연결된다',
+/* ════ GPT 단타 오늘 누적 그래프 · 매매없음 표시 ════ */
+console.log('\n[SCALPING DAILY TREND] 오늘 누적 결과 그래프 · 매매없음');
+ok('GPT 오늘 탭에 4전략 누적 수익률 그래프가 연결되고 최근 31일을 확대한다',
    /id="daily_cumulative_chart"/.test(scl)
    &&/async function renderDailyCumulativeChart\(\)/.test(scl)
    &&/\/api\/scalping-history\?strategy='\+name\+'&range=all/.test(scl)
-   &&/전략별 누적 결과 · 수익률 추이/.test(scl));
+   &&/전체 누적값 · 최근 31일 확대/.test(scl)
+   &&/cut\.setUTCDate\(cut\.getUTCDate\(\)-30\)/.test(scl)
+   &&/시초가·데이트레이딩 선도 함께 보이게/.test(scl));
 ok('무매매 확정일은 0.00% 대신 매매없음으로 표시한다',
    /const resultText=x\.noTrade\?'매매없음':dailyResultPct\(r\);/.test(scl)
    &&/x\.noTrade\?'매매없음 · 0\.00% 반영'/.test(scl));
