@@ -56,6 +56,41 @@ export const SHADOW_VARIANTS=Object.freeze([
     description:"재돌파 진입 시각을 09:15까지로 제한",
     params:{entryCutoff:915},
   },
+  {
+    name:"entry_by_0920",
+    designedFrom:["parameter-sensitivity"],
+    label:"09:20 이전",
+    description:"기준 09:30보다 일찍 끊되 09:15보다 완화한 진입시간 민감도",
+    params:{entryCutoff:920},
+  },
+  {
+    name:"gap_3_6",
+    designedFrom:["parameter-sensitivity"],
+    label:"갭 3~6%",
+    description:"기준 갭 2~7%보다 중앙 구간만 허용하는 민감도",
+    params:{gapMin:3,gapMax:6},
+  },
+  {
+    name:"vol_1.5",
+    designedFrom:["parameter-sensitivity"],
+    label:"거래량≥1.5배",
+    description:"재돌파 1분 거래량 배수를 1.5배로 강화",
+    params:{volMult:1.5},
+  },
+  {
+    name:"stop_0.7",
+    designedFrom:["parameter-sensitivity"],
+    label:"손절 0.7%",
+    description:"기준 손절 1.0%보다 빠른 손절 민감도",
+    params:{stop:.7},
+  },
+  {
+    name:"tp_1.0",
+    designedFrom:["parameter-sensitivity"],
+    label:"익절 1.0%",
+    description:"기준 익절 1.5%보다 빠른 이익실현 민감도",
+    params:{takeProfit:1.0},
+  },
 ]);
 
 export const OPENING_FIXED_FRICTION_PCT=.23;
