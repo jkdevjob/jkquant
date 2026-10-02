@@ -11190,6 +11190,25 @@ console.log('\n[PLAN AUTH] 자산플랜 로그인 게이트');
   })().catch(e=>ok('로그인 상태 처리기 시험 실행', false, String(e&&e.message||e))));
 }
 
+
+/* ════ GPT 오늘 탭 실시간 마감장부 우선 ════ */
+console.log('\n[SCALPING TODAY LIVE] BTC·SOXL 실시간 장부 우선 · 부분 장애 격리');
+{
+  const dapi=fs.readFileSync(__d+'/functions/api/scalping-daily-results.js','utf8');
+  ok('오늘 API는 BTC·SOXL Worker 마감 모의장부를 연구 CSV보다 우선한다',
+     /GLOBAL_WORKER_FALLBACK/.test(dapi)
+     &&/async function globalPaperSessions\(env,strategy\)/.test(dapi)
+     &&/liveFirstSessions\(env,"crypto"/.test(dapi)
+     &&/liveFirstSessions\(env,"soxl"/.test(dapi)
+     &&/source,"global-paper-live"|source:"global-paper-live"/.test(dapi));
+  ok('오늘 API는 전략별 실패를 격리해 한 원천 오류가 4전략 전체를 숨기지 않는다',
+     /async function safeSessions\(fn\)/.test(dapi)
+     &&/safeSessions\(\(\)=>openingSessions\(\)\)/.test(dapi)
+     &&/safeSessions\(\(\)=>daytradingSessions\(\)\)/.test(dapi));
+  ok('오늘 화면은 실시간 마감 모의장부 사용 여부를 표시한다',
+     /global-paper-live/.test(scl) && /실시간 마감 모의장부/.test(scl));
+}
+
 Promise.all(PENDING).then(()=>{
   console.log(`\n════ 결과: ${pass} PASS / ${fail} FAIL ${fail===0?'— ALL PASS ★':'— 배포 금지, 위 ✗ 항목 수정 필요'} ════`);
   process.exit(fail===0?0:1);
