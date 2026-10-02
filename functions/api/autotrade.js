@@ -175,7 +175,7 @@ export async function onRequest({ request, env }) {
     out.uid = uid;
 
     const doc = await fsGet(tok, pid, "users/" + uid);
-    const state = doc && doc.state;
+    const state = doc && (doc.stateV2 || doc.state);  // stateV2 정본, legacy state는 1회 마이그레이션 전 fallback
     if (!state || !state.inf || !state.inf.sessions) return json({ ...out, error: "저장된 세션이 없습니다" }, 404);
 
     // 오늘 이미 돌았으면 다시 내지 않는다 — 이중 주문 방지
