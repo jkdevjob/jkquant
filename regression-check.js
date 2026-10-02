@@ -10771,12 +10771,18 @@ console.log('[OPENING SIGNAL LEARNING] 실시간 ledger · 30분 사후라벨 ·
      /export class OpeningSignalStore extends DurableObject/.test(ow)
      && /SIGNAL_STORE/.test(ow) && /async function appendLedger/.test(ow)
      && /liveSignalLedger/.test(oy));
-  ok('실시간 ledger는 기준+그림자 BUY/SELL을 strategyVersion과 함께 보존',
-     /liveEvent\(date,target,"buy","baseline"/.test(ow)
+  ok('실시간 ledger는 기준+운영메인+그림자 BUY/SELL을 strategyVersion과 함께 보존',
+     /baselineBuyEvents/.test(ow)
+     && /baselineSellEvents/.test(ow)
+     && /liveEvent\(date,target,"buy","baseline"/.test(ow)
      && /liveEvent\(date,target,"sell","baseline"/.test(ow)
+     && /mainVariant!=="baseline"/.test(ow)
+     && /liveEvent\(date,target,"buy",mainVariant/.test(ow)
+     && /liveEvent\(date,target,"sell",mainVariant/.test(ow)
      && /liveEvent\(date,target,"buy",String\(v\.name/.test(ow)
      && /liveEvent\(date,target,"sell",String\(v\.name/.test(ow)
      && /strategyVersion:signal\.strategyVersion/.test(ow)
+     && /canonical_baseline_observation/.test(ow)
      && /shadow_strategy_not_notified/.test(ow));
   ok('Telegram 실패가 신호를 없애지 않고 VTS 실행만 안전하게 보류',
      /telegram\.buyError/.test(om) && /telegram\.sellError/.test(om)
@@ -11516,10 +11522,54 @@ console.log('\n[SCALPING TODAY LIVE] BTC·SOXL 실시간 장부 우선 · 부분
   ok('오늘 API는 전략별 실패를 격리해 한 원천 오류가 4전략 전체를 숨기지 않는다',
      /async function safeSessions\(fn\)/.test(dapi)
      &&/safeSessions\(\(\)=>openingSessions\(\)\)/.test(dapi)
-     &&/safeSessions\(\(\)=>daytradingSessions\(\)\)/.test(dapi));
+     &&/safeSessions\(\(\)=>daytradingSessions\(env\)\)/.test(dapi));
   ok('오늘 화면은 실시간 마감 모의장부 사용 여부를 표시한다',
      /global-paper-live/.test(scl) && /실시간 마감 모의장부/.test(scl));
 }
+
+
+/* ════ GPT 그림자전략 최소10개 + 수동 메인승격 ════ */
+console.log('\n[SCALPING SHADOW/PROMOTION] 최소10개 · 순위 · 소유자 수동승격 · baseline 보존');
+{
+  const rankApi=fs.readFileSync(__d+'/functions/api/scalping-shadow-ranking.js','utf8');
+  const promoApi=fs.readFileSync(__d+'/functions/api/scalping-promotion.js','utf8');
+  const openMon=fs.readFileSync(__d+'/functions/api/opening-monitor.js','utf8');
+  const dayCore=fs.readFileSync(__d+'/functions/api/_daytrading.js','utf8');
+  const ow=fs.readFileSync(__d+'/worker/opening-scheduler/src/index.js','utf8');
+  const dw=fs.readFileSync(__d+'/worker/daytrading-scheduler/src/index.js','utf8');
+  const gw=fs.readFileSync(__d+'/worker/global-intraday-scheduler/src/index.js','utf8');
+
+  ok('단타 버전 v1.38.0 · 4개 탭 그림자 순위 컨테이너 존재',
+     /id="scVer">v1\.38\.0/.test(scl)
+     && ['opening','daytrading','crypto','soxl'].every(x=>scl.includes('id="shadow_rank_'+x+'"')));
+  ok('각 탭 그림자 카탈로그 최소 10개를 강제한다',
+     /minRequired:10/.test(rankApi)
+     && /minShadowStrategies:10/.test(rankApi)
+     && (dayCore.match(/name:"/g)||[]).length>=10);
+  ok('승격은 자동이 아니라 소유자 버튼으로만 수행한다',
+     /autoPromotion:false/.test(rankApi)
+     && /⭐ 메인전략 승격/.test(scl)
+     && /accounts:lookup/.test(promoApi)
+     && /owner-promotion-button/.test(promoApi));
+  ok('승격 조건은 review+표본+위험+점수+실시간호환을 모두 요구한다',
+     /row\.review===true&&row\.sampleReady===true&&row\.riskOk===true&&Number\(row\.researchScore\)>=PROMOTION_MIN_SCORE/.test(rankApi)
+     && /NON_PROMOTABLE/.test(rankApi));
+  ok('승격은 다음 새 세션부터 잠기고 baseline 연구 이력은 분리 보존한다',
+     /next-new-session/.test(promoApi)
+     && /baselineTrades/.test(openMon) && /operationalTrades/.test(openMon)
+     && /mainVariantForDate/.test(ow)
+     && /schema:2,date,mainVariant/.test(dw)
+     && /mainVariantForDate/.test(gw));
+  ok('원래 기준전략 원복 버튼과 서버 baseline 원복 경로가 있다',
+     /원래 기준전략으로 원복/.test(scl)
+     && /variant==="baseline"/.test(promoApi));
+  ok('Worker 메인전략 설정 경로는 monitor key로 보호된다',
+     /u\.pathname==="\/config"/.test(ow)
+     && /u\.pathname==="\/config"/.test(dw)
+     && /u\.pathname==="\/config"/.test(gw)
+     && /x-monitor-key/.test(promoApi));
+}
+
 
 Promise.all(PENDING).then(()=>{
   console.log(`\n════ 결과: ${pass} PASS / ${fail} FAIL ${fail===0?'— ALL PASS ★':'— 배포 금지, 위 ✗ 항목 수정 필요'} ════`);

@@ -59,12 +59,18 @@ function emptyShadow(){
     name:v.name,label:v.label,description:v.description,params:v.params,designedFrom:v.designedFrom||[],trades:[]
   }]));
 }
+function mainVariantDef(name){
+  const n=String(name||"baseline");
+  if(n==="baseline")return {name:"baseline",label:"원래 기준전략",params:{}};
+  return SHADOW_VARIANTS.find(v=>v.name===n)||{name:"baseline",label:"원래 기준전략",params:{}};
+}
 
-async function scanShard(origin,now,shard,shards,limit,cutoffHm){
+async function scanShard(origin,now,shard,shards,limit,cutoffHm,mainVariant="baseline"){
   const uj=await (await fetch(origin+"/api/universe?limit="+limit)).json();
   const universe=(uj.universe||[]).filter((_,i)=>i%shards===shard);
-  const trades=[],shadow=emptyShadow(),errors=[];let idx=0;
+  const trades=[],baselineTrades=[],shadow=emptyShadow(),errors=[];let idx=0;
   const frictionCalibration=await openingVtsCalibration(origin);
+  const mainDef=mainVariantDef(mainVariant);
 
   async function worker(){
     while(idx<universe.length){
@@ -80,8 +86,11 @@ async function scanShard(origin,now,shard,shards,limit,cutoffHm){
         const meta=dailyMeta(dj,now.date);
         if(!meta)continue;
 
-        const base=rebreakTrade(rows,meta,cutoffHm,{frictionCalibration});
-        if(base)trades.push({code:u.code,name:u.name||u.code,variant:"baseline",...base});
+        const canonical=rebreakTrade(rows,meta,cutoffHm,{frictionCalibration});
+        if(canonical)baselineTrades.push({code:u.code,name:u.name||u.code,variant:"baseline",mainVariant:"baseline",...canonical});
+
+        const operational=mainDef.name==="baseline"?canonical:rebreakTrade(rows,meta,cutoffHm,{...mainDef.params,frictionCalibration});
+        if(operational)trades.push({code:u.code,name:u.name||u.code,variant:mainDef.name,mainVariant:mainDef.name,...operational});
 
         for(const v of SHADOW_VARIANTS){
           const tr=rebreakTrade(rows,meta,cutoffHm,{...v.params,frictionCalibration});
@@ -96,8 +105,9 @@ async function scanShard(origin,now,shard,shards,limit,cutoffHm){
 
   const sorter=(a,b)=>a.entryTime-b.entryTime||(b.amountRatio-a.amountRatio)||String(a.code).localeCompare(String(b.code));
   trades.sort(sorter);
+  baselineTrades.sort(sorter);
   Object.values(shadow).forEach(x=>x.trades.sort(sorter));
-  return {universe:universe.length,trades,shadow,errors};
+  return {universe:universe.length,trades,baselineTrades,shadow,errors,mainVariant:mainDef.name,mainLabel:mainDef.label};
 }
 function buyLines(rows){
   return rows.flatMap((x,i)=>[
@@ -137,6 +147,8 @@ export async function onRequestGet({request,env}){
   const shards=Math.max(1,Math.min(10,parseInt(url.searchParams.get("shards")||"5",10)||5));
   const limit=Math.max(10,Math.min(100,parseInt(url.searchParams.get("limit")||"100",10)||100));
   const origin=url.origin;
+  const requestedMain=String(url.searchParams.get("mainVariant")||"baseline");
+  const mainVariant=mainVariantDef(requestedMain).name;
   const targetRaw=url.searchParams.get("targetHm");
   let liveTargetHm=now.targetHm;
   if(!history&&!serverHistory&&targetRaw!==null){
@@ -155,12 +167,13 @@ export async function onRequestGet({request,env}){
   const cutoffHm=(history||serverHistory)?Math.min(930,now.hm>930?930:now.targetHm):liveTargetHm;
 
   try{
-    const res=await scanShard(origin,now,shard,shards,limit,cutoffHm);
+    const res=await scanShard(origin,now,shard,shards,limit,cutoffHm,mainVariant);
 
     if(history||serverHistory){
       return new Response(JSON.stringify({
-        ok:true,date:now.date,cutoffHm,shard,shards,universe:res.universe,
-        trades:res.trades,
+        ok:true,date:now.date,cutoffHm,shard,shards,universe:res.universe,mainVariant:res.mainVariant,
+        trades:res.baselineTrades,
+        operationalTrades:res.trades,
         shadowVariants:Object.values(res.shadow),
         errors:res.errors.length
       }),{headers:JH});
@@ -168,6 +181,10 @@ export async function onRequestGet({request,env}){
 
     const buys=res.trades.filter(x=>x.entryTime===liveTargetHm);
     const sells=res.trades.filter(x=>x.exitTime===liveTargetHm);
+    // 승격 뒤에도 원래 baseline 실시간 신호를 별도 원본으로 계속 남긴다.
+    // 운영 메인과 baseline이 같을 때는 Worker에서 중복 이벤트를 만들지 않는다.
+    const baselineBuyEvents=res.baselineTrades.filter(x=>x.entryTime===liveTargetHm);
+    const baselineSellEvents=res.baselineTrades.filter(x=>x.exitTime===liveTargetHm);
     const telegram={buySent:false,sellSent:false,buyMessageId:null,sellMessageId:null,buyError:null,sellError:null};
 
     // Telegram 전송 실패가 신호 원본 자체를 지우지 않게 한다.
@@ -186,8 +203,9 @@ export async function onRequestGet({request,env}){
     }
 
     return new Response(JSON.stringify({
-      ok:true,date:now.date,targetHm:liveTargetHm,shard,shards,universe:res.universe,
+      ok:true,date:now.date,targetHm:liveTargetHm,shard,shards,universe:res.universe,mainVariant:res.mainVariant,
       buyEvents:buys,sellEvents:sells,trades:res.trades,
+      baselineBuyEvents,baselineSellEvents,baselineTrades:res.baselineTrades,
       shadowEvents:shadowEvents(res.shadow,liveTargetHm),
       telegram,errors:res.errors.length
     }),{headers:JH});
