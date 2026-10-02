@@ -10224,7 +10224,7 @@ console.log('\n[135] 자산플랜 세션 — 운영처럼 세션 + 모의투자 
   ok('B 세션은 horizon별 분리되고 현재 투자중 플랜은 기존 저장소와 분리',
      /filter\(x=>x&&\+x\.horizon===\+h\)/.test(extractFn(pl,'function assetSessionList(h=activeHorizon)'))
      && /현재 투자중 플랜은 기존 fiveYearPlan 저장소를 그대로 쓴다/.test(pl)
-     && /if\(x\)\{[\s\S]*syncActiveAssetSessionFromView/.test(extractFn(pl,'function localSave(force=false)')));
+     && /if\(x\)\{[\s\S]*syncActiveAssetSessionFromView/.test(extractFn(pl,'function localSave()')));
 
   ok('C 선택한 운영 세션 아래 기존 현재분석·계좌·거래이력·판단근거·전략설명을 그대로 사용',
      /id="alphaOrderSection"/.test(pl) && /id="alphaAccountSection"/.test(pl)
