@@ -1298,8 +1298,11 @@ console.log('[23] 관리자 모드 — 접속 계정·사용자 관리');
 
   /* 곁들여 고친 것 — users/{uid}는 운영과 백테가 같이 쓰는 문서다.
      merge 없이 덮어써서 백테의 커스텀 종목이 서버에서 사라지고 있었다. */
-  ok('운영 저장이 백테 종목을 안 지운다',
-     /setDoc\(window\.fb\.doc\(window\.fb\.db,'users',curUid\),\{state:S,updated:\(S\._updated\|\|Date\.now\(\)\)\},\{merge:true\}\)/.test(idx));
+  ok('운영 저장이 백테 종목을 안 지우고 거래이력 revision을 트랜잭션으로 보호한다',
+     /runTransaction/.test(idx)
+     && /tx\.set\(ref,\{state:candidate,updated:writeUpdated,stateRev:nr\},\{merge:true\}\)/.test(idx)
+     && /REMOTE_HISTORY_CONFLICT/.test(idx)
+     && /_historyPreserves\(candidate,remote\)/.test(idx));
 }
 
 
@@ -1478,8 +1481,15 @@ console.log('[28] KIS 모의투자 실행 · 주문 이력');
   ok('성공·실패 모두 기록', /KLOG\.unshift\(rec\); saveK\(\); renderKlog\(\);/.test(sc)
      && /rec\.ok=!!j\.ok;/.test(sc));
   ok('수동 주문창도 같은 경로', /const rec=await kisSubmit\(\{side,code,name:nm,qty,price,priceType:mkt\?'market':'limit'\}\);/.test(sc));
-  ok('클라우드에도 남긴다', /window\.fb\.doc\(window\.fb\.db,'users',me\.uid\)[\s\S]{0,80}scalp:\{ kis:KLOG/.test(sc));
-  ok('클라우드 병합은 id 기준(지운 건 안 살아남)', /const seen=new Set\(KLOG\.map\(x=>x\.id\)\);/.test(sc));
+  ok('클라우드에도 트랜잭션으로 남긴다',
+     /window\.fb\.runTransaction\(window\.fb\.db,async tx=>/.test(sc)
+     && /tx\.set\(ref,\{scalp:next\},\{merge:true\}\)/.test(sc));
+  ok('KIS 주문이력은 원격+로컬 id 합집합 append-only',
+     /const kisBy=new Map\(\);/.test(sc)
+     && /old&&Array\.isArray\(old\.kis\)/.test(sc)
+     && /\.\.\.KLOG/.test(sc)
+     && !/function delKlog\(i\)\{[^}]*KLOG\.splice/.test(sc)
+     && !/function clearKlog\(\)\{[^}]*KLOG=\[\]/.test(sc));
 
   // 반자동이다 — 확인 없이 주문이 나가면 안 된다
   ok('매수는 확인창을 거친다', /async function kisBuyPick\(code\)\{[\s\S]{0,900}?if\(!confirm\(/.test(sc));
@@ -1595,8 +1605,10 @@ console.log('[30] 모의 시작일 일괄 변경');
      && KEYS.every(k=>new RegExp(`delete t\\.settings\\.${k};`).test(idx)),
      KEYS.filter(k=>!new RegExp(`delete x\\.settings\\.${k};`).test(ap)).join(',')||'ok');
   const iSaveAll=ap.indexOf('saveLocal();'), iPushAll=ap.indexOf('await pushRemoteNow()'), iOpenAll=ap.indexOf('await openPaper()');
-  ok('지운 자리를 다시 채우기 전에 로컬·클라우드에 새 출발선을 저장한다',
-     iSaveAll>=0 && iPushAll>iSaveAll && iOpenAll>iPushAll, iSaveAll+' / '+iPushAll+' / '+iOpenAll);
+  ok('모의 이력을 비운 중간상태는 로컬에만 두고 재생 완료 뒤에만 클라우드 저장',
+     iSaveAll>=0 && iOpenAll>iSaveAll && iPushAll>iOpenAll
+     && ap.slice(iSaveAll,iOpenAll).indexOf('pushRemoteNow')<0,
+     iSaveAll+' / '+iOpenAll+' / '+iPushAll);
   ok('모의가 없으면 알리고 멈춘다', /if\(!list\.length\)\{ alert\('모의 세션이 없습니다\.'\); return; \}/.test(ap));
 
   /* 사용자가 5년 비교를 직접 할 수 있도록 모의 시작일 하한을 5년으로 넓힌다. */
@@ -1878,11 +1890,12 @@ console.log('[40] 모의 일괄 적용 — 원금과 1회 적립액을 따로');
   ok('잘못된 값이면 멈춘다', /cap===false \|\| add===false/.test(ap));
   ok('원금과 적립액을 따로 적용하고 ASAP은 1·2·3배 헬퍼를 쓴다', /paperCapField\(tab,x\.settings\)/.test(ap) && /x\.settings\[f\]=wonToSess\(cap,x\.settings,R\)/.test(ap)
      && /applyPaperAdd\(tab,x\.settings,add,R\)/.test(ap));
-  ok('전체 적용은 모든 모의 세션 시작일을 같은 날짜로 강제하고 재생 전에 클라우드에 먼저 저장한다',
+  ok('전체 적용은 모든 모의 세션 시작일을 맞추되 빈 이력 상태는 클라우드에 저장하지 않는다',
      /S\.paperCommon\.simStart=ns/.test(ap)
      && /x\.simStart=ns/.test(ap)
-     && ap.indexOf('await pushRemoteNow()')>=0
-     && ap.indexOf('await pushRemoteNow()')<ap.indexOf('await openPaper()')
+     && ap.indexOf('await openPaper()')>=0
+     && ap.indexOf('await pushRemoteNow()')>ap.indexOf('await openPaper()')
+     && ap.slice(0,ap.indexOf('await openPaper()')).indexOf('pushRemoteNow')<0
      && /paperSessions\(\)\.filter\(\(\[,x\]\)=>x\.simStart!==ns\)/.test(ap));
   /* 금액 칸은 원화다. 미국 종목 세션엔 시작일 환율로 환산해 들어가므로
      어떤 환율을 썼는지 묻기 전에 보여야 한다 — 원금이 얼마로 들어갈지가 달라진다. */
@@ -1942,7 +1955,8 @@ console.log('[40] 모의 일괄 적용 — 원금과 1회 적립액을 따로');
 
   const ap=extractFn(idx,'async function applyAllSimStart()');
   const p1=ap.indexOf('await pushRemoteNow()'), p2=ap.indexOf('await openPaper()');
-  ok('모의 시작일 — 전체 적용은 재생 전에 즉시 cloud 저장', p1>=0&&p2>=0&&p1<p2, p1+' / '+p2);
+  ok('모의 시작일 — 재생 완료 전에는 cloud 원장을 건드리지 않는다',
+     p1>=0&&p2>=0&&p2<p1&&ap.slice(0,p2).indexOf('pushRemoteNow')<0, p2+' / '+p1);
 
   const ss=extractFn(idx,'function saveSettings()');
   ok('무매 설정 — 기존 settings를 보존한 채 화면 값만 덮어쓴다',
@@ -3190,9 +3204,11 @@ console.log('\n[61] 모의 성과 — 원화로 받아 세션 통화로 환산')
   ok('쓴 환율을 확인창에 적는다', /전략 계산에만 \$\{fx\.date\} 기준 환율 \$\{fx\.rate\.toLocaleString\('en-US'\)\}원\/\$을 사용합니다/.test(idx));
   ok('국내만 있으면 환율을 안 부른다', /const needUsd=\[\.\.\.capHit,\.\.\.addHit\]\.some\(\(\[,x\]\)=>!isKrwSt\(x\.settings\)\);/.test(idx));
   ok('끝나고도 쓴 환율을 남긴다', /const fxNote = fx \? `미국 종목은 \$\{fx\.date\} 환율/.test(idx));
-  ok('전체 적용 즉시 클라우드 저장 함수가 있다',
+  ok('클라우드 저장 함수는 transaction + history conflict guard를 탄다',
      /async function pushRemoteNow\(\)/.test(idx)
-     && /await window\.fb\.setDoc/.test(extractFn(idx,'async function pushRemoteNow()')));
+     && /_commitStateRemote\('cloud-now'\)/.test(extractFn(idx,'async function pushRemoteNow()'))
+     && /window\.fb\.runTransaction/.test(extractFn(idx,'async function _commitStateRemote(where)'))
+     && /REMOTE_HISTORY_CONFLICT/.test(extractFn(idx,'async function _commitStateRemote(where)')));
 
   // 서버: 날짜를 주면 그 날 값, 주말이면 직전 영업일
   const fx=fs.existsSync(__d+'/functions/api/fx.js') ? fs.readFileSync(__d+'/functions/api/fx.js','utf8') : '';
@@ -8689,7 +8705,7 @@ console.log('\n[119] 제10차 — 라오어 V4.0 원문 직접 대조 (SOURCE GO
      && /const INF_DEFAULTS_POLICY_VER=2;/.test(idx)
      && /function migrateInfOperatingDefaults\(\)/.test(idx)
      && /st\.big=IM_BIG_DEFAULT;/.test(idx) && /st\.revGap=REV_GAP_DEF;/.test(idx) && /st\.rows=IM_ROWS_DEFAULT;/.test(idx)
-     && /if\(migrateInfOperatingDefaults\(\)\) saveLocal\(\);/.test(idx)
+     && /if\(migrateInfOperatingDefaults\(\) && \(!curUid\|\|stateCloudHydrated\)\) saveLocal\(\);/.test(idx)
      && /function migrateLiveInfOperatingDefaults\(\)/.test(pl)
      && /st\.big=PATH_DEFAULTS\.classic\.infBig;/.test(pl) && /st\.revGap=0;/.test(pl) && /st\.rows=PATH_DEFAULTS\.classic\.infRows;/.test(pl)
      && !/V4\.0 정식 구성입니다/.test(idx) && !/V4\.0 정식 · 1회매수금÷\(수량\+k\) · 0이면/.test(idx)
