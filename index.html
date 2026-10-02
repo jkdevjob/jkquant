@@ -503,7 +503,7 @@ html.had-user #authgate .bootwait{display:block}
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-app.js";
   import { getAuth, GoogleAuthProvider, signInWithPopup, getRedirectResult, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-auth.js";
-  import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-firestore.js";
+  import { getFirestore, doc, getDoc, setDoc, runTransaction } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-firestore.js";
   const firebaseConfig = {
     apiKey: "AIzaSyBzBe9pAttnbDgTlNThWZzNqtAAKxX7Ksw",
     authDomain: "jk-invest.firebaseapp.com",
@@ -518,7 +518,7 @@ html.had-user #authgate .bootwait{display:block}
   const db = getFirestore(app);
   const provider = new GoogleAuthProvider();
   // 전역 노출 (일반 스크립트에서 사용)
-  window.fb = { auth, db, provider, signInWithPopup, getRedirectResult, onAuthStateChanged, signOut, doc, getDoc, setDoc };
+  window.fb = { auth, db, provider, signInWithPopup, getRedirectResult, onAuthStateChanged, signOut, doc, getDoc, setDoc, runTransaction };
   window.dispatchEvent(new Event('fb-ready'));
 </script>
 </head>
@@ -549,7 +549,7 @@ try{ if(localStorage.getItem('qcockpit_hadUser')==='1') document.documentElement
 </div>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.106.4</span></h1></div>
+    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.107.0</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -1660,7 +1660,7 @@ if(/^\/paper\/?$/.test(location.pathname)){
   <footer>
     <strong>JK 퀀트</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.106.4</b> · 2026-10-01</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.107.0</b> · 2026-10-02</div>
   </footer>
 </div>
 
@@ -2250,11 +2250,17 @@ function migrateInfOperatingDefaults(){
 
 function load(){
   try{S=JSON.parse(localStorage.getItem(lsKey()))}catch(e){S=null}
-  if(!validState(S)){S=freshState();saveLocal();}
+  const hadValidLocal=validState(S);
+  if(!hadValidLocal){
+    S=freshState();
+    // 로그인 사용자는 Firebase 원장을 읽기 전의 새 기본상태를 "최신 로컬"로 저장하지 않는다.
+    // 새 기기/캐시삭제 직후 빈 상태가 기존 클라우드 거래이력을 덮는 사고를 막는다.
+    if(!curUid)saveLocal();
+  }
   if(!S.activeTab)S.activeTab='inf';
   ensureBoxes();
   forceV40();   // V5.0 숨김 기간: 저장된 v50 세션을 v40으로 되돌림
-  if(migrateInfOperatingDefaults()) saveLocal();
+  if(migrateInfOperatingDefaults() && (!curUid||stateCloudHydrated)) saveLocal();
 }
 /* 로컬 저장은 실패할 수 있다 — 용량 초과(QuotaExceededError)나 사생활 보호 모드.
    예전에는 여기서 던진 예외가 load() → 로그인 처리까지 타고 올라가서
@@ -2262,6 +2268,65 @@ function load(){
    되고, 사파리는 UTF-16으로 세어 5MB 한도에 두 배 빨리 닿는다.
    로컬 저장이 실패해도 클라우드 저장은 계속돼야 기록을 잃지 않는다. */
 let lsFailed=false;
+/* ── 거래이력 보존 가드 ──────────────────────────────────────────────
+   timestamps만으로 로컬/클라우드 승자를 정하면 새 기기·오래 열린 탭·다른 기기에서
+   "기록이 더 적은데 시각만 최신"인 상태가 전체 state를 덮을 수 있다.
+   클라우드 revision + 실제 이력 포함관계를 함께 본다. */
+let stateCloudHydrated=false, stateCloudRev=0, stateCloudConflict=false, stateCloudPending=false;
+function _histKeyPart(x){
+  if(x&&x.id!=null)return 'id:'+String(x.id);
+  if(x&&x.ts!=null)return 'ts:'+String(x.ts);
+  return '';
+}
+function _stateHistoryMap(st){
+  const m=new Map(), boxes=['inf','vr','ma','ivs','dca','asap'];
+  if(!st||typeof st!=='object')return m;
+  for(const bk of boxes){
+    const box=st[bk]; if(!box||!Array.isArray(box.sessions))continue;
+    for(const s of box.sessions){
+      if(!s||!s.id)continue;
+      const p=bk+'|'+s.id;
+      m.set(p+'|@session','1');
+      const h=Array.isArray(s.hist)?s.hist:[];
+      h.forEach((r,i)=>{
+        const k=_histKeyPart(r)||('fallback:'+String(r&&r.date||'')+':'+String(r&&(r.kind||r.type)||'')+':'+i);
+        m.set(p+'|hist|'+k,JSON.stringify(r));
+      });
+    }
+  }
+  const plan=st.plan;
+  if(plan&&Array.isArray(plan.sessions)){
+    for(const s of plan.sessions){
+      if(!s||!s.id)continue;
+      const p='plan|'+s.id; m.set(p+'|@session','1');
+      const l=s.ledger||{};
+      if(l.base)m.set(p+'|@base',JSON.stringify(l.base));
+      (Array.isArray(l.events)?l.events:[]).forEach((r,i)=>{
+        const k=_histKeyPart(r)||('fallback:'+String(r&&r.date||'')+':'+String(r&&r.type||'')+':'+i);
+        m.set(p+'|event|'+k,JSON.stringify(r));
+      });
+    }
+  }
+  return m;
+}
+function _historyPreserves(candidate,remote){
+  const a=_stateHistoryMap(candidate),b=_stateHistoryMap(remote);
+  for(const [k,v] of b){if(!a.has(k)||a.get(k)!==v)return false;}
+  return true;
+}
+function _historyRelation(a,b){
+  const ap=_historyPreserves(a,b),bp=_historyPreserves(b,a);
+  return {aPreservesB:ap,bPreservesA:bp,equal:ap&&bp};
+}
+function _historyCount(st){return _stateHistoryMap(st).size;}
+function _writeLocalExact(st){
+  try{localStorage.setItem(lsKey(),JSON.stringify(st));return true;}catch(e){console.error('local exact',e);return false;}
+}
+function _lockStateConflict(msg){
+  stateCloudConflict=true;stateCloudPending=false;
+  try{setSync('err');}catch(e){}
+  try{showLsWarn('⚠️ 거래이력 보호: '+msg+' 클라우드 저장을 잠갔습니다. 이 탭에서 새 기록을 더 입력하지 말고 새로고침해 최신 원장을 다시 불러오세요.');}catch(e){}
+}
 function _newerLocalState(){
   try{
     const x=JSON.parse(localStorage.getItem(lsKey())||'null');
@@ -7958,7 +8023,9 @@ async function paperRepairLegacyStarts(){
     paperSeedCommonAmounts(tab,x,R,commonWon);
   }
   S._paperStartRepairVer=PAPER_START_REPAIR_VER;
-  saveLocal(); await pushRemoteNow();
+  // 기존 모의 이력을 비운 중간상태는 클라우드에 절대 쓰지 않는다.
+  // 재생이 끝나 새 이력이 생긴 뒤의 일반 저장만 클라우드 원장을 갱신한다.
+  saveLocal();
   paperNote=`🔧 시작일 오류로 최근 날짜에 묶였던 모의 세션 ${uniq.length}개를 ${common} 기준으로 복구했습니다.`;
   return uniq.length;
 }
@@ -8108,13 +8175,12 @@ async function applyAllSimStart(){
       if(amtTouched) x.paperFxRate=isKrwSt(x.settings)?1:R; }
   });
   saveLocal();
-  /* 전체 적용 버튼을 누른 순간의 시작일·원금·세션 설정을 먼저 영구 저장한다.
-     재생(openPaper)이 오래 걸리거나 중간에 페이지를 옮겨도 예전 paperCommon 날짜로 돌아가면 안 된다. */
-  const appliedCloudOk=await pushRemoteNow();
+  /* 거래이력을 비운 중간상태는 Firebase에 쓰지 않는다.
+     재생이 실패/중단되면 클라우드의 직전 원장이 그대로 복구본으로 남는다. */
   await openPaper();          // 지운 자리를 새 시작일로 다시 채우고 표를 새로 그린다
   saveLocal();
   const replayCloudOk=await pushRemoteNow();
-  const cloudOk=appliedCloudOk||replayCloudOk;
+  const cloudOk=replayCloudOk;
   const dateMiss=paperSessions().filter(([,x])=>x.simStart!==ns);
   if(dateMiss.length){
     paperNote=`⚠ 전체 적용 후 시작일이 안 맞는 세션 ${dateMiss.length}개: ${dateMiss.map(([,x])=>x.name).join(', ')}`;
@@ -9924,61 +9990,101 @@ let saveTimer=null, lastPushedJSON='';
 function setSync(state){ // 'ok'|'sync'|'err'|null
   const d=$('syncdot');if(d)d.className='syncdot'+(state?(' '+state):'');
 }
+async function _commitStateRemote(where){
+  if(!curUid||!window.fb)return true;
+  if(!stateCloudHydrated){stateCloudPending=true;setSync('sync');return false;}
+  if(stateCloudConflict)return false;
+  if(_staleStateGuard(where))return false;
+  const ref=window.fb.doc(window.fb.db,'users',curUid);
+  const candidate=JSON.parse(JSON.stringify(S)),writeUpdated=+candidate._updated||Date.now();
+  try{
+    const nextRev=await window.fb.runTransaction(window.fb.db,async tx=>{
+      const snap=await tx.get(ref),d=snap.exists()?(snap.data()||{}):{},remote=d.state,rev=+d.stateRev||0;
+      // 다른 기기/탭이 우리가 마지막으로 본 뒤 썼다면 그쪽 이력을 한 건도 잃지 않는 경우만 자동 쓰기 허용.
+      if(remote&&validState(remote)&&rev!==stateCloudRev&&!_historyPreserves(candidate,remote)){
+        const err=new Error('REMOTE_HISTORY_CONFLICT');err.code='history-conflict';throw err;
+      }
+      const nr=rev+1;
+      tx.set(ref,{state:candidate,updated:writeUpdated,stateRev:nr},{merge:true});
+      return nr;
+    });
+    stateCloudRev=+nextRev||stateCloudRev;stateCloudConflict=false;stateCloudPending=false;
+    lastPushedJSON=JSON.stringify(S);setSync('ok');return true;
+  }catch(e){
+    console.error(where,e);
+    if((e&&e.code==='history-conflict')||String(e&&e.message||e).includes('REMOTE_HISTORY_CONFLICT'))
+      _lockStateConflict('다른 기기/탭의 최신 거래이력과 현재 상태가 서로 달라 자동 덮어쓰기를 차단했습니다.');
+    else setSync('err');
+    return false;
+  }
+}
 async function pushRemote(){
-  if(!curUid||!window.fb)return;            // 로그인 전엔 로컬만
-  if(_staleStateGuard('cloud-schedule')) return; // 오래된 탭이 최신 클라우드 state를 덮지 못하게
+  if(!curUid||!window.fb)return;
+  if(!stateCloudHydrated){stateCloudPending=true;setSync('sync');return;}
+  if(stateCloudConflict)return;
+  if(_staleStateGuard('cloud-schedule'))return;
   if(saveTimer)clearTimeout(saveTimer);
   setSync('sync');
   saveTimer=setTimeout(async()=>{
-    try{
-      if(_staleStateGuard('cloud-write')){ setSync('ok'); return; }
-      const json=JSON.stringify(S);
-      if(json===lastPushedJSON){setSync('ok');return;}
-      // merge 필수 — 이 문서엔 백테가 쓰는 backtestTickers도 같이 산다.
-      // 통째로 덮어쓰던 탓에 백테에서 추가한 종목이 운영 앱을 열면 서버에서 사라졌다
-      // (같은 기기는 localStorage 사본에 가려 안 보였고, 다른 기기에서 드러났다).
-      await window.fb.setDoc(window.fb.doc(window.fb.db,'users',curUid),{state:S,updated:(S._updated||Date.now())},{merge:true});
-      lastPushedJSON=json; setSync('ok');
-    }catch(e){console.error('push',e);setSync('err');}
-  },800); // 입력 직후 잦은 저장 방지(디바운스)
+    const json=JSON.stringify(S);
+    if(json===lastPushedJSON){setSync('ok');return;}
+    await _commitStateRemote('cloud-write');
+  },800);
 }
 async function pushRemoteNow(){
-  if(!curUid||!window.fb) return true;
-  if(_staleStateGuard('cloud-now')) return false;
-  if(saveTimer){ clearTimeout(saveTimer); saveTimer=null; }
-  setSync('sync');
-  try{
-    const json=JSON.stringify(S);
-    await window.fb.setDoc(window.fb.doc(window.fb.db,'users',curUid),{state:S,updated:(S._updated||Date.now())},{merge:true});
-    lastPushedJSON=json; setSync('ok'); return true;
-  }catch(e){console.error('pushNow',e);setSync('err');return false;}
+  if(!curUid||!window.fb)return true;
+  if(saveTimer){clearTimeout(saveTimer);saveTimer=null;}
+  return await _commitStateRemote('cloud-now');
 }
 async function pullRemote(){
   if(!curUid||!window.fb)return false;
+  stateCloudHydrated=false;stateCloudConflict=false;
   try{
-    const snap=await window.fb.getDoc(window.fb.doc(window.fb.db,'users',curUid));
-    if(snap.exists()){
-      const d=snap.data();
-      if(d&&d.strategyDefaultOverrides&&typeof d.strategyDefaultOverrides==='object') cacheStrategyDefaults(d.strategyDefaultOverrides);
-      if(d&&validState(d.state)){
-        // 신선도 가드: 이 기기의 로컬 저장본이 서버보다 최신이면(오프라인 수정 등) 낡은 서버로 덮지 않고 로컬을 밀어올림
-        let local=null; try{local=JSON.parse(localStorage.getItem(lsKey()))}catch(e){}
-        if(local&&validState(local)&&(local._updated||0)>(d.updated||0)){
-          S=local; if(!S.activeTab)S.activeTab='inf'; ensureBoxes();
-          if(migrateInfOperatingDefaults()) saveLocal();
-          lastPushedJSON=null; pushRemote();
-          return true;
+    const ref=window.fb.doc(window.fb.db,'users',curUid),snap=await window.fb.getDoc(ref);
+    const d=snap.exists()?(snap.data()||{}):{};
+    if(d&&d.strategyDefaultOverrides&&typeof d.strategyDefaultOverrides==='object')cacheStrategyDefaults(d.strategyDefaultOverrides);
+    let local=null;try{local=JSON.parse(localStorage.getItem(lsKey())||'null')}catch(e){}
+    const remote=d&&validState(d.state)?d.state:null;
+    stateCloudRev=+d.stateRev||0;
+    if(remote){
+      const lvalid=validState(local);
+      if(!lvalid){
+        S=remote;
+      }else{
+        const rel=_historyRelation(local,remote);
+        if(rel.equal){
+          S=(+local._updated||0)>(+d.updated||0)?local:remote;
+        }else if(rel.aPreservesB&&!rel.bPreservesA){
+          // 로컬에만 추가 기록이 있는 오프라인 정상 케이스.
+          S=local;stateCloudPending=true;
+        }else if(rel.bPreservesA&&!rel.aPreservesB){
+          // 클라우드에 더 많은 기록이 있으면 시각과 무관하게 클라우드가 우선한다.
+          S=remote;
+        }else{
+          // 서로 다른 수정/기록이 갈라졌다. 어느 쪽도 지우지 않고 원격 쓰기를 멈춘다.
+          S=remote;stateCloudConflict=true;
+          _lockStateConflict('브라우저와 클라우드 거래이력이 서로 갈라져 어느 쪽도 자동으로 덮어쓰지 않습니다.');
         }
-        S=d.state;if(!S.activeTab)S.activeTab='inf';ensureBoxes();
-        const migrated=migrateInfOperatingDefaults();
-        saveLocal();
-        lastPushedJSON=migrated?'':JSON.stringify(S);
-        if(migrated) pushRemote();
-        return true;
       }
+      if(!S.activeTab)S.activeTab='inf';ensureBoxes();
+      const migrated=migrateInfOperatingDefaults();
+      // 원격을 로컬 캐시에 복사할 때 저장시각을 "지금"으로 올리지 않는다.
+      if(S===remote){S._updated=+d.updated||S._updated||0;_writeLocalExact(S);}
+      else if(migrated)saveLocal();
+      lastPushedJSON=(S===remote&&!migrated)?JSON.stringify(S):'';
+    }else{
+      if(!validState(S))S=validState(local)?local:freshState();
+      ensureBoxes();stateCloudPending=true;
     }
-  }catch(e){console.error('pull',e);}
-  return false;
+    stateCloudHydrated=true;
+    if(stateCloudConflict){setSync('err');return true;}
+    if(stateCloudPending||lastPushedJSON==='')await pushRemoteNow();
+    return true;
+  }catch(e){
+    console.error('pull',e);stateCloudHydrated=false;setSync('err');
+    try{showLsWarn('클라우드 원장을 확인하지 못해 안전을 위해 클라우드 저장을 잠갔습니다. 브라우저 기록은 유지됩니다.');}catch(_){}
+    return false;
+  }
 }
 /* 구글시트 잔재 호환 (호출되어도 무해) */
 function setLed(){}
