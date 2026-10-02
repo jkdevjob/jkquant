@@ -2392,6 +2392,40 @@ function _mergeRecordArrays(preferred,other){
   try{sortHist(out);}catch(e){}
   return out;
 }
+/* v3.108.1에서 이미 중복 저장된 legacy 행 복구.
+   stateV2 전환 직전의 legacy state는 그 시점 원장의 기준 스냅샷이다.
+   현행 앱은 새 거래에 항상 ts를 넣으므로, stateV2 안의 identity 없는 동일 legacy 행 수가
+   그 스냅샷보다 많아졌다면 자동병합이 만든 중복으로 확정할 수 있다.
+   강한 id/ts 행이나 legacy에 없던 내용은 건드리지 않는다. */
+function _repairLegacyMergeDupes(st,legacy){
+  if(!st||!legacy)return 0;
+  let fixed=0;
+  for(const bk of ['inf','vr','ma','ivs','dca','asap']){
+    const cb=st[bk], lb=legacy[bk];
+    if(!cb||!lb||!Array.isArray(cb.sessions)||!Array.isArray(lb.sessions))continue;
+    const lm=new Map(lb.sessions.filter(Boolean).map(x=>[String(x.id||''),x]));
+    for(const cs of cb.sessions){
+      if(!cs||!Array.isArray(cs.hist))continue;
+      const ls=lm.get(String(cs.id||'')); if(!ls||!Array.isArray(ls.hist))continue;
+      const cap=new Map();
+      for(const r of ls.hist){
+        if(_histKeyPart(r))continue;
+        const k=_histSemanticKey(r); cap.set(k,(cap.get(k)||0)+1);
+      }
+      if(!cap.size)continue;
+      const used=new Map();
+      cs.hist=cs.hist.filter(r=>{
+        if(_histKeyPart(r))return true;
+        const k=_histSemanticKey(r), max=cap.get(k);
+        if(max==null)return true;                            // legacy 기준에 없는 행은 추정 삭제 금지
+        const n=(used.get(k)||0)+1; used.set(k,n);
+        if(n<=max)return true;
+        fixed++; return false;                              // baseline보다 늘어난 동일 weak 행만 제거
+      });
+    }
+  }
+  return fixed;
+}
 function _mergeHistorySafeState(preferred,other){
   const p=preferred&&typeof preferred==='object'?preferred:{},o=other&&typeof other==='object'?other:{};
   const out=JSON.parse(JSON.stringify(Object.keys(p).length?p:o));
@@ -10142,7 +10176,8 @@ async function pullRemote(){
     const d=snap.exists()?(snap.data()||{}):{};
     if(d&&d.strategyDefaultOverrides&&typeof d.strategyDefaultOverrides==='object')cacheStrategyDefaults(d.strategyDefaultOverrides);
     let local=null;try{local=JSON.parse(localStorage.getItem(lsKey())||'null')}catch(e){}
-    const hasV2=d&&validState(d.stateV2),remote=hasV2?d.stateV2:(d&&validState(d.state)?d.state:null);
+    const hasV2=d&&validState(d.stateV2),legacy=d&&validState(d.state)?d.state:null;
+    const remote=hasV2?d.stateV2:legacy;
     const remoteUpdated=hasV2?(+d.stateV2Updated||0):(+d.updated||0);
     stateCloudRev=+d.stateV2Rev||0;
     stateCloudHistorySig=remote?_historySignature(remote):'';
@@ -10169,13 +10204,17 @@ async function pullRemote(){
         }
       }
       if(!S.activeTab)S.activeTab='inf';ensureBoxes();
+      /* v3.108.1 자동병합이 이미 같은 legacy 행을 두 번 저장했다면 여기서 한 번 정리한다.
+         frozen legacy snapshot의 동일 weak 행 개수까지만 되돌리므로 새 ts/id 거래는 건드리지 않는다. */
+      const repaired=(hasV2&&legacy)?_repairLegacyMergeDupes(S,legacy):0;
+      if(repaired>0){ stateCloudPending=true; console.warn('legacy merge duplicates repaired',repaired); }
       const migrated=migrateInfOperatingDefaults();
       // 원격을 로컬 캐시에 복사할 때 저장시각을 "지금"으로 올리지 않는다.
       if(S===remote){S._updated=remoteUpdated||S._updated||0;_writeLocalExact(S);}
-      else if(migrated)saveLocal();
+      else if(migrated||repaired>0)saveLocal();
       // legacy state에서 처음 올라온 경우 즉시 stateV2 정본을 만든다.
       if(!hasV2)stateCloudPending=true;
-      lastPushedJSON=(S===remote&&!migrated&&hasV2)?JSON.stringify(S):'';
+      lastPushedJSON=(S===remote&&!migrated&&!repaired&&hasV2)?JSON.stringify(S):'';
     }else{
       if(!validState(S))S=validState(local)?local:freshState();
       ensureBoxes();stateCloudPending=true;
