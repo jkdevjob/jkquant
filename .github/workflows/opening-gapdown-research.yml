@@ -82,6 +82,24 @@ jobs:
             fi
           done
 
+      - name: 단타(클로드) 하루 마감 장부 보관 (Worker 에 한 번만 저장된 마감 기록의 사본 · 최근 6일)
+        env:
+          KEY: ${{ secrets.AUTOTRADE_KEY }}
+          OPENING_WORKER: https://jkquant-opening-scheduler.mumae4.workers.dev
+        shell: bash
+        run: |
+          mkdir -p data/claude-live
+          [ -n "$KEY" ] || { echo "::warning::AUTOTRADE_KEY 없음 — 보관 생략"; exit 0; }
+          for k in 0 1 2 3 4 5; do
+            DATE=$(TZ=Asia/Seoul date -d "-$k day" +%F)
+            STATUS=$(curl -sS --max-time 30 -o cl-ledger.json -w '%{http_code}' -H "x-monitor-key: $KEY" "$OPENING_WORKER/claude?date=$DATE" || true)
+            if [ "$STATUS" = "200" ] && jq -e '.ok == true and (.ledger.events | type == "array") and (.ledger.events | length > 0)' cl-ledger.json >/dev/null 2>&1; then
+              # 원본은 Worker 쪽에서 기록마다 한 번만 쓰인다(더해지기만 함) — 사본은 늘어난 만큼 다시 받는다
+              jq '{ok, date, ledger, source:"cloudflare-opening-scheduler-claude-ledger"}' cl-ledger.json > "data/claude-live/$DATE.json"
+              echo "$DATE: $(jq -c '[.ledger.events[].id]' "data/claude-live/$DATE.json")"
+            fi
+          done
+
       - name: 연구 통계 + 실측 연결 + 다음 거래일 명단
         env:
           JKQ_GAPDOWN_OUT: data/opening-gapdown-research
@@ -103,14 +121,24 @@ jobs:
 
       - name: 저장
         run: |
-          if [ -z "$(git status --porcelain data/opening-gapdown-research data/opening-gapdown-live data/etf-overnight-research data/claude-lab data/claude-paper)" ]; then
+          if [ -z "$(git status --porcelain data/opening-gapdown-research data/opening-gapdown-live data/etf-overnight-research data/claude-lab data/claude-paper data/claude-live)" ]; then
             echo "변경 없음"
             exit 0
           fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add data/opening-gapdown-research data/opening-gapdown-live data/etf-overnight-research data/claude-lab $(ls -d data/claude-paper 2>/dev/null)
+          git add data/opening-gapdown-research data/opening-gapdown-live data/etf-overnight-research data/claude-lab $(ls -d data/claude-paper data/claude-live 2>/dev/null)
           git commit -m "data: opening gap-down research $(TZ=Asia/Seoul date '+%F %H:%M') [skip ci]"
           git pull --rebase origin scalping-data
           git push origin scalping-data
+
+      - name: 🆚 클로드 vs GPT 매일 대결 요약 텔레그램 (18:40 밤 계산 뒤 · 날짜당 한 번 · 실패해도 기록에 영향 없음)
+        if: github.event_name == 'schedule' && github.event.schedule == '40 9 * * 1-5'
+        env:
+          KEY: ${{ secrets.AUTOTRADE_KEY }}
+          JKQ_DATA: data
+        run: |
+          [ -n "$KEY" ] || { echo "::warning::AUTOTRADE_KEY 없음 — 알림 생략"; exit 0; }
+          python .app/scripts/claude_lab.py --duel-payload > duel.json || exit 0
+          curl -sS -X POST https://jkquant.pages.dev/api/claude-telegram -H "content-type: application/json" -H "x-monitor-key: $KEY" --data @duel.json || true
 

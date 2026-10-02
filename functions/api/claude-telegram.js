@@ -9,7 +9,7 @@ import { openingDay, etfDay, coinDay, soxlDay, composeDay, composeOverview } fro
 
 const JH={"Content-Type":"application/json; charset=utf-8","Cache-Control":"no-store"};
 const RAW="https://raw.githubusercontent.com/jkdevjob/jkquant/scalping-data/data/";
-const KINDS=["preopen","etfbuy","weekly"];
+const KINDS=["preopen","etfbuy","weekly","duel"];
 const SX_ACT={enter:"시가 매수",hold:"보유",exit:"시가 매도",flat:"쉼"};
 const SX_NEXT={buy:"시가 매수 (과매도 신호)",sell:"시가 매도"};
 const PART={opening_d1v2:"① 시초가",daytrading_etf:"② ETF 야간",crypto_btc:"③ BTC",crypto_eth:"③ ETH",us_soxl:"④ SOXL"};
@@ -55,6 +55,8 @@ export function compose(kind,date,live,extra={}){
     const buy=(d.rows||[]).find(x=>String(x.buyTime||"").startsWith("오늘"))||(d.rows||[]).find(x=>x.status==="매매 없음");
     if(buy&&buy.status!=="매매 없음")L.push("② 코스닥150 레버리지 −3% 이하 → 종가 모의 매수 "+n(buy.buyPrice)+" ("+buy.status+") → 내일 시가 매도");
     else L.push("② 매매 없음 — "+((buy&&buy.note)||"예상 하락이 −3% 이내"));
+  }else if(kind==="duel"){
+    L.push(duelLines(extra.duel,"🆚 [클로드 vs GPT] "+date+" 대결"));
   }else if(kind==="weekly"){
     const lab=extra.lab||{},w=lab.week||{},a=w.account||{};
     L.push("🤖 [클로드 단타] 주간 결과 "+(w.weekStart||"?")+" ~ "+(w.asOf||"?"));
@@ -69,12 +71,29 @@ export function compose(kind,date,live,extra={}){
     for(const [tab,rows] of Object.entries(lab.shadows||{}))for(const x of (Array.isArray(rows)?rows:[]))
       if(x.promotion&&x.promotion.code==="candidate")cand.push((TABN[tab]||tab)+" "+x.name+" — "+x.promotion.text);
     L.push(cand.length?"🧪 그림자 교체 후보:\n · "+cand.join("\n · "):"🧪 그림자 교체 후보 없음 (판정 표본 매매 20일 이상 + 기준보다 나을 때만 표시)");
+    const du=lab.duel||{},dt=du.total||{},dl=(dt.days||[])[(dt.days||[]).length-1];
+    L.push(duelLines({start:du.start,record:dt.record,cumClaude:(dt.claude||{}).totalPct,cumGpt:(dt.gpt||{}).totalPct,last:dl,
+      tabs:Object.fromEntries(Object.entries(du.tabs||{}).map(([k,t])=>{const lr=(t.days||[])[(t.days||[]).length-1];return [k,{cumClaude:(t.claude||{}).totalPct,cumGpt:(t.gpt||{}).totalPct,
+        last:lr?{date:lr.date,claude:lr.claude.pnlPct,gpt:lr.gpt.pnlPct,winner:lr.winner}:null}]}))},"🆚 GPT 대결 (누적)"));
   }
   L.push("");
   L.push("모의투자 기록 · 자세히: jkquant.pages.dev/claude");
   return L.join("\n");
 }
 
+const DUEL_NAME={opening:"① 시초가",daytrading:"② 데이트레이딩",crypto:"③ 비트코인",soxl:"④ SOXL"};
+export function duelLines(d,title){
+  d=d||{};const L=[title];
+  const rec=d.record||{},last=d.last;
+  if(!last){L.push("아직 같은 날 기록 없음 — "+(d.start||"")+" 부터 두 쪽 실시간 모의매매 기록으로 비교합니다.");return L.join("\n");}
+  const W=w=>w==="claude"?"🤖 승":w==="gpt"?"GPT 승":"무";
+  L.push("합계(4탭 균등) "+last.date+": 🤖 "+p(last.claudePct)+" vs GPT "+p(last.gptPct)+" → "+W(last.winner));
+  L.push("누적 🤖 "+p(d.cumClaude)+" vs GPT "+p(d.cumGpt)+" · "+(rec.claude||0)+"승 "+(rec.gpt||0)+"패 "+(rec.draw||0)+"무 (클로드 기준)");
+  for(const k of Object.keys(DUEL_NAME)){const t=(d.tabs||{})[k];if(!t)continue;
+    L.push(DUEL_NAME[k]+": "+(t.last?t.last.date.slice(5)+" 🤖 "+p(t.last.claude)+" vs "+p(t.last.gpt)+" "+W(t.last.winner):"기록 없음")+" · 누적 🤖 "+p(t.cumClaude)+" vs "+p(t.cumGpt));}
+  L.push("같은 시작일 · 같은 비용표 · 실시간 모의매매 기록끼리");
+  return L.join("\n");
+}
 export function mondayOf(date){
   const d=new Date(date+"T00:00:00Z"),w=(d.getUTCDay()+6)%7;
   return new Date(d.getTime()-w*86400000).toISOString().slice(0,10);
@@ -157,6 +176,7 @@ export async function onRequestPost({request,env}){
     const origin=new URL(request.url).origin;
     const live=await fetch(origin+"/api/claude-live",{headers:{Accept:"application/json"}}).then(r=>r.json()).catch(()=>null);
     const extra={};
+    if(kind==="duel")extra.duel=b.duel;
     if(kind==="weekly"){
       extra.lab=await fetch(RAW+"claude-lab/latest.json?t="+Date.now()).then(r=>r.ok?r.json():null).catch(()=>null);
       extra.weekStart=mondayOf(date);

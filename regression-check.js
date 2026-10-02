@@ -11019,6 +11019,12 @@ console.log('[GAPDOWN D-1 / DIP24 D-3] 연구용 모의체결 경로 안전장�
        &&/if \(v2\) \{ r\.trades = done; r\.open = open; \}\n\s*else r\.measure = rows;/.test(dy)&&/ledger\(env,d,"\/claude"\)/.test(lv2)
        &&/return drop_open_session\(/.test(fs.readFileSync(__d+'/scripts/claude_lab.py','utf8')));
   }
+  { const lp=fs.readFileSync(__d+'/scripts/claude_lab.py','utf8');
+    ok('🆚 GPT 대결 탭: 실시간 기록끼리(Worker 마감 장부 사본 data/claude-live) · 같은 시작일·비용표 · 두 쪽 다 있는 날만 · 합계 4탭 균등 · 매일 18:40 뒤 알림',
+       /DUEL_START = "2026-10-05"/.test(lp)&&/    days = sorted\(mine & theirs\)/.test(lp)&&/report\["duel"\] = duel\(\)/.test(lp)
+       &&/data-tab="duel"/.test(scl2)&&/function duelPage\(\)/.test(scl2)&&/\$OPENING_WORKER\/claude\?date=\$DATE/.test(wf)
+       &&/github\.event\.schedule == '40 9 \* \* 1-5'/.test(wf)&&/claude_lab\.py --duel-payload > duel\.json/.test(wf));
+  }
   ok('클로드 모의투자 장부: 날짜별 한 번만 쓰기 · 요약은 장부 값만 · 화면 누적표 · workflow 저장',
      /def write_once\(path, obj\):\n[\s\S]{0,200}if path\.exists\(\):\n\s*return False/.test(fs.readFileSync(__d+'/scripts/claude_lab.py','utf8'))
      &&/모의투자 누적/.test(scl2)&&/data\/claude-paper/.test(wf));

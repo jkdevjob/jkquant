@@ -899,6 +899,95 @@ def fair_compare(tab, calendar):
                 note=FAIR_NOTE, claude=_side_summary(days, cby, cost_c), gpt=_side_summary(days, gby, cost), days=rows)
 
 
+# ── 🆚 GPT 대결: 실시간 모의매매 기록끼리만(재구성·백테스트 없음) · 같은 시작일 · 같은 비용표 · 칸 자금 100% · 합계는 4탭 균등 ──
+DUEL_START = "2026-10-05"
+DUEL_TABS = ("opening", "daytrading", "crypto", "soxl")
+DUEL_RULES = ("두 쪽 모두 그날 실시간으로 남긴 모의매매 기록만 쓴다(클로드 = Worker 하루 마감 장부, GPT = 자기 기준전략 기록). "
+              "같은 시작일(2026-10-05)부터 두 쪽 기록이 다 있는 날만 비교한다. 매매마다 (청산가 ÷ 진입가 − 1)에서 같은 시장 비용표를 뺀다. "
+              "하루 손익은 그날 청산된 매매(실현) 기준, 칸 자금 100%. 매매 없는 날 0%. 합계는 4개 탭을 25%씩 같은 원금으로. "
+              "하루 승패는 0.01%p 넘게 앞선 쪽이 이김.")
+
+
+def claude_closed_records(tab):
+    """data/claude-live/{날짜}.json(Worker 마감 장부 사본)에서 close:{tab} 기록 — {거래일: 기록}."""
+    out = {}
+    folder = DATA / "claude-live"
+    for f in sorted(folder.glob("*.json")) if folder.exists() else []:
+        j = read_json(f) or {}
+        for e in ((j.get("ledger") or {}).get("events") or []):
+            if e and e.get("id") == "close:" + tab and e.get("payload"):
+                out[e["payload"].get("date") or j.get("date")] = e["payload"]
+    return out
+
+
+def gpt_coverage(tab):
+    """GPT 기록이 '그날을 처리했다'고 볼 수 있는 날짜 — 매매 없는 날도 0% 로 셀 수 있게."""
+    if tab == "opening":
+        folder = DATA / "opening-history"
+        return {f.stem for f in folder.glob("20??-??-??.json")} if folder.exists() else set()
+    if tab == "daytrading":
+        j = read_json(DATA / "daytrading-research/latest.json") or {}
+        end = j.get("latestObservedDay") or j.get("to")
+        days = set(CAL.get("etf") or [])
+        return {d for d in days if end and d <= str(end)[:10]}
+    path = {"crypto": "crypto-research/baseline-decisions.csv", "soxl": "soxl-research/baseline-decisions.csv"}[tab]
+    return {r["date"] for r in read_csv(DATA / path) if r.get("date")}
+
+
+def duel_tab(tab, start=DUEL_START):
+    cost_g = FAIR_COST["opening" if tab == "opening" else "crypto" if tab == "crypto" else "soxl" if tab == "soxl" else "daytrading_stock"]
+    cost_c = FAIR_COST["daytrading_etf"] if tab == "daytrading" else cost_g
+    recs = claude_closed_records(tab)
+    cby, mine = {}, set()
+    for d, r in recs.items():
+        if r.get("status") != "closed" or d < start:
+            continue
+        mine.add(d)
+        for t in r.get("trades") or []:
+            g = _gross(t.get("entryPrice"), t.get("exitPrice"))
+            if g is not None:
+                cby.setdefault(d, []).append(dict(name=t.get("name"), entry=t.get("entryPrice"), exit=t.get("exitPrice"), reason=t.get("reason"),
+                                                  gross=g, slot=0.5 if tab == "crypto" else None))
+    gby, _, gver = gpt_trades(tab)
+    theirs = {d for d in gpt_coverage(tab) if d >= start} | {d for d in gby if d >= start}
+    days = sorted(mine & theirs)
+    rows, cc, cg, wins, losses, draws = [], 1.0, 1.0, 0, 0, 0
+    for d in days:
+        c = _side_day(cby.get(d, []), cost_c) if cby.get(d) else 0.0
+        g = _side_day(gby.get(d, []), cost_g) if gby.get(d) else 0.0
+        cc *= 1 + c / 100
+        cg *= 1 + g / 100
+        w = "claude" if c - g > 0.01 else "gpt" if g - c > 0.01 else "draw"
+        wins, losses, draws = wins + (w == "claude"), losses + (w == "gpt"), draws + (w == "draw")
+        rows.append(dict(date=d, winner=w, cumClaudePct=(cc - 1) * 100, cumGptPct=(cg - 1) * 100,
+                         claude=dict(pnlPct=c, entries=len(cby.get(d, [])), trades=[dict(t, net=t["gross"] - cost_c) for t in cby.get(d, [])]),
+                         gpt=dict(pnlPct=g, entries=len(gby.get(d, [])), trades=[dict(t, net=t["gross"] - cost_g) for t in gby.get(d, [])])))
+    pending = sorted((mine ^ theirs))
+    return dict(days=rows, claude=_side_summary(days, cby, cost_c), gpt=_side_summary(days, {d: v for d, v in gby.items() if d in set(days)}, cost_g),
+                record=dict(claude=wins, gpt=losses, draw=draws), costPct=dict(claude=cost_c, gpt=cost_g), gptVersions=gver,
+                pending=[dict(date=d, missing="GPT" if d in mine else "클로드") for d in pending[-10:]])
+
+
+def duel(start=DUEL_START):
+    tabs = {t: duel_tab(t, start) for t in DUEL_TABS}
+    dates = sorted({r["date"] for t in tabs.values() for r in t["days"]})
+    by = {t: {r["date"]: r for r in tabs[t]["days"]} for t in DUEL_TABS}
+    rows, cc, cg, w, l, dr = [], 1.0, 1.0, 0, 0, 0
+    for d in dates:
+        c = sum(0.25 * by[t][d]["claude"]["pnlPct"] for t in DUEL_TABS if d in by[t])
+        g = sum(0.25 * by[t][d]["gpt"]["pnlPct"] for t in DUEL_TABS if d in by[t])
+        cc *= 1 + c / 100
+        cg *= 1 + g / 100
+        win = "claude" if c - g > 0.01 else "gpt" if g - c > 0.01 else "draw"
+        w, l, dr = w + (win == "claude"), l + (win == "gpt"), dr + (win == "draw")
+        rows.append(dict(date=d, claudePct=c, gptPct=g, winner=win, cumClaudePct=(cc - 1) * 100, cumGptPct=(cg - 1) * 100))
+    dv_c = {r["date"]: r["claudePct"] for r in rows}
+    dv_g = {r["date"]: r["gptPct"] for r in rows}
+    total = dict(days=rows, record=dict(claude=w, gpt=l, draw=dr),
+                 claude=goal_metrics(dv_c, dates, 365) if dates else {}, gpt=goal_metrics(dv_g, dates, 365) if dates else {})
+    return dict(start=start, rules=DUEL_RULES, costs=FAIR_COST, tabs=tabs, total=total, latest=dates[-1] if dates else None)
+
+
 def review_entry(report):
     """매일 검증·분석 기록 — 날짜별 한 번만 쓴다(저녁 첫 실행 기준). 자동 점검 결과 + 판단 근거."""
     today = datetime.now(KST).strftime("%Y-%m-%d")
@@ -1082,6 +1171,10 @@ def main():
             report["fair"][tab] = fair_compare(tab, cal)
         except Exception as e:  # noqa: BLE001
             report["fair"][tab] = dict(available=False, error=str(e))
+    try:
+        report["duel"] = duel()
+    except Exception as e:  # noqa: BLE001
+        report["duel"] = dict(error=str(e))
     report["changelog"] = CHANGELOG
     try:
         report["review"] = write_review(report)
@@ -1101,5 +1194,23 @@ def write_csv(path, rows):
         w.writerows(rows)
 
 
+def duel_payload(latest, today):
+    """매일 대결 요약 알림 본문 — 밤 계산의 대결 결과(같은 장부)만 옮긴다."""
+    d = latest.get("duel") or {}
+    tot = (d.get("total") or {})
+    last = (tot.get("days") or [None])[-1]
+    tabs = {}
+    for k, t in (d.get("tabs") or {}).items():
+        lr = (t.get("days") or [None])[-1]
+        tabs[k] = dict(record=t.get("record"), cumClaude=(t.get("claude") or {}).get("totalPct"), cumGpt=(t.get("gpt") or {}).get("totalPct"),
+                       last=dict(date=lr["date"], claude=lr["claude"]["pnlPct"], gpt=lr["gpt"]["pnlPct"], winner=lr["winner"]) if lr else None)
+    return dict(kind="duel", date=today, duel=dict(start=d.get("start"), last=last, record=tot.get("record"),
+                                                   cumClaude=(tot.get("claude") or {}).get("totalPct"), cumGpt=(tot.get("gpt") or {}).get("totalPct"), tabs=tabs))
+
+
 if __name__ == "__main__":
+    import sys
+    if "--duel-payload" in sys.argv:                   # workflow: 매일 대결 요약 알림 본문만 출력
+        print(json.dumps(duel_payload(read_json(OUT / "latest.json") or {}, datetime.now(KST).strftime("%Y-%m-%d")), ensure_ascii=False, default=str))
+        raise SystemExit(0)
     raise SystemExit(main())

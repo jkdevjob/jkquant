@@ -271,4 +271,13 @@ t("day close ④: SOXL session after the decision; holiday when no session; sell
   assert.equal(DAY.soxlDay("2026-10-05", { basedOn: "2026-10-02", action: "none" }, q("2026-10-02", 1, 1), null).status, "holiday");
   assert.ok(DAY.soxlDay("2026-10-05", { basedOn: "2026-10-05", action: "none" }, q("2026-10-05", 1, 1), null).note.includes("밤 판단 없음"));
 });
+t("duel telegram: daily summary + empty start", () => {
+  const d = { start: "2026-10-05", record: { claude: 3, gpt: 1, draw: 1 }, cumClaude: 2.4, cumGpt: -0.6,
+              last: { date: "2026-10-09", claudePct: 0.4, gptPct: -0.2, winner: "claude" },
+              tabs: { crypto: { cumClaude: 3, cumGpt: -1, last: { date: "2026-10-09", claude: 0.9, gpt: -0.3, winner: "claude" } }, soxl: { cumClaude: 0, cumGpt: 0, last: null } } };
+  const t = TG.compose("duel", "2026-10-09", null, { duel: d });
+  assert.ok(t.includes("합계(4탭 균등) 2026-10-09: 🤖 +0.40% vs GPT -0.20% → 🤖 승") && t.includes("누적 🤖 +2.40% vs GPT -0.60% · 3승 1패 1무")
+    && t.includes("③ 비트코인: 10-09 🤖 +0.90% vs -0.30% 🤖 승") && t.includes("④ SOXL: 기록 없음"));
+  assert.ok(TG.compose("duel", "2026-10-02", null, { duel: { start: "2026-10-05" } }).includes("아직 같은 날 기록 없음 — 2026-10-05 부터"));
+});
 console.log(`opening gap-down JS: ${n} ALL PASS`);

@@ -53,6 +53,10 @@ PY = [
     ("fair window not gpt", "claude_lab.py", "    days = [d for d in cal if start <= d <= min(end, c_last)]\n", "    days = [d for d in cal if d <= min(end, c_last)]\n"),
     ("fair coin slot ignored", "claude_lab.py", "    if all(s is not None for _, s in nets):", "    if False:"),
     ("us open bar kept", "claude_lab.py", "    return {d: v for d, v in bars.items() if d < today or (d == today and closed)}", "    return dict(bars)"),
+    ("duel before start", "claude_lab.py", 'if r.get("status") != "closed" or d < start:', 'if r.get("status") != "closed":'),
+    ("duel one-sided days", "claude_lab.py", "    days = sorted(mine & theirs)\n", "    days = sorted(mine | theirs)\n"),
+    ("duel gpt cost differs", "claude_lab.py", "        g = _side_day(gby.get(d, []), cost_g) if gby.get(d) else 0.0", "        g = _side_day(gby.get(d, []), 0.0) if gby.get(d) else 0.0"),
+    ("duel total not equal weight", "claude_lab.py", '        c = sum(0.25 * by[t][d]["claude"]["pnlPct"] for t in DUEL_TABS if d in by[t])', '        c = sum(by[t][d]["claude"]["pnlPct"] for t in DUEL_TABS if d in by[t])'),
     ("dip hit minutes", "backtest_crypto_orb.py", "int((hit - entry_t).total_seconds() // 60) + 5", "int((hit - entry_t).total_seconds() // 60)"),
 ]
 JS = [

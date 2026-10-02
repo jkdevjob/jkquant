@@ -402,6 +402,31 @@ class ClaudeLabTrend(unittest.TestCase):
         # 겨울(EST): 20:20 UTC = 뉴욕 15:20 → 아직 장중
         self.assertEqual(sorted(lab.drop_open_session({"2026-12-01": 1}, datetime(2026, 12, 1, 20, 20, tzinfo=timezone.utc))), [])
 
+    def test_duel_live_records_only_same_start_same_cost(self):
+        old = (lab.claude_closed_records, lab.gpt_trades, lab.gpt_coverage)
+        try:
+            recs = {"2026-10-02": {"status": "closed", "trades": [{"name": "X", "entryPrice": 100, "exitPrice": 110}]},          # 시작일 전 → 제외
+                    "2026-10-05": {"status": "closed", "trades": [{"name": "BTC", "entryPrice": 100, "exitPrice": 102}]},
+                    "2026-10-06": {"status": "closed", "trades": []},
+                    "2026-10-07": {"status": "closed", "trades": [{"name": "ETH", "entryPrice": 100, "exitPrice": 99}]}}          # GPT 기록 없음 → 대기
+            lab.claude_closed_records = lambda tab: recs if tab == "crypto" else {}
+            lab.gpt_trades = lambda tab: ({"2026-10-05": [dict(name="BTC", entry=100, exit=100.5, reason="익절", gross=0.5)]} if tab == "crypto" else {}, {}, ["g1"])
+            lab.gpt_coverage = lambda tab: {"2026-10-05", "2026-10-06"} if tab == "crypto" else set()
+            t = lab.duel_tab("crypto")
+            self.assertEqual([r["date"] for r in t["days"]], ["2026-10-05", "2026-10-06"])
+            d5 = t["days"][0]
+            self.assertAlmostEqual(d5["claude"]["pnlPct"], (2.0 - 0.14) * 0.5)          # 코인 한쪽 몫
+            self.assertAlmostEqual(d5["gpt"]["pnlPct"], 0.5 - 0.14)
+            self.assertEqual(d5["winner"], "claude")
+            self.assertEqual(t["days"][1]["winner"], "draw")                               # 둘 다 매매 없음 0%
+            self.assertEqual(t["record"], {"claude": 1, "gpt": 0, "draw": 1})
+            self.assertEqual(t["pending"], [{"date": "2026-10-07", "missing": "GPT"}])
+            full = lab.duel()
+            self.assertAlmostEqual(full["total"]["days"][0]["claudePct"], 0.25 * (2.0 - 0.14) * 0.5)   # 합계는 4탭 균등
+            self.assertEqual(full["latest"], "2026-10-06")
+        finally:
+            lab.claude_closed_records, lab.gpt_trades, lab.gpt_coverage = old
+
     def test_profit_factor(self):
         D = ["2026-10-05", "2026-10-06", "2026-10-07", "2026-10-08", "2026-10-09"]
         z = lab.goal_metrics({D[0]: 3.0, D[1]: -1.0, D[2]: -2.0, D[3]: 1.0}, D)
