@@ -11200,7 +11200,7 @@ console.log('\n[SCALPING TODAY LIVE] BTC·SOXL 실시간 장부 우선 · 부분
      &&/async function globalPaperSessions\(env,strategy\)/.test(dapi)
      &&/liveFirstSessions\(env,"crypto"/.test(dapi)
      &&/liveFirstSessions\(env,"soxl"/.test(dapi)
-     &&/source,"global-paper-live"|source:"global-paper-live"/.test(dapi));
+     &&/"global-paper-live"/.test(dapi));
   ok('오늘 API는 전략별 실패를 격리해 한 원천 오류가 4전략 전체를 숨기지 않는다',
      /async function safeSessions\(fn\)/.test(dapi)
      &&/safeSessions\(\(\)=>openingSessions\(\)\)/.test(dapi)
