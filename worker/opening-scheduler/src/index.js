@@ -172,8 +172,9 @@ function collectEvents(date,target,parts){
     const tel=p.telegram||{};
     const buyDelivery={channel:"telegram",sent:!!tel.buySent,messageId:tel.buyMessageId||null,error:tel.buyError||null};
     const sellDelivery={channel:"telegram",sent:!!tel.sellSent,messageId:tel.sellMessageId||null,error:tel.sellError||null};
-    for(const x of (p.buyEvents||[]))out.push(liveEvent(date,target,"buy","baseline",x,buyDelivery,null));
-    for(const x of (p.sellEvents||[]))out.push(liveEvent(date,target,"sell","baseline",x,sellDelivery,null));
+    const mainVariant=String(p.mainVariant||"baseline");
+    for(const x of (p.buyEvents||[]))out.push(liveEvent(date,target,"buy",mainVariant,x,buyDelivery,null));
+    for(const x of (p.sellEvents||[]))out.push(liveEvent(date,target,"sell",mainVariant,x,sellDelivery,null));
     for(const v of (p.shadowEvents||[])){
       const delivery={channel:"telegram",sent:false,messageId:null,error:null,reason:"shadow_strategy_not_notified"};
       for(const x of (v.buyEvents||[]))out.push(liveEvent(date,target,"buy",String(v.name||"shadow"),x,delivery,v));
@@ -213,7 +214,7 @@ async function sendOpeningCloseSummary(env,date){
     if(!r.ok||!j.ok)throw new Error("opening summary shard "+shard+" HTTP "+r.status+" "+String(j.error||""));
     parts.push(j);
   }
-  const trades=parts.flatMap(x=>Array.isArray(x.trades)?x.trades:[]).sort((a,b)=>(+a.entryTime||0)-(+b.entryTime||0));
+  const trades=parts.flatMap(x=>Array.isArray(x.operationalTrades)?x.operationalTrades:(Array.isArray(x.trades)?x.trades:[])).sort((a,b)=>(+a.entryTime||0)-(+b.entryTime||0));
   const pn=trades.map(x=>Number(x.pnl)).filter(Number.isFinite),wins=pn.filter(x=>x>0).length,losses=pn.filter(x=>x<0).length;
   const avg=pn.length?pn.reduce((s,x)=>s+x,0)/pn.length:0;
   const lines=[
