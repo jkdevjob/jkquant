@@ -260,7 +260,7 @@ canvas{display:block;width:100%;height:auto}
 
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Morning Scalping</div><h1>JK <span class="v">퀀트</span> 단타 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="scVer">v1.35.3</span></h1></div>
+    <div><div class="kicker">Morning Scalping</div><h1>JK <span class="v">퀀트</span> 단타 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="scVer">v1.35.4</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -283,7 +283,7 @@ canvas{display:block;width:100%;height:auto}
 
 <div class="wrap" id="app" style="display:none">
   <div class="strategy-tabs">
-    <button class="strategy-tab on" data-strategy="daily" onclick="showStrategy('daily')">📅 전일·당일</button>
+    <button class="strategy-tab on" data-strategy="daily" onclick="showStrategy('daily')">📅 오늘</button>
     <button class="strategy-tab" data-strategy="opening" onclick="showStrategy('opening')">⚡ 시초가 돌파</button>
     <button class="strategy-tab" data-strategy="daytrading" onclick="showStrategy('daytrading')">📈 데이트레이딩</button>
     <button class="strategy-tab" data-strategy="crypto" onclick="showStrategy('crypto')">₿ 비트코인</button>
@@ -292,9 +292,9 @@ canvas{display:block;width:100%;height:auto}
   </div>
 
   <div id="strategy_daily" class="strategy-pane on">
-    <div class="strategy-head">모든 기준전략의 전일 · 당일(최근 확정 세션) 결과를 한 화면에서 비교</div>
+    <div class="strategy-head">모든 기준전략의 오늘 상태와 최근 확정 세션 결과를 한 화면에서 비교</div>
     <div class="card">
-      <h3><span class="dot"></span>📅 모든 전략 전일 · 당일 결과 <span class="sub">순수익 · 기준전략</span></h3>
+      <h3><span class="dot"></span>📅 오늘 기준전략 결과 <span class="sub">최근 확정 세션 · 순수익</span></h3>
       <p class="lead">시초가·데이트레이딩·비트코인·SOXL의 <b>최근 두 확정 세션</b>을 한 번에 보여줍니다.
         한 전략에서 같은 날 여러 종목을 거래하면 <b>동일비중 평균 순손익</b>을 일일 결과로 사용하고, 거래가 없으면 0%입니다.
         전략별 장 마감 시각이 달라 날짜를 반드시 함께 표시합니다.</p>
@@ -302,7 +302,7 @@ canvas{display:block;width:100%;height:auto}
         <button class="ghostbtn" onclick="loadDailyStrategyResults(true)">🔄 결과 새로고침</button>
         <span class="sub" id="daily_results_meta">불러오는 중…</span>
       </div>
-      <div id="daily_results_body"><p class="sub">전략별 전일·당일 결과를 불러오는 중…</p></div>
+      <div id="daily_results_body"><p class="sub">전략별 오늘 결과를 불러오는 중…</p></div>
       <div id="daily_cumulative_chart" style="margin-top:14px"><p class="sub">전략별 누적 수익률 추이를 불러오는 중…</p></div>
       <p class="note">목표 표시는 각 전략 단독 기준 <b>일 +1%</b> 달성 여부입니다. 서로 다른 전략의 수익률은 자금배분이 정해지기 전에는 단순 합산하지 않습니다.<br><b>보유 원칙:</b> 현재 4개 기준전략은 모두 당일청산·오버나이트 금지입니다. 향후 예외 후보도 별도 검증을 거쳐 최대 5거래일까지만 허용하며 6거래일 이상은 단타 전략에서 제외합니다.</p>
     </div>
@@ -1479,26 +1479,36 @@ async function renderDailyCumulativeChart(){
       const j=await r.json(); if(!r.ok||!j.ok)throw new Error((j&&j.error)||('HTTP '+r.status));
       return {name,daily:(j.summary&&j.summary.dailySeries)||[]};
     }));
-    const dates=[...new Set(reps.flatMap(x=>x.daily.map(d=>d.date)))].sort();
-    if(!dates.length){el.innerHTML='<div class="warn">아직 누적 확정 일별 결과가 없습니다.</div>';return;}
-    const series=reps.map(s=>{
+    const allDates=[...new Set(reps.flatMap(x=>x.daily.map(d=>d.date)))].sort();
+    if(!allDates.length){el.innerHTML='<div class="warn">아직 누적 확정 일별 결과가 없습니다.</div>';return;}
+
+    // 누적값은 전체 이력으로 계산하고, 화면만 최근 31일을 확대한다.
+    // BTC의 긴 이력 때문에 최근 시작한 시초가·데이트레이딩 선이 오른쪽 끝에 눌리는 문제를 방지한다.
+    const fullSeries=reps.map(s=>{
       const m=new Map(s.daily.map(d=>[d.date,Number(d.returnPct)||0])); let eq=1;
-      return {name:s.name,points:dates.map(date=>{if(m.has(date))eq*=1+m.get(date)/100;return {date,value:(eq-1)*100};})};
+      return {name:s.name,hasTrades:s.daily.length>0,points:allDates.map(date=>{if(m.has(date))eq*=1+m.get(date)/100;return {date,value:(eq-1)*100};})};
     });
+    const latest=allDates[allDates.length-1],cut=new Date(latest+'T00:00:00Z');cut.setUTCDate(cut.getUTCDate()-30);
+    const cutoff=cut.toISOString().slice(0,10);
+    let dates=allDates.filter(d=>d>=cutoff);
+    if(dates.length<2)dates=allDates.slice(-Math.min(30,allDates.length));
+    const visible=new Set(dates);
+    const series=fullSeries.map(s=>({name:s.name,hasTrades:s.hasTrades,points:s.points.filter(p=>visible.has(p.date))}));
+
     const all=[0,...series.flatMap(s=>s.points.map(p=>p.value))];
     let lo=Math.min(...all),hi=Math.max(...all); if(hi-lo<1){lo-=.5;hi+=.5;} const pad=(hi-lo)*.12;lo-=pad;hi+=pad;
     const W=820,H=300,P={l:54,r:18,t:22,b:42},x=i=>P.l+(dates.length<2?(W-P.l-P.r)/2:i*(W-P.l-P.r)/(dates.length-1)),y=v=>P.t+(hi-v)*(H-P.t-P.b)/(hi-lo);
     const grid=Array.from({length:5},(_,i)=>{const v=hi-(hi-lo)*i/4,yy=y(v);return '<line x1="'+P.l+'" y1="'+yy.toFixed(1)+'" x2="'+(W-P.r)+'" y2="'+yy.toFixed(1)+'" stroke="var(--line)" stroke-width="1"/><text x="'+(P.l-8)+'" y="'+(yy+4).toFixed(1)+'" text-anchor="end" fill="var(--faint)" font-size="10">'+(v>=0?'+':'')+v.toFixed(1)+'%</text>';}).join('');
     const zero=lo<=0&&hi>=0?'<line x1="'+P.l+'" y1="'+y(0).toFixed(1)+'" x2="'+(W-P.r)+'" y2="'+y(0).toFixed(1)+'" stroke="var(--faint)" stroke-dasharray="4 4"/>':'';
-    const lines=series.map(s=>'<polyline fill="none" stroke="'+DAILY_CHART_COLORS[s.name]+'" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" points="'+s.points.map((p,i)=>x(i).toFixed(1)+','+y(p.value).toFixed(1)).join(' ')+'"/>').join('');
-    const dots=series.map(s=>s.points.map((p,i)=>'<circle cx="'+x(i).toFixed(1)+'" cy="'+y(p.value).toFixed(1)+'" r="2.5" fill="'+DAILY_CHART_COLORS[s.name]+'"><title>'+DAILY_RESULT_LABELS[s.name]+' · '+p.date+' · '+dailyResultPct(p.value)+'</title></circle>').join('')).join('');
+    const lines=series.map(s=>'<polyline fill="none" stroke="'+DAILY_CHART_COLORS[s.name]+'" stroke-width="3" stroke-linejoin="round" stroke-linecap="round" points="'+s.points.map((p,i)=>x(i).toFixed(1)+','+y(p.value).toFixed(1)).join(' ')+'"/>').join('');
+    const dots=series.map(s=>s.points.map((p,i)=>'<circle cx="'+x(i).toFixed(1)+'" cy="'+y(p.value).toFixed(1)+'" r="3" fill="'+DAILY_CHART_COLORS[s.name]+'"><title>'+DAILY_RESULT_LABELS[s.name]+' · '+p.date+' · '+(s.hasTrades?dailyResultPct(p.value):'매매기록 없음')+'</title></circle>').join('')).join('');
     const tickIdx=[...new Set([0,Math.floor((dates.length-1)/2),dates.length-1])];
     const ticks=tickIdx.map(i=>'<text x="'+x(i).toFixed(1)+'" y="'+(H-16)+'" text-anchor="'+(i===0?'start':i===dates.length-1?'end':'middle')+'" fill="var(--faint)" font-size="10">'+esc(dates[i].slice(5))+'</text>').join('');
-    const legend=series.map(s=>{const last=s.points[s.points.length-1];return '<span style="display:inline-flex;align-items:center;gap:5px"><i style="width:9px;height:9px;border-radius:50%;background:'+DAILY_CHART_COLORS[s.name]+'"></i>'+DAILY_RESULT_LABELS[s.name]+' <b class="'+(last.value>=0?'win':'loss')+'">'+dailyResultPct(last.value)+'</b></span>';}).join('');
-    el.innerHTML='<div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-bottom:8px"><b>📈 전략별 누적 결과 · 수익률 추이</b><span class="sub">확정 일별 순수익 · 복리 누적</span></div>'+
+    const legend=series.map(s=>{const last=s.points[s.points.length-1];return '<span style="display:inline-flex;align-items:center;gap:5px"><i style="width:10px;height:10px;border-radius:50%;background:'+DAILY_CHART_COLORS[s.name]+'"></i>'+DAILY_RESULT_LABELS[s.name]+' <b class="'+(last&&last.value>=0?'win':'loss')+'">'+(s.hasTrades&&last?dailyResultPct(last.value):'매매기록 없음')+'</b></span>';}).join('');
+    el.innerHTML='<div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-bottom:8px"><b>📈 전략별 누적 결과 · 수익률 추이</b><span class="sub">전체 누적값 · 최근 31일 확대</span></div>'+
       '<div style="overflow-x:auto"><svg viewBox="0 0 '+W+' '+H+'" style="display:block;width:100%;min-width:620px;height:auto" role="img" aria-label="전략별 누적 수익률 추이">'+grid+zero+lines+dots+ticks+'</svg></div>'+
       '<div class="row" style="gap:12px;margin-top:7px;font-size:11px">'+legend+'</div>'+
-      '<p class="note">각 전략의 확정 일별 계좌수익률을 날짜순으로 복리 누적합니다. 해당 전략이 매매하지 않은 날짜는 수익률 0%로 보고 직전 누적값을 유지하며, 전일·당일 카드에는 <b>매매없음</b>으로 표시합니다.</p>';
+      '<p class="note">누적값은 각 전략의 전체 확정 일별 계좌수익률을 날짜순으로 복리 계산합니다. 그래프 화면만 최근 31일을 확대해 시초가·데이트레이딩 선도 함께 보이게 했습니다. 해당 전략이 매매하지 않은 날짜는 수익률 0%로 보고 직전 누적값을 유지하며, 오늘 카드에는 <b>매매없음</b>으로 표시합니다.</p>';
   }catch(e){el.innerHTML='<div class="warn">누적 수익률 그래프 조회 실패 · '+esc(e.message||String(e))+'</div>';}
 }
 
@@ -1875,25 +1885,7 @@ function d1status(x){
   return '<span class="sig watch">수집중</span>';
 }
 function setupDaily1ShadowCards(){
-  ['opening','daytrading','crypto','soxl'].forEach(name=>{
-    if($('daily1_'+name))return;
-    const pane=$('strategy_'+name);
-    const body=pane&&pane.querySelector('.flow-section[data-flow="review"] .flow-body');
-    if(!body)return;
-    const card=flowCard('🎯 일 +1% 그림자 모의전략',
-      '<div id="daily1_'+name+'"><p class="sub">2026-10-01부터 고정 규칙으로 매일 모의 결과를 누적합니다. 불러오는 중…</p></div>');
-    body.prepend(card);
-  });
-  if(!$('daily1_overview')){
-    const pane=$('strategy_daily'),overview=$('strategy_overview');
-    if(pane&&overview){
-      const card=document.createElement('div');card.className='card';
-      card.innerHTML='<h3><span class="dot"></span>🎯 +1% 그림자 전략 · 매일 모의결과 <span class="sub">2026-10-01 이후 prospective</span></h3>'+
-        '<div id="daily1_overview"><p class="sub">네 후보전략의 최근 확정 결과를 불러오는 중…</p></div>'+
-        '<p class="note">기준전략을 자동으로 바꾸지 않습니다. 완료봉 신호 → 다음 봉 시가 진입, 비용 반영, 동일봉 손절/익절은 손절 우선으로 기록합니다.</p>';
-      pane.insertBefore(card,overview);
-    }
-  }
+  // 그림자 전략 연구/수집은 백엔드에서 계속하지만 /scalping 운영 화면에서는 숨긴다.
 }
 function renderDaily1Strategy(name,x){
   const el=$('daily1_'+name);if(!el||!x)return;
