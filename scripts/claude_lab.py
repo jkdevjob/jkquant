@@ -194,6 +194,8 @@ def coin_breakout(H, p):
             s0 = datetime.fromisoformat(d + "T09:00:00")
             bars = [H[(s0 + timedelta(hours=k)).isoformat()] for k in range(24)]
             for k, b in enumerate(bars):
+                if p.get("lastEntryHour") is not None and (s0 + timedelta(hours=k)).hour >= p["lastEntryHour"] and k < 15:
+                    break                                          # 그림자: 밤(lastEntryHour 시 이후) 돌파는 사지 않는다
                 if b[1] > level:
                     e = max(b[0], level) * (1 + p["entrySlipPct"] / 100)
                     stop = e * (1 - p["stopPct"] / 100)
@@ -645,6 +647,17 @@ def d1_variant(minq):
     return {d: statistics.fmean(v) for d, v in by.items() if q.get(d, 0) >= minq}, sorted(q)
 
 
+def kr_calendar(now=None, fetch=None):
+    """국내 거래일 달력(233740 일봉 날짜). 오늘은 장이 끝난 16:00 뒤, 오늘 봉이 있을 때만 넣는다(장중 봉은 거래일 확정이 아니다)."""
+    now = now or datetime.now(KST)
+    if fetch is None:
+        import FinanceDataReader as fdr
+        fetch = lambda: [str(i)[:10] for i, r in fdr.DataReader("233740", "2016-01-01").iterrows() if float(r["Open"]) > 0]
+    today = now.strftime("%Y-%m-%d")
+    days = fetch()
+    return [d for d in days if d < today or (d == today and now.hour >= 16)]
+
+
 def etf_variant(code, th):
     import FinanceDataReader as fdr
     today = datetime.now(KST).strftime("%Y-%m-%d")
@@ -683,7 +696,8 @@ def shadows(per_rows, soxl_rows):
         for name, ver, kw, rule in (("평균 10일", "coin_bo_ma10", dict(ma=10), "추세 기준 10일 평균"),
                                     ("평균 50일", "coin_bo_ma50", dict(ma=50), "추세 기준 50일 평균"),
                                     ("손절 없음", "coin_bo_nostop", dict(stopPct=99.0), "손절 없이 다음 날 09:00 매도"),
-                                    ("변동성 돌파 k=0.7", "coin_vb_k07", dict(level="vb", k=0.7), "기준선 = 오늘 시가 + 0.7 × 어제 (고가−저가)")):
+                                    ("변동성 돌파 k=0.7", "coin_vb_k07", dict(level="vb", k=0.7), "기준선 = 오늘 시가 + 0.7 × 어제 (고가−저가)"),
+                                    ("21시 전 돌파만 · 자금 100%", "coin_bo_before21_full", dict(lastEntryHour=21, size=1.25), "밤 9시 이후 돌파는 사지 않음(설계 MDD −23.6→−12.3%) · 대신 자금 80→100%")):
             per, cal = {}, set()
             for m, H in per_rows.items():
                 dv, _, _, days = coin_breakout(H, dict(COIN_BO, **kw))
@@ -1142,7 +1156,7 @@ def main():
                                  lastYear=goal_metrics({d: v for d, v in acct.items() if d >= "2025-10-01" and d <= DESIGN_END}, [d for d in acal if "2025-10-01" <= d <= DESIGN_END], 365),
                                  recent=[dict(date=d, pnlPct=acct[d]) for d in sorted(acct)[-20:]])
     try:
-        CAL["etf"] = etf_variant("233740", -3.0)[1]          # 국내 거래일 달력(ETF 일봉은 당일 저녁 확정)
+        CAL["etf"] = kr_calendar()
     except Exception:  # noqa: BLE001
         CAL["etf"] = []
     report["daily"] = daily_board(report, d1, krx_cal, crypto_full, locals().get("cal_c") or [])

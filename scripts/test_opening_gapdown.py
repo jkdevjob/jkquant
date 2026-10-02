@@ -427,6 +427,31 @@ class ClaudeLabTrend(unittest.TestCase):
         finally:
             lab.claude_closed_records, lab.gpt_trades, lab.gpt_coverage = old
 
+    def test_kr_calendar_includes_today_only_after_close(self):
+        from datetime import datetime
+        f = lambda: ["2026-10-01", "2026-10-02"]
+        self.assertEqual(lab.kr_calendar(datetime(2026, 10, 2, 15, 30, tzinfo=lab.KST), f), ["2026-10-01"])
+        self.assertEqual(lab.kr_calendar(datetime(2026, 10, 2, 16, 5, tzinfo=lab.KST), f), ["2026-10-01", "2026-10-02"])
+
+    def test_coin_breakout_last_entry_hour_shadow(self):
+        from datetime import datetime, timedelta
+        H = {}
+        base = datetime(2026, 9, 1)
+        for i in range(22):
+            s0 = datetime.fromisoformat((base + timedelta(days=i)).date().isoformat() + "T09:00:00")
+            o = 100.0 + i
+            for k in range(24):
+                H[(s0 + timedelta(hours=k)).isoformat()] = [o, o, o, o]
+        last = (base + timedelta(days=21)).date().isoformat()
+        s0 = datetime.fromisoformat(last + "T09:00:00")
+        for k in range(24):
+            H[(s0 + timedelta(hours=k)).isoformat()] = [119.0, 119.5, 118.0, 119.0]         # 어제 고가 120 아래
+        H[(s0 + timedelta(hours=13)).isoformat()] = [119.0, 130.0, 119.0, 125.0]          # 22시 돌파
+        _, dec, _, _ = lab.coin_breakout(H, dict(lab.COIN_BO))
+        self.assertEqual({r["date"]: r for r in dec}[last]["entryHour"], "22:00")
+        _, dec2, _, _ = lab.coin_breakout(H, dict(lab.COIN_BO, lastEntryHour=21))
+        self.assertEqual({r["date"]: r for r in dec2}[last]["action"], "no_break")
+
     def test_profit_factor(self):
         D = ["2026-10-05", "2026-10-06", "2026-10-07", "2026-10-08", "2026-10-09"]
         z = lab.goal_metrics({D[0]: 3.0, D[1]: -1.0, D[2]: -2.0, D[3]: 1.0}, D)
