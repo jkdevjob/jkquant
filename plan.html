@@ -217,7 +217,7 @@ body.asset-paper-mode .ledger-del{display:none!important}
 <body>
 <div class="wrap">
   <div class="top">
-    <div class="brand"><div class="logo">Asset Plan</div><h1>자산플랜 <span class="ver">v1.39.4</span></h1></div>
+    <div class="brand"><div class="logo">Asset Plan</div><h1>자산플랜 <span class="ver">v1.40.0</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
       <div class="jkmenu" id="jkmenuWrap">
@@ -750,7 +750,7 @@ body.asset-paper-mode .ledger-del{display:none!important}
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-app.js";
 import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-auth.js";
-import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-firestore.js";
+import { getFirestore, doc, getDoc, setDoc, runTransaction } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-firestore.js";
 
 const firebaseConfig={
   apiKey:"AIzaSyBzBe9pAttnbDgTlNThWZzNqtAAKxX7Ksw",
@@ -869,6 +869,8 @@ const STAGES={
 let liveState=null, liveStateSource="", liveBusy=false, liveQuotes={}, pendingVrCycle=null;
 let planBootHydrating=true,planForceLocalSave=false;
 let planRecoveryLock=false,planRecoveryCandidates=[],planRecoveryApplied="";
+let planStateCloudHydrated=false,planStateCloudRev=0,planStateConflict=false;
+let planCloudHydrated=false,planCloudRev=0;
 const FEE=0.0025;
 const ALPHA_FEE_RATE=0.001; // 토스증권 미국주식 표준 0.1% (A안 실전 장부/주문 전용)
 function alphaFee(q,p){const gross=Math.max(0,(+q||0)*(+p||0));return gross<=10?0:Math.floor(gross*ALPHA_FEE_RATE*100)/100;}
@@ -922,6 +924,58 @@ function activeAssetSession(){
 }
 function assetPaperMode(){const x=activeAssetSession();return !!(x&&x.paper);}
 function cloneObj(v){return JSON.parse(JSON.stringify(v));}
+/* 운영 state와 5년플랜 원장은 timestamps만 보지 않는다.
+   다른 기기/탭의 거래기록을 전부 포함하지 못하는 쓰기는 클라우드에서 차단한다. */
+function planOpHistoryMap(st){
+  const m=new Map(),boxes=['inf','vr','ma','ivs','dca','asap'];
+  if(!st||typeof st!=='object')return m;
+  for(const bk of boxes){
+    const box=st[bk];if(!box||!Array.isArray(box.sessions))continue;
+    for(const s of box.sessions){
+      if(!s||!s.id)continue;const p=bk+'|'+s.id;m.set(p+'|@session','1');
+      (Array.isArray(s.hist)?s.hist:[]).forEach((r,i)=>{
+        const id=r&&r.id!=null?'id:'+r.id:r&&r.ts!=null?'ts:'+r.ts:'fallback:'+String(r&&r.date||'')+':'+String(r&&(r.kind||r.type)||'')+':'+i;
+        m.set(p+'|hist|'+id,JSON.stringify(r));
+      });
+    }
+  }
+  const pb=st.plan;if(pb&&Array.isArray(pb.sessions))for(const s of pb.sessions){
+    if(!s||!s.id)continue;const p='plan|'+s.id;m.set(p+'|@session','1');const l=s.ledger||{};
+    if(l.base)m.set(p+'|@base',JSON.stringify(l.base));
+    (Array.isArray(l.events)?l.events:[]).forEach((r,i)=>{
+      const id=r&&r.id!=null?'id:'+r.id:r&&r.ts!=null?'ts:'+r.ts:'fallback:'+String(r&&r.date||'')+':'+String(r&&r.type||'')+':'+i;
+      m.set(p+'|event|'+id,JSON.stringify(r));
+    });
+  }
+  return m;
+}
+function planOpPreserves(a,b){
+  const A=planOpHistoryMap(a),B=planOpHistoryMap(b);for(const [k,v] of B)if(!A.has(k)||A.get(k)!==v)return false;return true;
+}
+function planHistoryMap(o){
+  const m=new Map();if(!o||typeof o!=='object')return m;
+  const a=o.alphaLedger||{};if(a.base)m.set('alpha|@base',JSON.stringify(a.base));
+  (Array.isArray(a.events)?a.events:[]).forEach((r,i)=>{
+    const id=r&&r.id!=null?'id:'+r.id:r&&r.ts!=null?'ts:'+r.ts:'fallback:'+String(r&&r.date||'')+':'+String(r&&r.type||'')+':'+i;
+    m.set('alpha|event|'+id,JSON.stringify(r));
+  });
+  const ss=Array.isArray(o.sleeveSessions)?o.sleeveSessions:[];
+  for(const s of ss){
+    if(!s||!s.id)continue;const p='sleeve|'+s.id;m.set(p+'|@session','1');const l=s.ledger||{};
+    m.set(p+'|@base',JSON.stringify({startQLD:+l.startQLD||0,startSGOV:+l.startSGOV||0,startCash:+l.startCash||0}));
+    (Array.isArray(l.trades)?l.trades:[]).forEach((r,i)=>{
+      const id=r&&r.id!=null?'id:'+r.id:'fallback:'+String(r&&r.date||'')+':'+String(r&&r.symbol||'')+':'+i;
+      m.set(p+'|trade|'+id,JSON.stringify(r));
+    });
+  }
+  return m;
+}
+function planHistoryPreserves(a,b){
+  const A=planHistoryMap(a),B=planHistoryMap(b);for(const [k,v] of B)if(!A.has(k)||A.get(k)!==v)return false;return true;
+}
+function planHistoryRelation(a,b){
+  const ap=planHistoryPreserves(a,b),bp=planHistoryPreserves(b,a);return {aPreservesB:ap,bPreservesA:bp,equal:ap&&bp};
+}
 function assetLedgerSeed(date,cap){
   return {base:{date:date||todayISO(),tecl:0,tqqq:0,sgov:0,cash:+cap||0,avgTecl:null,avgTqqq:null,avgSgov:null},events:[],feeModel:'toss-us-0.1-v1'};
 }
@@ -1157,9 +1211,28 @@ async function saveOperatingState(){
   const ts=Date.now();liveState._updated=ts;
   const key=auth.currentUser?'qcockpit_v2_'+auth.currentUser.uid:'qcockpit_v2_guest';
   try{localStorage.setItem(key,JSON.stringify(liveState));}catch(e){}
-  if(auth.currentUser){
-    try{await setDoc(doc(db,'users',auth.currentUser.uid),{state:liveState,updated:ts},{merge:true});liveStateSource='5년 플랜에서 저장';}
-    catch(e){console.error('operating save',e);}
+  if(!auth.currentUser)return true;
+  if(!planStateCloudHydrated||planStateConflict){
+    liveStateSource=planStateConflict?'운영 원장 충돌 · 클라우드 저장 잠금':'운영 원장 확인 전 · 클라우드 저장 대기';
+    return false;
+  }
+  const ref=doc(db,'users',auth.currentUser.uid),candidate=cloneObj(liveState);
+  try{
+    const nextRev=await runTransaction(db,async tx=>{
+      const snap=await tx.get(ref),d=snap.exists()?(snap.data()||{}):{},remote=d.state,rev=+d.stateRev||0;
+      if(remote&&rev!==planStateCloudRev&&!planOpPreserves(candidate,remote)){
+        const e=new Error('OPERATING_HISTORY_CONFLICT');e.code='history-conflict';throw e;
+      }
+      const nr=rev+1;tx.set(ref,{state:candidate,updated:ts,stateRev:nr},{merge:true});return nr;
+    });
+    planStateCloudRev=+nextRev||planStateCloudRev;liveStateSource='5년 플랜에서 저장';return true;
+  }catch(e){
+    console.error('operating save',e);
+    if((e&&e.code==='history-conflict')||String(e&&e.message||e).includes('OPERATING_HISTORY_CONFLICT')){
+      planStateConflict=true;liveStateSource='운영 원장 충돌 · 클라우드 저장 잠금';
+      alert('다른 기기/탭의 최신 거래이력이 감지되어 운영 원장 덮어쓰기를 차단했습니다. 새로고침 후 최신 원장을 확인하세요.');
+    }
+    return false;
   }
 }
 function applyInitialBalances(a){
@@ -2137,14 +2210,25 @@ function orderHtml(o){const c=o.side==='buy'?'buy':'sell',lab=o.side==='buy'?'�
 function waitHtml(t,sub=''){return '<div class="liveitem wait"><strong>'+t+'</strong>'+(sub?'<small>'+sub+'</small>':'')+'</div>';}
 async function loadOperatingState(user){
   const local=opLocalState(user?.uid),localUpdated=+local?._updated||0;
-  let cloud=null,cloudUpdated=0;
-  if(user){try{const snap=await getDoc(doc(db,'users',user.uid));if(snap.exists()){const d=snap.data();cloud=d.state||null;cloudUpdated=+d.updated||0;}}catch(e){}}
-  if(local&&localUpdated>=cloudUpdated){liveState=local;liveStateSource='이 기기 운영데이터';}
-  else if(cloud&&cloud.inf&&cloud.vr){liveState=cloud;liveStateSource='클라우드 운영데이터';}
+  let cloud=null,cloudUpdated=0;planStateCloudHydrated=!user;planStateConflict=false;
+  if(user){
+    try{
+      const snap=await getDoc(doc(db,'users',user.uid));
+      if(snap.exists()){const d=snap.data()||{};cloud=d.state||null;cloudUpdated=+d.updated||0;planStateCloudRev=+d.stateRev||0;}
+      planStateCloudHydrated=true;
+    }catch(e){liveState=local||null;liveStateSource='클라우드 운영원장 확인 실패 · 저장 잠금';planStateCloudHydrated=false;ensureLiveBoxes();renderSessionSelectors();renderAssetSessions();return;}
+  }
+  if(local&&cloud&&cloud.inf&&cloud.vr){
+    const lp=planOpPreserves(local,cloud),cp=planOpPreserves(cloud,local);
+    if(lp&&cp){liveState=localUpdated>=cloudUpdated?local:cloud;liveStateSource=liveState===local?'이 기기 운영데이터':'클라우드 운영데이터';}
+    else if(lp&&!cp){liveState=local;liveStateSource='이 기기 운영데이터 · 미동기화 기록 포함';}
+    else if(cp&&!lp){liveState=cloud;liveStateSource='클라우드 운영데이터 · 더 많은 거래이력';try{localStorage.setItem('qcockpit_v2_'+user.uid,JSON.stringify(cloud));}catch(e){}}
+    else{liveState=cloud;planStateConflict=true;liveStateSource='운영 원장 충돌 · 클라우드 저장 잠금';}
+  }else if(cloud&&cloud.inf&&cloud.vr){liveState=cloud;liveStateSource='클라우드 운영데이터';if(user)try{localStorage.setItem('qcockpit_v2_'+user.uid,JSON.stringify(cloud));}catch(e){}}
   else if(local){liveState=local;liveStateSource='이 기기 운영데이터';}
   else{liveState=null;liveStateSource='운영데이터 없음';}
   ensureLiveBoxes();
-  if(migrateLiveInfOperatingDefaults())await saveOperatingState();
+  if(migrateLiveInfOperatingDefaults()&&!planStateConflict)await saveOperatingState();
   renderSessionSelectors();renderAssetSessions();
 }
 async function refreshLive(){
@@ -2578,17 +2662,34 @@ async function cloudSave(){
   if(!x&&planRecoveryLock){
     localSave();
     if($("saveState"))$("saveState").textContent="복구 보호모드 · Firebase 저장 잠금";
-    return;
+    return false;
   }
   if(x){
     if(!x.paper)syncActiveAssetSessionFromView();
-    await saveOperatingState();
-    $("saveState").textContent=x.paper?"모의 세션 저장 완료":"세션 계정 + 브라우저 저장 완료";
-    return;
+    const ok=await saveOperatingState();
+    $("saveState").textContent=ok?(x.paper?"모의 세션 저장 완료":"세션 계정 + 브라우저 저장 완료"):"거래이력 보호 · 클라우드 저장 잠금";
+    return ok;
   }
   localSave();
-  if(!auth.currentUser){$("saveState").textContent="브라우저 저장 완료 · 로그인하면 계정에도 저장";return;}
-  try{await setDoc(doc(db,"users",auth.currentUser.uid),{fiveYearPlan:readForm()},{merge:true});$("saveState").textContent="계정 + 브라우저 저장 완료";}catch(e){$("saveState").textContent="브라우저 저장 완료 · 계정 저장 실패";}
+  if(!auth.currentUser){$("saveState").textContent="브라우저 저장 완료 · 로그인하면 계정에도 저장";return true;}
+  if(!planCloudHydrated){$("saveState").textContent="계정 원장 확인 전 · 클라우드 저장 잠금";return false;}
+  const candidate=readForm(),ref=doc(db,"users",auth.currentUser.uid);
+  try{
+    const nextRev=await runTransaction(db,async tx=>{
+      const snap=await tx.get(ref),d=snap.exists()?(snap.data()||{}):{},remote=d.fiveYearPlan,rev=+d.fiveYearPlanRev||0;
+      if(remote&&rev!==planCloudRev&&!planHistoryPreserves(candidate,remote)){
+        const e=new Error('PLAN_HISTORY_CONFLICT');e.code='history-conflict';throw e;
+      }
+      const nr=rev+1;tx.set(ref,{fiveYearPlan:candidate,fiveYearPlanRev:nr,fiveYearPlanUpdated:Date.now()},{merge:true});return nr;
+    });
+    planCloudRev=+nextRev||planCloudRev;$("saveState").textContent="계정 + 브라우저 저장 완료";return true;
+  }catch(e){
+    console.error('plan cloud save',e);
+    if((e&&e.code==='history-conflict')||String(e&&e.message||e).includes('PLAN_HISTORY_CONFLICT')){
+      planRecoveryLock=true;planRecoveryRender();$("saveState").textContent="거래이력 충돌 · Firebase 저장 잠금";
+    }else $("saveState").textContent="브라우저 저장 완료 · 계정 저장 실패";
+    return false;
+  }
 }
 function planLedgerEventCount(o){
   const l=o&&o.alphaLedger;
@@ -2642,15 +2743,22 @@ async function confirmPlanRecovery(){
   const recovered=readForm();
   try{
     localStorage.setItem(KEY+"_recovery_confirmed",JSON.stringify(recovered));
-    await setDoc(doc(db,"users",auth.currentUser.uid),{fiveYearPlan:recovered},{merge:true});
+    const ref=doc(db,"users",auth.currentUser.uid);
+    const nextRev=await runTransaction(db,async tx=>{
+      const snap=await tx.get(ref),d=snap.exists()?(snap.data()||{}):{},nr=(+d.fiveYearPlanRev||0)+1;
+      tx.set(ref,{fiveYearPlan:recovered,fiveYearPlanRev:nr,fiveYearPlanUpdated:Date.now()},{merge:true});return nr;
+    });
+    planCloudRev=+nextRev||planCloudRev;planCloudHydrated=true;
     planRecoveryLock=false;planForceLocalSave=true;try{localSave();}finally{planForceLocalSave=false;}
     planRecoveryRender();$("saveState").textContent="장부 복구 확정 · 계정 + 브라우저 저장 완료";
   }catch(e){alert("복구 확정 저장에 실패했습니다. 현재 화면은 유지됩니다.");}
 }
 async function cloudLoad(user){
-  if(!user)return;
+  if(!user){planCloudHydrated=true;return;}
+  planCloudHydrated=false;
   try{
     const snap=await getDoc(doc(db,"users",user.uid)),d=snap.data()||{},v=d.fiveYearPlan;
+    planCloudRev=+d.fiveYearPlanRev||0;
     const local=planRecoveryRead(KEY),pre=planRecoveryRead(KEY+"_precloud_restore"),
       oldCloud=planRecoveryRead(KEY+"_cloud_recovery"),prevCloud=planRecoveryRead(KEY+"_cloud_previous");
     if(v){
@@ -2686,12 +2794,13 @@ async function cloudLoad(user){
       $("saveState").textContent="이 기기 저장값 유지";
     }
     planRecoveryRender();
+    planCloudHydrated=true;
     if(d.state&&d.state.inf&&d.state.vr){
-      liveState=d.state;liveStateSource="클라우드 운영데이터";
+      liveState=d.state;liveStateSource="클라우드 운영데이터";planStateCloudRev=+d.stateRev||0;planStateCloudHydrated=true;
       ensureLiveBoxes();
       if(migrateLiveInfOperatingDefaults())await saveOperatingState();
     }
-  }catch(e){console.error("plan cloud load",e);}
+  }catch(e){planCloudHydrated=false;console.error("plan cloud load",e);}
 }
 function userBadge(user){
   const b=$("userbadge");
