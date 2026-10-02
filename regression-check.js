@@ -11085,5 +11085,16 @@ console.log('[GAPDOWN D-1 / DIP24 D-3] 연구용 모의체결 경로 안전장�
      /DIP24_VERSION = "btc_dip24_v1"/.test(bt)&&/hb\[h - one\]\["c"\] \/ hb\[h - one \* \(lb \+ 1\)\]\["c"\]/.test(bt)
      &&/"orders": "none \(research shadow\)"/.test(bt)&&/designEndKst="2026-09-30"/.test(bt));
 }
+/* ════ GPT 단타 전일·당일 누적 그래프 · 매매없음 표시 ════ */
+console.log('\n[SCALPING DAILY TREND] 전일·당일 누적 결과 그래프 · 매매없음');
+ok('GPT 전일·당일 탭에 4전략 누적 수익률 그래프가 연결된다',
+   /id="daily_cumulative_chart"/.test(scl)
+   &&/async function renderDailyCumulativeChart\(\)/.test(scl)
+   &&/\/api\/scalping-history\?strategy='\+name\+'&range=all/.test(scl)
+   &&/전략별 누적 결과 · 수익률 추이/.test(scl));
+ok('무매매 확정일은 0.00% 대신 매매없음으로 표시한다',
+   /const resultText=x\.noTrade\?'매매없음':dailyResultPct\(r\);/.test(scl)
+   &&/x\.noTrade\?'매매없음 · 0\.00% 반영'/.test(scl));
+
 console.log(`\n════ 결과: ${pass} PASS / ${fail} FAIL ${fail===0?'— ALL PASS ★':'— 배포 금지, 위 ✗ 항목 수정 필요'} ════`);
 process.exit(fail===0?0:1);
