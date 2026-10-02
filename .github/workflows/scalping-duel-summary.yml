@@ -1,0 +1,51 @@
+name: GPT·클로드 단타 대결 요약
+
+# 국내 장마감 자료가 scalping-data에 확정된 뒤 시도한다.
+# GitHub 지연/클로드 장부 지연에 대비해 백업 시각이 있지만 API가 날짜별 1회만 전송한다.
+on:
+  schedule:
+    - cron: "10 8 * * 1-5"   # 17:10 KST
+    - cron: "40 8 * * 1-5"   # 17:40 KST backup
+    - cron: "10 9 * * 1-5"   # 18:10 KST final backup
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: scalping-duel-summary
+  cancel-in-progress: false
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: 대결 요약 Telegram
+        env:
+          KEY: ${{ secrets.AUTOTRADE_KEY }}
+          BASE: https://jkquant.pages.dev
+        shell: bash
+        run: |
+          set -e
+          [ -n "$KEY" ] || { echo "AUTOTRADE_KEY GitHub Secret 없음"; exit 1; }
+          DATE=$(TZ=Asia/Seoul date +%F)
+          if [[ "$DATE" < "2026-10-05" ]]; then
+            echo "대결 시작일 전 — 종료"
+            exit 0
+          fi
+          STATUS=$(curl -sS --max-time 60 -o duel-response.json -w '%{http_code}'             -X POST -H "x-monitor-key: $KEY" -H "content-type: application/json"             --data "{\"date\":\"$DATE\"}" "$BASE/api/scalping-duel" || true)
+          cat duel-response.json 2>/dev/null || true
+          echo
+          if [ "$STATUS" = "200" ] && jq -e '.ok == true' duel-response.json >/dev/null 2>&1; then
+            if jq -e '.pending == true' duel-response.json >/dev/null 2>&1; then
+              echo "$DATE 양쪽 같은 날 장부가 아직 덜 쌓임 — 다음 백업 시각에 재확인"
+            elif jq -e '.duplicate == true' duel-response.json >/dev/null 2>&1; then
+              echo "$DATE 대결 요약 이미 전송됨"
+            else
+              echo "$DATE 대결 요약 전송 완료"
+            fi
+            exit 0
+          fi
+          echo "대결 요약 API 실패 HTTP $STATUS"
+          exit 1
