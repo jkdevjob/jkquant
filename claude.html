@@ -27,11 +27,32 @@ table.board{min-width:0}table.board td.nm{white-space:normal;min-width:150px}tab
 table.doc td{padding:6px 6px}
 .loading{padding:40px;text-align:center;color:var(--dim)}.warn{padding:9px 11px;border-radius:9px;background:rgba(248,123,140,.08);border:1px solid rgba(248,123,140,.25);color:#ffb3be;font-size:12px}
 @media(max-width:560px){.wrap{padding:0 11px}.hero h2{font-size:20px}.kpi .v{font-size:17px}}
+#gate{position:fixed;inset:0;background:linear-gradient(160deg,#0f1320,#171c2e);z-index:200;display:flex;align-items:center;justify-content:center;padding:24px;text-align:center}
+#gate .gbox{max-width:380px;width:100%}#gate .glogo{font-size:26px;font-weight:800;margin-bottom:6px}#gate .gsub{color:var(--dim);font-size:13px;margin-bottom:24px;line-height:1.6}
+#gbtn{display:inline-flex;align-items:center;gap:10px;background:#fff;color:#1f1f1f;border:none;border-radius:12px;padding:13px 20px;font-size:15px;font-weight:700;cursor:pointer;width:100%;justify-content:center}
+#gate .gnote{color:var(--faint);font-size:11.5px;margin-top:18px}.ubadge{font-size:11px;color:var(--dim);margin-right:8px}.ubadge button{background:none;border:none;color:var(--accent);font-weight:700;cursor:pointer;font-size:11px;padding:0}
 </style>
+<script type="module">
+  // 소유자만 보는 화면 — 단타(GPT)와 같은 Google 로그인 · /api/owner 판정. 자료 API 도 로그인 토큰 없이는 401.
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-app.js";
+  import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-auth.js";
+  const app = initializeApp({ apiKey: "AIzaSyBzBe9pAttnbDgTlNThWZzNqtAAKxX7Ksw", authDomain: "jk-invest.firebaseapp.com", projectId: "jk-invest",
+    storageBucket: "jk-invest.firebasestorage.app", messagingSenderId: "1024066323251", appId: "1:1024066323251:web:23d557527866205f01f446" });
+  window.fb = { auth:getAuth(app), provider:new GoogleAuthProvider(), signInWithPopup, onAuthStateChanged, signOut };
+  window.dispatchEvent(new Event('fb-ready'));
+</script>
 </head>
 <body>
+<div id="gate"><div class="gbox">
+  <div class="glogo">🤖 단타 (클로드)</div>
+  <div class="gsub" id="gate_sub">이 화면은 <b>소유자 계정</b>만 볼 수 있습니다.</div>
+  <button id="gbtn" onclick="googleLogin()">Google로 로그인</button>
+  <div class="sub" id="gate_err" style="margin-top:14px;min-height:16px;color:var(--red)"></div>
+  <div class="gnote"><a href="/" style="color:var(--faint)">← 운영 화면으로</a></div>
+</div></div>
 <header><div class="wrap"><div class="htop">
-  <div class="brand"><div class="kicker">JK QUANT · CLAUDE</div><h1>🤖 단타 <span class="v">(클로드)</span> <span class="ver" id="clVer">v2.7.2</span></h1></div>
+  <div class="brand"><div class="kicker">JK QUANT · CLAUDE</div><h1>🤖 단타 <span class="v">(클로드)</span> <span class="ver" id="clVer">v2.8.0</span></h1></div>
+  <div style="display:flex;align-items:center"><span class="ubadge" id="ubadge"></span>
   <div class="jkmenu" id="jkmenuWrap">
     <button class="jkmenu-btn" aria-label="메뉴" onclick="jkMenuToggle(event)">三</button>
     <div class="jkmenu-pop" id="jkmenuPop" hidden>
@@ -45,6 +66,7 @@ table.doc td{padding:6px 6px}
       <a href="/job"><span class="mi">💼</span>JOB</a>
       <a href="/admin"><span class="mi">👤</span>관리자</a>
     </div>
+  </div>
   </div>
 </div></div></header>
 
@@ -404,7 +426,7 @@ function render(){
 }
 var LIVE=null;
 async function loadLive(){
-  try{var r=await fetch("/api/claude-live",{headers:{Accept:"application/json"}});var j=await r.json();LIVE=(r.ok&&j.ok)?j:{error:j.error||("HTTP "+r.status)};}
+  try{var r=await fetch("/api/claude-live",{headers:await authHeaders()});var j=await r.json();LIVE=(r.ok&&j.ok)?j:{error:j.error||("HTTP "+r.status)};}
   catch(e){LIVE={error:String(e.message||e)}}
   render();
 }
@@ -452,14 +474,33 @@ async function load(){
   var body=document.getElementById("body");
   try{var t=localStorage.getItem("clTab");if(t)TAB=t}catch(e){}
   try{
-    var r=await fetch("/api/claude-lab",{headers:{Accept:"application/json"}});var j=await r.json();
+    var r=await fetch("/api/claude-lab",{headers:await authHeaders()});var j=await r.json();
     if(!r.ok||!j.ok)throw new Error(j.error||("HTTP "+r.status));
     J=j;showTab(TAB);
     loadLive();
-    setInterval(function(){if(!document.hidden)loadLive()},60000);
+    if(!window.__liveTimer)window.__liveTimer=setInterval(function(){if(!document.hidden&&ME)loadLive()},60000);
   }catch(e){body.innerHTML="<div class='warn'>불러오기 실패: "+esc(e.message||String(e))+"</div>"}
 }
-load();
+// ── 로그인 · 소유자 확인 (단타 GPT 와 같은 규약: /api/owner) ──
+var ME=null;
+async function authHeaders(){var h={Accept:"application/json"};if(ME){try{h.Authorization="Bearer "+(await ME.getIdToken())}catch(e){}}return h}
+function gateShow(msg){document.getElementById("gate").style.display="flex";if(msg)document.getElementById("gate_sub").innerHTML=msg}
+function googleLogin(){var e=document.getElementById("gate_err");e.textContent="";window.fb.signInWithPopup(window.fb.auth,window.fb.provider).catch(function(x){e.textContent=(x&&x.message)||"로그인 실패"})}
+function doLogout(){window.fb.signOut(window.fb.auth)}
+function boot(){
+  window.fb.onAuthStateChanged(window.fb.auth,async function(user){
+    ME=user||null;var ub=document.getElementById("ubadge");
+    if(!user){if(ub)ub.innerHTML="";J=null;LIVE=null;document.getElementById("body").innerHTML="";gateShow("이 화면은 <b>소유자 계정</b>만 볼 수 있습니다.");return}
+    var ok=false;
+    try{var r=await fetch("/api/owner",{cache:"no-store",headers:{Authorization:"Bearer "+(await user.getIdToken())}});var j=await r.json();ok=!!j.isOwner}catch(e){}
+    if(!ok){gateShow("<b>"+esc(user.email||"")+"</b> 계정에는 접근 권한이 없습니다.");var b=document.getElementById("gbtn");b.textContent="다른 계정으로 로그인";
+      b.onclick=function(){window.fb.signOut(window.fb.auth).then(googleLogin)};return}
+    document.getElementById("gate").style.display="none";
+    if(ub)ub.innerHTML=esc(user.email||"")+" · <button onclick='doLogout()'>로그아웃</button>";
+    load();
+  });
+}
+if(window.fb)boot();else window.addEventListener("fb-ready",boot);
 </script>
 </body>
 </html>

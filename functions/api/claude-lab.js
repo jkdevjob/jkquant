@@ -3,6 +3,7 @@
 // 탭 4개(시초가·데이트레이딩·비트코인·SOXL) 클로드 전략 + GPT 기준전략 같은 기간 비교(claude-lab/latest.json)
 // 연구 결과와 VTS 실측은 scalping-data 브랜치의 이 전략 전용 폴더에서만 읽는다.
 
+import { claudeAuthorized } from "./_claude_auth.js";
 const JH={"Content-Type":"application/json; charset=utf-8","Cache-Control":"no-store"};
 const RAW="https://raw.githubusercontent.com/jkdevjob/jkquant/scalping-data/data/";
 
@@ -13,7 +14,8 @@ async function readRaw(path){
   return r.json();
 }
 
-export async function onRequestGet(){
+export async function onRequestGet({request,env}){
+  if(!(await claudeAuthorized(request,env)))return new Response(JSON.stringify({ok:false,error:"unauthorized"}),{status:401,headers:JH});   // 소유자만
   try{
     const [gd,etf,wl,lab]=await Promise.all([
       readRaw("opening-gapdown-research/latest.json"),
