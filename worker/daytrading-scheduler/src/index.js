@@ -370,10 +370,27 @@ async function advanceExistingPaper(env,date,target){
   return saved;
 }
 
+async function sendDailySummary(env,date){
+  const ledger=await readPaper(env,date);
+  const a=ledger&&Array.isArray(ledger.trades)?ledger.trades:[];
+  const closed=a.filter(x=>x.status==="closed"),open=a.filter(x=>x.status==="open");
+  const pn=closed.map(x=>Number(x.pnl)).filter(Number.isFinite),wins=pn.filter(x=>x>0).length,losses=pn.filter(x=>x<0).length;
+  const avg=pn.length?pn.reduce((s,x)=>s+x,0)/pn.length:0;
+  const lines=[
+    "후보/진입 "+a.length+"건 · 청산 "+closed.length+"건 · 미청산 "+open.length+"건",
+    "승 "+wins+" · 패 "+losses+" · 승률 "+(pn.length?(wins/pn.length*100).toFixed(1):"0.0")+"%",
+    "실현 평균 순수익률 "+signedPct(avg)+" · 왕복 마찰비용 "+PAPER_FRICTION_PCT.toFixed(2)+"% 반영"
+  ];
+  for(const x of closed)lines.push((x.name||x.code)+" · "+hmLabel(x.entryTime)+"→"+hmLabel(x.exitTime)+" · "+signedPct(x.pnl)+" · "+exitLabel(x.reason));
+  if(!a.length)lines.push("오늘 조건 충족 모의거래 없음");
+  return sendScalpingAlert(env,{strategy:"daytrading",stage:"summary",eventId:"daytrading:"+date+":close-summary",date,time:"15:35 KST",lines});
+}
+
 async function runScheduled(controller,env){
   if(!env.MONITOR_KEY)throw new Error("MONITOR_KEY secret missing");
   const scheduled=Number(controller.scheduledTime)||Date.now();
   const sched=kstParts(scheduled);
+  if(sched.hm===1535){ await sendDailySummary(env,sched.date); return; }
   const lag=Math.max(0,Date.now()-scheduled);
 
   // 09:55 KST: immutable Top100 snapshot. If it is delayed beyond 10:15,
