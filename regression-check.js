@@ -11539,8 +11539,8 @@ console.log('\n[SCALPING SHADOW/PROMOTION] 최소10개 · 순위 · 소유자 �
   const dw=fs.readFileSync(__d+'/worker/daytrading-scheduler/src/index.js','utf8');
   const gw=fs.readFileSync(__d+'/worker/global-intraday-scheduler/src/index.js','utf8');
 
-  ok('단타 버전 v1.38.0 · 4개 탭 그림자 순위 컨테이너 존재',
-     /id="scVer">v1\.38\.0/.test(scl)
+  ok('단타 버전 v1.38.1 · 4개 탭 그림자 순위 컨테이너 존재',
+     /id="scVer">v1\.38\.1/.test(scl)
      && ['opening','daytrading','crypto','soxl'].every(x=>scl.includes('id="shadow_rank_'+x+'"')));
   ok('각 탭 그림자 카탈로그 최소 10개를 강제한다',
      /minRequired:10/.test(rankApi)
