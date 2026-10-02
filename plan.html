@@ -217,7 +217,7 @@ body.asset-paper-mode .ledger-del{display:none!important}
 <body>
 <div class="wrap">
   <div class="top">
-    <div class="brand"><div class="logo">Asset Plan</div><h1>자산플랜 <span class="ver">v1.40.1</span></h1></div>
+    <div class="brand"><div class="logo">Asset Plan</div><h1>자산플랜 <span class="ver">v1.40.2</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
       <div class="jkmenu" id="jkmenuWrap">
@@ -869,8 +869,8 @@ const STAGES={
 let liveState=null, liveStateSource="", liveBusy=false, liveQuotes={}, pendingVrCycle=null;
 let planBootHydrating=true,planForceLocalSave=false;
 let planRecoveryLock=false,planRecoveryCandidates=[],planRecoveryApplied="";
-let planStateCloudHydrated=false,planStateCloudRev=0,planStateConflict=false;
-let planCloudHydrated=false,planCloudRev=0;
+let planStateCloudHydrated=false,planStateCloudRev=0,planStateConflict=false,planStateHistorySig='';
+let planCloudHydrated=false,planCloudRev=0,planCloudHistorySig='';
 const FEE=0.0025;
 const ALPHA_FEE_RATE=0.001; // 토스증권 미국주식 표준 0.1% (A안 실전 장부/주문 전용)
 function alphaFee(q,p){const gross=Math.max(0,(+q||0)*(+p||0));return gross<=10?0:Math.floor(gross*ALPHA_FEE_RATE*100)/100;}
@@ -952,6 +952,8 @@ function planOpHistoryMap(st){
 function planOpPreserves(a,b){
   const A=planOpHistoryMap(a),B=planOpHistoryMap(b);for(const [k,v] of B)if(!A.has(k)||A.get(k)!==v)return false;return true;
 }
+function planMapSig(m){return JSON.stringify([...m.entries()].sort((a,b)=>String(a[0]).localeCompare(String(b[0]))));}
+function planOpHistorySig(st){return planMapSig(planOpHistoryMap(st));}
 function planHistoryMap(o){
   const m=new Map();if(!o||typeof o!=='object')return m;
   const a=o.alphaLedger||{};if(a.base)m.set('alpha|@base',JSON.stringify(a.base));
@@ -976,6 +978,7 @@ function planHistoryPreserves(a,b){
 function planHistoryRelation(a,b){
   const ap=planHistoryPreserves(a,b),bp=planHistoryPreserves(b,a);return {aPreservesB:ap,bPreservesA:bp,equal:ap&&bp};
 }
+function planHistorySig(o){return planMapSig(planHistoryMap(o));}
 /* 명시적 삭제·초기화 직전 스냅샷. 자동 덮어쓰기 방지와 별개로 사람 실수도 되돌릴 수 있게 한다. */
 function planManualBackup(reason){
   try{
@@ -1231,12 +1234,13 @@ async function saveOperatingState(){
   try{
     const nextRev=await runTransaction(db,async tx=>{
       const snap=await tx.get(ref),d=snap.exists()?(snap.data()||{}):{},remote=d.state,rev=+d.stateRev||0;
-      if(remote&&rev!==planStateCloudRev&&!planOpPreserves(candidate,remote)){
+      const remoteSig=remote?planOpHistorySig(remote):'',remoteChanged=rev!==planStateCloudRev||(planStateHistorySig!==''&&remoteSig!==planStateHistorySig);
+      if(remote&&remoteChanged&&!planOpPreserves(candidate,remote)){
         const e=new Error('OPERATING_HISTORY_CONFLICT');e.code='history-conflict';throw e;
       }
       const nr=rev+1;tx.set(ref,{state:candidate,updated:ts,stateRev:nr},{merge:true});return nr;
     });
-    planStateCloudRev=+nextRev||planStateCloudRev;liveStateSource='5년 플랜에서 저장';return true;
+    planStateCloudRev=+nextRev||planStateCloudRev;planStateHistorySig=planOpHistorySig(liveState);liveStateSource='5년 플랜에서 저장';return true;
   }catch(e){
     console.error('operating save',e);
     if((e&&e.code==='history-conflict')||String(e&&e.message||e).includes('OPERATING_HISTORY_CONFLICT')){
@@ -2229,7 +2233,7 @@ async function loadOperatingState(user){
   if(user){
     try{
       const snap=await getDoc(doc(db,'users',user.uid));
-      if(snap.exists()){const d=snap.data()||{};cloud=d.state||null;cloudUpdated=+d.updated||0;planStateCloudRev=+d.stateRev||0;}
+      if(snap.exists()){const d=snap.data()||{};cloud=d.state||null;cloudUpdated=+d.updated||0;planStateCloudRev=+d.stateRev||0;planStateHistorySig=cloud?planOpHistorySig(cloud):'';}
       planStateCloudHydrated=true;
     }catch(e){liveState=local||null;liveStateSource='클라우드 운영원장 확인 실패 · 저장 잠금';planStateCloudHydrated=false;ensureLiveBoxes();renderSessionSelectors();renderAssetSessions();return;}
   }
@@ -2694,12 +2698,13 @@ async function cloudSave(){
   try{
     const nextRev=await runTransaction(db,async tx=>{
       const snap=await tx.get(ref),d=snap.exists()?(snap.data()||{}):{},remote=d.fiveYearPlan,rev=+d.fiveYearPlanRev||0;
-      if(remote&&rev!==planCloudRev&&!planHistoryPreserves(candidate,remote)){
+      const remoteSig=remote?planHistorySig(remote):'',remoteChanged=rev!==planCloudRev||(planCloudHistorySig!==''&&remoteSig!==planCloudHistorySig);
+      if(remote&&remoteChanged&&!planHistoryPreserves(candidate,remote)){
         const e=new Error('PLAN_HISTORY_CONFLICT');e.code='history-conflict';throw e;
       }
       const nr=rev+1;tx.set(ref,{fiveYearPlan:candidate,fiveYearPlanRev:nr,fiveYearPlanUpdated:Date.now()},{merge:true});return nr;
     });
-    planCloudRev=+nextRev||planCloudRev;$("saveState").textContent="계정 + 브라우저 저장 완료";return true;
+    planCloudRev=+nextRev||planCloudRev;planCloudHistorySig=planHistorySig(candidate);$("saveState").textContent="계정 + 브라우저 저장 완료";return true;
   }catch(e){
     console.error('plan cloud save',e);
     if((e&&e.code==='history-conflict')||String(e&&e.message||e).includes('PLAN_HISTORY_CONFLICT')){
@@ -2765,7 +2770,7 @@ async function confirmPlanRecovery(){
       const snap=await tx.get(ref),d=snap.exists()?(snap.data()||{}):{},nr=(+d.fiveYearPlanRev||0)+1;
       tx.set(ref,{fiveYearPlan:recovered,fiveYearPlanRev:nr,fiveYearPlanUpdated:Date.now()},{merge:true});return nr;
     });
-    planCloudRev=+nextRev||planCloudRev;planCloudHydrated=true;
+    planCloudRev=+nextRev||planCloudRev;planCloudHistorySig=planHistorySig(recovered);planCloudHydrated=true;
     planRecoveryLock=false;planForceLocalSave=true;try{localSave();}finally{planForceLocalSave=false;}
     planRecoveryRender();$("saveState").textContent="장부 복구 확정 · 계정 + 브라우저 저장 완료";
   }catch(e){alert("복구 확정 저장에 실패했습니다. 현재 화면은 유지됩니다.");}
@@ -2775,7 +2780,7 @@ async function cloudLoad(user){
   planCloudHydrated=false;
   try{
     const snap=await getDoc(doc(db,"users",user.uid)),d=snap.data()||{},v=d.fiveYearPlan;
-    planCloudRev=+d.fiveYearPlanRev||0;
+    planCloudRev=+d.fiveYearPlanRev||0;planCloudHistorySig=v?planHistorySig(v):'';
     const local=planRecoveryRead(KEY),pre=planRecoveryRead(KEY+"_precloud_restore"),
       oldCloud=planRecoveryRead(KEY+"_cloud_recovery"),prevCloud=planRecoveryRead(KEY+"_cloud_previous"),
       manualWrap=planRecoveryRead(KEY+"_manual_backup"),manual=manualWrap&&manualWrap.fiveYearPlan;
@@ -2815,7 +2820,7 @@ async function cloudLoad(user){
     planRecoveryRender();
     planCloudHydrated=true;
     if(d.state&&d.state.inf&&d.state.vr){
-      liveState=d.state;liveStateSource="클라우드 운영데이터";planStateCloudRev=+d.stateRev||0;planStateCloudHydrated=true;
+      liveState=d.state;liveStateSource="클라우드 운영데이터";planStateCloudRev=+d.stateRev||0;planStateHistorySig=planOpHistorySig(d.state);planStateCloudHydrated=true;
       ensureLiveBoxes();
       if(migrateLiveInfOperatingDefaults())await saveOperatingState();
     }
