@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "generatedAt": "2026-10-02T19:15:22.661986+09:00",
+  "generatedAt": "2026-10-02T19:40:36.644123+09:00",
   "designEnd": "2026-09-30",
   "gate": {
     "mdd": -25.0,
@@ -850,7 +850,7 @@
     ]
   },
   "daily": {
-    "generatedAt": "2026-10-02T19:15:29.123733+09:00",
+    "generatedAt": "2026-10-02T19:40:43.006447+09:00",
     "today": "2026-10-02",
     "finalKrDaily": "2026-09-29",
     "rows": [
@@ -863,7 +863,7 @@
         "lastDate": "2026-10-02",
         "prev": "no_trade",
         "last": "no_trade",
-        "plan": "명단 10종목 · 08:56 예상갭 확인 (통과 5종목 이상일 때 v2 매매)"
+        "plan": "명단 11종목 · 08:56 예상갭 확인 (통과 5종목 이상일 때 v2 매매)"
       },
       {
         "group": "시초가",
@@ -958,7 +958,7 @@
   },
   "paper": {
     "start": "2026-10-01",
-    "newFiles": 0,
+    "newFiles": 2,
     "summary": {
       "opening_d1v2": {
         "rows": [
@@ -968,14 +968,21 @@
             "pnlPct": 0.0,
             "cumPct": 0.0,
             "note": "no_expected_gap_down"
+          },
+          {
+            "date": "2026-10-02",
+            "action": "no_trade",
+            "pnlPct": 0.0,
+            "cumPct": 0.0,
+            "note": "rsi14_prev<30+expected_gap<=-2%+deepest3"
           }
         ],
         "currentDrawdownPct": 0.0,
         "lossStreak": 0,
         "start": "2026-10-01",
-        "days": 1,
+        "days": 2,
         "first": "2026-10-01",
-        "last": "2026-10-01",
+        "last": "2026-10-02",
         "tradeDays": 0,
         "plus1Days": 0,
         "winDays": 0,
@@ -1002,14 +1009,21 @@
             "pnlPct": 0.0,
             "cumPct": 0.0,
             "note": ""
+          },
+          {
+            "date": "2026-10-02",
+            "action": "no_trade",
+            "pnlPct": 0.0,
+            "cumPct": 0.0,
+            "note": ""
           }
         ],
         "currentDrawdownPct": 0.0,
         "lossStreak": 0,
         "start": "2026-10-01",
-        "days": 1,
+        "days": 2,
         "first": "2026-10-01",
-        "last": "2026-10-01",
+        "last": "2026-10-02",
         "tradeDays": 0,
         "plus1Days": 0,
         "winDays": 0,
@@ -1575,6 +1589,59 @@
           "code": "collecting",
           "text": "판정 표본 매매 0/20일 — 판단 전"
         }
+      },
+      {
+        "name": "21시 전 돌파만 · 자금 100%",
+        "version": "coin_bo_before21_full",
+        "rule": "밤 9시 이후 돌파는 사지 않음(설계 MDD −23.6→−12.3%) · 대신 자금 80→100% · BTC+ETH 반반 · 자금 80%",
+        "design": {
+          "days": 3144,
+          "tradeDays": 852,
+          "tradeDaysPerYear": 98.91221374045803,
+          "plus1RateOfTradeDays": 28.051643192488264,
+          "lossDaysPerYear": 52.93893129770993,
+          "tStat": 3.539221471862308,
+          "plus1Days": 239,
+          "plus1DaysPerYear": 27.746501272264634,
+          "plus5Weeks": 36,
+          "plus5WeeksPerYear": 4.1793893129771,
+          "weeklyAvgPct": 0.4899719429164895,
+          "totalPct": 838.0112255256595,
+          "lossDays": 456,
+          "lossDayAvgPct": -1.274064254648819,
+          "worstDayPct": -5.239999999999999,
+          "mddPct": -15.409705697559827,
+          "cagrPct": 29.678405891664994,
+          "expectancyPct": 0.29124978011713604,
+          "profitFactor": 1.4271191337168243,
+          "gate": true
+        },
+        "outOfSample": {
+          "days": 1,
+          "tradeDays": 0,
+          "tradeDaysPerYear": 0.0,
+          "plus1RateOfTradeDays": null,
+          "lossDaysPerYear": 0.0,
+          "tStat": null,
+          "plus1Days": 0,
+          "plus1DaysPerYear": 0.0,
+          "plus5Weeks": 0,
+          "plus5WeeksPerYear": 0.0,
+          "weeklyAvgPct": 0.0,
+          "totalPct": 0.0,
+          "lossDays": 0,
+          "lossDayAvgPct": 0.0,
+          "worstDayPct": 0.0,
+          "mddPct": 0.0,
+          "cagrPct": null,
+          "expectancyPct": null,
+          "profitFactor": null,
+          "gate": false
+        },
+        "promotion": {
+          "code": "collecting",
+          "text": "판정 표본 매매 0/20일 — 판단 전"
+        }
       }
     ],
     "soxl": [
@@ -1806,20 +1873,20 @@
     },
     "parts": {
       "opening_d1v2": {
-        "days": 1,
+        "days": 2,
         "tradeDays": 0,
         "plus1Days": 0,
         "weekPct": 0.0,
         "contribPct": 0.0,
-        "through": "2026-10-01"
+        "through": "2026-10-02"
       },
       "daytrading_etf": {
-        "days": 1,
+        "days": 2,
         "tradeDays": 0,
         "plus1Days": 0,
         "weekPct": 0.0,
         "contribPct": 0.0,
-        "through": "2026-10-01"
+        "through": "2026-10-02"
       },
       "coin_bo_btc": {
         "days": 0,
@@ -1871,20 +1938,20 @@
     },
     "parts": {
       "opening_d1v2": {
-        "days": 3,
-        "tradeDays": 0,
-        "plus1Days": 0,
-        "weekPct": 0.0,
-        "contribPct": 0.0,
-        "through": "2026-10-01"
-      },
-      "daytrading_etf": {
         "days": 4,
         "tradeDays": 0,
         "plus1Days": 0,
         "weekPct": 0.0,
         "contribPct": 0.0,
-        "through": "2026-10-01"
+        "through": "2026-10-02"
+      },
+      "daytrading_etf": {
+        "days": 5,
+        "tradeDays": 0,
+        "plus1Days": 0,
+        "weekPct": 0.0,
+        "contribPct": 0.0,
+        "through": "2026-10-02"
       },
       "coin_bo_btc": {
         "days": 4,
@@ -1919,7 +1986,7 @@
       "available": true,
       "window": [
         "2026-09-22",
-        "2026-10-01"
+        "2026-10-02"
       ],
       "costPct": {
         "claude": 0.25,
@@ -1943,19 +2010,67 @@
         "avgDayPct": null
       },
       "gpt": {
-        "tradeDays": 4,
-        "trades": 16,
-        "wins": 4,
-        "losses": 12,
+        "tradeDays": 5,
+        "trades": 20,
+        "wins": 5,
+        "losses": 15,
         "winRate": 25.0,
-        "avgTradePct": -0.4029287276505191,
-        "totalPct": -1.4115125306752185,
+        "avgTradePct": -0.4372051717097506,
+        "totalPct": -1.9777170076265893,
         "plus1Days": 0,
         "worstDayPct": -0.7632057658653377,
-        "mddPct": -1.4115125306752185,
-        "avgDayPct": -0.3538342085197712
+        "mddPct": -1.9777170076265893,
+        "avgDayPct": -0.39792955640515226
       },
       "days": [
+        {
+          "date": "2026-10-02",
+          "claude": {
+            "cands": null,
+            "entries": 0,
+            "pnlPct": 0.0,
+            "trades": []
+          },
+          "gpt": {
+            "cands": null,
+            "entries": 4,
+            "pnlPct": -0.5743109479466766,
+            "trades": [
+              {
+                "name": "성호전자",
+                "entry": 32400.0,
+                "exit": 31800.0,
+                "reason": "손절",
+                "gross": -1.851851851851849,
+                "net": -2.101851851851849
+              },
+              {
+                "name": "대한광통신",
+                "entry": 18250.0,
+                "exit": 18020.0,
+                "reason": "손절",
+                "gross": -1.2602739726027434,
+                "net": -1.5102739726027434
+              },
+              {
+                "name": "RF머트리얼즈",
+                "entry": 55100.0,
+                "exit": 56100.0,
+                "reason": "익절",
+                "gross": 1.814882032667886,
+                "net": 1.564882032667886
+              },
+              {
+                "name": "한미반도체",
+                "entry": 278500.0,
+                "exit": 278500.0,
+                "reason": "09:30 청산",
+                "gross": 0.0,
+                "net": -0.25
+              }
+            ]
+          }
+        },
         {
           "date": "2026-10-01",
           "claude": {
@@ -2196,7 +2311,7 @@
       "available": true,
       "window": [
         "2026-09-29",
-        "2026-10-01"
+        "2026-10-02"
       ],
       "costPct": {
         "claude": 0.15,
@@ -2220,19 +2335,59 @@
         "avgDayPct": null
       },
       "gpt": {
-        "tradeDays": 3,
-        "trades": 9,
-        "wins": 2,
-        "losses": 7,
-        "winRate": 22.22222222222222,
-        "avgTradePct": -0.5833333333333324,
-        "totalPct": -1.7530078124999848,
+        "tradeDays": 4,
+        "trades": 12,
+        "wins": 3,
+        "losses": 9,
+        "winRate": 25.0,
+        "avgTradePct": -0.4999999999999993,
+        "totalPct": -1.9986252929687254,
         "plus1Days": 0,
         "worstDayPct": -1.2500000000000009,
         "mddPct": -2.4843749999999942,
-        "avgDayPct": -0.5833333333333325
+        "avgDayPct": -0.49999999999999933
       },
       "days": [
+        {
+          "date": "2026-10-02",
+          "claude": {
+            "cands": null,
+            "entries": 0,
+            "pnlPct": 0.0,
+            "trades": []
+          },
+          "gpt": {
+            "cands": null,
+            "entries": 3,
+            "pnlPct": -0.25,
+            "trades": [
+              {
+                "name": "한온시스템",
+                "entry": 3850.0,
+                "exit": 3811.5,
+                "reason": "손절",
+                "gross": -1.0000000000000009,
+                "net": -1.2500000000000009
+              },
+              {
+                "name": "DB하이텍",
+                "entry": 144000.0,
+                "exit": 142560.0,
+                "reason": "손절",
+                "gross": -1.0000000000000009,
+                "net": -1.2500000000000009
+              },
+              {
+                "name": "산일전기",
+                "entry": 218500.0,
+                "exit": 222870.0,
+                "reason": "익절",
+                "gross": 2.0000000000000018,
+                "net": 1.7500000000000018
+              }
+            ]
+          }
+        },
         {
           "date": "2026-10-01",
           "claude": {
@@ -3248,13 +3403,13 @@
   "review": {
     "today": {
       "date": "2026-10-02",
-      "writtenAt": "2026-10-02T19:15:34.550838+09:00",
+      "writtenAt": "2026-10-02T19:40:49.336280+09:00",
       "tabs": {
         "시초가": {
           "name": "① D-1 갭하락 과매도 v2",
           "date": "2026-10-02",
           "result": "no_trade",
-          "plan": "명단 10종목 · 08:56 예상갭 확인 (통과 5종목 이상일 때 v2 매매)"
+          "plan": "명단 11종목 · 08:56 예상갭 확인 (통과 5종목 이상일 때 v2 매매)"
         },
         "데이트레이딩": {
           "name": "② 코스닥150 레버리지 하락일 야간",
