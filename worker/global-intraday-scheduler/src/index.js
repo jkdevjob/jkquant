@@ -120,7 +120,7 @@ function paperLedger(strategy,date,t,opts={}){
     }
     trades=[{
       id:strategy+":"+date+":"+String(t.signal&&t.signal.time||""),
-      strategyVersion:version,status:waiting?"pending":(t.exit?"closed":"open"),
+      strategyVersion:version,mainVariant:String(opts.mainVariant||"baseline"),strategyParams:opts.params||t.params||null,status:waiting?"pending":(t.exit?"closed":"open"),
       signalTime:t.signal&&t.signal.time||null,entryTime:t.entry&&t.entry.time||null,
       exitTime:t.exit&&t.exit.bar&&t.exit.bar.time||null,
       entryPrice,exitPrice,currentPrice,
@@ -132,7 +132,7 @@ function paperLedger(strategy,date,t,opts={}){
   const live=trades.map(x=>Number(x.pnlPct)).filter(Number.isFinite);
   const sum=live.reduce((a,b)=>a+b,0);
   return {
-    schema:1,strategy,date,timezone,strategyVersion:version,mainVariant:String(opts.mainVariant||"baseline"),mode:"server-live-paper-no-order",
+    schema:1,strategy,date,timezone,strategyVersion:version,mainVariant:String(opts.mainVariant||"baseline"),strategyParams:opts.params||t?.params||null,mode:"server-live-paper-no-order",
     updatedAt:new Date().toISOString(),slots:1,frictionPct:friction,trades,
     summary:{selected:trades.length,pending:trades.filter(x=>x.status==="pending").length,open:trades.filter(x=>x.status==="open").length,
       closed:trades.filter(x=>x.status==="closed").length,accountReturnPct:sum,tradeSumPct:sum}
@@ -309,7 +309,7 @@ async function runBtc(env,now){
   if(k.hm<5||k.hm>BTC_EXIT_TRACK_END_HM)return;
   const mainVariant=await mainVariantForDate(env,"crypto",k.date),vp=variantParams("crypto",mainVariant);
   const t=btcTrade(await fetchBtc(k.date),now,k.date,vp.params);
-  await writePaper(env,paperLedger("crypto",k.date,t,{currency:"KRW",timezone:"Asia/Seoul",version:BTC_STRATEGY_VERSION+"@"+vp.name,mainVariant:vp.name,friction:.14}));
+  await writePaper(env,paperLedger("crypto",k.date,t,{currency:"KRW",timezone:"Asia/Seoul",version:BTC_STRATEGY_VERSION+"@"+vp.name,mainVariant:vp.name,params:vp.params,friction:.14}));
   if(!t||t.waiting)return;
   await alert(env,{
     strategy:"crypto",stage:"buy",eventId:"crypto:"+BTC_STRATEGY_VERSION+"@"+mainVariant+":"+t.date+":"+t.signal.time+":buy",date:t.date,time:t.entry.time,
@@ -335,10 +335,10 @@ async function runBtc(env,now){
 }
 async function runSoxl(env,now){
   const n=parts(now,"America/New_York");
-  if(["Sat","Sun"].includes(n.weekday)||n.hm<945||n.hm>SOXL_PAPER_TRACK_END_HM)return;
+  if(["Sat","Sun"].includes(n.weekday)||n.hm<935||n.hm>SOXL_PAPER_TRACK_END_HM)return;
   const mainVariant=await mainVariantForDate(env,"soxl",n.date),vp=variantParams("soxl",mainVariant);
   const t=soxlTrade(await fetchSoxl(),now,n.date,vp.params);
-  await writePaper(env,paperLedger("soxl",n.date,t,{currency:"USD",timezone:"America/New_York",version:SOXL_STRATEGY_VERSION+"@"+vp.name,mainVariant:vp.name,friction:.20}));
+  await writePaper(env,paperLedger("soxl",n.date,t,{currency:"USD",timezone:"America/New_York",version:SOXL_STRATEGY_VERSION+"@"+vp.name,mainVariant:vp.name,params:vp.params,friction:.20}));
   if(!t||t.waiting)return;
   await alert(env,{
     strategy:"soxl",stage:"buy",eventId:"soxl:"+mainVariant+":"+t.date+":"+t.signal.time+":buy",date:t.date,time:t.entry.time+" ET",
