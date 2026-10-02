@@ -10310,6 +10310,25 @@ try{ renderInAppWarn(); }catch(e){}
     try{
       const gate=document.getElementById('authgate');
       if(!gate || getComputedStyle(gate).display==='none') return;   // 이미 정상 진입
+
+      /* Firebase가 currentUser를 복원했는데 onAuthStateChanged 후속 흐름만 멈춘 경우
+         로그인 화면에 가두지 말고 로컬 상태로 즉시 앱을 연다. 클라우드 동기화는
+         인증 콜백이 회복되면 뒤에서 다시 맞춘다. */
+      const restored=window.fb&&window.fb.auth&&window.fb.auth.currentUser;
+      if(restored && !appStarted){
+        try{
+          curUid=restored.uid; curEmail=restored.email||'';
+          try{ localStorage.setItem('qcockpit_hadUser','1'); }catch(e){}
+          try{ renderUserBadge(restored); }catch(e){}
+          try{ load(); }catch(e){}
+          if(!validState(S)){ try{ S=freshState(); ensureBoxes(); saveLocal(); }catch(e){} }
+          gate.style.display='none';
+          startApp(); applyAdminMode();
+          authStep='워치독 로컬복구';
+          authWarn('');
+          return;
+        }catch(e){ console.error('auth watchdog local recovery',e); }
+      }
       document.documentElement.classList.remove('had-user');
       const bw=gate.querySelector('.bootwait'), gb=gate.querySelector('.gbox');
       if(bw) bw.style.display='none';
