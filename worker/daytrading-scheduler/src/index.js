@@ -9,6 +9,20 @@ const PAPER_TAKE_PROFIT_PCT=2.0;
 const PAPER_FINAL_EXIT_HM=1510;
 const PAPER_FRICTION_PCT=0.25;
 const KIS_MIN_INTERVAL_MS=650;
+const DAY_EXIT_VARIANTS=Object.freeze({
+  baseline:{stopPct:1.0,takeProfitPct:2.0,maxTrades:3},
+  "vol_2.0":{stopPct:1.0,takeProfitPct:2.0,maxTrades:3},
+  lookback_30:{stopPct:1.0,takeProfitPct:2.0,maxTrades:3},
+  "vwap_slope_0.2":{stopPct:1.0,takeProfitPct:2.0,maxTrades:3},
+  entry_by_1400:{stopPct:1.0,takeProfitPct:2.0,maxTrades:3},
+  session_min_2:{stopPct:1.0,takeProfitPct:2.0,maxTrades:3},
+  "stop_0.8":{stopPct:0.8,takeProfitPct:2.0,maxTrades:3},
+  "tp_1.5":{stopPct:1.0,takeProfitPct:1.5,maxTrades:3},
+  "vol_1.2":{stopPct:1.0,takeProfitPct:2.0,maxTrades:3},
+  lookback_10:{stopPct:1.0,takeProfitPct:2.0,maxTrades:3},
+  max_trades_1:{stopPct:1.0,takeProfitPct:2.0,maxTrades:1}
+});
+function dayExitParams(name){return DAY_EXIT_VARIANTS[String(name||"baseline")]||DAY_EXIT_VARIANTS.baseline;}
 
 let lastKisAt=0;
 
@@ -49,6 +63,18 @@ async function throttleKis(){
 export class SnapshotStore extends DurableObject {
   async fetch(request){
     const u=new URL(request.url);
+    if(request.method==="GET"&&u.pathname==="/config"){
+      const config=(await this.ctx.storage.get("strategyConfig"))||{schema:1,strategy:"daytrading",selectedVariant:"baseline",updatedAt:null,updatedBy:null};
+      return json({ok:true,config});
+    }
+    if(request.method==="POST"&&u.pathname==="/config"){
+      const b=await request.json();
+      const variant=String(b&&b.variant||"");
+      if(!variant||!DAY_EXIT_VARIANTS[variant])return json({ok:false,error:"unsupported variant"},400);
+      const config={schema:1,strategy:"daytrading",selectedVariant:variant,updatedAt:new Date().toISOString(),updatedBy:String(b.updatedBy||"owner"),source:String(b.source||"manual-promotion")};
+      await this.ctx.storage.put("strategyConfig",config);
+      return json({ok:true,config});
+    }
     if(request.method==="GET"&&u.pathname==="/get"){
       const snapshot=await this.ctx.storage.get("snapshot");
       return json({ok:true,snapshot:snapshot||null});
@@ -77,6 +103,18 @@ export class SnapshotStore extends DurableObject {
 
 function store(env,date){
   return env.SNAPSHOT_STORE.get(env.SNAPSHOT_STORE.idFromName(date));
+}
+function configStore(env){return env.SNAPSHOT_STORE.get(env.SNAPSHOT_STORE.idFromName("__gpt_daytrading_strategy_config__"));}
+async function readStrategyConfig(env){
+  const r=await configStore(env).fetch("https://snapshot.internal/config");
+  const j=await r.json().catch(()=>({}));
+  return j.config||{schema:1,strategy:"daytrading",selectedVariant:"baseline",updatedAt:null};
+}
+async function writeStrategyConfig(env,b){
+  const r=await configStore(env).fetch("https://snapshot.internal/config",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(b)});
+  const j=await r.json().catch(()=>({}));
+  if(!r.ok||!j.ok)throw new Error(j.error||("config store HTTP "+r.status));
+  return j.config;
 }
 async function readSnapshot(env,date){
   const r=await store(env,date).fetch("https://snapshot.internal/get");
@@ -111,8 +149,10 @@ async function captureSnapshot(env,date){
   const j=await r.json().catch(()=>({}));
   const rows=Array.isArray(j.universe)?j.universe:[];
   if(!r.ok||!rows.length)throw new Error("universe HTTP "+r.status);
+  const config=await readStrategyConfig(env);
+  const mainVariant=DAY_EXIT_VARIANTS[config.selectedVariant]?config.selectedVariant:"baseline";
   const snapshot={
-    schema:2,date,
+    schema:2,date,mainVariant,
     snapshotAt:new Date().toISOString(),
     snapshotHm:now.hm,
     scheduledTargetHm:955,
@@ -132,10 +172,11 @@ async function getOrCreateSnapshot(env,date){
   return captureSnapshot(env,date);
 }
 async function scanShard(env,snapshot,target,shard){
+  const mainVariant=String(snapshot&&snapshot.mainVariant||"baseline");
   const r=await fetch(baseUrl(env)+"/api/daytrading-monitor",{
     method:"POST",
     headers:{"content-type":"application/json","x-monitor-key":env.MONITOR_KEY},
-    body:JSON.stringify({snapshot,targetHm:target,shard,shards:SHARDS})
+    body:JSON.stringify({snapshot,targetHm:target,shard,shards:SHARDS,mainVariant})
   });
   const j=await r.json().catch(()=>({}));
   if(!r.ok||!j.ok)throw new Error("shard "+shard+" HTTP "+r.status+" "+String(j.error||j.skipped||""));
@@ -176,7 +217,7 @@ async function kisRange(env,code,date,fromHm,toHm){
   }
   return [...by.values()].sort((x,y)=>barHm(x)-barHm(y));
 }
-function blankTrade(c,date){
+function blankTrade(c,date,params=DAY_EXIT_VARIANTS.baseline){
   return {
     id:String(c.code)+":"+String(c.signalTime),
     date,code:String(c.code||""),name:c.name||c.code,rank:+c.rank||0,
@@ -185,7 +226,7 @@ function blankTrade(c,date){
     entryTime:addHm(+c.signalTime||0,1),entryPrice:null,status:"pending",
     exitTime:null,exitPrice:null,reason:null,grossPnl:null,pnl:null,
     currentPrice:null,unrealizedPnl:null,lastEvaluatedHm:null,
-    stopPct:PAPER_STOP_PCT,takeProfitPct:PAPER_TAKE_PROFIT_PCT,
+    stopPct:Number(params.stopPct||PAPER_STOP_PCT),takeProfitPct:Number(params.takeProfitPct||PAPER_TAKE_PROFIT_PCT),
     finalExit:PAPER_FINAL_EXIT_HM,frictionPct:PAPER_FRICTION_PCT,
     source:"kis-minhist-paper"
   };
@@ -200,8 +241,9 @@ function applyBars(trade,bars,target){
     if(!(t.entryPrice>0))return t;
     t.status="open";
   }
-  const stop=t.entryPrice*(1-PAPER_STOP_PCT/100);
-  const tp=t.entryPrice*(1+PAPER_TAKE_PROFIT_PCT/100);
+  const stopPct=Number(t.stopPct||PAPER_STOP_PCT),takeProfitPct=Number(t.takeProfitPct||PAPER_TAKE_PROFIT_PCT);
+  const stop=t.entryPrice*(1-stopPct/100);
+  const tp=t.entryPrice*(1+takeProfitPct/100);
   const after=bars.filter(x=>barHm(x)>=t.entryTime&&(!t.lastEvaluatedHm||barHm(x)>t.lastEvaluatedHm));
   for(const b of after){
     const h=barHm(b);
@@ -232,15 +274,15 @@ function applyBars(trade,bars,target){
   }
   if(t.status==="closed"&&t.exitPrice>0){
     t.grossPnl=(t.exitPrice/t.entryPrice-1)*100;
-    t.pnl=t.grossPnl-PAPER_FRICTION_PCT;
+    t.pnl=t.grossPnl-Number(t.frictionPct||PAPER_FRICTION_PCT);
     t.currentPrice=t.exitPrice;t.unrealizedPnl=null;
   }else if(t.entryPrice>0&&t.currentPrice>0){
-    t.unrealizedPnl=(t.currentPrice/t.entryPrice-1)*100-PAPER_FRICTION_PCT;
+    t.unrealizedPnl=(t.currentPrice/t.entryPrice-1)*100-Number(t.frictionPct||PAPER_FRICTION_PCT);
   }
   return t;
 }
-async function advanceTrade(env,date,candidate,existing,target){
-  let t=existing?{...existing}:blankTrade(candidate,date);
+async function advanceTrade(env,date,candidate,existing,target,params=DAY_EXIT_VARIANTS.baseline){
+  let t=existing?{...existing}:blankTrade(candidate,date,params);
   if(t.status==="closed")return t;
   if(target<t.entryTime)return t;
   let from=t.entryTime;
@@ -255,7 +297,7 @@ async function advanceTrade(env,date,candidate,existing,target){
   }
   return t;
 }
-function pickCandidates(parts){
+function pickCandidates(parts,maxTrades=PAPER_MAX_TRADES){
   const a=parts.flatMap(x=>x.signals||[]).slice().sort((x,y)=>
     (+x.signalTime||0)-(+y.signalTime||0)||(+y.score||0)-(+x.score||0)||String(x.code||"").localeCompare(String(y.code||""))
   );
@@ -264,7 +306,7 @@ function pickCandidates(parts){
     const code=String(x.code||"");
     if(!code||seen.has(code))continue;
     seen.add(code);out.push(x);
-    if(out.length>=PAPER_MAX_TRADES)break;
+    if(out.length>=maxTrades)break;
   }
   return out;
 }
@@ -313,7 +355,7 @@ async function notifyPaperTransitions(env,oldLedger,newLedger){
           "신호 "+hmLabel(x.signalTime)+" · 신호가 "+Math.round(x.signalPrice||0).toLocaleString("ko-KR")+"원",
           "매수: 다음 1분봉 시가 "+hmLabel(x.entryTime)+(x.entryPrice?" · "+Math.round(x.entryPrice).toLocaleString("ko-KR")+"원":" · 진입 대기"),
           "근거: 점수 "+Number(x.score||0).toFixed(1)+" · 장중수익 "+signedPct(x.sessionRet)+" · VWAP기울기 "+signedPct(x.vwapSlope)+" · 거래량 "+Number(x.volRatio||0).toFixed(2)+"배",
-          "청산계획: 손절 -"+PAPER_STOP_PCT.toFixed(1)+"% · 익절 +"+PAPER_TAKE_PROFIT_PCT.toFixed(1)+"% · "+hmLabel(PAPER_FINAL_EXIT_HM)+" 시간청산"
+          "청산계획: 손절 -"+Number(newLedger.stopPct||PAPER_STOP_PCT).toFixed(1)+"% · 익절 +"+Number(newLedger.takeProfitPct||PAPER_TAKE_PROFIT_PCT).toFixed(1)+"% · "+hmLabel(PAPER_FINAL_EXIT_HM)+" 시간청산"
         ]
       });
     }
@@ -332,18 +374,19 @@ async function notifyPaperTransitions(env,oldLedger,newLedger){
     }
   }
 }
-async function reconcilePaper(env,date,target,candidates){
+async function reconcilePaper(env,date,target,candidates,mainVariant="baseline"){
   const old=await readPaper(env,date);
+  const params=dayExitParams(mainVariant);
   const by=new Map(((old&&old.trades)||[]).map(x=>[x.id,x]));
   const trades=[];
   for(const c of candidates){
     const id=String(c.code)+":"+String(c.signalTime);
-    trades.push(await advanceTrade(env,date,c,by.get(id)||null,target));
+    trades.push(await advanceTrade(env,date,c,by.get(id)||null,target,params));
   }
   const ledger={
-    schema:1,date,updatedAt:new Date().toISOString(),targetHm:target,
+    schema:1,date,updatedAt:new Date().toISOString(),targetHm:target,mainVariant,
     strategy:"VWAP trend breakout v1",mode:"server-live-paper-no-order",
-    maxTrades:PAPER_MAX_TRADES,stopPct:PAPER_STOP_PCT,takeProfitPct:PAPER_TAKE_PROFIT_PCT,
+    maxTrades:params.maxTrades,stopPct:params.stopPct,takeProfitPct:params.takeProfitPct,
     finalExit:PAPER_FINAL_EXIT_HM,frictionPct:PAPER_FRICTION_PCT,
     trades
   };
@@ -361,7 +404,7 @@ async function advanceExistingPaper(env,date,target){
       code:x.code,name:x.name,rank:x.rank,signalTime:x.signalTime,signalPrice:x.signalPrice,
       score:x.score,sessionRet:x.sessionRet,vwapSlope:x.vwapSlope,volRatio:x.volRatio
     };
-    trades.push(await advanceTrade(env,date,c,x,target));
+    trades.push(await advanceTrade(env,date,c,x,target,{stopPct:x.stopPct||old.stopPct,takeProfitPct:x.takeProfitPct||old.takeProfitPct,maxTrades:old.maxTrades||PAPER_MAX_TRADES}));
   }
   const ledger={...old,updatedAt:new Date().toISOString(),targetHm:target,trades};
   ledger.summary=ledgerSummary(ledger);
@@ -428,8 +471,9 @@ async function runScheduled(controller,env){
   let ledger=null;
   // 하루 최대 3건 선정은 Top100 전체 결과가 모두 있을 때만 한다. 일부 shard 누락으로 잘못된 3건을 고정하지 않는다.
   if(ok.length===SHARDS){
-    const candidates=pickCandidates(ok);
-    ledger=await reconcilePaper(env,sched.date,target,candidates);
+    const mainVariant=String(snapshot.mainVariant||"baseline"),params=dayExitParams(mainVariant);
+    const candidates=pickCandidates(ok,params.maxTrades);
+    ledger=await reconcilePaper(env,sched.date,target,candidates,mainVariant);
   }
   console.log(JSON.stringify({
     type:"day_scan",date:sched.date,targetHm:target,lagMs:lag,snapshotHm:snapshot.snapshotHm,
@@ -448,6 +492,17 @@ export default {
       schedule:"09:55 snapshot + 10:00~14:31 signal scans + 14:32~15:11 paper exits",
       paper:{maxTrades:PAPER_MAX_TRADES,stopPct:PAPER_STOP_PCT,takeProfitPct:PAPER_TAKE_PROFIT_PCT,finalExit:PAPER_FINAL_EXIT_HM,frictionPct:PAPER_FRICTION_PCT}
     });
+    if(u.pathname==="/config"){
+      if(!authorized(request,env))return json({ok:false,error:"unauthorized"},401);
+      try{
+        if(request.method==="GET")return json({ok:true,config:await readStrategyConfig(env)});
+        if(request.method==="POST"){
+          const b=await request.json();
+          return json({ok:true,config:await writeStrategyConfig(env,b)});
+        }
+        return json({ok:false,error:"method not allowed"},405);
+      }catch(e){return json({ok:false,error:String(e.message||e)},500);}
+    }
     if(u.pathname==="/snapshot"){
       if(!authorized(request,env))return json({ok:false,error:"unauthorized"},401);
       const date=String(u.searchParams.get("date")||kstParts().date);
