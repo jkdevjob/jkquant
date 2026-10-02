@@ -76,7 +76,7 @@ const all=fn(idx,'async function applyAllSimStart()');
 const pSave=all.indexOf('saveLocal();'),pReplay=all.indexOf('await openPaper()'),pPush=all.indexOf('await pushRemoteNow()');
 ok('모의 전체적용은 local blank -> replay -> cloud 순서',pSave>=0&&pReplay>pSave&&pPush>pReplay);
 ok('replay 전 cloud push 없음',all.slice(0,pReplay).indexOf('pushRemoteNow')<0);
-const repair=fn(idx,'async function repairPaperStart');
+const repair=fn(idx,'async function paperRepairLegacyStarts');
 const resetAt=repair.indexOf('x.hist=[]');
 ok('자동 시작일 복구도 hist 비운 뒤 즉시 cloud push 안 함',
   resetAt>=0&&repair.slice(resetAt).indexOf('await pushRemoteNow()')<0);
