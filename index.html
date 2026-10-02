@@ -548,7 +548,7 @@ try{ if(localStorage.getItem('qcockpit_hadUser')==='1') document.documentElement
 </div>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.109.1</span></h1></div>
+    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.109.2</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -1659,7 +1659,7 @@ if(/^\/paper\/?$/.test(location.pathname)){
   <footer>
     <strong>JK 퀀트</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.109.1</b> · 2026-10-03</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.109.2</b> · 2026-10-03</div>
   </footer>
 </div>
 
@@ -2248,18 +2248,15 @@ function migrateInfOperatingDefaults(){
 }
 
 function load(){
-  try{S=JSON.parse(localStorage.getItem(lsKey()))}catch(e){S=null}
-  const hadValidLocal=validState(S);
-  if(!hadValidLocal){
-    S=freshState();
-    // 로그인 사용자는 Firebase 원장을 읽기 전의 새 기본상태를 "최신 로컬"로 저장하지 않는다.
-    // 새 기기/캐시삭제 직후 빈 상태가 기존 클라우드 거래이력을 덮는 사고를 막는다.
-    if(!curUid)saveLocal();
+  if(curUid){
+    /* 로그인 사용자는 브라우저 원장을 읽지 않는다. Firebase stateV2가 유일한 정본이다. */
+    S=freshState();ensureBoxes();forceV40();return;
   }
+  try{S=JSON.parse(localStorage.getItem(lsKey()))}catch(e){S=null}
+  if(!validState(S)){S=freshState();saveLocal();}
   if(!S.activeTab)S.activeTab='inf';
-  ensureBoxes();
-  forceV40();   // V5.0 숨김 기간: 저장된 v50 세션을 v40으로 되돌림
-  if(migrateInfOperatingDefaults() && (!curUid||stateCloudHydrated)) saveLocal();
+  ensureBoxes();forceV40();
+  if(migrateInfOperatingDefaults())saveLocal();
 }
 /* 로컬 저장은 실패할 수 있다 — 용량 초과(QuotaExceededError)나 사생활 보호 모드.
    예전에는 여기서 던진 예외가 load() → 로그인 처리까지 타고 올라가서
@@ -2271,7 +2268,7 @@ let lsFailed=false;
    timestamps만으로 로컬/클라우드 승자를 정하면 새 기기·오래 열린 탭·다른 기기에서
    "기록이 더 적은데 시각만 최신"인 상태가 전체 state를 덮을 수 있다.
    클라우드 revision + 실제 이력 포함관계를 함께 본다. */
-let stateCloudHydrated=false, stateCloudRev=0, stateCloudPending=false, stateCloudHistorySig='';
+let stateCloudHydrated=false, stateCloudRev=0, stateCloudPending=false, stateCloudHistorySig='', stateDbBase=null;
 function _histKeyPart(x){
   if(x&&x.id!=null)return 'id:'+String(x.id);
   if(x&&x.ts!=null)return 'ts:'+String(x.ts);
@@ -2366,8 +2363,8 @@ function _stateCacheCopy(st){
   return x;
 }
 function _writeLocalExact(st){
-  /* 브라우저 저장소는 UI/설정 캐시일 뿐이다. 거래이력은 Firebase stateV2가 유일한 정본. */
-  try{localStorage.setItem(lsKey(),JSON.stringify(_stateCacheCopy(st)));return true;}catch(e){console.error('local exact',e);return false;}
+  if(curUid)return true; // 로그인 계정 state는 브라우저에 저장하지 않는다.
+  try{localStorage.setItem(lsKey(),JSON.stringify(st));return true;}catch(e){console.error('local exact',e);return false;}
 }
 /* 저장본이 갈라져도 사용자에게 잠금/복구 절차를 요구하지 않는다.
    현재 탭의 값은 우선하되 다른 저장본에만 있는 거래·세션은 합쳐서 보존한다. */
@@ -2493,20 +2490,10 @@ function _staleStateGuard(where){
   return false;
 }
 function saveLocal(){
-  if(_staleStateGuard('local')) return false;
+  if(curUid)return true; // 로그인 사용자: 거래/설정 state 전체를 localStorage에 쓰지 않는다.
   S._updated=Date.now();
-  try{
-    localStorage.setItem(lsKey(),JSON.stringify(_stateCacheCopy(S)));
-    if(lsFailed){ lsFailed=false; const n=$('lswarn'); if(n) n.remove(); }
-    return true;
-  }catch(e){
-    console.error('saveLocal',e);
-    if(!lsFailed){
-      lsFailed=true;
-      showLsWarn('브라우저 설정 캐시를 저장하지 못했습니다. 거래이력은 Firebase DB에만 저장됩니다.');
-    }
-    return false;
-  }
+  try{localStorage.setItem(lsKey(),JSON.stringify(S));return true;}
+  catch(e){console.error('saveLocal',e);return false;}
 }
 function showLsWarn(msg){
   try{
@@ -10139,6 +10126,78 @@ let saveTimer=null, lastPushedJSON='';
 function setSync(state){ // 'ok'|'sync'|'err'|null
   const d=$('syncdot');if(d)d.className='syncdot'+(state?(' '+state):'');
 }
+function _histEntries(a){
+  const occ={},out=[];
+  for(const r of (Array.isArray(a)?a:[])){
+    let k=_histKeyPart(r);
+    if(!k){const sem=_histSemanticKey(r),n=(occ[sem]||0)+1;occ[sem]=n;k='legacy:'+sem+':'+n;}
+    out.push([k,r]);
+  }
+  return out;
+}
+function _rebaseRecordArray(base,candidate,remote){
+  const B=new Map(_histEntries(base)), C=new Map(_histEntries(candidate)), R=new Map(_histEntries(remote));
+  const order=_histEntries(remote).map(x=>x[0]);
+  for(const [k] of B)if(!C.has(k))R.delete(k); // 이 탭에서 명시적으로 삭제
+  for(const [k,v] of C){
+    const bv=B.get(k);
+    if(!B.has(k)||_histStableJson(v)!==_histStableJson(bv)){
+      R.set(k,JSON.parse(JSON.stringify(v)));
+      if(!order.includes(k))order.push(k);
+    }
+  }
+  const out=[];for(const k of order)if(R.has(k)){out.push(R.get(k));R.delete(k);}
+  for(const v of R.values())out.push(v);
+  try{sortHist(out);}catch(e){}
+  return out;
+}
+function _rebaseStateOnRemote(base,candidate,remote){
+  if(!base||!remote)return JSON.parse(JSON.stringify(candidate));
+  const out=JSON.parse(JSON.stringify(remote)), boxes=['inf','vr','ma','ivs','dca','asap'];
+  for(const k of Object.keys(candidate))if(!boxes.includes(k)&&k!=='plan')out[k]=JSON.parse(JSON.stringify(candidate[k]));
+  for(const bk of boxes){
+    const B=base[bk]||{},C=candidate[bk]||{},R=remote[bk]||{};
+    if(!out[bk])out[bk]={};
+    for(const k of Object.keys(C))if(k!=='sessions')out[bk][k]=JSON.parse(JSON.stringify(C[k]));
+    const bm=new Map((Array.isArray(B.sessions)?B.sessions:[]).filter(Boolean).map(x=>[String(x.id||''),x]));
+    const cm=new Map((Array.isArray(C.sessions)?C.sessions:[]).filter(Boolean).map(x=>[String(x.id||''),x]));
+    const rm=new Map((Array.isArray(R.sessions)?R.sessions:[]).filter(Boolean).map(x=>[String(x.id||''),JSON.parse(JSON.stringify(x))]));
+    for(const [id] of bm)if(!cm.has(id))rm.delete(id);
+    for(const [id,cs] of cm){
+      const bs=bm.get(id),rs=rm.get(id);
+      if(!bs||!rs){rm.set(id,JSON.parse(JSON.stringify(cs)));continue;}
+      const ns=JSON.parse(JSON.stringify(rs));
+      for(const k of Object.keys(cs))if(k!=='hist')ns[k]=JSON.parse(JSON.stringify(cs[k]));
+      ns.hist=_rebaseRecordArray(bs.hist,cs.hist,rs.hist);
+      rm.set(id,ns);
+    }
+    out[bk].sessions=[...rm.values()];
+  }
+  const Bp=base.plan||{},Cp=candidate.plan||{},Rp=remote.plan||{};
+  if(Cp&&Array.isArray(Cp.sessions)){
+    if(!out.plan)out.plan={};
+    for(const k of Object.keys(Cp))if(k!=='sessions')out.plan[k]=JSON.parse(JSON.stringify(Cp[k]));
+    const bm=new Map((Array.isArray(Bp.sessions)?Bp.sessions:[]).filter(Boolean).map(x=>[String(x.id||''),x]));
+    const cm=new Map(Cp.sessions.filter(Boolean).map(x=>[String(x.id||''),x]));
+    const rm=new Map((Array.isArray(Rp.sessions)?Rp.sessions:[]).filter(Boolean).map(x=>[String(x.id||''),JSON.parse(JSON.stringify(x))]));
+    for(const [id] of bm)if(!cm.has(id))rm.delete(id);
+    for(const [id,cs] of cm){
+      const bs=bm.get(id),rs=rm.get(id);
+      if(!bs||!rs){rm.set(id,JSON.parse(JSON.stringify(cs)));continue;}
+      const ns=JSON.parse(JSON.stringify(rs));
+      for(const k of Object.keys(cs))if(k!=='ledger')ns[k]=JSON.parse(JSON.stringify(cs[k]));
+      if(cs.ledger){
+        ns.ledger=JSON.parse(JSON.stringify(rs.ledger||{}));
+        const bl=bs.ledger||{},cl=cs.ledger||{},rl=rs.ledger||{};
+        for(const k of Object.keys(cl))if(k!=='events')ns.ledger[k]=JSON.parse(JSON.stringify(cl[k]));
+        ns.ledger.events=_rebaseRecordArray(bl.events,cl.events,rl.events);
+      }
+      rm.set(id,ns);
+    }
+    out.plan.sessions=[...rm.values()];
+  }
+  return out;
+}
 async function _commitStateRemote(where){
   if(!curUid||!window.fb)return true;
   if(!stateCloudHydrated){stateCloudPending=true;setSync('sync');return false;}
@@ -10152,26 +10211,21 @@ async function _commitStateRemote(where){
       const remote=validState(d.stateV2)?d.stateV2:d.state,rev=+d.stateV2Rev||0;
       const remoteSig=remote&&validState(remote)?_historySignature(remote):'';
       const remoteChanged=rev!==stateCloudRev||(stateCloudHistorySig!==''&&remoteSig!==stateCloudHistorySig);
-      if(remote&&validState(remote)&&remoteChanged&&!_historyPreserves(candidate,remote)){
-        const err=new Error('REMOTE_HISTORY_CONFLICT');err.code='history-conflict';throw err;
+      if(remote&&validState(remote)&&remoteChanged){
+        candidate=_rebaseStateOnRemote(stateDbBase,candidate,remote);
+        candidate._updated=writeUpdated=Date.now();
+        mergedRemote=true;
       }
       const nr=rev+1;
       // stateV2가 정본이다. 다른 탭/기기 기록은 위에서 자동 합친 뒤 즉시 저장한다.
       tx.set(ref,{stateV2:candidate,stateV2Updated:writeUpdated,stateV2Rev:nr},{merge:true});
       return nr;
     });
-    if(mergedRemote){
-      S=candidate;ensureBoxes();_writeLocalExact(S);
-      try{refreshAll();}catch(e){console.warn('merged refresh',e);}
-    }
-    stateCloudRev=+nextRev||stateCloudRev;stateCloudHistorySig=_historySignature(candidate);
-    stateCloudPending=false;
-    lastPushedJSON=JSON.stringify(candidate);setSync('ok');return true;
+    if(mergedRemote){S=candidate;ensureBoxes();try{refreshAll();}catch(e){console.warn('db rebase refresh',e);}}
+    stateCloudRev=+nextRev||stateCloudRev;stateCloudHistorySig=_historySignature(candidate);stateDbBase=JSON.parse(JSON.stringify(candidate));
+    stateCloudPending=false;lastPushedJSON=JSON.stringify(candidate);setSync('ok');return true;
   }catch(e){
     console.error(where,e);setSync('err');
-    if((e&&e.code==='history-conflict')||String(e&&e.message||e).includes('REMOTE_HISTORY_CONFLICT')){
-      showLsWarn('DB에 더 최신 거래이력이 있어 저장을 중단했습니다. 새로고침해 DB 원장을 다시 불러온 뒤 입력해 주세요.');
-    }
     return false;
   }
 }
@@ -10197,7 +10251,7 @@ async function pullRemote(){
     stateCloudRev=+d.stateV2Rev||0;
     stateCloudHistorySig=remote?_historySignature(remote):'';
     if(remote){
-      S=JSON.parse(JSON.stringify(remote)); // DB가 유일한 거래 원장
+      S=JSON.parse(JSON.stringify(remote)); stateDbBase=JSON.parse(JSON.stringify(remote)); // DB가 유일한 거래 원장
       if(!S.activeTab)S.activeTab='inf';ensureBoxes();
       const repaired=(hasV2&&legacy)?_repairLegacyMergeDupes(S,legacy):0;
       if(repaired>0){stateCloudPending=true;console.warn('legacy merge duplicates repaired',repaired);}
@@ -10207,10 +10261,8 @@ async function pullRemote(){
       if(!hasV2||migrated||repaired>0)stateCloudPending=true;
       lastPushedJSON=(!stateCloudPending&&hasV2)?JSON.stringify(S):'';
     }else{
-      /* 계정에 원장이 없을 때만 현재 설정 캐시/기본값으로 최초 DB를 만든다.
-         로컬의 과거 거래이력은 _stateCacheCopy 때문에 존재하지 않는다. */
-      let local=null;try{local=JSON.parse(localStorage.getItem(lsKey())||'null')}catch(e){}
-      S=validState(local)?local:freshState();ensureBoxes();stateCloudPending=true;
+      /* DB 원장이 없으면 새 원장을 만든다. 로그인 사용자의 브라우저 state는 읽지 않는다. */
+      S=freshState();ensureBoxes();stateDbBase=null;stateCloudPending=true;
     }
     stateCloudHydrated=true;
     if(stateCloudPending||lastPushedJSON==='')await pushRemoteNow();
@@ -10405,43 +10457,21 @@ function initAuth(){
     const accFb={auth:window.fb.auth, db:window.fb.db, doc:window.fb.doc, getDoc:window.fb.getDoc, setDoc:window.fb.setDoc};
     accessLocked=false;
     if(!await JKAccess.admit(user, accFb, {lock:r=>accessLock(user, r, accFb)})) return;
-    /* 이 기기에 저장된 걸로 곧바로 연다. 예전에는 프로필 쓰기(≤6초)와
-       클라우드 읽기(≤8초)가 둘 다 끝나야 화면이 열려서, 메뉴로 페이지를 옮길
-       때마다 로그인 화면을 몇 초씩 보고 있어야 했다. 기록은 어차피 이 기기에도
-       있으니 먼저 열고, 클라우드는 도착하면 그때 맞춘다. */
-    authStep='로컬 열기';
-    let openedLocal=false;
-    try{ load(); openedLocal=validState(S); }catch(e){ console.error('local',e); }
-    if(openedLocal){
-      $('authgate').style.display='none';
-      try{ startApp(); applyAdminMode(); setSync('sync'); }
-      catch(e){ console.error('startApp',e); openedLocal=false; $('authgate').style.display='flex';
-                authWarn('앱을 여는 중 오류가 났습니다 — '+(e&&e.message||e)); }
-    }
-
-    // 접속 기록. 승인·차단 판정은 위(이용 승인)에서 끝났다 — 여기서 또 세지 않는다.
+    /* 거래 원장은 Firebase DB만 사용한다. 로그인 뒤 DB를 먼저 읽고 성공해야 앱을 연다. */
     authStep='프로필';
-    try{ await withTimeout(touchProfile(user), 6000, '프로필 확인'); }catch(e){ console.warn('profile',e); }   // 접속 기록 실패로 로그인까지 막지는 않는다
-    if(accessLocked) return;   // 그 사이 승인 취소·차단이 확인됐다 — 클라우드 기록을 열지 않는다
+    try{ await withTimeout(touchProfile(user), 6000, '프로필 확인'); }catch(e){ console.warn('profile',e); }
+    if(accessLocked) return;
 
-    /* 클라우드 기록. 먼저 연 뒤라면 늦게 와도 상관없고, 못 열었다면 이게 유일한 길이다.
-       pullRemote 는 로컬이 더 최신이면 로컬을 지키고 밀어올리므로, 먼저 연 사이에
-       사용자가 뭔가 적었어도 그게 덮이지 않는다. */
-    authStep='기록 읽기';
+    authStep='DB 원장 읽기';
     try{
-      const ok=await withTimeout(pullRemote(), 8000, '클라우드 기록');
-      if(!ok && !openedLocal) load();
+      const ok=await withTimeout(pullRemote(), 12000, 'Firebase DB 원장');
+      if(!ok)throw new Error('Firebase DB 원장을 읽지 못했습니다');
+      try{localStorage.removeItem(lsKey());}catch(e){} // 과거 브라우저 원장 제거
     }catch(e){
-      console.error('load',e);
-      if(!openedLocal){
-        let opened=false;
-        try{ load(); opened=validState(S); }catch(e2){ console.error('local',e2); }
-        if(!opened){ try{ S=freshState(); ensureBoxes(); saveLocal(); }catch(e2){ console.error('fresh',e2); } }
-        authWarn((opened?'클라우드 기록을 못 읽어 이 기기에 저장된 걸로 엽니다':'저장된 기록을 읽지 못해 새로 시작합니다')
-          +' — '+(e&&e.message||e));
-      }else{
-        authWarn('클라우드 기록을 못 읽었습니다 — 이 기기에 저장된 걸로 보고 있습니다 · '+(e&&e.message||e));
-      }
+      console.error('db load',e);
+      authWarn('Firebase DB 원장을 불러오지 못했습니다. 오래된 브라우저 기록으로 열지 않습니다 — '+(e&&e.message||e));
+      setSync('err');
+      return;
     }
     authStep='앱 시작';
     $('authgate').style.display='none';
