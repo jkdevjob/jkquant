@@ -8031,19 +8031,24 @@ console.log('\n[117] 자산플랜 v1.28.0 — 기간마다 완전히 다른 매�
      && !/\$\("alphaCapitalInput"\)\.addEventListener\("change"/.test(pl)
      && /const cap=Math\.max\(1,Math\.round\(Number\(\$\('alphaCapitalInput'\)\.value\)\|\|0\)\)/.test(pl)
      && /\$\('startCapital'\)\.value=cap/.test(pl));
-  ok('새로고침 시 정상 로컬은 우선 · 로컬 거래이력 0건이면 클라우드 거래이력을 복구',
-     /let local=null;try\{local=JSON\.parse\(localStorage\.getItem\(KEY\)\|\|"null"\)\}catch\(e\)\{\}/.test(pl)
-     && /function planLedgerEventCount\(o\)/.test(pl)
-     && /function planLedgerHasActivity\(o\)/.test(pl)
-     && /!localActive&&cloudActive/.test(pl)
-     && /KEY\+"_cloud_recovery"/.test(pl)
+  ok('장부 복구 보호모드 — 로컬·백업·Firebase 후보를 보존하고 최다 이력을 화면 복구한 뒤 클라우드 저장 잠금',
+     /function planRecoveryMeta\(o\)/.test(pl)
+     && /function planRecoveryScore\(o\)/.test(pl)
      && /KEY\+"_precloud_restore"/.test(pl)
-     && /planForceLocalSave=true;try\{localSave\(\);\}finally\{planForceLocalSave=false;\}/.test(pl)
-     && /클라우드 거래이력 복구/.test(pl)
+     && /KEY\+"_cloud_recovery"/.test(pl)
+     && /KEY\+"_cloud_previous"/.test(pl)
+     && /KEY\+"_cloud_latest"/.test(pl)
+     && /planRecoveryCandidates/.test(pl)
+     && /planRecoveryLock=conflict/.test(pl)
+     && /복구 보호모드/.test(pl)
+     && /Firebase 저장 잠금/.test(pl)
+     && /if\(!x&&planRecoveryLock\)/.test(pl)
+     && /id="planRecoverySelect"/.test(pl)
+     && /function applyPlanRecoveryCandidate\(index\)/.test(pl)
+     && /async function confirmPlanRecovery\(\)/.test(pl)
+     && /KEY\+"_recovery_confirmed"/.test(pl)
      && /planBootHydrating&&!planForceLocalSave&&!x/.test(pl)
-     && /planBootHydrating=false/.test(pl)
-     && /이 기기 저장값 유지/.test(pl)
-     && /await cloudSave\(\)/.test(pl));
+     && /planBootHydrating=false/.test(pl));
   ok('자산플랜 주문에 종목별 목표금액·오늘 매수금액·수수료포함 필요현금 표시',
      /목표 보유금액:/.test(pl)
      && /오늘 매수금액:/.test(pl)
