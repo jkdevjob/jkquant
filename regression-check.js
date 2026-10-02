@@ -11029,10 +11029,10 @@ console.log('[GAPDOWN D-1 / DIP24 D-3] 연구용 모의체결 경로 안전장�
        &&['opening','daytrading','crypto','soxl'].every(k=>new RegExp('\\b'+k+':\\{title:').test(scl2)));
   }
   { const lp=fs.readFileSync(__d+'/scripts/claude_lab.py','utf8');
-    ok('그림자 교체 후보: 판정 표본 매매 20일 이상 · 자동 교체 없음(표시만) · 화면 ⭐ 표시 + 이번 주 결과 카드(오늘·전체 탭)',
+    ok('그림자 교체 후보: 판정 표본 매매 20일 이상 · 자동 교체 없음(표시만) · 화면 ⭐ 표시 + 이번 주 결과 카드(전체 탭)',
        /PROMOTE_MIN_TRADE_DAYS = 20/.test(lp)&&/attach_promotions\(report\)/.test(lp)&&/report\["week"\] = week_summary\(/.test(lp)
        &&!/CRYPTO\[[^\]]+\] = |US\[[^\]]+\] = /.test(lp.slice(lp.indexOf('def promotion('),lp.indexOf('def week_summary(')))
-       &&/function promoBadge\(pr\)/.test(scl2)&&/function weekCard\(\)/.test(scl2)&&(scl2.match(/weekCard\(\)/g)||[]).length===3);
+       &&/function promoBadge\(pr\)/.test(scl2)&&/function weekCard\(\)/.test(scl2)&&(scl2.match(/weekCard\(\)/g)||[]).length===2);
   }
   { const lp=fs.readFileSync(__d+'/scripts/claude_lab.py','utf8'),lv=fs.readFileSync(__d+'/functions/api/claude-live.js','utf8');
     const hold=[...lp.matchAll(/maxHoldDays=(\d+)/g)].map(m=>+m[1]);
@@ -11072,7 +11072,7 @@ console.log('[GAPDOWN D-1 / DIP24 D-3] 연구용 모의체결 경로 안전장�
      &&/x\.claude\.entries\?/.test(scl2)&&/tradeDays=trades\)/.test(fs.readFileSync(__d+'/scripts/claude_lab.py','utf8')));
   ok('📅 오늘 탭에서 \'전일 · 당일 결과\' 표 삭제(사용자 요청 2026-10-02)', !/전일 · 당일 결과 — 모든 전략/.test(scl2));
   ok('📅 오늘 탭 전략별 누적 수익률 추이: 모의 장부 / 최근 60일 재구성(참고) 따로 · 섞지 않음 · 5색(검증) + 범례',
-     /function trendCard\(\)/.test(scl2)&&/html\+=trendCard\(\);/.test(scl2)&&/function paperCurves\(\)/.test(scl2)
+     /function trendBlock\(\)/.test(scl2)&&/\+trendBlock\(\)\+/.test(scl2)&&/function paperCurves\(\)/.test(scl2)
      &&/report\["curves"\] = recent_curves\(/.test(fs.readFileSync(__d+'/scripts/claude_lab.py','utf8')));
   ok('클로드 모의투자 장부: 날짜별 한 번만 쓰기 · 요약은 장부 값만 · 화면 누적표 · workflow 저장',
      /def write_once\(path, obj\):\n[\s\S]{0,200}if path\.exists\(\):\n\s*return False/.test(fs.readFileSync(__d+'/scripts/claude_lab.py','utf8'))
@@ -11137,6 +11137,40 @@ console.log('\n[CLAUDE HEADER] 머리말 통일');
      &&!/id="ubadge"|JK QUANT · CLAUDE/.test(ch)
      &&/\.userbadge img\{width:22px;height:22px;border-radius:50%\}/.test(ch));
 }
+
+/* ════ 단타(클로드) 오늘 탭 — 지피티 오늘 탭과 같은 구성 ════ */
+console.log('\n[CLAUDE TODAY] 오늘 탭 통일');
+{
+  const ch=fs.readFileSync(__d+'/claude.html','utf8');
+  ok('오늘 탭 = 지피티와 같은 두 카드(📅 오늘 기준전략 결과: 전략별 전일·당일 + 누적 추이 / 📊 4전략 누적 상태: 표본·승률·거래당·필요승률·엣지·검증상태)',
+     /html\+=todayPage\(lab\);/.test(ch)&&/📅 오늘 기준전략 결과 <span class='sub'>최근 확정 세션 · 순수익<\/span>/.test(ch)
+     &&/resultCell\(r\.prev,r\.prevDate,"전일",cl\)\+resultCell\(r\.last,r\.lastDate,"당일",cl\)/.test(ch)
+     &&/📊 4전략 누적 상태/.test(ch)&&/<th>표본<\/th><th>승률<\/th><th>거래당<\/th><th>필요승률<\/th><th>엣지<\/th><th>검증상태<\/th>/.test(ch)
+     &&/class="daily-result-list"|'daily-result-list'/.test(ch)&&!/<div class="hero">/.test(ch));
+  // 값 시험 — 화면 함수를 그대로 떼어 실행
+  const grab=n=>{const i=ch.indexOf('function '+n+'(');let d=0,j=ch.indexOf('{',i);for(;j<ch.length;j++){if(ch[j]==='{')d++;else if(ch[j]==='}'&&--d===0)break;}return ch.slice(i,j+1);};
+  const env='var NOTRADE="매매 없음";function esc(s){return String(s)}function cls(v){return v>0?"win":v<0?"loss":""}function pct(v){return (v>=0?"+":"")+(+v).toFixed(2)+"%"}';
+  let f={dayCell:()=>'',scoreOf:()=>null};
+  try{f=new Function(env+grab('resultCell')+grab('scoreOf')+';return {dayCell:resultCell,scoreOf:scoreOf}')();}catch(e){console.log('  (오늘 탭 함수 추출 실패: '+e.message+')');}
+  const s1=f.scoreOf({tradeDays:152,lossDays:57,lossDayAvgPct:-3.5132163740225857,expectancyPct:1.3304699743160744});
+  const agree=f.dayCell(-0.5,'2026-10-02','당일',{date:'2026-10-02',trades:[{},{}],wins:1,losses:1});
+  const clash=f.dayCell('no_trade','2026-10-02','당일',{date:'2026-10-02',trades:[{}],wins:0,losses:1});
+  ok('오늘 탭 값: ① 설계표본 승률 62.5% · 필요승률 45.3% · 엣지 +17.2%p / 장부와 매매 여부가 맞을 때만 건수 · 어긋나면 0건(장부 건수 안 섞음) / +1% 달성 표시',
+     s1&&Math.abs(s1.wr-62.5)<0.05&&Math.abs(s1.req-45.33)<0.05&&Math.abs(s1.edge-17.17)<0.05
+     &&/기준전략 2건 · 승 1 · 패 1/.test(agree)&&/목표까지 1\.50%p/.test(agree)
+     &&/매매없음/.test(clash)&&/기준전략 0건/.test(clash)&&!/1건/.test(clash)
+     &&/daily-result-goal hit'>\+1% 달성/.test(f.dayCell(1.2,'2026-10-02','당일',null))&&f.scoreOf({tradeDays:0})===null,
+     JSON.stringify(s1));
+  const fnames=[...ch.matchAll(/(?:^|[;\s}])function ([A-Za-z_$][\w$]*)\(/g)].map(m=>m[1]),dup=fnames.filter((n,i)=>fnames.indexOf(n)!==i);
+  ok('클로드 화면 함수 이름 중복 없음(뒤에 선언한 함수가 앞의 것을 덮어쓰지 않게)',dup.length===0,dup.join(','));
+  ok('③ 코인은 마감 장부(00~24시 KST)와 하루 정의(Upbit 09시)가 달라 건수를 섞지 않는다',
+     /cl=z\[0\]==="crypto"\?null:lt\.closed/.test(ch));
+}
+
+/* ════ 자산플랜 로그인 게이트 — 로그인해야만 열린다 ════
+   운영·단타·관리자 화면처럼 자산플랜도 로그인 전·로그아웃·차단 계정이면 본문을 숨기고
+   클라우드 장부·시세를 하나도 불러오지 않는다. 막 위치·본문 숨김(CSS)·planGate/planBlocked 값·
+   로그인 상태 처리 순서(차단 확인이 본문 열기보다 먼저)를 값으로 본다. */
 
 /* ════ 이용 승인제 — 로그인 → 신청 → 관리자 승인 → 사용 ════
    모든 페이지는 로그인해야 열리고, 관리자(소유자)가 승인한 계정만 쓴다. 단타 두 화면과 관리자는 소유자만.

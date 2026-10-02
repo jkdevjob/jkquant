@@ -12,13 +12,15 @@
 .jkmenu{position:relative;flex-shrink:0}.jkmenu-btn{height:40px;width:46px;display:inline-flex;align-items:center;justify-content:center;background:var(--surf2);border:1px solid var(--border);color:var(--text);border-radius:11px;font-size:19px;font-weight:700;line-height:1;cursor:pointer;letter-spacing:1px}.jkmenu-btn:hover{border-color:var(--vio);color:var(--vio)}
 .jkmenu-pop{position:absolute;right:0;top:47px;z-index:100;background:var(--surf);border:1px solid var(--border);border-radius:10px;padding:6px;min-width:166px;box-shadow:0 14px 34px rgba(0,0,0,.45);display:flex;flex-direction:column;gap:2px}
 .jkmenu-pop[hidden]{display:none}.jkmenu-pop a{display:flex;align-items:center;gap:9px;padding:10px 12px;border-radius:8px;color:var(--dim);text-decoration:none;font-weight:700}.jkmenu-pop a:hover,.jkmenu-pop a.cur{background:var(--surf2);color:var(--text)}.jkmenu-pop a.cur{color:var(--gold)}.mi{width:18px;text-align:center}
-main{padding:22px 0 70px}.hero h2{font-size:23px;margin:0 0 3px}.sub{color:var(--dim);font-size:12px}
+main{padding:0 0 70px}.hero h2{font-size:23px;margin:0 0 3px}.sub{color:var(--dim);font-size:12px}
 .card{background:var(--surf);border:1px solid var(--border);border-radius:12px;padding:14px;margin-top:12px}.card h3{margin:0 0 4px;font-size:16px}
 .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin-top:10px}.kpi{background:var(--surf2);border:1px solid var(--border);border-radius:10px;padding:10px}.kpi .l{font-size:11px;color:var(--dim)}.kpi .v{font-size:20px;font-weight:900;margin-top:2px}
 .tw{overflow-x:auto;margin-top:8px}table{border-collapse:collapse;width:100%;min-width:560px;font-size:12.5px}th,td{border-bottom:1px solid var(--border);padding:7px 8px;text-align:right;white-space:nowrap}th{color:var(--dim);font-weight:700}td:first-child,th:first-child{text-align:left}
 .win{color:var(--green)}.loss{color:var(--red)}.good{color:var(--green)}.bad{color:var(--red)}.note{color:var(--faint);font-size:11.5px;margin-top:8px}
 .rule{background:var(--surf2);border:1px solid var(--border);border-radius:10px;padding:10px;margin-top:8px;font-size:13px}.rule b{color:var(--gold)}
-.tabs{display:flex;gap:7px;overflow-x:auto;padding:4px 0 8px;margin-top:14px}.tab{flex:0 0 auto;border:1px solid var(--border);background:var(--surf);color:var(--dim);border-radius:999px;padding:8px 13px;font-weight:800;font-size:13px;cursor:pointer}.tab.on{background:var(--accent);border-color:var(--accent);color:#fff}
+.tabs{display:flex;gap:8px;flex-wrap:wrap;margin:14px 0 12px;position:sticky;top:8px;z-index:40;background:var(--bg);padding:6px 0}.tab{flex:1 1 120px;padding:11px 10px;border:1px solid var(--border);border-radius:10px;background:var(--surf);color:var(--dim);font-weight:800;font-size:13px;cursor:pointer}.tab.on{background:var(--vio);border-color:#6366d9;color:#fff}
+.strategy-head{margin:4px 0 10px;color:var(--dim);font-size:12px}.lead{color:var(--dim);font-size:13px;margin:8px 0 13px}.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.ghostbtn{padding:9px 14px;border-radius:10px;border:1px solid var(--border);background:transparent;color:var(--dim);font-size:12.5px;cursor:pointer}.seg{padding:5px 11px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--dim);font-size:12px;font-weight:700;cursor:pointer}.seg.on{background:var(--vio);border-color:#6366d9;color:#fff}.card h3 .dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--gold);margin-right:8px;vertical-align:middle}
+.daily-result-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.daily-result-card{background:var(--surf2);border:1px solid var(--border);border-radius:12px;padding:12px}.daily-result-title{display:flex;align-items:center;justify-content:space-between;gap:8px;font-weight:800;margin-bottom:9px}.daily-result-title button{border:0;background:transparent;color:var(--vio);font:inherit;font-size:12px;font-weight:800;cursor:pointer;padding:0}.daily-result-cols{display:grid;grid-template-columns:1fr 1fr;gap:8px}.daily-result-box{background:var(--surf);border:1px solid var(--border);border-radius:10px;padding:10px;min-width:0}.daily-result-label{font-size:10.5px;color:var(--faint);font-weight:700}.daily-result-ret{font-size:21px;font-weight:900;line-height:1.25;margin:3px 0}.daily-result-meta{font-size:11px;color:var(--dim);line-height:1.45}.daily-result-goal{display:inline-block;margin-top:5px;padding:2px 6px;border-radius:6px;font-size:10px;font-weight:800;background:var(--bg);color:var(--dim)}.daily-result-goal.hit{background:rgba(54,211,153,.12);color:var(--green)}@media(max-width:620px){.daily-result-list{grid-template-columns:1fr}}
 .vs td:first-child{font-weight:800}
 table.board{min-width:0}table.board td.nm{white-space:normal;min-width:150px}table.board td,table.board th{padding:7px 6px}.tag{display:inline-block;font-size:10.5px;padding:2px 7px;border-radius:999px;border:1px solid var(--border);color:var(--dim);margin-left:6px}
 .sec>summary{cursor:pointer;list-style:none}.sec>summary::-webkit-details-marker{display:none}.sec>summary h3:before{content:"▸ ";color:var(--faint)}.sec[open]>summary h3:before{content:"▾ "}
@@ -51,7 +53,7 @@ table.doc td{padding:6px 6px}
   <div class="gnote"><a href="/" style="color:var(--faint)">← 운영 화면으로</a></div>
 </div></div>
 <header><div class="wrap"><div class="htop">
-  <div><div class="kicker">Claude Scalping</div><h1>JK <span class="v">퀀트</span> 단타 <span class="ver" id="clVer">v2.9.3</span></h1></div>
+  <div><div class="kicker">Claude Scalping</div><h1>JK <span class="v">퀀트</span> 단타 <span class="ver" id="clVer">v2.10.0</span></h1></div>
   <div class="hright">
     <div class="userbadge" id="userbadge"></div>
   <div class="jkmenu" id="jkmenuWrap">
@@ -72,10 +74,6 @@ table.doc td{padding:6px 6px}
 </div></div></header>
 
 <main><div class="wrap">
-  <div class="hero">
-    <h2>목표: 하루 +1% · 주 +5%</h2>
-    <div class="sub">GPT 단타와 같은 4개 탭에 클로드 전략을 하나씩 두고, 같은 기간으로 GPT 기준전략과 비교합니다. 모든 수익률은 수수료·세금·슬리피지를 뺀 순수익, 매매 없는 날은 0%로 셉니다.</div>
-  </div>
   <div class="tabs" id="tabs">
     <button class="tab on" data-tab="today" onclick="showTab('today')">📅 오늘</button>
     <button class="tab" data-tab="opening" onclick="showTab('opening')">⚡ 시초가</button>
@@ -228,17 +226,17 @@ function trendSvg(series){
     return "<span style='display:inline-block;white-space:nowrap;margin-right:10px'><span style='color:"+TREND_C[k]+"'>━</span> "+TREND_N[k]+" "+(nt?NOTRADE:"<b class='"+cls(l.cumPct)+"'>"+pct(l.cumPct)+"</b>")+"</span>"}).join(" ");
   return "<svg viewBox='0 0 "+W+" "+H+"' style='width:100%;max-width:620px;display:block' role='img' aria-label='전략별 누적 수익률 추이'>"+g+"</svg><div class='sub' style='margin-top:4px;line-height:1.9'>"+leg+"</div>";
 }
-function trendCard(){
+function trendBlock(){
   var cv=(J.lab||{}).curves||{},pap=paperCurves(),rec=cv.series||{};
   var paperN=Object.keys(pap).reduce(function(a,k){return Math.max(a,(pap[k]||[]).length)},0);
   if(!TREND_MODE)TREND_MODE=paperN>=2?"paper":"recon";
   var td=cv.tradeDays||{};Object.keys(rec).forEach(function(k){if(rec[k])rec[k].tradeDays=td[k]});
   var sv=trendSvg(TREND_MODE==="paper"?pap:rec);
-  var btn=function(m,l){return "<button class='tab"+(TREND_MODE===m?" on":"")+"' style='padding:5px 11px;font-size:12px' onclick='TREND_MODE=\""+m+"\";render()'>"+l+"</button>"};
+  var btn=function(m,l){return "<button class='seg"+(TREND_MODE===m?" on":"")+"' onclick='TREND_MODE=\""+m+"\";render()'>"+l+"</button>"};
   var note=TREND_MODE==="paper"?"실제 모의투자 장부(날짜별 한 번 기록) 기준 · 칸 자금 100% · 코인은 두 코인 반반 · 매매 없는 날 0%.":esc(cv.note||"")+" · "+esc(cv.start||"")+" ~";
-  return "<div class='card'><h3>📈 전략별 누적 수익률 추이</h3><div style='display:flex;gap:6px;margin:6px 0'>"+btn("paper","모의 장부 (10/1~)")+btn("recon","최근 60일 규칙 재구성 (참고)")+"</div>"+
+  return "<div style='display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-bottom:8px'><b>📈 전략별 누적 결과 · 수익률 추이</b><span style='display:flex;gap:6px'>"+btn("paper","모의 장부 (10/1~)")+btn("recon","최근 60일 재구성 (참고)")+"</span></div>"+
     (sv||"<p class='note'>"+(TREND_MODE==="paper"?"모의 장부에 그릴 만큼 쌓인 날이 아직 없습니다(코인·SOXL·계좌는 10/3 부터). '최근 60일 규칙 재구성'에서 같은 규칙의 최근 흐름을 볼 수 있습니다.":"재구성 자료가 아직 없습니다.")+"</p>")+
-    "<p class='note'>"+note+" 점에 손가락을 대면 날짜별 값이 보입니다.</p></div>";
+    "<p class='note'>"+note+" 점에 손가락을 대면 날짜별 값이 보입니다.</p>";
 }
 // 🆚 GPT 대결 — 실시간 모의매매 기록끼리, 같은 시작일·같은 비용표. 색: 클로드 = 파랑, GPT = 주황(검증된 2색, 이름표 같이)
 var DUEL_C="#3987e5",DUEL_G="#d95926",DUEL_NAME={opening:"① 시초가",daytrading:"② 데이트레이딩",crypto:"③ 비트코인",soxl:"④ SOXL",total:"🏦 합계(4탭 균등)"};
@@ -412,28 +410,60 @@ function nextSig(t,unit){
     return "<div class='kpis'><div class='kpi'><div class='l'>다음 "+unit+" 할 일 ("+esc(n.basedOn)+" 종가 기준)</div><div class='v "+(n.action==="buy"?"good":"")+"'>"+esc(act)+"</div><div class='sub'>종가 "+num(n.close)+" · RSI(2) "+num(n.rsi2,0)+" (매수 &lt; 20) · 200일 평균 "+num(n.ma)+(n.close>n.ma?" 위":" 아래")+"</div></div></div>";}
   return "<div class='kpis'><div class='kpi'><div class='l'>다음 "+unit+" 신호 ("+esc(n.basedOn)+" 종가 기준)</div><div class='v "+(n.holdNext?"good":"")+"'>"+(n.holdNext?"보유":"쉼")+"</div><div class='sub'>종가 "+Math.round(n.signalClose).toLocaleString()+" · 평균 "+Math.round(n.ma).toLocaleString()+"</div></div></div>";
 }
+// 📅 오늘 탭 — 지피티 단타 오늘 탭과 같은 구성: ① 전략별 전일·당일(최근 두 확정 세션) + 누적 추이 ② 4전략 누적 상태
+var TODAY_T=[["opening","① 시초가","시초가","KRX 15:40 KST 마감 장부"],["daytrading","② 데이트레이딩","데이트레이딩","KRX 15:40 KST 마감 장부 · 다음 날 시가 매도"],
+  ["crypto","③ 비트코인","비트코인","Upbit 일봉(09:00 KST) 확정"],["soxl","④ SOXL","SOXL","미국 정규장 16:00 ET 마감"]];
+function resultCell(v,date,label,cl){
+  if(v==null)return "<div class='daily-result-box'><div class='daily-result-label'>"+label+"</div><div class='daily-result-ret'>—</div><div class='daily-result-meta'>확정 결과 대기</div></div>";
+  var nt=v==="no_trade",pd=v==="pending",ok=!nt&&!pd&&isFinite(v),hit=ok&&v>=1;
+  var c=cl&&cl.date===date&&((cl.trades||[]).length>0)===(!nt&&!pd)?cl:null;   // 같은 날·같은 정의의 마감 장부와 매매 여부가 맞을 때만 건수·승패를 장부에서
+  var meta=c?"기준전략 "+((c.trades||[]).length)+"건 · 승 "+(c.wins||0)+" · 패 "+(c.losses||0):nt?"기준전략 0건":pd?"장부 확정 대기":"모의 장부 확정";
+  var goal=hit?"+1% 달성":nt?"매매없음 · 0.00% 반영":ok?"목표까지 "+Math.max(0,1-v).toFixed(2)+"%p":"확정 대기";
+  return "<div class='daily-result-box'><div class='daily-result-label'>"+label+" · "+esc(date||"—")+"</div>"+
+    "<div class='daily-result-ret "+(ok?cls(v):"")+"'>"+(nt?"매매없음":pd?"—":pct(v))+"</div>"+
+    "<div class='daily-result-meta'>"+meta+"</div><span class='daily-result-goal"+(hit?" hit":"")+"'>"+goal+"</span></div>";
+}
+function scoreOf(d){                                                   // 설계 표본에서 승률·거래당·필요승률(손익분기)·엣지
+  d=d||{};var N=d.tradeDays||0,nl=d.lossDays||0,nw=N-nl,L=-(d.lossDayAvgPct||0),E=d.expectancyPct;
+  if(!N||!nw||E==null)return null;
+  var W=(E*N+nl*L)/nw,req=W+L>0?L/(W+L)*100:null,wr=nw/N*100;
+  return {n:N,wr:wr,avg:E,req:req,edge:req==null?null:wr-req};
+}
+function todayPage(lab){
+  var dl=lab.daily||{},rows=(dl.rows||[]).filter(function(x){return x.side==="claude"}),T=lab.tabs||{},L=(LIVE&&!LIVE.error&&LIVE.tabs)||{};
+  var cards=TODAY_T.map(function(z){
+    var r=rows.find(function(x){return x.group===z[2]})||{},lt=L[z[0]]||{},q=lt.today,cl=z[0]==="crypto"?null:lt.closed;   // 코인 마감 장부는 00~24시 KST, 여기 하루는 Upbit 09시 — 정의가 달라 섞지 않음
+    var live=q&&!(cl&&cl.date===LIVE.today)&&(q.trades>0||q.noTrade)?"<div class='daily-result-meta'>⏱ 지금 장중 "+(q.noTrade?NOTRADE:pct(q.tabPct))+(q.noTrade?"":" · 거래 "+q.trades+"건")+" <span class='sub'>("+kstTime(LIVE.asOf)+" · 확정 전)</span></div>":"";
+    return "<div class='daily-result-card'><div class='daily-result-title'><span>"+z[1]+"</span><button onclick=\"showTab('"+z[0]+"')\">전략 보기 →</button></div>"+
+      "<div class='daily-result-cols'>"+resultCell(r.prev,r.prevDate,"전일",cl)+resultCell(r.last,r.lastDate,"당일",cl)+"</div>"+
+      "<div class='daily-result-meta' style='margin-top:7px'>시간 기준 "+z[3]+"</div>"+live+(r.plan?"<div class='daily-result-meta'>오늘: "+esc(r.plan)+"</div>":"")+"</div>";
+  }).join("");
+  var stamp=String(dl.generatedAt||lab.generatedAt||"").replace("T"," ").slice(0,16);
+  var pp=lab.paper||{},sm=pp.summary||{},PK={opening:["opening_d1v2"],daytrading:["daytrading_etf"],crypto:["coin_bo_btc","coin_bo_eth"],soxl:["us_soxl"]};
+  var sp=function(v){return v==null?"—":pct(v)};
+  var ov=TODAY_T.map(function(z){var c=(T[z[0]]||{}).claude||{},s=scoreOf(c.design),p=PK[z[0]].map(function(k){return sm[k]||{}});
+    var td=p.reduce(function(a,x){return a+(x.tradeDays||0)},0),st=(p[0].status||{}).text||"모의 장부 대기";
+    var prog=td<20?"수집중 "+td+"/20일":"검증 "+td+"일";
+    if(!s)return "<tr><td><b>"+z[2]+"</b></td><td colspan='5' class='sub'>불러오는 중/데이터 없음</td><td>"+prog+"</td></tr>";
+    return "<tr><td><b>"+z[2]+"</b></td><td>"+s.n+"</td><td>"+s.wr.toFixed(1)+"%</td><td class='"+(s.avg>=0?"win":"loss")+"'>"+sp(s.avg)+"</td><td>"+(s.req==null?"—":s.req.toFixed(1)+"%")+"</td>"+
+      "<td class='"+((s.edge||0)>=0?"win":"loss")+"'>"+sp(s.edge)+"</td><td title='"+esc(st)+"'>"+prog+"</td></tr>"}).join("");
+  return "<div class='strategy-head'>모든 기준전략의 오늘 상태와 최근 확정 세션 결과를 한 화면에서 비교</div>"+
+    "<div class='card'><h3><span class='dot'></span>📅 오늘 기준전략 결과 <span class='sub'>최근 확정 세션 · 순수익</span></h3>"+
+    "<p class='lead'>시초가·데이트레이딩·비트코인·SOXL의 <b>최근 두 확정 세션</b>을 한 번에 보여줍니다. 수수료·세금·슬리피지를 뺀 순수익이고, 거래가 없으면 <b>매매없음</b>(0%)입니다. 전략별 장 마감 시각이 달라 날짜를 반드시 함께 표시합니다.</p>"+
+    "<div class='row' style='margin-bottom:10px'><button class='ghostbtn' onclick='refreshToday()'>🔄 결과 새로고침</button><span class='sub' id='daily_results_meta'>기준일 "+esc(dl.today||"")+" · 갱신 "+esc(stamp)+"</span></div>"+
+    "<div class='daily-result-list'>"+cards+"</div>"+
+    "<div style='margin-top:14px'>"+trendBlock()+"</div>"+
+    "<p class='note'>목표 표시는 각 전략 단독 기준 <b>일 +1%</b> 달성 여부입니다. 서로 다른 전략의 수익률은 단순 합산하지 않습니다(전체 계좌 합산은 🎯 전체 계좌 탭).<br><b>보유 원칙:</b> ①②③ 은 하루를 넘기지 않고, ④ SOXL 만 최대 5거래일까지 보유합니다. 6거래일 이상은 단타 전략에서 제외합니다.</p></div>"+
+    "<div class='card'><h3><span class='dot'></span>📊 4전략 누적 상태 <span class='sub'>기준전략 · 성과 순위가 아니라 현재 측정값</span></h3>"+
+    "<div class='tw'><table class='board'><thead><tr><th>전략</th><th>표본</th><th>승률</th><th>거래당</th><th>필요승률</th><th>엣지</th><th>검증상태</th></tr></thead><tbody>"+ov+"</tbody></table></div>"+
+    "<p class='note'>표본·승률·거래당은 설계 표본(백테스트, 매매일 단위) 값입니다. 승률 = 손실이 아닌 매매일 비율, 필요승률 = 평균 이익·손실로 본 손익분기 승률, 엣지 = 승률 − 필요승률. 검증상태는 10/1 부터 쌓는 모의투자 누적 매매일(20일이면 판정)입니다.</p></div>";
+}
+function refreshToday(){var m=document.getElementById("daily_results_meta");if(m)m.textContent="새로고침 중…";load();loadLive()}
 function render(){
   var body=document.getElementById("body");if(!J)return;
   var gd=J.gapdown||{},et=J.etf||{},wl=J.watchlist||{},lab=J.lab||{tabs:{}},T=lab.tabs||{},html="";
   if(TAB==="today"){
-    if(LIVE&&!LIVE.error){
-      var L=LIVE.tabs||{};
-      var k=function(lbl,tb){var q=(L[tb]||{}).today;return "<div class='kpi'><div class='l'>"+lbl+"</div><div class='v "+(q&&!q.noTrade?cls(q.tabPct):"")+"'>"+(!q?"—":q.noTrade?NOTRADE:pct(q.tabPct))+"</div><div class='sub'>"+(q?(q.noTrade?"":"거래 "+q.trades+"건 · 계좌 "+pct(q.accountPct)+"<br>")+esc(q.why):"")+"</div></div>"};
-      var tot=["opening","daytrading","crypto","soxl"].reduce(function(a,tb){var q=(L[tb]||{}).today;return a+(q?q.accountPct:0)},0);
-      html+="<div class='card'><h3>⏱ 지금 장중 손익 (클로드, 모의)</h3><div class='sub'>칸 수익률 = 그 칸 자금 기준, 계좌 = 전체 계좌 비중 반영(국내 30% — ①② 같은 날이면 반씩 · 코인 30% · 미국 40%). 현재가 기준이며 확정 결과는 저녁 장부로 남습니다. "+kstTime(LIVE.asOf)+" 기준 · 1분마다 갱신</div>"+
-        "<div class='why'>🏦 오늘 계좌 합계(장중 추정) <span class='"+cls(tot)+"'>"+pct(tot)+"</span></div><div class='kpis'>"+
-        k("① 시초가","opening")+k("② 데이트레이딩","daytrading")+k("③ 코인 BTC·ETH","crypto")+k("④ SOXL","soxl")+"</div></div>";
-    }
-    html+=weekCard();
-    html+=trendCard();
-    var pp=(lab.paper||{}),sm=pp.summary||{},NM={opening_d1v2:"① D-1 갭하락 과매도 v2",daytrading_etf:"② 코스닥150 레버리지 하락일 야간",coin_bo_btc:"③ BTC 고가 돌파 하루 단타 (칸 전액)",coin_bo_eth:"③ ETH 고가 돌파 하루 단타 (칸 전액)",us_soxl:"④ SOXL 과매도 반등 ≤5일 (칸 전액)",account:"🏦 전체 계좌"};
-    var prow=Object.keys(NM).map(function(k){var z=sm[k]||{},e=z.expected||{},st=z.status||{};
-      return "<tr><td class='nm'>"+esc(NM[k])+"<div class='sub'>"+(z.first?esc(z.first)+" ~ "+esc(z.last):"기록 시작 전"+(z.start?" · "+esc(z.start)+" 부터":""))+"</div></td><td>"+(z.tradeDays||0)+"<span class='sub'>/"+(z.days||0)+"일</span></td><td class='win'>"+(z.plus1Days||0)+"</td>"+
-        "<td class='"+cls(z.totalPct)+"'><b>"+(z.totalPct==null?"—":pct(z.totalPct,1))+"</b></td><td>"+(z.avgTradePct==null?"—":pct(z.avgTradePct))+"<div class='sub'>기대 "+pct(e.expectancyPct)+"</div></td><td style='white-space:normal;min-width:110px'>"+
-        "<span class='"+(st.code==="below"?"loss":st.code==="ok"?"win":"sub")+"'>"+esc(st.text||"")+"</span></td></tr>"}).join("");
-    html+="<div class='card'><h3>📒 모의투자 누적 ("+esc(pp.start||"2026-10-01")+"~)</h3><div class='sub'>날짜별 장부는 한 번만 쓰고 덮어쓰지 않습니다. 국내는 KIS 모의투자 체결, 코인·미국은 일봉 모의 체결입니다. 매매일 20일이 쌓이면 기대(설계 표본)와 비교해 벗어나면 '규칙 점검'으로 표시합니다.</div>"+
-      (pp.error?"<div class='warn'>"+esc(pp.error)+"</div>":"")+
-      "<div class='tw'><table class='board'><thead><tr><th>전략</th><th>매매일</th><th>+1%↑</th><th>누적</th><th>매매일 평균</th><th>상태</th></tr></thead><tbody>"+prow+"</tbody></table></div></div>";
+    html+=todayPage(lab);
   }else if(TAB==="duel"){
     html+=duelPage();
   }else if(TAB==="opening"||TAB==="daytrading"||TAB==="crypto"||TAB==="soxl"){
