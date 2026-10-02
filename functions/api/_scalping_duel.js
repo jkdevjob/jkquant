@@ -51,7 +51,7 @@ export function sideDay(trades,cost){
   const a=Array.isArray(trades)?trades:[];
   if(!a.length)return 0;
   const net=a.map(t=>({v:Number(t.gross)-Number(cost),slot:t.slot}));
-  if(net.every(x=>Number.isFinite(Number(x.slot))))return net.reduce((s,x)=>s+x.v*Number(x.slot),0);
+  if(net.every(x=>x.slot!=null&&Number.isFinite(Number(x.slot))))return net.reduce((s,x)=>s+x.v*Number(x.slot),0);
   return net.reduce((s,x)=>s+x.v,0)/net.length;
 }
 export function winner(gpt,claude){
