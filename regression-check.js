@@ -1268,9 +1268,9 @@ console.log('[23] 관리자 모드 — 접속 계정·사용자 관리');
      /const affects=changed\.some\(k=>PAPER_AFFECT_KEYS\[tab\]/.test(adm)
      && /filter\(x=>!\(x&&\(x\.sim\|\|x\.auto\)\)\)/.test(adm)
      && /delete sess\.settings\.simSig/.test(adm));
-  ok('기존 세션 적용 — 로컬과 클라우드 상태를 같이 갱신한다',
+  ok('기존 세션 적용 — 로컬과 protected stateV2 클라우드 상태를 같이 갱신한다',
      /localStorage\.setItem\('qcockpit_v2_'\+me\.uid,JSON\.stringify\(state\)\)/.test(adm)
-     && /state,updated:now,strategyDefaultOverrides:strategyOverrides/.test(adm));
+     && /stateV2:state,stateV2Updated:now,stateV2Rev:nr,strategyDefaultOverrides:strategyOverrides/.test(adm));
   ok('관리자 아닌 계정은 문 앞에서 막힌다', /if\(isAdmin\(\)\)\{[\s\S]{0,200}?\$\('gate'\)\.style\.display='none'/.test(adm)
      && /계정에는 관리자 권한이 없습니다/.test(adm));
 
@@ -1298,11 +1298,12 @@ console.log('[23] 관리자 모드 — 접속 계정·사용자 관리');
 
   /* 곁들여 고친 것 — users/{uid}는 운영과 백테가 같이 쓰는 문서다.
      merge 없이 덮어써서 백테의 커스텀 종목이 서버에서 사라지고 있었다. */
-  ok('운영 저장이 백테 종목을 안 지우고 거래이력 revision을 트랜잭션으로 보호한다',
+  ok('운영 저장이 백테 종목을 안 지우고 거래이력을 트랜잭션에서 자동병합한다',
      /runTransaction/.test(idx)
-     && /tx\.set\(ref,\{state:candidate,updated:writeUpdated,stateRev:nr\},\{merge:true\}\)/.test(idx)
-     && /REMOTE_HISTORY_CONFLICT/.test(idx)
-     && /_historyPreserves\(candidate,remote\)/.test(idx));
+     && /tx\.set\(ref,\{stateV2:candidate,stateV2Updated:writeUpdated,stateV2Rev:nr\},\{merge:true\}\)/.test(idx)
+     && /candidate=_mergeHistorySafeState\(candidate,remote\)/.test(idx)
+     && /_historyPreserves\(candidate,remote\)/.test(idx)
+     && !/⚠️ 거래이력 보호:/.test(idx));
 }
 
 
@@ -1742,7 +1743,7 @@ console.log('[35] 로그인 — 조용히 갇히지 않는다');
   const sl=extractFn(idx,'function saveLocal()');
   ok('saveLocal이 예외를 안 던진다', /try\{/.test(sl) && /catch\(e\)\{/.test(sl));
   ok('저장 실패를 사용자에게 알린다', /showLsWarn\(/.test(sl) && !!extractFn(idx,'function showLsWarn(msg)'));
-  ok('클라우드 저장은 계속된다', /function save\(\)\{saveLocal\(\);pushRemote\(\);\}/.test(idx));
+  ok('클라우드 저장은 즉시 계속된다', /function save\(\)\{saveLocal\(\);void pushRemoteNow\(\);\}/.test(idx));
   ok('저장이 복구되면 경고를 치운다', /lsFailed=false;[\s\S]{0,60}remove\(\)/.test(sl));
 
   /* try/catch 는 '던져야' 잡는다. Firestore 호출이 영영 안 끝나면 예외가 아니라
@@ -3204,11 +3205,12 @@ console.log('\n[61] 모의 성과 — 원화로 받아 세션 통화로 환산')
   ok('쓴 환율을 확인창에 적는다', /전략 계산에만 \$\{fx\.date\} 기준 환율 \$\{fx\.rate\.toLocaleString\('en-US'\)\}원\/\$을 사용합니다/.test(idx));
   ok('국내만 있으면 환율을 안 부른다', /const needUsd=\[\.\.\.capHit,\.\.\.addHit\]\.some\(\(\[,x\]\)=>!isKrwSt\(x\.settings\)\);/.test(idx));
   ok('끝나고도 쓴 환율을 남긴다', /const fxNote = fx \? `미국 종목은 \$\{fx\.date\} 환율/.test(idx));
-  ok('클라우드 저장 함수는 transaction + history conflict guard를 탄다',
+  ok('클라우드 저장 함수는 즉시 transaction + history auto-merge를 탄다',
      /async function pushRemoteNow\(\)/.test(idx)
      && /_commitStateRemote\('cloud-now'\)/.test(extractFn(idx,'async function pushRemoteNow()'))
      && /window\.fb\.runTransaction/.test(extractFn(idx,'async function _commitStateRemote(where)'))
-     && /REMOTE_HISTORY_CONFLICT/.test(extractFn(idx,'async function _commitStateRemote(where)')));
+     && /candidate=_mergeHistorySafeState\(candidate,remote\)/.test(extractFn(idx,'async function _commitStateRemote(where)'))
+     && /function save\(\)\{saveLocal\(\);void pushRemoteNow\(\);\}/.test(idx));
 
   // 서버: 날짜를 주면 그 날 값, 주말이면 직전 영업일
   const fx=fs.existsSync(__d+'/functions/api/fx.js') ? fs.readFileSync(__d+'/functions/api/fx.js','utf8') : '';
@@ -9727,12 +9729,12 @@ console.log('\n[128] 자산플랜 검증 후속 — 20년 월말 신호 · 장�
 
   /* ② 추가 · 삭제 — 실제 함수로 */
   const mk=(ledger,inp)=>{ const msgs=[], EL={alphaCashDate:{value:inp.date||''},alphaCashKind:{value:inp.kind||'div'},alphaCashAmt:{value:String(inp.amt||'')}};
-    const F=new Function('$','alert','confirm','todayISO','usd2','alphaSyncInputs','renderAlphaLedger','localSave','refreshAlphaFromCache','cloudSave','L0',
+    const F=new Function('$','alert','confirm','todayISO','usd2','alphaSyncInputs','renderAlphaLedger','localSave','refreshAlphaFromCache','cloudSave','planManualBackup','L0',
       'let alphaLedger=L0;\n'+extractFn(pl,'function alphaEventList(ledger=alphaLedger)')+'\n'+extractFn(pl,'function alphaLedgerCalc(ledger=alphaLedger)')+'\n'
       +optFn(pl,'async function alphaAddCashEvent()')+'\n'+extractFn(pl,'async function alphaDeleteEvent(id)')
       +'\nreturn {add:(typeof alphaAddCashEvent==="function")?alphaAddCashEvent:null, del:alphaDeleteEvent, get:()=>alphaLedger, calc:alphaLedgerCalc};')(
       id=>EL[id]||(EL[id]={value:''}), m=>msgs.push(String(m)), ()=>true, ()=>'2026-09-25', v=>'$'+(+v).toFixed(2),
-      ()=>{}, ()=>{}, ()=>{}, ()=>{}, async()=>{}, JSON.parse(JSON.stringify(ledger)));
+      ()=>{}, ()=>{}, ()=>{}, ()=>{}, async()=>{}, ()=>{}, JSON.parse(JSON.stringify(ledger)));
     return {...F, msgs}; };
   { const A=mk(L0,{date:'2026-09-06',kind:'div',amt:12.34});
     if(A.add) A.add();   // 장부 변경·안내는 첫 await 전에 동기로 끝난다 (저장만 비동기)
@@ -11160,5 +11162,83 @@ console.log('\n[CLAUDE TODAY] 오늘 탭 통일');
      /cl=z\[0\]==="crypto"\?null:lt\.closed/.test(ch));
 }
 
-console.log(`\n════ 결과: ${pass} PASS / ${fail} FAIL ${fail===0?'— ALL PASS ★':'— 배포 금지, 위 ✗ 항목 수정 필요'} ════`);
-process.exit(fail===0?0:1);
+/* ════ 자산플랜 로그인 게이트 — 로그인해야만 열린다 ════
+   운영·단타·관리자 화면처럼 자산플랜도 로그인 전·로그아웃·차단 계정이면 본문을 숨기고
+   클라우드 장부·시세를 하나도 불러오지 않는다. 막 위치·본문 숨김(CSS)·planGate/planBlocked 값·
+   로그인 상태 처리 순서(차단 확인이 본문 열기보다 먼저)를 값으로 본다. */
+const PENDING=[];   // 비동기 값 시험 — 결과 줄은 이것들이 다 끝난 뒤에 찍는다
+console.log('\n[PLAN AUTH] 자산플랜 로그인 게이트');
+{
+  const pl=fs.readFileSync(__d+'/plan.html','utf8');
+  ok('본문은 로그인(html.authed) 전에는 숨기고, 막은 로그인 뒤에만 숨긴다',
+     pl.includes('html:not(.authed) body>*:not(#authgate){visibility:hidden}') && pl.includes('html.authed #authgate{display:none}'));
+  ok('로그인 막이 본문보다 먼저 있다 (body 바로 아래 · 본문 .wrap 앞)',
+     (()=>{ const b=pl.indexOf('<body>'), g=pl.indexOf('<div id="authgate"'), w=pl.indexOf('<div class="wrap">'); return b>=0&&g>b&&w>g; })());
+  const mkDoc=()=>{ const s=new Set(); return {s, documentElement:{classList:{add:c=>s.add(c),remove:c=>s.delete(c),contains:c=>s.has(c)}}}; };
+  const mkLS=()=>{ const m={}; return {m, getItem:k=>k in m?m[k]:null, setItem:(k,v)=>{m[k]=String(v);}, removeItem:k=>{delete m[k];}}; };
+  { const D=mkDoc(), L=mkLS();
+    const planGate=new Function('document','localStorage',extractFn(pl,'function planGate(on){')+'\nreturn planGate;')(D,L);
+    planGate(true);  const a=D.s.has('authed') && L.m.qcockpit_hadUser==='1';
+    planGate(false); const b=!D.s.has('authed') && !('qcockpit_hadUser' in L.m);
+    ok('planGate(true) 는 본문을 열고 기기 표시를 남긴다 · planGate(false) 는 닫고 지운다', a&&b, JSON.stringify({a,b})); }
+  const blkSrc=extractFn(pl,'async function planBlocked(user){');
+  const mkBlk=(prof,failRead)=>new Function('getDoc','doc','db','PLAN_ADMIN_EMAILS','console',blkSrc+'\nreturn planBlocked;')(
+    async()=>{ if(failRead) throw new Error('offline'); return {exists:()=>!!prof, data:()=>prof}; },
+    (db,...p)=>p.join('/'), {}, ['jk82investing@gmail.com'], {warn(){}});
+  const U={uid:'u1',email:'someone@example.com'}, ADM={uid:'a1',email:' JK82investing@gmail.com '};
+  PENDING.push((async()=>{
+    const r=[await mkBlk({blocked:true})(U), await mkBlk({blocked:false})(U), await mkBlk(null)(U),
+             await mkBlk({blocked:true})(ADM), await mkBlk({blocked:true},true)(U), await mkBlk(null)(null)];
+    ok('planBlocked: 차단 → 막음 · 정상·프로필 없음 → 통과 · 관리자는 차단 표시여도 통과 · 확인 실패는 통과 · 로그아웃은 막음',
+       JSON.stringify(r)===JSON.stringify([true,false,false,false,false,true]), JSON.stringify(r));
+  })());
+  /* 로그인 상태 처리기 — 실제 글자를 떼어 와 가짜 이웃으로 돌린다. 부른 순서를 적어 본다. */
+  const hs=extractFn(pl,'onAuthStateChanged(auth,async user=>{'), handlerSrc=hs.slice(hs.indexOf('async user=>'));
+  const runH=async(user,blocked)=>{
+    const log=[], gerr={textContent:''};
+    const h=new Function('planGate','userBadge','planBlocked','signOut','auth','$','cloudLoad','refreshLive','planBootHydrating',
+      'requestedAssetSessionId','assetPlanBox','activeHorizon','localStorage','writeAssetSessionLocal','renderHorizonCopy','renderAssetSessions','loadActiveAssetSessionView',
+      'return '+handlerSrc)(
+      on=>log.push('gate:'+on), u=>log.push('badge:'+(u?'user':'null')), async u=>{ log.push('blocked?'); return u?blocked:true; },
+      async()=>log.push('signOut'), {}, id=>id==='gerr'?gerr:null, async()=>log.push('cloudLoad'), async()=>log.push('refreshLive'), true,
+      null, ()=>({sessions:[],activeByHorizon:{}}), 5, mkLS(), ()=>{}, ()=>{}, ()=>log.push('renderSessions'), async()=>log.push('loadView'));
+    await h(user); return {log, gerr:gerr.textContent};
+  };
+  PENDING.push((async()=>{
+    const out=await runH(null,false);
+    ok('로그인 안 함 → 막만 띄우고 끝 (차단 확인·로그아웃·장부·시세 모두 안 부름)',
+       JSON.stringify(out.log)===JSON.stringify(['gate:false','badge:null']), JSON.stringify(out.log));
+    const ok1=await runH(U,false), L1=ok1.log;
+    ok('로그인함 → 차단 확인 뒤에 본문을 열고, 그 다음에 장부·시세를 부른다',
+       L1.indexOf('blocked?')===0 && L1.indexOf('gate:true')>0 && L1.indexOf('cloudLoad')>L1.indexOf('gate:true')
+       && L1.includes('refreshLive') && !L1.includes('signOut') && !L1.includes('gate:false'), JSON.stringify(L1));
+    const bl=await runH(U,true), L2=bl.log;
+    ok('차단 계정 → 본문을 한 번도 열지 않고 로그아웃 · 안내문 · 장부·시세 안 부름',
+       !L2.includes('gate:true') && L2.includes('gate:false') && L2.includes('signOut') && !L2.includes('cloudLoad') && !L2.includes('refreshLive')
+       && /차단/.test(bl.gerr), JSON.stringify(L2)+' '+bl.gerr);
+  })().catch(e=>ok('로그인 상태 처리기 시험 실행', false, String(e&&e.message||e))));
+}
+
+
+/* ════ GPT 오늘 탭 실시간 마감장부 우선 ════ */
+console.log('\n[SCALPING TODAY LIVE] BTC·SOXL 실시간 장부 우선 · 부분 장애 격리');
+{
+  const dapi=fs.readFileSync(__d+'/functions/api/scalping-daily-results.js','utf8');
+  ok('오늘 API는 BTC·SOXL Worker 마감 모의장부를 연구 CSV보다 우선한다',
+     /GLOBAL_WORKER_FALLBACK/.test(dapi)
+     &&/async function globalPaperSessions\(env,strategy\)/.test(dapi)
+     &&/liveFirstSessions\(env,"crypto"/.test(dapi)
+     &&/liveFirstSessions\(env,"soxl"/.test(dapi)
+     &&/"global-paper-live"/.test(dapi));
+  ok('오늘 API는 전략별 실패를 격리해 한 원천 오류가 4전략 전체를 숨기지 않는다',
+     /async function safeSessions\(fn\)/.test(dapi)
+     &&/safeSessions\(\(\)=>openingSessions\(\)\)/.test(dapi)
+     &&/safeSessions\(\(\)=>daytradingSessions\(\)\)/.test(dapi));
+  ok('오늘 화면은 실시간 마감 모의장부 사용 여부를 표시한다',
+     /global-paper-live/.test(scl) && /실시간 마감 모의장부/.test(scl));
+}
+
+Promise.all(PENDING).then(()=>{
+  console.log(`\n════ 결과: ${pass} PASS / ${fail} FAIL ${fail===0?'— ALL PASS ★':'— 배포 금지, 위 ✗ 항목 수정 필요'} ════`);
+  process.exit(fail===0?0:1);
+});

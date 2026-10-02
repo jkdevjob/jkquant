@@ -34,17 +34,22 @@ function ok(name,cond){assert.ok(cond,name);console.log('PASS '+name);}
 ok('운영 Firebase 쓰기는 transaction + protected stateV2Rev', idx.includes('runTransaction')&&idx.includes('stateV2Rev:nr')&&idx.includes('stateV2:candidate'));
 ok('로그인 사용자는 cloud hydrate 전 fresh state를 local 최신값으로 만들지 않음',
   /if\(!hadValidLocal\)\{[\s\S]*if\(!curUid\)saveLocal\(\);/.test(fn(idx,'function load()')));
-ok('운영 cloud read 실패 중 remote write 잠금',
+ok('운영 cloud read 실패는 원격 덮어쓰기 없이 pending으로 두고 방해 팝업을 띄우지 않음',
   /stateCloudHydrated=false/.test(fn(idx,'async function pullRemote()'))
-  && /클라우드 원장을 확인하지 못해 안전을 위해 클라우드 저장을 잠갔습니다/.test(idx));
-ok('구버전 client가 revision 없이 쓴 변경도 history fingerprint로 감지',
+  && /stateCloudPending=true/.test(fn(idx,'async function pullRemote()'))
+  && !idx.includes('⚠️ 거래이력 보호:')
+  && !idx.includes('클라우드 저장을 잠갔습니다'));
+ok('구버전 client가 revision 없이 쓴 변경도 history fingerprint로 감지하고 자동 병합',
   /stateCloudHistorySig/.test(idx)
-  && /remoteChanged=rev!==stateCloudRev\|\|\(stateCloudHistorySig!==''&&remoteSig!==stateCloudHistorySig\)/.test(fn(idx,'async function _commitStateRemote(where)')));
+  && /remoteChanged=rev!==stateCloudRev\|\|\(stateCloudHistorySig!==''&&remoteSig!==stateCloudHistorySig\)/.test(fn(idx,'async function _commitStateRemote(where)'))
+  && /candidate=_mergeHistorySafeState\(candidate,remote\)/.test(fn(idx,'async function _commitStateRemote(where)')));
 
 const idxFns=[
-  '_histKeyPart','_stateHistoryMap','_historyPreserves','_historyRelation','_historyCount','_historySignature'
+  '_histKeyPart','_histStableJson','_histSemanticKey','_histGroupKey',
+  '_stateHistoryMap','_historyPreserves','_historyRelation','_historyCount','_historySignature',
+  '_mergeRecordArrays','_repairLegacyMergeDupes','_mergeHistorySafeState'
 ].map(n=>fn(idx,'function '+n+'(')).join('\n');
-const IC=vm.createContext({console,Map,JSON});
+const IC=vm.createContext({console,Map,Set,JSON,sortHist:a=>a.sort((x,y)=>String(x.date||'').localeCompare(String(y.date||''))||((x.ts||0)-(y.ts||0)))});
 vm.runInContext(idxFns,IC);
 const mkState=hist=>({inf:{sessions:[{id:'i1',hist}]},vr:{sessions:[{id:'v1',hist:[]}]},plan:{sessions:[]}});
 const r1={ts:1,date:'2026-09-01',kind:'buy',price:10,qty:1};
@@ -53,15 +58,50 @@ const remote=mkState([r1,r2]), empty=mkState([]), plus=mkState([r1,r2,{ts:3,date
 const edited=mkState([{...r1,price:12},r2]);
 ok('빈 local은 remote 거래이력을 보존하지 못한다고 판정',IC._historyPreserves(empty,remote)===false);
 ok('remote 전체 + 새 거래 local은 remote를 보존한다고 판정',IC._historyPreserves(plus,remote)===true);
-ok('같은 ts 거래내용이 바뀐 충돌은 양쪽 자동덮어쓰기 금지',
-  IC._historyPreserves(edited,remote)===false&&IC._historyPreserves(remote,edited)===false);
+ok('같은 ts 거래내용이 바뀐 상태도 자동병합에서 현재 입력값을 유지',(()=>{
+  const m=IC._mergeHistorySafeState(edited,remote),h=m.inf.sessions[0].hist;
+  return h.length===2&&h.find(x=>x.ts===1).price===12&&h.some(x=>x.ts===2);
+})());
+/* v3.108.1 회귀: ts/id가 없는 예전 거래는 Firestore 왕복 때 객체 필드 순서가 달라지면
+   JSON.stringify 결과가 달라져 같은 매수/매도를 두 번 합쳤다. 그 중복이 보유수량·T·실현손익을
+   틀어 무매 cycleEnd/분석값까지 깨뜨렸다. canonical JSON으로 같은 행을 알아봐야 한다. */
+const legacyA={date:'2026-08-03',kind:'1회매수',price:10,qty:2};
+const legacyB={qty:2,price:10,kind:'1회매수',date:'2026-08-03'};
+ok('legacy 거래는 객체 필드 순서가 달라도 같은 이력으로 판정',(()=>{
+  const rel=IC._historyRelation(mkState([legacyA]),mkState([legacyB]));
+  return rel.equal===true;
+})());
+ok('legacy 같은 거래를 cloud merge 해도 한 줄만 남음',(()=>{
+  const m=IC._mergeHistorySafeState(mkState([legacyA]),mkState([legacyB]));
+  return m.inf.sessions[0].hist.length===1;
+})());
+ok('현재 원장에 없는 identity-less 옛 행을 자동으로 되살리지 않음',(()=>{
+  const stale={date:'2026-07-31',kind:'절반매수',price:8,qty:1};
+  const m=IC._mergeHistorySafeState(mkState([r1]),mkState([r1,stale]));
+  return m.inf.sessions[0].hist.length===1&&m.inf.sessions[0].hist[0].ts===1;
+})());
+ok('v3.108.1이 이미 만든 legacy 동일행 중복도 frozen legacy 기준으로 복구',(()=>{
+  const base=mkState([legacyA]);
+  const dup=mkState([legacyA,legacyB,{ts:99,date:'2026-10-03',kind:'1회매수',price:12,qty:1}]);
+  const n=IC._repairLegacyMergeDupes(dup,base),h=dup.inf.sessions[0].hist;
+  return n===1&&h.length===2&&h.filter(x=>!x.ts).length===1&&h.some(x=>x.ts===99);
+})());
+const splitLocal=mkState([r1,{ts:3,date:'2026-09-03',kind:'buy',price:9,qty:1}]);
+const splitRemote=mkState([r1,r2,{ts:4,date:'2026-09-04',kind:'sell',price:12,qty:1}]);
+ok('서로 다른 탭에서 추가한 거래는 자동병합 후 하나도 빠지지 않음',(()=>{
+  const m=IC._mergeHistorySafeState(splitLocal,splitRemote),ts=m.inf.sessions[0].hist.map(x=>x.ts).sort();
+  return JSON.stringify(ts)===JSON.stringify([1,2,3,4]);
+})());
+ok('일반 save는 거래 입력 확정 즉시 Firebase 저장 경로를 호출',
+  fn(idx,'function save()').includes('pushRemoteNow()')
+  && fn(idx,'async function pushRemote()').includes('pushRemoteNow()'));
 
 /* 2. 모의 기록 재생 — 빈 중간 장부를 cloud에 올리지 않는다 */
 const all=fn(idx,'async function applyAllSimStart()');
 const pSave=all.indexOf('saveLocal();'),pReplay=all.indexOf('await openPaper()'),pPush=all.indexOf('await pushRemoteNow()');
 ok('모의 전체적용은 local blank -> replay -> cloud 순서',pSave>=0&&pReplay>pSave&&pPush>pReplay);
 ok('replay 전 cloud push 없음',all.slice(0,pReplay).indexOf('pushRemoteNow')<0);
-const repair=fn(idx,'async function repairPaperStart');
+const repair=fn(idx,'async function paperRepairLegacyStarts');
 const resetAt=repair.indexOf('x.hist=[]');
 ok('자동 시작일 복구도 hist 비운 뒤 즉시 cloud push 안 함',
   resetAt>=0&&repair.slice(resetAt).indexOf('await pushRemoteNow()')<0);

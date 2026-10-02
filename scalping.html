@@ -260,7 +260,7 @@ canvas{display:block;width:100%;height:auto}
 
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Morning Scalping</div><h1>JK <span class="v">퀀트</span> 단타 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="scVer">v1.36.0</span></h1></div>
+    <div><div class="kicker">Morning Scalping</div><h1>JK <span class="v">퀀트</span> 단타 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="scVer">v1.36.1</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -296,6 +296,7 @@ canvas{display:block;width:100%;height:auto}
     <div class="card">
       <h3><span class="dot"></span>📅 오늘 기준전략 결과 <span class="sub">최근 확정 세션 · 순수익</span></h3>
       <p class="lead">시초가·데이트레이딩·비트코인·SOXL의 <b>최근 두 확정 세션</b>을 한 번에 보여줍니다.
+        BTC·SOXL은 <b>서버 실시간 모의장부를 우선</b> 사용하고, 없을 때만 연구 확정 이력으로 보완합니다.
         한 전략에서 같은 날 여러 종목을 거래하면 <b>동일비중 평균 순손익</b>을 일일 결과로 사용하고, 거래가 없으면 0%입니다.
         전략별 장 마감 시각이 달라 날짜를 반드시 함께 표시합니다.</p>
       <div class="row" style="margin-bottom:10px">
@@ -1546,7 +1547,9 @@ async function loadDailyStrategyResults(force){
       return '<div class="daily-result-card">'+
         '<div class="daily-result-title"><span>'+nm+'</span><button onclick="showStrategy(\''+z.strategy+'\')">전략 보기 →</button></div>'+
         '<div class="daily-result-cols">'+dailyResultCell(z.previous,'전일')+dailyResultCell(z.current,'당일')+'</div>'+
-        '<div class="daily-result-meta" style="margin-top:7px">시간 기준 '+esc(z.marketTime||'')+(z.status==='collecting'?' · 데이터 수집 대기':'')+'</div>'+
+        '<div class="daily-result-meta" style="margin-top:7px">시간 기준 '+esc(z.marketTime||'')+
+          (z.current&&z.current.source==='global-paper-live'?' · <b>실시간 마감 모의장부</b>':' · 연구/확정 이력')+
+          (z.status==='collecting'?' · 데이터 수집 대기':z.status==='error'?' · <span class="loss">일부 원천 조회 실패</span>':'')+'</div>'+
       '</div>';
     }).join('');
     body.innerHTML='<div class="daily-result-list">'+rows+'</div>';

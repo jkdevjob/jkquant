@@ -261,7 +261,6 @@ html.had-user #authgate .bootwait{display:block}
 #authgate .bootwait .bw-logo{font-size:22px;font-weight:800;color:var(--dim);margin-bottom:12px}
 #authgate .bootwait .bw-dot{display:inline-block;width:16px;height:16px;border:2.5px solid var(--line);border-top-color:var(--vio);border-radius:50%;animation:bwspin .7s linear infinite;vertical-align:-3px;margin-right:7px}
 #authgate .bootwait .bw-help{margin-top:18px;font-size:11.5px;color:var(--faint);line-height:1.6}
-#authgate .bootwait .bw-plan{display:inline-block;margin-top:12px;padding:9px 13px;border:1px solid var(--line);border-radius:9px;color:var(--vio);text-decoration:none;background:rgba(139,124,246,.08);font-weight:700}
 @keyframes bwspin{to{transform:rotate(360deg)}}
 #authgate .gbox{max-width:360px;width:100%;text-align:center}
 #authgate .glogo{font-size:30px;font-weight:800;letter-spacing:-.02em;margin-bottom:6px}
@@ -531,7 +530,6 @@ try{ if(localStorage.getItem('qcockpit_hadUser')==='1') document.documentElement
 <div id="authgate">
   <div class="bootwait"><div class="bw-logo">JK 퀀트</div><span class="bw-dot"></span>여는 중…
     <div class="bw-help">오래 멈추면 자동으로 복구 화면으로 전환됩니다.</div>
-    <a class="bw-plan" href="/plan">🧭 5년 플랜 바로 열기</a>
   </div>
   <div class="gbox">
     <div class="glogo">JK <span class="v">퀀트</span></div>
@@ -549,7 +547,7 @@ try{ if(localStorage.getItem('qcockpit_hadUser')==='1') document.documentElement
 </div>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.108.0</span></h1></div>
+    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.108.3</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -1660,7 +1658,7 @@ if(/^\/paper\/?$/.test(location.pathname)){
   <footer>
     <strong>JK 퀀트</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.108.0</b> · 2026-10-02</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.108.3</b> · 2026-10-03</div>
   </footer>
 </div>
 
@@ -2272,11 +2270,34 @@ let lsFailed=false;
    timestamps만으로 로컬/클라우드 승자를 정하면 새 기기·오래 열린 탭·다른 기기에서
    "기록이 더 적은데 시각만 최신"인 상태가 전체 state를 덮을 수 있다.
    클라우드 revision + 실제 이력 포함관계를 함께 본다. */
-let stateCloudHydrated=false, stateCloudRev=0, stateCloudConflict=false, stateCloudPending=false, stateCloudHistorySig='';
+let stateCloudHydrated=false, stateCloudRev=0, stateCloudPending=false, stateCloudHistorySig='';
 function _histKeyPart(x){
   if(x&&x.id!=null)return 'id:'+String(x.id);
   if(x&&x.ts!=null)return 'ts:'+String(x.ts);
   return '';
+}
+/* Firestore/JSON을 왕복하면 객체 필드 순서는 달라질 수 있다.
+   예전 거래(ts/id 없음)를 JSON.stringify 원문 순서로 비교하면 같은 거래를 다른 거래로 보고
+   자동 병합하면서 중복시킬 수 있다. 키를 정렬한 canonical JSON으로 비교한다. */
+function _histStableJson(v){
+  const norm=x=>{
+    if(Array.isArray(x))return x.map(norm);
+    if(x&&typeof x==='object'){
+      const o={}; Object.keys(x).sort().forEach(k=>{o[k]=norm(x[k]);}); return o;
+    }
+    return x;
+  };
+  try{return JSON.stringify(norm(v));}catch(e){return JSON.stringify(v);}
+}
+function _histSemanticKey(x){
+  if(!x||typeof x!=='object')return _histStableJson(x);
+  const o={};
+  Object.keys(x).filter(k=>k!=='id'&&k!=='ts').sort().forEach(k=>{o[k]=x[k];});
+  return _histStableJson(o);
+}
+function _histGroupKey(x){
+  x=x||{};
+  return [x.date||'',x.kind||x.type||'',x.symbol||'',x.leg||'',x.side||''].join('|');
 }
 function _stateHistoryMap(st){
   const m=new Map(), boxes=['inf','vr','ma','ivs','dca','asap'];
@@ -2288,9 +2309,14 @@ function _stateHistoryMap(st){
       const p=bk+'|'+s.id;
       m.set(p+'|@session','1');
       const h=Array.isArray(s.hist)?s.hist:[];
+      const weakOcc={};
       h.forEach((r,i)=>{
-        const k=_histKeyPart(r)||('fallback:'+String(r&&r.date||'')+':'+String(r&&(r.kind||r.type)||'')+':'+i);
-        m.set(p+'|hist|'+k,JSON.stringify(r));
+        let k=_histKeyPart(r);
+        if(!k){
+          const sem=_histSemanticKey(r), n=(weakOcc[sem]||0)+1; weakOcc[sem]=n;
+          k='legacy:'+sem+':'+n;  // 동일 내용의 실제 복수 체결도 occurrence로 보존
+        }
+        m.set(p+'|hist|'+k,_histStableJson(r));
       });
     }
   }
@@ -2301,9 +2327,14 @@ function _stateHistoryMap(st){
       const p='plan|'+s.id; m.set(p+'|@session','1');
       const l=s.ledger||{};
       if(l.base)m.set(p+'|@base',JSON.stringify(l.base));
+      const weakOcc={};
       (Array.isArray(l.events)?l.events:[]).forEach((r,i)=>{
-        const k=_histKeyPart(r)||('fallback:'+String(r&&r.date||'')+':'+String(r&&r.type||'')+':'+i);
-        m.set(p+'|event|'+k,JSON.stringify(r));
+        let k=_histKeyPart(r);
+        if(!k){
+          const sem=_histSemanticKey(r), n=(weakOcc[sem]||0)+1; weakOcc[sem]=n;
+          k='legacy:'+sem+':'+n;
+        }
+        m.set(p+'|event|'+k,_histStableJson(r));
       });
     }
   }
@@ -2325,10 +2356,112 @@ function _historySignature(st){
 function _writeLocalExact(st){
   try{localStorage.setItem(lsKey(),JSON.stringify(st));return true;}catch(e){console.error('local exact',e);return false;}
 }
-function _lockStateConflict(msg){
-  stateCloudConflict=true;stateCloudPending=false;
-  try{setSync('err');}catch(e){}
-  try{showLsWarn('⚠️ 거래이력 보호: '+msg+' 클라우드 저장을 잠갔습니다. 이 탭에서 새 기록을 더 입력하지 말고 새로고침해 최신 원장을 다시 불러오세요.');}catch(e){}
+/* 저장본이 갈라져도 사용자에게 잠금/복구 절차를 요구하지 않는다.
+   현재 탭의 값은 우선하되 다른 저장본에만 있는 거래·세션은 합쳐서 보존한다. */
+function _mergeRecordArrays(preferred,other){
+  const P=Array.isArray(preferred)?preferred:[], O=Array.isArray(other)?other:[];
+  if(!P.length) return O.map(x=>JSON.parse(JSON.stringify(x))); // 새 기기/빈 세션은 원격 원장을 그대로 복구
+  const out=P.map(x=>JSON.parse(JSON.stringify(x)));
+  const strong=new Set(), semAny=new Map(), prefGroups=new Map(), otherGroups=new Map();
+  const addGroup=(m,x)=>{const g=_histGroupKey(x); if(!m.has(g))m.set(g,[]); m.get(g).push(x);};
+  P.forEach(x=>{
+    const k=_histKeyPart(x); if(k)strong.add(k);
+    const sem=_histSemanticKey(x); semAny.set(sem,(semAny.get(sem)||0)+1); addGroup(prefGroups,x);
+  });
+  O.forEach(x=>addGroup(otherGroups,x));
+  const otherWeakSeen=new Map();
+  for(const x of O){
+    const k=_histKeyPart(x), sem=_histSemanticKey(x), g=_histGroupKey(x);
+    if(k&&strong.has(k))continue;                         // 같은 id/ts면 preferred가 현재값
+    if(!k){
+      const n=(otherWeakSeen.get(sem)||0)+1; otherWeakSeen.set(sem,n);
+      if(n<=(semAny.get(sem)||0))continue;               // ts/id 없는 같은 거래 — 필드순서와 무관하게 같은 행
+      /* identity 없는 legacy 행은 삭제/수정 여부를 알 수 없다.
+         이미 원장이 있는 preferred에 '다른 내용'의 옛 행을 자동으로 되살리면
+         매수·매도가 중복되어 T/보유/실현손익/사이클 종료가 모두 깨진다.
+         새 기록은 현행 앱에서 항상 ts가 있으므로, unmatched legacy는 preferred를 따른다. */
+      continue;
+    }
+    /* 한쪽만 legacy이고 날짜·종류가 1:1이면 같은 옛 거래를 편집해 ts가 생긴 경우다.
+       preferred를 정본으로 두고 stale 사본을 합치지 않는다. 여러 체결이 있는 날은 추정하지 않는다. */
+    const pg=prefGroups.get(g)||[], og=otherGroups.get(g)||[];
+    if(pg.length===1&&og.length===1&&!_histKeyPart(pg[0]))continue;
+    if(semAny.has(sem)&&pg.some(r=>!_histKeyPart(r)&&_histSemanticKey(r)===sem))continue;
+    out.push(JSON.parse(JSON.stringify(x))); strong.add(k); semAny.set(sem,(semAny.get(sem)||0)+1);
+  }
+  try{sortHist(out);}catch(e){}
+  return out;
+}
+/* v3.108.1에서 이미 중복 저장된 legacy 행 복구.
+   stateV2 전환 직전의 legacy state는 그 시점 원장의 기준 스냅샷이다.
+   현행 앱은 새 거래에 항상 ts를 넣으므로, stateV2 안의 identity 없는 동일 legacy 행 수가
+   그 스냅샷보다 많아졌다면 자동병합이 만든 중복으로 확정할 수 있다.
+   강한 id/ts 행이나 legacy에 없던 내용은 건드리지 않는다. */
+function _repairLegacyMergeDupes(st,legacy){
+  if(!st||!legacy)return 0;
+  let fixed=0;
+  for(const bk of ['inf','vr','ma','ivs','dca','asap']){
+    const cb=st[bk], lb=legacy[bk];
+    if(!cb||!lb||!Array.isArray(cb.sessions)||!Array.isArray(lb.sessions))continue;
+    const lm=new Map(lb.sessions.filter(Boolean).map(x=>[String(x.id||''),x]));
+    for(const cs of cb.sessions){
+      if(!cs||!Array.isArray(cs.hist))continue;
+      const ls=lm.get(String(cs.id||'')); if(!ls||!Array.isArray(ls.hist))continue;
+      const cap=new Map();
+      for(const r of ls.hist){
+        if(_histKeyPart(r))continue;
+        const k=_histSemanticKey(r); cap.set(k,(cap.get(k)||0)+1);
+      }
+      if(!cap.size)continue;
+      const used=new Map();
+      cs.hist=cs.hist.filter(r=>{
+        if(_histKeyPart(r))return true;
+        const k=_histSemanticKey(r), max=cap.get(k);
+        if(max==null)return true;                            // legacy 기준에 없는 행은 추정 삭제 금지
+        const n=(used.get(k)||0)+1; used.set(k,n);
+        if(n<=max)return true;
+        fixed++; return false;                              // baseline보다 늘어난 동일 weak 행만 제거
+      });
+    }
+  }
+  return fixed;
+}
+function _mergeHistorySafeState(preferred,other){
+  const p=preferred&&typeof preferred==='object'?preferred:{},o=other&&typeof other==='object'?other:{};
+  const out=JSON.parse(JSON.stringify(Object.keys(p).length?p:o));
+  for(const bk of ['inf','vr','ma','ivs','dca','asap']){
+    const ob=o[bk];if(!ob||!Array.isArray(ob.sessions))continue;
+    if(!out[bk]||!Array.isArray(out[bk].sessions)){out[bk]=JSON.parse(JSON.stringify(ob));continue;}
+    const byId=new Map(out[bk].sessions.filter(Boolean).map(s=>[String(s.id||''),s]));
+    for(const rs of ob.sessions){
+      if(!rs)continue;const id=String(rs.id||''),ls=byId.get(id);
+      if(!ls){const cp=JSON.parse(JSON.stringify(rs));out[bk].sessions.push(cp);byId.set(id,cp);continue;}
+      ls.hist=_mergeRecordArrays(ls.hist,rs.hist);
+    }
+  }
+  const op=o.plan;
+  if(op&&Array.isArray(op.sessions)){
+    if(!out.plan||!Array.isArray(out.plan.sessions)){out.plan=JSON.parse(JSON.stringify(op));}
+    else{
+      const byId=new Map(out.plan.sessions.filter(Boolean).map(s=>[String(s.id||''),s]));
+      for(const rs of op.sessions){
+        if(!rs)continue;const id=String(rs.id||''),ls=byId.get(id);
+        if(!ls){const cp=JSON.parse(JSON.stringify(rs));out.plan.sessions.push(cp);byId.set(id,cp);continue;}
+        if(rs.ledger){
+          if(!ls.ledger)ls.ledger=JSON.parse(JSON.stringify(rs.ledger));
+          else{
+            const lb=ls.ledger.base||{},rb=rs.ledger.base||{};
+            const lActive=(Array.isArray(ls.ledger.events)&&ls.ledger.events.length)||+lb.tecl||+lb.tqqq||+lb.sgov;
+            const rActive=(Array.isArray(rs.ledger.events)&&rs.ledger.events.length)||+rb.tecl||+rb.tqqq||+rb.sgov;
+            if(!lActive&&rActive)ls.ledger.base=JSON.parse(JSON.stringify(rb));
+            ls.ledger.events=_mergeRecordArrays(ls.ledger.events,rs.ledger.events);
+          }
+        }
+      }
+    }
+  }
+  out._updated=Math.max(+p._updated||0,+o._updated||0);
+  return out;
 }
 function _newerLocalState(){
   try{
@@ -2341,12 +2474,11 @@ function _newerLocalState(){
    저장 직전 localStorage의 최신 revision을 확인해 오래된 탭의 전체-state overwrite를 차단한다. */
 function _staleStateGuard(where){
   const newer=_newerLocalState();
-  if(!newer) return false;
-  console.warn('stale state blocked',where,{mine:S&&S._updated,local:newer._updated});
-  try{
-    showLsWarn('다른 탭에 더 최신 기록이 있어 이 탭의 오래된 상태 저장을 막았습니다. 최신 기록을 보호하려면 이 탭을 새로고침하세요.');
-  }catch(e){}
-  return true;
+  if(!newer)return false;
+  console.info('newer local state merged',where,{mine:S&&S._updated,local:newer._updated});
+  S=_mergeHistorySafeState(S,newer);
+  _writeLocalExact(S);
+  return false;
 }
 function saveLocal(){
   if(_staleStateGuard('local')) return false;
@@ -2379,7 +2511,7 @@ function showLsWarn(msg){
     document.body.appendChild(d);
   }catch(e){ console.error(msg); }
 }
-function save(){saveLocal();pushRemote();}
+function save(){saveLocal();void pushRemoteNow();}
 function tabBox(){return S[S.activeTab]}
 function curStrat(){const b=tabBox();return b.sessions.find(x=>x.id===b.active)||b.sessions[0]}
 function sess(){return curStrat()}
@@ -3854,7 +3986,7 @@ function closeEditInf(){ $('editInfModal').classList.remove('on'); editInfIdx=-1
 function saveInfEdit(){
   if(editInfIdx<0)return; const hist=curStrat().hist, h=hist[editInfIdx]; if(!h){closeEditInf();return;}
   const kind=$('ei_kind').value, date=$('ei_date').value||h.date;
-  const rec={ts:h.ts||Date.now(), date, kind};
+  const rec={ts:h.ts||Date.now(), date, kind}; if(h.id!=null)rec.id=h.id; // 기존 안정 ID는 편집해도 유지
   if(isCx(kind)){
     const sp=+unComma($('ei_sprice').value),sq=+$('ei_sqty').value,bp=+unComma($('ei_bprice').value),bq=+$('ei_bqty').value;
     if(!sp||!sq||!bp||!bq){alert('매도·매수 가격과 수량을 모두 입력하세요');return}
@@ -9996,64 +10128,56 @@ function setSync(state){ // 'ok'|'sync'|'err'|null
 async function _commitStateRemote(where){
   if(!curUid||!window.fb)return true;
   if(!stateCloudHydrated){stateCloudPending=true;setSync('sync');return false;}
-  if(stateCloudConflict)return false;
-  if(_staleStateGuard(where))return false;
+  _staleStateGuard(where);
   const ref=window.fb.doc(window.fb.db,'users',curUid);
-  const candidate=JSON.parse(JSON.stringify(S)),writeUpdated=+candidate._updated||Date.now();
+  let candidate=JSON.parse(JSON.stringify(S)),writeUpdated=Date.now(),mergedRemote=false;
+  candidate._updated=Math.max(+candidate._updated||0,writeUpdated);
   try{
     const nextRev=await window.fb.runTransaction(window.fb.db,async tx=>{
       const snap=await tx.get(ref),d=snap.exists()?(snap.data()||{}):{};
       const remote=validState(d.stateV2)?d.stateV2:d.state,rev=+d.stateV2Rev||0;
       const remoteSig=remote&&validState(remote)?_historySignature(remote):'';
-      // revision이 바뀌었거나, 구버전 클라이언트가 revision 없이 원장을 바꿨더라도
-      // 마지막으로 본 원장과 달라졌으면 현재 후보가 원격 이력을 전부 포함하는지 다시 확인한다.
       const remoteChanged=rev!==stateCloudRev||(stateCloudHistorySig!==''&&remoteSig!==stateCloudHistorySig);
       if(remote&&validState(remote)&&remoteChanged&&!_historyPreserves(candidate,remote)){
-        const err=new Error('REMOTE_HISTORY_CONFLICT');err.code='history-conflict';throw err;
+        candidate=_mergeHistorySafeState(candidate,remote);
+        candidate._updated=writeUpdated=Date.now();
+        mergedRemote=true;
       }
       const nr=rev+1;
-      // stateV2가 정본이다. 구버전 탭은 legacy state만 쓰므로 최신 원장을 덮을 수 없다.
+      // stateV2가 정본이다. 다른 탭/기기 기록은 위에서 자동 합친 뒤 즉시 저장한다.
       tx.set(ref,{stateV2:candidate,stateV2Updated:writeUpdated,stateV2Rev:nr},{merge:true});
       return nr;
     });
-    stateCloudRev=+nextRev||stateCloudRev;stateCloudHistorySig=_historySignature(S);
-    stateCloudConflict=false;stateCloudPending=false;
-    lastPushedJSON=JSON.stringify(S);setSync('ok');return true;
+    if(mergedRemote){
+      S=candidate;ensureBoxes();_writeLocalExact(S);
+      try{refreshAll();}catch(e){console.warn('merged refresh',e);}
+    }
+    stateCloudRev=+nextRev||stateCloudRev;stateCloudHistorySig=_historySignature(candidate);
+    stateCloudPending=false;
+    lastPushedJSON=JSON.stringify(candidate);setSync('ok');return true;
   }catch(e){
-    console.error(where,e);
-    if((e&&e.code==='history-conflict')||String(e&&e.message||e).includes('REMOTE_HISTORY_CONFLICT'))
-      _lockStateConflict('다른 기기/탭의 최신 거래이력과 현재 상태가 서로 달라 자동 덮어쓰기를 차단했습니다.');
-    else setSync('err');
-    return false;
+    console.error(where,e);setSync('err');return false;
   }
 }
-async function pushRemote(){
-  if(!curUid||!window.fb)return;
-  if(!stateCloudHydrated){stateCloudPending=true;setSync('sync');return;}
-  if(stateCloudConflict)return;
-  if(_staleStateGuard('cloud-schedule'))return;
-  if(saveTimer)clearTimeout(saveTimer);
-  setSync('sync');
-  saveTimer=setTimeout(async()=>{
-    const json=JSON.stringify(S);
-    if(json===lastPushedJSON){setSync('ok');return;}
-    await _commitStateRemote('cloud-write');
-  },800);
-}
+async function pushRemote(){return await pushRemoteNow();}
 async function pushRemoteNow(){
   if(!curUid||!window.fb)return true;
   if(saveTimer){clearTimeout(saveTimer);saveTimer=null;}
+  if(!stateCloudHydrated){stateCloudPending=true;setSync('sync');return false;}
+  const json=JSON.stringify(S);
+  if(json===lastPushedJSON){setSync('ok');return true;}
   return await _commitStateRemote('cloud-now');
 }
 async function pullRemote(){
   if(!curUid||!window.fb)return false;
-  stateCloudHydrated=false;stateCloudConflict=false;
+  stateCloudHydrated=false;
   try{
     const ref=window.fb.doc(window.fb.db,'users',curUid),snap=await window.fb.getDoc(ref);
     const d=snap.exists()?(snap.data()||{}):{};
     if(d&&d.strategyDefaultOverrides&&typeof d.strategyDefaultOverrides==='object')cacheStrategyDefaults(d.strategyDefaultOverrides);
     let local=null;try{local=JSON.parse(localStorage.getItem(lsKey())||'null')}catch(e){}
-    const hasV2=d&&validState(d.stateV2),remote=hasV2?d.stateV2:(d&&validState(d.state)?d.state:null);
+    const hasV2=d&&validState(d.stateV2),legacy=d&&validState(d.state)?d.state:null;
+    const remote=hasV2?d.stateV2:legacy;
     const remoteUpdated=hasV2?(+d.stateV2Updated||0):(+d.updated||0);
     stateCloudRev=+d.stateV2Rev||0;
     stateCloudHistorySig=remote?_historySignature(remote):'';
@@ -10072,30 +10196,34 @@ async function pullRemote(){
           // 클라우드에 더 많은 기록이 있으면 시각과 무관하게 클라우드가 우선한다.
           S=remote;
         }else{
-          // 서로 다른 수정/기록이 갈라졌다. 어느 쪽도 지우지 않고 원격 쓰기를 멈춘다.
-          S=remote;stateCloudConflict=true;
-          _lockStateConflict('브라우저와 클라우드 거래이력이 서로 갈라져 어느 쪽도 자동으로 덮어쓰지 않습니다.');
+          // 서로 다른 탭/기기에서 기록이 추가된 경우 양쪽 이력을 자동 합친다.
+          // 같은 id/ts의 현재 입력값은 최신 브라우저 쪽을 우선하고, 다른 쪽에만 있는 기록은 모두 보존한다.
+          const preferLocal=(+local._updated||0)>remoteUpdated;
+          S=_mergeHistorySafeState(preferLocal?local:remote,preferLocal?remote:local);
+          stateCloudPending=true;
         }
       }
       if(!S.activeTab)S.activeTab='inf';ensureBoxes();
+      /* v3.108.1 자동병합이 이미 같은 legacy 행을 두 번 저장했다면 여기서 한 번 정리한다.
+         frozen legacy snapshot의 동일 weak 행 개수까지만 되돌리므로 새 ts/id 거래는 건드리지 않는다. */
+      const repaired=(hasV2&&legacy)?_repairLegacyMergeDupes(S,legacy):0;
+      if(repaired>0){ stateCloudPending=true; console.warn('legacy merge duplicates repaired',repaired); }
       const migrated=migrateInfOperatingDefaults();
       // 원격을 로컬 캐시에 복사할 때 저장시각을 "지금"으로 올리지 않는다.
       if(S===remote){S._updated=remoteUpdated||S._updated||0;_writeLocalExact(S);}
-      else if(migrated)saveLocal();
+      else if(migrated||repaired>0)saveLocal();
       // legacy state에서 처음 올라온 경우 즉시 stateV2 정본을 만든다.
       if(!hasV2)stateCloudPending=true;
-      lastPushedJSON=(S===remote&&!migrated&&hasV2)?JSON.stringify(S):'';
+      lastPushedJSON=(S===remote&&!migrated&&!repaired&&hasV2)?JSON.stringify(S):'';
     }else{
       if(!validState(S))S=validState(local)?local:freshState();
       ensureBoxes();stateCloudPending=true;
     }
     stateCloudHydrated=true;
-    if(stateCloudConflict){setSync('err');return true;}
     if(stateCloudPending||lastPushedJSON==='')await pushRemoteNow();
     return true;
   }catch(e){
-    console.error('pull',e);stateCloudHydrated=false;setSync('err');
-    try{showLsWarn('클라우드 원장을 확인하지 못해 안전을 위해 클라우드 저장을 잠갔습니다. 브라우저 기록은 유지됩니다.');}catch(_){}
+    console.error('pull',e);stateCloudHydrated=false;stateCloudPending=true;setSync('err');
     return false;
   }
 }
@@ -10422,8 +10550,7 @@ try{ renderInAppWarn(); }catch(e){}
    had-user 기기는 로그인 박스를 숨기고 스플래시만 보여준다.
    Firebase 모듈 자체가 네트워크/인앱 브라우저에서 로드되지 않으면 fb-ready도,
    onAuthStateChanged도 오지 않아 과거에는 '여는 중…'에 영구 고정됐다.
-   6초 뒤에도 authgate가 떠 있으면 숨김을 풀고 사용자가 다시 로그인하거나
-   5년 플랜으로 바로 이동할 수 있게 한다. */
+   6초 뒤에도 authgate가 떠 있으면 숨김을 풀고 사용자가 다시 로그인할 수 있게 한다. */
 (function bootWatchdog(){
   setTimeout(function(){
     try{
