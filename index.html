@@ -10346,8 +10346,20 @@ try{ renderInAppWarn(); }catch(e){}
 })();
 
 /* ── 시작: Firebase 준비되면 인증 시작 ── */
-if(window.fb){initAuth();}
-else{window.addEventListener('fb-ready',initAuth);}
+/* 인증 초기화는 모듈 이벤트 유실까지 방어한다.
+   type=module은 비동기라 fb-ready가 classic script의 listener 등록 직전에
+   발생할 수 있다. 이벤트를 놓쳐도 polling이 window.fb를 발견해 한 번만 연결한다. */
+function ensureAuthInit(){
+  if(authWired) return;
+  if(window.fb){ try{ initAuth(); }catch(e){ authLastErr='initAuth '+(e&&e.message||e); authWarn(authLastErr); } }
+}
+ensureAuthInit();
+window.addEventListener('fb-ready',ensureAuthInit);
+let _authBootTries=0;
+const _authBootPoll=setInterval(()=>{
+  ensureAuthInit();
+  if(authWired || ++_authBootTries>=20) clearInterval(_authBootPoll);
+},250);
 
 /* ── 셀프테스트 (?selftest=1) — 앱 실함수를 브라우저에서 직접 검증 ── */
 (function(){
