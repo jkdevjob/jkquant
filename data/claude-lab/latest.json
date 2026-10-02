@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "generatedAt": "2026-10-03T00:59:24.352683+09:00",
+  "generatedAt": "2026-10-03T04:32:08.295624+09:00",
   "designEnd": "2026-09-30",
   "gate": {
     "mdd": -25.0,
@@ -13,28 +13,49 @@
         "strategyVersion": "opening_gapdown_v1 (v2 필터)",
         "rule": "전일 RSI<30 + 시가 갭 −2~−29% 종목이 5개 이상인 날, 가장 깊은 3종목 시가 매수 → 종가 매도",
         "design": {
-          "days": 2144,
+          "days": 2145,
           "tradeDays": 152,
-          "tradeDaysPerYear": 17.723880597014926,
+          "tradeDaysPerYear": 17.715617715617714,
           "plus1RateOfTradeDays": 53.94736842105263,
-          "lossDaysPerYear": 6.646455223880596,
+          "lossDaysPerYear": 6.643356643356643,
           "tStat": 3.019079911989472,
           "plus1Days": 82,
-          "plus1DaysPerYear": 9.561567164179104,
+          "plus1DaysPerYear": 9.557109557109557,
           "plus5Weeks": 19,
-          "plus5WeeksPerYear": 2.2154850746268657,
+          "plus5WeeksPerYear": 2.2144522144522143,
           "weeklyAvgPct": 0.39336049334359746,
           "totalPct": 501.42464437114,
           "lossDays": 57,
           "lossDayAvgPct": -3.5132163740225857,
           "worstDayPct": -18.11551178606366,
           "mddPct": -25.82853778274714,
-          "cagrPct": 23.269609195744035,
+          "cagrPct": 23.257587189833686,
           "expectancyPct": 1.3304699743160744,
           "profitFactor": 2.0098780017489246,
           "gate": false
         },
-        "outOfSample": {},
+        "outOfSample": {
+          "days": 1,
+          "tradeDays": 0,
+          "tradeDaysPerYear": 0.0,
+          "plus1RateOfTradeDays": null,
+          "lossDaysPerYear": 0.0,
+          "tStat": null,
+          "plus1Days": 0,
+          "plus1DaysPerYear": 0.0,
+          "plus5Weeks": 0,
+          "plus5WeeksPerYear": 0.0,
+          "weeklyAvgPct": 0.0,
+          "totalPct": 0.0,
+          "lossDays": 0,
+          "lossDayAvgPct": 0.0,
+          "worstDayPct": 0.0,
+          "mddPct": 0.0,
+          "cagrPct": null,
+          "expectancyPct": null,
+          "profitFactor": null,
+          "gate": false
+        },
         "recent": [
           {
             "date": "2026-06-04",
@@ -109,11 +130,11 @@
       "compare": {
         "window": [
           "2026-09-22",
-          "2026-09-29"
+          "2026-10-01"
         ],
         "note": "GPT 기준전략 기록이 있는 날짜 구간에서 같은 달력으로 계산",
         "claude": {
-          "days": 4,
+          "days": 6,
           "tradeDays": 0,
           "tradeDaysPerYear": 0.0,
           "plus1RateOfTradeDays": null,
@@ -135,25 +156,25 @@
           "gate": false
         },
         "gpt": {
-          "days": 4,
-          "tradeDays": 3,
-          "tradeDaysPerYear": 187.5,
+          "days": 6,
+          "tradeDays": 4,
+          "tradeDaysPerYear": 166.66666666666666,
           "plus1RateOfTradeDays": 0.0,
           "lossDaysPerYear": 125.0,
-          "tStat": -0.740316614619969,
+          "tStat": -1.4241482239636856,
           "plus1Days": 0,
           "plus1DaysPerYear": 0.0,
           "plus5Weeks": 0,
           "plus5WeeksPerYear": 0.0,
-          "weeklyAvgPct": -0.3271816053208809,
-          "totalPct": -0.6532927326131643,
-          "lossDays": 2,
-          "lossDayAvgPct": -0.49429815508451946,
-          "worstDayPct": -0.6633977882975293,
-          "mddPct": -0.9864389503673632,
+          "weeklyAvgPct": -0.7082644580503006,
+          "totalPct": -1.4115125306752185,
+          "lossDays": 3,
+          "lossDayAvgPct": -0.5839340253447922,
+          "worstDayPct": -0.7632057658653377,
+          "mddPct": -1.4115125306752185,
           "cagrPct": null,
-          "expectancyPct": -0.2173770227379157,
-          "profitFactor": 0.34034644727508645,
+          "expectancyPct": -0.3538342085197712,
+          "profitFactor": 0.19206806896642195,
           "gate": false
         }
       }
@@ -164,28 +185,49 @@
         "strategyVersion": "etf_dip_overnight_v1",
         "rule": "KODEX 코스닥150레버리지가 −3% 이하로 마감한 날 종가 매수 → 다음 날 시가 매도 (거래세 없음)",
         "design": {
-          "days": 2144,
+          "days": 2145,
           "tradeDays": 397,
-          "tradeDaysPerYear": 46.2919776119403,
+          "tradeDaysPerYear": 46.27039627039627,
           "plus1RateOfTradeDays": 38.287153652392945,
-          "lossDaysPerYear": 18.423507462686565,
+          "lossDaysPerYear": 18.414918414918414,
           "tStat": 2.5195326901287625,
           "plus1Days": 152,
-          "plus1DaysPerYear": 17.723880597014926,
+          "plus1DaysPerYear": 17.715617715617714,
           "plus5Weeks": 12,
-          "plus5WeeksPerYear": 1.3992537313432836,
+          "plus5WeeksPerYear": 1.3986013986013985,
           "weeklyAvgPct": 0.2802408153246727,
           "totalPct": 259.2719184718375,
           "lossDays": 158,
           "lossDayAvgPct": -1.9874821871911676,
           "worstDayPct": -13.071765169424747,
           "mddPct": -23.409473270403335,
-          "cagrPct": 16.08198892586281,
+          "cagrPct": 16.073918853346967,
           "expectancyPct": 0.3635751915676489,
           "profitFactor": 1.4596469857297056,
           "gate": true
         },
-        "outOfSample": {},
+        "outOfSample": {
+          "days": 1,
+          "tradeDays": 0,
+          "tradeDaysPerYear": 0.0,
+          "plus1RateOfTradeDays": null,
+          "lossDaysPerYear": 0.0,
+          "tStat": null,
+          "plus1Days": 0,
+          "plus1DaysPerYear": 0.0,
+          "plus5Weeks": 0,
+          "plus5WeeksPerYear": 0.0,
+          "weeklyAvgPct": 0.0,
+          "totalPct": 0.0,
+          "lossDays": 0,
+          "lossDayAvgPct": 0.0,
+          "worstDayPct": 0.0,
+          "mddPct": 0.0,
+          "cagrPct": null,
+          "expectancyPct": null,
+          "profitFactor": null,
+          "gate": false
+        },
         "recent": [
           {
             "date": "2026-07-15",
@@ -260,11 +302,11 @@
       "compare": {
         "window": [
           "2026-09-29",
-          "2026-09-29"
+          "2026-10-01"
         ],
         "note": "GPT 기준전략 기록이 있는 날짜 구간에서 같은 달력으로 계산",
         "claude": {
-          "days": 1,
+          "days": 3,
           "tradeDays": 0,
           "tradeDaysPerYear": 0.0,
           "plus1RateOfTradeDays": null,
@@ -286,25 +328,25 @@
           "gate": false
         },
         "gpt": {
-          "days": 1,
-          "tradeDays": 1,
+          "days": 3,
+          "tradeDays": 3,
           "tradeDaysPerYear": 250.0,
           "plus1RateOfTradeDays": 0.0,
-          "lossDaysPerYear": 250.0,
-          "tStat": null,
+          "lossDaysPerYear": 166.66666666666666,
+          "tStat": -0.8749999999999964,
           "plus1Days": 0,
           "plus1DaysPerYear": 0.0,
           "plus5Weeks": 0,
           "plus5WeeksPerYear": 0.0,
-          "weeklyAvgPct": -1.2499999999999956,
-          "totalPct": -1.2499999999999956,
-          "lossDays": 1,
+          "weeklyAvgPct": -1.7530078124999848,
+          "totalPct": -1.7530078124999848,
+          "lossDays": 2,
           "lossDayAvgPct": -1.2500000000000009,
           "worstDayPct": -1.2500000000000009,
-          "mddPct": -1.2499999999999956,
+          "mddPct": -2.4843749999999942,
           "cagrPct": null,
-          "expectancyPct": -1.2500000000000009,
-          "profitFactor": 0.0,
+          "expectancyPct": -0.5833333333333325,
+          "profitFactor": 0.3000000000000016,
           "gate": false
         }
       }
@@ -850,9 +892,9 @@
     ]
   },
   "daily": {
-    "generatedAt": "2026-10-03T00:59:31.712183+09:00",
+    "generatedAt": "2026-10-03T04:32:15.439017+09:00",
     "today": "2026-10-03",
-    "finalKrDaily": "2026-09-29",
+    "finalKrDaily": "2026-10-01",
     "rows": [
       {
         "group": "시초가",
@@ -863,7 +905,7 @@
         "lastDate": "2026-10-02",
         "prev": "no_trade",
         "last": "no_trade",
-        "plan": "명단 11종목 · 08:56 예상갭 확인 (통과 5종목 이상일 때 v2 매매)"
+        "plan": "명단 9종목 · 08:56 예상갭 확인 (통과 5종목 이상일 때 v2 매매)"
       },
       {
         "group": "시초가",
@@ -1112,6 +1154,14 @@
         },
         {
           "date": "2026-09-29",
+          "cumPct": 0.0
+        },
+        {
+          "date": "2026-09-30",
+          "cumPct": 0.0
+        },
+        {
+          "date": "2026-10-01",
           "cumPct": 0.0
         }
       ],
@@ -1969,8 +2019,8 @@
         "avgTradePct": null,
         "expected": {
           "expectancyPct": 1.3304699743160744,
-          "plus1DaysPerYear": 9.561567164179104,
-          "tradeDaysPerYear": 17.723880597014926
+          "plus1DaysPerYear": 9.557109557109557,
+          "tradeDaysPerYear": 17.715617715617714
         },
         "status": {
           "code": "collecting",
@@ -2010,8 +2060,8 @@
         "avgTradePct": null,
         "expected": {
           "expectancyPct": 0.3635751915676489,
-          "plus1DaysPerYear": 17.723880597014926,
-          "tradeDaysPerYear": 46.2919776119403
+          "plus1DaysPerYear": 17.715617715617714,
+          "tradeDaysPerYear": 46.27039627039627
         },
         "status": {
           "code": "collecting",
@@ -2132,31 +2182,52 @@
         "version": "opening_gapdown_v1",
         "rule": "v2 필터 없이 조건 맞는 날 매일 3종목",
         "design": {
-          "days": 2144,
+          "days": 2145,
           "tradeDays": 677,
-          "tradeDaysPerYear": 78.94123134328358,
+          "tradeDaysPerYear": 78.9044289044289,
           "plus1RateOfTradeDays": 41.506646971935005,
-          "lossDaysPerYear": 39.99533582089552,
+          "lossDaysPerYear": 39.976689976689975,
           "tStat": -0.19128073441419313,
           "plus1Days": 281,
-          "plus1DaysPerYear": 32.76585820895522,
+          "plus1DaysPerYear": 32.75058275058275,
           "plus5Weeks": 62,
-          "plus5WeeksPerYear": 7.229477611940298,
+          "plus5WeeksPerYear": 7.226107226107226,
           "weeklyAvgPct": -0.4558390776740806,
           "totalPct": -87.60586795995276,
           "lossDays": 343,
           "lossDayAvgPct": -4.674827245733651,
           "worstDayPct": -28.738771929824562,
           "mddPct": -97.14997304067013,
-          "cagrPct": -21.609228405094505,
+          "cagrPct": -21.6003303109206,
           "expectancyPct": -0.052647723462098436,
           "profitFactor": 0.977771580784553,
           "gate": false
         },
-        "outOfSample": {},
+        "outOfSample": {
+          "days": 1,
+          "tradeDays": 1,
+          "tradeDaysPerYear": 250.0,
+          "plus1RateOfTradeDays": 100.0,
+          "lossDaysPerYear": 0.0,
+          "tStat": null,
+          "plus1Days": 1,
+          "plus1DaysPerYear": 250.0,
+          "plus5Weeks": 1,
+          "plus5WeeksPerYear": 250.0,
+          "weeklyAvgPct": 34.45750000000001,
+          "totalPct": 34.45750000000001,
+          "lossDays": 0,
+          "lossDayAvgPct": 0.0,
+          "worstDayPct": 34.4575,
+          "mddPct": 0.0,
+          "cagrPct": null,
+          "expectancyPct": 34.4575,
+          "profitFactor": null,
+          "gate": true
+        },
         "promotion": {
           "code": "collecting",
-          "text": "판정 표본 매매 0/20일 — 판단 전"
+          "text": "판정 표본 매매 1/20일 — 판단 전"
         }
       },
       {
@@ -2164,28 +2235,49 @@
         "version": "opening_gapdown_v2_min3",
         "rule": "통과 종목 3개 이상인 날만",
         "design": {
-          "days": 2144,
+          "days": 2145,
           "tradeDays": 237,
-          "tradeDaysPerYear": 27.635261194029848,
+          "tradeDaysPerYear": 27.622377622377623,
           "plus1RateOfTradeDays": 50.63291139240506,
-          "lossDaysPerYear": 11.310634328358208,
+          "lossDaysPerYear": 11.305361305361306,
           "tStat": 2.8301860558345058,
           "plus1Days": 120,
-          "plus1DaysPerYear": 13.992537313432836,
+          "plus1DaysPerYear": 13.986013986013987,
           "plus5Weeks": 26,
-          "plus5WeeksPerYear": 3.0317164179104474,
+          "plus5WeeksPerYear": 3.0303030303030303,
           "weeklyAvgPct": 0.42685763178720304,
           "totalPct": 600.474479636734,
           "lossDays": 97,
           "lossDayAvgPct": -3.4582942266220535,
           "worstDayPct": -18.11551178606366,
           "mddPct": -30.008864266560774,
-          "cagrPct": 25.480583494277887,
+          "cagrPct": 25.46730602001974,
           "expectancyPct": 0.9578388020812089,
           "profitFactor": 1.676717018363197,
           "gate": false
         },
-        "outOfSample": {},
+        "outOfSample": {
+          "days": 1,
+          "tradeDays": 0,
+          "tradeDaysPerYear": 0.0,
+          "plus1RateOfTradeDays": null,
+          "lossDaysPerYear": 0.0,
+          "tStat": null,
+          "plus1Days": 0,
+          "plus1DaysPerYear": 0.0,
+          "plus5Weeks": 0,
+          "plus5WeeksPerYear": 0.0,
+          "weeklyAvgPct": 0.0,
+          "totalPct": 0.0,
+          "lossDays": 0,
+          "lossDayAvgPct": 0.0,
+          "worstDayPct": 0.0,
+          "mddPct": 0.0,
+          "cagrPct": null,
+          "expectancyPct": null,
+          "profitFactor": null,
+          "gate": false
+        },
         "promotion": {
           "code": "collecting",
           "text": "판정 표본 매매 0/20일 — 판단 전"
@@ -2896,10 +2988,10 @@
     "weekEnd": "2026-10-04",
     "asOf": "2026-10-03",
     "account": {
-      "days": 2,
+      "days": 4,
       "plus1Days": 0,
-      "weekPct": -1.158051022252915,
-      "through": "2026-09-29",
+      "weekPct": -1.2717108282132128,
+      "through": "2026-10-01",
       "daily": [
         {
           "date": "2026-09-28",
@@ -2908,13 +3000,21 @@
         {
           "date": "2026-09-29",
           "pnlPct": -1.1580510222529157
+        },
+        {
+          "date": "2026-09-30",
+          "pnlPct": -0.1149914658055585
+        },
+        {
+          "date": "2026-10-01",
+          "pnlPct": 0.0
         }
       ],
       "hit5": false
     },
     "parts": {
       "opening_d1v2": {
-        "days": 4,
+        "days": 5,
         "tradeDays": 0,
         "plus1Days": 0,
         "weekPct": 0.0,
@@ -3050,7 +3150,10 @@
         {
           "date": "2026-10-01",
           "claude": {
-            "cands": null,
+            "cands": [
+              27,
+              1
+            ],
             "entries": 0,
             "pnlPct": 0.0,
             "trades": []
@@ -3065,7 +3168,10 @@
         {
           "date": "2026-09-30",
           "claude": {
-            "cands": null,
+            "cands": [
+              14,
+              0
+            ],
             "entries": 0,
             "pnlPct": 0.0,
             "trades": []
@@ -4379,13 +4485,13 @@
   "review": {
     "today": {
       "date": "2026-10-03",
-      "writtenAt": "2026-10-03T00:59:39.875193+09:00",
+      "writtenAt": "2026-10-03T04:32:22.902216+09:00",
       "tabs": {
         "시초가": {
           "name": "① D-1 갭하락 과매도 v2",
           "date": "2026-10-02",
           "result": "no_trade",
-          "plan": "명단 11종목 · 08:56 예상갭 확인 (통과 5종목 이상일 때 v2 매매)"
+          "plan": "명단 9종목 · 08:56 예상갭 확인 (통과 5종목 이상일 때 v2 매매)"
         },
         "데이트레이딩": {
           "name": "② 코스닥150 레버리지 하락일 야간",
