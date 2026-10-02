@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "generatedAt": "2026-10-02T12:09:28.797529+09:00",
+  "generatedAt": "2026-10-02T18:56:48.401004+09:00",
   "strategyVersion": "opening_gapdown_v1",
   "rule": {
     "rsiMax": 30.0,
@@ -89,6 +89,12 @@
       "url": "https://raw.githubusercontent.com/FinanceData/fdr_krx_data_cache/master/data/listing/krx/2026-10-01.csv",
       "rows": 2873,
       "lastDate": "2026-10-01",
+      "status": "provisional"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/FinanceData/fdr_krx_data_cache/master/data/listing/krx/2026-10-02.csv",
+      "rows": 2873,
+      "lastDate": "2026-10-02",
       "status": "provisional"
     }
   ],
@@ -2092,9 +2098,9 @@
     }
   },
   "live": {
-    "trades": 0,
-    "days": 0,
-    "actualGapQualifiesRate": null,
+    "trades": 1,
+    "days": 1,
+    "actualGapQualifiesRate": 0.0,
     "openVsExpectedPct": {
       "n": 0,
       "mean": null
@@ -2108,8 +2114,8 @@
       "mean": null
     },
     "realizedNetPct": {
-      "n": 0,
-      "mean": null
+      "n": 1,
+      "mean": -0.5068549280177224
     },
     "modelNet0tPct": {
       "n": 0,
@@ -2117,11 +2123,39 @@
     },
     "note": "buySlip = 매수체결가/시가-1, sellSlip = 1-매도체결가/종가 (양수 = 비용). 판정은 realizedNet 누적으로 한다."
   },
-  "liveTrades": [],
+  "liveTrades": [
+    {
+      "date": "2026-10-02",
+      "code": "145020",
+      "name": "휴젤",
+      "strategyVersion": "opening_gapdown_v1",
+      "source": "kis-vts-live",
+      "expectedPrice": 176500,
+      "expectedGapPct": -2.270210409745288,
+      "actualOpen": null,
+      "actualClose": null,
+      "actualGapPct": null,
+      "actualGapQualifies": false,
+      "openVsExpectedPct": null,
+      "buyOrderOk": true,
+      "buyOrderMsg": "모의투자 매수주문이 완료 되었습니다.",
+      "sellOrderOk": true,
+      "sellOrderMsg": "모의투자 매도주문이 완료 되었습니다.",
+      "buyQty": 11,
+      "buyFill": 180600,
+      "sellQty": 11,
+      "sellFill": 180100,
+      "buySlipPct": null,
+      "sellSlipPct": null,
+      "realizedGrossPct": -0.2768549280177224,
+      "realizedNetPct": -0.5068549280177224,
+      "modelNet0tPct": null
+    }
+  ],
   "watchlist": {
-    "basedOn": "2026-10-01",
+    "basedOn": "2026-10-02",
     "basedOnStatus": "provisional_snapshot",
-    "size": 9
+    "size": 10
   },
   "finalDataThrough": "2026-09-29"
 }

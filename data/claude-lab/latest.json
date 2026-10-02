@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "generatedAt": "2026-10-02T12:09:39.007457+09:00",
+  "generatedAt": "2026-10-02T18:56:58.495200+09:00",
   "designEnd": "2026-09-30",
   "gate": {
     "mdd": -25.0,
@@ -102,9 +102,9 @@
         "strategyVersions": [
           "opening_rebreak_v1"
         ],
-        "trades": 16,
+        "trades": 20,
         "from_": "2026-09-22",
-        "to": "2026-09-30"
+        "to": "2026-10-02"
       },
       "compare": {
         "window": [
@@ -253,9 +253,9 @@
         "strategyVersions": [
           "daytrading_vwap_breakout_v1"
         ],
-        "trades": 9,
+        "trades": 12,
         "from_": "2026-09-29",
-        "to": "2026-10-01"
+        "to": "2026-10-02"
       },
       "compare": {
         "window": [
@@ -850,7 +850,7 @@
     ]
   },
   "daily": {
-    "generatedAt": "2026-10-02T12:09:45.805682+09:00",
+    "generatedAt": "2026-10-02T18:57:04.772765+09:00",
     "today": "2026-10-02",
     "finalKrDaily": "2026-09-29",
     "rows": [
@@ -859,21 +859,21 @@
         "side": "claude",
         "name": "① D-1 갭하락 과매도 v2",
         "version": "opening_gapdown_v1",
-        "prevDate": "2026-09-30",
-        "lastDate": "2026-10-01",
-        "prev": "pending",
+        "prevDate": "2026-10-01",
+        "lastDate": "2026-10-02",
+        "prev": "no_trade",
         "last": "no_trade",
-        "plan": "명단 9종목 · 08:56 예상갭 확인 (통과 5종목 이상일 때 v2 매매)"
+        "plan": "명단 10종목 · 08:56 예상갭 확인 (통과 5종목 이상일 때 v2 매매)"
       },
       {
         "group": "시초가",
         "side": "gpt",
         "name": "시초가 돌파",
         "version": "opening_rebreak_v1",
-        "prevDate": "2026-09-30",
-        "lastDate": "2026-10-01",
-        "prev": -0.7632057658653377,
-        "last": "no_trade",
+        "prevDate": "2026-10-01",
+        "lastDate": "2026-10-02",
+        "prev": "no_trade",
+        "last": -1.2669821043386493,
         "plan": null
       },
       {
@@ -881,8 +881,8 @@
         "side": "claude",
         "name": "② 코스닥150 레버리지 하락일 야간",
         "version": "etf_dip_overnight_v1",
-        "prevDate": "2026-09-30",
-        "lastDate": "2026-10-01",
+        "prevDate": "2026-10-01",
+        "lastDate": "2026-10-02",
         "prev": "no_trade",
         "last": "no_trade",
         "plan": "15:21 예상 종가 −3% 이하면 종가 매수 → 다음 날 시가 매도"
@@ -892,10 +892,10 @@
         "side": "gpt",
         "name": "데이트레이딩",
         "version": "daytrading_vwap_breakout_v1",
-        "prevDate": "2026-09-30",
-        "lastDate": "2026-10-01",
-        "prev": -1.2500000000000009,
-        "last": 0.7500000000000046,
+        "prevDate": "2026-10-01",
+        "lastDate": "2026-10-02",
+        "prev": 0.7500000000000046,
+        "last": -0.25,
         "plan": null
       },
       {
@@ -1919,7 +1919,7 @@
       "available": true,
       "window": [
         "2026-09-22",
-        "2026-09-30"
+        "2026-10-01"
       ],
       "costPct": {
         "claude": 0.25,
@@ -1956,6 +1956,21 @@
         "avgDayPct": -0.3538342085197712
       },
       "days": [
+        {
+          "date": "2026-10-01",
+          "claude": {
+            "cands": null,
+            "entries": 0,
+            "pnlPct": 0.0,
+            "trades": []
+          },
+          "gpt": {
+            "cands": null,
+            "entries": 0,
+            "pnlPct": 0.0,
+            "trades": []
+          }
+        },
         {
           "date": "2026-09-30",
           "claude": {
@@ -3043,17 +3058,17 @@
   "review": {
     "today": {
       "date": "2026-10-02",
-      "writtenAt": "2026-10-02T12:09:51.792196+09:00",
+      "writtenAt": "2026-10-02T18:57:10.907061+09:00",
       "tabs": {
         "시초가": {
           "name": "① D-1 갭하락 과매도 v2",
-          "date": "2026-10-01",
+          "date": "2026-10-02",
           "result": "no_trade",
-          "plan": "명단 9종목 · 08:56 예상갭 확인 (통과 5종목 이상일 때 v2 매매)"
+          "plan": "명단 10종목 · 08:56 예상갭 확인 (통과 5종목 이상일 때 v2 매매)"
         },
         "데이트레이딩": {
           "name": "② 코스닥150 레버리지 하락일 야간",
-          "date": "2026-10-01",
+          "date": "2026-10-02",
           "result": "no_trade",
           "plan": "15:21 예상 종가 −3% 이하면 종가 매수 → 다음 날 시가 매도"
         },
@@ -3077,13 +3092,15 @@
         }
       },
       "opening": {
-        "reason": null,
-        "picks": [],
-        "breadth": null
+        "reason": "rsi14_prev<30+expected_gap<=-2%+deepest3",
+        "picks": [
+          "휴젤"
+        ],
+        "breadth": 1
       },
       "etf": {
-        "buy": null,
-        "drop": null
+        "buy": "no_signal_drop_above_-3%",
+        "drop": -1.5337423312883458
       },
       "paper": {
         "opening_d1v2": {
@@ -3117,12 +3134,91 @@
           "status": "매매일 0/20 — 판단 전"
         }
       },
-      "issues": [
-        "오늘 ①② 원본 기록 없음(휴장일이 아니면 점검)"
-      ],
-      "verdict": "점검 필요 1건"
+      "issues": [],
+      "verdict": "문제 없음"
     },
     "history": [
+      {
+        "date": "2026-10-02",
+        "writtenAt": "2026-10-02T18:57:10.907061+09:00",
+        "tabs": {
+          "시초가": {
+            "name": "① D-1 갭하락 과매도 v2",
+            "date": "2026-10-02",
+            "result": "no_trade",
+            "plan": "명단 10종목 · 08:56 예상갭 확인 (통과 5종목 이상일 때 v2 매매)"
+          },
+          "데이트레이딩": {
+            "name": "② 코스닥150 레버리지 하락일 야간",
+            "date": "2026-10-02",
+            "result": "no_trade",
+            "plan": "15:21 예상 종가 −3% 이하면 종가 매수 → 다음 날 시가 매도"
+          },
+          "비트코인": {
+            "name": "③ BTC·ETH 어제 고가 돌파 하루 단타",
+            "date": "2026-10-01",
+            "result": "no_trade",
+            "plan": "BTC 돌파 감시 · ETH 돌파 감시"
+          },
+          "SOXL": {
+            "name": "④ SOXL 단기 과매도 반등 (최대 5일)",
+            "date": "2026-10-01",
+            "result": "no_trade",
+            "plan": "쉼 (과매도 신호 없음) · 자금 50%"
+          },
+          "전체": {
+            "name": "🏦 전체 계좌 (국내 30% · 코인 30% · 미국 40%)",
+            "date": "2026-09-30",
+            "result": -0.1149914658055585,
+            "plan": null
+          }
+        },
+        "opening": {
+          "reason": "rsi14_prev<30+expected_gap<=-2%+deepest3",
+          "picks": [
+            "휴젤"
+          ],
+          "breadth": 1
+        },
+        "etf": {
+          "buy": "no_signal_drop_above_-3%",
+          "drop": -1.5337423312883458
+        },
+        "paper": {
+          "opening_d1v2": {
+            "tradeDays": 0,
+            "totalPct": 0.0,
+            "status": "매매일 0/20 — 판단 전"
+          },
+          "daytrading_etf": {
+            "tradeDays": 0,
+            "totalPct": 0.0,
+            "status": "매매일 0/20 — 판단 전"
+          },
+          "coin_bo_btc": {
+            "tradeDays": 0,
+            "totalPct": null,
+            "status": "매매일 0/20 — 판단 전"
+          },
+          "coin_bo_eth": {
+            "tradeDays": 0,
+            "totalPct": null,
+            "status": "매매일 0/20 — 판단 전"
+          },
+          "us_soxl": {
+            "tradeDays": 0,
+            "totalPct": null,
+            "status": "매매일 0/20 — 판단 전"
+          },
+          "account": {
+            "tradeDays": 0,
+            "totalPct": null,
+            "status": "매매일 0/20 — 판단 전"
+          }
+        },
+        "issues": [],
+        "verdict": "문제 없음"
+      },
       {
         "date": "2026-10-01",
         "writtenAt": "2026-10-01T22:25:45.460125+09:00",

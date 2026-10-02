@@ -1,0 +1,516 @@
+{
+  "ok": true,
+  "date": "2026-10-02",
+  "ledger": {
+    "schema": 1,
+    "date": "2026-10-02",
+    "createdAt": "2026-10-01T23:56:34.448Z",
+    "updatedAt": "2026-10-02T06:40:34.688Z",
+    "scans": [
+      {
+        "id": "2026-10-02:preopen:2026-10-02:opening_gapdown:preopen:all",
+        "scheduledTime": 1790898974000,
+        "capturedAt": "2026-10-01T23:56:35.158Z",
+        "targetHm": 856,
+        "lagMs": 0,
+        "partial": false,
+        "okShards": 1,
+        "failed": [],
+        "quoteErrors": 0,
+        "eventCount": 1
+      },
+      {
+        "id": "2026-10-02:quote:2026-10-02:opening_gapdown:quote:part0",
+        "scheduledTime": 1790898974000,
+        "capturedAt": "2026-10-01T23:56:33.772Z",
+        "targetHm": 856,
+        "lagMs": 0,
+        "partial": false,
+        "okShards": 1,
+        "failed": [],
+        "quoteErrors": 0,
+        "eventCount": 1
+      },
+      {
+        "id": "2026-10-02:close:2026-10-02:opening_gapdown:close:all",
+        "scheduledTime": 1790922074000,
+        "capturedAt": "2026-10-02T06:21:42.337Z",
+        "targetHm": 1521,
+        "lagMs": 0,
+        "partial": false,
+        "okShards": 1,
+        "failed": [],
+        "quoteErrors": 0,
+        "eventCount": 1
+      },
+      {
+        "id": "2026-10-02:etf_buy:2026-10-02:opening_gapdown:etf_buy:all",
+        "scheduledTime": 1790922074000,
+        "capturedAt": "2026-10-02T06:21:43.503Z",
+        "targetHm": 1521,
+        "lagMs": 0,
+        "partial": false,
+        "okShards": 1,
+        "failed": [],
+        "quoteErrors": 0,
+        "eventCount": 1
+      },
+      {
+        "id": "2026-10-02:etf_reconcile:2026-10-02:opening_gapdown:etf_reconcile:all",
+        "scheduledTime": 1790923221000,
+        "capturedAt": "2026-10-02T06:40:34.594Z",
+        "targetHm": 1540,
+        "lagMs": 0,
+        "partial": false,
+        "okShards": 1,
+        "failed": [],
+        "quoteErrors": 0,
+        "eventCount": 1
+      },
+      {
+        "id": "2026-10-02:reconcile:2026-10-02:opening_gapdown:reconcile:all",
+        "scheduledTime": 1790923221000,
+        "capturedAt": "2026-10-02T06:40:32.167Z",
+        "targetHm": 1540,
+        "lagMs": 0,
+        "partial": false,
+        "okShards": 1,
+        "failed": [],
+        "quoteErrors": 0,
+        "eventCount": 1
+      }
+    ],
+    "events": [
+      {
+        "id": "2026-10-02:opening_gapdown:preopen:all",
+        "date": "2026-10-02",
+        "capturedAt": "2026-10-01T23:56:35.158Z",
+        "targetHm": 856,
+        "strategy": "opening_gapdown",
+        "strategyVersion": "opening_gapdown_v1",
+        "stage": "preopen",
+        "payload": {
+          "httpStatus": 200,
+          "ok": true,
+          "stage": "preopen",
+          "strategyVersion": "opening_gapdown_v1",
+          "date": "2026-10-02",
+          "startedAt": "2026-10-01T23:56:34.583Z",
+          "watchlist": {
+            "basedOn": "2026-10-01",
+            "generatedAt": "2026-10-02T08:40:06.992590+09:00",
+            "size": 9,
+            "rule": {
+              "rsiMax": 30,
+              "gapMax": -2,
+              "gapFloor": -29,
+              "picks": 3
+            },
+            "quotedLimit": 80,
+            "truncated": false
+          },
+          "candidates": 9,
+          "picks": [
+            {
+              "code": "145020",
+              "name": "휴젤",
+              "expectedPrice": 176500,
+              "basePrice": 180600,
+              "expectedGapPct": -2.270210409745288,
+              "rsi14Prev": 19.89
+            }
+          ],
+          "orders": [
+            {
+              "signalId": "gapdown:2026-10-02:145020:buy",
+              "strategy": "opening_gapdown",
+              "strategyVersion": "opening_gapdown_v1",
+              "date": "2026-10-02",
+              "side": "buy",
+              "code": "145020",
+              "name": "휴젤",
+              "qty": 11,
+              "submittedAt": "2026-10-01T23:56:34.604Z",
+              "vts": {
+                "ok": true,
+                "env": "vts",
+                "priceType": "market",
+                "orderNo": "0000001145",
+                "msg": "모의투자 매수주문이 완료 되었습니다.",
+                "httpStatus": 200
+              }
+            }
+          ],
+          "decisionReason": "rsi14_prev<30+expected_gap<=-2%+deepest3",
+          "breadth": {
+            "qualified": 1,
+            "v2MinQualified": 5,
+            "v2Signal": false
+          },
+          "budgetPerPick": 2000000,
+          "finishedAt": "2026-10-01T23:56:35.155Z"
+        }
+      },
+      {
+        "id": "2026-10-02:opening_gapdown:quote:part0",
+        "date": "2026-10-02",
+        "capturedAt": "2026-10-01T23:56:33.772Z",
+        "targetHm": 856,
+        "strategy": "opening_gapdown",
+        "strategyVersion": "opening_gapdown_v1",
+        "stage": "quote",
+        "payload": {
+          "httpStatus": 200,
+          "ok": true,
+          "stage": "quote",
+          "strategyVersion": "opening_gapdown_v1",
+          "date": "2026-10-02",
+          "part": 0,
+          "startedAt": "2026-10-01T23:56:23.049Z",
+          "watchlist": {
+            "basedOn": "2026-10-01",
+            "generatedAt": "2026-10-02T08:40:06.992590+09:00",
+            "size": 9,
+            "rule": {
+              "rsiMax": 30,
+              "gapMax": -2,
+              "gapFloor": -29,
+              "picks": 3
+            },
+            "quotedLimit": 80,
+            "truncated": false
+          },
+          "candidates": [
+            {
+              "code": "145020",
+              "name": "휴젤",
+              "market": "KOSDAQ",
+              "rsi14Prev": 19.89,
+              "prevClose": 180100,
+              "prevAmountKrw": 11685592850,
+              "quotedAt": "2026-10-01T23:56:25.018Z",
+              "expectedPrice": 176500,
+              "basePrice": 180600,
+              "expectedChgPct": -2.27,
+              "expectedVolume": 884,
+              "phase": "311",
+              "expectedGapPct": -2.270210409745288,
+              "error": null
+            },
+            {
+              "code": "290690",
+              "name": "아리바이오홀딩스",
+              "market": "KOSDAQ",
+              "rsi14Prev": 22.472,
+              "prevClose": 3185,
+              "prevAmountKrw": 6368791624,
+              "quotedAt": "2026-10-01T23:56:25.997Z",
+              "expectedPrice": 3140,
+              "basePrice": 3170,
+              "expectedChgPct": -0.95,
+              "expectedVolume": 1208,
+              "phase": "311",
+              "expectedGapPct": -0.9463722397476393,
+              "error": null
+            },
+            {
+              "code": "475830",
+              "name": "오름테라퓨틱",
+              "market": "KOSDAQ",
+              "rsi14Prev": 22.706,
+              "prevClose": 23200,
+              "prevAmountKrw": 8843803000,
+              "quotedAt": "2026-10-01T23:56:27.069Z",
+              "expectedPrice": 23000,
+              "basePrice": 23350,
+              "expectedChgPct": -1.5,
+              "expectedVolume": 707,
+              "phase": "311",
+              "expectedGapPct": -1.498929336188437,
+              "error": null
+            },
+            {
+              "code": "271560",
+              "name": "오리온",
+              "market": "KOSPI",
+              "rsi14Prev": 25.828,
+              "prevClose": 106200,
+              "prevAmountKrw": 4938401950,
+              "quotedAt": "2026-10-01T23:56:27.893Z",
+              "expectedPrice": 104600,
+              "basePrice": 106100,
+              "expectedChgPct": -1.41,
+              "expectedVolume": 414,
+              "phase": "311",
+              "expectedGapPct": -1.413760603204528,
+              "error": null
+            },
+            {
+              "code": "298020",
+              "name": "효성티앤씨",
+              "market": "KOSPI",
+              "rsi14Prev": 26.414,
+              "prevClose": 275000,
+              "prevAmountKrw": 6912755500,
+              "quotedAt": "2026-10-01T23:56:28.715Z",
+              "expectedPrice": 272500,
+              "basePrice": 274500,
+              "expectedChgPct": -0.73,
+              "expectedVolume": 124,
+              "phase": "311",
+              "expectedGapPct": -0.7285974499089298,
+              "error": null
+            },
+            {
+              "code": "007070",
+              "name": "GS리테일",
+              "market": "KOSPI",
+              "rsi14Prev": 28.563,
+              "prevClose": 22100,
+              "prevAmountKrw": 2624674650,
+              "quotedAt": "2026-10-01T23:56:29.542Z",
+              "expectedPrice": 21950,
+              "basePrice": 22100,
+              "expectedChgPct": -0.68,
+              "expectedVolume": 276,
+              "phase": "311",
+              "expectedGapPct": -0.6787330316742057,
+              "error": null
+            },
+            {
+              "code": "439960",
+              "name": "코스모로보틱스",
+              "market": "KOSDAQ",
+              "rsi14Prev": 28.645,
+              "prevClose": 8540,
+              "prevAmountKrw": 235848456435,
+              "quotedAt": "2026-10-01T23:56:30.366Z",
+              "expectedPrice": 8650,
+              "basePrice": 8650,
+              "expectedChgPct": 0,
+              "expectedVolume": 18048,
+              "phase": "311",
+              "expectedGapPct": 0,
+              "error": null
+            },
+            {
+              "code": "029780",
+              "name": "삼성카드",
+              "market": "KOSPI",
+              "rsi14Prev": 29.644,
+              "prevClose": 41850,
+              "prevAmountKrw": 2894485450,
+              "quotedAt": "2026-10-01T23:56:31.191Z",
+              "expectedPrice": 41700,
+              "basePrice": 41850,
+              "expectedChgPct": -0.36,
+              "expectedVolume": 259,
+              "phase": "311",
+              "expectedGapPct": -0.35842293906810374,
+              "error": null
+            },
+            {
+              "code": "004170",
+              "name": "신세계",
+              "market": "KOSPI",
+              "rsi14Prev": 29.825,
+              "prevClose": 332500,
+              "prevAmountKrw": 15619881000,
+              "quotedAt": "2026-10-01T23:56:33.219Z",
+              "expectedPrice": 331000,
+              "basePrice": 333500,
+              "expectedChgPct": -0.75,
+              "expectedVolume": 47,
+              "phase": "311",
+              "expectedGapPct": -0.7496251874062998,
+              "error": null
+            }
+          ],
+          "decisionReason": "",
+          "finishedAt": "2026-10-01T23:56:33.769Z"
+        }
+      },
+      {
+        "id": "2026-10-02:opening_gapdown:close:all",
+        "date": "2026-10-02",
+        "capturedAt": "2026-10-02T06:21:42.337Z",
+        "targetHm": 1521,
+        "strategy": "opening_gapdown",
+        "strategyVersion": "opening_gapdown_v1",
+        "stage": "close",
+        "payload": {
+          "httpStatus": 200,
+          "ok": true,
+          "stage": "close",
+          "strategyVersion": "opening_gapdown_v1",
+          "date": "2026-10-02",
+          "startedAt": "2026-10-02T06:21:32.006Z",
+          "positions": [
+            {
+              "code": "145020",
+              "name": "휴젤",
+              "buy": {
+                "qty": 11,
+                "avgPrice": 180600,
+                "orderNos": [
+                  "0000001145"
+                ],
+                "orderTimes": [
+                  "085634"
+                ]
+              },
+              "sell": {
+                "qty": 0,
+                "avgPrice": null,
+                "orderNos": [],
+                "orderTimes": []
+              },
+              "openQty": 11
+            }
+          ],
+          "orders": [
+            {
+              "signalId": "gapdown:2026-10-02:145020:sell",
+              "strategy": "opening_gapdown",
+              "strategyVersion": "opening_gapdown_v1",
+              "date": "2026-10-02",
+              "side": "sell",
+              "code": "145020",
+              "name": "휴젤",
+              "qty": 11,
+              "submittedAt": "2026-10-02T06:21:38.755Z",
+              "vts": {
+                "ok": true,
+                "env": "vts",
+                "priceType": "market",
+                "orderNo": "0000031986",
+                "msg": "모의투자 매도주문이 완료 되었습니다.",
+                "httpStatus": 200
+              }
+            }
+          ],
+          "finishedAt": "2026-10-02T06:21:42.335Z"
+        }
+      },
+      {
+        "id": "2026-10-02:opening_gapdown:etf_buy:all",
+        "date": "2026-10-02",
+        "capturedAt": "2026-10-02T06:21:43.503Z",
+        "targetHm": 1521,
+        "strategy": "opening_gapdown",
+        "strategyVersion": "opening_gapdown_v1",
+        "stage": "etf_buy",
+        "payload": {
+          "httpStatus": 200,
+          "ok": true,
+          "stage": "etf_buy",
+          "strategy": "etf_dip_overnight",
+          "strategyVersion": "etf_dip_overnight_v1",
+          "date": "2026-10-02",
+          "code": "233740",
+          "rule": {
+            "code": "233740",
+            "name": "KODEX 코스닥150레버리지",
+            "dropMaxPct": -3,
+            "version": "etf_dip_overnight_v1",
+            "budgetMultiple": 3
+          },
+          "startedAt": "2026-10-02T06:21:42.610Z",
+          "quote": {
+            "expectedPrice": 8025,
+            "basePrice": 8150,
+            "expectedChgPct": -1.53,
+            "phase": "121",
+            "time": "152143"
+          },
+          "dropPct": -1.5337423312883458,
+          "signal": false,
+          "order": null,
+          "decisionReason": "no_signal_drop_above_-3%",
+          "finishedAt": "2026-10-02T06:21:43.500Z"
+        }
+      },
+      {
+        "id": "2026-10-02:opening_gapdown:etf_reconcile:all",
+        "date": "2026-10-02",
+        "capturedAt": "2026-10-02T06:40:34.594Z",
+        "targetHm": 1540,
+        "strategy": "opening_gapdown",
+        "strategyVersion": "opening_gapdown_v1",
+        "stage": "etf_reconcile",
+        "payload": {
+          "httpStatus": 200,
+          "ok": true,
+          "stage": "etf_reconcile",
+          "strategy": "etf_dip_overnight",
+          "strategyVersion": "etf_dip_overnight_v1",
+          "date": "2026-10-02",
+          "code": "233740",
+          "fills": {
+            "closeBuy": {
+              "qty": 0,
+              "avgPrice": null,
+              "orderNos": [],
+              "orderTimes": []
+            },
+            "openSell": {
+              "qty": 0,
+              "avgPrice": null,
+              "orderNos": [],
+              "orderTimes": []
+            }
+          },
+          "finishedAt": "2026-10-02T06:40:34.590Z"
+        }
+      },
+      {
+        "id": "2026-10-02:opening_gapdown:reconcile:all",
+        "date": "2026-10-02",
+        "capturedAt": "2026-10-02T06:40:32.167Z",
+        "targetHm": 1540,
+        "strategy": "opening_gapdown",
+        "strategyVersion": "opening_gapdown_v1",
+        "stage": "reconcile",
+        "payload": {
+          "httpStatus": 200,
+          "ok": true,
+          "stage": "reconcile",
+          "strategyVersion": "opening_gapdown_v1",
+          "date": "2026-10-02",
+          "startedAt": "2026-10-02T06:40:31.104Z",
+          "positions": [
+            {
+              "code": "145020",
+              "name": "휴젤",
+              "buy": {
+                "qty": 11,
+                "avgPrice": 180600,
+                "orderNos": [
+                  "0000001145"
+                ],
+                "orderTimes": [
+                  "085634"
+                ]
+              },
+              "sell": {
+                "qty": 11,
+                "avgPrice": 180100,
+                "orderNos": [
+                  "0000031986"
+                ],
+                "orderTimes": [
+                  "152141"
+                ]
+              },
+              "openQty": 0
+            }
+          ],
+          "orders": [],
+          "finishedAt": "2026-10-02T06:40:32.162Z"
+        }
+      }
+    ]
+  },
+  "archivedAt": "2026-10-02T18:55:34+09:00",
+  "source": "cloudflare-opening-scheduler-durable-ledger"
+}
