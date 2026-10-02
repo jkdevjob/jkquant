@@ -6,7 +6,7 @@
   "date": "2026-10-02",
   "note": "KIS VTS existing fills are only compared; no broker order is submitted by this endpoint.",
   "internalTrades": 4,
-  "kisOrders": 4,
+  "kisOrders": 5,
   "matches": [
     {
       "code": "043260",
@@ -145,6 +145,19 @@
     {
       "code": "145020",
       "name": "휴젤",
+      "side": "매도",
+      "orderTime": "152141",
+      "orderQty": 11,
+      "fillQty": 11,
+      "fillPrice": 180100,
+      "remainingQty": 0,
+      "rejectedQty": 0,
+      "canceled": false,
+      "orderType": "시장가"
+    },
+    {
+      "code": "145020",
+      "name": "휴젤",
       "side": "매수",
       "orderTime": "085634",
       "orderQty": 11,
@@ -156,7 +169,7 @@
       "orderType": "시장가"
     }
   ],
-  "dailyBrokerEstimatedCosts": 4978,
+  "dailyBrokerEstimatedCosts": 9220,
   "summary": {
     "completeMatches": 1,
     "matchRatePct": 25,
@@ -180,7 +193,7 @@
     "frictionGapVsInternal025Pct": 0.2829474528139482,
     "calibrationStatus": "collecting",
     "calibrationMatches": 1,
-    "filledOrderCount": 4,
+    "filledOrderCount": 5,
     "partialFillOrderCount": 0,
     "unfilledOrderCount": 0,
     "canceledOrderCount": 0,
