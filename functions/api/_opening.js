@@ -102,7 +102,7 @@ function openingFactoryIndex(ms=Date.now()){return Math.max(0,Math.floor((ms-OPE
 function o10(x){return Math.round(Number(x)*10);}
 export function openingFactoryVariants(ms=Date.now()){
   const k=openingFactoryIndex(ms),out=[];
-  const pbs=[.4,.6,.8],amounts=[1.3,1.6,1.9],vols=[1.1,1.4,1.8],cuts=[910,915,920],
+  const pbs=[.4,.6,.8],amounts=[1.3,1.5,1.7,1.9],vols=[1.1,1.4,1.8],cuts=[910,915,920],
         stops=[.7,.9,1.1],tps=[1.2,1.8,2.1];
   for(let j=0;j<4;j++){
     const z=k*4+j,pb=pbs[z%pbs.length],amount=amounts[(z*3+1)%amounts.length],
