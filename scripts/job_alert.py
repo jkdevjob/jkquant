@@ -21,7 +21,11 @@ CACHE_DIR = Path(".job-alert-cache")
 SEEN_FILE = CACHE_DIR / "seen.json"
 SENT_FILE = CACHE_DIR / "last_sent_date.txt"
 ARCHIVE_FILE = Path("data/job_archive.json")
+HISTORY_FILE = Path("data/job_history.json")
 ARCHIVE_DAYS = 180
+CRAWL_RANGE_DAYS = 35
+DIRECT_MISS_CLOSE_THRESHOLD = 3
+SEARCH_MISS_CLOSE_THRESHOLD = 7
 
 JAVA_AI_QUERIES = [
     '대전 Java JSP Spring 프리랜서 프로젝트',
@@ -120,7 +124,7 @@ JOBKOREA_DIRECT_QUERIES = [
     '대전 경력무관 알바', '세종 경력무관 알바',
     '대전 전산보조 단기', '세종 전산보조 단기',
 ]
-JOBKOREA_PAGES_PER_QUERY = 2
+JOBKOREA_MAX_PAGES_PER_QUERY = 10
 
 SARAMIN_BASE = 'https://www.saramin.co.kr'
 SARAMIN_DIRECT_QUERIES = [
@@ -133,7 +137,7 @@ SARAMIN_DIRECT_QUERIES = [
     '대전 연봉 6000', '세종 연봉 6000',
     '대전 월급 500', '세종 월급 500',
 ]
-SARAMIN_PAGES_PER_QUERY = 1
+SARAMIN_MAX_PAGES_PER_QUERY = 8
 
 SEARCH_SOURCES = {
     '고용24': 'work24.go.kr',
@@ -1017,23 +1021,22 @@ def jobkorea_title_quality(title):
 
 def collect_jobkorea_direct():
     session = requests.Session()
-    session.headers.update({
-        'User-Agent': (
-            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) '
-            'AppleWebKit/537.36 (KHTML, like Gecko) '
-            'Chrome/154.0.0.0 Safari/537.36'
-        ),
-        'Accept-Language': 'ko-KR,ko;q=0.9,en;q=0.7',
-    })
+    session.headers.update(DETAIL_HEADERS)
 
     jobs = {}
     ok_pages = 0
     failed_pages = 0
     parsed_links = 0
     errors = []
+    cutoff = date.today() - timedelta(days=CRAWL_RANGE_DAYS)
+    max_pages = 3 if os.environ.get('JOB_ALERT_FAST') == '1' else JOBKOREA_MAX_PAGES_PER_QUERY
 
     for query in JOBKOREA_DIRECT_QUERIES:
-        for page_no in range(1, JOBKOREA_PAGES_PER_QUERY + 1):
+        no_new_pages = 0
+        for page_no in range(1, max_pages + 1):
+            before_count = len(jobs)
+            page_dates = []
+            page_parsed_detail_links = 0
             try:
                 response = session.get(
                     f'{JOBKOREA_BASE}/Search',
@@ -1044,13 +1047,13 @@ def collect_jobkorea_direct():
                 ok_pages += 1
 
                 soup = BeautifulSoup(response.text, 'html.parser')
-                page_links = 0
-                page_parsed_detail_links = 0
+                seen_ids = set()
                 for anchor in soup.find_all('a', href=True):
                     href = anchor.get('href') or ''
                     match = re.search(r'/Recruit/GI_Read/(\d+)', href, re.I)
-                    if not match:
+                    if not match or match.group(1) in seen_ids:
                         continue
+                    seen_ids.add(match.group(1))
 
                     title = normalize_text(anchor.get_text(' ', strip=True))
                     if (
@@ -1062,6 +1065,12 @@ def collect_jobkorea_direct():
 
                     page_parsed_detail_links += 1
                     body = jobkorea_card_text(anchor)
+                    posted, _ = parse_job_posted_date(title, body)
+                    if posted:
+                        try:
+                            page_dates.append(date.fromisoformat(posted))
+                        except Exception:
+                            pass
                     if not has_target_location(body):
                         continue
 
@@ -1090,29 +1099,40 @@ def collect_jobkorea_direct():
                             current['_title_quality'] = candidate['_title_quality']
                             current['salary'] = salary_info(current['title'], current['body'])
                             current['short_pay'] = short_term_pay_info(current['title'], current['body'])
-                    page_links += 1
 
-                parsed_links += page_links
-                # 검색 결과 페이지 구조가 바뀐 경우 조용히 '0건'으로 오인하지 않는다.
-                raw_has_job_links = bool(
-                    re.search(r'/Recruit/GI_Read/\d+', response.text, re.I)
-                )
+                page_new = len(jobs) - before_count
+                parsed_links += page_new
+                raw_has_job_links = bool(re.search(r'/Recruit/GI_Read/\d+', response.text, re.I))
                 if raw_has_job_links and page_parsed_detail_links == 0:
                     failed_pages += 1
                     errors.append(f'{query} p{page_no}: HTML에는 공고가 있으나 링크 파싱 0건')
+
+                if page_parsed_detail_links == 0:
+                    break
+                no_new_pages = no_new_pages + 1 if page_new == 0 else 0
+                # 날짜가 확인되는 검색결과는 최근 한 달 범위를 벗어나면 더 내려가지 않는다.
+                if page_dates and max(page_dates) < cutoff:
+                    break
+                # 다른 검색어에서 이미 모두 수집된 페이지가 연속되면 중복 탐색을 중단한다.
+                if no_new_pages >= 2:
+                    break
             except Exception as exc:
                 failed_pages += 1
                 errors.append(f'{query} p{page_no}: {type(exc).__name__} {exc}')
+                if page_no >= 2:
+                    break
 
-            time.sleep(0.15)
+            time.sleep(0.12)
 
     status = {
-        'ok': ok_pages > 0 and parsed_links > 0,
+        'ok': ok_pages > 0 and len(jobs) > 0,
         'ok_pages': ok_pages,
         'failed_pages': failed_pages,
         'parsed_jobs': len(jobs),
         'parsed_links': parsed_links,
+        'max_pages': max_pages,
         'errors': errors[:5],
+        'mode': '직접',
     }
     print(
         f'[INFO] jobkorea_direct ok={status["ok"]} ok_pages={ok_pages} '
@@ -1125,194 +1145,26 @@ def collect_jobkorea_direct():
     direct_jobs = list(jobs.values())
     for job in direct_jobs:
         job.pop('_title_quality', None)
-    direct_jobs = enrich_jobs_from_details(direct_jobs)
+    direct_jobs = enrich_jobs_from_details(direct_jobs, workers=12)
     return direct_jobs, status
-
-
-def compact_job_title(title):
-    text = normalize_text(title).lower()
-    text = re.sub(r'\[[^\]]*\]|\([^)]*\)', ' ', text)
-    text = re.sub(
-        r'\b(?:채용|모집|공고|정규직|계약직|프리랜서|경력직|경력|신입|즉시지원)\b',
-        ' ',
-        text,
-    )
-    text = re.sub(r'[^0-9a-z가-힣]+', ' ', text)
-    return normalize_text(text)
-
-
-def title_tokens(title):
-    return {
-        token for token in compact_job_title(title).split()
-        if len(token) >= 2 and token not in {'대전', '세종', '개발자', '채용', '모집'}
-    }
-
-
-def company_hint(title, body):
-    text = normalize_text(f'{title} {body}')
-    patterns = [
-        r'(?:\(주\)|주식회사)\s*([가-힣A-Za-z0-9&._-]{2,40})',
-        r'([가-힣A-Za-z0-9&._-]{2,40})\s*㈜',
-    ]
-    for pattern in patterns:
-        m = re.search(pattern, text)
-        if m:
-            candidate = clean_company_name(m.group(1), title)
-            if candidate:
-                return candidate
-
-    m = re.match(r'^\[([^\]]{2,40})\]', normalize_text(title))
-    if m:
-        candidate = clean_company_name(m.group(1), title='')
-        if candidate and candidate not in {'대전', '세종', '서울', '경기', '충남', '충북'}:
-            return candidate
-    return ''
-
-
-def job_fingerprint(job):
-    title = compact_job_title(job.get('title', ''))
-    company = (
-        clean_company_name(job.get('company', ''), job.get('title', ''))
-        or company_hint(job.get('title', ''), job.get('body', ''))
-    )
-    return f'{company}|{title}' if company else title
-
-
-def same_job(a, b):
-    if not has_target_location(f"{a.get('title','')} {a.get('body','')}"):
-        return False
-    if not has_target_location(f"{b.get('title','')} {b.get('body','')}"):
-        return False
-
-    ca = (
-        clean_company_name(a.get('company', ''), a.get('title', ''))
-        or company_hint(a.get('title', ''), a.get('body', ''))
-    )
-    cb = (
-        clean_company_name(b.get('company', ''), b.get('title', ''))
-        or company_hint(b.get('title', ''), b.get('body', ''))
-    )
-    if ca and cb and ca != cb:
-        return False
-
-    ta = compact_job_title(a.get('title', ''))
-    tb = compact_job_title(b.get('title', ''))
-    if not ta or not tb:
-        return False
-    if ta == tb:
-        return True
-
-    ratio = SequenceMatcher(None, ta, tb).ratio()
-    sa, sb = title_tokens(ta), title_tokens(tb)
-    union = sa | sb
-    jaccard = (len(sa & sb) / len(union)) if union else 0.0
-    return ratio >= 0.90 or (len(sa & sb) >= 3 and jaccard >= 0.78)
-
-
-def merge_duplicate_job(base, incoming):
-    sources = list(dict.fromkeys(
-        (base.get('sources') or [base.get('source')])
-        + (incoming.get('sources') or [incoming.get('source')])
-    ))
-    sources = [s for s in sources if s]
-    base['sources'] = sources
-
-    bp = SOURCE_PRIORITY.get(base.get('source'), 0)
-    ip = SOURCE_PRIORITY.get(incoming.get('source'), 0)
-    if ip > bp:
-        for key in ('title', 'url', 'source', 'company'):
-            if incoming.get(key):
-                base[key] = incoming.get(key, base.get(key))
-
-    if not clean_company_name(base.get('company', ''), base.get('title', '')):
-        incoming_company = clean_company_name(
-            incoming.get('company', ''),
-            incoming.get('title', ''),
-        )
-        if incoming_company:
-            base['company'] = incoming_company
-
-    if len(incoming.get('body', '')) > len(base.get('body', '')):
-        base['body'] = incoming.get('body', '')
-
-    base['salary'] = salary_info(base.get('title', ''), base.get('body', ''))
-    base['short_pay'] = short_term_pay_info(base.get('title', ''), base.get('body', ''))
-    base['score'] = max(base.get('score', 0), incoming.get('score', 0))
-    return base
-
-
-def dedupe_jobs_cross_source(jobs):
-    unique = []
-    by_url = {}
-    for raw in jobs:
-        job = dict(raw)
-        job['url'] = normalize_url(job.get('url', ''))
-        if not job['url']:
-            continue
-        job.setdefault('sources', [job.get('source') or domain_of(job['url'])])
-
-        current = by_url.get(job['url'])
-        if current is not None:
-            merge_duplicate_job(current, job)
-            continue
-
-        duplicate = None
-        for existing in unique:
-            if same_job(existing, job):
-                duplicate = existing
-                break
-        if duplicate is not None:
-            merge_duplicate_job(duplicate, job)
-            by_url[job['url']] = duplicate
-        else:
-            unique.append(job)
-            by_url[job['url']] = job
-    return unique
-
-
-def saramin_card_text(anchor):
-    node = anchor
-    fallback = normalize_text(anchor.get_text(' ', strip=True))
-    for _ in range(10):
-        node = getattr(node, 'parent', None)
-        if node is None:
-            break
-        ids = set()
-        for link in node.find_all('a', href=True):
-            href = link.get('href') or ''
-            m = re.search(r'(?:rec_idx=|/jobs/view\?rec_idx=)(\d+)', href, re.I)
-            if m:
-                ids.add(m.group(1))
-        if len(ids) > 1:
-            break
-        text = normalize_text(node.get_text(' ', strip=True))
-        if not text or len(text) > 1800:
-            continue
-        if len(ids) == 1:
-            fallback = text
-            if has_target_location(text):
-                return text
-    return fallback
-
 
 def collect_saramin_direct():
     session = requests.Session()
-    session.headers.update({
-        'User-Agent': (
-            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) '
-            'AppleWebKit/537.36 (KHTML, like Gecko) '
-            'Chrome/154.0.0.0 Safari/537.36'
-        ),
-        'Accept-Language': 'ko-KR,ko;q=0.9,en;q=0.7',
-    })
+    session.headers.update(DETAIL_HEADERS)
 
     jobs = {}
     ok_pages = 0
     failed_pages = 0
     errors = []
+    cutoff = date.today() - timedelta(days=CRAWL_RANGE_DAYS)
+    max_pages = 3 if os.environ.get('JOB_ALERT_FAST') == '1' else SARAMIN_MAX_PAGES_PER_QUERY
 
     for query in SARAMIN_DIRECT_QUERIES:
-        for page_no in range(1, SARAMIN_PAGES_PER_QUERY + 1):
+        no_new_pages = 0
+        for page_no in range(1, max_pages + 1):
+            before_count = len(jobs)
+            page_dates = []
+            page_links = 0
             try:
                 response = session.get(
                     f'{SARAMIN_BASE}/zf_user/search',
@@ -1326,18 +1178,27 @@ def collect_saramin_direct():
                 response.raise_for_status()
                 ok_pages += 1
                 soup = BeautifulSoup(response.text, 'html.parser')
+                seen_ids = set()
 
                 for anchor in soup.find_all('a', href=True):
                     href = anchor.get('href') or ''
                     m = re.search(r'(?:rec_idx=|/jobs/view\?rec_idx=)(\d+)', href, re.I)
-                    if not m:
+                    if not m or m.group(1) in seen_ids:
                         continue
+                    seen_ids.add(m.group(1))
                     title = normalize_text(anchor.get_text(' ', strip=True))
                     if not title or len(title) < 3:
                         continue
                     body = saramin_card_text(anchor)
+                    posted, _ = parse_job_posted_date(title, body)
+                    if posted:
+                        try:
+                            page_dates.append(date.fromisoformat(posted))
+                        except Exception:
+                            pass
                     if not has_target_location(body):
                         continue
+                    page_links += 1
                     url = f'{SARAMIN_BASE}/zf_user/jobs/view?rec_idx={m.group(1)}'
                     candidate = {
                         'title': title,
@@ -1352,15 +1213,27 @@ def collect_saramin_direct():
                     current = jobs.get(url)
                     if current is None or len(candidate['body']) > len(current['body']):
                         jobs[url] = candidate
+
+                page_new = len(jobs) - before_count
+                if not seen_ids:
+                    break
+                no_new_pages = no_new_pages + 1 if page_new == 0 else 0
+                if page_dates and max(page_dates) < cutoff:
+                    break
+                if no_new_pages >= 2:
+                    break
             except Exception as exc:
                 failed_pages += 1
                 errors.append(f'{query} p{page_no}: {type(exc).__name__} {exc}')
-            time.sleep(0.12)
+                if page_no >= 2:
+                    break
+            time.sleep(0.10)
 
     status = {
-        'ok': ok_pages > 0,
+        'ok': ok_pages > 0 and len(jobs) > 0,
         'count': len(jobs),
         'failed_pages': failed_pages,
+        'max_pages': max_pages,
         'errors': errors[:3],
         'mode': '직접',
     }
@@ -1368,93 +1241,129 @@ def collect_saramin_direct():
         f'[INFO] saramin_direct ok={status["ok"]} ok_pages={ok_pages} '
         f'failed_pages={failed_pages} parsed_jobs={len(jobs)}'
     )
-    direct_jobs = enrich_jobs_from_details(list(jobs.values()))
+    direct_jobs = enrich_jobs_from_details(list(jobs.values()), workers=12)
     return direct_jobs, status
-
-
 
 def normalize_search_result_title(source_name, title, body):
     title = normalize_text(title)
     body = normalize_text(body)
 
-    # 고용24 검색결과는 문서 제목이 '채용정보 상세 | ...'로 내려오는 경우가 있다.
-    # 이때 검색 스니펫의 첫 실제 공고명을 제목으로 사용한다.
     if source_name == '고용24' and (
         '채용정보 상세' in title
         or '일자리 찾기' in title
         or '채용정보 상세검색' in title
     ):
-        text = re.sub(
+        candidate = title_from_card_body(body)
+        if candidate:
+            return candidate
+
+    if source_name in {'알바몬', '알바천국'} and (
+        title in {'알바몬', '알바천국'}
+        or len(title) < 4
+    ):
+        stripped = re.sub(
             r'^[A-Z][a-z]{2}\s+\d{1,2},\s+\d{4}\s*[·-]\s*',
             '',
             body,
         )
         patterns = [
-            r'(?:채용시까지|상시채용|오늘마감|마감임박|D-\d+)\s+(.+?)\s+\[[^\]]+\]\s+\d+\s*명',
-            r'(?:채용시까지|상시채용|오늘마감|마감임박|D-\d+)\s+(.+?)(?=\s+\d+\s*명\b)',
+            r'(?:\.\.\.|…)\s*(?:\([^)]*\)\s*)?([^·.]{3,140}?(?:알바|모집|채용))(?=[.·]|$)',
+            r'(?:\([^)]*(?:단기|경력무관)[^)]*\)\s*)([^·.]{3,140}?(?:알바|모집|채용))(?=[.·]|$)',
         ]
         for pattern in patterns:
-            m = re.search(pattern, text, re.I)
+            m = re.search(pattern, stripped, re.I)
             if m:
                 candidate = normalize_text(m.group(1))
-                if 3 <= len(candidate) <= 180:
+                if candidate and not is_generic_job_title(candidate):
                     return candidate
 
-    return clean_detail_title(title) or title
+    cleaned = clean_detail_title(title)
+    return cleaned or title
 
 
-def collect_search_source(source_name, domain):
-    jobs = {}
-    errors = []
-    ddgs = DDGS()
-    for term in SOURCE_SEARCH_TERMS:
-        query = f'site:{domain} {term}'
+def _fallback_search_term(term):
+    loc = '대전' if '대전' in term else ('세종' if '세종' in term else '')
+    lower = term.lower()
+    if '단기' in term or '알바' in term:
+        core = '단기 알바'
+    elif '연봉' in term or '월급' in term:
+        core = '채용'
+    elif 'ai' in lower:
+        core = 'AI 개발자'
+    else:
+        core = 'Java 개발자'
+    return normalize_text(f'{loc} {core}')
+
+
+def _ddgs_search_with_retry(query, max_results=12):
+    last_exc = None
+    for attempt in range(3):
         try:
-            results = ddgs.text(
+            return list(DDGS().text(
                 query,
                 region='kr-kr',
                 safesearch='moderate',
                 timelimit='m',
-                max_results=10,
-            )
-            for item in results or []:
-                title = normalize_text(item.get('title'))
-                body = normalize_text(item.get('body'))
-                url = normalize_url(item.get('href') or item.get('url') or '')
-                if not url or domain not in domain_of(url):
-                    continue
-                if not has_target_location(f'{title} {body}'):
-                    continue
-                candidate = {
-                    'title': title,
-                    'body': body,
-                    'url': url,
-                    'score': 0,
-                    'salary': salary_info(title, body),
-                    'short_pay': short_term_pay_info(title, body),
-                    'source': source_name,
-                    'sources': [source_name],
-                }
-                current = jobs.get(url)
-                if current is None or len(body) > len(current.get('body', '')):
-                    jobs[url] = candidate
+                max_results=max_results,
+            ) or []), None
         except Exception as exc:
-            errors.append(f'{term}: {type(exc).__name__}')
+            last_exc = exc
+            time.sleep(0.35 * (attempt + 1))
+    return [], last_exc
+
+def collect_search_source(source_name, domain):
+    jobs = {}
+    errors = []
+    successful_queries = 0
+
+    for term in SOURCE_SEARCH_TERMS:
+        query = f'site:{domain} {term}'
+        results, error = _ddgs_search_with_retry(query)
+        if error is not None:
+            fallback = f'site:{domain} {_fallback_search_term(term)}'
+            results, fallback_error = _ddgs_search_with_retry(fallback, max_results=15)
+            if fallback_error is not None:
+                errors.append(f'{term}: {type(fallback_error).__name__}')
+                continue
+        successful_queries += 1
+
+        for item in results or []:
+            raw_title = normalize_text(item.get('title'))
+            body = normalize_text(item.get('body'))
+            title = normalize_search_result_title(source_name, raw_title, body)
+            url = normalize_url(item.get('href') or item.get('url') or '')
+            if not url or domain not in domain_of(url):
+                continue
+            if not has_target_location(f'{title} {body}'):
+                continue
+            candidate = {
+                'title': title,
+                'body': body,
+                'url': url,
+                'score': 0,
+                'salary': salary_info(title, body),
+                'short_pay': short_term_pay_info(title, body),
+                'source': source_name,
+                'sources': [source_name],
+            }
+            current = jobs.get(url)
+            if current is None or len(body) > len(current.get('body', '')):
+                jobs[url] = candidate
         time.sleep(0.05)
 
     status = {
-        'ok': len(errors) < len(SOURCE_SEARCH_TERMS),
+        'ok': successful_queries > 0,
         'count': len(jobs),
+        'successful_queries': successful_queries,
         'failed_queries': len(errors),
-        'errors': errors[:2],
+        'errors': errors[:3],
         'mode': '검색',
     }
     print(
         f'[INFO] source={source_name} ok={status["ok"]} '
-        f'jobs={len(jobs)} failed_queries={len(errors)}'
+        f'jobs={len(jobs)} success_queries={successful_queries} failed_queries={len(errors)}'
     )
     return list(jobs.values()), status
-
 
 def collect_all_sources():
     jobkorea_jobs, jobkorea_raw = collect_jobkorea_direct()
@@ -1531,6 +1440,159 @@ def parse_job_posted_date(title, body):
     return '', ''
 
 
+
+def parse_job_deadline(title, body):
+    text = normalize_text(f'{title} {body}')
+    today = date.today()
+    if any(term in text for term in ('채용시', '상시채용', '상시 모집', '상시모집')):
+        return '', '채용시'
+
+    if '오늘마감' in text or '오늘 마감' in text:
+        return today.isoformat(), '마감표시'
+    if '내일마감' in text or '내일 마감' in text:
+        return (today + timedelta(days=1)).isoformat(), '마감표시'
+
+    m = re.search(r'D-(\d{1,3})', text, re.I)
+    if m:
+        return (today + timedelta(days=int(m.group(1)))).isoformat(), 'D-day'
+
+    full_patterns = [
+        r'(?:마감일|접수마감|지원마감|채용마감)\s*[:：]?\s*(20\d{2})[./-](\d{1,2})[./-](\d{1,2})',
+        r'~\s*(20\d{2})[./-](\d{1,2})[./-](\d{1,2})',
+    ]
+    for pattern in full_patterns:
+        m = re.search(pattern, text, re.I)
+        if m:
+            try:
+                return date(int(m.group(1)), int(m.group(2)), int(m.group(3))).isoformat(), '마감일'
+            except Exception:
+                pass
+
+    m = re.search(
+        r'(?:마감일|접수마감|지원마감|채용마감|~)\s*[:：]?\s*(\d{1,2})[./-](\d{1,2})(?:\([^)]*\))?',
+        text,
+        re.I,
+    )
+    if m:
+        try:
+            candidate = date(today.year, int(m.group(1)), int(m.group(2)))
+            if candidate < today - timedelta(days=120):
+                candidate = date(today.year + 1, int(m.group(1)), int(m.group(2)))
+            return candidate.isoformat(), '마감일'
+        except Exception:
+            pass
+    return '', ''
+
+
+def content_close_reason(title, body, deadline=''):
+    text = normalize_text(f'{title} {body}')
+    if any(term in text for term in (
+        '마감되었습니다', '채용마감', '채용 마감', '접수마감',
+        '접수 마감', '공고마감', '공고 마감', '마감된 공고',
+    )):
+        return '원문 마감 표시'
+    if deadline:
+        try:
+            if date.fromisoformat(deadline) < date.today():
+                return f'마감일 경과({deadline})'
+        except Exception:
+            pass
+    return ''
+
+
+def source_check_succeeded(item, source_statuses):
+    for source in (item.get('sources') or [item.get('source')]):
+        if source and (source_statuses.get(source) or {}).get('ok'):
+            return True
+    return False
+
+
+def miss_close_threshold(item, source_statuses):
+    modes = [
+        (source_statuses.get(source) or {}).get('mode')
+        for source in (item.get('sources') or [item.get('source')])
+        if source
+    ]
+    return DIRECT_MISS_CLOSE_THRESHOLD if '직접' in modes else SEARCH_MISS_CLOSE_THRESHOLD
+
+
+def apply_unseen_status(item, source_statuses):
+    out = sanitize_archive_identity(item)
+    deadline = out.get('deadline', '')
+    deadline_source = out.get('deadlineSource', '')
+    if not deadline:
+        deadline, deadline_source = parse_job_deadline(out.get('title', ''), out.get('body', ''))
+    out['deadline'] = deadline
+    out['deadlineSource'] = deadline_source
+
+    explicit_reason = content_close_reason(out.get('title', ''), out.get('body', ''), deadline)
+    if explicit_reason:
+        out['status'] = 'closed'
+        out['closedAt'] = out.get('closedAt') or today_kst()
+        out['closeReason'] = explicit_reason
+        return out
+
+    if out.get('status') == 'closed':
+        return out
+
+    misses = int(out.get('missCount') or 0)
+    if source_check_succeeded(out, source_statuses):
+        misses += 1
+    out['missCount'] = misses
+    out['status'] = 'active'
+    out['closedAt'] = ''
+    out['closeReason'] = ''
+    if misses >= miss_close_threshold(out, source_statuses):
+        out['status'] = 'closed'
+        out['closedAt'] = today_kst()
+        out['closeReason'] = f'원문 미확인 {misses}회'
+    return out
+
+
+def load_job_history():
+    if not HISTORY_FILE.exists():
+        return {'updatedAt': '', 'jobs': []}
+    try:
+        data = json.loads(HISTORY_FILE.read_text(encoding='utf-8'))
+        if not isinstance(data, dict) or not isinstance(data.get('jobs'), list):
+            raise ValueError('invalid history')
+        return data
+    except Exception as exc:
+        print(f'[WARN] job history load failed: {exc}', file=sys.stderr)
+        return {'updatedAt': '', 'jobs': []}
+
+
+def save_job_history(existing_jobs, expired_jobs):
+    merged = {}
+    for item in list(existing_jobs or []) + list(expired_jobs or []):
+        row = sanitize_archive_identity(item)
+        key = normalize_url(row.get('url', '')) or row.get('id') or job_fingerprint(row)
+        if not key:
+            continue
+        row['archivedAt'] = row.get('archivedAt') or today_kst()
+        merged[key] = row
+
+    jobs = list(merged.values())
+    jobs.sort(
+        key=lambda x: (
+            x.get('postedDate') or x.get('firstSeen') or '',
+            x.get('lastSeen') or '',
+        ),
+        reverse=True,
+    )
+    payload = {
+        'updatedAt': datetime.now(ZoneInfo('Asia/Seoul')).isoformat(timespec='seconds'),
+        'count': len(jobs),
+        'jobs': jobs,
+    }
+    HISTORY_FILE.parent.mkdir(parents=True, exist_ok=True)
+    HISTORY_FILE.write_text(
+        json.dumps(payload, ensure_ascii=False, indent=2),
+        encoding='utf-8',
+    )
+    print(f'[INFO] job_history saved={len(jobs)} path={HISTORY_FILE}')
+    return len(jobs)
+
 def archive_categories(job):
     cats = []
     title, body, url = job.get('title', ''), job.get('body', ''), job.get('url', '')
@@ -1564,6 +1626,7 @@ def archive_locations(job):
 def archive_entry(job, existing=None):
     today = today_kst()
     posted, posted_source = parse_job_posted_date(job.get('title', ''), job.get('body', ''))
+    deadline, deadline_source = parse_job_deadline(job.get('title', ''), job.get('body', ''))
     old = existing or {}
 
     salary = salary_info(job.get('title', ''), job.get('body', ''))
@@ -1576,6 +1639,7 @@ def archive_entry(job, existing=None):
 
     first_seen = old.get('firstSeen') or today
     old_posted = old.get('postedDate') or ''
+    # 같은 URL의 기존 공고는 최초 등록일을 유지한다. 재등록은 URL/공고ID가 달라 별도 항목이 된다.
     if old_posted and (not posted or old_posted < posted):
         posted = old_posted
         posted_source = old.get('dateSource') or posted_source
@@ -1589,13 +1653,17 @@ def archive_entry(job, existing=None):
     if len(body) > 900:
         body = body[:897] + '...'
 
+    title = (
+        clean_detail_title(job.get('title', ''), company)
+        or clean_detail_title(old.get('title', ''), company)
+        or '제목 없음'
+    )
+    close_reason = content_close_reason(title, body or old.get('body', ''), deadline)
+    status = 'closed' if close_reason else 'active'
+
     entry = {
         'id': normalize_url(job.get('url', '')) or old.get('id') or job_fingerprint(job),
-        'title': (
-            clean_detail_title(job.get('title', ''), company)
-            or clean_detail_title(old.get('title', ''), company)
-            or '제목 없음'
-        ),
+        'title': title,
         'company': company,
         'body': body or old.get('body', ''),
         'url': normalize_url(job.get('url', '')) or old.get('url', ''),
@@ -1607,14 +1675,18 @@ def archive_entry(job, existing=None):
         'shortPay': short_pay,
         'postedDate': posted or old_posted,
         'dateSource': posted_source or old.get('dateSource', '') or '수집일',
+        'deadline': deadline or old.get('deadline', ''),
+        'deadlineSource': deadline_source or old.get('deadlineSource', ''),
+        'status': status,
+        'missCount': 0,
+        'closedAt': (old.get('closedAt') or today) if status == 'closed' else '',
+        'closeReason': close_reason,
         'firstSeen': first_seen,
         'lastSeen': today,
     }
     if not entry['categories'] and old.get('categories'):
         entry['categories'] = old['categories']
     return entry
-
-
 
 def sanitize_archive_identity(item):
     out = dict(item or {})
@@ -1631,6 +1703,14 @@ def sanitize_archive_identity(item):
     out['company'] = company
     if out.get('url'):
         out['id'] = normalize_url(out.get('url', '')) or out.get('id', '')
+    if not out.get('deadline'):
+        deadline, deadline_source = parse_job_deadline(out.get('title', ''), out.get('body', ''))
+        out['deadline'] = deadline
+        out['deadlineSource'] = deadline_source
+    out['status'] = out.get('status') or ('closed' if content_close_reason(out.get('title', ''), out.get('body', ''), out.get('deadline', '')) else 'active')
+    out['missCount'] = int(out.get('missCount') or 0)
+    out['closedAt'] = out.get('closedAt', '')
+    out['closeReason'] = out.get('closeReason', '')
     return out
 
 
@@ -1660,16 +1740,15 @@ def load_job_archive():
 def save_job_archive(all_jobs, source_statuses):
     ARCHIVE_FILE.parent.mkdir(parents=True, exist_ok=True)
     previous = load_job_archive()
+    history = load_job_history()
     old_jobs = previous.get('jobs', [])
 
-    # URL과 공고 fingerprint 양쪽으로 기존 항목을 찾는다.
+    # 기존 항목 갱신은 정규화 URL/원문 공고ID 기준만 사용한다.
+    # 회사명+제목 fingerprint로 새 URL을 합치면 재등록 공고를 잃을 수 있다.
     by_url = {}
-    by_fp = {}
     for old in old_jobs:
         if old.get('url'):
             by_url[normalize_url(old['url'])] = old
-        if old.get('id'):
-            by_fp[old['id']] = old
 
     merged = []
     used_old_ids = set()
@@ -1678,15 +1757,12 @@ def save_job_archive(all_jobs, source_statuses):
         if not cats:
             continue
         url = normalize_url(job.get('url', ''))
-        fp = job_fingerprint(job)
-        old = by_url.get(url) or by_fp.get(fp)
+        old = by_url.get(url)
         entry = archive_entry(job, old)
         merged.append(entry)
         if old:
             used_old_ids.add(id(old))
 
-    # 오늘 검색에 안 잡힌 기존 공고도 보관기간 동안 유지하되,
-    # 과거에 잘못 저장된 제목/업체명은 원문 상세페이지로 다시 교정한다.
     unseen_old = [
         old for old in old_jobs
         if id(old) not in used_old_ids
@@ -1707,20 +1783,23 @@ def save_job_archive(all_jobs, source_statuses):
     for old in unseen_old:
         url = normalize_url(old.get('url', ''))
         candidate = refreshed_by_url.get(url, old)
-        merged.append(sanitize_archive_identity(candidate))
+        merged.append(apply_unseen_status(candidate, source_statuses))
 
-    # 사이트가 달라도 같은 공고는 하나로 합친다.
+    # 다른 사이트에 동시에 올라온 같은 공고는 하나로 합치되,
+    # 같은 사이트의 다른 URL은 재등록 가능성이 있으므로 same_job()에서 합치지 않는다.
     result = []
     for item in merged:
         duplicate = None
         probe = {
             'title': item.get('title', ''),
+            'company': item.get('company', ''),
             'body': item.get('body', ''),
             'url': item.get('url', ''),
         }
         for existing in result:
             ex_probe = {
                 'title': existing.get('title', ''),
+                'company': existing.get('company', ''),
                 'body': existing.get('body', ''),
                 'url': existing.get('url', ''),
             }
@@ -1733,19 +1812,22 @@ def save_job_archive(all_jobs, source_statuses):
             duplicate['sources'] = list(dict.fromkeys(
                 (duplicate.get('sources') or []) + (item.get('sources') or [])
             ))
-            if item.get('postedDate', '') > duplicate.get('postedDate', ''):
-                duplicate['postedDate'] = item.get('postedDate', '')
-                duplicate['dateSource'] = item.get('dateSource', '')
             duplicate['lastSeen'] = max(duplicate.get('lastSeen', ''), item.get('lastSeen', ''))
-            duplicate['firstSeen'] = min(
-                x for x in [duplicate.get('firstSeen', ''), item.get('firstSeen', '')] if x
-            )
+            firsts = [x for x in [duplicate.get('firstSeen', ''), item.get('firstSeen', '')] if x]
+            if firsts:
+                duplicate['firstSeen'] = min(firsts)
             duplicate['categories'] = list(dict.fromkeys(
                 (duplicate.get('categories') or []) + (item.get('categories') or [])
             ))
+            if duplicate.get('status') != 'active' and item.get('status') == 'active':
+                duplicate['status'] = 'active'
+                duplicate['closedAt'] = ''
+                duplicate['closeReason'] = ''
+                duplicate['missCount'] = 0
 
     cutoff = date.today() - timedelta(days=ARCHIVE_DAYS)
     kept = []
+    expired = []
     for item in result:
         effective = item.get('postedDate') or item.get('firstSeen') or today_kst()
         try:
@@ -1754,6 +1836,8 @@ def save_job_archive(all_jobs, source_statuses):
             d = date.today()
         if d >= cutoff:
             kept.append(item)
+        else:
+            expired.append(item)
 
     kept.sort(
         key=lambda x: (
@@ -1763,10 +1847,13 @@ def save_job_archive(all_jobs, source_statuses):
         ),
         reverse=True,
     )
+    history_count = save_job_history(history.get('jobs', []), expired)
+
     payload = {
         'updatedAt': datetime.now(ZoneInfo('Asia/Seoul')).isoformat(timespec='seconds'),
         'rangeDays': ARCHIVE_DAYS,
         'cutoffDate': cutoff.isoformat(),
+        'historyCount': history_count,
         'sourceStatuses': source_statuses,
         'count': len(kept),
         'jobs': kept,
@@ -1775,9 +1862,13 @@ def save_job_archive(all_jobs, source_statuses):
         json.dumps(payload, ensure_ascii=False, indent=2),
         encoding='utf-8',
     )
-    print(f'[INFO] job_archive saved={len(kept)} cutoff={cutoff.isoformat()} path={ARCHIVE_FILE}')
+    active_count = sum(1 for item in kept if item.get('status', 'active') == 'active')
+    closed_count = len(kept) - active_count
+    print(
+        f'[INFO] job_archive saved={len(kept)} active={active_count} closed={closed_count} '
+        f'history={history_count} cutoff={cutoff.isoformat()} path={ARCHIVE_FILE}'
+    )
     return len(kept)
-
 
 def search_jobs():
     all_jobs, source_statuses = collect_all_sources()
