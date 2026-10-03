@@ -39,42 +39,33 @@ function applyCustomList(custom){
   if(custom.length){ buildTickerPick(); if(typeof renderSingle==='function') renderSingle(); }
 }
 
-// 저장: Firestore(로그인 시) + localStorage(항상)
+// 백테스트 사용자 설정도 Firebase가 유일한 정본이다.
 window.saveCustomTickers = async function(){
   const custom = getCustomList();
-  try { localStorage.setItem('jkq_bt_tickers', JSON.stringify(custom)); } catch(e){}
-  if(!auth.currentUser) return;
-  try { await setDoc(doc(db,'users',auth.currentUser.uid),{backtestTickers:custom},{merge:true}); }
-  catch(e){ console.warn('Firestore 저장 실패',e); }
-};
-
-// Firestore에서 커스텀 종목 불러오기
-async function loadCustomTickers(uid) {
-  try {
-    const snap = await getDoc(doc(db, 'users', uid));
-    const custom = snap.data()?.backtestTickers || [];
-    if(custom.length){ applyCustomList(custom); return; }
-  } catch(e) { console.warn('Firestore 불러오기 실패', e); }
-  // Firestore 실패 시 localStorage 폴백
-  loadFromLocalStorage();
-}
-function loadFromLocalStorage(){
+  if(!auth.currentUser) return false;
   try{
-    const saved = JSON.parse(localStorage.getItem('jkq_bt_tickers')||'[]');
-    if(saved.length) applyCustomList(saved);
-  }catch(e){}
+    await setDoc(doc(db,'users',auth.currentUser.uid),{backtestTickers:custom,backtestTickersUpdated:Date.now()},{merge:true});
+    return true;
+  }catch(e){ console.warn('Firestore 저장 실패',e); return false; }
+};
+window.saveBacktestState = async function(st){
+  if(!auth.currentUser) return false;
+  try{
+    await setDoc(doc(db,'users',auth.currentUser.uid),{backtestState:st,backtestStateUpdated:Date.now()},{merge:true});
+    return true;
+  }catch(e){ console.warn('백테스트 설정 저장 실패',e); return false; }
+};
+async function loadBacktestUserState(uid){
+  const snap=await getDoc(doc(db,'users',uid)),d=snap.exists()?(snap.data()||{}):{};
+  const custom=Array.isArray(d.backtestTickers)?d.backtestTickers:[];
+  if(custom.length)applyCustomList(custom);
+  if(typeof window.restoreBtStateFrom==='function')window.restoreBtStateFrom(d.backtestState||null);
 }
-// type="module"은 defer라 아래 일반 스크립트 블록보다 '나중에' 실행된다.
-// (주석에도 script 태그 문자열을 그대로 쓰지 않는다 — 태그 추출·파싱을 깨뜨린다)
-// 그래서 초기화 IIFE에서 이 함수를 부르면 항상 ReferenceError였고(커스텀 종목이 새로고침 때 사라졌다),
-// 복원은 모듈 자신이 — TICKERS/buildTickerPick이 이미 준비된 이 시점에 — 직접 해야 한다.
-window.loadFromLocalStorage = loadFromLocalStorage;
-loadFromLocalStorage();
 
 // 로그인 · 이용 승인 — 승인된 계정만 본문이 열린다 (판정은 jk-access.js 한 곳 · 운영·플랜과 같은 글자)
 JKAccess.guard({auth, db, doc, getDoc, setDoc, onAuthStateChanged, signInWithPopup, GoogleAuthProvider, signOut}, {
   onUser: user => renderUserBadge(user),
-  onOk:   user => loadCustomTickers(user.uid)
+  onOk:   user => loadBacktestUserState(user.uid)
 });
 
 
@@ -321,7 +312,7 @@ td:first-child{text-align:left;}
   <div class="brand">
     <div>
       <div class="logo">Backtest</div>
-      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v2.17.0</span></h1>
+      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v2.17.1</span></h1>
     </div>
   </div>
   <div class="hright">
@@ -2043,33 +2034,31 @@ function renderMomentum(res,U,tickers){
   lastRender();
 }
 
-/* ════════ 옵션 저장/복원 — 새로고침해도 모든 설정 유지 (localStorage) ════════ */
-const BT_STATE_KEY='jkq_bt_state';
-function saveBtState(){ if(_restoring)return; try{
-  const inputs={}; document.querySelectorAll('.ctrl-card input[id]').forEach(el=>{ if(el.id!=='addTicker'&&el.id!=='addTicker2'&&el.id!=='dEnd') inputs[el.id]=el.value; });  // 종료일(dEnd)은 저장 안 함 — 항상 오늘 날짜 유지
+/* ════════ 옵션 저장/복원 — Firebase DB 전용 ════════ */
+function btStateSnapshot(){
+  const inputs={}; document.querySelectorAll('.ctrl-card input[id]').forEach(el=>{ if(el.id!=='addTicker'&&el.id!=='addTicker2'&&el.id!=='dEnd') inputs[el.id]=el.value; });
   const segs={}; document.querySelectorAll('.ctrl-card .seg[id]').forEach(seg=>{ const b=seg.querySelector('button.active'); if(b){ const v=Object.values(b.dataset)[0]; if(v!=null) segs[seg.id]=v; } });
-  const st={ v:1, strat, inputs, segs, sets:{dca:[...dcaActive],im:[...imActive],vr:[...vrActive],ma:[...maActive],asap:[...asapActive],all:[...allActive],std:[...stdActive],ivs:[...ivsActive]} };
-  localStorage.setItem(BT_STATE_KEY, JSON.stringify(st));
-}catch(e){} }
-function restoreBtState(){ try{
-  const st=JSON.parse(localStorage.getItem(BT_STATE_KEY)||'null'); if(!st) return false;
+  return {v:2,strat,inputs,segs,sets:{dca:[...dcaActive],im:[...imActive],vr:[...vrActive],ma:[...maActive],asap:[...asapActive],all:[...allActive],std:[...stdActive],ivs:[...ivsActive]}};
+}
+async function saveBtState(){
+  if(_restoring||typeof window.saveBacktestState!=='function')return false;
+  return await window.saveBacktestState(btStateSnapshot());
+}
+function restoreBtStateFrom(st){
+  if(!st||typeof st!=='object')return false;
   _restoring=true;
   try{
     if(st.sets){ if(st.sets.dca)dcaActive=new Set(st.sets.dca); if(st.sets.im)imActive=new Set(st.sets.im); if(st.sets.vr)vrActive=new Set(st.sets.vr); if(st.sets.ma)maActive=new Set(st.sets.ma); if(st.sets.asap)asapActive=new Set(st.sets.asap); if(st.sets.all)allActive=new Set(st.sets.all); if(st.sets.std)stdActive=new Set(st.sets.std); if(st.sets.ivs)ivsActive=new Set(st.sets.ivs); }
-    // 세그: 저장된 값의 버튼을 클릭해 active 클래스 + JS 변수 동기화 (핸들러가 단일 진실원). _restoring이라 재실행은 억제됨.
     if(st.segs) Object.entries(st.segs).forEach(([id,val])=>{ const seg=document.getElementById(id); if(!seg)return;
       const btn=[...seg.querySelectorAll('button')].find(b=>String(Object.values(b.dataset)[0])===String(val)); if(btn) btn.click(); });
-    // 입력값: 세그 클릭 이후에 덮어써 저장값 우선 (예: 후보군 변경이 원금을 초기화해도 저장값 복원)
-    if(st.inputs) Object.entries(st.inputs).forEach(([id,v])=>{ if(id==='dEnd')return; const el=document.getElementById(id); if(el&&v!=null&&v!=='') el.value=v; });  // 종료일은 복원하지 않음 (오늘 날짜 고정)
-    if(st.strat) setStrat(st.strat);
-  }finally{ _restoring=false; }
+    if(st.inputs) Object.entries(st.inputs).forEach(([id,v])=>{ if(id==='dEnd')return; const el=document.getElementById(id); if(el&&v!=null&&v!=='') el.value=v; });
+    if(st.strat)setStrat(st.strat);
+  }finally{_restoring=false;}
   return true;
-}catch(e){ _restoring=false; return false; } }
-// 변경 시 자동 저장 (세그 클릭·셀렉트 변경은 즉시, 텍스트 입력은 디바운스)
-['click','change'].forEach(ev=>document.querySelector('.ctrl-card')?.addEventListener(ev,()=>{ if(!_restoring) setTimeout(saveBtState,0); }));
-document.querySelector('.ctrl-card')?.addEventListener('input',()=>{ if(_restoring)return; clearTimeout(window._btSaveT); window._btSaveT=setTimeout(saveBtState,450); });
-// 초기 복원 (기본값·빈 상태 세팅 뒤, 모든 세그 배선 완료 후 실행)
-restoreBtState();
+}
+window.restoreBtStateFrom=restoreBtStateFrom;
+['click','change'].forEach(ev=>document.querySelector('.ctrl-card')?.addEventListener(ev,()=>{ if(!_restoring) setTimeout(()=>{void saveBtState();},0); }));
+document.querySelector('.ctrl-card')?.addEventListener('input',()=>{ if(_restoring)return; clearTimeout(window._btSaveT); window._btSaveT=setTimeout(()=>{void saveBtState();},450); });
 
 /* 짧은 기간 — 막지 않고 알린다.
    1년 미만을 통째로 막아 두니 '올해 1월부터'를 볼 수가 없었다. 막아야 할 이유는
