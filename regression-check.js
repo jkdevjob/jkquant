@@ -1755,7 +1755,7 @@ console.log('[35] 로그인 — 조용히 갇히지 않는다');
   ok('Firebase 저장 실패는 동기화 오류 상태로 남긴다',
      /setSync\('err'\)/.test(extractFn(idx,'async function _commitStateRemote(where)')));
   ok('일반 save는 즉시 Firebase 저장 promise를 반환',
-     /function save\(\)\{[^}]*return pushRemoteNow\(\);\}/.test(idx));
+     /function save\(\)\{\s*if\(S\)S\._updated=Date\.now\(\);\s*return pushRemoteNow\(\);\s*\}/.test(idx));
   ok('운영 앱에 브라우저 영구저장 폴백이 없다',
      !/localStorage|sessionStorage|indexedDB/.test(idx));
 
@@ -11238,15 +11238,18 @@ console.log('\n[ACCESS] 이용 승인제 — 판정 한 곳 · 모든 페이지 
                  adminKey:ADMIN_KEYS.some(k=>k in (w.data||{})), cache:'jk_access_v1' in E.lsm}; }
     { const E=loadAccess(), F=mkFb({email:U.email, lastSeen:5});                    // 옛 계정(신청 기록 없음) — 신청으로 잡힌다
       const r=await E.A.check(U, F.fb); out.legacy={st:r.state, n:F.log.writes.length, req:!!(F.log.writes[0]&&F.log.writes[0].data.requestedAt)}; }
-    { const E=loadAccess(), F=mkFb({requestedAt:1, approved:true});                 // 승인됨 — 쓰지 않고 이 기기에 기억
-      const r=await E.A.check(U, F.fb); const c=JSON.parse(E.lsm.jk_access_v1||'null');
-      out.appr={st:r.state, n:F.log.writes.length, cache:c&&c.uid+':'+c.state}; }
-    { const E=loadAccess({ls:{jk_access_v1:JSON.stringify({uid:'u1',state:'approved'})}}), F=mkFb({requestedAt:1, approved:true, blocked:true});
-      const r=await E.A.check(U, F.fb); out.blk={st:r.state, cache:'jk_access_v1' in E.lsm}; }          // 승인돼 있어도 차단 — 기억도 지운다
-    { const E=loadAccess({ls:{jk_access_v1:JSON.stringify({uid:'u1',state:'approved'})}}), F=mkFb(null,{failRead:true});
-      const r=await E.A.check(U, F.fb); out.offOk={st:r.state, off:!!r.offline, n:F.log.writes.length}; } // 확인 실패 + 이 기기에서 승인 확인됨 → 연다
-    { const E=loadAccess({ls:{jk_access_v1:JSON.stringify({uid:'u9',state:'approved'})}}), F=mkFb(null,{failRead:true});
-      out.offOther=(await E.A.check(U, F.fb)).state; }                                                      // 다른 계정의 기억은 안 통한다
+    { const E=loadAccess(), F=mkFb({requestedAt:1, approved:true});                 // 승인됨 — 쓰지 않고 페이지 메모리 캐시에만 유지
+      const r=await E.A.check(U, F.fb);
+      out.appr={st:r.state, n:F.log.writes.length, cache:E.A.cacheOk(U), browser:'jk_access_v1' in E.lsm}; }
+    { const E=loadAccess(), F=mkFb({requestedAt:1, approved:true, blocked:true});
+      E.A.cacheSet(U,'approved');
+      const r=await E.A.check(U, F.fb); out.blk={st:r.state, cache:E.A.cacheOk(U), browser:'jk_access_v1' in E.lsm}; } // 승인돼 있어도 차단 — 메모리 승인도 지운다
+    { const E=loadAccess(), F=mkFb(null,{failRead:true});
+      E.A.cacheSet(U,'approved');
+      const r=await E.A.check(U, F.fb); out.offOk={st:r.state, off:!!r.offline, n:F.log.writes.length, browser:'jk_access_v1' in E.lsm}; } // 같은 페이지 메모리 승인만 오프라인 허용
+    { const E=loadAccess(), F=mkFb(null,{failRead:true});
+      E.A.cacheSet(U2,'approved');
+      out.offOther=(await E.A.check(U, F.fb)).state; }                                                      // 다른 계정 메모리는 안 통한다
     { const E=loadAccess(), F=mkFb(null,{failRead:true}); out.offNone=(await E.A.check(U, F.fb)).state; }
     { const E=loadAccess(), F=mkFb(null,{hang:true}); const r=await E.A.check(U, F.fb, {timeoutMs:20});
       out.hang={st:r.state, why:/응답 없음/.test(r.error||'')}; }                                           // 영영 안 끝나는 읽기는 시간으로 끊는다
@@ -11257,10 +11260,10 @@ console.log('\n[ACCESS] 이용 승인제 — 판정 한 곳 · 모든 페이지 
        out.fresh.st==='pending' && out.fresh.n===1 && out.fresh.ref==='profiles/u1' && out.fresh.keys==='email,name,photo,requestedAt'
        && out.fresh.merge && !out.fresh.adminKey && !out.fresh.cache, JSON.stringify(out.fresh));
     ok('check: 신청 기록 없는 옛 계정도 신청으로 잡힌다(대기)', out.legacy.st==='pending' && out.legacy.n===1 && out.legacy.req, JSON.stringify(out.legacy));
-    ok('check: 승인된 계정 → 승인 · 다시 쓰지 않음 · 이 기기에 그 uid 로 기억', out.appr.st==='approved' && out.appr.n===0 && out.appr.cache==='u1:approved', JSON.stringify(out.appr));
-    ok('check: 승인돼 있어도 차단이면 막고 기억을 지운다', out.blk.st==='blocked' && !out.blk.cache, JSON.stringify(out.blk));
-    ok('check: 확인 실패 — 이 기기에서 승인 확인된 그 계정만 연다(오프라인) · 다른 계정 기억·기억 없음은 오류',
-       out.offOk.st==='approved' && out.offOk.off && out.offOk.n===0 && out.offOther==='error' && out.offNone==='error', JSON.stringify([out.offOk,out.offOther,out.offNone]));
+    ok('check: 승인된 계정 → 승인 · 다시 쓰지 않음 · 페이지 메모리에서만 승인 유지', out.appr.st==='approved' && out.appr.n===0 && out.appr.cache && !out.appr.browser, JSON.stringify(out.appr));
+    ok('check: 승인돼 있어도 차단이면 막고 페이지 메모리 승인도 지운다', out.blk.st==='blocked' && !out.blk.cache && !out.blk.browser, JSON.stringify(out.blk));
+    ok('check: 확인 실패 — 같은 페이지 메모리 승인 계정만 오프라인 허용 · 다른 계정/새 페이지는 오류 · 브라우저 영구저장 없음',
+       out.offOk.st==='approved' && out.offOk.off && out.offOk.n===0 && !out.offOk.browser && out.offOther==='error' && out.offNone==='error', JSON.stringify([out.offOk,out.offOther,out.offNone]));
     ok('check: 안 끝나는 읽기는 시간으로 끊어 오류로', out.hang.st==='error' && out.hang.why, JSON.stringify(out.hang));
     ok('check: 관리자는 읽지도 않고 통과 · 단타·관리자 메뉴를 켜고, 다른 계정이 확인되면 끈다',
        out.adm.st==='admin' && out.adm.reads===0 && out.adm.admin && !out.adm.afterUser, JSON.stringify(out.adm));
@@ -11269,7 +11272,8 @@ console.log('\n[ACCESS] 이용 승인제 — 판정 한 곳 · 모든 페이지 
   // ── 열지 말지(admit) — 빠른 길 · 뒤에서 다시 묻기 · 계정 바뀜 ──
   PENDING.push((async()=>{
     const out={};
-    { const E=loadAccess({ls:{jk_access_v1:JSON.stringify({uid:'u1',state:'approved'})}}), F=mkFb({requestedAt:1, approved:true, blocked:true},{user:U, delay:3});
+    { const E=loadAccess(), F=mkFb({requestedAt:1, approved:true, blocked:true},{user:U, delay:3});
+      E.A.cacheSet(U,'approved');
       const locks=[]; let settled=false;
       const p=E.A.admit(U, F.fb, {lock:r=>locks.push(r.state)}).then(v=>{ settled=true; return v; });
       const v=await p; const before=locks.length; await tick(12);
@@ -11279,15 +11283,15 @@ console.log('\n[ACCESS] 이용 승인제 — 판정 한 곳 · 모든 페이지 
       const v=await p; out.pend={v, locks:locks.join(','), first:seen[0], ok:E.cls.has('jk-ok')}; }
     { const E=loadAccess(), F=mkFb({requestedAt:1, approved:true},{user:U}); const locks=[];
       const v=await E.A.admit(U, F.fb, {lock:r=>locks.push(r.state)});
-      out.appr={v, locks:locks.length, ok:E.cls.has('jk-ok'), gate:(E.els.jkgate||{}).className, cache:'jk_access_v1' in E.lsm}; }
+      out.appr={v, locks:locks.length, ok:E.cls.has('jk-ok'), gate:(E.els.jkgate||{}).className, cache:E.A.cacheOk(U), browser:'jk_access_v1' in E.lsm}; }
     { const E=loadAccess(), F=mkFb({requestedAt:1},{user:U, onRead:auth=>{ auth.currentUser=U2; }}); const locks=[];
       const v=await E.A.admit(U, F.fb, {lock:r=>locks.push(r.state)}); out.stale={v, locks:locks.length}; }
     { const E=loadAccess(), F=mkFb(null,{user:ADM}); const v=await E.A.admit(ADM, F.fb, {lock:()=>{}}); await tick();
       out.adm={v, reads:F.log.reads, admin:E.cls.has('jk-admin')}; }
-    ok('admit: 이 기기에서 승인 확인된 계정은 곧바로 연다 → 뒤에서 다시 물어 차단이면 그 자리에서 덮는다(한 번)',
+    ok('admit: 같은 페이지 메모리에서 승인 확인된 계정은 곧바로 연다 → 뒤에서 다시 물어 차단이면 그 자리에서 덮는다(한 번)',
        out.fast.v===true && out.fast.before===0 && out.fast.locks==='blocked', JSON.stringify(out.fast));
     ok('admit: 처음 보는 계정은 \'확인 중\' 을 띄우고 답을 기다린다 → 대기면 덮고 false', out.pend.v===false && out.pend.locks==='pending' && out.pend.first==='checking' && !out.pend.ok, JSON.stringify(out.pend));
-    ok('admit: 승인이면 막을 걷고(jk-ok) true · 이 기기에 기억', out.appr.v===true && out.appr.locks===0 && out.appr.ok && out.appr.gate==='' && out.appr.cache, JSON.stringify(out.appr));
+    ok('admit: 승인이면 막을 걷고(jk-ok) true · 페이지 메모리에만 유지', out.appr.v===true && out.appr.locks===0 && out.appr.ok && out.appr.gate==='' && out.appr.cache && !out.appr.browser, JSON.stringify(out.appr));
     ok('admit: 확인하는 사이 계정이 바뀌면 false · 덮지도 않는다(새 계정 흐름이 맡는다)', out.stale.v===false && out.stale.locks===0, JSON.stringify(out.stale));
     ok('admit: 관리자는 묻지 않고 연다 · 메뉴 켬', out.adm.v===true && out.adm.reads===0 && out.adm.admin, JSON.stringify(out.adm));
   })().catch(e=>ok('admit 시험 실행', false, String(e&&e.stack||e))));
