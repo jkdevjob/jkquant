@@ -30,9 +30,17 @@ function fallbackScore(kind,x){
   const raw=50+20*Math.tanh(all/.20)+25*Math.tanh(validation/.20)+10*Math.tanh(recent/.75)+5*(risk?1:-1);
   return {score:clamp(50+(raw-50)*sf,0,100),sampleFactor:sf,trades,minTrades:min};
 }
+function generatedCompatible(kind,name){
+  const n=String(name||"");
+  const rx={opening:/^gen_o_/,daytrading:/^gen_d_/,crypto:/^gen_c_/,soxl:/^gen_s_/}[kind];
+  return !!rx&&rx.test(n);
+}
 function normalize(kind,report){
-  const by=new Map((report&&report.candidates||[]).map(x=>[String(x.name||""),x]));
-  const rows=CATALOG[kind].map(name=>{
+  const candidates=(report&&report.candidates)||[];
+  const by=new Map(candidates.map(x=>[String(x.name||""),x]));
+  const generated=candidates.map(x=>String(x.name||"")).filter(name=>generatedCompatible(kind,name));
+  const names=[...new Set([...(CATALOG[kind]||[]),...generated])];
+  const rows=names.map(name=>{
     const x=by.get(name)||{name,status:"collecting"};
     const fb=fallbackScore(kind,x);
     const score=Number.isFinite(Number(x.researchScore))?Number(x.researchScore):fb.score;
@@ -47,8 +55,9 @@ function normalize(kind,report){
       validationEdgePct:n(x.validationAvgEdgePct,x.holdoutAvgEdgePct!=null?x.holdoutAvgEdgePct:(x.last20AvgEdgePct!=null?x.last20AvgEdgePct:x.oosAvgEdgePct)),
       recentEdgePct:n(x.recentEdgePct,x.last20AvgEdgePct!=null?x.last20AvgEdgePct:x.holdoutAvgEdgePct),
       riskOk:x.mddOk!==false&&x.profitFactorOk!==false,
+      factory:x.factory===true||generatedCompatible(kind,name),factoryReady:x.factoryReady!==false,
       review:x.status==="review",
-      liveCompatible:!NON_PROMOTABLE.has(kind+":"+name)
+      liveCompatible:!NON_PROMOTABLE.has(kind+":"+name)&&((CATALOG[kind]||[]).includes(name)||generatedCompatible(kind,name))
     };
     row.promotionEligible=isPromotionEligible(kind,row);
     const life=report&&report.lifecycle||{},active=new Set(life.active||[]);
@@ -92,4 +101,4 @@ export async function onRequestGet(){
     return json({ok:true,generatedAt:j.generatedAt||null,date:j.date||null,autoPromotion:true,rankings});
   }catch(e){return json({ok:false,error:String(e.message||e)},502);}
 }
-export {CATALOG,normalize,fallbackScore,isPromotionEligible,PROMOTION_MIN_SCORE,NON_PROMOTABLE};
+export {CATALOG,normalize,fallbackScore,isPromotionEligible,PROMOTION_MIN_SCORE,NON_PROMOTABLE,generatedCompatible};
