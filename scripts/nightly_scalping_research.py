@@ -42,10 +42,43 @@ SHADOW_MIN_COUNT=10
 SHADOW_SCORE_VERSION="v2-lifecycle"
 AUTO_PROMOTION_DAYS=7
 AUTO_PROMOTION_MIN_SCORE=60
+FACTORY_EPOCH=date(2026,10,3)
+FACTORY_CYCLE_DAYS=28
+FACTORY_INCUBATION_DAYS=14
+
+def factory_cycle_index(on_date=None):
+    d=on_date or datetime.now(KST).date()
+    return max(0,(d-FACTORY_EPOCH).days//FACTORY_CYCLE_DAYS)
+
+def opening_factory_names(on_date=None):
+    k=factory_cycle_index(on_date);out=[]
+    pbs=[.4,.6,.8];amounts=[1.3,1.6,1.9];vols=[1.1,1.4,1.8];cuts=[910,915,920]
+    stops=[.7,.9,1.1];tps=[1.2,1.8,2.1]
+    for j in range(4):
+        z=k*4+j;pb=pbs[z%len(pbs)];amount=amounts[(z*3+1)%len(amounts)]
+        vol=vols[(z*5+2)%len(vols)];cut=cuts[(z*7)%len(cuts)]
+        stop=stops[(z*11+1)%len(stops)];tp=tps[(z*13+2)%len(tps)]
+        out.append(f"gen_o_pb{round(pb*10)}_am{round(amount*10)}_v{round(vol*10)}_e{cut}_sl{round(stop*10)}_tp{round(tp*10)}")
+    return out
+
+def factory_meta(name,evidence_date):
+    if not str(name or "").startswith("gen_"):
+        return {"factory":False,"factoryReady":True,"factoryAgeDays":None,"factoryIncubationDays":0}
+    try:
+        ed=date.fromisoformat(str(evidence_date))
+    except Exception:
+        ed=datetime.now(KST).date()
+    start=FACTORY_EPOCH+timedelta(days=factory_cycle_index(ed)*FACTORY_CYCLE_DAYS)
+    age=max(0,(ed-start).days)
+    return {"factory":True,"factoryReady":age>=FACTORY_INCUBATION_DAYS,
+            "factoryAgeDays":age,"factoryIncubationDays":FACTORY_INCUBATION_DAYS,
+            "factoryCycleStart":start.isoformat()}
+
 OPENING_SHADOW_NAMES=[
     "hold_to_next_open","today_combo_v1","pb_max_0.5","amount_1.5","entry_by_0915",
     "entry_by_0920","gap_3_6","vol_1.5","stop_0.7","tp_1.0",
     "pb_max_0.7","amount_1.8","entry_by_0910","stop_0.8_tp_1.8",
+    *opening_factory_names(),
 ]
 
 def load_json(p:Path, default=None):
@@ -144,6 +177,7 @@ def apply_shadow_lifecycle(kind, report, current_date=None):
     retired=[x for x in prev_active if x not in active_set]
     for x in rows:
         name=str(x.get("name") or "")
+        x.update(factory_meta(name,evidence_date))
         if name in active_set:
             x["lifecycleStatus"]="active"
             x["lifecycleReason"]="상위 %d 경쟁군 유지"%SHADOW_MIN_COUNT
@@ -180,6 +214,7 @@ def apply_shadow_lifecycle(kind, report, current_date=None):
         and top.get("sampleReady") is True
         and risk_ok
         and float(top.get("researchScore") or 0)>=AUTO_PROMOTION_MIN_SCORE
+        and top.get("factoryReady") is not False
         and not (kind=="opening" and leader=="hold_to_next_open")
     )
     missing=[]
@@ -188,6 +223,7 @@ def apply_shadow_lifecycle(kind, report, current_date=None):
     if top.get("sampleReady") is not True: missing.append("최소 표본 미충족")
     if not risk_ok: missing.append("위험조건 미충족")
     if float(top.get("researchScore") or 0)<AUTO_PROMOTION_MIN_SCORE: missing.append("점수 %.2f<%d"%(float(top.get("researchScore") or 0),AUTO_PROMOTION_MIN_SCORE))
+    if top.get("factoryReady") is False: missing.append("자동생성 인큐베이션 %d/%d일"%(int(top.get("factoryAgeDays") or 0),FACTORY_INCUBATION_DAYS))
     if kind=="opening" and leader=="hold_to_next_open": missing.append("연구전용 전략")
 
     today_changes=[
@@ -222,6 +258,7 @@ def apply_shadow_lifecycle(kind, report, current_date=None):
             "enabled":True,
             "requiredLeaderDays":AUTO_PROMOTION_DAYS,
             "minScore":AUTO_PROMOTION_MIN_SCORE,
+            "factoryIncubationDays":FACTORY_INCUBATION_DAYS,
             "eligible":gate_ok,
             "variant":leader or None,
             "score":float(top.get("researchScore") or 0) if top else None,
