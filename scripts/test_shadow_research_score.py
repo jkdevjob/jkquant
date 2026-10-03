@@ -69,7 +69,7 @@ assert len(state["activeCandidates"])>=10
 print("ALL PASS — shadow lifecycle")
 
 
-print("[shadow generator] 새 연구세션마다 신규 후보 생성, 같은 세션 중복 금지")
+print("[shadow generator] 주 1회 생성·중복 금지·실제 경쟁군 진입 검사")
 base_candidates=[]
 for i,name in enumerate(m.CANDIDATE_POOLS["crypto"]):
     base_candidates.append({
@@ -81,13 +81,41 @@ for i,name in enumerate(m.CANDIDATE_POOLS["crypto"]):
 rep={"to":"2026-10-01","candidates":base_candidates}
 s1=m.evolve_lifecycle("crypto",rep,None)
 assert s1["factoryGeneration"]==1
-assert len(s1["generatedCandidates"])==5
-names1=[x["name"] for x in s1["generatedCandidates"]]
+assert len(s1["generatedPool"])==1
+assert s1["generatedPool"][0]["name"]=="cf_g0001"
+assert s1["generatedPool"][0]["params"]==m.factory_params("crypto",1)
+
 s1_same=m.evolve_lifecycle("crypto",rep,s1)
 assert s1_same["factoryGeneration"]==1
-assert [x["name"] for x in s1_same["generatedCandidates"]]==names1
-rep["to"]="2026-10-02"
-s2=m.evolve_lifecycle("crypto",rep,s1_same)
+assert len(s1_same["generatedPool"])==1
+
+rep["to"]="2026-10-07"
+s6=m.evolve_lifecycle("crypto",rep,s1_same)
+assert s6["factoryGeneration"]==1, "7일 미만에는 신규 세대 생성 금지"
+
+rep["to"]="2026-10-08"
+s2=m.evolve_lifecycle("crypto",rep,s6)
 assert s2["factoryGeneration"]==2
-assert [x["name"] for x in s2["generatedCandidates"]]!=names1
+assert [x["name"] for x in s2["generatedPool"]]==["cf_g0001","cf_g0002"]
+
+# 생성 후보가 충분한 전향적 표본을 얻은 뒤에는 정적 예비후보와 동일하게 경쟁한다.
+generated={
+    "name":"cf_g0001","status":"review","researchScore":95,
+    "sampleFactor":1,"sampleReady":True,
+    "scoreParts":{"trades":60,"minTrades":50},
+    "allAvgEdgePct":.3,"holdoutAvgEdgePct":.3,"recentEdgePct":.5,"mddOk":True,
+}
+rep["candidates"]=base_candidates+[generated]
+bad_name=s2["activeCandidates"][-1]
+for day in (9,10,11):
+    rep["to"]=f"2026-10-{day:02d}"
+    for x in rep["candidates"]:
+        if x["name"]==bad_name:
+            x["researchScore"]=20
+            x["sampleReady"]=True
+            x["holdoutAvgEdgePct"]=-.5
+            x["scoreParts"]={"trades":60,"minTrades":50}
+    s2=m.evolve_lifecycle("crypto",rep,s2)
+assert "cf_g0001" in s2["activeCandidates"], "자동생성 후보가 퇴출 빈자리를 실제로 채워야 함"
+assert len(s2["activeCandidates"])>=10
 print("ALL PASS — shadow generator")
