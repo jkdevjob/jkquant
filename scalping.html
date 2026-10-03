@@ -260,7 +260,7 @@ canvas{display:block;width:100%;height:auto}
 
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Morning Scalping</div><h1>JK <span class="v">퀀트</span> 단타 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="scVer">v1.40.0</span></h1></div>
+    <div><div class="kicker">Morning Scalping</div><h1>JK <span class="v">퀀트</span> 단타 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="scVer">v1.41.0</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -3505,40 +3505,49 @@ document.getElementById('ch_tf').addEventListener('click',e=>{
 window.addEventListener('resize',()=>{ if(CUR) drawChart(CUR.a); });
 
 /* ══ 모의투자(페이퍼) ══ */
-function paperEnter(code){
+async function paperEnter(code){
   const s=SCREEN.find(x=>x.code===code); if(!s) return;
   if(POS.some(p=>p.code===code)){ alert(s.name+' 은(는) 이미 보유 중입니다. (종목당 동시 1포지션)'); return; }
   const en=s.price,L=levelsOf(en,s.atr14);
   if(!L){alert('ATR 없음 — 레벨 계산 불가. 고정 %로 대체하지 않습니다.');return;}
   if(!confirm(`[모의투자] ${s.name} 진입\n진입 ${commas(en)} · 손절 ${commas(L.stop)}(−2×ATR) · 목표 ${commas(L.tgt)}(+4×ATR)\n최대 5일 보유\n\n기록할까요?`)) return;
+  const before=scalpClone(POS);
   POS.unshift({code,name:s.name,entry:en,stop:L.stop,tgt:L.tgt,atr14:L.atr14,cur:en,ts:Date.now(),score:s.score});
-  saveP(); renderPos();
+  renderPos();
+  if(!await saveP()){POS=before;renderPos();alert('포지션이 Firebase DB에 저장되지 않아 추가를 취소했습니다.');return;}
   window.scrollTo({top:$('pos_body').getBoundingClientRect().top+window.scrollY-80,behavior:'smooth'});
 }
 
 /* ══ 포지션 ══ */
-function enterPos(){
+async function enterPos(){
   if(!CUR){ return; }
   const entry=CUR&&CUR.a?+CUR.a.price:0; if(!(entry>0)){ alert('진입가를 확인해주세요.'); return; }
   const L=levelsOf(entry,CUR.a.atr14); if(!L){alert('ATR 없음 — 레벨 계산 불가.');return;}
+  const before=scalpClone(POS);
   POS.unshift({code:CUR.code,name:CUR.name,entry,stop:L.stop,tgt:L.tgt,atr14:L.atr14,cur:entry,ts:Date.now()});
-  saveP(); renderPos();
+  renderPos();
+  if(!await saveP()){POS=before;renderPos();alert('포지션이 Firebase DB에 저장되지 않아 추가를 취소했습니다.');return;}
   if(chartOpen()) closeChart();
   window.scrollTo({top:$('pos_body').getBoundingClientRect().top+window.scrollY-80,behavior:'smooth'});
 }
-function delPos(i){ POS.splice(i,1); saveP(); renderPos(); }
+async function delPos(i){
+  const before=scalpClone(POS);POS.splice(i,1);renderPos();
+  if(!await saveP()){POS=before;renderPos();alert('포지션 삭제가 Firebase DB에 저장되지 않아 원래 상태로 되돌렸습니다.');}
+}
 async function refreshPos(){
   if(!POS.length){ renderPos(); return; }
   await Promise.all(POS.map(async p=>{ try{ const j=await qFetch(p.code); p.cur=j.price!=null?j.price:p.cur; }catch(e){} }));
   saveP(); renderPos();
 }
-function closePos(i){
+async function closePos(i){
   const p=POS[i]; if(!p) return;
   const def = p.cur||p.entry;
   const ex=prompt(`${p.name} 청산가를 입력하세요.`, def>=100?Math.round(def):def);
   if(ex==null) return; const out=+ex; if(!(out>0)){ alert('청산가가 올바르지 않습니다.'); return; }
+  const beforePos=scalpClone(POS),beforeLog=scalpClone(LOG);
   LOG.unshift({date:new Date().toISOString().slice(0,10),tkr:p.name,trig:'스크린',in:p.entry,out,fee:openingFrictionPct(p.entry),note:'포지션 청산'});
-  saveL(); POS.splice(i,1); saveP(); renderPos(); renderLog();
+  POS.splice(i,1);renderPos();renderLog();
+  if(!await cloudSave()){POS=beforePos;LOG=beforeLog;renderPos();renderLog();alert('청산 기록이 Firebase DB에 저장되지 않아 원래 상태로 되돌렸습니다.');}
 }
 function renderPos(){
   const b=$('pos_body');
@@ -3578,14 +3587,24 @@ function recalc(){
 
 /* ══ 모의 일지 ══ */
 function net(t){ return (t.out-t.in)/t.in*100-(+t.fee||0); }
-function addTrade(){
+async function addTrade(){
   const inP=+$('f_in').value, outP=+$('f_out').value;
   if(!(inP>0)||!(outP>0)){ alert('진입가·청산가를 넣어주세요.'); return; }
+  const before=scalpClone(LOG);
   LOG.unshift({date:$('f_date').value||new Date().toISOString().slice(0,10),tkr:($('f_tkr').value||'').trim()||'—',trig:$('f_trig').value,in:inP,out:outP,fee:+$('f_fee').value||0,note:($('f_note').value||'').trim()});
-  saveL(); $('f_tkr').value=''; $('f_in').value=''; $('f_out').value=''; $('f_note').value=''; renderLog();
+  renderLog();
+  if(await saveL()){$('f_tkr').value=''; $('f_in').value=''; $('f_out').value=''; $('f_note').value='';}
+  else{LOG=before;renderLog();alert('거래일지가 Firebase DB에 저장되지 않아 추가를 취소했습니다.');}
 }
-function delTrade(i){ LOG.splice(i,1); saveL(); renderLog(); }
-function clearLog(){ if(!LOG.length) return; if(!confirm('일지를 전부 지울까요?')) return; LOG=[]; saveL(); renderLog(); }
+async function delTrade(i){
+  const before=scalpClone(LOG);LOG.splice(i,1);renderLog();
+  if(!await saveL()){LOG=before;renderLog();alert('거래일지 삭제가 Firebase DB에 저장되지 않아 원래 상태로 되돌렸습니다.');}
+}
+async function clearLog(){
+  if(!LOG.length)return;if(!confirm('일지를 전부 지울까요?\n삭제는 Firebase DB에 즉시 반영됩니다.'))return;
+  const before=scalpClone(LOG);LOG=[];renderLog();
+  if(!await saveL()){LOG=before;renderLog();alert('거래일지 초기화가 Firebase DB에 저장되지 않아 원래 상태로 되돌렸습니다.');}
+}
 function statOf(rows){ const n=rows.length; if(!n) return null; const ns=rows.map(net); const w=ns.filter(x=>x>0), l=ns.filter(x=>x<=0); const avg=a=>a.length?a.reduce((s,x)=>s+x,0)/a.length:0; const aw=avg(w),al=avg(l); return {n,wr:w.length/n,aw,al,pay:al!==0?aw/Math.abs(al):(aw>0?Infinity:0),ev:avg(ns)}; }
 function renderLog(){
   const s=statOf(LOG);
@@ -3634,7 +3653,9 @@ async function kisSubmit(o){
     const j=await r.json();
     rec.ok=!!j.ok; rec.orderNo=j.orderNo||''; rec.msg=j.msg||j.error||(j.ok?'주문 접수':'주문 실패');
   }catch(e){ rec.msg=String(e.message||e); }
-  KLOG.unshift(rec); saveK(); renderKlog();
+  KLOG.unshift(rec);renderKlog();
+  rec.storageOk=await saveK();
+  if(!rec.storageOk) setSync('KIS 주문결과 Firebase DB 저장 실패 — 재시도 필요',true);
   return rec;
 }
 
@@ -3829,16 +3850,27 @@ let me=null, OWNSRC='';
 /* 허용 목록은 서버 밖으로 안 나온다 — 본인이 소유자인지만 판정받는다 */
 async function checkOwner(user){
   const tok=await user.getIdToken();
-  const r=await fetch('/api/owner',{cache:'no-store',headers:{'Authorization':'Bearer '+tok}});
-  const j=await r.json(); OWNSRC=j.source||'';
-  if(j.error) throw new Error(j.error);
-  return !!j.isOwner;
+  const ctl=new AbortController(),timer=setTimeout(()=>ctl.abort(),8000);
+  try{
+    const r=await fetch('/api/owner',{cache:'no-store',signal:ctl.signal,headers:{'Authorization':'Bearer '+tok}});
+    const j=await r.json(); OWNSRC=j.source||'';
+    if(j.error) throw new Error(j.error);
+    return !!j.isOwner;
+  }catch(e){
+    if(e&&e.name==='AbortError')throw new Error('소유자 권한 확인이 8초 안에 끝나지 않았습니다.');
+    throw e;
+  }finally{clearTimeout(timer);}
+}
+function resetLoginButton(){
+  const b=$('gbtn');if(!b)return;
+  b.style.display='';b.disabled=false;b.innerHTML='<svg viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg> Google로 로그인';
+  b.onclick=googleLogin;
 }
 function denyGate(user,msg){
   stopLive(); stopOpeningLive();
   $('gate').style.display='flex'; $('app').style.display='none';
   $('gate_sub').innerHTML=msg;
-  const b=$('gbtn'); if(b){ b.textContent='다른 계정으로 로그인';
+  const b=$('gbtn'); if(b){ b.style.display='';b.disabled=false;b.textContent='다른 계정으로 로그인';
     b.onclick=()=>{ window.fb.signOut(window.fb.auth).then(googleLogin); }; }
 }
 function googleLogin(){ const err=$('gate_err'); if(err) err.textContent=''; window.fb.signInWithPopup(window.fb.auth,window.fb.provider).catch(e=>{ if(err) err.textContent=(e&&e.message)||'로그인 실패'; }); }
@@ -3849,7 +3881,10 @@ function boot(){
   window.fb.onAuthStateChanged(window.fb.auth, async user=>{
     me=user||null; renderBadge();
     if(!user){ stopLive(); stopOpeningLive(); $('gate').style.display='flex'; $('app').style.display='none';
-      $('gate_sub').innerHTML='이 화면은 <b>소유자 계정</b>만 볼 수 있습니다.'; return; }
+      $('gate_sub').innerHTML='이 화면은 <b>소유자 계정</b>만 볼 수 있습니다.'; resetLoginButton(); return; }
+    $('gate').style.display='flex';$('app').style.display='none';
+    $('gate_sub').innerHTML='<b>'+esc(user.email||'')+'</b><br><span class="sub">소유자 권한 확인 중…</span>';
+    const gb=$('gbtn');if(gb){gb.style.display='none';gb.disabled=true;}
     let isOwner=false;
     try{ isOwner=await checkOwner(user); }
     catch(e){ denyGate(user,'권한 확인에 실패했습니다. 새로고침해 주세요.<br><span class="sub">'+esc(e.message||e)+'</span>'); return; }
