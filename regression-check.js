@@ -11380,8 +11380,12 @@ console.log('\n[ACCESS] 이용 승인제 — 판정 한 곳 · 모든 페이지 
   ok('운영·자산플랜·관리자는 jk-access.js 를 불러 같은 판정을 쓴다 (운영·플랜은 admit · 관리자는 decide)',
      idx.includes('<script src="/jk-access.js"></script>') && pl.includes('<script src="/jk-access.js"></script>') && adm.includes('<script src="/jk-access.js"></script>')
      && /JKAccess\.admit\(user, accFb/.test(idx) && /JKAccess\.admit\(user,planFb/.test(pl) && /JKAccess\.decide\(\{email:r\.email\}, r\)/.test(adm));
-  ok('단타 두 화면은 소유자만 (서버 /api/owner 판정 · 로그인 토큰)',
-     /fetch\('\/api\/owner',\{cache:'no-store',signal:ctl\.signal,headers:\{'Authorization':'Bearer '\+tok\}\}\)/.test(scal) && /fetch\("\/api\/owner"/.test(cla) && /Bearer "\+\(await user\.getIdToken\(\)\)/.test(cla));
+  ok('단타 두 화면은 소유자만 + 권한 확인 timeout (서버 /api/owner 판정 · 로그인 토큰)',
+     /fetch\('\/api\/owner',\{cache:'no-store',signal:ctl\.signal,headers:\{'Authorization':'Bearer '\+tok\}\}\)/.test(scal)
+     && /async function checkOwner\(user\)/.test(cla)
+     && /AbortController/.test(cla) && /8000/.test(cla)
+     && /fetch\("\/api\/owner",\{cache:"no-store",signal:ctl\.signal/.test(cla)
+     && /Bearer "\+\(await user\.getIdToken\(\)\)/.test(cla));
   { const lists=[
       ['jk-access.js', (accSrc.match(/var ADMIN_EMAILS=(\[[^\]]*\])/)||[])[1]],
       ['index.html',   (idx.match(/const ADMIN_EMAILS=(\[[^\]]*\])/)||[])[1]],
