@@ -565,6 +565,12 @@ export default {
       const date=String(u.searchParams.get("date")||parts(now,tz).date);
       return json({ok:true,strategy,date,ledger:await readPaper(env,strategy,date)});
     }
+    if(u.pathname==="/paper-dates"){
+      if(!authorized(request,env))return json({ok:false,error:"unauthorized"},401);
+      const strategy=String(u.searchParams.get("strategy")||"").toLowerCase();
+      if(!["crypto","soxl"].includes(strategy))return json({ok:false,error:"unsupported strategy"},400);
+      return json({ok:true,strategy,dates:await readPaperDates(env,strategy)});
+    }
     if(u.pathname==="/paper-history"){
       if(!authorized(request,env))return json({ok:false,error:"unauthorized"},401);
       const strategy=String(u.searchParams.get("strategy")||"").toLowerCase();
