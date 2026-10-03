@@ -1090,13 +1090,11 @@ def collect_jobkorea_direct():
                 ok_pages += 1
 
                 soup = BeautifulSoup(response.text, 'html.parser')
-                seen_ids = set()
                 for anchor in soup.find_all('a', href=True):
                     href = anchor.get('href') or ''
                     match = re.search(r'/Recruit/GI_Read/(\d+)', href, re.I)
-                    if not match or match.group(1) in seen_ids:
+                    if not match:
                         continue
-                    seen_ids.add(match.group(1))
 
                     title = normalize_text(anchor.get_text(' ', strip=True))
                     if (
@@ -1395,14 +1393,13 @@ def collect_saramin_direct():
                 response.raise_for_status()
                 ok_pages += 1
                 soup = BeautifulSoup(response.text, 'html.parser')
-                seen_ids = set()
+                raw_ids = set(re.findall(r'(?:rec_idx=|/jobs/view\?rec_idx=)(\d+)', response.text, re.I))
 
                 for anchor in soup.find_all('a', href=True):
                     href = anchor.get('href') or ''
                     m = re.search(r'(?:rec_idx=|/jobs/view\?rec_idx=)(\d+)', href, re.I)
-                    if not m or m.group(1) in seen_ids:
+                    if not m:
                         continue
-                    seen_ids.add(m.group(1))
                     title = normalize_text(anchor.get_text(' ', strip=True))
                     if not title or len(title) < 3:
                         continue
@@ -1432,7 +1429,7 @@ def collect_saramin_direct():
                         jobs[url] = candidate
 
                 page_new = len(jobs) - before_count
-                if not seen_ids:
+                if not raw_ids:
                     break
                 no_new_pages = no_new_pages + 1 if page_new == 0 else 0
                 if page_dates and max(page_dates) < cutoff:
