@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import {liveLedgerSummary,mergeSessions,completedGlobalCandidates} from "../functions/api/scalping-daily-results.js";
+import {liveLedgerSummary,mergeSessions,mergeDaytradingSessions,completedGlobalCandidates} from "../functions/api/scalping-daily-results.js";
 
 console.log("[scalping today] live ledger 우선/무매매/날짜 경계 값 시험");
 
@@ -32,6 +32,23 @@ assert.equal(merged[0].date,"2026-10-02");
 assert.equal(merged[0].source,"global-paper-live");
 assert.equal(merged[0].returnPct,0);
 assert.equal(merged[1].date,"2026-10-01");
+
+const recovered=mergeDaytradingSessions(
+  [{date:"2026-10-02",returnPct:0,trades:0,noTrade:true,source:"daytrading-paper-live",mainVariant:"baseline"}],
+  [{date:"2026-10-02",returnPct:-0.25,trades:3,noTrade:false,source:"daytrading-research",mainVariant:"baseline"}]
+);
+assert.equal(recovered[0].trades,3);
+assert.equal(recovered[0].noTrade,false);
+assert.equal(recovered[0].returnPct,-0.25);
+assert.equal(recovered[0].source,"daytrading-research-confirmed");
+
+const promotedNoTrade=mergeDaytradingSessions(
+  [{date:"2026-10-02",returnPct:0,trades:0,noTrade:true,source:"daytrading-paper-live",mainVariant:"vol_2.0"}],
+  [{date:"2026-10-02",returnPct:-0.25,trades:3,noTrade:false,source:"daytrading-research",mainVariant:"baseline"}]
+);
+assert.equal(promotedNoTrade[0].trades,0);
+assert.equal(promotedNoTrade[0].noTrade,true);
+assert.equal(promotedNoTrade[0].source,"daytrading-paper-live");
 
 const now=Date.parse("2026-10-02T22:29:00Z"); // 10/03 07:29 KST = 10/02 18:29 ET
 const crypto=completedGlobalCandidates("crypto",now);
