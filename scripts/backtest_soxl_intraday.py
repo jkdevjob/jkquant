@@ -13,7 +13,8 @@ Baseline v1:
 - Same-bar stop/target conflict resolves to stop.
 - Net result subtracts 0.20% round-trip friction.
 
-Research only. Variants never auto-promote and no orders are placed.
+Research only. This file never places orders. Nightly lifecycle code may select a
+validated seven-day leader for the next paper/VTS session.
 """
 from __future__ import annotations
 
