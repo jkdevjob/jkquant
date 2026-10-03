@@ -30,7 +30,12 @@ const BTC_VARIANTS=Object.freeze({
   "vol_1.3":{rangeBars:1,volumeMult:1.3,useVwap:true,entryCutoffHm:2155,stopPct:.5,takeProfitPct:1.0,maxHoldBars:12},
   "stop_0.4_tp_0.8":{rangeBars:1,volumeMult:1.2,useVwap:true,entryCutoffHm:2155,stopPct:.4,takeProfitPct:.8,maxHoldBars:12},
   hold_90m:{rangeBars:1,volumeMult:1.2,useVwap:true,entryCutoffHm:2155,stopPct:.5,takeProfitPct:1.0,maxHoldBars:18},
-  entry_by_2000:{rangeBars:1,volumeMult:1.2,useVwap:true,entryCutoffHm:1955,stopPct:.5,takeProfitPct:1.0,maxHoldBars:12}
+  entry_by_2000:{rangeBars:1,volumeMult:1.2,useVwap:true,entryCutoffHm:1955,stopPct:.5,takeProfitPct:1.0,maxHoldBars:12},
+  combo_range10_vol13:{rangeBars:2,volumeMult:1.3,useVwap:true,entryCutoffHm:2155,stopPct:.5,takeProfitPct:1.0,maxHoldBars:12},
+  combo_novwap_vol15:{rangeBars:1,volumeMult:1.5,useVwap:false,entryCutoffHm:2155,stopPct:.5,takeProfitPct:1.0,maxHoldBars:12},
+  "stop_0.6_tp_1.2":{rangeBars:1,volumeMult:1.2,useVwap:true,entryCutoffHm:2155,stopPct:.6,takeProfitPct:1.2,maxHoldBars:12},
+  hold_45m:{rangeBars:1,volumeMult:1.2,useVwap:true,entryCutoffHm:2155,stopPct:.5,takeProfitPct:1.0,maxHoldBars:9},
+  entry_by_2100:{rangeBars:1,volumeMult:1.2,useVwap:true,entryCutoffHm:2055,stopPct:.5,takeProfitPct:1.0,maxHoldBars:12}
 });
 const SOXL_VARIANTS=Object.freeze({
   baseline:{rangeBars:3,volumeLookback:6,volumeMult:1.0,useVwap:true,entryCutoffHm:1130,stopPct:1.2,takeProfitPct:2.4,maxHoldBars:18},
@@ -48,7 +53,12 @@ const SOXL_VARIANTS=Object.freeze({
   "vol_1.5":{rangeBars:3,volumeLookback:6,volumeMult:1.5,useVwap:true,entryCutoffHm:1130,stopPct:1.2,takeProfitPct:2.4,maxHoldBars:18},
   "stop_1.0_tp_2.0":{rangeBars:3,volumeLookback:6,volumeMult:1.0,useVwap:true,entryCutoffHm:1130,stopPct:1.0,takeProfitPct:2.0,maxHoldBars:18},
   hold_60m:{rangeBars:3,volumeLookback:6,volumeMult:1.0,useVwap:true,entryCutoffHm:1130,stopPct:1.2,takeProfitPct:2.4,maxHoldBars:12},
-  entry_by_1100:{rangeBars:3,volumeLookback:6,volumeMult:1.0,useVwap:true,entryCutoffHm:1100,stopPct:1.2,takeProfitPct:2.4,maxHoldBars:18}
+  entry_by_1100:{rangeBars:3,volumeLookback:6,volumeMult:1.0,useVwap:true,entryCutoffHm:1100,stopPct:1.2,takeProfitPct:2.4,maxHoldBars:18},
+  combo_range10_vol12:{rangeBars:2,volumeLookback:6,volumeMult:1.2,useVwap:true,entryCutoffHm:1130,stopPct:1.2,takeProfitPct:2.4,maxHoldBars:18},
+  combo_novwap_vol12:{rangeBars:3,volumeLookback:6,volumeMult:1.2,useVwap:false,entryCutoffHm:1130,stopPct:1.2,takeProfitPct:2.4,maxHoldBars:18},
+  "stop_0.9_tp_1.8":{rangeBars:3,volumeLookback:6,volumeMult:1.0,useVwap:true,entryCutoffHm:1130,stopPct:.9,takeProfitPct:1.8,maxHoldBars:18},
+  hold_75m:{rangeBars:3,volumeLookback:6,volumeMult:1.0,useVwap:true,entryCutoffHm:1130,stopPct:1.2,takeProfitPct:2.4,maxHoldBars:15},
+  entry_by_1045:{rangeBars:3,volumeLookback:6,volumeMult:1.0,useVwap:true,entryCutoffHm:1045,stopPct:1.2,takeProfitPct:2.4,maxHoldBars:18}
 });
 function variantParams(strategy,name){
   const map=strategy==="crypto"?BTC_VARIANTS:SOXL_VARIANTS;
