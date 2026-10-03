@@ -3674,8 +3674,13 @@ async function kisBuyPick(code){
   const rec=await kisSubmit({side:'buy',code,name:s.name,qty,price:px,score:s.score,plan:{stop:L.stop,tgt:L.tgt}});
   if(rec.ok){
     POS.unshift({code,name:s.name,entry:px,stop:L.stop,tgt:L.tgt,cur:px,ts:Date.now(),score:s.score,kis:true,qty,orderNo:rec.orderNo});
-    saveP(); renderPos(); kisBalance();
-    alert(`매수 주문이 접수됐습니다.\n주문번호 ${rec.orderNo||'—'}\n\n보유 포지션에 담았습니다. 체결 여부는 잔고에서 확인하세요.`);
+    renderPos();
+    const stored=await saveP();
+    kisBalance();
+    if(!stored){
+      await cloudLoad().catch(()=>false);renderPos();renderLog();renderKlog();
+      alert(`매수 주문은 접수됐지만 Firebase DB 저장에 실패했습니다.\n주문번호 ${rec.orderNo||'—'}\n\n증권사 잔고가 실제 상태입니다. 새로고침 후 잔고와 DB를 반드시 대조하세요.`);
+    }else alert(`매수 주문이 접수됐습니다.\n주문번호 ${rec.orderNo||'—'}\n\n보유 포지션과 주문이 Firebase DB에 저장됐습니다. 체결 여부는 잔고에서 확인하세요.`);
   } else {
     alert('주문이 나가지 않았습니다.\n\n'+rec.msg+'\n\n이력에는 실패로 남겼습니다.');
   }
@@ -3696,8 +3701,13 @@ async function kisSellPos(i){
   const rec=await kisSubmit({side:'sell',code:p.code,name:p.name,qty,price:px,plan:{stop:p.stop,tgt:p.tgt}});
   if(rec.ok){
     LOG.unshift({date:new Date().toISOString().slice(0,10),tkr:p.name,trig:'스크린',in:p.entry,out:px,fee:openingFrictionPct(p.entry),note:'KIS 모의투자 · '+why});
-    saveL(); POS.splice(i,1); saveP(); renderPos(); renderLog(); kisBalance();
-    alert(`매도 주문이 접수됐습니다.\n주문번호 ${rec.orderNo||'—'}`);
+    POS.splice(i,1);renderPos();renderLog();
+    const stored=await cloudSave();
+    kisBalance();
+    if(!stored){
+      await cloudLoad().catch(()=>false);renderPos();renderLog();renderKlog();
+      alert(`매도 주문은 접수됐지만 Firebase DB 저장에 실패했습니다.\n주문번호 ${rec.orderNo||'—'}\n\n증권사 잔고가 실제 상태입니다. 새로고침 후 잔고와 DB를 반드시 대조하세요.`);
+    }else alert(`매도 주문이 접수됐습니다.\n주문번호 ${rec.orderNo||'—'}\n거래일지와 포지션 변경도 Firebase DB에 저장됐습니다.`);
   } else {
     alert('주문이 나가지 않았습니다.\n\n'+rec.msg+'\n\n포지션은 그대로 두었습니다.');
   }
