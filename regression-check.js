@@ -1231,9 +1231,10 @@ console.log('[23] 관리자 모드 — 접속 계정·사용자 관리');
   ok('보임 전환은 클래스로', /classList\.toggle\('admin-on', on\)/.test(idx));
   /* 승인 안 된 계정(대기·거절·차단)은 앱을 열기 전에 막는다 — 판정은 jk-access.js 한 곳(JKAccess.admit).
      값 시험은 아래 [ACCESS] 에 있다(실제 initAuth 를 가짜 이웃으로 돌린다). */
-  ok('승인 확인이 앱 열기보다 먼저 (운영)',
+  ok('승인 확인이 Firebase DB 원장 읽기보다 먼저 (운영)',
      /if\(!await JKAccess\.admit\(user, accFb, \{lock:r=>accessLock\(user, r, accFb\)\}\)\) return;/.test(idx)
-     && idx.indexOf('JKAccess.admit(user, accFb')>0 && idx.indexOf('JKAccess.admit(user, accFb') < idx.indexOf("try{ load(); openedLocal=validState(S); }"));
+     && idx.indexOf('JKAccess.admit(user, accFb')>0
+     && idx.indexOf('JKAccess.admit(user, accFb') < idx.indexOf("withTimeout(pullRemote()"));
   ok('관리자 페이지도 컬렉션 통째 읽기를 쓴다', /doc, getDoc, setDoc, collection, getDocs/.test(adm)
      && /getDocs\(window\.fb\.collection\(window\.fb\.db,'profiles'\)\)/.test(adm));
   ok('목록은 마지막 접속 최신순', /rows\.sort\(\(a,b\)=>\(\+b\.lastSeen\|\|0\)-\(\+a\.lastSeen\|\|0\)\)/.test(adm));
@@ -1271,9 +1272,9 @@ console.log('[23] 관리자 모드 — 접속 계정·사용자 관리');
      /const affects=changed\.some\(k=>PAPER_AFFECT_KEYS\[tab\]/.test(adm)
      && /filter\(x=>!\(x&&\(x\.sim\|\|x\.auto\)\)\)/.test(adm)
      && /delete sess\.settings\.simSig/.test(adm));
-  ok('기존 세션 적용 — 로컬과 protected stateV2 클라우드 상태를 같이 갱신한다',
-     /localStorage\.setItem\('qcockpit_v2_'\+me\.uid,JSON\.stringify\(state\)\)/.test(adm)
-     && /stateV2:state,stateV2Updated:now,stateV2Rev:nr,strategyDefaultOverrides:strategyOverrides/.test(adm));
+  ok('기존 세션 적용 — protected stateV2 Firebase 상태만 갱신한다',
+     /stateV2:state,stateV2Updated:now,stateV2Rev:nr,strategyDefaultOverrides:strategyOverrides/.test(adm)
+     && !/localStorage|sessionStorage|indexedDB/.test(adm));
   ok('관리자 아닌 계정은 문 앞에서 막힌다', /if\(isAdmin\(\)\)\{[\s\S]{0,200}?\$\('gate'\)\.style\.display='none'/.test(adm)
      && /계정에는 관리자 권한이 없습니다/.test(adm));
 
@@ -1295,7 +1296,9 @@ console.log('[23] 관리자 모드 — 접속 계정·사용자 관리');
   ok('보안 규칙을 저장소에 둔다', !!ru, ru?'':'firestore.rules 없음');
   ok('규칙도 같은 관리자만 본다', /request\.auth\.token\.email == 'jk82investing@gmail\.com'/.test(ru));
   ok('사용자 목록은 관리자만', /allow list: if isAdmin\(\)/.test(ru));
-  ok('거래기록은 관리자도 못 본다 · 승인 전에는 본인도 못 연다', /match \/users\/\{uid\} \{\s*\n\s*allow read, write: if isMine\(uid\) && approved\(\);\s*\n\s*\}/.test(ru));
+  ok('거래기록과 하위컬렉션은 승인된 본인만 연다',
+     /match \/users\/\{uid\} \{[\s\S]*?allow read, write: if isMine\(uid\) && approved\(\);/.test(ru)
+     && /match \/\{document=\*\*\} \{[\s\S]*?allow read, write: if isMine\(uid\) && approved\(\);/.test(ru));
   ok('본인이 승인·차단 칸을 못 쓴다 (만들 때도 고칠 때도)',
      /function adminKeys\(\)\s*\{ return \['blocked', 'approved', 'approvedAt', 'approvedBy'\]; \}/.test(ru)
      && /allow create: if isMine\(uid\) && ownEmail\(\) && !request\.resource\.data\.keys\(\)\.hasAny\(adminKeys\(\)\);/.test(ru)
@@ -1303,12 +1306,11 @@ console.log('[23] 관리자 모드 — 접속 계정·사용자 관리');
 
   /* 곁들여 고친 것 — users/{uid}는 운영과 백테가 같이 쓰는 문서다.
      merge 없이 덮어써서 백테의 커스텀 종목이 서버에서 사라지고 있었다. */
-  ok('운영 저장이 백테 종목을 안 지우고 거래이력을 트랜잭션에서 자동병합한다',
+  ok('운영 저장은 다른 사용자 필드를 지우지 않고 DB snapshot 기준 3-way rebase한다',
      /runTransaction/.test(idx)
      && /tx\.set\(ref,\{stateV2:candidate,stateV2Updated:writeUpdated,stateV2Rev:nr\},\{merge:true\}\)/.test(idx)
-     && /candidate=_mergeHistorySafeState\(candidate,remote\)/.test(idx)
-     && /_historyPreserves\(candidate,remote\)/.test(idx)
-     && !/⚠️ 거래이력 보호:/.test(idx));
+     && /candidate=_rebaseStateOnRemote\(stateDbBase,candidate,remote\)/.test(idx)
+     && !/다른 기기\/탭의 최신 거래이력이 감지되어/.test(idx));
 }
 
 
@@ -1487,13 +1489,12 @@ console.log('[28] KIS 모의투자 실행 · 주문 이력');
   ok('성공·실패 모두 기록', /KLOG\.unshift\(rec\); saveK\(\); renderKlog\(\);/.test(sc)
      && /rec\.ok=!!j\.ok;/.test(sc));
   ok('수동 주문창도 같은 경로', /const rec=await kisSubmit\(\{side,code,name:nm,qty,price,priceType:mkt\?'market':'limit'\}\);/.test(sc));
-  ok('클라우드에도 트랜잭션으로 남긴다',
+  ok('단타 상태도 Firebase transaction + 3-way rebase로 남긴다',
      /window\.fb\.runTransaction\(window\.fb\.db,async tx=>/.test(sc)
-     && /tx\.set\(ref,\{scalp:next\},\{merge:true\}\)/.test(sc));
-  ok('KIS 주문이력은 원격+로컬 id 합집합 append-only',
-     /const kisBy=new Map\(\);/.test(sc)
-     && /old&&Array\.isArray\(old\.kis\)/.test(sc)
-     && /\.\.\.KLOG/.test(sc)
+     && /tx\.set\(ref,\{scalp:out\},\{merge:true\}\)/.test(sc)
+     && /scalpRebase\(base\.pos,candidate\.pos,remote\.pos/.test(sc));
+  ok('KIS 주문이력은 Firebase remote+candidate append-only 합집합',
+     /scalpMergeAppend\(remote\.kis\|\|\[\],candidate\.kis,'kis'\)/.test(sc)
      && !/function delKlog\(i\)\{[^}]*KLOG\.splice/.test(sc)
      && !/function clearKlog\(\)\{[^}]*KLOG=\[\]/.test(sc));
 
@@ -1739,17 +1740,24 @@ console.log('[35] 로그인 — 조용히 갇히지 않는다');
   ok('배지 그리기 실패를 막는다', /try\{ renderUserBadge\(user\); \}catch/.test(ia));
   ok('프로필 확인 실패로 로그인을 막지 않는다',
      /\}catch\(e\)\{ console\.warn\('profile',e\); \}/.test(ia));
-  ok('기록 읽기 실패는 새 상태로 연다', /catch\(e\)\{[\s\S]*?S=freshState\(\)/.test(ia));
+  ok('Firebase DB 원장 읽기 실패는 오래된 브라우저 상태로 열지 않는다',
+     /Firebase DB 원장을 불러오지 못했습니다/.test(ia)
+     && /setSync\('err'\);\s*return;/.test(ia));
   ok('원인을 화면에 남긴다', /authWarn\(/.test(ia) && !!extractFn(idx,'function authWarn(msg)'));
   const iGate=ia.indexOf("$('authgate').style.display='none'");
   ok('앱 시작 전에 로그인창을 닫는다', iGate>0 && iGate < ia.indexOf('startApp()'));
 
   // localStorage는 용량 초과·사생활 보호 모드에서 던진다 — 그게 로그인까지 타고 올라갔었다
   const sl=extractFn(idx,'function saveLocal()');
-  ok('saveLocal이 예외를 안 던진다', /try\{/.test(sl) && /catch\(e\)\{/.test(sl));
-  ok('저장 실패를 사용자에게 알린다', /showLsWarn\(/.test(sl) && !!extractFn(idx,'function showLsWarn(msg)'));
-  ok('클라우드 저장은 즉시 계속된다', /function save\(\)\{saveLocal\(\);void pushRemoteNow\(\);\}/.test(idx));
-  ok('저장이 복구되면 경고를 치운다', /lsFailed=false;[\s\S]{0,60}remove\(\)/.test(sl));
+  ok('saveLocal은 브라우저 영구저장 없이 메모리 timestamp만 갱신',
+     /S\._updated=Date\.now\(\)/.test(sl)
+     && !/localStorage|sessionStorage|indexedDB/.test(sl));
+  ok('Firebase 저장 실패는 동기화 오류 상태로 남긴다',
+     /setSync\('err'\)/.test(extractFn(idx,'async function _commitStateRemote(where)')));
+  ok('일반 save는 즉시 Firebase 저장 promise를 반환',
+     /function save\(\)\{\s*if\(S\)S\._updated=Date\.now\(\);\s*return pushRemoteNow\(\);\s*\}/.test(idx));
+  ok('운영 앱에 브라우저 영구저장 폴백이 없다',
+     !/localStorage|sessionStorage|indexedDB/.test(idx));
 
   /* try/catch 는 '던져야' 잡는다. Firestore 호출이 영영 안 끝나면 예외가 아니라
      그냥 멈춰 있어서 로그인 처리가 통째로 갇힌다 — 웨일 iOS에서 실제로 났다
@@ -1757,11 +1765,15 @@ console.log('[35] 로그인 — 조용히 갇히지 않는다');
   const wt=extractFn(idx,'function withTimeout(p, ms, label)');
   ok('안 끝나는 호출을 시간으로 끊는다', !!wt && /Promise\.race/.test(wt) && /setTimeout/.test(wt));
   ok('프로필 확인에 제한시간', /withTimeout\(touchProfile\(user\), 6000, '프로필 확인'\)/.test(ia));
-  ok('클라우드 읽기에 제한시간', /withTimeout\(pullRemote\(\), 8000, '클라우드 기록'\)/.test(ia));
+  ok('Firebase DB 원장 읽기에 제한시간',
+     /withTimeout\(pullRemote\(\), 12000, 'Firebase DB 원장'\)/.test(ia));
   // 클라우드가 안 와도 이 기기에 있는 걸로 열어야 한다 — 새로 시작하면 기록이 사라진 것처럼 보인다
-  ok('클라우드가 안 오면 로컬로 연다', /load\(\); opened=validState\(S\);/.test(ia)
-     && /이 기기에 저장된 걸로 엽니다/.test(ia));
-  ok('로컬도 없을 때만 새로 시작', /if\(!opened\)\{[\s\S]{0,80}freshState\(\)/.test(ia));
+  ok('Firebase DB 원장이 안 오면 앱을 열지 않는다',
+     /Firebase DB 원장을 불러오지 못했습니다/.test(ia)
+     && !/이 기기에 저장된 걸로 엽니다/.test(ia));
+  ok('계정 DB 원장이 없을 때만 fresh state를 만들어 Firebase에 생성',
+     /DB 원장이 없으면 새 원장을 만든다/.test(extractFn(idx,'async function pullRemote()'))
+     && /S=freshState\(\)/.test(extractFn(idx,'async function pullRemote()')));
   // 어디서 멈췄는지 알아야 다음에 안 헤맨다
   ok('진행 단계를 남긴다', /let authStep=/.test(idx)
      && (idx.match(/authStep='/g)||[]).length>=4);
@@ -1851,13 +1863,14 @@ console.log('[39] 로그인 진단 — 어디서 막혔는지 화면에서 읽�
   ok('진단 함수 존재', !!ad);
   // 막히는 지점마다 한 줄씩 — 이게 있어야 되묻지 않고 원인이 갈린다
   [['모듈 로딩','로그인모듈'],['핸들러 연결','인증대기'],['인증 상태','로그인상태'],
-   ['앱 시작','앱시작'],['저장소','저장소'],['브라우저','브라우저']].forEach(([nm,key])=>{
+   ['앱 시작','앱시작'],['데이터 저장','데이터저장'],['브라우저','브라우저']].forEach(([nm,key])=>{
     ok('진단에 '+nm+' 줄이 있다', ad.includes("'"+key));
   });
   ok('마지막 오류도 남긴다', /authLastErr/.test(ad) && /let authLastErr=/.test(idx));
   ok('UA도 남긴다', /navigator\.userAgent/.test(ad));
-  ok('저장소는 실제로 써 보고 판단한다', /function storageOK\(\)/.test(idx)
-     && /localStorage\.setItem\('_t','1'\)/.test(extractFn(idx,'function storageOK()')));
+  ok('진단은 데이터 저장 방식을 Firebase DB 전용으로 표시한다',
+     /function storageOK\(\)/.test(idx)
+     && /Firebase DB 전용/.test(extractFn(idx,'function storageOK()')));
   // 앞단에서 막힌 건지 뒷단에서 막힌 건지 가르는 플래그
   const ia=extractFn(idx,'function initAuth()');
   ok('핸들러 연결 표시를 세운다', /authWired=true;/.test(ia) && /let authWired=false;/.test(idx));
@@ -1917,11 +1930,12 @@ console.log('[40] 모의 일괄 적용 — 원금과 1회 적립액을 따로');
      /const PAPER_DEFAULT_CAPITAL_WON=100000000;/.test(idx)
      && /const PAPER_DEFAULT_ADD_WON=50000;/.test(idx));
   const pe=extractFn(idx,'async function paperEnsureCommonWon()');
-  ok('paperCommon이 비어 있으면 추정하지 않고 기본 원화값을 그대로 저장한다',
+  ok('paperCommon이 비어 있으면 기본 원화값을 stateV2에 넣고 Firebase 저장한다',
      /pc\.capitalWon=PAPER_DEFAULT_CAPITAL_WON/.test(pe)
      && /pc\.addWon=PAPER_DEFAULT_ADD_WON/.test(pe)
      && !/fxAt\(/.test(pe)
-     && /saveLocal\(\); pushRemote\(\);/.test(pe));
+     && /pc\.formMemo=/.test(pe)
+     && /pushRemote\(\)/.test(pe));
   const sp=extractFn(idx,'function syncPaperStart()');
   ok('입력칸도 저장값이 없으면 1억 · 5만원을 그대로 표시한다',
      /PAPER_DEFAULT_CAPITAL_WON/.test(sp) && /PAPER_DEFAULT_ADD_WON/.test(sp));
@@ -2432,34 +2446,21 @@ console.log('\n[44] 숫자 표기 — 기호는 뒤, 자릿수는 오른쪽 맞�
    사람도 페이지를 옮길 때마다 '로그인하세요'를 몇 초씩 보고 있어야 했다.
    (1) 이 기기에서 로그인한 적이 있으면 로그인 화면 대신 조용히 '여는 중'
    (2) 화면은 이 기기에 저장된 걸로 먼저 열고, 클라우드는 도착하면 맞춘다 */
-console.log('\n[45] 메뉴 이동 — 로그인 화면이 번쩍이지 않는다');
+console.log('\n[45] 메뉴 이동 — Firebase DB 원장 확인 뒤 앱 오픈');
 {
-  // 첫 페인트 전에 정해야 번쩍이지 않는다 — 그래서 <head>/본문 첫머리의 동기 스크립트다
-  ok('로그인한 적 있는 기기는 표시를 남긴다', /localStorage\.setItem\('qcockpit_hadUser','1'\)/.test(idx));
-  ok('그 표시를 첫 페인트 전에 본다',
-     /try\{ if\(localStorage\.getItem\('qcockpit_hadUser'\)==='1'\) document\.documentElement\.classList\.add\('had-user'\); \}catch\(e\)\{\}/.test(idx));
-  ok('표시가 있으면 로그인 상자 대신 여는 중',
-     /html\.had-user #authgate \.gbox\{display:none\}/.test(idx)
-     && /html\.had-user #authgate \.bootwait\{display:block\}/.test(idx));
-  // 정말 풀렸으면 그때 로그인 화면을 띄우고 표시를 지운다 — 안 지우면 영영 '여는 중'이다
-  ok('로그인이 풀리면 표시를 지운다',
-     /if\(!user\)\{[\s\S]{0,320}?localStorage\.removeItem\('qcockpit_hadUser'\)[\s\S]{0,200}?\$\('authgate'\)\.style\.display='flex'/.test(idx));
-  ok('로그아웃해도 표시를 지운다',
-     /function doLogout\(\)\{[\s\S]{0,260}?localStorage\.removeItem\('qcockpit_hadUser'\)/.test(idx));
-
-  // 클라우드를 기다리지 않는다 — 이게 '오래 걸리네'의 알맹이다
-  ok('이 기기 기록으로 먼저 연다',
-     /authStep='로컬 열기'/.test(idx)
-     && /if\(openedLocal\)\{\s*\n\s*\$\('authgate'\)\.style\.display='none';/.test(idx));
-  ok('먼저 여는 쪽이 프로필·클라우드보다 앞선다',
-     idx.indexOf("authStep='로컬 열기'") < idx.indexOf("authStep='프로필'")
-     && idx.indexOf("authStep='프로필'") < idx.indexOf("authStep='기록 읽기'"));
-  // 먼저 열어 놓고 또 load() 하면 사용자가 그 사이 적은 게 날아간다
-  ok('먼저 열었으면 로컬을 다시 읽지 않는다', /if\(!ok && !openedLocal\) load\(\);/.test(idx));
-  // startApp 은 두 번 불려도 다시 그리기만 한다
+  const ia=extractFn(idx,'function initAuth()');
+  ok('승인 확인이 Firebase DB 원장 읽기보다 먼저',
+     ia.indexOf('JKAccess.admit(user, accFb')>=0
+     && ia.indexOf('JKAccess.admit(user, accFb') < ia.indexOf('pullRemote()'));
+  ok('Firebase DB 원장 읽기 성공 뒤에만 앱을 연다',
+     ia.indexOf('pullRemote()')>=0
+     && ia.indexOf('startApp()')>ia.indexOf('pullRemote()')
+     && ia.indexOf("$('authgate').style.display='none'")>ia.indexOf('pullRemote()'));
+  ok('DB 원장 읽기 실패는 브라우저 저장본으로 우회하지 않는다',
+     /Firebase DB 원장을 불러오지 못했습니다/.test(ia)
+     && !/openedLocal|로컬 열기|이 기기에 저장된 걸로/.test(ia));
   ok('두 번 열어도 안전하다', /if\(appStarted\)\{refreshAll\(\);return;\}/.test(idx));
-  // 승인 취소·차단은 늦게 와도 반드시 듣는다 — 먼저 열어 준 화면을 그대로 두면 안 된다 (값 시험은 [ACCESS])
-  ok('승인 취소·차단이면 열어 준 화면을 덮는다',
+  ok('승인 취소·차단이면 열린 화면을 덮는다',
      /function accessLock\(user, r, accFb\)\{\s*\n\s*accessLocked=true;\s*\n\s*\$\('authgate'\)\.style\.display='flex';\s*\n\s*JKAccess\.show\(r\.state,/.test(idx));
 }
 
@@ -3210,12 +3211,12 @@ console.log('\n[61] 모의 성과 — 원화로 받아 세션 통화로 환산')
   ok('쓴 환율을 확인창에 적는다', /전략 계산에만 \$\{fx\.date\} 기준 환율 \$\{fx\.rate\.toLocaleString\('en-US'\)\}원\/\$을 사용합니다/.test(idx));
   ok('국내만 있으면 환율을 안 부른다', /const needUsd=\[\.\.\.capHit,\.\.\.addHit\]\.some\(\(\[,x\]\)=>!isKrwSt\(x\.settings\)\);/.test(idx));
   ok('끝나고도 쓴 환율을 남긴다', /const fxNote = fx \? `미국 종목은 \$\{fx\.date\} 환율/.test(idx));
-  ok('클라우드 저장 함수는 즉시 transaction + history auto-merge를 탄다',
+  ok('클라우드 저장 함수는 즉시 transaction + DB snapshot 3-way rebase를 탄다',
      /async function pushRemoteNow\(\)/.test(idx)
      && /_commitStateRemote\('cloud-now'\)/.test(extractFn(idx,'async function pushRemoteNow()'))
      && /window\.fb\.runTransaction/.test(extractFn(idx,'async function _commitStateRemote(where)'))
-     && /candidate=_mergeHistorySafeState\(candidate,remote\)/.test(extractFn(idx,'async function _commitStateRemote(where)'))
-     && /function save\(\)\{saveLocal\(\);void pushRemoteNow\(\);\}/.test(idx));
+     && /candidate=_rebaseStateOnRemote\(stateDbBase,candidate,remote\)/.test(extractFn(idx,'async function _commitStateRemote(where)'))
+     && /return pushRemoteNow\(\)/.test(extractFn(idx,'function save()')));
 
   // 서버: 날짜를 주면 그 날 값, 주말이면 직전 영업일
   const fx=fs.existsSync(__d+'/functions/api/fx.js') ? fs.readFileSync(__d+'/functions/api/fx.js','utf8') : '';
@@ -8054,24 +8055,11 @@ console.log('\n[117] 자산플랜 v1.28.0 — 기간마다 완전히 다른 매�
      && !/\$\("alphaCapitalInput"\)\.addEventListener\("change"/.test(pl)
      && /const cap=Math\.max\(1,Math\.round\(Number\(\$\('alphaCapitalInput'\)\.value\)\|\|0\)\)/.test(pl)
      && /\$\('startCapital'\)\.value=cap/.test(pl));
-  ok('장부 복구 보호모드 — 로컬·백업·Firebase 후보를 보존하고 최다 이력을 화면 복구한 뒤 클라우드 저장 잠금',
-     /function planRecoveryMeta\(o\)/.test(pl)
-     && /function planRecoveryScore\(o\)/.test(pl)
-     && /KEY\+"_precloud_restore"/.test(pl)
-     && /KEY\+"_cloud_recovery"/.test(pl)
-     && /KEY\+"_cloud_previous"/.test(pl)
-     && /KEY\+"_cloud_latest"/.test(pl)
-     && /planRecoveryCandidates/.test(pl)
-     && /planRecoveryLock=conflict/.test(pl)
-     && /복구 보호모드/.test(pl)
-     && /Firebase 저장 잠금/.test(pl)
-     && /if\(!x&&planRecoveryLock\)/.test(pl)
-     && /id="planRecoverySelect"/.test(pl)
-     && /function applyPlanRecoveryCandidate\(index\)/.test(pl)
-     && /async function confirmPlanRecovery\(\)/.test(pl)
-     && /KEY\+"_recovery_confirmed"/.test(pl)
-     && /planBootHydrating&&!planForceLocalSave&&!x/.test(pl)
-     && /planBootHydrating=false/.test(pl));
+  ok('장부 복구는 자동 최다이력 선택 없이 현재 Firebase 원장을 직접 사용',
+     /function planManualBackup\(reason\)/.test(pl)
+     && /planManualBackupMemory/.test(pl)
+     && /apply\(cloneObj\(v\)\)/.test(extractFn(pl,'async function cloudLoad(user)'))
+     && !/planRecoveryScore|_precloud_restore|_cloud_recovery|_cloud_previous/.test(extractFn(pl,'async function cloudLoad(user)')));
   ok('자산플랜 주문에 종목별 목표금액·오늘 매수금액·수수료포함 필요현금 표시',
      /목표 보유금액:/.test(pl)
      && /오늘 매수금액:/.test(pl)
@@ -8712,7 +8700,7 @@ console.log('\n[119] 제10차 — 라오어 V4.0 원문 직접 대조 (SOURCE GO
      && /const INF_DEFAULTS_POLICY_VER=2;/.test(idx)
      && /function migrateInfOperatingDefaults\(\)/.test(idx)
      && /st\.big=IM_BIG_DEFAULT;/.test(idx) && /st\.revGap=REV_GAP_DEF;/.test(idx) && /st\.rows=IM_ROWS_DEFAULT;/.test(idx)
-     && /if\(migrateInfOperatingDefaults\(\) && \(!curUid\|\|stateCloudHydrated\)\) saveLocal\(\);/.test(idx)
+     && /const migrated=migrateInfOperatingDefaults\(\);/.test(extractFn(idx,'async function pullRemote()'))
      && /function migrateLiveInfOperatingDefaults\(\)/.test(pl)
      && /st\.big=PATH_DEFAULTS\.classic\.infBig;/.test(pl) && /st\.revGap=0;/.test(pl) && /st\.rows=PATH_DEFAULTS\.classic\.infRows;/.test(pl)
      && !/V4\.0 정식 구성입니다/.test(idx) && !/V4\.0 정식 · 1회매수금÷\(수량\+k\) · 0이면/.test(idx)
@@ -9041,7 +9029,7 @@ console.log('\n[123] 모의 성과 — 단독 페이지(/paper)');
     return {page:cls.has('paperpage'), title:doc.title, homeCur:a.home.has('cur'), paperCur:a.paper.has('cur'), calls}; };
   const e1=runEarly('/paper',''), e2=runEarly('/','?paper=1'), e3=runEarly('/',''), e4=runEarly('/','?x=1&paper=10');
   ok('/paper 로 열면 페이지 모드 · 제목 · 메뉴 현재 표시가 모의로',
-     !!early && e1.page && /모의투자 성과/.test(e1.title) && !e1.homeCur && e1.paperCur, JSON.stringify(e1));
+     !!early && e1.page && e1.title==='JK 퀀트 — 모의투자' && !e1.homeCur && e1.paperCur, JSON.stringify(e1));
   ok('예전 주소 /?paper=1 은 /paper 로 바꿔 페이지로 연다 · 그냥 / 는 운영 화면 그대로 · paper=10 같은 다른 값은 건드리지 않는다',
      e2.page && e2.calls.join()==='/paper' && !e3.page && e3.homeCur && !e3.calls.length && !e4.page && !e4.calls.length,
      JSON.stringify([e2,e3,e4]));
@@ -9057,20 +9045,20 @@ console.log('\n[123] 모의 성과 — 단독 페이지(/paper)');
     const hist=[];
     const F=new Function('$','document','history','APP_TITLE',
       [extractFn(idx,'function closePaper()'), extractFn(idx,'function isPaperPage()'), extractFn(idx,'function paperPageMode(on)')].join('\n')
-      +'\nreturn {closePaper, isPaperPage, paperPageMode};')(id=>E[id]||null, docF, {pushState:(a,b,u)=>hist.push(u)}, 'JK 퀀트 — 앱');
+      +'\nreturn {closePaper, isPaperPage, paperPageMode};')(id=>E[id]||null, docF, {pushState:(a,b,u)=>hist.push(u)}, 'JK 퀀트 — 운영');
     F.paperPageMode(true);
     const on1={page:body._cls.has('paperpage'), inPage:modal.parentNode===page, homeCur:home._cls.has('cur'), paperCur:jk._cls.has('cur'), title:docF.title, wait:/기록을 맞추는 중/.test(pbody.innerHTML)};
     F.closePaper();   // 전략 이름을 누르면 gotoSess 가 부른다 — 페이지에서 나가 운영 화면으로
     const off1={page:body._cls.has('paperpage'), inBody:modal.parentNode===body, open:modal._cls.has('on'), homeCur:home._cls.has('cur'), paperCur:jk._cls.has('cur'), title:docF.title, hist:hist.join()};
     ok('페이지 모드 — 상자를 본문 자리로 옮기고 메뉴·제목·대기 문구를 맞춘다',
-       on1.page && on1.inPage && !on1.homeCur && on1.paperCur && /모의투자 성과/.test(on1.title) && on1.wait, JSON.stringify(on1));
+       on1.page && on1.inPage && !on1.homeCur && on1.paperCur && on1.title==='JK 퀀트 — 모의투자' && on1.wait, JSON.stringify(on1));
     ok('페이지에서 전략 이름을 누르면 운영 화면으로 나간다 — 주소 / · 상자는 모달 자리로 · 모달로 뜨지 않는다 · 메뉴·제목 되돌림',
-       !off1.page && off1.inBody && !off1.open && off1.homeCur && !off1.paperCur && off1.title==='JK 퀀트 — 앱' && off1.hist==='/', JSON.stringify(off1)); }
+       !off1.page && off1.inBody && !off1.open && off1.homeCur && !off1.paperCur && off1.title==='JK 퀀트 — 운영' && off1.hist==='/', JSON.stringify(off1)); }
   // 채우기는 클라우드 기록을 맞춘 뒤 한 번 — 로컬로 먼저 연 갈래(openedLocal)에서는 부르지 않는다
   { const ia=extractFn(idx,'function initAuth()');
     const iPull=ia.indexOf('pullRemote()'), iAuto=ia.indexOf('paperPageAuto()'), local=(ia.match(/if\(openedLocal\)\{[\s\S]*?\n    \}/)||[''])[0];
-    ok('모의 페이지 채우기는 클라우드 기록을 읽은 뒤 (로컬로 먼저 열 때는 안 한다)',
-       iPull>0 && iAuto>iPull && (ia.match(/paperPageAuto\(\)/g)||[]).length===1 && !!local && !/paperPageAuto/.test(local), `pull ${iPull} · auto ${iAuto}`);
+    ok('모의 페이지 채우기는 Firebase DB 기록을 읽은 뒤 한 번만 실행',
+       iPull>0 && iAuto>iPull && (ia.match(/paperPageAuto\(\)/g)||[]).length===1, `pull ${iPull} · auto ${iAuto}`);
     const pa=extractFn(idx,'function paperPageAuto()');
     ok('페이지 채우기는 한 번만 · 페이지가 아닐 때는 안 한다', /if\(!isPaperPage\(\) \|\| window\._paperAutoOpened\) return;/.test(pa) && /window\._paperAutoOpened=true;/.test(pa));
     ok('예전 자동 열기(/?paper=1 · 모의 세션이 있으면 곧바로)는 없앴다 — 로컬 기록으로 먼저 채우던 길',
@@ -9734,12 +9722,12 @@ console.log('\n[128] 자산플랜 검증 후속 — 20년 월말 신호 · 장�
 
   /* ② 추가 · 삭제 — 실제 함수로 */
   const mk=(ledger,inp)=>{ const msgs=[], EL={alphaCashDate:{value:inp.date||''},alphaCashKind:{value:inp.kind||'div'},alphaCashAmt:{value:String(inp.amt||'')}};
-    const F=new Function('$','alert','confirm','todayISO','usd2','alphaSyncInputs','renderAlphaLedger','localSave','refreshAlphaFromCache','cloudSave','planManualBackup','L0',
+    const F=new Function('$','alert','confirm','todayISO','usd2','alphaSyncInputs','renderAlphaLedger','localSave','refreshAlphaFromCache','cloudSave','planManualBackup','cloneObj','L0',
       'let alphaLedger=L0;\n'+extractFn(pl,'function alphaEventList(ledger=alphaLedger)')+'\n'+extractFn(pl,'function alphaLedgerCalc(ledger=alphaLedger)')+'\n'
       +optFn(pl,'async function alphaAddCashEvent()')+'\n'+extractFn(pl,'async function alphaDeleteEvent(id)')
       +'\nreturn {add:(typeof alphaAddCashEvent==="function")?alphaAddCashEvent:null, del:alphaDeleteEvent, get:()=>alphaLedger, calc:alphaLedgerCalc};')(
       id=>EL[id]||(EL[id]={value:''}), m=>msgs.push(String(m)), ()=>true, ()=>'2026-09-25', v=>'$'+(+v).toFixed(2),
-      ()=>{}, ()=>{}, ()=>{}, ()=>{}, async()=>{}, ()=>{}, JSON.parse(JSON.stringify(ledger)));
+      ()=>{}, ()=>{}, ()=>{}, ()=>{}, async()=>true, ()=>{}, x=>JSON.parse(JSON.stringify(x)), JSON.parse(JSON.stringify(ledger)));
     return {...F, msgs}; };
   { const A=mk(L0,{date:'2026-09-06',kind:'div',amt:12.34});
     if(A.add) A.add();   // 장부 변경·안내는 첫 await 전에 동기로 끝난다 (저장만 비동기)
@@ -10244,10 +10232,10 @@ console.log('\n[135] 자산플랜 세션 — 운영처럼 세션 + 모의투자 
      && /id="assetSessionAdd"/.test(pl) && /id="assetSessionModal"/.test(pl)
      && /data-horizon="5"/.test(pl) && /data-horizon="10"/.test(pl) && /data-horizon="15"/.test(pl) && /data-horizon="20"/.test(pl));
 
-  ok('B 세션은 horizon별 분리되고 현재 투자중 플랜은 기존 저장소와 분리',
+  ok('B 세션은 horizon별 분리되고 현재 투자중 플랜은 Firebase 원장과 분리',
      /filter\(x=>x&&\+x\.horizon===\+h\)/.test(extractFn(pl,'function assetSessionList(h=activeHorizon)'))
-     && /현재 투자중 플랜은 기존 fiveYearPlan 저장소를 그대로 쓴다/.test(pl)
-     && /if\(x\)\{[\s\S]*syncActiveAssetSessionFromView/.test(extractFn(pl,'function localSave(')));
+     && /fiveYearPlanV2/.test(pl)
+     && /if\(x&&!x\.paper\)syncActiveAssetSessionFromView/.test(extractFn(pl,'function localSave(')));
 
   ok('C 선택한 운영 세션 아래 기존 현재분석·계좌·거래이력·판단근거·전략설명을 그대로 사용',
      /id="alphaOrderSection"/.test(pl) && /id="alphaAccountSection"/.test(pl)
@@ -11250,15 +11238,18 @@ console.log('\n[ACCESS] 이용 승인제 — 판정 한 곳 · 모든 페이지 
                  adminKey:ADMIN_KEYS.some(k=>k in (w.data||{})), cache:'jk_access_v1' in E.lsm}; }
     { const E=loadAccess(), F=mkFb({email:U.email, lastSeen:5});                    // 옛 계정(신청 기록 없음) — 신청으로 잡힌다
       const r=await E.A.check(U, F.fb); out.legacy={st:r.state, n:F.log.writes.length, req:!!(F.log.writes[0]&&F.log.writes[0].data.requestedAt)}; }
-    { const E=loadAccess(), F=mkFb({requestedAt:1, approved:true});                 // 승인됨 — 쓰지 않고 이 기기에 기억
-      const r=await E.A.check(U, F.fb); const c=JSON.parse(E.lsm.jk_access_v1||'null');
-      out.appr={st:r.state, n:F.log.writes.length, cache:c&&c.uid+':'+c.state}; }
-    { const E=loadAccess({ls:{jk_access_v1:JSON.stringify({uid:'u1',state:'approved'})}}), F=mkFb({requestedAt:1, approved:true, blocked:true});
-      const r=await E.A.check(U, F.fb); out.blk={st:r.state, cache:'jk_access_v1' in E.lsm}; }          // 승인돼 있어도 차단 — 기억도 지운다
-    { const E=loadAccess({ls:{jk_access_v1:JSON.stringify({uid:'u1',state:'approved'})}}), F=mkFb(null,{failRead:true});
-      const r=await E.A.check(U, F.fb); out.offOk={st:r.state, off:!!r.offline, n:F.log.writes.length}; } // 확인 실패 + 이 기기에서 승인 확인됨 → 연다
-    { const E=loadAccess({ls:{jk_access_v1:JSON.stringify({uid:'u9',state:'approved'})}}), F=mkFb(null,{failRead:true});
-      out.offOther=(await E.A.check(U, F.fb)).state; }                                                      // 다른 계정의 기억은 안 통한다
+    { const E=loadAccess(), F=mkFb({requestedAt:1, approved:true});                 // 승인됨 — 쓰지 않고 페이지 메모리 캐시에만 유지
+      const r=await E.A.check(U, F.fb);
+      out.appr={st:r.state, n:F.log.writes.length, cache:E.A.cacheOk(U), browser:'jk_access_v1' in E.lsm}; }
+    { const E=loadAccess(), F=mkFb({requestedAt:1, approved:true, blocked:true});
+      E.A.cacheSet(U,'approved');
+      const r=await E.A.check(U, F.fb); out.blk={st:r.state, cache:E.A.cacheOk(U), browser:'jk_access_v1' in E.lsm}; } // 승인돼 있어도 차단 — 메모리 승인도 지운다
+    { const E=loadAccess(), F=mkFb(null,{failRead:true});
+      E.A.cacheSet(U,'approved');
+      const r=await E.A.check(U, F.fb); out.offOk={st:r.state, off:!!r.offline, n:F.log.writes.length, browser:'jk_access_v1' in E.lsm}; } // 같은 페이지 메모리 승인만 오프라인 허용
+    { const E=loadAccess(), F=mkFb(null,{failRead:true});
+      E.A.cacheSet(U2,'approved');
+      out.offOther=(await E.A.check(U, F.fb)).state; }                                                      // 다른 계정 메모리는 안 통한다
     { const E=loadAccess(), F=mkFb(null,{failRead:true}); out.offNone=(await E.A.check(U, F.fb)).state; }
     { const E=loadAccess(), F=mkFb(null,{hang:true}); const r=await E.A.check(U, F.fb, {timeoutMs:20});
       out.hang={st:r.state, why:/응답 없음/.test(r.error||'')}; }                                           // 영영 안 끝나는 읽기는 시간으로 끊는다
@@ -11269,10 +11260,10 @@ console.log('\n[ACCESS] 이용 승인제 — 판정 한 곳 · 모든 페이지 
        out.fresh.st==='pending' && out.fresh.n===1 && out.fresh.ref==='profiles/u1' && out.fresh.keys==='email,name,photo,requestedAt'
        && out.fresh.merge && !out.fresh.adminKey && !out.fresh.cache, JSON.stringify(out.fresh));
     ok('check: 신청 기록 없는 옛 계정도 신청으로 잡힌다(대기)', out.legacy.st==='pending' && out.legacy.n===1 && out.legacy.req, JSON.stringify(out.legacy));
-    ok('check: 승인된 계정 → 승인 · 다시 쓰지 않음 · 이 기기에 그 uid 로 기억', out.appr.st==='approved' && out.appr.n===0 && out.appr.cache==='u1:approved', JSON.stringify(out.appr));
-    ok('check: 승인돼 있어도 차단이면 막고 기억을 지운다', out.blk.st==='blocked' && !out.blk.cache, JSON.stringify(out.blk));
-    ok('check: 확인 실패 — 이 기기에서 승인 확인된 그 계정만 연다(오프라인) · 다른 계정 기억·기억 없음은 오류',
-       out.offOk.st==='approved' && out.offOk.off && out.offOk.n===0 && out.offOther==='error' && out.offNone==='error', JSON.stringify([out.offOk,out.offOther,out.offNone]));
+    ok('check: 승인된 계정 → 승인 · 다시 쓰지 않음 · 페이지 메모리에서만 승인 유지', out.appr.st==='approved' && out.appr.n===0 && out.appr.cache && !out.appr.browser, JSON.stringify(out.appr));
+    ok('check: 승인돼 있어도 차단이면 막고 페이지 메모리 승인도 지운다', out.blk.st==='blocked' && !out.blk.cache && !out.blk.browser, JSON.stringify(out.blk));
+    ok('check: 확인 실패 — 같은 페이지 메모리 승인 계정만 오프라인 허용 · 다른 계정/새 페이지는 오류 · 브라우저 영구저장 없음',
+       out.offOk.st==='approved' && out.offOk.off && out.offOk.n===0 && !out.offOk.browser && out.offOther==='error' && out.offNone==='error', JSON.stringify([out.offOk,out.offOther,out.offNone]));
     ok('check: 안 끝나는 읽기는 시간으로 끊어 오류로', out.hang.st==='error' && out.hang.why, JSON.stringify(out.hang));
     ok('check: 관리자는 읽지도 않고 통과 · 단타·관리자 메뉴를 켜고, 다른 계정이 확인되면 끈다',
        out.adm.st==='admin' && out.adm.reads===0 && out.adm.admin && !out.adm.afterUser, JSON.stringify(out.adm));
@@ -11281,7 +11272,8 @@ console.log('\n[ACCESS] 이용 승인제 — 판정 한 곳 · 모든 페이지 
   // ── 열지 말지(admit) — 빠른 길 · 뒤에서 다시 묻기 · 계정 바뀜 ──
   PENDING.push((async()=>{
     const out={};
-    { const E=loadAccess({ls:{jk_access_v1:JSON.stringify({uid:'u1',state:'approved'})}}), F=mkFb({requestedAt:1, approved:true, blocked:true},{user:U, delay:3});
+    { const E=loadAccess(), F=mkFb({requestedAt:1, approved:true, blocked:true},{user:U, delay:3});
+      E.A.cacheSet(U,'approved');
       const locks=[]; let settled=false;
       const p=E.A.admit(U, F.fb, {lock:r=>locks.push(r.state)}).then(v=>{ settled=true; return v; });
       const v=await p; const before=locks.length; await tick(12);
@@ -11291,15 +11283,15 @@ console.log('\n[ACCESS] 이용 승인제 — 판정 한 곳 · 모든 페이지 
       const v=await p; out.pend={v, locks:locks.join(','), first:seen[0], ok:E.cls.has('jk-ok')}; }
     { const E=loadAccess(), F=mkFb({requestedAt:1, approved:true},{user:U}); const locks=[];
       const v=await E.A.admit(U, F.fb, {lock:r=>locks.push(r.state)});
-      out.appr={v, locks:locks.length, ok:E.cls.has('jk-ok'), gate:(E.els.jkgate||{}).className, cache:'jk_access_v1' in E.lsm}; }
+      out.appr={v, locks:locks.length, ok:E.cls.has('jk-ok'), gate:(E.els.jkgate||{}).className, cache:E.A.cacheOk(U), browser:'jk_access_v1' in E.lsm}; }
     { const E=loadAccess(), F=mkFb({requestedAt:1},{user:U, onRead:auth=>{ auth.currentUser=U2; }}); const locks=[];
       const v=await E.A.admit(U, F.fb, {lock:r=>locks.push(r.state)}); out.stale={v, locks:locks.length}; }
     { const E=loadAccess(), F=mkFb(null,{user:ADM}); const v=await E.A.admit(ADM, F.fb, {lock:()=>{}}); await tick();
       out.adm={v, reads:F.log.reads, admin:E.cls.has('jk-admin')}; }
-    ok('admit: 이 기기에서 승인 확인된 계정은 곧바로 연다 → 뒤에서 다시 물어 차단이면 그 자리에서 덮는다(한 번)',
+    ok('admit: 같은 페이지 메모리에서 승인 확인된 계정은 곧바로 연다 → 뒤에서 다시 물어 차단이면 그 자리에서 덮는다(한 번)',
        out.fast.v===true && out.fast.before===0 && out.fast.locks==='blocked', JSON.stringify(out.fast));
     ok('admit: 처음 보는 계정은 \'확인 중\' 을 띄우고 답을 기다린다 → 대기면 덮고 false', out.pend.v===false && out.pend.locks==='pending' && out.pend.first==='checking' && !out.pend.ok, JSON.stringify(out.pend));
-    ok('admit: 승인이면 막을 걷고(jk-ok) true · 이 기기에 기억', out.appr.v===true && out.appr.locks===0 && out.appr.ok && out.appr.gate==='' && out.appr.cache, JSON.stringify(out.appr));
+    ok('admit: 승인이면 막을 걷고(jk-ok) true · 페이지 메모리에만 유지', out.appr.v===true && out.appr.locks===0 && out.appr.ok && out.appr.gate==='' && out.appr.cache && !out.appr.browser, JSON.stringify(out.appr));
     ok('admit: 확인하는 사이 계정이 바뀌면 false · 덮지도 않는다(새 계정 흐름이 맡는다)', out.stale.v===false && out.stale.locks===0, JSON.stringify(out.stale));
     ok('admit: 관리자는 묻지 않고 연다 · 메뉴 켬', out.adm.v===true && out.adm.reads===0 && out.adm.admin, JSON.stringify(out.adm));
   })().catch(e=>ok('admit 시험 실행', false, String(e&&e.stack||e))));
@@ -11337,8 +11329,10 @@ console.log('\n[ACCESS] 이용 승인제 — 판정 한 곳 · 모든 페이지 
        && pl.includes('html:not(.authed) body>*:not(#authgate){visibility:hidden}'));
     ok('가림: data-guard 페이지는 승인 확인(jk-ok) 전까지 본문 전부를 숨긴다',
        E.cls.has('jk-guard') && css.includes('html.jk-guard:not(.jk-ok) body>*:not(#jkgate){visibility:hidden}'));
-    const E2=loadAccess(); const E3=loadAccess({ls:{jk_access_v1:JSON.stringify({uid:'a1',state:'admin'})}});
-    ok('가림은 data-guard 일 때만 · 소유자 메뉴는 이 기기 기억으로 먼저 켠다(깜빡임 없음)', !E2.cls.has('jk-guard') && !E2.cls.has('jk-admin') && E3.cls.has('jk-admin')); }
+    const E2=loadAccess(), E3=loadAccess();
+    ok('가림은 data-guard 일 때만 · 소유자 메뉴는 Firebase 승인 전 미리 켜지지 않는다',
+       !E2.cls.has('jk-guard') && !E2.cls.has('jk-admin') && !E3.cls.has('jk-admin')
+       && !/localStorage|sessionStorage|indexedDB/.test(accSrc)); }
 
   // ── guard() — 백테·공모주·JOB 이 통째로 맡기는 길 ──
   PENDING.push((async()=>{
@@ -11380,79 +11374,45 @@ console.log('\n[ACCESS] 이용 승인제 — 판정 한 곳 · 모든 페이지 
     ].map(([k,v])=>[k, String(v||'').replace(/\s|"/g,'').replace(/'/g,'')]);
     ok('관리자(소유자) 계정이 다섯 곳 모두 같다 — jk-access·운영·관리자·서버 기본값·규칙', lists.every(x=>x[1] && x[1]===lists[0][1]), JSON.stringify(lists)); }
 
-  // ── 운영(initAuth) — 실제 글자를 가짜 이웃으로 돌린다 ──
-  { const iaSrc=extractFn(idx,'function initAuth(){'), alSrc=extractFn(idx,'function accessLock(user, r, accFb){');
-    const runIdx=async(mode)=>{
-      const log=[], gate={style:{display:'flex'}}; let cb=null;
-      const auth={currentUser:U};
-      const fbw={auth, db:{}, doc:()=>{}, getDoc:()=>{}, setDoc:()=>{}, getRedirectResult:()=>Promise.resolve(), onAuthStateChanged:(a,f)=>{ cb=f; }, signOut:async()=>{}};
-      const JK={ hide:()=>log.push('hide'), setAdmin:()=>{}, cacheSet:()=>{}, saveNote:()=>{},
-        show:(st)=>log.push('show:'+st),
-        admit:async(user, f, o)=>{ log.push('admit');
-          if(mode==='pending'){ o.lock({state:'pending'}); return false; }
-          if(mode==='revoked'){ setTimeout(()=>o.lock({state:'blocked'}),0); return true; }
-          return true; } };
-      const factory=new Function('window','JKAccess','localStorage','document','$','applyAdminMode','renderUserBadge','load','validState','startApp','setSync',
-        'authWarn','withTimeout','touchProfile','pullRemote','freshState','ensureBoxes','saveLocal','paperPageAuto','googleLogin','doLogout','console',
-        "let curUid=null, curEmail=null, authStep='', accessLocked=false, authWired=false, S={ok:1};\n"+alSrc+'\n'+iaSrc+'\nreturn {initAuth, st:()=>({curUid, accessLocked})};');
-      const env=factory({fb:fbw, JKAccess:JK}, JK, {setItem(){}, removeItem(){}, getItem(){ return null; }}, {documentElement:{classList:{remove(){}, add(){}}}},
-        id=>id==='authgate'?gate:{textContent:''}, ()=>{}, ()=>{}, ()=>log.push('load'), ()=>true, ()=>log.push('startApp'), ()=>{},
-        m=>log.push('warn'), (p)=>p, async()=>{ log.push('touch'); await tick(); }, async()=>{ log.push('pull'); return true; }, ()=>({}), ()=>{}, ()=>{}, ()=>log.push('paperAuto'),
-        ()=>{}, ()=>{}, {warn(){}, error(){}});
-      env.initAuth(); await cb(U); await tick(10);
-      return {log:log.join(','), gate:gate.style.display, locked:env.st().accessLocked};
-    };
-    PENDING.push((async()=>{
-      const p=await runIdx('pending'), a=await runIdx('approved'), v=await runIdx('revoked');
-      ok('운영: 승인 대기 → 승인 확인만 하고 끝 — 이 기기 기록·앱·접속 기록·클라우드 기록 모두 안 연다 · 로그인 막 유지 + 대기 화면',
-         p.log==='admit,show:pending' && p.gate==='flex', JSON.stringify(p));
-      ok('운영: 승인 → 승인 확인 뒤에 로컬로 열고 → 접속 기록 → 클라우드 기록 → 앱 시작',
-         a.log==='admit,load,startApp,touch,pull,startApp,paperAuto' && a.gate==='none', JSON.stringify(a));
-      ok('운영: 먼저 열린 뒤 승인 취소·차단이 확인되면 덮고 클라우드 기록은 더 열지 않는다',
-         v.log==='admit,load,startApp,touch,show:blocked' && v.gate==='flex' && v.locked===true, JSON.stringify(v));
-    })().catch(e=>ok('운영 승인 시험 실행', false, String(e&&e.stack||e))));
+  // ── 운영·자산플랜 — 승인 후 Firebase DB 정본을 읽은 뒤에만 본문을 연다 ──
+  {
+    const ia=extractFn(idx,'function initAuth()');
+    ok('운영: 승인 대기는 DB 원장·앱을 열지 않는다',
+       ia.indexOf('JKAccess.admit(user, accFb')>=0
+       && ia.indexOf('JKAccess.admit(user, accFb')<ia.indexOf('pullRemote()'));
+    ok('운영: 승인 후 Firebase DB 원장 성공 뒤 앱 시작',
+       ia.indexOf('pullRemote()')>=0
+       && ia.indexOf('startApp()')>ia.indexOf('pullRemote()')
+       && /Firebase DB 원장을 불러오지 못했습니다/.test(ia));
     const wd=(idx.match(/\(function bootWatchdog\(\)\{[\s\S]*?\n\}\)\(\);/)||[''])[0];
-    ok('운영 부팅 워치독: 승인 화면이 떠 있으면 손대지 않고, 이 기기에서 승인 확인된 계정만 로컬로 연다 (대기 계정이 6초 뒤 열리던 구멍)',
-       /if\(window\.JKAccess && JKAccess\.showing\(\)\) return;/.test(wd) && /const accOk=!!\(restored && window\.JKAccess && \(JKAccess\.isAdminEmail\(restored\.email\)\|\|JKAccess\.cacheOk\(restored\)\)\);/.test(wd)
-       && /if\(restored && !appStarted && accOk\)\{/.test(wd)); }
+    ok('운영 부팅 워치독은 오래된 브라우저 원장으로 앱을 열지 않는다',
+       /Firebase DB 원장 확인이 지연/.test(wd)
+       && !/restored|cacheOk|startApp\(\)/.test(wd));
+  }
 
-  // ── 자산플랜 — 로그인 막(본문 숨김) · planGate · 처리 순서 ──
   ok('자산플랜: 본문은 로그인(html.authed) 전에는 숨기고, 막은 로그인 뒤에만 숨긴다',
      pl.includes('html:not(.authed) body>*:not(#authgate){visibility:hidden}') && pl.includes('html.authed #authgate{display:none}'));
   ok('자산플랜: 로그인 막이 본문보다 먼저 있다 (body 바로 아래 · 본문 .wrap 앞)',
-     (()=>{ const b=pl.indexOf('<body>'), g=pl.indexOf('<div id="authgate"'), w=pl.indexOf('<div class="wrap">'); return b>=0&&g>b&&w>g; })());
-  const mkDoc=()=>{ const s=new Set(); return {s, documentElement:{classList:{add:c=>s.add(c),remove:c=>s.delete(c),contains:c=>s.has(c)}}}; };
-  const mkLS=()=>{ const m={}; return {m, getItem:k=>k in m?m[k]:null, setItem:(k,v)=>{m[k]=String(v);}, removeItem:k=>{delete m[k];}}; };
-  { const D=mkDoc(), L=mkLS();
-    const planGate=new Function('document','localStorage',extractFn(pl,'function planGate(on){')+'\nreturn planGate;')(D,L);
-    planGate(true);  const a=D.s.has('authed') && L.m.qcockpit_hadUser==='1';
-    planGate(false); const b=!D.s.has('authed') && !('qcockpit_hadUser' in L.m);
-    ok('자산플랜: planGate(true) 는 본문을 열고 기기 표시를 남긴다 · planGate(false) 는 닫고 지운다', a&&b, JSON.stringify({a,b})); }
+     (()=>{ const x=pl.indexOf('<body>'), g=pl.indexOf('<div id="authgate"'), w=pl.indexOf('<div class="wrap">'); return x>=0&&g>x&&w>g; })());
+  {
+    const gateFn=extractFn(pl,'function planGate(on){');
+    ok('자산플랜: planGate는 화면 class만 바꾸고 브라우저 영구저장을 하지 않는다',
+       /classList\.add\('authed'\)/.test(gateFn)
+       && /classList\.remove\('authed'\)/.test(gateFn)
+       && !/localStorage|sessionStorage|indexedDB/.test(gateFn));
+  }
   ok('자산플랜: 따로 차단 판정이 없다 (jk-access.js 한 곳)', !/async function planBlocked\(/.test(pl) && !/PLAN_ADMIN_EMAILS/.test(pl));
-  const hs=extractFn(pl,'onAuthStateChanged(auth,async user=>{'), handlerSrc=hs.slice(hs.indexOf('async user=>'));
-  const runH=async(user,mode)=>{
-    const log=[];
-    const JK={hide:()=>log.push('hide'), setAdmin:()=>{}, cacheSet:()=>{}, saveNote:()=>{}, show:st=>log.push('show:'+st),
-      admit:async(u,f,o)=>{ log.push('admit'); if(mode==='pending'){ o.lock({state:'pending'}); return false; } return true; }};
-    const h=new Function('planGate','userBadge','JKAccess','planFb','signOut','auth','$','cloudLoad','refreshLive','planBootHydrating',
-      'requestedAssetSessionId','assetPlanBox','activeHorizon','localStorage','writeAssetSessionLocal','renderHorizonCopy','renderAssetSessions','loadActiveAssetSessionView',
-      'return '+handlerSrc)(
-      on=>log.push('gate:'+on), u=>log.push('badge:'+(u?'user':'null')), JK, {}, async()=>log.push('signOut'), {}, ()=>null,
-      async()=>log.push('cloudLoad'), async()=>log.push('refreshLive'), true,
-      null, ()=>({sessions:[],activeByHorizon:{}}), 5, mkLS(), ()=>{}, ()=>{}, ()=>log.push('renderSessions'), async()=>log.push('loadView'));
-    await h(user); return log;
-  };
-  PENDING.push((async()=>{
-    const L0=await runH(null);
-    ok('자산플랜: 로그인 안 함 → 막만 띄우고 끝 (승인 확인·장부·시세 모두 안 부름)',
-       L0.join(',')==='gate:false,badge:null,hide', JSON.stringify(L0));
-    const L1=await runH(U,'approved');
-    ok('자산플랜: 승인 → 승인 확인 뒤에 본문을 열고, 그 다음에 장부·시세를 부른다',
-       L1[0]==='admit' && L1.indexOf('gate:true')>0 && L1.indexOf('cloudLoad')>L1.indexOf('gate:true') && L1.includes('refreshLive') && !L1.includes('gate:false'), JSON.stringify(L1));
-    const L2=await runH(U,'pending');
-    ok('자산플랜: 승인 대기 → 본문을 한 번도 열지 않고 대기 화면 · 장부·시세 안 부름',
-       !L2.includes('gate:true') && L2.includes('gate:false') && L2.includes('show:pending') && !L2.includes('cloudLoad') && !L2.includes('refreshLive'), JSON.stringify(L2));
-  })().catch(e=>ok('자산플랜 로그인 처리기 시험 실행', false, String(e&&e.stack||e))));
+  {
+    const hs=extractFn(pl,'onAuthStateChanged(auth,async user=>{');
+    ok('자산플랜: 승인 → Firebase DB 원장 → 본문 → 시세 순서',
+       hs.indexOf('JKAccess.admit(user,planFb')>=0
+       && hs.indexOf('cloudLoad(user)')>hs.indexOf('JKAccess.admit(user,planFb')
+       && hs.indexOf('planGate(true)')>hs.indexOf('cloudLoad(user)')
+       && hs.indexOf('refreshLive()')>hs.indexOf('planGate(true)'));
+    ok('자산플랜: DB 읽기 실패 시 본문을 열지 않는다',
+       /Firebase DB 원장을 불러오지 못했습니다/.test(hs)
+       && /planGate\(false\)/.test(hs));
+  }
 
   // ── 관리자 — 승인 화면 (목록 순서·상태·단추·쓰기) ──
   { const uSrc=adm.slice(adm.indexOf('const ACC_LABEL='), adm.indexOf('// ── 2. 전략 기본값'));
@@ -11539,8 +11499,8 @@ console.log('\n[SCALPING SHADOW/PROMOTION] 최소10개 · 순위 · 소유자 �
   const dw=fs.readFileSync(__d+'/worker/daytrading-scheduler/src/index.js','utf8');
   const gw=fs.readFileSync(__d+'/worker/global-intraday-scheduler/src/index.js','utf8');
 
-  ok('단타 버전 v1.38.1 · 4개 탭 그림자 순위 컨테이너 존재',
-     /id="scVer">v1\.38\.1/.test(scl)
+  ok('단타 버전 x.y.z · 4개 탭 그림자 순위 컨테이너 존재',
+     /id="scVer">v\d+\.\d+\.\d+</.test(scl)
      && ['opening','daytrading','crypto','soxl'].every(x=>scl.includes('id="shadow_rank_'+x+'"')));
   ok('각 탭 그림자 카탈로그 최소 10개를 강제한다',
      /minRequired:10/.test(rankApi)

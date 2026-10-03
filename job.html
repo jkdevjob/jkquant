@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>JOB — JK Quant</title>
+<title>JK 퀀트 — JOB</title>
 <style>
 :root{--bg:#0f1320;--surf:#171c2e;--surf2:#1e2540;--border:#2a3354;--border2:#34406a;--text:#e8ecf7;--dim:#9aa6c9;--faint:#6f7ba0;--accent:#8b8cf0;--green:#36d399;--red:#f87b8c;--gold:#f5c451}
 *{box-sizing:border-box}html,body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Pretendard","Segoe UI",sans-serif}body{font-size:14px;line-height:1.55}a{color:inherit}button,input,select{font:inherit}
@@ -34,7 +34,12 @@ import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signO
 import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-firestore.js";
 const app=initializeApp({apiKey:"AIzaSyBzBe9pAttnbDgTlNThWZzNqtAAKxX7Ksw",authDomain:"jk-invest.firebaseapp.com",projectId:"jk-invest",
   storageBucket:"jk-invest.firebasestorage.app",messagingSenderId:"1024066323251",appId:"1:1024066323251:web:23d557527866205f01f446"});
-JKAccess.guard({auth:getAuth(app), db:getFirestore(app), doc, getDoc, setDoc, onAuthStateChanged, signInWithPopup, GoogleAuthProvider, signOut});
+const auth=getAuth(app),db=getFirestore(app);
+window.jobFb={auth,db,doc,getDoc,setDoc,uid:null};
+JKAccess.guard({auth,db,doc,getDoc,setDoc,onAuthStateChanged,signInWithPopup,GoogleAuthProvider,signOut},{
+  onUser:user=>{window.jobFb.uid=user?user.uid:null;},
+  onOk:async user=>{window.jobFb.uid=user.uid;if(window.loadScraps)await window.loadScraps();}
+});
 </script>
 </head>
 <body>
@@ -95,16 +100,27 @@ document.addEventListener("click",function(e){var m=document.getElementById("jkm
 function esc(s){return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;")}
 var CAT_LABEL={java_ai:"Java·AI",regular_dev:"개발자 정규직",salary500:"월500+",salary450:"월450~499",short_term:"단기알바",scrap:"스크랩"};
 var DATA={jobs:[],sourceStatuses:{}},activeCat="all",shown=50,filtered=[];
-var SCRAP_STORAGE_KEY="jkquant_job_scraps_v1",SCRAPS={};
+var SCRAPS={};
 function scrapKey(j){return String((j&&j.url)||(j&&j.id)||"").trim()}
-function loadScraps(){
+async function loadScraps(){
+  SCRAPS={};
+  var F=window.jobFb;if(!F||!F.uid){renderScrapCount();return false}
   try{
-    var raw=localStorage.getItem(SCRAP_STORAGE_KEY);
-    var parsed=raw?JSON.parse(raw):{};
-    SCRAPS=parsed&&typeof parsed==="object"&&!Array.isArray(parsed)?parsed:{}
-  }catch(e){SCRAPS={}}
+    var snap=await F.getDoc(F.doc(F.db,"users",F.uid)),d=snap.exists()?(snap.data()||{}):{},v=d.jobScraps;
+    SCRAPS=v&&typeof v==="object"&&!Array.isArray(v)?v:{};
+    renderScrapCount();
+    if((DATA.jobs||[]).length){syncScrapSnapshots();applyFilters()}
+    return true
+  }catch(e){console.error("JOB 스크랩 DB 읽기 실패",e);return false}
 }
-function saveScraps(){try{localStorage.setItem(SCRAP_STORAGE_KEY,JSON.stringify(SCRAPS))}catch(e){}}
+async function saveScraps(){
+  var F=window.jobFb;if(!F||!F.uid)return false;
+  try{
+    await F.setDoc(F.doc(F.db,"users",F.uid),{jobScraps:SCRAPS,jobScrapsUpdated:Date.now()},{merge:true});
+    return true
+  }catch(e){console.error("JOB 스크랩 DB 저장 실패",e);return false}
+}
+window.loadScraps=loadScraps;
 function isScrapped(j){var k=scrapKey(j);return !!(k&&SCRAPS[k])}
 function syncScrapSnapshots(){
   var changed=false;
@@ -112,7 +128,7 @@ function syncScrapSnapshots(){
     var k=scrapKey(j);
     if(k&&SCRAPS[k]){SCRAPS[k]={savedAt:SCRAPS[k].savedAt||new Date().toISOString(),job:j};changed=true}
   });
-  if(changed)saveScraps()
+  if(changed)void saveScraps()
 }
 function scrapJobs(){
   var current={};
@@ -126,16 +142,21 @@ function renderScrapCount(){
   var el=document.getElementById("scrapCnt");
   if(el)el.textContent=Object.keys(SCRAPS).length.toLocaleString()
 }
-function toggleScrapByKey(key){
+async function toggleScrapByKey(key){
   key=String(key||"");
   if(!key)return;
+  var before=JSON.parse(JSON.stringify(SCRAPS));
   if(SCRAPS[key])delete SCRAPS[key];
   else{
     var job=(DATA.jobs||[]).concat(filtered||[]).find(function(j){return scrapKey(j)===key});
     if(!job)return;
     SCRAPS[key]={savedAt:new Date().toISOString(),job:job}
   }
-  saveScraps();renderScrapCount();applyFilters()
+  renderScrapCount();applyFilters();
+  if(!await saveScraps()){
+    SCRAPS=before;renderScrapCount();applyFilters();
+    alert("스크랩을 Firebase DB에 저장하지 못했습니다. 변경을 되돌렸습니다.")
+  }
 }
 function effectiveDate(j){return j.postedDate||j.firstSeen||""}
 function fmtDate(s){if(!s)return "날짜 미상";var p=s.split("-");return p.length===3?p[0]+"."+p[1]+"."+p[2]:s}
@@ -197,7 +218,7 @@ function applyFilters(){
   shown=+document.getElementById("pageSize").value||50;renderList()
 }
 function renderList(){
-  document.getElementById("totalCnt").textContent=DATA.jobs.length.toLocaleString();document.getElementById("viewCnt").textContent=filtered.length.toLocaleString();renderScrapCount();document.getElementById("resultText").textContent=filtered.length.toLocaleString()+"건 · "+(activeCat==="all"?"전체":CAT_LABEL[activeCat]||activeCat)+(activeCat==="scrap"?" · 이 브라우저에 저장":"");
+  document.getElementById("totalCnt").textContent=DATA.jobs.length.toLocaleString();document.getElementById("viewCnt").textContent=filtered.length.toLocaleString();renderScrapCount();document.getElementById("resultText").textContent=filtered.length.toLocaleString()+"건 · "+(activeCat==="all"?"전체":CAT_LABEL[activeCat]||activeCat)+(activeCat==="scrap"?" · Firebase DB 저장":"");
   var rows=filtered.slice(0,shown),el=document.getElementById("list");if(!rows.length){el.innerHTML='<div class="empty">조건에 맞는 공고가 없습니다.</div>';document.getElementById("moreBtn").hidden=true;return}
   el.innerHTML=rows.map(function(j){
     var cats=(j.categories||[]).map(function(c){return '<span class="tag '+tagClass(c)+'">'+esc(CAT_LABEL[c]||c)+"</span>"}).join("");
@@ -221,7 +242,7 @@ document.getElementById("tabs").addEventListener("click",function(e){var b=e.tar
 document.getElementById("period").addEventListener("change",function(){syncDatesFromPeriod();applyFilters()});
 ["keyword","region","employment","source","sort","pageSize"].forEach(function(id){var el=document.getElementById(id);el.addEventListener(id==="keyword"?"input":"change",applyFilters)});
 ["fromDate","toDate"].forEach(function(id){document.getElementById(id).addEventListener("change",function(){document.getElementById("period").value="custom";applyFilters()})});
-loadScraps();renderScrapCount();setDefaultDates();
+renderScrapCount();setDefaultDates();
 (function(){fetch("/data/job_archive.json?ts="+Date.now(),{cache:"no-store"}).then(function(r){if(!r.ok)throw new Error("HTTP "+r.status);return r.json()}).then(function(d){DATA=d||{};DATA.jobs=Array.isArray(DATA.jobs)?DATA.jobs:[];syncScrapSnapshots();renderSources();var upd=DATA.updatedAt?new Date(DATA.updatedAt):null;document.getElementById("updated").textContent="최근 "+(DATA.rangeDays||30)+"일 · 중복 제거 · "+(upd&&!isNaN(upd)?"업데이트 "+upd.toLocaleString("ko-KR"):"업데이트 준비 중");applyFilters()}).catch(function(e){document.getElementById("list").innerHTML='<div class="empty">JOB 데이터를 아직 준비 중입니다.<br><span class="sub">'+esc(e.message||e)+"</span></div>";document.getElementById("resultText").textContent="데이터 준비 중"})})();
 </script>
 </body>

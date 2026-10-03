@@ -9,7 +9,7 @@
    운영·자산플랜은 자기 로그인 막을 쓰고, 승인 판정(check)과 대기 화면(show)만 여기서 가져간다. */
 (function(){
   var ADMIN_EMAILS=['jk82investing@gmail.com'];
-  var CACHE='jk_access_v1';
+  var accessCache=null; // 페이지가 열려 있는 동안만 유지. 영구 브라우저 저장 금지.
   var html=document.documentElement;
   function norm(e){ return String(e||'').trim().toLowerCase(); }
   function isAdminEmail(e){ return ADMIN_EMAILS.indexOf(norm(e))>=0; }
@@ -22,12 +22,9 @@
     return 'pending';
   }
   function isOk(state){ return state==='admin'||state==='approved'; }
-  /* 이 기기에서 승인이 확인된 계정 — 확인이 늦거나 오프라인일 때만 쓴다(처음 보는 계정은 늘 서버에 묻는다) */
-  function cacheGet(){ try{ return JSON.parse(localStorage.getItem(CACHE)||'null'); }catch(e){ return null; } }
-  function cacheSet(user, state){
-    try{ if(user && isOk(state)) localStorage.setItem(CACHE, JSON.stringify({uid:user.uid, state:state, at:Date.now()}));
-         else localStorage.removeItem(CACHE); }catch(e){}
-  }
+  /* 승인 캐시는 같은 페이지의 메모리에서만 유지한다. 페이지 이동/새로고침마다 Firebase를 다시 확인한다. */
+  function cacheGet(){ return accessCache; }
+  function cacheSet(user, state){ accessCache=(user&&isOk(state))?{uid:user.uid,state:state,at:Date.now()}:null; }
   function cacheOk(user){ var c=cacheGet(); return !!(user && c && c.uid===user.uid && isOk(c.state)); }
   function setAdmin(on){ html.classList.toggle('jk-admin', !!on); }
   function timeout(p, ms){ var t; return Promise.race([p, new Promise(function(_, rej){ t=setTimeout(function(){ rej(new Error('응답 없음('+Math.round(ms/1000)+'초)')); }, ms); })])
@@ -81,9 +78,7 @@
   try{ var st=document.createElement('style'); st.id='jkaccess-css'; st.textContent=css; (document.head||html).appendChild(st); }catch(e){}
   var cur=document.currentScript;
   if(cur && cur.getAttribute('data-guard')==='1') html.classList.add('jk-guard');
-  /* 단타·관리자 메뉴가 소유자 화면에서 깜빡이지 않게 — 이 기기의 마지막 확인으로 먼저 보이고, 로그인 확인이 바로잡는다.
-     메뉴를 보이는 것뿐이다. 단타는 서버(/api/owner)가, 관리자 화면은 계정 확인이 따로 막는다. */
-  try{ var c0=cacheGet(); if(c0 && c0.state==='admin') setAdmin(true); }catch(e){}
+  /* 관리자 메뉴는 현재 페이지에서 Firebase 승인 확인이 끝난 뒤에만 보인다. */
 
   var G='<svg viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>';
   function esc(t){ return String(t==null?'':t).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }

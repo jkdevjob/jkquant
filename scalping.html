@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="theme-color" content="#0f1320">
 <meta name="robots" content="noindex,nofollow">
-<title>JK 퀀트 — 단타</title>
+<title>JK 퀀트 — 단타(지피티)</title>
 <style>
 :root{
   --bg:#0f1320;--panel:#171c2e;--panel2:#1e2540;--line:#2a3354;
@@ -228,7 +228,7 @@ canvas{display:block;width:100%;height:auto}
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-app.js";
   import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-auth.js";
-  import { getFirestore, doc, getDoc, setDoc, runTransaction } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-firestore.js";
+  import { getFirestore, doc, getDoc, setDoc, runTransaction, collection, getDocs, deleteDoc } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-firestore.js";
   const firebaseConfig = {
     apiKey: "AIzaSyBzBe9pAttnbDgTlNThWZzNqtAAKxX7Ksw",
     authDomain: "jk-invest.firebaseapp.com",
@@ -239,7 +239,7 @@ canvas{display:block;width:100%;height:auto}
   };
   const app = initializeApp(firebaseConfig);
   window.fb = { auth:getAuth(app), db:getFirestore(app), provider:new GoogleAuthProvider(),
-                signInWithPopup, onAuthStateChanged, signOut, doc, getDoc, setDoc, runTransaction };
+                signInWithPopup, onAuthStateChanged, signOut, doc, getDoc, setDoc, runTransaction, collection, getDocs, deleteDoc };
   window.dispatchEvent(new Event('fb-ready'));
 </script>
 </head>
@@ -789,74 +789,100 @@ function analyze(j,atrBars){
 }
 
 /* ══ 저장 (포지션·일지·KIS 이력) ══
-   KIS 이력만은 localStorage 로 끝내지 않는다. 증권사에 실제로 나간 주문의 기록이라
+   KIS 이력은 Firebase DB에 남긴다. 증권사에 실제로 나간 주문의 기록이라
    브라우저 캐시를 지우면 사라지는 자리에 두면 안 된다 — Firestore users/{uid}.scalp 에도 남긴다.
    (index.html 이 같은 문서의 state 필드를 쓰므로 merge 로 서로 안 건드린다) */
-let PKEY='jkq_scalp_pos_anon', LKEY='jkq_scalp_log_anon', KKEY='jkq_scalp_kis_anon', THKEY='jkq_scalp_top2_hist_anon';
 let POS=[], LOG=[], KLOG=[], TOP2HIST=[];
-function loadAll(){
-  const g=(k,d)=>{ try{ const v=JSON.parse(localStorage.getItem(k)||'null'); return Array.isArray(v)?v:d; }catch(e){ return d; } };
-  POS=g(PKEY,[]); LOG=g(LKEY,[]); KLOG=g(KKEY,[]); TOP2HIST=g(THKEY,[]);
+let SCALP_DB_BASE={pos:[],log:[],kis:[],top2:[],prefs:{}};
+let SCALP_PREFS={strategyTab:'daily',top2Lock:null,archMeta:{last:0,auto:true}};
+function scalpClone(v){return JSON.parse(JSON.stringify(v==null?null:v))}
+function scalpStable(v){
+  const n=x=>Array.isArray(x)?x.map(n):(x&&typeof x==='object'?Object.keys(x).sort().reduce((o,k)=>(o[k]=n(x[k]),o),{}):x);
+  try{return JSON.stringify(n(v));}catch(e){return JSON.stringify(v)}
 }
-function saveP(){ try{ localStorage.setItem(PKEY,JSON.stringify(POS)); }catch(e){} }
-function saveL(){ try{ localStorage.setItem(LKEY,JSON.stringify(LOG)); }catch(e){} }
-function saveK(){ try{ localStorage.setItem(KKEY,JSON.stringify(KLOG)); }catch(e){} cloudSave(); }
-function saveTop2Hist(){ try{ localStorage.setItem(THKEY,JSON.stringify(TOP2HIST)); }catch(e){} cloudSave(); renderTop2History(); }
+function scalpEntries(a,type){
+  const occ={},out=[];
+  for(const r of (Array.isArray(a)?a:[])){
+    let k='';
+    if(r&&r.id!=null)k='id:'+String(r.id);
+    else if(type==='top2'&&r&&r.date)k='date:'+String(r.date);
+    else if(type==='pos'&&r&&r.ts!=null)k='pos:'+String(r.code||'')+':'+String(r.ts);
+    else if(type==='kis'&&r)k='kis:'+String(r.orderNo||r.id||[r.ts,r.date,r.time,r.code,r.side].join('|'));
+    if(!k){const sem=scalpStable(r),n=(occ[sem]||0)+1;occ[sem]=n;k='legacy:'+sem+':'+n;}
+    out.push([k,r]);
+  }
+  return out;
+}
+function scalpRebase(base,candidate,remote,type){
+  const B=new Map(scalpEntries(base,type)),C=new Map(scalpEntries(candidate,type)),R=new Map(scalpEntries(remote,type));
+  const order=scalpEntries(remote,type).map(x=>x[0]);
+  for(const [k] of B)if(!C.has(k))R.delete(k);
+  for(const [k,v] of C){
+    const b=B.get(k);
+    if(!B.has(k)||scalpStable(v)!==scalpStable(b)){R.set(k,scalpClone(v));if(!order.includes(k))order.push(k);}
+  }
+  const out=[];for(const k of order)if(R.has(k)){out.push(R.get(k));R.delete(k);}
+  for(const v of R.values())out.push(v);
+  return out;
+}
+function scalpMergeAppend(remote,candidate,type){
+  const m=new Map(scalpEntries(remote,type));
+  for(const [k,v] of scalpEntries(candidate,type))if(!m.has(k))m.set(k,scalpClone(v));
+  return [...m.values()];
+}
+function loadAll(){POS=[];LOG=[];KLOG=[];TOP2HIST=[];}
+function saveP(){return cloudSave();}
+function saveL(){return cloudSave();}
+function saveK(){return cloudSave();}
+function saveTop2Hist(){const p=cloudSave();renderTop2History();return p;}
 
-/* ── 클라우드 동기화 ── */
-let _cloudT=null;
-function cloudSave(){                       // 연타로 쓰지 않게 2초 모아서 한 번
-  if(!me||!window.fb||!window.fb.runTransaction) return;
-  clearTimeout(_cloudT);
-  _cloudT=setTimeout(async()=>{
+/* ── Firebase DB 동기화 — 브라우저 영구저장 없음 ── */
+let _cloudChain=Promise.resolve();
+function cloudSave(){
+  if(!me||!window.fb||!window.fb.runTransaction)return Promise.resolve(false);
+  const candidate={pos:scalpClone(POS),log:scalpClone(LOG),kis:scalpClone(KLOG),top2:scalpClone(TOP2HIST),prefs:scalpClone(SCALP_PREFS)};
+  const base=scalpClone(SCALP_DB_BASE);
+  _cloudChain=_cloudChain.catch(()=>{}).then(async()=>{
     try{
       const ref=window.fb.doc(window.fb.db,'users',me.uid);
-      const merged=await window.fb.runTransaction(window.fb.db,async tx=>{
-        const snap=await tx.get(ref),old=snap.exists()&&snap.data()?snap.data().scalp:null;
-        // 실제 주문 이력은 append-only. 다른 기기의 주문을 현재 브라우저가 모른다고 해서 절대 지우지 않는다.
-        const kisBy=new Map();
-        for(const x of [...((old&&Array.isArray(old.kis))?old.kis:[]),...KLOG]){
-          if(!x)continue;const k=x.id!=null?String(x.id):[x.ts,x.date,x.time,x.code,x.side,x.orderNo].join('|');
-          if(!kisBy.has(k))kisBy.set(k,x);
-        }
-        const kis=[...kisBy.values()].sort((a,b)=>(b.ts||0)-(a.ts||0));
-        const topBy=new Map();
-        for(const x of [...((old&&Array.isArray(old.top2))?old.top2:[]),...TOP2HIST]){
-          if(!x||!x.date)continue;const cur=topBy.get(x.date);
-          if(!cur||(+x.updated||0)>=(+cur.updated||0))topBy.set(x.date,x);
-        }
-        const top2=[...topBy.values()].sort((a,b)=>String(b.date).localeCompare(String(a.date)));
-        const pos=POS.length?POS:((old&&Array.isArray(old.pos))?old.pos:[]);
-        const next={kis,pos,top2,updated:Date.now()};
-        tx.set(ref,{scalp:next},{merge:true});return next;
+      const next=await window.fb.runTransaction(window.fb.db,async tx=>{
+        const snap=await tx.get(ref),old=snap.exists()&&snap.data()?snap.data().scalp:null,remote=old||{};
+        const out={
+          pos:scalpRebase(base.pos,candidate.pos,remote.pos||[],'pos'),
+          log:scalpRebase(base.log,candidate.log,remote.log||[],'log'),
+          kis:scalpMergeAppend(remote.kis||[],candidate.kis,'kis'),
+          top2:scalpRebase(base.top2,candidate.top2,remote.top2||[],'top2'),
+          prefs:Object.assign({},remote.prefs||{},candidate.prefs||{}),
+          updated:Date.now()
+        };
+        tx.set(ref,{scalp:out},{merge:true});return out;
       });
-      KLOG=merged.kis;TOP2HIST=merged.top2;if(!POS.length&&merged.pos)POS=merged.pos;
-      try{localStorage.setItem(KKEY,JSON.stringify(KLOG));localStorage.setItem(THKEY,JSON.stringify(TOP2HIST));}catch(e){}
-      setSync('클라우드 저장됨 · '+new Date().toLocaleTimeString('ko-KR'));
-    }catch(e){ setSync('클라우드 저장 실패 — '+(e.message||e), true); }
-  },2000);
+      POS=scalpClone(next.pos||[]);LOG=scalpClone(next.log||[]);KLOG=scalpClone(next.kis||[]);
+      TOP2HIST=scalpClone(next.top2||[]);SCALP_PREFS=Object.assign({strategyTab:'daily',top2Lock:null,archMeta:{last:0,auto:true}},scalpClone(next.prefs||{}));
+      SCALP_DB_BASE=scalpClone(next);
+      setSync('Firebase DB 저장됨 · '+new Date().toLocaleTimeString('ko-KR'));
+      return true;
+    }catch(e){setSync('Firebase DB 저장 실패 — '+(e.message||e),true);return false;}
+  });
+  return _cloudChain;
 }
 async function cloudLoad(){
-  if(!me||!window.fb||!window.fb.getDoc) return;
+  if(!me||!window.fb||!window.fb.getDoc)return false;
   try{
     const snap=await window.fb.getDoc(window.fb.doc(window.fb.db,'users',me.uid));
-    const sc=snap.exists()&&snap.data()&&snap.data().scalp;
-    if(!sc) return;
-    // 기기마다 기록이 갈릴 수 있다 — 주문 id 기준으로 합치고 최신순 정렬 (지운 기록이 되살아나지 않게 병합만)
-    if(Array.isArray(sc.kis)&&sc.kis.length){
-      const seen=new Set(KLOG.map(x=>x.id));
-      sc.kis.forEach(x=>{ if(x&&x.id&&!seen.has(x.id)){ KLOG.push(x); seen.add(x.id); } });
-      KLOG.sort((a,b)=>(b.ts||0)-(a.ts||0));
-      try{ localStorage.setItem(KKEY,JSON.stringify(KLOG)); }catch(e){}
-    }
-    if(Array.isArray(sc.pos)&&!POS.length&&sc.pos.length){ POS=sc.pos; saveP(); }
-    if(Array.isArray(sc.top2)&&sc.top2.length){
-      const byDate=new Map(TOP2HIST.filter(x=>x&&x.date).map(x=>[x.date,x]));
-      sc.top2.forEach(x=>{ if(!x||!x.date)return; const cur=byDate.get(x.date); if(!cur||(x.updated||0)>(cur.updated||0))byDate.set(x.date,x); });
-      TOP2HIST=[...byDate.values()].sort((a,b)=>String(b.date).localeCompare(String(a.date)));
-      try{ localStorage.setItem(THKEY,JSON.stringify(TOP2HIST)); }catch(e){}
-    }
-  }catch(e){ setSync('클라우드 읽기 실패 — '+(e.message||e), true); }
+    const sc=snap.exists()&&snap.data()&&snap.data().scalp||{};
+    POS=scalpClone(Array.isArray(sc.pos)?sc.pos:[]);
+    LOG=scalpClone(Array.isArray(sc.log)?sc.log:[]);
+    KLOG=scalpClone(Array.isArray(sc.kis)?sc.kis:[]);
+    TOP2HIST=scalpClone(Array.isArray(sc.top2)?sc.top2:[]);
+    SCALP_PREFS=Object.assign({strategyTab:'daily',top2Lock:null,archMeta:{last:0,auto:true}},scalpClone(sc.prefs||{}));
+    SCALP_DB_BASE=scalpClone({pos:POS,log:LOG,kis:KLOG,top2:TOP2HIST,prefs:SCALP_PREFS});
+    if(typeof OB_TOP2!=='undefined')OB_TOP2=scalpClone(SCALP_PREFS.top2Lock||null);
+    if(typeof AMETA!=='undefined')AMETA=Object.assign({last:0,auto:true},scalpClone(SCALP_PREFS.archMeta||{}));
+    if(typeof loadArch==='function')await loadArch();
+    setSync('Firebase DB 원장 불러옴');
+    return true;
+  }catch(e){setSync('Firebase DB 읽기 실패 — '+(e.message||e),true);return false;}
 }
 function setSync(t,bad){ const el=$('klog_sync'); if(el){ el.textContent=t; el.style.color=bad?'var(--sell)':''; } }
 
@@ -1062,25 +1088,45 @@ function addFirst(){
 /* ══ 분봉 아카이브 (9:00~9:30 누적) ══
    네이버 분봉은 최근 7거래일만 준다 → 주기적으로 저장하면 창이 겹치며 과거가 쌓인다.
    구조: ARCH[날짜][종목코드] = [[hhmm, 종가, 거래량], ...]  (09:00~09:30만) */
-let AKEY='jkq_scalp_arch_anon', ARCH={};
+let ARCH={},ARCH_DIRTY=new Set();
 let AMETA={last:0,auto:true};
-function loadArch(){
-  try{ const v=JSON.parse(localStorage.getItem(AKEY)||'{}'); ARCH=(v&&typeof v==='object')?v:{}; }catch(e){ ARCH={}; }
-  try{ const m=JSON.parse(localStorage.getItem(AKEY+'_meta')||'null'); if(m&&typeof m==='object') AMETA=Object.assign(AMETA,m); }catch(e){}
-  const cb=$('ar_auto'); if(cb) cb.checked=AMETA.auto!==false;
+async function loadArch(){
+  ARCH={};ARCH_DIRTY.clear();
+  AMETA=Object.assign({last:0,auto:true},scalpClone((SCALP_PREFS&&SCALP_PREFS.archMeta)||{}));
+  if(me&&window.fb&&window.fb.collection&&window.fb.getDocs){
+    try{
+      const q=await window.fb.getDocs(window.fb.collection(window.fb.db,'users',me.uid,'scalpArchive'));
+      q.forEach(d=>{const v=d.data()||{},date=String(v.date||d.id||'');if(date&&v.data&&typeof v.data==='object')ARCH[date]=v.data;});
+    }catch(e){console.warn('archive load',e);}
+  }
+  const cb=$('ar_auto');if(cb)cb.checked=AMETA.auto!==false;
 }
-function archSaveMeta(){ const cb=$('ar_auto'); if(cb) AMETA.auto=cb.checked;
-  try{ localStorage.setItem(AKEY+'_meta',JSON.stringify(AMETA)); }catch(e){} }
-/* 7거래일 창이라 놓치면 그 구간은 영영 없다 → 3일마다 자동으로 받아둔다 */
-async function archAuto(){
-  if(AMETA.auto===false) return;
-  const days=(Date.now()-(AMETA.last||0))/864e5;
-  if(days<3) return;
-  $('ar_msg').textContent='자동 수집 중… (7거래일 창을 놓치지 않기 위해 3일마다 받습니다)';
-  await archSnapshot(true);
+async function archSaveMeta(){
+  const cb=$('ar_auto');if(cb)AMETA.auto=cb.checked;
+  SCALP_PREFS.archMeta=scalpClone(AMETA);
+  return await cloudSave();
 }
-function saveArch(){ try{ localStorage.setItem(AKEY,JSON.stringify(ARCH)); return true; }
-  catch(e){ alert('저장 공간이 부족합니다. CSV로 내보낸 뒤 삭제하세요.'); return false; } }
+async function saveArch(){
+  if(!me||!window.fb||!window.fb.setDoc)return false;
+  const dates=[...ARCH_DIRTY].filter(d=>ARCH[d]&&typeof ARCH[d]==='object');
+  if(!dates.length)return true;
+  try{
+    await Promise.all(dates.map(d=>window.fb.setDoc(
+      window.fb.doc(window.fb.db,'users',me.uid,'scalpArchive',d),
+      {date:d,data:ARCH[d],updated:Date.now()}
+    )));
+    dates.forEach(d=>ARCH_DIRTY.delete(d));
+    return true;
+  }catch(e){console.error('archive save',e);return false;}
+}
+async function clearArchDb(){
+  if(!me||!window.fb||!window.fb.getDocs)return false;
+  try{
+    const q=await window.fb.getDocs(window.fb.collection(window.fb.db,'users',me.uid,'scalpArchive'));
+    await Promise.all(q.docs.map(d=>window.fb.deleteDoc(window.fb.doc(window.fb.db,'users',me.uid,'scalpArchive',d.id))));
+    return true;
+  }catch(e){console.error('archive clear',e);return false;}
+}
 function normalizeArchRows(raw,meta){
   const a=(raw||[]).slice().sort((x,y)=>x[0]-y[0]).map(r=>r.slice());
   if(!a.length || (meta&&meta.volMode==='minute')) return a;
@@ -1126,7 +1172,7 @@ async function archSnapshot(auto){
           const t=x.t||''; const d=t.slice(0,10), hh=+t.slice(11,13), mm=+t.slice(14,16);
           if(!d || hh!==9 || mm>30) return;                  // 09:00~09:30만
           const hm=hh*100+mm;
-          (ARCH[d]=ARCH[d]||{}); const arr=(ARCH[d][u.code]=ARCH[d][u.code]||[]);
+          (ARCH[d]=ARCH[d]||{}); ARCH_DIRTY.add(d); const arr=(ARCH[d][u.code]=ARCH[d][u.code]||[]);
           if(!arr.some(r=>r[0]===hm)){ arr.push(x.open!=null&&x.high!=null&&x.low!=null?[hm,x.close,x.vol||0,x.open,x.high,x.low]:[hm,x.close,x.vol||0]); added++; }
           const di=doh.findIndex(z=>z.date===d);
           ARCH[d]._meta=ARCH[d]._meta||{}; const oldm=ARCH[d]._meta[u.code]||{};
@@ -1140,8 +1186,8 @@ async function archSnapshot(auto){
   }
   await Promise.all(Array.from({length:6},()=>worker()));
   prog.style.display='none'; $('arBtn').disabled=false;
-  const ok=saveArch(); const s=archStats();
-  if(ok){ AMETA.last=Date.now(); archSaveMeta(); }
+  const ok=await saveArch(); const s=archStats();
+  if(ok){ AMETA.last=Date.now(); await archSaveMeta(); }
   const warn = s.kb>3500 ? ' <span style="color:var(--gold)">⚠ 용량 3.5MB 초과 — CSV로 내보낸 뒤 삭제하세요</span>' : '';
   $('ar_msg').innerHTML=ok?`${auto?'🔄 자동 수집':'✓ 수집'} · 새 분봉 <b>${added.toLocaleString()}</b>개 · 누적 <b>${s.dates.length}거래일</b> · ${new Date().toLocaleString('ko-KR',{hour12:false})}${warn}`
                           :'저장 실패(용량) — CSV로 내보낸 뒤 삭제하세요.';
@@ -1156,7 +1202,7 @@ function archExport(){
   a.download=`scalping_0900_0930_${s.dates[0]}_${s.dates[s.dates.length-1]}.csv`;
   document.body.appendChild(a); a.click(); a.remove();
 }
-function archClear(){ if(!confirm('아카이브를 전부 지울까요? (CSV로 내보냈는지 확인하세요)')) return; ARCH={}; saveArch(); renderArch(); $('ar_msg').textContent='삭제됨'; }
+async function archClear(){ if(!confirm('아카이브를 전부 지울까요? (CSV로 내보냈는지 확인하세요)')) return; const before=ARCH; ARCH={};ARCH_DIRTY.clear(); if(await clearArchDb()){renderArch();$('ar_msg').textContent='Firebase DB에서 삭제됨';}else{ARCH=before;renderArch();$('ar_msg').textContent='DB 삭제 실패 — 원래 아카이브를 유지합니다.';} }
 
 
 function btcPct(v){
@@ -2265,7 +2311,7 @@ function showStrategy(name){
   document.querySelectorAll('.strategy-pane').forEach(x=>x.classList.remove('on'));
   document.querySelectorAll('.strategy-tab').forEach(x=>x.classList.toggle('on',x.dataset.strategy===name));
   const p=$('strategy_'+name); if(p)p.classList.add('on');
-  try{localStorage.setItem('jkq_scalp_strategy_tab',name);}catch(e){}
+  SCALP_PREFS.strategyTab=name;if(me)void cloudSave();
   if(name==='duel'){ loadScalpingDuel(false); }
   if(name==='daily'){
     loadDailyStrategyResults(false);
@@ -2285,8 +2331,7 @@ function showStrategy(name){
   else stopGlobalPaperAuto();
 }
 function restoreStrategy(){
-  let n='daily';
-  try{n=localStorage.getItem('jkq_scalp_strategy_tab')||'daily';}catch(e){}
+  let n=String((SCALP_PREFS&&SCALP_PREFS.strategyTab)||'daily');
   if(!['daily','duel','opening','daytrading','crypto','soxl'].includes(n))n='daily';
   showStrategy(n);
 }
@@ -2597,10 +2642,6 @@ async function loadVtsResearch(strategy){
 
 /* ══ 시초가 돌파 실시간 감시 ══ */
 let OB_LIVE=false, OB_TIMER=null, OB_BUSY=false, OB_NOTIFIED=new Set(), OB_LAST_MINUTE='', OB_TOP2=null;
-try{
-  const z=JSON.parse(localStorage.getItem('jkq_ob_top2_lock')||'null');
-  if(z&&z.date&&Array.isArray(z.items)) OB_TOP2=z;
-}catch(e){}
 async function telegramOpeningEvent(title,body){
   try{
     if(!me)return false;
@@ -2845,7 +2886,7 @@ function obKstNow(){
   return {date,hm:hh*100+mm,key:date+' '+String(hh).padStart(2,'0')+':'+String(mm).padStart(2,'0')};
 }
 function obKstHM(){return obKstNow().hm;}
-function saveTop2Lock(){try{localStorage.setItem('jkq_ob_top2_lock',JSON.stringify(OB_TOP2));}catch(e){}}
+function saveTop2Lock(){SCALP_PREFS.top2Lock=scalpClone(OB_TOP2);if(me)void cloudSave();}
 function toggleOpeningLive(){OB_LIVE?stopOpeningLive():startOpeningLive();}
 function startOpeningLive(){
   OB_LIVE=true; const b=$('obLiveBtn'); if(b)b.textContent='⏸ 시초가 감시 중지';
@@ -2861,7 +2902,7 @@ function archiveOpeningFeed(code,min,daily){
   (min||[]).forEach(x=>{
     const t=x.t||'',d=t.slice(0,10),hh=+t.slice(11,13),mm=+t.slice(14,16);
     if(!d||hh!==9||mm>30)return;
-    const hm=hh*100+mm; ARCH[d]=ARCH[d]||{}; const arr=ARCH[d][code]=ARCH[d][code]||[];
+    const hm=hh*100+mm; ARCH[d]=ARCH[d]||{}; ARCH_DIRTY.add(d); const arr=ARCH[d][code]=ARCH[d][code]||[];
     const row=x.open!=null&&x.high!=null&&x.low!=null?[hm,+x.close,+x.vol||0,+x.open,+x.high,+x.low]:[hm,+x.close,+x.vol||0];
     const at=arr.findIndex(r=>r[0]===hm);
     if(at>=0) arr[at]=row; else {arr.push(row);added++;}
@@ -3042,7 +3083,7 @@ async function openingLiveScan(force){
     await Promise.all(Array.from({length:6},()=>worker()));
     renderLiveRebreak(now,rebreaks);
     msg.textContent='● 실시간 감시 중 · '+rebreaks.length+'개 후보 · '+new Date().toLocaleTimeString('ko-KR');
-    if(saveArch()){AMETA.last=Date.now();archSaveMeta();renderArch();}
+    if(await saveArch()){AMETA.last=Date.now();await archSaveMeta();renderArch();}
   }catch(e){msg.textContent='시초가 감시 실패: '+(e.message||e);}
   finally{OB_BUSY=false;}
 }
@@ -3795,7 +3836,7 @@ function boot(){
       return;
     }
     $('gate').style.display='none'; $('app').style.display='';
-    // 주문 감사이력은 로컬과 클라우드를 먼저 합친 뒤 화면을 연다. 빈 로컬이 기존 클라우드 이력을 덮지 않는다.
+    // 사용자 데이터는 Firebase DB에서만 불러온다.
     loadAll();await cloudLoad();
     // 활성 4개 단타전략만 초기화한다. 폐기된 과매도 반등용 공용 수동매매 UI/장부는 더 이상 실행하지 않는다.
     setupUnifiedStrategyFlow();

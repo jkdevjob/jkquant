@@ -157,7 +157,7 @@ pre.rules{background:var(--bg);border:1px solid var(--line);border-radius:10px;p
 
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Admin Console</div><h1>JK <span class="v">퀀트</span> 관리자 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="adVer">v0.11.0</span></h1></div>
+    <div><div class="kicker">Admin Console</div><h1>JK <span class="v">퀀트</span> 관리자 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="adVer">v0.11.1</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -465,29 +465,20 @@ function readCurrentDefaultTab(){
   strategyOverrides[defaultsTab]=over;
 }
 async function loadStrategyDefaultsAdmin(){
-  let local=null, legacyLocal=null;
-  try{local=JSON.parse(localStorage.getItem(STRATEGY_DEFAULT_CACHE)||'null')}catch(e){}
-  try{legacyLocal=JSON.parse(localStorage.getItem(STRATEGY_DEFAULT_LEGACY_CACHE)||'null')}catch(e){}
-  if(legacyLocal&&typeof legacyLocal==='object')strategyValues=mergeValues(legacyLocal);
-  if(local&&typeof local==='object'){
-    strategyOverrides=normalizeOverrides(local);
-    strategyValues=mergeValues(strategyOverrides);
-  }
+  strategyOverrides={inf:{},vr:{},ma:{},ivs:{},dca:{},asap:{}};
+  strategyValues=cfgClone(STRATEGY_DEFAULT_BUILTIN);
   if(me){
     try{
       const snap=await window.fb.getDoc(window.fb.doc(window.fb.db,'users',me.uid));
       if(snap.exists()){
         const d=snap.data()||{};
-        /* v1의 strategyDefaults는 전체 설정 한 벌이었다. v2에서 그걸 전부 활성화하면 다시
-           '전체가 바뀌는' 문제가 생기므로 값 표시용으로만 읽고 체크는 켜지 않는다. */
         if(d.strategyDefaults&&typeof d.strategyDefaults==='object')strategyValues=mergeValues(d.strategyDefaults);
         if(d.strategyDefaultOverrides&&typeof d.strategyDefaultOverrides==='object'){
           strategyOverrides=normalizeOverrides(d.strategyDefaultOverrides);
           for(const tab of Object.keys(strategyValues)) strategyValues[tab]={...strategyValues[tab],...(strategyOverrides[tab]||{})};
-          try{localStorage.setItem(STRATEGY_DEFAULT_CACHE,JSON.stringify(strategyOverrides));}catch(e){}
         }
       }
-    }catch(e){}
+    }catch(e){console.warn('strategy defaults load',e);}
   }
   paintDefaultTabs();
 }
@@ -496,7 +487,6 @@ async function saveStrategyDefaults(){
   readCurrentDefaultTab();
   const status=$('cfgStatus'), n=Object.values(strategyOverrides).reduce((a,x)=>a+Object.keys(x||{}).length,0);
   if(status){status.className='cfgstatus';status.textContent='저장 중…';}
-  try{localStorage.setItem(STRATEGY_DEFAULT_CACHE,JSON.stringify(strategyOverrides));}catch(e){}
   try{
     await window.fb.setDoc(window.fb.doc(window.fb.db,'users',me.uid),{
       strategyDefaultOverrides:strategyOverrides,strategyDefaultOverridesUpdated:Date.now()
@@ -504,7 +494,7 @@ async function saveStrategyDefaults(){
     if(status){status.className='cfgstatus ok';status.textContent='✓ '+n+'개 선택 항목 저장 완료 · 새 세션에는 선택된 값만 적용됩니다.';}
     paintDefaultTabs();
   }catch(e){
-    if(status){status.className='cfgstatus err';status.textContent='브라우저에는 저장됐지만 클라우드 저장 실패 — '+(e.message||e);}
+    if(status){status.className='cfgstatus err';status.textContent='Firebase 저장 실패 — '+(e.message||e);}
   }
 }
 async function clearStrategyDefaults(){
@@ -512,7 +502,6 @@ async function clearStrategyDefaults(){
   if(!confirm('관리자가 강제로 지정한 모든 전략 기본값을 해제할까요?\n이후 새 세션은 앱 기본값을 사용합니다. 기존 세션은 건드리지 않습니다.'))return;
   strategyOverrides={inf:{},vr:{},ma:{},ivs:{},dca:{},asap:{}};
   strategyValues=cfgClone(STRATEGY_DEFAULT_BUILTIN);
-  try{localStorage.setItem(STRATEGY_DEFAULT_CACHE,JSON.stringify(strategyOverrides));}catch(e){}
   try{
     await window.fb.setDoc(window.fb.doc(window.fb.db,'users',me.uid),{
       strategyDefaultOverrides:strategyOverrides,strategyDefaultOverridesUpdated:Date.now()
@@ -595,10 +584,6 @@ async function applyDefaultsExistingSessions(){
         stateV2:state,stateV2Updated:now,stateV2Rev:nr,strategyDefaultOverrides:strategyOverrides,strategyDefaultOverridesUpdated:now
       },{merge:true});
     });
-    try{
-      localStorage.setItem('qcockpit_v2_'+me.uid,JSON.stringify(state));
-      localStorage.setItem(STRATEGY_DEFAULT_CACHE,JSON.stringify(strategyOverrides));
-    }catch(e){}
     if(status){
       status.className='cfgstatus ok';
       status.textContent='✓ '+touched+'개 세션 · '+changedFields+'개 설정 변경 · 모의 자동기록 '+generated+'건 재계산 대기';
@@ -673,6 +658,19 @@ async function runDiag(){
 // ── 3. 보안 규칙 ─────────────────────────────────────────────────────
 const RULES=`rules_version = '2';
 
+/* JK 퀀트 — Firestore 보안 규칙
+   Firebase 콘솔 → Firestore Database → 규칙 에 이 내용을 붙여넣고 게시한다.
+
+   이용 승인제: 로그인하면 이용 신청이 접수되고(profiles/{uid}.requestedAt), 관리자가 승인해야
+   (profiles/{uid}.approved == true) 자기 기록을 열 수 있다. 차단(blocked)은 승인보다 먼저다.
+   화면 쪽 판정은 jk-access.js(JKAccess.decide)가 한 곳에서 하고, 이 규칙이 같은 판정으로 데이터를 막는다.
+   화면만 가리면 앱을 거치지 않고 데이터를 읽는 걸 막지 못한다 — 진짜 잠금은 이 규칙이다.
+   관리자 목록 조회(profiles 전체 읽기)도 규칙이 허용해야 동작한다.
+
+   컬렉션 두 개:
+     users/{uid}    — 그 사람의 전략·거래기록 전부. 승인된 본인만 읽고 쓴다. 관리자도 안 본다.
+     profiles/{uid} — 이메일·신청·접속시각·승인 상태. 관리자가 전체를 읽고 승인·차단한다. */
+
 service cloud.firestore {
   match /databases/{database}/documents {
 
@@ -694,6 +692,12 @@ service cloud.firestore {
     // 거래기록은 남이 못 본다 — 관리자도 마찬가지다. 승인 전에는 본인도 못 연다
     match /users/{uid} {
       allow read, write: if isMine(uid) && approved();
+
+      // 단타 분봉 아카이브 등 큰 사용자 데이터는 날짜별 하위 문서로 분리한다.
+      // 부모 users/{uid}와 동일하게 승인된 본인만 접근할 수 있다.
+      match /{document=**} {
+        allow read, write: if isMine(uid) && approved();
+      }
     }
 
     match /profiles/{uid} {

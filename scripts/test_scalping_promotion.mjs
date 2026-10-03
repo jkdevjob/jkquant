@@ -41,7 +41,7 @@ assert.equal(effectiveFrom("soxl",monBeforeEt),"2026-10-05");
 assert.equal(effectiveFrom("soxl",monAfterEt),"2026-10-06");
 
 const ui=fs.readFileSync("scalping.html","utf8");
-assert.ok(/id="scVer">v1\.38\.1/.test(ui));
+assert.ok(/id="scVer">v\d+\.\d+\.\d+</.test(ui));
 assert.ok(ui.includes("⭐ 메인전략 승격"));
 assert.ok(ui.includes("원래 기준전략으로 원복"));
 assert.ok(ui.includes("다음 새 세션부터"));
