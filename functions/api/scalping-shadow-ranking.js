@@ -44,7 +44,7 @@ function normalize(kind,report){
     const trades=n(parts.trades,x.allTrades!=null?x.allTrades:x.trades);
     const row={
       name,status:x.status||"collecting",rank:null,
-      researchScore:+score.toFixed(2),sampleFactor:sf,sampleReady:x.sampleReady===true||sf>=1,
+      researchScore:+score.toFixed(2),sampleFactor:sf,sampleReady:Object.prototype.hasOwnProperty.call(x,"sampleReady")?x.sampleReady===true:sf>=1,
       trades,validationTrades:n(x.holdoutTrades,x.oosTrades),
       allEdgePct:n(x.allAvgEdgePct,x.avgPnlEdgePct),
       validationEdgePct:n(x.validationAvgEdgePct,x.holdoutAvgEdgePct!=null?x.holdoutAvgEdgePct:(x.last20AvgEdgePct!=null?x.last20AvgEdgePct:x.oosAvgEdgePct)),
