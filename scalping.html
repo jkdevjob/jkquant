@@ -260,7 +260,7 @@ canvas{display:block;width:100%;height:auto}
 
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Morning Scalping</div><h1>JK <span class="v">퀀트</span> 단타 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="scVer">v1.38.2</span></h1></div>
+    <div><div class="kicker">Morning Scalping</div><h1>JK <span class="v">퀀트</span> 단타 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="scVer">v1.39.0</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -2215,39 +2215,62 @@ function promotionAction(kind,x){
 }
 function renderShadowRanking(kind,data){
   const el=$('shadow_rank_'+kind);if(!el)return;
-  const rows=(data&&data.rows)||[],rule=data&&data.rankingRule||{},pr=data&&data.promotionRule||{};
+  const rows=(data&&data.rows)||[],reserve=(data&&data.reserveRows)||[],retired=(data&&data.retiredRows)||[];
+  const rule=data&&data.rankingRule||{},pr=data&&data.promotionRule||{},life=data&&data.lifecycle||{};
   if(!rows.length){el.innerHTML='<div class="warn">그림자 전략 순위 데이터 수집 중</div>';return;}
   const label=n=>(SHADOW_RANK_LABELS[kind]||{})[n]||n;
   const current=selectedMainVariant(kind),pending=pendingMainVariant(kind),currentLabel=current==='baseline'?'원래 기준전략':label(current);
+  const leader=life.leader||{},leaderName=String(leader.name||''),leaderCount=Number(leader.consecutiveResearchSessions||0),leaderNeed=Number(leader.requiredResearchSessions||7);
+  const autoReady=life.autoPromotionReady===true,autoCandidate=String(life.autoPromotionCandidate||'');
   const eligible=rows.filter(x=>x.promotionEligible===true&&x.name!==current&&x.name!==pending);
   const topEligible=eligible[0]||null;
   const body=rows.map(x=>{
     const sample=x.trades>0?(x.trades+'건 · '+Math.round((Number(x.sampleFactor)||0)*100)+'%'):'수집대기';
-    const st=x.promotionEligible?'⭐ 승격 가능':x.review?'검토후보':(x.sampleReady?'평가중':'표본수집');
+    const st=x.promotionEligible?'⭐ 승격조건 통과':x.review?'검토후보':(x.sampleReady?'평가중':'표본수집');
     const medal=x.rank===1?'🥇 ':x.rank===2?'🥈 ':x.rank===3?'🥉 ':'';
-    return '<tr><td><b>'+medal+x.rank+'</b></td><td><b>'+esc(label(x.name))+'</b><div class="sub">'+esc(x.name)+'</div></td>'+
+    const lead=x.name===leaderName?'<div class="sub">1위 유지 '+leaderCount+'/'+leaderNeed+' 연구세션</div>':'';
+    return '<tr><td><b>'+medal+x.rank+'</b></td><td><b>'+esc(label(x.name))+'</b><div class="sub">'+esc(x.name)+'</div>'+lead+'</td>'+
       '<td class="'+(Number(x.researchScore)>=50?'win':'loss')+'"><b>'+Number(x.researchScore||0).toFixed(1)+'</b></td>'+
       '<td>'+sample+'</td><td class="'+(x.allEdgePct>=0?'win':'loss')+'">'+shadowRankPct(x.allEdgePct)+'</td>'+
       '<td class="'+(x.validationEdgePct>=0?'win':'loss')+'">'+shadowRankPct(x.validationEdgePct)+'</td>'+
       '<td class="'+(x.recentEdgePct>=0?'win':'loss')+'">'+shadowRankPct(x.recentEdgePct)+'</td>'+
       '<td>'+(x.riskOk?'✅':'⚠️')+'</td><td>'+st+'</td><td>'+promotionAction(kind,x)+'</td></tr>';
   }).join('');
+  const changes=(life.recentChanges||[]).slice().reverse().slice(0,6);
+  const changeHtml=changes.length?changes.map(x=>'<div class="sub" style="margin:3px 0">'+esc(x.date||'')+' · '+(x.type==='retired'?'퇴출':'신규투입')+' <b>'+esc(label(x.name||''))+'</b> · '+esc(x.reason||'')+'</div>').join(''):'<div class="sub">아직 자동 교체 이력이 없습니다.</div>';
+  const reserveHtml=reserve.length?reserve.map(x=>'<span class="pill" style="margin:2px">'+esc(label(x.name))+' '+Number(x.researchScore||0).toFixed(1)+'</span>').join(''):'<span class="sub">예비 후보 없음</span>';
+  const retiredNames=(life.retired||[]).slice().reverse().slice(0,6);
+  const retiredHtml=retiredNames.length?retiredNames.map(x=>'<div class="sub" style="margin:3px 0"><b>'+esc(label(x.name||''))+'</b> · '+esc(x.reason||'')+'</div>').join(''):'<div class="sub">퇴출 전략 없음</div>';
   const revert=current!=='baseline'?'<button class="ghostbtn sm" onclick="promoteShadow(\''+kind+'\',\'baseline\')">↩ 원래 기준전략으로 원복</button>':'';
   const nextDate=String((((PROMOTION_STATE||{}).nextEffectiveFrom||{})[kind])||'다음 새 세션');
-  const candidate=topEligible?('<div class="card" style="margin:8px 0 12px;border-color:rgba(54,211,153,.55)">'+
-    '<h3 style="margin-bottom:7px">⬆ 메인전략 승격 후보</h3>'+
-    '<div><b>#'+topEligible.rank+' '+esc(label(topEligible.name))+'</b> · 연구점수 <b class="win">'+Number(topEligible.researchScore||0).toFixed(1)+'</b>'+
-    ' · 표본 '+Number(topEligible.trades||0)+'건 · 검증우위 '+shadowRankPct(topEligible.validationEdgePct)+'</div>'+
-    '<div class="sub" style="margin-top:5px">검토·표본·위험·실시간호환·60점 기준을 모두 통과했습니다. 자동승격하지 않고 버튼을 눌러야 '+esc(nextDate)+'부터 메인전략이 됩니다.</div>'+
-    '<button class="prim" style="margin-top:9px" onclick="promoteShadow(\''+kind+'\',\''+String(topEligible.name).replace(/'/g,"\\'")+'\')">⭐ 이 전략을 메인전략으로 승격</button></div>'):
-    '<div class="warn" style="margin:8px 0 12px"><b>⬆ 메인전략 승격 후보:</b> 아직 모든 승격 조건을 통과한 새 후보가 없습니다.</div>';
-  el.innerHTML=candidate+'<div style="margin:14px 0 7px;display:flex;gap:8px;align-items:center;flex-wrap:wrap"><b>🏁 그림자 전략 순위</b>'+
+  const candidate=autoReady?('<div class="card" style="margin:8px 0 12px;border-color:rgba(54,211,153,.55)">'+
+    '<h3 style="margin-bottom:7px">🤖 자동 메인승격 준비 완료</h3>'+
+    '<div><b>'+esc(label(autoCandidate))+'</b> · '+leaderCount+'/'+leaderNeed+' 연구세션 연속 1위 · 기존 승격 안전조건 통과</div>'+
+    '<div class="sub" style="margin-top:5px">'+esc(nextDate)+' 새 세션부터 자동 메인 적용 대상입니다.</div></div>'):
+    '<div class="warn" style="margin:8px 0 12px"><b>🤖 자동승격 상태:</b> '+esc(life.autoPromotionReason||('1위 유지 '+leaderCount+'/'+leaderNeed+' 연구세션'))+'</div>';
+  el.innerHTML=candidate+
+    '<div class="strategy-cockpit">'+
+      '<div class="cockpit-box"><div class="cockpit-label">활성 경쟁군</div><div class="cockpit-value">'+rows.length+'개</div><div class="cockpit-detail">최소 '+Number(data.minRequired||10)+'개 유지</div></div>'+
+      '<div class="cockpit-box"><div class="cockpit-label">전체 후보 풀</div><div class="cockpit-value">'+Number(data.totalCandidatePool||rows.length)+'개</div><div class="cockpit-detail">예비 '+reserve.length+'개</div></div>'+
+      '<div class="cockpit-box"><div class="cockpit-label">현재 1위</div><div class="cockpit-value">'+esc(leaderName?label(leaderName):'—')+'</div><div class="cockpit-detail">'+leaderCount+'/'+leaderNeed+' 연구세션</div></div>'+
+      '<div class="cockpit-box"><div class="cockpit-label">자동승격</div><div class="cockpit-value">'+(autoReady?'준비 완료':'대기')+'</div><div class="cockpit-detail">다음 새 세션 적용</div></div>'+
+      '<div class="cockpit-box"><div class="cockpit-label">퇴출 누계</div><div class="cockpit-value">'+Number((life.retired||[]).length)+'</div><div class="cockpit-detail">이력은 삭제하지 않음</div></div>'+
+      '<div class="cockpit-box"><div class="cockpit-label">후보 생성기</div><div class="cockpit-value">자동</div><div class="cockpit-detail">'+esc(life.candidateFactory||'parameter-neighborhood')+'</div></div>'+
+    '</div>'+
+    '<div style="margin:14px 0 7px;display:flex;gap:8px;align-items:center;flex-wrap:wrap"><b>🏁 활성 그림자 전략 순위</b>'+
     '<span class="pill good">운영 메인 <b>'+esc(currentLabel)+'</b></span>'+revert+
-    '<span class="sub">최소 '+Number(data.minRequired||10)+'개 · 원래 baseline 제외 순위 · '+esc(data.from||'—')+' ~ '+esc(data.to||'—')+'</span></div>'+
-    '<div class="htable-wrap"><table class="htable"><thead><tr><th>순위</th><th>그림자 전략</th><th>점수</th><th>표본</th><th>전체우위</th><th>검증우위</th><th>최근우위</th><th>위험</th><th>상태</th><th>메인전략</th></tr></thead><tbody>'+body+'</tbody></table></div>'+
+    '<span class="sub">'+esc(data.from||'—')+' ~ '+esc(data.to||'—')+'</span></div>'+
+    '<div class="htable-wrap"><table class="htable"><thead><tr><th>순위</th><th>그림자 전략</th><th>점수</th><th>표본</th><th>전체우위</th><th>검증우위</th><th>최근우위</th><th>위험</th><th>상태</th><th>수동조치</th></tr></thead><tbody>'+body+'</tbody></table></div>'+
+    '<div class="card" style="margin:12px 0 0"><h3>🧬 전략 분석·개선 상태</h3>'+
+      '<div class="sub"><b>퇴출 규칙:</b> '+esc(life.retirementRule||'표본충족 후 반복 부진만 퇴출')+'</div>'+
+      '<div class="sub"><b>보충 규칙:</b> '+esc(life.replacementRule||'예비 후보 자동투입')+'</div>'+
+      '<div style="margin-top:8px"><b>예비 후보</b><div style="margin-top:5px">'+reserveHtml+'</div></div>'+
+      '<div style="margin-top:10px"><b>최근 개선내역</b>'+changeHtml+'</div>'+
+      '<div style="margin-top:10px"><b>최근 퇴출내역</b>'+retiredHtml+'</div>'+
+    '</div>'+
     '<div class="warn" style="margin-top:8px"><b>순위점수 '+esc(rule.version||'v1')+':</b> '+esc(rule.formula||'표본수·전체 기대값·검증 기대값·최근 성과·위험을 결합')+
-    '<br><b>승격 버튼:</b> 전략별 검토 기준 + 표본충족 + 위험통과 + 실시간 재현 가능 + 연구점수 '+Number(pr.minScore||60)+'점 이상일 때만 표시합니다. <b>자동승격은 OFF</b>이며 버튼을 눌러야 바뀝니다.'+
-    '<br><span class="sub">표본계수 '+esc(rule.sampleFactor||'min(1, trades/minTrades)')+' · 0건 후보는 항상 맨 아래. 승격해도 이미 시작된 세션은 기존 전략으로 끝나고 다음 새 세션부터 적용됩니다. 원래 연구 baseline은 그대로 보존됩니다.</span></div>';
+    '<br><b>자동승격:</b> 활성 경쟁군에서 <b>'+leaderNeed+'개의 서로 다른 연구세션 연속 1위</b>이면서 전략별 검토·표본·위험·실시간호환·'+Number(pr.minScore||60)+'점 조건을 모두 통과할 때만 다음 새 세션부터 자동 적용합니다.'+
+    '<br><span class="sub">수동승격/원복 버튼은 비상조치용으로 유지합니다. 퇴출 전략의 과거 성과와 변경 사유는 삭제하지 않습니다.</span></div>';
 }
 async function loadPromotionState(force=false){
   const now=Date.now();
