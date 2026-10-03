@@ -104,6 +104,11 @@ function titleExprOk(expr,consts){
 }
 for(const file of FILES){
   const src=fs.readFileSync(path.join(ROOT,file),'utf8'),consts=collectStringConsts(src);
+  const staticTitle=(src.match(/<title>([^<]+)<\/title>/i)||[])[1]||'';
+  if(staticTitle.startsWith('JK 퀀트 — ')){
+    const inherited=/\b(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*=\s*document\.title\b/g;
+    let im;while((im=inherited.exec(src)))consts.set(im[1],staticTitle);
+  }
   const re=/document\.title\s*=\s*([^;\n]+)/g;
   let m;
   while((m=re.exec(src))){
