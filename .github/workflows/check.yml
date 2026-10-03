@@ -546,6 +546,9 @@ jobs:
             process.exit(r.fail?1:0);
           "
 
+      - name: 브라우저 영구저장 금지 · 탭 제목 통일 검사
+        run: node scripts/check-no-browser-storage.cjs
+
       - name: 거래이력 보존 불변식 검사
         run: node scripts/check-history-preservation.cjs
 
