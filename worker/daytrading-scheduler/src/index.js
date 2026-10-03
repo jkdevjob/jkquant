@@ -32,6 +32,10 @@ const DAY_EXIT_VARIANTS=Object.freeze({
   session_max_5:{stopPct:1.0,takeProfitPct:2.0,maxTrades:3},
   combo_lb30_vol12:{stopPct:1.0,takeProfitPct:2.0,maxTrades:3}
 });
+function isDayVariantName(name){
+  const n=String(name||"");
+  return !!DAY_EXIT_VARIANTS[n]||/^cf_g\d{4,}$/.test(n);
+}
 function dayExitParams(name){return DAY_EXIT_VARIANTS[String(name||"baseline")]||DAY_EXIT_VARIANTS.baseline;}
 
 let lastKisAt=0;
@@ -80,7 +84,7 @@ export class SnapshotStore extends DurableObject {
     if(request.method==="POST"&&u.pathname==="/config"){
       const b=await request.json();
       const variant=String(b&&b.variant||"");
-      if(!variant||!DAY_EXIT_VARIANTS[variant])return json({ok:false,error:"unsupported variant"},400);
+      if(!variant||!isDayVariantName(variant))return json({ok:false,error:"unsupported variant"},400);
       const prev=(await this.ctx.storage.get("strategyConfig"))||{schema:2,strategy:"daytrading",selectedVariant:"baseline",history:[]};
       const at=new Date().toISOString(),effectiveFrom=String(b&&b.effectiveFrom||"");
       const entry={at,effectiveFrom,previousVariant:String(b&&b.previousVariant||prev.selectedVariant||"baseline"),selectedVariant:variant,
@@ -168,7 +172,7 @@ async function captureSnapshot(env,date){
   if(!r.ok||!rows.length)throw new Error("universe HTTP "+r.status);
   const config=await readStrategyConfig(env);
   const selected=(config.effectiveFrom&&String(date)<String(config.effectiveFrom))?String(config.previousVariant||"baseline"):String(config.selectedVariant||"baseline");
-  const mainVariant=DAY_EXIT_VARIANTS[selected]?selected:"baseline";
+  const mainVariant=isDayVariantName(selected)?selected:"baseline";
   const snapshot={
     schema:2,date,mainVariant,
     snapshotAt:new Date().toISOString(),
