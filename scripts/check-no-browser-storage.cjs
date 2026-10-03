@@ -83,19 +83,33 @@ for(const abs of htmlAbs){
   }
 }
 
+function collectStringConsts(src){
+  const out=new Map(),re=/\b(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*=\s*(?:'([^'\n]*)'|"([^"\n]*)"|`([^`\n]*)`)/g;
+  let m;while((m=re.exec(src)))out.set(m[1],m[2]??m[3]??m[4]??'');
+  return out;
+}
+function titleAtomOk(expr,consts){
+  expr=String(expr||'').trim();
+  let m=expr.match(/^(?:'([^'\n]*)'|"([^"\n]*)"|`([^`\n]*)`)$/);
+  if(m)return (m[1]??m[2]??m[3]??'').startsWith('JK 퀀트 — ');
+  if(/^[A-Za-z_$][\w$]*$/.test(expr))return String(consts.get(expr)||'').startsWith('JK 퀀트 — ');
+  return false;
+}
+function titleExprOk(expr,consts){
+  expr=String(expr||'').trim();
+  if(titleAtomOk(expr,consts))return true;
+  const q=expr.indexOf('?'),c=expr.lastIndexOf(':');
+  if(q>=0&&c>q)return titleAtomOk(expr.slice(q+1,c),consts)&&titleAtomOk(expr.slice(c+1),consts);
+  return false;
+}
 for(const file of FILES){
-  const src=fs.readFileSync(path.join(ROOT,file),'utf8');
-  const literalTitle=/document\.title\s*=\s*(?:'([^'\n]*)'|"([^"\n]*)"|`([^`\n]*)`)/g;
+  const src=fs.readFileSync(path.join(ROOT,file),'utf8'),consts=collectStringConsts(src);
+  const re=/document\.title\s*=\s*([^;\n]+)/g;
   let m;
-  while((m=literalTitle.exec(src))){
-    const val=m[1]??m[2]??m[3]??'';
-    if(!val.startsWith('JK 퀀트 — ')){
-      console.error('✗ '+file+' — 동적 document.title이 "JK 퀀트 — 메뉴명" 형식이 아님: '+val);fail++;
+  while((m=re.exec(src))){
+    if(!titleExprOk(m[1],consts)){
+      console.error('✗ '+file+' — 동적 document.title 결과가 모두 "JK 퀀트 — 메뉴명" 형식이어야 함: '+m[1].trim());fail++;
     }
-  }
-  const nonLiteral=/document\.title\s*=\s*(?!['"`])([^;\n]+)/g;
-  while((m=nonLiteral.exec(src))){
-    console.error('✗ '+file+' — 동적 document.title은 검증 가능한 문자열 리터럴을 사용해야 함: '+m[1].trim());fail++;
   }
 }
 
