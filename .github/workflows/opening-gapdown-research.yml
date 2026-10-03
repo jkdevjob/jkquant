@@ -130,7 +130,19 @@ jobs:
           git add data/opening-gapdown-research data/opening-gapdown-live data/etf-overnight-research data/claude-lab $(ls -d data/claude-paper data/claude-live 2>/dev/null)
           git commit -m "data: opening gap-down research $(TZ=Asia/Seoul date '+%F %H:%M') [skip ci]"
           git pull --rebase origin scalping-data
-          git push origin scalping-data
+          PUSH_OK=0
+          for attempt in $(seq 1 6); do
+            if git push origin scalping-data; then
+              PUSH_OK=1
+              break
+            fi
+            echo "scalping-data push 경합 — 재동기화 후 재시도 $attempt/6"
+            if ! git pull --rebase origin scalping-data; then
+              git rebase --abort >/dev/null 2>&1 || true
+            fi
+            sleep $((attempt * 2))
+          done
+          [ "$PUSH_OK" = "1" ] || { echo "scalping-data push 6회 실패"; exit 1; }
 
       - name: 🆚 클로드 vs GPT 매일 대결 요약 텔레그램 (평일 18:40 뒤 첫 실행 · 날짜당 한 번 · 실패해도 기록에 영향 없음)
         # GitHub 예약 실행은 늦거나 빠질 수 있다 — 예약 이름 대신 '평일 18:40 이후 첫 실행'으로 보내고, 보낸 날은 표시 파일로 다시 안 보낸다
