@@ -544,7 +544,7 @@ html.had-user #authgate .bootwait{display:block}
 </div>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.109.4</span></h1></div>
+    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.109.5</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -1655,7 +1655,7 @@ if(/^\/paper\/?$/.test(location.pathname)){
   <footer>
     <strong>JK 퀀트</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.109.4</b> · 2026-10-03</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.109.5</b> · 2026-10-03</div>
   </footer>
 </div>
 
@@ -9325,6 +9325,9 @@ function updateStickyOffsets(){
   st.setProperty('--h1',h1+'px'); st.setProperty('--h2',h2+'px'); st.setProperty('--h3',h3+'px');
 }
 function renderSessbar(){
+  // 모의 성과 전체 계산은 내부적으로 activeTab/active session을 잠깐 바꾼다.
+  // 그 임시 계산 상태를 운영 세션바에 그리면 탭이 움직이는 것처럼 보여 혼란을 준다.
+  if(_paperFilling)return;
   const box=tabBox(), bar=$('sessbar');let html='';
   box.sessions.forEach(s=>{
     const on=s.id===box.active;
@@ -9651,6 +9654,8 @@ async function createSess(){
 
 /* ── 상태줄 ── */
 function renderStatusline(){
+  // 모의 성과 백그라운드 재생 중에는 운영 상태줄을 임시 세션으로 바꾸지 않는다.
+  if(_paperFilling)return;
   const s=sess(), strat=S.activeTab;
   let html='';   // 세션명(키움 USD)은 세션바와 중복이라 제거 — 전략 요약만 표시
   if(strat==='inf'){
@@ -9987,6 +9992,9 @@ async function saveSettings(){
    (예: 로테이션 기록 {type:'in'}에는 kind가 없어 computeInf가 터짐).
    비활성 탭은 탭 전환 시 setupTabs가 각자 refresh를 호출하므로 갱신이 보장된다. */
 function refreshAll(){
+  // 전체 모의 성과 계산 중 refresh가 연쇄 호출돼도 운영 UI는 현재 탭 그대로 고정한다.
+  // paperFillAll() 종료 후 openPaper()가 _paperFilling=false 상태에서 한 번 정상 갱신한다.
+  if(_paperFilling)return;
   renderSessbar();renderStatusline();
   const t=S&&S.activeTab;
   const fn = t==='inf'?refreshInf : t==='ma'?refreshMa : t==='ivs'?refreshIvs : t==='dca'?refreshDca : t==='asap'?refreshAsap : refreshVr;
