@@ -11402,7 +11402,8 @@ console.log('\n[ACCESS] 이용 승인제 — 판정 한 곳 · 모든 페이지 
   ok('백테·공모주·JOB 은 data-guard 로 불러 guard() 하나로 맡긴다 (본문보다 먼저 · 따로 onAuthStateChanged 안 씀)',
      [bt, ipo, job].every(h=>h.includes(jkTag) && h.indexOf(jkTag)<h.indexOf('<body') && /JKAccess\.guard\(\{auth/.test(h)
        && !/\n\s*onAuthStateChanged\(auth,/.test(h)));
-  ok('JOB 도 같은 Firebase 프로젝트로 로그인한다', /projectId:"jk-invest"/.test(job) && /getAuth\(app\)/.test(job) && /getFirestore\(app\)/.test(job));
+  ok('JOB 도 같은 Firebase 프로젝트로 로그인한다', /projectId:"jk-invest"/.test(job) && /getAuth\(app\)/.test(job)
+     && /initializeFirestore\(app,\{experimentalForceLongPolling:true\}\)/.test(job));
   ok('운영·자산플랜·관리자는 jk-access.js 를 불러 같은 판정을 쓴다 (운영·플랜은 admit · 관리자는 decide)',
      idx.includes('<script src="/jk-access.js"></script>') && pl.includes('<script src="/jk-access.js"></script>') && adm.includes('<script src="/jk-access.js"></script>')
      && /JKAccess\.admit\(user, accFb/.test(idx) && /JKAccess\.admit\(user,planFb/.test(pl) && /JKAccess\.decide\(\{email:r\.email\}, r\)/.test(adm));
