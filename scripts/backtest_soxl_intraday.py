@@ -62,6 +62,11 @@ VARIANTS = [
     Params("stop_1.0_tp_2.0", stop_pct=1.0, take_profit_pct=2.0),
     Params("hold_60m", max_hold_bars=12),
     Params("entry_by_1100", entry_cutoff_hm=1100),
+    Params("combo_range10_vol12", range_bars=2, volume_mult=1.2),
+    Params("combo_novwap_vol12", volume_mult=1.2, use_vwap=False),
+    Params("stop_0.9_tp_1.8", stop_pct=0.9, take_profit_pct=1.8),
+    Params("hold_75m", max_hold_bars=15),
+    Params("entry_by_1045", entry_cutoff_hm=1045),
 ]
 
 
