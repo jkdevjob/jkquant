@@ -25,6 +25,14 @@ function buildDailyRisk(src){
   return new Function(ret+'\n'+risk+'\nreturn dailyRisk;')();
 }
 function near(a,b,t=1e-9){return Math.abs(a-b)<=t;}
+function marProbe(src){
+  try{
+    const fn=extractFn(src,'function scalpingMar(');
+    const f=new Function(fn+'\nreturn scalpingMar;')();
+    const v=f(21,-10,'2025-01-01','2026-01-01');
+    return Number.isFinite(v)&&v>2&&v<2.2;
+  }catch(e){return false;}
+}
 function riskProbe(src){
   try{
     const f=buildDailyRisk(src);
@@ -46,6 +54,10 @@ function riskProbe(src){
 }
 
 ok(/id="scVer">v\d+\.\d+\.\d+<\/span>/.test(ui),'scalping UI version uses x.y.z format');
+ok(marProbe(ui),'MAR uses annualized CAGR divided by absolute MDD');
+const mutMar=ui.replace('return Number.isFinite(cagr)?cagr/dd:null;','return Number.isFinite(cagr)?cagr:null;');
+ok(!marProbe(mutMar),'mutation killed: MAR must divide CAGR by absolute MDD');
+ok((ui.match(/<th>MAR<\/th>/g)||[]).length>=3&&ui.includes('전체기간 CAGR ÷ |MDD|'),'BTC/SOXL/daytrading tables expose MAR next to MDD');
 const labels=['📖 전략 · 종목선정 규칙','🔎 오늘 종목 선정 · 감시','🟢 매수 타이밍','🔴 매도 · 손절 · 리스크','📒 오늘 모의매매 · 손익','🗓 다음 계획','🧪 그림자 · 매일 검증 · 개선','📚 누적 모의매매 이력','🔍 실행품질 · VTS 대조'];
 const pos=labels.map(x=>ui.indexOf(x));
 ok(pos.every((x,i)=>x>=0&&(i===0||x>pos[i-1])),'nine-step self-contained tab order');

@@ -221,7 +221,7 @@ function paperLedger(strategy,date,t,opts={}){
   const sum=live.reduce((a,b)=>a+b,0);
   return {
     schema:1,strategy,date,timezone,strategyVersion:version,mainVariant:String(opts.mainVariant||"baseline"),strategyParams:opts.params||t?.params||null,mode:"server-live-paper-no-order",
-    updatedAt:new Date().toISOString(),slots:1,frictionPct:friction,trades,
+    updatedAt:new Date().toISOString(),slots:1,frictionPct:friction,trades,decision:opts.decision||null,
     summary:{selected:trades.length,pending:trades.filter(x=>x.status==="pending").length,open:trades.filter(x=>x.status==="open").length,
       closed:trades.filter(x=>x.status==="closed").length,accountReturnPct:sum,tradeSumPct:sum}
   };
@@ -287,6 +287,40 @@ async function fetchBtc(targetDate){
   }
   return [...by.values()].sort((a,b)=>a.ms-b.ms);
 }
+function btcNoTradeDecision(bars,now,date,overrides={}){
+  const p={...BTC_VARIANTS.baseline,...(overrides||{})};
+  const a=bars.filter(x=>x.date===date);
+  if(a.length<p.rangeBars+1)return {code:"insufficient_bars",reason:"00:00 이후 확정 5분봉이 아직 부족합니다."};
+  const oi=a.findIndex(x=>x.hm===BTC_OPEN_HM);
+  if(oi<0)return {code:"opening_missing",reason:"00:00 시초 5분봉을 아직 확보하지 못했습니다."};
+  const opening=a.slice(oi,oi+p.rangeBars);
+  if(opening.length!==p.rangeBars||opening.some((x,k)=>x.hm!==k*5)||!opening.every(x=>barCompleted(x.ms,now))){
+    return {code:"opening_pending",reason:"00:00~00:05 시초 범위 확정 대기 중입니다."};
+  }
+  const orHigh=Math.max(...opening.map(x=>x.h)),baseVol=opening.reduce((sum,x)=>sum+x.v,0)/opening.length;
+  if(!(orHigh>0)||!(baseVol>0))return {code:"opening_invalid",reason:"시초 범위 가격/거래량 데이터가 불완전합니다."};
+  let pv=0,cv=0,fresh=0,volPass=0,vwapPass=0,maxFreshVr=0,lastHm=null;
+  for(const z of opening){const tp=(z.h+z.l+z.c)/3;pv+=tp*z.v;cv+=z.v;}
+  for(let i=oi+p.rangeBars;i<a.length;i++){
+    const x=a[i];
+    if(x.hm>p.entryCutoffHm||!barCompleted(x.ms,now))break;
+    lastHm=x.hm;
+    const tp=(x.h+x.l+x.c)/3;pv+=tp*x.v;cv+=x.v;
+    const vwap=cv>0?pv/cv:0,vr=x.v/baseVol,prev=a[i-1];
+    const isFresh=x.c>orHigh&&prev.c<=orHigh;
+    if(!isFresh)continue;
+    fresh++;maxFreshVr=Math.max(maxFreshVr,vr);
+    if(vr<p.volumeMult)continue;
+    volPass++;
+    if(p.useVwap&&!(x.c>vwap))continue;
+    vwapPass++;
+  }
+  if(vwapPass>0)return {code:"qualified_wait",reason:"조건 충족 신호는 있었지만 다음 5분봉 진입 데이터가 아직 확정되지 않았습니다."};
+  if(fresh===0)return {code:"no_fresh_breakout",reason:"OR 고점 신규 돌파가 아직 없습니다. (OR "+Math.round(orHigh).toLocaleString("ko-KR")+"원)"};
+  if(volPass===0)return {code:"volume_filter",reason:"OR 신규 돌파 "+fresh+"건이 있었지만 거래량 "+p.volumeMult.toFixed(1)+"배 기준을 통과하지 못했습니다. (최대 "+maxFreshVr.toFixed(2)+"배)"};
+  return {code:"vwap_filter",reason:"돌파·거래량 조건은 통과했지만 누적 VWAP 상회 조건을 통과하지 못했습니다."};
+}
+
 function btcTrade(bars,now,date,overrides={}){
   const p={...BTC_VARIANTS.baseline,...(overrides||{})};
   const a=bars.filter(x=>x.date===date);
@@ -396,8 +430,11 @@ async function runBtc(env,now){
   // 신규 진입은 00:05~22:00 KST. 22:00 진입분은 최대 60분 청산까지 계속 추적한다.
   if(k.hm<5||k.hm>BTC_EXIT_TRACK_END_HM)return;
   const mainVariant=await mainVariantForDate(env,"crypto",k.date),vp=variantParams("crypto",mainVariant);
-  const t=btcTrade(await fetchBtc(k.date),now,k.date,vp.params);
-  await writePaper(env,paperLedger("crypto",k.date,t,{currency:"KRW",timezone:"Asia/Seoul",version:BTC_STRATEGY_VERSION+"@"+vp.name,mainVariant:vp.name,params:vp.params,friction:.14}));
+  const bars=await fetchBtc(k.date),t=btcTrade(bars,now,k.date,vp.params);
+  const decision=t
+    ? {code:t.waiting?"qualified_wait":"qualified_signal",reason:t.waiting?"조건 충족 신호 발생 · 다음 5분봉 시가 진입 대기":"돌파·거래량·VWAP 조건 충족"}
+    : btcNoTradeDecision(bars,now,k.date,vp.params);
+  await writePaper(env,paperLedger("crypto",k.date,t,{currency:"KRW",timezone:"Asia/Seoul",version:BTC_STRATEGY_VERSION+"@"+vp.name,mainVariant:vp.name,params:vp.params,friction:.14,decision}));
   if(!t||t.waiting)return;
   await alert(env,{
     strategy:"crypto",stage:"buy",eventId:"crypto:"+BTC_STRATEGY_VERSION+"@"+mainVariant+":"+t.date+":"+t.signal.time+":buy",date:t.date,time:t.entry.time,
@@ -480,7 +517,7 @@ async function run(env){
   const out=await Promise.allSettled([runBtc(env,now),runSoxl(env,now),runCloseSummaries(env,now)]);
   out.forEach((x,i)=>{if(x.status==="rejected")console.error(JSON.stringify({type:"global_intraday_error",strategy:i===0?"crypto":i===1?"soxl":"close-summary",error:String(x.reason&&x.reason.message||x.reason)}));});
 }
-export {btcTrade,soxlTrade,paperLedger,variantParams,BTC_VARIANTS,SOXL_VARIANTS,BTC_OPEN_HM,BTC_LAST_SIGNAL_HM,BTC_LAST_ENTRY_HM,BTC_EXIT_TRACK_END_HM,BTC_STRATEGY_VERSION,SOXL_STRATEGY_VERSION,SOXL_LAST_SIGNAL_HM,SOXL_PAPER_TRACK_END_HM};
+export {btcTrade,btcNoTradeDecision,soxlTrade,paperLedger,variantParams,BTC_VARIANTS,SOXL_VARIANTS,BTC_OPEN_HM,BTC_LAST_SIGNAL_HM,BTC_LAST_ENTRY_HM,BTC_EXIT_TRACK_END_HM,BTC_STRATEGY_VERSION,SOXL_STRATEGY_VERSION,SOXL_LAST_SIGNAL_HM,SOXL_PAPER_TRACK_END_HM};
 
 export default {
   async scheduled(controller,env,ctx){ctx.waitUntil(run(env));},

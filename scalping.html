@@ -260,7 +260,7 @@ canvas{display:block;width:100%;height:auto}
 
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Morning Scalping</div><h1>JK <span class="v">퀀트</span> 단타 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="scVer">v1.41.0</span></h1></div>
+    <div><div class="kicker">Morning Scalping</div><h1>JK <span class="v">퀀트</span> 단타 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="scVer">v1.41.1</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -1213,6 +1213,18 @@ function btcNum(v,d=2){
   const n=Number(v);
   return Number.isFinite(n)?n.toFixed(d):'—';
 }
+function scalpingMar(compoundReturnPct,mddPct,from,to){
+  const total=Number(compoundReturnPct),dd=Math.abs(Number(mddPct));
+  const a=Date.parse(String(from||'')+'T00:00:00Z'),b=Date.parse(String(to||'')+'T00:00:00Z');
+  if(!Number.isFinite(total)||!Number.isFinite(dd)||dd<=0||total<=-100||!Number.isFinite(a)||!Number.isFinite(b)||b<a)return null;
+  const days=Math.max(1,Math.round((b-a)/86400000)+1),years=days/365.2425;
+  const cagr=(Math.pow(1+total/100,1/years)-1)*100;
+  return Number.isFinite(cagr)?cagr/dd:null;
+}
+function scalpingMarText(compoundReturnPct,mddPct,from,to){
+  const m=scalpingMar(compoundReturnPct,mddPct,from,to);
+  return Number.isFinite(m)?m.toFixed(2):'—';
+}
 async function loadCryptoLive(){
   const msg=$('btc_live_msg'); if(msg)msg.textContent='업비트 시세 조회 중…';
   try{
@@ -1268,7 +1280,10 @@ async function loadGlobalPaper(strategy,silent=false){
       '<div class="outbox"><div class="ol">개별 매매 수익률 합계</div><div class="ov '+((sum.tradeSumPct||0)>=0?'good':'bad')+'">'+pct(sum.tradeSumPct||0)+'</div></div>'+
       '<div class="outbox"><div class="ol">상태</div><div class="ov" style="font-size:14px">'+(x?(x.status==='closed'?'청산완료':x.status==='open'?'보유중':'진입대기'):'신호 없음')+'</div></div>'+
       '</div>';
-    if(!x){html+='<div class="warn">현재까지 기준전략을 통과한 신호가 없습니다. 0건도 정상 결과입니다.</div>';}
+    if(!x){
+      const why=l.decision&&l.decision.reason?esc(l.decision.reason):'현재까지 기준전략을 통과한 신호가 없습니다.';
+      html+='<div class="warn"><b>매매없음</b> · '+why+'<br><span class="sub">0건도 정상 결과이며, 서버가 다음 확정 5분봉마다 조건을 다시 평가합니다.</span></div>';
+    }
     else{
       const pl=x.pnlPct;
       const reason=x.reason==='stop'||x.reason==='stop_same_bar'?'손절':x.reason==='take_profit'?'익절':x.reason==='time_exit'?'시간청산':x.reason==='tracking'?'추적중':'다음봉 시가대기';
@@ -1313,6 +1328,7 @@ async function loadCryptoResearch(){
       '<div class="outbox"><div class="ol">Profit Factor</div><div class="ov">'+(Number(s.profitFactor)>=999?'∞':btcNum(s.profitFactor,2))+'</div></div>'+
       '<div class="outbox"><div class="ol">복리 누적</div><div class="ov '+(Number(s.compoundReturnPct)>0?'good':Number(s.compoundReturnPct)<0?'bad':'mid')+'">'+btcPct(s.compoundReturnPct)+'</div></div>'+
       '<div class="outbox"><div class="ol">MDD</div><div class="ov bad">'+btcPct(s.maxDrawdownPct)+'</div></div>'+
+      '<div class="outbox"><div class="ol">MAR</div><div class="ov">'+scalpingMarText(s.compoundReturnPct,s.maxDrawdownPct,j.from,j.to)+'</div><div class="sub">전체기간 CAGR ÷ |MDD|</div></div>'+
       '<div class="outbox"><div class="ol">전체 일평균</div><div class="ov '+(Number(s.avgDailyReturnPct)>0?'good':Number(s.avgDailyReturnPct)<0?'bad':'mid')+'">'+btcPct(s.avgDailyReturnPct)+'</div></div>'+
       '<div class="outbox"><div class="ol">순 +1% 이상 일수</div><div class="ov">'+btcNum(s.target1PctDayRatePct,1)+'%</div></div>'+
       '</div>';
@@ -1331,7 +1347,7 @@ async function loadCryptoResearch(){
       const label=st==='trade_closed'?'매매 완료':st==='position_open'?'보유중':st==='no_trade'?'매매 없음':'감시중 · 아직 매매 없음';
       currentHtml='<div class="warn" style="margin-bottom:9px"><b>오늘 '+esc(cs.date||'')+' · '+label+'</b> · 최신봉 '+esc(cs.lastBarKst||'—')+
         (t?('<br>신호 '+esc(t.signalTimeKst||'—')+' · 진입 '+esc(t.entryTimeKst||'—')+' · '+Number(t.entryPrice||0).toLocaleString('ko-KR')+'원'+
-          (st==='trade_closed'?(' · 순손익 '+btcPct(t.pnlPct)+' · '+esc(t.reason||'')):' · 포지션 추적중')):'')+'</div>';
+          (st==='trade_closed'?(' · 순손익 '+btcPct(t.pnlPct)+' · '+esc(t.reason||'')):' · 포지션 추적중')):(cs.decisionReason?'<br><b>사유:</b> '+esc(cs.decisionReason):''))+'</div>';
     }else{
       currentHtml='<div class="warn" style="margin-bottom:9px"><b>오늘 데이터 미수집</b> · 매매 없음으로 간주하지 않습니다.</div>';
     }
@@ -1356,7 +1372,7 @@ async function loadCryptoResearch(){
         '순손익 '+btcPct(last.pnlPct));
     }
     setReviewLog('crypto','<b>'+(j.to||'최근')+'</b> · 유효 '+j.validDays+'일 · 기준 '+(s.trades||0)+'건 · 승률 '+btcNum(s.winRate,1)+'% · 거래당 '+btcPct(s.avgPnl)+'<br><span class="sub">기준전략은 자동 변경하지 않고 그림자 후보·홀드아웃·30일 롤링을 계속 비교합니다.</span>');
-    h+='<div class="htable-wrap"><table class="htable"><thead><tr><th>규칙</th><th>거래</th><th>승률</th><th>평균</th><th>PF</th><th>복리</th><th>MDD</th><th>홀드아웃 평균</th></tr></thead><tbody>';
+    h+='<div class="htable-wrap"><table class="htable"><thead><tr><th>규칙</th><th>거래</th><th>승률</th><th>평균</th><th>PF</th><th>복리</th><th>MDD</th><th>MAR</th><th>홀드아웃 평균</th></tr></thead><tbody>';
     vars.forEach(v=>{
       const p=v.params||{}, x=v.summary||{}, z=(v.validation||{}).holdout||{};
       const nm=labels[p.name]||p.name||'—';
@@ -1365,6 +1381,7 @@ async function loadCryptoResearch(){
         '<td>'+(Number(x.profitFactor)>=999?'∞':btcNum(x.profitFactor,2))+'</td>'+
         '<td class="'+(Number(x.compoundReturnPct)>0?'win':Number(x.compoundReturnPct)<0?'loss':'')+'">'+btcPct(x.compoundReturnPct)+'</td>'+
         '<td class="loss">'+btcPct(x.maxDrawdownPct)+'</td>'+
+        '<td>'+scalpingMarText(x.compoundReturnPct,x.maxDrawdownPct,j.from,j.to)+'</td>'+
         '<td class="'+(Number(z.avgPnl)>0?'win':Number(z.avgPnl)<0?'loss':'')+'">'+btcPct(z.avgPnl)+'</td></tr>';
     });
     h+='</tbody></table></div>';
@@ -1430,7 +1447,8 @@ async function loadSoxlResearch(){
       '<div class="outbox"><div class="ol">전체 일평균</div><div class="ov">'+soxlPct(st.avgDailyReturnPct)+'</div></div>'+
       '<div class="outbox"><div class="ol">+1% 이상 일수</div><div class="ov">'+soxlNum(st.target1PctDayRatePct,1)+'%</div></div>'+
       '<div class="outbox"><div class="ol">복리</div><div class="ov">'+soxlPct(st.compoundReturnPct)+'</div></div>'+
-      '<div class="outbox"><div class="ol">MDD</div><div class="ov">'+soxlPct(st.maxDrawdownPct)+'</div></div></div>';
+      '<div class="outbox"><div class="ol">MDD</div><div class="ov">'+soxlPct(st.maxDrawdownPct)+'</div></div>'+
+      '<div class="outbox"><div class="ol">MAR</div><div class="ov">'+scalpingMarText(st.compoundReturnPct,st.maxDrawdownPct,j.from,j.to)+'</div><div class="sub">전체기간 CAGR ÷ |MDD|</div></div></div>';
     h+='<div class="warn"><b>홀드아웃</b> '+(hv.trades||0)+'건 · 평균 '+soxlPct(hv.avgPnl)+' · 복리 '+soxlPct(hv.compoundReturnPct)+
       (roll.count?' · <b>30일 롤링 최악</b> '+soxlPct(roll.worstCompoundReturnPct):'')+
       ' · <b>Walk-forward</b> '+esc(wf.status||'collecting')+' / '+Number(wf.foldCount||0)+' folds</div>';
@@ -1458,11 +1476,11 @@ async function loadSoxlResearch(){
     }else if(ld) setTimingBoard('soxl','buy','최근 NO TRADE',esc(ld.date||'')+' · 매수 없음',esc(ld.decisionReason||''));
     if(lt) setTimingBoard('soxl','sell','최근 청산',esc(lt.exitTimeEt||'')+' · $'+soxlNum(lt.exitPrice)+' · '+esc(lt.reason||''),'순손익 '+soxlPct(lt.pnlPct)+' · MFE/MAE '+soxlPct(lt.mfePct)+' / '+soxlPct(lt.maePct));
     setReviewLog('soxl','<b>'+(j.to||'최근')+'</b> · 유효 '+j.validDays+'일 · 기준 '+(st.trades||0)+'건 · 승률 '+soxlNum(st.winRate,1)+'% · 거래당 '+soxlPct(st.avgPnl)+'<br><span class="sub">홀드아웃·30일 롤링·Walk-forward와 그림자전략을 병렬 검증하며 기준전략은 자동 승격하지 않습니다.</span>');
-    h+='<div style="margin:14px 0 8px"><b>🧬 기준 + 그림자</b></div><div class="htable-wrap"><table class="htable"><thead><tr><th>규칙</th><th>거래</th><th>승률</th><th>평균</th><th>+1%일</th><th>PF</th><th>복리</th><th>MDD</th><th>홀드아웃 평균</th></tr></thead><tbody>';
+    h+='<div style="margin:14px 0 8px"><b>🧬 기준 + 그림자</b></div><div class="htable-wrap"><table class="htable"><thead><tr><th>규칙</th><th>거래</th><th>승률</th><th>평균</th><th>+1%일</th><th>PF</th><th>복리</th><th>MDD</th><th>MAR</th><th>홀드아웃 평균</th></tr></thead><tbody>';
     vars.forEach(v=>{const p=v.params||{},x=v.summary||{},z=(v.validation||{}).holdout||{};
       h+='<tr><td>'+esc(labels[p.name]||p.name||'—')+'</td><td>'+Number(x.trades||0)+'</td><td>'+soxlNum(x.winRate,1)+'%</td><td>'+soxlPct(x.avgPnl)+'</td>'+
         '<td>'+soxlNum(x.target1PctDayRatePct,1)+'%</td><td>'+(Number(x.profitFactor)>=999?'∞':soxlNum(x.profitFactor,2))+'</td><td>'+soxlPct(x.compoundReturnPct)+'</td>'+
-        '<td>'+soxlPct(x.maxDrawdownPct)+'</td><td>'+soxlPct(z.avgPnl)+'</td></tr>';});
+        '<td>'+soxlPct(x.maxDrawdownPct)+'</td><td>'+scalpingMarText(x.compoundReturnPct,x.maxDrawdownPct,j.from,j.to)+'</td><td>'+soxlPct(z.avgPnl)+'</td></tr>';});
     h+='</tbody></table></div><p class="note">성과만 보고 자동 승격하지 않습니다. 표본·홀드아웃·롤링 일관성이 확인된 후보만 검토합니다.</p>';
     body.innerHTML=h;
   }catch(e){msg.textContent='SOXL 연구결과 조회 실패';body.innerHTML='<div class="err">'+esc(e.message||e)+'</div>';}
@@ -2531,7 +2549,7 @@ async function loadDayTradingResearch(){
       return '<tr><td><b>'+esc(name)+'</b></td><td>'+(z.trades||0)+'</td><td>'+((z.winRate||0).toFixed(1))+'%</td>'+
         '<td class="'+((z.avgPnl||0)>=0?'win':'loss')+'">'+((z.avgPnl||0)>=0?'+':'')+(z.avgPnl||0).toFixed(3)+'%</td>'+
         '<td>'+pf+'</td><td class="'+((z.portfolioReturnPct||0)>=0?'win':'loss')+'">'+((z.portfolioReturnPct||0)>=0?'+':'')+(z.portfolioReturnPct||0).toFixed(2)+'%</td>'+
-        '<td class="loss">'+(z.portfolioMddPct||0).toFixed(2)+'%</td></tr>';
+        '<td class="loss">'+(z.portfolioMddPct||0).toFixed(2)+'%</td><td>'+scalpingMarText(z.portfolioReturnPct,z.portfolioMddPct,j.from,j.to)+'</td></tr>';
     }).join('');
 
     const dg=j.diagnostics||{},fp=dg.forwardPath||{};
@@ -2560,7 +2578,7 @@ async function loadDayTradingResearch(){
 
     body.innerHTML=qualityHtml+todayHtml+parityHtml+observedHtml+
       '<div style="margin:14px 0 8px"><b>🧪 누적 비교</b></div>'+
-      '<div class="htable-wrap"><table class="htable"><thead><tr><th>전략</th><th>거래</th><th>승률</th><th>평균손익</th><th>PF</th><th>포트수익</th><th>MDD</th></tr></thead><tbody>'+rows+'</tbody></table></div>'+
+      '<div class="htable-wrap"><table class="htable"><thead><tr><th>전략</th><th>거래</th><th>승률</th><th>평균손익</th><th>PF</th><th>포트수익</th><th>MDD</th><th>MAR</th></tr></thead><tbody>'+rows+'</tbody></table></div>'+
       diagHtml+
       '<div class="warn" style="margin-top:10px"><b>'+esc(wfText)+'</b> · 전체기간 성과가 좋아도 OOS 검증 전에는 기준전략을 자동 변경하지 않습니다.</div>';
   }catch(e){
