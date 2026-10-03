@@ -33,6 +33,11 @@ async function ownerInfo(request,env){
   }catch(e){return {ok:false,error:"로그인 정보를 확인하지 못했습니다."};}
 }
 function monitorKey(env){return String(env.DAYTRADING_MONITOR_KEY||env.OPENING_MONITOR_KEY||env.AUTOTRADE_KEY||"").trim();}
+function monitorAuthorized(request,env){
+  const got=String(request.headers.get("x-monitor-key")||"").trim();
+  const want=monitorKey(env);
+  return !!want&&got===want;
+}
 function workerUrl(env,strategy){
   const d=WORKERS[strategy];if(!d)return "";
   return String(env[d.env]||d.fallback).replace(/\/$/,"");
@@ -116,8 +121,61 @@ export async function onRequestGet({request,env}){
     catch(e){errors[strategy]=String(e.message||e);}
     nextEffectiveFrom[strategy]=effectiveFrom(strategy);
   }));
-  return json({ok:true,effective:"next-new-session",autoPromotion:false,configs,errors,nextEffectiveFrom});
+  return json({ok:true,effective:"next-new-session",autoPromotion:true,configs,errors,nextEffectiveFrom});
 }
+export async function onRequestPut({request,env}){
+  if(!monitorAuthorized(request,env))return json({ok:false,error:"unauthorized"},401);
+  let report={};try{report=await request.json();}catch(e){return json({ok:false,error:"JSON body 오류"},400);}
+  const reportDate=String(report.date||"");
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(reportDate))return json({ok:false,error:"nightly report date required"},400);
+
+  const results={};
+  for(const strategy of Object.keys(WORKERS)){
+    try{
+      const sr=report[strategy]||{},life=sr.lifecycle||{},auto=life.autoPromotion||{};
+      const variant=String(auto.variant||"");
+      if(auto.enabled!==true||auto.eligible!==true){
+        results[strategy]={ok:true,action:"skip",reason:String(auto.reason||"자동승격 조건 미충족")};
+        continue;
+      }
+      if(Number(life.leaderDays||0)<7){
+        results[strategy]={ok:false,action:"blocked",reason:"7일 연속 1위 미충족"};
+        continue;
+      }
+      if(!allowedVariant(strategy,variant)){
+        results[strategy]={ok:false,action:"blocked",reason:"unknown variant"};
+        continue;
+      }
+      const ranking=normalize(strategy,sr);
+      const row=(ranking.rows||[]).find(x=>x.name===variant);
+      const decision=promotionDecision(strategy,variant,ranking);
+      if(!decision.ok||!row||row.rank!==1){
+        results[strategy]={ok:false,action:"blocked",reason:decision.reason||"현재 1위/승격 게이트 불일치"};
+        continue;
+      }
+      const before=await workerConfig(env,strategy);
+      const currentSelected=String(before&&before.selectedVariant||"baseline");
+      if(currentSelected===variant){
+        results[strategy]={ok:true,action:"unchanged",variant,reason:"이미 선택된 메인전략"};
+        continue;
+      }
+      const from=effectiveFrom(strategy),previousVariant=activeVariant(before,strategy);
+      const config=decorateConfig(await workerConfig(env,strategy,"POST",{
+        variant,effectiveFrom:from,previousVariant,
+        updatedBy:"nightly-research",source:"auto-promotion-7d-leader",
+        researchScore:row.researchScore,rank:row.rank
+      }),strategy);
+      results[strategy]={
+        ok:true,action:"promoted",variant,previousVariant,effectiveFrom:from,
+        researchScore:row.researchScore,leaderDays:Number(life.leaderDays||0),config
+      };
+    }catch(e){
+      results[strategy]={ok:false,action:"error",reason:String(e.message||e)};
+    }
+  }
+  return json({ok:true,reportDate,autoPromotion:true,effective:"next-new-session",results});
+}
+
 export async function onRequestPost({request,env}){
   const who=await ownerInfo(request,env);if(!who.ok)return json({ok:false,error:who.error},401);
   let b={};try{b=await request.json();}catch(e){return json({ok:false,error:"JSON body 오류"},400);}
