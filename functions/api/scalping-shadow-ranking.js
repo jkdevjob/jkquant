@@ -51,6 +51,14 @@ function normalize(kind,report){
       liveCompatible:!NON_PROMOTABLE.has(kind+":"+name)
     };
     row.promotionEligible=isPromotionEligible(kind,row);
+    const life=report&&report.lifecycle||{},active=new Set(life.active||[]);
+    row.lifecycleStatus=active.has(name)?"active":((life.reserve||[]).includes(name)?"retired":"candidate");
+    row.lifecycleReason=(x&&x.lifecycleReason)||(
+      row.lifecycleStatus==="active"?"상위 10 경쟁군 유지":
+      row.lifecycleStatus==="retired"?"하위 순위 자동퇴출 · 예비후보":"후보 수집"
+    );
+    row.leaderDays=life.leader===name?Number(life.leaderDays||0):0;
+    row.autoPromotionEligible=!!(life.autoPromotion&&life.autoPromotion.eligible&&life.autoPromotion.variant===name);
     return row;
   });
   rows.sort((a,b)=>(a.trades<=0)-(b.trades<=0)||b.researchScore-a.researchScore||b.sampleFactor-a.sampleFactor||a.name.localeCompare(b.name));
@@ -65,9 +73,10 @@ function normalize(kind,report){
       formula:"50 + sampleFactor × (20·tanh(allEdge/0.20) + 25·tanh(validationEdge/0.20) + 10·tanh(recentEdge/0.75) + 5·riskSign), clipped 0~100",
       sampleFactor:"min(1, trades/minTrades)"
     },
+    lifecycle:report&&report.lifecycle||null,
     promotionRule:{
-      automatic:false,minScore:PROMOTION_MIN_SCORE,
-      requirements:["strategy-specific review gate","sampleReady","riskOk","liveCompatible","researchScore >= "+PROMOTION_MIN_SCORE],
+      automatic:true,leaderDays:7,minScore:PROMOTION_MIN_SCORE,
+      requirements:["최근 7일 동일 1위","strategy-specific review gate","sampleReady","riskOk","liveCompatible","researchScore >= "+PROMOTION_MIN_SCORE],
       effective:"next-new-session"
     },
     rows
@@ -80,7 +89,7 @@ export async function onRequestGet(){
     const j=await r.json();
     const rankings={};
     for(const k of Object.keys(CATALOG))rankings[k]=normalize(k,j[k]||{});
-    return json({ok:true,generatedAt:j.generatedAt||null,date:j.date||null,autoPromotion:false,rankings});
+    return json({ok:true,generatedAt:j.generatedAt||null,date:j.date||null,autoPromotion:true,rankings});
   }catch(e){return json({ok:false,error:String(e.message||e)},502);}
 }
 export {CATALOG,normalize,fallbackScore,isPromotionEligible,PROMOTION_MIN_SCORE,NON_PROMOTABLE};
