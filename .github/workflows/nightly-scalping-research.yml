@@ -1,7 +1,7 @@
 name: 단타 야간 자동연구
 
 # 시초가 + 데이트레이딩 + 비트코인 + SOXL + KIS VTS 체결자료를 하루 한 번 통합 분석한다.
-# 라이브 전략은 자동으로 바꾸지 않고, 충분한 표본이 쌓였을 때 검토 후보만 기록/알림한다.
+# 그림자 전략을 매일 재평가하고, 최근 7일 동일 1위 + 검증 게이트를 모두 통과한 경우에만 다음 세션 메인으로 자동승격한다.
 
 on:
   schedule:
@@ -70,6 +70,30 @@ jobs:
               sleep 10
             done
             [ "$SENT" = "1" ] || echo "Telegram 야간연구 전송 보류 — 20:10 backup이 marker 없이 재시도"
+          fi
+
+          # 최근 7일 동일 1위 + 표본/검증/위험 게이트 통과 전략만 자동승격한다.
+          # Pages 배포 지연을 고려해 새 API가 준비될 때까지 재시도하고 결과를 데이터 브랜치에 감사기록으로 남긴다.
+          if [ -n "$KEY" ] && [ -f "$REPORT" ]; then
+            AUTO_OUT="data/nightly-research/$DATE-auto-promotion.json"
+            AUTO_OK=0
+            for attempt in $(seq 1 12); do
+              STATUS=$(curl -sS --max-time 30 -o auto-promotion-response.json -w '%{http_code}' \
+                -X PUT -H "x-monitor-key: $KEY" -H "content-type: application/json" \
+                --data-binary @"$REPORT" "$BASE/api/scalping-promotion" || true)
+              echo "자동승격 attempt $attempt HTTP $STATUS: $(cat auto-promotion-response.json 2>/dev/null || true)"
+              if [ "$STATUS" = "200" ] && jq -e '.ok == true' auto-promotion-response.json >/dev/null 2>&1; then
+                jq --arg executedAt "$(TZ=Asia/Seoul date --iso-8601=seconds)" \
+                  '. + {executedAt:$executedAt,source:"nightly-scalping-research"}' auto-promotion-response.json > "$AUTO_OUT"
+                AUTO_OK=1
+                break
+              fi
+              sleep 10
+            done
+            if [ "$AUTO_OK" != "1" ]; then
+              jq -n --arg date "$DATE" --arg at "$(TZ=Asia/Seoul date --iso-8601=seconds)" \
+                '{ok:false,date:$date,executedAt:$at,source:"nightly-scalping-research",error:"auto promotion endpoint unavailable after retries"}' > "$AUTO_OUT"
+            fi
           fi
 
           git config user.name "github-actions[bot]"
