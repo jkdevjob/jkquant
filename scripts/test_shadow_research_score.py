@@ -34,7 +34,7 @@ for i,name in enumerate(pool):
     cands.append({
         "name":name,
         "status":"review" if name=="vol_1.0" else "collecting",
-        "researchScore":80-i,
+        "researchScore":90 if name=="vol_1.0" else 70-i,
         "sampleFactor":1,
         "sampleReady":True,
         "scoreParts":{"trades":60,"minTrades":50},
