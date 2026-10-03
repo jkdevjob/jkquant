@@ -6,6 +6,7 @@ on:
     branches: [main]
     paths:
       - "worker/daytrading-scheduler/**"
+      - "scripts/backfill_scalping_paper.py"
       - ".github/workflows/deploy-daytrading-scheduler.yml"
 
 permissions:
@@ -14,7 +15,7 @@ permissions:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
 
@@ -42,3 +43,15 @@ jobs:
           MONITOR_KEY: ${{ secrets.AUTOTRADE_KEY }}
         shell: bash
         run: printf '%s' "$MONITOR_KEY" | npx --yes wrangler@4 secret put MONITOR_KEY --config worker/daytrading-scheduler/wrangler.jsonc
+
+      - name: Python 준비
+        uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+
+      - name: 백필 도구 의존성 설치
+        run: pip install --quiet "requests>=2.32,<3"
+
+      - name: 과거 모의장부 Durable DB 백필 + 무결성 감사
+        env:
+          MONITOR_KEY: ${{ secrets.AUTOTRADE_KEY }}
+        run: python scripts/backfill_scalping_paper.py --strategies daytrading --backfill

@@ -197,6 +197,18 @@ async function readPaperHistory(env,limit=120){
   }
   return {dates,ledgers};
 }
+async function importHistoricalPaper(env,ledger){
+  if(!ledger||typeof ledger!=="object"||!Array.isArray(ledger.trades))throw new Error("invalid paper ledger");
+  const date=String(ledger.date||"");
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(date))throw new Error("invalid paper date");
+  const today=kstParts().date;
+  if(date>=today)throw new Error("historical import requires completed date");
+  const existing=await readPaper(env,date);
+  if(existing)return {imported:false,kept:true,ledger:existing};
+  const clean={...ledger,schema:Number(ledger.schema)||1,strategy:"daytrading",date,
+    mode:"historical-research-import-no-order",importedAt:new Date().toISOString()};
+  return {imported:true,kept:false,ledger:await writePaper(env,clean)};
+}
 async function captureSnapshot(env,date){
   const now=kstParts();
   if(now.date!==date||now.hm>MAX_SNAPSHOT_HM)return null;
@@ -572,11 +584,24 @@ export default {
       const ledger=await readPaper(env,date);
       return json({ok:true,date,ledger});
     }
+    if(u.pathname==="/paper-dates"){
+      if(!authorized(request,env))return json({ok:false,error:"unauthorized"},401);
+      return json({ok:true,strategy:"daytrading",dates:await readPaperDates(env)});
+    }
     if(u.pathname==="/paper-history"){
       if(!authorized(request,env))return json({ok:false,error:"unauthorized"},401);
       const limit=Math.max(1,Math.min(3650,Number(u.searchParams.get("limit")||120)));
       const h=await readPaperHistory(env,limit);
       return json({ok:true,dates:h.dates,ledgers:h.ledgers});
+    }
+    if(u.pathname==="/paper-import"){
+      if(!authorized(request,env))return json({ok:false,error:"unauthorized"},401);
+      if(request.method!=="POST")return json({ok:false,error:"method not allowed"},405);
+      try{
+        const b=await request.json(),ledger=b&&b.ledger;
+        const out=await importHistoricalPaper(env,ledger);
+        return json({ok:true,strategy:"daytrading",date:String(ledger&&ledger.date||""),...out});
+      }catch(e){return json({ok:false,error:String(e.message||e)},400);}
     }
     return json({ok:false,error:"not found"},404);
   }

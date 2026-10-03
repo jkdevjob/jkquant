@@ -192,6 +192,19 @@ async function readPaperHistory(env,strategy,limit=120){
   }
   return {dates,ledgers};
 }
+async function importHistoricalPaper(env,strategy,ledger){
+  if(!ledger||typeof ledger!=="object"||!Array.isArray(ledger.trades))throw new Error("invalid paper ledger");
+  const date=String(ledger.date||"");
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(date))throw new Error("invalid paper date");
+  const tz=strategy==="crypto"?"Asia/Seoul":"America/New_York";
+  const today=parts(Date.now(),tz).date;
+  if(date>=today)throw new Error("historical import requires completed date");
+  const existing=await readPaper(env,strategy,date);
+  if(existing)return {imported:false,kept:true,ledger:existing};
+  const clean={...ledger,schema:Number(ledger.schema)||1,strategy,date,
+    mode:"historical-research-import-no-order",importedAt:new Date().toISOString()};
+  return {imported:true,kept:false,ledger:await writePaper(env,clean)};
+}
 function paperLedger(strategy,date,t,opts={}){
   const currency=opts.currency||"USD",timezone=opts.timezone||"UTC",version=opts.version||"",friction=Number(opts.friction||0);
   let trades=[];
@@ -552,6 +565,12 @@ export default {
       const date=String(u.searchParams.get("date")||parts(now,tz).date);
       return json({ok:true,strategy,date,ledger:await readPaper(env,strategy,date)});
     }
+    if(u.pathname==="/paper-dates"){
+      if(!authorized(request,env))return json({ok:false,error:"unauthorized"},401);
+      const strategy=String(u.searchParams.get("strategy")||"").toLowerCase();
+      if(!["crypto","soxl"].includes(strategy))return json({ok:false,error:"unsupported strategy"},400);
+      return json({ok:true,strategy,dates:await readPaperDates(env,strategy)});
+    }
     if(u.pathname==="/paper-history"){
       if(!authorized(request,env))return json({ok:false,error:"unauthorized"},401);
       const strategy=String(u.searchParams.get("strategy")||"").toLowerCase();
@@ -559,6 +578,17 @@ export default {
       const limit=Math.max(1,Math.min(3650,Number(u.searchParams.get("limit")||120)));
       const h=await readPaperHistory(env,strategy,limit);
       return json({ok:true,strategy,dates:h.dates,ledgers:h.ledgers});
+    }
+    if(u.pathname==="/paper-import"){
+      if(!authorized(request,env))return json({ok:false,error:"unauthorized"},401);
+      if(request.method!=="POST")return json({ok:false,error:"method not allowed"},405);
+      try{
+        const b=await request.json(),strategy=String(b&&b.strategy||"").toLowerCase(),ledger=b&&b.ledger;
+        if(!["crypto","soxl"].includes(strategy))return json({ok:false,error:"unsupported strategy"},400);
+        if(!ledger||String(ledger.strategy||strategy)!==strategy)return json({ok:false,error:"strategy mismatch"},400);
+        const out=await importHistoricalPaper(env,strategy,{...ledger,strategy});
+        return json({ok:true,strategy,date:String(ledger.date||""),...out});
+      }catch(e){return json({ok:false,error:String(e.message||e)},400);}
     }
     return json({ok:false,error:"not found"},404);
   }
