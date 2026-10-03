@@ -65,6 +65,10 @@ VARIANTS = [
     Params("hold_30m", max_hold_bars=6),
     Params("hold_120m", max_hold_bars=24),
     Params("entry_by_1800", entry_cutoff_min=17 * 60 + 55),  # 17:55 signal -> 18:00 KST entry
+    Params("vol_0.8", volume_mult=0.8),
+    Params("range_10m", range_bars=2),
+    Params("entry_by_2000", entry_cutoff_min=19 * 60 + 55),  # 19:55 signal -> 20:00 KST entry
+    Params("hold_90m", max_hold_bars=18),
 ]
 
 
