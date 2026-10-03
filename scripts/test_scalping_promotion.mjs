@@ -10,6 +10,7 @@ assert.equal(isPromotionEligible("crypto",eligible),true);
 assert.equal(isPromotionEligible("crypto",{...eligible,review:false}),false,"review 변이를 막아야 함");
 assert.equal(isPromotionEligible("crypto",{...eligible,sampleReady:false}),false,"표본부족 변이를 막아야 함");
 assert.equal(isPromotionEligible("crypto",{...eligible,riskOk:false}),false,"위험 실패 변이를 막아야 함");
+assert.equal(isPromotionEligible("crypto",{...eligible,factoryReady:false}),false,"자동생성 인큐베이션 미완료 변이를 막아야 함");
 assert.equal(isPromotionEligible("crypto",{...eligible,researchScore:PROMOTION_MIN_SCORE-.01}),false,"점수 미달 변이를 막아야 함");
 assert.equal(isPromotionEligible("opening",{...eligible,name:"hold_to_next_open"}),false,"오버나이트 그림자는 운영승격 금지");
 
@@ -53,6 +54,7 @@ assert.ok(promotion.includes("promotionDecision"),"서버측 승격 재검증 �
 assert.ok(promotion.includes("onRequestPut"),"야간 자동승격 API 필요");
 assert.ok(promotion.includes("auto-promotion-7d-leader"),"7일 1위 자동승격 감사 source 필요");
 assert.ok(promotion.includes("leaderDays||0)<7"),"7일 1위 서버 재검증 필요");
+assert.ok(promotion.includes("automatic-promotion-only"),"수동 비-baseline 승격은 차단해야 함");
 assert.ok(promotion.includes('"x-monitor-key":key'),"Worker 설정 변경은 monitor key로 보호");
 assert.ok(promotion.includes('effective:"next-new-session"'));
 assert.ok(promotion.includes("effectiveFrom"),"적용 시작일을 서버가 계산해야 함");
@@ -61,6 +63,7 @@ assert.ok(promotion.includes("previousVariant"),"진행 중 세션의 이전 메
 const opening=fs.readFileSync("functions/api/opening-monitor.js","utf8");
 assert.ok(opening.includes("baselineTrades"),"원래 opening baseline은 별도 보존");
 assert.ok(opening.includes("operationalTrades"),"승격 운영 이력은 baseline과 분리");
+assert.ok(opening.includes("openingVariant"),"시초가 자동생성 실행 파서 연결 필요");
 
 const ow=fs.readFileSync("worker/opening-scheduler/src/index.js","utf8");
 assert.ok(ow.includes("__gpt_opening_strategy_config__"));
@@ -72,6 +75,7 @@ assert.ok(dw.includes("__gpt_daytrading_strategy_config__"));
 assert.ok(dw.includes("snapshotHm:now.hm"));
 assert.ok(dw.includes("schema:2,date,mainVariant"),"09:55 snapshot에 메인전략 잠금");
 assert.ok(dw.includes('u.pathname==="/config"'));
+assert.ok(dw.includes("parseGeneratedDayVariant"),"데이트레이딩 자동생성 실행 파서 필요");
 
 const gw=fs.readFileSync("worker/global-intraday-scheduler/src/index.js","utf8");
 assert.ok(gw.includes("__gpt_strategy_config__"));
@@ -79,6 +83,7 @@ assert.ok(gw.includes("mainVariantForDate"));
 assert.ok(gw.includes("BTC_VARIANTS"));
 assert.ok(gw.includes("SOXL_VARIANTS"));
 assert.ok(gw.includes('u.pathname==="/config"'));
+assert.ok(gw.includes("parseGeneratedGlobalVariant"),"BTC/SOXL 자동생성 실행 파서 필요");
 for(const txt of [ow,dw,gw]){
   assert.ok(txt.includes("history"),"승격 이력을 Durable Object 설정에 보존해야 함");
   assert.ok(txt.includes("effectiveFrom"),"다음 세션 적용 경계가 Worker에도 있어야 함");
