@@ -72,6 +72,57 @@ RETIRE_STREAK_REQUIRED=3
 AUTO_PROMOTION_LEADER_SESSIONS=7
 AUTO_PROMOTION_MIN_SCORE=60.0
 
+FACTORY_TEMPLATES={
+    "opening":[
+        ("cf_pb_{g}",lambda g:{"pbMax":round(0.45+0.05*(g%9),2)}),
+        ("cf_amount_{g}",lambda g:{"amountMult":round(1.3+0.1*(g%9),1)}),
+        ("cf_entry_{g}",lambda g:{"entryCutoff":905+5*(g%5)}),
+        ("cf_vol_{g}",lambda g:{"volMult":round(1.1+0.1*(g%10),1)}),
+    ],
+    "daytrading":[
+        ("cf_vol_{g}",lambda g:{"vol_mult":round(1.1+0.1*(g%11),1)}),
+        ("cf_lookback_{g}",lambda g:{"lookback":10+5*(g%7)}),
+        ("cf_slope_{g}",lambda g:{"min_vwap_slope":round(0.05+0.05*(g%6),2)}),
+        ("cf_entry_{g}",lambda g:{"entry_cutoff":1230+30*(g%5)}),
+    ],
+    "crypto":[
+        ("cf_vol_{g}",lambda g:{"volume_mult":round(0.9+0.1*(g%9),1)}),
+        ("cf_range_{g}",lambda g:{"range_bars":1+(g%6)}),
+        ("cf_hold_{g}",lambda g:{"max_hold_bars":6+6*(g%6)}),
+        ("cf_rr_{g}",lambda g:{"stop_pct":round(0.3+0.1*(g%5),1),"take_profit_pct":round(0.6+0.2*(g%5),1)}),
+    ],
+    "soxl":[
+        ("cf_vol_{g}",lambda g:{"volume_mult":round(0.7+0.1*(g%10),1)}),
+        ("cf_range_{g}",lambda g:{"range_bars":1+(g%6)}),
+        ("cf_hold_{g}",lambda g:{"max_hold_bars":9+3*(g%8)}),
+        ("cf_rr_{g}",lambda g:{"stop_pct":round(0.8+0.1*(g%7),1),"take_profit_pct":round(1.6+0.2*(g%7),1)}),
+    ],
+}
+
+def next_factory_candidates(kind, previous, count=5):
+    """Deterministic generation metadata for the next research generation.
+
+    The live engines still require a generated candidate to be materialized in
+    their strategy definition before it is promotion-compatible. Therefore
+    generated rows start in research-only incubation and cannot auto-promote.
+    """
+    start=int(previous.get("factoryGeneration") or 0)+1
+    out=[]
+    tmpls=FACTORY_TEMPLATES[kind]
+    for n in range(count):
+        g=start+n
+        name_t,fn=tmpls[g%len(tmpls)]
+        out.append({
+            "name":name_t.format(g=g),
+            "generation":g,
+            "params":fn(g),
+            "status":"incubating",
+            "liveCompatible":False,
+            "reason":"예비 후보 자동 생성 · 연구 검증 후 live-compatible 구현 시 승격 가능"
+        })
+    return out
+
+
 def load_json(p:Path, default=None):
     try:
         return json.loads(p.read_text(encoding="utf-8"))
@@ -258,6 +309,8 @@ def evolve_lifecycle(kind, report, previous=None):
         "candidatePoolSize":len(pool),
         "activeCandidates":active,
         "reserveCandidates":[x for x in pool if x not in active and x not in retired_names],
+        "generatedCandidates":next_factory_candidates(kind,previous,5),
+        "factoryGeneration":int(previous.get("factoryGeneration") or 0)+(1 if is_new_evidence else 0),
         "retired":retired[-50:],
         "poorStreaks":poor,
         "lastEvidenceDate":evidence or previous.get("lastEvidenceDate"),
