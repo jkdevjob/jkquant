@@ -658,6 +658,19 @@ async function runDiag(){
 // ── 3. 보안 규칙 ─────────────────────────────────────────────────────
 const RULES=`rules_version = '2';
 
+/* JK 퀀트 — Firestore 보안 규칙
+   Firebase 콘솔 → Firestore Database → 규칙 에 이 내용을 붙여넣고 게시한다.
+
+   이용 승인제: 로그인하면 이용 신청이 접수되고(profiles/{uid}.requestedAt), 관리자가 승인해야
+   (profiles/{uid}.approved == true) 자기 기록을 열 수 있다. 차단(blocked)은 승인보다 먼저다.
+   화면 쪽 판정은 jk-access.js(JKAccess.decide)가 한 곳에서 하고, 이 규칙이 같은 판정으로 데이터를 막는다.
+   화면만 가리면 앱을 거치지 않고 데이터를 읽는 걸 막지 못한다 — 진짜 잠금은 이 규칙이다.
+   관리자 목록 조회(profiles 전체 읽기)도 규칙이 허용해야 동작한다.
+
+   컬렉션 두 개:
+     users/{uid}    — 그 사람의 전략·거래기록 전부. 승인된 본인만 읽고 쓴다. 관리자도 안 본다.
+     profiles/{uid} — 이메일·신청·접속시각·승인 상태. 관리자가 전체를 읽고 승인·차단한다. */
+
 service cloud.firestore {
   match /databases/{database}/documents {
 
@@ -679,6 +692,12 @@ service cloud.firestore {
     // 거래기록은 남이 못 본다 — 관리자도 마찬가지다. 승인 전에는 본인도 못 연다
     match /users/{uid} {
       allow read, write: if isMine(uid) && approved();
+
+      // 단타 분봉 아카이브 등 큰 사용자 데이터는 날짜별 하위 문서로 분리한다.
+      // 부모 users/{uid}와 동일하게 승인된 본인만 접근할 수 있다.
+      match /{document=**} {
+        allow read, write: if isMine(uid) && approved();
+      }
     }
 
     match /profiles/{uid} {
