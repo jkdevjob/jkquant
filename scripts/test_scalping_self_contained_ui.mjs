@@ -20,8 +20,9 @@ function extractFn(text,marker){
   return text.slice(i,k+1);
 }
 function buildDailyRisk(src){
-  const fn=extractFn(src,'function dailyRisk(');
-  return new Function(fn+'\nreturn dailyRisk;')();
+  const ret=extractFn(src,'function sessionReturnPct(');
+  const risk=extractFn(src,'function dailyRisk(');
+  return new Function(ret+'\n'+risk+'\nreturn dailyRisk;')();
 }
 function near(a,b,t=1e-9){return Math.abs(a-b)<=t;}
 function riskProbe(src){
@@ -31,13 +32,13 @@ function riskProbe(src){
       {date:'2026-09-29',pnl:2},{date:'2026-09-29',pnl:0},
       {date:'2026-09-30',pnl:-2},{date:'2026-10-01',pnl:-1}
     ];
-    const z=f(rows);
+    const z=f(rows,'opening');
     if(z.daily.length!==3)return false;
     if(!near(z.daily[0].returnPct,1))return false; // same-day equal-weight average, not sum
     if(z.lossStreakTradeDays!==2)return false;
     if(!near(z.currentDrawdownPct,-2.98,1e-8))return false;
     if(z.recentDaily[0].date!=='2026-10-01')return false;
-    const z2=f([...rows,{date:'2026-10-02',pnl:0}]);
+    const z2=f([...rows,{date:'2026-10-02',pnl:0}],'opening');
     if(z2.lossStreakTradeDays!==0)return false;
     if(z2.weekStart!=='2026-09-28')return false;
     return true;
@@ -56,8 +57,8 @@ for(const needle of [
 ]) ok(ui.includes(needle),'UI contains '+needle);
 
 ok(riskProbe(hist),'risk engine: equal-weight daily return / drawdown / loss streak / weekly progress');
-const mutAvg=hist.replace('a.reduce((s,v)=>s+v,0)/a.length','a.reduce((s,v)=>s+v,0)');
-ok(!riskProbe(mutAvg),'mutation killed: daily account return must average same-day trades');
+const mutAvg=hist.replace('return sum/a.length;','return sum;');
+ok(!riskProbe(mutAvg),'mutation killed: opening daily account return must average same-day trades');
 const mutStreak=hist.replace('if(daily[i].returnPct<0)lossStreak++;','if(daily[i].returnPct<=0)lossStreak++;');
 ok(!riskProbe(mutStreak),'mutation killed: flat day ends loss streak');
 
