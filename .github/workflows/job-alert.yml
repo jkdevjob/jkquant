@@ -20,7 +20,7 @@ concurrency:
 jobs:
   search-and-notify:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 35
 
     steps:
       - name: Checkout
@@ -60,24 +60,28 @@ jobs:
             sleep 15
           done
 
+      - name: Validate JOB collector syntax
+        run: python -m py_compile scripts/job_alert.py
+
       - name: Search jobs and send Telegram
         env:
           AUTOTRADE_KEY: ${{ secrets.AUTOTRADE_KEY }}
           JKQUANT_BASE: https://jkquant.pages.dev
         run: python scripts/job_alert.py
 
-      - name: Publish 30-day JOB archive
+      - name: Publish JOB archive and long-term history
         shell: bash
         run: |
           set -euo pipefail
           test -f data/job_archive.json || exit 0
-          if git diff --quiet -- data/job_archive.json && git ls-files --error-unmatch data/job_archive.json >/dev/null 2>&1; then
-            echo "JOB archive unchanged"
+          test -f data/job_history.json || exit 0
+          if git diff --quiet -- data/job_archive.json data/job_history.json; then
+            echo "JOB archive/history unchanged"
             exit 0
           fi
           git config user.name "jkquant-job-bot"
           git config user.email "jkquant-job-bot@users.noreply.github.com"
-          git add data/job_archive.json
-          git commit -m "data: update 30-day job archive [skip ci]"
+          git add data/job_archive.json data/job_history.json
+          git commit -m "data: update job archive and history [skip ci]"
           git pull --rebase origin main
           git push origin HEAD:main
