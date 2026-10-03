@@ -2,7 +2,9 @@
 """Nightly research rollup for opening + day-trading + bitcoin + SOXL strategies.
 
 Reads immutable/reconstructed paper research from scalping-data and produces a
-single daily research report. It NEVER changes live strategy parameters.
+single daily research report. Shadow candidates rotate automatically; a live main
+change is allowed only after the same candidate leads seven distinct completed
+evaluation days and passes every validation/risk/live-compatibility gate.
 
 Promotion policy:
 - opening: >=20 archived days, >=50 baseline trades, candidate >=30 trades,
