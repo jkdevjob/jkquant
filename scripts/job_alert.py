@@ -515,23 +515,66 @@ def fetch_job_identity(job):
     return item
 
 
+def _known_identity_cache():
+    try:
+        if not ARCHIVE_FILE.exists():
+            return {}
+        data = json.loads(ARCHIVE_FILE.read_text(encoding='utf-8'))
+        out = {}
+        for item in data.get('jobs', []):
+            url = normalize_url(item.get('url', ''))
+            if url:
+                out[url] = item
+        return out
+    except Exception:
+        return {}
+
+
 def enrich_jobs_from_details(jobs, workers=8):
     jobs = list(jobs or [])
     if not jobs:
         return jobs
+
+    cache = _known_identity_cache()
     enriched = []
+    pending = []
     failures = 0
-    with ThreadPoolExecutor(max_workers=workers) as pool:
-        for item in pool.map(fetch_job_identity, jobs):
-            if item.pop('_identity_error', None):
-                failures += 1
+
+    for raw in jobs:
+        item = dict(raw)
+        url = normalize_url(item.get('url', ''))
+        cached = cache.get(url) or {}
+        cached_company = clean_company_name(
+            cached.get('company', ''),
+            item.get('title', ''),
+        )
+        hinted_company = company_hint(item.get('title', ''), item.get('body', ''))
+        current_title = clean_detail_title(item.get('title', ''), cached_company or hinted_company)
+
+        if cached_company and current_title and not is_generic_job_title(current_title):
+            item['company'] = cached_company
+            item['title'] = current_title
             enriched.append(item)
+            continue
+        if hinted_company and current_title and not is_generic_job_title(current_title):
+            item['company'] = hinted_company
+            item['title'] = current_title
+            enriched.append(item)
+            continue
+        pending.append(item)
+
+    if pending:
+        with ThreadPoolExecutor(max_workers=workers) as pool:
+            for item in pool.map(fetch_job_identity, pending):
+                if item.pop('_identity_error', None):
+                    failures += 1
+                enriched.append(item)
+
     print(
-        f'[INFO] detail_identity enriched={len(enriched)} '
-        f'failures={failures}'
+        f'[INFO] detail_identity total={len(jobs)} fetched={len(pending)} '
+        f'cached={len(jobs)-len(pending)} failures={failures}'
     )
     return enriched
-
 
 def normalize_url(url):
     try:
@@ -1148,6 +1191,180 @@ def collect_jobkorea_direct():
     direct_jobs = enrich_jobs_from_details(direct_jobs, workers=12)
     return direct_jobs, status
 
+def compact_job_title(title):
+    text = normalize_text(title).lower()
+    text = re.sub(r'\[[^\]]*\]|\([^)]*\)', ' ', text)
+    text = re.sub(
+        r'\b(?:채용|모집|공고|정규직|계약직|프리랜서|경력직|경력|신입|즉시지원)\b',
+        ' ',
+        text,
+    )
+    text = re.sub(r'[^0-9a-z가-힣]+', ' ', text)
+    return normalize_text(text)
+
+
+def title_tokens(title):
+    return {
+        token for token in compact_job_title(title).split()
+        if len(token) >= 2 and token not in {'대전', '세종', '개발자', '채용', '모집'}
+    }
+
+
+def company_hint(title, body):
+    text = normalize_text(f'{title} {body}')
+    patterns = [
+        r'(?:\(주\)|주식회사)\s*([가-힣A-Za-z0-9&._-]{2,40})',
+        r'([가-힣A-Za-z0-9&._-]{2,40})\s*㈜',
+    ]
+    for pattern in patterns:
+        m = re.search(pattern, text)
+        if m:
+            candidate = clean_company_name(m.group(1), title)
+            if candidate:
+                return candidate
+
+    m = re.match(r'^\[([^\]]{2,40})\]', normalize_text(title))
+    if m:
+        candidate = clean_company_name(m.group(1), title='')
+        if candidate and candidate not in {'대전', '세종', '서울', '경기', '충남', '충북'}:
+            return candidate
+    return ''
+
+
+def job_fingerprint(job):
+    title = compact_job_title(job.get('title', ''))
+    company = (
+        clean_company_name(job.get('company', ''), job.get('title', ''))
+        or company_hint(job.get('title', ''), job.get('body', ''))
+    )
+    return f'{company}|{title}' if company else title
+
+
+def same_job(a, b):
+    if not has_target_location(f"{a.get('title','')} {a.get('body','')}"):
+        return False
+    if not has_target_location(f"{b.get('title','')} {b.get('body','')}"):
+        return False
+
+    ua = normalize_url(a.get('url', ''))
+    ub = normalize_url(b.get('url', ''))
+    da = domain_of(ua)
+    db = domain_of(ub)
+    # 같은 사이트의 서로 다른 공고ID/URL은 재등록 가능성이 있으므로 합치지 않는다.
+    if ua and ub and ua != ub and da and da == db:
+        return False
+
+    ca = (
+        clean_company_name(a.get('company', ''), a.get('title', ''))
+        or company_hint(a.get('title', ''), a.get('body', ''))
+    )
+    cb = (
+        clean_company_name(b.get('company', ''), b.get('title', ''))
+        or company_hint(b.get('title', ''), b.get('body', ''))
+    )
+    if ca and cb and ca != cb:
+        return False
+
+    ta = compact_job_title(a.get('title', ''))
+    tb = compact_job_title(b.get('title', ''))
+    if not ta or not tb:
+        return False
+    if ta == tb:
+        return True
+
+    ratio = SequenceMatcher(None, ta, tb).ratio()
+    sa, sb = title_tokens(ta), title_tokens(tb)
+    union = sa | sb
+    jaccard = (len(sa & sb) / len(union)) if union else 0.0
+    return ratio >= 0.90 or (len(sa & sb) >= 3 and jaccard >= 0.78)
+
+
+def merge_duplicate_job(base, incoming):
+    sources = list(dict.fromkeys(
+        (base.get('sources') or [base.get('source')])
+        + (incoming.get('sources') or [incoming.get('source')])
+    ))
+    sources = [s for s in sources if s]
+    base['sources'] = sources
+
+    bp = SOURCE_PRIORITY.get(base.get('source'), 0)
+    ip = SOURCE_PRIORITY.get(incoming.get('source'), 0)
+    if ip > bp:
+        for key in ('title', 'url', 'source', 'company'):
+            if incoming.get(key):
+                base[key] = incoming.get(key, base.get(key))
+
+    if not clean_company_name(base.get('company', ''), base.get('title', '')):
+        incoming_company = clean_company_name(
+            incoming.get('company', ''),
+            incoming.get('title', ''),
+        )
+        if incoming_company:
+            base['company'] = incoming_company
+
+    if len(incoming.get('body', '')) > len(base.get('body', '')):
+        base['body'] = incoming.get('body', '')
+
+    base['salary'] = salary_info(base.get('title', ''), base.get('body', ''))
+    base['short_pay'] = short_term_pay_info(base.get('title', ''), base.get('body', ''))
+    base['score'] = max(base.get('score', 0), incoming.get('score', 0))
+    return base
+
+
+def dedupe_jobs_cross_source(jobs):
+    unique = []
+    by_url = {}
+    for raw in jobs:
+        job = dict(raw)
+        job['url'] = normalize_url(job.get('url', ''))
+        if not job['url']:
+            continue
+        job.setdefault('sources', [job.get('source') or domain_of(job['url'])])
+
+        current = by_url.get(job['url'])
+        if current is not None:
+            merge_duplicate_job(current, job)
+            continue
+
+        duplicate = None
+        for existing in unique:
+            if same_job(existing, job):
+                duplicate = existing
+                break
+        if duplicate is not None:
+            merge_duplicate_job(duplicate, job)
+            by_url[job['url']] = duplicate
+        else:
+            unique.append(job)
+            by_url[job['url']] = job
+    return unique
+
+
+def saramin_card_text(anchor):
+    node = anchor
+    fallback = normalize_text(anchor.get_text(' ', strip=True))
+    for _ in range(10):
+        node = getattr(node, 'parent', None)
+        if node is None:
+            break
+        ids = set()
+        for link in node.find_all('a', href=True):
+            href = link.get('href') or ''
+            m = re.search(r'(?:rec_idx=|/jobs/view\?rec_idx=)(\d+)', href, re.I)
+            if m:
+                ids.add(m.group(1))
+        if len(ids) > 1:
+            break
+        text = normalize_text(node.get_text(' ', strip=True))
+        if not text or len(text) > 1800:
+            continue
+        if len(ids) == 1:
+            fallback = text
+            if has_target_location(text):
+                return text
+    return fallback
+
+
 def collect_saramin_direct():
     session = requests.Session()
     session.headers.update(DETAIL_HEADERS)
@@ -1295,7 +1512,7 @@ def _fallback_search_term(term):
     return normalize_text(f'{loc} {core}')
 
 
-def _ddgs_search_with_retry(query, max_results=12):
+def _ddgs_search_with_retry(query, max_results=20):
     last_exc = None
     for attempt in range(3):
         try:
@@ -1321,7 +1538,7 @@ def collect_search_source(source_name, domain):
         results, error = _ddgs_search_with_retry(query)
         if error is not None:
             fallback = f'site:{domain} {_fallback_search_term(term)}'
-            results, fallback_error = _ddgs_search_with_retry(fallback, max_results=15)
+            results, fallback_error = _ddgs_search_with_retry(fallback, max_results=20)
             if fallback_error is not None:
                 errors.append(f'{term}: {type(fallback_error).__name__}')
                 continue
@@ -1516,8 +1733,77 @@ def miss_close_threshold(item, source_statuses):
     return DIRECT_MISS_CLOSE_THRESHOLD if '직접' in modes else SEARCH_MISS_CLOSE_THRESHOLD
 
 
+def verify_unseen_job(item):
+    out = dict(item or {})
+    out['_urlState'] = 'unknown'
+    out['_urlReason'] = ''
+    url = normalize_url(out.get('url', ''))
+    if not url:
+        return out
+
+    try:
+        response = requests.get(url, headers=DETAIL_HEADERS, timeout=12, allow_redirects=True)
+    except Exception as exc:
+        out['_urlReason'] = type(exc).__name__
+        return out
+
+    out['lastChecked'] = today_kst()
+    if response.status_code in {404, 410}:
+        out['_urlState'] = 'missing'
+        out['_urlReason'] = f'HTTP {response.status_code}'
+        return out
+    if response.status_code in {401, 403, 429} or response.status_code >= 500:
+        out['_urlReason'] = f'HTTP {response.status_code}'
+        return out
+    if not response.ok:
+        out['_urlReason'] = f'HTTP {response.status_code}'
+        return out
+
+    html = response.text or ''
+    if not html:
+        return out
+
+    detail_title, detail_company = extract_detail_identity(html, out.get('source', ''))
+    if detail_title and not is_generic_job_title(detail_title):
+        out['title'] = detail_title
+    if detail_company:
+        out['company'] = detail_company
+
+    page_text = normalize_text(BeautifulSoup(html, 'html.parser').get_text(' ', strip=True))
+    deadline, deadline_source = parse_job_deadline(out.get('title', ''), page_text[:12000])
+    if deadline:
+        out['deadline'] = deadline
+        out['deadlineSource'] = deadline_source
+    reason = content_close_reason(out.get('title', ''), page_text[:12000], out.get('deadline', ''))
+    if reason:
+        out['_urlState'] = 'closed'
+        out['_urlReason'] = reason
+    else:
+        out['_urlState'] = 'active'
+    return out
+
+
+def verify_unseen_jobs(items, workers=10):
+    items = list(items or [])
+    if not items:
+        return []
+    checked = []
+    with ThreadPoolExecutor(max_workers=workers) as pool:
+        for item in pool.map(verify_unseen_job, items):
+            checked.append(item)
+    counts = {}
+    for item in checked:
+        state = item.get('_urlState', 'unknown')
+        counts[state] = counts.get(state, 0) + 1
+    print(f'[INFO] unseen URL verification {counts}')
+    return checked
+
+
 def apply_unseen_status(item, source_statuses):
     out = sanitize_archive_identity(item)
+    url_state = out.pop('_urlState', 'unknown')
+    url_reason = out.pop('_urlReason', '')
+
     deadline = out.get('deadline', '')
     deadline_source = out.get('deadlineSource', '')
     if not deadline:
@@ -1526,28 +1812,41 @@ def apply_unseen_status(item, source_statuses):
     out['deadlineSource'] = deadline_source
 
     explicit_reason = content_close_reason(out.get('title', ''), out.get('body', ''), deadline)
+    if url_state == 'closed' and url_reason:
+        explicit_reason = url_reason
+
     if explicit_reason:
         out['status'] = 'closed'
         out['closedAt'] = out.get('closedAt') or today_kst()
         out['closeReason'] = explicit_reason
+        out['missCount'] = 0
+        return out
+
+    if url_state == 'active':
+        out['status'] = 'active'
+        out['missCount'] = 0
+        out['closedAt'] = ''
+        out['closeReason'] = ''
         return out
 
     if out.get('status') == 'closed':
         return out
 
     misses = int(out.get('missCount') or 0)
-    if source_check_succeeded(out, source_statuses):
+    if url_state == 'missing':
         misses += 1
     out['missCount'] = misses
     out['status'] = 'active'
     out['closedAt'] = ''
     out['closeReason'] = ''
-    if misses >= miss_close_threshold(out, source_statuses):
+
+    # 검색목록에서 빠졌다는 이유만으로는 마감시키지 않는다.
+    # 원문 URL이 실제로 연속해서 사라진 경우에만 보수적으로 마감한다.
+    if url_state == 'missing' and misses >= miss_close_threshold(out, source_statuses):
         out['status'] = 'closed'
         out['closedAt'] = today_kst()
-        out['closeReason'] = f'원문 미확인 {misses}회'
+        out['closeReason'] = f'원문 URL 미확인 {misses}회'
     return out
-
 
 def load_job_history():
     if not HISTORY_FILE.exists():
@@ -1683,6 +1982,7 @@ def archive_entry(job, existing=None):
         'closeReason': close_reason,
         'firstSeen': first_seen,
         'lastSeen': today,
+        'lastChecked': today,
     }
     if not entry['categories'] and old.get('categories'):
         entry['categories'] = old['categories']
@@ -1711,6 +2011,7 @@ def sanitize_archive_identity(item):
     out['missCount'] = int(out.get('missCount') or 0)
     out['closedAt'] = out.get('closedAt', '')
     out['closeReason'] = out.get('closeReason', '')
+    out['lastChecked'] = out.get('lastChecked', '')
     return out
 
 
@@ -1767,22 +2068,22 @@ def save_job_archive(all_jobs, source_statuses):
         old for old in old_jobs
         if id(old) not in used_old_ids
     ]
-    refresh_targets = [
+    verify_targets = [
         old for old in unseen_old
-        if archive_identity_needs_refresh(old) and old.get('url')
+        if old.get('url') and old.get('status', 'active') != 'closed'
     ]
-    refreshed_by_url = {}
-    if refresh_targets:
-        refreshed = enrich_jobs_from_details(refresh_targets, workers=6)
-        refreshed_by_url = {
+    verified_by_url = {}
+    if verify_targets:
+        verified = verify_unseen_jobs(verify_targets, workers=10)
+        verified_by_url = {
             normalize_url(item.get('url', '')): item
-            for item in refreshed
+            for item in verified
             if item.get('url')
         }
 
     for old in unseen_old:
         url = normalize_url(old.get('url', ''))
-        candidate = refreshed_by_url.get(url, old)
+        candidate = verified_by_url.get(url, old)
         merged.append(apply_unseen_status(candidate, source_statuses))
 
     # 다른 사이트에 동시에 올라온 같은 공고는 하나로 합치되,

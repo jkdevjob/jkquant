@@ -1,0 +1,29 @@
+name: JOB Logic Check
+
+on:
+  push:
+    paths:
+      - "scripts/job_alert.py"
+      - "scripts/test_job_alert_logic.py"
+      - ".github/workflows/job-logic-check.yml"
+  pull_request:
+    paths:
+      - "scripts/job_alert.py"
+      - "scripts/test_job_alert_logic.py"
+      - ".github/workflows/job-logic-check.yml"
+
+jobs:
+  job-logic:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install JOB dependencies
+        run: pip install "ddgs>=9,<10" "requests>=2.32,<3" "beautifulsoup4>=4.12,<5"
+      - name: Validate JOB collector
+        run: |
+          python -m py_compile scripts/job_alert.py scripts/test_job_alert_logic.py
+          python scripts/test_job_alert_logic.py
