@@ -13,6 +13,7 @@ const CATALOG={
 const MIN_TRADES={opening:30,daytrading:30,crypto:50,soxl:30};
 const PROMOTION_MIN_SCORE=60;
 const NON_PROMOTABLE=new Set(["opening:hold_to_next_open"]);
+function isGeneratedVariant(name){return /^cf_g\d{4,}$/.test(String(name||""));}
 function isPromotionEligible(kind,row){
   if(!row||NON_PROMOTABLE.has(kind+":"+String(row.name||"")))return false;
   return row.review===true&&row.sampleReady===true&&row.riskOk===true&&Number(row.researchScore)>=PROMOTION_MIN_SCORE;
@@ -33,10 +34,17 @@ function fallbackScore(kind,x){
 function normalize(kind,report){
   const by=new Map((report&&report.candidates||[]).map(x=>[String(x.name||""),x]));
   const life=report&&report.lifecycle||{};
-  const activeSet=new Set(Array.isArray(life.activeCandidates)&&life.activeCandidates.length?life.activeCandidates:CATALOG[kind].slice(0,10));
+  const generatedMeta=new Map((life.generatedPool||[]).map(x=>[String(x&&x.name||""),x||{}]));
+  const names=[...new Set([
+    ...(CATALOG[kind]||[]),
+    ...[...generatedMeta.keys()].filter(isGeneratedVariant),
+    ...(report&&report.candidates||[]).map(x=>String(x.name||"")).filter(isGeneratedVariant)
+  ])];
+  const activeSet=new Set(Array.isArray(life.activeCandidates)&&life.activeCandidates.length?life.activeCandidates:(CATALOG[kind]||[]).slice(0,10));
   const retiredSet=new Set((life.retired||[]).map(x=>String(x&&x.name||"")));
-  const rows=CATALOG[kind].map(name=>{
-    const x=by.get(name)||{name,status:"collecting"};
+  const rows=names.map(name=>{
+    const meta=generatedMeta.get(name)||{};
+    const x=by.get(name)||{name,status:isGeneratedVariant(name)?"incubating":"collecting",params:meta.params||null};
     const fb=fallbackScore(kind,x);
     const score=Number.isFinite(Number(x.researchScore))?Number(x.researchScore):fb.score;
     const sf=Number.isFinite(Number(x.sampleFactor))?Number(x.sampleFactor):fb.sampleFactor;
@@ -51,7 +59,8 @@ function normalize(kind,report){
       recentEdgePct:n(x.recentEdgePct,x.last20AvgEdgePct!=null?x.last20AvgEdgePct:x.holdoutAvgEdgePct),
       riskOk:x.mddOk!==false&&x.profitFactorOk!==false,
       review:x.status==="review",
-      liveCompatible:!NON_PROMOTABLE.has(kind+":"+name),
+      liveCompatible:!NON_PROMOTABLE.has(kind+":"+name)&&((CATALOG[kind]||[]).includes(name)||isGeneratedVariant(name)),
+      params:x.params||meta.params||null,
       active:activeSet.has(name),
       lifecycleStatus:retiredSet.has(name)?"retired":(activeSet.has(name)?"active":"reserve")
     };
@@ -94,4 +103,4 @@ export async function onRequestGet(){
     return json({ok:true,generatedAt:j.generatedAt||null,date:j.date||null,autoPromotion:true,rankings});
   }catch(e){return json({ok:false,error:String(e.message||e)},502);}
 }
-export {CATALOG,normalize,fallbackScore,isPromotionEligible,PROMOTION_MIN_SCORE,NON_PROMOTABLE};
+export {CATALOG,normalize,fallbackScore,isPromotionEligible,PROMOTION_MIN_SCORE,NON_PROMOTABLE,isGeneratedVariant};
