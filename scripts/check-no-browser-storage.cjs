@@ -56,7 +56,15 @@ const FILES=[...appAbs].map(rel).sort();
 
 let fail=0;
 for(const file of FILES){
-  const src=fs.readFileSync(path.join(ROOT,file),'utf8');
+  let src=fs.readFileSync(path.join(ROOT,file),'utf8');
+  if(file==='plan.html'){
+    const m=src.match(/\/\* LEGACY_PLAN_RECOVERY_READ_ONCE_START[\s\S]*?LEGACY_PLAN_RECOVERY_READ_ONCE_END \*\//);
+    if(m){
+      if(/\.setItem\s*\(/.test(m[0])){console.error('✗ plan.html — 1회 복구 블록은 브라우저 저장소 쓰기 금지');fail++;}
+      if(!/\.getItem\s*\(/.test(m[0])||!/\.removeItem\s*\(/.test(m[0])){console.error('✗ plan.html — 1회 복구 블록은 읽기 후 삭제만 허용');fail++;}
+      src=src.replace(m[0],'');
+    }
+  }
   for(const [label,re] of BAD){
     if(re.test(src)){console.error('✗ '+file+' — 앱 직접 브라우저 영구저장 사용 발견: '+label);fail++;}
   }
@@ -119,6 +127,6 @@ for(const file of FILES){
 }
 
 if(fail)process.exit(1);
-console.log('✓ JKQuant 앱 직접 브라우저 영구저장 0건');
+console.log('✓ JKQuant 앱 직접 브라우저 영구저장 쓰기 0건 · plan 1회 legacy 읽기/삭제만 예외');
 console.log('✓ 전체 앱 HTML + 참조 로컬 JS 자동 탐색: '+FILES.length+'개 파일');
 console.log('✓ 모든 브라우저 탭 제목 JK 퀀트 — 메뉴명 형식');
