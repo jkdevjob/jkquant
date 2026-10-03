@@ -27,8 +27,10 @@ def run():
     assert albamon != '알바몬' and '데이터 알바' in albamon
 
     retry_src = inspect.getsource(j.collect_search_source)
-    assert "timelimit=None" in retry_src and "attempts=2" in retry_src, 'search sources need final serial recovery retry'
+    all_src = inspect.getsource(j.collect_all_sources)
+    assert "timelimit=None" in retry_src and "attempts=2" in retry_src, 'search sources need final per-query recovery retry'
     assert "'degraded': bool(errors)" in retry_src, 'partial source failures must remain visible'
+    assert "serial_recovery=1" in all_src and "for name in degraded" in all_src, 'degraded sources need post-pool serial recovery'
 
     missing = {
         **a,
