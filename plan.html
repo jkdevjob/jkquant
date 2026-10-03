@@ -265,7 +265,7 @@ setTimeout(function(){ var h=document.documentElement; if(h.classList.contains('
 </script>
 <div class="wrap">
   <div class="top">
-    <div class="brand"><div class="logo">Asset Plan</div><h1>자산플랜 <span class="ver">v1.43.1</span></h1></div>
+    <div class="brand"><div class="logo">Asset Plan</div><h1>자산플랜 <span class="ver">v1.43.2</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
       <div class="jkmenu" id="jkmenuWrap">
@@ -787,7 +787,7 @@ setTimeout(function(){ var h=document.documentElement; if(h.classList.contains('
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-app.js";
 import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-auth.js";
-import { getFirestore, doc, getDoc, setDoc, runTransaction } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-firestore.js";
+import { initializeFirestore, doc, getDoc, setDoc, runTransaction } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-firestore.js";
 
 const firebaseConfig={
   apiKey:"AIzaSyBzBe9pAttnbDgTlNThWZzNqtAAKxX7Ksw",
@@ -797,7 +797,7 @@ const firebaseConfig={
   messagingSenderId:"1024066323251",
   appId:"1:1024066323251:web:23d557527866205f01f446"
 };
-const app=initializeApp(firebaseConfig),auth=getAuth(app),db=getFirestore(app);
+const app=initializeApp(firebaseConfig),auth=getAuth(app),db=initializeFirestore(app,{experimentalForceLongPolling:true});
 const KEY="jkq_5y_plan_v1";
 const $=id=>document.getElementById(id);
 const num=(id,fallback=0)=>{const v=Number($(id).value);return Number.isFinite(v)?v:fallback};
@@ -3016,22 +3016,11 @@ window.planLoginImpl=()=>{
     er.textContent=(e&&e.code==='auth/popup-blocked')?'팝업이 막혔습니다 — 브라우저에서 팝업을 허용한 뒤 다시 눌러 주세요.':((e&&e.message)||'로그인 실패'); });
 };
 const planFb={auth,db,doc,getDoc,setDoc};
-onAuthStateChanged(auth,async user=>{
-  /* 로그인 전에는 아무것도 열지 않는다 — 본문을 숨기고, 클라우드 장부·시세 로딩도 시작하지 않는다. */
-  if(!user){ planGate(false); userBadge(null); JKAccess.hide(); JKAccess.setAdmin(false); JKAccess.cacheSet(null); return; }
-  /* 승인된 계정만 연다. 승인 대기·거절·확인 실패면 본문을 열지 않고 그 화면으로 덮는다(열린 뒤 취소돼도 덮는다). */
-  const planLock=acc=>{ planGate(false);
-    JKAccess.show(acc.state,{user,prof:acc.prof,login:()=>window.planLoginImpl(),logout:()=>signOut(auth),
-      retry:()=>location.reload(),saveNote:n=>JKAccess.saveNote(user,planFb,n)}); };
-  if(!await JKAccess.admit(user,planFb,{lock:planLock})) return;
-  userBadge(user);
-  try{
-    await cloudLoad(user); // Firebase 원장을 먼저 읽은 뒤에만 본문을 연다.
-  }catch(e){
-    planGate(false);
-    const er=$("gerr");if(er)er.textContent='Firebase DB 원장을 불러오지 못했습니다. 브라우저 저장본으로 대신 열지 않습니다.';
-    return;
-  }
+function planWithTimeout(p,ms,label){
+  return Promise.race([p,new Promise((_,rej)=>setTimeout(()=>rej(new Error(label+' 응답 없음('+Math.round(ms/1000)+'초)')),ms))]);
+}
+async function finishPlanOpen(user){
+  await planWithTimeout(cloudLoad(user),12000,'Firebase DB 원장'); // DB 정본을 먼저 읽은 뒤에만 본문을 연다.
   planBootHydrating=false;
   planGate(true);
   await refreshLive();
@@ -3044,6 +3033,34 @@ onAuthStateChanged(auth,async user=>{
   }
   renderAssetSessions();
   await loadActiveAssetSessionView(false);
+}
+function showPlanDbRetry(e){
+  planGate(false);
+  const er=$("gerr");
+  if(er)er.textContent='로그인은 완료됐지만 Firebase DB 원장을 불러오지 못했습니다. 브라우저 저장본으로 대신 열지 않습니다 — '+((e&&e.message)||e||'연결 실패');
+  const b=$("gbtn");
+  if(b){b.disabled=false;b.textContent='Firebase DB 다시 연결';b.onclick=()=>window.planRetryDbImpl();}
+}
+window.planRetryDbImpl=async()=>{
+  const user=auth.currentUser;
+  if(!user)return window.planLoginImpl();
+  const b=$("gbtn"),er=$("gerr");
+  if(b){b.disabled=true;b.textContent='Firebase DB 다시 연결 중…';}
+  if(er)er.textContent='로그인은 완료됐습니다. Firebase DB 원장을 다시 연결하고 있습니다…';
+  try{await finishPlanOpen(user);}
+  catch(e){console.error('plan db retry',e);showPlanDbRetry(e);}
+};
+onAuthStateChanged(auth,async user=>{
+  /* 로그인 전에는 아무것도 열지 않는다 — 본문을 숨기고, 클라우드 장부·시세 로딩도 시작하지 않는다. */
+  if(!user){ planGate(false); userBadge(null); JKAccess.hide(); JKAccess.setAdmin(false); JKAccess.cacheSet(null); return; }
+  /* 승인된 계정만 연다. 승인 대기·거절·확인 실패면 본문을 열지 않고 그 화면으로 덮는다(열린 뒤 취소돼도 덮는다). */
+  const planLock=acc=>{ planGate(false);
+    JKAccess.show(acc.state,{user,prof:acc.prof,login:()=>window.planLoginImpl(),logout:()=>signOut(auth),
+      retry:()=>location.reload(),saveNote:n=>JKAccess.saveNote(user,planFb,n)}); };
+  if(!await JKAccess.admit(user,planFb,{lock:planLock})) return;
+  userBadge(user);
+  try{await finishPlanOpen(user);}
+  catch(e){console.error('plan cloud open',e);showPlanDbRetry(e);}
 });
 </script>
 </body>
