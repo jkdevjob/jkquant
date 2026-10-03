@@ -133,6 +133,15 @@ export class PaperStore extends DurableObject{
       await this.ctx.storage.put("paperDates",dates);
       return json({ok:true,dates});
     }
+    if(request.method==="GET"&&u.pathname==="/history-backfill-state"){
+      return json({ok:true,state:(await this.ctx.storage.get("historyBackfillV1"))||null});
+    }
+    if(request.method==="POST"&&u.pathname==="/history-backfill-state"){
+      const state=await request.json();
+      if(!state||typeof state!=="object")return json({ok:false,error:"invalid backfill state"},400);
+      await this.ctx.storage.put("historyBackfillV1",state);
+      return json({ok:true,state});
+    }
     return json({ok:false,error:"not found"},404);
   }
 }
@@ -191,6 +200,115 @@ async function readPaperHistory(env,strategy,limit=120){
     if(ledger)ledgers.push(ledger);
   }
   return {dates,ledgers};
+}
+const HISTORY_RAW="https://raw.githubusercontent.com/jkdevjob/jkquant/scalping-data/data/";
+function parseCsvLine(line){
+  const out=[];let cur="",quoted=false;
+  for(let i=0;i<String(line||"").length;i++){
+    const ch=line[i];
+    if(ch==='"'){
+      if(quoted&&line[i+1]==='"'){cur+='"';i++;}else quoted=!quoted;
+    }else if(ch===","&&!quoted){out.push(cur);cur="";}
+    else cur+=ch;
+  }
+  out.push(cur);return out;
+}
+function parseCsvText(text){
+  const lines=String(text||"").replace(/\r/g,"").split("\n").filter(x=>x.trim()!=="");
+  if(!lines.length)return [];
+  const head=parseCsvLine(lines[0]);
+  return lines.slice(1).map(line=>{
+    const a=parseCsvLine(line),o={};
+    head.forEach((k,i)=>{o[k]=a[i]??"";});
+    return o;
+  });
+}
+function histNum(v){const n=Number(v);return Number.isFinite(n)?n:null;}
+function historicalDecisionPath(strategy){
+  return strategy==="crypto"?"crypto-research/baseline-decisions.csv":"soxl-research/baseline-decisions.csv";
+}
+async function loadHistoricalDecisions(strategy){
+  const path=historicalDecisionPath(strategy);
+  const r=await fetch(HISTORY_RAW+path,{headers:{"accept":"text/csv","user-agent":"jkquant-paper-backfill/1.0"}});
+  if(!r.ok)throw new Error("history csv HTTP "+r.status+" "+path);
+  return parseCsvText(await r.text()).filter(x=>/^\d{4}-\d{2}-\d{2}$/.test(String(x.date||"")));
+}
+function historicalLedger(strategy,row){
+  const trade=String(row&&row.action||"").toLowerCase()==="trade";
+  const date=String(row&&row.date||"");
+  const strategyVersion=String(row&&row.strategyVersion||"");
+  const entryTime=String(row&&(row.entryTimeKst||row.entryTimeEt)||"");
+  const exitTime=String(row&&(row.exitTimeKst||row.exitTimeEt)||"");
+  const pnl=histNum(row&&row.pnlPct);
+  const decisionReason=String(row&&row.decisionReason||"");
+  const trades=trade?[{
+    id:"history:"+strategy+":"+date,status:"closed",historical:true,
+    entryTime,exitTime,entryPrice:histNum(row.entryPrice),exitPrice:histNum(row.exitPrice),
+    reason:String(row.exitReason||""),pnlPct:pnl??0
+  }]:[];
+  return {
+    schema:2,strategy,date,updatedAt:new Date().toISOString(),strategyVersion,mainVariant:"baseline",
+    mode:"historical-backfill",source:"scalping-data/"+historicalDecisionPath(strategy),
+    frictionPct:strategy==="crypto"?.14:.20,trades,
+    decision:{code:trade?"trade":(decisionReason||"no_trade"),reason:decisionReason|| (trade?"confirmed historical trade":"confirmed no-trade")}
+  };
+}
+function historicalParity(ledger,row){
+  if(!ledger)return {ok:false,reason:"missing_ledger"};
+  const liveVariant=String(ledger.mainVariant||"baseline");
+  if(liveVariant!=="baseline")return {ok:true,variantOverride:true};
+  const trade=String(row&&row.action||"").toLowerCase()==="trade";
+  const all=Array.isArray(ledger.trades)?ledger.trades:[];
+  if(!trade)return all.length===0?{ok:true}:{ok:false,reason:"expected_no_trade"};
+  const closed=all.filter(x=>x&&x.status==="closed"&&Number.isFinite(Number(x.pnlPct)));
+  if(!closed.length)return {ok:false,reason:"expected_closed_trade"};
+  const want=histNum(row&&row.pnlPct),got=Number(closed[0].pnlPct);
+  if(want!=null&&Math.abs(got-want)>1e-7)return {ok:false,reason:"pnl_mismatch",want,got};
+  const ver=String(ledger.strategyVersion||"");
+  const sourceVer=String(row&&row.strategyVersion||"");
+  if(sourceVer&&ver&&!ver.startsWith(sourceVer))return {ok:false,reason:"strategy_version_mismatch",want:sourceVer,got:ver};
+  return {ok:true};
+}
+async function readHistoryBackfillState(env,strategy){
+  const r=await paperIndexStore(env,strategy).fetch("https://paper.internal/history-backfill-state");
+  const j=await r.json().catch(()=>({}));
+  return j.state&&typeof j.state==="object"?j.state:{schema:1,strategy,cursor:0,total:0,imported:0,existing:0,verified:0,issues:[],done:false};
+}
+async function writeHistoryBackfillState(env,strategy,state){
+  const r=await paperIndexStore(env,strategy).fetch("https://paper.internal/history-backfill-state",{
+    method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(state)
+  });
+  const j=await r.json().catch(()=>({}));
+  if(!r.ok||!j.ok)throw new Error(j.error||("backfill state HTTP "+r.status));
+  return j.state;
+}
+async function backfillHistoryChunk(env,strategy,limit=20){
+  const prev=await readHistoryBackfillState(env,strategy);
+  if(prev.done)return prev;
+  const rows=await loadHistoricalDecisions(strategy);
+  let cursor=Math.max(0,Math.min(rows.length,Number(prev.cursor)||0));
+  let imported=Number(prev.imported)||0,existing=Number(prev.existing)||0,verified=Number(prev.verified)||0;
+  const issues=Array.isArray(prev.issues)?prev.issues.slice(-30):[];
+  const end=Math.min(rows.length,cursor+Math.max(1,Math.min(50,Number(limit)||20)));
+  for(let i=cursor;i<end;i++){
+    const row=rows[i],date=String(row.date);
+    const old=await readPaper(env,strategy,date).catch(()=>null);
+    if(old){
+      existing++;
+      await rememberPaperDate(env,strategy,date);
+      const p=historicalParity(old,row);
+      if(!p.ok)issues.push({date,reason:p.reason,want:p.want??null,got:p.got??null});
+    }else{
+      await writePaper(env,historicalLedger(strategy,row)); imported++;
+    }
+    verified++;
+  }
+  cursor=end;
+  const state={schema:1,strategy,cursor,total:rows.length,imported,existing,verified,
+    issues:issues.slice(-30),done:cursor>=rows.length,source:historicalDecisionPath(strategy),updatedAt:new Date().toISOString()};
+  await writeHistoryBackfillState(env,strategy,state);
+  if(state.done)console.log(JSON.stringify({type:"paper_history_backfill_complete",strategy,total:state.total,imported,existing,issues:state.issues.length}));
+  return state;
 }
 function paperLedger(strategy,date,t,opts={}){
   const currency=opts.currency||"USD",timezone=opts.timezone||"UTC",version=opts.version||"",friction=Number(opts.friction||0);
@@ -514,10 +632,17 @@ async function runCloseSummaries(env,now){
 async function run(env){
   if(!env.MONITOR_KEY)throw new Error("MONITOR_KEY secret missing");
   const now=Date.now();
-  const out=await Promise.allSettled([runBtc(env,now),runSoxl(env,now),runCloseSummaries(env,now)]);
-  out.forEach((x,i)=>{if(x.status==="rejected")console.error(JSON.stringify({type:"global_intraday_error",strategy:i===0?"crypto":i===1?"soxl":"close-summary",error:String(x.reason&&x.reason.message||x.reason)}));});
+  const tasks=[
+    ["crypto-backfill",backfillHistoryChunk(env,"crypto",20)],
+    ["soxl-backfill",backfillHistoryChunk(env,"soxl",20)],
+    ["crypto",runBtc(env,now)],
+    ["soxl",runSoxl(env,now)],
+    ["close-summary",runCloseSummaries(env,now)]
+  ];
+  const out=await Promise.allSettled(tasks.map(x=>x[1]));
+  out.forEach((x,i)=>{if(x.status==="rejected")console.error(JSON.stringify({type:"global_intraday_error",strategy:tasks[i][0],error:String(x.reason&&x.reason.message||x.reason)}));});
 }
-export {btcTrade,btcNoTradeDecision,soxlTrade,paperLedger,variantParams,BTC_VARIANTS,SOXL_VARIANTS,BTC_OPEN_HM,BTC_LAST_SIGNAL_HM,BTC_LAST_ENTRY_HM,BTC_EXIT_TRACK_END_HM,BTC_STRATEGY_VERSION,SOXL_STRATEGY_VERSION,SOXL_LAST_SIGNAL_HM,SOXL_PAPER_TRACK_END_HM};
+export {btcTrade,btcNoTradeDecision,soxlTrade,paperLedger,variantParams,parseCsvText,historicalLedger,historicalParity,BTC_VARIANTS,SOXL_VARIANTS,BTC_OPEN_HM,BTC_LAST_SIGNAL_HM,BTC_LAST_ENTRY_HM,BTC_EXIT_TRACK_END_HM,BTC_STRATEGY_VERSION,SOXL_STRATEGY_VERSION,SOXL_LAST_SIGNAL_HM,SOXL_PAPER_TRACK_END_HM};
 
 export default {
   async scheduled(controller,env,ctx){ctx.waitUntil(run(env));},
@@ -559,6 +684,14 @@ export default {
       const limit=Math.max(1,Math.min(3650,Number(u.searchParams.get("limit")||120)));
       const h=await readPaperHistory(env,strategy,limit);
       return json({ok:true,strategy,dates:h.dates,ledgers:h.ledgers});
+    }
+    if(u.pathname==="/paper-backfill-status"){
+      if(!authorized(request,env))return json({ok:false,error:"unauthorized"},401);
+      const strategy=String(u.searchParams.get("strategy")||"").toLowerCase();
+      if(!["crypto","soxl"].includes(strategy))return json({ok:false,error:"unsupported strategy"},400);
+      const state=await readHistoryBackfillState(env,strategy);
+      const dates=await readPaperDates(env,strategy);
+      return json({ok:true,strategy,state,indexedDates:dates.length,integrityOk:!!state.done&&!(state.issues||[]).length});
     }
     return json({ok:false,error:"not found"},404);
   }
