@@ -69,7 +69,9 @@ def test_worker_safety():
     for src in (g, d):
         assert 'u.pathname==="/paper-import"' in src
         assert 'historical import requires completed date' in src
-        assert 'if(existing)return {imported:false,kept:true' in src
+        assert 'if(existing){' in src
+        assert 'rememberPaperDate(env' in src
+        assert 'return {imported:false,kept:true' in src
         assert 'historical-research-import-no-order' in src
         assert 'u.pathname==="/paper-dates"' in src
 

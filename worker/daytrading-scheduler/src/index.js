@@ -204,7 +204,11 @@ async function importHistoricalPaper(env,ledger){
   const today=kstParts().date;
   if(date>=today)throw new Error("historical import requires completed date");
   const existing=await readPaper(env,date);
-  if(existing)return {imported:false,kept:true,ledger:existing};
+  if(existing){
+    // Older ledgers may predate the paper-date index. Preserve the ledger, repair only the index.
+    await rememberPaperDate(env,date);
+    return {imported:false,kept:true,ledger:existing};
+  }
   const clean={...ledger,schema:Number(ledger.schema)||1,strategy:"daytrading",date,
     mode:"historical-research-import-no-order",importedAt:new Date().toISOString()};
   return {imported:true,kept:false,ledger:await writePaper(env,clean)};
