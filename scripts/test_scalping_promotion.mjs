@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import {normalize,isPromotionEligible,PROMOTION_MIN_SCORE} from "../functions/api/scalping-shadow-ranking.js";
 import {promotionDecision,effectiveFrom} from "../functions/api/scalping-promotion.js";
 
-console.log("[scalping promotion] 수동 승격 가드 + 다음세션 잠금 검사");
+console.log("[scalping promotion] 승격 가드 + 다음세션 잠금 검사");
 
 const eligible={name:"vol_1.0",review:true,sampleReady:true,riskOk:true,researchScore:PROMOTION_MIN_SCORE+5};
 assert.equal(isPromotionEligible("crypto",eligible),true);
@@ -42,7 +42,8 @@ assert.equal(effectiveFrom("soxl",monAfterEt),"2026-10-06");
 
 const ui=fs.readFileSync("scalping.html","utf8");
 assert.ok(/id="scVer">v\d+\.\d+\.\d+</.test(ui));
-assert.ok(ui.includes("⭐ 메인전략 승격"));
+assert.ok(!ui.includes("⭐ 메인전략 승격"),"일반 수동승격 버튼은 제거되어야 함");
+assert.ok(ui.includes("🤖 자동승격 감시"),"자동승격 상태 표시 필요");
 assert.ok(ui.includes("원래 기준전략으로 원복"));
 assert.ok(ui.includes("다음 새 세션부터"));
 assert.ok(ui.includes("/api/scalping-promotion"));
@@ -83,4 +84,4 @@ for(const txt of [ow,dw,gw]){
 }
 assert.ok(gw.includes("n.hm<935"),"SOXL OR5 실시간 관찰이 늦으면 안 됨");
 
-console.log("ALL PASS — manual scalping promotion");
+console.log("ALL PASS — scalping promotion guards");
