@@ -48,9 +48,28 @@ const SOXL_VARIANTS=Object.freeze({
   entry_by_1000:{rangeBars:3,volumeLookback:6,volumeMult:1.0,useVwap:true,entryCutoffHm:1000,stopPct:1.2,takeProfitPct:2.4,maxHoldBars:18},
   hold_60m:{rangeBars:3,volumeLookback:6,volumeMult:1.0,useVwap:true,entryCutoffHm:1130,stopPct:1.2,takeProfitPct:2.4,maxHoldBars:12}
 });
+function parseGeneratedGlobalVariant(strategy,name){
+  const n=String(name||"");
+  if(strategy==="crypto"){
+    const m=/^gen_c_r(\d+)_v(\d+)_e(\d+)_sl(\d+)_tp(\d+)_h(\d+)$/.exec(n);
+    if(!m)return null;
+    const hm=+m[3],hh=Math.floor(hm/100),mm=hm%100;
+    return {rangeBars:+m[1],volumeMult:+m[2]/10,useVwap:true,entryCutoffHm:hh*100+mm,
+      stopPct:+m[4]/10,takeProfitPct:+m[5]/10,maxHoldBars:+m[6]};
+  }
+  const m=/^gen_s_r(\d+)_v(\d+)_e(\d+)_sl(\d+)_tp(\d+)_h(\d+)$/.exec(n);
+  if(!m)return null;
+  return {rangeBars:+m[1],volumeLookback:6,volumeMult:+m[2]/10,useVwap:true,entryCutoffHm:+m[3],
+    stopPct:+m[4]/10,takeProfitPct:+m[5]/10,maxHoldBars:+m[6]};
+}
 function variantParams(strategy,name){
   const map=strategy==="crypto"?BTC_VARIANTS:SOXL_VARIANTS;
-  return {name:map[name]?name:"baseline",params:map[name]||map.baseline};
+  const generated=parseGeneratedGlobalVariant(strategy,name);
+  return {name:map[name]?name:(generated?String(name):"baseline"),params:map[name]||generated||map.baseline};
+}
+function supportedGlobalVariant(strategy,name){
+  const map=strategy==="crypto"?BTC_VARIANTS:strategy==="soxl"?SOXL_VARIANTS:null;
+  return !!map&&(!!map[name]||!!parseGeneratedGlobalVariant(strategy,name));
 }
 function json(o,status=200){return new Response(JSON.stringify(o),{status,headers:{"content-type":"application/json; charset=utf-8","cache-control":"no-store"}});}
 function authorized(request,env){const got=request.headers.get("x-monitor-key")||"";return !!env.MONITOR_KEY&&got===env.MONITOR_KEY;}
@@ -66,7 +85,7 @@ export class PaperStore extends DurableObject{
     if(request.method==="POST"&&u.pathname==="/config"){
       const b=await request.json(),strategy=String(b&&b.strategy||""),variant=String(b&&b.variant||"");
       const map=strategy==="crypto"?BTC_VARIANTS:strategy==="soxl"?SOXL_VARIANTS:null;
-      if(!map||!map[variant])return json({ok:false,error:"unsupported strategy/variant"},400);
+      if(!map||!supportedGlobalVariant(strategy,variant))return json({ok:false,error:"unsupported strategy/variant"},400);
       const prev=(await this.ctx.storage.get("strategyConfig"))||{schema:2,strategy,selectedVariant:"baseline",history:[]};
       const at=new Date().toISOString(),effectiveFrom=String(b&&b.effectiveFrom||"");
       const entry={at,effectiveFrom,previousVariant:String(b&&b.previousVariant||prev.selectedVariant||"baseline"),selectedVariant:variant,
