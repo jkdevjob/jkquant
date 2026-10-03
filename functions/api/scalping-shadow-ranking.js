@@ -85,7 +85,7 @@ function normalize(kind,report){
     lifecycle:report&&report.lifecycle||null,
     promotionRule:{
       automatic:true,leaderDays:7,minScore:PROMOTION_MIN_SCORE,
-      requirements:["최근 7일 동일 1위","strategy-specific review gate","sampleReady","riskOk","liveCompatible","researchScore >= "+PROMOTION_MIN_SCORE],
+      requirements:["최근 7일 동일 1위","strategy-specific review gate","sampleReady","riskOk","factoryReady","liveCompatible","researchScore >= "+PROMOTION_MIN_SCORE],
       effective:"next-new-session"
     },
     rows
