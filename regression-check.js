@@ -1775,6 +1775,20 @@ console.log('[35] 로그인 — 조용히 갇히지 않는다');
   ok('iOS 계열에서도 Firestore가 멈추지 않도록 운영 DB는 long polling 사용',
      /initializeFirestore\(app,\{experimentalForceLongPolling:true\}\)/.test(idx)
      && !/const db = getFirestore\(app\)/.test(idx));
+  {
+    const pl=fs.readFileSync(__d+'/plan.html','utf8');
+    const ipo=fs.readFileSync(__d+'/ipo.html','utf8');
+    const job=fs.readFileSync(__d+'/job.html','utf8');
+    const pages=[
+      ['운영',idx],['자산플랜',pl],['백테',bt],['단타',scl],['공모주',ipo],['JOB',job],['관리자',adm]
+    ];
+    for(const [name,src] of pages){
+      ok(name+' Firebase는 iOS long polling 사용',
+         /initializeFirestore\([^;]+experimentalForceLongPolling:true/.test(src)
+         && !/\bgetFirestore\s*\(/.test(src));
+    }
+    ok('JOB 화면도 배포 버전 x.y.z 표시', /id="jobVer">v\d+\.\d+\.\d+<\/span>/.test(job));
+  }
   ok('DB 읽기 실패 뒤 재로그인 대신 같은 계정으로 DB 재연결 가능',
      /async function retryDbLoad\(\)/.test(idx)
      && /Firebase DB 다시 연결/.test(extractFn(idx,'async function retryDbLoad()'))
