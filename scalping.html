@@ -260,7 +260,7 @@ canvas{display:block;width:100%;height:auto}
 
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Morning Scalping</div><h1>JK <span class="v">퀀트</span> 단타 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="scVer">v1.38.2</span></h1></div>
+    <div><div class="kicker">Morning Scalping</div><h1>JK <span class="v">퀀트</span> 단타 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="scVer">v1.39.0</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -1375,7 +1375,7 @@ async function loadSoxlResearch(){
       return;
     }
     const labels={baseline:'기준 OR15',range_5m:'OR 5분',range_30m:'OR 30분','vol_0.8':'거래량 0.8배','vol_1.2':'거래량 1.2배',
-      no_vwap:'VWAP 제외','stop_0.8_tp_1.6':'손절0.8/익절1.6','stop_1.5_tp_3.0':'손절1.5/익절3.0',hold_45m:'최대45분',hold_120m:'최대120분',entry_by_1030:'10:30 이전'};
+      no_vwap:'VWAP 제외','stop_0.8_tp_1.6':'손절0.8/익절1.6','stop_1.5_tp_3.0':'손절1.5/익절3.0',hold_45m:'최대45분',hold_120m:'최대120분',entry_by_1030:'10:30 이전',range_10m:'OR 10분','vol_1.5':'거래량1.5배',entry_by_1000:'10:00 이전',hold_60m:'최대60분'};
     const vars=j.variants||[],base=vars.find(x=>x.params&&x.params.name==='baseline')||{},st=base.summary||{},hv=(base.validation||{}).holdout||{},roll=j.rolling30||{},wf=j.walkForward||{};
     msg.textContent=(j.from||'')+' ~ '+(j.to||'')+' · 유효 '+j.validDays+'일 · 기준 '+(st.trades||0)+'건 · '+(j.comparisonStatus==='reviewable'?'비교 가능':'표본 수집 중');
     let h='<div class="out" style="margin-bottom:12px">'+
@@ -2131,9 +2131,9 @@ async function loadScalpingDuel(silent=false){
 }
 
 const SHADOW_RANK_LABELS={
-  opening:{hold_to_next_open:'다음 거래일 시가 청산',today_combo_v1:'오늘 개선안 v1','pb_max_0.5':'눌림≤0.5%','amount_1.5':'거래대금≥1.5배',entry_by_0915:'09:15 이전',entry_by_0920:'09:20 이전',gap_3_6:'갭 3~6%','vol_1.5':'거래량≥1.5배','stop_0.7':'손절0.7%','tp_1.0':'익절1.0%'},
-  daytrading:{'vol_2.0':'거래량≥2.0배',lookback_30:'직전30분 고점','vwap_slope_0.2':'VWAP기울기≥0.2%',entry_by_1400:'14:00 이전',session_min_2:'시가대비≥2%','stop_0.8':'손절0.8%','tp_1.5':'익절1.5%','vol_1.2':'거래량≥1.2배',lookback_10:'직전10분 고점',max_trades_1:'하루 최대1건'},
-  crypto:{no_vwap:'VWAP 제외','vol_1.0':'거래량≥1.0배','vol_1.5':'거래량≥1.5배',range_15m:'OR 15분',range_30m:'OR 30분','stop_0.3_tp_0.6':'손절0.3/익절0.6','stop_0.7_tp_1.4':'손절0.7/익절1.4',hold_30m:'최대30분',hold_120m:'최대120분',entry_by_1800:'18:00 이전'},
+  opening:{hold_to_next_open:'다음 거래일 시가 청산',today_combo_v1:'오늘 개선안 v1','pb_max_0.5':'눌림≤0.5%','amount_1.5':'거래대금≥1.5배',entry_by_0915:'09:15 이전',entry_by_0920:'09:20 이전',gap_3_6:'갭 3~6%','vol_1.5':'거래량≥1.5배','stop_0.7':'손절0.7%','tp_1.0':'익절1.0%','pb_max_0.7':'눌림≤0.7%','amount_1.8':'거래대금≥1.8배','entry_by_0910':'09:10 이전','stop_0.8_tp_1.8':'손절0.8/익절1.8'},
+  daytrading:{'vol_2.0':'거래량≥2.0배',lookback_30:'직전30분 고점','vwap_slope_0.2':'VWAP기울기≥0.2%',entry_by_1400:'14:00 이전',session_min_2:'시가대비≥2%','stop_0.8':'손절0.8%','tp_1.5':'익절1.5%','vol_1.2':'거래량≥1.2배',lookback_10:'직전10분 고점',max_trades_1:'하루 최대1건','vwap_slope_0.15':'VWAP기울기≥0.15%','session_min_1.5':'세션상승≥1.5%','entry_by_1330':'13:30 이전','stop_0.8_tp_1.6':'손절0.8/익절1.6'},
+  crypto:{no_vwap:'VWAP 제외','vol_1.0':'거래량≥1.0배','vol_1.5':'거래량≥1.5배',range_15m:'OR 15분',range_30m:'OR 30분','stop_0.3_tp_0.6':'손절0.3/익절0.6','stop_0.7_tp_1.4':'손절0.7/익절1.4',hold_30m:'최대30분',hold_120m:'최대120분',entry_by_1800:'18:00 이전','vol_0.8':'거래량≥0.8배',range_10m:'OR 10분',entry_by_2000:'20:00 이전',hold_90m:'최대90분'},
   soxl:{range_5m:'OR 5분',range_30m:'OR 30분','vol_0.8':'거래량0.8배','vol_1.2':'거래량1.2배',no_vwap:'VWAP 제외','stop_0.8_tp_1.6':'손절0.8/익절1.6','stop_1.5_tp_3.0':'손절1.5/익절3.0',hold_45m:'최대45분',hold_120m:'최대120분',entry_by_1030:'10:30 이전'}
 };
 let SHADOW_RANK_CACHE=null,SHADOW_RANK_AT=0;
@@ -2162,46 +2162,52 @@ function renderMainStrategyState(kind){
 function promotionAction(kind,x){
   const current=selectedMainVariant(kind),pending=pendingMainVariant(kind);
   if(current===x.name)return '<span class="sig on">⭐ 현재 메인</span>';
-  if(pending===x.name)return '<span class="sig watch">⏭ 예약 메인</span>';
-  if(x.promotionEligible)return '<button class="ghostbtn buy sm" onclick="promoteShadow(\''+kind+'\',\''+String(x.name).replace(/'/g,"\\'")+'\')">⭐ 메인전략 승격</button>';
-  if(!x.liveCompatible)return '<span class="sub">운영승격 불가</span>';
-  return '<span class="sub">승격조건 대기</span>';
+  if(pending===x.name)return '<span class="sig watch">⏭ 자동승격 예약</span>';
+  if(x.autoPromotionEligible)return '<span class="sig on">🤖 자동승격 예정</span>';
+  if(x.rank===1)return '<span class="sig watch">🥇 1위 '+Number(x.leaderDays||0)+'/7일</span>';
+  if(x.lifecycleStatus==='retired')return '<span class="sub">자동퇴출·예비</span>';
+  return '<span class="sub">자동 경쟁중</span>';
 }
 function renderShadowRanking(kind,data){
   const el=$('shadow_rank_'+kind);if(!el)return;
-  const rows=(data&&data.rows)||[],rule=data&&data.rankingRule||{},pr=data&&data.promotionRule||{};
+  const rows=(data&&data.rows)||[],rule=data&&data.rankingRule||{},pr=data&&data.promotionRule||{},life=data&&data.lifecycle||{};
   if(!rows.length){el.innerHTML='<div class="warn">그림자 전략 순위 데이터 수집 중</div>';return;}
   const label=n=>(SHADOW_RANK_LABELS[kind]||{})[n]||n;
   const current=selectedMainVariant(kind),pending=pendingMainVariant(kind),currentLabel=current==='baseline'?'원래 기준전략':label(current);
-  const eligible=rows.filter(x=>x.promotionEligible===true&&x.name!==current&&x.name!==pending);
-  const topEligible=eligible[0]||null;
+  const auto=life.autoPromotion||{},leader=life.leader||null,leaderDays=Number(life.leaderDays||0);
+  const activeCount=(life.active||[]).length,reserveCount=(life.reserve||[]).length;
   const body=rows.map(x=>{
     const sample=x.trades>0?(x.trades+'건 · '+Math.round((Number(x.sampleFactor)||0)*100)+'%'):'수집대기';
-    const st=x.promotionEligible?'⭐ 승격 가능':x.review?'검토후보':(x.sampleReady?'평가중':'표본수집');
+    const lifecycle=x.lifecycleStatus==='retired'?'퇴출·예비':x.lifecycleStatus==='active'?'활성 경쟁':'후보';
+    const st=x.promotionEligible?'검증통과':x.review?'검토후보':(x.sampleReady?'평가중':'표본수집');
     const medal=x.rank===1?'🥇 ':x.rank===2?'🥈 ':x.rank===3?'🥉 ':'';
     return '<tr><td><b>'+medal+x.rank+'</b></td><td><b>'+esc(label(x.name))+'</b><div class="sub">'+esc(x.name)+'</div></td>'+
       '<td class="'+(Number(x.researchScore)>=50?'win':'loss')+'"><b>'+Number(x.researchScore||0).toFixed(1)+'</b></td>'+
       '<td>'+sample+'</td><td class="'+(x.allEdgePct>=0?'win':'loss')+'">'+shadowRankPct(x.allEdgePct)+'</td>'+
       '<td class="'+(x.validationEdgePct>=0?'win':'loss')+'">'+shadowRankPct(x.validationEdgePct)+'</td>'+
       '<td class="'+(x.recentEdgePct>=0?'win':'loss')+'">'+shadowRankPct(x.recentEdgePct)+'</td>'+
-      '<td>'+(x.riskOk?'✅':'⚠️')+'</td><td>'+st+'</td><td>'+promotionAction(kind,x)+'</td></tr>';
+      '<td>'+(x.riskOk?'✅':'⚠️')+'</td>'+
+      '<td><b>'+lifecycle+'</b><div class="sub">'+esc(x.lifecycleReason||st)+'</div></td><td>'+promotionAction(kind,x)+'</td></tr>';
   }).join('');
   const revert=current!=='baseline'?'<button class="ghostbtn sm" onclick="promoteShadow(\''+kind+'\',\'baseline\')">↩ 원래 기준전략으로 원복</button>':'';
   const nextDate=String((((PROMOTION_STATE||{}).nextEffectiveFrom||{})[kind])||'다음 새 세션');
-  const candidate=topEligible?('<div class="card" style="margin:8px 0 12px;border-color:rgba(54,211,153,.55)">'+
-    '<h3 style="margin-bottom:7px">⬆ 메인전략 승격 후보</h3>'+
-    '<div><b>#'+topEligible.rank+' '+esc(label(topEligible.name))+'</b> · 연구점수 <b class="win">'+Number(topEligible.researchScore||0).toFixed(1)+'</b>'+
-    ' · 표본 '+Number(topEligible.trades||0)+'건 · 검증우위 '+shadowRankPct(topEligible.validationEdgePct)+'</div>'+
-    '<div class="sub" style="margin-top:5px">검토·표본·위험·실시간호환·60점 기준을 모두 통과했습니다. 자동승격하지 않고 버튼을 눌러야 '+esc(nextDate)+'부터 메인전략이 됩니다.</div>'+
-    '<button class="prim" style="margin-top:9px" onclick="promoteShadow(\''+kind+'\',\''+String(topEligible.name).replace(/'/g,"\\'")+'\')">⭐ 이 전략을 메인전략으로 승격</button></div>'):
-    '<div class="warn" style="margin:8px 0 12px"><b>⬆ 메인전략 승격 후보:</b> 아직 모든 승격 조건을 통과한 새 후보가 없습니다.</div>';
-  el.innerHTML=candidate+'<div style="margin:14px 0 7px;display:flex;gap:8px;align-items:center;flex-wrap:wrap"><b>🏁 그림자 전략 순위</b>'+
+  const admitted=(life.admittedToday||[]),retired=(life.retiredToday||[]);
+  const progress=leader?('<b>'+esc(label(leader))+'</b> · 최근 1위 <b>'+leaderDays+'/7일</b> · 점수 '+Number(auto.score||0).toFixed(1)):'1위 후보 수집 중';
+  const autoBox='<div class="card" style="margin:8px 0 12px;border-color:'+(auto.eligible?'rgba(54,211,153,.65)':'rgba(245,196,81,.45)')+'">'+
+    '<h3 style="margin-bottom:7px">🤖 자동 전략 개선 · 메인승격</h3>'+
+    '<div>'+progress+'</div>'+
+    '<div class="sub" style="margin-top:5px">'+esc(auto.reason||'7일 1위와 검증 게이트를 추적합니다.')+
+    (auto.eligible?' · <b>조건 충족: '+esc(nextDate)+'부터 자동 메인승격</b>':'')+'</div>'+
+    '<div class="row" style="margin-top:8px;gap:7px"><span class="pill good">활성 '+activeCount+'개</span><span class="pill">예비/퇴출 '+reserveCount+'개</span>'+
+    (admitted.length?'<span class="pill good">신규투입 '+esc(admitted.map(label).join(', '))+'</span>':'')+
+    (retired.length?'<span class="pill">자동퇴출 '+esc(retired.map(label).join(', '))+'</span>':'')+'</div></div>';
+  el.innerHTML=autoBox+'<div style="margin:14px 0 7px;display:flex;gap:8px;align-items:center;flex-wrap:wrap"><b>🏁 그림자 전략 순위</b>'+
     '<span class="pill good">운영 메인 <b>'+esc(currentLabel)+'</b></span>'+revert+
-    '<span class="sub">최소 '+Number(data.minRequired||10)+'개 · 원래 baseline 제외 순위 · '+esc(data.from||'—')+' ~ '+esc(data.to||'—')+'</span></div>'+
-    '<div class="htable-wrap"><table class="htable"><thead><tr><th>순위</th><th>그림자 전략</th><th>점수</th><th>표본</th><th>전체우위</th><th>검증우위</th><th>최근우위</th><th>위험</th><th>상태</th><th>메인전략</th></tr></thead><tbody>'+body+'</tbody></table></div>'+
-    '<div class="warn" style="margin-top:8px"><b>순위점수 '+esc(rule.version||'v1')+':</b> '+esc(rule.formula||'표본수·전체 기대값·검증 기대값·최근 성과·위험을 결합')+
-    '<br><b>승격 버튼:</b> 전략별 검토 기준 + 표본충족 + 위험통과 + 실시간 재현 가능 + 연구점수 '+Number(pr.minScore||60)+'점 이상일 때만 표시합니다. <b>자동승격은 OFF</b>이며 버튼을 눌러야 바뀝니다.'+
-    '<br><span class="sub">표본계수 '+esc(rule.sampleFactor||'min(1, trades/minTrades)')+' · 0건 후보는 항상 맨 아래. 승격해도 이미 시작된 세션은 기존 전략으로 끝나고 다음 새 세션부터 적용됩니다. 원래 연구 baseline은 그대로 보존됩니다.</span></div>';
+    '<span class="sub">활성 최소 '+Number(data.minRequired||10)+'개 · 전체 후보 '+rows.length+'개 · '+esc(data.from||'—')+' ~ '+esc(data.to||'—')+'</span></div>'+
+    '<div class="htable-wrap"><table class="htable"><thead><tr><th>순위</th><th>그림자 전략</th><th>점수</th><th>표본</th><th>전체우위</th><th>검증우위</th><th>최근우위</th><th>위험</th><th>개선상태</th><th>메인전략</th></tr></thead><tbody>'+body+'</tbody></table></div>'+
+    '<div class="warn" style="margin-top:8px"><b>자동 개선 ON:</b> 매일 후보를 재평가해 상위 '+Number(data.minRequired||10)+'개를 활성 경쟁군으로 유지하고, 하위 전략은 자동 퇴출해 예비군으로 보냅니다.'+
+    '<br><b>자동 메인승격 ON:</b> 같은 전략이 최근 '+Number(pr.leaderDays||7)+'일 계속 1위이면서 검토·표본·위험·실시간호환·연구점수 '+Number(pr.minScore||60)+'점 기준을 모두 통과해야 다음 새 세션부터 자동 적용됩니다.'+
+    '<br><span class="sub">신규 후보는 예비 풀에서 자동 투입되고 모든 투입·퇴출·승격 사유를 야간 연구 기록에 보존합니다. 이미 시작된 세션은 기존 메인으로 끝냅니다.</span></div>';
 }
 async function loadPromotionState(force=false){
   const now=Date.now();
