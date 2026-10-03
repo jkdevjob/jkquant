@@ -93,6 +93,15 @@ ok('현금 기록 추가도 DB 결과를 기다리고 실패 시 롤백',
 ok('5년플랜 cloudLoad는 Firebase 현재 원장을 직접 적용',
   /apply\(cloneObj\(v\)\)/.test(fn(plan,'async function cloudLoad(user)'))
   && !/planRecoveryRead|planRecoveryScore/.test(fn(plan,'async function cloudLoad(user)')));
+ok('5년플랜 2026-10-03 오전 legacy 값은 1회만 Firebase 정본으로 이관',
+  /PLAN_LEGACY_RESTORE_MARK/.test(plan)
+  && /restoreMorningPlanFromLegacy\(user\)/.test(fn(plan,'async function cloudLoad(user)'))
+  && /fiveYearPlanV2=cloneObj\(legacyFive\)/.test(fn(plan,'function planLegacyRestorePatch('))
+  && /op\.plan=cloneObj\(legacyState\.plan\)/.test(fn(plan,'function planLegacyRestorePatch(')));
+ok('5년플랜 legacy 복구는 브라우저에 다시 쓰지 않고 성공 후 옛 키 삭제',
+  !/setItem\s*\(/.test(fn(plan,'async function restoreMorningPlanFromLegacy(user)'))
+  && /planClearLegacyKeys\(store,user\)/.test(fn(plan,'async function restoreMorningPlanFromLegacy(user)'))
+  && /JKAccess\.isAdminEmail\(user\.email\)/.test(fn(plan,'async function restoreMorningPlanFromLegacy(user)')));
 ok('5년플랜 복구 보호모드·브라우저 메모리 백업 제거',
   !/planRecovery|planManualBackup|planForceLocalSave|복구 보호모드/.test(plan));
 ok('5년플랜 체결 입력·수정은 DB 실패 시 화면 원복',
