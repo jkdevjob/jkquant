@@ -633,8 +633,8 @@ async function run(env){
   if(!env.MONITOR_KEY)throw new Error("MONITOR_KEY secret missing");
   const now=Date.now();
   const tasks=[
-    ["crypto-backfill",backfillHistoryChunk(env,"crypto",20)],
-    ["soxl-backfill",backfillHistoryChunk(env,"soxl",20)],
+    ["crypto-backfill",backfillHistoryChunk(env,"crypto",50)],
+    ["soxl-backfill",backfillHistoryChunk(env,"soxl",50)],
     ["crypto",runBtc(env,now)],
     ["soxl",runSoxl(env,now)],
     ["close-summary",runCloseSummaries(env,now)]
