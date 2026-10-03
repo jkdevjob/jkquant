@@ -726,7 +726,7 @@ def main():
             "liveStrategyAutoChange":True,
             "autoPromotionLeaderDays":AUTO_PROMOTION_DAYS,
             "autoPromotionMinScore":AUTO_PROMOTION_MIN_SCORE,
-            "note":"최근 7일 연구에서 같은 전략이 계속 1위이고 검토·표본·위험·점수 게이트를 모두 통과할 때만 다음 새 세션부터 자동승격한다."
+            "note":"같은 전략이 최근 7개 고유 평가일 계속 1위이고 검토·표본·위험·점수 게이트를 모두 통과할 때만 다음 새 세션부터 자동승격한다. 자동생성 후보는 28일 후보팩토리 주기와 최소 14일 인큐베이션을 추가로 통과해야 한다."
         }
     }
     OUT.mkdir(parents=True,exist_ok=True)
