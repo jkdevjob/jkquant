@@ -1628,11 +1628,35 @@ def collect_all_sources():
                 status = {
                     'ok': False,
                     'count': 0,
+                    'successful_queries': 0,
+                    'failed_queries': len(SOURCE_SEARCH_TERMS),
+                    'degraded': True,
                     'errors': [f'{type(exc).__name__}: {exc}'],
                     'mode': '검색',
                 }
             groups.append(jobs)
             statuses[name] = status
+
+    # 병렬 DDGS 수집 중 timeout이 난 출처는 pool 종료 뒤 직렬로 한 번 더 전체 수집한다.
+    # 같은 검색을 병렬 상태에서 계속 재시도하면 백엔드 rate-limit/timeout이 반복될 수 있다.
+    degraded = [
+        name for name in SEARCH_SOURCES
+        if not statuses.get(name, {}).get('ok') or statuses.get(name, {}).get('failed_queries', 0) > 0
+    ]
+    for name in degraded:
+        time.sleep(1.2)
+        domain = SEARCH_SOURCES[name]
+        print(f'[INFO] source={name} serial_recovery=1')
+        try:
+            retry_jobs, retry_status = collect_search_source(name, domain)
+            groups.append(retry_jobs)
+            prev = statuses.get(name, {})
+            prev_fail = int(prev.get('failed_queries') or len(SOURCE_SEARCH_TERMS))
+            new_fail = int(retry_status.get('failed_queries') or 0)
+            if retry_status.get('ok') and new_fail <= prev_fail:
+                statuses[name] = retry_status
+        except Exception as exc:
+            print(f'[WARN] source={name} serial recovery failed: {type(exc).__name__}: {exc}', file=sys.stderr)
 
     merged = dedupe_jobs_cross_source([job for group in groups for job in group])
     print(
