@@ -385,7 +385,7 @@ function statusBar(){
   return "<div class='status'><span>📊 기록 "+esc(String((J.lab||{}).generatedAt||"").slice(5,16).replace("T"," "))+"</span><span>⏱ 장중 "+(LIVE&&LIVE.asOf?kstTime(LIVE.asOf):"—")+"</span><span>▶ 다음: "+esc(nextTxt)+"</span>"+(iss.length?"<span class='loss'>⚠ 점검 "+iss.length+"건</span>":"<span class='win'>✔ 점검 이상 없음</span>")+"</div>";
 }
 var J=null,TAB="today";
-function showTab(t){TAB=t;document.querySelectorAll(".tab").forEach(function(b){b.classList.toggle("on",b.getAttribute("data-tab")===t)});try{localStorage.setItem("clTab",t)}catch(e){}render()}
+function showTab(t){TAB=t;document.querySelectorAll(".tab").forEach(function(b){b.classList.toggle("on",b.getAttribute("data-tab")===t)});render()}
 // 클로드 vs GPT — 같은 날짜 구간·같은 달력
 function vsRow(label,z){
   if(!z)return "<tr><td>"+esc(label)+"</td><td colspan='8' class='sub'>기록 없음</td></tr>";
@@ -540,7 +540,6 @@ function liveCard0(tab){
 }
 async function load(){
   var body=document.getElementById("body");
-  try{var t=localStorage.getItem("clTab");if(t)TAB=t}catch(e){}
   try{
     var r=await fetch("/api/claude-lab",{headers:await authHeaders()});var j=await r.json();
     if(!r.ok||!j.ok)throw new Error(j.error||("HTTP "+r.status));
