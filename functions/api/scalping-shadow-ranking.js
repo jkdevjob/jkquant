@@ -5,8 +5,8 @@
 const JH={"Content-Type":"application/json; charset=utf-8","Cache-Control":"no-store"};
 const RAW="https://raw.githubusercontent.com/jkdevjob/jkquant/scalping-data/data/nightly-research/latest.json";
 const CATALOG={
-  opening:["hold_to_next_open","today_combo_v1","pb_max_0.5","amount_1.5","entry_by_0915","entry_by_0920","gap_3_6","vol_1.5","stop_0.7","tp_1.0","pb_max_0.7","amount_1.8","entry_by_0910","gap_2_5","vol_1.8"],
-  daytrading:["vol_2.0","lookback_30","vwap_slope_0.2","entry_by_1400","session_min_2","stop_0.8","tp_1.5","vol_1.2","lookback_10","max_trades_1","vwap_slope_0.15","entry_by_1330","session_max_6","vol_1.8","lookback_15"],
+  opening:["hold_to_next_open","today_combo_v1","pb_max_0.5","amount_1.5","entry_by_0915","entry_by_0920","gap_3_6","vol_1.5","stop_0.7","tp_1.0","pb_max_0.7","amount_1.8","entry_by_0910","gap_2_5","vol_1.8","combo_pb07_amt15","combo_e0920_vol15","gap_25_55","stop_0.9_tp_1.8","combo_pb05_e0920"],
+  daytrading:["vol_2.0","lookback_30","vwap_slope_0.2","entry_by_1400","session_min_2","stop_0.8","tp_1.5","vol_1.2","lookback_10","max_trades_1","vwap_slope_0.15","entry_by_1330","session_max_6","vol_1.8","lookback_15","combo_vol18_lb15","combo_slope15_e1400","session_min_1_5","session_max_5","combo_lb30_vol12"],
   crypto:["no_vwap","vol_1.0","vol_1.5","range_15m","range_30m","stop_0.3_tp_0.6","stop_0.7_tp_1.4","hold_30m","hold_120m","entry_by_1800","range_10m","vol_1.3","stop_0.4_tp_0.8","hold_90m","entry_by_2000"],
   soxl:["range_5m","range_30m","vol_0.8","vol_1.2","no_vwap","stop_0.8_tp_1.6","stop_1.5_tp_3.0","hold_45m","hold_120m","entry_by_1030","range_10m","vol_1.5","stop_1.0_tp_2.0","hold_60m","entry_by_1100"]
 };
