@@ -26,7 +26,13 @@ const DAY_EXIT_VARIANTS=Object.freeze({
   entry_by_1330:{stopPct:1.0,takeProfitPct:2.0,maxTrades:3},
   "stop_0.8_tp_1.6":{stopPct:0.8,takeProfitPct:1.6,maxTrades:3}
 });
-function dayExitParams(name){return DAY_EXIT_VARIANTS[String(name||"baseline")]||DAY_EXIT_VARIANTS.baseline;}
+function parseGeneratedDayVariant(name){
+  const m=/^gen_d_v(\d+)_l(\d+)_s(\d+)_r(\d+)_e(\d+)_sl(\d+)_tp(\d+)_m(\d+)$/.exec(String(name||""));
+  if(!m)return null;
+  return {stopPct:+m[6]/10,takeProfitPct:+m[7]/10,maxTrades:+m[8]};
+}
+function dayExitParams(name){return DAY_EXIT_VARIANTS[String(name||"baseline")]||parseGeneratedDayVariant(name)||DAY_EXIT_VARIANTS.baseline;}
+function supportedDayVariant(name){return !!DAY_EXIT_VARIANTS[String(name||"")]||!!parseGeneratedDayVariant(name);}
 
 let lastKisAt=0;
 
@@ -74,7 +80,7 @@ export class SnapshotStore extends DurableObject {
     if(request.method==="POST"&&u.pathname==="/config"){
       const b=await request.json();
       const variant=String(b&&b.variant||"");
-      if(!variant||!DAY_EXIT_VARIANTS[variant])return json({ok:false,error:"unsupported variant"},400);
+      if(!variant||!supportedDayVariant(variant))return json({ok:false,error:"unsupported variant"},400);
       const prev=(await this.ctx.storage.get("strategyConfig"))||{schema:2,strategy:"daytrading",selectedVariant:"baseline",history:[]};
       const at=new Date().toISOString(),effectiveFrom=String(b&&b.effectiveFrom||"");
       const entry={at,effectiveFrom,previousVariant:String(b&&b.previousVariant||prev.selectedVariant||"baseline"),selectedVariant:variant,
@@ -162,7 +168,7 @@ async function captureSnapshot(env,date){
   if(!r.ok||!rows.length)throw new Error("universe HTTP "+r.status);
   const config=await readStrategyConfig(env);
   const selected=(config.effectiveFrom&&String(date)<String(config.effectiveFrom))?String(config.previousVariant||"baseline"):String(config.selectedVariant||"baseline");
-  const mainVariant=DAY_EXIT_VARIANTS[selected]?selected:"baseline";
+  const mainVariant=supportedDayVariant(selected)?selected:"baseline";
   const snapshot={
     schema:2,date,mainVariant,
     snapshotAt:new Date().toISOString(),
