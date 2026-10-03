@@ -38,9 +38,10 @@ const rep={status:"reviewable",from:"2026-01-01",to:"2026-10-01",candidates:[
   {...bad,researchScore:30,sampleFactor:1,status:"collecting"}
 ]};
 const n=normalize("crypto",rep);
-assert.equal(n.rows.length,10);
+assert.equal(n.rows.length,CATALOG.crypto.length);
 assert.equal(n.rows[0].name,"vol_1.0");
 assert.ok(n.rows.findIndex(x=>x.trades===0)>0,"zero evidence rows should not lead");
-assert.deepEqual(n.rows.map(x=>x.rank),[1,2,3,4,5,6,7,8,9,10]);
+assert.deepEqual(n.rows.map(x=>x.rank),Array.from({length:CATALOG.crypto.length},(_,i)=>i+1));
 
-console.log("ALL PASS — shadow strategy minimum/ranking");
+assert.ok(CATALOG.opening.length>10&&CATALOG.daytrading.length>10&&CATALOG.crypto.length>10&&CATALOG.soxl.length>10,"reserve candidate pools required");
+console.log("ALL PASS — shadow strategy pool/ranking");
