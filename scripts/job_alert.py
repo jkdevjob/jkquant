@@ -1597,6 +1597,7 @@ def collect_search_source(source_name, domain):
         'count': len(jobs),
         'successful_queries': successful_queries,
         'failed_queries': len(errors),
+        'degraded': bool(errors),
         'errors': errors[:3],
         'mode': '검색',
     }
@@ -1635,11 +1636,42 @@ def collect_all_sources():
                 status = {
                     'ok': False,
                     'count': 0,
+                    'successful_queries': 0,
+                    'failed_queries': len(SOURCE_SEARCH_TERMS),
+                    'degraded': True,
                     'errors': [f'{type(exc).__name__}: {exc}'],
                     'mode': '검색',
                 }
             groups.append(jobs)
             statuses[name] = status
+
+    # DDGS 검색 출처는 병렬 요청이 겹치면 여러 사이트가 동시에 timeout 날 수 있다.
+    # 1차 병렬 수집에서 완전/부분 실패한 출처만 pool 종료 후 직렬로 다시 수집해
+    # 일시적인 rate-limit/backend timeout을 최종 실패로 굳히지 않는다.
+    degraded_sources = [
+        name for name in SEARCH_SOURCES
+        if not statuses.get(name, {}).get('ok')
+        or int(statuses.get(name, {}).get('failed_queries') or 0) > 0
+    ]
+    for name in degraded_sources:
+        time.sleep(1.0)
+        domain = SEARCH_SOURCES[name]
+        print(f'[INFO] source={name} serial_recovery=1')
+        try:
+            retry_jobs, retry_status = collect_search_source(name, domain)
+            groups.append(retry_jobs)
+            previous = statuses.get(name, {})
+            previous_failed = int(previous.get('failed_queries') or len(SOURCE_SEARCH_TERMS))
+            retry_failed = int(retry_status.get('failed_queries') or 0)
+            # 재시도 결과가 더 나쁘면 기존 상태를 유지한다.
+            if retry_status.get('ok') and retry_failed <= previous_failed:
+                statuses[name] = retry_status
+        except Exception as exc:
+            print(
+                f'[WARN] source={name} serial recovery failed: '
+                f'{type(exc).__name__}: {exc}',
+                file=sys.stderr,
+            )
 
     merged = dedupe_jobs_cross_source([job for group in groups for job in group])
     print(
