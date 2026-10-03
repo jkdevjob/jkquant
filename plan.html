@@ -265,7 +265,7 @@ setTimeout(function(){ var h=document.documentElement; if(h.classList.contains('
 </script>
 <div class="wrap">
   <div class="top">
-    <div class="brand"><div class="logo">Asset Plan</div><h1>자산플랜 <span class="ver">v1.43.2</span></h1></div>
+    <div class="brand"><div class="logo">Asset Plan</div><h1>자산플랜 <span class="ver">v1.43.3</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
       <div class="jkmenu" id="jkmenuWrap">
@@ -2864,6 +2864,8 @@ function planLegacyRestorePatch(d,legacyFive,legacyState,now){
   if(!changed)return null;
   patch[PLAN_LEGACY_RESTORE_MARK]=now;
   patch.planLegacyRestoreSource="legacy-browser-before-db-only";
+  patch.planLegacyRestoreHadFive=planLegacyFiveValid(legacyFive);
+  patch.planLegacyRestoreHadOperatingPlan=planLegacyStateValid(legacyState);
   return patch;
 }
 /* LEGACY_PLAN_RECOVERY_READ_ONCE_START
@@ -2903,14 +2905,16 @@ async function cloudLoad(user){
   if(!user){planCloudHydrated=true;return;}
   planCloudHydrated=false;
   try{
-    await restoreMorningPlanFromLegacy(user);
+    const restoredMorning=await restoreMorningPlanFromLegacy(user);
     const snap=await getDoc(doc(db,"users",user.uid)),d=snap.data()||{},hasPlanV2=!!d.fiveYearPlanV2,v=hasPlanV2?d.fiveYearPlanV2:d.fiveYearPlan;
     planCloudRev=+d.fiveYearPlanV2Rev||0;planCloudHistorySig=v?planHistorySig(v):'';
     if(v){
       planDbState=cloneObj(v);
       apply(cloneObj(v)); // 삭제된 행을 로컬 백업/이벤트수 기준으로 되살리지 않는다.
       renderSessionSelectors();renderLedger();renderAlphaLedger();render();
-      if($("saveState"))$("saveState").textContent="Firebase DB 원장 불러옴";
+      if($("saveState"))$("saveState").textContent=(restoredMorning||d[PLAN_LEGACY_RESTORE_MARK])
+        ?"Firebase DB 원장 불러옴 · 10/03 오전 복구 이력 확인"
+        :"Firebase DB 원장 불러옴";
     }else{
       planDbState=null;
       apply(defaults()); // 로그인 계정은 DB가 없을 때도 브라우저 state를 원장으로 사용하지 않는다.
