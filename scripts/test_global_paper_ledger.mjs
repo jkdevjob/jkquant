@@ -28,8 +28,17 @@ ok(s.trades[0].status==='open','SOXL open paper trade retained');
 ok(near(s.trades[0].pnlPct,1.8),'SOXL open paper PnL includes 0.20% friction');
 ok(near(s.summary.accountReturnPct,1.8),'SOXL 1-slot current account return');
 
-const none=mod.paperLedger('crypto','2026-10-01',null,{currency:'KRW',timezone:'Asia/Seoul',version:'btc_midnight_orb_v2',friction:.14});
+const none=mod.paperLedger('crypto','2026-10-01',null,{currency:'KRW',timezone:'Asia/Seoul',version:'btc_midnight_orb_v2',friction:.14,decision:{code:'no_fresh_breakout',reason:'OR 고점 신규 돌파 없음'}});
 ok(none.trades.length===0&&near(none.summary.accountReturnPct,0),'no-signal day remains 0% / 0 trades');
+ok(none.decision&&none.decision.code==='no_fresh_breakout','no-signal decision reason is persisted in durable ledger');
+
+const kst=(hh,mm)=>Date.parse(`2026-10-01T${String(hh).padStart(2,'0')}:${String(mm).padStart(2,'0')}:00+09:00`);
+const noBreakBars=[
+  {ms:kst(0,0),date:'2026-10-01',hm:0,time:'00:00',o:100,h:101,l:99,c:100,v:10},
+  {ms:kst(0,5),date:'2026-10-01',hm:5,time:'00:05',o:100,h:100.5,l:99,c:100,v:15}
+];
+const why=mod.btcNoTradeDecision(noBreakBars,kst(0,20),'2026-10-01');
+ok(why.code==='no_fresh_breakout'&&/OR 고점 신규 돌파/.test(why.reason),'BTC no-trade diagnostics identify missing fresh breakout');
 
 const worker=fs.readFileSync(path.join(__dirname,'..','worker/global-intraday-scheduler/src/index.js'),'utf8');
 const cfg=fs.readFileSync(path.join(__dirname,'..','worker/global-intraday-scheduler/wrangler.jsonc'),'utf8');
@@ -39,6 +48,7 @@ ok(worker.includes('import { DurableObject } from "cloudflare:workers";')&&worke
 ok(worker.includes('u.pathname==="/paper-index"')&&worker.includes('u.pathname==="/paper-history"')&&worker.includes('rememberPaperDate(env,ledger.strategy,ledger.date)'),'global worker keeps a durable per-strategy paper-date index and history endpoint');
 ok(cfg.includes('"PAPER_STORE"')&&cfg.includes('"new_sqlite_classes": ["PaperStore"]'),'global worker durable object binding/migration');
 ok(ui.includes("loadGlobalPaper('crypto')")&&ui.includes("loadGlobalPaper('soxl')")&&ui.includes('오늘 계좌수익률')&&ui.includes('개별 매매 수익률 합계'),'all-tab UI exposes live paper metrics');
+ok(ui.includes('l.decision&&l.decision.reason')&&ui.includes('<b>매매없음</b>'),'UI surfaces durable BTC no-trade decision reason');
 ok(api.includes('ownerAuthorized')&&api.includes('x-monitor-key')&&!/op=order|\/v1\/orders|env=real/i.test(api),'global paper API is owner-only read proxy');
 
 if(fail)process.exit(1);
