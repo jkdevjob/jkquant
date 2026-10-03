@@ -11556,6 +11556,12 @@ console.log('\n[SCALPING SHADOW/PROMOTION] 최소10개 · 자동퇴출/투입 ·
      && /recentChanges/.test(night)
      && /자동퇴출/.test(scl)
      && /신규투입/.test(scl));
+  ok('후보 팩토리는 28일 주기 신규 조합 + 14일 인큐베이션으로 계속 전략을 만든다',
+     /FACTORY_CYCLE_DAYS=28/.test(night)
+     && /FACTORY_INCUBATION_DAYS=14/.test(night)
+     && /opening_factory_names/.test(night)
+     && /28일마다 새 파라미터 조합 4개/.test(scl)
+     && /factoryReady/.test(rankApi));
   ok('자동승격은 7개 고유 평가일 1위 + 검증게이트를 모두 요구한다',
      /automatic:true,leaderDays:7/.test(rankApi)
      && /AUTO_PROMOTION_DAYS=7/.test(night)
