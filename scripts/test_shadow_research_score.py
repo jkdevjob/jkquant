@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import importlib.util
+import sys
 from pathlib import Path
 
 p=Path("scripts/nightly_scalping_research.py")
@@ -125,6 +126,7 @@ print("[shadow generated parity] 야간 생성기와 Python 백테스트 파라�
 def loadmod(path,name):
     spec=importlib.util.spec_from_file_location(name,Path(path))
     mod=importlib.util.module_from_spec(spec)
+    sys.modules[name]=mod
     spec.loader.exec_module(mod)
     return mod
 
