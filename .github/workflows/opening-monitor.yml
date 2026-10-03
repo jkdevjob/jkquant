@@ -223,7 +223,19 @@ jobs:
             fi
             git commit -m "data: opening baseline+shadow $DATE [skip ci]"
             git pull --rebase origin scalping-data
-            git push origin scalping-data
+            PUSH_OK=0
+            for attempt in $(seq 1 6); do
+              if git push origin scalping-data; then
+                PUSH_OK=1
+                break
+              fi
+              echo "scalping-data push 경합 — 재동기화 후 재시도 $attempt/6"
+              if ! git pull --rebase origin scalping-data; then
+                git rebase --abort >/dev/null 2>&1 || true
+              fi
+              sleep $((attempt * 2))
+            done
+            [ "$PUSH_OK" = "1" ] || { echo "scalping-data push 6회 실패"; exit 1; }
 
           }
 
@@ -276,7 +288,19 @@ jobs:
           if ! git diff --cached --quiet; then
             git commit -m "data: rebuild cumulative opening trades [skip ci]"
             git pull --rebase origin scalping-data
-            git push origin scalping-data
+            PUSH_OK=0
+            for attempt in $(seq 1 6); do
+              if git push origin scalping-data; then
+                PUSH_OK=1
+                break
+              fi
+              echo "scalping-data push 경합 — 재동기화 후 재시도 $attempt/6"
+              if ! git pull --rebase origin scalping-data; then
+                git rebase --abort >/dev/null 2>&1 || true
+              fi
+              sleep $((attempt * 2))
+            done
+            [ "$PUSH_OK" = "1" ] || { echo "scalping-data push 6회 실패"; exit 1; }
           else
             echo "누적 시초가 매매 CSV 변경 없음"
           fi
