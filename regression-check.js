@@ -9045,15 +9045,15 @@ console.log('\n[123] 모의 성과 — 단독 페이지(/paper)');
     const hist=[];
     const F=new Function('$','document','history','APP_TITLE',
       [extractFn(idx,'function closePaper()'), extractFn(idx,'function isPaperPage()'), extractFn(idx,'function paperPageMode(on)')].join('\n')
-      +'\nreturn {closePaper, isPaperPage, paperPageMode};')(id=>E[id]||null, docF, {pushState:(a,b,u)=>hist.push(u)}, 'JK 퀀트 — 앱');
+      +'\nreturn {closePaper, isPaperPage, paperPageMode};')(id=>E[id]||null, docF, {pushState:(a,b,u)=>hist.push(u)}, 'JK 퀀트 — 운영');
     F.paperPageMode(true);
     const on1={page:body._cls.has('paperpage'), inPage:modal.parentNode===page, homeCur:home._cls.has('cur'), paperCur:jk._cls.has('cur'), title:docF.title, wait:/기록을 맞추는 중/.test(pbody.innerHTML)};
     F.closePaper();   // 전략 이름을 누르면 gotoSess 가 부른다 — 페이지에서 나가 운영 화면으로
     const off1={page:body._cls.has('paperpage'), inBody:modal.parentNode===body, open:modal._cls.has('on'), homeCur:home._cls.has('cur'), paperCur:jk._cls.has('cur'), title:docF.title, hist:hist.join()};
     ok('페이지 모드 — 상자를 본문 자리로 옮기고 메뉴·제목·대기 문구를 맞춘다',
-       on1.page && on1.inPage && !on1.homeCur && on1.paperCur && /모의투자 성과/.test(on1.title) && on1.wait, JSON.stringify(on1));
+       on1.page && on1.inPage && !on1.homeCur && on1.paperCur && on1.title==='JK 퀀트 — 모의투자' && on1.wait, JSON.stringify(on1));
     ok('페이지에서 전략 이름을 누르면 운영 화면으로 나간다 — 주소 / · 상자는 모달 자리로 · 모달로 뜨지 않는다 · 메뉴·제목 되돌림',
-       !off1.page && off1.inBody && !off1.open && off1.homeCur && !off1.paperCur && off1.title==='JK 퀀트 — 앱' && off1.hist==='/', JSON.stringify(off1)); }
+       !off1.page && off1.inBody && !off1.open && off1.homeCur && !off1.paperCur && off1.title==='JK 퀀트 — 운영' && off1.hist==='/', JSON.stringify(off1)); }
   // 채우기는 클라우드 기록을 맞춘 뒤 한 번 — 로컬로 먼저 연 갈래(openedLocal)에서는 부르지 않는다
   { const ia=extractFn(idx,'function initAuth()');
     const iPull=ia.indexOf('pullRemote()'), iAuto=ia.indexOf('paperPageAuto()'), local=(ia.match(/if\(openedLocal\)\{[\s\S]*?\n    \}/)||[''])[0];
@@ -9727,7 +9727,7 @@ console.log('\n[128] 자산플랜 검증 후속 — 20년 월말 신호 · 장�
       +optFn(pl,'async function alphaAddCashEvent()')+'\n'+extractFn(pl,'async function alphaDeleteEvent(id)')
       +'\nreturn {add:(typeof alphaAddCashEvent==="function")?alphaAddCashEvent:null, del:alphaDeleteEvent, get:()=>alphaLedger, calc:alphaLedgerCalc};')(
       id=>EL[id]||(EL[id]={value:''}), m=>msgs.push(String(m)), ()=>true, ()=>'2026-09-25', v=>'$'+(+v).toFixed(2),
-      ()=>{}, ()=>{}, ()=>{}, ()=>{}, async()=>{}, ()=>{}, JSON.parse(JSON.stringify(ledger)));
+      ()=>{}, ()=>{}, ()=>{}, ()=>{}, async()=>true, ()=>{}, JSON.parse(JSON.stringify(ledger)));
     return {...F, msgs}; };
   { const A=mk(L0,{date:'2026-09-06',kind:'div',amt:12.34});
     if(A.add) A.add();   // 장부 변경·안내는 첫 await 전에 동기로 끝난다 (저장만 비동기)
