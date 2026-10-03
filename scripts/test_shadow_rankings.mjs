@@ -39,6 +39,8 @@ const rep={status:"reviewable",from:"2026-01-01",to:"2026-10-01",candidates:[
 ]};
 const n=normalize("crypto",rep);
 assert.equal(n.rows.length,10);
+assert.ok(n.totalCandidatePool>=15,"candidate pool should exceed active 10");
+assert.ok(n.reserveRows.length>=5,"reserve candidates should be available");
 assert.equal(n.rows[0].name,"vol_1.0");
 assert.ok(n.rows.findIndex(x=>x.trades===0)>0,"zero evidence rows should not lead");
 assert.deepEqual(n.rows.map(x=>x.rank),[1,2,3,4,5,6,7,8,9,10]);
