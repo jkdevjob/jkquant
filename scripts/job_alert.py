@@ -270,6 +270,7 @@ INVALID_COMPANY_EXACT = {
 GENERIC_JOB_TITLES = {
     '입사지원', '홈페이지 지원', '즉시지원', '스크랩', '관심기업',
     '채용', '모집', '채용공고', '공고', '상세보기',
+    '알바몬', '알바천국',
 }
 DETAIL_HEADERS = {
     'User-Agent': (
@@ -470,6 +471,17 @@ def title_from_card_body(body):
         if m:
             candidate = normalize_text(m.group(1))
             if 3 <= len(candidate) <= 180 and not is_generic_job_title(candidate):
+                return candidate
+
+    # 알바 검색 스니펫에서 사이트명만 제목으로 들어온 경우 실제 공고명을 복구한다.
+    for pattern in (
+        r'(?:\.\.\.|…)[ ]*(?:\([^)]*\)[ ]*)?([^·.]{3,140}?(?:알바|모집|채용))(?=[.·]|$)',
+        r'(?:\([^)]*(?:단기|경력무관)[^)]*\)[ ]*)([^·.]{3,140}?(?:알바|모집|채용))(?=[.·]|$)',
+    ):
+        m = re.search(pattern, text, re.I)
+        if m:
+            candidate = normalize_text(m.group(1))
+            if candidate and not is_generic_job_title(candidate):
                 return candidate
 
     if '스크랩' in text:
