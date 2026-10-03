@@ -157,7 +157,7 @@ pre.rules{background:var(--bg);border:1px solid var(--line);border-radius:10px;p
 
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Admin Console</div><h1>JK <span class="v">퀀트</span> 관리자 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="adVer">v0.11.0</span></h1></div>
+    <div><div class="kicker">Admin Console</div><h1>JK <span class="v">퀀트</span> 관리자 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="adVer">v0.11.1</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -465,29 +465,20 @@ function readCurrentDefaultTab(){
   strategyOverrides[defaultsTab]=over;
 }
 async function loadStrategyDefaultsAdmin(){
-  let local=null, legacyLocal=null;
-  try{local=JSON.parse(localStorage.getItem(STRATEGY_DEFAULT_CACHE)||'null')}catch(e){}
-  try{legacyLocal=JSON.parse(localStorage.getItem(STRATEGY_DEFAULT_LEGACY_CACHE)||'null')}catch(e){}
-  if(legacyLocal&&typeof legacyLocal==='object')strategyValues=mergeValues(legacyLocal);
-  if(local&&typeof local==='object'){
-    strategyOverrides=normalizeOverrides(local);
-    strategyValues=mergeValues(strategyOverrides);
-  }
+  strategyOverrides={inf:{},vr:{},ma:{},ivs:{},dca:{},asap:{}};
+  strategyValues=cfgClone(STRATEGY_DEFAULT_BUILTIN);
   if(me){
     try{
       const snap=await window.fb.getDoc(window.fb.doc(window.fb.db,'users',me.uid));
       if(snap.exists()){
         const d=snap.data()||{};
-        /* v1의 strategyDefaults는 전체 설정 한 벌이었다. v2에서 그걸 전부 활성화하면 다시
-           '전체가 바뀌는' 문제가 생기므로 값 표시용으로만 읽고 체크는 켜지 않는다. */
         if(d.strategyDefaults&&typeof d.strategyDefaults==='object')strategyValues=mergeValues(d.strategyDefaults);
         if(d.strategyDefaultOverrides&&typeof d.strategyDefaultOverrides==='object'){
           strategyOverrides=normalizeOverrides(d.strategyDefaultOverrides);
           for(const tab of Object.keys(strategyValues)) strategyValues[tab]={...strategyValues[tab],...(strategyOverrides[tab]||{})};
-          try{localStorage.setItem(STRATEGY_DEFAULT_CACHE,JSON.stringify(strategyOverrides));}catch(e){}
         }
       }
-    }catch(e){}
+    }catch(e){console.warn('strategy defaults load',e);}
   }
   paintDefaultTabs();
 }
@@ -496,7 +487,6 @@ async function saveStrategyDefaults(){
   readCurrentDefaultTab();
   const status=$('cfgStatus'), n=Object.values(strategyOverrides).reduce((a,x)=>a+Object.keys(x||{}).length,0);
   if(status){status.className='cfgstatus';status.textContent='저장 중…';}
-  try{localStorage.setItem(STRATEGY_DEFAULT_CACHE,JSON.stringify(strategyOverrides));}catch(e){}
   try{
     await window.fb.setDoc(window.fb.doc(window.fb.db,'users',me.uid),{
       strategyDefaultOverrides:strategyOverrides,strategyDefaultOverridesUpdated:Date.now()
@@ -504,7 +494,7 @@ async function saveStrategyDefaults(){
     if(status){status.className='cfgstatus ok';status.textContent='✓ '+n+'개 선택 항목 저장 완료 · 새 세션에는 선택된 값만 적용됩니다.';}
     paintDefaultTabs();
   }catch(e){
-    if(status){status.className='cfgstatus err';status.textContent='브라우저에는 저장됐지만 클라우드 저장 실패 — '+(e.message||e);}
+    if(status){status.className='cfgstatus err';status.textContent='Firebase 저장 실패 — '+(e.message||e);}
   }
 }
 async function clearStrategyDefaults(){
@@ -512,7 +502,6 @@ async function clearStrategyDefaults(){
   if(!confirm('관리자가 강제로 지정한 모든 전략 기본값을 해제할까요?\n이후 새 세션은 앱 기본값을 사용합니다. 기존 세션은 건드리지 않습니다.'))return;
   strategyOverrides={inf:{},vr:{},ma:{},ivs:{},dca:{},asap:{}};
   strategyValues=cfgClone(STRATEGY_DEFAULT_BUILTIN);
-  try{localStorage.setItem(STRATEGY_DEFAULT_CACHE,JSON.stringify(strategyOverrides));}catch(e){}
   try{
     await window.fb.setDoc(window.fb.doc(window.fb.db,'users',me.uid),{
       strategyDefaultOverrides:strategyOverrides,strategyDefaultOverridesUpdated:Date.now()
@@ -595,10 +584,6 @@ async function applyDefaultsExistingSessions(){
         stateV2:state,stateV2Updated:now,stateV2Rev:nr,strategyDefaultOverrides:strategyOverrides,strategyDefaultOverridesUpdated:now
       },{merge:true});
     });
-    try{
-      localStorage.setItem('qcockpit_v2_'+me.uid,JSON.stringify(state));
-      localStorage.setItem(STRATEGY_DEFAULT_CACHE,JSON.stringify(strategyOverrides));
-    }catch(e){}
     if(status){
       status.className='cfgstatus ok';
       status.textContent='✓ '+touched+'개 세션 · '+changedFields+'개 설정 변경 · 모의 자동기록 '+generated+'건 재계산 대기';
