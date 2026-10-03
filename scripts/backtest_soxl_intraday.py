@@ -46,6 +46,26 @@ class Params:
     friction_pct: float = 0.20
 
 
+FACTORY_EPOCH = datetime(2026, 10, 3, tzinfo=ET)
+FACTORY_CYCLE_DAYS = 28
+
+def _factory_index(now=None):
+    now = now or datetime.now(ET)
+    return max(0, (now.date() - FACTORY_EPOCH.date()).days // FACTORY_CYCLE_DAYS)
+
+def _soxl_factory_variants(now=None):
+    k=_factory_index(now); out=[]
+    ranges=[1,2,3,4,6]; vols=[.8,1.0,1.3,1.6]; cuts=[1000,1030,1100,1130]
+    stops=[1.0,1.2,1.4]; tps=[2.0,2.4,2.8]; holds=[12,18,24]
+    for j in range(4):
+        z=k*4+j
+        rb=ranges[z%len(ranges)]; vol=vols[(z*3+1)%len(vols)]; cut=cuts[(z*5+2)%len(cuts)]
+        stop=stops[(z*7+1)%len(stops)]; tp=tps[(z*11+2)%len(tps)]; hold=holds[(z*13+1)%len(holds)]
+        name=f"gen_s_r{rb}_v{round(vol*10)}_e{cut}_sl{round(stop*10)}_tp{round(tp*10)}_h{hold}"
+        out.append(Params(name,range_bars=rb,volume_mult=vol,entry_cutoff_hm=cut,
+                          stop_pct=stop,take_profit_pct=tp,max_hold_bars=hold))
+    return out
+
 VARIANTS = [
     Params("baseline"),
     Params("range_5m", range_bars=1),
@@ -62,6 +82,7 @@ VARIANTS = [
     Params("vol_1.5", volume_mult=1.5),
     Params("entry_by_1000", entry_cutoff_hm=1000),
     Params("hold_60m", max_hold_bars=12),
+    *_soxl_factory_variants(),
 ]
 
 
