@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import {liveLedgerSummary,mergeSessions,mergeDaytradingSessions,completedGlobalCandidates} from "../functions/api/scalping-daily-results.js";
+import {dailyRisk as historyDailyRisk} from "../functions/api/scalping-history.js";
 
 console.log("[scalping today] live ledger 우선/무매매/날짜 경계 값 시험");
 
@@ -56,5 +57,20 @@ const soxl=completedGlobalCandidates("soxl",now);
 assert.equal(crypto[0],"2026-10-02"); // 한국 00:00~24:00 기준, 끝난 날
 assert.equal(soxl[0],"2026-10-02");   // 미국 16:05 이후 끝난 거래일
 assert.ok(!soxl.some(d=>["0","6"].includes(String(new Date(d+"T12:00:00Z").getUTCDay()))));
+
+const dayHistory=historyDailyRisk([
+  {date:"2026-10-01",pnl:3.0},
+  {date:"2026-10-01",pnl:-1.0},
+  {date:"2026-10-02",pnl:1.5}
+],"daytrading");
+assert.equal(dayHistory.daily.length,2);
+assert.ok(Math.abs(dayHistory.daily[0].returnPct-(2/3))<1e-12); // 2% net / 3 fixed slots
+assert.ok(Math.abs(dayHistory.daily[1].returnPct-0.5)<1e-12);   // one trade, two unused cash slots
+
+const openingHistory=historyDailyRisk([
+  {date:"2026-10-01",pnl:3.0},
+  {date:"2026-10-01",pnl:-1.0}
+],"opening");
+assert.equal(openingHistory.daily[0].returnPct,1.0); // existing equal-weight opening rule remains unchanged
 
 console.log("ALL PASS — scalping today live results");

@@ -287,7 +287,7 @@ export async function onRequestGet({env}){
     ok:true,
     generatedAt:new Date().toISOString(),
     kstDate:isoKstDate(),
-    returnRule:"If a strategy has multiple baseline trades in one session, daily return is the equal-weight average of trade net PnL. No-trade session = 0%.",
+    returnRule:"Opening uses the equal-weight average of executed baseline trades; Daytrading uses the sum of trade net PnL divided by 3 fixed capital slots; BTC/SOXL use one slot. No-trade session = 0%.",
     sourceRule:"BTC/SOXL use the completed live paper ledger first; immutable research CSV is fallback. One strategy source failure does not hide the other strategies.",
     strategies:[
       pair("opening","시초가","KST",opening),

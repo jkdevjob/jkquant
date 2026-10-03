@@ -78,7 +78,16 @@ function dateDaysAgo(days){
   return d.toISOString().slice(0,10);
 }
 
-function dailyRisk(rows){
+export function sessionReturnPct(strategy,pnls){
+  const a=Array.isArray(pnls)?pnls.filter(Number.isFinite):[];
+  if(!a.length)return 0;
+  const sum=a.reduce((s,v)=>s+v,0);
+  // Daytrading allocates three equal capital slots per session; unused slots remain cash.
+  if(strategy==="daytrading")return sum/3;
+  // Opening uses equal weight across executed baseline trades; BTC/SOXL are one-slot strategies.
+  return sum/a.length;
+}
+export function dailyRisk(rows,strategy){
   const by=new Map();
   for(const x of rows){
     if(!x.date||!Number.isFinite(x.pnl))continue;
@@ -87,7 +96,7 @@ function dailyRisk(rows){
   }
   const daily=[...by.entries()].map(([date,a])=>({
     date,
-    returnPct:a.reduce((s,v)=>s+v,0)/a.length,
+    returnPct:sessionReturnPct(strategy,a),
     trades:a.length
   })).sort((a,b)=>String(a.date).localeCompare(String(b.date)));
   let eq=1,peak=1,maxDd=0;
@@ -160,7 +169,7 @@ export async function onRequestGet({request}){
     const pn=rows.map(x=>x.pnl).filter(Number.isFinite);
     const wins=pn.filter(x=>x>0),losses=pn.filter(x=>x<0);
     const avg=a=>a.length?a.reduce((s,x)=>s+x,0)/a.length:0;
-    const risk=dailyRisk(rows);
+    const risk=dailyRisk(rows,strategy);
 
     return new Response(JSON.stringify({
       ok:true,strategy,market:src.market,source:src.path,total,filtered,
