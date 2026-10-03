@@ -72,49 +72,53 @@ RETIRE_STREAK_REQUIRED=3
 AUTO_PROMOTION_LEADER_SESSIONS=7
 AUTO_PROMOTION_MIN_SCORE=60.0
 
-FACTORY_TEMPLATES={
-    "opening":[
-        ("cf_pb_{g}",lambda g:{"pbMax":round(0.45+0.05*(g%9),2)}),
-        ("cf_amount_{g}",lambda g:{"amountMult":round(1.3+0.1*(g%9),1)}),
-        ("cf_entry_{g}",lambda g:{"entryCutoff":905+5*(g%5)}),
-        ("cf_vol_{g}",lambda g:{"volMult":round(1.1+0.1*(g%10),1)}),
-    ],
-    "daytrading":[
-        ("cf_vol_{g}",lambda g:{"vol_mult":round(1.1+0.1*(g%11),1)}),
-        ("cf_lookback_{g}",lambda g:{"lookback":10+5*(g%7)}),
-        ("cf_slope_{g}",lambda g:{"min_vwap_slope":round(0.05+0.05*(g%6),2)}),
-        ("cf_entry_{g}",lambda g:{"entry_cutoff":1230+30*(g%5)}),
-    ],
-    "crypto":[
-        ("cf_vol_{g}",lambda g:{"volume_mult":round(0.9+0.1*(g%9),1)}),
-        ("cf_range_{g}",lambda g:{"range_bars":1+(g%6)}),
-        ("cf_hold_{g}",lambda g:{"max_hold_bars":6+6*(g%6)}),
-        ("cf_rr_{g}",lambda g:{"stop_pct":round(0.3+0.1*(g%5),1),"take_profit_pct":round(0.6+0.2*(g%5),1)}),
-    ],
-    "soxl":[
-        ("cf_vol_{g}",lambda g:{"volume_mult":round(0.7+0.1*(g%10),1)}),
-        ("cf_range_{g}",lambda g:{"range_bars":1+(g%6)}),
-        ("cf_hold_{g}",lambda g:{"max_hold_bars":9+3*(g%8)}),
-        ("cf_rr_{g}",lambda g:{"stop_pct":round(0.8+0.1*(g%7),1),"take_profit_pct":round(1.6+0.2*(g%7),1)}),
-    ],
+FACTORY_AXES={
+    "opening":{
+        "pbMax":[0.4,0.5,0.6,0.7,0.8],
+        "amountMult":[1.3,1.5,1.7,1.9,2.1],
+        "entryCutoff":[910,915,920,925,930],
+        "volMult":[1.0,1.2,1.4,1.6,1.8],
+    },
+    "daytrading":{
+        "vol_mult":[1.2,1.4,1.6,1.8,2.0],
+        "lookback":[10,15,20,25,30],
+        "min_vwap_slope":[0.05,0.10,0.15,0.20,0.25],
+        "entry_cutoff":[1230,1300,1330,1400,1430],
+    },
+    "crypto":{
+        "range_bars":[1,2,3,4,5,6],
+        "volume_mult":[0.9,1.0,1.1,1.2,1.3,1.4],
+        "max_hold_bars":[6,9,12,18,24,30],
+        "entry_cutoff_min":[17*60+55,18*60+55,19*60+55,20*60+55,21*60+55],
+    },
+    "soxl":{
+        "range_bars":[1,2,3,4,5,6],
+        "volume_mult":[0.8,0.9,1.0,1.1,1.2,1.4],
+        "max_hold_bars":[9,12,15,18,21,24],
+        "entry_cutoff_hm":[1030,1045,1100,1115,1130],
+    },
 }
 
-def next_factory_candidates(kind, previous, count=5):
-    start=int(previous.get("factoryGeneration") or 0)+1
-    out=[]
-    tmpls=FACTORY_TEMPLATES[kind]
-    for n in range(count):
-        g=start+n
-        name_t,fn=tmpls[g%len(tmpls)]
-        out.append({
-            "name":name_t.format(g=g),
-            "generation":g,
-            "params":fn(g),
-            "status":"incubating",
-            "reason":"자동 생성 신규 가설 · 기존 10개 이상 활성 경쟁군과 분리해 인큐베이팅"
-        })
+def factory_params(kind,generation):
+    axes=FACTORY_AXES[kind]
+    g=max(1,int(generation))-1
+    out={}
+    for key,vals in axes.items():
+        out[key]=vals[g%len(vals)]
+        g//=len(vals)
     return out
 
+def next_factory_candidate(kind, previous, evidence):
+    g=int(previous.get("factoryGeneration") or 0)+1
+    return {
+        "name":f"cf_g{g:04d}",
+        "generation":g,
+        "params":factory_params(kind,g),
+        "createdAfter":evidence,
+        "status":"incubating",
+        "liveCompatible":True,
+        "reason":"새 연구세션 자동 생성 · 다음 세션부터 전향적 검증",
+    }
 
 def load_json(p:Path, default=None):
     try:
@@ -205,8 +209,19 @@ def _candidate_sort_key(x):
     )
 
 def evolve_lifecycle(kind, report, previous=None):
-    pool=list(CANDIDATE_POOLS[kind])
     previous=previous or {}
+    evidence=str(report.get("to") or report.get("from") or "")
+    is_new_evidence=bool(evidence) and evidence!=str(previous.get("lastEvidenceDate") or "")
+    generated_pool=list(previous.get("generatedPool") or [])
+    if is_new_evidence:
+        fresh=next_factory_candidate(kind,previous,evidence)
+        if not any(str(x.get("name") or "")==fresh["name"] for x in generated_pool):
+            generated_pool.append(fresh)
+    report_names=[str(x.get("name") or "") for x in (report.get("candidates") or []) if str(x.get("name") or "").startswith("cf_g")]
+    pool=list(CANDIDATE_POOLS[kind])
+    for name in [str(x.get("name") or "") for x in generated_pool]+report_names:
+        if name and name not in pool:
+            pool.append(name)
     retired=[x for x in (previous.get("retired") or []) if str(x.get("name") or "") in pool]
     retired_names={str(x.get("name") or "") for x in retired}
     active=[x for x in (previous.get("activeCandidates") or pool[:ACTIVE_SHADOW_COUNT])
@@ -216,8 +231,6 @@ def evolve_lifecycle(kind, report, previous=None):
         if name not in active and name not in retired_names: active.append(name)
 
     by={str(x.get("name") or ""):x for x in (report.get("candidates") or [])}
-    evidence=str(report.get("to") or report.get("from") or "")
-    is_new_evidence=bool(evidence) and evidence!=str(previous.get("lastEvidenceDate") or "")
     poor=dict(previous.get("poorStreaks") or {})
     changes=list(previous.get("recentChanges") or [])[-19:]
 
@@ -297,12 +310,13 @@ def evolve_lifecycle(kind, report, previous=None):
 
     life={
         "schema":1,
-        "candidateFactory":"whitelisted-parameter-neighborhood-v1",
+        "candidateFactory":"prospective-mixed-radix-v2",
         "minimumActive":ACTIVE_SHADOW_COUNT,
         "candidatePoolSize":len(pool),
         "activeCandidates":active,
         "reserveCandidates":[x for x in pool if x not in active and x not in retired_names],
-        "generatedCandidates":next_factory_candidates(kind,previous,5) if is_new_evidence else list(previous.get("generatedCandidates") or []),
+        "generatedPool":generated_pool,
+        "generatedCandidates":generated_pool[-5:],
         "factoryGeneration":int(previous.get("factoryGeneration") or 0)+(1 if is_new_evidence else 0),
         "retired":retired[-50:],
         "poorStreaks":poor,
@@ -314,7 +328,7 @@ def evolve_lifecycle(kind, report, previous=None):
         "autoPromotionReason":auto_reason,
         "recentChanges":changes[-20:],
         "retirementRule":f"sampleReady 이후 위험 실패 또는 점수<40·검증우위<0 상태가 {RETIRE_STREAK_REQUIRED}개 서로 다른 연구세션 연속",
-        "replacementRule":"퇴출 즉시 예비 후보 중 연구순위가 가장 높은 후보를 활성화해 최소 10개 유지",
+        "replacementRule":"퇴출 즉시 정적+자동생성 예비 후보 중 연구순위가 가장 높은 후보를 활성화해 최소 10개 유지",
     }
     for x in report.get("candidates") or []:
         name=str(x.get("name") or "")
