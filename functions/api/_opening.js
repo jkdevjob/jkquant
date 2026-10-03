@@ -133,6 +133,29 @@ export const SHADOW_VARIANTS=Object.freeze([
   {name:"combo_pb05_e0920",designedFrom:["candidate-factory-v1"],label:"눌림0.5%+09:20",description:"얕은 눌림과 조기 진입 결합",params:{pbMax:.5,entryCutoff:920}},
 ]);
 
+
+const OPENING_FACTORY_AXES=Object.freeze({
+  pbMax:[0.4,0.5,0.6,0.7,0.8],
+  amountMult:[1.3,1.5,1.7,1.9,2.1],
+  entryCutoff:[910,915,920,925,930],
+  volMult:[1.0,1.2,1.4,1.6,1.8],
+});
+export function generatedOpeningVariant(name){
+  const m=String(name||"").match(/^cf_g(\d{4,})$/);
+  if(!m)return null;
+  let g=Math.max(1,Number(m[1]))-1;
+  const params={};
+  for(const [key,vals] of Object.entries(OPENING_FACTORY_AXES)){
+    params[key]=vals[g%vals.length];g=Math.floor(g/vals.length);
+  }
+  return {name:String(name),label:"자동생성 "+String(name),description:"전향적 자동생성 파라미터 후보",params,designedFrom:["auto-factory-v2"]};
+}
+export function openingVariant(name){
+  const n=String(name||"");
+  if(n==="baseline")return {name:"baseline",label:"원래 기준전략",description:"baseline",params:{}};
+  return SHADOW_VARIANTS.find(v=>v.name===n)||generatedOpeningVariant(n);
+}
+
 export const OPENING_FIXED_FRICTION_PCT=.23;
 export const OPENING_VTS_MIN_MATCHES=30;
 export const OPENING_FALLBACK_TICKS_PER_SIDE=2.5;
