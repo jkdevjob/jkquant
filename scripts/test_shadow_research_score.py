@@ -119,3 +119,21 @@ for day in (9,10,11):
 assert "cf_g0001" in s2["activeCandidates"], "자동생성 후보가 퇴출 빈자리를 실제로 채워야 함"
 assert len(s2["activeCandidates"])>=10
 print("ALL PASS — shadow generator")
+
+
+print("[shadow generated parity] 야간 생성기와 Python 백테스트 파라미터 일치 검사")
+def loadmod(path,name):
+    spec=importlib.util.spec_from_file_location(name,Path(path))
+    mod=importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
+day=loadmod("scripts/backtest_daytrading.py","bt_day_generated")
+btc=loadmod("scripts/backtest_crypto_orb.py","bt_btc_generated")
+soxl=loadmod("scripts/backtest_soxl_intraday.py","bt_soxl_generated")
+for g in (1,2,7,25,101):
+    name=f"cf_g{g:04d}"
+    assert m.factory_params("daytrading",g)==day.generated_params(name)
+    assert m.factory_params("crypto",g)==btc.generated_params(name)
+    assert m.factory_params("soxl",g)==soxl.generated_params(name)
+print("ALL PASS — generated Python parameter parity")
