@@ -260,7 +260,7 @@ canvas{display:block;width:100%;height:auto}
 
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Morning Scalping</div><h1>JK <span class="v">퀀트</span> 단타 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="scVer">v1.39.1</span></h1></div>
+    <div><div class="kicker">Morning Scalping</div><h1>JK <span class="v">퀀트</span> 단타 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="scVer">v1.39.2</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -1579,7 +1579,7 @@ async function renderDailyCumulativeChart(){
     el.innerHTML='<div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-bottom:8px"><b>📈 전략별 누적 결과 · 수익률 추이</b><span class="sub">전체 누적값 · 최근 31일 확대</span></div>'+
       '<div style="overflow-x:auto"><svg viewBox="0 0 '+W+' '+H+'" style="display:block;width:100%;min-width:620px;height:auto" role="img" aria-label="전략별 누적 수익률 추이">'+grid+zero+lines+dots+ticks+'</svg></div>'+
       '<div class="row" style="gap:12px;margin-top:7px;font-size:11px">'+legend+'</div>'+
-      '<p class="note">누적값은 각 전략의 전체 확정 일별 계좌수익률을 날짜순으로 복리 계산합니다. 그래프 화면만 최근 31일을 확대해 시초가·데이트레이딩 선도 함께 보이게 했습니다. 해당 전략이 매매하지 않은 날짜는 수익률 0%로 보고 직전 누적값을 유지하며, 오늘 카드에는 <b>매매없음</b>으로 표시합니다.</p>';
+      '<p class="note">누적값은 각 전략의 전체 확정 일별 계좌수익률을 날짜순으로 복리 계산합니다. 데이트레이딩은 하루 3개 동일자금 슬롯 기준으로 계산해 미사용 슬롯은 현금 0%로 반영합니다. 그래프 화면만 최근 31일을 확대해 시초가·데이트레이딩 선도 함께 보이게 했습니다. 해당 전략이 매매하지 않은 날짜는 수익률 0%로 보고 직전 누적값을 유지하며, 오늘 카드에는 <b>매매없음</b>으로 표시합니다.</p>';
   }catch(e){el.innerHTML='<div class="warn">누적 수익률 그래프 조회 실패 · '+esc(e.message||String(e))+'</div>';}
 }
 
