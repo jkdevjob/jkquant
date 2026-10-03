@@ -1,8 +1,8 @@
-// GET/POST /api/scalping-promotion
-// Owner-only manual promotion of a reviewed GPT shadow strategy.
+// GET/POST/PUT /api/scalping-promotion
+// PUT performs guarded nightly auto-promotion; owner POST is emergency baseline revert only.
 // Promotion never mutates an already-started session; each worker locks the selected main at its next new session.
 
-import { CATALOG, normalize } from "./scalping-shadow-ranking.js";
+import { CATALOG, normalize, generatedCompatible } from "./scalping-shadow-ranking.js";
 
 const JH={"Content-Type":"application/json; charset=utf-8","Cache-Control":"no-store"};
 const FIREBASE_API_KEY_FALLBACK="AIzaSyBzBe9pAttnbDgTlNThWZzNqtAAKxX7Ksw";
