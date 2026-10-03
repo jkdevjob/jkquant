@@ -54,6 +54,8 @@ function riskProbe(src){
 }
 
 ok(/id="scVer">v\d+\.\d+\.\d+<\/span>/.test(ui),'scalping UI version uses x.y.z format');
+ok(ui.includes('strategy-overview-table')&&ui.includes('font-size:12.5px')&&ui.includes('padding:7px 8px')&&ui.includes('min-width:560px'),'today 4-strategy overview matches Claude table sizing');
+ok(ui.includes('검증상태는 10/1부터 쌓는 모의투자 누적 매매일(20일이면 판정)입니다.'),'today 4-strategy overview includes Claude-equivalent explanatory note');
 ok(marProbe(ui),'MAR uses annualized CAGR divided by absolute MDD');
 const mutMar=ui.replace('return Number.isFinite(cagr)?cagr/dd:null;','return Number.isFinite(cagr)?cagr:null;');
 ok(!marProbe(mutMar),'mutation killed: MAR must divide CAGR by absolute MDD');
