@@ -53,6 +53,27 @@ class Params:
     slippage_round_trip_pct: float = 0.04
 
 
+FACTORY_EPOCH = datetime(2026, 10, 3, tzinfo=KST)
+FACTORY_CYCLE_DAYS = 28
+
+def _factory_index(now=None):
+    now = now or datetime.now(KST)
+    return max(0, (now.date() - FACTORY_EPOCH.date()).days // FACTORY_CYCLE_DAYS)
+
+def _crypto_factory_variants(now=None):
+    k=_factory_index(now); out=[]
+    ranges=[1,2,3,4]; vols=[.8,1.0,1.3,1.6]; cuts=[17*60+55,19*60+55,21*60+55]
+    stops=[.4,.6,.8]; tps=[.8,1.2,1.6]; holds=[6,12,18,24]
+    for j in range(4):
+        z=k*4+j
+        rb=ranges[z%len(ranges)]; vol=vols[(z*3+1)%len(vols)]; cut=cuts[(z*5+2)%len(cuts)]
+        stop=stops[(z*7+1)%len(stops)]; tp=tps[(z*11+2)%len(tps)]; hold=holds[(z*13+1)%len(holds)]
+        hm=(cut//60)*100+(cut%60)
+        name=f"gen_c_r{rb}_v{round(vol*10)}_e{hm}_sl{round(stop*10)}_tp{round(tp*10)}_h{hold}"
+        out.append(Params(name,range_bars=rb,volume_mult=vol,entry_cutoff_min=cut,
+                          stop_pct=stop,take_profit_pct=tp,max_hold_bars=hold))
+    return out
+
 VARIANTS = [
     Params("baseline"),
     Params("no_vwap", use_vwap=False),
@@ -69,6 +90,7 @@ VARIANTS = [
     Params("range_10m", range_bars=2),
     Params("entry_by_2000", entry_cutoff_min=19 * 60 + 55),  # 19:55 signal -> 20:00 KST entry
     Params("hold_90m", max_hold_bars=18),
+    *_crypto_factory_variants(),
 ]
 
 
