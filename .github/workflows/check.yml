@@ -94,6 +94,9 @@ jobs:
       - name: 그림자전략 수동 메인승격 가드 검사
         run: node scripts/test_scalping_promotion.mjs
 
+      - name: 그림자전략 7연속 1위 자동승격 가드 검사
+        run: node scripts/test_scalping_auto_promotion.mjs
+
       - name: BTC·SOXL 장중 모의장부 저장·표시 검사
         run: node scripts/test_global_paper_ledger.mjs
 
@@ -131,6 +134,7 @@ jobs:
           node --input-type=module --check < functions/api/daytrading-monitor.js
           node --input-type=module --check < functions/api/daytrading-summary.js
           node --input-type=module --check < functions/api/daytrading-paper.js
+          node --input-type=module --check < functions/api/scalping-auto-promotion.js
           node --input-type=module --check < functions/api/vts-reconcile.js
           node --input-type=module --check < functions/api/vts-research.js
           node --input-type=module --check < functions/api/vts-summary.js
