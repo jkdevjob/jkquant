@@ -60,10 +60,12 @@ CANDIDATE_POOLS={
                   "combo_vol18_lb15","combo_slope15_e1400","session_min_1_5","session_max_5","combo_lb30_vol12"],
     "crypto":["no_vwap","vol_1.0","vol_1.5","range_15m","range_30m","stop_0.3_tp_0.6",
               "stop_0.7_tp_1.4","hold_30m","hold_120m","entry_by_1800",
-              "range_10m","vol_1.3","stop_0.4_tp_0.8","hold_90m","entry_by_2000"],
+              "range_10m","vol_1.3","stop_0.4_tp_0.8","hold_90m","entry_by_2000",
+              "combo_range10_vol13","combo_novwap_vol15","stop_0.6_tp_1.2","hold_45m","entry_by_2100"],
     "soxl":["range_5m","range_30m","vol_0.8","vol_1.2","no_vwap","stop_0.8_tp_1.6",
             "stop_1.5_tp_3.0","hold_45m","hold_120m","entry_by_1030",
-            "range_10m","vol_1.5","stop_1.0_tp_2.0","hold_60m","entry_by_1100"],
+            "range_10m","vol_1.5","stop_1.0_tp_2.0","hold_60m","entry_by_1100",
+            "combo_range10_vol12","combo_novwap_vol12","stop_0.9_tp_1.8","hold_75m","entry_by_1045"],
 }
 ACTIVE_SHADOW_COUNT=10
 RETIRE_STREAK_REQUIRED=3
