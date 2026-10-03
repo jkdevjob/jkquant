@@ -1740,17 +1740,24 @@ console.log('[35] 로그인 — 조용히 갇히지 않는다');
   ok('배지 그리기 실패를 막는다', /try\{ renderUserBadge\(user\); \}catch/.test(ia));
   ok('프로필 확인 실패로 로그인을 막지 않는다',
      /\}catch\(e\)\{ console\.warn\('profile',e\); \}/.test(ia));
-  ok('기록 읽기 실패는 새 상태로 연다', /catch\(e\)\{[\s\S]*?S=freshState\(\)/.test(ia));
+  ok('Firebase DB 원장 읽기 실패는 오래된 브라우저 상태로 열지 않는다',
+     /Firebase DB 원장을 불러오지 못했습니다/.test(ia)
+     && /setSync\('err'\);\s*return;/.test(ia));
   ok('원인을 화면에 남긴다', /authWarn\(/.test(ia) && !!extractFn(idx,'function authWarn(msg)'));
   const iGate=ia.indexOf("$('authgate').style.display='none'");
   ok('앱 시작 전에 로그인창을 닫는다', iGate>0 && iGate < ia.indexOf('startApp()'));
 
   // localStorage는 용량 초과·사생활 보호 모드에서 던진다 — 그게 로그인까지 타고 올라갔었다
   const sl=extractFn(idx,'function saveLocal()');
-  ok('saveLocal이 예외를 안 던진다', /try\{/.test(sl) && /catch\(e\)\{/.test(sl));
-  ok('저장 실패를 사용자에게 알린다', /showLsWarn\(/.test(sl) && !!extractFn(idx,'function showLsWarn(msg)'));
-  ok('클라우드 저장은 즉시 계속된다', /function save\(\)\{saveLocal\(\);void pushRemoteNow\(\);\}/.test(idx));
-  ok('저장이 복구되면 경고를 치운다', /lsFailed=false;[\s\S]{0,60}remove\(\)/.test(sl));
+  ok('saveLocal은 브라우저 영구저장 없이 메모리 timestamp만 갱신',
+     /S\._updated=Date\.now\(\)/.test(sl)
+     && !/localStorage|sessionStorage|indexedDB/.test(sl));
+  ok('Firebase 저장 실패는 동기화 오류 상태로 남긴다',
+     /setSync\('err'\)/.test(extractFn(idx,'async function _commitStateRemote(where)')));
+  ok('일반 save는 즉시 Firebase 저장 promise를 반환',
+     /function save\(\)\{[^}]*return pushRemoteNow\(\);\}/.test(idx));
+  ok('운영 앱에 브라우저 영구저장 폴백이 없다',
+     !/localStorage|sessionStorage|indexedDB/.test(idx));
 
   /* try/catch 는 '던져야' 잡는다. Firestore 호출이 영영 안 끝나면 예외가 아니라
      그냥 멈춰 있어서 로그인 처리가 통째로 갇힌다 — 웨일 iOS에서 실제로 났다
@@ -1758,11 +1765,15 @@ console.log('[35] 로그인 — 조용히 갇히지 않는다');
   const wt=extractFn(idx,'function withTimeout(p, ms, label)');
   ok('안 끝나는 호출을 시간으로 끊는다', !!wt && /Promise\.race/.test(wt) && /setTimeout/.test(wt));
   ok('프로필 확인에 제한시간', /withTimeout\(touchProfile\(user\), 6000, '프로필 확인'\)/.test(ia));
-  ok('클라우드 읽기에 제한시간', /withTimeout\(pullRemote\(\), 8000, '클라우드 기록'\)/.test(ia));
+  ok('Firebase DB 원장 읽기에 제한시간',
+     /withTimeout\(pullRemote\(\), 12000, 'Firebase DB 원장'\)/.test(ia));
   // 클라우드가 안 와도 이 기기에 있는 걸로 열어야 한다 — 새로 시작하면 기록이 사라진 것처럼 보인다
-  ok('클라우드가 안 오면 로컬로 연다', /load\(\); opened=validState\(S\);/.test(ia)
-     && /이 기기에 저장된 걸로 엽니다/.test(ia));
-  ok('로컬도 없을 때만 새로 시작', /if\(!opened\)\{[\s\S]{0,80}freshState\(\)/.test(ia));
+  ok('Firebase DB 원장이 안 오면 앱을 열지 않는다',
+     /Firebase DB 원장을 불러오지 못했습니다/.test(ia)
+     && !/이 기기에 저장된 걸로 엽니다/.test(ia));
+  ok('계정 DB 원장이 없을 때만 fresh state를 만들어 Firebase에 생성',
+     /DB 원장이 없으면 새 원장을 만든다/.test(extractFn(idx,'async function pullRemote()'))
+     && /S=freshState\(\)/.test(extractFn(idx,'async function pullRemote()')));
   // 어디서 멈췄는지 알아야 다음에 안 헤맨다
   ok('진행 단계를 남긴다', /let authStep=/.test(idx)
      && (idx.match(/authStep='/g)||[]).length>=4);
