@@ -591,7 +591,12 @@ def main():
             minute_now = minute_of_day(bars_now[-1].get("tKst")) if bars_now else -1
             current_session = {"date": today_kst,
                                "status": "no_trade" if minute_now >= VARIANTS[0].entry_cutoff_min else "watching",
-                               "trades": 0, "lastBarKst": last_hm}
+                               "trades": 0, "lastBarKst": last_hm,
+                               "decisionReason": (
+                                   "21:55까지 OR 신규돌파·거래량 1.2배·VWAP 상회 조건을 모두 만족한 신호 없음"
+                                   if minute_now >= VARIANTS[0].entry_cutoff_min
+                                   else "아직 진입 마감 전 · OR 신규돌파·거래량 1.2배·VWAP 조건 감시 중"
+                               )}
 
     report = {
         "schema": 3,
