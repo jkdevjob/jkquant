@@ -101,7 +101,7 @@ async function latestRanking(strategy){
   return {generatedAt:j.generatedAt||null,ranking:normalize(strategy,j[strategy]||{})};
 }
 function allowedVariant(strategy,variant){
-  return variant==="baseline"||!!((CATALOG[strategy]||[]).includes(variant));
+  return variant==="baseline"||!!((CATALOG[strategy]||[]).includes(variant))||generatedCompatible(strategy,variant);
 }
 export function promotionDecision(strategy,variant,ranking){
   if(!WORKERS[strategy])return {ok:false,reason:"unsupported strategy"};
@@ -186,6 +186,7 @@ export async function onRequestPost({request,env}){
   let b={};try{b=await request.json();}catch(e){return json({ok:false,error:"JSON body 오류"},400);}
   const strategy=String(b.strategy||"").toLowerCase(),variant=String(b.variant||"");
   if(!WORKERS[strategy]||!allowedVariant(strategy,variant))return json({ok:false,error:"지원하지 않는 전략 또는 그림자전략입니다."},400);
+  if(variant!=="baseline")return json({ok:false,error:"메인전략 승격은 자동화되어 있습니다. 수동승격은 비활성화되었습니다.",reason:"automatic-promotion-only"},409);
   try{
     let generatedAt=null,ranking=null,decision;
     if(variant==="baseline")decision=promotionDecision(strategy,variant,null);
