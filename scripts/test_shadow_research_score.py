@@ -39,7 +39,8 @@ with tempfile.TemporaryDirectory() as td:
         *[{"name":f"candidate_{i}","rank":i+2,"status":"collecting","sampleReady":False,
            "researchScore":50-i} for i in range(13)]
     ]}
-    got=m.apply_shadow_lifecycle("crypto",report)
+    report["to"]="2026-09-30"
+    got=m.apply_shadow_lifecycle("crypto",report,"2026-09-30")
     life=got["lifecycle"]
     assert len(life["active"])==10
     assert len(life["reserve"])==4
