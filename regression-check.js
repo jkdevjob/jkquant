@@ -1863,13 +1863,14 @@ console.log('[39] 로그인 진단 — 어디서 막혔는지 화면에서 읽�
   ok('진단 함수 존재', !!ad);
   // 막히는 지점마다 한 줄씩 — 이게 있어야 되묻지 않고 원인이 갈린다
   [['모듈 로딩','로그인모듈'],['핸들러 연결','인증대기'],['인증 상태','로그인상태'],
-   ['앱 시작','앱시작'],['저장소','저장소'],['브라우저','브라우저']].forEach(([nm,key])=>{
+   ['앱 시작','앱시작'],['데이터 저장','데이터저장'],['브라우저','브라우저']].forEach(([nm,key])=>{
     ok('진단에 '+nm+' 줄이 있다', ad.includes("'"+key));
   });
   ok('마지막 오류도 남긴다', /authLastErr/.test(ad) && /let authLastErr=/.test(idx));
   ok('UA도 남긴다', /navigator\.userAgent/.test(ad));
-  ok('저장소는 실제로 써 보고 판단한다', /function storageOK\(\)/.test(idx)
-     && /localStorage\.setItem\('_t','1'\)/.test(extractFn(idx,'function storageOK()')));
+  ok('진단은 데이터 저장 방식을 Firebase DB 전용으로 표시한다',
+     /function storageOK\(\)/.test(idx)
+     && /Firebase DB 전용/.test(extractFn(idx,'function storageOK()')));
   // 앞단에서 막힌 건지 뒷단에서 막힌 건지 가르는 플래그
   const ia=extractFn(idx,'function initAuth()');
   ok('핸들러 연결 표시를 세운다', /authWired=true;/.test(ia) && /let authWired=false;/.test(idx));
@@ -1929,11 +1930,12 @@ console.log('[40] 모의 일괄 적용 — 원금과 1회 적립액을 따로');
      /const PAPER_DEFAULT_CAPITAL_WON=100000000;/.test(idx)
      && /const PAPER_DEFAULT_ADD_WON=50000;/.test(idx));
   const pe=extractFn(idx,'async function paperEnsureCommonWon()');
-  ok('paperCommon이 비어 있으면 추정하지 않고 기본 원화값을 그대로 저장한다',
+  ok('paperCommon이 비어 있으면 기본 원화값을 stateV2에 넣고 Firebase 저장한다',
      /pc\.capitalWon=PAPER_DEFAULT_CAPITAL_WON/.test(pe)
      && /pc\.addWon=PAPER_DEFAULT_ADD_WON/.test(pe)
      && !/fxAt\(/.test(pe)
-     && /saveLocal\(\); pushRemote\(\);/.test(pe));
+     && /pc\.formMemo=/.test(pe)
+     && /pushRemote\(\)/.test(pe));
   const sp=extractFn(idx,'function syncPaperStart()');
   ok('입력칸도 저장값이 없으면 1억 · 5만원을 그대로 표시한다',
      /PAPER_DEFAULT_CAPITAL_WON/.test(sp) && /PAPER_DEFAULT_ADD_WON/.test(sp));
