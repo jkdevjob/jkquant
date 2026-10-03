@@ -2,6 +2,14 @@ name: Job Alert Multi-source Diagnostic
 
 on:
   workflow_dispatch:
+  pull_request:
+    paths:
+      - "scripts/job_alert.py"
+      - ".github/workflows/job-alert-multisource-test.yml"
+  push:
+    paths:
+      - "scripts/job_alert.py"
+      - ".github/workflows/job-alert-multisource-test.yml"
 
 permissions:
   contents: read
