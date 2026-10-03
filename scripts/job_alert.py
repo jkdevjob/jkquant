@@ -1521,20 +1521,20 @@ def _fallback_search_term(term):
     return normalize_text(f'{loc} {core}')
 
 
-def _ddgs_search_with_retry(query, max_results=20):
+def _ddgs_search_with_retry(query, max_results=20, timelimit='m', attempts=3):
     last_exc = None
-    for attempt in range(3):
+    for attempt in range(max(1, attempts)):
         try:
             return list(DDGS().text(
                 query,
                 region='kr-kr',
                 safesearch='moderate',
-                timelimit='m',
+                timelimit=timelimit,
                 max_results=max_results,
             ) or []), None
         except Exception as exc:
             last_exc = exc
-            time.sleep(0.35 * (attempt + 1))
+            time.sleep(min(2.0, 0.35 * (attempt + 1)))
     return [], last_exc
 
 def collect_search_source(source_name, domain):
@@ -1549,8 +1549,15 @@ def collect_search_source(source_name, domain):
             fallback = f'site:{domain} {_fallback_search_term(term)}'
             results, fallback_error = _ddgs_search_with_retry(fallback, max_results=20)
             if fallback_error is not None:
-                errors.append(f'{term}: {type(fallback_error).__name__}')
-                continue
+                # DDGS가 특정 시간필터/백엔드에서 연속 timeout 나는 경우가 있어
+                # 마지막에는 직렬로 한 번 쉬고 시간필터 없이 같은 site 검색을 복구 시도한다.
+                time.sleep(0.8)
+                results, recovery_error = _ddgs_search_with_retry(
+                    fallback, max_results=12, timelimit=None, attempts=2
+                )
+                if recovery_error is not None:
+                    errors.append(f'{term}: {type(recovery_error).__name__}')
+                    continue
         successful_queries += 1
 
         for item in results or []:
@@ -1582,6 +1589,7 @@ def collect_search_source(source_name, domain):
         'count': len(jobs),
         'successful_queries': successful_queries,
         'failed_queries': len(errors),
+        'degraded': bool(errors),
         'errors': errors[:3],
         'mode': '검색',
     }
