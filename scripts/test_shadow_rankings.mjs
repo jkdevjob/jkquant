@@ -44,7 +44,8 @@ rep.candidates.push({name:"gen_c_r2_v13_e1955_sl06_tp12_h18",status:"review",res
 const n=normalize("crypto",rep);
 assert.equal(n.rows.length,CATALOG.crypto.length+1);
 assert.ok(n.rows.some(x=>x.name.startsWith("gen_c_")&&x.liveCompatible),"generated crypto candidate must be ranked/live-compatible");
-assert.equal(n.rows[0].name,"vol_1.0");
+assert.equal(n.rows[0].name,"gen_c_r2_v13_e1955_sl06_tp12_h18","higher-scoring generated candidate should lead");
+assert.ok(n.rows.find(x=>x.name==="vol_1.0").rank>1,"static candidate remains ranked behind stronger generated candidate");
 assert.ok(n.rows.findIndex(x=>x.trades===0)>0,"zero evidence rows should not lead");
 assert.deepEqual(n.rows.map(x=>x.rank),Array.from({length:CATALOG.crypto.length+1},(_,i)=>i+1));
 
