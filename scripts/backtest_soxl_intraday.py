@@ -29,6 +29,7 @@ from zoneinfo import ZoneInfo
 NY = ZoneInfo("America/New_York")
 DATA = Path("data") / "soxl" / "SOXL" / "5m"
 OUT = Path("data") / "soxl-research"
+LIFECYCLE = Path("data") / "nightly-research" / "lifecycle.json"
 
 
 @dataclass(frozen=True)
@@ -43,6 +44,7 @@ class Params:
     take_profit_pct: float = 2.4
     max_hold_bars: int = 18
     friction_pct: float = 0.20
+    evaluation_start: str = ""
 
 
 VARIANTS = [
@@ -69,6 +71,39 @@ VARIANTS = [
     Params("entry_by_1045", entry_cutoff_hm=1045),
 ]
 
+
+def generated_params(name):
+    import re
+    m=re.fullmatch(r"cf_g(\d{4,})",str(name or ""))
+    if not m:
+        return None
+    g=max(1,int(m.group(1)))-1
+    axes=[
+        ("range_bars",[1,2,3,4,5,6]),
+        ("volume_mult",[0.8,0.9,1.0,1.1,1.2,1.4]),
+        ("max_hold_bars",[9,12,15,18,21,24]),
+        ("entry_cutoff_hm",[1030,1045,1100,1115,1130]),
+    ]
+    out={}
+    for key,vals in axes:
+        out[key]=vals[g%len(vals)]
+        g//=len(vals)
+    return out
+
+def generated_variants():
+    try:
+        j=json.loads(LIFECYCLE.read_text(encoding="utf-8"))
+    except Exception:
+        return []
+    life=((j.get("strategies") or {}).get("soxl") or {})
+    out=[]
+    for x in life.get("generatedPool") or []:
+        name=str((x or {}).get("name") or "")
+        p=generated_params(name)
+        if not p:
+            continue
+        out.append(Params(name,evaluation_start=str((x or {}).get("createdAfter") or ""),**p))
+    return out
 
 def et_hm(t: str) -> int:
     try:
@@ -474,6 +509,11 @@ def walk_forward(days, trade_map, train_days=30, test_days=10, step_days=10):
 
 
 def main():
+    global VARIANTS
+    dyn=generated_variants()
+    if dyn:
+        seen={p.name for p in VARIANTS}
+        VARIANTS=VARIANTS+[p for p in dyn if p.name not in seen]
     all_days = load_days()
     OUT.mkdir(parents=True, exist_ok=True)
 
@@ -496,9 +536,11 @@ def main():
     decision_map = {}
 
     for p in VARIANTS:
+        pvalid=[d for d in valid if not p.evaluation_start or str(d.get("sessionDateEt") or "")>p.evaluation_start]
+        plabels=[x["sessionDateEt"] for x in pvalid]
         trades = []
         decisions = []
-        for d in valid:
+        for d in pvalid:
             t, dec = evaluate_day(d, p)
             decisions.append(dec)
             if t:
@@ -507,8 +549,8 @@ def main():
         decision_map[p.name] = decisions
         reports.append({
             "params": asdict(p),
-            "summary": summary(trades, labels),
-            "validation": split_validation(valid, trades),
+            "summary": summary(trades, plabels),
+            "validation": split_validation(pvalid, trades),
         })
 
     baseline = trade_map["baseline"]
