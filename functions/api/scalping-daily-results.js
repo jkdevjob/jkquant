@@ -161,11 +161,32 @@ async function daytradingLiveSessions(env){
   }
   return out;
 }
+function mergeDaytradingSessions(live,fallback){
+  const primary=Array.isArray(live)?live:[];
+  const secondary=Array.isArray(fallback)?fallback:[];
+  const fbByDate=new Map(secondary.filter(x=>x&&x.date).map(x=>[String(x.date),x]));
+  const resolved=primary.map(x=>{
+    if(!x||!x.date)return x;
+    const fb=fbByDate.get(String(x.date));
+    if(!fb)return x;
+    const liveTrades=Number(x.trades||0),fallbackTrades=Number(fb.trades||0);
+    const liveVariant=String(x.mainVariant||"baseline");
+    const fallbackVariant=String(fb.mainVariant||"baseline");
+    // A zero-trade live ledger must not erase confirmed reconstructed trades
+    // when both sources represent the same operational main strategy.
+    // If a different variant was promoted, keep the live ledger as authoritative.
+    if(liveTrades===0&&fallbackTrades>0&&liveVariant===fallbackVariant){
+      return {...fb,source:"daytrading-research-confirmed",liveLedgerSource:x.source||null,liveLedgerNoTrade:true};
+    }
+    return x;
+  });
+  return mergeSessions(resolved,secondary);
+}
 async function daytradingSessions(env){
   let live=[],fallback=[];
   try{live=await daytradingLiveSessions(env);}catch(e){}
   try{fallback=await daytradingResearchSessions();}catch(e){}
-  return mergeSessions(live,fallback);
+  return mergeDaytradingSessions(live,fallback);
 }
 async function decisionSessions(path,source){
   const t=await readText(path);
@@ -277,4 +298,4 @@ export async function onRequestGet({env}){
   }),{headers:JH});
 }
 
-export {liveLedgerSummary,mergeSessions,completedGlobalCandidates};
+export {liveLedgerSummary,mergeSessions,mergeDaytradingSessions,completedGlobalCandidates};
