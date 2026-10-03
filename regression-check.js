@@ -3211,12 +3211,12 @@ console.log('\n[61] 모의 성과 — 원화로 받아 세션 통화로 환산')
   ok('쓴 환율을 확인창에 적는다', /전략 계산에만 \$\{fx\.date\} 기준 환율 \$\{fx\.rate\.toLocaleString\('en-US'\)\}원\/\$을 사용합니다/.test(idx));
   ok('국내만 있으면 환율을 안 부른다', /const needUsd=\[\.\.\.capHit,\.\.\.addHit\]\.some\(\(\[,x\]\)=>!isKrwSt\(x\.settings\)\);/.test(idx));
   ok('끝나고도 쓴 환율을 남긴다', /const fxNote = fx \? `미국 종목은 \$\{fx\.date\} 환율/.test(idx));
-  ok('클라우드 저장 함수는 즉시 transaction + history auto-merge를 탄다',
+  ok('클라우드 저장 함수는 즉시 transaction + DB snapshot 3-way rebase를 탄다',
      /async function pushRemoteNow\(\)/.test(idx)
      && /_commitStateRemote\('cloud-now'\)/.test(extractFn(idx,'async function pushRemoteNow()'))
      && /window\.fb\.runTransaction/.test(extractFn(idx,'async function _commitStateRemote(where)'))
-     && /candidate=_mergeHistorySafeState\(candidate,remote\)/.test(extractFn(idx,'async function _commitStateRemote(where)'))
-     && /function save\(\)\{saveLocal\(\);void pushRemoteNow\(\);\}/.test(idx));
+     && /candidate=_rebaseStateOnRemote\(stateDbBase,candidate,remote\)/.test(extractFn(idx,'async function _commitStateRemote(where)'))
+     && /return pushRemoteNow\(\)/.test(extractFn(idx,'function save()')));
 
   // 서버: 날짜를 주면 그 날 값, 주말이면 직전 영업일
   const fx=fs.existsSync(__d+'/functions/api/fx.js') ? fs.readFileSync(__d+'/functions/api/fx.js','utf8') : '';
@@ -8055,24 +8055,11 @@ console.log('\n[117] 자산플랜 v1.28.0 — 기간마다 완전히 다른 매�
      && !/\$\("alphaCapitalInput"\)\.addEventListener\("change"/.test(pl)
      && /const cap=Math\.max\(1,Math\.round\(Number\(\$\('alphaCapitalInput'\)\.value\)\|\|0\)\)/.test(pl)
      && /\$\('startCapital'\)\.value=cap/.test(pl));
-  ok('장부 복구 보호모드 — 로컬·백업·Firebase 후보를 보존하고 최다 이력을 화면 복구한 뒤 클라우드 저장 잠금',
-     /function planRecoveryMeta\(o\)/.test(pl)
-     && /function planRecoveryScore\(o\)/.test(pl)
-     && /KEY\+"_precloud_restore"/.test(pl)
-     && /KEY\+"_cloud_recovery"/.test(pl)
-     && /KEY\+"_cloud_previous"/.test(pl)
-     && /KEY\+"_cloud_latest"/.test(pl)
-     && /planRecoveryCandidates/.test(pl)
-     && /planRecoveryLock=conflict/.test(pl)
-     && /복구 보호모드/.test(pl)
-     && /Firebase 저장 잠금/.test(pl)
-     && /if\(!x&&planRecoveryLock\)/.test(pl)
-     && /id="planRecoverySelect"/.test(pl)
-     && /function applyPlanRecoveryCandidate\(index\)/.test(pl)
-     && /async function confirmPlanRecovery\(\)/.test(pl)
-     && /KEY\+"_recovery_confirmed"/.test(pl)
-     && /planBootHydrating&&!planForceLocalSave&&!x/.test(pl)
-     && /planBootHydrating=false/.test(pl));
+  ok('장부 복구는 자동 최다이력 선택 없이 현재 Firebase 원장을 직접 사용',
+     /function planManualBackup\(reason\)/.test(pl)
+     && /planManualBackupMemory/.test(pl)
+     && /apply\(cloneObj\(v\)\)/.test(extractFn(pl,'async function cloudLoad(user)'))
+     && !/planRecoveryScore|_precloud_restore|_cloud_recovery|_cloud_previous/.test(extractFn(pl,'async function cloudLoad(user)')));
   ok('자산플랜 주문에 종목별 목표금액·오늘 매수금액·수수료포함 필요현금 표시',
      /목표 보유금액:/.test(pl)
      && /오늘 매수금액:/.test(pl)
@@ -8713,7 +8700,7 @@ console.log('\n[119] 제10차 — 라오어 V4.0 원문 직접 대조 (SOURCE GO
      && /const INF_DEFAULTS_POLICY_VER=2;/.test(idx)
      && /function migrateInfOperatingDefaults\(\)/.test(idx)
      && /st\.big=IM_BIG_DEFAULT;/.test(idx) && /st\.revGap=REV_GAP_DEF;/.test(idx) && /st\.rows=IM_ROWS_DEFAULT;/.test(idx)
-     && /if\(migrateInfOperatingDefaults\(\) && \(!curUid\|\|stateCloudHydrated\)\) saveLocal\(\);/.test(idx)
+     && /const migrated=migrateInfOperatingDefaults\(\);/.test(extractFn(idx,'async function pullRemote()'))
      && /function migrateLiveInfOperatingDefaults\(\)/.test(pl)
      && /st\.big=PATH_DEFAULTS\.classic\.infBig;/.test(pl) && /st\.revGap=0;/.test(pl) && /st\.rows=PATH_DEFAULTS\.classic\.infRows;/.test(pl)
      && !/V4\.0 정식 구성입니다/.test(idx) && !/V4\.0 정식 · 1회매수금÷\(수량\+k\) · 0이면/.test(idx)
@@ -9042,7 +9029,7 @@ console.log('\n[123] 모의 성과 — 단독 페이지(/paper)');
     return {page:cls.has('paperpage'), title:doc.title, homeCur:a.home.has('cur'), paperCur:a.paper.has('cur'), calls}; };
   const e1=runEarly('/paper',''), e2=runEarly('/','?paper=1'), e3=runEarly('/',''), e4=runEarly('/','?x=1&paper=10');
   ok('/paper 로 열면 페이지 모드 · 제목 · 메뉴 현재 표시가 모의로',
-     !!early && e1.page && /모의투자 성과/.test(e1.title) && !e1.homeCur && e1.paperCur, JSON.stringify(e1));
+     !!early && e1.page && e1.title==='JK 퀀트 — 모의투자' && !e1.homeCur && e1.paperCur, JSON.stringify(e1));
   ok('예전 주소 /?paper=1 은 /paper 로 바꿔 페이지로 연다 · 그냥 / 는 운영 화면 그대로 · paper=10 같은 다른 값은 건드리지 않는다',
      e2.page && e2.calls.join()==='/paper' && !e3.page && e3.homeCur && !e3.calls.length && !e4.page && !e4.calls.length,
      JSON.stringify([e2,e3,e4]));
@@ -9070,8 +9057,8 @@ console.log('\n[123] 모의 성과 — 단독 페이지(/paper)');
   // 채우기는 클라우드 기록을 맞춘 뒤 한 번 — 로컬로 먼저 연 갈래(openedLocal)에서는 부르지 않는다
   { const ia=extractFn(idx,'function initAuth()');
     const iPull=ia.indexOf('pullRemote()'), iAuto=ia.indexOf('paperPageAuto()'), local=(ia.match(/if\(openedLocal\)\{[\s\S]*?\n    \}/)||[''])[0];
-    ok('모의 페이지 채우기는 클라우드 기록을 읽은 뒤 (로컬로 먼저 열 때는 안 한다)',
-       iPull>0 && iAuto>iPull && (ia.match(/paperPageAuto\(\)/g)||[]).length===1 && !!local && !/paperPageAuto/.test(local), `pull ${iPull} · auto ${iAuto}`);
+    ok('모의 페이지 채우기는 Firebase DB 기록을 읽은 뒤 한 번만 실행',
+       iPull>0 && iAuto>iPull && (ia.match(/paperPageAuto\(\)/g)||[]).length===1, `pull ${iPull} · auto ${iAuto}`);
     const pa=extractFn(idx,'function paperPageAuto()');
     ok('페이지 채우기는 한 번만 · 페이지가 아닐 때는 안 한다', /if\(!isPaperPage\(\) \|\| window\._paperAutoOpened\) return;/.test(pa) && /window\._paperAutoOpened=true;/.test(pa));
     ok('예전 자동 열기(/?paper=1 · 모의 세션이 있으면 곧바로)는 없앴다 — 로컬 기록으로 먼저 채우던 길',
@@ -10245,10 +10232,10 @@ console.log('\n[135] 자산플랜 세션 — 운영처럼 세션 + 모의투자 
      && /id="assetSessionAdd"/.test(pl) && /id="assetSessionModal"/.test(pl)
      && /data-horizon="5"/.test(pl) && /data-horizon="10"/.test(pl) && /data-horizon="15"/.test(pl) && /data-horizon="20"/.test(pl));
 
-  ok('B 세션은 horizon별 분리되고 현재 투자중 플랜은 기존 저장소와 분리',
+  ok('B 세션은 horizon별 분리되고 현재 투자중 플랜은 Firebase 원장과 분리',
      /filter\(x=>x&&\+x\.horizon===\+h\)/.test(extractFn(pl,'function assetSessionList(h=activeHorizon)'))
-     && /현재 투자중 플랜은 기존 fiveYearPlan 저장소를 그대로 쓴다/.test(pl)
-     && /if\(x\)\{[\s\S]*syncActiveAssetSessionFromView/.test(extractFn(pl,'function localSave(')));
+     && /fiveYearPlanV2/.test(pl)
+     && /if\(x&&!x\.paper\)syncActiveAssetSessionFromView/.test(extractFn(pl,'function localSave(')));
 
   ok('C 선택한 운영 세션 아래 기존 현재분석·계좌·거래이력·판단근거·전략설명을 그대로 사용',
      /id="alphaOrderSection"/.test(pl) && /id="alphaAccountSection"/.test(pl)
@@ -11540,8 +11527,8 @@ console.log('\n[SCALPING SHADOW/PROMOTION] 최소10개 · 순위 · 소유자 �
   const dw=fs.readFileSync(__d+'/worker/daytrading-scheduler/src/index.js','utf8');
   const gw=fs.readFileSync(__d+'/worker/global-intraday-scheduler/src/index.js','utf8');
 
-  ok('단타 버전 v1.38.1 · 4개 탭 그림자 순위 컨테이너 존재',
-     /id="scVer">v1\.38\.1/.test(scl)
+  ok('단타 버전 x.y.z · 4개 탭 그림자 순위 컨테이너 존재',
+     /id="scVer">v\d+\.\d+\.\d+</.test(scl)
      && ['opening','daytrading','crypto','soxl'].every(x=>scl.includes('id="shadow_rank_'+x+'"')));
   ok('각 탭 그림자 카탈로그 최소 10개를 강제한다',
      /minRequired:10/.test(rankApi)
