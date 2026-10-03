@@ -1231,10 +1231,12 @@ console.log('[23] 관리자 모드 — 접속 계정·사용자 관리');
   ok('보임 전환은 클래스로', /classList\.toggle\('admin-on', on\)/.test(idx));
   /* 승인 안 된 계정(대기·거절·차단)은 앱을 열기 전에 막는다 — 판정은 jk-access.js 한 곳(JKAccess.admit).
      값 시험은 아래 [ACCESS] 에 있다(실제 initAuth 를 가짜 이웃으로 돌린다). */
-  ok('승인 확인이 Firebase DB 원장 읽기보다 먼저 (운영)',
-     /if\(!await JKAccess\.admit\(user, accFb, \{lock:r=>accessLock\(user, r, accFb\)\}\)\) return;/.test(idx)
-     && idx.indexOf('JKAccess.admit(user, accFb')>0
-     && idx.indexOf('JKAccess.admit(user, accFb') < idx.indexOf("withTimeout(pullRemote()"));
+  { const authFlow=extractFn(idx,'function initAuth(){');
+    ok('승인 확인이 Firebase DB 원장 읽기보다 먼저 (운영)',
+       /if\(!await JKAccess\.admit\(user, accFb, \{lock:r=>accessLock\(user, r, accFb\)\}\)\) return;/.test(authFlow)
+       && authFlow.indexOf('JKAccess.admit(user, accFb')>0
+       && authFlow.indexOf('JKAccess.admit(user, accFb') < authFlow.indexOf("withTimeout(pullRemote()"));
+  }
   ok('관리자 페이지도 컬렉션 통째 읽기를 쓴다', /doc, getDoc, setDoc, collection, getDocs/.test(adm)
      && /getDocs\(window\.fb\.collection\(window\.fb\.db,'profiles'\)\)/.test(adm));
   ok('목록은 마지막 접속 최신순', /rows\.sort\(\(a,b\)=>\(\+b\.lastSeen\|\|0\)-\(\+a\.lastSeen\|\|0\)\)/.test(adm));
@@ -1279,9 +1281,12 @@ console.log('[23] 관리자 모드 — 접속 계정·사용자 관리');
      && /계정에는 관리자 권한이 없습니다/.test(adm));
 
   // 승인 안 된 계정이 데이터를 열고 나서 쫓겨나면 막은 의미가 없다
-  ok('승인 확인이 데이터 로딩보다 먼저 · 열린 뒤 취소되면 클라우드 기록을 더 열지 않는다',
-     idx.indexOf('JKAccess.admit(user, accFb') < idx.indexOf("withTimeout(pullRemote()")
-     && /if\(accessLocked\) return;/.test(idx) && idx.indexOf('if(accessLocked) return;') < idx.indexOf("withTimeout(pullRemote()"));
+  { const authFlow=extractFn(idx,'function initAuth(){');
+    ok('승인 확인이 데이터 로딩보다 먼저 · 열린 뒤 취소되면 클라우드 기록을 더 열지 않는다',
+       authFlow.indexOf('JKAccess.admit(user, accFb') < authFlow.indexOf("withTimeout(pullRemote()")
+       && /if\(accessLocked\) return;/.test(authFlow)
+       && authFlow.indexOf('if(accessLocked) return;') < authFlow.indexOf("withTimeout(pullRemote()"));
+  }
   // 판정을 두 곳에서 세면 갈라진다 — 운영에 따로 차단 판정이 남아 있으면 안 된다
   ok('운영에 따로 차단 판정이 없다 (jk-access.js 한 곳)', !/function isBlocked\(/.test(idx) && !/isBlocked\(prof\)/.test(idx));
   ok('관리자 행엔 차단 버튼이 없다', /\$\{adm\?'<span class="sub">—<\/span>':/.test(adm));
@@ -11414,14 +11419,18 @@ console.log('\n[ACCESS] 이용 승인제 — 판정 한 곳 · 모든 페이지 
   ok('자산플랜: 따로 차단 판정이 없다 (jk-access.js 한 곳)', !/async function planBlocked\(/.test(pl) && !/PLAN_ADMIN_EMAILS/.test(pl));
   {
     const hs=extractFn(pl,'onAuthStateChanged(auth,async user=>{');
+    const open=extractFn(pl,'async function finishPlanOpen(user){');
+    const fail=extractFn(pl,'function showPlanDbRetry(e){');
     ok('자산플랜: 승인 → Firebase DB 원장 → 본문 → 시세 순서',
        hs.indexOf('JKAccess.admit(user,planFb')>=0
-       && hs.indexOf('cloudLoad(user)')>hs.indexOf('JKAccess.admit(user,planFb')
-       && hs.indexOf('planGate(true)')>hs.indexOf('cloudLoad(user)')
-       && hs.indexOf('refreshLive()')>hs.indexOf('planGate(true)'));
+       && hs.indexOf('finishPlanOpen(user)')>hs.indexOf('JKAccess.admit(user,planFb')
+       && open.indexOf('cloudLoad(user)')>=0
+       && open.indexOf('planGate(true)')>open.indexOf('cloudLoad(user)')
+       && open.indexOf('refreshLive()')>open.indexOf('planGate(true)'));
     ok('자산플랜: DB 읽기 실패 시 본문을 열지 않는다',
-       /Firebase DB 원장을 불러오지 못했습니다/.test(hs)
-       && /planGate\(false\)/.test(hs));
+       /catch\(e\)\{console\.error\('plan cloud open',e\);showPlanDbRetry\(e\);\}/.test(hs)
+       && /planGate\(false\)/.test(fail)
+       && /Firebase DB 원장을 불러오지 못했습니다/.test(fail));
   }
 
   // ── 관리자 — 승인 화면 (목록 순서·상태·단추·쓰기) ──
