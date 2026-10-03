@@ -71,6 +71,8 @@ ACTIVE_SHADOW_COUNT=10
 RETIRE_STREAK_REQUIRED=3
 AUTO_PROMOTION_LEADER_SESSIONS=7
 AUTO_PROMOTION_MIN_SCORE=60.0
+FACTORY_INTERVAL_DAYS=7
+FACTORY_POOL_LIMIT=24
 
 FACTORY_AXES={
     "opening":{
@@ -107,6 +109,16 @@ def factory_params(kind,generation):
         out[key]=vals[g%len(vals)]
         g//=len(vals)
     return out
+
+def _days_between(a,b):
+    try:
+        return (datetime.fromisoformat(str(b)).date()-datetime.fromisoformat(str(a)).date()).days
+    except Exception:
+        return 999999
+
+def factory_due(previous,evidence):
+    last=str(previous.get("lastFactoryDate") or "")
+    return bool(evidence) and (not last or _days_between(last,evidence)>=FACTORY_INTERVAL_DAYS)
 
 def next_factory_candidate(kind, previous, evidence):
     g=int(previous.get("factoryGeneration") or 0)+1
@@ -213,10 +225,12 @@ def evolve_lifecycle(kind, report, previous=None):
     evidence=str(report.get("to") or report.get("from") or "")
     is_new_evidence=bool(evidence) and evidence!=str(previous.get("lastEvidenceDate") or "")
     generated_pool=list(previous.get("generatedPool") or [])
-    if is_new_evidence:
+    generated_now=False
+    if is_new_evidence and factory_due(previous,evidence):
         fresh=next_factory_candidate(kind,previous,evidence)
         if not any(str(x.get("name") or "")==fresh["name"] for x in generated_pool):
             generated_pool.append(fresh)
+            generated_now=True
     report_names=[str(x.get("name") or "") for x in (report.get("candidates") or []) if str(x.get("name") or "").startswith("cf_g")]
     pool=list(CANDIDATE_POOLS[kind])
     for name in [str(x.get("name") or "") for x in generated_pool]+report_names:
@@ -315,9 +329,13 @@ def evolve_lifecycle(kind, report, previous=None):
         "candidatePoolSize":len(pool),
         "activeCandidates":active,
         "reserveCandidates":[x for x in pool if x not in active and x not in retired_names],
-        "generatedPool":generated_pool,
+        "generatedPool":(
+            [x for x in generated_pool if str(x.get("name") or "") in active][-FACTORY_POOL_LIMIT:]
+            + [x for x in generated_pool if str(x.get("name") or "") not in active][-FACTORY_POOL_LIMIT:]
+        )[-FACTORY_POOL_LIMIT:],
         "generatedCandidates":generated_pool[-5:],
-        "factoryGeneration":int(previous.get("factoryGeneration") or 0)+(1 if is_new_evidence else 0),
+        "factoryGeneration":int(previous.get("factoryGeneration") or 0)+(1 if generated_now else 0),
+        "lastFactoryDate":evidence if generated_now else previous.get("lastFactoryDate"),
         "retired":retired[-50:],
         "poorStreaks":poor,
         "lastEvidenceDate":evidence or previous.get("lastEvidenceDate"),
