@@ -52,7 +52,7 @@ def factory_cycle_index(on_date=None):
 
 def opening_factory_names(on_date=None):
     k=factory_cycle_index(on_date);out=[]
-    pbs=[.4,.6,.8];amounts=[1.3,1.6,1.9];vols=[1.1,1.4,1.8];cuts=[910,915,920]
+    pbs=[.4,.6,.8];amounts=[1.3,1.5,1.7,1.9];vols=[1.1,1.4,1.8];cuts=[910,915,920]
     stops=[.7,.9,1.1];tps=[1.2,1.8,2.1]
     for j in range(4):
         z=k*4+j;pb=pbs[z%len(pbs)];amount=amounts[(z*3+1)%len(amounts)]
