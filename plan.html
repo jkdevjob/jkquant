@@ -265,7 +265,7 @@ setTimeout(function(){ var h=document.documentElement; if(h.classList.contains('
 </script>
 <div class="wrap">
   <div class="top">
-    <div class="brand"><div class="logo">Asset Plan</div><h1>자산플랜 <span class="ver">v1.43.0</span></h1></div>
+    <div class="brand"><div class="logo">Asset Plan</div><h1>자산플랜 <span class="ver">v1.43.1</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
       <div class="jkmenu" id="jkmenuWrap">
@@ -2836,10 +2836,74 @@ async function cloudSave(){
     return false;
   }
 }
+
+const PLAN_LEGACY_RESTORE_MARK="planLegacyRestore20261003At";
+function planLegacyFiveValid(v){
+  return !!(v&&typeof v==="object"&&v.alphaLedger&&typeof v.alphaLedger==="object");
+}
+function planLegacyStateValid(v){
+  return !!(v&&typeof v==="object"&&v.plan&&typeof v.plan==="object"&&Array.isArray(v.plan.sessions));
+}
+function planLegacyRestorePatch(d,legacyFive,legacyState,now){
+  const patch={};let changed=false;
+  if(planLegacyFiveValid(legacyFive)){
+    patch.fiveYearPlanV2=cloneObj(legacyFive);
+    patch.fiveYearPlanV2Rev=(+d.fiveYearPlanV2Rev||0)+1;
+    patch.fiveYearPlanV2Updated=now;
+    changed=true;
+  }
+  if(planLegacyStateValid(legacyState)){
+    const op=cloneObj(d.stateV2||d.state||{});
+    op.plan=cloneObj(legacyState.plan);
+    op._updated=now;
+    patch.stateV2=op;
+    patch.stateV2Rev=(+d.stateV2Rev||0)+1;
+    patch.stateV2Updated=now;
+    changed=true;
+  }
+  if(!changed)return null;
+  patch[PLAN_LEGACY_RESTORE_MARK]=now;
+  patch.planLegacyRestoreSource="legacy-browser-before-db-only";
+  return patch;
+}
+/* LEGACY_PLAN_RECOVERY_READ_ONCE_START
+   2026-10-03 DB-only 전환 직전 이 브라우저에 남아 있던 5년플랜 값을 한 번만 Firebase로 이관한다.
+   새 값을 브라우저에 저장하지 않으며, 이관 성공 후 옛 키는 삭제한다. */
+function planLegacyStore(){try{return window.localStorage;}catch(e){return null;}}
+function planReadLegacyJson(store,key){
+  if(!store)return null;
+  try{const raw=store.getItem(key);return raw?JSON.parse(raw):null;}catch(e){return null;}
+}
+function planClearLegacyKeys(store,user){
+  if(!store)return;
+  const keys=[KEY,KEY+"_manual_backup",KEY+"_precloud_restore",KEY+"_cloud_recovery",KEY+"_cloud_previous",KEY+"_cloud_latest",KEY+"_recovery_confirmed"];
+  if(user&&user.uid)keys.push("qcockpit_v2_"+user.uid);
+  for(const k of keys)try{store.removeItem(k);}catch(e){}
+}
+async function restoreMorningPlanFromLegacy(user){
+  if(!user||!window.JKAccess||!JKAccess.isAdminEmail(user.email))return false;
+  const store=planLegacyStore();if(!store)return false;
+  const legacyFive=planReadLegacyJson(store,KEY);
+  const legacyState=planReadLegacyJson(store,"qcockpit_v2_"+user.uid);
+  if(!planLegacyFiveValid(legacyFive)&&!planLegacyStateValid(legacyState))return false;
+  const ref=doc(db,"users",user.uid);let applied=false,already=false;
+  await runTransaction(db,async tx=>{
+    const snap=await tx.get(ref),d=snap.exists()?(snap.data()||{}):{};
+    if(d[PLAN_LEGACY_RESTORE_MARK]){already=true;return;}
+    const patch=planLegacyRestorePatch(d,legacyFive,legacyState,Date.now());
+    if(!patch)return;
+    tx.set(ref,patch,{merge:true});applied=true;
+  });
+  if(applied||already)planClearLegacyKeys(store,user);
+  return applied;
+}
+/* LEGACY_PLAN_RECOVERY_READ_ONCE_END */
+
 async function cloudLoad(user){
   if(!user){planCloudHydrated=true;return;}
   planCloudHydrated=false;
   try{
+    await restoreMorningPlanFromLegacy(user);
     const snap=await getDoc(doc(db,"users",user.uid)),d=snap.data()||{},hasPlanV2=!!d.fiveYearPlanV2,v=hasPlanV2?d.fiveYearPlanV2:d.fiveYearPlan;
     planCloudRev=+d.fiveYearPlanV2Rev||0;planCloudHistorySig=v?planHistorySig(v):'';
     if(v){
