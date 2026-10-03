@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import inspect
 import job_alert as j
 
 
@@ -24,6 +25,12 @@ def run():
         'Sep 16, 2026 · 매장관리·판매 ... (단기/경력무관) 습관 기록 앱 데이터 알바. 시간협의 · 대전 전체',
     )
     assert albamon != '알바몬' and '데이터 알바' in albamon
+
+    retry_src = inspect.getsource(j._ddgs_search_with_retry)
+    assert "('kr-kr', 'm')" in retry_src and "('wt-wt', None)" in retry_src
+    collect_src = inspect.getsource(j.collect_search_source)
+    assert "broad = f'\"{domain}\" {fallback_term}'" in collect_src
+    assert "domain not in domain_of(url)" in collect_src
 
     missing = {
         **a,

@@ -1522,19 +1522,27 @@ def _fallback_search_term(term):
 
 
 def _ddgs_search_with_retry(query, max_results=20):
+    """DDGS timeout/rate-limit recovery without treating one backend hiccup as a source failure."""
     last_exc = None
-    for attempt in range(3):
+    attempts = [
+        ('kr-kr', 'm'),
+        ('kr-kr', None),
+        ('wt-wt', 'm'),
+        ('wt-wt', None),
+    ]
+    for attempt, (region, timelimit) in enumerate(attempts, 1):
         try:
-            return list(DDGS().text(
-                query,
-                region='kr-kr',
-                safesearch='moderate',
-                timelimit='m',
-                max_results=max_results,
-            ) or []), None
+            kwargs = {
+                'region': region,
+                'safesearch': 'moderate',
+                'max_results': max_results,
+            }
+            if timelimit:
+                kwargs['timelimit'] = timelimit
+            return list(DDGS().text(query, **kwargs) or []), None
         except Exception as exc:
             last_exc = exc
-            time.sleep(0.35 * (attempt + 1))
+            time.sleep(min(1.5, 0.35 * attempt))
     return [], last_exc
 
 def collect_search_source(source_name, domain):
@@ -1546,11 +1554,18 @@ def collect_search_source(source_name, domain):
         query = f'site:{domain} {term}'
         results, error = _ddgs_search_with_retry(query)
         if error is not None:
-            fallback = f'site:{domain} {_fallback_search_term(term)}'
+            fallback_term = _fallback_search_term(term)
+            fallback = f'site:{domain} {fallback_term}'
             results, fallback_error = _ddgs_search_with_retry(fallback, max_results=20)
             if fallback_error is not None:
-                errors.append(f'{term}: {type(fallback_error).__name__}')
-                continue
+                # Some DDGS backends occasionally choke on site: for a specific domain.
+                # Final recovery keeps the domain in the query text, then the normal URL-domain
+                # filter below still rejects results from other sites.
+                broad = f'"{domain}" {fallback_term}'
+                results, broad_error = _ddgs_search_with_retry(broad, max_results=15)
+                if broad_error is not None:
+                    errors.append(f'{term}: {type(broad_error).__name__}')
+                    continue
         successful_queries += 1
 
         for item in results or []:
