@@ -128,6 +128,11 @@ export async function onRequestPut({request,env}){
   let report={};try{report=await request.json();}catch(e){return json({ok:false,error:"JSON body 오류"},400);}
   const reportDate=String(report.date||"");
   if(!/^\d{4}-\d{2}-\d{2}$/.test(reportDate))return json({ok:false,error:"nightly report date required"},400);
+  const today=dateParts(Date.now(),"Asia/Seoul").date;
+  if(reportDate!==today)return json({ok:false,error:"stale nightly report",reportDate,today},409);
+  if(report.mode!=="nightly-research-auto-lifecycle"||!report.guardrail||report.guardrail.liveStrategyAutoChange!==true){
+    return json({ok:false,error:"auto-promotion lifecycle report required"},409);
+  }
 
   const results={};
   for(const strategy of Object.keys(WORKERS)){
