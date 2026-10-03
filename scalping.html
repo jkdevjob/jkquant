@@ -2192,7 +2192,11 @@ function renderShadowRanking(kind,data){
   const revert=current!=='baseline'?'<button class="ghostbtn sm" onclick="promoteShadow(\''+kind+'\',\'baseline\')">↩ 원래 기준전략으로 원복</button>':'';
   const nextDate=String((((PROMOTION_STATE||{}).nextEffectiveFrom||{})[kind])||'다음 새 세션');
   const admitted=(life.admittedToday||[]),retired=(life.retiredToday||[]);
+  const recentChanges=(life.recentChanges||[]).slice().reverse().slice(0,6);
   const progress=leader?('<b>'+esc(label(leader))+'</b> · 최근 1위 <b>'+leaderDays+'/7일</b> · 점수 '+Number(auto.score||0).toFixed(1)):'1위 후보 수집 중';
+  const changeHtml=recentChanges.length?('<div style="margin-top:9px"><b>최근 개선내역</b><div class="sub" style="margin-top:4px;line-height:1.65">'+
+    recentChanges.map(x=>esc(x.date||'')+' · '+(x.type==='admit'?'신규투입':'자동퇴출')+' · '+esc(label(x.variant||''))+' · '+esc(x.reason||'')).join('<br>')+
+    '</div></div>'):'';
   const autoBox='<div class="card" style="margin:8px 0 12px;border-color:'+(auto.eligible?'rgba(54,211,153,.65)':'rgba(245,196,81,.45)')+'">'+
     '<h3 style="margin-bottom:7px">🤖 자동 전략 개선 · 메인승격</h3>'+
     '<div>'+progress+'</div>'+
@@ -2200,7 +2204,7 @@ function renderShadowRanking(kind,data){
     (auto.eligible?' · <b>조건 충족: '+esc(nextDate)+'부터 자동 메인승격</b>':'')+'</div>'+
     '<div class="row" style="margin-top:8px;gap:7px"><span class="pill good">활성 '+activeCount+'개</span><span class="pill">예비/퇴출 '+reserveCount+'개</span>'+
     (admitted.length?'<span class="pill good">신규투입 '+esc(admitted.map(label).join(', '))+'</span>':'')+
-    (retired.length?'<span class="pill">자동퇴출 '+esc(retired.map(label).join(', '))+'</span>':'')+'</div></div>';
+    (retired.length?'<span class="pill">자동퇴출 '+esc(retired.map(label).join(', '))+'</span>':'')+'</div>'+changeHtml+'</div>';
   el.innerHTML=autoBox+'<div style="margin:14px 0 7px;display:flex;gap:8px;align-items:center;flex-wrap:wrap"><b>🏁 그림자 전략 순위</b>'+
     '<span class="pill good">운영 메인 <b>'+esc(currentLabel)+'</b></span>'+revert+
     '<span class="sub">활성 최소 '+Number(data.minRequired||10)+'개 · 전체 후보 '+rows.length+'개 · '+esc(data.from||'—')+' ~ '+esc(data.to||'—')+'</span></div>'+
