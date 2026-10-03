@@ -265,7 +265,7 @@ setTimeout(function(){ var h=document.documentElement; if(h.classList.contains('
 </script>
 <div class="wrap">
   <div class="top">
-    <div class="brand"><div class="logo">Asset Plan</div><h1>자산플랜 <span class="ver">v1.42.3</span></h1></div>
+    <div class="brand"><div class="logo">Asset Plan</div><h1>자산플랜 <span class="ver">v1.43.0</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
       <div class="jkmenu" id="jkmenuWrap">
@@ -315,17 +315,6 @@ setTimeout(function(){ var h=document.documentElement; if(h.classList.contains('
     </div>
     <div class="asset-session-chips" id="assetSessionChips"></div>
     <div class="asset-session-state" id="assetSessionState">현재 투자중 플랜</div>
-  </section>
-
-  <section class="plan-recovery" id="planRecoveryBox" hidden>
-    <b>🛟 장부 복구 보호모드</b>
-    <div class="sub" id="planRecoveryText">저장된 장부 후보를 확인하고 있습니다.</div>
-    <div class="plan-recovery-controls">
-      <select id="planRecoverySelect" aria-label="복구할 장부 선택"></select>
-      <button class="btn" id="planRecoveryApply">선택 장부 화면에 적용</button>
-      <button class="btn gold" id="planRecoveryConfirm">이 장부로 복구 확정</button>
-    </div>
-    <div class="sub">복구 확정 전에는 현재 투자중 장부를 Firebase에 저장하지 않습니다. 후보를 바꿔 보면서 거래이력을 확인할 수 있습니다.</div>
   </section>
 
   <nav class="asset-detail-tabs" id="assetDetailTabs" role="tablist" aria-label="선택한 세션 상세">
@@ -912,8 +901,7 @@ const STAGES={
 
 
 let liveState=null, liveStateSource="", liveBusy=false, liveQuotes={}, pendingVrCycle=null;
-let planBootHydrating=true,planForceLocalSave=false;
-let planRecoveryLock=false,planRecoveryCandidates=[],planRecoveryApplied="";
+let planBootHydrating=true;
 let planStateCloudHydrated=false,planStateCloudRev=0,planStateConflict=false,planStateHistorySig='',planStateDbBase=null;
 let planCloudHydrated=false,planCloudRev=0,planCloudHistorySig='',planDbState=null;
 const FEE=0.0025;
@@ -1020,37 +1008,6 @@ function planHistoryRelation(a,b){
   const ap=planHistoryPreserves(a,b),bp=planHistoryPreserves(b,a);return {aPreservesB:ap,bPreservesA:bp,equal:ap&&bp};
 }
 function planHistorySig(o){return planMapSig(planHistoryMap(o));}
-/* 명시적 삭제·초기화 직전 스냅샷. 자동 덮어쓰기 방지와 별개로 사람 실수도 되돌릴 수 있게 한다. */
-let planManualBackupMemory=null;
-function planSettingsCacheCopy(o){
-  const x=cloneObj(o||{});
-  if(x.alphaLedger&&Array.isArray(x.alphaLedger.events))x.alphaLedger.events=[];
-  if(x.sleeveLedger&&Array.isArray(x.sleeveLedger.trades))x.sleeveLedger.trades=[];
-  if(Array.isArray(x.sleeveSessions))x.sleeveSessions.forEach(ss=>{
-    if(ss&&ss.ledger&&Array.isArray(ss.ledger.trades))ss.ledger.trades=[];
-  });
-  return x;
-}
-function planOperatingCacheCopy(st){
-  const x=cloneObj(st||{});
-  for(const bk of ['inf','vr','ma','ivs','dca','asap']){
-    const b=x[bk];if(!b||!Array.isArray(b.sessions))continue;
-    b.sessions.forEach(ss=>{if(ss)ss.hist=[];});
-  }
-  if(x.plan&&Array.isArray(x.plan.sessions))x.plan.sessions.forEach(ss=>{
-    if(ss&&ss.ledger&&Array.isArray(ss.ledger.events))ss.ledger.events=[];
-  });
-  return x;
-}
-function planManualBackup(reason){
-  try{
-    /* 삭제 직전 스냅샷은 이 탭 메모리에만 둔다. 브라우저 영구저장 없이 메모리에만 보관한다. */
-    planManualBackupMemory={at:Date.now(),reason:String(reason||'manual'),fiveYearPlan:cloneObj(readForm()),
-      activeAssetSession:activeAssetSession()?cloneObj(activeAssetSession()):null,
-      activeSleeveSession:activeSleeveSession()?cloneObj(activeSleeveSession()):null};
-    return true;
-  }catch(e){console.error('plan manual backup',e);return false;}
-}
 function assetLedgerSeed(date,cap){
   return {base:{date:date||todayISO(),tecl:0,tqqq:0,sgov:0,cash:+cap||0,avgTecl:null,avgTqqq:null,avgSgov:null},events:[],feeModel:'toss-us-0.1-v1'};
 }
@@ -1242,10 +1199,13 @@ async function createAssetSession(){
 }
 async function deleteAssetSession(id){
   const b=assetPlanBox(),x=b.sessions.find(s=>s.id===id);if(!x)return;
-  if(!confirm("'"+(x.name||'세션')+"'을 삭제할까요?\n현재 투자중 플랜과 다른 세션은 그대로입니다.\n삭제 직전 장부는 자동 백업합니다."))return;
-  planManualBackup('asset-session-delete:'+String(x.id||''));
+  if(!confirm("'"+(x.name||'세션')+"'을 삭제할까요?\n삭제는 Firebase DB에 즉시 반영되며 다른 세션은 그대로입니다."))return;
+  const before=cloneObj(liveState),beforePaper=assetPaperCache[id];
   b.sessions=b.sessions.filter(s=>s.id!==id);if(String(b.activeByHorizon[+x.horizon]||'')===id)b.activeByHorizon[+x.horizon]='';
-  delete assetPaperCache[id];writeAssetSessionLocal();await saveOperatingState();await loadActiveAssetSessionView(true);
+  delete assetPaperCache[id];writeAssetSessionLocal();
+  const ok=await saveOperatingState();
+  if(!ok){liveState=before;if(beforePaper)assetPaperCache[id]=beforePaper;alert('세션 삭제가 DB에 저장되지 않아 원래 상태로 되돌렸습니다.');}
+  await loadActiveAssetSessionView(true);
 }
 function guardAssetPaperEdit(){
   if(!assetPaperMode())return false;
@@ -2367,7 +2327,6 @@ async function addLedgerTrade(){
 async function delLedgerTrade(id){
   const ss=activeSleeveSession(),t=(sleeveLedger.trades||[]).find(x=>String(x.id)===String(id));if(!ss||!t)return;
   if(!confirm((t.date||'')+' '+(t.symbol||'')+' '+(t.side==='sell'?'매도':'매수')+' 기록을 삭제할까요?\n삭제는 Firebase DB에 즉시 반영됩니다.'))return;
-  planManualBackup('sleeve-trade-delete:'+String(id));
   const before=cloneObj(ss.ledger);
   sleeveLedger.trades=(sleeveLedger.trades||[]).filter(t=>String(t.id)!==String(id));renderLedger();render();
   const ok=await cloudSave();
@@ -2376,7 +2335,6 @@ async function delLedgerTrade(id){
 async function resetLedger(){
   const ss=activeSleeveSession();if(!ss){alert('선택된 QLD·SGOV 장부 세션이 없습니다.');return;}
   if(!confirm('현재 장부 세션의 시작값과 거래기록을 모두 지울까요?\n초기화는 Firebase DB에 즉시 반영됩니다.'))return;
-  planManualBackup('sleeve-ledger-reset:'+String(ss.id||''));
   const before=cloneObj(ss.ledger);
   ss.ledger={startQLD:0,startSGOV:0,startCash:0,trades:[]};bindSleeveLedger();renderLedger();render();
   const ok=await cloudSave();
@@ -2652,7 +2610,10 @@ async function alphaSaveFills(){
   if(!events.length){alert('체결된 주문이 없습니다. 미체결이면 저장하지 않아도 됩니다.');return;}
   const candidate=JSON.parse(JSON.stringify(alphaLedger));candidate.events.push(...events);const chk=alphaLedgerCalc(candidate);
   if(chk.cash<-.005){alert('현금이 '+usd(chk.cash)+'가 되어 저장할 수 없습니다. 실제 체결수량·체결가 또는 시작자금을 확인하세요.');return;}
-  alphaLedger.events.push(...events);alphaCloseFillEditor();alphaSyncInputs();renderAlphaLedger();localSave();refreshAlphaFromCache();await cloudSave();
+  const before=cloneObj(alphaLedger);
+  alphaLedger.events.push(...events);alphaCloseFillEditor();alphaSyncInputs();renderAlphaLedger();localSave();refreshAlphaFromCache();
+  const ok=await cloudSave();
+  if(!ok){alphaLedger=before;alphaSyncInputs();renderAlphaLedger();refreshAlphaFromCache();alert('체결 이력이 DB에 저장되지 않아 화면을 원래 상태로 되돌렸습니다.');}
 }
 function alphaCloseEdit(){
   alphaEditingId="";
@@ -2684,12 +2645,14 @@ async function alphaSaveEdit(){
   }
   const curChk=alphaLedgerCalc(alphaLedger),chk=alphaLedgerCalc(candidate);if(chk.invalid){alert('수정할 수 없습니다. '+chk.error);return;}
   if(chk.cash<-.005 && chk.cash<curChk.cash-.005){alert('수정하면 현금 부족이 더 커져 저장할 수 없습니다. 현재 '+usd(curChk.cash)+' → 수정 후 '+usd(chk.cash));return;}
-  alphaLedger=candidate;alphaCloseEdit();alphaSyncInputs();renderAlphaLedger();localSave();refreshAlphaFromCache();await cloudSave();
+  const before=cloneObj(alphaLedger);
+  alphaLedger=candidate;alphaCloseEdit();alphaSyncInputs();renderAlphaLedger();localSave();refreshAlphaFromCache();
+  const ok=await cloudSave();
+  if(!ok){alphaLedger=before;alphaSyncInputs();renderAlphaLedger();refreshAlphaFromCache();alert('수정 내용이 DB에 저장되지 않아 원래 상태로 되돌렸습니다.');}
 }
 async function alphaDeleteEvent(id){
   const e=(alphaLedger.events||[]).find(x=>String(x.id)===String(id));if(!e)return;
   if(!confirm('이 기록을 삭제하고 이후 잔고를 다시 계산할까요?\n삭제는 Firebase DB에 즉시 반영됩니다.'))return;
-  planManualBackup('alpha-event-delete:'+String(id));
   const before=cloneObj(alphaLedger),candidate=cloneObj(alphaLedger);candidate.events=(candidate.events||[]).filter(x=>String(x.id)!==String(id));
   const curChk=alphaLedgerCalc(alphaLedger),chk=alphaLedgerCalc(candidate);if(chk.invalid){alert('삭제할 수 없습니다. '+chk.error);return;}
   if(chk.cash<-.005&&chk.cash<curChk.cash-.005){alert('삭제하면 현금이 '+usd2(chk.cash)+'가 되어 삭제할 수 없습니다. 이 기록에 기대는 뒤 체결을 먼저 확인하세요.');return;}
@@ -2715,7 +2678,6 @@ async function alphaAddCashEvent(){
 async function alphaResetLedger(){
   const cap=Math.max(1,Math.round(Number($('alphaCapitalInput').value)||0));
   if(!confirm('A안 거래이력과 보유량을 모두 초기화하고 현금 '+usd2(cap)+'에서 처음부터 시작할까요?\n초기화는 Firebase DB에 즉시 반영됩니다.'))return;
-  planManualBackup('alpha-ledger-reset');
   const beforeLedger=cloneObj(alphaLedger),beforeStart=$('startCapital').value,beforeDate=$('startDate').value;
   $('startCapital').value=cap;$('alphaCapitalInput').value=cap;$('alphaCapitalInput').dataset.dirty='';$('startDate').value=todayISO();
   alphaLedger={base:{date:todayISO(),tecl:0,tqqq:0,sgov:0,cash:cap,avgTecl:null,avgTqqq:null,avgSgov:null},events:[],feeModel:"toss-us-0.1-v1"};
@@ -2855,7 +2817,6 @@ async function cloudSave(){
     if($("saveState"))$("saveState").textContent=ok?(x.paper?"모의 세션 DB 저장 완료":"운영 세션 DB 저장 완료"):"DB 저장 실패 · 새로고침 전 확인 필요";
     return ok;
   }
-  if(planRecoveryLock){if($("saveState"))$("saveState").textContent="복구 보호모드 · Firebase 저장 잠금";return false;}
   if(!planCloudHydrated){if($("saveState"))$("saveState").textContent="Firebase 원장 확인 전 · 저장 대기";return false;}
   let candidate=readForm();const ref=doc(db,"users",auth.currentUser.uid);
   try{
@@ -2875,75 +2836,12 @@ async function cloudSave(){
     return false;
   }
 }
-function planLedgerEventCount(o){
-  const l=o&&o.alphaLedger;
-  return l&&Array.isArray(l.events)?l.events.length:0;
-}
-function planLedgerHasActivity(o){
-  const l=o&&o.alphaLedger,b=l&&l.base||{};
-  return planLedgerEventCount(o)>0
-    || Math.max(0,+b.tecl||0)>0 || Math.max(0,+b.tqqq||0)>0 || Math.max(0,+b.sgov||0)>0;
-}
-function planRecoveryMeta(o){
-  const events=planLedgerEventCount(o),l=o&&o.alphaLedger;
-  let shares=0,last="";
-  if(l){
-    try{const s=alphaLedgerCalc(l);shares=(+s.tecl||0)+(+s.tqqq||0)+(+s.sgov||0);}catch(e){}
-    for(const e of (Array.isArray(l.events)?l.events:[])){const d=String(e&&e.date||"");if(d>last)last=d;}
-    const bd=String(l.base&&l.base.date||"");if(bd>last)last=bd;
-  }
-  return {events,shares,last,active:events>0||shares>0};
-}
-function planRecoveryScore(o){
-  const m=planRecoveryMeta(o);
-  return m.events*1000000+(m.active?100000:0)+Math.min(99999,m.shares);
-}
-function planRecoveryRead(key){
-  return planManualBackupMemory&&planManualBackupMemory.fiveYearPlan?cloneObj(planManualBackupMemory.fiveYearPlan):null;
-}
-function planRecoverySignature(o){try{return JSON.stringify(o&&o.alphaLedger||null)}catch(e){return ""}}
-function planRecoveryRender(){
-  const box=$("planRecoveryBox"),sel=$("planRecoverySelect"),txt=$("planRecoveryText");if(!box||!sel||!txt)return;
-  box.hidden=!planRecoveryLock;
-  if(!planRecoveryLock)return;
-  sel.innerHTML=planRecoveryCandidates.map((c,i)=>{
-    const m=planRecoveryMeta(c.data);
-    return '<option value="'+i+'" '+(c.name===planRecoveryApplied?'selected':'')+'>'+c.name+' · 거래 '+m.events+'건 · 보유 '+m.shares+'주'+(m.last?' · '+m.last:'')+'</option>';
-  }).join("");
-  const cur=planRecoveryCandidates.find(c=>c.name===planRecoveryApplied),m=cur?planRecoveryMeta(cur.data):{events:0,shares:0,last:""};
-  txt.textContent=(cur?cur.name:"복구 후보")+"를 화면에 적용했습니다 · 거래 "+m.events+"건 · 보유 "+m.shares+"주"+(m.last?" · 마지막 기록 "+m.last:"")+" · Firebase 저장은 잠겨 있습니다.";
-}
-function applyPlanRecoveryCandidate(index){
-  const c=planRecoveryCandidates[Number(index)];if(!c||!c.data)return;
-  apply(cloneObj(c.data));planRecoveryApplied=c.name;planRecoveryLock=true;
-  planForceLocalSave=true;try{localSave();}finally{planForceLocalSave=false;}
-  renderSessionSelectors();renderLedger();renderAlphaLedger();render();refreshAlphaFromCache();planRecoveryRender();
-  if($("saveState"))$("saveState").textContent="복구 보호모드 · "+c.name+" 적용 · Firebase 저장 잠금";
-}
-async function confirmPlanRecovery(){
-  if(!planRecoveryLock)return;
-  if(!auth.currentUser){alert("로그인 후 복구를 확정할 수 있습니다.");return;}
-  if(!confirm("현재 화면의 거래이력을 Firebase 원장으로 복구 확정할까요?\n확정 전 화면 상태는 현재 탭 메모리에만 임시 보관합니다."))return;
-  const recovered=readForm();
-  try{
-    planManualBackupMemory={at:Date.now(),reason:'recovery-confirmed',fiveYearPlan:cloneObj(recovered)};
-    const ref=doc(db,"users",auth.currentUser.uid);
-    const nextRev=await runTransaction(db,async tx=>{
-      const snap=await tx.get(ref),d=snap.exists()?(snap.data()||{}):{},nr=(+d.fiveYearPlanV2Rev||0)+1;
-      tx.set(ref,{fiveYearPlanV2:recovered,fiveYearPlanV2Rev:nr,fiveYearPlanV2Updated:Date.now()},{merge:true});return nr;
-    });
-    planCloudRev=+nextRev||planCloudRev;planCloudHistorySig=planHistorySig(recovered);planCloudHydrated=true;planDbState=cloneObj(recovered);
-    planRecoveryLock=false;planForceLocalSave=true;try{localSave();}finally{planForceLocalSave=false;}
-    planRecoveryRender();$("saveState").textContent="장부 복구 확정 · Firebase DB 저장 완료";
-  }catch(e){alert("복구 확정 저장에 실패했습니다. 현재 화면은 유지됩니다.");}
-}
 async function cloudLoad(user){
   if(!user){planCloudHydrated=true;return;}
   planCloudHydrated=false;
   try{
     const snap=await getDoc(doc(db,"users",user.uid)),d=snap.data()||{},hasPlanV2=!!d.fiveYearPlanV2,v=hasPlanV2?d.fiveYearPlanV2:d.fiveYearPlan;
     planCloudRev=+d.fiveYearPlanV2Rev||0;planCloudHistorySig=v?planHistorySig(v):'';
-    planRecoveryLock=false;planRecoveryCandidates=[];planRecoveryApplied="";
     if(v){
       planDbState=cloneObj(v);
       apply(cloneObj(v)); // 삭제된 행을 로컬 백업/이벤트수 기준으로 되살리지 않는다.
@@ -2954,7 +2852,6 @@ async function cloudLoad(user){
       apply(defaults()); // 로그인 계정은 DB가 없을 때도 브라우저 state를 원장으로 사용하지 않는다.
       if($("saveState"))$("saveState").textContent="Firebase 원장 없음 · 첫 저장 시 DB 생성";
     }
-    planRecoveryRender();
     planCloudHydrated=true;
     if(!hasPlanV2&&v)await cloudSave();
 
@@ -2981,8 +2878,6 @@ apply(d);$("slDate").value=todayISO();renderSessionSelectors();renderLedger();re
 ["startDate","targetDate","startCapital","targetCapital","monthlyAdd","targetIncome","stageMode","balMM","balVR","balQLD","balSGOV","cagrLow","cagrBase","cagrHigh","incomeBasis","incomeYield","sgovYield","extraWithdraw"].forEach(id=>$(id).addEventListener("change",render));
 $("assetSessionAdd").addEventListener("click",openAssetSessionModal);
 $("assetSessionEdit").addEventListener("click",editAssetSession);
-$("planRecoveryApply").addEventListener("click",()=>applyPlanRecoveryCandidate($("planRecoverySelect").value));
-$("planRecoveryConfirm").addEventListener("click",confirmPlanRecovery);
 $("assetDetailTabs").addEventListener("click",e=>{const b=e.target.closest('[data-asset-detail]');if(b)setAssetDetail(b.dataset.assetDetail);});
 $("assetDetailTabs").addEventListener("keydown",e=>{
   const tabs=Array.from(document.querySelectorAll('[data-asset-detail]')),i=tabs.indexOf(e.target);
