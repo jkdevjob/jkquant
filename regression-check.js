@@ -1486,7 +1486,7 @@ console.log('[28] KIS 모의투자 실행 · 주문 이력');
   ok('KIS 포지션은 KIS 로 청산', /\$\{p\.kis\?`<button class="ghostbtn sm danger" onclick="kisSellPos\(\$\{i\}\)"/.test(sc));
 
   // 나간 주문은 성공이든 실패든 남아야 한다 — 실패 사유가 "왜 그날 안 샀나"의 유일한 근거다
-  ok('성공·실패 모두 기록', /KLOG\.unshift\(rec\); saveK\(\); renderKlog\(\);/.test(sc)
+  ok('성공·실패 모두 기록', /KLOG\.unshift\(rec\);renderKlog\(\);\s*rec\.storageOk=await saveK\(\);/.test(sc)
      && /rec\.ok=!!j\.ok;/.test(sc));
   ok('수동 주문창도 같은 경로', /const rec=await kisSubmit\(\{side,code,name:nm,qty,price,priceType:mkt\?'market':'limit'\}\);/.test(sc));
   ok('단타 상태도 Firebase transaction + 3-way rebase로 남긴다',
@@ -8055,11 +8055,9 @@ console.log('\n[117] 자산플랜 v1.28.0 — 기간마다 완전히 다른 매�
      && !/\$\("alphaCapitalInput"\)\.addEventListener\("change"/.test(pl)
      && /const cap=Math\.max\(1,Math\.round\(Number\(\$\('alphaCapitalInput'\)\.value\)\|\|0\)\)/.test(pl)
      && /\$\('startCapital'\)\.value=cap/.test(pl));
-  ok('장부 복구는 자동 최다이력 선택 없이 현재 Firebase 원장을 직접 사용',
-     /function planManualBackup\(reason\)/.test(pl)
-     && /planManualBackupMemory/.test(pl)
-     && /apply\(cloneObj\(v\)\)/.test(extractFn(pl,'async function cloudLoad(user)'))
-     && !/planRecoveryScore|_precloud_restore|_cloud_recovery|_cloud_previous/.test(extractFn(pl,'async function cloudLoad(user)')));
+  ok('장부 복구 보호모드 없이 현재 Firebase 원장을 직접 사용',
+     /apply\(cloneObj\(v\)\)/.test(extractFn(pl,'async function cloudLoad(user)'))
+     && !/planManualBackup|planManualBackupMemory|planRecovery|복구 보호모드/.test(pl));
   ok('자산플랜 주문에 종목별 목표금액·오늘 매수금액·수수료포함 필요현금 표시',
      /목표 보유금액:/.test(pl)
      && /오늘 매수금액:/.test(pl)
@@ -11364,7 +11362,7 @@ console.log('\n[ACCESS] 이용 승인제 — 판정 한 곳 · 모든 페이지 
      idx.includes('<script src="/jk-access.js"></script>') && pl.includes('<script src="/jk-access.js"></script>') && adm.includes('<script src="/jk-access.js"></script>')
      && /JKAccess\.admit\(user, accFb/.test(idx) && /JKAccess\.admit\(user,planFb/.test(pl) && /JKAccess\.decide\(\{email:r\.email\}, r\)/.test(adm));
   ok('단타 두 화면은 소유자만 (서버 /api/owner 판정 · 로그인 토큰)',
-     /fetch\('\/api\/owner',\{cache:'no-store',headers:\{'Authorization':'Bearer '\+tok\}\}\)/.test(scal) && /fetch\("\/api\/owner"/.test(cla) && /Bearer "\+\(await user\.getIdToken\(\)\)/.test(cla));
+     /fetch\('\/api\/owner',\{cache:'no-store',signal:ctl\.signal,headers:\{'Authorization':'Bearer '\+tok\}\}\)/.test(scal) && /fetch\("\/api\/owner"/.test(cla) && /Bearer "\+\(await user\.getIdToken\(\)\)/.test(cla));
   { const lists=[
       ['jk-access.js', (accSrc.match(/var ADMIN_EMAILS=(\[[^\]]*\])/)||[])[1]],
       ['index.html',   (idx.match(/const ADMIN_EMAILS=(\[[^\]]*\])/)||[])[1]],

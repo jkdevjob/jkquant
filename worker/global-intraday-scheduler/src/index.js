@@ -123,11 +123,35 @@ export class PaperStore extends DurableObject{
       await this.ctx.storage.put("ledger",ledger);
       return json({ok:true,ledger});
     }
+    if(request.method==="GET"&&u.pathname==="/paper-index"){
+      return json({ok:true,dates:(await this.ctx.storage.get("paperDates"))||[]});
+    }
+    if(request.method==="POST"&&u.pathname==="/paper-index"){
+      const b=await request.json(),date=String(b&&b.date||"");
+      if(!/^\d{4}-\d{2}-\d{2}$/.test(date))return json({ok:false,error:"invalid paper date"},400);
+      const dates=Array.from(new Set([...(await this.ctx.storage.get("paperDates")||[]),date])).sort();
+      await this.ctx.storage.put("paperDates",dates);
+      return json({ok:true,dates});
+    }
     return json({ok:false,error:"not found"},404);
   }
 }
 function paperStore(env,strategy,date){return env.PAPER_STORE.get(env.PAPER_STORE.idFromName(strategy+":"+date));}
+function paperIndexStore(env,strategy){return env.PAPER_STORE.get(env.PAPER_STORE.idFromName("__paper_index__:"+strategy));}
 function configStore(env,strategy){return env.PAPER_STORE.get(env.PAPER_STORE.idFromName("__gpt_strategy_config__:"+strategy));}
+async function readPaperDates(env,strategy){
+  const r=await paperIndexStore(env,strategy).fetch("https://paper.internal/paper-index");
+  const j=await r.json().catch(()=>({}));
+  return Array.isArray(j.dates)?j.dates:[];
+}
+async function rememberPaperDate(env,strategy,date){
+  const r=await paperIndexStore(env,strategy).fetch("https://paper.internal/paper-index",{
+    method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({date})
+  });
+  const j=await r.json().catch(()=>({}));
+  if(!r.ok||!j.ok)throw new Error(j.error||("paper index HTTP "+r.status));
+  return j.dates||[];
+}
 async function readStrategyConfig(env,strategy){
   const r=await configStore(env,strategy).fetch("https://paper.internal/config?strategy="+encodeURIComponent(strategy));
   const j=await r.json().catch(()=>({}));
@@ -154,7 +178,19 @@ async function writePaper(env,ledger){
   const r=await paperStore(env,ledger.strategy,ledger.date).fetch("https://paper.internal/paper",{
     method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(ledger)
   });
-  const j=await r.json(); if(!r.ok||!j.ok)throw new Error(j.error||("paper store HTTP "+r.status)); return j.ledger;
+  const j=await r.json();
+  if(!r.ok||!j.ok)throw new Error(j.error||("paper store HTTP "+r.status));
+  await rememberPaperDate(env,ledger.strategy,ledger.date);
+  return j.ledger;
+}
+async function readPaperHistory(env,strategy,limit=120){
+  const dates=(await readPaperDates(env,strategy)).slice().sort().reverse().slice(0,Math.max(1,Math.min(3650,Number(limit)||120)));
+  const ledgers=[];
+  for(const date of dates){
+    const ledger=await readPaper(env,strategy,date).catch(()=>null);
+    if(ledger)ledgers.push(ledger);
+  }
+  return {dates,ledgers};
 }
 function paperLedger(strategy,date,t,opts={}){
   const currency=opts.currency||"USD",timezone=opts.timezone||"UTC",version=opts.version||"",friction=Number(opts.friction||0);
@@ -450,7 +486,7 @@ export default {
   async scheduled(controller,env,ctx){ctx.waitUntil(run(env));},
   async fetch(request,env){
     const u=new URL(request.url);
-    if(u.pathname==="/health")return json({ok:true,service:"jkquant-global-intraday-scheduler",schedule:"every minute",strategies:["crypto","soxl"],crypto:{strategyVersion:BTC_STRATEGY_VERSION,openingRange:"00:00~00:05 KST",newEntryThrough:"22:00 KST",exitTrackingThrough:"23:05 KST"},soxl:{symbol:"SOXL",strategyVersion:SOXL_STRATEGY_VERSION,openingRange:"09:30~09:45 ET",newEntryThrough:"11:30 ET",paperTrackingThrough:"16:05 ET",overnight:false},mode:"research-paper-alert-no-order",manualPromotion:"owner button -> next session lock"});
+    if(u.pathname==="/health")return json({ok:true,service:"jkquant-global-intraday-scheduler",schedule:"every minute",strategies:["crypto","soxl"],paperStore:"Durable Object SQLite + per-strategy date index",crypto:{strategyVersion:BTC_STRATEGY_VERSION,openingRange:"00:00~00:05 KST",newEntryThrough:"22:00 KST",exitTrackingThrough:"23:05 KST"},soxl:{symbol:"SOXL",strategyVersion:SOXL_STRATEGY_VERSION,openingRange:"09:30~09:45 ET",newEntryThrough:"11:30 ET",paperTrackingThrough:"16:05 ET",overnight:false},mode:"research-paper-alert-no-order",manualPromotion:"owner button -> next session lock"});
     if(u.pathname==="/bars"){
       if(!authorized(request,env))return json({ok:false,error:"unauthorized"},401);
       const strategy=String(u.searchParams.get("strategy")||"").toLowerCase();
@@ -478,6 +514,14 @@ export default {
       const now=Date.now(),tz=strategy==="crypto"?"Asia/Seoul":"America/New_York";
       const date=String(u.searchParams.get("date")||parts(now,tz).date);
       return json({ok:true,strategy,date,ledger:await readPaper(env,strategy,date)});
+    }
+    if(u.pathname==="/paper-history"){
+      if(!authorized(request,env))return json({ok:false,error:"unauthorized"},401);
+      const strategy=String(u.searchParams.get("strategy")||"").toLowerCase();
+      if(!["crypto","soxl"].includes(strategy))return json({ok:false,error:"unsupported strategy"},400);
+      const limit=Math.max(1,Math.min(3650,Number(u.searchParams.get("limit")||120)));
+      const h=await readPaperHistory(env,strategy,limit);
+      return json({ok:true,strategy,dates:h.dates,ledgers:h.ledgers});
     }
     return json({ok:false,error:"not found"},404);
   }

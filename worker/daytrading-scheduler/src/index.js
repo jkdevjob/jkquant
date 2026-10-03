@@ -118,6 +118,16 @@ export class SnapshotStore extends DurableObject {
       await this.ctx.storage.put("paperLedger",ledger);
       return json({ok:true,ledger});
     }
+    if(request.method==="GET"&&u.pathname==="/paper-index"){
+      return json({ok:true,dates:(await this.ctx.storage.get("paperDates"))||[]});
+    }
+    if(request.method==="POST"&&u.pathname==="/paper-index"){
+      const b=await request.json(),date=String(b&&b.date||"");
+      if(!/^\d{4}-\d{2}-\d{2}$/.test(date))return json({ok:false,error:"invalid paper date"},400);
+      const dates=Array.from(new Set([...(await this.ctx.storage.get("paperDates")||[]),date])).sort();
+      await this.ctx.storage.put("paperDates",dates);
+      return json({ok:true,dates});
+    }
     return json({ok:false,error:"not found"},404);
   }
 }
@@ -125,7 +135,21 @@ export class SnapshotStore extends DurableObject {
 function store(env,date){
   return env.SNAPSHOT_STORE.get(env.SNAPSHOT_STORE.idFromName(date));
 }
+function paperIndexStore(env){return env.SNAPSHOT_STORE.get(env.SNAPSHOT_STORE.idFromName("__paper_index__"));}
 function configStore(env){return env.SNAPSHOT_STORE.get(env.SNAPSHOT_STORE.idFromName("__gpt_daytrading_strategy_config__"));}
+async function readPaperDates(env){
+  const r=await paperIndexStore(env).fetch("https://snapshot.internal/paper-index");
+  const j=await r.json().catch(()=>({}));
+  return Array.isArray(j.dates)?j.dates:[];
+}
+async function rememberPaperDate(env,date){
+  const r=await paperIndexStore(env).fetch("https://snapshot.internal/paper-index",{
+    method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({date})
+  });
+  const j=await r.json().catch(()=>({}));
+  if(!r.ok||!j.ok)throw new Error(j.error||("paper index HTTP "+r.status));
+  return j.dates||[];
+}
 async function readStrategyConfig(env){
   const r=await configStore(env).fetch("https://snapshot.internal/config");
   const j=await r.json().catch(()=>({}));
@@ -161,7 +185,17 @@ async function writePaper(env,ledger){
   });
   const j=await r.json();
   if(!r.ok||!j.ok)throw new Error(j.error||("paper store HTTP "+r.status));
+  await rememberPaperDate(env,ledger.date);
   return j.ledger;
+}
+async function readPaperHistory(env,limit=120){
+  const dates=(await readPaperDates(env)).slice().sort().reverse().slice(0,Math.max(1,Math.min(3650,Number(limit)||120)));
+  const ledgers=[];
+  for(const date of dates){
+    const ledger=await readPaper(env,date).catch(()=>null);
+    if(ledger)ledgers.push(ledger);
+  }
+  return {dates,ledgers};
 }
 async function captureSnapshot(env,date){
   const now=kstParts();
@@ -513,7 +547,7 @@ export default {
     if(u.pathname==="/health")return json({
       ok:true,service:"jkquant-daytrading-scheduler",
       schedule:"09:55 snapshot + 10:00~14:31 signal scans + 14:32~15:11 paper exits",
-      paper:{maxTrades:PAPER_MAX_TRADES,stopPct:PAPER_STOP_PCT,takeProfitPct:PAPER_TAKE_PROFIT_PCT,finalExit:PAPER_FINAL_EXIT_HM,frictionPct:PAPER_FRICTION_PCT}
+      paper:{maxTrades:PAPER_MAX_TRADES,stopPct:PAPER_STOP_PCT,takeProfitPct:PAPER_TAKE_PROFIT_PCT,finalExit:PAPER_FINAL_EXIT_HM,frictionPct:PAPER_FRICTION_PCT,store:"Durable Object SQLite + date index"}
     });
     if(u.pathname==="/config"){
       if(!authorized(request,env))return json({ok:false,error:"unauthorized"},401);
@@ -537,6 +571,12 @@ export default {
       const date=String(u.searchParams.get("date")||kstParts().date);
       const ledger=await readPaper(env,date);
       return json({ok:true,date,ledger});
+    }
+    if(u.pathname==="/paper-history"){
+      if(!authorized(request,env))return json({ok:false,error:"unauthorized"},401);
+      const limit=Math.max(1,Math.min(3650,Number(u.searchParams.get("limit")||120)));
+      const h=await readPaperHistory(env,limit);
+      return json({ok:true,dates:h.dates,ledgers:h.ledgers});
     }
     return json({ok:false,error:"not found"},404);
   }

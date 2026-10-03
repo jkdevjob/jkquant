@@ -138,6 +138,14 @@ async function readDaytradingPaper(env,date){
   if(!r.ok||!j.ok)throw new Error(j.error||("daytrading worker HTTP "+r.status));
   return j.ledger||null;
 }
+async function readDaytradingPaperHistory(env,limit=8){
+  const key=globalKey(env);if(!key)throw new Error("daytrading monitor key missing");
+  const worker=String(env.DAYTRADING_WORKER_URL||DAYTRADING_WORKER_FALLBACK).replace(/\/$/,"");
+  const r=await fetch(worker+"/paper-history?limit="+Math.max(1,Math.min(120,Number(limit)||8)),{headers:{"Accept":"application/json","x-monitor-key":key}});
+  const j=await r.json().catch(()=>({}));
+  if(!r.ok||!j.ok)throw new Error(j.error||("daytrading history HTTP "+r.status));
+  return Array.isArray(j.ledgers)?j.ledgers:[];
+}
 function daytradingLedgerSummary(ledger,date){
   const all=Array.isArray(ledger&&ledger.trades)?ledger.trades:[];
   const closed=all.filter(x=>x&&x.status==="closed"&&Number.isFinite(Number(x.pnl)));
@@ -151,15 +159,26 @@ function daytradingLedgerSummary(ledger,date){
   };
 }
 async function daytradingLiveSessions(env){
-  const out=[];
-  for(const date of completedKrCandidates()){
+  const out=[],candidates=completedKrCandidates(),completed=new Set(candidates);
+  try{
+    const indexed=await readDaytradingPaperHistory(env,12);
+    for(const ledger of indexed){
+      const date=String(ledger&&ledger.date||"");
+      if(date&&completed.has(date))out.push(daytradingLedgerSummary(ledger,date));
+      if(out.length>=2)break;
+    }
+  }catch(e){}
+  if(out.length>=2)return out;
+  const seen=new Set(out.map(x=>x.date));
+  for(const date of candidates){
+    if(seen.has(date))continue;
     try{
       const ledger=await readDaytradingPaper(env,date);
-      if(ledger)out.push(daytradingLedgerSummary(ledger,date));
+      if(ledger){out.push(daytradingLedgerSummary(ledger,date));seen.add(date);}
     }catch(e){}
     if(out.length>=2)break;
   }
-  return out;
+  return out.sort((a,b)=>String(b.date).localeCompare(String(a.date))).slice(0,2);
 }
 function mergeDaytradingSessions(live,fallback){
   const primary=Array.isArray(live)?live:[];
@@ -224,6 +243,16 @@ async function readGlobalPaper(env,strategy,date){
   if(!r.ok||!j.ok)throw new Error(j.error||("global worker HTTP "+r.status));
   return j.ledger||null;
 }
+async function readGlobalPaperHistory(env,strategy,limit=8){
+  const key=globalKey(env);
+  if(!key)throw new Error("global intraday monitor key missing");
+  const worker=String(env.GLOBAL_INTRADAY_WORKER_URL||GLOBAL_WORKER_FALLBACK).replace(/\/$/,"");
+  const q=new URLSearchParams({strategy,limit:String(Math.max(1,Math.min(120,Number(limit)||8)))});
+  const r=await fetch(worker+"/paper-history?"+q.toString(),{headers:{"Accept":"application/json","x-monitor-key":key}});
+  const j=await r.json().catch(()=>({}));
+  if(!r.ok||!j.ok)throw new Error(j.error||("global history HTTP "+r.status));
+  return Array.isArray(j.ledgers)?j.ledgers:[];
+}
 function completedGlobalCandidates(strategy,now=Date.now()){
   if(strategy==="crypto"){
     const k=tzParts("Asia/Seoul",now),out=[];
@@ -241,17 +270,28 @@ function completedGlobalCandidates(strategy,now=Date.now()){
   return out;
 }
 async function globalPaperSessions(env,strategy){
-  const out=[];
-  for(const date of completedGlobalCandidates(strategy)){
+  const out=[],candidates=completedGlobalCandidates(strategy),completed=new Set(candidates);
+  try{
+    const indexed=await readGlobalPaperHistory(env,strategy,12);
+    for(const ledger of indexed){
+      const date=String(ledger&&ledger.date||"");
+      if(date&&completed.has(date))out.push(liveLedgerSummary(ledger,date,"global-paper-db"));
+      if(out.length>=2)break;
+    }
+  }catch(e){}
+  if(out.length>=2)return out;
+  const seen=new Set(out.map(x=>x.date));
+  for(const date of candidates){
+    if(seen.has(date))continue;
     try{
       const ledger=await readGlobalPaper(env,strategy,date);
-      if(ledger)out.push(liveLedgerSummary(ledger,date,"global-paper-live"));
+      if(ledger){out.push(liveLedgerSummary(ledger,date,"global-paper-live"));seen.add(date);}
     }catch(e){
-      // 개별 날짜 조회 실패가 오늘 화면 전체를 막지 않게 다음 후보를 계속 본다.
+      // 기존 배포에는 paper-history가 없을 수 있으므로 날짜별 조회를 계속 fallback한다.
     }
     if(out.length>=2)break;
   }
-  return out;
+  return out.sort((a,b)=>String(b.date).localeCompare(String(a.date))).slice(0,2);
 }
 async function liveFirstSessions(env,strategy,path,source){
   let live=[],fallback=[],liveError=null,fallbackError=null;

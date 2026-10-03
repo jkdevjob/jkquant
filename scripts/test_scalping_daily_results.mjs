@@ -67,6 +67,13 @@ assert.equal(dayHistory.daily.length,2);
 assert.ok(Math.abs(dayHistory.daily[0].returnPct-(2/3))<1e-12); // 2% net / 3 fixed slots
 assert.ok(Math.abs(dayHistory.daily[1].returnPct-0.5)<1e-12);   // one trade, two unused cash slots
 
+const dbNoTrade=historyDailyRisk([
+  {date:"2026-10-01",pnl:1.5}
+],"daytrading",["2026-10-01","2026-10-02"]);
+assert.equal(dbNoTrade.daily.length,2);
+assert.equal(dbNoTrade.daily[1].date,"2026-10-02");
+assert.equal(dbNoTrade.daily[1].returnPct,0); // durable DB no-trade date remains in cumulative curve
+
 const openingHistory=historyDailyRisk([
   {date:"2026-10-01",pnl:3.0},
   {date:"2026-10-01",pnl:-1.0}
