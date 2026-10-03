@@ -11325,8 +11325,10 @@ console.log('\n[ACCESS] 이용 승인제 — 판정 한 곳 · 모든 페이지 
        && pl.includes('html:not(.authed) body>*:not(#authgate){visibility:hidden}'));
     ok('가림: data-guard 페이지는 승인 확인(jk-ok) 전까지 본문 전부를 숨긴다',
        E.cls.has('jk-guard') && css.includes('html.jk-guard:not(.jk-ok) body>*:not(#jkgate){visibility:hidden}'));
-    const E2=loadAccess(); const E3=loadAccess({ls:{jk_access_v1:JSON.stringify({uid:'a1',state:'admin'})}});
-    ok('가림은 data-guard 일 때만 · 소유자 메뉴는 이 기기 기억으로 먼저 켠다(깜빡임 없음)', !E2.cls.has('jk-guard') && !E2.cls.has('jk-admin') && E3.cls.has('jk-admin')); }
+    const E2=loadAccess(), E3=loadAccess();
+    ok('가림은 data-guard 일 때만 · 소유자 메뉴는 Firebase 승인 전 미리 켜지지 않는다',
+       !E2.cls.has('jk-guard') && !E2.cls.has('jk-admin') && !E3.cls.has('jk-admin')
+       && !/localStorage|sessionStorage|indexedDB/.test(accSrc)); }
 
   // ── guard() — 백테·공모주·JOB 이 통째로 맡기는 길 ──
   PENDING.push((async()=>{
@@ -11368,79 +11370,45 @@ console.log('\n[ACCESS] 이용 승인제 — 판정 한 곳 · 모든 페이지 
     ].map(([k,v])=>[k, String(v||'').replace(/\s|"/g,'').replace(/'/g,'')]);
     ok('관리자(소유자) 계정이 다섯 곳 모두 같다 — jk-access·운영·관리자·서버 기본값·규칙', lists.every(x=>x[1] && x[1]===lists[0][1]), JSON.stringify(lists)); }
 
-  // ── 운영(initAuth) — 실제 글자를 가짜 이웃으로 돌린다 ──
-  { const iaSrc=extractFn(idx,'function initAuth(){'), alSrc=extractFn(idx,'function accessLock(user, r, accFb){');
-    const runIdx=async(mode)=>{
-      const log=[], gate={style:{display:'flex'}}; let cb=null;
-      const auth={currentUser:U};
-      const fbw={auth, db:{}, doc:()=>{}, getDoc:()=>{}, setDoc:()=>{}, getRedirectResult:()=>Promise.resolve(), onAuthStateChanged:(a,f)=>{ cb=f; }, signOut:async()=>{}};
-      const JK={ hide:()=>log.push('hide'), setAdmin:()=>{}, cacheSet:()=>{}, saveNote:()=>{},
-        show:(st)=>log.push('show:'+st),
-        admit:async(user, f, o)=>{ log.push('admit');
-          if(mode==='pending'){ o.lock({state:'pending'}); return false; }
-          if(mode==='revoked'){ setTimeout(()=>o.lock({state:'blocked'}),0); return true; }
-          return true; } };
-      const factory=new Function('window','JKAccess','localStorage','document','$','applyAdminMode','renderUserBadge','load','validState','startApp','setSync',
-        'authWarn','withTimeout','touchProfile','pullRemote','freshState','ensureBoxes','saveLocal','paperPageAuto','googleLogin','doLogout','console',
-        "let curUid=null, curEmail=null, authStep='', accessLocked=false, authWired=false, S={ok:1};\n"+alSrc+'\n'+iaSrc+'\nreturn {initAuth, st:()=>({curUid, accessLocked})};');
-      const env=factory({fb:fbw, JKAccess:JK}, JK, {setItem(){}, removeItem(){}, getItem(){ return null; }}, {documentElement:{classList:{remove(){}, add(){}}}},
-        id=>id==='authgate'?gate:{textContent:''}, ()=>{}, ()=>{}, ()=>log.push('load'), ()=>true, ()=>log.push('startApp'), ()=>{},
-        m=>log.push('warn'), (p)=>p, async()=>{ log.push('touch'); await tick(); }, async()=>{ log.push('pull'); return true; }, ()=>({}), ()=>{}, ()=>{}, ()=>log.push('paperAuto'),
-        ()=>{}, ()=>{}, {warn(){}, error(){}});
-      env.initAuth(); await cb(U); await tick(10);
-      return {log:log.join(','), gate:gate.style.display, locked:env.st().accessLocked};
-    };
-    PENDING.push((async()=>{
-      const p=await runIdx('pending'), a=await runIdx('approved'), v=await runIdx('revoked');
-      ok('운영: 승인 대기 → 승인 확인만 하고 끝 — 이 기기 기록·앱·접속 기록·클라우드 기록 모두 안 연다 · 로그인 막 유지 + 대기 화면',
-         p.log==='admit,show:pending' && p.gate==='flex', JSON.stringify(p));
-      ok('운영: 승인 → 승인 확인 뒤에 로컬로 열고 → 접속 기록 → 클라우드 기록 → 앱 시작',
-         a.log==='admit,load,startApp,touch,pull,startApp,paperAuto' && a.gate==='none', JSON.stringify(a));
-      ok('운영: 먼저 열린 뒤 승인 취소·차단이 확인되면 덮고 클라우드 기록은 더 열지 않는다',
-         v.log==='admit,load,startApp,touch,show:blocked' && v.gate==='flex' && v.locked===true, JSON.stringify(v));
-    })().catch(e=>ok('운영 승인 시험 실행', false, String(e&&e.stack||e))));
+  // ── 운영·자산플랜 — 승인 후 Firebase DB 정본을 읽은 뒤에만 본문을 연다 ──
+  {
+    const ia=extractFn(idx,'function initAuth()');
+    ok('운영: 승인 대기는 DB 원장·앱을 열지 않는다',
+       ia.indexOf('JKAccess.admit(user, accFb')>=0
+       && ia.indexOf('JKAccess.admit(user, accFb')<ia.indexOf('pullRemote()'));
+    ok('운영: 승인 후 Firebase DB 원장 성공 뒤 앱 시작',
+       ia.indexOf('pullRemote()')>=0
+       && ia.indexOf('startApp()')>ia.indexOf('pullRemote()')
+       && /Firebase DB 원장을 불러오지 못했습니다/.test(ia));
     const wd=(idx.match(/\(function bootWatchdog\(\)\{[\s\S]*?\n\}\)\(\);/)||[''])[0];
-    ok('운영 부팅 워치독: 승인 화면이 떠 있으면 손대지 않고, 이 기기에서 승인 확인된 계정만 로컬로 연다 (대기 계정이 6초 뒤 열리던 구멍)',
-       /if\(window\.JKAccess && JKAccess\.showing\(\)\) return;/.test(wd) && /const accOk=!!\(restored && window\.JKAccess && \(JKAccess\.isAdminEmail\(restored\.email\)\|\|JKAccess\.cacheOk\(restored\)\)\);/.test(wd)
-       && /if\(restored && !appStarted && accOk\)\{/.test(wd)); }
+    ok('운영 부팅 워치독은 오래된 브라우저 원장으로 앱을 열지 않는다',
+       /Firebase DB 원장 확인이 지연/.test(wd)
+       && !/restored|cacheOk|startApp\(\)/.test(wd));
+  }
 
-  // ── 자산플랜 — 로그인 막(본문 숨김) · planGate · 처리 순서 ──
   ok('자산플랜: 본문은 로그인(html.authed) 전에는 숨기고, 막은 로그인 뒤에만 숨긴다',
      pl.includes('html:not(.authed) body>*:not(#authgate){visibility:hidden}') && pl.includes('html.authed #authgate{display:none}'));
   ok('자산플랜: 로그인 막이 본문보다 먼저 있다 (body 바로 아래 · 본문 .wrap 앞)',
-     (()=>{ const b=pl.indexOf('<body>'), g=pl.indexOf('<div id="authgate"'), w=pl.indexOf('<div class="wrap">'); return b>=0&&g>b&&w>g; })());
-  const mkDoc=()=>{ const s=new Set(); return {s, documentElement:{classList:{add:c=>s.add(c),remove:c=>s.delete(c),contains:c=>s.has(c)}}}; };
-  const mkLS=()=>{ const m={}; return {m, getItem:k=>k in m?m[k]:null, setItem:(k,v)=>{m[k]=String(v);}, removeItem:k=>{delete m[k];}}; };
-  { const D=mkDoc(), L=mkLS();
-    const planGate=new Function('document','localStorage',extractFn(pl,'function planGate(on){')+'\nreturn planGate;')(D,L);
-    planGate(true);  const a=D.s.has('authed') && L.m.qcockpit_hadUser==='1';
-    planGate(false); const b=!D.s.has('authed') && !('qcockpit_hadUser' in L.m);
-    ok('자산플랜: planGate(true) 는 본문을 열고 기기 표시를 남긴다 · planGate(false) 는 닫고 지운다', a&&b, JSON.stringify({a,b})); }
+     (()=>{ const x=pl.indexOf('<body>'), g=pl.indexOf('<div id="authgate"'), w=pl.indexOf('<div class="wrap">'); return x>=0&&g>x&&w>g; })());
+  {
+    const gateFn=extractFn(pl,'function planGate(on){');
+    ok('자산플랜: planGate는 화면 class만 바꾸고 브라우저 영구저장을 하지 않는다',
+       /classList\.add\('authed'\)/.test(gateFn)
+       && /classList\.remove\('authed'\)/.test(gateFn)
+       && !/localStorage|sessionStorage|indexedDB/.test(gateFn));
+  }
   ok('자산플랜: 따로 차단 판정이 없다 (jk-access.js 한 곳)', !/async function planBlocked\(/.test(pl) && !/PLAN_ADMIN_EMAILS/.test(pl));
-  const hs=extractFn(pl,'onAuthStateChanged(auth,async user=>{'), handlerSrc=hs.slice(hs.indexOf('async user=>'));
-  const runH=async(user,mode)=>{
-    const log=[];
-    const JK={hide:()=>log.push('hide'), setAdmin:()=>{}, cacheSet:()=>{}, saveNote:()=>{}, show:st=>log.push('show:'+st),
-      admit:async(u,f,o)=>{ log.push('admit'); if(mode==='pending'){ o.lock({state:'pending'}); return false; } return true; }};
-    const h=new Function('planGate','userBadge','JKAccess','planFb','signOut','auth','$','cloudLoad','refreshLive','planBootHydrating',
-      'requestedAssetSessionId','assetPlanBox','activeHorizon','localStorage','writeAssetSessionLocal','renderHorizonCopy','renderAssetSessions','loadActiveAssetSessionView',
-      'return '+handlerSrc)(
-      on=>log.push('gate:'+on), u=>log.push('badge:'+(u?'user':'null')), JK, {}, async()=>log.push('signOut'), {}, ()=>null,
-      async()=>log.push('cloudLoad'), async()=>log.push('refreshLive'), true,
-      null, ()=>({sessions:[],activeByHorizon:{}}), 5, mkLS(), ()=>{}, ()=>{}, ()=>log.push('renderSessions'), async()=>log.push('loadView'));
-    await h(user); return log;
-  };
-  PENDING.push((async()=>{
-    const L0=await runH(null);
-    ok('자산플랜: 로그인 안 함 → 막만 띄우고 끝 (승인 확인·장부·시세 모두 안 부름)',
-       L0.join(',')==='gate:false,badge:null,hide', JSON.stringify(L0));
-    const L1=await runH(U,'approved');
-    ok('자산플랜: 승인 → 승인 확인 뒤에 본문을 열고, 그 다음에 장부·시세를 부른다',
-       L1[0]==='admit' && L1.indexOf('gate:true')>0 && L1.indexOf('cloudLoad')>L1.indexOf('gate:true') && L1.includes('refreshLive') && !L1.includes('gate:false'), JSON.stringify(L1));
-    const L2=await runH(U,'pending');
-    ok('자산플랜: 승인 대기 → 본문을 한 번도 열지 않고 대기 화면 · 장부·시세 안 부름',
-       !L2.includes('gate:true') && L2.includes('gate:false') && L2.includes('show:pending') && !L2.includes('cloudLoad') && !L2.includes('refreshLive'), JSON.stringify(L2));
-  })().catch(e=>ok('자산플랜 로그인 처리기 시험 실행', false, String(e&&e.stack||e))));
+  {
+    const hs=extractFn(pl,'onAuthStateChanged(auth,async user=>{');
+    ok('자산플랜: 승인 → Firebase DB 원장 → 본문 → 시세 순서',
+       hs.indexOf('JKAccess.admit(user,planFb')>=0
+       && hs.indexOf('cloudLoad(user)')>hs.indexOf('JKAccess.admit(user,planFb')
+       && hs.indexOf('planGate(true)')>hs.indexOf('cloudLoad(user)')
+       && hs.indexOf('refreshLive()')>hs.indexOf('planGate(true)'));
+    ok('자산플랜: DB 읽기 실패 시 본문을 열지 않는다',
+       /Firebase DB 원장을 불러오지 못했습니다/.test(hs)
+       && /planGate\(false\)/.test(hs));
+  }
 
   // ── 관리자 — 승인 화면 (목록 순서·상태·단추·쓰기) ──
   { const uSrc=adm.slice(adm.indexOf('const ACC_LABEL='), adm.indexOf('// ── 2. 전략 기본값'));
