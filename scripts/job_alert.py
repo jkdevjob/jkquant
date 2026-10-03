@@ -1191,6 +1191,180 @@ def collect_jobkorea_direct():
     direct_jobs = enrich_jobs_from_details(direct_jobs, workers=12)
     return direct_jobs, status
 
+def compact_job_title(title):
+    text = normalize_text(title).lower()
+    text = re.sub(r'\[[^\]]*\]|\([^)]*\)', ' ', text)
+    text = re.sub(
+        r'\b(?:채용|모집|공고|정규직|계약직|프리랜서|경력직|경력|신입|즉시지원)\b',
+        ' ',
+        text,
+    )
+    text = re.sub(r'[^0-9a-z가-힣]+', ' ', text)
+    return normalize_text(text)
+
+
+def title_tokens(title):
+    return {
+        token for token in compact_job_title(title).split()
+        if len(token) >= 2 and token not in {'대전', '세종', '개발자', '채용', '모집'}
+    }
+
+
+def company_hint(title, body):
+    text = normalize_text(f'{title} {body}')
+    patterns = [
+        r'(?:\(주\)|주식회사)\s*([가-힣A-Za-z0-9&._-]{2,40})',
+        r'([가-힣A-Za-z0-9&._-]{2,40})\s*㈜',
+    ]
+    for pattern in patterns:
+        m = re.search(pattern, text)
+        if m:
+            candidate = clean_company_name(m.group(1), title)
+            if candidate:
+                return candidate
+
+    m = re.match(r'^\[([^\]]{2,40})\]', normalize_text(title))
+    if m:
+        candidate = clean_company_name(m.group(1), title='')
+        if candidate and candidate not in {'대전', '세종', '서울', '경기', '충남', '충북'}:
+            return candidate
+    return ''
+
+
+def job_fingerprint(job):
+    title = compact_job_title(job.get('title', ''))
+    company = (
+        clean_company_name(job.get('company', ''), job.get('title', ''))
+        or company_hint(job.get('title', ''), job.get('body', ''))
+    )
+    return f'{company}|{title}' if company else title
+
+
+def same_job(a, b):
+    if not has_target_location(f"{a.get('title','')} {a.get('body','')}"):
+        return False
+    if not has_target_location(f"{b.get('title','')} {b.get('body','')}"):
+        return False
+
+    ua = normalize_url(a.get('url', ''))
+    ub = normalize_url(b.get('url', ''))
+    da = domain_of(ua)
+    db = domain_of(ub)
+    # 같은 사이트의 서로 다른 공고ID/URL은 재등록 가능성이 있으므로 합치지 않는다.
+    if ua and ub and ua != ub and da and da == db:
+        return False
+
+    ca = (
+        clean_company_name(a.get('company', ''), a.get('title', ''))
+        or company_hint(a.get('title', ''), a.get('body', ''))
+    )
+    cb = (
+        clean_company_name(b.get('company', ''), b.get('title', ''))
+        or company_hint(b.get('title', ''), b.get('body', ''))
+    )
+    if ca and cb and ca != cb:
+        return False
+
+    ta = compact_job_title(a.get('title', ''))
+    tb = compact_job_title(b.get('title', ''))
+    if not ta or not tb:
+        return False
+    if ta == tb:
+        return True
+
+    ratio = SequenceMatcher(None, ta, tb).ratio()
+    sa, sb = title_tokens(ta), title_tokens(tb)
+    union = sa | sb
+    jaccard = (len(sa & sb) / len(union)) if union else 0.0
+    return ratio >= 0.90 or (len(sa & sb) >= 3 and jaccard >= 0.78)
+
+
+def merge_duplicate_job(base, incoming):
+    sources = list(dict.fromkeys(
+        (base.get('sources') or [base.get('source')])
+        + (incoming.get('sources') or [incoming.get('source')])
+    ))
+    sources = [s for s in sources if s]
+    base['sources'] = sources
+
+    bp = SOURCE_PRIORITY.get(base.get('source'), 0)
+    ip = SOURCE_PRIORITY.get(incoming.get('source'), 0)
+    if ip > bp:
+        for key in ('title', 'url', 'source', 'company'):
+            if incoming.get(key):
+                base[key] = incoming.get(key, base.get(key))
+
+    if not clean_company_name(base.get('company', ''), base.get('title', '')):
+        incoming_company = clean_company_name(
+            incoming.get('company', ''),
+            incoming.get('title', ''),
+        )
+        if incoming_company:
+            base['company'] = incoming_company
+
+    if len(incoming.get('body', '')) > len(base.get('body', '')):
+        base['body'] = incoming.get('body', '')
+
+    base['salary'] = salary_info(base.get('title', ''), base.get('body', ''))
+    base['short_pay'] = short_term_pay_info(base.get('title', ''), base.get('body', ''))
+    base['score'] = max(base.get('score', 0), incoming.get('score', 0))
+    return base
+
+
+def dedupe_jobs_cross_source(jobs):
+    unique = []
+    by_url = {}
+    for raw in jobs:
+        job = dict(raw)
+        job['url'] = normalize_url(job.get('url', ''))
+        if not job['url']:
+            continue
+        job.setdefault('sources', [job.get('source') or domain_of(job['url'])])
+
+        current = by_url.get(job['url'])
+        if current is not None:
+            merge_duplicate_job(current, job)
+            continue
+
+        duplicate = None
+        for existing in unique:
+            if same_job(existing, job):
+                duplicate = existing
+                break
+        if duplicate is not None:
+            merge_duplicate_job(duplicate, job)
+            by_url[job['url']] = duplicate
+        else:
+            unique.append(job)
+            by_url[job['url']] = job
+    return unique
+
+
+def saramin_card_text(anchor):
+    node = anchor
+    fallback = normalize_text(anchor.get_text(' ', strip=True))
+    for _ in range(10):
+        node = getattr(node, 'parent', None)
+        if node is None:
+            break
+        ids = set()
+        for link in node.find_all('a', href=True):
+            href = link.get('href') or ''
+            m = re.search(r'(?:rec_idx=|/jobs/view\?rec_idx=)(\d+)', href, re.I)
+            if m:
+                ids.add(m.group(1))
+        if len(ids) > 1:
+            break
+        text = normalize_text(node.get_text(' ', strip=True))
+        if not text or len(text) > 1800:
+            continue
+        if len(ids) == 1:
+            fallback = text
+            if has_target_location(text):
+                return text
+    return fallback
+
+
 def collect_saramin_direct():
     session = requests.Session()
     session.headers.update(DETAIL_HEADERS)
