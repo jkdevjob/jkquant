@@ -91,6 +91,10 @@ export const SHADOW_VARIANTS=Object.freeze([
     description:"기준 익절 1.5%보다 빠른 이익실현 민감도",
     params:{takeProfit:1.0},
   },
+  {name:"pb_max_0.7",designedFrom:["auto-candidate-pool-v1"],label:"눌림≤0.7%",description:"0.5%와 기준 1.0% 사이 민감도",params:{pbMax:.7}},
+  {name:"amount_1.8",designedFrom:["auto-candidate-pool-v1"],label:"거래대금≥1.8배",description:"거래대금 필터 강화 후보",params:{amountMult:1.8}},
+  {name:"entry_by_0910",designedFrom:["auto-candidate-pool-v1"],label:"09:10 이전",description:"초반 신호 집중 후보",params:{entryCutoff:910}},
+  {name:"stop_0.8_tp_1.8",designedFrom:["auto-candidate-pool-v1"],label:"손절0.8%·익절1.8%",description:"손익비 동시 조정 후보",params:{stop:.8,takeProfit:1.8}},
 ]);
 
 export const OPENING_FIXED_FRICTION_PCT=.23;
