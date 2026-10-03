@@ -503,7 +503,7 @@ html.had-user #authgate .bootwait{display:block}
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-app.js";
   import { getAuth, GoogleAuthProvider, signInWithPopup, getRedirectResult, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-auth.js";
-  import { getFirestore, doc, getDoc, setDoc, runTransaction } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-firestore.js";
+  import { initializeFirestore, doc, getDoc, setDoc, runTransaction } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-firestore.js";
   const firebaseConfig = {
     apiKey: "AIzaSyBzBe9pAttnbDgTlNThWZzNqtAAKxX7Ksw",
     authDomain: "jk-invest.firebaseapp.com",
@@ -515,7 +515,7 @@ html.had-user #authgate .bootwait{display:block}
   };
   const app = initializeApp(firebaseConfig);
   const auth = getAuth(app);
-  const db = getFirestore(app);
+  const db = initializeFirestore(app,{experimentalForceLongPolling:true});
   const provider = new GoogleAuthProvider();
   // 전역 노출 (일반 스크립트에서 사용)
   window.fb = { auth, db, provider, signInWithPopup, getRedirectResult, onAuthStateChanged, signOut, doc, getDoc, setDoc, runTransaction };
@@ -544,7 +544,7 @@ html.had-user #authgate .bootwait{display:block}
 </div>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.109.3</span></h1></div>
+    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.109.4</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -1655,7 +1655,7 @@ if(/^\/paper\/?$/.test(location.pathname)){
   <footer>
     <strong>JK 퀀트</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.109.3</b> · 2026-10-03</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.109.4</b> · 2026-10-03</div>
   </footer>
 </div>
 
@@ -10273,6 +10273,33 @@ function googleLogin(){
     authLastErr=String(code);
   });
 }
+async function retryDbLoad(){
+  const user=window.fb&&window.fb.auth&&window.fb.auth.currentUser;
+  if(!user){ googleLogin(); return; }
+  const b=$('gbtn');
+  if(b){ b.disabled=true; b.textContent='Firebase DB 다시 연결 중…'; }
+  authStep='DB 원장 재연결';
+  authWarn('로그인은 완료됐습니다. Firebase DB 원장을 다시 연결하고 있습니다…');
+  try{
+    const ok=await withTimeout(pullRemote(),12000,'Firebase DB 원장 재연결');
+    if(!ok)throw new Error('Firebase DB 원장을 읽지 못했습니다');
+    $('authgate').style.display='none';
+    startApp();
+    applyAdminMode();
+    setSync('ok');
+    paperPageAuto();
+  }catch(e){
+    console.error('db retry',e);
+    authWarn('로그인은 완료됐지만 Firebase DB 원장을 불러오지 못했습니다 — '+(e&&e.message||e));
+    setSync('err');
+  }finally{
+    if(b && getComputedStyle($('authgate')).display!=='none'){
+      b.disabled=false;
+      b.textContent='Firebase DB 다시 연결';
+      b.onclick=retryDbLoad;
+    }
+  }
+}
 function doLogout(){
   if(!window.fb)return;
   window.fb.signOut(window.fb.auth).then(()=>{location.reload();});
@@ -10404,7 +10431,9 @@ function initAuth(){
       if(!ok)throw new Error('Firebase DB 원장을 읽지 못했습니다');
     }catch(e){
       console.error('db load',e);
-      authWarn('Firebase DB 원장을 불러오지 못했습니다. 오래된 브라우저 기록으로 열지 않습니다 — '+(e&&e.message||e));
+      authWarn('로그인은 완료됐지만 Firebase DB 원장을 불러오지 못했습니다. 오래된 브라우저 기록으로 열지 않습니다 — '+(e&&e.message||e));
+      const b=$('gbtn');
+      if(b){ b.disabled=false; b.textContent='Firebase DB 다시 연결'; b.onclick=retryDbLoad; }
       setSync('err');
       return;
     }
