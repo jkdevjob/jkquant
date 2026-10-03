@@ -53,7 +53,7 @@ table.doc td{padding:6px 6px}
   <div class="gnote"><a href="/" style="color:var(--faint)">← 운영 화면으로</a></div>
 </div></div>
 <header><div class="wrap"><div class="htop">
-  <div><div class="kicker">Claude Scalping</div><h1>JK <span class="v">퀀트</span> 단타 <span class="ver" id="clVer">v2.10.1</span></h1></div>
+  <div><div class="kicker">Claude Scalping</div><h1>JK <span class="v">퀀트</span> 단타 <span class="ver" id="clVer">v2.10.2</span></h1></div>
   <div class="hright">
     <div class="userbadge" id="userbadge"></div>
   <div class="jkmenu" id="jkmenuWrap">
@@ -552,6 +552,13 @@ async function load(){
 var ME=null;
 async function authHeaders(){var h={Accept:"application/json"};if(ME){try{h.Authorization="Bearer "+(await ME.getIdToken())}catch(e){}}return h}
 function gateShow(msg){document.getElementById("gate").style.display="flex";if(msg)document.getElementById("gate_sub").innerHTML=msg}
+async function checkOwner(user){
+  var ctl=new AbortController(),timer=setTimeout(function(){ctl.abort()},8000);
+  try{
+    var r=await fetch("/api/owner",{cache:"no-store",signal:ctl.signal,headers:{Authorization:"Bearer "+(await user.getIdToken())}});
+    var j=await r.json();if(!r.ok||j.error)throw new Error(j.error||("HTTP "+r.status));return !!j.isOwner;
+  }finally{clearTimeout(timer)}
+}
 function googleLogin(){var e=document.getElementById("gate_err");e.textContent="";window.fb.signInWithPopup(window.fb.auth,window.fb.provider).catch(function(x){e.textContent=(x&&x.message)||"로그인 실패"})}
 function doLogout(){window.fb.signOut(window.fb.auth)}
 function boot(){
@@ -559,7 +566,7 @@ function boot(){
     ME=user||null;var ub=document.getElementById("userbadge");
     if(!user){if(ub)ub.innerHTML="";J=null;LIVE=null;document.getElementById("body").innerHTML="";gateShow("이 화면은 <b>소유자 계정</b>만 볼 수 있습니다.");return}
     var ok=false;
-    try{var r=await fetch("/api/owner",{cache:"no-store",headers:{Authorization:"Bearer "+(await user.getIdToken())}});var j=await r.json();ok=!!j.isOwner}catch(e){}
+    try{ok=await checkOwner(user)}catch(e){var er=document.getElementById("gate_err");if(er)er.textContent="권한 확인 응답이 없습니다. 새로고침하거나 다시 로그인해 주세요. ("+((e&&e.name)==="AbortError"?"8초 timeout":((e&&e.message)||e))+")";return}
     if(!ok){gateShow("<b>"+esc(user.email||"")+"</b> 계정에는 접근 권한이 없습니다.");var b=document.getElementById("gbtn");b.textContent="다른 계정으로 로그인";
       b.onclick=function(){window.fb.signOut(window.fb.auth).then(googleLogin)};return}
     document.getElementById("gate").style.display="none";
