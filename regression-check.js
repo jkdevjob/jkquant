@@ -9722,7 +9722,8 @@ console.log('\n[128] 자산플랜 검증 후속 — 20년 월말 신호 · 장�
 
   /* ② 추가 · 삭제 — 실제 함수로 */
   const mk=(ledger,inp)=>{ const msgs=[], EL={alphaCashDate:{value:inp.date||''},alphaCashKind:{value:inp.kind||'div'},alphaCashAmt:{value:String(inp.amt||'')}};
-    const F=new Function('+extractFn(pl,'function alphaEventList(ledger=alphaLedger)')+'\n'+extractFn(pl,'function alphaLedgerCalc(ledger=alphaLedger)')+'\n'
+    const F=new Function('$','alert','confirm','todayISO','usd2','alphaSyncInputs','renderAlphaLedger','localSave','refreshAlphaFromCache','cloudSave','planManualBackup','cloneObj','L0',
+      'let alphaLedger=L0;\n'+extractFn(pl,'function alphaEventList(ledger=alphaLedger)')+'\n'+extractFn(pl,'function alphaLedgerCalc(ledger=alphaLedger)')+'\n'
       +optFn(pl,'async function alphaAddCashEvent()')+'\n'+extractFn(pl,'async function alphaDeleteEvent(id)')
       +'\nreturn {add:(typeof alphaAddCashEvent==="function")?alphaAddCashEvent:null, del:alphaDeleteEvent, get:()=>alphaLedger, calc:alphaLedgerCalc};')(
       id=>EL[id]||(EL[id]={value:''}), m=>msgs.push(String(m)), ()=>true, ()=>'2026-09-25', v=>'$'+(+v).toFixed(2),
