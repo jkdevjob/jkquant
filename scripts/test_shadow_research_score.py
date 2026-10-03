@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 import importlib.util
-from pathlib import Path\nimport json\nimport tempfile
+from pathlib import Path
+import json
+import tempfile
 
 p=Path("scripts/nightly_scalping_research.py")
 spec=importlib.util.spec_from_file_location("nightly_scalping_research",p)
