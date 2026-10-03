@@ -200,7 +200,11 @@ async function importHistoricalPaper(env,strategy,ledger){
   const today=parts(Date.now(),tz).date;
   if(date>=today)throw new Error("historical import requires completed date");
   const existing=await readPaper(env,strategy,date);
-  if(existing)return {imported:false,kept:true,ledger:existing};
+  if(existing){
+    // Older ledgers may predate the paper-date index. Preserve the ledger, repair only the index.
+    await rememberPaperDate(env,strategy,date);
+    return {imported:false,kept:true,ledger:existing};
+  }
   const clean={...ledger,schema:Number(ledger.schema)||1,strategy,date,
     mode:"historical-research-import-no-order",importedAt:new Date().toISOString()};
   return {imported:true,kept:false,ledger:await writePaper(env,clean)};
