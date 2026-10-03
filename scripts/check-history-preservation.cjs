@@ -93,6 +93,13 @@ ok('현금 기록 추가도 DB 결과를 기다리고 실패 시 롤백',
 ok('5년플랜 cloudLoad는 Firebase 현재 원장을 직접 적용',
   /apply\(cloneObj\(v\)\)/.test(fn(plan,'async function cloudLoad(user)'))
   && !/planRecoveryRead|planRecoveryScore/.test(fn(plan,'async function cloudLoad(user)')));
+ok('5년플랜 복구 보호모드·브라우저 메모리 백업 제거',
+  !/planRecovery|planManualBackup|planForceLocalSave|복구 보호모드/.test(plan));
+ok('5년플랜 체결 입력·수정은 DB 실패 시 화면 원복',
+  /const ok=await cloudSave\(\)/.test(fn(plan,'async function alphaSaveFills()'))
+  && /alphaLedger=before/.test(fn(plan,'async function alphaSaveFills()'))
+  && /const ok=await cloudSave\(\)/.test(fn(plan,'async function alphaSaveEdit()'))
+  && /alphaLedger=before/.test(fn(plan,'async function alphaSaveEdit()')));
 
 const pFns=['planStableJson','planRecEntries','planRebaseRecords','planRebaseFiveYear']
   .map(n=>fn(plan,'function '+n+'(')).join('\n');
@@ -120,6 +127,14 @@ ok('단타 KIS 감사이력은 DB remote+candidate append union',
 ok('단타 분봉 아카이브는 날짜별 Firestore 하위문서',
   /'scalpArchive',d/.test(fn(scal,'async function saveArch()'))
   && /collection\(window\.fb\.db,'users',me\.uid,'scalpArchive'\)/.test(fn(scal,'async function loadArch()')));
+ok('단타 수동 거래 추가·삭제는 Firebase 저장 실패 시 롤백',
+  /await saveL\(\)/.test(fn(scal,'async function addTrade()'))
+  && /LOG=before/.test(fn(scal,'async function addTrade()'))
+  && /await saveL\(\)/.test(fn(scal,'async function delTrade(i)'))
+  && /LOG=before/.test(fn(scal,'async function delTrade(i)')));
+ok('단타 소유자 권한 확인은 무한대기하지 않음',
+  /AbortController/.test(fn(scal,'async function checkOwner(user)'))
+  && /8000/.test(fn(scal,'async function checkOwner(user)')));
 
 const sFns=['scalpClone','scalpStable','scalpEntries','scalpRebase'].map(n=>fn(scal,'function '+n+'(')).join('\n');
 const SC=vm.createContext({console,Map,JSON});
