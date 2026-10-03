@@ -109,7 +109,7 @@ def ranking_rule():
         "minShadowStrategies":SHADOW_MIN_COUNT,
         "formula":"50 + sampleFactor × (20·tanh(allEdge/0.20) + 25·tanh(validationEdge/0.20) + 10·tanh(recentEdge/0.75) + 5·riskSign), clipped 0~100",
         "sampleFactor":"min(1, trades/minTrades)",
-        "note":"Rank is research triage only. Backtest/reconstruction and live-forward evidence stay separate; baseline is never auto-promoted.",
+        "note":"Backtest/reconstruction and live-forward evidence stay separate. Active top-10 rotates automatically; only a 7-day #1 that passes every validation gate can auto-promote.",
     }
 
 def _rank1_name(report):
@@ -188,6 +188,22 @@ def apply_shadow_lifecycle(kind, report, current_date=None):
     if float(top.get("researchScore") or 0)<AUTO_PROMOTION_MIN_SCORE: missing.append("점수 %.2f<%d"%(float(top.get("researchScore") or 0),AUTO_PROMOTION_MIN_SCORE))
     if kind=="opening" and leader=="hold_to_next_open": missing.append("연구전용 전략")
 
+    today_changes=[
+        *[{"date":current_date,"type":"admit","variant":x,"reason":"상위 %d 진입으로 신규 투입"%SHADOW_MIN_COUNT} for x in admitted],
+        *[{"date":current_date,"type":"retire","variant":x,"reason":"상위 %d 이탈로 자동 퇴출"%SHADOW_MIN_COUNT} for x in retired],
+    ]
+    previous_changes=[]
+    for old in previous[-7:]:
+        old_life=((old.get(kind) or {}).get("lifecycle") or {})
+        for ch in old_life.get("changeLog") or []:
+            previous_changes.append({
+                "date":str(ch.get("date") or old.get("date") or ""),
+                "type":str(ch.get("type") or ""),
+                "variant":str(ch.get("variant") or ""),
+                "reason":str(ch.get("reason") or ""),
+            })
+    recent_changes=(previous_changes+today_changes)[-12:]
+
     report["lifecycle"]={
         "version":"v1",
         "minimumActive":SHADOW_MIN_COUNT,
@@ -210,10 +226,8 @@ def apply_shadow_lifecycle(kind, report, current_date=None):
             "reason":"자동승격 조건 충족" if gate_ok else " · ".join(missing) or "후보 없음",
             "effective":"next-new-session",
         },
-        "changeLog":[
-            *[{"type":"admit","variant":x,"reason":"상위 %d 진입으로 신규 투입"%SHADOW_MIN_COUNT} for x in admitted],
-            *[{"type":"retire","variant":x,"reason":"상위 %d 이탈로 자동 퇴출"%SHADOW_MIN_COUNT} for x in retired],
-        ],
+        "changeLog":today_changes,
+        "recentChanges":recent_changes,
     }
     return report
 
@@ -490,7 +504,7 @@ def daytrading_report():
         "variants":rows,"candidates":candidates,
         "rankingRule":ranking_rule(),
         "configuredShadowCount":max(0,len(rows)-1),
-        "autoPromotion":False,
+        "autoPromotion":True,
     }
 
 def crypto_report():
@@ -556,7 +570,7 @@ def crypto_report():
         "variants":rows,"candidates":candidates,
         "rankingRule":ranking_rule(),
         "configuredShadowCount":max(0,len(rows)-1),
-        "autoPromotion":False,
+        "autoPromotion":True,
         "targetNote":"1% is a research target metric, not a guaranteed daily return."
     }
 
@@ -630,7 +644,7 @@ def soxl_report():
         "variants":rows,"candidates":candidates,
         "rankingRule":ranking_rule(),
         "configuredShadowCount":max(0,len(rows)-1),
-        "autoPromotion":False,
+        "autoPromotion":True,
         "targetNote":"Net +1% days are a research metric, not a guaranteed daily return.",
     }
 
