@@ -293,9 +293,10 @@ jobs:
           const r=fs.readFileSync('.github/workflows/daytrading-research.yml','utf8');
           let fail=0;
           const crons=w.triggers&&w.triggers.crons||[];
-          for(const x of ['55 0 * * MON-FRI','0-59 1-5 * * MON-FRI','0-11 6 * * MON-FRI']){
+          for(const x of ['55 0 * * MON-FRI','0-59 1-6 * * MON-FRI']){
             if(!crons.includes(x)){console.error('✗ 데이트레이딩 Cron 누락: '+x);fail++;}
           }
+          if(crons.length>2){console.error('✗ 데이트레이딩 Cron은 Free 계정 한도 보호를 위해 2개 이하로 유지해야 함');fail++;}
           if(!w.durable_objects||!w.migrations||!String(JSON.stringify(w.migrations)).includes('new_sqlite_classes')){
             console.error('✗ 09:55 스냅샷 Durable Object SQLite 저장소 없음'); fail++;
           }
