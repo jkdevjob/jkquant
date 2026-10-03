@@ -322,6 +322,11 @@ def evolve_lifecycle(kind, report, previous=None):
     else:
         auto_reason="7개 연속 연구세션 1위 + 기존 승격조건 통과"
 
+    active_generated=[x for x in generated_pool if str(x.get("name") or "") in active]
+    other_generated=[x for x in generated_pool if str(x.get("name") or "") not in active]
+    slots=max(0,FACTORY_POOL_LIMIT-len(active_generated))
+    kept_generated=(active_generated+other_generated[-slots:]) if slots>0 else active_generated[:FACTORY_POOL_LIMIT]
+
     life={
         "schema":1,
         "candidateFactory":"prospective-mixed-radix-v2",
@@ -329,10 +334,7 @@ def evolve_lifecycle(kind, report, previous=None):
         "candidatePoolSize":len(pool),
         "activeCandidates":active,
         "reserveCandidates":[x for x in pool if x not in active and x not in retired_names],
-        "generatedPool":(
-            [x for x in generated_pool if str(x.get("name") or "") in active][-FACTORY_POOL_LIMIT:]
-            + [x for x in generated_pool if str(x.get("name") or "") not in active][-FACTORY_POOL_LIMIT:]
-        )[-FACTORY_POOL_LIMIT:],
+        "generatedPool":kept_generated,
         "generatedCandidates":generated_pool[-5:],
         "factoryGeneration":int(previous.get("factoryGeneration") or 0)+(1 if generated_now else 0),
         "lastFactoryDate":evidence if generated_now else previous.get("lastFactoryDate"),
