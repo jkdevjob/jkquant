@@ -37,6 +37,7 @@ from zoneinfo import ZoneInfo
 KST = ZoneInfo("Asia/Seoul")
 DATA = Path("data") / "crypto" / "KRW-BTC" / "5m"
 OUT = Path("data") / "crypto-research"
+LIFECYCLE = Path("data") / "nightly-research" / "lifecycle.json"
 
 
 @dataclass(frozen=True)
@@ -51,6 +52,7 @@ class Params:
     max_hold_bars: int = 12      # 60 minutes on 5m bars
     fee_round_trip_pct: float = 0.10
     slippage_round_trip_pct: float = 0.04
+    evaluation_start: str = ""
 
 
 VARIANTS = [
@@ -77,6 +79,39 @@ VARIANTS = [
     Params("entry_by_2100", entry_cutoff_min=20 * 60 + 55),
 ]
 
+
+def generated_params(name):
+    import re
+    m=re.fullmatch(r"cf_g(\d{4,})",str(name or ""))
+    if not m:
+        return None
+    g=max(1,int(m.group(1)))-1
+    axes=[
+        ("range_bars",[1,2,3,4,5,6]),
+        ("volume_mult",[0.9,1.0,1.1,1.2,1.3,1.4]),
+        ("max_hold_bars",[6,9,12,18,24,30]),
+        ("entry_cutoff_min",[17*60+55,18*60+55,19*60+55,20*60+55,21*60+55]),
+    ]
+    out={}
+    for key,vals in axes:
+        out[key]=vals[g%len(vals)]
+        g//=len(vals)
+    return out
+
+def generated_variants():
+    try:
+        j=json.loads(LIFECYCLE.read_text(encoding="utf-8"))
+    except Exception:
+        return []
+    life=((j.get("strategies") or {}).get("crypto") or {})
+    out=[]
+    for x in life.get("generatedPool") or []:
+        name=str((x or {}).get("name") or "")
+        p=generated_params(name)
+        if not p:
+            continue
+        out.append(Params(name,evaluation_start=str((x or {}).get("createdAfter") or ""),**p))
+    return out
 
 def minute_of_day(t: str) -> int:
     s = str(t or "")
@@ -499,6 +534,11 @@ def dip24_summary(trades):
 
 
 def main():
+    global VARIANTS
+    dyn=generated_variants()
+    if dyn:
+        seen={p.name for p in VARIANTS}
+        VARIANTS=VARIANTS+[p for p in dyn if p.name not in seen]
     all_days = load_days()
     OUT.mkdir(parents=True, exist_ok=True)
 
@@ -519,12 +559,14 @@ def main():
     reports = []
     variant_trades = {}
     for p in VARIANTS:
-        trades = [t for d in valid if (t := trade_for_day(d, p))]
+        pvalid=[d for d in valid if not p.evaluation_start or str(d.get("sessionDateKst") or "")>p.evaluation_start]
+        plabels=[x["sessionDateKst"] for x in pvalid]
+        trades = [t for d in pvalid if (t := trade_for_day(d, p))]
         variant_trades[p.name] = trades
         reports.append({
             "params": asdict(p),
-            "summary": summary(trades, labels),
-            "validation": split_validation(valid, trades),
+            "summary": summary(trades, plabels),
+            "validation": split_validation(pvalid, trades),
         })
 
     baseline = variant_trades["baseline"]
