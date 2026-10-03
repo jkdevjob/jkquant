@@ -36,8 +36,24 @@ export const DAY_SHADOW_VARIANTS=Object.freeze([
   {name:"combo_lb30_vol12",label:"30분고점+거래량1.2",params:{lookback:30,volMult:1.2}},
 ]);
 
+const DAY_FACTORY_AXES=Object.freeze({
+  volMult:[1.2,1.4,1.6,1.8,2.0],
+  lookback:[10,15,20,25,30],
+  minVwapSlope:[0.05,0.10,0.15,0.20,0.25],
+  entryCutoff:[1230,1300,1330,1400,1430],
+});
+export function generatedDayVariant(name){
+  const m=String(name||"").match(/^cf_g(\d{4,})$/);
+  if(!m)return null;
+  let g=Math.max(1,Number(m[1]))-1;
+  const params={};
+  for(const [key,vals] of Object.entries(DAY_FACTORY_AXES)){
+    params[key]=vals[g%vals.length];g=Math.floor(g/vals.length);
+  }
+  return {name:String(name),label:"자동생성 "+String(name),params};
+}
 export function dayVariant(name){
-  return DAY_SHADOW_VARIANTS.find(x=>x.name===name)||null;
+  return DAY_SHADOW_VARIANTS.find(x=>x.name===name)||generatedDayVariant(name)||null;
 }
 
 const hmOf=t=>+String(t||"").slice(11,13)*100 + +String(t||"").slice(14,16);
