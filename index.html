@@ -8319,7 +8319,7 @@ function paperPageMode(on){
   }
   const home=document.querySelector('#jkmenuPop a[href="/"]'), pp=$('jkPaper');
   if(home) home.classList.toggle('cur', !on); if(pp) pp.classList.toggle('cur', !!on);
-  document.title = on ? '모의투자 성과 — JK 퀀트' : APP_TITLE;
+  document.title = on ? 'JK 퀀트 — 모의투자' : APP_TITLE;
   if(on && $('paper_body') && !$('paper_body').innerHTML.trim())
     $('paper_body').innerHTML='<p class="lead">기록을 맞추는 중… <span style="color:var(--faint)">클라우드 기록을 읽은 뒤 전 전략 모의 세션을 오늘까지 굴립니다.</span></p>';
 }
