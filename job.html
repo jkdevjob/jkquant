@@ -31,10 +31,10 @@ main{padding:22px 0 70px}.hero{display:flex;gap:12px;justify-content:space-betwe
 /* 로그인 · 이용 승인 — 승인된 계정만 본문이 열린다 (판정은 jk-access.js 한 곳 · 운영·플랜·백테·공모주와 같은 글자) */
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-app.js";
 import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-auth.js";
-import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-firestore.js";
+import { initializeFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-firestore.js";
 const app=initializeApp({apiKey:"AIzaSyBzBe9pAttnbDgTlNThWZzNqtAAKxX7Ksw",authDomain:"jk-invest.firebaseapp.com",projectId:"jk-invest",
   storageBucket:"jk-invest.firebasestorage.app",messagingSenderId:"1024066323251",appId:"1:1024066323251:web:23d557527866205f01f446"});
-const auth=getAuth(app),db=getFirestore(app);
+const auth=getAuth(app),db=initializeFirestore(app,{experimentalForceLongPolling:true});
 window.jobFb={auth,db,doc,getDoc,setDoc,uid:null};
 JKAccess.guard({auth,db,doc,getDoc,setDoc,onAuthStateChanged,signInWithPopup,GoogleAuthProvider,signOut},{
   onUser:user=>{window.jobFb.uid=user?user.uid:null;},
