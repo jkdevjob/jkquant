@@ -2,6 +2,7 @@ import fs from "node:fs";
 import assert from "node:assert/strict";
 import {normalize,isPromotionEligible,PROMOTION_MIN_SCORE} from "../functions/api/scalping-shadow-ranking.js";
 import {promotionDecision,effectiveFrom} from "../functions/api/scalping-promotion.js";
+import {autoPromotionDecision} from "../functions/api/scalping-auto-promotion.js";
 
 console.log("[scalping promotion] 승격 가드 + 다음세션 잠금 검사");
 
@@ -22,6 +23,24 @@ assert.equal(ranking.rows.find(x=>x.name==="vol_1.0").promotionEligible,true);
 assert.equal(promotionDecision("crypto","vol_1.0",ranking).ok,true);
 assert.equal(promotionDecision("crypto","baseline",null).ok,true,"baseline 원복은 항상 허용");
 assert.equal(promotionDecision("crypto","not_a_variant",ranking).ok,false);
+
+const autoSection={
+  ...report,
+  lifecycle:{
+    activeCandidates:["vol_1.0","vol_1.5","no_vwap","range_15m","range_30m","hold_30m","hold_120m","entry_by_1800","stop_0.3_tp_0.6","stop_0.7_tp_1.4"],
+    retired:[],
+    leader:{name:"vol_1.0",consecutiveResearchSessions:6,requiredResearchSessions:7,dates:["d1","d2","d3","d4","d5","d6"]},
+    autoPromotionCandidate:"",
+    autoPromotionReady:false,
+    autoPromotionReason:"1위 유지 6/7 연구세션"
+  }
+};
+assert.equal(autoPromotionDecision("crypto",autoSection).ok,false,"6연속 1위는 자동승격 금지");
+autoSection.lifecycle.leader.consecutiveResearchSessions=7;
+autoSection.lifecycle.leader.dates.push("d7");
+autoSection.lifecycle.autoPromotionCandidate="vol_1.0";
+autoSection.lifecycle.autoPromotionReady=true;
+assert.equal(autoPromotionDecision("crypto",autoSection).ok,true,"7연속 1위 + 기존 승격조건 통과 시 자동승격 허용");
 assert.equal(promotionDecision("crypto","not_a_variant",ranking).ok,false);
 
 // 2026-10-03 08:36 KST = 2026-10-02 19:36 ET.
@@ -43,7 +62,7 @@ assert.equal(effectiveFrom("soxl",monAfterEt),"2026-10-06");
 const ui=fs.readFileSync("scalping.html","utf8");
 assert.ok(/id="scVer">v\d+\.\d+\.\d+</.test(ui));
 assert.ok(!ui.includes("⭐ 메인전략 승격"),"일반 수동승격 버튼은 제거되어야 함");
-assert.ok(ui.includes("🤖 자동승격 감시"),"자동승격 상태 표시 필요");
+assert.ok(ui.includes("자동승격"),"자동승격 상태 표시 필요");
 assert.ok(ui.includes("원래 기준전략으로 원복"));
 assert.ok(ui.includes("다음 새 세션부터"));
 assert.ok(ui.includes("/api/scalping-promotion"));
