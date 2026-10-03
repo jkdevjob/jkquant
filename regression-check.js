@@ -11584,6 +11584,36 @@ console.log('\n[SCALPING SHADOW/PROMOTION] 활성10개 · 후보20개 · 자동�
 }
 
 
+/* ════ 장애 복구 미완료 항목 — Claude 권한 timeout · 5년플랜 복구표시 · Firestore 실권한 검사 ════ */
+console.log('\n[OUTAGE LEFTOVERS] Claude 권한 timeout · 5년플랜 복구표시 · Firestore 실권한 검사');
+{
+  const cla=fs.readFileSync(__d+'/claude.html','utf8');
+  const pl=fs.readFileSync(__d+'/plan.html','utf8');
+
+  ok('클로드 단타 /api/owner 권한 확인은 8초 뒤 중단되어 로그인 화면에 무한 고착되지 않는다',
+     /async function checkOwner\(user\)/.test(cla)
+     && /new AbortController\(\)/.test(cla)
+     && /setTimeout\(function\(\)\{ctl\.abort\(\)\},8000\)/.test(cla)
+     && /signal:ctl\.signal/.test(cla)
+     && /8초 timeout/.test(cla));
+
+  ok('5년플랜 10\/03 legacy 복구는 무엇을 복구했는지 메타데이터를 Firebase에 남긴다',
+     /planLegacyRestoreHadFive=planLegacyFiveValid\(legacyFive\)/.test(pl)
+     && /planLegacyRestoreHadOperatingPlan=planLegacyStateValid\(legacyState\)/.test(pl));
+  ok('5년플랜은 복구 적용 또는 기존 복구 마커가 있으면 화면에 복구 이력을 표시한다',
+     /const restoredMorning=await restoreMorningPlanFromLegacy\(user\)/.test(pl)
+     && /restoredMorning\|\|d\[PLAN_LEGACY_RESTORE_MARK\]/.test(pl)
+     && /10\/03 오전 복구 이력 확인/.test(pl));
+
+  ok('관리자 보안 규칙 탭은 현재 배포된 Firestore 권한을 직접 검사할 수 있다',
+     /onclick="verifyDeployedRules\(\)"/.test(adm)
+     && /async function verifyDeployedRules\(\)/.test(adm)
+     && /관리자 profiles 목록 조회 허용/.test(adm)
+     && /본인 users 원장 읽기 허용/.test(adm)
+     && /다른 사용자 users 원장 읽기 차단/.test(adm));
+}
+
+
 Promise.all(PENDING).then(()=>{
   console.log(`\n════ 결과: ${pass} PASS / ${fail} FAIL ${fail===0?'— ALL PASS ★':'— 배포 금지, 위 ✗ 항목 수정 필요'} ════`);
   process.exit(fail===0?0:1);
