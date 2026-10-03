@@ -18,6 +18,7 @@ KST=ZoneInfo("Asia/Seoul")
 DATA=Path("data/daytrading")
 LIVE=Path("data/daytrading-live")
 OUT=Path("data/daytrading-research")
+LIFECYCLE=Path("data/nightly-research/lifecycle.json")
 
 # Primary research is meant to use a universe frozen around 10:00 KST.
 # GitHub scheduled jobs can be delayed by hours; those late snapshots are still
@@ -41,6 +42,7 @@ class Params:
     final_exit:int=1510
     fee:float=0.25
     max_trades:int=3
+    evaluation_start:str=""
 
 VARIANTS=[
     Params("baseline"),
@@ -65,6 +67,39 @@ VARIANTS=[
     Params("session_max_5",max_session_ret=5.0),
     Params("combo_lb30_vol12",lookback=30,vol_mult=1.2),
 ]
+
+def generated_params(name):
+    import re
+    m=re.fullmatch(r"cf_g(\d{4,})",str(name or ""))
+    if not m:
+        return None
+    g=max(1,int(m.group(1)))-1
+    axes=[
+        ("vol_mult",[1.2,1.4,1.6,1.8,2.0]),
+        ("lookback",[10,15,20,25,30]),
+        ("min_vwap_slope",[0.05,0.10,0.15,0.20,0.25]),
+        ("entry_cutoff",[1230,1300,1330,1400,1430]),
+    ]
+    out={}
+    for key,vals in axes:
+        out[key]=vals[g%len(vals)]
+        g//=len(vals)
+    return out
+
+def generated_variants():
+    try:
+        j=json.loads(LIFECYCLE.read_text(encoding="utf-8"))
+    except Exception:
+        return []
+    life=((j.get("strategies") or {}).get("daytrading") or {})
+    out=[]
+    for x in life.get("generatedPool") or []:
+        name=str((x or {}).get("name") or "")
+        p=generated_params(name)
+        if not p:
+            continue
+        out.append(Params(name,evaluation_start=str((x or {}).get("createdAfter") or ""),**p))
+    return out
 
 def hm(t):
     s=str(t or "")
@@ -281,6 +316,8 @@ def first_trade(day,row,p:Params):
 def trades_for_variant(days,p):
     chosen=[]
     for day in days:
+        if p.evaluation_start and str(day.get("date") or "")<=p.evaluation_start:
+            continue
         cands=[]
         for row in day.get("universe") or []:
             t=first_trade(day,row,p)
@@ -460,6 +497,11 @@ def live_paper_comparison(date,reconstructed):
 
 
 def main():
+    global VARIANTS
+    dyn=generated_variants()
+    if dyn:
+        seen={p.name for p in VARIANTS}
+        VARIANTS=VARIANTS+[p for p in dyn if p.name not in seen]
     all_days=load_days(); OUT.mkdir(parents=True,exist_ok=True)
     if not all_days:
         print("No day-trading archives yet.")

@@ -46,8 +46,19 @@ async function snapshot(date,year){
   if(!r.ok)throw new Error("snapshot HTTP "+r.status);
   return r.json();
 }
-function emptyShadow(){
-  return Object.fromEntries(DAY_SHADOW_VARIANTS.map(v=>[v.name,{name:v.name,label:v.label,params:v.params,signals:[]}]));
+async function generatedDayVariants(){
+  const u="https://raw.githubusercontent.com/jkdevjob/jkquant/scalping-data/data/nightly-research/lifecycle.json";
+  try{
+    const r=await fetch(u,{headers:{"Accept":"application/json","User-Agent":"jkquant-day-generated/1.0"},cf:{cacheTtl:60}});
+    if(!r.ok)return [];
+    const j=await r.json();
+    const life=((j.strategies||{}).daytrading)||{};
+    const pool=Array.isArray(life.generatedPool)?life.generatedPool:[];
+    return pool.map(x=>dayVariant(x&&x.name)).filter(Boolean);
+  }catch(e){return [];}
+}
+function emptyShadow(variants){
+  return Object.fromEntries((variants||[]).map(v=>[v.name,{name:v.name,label:v.label,params:v.params,signals:[]}]));
 }
 function mainVariantDef(name){
   const n=String(name||"baseline");
@@ -64,7 +75,9 @@ function validTarget(now,requested){
 
 async function scanShard(origin,now,snap,shard,shards,targetHm,mainVariant="baseline"){
   const universe=(snap.universe||[]).filter((_,i)=>i%shards===shard);
-  const signals=[],shadow=emptyShadow(),errors=[];let idx=0;
+  const generated=await generatedDayVariants();
+  const shadowVariants=[...DAY_SHADOW_VARIANTS,...generated.filter(v=>!DAY_SHADOW_VARIANTS.some(s=>s.name===v.name))];
+  const signals=[],shadow=emptyShadow(shadowVariants),errors=[];let idx=0;
   const mainDef=mainVariantDef(mainVariant);
   async function worker(){
     while(idx<universe.length){
@@ -75,7 +88,7 @@ async function scanShard(origin,now,snap,shard,shards,targetHm,mainVariant="base
         const rows=minuteVolume(mj.minutes).filter(x=>String(x.t||"").slice(0,10)===now.date);
         const base=daySignal(rows,targetHm,{snapshotHm:+snap.snapshotHm||1000,...mainDef.params});
         if(base)signals.push({code:u.code,name:u.name||u.code,rank:+u.rank||0,mainVariant:mainDef.name,strategyParams:mainDef.params,...base});
-        for(const v of DAY_SHADOW_VARIANTS){
+        for(const v of shadowVariants){
           const s=daySignal(rows,targetHm,{snapshotHm:+snap.snapshotHm||1000,...v.params});
           if(s)shadow[v.name].signals.push({code:u.code,name:u.name||u.code,rank:+u.rank||0,...s});
         }
