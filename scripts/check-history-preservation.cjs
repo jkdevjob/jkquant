@@ -97,7 +97,10 @@ ok('5년플랜 2026-10-03 오전 legacy 값은 1회만 Firebase 정본으로 이
   /PLAN_LEGACY_RESTORE_MARK/.test(plan)
   && /restoreMorningPlanFromLegacy\(user\)/.test(fn(plan,'async function cloudLoad(user)'))
   && /fiveYearPlanV2=cloneObj\(legacyFive\)/.test(fn(plan,'function planLegacyRestorePatch('))
-  && /op\.plan=cloneObj\(legacyState\.plan\)/.test(fn(plan,'function planLegacyRestorePatch(')));
+  && /op\.plan=cloneObj\(legacyState\.plan\)/.test(fn(plan,'function planLegacyRestorePatch('))
+  && /planLegacyRestoreHadFive/.test(fn(plan,'function planLegacyRestorePatch('))
+  && /planLegacyRestoreHadOperatingPlan/.test(fn(plan,'function planLegacyRestorePatch('))
+  && /오전 복구 이력 확인/.test(fn(plan,'async function cloudLoad(user)')));
 ok('5년플랜 legacy 복구는 브라우저에 다시 쓰지 않고 성공 후 옛 키 삭제',
   !/setItem\s*\(/.test(fn(plan,'async function restoreMorningPlanFromLegacy(user)'))
   && /planClearLegacyKeys\(store,user\)/.test(fn(plan,'async function restoreMorningPlanFromLegacy(user)'))
