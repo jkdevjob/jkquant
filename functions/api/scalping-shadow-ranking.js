@@ -33,7 +33,7 @@ function fallbackScore(kind,x){
 function normalize(kind,report){
   const by=new Map((report&&report.candidates||[]).map(x=>[String(x.name||""),x]));
   const life=report&&report.lifecycle||{};
-  const activeSet=new Set(Array.isArray(life.activeCandidates)?life.activeCandidates:CATALOG[kind]);
+  const activeSet=new Set(Array.isArray(life.activeCandidates)&&life.activeCandidates.length?life.activeCandidates:CATALOG[kind].slice(0,10));
   const retiredSet=new Set((life.retired||[]).map(x=>String(x&&x.name||"")));
   const rows=CATALOG[kind].map(name=>{
     const x=by.get(name)||{name,status:"collecting"};
