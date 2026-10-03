@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import {normalize,isPromotionEligible,PROMOTION_MIN_SCORE} from "../functions/api/scalping-shadow-ranking.js";
 import {promotionDecision,effectiveFrom} from "../functions/api/scalping-promotion.js";
 
-console.log("[scalping promotion] 수동 승격 가드 + 다음세션 잠금 검사");
+console.log("[scalping promotion] 자동승격 가드 + 다음세션 잠금 검사");
 
 const eligible={name:"vol_1.0",review:true,sampleReady:true,riskOk:true,researchScore:PROMOTION_MIN_SCORE+5};
 assert.equal(isPromotionEligible("crypto",eligible),true);
@@ -41,8 +41,8 @@ assert.equal(effectiveFrom("soxl",monBeforeEt),"2026-10-05");
 assert.equal(effectiveFrom("soxl",monAfterEt),"2026-10-06");
 
 const ui=fs.readFileSync("scalping.html","utf8");
-assert.ok(/id="scVer">v1\.38\.1/.test(ui));
-assert.ok(ui.includes("⭐ 메인전략 승격"));
+assert.ok(/id="scVer">v1\\.39\\.0/.test(ui));
+assert.ok(ui.includes("자동 메인승격 ON"));
 assert.ok(ui.includes("원래 기준전략으로 원복"));
 assert.ok(ui.includes("다음 새 세션부터"));
 assert.ok(ui.includes("/api/scalping-promotion"));
@@ -50,6 +50,9 @@ assert.ok(ui.includes("/api/scalping-promotion"));
 const promotion=fs.readFileSync("functions/api/scalping-promotion.js","utf8");
 assert.ok(promotion.includes("accounts:lookup"),"owner Firebase 재검증 필요");
 assert.ok(promotion.includes("promotionDecision"),"서버측 승격 재검증 필요");
+assert.ok(promotion.includes("onRequestPut"),"야간 자동승격 API 필요");
+assert.ok(promotion.includes("auto-promotion-7d-leader"),"7일 1위 자동승격 감사 source 필요");
+assert.ok(promotion.includes("leaderDays||0)<7"),"7일 1위 서버 재검증 필요");
 assert.ok(promotion.includes('"x-monitor-key":key'),"Worker 설정 변경은 monitor key로 보호");
 assert.ok(promotion.includes('effective:"next-new-session"'));
 assert.ok(promotion.includes("effectiveFrom"),"적용 시작일을 서버가 계산해야 함");
@@ -83,4 +86,4 @@ for(const txt of [ow,dw,gw]){
 }
 assert.ok(gw.includes("n.hm<935"),"SOXL OR5 실시간 관찰이 늦으면 안 됨");
 
-console.log("ALL PASS — manual scalping promotion");
+console.log("ALL PASS — automatic scalping promotion");
