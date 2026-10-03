@@ -85,11 +85,12 @@ for(const abs of htmlAbs){
 
 for(const file of FILES){
   const src=fs.readFileSync(path.join(ROOT,file),'utf8');
-  const re=/document\.title\s*=\s*(['"`])([^\1\n]*?)\1/g;
+  const literalTitle=/document\.title\s*=\s*(?:'([^'\n]*)'|"([^"\n]*)"|`([^`\n]*)`)/g;
   let m;
-  while((m=re.exec(src))){
-    if(!m[2].startsWith('JK 퀀트 — ')){
-      console.error('✗ '+file+' — 동적 document.title이 "JK 퀀트 — 메뉴명" 형식이 아님: '+m[2]);fail++;
+  while((m=literalTitle.exec(src))){
+    const val=m[1]??m[2]??m[3]??'';
+    if(!val.startsWith('JK 퀀트 — ')){
+      console.error('✗ '+file+' — 동적 document.title이 "JK 퀀트 — 메뉴명" 형식이 아님: '+val);fail++;
     }
   }
   const nonLiteral=/document\.title\s*=\s*(?!['"`])([^;\n]+)/g;
