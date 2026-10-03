@@ -55,7 +55,7 @@ const ui=fs.readFileSync(path.join(__dirname,'..','scalping.html'),'utf8');
 const api=fs.readFileSync(path.join(__dirname,'..','functions/api/global-paper.js'),'utf8');
 ok(worker.includes('import { DurableObject } from "cloudflare:workers";')&&worker.includes('class PaperStore extends DurableObject')&&worker.includes('writePaper(env,paperLedger("crypto"')&&worker.includes('writePaper(env,paperLedger("soxl"'),'global worker imports DurableObject and stores both live paper ledgers');
 ok(worker.includes('u.pathname==="/paper-index"')&&worker.includes('u.pathname==="/paper-history"')&&worker.includes('rememberPaperDate(env,ledger.strategy,ledger.date)'),'global worker keeps a durable per-strategy paper-date index and history endpoint');
-ok(worker.includes('backfillHistoryChunk(env,"crypto",20)')&&worker.includes('backfillHistoryChunk(env,"soxl",20)')&&worker.includes('u.pathname==="/paper-backfill-status"'),'global worker incrementally backfills BTC/SOXL historical decisions and exposes integrity status');
+ok(worker.includes('backfillHistoryChunk(env,"crypto",50)')&&worker.includes('backfillHistoryChunk(env,"soxl",50)')&&worker.includes('u.pathname==="/paper-backfill-status"'),'global worker incrementally backfills BTC/SOXL historical decisions and exposes integrity status');
 ok(cfg.includes('"PAPER_STORE"')&&cfg.includes('"new_sqlite_classes": ["PaperStore"]'),'global worker durable object binding/migration');
 ok(ui.includes("loadGlobalPaper('crypto')")&&ui.includes("loadGlobalPaper('soxl')")&&ui.includes('오늘 계좌수익률')&&ui.includes('개별 매매 수익률 합계'),'all-tab UI exposes live paper metrics');
 ok(ui.includes('l.decision&&l.decision.reason')&&ui.includes('<b>매매없음</b>'),'UI surfaces durable BTC no-trade decision reason');
