@@ -91,6 +91,46 @@ export const SHADOW_VARIANTS=Object.freeze([
     description:"기준 익절 1.5%보다 빠른 이익실현 민감도",
     params:{takeProfit:1.0},
   },
+  {
+    name:"pb_max_0.7",
+    designedFrom:["candidate-factory-v1"],
+    label:"눌림≤0.7%",
+    description:"0.5%와 기준 1.0% 사이의 중간 눌림 민감도",
+    params:{pbMax:.7},
+  },
+  {
+    name:"amount_1.8",
+    designedFrom:["candidate-factory-v1"],
+    label:"거래대금≥1.8배",
+    description:"강한 재돌파만 남기는 거래대금 강화 후보",
+    params:{amountMult:1.8},
+  },
+  {
+    name:"entry_by_0910",
+    designedFrom:["candidate-factory-v1"],
+    label:"09:10 이전",
+    description:"초반 모멘텀만 허용하는 조기 진입 후보",
+    params:{entryCutoff:910},
+  },
+  {
+    name:"gap_2_5",
+    designedFrom:["candidate-factory-v1"],
+    label:"갭 2~5%",
+    description:"과도한 갭을 제외하고 중간 갭만 허용",
+    params:{gapMin:2,gapMax:5},
+  },
+  {
+    name:"vol_1.8",
+    designedFrom:["candidate-factory-v1"],
+    label:"거래량≥1.8배",
+    description:"재돌파 거래량 강도를 더 높인 후보",
+    params:{volMult:1.8},
+  },
+  {name:"combo_pb07_amt15",designedFrom:["candidate-factory-v1"],label:"눌림0.7%+대금1.5배",description:"중간 눌림과 강한 거래대금 결합",params:{pbMax:.7,amountMult:1.5}},
+  {name:"combo_e0920_vol15",designedFrom:["candidate-factory-v1"],label:"09:20+거래량1.5배",description:"조기 진입과 거래량 강화 결합",params:{entryCutoff:920,volMult:1.5}},
+  {name:"gap_25_55",designedFrom:["candidate-factory-v1"],label:"갭2.5~5.5%",description:"갭 극단부를 줄인 중간 범위 후보",params:{gapMin:2.5,gapMax:5.5}},
+  {name:"stop_0.9_tp_1.8",designedFrom:["candidate-factory-v1"],label:"손절0.9/익절1.8",description:"손익비를 높인 청산 후보",params:{stop:.9,takeProfit:1.8}},
+  {name:"combo_pb05_e0920",designedFrom:["candidate-factory-v1"],label:"눌림0.5%+09:20",description:"얕은 눌림과 조기 진입 결합",params:{pbMax:.5,entryCutoff:920}},
 ]);
 
 export const OPENING_FIXED_FRICTION_PCT=.23;

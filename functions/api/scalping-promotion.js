@@ -116,7 +116,7 @@ export async function onRequestGet({request,env}){
     catch(e){errors[strategy]=String(e.message||e);}
     nextEffectiveFrom[strategy]=effectiveFrom(strategy);
   }));
-  return json({ok:true,effective:"next-new-session",autoPromotion:false,configs,errors,nextEffectiveFrom});
+  return json({ok:true,effective:"next-new-session",autoPromotion:true,automaticRule:"7-research-session-active-rank-1",configs,errors,nextEffectiveFrom});
 }
 export async function onRequestPost({request,env}){
   const who=await ownerInfo(request,env);if(!who.ok)return json({ok:false,error:who.error},401);
@@ -141,7 +141,7 @@ export async function onRequestPost({request,env}){
     }),strategy);
     return json({
       ok:true,strategy,variant,previousVariant,effectiveFrom:from,config,researchGeneratedAt:generatedAt,
-      effective:"next-new-session",autoPromotion:false,
+      effective:"next-new-session",autoPromotion:true,
       note:"현재 시작된 세션은 기존 메인전략으로 끝내고 "+from+" 새 세션부터 선택 전략을 메인으로 잠급니다."
     });
   }catch(e){return json({ok:false,error:String(e.message||e)},502);}

@@ -20,7 +20,17 @@ const DAY_EXIT_VARIANTS=Object.freeze({
   "tp_1.5":{stopPct:1.0,takeProfitPct:1.5,maxTrades:3},
   "vol_1.2":{stopPct:1.0,takeProfitPct:2.0,maxTrades:3},
   lookback_10:{stopPct:1.0,takeProfitPct:2.0,maxTrades:3},
-  max_trades_1:{stopPct:1.0,takeProfitPct:2.0,maxTrades:1}
+  max_trades_1:{stopPct:1.0,takeProfitPct:2.0,maxTrades:1},
+  "vwap_slope_0.15":{stopPct:1.0,takeProfitPct:2.0,maxTrades:3},
+  entry_by_1330:{stopPct:1.0,takeProfitPct:2.0,maxTrades:3},
+  session_max_6:{stopPct:1.0,takeProfitPct:2.0,maxTrades:3},
+  "vol_1.8":{stopPct:1.0,takeProfitPct:2.0,maxTrades:3},
+  lookback_15:{stopPct:1.0,takeProfitPct:2.0,maxTrades:3},
+  combo_vol18_lb15:{stopPct:1.0,takeProfitPct:2.0,maxTrades:3},
+  combo_slope15_e1400:{stopPct:1.0,takeProfitPct:2.0,maxTrades:3},
+  session_min_1_5:{stopPct:1.0,takeProfitPct:2.0,maxTrades:3},
+  session_max_5:{stopPct:1.0,takeProfitPct:2.0,maxTrades:3},
+  combo_lb30_vol12:{stopPct:1.0,takeProfitPct:2.0,maxTrades:3}
 });
 function dayExitParams(name){return DAY_EXIT_VARIANTS[String(name||"baseline")]||DAY_EXIT_VARIANTS.baseline;}
 

@@ -5,7 +5,7 @@ import {CATALOG,normalize,fallbackScore} from "../functions/api/scalping-shadow-
 console.log("[shadow ranking] 최소 10개 + 순위/표본 보정 검사");
 
 for(const [kind,names] of Object.entries(CATALOG)){
-  assert.ok(names.length>=10,kind+" shadow catalog must be >=10");
+  assert.ok(names.length>=20,kind+" shadow catalog must be >=20");
   assert.equal(new Set(names).size,names.length,kind+" shadow names must be unique");
 }
 
@@ -39,6 +39,8 @@ const rep={status:"reviewable",from:"2026-01-01",to:"2026-10-01",candidates:[
 ]};
 const n=normalize("crypto",rep);
 assert.equal(n.rows.length,10);
+assert.ok(n.totalCandidatePool>=20,"candidate pool should be at least 20");
+assert.ok(n.reserveRows.length>=10,"at least 10 reserve candidates should be available");
 assert.equal(n.rows[0].name,"vol_1.0");
 assert.ok(n.rows.findIndex(x=>x.trades===0)>0,"zero evidence rows should not lead");
 assert.deepEqual(n.rows.map(x=>x.rank),[1,2,3,4,5,6,7,8,9,10]);

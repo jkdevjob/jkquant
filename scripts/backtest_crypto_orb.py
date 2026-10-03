@@ -65,6 +65,16 @@ VARIANTS = [
     Params("hold_30m", max_hold_bars=6),
     Params("hold_120m", max_hold_bars=24),
     Params("entry_by_1800", entry_cutoff_min=17 * 60 + 55),  # 17:55 signal -> 18:00 KST entry
+    Params("range_10m", range_bars=2),
+    Params("vol_1.3", volume_mult=1.3),
+    Params("stop_0.4_tp_0.8", stop_pct=0.4, take_profit_pct=0.8),
+    Params("hold_90m", max_hold_bars=18),
+    Params("entry_by_2000", entry_cutoff_min=19 * 60 + 55),
+    Params("combo_range10_vol13", range_bars=2, volume_mult=1.3),
+    Params("combo_novwap_vol15", use_vwap=False, volume_mult=1.5),
+    Params("stop_0.6_tp_1.2", stop_pct=0.6, take_profit_pct=1.2),
+    Params("hold_45m", max_hold_bars=9),
+    Params("entry_by_2100", entry_cutoff_min=20 * 60 + 55),
 ]
 
 

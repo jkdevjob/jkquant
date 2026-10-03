@@ -56,6 +56,14 @@ jobs:
           python .app/scripts/nightly_scalping_research.py
 
           REPORT="data/nightly-research/latest.json"
+          if [ -n "$KEY" ] && [ -f "$REPORT" ]; then
+            STATUS=$(curl -sS --max-time 30 -o auto-promotion-response.json -w '%{http_code}'               -X POST -H "x-monitor-key: $KEY" -H "content-type: application/json"               --data-binary @"$REPORT" "$BASE/api/scalping-auto-promotion" || true)
+            echo "자동 메인승격 HTTP $STATUS: $(cat auto-promotion-response.json 2>/dev/null || true)"
+            if [ "$STATUS" != "200" ]; then
+              echo "::warning::자동승격 API 호출 실패 — 연구결과/라이프사이클 저장은 계속 진행"
+            fi
+          fi
+
           MARK="data/nightly-research/$DATE-summary-sent.json"
           if [ -n "$KEY" ] && [ -f "$REPORT" ] && [ ! -f "$MARK" ]; then
             SENT=0

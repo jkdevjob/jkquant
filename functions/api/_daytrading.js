@@ -24,6 +24,16 @@ export const DAY_SHADOW_VARIANTS=Object.freeze([
   {name:"vol_1.2",label:"거래량≥1.2배",params:{volMult:1.2}},
   {name:"lookback_10",label:"직전10분 고점",params:{lookback:10}},
   {name:"max_trades_1",label:"하루 최대1건",params:{maxTrades:1}},
+  {name:"vwap_slope_0.15",label:"VWAP기울기≥0.15%",params:{minVwapSlope:0.15}},
+  {name:"entry_by_1330",label:"13:30 이전",params:{entryCutoff:1330}},
+  {name:"session_max_6",label:"세션상승≤6%",params:{maxSessionRet:6.0}},
+  {name:"vol_1.8",label:"거래량≥1.8배",params:{volMult:1.8}},
+  {name:"lookback_15",label:"직전15분 고점",params:{lookback:15}},
+  {name:"combo_vol18_lb15",label:"거래량1.8+15분고점",params:{volMult:1.8,lookback:15}},
+  {name:"combo_slope15_e1400",label:"VWAP0.15+14:00",params:{minVwapSlope:0.15,entryCutoff:1400}},
+  {name:"session_min_1_5",label:"세션상승≥1.5%",params:{minSessionRet:1.5}},
+  {name:"session_max_5",label:"세션상승≤5%",params:{maxSessionRet:5.0}},
+  {name:"combo_lb30_vol12",label:"30분고점+거래량1.2",params:{lookback:30,volMult:1.2}},
 ]);
 
 export function dayVariant(name){

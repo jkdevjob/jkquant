@@ -11488,11 +11488,12 @@ console.log('\n[SCALPING TODAY LIVE] BTC·SOXL 실시간 장부 우선 · 부분
 }
 
 
-/* ════ GPT 그림자전략 최소10개 + 수동 메인승격 ════ */
-console.log('\n[SCALPING SHADOW/PROMOTION] 최소10개 · 순위 · 소유자 수동승격 · baseline 보존');
+/* ════ GPT 그림자전략 자동진화 + 7연속 1위 자동승격 ════ */
+console.log('\n[SCALPING SHADOW/PROMOTION] 활성10개 · 후보20개 · 자동진화 · 7연속 1위 자동승격 · baseline 보존');
 {
   const rankApi=fs.readFileSync(__d+'/functions/api/scalping-shadow-ranking.js','utf8');
   const promoApi=fs.readFileSync(__d+'/functions/api/scalping-promotion.js','utf8');
+  const autoPromoApi=fs.readFileSync(__d+'/functions/api/scalping-auto-promotion.js','utf8');
   const openMon=fs.readFileSync(__d+'/functions/api/opening-monitor.js','utf8');
   const dayCore=fs.readFileSync(__d+'/functions/api/_daytrading.js','utf8');
   const ow=fs.readFileSync(__d+'/worker/opening-scheduler/src/index.js','utf8');
@@ -11502,15 +11503,18 @@ console.log('\n[SCALPING SHADOW/PROMOTION] 최소10개 · 순위 · 소유자 �
   ok('단타 버전 x.y.z · 4개 탭 그림자 순위 컨테이너 존재',
      /id="scVer">v\d+\.\d+\.\d+</.test(scl)
      && ['opening','daytrading','crypto','soxl'].every(x=>scl.includes('id="shadow_rank_'+x+'"')));
-  ok('각 탭 그림자 카탈로그 최소 10개를 강제한다',
+  ok('각 탭 후보 풀 20개 · 활성 경쟁군 최소 10개를 강제한다',
      /minRequired:10/.test(rankApi)
      && /minShadowStrategies:10/.test(rankApi)
-     && (dayCore.match(/name:"/g)||[]).length>=10);
-  ok('승격은 자동이 아니라 소유자 버튼으로만 수행한다',
-     /autoPromotion:false/.test(rankApi)
-     && /⭐ 메인전략 승격/.test(scl)
-     && /accounts:lookup/.test(promoApi)
-     && /owner-promotion-button/.test(promoApi));
+     && /totalCandidatePool/.test(rankApi)
+     && (dayCore.match(/name:"/g)||[]).length>=20);
+  ok('승격은 수동 버튼이 아니라 7개 연구세션 연속 1위 자동승격으로 수행한다',
+     /automatic:true/.test(rankApi)
+     && /leaderResearchSessions:7/.test(rankApi)
+     && !/⭐ 메인전략 승격/.test(scl)
+     && /REQUIRED_LEADER_SESSIONS=7/.test(autoPromoApi)
+     && /row\.rank!==1/.test(autoPromoApi)
+     && /row\.promotionEligible/.test(autoPromoApi));
   ok('승격 조건은 review+표본+위험+점수+실시간호환을 모두 요구한다',
      /row\.review===true&&row\.sampleReady===true&&row\.riskOk===true&&Number\(row\.researchScore\)>=PROMOTION_MIN_SCORE/.test(rankApi)
      && /NON_PROMOTABLE/.test(rankApi));
@@ -11523,11 +11527,12 @@ console.log('\n[SCALPING SHADOW/PROMOTION] 최소10개 · 순위 · 소유자 �
   ok('원래 기준전략 원복 버튼과 서버 baseline 원복 경로가 있다',
      /원래 기준전략으로 원복/.test(scl)
      && /variant==="baseline"/.test(promoApi));
-  ok('Worker 메인전략 설정 경로는 monitor key로 보호된다',
+  ok('Worker 메인전략 설정 경로는 monitor key로 보호되고 자동승격도 동일 키를 사용한다',
      /u\.pathname==="\/config"/.test(ow)
      && /u\.pathname==="\/config"/.test(dw)
      && /u\.pathname==="\/config"/.test(gw)
-     && /x-monitor-key/.test(promoApi));
+     && /x-monitor-key/.test(promoApi)
+     && /x-monitor-key/.test(autoPromoApi));
 }
 
 

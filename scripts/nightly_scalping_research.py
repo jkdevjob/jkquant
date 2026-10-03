@@ -2,7 +2,15 @@
 """Nightly research rollup for opening + day-trading + bitcoin + SOXL strategies.
 
 Reads immutable/reconstructed paper research from scalping-data and produces a
-single daily research report. It NEVER changes live strategy parameters.
+single daily research report plus a persistent shadow-strategy lifecycle.
+
+Evolution policy:
+- keep at least 10 active shadow candidates per strategy;
+- retire only sample-ready candidates that repeatedly fail validation/risk gates;
+- automatically activate the best reserve candidate after a retirement;
+- track the #1 active candidate across distinct research sessions;
+- a candidate may request automatic main promotion only after 7 consecutive
+  distinct research sessions at rank #1 AND all existing promotion gates pass.
 
 Promotion policy:
 - opening: >=20 archived days, >=50 baseline trades, candidate >=30 trades,
@@ -41,7 +49,28 @@ SHADOW_SCORE_VERSION="v1"
 OPENING_SHADOW_NAMES=[
     "hold_to_next_open","today_combo_v1","pb_max_0.5","amount_1.5","entry_by_0915",
     "entry_by_0920","gap_3_6","vol_1.5","stop_0.7","tp_1.0",
+    "pb_max_0.7","amount_1.8","entry_by_0910","gap_2_5","vol_1.8",
+    "combo_pb07_amt15","combo_e0920_vol15","gap_25_55","stop_0.9_tp_1.8","combo_pb05_e0920",
 ]
+CANDIDATE_POOLS={
+    "opening":OPENING_SHADOW_NAMES,
+    "daytrading":["vol_2.0","lookback_30","vwap_slope_0.2","entry_by_1400","session_min_2",
+                  "stop_0.8","tp_1.5","vol_1.2","lookback_10","max_trades_1",
+                  "vwap_slope_0.15","entry_by_1330","session_max_6","vol_1.8","lookback_15",
+                  "combo_vol18_lb15","combo_slope15_e1400","session_min_1_5","session_max_5","combo_lb30_vol12"],
+    "crypto":["no_vwap","vol_1.0","vol_1.5","range_15m","range_30m","stop_0.3_tp_0.6",
+              "stop_0.7_tp_1.4","hold_30m","hold_120m","entry_by_1800",
+              "range_10m","vol_1.3","stop_0.4_tp_0.8","hold_90m","entry_by_2000",
+              "combo_range10_vol13","combo_novwap_vol15","stop_0.6_tp_1.2","hold_45m","entry_by_2100"],
+    "soxl":["range_5m","range_30m","vol_0.8","vol_1.2","no_vwap","stop_0.8_tp_1.6",
+            "stop_1.5_tp_3.0","hold_45m","hold_120m","entry_by_1030",
+            "range_10m","vol_1.5","stop_1.0_tp_2.0","hold_60m","entry_by_1100",
+            "combo_range10_vol12","combo_novwap_vol12","stop_0.9_tp_1.8","hold_75m","entry_by_1045"],
+}
+ACTIVE_SHADOW_COUNT=10
+RETIRE_STREAK_REQUIRED=3
+AUTO_PROMOTION_LEADER_SESSIONS=7
+AUTO_PROMOTION_MIN_SCORE=60.0
 
 def load_json(p:Path, default=None):
     try:
@@ -106,8 +135,148 @@ def ranking_rule():
         "minShadowStrategies":SHADOW_MIN_COUNT,
         "formula":"50 + sampleFactor × (20·tanh(allEdge/0.20) + 25·tanh(validationEdge/0.20) + 10·tanh(recentEdge/0.75) + 5·riskSign), clipped 0~100",
         "sampleFactor":"min(1, trades/minTrades)",
-        "note":"Rank is research triage only. Backtest/reconstruction and live-forward evidence stay separate; baseline is never auto-promoted.",
+        "note":"Rank uses sample-shrunk research evidence. Active candidate lifecycle is separate from reserve/retired history.",
     }
+
+
+def _candidate_trades(x):
+    return int((x.get("scoreParts") or {}).get("trades") or x.get("trades") or x.get("allTrades") or 0)
+
+def _validation_edge(x):
+    for k in ("validationAvgEdgePct","holdoutAvgEdgePct","last20AvgEdgePct","oosAvgEdgePct"):
+        if x.get(k) is not None:
+            try: return float(x.get(k) or 0)
+            except Exception: pass
+    return 0.0
+
+def _risk_ok(x):
+    return x.get("mddOk") is not False and x.get("profitFactorOk") is not False
+
+def _candidate_sort_key(x):
+    return (
+        _candidate_trades(x)<=0,
+        -float(x.get("researchScore") or 0),
+        -float(x.get("sampleFactor") or 0),
+        str(x.get("name") or ""),
+    )
+
+def evolve_lifecycle(kind, report, previous=None):
+    pool=list(CANDIDATE_POOLS[kind])
+    previous=previous or {}
+    retired=[x for x in (previous.get("retired") or []) if str(x.get("name") or "") in pool]
+    retired_names={str(x.get("name") or "") for x in retired}
+    active=[x for x in (previous.get("activeCandidates") or pool[:ACTIVE_SHADOW_COUNT])
+            if x in pool and x not in retired_names]
+    for name in pool:
+        if len(active)>=ACTIVE_SHADOW_COUNT: break
+        if name not in active and name not in retired_names: active.append(name)
+
+    by={str(x.get("name") or ""):x for x in (report.get("candidates") or [])}
+    evidence=str(report.get("to") or report.get("from") or "")
+    is_new_evidence=bool(evidence) and evidence!=str(previous.get("lastEvidenceDate") or "")
+    poor=dict(previous.get("poorStreaks") or {})
+    changes=list(previous.get("recentChanges") or [])[-19:]
+
+    if is_new_evidence:
+        reserve=[x for x in pool if x not in active and x not in retired_names]
+        retireable=[]
+        for name in list(active):
+            row=by.get(name) or {}
+            sample_ready=row.get("sampleReady") is True
+            weak=sample_ready and ((not _risk_ok(row)) or (
+                float(row.get("researchScore") or 0)<40.0 and _validation_edge(row)<0
+            ))
+            poor[name]=(int(poor.get(name) or 0)+1) if weak else 0
+            if poor[name]>=RETIRE_STREAK_REQUIRED:
+                retireable.append(name)
+
+        # Worst persistent failures leave first; every retirement immediately gets a reserve replacement.
+        retireable.sort(key=lambda n:(
+            float((by.get(n) or {}).get("researchScore") or 0),
+            _validation_edge(by.get(n) or {}),
+            n
+        ))
+        for name in retireable:
+            reserve=[x for x in pool if x not in active and x not in retired_names]
+            if not reserve: break
+            active.remove(name)
+            row=by.get(name) or {}
+            reason=("위험조건 반복 실패" if not _risk_ok(row)
+                    else f"검증우위 {_validation_edge(row):+.3f}% · 연구점수 {float(row.get('researchScore') or 0):.1f}가 "
+                         f"{RETIRE_STREAK_REQUIRED}개 연구세션 연속 부진")
+            rec={"name":name,"retiredAt":evidence,"reason":reason}
+            retired.append(rec);retired_names.add(name);poor[name]=0
+            changes.append({"date":evidence,"type":"retired","name":name,"reason":reason})
+
+            reserve_rows=[by.get(n) or {"name":n} for n in pool if n not in active and n not in retired_names]
+            reserve_rows.sort(key=_candidate_sort_key)
+            if reserve_rows:
+                replacement=str(reserve_rows[0].get("name") or "")
+                if replacement:
+                    active.append(replacement)
+                    changes.append({"date":evidence,"type":"activated","name":replacement,
+                                    "reason":f"{name} 퇴출 후 경쟁군 {ACTIVE_SHADOW_COUNT}개 유지"})
+
+    # Active leaderboard is independent from reserve/retired research rows.
+    active_rows=[by.get(n) or {"name":n,"researchScore":0,"sampleFactor":0} for n in active]
+    active_rows.sort(key=_candidate_sort_key)
+    for i,row in enumerate(active_rows,1):
+        row["activeRank"]=i
+
+    leader_name=str(active_rows[0].get("name") or "") if active_rows else ""
+    prev_leader=previous.get("leader") or {}
+    leader_dates=list(prev_leader.get("dates") or [])
+    if is_new_evidence:
+        if leader_name and leader_name==str(prev_leader.get("name") or ""):
+            if evidence not in leader_dates: leader_dates.append(evidence)
+        else:
+            leader_dates=[evidence] if leader_name else []
+    leader_dates=leader_dates[-AUTO_PROMOTION_LEADER_SESSIONS:]
+    consecutive=len(leader_dates) if leader_name else 0
+    leader_row=by.get(leader_name) or {}
+    promotion_gate=(
+        leader_row.get("status")=="review"
+        and leader_row.get("sampleReady") is True
+        and _risk_ok(leader_row)
+        and float(leader_row.get("researchScore") or 0)>=AUTO_PROMOTION_MIN_SCORE
+        and not (kind=="opening" and leader_name=="hold_to_next_open")
+    )
+    ready=consecutive>=AUTO_PROMOTION_LEADER_SESSIONS and promotion_gate
+    if not leader_name:
+        auto_reason="활성 후보 없음"
+    elif consecutive<AUTO_PROMOTION_LEADER_SESSIONS:
+        auto_reason=f"1위 유지 {consecutive}/{AUTO_PROMOTION_LEADER_SESSIONS} 연구세션"
+    elif not promotion_gate:
+        auto_reason="1위 유지 충족, 기존 표본·검증·위험·점수 승격조건 미충족"
+    else:
+        auto_reason="7개 연속 연구세션 1위 + 기존 승격조건 통과"
+
+    life={
+        "schema":1,
+        "candidateFactory":"whitelisted-parameter-neighborhood-v1",
+        "minimumActive":ACTIVE_SHADOW_COUNT,
+        "candidatePoolSize":len(pool),
+        "activeCandidates":active,
+        "reserveCandidates":[x for x in pool if x not in active and x not in retired_names],
+        "retired":retired[-50:],
+        "poorStreaks":poor,
+        "lastEvidenceDate":evidence or previous.get("lastEvidenceDate"),
+        "leader":{"name":leader_name,"consecutiveResearchSessions":consecutive,
+                  "requiredResearchSessions":AUTO_PROMOTION_LEADER_SESSIONS,"dates":leader_dates},
+        "autoPromotionCandidate":leader_name if ready else None,
+        "autoPromotionReady":ready,
+        "autoPromotionReason":auto_reason,
+        "recentChanges":changes[-20:],
+        "retirementRule":f"sampleReady 이후 위험 실패 또는 점수<40·검증우위<0 상태가 {RETIRE_STREAK_REQUIRED}개 서로 다른 연구세션 연속",
+        "replacementRule":"퇴출 즉시 예비 후보 중 연구순위가 가장 높은 후보를 활성화해 최소 10개 유지",
+    }
+    for x in report.get("candidates") or []:
+        name=str(x.get("name") or "")
+        x["lifecycleStatus"]="retired" if name in retired_names else ("active" if name in active else "reserve")
+        x["activeRank"]=next((i for i,r in enumerate(active_rows,1) if str(r.get("name") or "")==name),None)
+    report["lifecycle"]=life
+    report["autoPromotion"]=True
+    return life
 
 def opening_condition_bucket(name, value):
     try:
@@ -309,7 +478,7 @@ def opening_report():
             "minDays":OPEN_MIN_DAYS,"minBaselineTrades":OPEN_MIN_BASE_TRADES,
             "minCandidateTrades":OPEN_MIN_CAND_TRADES,
             "allAvgEdgePct":OPEN_ALL_EDGE,"last20AvgEdgePct":OPEN_20D_EDGE,
-            "autoPromotion":False,
+            "autoPromotion":True,
         },
         "variants":variants,"candidates":candidates,
         "rankingRule":ranking_rule(),
@@ -382,7 +551,7 @@ def daytrading_report():
         "variants":rows,"candidates":candidates,
         "rankingRule":ranking_rule(),
         "configuredShadowCount":max(0,len(rows)-1),
-        "autoPromotion":False,
+        "autoPromotion":True,
     }
 
 def crypto_report():
@@ -550,22 +719,31 @@ def main():
     c=crypto_report()
     sx=soxl_report()
     v=vts_report()
+    OUT.mkdir(parents=True,exist_ok=True)
+    state_path=OUT/"lifecycle.json"
+    state=load_json(state_path,{"schema":1,"strategies":{}}) or {"schema":1,"strategies":{}}
+    strategies=state.setdefault("strategies",{})
+    for kind,obj in (("opening",o),("daytrading",d),("crypto",c),("soxl",sx)):
+        strategies[kind]=evolve_lifecycle(kind,obj,strategies.get(kind) or {})
+    state["updatedAt"]=now.isoformat()
+    state_path.write_text(json.dumps(state,ensure_ascii=False,indent=2),encoding="utf-8")
+
     report={
-        "schema":1,
+        "schema":2,
         "generatedAt":now.isoformat(),
         "date":now.strftime("%Y-%m-%d"),
-        "mode":"nightly-research-no-auto-promotion",
+        "mode":"nightly-shadow-auto-evolution",
         "opening":o,
         "daytrading":d,
         "crypto":c,
         "soxl":sx,
         "execution":v,
         "guardrail":{
-            "liveStrategyAutoChange":False,
-            "note":"데이터는 매일 누적·비교하지만 기준전략은 자동 변경하지 않는다. 충분한 표본과 일관성이 확인되면 검토 후보만 올린다."
+            "liveStrategyAutoChange":True,
+            "autoPromotionRule":"7 distinct research sessions at active rank #1 plus all existing promotion gates",
+            "note":"부진 후보 자동퇴출·예비후보 자동투입은 연구 경쟁군에만 적용한다. 메인전략 자동변경은 7연속 1위와 기존 표본/검증/위험/점수 조건을 모두 통과한 경우에만 다음 새 세션부터 적용한다."
         }
     }
-    OUT.mkdir(parents=True,exist_ok=True)
     (OUT/"latest.json").write_text(json.dumps(report,ensure_ascii=False,indent=2),encoding="utf-8")
     (OUT/f"{report['date']}.json").write_text(json.dumps(report,ensure_ascii=False,indent=2),encoding="utf-8")
     print(json.dumps({

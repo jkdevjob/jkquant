@@ -94,6 +94,9 @@ jobs:
       - name: 그림자전략 수동 메인승격 가드 검사
         run: node scripts/test_scalping_promotion.mjs
 
+      - name: 그림자전략 7연속 1위 자동승격 가드 검사
+        run: node scripts/test_scalping_auto_promotion.mjs
+
       - name: BTC·SOXL 장중 모의장부 저장·표시 검사
         run: node scripts/test_global_paper_ledger.mjs
 
@@ -131,6 +134,7 @@ jobs:
           node --input-type=module --check < functions/api/daytrading-monitor.js
           node --input-type=module --check < functions/api/daytrading-summary.js
           node --input-type=module --check < functions/api/daytrading-paper.js
+          node --input-type=module --check < functions/api/scalping-auto-promotion.js
           node --input-type=module --check < functions/api/vts-reconcile.js
           node --input-type=module --check < functions/api/vts-research.js
           node --input-type=module --check < functions/api/vts-summary.js
@@ -380,20 +384,30 @@ jobs:
           console.log('✓ opening/daytrading/bitcoin/SOXL strategy evidence is retained');
           NODE
 
-      - name: 야간 자동연구는 분석 전용인지 검사
+      - name: 야간 자동연구·자동승격 안전가드 검사
         run: |
           node - <<'NODE'
           const fs=require('fs');
           const py=fs.readFileSync('scripts/nightly_scalping_research.py','utf8');
           const w=fs.readFileSync('.github/workflows/nightly-scalping-research.yml','utf8');
+          const api=fs.readFileSync('functions/api/scalping-auto-promotion.js','utf8');
           let fail=0;
-          const must=[
-            ['liveStrategyAutoChange":False','라이브 전략 자동변경 OFF'],
+          const mustPy=[
+            ['AUTO_PROMOTION_LEADER_SESSIONS=7','7연속 연구세션 기준'],
+            ['AUTO_PROMOTION_MIN_SCORE=60.0','최소 연구점수'],
             ['OPEN_MIN_DAYS=20','시초가 최소 일수'],
             ['OPEN_MIN_BASE_TRADES=50','시초가 최소 기준거래'],
-            ['autoPromotion":False','자동 승격 OFF']
+            ['"liveStrategyAutoChange":True','가드된 자동승격 모드']
           ];
-          for(const [needle,label] of must){if(!py.includes(needle)){console.error('✗ '+label+' 없음');fail++;}}
+          for(const [needle,label] of mustPy){if(!py.includes(needle)){console.error('✗ '+label+' 없음');fail++;}}
+          const mustApi=[
+            ['REQUIRED_LEADER_SESSIONS=7','API 7연속 기준'],
+            ['row.promotionEligible','기존 승격게이트 재검증'],
+            ['row.rank!==1','활성 1위 재검증'],
+            ['effective:"next-new-session"','다음 세션 적용']
+          ];
+          for(const [needle,label] of mustApi){if(!api.includes(needle)){console.error('✗ '+label+' 없음');fail++;}}
+          if(!w.includes('/api/scalping-auto-promotion')){console.error('✗ 야간연구 자동승격 API 호출 없음');fail++;}
           if(!w.includes('10 10 * * *')||!w.includes('10 11 * * *')){
             console.error('✗ 매일 19:10/20:10 KST 야간 연구 schedule 없음'); fail++;
           }
@@ -403,13 +417,12 @@ jobs:
           if(!w.includes('seq 1 12')||!w.includes('20:10 backup')){
             console.error('✗ Pages 배포 지연 시 Telegram 재시도/fallback 없음'); fail++;
           }
-          if(/\/api\/kis\?op=order|priceType.*market/.test(py+w)){
-            console.error('✗ 야간 연구 경로에서 주문 호출 발견'); fail++;
+          if(/\/api\/kis\?op=order|priceType.*market/.test(py+w+api)){
+            console.error('✗ 야간 연구/자동승격 경로에서 브로커 주문 호출 발견'); fail++;
           }
           if(fail)process.exit(1);
-          console.log('✓ nightly research is analysis-only / no auto promotion');
+          console.log('✓ nightly research auto-evolution is guarded by 7-session + promotion gates');
           NODE
-
 
       - name: 비트코인 단타 연구 불변식 검사
         run: |
