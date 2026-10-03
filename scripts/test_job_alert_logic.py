@@ -31,6 +31,10 @@ def run():
     collect_src = inspect.getsource(j.collect_search_source)
     assert "broad = f'\"{domain}\" {fallback_term}'" in collect_src
     assert "domain not in domain_of(url)" in collect_src
+    all_src = inspect.getsource(j.collect_all_sources)
+    assert "degraded_sources" in all_src
+    assert "serial_recovery=1" in all_src
+    assert "retry_failed <= previous_failed" in all_src
 
     missing = {
         **a,
