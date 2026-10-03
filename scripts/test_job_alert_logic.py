@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import inspect
 import job_alert as j
 
 
@@ -24,6 +25,10 @@ def run():
         'Sep 16, 2026 · 매장관리·판매 ... (단기/경력무관) 습관 기록 앱 데이터 알바. 시간협의 · 대전 전체',
     )
     assert albamon != '알바몬' and '데이터 알바' in albamon
+
+    retry_src = inspect.getsource(j.collect_search_source)
+    assert "timelimit=None" in retry_src and "attempts=2" in retry_src, 'search sources need final serial recovery retry'
+    assert "'degraded': bool(errors)" in retry_src, 'partial source failures must remain visible'
 
     missing = {
         **a,
