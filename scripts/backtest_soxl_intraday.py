@@ -57,6 +57,10 @@ VARIANTS = [
     Params("hold_45m", max_hold_bars=9),
     Params("hold_120m", max_hold_bars=24),
     Params("entry_by_1030", entry_cutoff_hm=1030),
+    Params("range_10m", range_bars=2),
+    Params("vol_1.5", volume_mult=1.5),
+    Params("entry_by_1000", entry_cutoff_hm=1000),
+    Params("hold_60m", max_hold_bars=12),
 ]
 
 
