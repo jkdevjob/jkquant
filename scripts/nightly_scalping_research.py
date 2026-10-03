@@ -37,10 +37,13 @@ OPEN_MIN_CAND_TRADES=30
 OPEN_ALL_EDGE=0.10
 OPEN_20D_EDGE=0.05
 SHADOW_MIN_COUNT=10
-SHADOW_SCORE_VERSION="v1"
+SHADOW_SCORE_VERSION="v2-lifecycle"
+AUTO_PROMOTION_DAYS=7
+AUTO_PROMOTION_MIN_SCORE=60
 OPENING_SHADOW_NAMES=[
     "hold_to_next_open","today_combo_v1","pb_max_0.5","amount_1.5","entry_by_0915",
     "entry_by_0920","gap_3_6","vol_1.5","stop_0.7","tp_1.0",
+    "pb_max_0.7","amount_1.8","entry_by_0910","stop_0.8_tp_1.8",
 ]
 
 def load_json(p:Path, default=None):
@@ -108,6 +111,102 @@ def ranking_rule():
         "sampleFactor":"min(1, trades/minTrades)",
         "note":"Rank is research triage only. Backtest/reconstruction and live-forward evidence stay separate; baseline is never auto-promoted.",
     }
+
+def _rank1_name(report):
+    rows=(report or {}).get("candidates") or []
+    ranked=sorted(rows,key=lambda x:int(x.get("rank") or 999999))
+    return str(ranked[0].get("name") or "") if ranked else ""
+
+def _previous_reports(limit=14):
+    out=[]
+    for p in sorted(OUT.glob("????-??-??.json"))[-limit:]:
+        j=load_json(p,{}) or {}
+        if j.get("date"):
+            out.append(j)
+    return out
+
+def apply_shadow_lifecycle(kind, report):
+    rows=sorted((report or {}).get("candidates") or [],key=lambda x:int(x.get("rank") or 999999))
+    active=rows[:SHADOW_MIN_COUNT]
+    reserve=rows[SHADOW_MIN_COUNT:]
+    previous=_previous_reports()
+    prev_lifecycle=((previous[-1].get(kind) or {}).get("lifecycle") or {}) if previous else {}
+    prev_active=set(prev_lifecycle.get("active") or [])
+    active_names=[str(x.get("name") or "") for x in active if x.get("name")]
+    reserve_names=[str(x.get("name") or "") for x in reserve if x.get("name")]
+    active_set=set(active_names)
+
+    admitted=[x for x in active_names if x not in prev_active] if prev_active else []
+    retired=[x for x in prev_active if x not in active_set]
+    for x in rows:
+        name=str(x.get("name") or "")
+        if name in active_set:
+            x["lifecycleStatus"]="active"
+            x["lifecycleReason"]="상위 %d 경쟁군 유지"%SHADOW_MIN_COUNT
+        else:
+            x["lifecycleStatus"]="retired"
+            x["lifecycleReason"]="하위 순위 자동퇴출 · 예비후보로 전환"
+
+    leader=active_names[0] if active_names else ""
+    prior_leaders=[]
+    for old in previous[-(AUTO_PROMOTION_DAYS-1):]:
+        old_strategy=old.get(kind) or {}
+        old_lifecycle=old_strategy.get("lifecycle") or {}
+        prior_leaders.append(str(old_lifecycle.get("leader") or _rank1_name(old_strategy) or ""))
+    leader_series=prior_leaders+[leader]
+    leader_days=0
+    for name in reversed(leader_series):
+        if leader and name==leader:
+            leader_days+=1
+        else:
+            break
+
+    top=active[0] if active else {}
+    risk_ok=top.get("mddOk") is not False and top.get("profitFactorOk") is not False
+    gate_ok=(
+        bool(leader)
+        and leader_days>=AUTO_PROMOTION_DAYS
+        and top.get("status")=="review"
+        and top.get("sampleReady") is True
+        and risk_ok
+        and float(top.get("researchScore") or 0)>=AUTO_PROMOTION_MIN_SCORE
+        and not (kind=="opening" and leader=="hold_to_next_open")
+    )
+    missing=[]
+    if leader_days<AUTO_PROMOTION_DAYS: missing.append("1위 유지 %d/%d일"%(leader_days,AUTO_PROMOTION_DAYS))
+    if top.get("status")!="review": missing.append("검토 게이트 미통과")
+    if top.get("sampleReady") is not True: missing.append("최소 표본 미충족")
+    if not risk_ok: missing.append("위험조건 미충족")
+    if float(top.get("researchScore") or 0)<AUTO_PROMOTION_MIN_SCORE: missing.append("점수 %.2f<%d"%(float(top.get("researchScore") or 0),AUTO_PROMOTION_MIN_SCORE))
+    if kind=="opening" and leader=="hold_to_next_open": missing.append("연구전용 전략")
+
+    report["lifecycle"]={
+        "version":"v1",
+        "minimumActive":SHADOW_MIN_COUNT,
+        "candidatePoolCount":len(rows),
+        "active":active_names,
+        "reserve":reserve_names,
+        "admittedToday":admitted,
+        "retiredToday":retired,
+        "leader":leader or None,
+        "leaderDays":leader_days,
+        "recentLeaders":leader_series[-AUTO_PROMOTION_DAYS:],
+        "autoPromotion":{
+            "enabled":True,
+            "requiredLeaderDays":AUTO_PROMOTION_DAYS,
+            "minScore":AUTO_PROMOTION_MIN_SCORE,
+            "eligible":gate_ok,
+            "variant":leader or None,
+            "score":float(top.get("researchScore") or 0) if top else None,
+            "reason":"자동승격 조건 충족" if gate_ok else " · ".join(missing) or "후보 없음",
+            "effective":"next-new-session",
+        },
+        "changeLog":[
+            *[{"type":"admit","variant":x,"reason":"상위 %d 진입으로 신규 투입"%SHADOW_MIN_COUNT} for x in admitted],
+            *[{"type":"retire","variant":x,"reason":"상위 %d 이탈로 자동 퇴출"%SHADOW_MIN_COUNT} for x in retired],
+        ],
+    }
+    return report
 
 def opening_condition_bucket(name, value):
     try:
@@ -545,24 +644,26 @@ def vts_report():
 
 def main():
     now=datetime.now(KST)
-    o=opening_report()
-    d=daytrading_report()
-    c=crypto_report()
-    sx=soxl_report()
+    o=apply_shadow_lifecycle("opening",opening_report())
+    d=apply_shadow_lifecycle("daytrading",daytrading_report())
+    c=apply_shadow_lifecycle("crypto",crypto_report())
+    sx=apply_shadow_lifecycle("soxl",soxl_report())
     v=vts_report()
     report={
         "schema":1,
         "generatedAt":now.isoformat(),
         "date":now.strftime("%Y-%m-%d"),
-        "mode":"nightly-research-no-auto-promotion",
+        "mode":"nightly-research-auto-lifecycle",
         "opening":o,
         "daytrading":d,
         "crypto":c,
         "soxl":sx,
         "execution":v,
         "guardrail":{
-            "liveStrategyAutoChange":False,
-            "note":"데이터는 매일 누적·비교하지만 기준전략은 자동 변경하지 않는다. 충분한 표본과 일관성이 확인되면 검토 후보만 올린다."
+            "liveStrategyAutoChange":True,
+            "autoPromotionLeaderDays":AUTO_PROMOTION_DAYS,
+            "autoPromotionMinScore":AUTO_PROMOTION_MIN_SCORE,
+            "note":"최근 7일 연구에서 같은 전략이 계속 1위이고 검토·표본·위험·점수 게이트를 모두 통과할 때만 다음 새 세션부터 자동승격한다."
         }
     }
     OUT.mkdir(parents=True,exist_ok=True)
