@@ -584,6 +584,10 @@ export default {
       const ledger=await readPaper(env,date);
       return json({ok:true,date,ledger});
     }
+    if(u.pathname==="/paper-dates"){
+      if(!authorized(request,env))return json({ok:false,error:"unauthorized"},401);
+      return json({ok:true,strategy:"daytrading",dates:await readPaperDates(env)});
+    }
     if(u.pathname==="/paper-history"){
       if(!authorized(request,env))return json({ok:false,error:"unauthorized"},401);
       const limit=Math.max(1,Math.min(3650,Number(u.searchParams.get("limit")||120)));
