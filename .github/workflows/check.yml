@@ -91,7 +91,7 @@ jobs:
           node scripts/test_shadow_rankings.mjs
           python scripts/test_shadow_research_score.py
 
-      - name: 그림자전략 수동 메인승격 가드 검사
+      - name: 그림자전략 자동 메인승격 가드 검사
         run: node scripts/test_scalping_promotion.mjs
 
       - name: BTC·SOXL 장중 모의장부 저장·표시 검사
@@ -380,18 +380,22 @@ jobs:
           console.log('✓ opening/daytrading/bitcoin/SOXL strategy evidence is retained');
           NODE
 
-      - name: 야간 자동연구는 분석 전용인지 검사
+      - name: 야간 자동연구 7일 1위 자동승격 안전검사
         run: |
           node - <<'NODE'
           const fs=require('fs');
           const py=fs.readFileSync('scripts/nightly_scalping_research.py','utf8');
           const w=fs.readFileSync('.github/workflows/nightly-scalping-research.yml','utf8');
+          const api=fs.readFileSync('functions/api/scalping-promotion.js','utf8');
           let fail=0;
           const must=[
-            ['liveStrategyAutoChange":False','라이브 전략 자동변경 OFF'],
+            ['liveStrategyAutoChange":True','검증조건부 메인전략 자동변경 ON'],
+            ['AUTO_PROMOTION_DAYS=7','7개 고유 평가일 1위 조건'],
+            ['AUTO_PROMOTION_MIN_SCORE=60','자동승격 최소점수'],
             ['OPEN_MIN_DAYS=20','시초가 최소 일수'],
             ['OPEN_MIN_BASE_TRADES=50','시초가 최소 기준거래'],
-            ['autoPromotion":False','자동 승격 OFF']
+            ['"autoPromotion":True','자동 승격 상태 ON'],
+            ['evidenceDate','중복 실행을 막는 고유 평가일 기록']
           ];
           for(const [needle,label] of must){if(!py.includes(needle)){console.error('✗ '+label+' 없음');fail++;}}
           if(!w.includes('10 10 * * *')||!w.includes('10 11 * * *')){
@@ -400,14 +404,22 @@ jobs:
           if(!py.includes('CRYPTO=Path("data/crypto-research/latest.json")')||!py.includes('"crypto":c')){
             console.error('✗ 야간 통합연구에 비트코인 축이 없음'); fail++;
           }
-          if(!w.includes('seq 1 12')||!w.includes('20:10 backup')){
-            console.error('✗ Pages 배포 지연 시 Telegram 재시도/fallback 없음'); fail++;
+          if(!w.includes('seq 1 12')||!w.includes('/api/scalping-promotion')||!w.includes('x-monitor-key')){
+            console.error('✗ Pages 지연 재시도/보호된 자동승격 호출 없음'); fail++;
           }
-          if(/\/api\/kis\?op=order|priceType.*market/.test(py+w)){
-            console.error('✗ 야간 연구 경로에서 주문 호출 발견'); fail++;
+          const apiMust=[
+            ['leaderDays||0)<7','서버측 7일 재검증'],
+            ['promotionDecision','서버측 승격 게이트 재검증'],
+            ['stale nightly report','오래된 보고서 재전송 차단'],
+            ['auto-promotion-7d-leader','자동승격 감사 source'],
+            ['effectiveFrom','다음 세션 적용일 계산']
+          ];
+          for(const [needle,label] of apiMust){if(!api.includes(needle)){console.error('✗ '+label+' 없음');fail++;}}
+          if(/\/api\/kis\?op=order|priceType.*market/.test(py+w+api)){
+            console.error('✗ 야간 자동개선/승격 경로에서 직접 주문 호출 발견'); fail++;
           }
           if(fail)process.exit(1);
-          console.log('✓ nightly research is analysis-only / no auto promotion');
+          console.log('✓ nightly lifecycle auto-promotes only guarded 7-day leaders; no direct order path');
           NODE
 
 
