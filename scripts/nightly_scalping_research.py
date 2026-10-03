@@ -125,11 +125,13 @@ def _previous_reports(limit=14):
             out.append(j)
     return out
 
-def apply_shadow_lifecycle(kind, report):
+def apply_shadow_lifecycle(kind, report, current_date=None):
     rows=sorted((report or {}).get("candidates") or [],key=lambda x:int(x.get("rank") or 999999))
     active=rows[:SHADOW_MIN_COUNT]
     reserve=rows[SHADOW_MIN_COUNT:]
-    previous=_previous_reports()
+    current_date=str(current_date or "")
+    evidence_date=str((report or {}).get("to") or current_date)
+    previous=[x for x in _previous_reports() if str(x.get("date") or "")!=current_date]
     prev_lifecycle=((previous[-1].get(kind) or {}).get("lifecycle") or {}) if previous else {}
     prev_active=set(prev_lifecycle.get("active") or [])
     active_names=[str(x.get("name") or "") for x in active if x.get("name")]
@@ -148,11 +150,17 @@ def apply_shadow_lifecycle(kind, report):
             x["lifecycleReason"]="하위 순위 자동퇴출 · 예비후보로 전환"
 
     leader=active_names[0] if active_names else ""
-    prior_leaders=[]
-    for old in previous[-(AUTO_PROMOTION_DAYS-1):]:
+    # 같은 날 백업 실행이나 주말 재분석을 별도 '1일'로 세지 않는다.
+    # 전략별 실제 확정 평가일(to)을 기준으로 최근 7개 고유 평가일의 1위를 추적한다.
+    evidence={}
+    for old in previous:
         old_strategy=old.get(kind) or {}
         old_lifecycle=old_strategy.get("lifecycle") or {}
-        prior_leaders.append(str(old_lifecycle.get("leader") or _rank1_name(old_strategy) or ""))
+        old_evidence=str(old_lifecycle.get("evidenceDate") or old_strategy.get("to") or old.get("date") or "")
+        if old_evidence:
+            evidence[old_evidence]=str(old_lifecycle.get("leader") or _rank1_name(old_strategy) or "")
+    prior_dates=sorted(d for d in evidence if d and d!=evidence_date)[-(AUTO_PROMOTION_DAYS-1):]
+    prior_leaders=[evidence[d] for d in prior_dates]
     leader_series=prior_leaders+[leader]
     leader_days=0
     for name in reversed(leader_series):
@@ -189,6 +197,7 @@ def apply_shadow_lifecycle(kind, report):
         "admittedToday":admitted,
         "retiredToday":retired,
         "leader":leader or None,
+        "evidenceDate":evidence_date or None,
         "leaderDays":leader_days,
         "recentLeaders":leader_series[-AUTO_PROMOTION_DAYS:],
         "autoPromotion":{
@@ -408,7 +417,7 @@ def opening_report():
             "minDays":OPEN_MIN_DAYS,"minBaselineTrades":OPEN_MIN_BASE_TRADES,
             "minCandidateTrades":OPEN_MIN_CAND_TRADES,
             "allAvgEdgePct":OPEN_ALL_EDGE,"last20AvgEdgePct":OPEN_20D_EDGE,
-            "autoPromotion":False,
+            "autoPromotion":True,
         },
         "variants":variants,"candidates":candidates,
         "rankingRule":ranking_rule(),
@@ -644,15 +653,16 @@ def vts_report():
 
 def main():
     now=datetime.now(KST)
-    o=apply_shadow_lifecycle("opening",opening_report())
-    d=apply_shadow_lifecycle("daytrading",daytrading_report())
-    c=apply_shadow_lifecycle("crypto",crypto_report())
-    sx=apply_shadow_lifecycle("soxl",soxl_report())
+    today=now.strftime("%Y-%m-%d")
+    o=apply_shadow_lifecycle("opening",opening_report(),today)
+    d=apply_shadow_lifecycle("daytrading",daytrading_report(),today)
+    c=apply_shadow_lifecycle("crypto",crypto_report(),today)
+    sx=apply_shadow_lifecycle("soxl",soxl_report(),today)
     v=vts_report()
     report={
         "schema":1,
         "generatedAt":now.isoformat(),
-        "date":now.strftime("%Y-%m-%d"),
+        "date":today,
         "mode":"nightly-research-auto-lifecycle",
         "opening":o,
         "daytrading":d,
