@@ -125,7 +125,7 @@ pre.rules{background:var(--bg);border:1px solid var(--line);border-radius:10px;p
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-app.js";
   import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-auth.js";
-  import { getFirestore, doc, getDoc, setDoc, collection, getDocs, runTransaction } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-firestore.js";
+  import { initializeFirestore, doc, getDoc, setDoc, collection, getDocs, runTransaction } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-firestore.js";
   const firebaseConfig = {
     apiKey: "AIzaSyBzBe9pAttnbDgTlNThWZzNqtAAKxX7Ksw",
     authDomain: "jk-invest.firebaseapp.com",
@@ -135,7 +135,7 @@ pre.rules{background:var(--bg);border:1px solid var(--line);border-radius:10px;p
     appId: "1:1024066323251:web:23d557527866205f01f446"
   };
   const app = initializeApp(firebaseConfig);
-  window.fb = { auth:getAuth(app), db:getFirestore(app), provider:new GoogleAuthProvider(),
+  window.fb = { auth:getAuth(app), db:initializeFirestore(app,{experimentalForceLongPolling:true}), provider:new GoogleAuthProvider(),
                 signInWithPopup, onAuthStateChanged, signOut, doc, getDoc, setDoc, collection, getDocs, runTransaction };
   window.dispatchEvent(new Event('fb-ready'));
 </script>
@@ -157,7 +157,7 @@ pre.rules{background:var(--bg);border:1px solid var(--line);border-radius:10px;p
 
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Admin Console</div><h1>JK <span class="v">퀀트</span> 관리자 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="adVer">v0.11.1</span></h1></div>
+    <div><div class="kicker">Admin Console</div><h1>JK <span class="v">퀀트</span> 관리자 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="adVer">v0.11.2</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
