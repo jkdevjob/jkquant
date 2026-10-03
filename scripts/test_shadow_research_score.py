@@ -51,4 +51,11 @@ with tempfile.TemporaryDirectory() as td:
     assert life["autoPromotion"]["eligible"] is True
     m.OUT=old_out
 
-print("ALL PASS — shadow research score + lifecycle")
+a=m.opening_factory_names(m.date(2026,10,3))
+b=m.opening_factory_names(m.date(2026,10,31))
+assert len(a)==4 and len(set(a))==4
+assert len(b)==4 and a!=b
+assert m.factory_meta(a[0],"2026-10-10")["factoryReady"] is False
+assert m.factory_meta(a[0],"2026-10-17")["factoryReady"] is True
+
+print("ALL PASS — shadow research score + lifecycle + recurring factory")
