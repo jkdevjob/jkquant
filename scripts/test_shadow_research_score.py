@@ -67,3 +67,27 @@ assert bad_name not in state["activeCandidates"]
 assert any(x["name"]==bad_name for x in state["retired"])
 assert len(state["activeCandidates"])>=10
 print("ALL PASS — shadow lifecycle")
+
+
+print("[shadow generator] 새 연구세션마다 신규 후보 생성, 같은 세션 중복 금지")
+base_candidates=[]
+for i,name in enumerate(m.CANDIDATE_POOLS["crypto"]):
+    base_candidates.append({
+        "name":name,"status":"collecting","researchScore":60-i,
+        "sampleFactor":0.5,"sampleReady":False,
+        "scoreParts":{"trades":25,"minTrades":50},
+        "holdoutAvgEdgePct":0.0,"mddOk":True,
+    })
+rep={"to":"2026-10-01","candidates":base_candidates}
+s1=m.evolve_lifecycle("crypto",rep,None)
+assert s1["factoryGeneration"]==1
+assert len(s1["generatedCandidates"])==5
+names1=[x["name"] for x in s1["generatedCandidates"]]
+s1_same=m.evolve_lifecycle("crypto",rep,s1)
+assert s1_same["factoryGeneration"]==1
+assert [x["name"] for x in s1_same["generatedCandidates"]]==names1
+rep["to"]="2026-10-02"
+s2=m.evolve_lifecycle("crypto",rep,s1_same)
+assert s2["factoryGeneration"]==2
+assert [x["name"] for x in s2["generatedCandidates"]]!=names1
+print("ALL PASS — shadow generator")
