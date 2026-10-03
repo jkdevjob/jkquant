@@ -10,7 +10,7 @@ Research only. No broker orders are placed.
 from __future__ import annotations
 import csv, gzip, json, statistics
 from dataclasses import dataclass, asdict
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
@@ -42,6 +42,27 @@ class Params:
     fee:float=0.25
     max_trades:int=3
 
+FACTORY_EPOCH=datetime(2026,10,3,tzinfo=timezone.utc)
+FACTORY_CYCLE_DAYS=28
+
+def _factory_index(now=None):
+    now=now or datetime.now(timezone.utc)
+    return max(0,(now-FACTORY_EPOCH).days//FACTORY_CYCLE_DAYS)
+
+def _day_factory_variants(now=None):
+    k=_factory_index(now);out=[]
+    vols=[1.1,1.3,1.7,1.9];looks=[12,15,25,35];slopes=[.05,.12,.18,.25]
+    rets=[.5,1.5,2.5];cuts=[1300,1400];stops=[.7,.9,1.1];tps=[1.6,1.8,2.2];maxes=[2,3]
+    for j in range(4):
+        z=k*4+j
+        vol=vols[z%len(vols)];look=looks[(z*3+1)%len(looks)];slope=slopes[(z*5+2)%len(slopes)]
+        ret=rets[(z*7+1)%len(rets)];cut=cuts[z%len(cuts)];stop=stops[(z*11+1)%len(stops)]
+        tp=tps[(z*13+2)%len(tps)];mx=maxes[(z*17)%len(maxes)]
+        name=f"gen_d_v{round(vol*10)}_l{look}_s{round(slope*100)}_r{round(ret*10)}_e{cut}_sl{round(stop*10)}_tp{round(tp*10)}_m{mx}"
+        out.append(Params(name,vol_mult=vol,lookback=look,min_vwap_slope=slope,min_session_ret=ret,
+                          entry_cutoff=cut,stop=stop,take_profit=tp,max_trades=mx))
+    return out
+
 VARIANTS=[
     Params("baseline"),
     Params("vol_2.0",vol_mult=2.0),
@@ -58,6 +79,7 @@ VARIANTS=[
     Params("session_min_1.5",min_session_ret=1.5),
     Params("entry_by_1330",entry_cutoff=1330),
     Params("stop_0.8_tp_1.6",stop=0.8,take_profit=1.6),
+    *_day_factory_variants(),
 ]
 
 def hm(t):
