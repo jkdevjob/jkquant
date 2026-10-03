@@ -1,6 +1,11 @@
 #!/usr/bin/env python3
 import importlib.util
+import sys
+import types
 from pathlib import Path
+
+# Unit tests exercise pure builders/safety rules only; deployment workflow installs real requests.
+sys.modules.setdefault("requests", types.ModuleType("requests"))
 
 ROOT = Path(__file__).resolve().parents[1]
 SPEC = importlib.util.spec_from_file_location("bp", ROOT / "scripts" / "backfill_scalping_paper.py")
