@@ -4,6 +4,8 @@
 
 const JH={"Content-Type":"application/json; charset=utf-8","Cache-Control":"no-store"};
 const RAW="https://raw.githubusercontent.com/jkdevjob/jkquant/scalping-data/data/";
+const GLOBAL_WORKER_FALLBACK="https://jkquant-global-intraday-scheduler.mumae4.workers.dev";
+const DAYTRADING_WORKER_FALLBACK="https://jkquant-daytrading-scheduler.mumae4.workers.dev";
 
 const SOURCES={
   opening:{path:"opening-history/baseline-trades.csv",market:"KR",pnl:"pnl"},
@@ -77,6 +79,58 @@ function dateDaysAgo(days){
   const d=new Date(Date.now()-days*86400000);
   return d.toISOString().slice(0,10);
 }
+function tzNow(timeZone){
+  const p=new Intl.DateTimeFormat("en-CA",{timeZone,year:"numeric",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit",hour12:false,weekday:"short"}).formatToParts(new Date());
+  const g=t=>p.find(x=>x.type===t)?.value||"";
+  const hh=Number(g("hour"))||0,mm=Number(g("minute"))||0;
+  return {date:g("year")+"-"+g("month")+"-"+g("day"),hm:hh*100+mm,weekday:g("weekday")};
+}
+function isCompletedSession(strategy,date){
+  if(strategy==="crypto")return String(date)<tzNow("Asia/Seoul").date;
+  if(strategy==="daytrading"){
+    const k=tzNow("Asia/Seoul");
+    return String(date)<k.date||(String(date)===k.date&&!["Sat","Sun"].includes(k.weekday)&&k.hm>=1535);
+  }
+  if(strategy==="soxl"){
+    const n=tzNow("America/New_York");
+    return String(date)<n.date||(String(date)===n.date&&!["Sat","Sun"].includes(n.weekday)&&n.hm>=1605);
+  }
+  return false;
+}
+function monitorKey(env){return String(env&&(env.DAYTRADING_MONITOR_KEY||env.OPENING_MONITOR_KEY||env.AUTOTRADE_KEY)||"").trim();}
+async function durableLedgers(env,strategy,limit=3650){
+  if(!["daytrading","crypto","soxl"].includes(strategy))return [];
+  const key=monitorKey(env);if(!key)return [];
+  const base=String(strategy==="daytrading"?(env.DAYTRADING_WORKER_URL||DAYTRADING_WORKER_FALLBACK):(env.GLOBAL_INTRADAY_WORKER_URL||GLOBAL_WORKER_FALLBACK)).replace(/\/$/,"");
+  const q=new URLSearchParams({limit:String(Math.max(1,Math.min(3650,Number(limit)||3650)))});
+  if(strategy!=="daytrading")q.set("strategy",strategy);
+  const r=await fetch(base+"/paper-history?"+q.toString(),{headers:{"Accept":"application/json","x-monitor-key":key}});
+  const j=await r.json().catch(()=>({}));
+  if(!r.ok||!j.ok)return [];
+  return (Array.isArray(j.ledgers)?j.ledgers:[]).filter(x=>x&&x.date&&isCompletedSession(strategy,String(x.date)));
+}
+function durableTradeRows(strategy,ledgers){
+  const rows=[],days=[];
+  for(const ledger of ledgers||[]){
+    const date=String(ledger.date||"");if(!date)continue;
+    const trades=Array.isArray(ledger.trades)?ledger.trades:[];
+    if(trades.some(x=>x&&x.status!=="closed"))continue;
+    days.push(date);
+    for(const x of trades){
+      const pnl=strategy==="daytrading"?n(x.pnl):n(x.pnlPct);
+      if(!Number.isFinite(pnl))continue;
+      rows.push({
+        date,code:strategy==="daytrading"?String(x.code||""):(strategy==="crypto"?"KRW-BTC":"SOXL"),
+        name:strategy==="daytrading"?String(x.name||x.code||""):(strategy==="crypto"?"비트코인":"SOXL"),
+        strategyVersion:String(x.strategyVersion||ledger.strategyVersion||""),
+        signalTime:hm(x.signalTime),entryTime:hm(x.entryTime),entryPrice:n(x.entryPrice),
+        exitTime:hm(x.exitTime),exitPrice:n(x.exitPrice),reason:String(x.reason||""),pnl,
+        rank:n(x.rank),detail:{source:"durable-paper-db",mainVariant:String(x.mainVariant||ledger.mainVariant||"baseline")}
+      });
+    }
+  }
+  return {rows,days:Array.from(new Set(days))};
+}
 
 export function sessionReturnPct(strategy,pnls){
   const a=Array.isArray(pnls)?pnls.filter(Number.isFinite):[];
@@ -87,8 +141,8 @@ export function sessionReturnPct(strategy,pnls){
   // Opening uses equal weight across executed baseline trades; BTC/SOXL are one-slot strategies.
   return sum/a.length;
 }
-export function dailyRisk(rows,strategy){
-  const by=new Map();
+export function dailyRisk(rows,strategy,explicitDays=[]){
+  const by=new Map((Array.isArray(explicitDays)?explicitDays:[]).map(d=>[String(d),[]]));
   for(const x of rows){
     if(!x.date||!Number.isFinite(x.pnl))continue;
     if(!by.has(x.date))by.set(x.date,[]);
@@ -136,7 +190,7 @@ export function dailyRisk(rows,strategy){
   };
 }
 
-export async function onRequestGet({request}){
+export async function onRequestGet({request,env}){
   try{
     const u=new URL(request.url);
     const strategy=(u.searchParams.get("strategy")||"").toLowerCase();
@@ -150,6 +204,17 @@ export async function onRequestGet({request}){
     if(!r.ok)throw new Error("GitHub raw "+src.path+" HTTP "+r.status);
 
     let rows=parseCsv(await r.text()).map(x=>normalize(strategy,x)).filter(x=>x.date);
+    let durableDays=[];
+    if(strategy!=="opening"){
+      try{
+        const db=durableTradeRows(strategy,await durableLedgers(env,strategy));
+        durableDays=db.days;
+        if(durableDays.length){
+          const override=new Set(durableDays);
+          rows=rows.filter(x=>!override.has(String(x.date))).concat(db.rows);
+        }
+      }catch(e){}
+    }
     rows.sort((a,b)=>String(b.date).localeCompare(String(a.date))||String(b.entryTime).localeCompare(String(a.entryTime))||String(a.code).localeCompare(String(b.code)));
     const total=rows.length;
 
@@ -169,10 +234,10 @@ export async function onRequestGet({request}){
     const pn=rows.map(x=>x.pnl).filter(Number.isFinite);
     const wins=pn.filter(x=>x>0),losses=pn.filter(x=>x<0);
     const avg=a=>a.length?a.reduce((s,x)=>s+x,0)/a.length:0;
-    const risk=dailyRisk(rows,strategy);
+    const risk=dailyRisk(rows,strategy,durableDays.filter(d=>(!from||d>=from)&&(!to||d<=to)));
 
     return new Response(JSON.stringify({
-      ok:true,strategy,market:src.market,source:src.path,total,filtered,
+      ok:true,strategy,market:src.market,source:src.path,durableDbDays:durableDays.length,total,filtered,
       page,pageSize,pages,trades,
       summary:{
         trades:filtered,
