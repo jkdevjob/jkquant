@@ -1767,6 +1767,13 @@ console.log('[35] 로그인 — 조용히 갇히지 않는다');
   ok('프로필 확인에 제한시간', /withTimeout\(touchProfile\(user\), 6000, '프로필 확인'\)/.test(ia));
   ok('Firebase DB 원장 읽기에 제한시간',
      /withTimeout\(pullRemote\(\), 12000, 'Firebase DB 원장'\)/.test(ia));
+  ok('iOS 계열에서도 Firestore가 멈추지 않도록 운영 DB는 long polling 사용',
+     /initializeFirestore\(app,\{experimentalForceLongPolling:true\}\)/.test(idx)
+     && !/const db = getFirestore\(app\)/.test(idx));
+  ok('DB 읽기 실패 뒤 재로그인 대신 같은 계정으로 DB 재연결 가능',
+     /async function retryDbLoad\(\)/.test(idx)
+     && /Firebase DB 다시 연결/.test(extractFn(idx,'async function retryDbLoad()'))
+     && /b\.onclick=retryDbLoad/.test(ia));
   // 클라우드가 안 와도 이 기기에 있는 걸로 열어야 한다 — 새로 시작하면 기록이 사라진 것처럼 보인다
   ok('Firebase DB 원장이 안 오면 앱을 열지 않는다',
      /Firebase DB 원장을 불러오지 못했습니다/.test(ia)
@@ -8058,6 +8065,11 @@ console.log('\n[117] 자산플랜 v1.28.0 — 기간마다 완전히 다른 매�
   ok('장부 복구 보호모드 없이 현재 Firebase 원장을 직접 사용',
      /apply\(cloneObj\(v\)\)/.test(extractFn(pl,'async function cloudLoad(user)'))
      && !/planManualBackup|planManualBackupMemory|planRecovery|복구 보호모드/.test(pl));
+  ok('자산플랜도 iOS Firestore long polling + 12초 재연결 경로 사용',
+     /initializeFirestore\(app,\{experimentalForceLongPolling:true\}\)/.test(pl)
+     && /function planWithTimeout\(p,ms,label\)/.test(pl)
+     && /Firebase DB 다시 연결/.test(pl)
+     && /window\.planRetryDbImpl=async/.test(pl));
   ok('자산플랜 주문에 종목별 목표금액·오늘 매수금액·수수료포함 필요현금 표시',
      /목표 보유금액:/.test(pl)
      && /오늘 매수금액:/.test(pl)
