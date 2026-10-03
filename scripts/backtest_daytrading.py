@@ -59,6 +59,11 @@ VARIANTS=[
     Params("session_max_6",max_session_ret=6.0),
     Params("vol_1.8",vol_mult=1.8),
     Params("lookback_15",lookback=15),
+    Params("combo_vol18_lb15",vol_mult=1.8,lookback=15),
+    Params("combo_slope15_e1400",min_vwap_slope=0.15,entry_cutoff=1400),
+    Params("session_min_1_5",min_session_ret=1.5),
+    Params("session_max_5",max_session_ret=5.0),
+    Params("combo_lb30_vol12",lookback=30,vol_mult=1.2),
 ]
 
 def hm(t):
