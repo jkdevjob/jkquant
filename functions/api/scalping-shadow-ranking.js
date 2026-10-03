@@ -15,7 +15,7 @@ const PROMOTION_MIN_SCORE=60;
 const NON_PROMOTABLE=new Set(["opening:hold_to_next_open"]);
 function isPromotionEligible(kind,row){
   if(!row||NON_PROMOTABLE.has(kind+":"+String(row.name||"")))return false;
-  return row.review===true&&row.sampleReady===true&&row.riskOk===true&&Number(row.researchScore)>=PROMOTION_MIN_SCORE;
+  return row.review===true&&row.sampleReady===true&&row.riskOk===true&&row.factoryReady!==false&&Number(row.researchScore)>=PROMOTION_MIN_SCORE;
 }
 function json(o,s=200){return new Response(JSON.stringify(o),{status:s,headers:JH});}
 function n(v,d=0){const x=Number(v);return Number.isFinite(x)?x:d;}
