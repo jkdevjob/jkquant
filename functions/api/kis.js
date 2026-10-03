@@ -67,6 +67,12 @@ const isReal = (env) => String(env.KIS_ENV || "vts").toLowerCase() === "real";
 
 function json(obj, status = 200) { return new Response(JSON.stringify(obj), { status, headers: JH }); }
 
+function internalMarketReadAuthorized(request, env) {
+  const got=String(request.headers.get("x-monitor-key")||"").trim();
+  const expected=String(env.AUTOTRADE_KEY||env.DAYTRADING_MONITOR_KEY||env.OPENING_MONITOR_KEY||"").trim();
+  return !!expected && got===expected;
+}
+
 /* 요청이 고른 환경의 자격증명으로 env 를 갈아끼운다.
    base()·acct()·isReal()·getToken() 이 전부 env 를 읽으므로, 여기서 한 번 바꿔 주면
    아래 코드는 손대지 않아도 된다. 토큰 캐시도 base(env) 로 키를 잡아 환경별로 갈린다. */
@@ -233,6 +239,36 @@ async function usPrice(env, sym, excdHint) {
   return { ok: false, error: RATE_LIMITED(last) ? "초당 요청 제한 — 잠시 후 다시"
     : ((last && last.msg1) || "해외 시세 조회 실패 — 티커나 거래소를 확인하세요"),
     rateLimited: RATE_LIMITED(last) };
+}
+
+async function usMinuteBars(env, sym, excdHint) {
+  const token=await getToken(env);
+  const tries=excdHint?[excdHint]:EXCD_TRY;
+  let last=null;
+  const pick=(o,...ks)=>{for(const key of ks){if(o&&o[key]!=null&&o[key]!=="")return o[key];}return "";};
+  for(const excd of tries){
+    const qs=new URLSearchParams({AUTH:"",EXCD:excd,SYMB:sym,NMIN:"5",PINC:"1",NEXT:"",NREC:"120",FILL:"",KEYB:""});
+    const j=await readJson(base(env)+"/uapi/overseas-price/v1/quotations/inquire-time-itemchartprice?"+qs,{
+      headers:{authorization:"Bearer "+token,appkey:env.KIS_APPKEY,appsecret:env.KIS_APPSECRET,
+        tr_id:"HHDFS76950200",custtype:"P"}
+    });
+    last=j;
+    if(String(j.rt_cd)!=="0")continue;
+    const rows=Array.isArray(j.output2)?j.output2:[];
+    const bars=rows.map(o=>{
+      const ds=String(pick(o,"xymd","XYMD","tymd","TYMD")).replace(/\D/g,"");
+      const ts=String(pick(o,"xhms","XHMS")).replace(/\D/g,"").padStart(6,"0");
+      return {
+        date:ds.length===8?ds.slice(0,4)+"-"+ds.slice(4,6)+"-"+ds.slice(6,8):"",
+        time:ts.length>=4?ts.slice(0,2)+":"+ts.slice(2,4):"",
+        o:+pick(o,"open","OPEN")||0,h:+pick(o,"high","HIGH")||0,l:+pick(o,"low","LOW")||0,
+        c:+pick(o,"last","LAST")||0,v:+pick(o,"evol","EVOL")||0
+      };
+    }).filter(x=>x.date&&x.time&&x.c>0).sort((a,b)=>(a.date+a.time).localeCompare(b.date+b.time));
+    if(bars.length)return {ok:true,code:sym,excd,source:"KIS/HHDFS76950200",interval:"5m",bars};
+  }
+  return {ok:false,error:RATE_LIMITED(last)?"초당 요청 제한 — 잠시 후 다시":((last&&last.msg1)||"해외 5분봉 조회 실패"),
+    rateLimited:RATE_LIMITED(last)};
 }
 
 // 해외 잔고는 거래소별로 따로 물어야 한다 — 세 곳을 합쳐서 준다.
@@ -448,6 +484,19 @@ export async function onRequestGet({ request, env }) {
                 + `KIS_OWNER_EMAIL 이 따로 있으면 그게 우선하니, 안 쓸 거면 그 변수를 지우면 됩니다`);
     }
     return json({ env: isReal(env) ? "real" : "vts", checks, allOk: checks.every(c => c.ok) });
+  }
+  if (op === "usmin") {
+    if (!internalMarketReadAuthorized(request, rawEnv)) return json({error:"unauthorized"},401);
+    if (!env.KIS_APPKEY || !env.KIS_APPSECRET) return json({error:"KIS 해외 시세 키가 설정되지 않았습니다."},400);
+    try {
+      const code=String(url.searchParams.get("code")||"SOXL").toUpperCase();
+      if (!USSYM.test(code)) return json({error:"미국 종목코드가 올바르지 않습니다."},400);
+      const excd=String(url.searchParams.get("excd")||"").toUpperCase()||null;
+      const out=await usMinuteBars(env,code,excd);
+      return out.ok?json(out):json(out,502);
+    } catch(e) {
+      return json({error:String(e.message||e)},502);
+    }
   }
   if (!configured(env)) return json({ error: "KIS 키가 설정되지 않았습니다. Cloudflare 환경변수를 확인하세요." }, 400);
 
