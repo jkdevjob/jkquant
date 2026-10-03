@@ -2,7 +2,7 @@
 // 브라우저 없이 시초가 눌림→재돌파 기준전략을 서버에서 감시하고 Telegram으로 모의 매수/매도 신호를 보낸다.
 // 연구용 shadow 전략은 같은 분봉/같은 엔진으로 동시에 계산하지만 실제 알림/주문에는 영향을 주지 않고 기록만 한다.
 
-import { minuteVolume, dailyMeta, rebreakTrade, SHADOW_VARIANTS } from "./_opening.js";
+import { minuteVolume, dailyMeta, rebreakTrade, SHADOW_VARIANTS, openingVariant } from "./_opening.js";
 
 const JH={"Content-Type":"application/json; charset=utf-8","Cache-Control":"no-store"};
 const FIREBASE_API_KEY_FALLBACK="AIzaSyBzBe9pAttnbDgTlNThWZzNqtAAKxX7Ksw";
@@ -46,6 +46,18 @@ async function sendTelegram(env,title,lines){
   return {ok:true,messageId:j.result&&j.result.message_id};
 }
 
+async function generatedOpeningVariants(){
+  const u="https://raw.githubusercontent.com/jkdevjob/jkquant/scalping-data/data/nightly-research/lifecycle.json";
+  try{
+    const r=await fetch(u,{headers:{"Accept":"application/json","User-Agent":"jkquant-opening-generated/1.0"},cf:{cacheTtl:60}});
+    if(!r.ok)return [];
+    const j=await r.json();
+    const life=((j.strategies||{}).opening)||{};
+    const pool=Array.isArray(life.generatedPool)?life.generatedPool:[];
+    return pool.map(x=>openingVariant(x&&x.name)).filter(Boolean);
+  }catch(e){return [];}
+}
+
 async function openingVtsCalibration(origin){
   try{
     const j=await fetch(origin+"/api/vts-research",{headers:{"Accept":"application/json"}}).then(r=>r.json());
@@ -54,21 +66,23 @@ async function openingVtsCalibration(origin){
   }catch(e){return null;}
 }
 
-function emptyShadow(){
-  return Object.fromEntries(SHADOW_VARIANTS.map(v=>[v.name,{
+function emptyShadow(variants){
+  return Object.fromEntries((variants||[]).map(v=>[v.name,{
     name:v.name,label:v.label,description:v.description,params:v.params,designedFrom:v.designedFrom||[],trades:[]
   }]));
 }
 function mainVariantDef(name){
-  const n=String(name||"baseline");
-  if(n==="baseline")return {name:"baseline",label:"원래 기준전략",params:{}};
-  return SHADOW_VARIANTS.find(v=>v.name===n)||{name:"baseline",label:"원래 기준전략",params:{}};
+  return openingVariant(name)||{name:"baseline",label:"원래 기준전략",params:{}};
 }
 
 async function scanShard(origin,now,shard,shards,limit,cutoffHm,mainVariant="baseline"){
-  const uj=await (await fetch(origin+"/api/universe?limit="+limit)).json();
+  const [uj,generated]=await Promise.all([
+    fetch(origin+"/api/universe?limit="+limit).then(r=>r.json()),
+    generatedOpeningVariants()
+  ]);
   const universe=(uj.universe||[]).filter((_,i)=>i%shards===shard);
-  const trades=[],baselineTrades=[],shadow=emptyShadow(),errors=[];let idx=0;
+  const shadowVariants=[...SHADOW_VARIANTS,...generated.filter(v=>!SHADOW_VARIANTS.some(s=>s.name===v.name))];
+  const trades=[],baselineTrades=[],shadow=emptyShadow(shadowVariants),errors=[];let idx=0;
   const frictionCalibration=await openingVtsCalibration(origin);
   const mainDef=mainVariantDef(mainVariant);
 
@@ -92,7 +106,7 @@ async function scanShard(origin,now,shard,shards,limit,cutoffHm,mainVariant="bas
         const operational=mainDef.name==="baseline"?canonical:rebreakTrade(rows,meta,cutoffHm,{...mainDef.params,frictionCalibration});
         if(operational)trades.push({code:u.code,name:u.name||u.code,variant:mainDef.name,mainVariant:mainDef.name,...operational});
 
-        for(const v of SHADOW_VARIANTS){
+        for(const v of shadowVariants){
           const tr=rebreakTrade(rows,meta,cutoffHm,{...v.params,frictionCalibration});
           if(tr)shadow[v.name].trades.push({code:u.code,name:u.name||u.code,variant:v.name,...tr});
         }
