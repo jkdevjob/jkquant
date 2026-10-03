@@ -2208,10 +2208,10 @@ function renderMainStrategyState(kind){
 function promotionAction(kind,x){
   const current=selectedMainVariant(kind),pending=pendingMainVariant(kind);
   if(current===x.name)return '<span class="sig on">⭐ 현재 메인</span>';
-  if(pending===x.name)return '<span class="sig watch">⏭ 자동승격 예약</span>';
-  if(x.promotionEligible)return '<span class="sig watch">🤖 자동승격 감시</span>';
+  if(pending===x.name)return '<span class="sig watch">⏭ 예약 메인</span>';
   if(!x.liveCompatible)return '<span class="sub">운영승격 불가</span>';
-  return '<span class="sub">자동승격 조건 대기</span>';
+  if(x.promotionEligible)return '<span class="sig watch">🤖 자동승격 조건통과</span>';
+  return '<span class="sub">자동승격 대기</span>';
 }
 function renderShadowRanking(kind,data){
   const el=$('shadow_rank_'+kind);if(!el)return;
