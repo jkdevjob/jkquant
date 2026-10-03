@@ -19,7 +19,7 @@ export const OPENING_BASE_PARAMS=Object.freeze({
 
 // 2026-09-22 첫 실측 결과에서 나온 가설.
 // 하루 결과로 기준전략을 바꾸지 않고, 장중에는 그림자 신호로만 병렬 기록한다.
-export const SHADOW_VARIANTS=Object.freeze([
+const STATIC_OPENING_SHADOW_VARIANTS=[
   {
     name:"hold_to_next_open",
     designedFrom:["2025-09-01/2026-09-30"],
@@ -95,7 +95,37 @@ export const SHADOW_VARIANTS=Object.freeze([
   {name:"amount_1.8",designedFrom:["auto-candidate-pool-v1"],label:"거래대금≥1.8배",description:"거래대금 필터 강화 후보",params:{amountMult:1.8}},
   {name:"entry_by_0910",designedFrom:["auto-candidate-pool-v1"],label:"09:10 이전",description:"초반 신호 집중 후보",params:{entryCutoff:910}},
   {name:"stop_0.8_tp_1.8",designedFrom:["auto-candidate-pool-v1"],label:"손절0.8%·익절1.8%",description:"손익비 동시 조정 후보",params:{stop:.8,takeProfit:1.8}},
-]);
+];
+
+const OPEN_FACTORY_EPOCH_MS=Date.UTC(2026,9,3),OPEN_FACTORY_CYCLE_MS=28*86400000;
+function openingFactoryIndex(ms=Date.now()){return Math.max(0,Math.floor((ms-OPEN_FACTORY_EPOCH_MS)/OPEN_FACTORY_CYCLE_MS));}
+function o10(x){return Math.round(Number(x)*10);}
+export function openingFactoryVariants(ms=Date.now()){
+  const k=openingFactoryIndex(ms),out=[];
+  const pbs=[.4,.6,.8],amounts=[1.3,1.6,1.9],vols=[1.1,1.4,1.8],cuts=[910,915,920],
+        stops=[.7,.9,1.1],tps=[1.2,1.8,2.1];
+  for(let j=0;j<4;j++){
+    const z=k*4+j,pb=pbs[z%pbs.length],amount=amounts[(z*3+1)%amounts.length],
+          vol=vols[(z*5+2)%vols.length],cut=cuts[(z*7)%cuts.length],
+          stop=stops[(z*11+1)%stops.length],tp=tps[(z*13+2)%tps.length];
+    const name=`gen_o_pb${o10(pb)}_am${o10(amount)}_v${o10(vol)}_e${cut}_sl${o10(stop)}_tp${o10(tp)}`;
+    out.push({name,label:"자동생성 "+(j+1),description:"28일 후보팩토리 생성 전략",
+      designedFrom:["candidate-factory-cycle-"+k],factory:true,factoryCycle:k,
+      params:{pbMax:pb,amountMult:amount,volMult:vol,entryCutoff:cut,stop,takeProfit:tp}});
+  }
+  return out;
+}
+export const SHADOW_VARIANTS=Object.freeze([...STATIC_OPENING_SHADOW_VARIANTS,...openingFactoryVariants()]);
+export function parseGeneratedOpeningVariant(name){
+  const m=/^gen_o_pb(\d+)_am(\d+)_v(\d+)_e(\d+)_sl(\d+)_tp(\d+)$/.exec(String(name||""));
+  if(!m)return null;
+  return {name:String(name),label:"자동생성 전략",description:"후보팩토리 생성 전략",factory:true,params:{
+    pbMax:+m[1]/10,amountMult:+m[2]/10,volMult:+m[3]/10,entryCutoff:+m[4],stop:+m[5]/10,takeProfit:+m[6]/10
+  }};
+}
+export function openingVariant(name){
+  return SHADOW_VARIANTS.find(x=>x.name===String(name||""))||parseGeneratedOpeningVariant(name);
+}
 
 export const OPENING_FIXED_FRICTION_PCT=.23;
 export const OPENING_VTS_MIN_MATCHES=30;
