@@ -1231,9 +1231,10 @@ console.log('[23] 관리자 모드 — 접속 계정·사용자 관리');
   ok('보임 전환은 클래스로', /classList\.toggle\('admin-on', on\)/.test(idx));
   /* 승인 안 된 계정(대기·거절·차단)은 앱을 열기 전에 막는다 — 판정은 jk-access.js 한 곳(JKAccess.admit).
      값 시험은 아래 [ACCESS] 에 있다(실제 initAuth 를 가짜 이웃으로 돌린다). */
-  ok('승인 확인이 앱 열기보다 먼저 (운영)',
+  ok('승인 확인이 Firebase DB 원장 읽기보다 먼저 (운영)',
      /if\(!await JKAccess\.admit\(user, accFb, \{lock:r=>accessLock\(user, r, accFb\)\}\)\) return;/.test(idx)
-     && idx.indexOf('JKAccess.admit(user, accFb')>0 && idx.indexOf('JKAccess.admit(user, accFb') < idx.indexOf("try{ load(); openedLocal=validState(S); }"));
+     && idx.indexOf('JKAccess.admit(user, accFb')>0
+     && idx.indexOf('JKAccess.admit(user, accFb') < idx.indexOf("withTimeout(pullRemote()"));
   ok('관리자 페이지도 컬렉션 통째 읽기를 쓴다', /doc, getDoc, setDoc, collection, getDocs/.test(adm)
      && /getDocs\(window\.fb\.collection\(window\.fb\.db,'profiles'\)\)/.test(adm));
   ok('목록은 마지막 접속 최신순', /rows\.sort\(\(a,b\)=>\(\+b\.lastSeen\|\|0\)-\(\+a\.lastSeen\|\|0\)\)/.test(adm));
@@ -1271,9 +1272,9 @@ console.log('[23] 관리자 모드 — 접속 계정·사용자 관리');
      /const affects=changed\.some\(k=>PAPER_AFFECT_KEYS\[tab\]/.test(adm)
      && /filter\(x=>!\(x&&\(x\.sim\|\|x\.auto\)\)\)/.test(adm)
      && /delete sess\.settings\.simSig/.test(adm));
-  ok('기존 세션 적용 — 로컬과 protected stateV2 클라우드 상태를 같이 갱신한다',
-     /localStorage\.setItem\('qcockpit_v2_'\+me\.uid,JSON\.stringify\(state\)\)/.test(adm)
-     && /stateV2:state,stateV2Updated:now,stateV2Rev:nr,strategyDefaultOverrides:strategyOverrides/.test(adm));
+  ok('기존 세션 적용 — protected stateV2 Firebase 상태만 갱신한다',
+     /stateV2:state,stateV2Updated:now,stateV2Rev:nr,strategyDefaultOverrides:strategyOverrides/.test(adm)
+     && !/localStorage|sessionStorage|indexedDB/.test(adm));
   ok('관리자 아닌 계정은 문 앞에서 막힌다', /if\(isAdmin\(\)\)\{[\s\S]{0,200}?\$\('gate'\)\.style\.display='none'/.test(adm)
      && /계정에는 관리자 권한이 없습니다/.test(adm));
 
@@ -1295,7 +1296,9 @@ console.log('[23] 관리자 모드 — 접속 계정·사용자 관리');
   ok('보안 규칙을 저장소에 둔다', !!ru, ru?'':'firestore.rules 없음');
   ok('규칙도 같은 관리자만 본다', /request\.auth\.token\.email == 'jk82investing@gmail\.com'/.test(ru));
   ok('사용자 목록은 관리자만', /allow list: if isAdmin\(\)/.test(ru));
-  ok('거래기록은 관리자도 못 본다 · 승인 전에는 본인도 못 연다', /match \/users\/\{uid\} \{\s*\n\s*allow read, write: if isMine\(uid\) && approved\(\);\s*\n\s*\}/.test(ru));
+  ok('거래기록과 하위컬렉션은 승인된 본인만 연다',
+     /match \/users\/\{uid\} \{[\s\S]*?allow read, write: if isMine\(uid\) && approved\(\);/.test(ru)
+     && /match \/\{document=\*\*\} \{[\s\S]*?allow read, write: if isMine\(uid\) && approved\(\);/.test(ru));
   ok('본인이 승인·차단 칸을 못 쓴다 (만들 때도 고칠 때도)',
      /function adminKeys\(\)\s*\{ return \['blocked', 'approved', 'approvedAt', 'approvedBy'\]; \}/.test(ru)
      && /allow create: if isMine\(uid\) && ownEmail\(\) && !request\.resource\.data\.keys\(\)\.hasAny\(adminKeys\(\)\);/.test(ru)
@@ -1303,12 +1306,11 @@ console.log('[23] 관리자 모드 — 접속 계정·사용자 관리');
 
   /* 곁들여 고친 것 — users/{uid}는 운영과 백테가 같이 쓰는 문서다.
      merge 없이 덮어써서 백테의 커스텀 종목이 서버에서 사라지고 있었다. */
-  ok('운영 저장이 백테 종목을 안 지우고 거래이력을 트랜잭션에서 자동병합한다',
+  ok('운영 저장은 다른 사용자 필드를 지우지 않고 DB snapshot 기준 3-way rebase한다',
      /runTransaction/.test(idx)
      && /tx\.set\(ref,\{stateV2:candidate,stateV2Updated:writeUpdated,stateV2Rev:nr\},\{merge:true\}\)/.test(idx)
-     && /candidate=_mergeHistorySafeState\(candidate,remote\)/.test(idx)
-     && /_historyPreserves\(candidate,remote\)/.test(idx)
-     && !/⚠️ 거래이력 보호:/.test(idx));
+     && /candidate=_rebaseStateOnRemote\(stateDbBase,candidate,remote\)/.test(idx)
+     && !/다른 기기\/탭의 최신 거래이력이 감지되어/.test(idx));
 }
 
 
@@ -1487,13 +1489,12 @@ console.log('[28] KIS 모의투자 실행 · 주문 이력');
   ok('성공·실패 모두 기록', /KLOG\.unshift\(rec\); saveK\(\); renderKlog\(\);/.test(sc)
      && /rec\.ok=!!j\.ok;/.test(sc));
   ok('수동 주문창도 같은 경로', /const rec=await kisSubmit\(\{side,code,name:nm,qty,price,priceType:mkt\?'market':'limit'\}\);/.test(sc));
-  ok('클라우드에도 트랜잭션으로 남긴다',
+  ok('단타 상태도 Firebase transaction + 3-way rebase로 남긴다',
      /window\.fb\.runTransaction\(window\.fb\.db,async tx=>/.test(sc)
-     && /tx\.set\(ref,\{scalp:next\},\{merge:true\}\)/.test(sc));
-  ok('KIS 주문이력은 원격+로컬 id 합집합 append-only',
-     /const kisBy=new Map\(\);/.test(sc)
-     && /old&&Array\.isArray\(old\.kis\)/.test(sc)
-     && /\.\.\.KLOG/.test(sc)
+     && /tx\.set\(ref,\{scalp:out\},\{merge:true\}\)/.test(sc)
+     && /scalpRebase\(base\.pos,candidate\.pos,remote\.pos/.test(sc));
+  ok('KIS 주문이력은 Firebase remote+candidate append-only 합집합',
+     /scalpMergeAppend\(remote\.kis\|\|\[\],candidate\.kis,'kis'\)/.test(sc)
      && !/function delKlog\(i\)\{[^}]*KLOG\.splice/.test(sc)
      && !/function clearKlog\(\)\{[^}]*KLOG=\[\]/.test(sc));
 
