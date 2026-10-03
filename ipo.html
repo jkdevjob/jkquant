@@ -525,7 +525,7 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
 <body>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Public Offering</div><h1>JK <span class="v">공모주</span> <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v1.3.1</span></h1></div>
+    <div><div class="kicker">Public Offering</div><h1>JK <span class="v">공모주</span> <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v1.3.2</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
       <div class="jkmenu" id="jkmenuWrap">
@@ -698,7 +698,7 @@ document.addEventListener("click",function(e){ var m=document.getElementById("jk
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-app.js";
   import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-auth.js";
-  import { getFirestore, doc, getDoc, setDoc, runTransaction } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-firestore.js";
+  import { initializeFirestore, doc, getDoc, setDoc, runTransaction } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-firestore.js";
   const firebaseConfig = {
     apiKey: "AIzaSyBzBe9pAttnbDgTlNThWZzNqtAAKxX7Ksw",
     authDomain: "jk-invest.firebaseapp.com",
@@ -708,7 +708,7 @@ document.addEventListener("click",function(e){ var m=document.getElementById("jk
     appId: "1:1024066323251:web:23d557527866205f01f446"
   };
   const app = initializeApp(firebaseConfig);
-  const auth = getAuth(app); const db = getFirestore(app); const provider = new GoogleAuthProvider();
+  const auth = getAuth(app); const db = initializeFirestore(app,{experimentalForceLongPolling:true}); const provider = new GoogleAuthProvider();
   window.ipoFb = { db, doc, setDoc, runTransaction };
 
 /* 상단 사용자 배지 — 모든 페이지가 같은 모양이다.

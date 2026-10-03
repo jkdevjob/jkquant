@@ -1622,6 +1622,20 @@ console.log('[30] 모의 시작일 일괄 변경');
      && ap.slice(iSaveAll,iOpenAll).indexOf('pushRemoteNow')<0,
      iSaveAll+' / '+iOpenAll+' / '+iPushAll);
   ok('모의가 없으면 알리고 멈춘다', /if\(!list\.length\)\{ alert\('모의 세션이 없습니다\.'\); return; \}/.test(ap));
+  {
+    const rs=extractFn(idx,'function renderSessbar()');
+    const rl=extractFn(idx,'function renderStatusline()');
+    const ra=extractFn(idx,'function refreshAll()');
+    const pf=extractFn(idx,'async function paperFillAll()');
+    ok('전체 적용 백그라운드 계산 중 운영 세션바는 움직이지 않는다',
+       /if\(_paperFilling\)return;/.test(rs));
+    ok('전체 적용 백그라운드 계산 중 운영 상태줄은 움직이지 않는다',
+       /if\(_paperFilling\)return;/.test(rl));
+    ok('전체 적용 백그라운드 계산 중 운영 화면 전체 refresh를 막는다',
+       /if\(_paperFilling\)return;/.test(ra));
+    ok('성과 계산은 원래 활성 탭을 반드시 복원한다',
+       /const prevTab=S\.activeTab/.test(pf) && /S\.activeTab=prevTab;/.test(pf));
+  }
 
   /* 사용자가 5년 비교를 직접 할 수 있도록 모의 시작일 하한을 5년으로 넓힌다. */
   ok('5년 하한이 있다', /const PAPER_MAX_YEARS=5;/.test(idx) && /function paperMinDate\(\)/.test(idx));
@@ -1775,6 +1789,20 @@ console.log('[35] 로그인 — 조용히 갇히지 않는다');
   ok('iOS 계열에서도 Firestore가 멈추지 않도록 운영 DB는 long polling 사용',
      /initializeFirestore\(app,\{experimentalForceLongPolling:true\}\)/.test(idx)
      && !/const db = getFirestore\(app\)/.test(idx));
+  {
+    const pl=fs.readFileSync(__d+'/plan.html','utf8');
+    const ipo=fs.readFileSync(__d+'/ipo.html','utf8');
+    const job=fs.readFileSync(__d+'/job.html','utf8');
+    const pages=[
+      ['운영',idx],['자산플랜',pl],['백테',bt],['단타',scl],['공모주',ipo],['JOB',job],['관리자',adm]
+    ];
+    for(const [name,src] of pages){
+      ok(name+' Firebase는 iOS long polling 사용',
+         /initializeFirestore\([^;]+experimentalForceLongPolling:true/.test(src)
+         && !/\bgetFirestore\s*\(/.test(src));
+    }
+    ok('JOB 화면도 배포 버전 x.y.z 표시', /id="jobVer">v\d+\.\d+\.\d+<\/span>/.test(job));
+  }
   ok('DB 읽기 실패 뒤 재로그인 대신 같은 계정으로 DB 재연결 가능',
      /async function retryDbLoad\(\)/.test(idx)
      && /Firebase DB 다시 연결/.test(extractFn(idx,'async function retryDbLoad()'))
@@ -11374,7 +11402,8 @@ console.log('\n[ACCESS] 이용 승인제 — 판정 한 곳 · 모든 페이지 
   ok('백테·공모주·JOB 은 data-guard 로 불러 guard() 하나로 맡긴다 (본문보다 먼저 · 따로 onAuthStateChanged 안 씀)',
      [bt, ipo, job].every(h=>h.includes(jkTag) && h.indexOf(jkTag)<h.indexOf('<body') && /JKAccess\.guard\(\{auth/.test(h)
        && !/\n\s*onAuthStateChanged\(auth,/.test(h)));
-  ok('JOB 도 같은 Firebase 프로젝트로 로그인한다', /projectId:"jk-invest"/.test(job) && /getAuth\(app\)/.test(job) && /getFirestore\(app\)/.test(job));
+  ok('JOB 도 같은 Firebase 프로젝트로 로그인한다', /projectId:"jk-invest"/.test(job) && /getAuth\(app\)/.test(job)
+     && /initializeFirestore\(app,\{experimentalForceLongPolling:true\}\)/.test(job));
   ok('운영·자산플랜·관리자는 jk-access.js 를 불러 같은 판정을 쓴다 (운영·플랜은 admit · 관리자는 decide)',
      idx.includes('<script src="/jk-access.js"></script>') && pl.includes('<script src="/jk-access.js"></script>') && adm.includes('<script src="/jk-access.js"></script>')
      && /JKAccess\.admit\(user, accFb/.test(idx) && /JKAccess\.admit\(user,planFb/.test(pl) && /JKAccess\.decide\(\{email:r\.email\}, r\)/.test(adm));
