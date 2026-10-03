@@ -260,7 +260,7 @@ canvas{display:block;width:100%;height:auto}
 
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Morning Scalping</div><h1>JK <span class="v">퀀트</span> 단타 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="scVer">v1.39.1</span></h1></div>
+    <div><div class="kicker">Morning Scalping</div><h1>JK <span class="v">퀀트</span> 단타 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="scVer">v1.40.0</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -2240,7 +2240,7 @@ function renderShadowRanking(kind,data){
   const generated=(life.generatedCandidates||[]).slice(0,5);
   const changeHtml=changes.length?changes.map(x=>'<div class="sub" style="margin:3px 0">'+esc(x.date||'')+' · '+(x.type==='retired'?'퇴출':'신규투입')+' <b>'+esc(label(x.name||''))+'</b> · '+esc(x.reason||'')+'</div>').join(''):'<div class="sub">아직 자동 교체 이력이 없습니다.</div>';
   const reserveHtml=reserve.length?reserve.map(x=>'<span class="pill" style="margin:2px">'+esc(label(x.name))+' '+Number(x.researchScore||0).toFixed(1)+'</span>').join(''):'<span class="sub">예비 후보 없음</span>';
-  const generatedHtml=generated.length?generated.map(x=>'<div class="sub" style="margin:3px 0"><b>'+esc(x.name||'')+'</b> · '+esc(JSON.stringify(x.params||{}))+' · 인큐베이팅</div>').join(''):'<div class="sub">이번 연구세션 신규 생성 없음</div>';
+  const generatedHtml=generated.length?generated.map(x=>'<div class="sub" style="margin:3px 0"><b>'+esc(x.name||'')+'</b> · '+esc(JSON.stringify(x.params||{}))+' · 생성 이후 데이터만 전향적 검증 · 인큐베이팅</div>').join(''):'<div class="sub">이번 연구세션 신규 생성 없음</div>';
   const retiredNames=(life.retired||[]).slice().reverse().slice(0,6);
   const retiredHtml=retiredNames.length?retiredNames.map(x=>'<div class="sub" style="margin:3px 0"><b>'+esc(label(x.name||''))+'</b> · '+esc(x.reason||'')+'</div>').join(''):'<div class="sub">퇴출 전략 없음</div>';
   const revert=current!=='baseline'?'<button class="ghostbtn sm" onclick="promoteShadow(\''+kind+'\',\'baseline\')">↩ 원래 기준전략으로 원복</button>':'';
