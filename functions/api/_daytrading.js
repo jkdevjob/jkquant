@@ -13,7 +13,7 @@ export const DAY_BASE_PARAMS=Object.freeze({
   volMult:1.5,
 });
 
-export const DAY_SHADOW_VARIANTS=Object.freeze([
+const STATIC_DAY_SHADOW_VARIANTS=[
   {name:"vol_2.0",label:"거래량≥2.0배",params:{volMult:2.0}},
   {name:"lookback_30",label:"직전30분 고점",params:{lookback:30}},
   {name:"vwap_slope_0.2",label:"VWAP기울기≥0.2%",params:{minVwapSlope:0.20}},
@@ -28,10 +28,38 @@ export const DAY_SHADOW_VARIANTS=Object.freeze([
   {name:"session_min_1.5",label:"세션상승≥1.5%",params:{minSessionRet:1.5}},
   {name:"entry_by_1330",label:"13:30 이전",params:{entryCutoff:1330}},
   {name:"stop_0.8_tp_1.6",label:"손절0.8%·익절1.6%",params:{stopPct:0.8,takeProfitPct:1.6}},
-]);
+];
 
+const FACTORY_EPOCH_MS=Date.UTC(2026,9,3),FACTORY_CYCLE_MS=28*86400000;
+function factoryIndex(ms=Date.now()){return Math.max(0,Math.floor((ms-FACTORY_EPOCH_MS)/FACTORY_CYCLE_MS));}
+function enc10(x){return Math.round(Number(x)*10);}
+export function dayFactoryVariants(ms=Date.now()){
+  const k=factoryIndex(ms),out=[];
+  const vols=[1.1,1.3,1.7,1.9],looks=[12,15,25,35],slopes=[.05,.12,.18,.25],
+        rets=[.5,1.5,2.5],cuts=[1300,1400],stops=[.7,.9,1.1],tps=[1.6,1.8,2.2],maxes=[2,3];
+  for(let j=0;j<4;j++){
+    const z=k*4+j;
+    const vol=vols[z%vols.length],look=looks[(z*3+1)%looks.length],slope=slopes[(z*5+2)%slopes.length],
+          ret=rets[(z*7+1)%rets.length],cut=cuts[z%cuts.length],stop=stops[(z*11+1)%stops.length],
+          tp=tps[(z*13+2)%tps.length],max=maxes[(z*17)%maxes.length];
+    const name=`gen_d_v${enc10(vol)}_l${look}_s${Math.round(slope*100)}_r${enc10(ret)}_e${cut}_sl${enc10(stop)}_tp${enc10(tp)}_m${max}`;
+    out.push({name,label:"자동생성 "+(j+1),designedFrom:["candidate-factory-cycle-"+k],
+      params:{volMult:vol,lookback:look,minVwapSlope:slope,minSessionRet:ret,entryCutoff:cut,stopPct:stop,takeProfitPct:tp,maxTrades:max},
+      factory:true,factoryCycle:k});
+  }
+  return out;
+}
+export const DAY_SHADOW_VARIANTS=Object.freeze([...STATIC_DAY_SHADOW_VARIANTS,...dayFactoryVariants()]);
+export function parseGeneratedDayVariant(name){
+  const m=/^gen_d_v(\d+)_l(\d+)_s(\d+)_r(\d+)_e(\d+)_sl(\d+)_tp(\d+)_m(\d+)$/.exec(String(name||""));
+  if(!m)return null;
+  return {name:String(name),label:"자동생성 전략",factory:true,params:{
+    volMult:+m[1]/10,lookback:+m[2],minVwapSlope:+m[3]/100,minSessionRet:+m[4]/10,
+    entryCutoff:+m[5],stopPct:+m[6]/10,takeProfitPct:+m[7]/10,maxTrades:+m[8]
+  }};
+}
 export function dayVariant(name){
-  return DAY_SHADOW_VARIANTS.find(x=>x.name===name)||null;
+  return DAY_SHADOW_VARIANTS.find(x=>x.name===name)||parseGeneratedDayVariant(name);
 }
 
 const hmOf=t=>+String(t||"").slice(11,13)*100 + +String(t||"").slice(14,16);
