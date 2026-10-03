@@ -2,7 +2,7 @@
 // 브라우저 없이 시초가 눌림→재돌파 기준전략을 서버에서 감시하고 Telegram으로 모의 매수/매도 신호를 보낸다.
 // 연구용 shadow 전략은 같은 분봉/같은 엔진으로 동시에 계산하지만 실제 알림/주문에는 영향을 주지 않고 기록만 한다.
 
-import { minuteVolume, dailyMeta, rebreakTrade, SHADOW_VARIANTS } from "./_opening.js";
+import { minuteVolume, dailyMeta, rebreakTrade, SHADOW_VARIANTS, openingVariant } from "./_opening.js";
 
 const JH={"Content-Type":"application/json; charset=utf-8","Cache-Control":"no-store"};
 const FIREBASE_API_KEY_FALLBACK="AIzaSyBzBe9pAttnbDgTlNThWZzNqtAAKxX7Ksw";
@@ -62,7 +62,7 @@ function emptyShadow(){
 function mainVariantDef(name){
   const n=String(name||"baseline");
   if(n==="baseline")return {name:"baseline",label:"원래 기준전략",params:{}};
-  return SHADOW_VARIANTS.find(v=>v.name===n)||{name:"baseline",label:"원래 기준전략",params:{}};
+  return openingVariant(n)||{name:"baseline",label:"원래 기준전략",params:{}};
 }
 
 async function scanShard(origin,now,shard,shards,limit,cutoffHm,mainVariant="baseline"){
