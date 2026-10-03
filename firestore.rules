@@ -34,6 +34,12 @@ service cloud.firestore {
     // 거래기록은 남이 못 본다 — 관리자도 마찬가지다. 승인 전에는 본인도 못 연다
     match /users/{uid} {
       allow read, write: if isMine(uid) && approved();
+
+      // 단타 분봉 아카이브 등 큰 사용자 데이터는 날짜별 하위 문서로 분리한다.
+      // 부모 users/{uid}와 동일하게 승인된 본인만 접근할 수 있다.
+      match /{document=**} {
+        allow read, write: if isMine(uid) && approved();
+      }
     }
 
     match /profiles/{uid} {
