@@ -32,6 +32,15 @@ const none=mod.paperLedger('crypto','2026-10-01',null,{currency:'KRW',timezone:'
 ok(none.trades.length===0&&near(none.summary.accountReturnPct,0),'no-signal day remains 0% / 0 trades');
 ok(none.decision&&none.decision.code==='no_fresh_breakout','no-signal decision reason is persisted in durable ledger');
 
+const csv=mod.parseCsvText('date,strategyVersion,action,decisionReason,entryTimeKst,exitTimeKst,entryPrice,exitPrice,exitReason,pnlPct\n2026-09-01,btc_midnight_orb_v2,trade,ok,00:10,01:00,100,101,time_exit,0.86\n2026-09-02,btc_midnight_orb_v2,no_trade,no_breakout,,,,,,');
+ok(csv.length===2&&csv[0].date==='2026-09-01'&&csv[1].action==='no_trade','historical CSV parser reads decision rows');
+const histTrade=mod.historicalLedger('crypto',csv[0]);
+ok(histTrade.trades.length===1&&histTrade.trades[0].status==='closed'&&near(histTrade.trades[0].pnlPct,.86),'historical trade becomes closed durable ledger');
+ok(mod.historicalParity(histTrade,csv[0]).ok,'historical imported trade passes full-row parity');
+const histNone=mod.historicalLedger('crypto',csv[1]);
+ok(histNone.trades.length===0&&mod.historicalParity(histNone,csv[1]).ok,'historical no-trade day becomes zero-trade durable ledger');
+ok(!mod.historicalParity(histTrade,{...csv[0],pnlPct:'9.99'}).ok,'historical parity detects PnL mismatch');
+
 const kst=(hh,mm)=>Date.parse(`2026-10-01T${String(hh).padStart(2,'0')}:${String(mm).padStart(2,'0')}:00+09:00`);
 const noBreakBars=[
   {ms:kst(0,0),date:'2026-10-01',hm:0,time:'00:00',o:100,h:101,l:99,c:100,v:10},
@@ -46,6 +55,7 @@ const ui=fs.readFileSync(path.join(__dirname,'..','scalping.html'),'utf8');
 const api=fs.readFileSync(path.join(__dirname,'..','functions/api/global-paper.js'),'utf8');
 ok(worker.includes('import { DurableObject } from "cloudflare:workers";')&&worker.includes('class PaperStore extends DurableObject')&&worker.includes('writePaper(env,paperLedger("crypto"')&&worker.includes('writePaper(env,paperLedger("soxl"'),'global worker imports DurableObject and stores both live paper ledgers');
 ok(worker.includes('u.pathname==="/paper-index"')&&worker.includes('u.pathname==="/paper-history"')&&worker.includes('rememberPaperDate(env,ledger.strategy,ledger.date)'),'global worker keeps a durable per-strategy paper-date index and history endpoint');
+ok(worker.includes('backfillHistoryChunk(env,"crypto",20)')&&worker.includes('backfillHistoryChunk(env,"soxl",20)')&&worker.includes('u.pathname==="/paper-backfill-status"'),'global worker incrementally backfills BTC/SOXL historical decisions and exposes integrity status');
 ok(cfg.includes('"PAPER_STORE"')&&cfg.includes('"new_sqlite_classes": ["PaperStore"]'),'global worker durable object binding/migration');
 ok(ui.includes("loadGlobalPaper('crypto')")&&ui.includes("loadGlobalPaper('soxl')")&&ui.includes('오늘 계좌수익률')&&ui.includes('개별 매매 수익률 합계'),'all-tab UI exposes live paper metrics');
 ok(ui.includes('l.decision&&l.decision.reason')&&ui.includes('<b>매매없음</b>'),'UI surfaces durable BTC no-trade decision reason');
