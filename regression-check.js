@@ -1622,6 +1622,20 @@ console.log('[30] 모의 시작일 일괄 변경');
      && ap.slice(iSaveAll,iOpenAll).indexOf('pushRemoteNow')<0,
      iSaveAll+' / '+iOpenAll+' / '+iPushAll);
   ok('모의가 없으면 알리고 멈춘다', /if\(!list\.length\)\{ alert\('모의 세션이 없습니다\.'\); return; \}/.test(ap));
+  {
+    const rs=extractFn(idx,'function renderSessbar()');
+    const rl=extractFn(idx,'function renderStatusline()');
+    const ra=extractFn(idx,'function refreshAll()');
+    const pf=extractFn(idx,'async function paperFillAll()');
+    ok('전체 적용 백그라운드 계산 중 운영 세션바는 움직이지 않는다',
+       /if\(_paperFilling\)return;/.test(rs));
+    ok('전체 적용 백그라운드 계산 중 운영 상태줄은 움직이지 않는다',
+       /if\(_paperFilling\)return;/.test(rl));
+    ok('전체 적용 백그라운드 계산 중 운영 화면 전체 refresh를 막는다',
+       /if\(_paperFilling\)return;/.test(ra));
+    ok('성과 계산은 원래 활성 탭을 반드시 복원한다',
+       /const prevTab=S\.activeTab/.test(pf) && /S\.activeTab=prevTab;/.test(pf));
+  }
 
   /* 사용자가 5년 비교를 직접 할 수 있도록 모의 시작일 하한을 5년으로 넓힌다. */
   ok('5년 하한이 있다', /const PAPER_MAX_YEARS=5;/.test(idx) && /function paperMinDate\(\)/.test(idx));
