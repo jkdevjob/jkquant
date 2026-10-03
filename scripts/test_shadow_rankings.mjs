@@ -10,8 +10,9 @@ for(const [kind,names] of Object.entries(CATALOG)){
 }
 
 const opening=fs.readFileSync("functions/api/_opening.js","utf8");
-const openingBlock=(opening.match(/SHADOW_VARIANTS=Object\.freeze\(\[([\s\S]*?)\]\);/)||[])[1]||"";
-assert.ok((openingBlock.match(/name:"/g)||[]).length>=10,"opening live shadows <10");
+assert.ok(opening.includes("STATIC_OPENING_SHADOW_VARIANTS"),"opening static pool missing");
+assert.ok(opening.includes("openingFactoryVariants"),"opening recurring candidate factory missing");
+assert.ok(opening.includes("parseGeneratedOpeningVariant"),"opening generated variant parser missing");
 
 for(const [path,kind] of [
   ["scripts/backtest_daytrading.py","daytrading"],
@@ -37,11 +38,19 @@ const rep={status:"reviewable",from:"2026-01-01",to:"2026-10-01",candidates:[
   {...good,researchScore:70,sampleFactor:1,status:"review"},
   {...bad,researchScore:30,sampleFactor:1,status:"collecting"}
 ]};
+rep.candidates.push({name:"gen_c_r2_v13_e1955_sl06_tp12_h18",status:"review",researchScore:75,sampleFactor:1,
+  sampleReady:true,trades:60,allAvgEdgePct:.25,holdoutAvgEdgePct:.22,recentEdgePct:.6,mddOk:true,
+  factory:true,factoryReady:true});
 const n=normalize("crypto",rep);
-assert.equal(n.rows.length,CATALOG.crypto.length);
+assert.equal(n.rows.length,CATALOG.crypto.length+1);
+assert.ok(n.rows.some(x=>x.name.startsWith("gen_c_")&&x.liveCompatible),"generated crypto candidate must be ranked/live-compatible");
 assert.equal(n.rows[0].name,"vol_1.0");
 assert.ok(n.rows.findIndex(x=>x.trades===0)>0,"zero evidence rows should not lead");
-assert.deepEqual(n.rows.map(x=>x.rank),Array.from({length:CATALOG.crypto.length},(_,i)=>i+1));
+assert.deepEqual(n.rows.map(x=>x.rank),Array.from({length:CATALOG.crypto.length+1},(_,i)=>i+1));
 
 assert.ok(CATALOG.opening.length>10&&CATALOG.daytrading.length>10&&CATALOG.crypto.length>10&&CATALOG.soxl.length>10,"reserve candidate pools required");
+for(const path of ["functions/api/_daytrading.js","scripts/backtest_daytrading.py","scripts/backtest_crypto_orb.py","scripts/backtest_soxl_intraday.py"]){
+  const s=fs.readFileSync(path,"utf8");
+  assert.ok(/factory/i.test(s)&&/gen_[dcso]_/.test(s),path+" recurring factory missing");
+}
 console.log("ALL PASS — shadow strategy pool/ranking");
