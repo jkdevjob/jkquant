@@ -1984,13 +1984,26 @@ console.log('[40] 모의 일괄 적용 — 원금과 1회 적립액을 따로');
   ok('ASAP은 원금이 아니라 1회 적립액(base) 대상이다', /return null;\s*\/\/ asap/.test(cf) && /if\(tab==='asap'\) return 'base';/.test(af));
   ok('세션 달러값을 역환산하는 현재값 요약 함수는 제거했다', !/function paperValSummary\(/.test(idx) && !/function paperValSummaryWon\(/.test(idx));
   const sp=extractFn(idx,'function syncPaperStart()');
+  const pfs=extractFn(idx,'function paperFormSimStart()');
+  const pps=extractFn(idx,'function paperPreferredSimStart()');
   ok('전체 적용 공통 시작일은 표시 함수가 역으로 덮어쓰지 않는다',
      /const pc=\(S&&S\.paperCommon\)\|\|\{\}/.test(sp)
-     && /const common=paperPreferredSimStart\(\)/.test(sp)
+     && /const common=paperFormSimStart\(\)/.test(sp)
      && /const pick=\(common&&common>=min&&common<=today\)\?common/.test(sp)
      && !/pc\.simStart=sessionCommon/.test(sp)
      && !/saveLocal\(\); pushRemote\(\);/.test(sp));
+  ok('모의 시작일 입력칸은 마지막 입력값이 확정값보다 우선한다',
+     /if\(valid\(memo\.simStart\)\) return memo\.simStart;/.test(pfs)
+     && /return paperPreferredSimStart\(\);/.test(pfs));
+  ok('실제 모의 운전 기준일은 전체 적용 확정값이 입력 메모보다 우선한다',
+     pps.indexOf('if(valid(pc.simStart)) return pc.simStart;')>=0
+     && pps.indexOf('if(valid(pc.simStart)) return pc.simStart;') < pps.indexOf('if(valid(memo.simStart)) return memo.simStart;'));
   ok('열 때 마지막으로 입력한 원화 원본을 입력칸에 그대로 복원한다', /pc\.capitalWon/.test(sp) && /pc\.addWon/.test(sp) && /toLocaleString\('ko-KR'/.test(sp));
+  const prm=extractFn(idx,'async function paperRememberForm(immediate=false)');
+  ok('모의 시작일 날짜 변경은 debounce 없이 즉시 Firebase stateV2 저장을 시작한다',
+     /id="p_simstart" type="date" onchange="void paperRememberForm\(true\)"/.test(idx)
+     && /if\(immediate\) return await save\(\);/.test(prm)
+     && prm.indexOf('if(immediate) return await save();') < prm.indexOf('paperMemoTimer=setTimeout'));
   const ap=extractFn(idx,'async function applyAllSimStart()');
   ok('두 값을 따로 읽는다', /paperReadAmt\('p_capital'/.test(ap) && /paperReadAmt\('p_addamt'/.test(ap));
   ok('잘못된 값이면 멈춘다', /cap===false \|\| add===false/.test(ap));
@@ -2023,6 +2036,9 @@ console.log('[40] 모의 일괄 적용 — 원금과 1회 적립액을 따로');
      && !/fxAt\(/.test(pe)
      && /pc\.formMemo=/.test(pe)
      && /pushRemote\(\)/.test(pe));
+  ok('원화 기본값 마이그레이션이 사용자가 입력한 시작일 메모를 확정 시작일로 덮지 않는다',
+     /const memo=paperFormMemoRead\(\);/.test(pe)
+     && /simStart:memo\.simStart\|\|pc\.simStart\|\|''/.test(pe));
   const sp=extractFn(idx,'function syncPaperStart()');
   ok('입력칸도 저장값이 없으면 1억 · 5만원을 그대로 표시한다',
      /PAPER_DEFAULT_CAPITAL_WON/.test(sp) && /PAPER_DEFAULT_ADD_WON/.test(sp));
@@ -2056,7 +2072,7 @@ console.log('[40] 모의 일괄 적용 — 원금과 1회 적립액을 따로');
 {
   const sp=extractFn(idx,'function syncPaperStart()');
   ok('모의 시작일 — 세션 상태가 바뀌어도 전체 적용 paperCommon을 역으로 덮지 않는다',
-     /const common=paperPreferredSimStart\(\)/.test(sp)
+     /const common=paperFormSimStart\(\)/.test(sp)
      && !/sessionCommon/.test(sp)
      && !/pc\.simStart=/.test(sp));
 
