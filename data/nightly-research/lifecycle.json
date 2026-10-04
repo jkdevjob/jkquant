@@ -129,9 +129,8 @@
       "schema": 1,
       "candidateFactory": "prospective-mixed-radix-v2",
       "minimumActive": 10,
-      "candidatePoolSize": 20,
+      "candidatePoolSize": 21,
       "activeCandidates": [
-        "no_vwap",
         "vol_1.0",
         "vol_1.5",
         "range_15m",
@@ -140,7 +139,8 @@
         "stop_0.7_tp_1.4",
         "hold_30m",
         "hold_120m",
-        "entry_by_1800"
+        "entry_by_1800",
+        "stop_0.6_tp_1.2"
       ],
       "reserveCandidates": [
         "range_10m",
@@ -150,17 +150,53 @@
         "entry_by_2000",
         "combo_range10_vol13",
         "combo_novwap_vol15",
-        "stop_0.6_tp_1.2",
         "hold_45m",
-        "entry_by_2100"
+        "entry_by_2100",
+        "cf_g0001"
       ],
-      "generatedPool": [],
-      "generatedCandidates": [],
-      "factoryGeneration": 0,
-      "lastFactoryDate": null,
-      "retired": [],
+      "generatedPool": [
+        {
+          "name": "cf_g0001",
+          "generation": 1,
+          "params": {
+            "range_bars": 1,
+            "volume_mult": 0.9,
+            "max_hold_bars": 6,
+            "entry_cutoff_min": 1075
+          },
+          "createdAfter": "2026-10-03",
+          "status": "incubating",
+          "liveCompatible": true,
+          "reason": "새 연구세션 자동 생성 · 다음 세션부터 전향적 검증"
+        }
+      ],
+      "generatedCandidates": [
+        {
+          "name": "cf_g0001",
+          "generation": 1,
+          "params": {
+            "range_bars": 1,
+            "volume_mult": 0.9,
+            "max_hold_bars": 6,
+            "entry_cutoff_min": 1075
+          },
+          "createdAfter": "2026-10-03",
+          "status": "incubating",
+          "liveCompatible": true,
+          "reason": "새 연구세션 자동 생성 · 다음 세션부터 전향적 검증"
+        }
+      ],
+      "factoryGeneration": 1,
+      "lastFactoryDate": "2026-10-03",
+      "retired": [
+        {
+          "name": "no_vwap",
+          "retiredAt": "2026-10-03",
+          "reason": "위험조건 반복 실패"
+        }
+      ],
       "poorStreaks": {
-        "no_vwap": 2,
+        "no_vwap": 0,
         "vol_1.0": 0,
         "vol_1.5": 0,
         "range_15m": 0,
@@ -171,20 +207,34 @@
         "hold_120m": 0,
         "entry_by_1800": 0
       },
-      "lastEvidenceDate": "2026-10-02",
+      "lastEvidenceDate": "2026-10-03",
       "leader": {
         "name": "hold_30m",
-        "consecutiveResearchSessions": 2,
+        "consecutiveResearchSessions": 3,
         "requiredResearchSessions": 7,
         "dates": [
           "2026-10-01",
-          "2026-10-02"
+          "2026-10-02",
+          "2026-10-03"
         ]
       },
       "autoPromotionCandidate": null,
       "autoPromotionReady": false,
-      "autoPromotionReason": "1위 유지 2/7 연구세션",
-      "recentChanges": [],
+      "autoPromotionReason": "1위 유지 3/7 연구세션",
+      "recentChanges": [
+        {
+          "date": "2026-10-03",
+          "type": "retired",
+          "name": "no_vwap",
+          "reason": "위험조건 반복 실패"
+        },
+        {
+          "date": "2026-10-03",
+          "type": "activated",
+          "name": "stop_0.6_tp_1.2",
+          "reason": "no_vwap 퇴출 후 경쟁군 10개 유지"
+        }
+      ],
       "retirementRule": "sampleReady 이후 위험 실패 또는 점수<40·검증우위<0 상태가 3개 서로 다른 연구세션 연속",
       "replacementRule": "퇴출 즉시 정적+자동생성 예비 후보 중 연구순위가 가장 높은 후보를 활성화해 최소 10개 유지"
     },
@@ -251,5 +301,5 @@
       "replacementRule": "퇴출 즉시 정적+자동생성 예비 후보 중 연구순위가 가장 높은 후보를 활성화해 최소 10개 유지"
     }
   },
-  "updatedAt": "2026-10-04T00:08:16.768206+09:00"
+  "updatedAt": "2026-10-05T00:17:04.794440+09:00"
 }
