@@ -1,6 +1,6 @@
 {
   "schema": 3,
-  "generatedAt": "2026-10-04T22:18:33.602446+09:00",
+  "generatedAt": "2026-10-05T02:42:32.685563+09:00",
   "market": "KRW-BTC",
   "unitMinutes": 5,
   "source": "Upbit public minute candles",
@@ -1546,6 +1546,77 @@
           "maxDrawdownPct": -10.164258675291894
         }
       }
+    },
+    {
+      "params": {
+        "name": "cf_g0001",
+        "range_bars": 1,
+        "volume_mult": 0.9,
+        "use_vwap": true,
+        "entry_cutoff_min": 1075,
+        "stop_pct": 0.5,
+        "take_profit_pct": 1.0,
+        "max_hold_bars": 6,
+        "fee_round_trip_pct": 0.1,
+        "slippage_round_trip_pct": 0.04,
+        "evaluation_start": "2026-10-03"
+      },
+      "summary": {
+        "days": 0,
+        "trades": 0,
+        "signalRatePct": 0.0,
+        "noTradeDays": 0,
+        "winRate": 0.0,
+        "avgPnl": 0.0,
+        "avgDailyReturnPct": 0.0,
+        "positiveDayRatePct": 0.0,
+        "target1PctDayCount": 0,
+        "target1PctDayRatePct": 0.0,
+        "medianPnl": 0.0,
+        "sumPnl": 0,
+        "compoundReturnPct": 0.0,
+        "profitFactor": 0.0,
+        "maxDrawdownPct": 0.0
+      },
+      "validation": {
+        "status": "collecting",
+        "trainDays": 0,
+        "holdoutDays": 0,
+        "train": {
+          "days": 0,
+          "trades": 0,
+          "signalRatePct": 0.0,
+          "noTradeDays": 0,
+          "winRate": 0.0,
+          "avgPnl": 0.0,
+          "avgDailyReturnPct": 0.0,
+          "positiveDayRatePct": 0.0,
+          "target1PctDayCount": 0,
+          "target1PctDayRatePct": 0.0,
+          "medianPnl": 0.0,
+          "sumPnl": 0,
+          "compoundReturnPct": 0.0,
+          "profitFactor": 0.0,
+          "maxDrawdownPct": 0.0
+        },
+        "holdout": {
+          "days": 0,
+          "trades": 0,
+          "signalRatePct": 0.0,
+          "noTradeDays": 0,
+          "winRate": 0.0,
+          "avgPnl": 0.0,
+          "avgDailyReturnPct": 0.0,
+          "positiveDayRatePct": 0.0,
+          "target1PctDayCount": 0,
+          "target1PctDayRatePct": 0.0,
+          "medianPnl": 0.0,
+          "sumPnl": 0,
+          "compoundReturnPct": 0.0,
+          "profitFactor": 0.0,
+          "maxDrawdownPct": 0.0
+        }
+      }
     }
   ],
   "rolling30": {
@@ -2384,13 +2455,7 @@
       }
     }
   ],
-  "currentSession": {
-    "date": "2026-10-04",
-    "status": "watching",
-    "trades": 0,
-    "lastBarKst": "08:55",
-    "decisionReason": "아직 진입 마감 전 · OR 신규돌파·거래량 1.2배·VWAP 조건 감시 중"
-  },
+  "currentSession": null,
   "shadowDip24": {
     "strategyVersion": "btc_dip24_v1",
     "params": {
