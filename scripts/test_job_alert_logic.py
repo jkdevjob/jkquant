@@ -17,7 +17,48 @@ def run():
     assert j.same_job(a, cross) is True, 'cross-site duplicate should still merge'
 
     deadline, source = j.parse_job_deadline('테스트 채용', '~ 10/31(토) 입사지원')
-    assert deadline.endswith('-10-31') and source == '마감일'
+    assert deadline.endswith('-10-31') and source == '지원마감일'
+
+    tomorrow = j.today_date_kst() + j.timedelta(days=1)
+    yesterday = j.today_date_kst() - j.timedelta(days=1)
+    explicit, explicit_source = j.parse_job_deadline(
+        '테스트 채용',
+        f'채용시 조기마감 가능 · 지원마감: {tomorrow.isoformat()}',
+    )
+    assert explicit == tomorrow.isoformat()
+    assert explicit_source == '지원마감일', 'explicit support deadline must beat 채용시 fallback'
+    assert j.content_close_reason('테스트 채용', f'지원마감 {tomorrow.isoformat()}', explicit) == ''
+    assert '마감일 경과' in j.content_close_reason(
+        '테스트 채용',
+        f'지원마감 {yesterday.isoformat()}',
+        yesterday.isoformat(),
+    )
+
+    detail_html = f"""
+    <html><head>
+      <script type="application/ld+json">
+      {{"@context":"https://schema.org","@type":"JobPosting",
+        "title":"대전 Java 개발자","validThrough":"{tomorrow.isoformat()}T23:59:59+09:00",
+        "hiringOrganization":{{"@type":"Organization","name":"테스트회사"}}}}
+      </script>
+    </head><body>지원마감 {tomorrow.isoformat()}</body></html>
+    """
+    structured_deadline, structured_source = j.extract_detail_deadline(
+        detail_html,
+        '대전 Java 개발자',
+        '잡코리아',
+    )
+    assert structured_deadline == tomorrow.isoformat()
+    assert structured_source == '구조화데이터:validThrough'
+
+    expired_job = {
+        **a,
+        'deadline': yesterday.isoformat(),
+        'deadlineSource': '지원마감일',
+    }
+    assert j.classify_jobs([expired_job], j.score_java_result) == [], (
+        'expired postings must never be sent as active/new matches'
+    )
 
     albamon = j.normalize_search_result_title(
         '알바몬',
