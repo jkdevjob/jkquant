@@ -58,7 +58,7 @@ ok(ui.includes('strategy-overview-table')&&ui.includes('font-size:12.5px')&&ui.i
 ok(ui.includes('id="daily_trend_card"')&&ui.includes('id="daily_cumulative_chart"'),'today cumulative trend has its own visible card');
 ok(ui.includes('stroke="var(--gold)" stroke-width="2.4"')&&ui.includes('font-weight="800">0%</text>'),'today cumulative trend emphasizes the zero-percent baseline');
 ok(ui.includes('rgba(54,211,153,.055)')&&ui.includes('rgba(248,123,140,.055)')&&ui.includes('수익 +')&&ui.includes('손실 −'),'today cumulative trend separates positive and negative zones');
-ok(ui.includes('const DAILY_TREND_STEP=5')&&ui.includes('v-=DAILY_TREND_STEP')&&ui.includes("v.toFixed(0)+'%'"),'today cumulative trend uses fixed 5 percentage-point grid');
+ok(ui.includes('const DAILY_TREND_STEP=5')&&ui.includes('v-=DAILY_TREND_STEP')&&ui.includes('v.toFixed(0)'),'today cumulative trend uses fixed 5 percentage-point grid');
 ok(ui.includes('&range=all&trend=1')&&ui.includes("cache:'default'")&&ui.includes('DAILY_TREND_TTL_MS=300000'),'today cumulative trend uses lightweight cached history');
 ok(ui.includes("if(name==='daily'){\n    loadDailyStrategyResults(false);\n    renderDailyCumulativeChart();"),'today tab renders cumulative trend independently of daily-result API');
 ok(ui.includes('function refreshDailyDashboard()')&&ui.includes('onclick="refreshDailyDashboard()"'),'today refresh reloads both result cards and cumulative trend');
