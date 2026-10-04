@@ -271,7 +271,7 @@ canvas{display:block;width:100%;height:auto}
 
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Morning Scalping</div><h1>JK <span class="v">퀀트</span> 단타 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="scVer">v1.41.6</span></h1></div>
+    <div><div class="kicker">Morning Scalping</div><h1>JK <span class="v">퀀트</span> 단타 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="scVer">v1.41.7</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -1571,16 +1571,32 @@ function dailyResultCell(x,label){
     '<span class="daily-result-goal '+(hit?'hit':'')+'">'+target+'</span></div>';
 }
 const DAILY_CHART_COLORS={opening:'#f5c451',daytrading:'#8b8cf0',crypto:'#36d399',soxl:'#f87b8c'};
-async function renderDailyCumulativeChart(){
+const DAILY_TREND_STEP=5,DAILY_TREND_TTL_MS=300000;
+let DAILY_TREND_CACHE=null,DAILY_TREND_CACHE_AT=0,DAILY_TREND_PROMISE=null;
+async function loadDailyTrendSeries(force=false){
+  const now=Date.now();
+  if(!force&&DAILY_TREND_CACHE&&now-DAILY_TREND_CACHE_AT<DAILY_TREND_TTL_MS)return DAILY_TREND_CACHE;
+  if(!force&&DAILY_TREND_PROMISE)return DAILY_TREND_PROMISE;
+  const names=['opening','daytrading','crypto','soxl'];
+  const p=Promise.all(names.map(async name=>{
+    const r=await fetch('/api/scalping-history?strategy='+name+'&range=all&trend=1',{headers:{Accept:'application/json'},cache:'default'});
+    const j=await r.json(); if(!r.ok||!j.ok)throw new Error((j&&j.error)||('HTTP '+r.status));
+    return {name,daily:(j.summary&&j.summary.dailySeries)||[]};
+  }));
+  DAILY_TREND_PROMISE=p;
+  try{
+    const reps=await p;
+    DAILY_TREND_CACHE=reps;DAILY_TREND_CACHE_AT=Date.now();
+    return reps;
+  }finally{
+    if(DAILY_TREND_PROMISE===p)DAILY_TREND_PROMISE=null;
+  }
+}
+async function renderDailyCumulativeChart(force=false){
   const el=$('daily_cumulative_chart'); if(!el)return;
   el.innerHTML='<p class="sub">전략별 누적 수익률 계산 중…</p>';
   try{
-    const names=['opening','daytrading','crypto','soxl'];
-    const reps=await Promise.all(names.map(async name=>{
-      const r=await fetch('/api/scalping-history?strategy='+name+'&range=all&page=1&pageSize=20',{headers:{Accept:'application/json'},cache:'no-store'});
-      const j=await r.json(); if(!r.ok||!j.ok)throw new Error((j&&j.error)||('HTTP '+r.status));
-      return {name,daily:(j.summary&&j.summary.dailySeries)||[]};
-    }));
+    const reps=await loadDailyTrendSeries(force);
     const allDates=[...new Set(reps.flatMap(x=>x.daily.map(d=>d.date)))].sort();
     if(!allDates.length){el.innerHTML='<div class="warn">아직 누적 확정 일별 결과가 없습니다.</div>';return;}
 
@@ -1597,15 +1613,19 @@ async function renderDailyCumulativeChart(){
     const visible=new Set(dates);
     const series=fullSeries.map(s=>({name:s.name,hasTrades:s.hasTrades,points:s.points.filter(p=>visible.has(p.date))}));
 
-    const all=[0,...series.flatMap(s=>s.points.map(p=>p.value))];
-    let lo=Math.min(...all),hi=Math.max(...all); if(hi-lo<1){lo-=.5;hi+=.5;} const pad=(hi-lo)*.12;lo-=pad;hi+=pad;
+    const all=[0,...series.flatMap(s=>s.points.map(p=>p.value))],rawLo=Math.min(...all),rawHi=Math.max(...all);
+    let lo=Math.floor(rawLo/DAILY_TREND_STEP)*DAILY_TREND_STEP,hi=Math.ceil(rawHi/DAILY_TREND_STEP)*DAILY_TREND_STEP;
+    if(rawLo<0&&Math.abs(rawLo-lo)<1e-9)lo-=DAILY_TREND_STEP;
+    if(rawHi>0&&Math.abs(rawHi-hi)<1e-9)hi+=DAILY_TREND_STEP;
+    lo=Math.min(lo,-DAILY_TREND_STEP);hi=Math.max(hi,DAILY_TREND_STEP);
     const W=820,H=300,P={l:54,r:18,t:22,b:42},x=i=>P.l+(dates.length<2?(W-P.l-P.r)/2:i*(W-P.l-P.r)/(dates.length-1)),y=v=>P.t+(hi-v)*(H-P.t-P.b)/(hi-lo);
     const plotW=W-P.l-P.r,plotBottom=H-P.b,zeroY=y(0);
     const zones='<rect x="'+P.l+'" y="'+P.t+'" width="'+plotW+'" height="'+Math.max(0,zeroY-P.t).toFixed(1)+'" fill="rgba(54,211,153,.055)"/>'+
       '<rect x="'+P.l+'" y="'+zeroY.toFixed(1)+'" width="'+plotW+'" height="'+Math.max(0,plotBottom-zeroY).toFixed(1)+'" fill="rgba(248,123,140,.055)"/>'+
       '<text x="'+(W-P.r-6)+'" y="'+(P.t+14)+'" text-anchor="end" fill="var(--buy)" font-size="10" font-weight="700">수익 +</text>'+
       '<text x="'+(W-P.r-6)+'" y="'+(plotBottom-7)+'" text-anchor="end" fill="var(--sell)" font-size="10" font-weight="700">손실 −</text>';
-    const grid=Array.from({length:5},(_,i)=>{const v=hi-(hi-lo)*i/4,yy=y(v);return '<line x1="'+P.l+'" y1="'+yy.toFixed(1)+'" x2="'+(W-P.r)+'" y2="'+yy.toFixed(1)+'" stroke="var(--line)" stroke-width="1"/><text x="'+(P.l-8)+'" y="'+(yy+4).toFixed(1)+'" text-anchor="end" fill="var(--faint)" font-size="10">'+(v>=0?'+':'')+v.toFixed(1)+'%</text>';}).join('');
+    const gridVals=[];for(let v=hi;v>=lo-1e-9;v-=DAILY_TREND_STEP)gridVals.push(v);
+    const grid=gridVals.map(v=>{const yy=y(v);return '<line x1="'+P.l+'" y1="'+yy.toFixed(1)+'" x2="'+(W-P.r)+'" y2="'+yy.toFixed(1)+'" stroke="var(--line)" stroke-width="1"/><text x="'+(P.l-8)+'" y="'+(yy+4).toFixed(1)+'" text-anchor="end" fill="var(--faint)" font-size="10">'+(v>0?'+':'')+v.toFixed(0)+'%</text>';}).join('');
     const zero='<line x1="'+P.l+'" y1="'+zeroY.toFixed(1)+'" x2="'+(W-P.r)+'" y2="'+zeroY.toFixed(1)+'" stroke="var(--gold)" stroke-width="2.4"/>'+
       '<text x="'+(P.l-8)+'" y="'+(zeroY+4).toFixed(1)+'" text-anchor="end" fill="var(--gold)" font-size="10" font-weight="800">0%</text>';
     const lines=series.map(s=>'<polyline fill="none" stroke="'+DAILY_CHART_COLORS[s.name]+'" stroke-width="3" stroke-linejoin="round" stroke-linecap="round" points="'+s.points.map((p,i)=>x(i).toFixed(1)+','+y(p.value).toFixed(1)).join(' ')+'"/>').join('');
@@ -1622,7 +1642,7 @@ async function renderDailyCumulativeChart(){
 
 function refreshDailyDashboard(){
   loadDailyStrategyResults(true);
-  renderDailyCumulativeChart();
+  renderDailyCumulativeChart(true);
 }
 async function loadDailyStrategyResults(force){
   const body=$('daily_results_body'),meta=$('daily_results_meta'); if(!body)return;
