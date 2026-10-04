@@ -508,6 +508,15 @@ def fetch_job_identity(job):
                 item['title'] = detail_title
             if detail_company:
                 item['company'] = detail_company
+            detail_deadline, deadline_source = extract_detail_deadline(
+                response.text,
+                item.get('title', ''),
+                item.get('source', ''),
+            )
+            if detail_deadline or deadline_source:
+                item['deadline'] = detail_deadline
+                item['deadlineSource'] = deadline_source
+                item['deadlineCheckedAt'] = today_kst()
     except Exception as exc:
         item['_identity_error'] = type(exc).__name__
 
@@ -911,6 +920,10 @@ def today_kst():
     return datetime.now(ZoneInfo('Asia/Seoul')).date().isoformat()
 
 
+def today_date_kst():
+    return datetime.now(ZoneInfo('Asia/Seoul')).date()
+
+
 def already_sent_today():
     if not SENT_FILE.exists():
         return False
@@ -1003,6 +1016,9 @@ def merge_jobs(*groups):
 def classify_jobs(jobs, scorer):
     result = []
     for job in jobs:
+        deadline = job.get('deadline', '')
+        if content_close_reason(job.get('title', ''), job.get('body', ''), deadline):
+            continue
         score = scorer(job['title'], job['body'], job['url'])
         if score < 0:
             continue
@@ -1083,7 +1099,7 @@ def collect_jobkorea_direct():
     failed_pages = 0
     parsed_links = 0
     errors = []
-    cutoff = date.today() - timedelta(days=CRAWL_RANGE_DAYS)
+    cutoff = today_date_kst() - timedelta(days=CRAWL_RANGE_DAYS)
     max_pages = 3 if os.environ.get('JOB_ALERT_FAST') == '1' else JOBKOREA_MAX_PAGES_PER_QUERY
 
     for query in JOBKOREA_DIRECT_QUERIES:
@@ -1383,7 +1399,7 @@ def collect_saramin_direct():
     ok_pages = 0
     failed_pages = 0
     errors = []
-    cutoff = date.today() - timedelta(days=CRAWL_RANGE_DAYS)
+    cutoff = today_date_kst() - timedelta(days=CRAWL_RANGE_DAYS)
     max_pages = 3 if os.environ.get('JOB_ALERT_FAST') == '1' else SARAMIN_MAX_PAGES_PER_QUERY
 
     for query in SARAMIN_DIRECT_QUERIES:
@@ -1674,6 +1690,28 @@ def collect_all_sources():
             )
 
     merged = dedupe_jobs_cross_source([job for group in groups for job in group])
+
+    # 검색엔진 기반 출처는 스니펫의 마감일이 누락/오래될 수 있으므로
+    # 최종 후보에 대해서는 원문 상세페이지를 한 번 확인해 지원마감일을 확정한다.
+    search_source_names = set(SEARCH_SOURCES.keys())
+    detail_targets = [
+        job for job in merged
+        if job.get('source') in search_source_names
+    ]
+    if detail_targets:
+        enriched = enrich_jobs_from_details(detail_targets, workers=10)
+        enriched_by_url = {
+            normalize_url(job.get('url', '')): job
+            for job in enriched
+            if job.get('url')
+        }
+        merged = [
+            enriched_by_url.get(normalize_url(job.get('url', '')), job)
+            if job.get('source') in search_source_names else job
+            for job in merged
+        ]
+        merged = dedupe_jobs_cross_source(merged)
+
     print(
         f'[INFO] all_sources raw={sum(len(g) for g in groups)} '
         f'deduped={len(merged)} sources={len(statuses)}'
@@ -1695,7 +1733,7 @@ def parse_job_posted_date(title, body):
                 if year_digits == 2:
                     year += 2000
                 d = date(year, int(m.group(2)), int(m.group(3)))
-                if date.today() - timedelta(days=370) <= d <= date.today() + timedelta(days=2):
+                if today_date_kst() - timedelta(days=370) <= d <= today_date_kst() + timedelta(days=2):
                     dates.append(d)
             except Exception:
                 pass
@@ -1707,19 +1745,74 @@ def parse_job_posted_date(title, body):
     if m:
         days = int(m.group(1))
         if 0 <= days <= 30:
-            return (date.today() - timedelta(days=days)).isoformat(), '검색표시'
+            return (today_date_kst() - timedelta(days=days)).isoformat(), '검색표시'
     if '오늘' in text and any(term in text for term in ('등록', '수정', '게시')):
-        return date.today().isoformat(), '검색표시'
+        return today_date_kst().isoformat(), '검색표시'
     return '', ''
 
 
 
+def _deadline_date_from_parts(year, month, day):
+    try:
+        return date(int(year), int(month), int(day))
+    except Exception:
+        return None
+
+
+def _deadline_from_iso_value(value):
+    text = normalize_text(str(value or ''))
+    if not text:
+        return ''
+    m = re.search(r'(20\d{2})-(\d{1,2})-(\d{1,2})', text)
+    if not m:
+        m = re.search(r'(20\d{2})[./](\d{1,2})[./](\d{1,2})', text)
+    if not m:
+        return ''
+    d = _deadline_date_from_parts(m.group(1), m.group(2), m.group(3))
+    return d.isoformat() if d else ''
+
+
 def parse_job_deadline(title, body):
     text = normalize_text(f'{title} {body}')
-    today = date.today()
-    if any(term in text for term in ('채용시', '상시채용', '상시 모집', '상시모집')):
-        return '', '채용시'
+    today = today_date_kst()
 
+    # 1) 절대 마감일이 있으면 "채용시/상시" 문구보다 우선한다.
+    # 상세페이지 공통 안내문에 '채용시'가 섞여 있어 실제 지원마감일을 놓치는 것을 막는다.
+    full_patterns = [
+        r'(?:지원\s*마감(?:일)?|접수\s*마감(?:일)?|채용\s*마감(?:일)?|마감일|접수기간|지원기간|모집기간)'
+        r'.{0,50}?(20\d{2})[./-](\d{1,2})[./-](\d{1,2})',
+        r'(?:지원\s*마감(?:일)?|접수\s*마감(?:일)?|채용\s*마감(?:일)?|마감일|접수기간|지원기간|모집기간)'
+        r'.{0,50}?~\s*(20\d{2})[./-](\d{1,2})[./-](\d{1,2})',
+        # 검색결과의 "~ 2026-10-31 입사지원" 형태
+        r'~\s*(20\d{2})[./-](\d{1,2})[./-](\d{1,2})(?=.{0,30}(?:입사지원|홈페이지\s*지원|지원하기|접수|마감|$))',
+    ]
+    for pattern in full_patterns:
+        m = re.search(pattern, text, re.I)
+        if m:
+            d = _deadline_date_from_parts(m.group(1), m.group(2), m.group(3))
+            if d:
+                return d.isoformat(), '지원마감일'
+
+    # 2) 연도 생략형. 현재 연도 말/다음 연도 초 경계를 보정한다.
+    short_patterns = [
+        r'(?:지원\s*마감(?:일)?|접수\s*마감(?:일)?|채용\s*마감(?:일)?|마감일|접수기간|지원기간|모집기간)'
+        r'.{0,50}?~?\s*(\d{1,2})[./-](\d{1,2})(?:\([^)]*\))?',
+        r'~\s*(\d{1,2})[./-](\d{1,2})(?:\([^)]*\))?(?=.{0,30}(?:입사지원|홈페이지\s*지원|지원하기|접수|마감|$))',
+    ]
+    for pattern in short_patterns:
+        m = re.search(pattern, text, re.I)
+        if not m:
+            continue
+        try:
+            candidate = date(today.year, int(m.group(1)), int(m.group(2)))
+            # 연말에 1~2월 마감 공고가 잡히는 경우 다음 해로 본다.
+            if candidate < today - timedelta(days=120):
+                candidate = date(today.year + 1, int(m.group(1)), int(m.group(2)))
+            return candidate.isoformat(), '지원마감일'
+        except Exception:
+            pass
+
+    # 3) 상대 마감표시는 수집 당일의 KST 날짜를 기준으로 절대일로 고정한다.
     if '오늘마감' in text or '오늘 마감' in text:
         return today.isoformat(), '마감표시'
     if '내일마감' in text or '내일 마감' in text:
@@ -1729,44 +1822,71 @@ def parse_job_deadline(title, body):
     if m:
         return (today + timedelta(days=int(m.group(1)))).isoformat(), 'D-day'
 
-    full_patterns = [
-        r'(?:마감일|접수마감|지원마감|채용마감)\s*[:：]?\s*(20\d{2})[./-](\d{1,2})[./-](\d{1,2})',
-        r'~\s*(20\d{2})[./-](\d{1,2})[./-](\d{1,2})',
-    ]
-    for pattern in full_patterns:
-        m = re.search(pattern, text, re.I)
-        if m:
-            try:
-                return date(int(m.group(1)), int(m.group(2)), int(m.group(3))).isoformat(), '마감일'
-            except Exception:
-                pass
+    # 4) 실제 날짜를 찾지 못한 경우에만 채용시/상시채용을 사용한다.
+    if any(term in text for term in ('채용시까지', '채용시', '상시채용', '상시 모집', '상시모집')):
+        return '', '채용시'
 
-    m = re.search(
-        r'(?:마감일|접수마감|지원마감|채용마감|~)\s*[:：]?\s*(\d{1,2})[./-](\d{1,2})(?:\([^)]*\))?',
-        text,
-        re.I,
-    )
-    if m:
-        try:
-            candidate = date(today.year, int(m.group(1)), int(m.group(2)))
-            if candidate < today - timedelta(days=120):
-                candidate = date(today.year + 1, int(m.group(1)), int(m.group(2)))
-            return candidate.isoformat(), '마감일'
-        except Exception:
-            pass
     return '', ''
+
+
+def extract_detail_deadline(html, title='', source=''):
+    soup = BeautifulSoup(html or '', 'html.parser')
+
+    # schema.org JobPosting.validThrough/applicationDeadline가 가장 신뢰도가 높다.
+    for script in soup.find_all('script'):
+        typ = (script.get('type') or '').lower()
+        if 'ld+json' not in typ:
+            continue
+        raw = script.string or script.get_text() or ''
+        if not raw.strip():
+            continue
+        try:
+            data = json.loads(raw)
+        except Exception:
+            continue
+        for obj in _walk_jsonld(data):
+            obj_type = obj.get('@type')
+            types = obj_type if isinstance(obj_type, list) else [obj_type]
+            if not any(str(t).lower() == 'jobposting' for t in types if t):
+                continue
+            for key in ('validThrough', 'applicationDeadline', 'application_deadline'):
+                deadline = _deadline_from_iso_value(obj.get(key))
+                if deadline:
+                    return deadline, f'구조화데이터:{key}'
+
+    # itemprop=validThrough 메타/태그도 우선 사용한다.
+    for node in soup.select('[itemprop="validThrough"], meta[name="validThrough"], meta[property="validThrough"]'):
+        raw = node.get('content') or node.get('datetime') or node.get_text(' ', strip=True)
+        deadline = _deadline_from_iso_value(raw)
+        if deadline:
+            return deadline, '구조화데이터:validThrough'
+
+    # 마지막으로 상세페이지 본문에서 지원/접수/마감 문맥이 있는 날짜만 파싱한다.
+    page_text = normalize_text(soup.get_text(' ', strip=True))
+    return parse_job_deadline(title, page_text[:16000])
 
 
 def content_close_reason(title, body, deadline=''):
     text = normalize_text(f'{title} {body}')
-    if any(term in text for term in (
-        '마감되었습니다', '채용마감', '채용 마감', '접수마감',
-        '접수 마감', '공고마감', '공고 마감', '마감된 공고',
-    )):
+    explicit_patterns = [
+        r'마감되었습니다',
+        r'채용(?:이|은|이\s*)?\s*마감(?:되었|됐|됨)',
+        r'접수(?:가|는|가\s*)?\s*마감(?:되었|됐|됨)',
+        r'지원(?:이|은|이\s*)?\s*(?:마감|종료)(?:되었|됐|됨)?',
+        r'접수\s*종료',
+        r'채용\s*종료',
+        r'마감된\s*공고',
+        r'공고(?:가|는)?\s*마감(?:되었|됐|됨)',
+        r'(?:^|[\[\(])\s*채용\s*마감\s*(?:[\]\)]|$)',
+    ]
+    if any(re.search(pattern, text, re.I) for pattern in explicit_patterns):
         return '원문 마감 표시'
+
+    # '지원마감일 10/31', '접수마감 10/31'은 상태 문구가 아니라 날짜 라벨이다.
+    # 날짜가 오늘까지면 당일에는 진행중으로 두고, 다음 날부터 마감 처리한다.
     if deadline:
         try:
-            if date.fromisoformat(deadline) < date.today():
+            if date.fromisoformat(deadline) < today_date_kst():
                 return f'마감일 경과({deadline})'
         except Exception:
             pass
@@ -1826,11 +1946,16 @@ def verify_unseen_job(item):
         out['company'] = detail_company
 
     page_text = normalize_text(BeautifulSoup(html, 'html.parser').get_text(' ', strip=True))
-    deadline, deadline_source = parse_job_deadline(out.get('title', ''), page_text[:12000])
-    if deadline:
+    deadline, deadline_source = extract_detail_deadline(
+        html,
+        out.get('title', ''),
+        out.get('source', ''),
+    )
+    if deadline or deadline_source:
         out['deadline'] = deadline
         out['deadlineSource'] = deadline_source
-    reason = content_close_reason(out.get('title', ''), page_text[:12000], out.get('deadline', ''))
+        out['deadlineCheckedAt'] = today_kst()
+    reason = content_close_reason(out.get('title', ''), page_text[:16000], out.get('deadline', ''))
     if reason:
         out['_urlState'] = 'closed'
         out['_urlReason'] = reason
@@ -1981,7 +2106,9 @@ def archive_locations(job):
 def archive_entry(job, existing=None):
     today = today_kst()
     posted, posted_source = parse_job_posted_date(job.get('title', ''), job.get('body', ''))
-    deadline, deadline_source = parse_job_deadline(job.get('title', ''), job.get('body', ''))
+    parsed_deadline, parsed_deadline_source = parse_job_deadline(job.get('title', ''), job.get('body', ''))
+    deadline = job.get('deadline', '') or parsed_deadline
+    deadline_source = job.get('deadlineSource', '') or parsed_deadline_source
     old = existing or {}
 
     salary = salary_info(job.get('title', ''), job.get('body', ''))
@@ -2032,6 +2159,7 @@ def archive_entry(job, existing=None):
         'dateSource': posted_source or old.get('dateSource', '') or '수집일',
         'deadline': deadline or old.get('deadline', ''),
         'deadlineSource': deadline_source or old.get('deadlineSource', ''),
+        'deadlineCheckedAt': job.get('deadlineCheckedAt', '') or old.get('deadlineCheckedAt', ''),
         'status': status,
         'missCount': 0,
         'closedAt': (old.get('closedAt') or today) if status == 'closed' else '',
@@ -2182,7 +2310,7 @@ def save_job_archive(all_jobs, source_statuses):
                 duplicate['closeReason'] = ''
                 duplicate['missCount'] = 0
 
-    cutoff = date.today() - timedelta(days=ARCHIVE_DAYS)
+    cutoff = today_date_kst() - timedelta(days=ARCHIVE_DAYS)
     kept = []
     expired = []
     for item in result:
@@ -2190,7 +2318,7 @@ def save_job_archive(all_jobs, source_statuses):
         try:
             d = date.fromisoformat(effective)
         except Exception:
-            d = date.today()
+            d = today_date_kst()
         if d >= cutoff:
             kept.append(item)
         else:
