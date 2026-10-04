@@ -235,6 +235,7 @@ canvas{display:block;width:100%;height:auto}
 
 
 </style>
+<script src="/jk-access.js"></script>
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-app.js";
   import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-auth.js";
@@ -270,7 +271,7 @@ canvas{display:block;width:100%;height:auto}
 
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Morning Scalping</div><h1>JK <span class="v">퀀트</span> 단타 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="scVer">v1.41.4</span></h1></div>
+    <div><div class="kicker">Morning Scalping</div><h1>JK <span class="v">퀀트</span> 단타 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="scVer">v1.41.5</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -3926,6 +3927,7 @@ function boot(){
   window.fb.onAuthStateChanged(window.fb.auth, async user=>{
     me=user||null; renderBadge();
     if(!user){ stopLive(); stopOpeningLive(); $('gate').style.display='flex'; $('app').style.display='none';
+      try{ if(window.JKAccess) JKAccess.setAdmin(false); }catch(e){}
       $('gate_sub').innerHTML='이 화면은 <b>소유자 계정</b>만 볼 수 있습니다.'; resetLoginButton(); return; }
     $('gate').style.display='flex';$('app').style.display='none';
     $('gate_sub').innerHTML='<b>'+esc(user.email||'')+'</b><br><span class="sub">소유자 권한 확인 중…</span>';
@@ -3934,6 +3936,7 @@ function boot(){
     try{ isOwner=await checkOwner(user); }
     catch(e){ denyGate(user,'권한 확인에 실패했습니다. 새로고침해 주세요.<br><span class="sub">'+esc(e.message||e)+'</span>'); return; }
     if(!isOwner){
+      try{ if(window.JKAccess) JKAccess.setAdmin(false); }catch(e){}
       const srcTxt = OWNSRC==='default' ? '아직 <b>OWNER_EMAIL</b> 을 설정하지 않아 기본 계정만 허용된 상태입니다.'
                    : '현재 허용 목록은 환경변수 <b>'+esc(OWNSRC)+'</b> 에서 읽고 있습니다.';
       denyGate(user,'<b>'+esc(user.email||'')+'</b> 계정에는 접근 권한이 없습니다.<br>'
@@ -3941,6 +3944,12 @@ function boot(){
         +'<b>OWNER_EMAIL</b> 값을 <b>'+esc(user.email||'')+'</b> 로 넣고 <b>재배포</b>하면 열립니다.</span>');
       return;
     }
+    try{
+      if(window.JKAccess){
+        JKAccess.setAdmin(true);
+        await JKAccess.applyMenuConfig(user,window.fb,{force:true});
+      }
+    }catch(e){ console.warn('menu config',e); }
     $('gate').style.display='none'; $('app').style.display='';
     // 사용자 데이터는 Firebase DB에서만 불러온다.
     loadAll();await cloudLoad();
