@@ -544,7 +544,7 @@ html.had-user #authgate .bootwait{display:block}
 </div>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.109.6</span></h1></div>
+    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.109.7</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -1655,7 +1655,7 @@ if(/^\/paper\/?$/.test(location.pathname)){
   <footer>
     <strong>JK 퀀트</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.109.6</b> · 2026-10-05</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.109.7</b> · 2026-10-05</div>
   </footer>
 </div>
 
@@ -1830,7 +1830,7 @@ if(/^\/paper\/?$/.test(location.pathname)){
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px;align-items:end">
       <div class="field" style="min-width:0;margin:0">
         <label style="font-size:12px;margin-bottom:6px">모의 시작일 <span class="hint" id="p_simstart_n"></span></label>
-        <input id="p_simstart" type="date" onchange="paperRememberForm()">
+        <input id="p_simstart" type="date" onchange="void paperRememberForm(true)">
       </div>
       <div class="field" style="min-width:0;margin:0">
         <label style="font-size:12px;margin-bottom:6px">원금 <span class="hint">원화 입력</span></label>
@@ -8120,14 +8120,18 @@ async function paperRepairLegacyStarts(){
   return uniq.length;
 }
 let paperMemoTimer=null;
-function paperRememberForm(){
-  if(!S)return;
+async function paperRememberForm(immediate=false){
+  if(!S)return false;
   if(!S.paperCommon)S.paperCommon={};
   const c=$('p_capital'),a=$('p_addamt'),d=$('p_simstart');
   const cap=c?+unComma(c.value||''):0,add=a?+unComma(a.value||''):0;
   S.paperCommon.formMemo={simStart:d&&d.value?d.value:'',capitalWon:cap>0?cap:null,addWon:add>0?add:null};
   clearTimeout(paperMemoTimer);
+  /* 날짜는 change 한 순간 Firebase stateV2에 바로 남긴다.
+     원금/적립액은 타이핑 중 매 키마다 쓰지 않도록 기존 300ms debounce를 유지한다. */
+  if(immediate) return await save();
   paperMemoTimer=setTimeout(()=>{void save();},300);
+  return true;
 }
 /* 구버전에는 paperCommon 원화 원본이 없을 수 있다.
    사용자가 처음 지정한 기준값(원금 1억원 · 1회 적립액 5만원)을 원화 원본으로 채운다.
@@ -8151,7 +8155,10 @@ async function paperEnsureCommonWon(){
     if(dates.length===1){ pc.simStart=dates[0]; changed=true; }
   }
   if(changed){
-    pc.formMemo={simStart:pc.simStart||'',capitalWon:pc.capitalWon,addWon:pc.addWon};
+    const memo=paperFormMemoRead();
+    /* 원화 마이그레이션 때문에 사용자가 방금 고른(아직 전체 적용 전인) 날짜를
+       확정 시작일로 되돌리지 않는다. 입력 날짜는 입력 날짜대로 보존한다. */
+    pc.formMemo={simStart:memo.simStart||pc.simStart||'',capitalWon:pc.capitalWon,addWon:pc.addWon};
     saveLocal(); void pushRemote();
   }
   return changed;
@@ -8160,7 +8167,7 @@ function paperPreferredSimStart(){
   const min=paperMinDate(), today=new Date().toISOString().slice(0,10);
   const valid=d=>!!(d&&d>=min&&d<=today);
   const memo=paperFormMemoRead(), pc=(S&&S.paperCommon)||{};
-  // 사용자가 '전체 적용'을 눌러 확정한 값은 세션 추가·설정 변경·자동재생이 절대 덮지 않는다.
+  // 실제 모의 운전/새 세션은 '전체 적용'으로 확정한 시작일이 최우선이다.
   if(valid(pc.simStart)) return pc.simStart;
   if(valid(memo.simStart)) return memo.simStart;
   // 공통값이 없던 구버전 상태만 기존 세션에서 복구한다.
@@ -8173,6 +8180,15 @@ function paperPreferredSimStart(){
     if(rank.length===1 || rank[0][1]>rank[1][1]) return rank[0][0];
   }
   return today;
+}
+/* 모의 성과 창의 입력칸은 마지막 입력값을 우선 보여 준다.
+   '전체 적용' 전까지 실제 세션 시작일은 바꾸지 않되 Ctrl+F5 후에도 사용자가 고른 날짜는 유지한다. */
+function paperFormSimStart(){
+  const min=paperMinDate(), today=new Date().toISOString().slice(0,10);
+  const valid=d=>!!(d&&d>=min&&d<=today);
+  const memo=paperFormMemoRead();
+  if(valid(memo.simStart)) return memo.simStart;
+  return paperPreferredSimStart();
 }
 function syncPaperStart(){
   const el=$('p_simstart'); if(!el) return;
@@ -8190,7 +8206,7 @@ function syncPaperStart(){
   const pc=(S&&S.paperCommon)||{}, memo=paperFormMemoRead();
   /* 이 함수는 표시만 맞춘다. 실제 세션 날짜를 보고 paperCommon을 역으로 고치지 않는다.
      그 역방향 쓰기 때문에 잘못 생성된 '오늘 시작' 세션이 공통 시작일까지 오늘로 오염시켰다. */
-  const common=paperPreferredSimStart();
+  const common=paperFormSimStart();
   const pick=(common&&common>=min&&common<=today)?common:today;
   el.value=pick;
   el.disabled=!list.length;
