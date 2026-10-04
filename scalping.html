@@ -271,7 +271,7 @@ canvas{display:block;width:100%;height:auto}
 
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Morning Scalping</div><h1>JK <span class="v">퀀트</span> 단타 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="scVer">v1.41.5</span></h1></div>
+    <div><div class="kicker">Morning Scalping</div><h1>JK <span class="v">퀀트</span> 단타 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="scVer">v1.41.6</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -1600,15 +1600,21 @@ async function renderDailyCumulativeChart(){
     const all=[0,...series.flatMap(s=>s.points.map(p=>p.value))];
     let lo=Math.min(...all),hi=Math.max(...all); if(hi-lo<1){lo-=.5;hi+=.5;} const pad=(hi-lo)*.12;lo-=pad;hi+=pad;
     const W=820,H=300,P={l:54,r:18,t:22,b:42},x=i=>P.l+(dates.length<2?(W-P.l-P.r)/2:i*(W-P.l-P.r)/(dates.length-1)),y=v=>P.t+(hi-v)*(H-P.t-P.b)/(hi-lo);
+    const plotW=W-P.l-P.r,plotBottom=H-P.b,zeroY=y(0);
+    const zones='<rect x="'+P.l+'" y="'+P.t+'" width="'+plotW+'" height="'+Math.max(0,zeroY-P.t).toFixed(1)+'" fill="rgba(54,211,153,.055)"/>'+
+      '<rect x="'+P.l+'" y="'+zeroY.toFixed(1)+'" width="'+plotW+'" height="'+Math.max(0,plotBottom-zeroY).toFixed(1)+'" fill="rgba(248,123,140,.055)"/>'+
+      '<text x="'+(W-P.r-6)+'" y="'+(P.t+14)+'" text-anchor="end" fill="var(--buy)" font-size="10" font-weight="700">수익 +</text>'+
+      '<text x="'+(W-P.r-6)+'" y="'+(plotBottom-7)+'" text-anchor="end" fill="var(--sell)" font-size="10" font-weight="700">손실 −</text>';
     const grid=Array.from({length:5},(_,i)=>{const v=hi-(hi-lo)*i/4,yy=y(v);return '<line x1="'+P.l+'" y1="'+yy.toFixed(1)+'" x2="'+(W-P.r)+'" y2="'+yy.toFixed(1)+'" stroke="var(--line)" stroke-width="1"/><text x="'+(P.l-8)+'" y="'+(yy+4).toFixed(1)+'" text-anchor="end" fill="var(--faint)" font-size="10">'+(v>=0?'+':'')+v.toFixed(1)+'%</text>';}).join('');
-    const zero=lo<=0&&hi>=0?'<line x1="'+P.l+'" y1="'+y(0).toFixed(1)+'" x2="'+(W-P.r)+'" y2="'+y(0).toFixed(1)+'" stroke="var(--faint)" stroke-dasharray="4 4"/>':'';
+    const zero='<line x1="'+P.l+'" y1="'+zeroY.toFixed(1)+'" x2="'+(W-P.r)+'" y2="'+zeroY.toFixed(1)+'" stroke="var(--gold)" stroke-width="2.4"/>'+
+      '<text x="'+(P.l-8)+'" y="'+(zeroY+4).toFixed(1)+'" text-anchor="end" fill="var(--gold)" font-size="10" font-weight="800">0%</text>';
     const lines=series.map(s=>'<polyline fill="none" stroke="'+DAILY_CHART_COLORS[s.name]+'" stroke-width="3" stroke-linejoin="round" stroke-linecap="round" points="'+s.points.map((p,i)=>x(i).toFixed(1)+','+y(p.value).toFixed(1)).join(' ')+'"/>').join('');
     const dots=series.map(s=>s.points.map((p,i)=>'<circle cx="'+x(i).toFixed(1)+'" cy="'+y(p.value).toFixed(1)+'" r="3" fill="'+DAILY_CHART_COLORS[s.name]+'"><title>'+DAILY_RESULT_LABELS[s.name]+' · '+p.date+' · '+(s.hasTrades?dailyResultPct(p.value):'매매기록 없음')+'</title></circle>').join('')).join('');
     const tickIdx=[...new Set([0,Math.floor((dates.length-1)/2),dates.length-1])];
     const ticks=tickIdx.map(i=>'<text x="'+x(i).toFixed(1)+'" y="'+(H-16)+'" text-anchor="'+(i===0?'start':i===dates.length-1?'end':'middle')+'" fill="var(--faint)" font-size="10">'+esc(dates[i].slice(5))+'</text>').join('');
     const legend=series.map(s=>{const last=s.points[s.points.length-1];return '<span style="display:inline-flex;align-items:center;gap:5px"><i style="width:10px;height:10px;border-radius:50%;background:'+DAILY_CHART_COLORS[s.name]+'"></i>'+DAILY_RESULT_LABELS[s.name]+' <b class="'+(last&&last.value>=0?'win':'loss')+'">'+(s.hasTrades&&last?dailyResultPct(last.value):'매매기록 없음')+'</b></span>';}).join('');
     el.innerHTML='<div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-bottom:8px"><b>📈 전략별 누적 결과 · 수익률 추이</b><span class="sub">전체 누적값 · 최근 31일 확대</span></div>'+
-      '<div style="overflow-x:auto"><svg viewBox="0 0 '+W+' '+H+'" style="display:block;width:100%;min-width:620px;height:auto" role="img" aria-label="전략별 누적 수익률 추이">'+grid+zero+lines+dots+ticks+'</svg></div>'+
+      '<div style="overflow-x:auto"><svg viewBox="0 0 '+W+' '+H+'" style="display:block;width:100%;min-width:620px;height:auto" role="img" aria-label="전략별 누적 수익률 추이">'+zones+grid+zero+lines+dots+ticks+'</svg></div>'+
       '<div class="row" style="gap:12px;margin-top:7px;font-size:11px">'+legend+'</div>'+
       '<p class="note">누적값은 각 전략의 전체 확정 일별 계좌수익률을 날짜순으로 복리 계산합니다. 데이트레이딩은 하루 3개 동일자금 슬롯 기준으로 계산해 미사용 슬롯은 현금 0%로 반영합니다. 그래프 화면만 최근 31일을 확대해 시초가·데이트레이딩 선도 함께 보이게 했습니다. 해당 전략이 매매하지 않은 날짜는 수익률 0%로 보고 직전 누적값을 유지하며, 오늘 카드에는 <b>매매없음</b>으로 표시합니다.</p>';
   }catch(e){el.innerHTML='<div class="warn">누적 수익률 그래프 조회 실패 · '+esc(e.message||String(e))+'</div>';}
