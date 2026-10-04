@@ -34,13 +34,15 @@ table.doc td{padding:6px 6px}
 #gbtn{display:inline-flex;align-items:center;gap:10px;background:#fff;color:#1f1f1f;border:none;border-radius:12px;padding:13px 20px;font-size:15px;font-weight:700;cursor:pointer;width:100%;justify-content:center}
 #gate .gnote{color:var(--faint);font-size:11.5px;margin-top:18px}
 </style>
+<script src="/jk-access.js"></script>
 <script type="module">
   // 소유자만 보는 화면 — 단타(GPT)와 같은 Google 로그인 · /api/owner 판정. 자료 API 도 로그인 토큰 없이는 401.
   import { initializeApp } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-app.js";
   import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-auth.js";
+  import { initializeFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/12.14.0/firebase-firestore.js";
   const app = initializeApp({ apiKey: "AIzaSyBzBe9pAttnbDgTlNThWZzNqtAAKxX7Ksw", authDomain: "jk-invest.firebaseapp.com", projectId: "jk-invest",
     storageBucket: "jk-invest.firebasestorage.app", messagingSenderId: "1024066323251", appId: "1:1024066323251:web:23d557527866205f01f446" });
-  window.fb = { auth:getAuth(app), provider:new GoogleAuthProvider(), signInWithPopup, onAuthStateChanged, signOut };
+  window.fb = { auth:getAuth(app), db:initializeFirestore(app,{experimentalForceLongPolling:true}), provider:new GoogleAuthProvider(), signInWithPopup, onAuthStateChanged, signOut, doc, getDoc, setDoc };
   window.dispatchEvent(new Event('fb-ready'));
 </script>
 </head>
@@ -53,7 +55,7 @@ table.doc td{padding:6px 6px}
   <div class="gnote"><a href="/" style="color:var(--faint)">← 운영 화면으로</a></div>
 </div></div>
 <header><div class="wrap"><div class="htop">
-  <div><div class="kicker">Claude Scalping</div><h1>JK <span class="v">퀀트</span> 단타 <span class="ver" id="clVer">v2.10.2</span></h1></div>
+  <div><div class="kicker">Claude Scalping</div><h1>JK <span class="v">퀀트</span> 단타 <span class="ver" id="clVer">v2.10.3</span></h1></div>
   <div class="hright">
     <div class="userbadge" id="userbadge"></div>
   <div class="jkmenu" id="jkmenuWrap">
@@ -564,11 +566,12 @@ function doLogout(){window.fb.signOut(window.fb.auth)}
 function boot(){
   window.fb.onAuthStateChanged(window.fb.auth,async function(user){
     ME=user||null;var ub=document.getElementById("userbadge");
-    if(!user){if(ub)ub.innerHTML="";J=null;LIVE=null;document.getElementById("body").innerHTML="";gateShow("이 화면은 <b>소유자 계정</b>만 볼 수 있습니다.");return}
+    if(!user){if(ub)ub.innerHTML="";J=null;LIVE=null;document.getElementById("body").innerHTML="";try{if(window.JKAccess)JKAccess.setAdmin(false)}catch(e){}gateShow("이 화면은 <b>소유자 계정</b>만 볼 수 있습니다.");return}
     var ok=false;
     try{ok=await checkOwner(user)}catch(e){var er=document.getElementById("gate_err");if(er)er.textContent="권한 확인 응답이 없습니다. 새로고침하거나 다시 로그인해 주세요. ("+((e&&e.name)==="AbortError"?"8초 timeout":((e&&e.message)||e))+")";return}
-    if(!ok){gateShow("<b>"+esc(user.email||"")+"</b> 계정에는 접근 권한이 없습니다.");var b=document.getElementById("gbtn");b.textContent="다른 계정으로 로그인";
+    if(!ok){try{if(window.JKAccess)JKAccess.setAdmin(false)}catch(e){}gateShow("<b>"+esc(user.email||"")+"</b> 계정에는 접근 권한이 없습니다.");var b=document.getElementById("gbtn");b.textContent="다른 계정으로 로그인";
       b.onclick=function(){window.fb.signOut(window.fb.auth).then(googleLogin)};return}
+    try{if(window.JKAccess){JKAccess.setAdmin(true);await JKAccess.applyMenuConfig(user,window.fb,{force:true})}}catch(e){console.warn("menu config",e)}
     document.getElementById("gate").style.display="none";
     if(ub)ub.innerHTML=(user.photoURL?"<img src=\""+esc(user.photoURL)+"\" alt=\"\">":"")+"<span>"+esc(user.displayName||user.email||"")+"</span> · <button class=\"lo\" onclick=\"doLogout()\">로그아웃</button>";
     load();
