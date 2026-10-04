@@ -9,9 +9,10 @@ rules_version = '2';
    화면만 가리면 앱을 거치지 않고 데이터를 읽는 걸 막지 못한다 — 진짜 잠금은 이 규칙이다.
    관리자 목록 조회(profiles 전체 읽기)도 규칙이 허용해야 동작한다.
 
-   컬렉션 두 개:
-     users/{uid}    — 그 사람의 전략·거래기록 전부. 승인된 본인만 읽고 쓴다. 관리자도 안 본다.
-     profiles/{uid} — 이메일·신청·접속시각·승인 상태. 관리자가 전체를 읽고 승인·차단한다. */
+   컬렉션 세 개:
+     users/{uid}       — 그 사람의 전략·거래기록 전부. 승인된 본인만 읽고 쓴다. 관리자도 안 본다.
+     profiles/{uid}    — 이메일·신청·접속시각·승인 상태. 관리자가 전체를 읽고 승인·차단한다.
+     settings/siteMenu — 공용 메뉴 공개범위·순서. 승인 사용자는 읽고 관리자만 쓴다. */
 
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -50,6 +51,12 @@ service cloud.firestore {
       allow update: if isMine(uid) && ownEmail()
                     && !request.resource.data.diff(resource.data).affectedKeys().hasAny(adminKeys());
       allow write:  if isAdmin();                     // 승인·승인 취소·차단은 관리자만
+    }
+
+    // 메뉴 정책은 모든 승인 사용자가 같은 값을 읽고, 관리자만 변경한다.
+    match /settings/siteMenu {
+      allow read:  if approved();
+      allow write: if isAdmin();
     }
   }
 }

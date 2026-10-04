@@ -27,8 +27,14 @@ function optFn(src, marker){ try{ return extractFn(src, marker); }catch(e){ retu
 // 관리자 화면은 별도 페이지다 (백테와 같은 구조). 없으면 [23]에서 잡힌다
 const ADM=__d+'/admin.html';
 const SCL=__d+'/scalping.html';
+const CLA=__d+'/claude.html';
+const ACC=__d+'/jk-access.js';
+const RULESFILE=__d+'/firestore.rules';
 const adm=fs.existsSync(ADM)?fs.readFileSync(ADM,'utf8'):'';
 const scl=fs.existsSync(SCL)?fs.readFileSync(SCL,'utf8'):'';
+const cla=fs.existsSync(CLA)?fs.readFileSync(CLA,'utf8'):'';
+const acc=fs.existsSync(ACC)?fs.readFileSync(ACC,'utf8'):'';
+const rulesFile=fs.existsSync(RULESFILE)?fs.readFileSync(RULESFILE,'utf8'):'';
 console.log(`대상: ${IDX} (${(idx.match(/appVer">(v[\d.]+)/)||[])[1]||'?'}) · ${BT} (${(bt.match(/btVer[^>]*>(v[\d.]+)/)||[])[1]||'?'})\n`);
 
 /* ════ 0. 파일 문법 ════ */
@@ -41,7 +47,12 @@ console.log('[0] 파일 문법');
     const r=spawnSync('node',['--check',tmp],{encoding:'utf8'});
     ok(label+' 메인 스크립트 문법', r.status===0, (r.stderr||'').split('\n')[0]);
   };
-  chk(idx,'index'); chk(bt,'backtest'); if(adm) chk(adm,'admin'); if(scl) chk(scl,'scalping');
+  const chkJs=(js,label)=>{
+    const tmp=path.join(require('os').tmpdir(),'__syn_'+label+'.js'); fs.writeFileSync(tmp,js);
+    const r=spawnSync('node',['--check',tmp],{encoding:'utf8'});
+    ok(label+' 스크립트 문법', r.status===0, (r.stderr||'').split('\n')[0]);
+  };
+  chk(idx,'index'); chk(bt,'backtest'); if(adm) chk(adm,'admin'); if(scl) chk(scl,'scalping'); if(acc) chkJs(acc,'jk-access');
 }
 
 // index 엔진
@@ -1242,7 +1253,41 @@ console.log('[23] 관리자 모드 — 접속 계정·사용자 관리');
   ok('목록은 마지막 접속 최신순', /rows\.sort\(\(a,b\)=>\(\+b\.lastSeen\|\|0\)-\(\+a\.lastSeen\|\|0\)\)/.test(adm));
   // 기능은 SECTIONS 한 줄 + render 함수 하나로 늘린다
   ok('화면 목록이 한곳에 모여 있다', /const SECTIONS=\[/.test(adm)
-     && /\{id:'users'/.test(adm) && /\{id:'defaults'/.test(adm) && /\{id:'diag'/.test(adm) && /\{id:'rules'/.test(adm));
+     && /\{id:'users'/.test(adm) && /\{id:'menus'/.test(adm) && /\{id:'defaults'/.test(adm)
+     && /\{id:'diag'/.test(adm) && /\{id:'rules'/.test(adm));
+  ok('관리자 메뉴 관리가 공개·관리자·숨김 세 상태를 저장한다',
+     /function renderMenus\(el\)/.test(adm) && /function saveMenus\(\)/.test(adm)
+     && /settings','siteMenu/.test(adm) && /\['public','admin','hidden'\]/.test(adm));
+  ok('관리자 메뉴 순서 변경이 실제 order를 다시 매긴다',
+     /function moveMenu\(path,dir\)/.test(adm) && /menuDraft\.forEach\(\(x,k\)=>x\.order=\(k\+1\)\*10\)/.test(adm));
+  ok('소유자 전용 메뉴는 전체공개로 낮출 수 없다',
+     /const MENU_HARD_ADMIN=new Set\(\['\/scalping','\/claude','\/admin'\]\)/.test(adm)
+     && /if\(hard&&mode==='public'\)mode='admin'/.test(adm));
+  ok('공용 메뉴 정책은 jk-access 한 곳에서 읽고 적용한다',
+     /var MENU_ITEMS=\[/.test(acc) && /'settings','siteMenu'/.test(acc)
+     && /function applyMenuDom\(user,cfg\)/.test(acc) && /links\.sort\(/.test(acc)
+     && /pop\.appendChild\(a\)/.test(acc) && /\.jk-menu-hidden\{display:none!important\}/.test(acc));
+  ok('관리자 전용·숨김 직접 URL은 일반 사용자에게 차단한다',
+     /function menuAccess\(user,cfg,path\)/.test(acc)
+     && /return \{mode:mode,allowed:admin\|\|mode==='public'\}/.test(acc)
+     && /if\(!ma\.allowed\)\{ lock\(\{state:'menu',menuMode:ma\.mode\}\); return false; \}/.test(acc));
+  {
+    const vm=require('vm'), box={location:{origin:'https://jkquant.pages.dev',pathname:'/job'},URL};
+    const menuDecl=(acc.match(/var MENU_ITEMS=\[[\s\S]*?\n  \];/)||[''])[0];
+    const adminDecl=(acc.match(/var ADMIN_EMAILS=\[[^\n]+\];/)||[''])[0];
+    const fn=n=>optFn(acc,'function '+n+'(');
+    try{
+      vm.runInNewContext(adminDecl+'\n'+menuDecl+'\n'+fn('norm')+'\n'+fn('isAdminEmail')+'\n'+fn('menuPath')+'\n'+fn('menuDefaults')+'\n'+fn('normalizeMenuConfig')+'\n'+fn('menuMode')+'\n'+fn('menuAccess')
+        +'\nthis.out={d:menuDefaults(),n:normalizeMenuConfig({items:{"/job":{mode:"hidden",order:5},"/plan":{mode:"admin",order:6}}}),a:menuAccess({email:"user@example.com"},normalizeMenuConfig({items:{"/job":{mode:"hidden"}}}),"/job"),b:menuAccess({email:"jk82investing@gmail.com"},normalizeMenuConfig({items:{"/job":{mode:"hidden"}}}),"/job")};',box);
+      ok('메뉴 정책 값 시험 — 기본/숨김/관리자 우회',
+         box.out.d.items['/plan'].mode==='public' && box.out.d.items['/scalping'].mode==='admin'
+         && box.out.n.items['/job'].mode==='hidden' && box.out.n.items['/job'].order===5
+         && box.out.a.allowed===false && box.out.b.allowed===true);
+    }catch(e){ ok('메뉴 정책 값 시험 — 기본/숨김/관리자 우회',false,e.message); }
+  }
+  ok('GPT·클로드 단타도 공용 메뉴 정책을 적용한다',
+     /<script src="\/jk-access\.js"><\/script>/.test(scl) && /JKAccess\.applyMenuConfig\(user,window\.fb,\{force:true\}\)/.test(scl)
+     && /<script src="\/jk-access\.js"><\/script>/.test(cla) && /JKAccess\.applyMenuConfig\(user,window\.fb,\{force:true\}\)/.test(cla));
   ok('관리자에서 여섯 운영전략 기본값을 편집한다',
      /const STRATEGY_DEFAULT_BUILTIN=\{/.test(adm)
      && /inf:\{ticker:'SOXL'/.test(adm) && /vr:\{ticker:'TQQQ'/.test(adm)
@@ -1296,11 +1341,13 @@ console.log('[23] 관리자 모드 — 접속 계정·사용자 관리');
      /allow list: if isAdmin\(\)/.test(adm) && /const RULES=`rules_version = '2';/.test(adm));
 
   /* 클라이언트 차단은 앱을 거쳐 들어올 때만 듣는다. 규칙이 있어야 진짜로 막힌다 */
-  const rp=__d+'/firestore.rules';
-  const ru=fs.existsSync(rp)?fs.readFileSync(rp,'utf8'):'';
+  const rp=RULESFILE;
+  const ru=rulesFile;
   ok('보안 규칙을 저장소에 둔다', !!ru, ru?'':'firestore.rules 없음');
   ok('규칙도 같은 관리자만 본다', /request\.auth\.token\.email == 'jk82investing@gmail\.com'/.test(ru));
   ok('사용자 목록은 관리자만', /allow list: if isAdmin\(\)/.test(ru));
+  ok('메뉴 정책 문서는 승인 사용자가 읽고 관리자만 쓴다',
+     /match \/settings\/siteMenu \{[\s\S]*?allow read:\s+if approved\(\);[\s\S]*?allow write: if isAdmin\(\);/.test(ru));
   ok('거래기록과 하위컬렉션은 승인된 본인만 연다',
      /match \/users\/\{uid\} \{[\s\S]*?allow read, write: if isMine\(uid\) && approved\(\);/.test(ru)
      && /match \/\{document=\*\*\} \{[\s\S]*?allow read, write: if isMine\(uid\) && approved\(\);/.test(ru));
@@ -11241,7 +11288,7 @@ console.log('\n[ACCESS] 이용 승인제 — 판정 한 곳 · 모든 페이지 
     const head=mkEl('head'), body=mkEl('body');
     const document={ documentElement:{classList:{add:c=>cls.add(c), remove:c=>cls.delete(c), contains:c=>cls.has(c),
                        toggle:(c,on)=>{ if(on===undefined?!cls.has(c):on) cls.add(c); else cls.delete(c); }}},
-      head, body, createElement:mkEl, getElementById:id=>els[id]||null,
+      head, body, createElement:mkEl, getElementById:id=>els[id]||null, querySelectorAll:()=>[],
       currentScript:{getAttribute:k=>k==='data-guard'?(o.guard?'1':null):null},
       addEventListener:(t,f)=>{ if(t==='click') clicks.push(f); } };
     const localStorage={getItem:k=>k in lsm?lsm[k]:null, setItem:(k,v)=>{ lsm[k]=String(v); }, removeItem:k=>{ delete lsm[k]; }};
@@ -11252,11 +11299,20 @@ console.log('\n[ACCESS] 이용 승인제 — 판정 한 곳 · 모든 페이지 
   };
   /* 가짜 Firestore — 읽기·쓰기를 적어 둔다 */
   const mkFb=(prof,o={})=>{
-    const log={reads:0, writes:[]};
+    const log={reads:0, profileReads:0, menuReads:0, writes:[]};
     const auth={currentUser:o.user||null};
     return {log, auth, fb:{auth, db:{}, doc:(db,c,id)=>c+'/'+id,
-      getDoc:async ref=>{ log.reads++; if(o.onRead) o.onRead(auth); if(o.hang) return new Promise(()=>{}); if(o.delay) await tick(o.delay); if(o.failRead) throw new Error('offline');
-                          return {exists:()=>!!prof, data:()=>prof}; },
+      getDoc:async ref=>{
+        log.reads++;
+        if(ref==='settings/siteMenu'){
+          log.menuReads++;
+          if(o.menuFail) throw new Error('menu offline');
+          return {exists:()=>false, data:()=>({})};
+        }
+        log.profileReads++;
+        if(o.onRead) o.onRead(auth); if(o.hang) return new Promise(()=>{}); if(o.delay) await tick(o.delay); if(o.failRead) throw new Error('offline');
+        return {exists:()=>!!prof, data:()=>prof};
+      },
       setDoc:async(ref,data,opt)=>{ log.writes.push({ref, data, opt}); }}};
   };
   const U={uid:'u1', email:'someone@example.com', displayName:'사람', photoURL:'p.png'};
@@ -11330,13 +11386,14 @@ console.log('\n[ACCESS] 이용 승인제 — 판정 한 곳 · 모든 페이지 
     { const E=loadAccess(), F=mkFb({requestedAt:1},{user:U, onRead:auth=>{ auth.currentUser=U2; }}); const locks=[];
       const v=await E.A.admit(U, F.fb, {lock:r=>locks.push(r.state)}); out.stale={v, locks:locks.length}; }
     { const E=loadAccess(), F=mkFb(null,{user:ADM}); const v=await E.A.admit(ADM, F.fb, {lock:()=>{}}); await tick();
-      out.adm={v, reads:F.log.reads, admin:E.cls.has('jk-admin')}; }
+      out.adm={v, profileReads:F.log.profileReads, menuReads:F.log.menuReads, admin:E.cls.has('jk-admin')}; }
     ok('admit: 같은 페이지 메모리에서 승인 확인된 계정은 곧바로 연다 → 뒤에서 다시 물어 차단이면 그 자리에서 덮는다(한 번)',
        out.fast.v===true && out.fast.before===0 && out.fast.locks==='blocked', JSON.stringify(out.fast));
     ok('admit: 처음 보는 계정은 \'확인 중\' 을 띄우고 답을 기다린다 → 대기면 덮고 false', out.pend.v===false && out.pend.locks==='pending' && out.pend.first==='checking' && !out.pend.ok, JSON.stringify(out.pend));
     ok('admit: 승인이면 막을 걷고(jk-ok) true · 페이지 메모리에만 유지', out.appr.v===true && out.appr.locks===0 && out.appr.ok && out.appr.gate==='' && out.appr.cache && !out.appr.browser, JSON.stringify(out.appr));
     ok('admit: 확인하는 사이 계정이 바뀌면 false · 덮지도 않는다(새 계정 흐름이 맡는다)', out.stale.v===false && out.stale.locks===0, JSON.stringify(out.stale));
-    ok('admit: 관리자는 묻지 않고 연다 · 메뉴 켬', out.adm.v===true && out.adm.reads===0 && out.adm.admin, JSON.stringify(out.adm));
+    ok('admit: 관리자는 승인 프로필은 묻지 않고 연다 · 공용 메뉴 설정만 읽고 메뉴 켬',
+       out.adm.v===true && out.adm.profileReads===0 && out.adm.menuReads===1 && out.adm.admin, JSON.stringify(out.adm));
   })().catch(e=>ok('admit 시험 실행', false, String(e&&e.stack||e))));
 
   // ── 화면(show) · 단추 · 메모 ──

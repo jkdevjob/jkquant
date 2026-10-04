@@ -10,6 +10,85 @@
 (function(){
   var ADMIN_EMAILS=['jk82investing@gmail.com'];
   var accessCache=null; // 페이지가 열려 있는 동안만 유지. 영구 브라우저 저장 금지.
+  /* 공용 메뉴 정책 — 관리자가 Firestore settings/siteMenu 한 곳에서 공개/관리자/숨김과 순서를 정한다.
+     hidden은 모든 사람의 메뉴에서 숨기고, 관리자는 주소를 직접 입력했을 때만 접근할 수 있다.
+     scalping/claude/admin은 별도 소유자 보안이 있으므로 기본값도 admin이다. */
+  var MENU_ITEMS=[
+    {path:'/',label:'운영',mode:'public',order:10},
+    {path:'/plan',label:'자산플랜',mode:'public',order:20},
+    {path:'/backtest',label:'백테',mode:'public',order:30},
+    {path:'/scalping',label:'단타(지피티)',mode:'admin',order:40},
+    {path:'/claude',label:'단타(클로드)',mode:'admin',order:50},
+    {path:'/paper',label:'모의',mode:'public',order:60},
+    {path:'/ipo',label:'공모주',mode:'public',order:70},
+    {path:'/job',label:'JOB',mode:'public',order:80},
+    {path:'/admin',label:'관리자',mode:'admin',order:90}
+  ];
+  var menuCache=null;
+  function menuPath(v){
+    var p=String(v||'/').split(/[?#]/)[0]||'/';
+    try{ p=new URL(p, location.origin).pathname; }catch(e){}
+    p=p.replace(/\/+$/,'')||'/';
+    var map={'/index.html':'/','/plan.html':'/plan','/backtest.html':'/backtest','/scalping.html':'/scalping',
+             '/claude.html':'/claude','/ipo.html':'/ipo','/job.html':'/job','/admin.html':'/admin'};
+    return map[p]||p;
+  }
+  function menuDefaults(){
+    var items={}; MENU_ITEMS.forEach(function(x){items[x.path]={mode:x.mode,order:x.order};});
+    return {items:items,updatedAt:0,updatedBy:''};
+  }
+  function normalizeMenuConfig(data){
+    var d=menuDefaults(),src=data&&data.items&&typeof data.items==='object'?data.items:{};
+    MENU_ITEMS.forEach(function(x){
+      var v=src[x.path]||{},mode=['public','admin','hidden'].indexOf(v.mode)>=0?v.mode:x.mode;
+      var order=Number.isFinite(+v.order)?+v.order:x.order;
+      d.items[x.path]={mode:mode,order:order};
+    });
+    d.updatedAt=+(data&&data.updatedAt)||0; d.updatedBy=String(data&&data.updatedBy||'');
+    return d;
+  }
+  async function loadMenuConfig(user,fb,opt){
+    opt=opt||{}; if(menuCache&&!opt.force)return menuCache;
+    var cfg=menuDefaults();
+    if(user&&fb&&fb.db&&fb.doc&&fb.getDoc){
+      try{
+        var snap=await timeout(fb.getDoc(fb.doc(fb.db,'settings','siteMenu')),opt.timeoutMs||5000);
+        if(snap&&snap.exists&&snap.exists())cfg=normalizeMenuConfig(snap.data()||{});
+      }catch(e){ console.warn('menu config',e); }
+    }
+    menuCache=cfg; return cfg;
+  }
+  function menuMode(cfg,path){
+    path=menuPath(path); var d=MENU_ITEMS.find(function(x){return x.path===path;});
+    var v=cfg&&cfg.items&&cfg.items[path]; return v&&v.mode||d&&d.mode||'public';
+  }
+  function applyMenuDom(user,cfg){
+    var admin=isAdminEmail(user&&user.email),pops=document.querySelectorAll('.jkmenu-pop');
+    Array.prototype.forEach.call(pops,function(pop){
+      var links=Array.prototype.slice.call(pop.querySelectorAll('a[href]'));
+      links.sort(function(a,b){
+        var ap=menuPath(a.getAttribute('href')),bp=menuPath(b.getAttribute('href'));
+        var av=cfg&&cfg.items&&cfg.items[ap],bv=cfg&&cfg.items&&cfg.items[bp];
+        return +(av&&av.order||9999)-+(bv&&bv.order||9999);
+      });
+      links.forEach(function(a){
+        var p=menuPath(a.getAttribute('href')),mode=menuMode(cfg,p);
+        var visible=mode==='public'||(mode==='admin'&&admin);
+        if(mode==='hidden')visible=false;
+        a.classList.toggle('jk-menu-hidden',!visible);
+        if(p==='/admin')a.classList.toggle('admin-on',admin);
+        pop.appendChild(a);
+      });
+    });
+  }
+  async function applyMenuConfig(user,fb,opt){
+    setAdmin(isAdminEmail(user&&user.email));
+    var cfg=await loadMenuConfig(user,fb,opt); applyMenuDom(user,cfg); return cfg;
+  }
+  function menuAccess(user,cfg,path){
+    var mode=menuMode(cfg,path),admin=isAdminEmail(user&&user.email);
+    return {mode:mode,allowed:admin||mode==='public'};
+  }
   var html=document.documentElement;
   function norm(e){ return String(e||'').trim().toLowerCase(); }
   function isAdminEmail(e){ return ADMIN_EMAILS.indexOf(norm(e))>=0; }
@@ -60,6 +139,7 @@
   /* ── 화면 ── 단타·관리자 메뉴는 소유자에게만 · 승인 전에는 본문을 가린다(data-guard) */
   var css=''
    +'html:not(.jk-admin) a[href="/scalping"],html:not(.jk-admin) a[href="/claude"],html:not(.jk-admin) a[href="/admin"]{display:none!important}'
+   +'.jk-menu-hidden{display:none!important}'
    +'html.jk-guard:not(.jk-ok) body{overflow:hidden}'
    +'html.jk-guard:not(.jk-ok) body>*:not(#jkgate){visibility:hidden}'
    +'#jkgate{position:fixed;inset:0;z-index:2147483000;display:none;align-items:center;justify-content:center;padding:24px;'
@@ -105,6 +185,13 @@
           +'<button class="jbtn j2" data-jk="note">메모 남기기</button>'
           +'<button class="jbtn j2" data-jk="retry">승인됐는지 다시 확인</button>'
           +'<button class="jbtn j2" data-jk="logout">로그아웃</button>';
+    }else if(state==='menu'){
+      var hidden=o.menuMode==='hidden';
+      body='<div class="js">'+(hidden
+          ?'이 메뉴는 현재 <b>전체 숨김</b> 상태입니다.<br>관리자는 주소를 직접 입력해서만 열 수 있습니다.'
+          :'이 메뉴는 현재 <b>관리자 전용</b>입니다.')+'</div>'
+          +'<button class="jbtn j2" onclick="location.href=\'/\'">운영 화면으로</button>'
+          +(o.logout?'<button class="jbtn j2" data-jk="logout">로그아웃</button>':'');
     }else if(state==='blocked'){
       body='<div class="js">'+who+' 계정은 사용할 수 없습니다.<br>(승인 거절 또는 차단)<br>다른 계정으로 쓰려면 로그아웃한 뒤 다시 로그인하세요.</div>'
           +'<button class="jbtn j2" data-jk="logout">로그아웃</button>';
@@ -140,8 +227,16 @@
     o=o||{};
     var lock=function(r){ try{ if(o.lock) o.lock(r); }catch(e){ console.error(e); } };
     var stale=function(){ var cu=fb.auth && fb.auth.currentUser; return !!(fb.auth && (!cu || cu.uid!==user.uid)); };
+    async function menuOk(){
+      var cfg=await applyMenuConfig(user,fb);
+      var ma=menuAccess(user,cfg,location.pathname);
+      if(!ma.allowed){ lock({state:'menu',menuMode:ma.mode}); return false; }
+      return true;
+    }
     if(isAdminEmail(user.email) || cacheOk(user)){
-      setAdmin(isAdminEmail(user.email)); hide();
+      setAdmin(isAdminEmail(user.email));
+      if(!await menuOk())return false;
+      hide();
       check(user, fb).then(function(r){ if(!stale() && !isOk(r.state)) lock(r); }, function(e){ console.warn('access recheck', e); });
       return true;
     }
@@ -149,6 +244,7 @@
     var r; try{ r=await check(user, fb); }catch(e){ r={state:'error', error:String(e&&e.message||e)}; }
     if(stale()) return false;
     if(!isOk(r.state)){ lock(r); return false; }
+    if(!await menuOk())return false;
     hide();
     return true;
   }
@@ -179,6 +275,8 @@
     });
   }
 
-  window.JKAccess={ADMIN_EMAILS:ADMIN_EMAILS, isAdminEmail:isAdminEmail, decide:decide, isOk:isOk, check:check, admit:admit, saveNote:saveNote,
-                   cacheOk:cacheOk, cacheSet:cacheSet, setAdmin:setAdmin, show:show, hide:hide, showing:showing, guard:guard};
+  window.JKAccess={ADMIN_EMAILS:ADMIN_EMAILS, MENU_ITEMS:MENU_ITEMS, isAdminEmail:isAdminEmail, decide:decide, isOk:isOk, check:check, admit:admit, saveNote:saveNote,
+                   cacheOk:cacheOk, cacheSet:cacheSet, setAdmin:setAdmin, show:show, hide:hide, showing:showing, guard:guard,
+                   menuPath:menuPath, menuDefaults:menuDefaults, normalizeMenuConfig:normalizeMenuConfig, loadMenuConfig:loadMenuConfig,
+                   applyMenuConfig:applyMenuConfig, menuAccess:menuAccess};
 })();
