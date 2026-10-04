@@ -1274,9 +1274,10 @@ console.log('[23] 관리자 모드 — 접속 계정·사용자 관리');
   {
     const vm=require('vm'), box={location:{origin:'https://jkquant.pages.dev',pathname:'/job'},URL};
     const menuDecl=(acc.match(/var MENU_ITEMS=\[[\s\S]*?\n  \];/)||[''])[0];
+    const adminDecl=(acc.match(/var ADMIN_EMAILS=\[[^\n]+\];/)||[''])[0];
     const fn=n=>optFn(acc,'function '+n+'(');
     try{
-      vm.runInNewContext(menuDecl+'\n'+fn('norm')+'\n'+fn('isAdminEmail')+'\n'+fn('menuPath')+'\n'+fn('menuDefaults')+'\n'+fn('normalizeMenuConfig')+'\n'+fn('menuMode')+'\n'+fn('menuAccess')
+      vm.runInNewContext(adminDecl+'\n'+menuDecl+'\n'+fn('norm')+'\n'+fn('isAdminEmail')+'\n'+fn('menuPath')+'\n'+fn('menuDefaults')+'\n'+fn('normalizeMenuConfig')+'\n'+fn('menuMode')+'\n'+fn('menuAccess')
         +'\nthis.out={d:menuDefaults(),n:normalizeMenuConfig({items:{"/job":{mode:"hidden",order:5},"/plan":{mode:"admin",order:6}}}),a:menuAccess({email:"user@example.com"},normalizeMenuConfig({items:{"/job":{mode:"hidden"}}}),"/job"),b:menuAccess({email:"jk82investing@gmail.com"},normalizeMenuConfig({items:{"/job":{mode:"hidden"}}}),"/job")};',box);
       ok('메뉴 정책 값 시험 — 기본/숨김/관리자 우회',
          box.out.d.items['/plan'].mode==='public' && box.out.d.items['/scalping'].mode==='admin'
@@ -11287,7 +11288,7 @@ console.log('\n[ACCESS] 이용 승인제 — 판정 한 곳 · 모든 페이지 
     const head=mkEl('head'), body=mkEl('body');
     const document={ documentElement:{classList:{add:c=>cls.add(c), remove:c=>cls.delete(c), contains:c=>cls.has(c),
                        toggle:(c,on)=>{ if(on===undefined?!cls.has(c):on) cls.add(c); else cls.delete(c); }}},
-      head, body, createElement:mkEl, getElementById:id=>els[id]||null,
+      head, body, createElement:mkEl, getElementById:id=>els[id]||null, querySelectorAll:()=>[],
       currentScript:{getAttribute:k=>k==='data-guard'?(o.guard?'1':null):null},
       addEventListener:(t,f)=>{ if(t==='click') clicks.push(f); } };
     const localStorage={getItem:k=>k in lsm?lsm[k]:null, setItem:(k,v)=>{ lsm[k]=String(v); }, removeItem:k=>{ delete lsm[k]; }};
@@ -11298,11 +11299,20 @@ console.log('\n[ACCESS] 이용 승인제 — 판정 한 곳 · 모든 페이지 
   };
   /* 가짜 Firestore — 읽기·쓰기를 적어 둔다 */
   const mkFb=(prof,o={})=>{
-    const log={reads:0, writes:[]};
+    const log={reads:0, profileReads:0, menuReads:0, writes:[]};
     const auth={currentUser:o.user||null};
     return {log, auth, fb:{auth, db:{}, doc:(db,c,id)=>c+'/'+id,
-      getDoc:async ref=>{ log.reads++; if(o.onRead) o.onRead(auth); if(o.hang) return new Promise(()=>{}); if(o.delay) await tick(o.delay); if(o.failRead) throw new Error('offline');
-                          return {exists:()=>!!prof, data:()=>prof}; },
+      getDoc:async ref=>{
+        log.reads++;
+        if(ref==='settings/siteMenu'){
+          log.menuReads++;
+          if(o.menuFail) throw new Error('menu offline');
+          return {exists:()=>false, data:()=>({})};
+        }
+        log.profileReads++;
+        if(o.onRead) o.onRead(auth); if(o.hang) return new Promise(()=>{}); if(o.delay) await tick(o.delay); if(o.failRead) throw new Error('offline');
+        return {exists:()=>!!prof, data:()=>prof};
+      },
       setDoc:async(ref,data,opt)=>{ log.writes.push({ref, data, opt}); }}};
   };
   const U={uid:'u1', email:'someone@example.com', displayName:'사람', photoURL:'p.png'};
@@ -11376,13 +11386,14 @@ console.log('\n[ACCESS] 이용 승인제 — 판정 한 곳 · 모든 페이지 
     { const E=loadAccess(), F=mkFb({requestedAt:1},{user:U, onRead:auth=>{ auth.currentUser=U2; }}); const locks=[];
       const v=await E.A.admit(U, F.fb, {lock:r=>locks.push(r.state)}); out.stale={v, locks:locks.length}; }
     { const E=loadAccess(), F=mkFb(null,{user:ADM}); const v=await E.A.admit(ADM, F.fb, {lock:()=>{}}); await tick();
-      out.adm={v, reads:F.log.reads, admin:E.cls.has('jk-admin')}; }
+      out.adm={v, profileReads:F.log.profileReads, menuReads:F.log.menuReads, admin:E.cls.has('jk-admin')}; }
     ok('admit: 같은 페이지 메모리에서 승인 확인된 계정은 곧바로 연다 → 뒤에서 다시 물어 차단이면 그 자리에서 덮는다(한 번)',
        out.fast.v===true && out.fast.before===0 && out.fast.locks==='blocked', JSON.stringify(out.fast));
     ok('admit: 처음 보는 계정은 \'확인 중\' 을 띄우고 답을 기다린다 → 대기면 덮고 false', out.pend.v===false && out.pend.locks==='pending' && out.pend.first==='checking' && !out.pend.ok, JSON.stringify(out.pend));
     ok('admit: 승인이면 막을 걷고(jk-ok) true · 페이지 메모리에만 유지', out.appr.v===true && out.appr.locks===0 && out.appr.ok && out.appr.gate==='' && out.appr.cache && !out.appr.browser, JSON.stringify(out.appr));
     ok('admit: 확인하는 사이 계정이 바뀌면 false · 덮지도 않는다(새 계정 흐름이 맡는다)', out.stale.v===false && out.stale.locks===0, JSON.stringify(out.stale));
-    ok('admit: 관리자는 묻지 않고 연다 · 메뉴 켬', out.adm.v===true && out.adm.reads===0 && out.adm.admin, JSON.stringify(out.adm));
+    ok('admit: 관리자는 승인 프로필은 묻지 않고 연다 · 공용 메뉴 설정만 읽고 메뉴 켬',
+       out.adm.v===true && out.adm.profileReads===0 && out.adm.menuReads===1 && out.adm.admin, JSON.stringify(out.adm));
   })().catch(e=>ok('admit 시험 실행', false, String(e&&e.stack||e))));
 
   // ── 화면(show) · 단추 · 메모 ──
