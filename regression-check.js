@@ -1777,11 +1777,11 @@ console.log('[33] 세션 이동 — 보던 서브탭 유지');
      && ks.indexOf('resetSubnav(sec)') < ks.indexOf('goBlk(sec,blk,true)'));
   ok('칩과 블록이 둘 다 있을 때만 되돌린다',
      /chip\[data-b="\$\{blk\}"\]/.test(ks) && /&& \$\(blk\)/.test(ks));
-  // switchSess만 유지한다 — 새 세션 추가·설정 초기화는 '현재'로 리셋하는 게 맞다
+  // 세션 이동과 모의 세션 추가는 보던 탭을 유지한다. 실계좌 추가/삭제는 기존 초기화를 따른다.
   const sw=extractFn(idx,'function switchSess(id)');
   ok('switchSess가 유지를 쓴다', /keepSubnav\(S\.activeTab\)/.test(sw) && !/resetSubnav/.test(sw));
   const n=(idx.match(/resetSubnav\(S\.activeTab\)/g)||[]).length;
-  ok('새 세션·삭제는 그대로 리셋', n===2, n+'곳');
+  ok('실계좌 새 세션·삭제는 리셋, 모의 세션은 하위 탭 유지', n===2 && /if\(s\.paper\) keepSubnav\(S\.activeTab\); else resetSubnav\(S\.activeTab\);/.test(idx), n+'곳');
   // gotoSess(모의 성과 → 분석)는 switchSess 뒤에 칩을 눌러서 덮어쓴다
   const gs=extractFn(idx,'function gotoSess(tab, id)');
   ok('gotoSess는 분석으로 덮어쓴다', gs.indexOf('switchSess(id)') < gs.indexOf('-anal"]'));
@@ -11670,6 +11670,11 @@ console.log('\n[OUTAGE LEFTOVERS] Claude 권한 timeout · 5년플랜 복구표�
      && /다른 사용자 users 원장 읽기 차단/.test(adm));
 }
 
+
+{
+  const r=require('child_process').spawnSync(process.execPath,[require('path').join(__dirname,'scripts/check-paper-apply-navigation.cjs'),process.argv[2]||'index.html'],{encoding:'utf8'});
+  ok('모의 적용 현재 탭 유지 · 재생 중 임시 선택 저장 차단',r.status===0,(r.stdout||'')+(r.stderr||''));
+}
 
 Promise.all(PENDING).then(()=>{
   console.log(`\n════ 결과: ${pass} PASS / ${fail} FAIL ${fail===0?'— ALL PASS ★':'— 배포 금지, 위 ✗ 항목 수정 필요'} ════`);

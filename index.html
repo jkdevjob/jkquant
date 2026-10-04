@@ -544,7 +544,7 @@ html.had-user #authgate .bootwait{display:block}
 </div>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.109.5</span></h1></div>
+    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.109.6</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -1655,7 +1655,7 @@ if(/^\/paper\/?$/.test(location.pathname)){
   <footer>
     <strong>JK 퀀트</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.109.5</b> · 2026-10-03</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.109.6</b> · 2026-10-05</div>
   </footer>
 </div>
 
@@ -7882,6 +7882,8 @@ async function openPaper(){
   syncPaperStart();
   await loadFX();               // 모의성과 목록은 열 때 받은 현재 USD/KRW로 원화 환산
   const filled=await paperFillAll();
+  // 계산용 임시 탭/세션을 복원한 뒤 완성된 모의 기록만 저장한다.
+  if(filled) await pushRemoteNow();
   refreshAll();
   const rows=filled||paperSummary();
   rows.forEach(r=>{ r.wonRate=paperWonRate(r); });
@@ -9648,7 +9650,9 @@ async function createSess(){
   s.kis=kisOwner && !!($('sess_kis')&&$('sess_kis').checked);
   box.sessions.push(s);box.active=s.id;saveLocal();
   const cloudSave=pushRemoteNow();
-  closeSess();resetSubnav(S.activeTab);refreshAll();
+  closeSess();
+  if(s.paper) keepSubnav(S.activeTab); else resetSubnav(S.activeTab);
+  refreshAll();
   await cloudSave;
 }
 
@@ -10179,6 +10183,9 @@ async function _commitStateRemote(where){
 }
 async function pushRemote(){return await pushRemoteNow();}
 async function pushRemoteNow(){
+  // 전체 모의 재생은 계산용으로 활성 전략/세션을 잠시 바꾼다.
+  // 이 선택값과 재생 중간 기록을 DB에 쓰면 운영 탭이 바뀔 수 있다.
+  if(_paperFilling)return false;
   if(!curUid||!window.fb)return true;
   if(saveTimer){clearTimeout(saveTimer);saveTimer=null;}
   if(!stateCloudHydrated){stateCloudPending=true;setSync('sync');return false;}
