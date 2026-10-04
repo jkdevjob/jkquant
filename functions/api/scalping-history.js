@@ -3,6 +3,19 @@
 // Read-only. No order path and no strategy mutation.
 
 const JH={"Content-Type":"application/json; charset=utf-8","Cache-Control":"no-store"};
+const TREND_H={"Content-Type":"application/json; charset=utf-8","Cache-Control":"public, max-age=60, s-maxage=300, stale-while-revalidate=1800"};
+async function trendCacheGet(request){
+  try{
+    const c=globalThis.caches&&globalThis.caches.default;
+    return c?await c.match(new Request(request.url,{method:"GET"})):null;
+  }catch(e){return null;}
+}
+async function trendCachePut(request,response){
+  try{
+    const c=globalThis.caches&&globalThis.caches.default;
+    if(c)await c.put(new Request(request.url,{method:"GET"}),response.clone());
+  }catch(e){}
+}
 const RAW="https://raw.githubusercontent.com/jkdevjob/jkquant/scalping-data/data/";
 const GLOBAL_WORKER_FALLBACK="https://jkquant-global-intraday-scheduler.mumae4.workers.dev";
 const DAYTRADING_WORKER_FALLBACK="https://jkquant-daytrading-scheduler.mumae4.workers.dev";
@@ -193,11 +206,19 @@ export function dailyRisk(rows,strategy,explicitDays=[]){
 export async function onRequestGet({request,env}){
   try{
     const u=new URL(request.url);
+    const trendOnly=u.searchParams.get("trend")==="1";
+    if(trendOnly){
+      const hit=await trendCacheGet(request);
+      if(hit)return hit;
+    }
     const strategy=(u.searchParams.get("strategy")||"").toLowerCase();
     const src=SOURCES[strategy];
     if(!src)return new Response(JSON.stringify({ok:false,error:"strategy must be opening|daytrading|crypto|soxl"}),{status:400,headers:JH});
 
-    const r=await fetch(RAW+src.path,{headers:{"Accept":"text/csv","User-Agent":"jkquant-scalping-history/1.0"}});
+    const r=await fetch(RAW+src.path,{
+      headers:{"Accept":"text/csv","User-Agent":"jkquant-scalping-history/1.1"},
+      ...(trendOnly?{cf:{cacheEverything:true,cacheTtl:300}}:{})
+    });
     if(r.status===404){
       return new Response(JSON.stringify({ok:true,strategy,source:src.path,total:0,filtered:0,page:1,pageSize:100,pages:0,trades:[],status:"collecting"}),{headers:JH});
     }
@@ -207,7 +228,7 @@ export async function onRequestGet({request,env}){
     let durableDays=[];
     if(strategy!=="opening"){
       try{
-        const db=durableTradeRows(strategy,await durableLedgers(env,strategy));
+        const db=durableTradeRows(strategy,await durableLedgers(env,strategy,trendOnly?120:3650));
         durableDays=db.days;
         if(durableDays.length){
           const override=new Set(durableDays);
@@ -226,6 +247,16 @@ export async function onRequestGet({request,env}){
     if(to)rows=rows.filter(x=>x.date<=to);
 
     const filtered=rows.length;
+    const risk=dailyRisk(rows,strategy,durableDays.filter(d=>(!from||d>=from)&&(!to||d<=to)));
+    if(trendOnly){
+      const response=new Response(JSON.stringify({
+        ok:true,strategy,market:src.market,source:src.path,durableDbDays:durableDays.length,
+        summary:{dailySeries:risk.daily}
+      }),{headers:TREND_H});
+      await trendCachePut(request,response);
+      return response;
+    }
+
     const page=Math.max(1,parseInt(u.searchParams.get("page")||"1",10)||1);
     const pageSize=Math.min(200,Math.max(20,parseInt(u.searchParams.get("pageSize")||"100",10)||100));
     const pages=filtered?Math.ceil(filtered/pageSize):0;
@@ -234,7 +265,6 @@ export async function onRequestGet({request,env}){
     const pn=rows.map(x=>x.pnl).filter(Number.isFinite);
     const wins=pn.filter(x=>x>0),losses=pn.filter(x=>x<0);
     const avg=a=>a.length?a.reduce((s,x)=>s+x,0)/a.length:0;
-    const risk=dailyRisk(rows,strategy,durableDays.filter(d=>(!from||d>=from)&&(!to||d<=to)));
 
     return new Response(JSON.stringify({
       ok:true,strategy,market:src.market,source:src.path,durableDbDays:durableDays.length,total,filtered,
