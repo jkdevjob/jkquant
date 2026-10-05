@@ -1481,6 +1481,30 @@ def company_hint(title, body):
             return candidate
     return ''
 
+
+def identity_quality_issue(item):
+    """사용자에게 노출할 공고의 최소 식별 품질을 검증한다."""
+    item = item or {}
+    title = clean_detail_title(item.get('title', ''), item.get('company', ''))
+    body = normalize_text(item.get('body', ''))
+    company = (
+        clean_company_name(item.get('company', ''), title)
+        or company_hint(title, body)
+    )
+    url = normalize_url(item.get('url', ''))
+
+    if not title or is_generic_job_title(title) or not is_plausible_job_title(title):
+        return 'invalid_title'
+    if not url or is_listing_or_search_url(url):
+        return 'invalid_url'
+    # 회사명을 끝내 복구하지 못한 검색 스니펫/헤드헌팅 익명 공고는
+    # 화면에 노출하지 않는다. 사용자 화면에서 '업체 비공개' 쓰레기 행이
+    # 누적되는 것을 막기 위한 최소 품질 게이트다.
+    if not company:
+        return 'missing_company'
+    return ''
+
+
 def job_fingerprint(job):
     title = compact_job_title(job.get('title', ''))
     company = (
@@ -2668,9 +2692,14 @@ def save_job_archive(all_jobs, source_statuses):
 
     merged = []
     used_old_ids = set()
+    quality_rejected = []
     for job in all_jobs:
         cats = archive_categories(job)
         if not cats:
+            continue
+        quality_issue = identity_quality_issue(job)
+        if quality_issue:
+            quality_rejected.append((quality_issue, job.get('source', ''), job.get('url', '')))
             continue
         url = normalize_url(job.get('url', ''))
         old = by_url.get(url)
@@ -2678,6 +2707,12 @@ def save_job_archive(all_jobs, source_statuses):
         merged.append(entry)
         if old:
             used_old_ids.add(id(old))
+
+    if quality_rejected:
+        counts = {}
+        for reason, _source, _url in quality_rejected:
+            counts[reason] = counts.get(reason, 0) + 1
+        print(f'[INFO] archive quality rejected={len(quality_rejected)} reasons={counts}')
 
     unseen_old = [
         old for old in old_jobs
@@ -2701,6 +2736,9 @@ def save_job_archive(all_jobs, source_statuses):
             continue
         url = normalize_url(old.get('url', ''))
         candidate = verified_by_url.get(url, old)
+        # 과거에 저장된 회사명 누락/깨진 공고도 다음 저장 때 자동 정리한다.
+        if identity_quality_issue(candidate):
+            continue
         merged.append(apply_unseen_status(candidate, source_statuses))
 
     # 다른 사이트에 동시에 올라온 같은 공고는 하나로 합치되,
