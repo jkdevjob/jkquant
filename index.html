@@ -544,7 +544,7 @@ html.had-user #authgate .bootwait{display:block}
 </div>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.110.4</span></h1></div>
+    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.110.5</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -1655,7 +1655,7 @@ if(/^\/paper\/?$/.test(location.pathname)){
   <footer>
     <strong>JK 퀀트</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.110.4</b> · 2026-10-05</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.110.5</b> · 2026-10-05</div>
   </footer>
 </div>
 
@@ -8465,6 +8465,13 @@ function paperPageMode(on){
    pullRemote 는 저장 시각이 더 늦은 쪽을 남기는데, 채우기가 로컬 저장 시각을 지금으로 바꾼다. */
 function paperPageAuto(){
   if(!isPaperPage() || window._paperAutoOpened) return;
+  /* Firebase 원장을 읽기 전에 freshState/임시 상태로 모의성과를 계산하면
+     시작일·세션·캐시가 틀린 숫자로 보인다. 원장 hydrate 완료 뒤에만 연다. */
+  if(typeof stateCloudHydrated!=='undefined' && !stateCloudHydrated){
+    const body=$('paper_body');
+    if(body)body.innerHTML='<p class="lead">Firebase DB 원장을 불러온 뒤 모의성과를 계산합니다…</p>';
+    return;
+  }
   window._paperAutoOpened=true;
   try{ openPaper(); }catch(e){ console.error('paper page',e); }
 }
@@ -10477,7 +10484,7 @@ async function retryDbLoad(){
   authStep='DB 원장 재연결';
   authWarn('로그인은 완료됐습니다. Firebase DB 원장을 다시 연결하고 있습니다…');
   try{
-    const ok=await withTimeout(pullRemote(),12000,'Firebase DB 원장 재연결');
+    const ok=await withTimeout(pullRemote(),20000,'Firebase DB 원장 재연결');
     if(!ok)throw new Error('Firebase DB 원장을 읽지 못했습니다');
     $('authgate').style.display='none';
     startApp();
@@ -10617,13 +10624,17 @@ function initAuth(){
     accessLocked=false;
     if(!await JKAccess.admit(user, accFb, {lock:r=>accessLock(user, r, accFb)})) return;
     /* 거래 원장은 Firebase DB만 사용한다. 로그인 뒤 DB를 먼저 읽고 성공해야 앱을 연다. */
-    authStep='프로필';
-    try{ await withTimeout(touchProfile(user), 6000, '프로필 확인'); }catch(e){ console.warn('profile',e); }
+    /* 프로필 방문기록은 거래 원장과 무관하다.
+       예전에는 이 기록을 최대 6초 기다린 뒤에야 users/{uid} 원장을 읽어서,
+       iOS/모바일에서 정상 로그인도 6초 워치독에 걸려 'DB 지연' 화면으로 바뀌었다.
+       원장을 먼저 열고 프로필 기록은 뒤에서 비동기로 남긴다. */
     if(accessLocked) return;
 
     authStep='DB 원장 읽기';
+    const loginBtn=$('gbtn');
+    if(loginBtn){ loginBtn.disabled=true; loginBtn.textContent='Firebase DB 원장 불러오는 중…'; }
     try{
-      const ok=await withTimeout(pullRemote(), 12000, 'Firebase DB 원장');
+      const ok=await withTimeout(pullRemote(), 20000, 'Firebase DB 원장');
       if(!ok)throw new Error('Firebase DB 원장을 읽지 못했습니다');
     }catch(e){
       console.error('db load',e);
@@ -10640,6 +10651,8 @@ function initAuth(){
       applyAdminMode();          // 계정으로 권한이 정해지므로 로그인 뒤에 다시 본다
       setSync('ok');
       paperPageAuto();           // /paper 로 열었으면 이제(클라우드 기록을 맞춘 뒤) 모의 성과를 채운다
+      /* 접속 기록은 앱을 여는 것보다 중요하지 않다. 실패해도 거래 원장/모의성과는 그대로 쓴다. */
+      void withTimeout(touchProfile(user), 8000, '프로필 기록').catch(e=>console.warn('profile',e));
     }catch(e){
       console.error('startApp',e);
       $('authgate').style.display='flex';
@@ -10738,23 +10751,57 @@ try{ renderInAppWarn(); }catch(e){}
    onAuthStateChanged도 오지 않아 과거에는 '여는 중…'에 영구 고정됐다.
    6초 뒤에도 authgate가 떠 있으면 숨김을 풀고 사용자가 다시 로그인할 수 있게 한다. */
 (function bootWatchdog(){
+  /* 6초는 '복구 화면'을 띄울 시간이 아니라 현재 단계를 알려줄 시간이다.
+     승인/메뉴/원장 읽기는 정상이어도 모바일에서 6초를 넘을 수 있다.
+     특히 로그인된 사용자를 다시 Google 로그인 화면으로 바꾸면 진행 중인 DB 읽기와
+     사용자가 누르는 재로그인이 겹쳐 상태가 더 꼬였다. */
   setTimeout(function(){
     try{
       const gate=document.getElementById('authgate');
       if(!gate || getComputedStyle(gate).display==='none')return;
       if(window.JKAccess&&JKAccess.showing())return;
       const bw=gate.querySelector('.bootwait'),gb=gate.querySelector('.gbox');
-      if(bw)bw.style.display='none';if(gb)gb.style.display='block';
+      const user=window.fb&&window.fb.auth&&window.fb.auth.currentUser;
+      if(user || (typeof authWired!=='undefined'&&authWired&&authStep!=='시작 전')){
+        if(gb)gb.style.display='none';
+        if(bw){
+          bw.style.display='block';
+          const help=bw.querySelector('.bw-help');
+          if(help)help.textContent='로그인은 확인됐습니다. '+(authStep||'Firebase DB 원장')+' 처리 중…';
+        }
+        return;
+      }
+      /* 로그인 상태 자체가 12초 넘게 안 잡힐 때만 실제 로그인 복구 화면을 연다. */
+    }catch(e){console.error('boot watchdog stage1',e);}
+  },6000);
+  setTimeout(function(){
+    try{
+      const gate=document.getElementById('authgate');
+      if(!gate || getComputedStyle(gate).display==='none')return;
+      if(window.JKAccess&&JKAccess.showing())return;
+      const bw=gate.querySelector('.bootwait'),gb=gate.querySelector('.gbox');
       const err=document.getElementById('gerr');
-      if(err){
-        err.style.display='block';
-        err.textContent=window.fb
-          ? 'Firebase DB 원장 확인이 지연되고 있습니다. 잠시 후 새로고침하거나 다시 로그인해 주세요.'
-          : '로그인 모듈을 불러오지 못했습니다. 기본 브라우저에서 다시 열어주세요.';
+      const user=window.fb&&window.fb.auth&&window.fb.auth.currentUser;
+      if(user){
+        if(bw)bw.style.display='none';
+        if(gb)gb.style.display='block';
+        const b=document.getElementById('gbtn');
+        if(b){b.disabled=false;b.textContent='Firebase DB 다시 연결';b.onclick=retryDbLoad;}
+        if(err){err.style.display='block';err.textContent='Google 로그인은 완료됐습니다. Firebase DB 원장 연결만 다시 시도해 주세요.';}
+      }else{
+        if(bw)bw.style.display='none';if(gb)gb.style.display='block';
+        const b=document.getElementById('gbtn');
+        if(b){b.disabled=false;b.textContent='Google로 시작하기';b.onclick=googleLogin;}
+        if(err){
+          err.style.display='block';
+          err.textContent=window.fb
+            ? '로그인 상태 확인이 오래 걸리고 있습니다. Google 로그인을 다시 시도해 주세요.'
+            : '로그인 모듈을 불러오지 못했습니다. 기본 브라우저에서 다시 열어주세요.';
+        }
       }
       try{renderInAppWarn();}catch(e){}
-    }catch(e){console.error('boot watchdog',e);}
-  },6000);
+    }catch(e){console.error('boot watchdog stage2',e);}
+  },22000);
 })();
 
 /* ── 시작: Firebase 준비되면 인증 시작 ── */
