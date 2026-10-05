@@ -128,6 +128,19 @@ def run():
     assert j.clean_company_name('신입/경력') == ''
     assert j.clean_company_name('대전/IT') == ''
     assert j.clean_company_name('상상스토리/세종') == '상상스토리'
+    assert j.identity_quality_issue({
+        'title': 'SW 개발자(백엔드) 채용 공고 (대전)',
+        'company': '',
+        'body': '[신입/경력] SW 개발자(백엔드) 채용 공고 (대전)',
+        'url': 'https://www.saramin.co.kr/zf_user/jobs/view?rec_idx=54929576',
+    }) == 'missing_company'
+    assert j.identity_quality_issue({
+        'title': '대전 Java 개발자 채용',
+        'company': '테스트회사',
+        'body': '대전 Java Spring 정규직',
+        'url': 'https://www.jobkorea.co.kr/Recruit/GI_Read/1001',
+    }) == ''
+
 
     assert j.is_listing_or_search_url(
         'https://www.albamon.com/jobs/area/home?areas=G000'
