@@ -35,7 +35,7 @@ async function application(failLoader=false){
  const S={activeTab:'ma',paperCommon:{}};const saved=[];const old={};
  for(const t of tabs){S[t]={active:t+'-live',sessions:[{id:t+'-live',paper:false,settings:{ticker:'LIVE'},hist:[{amt:9}]},{id:t+'-paper',paper:true,settings:{ticker:t,simLast:'old'},hist:[{sim:true,amt:3}],simStart:'2025-01-01'}]};old[t]=clone(S[t].sessions[0]);}
  const fields={p_simstart:{value:'2025-02-03'},paperModal:el('modal')};
- const c=vm.createContext({S,console:{error(){}},setTimeout:()=>0,clearTimeout:()=>{},_paperFilling:false,_fillQuoteCache:null,lastQuote:{},curUid:'test',window:{fb:{}},saveTimer:null,stateCloudHydrated:true,lastPushedJSON:'',PAPER_TABS:tabs.map(t=>[t,t]),PAPER_CACHESYM:Object.fromEntries(tabs.map(t=>[t,()=>t])),PAPER_LOADERS:{},
+ const c=vm.createContext({S,console:{error(){}},setTimeout:()=>0,clearTimeout:()=>{},_paperFilling:false,_fillQuoteCache:null,lastQuote:{},curUid:'test',window:{fb:{}},saveTimer:null,stateSaveQueue:Promise.resolve(),stateCloudHydrated:true,lastPushedJSON:'',PAPER_TABS:tabs.map(t=>[t,t]),PAPER_CACHESYM:Object.fromEntries(tabs.map(t=>[t,()=>t])),PAPER_LOADERS:{},
   $:id=>fields[id],paperMinDate:()=> '2020-01-01',PAPER_MAX_YEARS:5,PAPER_RAW_WON_MIGRATION:1,
   paperSessions:()=>tabs.flatMap(t=>S[t].sessions.filter(s=>s.paper).map(s=>[t,s])),paperReadAmt:()=>null,
   confirm:()=>true,paperRememberForm:()=>{},saveLocal:()=>{},paperEnsureCommonWon:async()=>{},paperRepairLegacyStarts:async()=>0,paperRepairCommonStarts:async()=>0,syncPaperStart:()=>{},loadFX:async()=>{},
