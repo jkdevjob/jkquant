@@ -251,6 +251,51 @@ function parts(ms,tz){
   const hh=+g("hour"),mm=+g("minute");
   return {date:g("year")+"-"+g("month")+"-"+g("day"),hh,mm,hm:hh*100+mm,weekday:g("weekday")};
 }
+
+function isoUtc(y,m,d){return new Date(Date.UTC(y,m-1,d)).toISOString().slice(0,10);}
+function nthWeekday(y,m,weekday,n){
+  const first=new Date(Date.UTC(y,m-1,1)),delta=(weekday-first.getUTCDay()+7)%7;
+  return isoUtc(y,m,1+delta+(n-1)*7);
+}
+function lastWeekday(y,m,weekday){
+  const last=new Date(Date.UTC(y,m,0)),delta=(last.getUTCDay()-weekday+7)%7;
+  return isoUtc(y,m,last.getUTCDate()-delta);
+}
+function observedFixed(y,m,d){
+  const x=new Date(Date.UTC(y,m-1,d)),wd=x.getUTCDay();
+  if(wd===6)x.setUTCDate(x.getUTCDate()-1);
+  else if(wd===0)x.setUTCDate(x.getUTCDate()+1);
+  return x.toISOString().slice(0,10);
+}
+function easterSunday(y){
+  const a=y%19,b=Math.floor(y/100),cc=y%100,d=Math.floor(b/4),e=b%4,f=Math.floor((b+8)/25),g=Math.floor((b-f+1)/3);
+  const h=(19*a+b-d-g+15)%30,i=Math.floor(cc/4),k=cc%4,l=(32+2*e+2*i-h-k)%7,m=Math.floor((a+11*h+22*l)/451);
+  const month=Math.floor((h+l-7*m+114)/31),day=(h+l-7*m+114)%31+1;
+  return new Date(Date.UTC(y,month-1,day));
+}
+function nyseHolidaySet(y){
+  const s=new Set([
+    observedFixed(y,1,1),
+    nthWeekday(y,1,1,3),
+    nthWeekday(y,2,1,3),
+    lastWeekday(y,5,1),
+    observedFixed(y,6,19),
+    observedFixed(y,7,4),
+    nthWeekday(y,9,1,1),
+    nthWeekday(y,11,4,4),
+    observedFixed(y,12,25)
+  ]);
+  const easter=easterSunday(y);easter.setUTCDate(easter.getUTCDate()-2);s.add(easter.toISOString().slice(0,10));
+  const nextNewYear=observedFixed(y+1,1,1);if(nextNewYear.startsWith(y+"-"))s.add(nextNewYear);
+  return s;
+}
+function isNyseSessionDate(date){
+  const d=new Date(date+"T12:00:00Z"),wd=d.getUTCDay(),y=d.getUTCFullYear();
+  return wd!==0&&wd!==6&&!nyseHolidaySet(y).has(date);
+}
+function hasSoxlSessionOpenBar(bars,date){
+  return Array.isArray(bars)&&bars.some(x=>x&&x.date===date&&x.hm===930&&x.c>0);
+}
 function signed(v,d=2){const n=Number(v||0);return (n>=0?"+":"")+n.toFixed(d)+"%";}
 function money(v,currency){
   const n=Number(v||0);
@@ -477,9 +522,18 @@ async function runBtc(env,now){
 }
 async function runSoxl(env,now){
   const n=parts(now,"America/New_York");
-  if(["Sat","Sun"].includes(n.weekday)||n.hm<935||n.hm>SOXL_PAPER_TRACK_END_HM)return;
+  if(n.hm<935||n.hm>SOXL_PAPER_TRACK_END_HM)return;
+  if(!isNyseSessionDate(n.date)){
+    console.log(JSON.stringify({type:"market_closed_skip",market:"NYSE",date:n.date,strategy:"soxl"}));
+    return;
+  }
+  const bars=await fetchSoxl();
+  if(!hasSoxlSessionOpenBar(bars,n.date)){
+    console.log(JSON.stringify({type:"market_session_unconfirmed_skip",market:"NYSE",date:n.date,strategy:"soxl",reason:"09:30 ET bar missing"}));
+    return;
+  }
   const mainVariant=await mainVariantForDate(env,"soxl",n.date),vp=variantParams("soxl",mainVariant);
-  const t=soxlTrade(await fetchSoxl(),now,n.date,vp.params);
+  const t=soxlTrade(bars,now,n.date,vp.params);
   await writePaper(env,paperLedger("soxl",n.date,t,{currency:"USD",timezone:"America/New_York",version:SOXL_STRATEGY_VERSION+"@"+vp.name,mainVariant:vp.name,params:vp.params,friction:.20}));
   if(!t||t.waiting)return;
   await alert(env,{
@@ -525,7 +579,15 @@ async function runCloseSummaries(env,now){
   const k=parts(now,"Asia/Seoul");
   if(k.hm===5)await sendCloseSummary(env,"crypto",previousDate(k.date),"00:05 KST");
   const n=parts(now,"America/New_York");
-  if(!["Sat","Sun"].includes(n.weekday)&&n.hm===1605)await sendCloseSummary(env,"soxl",n.date,"16:05 ET");
+  if(n.hm===1605&&isNyseSessionDate(n.date)){
+    try{
+      const bars=await fetchSoxl();
+      if(hasSoxlSessionOpenBar(bars,n.date))await sendCloseSummary(env,"soxl",n.date,"16:05 ET");
+      else console.log(JSON.stringify({type:"market_session_unconfirmed_skip",market:"NYSE",date:n.date,strategy:"soxl-summary",reason:"09:30 ET bar missing"}));
+    }catch(e){
+      console.error(JSON.stringify({type:"market_session_check_failed",market:"NYSE",date:n.date,strategy:"soxl-summary",error:String(e.message||e)}));
+    }
+  }
 }
 
 async function run(env){
@@ -534,7 +596,7 @@ async function run(env){
   const out=await Promise.allSettled([runBtc(env,now),runSoxl(env,now),runCloseSummaries(env,now)]);
   out.forEach((x,i)=>{if(x.status==="rejected")console.error(JSON.stringify({type:"global_intraday_error",strategy:i===0?"crypto":i===1?"soxl":"close-summary",error:String(x.reason&&x.reason.message||x.reason)}));});
 }
-export {btcTrade,btcNoTradeDecision,soxlTrade,paperLedger,variantParams,BTC_VARIANTS,SOXL_VARIANTS,BTC_OPEN_HM,BTC_LAST_SIGNAL_HM,BTC_LAST_ENTRY_HM,BTC_EXIT_TRACK_END_HM,BTC_STRATEGY_VERSION,SOXL_STRATEGY_VERSION,SOXL_LAST_SIGNAL_HM,SOXL_PAPER_TRACK_END_HM};
+export {btcTrade,btcNoTradeDecision,soxlTrade,paperLedger,variantParams,isNyseSessionDate,hasSoxlSessionOpenBar,BTC_VARIANTS,SOXL_VARIANTS,BTC_OPEN_HM,BTC_LAST_SIGNAL_HM,BTC_LAST_ENTRY_HM,BTC_EXIT_TRACK_END_HM,BTC_STRATEGY_VERSION,SOXL_STRATEGY_VERSION,SOXL_LAST_SIGNAL_HM,SOXL_PAPER_TRACK_END_HM};
 
 export default {
   async scheduled(controller,env,ctx){ctx.waitUntil(run(env));},

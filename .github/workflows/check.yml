@@ -86,6 +86,9 @@ jobs:
       - name: 단타 탭 단독사용 UI·위험지표 검사
         run: node scripts/test_scalping_self_contained_ui.mjs
 
+      - name: 비트코인 제외 단타 개장일 선행가드 검사
+        run: node scripts/test_scalping_market_day_gate.mjs
+
       - name: GPT·클로드 단타 대결 규칙 값·변이 검사
         run: node scripts/test_scalping_duel.mjs
 

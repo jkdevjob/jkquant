@@ -35,6 +35,58 @@ function authorized(request,env){
   return !!env.MONITOR_KEY&&got===env.MONITOR_KEY;
 }
 
+const KR_MARKET_DAY_CACHE=new Map();
+async function krMarketOpen(env,date){
+  if(KR_MARKET_DAY_CACHE.has(date))return KR_MARKET_DAY_CACHE.get(date);
+  const q=new URLSearchParams({op:"holiday",market:"kr",date:String(date).replace(/\D/g,"")});
+  const r=await fetch(baseUrl(env)+"/api/kis?"+q.toString(),{headers:{"accept":"application/json"}});
+  const j=await r.json().catch(()=>({}));
+  if(!r.ok||j.ok!==true||typeof j.open!=="boolean")throw new Error(j.error||("KRX holiday HTTP "+r.status));
+  KR_MARKET_DAY_CACHE.set(date,j.open);
+  return j.open;
+}
+function isoUtc(y,m,d){return new Date(Date.UTC(y,m-1,d)).toISOString().slice(0,10);}
+function nthWeekday(y,m,weekday,n){
+  const first=new Date(Date.UTC(y,m-1,1)),delta=(weekday-first.getUTCDay()+7)%7;
+  return isoUtc(y,m,1+delta+(n-1)*7);
+}
+function lastWeekday(y,m,weekday){
+  const last=new Date(Date.UTC(y,m,0)),delta=(last.getUTCDay()-weekday+7)%7;
+  return isoUtc(y,m,last.getUTCDate()-delta);
+}
+function observedFixed(y,m,d){
+  const x=new Date(Date.UTC(y,m-1,d)),wd=x.getUTCDay();
+  if(wd===6)x.setUTCDate(x.getUTCDate()-1);
+  else if(wd===0)x.setUTCDate(x.getUTCDate()+1);
+  return x.toISOString().slice(0,10);
+}
+function easterSunday(y){
+  const a=y%19,b=Math.floor(y/100),c=y%100,d=Math.floor(b/4),e=b%4,f=Math.floor((b+8)/25),g=Math.floor((b-f+1)/3);
+  const h=(19*a+b-d-g+15)%30,i=Math.floor(c/4),k=c%4,l=(32+2*e+2*i-h-k)%7,m=Math.floor((a+11*h+22*l)/451);
+  const month=Math.floor((h+l-7*m+114)/31),day=(h+l-7*m+114)%31+1;
+  return new Date(Date.UTC(y,month-1,day));
+}
+function nyseHolidaySet(y){
+  const s=new Set([
+    observedFixed(y,1,1),
+    nthWeekday(y,1,1,3),
+    nthWeekday(y,2,1,3),
+    lastWeekday(y,5,1),
+    observedFixed(y,6,19),
+    observedFixed(y,7,4),
+    nthWeekday(y,9,1,1),
+    nthWeekday(y,11,4,4),
+    observedFixed(y,12,25)
+  ]);
+  const easter=easterSunday(y);easter.setUTCDate(easter.getUTCDate()-2);s.add(easter.toISOString().slice(0,10));
+  const nextNewYear=observedFixed(y+1,1,1);if(nextNewYear.startsWith(y+"-"))s.add(nextNewYear);
+  return s;
+}
+function isNyseSessionDate(date){
+  const d=new Date(date+"T12:00:00Z"),wd=d.getUTCDay(),y=d.getUTCFullYear();
+  return wd!==0&&wd!==6&&!nyseHolidaySet(y).has(date);
+}
+
 export class OpeningSignalStore extends DurableObject {
   async fetch(request){
     const u=new URL(request.url);
@@ -509,6 +561,28 @@ export default {
     const route=scheduleRoute(at);
     // 09:05 KST 매일(주말 포함 — 코인은 쉬지 않는다): 코인 하루 마감·미국 지난 세션 결과 알림
     if(claudeWeeklyDue(at))ctx.waitUntil(claudeTelegram(env,kstParts(at).date,"weekly"));
+
+    const krRoute=route==="opening"||route==="claude_kr"||(route&&route.startsWith("gapdown_"));
+    if(krRoute){
+      const date=kstParts(at).date;
+      try{
+        if(!(await krMarketOpen(env,date))){
+          console.log(JSON.stringify({type:"market_closed_skip",market:"KRX",date,route}));
+          return;
+        }
+      }catch(e){
+        console.error(JSON.stringify({type:"market_day_unknown_skip",market:"KRX",date,route,error:String(e.message||e)}));
+        return;
+      }
+    }
+    if(route==="claude_soxl"){
+      const date=nyDate(at);
+      if(!isNyseSessionDate(date)){
+        console.log(JSON.stringify({type:"market_closed_skip",market:"NYSE",date,route}));
+        return;
+      }
+    }
+
     if(route==="claude_crypto")ctx.waitUntil(claudeDayClose(env,"crypto",kstParts(at-864e5).date,at));   // 어제 00:00~24:00
     else if(route==="claude_soxl")ctx.waitUntil(claudeDayClose(env,"soxl",nyDate(at),at));
     else if(route==="claude_kr")ctx.waitUntil(claudeKrClose(env,kstParts(at).date,at));
