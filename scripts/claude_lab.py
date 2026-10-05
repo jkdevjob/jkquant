@@ -1553,9 +1553,7 @@ def review_entry(report):
         for o in (ev.get(st_name) or {}).get("orders") or ([(ev.get(st_name) or {}).get("order")] if (ev.get(st_name) or {}).get("order") else []):
             if o and not ((o.get("vts") or {}).get("ok")):
                 issues.append(f"{st_name} 주문 실패: {o.get('code')} {(o.get('vts') or {}).get('msg', '')}")
-    if krx_closed(today):
-        issues = [x for x in issues if "주문 실패" not in x or "krx_holiday" in x]
-    elif datetime.now(KST).weekday() < 5 and not led:
+    if datetime.now(KST).weekday() < 5 and not led and not krx_closed(today):     # 휴장일엔 원본이 없어도 정상(주문 실패는 휴장일이라도 그대로 점검)
         issues.append("오늘 ①② 원본 기록 없음 — 개장일인데 08:56 기록이 없음(점검)")
     for k, v in paper.items():
         if (v.get("status") or {}).get("code") == "below":

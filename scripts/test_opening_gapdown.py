@@ -537,6 +537,28 @@ class ClaudeLabTrend(unittest.TestCase):
         self.assertEqual(n, 5)
 
 
+class ReviewHolidayTest(unittest.TestCase):
+    """밤 점검: 휴장일(10/5 개천절 대체휴일)엔 ①② 원본이 없어도 정상, 개장일(10/6)엔 '원본 없음' 점검. 주문 실패는 날과 상관없이 점검."""
+
+    def at(self, day, ledger):
+        class FixedDT(lab.datetime):
+            @classmethod
+            def now(cls, tz=None):
+                return lab.datetime.fromisoformat(day + "T20:00:00+09:00")
+        old = (lab.datetime, lab.read_json)
+        lab.datetime, lab.read_json = FixedDT, (lambda p: ledger)
+        try:
+            return " ".join(lab.review_entry({"paper": {"summary": {}}, "daily": {"rows": []}}).get("issues") or [])
+        finally:
+            lab.datetime, lab.read_json = old
+
+    def test_holiday_vs_open_day(self):
+        self.assertNotIn("원본 기록 없음", self.at("2026-10-05", {}))
+        self.assertIn("원본 기록 없음", self.at("2026-10-06", {}))
+        bad = {"ledger": {"events": [{"stage": "preopen", "payload": {"orders": [{"code": "000010", "vts": {"ok": False, "msg": "휴장"}}]}}]}}
+        self.assertIn("preopen 주문 실패: 000010", self.at("2026-10-05", bad))
+
+
 class CoinParityTest(unittest.TestCase):
     """③ 같은 규칙을 밤 계산(Python)과 실시간·마감 장부(JS)가 각자 계산한다 — 변수를 바꿔도 결과가 같아야 한다."""
 

@@ -67,6 +67,7 @@ PY = [
     ("curves include future", "claude_lab.py", "            if d < start or d > today:\n", "            if d < start:\n"),
     ("dip hit minutes", "backtest_crypto_orb.py", "int((hit - entry_t).total_seconds() // 60) + 5", "int((hit - entry_t).total_seconds() // 60)"),
     ("gpt blank date crashes", "claude_lab.py", "        try:\n            v = float(r[col])", "        by.setdefault(r.get(\"date\"), [])\n        try:\n            v = float(r[col])"),
+    ("review holiday ignored", "claude_lab.py", " and not led and not krx_closed(today):", " and not led:"),
 ]
 JS = [
     ("base price first", "_gapdown.js", "const base=+(q&&q.basePrice)>0?+q.basePrice:+prevClose||0;", "const base=+prevClose||0;"),
