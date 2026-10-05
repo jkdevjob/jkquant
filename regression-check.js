@@ -3300,9 +3300,10 @@ console.log('\n[61] 모의 성과 — 원화로 받아 세션 통화로 환산')
      && !/max-width:160px/.test(idx));
   {
     const op=extractFn(idx,'async function openPaper()');
+    const rv=extractFn(idx,'async function refreshPaperView(force=false)');
     const pr=extractFn(idx,'function paperWonRate(r)');
     ok('모의 성과 목록은 현재 환율로 평가·인출을 표시하고 투입은 입력 원화를 유지한다',
-       /await loadFX\(\)/.test(op) && /liveFX/.test(pr) && !/fxAt\(/.test(pr)
+       /await loadFX\(\)/.test(rv) && /liveFX/.test(pr) && !/fxAt\(/.test(pr)
        && /paperWon\(r\.total,r\.wonRate\)/.test(op)
        && /paperInflowText\(r\)/.test(op)
        && /paperWon\(outAmt,r\.wonRate\)/.test(op)
@@ -10335,10 +10336,12 @@ console.log('\n[134] 모의 시작일 — 설정 변경으로 오늘 리셋 금�
      && /x\.simStart=common/.test(repair));
 
   const op=extractFn(idx,'async function openPaper()');
+  const rv=extractFn(idx,'async function refreshPaperView(force=false)');
   ok('G 성과창은 표 계산 전에 구버전 시작일 복구를 끝낸다',
      op.indexOf('await paperRepairLegacyStarts()')>=0
      && op.indexOf('await paperRepairLegacyStarts()')<op.indexOf('syncPaperStart()')
-     && op.indexOf('await paperRepairLegacyStarts()')<op.indexOf('await paperFillAll()'));
+     && op.indexOf('await paperRepairLegacyStarts()')<op.indexOf('rows=await refreshPaperView(true)')
+     && /const rows=await paperFillAll\(\)/.test(rv));
 }
 
 
