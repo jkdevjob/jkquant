@@ -41,6 +41,7 @@ jobs:
           python -m py_compile scripts/test_crypto_midnight_orb.py
           python -m py_compile scripts/collect_soxl_data.py
           python -m py_compile scripts/backtest_soxl_intraday.py
+          python -m py_compile scripts/build_scalping_trend.py
           python -m py_compile scripts/daily1_shadow_lab.py
           python -m py_compile scripts/test_daily1_shadow.py
           python -m py_compile scripts/test_shadow_research_score.py
@@ -151,6 +152,7 @@ jobs:
           node --input-type=module --check < functions/api/soxl-research.js
           node --input-type=module --check < functions/api/global-paper.js
           node --input-type=module --check < functions/api/scalping-history.js
+          node --input-type=module --check < functions/api/scalping-trend.js
           node --input-type=module --check < functions/api/scalping-review.js
           node --input-type=module --check < functions/api/scalping-daily-results.js
           node --input-type=module --check < functions/api/daily1-shadow.js
