@@ -1,0 +1,1513 @@
+{
+ "schema": 1,
+ "tabs": {
+  "opening": {
+   "pool": [
+    {
+     "version": "opening_gapdown_v1+v2filter",
+     "name": "기본 · ① D-1 갭하락 과매도 v2",
+     "rule": "전일 RSI<30 + 시가 갭 −2~−29% 종목이 5개 이상인 날, 가장 깊은 3종목 시가 매수 → 종가 매도",
+     "params": {
+      "minQ": 5,
+      "topK": 3,
+      "gapMax": null
+     },
+     "source": "seed",
+     "addedAt": "2026-10-05"
+    },
+    {
+     "version": "opening_d1_min6",
+     "name": "통과 6개 이상",
+     "rule": "더 강한 투매일만",
+     "params": {
+      "minQ": 6,
+      "topK": 3,
+      "gapMax": null
+     },
+     "source": "seed",
+     "addedAt": "2026-10-05"
+    },
+    {
+     "version": "opening_d1_min7",
+     "name": "통과 7개 이상",
+     "rule": "더 강한 투매일만",
+     "params": {
+      "minQ": 7,
+      "topK": 3,
+      "gapMax": null
+     },
+     "source": "seed",
+     "addedAt": "2026-10-05"
+    },
+    {
+     "version": "opening_d1_min8",
+     "name": "통과 8개 이상",
+     "rule": "아주 강한 투매일만",
+     "params": {
+      "minQ": 8,
+      "topK": 3,
+      "gapMax": null
+     },
+     "source": "seed",
+     "addedAt": "2026-10-05"
+    },
+    {
+     "version": "g_open_q8_k3",
+     "name": "통과 8개↑ · 깊은 3종목",
+     "rule": "전일 RSI<30 명단 중 시가 갭 −2~−29% 종목이 8개 이상인 날, 갭 깊은 3종목 시가 매수 → 종가 매도",
+     "params": {
+      "minQ": 8,
+      "topK": 3,
+      "gapMax": null
+     },
+     "source": "generated",
+     "addedAt": "2026-10-05"
+    },
+    {
+     "version": "g_open_q6_k3",
+     "name": "통과 6개↑ · 깊은 3종목",
+     "rule": "전일 RSI<30 명단 중 시가 갭 −2~−29% 종목이 6개 이상인 날, 갭 깊은 3종목 시가 매수 → 종가 매도",
+     "params": {
+      "minQ": 6,
+      "topK": 3,
+      "gapMax": null
+     },
+     "source": "generated",
+     "addedAt": "2026-10-05"
+    },
+    {
+     "version": "g_open_q7_k2",
+     "name": "통과 7개↑ · 깊은 2종목",
+     "rule": "전일 RSI<30 명단 중 시가 갭 −2~−29% 종목이 7개 이상인 날, 갭 깊은 2종목 시가 매수 → 종가 매도",
+     "params": {
+      "minQ": 7,
+      "topK": 2,
+      "gapMax": null
+     },
+     "source": "generated",
+     "addedAt": "2026-10-05"
+    },
+    {
+     "version": "g_open_q7_k3_gap3",
+     "name": "통과 7개↑ · 깊은 3종목 · 갭 -3% 이하만",
+     "rule": "전일 RSI<30 명단 중 시가 갭 −2~−29% 종목이 7개 이상인 날, 갭 깊은 3종목 · 갭 -3% 이하만 시가 매수 → 종가 매도",
+     "params": {
+      "minQ": 7,
+      "topK": 3,
+      "gapMax": -3.0
+     },
+     "source": "generated",
+     "addedAt": "2026-10-05"
+    },
+    {
+     "version": "g_open_q9_k3",
+     "name": "통과 9개↑ · 깊은 3종목",
+     "rule": "전일 RSI<30 명단 중 시가 갭 −2~−29% 종목이 9개 이상인 날, 갭 깊은 3종목 시가 매수 → 종가 매도",
+     "params": {
+      "minQ": 9,
+      "topK": 3,
+      "gapMax": null
+     },
+     "source": "generated",
+     "addedAt": "2026-10-05"
+    },
+    {
+     "version": "g_open_q7_k3",
+     "name": "통과 7개↑ · 깊은 3종목",
+     "rule": "전일 RSI<30 명단 중 시가 갭 −2~−29% 종목이 7개 이상인 날, 갭 깊은 3종목 시가 매수 → 종가 매도",
+     "params": {
+      "minQ": 7,
+      "topK": 3,
+      "gapMax": null
+     },
+     "source": "generated",
+     "addedAt": "2026-10-05"
+    },
+    {
+     "version": "g_open_q8_k2",
+     "name": "통과 8개↑ · 깊은 2종목",
+     "rule": "전일 RSI<30 명단 중 시가 갭 −2~−29% 종목이 8개 이상인 날, 갭 깊은 2종목 시가 매수 → 종가 매도",
+     "params": {
+      "minQ": 8,
+      "topK": 2,
+      "gapMax": null
+     },
+     "source": "generated",
+     "addedAt": "2026-10-05"
+    },
+    {
+     "version": "g_open_q8_k3_gap3",
+     "name": "통과 8개↑ · 깊은 3종목 · 갭 -3% 이하만",
+     "rule": "전일 RSI<30 명단 중 시가 갭 −2~−29% 종목이 8개 이상인 날, 갭 깊은 3종목 · 갭 -3% 이하만 시가 매수 → 종가 매도",
+     "params": {
+      "minQ": 8,
+      "topK": 3,
+      "gapMax": -3.0
+     },
+     "source": "generated",
+     "addedAt": "2026-10-05"
+    },
+    {
+     "version": "g_open_q6_k2",
+     "name": "통과 6개↑ · 깊은 2종목",
+     "rule": "전일 RSI<30 명단 중 시가 갭 −2~−29% 종목이 6개 이상인 날, 갭 깊은 2종목 시가 매수 → 종가 매도",
+     "params": {
+      "minQ": 6,
+      "topK": 2,
+      "gapMax": null
+     },
+     "source": "generated",
+     "addedAt": "2026-10-05"
+    }
+   ],
+   "retired": [
+    {
+     "version": "opening_d1_min2",
+     "name": "통과 2개 이상",
+     "params": {
+      "minQ": 2,
+      "topK": 3,
+      "gapMax": null
+     },
+     "retiredAt": "2026-10-05",
+     "reason": "손실 기준 미달 — MDD -54.6% · 최악일 -18.1% · 거래당 +0.57%"
+    },
+    {
+     "version": "opening_d1_min3",
+     "name": "통과 3개 이상",
+     "params": {
+      "minQ": 3,
+      "topK": 3,
+      "gapMax": null
+     },
+     "retiredAt": "2026-10-05",
+     "reason": "손실 기준 미달 — MDD -30.0% · 최악일 -18.1% · 거래당 +0.96%"
+    },
+    {
+     "version": "opening_d1_min4",
+     "name": "통과 4개 이상",
+     "params": {
+      "minQ": 4,
+      "topK": 3,
+      "gapMax": null
+     },
+     "retiredAt": "2026-10-05",
+     "reason": "손실 기준 미달 — MDD -25.8% · 최악일 -18.1% · 거래당 +1.15%"
+    },
+    {
+     "version": "opening_d1_min5_top2",
+     "name": "통과 5개↑ · 깊은 2종목",
+     "params": {
+      "minQ": 5,
+      "topK": 2,
+      "gapMax": null
+     },
+     "retiredAt": "2026-10-05",
+     "reason": "손실 기준 미달 — MDD -28.8% · 최악일 -13.1% · 거래당 +1.16%"
+    },
+    {
+     "version": "opening_d1_min5_gap3",
+     "name": "통과 5개↑ · 갭 −3% 이하만",
+     "params": {
+      "minQ": 5,
+      "topK": 3,
+      "gapMax": -3.0
+     },
+     "retiredAt": "2026-10-05",
+     "reason": "손실 기준 미달 — MDD -25.2% · 최악일 -14.4% · 거래당 +1.51%"
+    },
+    {
+     "version": "opening_d1_min5_top1",
+     "name": "통과 5개↑ · 가장 깊은 1종목",
+     "params": {
+      "minQ": 5,
+      "topK": 1,
+      "gapMax": null
+     },
+     "retiredAt": "2026-10-05",
+     "reason": "손실 기준 미달 — MDD -49.2% · 최악일 -25.8% · 거래당 +1.11%"
+    },
+    {
+     "version": "opening_d1_min1",
+     "name": "통과 1개 이상 (매일)",
+     "params": {
+      "minQ": 1,
+      "topK": 3,
+      "gapMax": null
+     },
+     "retiredAt": "2026-10-05",
+     "reason": "손실 기준 미달 — MDD -97.1% · 최악일 -28.7% · 거래당 -0.00%"
+    },
+    {
+     "version": "opening_d1_min3_top1",
+     "name": "통과 3개↑ · 가장 깊은 1종목",
+     "params": {
+      "minQ": 3,
+      "topK": 1,
+      "gapMax": null
+     },
+     "retiredAt": "2026-10-05",
+     "reason": "손실 기준 미달 — MDD -56.8% · 최악일 -25.8% · 거래당 +1.31%"
+    }
+   ],
+   "tried": [
+    "g_open_q5_k3"
+   ],
+   "snapshots": [
+    {
+     "date": "2026-10-05",
+     "top": "opening_d1_min7",
+     "main": "opening_gapdown_v1+v2filter",
+     "bottom": [
+      "opening_d1_min4",
+      "opening_d1_min3",
+      "opening_d1_min2"
+     ],
+     "ranks": [
+      "opening_d1_min7",
+      "opening_d1_min8",
+      "opening_d1_min6",
+      "opening_d1_min3_top1",
+      "opening_d1_min1",
+      "opening_d1_min5_top1",
+      "opening_d1_min5_gap3",
+      "opening_d1_min5_top2",
+      "opening_gapdown_v1+v2filter",
+      "opening_d1_min4",
+      "opening_d1_min3",
+      "opening_d1_min2"
+     ]
+    }
+   ]
+  },
+  "daytrading": {
+   "pool": [
+    {
+     "version": "etf_dip_overnight_v1",
+     "name": "기본 · ② 코스닥150 레버리지 하락일 야간",
+     "rule": "KODEX 코스닥150레버리지가 −3% 이하로 마감한 날 종가 매수 → 다음 날 시가 매도 (거래세 없음)",
+     "params": {
+      "code": "233740",
+      "th": -3.0
+     },
+     "source": "seed",
+     "addedAt": "2026-10-05"
+    },
+    {
+     "version": "etf_dip_th25",
+     "name": "−2.5% 이하 마감",
+     "rule": "−2.5% 이하 마감이면 종가 매수",
+     "params": {
+      "code": "233740",
+      "th": -2.5
+     },
+     "source": "seed",
+     "addedAt": "2026-10-05"
+    },
+    {
+     "version": "etf_dip_th35",
+     "name": "−3.5% 이하 마감",
+     "rule": "−3.5% 이하 마감이면 종가 매수",
+     "params": {
+      "code": "233740",
+      "th": -3.5
+     },
+     "source": "seed",
+     "addedAt": "2026-10-05"
+    },
+    {
+     "version": "etf_dip_overnight_th4",
+     "name": "−4% 이하 마감",
+     "rule": "−4% 이하 마감이면 종가 매수",
+     "params": {
+      "code": "233740",
+      "th": -4.0
+     },
+     "source": "seed",
+     "addedAt": "2026-10-05"
+    },
+    {
+     "version": "etf_dip_th45",
+     "name": "−4.5% 이하 마감",
+     "rule": "−4.5% 이하 마감이면 종가 매수",
+     "params": {
+      "code": "233740",
+      "th": -4.5
+     },
+     "source": "seed",
+     "addedAt": "2026-10-05"
+    },
+    {
+     "version": "etf_dip_th5",
+     "name": "−5% 이하 마감",
+     "rule": "−5% 이하 마감이면 종가 매수",
+     "params": {
+      "code": "233740",
+      "th": -5.0
+     },
+     "source": "seed",
+     "addedAt": "2026-10-05"
+    },
+    {
+     "version": "g_etf_th3.25",
+     "name": "−3.25% 이하 마감",
+     "rule": "KODEX 코스닥150레버리지가 −3.25% 이하로 마감한 날 종가 매수 → 다음 날 시가 매도",
+     "params": {
+      "code": "233740",
+      "th": -3.25
+     },
+     "source": "generated",
+     "addedAt": "2026-10-05"
+    },
+    {
+     "version": "g_etf_th2.75",
+     "name": "−2.75% 이하 마감",
+     "rule": "KODEX 코스닥150레버리지가 −2.75% 이하로 마감한 날 종가 매수 → 다음 날 시가 매도",
+     "params": {
+      "code": "233740",
+      "th": -2.75
+     },
+     "source": "generated",
+     "addedAt": "2026-10-05"
+    },
+    {
+     "version": "g_etf_th4.25",
+     "name": "−4.25% 이하 마감",
+     "rule": "KODEX 코스닥150레버리지가 −4.25% 이하로 마감한 날 종가 매수 → 다음 날 시가 매도",
+     "params": {
+      "code": "233740",
+      "th": -4.25
+     },
+     "source": "generated",
+     "addedAt": "2026-10-05"
+    },
+    {
+     "version": "g_etf_th3.75",
+     "name": "−3.75% 이하 마감",
+     "rule": "KODEX 코스닥150레버리지가 −3.75% 이하로 마감한 날 종가 매수 → 다음 날 시가 매도",
+     "params": {
+      "code": "233740",
+      "th": -3.75
+     },
+     "source": "generated",
+     "addedAt": "2026-10-05"
+    },
+    {
+     "version": "g_etf_th4.75",
+     "name": "−4.75% 이하 마감",
+     "rule": "KODEX 코스닥150레버리지가 −4.75% 이하로 마감한 날 종가 매수 → 다음 날 시가 매도",
+     "params": {
+      "code": "233740",
+      "th": -4.75
+     },
+     "source": "generated",
+     "addedAt": "2026-10-05"
+    },
+    {
+     "version": "g_etf_th7.25",
+     "name": "−7.25% 이하 마감",
+     "rule": "KODEX 코스닥150레버리지가 −7.25% 이하로 마감한 날 종가 매수 → 다음 날 시가 매도",
+     "params": {
+      "code": "233740",
+      "th": -7.25
+     },
+     "source": "generated",
+     "addedAt": "2026-10-05"
+    },
+    {
+     "version": "g_etf_th2.5",
+     "name": "−2.5% 이하 마감",
+     "rule": "KODEX 코스닥150레버리지가 −2.5% 이하로 마감한 날 종가 매수 → 다음 날 시가 매도",
+     "params": {
+      "code": "233740",
+      "th": -2.5
+     },
+     "source": "generated",
+     "addedAt": "2026-10-05"
+    }
+   ],
+   "retired": [
+    {
+     "version": "etf_dip_overnight_k200",
+     "name": "코스피200 레버리지 −3%",
+     "retiredAt": "2026-10-05",
+     "reason": "주문 경로 없음(다른 종목) — 자동 승격 불가라 경쟁군에서 뺌"
+    },
+    {
+     "version": "etf_dip_k200_th2",
+     "name": "코스피200 레버리지 −2%",
+     "retiredAt": "2026-10-05",
+     "reason": "주문 경로 없음(다른 종목) — 자동 승격 불가라 경쟁군에서 뺌"
+    },
+    {
+     "version": "etf_dip_kq150_th15",
+     "name": "코스닥150 (1배) −1.5%",
+     "retiredAt": "2026-10-05",
+     "reason": "주문 경로 없음(다른 종목) — 자동 승격 불가라 경쟁군에서 뺌"
+    },
+    {
+     "version": "etf_dip_th15",
+     "name": "−1.5% 이하 마감",
+     "params": {
+      "code": "233740",
+      "th": -1.5
+     },
+     "retiredAt": "2026-10-05",
+     "reason": "손실 기준 미달 — MDD -39.4% · 최악일 -13.1% · 거래당 +0.16%"
+    },
+    {
+     "version": "etf_dip_overnight_th2",
+     "name": "−2% 이하 마감",
+     "params": {
+      "code": "233740",
+      "th": -2.0
+     },
+     "retiredAt": "2026-10-05",
+     "reason": "손실 기준 미달 — MDD -30.6% · 최악일 -13.1% · 거래당 +0.23%"
+    }
+   ],
+   "tried": [],
+   "snapshots": [
+    {
+     "date": "2026-10-05",
+     "top": "etf_dip_overnight_v1",
+     "main": "etf_dip_overnight_v1",
+     "bottom": [
+      "etf_dip_th5",
+      "etf_dip_overnight_th2",
+      "etf_dip_th15"
+     ],
+     "ranks": [
+      "etf_dip_overnight_v1",
+      "etf_dip_overnight_th4",
+      "etf_dip_th45",
+      "etf_dip_th35",
+      "etf_dip_th25",
+      "etf_dip_th5",
+      "etf_dip_overnight_th2",
+      "etf_dip_th15"
+     ]
+    }
+   ]
+  },
+  "crypto": {
+   "pool": [
+    {
+     "version": "coin_breakout_v1",
+     "name": "기본 · ③ BTC·ETH 어제 고가 돌파 하루 단타",
+     "rule": "업비트 BTC·ETH 각각(하루 = 09:00~다음날 09:00): 어제 종가 > 20일 평균인 날만, 오늘 가격이 어제 고가를 넘는 순간 매수 → 다음 날 09:00 에 무조건 매도(보유 24시간 미만). 매수가 대비 −5% 닿으면 손절. 두 코인 반반, 탭 표시 자금 80%.",
+     "params": {
+      "ma": 20,
+      "stopPct": 5.0,
+      "level": "prevhigh",
+      "k": 0.5,
+      "lastEntryHour": null,
+      "tabSize": 0.8,
+      "markets": [
+       "KRW-BTC",
+       "KRW-ETH"
+      ]
+     },
+     "source": "seed",
+     "addedAt": "2026-10-05"
+    },
+    {
+     "version": "coin_bo_ma10",
+     "name": "평균 10일",
+     "rule": "추세 기준 10일 평균",
+     "params": {
+      "ma": 10,
+      "stopPct": 5.0,
+      "level": "prevhigh",
+      "k": 0.5,
+      "lastEntryHour": null,
+      "tabSize": 0.8,
+      "markets": [
+       "KRW-BTC",
+       "KRW-ETH"
+      ]
+     },
+     "source": "seed",
+     "addedAt": "2026-10-05"
+    },
+    {
+     "version": "coin_bo_ma30",
+     "name": "평균 30일",
+     "rule": "추세 기준 30일 평균",
+     "params": {
+      "ma": 30,
+      "stopPct": 5.0,
+      "level": "prevhigh",
+      "k": 0.5,
+      "lastEntryHour": null,
+      "tabSize": 0.8,
+      "markets": [
+       "KRW-BTC",
+       "KRW-ETH"
+      ]
+     },
+     "source": "seed",
+     "addedAt": "2026-10-05"
+    },
+    {
+     "version": "coin_bo_ma50",
+     "name": "평균 50일",
+     "rule": "추세 기준 50일 평균",
+     "params": {
+      "ma": 50,
+      "stopPct": 5.0,
+      "level": "prevhigh",
+      "k": 0.5,
+      "lastEntryHour": null,
+      "tabSize": 0.8,
+      "markets": [
+       "KRW-BTC",
+       "KRW-ETH"
+      ]
+     },
+     "source": "seed",
+     "addedAt": "2026-10-05"
+    },
+    {
+     "version": "coin_bo_stop3",
+     "name": "손절 −3%",
+     "rule": "매수가 −3% 손절",
+     "params": {
+      "ma": 20,
+      "stopPct": 3.0,
+      "level": "prevhigh",
+      "k": 0.5,
+      "lastEntryHour": null,
+      "tabSize": 0.8,
+      "markets": [
+       "KRW-BTC",
+       "KRW-ETH"
+      ]
+     },
+     "source": "seed",
+     "addedAt": "2026-10-05"
+    },
+    {
+     "version": "coin_bo_stop8",
+     "name": "손절 −8%",
+     "rule": "매수가 −8% 손절",
+     "params": {
+      "ma": 20,
+      "stopPct": 8.0,
+      "level": "prevhigh",
+      "k": 0.5,
+      "lastEntryHour": null,
+      "tabSize": 0.8,
+      "markets": [
+       "KRW-BTC",
+       "KRW-ETH"
+      ]
+     },
+     "source": "seed",
+     "addedAt": "2026-10-05"
+    },
+    {
+     "version": "coin_bo_nostop",
+     "name": "손절 없음",
+     "rule": "손절 없이 다음 날 09:00 매도",
+     "params": {
+      "ma": 20,
+      "stopPct": 99.0,
+      "level": "prevhigh",
+      "k": 0.5,
+      "lastEntryHour": null,
+      "tabSize": 0.8,
+      "markets": [
+       "KRW-BTC",
+       "KRW-ETH"
+      ]
+     },
+     "source": "seed",
+     "addedAt": "2026-10-05"
+    },
+    {
+     "version": "coin_vb_k07",
+     "name": "변동성 돌파 k=0.7",
+     "rule": "기준선 = 오늘 시가 + 0.7 × 어제 (고가−저가)",
+     "params": {
+      "ma": 20,
+      "stopPct": 5.0,
+      "level": "vb",
+      "k": 0.7,
+      "lastEntryHour": null,
+      "tabSize": 0.8,
+      "markets": [
+       "KRW-BTC",
+       "KRW-ETH"
+      ]
+     },
+     "source": "seed",
+     "addedAt": "2026-10-05"
+    },
+    {
+     "version": "coin_bo_before21",
+     "name": "21시 전 돌파만",
+     "rule": "밤 9시 이후 돌파는 사지 않음",
+     "params": {
+      "ma": 20,
+      "stopPct": 5.0,
+      "level": "prevhigh",
+      "k": 0.5,
+      "lastEntryHour": 21,
+      "tabSize": 0.8,
+      "markets": [
+       "KRW-BTC",
+       "KRW-ETH"
+      ]
+     },
+     "source": "seed",
+     "addedAt": "2026-10-05"
+    },
+    {
+     "version": "coin_bo_btc_only",
+     "name": "BTC 만",
+     "rule": "BTC 한 코인에 칸 전액",
+     "params": {
+      "ma": 20,
+      "stopPct": 5.0,
+      "level": "prevhigh",
+      "k": 0.5,
+      "lastEntryHour": null,
+      "tabSize": 0.8,
+      "markets": [
+       "KRW-BTC"
+      ]
+     },
+     "source": "seed",
+     "addedAt": "2026-10-05"
+    },
+    {
+     "version": "coin_vb_k05_before21",
+     "name": "변동성 돌파 k=0.5 · 21시 전",
+     "rule": "변동성 돌파 + 밤 9시 이후 돌파는 사지 않음",
+     "params": {
+      "ma": 20,
+      "stopPct": 5.0,
+      "level": "vb",
+      "k": 0.5,
+      "lastEntryHour": 21,
+      "tabSize": 0.8,
+      "markets": [
+       "KRW-BTC",
+       "KRW-ETH"
+      ]
+     },
+     "source": "seed",
+     "addedAt": "2026-10-05"
+    },
+    {
+     "version": "g_coin_ma25_s99_hi_both",
+     "name": "평균 25일 · 어제 고가 돌파 · 손절 없음 · BTC·ETH 반반",
+     "rule": "어제 종가 > 25일 평균인 날, 어제 고가를 넘는 순간 매수 → 다음 날 09:00 매도 · 손절 없음 · BTC·ETH 반반 · 탭 자금 80%",
+     "params": {
+      "ma": 25,
+      "stopPct": 99.0,
+      "level": "prevhigh",
+      "k": 0.5,
+      "lastEntryHour": null,
+      "tabSize": 0.8,
+      "markets": [
+       "KRW-BTC",
+       "KRW-ETH"
+      ]
+     },
+     "source": "generated",
+     "addedAt": "2026-10-05"
+    },
+    {
+     "version": "g_coin_ma15_s99_hi_both",
+     "name": "평균 15일 · 어제 고가 돌파 · 손절 없음 · BTC·ETH 반반",
+     "rule": "어제 종가 > 15일 평균인 날, 어제 고가를 넘는 순간 매수 → 다음 날 09:00 매도 · 손절 없음 · BTC·ETH 반반 · 탭 자금 80%",
+     "params": {
+      "ma": 15,
+      "stopPct": 99.0,
+      "level": "prevhigh",
+      "k": 0.5,
+      "lastEntryHour": null,
+      "tabSize": 0.8,
+      "markets": [
+       "KRW-BTC",
+       "KRW-ETH"
+      ]
+     },
+     "source": "generated",
+     "addedAt": "2026-10-05"
+    }
+   ],
+   "retired": [
+    {
+     "version": "coin_vb_k05",
+     "name": "변동성 돌파 k=0.5",
+     "params": {
+      "ma": 20,
+      "stopPct": 5.0,
+      "level": "vb",
+      "k": 0.5,
+      "lastEntryHour": null,
+      "tabSize": 0.8,
+      "markets": [
+       "KRW-BTC",
+       "KRW-ETH"
+      ]
+     },
+     "retiredAt": "2026-10-05",
+     "reason": "손실 기준 미달 — MDD -25.6% · 최악일 -4.2% · 거래당 +0.15%"
+    },
+    {
+     "version": "coin_bo_eth_only",
+     "name": "ETH 만",
+     "params": {
+      "ma": 20,
+      "stopPct": 5.0,
+      "level": "prevhigh",
+      "k": 0.5,
+      "lastEntryHour": null,
+      "tabSize": 0.8,
+      "markets": [
+       "KRW-ETH"
+      ]
+     },
+     "retiredAt": "2026-10-05",
+     "reason": "손실 기준 미달 — MDD -28.1% · 최악일 -4.2% · 거래당 +0.31%"
+    }
+   ],
+   "tried": [],
+   "snapshots": [
+    {
+     "date": "2026-10-05",
+     "top": "coin_bo_nostop",
+     "main": "coin_breakout_v1",
+     "bottom": [
+      "coin_vb_k05_before21",
+      "coin_bo_eth_only",
+      "coin_vb_k05"
+     ],
+     "ranks": [
+      "coin_bo_nostop",
+      "coin_bo_stop8",
+      "coin_breakout_v1",
+      "coin_bo_btc_only",
+      "coin_bo_ma10",
+      "coin_vb_k07",
+      "coin_bo_ma50",
+      "coin_bo_stop3",
+      "coin_bo_before21",
+      "coin_bo_ma30",
+      "coin_vb_k05_before21",
+      "coin_bo_eth_only",
+      "coin_vb_k05"
+     ]
+    }
+   ]
+  },
+  "soxl": {
+   "pool": [
+    {
+     "version": "soxl_rsi2_meanrev_v1",
+     "name": "기본 · ④ SOXL 단기 과매도 반등 (최대 5일)",
+     "rule": "SOXL 단기 과매도 반등(최대 5거래일). 장 마감 확정 종가로 RSI(2)<20 이고 종가 > 200일 평균이면 다음 날 시가 매수 → 종가가 전날보다 오른 날이 나오면 그다음 날 시가 매도, 늦어도 5거래일째 종가 뒤 다음 시가 매도. 탭 표시 자금 50%.",
+     "params": {
+      "rsiMax": 20.0,
+      "rsiN": 2,
+      "ma": 200,
+      "maxHoldDays": 5,
+      "tabSize": 0.5
+     },
+     "source": "seed",
+     "addedAt": "2026-10-05"
+    },
+    {
+     "version": "soxl_rsi2_th10",
+     "name": "RSI(2) < 10",
+     "rule": "더 깊은 과매도만",
+     "params": {
+      "rsiMax": 10.0,
+      "rsiN": 2,
+      "ma": 200,
+      "maxHoldDays": 5,
+      "tabSize": 0.5
+     },
+     "source": "seed",
+     "addedAt": "2026-10-05"
+    },
+    {
+     "version": "soxl_rsi2_ma150",
+     "name": "150일 평균 위",
+     "rule": "추세 조건을 150일 평균으로",
+     "params": {
+      "rsiMax": 20.0,
+      "rsiN": 2,
+      "ma": 150,
+      "maxHoldDays": 5,
+      "tabSize": 0.5
+     },
+     "source": "seed",
+     "addedAt": "2026-10-05"
+    },
+    {
+     "version": "soxl_rsi2_max2",
+     "name": "최대 2일",
+     "rule": "2거래일 뒤 다음 시가 매도",
+     "params": {
+      "rsiMax": 20.0,
+      "rsiN": 2,
+      "ma": 200,
+      "maxHoldDays": 2,
+      "tabSize": 0.5
+     },
+     "source": "seed",
+     "addedAt": "2026-10-05"
+    },
+    {
+     "version": "soxl_rsi2_max3",
+     "name": "최대 3일",
+     "rule": "3거래일 뒤 다음 시가 매도",
+     "params": {
+      "rsiMax": 20.0,
+      "rsiN": 2,
+      "ma": 200,
+      "maxHoldDays": 3,
+      "tabSize": 0.5
+     },
+     "source": "seed",
+     "addedAt": "2026-10-05"
+    },
+    {
+     "version": "soxl_rsi3_th20",
+     "name": "RSI(3) < 20",
+     "rule": "RSI 기간 3일",
+     "params": {
+      "rsiMax": 20.0,
+      "rsiN": 3,
+      "ma": 200,
+      "maxHoldDays": 5,
+      "tabSize": 0.5
+     },
+     "source": "seed",
+     "addedAt": "2026-10-05"
+    },
+    {
+     "version": "g_soxl_r3lt15_ma200_d5",
+     "name": "RSI(3) < 15 · 200일 평균 위 · 최대 5일",
+     "rule": "확정 종가 RSI(3) < 15 · 200일 평균 위면 다음 시가 매수 → 오른 날 다음 시가 매도, 최대 5거래일 · 탭 자금 50%",
+     "params": {
+      "rsiMax": 15.0,
+      "rsiN": 3,
+      "ma": 200,
+      "maxHoldDays": 5,
+      "tabSize": 0.5
+     },
+     "source": "generated",
+     "addedAt": "2026-10-05"
+    },
+    {
+     "version": "g_soxl_r2lt20_ma200_d5",
+     "name": "RSI(2) < 20 · 200일 평균 위 · 최대 5일",
+     "rule": "확정 종가 RSI(2) < 20 · 200일 평균 위면 다음 시가 매수 → 오른 날 다음 시가 매도, 최대 5거래일 · 탭 자금 50%",
+     "params": {
+      "rsiMax": 20.0,
+      "rsiN": 2,
+      "ma": 200,
+      "maxHoldDays": 5,
+      "tabSize": 0.5
+     },
+     "source": "generated",
+     "addedAt": "2026-10-05"
+    },
+    {
+     "version": "g_soxl_r3lt20_ma150_d5",
+     "name": "RSI(3) < 20 · 150일 평균 위 · 최대 5일",
+     "rule": "확정 종가 RSI(3) < 20 · 150일 평균 위면 다음 시가 매수 → 오른 날 다음 시가 매도, 최대 5거래일 · 탭 자금 50%",
+     "params": {
+      "rsiMax": 20.0,
+      "rsiN": 3,
+      "ma": 150,
+      "maxHoldDays": 5,
+      "tabSize": 0.5
+     },
+     "source": "generated",
+     "addedAt": "2026-10-05"
+    },
+    {
+     "version": "g_soxl_r3lt20_ma200_d4",
+     "name": "RSI(3) < 20 · 200일 평균 위 · 최대 4일",
+     "rule": "확정 종가 RSI(3) < 20 · 200일 평균 위면 다음 시가 매수 → 오른 날 다음 시가 매도, 최대 4거래일 · 탭 자금 50%",
+     "params": {
+      "rsiMax": 20.0,
+      "rsiN": 3,
+      "ma": 200,
+      "maxHoldDays": 4,
+      "tabSize": 0.5
+     },
+     "source": "generated",
+     "addedAt": "2026-10-05"
+    },
+    {
+     "version": "g_soxl_r2lt15_ma200_d5",
+     "name": "RSI(2) < 15 · 200일 평균 위 · 최대 5일",
+     "rule": "확정 종가 RSI(2) < 15 · 200일 평균 위면 다음 시가 매수 → 오른 날 다음 시가 매도, 최대 5거래일 · 탭 자금 50%",
+     "params": {
+      "rsiMax": 15.0,
+      "rsiN": 2,
+      "ma": 200,
+      "maxHoldDays": 5,
+      "tabSize": 0.5
+     },
+     "source": "generated",
+     "addedAt": "2026-10-05"
+    },
+    {
+     "version": "g_soxl_r2lt5_ma200_d5",
+     "name": "RSI(2) < 5 · 200일 평균 위 · 최대 5일",
+     "rule": "확정 종가 RSI(2) < 5 · 200일 평균 위면 다음 시가 매수 → 오른 날 다음 시가 매도, 최대 5거래일 · 탭 자금 50%",
+     "params": {
+      "rsiMax": 5.0,
+      "rsiN": 2,
+      "ma": 200,
+      "maxHoldDays": 5,
+      "tabSize": 0.5
+     },
+     "source": "generated",
+     "addedAt": "2026-10-05"
+    },
+    {
+     "version": "g_soxl_r3lt10_ma200_d5",
+     "name": "RSI(3) < 10 · 200일 평균 위 · 최대 5일",
+     "rule": "확정 종가 RSI(3) < 10 · 200일 평균 위면 다음 시가 매수 → 오른 날 다음 시가 매도, 최대 5거래일 · 탭 자금 50%",
+     "params": {
+      "rsiMax": 10.0,
+      "rsiN": 3,
+      "ma": 200,
+      "maxHoldDays": 5,
+      "tabSize": 0.5
+     },
+     "source": "generated",
+     "addedAt": "2026-10-05"
+    }
+   ],
+   "retired": [
+    {
+     "version": "soxl_rsi2_th25_max3",
+     "name": "RSI(2) < 25 · 최대 3일",
+     "params": {
+      "rsiMax": 25.0,
+      "rsiN": 2,
+      "ma": 200,
+      "maxHoldDays": 3,
+      "tabSize": 0.5
+     },
+     "retiredAt": "2026-10-05",
+     "reason": "손실 기준 미달 — MDD -30.6% · 최악일 -8.4% · 거래당 +0.17%"
+    },
+    {
+     "version": "soxl_rsi2_1d",
+     "name": "하루 한정",
+     "params": {
+      "rsiMax": 20.0,
+      "rsiN": 2,
+      "ma": 200,
+      "maxHoldDays": 1,
+      "tabSize": 0.5
+     },
+     "retiredAt": "2026-10-05",
+     "reason": "손실 기준 미달 — MDD -38.5% · 최악일 -7.6% · 거래당 +0.07%"
+    },
+    {
+     "version": "soxl_rsi2_th25",
+     "name": "RSI(2) < 25",
+     "params": {
+      "rsiMax": 25.0,
+      "rsiN": 2,
+      "ma": 200,
+      "maxHoldDays": 5,
+      "tabSize": 0.5
+     },
+     "retiredAt": "2026-10-05",
+     "reason": "손실 기준 미달 — MDD -25.0% · 최악일 -8.4% · 거래당 +0.18%"
+    },
+    {
+     "version": "soxl_rsi2_th30",
+     "name": "RSI(2) < 30",
+     "params": {
+      "rsiMax": 30.0,
+      "rsiN": 2,
+      "ma": 200,
+      "maxHoldDays": 5,
+      "tabSize": 0.5
+     },
+     "retiredAt": "2026-10-05",
+     "reason": "손실 기준 미달 — MDD -25.0% · 최악일 -8.4% · 거래당 +0.20%"
+    },
+    {
+     "version": "soxl_rsi2_ma100",
+     "name": "100일 평균 위",
+     "params": {
+      "rsiMax": 20.0,
+      "rsiN": 2,
+      "ma": 100,
+      "maxHoldDays": 5,
+      "tabSize": 0.5
+     },
+     "retiredAt": "2026-10-05",
+     "reason": "손실 기준 미달 — MDD -31.1% · 최악일 -7.6% · 거래당 +0.17%"
+    },
+    {
+     "version": "soxl_rsi2_noma",
+     "name": "평균 조건 없음",
+     "params": {
+      "rsiMax": 20.0,
+      "rsiN": 2,
+      "ma": 0,
+      "maxHoldDays": 5,
+      "tabSize": 0.5
+     },
+     "retiredAt": "2026-10-05",
+     "reason": "손실 기준 미달 — MDD -40.0% · 최악일 -15.5% · 거래당 +0.16%"
+    }
+   ],
+   "tried": [
+    "g_soxl_r3lt25_ma200_d5",
+    "g_soxl_r4lt20_ma200_d5"
+   ],
+   "snapshots": [
+    {
+     "date": "2026-10-05",
+     "top": "soxl_rsi3_th20",
+     "main": "soxl_rsi2_meanrev_v1",
+     "bottom": [
+      "soxl_rsi2_th25",
+      "soxl_rsi2_1d",
+      "soxl_rsi2_th25_max3"
+     ],
+     "ranks": [
+      "soxl_rsi3_th20",
+      "soxl_rsi2_th10",
+      "soxl_rsi2_ma150",
+      "soxl_rsi2_meanrev_v1",
+      "soxl_rsi2_max3",
+      "soxl_rsi2_max2",
+      "soxl_rsi2_noma",
+      "soxl_rsi2_ma100",
+      "soxl_rsi2_th30",
+      "soxl_rsi2_th25",
+      "soxl_rsi2_1d",
+      "soxl_rsi2_th25_max3"
+     ]
+    }
+   ]
+  }
+ },
+ "log": [
+  {
+   "date": "2026-10-05",
+   "at": "2026-10-05T21:11+09:00",
+   "tab": "opening",
+   "kind": "new",
+   "version": "g_open_q8_k3",
+   "name": "통과 8개↑ · 깊은 3종목",
+   "reason": "신규 투입 — 점수 +0.470 · 최근 1년 +40.1% (상위 opening_d1_min7 주변/격자에서)"
+  },
+  {
+   "date": "2026-10-05",
+   "at": "2026-10-05T21:11+09:00",
+   "tab": "opening",
+   "kind": "new",
+   "version": "g_open_q6_k3",
+   "name": "통과 6개↑ · 깊은 3종목",
+   "reason": "신규 투입 — 점수 +0.378 · 최근 1년 +33.0% (상위 opening_d1_min7 주변/격자에서)"
+  },
+  {
+   "date": "2026-10-05",
+   "at": "2026-10-05T21:11+09:00",
+   "tab": "opening",
+   "kind": "new",
+   "version": "g_open_q7_k2",
+   "name": "통과 7개↑ · 깊은 2종목",
+   "reason": "신규 투입 — 점수 +0.533 · 최근 1년 +41.0% (상위 opening_d1_min7 주변/격자에서)"
+  },
+  {
+   "date": "2026-10-05",
+   "at": "2026-10-05T21:11+09:00",
+   "tab": "opening",
+   "kind": "new",
+   "version": "g_open_q7_k3_gap3",
+   "name": "통과 7개↑ · 깊은 3종목 · 갭 -3% 이하만",
+   "reason": "신규 투입 — 점수 +0.557 · 최근 1년 +43.3% (상위 opening_d1_min7 주변/격자에서)"
+  },
+  {
+   "date": "2026-10-05",
+   "at": "2026-10-05T21:11+09:00",
+   "tab": "opening",
+   "kind": "new",
+   "version": "g_open_q9_k3",
+   "name": "통과 9개↑ · 깊은 3종목",
+   "reason": "신규 투입 — 점수 +0.358 · 최근 1년 +29.9% (상위 opening_d1_min7 주변/격자에서)"
+  },
+  {
+   "date": "2026-10-05",
+   "at": "2026-10-05T21:11+09:00",
+   "tab": "opening",
+   "kind": "new",
+   "version": "g_open_q7_k3",
+   "name": "통과 7개↑ · 깊은 3종목",
+   "reason": "신규 투입 — 점수 +0.475 · 최근 1년 +39.2% (상위 opening_d1_min7 주변/격자에서)"
+  },
+  {
+   "date": "2026-10-05",
+   "at": "2026-10-05T21:11+09:00",
+   "tab": "opening",
+   "kind": "new",
+   "version": "g_open_q8_k2",
+   "name": "통과 8개↑ · 깊은 2종목",
+   "reason": "신규 투입 — 점수 +0.532 · 최근 1년 +40.7% (상위 opening_d1_min7 주변/격자에서)"
+  },
+  {
+   "date": "2026-10-05",
+   "at": "2026-10-05T21:11+09:00",
+   "tab": "opening",
+   "kind": "new",
+   "version": "g_open_q8_k3_gap3",
+   "name": "통과 8개↑ · 깊은 3종목 · 갭 -3% 이하만",
+   "reason": "신규 투입 — 점수 +0.548 · 최근 1년 +43.0% (상위 opening_d1_min7 주변/격자에서)"
+  },
+  {
+   "date": "2026-10-05",
+   "at": "2026-10-05T21:11+09:00",
+   "tab": "opening",
+   "kind": "new",
+   "version": "g_open_q6_k2",
+   "name": "통과 6개↑ · 깊은 2종목",
+   "reason": "신규 투입 — 점수 +0.448 · 최근 1년 +39.5% (상위 opening_d1_min7 주변/격자에서)"
+  },
+  {
+   "date": "2026-10-05",
+   "at": "2026-10-05T21:11+09:00",
+   "tab": "opening",
+   "kind": "reject",
+   "version": "",
+   "name": "",
+   "reason": "새 후보 1개는 손실 기준 미달로 투입 전 탈락"
+  },
+  {
+   "date": "2026-10-05",
+   "at": "2026-10-05T21:11+09:00",
+   "tab": "opening",
+   "kind": "retire",
+   "version": "opening_d1_min2",
+   "name": "통과 2개 이상",
+   "reason": "손실 기준 미달 — MDD -54.6% · 최악일 -18.1% · 거래당 +0.57%"
+  },
+  {
+   "date": "2026-10-05",
+   "at": "2026-10-05T21:11+09:00",
+   "tab": "opening",
+   "kind": "retire",
+   "version": "opening_d1_min3",
+   "name": "통과 3개 이상",
+   "reason": "손실 기준 미달 — MDD -30.0% · 최악일 -18.1% · 거래당 +0.96%"
+  },
+  {
+   "date": "2026-10-05",
+   "at": "2026-10-05T21:11+09:00",
+   "tab": "opening",
+   "kind": "retire",
+   "version": "opening_d1_min4",
+   "name": "통과 4개 이상",
+   "reason": "손실 기준 미달 — MDD -25.8% · 최악일 -18.1% · 거래당 +1.15%"
+  },
+  {
+   "date": "2026-10-05",
+   "at": "2026-10-05T21:11+09:00",
+   "tab": "opening",
+   "kind": "retire",
+   "version": "opening_d1_min5_top2",
+   "name": "통과 5개↑ · 깊은 2종목",
+   "reason": "손실 기준 미달 — MDD -28.8% · 최악일 -13.1% · 거래당 +1.16%"
+  },
+  {
+   "date": "2026-10-05",
+   "at": "2026-10-05T21:11+09:00",
+   "tab": "opening",
+   "kind": "retire",
+   "version": "opening_d1_min5_gap3",
+   "name": "통과 5개↑ · 갭 −3% 이하만",
+   "reason": "손실 기준 미달 — MDD -25.2% · 최악일 -14.4% · 거래당 +1.51%"
+  },
+  {
+   "date": "2026-10-05",
+   "at": "2026-10-05T21:11+09:00",
+   "tab": "opening",
+   "kind": "retire",
+   "version": "opening_d1_min5_top1",
+   "name": "통과 5개↑ · 가장 깊은 1종목",
+   "reason": "손실 기준 미달 — MDD -49.2% · 최악일 -25.8% · 거래당 +1.11%"
+  },
+  {
+   "date": "2026-10-05",
+   "at": "2026-10-05T21:11+09:00",
+   "tab": "opening",
+   "kind": "retire",
+   "version": "opening_d1_min1",
+   "name": "통과 1개 이상 (매일)",
+   "reason": "손실 기준 미달 — MDD -97.1% · 최악일 -28.7% · 거래당 -0.00%"
+  },
+  {
+   "date": "2026-10-05",
+   "at": "2026-10-05T21:11+09:00",
+   "tab": "opening",
+   "kind": "retire",
+   "version": "opening_d1_min3_top1",
+   "name": "통과 3개↑ · 가장 깊은 1종목",
+   "reason": "손실 기준 미달 — MDD -56.8% · 최악일 -25.8% · 거래당 +1.31%"
+  },
+  {
+   "date": "2026-10-05",
+   "at": "2026-10-05T21:11+09:00",
+   "tab": "daytrading",
+   "kind": "new",
+   "version": "g_etf_th3.25",
+   "name": "−3.25% 이하 마감",
+   "reason": "신규 투입 — 점수 +0.433 · 최근 1년 +69.6% (상위 etf_dip_overnight_v1 주변/격자에서)"
+  },
+  {
+   "date": "2026-10-05",
+   "at": "2026-10-05T21:11+09:00",
+   "tab": "daytrading",
+   "kind": "new",
+   "version": "g_etf_th2.75",
+   "name": "−2.75% 이하 마감",
+   "reason": "신규 투입 — 점수 +0.278 · 최근 1년 +69.7% (상위 etf_dip_overnight_v1 주변/격자에서)"
+  },
+  {
+   "date": "2026-10-05",
+   "at": "2026-10-05T21:11+09:00",
+   "tab": "daytrading",
+   "kind": "new",
+   "version": "g_etf_th4.25",
+   "name": "−4.25% 이하 마감",
+   "reason": "신규 투입 — 점수 +0.460 · 최근 1년 +74.5% (상위 etf_dip_overnight_v1 주변/격자에서)"
+  },
+  {
+   "date": "2026-10-05",
+   "at": "2026-10-05T21:11+09:00",
+   "tab": "daytrading",
+   "kind": "new",
+   "version": "g_etf_th3.75",
+   "name": "−3.75% 이하 마감",
+   "reason": "신규 투입 — 점수 +0.395 · 최근 1년 +62.6% (상위 etf_dip_overnight_v1 주변/격자에서)"
+  },
+  {
+   "date": "2026-10-05",
+   "at": "2026-10-05T21:11+09:00",
+   "tab": "daytrading",
+   "kind": "new",
+   "version": "g_etf_th4.75",
+   "name": "−4.75% 이하 마감",
+   "reason": "신규 투입 — 점수 +0.367 · 최근 1년 +68.9% (상위 etf_dip_overnight_v1 주변/격자에서)"
+  },
+  {
+   "date": "2026-10-05",
+   "at": "2026-10-05T21:11+09:00",
+   "tab": "daytrading",
+   "kind": "new",
+   "version": "g_etf_th7.25",
+   "name": "−7.25% 이하 마감",
+   "reason": "신규 투입 — 점수 +0.290 · 최근 1년 +28.0% (상위 etf_dip_overnight_v1 주변/격자에서)"
+  },
+  {
+   "date": "2026-10-05",
+   "at": "2026-10-05T21:11+09:00",
+   "tab": "daytrading",
+   "kind": "new",
+   "version": "g_etf_th2.5",
+   "name": "−2.5% 이하 마감",
+   "reason": "신규 투입 — 점수 +0.303 · 최근 1년 +77.6% (상위 etf_dip_overnight_v1 주변/격자에서)"
+  },
+  {
+   "date": "2026-10-05",
+   "at": "2026-10-05T21:11+09:00",
+   "tab": "daytrading",
+   "kind": "retire",
+   "version": "etf_dip_th15",
+   "name": "−1.5% 이하 마감",
+   "reason": "손실 기준 미달 — MDD -39.4% · 최악일 -13.1% · 거래당 +0.16%"
+  },
+  {
+   "date": "2026-10-05",
+   "at": "2026-10-05T21:11+09:00",
+   "tab": "daytrading",
+   "kind": "retire",
+   "version": "etf_dip_overnight_th2",
+   "name": "−2% 이하 마감",
+   "reason": "손실 기준 미달 — MDD -30.6% · 최악일 -13.1% · 거래당 +0.23%"
+  },
+  {
+   "date": "2026-10-05",
+   "at": "2026-10-05T21:11+09:00",
+   "tab": "crypto",
+   "kind": "new",
+   "version": "g_coin_ma25_s99_hi_both",
+   "name": "평균 25일 · 어제 고가 돌파 · 손절 없음 · BTC·ETH 반반",
+   "reason": "신규 투입 — 점수 +0.199 · 최근 1년 -1.6% (상위 coin_bo_nostop 주변/격자에서)"
+  },
+  {
+   "date": "2026-10-05",
+   "at": "2026-10-05T21:11+09:00",
+   "tab": "crypto",
+   "kind": "new",
+   "version": "g_coin_ma15_s99_hi_both",
+   "name": "평균 15일 · 어제 고가 돌파 · 손절 없음 · BTC·ETH 반반",
+   "reason": "신규 투입 — 점수 +0.343 · 최근 1년 +9.8% (상위 coin_bo_nostop 주변/격자에서)"
+  },
+  {
+   "date": "2026-10-05",
+   "at": "2026-10-05T21:11+09:00",
+   "tab": "crypto",
+   "kind": "retire",
+   "version": "coin_vb_k05",
+   "name": "변동성 돌파 k=0.5",
+   "reason": "손실 기준 미달 — MDD -25.6% · 최악일 -4.2% · 거래당 +0.15%"
+  },
+  {
+   "date": "2026-10-05",
+   "at": "2026-10-05T21:11+09:00",
+   "tab": "crypto",
+   "kind": "retire",
+   "version": "coin_bo_eth_only",
+   "name": "ETH 만",
+   "reason": "손실 기준 미달 — MDD -28.1% · 최악일 -4.2% · 거래당 +0.31%"
+  },
+  {
+   "date": "2026-10-05",
+   "at": "2026-10-05T21:11+09:00",
+   "tab": "soxl",
+   "kind": "new",
+   "version": "g_soxl_r3lt15_ma200_d5",
+   "name": "RSI(3) < 15 · 200일 평균 위 · 최대 5일",
+   "reason": "신규 투입 — 점수 +0.447 · 최근 1년 +41.5% (상위 soxl_rsi3_th20 주변/격자에서)"
+  },
+  {
+   "date": "2026-10-05",
+   "at": "2026-10-05T21:11+09:00",
+   "tab": "soxl",
+   "kind": "new",
+   "version": "g_soxl_r2lt20_ma200_d5",
+   "name": "RSI(2) < 20 · 200일 평균 위 · 최대 5일",
+   "reason": "신규 투입 — 점수 +0.278 · 최근 1년 +49.5% (상위 soxl_rsi3_th20 주변/격자에서)"
+  },
+  {
+   "date": "2026-10-05",
+   "at": "2026-10-05T21:11+09:00",
+   "tab": "soxl",
+   "kind": "new",
+   "version": "g_soxl_r3lt20_ma150_d5",
+   "name": "RSI(3) < 20 · 150일 평균 위 · 최대 5일",
+   "reason": "신규 투입 — 점수 +0.631 · 최근 1년 +53.2% (상위 soxl_rsi3_th20 주변/격자에서)"
+  },
+  {
+   "date": "2026-10-05",
+   "at": "2026-10-05T21:11+09:00",
+   "tab": "soxl",
+   "kind": "new",
+   "version": "g_soxl_r3lt20_ma200_d4",
+   "name": "RSI(3) < 20 · 200일 평균 위 · 최대 4일",
+   "reason": "신규 투입 — 점수 +0.697 · 최근 1년 +56.9% (상위 soxl_rsi3_th20 주변/격자에서)"
+  },
+  {
+   "date": "2026-10-05",
+   "at": "2026-10-05T21:11+09:00",
+   "tab": "soxl",
+   "kind": "new",
+   "version": "g_soxl_r2lt15_ma200_d5",
+   "name": "RSI(2) < 15 · 200일 평균 위 · 최대 5일",
+   "reason": "신규 투입 — 점수 +0.311 · 최근 1년 +58.0% (상위 soxl_rsi3_th20 주변/격자에서)"
+  },
+  {
+   "date": "2026-10-05",
+   "at": "2026-10-05T21:11+09:00",
+   "tab": "soxl",
+   "kind": "new",
+   "version": "g_soxl_r2lt5_ma200_d5",
+   "name": "RSI(2) < 5 · 200일 평균 위 · 최대 5일",
+   "reason": "신규 투입 — 점수 +0.359 · 최근 1년 +56.8% (상위 soxl_rsi3_th20 주변/격자에서)"
+  },
+  {
+   "date": "2026-10-05",
+   "at": "2026-10-05T21:11+09:00",
+   "tab": "soxl",
+   "kind": "new",
+   "version": "g_soxl_r3lt10_ma200_d5",
+   "name": "RSI(3) < 10 · 200일 평균 위 · 최대 5일",
+   "reason": "신규 투입 — 점수 +0.104 · 최근 1년 +23.8% (상위 soxl_rsi3_th20 주변/격자에서)"
+  },
+  {
+   "date": "2026-10-05",
+   "at": "2026-10-05T21:11+09:00",
+   "tab": "soxl",
+   "kind": "reject",
+   "version": "",
+   "name": "",
+   "reason": "새 후보 2개는 손실 기준 미달로 투입 전 탈락"
+  },
+  {
+   "date": "2026-10-05",
+   "at": "2026-10-05T21:11+09:00",
+   "tab": "soxl",
+   "kind": "retire",
+   "version": "soxl_rsi2_th25_max3",
+   "name": "RSI(2) < 25 · 최대 3일",
+   "reason": "손실 기준 미달 — MDD -30.6% · 최악일 -8.4% · 거래당 +0.17%"
+  },
+  {
+   "date": "2026-10-05",
+   "at": "2026-10-05T21:11+09:00",
+   "tab": "soxl",
+   "kind": "retire",
+   "version": "soxl_rsi2_1d",
+   "name": "하루 한정",
+   "reason": "손실 기준 미달 — MDD -38.5% · 최악일 -7.6% · 거래당 +0.07%"
+  },
+  {
+   "date": "2026-10-05",
+   "at": "2026-10-05T21:11+09:00",
+   "tab": "soxl",
+   "kind": "retire",
+   "version": "soxl_rsi2_th25",
+   "name": "RSI(2) < 25",
+   "reason": "손실 기준 미달 — MDD -25.0% · 최악일 -8.4% · 거래당 +0.18%"
+  },
+  {
+   "date": "2026-10-05",
+   "at": "2026-10-05T21:11+09:00",
+   "tab": "soxl",
+   "kind": "retire",
+   "version": "soxl_rsi2_th30",
+   "name": "RSI(2) < 30",
+   "reason": "손실 기준 미달 — MDD -25.0% · 최악일 -8.4% · 거래당 +0.20%"
+  },
+  {
+   "date": "2026-10-05",
+   "at": "2026-10-05T21:11+09:00",
+   "tab": "soxl",
+   "kind": "retire",
+   "version": "soxl_rsi2_ma100",
+   "name": "100일 평균 위",
+   "reason": "손실 기준 미달 — MDD -31.1% · 최악일 -7.6% · 거래당 +0.17%"
+  },
+  {
+   "date": "2026-10-05",
+   "at": "2026-10-05T21:11+09:00",
+   "tab": "soxl",
+   "kind": "retire",
+   "version": "soxl_rsi2_noma",
+   "name": "평균 조건 없음",
+   "reason": "손실 기준 미달 — MDD -40.0% · 최악일 -15.5% · 거래당 +0.16%"
+  }
+ ],
+ "updatedAt": "2026-10-05T21:11+09:00"
+}
