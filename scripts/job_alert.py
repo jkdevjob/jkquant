@@ -1593,7 +1593,7 @@ def _ddgs_search_with_retry(query, max_results=20):
     return [], last_exc
 
 def is_listing_or_search_url(url):
-    """검색결과/목록 URL을 개별 채용공고로 저장하지 않는다."""
+    """검색결과/목록/프로필/회사소개 URL을 개별 채용공고로 저장하지 않는다."""
     try:
         parts = urlsplit(url)
         host = parts.netloc.lower().replace('www.', '')
@@ -1609,6 +1609,13 @@ def is_listing_or_search_url(url):
     if host.endswith('incruit.com') and (
         path.startswith('/list/search')
         or 'jobdb_list/searchjob' in path
+        or path.startswith('/company/')
+    ):
+        return True
+    if host.endswith('rocketpunch.com') and (
+        path.startswith('/@')
+        or (path.startswith('/companies/') and '/jobs/' not in path)
+        or path.startswith('/company/')
     ):
         return True
     if host.endswith('work24.go.kr') and (
@@ -1623,6 +1630,93 @@ def is_listing_or_search_url(url):
             return True
     return False
 
+
+def is_non_job_record(title, body, url=''):
+    title_text = normalize_text(title)
+    body_text = normalize_text(body)
+    text = normalize_text(f'{title_text} {body_text}')
+
+    if is_listing_or_search_url(url):
+        return True
+    if is_generic_job_title(title_text):
+        return True
+    if re.search(r'총\s*팔로워|팔로잉\s*\d+|프로필\s*게시물|커리어\s*요약', text, re.I):
+        return True
+    if re.search(r'@[-_a-z0-9]{6,}', title_text, re.I) and '채용' not in text and '모집' not in text:
+        return True
+    return False
+
+
+def employment_types(title, body):
+    text = normalize_text(f'{title} {body}')
+    found = []
+    patterns = [
+        ('정규직', r'정규직|정규\s*사원'),
+        ('계약직', r'계약직|기간제'),
+        ('프리랜서', r'프리랜서|freelance'),
+        ('인턴', r'인턴'),
+        ('파견직', r'파견직|파견근무'),
+        ('아르바이트', r'아르바이트|알바'),
+    ]
+    for label, pattern in patterns:
+        if re.search(pattern, text, re.I):
+            found.append(label)
+    return found
+
+
+def career_label(title, body):
+    text = normalize_text(f'{title} {body}')
+    patterns = [
+        (r'신입\s*[·ㆍ/,+&]\s*경력|신입\s*(?:및|또는)\s*경력', '신입·경력'),
+        (r'경력\s*무관|경력무관', '경력무관'),
+        (r'경력\s*(\d+)\s*[~～-]\s*(\d+)\s*년', None),
+        (r'경력\s*(\d+)\s*년\s*(?:이상|↑|\+)', None),
+        (r'경력\s*(\d+)\s*년', None),
+        (r'신입', '신입'),
+        (r'경력직|경력자', '경력'),
+    ]
+    for pattern, fixed in patterns:
+        m = re.search(pattern, text, re.I)
+        if not m:
+            continue
+        if fixed:
+            return fixed
+        if m.lastindex == 2:
+            return f'경력 {m.group(1)}~{m.group(2)}년'
+        return f'경력 {m.group(1)}년↑'
+    return ''
+
+
+def education_label(title, body):
+    text = normalize_text(f'{title} {body}')
+    patterns = [
+        (r'학력\s*무관|학력무관', '학력무관'),
+        (r'고졸\s*(?:이상|↑)', '고졸↑'),
+        (r'(?:초대졸|전문대졸)\s*(?:이상|↑)', '초대졸↑'),
+        (r'대졸\s*(?:이상|↑)', '대졸↑'),
+        (r'석사\s*(?:이상|↑)', '석사↑'),
+        (r'박사\s*(?:이상|↑)', '박사↑'),
+    ]
+    for pattern, label in patterns:
+        if re.search(pattern, text, re.I):
+            return label
+    return ''
+
+
+def attach_job_metadata(item, detail_text=''):
+    out = dict(item or {})
+    text = normalize_text(detail_text) or normalize_text(out.get('body', ''))
+    title = out.get('title', '')
+    emps = employment_types(title, text)
+    career = career_label(title, text)
+    education = education_label(title, text)
+    if emps:
+        out['employmentTypes'] = emps
+    if career:
+        out['career'] = career
+    if education:
+        out['education'] = education
+    return out
 
 def collect_search_source(source_name, domain):
     jobs = {}
