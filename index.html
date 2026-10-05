@@ -544,7 +544,7 @@ html.had-user #authgate .bootwait{display:block}
 </div>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.110.0</span></h1></div>
+    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.110.1</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -1655,7 +1655,7 @@ if(/^\/paper\/?$/.test(location.pathname)){
   <footer>
     <strong>JK 퀀트</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.110.0</b> · 2026-10-05</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.110.1</b> · 2026-10-05</div>
   </footer>
 </div>
 
@@ -10187,14 +10187,46 @@ function _rebaseRecordArray(base,candidate,remote){
   try{sortHist(out);}catch(e){}
   return out;
 }
+function _statePlainObject(v){return !!(v&&typeof v==='object'&&!Array.isArray(v));}
+function _stateValEq(a,b){
+  if(a===undefined||b===undefined)return a===b;
+  return _histStableJson(a)===_histStableJson(b);
+}
+/* 일반 필드용 3-way merge.
+   base = 이 탭이 마지막으로 읽은 DB, candidate = 이 탭의 현재 상태, remote = 지금 DB.
+   candidate가 base와 같다면 이 탭은 그 필드를 건드리지 않은 것이다 — 최신 remote를 반드시 보존한다.
+   이 규칙이 없으면 오래 열린 탭이 예전 paperCommon.simStart / session.simStart를
+   unrelated 저장 한 번으로 되살려 전체 적용 날짜를 과거 값으로 되돌린다. */
+function _rebaseObjectFields(base,candidate,remote,skip){
+  const B=_statePlainObject(base)?base:{},C=_statePlainObject(candidate)?candidate:{},R=_statePlainObject(remote)?remote:{};
+  const out=JSON.parse(JSON.stringify(R)), omit=skip||new Set();
+  const keys=new Set([...Object.keys(B),...Object.keys(C)]);
+  for(const k of keys){
+    if(omit.has(k))continue;
+    const bh=Object.prototype.hasOwnProperty.call(B,k), ch=Object.prototype.hasOwnProperty.call(C,k), rh=Object.prototype.hasOwnProperty.call(R,k);
+    if(!ch){
+      if(bh)delete out[k];                 // 이 탭에서 실제 삭제
+      continue;                            // base에도 없으면 untouched → remote 유지
+    }
+    if(!bh){out[k]=JSON.parse(JSON.stringify(C[k]));continue;} // 이 탭에서 새로 추가
+    if(_stateValEq(C[k],B[k]))continue;    // untouched → remote 유지
+    if(_statePlainObject(B[k])&&_statePlainObject(C[k])&&rh&&_statePlainObject(R[k])&&!_stateValEq(R[k],B[k])){
+      out[k]=_rebaseObjectFields(B[k],C[k],R[k],null);         // 서로 다른 하위 필드 변경 합치기
+    }else{
+      out[k]=JSON.parse(JSON.stringify(C[k]));                 // 실제 로컬 변경은 로컬 우선
+    }
+  }
+  return out;
+}
 function _rebaseStateOnRemote(base,candidate,remote){
   if(!base||!remote)return JSON.parse(JSON.stringify(candidate));
-  const out=JSON.parse(JSON.stringify(remote)), boxes=['inf','vr','ma','ivs','dca','asap'];
-  for(const k of Object.keys(candidate))if(!boxes.includes(k)&&k!=='plan')out[k]=JSON.parse(JSON.stringify(candidate[k]));
+  const boxes=['inf','vr','ma','ivs','dca','asap'], topSkip=new Set([...boxes,'plan']);
+  /* top-level도 무조건 candidate 승이 아니라 3-way로 합친다.
+     특히 paperCommon/formMemo/paperViewCache가 stale 탭에서 되살아나는 것을 막는다. */
+  const out=_rebaseObjectFields(base,candidate,remote,topSkip);
   for(const bk of boxes){
     const B=base[bk]||{},C=candidate[bk]||{},R=remote[bk]||{};
-    if(!out[bk])out[bk]={};
-    for(const k of Object.keys(C))if(k!=='sessions')out[bk][k]=JSON.parse(JSON.stringify(C[k]));
+    out[bk]=_rebaseObjectFields(B,C,R,new Set(['sessions']));
     const bm=new Map((Array.isArray(B.sessions)?B.sessions:[]).filter(Boolean).map(x=>[String(x.id||''),x]));
     const cm=new Map((Array.isArray(C.sessions)?C.sessions:[]).filter(Boolean).map(x=>[String(x.id||''),x]));
     const rm=new Map((Array.isArray(R.sessions)?R.sessions:[]).filter(Boolean).map(x=>[String(x.id||''),JSON.parse(JSON.stringify(x))]));
@@ -10202,8 +10234,7 @@ function _rebaseStateOnRemote(base,candidate,remote){
     for(const [id,cs] of cm){
       const bs=bm.get(id),rs=rm.get(id);
       if(!bs||!rs){rm.set(id,JSON.parse(JSON.stringify(cs)));continue;}
-      const ns=JSON.parse(JSON.stringify(rs));
-      for(const k of Object.keys(cs))if(k!=='hist')ns[k]=JSON.parse(JSON.stringify(cs[k]));
+      const ns=_rebaseObjectFields(bs,cs,rs,new Set(['hist']));
       ns.hist=_rebaseRecordArray(bs.hist,cs.hist,rs.hist);
       rm.set(id,ns);
     }
@@ -10211,8 +10242,7 @@ function _rebaseStateOnRemote(base,candidate,remote){
   }
   const Bp=base.plan||{},Cp=candidate.plan||{},Rp=remote.plan||{};
   if(Cp&&Array.isArray(Cp.sessions)){
-    if(!out.plan)out.plan={};
-    for(const k of Object.keys(Cp))if(k!=='sessions')out.plan[k]=JSON.parse(JSON.stringify(Cp[k]));
+    out.plan=_rebaseObjectFields(Bp,Cp,Rp,new Set(['sessions']));
     const bm=new Map((Array.isArray(Bp.sessions)?Bp.sessions:[]).filter(Boolean).map(x=>[String(x.id||''),x]));
     const cm=new Map(Cp.sessions.filter(Boolean).map(x=>[String(x.id||''),x]));
     const rm=new Map((Array.isArray(Rp.sessions)?Rp.sessions:[]).filter(Boolean).map(x=>[String(x.id||''),JSON.parse(JSON.stringify(x))]));
@@ -10220,12 +10250,10 @@ function _rebaseStateOnRemote(base,candidate,remote){
     for(const [id,cs] of cm){
       const bs=bm.get(id),rs=rm.get(id);
       if(!bs||!rs){rm.set(id,JSON.parse(JSON.stringify(cs)));continue;}
-      const ns=JSON.parse(JSON.stringify(rs));
-      for(const k of Object.keys(cs))if(k!=='ledger')ns[k]=JSON.parse(JSON.stringify(cs[k]));
+      const ns=_rebaseObjectFields(bs,cs,rs,new Set(['ledger']));
       if(cs.ledger){
-        ns.ledger=JSON.parse(JSON.stringify(rs.ledger||{}));
         const bl=bs.ledger||{},cl=cs.ledger||{},rl=rs.ledger||{};
-        for(const k of Object.keys(cl))if(k!=='events')ns.ledger[k]=JSON.parse(JSON.stringify(cl[k]));
+        ns.ledger=_rebaseObjectFields(bl,cl,rl,new Set(['events']));
         ns.ledger.events=_rebaseRecordArray(bl.events,cl.events,rl.events);
       }
       rm.set(id,ns);
