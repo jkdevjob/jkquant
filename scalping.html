@@ -271,7 +271,7 @@ canvas{display:block;width:100%;height:auto}
 
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Morning Scalping</div><h1>JK <span class="v">퀀트</span> 단타 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="scVer">v1.42.0</span></h1></div>
+    <div><div class="kicker">Morning Scalping</div><h1>JK <span class="v">퀀트</span> 단타 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="scVer">v1.42.1</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -1578,11 +1578,12 @@ async function loadDailyTrendSeries(force=false){
   if(!force&&DAILY_TREND_CACHE&&now-DAILY_TREND_CACHE_AT<DAILY_TREND_TTL_MS)return DAILY_TREND_CACHE;
   if(!force&&DAILY_TREND_PROMISE)return DAILY_TREND_PROMISE;
   const names=['opening','daytrading','crypto','soxl'];
-  const p=Promise.all(names.map(async name=>{
-    const r=await fetch('/api/scalping-history?strategy='+name+'&range=all&trend=1',{headers:{Accept:'application/json'},cache:'default'});
-    const j=await r.json(); if(!r.ok||!j.ok)throw new Error((j&&j.error)||('HTTP '+r.status));
-    return {name,daily:(j.summary&&j.summary.dailySeries)||[]};
-  }));
+  const url='/api/scalping-trend'+(force?'?_ts='+now:'');
+  const p=(async()=>{
+    const r=await fetch(url,{headers:{Accept:'application/json'},cache:force?'no-store':'default'});
+    const j=await r.json(); if(!r.ok||!j||!j.strategies)throw new Error((j&&j.error)||('HTTP '+r.status));
+    return names.map(name=>({name,daily:(j.strategies[name]&&j.strategies[name].daily)||[]}));
+  })();
   DAILY_TREND_PROMISE=p;
   try{
     const reps=await p;
