@@ -265,7 +265,7 @@ setTimeout(function(){ var h=document.documentElement; if(h.classList.contains('
 </script>
 <div class="wrap">
   <div class="top">
-    <div class="brand"><div class="logo">Asset Plan</div><h1>자산플랜 <span class="ver">v1.43.4</span></h1></div>
+    <div class="brand"><div class="logo">Asset Plan</div><h1>자산플랜 <span class="ver">v1.43.5</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
       <div class="jkmenu" id="jkmenuWrap">
@@ -2105,9 +2105,9 @@ function alphaWeightHistory(rows,D,count=60){
 function alphaOrderHtml(side,sym,qty,price,note){
   const c=side==='buy'?'buy':'sell',lab=side==='buy'?'매수':'매도',gross=Math.max(0,qty*price),fee=alphaFee(qty,price),net=side==='buy'?gross+fee:gross-fee;
   const money=side==='buy'
-    ? '매수금액 '+usd(gross)+' · 수수료 포함 필요현금 약 '+usd(net)
-    : '매도금액 '+usd(gross)+' · 수수료 차감 예상유입 약 '+usd(net);
-  return '<div class="liveitem '+c+'"><strong>'+lab+' · '+sym+' '+qty+'주 · '+usd(gross)+'</strong><small>'+money+' · 현재가 '+usd(price)+' 기준 예상수량 · 실제 체결가는 주문 시점 가격 · '+(note||'목표비중 조정')+'</small></div>';
+    ? '총 매수금액 '+usd(gross)+' · 수수료 포함 필요현금 약 '+usd(net)
+    : '총 매도금액 '+usd(gross)+' · 수수료 차감 예상유입 약 '+usd(net);
+  return '<div class="liveitem '+c+'"><strong>'+lab+' · '+sym+' · 1주 기준가 '+usd(price)+' × '+qty+'주 = '+usd(gross)+'</strong><small>'+money+' · 주문수량 계산 기준가는 현재가(없으면 최근 확정종가) · 실제 체결가는 주문 시점 가격 · '+(note||'목표비중 조정')+'</small></div>';
 }
 function _planOrderTargets(targets,pxs,pos,cash){
   const F=ALPHA_FEE_RATE,orders=[];let avail=Math.max(0,cash);
