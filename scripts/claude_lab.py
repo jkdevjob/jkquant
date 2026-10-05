@@ -1082,10 +1082,13 @@ def gpt_daily(tab):
     by, ver = {}, set()
     for r in rows:
         try:
-            by.setdefault(r["date"], []).append(float(r[col]))
-            ver.add(r.get("strategyVersion") or "")
-        except (KeyError, ValueError):
+            v = float(r[col])                      # 먼저 숫자로 — 빈 값(미청산 등)이면 그 날짜를 만들지 않는다(빈 평균으로 밤 계산이 죽던 문제)
+        except (KeyError, ValueError, TypeError):
             continue
+        if not math.isfinite(v):
+            continue
+        by.setdefault(r["date"], []).append(v)
+        ver.add(r.get("strategyVersion") or "")
     return {d: statistics.fmean(v) for d, v in by.items()}, sorted(v for v in ver if v), len(rows)
 
 

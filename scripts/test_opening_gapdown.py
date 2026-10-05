@@ -528,6 +528,23 @@ class ClaudeLabTrend(unittest.TestCase):
         self.assertAlmostEqual(r["compare"]["claude"]["totalPct"], 1.0)     # 01-05 의 +5% 는 GPT 기록 전이라 빼고 비교
         self.assertAlmostEqual(r["compare"]["gpt"]["totalPct"], -1.0)
 
+    def test_gpt_daily_skips_blank_values(self):
+        # 2026-10-05 밤 계산이 죽은 원인: 빈 손익 칸(미청산)이 '빈 날짜'를 만들고 평균에서 예외. 빈 값은 날짜째 건너뛴다.
+        with tempfile.TemporaryDirectory() as tmp:
+            old_data, old_files = lab.DATA, dict(lab.GPT_FILES)
+            lab.DATA = lab.Path(tmp)
+            try:
+                (lab.DATA / "g.csv").write_text("date,pnl,strategyVersion\n2026-10-01,1.5,v1\n2026-10-02,,v1\n2026-10-02,nan,v1\n2026-10-03,-1,v1\n2026-10-03,2,v1\n", encoding="utf-8")
+                lab.GPT_FILES["soxl"] = ("g.csv", "pnl")
+                d, ver, n = lab.gpt_daily("soxl")
+            finally:
+                lab.DATA, lab.GPT_FILES = old_data, old_files
+                lab.GPT_FILES.update(old_files)
+        self.assertEqual(sorted(d), ["2026-10-01", "2026-10-03"])
+        self.assertAlmostEqual(d["2026-10-03"], 0.5)
+        self.assertEqual(ver, ["v1"])
+        self.assertEqual(n, 5)
+
 
 if __name__ == "__main__":
     unittest.main()

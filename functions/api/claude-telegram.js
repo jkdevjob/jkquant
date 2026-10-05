@@ -48,7 +48,7 @@ export function compose(kind,date,live,extra={}){
       L.push("① 갭하락 과매도 — 모의 매수 "+o.rows.length+"종목"+(b?" (통과 "+b.qualified+"개 · v2 매매일 "+(b.v2Signal?"예":"아니오")+")":""));
       for(const r of o.rows)L.push(" · "+r.name+" "+n(r.buyPrice)+(r.buyPriceKind==="예상"?"(예상)":"")+" 갭 "+p(r.expectedGapPct)+(r.status==="주문 실패"?" ⚠️주문 실패":""));
       L.push("→ 15:30 종가 동시호가에 매도");
-    }else L.push("① 갭하락 과매도 — 매매 없음 ("+(dec.reason||"조건 맞는 종목 없음")+")");
+    }else L.push(dec.reason==="krx_holiday"?"🔒 국내 휴장일 — ①② 시세 조회·주문 없음":"① 갭하락 과매도 — 매매 없음 ("+(dec.reason||"조건 맞는 종목 없음")+")");
     for(const r of (d.rows||[]).filter(x=>x.sellTime&&String(x.sellTime).includes("시가")))L.push("② ETF 야간 — 전날 종가 매수분 시가 매도 ("+r.status+")");
   }else if(kind==="etfbuy"){
     L.push("🤖 [클로드 단타] "+date+" 15:21 데이트레이딩");

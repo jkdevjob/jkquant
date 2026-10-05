@@ -12,6 +12,7 @@
 // 호출자는 opening-scheduler Worker 이고, Worker 가 응답 전체를 Durable Object 원본 ledger 에 먼저 저장한다.
 // 주문은 절대 자동 재시도하지 않는다.
 import { GAPDOWN_VERSION, expectedGapPct, gapdownPicks, watchlistUsable } from "./_gapdown.js";
+import { krxDay } from "./_krx_calendar.js";
 
 const JH={"Content-Type":"application/json; charset=utf-8","Cache-Control":"no-store"};
 const WATCH_URL="https://raw.githubusercontent.com/jkdevjob/jkquant/scalping-data/data/opening-gapdown-research/watchlist.json";
@@ -294,6 +295,10 @@ export async function onRequestPost({request,env}){
   const stage=String(b.stage||""),now=kstNow(),date=String(b.date||"");
   if(date!==now.date)return json({ok:false,error:"오늘 날짜만 처리합니다.",today:now.date,date},400);
   if(["Sat","Sun"].includes(now.weekday))return json({ok:false,error:"주말"},400);
+  // 장이 열리는 날인지 먼저 — 휴장이면 시세 조회도 주문도 하지 않고 '휴장'으로 기록만 남긴다
+  const kd=krxDay(date);
+  if(kd.closed)return json({ok:true,stage,date,skipped:"krx_holiday",decisionReason:"krx_holiday",holiday:true,
+    candidates:stage==="quote"?[]:0,picks:[],orders:[],positions:[],signal:false,order:null,finishedAt:new Date().toISOString()});
   if(!stageWindow(stage,now.hms))return json({ok:false,error:"허용 시간창 밖",stage,kstHms:now.hms},400);
   const origin=new URL(request.url).origin;
   try{
