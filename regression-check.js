@@ -11273,10 +11273,11 @@ console.log('[GAPDOWN D-1 / DIP24 D-3] 연구용 모의체결 경로 안전장�
 }
 /* ════ GPT 단타 오늘 누적 그래프 · 매매없음 표시 ════ */
 console.log('\n[SCALPING DAILY TREND] 오늘 누적 결과 그래프 · 매매없음');
-ok('GPT 오늘 탭에 4전략 누적 수익률 그래프가 연결되고 최근 31일을 확대한다',
+ok('GPT 오늘 탭에 4전략 누적 수익률 그래프가 단일 사전계산 API로 연결되고 최근 31일을 확대한다',
    /id="daily_cumulative_chart"/.test(scl)
    &&/async function renderDailyCumulativeChart\(force=false\)/.test(scl)
-   &&/\/api\/scalping-history\?strategy='\+name\+'&range=all&trend=1/.test(scl)
+   &&/const url='\/api\/scalping-trend'/.test(scl)
+   &&!/range=all&trend=1/.test(scl)
    &&/DAILY_TREND_STEP=5/.test(scl)
    &&/전체 누적값 · 최근 31일 확대/.test(scl)
    &&/cut\.setUTCDate\(cut\.getUTCDate\(\)-30\)/.test(scl)
