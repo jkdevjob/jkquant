@@ -1854,7 +1854,8 @@ console.log('[35] 로그인 — 조용히 갇히지 않는다');
   ok('비로그인은 먼저 빠져나간다', /if\(!user\)\{/.test(ia) && ia.indexOf('if(!user){') < ia.indexOf('touchProfile'));
   ok('배지 그리기 실패를 막는다', /try\{ renderUserBadge\(user\); \}catch/.test(ia));
   ok('프로필 확인 실패로 로그인을 막지 않는다',
-     /\}catch\(e\)\{ console\.warn\('profile',e\); \}/.test(ia));
+     /void withTimeout\(touchProfile\(user\), 8000, '프로필 기록'\)\.catch\(e=>console\.warn\('profile',e\)\)/.test(ia)
+     && ia.indexOf('touchProfile(user)')>ia.indexOf('startApp()'));
   ok('Firebase DB 원장 읽기 실패는 오래된 브라우저 상태로 열지 않는다',
      /Firebase DB 원장을 불러오지 못했습니다/.test(ia)
      && /setSync\('err'\);\s*return;/.test(ia));
@@ -1879,9 +1880,11 @@ console.log('[35] 로그인 — 조용히 갇히지 않는다');
      (구글 인증은 됐는데 앱시작 '안 됨'). 그래서 시간을 재서 끊는다. */
   const wt=extractFn(idx,'function withTimeout(p, ms, label)');
   ok('안 끝나는 호출을 시간으로 끊는다', !!wt && /Promise\.race/.test(wt) && /setTimeout/.test(wt));
-  ok('프로필 확인에 제한시간', /withTimeout\(touchProfile\(user\), 6000, '프로필 확인'\)/.test(ia));
+  ok('프로필 기록은 앱 시작 뒤 비동기·제한시간으로 처리',
+     /void withTimeout\(touchProfile\(user\), 8000, '프로필 기록'\)/.test(ia)
+     && ia.indexOf('touchProfile(user)')>ia.indexOf('startApp()'));
   ok('Firebase DB 원장 읽기에 제한시간',
-     /withTimeout\(pullRemote\(\), 12000, 'Firebase DB 원장'\)/.test(ia));
+     /withTimeout\(pullRemote\(\), 20000, 'Firebase DB 원장'\)/.test(ia));
   ok('iOS 계열에서도 Firestore가 멈추지 않도록 운영 DB는 long polling 사용',
      /initializeFirestore\(app,\{experimentalForceLongPolling:true\}\)/.test(idx)
      && !/const db = getFirestore\(app\)/.test(idx));
@@ -11713,8 +11716,10 @@ console.log('\n[ACCESS] 이용 승인제 — 판정 한 곳 · 모든 페이지 
        && ia.indexOf('startApp()')>ia.indexOf('pullRemote()')
        && /Firebase DB 원장을 불러오지 못했습니다/.test(ia));
     const wd=(idx.match(/\(function bootWatchdog\(\)\{[\s\S]*?\n\}\)\(\);/)||[''])[0];
-    ok('운영 부팅 워치독은 오래된 브라우저 원장으로 앱을 열지 않는다',
-       /Firebase DB 원장 확인이 지연/.test(wd)
+    ok('운영 부팅 워치독은 로그인된 사용자를 false sign-out 시키지 않고 오래된 브라우저 원장도 열지 않는다',
+       /currentUser/.test(wd)
+       && /Firebase DB 다시 연결/.test(wd)
+       && /22000/.test(wd)
        && !/restored|cacheOk|startApp\(\)/.test(wd));
   }
 
