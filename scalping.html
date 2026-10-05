@@ -271,7 +271,7 @@ canvas{display:block;width:100%;height:auto}
 
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Morning Scalping</div><h1>JK <span class="v">퀀트</span> 단타 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="scVer">v1.42.1</span></h1></div>
+    <div><div class="kicker">Morning Scalping</div><h1>JK <span class="v">퀀트</span> 단타 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="scVer">v1.42.2</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -1559,9 +1559,11 @@ function dailyResultPct(v){
 }
 function dailyResultCell(x,label){
   if(!x)return '<div class="daily-result-box"><div class="daily-result-label">'+label+'</div><div class="daily-result-ret">—</div><div class="daily-result-meta">확정 결과 대기</div></div>';
+  const date=String(x.date||'—');
+  if(x.marketClosed)return '<div class="daily-result-box"><div class="daily-result-label">'+label+' · '+esc(date)+'</div><div class="daily-result-ret">휴장</div><div class="daily-result-meta">해당 시장 비개장일 · 전략 미실행</div><span class="daily-result-goal">수익률 계산 제외</span></div>';
+  if(x.marketDayUnknown)return '<div class="daily-result-box"><div class="daily-result-label">'+label+' · '+esc(date)+'</div><div class="daily-result-ret">확인필요</div><div class="daily-result-meta">'+esc(x.marketDayError||'개장일 확인 실패')+'</div><span class="daily-result-goal">전략 실행 보류</span></div>';
   const r=Number(x.returnPct),ok=Number.isFinite(r),hit=ok&&r>=1;
   const cls=ok?(r>0?'win':r<0?'loss':''):'';
-  const date=String(x.date||'—');
   const trades=Number(x.trades||0);
   const resultText=x.noTrade?'매매없음':dailyResultPct(r);
   const target=hit?'+1% 달성':(x.noTrade?'매매없음 · 0.00% 반영':(ok?'목표까지 '+Math.max(0,1-r).toFixed(2)+'%p':'확정 대기'));
