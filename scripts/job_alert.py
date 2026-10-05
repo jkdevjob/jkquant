@@ -346,10 +346,28 @@ def clean_detail_title(value, company=''):
     text = normalize_text(value)
     if not text:
         return ''
-
-    # 포털명이 붙은 페이지 title/og:title 뒤쪽은 공고명이 아니다.
     text = re.sub(
-        r'\s*(?:[-|｜]\s*)?(?:사람인|잡코리아(?:\s*헤드헌팅)?|원티드|점핏|커리어|인크루트|로켓펀치|알바몬|알바천국).*
+        r'\s*(?:[-|｜]\s*)?(?:사람인|잡코리아(?:\s*헤드헌팅)?|원티드|점핏|커리어|인크루트|로켓펀치|알바몬|알바천국).*$', 
+        '', 
+        text,
+        flags=re.I,
+    ).strip()
+    text = re.sub(
+        r'^(?:벤처기업|중소기업|중견기업|대기업|외국계|공공기관)\s*[:：]\s*',
+        '',
+        text,
+    ).strip()
+    company = clean_company_name(company)
+    if company:
+        prefixes = [
+            f'[{company}]',
+            f'[{company.replace("(주)", "").replace("㈜", "").strip()}]',
+        ]
+        for prefix in prefixes:
+            if prefix != '[]' and text.startswith(prefix):
+                text = normalize_text(text[len(prefix):])
+                break
+    return '' if is_generic_job_title(text) else text
 
 def _walk_jsonld(value):
     if isinstance(value, dict):
