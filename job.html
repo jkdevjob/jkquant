@@ -257,8 +257,29 @@ document.getElementById("period").addEventListener("change",function(){syncDates
 renderScrapCount();setDefaultDates();
 (function(){
   var ts=Date.now();
-  var current=fetch("/data/job_archive.json?ts="+ts,{cache:"no-store"}).then(function(r){if(!r.ok)throw new Error("archive HTTP "+r.status);return r.json()});
-  var history=fetch("/data/job_history.json?ts="+ts,{cache:"no-store"}).then(function(r){if(!r.ok)return {jobs:[],count:0};return r.json()}).catch(function(){return {jobs:[],count:0}});
+  var RAW_BASE="https://raw.githubusercontent.com/jkdevjob/jkquant/main/";
+  function fetchJson(url,fallback){
+    return fetch(url+(url.indexOf("?")>=0?"&":"?")+"ts="+ts,{cache:"no-store"})
+      .then(function(r){if(!r.ok)throw new Error("HTTP "+r.status);return r.json()})
+      .catch(function(){return fallback});
+  }
+  function newest(a,b){
+    a=a||{};b=b||{};
+    var at=Date.parse(a.updatedAt||"")||0,bt=Date.parse(b.updatedAt||"")||0;
+    return bt>at?b:a;
+  }
+  var current=Promise.all([
+    fetchJson("/data/job_archive.json",null),
+    fetchJson(RAW_BASE+"data/job_archive.json",null)
+  ]).then(function(x){
+    var picked=newest(x[0],x[1]);
+    if(!picked)throw new Error("JOB archive를 불러오지 못했습니다.");
+    return picked;
+  });
+  var history=Promise.all([
+    fetchJson("/data/job_history.json",{jobs:[],count:0}),
+    fetchJson(RAW_BASE+"data/job_history.json",{jobs:[],count:0})
+  ]).then(function(x){return newest(x[0],x[1])||{jobs:[],count:0}});
   Promise.all([current,history]).then(function(parts){
     var d=parts[0]||{},hist=parts[1]||{},map={};
     (Array.isArray(d.jobs)?d.jobs:[]).concat(Array.isArray(hist.jobs)?hist.jobs:[]).forEach(function(j){
