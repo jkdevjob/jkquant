@@ -233,8 +233,15 @@
       if(!ma.allowed){ lock({state:'menu',menuMode:ma.mode}); return false; }
       return true;
     }
-    if(isAdminEmail(user.email) || cacheOk(user)){
-      setAdmin(isAdminEmail(user.email));
+    if(isAdminEmail(user.email)){
+      /* 관리자는 현재 페이지 접근이 항상 허용된다.
+         메뉴 정렬 하나 읽느라 5초를 막으면 실제 원장 로딩이 늦어지므로 앱부터 열고 뒤에서 적용한다. */
+      setAdmin(true); hide();
+      applyMenuConfig(user,fb).catch(function(e){ console.warn('menu config',e); });
+      return true;
+    }
+    if(cacheOk(user)){
+      setAdmin(false);
       if(!await menuOk())return false;
       hide();
       check(user, fb).then(function(r){ if(!stale() && !isOk(r.state)) lock(r); }, function(e){ console.warn('access recheck', e); });
@@ -261,7 +268,14 @@
     var logout=function(){ return fb.signOut(fb.auth); };
     var resolved=false, startedUid=null;   // 같은 화면에서 다른 계정으로 다시 로그인하면 그 계정 자료를 다시 부른다
     show('checking');
-    setTimeout(function(){ if(!resolved) show('signedout', {login:login, msg:'로그인 확인이 늦어지고 있습니다 — 다시 로그인하거나 새로고침해 주세요.'}); }, 8000);
+    setTimeout(function(){
+      if(resolved)return;
+      /* currentUser가 이미 있으면 인증 콜백/DB가 늦는 것이지 로그아웃이 아니다.
+         예전엔 8초만 지나면 로그인 버튼으로 바꿔 진행 중 인증을 사용자가 또 시작하게 했다. */
+      var cu=fb.auth&&fb.auth.currentUser;
+      if(cu) show('checking', {user:cu, msg:'Google 로그인은 확인됐습니다. Firebase DB 연결을 기다리는 중입니다…'});
+      else show('signedout', {login:login, msg:'로그인 상태 확인이 늦어지고 있습니다 — 다시 로그인하거나 새로고침해 주세요.'});
+    }, 12000);
     fb.onAuthStateChanged(fb.auth, async function(user){
       resolved=true;
       try{ if(o.onUser) o.onUser(user||null); }catch(e){ console.warn(e); }
