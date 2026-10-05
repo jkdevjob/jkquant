@@ -68,6 +68,17 @@ function authorized(request,env){
   const got=request.headers.get("x-monitor-key")||"";
   return !!env.MONITOR_KEY&&got===env.MONITOR_KEY;
 }
+
+const KR_MARKET_DAY_CACHE=new Map();
+async function krMarketOpen(env,date){
+  if(KR_MARKET_DAY_CACHE.has(date))return KR_MARKET_DAY_CACHE.get(date);
+  const q=new URLSearchParams({op:"holiday",market:"kr",date:String(date).replace(/\D/g,"")});
+  const r=await fetch(baseUrl(env)+"/api/kis?"+q.toString(),{headers:{"accept":"application/json"}});
+  const j=await r.json().catch(()=>({}));
+  if(!r.ok||j.ok!==true||typeof j.open!=="boolean")throw new Error(j.error||("KRX holiday HTTP "+r.status));
+  KR_MARKET_DAY_CACHE.set(date,j.open);
+  return j.open;
+}
 async function throttleKis(){
   const wait=KIS_MIN_INTERVAL_MS-(Date.now()-lastKisAt);
   if(wait>0)await sleep(wait);
@@ -506,6 +517,17 @@ async function runScheduled(controller,env){
   if(!env.MONITOR_KEY)throw new Error("MONITOR_KEY secret missing");
   const scheduled=Number(controller.scheduledTime)||Date.now();
   const sched=kstParts(scheduled);
+
+  try{
+    if(!(await krMarketOpen(env,sched.date))){
+      console.log(JSON.stringify({type:"market_closed_skip",market:"KRX",date:sched.date,hm:sched.hm,strategy:"daytrading"}));
+      return;
+    }
+  }catch(e){
+    console.error(JSON.stringify({type:"market_day_unknown_skip",market:"KRX",date:sched.date,hm:sched.hm,strategy:"daytrading",error:String(e.message||e)}));
+    return;
+  }
+
   if(sched.hm===1535){ await sendDailySummary(env,sched.date); return; }
   const lag=Math.max(0,Date.now()-scheduled);
 
