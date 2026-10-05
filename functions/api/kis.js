@@ -355,6 +355,83 @@ export async function onRequestGet({ request, env }) {
       ready: modes.filter((m) => m.ready).map((m) => m.id),
     });
   }
+  if (op === "holiday") {
+    // 단타 실행 전 국내 주식시장이 실제 개장일인지 확인한다.
+    // KIS 공식 국내휴장일조회(CTCA0903R)의 opnd_yn 이 주문 가능 여부 기준이다.
+    const date = String(url.searchParams.get("date") || "").replace(/\D/g, "");
+    if (!/^\d{8}$/.test(date)) return json({ error: "날짜는 YYYYMMDD 형식입니다." }, 400);
+
+    const cacheUrl = new URL(request.url);
+    cacheUrl.search = "?op=holiday&market=kr&date=" + date;
+    const cacheKey = new Request(cacheUrl.toString(), { method: "GET" });
+    try {
+      const cache = globalThis.caches && globalThis.caches.default;
+      const hit = cache ? await cache.match(cacheKey) : null;
+      if (hit) return hit;
+    } catch (e) {}
+
+    const requested = String(url.searchParams.get("env") || "").toLowerCase();
+    const order = requested === "real" || requested === "vts"
+      ? [requested, requested === "real" ? "vts" : "real"]
+      : [wantEnv(null, rawEnv), wantEnv(null, rawEnv) === "real" ? "vts" : "real"];
+    const tried = [], errors = [];
+    for (const mode of [...new Set(order)]) {
+      const e = withEnv(rawEnv, mode, "kr");
+      if (!e.KIS_APPKEY || !e.KIS_APPSECRET) continue;
+      tried.push(mode);
+      try {
+        const token = await getToken(e);
+        const qs = new URLSearchParams({ BASS_DT: date, CTX_AREA_FK: "", CTX_AREA_NK: "" });
+        const j = await readJson(base(e) + "/uapi/domestic-stock/v1/quotations/chk-holiday?" + qs, {
+          headers: {
+            authorization: "Bearer " + token,
+            appkey: e.KIS_APPKEY,
+            appsecret: e.KIS_APPSECRET,
+            tr_id: "CTCA0903R",
+            custtype: "P",
+          },
+        });
+        if (String(j.rt_cd) !== "0") throw new Error(j.msg1 || j.msg_cd || "휴장일 조회 실패");
+        const rows = Array.isArray(j.output) ? j.output : (j.output ? [j.output] : []);
+        const row = rows.find(x => String(x && x.bass_dt || "") === date);
+        if (!row) throw new Error("응답에 기준일자가 없습니다.");
+        const open = String(row.opnd_yn || "").toUpperCase() === "Y";
+        const body = JSON.stringify({
+          ok: true,
+          market: "KRX",
+          date: date.slice(0,4) + "-" + date.slice(4,6) + "-" + date.slice(6,8),
+          open,
+          opndYn: String(row.opnd_yn || ""),
+          businessDay: String(row.bzdy_yn || ""),
+          tradeDay: String(row.tr_day_yn || ""),
+          settlementDay: String(row.sttl_day_yn || ""),
+          source: "KIS/CTCA0903R",
+          env: mode,
+        });
+        const response = new Response(body, { status: 200, headers: {
+          ...JH,
+          "Cache-Control": "public, max-age=3600, s-maxage=21600, stale-while-revalidate=86400",
+        }});
+        try {
+          const cache = globalThis.caches && globalThis.caches.default;
+          if (cache) await cache.put(cacheKey, response.clone());
+        } catch (e2) {}
+        return response;
+      } catch (e) {
+        errors.push(mode + ": " + String(e.message || e));
+      }
+    }
+    return json({
+      ok: false,
+      market: "KRX",
+      date: date.slice(0,4) + "-" + date.slice(4,6) + "-" + date.slice(6,8),
+      open: false,
+      unknown: true,
+      source: "KIS/CTCA0903R",
+      tried,
+      error: errors.join(" / ") || "사용 가능한 KIS 국내 시세 키가 없습니다.",
+    }, 502);
+  }
   // 시장은 code 로 정해진다 — 계좌가 시장별로 갈릴 수 있어 여기서 같이 넘긴다
   { const c = String(url.searchParams.get("code") || "").toUpperCase();
     const mk = url.searchParams.get("market") || (c ? (USSYM.test(c) ? "us" : "kr") : "");
