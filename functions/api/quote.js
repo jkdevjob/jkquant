@@ -231,42 +231,60 @@ async function yahooDaily(host, symbol, range, dbg, period1=null, period2=null, 
 }
 
 async function yahooIntraday(symbol, dbg) {
-  const u = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?interval=1m&range=1d&includePrePost=true`;
-  const r = await fetch(u, { headers: { "User-Agent": UA, "Accept": "application/json", "Referer": "https://finance.yahoo.com/" }, cf: { cacheTtl: 60 } });
-  dbg && dbg.push(`intraday: HTTP ${r.status}`);
-  if (!r.ok) throw new Error("HTTP " + r.status);
-  const j = await r.json();
-  const res = j && j.chart && j.chart.result && j.chart.result[0];
-  if (!res) throw new Error("empty");
-  const ts = res.timestamp || [];
-  const q = (res.indicators && res.indicators.quote && res.indicators.quote[0]) || {};
-  const O = q.open || [], H = q.high || [], L = q.low || [], C = q.close || [];
-  const meta = res.meta || {};
-  const tp = meta.currentTradingPeriod || {};
-  const regStart = tp.regular ? tp.regular.start : null, regEnd = tp.regular ? tp.regular.end : null;
-  const preStart = tp.pre ? tp.pre.start : null, postEnd = tp.post ? tp.post.end : null;
-  function agg(f) {
-    let o = null, h = -Infinity, l = Infinity, c = null, has = false;
-    for (let i = 0; i < ts.length; i++) { if (!f(ts[i])) continue; const ci = C[i]; if (ci == null) continue; if (!has) { o = O[i] != null ? O[i] : ci; has = true; } if (H[i] != null && H[i] > h) h = H[i]; if (L[i] != null && L[i] < l) l = L[i]; c = ci; }
-    if (!has) return null; return { o: +(+o).toFixed(2), h: +(+h).toFixed(2), l: +(+l).toFixed(2), c: +(+c).toFixed(2) };
+  let lastErr = null;
+  for (const host of ["query1", "query2"]) {
+    try {
+      const u = `https://${host}.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?interval=1m&range=1d&includePrePost=true`;
+      const r = await fetch(u, { headers: { "User-Agent": UA, "Accept": "application/json", "Referer": "https://finance.yahoo.com/" }, cf: { cacheTtl: 60 } });
+      dbg && dbg.push(`intraday ${host}: HTTP ${r.status}`);
+      if (!r.ok) throw new Error("HTTP " + r.status);
+      const j = await r.json();
+      const res = j && j.chart && j.chart.result && j.chart.result[0];
+      if (!res) throw new Error("empty");
+      const ts = res.timestamp || [];
+      const q = (res.indicators && res.indicators.quote && res.indicators.quote[0]) || {};
+      const O = q.open || [], H = q.high || [], L = q.low || [], C = q.close || [];
+      const meta = res.meta || {};
+      const tp = meta.currentTradingPeriod || {};
+      const regStart = tp.regular ? tp.regular.start : null, regEnd = tp.regular ? tp.regular.end : null;
+      const preStart = tp.pre ? tp.pre.start : null, postEnd = tp.post ? tp.post.end : null;
+      function agg(f) {
+        let o = null, h = -Infinity, l = Infinity, c = null, has = false;
+        for (let i = 0; i < ts.length; i++) { if (!f(ts[i])) continue; const ci = C[i]; if (ci == null) continue; if (!has) { o = O[i] != null ? O[i] : ci; has = true; } if (H[i] != null && H[i] > h) h = H[i]; if (L[i] != null && L[i] < l) l = L[i]; c = ci; }
+        if (!has) return null; return { o: +(+o).toFixed(2), h: +(+h).toFixed(2), l: +(+l).toFixed(2), c: +(+c).toFixed(2) };
+      }
+      const pre = (preStart != null && regStart != null) ? agg(t => t >= preStart && t < regStart) : null;
+      const regular = (regStart != null && regEnd != null) ? agg(t => t >= regStart && t < regEnd) : agg(() => true);
+      const post = (regEnd != null) ? agg(t => t >= regEnd && (postEnd == null || t < postEnd + 60)) : null;
+      const dateStr = ts.length ? new Date(ts[ts.length - 1] * 1000).toISOString().slice(0, 10) : null;
+      if (!pre && !regular && !post) throw new Error("empty intraday");
+      return { pre, regular, post, date: dateStr };
+    } catch (e) {
+      lastErr = e;
+      dbg && dbg.push(`intraday ${host}: ${e.message}`);
+    }
   }
-  const pre = (preStart != null && regStart != null) ? agg(t => t >= preStart && t < regStart) : null;
-  const regular = (regStart != null && regEnd != null) ? agg(t => t >= regStart && t < regEnd) : agg(() => true);
-  const post = (regEnd != null) ? agg(t => t >= regEnd && (postEnd == null || t < postEnd + 60)) : null;
-  const dateStr = ts.length ? new Date(ts[ts.length - 1] * 1000).toISOString().slice(0, 10) : null;
-  if (!pre && !regular && !post) return null;
-  return { pre, regular, post, date: dateStr };
+  throw lastErr || new Error("intraday unavailable");
 }
 
 async function yahooQuote(symbol, dbg) {
-  const u = `https://query1.finance.yahoo.com/v7/finance/quote?symbols=${encodeURIComponent(symbol)}`;
-  const r = await fetch(u, { headers: { "User-Agent": UA, "Accept": "application/json", "Referer": "https://finance.yahoo.com/" }, cf: { cacheTtl: 30 } });
-  dbg && dbg.push(`yahooQuote: HTTP ${r.status}`);
-  if (!r.ok) throw new Error("HTTP " + r.status);
-  const j = await r.json();
-  const q = j && j.quoteResponse && j.quoteResponse.result && j.quoteResponse.result[0];
-  if (!q) throw new Error("empty");
-  return { price: q.regularMarketPrice != null ? +q.regularMarketPrice : null, marketState: q.marketState || null };
+  let lastErr = null;
+  for (const host of ["query1", "query2"]) {
+    try {
+      const u = `https://${host}.finance.yahoo.com/v7/finance/quote?symbols=${encodeURIComponent(symbol)}`;
+      const r = await fetch(u, { headers: { "User-Agent": UA, "Accept": "application/json", "Referer": "https://finance.yahoo.com/" }, cf: { cacheTtl: 30 } });
+      dbg && dbg.push(`yahooQuote ${host}: HTTP ${r.status}`);
+      if (!r.ok) throw new Error("HTTP " + r.status);
+      const j = await r.json();
+      const q = j && j.quoteResponse && j.quoteResponse.result && j.quoteResponse.result[0];
+      if (!q) throw new Error("empty");
+      return { price: q.regularMarketPrice != null ? +q.regularMarketPrice : null, marketState: q.marketState || null };
+    } catch (e) {
+      lastErr = e;
+      dbg && dbg.push(`yahooQuote ${host}: ${e.message}`);
+    }
+  }
+  throw lastErr || new Error("quote unavailable");
 }
 
 // Stooq fallback
