@@ -72,6 +72,34 @@ console.log('[0-A] 공통 로그인·실시간 시세 의존성');
      /for \(const host of \["query1", "query2"\]\)/.test(yq)
      && /for \(const host of \["query1", "query2"\]\)/.test(yi)
      && /query2/.test(yq) && /query2/.test(yi));
+
+  const authFlow=extractFn(idx,'function initAuth(){');
+  const paperAuto=extractFn(idx,'function paperPageAuto()');
+  ok('로그인 핵심 경로는 프로필 기록을 기다리지 않고 DB 원장을 먼저 읽는다',
+     authFlow.indexOf("authStep='DB 원장 읽기'")>=0
+     && authFlow.indexOf('withTimeout(pullRemote(), 20000')>=0
+     && authFlow.indexOf('void withTimeout(touchProfile(user), 8000')>authFlow.indexOf('startApp()'));
+  ok('모의성과는 Firebase 원장 hydrate 전 임시 상태로 계산하지 않는다',
+     /!stateCloudHydrated/.test(paperAuto)
+     && /Firebase DB 원장을 불러온 뒤 모의성과를 계산합니다/.test(paperAuto));
+
+  const bw=idx.slice(idx.indexOf('(function bootWatchdog(){'),idx.indexOf('/* ── 시작: Firebase 준비되면 인증 시작',idx.indexOf('(function bootWatchdog(){')));
+  ok('부팅 워치독은 로그인된 사용자를 6초 만에 Google 로그인 화면으로 되돌리지 않는다',
+     /const user=window\.fb&&window\.fb\.auth&&window\.fb\.auth\.currentUser/.test(bw)
+     && /if\(user \|\| \(typeof authWired/.test(bw)
+     && /22000/.test(bw)
+     && /Firebase DB 다시 연결/.test(bw));
+
+  const accSrc=fs.readFileSync(path.join(__d,'jk-access.js'),'utf8');
+  const admitSrc=extractFn(accSrc,'async function admit(user, fb, o)');
+  const guardSrc=extractFn(accSrc,'function guard(fb, o)');
+  ok('공용 로그인 가드도 currentUser가 있으면 false sign-out 화면을 띄우지 않는다',
+     /var cu=fb\.auth&&fb\.auth\.currentUser/.test(guardSrc)
+     && /if\(cu\) show\('checking'/.test(guardSrc));
+  ok('관리자 승인 경로는 메뉴설정 원격 읽기를 기다리지 않고 앱을 먼저 연다',
+     /if\(isAdminEmail\(user\.email\)\)/.test(admitSrc)
+     && /setAdmin\(true\); hide\(\);/.test(admitSrc)
+     && /applyMenuConfig\(user,fb\)\.catch/.test(admitSrc));
 }
 
 // index 엔진
