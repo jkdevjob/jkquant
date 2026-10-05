@@ -1666,7 +1666,8 @@ function renderDailyStrategyResultsPayload(j,force=false){
   meta.textContent='기준일 '+esc(j.kstDate||'')+' · 갱신 '+stamp+(force?' · 새로고침 완료':'');
   return j;
 }
-async function loadDailyStrategyResults(force=false){
+async function loadDailyStrategyResults(force){
+  force=!!force;
   const body=$('daily_results_body'),meta=$('daily_results_meta'); if(!body)return null;
   const now=Date.now();
   if(!force&&DAILY_RESULTS_PAYLOAD&&now-DAILY_RESULTS_AT<DAILY_RESULTS_TTL_MS)
