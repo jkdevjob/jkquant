@@ -555,6 +555,17 @@ async function runGapdown(stage,controller,env){
   else await claudeKrClose(env,date,ms);            // 15:40 체결조회로 ①② 장부가 마감된 뒤 전략별 결과 → 전일·당일 요약
 }
 
+export const CLAUDE_CONFIG_KEY="main";
+export function claudeConfigEvent(b){
+  if(!b||typeof b!=="object")return null;
+  const tabs=["opening","daytrading","crypto","soxl"];
+  if(!tabs.includes(b.tab)||!b.version||typeof b.params!=="object"||!b.params||!/^\d{4}-\d{2}-\d{2}$/.test(String(b.effectiveFrom||""))||!b.promotedAt)return null;
+  const payload={tab:b.tab,version:String(b.version).slice(0,80),name:String(b.name||"").slice(0,120),rule:String(b.rule||"").slice(0,400),
+    params:b.params,effectiveFrom:String(b.effectiveFrom),promotedAt:String(b.promotedAt),prevVersion:String(b.prevVersion||""),by:String(b.by||"").slice(0,120),
+    basis:b.basis&&typeof b.basis==="object"?{labGeneratedAt:String(b.basis.labGeneratedAt||""),rank:+b.basis.rank||null,promotion:String(b.basis.promotion||"").slice(0,300)}:null};
+  return {id:"promote:"+payload.tab+":"+payload.promotedAt,date:CLAUDE_CONFIG_KEY,capturedAt:new Date().toISOString(),targetHm:0,strategy:"claude_main",stage:"promote",payload};
+}
+
 export default {
   async scheduled(controller,env,ctx){
     const at=Number(controller.scheduledTime)||Date.now();
@@ -602,6 +613,22 @@ export default {
       const date=u.searchParams.get("date")||kstParts().date;
       try{return json({ok:true,date,ledger:await readLedger(env,date,"claude")});}
       catch(e){return json({ok:false,error:String(e.message||e)},500);}
+    }
+    // 단타(클로드) 메인 전략 승격 기록 — 쌓기만 한다(같은 id 는 무시). 내용 검사는 Pages /api/claude-promote 가 소유자 확인과 함께 한다.
+    if(u.pathname==="/claude-config"){
+      if(!authorized(request,env))return json({ok:false,error:"unauthorized"},401);
+      try{
+        if(request.method==="POST"){
+          const b=await request.json().catch(()=>null);
+          const e=claudeConfigEvent(b);
+          if(!e)return json({ok:false,error:"invalid promote record"},400);
+          const r=await appendLedger(env,{scanId:e.id,date:CLAUDE_CONFIG_KEY,scheduledTime:Date.now(),capturedAt:e.capturedAt,targetHm:kstHm(Date.now()),
+            lagMs:0,partial:false,okShards:1,failed:[],quoteErrors:0,events:[e]},"claudecfg");
+          return json({ok:true,added:r.added,event:e});
+        }
+        const l=await readLedger(env,CLAUDE_CONFIG_KEY,"claudecfg");
+        return json({ok:true,events:((l&&l.events)||[]).map(x=>x.payload)});
+      }catch(e){return json({ok:false,error:String(e.message||e)},500);}
     }
     if(u.pathname==="/events"){
       if(!authorized(request,env))return json({ok:false,error:"unauthorized"},401);

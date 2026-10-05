@@ -1,6 +1,7 @@
 """Mutations for D-1 opening_gapdown_v1 (Python research + JS live path) and D-3 btc_dip24_v1.
 Each mutant must make test_opening_gapdown.py or test_opening_gapdown.mjs fail. Working files are not edited."""
 from pathlib import Path
+import os
 import shutil
 import subprocess
 import sys
@@ -39,13 +40,17 @@ PY = [
     ("paper overwrite", "claude_lab.py", "    if path.exists():\n        return False\n", "\n"),
     ("drift too early", "claude_lab.py", "if n < 20 or not exp", "if n < 1 or not exp"),
     ("gpt same window", "claude_lab.py", "window = [d for d in cal if start and d >= start]", "window = list(cal)"),
-    ("promotion too early", "claude_lab.py", "    if n < PROMOTE_MIN_TRADE_DAYS:\n", "    if n < 1:\n"),
-    ("promotion ignores mdd", "claude_lab.py", "and s_mdd >= o_mdd - 5:", ":"),
+    ("arena promote after 6 days", "claude_lab.py", "if days >= PROMOTE_DAYS and gate_ok(top) and main_row:", "if days >= PROMOTE_DAYS - 1 and gate_ok(top) and main_row:"),
+    ("arena promote same day", "claude_lab.py", "    eff = (date.fromisoformat(today) + timedelta(days=1)).isoformat()", "    eff = today"),
+    ("arena admits gate fail", "claude_lab.py", "                if not gate_ok(m):\n                    st[\"tried\"].append(ver)\n                    rejected += 1\n                    continue\n", ""),
+    ("arena bottom streak ignored", "claude_lab.py", "            if n and _span_days(s0, today) >= PROMOTE_DAYS - 1:", "            if False:"),
+    ("arena no key still posts", "claude_lab.py", "    if not key:\n        return dict(ok=False, due=True", "    if False:\n        return dict(ok=False, due=True"),
     ("week kr overlap not split", "claude_lab.py", '"opening_d1v2": lambda d: a["krWeight"] * (0.5 if d in both else 1.0),', '"opening_d1v2": lambda d: a["krWeight"],'),
     ("coin level lookahead", "claude_lab.py", 'level = Dd[pd][1] if p["level"] == "prevhigh"', 'level = Dd[d][1] if p["level"] == "prevhigh"'),
     ("coin trend lookahead", "claude_lab.py", "        trend = C[i - 1] > ma\n", "        trend = C[i] > ma\n"),
     ("coin stop removed", "claude_lab.py", "if any(x[2] <= stop for x in bars[k:]):", "if False:"),
-    ("soxl buy signal off", "claude_lab.py", "        elif r2 < p[\"rsiMax\"] and C[i] > ma:\n            pending = \"buy\"", "        elif r2 < p[\"rsiMax\"] and C[i] > ma and False:\n            pending = \"buy\""),
+    ("soxl buy signal off", "claude_lab.py", "        elif r2 < p[\"rsiMax\"] and (ma is None or C[i] > ma):", "        elif r2 < p[\"rsiMax\"] and (ma is None or C[i] > ma) and False:"),
+    ("soxl ma filter ignored", "claude_lab.py", "        elif r2 < p[\"rsiMax\"] and (ma is None or C[i] > ma):", "        elif r2 < p[\"rsiMax\"]:"),
     ("soxl max hold ignored", "claude_lab.py", 'if C[i] > C[i - 1] or pos["days"] >= p["maxHoldDays"]:', 'if C[i] > C[i - 1]:'),
     ("ledger pending as no-trade", "claude_lab.py", 'for d in kr_days if d > final_kr and d >= st("opening_d1v2") and d1_live_status(d) == "no_trade"]', 'for d in kr_days if d > final_kr and d >= st("opening_d1v2")]'),
     ("account ignores kr settle", "claude_lab.py", "    ends = [kr_settled_through(final_kr, etf_to, kr_days, st(\"account\")),", "    ends = [\"9999\","),
@@ -62,6 +67,7 @@ PY = [
     ("curves include future", "claude_lab.py", "            if d < start or d > today:\n", "            if d < start:\n"),
     ("dip hit minutes", "backtest_crypto_orb.py", "int((hit - entry_t).total_seconds() // 60) + 5", "int((hit - entry_t).total_seconds() // 60)"),
     ("gpt blank date crashes", "claude_lab.py", "        try:\n            v = float(r[col])", "        by.setdefault(r.get(\"date\"), [])\n        try:\n            v = float(r[col])"),
+    ("review holiday ignored", "claude_lab.py", " and not led and not krx_closed(today):", " and not led:"),
 ]
 JS = [
     ("base price first", "_gapdown.js", "const base=+(q&&q.basePrice)>0?+q.basePrice:+prevClose||0;", "const base=+prevClose||0;"),
@@ -71,24 +77,36 @@ JS = [
     ("buy deadline", "opening-gapdown.js", 'if(stage==="preopen")return hms>=85000&&hms<ORDER_DEADLINE;', 'if(stage==="preopen")return hms>=85000&&hms<93000;'),
     ("close window", "opening-gapdown.js", 'if(stage==="close")return hms>=152000&&hms<152800;', 'if(stage==="close")return hms>=150000&&hms<152800;'),
     ("fill split", "opening-gapdown.js", 'buy:agg(fills("02",83000,90000))', 'buy:agg(fills("02",83000,240000))'),
-    ("etf drop sign", "opening-gapdown.js", "if(dropPct>ETF_RULE.dropMaxPct)return", "if(dropPct<ETF_RULE.dropMaxPct)return"),
+    ("etf drop sign", "opening-gapdown.js", "if(dropPct>th)return", "if(dropPct<th)return"),
+    ("etf main threshold ignored", "opening-gapdown.js", "return {dropPct,...etfDecision(dropPct,R.rule.dropMaxPct)};", "return {dropPct,...etfDecision(dropPct)};"),
+    ("etf rule other code allowed", "opening-gapdown.js", "const ok=!!(cfg&&cfg.ok)&&m.params.code===ETF_RULE.code;", "const ok=!!(cfg&&cfg.ok);"),
     ("etf buy window", "opening-gapdown.js", 'if(stage==="etf_buy")return hms>=152000&&hms<152800;', 'if(stage==="etf_buy")return hms>=150000&&hms<152800;'),
     ("etf fill split", "opening-gapdown.js", 'return {closeBuy:agg(f("02",151500,240000)),openSell:agg(f("01",83000,90000))};', 'return {closeBuy:agg(f("02",0,240000)),openSell:agg(f("01",0,240000))};'),
     ("live fill over expected", "claude-live.js", "const buy=bf||p.expectedPrice||null", "const buy=p.expectedPrice||bf||null"),
     ("live coin ma lookahead", "claude-live.js", "slice(1,1+ma)", "slice(0,ma)"),
     ("live coin stop", "claude-live.js", "const stopped=bars.slice(i).some(x=>+x.low_price<=stop);", "const stopped=false;"),
-    ("live coin level today high", "claude-live.js", "level:+candles[1].high_price", "level:+candles[0].high_price"),
+    ("live coin level today high", "claude-live.js", "const avg=done.reduce((a,b)=>a+b,0)/ma,y=c[1];", "const avg=done.reduce((a,b)=>a+b,0)/ma,y=c[0];"),
     ("soxl live same-session", "claude-live.js", "const started=!!(sess&&sess.date>nx.basedOn&&sess.open>0);", "const started=!!(sess&&sess.open>0);"),
     ("telegram no-trade hidden", "claude-telegram.js", 'else L.push(dec.reason==="krx_holiday"?"🔒 국내 휴장일 — ①② 시세 조회·주문 없음":"① 갭하락 과매도 — 매매 없음 ("+(dec.reason||"조건 맞는 종목 없음")+")");', ''),
     ("telegram weekly stale shown", "claude-telegram.js", "||(extra.weekStart&&w.weekStart!==extra.weekStart)", ""),
     ("telegram weekly keep as candidate", "claude-telegram.js", 'if(x.promotion&&x.promotion.code==="candidate")cand.push', 'if(x.promotion)cand.push'),
-    ("today tab return is sum", "claude-live.js", "tabPct=v.length?sum/v.length:0;", "tabPct=sum;"),
+    ("today tab return is sum", "claude-live.js", "tabPct=uv.length?us/uv.length:0;", "tabPct=us;"),
     ("today kr not split", "claude-live.js", "if(o&&d&&!o.noTrade&&!d.noTrade)for", "if(false)for"),
-    ("today failed order counted", "claude-live.js", 'const ok=rows.filter(r=>r.status!=="주문 실패");', "const ok=rows;"),
-    ("today measurement counted", "claude-live.js", "    if(rows.length&&b&&!b.v2Signal){", "    if(false){"),
+    ("today failed order counted", "claude-live.js", 'const ok=use.filter(r=>r.status!=="주문 실패");', "const ok=use;"),
+    ("today measurement counted", "claude-live.js", "    if(rows.length&&b&&!counts){", "    if(false){"),
+    ("today main topK ignored", "claude-live.js", "use=counts?rows.filter(r=>keep.has(String(r.code))):rows;", "use=rows;"),
+    ("coin night breakout allowed", "claude-live.js", "    if(p.lastEntryHour!=null&&hh>=p.lastEntryHour&&kk<15)break;", ""),
+    ("coin vb level ignored", "claude-live.js", 'const level=p.level==="vb"?+c[0].opening_price+p.k*(+y.high_price-+y.low_price):+y.high_price;', "const level=+y.high_price;"),
+    ("coin main stop ignored", "claude-live.js", "stop=entry*(1-stopPct/100);", "stop=entry*(1-5/100);"),
+    ("main hold over 5 allowed", "_claude_main.js", "maxHoldDays: int(p.maxHoldDays, 1, 5)", "maxHoldDays: int(p.maxHoldDays, 1, 50)"),
+    ("main other etf allowed", "_claude_main.js", 'if (String(p.code) !== "233740") throw new Error', 'if (false) throw new Error'),
+    ("main future event used", "_claude_main.js", "if (e.tab === tab && (!date || e.effectiveFrom <= date)) best = e;", "if (e.tab === tab) best = e;"),
+    ("main invalid record kept", "_claude_main.js", "    } catch (err) { /* 검사에 떨어진 기록은 쓰지 않는다 */ }", "    } catch (err) { out.push({ tab: e.tab, version: String(e.version), effectiveFrom: e.effectiveFrom, promotedAt: \"\", params: e.params || {} }); }"),
     ("day coin uses bars after close", "_claude_day.js", "hourly = (c.hourly || []).filter(b => t(b) + 36e5 <= dayEnd);", "hourly = (c.hourly || []);"),
     ("day coin realized before day", "_claude_day.js", "if (exitMs >= dayStart && exitMs < dayEnd && (stopBar || bars.length === 24)) {", "if (exitMs < dayEnd && (stopBar || bars.length === 24)) {"),
-    ("day opening measurement counted", "_claude_day.js", "  if (v2) { r.trades = done; r.open = open; }\n  else r.measure = rows;", "  { r.trades = done; r.open = open; }"),
+    ("day opening measurement counted", "_claude_day.js", "v2 = b.qualified == null ? !!b.v2Signal : openingCounts(P, b.qualified);", "v2 = true;"),
+    ("day opening main topK ignored", "_claude_day.js", "const mine = rows.filter(x => keep.has(String(x.code))), extra = rows.filter(x => !keep.has(String(x.code)));", "const mine = rows, extra = [];"),
+    ("day coin market not in main", "_claude_day.js", "      if (!P.markets.includes(c.market)) continue;", ""),
     ("day opening no cost", "_claude_day.js", "const net = pct(sell.avgPrice, buy.avgPrice) - COST.kr;", "const net = pct(sell.avgPrice, buy.avgPrice);"),
     ("day soxl holiday ignored", "_claude_day.js", "if (!sess || sess.date !== nyDate) return", "if (!sess) return"),
     ("day no-trade message skipped", "_claude_day.js", '  } else L.push("거래 없음");', "  }"),
@@ -104,7 +122,8 @@ JS = [
 
 
 def run_py(folder):
-    r = subprocess.run([sys.executable, str(folder / "test_opening_gapdown.py")], capture_output=True, text=True, encoding="utf-8")
+    r = subprocess.run([sys.executable, str(folder / "test_opening_gapdown.py")], capture_output=True, text=True, encoding="utf-8",
+                       env=dict(os.environ, JKQ_API_DIR=str(API)))
     return r.returncode != 0 and "FAILED (" in r.stderr, r.stderr[-800:]
 
 
@@ -128,7 +147,7 @@ for label, filename, before, after in PY:
 for label, filename, before, after in JS:
     with tempfile.TemporaryDirectory() as tmp:
         folder = Path(tmp)
-        for name in ("_gapdown.js", "opening-gapdown.js", "claude-live.js", "claude-telegram.js", "_claude_day.js", "_claude_auth.js", "claude-lab.js", "_krx_calendar.js"):
+        for name in ("_gapdown.js", "opening-gapdown.js", "claude-live.js", "claude-telegram.js", "_claude_day.js", "_claude_auth.js", "claude-lab.js", "_krx_calendar.js", "_claude_main.js"):
             shutil.copy(API / name, folder / name)
         path = folder / filename
         src = path.read_text(encoding="utf-8")

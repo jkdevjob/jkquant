@@ -6,10 +6,11 @@
 //  마감 장부는 Worker 가 Durable Object 에 한 번만 저장하고, 보냄·모름을 기록해 중복 발송을 막는다(재시도는 텔레그램이 거절한 경우만).
 import { ledger, quote } from "./claude-live.js";
 import { openingDay, etfDay, coinDay, soxlDay, composeDay, composeOverview } from "./_claude_day.js";
+import { MAIN_DEFAULT, loadMainEvents, mainFor, openingCounts } from "./_claude_main.js";
 
 const JH={"Content-Type":"application/json; charset=utf-8","Cache-Control":"no-store"};
 const RAW="https://raw.githubusercontent.com/jkdevjob/jkquant/scalping-data/data/";
-const KINDS=["preopen","etfbuy","weekly","duel"];
+const KINDS=["preopen","etfbuy","weekly","duel","promote"];
 const SX_ACT={enter:"시가 매수",hold:"보유",exit:"시가 매도",flat:"쉼"};
 const SX_NEXT={buy:"시가 매수 (과매도 신호)",sell:"시가 매도"};
 const PART={opening_d1v2:"① 시초가",daytrading_etf:"② ETF 야간",crypto_btc:"③ BTC",crypto_eth:"③ ETH",us_soxl:"④ SOXL"};
@@ -45,7 +46,9 @@ export function compose(kind,date,live,extra={}){
     L.push("🤖 [클로드 단타] "+date+" 08:59 시초가");
     const dec=o.decision||{},b=dec.breadth;
     if((o.rows||[]).length){
-      L.push("① 갭하락 과매도 — 모의 매수 "+o.rows.length+"종목"+(b?" (통과 "+b.qualified+"개 · v2 매매일 "+(b.v2Signal?"예":"아니오")+")":""));
+      const M=o.main||mainFor([],"opening"),isDef=M.version===MAIN_DEFAULT.opening.version;
+      const cnt=b?(b.qualified==null?!!b.v2Signal:openingCounts(M.params,b.qualified)):false;
+      L.push("① 갭하락 과매도 — 모의 매수 "+o.rows.length+"종목"+(b?" (통과 "+b.qualified+"개 · "+(isDef?"v2":"메인")+" 매매일 "+(cnt?"예":"아니오")+")":""));
       for(const r of o.rows)L.push(" · "+r.name+" "+n(r.buyPrice)+(r.buyPriceKind==="예상"?"(예상)":"")+" 갭 "+p(r.expectedGapPct)+(r.status==="주문 실패"?" ⚠️주문 실패":""));
       L.push("→ 15:30 종가 동시호가에 매도");
     }else L.push(dec.reason==="krx_holiday"?"🔒 국내 휴장일 — ①② 시세 조회·주문 없음":"① 갭하락 과매도 — 매매 없음 ("+(dec.reason||"조건 맞는 종목 없음")+")");
@@ -53,8 +56,15 @@ export function compose(kind,date,live,extra={}){
   }else if(kind==="etfbuy"){
     L.push("🤖 [클로드 단타] "+date+" 15:21 데이트레이딩");
     const buy=(d.rows||[]).find(x=>String(x.buyTime||"").startsWith("오늘"))||(d.rows||[]).find(x=>x.status==="매매 없음");
-    if(buy&&buy.status!=="매매 없음")L.push("② 코스닥150 레버리지 −3% 이하 → 종가 모의 매수 "+n(buy.buyPrice)+" ("+buy.status+") → 내일 시가 매도");
-    else L.push("② 매매 없음 — "+((buy&&buy.note)||"예상 하락이 −3% 이내"));
+    const th=String(((d.main||{}).params||MAIN_DEFAULT.daytrading.params).th).replace("-","−");
+    if(buy&&buy.status!=="매매 없음")L.push("② 코스닥150 레버리지 "+th+"% 이하 → 종가 모의 매수 "+n(buy.buyPrice)+" ("+buy.status+") → 내일 시가 매도");
+    else L.push("② 매매 없음 — "+((buy&&buy.note)||"예상 하락이 "+th+"% 이내"));
+  }else if(kind==="promote"){
+    const ev=extra.event||{};
+    L.push("🔁 [클로드 단타] "+(TABN[ev.tab]||"")+" 메인 전략 자동 교체 ("+date+")");
+    L.push((ev.prevVersion||"?")+" → "+(ev.name||ev.version||"?"));
+    L.push("근거: "+((ev.basis||{}).promotion||"7일 연속 1위"));
+    L.push(ev.effectiveFrom+" 부터 주문·장부·텔레그램 모두 새 메인 규칙");
   }else if(kind==="duel"){
     L.push(duelLines(extra.duel,"🆚 [클로드 vs GPT] "+date+" 대결"));
   }else if(kind==="weekly"){
@@ -107,12 +117,17 @@ async function krOpenOn(origin,date){
   return o.length?o[o.length-1].date===date:null;
 }
 export async function closeDay(origin,env,strategy,date){
+  const cfg=await loadMainEvents(env);                       // 그날 메인 전략(승격 기록). 못 읽으면 기본 메인 — 장부에 그 사실을 남긴다
+  const tag=r=>r&&Object.assign(r,cfg.ok?{}:{mainWarn:"메인 기록 읽기 실패("+cfg.error+") — 기본 메인으로 계산"});
+  return tag(await closeDay0(origin,env,strategy,date,cfg.events));
+}
+async function closeDay0(origin,env,strategy,date,events){
   if(strategy==="opening"){
     const l=await ledger(env,date);
     const st=Object.fromEntries(((l&&l.events)||[]).map(e=>[e.stage,e.payload||{}]));
     const open=((((st.reconcile||{}).positions)||[]).filter(p=>p.buy&&p.buy.qty>0&&!(p.sell&&p.sell.qty>0))).map(p=>p.code);
     const marks={};for(const c of open){const q=await quote(origin,c);if(q)marks[c]=q.price;}
-    return openingDay(date,l,await krOpenOn(origin,date),marks);
+    return openingDay(date,l,await krOpenOn(origin,date),marks,mainFor(events,"opening",date));
   }
   if(strategy==="daytrading"){
     const l=await ledger(env,date);let prev=null,pd=null;
@@ -121,13 +136,14 @@ export async function closeDay(origin,env,strategy,date){
   }
   if(strategy==="crypto"){
     const end=Date.parse(date+"T00:00:00+09:00")+864e5,to=new Date(end).toISOString().replace(".000Z","Z");   // 마감(00:00) 전 자료만
-    const coins=[];
+    const coins=[],mainOn=ud=>mainFor(events,"crypto",ud);
+    const maxMa=Math.max(mainOn(date).params.ma,mainOn(new Date(Date.parse(date+"T12:00:00Z")-864e5).toISOString().slice(0,10)).params.ma);
     for(const m of ["KRW-BTC","KRW-ETH"]){
-      const [daily,hourly]=await Promise.all(["days?market="+m+"&count=25&to="+to,"minutes/60?market="+m+"&count=60&to="+to].map(q=>
+      const [daily,hourly]=await Promise.all(["days?market="+m+"&count="+Math.min(200,maxMa+5)+"&to="+to,"minutes/60?market="+m+"&count=60&to="+to].map(q=>
         fetch("https://api.upbit.com/v1/candles/"+q,{headers:{Accept:"application/json"}}).then(r=>r.json())));
       coins.push({market:m,daily,hourly});
     }
-    return coinDay(date,coins,end);
+    return coinDay(date,coins,end,mainOn);
   }
   if(strategy==="soxl"){
     const lab=await fetch(RAW+"claude-lab/latest.json?t="+Date.now()).then(r=>r.ok?r.json():null).catch(()=>null);
@@ -171,12 +187,14 @@ export async function onRequestPost({request,env}){
   }
   const kind=String(b.kind||""),date=String(b.date||"");
   if(!KINDS.includes(kind)||!/^\d{4}-\d{2}-\d{2}$/.test(date))return json({ok:false,error:"kind/date 오류"},400);
-  if(!(await claim("claude:"+date+":"+kind)))return json({ok:true,duplicate:true});
+  if(kind==="promote"&&!(b.event&&TABN[b.event.tab]))return json({ok:false,error:"event 오류"},400);
+  if(!(await claim("claude:"+date+":"+kind+(kind==="promote"?":"+b.event.tab:""))))return json({ok:true,duplicate:true});
   try{
     const origin=new URL(request.url).origin;
     const live=await fetch(origin+"/api/claude-live",{headers:{Accept:"application/json","x-monitor-key":String(env.OPENING_MONITOR_KEY||env.AUTOTRADE_KEY||"").trim()}}).then(r=>r.json()).catch(()=>null);
     const extra={};
     if(kind==="duel")extra.duel=b.duel;
+    if(kind==="promote")extra.event=b.event;
     if(kind==="weekly"){
       extra.lab=await fetch(RAW+"claude-lab/latest.json?t="+Date.now()).then(r=>r.ok?r.json():null).catch(()=>null);
       extra.weekStart=mondayOf(date);

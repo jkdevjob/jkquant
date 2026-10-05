@@ -55,7 +55,7 @@ table.doc td{padding:6px 6px}
   <div class="gnote"><a href="/" style="color:var(--faint)">← 운영 화면으로</a></div>
 </div></div>
 <header><div class="wrap"><div class="htop">
-  <div><div class="kicker">Claude Scalping</div><h1>JK <span class="v">퀀트</span> 단타 <span class="ver" id="clVer">v2.10.4</span></h1></div>
+  <div><div class="kicker">Claude Scalping</div><h1>JK <span class="v">퀀트</span> 단타 <span class="ver" id="clVer">v2.11.0</span></h1></div>
   <div class="hright">
     <div class="userbadge" id="userbadge"></div>
   <div class="jkmenu" id="jkmenuWrap">
@@ -137,8 +137,11 @@ var DOC={
 };
 function sec(title,inner,open,id){return "<details class='card sec'"+(open?" open":"")+(id?" id='"+id+"'":"")+"><summary><h3 style='display:inline'>"+title+"</h3></summary><div style='margin-top:8px'>"+inner+"</div></details>"}
 function docRow(k,v){return "<tr><td style='width:96px;color:var(--gold);font-weight:800;vertical-align:top'>"+k+"</td><td style='white-space:normal;text-align:left'>"+esc(v)+"</td></tr>"}
+function mainBanner(tab){var a=arenaOf(tab),m=(((J.lab||{}).main||{})[tab]||{}).current;
+  if(!m||!m.effectiveFrom)return "";                             // 처음 채택한 기본 메인이면 아래 설명 그대로
+  return "<div class='warn' style='margin-bottom:8px'>🏆 지금 메인은 자동 승격된 <b>"+esc(m.name)+"</b> ("+esc(m.effectiveFrom)+" 부터) — "+esc(m.rule||"")+"<br>아래 설명은 처음 채택한 기본 전략 기준입니다. 바뀐 변수는 ⑥ 전략 경쟁 표에서 확인하세요.</div>";}
 function docCard(tab){var d=DOC[tab];if(!d)return "";
-  return sec("① 전략 · 종목 선정 규칙 — "+esc(d.title),"<div class='rule'>"+esc(d.what)+"</div><div class='tw'><table class='board doc'><tbody>"+docRow("종목 선정",d.pick)+docRow("자금",d.money)+docRow("근거",d.proof)+"</tbody></table></div>",true);}
+  return sec("① 전략 · 종목 선정 규칙 — "+esc(d.title),mainBanner(tab)+"<div class='rule'>"+esc(d.what)+"</div><div class='tw'><table class='board doc'><tbody>"+docRow("종목 선정",d.pick)+docRow("자금",d.money)+docRow("근거",d.proof)+"</tbody></table></div>",true);}
 function buyCard(tab){var d=DOC[tab];if(!d)return "";
   return sec("③ 매수 타이밍","<div class='tw'><table class='board doc'><tbody>"+docRow("매수",d.buy)+docRow("시간표",d.times)+"</tbody></table></div>",true);}
 function sellCard(tab){var d=DOC[tab];if(!d)return "";
@@ -157,7 +160,7 @@ function opsBoard(tab){
     (td.noTrade?k("오늘 칸 수익률",NOTRADE,"계좌 기여 0 · "+esc(td.why||"")):
       k("오늘 칸 수익률",pct(td.tabPct),"개별 매매 합계 "+pct(td.sumPct)+" · 거래 "+td.trades+"건 · 계좌 기여 "+pct(td.accountPct)+" (×"+Math.round(td.weight*100)+"%)",cls(td.tabPct)));
   var cum=keys.map(function(kk){var q=sm[kk]||{};return (keys.length>1?esc((PNAME[kk]||kk).split(" ")[0])+" ":"")+"매매 "+(q.tradeDays||0)+"일 · 승 "+(q.tradeDays?Math.round((q.winDays||0)/q.tradeDays*100)+"%":"—")+" · 평균 "+(q.avgTradePct==null?"—":pct(q.avgTradePct))}).join("<br>");
-  var shTxt=sh.map(function(x){var o=x.outOfSample||{},pr=x.promotion||{};return (pr.code==="candidate"?"⭐ ":"")+esc(x.name)+": "+(o.tradeDays||0)+"/20일 · 평균 "+pct(o.expectancyPct)+" · PF "+(o.profitFactor==null?"—":num(o.profitFactor))+" · +1%일 "+(o.plus1Days||0)}).join("<br>");
+  var az=arenaOf(tab),shTxt=az?arenaStatus(az)+" · 그림자 "+(az.poolSize||0)+"개":"";
   var rem=acc.weekPct==null?null:Math.max(0,5-acc.weekPct);
   return "<div class='card ops'><h3>🧭 전략 운영판</h3><div class='sub'>기준전략 <b>"+esc(c.strategyVersion||"—")+"</b> · "+esc(MARKET[tab]||"")+" · "+esc(EXEC[tab]||"")+"</div>"+
     "<div class='why'>📝 오늘: "+esc(td?td.why:"—")+"</div>"+
@@ -165,7 +168,7 @@ function opsBoard(tab){
       k("누적 모의 (10/1~)",z.totalPct==null?"—":pct(z.totalPct,1),cum+"<br>"+esc((z.status||{}).text||""),cls(z.totalPct))+
       k("이번 주 (월~)",pct(wcon),"이 칸 계좌 기여 · 계좌 주간 "+pct(acc.weekPct)+(rem==null?"":rem>0?" · +5%까지 "+num(rem)+"%p":" · +5% 달성 ✅"),cls(wcon))+
     "</div>"+
-    (shTxt?"<div class='sub' style='margin-top:8px'>🧪 그림자 판정 표본(10/1~, 매매 20일 전에는 교체 안 함)<br>"+shTxt+"</div>":"")+
+    (shTxt?"<div class='sub' style='margin-top:8px'>🏁 전략 경쟁: "+shTxt+" — 자세히는 ⑥</div>":"")+
     "<div class='sub' style='margin-top:6px'>데이터: 장부 마지막 "+esc(z.last||"—")+" · 밤 계산 "+esc(String((J.lab||{}).generatedAt||"").slice(5,16).replace("T"," "))+" · 장중 "+(LIVE&&LIVE.asOf?kstTime(LIVE.asOf):"—")+" (1분마다 자동 갱신)</div></div>";
 }
 function planCard(tab,T,wl){
@@ -182,26 +185,21 @@ function promoBadge(pr){
   return "<div class='"+(pr.code==="candidate"?"win":"sub")+"' style='margin:2px 0 4px'>"+(pr.code==="candidate"?"⭐ ":pr.code==="keep"?"· ":"⏳ ")+esc(pr.text||"")+"</div>";
 }
 function weekCard(){
-  var w=(J.lab||{}).week,wr=(J.lab||{}).weekRecon,recon=false;if(!w&&!wr)return "";
-  var has=function(x){return x&&!x.error&&((x.account||{}).days||0)>0};        // 계좌 장부가 시작되기 전엔 재구성 값을 보인다
-  if(!has(w)&&has(wr)){w=wr;recon=true}
-  if(!w)return "";
+  var w=(J.lab||{}).week;if(!w)return "";      // 실제 장부만(규칙 재구성 값은 보이지 않는다)
   if(w.error)return "<div class='card'><h3>🗓 이번 주 결과</h3><div class='warn'>"+esc(w.error)+"</div></div>";
   var a=w.account||{},P=w.parts||{},N={opening_d1v2:"① 시초가 (국내)",daytrading_etf:"② ETF 야간 (국내)",coin_bo_btc:"③ BTC",coin_bo_eth:"③ ETH",us_soxl:"④ SOXL (미국)"};
   var rows=Object.keys(N).map(function(k){var z=P[k]||{},nt=!(z.tradeDays>0);return "<tr><td class='nm'>"+esc(N[k])+"</td>"+(nt?"<td colspan='2'>"+NOTRADE+"</td>":"<td class='"+cls(z.contribPct)+"'><b>"+pct(z.contribPct)+"</b></td><td class='"+cls(z.weekPct)+"'>"+pct(z.weekPct,1)+"</td>")+"<td>"+(z.tradeDays||0)+"<span class='sub'>/"+(z.days||0)+"일</span></td><td class='sub'>"+(z.through?esc(z.through.slice(5)):"—")+"</td></tr>"}).join("");
   var cand=[];Object.keys((J.lab||{}).shadows||{}).forEach(function(t){var r=J.lab.shadows[t];(Array.isArray(r)?r:[]).forEach(function(x){if(x.promotion&&x.promotion.code==="candidate")cand.push(x.name+" — "+x.promotion.text)})});
-  return "<div class='card'><h3>🗓 이번 주 결과 ("+esc((w.weekStart||"").slice(5))+" ~ "+esc((w.asOf||"").slice(5))+")"+(recon?" <span class='tag'>규칙대로 재구성</span>":"")+"</h3>"+
-    (recon?"<div class='warn' style='margin-top:6px'>모의 장부가 아직 비어 있어(새 전략 채택 10/2) 같은 규칙으로 다시 계산한 값을 보여 줍니다. 장부가 쌓이면 자동으로 장부 값으로 바뀝니다.</div>":"")+
+  return "<div class='card'><h3>🗓 이번 주 결과 ("+esc((w.weekStart||"").slice(5))+" ~ "+esc((w.asOf||"").slice(5))+")"+"</h3>"+
     "<div class='sub'>"+esc(w.note||"")+" 매주 토요일 09:05 텔레그램으로도 보냅니다.</div>"+
     "<div class='kpis'><div class='kpi'><div class='l'>🏦 계좌 주간</div><div class='v "+cls(a.weekPct)+"'>"+pct(a.weekPct)+"</div><div class='sub'>목표 +5% "+(a.hit5?"달성 ✅":"까지 "+num(Math.max(0,5-(a.weekPct||0)))+"%p")+"</div></div>"+
-    "<div class='kpi'><div class='l'>+1% 달성일</div><div class='v'>"+(a.plus1Days||0)+"<span class='sub'>/"+(a.days||0)+"일</span></div><div class='sub'>"+(recon?"재구성 · 확정된 날":"장부 확정분")+"</div></div></div>"+
+    "<div class='kpi'><div class='l'>+1% 달성일</div><div class='v'>"+(a.plus1Days||0)+"<span class='sub'>/"+(a.days||0)+"일</span></div><div class='sub'>장부 확정분</div></div></div>"+
     "<div class='tw'><table class='board'><thead><tr><th>칸</th><th>계좌 기여</th><th>칸 안 주간</th><th>매매일</th><th>~까지</th></tr></thead><tbody>"+rows+"</tbody></table></div>"+
     "<p class='note'>"+(cand.length?"⭐ 그림자 교체 후보: "+esc(cand.join(" / ")):"그림자 교체 후보 없음 — 판정 표본(10/1~) 매매 20일 이상 + 기준보다 누적이 높고 +1% 달성일이 적지 않고 MDD 가 5%p 넘게 나쁘지 않을 때만 후보로 띄웁니다. 자동으로 바꾸지 않습니다.")+"</p></div>";
 }
 // 📈 전략별 누적 수익률 추이 — 모의 장부(실제 기록) / 최근 60일 규칙 재구성(참고)을 나눠 보인다(섞지 않음)
 var TREND_C={opening_d1v2:"#3987e5",daytrading_etf:"#d95926",coin_bo:"#199e70",us_soxl:"#c98500",account:"#d55181"};
 var TREND_N={opening_d1v2:"① 시초가",daytrading_etf:"② 데이트레이딩",coin_bo:"③ 비트코인",us_soxl:"④ SOXL",account:"🏦 전체 계좌"};
-var TREND_MODE=null;
 function paperCurves(){
   var sm=((J.lab||{}).paper||{}).summary||{},out={};
   var tr=function(r){return r.action&&r.action!=="no_trade"&&r.action!=="flat"};
@@ -229,18 +227,14 @@ function trendSvg(series){                                   // 지피티 단타
   return "<div style='overflow-x:auto'><svg viewBox='0 0 "+W+" "+H+"' style='display:block;width:100%;min-width:620px;height:auto' role='img' aria-label='전략별 누적 수익률 추이'>"+g+"</svg></div>"+
     "<div class='row' style='gap:12px;margin-top:7px;font-size:11px'>"+leg+"</div>";
 }
-function trendBlock(){
-  var cv=(J.lab||{}).curves||{},pap=paperCurves(),rec=cv.series||{};
+function trendBlock(){                                       // 실제 모의투자 장부만 그린다(규칙 재구성 값은 쓰지 않는다)
+  var pap=paperCurves();
   var paperN=Object.keys(pap).reduce(function(a,k){return Math.max(a,(pap[k]||[]).length)},0);
   var paperTraded=Object.keys(pap).some(function(k){return (pap[k]||[]).some(function(p){return p.traded})});
-  if(!TREND_MODE)TREND_MODE=paperN>=2&&paperTraded?"paper":"recon";   // 모의 장부에 매매가 하나도 없으면 0% 평선뿐이라 재구성부터 보인다
-  var td=cv.tradeDays||{};Object.keys(rec).forEach(function(k){if(rec[k])rec[k].tradeDays=td[k]});
-  var sv=TREND_MODE==="paper"&&!paperTraded?null:trendSvg(TREND_MODE==="paper"?pap:rec);
-  var btn=function(m,l){return "<button class='seg"+(TREND_MODE===m?" on":"")+"' onclick='TREND_MODE=\""+m+"\";render()'>"+l+"</button>"};
-  var note=TREND_MODE==="paper"?"실제 모의투자 장부(날짜별 한 번 기록) 기준 · 칸 자금 100% · 코인은 두 코인 반반 · 매매 없는 날 0%.":esc(cv.note||"")+" · "+esc(cv.start||"")+" ~";
-  return "<div style='display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-bottom:8px'><b>📈 전략별 누적 결과 · 수익률 추이</b><span style='display:flex;gap:6px'>"+btn("paper","모의 장부 (10/1~)")+btn("recon","최근 60일 재구성 (참고)")+"</span></div>"+
-    (sv||"<p class='note'>"+(TREND_MODE==="paper"?(paperN>=2?"모의 장부("+paperN+"일)에 아직 매매가 한 번도 없어 모든 전략이 0%입니다 — 그래프는 첫 매매부터 그립니다.":"모의 장부에 그릴 만큼 쌓인 날이 아직 없습니다(코인·SOXL·계좌는 10/3 부터).")+" '최근 60일 재구성'에서 같은 규칙의 최근 흐름을 볼 수 있습니다.":"재구성 자료가 아직 없습니다.")+"</p>")+
-    "<p class='note'>"+note+" 점에 손가락을 대면 날짜별 값이 보입니다.</p>";
+  var sv=paperTraded?trendSvg(pap):null;
+  return "<div style='display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-bottom:8px'><b>📈 전략별 누적 결과 · 수익률 추이</b><span class='sub'>실제 모의투자 장부 (10/1~)</span></div>"+
+    (sv||"<p class='note'>"+(paperN>=1?"모의 장부("+paperN+"일)에 아직 확정된 매매가 없어 모든 전략이 0%입니다 — 그래프는 첫 매매가 장부에 기록되는 날부터 그립니다.":"모의 장부에 기록된 날이 아직 없습니다.")+"</p>")+
+    "<p class='note'>날짜별로 한 번 쓴 실제 모의투자 장부 기준 · 칸 자금 100% · 코인은 두 코인 반반 · 매매 없는 날 0%. 점에 손가락을 대면 날짜별 값이 보입니다.</p>";
 }
 // 🆚 GPT 대결 — 실시간 모의매매 기록끼리, 같은 시작일·같은 비용표. 색: 클로드 = 파랑, GPT = 주황(검증된 2색, 이름표 같이)
 var DUEL_C="#3987e5",DUEL_G="#d95926",DUEL_NAME={opening:"① 시초가",daytrading:"② 데이트레이딩",crypto:"③ 비트코인",soxl:"④ SOXL",total:"🏦 합계(4탭 균등)"};
@@ -317,12 +311,38 @@ function fairCard(tab){
     "<p class='note'>"+esc(f.note||"")+" 초록 = 더 나은 쪽(매매 수는 많다고 좋은 게 아니라 표시 안 함).</p>"+sum+
     "<div style='margin-top:10px'><b>날짜별</b></div><div class='tw'><table class='board'><thead><tr><th>날짜(청산)</th><th>🤖 클로드</th><th>GPT</th></tr></thead><tbody>"+(days||"<tr><td colspan='3' class='sub'>같은 기간 기록 없음</td></tr>")+"</tbody></table></div>"+det,true);
 }
+// 🏁 전략 경쟁 · 자동 개선 — 밤 계산(arena)이 순위 · 신규 투입 · 퇴출 · 7일 1위 자동 승격을 하고, 화면은 그 결과와 사유를 그대로 보인다
+var ARENA_KIND={new:["🆕","신규 투입","win"],retire:["🚪","퇴출","loss"],reject:["✋","투입 전 탈락","sub"],promote:["🏆","메인 승격","win"],promote_failed:["⚠️","승격 기록 실패","loss"]};
+function arenaOf(tab){return (((J.lab||{}).arena)||{})[tab]||null}
+function arenaStatus(z){
+  if(!z)return "전략 경쟁 계산 전";
+  var st=z.status||{},top=(z.rows||[])[0]||{};
+  return st.code==="main_top"?"🥇 지금 메인이 1위":st.code==="promoted"?"🏆 "+esc(st.text):
+    "🥇 1위 "+esc(top.name||z.top||"")+" · "+(st.days||0)+"/7일"+(st.code==="streak"?" (7일이면 다음 날부터 자동 메인)":st.code==="due"?" · 승격 조건 충족":st.code==="failed"?" · ⚠ "+esc(st.text):"");
+}
+function arenaLog(list,withTab){
+  return (list||[]).slice().reverse().map(function(x){var k=ARENA_KIND[x.kind]||["·",x.kind,"sub"];
+    return "<tr><td>"+esc(String(x.date||"").slice(5))+"</td>"+(withTab?"<td>"+esc(({opening:"①",daytrading:"②",crypto:"③",soxl:"④"})[x.tab]||"")+"</td>":"")+
+      "<td class='"+k[2]+"' style='white-space:nowrap'>"+k[0]+" "+k[1]+"</td><td style='white-space:normal;text-align:left'>"+(x.name?"<b>"+esc(x.name)+"</b> ":"")+"<span class='sub'>"+esc(x.reason||"")+"</span></td></tr>"}).join("");
+}
 function shadowCard(tab){
-  var sh=((J.lab||{}).shadows||{})[tab]||[],t=(J.lab.tabs||{})[tab]||{},c=t.claude||{};
-  var rows=goalRow("★ 기준 · "+(c.strategyVersion||""),c.design)+sh.map(function(x){return x.error?"<tr><td colspan='9' class='sub'>"+esc(x.error)+"</td></tr>":goalRow("🧪 "+x.name,x.design)}).join("");
-  var oos=goalRow("★ 기준",c.outOfSample)+sh.filter(function(x){return !x.error}).map(function(x){return goalRow((x.promotion&&x.promotion.code==="candidate"?"⭐ ":"🧪 ")+x.name,x.outOfSample)}).join("");
-  var rules=sh.filter(function(x){return x.rule}).map(function(x){return "<li><b>"+esc(x.name)+"</b> — "+esc(x.rule)+" <span class='sub'>("+esc(x.version||"")+")</span>"+promoBadge(x.promotion)+"</li>"}).join("");
-  return sec("⑥ 그림자 전략 · 교체 판정","<div class='sub'>기준전략과 같은 기준으로 나란히 기록하는 비교용 전략(주문 없음). 판정용 표본(10/1~)에서 매매 20일 이상 쌓이고 기준보다 나으면 ⭐ 교체 후보로 표시하고, 검토 후에만 새 버전으로 바꿉니다(자동 교체 없음).</div><ul class='sub' style='margin:6px 0 0 18px;padding:0'>"+rules+"</ul>"+goalTable("설계 표본",rows)+goalTable("판정용 (10/1~)",oos),false);
+  var z=arenaOf(tab);
+  if(!z)return sec("⑥ 전략 경쟁 · 자동 개선","<p class='note'>밤 계산이 아직 전략 경쟁을 돌리지 않았습니다.</p>",false);
+  var wk=function(m){return m&&m.weeklyAvgPct!=null?pct(m.weeklyAvgPct,3):"—"};
+  var rows=(z.rows||[]).map(function(r){var f=r.full||{},y=r.year||{},d=r.d90||{},o=r.oos||{},pr=r.promotion||{};
+    var tag=r.isMain?"<span class='tag' style='color:var(--gold)'>메인</span>":r.isNew?"<span class='tag'>신규</span>":"";
+    var star=pr.code==="candidate"?"🥇 ":"";
+    return "<tr><td>"+r.rank+"</td><td class='nm' style='text-align:left'>"+star+esc(r.name)+tag+"<div class='sub'>"+esc(r.rule||"")+"</div></td><td class='"+cls(r.score)+"'><b>"+pct(r.score,3)+"</b></td>"+
+      "<td class='"+cls(y.totalPct)+"'>"+pct(y.totalPct,1)+"</td><td class='"+cls(d.totalPct)+"'>"+pct(d.totalPct,1)+"</td><td>"+mddTxt(f.mddPct)+"</td>"+
+      "<td>"+num(f.tradeDaysPerYear,0)+"</td><td>"+num(f.plus1DaysPerYear,0)+"</td><td>"+(o.tradeDays?pct(o.totalPct,1)+"<span class='sub'> ("+o.tradeDays+"일)</span>":"<span class='sub'>—</span>")+"</td></tr>"}).join("");
+  var lg=arenaLog(z.log,false);
+  return sec("⑥ 전략 경쟁 · 자동 개선 (메인 + 그림자 "+(z.poolSize||0)+"개)",
+    "<div class='why'>"+arenaStatus(z)+"</div>"+
+    "<div class='sub'>메인: <b>"+esc(z.mainName||z.main)+"</b>"+(z.effectiveFrom?" ("+esc(z.effectiveFrom)+" 부터)":" (처음 채택)")+" · 오늘 신규 "+(z.added||[]).length+" · 퇴출 "+(z.retiredToday||[]).length+" · 지금까지 시험한 후보 "+((z.triedCount||0)+(z.rows||[]).length)+"개 · 계산 "+esc(String((J.lab||{}).generatedAt||"").slice(5,16).replace("T"," "))+"</div>"+
+    "<div class='tw'><table class='board'><thead><tr><th>순위</th><th style='text-align:left'>전략 · 규칙</th><th>점수<div class='sub'>주 평균</div></th><th>최근 1년</th><th>최근 90일</th><th>MDD</th><th>매매일/년</th><th>+1%일/년</th><th>10/1~ 구간</th></tr></thead><tbody>"+rows+"</tbody></table></div>"+
+    "<div style='margin-top:10px'><b>📝 최근 개선 내역 · 사유</b></div>"+
+    (lg?"<div class='tw'><table class='board'><tbody>"+lg+"</tbody></table></div>":"<p class='note'>아직 기록이 없습니다.</p>")+
+    "<p class='note'>"+esc(z.rule||"")+" 모든 수치는 같은 함수 · 같은 비용(순수익)으로 계산합니다. 과거로 고른 결과라 과최적화 위험이 있어, 10/1~ 구간(규칙 채택 뒤 새 자료) 열로 계속 확인합니다.</p>",true);
 }
 // 장부가 빈 이유와 언제 채워지는지
 function emptyNote(k,z){
@@ -350,7 +370,7 @@ function reviewCard(tab){
     var extra=tab==="opening"&&h.opening?((h.opening.picks||[]).length?"매수: "+h.opening.picks.join(", "):"판단: "+(h.opening.reason||"")):tab==="daytrading"&&h.etf&&h.etf.buy?"15:21: "+h.etf.buy+(h.etf.drop!=null?" ("+pct(h.etf.drop)+")":""):"";
     return "<tr><td>"+esc(h.date)+"</td><td>"+resTxt+"</td><td style='white-space:normal;text-align:left'>"+esc(extra)+(h.issues&&h.issues.length?"<div class='loss'>"+esc(h.issues.join(" / "))+"</div>":"")+"</td><td>"+esc(h.verdict||"")+"</td></tr>"}).join("");
   var chg=cl.map(function(x){return "<li><b>"+esc(x.date)+"</b> "+esc(x.version)+" — "+esc(x.text)+"</li>"}).join("");
-  return sec("⑥ 매일 검증 · 분석 · 개선","<div class='sub'>매일 장 마감 뒤 자동 점검(주문 실패·기록 누락·연속 손실·기대 대비 실측)을 남기고, 평일 19:25 클로드가 결과를 보고 고칩니다. 규칙은 그림자 전략으로 먼저 검증한 뒤에만 새 버전으로 바꿉니다.</div>"+
+  return sec("⑦ 매일 검증 · 분석 · 개선","<div class='sub'>매일 장 마감 뒤 자동 점검(주문 실패·기록 누락·연속 손실·기대 대비 실측)을 남기고, 평일 19:25 클로드가 결과를 보고 고칩니다. 메인 교체는 ⑥ 전략 경쟁에서 같은 그림자가 7일 동안 매일 1위일 때 자동으로 합니다(다음 날부터, 이력·사유 기록).</div>"+
     (rows?"<div class='tw'><table class='board'><thead><tr><th>날짜</th><th>결과</th><th style='text-align:left'>내용</th><th>판정</th></tr></thead><tbody>"+rows+"</tbody></table></div>":"<p class='note'>아직 기록이 없습니다.</p>")+
     "<div style='margin-top:10px'><b>개선 이력</b></div><ul class='sub' style='margin:4px 0 0 18px;padding:0'>"+chg+"</ul>",false);
 }
@@ -460,7 +480,20 @@ function todayPage(lab){
     "<p class='note'>목표 표시는 각 전략 단독 기준 <b>일 +1%</b> 달성 여부입니다. 서로 다른 전략의 수익률은 단순 합산하지 않습니다(전체 계좌 합산은 🎯 전체 계좌 탭).<br><b>보유 원칙:</b> ①②③ 은 하루를 넘기지 않고, ④ SOXL 만 최대 5거래일까지 보유합니다. 6거래일 이상은 단타 전략에서 제외합니다.</p></div>"+
     "<div class='card'><h3><span class='dot'></span>📊 4전략 누적 상태 <span class='sub'>기준전략 · 성과 순위가 아니라 현재 측정값</span></h3>"+
     "<div class='tw'><table class='board'><thead><tr><th>전략</th><th>표본</th><th>승률</th><th>거래당</th><th>필요승률</th><th>엣지</th><th>검증상태</th></tr></thead><tbody>"+ov+"</tbody></table></div>"+
-    "<p class='note'>표본·승률·거래당은 설계 표본(백테스트, 매매일 단위) 값입니다. 승률 = 손실이 아닌 매매일 비율, 필요승률 = 평균 이익·손실로 본 손익분기 승률, 엣지 = 승률 − 필요승률. 검증상태는 10/1 부터 쌓는 모의투자 누적 매매일(20일이면 판정)입니다.</p></div>";
+    "<p class='note'>표본·승률·거래당은 설계 표본(백테스트, 매매일 단위) 값입니다. 승률 = 손실이 아닌 매매일 비율, 필요승률 = 평균 이익·손실로 본 손익분기 승률, 엣지 = 승률 − 필요승률. 검증상태는 10/1 부터 쌓는 모의투자 누적 매매일(20일이면 판정)입니다.</p></div>"+arenaOverview(lab);
+}
+function arenaOverview(lab){                                  // 📅 오늘 탭 — 탭별 지금 분석 상태 · 최근 개선 내역(전 탭)
+  var A=lab.arena||{},all=[];
+  var rows=TODAY_T.map(function(z){var a=A[z[0]];if(!a)return "<tr><td><b>"+z[2]+"</b></td><td colspan='3' class='sub'>계산 전</td></tr>";
+    (a.log||[]).forEach(function(x){all.push(x)});
+    return "<tr><td><b>"+z[2]+"</b></td><td class='nm' style='text-align:left'>"+esc(a.mainName||a.main)+"<div class='sub'>"+(a.effectiveFrom?esc(a.effectiveFrom)+" 부터":"처음 채택")+"</div></td><td class='nm' style='white-space:normal;text-align:left'>"+arenaStatus(a)+"</td><td>"+(a.poolSize||0)+"<span class='sub'> · 오늘 +"+(a.added||[]).length+"/−"+(a.retiredToday||[]).length+"</span></td></tr>"}).join("");
+  all.sort(function(a,b){return String(a.at||a.date).localeCompare(String(b.at||b.date))});
+  var lg=arenaLog(all.filter(function(x){return x.kind!=="reject"}).slice(-12),true);
+  return "<div class='card'><h3><span class='dot'></span>🔁 전략 분석 · 자동 개선 현황 <span class='sub'>밤 계산마다 순위 · 퇴출 · 신규 투입 · 7일 1위 자동 승격</span></h3>"+
+    "<div class='sub'>마지막 분석 "+esc(String(lab.generatedAt||"").slice(0,16).replace("T"," "))+" · 하루 세 번(18:40 · 23:40 · 07:30, GitHub 대기로 늦어질 수 있음)</div>"+
+    "<div class='tw'><table class='board'><thead><tr><th>전략</th><th style='text-align:left'>지금 메인</th><th style='text-align:left'>분석 상태</th><th>그림자</th></tr></thead><tbody>"+rows+"</tbody></table></div>"+
+    "<div style='margin-top:10px'><b>📝 최근 개선 내역 · 사유</b></div>"+(lg?"<div class='tw'><table class='board'><tbody>"+lg+"</tbody></table></div>":"<p class='note'>아직 기록이 없습니다.</p>")+
+    "<p class='note'>퇴출 = 손실 기준 미달 또는 7일 연속 하위 3위 · 신규 = 상위 전략 변수를 한 칸씩 바꾼 새 후보(손실 기준 통과만) · 승격 = 같은 그림자가 7일 동안 매일 1위면 다음 날부터 메인. 자세히는 각 탭 ⑥.</p></div>";
 }
 function refreshToday(){var m=document.getElementById("daily_results_meta");if(m)m.textContent="새로고침 중…";load();loadLive()}
 function render(){

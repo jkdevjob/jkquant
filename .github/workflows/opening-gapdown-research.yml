@@ -114,9 +114,26 @@ jobs:
           JKQ_GAPDOWN_LIVE: data/opening-gapdown-live
         run: python .app/scripts/backtest_etf_overnight.py
 
-      - name: 단타(클로드) 탭별 전략 + GPT 기준전략 같은 기간 비교
+      - name: 단타(클로드) 메인 전략 승격 기록 사본 (Worker claude-config — 쌓기만 하는 원본)
+        env:
+          KEY: ${{ secrets.AUTOTRADE_KEY }}
+          OPENING_WORKER: https://jkquant-opening-scheduler.mumae4.workers.dev
+        shell: bash
+        run: |
+          mkdir -p data/claude-lab
+          [ -n "$KEY" ] || { echo "::warning::AUTOTRADE_KEY 없음 — 승격 기록 사본 생략(지난 사본 또는 기본 메인)"; exit 0; }
+          STATUS=$(curl -sS --max-time 30 -o cl-config.json -w '%{http_code}' -H "x-monitor-key: $KEY" "$OPENING_WORKER/claude-config" || true)
+          if [ "$STATUS" = "200" ] && jq -e '.ok == true and (.events | type == "array")' cl-config.json >/dev/null 2>&1; then
+            jq '{ok, events, source:"cloudflare-opening-scheduler-claude-config"}' cl-config.json > data/claude-lab/main-config.json
+            echo "승격 기록 $(jq '.events | length' data/claude-lab/main-config.json)건"
+          else
+            echo "::warning::승격 기록 읽기 실패 HTTP $STATUS — 지난 사본(있으면)으로 계산"
+          fi
+
+      - name: 단타(클로드) 탭별 전략 + 전략 경쟁(자동 퇴출·신규 투입·7일 1위 자동 승격) + GPT 비교
         env:
           JKQ_DATA: data
+          JKQ_MONITOR_KEY: ${{ secrets.AUTOTRADE_KEY }}
         run: python .app/scripts/claude_lab.py
 
       - name: 저장
