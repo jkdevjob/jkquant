@@ -115,6 +115,10 @@ JS = [
     ("auth any token", "_claude_auth.js", "return !!email && ownersOf(env).includes(String(email).toLowerCase());", "return !!email;"),
     ("auth empty key", "_claude_auth.js", "return !!want && got === want;", "return got === want;"),
     ("watchlist whitelist", "opening-gapdown.js", "    if(!w)continue;\n", "    if(!w){out.push({...r});continue;}\n"),
+    ("token signature unchecked", "_firebase_token.js", '    if (!ok) return { ok: false, reason: "서명 불일치" };\n', ""),
+    ("token audience unchecked", "_firebase_token.js", 'if (p.aud !== projectId || p.iss !== "https://securetoken.google.com/" + projectId)', "if (false)"),
+    ("token expiry unchecked", "_firebase_token.js", "if (!(p.exp > nowSec) ||", "if (false &&"),
+    ("auth any verified email", "_claude_auth.js", "      if (v.ok) return v.email;", '      if (v.ok) return "jk82investing@gmail.com";'),
     ("krx holiday list ignored", "_krx_calendar.js", '  if (SET.has(d)) return { closed: true, reason: "krx_holiday", known: true };\n', ""),
     ("krx holiday telegram says order", "claude-telegram.js", 'L.push(dec.reason==="krx_holiday"?', 'L.push(false?'),
     ("krx holiday etf note", "claude-live.js", '}else if(buy.decisionReason==="krx_holiday")', '}else if(false)'),
@@ -147,7 +151,7 @@ for label, filename, before, after in PY:
 for label, filename, before, after in JS:
     with tempfile.TemporaryDirectory() as tmp:
         folder = Path(tmp)
-        for name in ("_gapdown.js", "opening-gapdown.js", "claude-live.js", "claude-telegram.js", "_claude_day.js", "_claude_auth.js", "claude-lab.js", "_krx_calendar.js", "_claude_main.js"):
+        for name in ("_gapdown.js", "opening-gapdown.js", "claude-live.js", "claude-telegram.js", "_claude_day.js", "_claude_auth.js", "claude-lab.js", "_krx_calendar.js", "_claude_main.js", "_firebase_token.js"):
             shutil.copy(API / name, folder / name)
         path = folder / filename
         src = path.read_text(encoding="utf-8")

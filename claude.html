@@ -55,7 +55,7 @@ table.doc td{padding:6px 6px}
   <div class="gnote"><a href="/" style="color:var(--faint)">← 운영 화면으로</a></div>
 </div></div>
 <header><div class="wrap"><div class="htop">
-  <div><div class="kicker">Claude Scalping</div><h1>JK <span class="v">퀀트</span> 단타 <span class="ver" id="clVer">v2.11.1</span></h1></div>
+  <div><div class="kicker">Claude Scalping</div><h1>JK <span class="v">퀀트</span> 단타 <span class="ver" id="clVer">v2.11.2</span></h1></div>
   <div class="hright">
     <div class="userbadge" id="userbadge"></div>
   <div class="jkmenu" id="jkmenuWrap">
@@ -587,28 +587,35 @@ async function load(){
 var ME=null;
 async function authHeaders(){var h={Accept:"application/json"};if(ME){try{h.Authorization="Bearer "+(await ME.getIdToken())}catch(e){}}return h}
 function gateShow(msg){document.getElementById("gate").style.display="flex";if(msg)document.getElementById("gate_sub").innerHTML=msg}
+// 소유자 확인 — 로그인 토큰 받기와 서버 확인을 따로 잰다(어느 쪽이 늦었는지 문구로 구분) · 서버 확인은 한 번 더 시도
+function withTimeout(p,ms,msg){var t;return Promise.race([p,new Promise(function(_,rej){t=setTimeout(function(){rej(new Error(msg))},ms)})]).finally(function(){clearTimeout(t)})}
 async function checkOwner(user){
-  var ctl=new AbortController(),timer=setTimeout(function(){ctl.abort()},8000);
-  try{
-    var r=await fetch("/api/owner",{cache:"no-store",signal:ctl.signal,headers:{Authorization:"Bearer "+(await user.getIdToken())}});
-    var j=await r.json();if(!r.ok||j.error)throw new Error(j.error||("HTTP "+r.status));return !!j.isOwner;
-  }finally{clearTimeout(timer)}
+  var tok=await withTimeout(user.getIdToken(),15000,"구글 로그인 토큰을 15초 안에 받지 못했습니다");
+  for(var a=0;a<2;a++){
+    var ctl=new AbortController(),timer=setTimeout(function(){ctl.abort()},10000);
+    try{
+      var r=await fetch("/api/owner",{cache:"no-store",signal:ctl.signal,headers:{Authorization:"Bearer "+tok}});
+      var j=await r.json();if(!r.ok||j.error)throw new Error(j.error||("HTTP "+r.status));return !!j.isOwner;
+    }catch(e){if(a===1||!(e&&e.name==="AbortError"))throw (e&&e.name==="AbortError")?new Error("권한 확인 서버가 10초씩 두 번 응답하지 않았습니다"):e}
+    finally{clearTimeout(timer)}
+  }
 }
 function googleLogin(){var e=document.getElementById("gate_err");e.textContent="";window.fb.signInWithPopup(window.fb.auth,window.fb.provider).catch(function(x){e.textContent=(x&&x.message)||"로그인 실패"})}
 function doLogout(){window.fb.signOut(window.fb.auth)}
-function boot(){
-  window.fb.onAuthStateChanged(window.fb.auth,async function(user){
+function boot(){window.fb.onAuthStateChanged(window.fb.auth,onUser)}
+async function onUser(user){{
     ME=user||null;var ub=document.getElementById("userbadge");
-    if(!user){if(ub)ub.innerHTML="";J=null;LIVE=null;document.getElementById("body").innerHTML="";try{if(window.JKAccess)JKAccess.setAdmin(false)}catch(e){}gateShow("이 화면은 <b>소유자 계정</b>만 볼 수 있습니다.");return}
+    if(!user){var gb=document.getElementById("gbtn");gb.textContent="Google로 로그인";gb.onclick=googleLogin;if(ub)ub.innerHTML="";J=null;LIVE=null;document.getElementById("body").innerHTML="";try{if(window.JKAccess)JKAccess.setAdmin(false)}catch(e){}gateShow("이 화면은 <b>소유자 계정</b>만 볼 수 있습니다.");return}
     var ok=false;
-    try{ok=await checkOwner(user)}catch(e){var er=document.getElementById("gate_err");if(er)er.textContent="권한 확인 응답이 없습니다. 새로고침하거나 다시 로그인해 주세요. ("+((e&&e.name)==="AbortError"?"8초 timeout":((e&&e.message)||e))+")";return}
+    try{ok=await checkOwner(user)}catch(e){gateShow();var er=document.getElementById("gate_err");if(er)er.textContent="권한 확인 실패 — "+((e&&e.message)||e)+". '다시 시도'를 눌러 주세요.";
+      var rb=document.getElementById("gbtn");rb.textContent="다시 시도";rb.onclick=function(){if(er)er.textContent="확인 중…";window.fb.auth.currentUser?onUser(window.fb.auth.currentUser):googleLogin()};return}
     if(!ok){try{if(window.JKAccess)JKAccess.setAdmin(false)}catch(e){}gateShow("<b>"+esc(user.email||"")+"</b> 계정에는 접근 권한이 없습니다.");var b=document.getElementById("gbtn");b.textContent="다른 계정으로 로그인";
       b.onclick=function(){window.fb.signOut(window.fb.auth).then(googleLogin)};return}
-    try{if(window.JKAccess){JKAccess.setAdmin(true);await JKAccess.applyMenuConfig(user,window.fb,{force:true})}}catch(e){console.warn("menu config",e)}
+    try{if(window.JKAccess){JKAccess.setAdmin(true);Promise.resolve(JKAccess.applyMenuConfig(user,window.fb,{force:true})).catch(function(e){console.warn("menu config",e)})}}catch(e){console.warn("menu config",e)}   // 메뉴 설정은 화면 열기를 막지 않는다
     document.getElementById("gate").style.display="none";
     if(ub)ub.innerHTML=(user.photoURL?"<img src=\""+esc(user.photoURL)+"\" alt=\"\">":"")+"<span>"+esc(user.displayName||user.email||"")+"</span> · <button class=\"lo\" onclick=\"doLogout()\">로그아웃</button>";
     load();
-  });
+  }
 }
 if(window.fb)boot();else window.addEventListener("fb-ready",boot);
 </script>

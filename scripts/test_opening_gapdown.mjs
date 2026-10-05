@@ -13,6 +13,7 @@ const AUTH = await import(pathToFileURL(path.join(dir, "_claude_auth.js")).href)
 const LAB = await import(pathToFileURL(path.join(dir, "claude-lab.js")).href);
 const KRX = await import(pathToFileURL(path.join(dir, "_krx_calendar.js")).href);
 const MAIN = await import(pathToFileURL(path.join(dir, "_claude_main.js")).href);
+const FT = await import(pathToFileURL(path.join(dir, "_firebase_token.js")).href);
 let n = 0;
 const pending = [];
 const t = (name, fn) => { const r = fn(); if (r && r.then) pending.push(r.then(() => { n++; })); else n++; };
@@ -112,6 +113,35 @@ t("worker: 휴장일엔 08:56 휴장 알림 한 번만 · 15:21/15:40 은 아예
   const f = new Function("krxDay", src.slice(a, b).replace("export ", "") + "\nreturn krHolidayAction;")(KRX.krxDay);
   assert.equal(f("preopen", "2026-10-09"), "notice"); assert.equal(f("close", "2026-10-09"), "skip"); assert.equal(f("reconcile", "2026-10-09"), "skip");
   assert.equal(f("preopen", "2026-10-08"), "run"); assert.equal(f("close", "2026-10-08"), "run");
+});
+t("로그인 토큰 서버 검증: 서명·프로젝트·만료·키를 직접 확인 · 공개키를 못 받으면 infra(예전 방식으로) · 소유자 판정에 그대로 쓰임", async () => {
+  const kp = await crypto.subtle.generateKey({ name: "RSASSA-PKCS1-v1_5", modulusLength: 2048, publicExponent: new Uint8Array([1, 0, 1]), hash: "SHA-256" }, true, ["sign", "verify"]);
+  const jwk = await crypto.subtle.exportKey("jwk", kp.publicKey);
+  const other = await crypto.subtle.generateKey({ name: "RSASSA-PKCS1-v1_5", modulusLength: 2048, publicExponent: new Uint8Array([1, 0, 1]), hash: "SHA-256" }, true, ["sign", "verify"]);
+  const b64 = o => Buffer.from(typeof o === "string" ? o : JSON.stringify(o)).toString("base64url");
+  const now = Math.floor(Date.now() / 1000);
+  const sign = async (pl, { kid = "k1", key = kp.privateKey } = {}) => {
+    const h = b64({ alg: "RS256", kid, typ: "JWT" }), p = b64(pl);
+    const sig = Buffer.from(await crypto.subtle.sign("RSASSA-PKCS1-v1_5", key, new TextEncoder().encode(h + "." + p))).toString("base64url");
+    return h + "." + p + "." + sig;
+  };
+  const base = { aud: "jk-invest", iss: "https://securetoken.google.com/jk-invest", sub: "u1", iat: now - 10, auth_time: now - 10, exp: now + 3000, email: "JK82investing@gmail.com", email_verified: true };
+  FT._setKeysForTest([{ ...jwk, kid: "k1" }]);
+  assert.deepEqual(await FT.verifyFirebaseToken(await sign(base)), { ok: true, email: "jk82investing@gmail.com", uid: "u1" });
+  assert.equal((await FT.verifyFirebaseToken(await sign({ ...base, aud: "other" }))).ok, false);
+  assert.equal((await FT.verifyFirebaseToken(await sign({ ...base, exp: now - 1 }))).ok, false);
+  assert.equal((await FT.verifyFirebaseToken(await sign(base, { kid: "zz" }))).reason, "모르는 키");
+  const bad = await FT.verifyFirebaseToken(await sign(base, { key: other.privateKey }));
+  assert.equal(bad.ok, false); assert.ok(!bad.infra);
+  const tok = await sign(base), parts = tok.split(".");
+  const forged = parts[0] + "." + b64({ ...base, email: "attacker@x.com" }) + "." + parts[2];
+  assert.equal((await FT.verifyFirebaseToken(forged)).reason, "서명 불일치");
+  const req = h => ({ headers: { get: k => h[k.toLowerCase()] || null } });
+  assert.equal(await AUTH.claudeAuthorized(req({ authorization: "Bearer " + tok }), { OWNER_EMAIL: "jk82investing@gmail.com" }), true);
+  assert.equal(await AUTH.claudeAuthorized(req({ authorization: "Bearer " + await sign({ ...base, email: "x@y.com" }) }), { OWNER_EMAIL: "jk82investing@gmail.com" }), false);
+  FT._setKeysForTest(null, -1);
+  const f0 = globalThis.fetch; globalThis.fetch = async () => { throw new Error("down"); };
+  try { const r = await FT.verifyFirebaseToken(tok); assert.equal(r.infra, true); } finally { globalThis.fetch = f0; }
 });
 const rule = { gapMax: -2, gapFloor: -29, picks: 3 };
 t("expected gap uses KIS base price, falls back to watchlist close", () => {

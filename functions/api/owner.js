@@ -7,6 +7,8 @@
 //   없으면 저장소 규약의 관리자 계정으로 폴백한다(잠김 방지).
 //   주문 권한도 기본은 이 값을 그대로 쓴다 — kis.js orderOwners() 참고.
 
+import { verifyFirebaseToken } from "./_firebase_token.js";
+
 const JH = {
   "Content-Type": "application/json; charset=utf-8",
   "Access-Control-Allow-Origin": "*",
@@ -29,13 +31,21 @@ export async function onRequestGet({ request, env }) {
   // 로그인 토큰이 없으면 판정 불가 — 목록은 알려주지 않는다
   if (!idToken) return new Response(JSON.stringify({ isOwner: false, source, needAuth: true }), { headers: JH });
   try {
-    const key = env.FIREBASE_API_KEY || FIREBASE_API_KEY_FALLBACK;
-    const r = await fetch("https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=" + key, {
-      method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ idToken }),
-    });
-    const j = await r.json().catch(() => ({}));
-    const u = j.users && j.users[0];
-    const email = u ? String(u.email || "").toLowerCase() : "";
+    // 토큰은 서버 안에서 서명으로 확인한다(빠름). Google 공개키를 못 받을 때만 예전처럼 Google 에 묻는다.
+    const v = await verifyFirebaseToken(idToken);
+    let email = v.ok ? v.email : "";
+    if (!v.ok && v.infra) {
+      const key = env.FIREBASE_API_KEY || FIREBASE_API_KEY_FALLBACK;
+      const ac = new AbortController(), t = setTimeout(() => ac.abort(), 6000);
+      try {
+        const r = await fetch("https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=" + key, {
+          method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ idToken }), signal: ac.signal,
+        });
+        const j = await r.json().catch(() => ({}));
+        const u = j.users && j.users[0];
+        email = u ? String(u.email || "").toLowerCase() : "";
+      } finally { clearTimeout(t); }
+    }
     if (!email) return new Response(JSON.stringify({ isOwner: false, source, error: "로그인 정보를 확인하지 못했습니다." }), { headers: JH });
     // email 은 '본인 것'이라 돌려줘도 된다(화면 안내용). 허용 목록은 끝까지 숨긴다.
     return new Response(JSON.stringify({ isOwner: owners.includes(email), email, source }), { headers: JH });
