@@ -544,7 +544,7 @@ html.had-user #authgate .bootwait{display:block}
 </div>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.110.1</span></h1></div>
+    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.110.2</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -1655,7 +1655,7 @@ if(/^\/paper\/?$/.test(location.pathname)){
   <footer>
     <strong>JK 퀀트</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.110.1</b> · 2026-10-05</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.110.2</b> · 2026-10-05</div>
   </footer>
 </div>
 
@@ -7088,10 +7088,14 @@ function vrStepCycle(sess, c, dateStr, close){
 let _paperBusy=false, paperNote='', paperNoteSid=null;
 function paperStart(sess){
   if(!sess) return null;
-  if(sess.simStart) return sess.simStart;
-  // '전체 적용'으로 정한 공통 시작일은 세션 설정 변경/재생성보다 상위의 출발선이다.
-  // 예전 세션에 simStart가 빠져 있어도 설정 저장 한 번으로 오늘이 새 시작일이 되면 안 된다.
   const pc=(S&&S.paperCommon)||{};
+  /* 전체 적용 세션의 정본은 paperCommon.simStart 다.
+     예전 코드는 sess.simStart 를 먼저 반환해서, 공통 시작일이 2025-01-01로 바뀌어도
+     Firebase에 남은 2026-06-01 세션값이 성과/재생에서 계속 이겼다.
+     명시적으로 따로 고른(explicit) 세션만 자기 날짜를 유지한다. */
+  if(sess.paper && sess.simStartMode!=='explicit' && pc.simStart) return pc.simStart;
+  if(sess.simStart) return sess.simStart;
+  // simStartMode 도 없던 구버전 세션은 공통 시작일을 출발선으로 복구한다.
   if(sess.paper && pc.simStart) return pc.simStart;
   const h=(sess.hist||[]).map(x=>x&&x.date).filter(Boolean).sort();
   if(h.length) return h[0];
@@ -7725,8 +7729,8 @@ function paperStat(tab, sess){
   const base=Math.max(1,inflow);
   // 돈은 모의 시작일부터 넣어 둔 것이다. 첫 기록일부터 재면(로테는 첫 신호가 몇 달 뒤일 수 있다)
   // 기간이 짧게 잡혀 연환산 수익률이 부풀려진다.
-  const first=h[0].date;
-  const from=(sess.simStart && sess.simStart<first) ? sess.simStart : first;
+  const first=h[0].date, start=paperStart(sess);
+  const from=(start && start<first) ? start : first;
   const to=(st.simLast&&st.simLast>h[h.length-1].date)?st.simLast:h[h.length-1].date;
   const spanDays=Math.max(1,Math.round((new Date(to)-new Date(from))/864e5));
   const yrs=Math.max(0.05,(new Date(to)-new Date(from))/(365.25*864e5));   // 연환산 분모용 하한
@@ -7875,6 +7879,9 @@ function paperViewCacheWrite(rows){
 function paperViewCacheFresh(x){ return !!x&&x.day===paperKstDate(); }
 async function refreshPaperView(force=false){
   if(_paperViewRefreshPromise)return _paperViewRefreshPromise;
+  // '오늘 갱신'을 직접 눌러도 오래된 세션 시작일이 공통 시작일을 이기지 못하게 먼저 정합화한다.
+  const repaired=await paperRepairCommonStarts();
+  if(repaired>0) force=true;
   const current=paperViewCacheRead();
   if(!force&&paperViewCacheFresh(current))return current&&current.rows||null;
   const p=(async()=>{
@@ -7935,11 +7942,13 @@ async function openPaper(){
     : '<p class="lead">저장된 모의 결과를 불러오는 중…</p>'; }
   $('paperModal').classList.add('on');
   await paperEnsureCommonWon();
-  await paperRepairLegacyStarts();
+  const legacyRepaired=await paperRepairLegacyStarts();
+  const commonRepaired=await paperRepairCommonStarts();
+  const repairedStarts=(+legacyRepaired||0)+(+commonRepaired||0);
   syncPaperStart();
 
   let cache=paperViewCacheRead(),rows=null;
-  if(forceRecalc){
+  if(forceRecalc||repairedStarts>0){
     rows=await refreshPaperView(true);
     cache=paperViewCacheRead();
   }else{
@@ -8187,6 +8196,43 @@ async function paperRepairLegacyStarts(){
   paperNote=`🔧 시작일 오류로 최근 날짜에 묶였던 모의 세션 ${uniq.length}개를 ${common} 기준으로 복구했습니다.`;
   return uniq.length;
 }
+/* 공통 전체적용 시작일과 실제 세션 시작일의 상시 정합성 검사.
+   2026-06-01 같은 오래된 잘못된 값은 위 legacy 복구(최근 14일 한정)가 잡지 못했다.
+   explicit 만 예외이고, common/구버전(미표시) 세션은 paperCommon.simStart가 정본이다. */
+function paperCommonStartTargets(){
+  if(!S) return {common:'',targets:[]};
+  const common=String(((S.paperCommon||{}).simStart)||'');
+  const min=paperMinDate(), today=new Date().toISOString().slice(0,10);
+  if(!(common&&common>=min&&common<=today)) return {common:'',targets:[]};
+  const targets=paperSessions().filter(([,x])=>x&&x.simStartMode!=='explicit'&&String(x.simStart||'')!==common);
+  return {common,targets};
+}
+async function paperRepairCommonStarts(){
+  const z=paperCommonStartTargets(), common=z.common, targets=z.targets;
+  if(!common||!targets.length) return 0;
+  let fx=null;
+  if(targets.some(([,x])=>!isKrwSt((x&&x.settings)||{}))){
+    fx=await fxAt(common);
+    if(!fx||!(+fx.rate>0)){
+      paperNote=`⚠ 공통 시작일 ${common} 복구에 필요한 환율을 받지 못했습니다. 새로고침 후 다시 시도합니다.`;
+      return 0;
+    }
+  }
+  const commonWon=paperCommonWonValues();
+  for(const [tab,x] of targets){
+    x.hist=[]; x.simStart=common; x.simStartMode='common';
+    const st=x.settings||{};
+    delete st.simLast; delete st.cycStart; delete st.startCyc; delete st.cycLog; delete st.simSig;
+    if(st.startv!==undefined) st.startv=0;
+    const R=isKrwSt(st)?1:+fx.rate;
+    paperSeedCommonAmounts(tab,x,R,commonWon);
+  }
+  // 2026-06-01 기준으로 만들어 둔 표 캐시도 함께 버려야 2025-01-01 재생 결과가 즉시 보인다.
+  delete S.paperViewCache;
+  saveLocal();
+  paperNote=`🔧 공통 시작일과 어긋난 모의 세션 ${targets.length}개를 ${common} 기준으로 초기화해 다시 계산합니다.`;
+  return targets.length;
+}
 let paperMemoTimer=null;
 async function paperRememberForm(immediate=false){
   if(!S)return false;
@@ -8335,6 +8381,8 @@ async function applyAllSimStart(){
   if(add!=null) S.paperCommon.addWon=add;
   S.paperCommon.rawWonMigration=PAPER_RAW_WON_MIGRATION;
   paperRememberForm();
+  // 이전 시작일로 계산한 모의성과 캐시는 전체 적용 순간 무효다.
+  delete S.paperViewCache;
   list.forEach(([tab,x])=>{
     x.hist=[]; x.simStart=ns; x.simStartMode='common';
     if(x.settings){ delete x.settings.simLast; delete x.settings.cycStart; delete x.settings.startCyc; delete x.settings.cycLog; x.settings.startv=0;
