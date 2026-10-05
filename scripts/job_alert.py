@@ -300,10 +300,11 @@ def clean_company_name(value, title=''):
         return ''
 
     generic = {
-        '엔지니어', '개발자', '프로그래머', '경력자', '신입', '경력',
+        '엔지니어', 'Engineer', '개발자', '프로그래머', '경력자', '신입', '경력',
         '신입/경력', '신입·경력', '경력무관', '정규직', '계약직',
         '프리랜서', '대전/IT', '세종/IT', 'IT', '백엔드', '프론트엔드',
         '소프트웨어개발', '웹개발', '서버개발', '하드웨어개발자',
+        '채용공고', '상주', '항공우주/세종',
     }
     if text in generic:
         return ''
@@ -840,17 +841,23 @@ def is_target_dev_job(title, body):
 
     software_terms = (
         'java', 'jsp', 'spring', 'spring boot', '전자정부', 'egov',
-        '백엔드', '프론트엔드', '웹개발', '서버개발', '소프트웨어개발',
-        '응용소프트웨어', '프로그래머', 'node.js', 'nodejs', 'nestjs',
-        'php', 'flutter', 'api', 'was', 'tomcat', '시스템 개발',
-        '시스템개발', '유지보수', 'sm ', ' si ', 'db ', 'dba',
-        '데이터 엔지니어', 'data engineer',
+        '백엔드', '프론트엔드', '풀스택', '웹개발', '웹 개발', '서버개발',
+        '서버 개발', '소프트웨어개발', '소프트웨어 개발', '응용소프트웨어',
+        '프로그래머', 'node.js', 'nodejs', 'nestjs', 'react', 'vue',
+        'angular', 'typescript', 'javascript', 'php', 'flutter',
+        'fastapi', 'django', 'flask', 'api', 'was', 'tomcat',
+        '시스템 개발', '시스템개발', '유지보수', 'sm ', ' si ',
+        'db ', 'dba', 'devops', 'kubernetes', 'docker', 'linux',
+        '클라우드', '데이터 엔지니어', 'data engineer', 'software engineer',
+        'sw 개발', 's/w 개발', 'macos', 'ios', 'android', 'unity',
+        'embedded linux',
     )
     ai_software_terms = (
         'llm', 'rag', '생성형ai', '생성형 ai', 'ai/ml', '머신러닝',
         'machine learning', '딥러닝', 'deep learning', 'nlp', '자연어',
         'computer vision', '컴퓨터비전', 'python', 'pytorch', 'tensorflow',
-        'ai agent', 'agentic', 'langchain', 'spring ai',
+        'ai agent', 'agentic', 'langchain', 'spring ai', 'ai 개발',
+        'ai 솔루션', 'ai service', '인공지능 개발',
     )
     if any(term in text for term in software_terms):
         return True
