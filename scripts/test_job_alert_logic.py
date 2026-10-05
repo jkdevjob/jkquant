@@ -168,6 +168,19 @@ def run():
     assert meta['employmentTypes'] == ['정규직', '계약직']
     assert meta['career'] == '경력 5~12년'
     assert meta['education'] == '대졸↑'
+    assert not j.response_points_to_job_detail(
+        'https://www.jobkorea.co.kr/Recruit/GI_Read/12345',
+        'https://www.jobkorea.co.kr/',
+    )
+    assert not j.response_points_to_job_detail(
+        'https://www.saramin.co.kr/zf_user/jobs/view?rec_idx=12345',
+        'https://www.saramin.co.kr/zf_user/search?searchword=java',
+    )
+    assert j.response_points_to_job_detail(
+        'https://www.jobkorea.co.kr/Recruit/GI_Read/12345',
+        'https://www.jobkorea.co.kr/Recruit/GI_Read/12345',
+    )
+
     assert j.is_listing_or_search_url('https://www.albamon.com/total-search?keyword=대전+단기')
     assert j.is_listing_or_search_url('https://www.alba.co.kr/search/Search?wsSrchWord=대전')
     assert j.is_listing_or_search_url('https://search.incruit.com/list/search.asp?col=job&kw=java')
@@ -199,6 +212,22 @@ def run():
     )
     assert closed['status'] == 'closed'
     assert closed['missCount'] == j.DIRECT_MISS_CLOSE_THRESHOLD
+
+    missing_once = dict(missing, missCount=0)
+    missing_once_result = j.apply_unseen_status(
+        missing_once,
+        {'잡코리아': {'ok': True, 'mode': '직접'}},
+    )
+    assert missing_once_result['status'] == 'closed'
+    assert 'HTTP 404' in missing_once_result['closeReason']
+
+    unknown = dict(missing, _urlState='unknown', _urlReason='HTTP 403', missCount=0)
+    unknown_result = j.apply_unseen_status(
+        unknown,
+        {'잡코리아': {'ok': True, 'mode': '직접'}},
+    )
+    assert unknown_result['status'] == 'unverified'
+    assert 'HTTP 403' in unknown_result['closeReason']
 
     active = dict(missing, _urlState='active', missCount=2)
     active_result = j.apply_unseen_status(
