@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# archive-publish-v2
 import json
 import os
 import re
