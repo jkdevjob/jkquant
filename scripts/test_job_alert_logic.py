@@ -33,6 +33,16 @@ def run():
         f'지원마감 {yesterday.isoformat()}',
         yesterday.isoformat(),
     )
+    assert j.content_close_reason(
+        '[대전] 기록물관리시스템 개발자 구인',
+        '상주 모집종료 예상 금액 500만원 ~ 700만원',
+        '',
+    ) == '원문 마감 표시'
+    assert j.content_close_reason(
+        '테스트 채용',
+        '삭제된 채용 공고입니다.',
+        '',
+    ) == '원문 마감 표시'
 
     detail_html = f"""
     <html><head>
@@ -59,6 +69,22 @@ def run():
     assert j.classify_jobs([expired_job], j.score_java_result) == [], (
         'expired postings must never be sent as active/new matches'
     )
+    closed_detail_job = {
+        **a,
+        '_urlState': 'closed',
+        '_urlReason': '원문 마감 표시',
+    }
+    assert j.classify_jobs([closed_detail_job], j.score_java_result) == [], (
+        'detail pages confirmed closed must never be sent as active/new matches'
+    )
+    missing_detail_job = {
+        **a,
+        '_urlState': 'missing',
+        '_urlReason': 'HTTP 404',
+    }
+    assert j.classify_jobs([missing_detail_job], j.score_java_result) == [], (
+        'deleted detail pages must never be sent as active/new matches'
+    )
 
     albamon = j.normalize_search_result_title(
         '알바몬',
@@ -66,6 +92,10 @@ def run():
         'Sep 16, 2026 · 매장관리·판매 ... (단기/경력무관) 습관 기록 앱 데이터 알바. 시간협의 · 대전 전체',
     )
     assert albamon != '알바몬' and '데이터 알바' in albamon
+    assert j.is_listing_or_search_url('https://www.albamon.com/total-search?keyword=대전+단기')
+    assert j.is_listing_or_search_url('https://www.alba.co.kr/search/Search?wsSrchWord=대전')
+    assert j.is_listing_or_search_url('https://search.incruit.com/list/search.asp?col=job&kw=java')
+    assert not j.is_listing_or_search_url('https://www.wanted.co.kr/gigs/projects/13524')
 
     retry_src = inspect.getsource(j._ddgs_search_with_retry)
     assert "('kr-kr', 'm')" in retry_src and "('wt-wt', None)" in retry_src
@@ -101,6 +131,25 @@ def run():
     )
     assert active_result['status'] == 'active'
     assert active_result['missCount'] == 0
+
+    old_expired = {
+        **a,
+        'deadline': yesterday.isoformat(),
+        'deadlineSource': '지원마감일',
+        'status': 'active',
+        'firstSeen': j.today_kst(),
+    }
+    carried = j.archive_entry(a, old_expired)
+    assert carried['deadline'] == yesterday.isoformat()
+    assert carried['status'] == 'closed'
+    assert '마감일 경과' in carried['closeReason']
+
+    detail_closed = j.archive_entry(
+        {**a, '_urlState': 'closed', '_urlReason': '원문 마감 표시'},
+        None,
+    )
+    assert detail_closed['status'] == 'closed'
+    assert detail_closed['closeReason'] == '원문 마감 표시'
 
     print('JOB logic tests: PASS')
 
