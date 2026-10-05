@@ -11901,6 +11901,18 @@ console.log('\n[CLAUDE ARENA] 메인 기록 하나 · 자동 퇴출·신규·7�
      &&/\+ "\/claude-config", ev, key\)/.test(lp)&&/const KINDS=\["preopen","etfbuy","weekly","duel","promote"\];/.test(tg));
 }
 
+/* ════ 단타(클로드) Worker 도 장 여는 날 먼저 (v2.11.1) ════ */
+console.log('\n[CLAUDE KRX WORKER] Worker 일정도 휴장일 먼저');
+{
+  const ow3=fs.readFileSync(__d+'/worker/opening-scheduler/src/index.js','utf8'),dw=fs.readFileSync(__d+'/.github/workflows/deploy-opening-scheduler.yml','utf8');
+  const rg=ow3.slice(ow3.indexOf('async function runGapdown('));
+  const h=rg.indexOf('const hol=krHolidayAction(stage,date);'),firstCall=Math.min(...['gapdownCall(','runEtf(','claudeKrClose(','readLedger('].map(x=>{const i=rg.indexOf(x);return i<0?1e9:i;}));
+  ok('Worker ①② 일정은 휴장일을 맨 먼저 본다 — 휴장이면 08:56 휴장 알림 한 번, 시세·주문·15:21·15:40 없음 · 15:56 재시도도 건너뜀 · 휴장일 목록이 바뀌면 Worker 재배포',
+     /import \{ krxDay \} from "\.\.\/\.\.\/\.\.\/functions\/api\/_krx_calendar\.js";/.test(ow3)&&h>0&&h<firstCall
+     &&/else if\(route==="claude_kr"\)\{if\(krHolidayAction\("close",kstParts\(at\)\.date\)==="run"\)ctx\.waitUntil\(claudeKrClose/.test(ow3)
+     &&/- "functions\/api\/_krx_calendar\.js"/.test(dw));
+}
+
 Promise.all(PENDING).then(()=>{
   const nav=require('child_process').spawnSync(process.execPath,[require('path').join(__dirname,'scripts/check-navigation-races.cjs'),process.argv[2]||'index.html'],{encoding:'utf8'});
   ok('운영 탭: 늦은 DB 저장과 이전 세션 시세가 현재 선택을 덮어쓰지 않음',nav.status===0,(nav.stdout||'')+(nav.stderr||''));
