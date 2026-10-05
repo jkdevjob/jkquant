@@ -3,6 +3,19 @@
 // Read-only: live paper ledgers are preferred for BTC/SOXL; immutable research/history is fallback.
 
 const JH={"Content-Type":"application/json; charset=utf-8","Cache-Control":"no-store"};
+const FAST_H={"Content-Type":"application/json; charset=utf-8","Cache-Control":"public, max-age=20, s-maxage=60, stale-while-revalidate=300"};
+async function edgeGet(request){
+  try{
+    const c=globalThis.caches&&globalThis.caches.default;
+    return c?await c.match(new Request(request.url,{method:"GET"})):null;
+  }catch(e){return null;}
+}
+async function edgePut(request,response){
+  try{
+    const c=globalThis.caches&&globalThis.caches.default;
+    if(c)await c.put(new Request(request.url,{method:"GET"}),response.clone());
+  }catch(e){}
+}
 const RAW="https://raw.githubusercontent.com/jkdevjob/jkquant/scalping-data/data/";
 const GLOBAL_WORKER_FALLBACK="https://jkquant-global-intraday-scheduler.mumae4.workers.dev";
 const DAYTRADING_WORKER_FALLBACK="https://jkquant-daytrading-scheduler.mumae4.workers.dev";
@@ -95,18 +108,22 @@ function mergeSessions(primary,fallback){
   return [...m.values()].sort((a,b)=>String(b.date).localeCompare(String(a.date))).slice(0,2);
 }
 async function openingSessions(){
-  const today=isoKstDate();
-  const out=[];
-  for(let back=0;back<15&&out.length<2;back++){
-    const date=shiftIso(today,-back);
-    const j=await readJson("opening-history/"+date+".json");
+  const today=isoKstDate(),out=[];
+  /* 예전에는 최근 JSON을 찾을 때 15일을 하나씩 await 해서 휴일/주말일수록 느렸다.
+     서로 독립인 날짜 파일은 한 번에 읽고 최신 2개만 고른다. */
+  const dates=Array.from({length:15},(_,back)=>shiftIso(today,-back));
+  const got=await Promise.all(dates.map(async date=>{
+    try{return [date,await readJson("opening-history/"+date+".json")];}
+    catch(e){return [date,null];}
+  }));
+  for(const [date,j] of got){
     if(!j)continue;
     const operational=Array.isArray(j.operationalTrades)?j.operationalTrades:(j.trades||[]);
     const z=tradeSummary(String(j.date||date),operational);
     z.source=Array.isArray(j.operationalTrades)?"opening-operational-history":"opening-history";
     z.mainVariant=String(j.mainVariant||"baseline");
     z.generatedAt=j.generatedAt||null;
-    out.push(z);
+    out.push(z); if(out.length>=2)break;
   }
   return out;
 }
@@ -170,14 +187,14 @@ async function daytradingLiveSessions(env){
   }catch(e){}
   if(out.length>=2)return out;
   const seen=new Set(out.map(x=>x.date));
-  for(const date of candidates){
-    if(seen.has(date))continue;
+  const missing=candidates.filter(date=>!seen.has(date));
+  const extra=await Promise.all(missing.map(async date=>{
     try{
       const ledger=await readDaytradingPaper(env,date);
-      if(ledger){out.push(daytradingLedgerSummary(ledger,date));seen.add(date);}
-    }catch(e){}
-    if(out.length>=2)break;
-  }
+      return ledger?daytradingLedgerSummary(ledger,date):null;
+    }catch(e){return null;}
+  }));
+  for(const x of extra){if(x&&!seen.has(x.date)){out.push(x);seen.add(x.date);}}
   return out.sort((a,b)=>String(b.date).localeCompare(String(a.date))).slice(0,2);
 }
 function mergeDaytradingSessions(live,fallback){
@@ -202,9 +219,8 @@ function mergeDaytradingSessions(live,fallback){
   return mergeSessions(resolved,secondary);
 }
 async function daytradingSessions(env){
-  let live=[],fallback=[];
-  try{live=await daytradingLiveSessions(env);}catch(e){}
-  try{fallback=await daytradingResearchSessions();}catch(e){}
+  const [lr,fr]=await Promise.allSettled([daytradingLiveSessions(env),daytradingResearchSessions()]);
+  const live=lr.status==="fulfilled"?lr.value:[],fallback=fr.status==="fulfilled"?fr.value:[];
   return mergeDaytradingSessions(live,fallback);
 }
 async function decisionSessions(path,source){
@@ -280,23 +296,21 @@ async function globalPaperSessions(env,strategy){
     }
   }catch(e){}
   if(out.length>=2)return out;
-  const seen=new Set(out.map(x=>x.date));
-  for(const date of candidates){
-    if(seen.has(date))continue;
+  const seen=new Set(out.map(x=>x.date)),missing=candidates.filter(date=>!seen.has(date));
+  const extra=await Promise.all(missing.map(async date=>{
     try{
       const ledger=await readGlobalPaper(env,strategy,date);
-      if(ledger){out.push(liveLedgerSummary(ledger,date,"global-paper-live"));seen.add(date);}
-    }catch(e){
-      // 기존 배포에는 paper-history가 없을 수 있으므로 날짜별 조회를 계속 fallback한다.
-    }
-    if(out.length>=2)break;
-  }
+      return ledger?liveLedgerSummary(ledger,date,"global-paper-live"):null;
+    }catch(e){return null;}
+  }));
+  for(const x of extra){if(x&&!seen.has(x.date)){out.push(x);seen.add(x.date);}}
   return out.sort((a,b)=>String(b.date).localeCompare(String(a.date))).slice(0,2);
 }
 async function liveFirstSessions(env,strategy,path,source){
-  let live=[],fallback=[],liveError=null,fallbackError=null;
-  try{live=await globalPaperSessions(env,strategy);}catch(e){liveError=String(e.message||e);}
-  try{fallback=await decisionSessions(path,source);}catch(e){fallbackError=String(e.message||e);}
+  const [lr,fr]=await Promise.allSettled([globalPaperSessions(env,strategy),decisionSessions(path,source)]);
+  const live=lr.status==="fulfilled"?lr.value:[],fallback=fr.status==="fulfilled"?fr.value:[];
+  const liveError=lr.status==="rejected"?String(lr.reason&&lr.reason.message||lr.reason):null;
+  const fallbackError=fr.status==="rejected"?String(fr.reason&&fr.reason.message||fr.reason):null;
   const sessions=mergeSessions(live,fallback);
   if(!sessions.length&&liveError&&fallbackError)throw new Error(liveError+" / "+fallbackError);
   return sessions;
@@ -316,14 +330,19 @@ function pair(name,label,marketTime,result){
   };
 }
 
-export async function onRequestGet({env}){
+export async function onRequestGet({request,env}){
+  const u=new URL(request.url),force=u.searchParams.get("refresh")==="1";
+  if(!force){
+    const hit=await edgeGet(request);
+    if(hit)return hit;
+  }
   const [opening,daytrading,crypto,soxl]=await Promise.all([
     safeSessions(()=>openingSessions()),
     safeSessions(()=>daytradingSessions(env)),
     safeSessions(()=>liveFirstSessions(env,"crypto","crypto-research/baseline-decisions.csv","crypto-research")),
     safeSessions(()=>liveFirstSessions(env,"soxl","soxl-research/baseline-decisions.csv","soxl-research"))
   ]);
-  return new Response(JSON.stringify({
+  const response=new Response(JSON.stringify({
     ok:true,
     generatedAt:new Date().toISOString(),
     kstDate:isoKstDate(),
@@ -335,7 +354,9 @@ export async function onRequestGet({env}){
       pair("crypto","비트코인","KST",crypto),
       pair("soxl","SOXL","ET",soxl)
     ]
-  }),{headers:JH});
+  }),{headers:force?JH:FAST_H});
+  if(!force)await edgePut(request,response);
+  return response;
 }
 
 export {liveLedgerSummary,mergeSessions,mergeDaytradingSessions,completedGlobalCandidates};
