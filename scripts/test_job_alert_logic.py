@@ -104,6 +104,22 @@ def run():
         'https://www.incruit.com/company/1680406293/job',
     )
 
+    assert j.is_non_job_record(
+        '대전 cj 후기 용돈 벌어보려고 갔는데',
+        '자유 알바몬 커뮤니티 개발자어쩌고',
+        'https://community.albamon.com/post/detail/947080',
+    )
+    assert j.is_non_job_record(
+        '제목 없음',
+        '대전광역시 서구 연봉 10,780만원',
+        'https://www.work24.go.kr/wk/a/b/1500/empDetailAuthView.do?wantedAuthNo=TEST',
+    )
+    assert j.score_salary_result(
+        '시설관리 기술직',
+        '대전 정규직 연봉 10,780만원',
+        'https://www.work24.go.kr/test',
+    ) < 0, 'salary tab must stay developer/IT focused'
+
     meta = j.attach_job_metadata({
         'title': 'Java 개발자 채용',
         'body': '대전 유성구 경력 5~12년 대졸↑ 정규직·계약직 Java Spring',
