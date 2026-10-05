@@ -66,6 +66,49 @@ function shiftIso(date,days){
   return new Date(Date.UTC(y,m-1,d+days)).toISOString().slice(0,10);
 }
 function weekdayUtc(date){return new Date(date+"T12:00:00Z").getUTCDay();}
+
+function isoUtc(y,m,d){return new Date(Date.UTC(y,m-1,d)).toISOString().slice(0,10);}
+function nthWeekday(y,m,weekday,n){
+  const first=new Date(Date.UTC(y,m-1,1)),delta=(weekday-first.getUTCDay()+7)%7;
+  return isoUtc(y,m,1+delta+(n-1)*7);
+}
+function lastWeekday(y,m,weekday){
+  const last=new Date(Date.UTC(y,m,0)),delta=(last.getUTCDay()-weekday+7)%7;
+  return isoUtc(y,m,last.getUTCDate()-delta);
+}
+function observedFixed(y,m,d){
+  const x=new Date(Date.UTC(y,m-1,d)),wd=x.getUTCDay();
+  if(wd===6)x.setUTCDate(x.getUTCDate()-1);
+  else if(wd===0)x.setUTCDate(x.getUTCDate()+1);
+  return x.toISOString().slice(0,10);
+}
+function easterSunday(y){
+  const a=y%19,b=Math.floor(y/100),cc=y%100,d=Math.floor(b/4),e=b%4,f=Math.floor((b+8)/25),g=Math.floor((b-f+1)/3);
+  const h=(19*a+b-d-g+15)%30,i=Math.floor(cc/4),k=cc%4,l=(32+2*e+2*i-h-k)%7,m=Math.floor((a+11*h+22*l)/451);
+  const month=Math.floor((h+l-7*m+114)/31),day=(h+l-7*m+114)%31+1;
+  return new Date(Date.UTC(y,month-1,day));
+}
+function nyseHolidaySet(y){
+  const s=new Set([observedFixed(y,1,1),nthWeekday(y,1,1,3),nthWeekday(y,2,1,3),lastWeekday(y,5,1),
+    observedFixed(y,6,19),observedFixed(y,7,4),nthWeekday(y,9,1,1),nthWeekday(y,11,4,4),observedFixed(y,12,25)]);
+  const easter=easterSunday(y);easter.setUTCDate(easter.getUTCDate()-2);s.add(easter.toISOString().slice(0,10));
+  const nextNewYear=observedFixed(y+1,1,1);if(nextNewYear.startsWith(y+"-"))s.add(nextNewYear);
+  return s;
+}
+function isNyseSessionDate(date){
+  const d=new Date(date+"T12:00:00Z"),wd=d.getUTCDay(),y=d.getUTCFullYear();
+  return wd!==0&&wd!==6&&!nyseHolidaySet(y).has(date);
+}
+async function krMarketDayStatus(request,date){
+  const u=new URL("/api/kis",request.url);
+  u.searchParams.set("op","holiday");u.searchParams.set("market","kr");u.searchParams.set("date",String(date).replace(/\D/g,""));
+  try{
+    const r=await fetch(u.toString(),{headers:{"accept":"application/json"}});
+    const j=await r.json().catch(()=>({}));
+    if(!r.ok||j.ok!==true||typeof j.open!=="boolean")return {date,open:null,error:j.error||("HTTP "+r.status),source:"KIS/CTCA0903R"};
+    return {date,open:j.open,source:j.source||"KIS/CTCA0903R"};
+  }catch(e){return {date,open:null,error:String(e.message||e),source:"KIS/CTCA0903R"};}
+}
 function tradeSummary(date,trades){
   const a=(Array.isArray(trades)?trades:[]).filter(x=>Number.isFinite(Number(x.pnl)));
   const pn=a.map(x=>Number(x.pnl));
@@ -319,13 +362,25 @@ async function safeSessions(fn){
   try{return {sessions:await fn(),error:null};}
   catch(e){return {sessions:[],error:String(e.message||e)};}
 }
-function pair(name,label,marketTime,result){
+function pair(name,label,marketTime,result,marketDay=null){
   const a=Array.isArray(result&&result.sessions)?result.sessions:[];
+  let current=a[0]||null,previous=a[1]||null;
+  if(marketDay&&marketDay.date){
+    if(marketDay.open===false){
+      current={date:marketDay.date,marketClosed:true,returnPct:0,sumPnlPct:0,trades:0,wins:0,losses:0,noTrade:true,finalized:true,source:"market-calendar"};
+      previous=a[0]||null;
+    }else if(marketDay.open===true){
+      current=a.find(x=>String(x&&x.date||"")===marketDay.date)||null;
+      previous=a.find(x=>String(x&&x.date||"")<marketDay.date)||null;
+    }else{
+      current={date:marketDay.date,marketDayUnknown:true,marketDayError:marketDay.error||"개장일 확인 실패",finalized:false};
+      previous=a[0]||null;
+    }
+  }
   return {
-    strategy:name,label,marketTime,
-    current:a[0]||null,
-    previous:a[1]||null,
-    status:a.length?"ok":(result&&result.error?"error":"collecting"),
+    strategy:name,label,marketTime,marketDay,
+    current,previous,
+    status:(current||previous)?"ok":(result&&result.error?"error":"collecting"),
     error:result&&result.error||null
   };
 }
@@ -336,12 +391,15 @@ export async function onRequestGet({request,env}){
     const hit=await edgeGet(request);
     if(hit)return hit;
   }
-  const [opening,daytrading,crypto,soxl]=await Promise.all([
+  const kst=tzParts("Asia/Seoul"),ny=tzParts("America/New_York");
+  const [opening,daytrading,crypto,soxl,krDay]=await Promise.all([
     safeSessions(()=>openingSessions()),
     safeSessions(()=>daytradingSessions(env)),
     safeSessions(()=>liveFirstSessions(env,"crypto","crypto-research/baseline-decisions.csv","crypto-research")),
-    safeSessions(()=>liveFirstSessions(env,"soxl","soxl-research/baseline-decisions.csv","soxl-research"))
+    safeSessions(()=>liveFirstSessions(env,"soxl","soxl-research/baseline-decisions.csv","soxl-research")),
+    krMarketDayStatus(request,kst.date)
   ]);
+  const usDay={date:ny.date,open:isNyseSessionDate(ny.date),source:"NYSE-calendar+live-session-gate"};
   const response=new Response(JSON.stringify({
     ok:true,
     generatedAt:new Date().toISOString(),
@@ -349,10 +407,10 @@ export async function onRequestGet({request,env}){
     returnRule:"Opening uses the equal-weight average of executed baseline trades; Daytrading uses the sum of trade net PnL divided by 3 fixed capital slots; BTC/SOXL use one slot. No-trade session = 0%.",
     sourceRule:"BTC/SOXL use the completed live paper ledger first; immutable research CSV is fallback. One strategy source failure does not hide the other strategies.",
     strategies:[
-      pair("opening","시초가","KST",opening),
-      pair("daytrading","데이트레이딩","KST",daytrading),
+      pair("opening","시초가","KST",opening,krDay),
+      pair("daytrading","데이트레이딩","KST",daytrading,krDay),
       pair("crypto","비트코인","KST",crypto),
-      pair("soxl","SOXL","ET",soxl)
+      pair("soxl","SOXL","ET",soxl,usDay)
     ]
   }),{headers:force?JH:FAST_H});
   if(!force)await edgePut(request,response);
