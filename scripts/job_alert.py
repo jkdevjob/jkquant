@@ -532,6 +532,62 @@ def title_from_card_body(body):
     return ''
 
 
+def has_jobposting_schema(html):
+    soup = BeautifulSoup(html or '', 'html.parser')
+    for script in soup.find_all('script'):
+        typ = (script.get('type') or '').lower()
+        if 'ld+json' not in typ:
+            continue
+        raw = script.string or script.get_text() or ''
+        if not raw.strip():
+            continue
+        try:
+            data = json.loads(raw)
+        except Exception:
+            continue
+        for obj in _walk_jsonld(data):
+            obj_type = obj.get('@type')
+            types = obj_type if isinstance(obj_type, list) else [obj_type]
+            if any(str(t).lower() == 'jobposting' for t in types if t):
+                return True
+    return False
+
+
+def source_detail_invalid_reason(html, source=''):
+    """HTTP 200이어도 실제 상세공고 내용이 사라진 소스별 빈/삭제 페이지를 차단한다."""
+    source = normalize_text(source)
+    if source != '알바몬':
+        return ''
+
+    page_text = normalize_text(BeautifulSoup(html or '', 'html.parser').get_text(' ', strip=True))
+    if not page_text:
+        return '알바몬 상세공고 내용 없음'
+
+    # 정상 알바몬 상세공고는 JobPosting 구조화데이터가 있거나,
+    # 근무조건/급여/근무기간/접수방법 등 실제 공고 본문 지표가 여러 개 존재한다.
+    if has_jobposting_schema(html):
+        return ''
+
+    detail_markers = (
+        '근무조건', '급여', '근무기간', '근무요일',
+        '근무시간', '접수방법', '근무지', '업직종',
+    )
+    marker_count = sum(1 for term in detail_markers if term in page_text)
+    if marker_count >= 2:
+        return ''
+
+    # 삭제된 알바몬 상세 URL은 회사명/제목 메타와 저작권 고지만 남고
+    # 실제 모집조건이 없는 200 페이지를 반환하는 경우가 있다.
+    if (
+        '본 정보는' in page_text
+        and '알바몬' in page_text
+        and ('무단전재' in page_text or '재배포' in page_text or '구직활동 이외' in page_text)
+    ):
+        return '알바몬 삭제/빈 상세페이지'
+
+    return '알바몬 상세공고 확인 불가'
+
+
 def fetch_job_identity(job):
     item = dict(job)
     item['_urlState'] = 'unknown'
@@ -559,6 +615,12 @@ def fetch_job_identity(job):
         if not response_points_to_job_detail(item.get('url', ''), response.url):
             item['_urlState'] = 'missing'
             item['_urlReason'] = '상세공고가 아닌 페이지로 이동'
+            return item
+
+        source_invalid = source_detail_invalid_reason(response.text, item.get('source', ''))
+        if source_invalid:
+            item['_urlState'] = 'missing'
+            item['_urlReason'] = source_invalid
             return item
 
         detail_title, detail_company = extract_detail_identity(
@@ -2221,7 +2283,9 @@ def parse_job_deadline(title, body):
     short_patterns = [
         r'(?:지원\s*마감(?:일)?|접수\s*마감(?:일)?|채용\s*마감(?:일)?|마감일|접수기간|지원기간|모집기간)'
         r'.{0,50}?~?\s*(\d{1,2})[./-](\d{1,2})(?:\([^)]*\))?',
-        r'~\s*(\d{1,2})[./-](\d{1,2})(?:\([^)]*\))?(?=.{0,30}(?:입사지원|홈페이지\s*지원|지원하기|접수|마감|$))',
+        r'~\s*(\d{1,2})[./-](\d{1,2})(?:\s*\([^)]*\))?(?=.{0,30}(?:입사지원|홈페이지\s*지원|지원하기|접수|마감|$))',
+        # 검색 스니펫의 "~08/02 (일) 회사명 ..."처럼 뒤에 지원 문구가 없는 형식
+        r'~\s*(\d{1,2})[./-](\d{1,2})(?:\s*\([^)]*\))?',
     ]
     for pattern in short_patterns:
         m = re.search(pattern, text, re.I)
@@ -2442,6 +2506,12 @@ def verify_unseen_job(item):
 
     html = response.text or ''
     if not html:
+        return out
+
+    source_invalid = source_detail_invalid_reason(html, out.get('source', ''))
+    if source_invalid:
+        out['_urlState'] = 'missing'
+        out['_urlReason'] = source_invalid
         return out
 
     detail_title, detail_company = extract_detail_identity(html, out.get('source', ''))

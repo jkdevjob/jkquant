@@ -128,6 +128,29 @@ def run():
     assert j.clean_company_name('신입/경력') == ''
     assert j.clean_company_name('대전/IT') == ''
     assert j.clean_company_name('상상스토리/세종') == '상상스토리'
+    deadline, source = j.parse_job_deadline(
+        '초급 중급 고급 프리랜서 JAVA 웹개발자 모십니다.',
+        '대전 ~08/02 (일) ㈜다올앤컴퍼니 기업인증'
+    )
+    assert deadline == '2026-08-02' and source == '지원마감일'
+    assert j.content_close_reason('테스트', '', deadline).startswith('마감일 경과')
+
+    albamon_dead_html = '''
+    <html><body>
+    본 정보는 메이크잇 (MakeIt) 에서 제공한 자료를 바탕으로 알바몬이 편집 및
+    그 표현방법을 수정하여 완성한 것입니다. 본 정보는 알바몬의 동의없이
+    무단전재 또는 재배포할 수 없으며 구직활동 이외의 용도로 사용할 수 없습니다.
+    </body></html>
+    '''
+    assert j.source_detail_invalid_reason(albamon_dead_html, '알바몬') == '알바몬 삭제/빈 상세페이지'
+
+    albamon_live_html = '''
+    <html><body><h1>테스트 채용</h1>
+    <div>근무조건</div><div>급여</div><div>근무기간</div><div>접수방법</div>
+    </body></html>
+    '''
+    assert j.source_detail_invalid_reason(albamon_live_html, '알바몬') == ''
+
     assert j.identity_quality_issue({
         'title': 'SW 개발자(백엔드) 채용 공고 (대전)',
         'company': '',
