@@ -290,11 +290,28 @@ def clean_company_name(value, title=''):
     text = re.sub(r'^\s*기업정보\s*[:：]?\s*', '', text)
     text = re.sub(r'\s+(?:관심기업|채용중\s*\d+\s*)$', '', text)
     text = text.strip('[]{}<>|·•-–— ')
+
+    # [상상스토리/세종]처럼 회사명 뒤에 검색 지역이 붙는 경우만 지역 꼬리를 제거한다.
+    text = re.sub(r'\s*/\s*(?:대전|세종)(?:광역시|특별자치시)?$', '', text).strip()
+
     if not text or len(text) < 2 or len(text) > 60:
         return ''
     if text in INVALID_COMPANY_EXACT:
         return ''
-    if re.fullmatch(r'(?:대전|세종)(?:광역시|특별자치시)?', text):
+
+    generic = {
+        '엔지니어', '개발자', '프로그래머', '경력자', '신입', '경력',
+        '신입/경력', '신입·경력', '경력무관', '정규직', '계약직',
+        '프리랜서', '대전/IT', '세종/IT', 'IT', '백엔드', '프론트엔드',
+        '소프트웨어개발', '웹개발', '서버개발', '하드웨어개발자',
+    }
+    if text in generic:
+        return ''
+    if re.fullmatch(r'(?:대전|세종)(?:광역시|특별자치시)?(?:/IT)?', text, re.I):
+        return ''
+    if re.fullmatch(r'(?:신입|경력)(?:\s*[/·ㆍ,+&]\s*(?:신입|경력))?', text):
+        return ''
+    if re.fullmatch(r'(?:경력\s*)?\d+\s*(?:~|-)\s*\d+\s*년', text):
         return ''
     if re.search(r'^(?:D-\d+|~\s*\d{1,2}/\d{1,2})$', text, re.I):
         return ''
@@ -305,7 +322,6 @@ def clean_company_name(value, title=''):
     if title and normalize_text(title) == text:
         return ''
     return text
-
 
 def is_generic_job_title(value):
     text = normalize_text(value)
@@ -819,6 +835,33 @@ def scoring_text(title, body):
     return normalize_text(f'{title} {relevant_job_body(title, body)}').lower()
 
 
+def is_target_dev_job(title, body):
+    text = normalize_text(f'{title} {body}').lower()
+
+    software_terms = (
+        'java', 'jsp', 'spring', 'spring boot', '전자정부', 'egov',
+        '백엔드', '프론트엔드', '웹개발', '서버개발', '소프트웨어개발',
+        '응용소프트웨어', '프로그래머', 'node.js', 'nodejs', 'nestjs',
+        'php', 'flutter', 'api', 'was', 'tomcat', '시스템 개발',
+        '시스템개발', '유지보수', 'sm ', ' si ', 'db ', 'dba',
+        '데이터 엔지니어', 'data engineer',
+    )
+    ai_software_terms = (
+        'llm', 'rag', '생성형ai', '생성형 ai', 'ai/ml', '머신러닝',
+        'machine learning', '딥러닝', 'deep learning', 'nlp', '자연어',
+        'computer vision', '컴퓨터비전', 'python', 'pytorch', 'tensorflow',
+        'ai agent', 'agentic', 'langchain', 'spring ai',
+    )
+    if any(term in text for term in software_terms):
+        return True
+    if any(term in text for term in ai_software_terms):
+        return True
+
+    # 단순히 직무명에 'AI' 또는 '개발자'가 있다는 이유로
+    # 기구설계/회로/HW/화학/로봇기계 직무를 개발자 공고로 취급하지 않는다.
+    return False
+
+
 def score_java_result(title, body, url):
     text = scoring_text(title, body)
 
@@ -1321,9 +1364,14 @@ def title_tokens(title):
 
 def company_hint(title, body):
     text = normalize_text(f'{title} {body}')
+
+    # 법인 표기가 붙은 실제 회사명을 최우선. 기존의 "엔지니어 ㈜회사"에서
+    # 엔지니어를 회사명으로 오인하던 역방향 정규식은 사용하지 않는다.
     patterns = [
-        r'(?:\(주\)|주식회사)\s*([가-힣A-Za-z0-9&._-]{2,40})',
-        r'([가-힣A-Za-z0-9&._-]{2,40})\s*㈜',
+        r'㈜\s*([가-힣A-Za-z0-9&._-]{2,40})',
+        r'\(주\)\s*([가-힣A-Za-z0-9&._-]{2,40})',
+        r'주식회사\s*([가-힣A-Za-z0-9&._-]{2,40})',
+        r'([가-힣A-Za-z0-9&._-]{2,40})\s*(?:주식회사|\(주\))',
     ]
     for pattern in patterns:
         m = re.search(pattern, text)
@@ -1332,13 +1380,13 @@ def company_hint(title, body):
             if candidate:
                 return candidate
 
+    # 사람인 제목의 [회사/지역] 형태는 보조적으로 사용한다.
     m = re.match(r'^\[([^\]]{2,40})\]', normalize_text(title))
     if m:
         candidate = clean_company_name(m.group(1), title='')
-        if candidate and candidate not in {'대전', '세종', '서울', '경기', '충남', '충북'}:
+        if candidate:
             return candidate
     return ''
-
 
 def job_fingerprint(job):
     title = compact_job_title(job.get('title', ''))
@@ -1645,7 +1693,7 @@ def _ddgs_search_with_retry(query, max_results=20):
     return [], last_exc
 
 def is_listing_or_search_url(url):
-    """검색결과/목록/프로필/회사소개 URL을 개별 채용공고로 저장하지 않는다."""
+    """검색/목록/프로필/회사소개/커뮤니티 URL은 개별 공고로 저장하지 않는다."""
     try:
         parts = urlsplit(url)
         host = parts.netloc.lower().replace('www.', '')
@@ -1684,15 +1732,17 @@ def is_listing_or_search_url(url):
         or path.startswith('/search')
     ):
         return True
-    if host.endswith('career.co.kr') and '/recruit/spcontents_view/' in path:
+    if host.endswith('career.co.kr') and (
+        '/search' in path
+        or '/recruit/list' in path
+    ):
         return True
-        if host.endswith('linkedin.com') and path.rstrip('/') in {'/jobs', '/jobs/search'}:
+    if host.endswith('linkedin.com') and path.rstrip('/') in {'/jobs', '/jobs/search'}:
         return True
     if query and any(token in query for token in ('query=', 'keyword=', 'wssrchword=')):
         if any(token in path for token in ('/search', 'total-search', 'searchjob')):
             return True
     return False
-
 
 def is_non_job_record(title, body, url=''):
     title_text = normalize_text(title)
@@ -3469,9 +3519,7 @@ def score_java_result(title, body, url):
     if any(term in text for term in JUNIOR_ONLY_TERMS):
         return -999
 
-    has_dev = any(term in text for term in DEV_REQUIRED_TERMS)
-    has_ai = any(term in text for term in AI_TERMS)
-    if not has_dev and not has_ai:
+    if not is_target_dev_job(title, body):
         return -999
 
     score = 0
@@ -3499,7 +3547,7 @@ def score_regular_dev_result(title, body, url):
         return -999
     if any(term in text for term in JUNIOR_ONLY_TERMS):
         return -999
-    if not any(term in text for term in DEV_REQUIRED_TERMS):
+    if not is_target_dev_job(title, body):
         return -999
 
     # 신입 공고라도 경력 지원 가능 문구가 함께 있으면 허용하고,
@@ -3545,7 +3593,7 @@ def score_salary_result(title, body, url):
 
     # 급여 500+/450+ 탭은 사용자의 개발자 구직용이다.
     # 신뢰 도메인이라는 이유만으로 비개발 고연봉 공고를 넣지 않는다.
-    if not any(term in text for term in DEV_REQUIRED_TERMS):
+    if not is_target_dev_job(title, body):
         return -999
 
     salary = salary_info(title, body)
