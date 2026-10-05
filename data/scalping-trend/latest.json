@@ -1,0 +1,1203 @@
+{
+  "schema": 1,
+  "generatedAt": "2026-10-05T08:56:26.718Z",
+  "rule": "Precomputed completed-session daily account returns for the Today cumulative trend. Opening/crypto/SOXL use same-day mean trade return; daytrading uses three equal capital slots (sum pnl / 3).",
+  "strategies": {
+    "opening": {
+      "source": "data/opening-history/baseline-trades.csv",
+      "daily": [
+        {
+          "date": "2026-09-22",
+          "returnPct": -0.32519852,
+          "cumulativePct": -0.32519852,
+          "trades": 7
+        },
+        {
+          "date": "2026-09-23",
+          "returnPct": -0.66339779,
+          "cumulativePct": -0.98643895,
+          "trades": 5
+        },
+        {
+          "date": "2026-09-28",
+          "returnPct": 0.33646524,
+          "cumulativePct": -0.65329273,
+          "trades": 2
+        },
+        {
+          "date": "2026-09-30",
+          "returnPct": -0.76320577,
+          "cumulativePct": -1.41151253,
+          "trades": 2
+        },
+        {
+          "date": "2026-10-02",
+          "returnPct": -1.2669821,
+          "cumulativePct": -2.66061102,
+          "trades": 4
+        }
+      ]
+    },
+    "daytrading": {
+      "source": "data/daytrading-research/baseline-trades.csv",
+      "daily": [
+        {
+          "date": "2026-09-29",
+          "returnPct": -1.25,
+          "cumulativePct": -1.25,
+          "trades": 3
+        },
+        {
+          "date": "2026-09-30",
+          "returnPct": -1.25,
+          "cumulativePct": -2.484375,
+          "trades": 3
+        },
+        {
+          "date": "2026-10-01",
+          "returnPct": 0.75,
+          "cumulativePct": -1.75300781,
+          "trades": 3
+        },
+        {
+          "date": "2026-10-02",
+          "returnPct": -0.25,
+          "cumulativePct": -1.99862529,
+          "trades": 3
+        }
+      ]
+    },
+    "crypto": {
+      "source": "data/crypto-research/baseline-trades.csv",
+      "daily": [
+        {
+          "date": "2025-10-01",
+          "returnPct": 0.03595128,
+          "cumulativePct": 0.03595128,
+          "trades": 1
+        },
+        {
+          "date": "2025-10-03",
+          "returnPct": 0.35880912,
+          "cumulativePct": 0.39488939,
+          "trades": 1
+        },
+        {
+          "date": "2025-10-04",
+          "returnPct": 0.86,
+          "cumulativePct": 1.25828544,
+          "trades": 1
+        },
+        {
+          "date": "2025-10-06",
+          "returnPct": 0.00508916,
+          "cumulativePct": 1.26343864,
+          "trades": 1
+        },
+        {
+          "date": "2025-10-07",
+          "returnPct": -0.24064152,
+          "cumulativePct": 1.01975676,
+          "trades": 1
+        },
+        {
+          "date": "2025-10-08",
+          "returnPct": 0.10249429,
+          "cumulativePct": 1.12329624,
+          "trades": 1
+        },
+        {
+          "date": "2025-10-09",
+          "returnPct": -0.01959061,
+          "cumulativePct": 1.10348558,
+          "trades": 1
+        },
+        {
+          "date": "2025-10-12",
+          "returnPct": -0.41694343,
+          "cumulativePct": 0.68194123,
+          "trades": 1
+        },
+        {
+          "date": "2025-10-13",
+          "returnPct": -0.64,
+          "cumulativePct": 0.03757681,
+          "trades": 1
+        },
+        {
+          "date": "2025-10-14",
+          "returnPct": -0.20731701,
+          "cumulativePct": -0.16981811,
+          "trades": 1
+        },
+        {
+          "date": "2025-10-15",
+          "returnPct": -0.14528808,
+          "cumulativePct": -0.31485946,
+          "trades": 1
+        },
+        {
+          "date": "2025-10-16",
+          "returnPct": -0.02491701,
+          "cumulativePct": -0.33969802,
+          "trades": 1
+        },
+        {
+          "date": "2025-10-19",
+          "returnPct": -0.2255223,
+          "cumulativePct": -0.56445422,
+          "trades": 1
+        },
+        {
+          "date": "2025-10-21",
+          "returnPct": -0.64,
+          "cumulativePct": -1.20084172,
+          "trades": 1
+        },
+        {
+          "date": "2025-10-23",
+          "returnPct": -0.05215529,
+          "cumulativePct": -1.2523707,
+          "trades": 1
+        },
+        {
+          "date": "2025-10-24",
+          "returnPct": -0.21992879,
+          "cumulativePct": -1.46954517,
+          "trades": 1
+        },
+        {
+          "date": "2025-10-27",
+          "returnPct": 0.0002475,
+          "cumulativePct": -1.46930131,
+          "trades": 1
+        },
+        {
+          "date": "2025-10-28",
+          "returnPct": -0.01280051,
+          "cumulativePct": -1.48191374,
+          "trades": 1
+        },
+        {
+          "date": "2025-10-29",
+          "returnPct": -0.33415767,
+          "cumulativePct": -1.81111948,
+          "trades": 1
+        },
+        {
+          "date": "2025-11-01",
+          "returnPct": -0.64,
+          "cumulativePct": -2.43952832,
+          "trades": 1
+        },
+        {
+          "date": "2025-11-02",
+          "returnPct": -0.12965912,
+          "cumulativePct": -2.56602436,
+          "trades": 1
+        },
+        {
+          "date": "2025-11-03",
+          "returnPct": -0.36020134,
+          "cumulativePct": -2.91698285,
+          "trades": 1
+        },
+        {
+          "date": "2025-11-08",
+          "returnPct": -0.64,
+          "cumulativePct": -3.53831416,
+          "trades": 1
+        },
+        {
+          "date": "2025-11-09",
+          "returnPct": -0.38300539,
+          "cumulativePct": -3.90776761,
+          "trades": 1
+        },
+        {
+          "date": "2025-11-12",
+          "returnPct": 0.22089744,
+          "cumulativePct": -3.69550234,
+          "trades": 1
+        },
+        {
+          "date": "2025-11-15",
+          "returnPct": 0.50028895,
+          "cumulativePct": -3.21370157,
+          "trades": 1
+        },
+        {
+          "date": "2025-11-16",
+          "returnPct": -0.64,
+          "cumulativePct": -3.83313388,
+          "trades": 1
+        },
+        {
+          "date": "2025-11-20",
+          "returnPct": -0.64,
+          "cumulativePct": -4.44860183,
+          "trades": 1
+        },
+        {
+          "date": "2025-11-26",
+          "returnPct": -0.32023522,
+          "cumulativePct": -4.75459106,
+          "trades": 1
+        },
+        {
+          "date": "2025-11-27",
+          "returnPct": -0.64,
+          "cumulativePct": -5.36416168,
+          "trades": 1
+        },
+        {
+          "date": "2025-11-30",
+          "returnPct": 0.13205882,
+          "cumulativePct": -5.2391867,
+          "trades": 1
+        },
+        {
+          "date": "2025-12-02",
+          "returnPct": -0.25049211,
+          "cumulativePct": -5.47655507,
+          "trades": 1
+        },
+        {
+          "date": "2025-12-03",
+          "returnPct": -0.64,
+          "cumulativePct": -6.08150512,
+          "trades": 1
+        },
+        {
+          "date": "2025-12-04",
+          "returnPct": -0.64,
+          "cumulativePct": -6.68258348,
+          "trades": 1
+        },
+        {
+          "date": "2025-12-08",
+          "returnPct": 0.29984301,
+          "cumulativePct": -6.40277773,
+          "trades": 1
+        },
+        {
+          "date": "2025-12-11",
+          "returnPct": 0.45798208,
+          "cumulativePct": -5.97411923,
+          "trades": 1
+        },
+        {
+          "date": "2025-12-14",
+          "returnPct": -0.17491905,
+          "cumulativePct": -6.13858841,
+          "trades": 1
+        },
+        {
+          "date": "2025-12-15",
+          "returnPct": -0.26453767,
+          "cumulativePct": -6.3868872,
+          "trades": 1
+        },
+        {
+          "date": "2025-12-20",
+          "returnPct": -0.64,
+          "cumulativePct": -6.98601112,
+          "trades": 1
+        },
+        {
+          "date": "2025-12-21",
+          "returnPct": 0.34142008,
+          "cumulativePct": -6.66844269,
+          "trades": 1
+        },
+        {
+          "date": "2025-12-25",
+          "returnPct": -0.16940926,
+          "cumulativePct": -6.82655499,
+          "trades": 1
+        },
+        {
+          "date": "2025-12-26",
+          "returnPct": 0.86,
+          "cumulativePct": -6.02526337,
+          "trades": 1
+        },
+        {
+          "date": "2025-12-28",
+          "returnPct": -0.12280995,
+          "cumulativePct": -6.14067369,
+          "trades": 1
+        },
+        {
+          "date": "2025-12-29",
+          "returnPct": -0.24374172,
+          "cumulativePct": -6.36944803,
+          "trades": 1
+        },
+        {
+          "date": "2026-01-02",
+          "returnPct": -0.2859797,
+          "cumulativePct": -6.6372124,
+          "trades": 1
+        },
+        {
+          "date": "2026-01-04",
+          "returnPct": 0.15499429,
+          "cumulativePct": -6.49250541,
+          "trades": 1
+        },
+        {
+          "date": "2026-01-05",
+          "returnPct": -0.07565773,
+          "cumulativePct": -6.56325106,
+          "trades": 1
+        },
+        {
+          "date": "2026-01-06",
+          "returnPct": 0.13033182,
+          "cumulativePct": -6.44147325,
+          "trades": 1
+        },
+        {
+          "date": "2026-01-07",
+          "returnPct": -0.64,
+          "cumulativePct": -7.04024782,
+          "trades": 1
+        },
+        {
+          "date": "2026-01-09",
+          "returnPct": 0.38142543,
+          "cumulativePct": -6.68567568,
+          "trades": 1
+        },
+        {
+          "date": "2026-01-11",
+          "returnPct": -0.0658982,
+          "cumulativePct": -6.74716815,
+          "trades": 1
+        },
+        {
+          "date": "2026-01-12",
+          "returnPct": -0.25922593,
+          "cumulativePct": -6.98890366,
+          "trades": 1
+        },
+        {
+          "date": "2026-01-13",
+          "returnPct": 0.31123195,
+          "cumulativePct": -6.69942341,
+          "trades": 1
+        },
+        {
+          "date": "2026-01-16",
+          "returnPct": -0.64,
+          "cumulativePct": -7.2965471,
+          "trades": 1
+        },
+        {
+          "date": "2026-01-18",
+          "returnPct": -0.10524872,
+          "cumulativePct": -7.3941163,
+          "trades": 1
+        },
+        {
+          "date": "2026-01-25",
+          "returnPct": -0.25133327,
+          "cumulativePct": -7.6268657,
+          "trades": 1
+        },
+        {
+          "date": "2026-01-26",
+          "returnPct": -0.64,
+          "cumulativePct": -8.21805376,
+          "trades": 1
+        },
+        {
+          "date": "2026-01-27",
+          "returnPct": -0.64,
+          "cumulativePct": -8.80545821,
+          "trades": 1
+        },
+        {
+          "date": "2026-01-31",
+          "returnPct": -0.64,
+          "cumulativePct": -9.38910328,
+          "trades": 1
+        },
+        {
+          "date": "2026-02-05",
+          "returnPct": -0.64,
+          "cumulativePct": -9.96901302,
+          "trades": 1
+        },
+        {
+          "date": "2026-02-09",
+          "returnPct": -0.64,
+          "cumulativePct": -10.54521134,
+          "trades": 1
+        },
+        {
+          "date": "2026-02-11",
+          "returnPct": -0.64,
+          "cumulativePct": -11.11772198,
+          "trades": 1
+        },
+        {
+          "date": "2026-02-14",
+          "returnPct": 0.86,
+          "cumulativePct": -10.35333439,
+          "trades": 1
+        },
+        {
+          "date": "2026-02-15",
+          "returnPct": -0.22841389,
+          "cumulativePct": -10.55809983,
+          "trades": 1
+        },
+        {
+          "date": "2026-02-16",
+          "returnPct": -0.64,
+          "cumulativePct": -11.13052799,
+          "trades": 1
+        },
+        {
+          "date": "2026-02-17",
+          "returnPct": -0.50414676,
+          "cumulativePct": -11.57856055,
+          "trades": 1
+        },
+        {
+          "date": "2026-02-19",
+          "returnPct": -0.64,
+          "cumulativePct": -12.14445777,
+          "trades": 1
+        },
+        {
+          "date": "2026-02-20",
+          "returnPct": -0.64,
+          "cumulativePct": -12.70673324,
+          "trades": 1
+        },
+        {
+          "date": "2026-02-22",
+          "returnPct": -0.20956729,
+          "cumulativePct": -12.88967137,
+          "trades": 1
+        },
+        {
+          "date": "2026-02-27",
+          "returnPct": -0.64,
+          "cumulativePct": -13.44717748,
+          "trades": 1
+        },
+        {
+          "date": "2026-03-02",
+          "returnPct": -0.13794526,
+          "cumulativePct": -13.56657299,
+          "trades": 1
+        },
+        {
+          "date": "2026-03-03",
+          "returnPct": 0.86,
+          "cumulativePct": -12.82324552,
+          "trades": 1
+        },
+        {
+          "date": "2026-03-08",
+          "returnPct": -0.64,
+          "cumulativePct": -13.38117675,
+          "trades": 1
+        },
+        {
+          "date": "2026-03-09",
+          "returnPct": -0.64,
+          "cumulativePct": -13.93553722,
+          "trades": 1
+        },
+        {
+          "date": "2026-03-10",
+          "returnPct": 0.04622337,
+          "cumulativePct": -13.89575532,
+          "trades": 1
+        },
+        {
+          "date": "2026-03-12",
+          "returnPct": 0.04162321,
+          "cumulativePct": -13.85991597,
+          "trades": 1
+        },
+        {
+          "date": "2026-03-15",
+          "returnPct": 0.11570567,
+          "cumulativePct": -13.76024701,
+          "trades": 1
+        },
+        {
+          "date": "2026-03-16",
+          "returnPct": 0.11472038,
+          "cumulativePct": -13.66131244,
+          "trades": 1
+        },
+        {
+          "date": "2026-03-23",
+          "returnPct": -0.18741813,
+          "cumulativePct": -13.8231268,
+          "trades": 1
+        },
+        {
+          "date": "2026-03-25",
+          "returnPct": -0.17445965,
+          "cumulativePct": -13.97347067,
+          "trades": 1
+        },
+        {
+          "date": "2026-03-26",
+          "returnPct": -0.64,
+          "cumulativePct": -14.52404046,
+          "trades": 1
+        },
+        {
+          "date": "2026-03-29",
+          "returnPct": 0.21552746,
+          "cumulativePct": -14.33981629,
+          "trades": 1
+        },
+        {
+          "date": "2026-03-30",
+          "returnPct": -0.30181549,
+          "cumulativePct": -14.59835199,
+          "trades": 1
+        },
+        {
+          "date": "2026-03-31",
+          "returnPct": 0.16297439,
+          "cumulativePct": -14.45916918,
+          "trades": 1
+        },
+        {
+          "date": "2026-04-02",
+          "returnPct": 0.04995825,
+          "cumulativePct": -14.41643448,
+          "trades": 1
+        },
+        {
+          "date": "2026-04-04",
+          "returnPct": -0.45087063,
+          "cumulativePct": -14.80230564,
+          "trades": 1
+        },
+        {
+          "date": "2026-04-05",
+          "returnPct": 0.06068723,
+          "cumulativePct": -14.75060152,
+          "trades": 1
+        },
+        {
+          "date": "2026-04-10",
+          "returnPct": 0.49213741,
+          "cumulativePct": -14.33105733,
+          "trades": 1
+        },
+        {
+          "date": "2026-04-11",
+          "returnPct": -0.64,
+          "cumulativePct": -14.87933857,
+          "trades": 1
+        },
+        {
+          "date": "2026-04-16",
+          "returnPct": 0.32025105,
+          "cumulativePct": -14.60673876,
+          "trades": 1
+        },
+        {
+          "date": "2026-04-24",
+          "returnPct": -0.19068772,
+          "cumulativePct": -14.76957322,
+          "trades": 1
+        },
+        {
+          "date": "2026-04-26",
+          "returnPct": -0.64,
+          "cumulativePct": -15.31504795,
+          "trades": 1
+        },
+        {
+          "date": "2026-04-27",
+          "returnPct": -0.07628325,
+          "cumulativePct": -15.37964838,
+          "trades": 1
+        },
+        {
+          "date": "2026-05-02",
+          "returnPct": -0.04795065,
+          "cumulativePct": -15.4202244,
+          "trades": 1
+        },
+        {
+          "date": "2026-05-03",
+          "returnPct": -0.05316758,
+          "cumulativePct": -15.46519342,
+          "trades": 1
+        },
+        {
+          "date": "2026-05-04",
+          "returnPct": -0.11603232,
+          "cumulativePct": -15.56328111,
+          "trades": 1
+        },
+        {
+          "date": "2026-05-05",
+          "returnPct": 0.14035731,
+          "cumulativePct": -15.44476801,
+          "trades": 1
+        },
+        {
+          "date": "2026-05-06",
+          "returnPct": -0.13335989,
+          "cumulativePct": -15.55753078,
+          "trades": 1
+        },
+        {
+          "date": "2026-05-08",
+          "returnPct": -0.54724403,
+          "cumulativePct": -16.01963715,
+          "trades": 1
+        },
+        {
+          "date": "2026-05-09",
+          "returnPct": -0.02017484,
+          "cumulativePct": -16.03658006,
+          "trades": 1
+        },
+        {
+          "date": "2026-05-11",
+          "returnPct": -0.14167721,
+          "cumulativePct": -16.15553708,
+          "trades": 1
+        },
+        {
+          "date": "2026-05-12",
+          "returnPct": 0.49694268,
+          "cumulativePct": -15.73887817,
+          "trades": 1
+        },
+        {
+          "date": "2026-05-14",
+          "returnPct": -0.18894473,
+          "cumulativePct": -15.89808512,
+          "trades": 1
+        },
+        {
+          "date": "2026-05-15",
+          "returnPct": -0.48026905,
+          "cumulativePct": -16.30200059,
+          "trades": 1
+        },
+        {
+          "date": "2026-05-17",
+          "returnPct": 0.02727429,
+          "cumulativePct": -16.27917256,
+          "trades": 1
+        },
+        {
+          "date": "2026-05-21",
+          "returnPct": -0.45784905,
+          "cumulativePct": -16.66248757,
+          "trades": 1
+        },
+        {
+          "date": "2026-05-22",
+          "returnPct": -0.10253409,
+          "cumulativePct": -16.74793693,
+          "trades": 1
+        },
+        {
+          "date": "2026-05-25",
+          "returnPct": 0.09512405,
+          "cumulativePct": -16.6687442,
+          "trades": 1
+        },
+        {
+          "date": "2026-05-30",
+          "returnPct": 0.20243431,
+          "cumulativePct": -16.50005314,
+          "trades": 1
+        },
+        {
+          "date": "2026-05-31",
+          "returnPct": -0.13543654,
+          "cumulativePct": -16.61314258,
+          "trades": 1
+        },
+        {
+          "date": "2026-06-01",
+          "returnPct": -0.09957963,
+          "cumulativePct": -16.6961789,
+          "trades": 1
+        },
+        {
+          "date": "2026-06-02",
+          "returnPct": -0.05437542,
+          "cumulativePct": -16.7414757,
+          "trades": 1
+        },
+        {
+          "date": "2026-06-05",
+          "returnPct": -0.64,
+          "cumulativePct": -17.27433026,
+          "trades": 1
+        },
+        {
+          "date": "2026-06-06",
+          "returnPct": -0.22408162,
+          "cumulativePct": -17.45970328,
+          "trades": 1
+        },
+        {
+          "date": "2026-06-07",
+          "returnPct": 0.52093069,
+          "cumulativePct": -17.02972554,
+          "trades": 1
+        },
+        {
+          "date": "2026-06-08",
+          "returnPct": -0.64,
+          "cumulativePct": -17.5607353,
+          "trades": 1
+        },
+        {
+          "date": "2026-06-09",
+          "returnPct": -0.64,
+          "cumulativePct": -18.08834659,
+          "trades": 1
+        },
+        {
+          "date": "2026-06-10",
+          "returnPct": -0.00961207,
+          "cumulativePct": -18.09622,
+          "trades": 1
+        },
+        {
+          "date": "2026-06-11",
+          "returnPct": -0.64,
+          "cumulativePct": -18.62040419,
+          "trades": 1
+        },
+        {
+          "date": "2026-06-12",
+          "returnPct": 0.86,
+          "cumulativePct": -17.92053966,
+          "trades": 1
+        },
+        {
+          "date": "2026-06-14",
+          "returnPct": -0.64,
+          "cumulativePct": -18.44584821,
+          "trades": 1
+        },
+        {
+          "date": "2026-06-15",
+          "returnPct": 0.86,
+          "cumulativePct": -17.7444825,
+          "trades": 1
+        },
+        {
+          "date": "2026-06-17",
+          "returnPct": -0.21888589,
+          "cumulativePct": -17.92452822,
+          "trades": 1
+        },
+        {
+          "date": "2026-06-21",
+          "returnPct": -0.39773196,
+          "cumulativePct": -18.25096861,
+          "trades": 1
+        },
+        {
+          "date": "2026-06-22",
+          "returnPct": -0.0978224,
+          "cumulativePct": -18.33093747,
+          "trades": 1
+        },
+        {
+          "date": "2026-06-24",
+          "returnPct": -0.46124779,
+          "cumulativePct": -18.70763422,
+          "trades": 1
+        },
+        {
+          "date": "2026-06-27",
+          "returnPct": -0.06318244,
+          "cumulativePct": -18.75899672,
+          "trades": 1
+        },
+        {
+          "date": "2026-06-28",
+          "returnPct": 0.03834229,
+          "cumulativePct": -18.72784706,
+          "trades": 1
+        },
+        {
+          "date": "2026-06-29",
+          "returnPct": -0.56747253,
+          "cumulativePct": -19.1890442,
+          "trades": 1
+        },
+        {
+          "date": "2026-07-02",
+          "returnPct": 0.86,
+          "cumulativePct": -18.49406998,
+          "trades": 1
+        },
+        {
+          "date": "2026-07-03",
+          "returnPct": -0.64,
+          "cumulativePct": -19.01570794,
+          "trades": 1
+        },
+        {
+          "date": "2026-07-04",
+          "returnPct": -0.64,
+          "cumulativePct": -19.53400741,
+          "trades": 1
+        },
+        {
+          "date": "2026-07-07",
+          "returnPct": 0.86,
+          "cumulativePct": -18.84199987,
+          "trades": 1
+        },
+        {
+          "date": "2026-07-08",
+          "returnPct": 0.16071564,
+          "cumulativePct": -18.71156627,
+          "trades": 1
+        },
+        {
+          "date": "2026-07-09",
+          "returnPct": 0.21950253,
+          "cumulativePct": -18.5331361,
+          "trades": 1
+        },
+        {
+          "date": "2026-07-10",
+          "returnPct": -0.53957605,
+          "cumulativePct": -18.97271179,
+          "trades": 1
+        },
+        {
+          "date": "2026-07-12",
+          "returnPct": -0.64,
+          "cumulativePct": -19.49128643,
+          "trades": 1
+        },
+        {
+          "date": "2026-07-13",
+          "returnPct": -0.19223405,
+          "cumulativePct": -19.64605159,
+          "trades": 1
+        },
+        {
+          "date": "2026-07-14",
+          "returnPct": 0.1467651,
+          "cumulativePct": -19.52812004,
+          "trades": 1
+        },
+        {
+          "date": "2026-07-16",
+          "returnPct": -0.61454882,
+          "cumulativePct": -20.02265903,
+          "trades": 1
+        },
+        {
+          "date": "2026-07-17",
+          "returnPct": -0.56631579,
+          "cumulativePct": -20.47558334,
+          "trades": 1
+        },
+        {
+          "date": "2026-07-18",
+          "returnPct": 0.06210661,
+          "cumulativePct": -20.42619342,
+          "trades": 1
+        },
+        {
+          "date": "2026-07-19",
+          "returnPct": 0.0834472,
+          "cumulativePct": -20.3597913,
+          "trades": 1
+        },
+        {
+          "date": "2026-07-20",
+          "returnPct": -0.16208806,
+          "cumulativePct": -20.48887857,
+          "trades": 1
+        },
+        {
+          "date": "2026-07-21",
+          "returnPct": 0.62674355,
+          "cumulativePct": -19.99054774,
+          "trades": 1
+        },
+        {
+          "date": "2026-07-24",
+          "returnPct": -0.02652721,
+          "cumulativePct": -20.01177202,
+          "trades": 1
+        },
+        {
+          "date": "2026-07-25",
+          "returnPct": -0.11014575,
+          "cumulativePct": -20.09987565,
+          "trades": 1
+        },
+        {
+          "date": "2026-07-26",
+          "returnPct": -0.23472217,
+          "cumulativePct": -20.28741895,
+          "trades": 1
+        },
+        {
+          "date": "2026-07-27",
+          "returnPct": -0.23098026,
+          "cumulativePct": -20.47153928,
+          "trades": 1
+        },
+        {
+          "date": "2026-07-29",
+          "returnPct": -0.19828638,
+          "cumulativePct": -20.62923339,
+          "trades": 1
+        },
+        {
+          "date": "2026-07-30",
+          "returnPct": -0.64,
+          "cumulativePct": -21.13720629,
+          "trades": 1
+        },
+        {
+          "date": "2026-07-31",
+          "returnPct": -0.14652884,
+          "cumulativePct": -21.25276303,
+          "trades": 1
+        },
+        {
+          "date": "2026-08-02",
+          "returnPct": -0.20281338,
+          "cumulativePct": -21.41247296,
+          "trades": 1
+        },
+        {
+          "date": "2026-08-03",
+          "returnPct": -0.22059797,
+          "cumulativePct": -21.58583545,
+          "trades": 1
+        },
+        {
+          "date": "2026-08-04",
+          "returnPct": -0.30588485,
+          "cumulativePct": -21.8256925,
+          "trades": 1
+        },
+        {
+          "date": "2026-08-06",
+          "returnPct": -0.30666667,
+          "cumulativePct": -22.06542704,
+          "trades": 1
+        },
+        {
+          "date": "2026-08-07",
+          "returnPct": -0.39118525,
+          "cumulativePct": -22.37029559,
+          "trades": 1
+        },
+        {
+          "date": "2026-08-10",
+          "returnPct": -0.14545852,
+          "cumulativePct": -22.48321461,
+          "trades": 1
+        },
+        {
+          "date": "2026-08-12",
+          "returnPct": 0.09893668,
+          "cumulativePct": -22.40652207,
+          "trades": 1
+        },
+        {
+          "date": "2026-08-16",
+          "returnPct": -0.11982153,
+          "cumulativePct": -22.49949577,
+          "trades": 1
+        },
+        {
+          "date": "2026-08-17",
+          "returnPct": -0.00680397,
+          "cumulativePct": -22.50476888,
+          "trades": 1
+        },
+        {
+          "date": "2026-08-18",
+          "returnPct": -0.08905813,
+          "cumulativePct": -22.57378468,
+          "trades": 1
+        },
+        {
+          "date": "2026-08-19",
+          "returnPct": -0.33224643,
+          "cumulativePct": -22.83103051,
+          "trades": 1
+        },
+        {
+          "date": "2026-08-20",
+          "returnPct": 0.86,
+          "cumulativePct": -22.16737738,
+          "trades": 1
+        },
+        {
+          "date": "2026-08-22",
+          "returnPct": -0.64,
+          "cumulativePct": -22.66550616,
+          "trades": 1
+        },
+        {
+          "date": "2026-08-23",
+          "returnPct": -0.48039012,
+          "cumulativePct": -23.03701343,
+          "trades": 1
+        },
+        {
+          "date": "2026-08-25",
+          "returnPct": 0.16697547,
+          "cumulativePct": -22.90850412,
+          "trades": 1
+        },
+        {
+          "date": "2026-08-26",
+          "returnPct": -0.27181938,
+          "cumulativePct": -23.11805375,
+          "trades": 1
+        },
+        {
+          "date": "2026-08-28",
+          "returnPct": -0.64,
+          "cumulativePct": -23.61009821,
+          "trades": 1
+        },
+        {
+          "date": "2026-08-30",
+          "returnPct": 0.57849007,
+          "cumulativePct": -23.16819021,
+          "trades": 1
+        },
+        {
+          "date": "2026-08-31",
+          "returnPct": 0.07107263,
+          "cumulativePct": -23.11358382,
+          "trades": 1
+        },
+        {
+          "date": "2026-09-01",
+          "returnPct": -0.10589139,
+          "cumulativePct": -23.19499992,
+          "trades": 1
+        },
+        {
+          "date": "2026-09-06",
+          "returnPct": 0.25919244,
+          "cumulativePct": -22.99592716,
+          "trades": 1
+        },
+        {
+          "date": "2026-09-09",
+          "returnPct": -0.27693748,
+          "cumulativePct": -23.2091803,
+          "trades": 1
+        },
+        {
+          "date": "2026-09-11",
+          "returnPct": -0.64,
+          "cumulativePct": -23.70064155,
+          "trades": 1
+        },
+        {
+          "date": "2026-09-14",
+          "returnPct": 0.37843537,
+          "cumulativePct": -23.41189779,
+          "trades": 1
+        },
+        {
+          "date": "2026-09-15",
+          "returnPct": -0.16997714,
+          "cumulativePct": -23.54208005,
+          "trades": 1
+        },
+        {
+          "date": "2026-09-16",
+          "returnPct": -0.64,
+          "cumulativePct": -24.03141074,
+          "trades": 1
+        },
+        {
+          "date": "2026-09-17",
+          "returnPct": -0.64,
+          "cumulativePct": -24.51760971,
+          "trades": 1
+        },
+        {
+          "date": "2026-09-20",
+          "returnPct": -0.64,
+          "cumulativePct": -25.00069701,
+          "trades": 1
+        },
+        {
+          "date": "2026-09-22",
+          "returnPct": -0.64,
+          "cumulativePct": -25.48069255,
+          "trades": 1
+        },
+        {
+          "date": "2026-09-23",
+          "returnPct": -0.3373402,
+          "cumulativePct": -25.73207613,
+          "trades": 1
+        },
+        {
+          "date": "2026-09-28",
+          "returnPct": -0.3738866,
+          "cumulativePct": -26.00975395,
+          "trades": 1
+        },
+        {
+          "date": "2026-09-29",
+          "returnPct": 0.09698568,
+          "cumulativePct": -25.937994,
+          "trades": 1
+        },
+        {
+          "date": "2026-09-30",
+          "returnPct": -0.1444188,
+          "cumulativePct": -26.04495346,
+          "trades": 1
+        },
+        {
+          "date": "2026-10-04",
+          "returnPct": -0.2171538,
+          "cumulativePct": -26.20554966,
+          "trades": 1
+        }
+      ]
+    },
+    "soxl": {
+      "source": "data/soxl-research/baseline-trades.csv",
+      "daily": [
+        {
+          "date": "2026-10-02",
+          "returnPct": -1.4,
+          "cumulativePct": -1.4,
+          "trades": 1
+        }
+      ]
+    }
+  }
+}
