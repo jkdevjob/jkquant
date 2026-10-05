@@ -194,6 +194,7 @@ function renderSources(){
   document.getElementById("sourceWarn").innerHTML=failed.length?'<div class="warn">⚠️ 이번 수집에서 제한/실패한 사이트: '+esc(failed.join(" · "))+". 다른 사이트에서 확인된 공고는 정상 표시됩니다.</div>":""
 }
 function isRegularJob(j){
+  if((j.employmentTypes||[]).indexOf("정규직")>=0)return true;
   var text=[j.title,j.body].join(" ").toLowerCase();
   return text.indexOf("정규직")>=0||text.indexOf("정규 사원")>=0||text.indexOf("정규사원")>=0
 }
@@ -228,15 +229,18 @@ function renderList(){
     var cats=(j.categories||[]).map(function(c){return '<span class="tag '+tagClass(c)+'">'+esc(CAT_LABEL[c]||c)+"</span>"}).join("");
     var loc=(j.locations||[]).map(function(x){return '<span class="tag">'+esc(x)+"</span>"}).join("");
     var salary=j.salary&&j.salary.label?'<span class="tag pay">'+esc(j.salary.label)+"</span>":"";
+    var employment=(j.employmentTypes||[]).map(function(x){return '<span class="tag reg">'+esc(x)+"</span>"}).join("");
+    var career=j.career?'<span class="tag">'+esc(j.career)+"</span>":"";
+    var education=j.education?'<span class="tag">'+esc(j.education)+"</span>":"";
     var st=j.status||"active";
     var statusTag='<span class="tag '+(st==="closed"?"closed":"active")+'">'+(st==="closed"?"마감":"진행중")+"</span>";
-    var deadline=j.deadline?'<span class="tag">마감 '+esc(fmtDate(j.deadline))+"</span>":"";
+    var deadline=j.deadline?'<span class="tag">마감 '+esc(fmtDate(j.deadline))+"</span>":(j.deadlineSource==="채용시"?'<span class="tag">채용시 마감</span>':"");
     var historyTag=j.archivedAt?'<span class="tag">장기보관</span>':"";
     var company='<span class="company-inline">'+esc((j.company||"").trim()||"업체 비공개")+"</span>";
     var dateLabel=j.postedDate?fmtDate(j.postedDate)+" · "+esc(j.dateSource||"등록일"):fmtDate(j.firstSeen)+" · 최초수집";
     var key=scrapKey(j),scrapped=isScrapped(j);
     var scrap='<button class="scrap-btn'+(scrapped?' on':'')+'" type="button" data-scrap-key="'+esc(key)+'" aria-label="'+(scrapped?'스크랩 해제':'스크랩')+'" title="'+(scrapped?'스크랩 해제':'스크랩')+'">'+(scrapped?'★':'☆')+'</button>';
-    return '<article class="card"><div class="cardtop"><div class="titleline"><a class="title" href="'+esc(j.url)+'" target="_blank" rel="noopener">'+esc(j.title||"제목 없음")+'</a>'+company+'</div><div class="card-actions"><div class="date">'+dateLabel+'</div>'+scrap+'</div></div><div class="meta">'+statusTag+deadline+historyTag+cats+loc+salary+'</div>'+(j.body?'<div class="desc">'+esc(j.body)+"</div>":"")+'<div class="src">출처: '+esc((j.sources||[]).join(" / ")||j.source||"-")+" · 마지막 확인 "+esc(j.lastSeen||"-")+(st==="closed"&&j.closeReason?" · "+esc(j.closeReason):"")+"</div></article>"
+    return '<article class="card"><div class="cardtop"><div class="titleline"><a class="title" href="'+esc(j.url)+'" target="_blank" rel="noopener">'+esc(j.title||"제목 없음")+'</a>'+company+'</div><div class="card-actions"><div class="date">'+dateLabel+'</div>'+scrap+'</div></div><div class="meta">'+statusTag+deadline+employment+career+education+historyTag+cats+loc+salary+'</div>'+(j.body?'<div class="desc">'+esc(j.body)+"</div>":"")+'<div class="src">출처: '+esc((j.sources||[]).join(" / ")||j.source||"-")+" · 마지막 확인 "+esc(j.lastSeen||"-")+(st==="closed"&&j.closeReason?" · "+esc(j.closeReason):"")+"</div></article>"
   }).join("");
   document.getElementById("moreBtn").hidden=shown>=filtered.length
 }
