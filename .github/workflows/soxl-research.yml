@@ -14,6 +14,7 @@ on:
       - ".github/workflows/soxl-research.yml"
       - "scripts/collect_soxl_data.py"
       - "scripts/backtest_soxl_intraday.py"
+      - "scripts/build_scalping_trend.py"
       - "functions/api/soxl-research.js"
       - "scalping.html"
 
@@ -113,10 +114,13 @@ jobs:
             fi
           fi
 
+          python .app/scripts/build_scalping_trend.py
+
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           [ -e data/soxl ] && git add -A -- data/soxl || true
           [ -e data/soxl-research ] && git add -A -- data/soxl-research || true
+          [ -e data/scalping-trend ] && git add -A -- data/scalping-trend || true
           if git diff --cached --quiet; then
             echo "새 SOXL 데이터/연구결과 없음"
             exit 0
