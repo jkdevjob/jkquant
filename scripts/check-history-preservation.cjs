@@ -40,7 +40,7 @@ ok('수동 무매 거래는 DB 성공 확인 후 입력창을 닫음',
   /const dbOk=await pushRemoteNow\(\)/.test(fn(idx,'async function sheetSaveInf()'))
   && /if\(!dbOk\)/.test(fn(idx,'async function sheetSaveInf()')));
 
-const idxFns=['_histKeyPart','_histStableJson','_histSemanticKey','_histGroupKey','_histEntries','_rebaseRecordArray','_rebaseStateOnRemote','_repairLegacyMergeDupes']
+const idxFns=['_histKeyPart','_histStableJson','_histSemanticKey','_histGroupKey','_histEntries','_rebaseRecordArray','_statePlainObject','_stateValEq','_rebaseObjectFields','_rebaseStateOnRemote','_repairLegacyMergeDupes']
   .map(n=>fn(idx,'function '+n+'(')).join('\n');
 const IC=vm.createContext({console,Map,Set,JSON,sortHist:a=>a.sort((x,y)=>String(x.date||'').localeCompare(String(y.date||''))||((x.ts||0)-(y.ts||0)))});
 vm.runInContext(idxFns,IC);

@@ -3339,6 +3339,49 @@ console.log('\n[61] 모의 성과 — 원화로 받아 세션 통화로 환산')
      && /candidate=_rebaseStateOnRemote\(stateDbBase,candidate,remote\)/.test(extractFn(idx,'async function _commitStateRemote(where)'))
      && /return pushRemoteNow\(\)/.test(extractFn(idx,'function save()')));
 
+  {
+    const src=[
+      extractFn(idx,'function _histKeyPart(x)'),
+      extractFn(idx,'function _histStableJson(v)'),
+      extractFn(idx,'function _histSemanticKey(x)'),
+      extractFn(idx,'function _histEntries(a)'),
+      extractFn(idx,'function _rebaseRecordArray(base,candidate,remote)'),
+      extractFn(idx,'function _statePlainObject(v)'),
+      extractFn(idx,'function _stateValEq(a,b)'),
+      extractFn(idx,'function _rebaseObjectFields(base,candidate,remote,skip)'),
+      extractFn(idx,'function _rebaseStateOnRemote(base,candidate,remote)')
+    ].join('\n');
+    let merge=null,err='';
+    try{ merge=new Function(src+'\nreturn _rebaseStateOnRemote;')(); }catch(e){err=e.message;}
+    const base={
+      activeTab:'inf',
+      paperCommon:{simStart:'2026-06-01',capitalWon:100000000,formMemo:{simStart:'2026-06-01'}},
+      inf:{active:'paper1',sessions:[{id:'paper1',paper:true,simStart:'2026-06-01',simStartMode:'common',settings:{ticker:'SOXL',target:10},hist:[]}]},
+      vr:{sessions:[]},ma:{sessions:[]},ivs:{sessions:[]},dca:{sessions:[]},asap:{sessions:[]}
+    };
+    const remote=JSON.parse(JSON.stringify(base));
+    remote.paperCommon.simStart='2025-01-01';
+    remote.paperCommon.formMemo.simStart='2025-01-01';
+    remote.inf.sessions[0].simStart='2025-01-01';
+    const stale=JSON.parse(JSON.stringify(base));
+    stale.activeTab='vr';                              // 오래된 탭에서 다른 UI만 조작
+    stale.paperCommon.capitalWon=120000000;           // 공통 원금은 실제로 수정
+    stale.inf.sessions[0].settings.target=15;         // 세션 설정도 실제로 수정
+    const merged=merge?merge(base,stale,remote):null;
+    ok('stale 탭 저장이 최신 전체적용 시작일 2025-01-01을 2026-06-01로 되돌리지 않는다',
+       !!merged
+       && merged.paperCommon.simStart==='2025-01-01'
+       && merged.paperCommon.formMemo.simStart==='2025-01-01'
+       && merged.inf.sessions[0].simStart==='2025-01-01',
+       err||JSON.stringify(merged&&{pc:merged.paperCommon,ss:merged.inf&&merged.inf.sessions&&merged.inf.sessions[0]}));
+    ok('3-way merge는 stale 필드는 최신 DB를 보존하면서 그 탭에서 실제 바꾼 값만 반영한다',
+       !!merged
+       && merged.activeTab==='vr'
+       && merged.paperCommon.capitalWon===120000000
+       && merged.inf.sessions[0].settings.target===15,
+       err||JSON.stringify(merged&&{activeTab:merged.activeTab,pc:merged.paperCommon,st:merged.inf&&merged.inf.sessions&&merged.inf.sessions[0]&&merged.inf.sessions[0].settings}));
+  }
+
   // 서버: 날짜를 주면 그 날 값, 주말이면 직전 영업일
   const fx=fs.existsSync(__d+'/functions/api/fx.js') ? fs.readFileSync(__d+'/functions/api/fx.js','utf8') : '';
   ok('fx API가 날짜를 받는다', /const want = new URL\(request\.url\)\.searchParams\.get\("date"\);/.test(fx)
