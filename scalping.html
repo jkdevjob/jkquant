@@ -271,7 +271,7 @@ canvas{display:block;width:100%;height:auto}
 
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Morning Scalping</div><h1>JK <span class="v">퀀트</span> 단타 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="scVer">v1.41.7</span></h1></div>
+    <div><div class="kicker">Morning Scalping</div><h1>JK <span class="v">퀀트</span> 단타 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="scVer">v1.42.0</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -1644,34 +1644,51 @@ function refreshDailyDashboard(){
   loadDailyStrategyResults(true);
   renderDailyCumulativeChart(true);
 }
-async function loadDailyStrategyResults(force){
-  const body=$('daily_results_body'),meta=$('daily_results_meta'); if(!body)return;
-  if(!force&&body.dataset.loaded==='1')return;
+const DAILY_RESULTS_TTL_MS=60000;
+let DAILY_RESULTS_PAYLOAD=null,DAILY_RESULTS_AT=0,DAILY_RESULTS_PROMISE=null;
+function renderDailyStrategyResultsPayload(j,force=false){
+  const body=$('daily_results_body'),meta=$('daily_results_meta');if(!body)return j;
+  const rows=(j.strategies||[]).map(z=>{
+    DAILY_RESULT_CACHE[z.strategy]=z;
+    renderStrategyCockpit(z.strategy);
+    const nm=DAILY_RESULT_LABELS[z.strategy]||z.label||z.strategy;
+    return '<div class="daily-result-card">'+
+      '<div class="daily-result-title"><span>'+nm+'</span><button onclick="showStrategy(\''+z.strategy+'\')">전략 보기 →</button></div>'+
+      '<div class="daily-result-cols">'+dailyResultCell(z.previous,'전일')+dailyResultCell(z.current,'당일')+'</div>'+
+      '<div class="daily-result-meta" style="margin-top:7px">시간 기준 '+esc(z.marketTime||'')+
+        (z.current&&z.current.source==='global-paper-live'?' · <b>실시간 마감 모의장부</b>':' · 연구/확정 이력')+
+        (z.status==='collecting'?' · 데이터 수집 대기':z.status==='error'?' · <span class="loss">일부 원천 조회 실패</span>':'')+'</div>'+
+    '</div>';
+  }).join('');
+  body.innerHTML='<div class="daily-result-list">'+rows+'</div>';
+  body.dataset.loaded='1';
+  const stamp=String(j.generatedAt||'').replace('T',' ').slice(0,16);
+  meta.textContent='기준일 '+esc(j.kstDate||'')+' · 갱신 '+stamp+(force?' · 새로고침 완료':'');
+  return j;
+}
+async function loadDailyStrategyResults(force=false){
+  const body=$('daily_results_body'),meta=$('daily_results_meta'); if(!body)return null;
+  const now=Date.now();
+  if(!force&&DAILY_RESULTS_PAYLOAD&&now-DAILY_RESULTS_AT<DAILY_RESULTS_TTL_MS)
+    return renderDailyStrategyResultsPayload(DAILY_RESULTS_PAYLOAD,false);
+  if(!force&&DAILY_RESULTS_PROMISE)return DAILY_RESULTS_PROMISE;
   meta.textContent='전략별 결과 불러오는 중…';
-  try{
-    const r=await fetch('/api/scalping-daily-results',{headers:{Accept:'application/json'},cache:'no-store'});
-    const j=await r.json(); if(!r.ok||!j.ok)throw new Error(j.error||('HTTP '+r.status));
-    const rows=(j.strategies||[]).map(z=>{
-      DAILY_RESULT_CACHE[z.strategy]=z;
-      renderStrategyCockpit(z.strategy);
-      const nm=DAILY_RESULT_LABELS[z.strategy]||z.label||z.strategy;
-      return '<div class="daily-result-card">'+
-        '<div class="daily-result-title"><span>'+nm+'</span><button onclick="showStrategy(\''+z.strategy+'\')">전략 보기 →</button></div>'+
-        '<div class="daily-result-cols">'+dailyResultCell(z.previous,'전일')+dailyResultCell(z.current,'당일')+'</div>'+
-        '<div class="daily-result-meta" style="margin-top:7px">시간 기준 '+esc(z.marketTime||'')+
-          (z.current&&z.current.source==='global-paper-live'?' · <b>실시간 마감 모의장부</b>':' · 연구/확정 이력')+
-          (z.status==='collecting'?' · 데이터 수집 대기':z.status==='error'?' · <span class="loss">일부 원천 조회 실패</span>':'')+'</div>'+
-      '</div>';
-    }).join('');
-    body.innerHTML='<div class="daily-result-list">'+rows+'</div>';
-    body.dataset.loaded='1';
-    const stamp=String(j.generatedAt||'').replace('T',' ').slice(0,16);
-    meta.textContent='기준일 '+esc(j.kstDate||'')+' · 갱신 '+stamp+(force?' · 새로고침 완료':'');
-  }catch(e){
-    meta.textContent='결과 조회 실패';
-    body.innerHTML='<div class="warn">'+esc(e.message||String(e))+'</div>';
-    body.dataset.loaded='0';
-  }
+  const p=(async()=>{
+    try{
+      const url='/api/scalping-daily-results'+(force?('?refresh=1&ts='+Date.now()):'');
+      const r=await fetch(url,{headers:{Accept:'application/json'},cache:force?'no-store':'default'});
+      const j=await r.json(); if(!r.ok||!j.ok)throw new Error(j.error||('HTTP '+r.status));
+      DAILY_RESULTS_PAYLOAD=j;DAILY_RESULTS_AT=Date.now();
+      return renderDailyStrategyResultsPayload(j,force);
+    }catch(e){
+      meta.textContent='결과 조회 실패';
+      body.innerHTML='<div class="warn">'+esc(e.message||String(e))+'</div>';
+      body.dataset.loaded='0';
+      return null;
+    }
+  })();
+  DAILY_RESULTS_PROMISE=p;
+  try{return await p;}finally{if(DAILY_RESULTS_PROMISE===p)DAILY_RESULTS_PROMISE=null;}
 }
 
 function cumulativeHistoryCard(name){
@@ -1793,6 +1810,7 @@ function renderScoreline(name,j){
     (req==null?'':' · 필요승률 <b>'+req.toFixed(1)+'%</b> · 엣지 <b class="'+((edge||0)>=0?'win':'loss')+'">'+sign(edge||0)+'</b>')+
     ' <span class="muted">['+progress+']</span>';
   SCORE_CACHE[name]={name,trades:n,winRate:wr,avgPnl:avg,required:req,edge,days,progress};
+  if(el)el.dataset.loaded='1';
   renderStrategyOverview();
   renderStrategyCockpit(name);
 }
@@ -1810,9 +1828,13 @@ function renderStrategyOverview(){
   el.innerHTML='<div class="strategy-overview-wrap"><table class="strategy-overview-table"><thead><tr><th>전략</th><th>표본</th><th>승률</th><th>거래당</th><th>필요승률</th><th>엣지</th><th>검증상태</th></tr></thead><tbody>'+rows+'</tbody></table></div>'+
     '<p class="note">표본·승률·거래당은 설계 표본(백테스트, 매매일 단위) 값입니다. 승률 = 손실이 아닌 매매일 비율, 필요승률 = 평균 이익·손실로 본 손익분기 승률, 엣지 = 승률 − 필요승률. 검증상태는 10/1부터 쌓는 모의투자 누적 매매일(20일이면 판정)입니다.</p>';
 }
-async function loadStrategyScorecard(name){
+async function loadStrategyScorecard(name,force=false){
   if(!SCORE_APIS[name])return;
-  const el=$('score_'+name); if(el)el.innerHTML='<span class="muted">기준전략 성과 불러오는 중…</span>';
+  const el=$('score_'+name);
+  if(!force&&SCORE_CACHE[name]&&el&&el.dataset.loaded==='1'){
+    renderStrategyOverview();renderStrategyCockpit(name);return;
+  }
+  if(el)el.innerHTML='<span class="muted">기준전략 성과 불러오는 중…</span>';
   try{
     const r=await fetch(SCORE_APIS[name],{headers:{Accept:'application/json'}});
     const j=await r.json(); if(!r.ok||!j.ok)throw new Error(j.error||('HTTP '+r.status));
@@ -2401,10 +2423,13 @@ function showStrategy(name){
   SCALP_PREFS.strategyTab=name;if(me)void cloudSave();
   if(name==='duel'){ loadScalpingDuel(false); }
   if(name==='daily'){
-    loadDailyStrategyResults(false);
-    renderDailyCumulativeChart();
-    loadDaily1Shadow(false);
-    active.forEach(x=>loadStrategyScorecard(x));
+    /* 오늘 탭의 핵심은 '오늘 결과'다. 연구/누적 그래프 9개 요청을 동시에 던져
+       첫 카드까지 늦추지 말고, 핵심 결과가 끝난 뒤 낮은 우선순위로 나눠 불러온다. */
+    Promise.resolve(loadDailyStrategyResults(false)).finally(()=>{
+      setTimeout(()=>renderDailyCumulativeChart(),0);
+      setTimeout(()=>loadDaily1Shadow(false),80);
+      setTimeout(()=>active.forEach(x=>loadStrategyScorecard(x)),180);
+    });
   }
   if(active.includes(name)){ loadScalpingHistory(name,1); loadStrategyScorecard(name); loadDaily1Shadow(false); loadScalpingReview(name,false); loadShadowRankings(false); renderStrategyStatus(name); renderPlan(name); }
   if(name==='opening'){loadServerOpeningHistory();startOpeningPaperAuto();}
