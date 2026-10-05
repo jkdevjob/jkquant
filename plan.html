@@ -265,7 +265,7 @@ setTimeout(function(){ var h=document.documentElement; if(h.classList.contains('
 </script>
 <div class="wrap">
   <div class="top">
-    <div class="brand"><div class="logo">Asset Plan</div><h1>자산플랜 <span class="ver">v1.43.3</span></h1></div>
+    <div class="brand"><div class="logo">Asset Plan</div><h1>자산플랜 <span class="ver">v1.43.4</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
       <div class="jkmenu" id="jkmenuWrap">
@@ -944,7 +944,20 @@ function setAssetDetail(name){
   });
   document.querySelectorAll('[data-asset-view]').forEach(p=>{p.hidden=p.dataset.assetView!==selected;});
 }
-const requestedAssetSessionId=(()=>{try{return new URLSearchParams(location.search).get('session')||'';}catch(e){return '';}})();
+let requestedAssetSessionId=(()=>{try{return new URLSearchParams(location.search).get('session')||'';}catch(e){return '';}})();
+/* 모의성과에서 /plan?session=... 으로 들어오는 값은 '한 번만' 적용하는 딥링크다.
+   사용자가 세션 칩을 직접 고른 뒤에도 URL에 session=모의ID가 남아 있으면
+   재인증/DB 재연결 때 그 모의세션이 다시 선택된다. */
+function clearRequestedAssetSessionLink(){
+  requestedAssetSessionId='';
+  try{
+    const u=new URL(location.href);
+    u.searchParams.delete('session');
+    u.searchParams.delete('horizon');
+    const q=u.searchParams.toString();
+    history.replaceState(null,'',u.pathname+(q?'?'+q:'')+u.hash);
+  }catch(e){}
+}
 function assetPlanBox(){ensureLiveBoxes();return liveState.plan;}
 function assetSessionList(h=activeHorizon){return assetPlanBox().sessions.filter(x=>x&&+x.horizon===+h);}
 function activeAssetSession(){
@@ -1121,6 +1134,16 @@ async function selectAssetSession(id){
   if(cur&&!cur.paper)syncActiveAssetSessionFromView();
   else if(!cur)localSave();
   const b=assetPlanBox();b.activeByHorizon[activeHorizon]=id||'';writeAssetSessionLocal();
+  // 사용자의 직접 선택이 모의성과 딥링크보다 우선한다.
+  clearRequestedAssetSessionLink();
+  // refreshLive()는 Firebase stateV2를 다시 읽으므로 선택값을 먼저 저장하지 않으면
+  // '현재 투자중'을 누른 직후 원격의 예전 모의 ID가 다시 살아나 모의 탭으로 튄다.
+  const saved=await saveOperatingState();
+  if(!saved){
+    if($('assetSessionState'))$('assetSessionState').textContent='세션 선택 저장 실패 · 다시 시도해 주세요.';
+    await loadActiveAssetSessionView(false);
+    return;
+  }
   await loadActiveAssetSessionView(true);
 }
 function openAssetSessionModal(){
@@ -3034,6 +3057,8 @@ async function finishPlanOpen(user){
       activeHorizon=+q.horizon;assetPlanBox().activeByHorizon[activeHorizon]=q.id;
       writeAssetSessionLocal();renderHorizonCopy();
     }
+    // 딥링크는 최초 진입용이다. 이후 DB 재연결/인증 재실행에서 재선택되지 않게 소비한다.
+    clearRequestedAssetSessionLink();
   }
   renderAssetSessions();
   await loadActiveAssetSessionView(false);
