@@ -55,6 +55,25 @@ console.log('[0] 파일 문법');
   chk(idx,'index'); chk(bt,'backtest'); if(adm) chk(adm,'admin'); if(scl) chk(scl,'scalping'); if(acc) chkJs(acc,'jk-access');
 }
 
+/* ── 공통 로그인·시세 부팅 경로 ── */
+console.log('[0-A] 공통 로그인·실시간 시세 의존성');
+{
+  const authPages=['index.html','plan.html','backtest.html','ipo.html','job.html','admin.html','scalping.html','claude.html'];
+  for(const p of authPages){
+    const s=fs.readFileSync(path.join(__d,p),'utf8');
+    ok(p+' Firebase SDK 12.19.0 통일',
+       (s.match(/firebasejs\/12\.19\.0/g)||[]).length>=3
+       && !/firebasejs\/12\.14\.0/.test(s));
+  }
+  const q=fs.readFileSync(path.join(__d,'functions/api/quote.js'),'utf8');
+  const yq=extractFn(q,'async function yahooQuote(symbol, dbg)');
+  const yi=extractFn(q,'async function yahooIntraday(symbol, dbg)');
+  ok('미국 실시간 시세 Yahoo query1 실패 시 query2 재시도',
+     /for \(const host of \["query1", "query2"\]\)/.test(yq)
+     && /for \(const host of \["query1", "query2"\]\)/.test(yi)
+     && /query2/.test(yq) && /query2/.test(yi));
+}
+
 // index 엔진
 const ki=idx.indexOf('const KIND_T=');
 const idxParts=[
