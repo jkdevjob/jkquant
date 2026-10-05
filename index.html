@@ -7088,7 +7088,7 @@ function vrStepCycle(sess, c, dateStr, close){
 let _paperBusy=false, paperNote='', paperNoteSid=null;
 function paperStart(sess){
   if(!sess) return null;
-  const pc=(S&&S.paperCommon)||{};
+  const pc=(typeof S!=='undefined'&&S&&S.paperCommon)||{};
   /* 전체 적용 세션의 정본은 paperCommon.simStart 다.
      예전 코드는 sess.simStart 를 먼저 반환해서, 공통 시작일이 2025-01-01로 바뀌어도
      Firebase에 남은 2026-06-01 세션값이 성과/재생에서 계속 이겼다.
