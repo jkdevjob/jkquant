@@ -2079,6 +2079,26 @@ def parse_job_posted_date(title, body):
     if dates:
         return max(dates).isoformat(), '등록/수정일'
 
+    # 검색 스니펫의 "Jul 1, 2025 · ..." 형식도 등록/검색일로 인식한다.
+    english_months = {
+        'Jan': 1, 'Feb': 2, 'Mar': 3, 'Apr': 4, 'May': 5, 'Jun': 6,
+        'Jul': 7, 'Aug': 8, 'Sep': 9, 'Oct': 10, 'Nov': 11, 'Dec': 12,
+    }
+    m = re.search(
+        r'\b(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+'
+        r'(\d{1,2}),\s+(20\d{2})\b',
+        text,
+        re.I,
+    )
+    if m:
+        key = m.group(1).title()
+        try:
+            d = date(int(m.group(3)), english_months[key], int(m.group(2)))
+            if today_date_kst() - timedelta(days=730) <= d <= today_date_kst() + timedelta(days=2):
+                return d.isoformat(), '검색표시'
+        except Exception:
+            pass
+
     # 검색 스니펫에 'N일 전'만 있는 경우도 가능한 범위에서 환산한다.
     m = re.search(r'(\d{1,2})\s*일\s*전', text)
     if m:
