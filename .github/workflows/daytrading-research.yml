@@ -26,6 +26,7 @@ on:
       - "scripts/snapshot_daytrading_universe.py"
       - "scripts/collect_daytrading_data.py"
       - "scripts/backtest_daytrading.py"
+      - "scripts/build_scalping_trend.py"
       - "worker/daytrading-scheduler/**"
       - "functions/api/daytrading-research.js"
       - "functions/api/daytrading-summary.js"
@@ -168,6 +169,7 @@ jobs:
           fi
 
           python .app/scripts/backtest_daytrading.py
+          python .app/scripts/build_scalping_trend.py
 
           if [ "$NEW_DAY" = "1" ] && [ -n "$KEY" ] && [ -f data/daytrading-research/latest.json ]; then
             STATUS=$(curl -sS --max-time 30 -o day-summary-response.json -w '%{http_code}'               -X POST -H "x-monitor-key: $KEY" -H "content-type: application/json"               --data-binary @data/daytrading-research/latest.json               "https://jkquant.pages.dev/api/daytrading-summary")
@@ -176,7 +178,7 @@ jobs:
 
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add data/daytrading data/daytrading-live data/daytrading-research
+          git add data/daytrading data/daytrading-live data/daytrading-research data/scalping-trend
           if git diff --cached --quiet; then
             echo "새 데이트레이딩 데이터/연구결과 없음"
             exit 0
