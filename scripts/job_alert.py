@@ -555,6 +555,11 @@ def fetch_job_identity(job):
             item['_urlReason'] = f'HTTP {response.status_code}'
             return item
 
+        if not response_points_to_job_detail(item.get('url', ''), response.url):
+            item['_urlState'] = 'missing'
+            item['_urlReason'] = '상세공고가 아닌 페이지로 이동'
+            return item
+
         detail_title, detail_company = extract_detail_identity(
             response.text,
             item.get('source', ''),
@@ -622,48 +627,42 @@ def _known_identity_cache():
 
 
 def enrich_jobs_from_details(jobs, workers=8):
+    """현재 수집된 모든 URL을 실제 상세페이지로 재검증한다.
+
+    캐시는 회사명/제목 보조값으로만 사용하며, 캐시가 있다는 이유로
+    HTTP 상세 검증을 건너뛰지 않는다.
+    """
     jobs = list(jobs or [])
     if not jobs:
         return jobs
 
     cache = _known_identity_cache()
-    enriched = []
-    pending = []
-    failures = 0
-
+    prepared = []
     for raw in jobs:
         item = dict(raw)
         url = normalize_url(item.get('url', ''))
         cached = cache.get(url) or {}
-        cached_company = clean_company_name(
-            cached.get('company', ''),
-            item.get('title', ''),
-        )
-        hinted_company = company_hint(item.get('title', ''), item.get('body', ''))
-        current_title = clean_detail_title(item.get('title', ''), cached_company or hinted_company)
+        if not clean_company_name(item.get('company', ''), item.get('title', '')):
+            cached_company = clean_company_name(cached.get('company', ''), item.get('title', ''))
+            if cached_company:
+                item['company'] = cached_company
+        prepared.append(item)
 
-        if cached_company and current_title and not is_generic_job_title(current_title):
-            item['company'] = cached_company
-            item['title'] = current_title
+    enriched = []
+    failures = 0
+    with ThreadPoolExecutor(max_workers=workers) as pool:
+        for item in pool.map(fetch_job_identity, prepared):
+            if item.pop('_identity_error', None):
+                failures += 1
             enriched.append(item)
-            continue
-        if hinted_company and current_title and not is_generic_job_title(current_title):
-            item['company'] = hinted_company
-            item['title'] = current_title
-            enriched.append(item)
-            continue
-        pending.append(item)
 
-    if pending:
-        with ThreadPoolExecutor(max_workers=workers) as pool:
-            for item in pool.map(fetch_job_identity, pending):
-                if item.pop('_identity_error', None):
-                    failures += 1
-                enriched.append(item)
-
+    counts = {}
+    for item in enriched:
+        state = item.get('_urlState', 'unknown')
+        counts[state] = counts.get(state, 0) + 1
     print(
-        f'[INFO] detail_identity total={len(jobs)} fetched={len(pending)} '
-        f'cached={len(jobs)-len(pending)} failures={failures}'
+        f'[INFO] detail_identity total={len(jobs)} verified={len(enriched)} '
+        f'failures={failures} states={counts}'
     )
     return enriched
 
@@ -2299,6 +2298,12 @@ def content_close_reason(title, body, deadline=''):
         r'(?:공고|페이지|채용정보).{0,20}찾을\s*수\s*없',
         r'공고(?:가|는)?\s*마감(?:되었|됐|됨)',
         r'(?:^|[\[\(])\s*채용\s*마감\s*(?:[\]\)]|$)',
+        r'삭제되었거나\s*마감된\s*(?:채용\s*)?공고',
+        r'(?:해당|본)\s*(?:채용\s*)?공고.{0,20}(?:마감|종료|삭제)',
+        r'마감된\s*(?:채용정보|채용공고|공고)',
+        r'(?:지원|접수).{0,20}(?:불가|종료|마감)',
+        r'현재\s*(?:채용\s*)?진행\s*중인\s*공고가\s*아닙니다',
+        r'채용\s*기간.{0,20}종료',
     ]
     if any(re.search(pattern, text, re.I) for pattern in explicit_patterns):
         return '원문 마감 표시'
@@ -2330,6 +2335,26 @@ def miss_close_threshold(item, source_statuses):
     return DIRECT_MISS_CLOSE_THRESHOLD if '직접' in modes else SEARCH_MISS_CLOSE_THRESHOLD
 
 
+def response_points_to_job_detail(request_url, response_url):
+    """200 응답이어도 목록/검색/홈으로 튕기면 삭제·만료 공고로 본다."""
+    req = normalize_url(request_url)
+    final = normalize_url(response_url)
+    if not final:
+        return False
+    if is_listing_or_search_url(final):
+        return False
+    try:
+        fp = urlsplit(final)
+        if fp.path in {'', '/'}:
+            return False
+    except Exception:
+        return False
+    # 타 도메인으로 이동한 경우에도 실제 공고 상세 URL이 아니면 실패 처리한다.
+    if domain_of(req) != domain_of(final) and not is_trusted(final):
+        return False
+    return True
+
+
 def verify_unseen_job(item):
     out = dict(item or {})
     out['_urlState'] = 'unknown'
@@ -2354,6 +2379,11 @@ def verify_unseen_job(item):
         return out
     if not response.ok:
         out['_urlReason'] = f'HTTP {response.status_code}'
+        return out
+
+    if not response_points_to_job_detail(url, response.url):
+        out['_urlState'] = 'missing'
+        out['_urlReason'] = '상세공고가 아닌 페이지로 이동'
         return out
 
     html = response.text or ''
@@ -2434,20 +2464,18 @@ def apply_unseen_status(item, source_statuses):
     if out.get('status') == 'closed':
         return out
 
-    misses = int(out.get('missCount') or 0)
     if url_state == 'missing':
-        misses += 1
-    out['missCount'] = misses
-    out['status'] = 'active'
-    out['closedAt'] = ''
-    out['closeReason'] = ''
-
-    # 검색목록에서 빠졌다는 이유만으로는 마감시키지 않는다.
-    # 원문 URL이 실제로 연속해서 사라진 경우에만 보수적으로 마감한다.
-    if url_state == 'missing' and misses >= miss_close_threshold(out, source_statuses):
+        out['missCount'] = int(out.get('missCount') or 0) + 1
         out['status'] = 'closed'
-        out['closedAt'] = today_kst()
-        out['closeReason'] = f'원문 URL 미확인 {misses}회'
+        out['closedAt'] = out.get('closedAt') or today_kst()
+        out['closeReason'] = url_reason or '원문 삭제/없음'
+        return out
+
+    # 403/429/네트워크 오류 등으로 현재 지원 가능 여부를 확인하지 못한 공고는
+    # 진행중으로 단정하지 않는다. 기본 화면의 진행중 목록에서 제외된다.
+    out['status'] = 'unverified'
+    out['closedAt'] = ''
+    out['closeReason'] = url_reason or '원문 상태 확인 불가'
     return out
 
 def load_job_history():
@@ -2827,8 +2855,33 @@ def save_job_archive(all_jobs, source_statuses):
     )
     return len(kept)
 
+def verified_active_jobs(jobs, workers=12):
+    """사용자에게 노출할 후보는 현재 상세페이지가 active로 확인된 것만 허용한다."""
+    jobs = list(jobs or [])
+    to_check = [j for j in jobs if j.get('_urlState') not in {'active', 'closed', 'missing'}]
+    checked_map = {}
+    if to_check:
+        checked = verify_unseen_jobs(to_check, workers=workers)
+        checked_map = {normalize_url(j.get('url', '')): j for j in checked}
+
+    out = []
+    counts = {}
+    for raw in jobs:
+        item = checked_map.get(normalize_url(raw.get('url', '')), raw)
+        state = item.get('_urlState', 'unknown')
+        counts[state] = counts.get(state, 0) + 1
+        if state != 'active':
+            continue
+        if identity_quality_issue(item):
+            continue
+        out.append(item)
+    print(f'[INFO] live job gate input={len(jobs)} output={len(out)} states={counts}')
+    return out
+
+
 def search_jobs():
     all_jobs, source_statuses = collect_all_sources()
+    all_jobs = verified_active_jobs(all_jobs)
 
     java_jobs = classify_jobs(all_jobs, score_java_result)
     regular_dev_jobs = classify_jobs(all_jobs, score_regular_dev_result)
