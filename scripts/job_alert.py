@@ -1843,6 +1843,16 @@ def is_listing_or_search_url(url):
         or path.startswith('/company/')
     ):
         return True
+    if host.endswith('jobkorea.co.kr') and (
+        path.lower() == '/search'
+        or path.lower().startswith('/search/')
+    ):
+        return True
+    if host.endswith('saramin.co.kr') and (
+        path.startswith('/zf_user/search')
+        or path.startswith('/zf_user/jobs/list')
+    ):
+        return True
     if host.endswith('work24.go.kr') and (
         path.rstrip('/').endswith('/search')
         or path.startswith('/search')
@@ -2335,8 +2345,42 @@ def miss_close_threshold(item, source_statuses):
     return DIRECT_MISS_CLOSE_THRESHOLD if '직접' in modes else SEARCH_MISS_CLOSE_THRESHOLD
 
 
+def posting_identity(url):
+    """알려진 채용사이트의 개별 공고 식별자를 추출한다."""
+    try:
+        parts = urlsplit(normalize_url(url))
+        host = parts.netloc.lower().replace('www.', '')
+        path = parts.path or ''
+        query = dict(parse_qsl(parts.query, keep_blank_values=True))
+    except Exception:
+        return ''
+
+    patterns = [
+        ('jobkorea.co.kr', r'/Recruit/GI_Read/(\d+)', 'jobkorea'),
+        ('jumpit.saramin.co.kr', r'/position/(\d+)', 'jumpit'),
+        ('wanted.co.kr', r'/gigs/projects/(\d+)', 'wanted-gigs'),
+        ('wanted.co.kr', r'/wd/(\d+)', 'wanted'),
+        ('albamon.com', r'/jobs/detail/(\d+)', 'albamon'),
+        ('incruit.com', r'/jobs/(\d+)', 'incruit'),
+    ]
+    for domain, pattern, prefix in patterns:
+        if host.endswith(domain):
+            m = re.search(pattern, path, re.I)
+            if m:
+                return f'{prefix}:{m.group(1)}'
+
+    if host.endswith('saramin.co.kr') and query.get('rec_idx'):
+        return f'saramin:{query["rec_idx"]}'
+    if host.endswith('work24.go.kr') and query.get('wantedAuthNo'):
+        return f'work24:{query["wantedAuthNo"]}'
+    for key in ('adid', 'jobno', 'job_no', 'recruitno', 'recruit_no'):
+        if query.get(key):
+            return f'{host}:{key}:{query[key]}'
+    return ''
+
+
 def response_points_to_job_detail(request_url, response_url):
-    """200 응답이어도 목록/검색/홈으로 튕기면 삭제·만료 공고로 본다."""
+    """200이어도 홈/목록/다른 공고로 이동하면 삭제·만료로 판단한다."""
     req = normalize_url(request_url)
     final = normalize_url(response_url)
     if not final:
@@ -2349,11 +2393,20 @@ def response_points_to_job_detail(request_url, response_url):
             return False
     except Exception:
         return False
-    # 타 도메인으로 이동한 경우에도 실제 공고 상세 URL이 아니면 실패 처리한다.
-    if domain_of(req) != domain_of(final) and not is_trusted(final):
-        return False
-    return True
 
+    req_domain = domain_of(req)
+    final_domain = domain_of(final)
+    if req_domain != final_domain:
+        return False
+
+    req_id = posting_identity(req)
+    final_id = posting_identity(final)
+    if req_id:
+        # 개별 공고 URL로 요청했다면 최종 URL도 같은 공고 식별자를 유지해야 한다.
+        return bool(final_id and final_id == req_id)
+
+    # 식별자를 모르는 사이트는 최소한 상세 URL이 홈/검색으로 변하지 않았는지 확인한다.
+    return True
 
 def verify_unseen_job(item):
     out = dict(item or {})
