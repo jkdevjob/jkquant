@@ -270,7 +270,7 @@ INVALID_COMPANY_EXACT = {
 GENERIC_JOB_TITLES = {
     '입사지원', '홈페이지 지원', '즉시지원', '스크랩', '관심기업',
     '채용', '모집', '채용공고', '공고', '상세보기',
-    '알바몬', '알바천국',
+    '알바몬', '알바천국', '제목 없음', '제목없음',
 }
 DETAIL_HEADERS = {
     'User-Agent': (
@@ -786,6 +786,8 @@ def is_entry_only(title, body):
 def score_java_result(title, body, url):
     text = f"{title} {body}".lower()
 
+    if is_non_job_record(title, body, url):
+        return -999
     if not has_target_location(text):
         return -999
     if any(term in text for term in EXCLUDE_TERMS):
@@ -813,6 +815,8 @@ def score_java_result(title, body, url):
 def score_regular_dev_result(title, body, url):
     text = f"{title} {body}".lower()
 
+    if is_non_job_record(title, body, url):
+        return -999
     if not has_target_location(text):
         return -999
     if any(term in text for term in EXCLUDE_TERMS):
@@ -858,11 +862,18 @@ def salary_is_plausible(title, body, salary):
 def score_salary_result(title, body, url):
     text = f"{title} {body}".lower()
 
+    if is_non_job_record(title, body, url):
+        return -999
     if not has_target_location(text):
         return -999
     if any(term in text for term in EXCLUDE_TERMS):
         return -999
     if is_entry_only(title, body):
+        return -999
+
+    # 급여 500+/450+ 탭은 사용자의 개발자 구직용이다.
+    # 신뢰 도메인이라는 이유만으로 비개발 고연봉 공고를 넣지 않는다.
+    if not any(term in text for term in DEV_REQUIRED_TERMS):
         return -999
 
     salary = salary_info(title, body)
@@ -883,6 +894,8 @@ def score_salary_result(title, body, url):
 def score_short_term_result(title, body, url):
     text = f"{title} {body}".lower()
 
+    if is_non_job_record(title, body, url):
+        return -999
     if not has_target_location(text):
         return -999
     if any(term in text for term in EXCLUDE_TERMS):
@@ -1605,9 +1618,17 @@ def is_listing_or_search_url(url):
     except Exception:
         return False
 
-    if host.endswith('albamon.com') and path.startswith('/total-search'):
+    if host.endswith('albamon.com') and (
+        path.startswith('/total-search')
+        or path.startswith('/post/')
+        or host.startswith('community.')
+    ):
         return True
-    if host.endswith('alba.co.kr') and '/search/' in path:
+    if host.endswith('alba.co.kr') and (
+        '/search/' in path
+        or '/community/' in path
+        or host.startswith('community.')
+    ):
         return True
     if host.endswith('incruit.com') and (
         path.startswith('/list/search')
@@ -1643,7 +1664,12 @@ def is_non_job_record(title, body, url=''):
         return True
     if is_generic_job_title(title_text):
         return True
-    if re.search(r'총\s*팔로워|팔로잉\s*\d+|프로필\s*게시물|커리어\s*요약', text, re.I):
+    if re.search(
+        r'총\s*팔로워|팔로잉\s*\d+|프로필\s*게시물|커리어\s*요약'
+        r'|자유\s*알바몬\s*커뮤니티|알바몬\s*커뮤니티|커뮤니티\s*게시판',
+        text,
+        re.I,
+    ):
         return True
     if re.search(r'@[-_a-z0-9]{6,}', title_text, re.I) and '채용' not in text and '모집' not in text:
         return True
