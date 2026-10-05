@@ -270,8 +270,9 @@ INVALID_COMPANY_EXACT = {
 GENERIC_JOB_TITLES = {
     '입사지원', '홈페이지 지원', '즉시지원', '스크랩', '관심기업',
     '채용', '모집', '채용공고', '공고', '상세보기',
-    '알바몬', '알바천국', '커리어', '인크루트', '원티드', '점핏',
-    '로켓펀치', '제목 없음', '제목없음',
+    '알바몬', '알바천국', '사람인', '잡코리아', '고용24',
+    '커리어', '인크루트', '원티드', '점핏', '로켓펀치',
+    '제목 없음', '제목없음',
 }
 DETAIL_HEADERS = {
     'User-Agent': (
@@ -454,6 +455,15 @@ def title_from_card_body(body):
     text = normalize_text(body)
     if not text:
         return ''
+
+    # 잡코리아 카드에서 회사명 링크가 제목으로 잘못 선택된 경우 실제 공고명을 복구한다.
+    if text.startswith('스크랩 '):
+        after = normalize_text(text[len('스크랩 '):])
+        m = re.search(r'\s+(?:㈜|\(주\)|주식회사)\s*[가-힣A-Za-z0-9&._-]{2,40}\b', after)
+        if m:
+            candidate = normalize_text(after[:m.start()])
+            if 4 <= len(candidate) <= 180 and not is_generic_job_title(candidate):
+                return candidate
 
     # 고용24/DDGS 스니펫: "Sep 7, 2026 · 채용시까지 실제 공고명 [기관] 1명 ..."
     # 형태에서 실제 공고명을 복구한다.
@@ -837,7 +847,36 @@ def scoring_text(title, body):
 
 
 def is_target_dev_job(title, body):
+    title_text = normalize_text(title).lower()
     text = normalize_text(f'{title} {body}').lower()
+
+    title_non_dev = (
+        '디자이너', '디자인', '영업', '마케팅', '강사', '멘토',
+        '운영매니저', '사업개발', '사업기획', '프로젝트 매니저',
+        'project manager', '기술영업', '상담원', '운전기사', '트레이너',
+        '미화원', '기구설계', '회로설계', '하드웨어 개발', '하드웨어개발',
+        ' h/w ', ' hw ', '전장제어', '매니플레이터', '보행제어',
+        '자동화 설비 전문', '현장셋업 보조', '기술지원본부장',
+    )
+    explicit_title_dev = (
+        'java', 'jsp', 'spring', '백엔드', '프론트엔드', '풀스택',
+        '웹개발', '웹 개발', '서버개발', '서버 개발', '소프트웨어',
+        'software', 'sw ', 's/w', '제어sw', '제어 sw', '펌웨어',
+        'firmware', 'ros2', 'python', 'llm', 'rag', '머신러닝',
+        'machine learning', '딥러닝', 'deep learning', 'ai 개발',
+        'ai 엔지니어', '인공지능 개발', '시스템 개발', '시스템개발',
+        '유지보수', 'devops', '클라우드', '데이터 엔지니어',
+    )
+    if any(term in title_text for term in title_non_dev) and not any(
+        term in title_text for term in explicit_title_dev
+    ):
+        return False
+
+    if any(term in title_text for term in (
+        '교육생과정', '교육생 과정', '국비 전액지원', '무료 취업교육',
+        '과정 운영매니저',
+    )):
+        return False
 
     software_terms = (
         'java', 'jsp', 'spring', 'spring boot', '전자정부', 'egov',
