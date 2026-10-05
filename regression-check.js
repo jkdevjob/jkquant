@@ -10476,6 +10476,22 @@ console.log('\n[135] 자산플랜 세션 — 운영처럼 세션 + 모의투자 
      && /requestedAssetSessionId/.test(pl));
 
   {
+    const sel=extractFn(pl,'async function selectAssetSession(id)');
+    const clear=extractFn(pl,'function clearRequestedAssetSessionLink()');
+    const finish=extractFn(pl,'async function finishPlanOpen(user)');
+    ok('F2 자산플랜 현재투자중 선택은 Firebase에 먼저 저장한 뒤 refreshLive를 허용한다',
+       /activeByHorizon\[activeHorizon\]=id\|\|''/.test(sel)
+       && sel.indexOf('await saveOperatingState()')>=0
+       && sel.indexOf('await saveOperatingState()')<sel.indexOf('await loadActiveAssetSessionView(true)'));
+    ok('F3 모의성과 session 딥링크는 1회성이고 사용자의 직접 선택 뒤 URL에서 제거한다',
+       /requestedAssetSessionId=''/.test(clear)
+       && /searchParams\.delete\('session'\)/.test(clear)
+       && /history\.replaceState/.test(clear)
+       && sel.indexOf('clearRequestedAssetSessionLink()')>=0
+       && finish.indexOf('clearRequestedAssetSessionLink()')>=0);
+  }
+
+  {
     const {spawnSync}=require('child_process'),os=require('os');
     const mod=(pl.match(/<script type="module">([\s\S]*?)<\/script>/)||[])[1]||'';
     const tmp=path.join(os.tmpdir(),'jkq_plan_module_check.mjs');fs.writeFileSync(tmp,mod);
