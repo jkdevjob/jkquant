@@ -92,6 +92,25 @@ def run():
         'Sep 16, 2026 · 매장관리·판매 ... (단기/경력무관) 습관 기록 앱 데이터 알바. 시간협의 · 대전 전체',
     )
     assert albamon != '알바몬' and '데이터 알바' in albamon
+
+    assert j.is_non_job_record(
+        '임준희(@b49d83a1a216494a) | 법무법인 세종 전문위원',
+        '총 팔로워 4 팔로잉 2 게시물 0 프로필 게시물 AI 커리어 요약',
+        'https://www.rocketpunch.com/@b49d83a1a216494a',
+    )
+    assert j.is_non_job_record(
+        '2026년 주식회사 데이터메이커 채용 | 인크루트',
+        '회사 소개 및 기업정보',
+        'https://www.incruit.com/company/1680406293/job',
+    )
+
+    meta = j.attach_job_metadata({
+        'title': 'Java 개발자 채용',
+        'body': '대전 유성구 경력 5~12년 대졸↑ 정규직·계약직 Java Spring',
+    })
+    assert meta['employmentTypes'] == ['정규직', '계약직']
+    assert meta['career'] == '경력 5~12년'
+    assert meta['education'] == '대졸↑'
     assert j.is_listing_or_search_url('https://www.albamon.com/total-search?keyword=대전+단기')
     assert j.is_listing_or_search_url('https://www.alba.co.kr/search/Search?wsSrchWord=대전')
     assert j.is_listing_or_search_url('https://search.incruit.com/list/search.asp?col=job&kw=java')
