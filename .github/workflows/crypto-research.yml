@@ -16,6 +16,7 @@ on:
       - ".github/workflows/crypto-research.yml"
       - "scripts/collect_crypto_data.py"
       - "scripts/backtest_crypto_orb.py"
+      - "scripts/build_scalping_trend.py"
 
 permissions:
   contents: write
@@ -54,7 +55,9 @@ jobs:
         run: python .app/scripts/collect_crypto_data.py
 
       - name: 00시 ORB · 22시 신규진입 누적 연구 백테스트
-        run: python .app/scripts/backtest_crypto_orb.py
+        run: |
+          python .app/scripts/backtest_crypto_orb.py
+          python .app/scripts/build_scalping_trend.py
 
       - name: ⑤ 매매이력 + ⑥ 검증분석 Telegram
         env:
@@ -95,13 +98,13 @@ jobs:
 
       - name: 데이터와 연구결과 저장
         run: |
-          if git diff --quiet -- data/crypto data/crypto-research && [ -z "$(git status --porcelain data/crypto data/crypto-research)" ]; then
+          if git diff --quiet -- data/crypto data/crypto-research data/scalping-trend && [ -z "$(git status --porcelain data/crypto data/crypto-research data/scalping-trend)" ]; then
             echo "새 비트코인 데이터/연구결과 없음"
             exit 0
           fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add data/crypto data/crypto-research
+          git add data/crypto data/crypto-research data/scalping-trend
           git commit -m "data: bitcoin scalping research $(TZ=Asia/Seoul date +%F) [skip ci]"
           git pull --rebase origin scalping-data
           git push origin scalping-data
