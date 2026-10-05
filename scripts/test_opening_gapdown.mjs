@@ -12,6 +12,7 @@ const DAY = await import(pathToFileURL(path.join(dir, "_claude_day.js")).href);
 const AUTH = await import(pathToFileURL(path.join(dir, "_claude_auth.js")).href);
 const LAB = await import(pathToFileURL(path.join(dir, "claude-lab.js")).href);
 const KRX = await import(pathToFileURL(path.join(dir, "_krx_calendar.js")).href);
+const MAIN = await import(pathToFileURL(path.join(dir, "_claude_main.js")).href);
 let n = 0;
 const pending = [];
 const t = (name, fn) => { const r = fn(); if (r && r.then) pending.push(r.then(() => { n++; })); else n++; };
@@ -31,6 +32,78 @@ t("holiday: live/telegram say 휴장 instead of '주문 실패'", () => {
   assert.equal(rows[0].note, "국내 휴장일");
   const pre = TG.compose("preopen", "2026-10-05", { tabs: { opening: { rows: [], decision: { reason: "krx_holiday" } }, daytrading: { rows: [] } } });
   assert.ok(pre.includes("국내 휴장일") && !pre.includes("주문 실패"));
+});
+t("main record: 범위 검사(보유 ≤5일 · ② 233740 전용) · 효력일 전에는 옛 메인 · 검사에 떨어진 기록은 버림", () => {
+  assert.throws(() => MAIN.validateParams("soxl", { rsiMax: 20, rsiN: 2, ma: 200, maxHoldDays: 6, tabSize: 0.5 }));
+  assert.throws(() => MAIN.validateParams("daytrading", { code: "122630", th: -3 }));
+  assert.deepEqual(MAIN.validateParams("daytrading", { code: "233740", th: -4 }), { code: "233740", th: -4 });
+  const ev = MAIN.cleanEvents([
+    { payload: { tab: "daytrading", version: "g_etf_th4", params: { th: -4 }, effectiveFrom: "2026-10-07", promotedAt: "a" } },
+    { payload: { tab: "soxl", version: "bad", params: { maxHoldDays: 9 }, effectiveFrom: "2026-10-07", promotedAt: "b" } },
+    { payload: { tab: "daytrading", version: "bad2", params: { code: "122630" }, effectiveFrom: "2026-10-08", promotedAt: "c" } }]);
+  assert.deepEqual(ev.map(e => e.version), ["g_etf_th4"]);
+  assert.equal(MAIN.mainFor(ev, "daytrading", "2026-10-06").version, "etf_dip_overnight_v1");
+  assert.equal(MAIN.mainFor(ev, "daytrading", "2026-10-07").params.th, -4);
+  assert.equal(MAIN.mainFor(ev, "daytrading").version, "g_etf_th4");
+  assert.deepEqual(MAIN.openingPick({ topK: 2, gapMax: -5 }, [{ code: "A", expectedGapPct: -3 }, { code: "B", expectedGapPct: -9 }, { code: "C", expectedGapPct: -6 }]), ["B", "C"]);
+  assert.deepEqual(MAIN.openingPick({ topK: 3, gapMax: -5 }, [{ code: "A", expectedGapPct: -3 }, { code: "B", expectedGapPct: -9 }]), ["B"]);
+});
+t("② 주문: 그날 메인 하락 기준으로 판단 · 기록을 못 읽으면 기본 −3% 로 하고 그 사실을 남긴다", () => {
+  const ev = MAIN.cleanEvents([{ tab: "daytrading", version: "g_etf_th4", params: { th: -4 }, effectiveFrom: "2026-10-07", promotedAt: "a" }]);
+  const r = F.etfRuleFor({ ok: true, events: ev }, "2026-10-07");
+  assert.equal(r.rule.dropMaxPct, -4); assert.equal(r.rule.version, "g_etf_th4"); assert.equal(r.ruleSource, "main-config");
+  assert.equal(F.etfRuleFor({ ok: true, events: ev }, "2026-10-06").rule.dropMaxPct, -3);
+  const f = F.etfRuleFor({ ok: false, error: "x" }, "2026-10-07");
+  assert.equal(f.rule.dropMaxPct, -3); assert.ok(f.ruleSource.startsWith("default"));
+  assert.equal(F.etfRuleFor({ ok: true, events: [{ tab: "daytrading", version: "z", effectiveFrom: "2026-10-01", params: { code: "122630", th: -2 } }] }, "2026-10-07").rule.dropMaxPct, -3);
+  assert.equal(F.etfDecision(-3.5, -4).signal, false); assert.equal(F.etfDecision(-4.2, -4).signal, true);
+  assert.equal(F.etfDecision(-3.5, -4).decisionReason, "no_signal_drop_above_-4%");
+  const plan = F.etfBuyPlan(r, { expectedPrice: 9650, basePrice: 10000 });           // −3.5%: 기본(−3)이면 매수, 메인 −4 면 안 삼
+  near(plan.dropPct, -3.5); assert.equal(plan.signal, false);
+  assert.equal(F.etfBuyPlan(f, { expectedPrice: 9650, basePrice: 10000 }).signal, true);
+});
+t("① 메인 변수: 매매일 기준(minQ) · 장부 종목(깊은 topK) — 장중 화면과 마감 장부가 같게", () => {
+  const rows = [{ code: "A", pnlPct: 3, status: "청산", buyPrice: 1, expectedGapPct: -9 }, { code: "B", pnlPct: -1, status: "청산", buyPrice: 1, expectedGapPct: -5 },
+    { code: "C", pnlPct: 1, status: "청산", buyPrice: 1, expectedGapPct: -3 }];
+  const m1 = { version: "g_open_q5_k1", params: { minQ: 5, topK: 1, gapMax: null } };
+  const one = LV.todaySummary("opening", { rows, decision: { breadth: { qualified: 6 } }, main: m1 }, 1000);
+  near(one.tabPct, 3); assert.equal(one.trades, 1); assert.ok(one.why.includes("장부에는 1종목"));
+  const m7 = { version: "g_open_q7_k3", params: { minQ: 7, topK: 3, gapMax: null } };
+  const no = LV.todaySummary("opening", { rows, decision: { breadth: { qualified: 6 } }, main: m7 }, 1000);
+  assert.equal(no.noTrade, true); assert.ok(no.why.includes("6<7"));
+  const L = { events: [
+    { stage: "preopen", payload: { watchlist: { size: 8 }, breadth: { qualified: 6, v2Signal: true }, decisionReason: "",
+      picks: [{ code: "A", expectedGapPct: -9 }, { code: "B", expectedGapPct: -5 }],
+      orders: [{ side: "buy", code: "A", name: "가", vts: { ok: true } }, { side: "buy", code: "B", name: "나", vts: { ok: true } }] } },
+    { stage: "reconcile", payload: { positions: [{ code: "A", buy: { qty: 10, avgPrice: 1000 }, sell: { qty: 10, avgPrice: 1020 } },
+                                                  { code: "B", buy: { qty: 5, avgPrice: 2000 }, sell: { qty: 5, avgPrice: 1980 } }] } }] };
+  const d1 = DAY.openingDay("2026-10-06", L, true, {}, m1);
+  assert.equal(d1.trades.length, 1); assert.equal(d1.trades[0].code, "A"); assert.equal(d1.measure.length, 1); assert.equal(d1.strategyVersion, "g_open_q5_k1");
+  const d7 = DAY.openingDay("2026-10-06", L, true, {}, m7);
+  assert.equal(d7.trades.length, 0); assert.equal(d7.measure.length, 2);
+});
+t("③ 메인 변수: 변동성 돌파 기준선 · 밤(21시~) 돌파 안 삼 · 손절폭 · 메인에 없는 코인은 마감 장부에서 뺀다", () => {
+  const c = [{ trade_price: 1, opening_price: 121 }, { trade_price: 120, high_price: 125, low_price: 115, candle_date_time_kst: "2026-10-01T09:00:00" }, ...Array.from({ length: 19 }, () => ({ trade_price: 100 }))];
+  const vb = LV.coinHoldToday(c, { ...MAIN.MAIN_DEFAULT.crypto.params, level: "vb", k: 0.5 });
+  near(vb.level, 121 + 0.5 * 10);
+  const P = { ...MAIN.MAIN_DEFAULT.crypto.params, lastEntryHour: 21, stopPct: 3 };
+  const h = LV.coinHoldToday(c, P);
+  const B = (hh, o, hi, lo, cl) => ({ candle_date_time_kst: "2026-10-02T" + hh + ":00:00", opening_price: o, high_price: hi, low_price: lo, trade_price: cl });
+  const night = LV.coinBreakoutDay(h, [B("20", 120, 124, 119, 123), B("21", 123, 130, 122, 129)], 129, P);
+  assert.equal(night.hold, false); assert.ok(night.status.includes("21시 전까지"));
+  const day = LV.coinBreakoutDay(h, [B("10", 123, 127, 121, 126), B("11", 126, 126, 120, 121)], 121, P);
+  near(day.stopPrice, 125 * 1.0005 * 0.97); assert.equal(day.stopped, true); near(day.pnlPct, -3 - 0.1 - 0.14);
+  const D = (d, close, high) => ({ candle_date_time_kst: d + "T09:00:00", trade_price: close, high_price: high });
+  const daily = [D("2026-10-05", 1, 1), D("2026-10-04", 120, 121), D("2026-10-03", 118, 119), ...Array.from({ length: 22 }, (_, i) => D("2026-09-" + String(30 - i).padStart(2, "0"), 100, 101))];
+  const Hh = (kst, o, hi, l, cl) => ({ candle_date_time_kst: kst, opening_price: o, high_price: hi, low_price: l, trade_price: cl });
+  const hourly = [];
+  for (let k = 0; k < 24; k++) { const t0 = Date.parse("2026-10-04T09:00:00+09:00") + k * 36e5; const s = new Date(t0 + 9 * 36e5).toISOString().slice(0, 19);
+    hourly.push(k === 4 ? Hh(s, 118, 120, 117.5, 119.5) : Hh(s, 119, 119, 118.9, 121)); }
+  const btcOnly = () => ({ params: { ...MAIN.MAIN_DEFAULT.crypto.params, markets: ["KRW-BTC"] } });
+  const eth = DAY.coinDay("2026-10-05", [{ market: "KRW-ETH", daily, hourly: hourly.slice().reverse() }], Date.parse("2026-10-06T00:00:00+09:00"), btcOnly);
+  assert.equal(eth.exits, 0); assert.equal(eth.open.length, 0);
+  const btc = DAY.coinDay("2026-10-05", [{ market: "KRW-BTC", daily, hourly: hourly.slice().reverse() }], Date.parse("2026-10-06T00:00:00+09:00"), btcOnly);
+  assert.equal(btc.exits, 1);
 });
 const rule = { gapMax: -2, gapFloor: -29, picks: 3 };
 t("expected gap uses KIS base price, falls back to watchlist close", () => {

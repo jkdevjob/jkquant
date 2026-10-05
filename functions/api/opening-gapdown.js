@@ -5,7 +5,7 @@
 //   stage=preopen   ~08:59:40    Worker 가 모은 예상가로 갭 계산 → 가장 깊은 갭 3종목을 장전 동시호가 시장가 매수
 //   stage=close     15:20~15:28  이 전략이 아침에 산 체결수량만 종가 동시호가 시장가 매도
 //   stage=reconcile 15:35~       매수·매도 실제 체결가 조회 (주문 없음)
-//   stage=etf_buy   15:20~15:28  ② 코스닥150 레버리지(233740) 예상 종가가 기준가 대비 −3% 이하면 종가 동시호가 시장가 매수
+//   stage=etf_buy   15:20~15:28  ② 코스닥150 레버리지(233740) 예상 종가가 기준가 대비 그날 메인 기준(기본 −3%) 이하면 종가 동시호가 시장가 매수
 //   stage=etf_sell  08:50~08:59:40 ② 전날 이 전략이 산 수량만 장전 동시호가 시장가 매도
 //   stage=etf_reconcile 15:35~   ② 오늘 매도·매수 체결가 조회 (주문 없음)
 // 목적은 수익이 아니라 측정이다: 예상체결가 대 실제 시가, 실제 체결가 대 시가·종가(슬리피지)를 매 건 남긴다.
@@ -13,6 +13,7 @@
 // 주문은 절대 자동 재시도하지 않는다.
 import { GAPDOWN_VERSION, expectedGapPct, gapdownPicks, watchlistUsable } from "./_gapdown.js";
 import { krxDay } from "./_krx_calendar.js";
+import { loadMainEvents, mainFor } from "./_claude_main.js";
 
 const JH={"Content-Type":"application/json; charset=utf-8","Cache-Control":"no-store"};
 const WATCH_URL="https://raw.githubusercontent.com/jkdevjob/jkquant/scalping-data/data/opening-gapdown-research/watchlist.json";
@@ -231,10 +232,23 @@ export function etfDropPct(q){
   const px=+(q&&q.expectedPrice)||0,base=+(q&&q.basePrice)||0;
   return px>0&&base>0?(px/base-1)*100:null;
 }
-export function etfDecision(dropPct){
+// th = 그날 메인 전략의 하락 기준(%, 기본 −3). 메인은 승격 기록(_claude_main.js)으로 정해진다.
+export function etfDecision(dropPct,th=ETF_RULE.dropMaxPct){
   if(dropPct===null||!Number.isFinite(dropPct))return {signal:false,decisionReason:"expected_price_missing"};
-  if(dropPct>ETF_RULE.dropMaxPct)return {signal:false,decisionReason:"no_signal_drop_above_-3%"};
-  return {signal:true,decisionReason:"expected_close_vs_base<=-3%"};
+  if(dropPct>th)return {signal:false,decisionReason:"no_signal_drop_above_"+th+"%"};
+  return {signal:true,decisionReason:"expected_close_vs_base<="+th+"%"};
+}
+// 15:21 판단(순수): 그날 메인 규칙 R 의 하락 기준으로 예상 종가 하락을 본다
+export function etfBuyPlan(R,q){
+  const dropPct=etfDropPct(q);
+  return {dropPct,...etfDecision(dropPct,R.rule.dropMaxPct)};
+}
+// 그날 ② 메인 규칙 — 승격 기록을 못 읽으면 기본 규칙으로 하되, 그 사실을 장부에 남긴다(주문을 막지 않는다).
+export function etfRuleFor(cfg,date){
+  const m=mainFor(cfg&&cfg.ok?cfg.events:[],"daytrading",date);
+  const ok=!!(cfg&&cfg.ok)&&m.params.code===ETF_RULE.code;
+  return {rule:{...ETF_RULE,dropMaxPct:ok?m.params.th:ETF_RULE.dropMaxPct,version:ok?m.version:ETF_RULE.version},
+    mainVersion:ok?m.version:ETF_RULE.version,ruleSource:ok?"main-config":"default (메인 기록 읽기 실패: "+((cfg&&cfg.error)||"없음")+")"};
 }
 export function etfSignalId(buyDate,side){return ["etf_dip",buyDate,ETF_RULE.code,side].join(":");}
 // 매수는 15:15 이후(종가 동시호가) 접수분, 매도는 09:00 전(장전 동시호가) 접수분만 이 전략 물량으로 센다.
@@ -248,19 +262,19 @@ export function etfFills(rows){
   return {closeBuy:agg(f("02",151500,240000)),openSell:agg(f("01",83000,90000))};
 }
 async function etfBuy(origin,env,date){
-  const out={stage:"etf_buy",strategy:"etf_dip_overnight",strategyVersion:ETF_RULE.version,date,code:ETF_RULE.code,
-    rule:ETF_RULE,startedAt:new Date().toISOString(),quote:null,dropPct:null,signal:false,order:null,decisionReason:""};
+  const R=etfRuleFor(await loadMainEvents(env,3000),date);
+  const out={stage:"etf_buy",strategy:"etf_dip_overnight",strategyVersion:R.rule.version,date,code:ETF_RULE.code,
+    rule:R.rule,ruleSource:R.ruleSource,startedAt:new Date().toISOString(),quote:null,dropPct:null,signal:false,order:null,decisionReason:""};
   let q;
   try{q=await quote(origin,ETF_RULE.code);}catch(e){out.decisionReason="quote_failed: "+String(e.message||e);return out;}
   out.quote={expectedPrice:q.expectedPrice||null,basePrice:q.basePrice||null,expectedChgPct:q.expectedChgPct,phase:q.phase||"",time:q.time||""};
-  out.dropPct=etfDropPct(q);
-  Object.assign(out,etfDecision(out.dropPct));
+  Object.assign(out,etfBuyPlan(R,q));
   if(!out.signal)return out;
   if(String(env.SCALPING_VTS_AUTO||"1")==="0"){out.ordersSkipped="SCALPING_VTS_AUTO=0";return out;}
   if(!env.AUTOTRADE_KEY){out.ordersSkipped="AUTOTRADE_KEY 없음";return out;}
   const qty=Math.floor(budget(env)*ETF_RULE.budgetMultiple/Math.max(1,+q.expectedPrice||0));
   out.order=await vtsOrder(origin,env,date,"buy",{code:ETF_RULE.code,name:ETF_RULE.name},qty,
-    {id:etfSignalId(date,"buy"),strategy:"etf_dip_overnight",version:ETF_RULE.version});
+    {id:etfSignalId(date,"buy"),strategy:"etf_dip_overnight",version:R.rule.version});
   return out;
 }
 async function etfSell(origin,env,date,buyDate){

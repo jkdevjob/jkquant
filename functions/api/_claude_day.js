@@ -2,6 +2,7 @@
 // 원본: ①② = Worker gapdown ledger(KIS 모의투자 주문·체결), ③ = 업비트 60분봉(끝난 봉만), ④ = 밤 판단(nextSignal) + 마감 시세.
 // 모든 함수는 마감 시점까지 들어온 자료만 받는다(미래 자료 없음). 순손익 = 비용(수수료·세금·미끄러짐) 뺀 값.
 import { coinHoldToday, coinBreakoutDay } from "./claude-live.js";
+import { MAIN_DEFAULT, mainFor, openingCounts, openingPick } from "./_claude_main.js";
 
 export const COST = { kr: 0.23, etf: 0.13, coin: 0.14, us: 0.20 };          // 왕복 %, 연구·실시간과 같은 값
 export const PAPER_CAPITAL = { coin: 10000000, soxl: 10000 };                // 주문 없는 칸의 모의 자금(원 · 달러)
@@ -30,12 +31,16 @@ function stagesOf(ledger) {
 }
 
 // ① 08:59 동시호가 매수 → 15:30 종가 동시호가 매도. 15:40 체결조회(reconcile)까지 끝난 장부만 받는다.
-export function openingDay(date, ledger, krOpen, marks = {}) {
+// main: 그날 ① 메인(_claude_main.mainFor) — 매매일 기준(통과 종목 수)과 장부에 넣을 종목(깊은 갭 topK · gapMax 이하). 없으면 기본 메인.
+export function openingDay(date, ledger, krOpen, marks = {}, main = null) {
   const r = { strategy: "opening", name: NAMES.opening, date, currency: "KRW", trades: [], open: [], measure: [] };
   if (!krOpen) return Object.assign(r, { status: "holiday", note: "국내 휴장" });
   const st = stagesOf(ledger), pre = st.preopen, rec = st.reconcile || {};
   if (!pre) return Object.assign(finish(r), { status: "closed", watched: 0, candidates: 0, entries: 0, note: "08:56 판단 기록 없음 — 점검" });
-  const b = pre.breadth || {}, v2 = !!b.v2Signal;
+  const M = main || mainFor([], "opening"), P = M.params, isDef = M.version === MAIN_DEFAULT.opening.version, lab = isDef ? "v2 매매일" : "메인 매매일";
+  const b = pre.breadth || {}, v2 = b.qualified == null ? !!b.v2Signal : openingCounts(P, b.qualified);
+  const src = (pre.picks || []).length ? pre.picks : (pre.orders || []).filter(o => o.side === "buy").map(o => ({ code: o.code, expectedGapPct: o.expectedGapPct }));
+  const keep = new Set(openingPick(P, src));                                // 메인이 장부에 넣는 종목(깊은 갭 topK · gapMax 이하)
   const pos = Object.fromEntries((rec.positions || []).map(p => [p.code, p]));
   const rows = [];
   for (const o of (pre.orders || []).filter(o => o.side === "buy" && o.vts && o.vts.ok)) {
@@ -52,12 +57,15 @@ export function openingDay(date, ledger, krOpen, marks = {}) {
   }
   const accepted = (pre.orders || []).filter(o => o.side === "buy" && o.vts && o.vts.ok).length;
   if (accepted && !(rec.positions || []).length) r.warn = "매수 접수 " + accepted + "건인데 15:40 체결조회 기록 없음 — 점검";
-  const done = rows.filter(x => !x.open), open = rows.filter(x => x.open);
-  if (v2) { r.trades = done; r.open = open; }
-  else r.measure = rows;                                                    // v2 매매일이 아니면 측정용 — 전략 손익에 넣지 않는다
+  const mine = rows.filter(x => keep.has(String(x.code))), extra = rows.filter(x => !keep.has(String(x.code)));
+  const done = mine.filter(x => !x.open), open = mine.filter(x => x.open);
+  if (v2) { r.trades = done; r.open = open; if (extra.length) r.measure = extra; }   // 메인이 고른 종목만 손익, 나머지 주문은 측정용
+  else r.measure = rows;                                                    // 매매일이 아니면 측정용 — 전략 손익에 넣지 않는다
   return Object.assign(finish(r), {
-    status: "closed", watched: (pre.watchlist || {}).size || 0, candidates: b.qualified || 0, entries: v2 ? rows.length : 0,
-    note: v2 ? "v2 매매일(통과 " + b.qualified + "종목)" : rows.length ? "v2 매매일 아님(통과 " + (b.qualified || 0) + "<5) — 측정용 모의매매는 전략 손익에 안 셈"
+    status: "closed", watched: (pre.watchlist || {}).size || 0, candidates: b.qualified || 0, entries: v2 ? mine.length : 0,
+    strategyVersion: M.version, params: P,
+    note: v2 ? lab + "(통과 " + b.qualified + "종목)" + (extra.length ? " · 장부 " + mine.length + "종목(메인 깊은 " + P.topK + (P.gapMax != null ? " · 갭 " + P.gapMax + "% 이하" : "") + ")" : "")
+      : rows.length ? lab + " 아님(통과 " + (b.qualified || 0) + "<" + P.minQ + ") — 측정용 모의매매는 전략 손익에 안 셈"
       : "매매 없음 — " + (pre.decisionReason || "조건 맞는 종목 없음")
   });
 }
@@ -77,7 +85,8 @@ export function etfDay(date, ledger, prevLedger, prevDate, krOpen) {
   if (nb.qty > 0) r.open.push({ name: "KODEX 코스닥150레버리지", code: "233740", entryTime: "15:30 종가", entryPrice: nb.avgPrice, qty: nb.qty, pnlPct: 0, reason: "내일 09:00 시가 매도" });
   return Object.assign(finish(r), {
     status: "closed", candidates: buy && buy.signal ? 1 : 0, entries: nb.qty > 0 ? 1 : 0,
-    note: buy ? (buy.signal ? "15:21 예상 하락 " + (+buy.dropPct).toFixed(2) + "% → 종가 매수" : "15:21 예상 하락 " + (buy.dropPct == null ? "—" : (+buy.dropPct).toFixed(2) + "%") + " (기준 −3% 이하 아님) → 매수 없음")
+    strategyVersion: buy && buy.strategyVersion || MAIN_DEFAULT.daytrading.version,
+    note: buy ? (buy.signal ? "15:21 예상 하락 " + (+buy.dropPct).toFixed(2) + "% → 종가 매수" : "15:21 예상 하락 " + (buy.dropPct == null ? "—" : (+buy.dropPct).toFixed(2) + "%") + " (기준 " + String((buy.rule && buy.rule.dropMaxPct) ?? -3).replace("-", "−") + "% 이하 아님) → 매수 없음")
       : "15:21 판단 기록 없음 — 점검"
   });
 }
@@ -85,7 +94,8 @@ export function etfDay(date, ledger, prevLedger, prevDate, krOpen) {
 // ③ 한국시각 00:00 마감 하루(d 00:00 ~ d+1 00:00) — 그 안에서 청산된 매매는 실현, 00:00 에 들고 있는 매매는 미청산.
 // 매매 규칙은 업비트 하루(09:00~다음 09:00) 기준 그대로: 업비트 하루 d-1 의 매수분은 d 09:00 에, d 의 매수분은 d+1 09:00 에 판다.
 // coins: [{market, daily(최신순, 0=진행 중 업비트 하루), hourly(최신순 60분봉)}] — 00:00 전에 끝난 봉만 쓴다.
-export function coinDay(date, coins, closeMs) {
+// mainOn(업비트 하루 날짜) → 그 하루의 ③ 메인. 없으면 기본 메인.
+export function coinDay(date, coins, closeMs, mainOn = null) {
   const r = { strategy: "crypto", name: NAMES.crypto, date, currency: "KRW", trades: [], open: [], watched: 0, candidates: 0, entries: 0 };
   const dayStart = Date.parse(date + "T00:00:00+09:00"), dayEnd = closeMs || dayStart + 864e5;
   const slot = PAPER_CAPITAL.coin / Math.max(1, coins.length);
@@ -99,12 +109,14 @@ export function coinDay(date, coins, closeMs) {
       const ud = new Date(dayStart - k * 864e5 + 9 * 36e5).toISOString().slice(0, 10);
       const idx = daily.findIndex(x => String(x.candle_date_time_kst || "").slice(0, 10) === ud);
       if (idx < 0) continue;
-      const h = coinHoldToday(daily.slice(idx), 20);                         // 그 업비트 하루의 판단(전날까지 확정 종가)
+      const P = (mainOn ? mainOn(ud) : mainFor([], "crypto")).params;
+      if (!P.markets.includes(c.market)) continue;                           // 그 하루의 메인에 없는 코인
+      const h = coinHoldToday(daily.slice(idx), P);                          // 그 업비트 하루의 판단(전날까지 확정 종가)
       if (!h) continue;
       if (h.hold && ud === date) r.candidates++;
       const s0 = Date.parse(ud + "T09:00:00+09:00");
       const bars = hourly.filter(b => t(b) >= s0 && t(b) < s0 + 864e5).sort((a, b) => t(a) - t(b));
-      const res = coinBreakoutDay(h, bars, bars.length ? +bars[bars.length - 1].trade_price : null);
+      const res = coinBreakoutDay(h, bars, bars.length ? +bars[bars.length - 1].trade_price : null, P);
       if (!res || !res.hold) continue;
       const entryBar = bars.find(b => String(b.candle_date_time_kst).slice(11, 16) === res.buyTime) || bars[0];
       const entryMs = t(entryBar);
@@ -115,7 +127,7 @@ export function coinDay(date, coins, closeMs) {
       if (exitMs >= dayStart && exitMs < dayEnd && (stopBar || bars.length === 24)) {
         const exitPrice = stopBar ? res.stopPrice : +bars[bars.length - 1].trade_price;
         r.trades.push(Object.assign(row, { exitTime: hm(exitMs), exitPrice, pnlPct: res.pnlPct, pnlAmount: (slot * res.pnlPct) / 100,
-          reason: stopBar ? "손절 −5%" : "다음 날 09:00 청산" }));
+          reason: stopBar ? "손절 −" + P.stopPct + "%" : "다음 날 09:00 청산" }));
       } else if (exitMs >= dayEnd) {
         const mark = bars.length ? +bars[bars.length - 1].trade_price : null;
         r.open.push(Object.assign(row, { markPrice: mark, pnlPct: mark ? pct(mark, res.buyPrice) - COST.coin : null, reason: "다음 09:00 매도 예정" }));
@@ -136,18 +148,19 @@ export function soxlDay(nyDate, nx, q, entry) {
   const close = +sess.close, open = +sess.open, cap = PAPER_CAPITAL.soxl;
   if (nx.action === "buy") {
     r.candidates = 1; r.entries = 1;
-    r.open.push({ name: "SOXL", entryTime: nyDate + " 09:30 시가", entryPrice: open, markPrice: close, pnlPct: pct(close, open) - COST.us / 2, reason: "오른 날 다음 시가 매도(최대 5일)" });
+    r.open.push({ name: "SOXL", entryTime: nyDate + " 09:30 시가", entryPrice: open, markPrice: close, pnlPct: pct(close, open) - COST.us / 2, reason: "오른 날 다음 시가 매도(최대 " + (nx.maxHoldDays || 5) + "일)" });
   } else if (nx.action === "sell" && entry && entry.entryPrice > 0) {
     const net = pct(open, +entry.entryPrice) - COST.us;
     r.trades.push({ name: "SOXL", entryTime: entry.date + " 시가", entryPrice: +entry.entryPrice, exitTime: nyDate + " 09:30 시가", exitPrice: open, notional: cap,
-      pnlPct: net, pnlAmount: (cap * net) / 100, reason: nx.heldDays >= 5 ? "최대 5일 청산" : "반등 청산(오른 날 다음 시가)" });
+      pnlPct: net, pnlAmount: (cap * net) / 100, reason: nx.heldDays >= (nx.maxHoldDays || 5) ? "최대 " + (nx.maxHoldDays || 5) + "일 청산" : "반등 청산(오른 날 다음 시가)" });
   } else if (nx.holding && entry && entry.entryPrice > 0) {
     r.open.push({ name: "SOXL", entryTime: entry.date + " 시가", entryPrice: +entry.entryPrice, markPrice: close, pnlPct: pct(close, +entry.entryPrice) - COST.us / 2,
-      reason: (nx.heldDays + 1) + "일째 보유 (최대 5일)" });
+      reason: (nx.heldDays + 1) + "일째 보유 (최대 " + (nx.maxHoldDays || 5) + "일)" });
   }
   r.realizedBase = cap;
   return Object.assign(finish(r), { status: "closed",
-    note: nx.action === "buy" ? "전날 확정 종가 RSI(2) " + (+nx.rsi2).toFixed(0) + " < 20 · 200일 평균 위 → 시가 매수" : nx.action === "sell" ? "시가 매도" : nx.holding ? "보유 유지" : "과매도 신호 없음 — 쉼",
+    strategyVersion: nx.version || MAIN_DEFAULT.soxl.version,
+    note: nx.action === "buy" ? "전날 확정 종가 RSI(" + (nx.rsiN || 2) + ") " + (+nx.rsi2).toFixed(0) + " < " + (nx.rsiMax ?? 20) + ((nx.maDays ?? 200) ? " · " + (nx.maDays ?? 200) + "일 평균 위" : "") + " → 시가 매수" : nx.action === "sell" ? "시가 매도" : nx.holding ? "보유 유지" : "과매도 신호 없음 — 쉼",
     capitalNote: "모의 자금 $" + cap.toLocaleString("en-US") });
 }
 

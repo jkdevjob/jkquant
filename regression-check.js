@@ -11230,7 +11230,7 @@ console.log('[GAPDOWN D-1 / DIP24 D-3] 연구용 모의체결 경로 안전장�
      &&/readRaw\("claude-lab\/latest\.json"\)/.test(orApi)&&/claude_lab\.py/.test(wf));
   { const tg=fs.readFileSync(__d+'/functions/api/claude-telegram.js','utf8');
     ok('클로드 Telegram: 서버키 인증·주문 경로 없음 · 08:56 매수·15:21 판단 알림 · 15:40 체결조회 뒤 ①② 하루 마감 → 전일·당일 요약',
-       /function authorized\(request,env\)/.test(tg)&&/claim\("claude:"\+date\+":"\+kind\)/.test(tg)&&!/op=order|opening-execute|kisOrder/.test(tg)
+       /function authorized\(request,env\)/.test(tg)&&/claim\("claude:"\+date\+":"\+kind\+\(kind==="promote"\?":"\+b\.event\.tab:""\)\)/.test(tg)&&!/op=order|opening-execute|kisOrder/.test(tg)
        &&/await claudeTelegram\(env,date,"preopen"\);/.test(ow)&&/if\(stage==="close"\)await claudeTelegram\(env,date,"etfbuy"\);\n\s*else await claudeKrClose\(env,date,ms\);/.test(ow)
        &&!/claudeMorningDue/.test(ow));
     // 하루 마감 알림: 마감 장부를 DO 에 한 번만 저장(먼저 저장된 것이 정본) → 그 장부로 발송 → 보냄·모름 기록(중복 없음) · 거절만 최대 5번 재시도
@@ -11248,15 +11248,16 @@ console.log('[GAPDOWN D-1 / DIP24 D-3] 연구용 모의체결 경로 안전장�
     ok('단타(클로드) 탭 구성: 운영판 → ①규칙 ②오늘 선정 ③매수 ④매도·리스크 ⑤오늘 장중 매매 ⑥그림자·검증 ⑦누적 ⑧실행품질 + 상태 줄 + 1분 자동 갱신',
        /function tabPage\(tab,T,gd,et,wl\)/.test(scl2)&&/opsBoard\(tab\)\+docCard\(tab\)\+planCard\(tab,T,wl\)\+buyCard\(tab\)\+sellCard\(tab\)\+liveCard\(tab\)/.test(scl2)
        &&/html\+=shadowCard\(tab\)\+reviewCard\(tab\)\+paperCard\(tab\);/.test(scl2)
-       &&['① 전략 · 종목 선정 규칙','② 오늘 종목 선정 · 감시','③ 매수 타이밍','④ 매도 · 손절 · 리스크','⑤ 오늘 장중 모의 매매이력','⑥ 그림자 전략','⑦ 누적 모의 매매이력','⑧ 실행 품질'].every(x=>scl2.includes(x))
+       &&['① 전략 · 종목 선정 규칙','② 오늘 종목 선정 · 감시','③ 매수 타이밍','④ 매도 · 손절 · 리스크','⑤ 오늘 장중 모의 매매이력','⑥ 전략 경쟁 · 자동 개선','⑦ 누적 모의 매매이력','⑧ 실행 품질'].every(x=>scl2.includes(x))
        &&/setInterval\(function\(\)\{if\(!document\.hidden&&ME\)loadLive\(\)\},60000\)/.test(scl2)
        &&/out\.tabs\[k\]\.today=todaySummary\(k,out\.tabs\[k\],now\.hm\);\n\s*applyKrSplit\(out\.tabs\);/.test(fs.readFileSync(__d+'/functions/api/claude-live.js','utf8'))&&/body\.innerHTML=statusBar\(\)\+html;/.test(scl2)
        &&['opening','daytrading','crypto','soxl'].every(k=>new RegExp('\\b'+k+':\\{title:').test(scl2)));
   }
   { const lp=fs.readFileSync(__d+'/scripts/claude_lab.py','utf8');
-    ok('그림자 교체 후보: 판정 표본 매매 20일 이상 · 자동 교체 없음(표시만) · 화면 ⭐ 표시 + 이번 주 결과 카드(전체 탭)',
-       /PROMOTE_MIN_TRADE_DAYS = 20/.test(lp)&&/attach_promotions\(report\)/.test(lp)&&/report\["week"\] = week_summary\(/.test(lp)
-       &&!/CRYPTO\[[^\]]+\] = |US\[[^\]]+\] = /.test(lp.slice(lp.indexOf('def promotion('),lp.indexOf('def week_summary(')))
+    ok('전략 경쟁: 그림자 10~12개 유지 · 손실 기준 미달/7일 하위 3위 퇴출 · 신규 투입 · 7일 1위 자동 승격(다음 날부터) · 이번 주 결과 카드(전체 탭)',
+       /POOL_TARGET, POOL_MIN, PROMOTE_DAYS, BOTTOM_N, GEN_ATTEMPTS = 12, 10, 7, 3, 40/.test(lp)&&/report\["arena"\], astate = arena\(ctx\)/.test(lp)
+       &&/attach_promotions\(report\)/.test(lp)&&/report\["week"\] = week_summary\(/.test(lp)
+       &&!/CRYPTO\[[^\]]+\] = |US\[[^\]]+\] = /.test(lp.slice(lp.indexOf('def arena('),lp.indexOf('def week_summary(')))
        &&/function promoBadge\(pr\)/.test(scl2)&&/function weekCard\(\)/.test(scl2)&&(scl2.match(/weekCard\(\)/g)||[]).length===2);
   }
   { const lp=fs.readFileSync(__d+'/scripts/claude_lab.py','utf8'),lv=fs.readFileSync(__d+'/functions/api/claude-live.js','utf8');
@@ -11264,7 +11265,7 @@ console.log('[GAPDOWN D-1 / DIP24 D-3] 연구용 모의체결 경로 안전장�
     ok('보유 기간 규칙(하루, 최대 5일): ③ 코인은 그날 24개 봉 안에서 사고 다음 09:00 매도 · ④ SOXL 최대 5거래일 · 옛 여러 날 보유 전략은 탭에서 빠짐',
        /bars = \[H\[\(s0 \+ timedelta\(hours=k\)\)\.isoformat\(\)\] for k in range\(24\)\]/.test(lp)&&/exitPrice=bars\[-1\]\[3\]/.test(lp)
        &&hold.length>=2&&hold.every(x=>x>=1&&x<=5)&&/SOXL_MR = dict\(version="soxl_rsi2_meanrev_v1", trade="SOXL"/.test(lp)
-       &&!/TQQQ|tqqq/.test(scl2)&&!/TQQQ|tqqq/.test(lv)&&/report\["tabs"\]\["soxl"\] = tab_report\("soxl", "④ SOXL/.test(lp),JSON.stringify(hold));
+       &&!/TQQQ|tqqq/.test(scl2)&&!/TQQQ|tqqq/.test(lv)&&/report\["tabs"\]\["soxl"\] = tab_report\("soxl", m4\["name"\]/.test(lp)&&/"soxl": dict\(version="soxl_rsi2_meanrev_v1", name="④ SOXL/.test(lp)&&/maxHoldDays=num\(p\["maxHoldDays"\], 1, 5, True\)/.test(lp),JSON.stringify(hold));
   }
   { const lp=fs.readFileSync(__d+'/scripts/claude_lab.py','utf8');
     ok('GPT 와 같은 조건 비교: 같은 비용표 · GPT 기록 구간만 · 매매 단위부터 다시 계산 · 탭마다 ⚖️ 카드(후보→진입→결과→누적)',
@@ -11275,7 +11276,7 @@ console.log('[GAPDOWN D-1 / DIP24 D-3] 연구용 모의체결 경로 안전장�
   { const dy=fs.readFileSync(__d+'/functions/api/_claude_day.js','utf8'),lv2=fs.readFileSync(__d+'/functions/api/claude-live.js','utf8');
     ok('클로드 하루 마감 장부: 코인은 자정 전에 끝난 봉만 · 업비트 요청도 to=자정 · ① v2 아닌 날 측정용은 손익 제외 · 웹이 같은 마감 장부를 읽음 · 미국 장중 봉 버림',
        /hourly = \(c\.hourly \|\| \[\]\)\.filter\(b => t\(b\) \+ 36e5 <= dayEnd\)/.test(dy)&&/count=60&to="\+to/.test(fs.readFileSync(__d+'/functions/api/claude-telegram.js','utf8'))
-       &&/if \(v2\) \{ r\.trades = done; r\.open = open; \}\n\s*else r\.measure = rows;/.test(dy)&&/ledger\(env,d,"\/claude"\)/.test(lv2)
+       &&/if \(v2\) \{ r\.trades = done; r\.open = open; if \(extra\.length\) r\.measure = extra; \}[^\n]*\n\s*else r\.measure = rows;/.test(dy)&&/ledger\(env,d,"\/claude"\)/.test(lv2)
        &&/return drop_open_session\(/.test(fs.readFileSync(__d+'/scripts/claude_lab.py','utf8')));
   }
   { const lp=fs.readFileSync(__d+'/scripts/claude_lab.py','utf8');
@@ -11421,10 +11422,10 @@ console.log('\n[CLAUDE TODAY] 오늘 탭 통일');
     try{g=new Function('var TREND_C={a:"#3987e5",b:"#d95926"},TREND_N={a:"A",b:"B"},NOTRADE="매매 없음";function esc(s){return String(s)}function cls(v){return v>0?"win":v<0?"loss":""}function pct(v){return (v>=0?"+":"")+(+v).toFixed(2)+"%"}'+grab('trendSvg')+';return trendSvg;')();}catch(e){err=e.message;}
     const sv=g?g({a:[{date:'2026-09-01',cumPct:0,traded:true},{date:'2026-09-02',cumPct:2},{date:'2026-09-03',cumPct:5}],b:[{date:'2026-09-02',cumPct:-1,traded:true}]}):'';
     const one=g?g({a:[{date:'2026-09-01',cumPct:0}]}):'x';
-    ok('추이 그래프 = 지피티와 같은 820×300 · 격자 5줄 · 날짜 3개(시작·가운데·끝) · 날짜 1개면 안 그림 / 모의 장부에 매매가 없으면 재구성부터 · 평선 안 그림',
+    ok('추이 그래프 = 지피티와 같은 820×300 · 격자 5줄 · 날짜 3개(시작·가운데·끝) · 날짜 1개면 안 그림 / 실제 모의 장부만(규칙 재구성 그래프 없음) · 매매 없으면 평선 대신 안내',
        /viewBox='0 0 820 300'/.test(sv)&&(sv.match(/stroke='var\(--border\)'/g)||[]).length===5&&/>09-01<\/text>/.test(sv)&&/>09-02<\/text>/.test(sv)&&/>09-03<\/text>/.test(sv)
        &&/B <b class='loss'>-1\.00%<\/b>/.test(sv)&&one===null
-       &&/TREND_MODE=paperN>=2&&paperTraded\?"paper":"recon"/.test(ch)&&/var sv=TREND_MODE==="paper"&&!paperTraded\?null:/.test(ch),err);
+       &&/var sv=paperTraded\?trendSvg\(pap\):null;/.test(ch)&&!/TREND_MODE|최근 60일 재구성|weekRecon|규칙대로 재구성/.test(ch),err);
   }
   ok('③ 코인은 마감 장부(00~24시 KST)와 하루 정의(Upbit 09시)가 달라 건수를 섞지 않는다',
      /cl=z\[0\]==="crypto"\?null:lt\.closed/.test(ch));
@@ -11860,6 +11861,35 @@ console.log('\n[CLAUDE KRX DAY] 휴장일 먼저 확인 · 밤 계산 빈 값');
      new RegExp('\\b'+(+yNext-1)+': \\[').test(kc)&&new RegExp('\\b'+yNext+': \\[').test(kc)&&/"2026-10-05"/.test(kc),yNext);
   ok('밤 계산: GPT 기록의 빈 손익 칸이 빈 날짜를 만들지 않는다(평균 예외로 계산 전체가 멈추던 문제)',
      /v = float\(r\[col\]\)\s+# 먼저 숫자로/.test(lp)&&!/by\.setdefault\(r\["date"\], \[\]\)\.append\(float\(r\[col\]\)\)/.test(lp));
+}
+
+/* ════ 단타(클로드) 메인 전략 기록 · 전략 경쟁 자동 개선 (v2.11.0) ════ */
+console.log('\n[CLAUDE ARENA] 메인 기록 하나 · 자동 퇴출·신규·7일 1위 승격 · 화면');
+{
+  const ow2=fs.readFileSync(__d+'/worker/opening-scheduler/src/index.js','utf8'),wf2=fs.readFileSync(__d+'/.github/workflows/opening-gapdown-research.yml','utf8');
+  const lv=fs.readFileSync(__d+'/functions/api/claude-live.js','utf8'),tg=fs.readFileSync(__d+'/functions/api/claude-telegram.js','utf8');
+  const og=fs.readFileSync(__d+'/functions/api/opening-gapdown.js','utf8'),lp=fs.readFileSync(__d+'/scripts/claude_lab.py','utf8'),ch=fs.readFileSync(__d+'/claude.html','utf8');
+  const cfgRoute=ow2.slice(ow2.indexOf('if(u.pathname==="/claude-config"){'),ow2.indexOf('if(u.pathname==="/events"){'));
+  ok('메인 기록 원본은 Worker /claude-config 하나(감시키 · 쌓기만) — 밤 계산 사본 · 실시간 화면 · 마감 장부/텔레그램 · ② 주문이 같은 기록을 읽는다',
+     /if\(!authorized\(request,env\)\)return json\(\{ok:false,error:"unauthorized"\},401\);/.test(cfgRoute)&&/appendLedger\(env,\{scanId:e\.id,date:CLAUDE_CONFIG_KEY/.test(cfgRoute)&&/"claudecfg"\)/.test(cfgRoute)
+     &&wf2.indexOf('$OPENING_WORKER/claude-config')>0&&wf2.indexOf('$OPENING_WORKER/claude-config')<wf2.indexOf('python .app/scripts/claude_lab.py')
+     &&/JKQ_MONITOR_KEY: \$\{\{ secrets\.AUTOTRADE_KEY \}\}\n\s*run: python \.app\/scripts\/claude_lab\.py/.test(wf2)
+     &&/const cfg=await loadMainEvents\(env\);/.test(lv)&&/const cfg=await loadMainEvents\(env\);/.test(tg)&&/const R=etfRuleFor\(await loadMainEvents\(env,3000\),date\);/.test(og)
+     &&!fs.existsSync(__d+'/functions/api/claude-promote.js'));
+  const cp=require('child_process');
+  const py=cp.spawnSync('python3',['-c','import sys,json;sys.path.insert(0,"scripts");import claude_lab as L;print(json.dumps({t:L.MAIN_DEFAULT[t]["params"] for t in L.TABS4}))'],{cwd:__d,encoding:'utf8'});
+  const js=cp.spawnSync(process.execPath,['--input-type=module','-e','import {MAIN_DEFAULT as M} from "'+require('url').pathToFileURL(__d+'/functions/api/_claude_main.js').href+'";console.log(JSON.stringify(Object.fromEntries(Object.entries(M).map(([k,v])=>[k,v.params]))))'],{encoding:'utf8'});
+  let same=false,why='';
+  try{const a=JSON.parse(py.stdout),b=JSON.parse(js.stdout);same=['opening','daytrading','crypto','soxl'].every(t=>JSON.stringify(Object.keys(a[t]).sort().map(k=>[k,a[t][k]]))===JSON.stringify(Object.keys(b[t]).sort().map(k=>[k,b[t][k]])));why=JSON.stringify([a,b]).slice(0,300);}
+  catch(e){why=(py.stderr||'')+(js.stderr||'')+e.message;}
+  ok('기본 메인 변수: 밤 계산(Python) = 실시간·주문(JS) — 한쪽만 바뀌면 빨간불',same,why);
+  ok('전략 경쟁 화면: 탭 ⑥ 순위표(점수·최근 1년·90일·MDD) + 개선 내역·사유 · 오늘 탭 자동 개선 현황 · 승격된 메인 안내 · 수동 승격 버튼 없음',
+     /function shadowCard\(tab\)\{\n\s*var z=arenaOf\(tab\);/.test(ch)&&/\+arenaOverview\(lab\);/.test(ch)&&/mainBanner\(tab\)\+"<div class='rule'>"/.test(ch)
+     &&/var ARENA_KIND=\{new:\["🆕","신규 투입"/.test(ch)&&!/claude-promote|승격 버튼/.test(ch)
+     &&/def arena\(ctx, today=None, state=None, tabs=TABS4\):/.test(lp)&&/ARENA_PATH\.write_text\(/.test(lp));
+  ok('자동 승격은 감시키가 있을 때만 Worker 기록 → 효력은 다음 날 · 텔레그램 알림(탭별 하루 한 번)',
+     /eff = \(date\.fromisoformat\(today\) \+ timedelta\(days=1\)\)\.isoformat\(\)/.test(lp)&&/if not key:\n\s*return dict\(ok=False, due=True/.test(lp)
+     &&/\+ "\/claude-config", ev, key\)/.test(lp)&&/const KINDS=\["preopen","etfbuy","weekly","duel","promote"\];/.test(tg));
 }
 
 Promise.all(PENDING).then(()=>{
