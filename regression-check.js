@@ -11645,7 +11645,7 @@ console.log('\n[ACCESS] 이용 승인제 — 판정 한 곳 · 모든 페이지 
      idx.includes('<script src="/jk-access.js"></script>') && pl.includes('<script src="/jk-access.js"></script>') && adm.includes('<script src="/jk-access.js"></script>')
      && /JKAccess\.admit\(user, accFb/.test(idx) && /JKAccess\.admit\(user,planFb/.test(pl) && /JKAccess\.decide\(\{email:r\.email\}, r\)/.test(adm));
   ok('단타 두 화면은 소유자만 (서버 /api/owner 판정 · 로그인 토큰)',
-     /fetch\('\/api\/owner',\{cache:'no-store',signal:ctl\.signal,headers:\{'Authorization':'Bearer '\+tok\}\}\)/.test(scal) && /fetch\("\/api\/owner"/.test(cla) && /Bearer "\+\(await user\.getIdToken\(\)\)/.test(cla));
+     /fetch\('\/api\/owner',\{cache:'no-store',signal:ctl\.signal,headers:\{'Authorization':'Bearer '\+tok\}\}\)/.test(scal) && /fetch\("\/api\/owner"/.test(cla) && /headers:\{Authorization:"Bearer "\+tok\}/.test(cla) && /var tok=await withTimeout\(user\.getIdToken\(\)/.test(cla));
   { const lists=[
       ['jk-access.js', (accSrc.match(/var ADMIN_EMAILS=(\[[^\]]*\])/)||[])[1]],
       ['index.html',   (idx.match(/const ADMIN_EMAILS=(\[[^\]]*\])/)||[])[1]],
@@ -11827,12 +11827,13 @@ console.log('\n[OUTAGE LEFTOVERS] Claude 권한 timeout · 5년플랜 복구표�
   const cla=fs.readFileSync(__d+'/claude.html','utf8');
   const pl=fs.readFileSync(__d+'/plan.html','utf8');
 
-  ok('클로드 단타 /api/owner 권한 확인은 8초 뒤 중단되어 로그인 화면에 무한 고착되지 않는다',
+  ok('클로드 단타 /api/owner 권한 확인은 시간 제한(토큰 15초 · 서버 10초 × 2번) 뒤 중단되어 로그인 화면에 무한 고착되지 않는다',
      /async function checkOwner\(user\)/.test(cla)
      && /new AbortController\(\)/.test(cla)
-     && /setTimeout\(function\(\)\{ctl\.abort\(\)\},8000\)/.test(cla)
+     && /setTimeout\(function\(\)\{ctl\.abort\(\)\},10000\)/.test(cla)
      && /signal:ctl\.signal/.test(cla)
-     && /8초 timeout/.test(cla));
+     && /withTimeout\(user\.getIdToken\(\),15000,/.test(cla)
+     && /권한 확인 서버가 10초씩 두 번 응답하지 않았습니다/.test(cla));
 
   ok('5년플랜 10\/03 legacy 복구는 무엇을 복구했는지 메타데이터를 Firebase에 남긴다',
      /planLegacyRestoreHadFive=planLegacyFiveValid\(legacyFive\)/.test(pl)
@@ -11911,6 +11912,20 @@ console.log('\n[CLAUDE KRX WORKER] Worker 일정도 휴장일 먼저');
      /import \{ krxDay \} from "\.\.\/\.\.\/\.\.\/functions\/api\/_krx_calendar\.js";/.test(ow3)&&h>0&&h<firstCall
      &&/else if\(route==="claude_kr"\)\{if\(krHolidayAction\("close",kstParts\(at\)\.date\)==="run"\)ctx\.waitUntil\(claudeKrClose/.test(ow3)
      &&/- "functions\/api\/_krx_calendar\.js"/.test(dw));
+}
+
+/* ════ 단타 로그인 '권한 확인 응답 없음(8초)' 수정 (v2.11.2) ════ */
+console.log('\n[DANTA LOGIN] 소유자 확인 빠르게 · 토큰/서버 따로 재기');
+{
+  const ow=fs.readFileSync(__d+'/functions/api/owner.js','utf8'),ca=fs.readFileSync(__d+'/functions/api/_claude_auth.js','utf8'),ch=fs.readFileSync(__d+'/claude.html','utf8');
+  ok('소유자 확인 서버: 토큰 서명을 서버 안에서 확인(Google 공개키 캐시) · 공개키를 못 받을 때만 예전 Google 조회(6초 제한)',
+     /const v = await verifyFirebaseToken\(idToken\);/.test(ow)&&ow.indexOf('verifyFirebaseToken(idToken)')<ow.indexOf('accounts:lookup')&&/if \(!v\.ok && v\.infra\) \{/.test(ow)&&/setTimeout\(\(\) => ac\.abort\(\), 6000\)/.test(ow)
+     &&/const v = await verifyFirebaseToken\(idToken\);[\s\S]{0,200}if \(v\.ok\) return v\.email;\n\s*if \(!v\.infra\) return "";/.test(ca));
+  const co=ch.slice(ch.indexOf('async function checkOwner(user){'),ch.indexOf('function googleLogin('));
+  ok('단타(클로드) 화면: 토큰 받기(15초)와 서버 확인(10초 × 2번)을 따로 · 실패 사유 표시 · 다시 시도 버튼(로그아웃 없이) · 메뉴 설정이 화면 열기를 막지 않음',
+     co.indexOf('user.getIdToken()')<co.indexOf('new AbortController()')&&/for\(var a=0;a<2;a\+\+\)/.test(co)
+     &&/rb\.textContent="다시 시도";rb\.onclick=function\(\)\{[^}]*onUser\(window\.fb\.auth\.currentUser\)/.test(ch)&&/function boot\(\)\{window\.fb\.onAuthStateChanged\(window\.fb\.auth,onUser\)\}/.test(ch)
+     &&!/await JKAccess\.applyMenuConfig/.test(ch));
 }
 
 Promise.all(PENDING).then(()=>{
