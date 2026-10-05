@@ -1,0 +1,87 @@
+{
+  "date": "2026-10-05",
+  "writtenAt": "2026-10-05T20:23:14.233553+09:00",
+  "tabs": {
+    "시초가": {
+      "name": "① D-1 갭하락 과매도 v2",
+      "date": "2026-10-02",
+      "result": "no_trade",
+      "plan": "명단 9종목 · 08:56 예상갭 확인 (통과 5종목 이상일 때 v2 매매)"
+    },
+    "데이트레이딩": {
+      "name": "② 코스닥150 레버리지 하락일 야간",
+      "date": "2026-10-02",
+      "result": "no_trade",
+      "plan": "15:21 예상 종가 −3% 이하면 종가 매수 → 다음 날 시가 매도"
+    },
+    "비트코인": {
+      "name": "③ BTC·ETH 어제 고가 돌파 하루 단타",
+      "date": "2026-10-04",
+      "result": 0.580706559896541,
+      "plan": "BTC 돌파 감시 · ETH 돌파 감시"
+    },
+    "SOXL": {
+      "name": "④ SOXL 단기 과매도 반등 (최대 5일)",
+      "date": "2026-10-02",
+      "result": "no_trade",
+      "plan": "쉼 (과매도 신호 없음) · 자금 50%"
+    },
+    "전체": {
+      "name": "🏦 전체 계좌 (국내 30% · 코인 30% · 미국 40%)",
+      "date": "2026-10-04",
+      "result": 0.21776495996120285,
+      "plan": null
+    }
+  },
+  "opening": {
+    "reason": "rsi14_prev<30+expected_gap<=-2%+deepest3",
+    "picks": [
+      "오름테라퓨틱",
+      "코스모로보틱스",
+      "앤로보틱스"
+    ],
+    "breadth": 5
+  },
+  "etf": {
+    "buy": "no_signal_drop_above_-3%",
+    "drop": -1.411042944785279
+  },
+  "paper": {
+    "opening_d1v2": {
+      "tradeDays": 0,
+      "totalPct": 0.0,
+      "status": "매매일 0/20 — 판단 전"
+    },
+    "daytrading_etf": {
+      "tradeDays": 0,
+      "totalPct": 0.0,
+      "status": "매매일 0/20 — 판단 전"
+    },
+    "coin_bo_btc": {
+      "tradeDays": 2,
+      "totalPct": 0.11348781856601597,
+      "status": "매매일 2/20 — 판단 전"
+    },
+    "coin_bo_eth": {
+      "tradeDays": 2,
+      "totalPct": -1.35661817914019,
+      "status": "매매일 2/20 — 판단 전"
+    },
+    "us_soxl": {
+      "tradeDays": 0,
+      "totalPct": 0.0,
+      "status": "매매일 0/20 — 판단 전"
+    },
+    "account": {
+      "tradeDays": 1,
+      "totalPct": -0.40166939567434223,
+      "status": "매매일 1/20 — 판단 전"
+    }
+  },
+  "issues": [
+    "preopen 주문 실패: 475830 모의투자 영업일이 아닙니다.",
+    "preopen 주문 실패: 439960 모의투자 영업일이 아닙니다.",
+    "preopen 주문 실패: 138360 모의투자 영업일이 아닙니다."
+  ],
+  "verdict": "점검 필요 3건"
+}

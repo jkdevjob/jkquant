@@ -1,0 +1,104 @@
+{
+  "ok": true,
+  "date": "2026-10-03",
+  "ledger": {
+    "schema": 1,
+    "date": "2026-10-03",
+    "mainVariant": "baseline",
+    "createdAt": "2026-10-03T15:05:40.240Z",
+    "updatedAt": "2026-10-03T15:05:40.583Z",
+    "scans": [
+      {
+        "id": "close:crypto",
+        "scheduledTime": 1791039938000,
+        "capturedAt": "2026-10-03T15:05:40.232Z",
+        "targetHm": 5,
+        "lagMs": 0,
+        "partial": false,
+        "okShards": 1,
+        "failed": [],
+        "quoteErrors": 0,
+        "eventCount": 1
+      },
+      {
+        "id": "tg:crypto:sent",
+        "scheduledTime": 1791039938000,
+        "capturedAt": "2026-10-03T15:05:40.571Z",
+        "targetHm": 5,
+        "lagMs": 0,
+        "partial": false,
+        "okShards": 1,
+        "failed": [],
+        "quoteErrors": 0,
+        "eventCount": 1
+      }
+    ],
+    "events": [
+      {
+        "id": "close:crypto",
+        "date": "2026-10-03",
+        "capturedAt": "2026-10-03T15:05:40.232Z",
+        "targetHm": 5,
+        "strategy": "claude_day",
+        "stage": "close",
+        "payload": {
+          "strategy": "crypto",
+          "name": "③ 비트코인 · BTC·ETH 어제 고가 돌파 하루 단타",
+          "date": "2026-10-03",
+          "currency": "KRW",
+          "trades": [
+            {
+              "name": "BTC",
+              "entryTime": "10-02 11:00",
+              "entryPrice": 115857900,
+              "notional": 5000000,
+              "exitTime": "10-03 09:00",
+              "exitPrice": 115050000,
+              "pnlPct": -0.8373197339154247,
+              "pnlAmount": -41865.98669577124,
+              "reason": "다음 날 09:00 청산"
+            },
+            {
+              "name": "ETH",
+              "entryTime": "10-02 09:00",
+              "entryPrice": 3695847,
+              "notional": 5000000,
+              "exitTime": "10-03 09:00",
+              "exitPrice": 3633000,
+              "pnlPct": -1.8404762372468397,
+              "pnlAmount": -92023.81186234199,
+              "reason": "다음 날 09:00 청산"
+            }
+          ],
+          "open": [],
+          "watched": 2,
+          "candidates": 2,
+          "entries": 0,
+          "exits": 2,
+          "wins": 0,
+          "losses": 2,
+          "winRate": 0,
+          "realizedAmount": -133889.79855811322,
+          "realizedPct": -1.3388979855811323,
+          "status": "closed",
+          "note": "한국시각 00:00 마감 · 매매 규칙은 업비트 하루(09:00~다음 09:00) 그대로",
+          "capitalNote": "코인 칸 모의 자금 10,000,000원(두 코인 반반)"
+        }
+      },
+      {
+        "id": "tg:crypto:sent",
+        "date": "2026-10-03",
+        "capturedAt": "2026-10-03T15:05:40.571Z",
+        "targetHm": 5,
+        "strategy": "claude_day",
+        "stage": "telegram",
+        "payload": {
+          "ok": true,
+          "messageId": 249,
+          "error": null
+        }
+      }
+    ]
+  },
+  "source": "cloudflare-opening-scheduler-claude-ledger"
+}
