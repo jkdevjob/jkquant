@@ -1,4 +1,5 @@
 import { DurableObject } from "cloudflare:workers";
+import { krxDay } from "../../../functions/api/_krx_calendar.js";   // KRX 휴장일 — 주문 경로(Pages)와 같은 목록
 
 // Cloudflare Worker — jkquant opening scheduler
 // Primary realtime trigger for the opening strategy.
@@ -500,10 +501,26 @@ async function runEtf(env,date,stage,ms,extra={}){
   catch(e){console.error(JSON.stringify({type:"gapdown_archive_failed",stage,error:String(e.message||e)}));}
   console.log(JSON.stringify({type:stage,date,signal:res.signal,reason:res.decisionReason||res.error||""}));
 }
+// 단타(클로드) ①② — 장이 열리는 날인지 먼저. 휴장이면 08:56 에 기록 한 줄 + 텔레그램 '휴장' 한 번만, 나머지(시세·주문·15:21·15:40)는 하지 않는다.
+export function krHolidayAction(stage,date){
+  const kd=krxDay(date);
+  if(!kd.closed)return "run";
+  return stage==="preopen"?"notice":"skip";
+}
 async function runGapdown(stage,controller,env){
   if(!env.MONITOR_KEY||!env.SIGNAL_STORE)throw new Error("MONITOR_KEY/SIGNAL_STORE missing");
   const ms=Number(controller.scheduledTime)||Date.now();
   const date=kstParts(ms).date;
+  const hol=krHolidayAction(stage,date);
+  if(hol!=="run"){
+    if(hol==="notice"){
+      try{await gapdownRecord(env,date,"preopen",{stage:"preopen",date,decisionReason:"krx_holiday",holiday:true,picks:[],orders:[],candidates:0},ms);}
+      catch(e){console.error(JSON.stringify({type:"gapdown_archive_failed",stage:"holiday",error:String(e.message||e)}));}
+      await claudeTelegram(env,date,"preopen");
+    }
+    console.log(JSON.stringify({type:"gapdown_holiday",date,stage,action:hol}));
+    return;
+  }
   if(stage==="preopen"){
     const prev=[];
     for(let k=1;k<=5;k++){
@@ -596,7 +613,7 @@ export default {
 
     if(route==="claude_crypto")ctx.waitUntil(claudeDayClose(env,"crypto",kstParts(at-864e5).date,at));   // 어제 00:00~24:00
     else if(route==="claude_soxl")ctx.waitUntil(claudeDayClose(env,"soxl",nyDate(at),at));
-    else if(route==="claude_kr")ctx.waitUntil(claudeKrClose(env,kstParts(at).date,at));
+    else if(route==="claude_kr"){if(krHolidayAction("close",kstParts(at).date)==="run")ctx.waitUntil(claudeKrClose(env,kstParts(at).date,at));}
     else if(route==="opening")ctx.waitUntil(runMinute(controller,env));
     else if(route&&route.startsWith("gapdown_"))ctx.waitUntil(runGapdown(route.slice(8),controller,env));
   },

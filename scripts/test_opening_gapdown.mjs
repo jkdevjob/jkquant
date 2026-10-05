@@ -105,6 +105,14 @@ t("③ 메인 변수: 변동성 돌파 기준선 · 밤(21시~) 돌파 안 삼 �
   const btc = DAY.coinDay("2026-10-05", [{ market: "KRW-BTC", daily, hourly: hourly.slice().reverse() }], Date.parse("2026-10-06T00:00:00+09:00"), btcOnly);
   assert.equal(btc.exits, 1);
 });
+t("worker: 휴장일엔 08:56 휴장 알림 한 번만 · 15:21/15:40 은 아예 안 함 · 개장일은 그대로", async () => {
+  const fs = await import("node:fs");
+  const src = fs.readFileSync(process.env.JKQ_WORKER_SRC || new URL("../worker/opening-scheduler/src/index.js", import.meta.url), "utf8");
+  const a = src.indexOf("export function krHolidayAction("), b = src.indexOf("\n}\n", a) + 2;
+  const f = new Function("krxDay", src.slice(a, b).replace("export ", "") + "\nreturn krHolidayAction;")(KRX.krxDay);
+  assert.equal(f("preopen", "2026-10-09"), "notice"); assert.equal(f("close", "2026-10-09"), "skip"); assert.equal(f("reconcile", "2026-10-09"), "skip");
+  assert.equal(f("preopen", "2026-10-08"), "run"); assert.equal(f("close", "2026-10-08"), "run");
+});
 const rule = { gapMax: -2, gapFloor: -29, picks: 3 };
 t("expected gap uses KIS base price, falls back to watchlist close", () => {
   near(G.expectedGapPct({ expectedPrice: 9500, basePrice: 10000 }, 12345), -5);
