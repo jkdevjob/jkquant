@@ -10380,11 +10380,54 @@ console.log('\n[134] 모의 시작일 — 설정 변경으로 오늘 리셋 금�
 
   const op=extractFn(idx,'async function openPaper()');
   const rv=extractFn(idx,'async function refreshPaperView(force=false)');
-  ok('G 성과창은 표 계산 전에 구버전 시작일 복구를 끝낸다',
+  ok('G 성과창은 표 계산 전에 구버전/공통 시작일 복구를 끝내고 불일치가 있으면 즉시 재계산한다',
      op.indexOf('await paperRepairLegacyStarts()')>=0
-     && op.indexOf('await paperRepairLegacyStarts()')<op.indexOf('syncPaperStart()')
-     && op.indexOf('await paperRepairLegacyStarts()')<op.indexOf('rows=await refreshPaperView(true)')
+     && op.indexOf('await paperRepairCommonStarts()')>op.indexOf('await paperRepairLegacyStarts()')
+     && op.indexOf('await paperRepairCommonStarts()')<op.indexOf('syncPaperStart()')
+     && /forceRecalc\|\|repairedStarts>0/.test(op)
      && /const rows=await paperFillAll\(\)/.test(rv));
+
+  const pst=extractFn(idx,'function paperStart(sess)');
+  const eff=new Function('S','paperPreferredSimStart',pst+'\nreturn paperStart;')(
+    {paperCommon:{simStart:'2025-01-01'}},()=> '2026-10-05');
+  ok('H common/구버전 세션은 stale 2026-06-01보다 전체적용 2025-01-01을 정본으로 쓰고 explicit만 예외',
+     eff({paper:true,simStart:'2026-06-01',simStartMode:'common',hist:[]})==='2025-01-01'
+     && eff({paper:true,simStart:'2026-06-01',hist:[]})==='2025-01-01'
+     && eff({paper:true,simStart:'2026-06-01',simStartMode:'explicit',hist:[]})==='2026-06-01');
+
+  const targetSrc=extractFn(idx,'function paperCommonStartTargets()');
+  const targetFn=new Function('S','paperMinDate','paperSessions',targetSrc+'\nreturn paperCommonStartTargets;')(
+    {paperCommon:{simStart:'2025-01-01'}},
+    ()=> '2021-01-01',
+    ()=>[
+      ['inf',{id:'common',paper:true,simStart:'2026-06-01',simStartMode:'common'}],
+      ['vr',{id:'legacy',paper:true,simStart:'2026-06-01'}],
+      ['ma',{id:'explicit',paper:true,simStart:'2026-06-01',simStartMode:'explicit'}],
+      ['dca',{id:'ok',paper:true,simStart:'2025-01-01',simStartMode:'common'}]
+    ]);
+  const tz=targetFn();
+  ok('I 오래된 2026-06-01 불일치는 14일 제한 없이 common/구버전만 복구 대상으로 잡고 explicit는 보존',
+     tz.common==='2025-01-01'
+     && tz.targets.length===2
+     && tz.targets.map(x=>x[1].id).sort().join(',')==='common,legacy',
+     JSON.stringify(tz.targets.map(x=>x[1].id)));
+
+  const commonRepair=extractFn(idx,'async function paperRepairCommonStarts()');
+  ok('J 공통 시작일 복구는 옛 자동기록·진행점·성과캐시를 지우고 시작일 환율 기준 금액을 다시 심는다',
+     /x\.hist=\[\]/.test(commonRepair)
+     && /delete st\.simLast/.test(commonRepair)
+     && /delete st\.simSig/.test(commonRepair)
+     && /paperSeedCommonAmounts\(tab,x,R,commonWon\)/.test(commonRepair)
+     && /delete S\.paperViewCache/.test(commonRepair));
+
+  const pstat=extractFn(idx,'function paperStat(tab, sess)');
+  ok('K 성과표 기간도 raw sess.simStart가 아니라 정본 paperStart를 사용한다',
+     /start=paperStart\(sess\)/.test(pstat)
+     && !/sess\.simStart && sess\.simStart<first/.test(pstat));
+
+  ok('L 오늘 갱신도 계산 전에 공통 시작일 불일치를 복구한다',
+     rv.indexOf('await paperRepairCommonStarts()')>=0
+     && rv.indexOf('await paperRepairCommonStarts()')<rv.indexOf('paperViewCacheRead()'));
 }
 
 
