@@ -410,7 +410,7 @@ export async function onRequestGet({ request, env }) {
         });
         const response = new Response(body, { status: 200, headers: {
           ...JH,
-          "Cache-Control": "public, max-age=3600, s-maxage=21600, stale-while-revalidate=86400",
+          "Cache-Control": "public, max-age=3600, s-maxage=86400, stale-while-revalidate=172800",
         }});
         try {
           const cache = globalThis.caches && globalThis.caches.default;
