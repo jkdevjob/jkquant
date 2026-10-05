@@ -544,7 +544,7 @@ html.had-user #authgate .bootwait{display:block}
 </div>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.110.2</span></h1></div>
+    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.110.3</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -1655,7 +1655,7 @@ if(/^\/paper\/?$/.test(location.pathname)){
   <footer>
     <strong>JK 퀀트</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.110.2</b> · 2026-10-05</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.110.3</b> · 2026-10-05</div>
   </footer>
 </div>
 
@@ -3513,6 +3513,7 @@ async function fetchQuote(which){
   const symbol=st.ticker||'SOXL';
   note.className='fetchnote load'; note.textContent='불러오는 중…';
   const q=await fetchDaily(symbol);
+  if(S.activeTab!==which || curStrat().settings!==st) return;
   if(q){
     const live=(q.price!=null&&q.price>0)?q.price:q.last.close;
     // 무매(inf)의 last는 'LOC 체결가로 쓸 확정 종가'다 — 장중·마감직후 봉의 close는 종가가 아니다.
@@ -4981,7 +4982,7 @@ async function loadMaData(force){
   if(!force && maQuoteData && String(maQuoteData.symbol||'').toUpperCase()===sym){ renderMaNow(); renderMaHist(); renderMaAnal(); return; }
   if(note){note.className='fetchnote load';note.textContent='종가 이력 불러오는 중…';}
   const q=await fetchDaily(sym);   // 체결가 + 배당 이벤트 — 배당은 장부 기록으로 받는다 (7차 D8)
-  if(S.activeTab!=='ma') return;   // await 사이 탭 전환 가드
+  if(S.activeTab!=='ma' || curStrat().settings!==st) return;   // await 사이 탭 전환 가드
   if(q && q.days && q.days.length){
     maQuoteData={symbol:q.symbol,days:q.days,last:q.last,price:(q.price!=null&&+q.price>0)?+q.price:q.last.close,currency:q.currency||'USD',src:q.src,
                  dividends:q.dividends||[], priceBasis:q.priceBasis||null};   // 배당 기록용 (divCashQ)
@@ -5438,7 +5439,7 @@ async function loadIvsData(force){
   if(!force && ivsQuoteData && String(ivsQuoteData.symbol||'').toUpperCase()===sym && haveX1){ renderIvsNow(); renderIvsAnal(); return; }
   if(note){note.className='fetchnote load';note.textContent='종가 이력 불러오는 중…';}
   const q=await fetchDaily(sym);   // 체결가 + 배당 이벤트 — 배당은 장부 기록으로 받는다 (7차 D8)
-  if(S.activeTab!=='ivs') return;   // await 사이 탭 전환 가드
+  if(S.activeTab!=='ivs' || curStrat().settings!==st) return;   // await 사이 탭 전환 가드
   if(q && q.days && q.days.length){
     ivsQuoteData={symbol:q.symbol,days:q.days,last:q.last,price:(q.price!=null&&+q.price>0)?+q.price:q.last.close,src:q.src,
                   dividends:q.dividends||[], priceBasis:q.priceBasis||null};   // 배당 기록용 (divCashQ)
@@ -5450,6 +5451,7 @@ async function loadIvsData(force){
       const s1=ivsX1Of(sym);
       if(!(ivsQuote1 && String(ivsQuote1.symbol||'').toUpperCase()===s1) || force){
         const q1=await fetchDaily(s1);   // 짝도 체결가 + 배당 (7차 D8)
+        if(S.activeTab!=='ivs' || curStrat().settings!==st) return;
         ivsQuote1 = (q1&&q1.days&&q1.days.length)
           ? {symbol:q1.symbol,days:q1.days,last:q1.last,price:(q1.price!=null&&+q1.price>0)?+q1.price:q1.last.close,
              dividends:q1.dividends||[], priceBasis:q1.priceBasis||null}
@@ -5968,7 +5970,7 @@ async function loadDcaData(force){
   if(!force && dcaQuoteData && String(dcaQuoteData.symbol||'').toUpperCase()===sym){ renderDcaNow(); renderDcaHist(); renderDcaAnal(); return; }
   if(note){note.className='fetchnote load';note.textContent='종가 이력 불러오는 중…';}
   const q=await fetchDailyDiv(sym);
-  if(S.activeTab!=='dca') return;   // await 사이 탭 전환 가드
+  if(S.activeTab!=='dca' || curStrat().settings!==st) return;   // await 사이 탭 전환 가드
   if(q && q.days && q.days.length){
     dcaQuoteData={symbol:q.symbol,days:q.days,raw:q.raw||[],dividends:q.dividends||[],splits:q.splits||[],
       last:q.last,price:(q.price!=null&&+q.price>0)?+q.price:q.last.close,currency:q.currency||'USD',src:q.src};
@@ -6346,7 +6348,7 @@ async function loadAsapData(force){
   if(!force && asapQuoteData && String(asapQuoteData.symbol||'').toUpperCase()===sym){ renderAsapNow(); renderAsapHist(); renderAsapAnal(); return; }
   if(note){note.className='fetchnote load';note.textContent='종가 이력 불러오는 중…';}
   const q=await fetchDaily(sym);   // 체결가 + 배당 이벤트 — 배당은 리저브 기록으로 받는다 (7차 D8)
-  if(S.activeTab!=='asap') return;   // await 사이 탭 전환 가드
+  if(S.activeTab!=='asap' || curStrat().settings!==st) return;   // await 사이 탭 전환 가드
   if(q && q.days && q.days.length){
     asapQuoteData={symbol:q.symbol,days:q.days,last:q.last,price:(q.price!=null&&+q.price>0)?+q.price:q.last.close,currency:q.currency||'USD',src:q.src,
                    dividends:q.dividends||[], priceBasis:q.priceBasis||null};   // 배당 기록용 (divCashQ)
@@ -6560,6 +6562,7 @@ async function loadVrChart(force){
   if(vrChartData && !force && lastQuote.vr && String(lastQuote.vr.symbol||'').toUpperCase()===_want){ drawVrChart(); return; }
   $('chart_note').className='fetchnote load'; $('chart_note').textContent='차트 불러오는 중…';
   const q=await fetchDaily(st.ticker||'TQQQ');
+  if(S.activeTab!=='vr' || curStrat().settings!==st) return;
   if(q){
     vrChartData=q.days;
     /* days를 5개로 잘라두면 재생·모의체결이 이력을 못 읽는다 — 전 구간을 그대로 둔다.
@@ -6634,7 +6637,7 @@ async function loadInfData(force){
   const q=await fetchDaily(st.ticker||'SOXL');
   // await 사이에 탭이 바뀌면 curStrat()이 남의 세션을 가리킨다 —
   // 그대로 render*를 부르면 그 기록을 무매 형식으로 해석해 computeInf가 터진다
-  if(S.activeTab!=='inf') return;
+  if(S.activeTab!=='inf' || curStrat().settings!==st) return;
   if(q){
     infQuoteCache=q; infQuoteCache.cut=simCutoff(curOf(st)); infChartData=q.days;
     const live=(q.price!=null&&q.price>0)?q.price:q.last.close;
@@ -9605,6 +9608,7 @@ function switchSess(id){
     else if(S.activeTab==='ma'){ loadMaData(true); }
     else if(S.activeTab==='ivs'){ loadIvsData(true); }
     else if(S.activeTab==='dca'){ loadDcaData(true); }
+    else if(S.activeTab==='asap'){ loadAsapData(true); }
     else { fetchQuote('vr'); loadVrChart(true); loadFearGreed(); }
   }catch(e){console.error(e)}
 }
@@ -10207,6 +10211,7 @@ function setupTabs(){
    storage 이벤트는 값을 쓴 탭 자신에게는 오지 않고 '다른 탭'에만 오므로 무한루프가 없다. */
 /* ── Firebase Firestore 동기화 (사용자별) ── */
 let saveTimer=null, lastPushedJSON='';
+let stateSaveQueue=Promise.resolve();
 function setSync(state){ // 'ok'|'sync'|'err'|null
   const d=$('syncdot');if(d)d.className='syncdot'+(state?(' '+state):'');
 }
@@ -10317,8 +10322,11 @@ async function _commitStateRemote(where){
   const ref=window.fb.doc(window.fb.db,'users',curUid);
   let candidate=JSON.parse(JSON.stringify(S)),writeUpdated=Date.now(),mergedRemote=false;
   candidate._updated=Math.max(+candidate._updated||0,writeUpdated);
+  const submitted=JSON.parse(JSON.stringify(candidate));
   try{
     const nextRev=await window.fb.runTransaction(window.fb.db,async tx=>{
+      // Firestore may retry: never merge a previous attempt into the next one.
+      candidate=JSON.parse(JSON.stringify(submitted));mergedRemote=false;
       const snap=await tx.get(ref),d=snap.exists()?(snap.data()||{}):{};
       const remote=validState(d.stateV2)?d.stateV2:d.state,rev=+d.stateV2Rev||0;
       const remoteSig=remote&&validState(remote)?_historySignature(remote):'';
@@ -10333,7 +10341,15 @@ async function _commitStateRemote(where){
       tx.set(ref,{stateV2:candidate,stateV2Updated:writeUpdated,stateV2Rev:nr},{merge:true});
       return nr;
     });
-    if(mergedRemote){S=candidate;ensureBoxes();try{refreshAll();}catch(e){console.warn('db rebase refresh',e);}}
+    if(mergedRemote){
+      // Keep edits made during await, and always keep this window's navigation.
+      const current=S, next=_rebaseStateOnRemote(submitted,current,candidate);
+      next.activeTab=current.activeTab;
+      for(const t of ['inf','vr','ma','ivs','dca','asap','plan']){
+        if(next[t]&&current[t])next[t].active=current[t].active;
+      }
+      S=next;ensureBoxes();try{refreshAll();}catch(e){console.warn('db rebase refresh',e);}
+    }
     stateCloudRev=+nextRev||stateCloudRev;stateCloudHistorySig=_historySignature(candidate);stateDbBase=JSON.parse(JSON.stringify(candidate));
     stateCloudPending=false;lastPushedJSON=JSON.stringify(candidate);setSync('ok');return true;
   }catch(e){
@@ -10349,9 +10365,14 @@ async function pushRemoteNow(){
   if(!curUid||!window.fb)return true;
   if(saveTimer){clearTimeout(saveTimer);saveTimer=null;}
   if(!stateCloudHydrated){stateCloudPending=true;setSync('sync');return false;}
-  const json=JSON.stringify(S);
-  if(json===lastPushedJSON){setSync('ok');return true;}
-  return await _commitStateRemote('cloud-now');
+  // Serialize commits; take the snapshot only when this save reaches the front.
+  const pending=stateSaveQueue.then(()=>{
+    if(_paperFilling)return false;
+    if(JSON.stringify(S)===lastPushedJSON){setSync('ok');return true;}
+    return _commitStateRemote('cloud-now');
+  });
+  stateSaveQueue=pending.catch(()=>false);
+  return await pending;
 }
 async function pullRemote(){
   if(!curUid||!window.fb)return false;
