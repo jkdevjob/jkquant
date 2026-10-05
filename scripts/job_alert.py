@@ -535,6 +535,7 @@ def fetch_job_identity(job):
             item['deadlineCheckedAt'] = today_kst()
 
         page_text = normalize_text(BeautifulSoup(response.text, 'html.parser').get_text(' ', strip=True))
+        item = attach_job_metadata(item, page_text[:16000])
         close_reason = content_close_reason(
             item.get('title', ''),
             page_text[:16000],
@@ -1045,6 +1046,8 @@ def merge_jobs(*groups):
 def classify_jobs(jobs, scorer):
     result = []
     for job in jobs:
+        if is_non_job_record(job.get('title', ''), job.get('body', ''), job.get('url', '')):
+            continue
         if job.get('_urlState') in {'closed', 'missing'}:
             continue
         deadline = job.get('deadline', '')
@@ -1748,7 +1751,7 @@ def collect_search_source(source_name, domain):
             url = normalize_url(item.get('href') or item.get('url') or '')
             if not url or domain not in domain_of(url):
                 continue
-            if is_listing_or_search_url(url):
+            if is_non_job_record(title, body, url):
                 continue
             if not has_target_location(f'{title} {body}'):
                 continue
@@ -2335,6 +2338,21 @@ def archive_entry(job, existing=None):
         'sources': sources,
         'locations': archive_locations(job) or old.get('locations', []),
         'categories': archive_categories(job),
+        'employmentTypes': (
+            job.get('employmentTypes')
+            or employment_types(job.get('title', ''), job.get('body', ''))
+            or old.get('employmentTypes', [])
+        ),
+        'career': (
+            job.get('career')
+            or career_label(job.get('title', ''), job.get('body', ''))
+            or old.get('career', '')
+        ),
+        'education': (
+            job.get('education')
+            or education_label(job.get('title', ''), job.get('body', ''))
+            or old.get('education', '')
+        ),
         'salary': salary,
         'shortPay': short_pay,
         'postedDate': posted or old_posted,
@@ -2448,6 +2466,8 @@ def save_job_archive(all_jobs, source_statuses):
         }
 
     for old in unseen_old:
+        if is_non_job_record(old.get('title', ''), old.get('body', ''), old.get('url', '')):
+            continue
         url = normalize_url(old.get('url', ''))
         candidate = verified_by_url.get(url, old)
         merged.append(apply_unseen_status(candidate, source_statuses))
@@ -2501,6 +2521,7 @@ def save_job_archive(all_jobs, source_statuses):
             d = date.fromisoformat(effective)
         except Exception:
             d = today_date_kst()
+        item = attach_job_metadata(item)
         if d >= cutoff:
             kept.append(item)
         else:
