@@ -655,8 +655,10 @@ console.log('[10] 모의 장부 정합');
      `생성 ${feeOf(rep)} / 장부 ${feeOf(led)}`);
 
   let stat=''; try{ stat=extractFn(idx,'function paperStat(tab, sess)'); }catch(e){}
-  // 기간은 첫 기록일이 아니라 모의 시작일부터 — 아니면 연환산이 부풀려진다
-  ok('모의 기간을 시작일부터 잰다', /sess\.simStart && sess\.simStart<first/.test(stat));
+  // 기간은 첫 기록일이 아니라 유효 모의 시작일부터 — common 세션은 paperCommon 정본을 써야 한다
+  ok('모의 기간을 시작일부터 잰다',
+     /start=paperStart\(sess\)/.test(stat)
+     && /const from=\(start && start<first\) \? start : first;/.test(stat));
   // 여러 세션을 한 표에 나열하므로 통화는 줄마다 따로
   ok('성과 행에 통화를 실어 보낸다', /cur:curOf\(st\)/.test(stat));
   ok('성과 표 금액은 원화-only로 찍는다', /paperInflowText\(r\)/.test(idx) && /paperWon\(r\.total,r\.wonRate\)/.test(idx));
@@ -2030,10 +2032,11 @@ console.log('[40] 모의 일괄 적용 — 원금과 1회 적립액을 따로');
      && /cache&&cache\.rows/.test(opFast)
      && /paperSummary\(\)/.test(opFast)
      && /setTimeout\(\(\)=>\{ void refreshPaperView\(false\)/.test(opFast));
-  ok('모의 성과 전 전략 재계산은 전체 적용·오늘 갱신에서만 강제한다',
-     /if\(forceRecalc\)\{[\s\S]*rows=await refreshPaperView\(true\)/.test(opFast)
+  ok('모의 성과 전 전략 재계산은 전체 적용·오늘 갱신·시작일 자동복구에서만 강제한다',
+     /if\(forceRecalc\|\|repairedStarts>0\)\{[\s\S]*rows=await refreshPaperView\(true\)/.test(opFast)
      && /await openPaper\(true\)/.test(ap)
-     && /onclick="refreshPaperViewButton\(\)"/.test(idx));
+     && /onclick="refreshPaperViewButton\(\)"/.test(idx)
+     && /const repaired=await paperRepairCommonStarts\(\)/.test(rvFast));
   ok('모의 성과 계산 결과는 stateV2 캐시에 저장하고 같은 날 재진입은 재계산하지 않는다',
      /const PAPER_VIEW_CACHE_VER=1;/.test(idx)
      && /S\.paperViewCache=x/.test(extractFn(idx,'function paperViewCacheWrite(rows)'))
