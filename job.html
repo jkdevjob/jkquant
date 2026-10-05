@@ -208,8 +208,8 @@ function applyFilters(){
     if(region&&(j.locations||[]).indexOf(region)<0)return false;
     if(employment==="regular"&&!isRegularJob(j))return false;
     if(employment==="nonregular"&&isRegularJob(j))return false;
-    var st=j.status||"active";
-    if(jobStatus==="active"&&st==="closed")return false;
+    var st=j.status||"unverified";
+    if(jobStatus==="active"&&st!=="active")return false;
     if(jobStatus==="closed"&&st!=="closed")return false;
     if(source&&(j.sources||[]).indexOf(source)<0)return false;
     if(q){var hay=[j.title,j.company,j.body,(j.sources||[]).join(" "),(j.locations||[]).join(" "),(j.categories||[]).map(function(c){return CAT_LABEL[c]||c}).join(" ")].join(" ").toLowerCase();if(hay.indexOf(q)<0)return false}
@@ -232,8 +232,8 @@ function renderList(){
     var employment=(j.employmentTypes||[]).map(function(x){return '<span class="tag reg">'+esc(x)+"</span>"}).join("");
     var career=j.career?'<span class="tag">'+esc(j.career)+"</span>":"";
     var education=j.education?'<span class="tag">'+esc(j.education)+"</span>":"";
-    var st=j.status||"active";
-    var statusTag='<span class="tag '+(st==="closed"?"closed":"active")+'">'+(st==="closed"?"마감":"진행중")+"</span>";
+    var st=j.status||"unverified";
+    var statusTag='<span class="tag '+(st==="closed"?"closed":st==="active"?"active":"")+'">'+(st==="closed"?"마감":st==="active"?"진행중":"확인불가")+"</span>";
     var deadline=j.deadline?'<span class="tag">마감 '+esc(fmtDate(j.deadline))+"</span>":(j.deadlineSource==="채용시"?'<span class="tag">채용시 마감</span>':"");
     var historyTag=j.archivedAt?'<span class="tag">장기보관</span>':"";
     var company='<span class="company-inline">'+esc((j.company||"").trim()||"업체 비공개")+"</span>";
