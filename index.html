@@ -7927,7 +7927,8 @@ function paperSortTable(key,th){
     h.textContent=base+(h===th?(paperSortDir>0?' ▲':' ▼'):'');
   });
 }
-async function openPaper(forceRecalc=false,skipAutoRefresh=false){
+async function openPaper(){
+  const forceRecalc=arguments[0]===true,skipAutoRefresh=arguments[1]===true;
   const body=$('paper_body');
   if(body){ body.innerHTML=forceRecalc
     ? '<p class="lead">전체 적용 결과를 다시 계산하는 중… <span style="color:var(--faint)">이때만 전 전략 시세·재생을 다시 확인합니다.</span></p>'
