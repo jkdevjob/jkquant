@@ -38,7 +38,7 @@ async function application(failLoader=false){
  const c=vm.createContext({S,console:{error(){}},setTimeout:()=>0,clearTimeout:()=>{},_paperFilling:false,_fillQuoteCache:null,lastQuote:{},curUid:'test',window:{fb:{}},saveTimer:null,stateCloudHydrated:true,lastPushedJSON:'',PAPER_TABS:tabs.map(t=>[t,t]),PAPER_CACHESYM:Object.fromEntries(tabs.map(t=>[t,()=>t])),PAPER_LOADERS:{},
   $:id=>fields[id],paperMinDate:()=> '2020-01-01',PAPER_MAX_YEARS:5,PAPER_RAW_WON_MIGRATION:1,
   paperSessions:()=>tabs.flatMap(t=>S[t].sessions.filter(s=>s.paper).map(s=>[t,s])),paperReadAmt:()=>null,
-  confirm:()=>true,paperRememberForm:()=>{},saveLocal:()=>{},paperEnsureCommonWon:async()=>{},paperRepairLegacyStarts:async()=>{},syncPaperStart:()=>{},loadFX:async()=>{},
+  confirm:()=>true,paperRememberForm:()=>{},saveLocal:()=>{},paperEnsureCommonWon:async()=>{},paperRepairLegacyStarts:async()=>0,paperRepairCommonStarts:async()=>0,syncPaperStart:()=>{},loadFX:async()=>{},
   paperViewCacheRead:()=>({rows:[]}),paperViewCacheFresh:()=>true,paperSummary:()=>[],
   divCashOn:()=>false,paperAuto:()=>{S[S.activeTab].sessions.find(s=>s.id===S[S.activeTab].active).hist.push({sim:true,amt:42});void c.pushRemoteNow();},
   vrSimForward:()=>{},infSimForward:()=>{},paperStat:(tab,s)=>({tab,id:s.id}),paperWonRate:()=>1,refreshAll:()=>{},setSync:()=>{},
