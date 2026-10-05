@@ -61,6 +61,7 @@ PY = [
     ("coin night filter off", "claude_lab.py", 'if p.get("lastEntryHour") is not None and (s0 + timedelta(hours=k)).hour >= p["lastEntryHour"] and k < 15:', "if False:"),
     ("curves include future", "claude_lab.py", "            if d < start or d > today:\n", "            if d < start:\n"),
     ("dip hit minutes", "backtest_crypto_orb.py", "int((hit - entry_t).total_seconds() // 60) + 5", "int((hit - entry_t).total_seconds() // 60)"),
+    ("gpt blank date crashes", "claude_lab.py", "        try:\n            v = float(r[col])", "        by.setdefault(r.get(\"date\"), [])\n        try:\n            v = float(r[col])"),
 ]
 JS = [
     ("base price first", "_gapdown.js", "const base=+(q&&q.basePrice)>0?+q.basePrice:+prevClose||0;", "const base=+prevClose||0;"),
@@ -78,7 +79,7 @@ JS = [
     ("live coin stop", "claude-live.js", "const stopped=bars.slice(i).some(x=>+x.low_price<=stop);", "const stopped=false;"),
     ("live coin level today high", "claude-live.js", "level:+candles[1].high_price", "level:+candles[0].high_price"),
     ("soxl live same-session", "claude-live.js", "const started=!!(sess&&sess.date>nx.basedOn&&sess.open>0);", "const started=!!(sess&&sess.open>0);"),
-    ("telegram no-trade hidden", "claude-telegram.js", 'else L.push("① 갭하락 과매도 — 매매 없음 ("+(dec.reason||"조건 맞는 종목 없음")+")");', ''),
+    ("telegram no-trade hidden", "claude-telegram.js", 'else L.push(dec.reason==="krx_holiday"?"🔒 국내 휴장일 — ①② 시세 조회·주문 없음":"① 갭하락 과매도 — 매매 없음 ("+(dec.reason||"조건 맞는 종목 없음")+")");', ''),
     ("telegram weekly stale shown", "claude-telegram.js", "||(extra.weekStart&&w.weekStart!==extra.weekStart)", ""),
     ("telegram weekly keep as candidate", "claude-telegram.js", 'if(x.promotion&&x.promotion.code==="candidate")cand.push', 'if(x.promotion)cand.push'),
     ("today tab return is sum", "claude-live.js", "tabPct=v.length?sum/v.length:0;", "tabPct=sum;"),
@@ -96,6 +97,9 @@ JS = [
     ("auth any token", "_claude_auth.js", "return !!email && ownersOf(env).includes(String(email).toLowerCase());", "return !!email;"),
     ("auth empty key", "_claude_auth.js", "return !!want && got === want;", "return got === want;"),
     ("watchlist whitelist", "opening-gapdown.js", "    if(!w)continue;\n", "    if(!w){out.push({...r});continue;}\n"),
+    ("krx holiday list ignored", "_krx_calendar.js", '  if (SET.has(d)) return { closed: true, reason: "krx_holiday", known: true };\n', ""),
+    ("krx holiday telegram says order", "claude-telegram.js", 'L.push(dec.reason==="krx_holiday"?', 'L.push(false?'),
+    ("krx holiday etf note", "claude-live.js", '}else if(buy.decisionReason==="krx_holiday")', '}else if(false)'),
 ]
 
 
@@ -124,7 +128,7 @@ for label, filename, before, after in PY:
 for label, filename, before, after in JS:
     with tempfile.TemporaryDirectory() as tmp:
         folder = Path(tmp)
-        for name in ("_gapdown.js", "opening-gapdown.js", "claude-live.js", "claude-telegram.js", "_claude_day.js", "_claude_auth.js", "claude-lab.js"):
+        for name in ("_gapdown.js", "opening-gapdown.js", "claude-live.js", "claude-telegram.js", "_claude_day.js", "_claude_auth.js", "claude-lab.js", "_krx_calendar.js"):
             shutil.copy(API / name, folder / name)
         path = folder / filename
         src = path.read_text(encoding="utf-8")

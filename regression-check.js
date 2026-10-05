@@ -11846,6 +11846,22 @@ console.log('\n[OUTAGE LEFTOVERS] Claude 권한 timeout · 5년플랜 복구표�
   ok('모의 적용 현재 탭 유지 · 재생 중 임시 선택 저장 차단',r.status===0,(r.stdout||'')+(r.stderr||''));
 }
 
+/* ════ 단타(클로드) 장 여는 날 먼저 · 밤 계산 중단 수정 (2026-10-05) ════ */
+console.log('\n[CLAUDE KRX DAY] 휴장일 먼저 확인 · 밤 계산 빈 값');
+{
+  const og=fs.readFileSync(__d+'/functions/api/opening-gapdown.js','utf8'),kc=fs.readFileSync(__d+'/functions/api/_krx_calendar.js','utf8');
+  const lp=fs.readFileSync(__d+'/scripts/claude_lab.py','utf8');
+  const post=og.slice(og.indexOf('export async function onRequestPost'));
+  const g=post.indexOf('const kd=krxDay(date);'),q=post.indexOf('if(stage==="quote")'),pre=post.indexOf('if(stage==="preopen")'),eb=post.indexOf('if(stage==="etf_buy")');
+  ok('①② 은 시세 조회·주문 전에 KRX 휴장일을 먼저 본다(휴장이면 기록만 · 주문 없음)',
+     g>0&&g<q&&g<pre&&g<eb&&/if\(kd\.closed\)return json\(\{ok:true,stage,date,skipped:"krx_holiday"/.test(post));
+  const yNext=String(new Date().getUTCFullYear()+1);
+  ok('KRX 휴장일 목록에 올해·내년이 있다(해마다 거래소 공지로 더한다) · 10/5 개천절 대체휴일 포함',
+     new RegExp('\\b'+(+yNext-1)+': \\[').test(kc)&&new RegExp('\\b'+yNext+': \\[').test(kc)&&/"2026-10-05"/.test(kc),yNext);
+  ok('밤 계산: GPT 기록의 빈 손익 칸이 빈 날짜를 만들지 않는다(평균 예외로 계산 전체가 멈추던 문제)',
+     /v = float\(r\[col\]\)\s+# 먼저 숫자로/.test(lp)&&!/by\.setdefault\(r\["date"\], \[\]\)\.append\(float\(r\[col\]\)\)/.test(lp));
+}
+
 Promise.all(PENDING).then(()=>{
   console.log(`\n════ 결과: ${pass} PASS / ${fail} FAIL ${fail===0?'— ALL PASS ★':'— 배포 금지, 위 ✗ 항목 수정 필요'} ════`);
   process.exit(fail===0?0:1);

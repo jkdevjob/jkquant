@@ -11,11 +11,27 @@ const TG = await import(pathToFileURL(path.join(dir, "claude-telegram.js")).href
 const DAY = await import(pathToFileURL(path.join(dir, "_claude_day.js")).href);
 const AUTH = await import(pathToFileURL(path.join(dir, "_claude_auth.js")).href);
 const LAB = await import(pathToFileURL(path.join(dir, "claude-lab.js")).href);
+const KRX = await import(pathToFileURL(path.join(dir, "_krx_calendar.js")).href);
 let n = 0;
 const pending = [];
 const t = (name, fn) => { const r = fn(); if (r && r.then) pending.push(r.then(() => { n++; })); else n++; };
 const near = (a, b) => assert.ok(Math.abs(a - b) < 1e-9, `${a} != ${b}`);
 
+t("KRX calendar: 10/5 개천절 대체휴일 · 10/9 한글날 · 주말은 휴장, 10/6 은 개장, 목록 없는 해는 known=false", () => {
+  assert.deepEqual(KRX.krxDay("2026-10-05"), { closed: true, reason: "krx_holiday", known: true });
+  assert.equal(KRX.krxDay("2026-10-09").closed, true); assert.equal(KRX.krxDay("2026-12-31").closed, true);
+  assert.equal(KRX.krxDay("2026-10-03").reason, "weekend");
+  assert.deepEqual(KRX.krxDay("2026-10-06"), { closed: false, reason: "", known: true });
+  assert.equal(KRX.krxDay("2030-03-04").known, false);
+});
+t("holiday: live/telegram say 휴장 instead of '주문 실패'", () => {
+  const sm = LV.todaySummary("opening", { rows: [], decision: { reason: "krx_holiday" } }, 900);
+  assert.ok(sm.noTrade && sm.why.includes("휴장"));
+  const rows = LV.etfRows({ etf_buy: { signal: false, decisionReason: "krx_holiday", dropPct: null } }, {}, null, null);
+  assert.equal(rows[0].note, "국내 휴장일");
+  const pre = TG.compose("preopen", "2026-10-05", { tabs: { opening: { rows: [], decision: { reason: "krx_holiday" } }, daytrading: { rows: [] } } });
+  assert.ok(pre.includes("국내 휴장일") && !pre.includes("주문 실패"));
+});
 const rule = { gapMax: -2, gapFloor: -29, picks: 3 };
 t("expected gap uses KIS base price, falls back to watchlist close", () => {
   near(G.expectedGapPct({ expectedPrice: 9500, basePrice: 10000 }, 12345), -5);
