@@ -848,24 +848,40 @@ def is_target_dev_job(title, body):
         'fastapi', 'django', 'flask', 'api', 'was', 'tomcat',
         '시스템 개발', '시스템개발', '유지보수', 'sm ', ' si ',
         'db ', 'dba', 'devops', 'kubernetes', 'docker', 'linux',
-        '클라우드', '데이터 엔지니어', 'data engineer', 'software engineer',
-        'sw 개발', 's/w 개발', 'macos', 'ios', 'android', 'unity',
-        'embedded linux',
+        '클라우드', '데이터 엔지니어', '데이터엔지니어', 'data engineer',
+        'data 엔지니어', 'software engineer', 'software developer',
+        'sw 개발', 'sw개발', 's/w 개발', 's/w', '제어sw', '제어 sw',
+        'ros2', 'ros ', 'macos', 'ios', 'android', 'unity',
+        'embedded linux', '임베디드 소프트웨어', '펌웨어', 'firmware',
+        '인프라 개발',
     )
     ai_software_terms = (
         'llm', 'rag', '생성형ai', '생성형 ai', 'ai/ml', '머신러닝',
         'machine learning', '딥러닝', 'deep learning', 'nlp', '자연어',
-        'computer vision', '컴퓨터비전', 'python', 'pytorch', 'tensorflow',
-        'ai agent', 'agentic', 'langchain', 'spring ai', 'ai 개발',
-        'ai 솔루션', 'ai service', '인공지능 개발',
+        'computer vision', '컴퓨터비전', 'machine vision', 'python',
+        'pytorch', 'tensorflow', 'ai agent', 'agentic', 'langchain',
+        'spring ai', 'ai 개발', 'ai 솔루션', 'ai service', '인공지능 개발',
     )
     if any(term in text for term in software_terms):
         return True
     if any(term in text for term in ai_software_terms):
         return True
 
-    # 단순히 직무명에 'AI' 또는 '개발자'가 있다는 이유로
-    # 기구설계/회로/HW/화학/로봇기계 직무를 개발자 공고로 취급하지 않는다.
+    # AI라는 단어만으로 영업/PM/교육/하드웨어 직무까지 포함하지 않는다.
+    # AI + 실제 개발/엔지니어/연구 역할인 경우만 보조적으로 허용한다.
+    has_ai = bool(re.search(r'\bai\b|인공지능', text, re.I))
+    has_build_role = any(term in text for term in (
+        '개발자', '개발 엔지니어', '개발엔지니어', 'software', 'engineer',
+        '엔지니어', '연구개발', 'r&d',
+    ))
+    non_dev_ai = any(term in text for term in (
+        '사업개발', '영업', '마케팅', '강사', '멘토', '교육사업',
+        '운영매니저', '프로젝트 매니저', 'project manager', ' pm ',
+        '기구설계', '회로설계', '하드웨어', ' h/w', ' hw ', '전원 개발',
+    ))
+    if has_ai and has_build_role and not non_dev_ai:
+        return True
+
     return False
 
 
