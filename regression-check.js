@@ -1663,7 +1663,7 @@ console.log('[30] 모의 시작일 일괄 변경');
      KEYS.every(k=>new RegExp(`delete x\\.settings\\.${k};`).test(ap)) && /x\.settings\.startv=0;/.test(ap)
      && KEYS.every(k=>new RegExp(`delete t\\.settings\\.${k};`).test(idx)),
      KEYS.filter(k=>!new RegExp(`delete x\\.settings\\.${k};`).test(ap)).join(',')||'ok');
-  const iSaveAll=ap.indexOf('saveLocal();'), iPushAll=ap.indexOf('await pushRemoteNow()'), iOpenAll=ap.indexOf('await openPaper()');
+  const iSaveAll=ap.indexOf('saveLocal();'), iPushAll=ap.indexOf('await pushRemoteNow()'), iOpenAll=ap.indexOf('await openPaper(true)');
   ok('모의 이력을 비운 중간상태는 로컬에만 두고 재생 완료 뒤에만 클라우드 저장',
      iSaveAll>=0 && iOpenAll>iSaveAll && iPushAll>iOpenAll
      && ap.slice(iSaveAll,iOpenAll).indexOf('pushRemoteNow')<0,
@@ -2012,9 +2012,9 @@ console.log('[40] 모의 일괄 적용 — 원금과 1회 적립액을 따로');
   ok('전체 적용은 모든 모의 세션 시작일을 맞추되 빈 이력 상태는 클라우드에 저장하지 않는다',
      /S\.paperCommon\.simStart=ns/.test(ap)
      && /x\.simStart=ns/.test(ap)
-     && ap.indexOf('await openPaper()')>=0
-     && ap.indexOf('await pushRemoteNow()')>ap.indexOf('await openPaper()')
-     && ap.slice(0,ap.indexOf('await openPaper()')).indexOf('pushRemoteNow')<0
+     && ap.indexOf('await openPaper(true)')>=0
+     && ap.indexOf('await pushRemoteNow()')>ap.indexOf('await openPaper(true)')
+     && ap.slice(0,ap.indexOf('await openPaper(true)')).indexOf('pushRemoteNow')<0
      && /paperSessions\(\)\.filter\(\(\[,x\]\)=>x\.simStart!==ns\)/.test(ap));
   /* 금액 칸은 원화다. 미국 종목 세션엔 시작일 환율로 환산해 들어가므로
      어떤 환율을 썼는지 묻기 전에 보여야 한다 — 원금이 얼마로 들어갈지가 달라진다. */
@@ -2022,6 +2022,23 @@ console.log('[40] 모의 일괄 적용 — 원금과 1회 적립액을 따로');
   ok('건너뛴 세션 이름에 조사를 안 붙인다', /건너뛴 세션: /.test(ap) && !/join\(', '\)\}은 금액/.test(ap));
   const rd=extractFn(idx,'function paperReadAmt(id, label)');
   ok('비우면 그대로 둔다', /if\(!raw\) return null;/.test(rd));
+
+  const opFast=extractFn(idx,'async function openPaper()');
+  const rvFast=extractFn(idx,'async function refreshPaperView(force=false)');
+  ok('모의 성과 평소 열기는 전 전략 재계산을 기다리지 않고 저장 캐시/장부를 먼저 표시한다',
+     /paperViewCacheRead\(\)/.test(opFast)
+     && /cache&&cache\.rows/.test(opFast)
+     && /paperSummary\(\)/.test(opFast)
+     && /setTimeout\(\(\)=>\{ void refreshPaperView\(false\)/.test(opFast));
+  ok('모의 성과 전 전략 재계산은 전체 적용·오늘 갱신에서만 강제한다',
+     /if\(forceRecalc\)\{[\s\S]*rows=await refreshPaperView\(true\)/.test(opFast)
+     && /await openPaper\(true\)/.test(ap)
+     && /onclick="refreshPaperViewButton\(\)"/.test(idx));
+  ok('모의 성과 계산 결과는 stateV2 캐시에 저장하고 같은 날 재진입은 재계산하지 않는다',
+     /const PAPER_VIEW_CACHE_VER=1;/.test(idx)
+     && /S\.paperViewCache=x/.test(extractFn(idx,'function paperViewCacheWrite(rows)'))
+     && /x\.day===paperKstDate\(\)/.test(extractFn(idx,'function paperViewCacheFresh(x)'))
+     && /if\(!force&&paperViewCacheFresh\(current\)\)return/.test(rvFast));
 }
 
 /* 기존 모의 세션 원화 원본 — 처음 지정한 정확한 값으로 채운다 */
@@ -2077,7 +2094,7 @@ console.log('[40] 모의 일괄 적용 — 원금과 1회 적립액을 따로');
      && !/pc\.simStart=/.test(sp));
 
   const ap=extractFn(idx,'async function applyAllSimStart()');
-  const p1=ap.indexOf('await pushRemoteNow()'), p2=ap.indexOf('await openPaper()');
+  const p1=ap.indexOf('await pushRemoteNow()'), p2=ap.indexOf('await openPaper(true)');
   ok('모의 시작일 — 재생 완료 전에는 cloud 원장을 건드리지 않는다',
      p1>=0&&p2>=0&&p2<p1&&ap.slice(0,p2).indexOf('pushRemoteNow')<0, p2+' / '+p1);
 
@@ -3283,9 +3300,10 @@ console.log('\n[61] 모의 성과 — 원화로 받아 세션 통화로 환산')
      && !/max-width:160px/.test(idx));
   {
     const op=extractFn(idx,'async function openPaper()');
+    const rv=extractFn(idx,'async function refreshPaperView(force=false)');
     const pr=extractFn(idx,'function paperWonRate(r)');
     ok('모의 성과 목록은 현재 환율로 평가·인출을 표시하고 투입은 입력 원화를 유지한다',
-       /await loadFX\(\)/.test(op) && /liveFX/.test(pr) && !/fxAt\(/.test(pr)
+       /await loadFX\(\)/.test(rv) && /liveFX/.test(pr) && !/fxAt\(/.test(pr)
        && /paperWon\(r\.total,r\.wonRate\)/.test(op)
        && /paperInflowText\(r\)/.test(op)
        && /paperWon\(outAmt,r\.wonRate\)/.test(op)
@@ -10318,10 +10336,12 @@ console.log('\n[134] 모의 시작일 — 설정 변경으로 오늘 리셋 금�
      && /x\.simStart=common/.test(repair));
 
   const op=extractFn(idx,'async function openPaper()');
+  const rv=extractFn(idx,'async function refreshPaperView(force=false)');
   ok('G 성과창은 표 계산 전에 구버전 시작일 복구를 끝낸다',
      op.indexOf('await paperRepairLegacyStarts()')>=0
      && op.indexOf('await paperRepairLegacyStarts()')<op.indexOf('syncPaperStart()')
-     && op.indexOf('await paperRepairLegacyStarts()')<op.indexOf('await paperFillAll()'));
+     && op.indexOf('await paperRepairLegacyStarts()')<op.indexOf('rows=await refreshPaperView(true)')
+     && /const rows=await paperFillAll\(\)/.test(rv));
 }
 
 
@@ -11221,6 +11241,33 @@ ok('GPT 오늘 탭에 4전략 누적 수익률 그래프가 연결되고 최근 
 ok('무매매 확정일은 0.00% 대신 매매없음으로 표시한다',
    /const resultText=x\.noTrade\?'매매없음':dailyResultPct\(r\);/.test(scl)
    &&/x\.noTrade\?'매매없음 · 0\.00% 반영'/.test(scl));
+
+console.log('\n[PERF FAST PATH] 모의 성과 · 단타 오늘 탭');
+{
+  const dapi=fs.readFileSync(__d+'/functions/api/scalping-daily-results.js','utf8');
+  const ss=extractFn(scl,'function showStrategy(name)');
+  const ld=extractFn(scl,'async function loadDailyStrategyResults(force)');
+  ok('단타 오늘은 핵심 결과를 먼저 받고 누적그래프·그림자·4개 연구를 뒤로 미룬다',
+     /Promise\.resolve\(loadDailyStrategyResults\(false\)\)\.finally/.test(ss)
+     && /setTimeout\(\(\)=>renderDailyCumulativeChart\(\),0\)/.test(ss)
+     && /setTimeout\(\(\)=>loadDaily1Shadow\(false\),80\)/.test(ss)
+     && /setTimeout\(\(\)=>active\.forEach\(x=>loadStrategyScorecard\(x\)\),180\)/.test(ss));
+  ok('단타 오늘 결과는 클라이언트 60초 캐시와 중복요청 합치기를 쓴다',
+     /const DAILY_RESULTS_TTL_MS=60000;/.test(scl)
+     && /DAILY_RESULTS_PROMISE/.test(ld)
+     && /DAILY_RESULTS_PAYLOAD/.test(ld)
+     && /refresh=1&ts=/.test(ld));
+  ok('단타 오늘 서버 응답은 Cloudflare edge 60초 캐시를 사용하고 수동 새로고침은 우회한다',
+     /s-maxage=60/.test(dapi)
+     && /async function edgeGet\(request\)/.test(dapi)
+     && /async function edgePut\(request,response\)/.test(dapi)
+     && /u\.searchParams\.get\("refresh"\)==="1"/.test(dapi)
+     && /if\(!force\)await edgePut\(request,response\)/.test(dapi));
+  ok('단타 오늘 서버의 독립 원천 조회는 순차 대기 대신 병렬 처리한다',
+     /const got=await Promise\.all\(dates\.map/.test(dapi)
+     && /Promise\.allSettled\(\[daytradingLiveSessions\(env\),daytradingResearchSessions\(\)\]\)/.test(dapi)
+     && /Promise\.allSettled\(\[globalPaperSessions\(env,strategy\),decisionSessions\(path,source\)\]\)/.test(dapi));
+}
 
 /* ════ 단타(클로드) 머리말 — 지피티 단타와 같은 모양 ════ */
 console.log('\n[CLAUDE HEADER] 머리말 통일');

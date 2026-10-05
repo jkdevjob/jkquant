@@ -544,7 +544,7 @@ html.had-user #authgate .bootwait{display:block}
 </div>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.109.7</span></h1></div>
+    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.110.0</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -1655,7 +1655,7 @@ if(/^\/paper\/?$/.test(location.pathname)){
   <footer>
     <strong>JK 퀀트</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.109.7</b> · 2026-10-05</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.110.0</b> · 2026-10-05</div>
   </footer>
 </div>
 
@@ -1849,7 +1849,7 @@ if(/^\/paper\/?$/.test(location.pathname)){
     </div>
   </div>
   <div id="paper_body"></div>
-  <div class="mbtns"><button class="close" onclick="closePaper()">닫기</button></div>
+  <div class="mbtns"><button class="ghostbtn" onclick="refreshPaperViewButton()">🔄 오늘 갱신</button><button class="close" onclick="closePaper()">닫기</button></div>
 </div></div>
 
 <!-- 세션 모달 -->
@@ -7847,6 +7847,60 @@ function paperWonRate(r){
   if(!r||r.cur==='krw') return 1;
   return (typeof liveFX!=='undefined'&&liveFX)?liveFX:FX;
 }
+/* 모의 성과 빠른 보기 캐시
+   - 거래 장부/설정은 Firebase stateV2가 정본이고, 이 캐시는 그 정본에서 계산한 '표 결과'만 저장한다.
+   - 평소 모의 페이지를 열 때는 저장된 표를 즉시 보여 주고 전 전략 재생을 다시 하지 않는다.
+   - 하루가 바뀌었거나 원장이 바뀌면 백그라운드에서 한 번만 증분 갱신한다.
+   - 전체 적용/오늘 갱신은 force=true로 명시적으로 다시 계산한다. */
+const PAPER_VIEW_CACHE_VER=1;
+let _paperViewRefreshPromise=null;
+function paperKstDate(){ return new Date(Date.now()+9*3600000).toISOString().slice(0,10); }
+function paperViewSig(){
+  const src=paperSessions().map(([tab,x])=>[tab,x&&x.id,x&&x.simStart,x&&x.paperFxRate,x&&x.settings,x&&x.hist]);
+  const s=JSON.stringify(src); let h=2166136261;
+  for(let i=0;i<s.length;i++){ h^=s.charCodeAt(i); h=Math.imul(h,16777619); }
+  return (h>>>0).toString(16);
+}
+function paperViewCacheRead(){
+  const x=S&&S.paperViewCache;
+  if(!x||+x.ver!==PAPER_VIEW_CACHE_VER||!Array.isArray(x.rows))return null;
+  if(x.sig!==paperViewSig())return null;
+  return x;
+}
+function paperViewCacheWrite(rows){
+  if(!S)return null;
+  const x={ver:PAPER_VIEW_CACHE_VER,day:paperKstDate(),at:Date.now(),sig:paperViewSig(),rows:JSON.parse(JSON.stringify(rows||[]))};
+  S.paperViewCache=x; return x;
+}
+function paperViewCacheFresh(x){ return !!x&&x.day===paperKstDate(); }
+async function refreshPaperView(force=false){
+  if(_paperViewRefreshPromise)return _paperViewRefreshPromise;
+  const current=paperViewCacheRead();
+  if(!force&&paperViewCacheFresh(current))return current&&current.rows||null;
+  const p=(async()=>{
+    const body=$('paper_body');
+    if(force&&body)body.insertAdjacentHTML('afterbegin','<p class="note" id="paper_refresh_note" style="color:var(--vio)">🔄 오늘 기준으로 모의 결과를 갱신하고 있습니다…</p>');
+    try{
+      await loadFX();
+      const rows=await paperFillAll();
+      if(rows){
+        paperViewCacheWrite(rows);
+        await pushRemoteNow();
+        try{refreshAll();}catch(e){}
+      }
+      return rows;
+    }finally{
+      const n=$('paper_refresh_note');if(n)n.remove();
+    }
+  })();
+  _paperViewRefreshPromise=p;
+  try{return await p;}finally{if(_paperViewRefreshPromise===p)_paperViewRefreshPromise=null;}
+}
+async function refreshPaperViewButton(){
+  const rows=await refreshPaperView(true);
+  if(rows)await openPaper(false,true);
+}
+
 let paperSortKey='', paperSortDir=1;
 function paperSortTable(key,th){
   const tb=$('paper_tbody'); if(!tb) return;
@@ -7874,18 +7928,32 @@ function paperSortTable(key,th){
   });
 }
 async function openPaper(){
+  const forceRecalc=arguments[0]===true,skipAutoRefresh=arguments[1]===true;
   const body=$('paper_body');
-  if(body){ body.innerHTML='<p class="lead">전 전략 모의 세션을 오늘까지 맞추는 중… <span style="color:var(--faint)">시세를 불러오느라 몇 초 걸립니다.</span></p>'; }
+  if(body){ body.innerHTML=forceRecalc
+    ? '<p class="lead">전체 적용 결과를 다시 계산하는 중… <span style="color:var(--faint)">이때만 전 전략 시세·재생을 다시 확인합니다.</span></p>'
+    : '<p class="lead">저장된 모의 결과를 불러오는 중…</p>'; }
   $('paperModal').classList.add('on');
   await paperEnsureCommonWon();
   await paperRepairLegacyStarts();
   syncPaperStart();
-  await loadFX();               // 모의성과 목록은 열 때 받은 현재 USD/KRW로 원화 환산
-  const filled=await paperFillAll();
-  // 계산용 임시 탭/세션을 복원한 뒤 완성된 모의 기록만 저장한다.
-  if(filled) await pushRemoteNow();
-  refreshAll();
-  const rows=filled||paperSummary();
+
+  let cache=paperViewCacheRead(),rows=null;
+  if(forceRecalc){
+    rows=await refreshPaperView(true);
+    cache=paperViewCacheRead();
+  }else{
+    /* 평소 열기: DB에 이미 계산된 장부를 다시 전 구간 재생하지 않는다.
+       캐시가 있으면 그대로, 없으면 현재 장부만 로컬 계산해서 먼저 그린다. */
+    rows=cache&&cache.rows ? JSON.parse(JSON.stringify(cache.rows)) : paperSummary();
+    if(!skipAutoRefresh&&!paperViewCacheFresh(cache)){
+      /* 하루가 바뀐 첫 진입만 백그라운드 증분 갱신. 화면 표시를 막지 않는다. */
+      setTimeout(()=>{ void refreshPaperView(false).then(r=>{ if(r&&$('paperModal').classList.contains('on'))openPaper(false,true); }); },0);
+    }
+    /* 환율은 표 렌더를 막지 않고 뒤에서 갱신한다. */
+    if(typeof loadFX==='function')setTimeout(()=>{void loadFX();},0);
+  }
+  rows=rows||[];
   rows.forEach(r=>{ r.wonRate=paperWonRate(r); });
   if(!body) return;
   if(!rows.length){
@@ -8280,7 +8348,7 @@ async function applyAllSimStart(){
   saveLocal();
   /* 거래이력을 비운 중간상태는 Firebase에 쓰지 않는다.
      재생이 실패/중단되면 클라우드의 직전 원장이 그대로 복구본으로 남는다. */
-  await openPaper();          // 지운 자리를 새 시작일로 다시 채우고 표를 새로 그린다
+  await openPaper(true);      // 전체 적용 때만 전 전략을 다시 계산한다
   saveLocal();
   const replayCloudOk=await pushRemoteNow();
   const cloudOk=replayCloudOk;

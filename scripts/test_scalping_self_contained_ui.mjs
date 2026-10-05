@@ -60,7 +60,7 @@ ok(ui.includes('stroke="var(--gold)" stroke-width="2.4"')&&ui.includes('font-wei
 ok(ui.includes('rgba(54,211,153,.055)')&&ui.includes('rgba(248,123,140,.055)')&&ui.includes('수익 +')&&ui.includes('손실 −'),'today cumulative trend separates positive and negative zones');
 ok(ui.includes('const DAILY_TREND_STEP=5')&&ui.includes('v-=DAILY_TREND_STEP')&&ui.includes('v.toFixed(0)'),'today cumulative trend uses fixed 5 percentage-point grid');
 ok(ui.includes('&range=all&trend=1')&&ui.includes("cache:'default'")&&ui.includes('DAILY_TREND_TTL_MS=300000'),'today cumulative trend uses lightweight cached history');
-ok(ui.includes("if(name==='daily'){\n    loadDailyStrategyResults(false);\n    renderDailyCumulativeChart();"),'today tab renders cumulative trend independently of daily-result API');
+ok(ui.includes("if(name==='daily'){")&&ui.includes("Promise.resolve(loadDailyStrategyResults(false)).finally")&&ui.includes("setTimeout(()=>renderDailyCumulativeChart(),0)"),'today tab renders core daily result first and defers cumulative trend');
 ok(ui.includes('function refreshDailyDashboard()')&&ui.includes('onclick="refreshDailyDashboard()"'),'today refresh reloads both result cards and cumulative trend');
 ok(ui.includes('검증상태는 10/1부터 쌓는 모의투자 누적 매매일(20일이면 판정)입니다.'),'today 4-strategy overview includes Claude-equivalent explanatory note');
 ok(marProbe(ui),'MAR uses annualized CAGR divided by absolute MDD');
