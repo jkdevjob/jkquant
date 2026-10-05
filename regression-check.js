@@ -10492,6 +10492,15 @@ console.log('\n[135] 자산플랜 세션 — 운영처럼 세션 + 모의투자 
   }
 
   {
+    const oh=extractFn(pl,'function alphaOrderHtml(side,sym,qty,price,note)');
+    ok('F4 자산플랜 주문은 1주 기준가 × 주수 = 총금액을 한 줄에 직접 표시한다',
+       /1주 기준가/.test(oh)
+       && /usd\(price\).*×.*qty.*=.*usd\(gross\)/.test(oh)
+       && /총 매수금액/.test(oh)
+       && /총 매도금액/.test(oh));
+  }
+
+  {
     const {spawnSync}=require('child_process'),os=require('os');
     const mod=(pl.match(/<script type="module">([\s\S]*?)<\/script>/)||[])[1]||'';
     const tmp=path.join(os.tmpdir(),'jkq_plan_module_check.mjs');fs.writeFileSync(tmp,mod);
