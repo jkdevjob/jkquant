@@ -6,6 +6,8 @@ const __dirname=path.dirname(fileURLToPath(import.meta.url));
 const root=path.join(__dirname,'..');
 const ui=fs.readFileSync(path.join(root,'scalping.html'),'utf8');
 const hist=fs.readFileSync(path.join(root,'functions/api/scalping-history.js'),'utf8');
+const trend=fs.readFileSync(path.join(root,'functions/api/scalping-trend.js'),'utf8');
+const trendBuild=fs.readFileSync(path.join(root,'scripts/build_scalping_trend.py'),'utf8');
 const review=fs.readFileSync(path.join(root,'functions/api/scalping-review.js'),'utf8');
 
 function fail(msg){console.error('✗ '+msg);process.exit(1);}
@@ -59,7 +61,10 @@ ok(ui.includes('id="daily_trend_card"')&&ui.includes('id="daily_cumulative_chart
 ok(ui.includes('stroke="var(--gold)" stroke-width="2.4"')&&ui.includes('font-weight="800">0%</text>'),'today cumulative trend emphasizes the zero-percent baseline');
 ok(ui.includes('rgba(54,211,153,.055)')&&ui.includes('rgba(248,123,140,.055)')&&ui.includes('수익 +')&&ui.includes('손실 −'),'today cumulative trend separates positive and negative zones');
 ok(ui.includes('const DAILY_TREND_STEP=5')&&ui.includes('v-=DAILY_TREND_STEP')&&ui.includes('v.toFixed(0)'),'today cumulative trend uses fixed 5 percentage-point grid');
-ok(ui.includes('&range=all&trend=1')&&ui.includes("cache:'default'")&&ui.includes('DAILY_TREND_TTL_MS=300000'),'today cumulative trend uses lightweight cached history');
+ok(ui.includes("const url='/api/scalping-trend'")&&ui.includes("fetch(url,{headers:{Accept:'application/json'},cache:force?'no-store':'default'})")&&ui.includes('DAILY_TREND_TTL_MS=300000'),'today cumulative trend uses one precomputed API request');
+ok(!ui.includes("&range=all&trend=1"),'today cumulative trend no longer fans out to four history APIs');
+ok(trend.includes('data/scalping-trend/latest.json')&&trend.includes('cacheTtl:300'),'precomputed trend API reads one tiny cached JSON');
+ok(trendBuild.includes('"daytrading": (Path("data/daytrading-research/baseline-trades.csv"), "pnl", "slots3")')&&trendBuild.includes('ret = total / 3.0 if mode == "slots3" else total / len(pnls)'),'precomputed trend builder preserves daily account-return rules');
 ok(ui.includes("if(name==='daily'){")&&ui.includes("Promise.resolve(loadDailyStrategyResults(false)).finally")&&ui.includes("setTimeout(()=>renderDailyCumulativeChart(),0)"),'today tab renders core daily result first and defers cumulative trend');
 ok(ui.includes('function refreshDailyDashboard()')&&ui.includes('onclick="refreshDailyDashboard()"'),'today refresh reloads both result cards and cumulative trend');
 ok(ui.includes('검증상태는 10/1부터 쌓는 모의투자 누적 매매일(20일이면 판정)입니다.'),'today 4-strategy overview includes Claude-equivalent explanatory note');
