@@ -120,6 +120,34 @@ def run():
         'https://www.work24.go.kr/test',
     ) < 0, 'salary tab must stay developer/IT focused'
 
+    assert j.company_hint(
+        '매니플레이터 제어 엔지니어',
+        '매니플레이터 제어 엔지니어 ㈜라이온로보틱스 대전 유성구'
+    ) == '라이온로보틱스'
+    assert j.clean_company_name('엔지니어') == ''
+    assert j.clean_company_name('신입/경력') == ''
+    assert j.clean_company_name('대전/IT') == ''
+    assert j.clean_company_name('상상스토리/세종') == '상상스토리'
+
+    assert j.is_listing_or_search_url(
+        'https://www.albamon.com/jobs/area/home?areas=G000'
+    )
+    assert j.is_listing_or_search_url(
+        'https://yw.work24.go.kr/search?query=ai'
+    )
+    assert j.is_target_dev_job(
+        '공공 JAVA PL 구인의 건(대전)',
+        'JAVA Spring 웹개발자'
+    )
+    assert not j.is_target_dev_job(
+        '로봇 기구설계 개발자',
+        '대전 기계·기계설비 설계엔지니어'
+    )
+    assert not j.is_target_dev_job(
+        '의약화학 연구원 채용',
+        '대전 바이오 제약 연구원 연봉 6000만원'
+    )
+
     meta = j.attach_job_metadata({
         'title': 'Java 개발자 채용',
         'body': '대전 유성구 경력 5~12년 대졸↑ 정규직·계약직 Java Spring',
