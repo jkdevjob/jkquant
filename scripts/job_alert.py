@@ -493,32 +493,61 @@ def title_from_card_body(body):
 
 def fetch_job_identity(job):
     item = dict(job)
+    item['_urlState'] = 'unknown'
+    item['_urlReason'] = ''
     try:
         response = requests.get(
             item.get('url', ''),
             headers=DETAIL_HEADERS,
             timeout=15,
+            allow_redirects=True,
         )
-        if response.ok and response.text:
-            detail_title, detail_company = extract_detail_identity(
-                response.text,
-                item.get('source', ''),
-            )
-            if detail_title:
-                item['title'] = detail_title
-            if detail_company:
-                item['company'] = detail_company
-            detail_deadline, deadline_source = extract_detail_deadline(
-                response.text,
-                item.get('title', ''),
-                item.get('source', ''),
-            )
-            if detail_deadline or deadline_source:
-                item['deadline'] = detail_deadline
-                item['deadlineSource'] = deadline_source
-                item['deadlineCheckedAt'] = today_kst()
+        item['lastChecked'] = today_kst()
+
+        if response.status_code in {404, 410}:
+            item['_urlState'] = 'missing'
+            item['_urlReason'] = f'HTTP {response.status_code}'
+            return item
+        if response.status_code in {401, 403, 429} or response.status_code >= 500:
+            item['_urlReason'] = f'HTTP {response.status_code}'
+            return item
+        if not response.ok or not response.text:
+            item['_urlReason'] = f'HTTP {response.status_code}'
+            return item
+
+        detail_title, detail_company = extract_detail_identity(
+            response.text,
+            item.get('source', ''),
+        )
+        if detail_title:
+            item['title'] = detail_title
+        if detail_company:
+            item['company'] = detail_company
+
+        detail_deadline, deadline_source = extract_detail_deadline(
+            response.text,
+            item.get('title', ''),
+            item.get('source', ''),
+        )
+        if detail_deadline or deadline_source:
+            item['deadline'] = detail_deadline
+            item['deadlineSource'] = deadline_source
+            item['deadlineCheckedAt'] = today_kst()
+
+        page_text = normalize_text(BeautifulSoup(response.text, 'html.parser').get_text(' ', strip=True))
+        close_reason = content_close_reason(
+            item.get('title', ''),
+            page_text[:16000],
+            item.get('deadline', ''),
+        )
+        if close_reason:
+            item['_urlState'] = 'closed'
+            item['_urlReason'] = close_reason
+        else:
+            item['_urlState'] = 'active'
     except Exception as exc:
         item['_identity_error'] = type(exc).__name__
+        item['_urlReason'] = type(exc).__name__
 
     if is_generic_job_title(item.get('title', '')):
         fallback_title = title_from_card_body(item.get('body', ''))
@@ -1016,6 +1045,8 @@ def merge_jobs(*groups):
 def classify_jobs(jobs, scorer):
     result = []
     for job in jobs:
+        if job.get('_urlState') in {'closed', 'missing'}:
+            continue
         deadline = job.get('deadline', '')
         if content_close_reason(job.get('title', ''), job.get('body', ''), deadline):
             continue
@@ -1561,6 +1592,38 @@ def _ddgs_search_with_retry(query, max_results=20):
             time.sleep(min(1.5, 0.35 * attempt))
     return [], last_exc
 
+def is_listing_or_search_url(url):
+    """검색결과/목록 URL을 개별 채용공고로 저장하지 않는다."""
+    try:
+        parts = urlsplit(url)
+        host = parts.netloc.lower().replace('www.', '')
+        path = (parts.path or '').lower()
+        query = (parts.query or '').lower()
+    except Exception:
+        return False
+
+    if host.endswith('albamon.com') and path.startswith('/total-search'):
+        return True
+    if host.endswith('alba.co.kr') and '/search/' in path:
+        return True
+    if host.endswith('incruit.com') and (
+        path.startswith('/list/search')
+        or 'jobdb_list/searchjob' in path
+    ):
+        return True
+    if host.endswith('work24.go.kr') and (
+        path.rstrip('/').endswith('/search')
+        or path.startswith('/search')
+    ):
+        return True
+    if host.endswith('linkedin.com') and path.rstrip('/') in {'/jobs', '/jobs/search'}:
+        return True
+    if query and any(token in query for token in ('query=', 'keyword=', 'wssrchword=')):
+        if any(token in path for token in ('/search', 'total-search', 'searchjob')):
+            return True
+    return False
+
+
 def collect_search_source(source_name, domain):
     jobs = {}
     errors = []
@@ -1590,6 +1653,8 @@ def collect_search_source(source_name, domain):
             title = normalize_search_result_title(source_name, raw_title, body)
             url = normalize_url(item.get('href') or item.get('url') or '')
             if not url or domain not in domain_of(url):
+                continue
+            if is_listing_or_search_url(url):
                 continue
             if not has_target_location(f'{title} {body}'):
                 continue
@@ -1876,7 +1941,13 @@ def content_close_reason(title, body, deadline=''):
         r'지원\s*(?:마감|종료)\s*(?:되었습니다|됐습니다|됨|완료)',
         r'접수\s*종료',
         r'채용\s*종료',
+        r'모집\s*(?:종료|마감)',
+        r'프로젝트\s*모집\s*(?:종료|마감)',
         r'마감된\s*공고',
+        r'삭제된\s*(?:채용\s*)?공고',
+        r'공고(?:가|는)?\s*삭제(?:되었|됐|됨)',
+        r'존재하지\s*않는\s*(?:채용\s*)?공고',
+        r'(?:공고|페이지|채용정보).{0,20}찾을\s*수\s*없',
         r'공고(?:가|는)?\s*마감(?:되었|됐|됨)',
         r'(?:^|[\[\(])\s*채용\s*마감\s*(?:[\]\)]|$)',
     ]
@@ -2106,11 +2177,21 @@ def archive_locations(job):
 
 def archive_entry(job, existing=None):
     today = today_kst()
+    old = existing or {}
     posted, posted_source = parse_job_posted_date(job.get('title', ''), job.get('body', ''))
     parsed_deadline, parsed_deadline_source = parse_job_deadline(job.get('title', ''), job.get('body', ''))
-    deadline = job.get('deadline', '') or parsed_deadline
-    deadline_source = job.get('deadlineSource', '') or parsed_deadline_source
-    old = existing or {}
+
+    # 현재 상세페이지가 deadlineSource를 반환했다면 빈 deadline(채용시/상시)도 현재값으로 인정한다.
+    # 현재 응답에 마감정보가 없을 때만 기존 확정 마감일을 승계한다.
+    if job.get('deadlineSource'):
+        deadline = job.get('deadline', '')
+        deadline_source = job.get('deadlineSource', '')
+    elif parsed_deadline_source:
+        deadline = parsed_deadline
+        deadline_source = parsed_deadline_source
+    else:
+        deadline = old.get('deadline', '')
+        deadline_source = old.get('deadlineSource', '')
 
     salary = salary_info(job.get('title', ''), job.get('body', ''))
     short_pay = short_term_pay_info(job.get('title', ''), job.get('body', ''))
@@ -2141,7 +2222,13 @@ def archive_entry(job, existing=None):
         or clean_detail_title(old.get('title', ''), company)
         or '제목 없음'
     )
-    close_reason = content_close_reason(title, body or old.get('body', ''), deadline)
+    close_reason = ''
+    if job.get('_urlState') in {'closed', 'missing'}:
+        close_reason = job.get('_urlReason') or (
+            '원문 삭제/없음' if job.get('_urlState') == 'missing' else '원문 마감 표시'
+        )
+    if not close_reason:
+        close_reason = content_close_reason(title, body or old.get('body', ''), deadline)
     status = 'closed' if close_reason else 'active'
 
     entry = {
