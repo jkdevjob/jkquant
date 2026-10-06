@@ -24,7 +24,13 @@ const ENGINE_MUTS=[
   ['인허가 누계를 1월에 다시 시작하지 않음',"const m=k-Math.floor(k/12)*12; if(m===0) return a;","const m=k-Math.floor(k/12)*12;"],
   ['앞으로 입주에 이번 달 포함(한 달 밀림)',"const ahead=moveinSum(D,r,t+1,t+12)","const ahead=moveinSum(D,r,t,t+11)"],
   ['구 입주 자료가 끝난 뒤를 모름으로',"const x=at(s,k); return x==null?0:x; }","const x=at(s,k); if(k>lastK(s)) return null; return x==null?0:x; }"],
-  ['장기 검증 학습을 1996년 전부터',"universe:['daejeon'],firstRetMin:'1996-01'}","universe:['daejeon']}"]
+  ['장기 검증 학습을 1996년 전부터',"universe:['daejeon'],firstRetMin:'1996-01'}","universe:['daejeon']}"],
+  ['매수우위 문턱 무시',"if(m==null||mk==null) continue; sc[r]=m; if(mk>=c.th&&m>0&&m>bv){bv=m;best=r;} }","if(m==null||mk==null) continue; sc[r]=m; if(m>0&&m>bv){bv=m;best=r;} }"],
+  ['공급 회피 상한 무시',"if(m==null||sp==null) continue; sc[r]=m; if(sp<=c.cap&&m>0&&m>bv){bv=m;best=r;} }","if(m==null||sp==null) continue; sc[r]=m; if(m>0&&m>bv){bv=m;best=r;} }"],
+  ['지난 1년 입주에 앞으로 입주를 씀(룩어헤드)',"function supplyPast(D,r,t){ const a=moveinSum(D,r,t-11,t),","function supplyPast(D,r,t){ const a=moveinSum(D,r,t+1,t+12),"],
+  ['매수우위 타이밍이 문턱 무시',"const mk=marketOf(D,c.region,t),ok=mk!=null&&mk>=c.th;","const mk=marketOf(D,c.region,t),ok=mk!=null;"],
+  ['v1 장부에 v2 후보 섞임',"  if(sv==='rec-wf-1') return c;\n","  \n"],
+  ['장부가 제 전략 버전 대신 기본 버전으로 계산',"const SV=(ledger&&ledger.strategyVersion)||o.strategy||STRATEGY_VERSION;","const SV=o.strategy||STRATEGY_VERSION;"]
 ];
 const COL_MUTS=[
   ['지역 이름 검사 없음','            if expect is not None and got != expect:','            if False:'],
