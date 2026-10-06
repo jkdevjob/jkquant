@@ -11909,6 +11909,19 @@ console.log('\n[OUTAGE LEFTOVERS] Claude 권한 timeout · 5년플랜 복구표�
   ok('모의 적용 현재 탭 유지 · 재생 중 임시 선택 저장 차단',r.status===0,(r.stdout||'')+(r.stderr||''));
 }
 
+/* ════ 로그인 화면 · 시세 요청 · 모의 성과 표 (2026-10-06 신고 재현분) ════
+   실서버·실화면에서 재현한 원인들 — 22초 '오래 걸린다' 오표시(로그아웃 판정 뒤에도) · 로그인 상자 먼저 번쩍임 ·
+   이름 모르는 앱 내장 브라우저 · 시세 요청 무제한 대기/한 번 실패에 공개 프록시로 · range=max 엣지 캐시 무용 ·
+   원화 금액을 하드코딩 환율(1,520)로 그림 · 시세 실패 줄을 하루 종일 캐시 · 백그라운드 갱신 중 전체 적용 결과 섞임 ·
+   첫 화면에 남의 종목/평단으로 센 값. 값 시험은 scripts/check-login-quote-paper.cjs 에 있다. */
+console.log('\n[LOGIN·QUOTE·PAPER] 로그인 화면 · 시세 요청 · 모의 성과 표');
+{
+  const r=require('child_process').spawnSync(process.execPath,[require('path').join(__dirname,'scripts/check-login-quote-paper.cjs'),process.argv[2]||'index.html'],{encoding:'utf8',timeout:120000});
+  const lines=(r.stdout||'').split('\n').filter(l=>/^(PASS|FAIL) /.test(l));
+  lines.forEach(l=>ok(l.replace(/^(PASS|FAIL) /,''), l.startsWith('PASS')));
+  ok('로그인·시세·모의 값 시험 전체', r.status===0 && lines.length>=15, (r.stdout||'').slice(-400)+(r.stderr||''));
+}
+
 /* ════ 단타(클로드) 장 여는 날 먼저 · 밤 계산 중단 수정 (2026-10-05) ════ */
 console.log('\n[CLAUDE KRX DAY] 휴장일 먼저 확인 · 밤 계산 빈 값');
 {
