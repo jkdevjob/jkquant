@@ -249,7 +249,8 @@ canvas{display:block;width:100%;height:auto}
     appId: "1:1024066323251:web:23d557527866205f01f446"
   };
   const app = initializeApp(firebaseConfig);
-  window.fb = { auth:getAuth(app), db:initializeFirestore(app,{experimentalAutoDetectLongPolling:true}), provider:new GoogleAuthProvider(),
+  const JK_FORCE_FIRESTORE_LONG_POLLING=/iPhone|iPad|iPod|NAVER|KAKAOTALK|Instagram|FBAN|FBAV|; wv\)/i.test(navigator.userAgent||"");
+  window.fb = { auth:getAuth(app), db:initializeFirestore(app,JK_FORCE_FIRESTORE_LONG_POLLING?{experimentalForceLongPolling:true}:{experimentalAutoDetectLongPolling:true}), provider:new GoogleAuthProvider(),
                 signInWithPopup, onAuthStateChanged, signOut, doc, getDoc, setDoc, runTransaction, collection, getDocs, deleteDoc };
   window.dispatchEvent(new Event('fb-ready'));
 </script>
@@ -271,7 +272,7 @@ canvas{display:block;width:100%;height:auto}
 
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Morning Scalping</div><h1>JK <span class="v">퀀트</span> 단타 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="scVer">v1.42.4</span></h1></div>
+    <div><div class="kicker">Morning Scalping</div><h1>JK <span class="v">퀀트</span> 단타 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="scVer">v1.42.5</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
