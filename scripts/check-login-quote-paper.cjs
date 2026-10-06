@@ -310,22 +310,108 @@ await t('P7 거래소 현지 시각: 포맷터는 시간대마다 한 번만 만
   assert.equal(v.date,want); assert(v.min>=0&&v.min<1440);
 });
 
-await t('D1 원장 문서 크기: 80% 넘으면 미리 알림 · 저장 실패면 크기 때문인지 적는다 · 크기는 UTF-8 바이트로 잰다',async()=>{
-  const src=(html.match(/const DB_DOC_LIMIT=1048576, DB_DOC_WARN=[^\n]*/)||[''])[0]+'\n'+fn('function dbStateBytes(json)')+'\n'+fn('function dbSizeMsg(bytes, err)');
-  const F=new Function('TextEncoder',src+'\nreturn {dbSizeMsg,dbStateBytes,DB_DOC_LIMIT,DB_DOC_WARN};')(TextEncoder);
+await t('D1 저장 실패 안내: 크기 · 사용량 한도 · 권한 · 그 밖을 가른다 — "Quota exceeded" 를 크기로 적지 않는다 · 크기는 문서 전체(칸별 내역)',async()=>{
+  const src=(html.match(/const DB_DOC_LIMIT=1048576, DB_DOC_WARN=[^\n]*/)||[''])[0]+'\n'+(html.match(/const DB_FIELD_LABEL=\{[\s\S]*?\};/)||[''])[0]+'\n'
+    +['function dbStateBytes(json)','function dbPartsText(parts, n)','function dbErrKind(err)','function dbErrBytes(err)','function dbSizeMsg(bytes, err, parts)'].map(fn).join('\n');
+  const F=new Function('TextEncoder','_dbArchiveBlocked',src+'\nreturn {dbSizeMsg,dbErrKind,dbErrBytes,dbStateBytes,DB_DOC_LIMIT,DB_DOC_WARN};')(TextEncoder,false);
   assert.equal(F.DB_DOC_LIMIT,1048576); assert.equal(F.DB_DOC_WARN,Math.round(1048576*0.8));
-  assert.equal(F.dbSizeMsg(500*1024,null),null,'500KB 는 조용');
-  const w=F.dbSizeMsg(900*1024,null); assert.equal(w.level,'warn'); assert(/900KB/.test(w.text)&&/88%/.test(w.text),w.text);
-  const e1=F.dbSizeMsg(1100*1024,new Error('internal')); assert.equal(e1.level,'err'); assert(/한도\(1024KB\)를 넘어/.test(e1.text));
-  const e2=F.dbSizeMsg(300*1024,{code:'invalid-argument',message:'Document exceeds the maximum allowed size'}); assert(/한도\(1024KB\)를 넘어/.test(e2.text));
-  const e3=F.dbSizeMsg(300*1024,{code:'permission-denied',message:'Missing or insufficient permissions.'}); assert.equal(e3.level,'err'); assert(/permissions/.test(e3.text)&&/300KB/.test(e3.text)&&!/넘어/.test(e3.text));
-  assert.equal(F.dbStateBytes('가나다'),9,'한글은 3바이트'); assert.equal(F.dbStateBytes('abc'),3);
-  const cm=fn('async function _commitStateRemote(where)');
-  assert(/dbSizeReport\(dbStateBytes\(lastPushedJSON\),null\)/.test(cm),'저장 성공 때 잰다');
-  assert(/console\.error\(where,e\);setSync\('err'\);\s*\n\s*dbSizeReport\(_subBytes,e\);/.test(cm),'저장 실패 때 이유를 적는다');
-  assert(/기록크기/.test(fn('function authDiag()')),'진단 정보에 크기');
+  const parts=[{k:'stateV2',bytes:662*1024},{k:'state',bytes:398*1024},{k:'scalp',bytes:41*1024},{k:'stateV2Rev',bytes:20}];
+  // Firestore 가 크기로 거절할 때 적는 글(문서 크기 숫자가 들어 있다) — 그 숫자로 적는다
+  const sizeErr={code:'invalid-argument',message:"Document 'projects/jk-invest/databases/(default)/documents/users/u1' cannot be written because its size (1,101,824 bytes) exceeds the maximum allowed size of 1,048,576 bytes."};
+  assert.equal(F.dbErrKind(sizeErr),'size'); assert.equal(F.dbErrBytes(sizeErr),1101824);
+  const e1=F.dbSizeMsg(F.dbErrBytes(sizeErr),sizeErr,parts); assert.equal(e1.level,'err');
+  assert(/문서 전체 1076KB = 운영·모의 기록 662KB · 옛 형식 사본\(10\/2 이전\) 398KB · 단타 41KB\./.test(e1.text),e1.text);
+  assert(/모든 칸을 합한 크기/.test(e1.text) && !/기록이 \d+KB 로/.test(e1.text),'예전 문구(기록 N KB 로 넘어) 아님');
+  // 사용량 한도 — 'exceeded' 가 들어 있어도 크기 문제가 아니다 (예전엔 /exceed/ 로 크기 탓을 했다)
+  const quota={code:'resource-exhausted',message:'Quota exceeded.'};
+  assert.equal(F.dbErrKind(quota),'quota');
+  const e2=F.dbSizeMsg(828*1024,quota,parts); assert(/사용량 한도/.test(e2.text) && /크기 문제가 아닙니다/.test(e2.text) && !/문서 한 개의 한도/.test(e2.text),e2.text);
+  const perm={code:'permission-denied',message:'Missing or insufficient permissions.'};
+  assert.equal(F.dbErrKind(perm),'perm'); assert(/권한이 거절/.test(F.dbSizeMsg(300*1024,perm,parts).text));
+  // 그 밖(네트워크 등) — 문서가 커 보여도 서버가 크기라고 안 했으면 크기 탓을 하지 않는다
+  const e4=F.dbSizeMsg(1100*1024,new Error('internal'),parts); assert.equal(F.dbErrKind(new Error('internal')),'other');
+  assert(/저장에 실패했습니다 — internal/.test(e4.text) && !/문서 한 개의 한도/.test(e4.text),e4.text);
+  // 경고 — 문서 전체 기준 · 내역 함께
+  assert.equal(F.dbSizeMsg(500*1024,null,parts),null,'500KB 는 조용');
+  const w=F.dbSizeMsg(900*1024,null,parts); assert.equal(w.level,'warn'); assert(/900KB/.test(w.text)&&/88%/.test(w.text)&&/운영·모의 기록 662KB/.test(w.text),w.text);
+  assert(/기록크기/.test(fn('function authDiag()')) && /dbPartsText\(dbPartsNow,6\)/.test(fn('function authDiag()')),'진단 정보에 문서 크기·내역');
 });
-
+await t('D2 Firestore 크기 계산식 — 공식 문서 예시(users/jeff/tasks/my_task_id · 147바이트) · 한글 3바이트 · 숫자 8바이트',async()=>{
+  const src=['function utf8Len(s)','function fsValueBytes(v)','function fsDocParts(d)','function fsDocBytes(path, parts)'].map(fn).join('\n');
+  const F=new Function(src+'\nreturn {utf8Len,fsValueBytes,fsDocParts,fsDocBytes};')();
+  assert.equal(F.utf8Len('abc'),3); assert.equal(F.utf8Len('가나다'),9); assert.equal(F.utf8Len('😀'),4);
+  assert.equal(F.fsValueBytes(null),1); assert.equal(F.fsValueBytes(false),1); assert.equal(F.fsValueBytes(1.5),8); assert.equal(F.fsValueBytes(3),8);
+  assert.equal(F.fsValueBytes('abc'),4); assert.equal(F.fsValueBytes([1,'a']),10); assert.equal(F.fsValueBytes({a:1}),10);
+  assert.equal(F.fsValueBytes({가:'나'}),8); assert.equal(F.fsValueBytes({x:{y:[true]}}),5);
+  const task={type:'Personal',done:false,priority:1,description:'Learn Cloud Firestore'};
+  const P=F.fsDocParts(task); assert.equal(P.reduce((a,p)=>a+p.bytes,0),71,'칸 합 71');
+  assert.equal(F.fsDocBytes('users/jeff/tasks/my_task_id',P),147,'공식 예시 147바이트');
+  assert.deepEqual(P.map(p=>p.k),['description','priority','type','done'],'큰 순');
+  // 무매 모의 한 줄 — JSON 117바이트 · Firestore 98바이트 (숫자는 자릿수와 무관하게 8)
+  const rec={date:'2026-10-05',kind:'1회매수',price:164.27,qty:31,amt:5092.37,fee:0,ts:1791317714930,sim:true};
+  assert.equal(F.fsValueBytes(rec),98); assert.equal(Buffer.byteLength(JSON.stringify(rec)),117);
+});
+await t('D3 문서가 경고선(80%)을 넘고 옛 형식 사본(state)이 있으면 — 사본을 archive 하위 문서로 옮기고 본 문서에서 지운다 · 한 트랜잭션 · 작은 문서·사본 없음은 그대로',async()=>{
+  const consts=(html.match(/const DB_DOC_LIMIT=1048576, DB_DOC_WARN=[^\n]*/)||[''])[0]+'\n'+(html.match(/const DB_LEGACY_KEYS=[^\n]*/)||[''])[0];
+  const src=consts+'\n'+['function utf8Len(s)','function fsValueBytes(v)','function fsDocParts(d)','function fsDocBytes(path, parts)','function dbPlanWrite(path, d, fields, force, canArchive)'].map(fn).join('\n');
+  const F=new Function(src+'\nreturn {dbPlanWrite,fsValueBytes,DB_DOC_WARN,DB_DOC_LIMIT};')();
+  const blob=n=>'x'.repeat(n);
+  const legacy={inf:{sessions:[{id:'a',hist:[{note:blob(420*1024)}]}]}};
+  const big={stateV2:{inf:{sessions:[{id:'a',hist:[{note:blob(600*1024)}]}]}},state:legacy,updated:1,stateRev:57,scalp:{log:[blob(30*1024)]}};
+  const fields={stateV2:{inf:{sessions:[{id:'a',hist:[{note:blob(610*1024)}]}]}},stateV2Updated:2,stateV2Rev:9};
+  const a=F.dbPlanWrite('users/u1',big,fields,false,true);
+  assert(a.archive && a.archive.state===legacy && a.archive.updated===1 && a.archive.stateRev===57,'옛 사본 세 칸을 그대로 옮긴다');
+  assert(!a.parts.some(p=>['state','updated','stateRev'].includes(p.k)) && a.parts.some(p=>p.k==='scalp'),'남은 칸 = 새 기록 + 다른 페이지 칸');
+  assert(a.bytes<F.DB_DOC_LIMIT && a.archivedBytes>380*1024,'옮긴 뒤 한도 안 · 옮긴 크기 '+a.archivedBytes);
+  const noArc=F.dbPlanWrite('users/u1',big,fields,false,false); assert.equal(noArc.archive,null,'규칙이 막으면(canArchive=false) 옮기지 않는다'); assert(noArc.bytes>F.DB_DOC_LIMIT);
+  // 경고선(80%)과 한도 사이 — 이미 무거우면 미리 옮긴다(다음 저장에서 넘기 전에)
+  const mid={stateV2:{n:blob(500*1024)},state:{n:blob(350*1024)}};
+  const m=F.dbPlanWrite('users/u1',mid,{stateV2:{n:blob(500*1024)}},false,true); assert(m.archive,'80~100% 구간도 옮긴다');
+  // 작은 문서 — 옛 사본이 있어도 그대로 (평소 저장은 바뀌지 않는다)
+  const small={stateV2:{n:blob(100*1024)},state:{n:blob(200*1024)}};
+  assert.equal(F.dbPlanWrite('users/u1',small,{stateV2:{n:blob(100*1024)}},false,true).archive,null);
+  assert(F.dbPlanWrite('users/u1',small,{stateV2:{n:blob(100*1024)}},true,true).archive,'바로 전에 크기로 거절됐으면(force) 작아 보여도 옮긴다');
+  assert.equal(F.dbPlanWrite('users/u1',{stateV2:{n:blob(900*1024)}},{stateV2:{n:blob(900*1024)}},true,true).archive,null,'옛 사본이 없으면 옮길 것 없음');
+});
+await t('D4 저장 배선 — 옮기기·지우기·새 기록이 한 트랜잭션 · 크기로 거절되면 한 번만 옮기며 다시 저장 · 보관 쓰기를 규칙이 막으면 옮기지 않고 다시 저장',async()=>{
+  const consts=(html.match(/const DB_DOC_LIMIT=1048576, DB_DOC_WARN=[^\n]*/)||[''])[0]+'\n'+(html.match(/const DB_LEGACY_KEYS=[^\n]*/)||[''])[0];
+  const helpers=['function utf8Len(s)','function fsValueBytes(v)','function fsDocParts(d)','function fsDocBytes(path, parts)','function dbPlanWrite(path, d, fields, force, canArchive)','function dbErrKind(err)','function dbErrBytes(err)'].map(fn).join('\n');
+  const blob=n=>'x'.repeat(n);
+  const run=async(remote,failWith)=>{
+    const sets=[], timers=[], reports=[]; let txCount=0;
+    const DEL={del:true};
+    const ctx={S:{inf:{sessions:[]},big:blob(620*1024)},curUid:'u1',stateCloudHydrated:true,stateCloudRev:0,stateCloudHistorySig:'',stateDbBase:null,stateCloudPending:true,lastPushedJSON:'',
+      _dbPlan:null,_dbForceArchive:false,_dbArchiveBlocked:false,_dbArchivedNote:'',console:{error(){},warn(){}},setTimeout:(f)=>{timers.push(f);return 0;},
+      _staleStateGuard(){},validState:x=>!!(x&&x.inf),_historySignature:()=>'',_rebaseStateOnRemote:(a,b)=>b,ensureBoxes(){},refreshAll(){},setSync(){},
+      dbSizeReport:(b,e,p)=>reports.push({b,e:e&&e.code,p}),pushRemoteNow:async()=>{},
+      window:{fb:{db:{},doc:(db,...p)=>({path:p.join('/')}),deleteField:()=>DEL,
+        runTransaction:async(db,cb)=>{ txCount++; const local=[]; const tx={get:async()=>({exists:()=>true,data:()=>JSON.parse(JSON.stringify(remote))}),set:(ref,data,opt)=>local.push({path:ref.path,data,opt})};
+          const out=await cb(tx); const f=failWith&&failWith(local); if(f) throw f; sets.push(...local); return out; }}}};
+    vm.createContext(ctx); vm.runInContext(consts+'\n'+helpers+'\n'+fn('async function _commitStateRemote(where)'),ctx);
+    const ok=await ctx._commitStateRemote('t');
+    return {ok,sets,timers,reports,ctx,txCount};
+  };
+  const remote={stateV2:{inf:{sessions:[]}},stateV2Rev:0,state:{inf:{sessions:[{id:'old',hist:[{n:blob(400*1024)}]}]}},updated:7,stateRev:3};
+  const a=await run(remote,null);
+  assert.equal(a.ok,true);
+  const arc=a.sets.find(x=>/^users\/u1\/archive\/legacy-state-\d+$/.test(x.path)), main=a.sets.find(x=>x.path==='users/u1');
+  assert(arc && JSON.stringify(arc.data.state)===JSON.stringify(remote.state) && arc.data.updated===7 && arc.data.stateRev===3,'보관 문서에 옛 사본 그대로');
+  assert(main && main.data.state.del && main.data.updated.del && main.data.stateRev.del && main.opt.merge && main.data.stateV2,'본 문서: 옛 칸 지우기 + 새 기록');
+  assert.equal(a.txCount,1,'한 트랜잭션'); assert(/옛 형식 사본\(\d+KB\)을 보관 문서로 옮겨/.test(a.ctx._dbArchivedNote),'성공 안내');
+  // 크기로 거절 — 이번에 안 옮겼고 옛 사본이 있으면 force 로 한 번만 다시
+  const sizeErr=Object.assign(new Error("Document 'x' cannot be written because its size (1,200,000 bytes) exceeds the maximum allowed size of 1,048,576 bytes."),{code:'invalid-argument'});
+  const smallRemote={stateV2:{inf:{sessions:[]}},stateV2Rev:0,state:{inf:{sessions:[]},n:blob(50*1024)}};
+  const b=await run(smallRemote,()=>sizeErr);
+  assert.equal(b.ok,false); assert.equal(b.ctx._dbForceArchive,true); assert.equal(b.timers.length,1,'한 번 다시 저장'); assert.equal(b.reports[0].b,1200000,'서버가 적은 크기로 안내');
+  b.ctx._dbPlan=null; await b.ctx._commitStateRemote('again');   // force 상태에서 또 거절 → 더는 다시 안 함
+  assert.equal(b.timers.length,1,'반복하지 않는다');
+  // 보관 하위 문서를 규칙이 막으면 — 옮기지 않고 다시 저장(평소 저장까지 막히면 안 된다)
+  const permErr=Object.assign(new Error('Missing or insufficient permissions.'),{code:'permission-denied'});
+  const c=await run(remote,local=>local.some(x=>/archive/.test(x.path))?permErr:null);
+  assert.equal(c.ok,false); assert.equal(c.ctx._dbArchiveBlocked,true); assert.equal(c.timers.length,1);
+  c.ctx._dbPlan=null; const ok2=await c.ctx._commitStateRemote('retry');
+  assert.equal(ok2,true,'옮기지 않고 저장 성공'); assert(!c.sets.some(x=>/archive/.test(x.path)),'보관 쓰기 시도 안 함');
+});
 await t('P8 모의 표는 계산이 끝나면 바로 다시 그린다 — 클라우드 저장이 안 끝나도 · 재계산이 실패하면 "다시 계산하는 중"을 실패 안내로 바꾼다',async()=>{
   // 저장이 끝나지 않는(느린 iOS long-polling 흉내) 상황에서도 onRows 는 계산 결과로 바로 불린다
   let saveDone=false, got=null, order=[];
