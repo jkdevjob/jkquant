@@ -11931,6 +11931,9 @@ console.log('\n[CLAUDE KRX DAY] 휴장일 먼저 확인 · 밤 계산 빈 값');
   const g=post.indexOf('const kd=krxDay(date);'),q=post.indexOf('if(stage==="quote")'),pre=post.indexOf('if(stage==="preopen")'),eb=post.indexOf('if(stage==="etf_buy")');
   ok('①② 은 시세 조회·주문 전에 KRX 휴장일을 먼저 본다(휴장이면 기록만 · 주문 없음)',
      g>0&&g<q&&g<pre&&g<eb&&/if\(kd\.closed\)return json\(\{ok:true,stage,date,skipped:"krx_holiday"/.test(post));
+  const gd=fs.readFileSync(__d+'/functions/api/_gapdown.js','utf8');
+  ok('① 명단 신선도는 직전 거래일 기준(휴장일 다음 날 명단을 오래됐다고 버리지 않음 — 10/6 판단 누락 대응)',
+     /if\(based<prevKrxDay\(today\)\)return \{ok:false,reason:"watchlist_stale"\};/.test(gd)&&/while\(krxDay\(t\.toISOString\(\)\.slice\(0,10\)\)\.closed\);/.test(gd)&&!/prevWeekday/.test(gd));
   const yNext=String(new Date().getUTCFullYear()+1);
   ok('KRX 휴장일 목록에 올해·내년이 있다(해마다 거래소 공지로 더한다) · 10/5 개천절 대체휴일 포함',
      new RegExp('\\b'+(+yNext-1)+': \\[').test(kc)&&new RegExp('\\b'+yNext+': \\[').test(kc)&&/"2026-10-05"/.test(kc),yNext);

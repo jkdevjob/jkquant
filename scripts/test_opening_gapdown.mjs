@@ -164,10 +164,15 @@ t("v2 breadth = every name inside the gap band (not capped at 3)", () => {
   const rows = [-1, -2, -3, -4, -5, -6, -30].map((g, i) => ({ code: "00001" + i, expectedGapPct: g }));
   assert.equal(G.gapdownPicks(rows, { ...rule, picks: 1e9 }).length, 5);
 });
-t("watchlist must be based on the previous weekday", () => {
+t("watchlist must be based on the previous KRX trading day (휴장일 건너뜀)", () => {
   const wl = { strategyVersion: "opening_gapdown_v1", basedOn: "2026-10-02", rule, names: [] };
   assert.equal(G.watchlistUsable(wl, "2026-10-05").ok, true);            // 금 → 월
   assert.equal(G.watchlistUsable({ ...wl, basedOn: "2026-10-01" }, "2026-10-05").reason, "watchlist_stale");
+  assert.equal(G.watchlistUsable(wl, "2026-10-06").ok, true);            // 10/5 휴장 → 직전 거래일 10/2 명단을 쓴다
+  assert.equal(G.watchlistUsable({ ...wl, basedOn: "2026-10-01" }, "2026-10-06").reason, "watchlist_stale");
+  assert.equal(G.watchlistUsable({ ...wl, basedOn: "2026-10-08" }, "2026-10-12").ok, true);   // 10/9 한글날(금) → 월요일은 목요일 명단
+  assert.equal(G.watchlistUsable({ ...wl, basedOn: "2026-10-07" }, "2026-10-12").reason, "watchlist_stale");
+  assert.equal(G.prevKrxDay("2026-10-06"), "2026-10-02");
   assert.equal(G.watchlistUsable({ ...wl, basedOn: "2026-10-05" }, "2026-10-05").reason, "watchlist_not_before_today");
   assert.equal(G.watchlistUsable({ ...wl, strategyVersion: "x" }, "2026-10-05").reason, "watchlist_invalid");
   assert.equal(G.watchlistUsable({ ...wl, rule: {} }, "2026-10-05").reason, "watchlist_rule_missing");
