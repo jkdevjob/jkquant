@@ -94,6 +94,30 @@ await t('Q1 시세: 자체 함수가 한 번 멈춰도 다시 물어 받는다 �
   calls=[]; const f2=mk((u)=>{ calls.push(u); return new Promise(()=>{}); });
   const t0=Date.now(); const q2=await f2('soxl'); assert.equal(q2,null); assert.equal(calls.length,2); assert(Date.now()-t0<2000,'포기까지 '+(Date.now()-t0)+'ms');
 });
+await t('Q1 운영 Pages 는 정식 /api/quote 2회 실패 뒤 느린 공개 프록시로 빠지지 않는다',async()=>{
+  const fr=fn('async function _fetchDailyRaw(symbol)');
+  let proxyCalls=0;
+  const run=new Function('fetchT','QUOTE_TRY_MS','quoteToDaily','PUBLIC_PROXIES','proxyText','parseIntraday','location',
+    fr+'\nreturn _fetchDailyRaw;')(
+      async()=>{throw Error('down');},[5,5],()=>null,[u=>u],
+      async()=>{proxyCalls++;throw Error('proxy');},()=>null,{hostname:'jkquant.pages.dev'});
+  const out=await run('SOXL');
+  assert.equal(out,null); assert.equal(proxyCalls,0,'운영에서 공개 프록시를 호출함');
+});
+await t('Q1 자산플랜 시세도 응답 무한대기 방지 — AbortController + 2회 시간상한',async()=>{
+  const fp=fnOf(plan,'async function fetchPlanQuote(symbol)');
+  assert(/for\(const ms of \[7000,10000\]\)/.test(fp),'7초/10초 재시도');
+  assert(/new AbortController\(\)/.test(fp)&&/Promise\.race\(\[p,lim\]\)/.test(fp),'요청 시간 제한');
+  assert(/throw lastErr\|\|new Error\(sym\+' 시세 실패'\)/.test(fp),'최종 실패 반환');
+});
+await t('Q1 서버 외부 시세 호출도 공급자 응답을 무한 대기하지 않는다',async()=>{
+  const fb=fnOf(quoteJs,'async function fetchBound(url, opt, ms=4500)');
+  assert(/AbortController/.test(fb)&&/setTimeout/.test(fb)&&/signal: ac\.signal/.test(fb));
+  const direct=(quoteJs.match(/await fetch\(/g)||[]).length;
+  assert.equal(direct,1,'fetchBound 내부 외 직접 await fetch가 남음: '+direct);
+  assert((quoteJs.match(/await fetchBound\(/g)||[]).length>=7,'시세 공급자 fetchBound 적용 누락');
+});
+
 await t('Q2 서버: range=max 의 야후 주소가 한 시간 안에는 같다(엣지 캐시가 맞는다) · 오늘 봉은 늘 범위 안',async()=>{
   const f=new Function(fnOf(quoteJs,'function yahooRangeParam(range, period1, period2, nowMs)')+'\nreturn yahooRangeParam;')();
   const h=Date.UTC(2026,9,6,1,0,0);
