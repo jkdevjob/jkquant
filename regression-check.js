@@ -12048,6 +12048,9 @@ console.log('\n[REAL ESTATE · CLAUDE] 엔진 값 시험 · 화면 연결 · 월
      P.strategyVersion===E2.STRATEGY_VERSION&&P.params&&P.params.lag===E2.DEFAULTS.lag&&P.decisions.length>0
      &&P.decisions.every(d=>d.sv&&d.ev&&/^\d{4}-\d{2}$/.test(d.data)&&E2.ymk(d.m)-E2.ymk(d.data)===P.params.lag));
   const S=JSON.parse(fs.readFileSync(__d+'/data/realestate/claude/series.json','utf8')).series;
+  ok('원자료(KB·ECOS): 대전 아파트 1986~ · 입주물량(예정 포함) · 매수우위 · 미분양 · 인허가',
+     S.kbSale&&S.kbSale.daejeon&&S.kbSale.daejeon.start==='1986-01'&&S.movein&&S.movein.daejeon&&E2.ymk(S.movein.daejeon.start)+S.movein.daejeon.v.length-1>E2.ymk(S.sale.daejeon.start)+S.sale.daejeon.v.length-1
+     &&S.kbMarket&&S.kbMarket.daejeon&&S.unsold&&S.unsold.daejeon&&S.permits&&S.permits.daejeon);
   ok('원자료: 대전 5구·세종 매매·전세지수 · 전세가율 · 거래량 · 지가 · 금리 · 물가',
      E2.UNIVERSE.every(r=>S.sale[r]&&S.jeonse[r]&&S.jratio[r]&&S.volume[r])&&S.land&&S.land.daejeon&&['baseRate','depositRate','cpi'].every(k=>S.macro[k]));
 }

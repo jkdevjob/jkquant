@@ -17,7 +17,7 @@
 (function(g){
 'use strict';
 
-const VERSION='1.0.0';
+const VERSION='1.1.0';
 const STRATEGY_VERSION='rec-wf-1';
 const DJ=['dj_dong','dj_jung','dj_seo','dj_yuseong','dj_daedeok'];
 const UNIVERSE=DJ.concat(['sejong']);
@@ -37,6 +37,11 @@ const DEFAULTS={
 
 /* 참고 사건 — 설명용 표시(월 단위). 전략 계산에는 쓰지 않는다. */
 const EVENTS=[
+  {m:'1989-04',g:'공급',t:'1기 신도시(분당·일산 등) 건설 계획 발표'},
+  {m:'1991-09',g:'공급',t:'1기 신도시 첫 입주(분당 시범단지)'},
+  {m:'1993-08',g:'대전',t:'대전 엑스포 개막(1993.8~11)'},
+  {m:'1997-11',g:'경제',t:'외환위기 — IMF 구제금융 신청'},
+  {m:'2002-09',g:'세종',t:'대선 후보 신행정수도 건설 공약 발표'},
   {m:'2003-12',g:'세종',t:'신행정수도 특별법 국회 통과'},
   {m:'2004-10',g:'세종',t:'헌법재판소 신행정수도 특별법 위헌 결정'},
   {m:'2005-03',g:'세종',t:'행정중심복합도시 특별법 국회 통과'},
@@ -74,7 +79,8 @@ function sumWin(s,k,n){ let t=0; for(let j=k-n+1;j<=k;j++){ const x=at(s,j); if(
 function prepare(doc){
   const S=(doc&&doc.series)||{};
   const D={doc:doc||{},regions:(doc&&doc.regions)||{},macro:{}};
-  for(const t of ['sale','jeonse','jratio','avgPrice','demand','volume','buyOutSeoul','buyOutOther','land','landQ']){
+  for(const t of ['sale','jeonse','jratio','avgPrice','demand','volume','buyOutSeoul','buyOutOther','land','landQ',
+    'kbSale','kbJeonse','kbJr','kbMarket','movein','unsold','permits','rtIndex']){
     D[t]={}; for(const r in (S[t]||{})){ const x=ser(S[t][r]); if(x) D[t][r]=x; }
   }
   for(const m in (S.macro||{})){ const x=ser(S.macro[m]); if(x) D.macro[m]=x; }
@@ -103,12 +109,29 @@ function jeonseRatio(D,r,t){
   if([a,b,a1,b1,v1].some(x=>x==null)||b===0||a1===0) return null;
   return {v:v1*(a/a1)/(b/b1),est:true};
 }
+/* 시 단위 자료(미분양·인허가·매수우위)는 대전 구에도 대전 값을 쓴다 */
+function cityOf(r){ return /^dj_/.test(r)?'daejeon':r; }
+/* 입주(KB): 시계열 범위 안의 빈 달은 0세대, 범위 밖은 모름 */
+/* KB 입주 일정은 모든 지역이 같은 기간(가장 이른 달 ~ 가장 먼 예정 달)을 덮는다 — 그 안에서 기록이 없는 달은 0세대 */
+function moveinRange(D){ if(D._mvR!==undefined) return D._mvR; let a=null,b=null;
+  for(const r in D.movein){ const s=D.movein[r],f=firstK(s),l=lastK(s); if(f!=null&&(a==null||f<a)) a=f; if(l!=null&&(b==null||l>b)) b=l; }
+  return (D._mvR=a==null?null:[a,b]); }
+function moveinAt(D,r,k){ const s=D.movein[r],R=moveinRange(D); if(!s||!R||k<R[0]||k>R[1]) return null; const x=at(s,k); return x==null?0:x; }
+function moveinSum(D,r,a,b){ let t=0; for(let k=a;k<=b;k++){ const x=moveinAt(D,r,k); if(x==null) return null; t+=x; } return t; }
+/* 앞으로 12개월 입주(예정) ÷ 지난 10년 연평균. 지금 시점은 예정(분양 때 공개)이고, 과거 시점은 실제 입주로 대신한다(지연·취소 미반영). */
+function supplyRatio(D,r,t){ const ahead=moveinSum(D,r,t+1,t+12),past=moveinSum(D,r,t-119,t); return (ahead==null||past==null||past<=0)?null:ahead/(past/10); }
+/* 인허가는 그해 1월부터 누계로 온다 → 달마다 값으로 바꾼다 */
+function permitsMonthly(D,r,k){ const s=D.permits[r],a=at(s,k); if(a==null) return null; const m=k-Math.floor(k/12)*12; if(m===0) return a; const b=at(s,k-1); return b==null?null:a-b; }
+function permitsRatio(D,r,t){ let y=0; for(let k=t-11;k<=t;k++){ const x=permitsMonthly(D,r,k); if(x==null) return null; y+=x; }
+  let p=0; for(let k=t-71;k<=t-12;k++){ const x=permitsMonthly(D,r,k); if(x==null) return null; p+=x; } return p<=0?null:y/(p/5); }
+function unsoldChange(D,r,t){ const a=at(D.unsold[r],t),b=at(D.unsold[r],t-12); return (a==null||b==null||b<=0)?null:a/b-1; }
 function features(D,r,t){
   const jr=jeonseRatio(D,r,t);
   return {mom3:chg(D.sale[r],t,3),mom6:chg(D.sale[r],t,6),mom12:chg(D.sale[r],t,12),
     jmom12:chg(D.jeonse[r],t,12),jgap12:jgap(D,r,t,12),jr:jr?jr.v:null,jrEst:jr?jr.est:null,
     dd:drawdown(D,r,t),rate12:rateChange(D,t,12),volG:volGrowth(D,r,t),out:outShare(D,r,t),
-    demand:at(D.demand[r],t)};
+    demand:at(D.demand[r],t),supply:supplyRatio(D,r,t),unsold12:unsoldChange(D,cityOf(r),t),
+    permits:permitsRatio(D,cityOf(r),t),market:at(D.kbMarket[cityOf(r)],t)};
 }
 
 /* 지가 긴 시계열: 2005년 전은 분기말 달의 분기 지수, 그 뒤는 월간 지수(같은 기준이라 그대로 잇는다) */
@@ -149,17 +172,17 @@ function zigzag(s,th){
 }
 function cycles(D,r,o){
   o=Object.assign({},DEFAULTS,o||{});
-  const s=D.sale[r],piv=zigzag(s,o.zigzag),cpi=D.macro.cpi,out=[];
+  const src=o.src||'sale',s=D[src][r],J=D[src==='kbSale'?'kbJeonse':'jeonse'][r],piv=zigzag(s,o.zigzag),cpi=D.macro.cpi,out=[];
   for(let i=1;i<piv.length;i++){
     const a=piv[i-1],b=piv[i],months=b.k-a.k; if(months<=0) continue;
     const c=b.v/a.v-1,ca=upTo(cpi,a.k),cb=upTo(cpi,b.k);
     const real=(ca&&cb)?(b.v/cb)/(a.v/ca)-1:null;
     const ra=upTo(D.macro.baseRate,a.k),rb=upTo(D.macro.baseRate,b.k);
-    const ja=at(D.jeonse[r],a.k),jb=at(D.jeonse[r],b.k);
-    const f=features(D,r,a.k);
+    const ja=at(J,a.k),jb=at(J,b.k);
+    const f=src==='sale'?features(D,r,a.k):{rate12:rateChange(D,a.k,12),supply:supplyRatio(D,r,a.k),unsold12:unsoldChange(D,cityOf(r),a.k),market:at(D.kbMarket[cityOf(r)],a.k)};
     out.push({from:kym(a.k),to:kym(b.k),months,type:c>=0?'up':'down',open:!!b.open,change:c,
       cagr:Math.pow(1+c,12/months)-1,real,rateFrom:ra,rateTo:rb,
-      jeonseChange:(ja&&jb)?jb/ja-1:null,atStart:{jgap12:f.jgap12,jr:f.jr,jrEst:f.jrEst,rate12:f.rate12,volG:f.volG,out:f.out,dd:f.dd,mom12:f.mom12}});
+      jeonseChange:(ja&&jb)?jb/ja-1:null,atStart:{jgap12:f.jgap12,jr:f.jr,jrEst:f.jrEst,rate12:f.rate12,volG:f.volG,out:f.out,dd:f.dd,mom12:f.mom12,supply:f.supply,unsold12:f.unsold12,market:f.market}});
   }
   return out;
 }
@@ -181,7 +204,11 @@ const FACTORS=[
   {id:'dd',label:'고점 대비 위치(0=고점)',fmt:'pct',hi:'고점 근처',lo:'고점보다 많이 빠짐'},
   {id:'volG',label:'거래량 증가율(최근 6개월 vs 1년 전)',fmt:'pct',hi:'거래 늘어남',lo:'거래 줄어듦'},
   {id:'out',label:'외지인 매입 비중(최근 6개월)',fmt:'pct',hi:'외지인 많음',lo:'외지인 적음'},
-  {id:'demand',label:'매매수급지수(100=균형)',fmt:'num',hi:'매수 우위',lo:'매도 우위'}
+  {id:'demand',label:'매매수급지수(100=균형)',fmt:'num',hi:'매수 우위',lo:'매도 우위'},
+  {id:'supply',label:'앞으로 12개월 입주 ÷ 지난 10년 연평균',fmt:'x',hi:'입주 많음',lo:'입주 적음',post:true},
+  {id:'unsold12',label:'미분양 1년 변화(시)',fmt:'pct',hi:'미분양 늘어남',lo:'미분양 줄어듦'},
+  {id:'permits',label:'인허가 1년 합 ÷ 지난 5년 평균(시)',fmt:'x',hi:'인허가 많음',lo:'인허가 적음'},
+  {id:'market',label:'KB 매수우위지수(시 · 100=균형)',fmt:'num',hi:'매수자 많음',lo:'매도자 많음'}
 ];
 function factorStudy(D,o){
   o=Object.assign({h:12,regions:UNIVERSE.concat(['daejeon'])},o||{});
@@ -189,13 +216,13 @@ function factorStudy(D,o){
     const obs=[];
     for(const r of o.regions){ const s=D.sale[r]; if(!s) continue; const k0=firstK(s),kN=lastK(s);
       for(let t=k0;t+o.h<=kN;t++){ const f=features(D,r,t)[F.id],y=chg(s,t+o.h,o.h); if(f!=null&&y!=null) obs.push({r,t,f,y}); } }
-    if(obs.length<30) return {id:F.id,label:F.label,fmt:F.fmt,hi:F.hi,lo:F.lo,n:obs.length,buckets:[],rho:null};
+    if(obs.length<30) return {id:F.id,label:F.label,fmt:F.fmt,hi:F.hi,lo:F.lo,post:!!F.post,n:obs.length,buckets:[],rho:null};
     const fs=obs.map(x=>x.f).sort((a,b)=>a-b),q1=quantile(fs,1/3),q2=quantile(fs,2/3);
     const B=[{name:'낮음',cond:x=>x.f<=q1},{name:'중간',cond:x=>x.f>q1&&x.f<=q2},{name:'높음',cond:x=>x.f>q2}].map(b=>{
       const ys=obs.filter(b.cond).map(x=>x.y); return {name:b.name,n:ys.length,avg:mean(ys),hit:ys.length?ys.filter(y=>y>0).length/ys.length:null}; });
     const rho=corr(ranks(obs.map(x=>x.f)),ranks(obs.map(x=>x.y)));
     const span=[Math.min.apply(null,obs.map(x=>x.t)),Math.max.apply(null,obs.map(x=>x.t))];
-    return {id:F.id,label:F.label,fmt:F.fmt,hi:F.hi,lo:F.lo,n:obs.length,q1,q2,buckets:B,rho,from:kym(span[0]),to:kym(span[1])};
+    return {id:F.id,label:F.label,fmt:F.fmt,hi:F.hi,lo:F.lo,post:!!F.post,n:obs.length,q1,q2,buckets:B,rho,from:kym(span[0]),to:kym(span[1])};
   });
 }
 /* 선후행: corr(a의 k월 수익, b의 k+lag월 수익). lag>0 이면 a 가 앞선다. */
@@ -233,7 +260,8 @@ function candLabel(c){
   return c.id;
 }
 /* 보유 중인 곳이 계속 조건을 만족하면 갈아타지 않는다(갈아타기 비용 약 2.1%). */
-function qualifies(D,c,r,t){
+function qualifies(D,c,r,t,U){
+  U=U||UNIVERSE;
   if(c.rule==='hold') return r===c.region;
   if(c.rule==='cash') return false;
   if(c.rule==='mom'||c.rule==='momRate'){ const m=chg(D.sale[r],t,c.k); if(m==null||m<=c.th) return false;
@@ -242,14 +270,14 @@ function qualifies(D,c,r,t){
   if(c.rule==='rebound'){ const m=chg(D.sale[r],t,6); return m!=null&&m>0; }
   if(c.rule==='volume'){ const m=chg(D.sale[r],t,3),v=volGrowth(D,r,t); return m!=null&&m>0&&v!=null&&v>0; }
   if(c.rule==='rot'){ const m=chg(D.sale[r],t,c.k); if(m==null) return false;
-    return UNIVERSE.filter(x=>{ const y=chg(D.sale[x],t,c.k); return y!=null&&y>m; }).length<2; }
+    return U.filter(x=>{ const y=chg(D.sale[x],t,c.k); return y!=null&&y>m; }).length<2; }
   return false;
 }
 function desire(D,c,t,pos,U){
   U=U||UNIVERSE; const sc={};
   if(c.rule==='cash') return {target:null,stay:false,scores:sc};
   if(c.rule==='hold') return {target:c.region,stay:pos===c.region,scores:sc};
-  if(pos&&qualifies(D,c,pos,t)) return {target:pos,stay:true,scores:sc};
+  if(pos&&qualifies(D,c,pos,t,U)) return {target:pos,stay:true,scores:sc};
   let best=null,bv=-Infinity;
   for(const r of U){
     if(c.rule==='mom'||c.rule==='momRate'||c.rule==='rot'){ const m=chg(D.sale[r],t,c.k); if(m==null) continue; sc[r]=m; if(m>bv){bv=m;best=r;} }
@@ -311,9 +339,10 @@ function simulate(D,o,choose){
   return {rows,decisions,stats:stats(rows,o.capital)};
 }
 function dataStart(D,o){
-  /* 자료로 판단을 시작할 수 있는 첫 달: 대전 구 3곳 이상 12개월 상승률이 나오는 달 */
-  const k0=Math.min.apply(null,DJ.map(r=>firstK(D.sale[r])).filter(x=>x!=null));
-  for(let t=k0;t<=D.lastK;t++){ if(DJ.filter(r=>chg(D.sale[r],t,12)!=null).length>=3) return t; }
+  /* 자료로 판단을 시작할 수 있는 첫 달: 투자 대상 중 3곳(대상이 적으면 전부) 이상 12개월 상승률이 나오는 달 */
+  const U=(o&&o.universe)||DJ,need=Math.min(3,U.length);
+  const k0=Math.min.apply(null,U.map(r=>firstK(D.sale[r])).filter(x=>x!=null));
+  for(let t=k0;t<=D.lastK;t++){ if(U.filter(r=>chg(D.sale[r],t,12)!=null).length>=need) return t; }
   return null;
 }
 /* 학습 표에서 1위 고르기. 학습 기간에 거의 사지 않은 규칙은 '현금' 후보와 같은 것이라 뺀다
@@ -325,33 +354,49 @@ function pickBest(table,o){
 }
 function walkForward(D,o){
   o=Object.assign({},DEFAULTS,o||{});
-  const C=candidates(),byId={},d0=dataStart(D,o); C.forEach(c=>byId[c.id]=c);
+  const U=o.universe||UNIVERSE,C=candidates(),byId={},d0=dataStart(D,Object.assign({},o,{universe:o.universe||DJ})); C.forEach(c=>byId[c.id]=c);
   if(d0==null||D.lastK==null) return null;
-  const firstRet=d0+o.lag,lastRet=D.lastK,years=[],sel={};
+  const firstRet=Math.max(d0+o.lag,o.firstRetMin?ymk(o.firstRetMin):-Infinity),lastRet=D.lastK,years=[],sel={};
   for(let y=Math.floor(firstRet/12)+1;;y++){
     const trainTo=y*12-o.lag; if(trainTo>D.lastK) break;
     if(trainTo-firstRet+1<o.minTrain) continue;
-    const table=C.map(c=>{ const s=simulate(D,Object.assign({},o,{from:firstRet,to:trainTo}),(d,pos)=>desire(D,c,d,pos)).stats;
+    const table=C.map(c=>{ const s=simulate(D,Object.assign({},o,{from:firstRet,to:trainTo}),(d,pos)=>desire(D,c,d,pos,U)).stats;
       return {id:c.id,score:s.cagr-o.penalty*s.mdd,cagr:s.cagr,mdd:s.mdd,trades:s.trades,inMarket:s.inMarket,eligible:c.rule==='cash'||s.inMarket>=o.minInMarket}; });
     const best=pickBest(table,o);
     years.push(y); sel[y]={id:best.id,label:candLabel(byId[best.id]),trainFrom:kym(firstRet),trainTo:kym(trainTo),table};
   }
   if(!years.length) return null;
   const oosFrom=years[0]*12,activeFor=k=>{ const y=Math.floor(k/12); return sel[y]?byId[sel[y].id]:null; };
-  const choose=(d,pos)=>{ const c=activeFor(d+o.lag); if(!c) return {target:null}; const r=desire(D,c,d,pos); r.cand=c.id; return r; };
+  const choose=(d,pos)=>{ const c=activeFor(d+o.lag); if(!c) return {target:null}; const r=desire(D,c,d,pos,U); r.cand=c.id; return r; };
   const meta=simulate(D,Object.assign({},o,{from:oosFrom,to:lastRet}),choose);
   const bench={};
-  for(const r of ['daejeon'].concat(UNIVERSE)){
+  for(const r of ['daejeon'].concat(U.filter(x=>x!=='daejeon'))){
     const s=D.sale[r]; if(!s) continue; const f=Math.max(oosFrom,firstK(s)+1);
     if(f>lastRet) continue;
     bench[r]=simulate(D,Object.assign({},o,{from:f,to:lastRet,minHold:0}),()=>({target:r}));
   }
   bench.cash=simulate(D,Object.assign({},o,{from:oosFrom,to:lastRet}),()=>({target:null}));
   /* 같은 기간 전체표본 최적(과최적화 참고용) */
-  const fullTable=C.map(c=>{ const s=simulate(D,Object.assign({},o,{from:oosFrom,to:lastRet}),(d,pos)=>desire(D,c,d,pos)).stats;
+  const fullTable=C.map(c=>{ const s=simulate(D,Object.assign({},o,{from:oosFrom,to:lastRet}),(d,pos)=>desire(D,c,d,pos,U)).stats;
     return {id:c.id,label:candLabel(c),score:s.cagr-o.penalty*s.mdd,cagr:s.cagr,mdd:s.mdd,trades:s.trades,inMarket:s.inMarket}; })
     .sort((a,b)=>b.score-a.score);
   return {years,sel,meta,bench,fullTable,oosFrom:kym(oosFrom),lastRet:kym(lastRet),firstRet:kym(firstRet),activeFor,choose,opts:o};
+}
+
+/* ── 장기 검증: KB 대전 전체(1986~)로 같은 후보·같은 워크포워드를 돌린다(투자 대상 = 대전 전체 하나).
+   예금 금리 자료가 1996년부터라 학습도 1996년부터 — 그 전엔 현금 수익을 셀 수 없다.
+   임대가치는 KB 전세가율(1998.12~, 그 전은 KB 전세·매매 지수 비로 거꾸로 이음). ── */
+function longD(D){
+  const s=D.kbSale.daejeon; if(!s) return null;
+  const L={doc:D.doc,regions:D.regions,macro:D.macro,sale:{daejeon:s},jeonse:{daejeon:D.kbJeonse.daejeon},jratio:{daejeon:D.kbJr.daejeon},
+    avgPrice:{},demand:{},volume:{},buyOutSeoul:{},buyOutOther:{},land:{},landQ:{},kbSale:{},kbJeonse:{},kbJr:{},kbMarket:D.kbMarket,movein:D.movein,unsold:D.unsold,permits:D.permits,rtIndex:{},peak:{}};
+  const pk=new Array(s.v.length); let m=null; for(let i=0;i<s.v.length;i++){ const x=s.v[i]; if(x!=null&&(m==null||x>m)) m=x; pk[i]=m; }
+  L.peak.daejeon={k0:s.k0,v:pk}; L.lastK=lastK(s);
+  return L;
+}
+function walkForwardLong(D,o){
+  const L=longD(D); if(!L) return null;
+  return walkForward(L,Object.assign({},o||{},{universe:['daejeon'],firstRetMin:'1996-01'}));
 }
 
 /* ── 모의장부(앞으로) — 덧붙이기만 한다. 지난 기록은 고치지 않는다. ── */
@@ -417,7 +462,7 @@ function snapshot(D,o){
 }
 
 const API={VERSION,STRATEGY_VERSION,DEFAULTS,UNIVERSE,DJ,EVENTS,FACTORS,ymk,kym,ser,at,firstK,lastK,upTo,chg,ret,prepare,label,
-  drawdown,jgap,rateChange,volGrowth,outShare,jeonseRatio,features,landLong,realSeries,zigzag,cycles,factorStudy,leadLag,corr,outlook,
+  drawdown,jgap,rateChange,volGrowth,outShare,jeonseRatio,features,landLong,realSeries,cityOf,moveinRange,moveinAt,moveinSum,supplyRatio,permitsMonthly,permitsRatio,unsoldChange,longD,walkForwardLong,zigzag,cycles,factorStudy,leadLag,corr,outlook,
   candidates,candLabel,qualifies,desire,planNext,monthYield,markMonth,stats,simulate,dataStart,pickBest,walkForward,paperUpdate,snapshot};
 g.JKRealEstateClaude=API;
 if(typeof module!=='undefined'&&module.exports) module.exports=API;

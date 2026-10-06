@@ -98,5 +98,49 @@ log = []
 same = C.refresh("x", C.to_series(full), lambda s, e: {k: v for k, v in full.items() if (s or "000000") <= k <= e}, False, "202012", log)
 ok("새 자료가 없으면 기록도 없다(파일을 다시 쓰지 않음)", C.from_series(same) == full and log == [], log)
 
+# 6) KB — dataList 끝의 변동률 요약은 버리고, 지역 코드·이름을 확인한다
+def fake_kb(rows, dates):
+    def get_json(url, headers=None):
+        return {"dataHeader": {"resultCode": "10000"}, "dataBody": {"data": {"날짜리스트": dates, "데이터리스트": rows}}}
+    return get_json
+C._kb_cache.clear()
+C.get_json = fake_kb([{"지역코드": "3000000000", "지역명": "대전", "dataList": [10.0, 11.0, 12.0, 5.5, -1.2, 3.3]}], ["202001", "202002", "202003"])
+got = C.kb_rows("priceIndex", {"a": "1"}, "3000000000", "대전", "")
+ok("KB: 날짜 수만큼만 쓴다(끝의 변동률 요약 버림)", got == {"202001": 10.0, "202002": 11.0, "202003": 12.0}, got)
+C._kb_cache.clear()
+C.get_json = fake_kb([{"지역코드": "3000000000", "지역명": "대전", "dataList": [{"매수우위지수": 50.0}, {"매수우위지수": 60.0}]}], ["202001", "202002"])
+ok("KB 매수우위: 값 묶음에서 지수만 꺼낸다", C.kb_rows("maktTrnd", {"b": "1"}, "3000000000", "대전", "", "매수우위지수") == {"202001": 50.0, "202002": 60.0})
+C._kb_cache.clear()
+C.get_json = fake_kb([{"지역코드": "3000000000", "지역명": "대구", "dataList": [1.0]}], ["202001"])
+try:
+    C.kb_rows("priceIndex", {"c": "1"}, "3000000000", "대전", "")
+    ok("KB: 지역 이름이 다르면 멈춘다", False, "예외 없음")
+except RuntimeError as e:
+    ok("KB: 지역 이름이 다르면 멈춘다", "불일치" in str(e), e)
+
+def fake_movein(name, rows):
+    def get_json(url, headers=None):
+        return {"dataBody": {"data": {"지역명": name, "차트데이터": rows}}}
+    return get_json
+C.get_json = fake_movein("유성구", [{"일정": "202708", "합계": {"세대수": 1567}}, {"일정": "202709", "합계": {"세대수": 2951}}, {"일정": "2027", "합계": {"세대수": 1}}])
+ok("KB 입주: 월(6자리)만 세대수로 모은다(예정 포함)", C.kb_movein("3020000000", "유성구") == {"202708": 1567.0, "202709": 2951.0})
+C.get_json = fake_movein("서구", [])
+try:
+    C.kb_movein("3020000000", "유성구")
+    ok("KB 입주: 지역 이름이 다르면 멈춘다", False, "예외 없음")
+except RuntimeError as e:
+    ok("KB 입주: 지역 이름이 다르면 멈춘다", "불일치" in str(e), e)
+
+def fake_ecos(name):
+    def get_json(url, headers=None):
+        return {"StatisticSearch": {"list_total_count": 1, "row": [{"TIME": "202001", "DATA_VALUE": "5", "ITEM_NAME1": name}]}}
+    return get_json
+C.get_json = fake_ecos("대구")
+try:
+    C.ecos_rows("901Y074", "I410G", "202001", "202001", "대전")
+    ok("ECOS: 항목 이름이 다르면 멈춘다", False, "예외 없음")
+except RuntimeError as e:
+    ok("ECOS: 항목 이름이 다르면 멈춘다", "불일치" in str(e), e)
+
 print("\n결과: %d PASS / %d FAIL" % (passed, failed))
 sys.exit(1 if failed else 0)
