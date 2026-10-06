@@ -269,7 +269,7 @@ setTimeout(function(){ var h=document.documentElement; if(h.classList.contains('
 </script>
 <div class="wrap">
   <div class="top">
-    <div class="brand"><div class="logo">Asset Plan</div><h1>자산플랜 <span class="ver">v1.43.13</span></h1></div>
+    <div class="brand"><div class="logo">Asset Plan</div><h1>자산플랜 <span class="ver">v1.43.14</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
       <div class="jkmenu" id="jkmenuWrap">
@@ -2021,12 +2021,19 @@ function quoteToDaily(SYM, j){
 }
 const MKT_CLOSE_MIN={usd:16*60, krw:15*60+30};      // 정규장 마감 (거래소 현지시각)
 const SETTLE_LAG_MIN=20;
+/* 포맷터는 시간대별로 한 번만 만들고, 같은 초 안의 호출은 같은 값을 돌려준다(분 단위만 쓰므로 결과는 같다). 앱(index)과 글자 그대로 같다. */
 function _exchNow(cur){
   const tz=(cur==='krw')?'Asia/Seoul':'America/New_York';
-  const P=new Intl.DateTimeFormat('en-CA',{timeZone:tz,year:'numeric',month:'2-digit',day:'2-digit',
-            hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).formatToParts(new Date());
+  const F=_exchNow._fmt||(_exchNow._fmt={}), M=_exchNow._memo||(_exchNow._memo={});
+  const now=new Date(), sec=Math.floor(now.getTime()/1000), m=M[tz];
+  if(m && m.sec===sec) return {date:m.date, min:m.min};
+  const f=F[tz]||(F[tz]=new Intl.DateTimeFormat('en-CA',{timeZone:tz,year:'numeric',month:'2-digit',day:'2-digit',
+            hour:'2-digit',minute:'2-digit',hourCycle:'h23'}));
+  const P=f.formatToParts(now);
   const g=k=>(P.find(x=>x.type===k)||{}).value;
-  return {date:`${g('year')}-${g('month')}-${g('day')}`, min:(+g('hour'))*60+(+g('minute'))};
+  const v={date:`${g('year')}-${g('month')}-${g('day')}`, min:(+g('hour'))*60+(+g('minute'))};
+  M[tz]={sec, date:v.date, min:v.min};
+  return v;
 }
 function simCutoff(cur){
   const n=_exchNow(cur);
@@ -2034,7 +2041,8 @@ function simCutoff(cur){
   const y=new Date(n.date+'T00:00:00Z'); y.setUTCDate(y.getUTCDate()-1);
   return y.toISOString().slice(0,10);
 }
-function settledBars(rows,cur){ const cut=simCutoff(cur); return (rows||[]).filter(r=>r.date<=cut); }
+/* 같은 시세 배열·같은 확정 상한·같은 길이면 같은 결과를 다시 쓴다. 앱(index)과 글자 그대로 같다. */
+function settledBars(rows,cur){ const cut=simCutoff(cur); if(!rows||typeof rows!=='object') return []; const M=settledBars._m||(settledBars._m=new WeakMap()), m=M.get(rows); if(m&&m.cut===cut&&m.len===rows.length) return m.out; const out=rows.filter(r=>r.date<=cut); M.set(rows,{cut,len:rows.length,out}); return out; }
 async function fetchPlanQuote(symbol){
   const sym=String(symbol||'').toUpperCase();if(liveQuotes[sym])return liveQuotes[sym];
   // 페이지/수동 새로고침 때 브라우저·CDN 캐시를 우회해 그 시점의 현재가를 다시 요청한다.

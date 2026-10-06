@@ -13,7 +13,8 @@ async function saves(destination){
  let rev=2,active=0,max=0;const gates=[],writes=[],renders=[];
  const c=vm.createContext({S:clone(base),curUid:'u',stateCloudHydrated:true,stateCloudRev:1,stateCloudHistorySig:'',stateDbBase:clone(base),stateCloudPending:false,lastPushedJSON:'',saveTimer:null,stateSaveQueue:Promise.resolve(),_paperFilling:false,console,setSync(){},_staleStateGuard(){},validState:()=>true,_historySignature:x=>JSON.stringify(x),ensureBoxes(){},refreshAll(){renders.push(clone(c.S));},sortHist:a=>a,window:{fb:{db:{},doc(){},async runTransaction(db,callback){active++;max=Math.max(max,active);const gate=deferred();gates.push(gate);await gate.promise;const tx={get:async()=>({exists:()=>true,data:()=>({stateV2:clone(remote),stateV2Rev:rev})}),set(ref,data){remote=clone(data.stateV2);rev=data.stateV2Rev;writes.push(clone(remote));}};try{return await callback(tx);}finally{active--;}}}}});
  const names=['_histKeyPart','_histStableJson','_histSemanticKey','_histGroupKey','_histEntries','_rebaseRecordArray','_statePlainObject','_stateValEq','_rebaseObjectFields','_rebaseStateOnRemote'];
- vm.runInContext(names.map(n=>fn('function '+n+'(')).join('\n')+fn('async function _commitStateRemote(where)')+fn('async function pushRemoteNow()'),c);
+ c.dbSizeReport=()=>{}; // 기록 크기 표시는 화면 일 — 저장 경쟁 시험과 무관
+ vm.runInContext(names.map(n=>fn('function '+n+'(')).join('\n')+fn('function dbStateBytes(json)')+fn('async function _commitStateRemote(where)')+fn('async function pushRemoteNow()'),c);
  const runTransaction=c.window.fb.runTransaction;
  c.window.fb.runTransaction=(db,callback)=>runTransaction(db,async tx=>{
    // An aborted Firestore attempt must not leak its remote-only fields into retry.

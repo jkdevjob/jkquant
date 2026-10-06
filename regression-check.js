@@ -2827,8 +2827,11 @@ console.log('\n[51] 목록을 열 때 같은 종목 시세를 두 번 받지 않
   const pf=(()=>{ try{ return extractFn(idx,'async function paperFillAll()'); }catch(e){ return ''; } })();
   ok('목록을 도는 동안만 켠다', /_fillQuoteCache=new Map\(\);/.test(pf));
   ok('다 돌면 반드시 끈다', /finally\s*\{[\s\S]{0,400}?_fillQuoteCache=null;/.test(pf));
-  // 평소 화면은 예전처럼 매번 새로 받아야 한다 — 캐시가 켜져 있지 않으면 그대로 통과
-  ok('평소엔 캐시를 타지 않는다', /if\(!_fillQuoteCache\) return fn\(SYM\);/.test(idx));
+  /* 평소 화면은 예전처럼 매번 새로 받는다 — 다만 '아직 오는 중'인 같은 종목 요청은 같이 쓴다
+     (실측: 탭을 누를 때마다 같은 종목 전체 이력을 동시에 두 번 받았다). 끝난 결과는 기억하지 않는다 —
+     값 시험은 scripts/check-login-quote-paper.cjs 'Q6' 에 있다. */
+  ok('평소엔 오는 중인 요청만 같이 쓴다(끝난 결과는 기억 안 함)', /if\(!_fillQuoteCache\) return _quoteShare\(fn, SYM\);/.test(idx)
+     && /const done=\(\)=>\{ if\(m\.get\(SYM\)===p\) m\.delete\(SYM\); \};/.test(idx));
 }
 
 /* ════ 52. '거래 수'를 두 군데서 따로 세지 않는다 ════
@@ -9574,7 +9577,7 @@ console.log('\n[126] 제12차 후속 — 운영 오늘 할 일은 확정 봉으�
 
   /* ── 적립 (200일선 배수) ── */
   const runDca=(st,Q)=>new Function('curStrat','dcaQuoteData','__CUT',
-      base+'\n'+(idx.match(/const DCA_N=\d+;/)||[''])[0]+'\n'+fns(['function computeDca()'])+'\nreturn computeDca();')(
+      base+'\n'+(idx.match(/const DCA_N=\d+;/)||[''])[0]+'\n'+fns(['function _dcaRawMap(raw)','function _dcaPriceView(days)','function computeDca()'])+'\nreturn computeDca();')(
       ()=>({settings:st,hist:[]}), Q, ()=>CUT);
   { const st={ticker:'USD',mode:'accum',amount:100,dipMul:2,freq:'month'};
     const Q={symbol:'USD', days:withToday, raw:[], dividends:[], price:today.close};
@@ -9586,7 +9589,7 @@ console.log('\n[126] 제12차 후속 — 운영 오늘 할 일은 확정 봉으�
 
   /* ── ASAP ── */
   const runAsap=(st,Q)=>new Function('curStrat','asapQuoteData','__CUT',
-      base+'\n'+fns(['function _asapMA(a,k)','function _asapRSI(a)','function asapPos(hist)','function computeAsap()'])+'\nreturn computeAsap();')(
+      base+'\n'+fns(['function _asapMA(a,k)','function _asapRSI(a)','function asapPos(hist)','function _asapPriceView(days)','function computeAsap()'])+'\nreturn computeAsap();')(
       ()=>({settings:st,hist:[]}), Q, ()=>CUT);
   { const st={ticker:'SOXL',base:10,mid:50,deep:100};
     const Q={symbol:'SOXL', days:withToday, price:today.close};
