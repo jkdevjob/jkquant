@@ -22,6 +22,9 @@ views.insertBefore(view,views.querySelector('[data-v="data"]')||null);
 
 const mount=view.querySelector("#gptPresale");
 let DATA=null, city="전체", sort="score";
+let LIVE={configured:false,note:"공식 API 확인 중"};
+let OFFICIAL=[];
+let FIN={id:"",ltv:50,rate:4.0,years:30,costRate:0};
 
 const style=document.createElement("style");
 style.textContent=
@@ -60,6 +63,67 @@ function verdict(x){
   return "중립";
 }
 function scoreLabel(n){return n>=75?"우선검토":n>=60?"관심":n>=45?"중립":"보수적"}
+function dateKst(d){const x=new Date(Date.now()+d*86400000);return new Intl.DateTimeFormat("en-CA",{timeZone:"Asia/Seoul",year:"numeric",month:"2-digit",day:"2-digit"}).format(x)}
+function moneyAmount(v){const n=Number(String(v==null?"":v).replace(/,/g,""));return Number.isFinite(n)&&n>0?n*10000:null}
+function normName(s){return String(s||"").replace(/[^0-9A-Za-z가-힣]/g,"").toLowerCase()}
+function officialStatus(r){
+  const now=dateKst(0),a=String(r.RCEPT_BGNDE||""),b=String(r.RCEPT_ENDDE||"");
+  if(b&&b<now)return "마감"; if(a&&a>now)return "예정"; if(a&&b&&a<=now&&b>=now)return "접수중"; return "공고";
+}
+function annNorm(r,category){
+  return {
+    key:[r.HOUSE_MANAGE_NO,r.PBLANC_NO,category].join("|"),
+    houseManageNo:String(r.HOUSE_MANAGE_NO||""),pblancNo:String(r.PBLANC_NO||""),
+    name:String(r.HOUSE_NM||""),region:String(r.SUBSCRPT_AREA_CODE_NM||""),
+    address:String(r.HSSPLY_ADRES||""),category,
+    announce:String(r.RCRIT_PBLANC_DE||""),start:String(r.RCEPT_BGNDE||""),
+    end:String(r.RCEPT_ENDDE||""),winner:String(r.PRZWNER_PRESNATN_DE||""),
+    moveIn:String(r.MVN_PREARNGE_YM||""),units:Number(r.TOT_SUPLY_HSHLDCO||0)||null,
+    status:officialStatus(r),raw:r,minPrice:null,maxPrice:null,models:[]
+  };
+}
+async function liveJson(q){
+  const r=await fetch("/api/realestate-gpt-live?"+new URLSearchParams(q),{cache:"no-store"});
+  const j=await r.json(); if(!r.ok||!j.ok)throw new Error(j.error||("HTTP "+r.status)); return j;
+}
+async function loadModels(a){
+  try{
+    const j=await liveJson({kind:"applyhome",category:a.category,mode:"model",houseManageNo:a.houseManageNo,pblancNo:a.pblancNo,perPage:"100"});
+    const rows=(j.payload&&j.payload.data)||[];
+    a.models=rows;
+    const prices=rows.map(x=>moneyAmount(x.LTTOT_TOP_AMOUNT)).filter(Number.isFinite);
+    if(prices.length){a.minPrice=Math.min(...prices);a.maxPrice=Math.max(...prices)}
+  }catch(e){}
+  return a;
+}
+async function loadOfficial(){
+  try{
+    const s=await liveJson({kind:"status"}); LIVE=s;
+    if(!s.configured){render();return}
+    const cats=["apt","remndr","opt"], regs=["대전","세종"];
+    const jobs=[]; for(const category of cats)for(const region of regs)jobs.push(
+      liveJson({kind:"applyhome",category,mode:"detail",region,from:dateKst(-75),to:dateKst(60),perPage:"200"}).then(j=>(j.payload&&j.payload.data||[]).map(r=>annNorm(r,category))).catch(()=>[])
+    );
+    const all=(await Promise.all(jobs)).flat();
+    const m=new Map(); for(const a of all)if(a.name)m.set(a.key,a);
+    OFFICIAL=[...m.values()].sort((a,b)=>String(b.announce||b.start).localeCompare(String(a.announce||a.start))).slice(0,20);
+    await Promise.all(OFFICIAL.slice(0,12).map(loadModels));
+    if(DATA){
+      for(const p of DATA.projects){
+        const pn=normName(p.name);
+        const a=OFFICIAL.find(x=>{const n=normName(x.name);return n&&(n.includes(pn)||pn.includes(n))});
+        if(a){
+          p.official=a;
+          if(a.start)p.offer.applyStart=a.start;if(a.end)p.offer.applyEnd=a.end;
+          if(a.winner)p.offer.winnerDate=a.winner;if(a.status)p.offer.status=a.status;
+          if(Number.isFinite(a.minPrice))p.offer.priceMin=a.minPrice;
+          if(Number.isFinite(a.maxPrice))p.offer.priceMax=a.maxPrice;
+        }
+      }
+    }
+    render();
+  }catch(e){LIVE={configured:false,note:"공식 API 연결 실패: "+String(e&&e.message||e),error:true};render()}
+}
 function marginClass(v){return !Number.isFinite(v)?"":v>0?"ps-positive":v<0?"ps-negative":"ps-neutral"}
 function daysOld(d){
   const t=Date.parse(d+"T00:00:00+09:00"); if(!Number.isFinite(t))return null;
@@ -74,6 +138,29 @@ function typeRows(p){
 }
 function compRows(p){
   return (p.recentComparables||[]).map(c=>'<tr><td>'+esc(c.name)+'</td><td>'+Number(c.area).toFixed(1)+'㎡</td><td>'+esc(c.date)+'</td><td>'+esc(c.floor)+'층</td><td>'+won(c.price)+'</td></tr>').join("");
+}
+function officialFeedHtml(){
+  const state=LIVE.configured?'<span class="ps-badge open">공식 API 자동수집 ON</span>':'<span class="ps-badge closed">공식 API 키 필요</span>';
+  if(!LIVE.configured)return '<div class="gpt-panel"><h4>공식 자동수집</h4><div class="ps-mini">'+state+' '+esc(LIVE.note||"")+'<br>Cloudflare Pages 환경변수 <b>DATA_GO_KR_API_KEY</b>에 공공데이터포털 키를 넣으면 청약홈 공고가 자동으로 붙습니다. 키 값은 화면/응답에 노출하지 않습니다.</div></div>';
+  const rows=OFFICIAL.slice(0,15).map(a=>'<tr><td>'+esc(a.name)+'</td><td>'+esc(a.region)+'</td><td>'+esc(a.category==="apt"?"일반":a.category==="remndr"?"무순위/잔여":"임의공급")+'</td><td>'+esc(a.status)+'</td><td>'+esc(a.start||a.announce)+'</td><td>'+esc(a.end)+'</td><td>'+ (a.minPrice?won(a.minPrice)+(a.maxPrice!==a.minPrice?"~"+won(a.maxPrice):""):"가격형 수집 전") +'</td></tr>').join("");
+  return '<div class="gpt-panel"><h4>공식 자동수집 피드</h4><div class="ps-mini">'+state+' · 최근 공고를 청약홈 OpenAPI에서 읽고 주택형별 최고분양가까지 자동 결합합니다.</div><div class="gpt-table-wrap"><table class="gpt-table"><thead><tr><th>단지</th><th>지역</th><th>구분</th><th>상태</th><th>접수시작</th><th>접수종료</th><th>최고분양가 범위</th></tr></thead><tbody>'+(rows||'<tr><td colspan="7">최근 대전·세종 공고 없음</td></tr>')+'</tbody></table></div></div>';
+}
+function annuity(principal,annual,years){
+  const r=annual/100/12,n=Math.max(1,Math.round(years*12)); if(!principal)return 0;if(!r)return principal/n;
+  const x=Math.pow(1+r,n);return principal*r*x/(x-1);
+}
+function financePanel(){
+  if(!DATA||!DATA.projects.length)return "";
+  if(!FIN.id)FIN.id=DATA.projects[0].id;
+  const p=DATA.projects.find(x=>x.id===FIN.id)||DATA.projects[0],x=calc(p);
+  const loan=x.eff*FIN.ltv/100,own=x.eff-loan,extra=x.eff*FIN.costRate/100;
+  const monthly=annuity(loan,FIN.rate,FIN.years),interestOnly=loan*FIN.rate/100/12;
+  const jeonse=p.benchmarks&&p.benchmarks.jeonse&&p.benchmarks.jeonse.price;
+  const moveinGap=Number.isFinite(jeonse)?x.eff+extra-jeonse:null;
+  const opts=DATA.projects.map(v=>'<option value="'+esc(v.id)+'" '+(v.id===p.id?'selected':'')+'>'+esc(v.name)+'</option>').join("");
+  return '<div class="gpt-panel"><h4>자금·대출 스트레스 계산기</h4><div class="ps-controls"><select id="finProject">'+opts+'</select><label>LTV <input id="finLtv" type="number" min="0" max="100" step="5" value="'+FIN.ltv+'" style="width:58px">%</label><label>금리 <input id="finRate" type="number" min="0" max="20" step=".1" value="'+FIN.rate+'" style="width:58px">%</label><label>기간 <input id="finYears" type="number" min="1" max="50" step="1" value="'+FIN.years+'" style="width:52px">년</label><label>취득·부대비율 <input id="finCost" type="number" min="0" max="20" step=".1" value="'+FIN.costRate+'" style="width:58px">%</label></div>'+
+  '<div class="ps-kpis"><div class="ps-kpi"><div class="k">실질비교가</div><div class="v">'+won(x.eff)+'</div><div class="s">분양가+확인된 확장비</div></div><div class="ps-kpi"><div class="k">가정 대출</div><div class="v">'+won(loan)+'</div><div class="s">LTV '+FIN.ltv+'% 단순 가정</div></div><div class="ps-kpi"><div class="k">계약가 기준 자기자금</div><div class="v">'+won(own+extra)+'</div><div class="s">대출 제외 + 입력한 부대비용</div></div><div class="ps-kpi"><div class="k">입주 후 전세 단순갭</div><div class="v">'+won(moveinGap)+'</div><div class="s">전세 '+won(jeonse)+' 가정</div></div></div>'+
+  '<div class="ps-mini"><b>원리금균등 월상환 약 '+won(monthly)+'</b> · 이자만 보면 월 '+won(interestOnly)+' · 실제 LTV/DSR·중도금대출·취득세는 계약/입주 시점의 개인 조건과 법령에 따라 달라집니다. 특히 2029년 입주 단지는 현재 세율을 고정 적용하지 않고 부대비율을 직접 넣게 했습니다.</div></div>';
 }
 function projectHtml(p){
   const x=calc(p), o=p.offer||{}, isOpen=o.status!=="마감";
@@ -120,7 +207,7 @@ function render(){
       '<div class="gpt-card"><div class="k">현재 1위 모의점수</div><div class="v gold">'+(best?best.x.score:"-")+'</div><div class="s">'+(best?esc(best.p.name):"-")+'</div></div>'+
       '<div class="gpt-card"><div class="k">데이터 기준일</div><div class="v" style="font-size:15px">'+esc(DATA.asOf)+'</div><div class="s">'+esc(DATA.notice||"")+'</div></div>'+
     '</div>'+
-    '<div class="gpt-panel"><div class="ps-head"><div><h4 style="margin:0">신규분양 비교</h4><div class="note">모의점수 = 보수적 가격메리트 35 + 상위단지 대비 여유 15 + 청약수요 20 + 전세지지 15 + 잔여물량 희소성 15. 실제 매수점수가 아니라 조사 우선순위입니다.</div></div>'+
+    officialFeedHtml()+financePanel()+'<div class="gpt-panel"><div class="ps-head"><div><h4 style="margin:0">신규분양 비교</h4><div class="note">모의점수 = 보수적 가격메리트 35 + 상위단지 대비 여유 15 + 청약수요 20 + 전세지지 15 + 잔여물량 희소성 15. 실제 매수점수가 아니라 조사 우선순위입니다.</div></div>'+
     '<div class="ps-controls"><button data-city="전체" class="'+(city==="전체"?"on":"")+'">전체</button><button data-city="대전" class="'+(city==="대전"?"on":"")+'">대전</button><button data-city="세종" class="'+(city==="세종"?"on":"")+'">세종</button><select id="psSort"><option value="score">모의점수순</option><option value="margin">안전마진순</option><option value="price">실질가격순</option><option value="date">접수일순</option></select><button id="psReload">새로읽기</button></div></div>'+
     '<div class="ps-list">'+(rows.map(v=>projectHtml(v.p)).join("")||'<div class="note">조건에 맞는 단지가 없습니다.</div>')+'</div></div>'+
     '<div class="gpt-panel"><h4>다음 데이터 계층 — 꼭 추가할 것</h4><div class="ps-mini"><b>1.</b> 반경 1·3km 향후 1/2/3년 입주물량과 미분양 · <b>2.</b> 현재 매물 최저/중앙 호가와 매물수 증감 · <b>3.</b> 분양권 실제 프리미엄(P) 추적 · <b>4.</b> 중도금 대출 가능 여부·이자·LTV/DSR · <b>5.</b> 취득세와 보유·양도 비용 · <b>6.</b> 학교/역/트램/도로 호재를 계획·확정·착공·개통으로 구분 · <b>7.</b> 계약률·미계약 반복횟수 · <b>8.</b> 입주 시점 예상 전세 공급까지 붙여야 실제 투자금과 하방위험을 제대로 비교할 수 있습니다.</div></div>';
@@ -142,6 +229,19 @@ mount.addEventListener("click",e=>{
   const c=e.target.closest("button[data-city]"); if(c){city=c.dataset.city;render();return}
   if(e.target.closest("#psReload")){load();return}
 });
-mount.addEventListener("change",e=>{if(e.target&&e.target.id==="psSort"){sort=e.target.value;render()}});
+mount.addEventListener("change",e=>{
+  if(!e.target)return;
+  if(e.target.id==="psSort"){sort=e.target.value;render();return}
+  if(e.target.id==="finProject"){FIN.id=e.target.value;render();return}
+});
+mount.addEventListener("input",e=>{
+  if(!e.target)return;
+  if(e.target.id==="finLtv")FIN.ltv=Math.max(0,Math.min(100,Number(e.target.value)||0));
+  else if(e.target.id==="finRate")FIN.rate=Math.max(0,Number(e.target.value)||0);
+  else if(e.target.id==="finYears")FIN.years=Math.max(1,Number(e.target.value)||1);
+  else if(e.target.id==="finCost")FIN.costRate=Math.max(0,Number(e.target.value)||0);
+  else return;
+  render();
+});
 load();
 })();
