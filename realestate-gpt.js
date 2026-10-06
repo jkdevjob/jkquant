@@ -29,12 +29,12 @@ canvas.gpt-chart{width:100%!important;max-height:330px}
  <div id="gptReStatus" class="gpt-status">데이터 불러오는 중</div>
 </div>
 <div class="gpt-nav" id="gptReNav">
- <button class="on" data-v="overview">큰그림</button>
- <button data-v="history">30년 시장지도</button>
- <button data-v="pattern">패턴 랩</button>
- <button data-v="backtest">백테스트</button>
- <button data-v="paper">현재 모의</button>
- <button data-v="rank">후보 랭킹</button>
+ <button class="on" data-v="overview">시장 요약</button>
+ <button data-v="history">과거 시장</button>
+ <button data-v="pattern">상승 원인 연구</button>
+ <button data-v="backtest">도시지수 실험</button>
+ <button data-v="paper">현재 시장신호</button>
+ <button data-v="rank">지역 조사순위</button>
  <button data-v="data">데이터</button>
 </div>
 <div id="gptReViews">
@@ -136,10 +136,10 @@ function btRow(name,row){
 }
 function renderBacktest(data){
   $("#gptBacktest").innerHTML=`
-   <div class="gpt-panel"><h4>GPT 독립 전략 v1 백테스트</h4>
+   <div class="gpt-panel"><h4>도시 가격지수 타이밍 실험</h4>
    <div class="note">신호는 매월 말까지 확인된 데이터만 사용하고 다음 달 지수에서 체결한 것으로 계산합니다. 매수: 12개월·3개월 모멘텀 모두 양수 + 36개월 고점 대비 -20~0% 구간. 매도: 최소 12개월 보유 후 12개월·3개월 모멘텀 모두 음수. 편도 마찰비용 1.5% 가정.</div>
    <div class="gpt-table-wrap"><table class="gpt-table"><thead><tr><th>지역</th><th>기간</th><th>누적수익</th><th>CAGR</th><th>MDD</th><th>매매횟수</th><th>단순보유</th><th>현재</th></tr></thead><tbody>${btRow("대전",data.daejeon)}${btRow("세종",data.sejong)}</tbody></table></div>
-   <div class="note">이 백테스트는 “도시 가격지수 타이밍 모델”입니다. 실제 아파트 매수는 단지 선택, 취득·중개·보유·양도비용, 대출이자, 공실/전세 리스크가 추가되므로 별도 실거래 백테스트가 필요합니다.</div></div>`;
+   <div class="note">이 화면은 최종 아파트 전략이 아니라 <b>시장 타이밍 연구</b>입니다. 실제 아파트 매수는 단지 선택, 취득·중개·보유·양도비용, 대출이자, 공실/전세 리스크가 추가되므로 별도 실거래 백테스트가 필요합니다.</div></div>`;
 }
 
 function paperCard(name,row){
