@@ -74,12 +74,12 @@ await t('L3 앱 내장 브라우저 감지 — 이름을 아는 앱 + 이름 모
   assert.equal(fs_(iOS+' Mobile/15E148'),null,'홈 화면 앱(standalone)은 내장 화면이 아니다');
 });
 
-await t('L4 Firestore 네트워크는 강제 long-polling이 아니라 자동감지 — 모바일 정상망 성능저하를 피한다',async()=>{
+await t('L4 Firestore 전송은 iOS·앱내장 브라우저만 강제 long-polling, 일반 브라우저는 자동감지',async()=>{
   const pages=['index.html','plan.html','backtest.html','scalping.html','claude.html','ipo.html','job.html','realestate.html','admin.html'];
   for(const p of pages){
     const s=fs.readFileSync(path.join(ROOT,p),'utf8');
-    assert(!/experimentalForceLongPolling\s*:\s*true/.test(s),p+' forced long polling');
-    assert(/experimentalAutoDetectLongPolling\s*:\s*true/.test(s),p+' auto detect missing');
+    assert(/const JK_FORCE_FIRESTORE_LONG_POLLING=\/iPhone\|iPad\|iPod\|NAVER\|KAKAOTALK\|Instagram\|FBAN\|FBAV\|; wv\\\)\/i\.test\(navigator\.userAgent\|\|""\);/.test(s),p+' mobile/webview detector missing');
+    assert(/JK_FORCE_FIRESTORE_LONG_POLLING\?\{experimentalForceLongPolling:true\}:\{experimentalAutoDetectLongPolling:true\}/.test(s),p+' conditional firestore transport missing');
   }
 });
 
