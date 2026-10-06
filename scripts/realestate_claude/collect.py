@@ -89,6 +89,47 @@ ECOS_SERIES = {
 
 ECOS_FROM = "198601"
 
+# ECOS 지역 자료 — (통계표, {지역: 항목코드}, 이름, 단위). 받은 행의 항목 이름(ITEM_NAME1)이 지역 이름과 같아야 한다.
+ECOS_REGIONAL = {
+    "unsold": ("901Y074", {"national": "I410A", "seoul": "I410B", "daejeon": "I410G", "sejong": "I410L"}, "미분양주택(ECOS 8.4.5)", "호"),
+    "permits": ("901Y105", {"national": "ALL", "daejeon": "DEJ", "sejong": "SEJ"}, "주택건설 인허가(ECOS 8.4.6) — 그해 1월부터 누계", "호(누계)"),
+    "rtIndex": ("901Y089", {"national": "100", "daejeon": "900", "sejong": "B00"}, "아파트 매매 실거래가격지수(ECOS 4.4.4)", "지수"),
+}
+ECOS_NAMES = {"national": "전국", "seoul": "서울", "daejeon": "대전", "sejong": "세종"}
+
+# KB(국민은행) — data.kbland.kr · kbland.kr 가 로그인 없는 방문자에게 쓰는 공개 통계 API.
+# 그 화면이 보내는 인자·머리글 그대로 보낸다(빠지면 400). 한 번에 전체 기간(기간=99)이 온다.
+UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0 Safari/537.36"
+KB_STAT = "https://data-api.kbland.kr/bfmstat/weekMnthlyHuseTrnd/"
+KB_LOTS = "https://api.kbland.kr/land-extra/lots/v1/api/aptMovinCnt"
+KB_HEAD_STAT = {"User-Agent": UA, "Accept": "application/json, text/plain, */*", "osType": "HUB",
+                "Origin": "https://data.kbland.kr", "Referer": "https://data.kbland.kr/"}
+KB_HEAD_LOTS = {"User-Agent": UA, "Accept": "application/json, text/plain, */*", "WebService": "1",
+                "Origin": "https://kbland.kr", "Referer": "https://kbland.kr/"}
+# 지역: 키 → (KB 지역코드, KB 지역명, 상위코드 — 구는 대전 아래에서 받는다)
+KB_REGIONS = {
+    "national": ("0000000000", "전국", ""), "seoul": ("1100000000", "서울", ""),
+    "daejeon": ("3000000000", "대전", ""), "sejong": ("3600000000", "세종", ""),
+    "dj_dong": ("3011000000", "동구", "3000000000"), "dj_jung": ("3014000000", "중구", "3000000000"),
+    "dj_seo": ("3017000000", "서구", "3000000000"), "dj_yuseong": ("3020000000", "유성구", "3000000000"),
+    "dj_daedeok": ("3023000000", "대덕구", "3000000000"),
+}
+KB_CITY = ["national", "seoul", "daejeon", "sejong"]
+KB_TABLES = {
+    "kbSale": {"path": "priceIndex", "name": "KB 월간 아파트 매매가격지수", "unit": "지수",
+               "params": {"월간주간구분코드": "01", "매물종별구분": "01", "매매전세코드": "01", "메뉴코드": "1", "type": "false", "기간": "99"}},
+    "kbJeonse": {"path": "priceIndex", "name": "KB 월간 아파트 전세가격지수", "unit": "지수",
+                 "params": {"월간주간구분코드": "01", "매물종별구분": "01", "매매전세코드": "02", "메뉴코드": "1", "type": "false", "기간": "99"}},
+    "kbJr": {"path": "dealCntstTnantRato", "name": "KB 아파트 매매가격 대비 전세가격 비율", "unit": "%", "regions": KB_CITY,
+             "params": {"매물종별구분": "01", "메뉴코드": "1", "type": "false", "기간": "99"}},
+    "kbMarket": {"path": "maktTrnd", "name": "KB 매수우위지수", "unit": "0~200(100=균형 · 클수록 매수자 많음)", "regions": KB_CITY,
+                 "field": "매수우위지수", "params": {"메뉴코드": "01", "월간주간구분코드": "01", "type": "false", "기간": "99"}},
+}
+# 입주물량(예정 포함) — 세종은 '세종시'(3611000000)로 받는다
+KB_MOVEIN = {"daejeon": ("3000000000", "대전"), "dj_dong": ("3011000000", "동구"), "dj_jung": ("3014000000", "중구"),
+             "dj_seo": ("3017000000", "서구"), "dj_yuseong": ("3020000000", "유성구"), "dj_daedeok": ("3023000000", "대덕구"),
+             "sejong": ("3611000000", "세종시")}
+
 
 def ym_add(ym, n):
     y, m = int(ym[:4]), int(ym[4:])
@@ -100,11 +141,11 @@ def ym_dash(ym):
     return ym[:4] + "-" + ym[4:]
 
 
-def get_json(url, tries=5):
+def get_json(url, tries=5, headers=None):
     last = None
     for a in range(tries):
         try:
-            req = urllib.request.Request(url, headers={"User-Agent": "jkquant-realestate/1.0"})
+            req = urllib.request.Request(url, headers=headers or {"User-Agent": "jkquant-realestate/1.0"})
             with urllib.request.urlopen(req, timeout=40) as r:
                 return json.loads(r.read().decode("utf-8"))
         except Exception as e:  # 네트워크·일시 오류만 재시도한다
@@ -187,7 +228,7 @@ def rone_rows_q(stat, where, start, end, expect=None):
     return out
 
 
-def ecos_rows(stat, item, start, end):
+def ecos_rows(stat, item, start, end, expect=None):
     out, i, step = {}, 1, (1000 if ECOS_KEY != "sample" else 10)
     while True:
         url = "%s/%s/json/kr/%d/%d/%s/M/%s/%s/%s" % (ECOS_URL, ECOS_KEY, i, i + step - 1, stat, start, end, item)
@@ -199,6 +240,8 @@ def ecos_rows(stat, item, start, end):
                 break
             raise RuntimeError("ECOS 오류 %s %s: %s" % (stat, item, d.get("RESULT")))
         for r in v["row"]:
+            if expect is not None and r.get("ITEM_NAME1") != expect:
+                raise RuntimeError("ECOS 항목 이름 불일치 %s %s: %r ≠ 기대 %r" % (stat, item, r.get("ITEM_NAME1"), expect))
             if r.get("DATA_VALUE") not in (None, ""):
                 out[r["TIME"]] = float(r["DATA_VALUE"])
         total = int(v["list_total_count"])
@@ -206,6 +249,58 @@ def ecos_rows(stat, item, start, end):
         time.sleep(PAUSE)
         if i > total:
             break
+    return out
+
+
+_kb_cache = {}
+
+
+def kb_table(path, params, parent):
+    """KB 통계 한 번 호출 → {지역코드: (지역명, {YYYYMM: 값})}. 같은 (표·상위지역)은 한 번만 부른다."""
+    key = (path, tuple(sorted(params.items())), parent)
+    if key not in _kb_cache:
+        q = dict(params)
+        q["지역코드"] = parent
+        d = get_json(KB_STAT + path + "?" + urllib.parse.urlencode(q), headers=KB_HEAD_STAT)
+        time.sleep(PAUSE)
+        if (d.get("dataHeader") or {}).get("resultCode") != "10000" or not (d.get("dataBody") or {}).get("data"):
+            raise RuntimeError("KB 오류 %s %s: %s" % (path, parent, str(d)[:200]))
+        _kb_cache[key] = d["dataBody"]["data"]
+    return _kb_cache[key]
+
+
+def kb_rows(path, params, code, name, parent, field=None):
+    """한 지역의 월별 값. dataList 끝에는 변동률 요약이 더 붙어 오므로 날짜 수만큼만 쓴다.
+    지역코드·지역명이 기대와 다르면 멈춘다."""
+    data = kb_table(path, params, parent)
+    dates = data.get("날짜리스트") or []
+    row = next((r for r in data.get("데이터리스트") or [] if r.get("지역코드") == code), None)
+    if row is None:
+        raise RuntimeError("KB 지역 없음 %s %s" % (path, code))
+    if row.get("지역명") != name:
+        raise RuntimeError("KB 지역 이름 불일치 %s %s: %r ≠ 기대 %r" % (path, code, row.get("지역명"), name))
+    out = {}
+    for m, v in zip(dates, (row.get("dataList") or [])[:len(dates)]):
+        if isinstance(v, dict):
+            v = v.get(field)
+        if v not in (None, ""):
+            out[m] = round(float(v), 4)
+    return out
+
+
+def kb_movein(code, name):
+    """월별 아파트 입주 세대수(앞으로 예정분 포함)."""
+    q = {"기간구분": "0", "법정동코드": code}
+    d = get_json(KB_LOTS + "?" + urllib.parse.urlencode(q), headers=KB_HEAD_LOTS)
+    time.sleep(PAUSE)
+    data = (d.get("dataBody") or {}).get("data") or {}
+    if data.get("지역명") != name:
+        raise RuntimeError("KB 입주 지역 이름 불일치 %s: %r ≠ 기대 %r" % (code, data.get("지역명"), name))
+    out = {}
+    for r in data.get("차트데이터") or []:
+        m = str(r.get("일정") or "")
+        if len(m) == 6 and r.get("합계") is not None:
+            out[m] = out.get(m, 0) + float(r["합계"].get("세대수") or 0)
     return out
 
 
@@ -300,6 +395,28 @@ def main():
         if only and name not in only:
             continue
         tasks.append((name, macro, mkey, (lambda s, e, _s=stat, _i=item: ecos_rows(_s, _i, s or ECOS_FROM, e))))
+    for ekey, (stat, items, _, _) in ECOS_REGIONAL.items():
+        bucket = series.setdefault(ekey, {})
+        for rkey, item in items.items():
+            name = "%s:%s" % (ekey, rkey)
+            if only and name not in only:
+                continue
+            tasks.append((name, bucket, rkey, (lambda s, e, _s=stat, _i=item, _x=ECOS_NAMES[rkey]: ecos_rows(_s, _i, s or "200001", e, _x))))
+    for tkey, tinfo in KB_TABLES.items():
+        bucket = series.setdefault(tkey, {})
+        for rkey in tinfo.get("regions") or list(KB_REGIONS):
+            code, kname, parent = KB_REGIONS[rkey]
+            name = "%s:%s" % (tkey, rkey)
+            if only and name not in only:
+                continue
+            tasks.append((name, bucket, rkey, (lambda s, e, _p=tinfo["path"], _q=tinfo["params"], _c=code, _n=kname, _par=parent, _f=tinfo.get("field"):
+                                              kb_rows(_p, _q, _c, _n, _par, _f))))
+    bucket = series.setdefault("movein", {})
+    for rkey, (code, kname) in KB_MOVEIN.items():
+        name = "movein:" + rkey
+        if only and name not in only:
+            continue
+        tasks.append((name, bucket, rkey, (lambda s, e, _c=code, _n=kname: kb_movein(_c, _n))))
     for bucket_name in list(series):  # 설정에서 빠진 지역(예: 개편된 권역)은 원자료에서도 뺀다
         if bucket_name != "macro" and bucket_name in RONE_TABLES:
             allowed = set(RONE_TABLES[bucket_name].get("regions") or REGIONS)
@@ -332,7 +449,12 @@ def main():
             "rone": {"name": "한국부동산원 부동산통계정보(R-ONE) 오픈API", "url": "https://www.reb.or.kr/r-one/",
                      "tables": RONE_TABLES, "note": "월간 조사 · 다음 달 중순 공표"},
             "ecos": {"name": "한국은행 경제통계시스템(ECOS) 오픈API", "url": "https://ecos.bok.or.kr/",
-                     "series": {k: {"stat": v[0], "item": v[1], "name": v[2], "unit": v[3]} for k, v in ECOS_SERIES.items()}},
+                     "series": {k: {"stat": v[0], "item": v[1], "name": v[2], "unit": v[3]} for k, v in ECOS_SERIES.items()},
+                     "regional": {k: {"stat": v[0], "items": v[1], "name": v[2], "unit": v[3]} for k, v in ECOS_REGIONAL.items()}},
+            "kb": {"name": "KB부동산 데이터허브(국민은행) 주택가격동향 · 입주물량", "url": "https://data.kbland.kr/",
+                   "tables": {k: {"path": v["path"], "name": v["name"], "unit": v["unit"]} for k, v in KB_TABLES.items()},
+                   "movein": {"path": "aptMovinCnt", "name": "KB 아파트 입주물량(월별 세대수 · 예정 포함)", "unit": "세대"},
+                   "note": "주택가격동향은 매월 중순 조사 · 다음 달 공표. 입주물량의 미래 달은 예정(분양 때 공개)"},
         },
         "regions": {k: {"label": v[0], "group": v[1], "codes": v[2], "name": v[3]} for k, v in REGIONS.items()},
         "series": series,

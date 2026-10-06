@@ -93,9 +93,10 @@ console.log('[부동산 클로드 엔진] 결정 사슬 · 정산');
 }
 
 console.log('[부동산 클로드 엔진] 룩어헤드 금지');
-function lookaheadCheck(doc,cut,tag){
+function lookaheadCheck(doc,cut,tag,wfn){
+  wfn=wfn||E.walkForward;
   const D1=E.prepare(doc),D2=E.prepare(perturbAfter(doc,cut));
-  const w1=E.walkForward(D1),w2=E.walkForward(D2),K=E.ymk(cut),lag=E.DEFAULTS.lag;
+  const w1=wfn(D1),w2=wfn(D2),K=E.ymk(cut),lag=E.DEFAULTS.lag;
   const sameSel=w1.years.filter(y=>y*12-lag<=K).every(y=>w2.sel[y]&&w1.sel[y].id===w2.sel[y].id&&near(w1.sel[y].table[0].score,w2.sel[y].table[0].score,1e-12));
   const d1=w1.meta.decisions.filter(x=>E.ymk(x.data)<=K),d2=w2.meta.decisions.filter(x=>E.ymk(x.data)<=K);
   const sameDec=d1.length>0&&d1.length===d2.length&&d1.every((x,i)=>x.target===d2[i].target&&x.cand===d2[i].cand);
@@ -141,6 +142,28 @@ console.log('[부동산 클로드 엔진] 참고 전망 · 지가 잇기');
   ok('지가 잇기: 2005년 전은 분기 값, 겹치는 달은 월간 값', E.kym(L.k0)==='2004-12'&&JSON.stringify(L.v)===JSON.stringify([60.3,60.4,60.5,60.9]),JSON.stringify(L.v));
 }
 
+console.log('[부동산 클로드 엔진] 공급 · 인허가 · 미분양');
+{
+  // 인허가: 그해 1월부터 누계 → 달마다 값
+  const D=E.prepare({series:{permits:{daejeon:{start:'2020-01',v:[10,25,30,null,null,null,null,null,null,null,null,40,7,9]}}}});
+  const pm=['2020-01','2020-02','2020-03','2020-12','2021-01','2021-02'].map(m=>E.permitsMonthly(D,'daejeon',E.ymk(m)));
+  ok('인허가 누계 → 월별: 1월은 그대로, 그 뒤는 전달 누계와의 차이(1월에 다시 시작)', JSON.stringify(pm)===JSON.stringify([10,15,5,null,7,2]),JSON.stringify(pm));
+  // 입주: 10년 동안 달마다 100세대, 앞으로 12개월은 달마다 200세대 → 2배
+  const v=[]; for(let i=0;i<120;i++) v.push(100); for(let i=0;i<12;i++) v.push(200);
+  const D2=E.prepare({series:{movein:{daejeon:{start:'2010-01',v}}}}),t=E.ymk('2019-12');
+  ok('입주 비율 = 앞으로 12개월 입주 ÷ 지난 10년 연평균 (달마다 100 → 200 이면 2.0)', near(E.supplyRatio(D2,'daejeon',t),2,1e-12));
+  const v3=v.slice(); v3[5]=null; v3[121]=null;  // 범위 안 빈 달 = 0세대
+  const D3=E.prepare({series:{movein:{daejeon:{start:'2010-01',v:v3}}}});
+  ok('입주: 범위 안의 빈 달은 0세대로 센다', near(E.supplyRatio(D3,'daejeon',t),(2400-200)/((12000-100)/10),1e-12));
+  ok('입주: 앞으로 12개월이 자료 범위를 넘으면 모름(null)', E.supplyRatio(D2,'daejeon',t+1)===null);
+  const D5=E.prepare({series:{movein:{daejeon:{start:'2010-01',v:v.concat([300])},dj_dong:{start:'2015-01',v:[50,null,70]}}}});
+  ok('입주: 구 자료가 일찍 끝나도 KB 일정 범위(가장 이른 달~가장 먼 예정 달) 안이면 0세대', E.moveinAt(D5,'dj_dong',E.ymk('2020-06'))===0
+     &&E.moveinAt(D5,'dj_dong',E.ymk('2014-06'))===0&&E.moveinAt(D5,'dj_dong',E.ymk('2015-03'))===70&&E.moveinAt(D5,'dj_dong',E.ymk('2021-02'))===null);
+  const D4=E.prepare({series:{unsold:{daejeon:{start:'2020-01',v:[100,0,0,0,0,0,0,0,0,0,0,0,150]}}}});
+  ok('미분양 1년 변화 = 지금 ÷ 1년 전 − 1', near(E.unsoldChange(D4,'daejeon',E.ymk('2021-01')),0.5,1e-12));
+  ok('대전 구는 시 단위 자료에 대전 값을 쓴다', E.cityOf('dj_yuseong')==='daejeon'&&E.cityOf('sejong')==='sejong');
+}
+
 console.log('[부동산 클로드 엔진] 모의장부 — 덧붙이기만 · 백테와 같은 값');
 function ledgerCheck(doc,t0,t1,t2,tag){
   const a=E.paperUpdate(null,E.prepare(truncateAfter(doc,t0)),{},'t0').ledger;
@@ -170,6 +193,13 @@ if(fs.existsSync(real)){
   lookaheadCheck(doc,'2016-06','실제');
   lookaheadCheck(doc,E.kym(D.lastK-14),'실제');
   ledgerCheck(doc,E.kym(D.lastK-30),E.kym(D.lastK-17),E.kym(D.lastK),'실제');
+  if(D.kbSale&&D.kbSale.daejeon){
+    lookaheadCheck(doc,'2008-06','장기(KB 대전)',E.walkForwardLong);
+    lookaheadCheck(doc,'2019-03','장기(KB 대전)',E.walkForwardLong);
+    const wl=E.walkForwardLong(D);
+    ok('장기 검증: 학습은 1996-01 부터(예금 금리 자료 시작) · 투자 대상은 대전 전체 하나',
+       wl&&wl.firstRet==='1996-01'&&wl.meta.rows.every(x=>x.pos===null||x.pos==='daejeon')&&wl.sel[wl.years[0]].trainFrom==='1996-01');
+  }
 }
 
 console.log(`\n결과: ${pass} PASS / ${fail} FAIL`);

@@ -7,7 +7,7 @@ const ROOT_ID='rec-root',DATA='/data/realestate/claude/';
 const COLORS={daejeon:'#8b8cf0',dj_dong:'#f87b8c',dj_jung:'#f5c451',dj_seo:'#36d399',dj_yuseong:'#5ec8f2',dj_daedeok:'#c29cf5',
   sejong:'#ff9f43',national:'#9aa6c9',seoul:'#59627f',metro5:'#7d86a8',cheongju:'#88a',cheonan:'#a88',gongju:'#8a8',gyeryong:'#aa8'};
 const st={tab:'sum',region:'daejeon',real:false,opts:{},charts:{}};
-let DOC=null,PAPER=null,D=null,WF=null,SNAP=null;
+let DOC=null,PAPER=null,D=null,WF=null,SNAP=null,WFL=null;
 
 /* ── 꾸밈(클로드 칸 안에서만) ── */
 const CSS=`
@@ -56,7 +56,7 @@ const wonM=x=>x==null||!isFinite(x)?'–':Math.round(x/1e4).toLocaleString('ko-K
 const cls=x=>x==null?'':(x>=0?'up':'dn');
 const esc=s=>String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 const L=r=>r?E.label(D,r):'현금(예금)';
-function fmtF(fmt,x){ return fmt==='pct'?pct(x):fmt==='pp'?pp(x):fmt==='pp1'?(x==null?'–':(x>=0?'+':'')+x.toFixed(2)+'%p'):num(x,1); }
+function fmtF(fmt,x){ return fmt==='pct'?pct(x):fmt==='pp'?pp(x):fmt==='pp1'?(x==null?'–':(x>=0?'+':'')+x.toFixed(2)+'%p'):fmt==='x'?(x==null?'–':num(x,2)+'배'):num(x,1); }
 
 /* ── 그래프 ── */
 function chart(id,labels,datasets,o){
@@ -64,7 +64,7 @@ function chart(id,labels,datasets,o){
   const el=document.getElementById(id); if(!el||!window.Chart) return;
   const fy=o.fmt||(v=>v);
   st.charts[id]=new Chart(el.getContext('2d'),{type:o.type||'line',data:{labels,datasets},
-    options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},animation:{duration:200},spanGaps:true,
+    options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},animation:false,spanGaps:true,
       elements:{point:{radius:0,hitRadius:6},line:{borderWidth:1.6}},
       plugins:{legend:{labels:{color:'#9aa6c9',boxWidth:10,font:{size:10.5}}},
         tooltip:{backgroundColor:'#1c2238',borderColor:'#2e3754',borderWidth:1,titleColor:'#9aa6c9',bodyColor:'#e8ecf7',
@@ -81,18 +81,19 @@ function ds(label,data,color,extra){ return Object.assign({label,data,borderColo
 function compute(){
   D=E.prepare(DOC);
   WF=E.walkForward(D,st.opts);
+  WFL=E.walkForwardLong(D,st.opts);
   SNAP=E.snapshot(D,st.opts);
 }
 
 /* ── 칸들 ── */
-const TABS=[['sum','요약'],['hist','30년 흐름'],['why','사이클·원인'],['strat','전략 검증'],['paper','모의투자'],['data','데이터·가정']];
+const TABS=[['sum','요약'],['hist','40년 흐름'],['why','사이클·원인'],['sup','공급·수급'],['strat','전략 검증'],['paper','모의투자'],['data','데이터·가정']];
 function render(){
   const root=document.getElementById(ROOT_ID); if(!root) return;
   Object.keys(st.charts).forEach(k=>{ st.charts[k].destroy(); delete st.charts[k]; });
   root.innerHTML='<div class="sub2">'+TABS.map(t=>'<button class="chip'+(st.tab===t[0]?' on':'')+'" data-rt="'+t[0]+'">'+t[1]+'</button>').join('')+'</div><div id="rec-body"></div>';
   root.querySelectorAll('[data-rt]').forEach(b=>b.onclick=()=>{ st.tab=b.getAttribute('data-rt'); render(); });
   const body=document.getElementById('rec-body');
-  try{ ({sum:renderSum,hist:renderHist,why:renderWhy,strat:renderStrat,paper:renderPaper,data:renderData})[st.tab](body); }
+  try{ ({sum:renderSum,hist:renderHist,why:renderWhy,sup:renderSup,strat:renderStrat,paper:renderPaper,data:renderData})[st.tab](body); }
   catch(e){ body.innerHTML='<div class="warn">화면을 그리지 못했습니다: '+esc(e.message||e)+'</div>'; console.error(e); }
 }
 
@@ -166,9 +167,17 @@ function renderSum(el){
       +'<div class="kv"><span>현금(예금)</span><b>'+pct(c&&c.cagr)+'</b></div>'
       +'<div class="kv"><span>최대낙폭 전략 / 대전</span><b>'+pct0(m.mdd)+' / '+pct0(b&&b.mdd)+'</b></div>'
       +'<div class="kv"><span>3억 → 전략 / 대전</span><b>'+won(m.end)+' / '+won(b&&b.end)+'</b></div>'
+      +(WFL&&WFL.bench.daejeon?'<div class="kv"><span>장기 · 대전 전체(KB) '+esc(WFL.oosFrom.slice(0,4))+'~</span><b>보유 '+pct(WFL.bench.daejeon.stats.cagr)+' / 전략 '+pct(WFL.meta.stats.cagr)+'</b></div>':'')
       +'<div class="note">해마다 그해 1월에 볼 수 있던 자료로만 전략을 골라 다음 1년에 적용했습니다(미래 자료 미사용).</div>';
   }
   h+='</div></div>';
+  const mkF=E.factorStudy(D,{h:12}).find(f=>f.id==='market'),mkNow=r=>E.at(D.kbMarket[r],E.lastK(D.kbMarket[r])),mkB=v=>!mkF||!mkF.buckets.length||v==null?null:mkF.buckets[v<=mkF.q1?0:v<=mkF.q2?1:2];
+  const usNow=r=>{ const k=E.lastK(D.unsold[r]); return k==null?null:{v:E.at(D.unsold[r],k),c:E.unsoldChange(D,r,k),m:E.kym(k)}; };
+  h+='<div class="card"><h3>🏗️ 공급·수급 체크 — 지금</h3>'+supplyTable(supplyRows())
+    +'<div class="grid" style="margin-top:8px">'+['daejeon','sejong'].map(r=>{ const v=mkNow(r),b=mkB(v),u=usNow(r);
+      return '<div><div class="kv"><span>'+esc(L(r))+' KB 매수우위</span><b>'+num(v,1)+(b?' <span class="note">→ 과거 이 구간 뒤 12개월 '+pct(b.avg)+'</span>':'')+'</b></div>'
+        +(u?'<div class="kv"><span>'+esc(L(r))+' 미분양('+esc(u.m)+')</span><b>'+Math.round(u.v).toLocaleString('ko-KR')+'호 · 1년 '+pct(u.c)+'</b></div>':'')+'</div>'; }).join('')+'</div>'
+    +'<div class="note">입주 예정은 KB(분양 때 공개된 일정). 매수우위 100 = 균형, 낮을수록 팔려는 사람이 많다. 자세한 그래프는 ‘공급·수급’ 칸.</div></div>';
   const ol=E.outlook(D);
   h+='<div class="card"><h3>🗺️ 지역별 참고 전망 — 지금 지표가 과거에 어땠나 (실험적)</h3><p class="lead">'+esc(ol.dataMonth)+' 지표가 과거 어느 구간(하위·중위·상위 1/3)에 해당하는지 보고, 그 구간에서 <b>이후 12개월 평균</b>이 얼마였는지 지표별로 모아 단순 평균했습니다. 전략 판단과 별개의 참고값입니다.</p>'
     +'<div class="tw"><table><tr><th>지역</th><th>참고 평균</th>'+ol.factors.map(f=>'<th class="l">'+esc(f.label)+'</th>').join('')+'</tr>'
@@ -190,18 +199,23 @@ function topScores(scores,cand){
 
 function renderHist(el){
   const t=D.lastK;
-  let h='<div class="card"><h3>📈 아파트 매매가격지수 (2026년 1월 = 100)</h3>'
+  let h='<div class="card"><h3>🕰️ 대전 아파트 40년 — KB 매매가격지수 (1986~)</h3>'
     +'<div class="row"><button class="btn'+(st.real?'':' on')+'" data-real="0">명목</button><button class="btn'+(st.real?' on':'')+'" data-real="1">실질(물가 차감)</button></div>'
+    +'<div class="cv"><canvas id="rc-kb"></canvas></div><div class="note">KB국민은행 월간 아파트 매매가격지수(로그 눈금). 대전은 1986년, 대전 구는 2003년 6월, 세종은 2013년 4월부터.</div></div>';
+  h+='<div class="card"><h3>📈 구별·세종 — 한국부동산원 아파트 매매가격지수 (2026년 1월 = 100)</h3>'
     +'<div class="cv"><canvas id="rc-sale"></canvas></div><div class="note">한국부동산원 월간 아파트 매매가격지수. 대전·5개 구는 2003년 11월, 세종은 2012년 11월부터. 실질은 소비자물가로 나눠 지금 물가 기준으로 바꾼 값.</div></div>';
   h+='<div class="card"><h3>🗺️ 30년 땅값 — 지역별 지가지수 (1994년 말~)</h3><div class="cv"><canvas id="rc-land"></canvas></div><div class="note">아파트 지수가 없는 2003년 이전 흐름은 땅값(한국부동산원 지역별 지가지수)으로 봅니다. 2004년까지는 분기, 2005년부터 월간. 세종은 출범(2012) 이후.</div></div>';
   h+='<div class="card"><h3>🏦 금리와 대전 아파트 1년 상승률</h3><div class="cv"><canvas id="rc-rate"></canvas></div></div>';
   h+='<div class="card"><h3>🔁 전세가율 (매매가 대비 전세가)</h3><div class="cv"><canvas id="rc-jr"></canvas></div><div class="note">2012년부터 공표치, 그 전(점선)은 전세·매매 지수 비로 거꾸로 이은 추정.</div></div>';
-  h+='<div class="card"><h3>📌 주요 사건과 그 뒤 12개월</h3><div class="tw"><table><tr><th>달</th><th class="l">사건</th><th>대전</th><th>세종</th></tr>'
-    +E.EVENTS.map(ev=>{ const k=E.ymk(ev.m),a=E.chg(D.sale.daejeon,Math.min(k+12,t),Math.min(12,t-k)),b=E.chg(D.sale.sejong,Math.min(k+12,t),Math.min(12,t-k));
+  h+='<div class="card"><h3>📌 주요 사건과 그 뒤 12개월</h3><div class="tw"><table><tr><th>달</th><th class="l">사건</th><th>대전(KB)</th><th>세종</th></tr>'
+    +E.EVENTS.map(ev=>{ const k=E.ymk(ev.m),a=E.chg(D.kbSale.daejeon||D.sale.daejeon,Math.min(k+12,t),Math.min(12,t-k)),b=E.chg(D.sale.sejong,Math.min(k+12,t),Math.min(12,t-k));
       return '<tr><td>'+ev.m+'</td><td class="l"><span class="tag">'+esc(ev.g)+'</span>'+esc(ev.t)+'</td><td class="'+cls(a)+'">'+(k<t?pct(a):'–')+'</td><td class="'+cls(b)+'">'+(k<t?pct(b):'–')+'</td></tr>'; }).join('')
     +'</table></div><div class="note">사건 달부터 12개월 뒤까지의 지수 변동입니다. 같은 시기 금리·공급 등 다른 원인이 섞여 있어 인과로 읽으면 안 됩니다. 사건 날짜는 정부 발표·언론 보도 기준(월 단위).</div></div>';
   el.innerHTML=h;
   el.querySelectorAll('[data-real]').forEach(b=>b.onclick=()=>{ st.real=b.getAttribute('data-real')==='1'; render(); });
+  const kbR=['daejeon','seoul','national','sejong'].filter(r=>D.kbSale[r]),kk1=E.lastK(D.kbSale.daejeon),kk0=E.ymk('1986-01'),klab=months(kk0,kk1);
+  chart('rc-kb',klab,kbR.map(r=>{ const s0=st.real?E.realSeries(D.kbSale[r],D.macro.cpi):D.kbSale[r];
+    return ds('KB '+L(r),lineOf(s0,kk0,kk1),COLORS[r],{borderWidth:r==='daejeon'?2.6:1.3,borderDash:r==='national'||r==='seoul'?[4,3]:undefined}); }),{fmt:v=>num(v,0),log:true});
   const regs=['daejeon','dj_dong','dj_jung','dj_seo','dj_yuseong','dj_daedeok','sejong','national','seoul'];
   const k0=E.ymk('2003-11'),lab=months(k0,t);
   chart('rc-sale',lab,regs.filter(r=>D.sale[r]).map(r=>{ const s=st.real?E.realSeries(D.sale[r],D.macro.cpi):D.sale[r];
@@ -225,7 +239,15 @@ function renderHist(el){
 function renderWhy(el){
   const r=st.region,cs=E.cycles(D,r,st.opts),fs=E.factorStudy(D,{h:12}),fs24=E.factorStudy(D,{h:24});
   const opts=['daejeon'].concat(E.UNIVERSE).map(k=>'<option value="'+k+'"'+(k===r?' selected':'')+'>'+esc(L(k))+'</option>').join('');
-  let h='<div class="card"><h3>🔁 상승·하락 사이클</h3><div class="row"><select id="rc-reg">'+opts+'</select></div>'
+  const lc=D.kbSale.daejeon?E.cycles(D,'daejeon',Object.assign({},st.opts,{src:'kbSale'})):[];
+  let h='<div class="card"><h3>🕰️ 대전 40년 사이클 (KB, 1986~) — 그 사이에 있었던 일</h3>'
+    +'<div class="tw"><table><tr><th>구간</th><th>개월</th><th>변동</th><th>연율</th><th>실질</th><th>기준금리</th><th>전세 변동</th><th>시작 때 입주(앞 12개월)</th><th>시작 때 매수우위</th><th class="l">그 사이 사건(참고)</th></tr>'
+    +lc.map(c=>{ const a=E.ymk(c.from),b=E.ymk(c.to),ev=E.EVENTS.filter(x=>{ const k=E.ymk(x.m); return k>=a&&k<b; });
+      return '<tr><td>'+(c.type==='up'?'▲ ':'▼ ')+c.from+' → '+c.to+(c.open?' (진행)':'')+'</td><td>'+c.months+'</td><td class="'+cls(c.change)+'">'+pct(c.change)+'</td><td class="'+cls(c.cagr)+'">'+pct(c.cagr)+'</td><td class="'+cls(c.real)+'">'+pct(c.real)+'</td>'
+        +'<td>'+(c.rateFrom==null?'–':num(c.rateFrom,2)+'→'+num(c.rateTo,2))+'</td><td class="'+cls(c.jeonseChange)+'">'+pct(c.jeonseChange)+'</td><td>'+fmtF('x',c.atStart.supply)+'</td><td>'+num(c.atStart.market,0)+'</td>'
+        +'<td class="l">'+ev.map(x=>'<span class="tag">'+esc(x.m)+'</span>'+esc(x.t)).join('<br>')+'</td></tr>'; }).join('')
+    +'</table></div><div class="note">KB 대전 아파트 지수의 고점·저점에서 '+Math.round(E.DEFAULTS.zigzag*100)+'% 이상 되돌리면 국면이 바뀐 것으로 본 사후 판정입니다. 사건은 같은 시기에 있었던 일을 나란히 둔 것이라 원인이라고 단정할 수 없습니다. 기준금리는 1999년 5월부터.</div></div>';
+  h+='<div class="card"><h3>🔁 상승·하락 사이클 — 구별·세종 (한국부동산원, 2003~)</h3><div class="row"><select id="rc-reg">'+opts+'</select></div>'
     +'<div class="tw"><table><tr><th>구간</th><th>개월</th><th>변동</th><th>연율</th><th>실질</th><th>기준금리</th><th>전세 변동</th><th>시작 때 전세−매매(12개월)</th><th>시작 때 금리 1년 변화</th><th>시작 때 거래량 증가</th><th>시작 때 외지인 비중</th></tr>'
     +cs.map(c=>'<tr><td>'+(c.type==='up'?'▲ ':'▼ ')+c.from+' → '+c.to+(c.open?' (진행)':'')+'</td><td>'+c.months+'</td><td class="'+cls(c.change)+'">'+pct(c.change)+'</td><td class="'+cls(c.cagr)+'">'+pct(c.cagr)+'</td><td class="'+cls(c.real)+'">'+pct(c.real)+'</td>'
       +'<td>'+num(c.rateFrom,2)+'→'+num(c.rateTo,2)+'</td><td class="'+cls(c.jeonseChange)+'">'+pct(c.jeonseChange)+'</td><td>'+pp(c.atStart.jgap12)+'</td><td>'+(c.atStart.rate12==null?'–':(c.atStart.rate12>=0?'+':'')+c.atStart.rate12.toFixed(2)+'%p')+'</td><td>'+pct(c.atStart.volG)+'</td><td>'+pct0(c.atStart.out)+'</td></tr>').join('')
@@ -250,6 +272,47 @@ function renderWhy(el){
       ds('외지인 매입 비중(오른쪽 축)',lab.map((_,i)=>{ const x=E.outShare(D,r,k0+i); return x==null?null:x*100; }),'#f5c451',{borderDash:[4,3],yAxisID:'y2'})],{fmt:v=>Math.round(v).toLocaleString('ko-KR'),y2:v=>num(v,0)+'%'}); }
 }
 
+function supplyRows(){
+  const t=D.lastK;
+  return ['daejeon','dj_dong','dj_jung','dj_seo','dj_yuseong','dj_daedeok','sejong'].filter(r=>D.movein[r]).map(r=>{
+    const past=E.moveinSum(D,r,t-119,t);
+    return {r,avg:past==null?null:past/10,n12:E.moveinSum(D,r,t+1,t+12),n24:E.moveinSum(D,r,t+1,t+24),ratio:E.supplyRatio(D,r,t)}; });
+}
+function supplyTable(rows){
+  return '<div class="tw"><table><tr><th>지역</th><th>지난 10년 연평균</th><th>앞으로 12개월</th><th>÷ 연평균</th><th>앞으로 24개월</th><th>÷ 연평균×2</th></tr>'
+    +rows.map(x=>{ const r24=x.n24!=null&&x.avg>0?x.n24/(x.avg*2):null;
+      return '<tr><td>'+esc(L(x.r))+'</td><td>'+(x.avg==null?'–':Math.round(x.avg).toLocaleString('ko-KR'))+'세대</td><td>'+(x.n12==null?'–':Math.round(x.n12).toLocaleString('ko-KR'))+'</td>'
+        +'<td class="'+(x.ratio==null?'':x.ratio>1.2?'dn':x.ratio<0.8?'up':'')+'"><b>'+fmtF('x',x.ratio)+'</b></td><td>'+(x.n24==null?'–':Math.round(x.n24).toLocaleString('ko-KR'))+'</td>'
+        +'<td class="'+(r24==null?'':r24>1.2?'dn':r24<0.8?'up':'')+'">'+fmtF('x',r24)+'</td></tr>'; }).join('')+'</table></div>';
+}
+function renderSup(el){
+  const t=D.lastK,R=E.moveinRange(D),ty=Math.floor(t/12),fs=E.factorStudy(D,{h:12}).filter(f=>['supply','unsold12','permits','market'].indexOf(f.id)>=0);
+  let h='<div class="card"><h3>🏗️ 아파트 입주물량 — 연도별 (KB, '+(R?Math.floor(R[1]/12):'')+'년까지 예정 포함)</h3><div class="cv"><canvas id="rc-mv"></canvas></div>'
+    +'<div class="note">옅은 막대는 아직 오지 않은 해(입주 예정 — 분양 때 공개). 올해는 지난달까지 실적 + 남은 달 예정.</div>'
+    +'<h4>지역별 — 앞으로 입주 예정 ('+esc(E.kym(t))+' 기준)</h4>'+supplyTable(supplyRows())
+    +'<div class="note">빨강 = 평소보다 20% 넘게 많음(가격에 부담), 초록 = 20% 넘게 적음. 대전 구는 KB 구 자료, 세종은 세종시 전체.</div></div>';
+  h+='<div class="card"><h3>📦 미분양 · 인허가 (한국은행 ECOS)</h3><div class="cv"><canvas id="rc-us"></canvas></div><div class="cv" style="margin-top:8px"><canvas id="rc-pm"></canvas></div>'
+    +'<div class="note">미분양은 달말 재고(호). 인허가는 최근 12개월 합(호) — 아파트는 인허가 2~3년 뒤 입주가 몰린다.</div></div>';
+  h+='<div class="card"><h3>🧭 KB 매수우위지수 (100 = 균형 · 클수록 사려는 사람이 많음)</h3><div class="cv"><canvas id="rc-mk"></canvas></div></div>';
+  h+='<div class="card"><h3>🧩 이 지표들이 다음 12개월을 알려 줬나</h3><div class="tw"><table><tr><th class="l">지표</th><th>낮음</th><th>중간</th><th>높음</th><th>순위상관</th><th>표본</th><th>기간</th></tr>'
+    +fs.map(f=>f.buckets.length?'<tr><td class="l">'+esc(f.label)+(f.post?' <span class="tag">사후 실적</span>':'')+'<div class="note">경계 '+fmtF(f.fmt,f.q1)+' / '+fmtF(f.fmt,f.q2)+'</div></td><td class="'+cls(f.buckets[0].avg)+'">'+pct(f.buckets[0].avg)+'</td><td class="'+cls(f.buckets[1].avg)+'">'+pct(f.buckets[1].avg)+'</td><td class="'+cls(f.buckets[2].avg)+'">'+pct(f.buckets[2].avg)+'</td><td>'+num(f.rho,2)+'</td><td>'+f.n+'</td><td>'+f.from+'~'+f.to+'</td></tr>'
+      :'<tr><td class="l">'+esc(f.label)+'</td><td colspan="6" class="l note">표본 부족('+f.n+')</td></tr>').join('')
+    +'</table></div><div class="note">대전 5개 구·세종·대전 전체를 달마다 모은 통계. ‘사후 실적’: 과거 시점의 ‘앞으로 입주’는 그때의 예정 대신 실제 입주로 셌습니다(분양 때 대부분 공개되지만 지연·취소는 반영 못 함). 미분양·인허가·매수우위는 시 단위라 대전 구에는 대전 값을 씁니다.</div></div>';
+  el.innerHTML=h;
+  if(R){ const y0=Math.max(Math.floor(R[0]/12),1990),y1=Math.floor(R[1]/12),ys=[]; for(let y=y0;y<=y1;y++) ys.push(y);
+    const ysum=(r,y)=>{ let a=0; for(let m=0;m<12;m++){ const x=E.moveinAt(D,r,y*12+m); if(x==null) return null; a+=x; } return a; };
+    const col=(c,y)=>y>ty?c+'55':c;
+    chart('rc-mv',ys.map(String),[ds('대전',ys.map(y=>ysum('daejeon',y)),COLORS.daejeon,{type:'bar',borderWidth:0,backgroundColor:ys.map(y=>col('#8b8cf0',y))}),
+      ds('세종',ys.map(y=>ysum('sejong',y)),COLORS.sejong,{type:'bar',borderWidth:0,backgroundColor:ys.map(y=>col('#ff9f43',y))})],{type:'bar',fmt:v=>Math.round(v).toLocaleString('ko-KR')}); }
+  const u0=E.ymk('2007-01'),ulab=months(u0,t);
+  chart('rc-us',ulab,[ds('대전 미분양',lineOf(D.unsold.daejeon,u0,t),COLORS.daejeon),ds('세종 미분양',lineOf(D.unsold.sejong,u0,t),COLORS.sejong)],{fmt:v=>Math.round(v).toLocaleString('ko-KR')});
+  const p12=r=>ulab.map((_,i)=>{ let a=0; for(let j=0;j<12;j++){ const x=E.permitsMonthly(D,r,u0+i-j); if(x==null) return null; a+=x; } return a; });
+  chart('rc-pm',ulab,[ds('대전 인허가(12개월 합)',p12('daejeon'),COLORS.daejeon),ds('세종 인허가(12개월 합)',p12('sejong'),COLORS.sejong)],{fmt:v=>Math.round(v).toLocaleString('ko-KR')});
+  const m0=E.ymk('2000-01'),mlab=months(m0,E.lastK(D.kbMarket.daejeon)||t);
+  chart('rc-mk',mlab,[ds('대전',lineOf(D.kbMarket.daejeon,m0,m0+mlab.length-1),COLORS.daejeon,{borderWidth:2.2}),ds('세종',lineOf(D.kbMarket.sejong,m0,m0+mlab.length-1),COLORS.sejong),
+    ds('전국',lineOf(D.kbMarket.national,m0,m0+mlab.length-1),COLORS.national,{borderDash:[4,3]}),ds('균형(100)',mlab.map(()=>100),'#59627f',{borderDash:[2,4],borderWidth:1})],{fmt:v=>num(v,0)});
+}
+
 function renderStrat(el){
   if(!WF){ el.innerHTML='<div class="warn">검증할 자료가 부족합니다.</div>'; return; }
   const o=WF.opts,m=WF.meta;
@@ -264,6 +327,12 @@ function renderStrat(el){
     +rows.map(x=>{ const s=x[1],r=x[2]==='meta'?m:WF.bench[x[2]];
       return '<tr><td>'+esc(x[0])+'</td><td>'+esc(r.rows[0].m)+'~</td><td class="'+cls(s.total)+'">'+pct(s.total)+'</td><td class="'+cls(s.cagr)+'"><b>'+pct(s.cagr)+'</b></td><td>'+pct0(s.mdd)+'</td><td>'+pct0(s.inMarket,0)+'</td><td>'+s.trades+'</td><td>'+wonM(s.fees)+'</td><td>'+won(s.end)+'</td></tr>'; }).join('')
     +'</table></div><div class="note">세종 보유는 세종 지수가 있는 달부터라 기간이 짧습니다. 마지막 보유분은 매도 비용 없이 평가.</div><div class="cv" style="margin-top:8px"><canvas id="rc-eq"></canvas></div></div>';
+  if(WFL){ const lm=WFL.meta.stats,lb=WFL.bench.daejeon&&WFL.bench.daejeon.stats,lcash=WFL.bench.cash.stats,cnt={};
+    WFL.years.forEach(y=>{ const id=WFL.sel[y].id; cnt[id]=(cnt[id]||0)+1; });
+    h+='<div class="card"><h3>🕰️ 장기 검증 — 대전 전체(KB) '+esc(WFL.oosFrom)+' ~ '+esc(WFL.lastRet)+'</h3><p class="lead">같은 후보·같은 방식(해마다 그해 1월에 볼 수 있던 자료로만 고르기)을 KB 대전 전체 지수에 적용했습니다. 예금 금리 자료가 1996년부터라 학습도 1996년부터입니다. 투자 대상이 대전 전체 하나라 ‘언제 사고 팔지’만 봅니다.</p>'
+      +'<div class="tw"><table><tr><th>전략</th><th>누적</th><th>연복리</th><th>최대낙폭</th><th>보유 비율</th><th>매매</th><th>3억 →</th></tr>'
+      +[['🤖 클로드 전략(워크포워드)',lm],['대전 전체 계속 보유',lb],['현금(정기예금 세후)',lcash]].map(x=>'<tr><td>'+esc(x[0])+'</td><td class="'+cls(x[1]&&x[1].total)+'">'+pct(x[1]&&x[1].total)+'</td><td class="'+cls(x[1]&&x[1].cagr)+'"><b>'+pct(x[1]&&x[1].cagr)+'</b></td><td>'+pct0(x[1]&&x[1].mdd)+'</td><td>'+pct0(x[1]&&x[1].inMarket,0)+'</td><td>'+(x[1]?x[1].trades:'–')+'</td><td>'+won(x[1]&&x[1].end)+'</td></tr>').join('')
+      +'</table></div><div class="note">해마다 고른 전략: '+Object.keys(cnt).map(id=>esc(id)+' '+cnt[id]+'년').join(' · ')+'</div><div class="cv" style="margin-top:8px"><canvas id="rc-eql"></canvas></div></div>'; }
   const sens=[0,.1,.25].map(pen=>{ const w=pen===o.penalty?WF:E.walkForward(D,Object.assign({},st.opts,{penalty:pen})); return [pen,w&&w.meta.stats]; });
   h+='<div class="card"><h3>🎚️ 고르는 기준을 바꾸면 (민감도)</h3><p class="lead">해마다 전략을 고르는 점수 = 연복리 − <b>낙폭 벌점</b> × 최대낙폭. 기본 0.25는 결과를 보기 전에 정한 값입니다. 기준에 따라 결과가 크게 달라지면 규칙 선택이 아직 불안정하다는 뜻입니다.</p>'
     +'<div class="tw"><table><tr><th>낙폭 벌점</th><th>연복리</th><th>최대낙폭</th><th>보유 비율</th><th>매매</th><th>3억 →</th></tr>'
@@ -286,6 +355,8 @@ function renderStrat(el){
     st.opts[k]=k==='rent'?v:+v; compute(); render(); });
   const k0=E.ymk(WF.oosFrom),k1=E.ymk(WF.lastRet),lab=months(k0,k1);
   const navLine=(rs)=>{ const mp={}; rs.forEach(x=>mp[x.m]=x.nav); return lab.map(l=>mp[l]==null?null:mp[l]); };
+  if(WFL){ const a0=E.ymk(WFL.oosFrom),a1=E.ymk(WFL.lastRet),llab=months(a0,a1),nl=(rs)=>{ const mp={}; rs.forEach(x=>mp[x.m]=x.nav); return llab.map(l=>mp[l]==null?null:mp[l]); };
+    chart('rc-eql',llab,[ds('클로드 전략',nl(WFL.meta.rows),'#f5c451',{borderWidth:2.6}),ds('대전 전체 보유',nl(WFL.bench.daejeon.rows),COLORS.daejeon),ds('현금',nl(WFL.bench.cash.rows),'#9aa6c9',{borderDash:[4,3]})],{fmt:v=>won(v)}); }
   chart('rc-eq',lab,[ds('클로드 전략',navLine(m.rows),'#f5c451',{borderWidth:2.6}),ds('대전 보유',navLine(WF.bench.daejeon.rows),COLORS.daejeon),
     WF.bench.sejong?ds('세종 보유',navLine(WF.bench.sejong.rows),COLORS.sejong):null,ds('현금',navLine(WF.bench.cash.rows),'#9aa6c9',{borderDash:[4,3]})].filter(Boolean),{fmt:v=>won(v)});
 }
@@ -309,12 +380,15 @@ function renderPaper(el){
 }
 
 function renderData(el){
-  const src=DOC.sources||{},rone=src.rone||{},ecos=src.ecos||{},S=DOC.series||{};
+  const src=DOC.sources||{},rone=src.rone||{},ecos=src.ecos||{},kb=src.kb||{},S=DOC.series||{};
   const cov=(t,r)=>{ const x=S[t]&&S[t][r]; if(!x) return '–'; const k0=E.ymk(x.start); return x.start+' ~ '+E.kym(k0+x.v.length-1); };
   let h='<div class="card"><h3>📚 자료</h3><div class="note">수집 '+esc(DOC.fetchedAt||'')+' · 매달 자동 갱신</div><div class="tw"><table><tr><th class="l">자료</th><th class="l">표</th><th>대전</th><th>유성구</th><th>세종</th></tr>'
     +Object.keys(rone.tables||{}).map(t=>{ const x=rone.tables[t]; return '<tr><td class="l">'+esc(x.name)+'<div class="note">'+esc(x.unit||'')+'</div></td><td class="l">'+esc(x.id)+'</td><td>'+cov(t,'daejeon')+'</td><td>'+cov(t,'dj_yuseong')+'</td><td>'+cov(t,'sejong')+'</td></tr>'; }).join('')
     +Object.keys(ecos.series||{}).map(t=>{ const x=ecos.series[t],m=S.macro&&S.macro[t]; return '<tr><td class="l">'+esc(x.name)+'<div class="note">'+esc(x.unit)+'</div></td><td class="l">ECOS '+esc(x.stat)+'/'+esc(x.item)+'</td><td colspan="3">'+(m?m.start+' ~ '+E.kym(E.ymk(m.start)+m.v.length-1):'–')+'</td></tr>'; }).join('')
-    +'</table></div><div class="note">출처: '+esc(rone.name||'')+' · '+esc(ecos.name||'')+'.</div></div>';
+    +Object.keys(ecos.regional||{}).map(t=>{ const x=ecos.regional[t]; return '<tr><td class="l">'+esc(x.name)+'<div class="note">'+esc(x.unit)+'</div></td><td class="l">ECOS '+esc(x.stat)+'</td><td>'+cov(t,'daejeon')+'</td><td>–</td><td>'+cov(t,'sejong')+'</td></tr>'; }).join('')
+    +Object.keys(kb.tables||{}).map(t=>{ const x=kb.tables[t]; return '<tr><td class="l">'+esc(x.name)+'<div class="note">'+esc(x.unit)+'</div></td><td class="l">KB '+esc(x.path)+'</td><td>'+cov(t,'daejeon')+'</td><td>'+cov(t,'dj_yuseong')+'</td><td>'+cov(t,'sejong')+'</td></tr>'; }).join('')
+    +(kb.movein?'<tr><td class="l">'+esc(kb.movein.name)+'<div class="note">'+esc(kb.movein.unit)+'</div></td><td class="l">KB '+esc(kb.movein.path)+'</td><td>'+cov('movein','daejeon')+'</td><td>'+cov('movein','dj_yuseong')+'</td><td>'+cov('movein','sejong')+'</td></tr>':'')
+    +'</table></div><div class="note">출처: '+esc(rone.name||'')+' · '+esc(ecos.name||'')+' · '+esc(kb.name||'')+'.</div></div>';
   const o=E.DEFAULTS;
   h+='<div class="card"><h3>📐 가정</h3><ul class="f">'
     +'<li><b>시점</b>: 월간 지수는 다음 달 중순에 공표된다. k월 수익에 걸 자리는 k−'+o.lag+'월까지 공표된 자료로만 정한다(룩어헤드 금지).</li>'
@@ -325,8 +399,9 @@ function renderData(el){
     +'<li><b>전략 고르기</b>: 해마다 1월, 그때까지 공표된 자료만으로 후보 '+E.candidates().length+'개(현금 유지 · 대전 보유 포함)를 처음부터 다시 돌려 ‘연복리 − '+o.penalty+'×최대낙폭’ 1위를 그해에 쓴다. 학습 기간 보유 비율이 '+pct0(o.minInMarket,0)+' 미만인 규칙은 사실상 현금이라 뺀다.</li>'
     +'<li><b>투자 단위</b>: 지역 지수를 그대로 따라가는 집 한 채(대출 없음). 실제 단지 수익은 지수와 다를 수 있다.</li></ul></div>';
   h+='<div class="card"><h3>🚧 아직 못 넣은 것 · 다음 단계</h3><ul class="f">'
-    +'<li>아파트 가격지수는 한국부동산원 기준 2003년 11월부터라, 그 전 15년은 지가지수로만 봅니다. KB 시계열(1986~)을 받으면 아파트로 30년을 채울 수 있습니다.</li>'
-    +'<li>국토부 실거래가(단지·동 단위) · 입주물량 · 미분양 · 인구 이동은 이 실행 환경에서 정부 사이트 접속이 막혀 빠졌습니다. 공급(입주물량)은 가격의 큰 원인이라 우선 추가 대상입니다.</li>'
+    +'<li>대전 아파트 40년은 KB 지수(1986~), 구별 비교·전략은 한국부동산원 지수(2003~)를 씁니다. 두 지수는 조사 표본이 달라 값이 조금 다릅니다.</li>'
+    +'<li>국토부 실거래가(단지·동 단위)는 정부 서버가 해외 IP 연결을 끊어 아직 못 넣었습니다. 인구 이동(통계청)은 인증키가 있으면 넣을 수 있습니다.</li>'
+    +'<li>입주·미분양·매수우위는 분석·참고 전망에만 쓰고 모의장부 전략(rec-wf-1)에는 아직 넣지 않았습니다 — 넣으면 전략 버전이 바뀌어 새 장부로 시작해야 합니다.</li>'
     +'<li>대출(LTV)·전세 끼고 사기(갭투자) 변형은 아직 넣지 않았습니다. 기본은 대출 없는 1주택입니다.</li></ul></div>';
   el.innerHTML=h;
 }

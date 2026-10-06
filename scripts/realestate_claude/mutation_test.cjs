@@ -20,13 +20,21 @@ const ENGINE_MUTS=[
   ['2012년 전 전세가율 추정 방향 뒤집힘','return {v:v1*(a/a1)/(b/b1),est:true};','return {v:v1*(b/b1)/(a/a1),est:true};'],
   ['참고 전망 구간 뒤집힘',"const bi=v<=f.q1?0:v<=f.q2?1:2,b=f.buckets[bi];","const bi=v<=f.q1?2:v<=f.q2?1:0,b=f.buckets[bi];"],
   ['사이클 되돌림 폭 무시',"else if(v<=hV*(1-th)){ piv.push({k:hK,v:hV,type:'peak'}); mode=-1; hK=k; hV=v; }","else if(v<hV){ piv.push({k:hK,v:hV,type:'peak'}); mode=-1; hK=k; hV=v; }"],
-  ['지가 잇기에서 분기값이 월간값을 덮음',"const a=at(m,k); v.push(a!=null?a:at(q,k));","const a=at(q,k); v.push(a!=null?a:at(m,k));"]
+  ['지가 잇기에서 분기값이 월간값을 덮음',"const a=at(m,k); v.push(a!=null?a:at(q,k));","const a=at(q,k); v.push(a!=null?a:at(m,k));"],
+  ['인허가 누계를 1월에 다시 시작하지 않음',"const m=k-Math.floor(k/12)*12; if(m===0) return a;","const m=k-Math.floor(k/12)*12;"],
+  ['앞으로 입주에 이번 달 포함(한 달 밀림)',"const ahead=moveinSum(D,r,t+1,t+12)","const ahead=moveinSum(D,r,t,t+11)"],
+  ['구 입주 자료가 끝난 뒤를 모름으로',"const x=at(s,k); return x==null?0:x; }","const x=at(s,k); if(k>lastK(s)) return null; return x==null?0:x; }"],
+  ['장기 검증 학습을 1996년 전부터',"universe:['daejeon'],firstRetMin:'1996-01'}","universe:['daejeon']}"]
 ];
 const COL_MUTS=[
   ['지역 이름 검사 없음','            if expect is not None and got != expect:','            if False:'],
   ['한 달 두 행 검사 없음','            if m in out and r.get("DTA_VAL") is not None:','            if False:'],
   ['소급 수정 감지 없음','    changed = [k for k in overlap if not same(fresh[k], old_rows[k])]','    changed = []'],
   ['분기말 달 잘못','    return "%s%02d" % (q[:4], int(q[4:]) * 3)','    return "%s%02d" % (q[:4], int(q[4:]) * 3 - 2)'],
+  ['KB 변동률 요약까지 값으로 씀','    for m, v in zip(dates, (row.get("dataList") or [])[:len(dates)]):','    for m, v in zip(dates + ["209901", "209902", "209903"], (row.get("dataList") or [])):'],
+  ['KB 지역 이름 검사 없음','    if row.get("지역명") != name:','    if False:'],
+  ['KB 입주 연도 합계도 달로 셈','        if len(m) == 6 and r.get("합계") is not None:','        if r.get("합계") is not None:'],
+  ['ECOS 항목 이름 검사 없음','            if expect is not None and r.get("ITEM_NAME1") != expect:','            if False:'],
   ['이어 받기 시작 달 건너뜀','    s = ym_add(max(out), 1)\n    while s <= end:\n        e = min(ym_add(s, 4), end)\n        rone_call(stat, where, s, e, out, expect)','    s = ym_add(max(out), 2)\n    while s <= end:\n        e = min(ym_add(s, 4), end)\n        rone_call(stat, where, s, e, out, expect)']
 ];
 let killed=0,total=0,bad=[];
