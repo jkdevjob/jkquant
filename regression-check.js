@@ -11430,11 +11430,12 @@ console.log('\n[PERF FAST PATH] 모의 성과 · 단타 오늘 탭');
   const dapi=fs.readFileSync(__d+'/functions/api/scalping-daily-results.js','utf8');
   const ss=extractFn(scl,'function showStrategy(name)');
   const ld=extractFn(scl,'async function loadDailyStrategyResults(force)');
-  ok('단타 오늘은 핵심 결과를 먼저 받고 누적그래프·그림자·4개 연구를 뒤로 미룬다',
+  ok('단타 오늘은 핵심 결과를 먼저 받고 누적그래프·그림자·자동개선·4개 연구를 뒤로 미룬다',
      /Promise\.resolve\(loadDailyStrategyResults\(false\)\)\.finally/.test(ss)
      && /setTimeout\(\(\)=>renderDailyCumulativeChart\(\),0\)/.test(ss)
      && /setTimeout\(\(\)=>loadDaily1Shadow\(false\),80\)/.test(ss)
-     && /setTimeout\(\(\)=>active\.forEach\(x=>loadStrategyScorecard\(x\)\),180\)/.test(ss));
+     && /setTimeout\(\(\)=>loadShadowRankings\(false\),120\)/.test(ss)
+     && /setTimeout\(\(\)=>active\.forEach\(x=>loadStrategyScorecard\(x\)\),220\)/.test(ss));
   ok('단타 오늘 결과는 클라이언트 60초 캐시와 중복요청 합치기를 쓴다',
      /const DAILY_RESULTS_TTL_MS=60000;/.test(scl)
      && /DAILY_RESULTS_PROMISE/.test(ld)
