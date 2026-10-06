@@ -148,25 +148,3 @@ jobs:
           git commit -m "data: opening gap-down research $(TZ=Asia/Seoul date '+%F %H:%M') [skip ci]"
           git pull --rebase origin scalping-data
           git push origin scalping-data
-
-      - name: 🆚 클로드 vs GPT 매일 대결 요약 텔레그램 (평일 18:40 뒤 첫 실행 · 날짜당 한 번 · 실패해도 기록에 영향 없음)
-        # GitHub 예약 실행은 늦거나 빠질 수 있다 — 예약 이름 대신 '평일 18:40 이후 첫 실행'으로 보내고, 보낸 날은 표시 파일로 다시 안 보낸다
-        env:
-          KEY: ${{ secrets.AUTOTRADE_KEY }}
-          JKQ_DATA: data
-        run: |
-          [ -n "$KEY" ] || { echo "::warning::AUTOTRADE_KEY 없음 — 알림 생략"; exit 0; }
-          D=$(TZ=Asia/Seoul date +%F); HM=$(TZ=Asia/Seoul date +%H%M); DOW=$(TZ=Asia/Seoul date +%u)
-          [ "$DOW" -le 5 ] && [ "$HM" -ge 1840 ] || { echo "평일 18:40 전 — 알림 안 함"; exit 0; }
-          MARK="data/claude-lab/duel-sent/$D"
-          [ -f "$MARK" ] && { echo "$D 이미 보냄"; exit 0; }
-          python .app/scripts/claude_lab.py --duel-payload > duel.json || exit 0
-          R=$(curl -sS -X POST https://jkquant.pages.dev/api/claude-telegram -H "content-type: application/json" -H "x-monitor-key: $KEY" --data @duel.json || true)
-          echo "$R"
-          if echo "$R" | grep -q '"ok":true'; then
-            mkdir -p data/claude-lab/duel-sent && echo "$R" > "$MARK"
-            git config user.name "github-actions[bot]"
-            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git add "$MARK" && git commit -m "data: duel telegram sent $D [skip ci]" && git pull --rebase origin scalping-data && git push origin scalping-data || true
-          fi
-

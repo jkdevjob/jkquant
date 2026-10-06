@@ -3,11 +3,7 @@ name: GPT·클로드 단타 대결 요약
 # 국내 장마감 자료가 scalping-data에 확정된 뒤 시도한다.
 # GitHub 지연/클로드 장부 지연에 대비해 백업 시각이 있지만 API가 날짜별 1회만 전송한다.
 on:
-  schedule:
-    - cron: "10 8 * * 1-5"   # 17:10 KST
-    - cron: "40 8 * * 1-5"   # 17:40 KST backup
-    - cron: "10 9 * * 1-5"   # 18:10 KST final backup
-  workflow_dispatch:
+  workflow_dispatch:   # 정규 18:10 KST 발송은 opening Worker 담당. 이 워크플로는 수동 fallback만.
 
 permissions:
   contents: read

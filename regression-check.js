@@ -11117,10 +11117,15 @@ console.log('[SCALPING TELEGRAM] 실시간 신호 · 일일 매매/연구 요약
      !/\/api\/kis\?op=order|opening-execute|method:"POST"[\s\S]{0,100}order/.test(globalWorker));
   ok('BTC·SOXL Worker 배포는 MONITOR_KEY Secret만 전달',
      /secret put MONITOR_KEY/.test(globalDeploy) && !/TELEGRAM_BOT_TOKEN|TELEGRAM_CHAT_ID/.test(globalDeploy));
-  ok('BTC ⑤⑥ 일일 Telegram 연결',
-     /scalping-daily-summary\?strategy=crypto/.test(cryptoYml) && /sections:\[5,6\]/.test(cryptoYml));
-  ok('SOXL ⑤⑥ 일일 Telegram 연결',
-     /scalping-daily-summary\?strategy=soxl/.test(soxlYml) && /sections:\[5,6\]/.test(soxlYml));
+  ok('BTC ⑤⑥ 일일 Telegram은 00:05 KST Worker 마감으로 연결',
+     /if\(k\.hm===5\)await sendCloseSummary\(env,"crypto"/.test(globalWorker)
+     && /"⑤ 오늘 매매이력"/.test(globalWorker)
+     && /"⑥ 검증·분석 기록 · 연구자료 기준 "/.test(globalWorker)
+     && !/scalping-daily-summary\?strategy=crypto/.test(cryptoYml));
+  ok('SOXL ⑤⑥ 일일 Telegram은 16:05 ET Worker 마감으로 연결',
+     /if\(n\.hm===1605&&isNyseSessionDate\(n\.date\)\)/.test(globalWorker)
+     && /sendCloseSummary\(env,"soxl"/.test(globalWorker)
+     && !/scalping-daily-summary\?strategy=soxl/.test(soxlYml));
   const soxlPy=fs.readFileSync(__d+'/scripts/backtest_soxl_intraday.py','utf8');
   const soxlCollector=fs.readFileSync(__d+'/scripts/collect_soxl_data.py','utf8');
   const soxlDoc=fs.readFileSync(__d+'/SOXL_SCALPING.md','utf8');
@@ -11235,10 +11240,10 @@ console.log('[GAPDOWN D-1 / DIP24 D-3] 연구용 모의체결 경로 안전장�
       const ms=Date.parse('2026-10-04T00:00:00Z')+d*864e5+(hh*60+mm)*6e4;       // 2026-10-04 = 일요일(UTC)
       const r=route(ms);if(r)count[r]=(count[r]||0)+1;}}
     const r0=route(Date.parse('2026-10-04T23:56:00Z')),r1=route(Date.parse('2026-10-03T23:56:00Z'));  // 월 08:56 KST / 일 08:56 KST
-    ok('Worker cron 한 줄 + 라우팅: 시초가 스캔 27분×5일·08:56·15:21·15:40 각 5번(주말 0) · 클로드 마감: 국내 15:56 재시도 5 · 코인 매일 00:05~00:31 · SOXL 뉴욕 16:05~16:31 평일(서머타임 자동)',
+    ok('Worker cron 한 줄 + 라우팅: 시초가 스캔 27분×5일·08:56·15:21·15:40 각 5번(주말 0) · 국내 15:56 · 대결 18:10 · 코인 00:05~00:31 · SOXL 뉴욕 16:05~16:31',
        crons.length===1&&count.opening===135&&count.gapdown_preopen===5&&count.gapdown_close===5&&count.gapdown_reconcile===5
-       &&count.claude_kr===5&&count.claude_crypto===27*7&&count.claude_soxl===27*5
-       &&Object.keys(count).length===7&&r0==='gapdown_preopen'&&r1===null
+       &&count.claude_kr===5&&count.duel===5&&count.claude_crypto===27*7&&count.claude_soxl===27*5
+       &&Object.keys(count).length===8&&r0==='gapdown_preopen'&&r1===null
        &&route(Date.parse('2026-10-05T20:05:00Z'))==='claude_soxl'&&route(Date.parse('2026-10-05T21:05:00Z'))===null      // 여름(EDT) 05:05 KST
        &&route(Date.parse('2026-12-07T21:05:00Z'))==='claude_soxl'&&route(Date.parse('2026-12-07T20:05:00Z'))===null      // 겨울(EST) 06:05 KST
        &&route(Date.parse('2026-10-09T20:05:00Z'))==='claude_soxl'&&route(Date.parse('2026-10-10T20:05:00Z'))===null      // 금요일 마감(한국 토요일) · 토요일 없음
@@ -11338,10 +11343,11 @@ console.log('[GAPDOWN D-1 / DIP24 D-3] 연구용 모의체결 경로 안전장�
        &&/return drop_open_session\(/.test(fs.readFileSync(__d+'/scripts/claude_lab.py','utf8')));
   }
   { const lp=fs.readFileSync(__d+'/scripts/claude_lab.py','utf8');
-    ok('🆚 GPT 대결 탭: 실시간 기록끼리(Worker 마감 장부 사본 data/claude-live) · 같은 시작일·비용표 · 두 쪽 다 있는 날만 · 합계 4탭 균등 · 매일 18:40 뒤 알림',
+    ok('🆚 GPT 대결 탭: 실시간 기록끼리 · 같은 시작일·비용표 · 두 쪽 다 있는 날만 · 합계 4탭 균등 · 국내 개장일 18:10 Worker 정시 알림',
        /DUEL_START = "2026-10-05"/.test(lp)&&/    days = sorted\(mine & theirs\)/.test(lp)&&/report\["duel"\] = duel\(\)/.test(lp)
        &&/data-tab="duel"/.test(scl2)&&/function duelPage\(\)/.test(scl2)&&/\$OPENING_WORKER\/claude\?date=\$DATE/.test(wf)
-       &&/\[ "\$HM" -ge 1840 \]/.test(wf)&&/MARK="data\/claude-lab\/duel-sent\/\$D"/.test(wf)&&/claude_lab\.py --duel-payload > duel\.json/.test(wf));
+       &&/if\(hm===1810\)return "duel"/.test(ow)&&/\/api\/scalping-duel/.test(ow)&&/route==="duel"/.test(ow)
+       &&!/duel-sent/.test(wf)&&!/claude_lab\.py --duel-payload > duel\.json/.test(wf));
   }
   { const lv3=fs.readFileSync(__d+'/functions/api/claude-live.js','utf8'),lb3=fs.readFileSync(__d+'/functions/api/claude-lab.js','utf8'),tg3=fs.readFileSync(__d+'/functions/api/claude-telegram.js','utf8');
     ok('단타(클로드) 소유자만: Google 로그인 + /api/owner 판정 화면 · 자료 API 는 소유자 토큰/서버키 없으면 401 · 서버끼리 호출은 감시키',
