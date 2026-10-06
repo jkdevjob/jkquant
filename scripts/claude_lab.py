@@ -481,55 +481,76 @@ def cell(series, d, final_through=None, live=None):
     return series[d] if d in series else "no_trade"
 
 
-def daily_board(report, d1, krx_cal, crypto_full, cal_c):
-    """📅 오늘 탭: 모든 전략의 전일·당일 결과 + 오늘 신호. 시장마다 자기 달력의 마지막 두 거래일."""
-    today = datetime.now(KST).strftime("%Y-%m-%d")
-    try:
-        import FinanceDataReader as fdr
-        kr_cal = sorted(set(krx_cal) | {str(i)[:10] for i in fdr.DataReader("233740", "2026-01-01").index if str(i)[:10] < today
-                                         or int(datetime.now(KST).strftime("%H%M")) >= 1600})
-    except Exception:  # noqa: BLE001
-        kr_cal = sorted(krx_cal)
+def kr_cell(series, d, today, hm, final_through=None, live=None, wait_close=False):
+    """①② 한국 날짜 d: 휴장이면 "holiday". 오늘 장 마감 확정(16:00) 전이면 ① 은 실시간 원본, ② 는 "pending"."""
+    if d > today:
+        return None
+    if krx_closed(d):
+        return "holiday"
+    if wait_close and d == today and hm < 1600:
+        return "pending"
+    return cell(series, d, final_through, live)
+
+
+def coin_cell(series, d, cal):
+    """③ 업비트 하루 d(한국 d 09:00 ~ d+1 09:00, 매수한 날 = 계좌 합산과 같은 날짜). 아직 안 끝난 하루는 "pending"."""
+    if d in set(cal):
+        return series.get(d, "no_trade")
+    return "pending" if not cal or d > max(cal) else None
+
+
+def us_cell(series, d, ucal):
+    """④ 한국 날짜 d = 전날 밤 미국장(뉴욕 d−1) 결과(한국 아침 마감 · 계좌 합산과 같은 날짜). 미국 휴장이면 "holiday"."""
+    nd = (date.fromisoformat(d) - timedelta(days=1)).isoformat()
+    if nd in set(ucal):
+        return series.get(nd, "no_trade")
+    return "pending" if not ucal or nd > max(ucal) else "holiday"
+
+
+def daily_board(report, d1, krx_cal, crypto_full, cal_c, now=None):
+    """📅 오늘 탭: 모든 전략을 같은 한국 날짜(어제 · 오늘)로 — 시장마다 그 한국 날짜에 해당하는 결과를 넣는다.
+    ①② 한국 거래일(휴장이면 휴장) · ③ 업비트 하루(그날 09시 시작) · ④ 전날 밤 미국장 · 전체 = 계좌 합산 날짜(모두 같은 규칙)."""
+    now = now or datetime.now(KST)
+    today, hm = now.strftime("%Y-%m-%d"), int(now.strftime("%H%M"))
+    yd = (date.fromisoformat(today) - timedelta(days=1)).isoformat()
     final_kr = max(krx_cal) if krx_cal else None
-    kp, kl = last_two(kr_cal)
-    cp, cl = last_two(cal_c)
     rows = []
 
-    def add(group, side, name, version, series, prev, last, final_through=None, plan=None, live=None):
-        rows.append(dict(group=group, side=side, name=name, version=version, prevDate=prev, lastDate=last,
-                         prev=cell(series, prev, final_through, live), last=cell(series, last, final_through, live), plan=plan))
+    def add(group, side, name, version, f, plan=None):
+        rows.append(dict(group=group, side=side, name=name, version=version, prevDate=yd, lastDate=today, prev=f(yd), last=f(today), plan=plan))
 
     tabs = report["tabs"]
     wl = read_json(DATA / "opening-gapdown-research/watchlist.json") or {}
     mo, md, mc, ms = (main_for(t) for t in TABS4)
-    add("시초가", "claude", mo["name"], mo["version"], d1, kp, kl, final_kr,
-        plan=f"명단 {len(wl.get('names') or [])}종목 · 08:56 예상갭 확인 (통과 {mo['params']['minQ']}종목 이상일 때 매매)", live=d1_live_status)
+    add("시초가", "claude", mo["name"], mo["version"], lambda d: kr_cell(d1, d, today, hm, final_kr, d1_live_status),
+        plan=f"명단 {len(wl.get('names') or [])}종목 · 08:56 예상갭 확인 (통과 {mo['params']['minQ']}종목 이상일 때 매매)")
     g, gv, _ = gpt_daily("opening")
-    add("시초가", "gpt", "시초가 돌파", ", ".join(gv), g, kp, kl)
-    add("데이트레이딩", "claude", md["name"], md["version"], ETF_PW, kp, kl,
+    add("시초가", "gpt", "시초가 돌파", ", ".join(gv), lambda d, g=g: kr_cell(g, d, today, hm, wait_close=True))
+    add("데이트레이딩", "claude", md["name"], md["version"], lambda d: kr_cell(ETF_PW, d, today, hm, wait_close=True),
         plan=f"15:21 예상 종가 {md['params']['th']:g}% 이하면 종가 매수 → 다음 날 시가 매도".replace("-", "−"))
     g, gv, _ = gpt_daily("daytrading")
-    add("데이트레이딩", "gpt", "데이트레이딩", ", ".join(gv), g, kp, kl)
+    add("데이트레이딩", "gpt", "데이트레이딩", ", ".join(gv), lambda d, g=g: kr_cell(g, d, today, hm, wait_close=True))
     c = tabs.get("crypto") or {}
     nx = c.get("nextSignals") or {}
-    add("비트코인", "claude", mc["name"], mc["version"], {d: v * mc["params"]["tabSize"] for d, v in crypto_full.items()}, cp, cl,
+    cs = {d: v * mc["params"]["tabSize"] for d, v in crypto_full.items()}
+    add("비트코인", "claude", mc["name"], mc["version"], lambda d: coin_cell(cs, d, cal_c),
         plan=" · ".join(f"{m.split('-')[1]} {'돌파 감시' if n.get('trendNext') else '쉼'}" for m, n in nx.items()))
     g, gv, _ = gpt_daily("crypto")
-    add("비트코인", "gpt", "비트코인", ", ".join(gv), g, cp, cl)
+    add("비트코인", "gpt", "비트코인", ", ".join(gv), lambda d, g=g: coin_cell(g, d, cal_c))
     sx = tabs.get("soxl") or {}
     udec = DECISIONS.get("SOXL") or []
+    ucal = sorted({r["date"] for r in udec})
     sdv = {r["date"]: float(r["pnlPct"]) * ms["params"]["tabSize"] for r in udec if r.get("pnlPct") not in (None, "", "None")}
-    sp, sl = last_two([r["date"] for r in udec])
     nx = sx.get("nextSignal") or {}
     plan = {"buy": "다음 미국장 시가 매수", "sell": "다음 미국장 시가 매도"}.get(nx.get("action"), "보유 중" if nx.get("holding") else "쉼 (과매도 신호 없음)")
-    add("SOXL", "claude", ms["name"], ms["version"], sdv, sp, sl, plan=plan + f" · 자금 {ms['params']['tabSize'] * 100:.0f}%")
+    add("SOXL", "claude", ms["name"], ms["version"], lambda d: us_cell(sdv, d, ucal), plan=plan + f" · 자금 {ms['params']['tabSize'] * 100:.0f}%")
     g, gv, _ = gpt_daily("soxl")
-    add("SOXL", "gpt", "SOXL", ", ".join(gv), g, sp, sl)
+    add("SOXL", "gpt", "SOXL", ", ".join(gv), lambda d, g=g: us_cell(g, d, ucal))
     acct = {r["date"]: r["pnlPct"] for r in (report.get("account") or {}).get("recent", [])}
-    ap, al = last_two(sorted(set(cal_c) | set(kr_cal)), upto=max(acct) if acct else None)
-    add("전체", "claude", "🏦 전체 계좌 (국내 30% · 코인 30% · 미국 40%)", "account", acct, ap, al)
-    return dict(generatedAt=datetime.now(KST).isoformat(), today=today, finalKrDaily=final_kr, rows=rows,
-                note="시장마다 자기 거래일 기준. ① 은 확정 일봉으로만 계산해 하루 늦게 채워질 수 있음(pending). 숫자는 순손익 %.")
+    add("전체", "claude", "🏦 전체 계좌 (국내 30% · 코인 30% · 미국 40%)", "account",
+        lambda d: acct[d] if d in acct else ("no_trade" if acct and d <= max(acct) else "pending"))
+    return dict(generatedAt=now.isoformat(), today=today, finalKrDaily=final_kr, rows=rows, basis="kst",
+                note="모든 전략을 같은 한국 날짜(어제 · 오늘)로. ①② 한국 거래일 · ③ 업비트 하루(그날 09시 시작) · ④ 전날 밤 미국장. 숫자는 순손익 %.")
 
 
 def finite(o):

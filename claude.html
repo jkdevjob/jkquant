@@ -56,7 +56,7 @@ table.doc td{padding:6px 6px}
   <div class="gnote"><a href="/" style="color:var(--faint)">← 운영 화면으로</a></div>
 </div></div>
 <header><div class="wrap"><div class="htop">
-  <div><div class="kicker">Claude Scalping</div><h1>JK <span class="v">퀀트</span> 단타 <span class="ver" id="clVer">v2.12.4</span></h1></div>
+  <div><div class="kicker">Claude Scalping</div><h1>JK <span class="v">퀀트</span> 단타 <span class="ver" id="clVer">v2.12.5</span></h1></div>
   <div class="hright">
     <div class="userbadge" id="userbadge"></div>
   <div class="jkmenu" id="jkmenuWrap">
@@ -442,11 +442,12 @@ function nextSig(t,unit){
       (n.entryRule?"<br>매수 조건: "+esc(n.entryRule):"")+(n.why?"<br>안 맞은 조건: "+esc(n.why):"")+"</div></div></div>";}
   return "<div class='kpis'><div class='kpi'><div class='l'>다음 "+unit+" 신호 ("+esc(n.basedOn)+" 종가 기준)</div><div class='v "+(n.holdNext?"good":"")+"'>"+(n.holdNext?"보유":"쉼")+"</div><div class='sub'>종가 "+Math.round(n.signalClose).toLocaleString()+" · 평균 "+Math.round(n.ma).toLocaleString()+"</div></div></div>";
 }
-// 📅 오늘 탭 — 지피티 단타 오늘 탭과 같은 구성: ① 전략별 전일·당일(최근 두 확정 세션) + 누적 추이 ② 4전략 누적 상태
-var TODAY_T=[["opening","① 시초가","시초가","KRX 15:40 KST 마감 장부"],["daytrading","② 데이트레이딩","데이트레이딩","KRX 15:40 KST 마감 장부 · 다음 날 시가 매도"],
-  ["crypto","③ 비트코인","비트코인","Upbit 일봉(09:00 KST) 확정"],["soxl","④ SOXL","SOXL","미국 정규장 16:00 ET 마감"]];
+// 📅 오늘 탭 — 지피티 단타 오늘 탭과 같은 구성: ① 전략별 전일·당일(모두 한국시간 어제·오늘) + 누적 추이 ② 4전략 누적 상태
+var TODAY_T=[["opening","① 시초가","시초가","그날 한국장 (15:40 마감)"],["daytrading","② 데이트레이딩","데이트레이딩","그날 아침 시가에 판 결과 (전날 종가 매수분)"],
+  ["crypto","③ 비트코인","비트코인","그날 09:00 시작 업비트 하루 (다음 날 09:00 확정)"],["soxl","④ SOXL","SOXL","전날 밤 미국장 (한국 아침 마감)"]];
 function resultCell(v,date,label,cl){
-  if(v==null)return "<div class='daily-result-box'><div class='daily-result-label'>"+label+"</div><div class='daily-result-ret'>—</div><div class='daily-result-meta'>확정 결과 대기</div></div>";
+  if(v==null)return "<div class='daily-result-box'><div class='daily-result-label'>"+label+(date?" · "+esc(date):"")+"</div><div class='daily-result-ret'>—</div><div class='daily-result-meta'>확정 결과 대기</div></div>";
+  if(v==="holiday")return "<div class='daily-result-box'><div class='daily-result-label'>"+label+" · "+esc(date||"—")+"</div><div class='daily-result-ret'>휴장</div><div class='daily-result-meta'>장이 열리지 않은 날</div><span class='daily-result-goal'>0.00% 반영</span></div>";
   var nt=v==="no_trade",pd=v==="pending",ok=!nt&&!pd&&isFinite(v),hit=ok&&v>=1;
   var c=cl&&cl.date===date&&((cl.trades||[]).length>0)===(!nt&&!pd)?cl:null;   // 같은 날·같은 정의의 마감 장부와 매매 여부가 맞을 때만 건수·승패를 장부에서
   var meta=c?"기준전략 "+((c.trades||[]).length)+"건 · 승 "+(c.wins||0)+" · 패 "+(c.losses||0):nt?"기준전략 0건":pd?"장부 확정 대기":"모의 장부 확정";
@@ -465,6 +466,7 @@ function todayPage(lab){
   var dl=lab.daily||{},rows=(dl.rows||[]).filter(function(x){return x.side==="claude"}),T=lab.tabs||{},L=(LIVE&&!LIVE.error&&LIVE.tabs)||{};
   var cards=TODAY_T.map(function(z){
     var r=rows.find(function(x){return x.group===z[2]})||{},lt=L[z[0]]||{},q=lt.today,cl=z[0]==="crypto"?null:lt.closed;   // 코인 마감 장부는 00~24시 KST, 여기 하루는 Upbit 09시 — 정의가 달라 섞지 않음
+    if(cl&&z[0]==="soxl"&&cl.date)cl=Object.assign({},cl,{date:new Date(Date.parse(cl.date+"T00:00:00Z")+864e5).toISOString().slice(0,10)});   // 미국장 d 마감 장부 = 한국 d+1 칸
     var live=q&&!(cl&&cl.date===LIVE.today)&&(q.trades>0||q.noTrade)?"<div class='daily-result-meta'>⏱ 지금 장중 "+(q.noTrade?NOTRADE:pct(q.tabPct))+(q.noTrade?"":" · 거래 "+q.trades+"건")+" <span class='sub'>("+kstTime(LIVE.asOf)+" · 확정 전)</span></div>":"";
     return "<div class='daily-result-card'><div class='daily-result-title'><span>"+z[1]+"</span><button onclick=\"showTab('"+z[0]+"')\">전략 보기 →</button></div>"+
       "<div class='daily-result-cols'>"+resultCell(r.prev,r.prevDate,"전일",cl)+resultCell(r.last,r.lastDate,"당일",cl)+"</div>"+
@@ -481,7 +483,7 @@ function todayPage(lab){
       "<td class='"+((s.edge||0)>=0?"win":"loss")+"'>"+sp(s.edge)+"</td><td title='"+esc(st)+"'>"+prog+"</td></tr>"}).join("");
   return "<div class='strategy-head'>모든 기준전략의 오늘 상태와 최근 확정 세션 결과를 한 화면에서 비교</div>"+
     "<div class='card'><h3><span class='dot'></span>📅 오늘 기준전략 결과 <span class='sub'>최근 확정 세션 · 순수익</span></h3>"+
-    "<p class='lead'>시초가·데이트레이딩·비트코인·SOXL의 <b>최근 두 확정 세션</b>을 한 번에 보여줍니다. 수수료·세금·슬리피지를 뺀 순수익이고, 거래가 없으면 <b>매매없음</b>(0%)입니다. 전략별 장 마감 시각이 달라 날짜를 반드시 함께 표시합니다.</p>"+
+    "<p class='lead'>시초가·데이트레이딩·비트코인·SOXL의 <b>한국시간 어제 · 오늘</b> 결과를 한 번에 보여줍니다. 수수료·세금·슬리피지를 뺀 순수익이고, 거래가 없으면 <b>매매없음</b>(0%)입니다. 날짜는 모든 전략이 같은 <b>한국시간 어제 · 오늘</b>이고, 시장마다 그 날짜에 해당하는 결과를 넣습니다(아래 '시간 기준').</p>"+
     "<div class='row' style='margin-bottom:10px'><button class='ghostbtn' onclick='refreshToday()'>🔄 결과 새로고침</button><span class='sub' id='daily_results_meta'>기준일 "+esc(dl.today||"")+" · 갱신 "+esc(stamp)+"</span></div>"+
     "<div class='daily-result-list'>"+cards+"</div>"+
     "<div style='margin-top:14px'>"+trendBlock()+"</div>"+
