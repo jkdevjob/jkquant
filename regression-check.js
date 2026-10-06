@@ -1885,8 +1885,10 @@ console.log('[35] 로그인 — 조용히 갇히지 않는다');
      && ia.indexOf('touchProfile(user)')>ia.indexOf('startApp()'));
   ok('Firebase DB 원장 읽기에 제한시간',
      /withTimeout\(pullRemote\(\), 20000, 'Firebase DB 원장'\)/.test(ia));
-  ok('Firestore 연결: 운영 DB는 long polling 자동 감지(강제 아님 — scripts/check-login-quote-paper.cjs 와 같은 규칙)',
-     /initializeFirestore\(app,\{experimentalAutoDetectLongPolling:true\}\)/.test(idx)&&!/experimentalForceLongPolling/.test(idx)
+  ok('Firestore 연결: 운영 DB는 iOS·앱내장 강제 long polling / 일반 자동 감지',
+     /JK_FORCE_FIRESTORE_LONG_POLLING/.test(idx)
+     && /experimentalForceLongPolling:true/.test(idx)
+     && /experimentalAutoDetectLongPolling:true/.test(idx)
      && !/const db = getFirestore\(app\)/.test(idx));
   {
     const pl=fs.readFileSync(__d+'/plan.html','utf8');
@@ -1896,8 +1898,10 @@ console.log('[35] 로그인 — 조용히 갇히지 않는다');
       ['운영',idx],['자산플랜',pl],['백테',bt],['단타',scl],['공모주',ipo],['JOB',job],['관리자',adm]
     ];
     for(const [name,src] of pages){
-      ok(name+' Firebase는 long polling 자동 감지(강제 아님)',
-         /initializeFirestore\([^;]+experimentalAutoDetectLongPolling:true/.test(src)&&!/experimentalForceLongPolling/.test(src)
+      ok(name+' Firebase는 iOS·앱내장 강제 long polling / 일반 자동 감지',
+         /JK_FORCE_FIRESTORE_LONG_POLLING/.test(src)
+         && /experimentalForceLongPolling:true/.test(src)
+         && /experimentalAutoDetectLongPolling:true/.test(src)
          && !/\bgetFirestore\s*\(/.test(src));
     }
     ok('JOB 화면도 배포 버전 x.y.z 표시', /id="jobVer">v\d+\.\d+\.\d+<\/span>/.test(job));
@@ -8275,8 +8279,10 @@ console.log('\n[117] 자산플랜 v1.28.0 — 기간마다 완전히 다른 매�
   ok('장부 복구 보호모드 없이 현재 Firebase 원장을 직접 사용',
      /apply\(cloneObj\(v\)\)/.test(extractFn(pl,'async function cloudLoad(user)'))
      && !/planManualBackup|planManualBackupMemory|planRecovery|복구 보호모드/.test(pl));
-  ok('자산플랜도 Firestore long polling 자동 감지 + 12초 재연결 경로 사용',
-     /initializeFirestore\(app,\{experimentalAutoDetectLongPolling:true\}\)/.test(pl)
+  ok('자산플랜도 iOS 강제 long polling + 12초 재연결 경로 사용',
+     /JK_FORCE_FIRESTORE_LONG_POLLING/.test(pl)
+     && /experimentalForceLongPolling:true/.test(pl)
+     && /experimentalAutoDetectLongPolling:true/.test(pl)
      && /function planWithTimeout\(p,ms,label\)/.test(pl)
      && /Firebase DB 다시 연결/.test(pl)
      && /window\.planRetryDbImpl=async/.test(pl));
@@ -11694,8 +11700,10 @@ console.log('\n[ACCESS] 이용 승인제 — 판정 한 곳 · 모든 페이지 
   ok('백테·공모주·JOB 은 data-guard 로 불러 guard() 하나로 맡긴다 (본문보다 먼저 · 따로 onAuthStateChanged 안 씀)',
      [bt, ipo, job].every(h=>h.includes(jkTag) && h.indexOf(jkTag)<h.indexOf('<body') && /JKAccess\.guard\(\{auth/.test(h)
        && !/\n\s*onAuthStateChanged\(auth,/.test(h)));
-  ok('JOB 도 같은 Firebase 프로젝트로 로그인한다', /projectId:"jk-invest"/.test(job) && /getAuth\(app\)/.test(job)
-     && /initializeFirestore\(app,\{experimentalAutoDetectLongPolling:true\}\)/.test(job));
+  ok('JOB 도 같은 Firebase 프로젝트 + iOS 안전 전송으로 로그인한다', /projectId:"jk-invest"/.test(job) && /getAuth\(app\)/.test(job)
+     && /JK_FORCE_FIRESTORE_LONG_POLLING/.test(job)
+     && /experimentalForceLongPolling:true/.test(job)
+     && /experimentalAutoDetectLongPolling:true/.test(job));
   ok('운영·자산플랜·관리자는 jk-access.js 를 불러 같은 판정을 쓴다 (운영·플랜은 admit · 관리자는 decide)',
      idx.includes('<script src="/jk-access.js"></script>') && pl.includes('<script src="/jk-access.js"></script>') && adm.includes('<script src="/jk-access.js"></script>')
      && /JKAccess\.admit\(user, accFb/.test(idx) && /JKAccess\.admit\(user,planFb/.test(pl) && /JKAccess\.decide\(\{email:r\.email\}, r\)/.test(adm));
@@ -12023,9 +12031,9 @@ console.log('\n[REAL ESTATE] 부동산 메뉴 · 클로드/지피티 탭');
   ok('공용 메뉴 정책·관리자 메뉴 관리에 부동산(공모주 70 < 부동산 75 < JOB 80)',
      /\{path:'\/ipo',label:'공모주',mode:'public',order:70\},\n\s*\{path:'\/realestate',label:'부동산',mode:'public',order:75\},\n\s*\{path:'\/job'/.test(acc)
      &&/'\/realestate\.html':'\/realestate'/.test(acc)&&/'\/realestate':'🏢'/.test(ad)&&/\{path:'\/realestate',label:'부동산',mode:'public',order:75\}/.test(ad));
-  ok('부동산 화면: 승인 가드 · long polling 자동 감지 · 버전 x.y.z · 클로드/지피티 탭 2개',
+  ok('부동산 화면: 승인 가드 · iOS 안전 Firestore 전송 · 버전 x.y.z · 클로드/지피티 탭 2개',
      /<script src="\/jk-access\.js" data-guard="1"><\/script>/.test(re)&&/JKAccess\.guard\(\{auth/.test(re)
-     &&/initializeFirestore\(app,\{experimentalAutoDetectLongPolling:true\}\)/.test(re)&&/id="reVer">v\d+\.\d+\.\d+<\/span>/.test(re)
+     &&/JK_FORCE_FIRESTORE_LONG_POLLING/.test(re)&&/experimentalForceLongPolling:true/.test(re)&&/experimentalAutoDetectLongPolling:true/.test(re)&&/id="reVer">v\d+\.\d+\.\d+<\/span>/.test(re)
      &&/data-tab="claude">[^<]*클로드</.test(re)&&/data-tab="gpt">[^<]*지피티</.test(re)
      &&re.indexOf('data-tab="claude"')<re.indexOf('data-tab="gpt"')&&/id="pane-claude"/.test(re)&&/id="pane-gpt"/.test(re));
 }
