@@ -362,23 +362,55 @@ async function safeSessions(fn){
   try{return {sessions:await fn(),error:null};}
   catch(e){return {sessions:[],error:String(e.message||e)};}
 }
-function pair(name,label,marketTime,result,marketDay=null){
+function kstSessionDate(strategy,date){
+  const d=String(date||"");
+  // SOXL ledger dates are U.S. market dates. The regular session closes on the
+  // next Korean calendar day, so every displayed SOXL result is shifted +1 day.
+  return strategy==="soxl"&&d?shiftIso(d,1):d;
+}
+function normalizeKstSessions(strategy,result){
   const a=Array.isArray(result&&result.sessions)?result.sessions:[];
-  let current=a[0]||null,previous=a[1]||null;
-  if(marketDay&&marketDay.date){
-    if(marketDay.open===false){
-      current={date:marketDay.date,marketClosed:true,returnPct:0,sumPnlPct:0,trades:0,wins:0,losses:0,noTrade:true,finalized:true,source:"market-calendar"};
-      previous=a[0]||null;
-    }else if(marketDay.open===true){
-      current=a.find(x=>String(x&&x.date||"")===marketDay.date)||null;
-      previous=a.find(x=>String(x&&x.date||"")<marketDay.date)||null;
+  return a.map(x=>{
+    const marketDate=String(x&&x.date||"");
+    const date=kstSessionDate(strategy,marketDate);
+    return {...x,date,marketDate:strategy==="soxl"?marketDate:null,timeZone:"Asia/Seoul"};
+  }).sort((a,b)=>String(b.date).localeCompare(String(a.date)));
+}
+function closedRow(date,source,marketDate=null){
+  return {date,marketDate,marketClosed:true,returnPct:0,sumPnlPct:0,trades:0,wins:0,losses:0,noTrade:true,finalized:true,source};
+}
+function pendingRow(date,reason,marketDate=null){
+  return {date,marketDate,pending:true,pendingReason:reason,finalized:false,source:"kst-calendar"};
+}
+function unknownRow(date,error){
+  return {date,marketDayUnknown:true,marketDayError:error||"개장일 확인 실패",finalized:false,source:"market-calendar"};
+}
+function placeholderFor(strategy,date,krStatus=null){
+  if(strategy==="opening"||strategy==="daytrading"){
+    if(krStatus&&krStatus.date===date){
+      if(krStatus.open===false)return closedRow(date,"KIS/CTCA0903R");
+      if(krStatus.open==null)return unknownRow(date,krStatus.error);
     }else{
-      current={date:marketDay.date,marketDayUnknown:true,marketDayError:marketDay.error||"개장일 확인 실패",finalized:false};
-      previous=a[0]||null;
+      const wd=weekdayUtc(date);
+      if(wd===0||wd===6)return closedRow(date,"weekend-calendar");
     }
+    return pendingRow(date,"KST 장 마감 후 기준전략 결과 확정");
   }
+  if(strategy==="crypto")return pendingRow(date,"KST 00:00~24:00 세션 종료 후 결과 확정");
+  if(strategy==="soxl"){
+    const marketDate=shiftIso(date,-1);
+    if(!isNyseSessionDate(marketDate))return closedRow(date,"NYSE-calendar",marketDate);
+    return pendingRow(date,"미국 정규장 종료 후 KST 날짜로 결과 확정",marketDate);
+  }
+  return pendingRow(date,"세션 결과 확정 대기");
+}
+function pairKst(name,label,result,kstDate,krStatuses=null){
+  const a=normalizeKstSessions(name,result),prevDate=shiftIso(kstDate,-1);
+  const statusMap=new Map((Array.isArray(krStatuses)?krStatuses:[]).filter(Boolean).map(x=>[String(x.date),x]));
+  const current=a.find(x=>String(x.date)===kstDate)||placeholderFor(name,kstDate,statusMap.get(kstDate)||null);
+  const previous=a.find(x=>String(x.date)===prevDate)||placeholderFor(name,prevDate,statusMap.get(prevDate)||null);
   return {
-    strategy:name,label,marketTime,marketDay,
+    strategy:name,label,marketTime:"KST",timeZone:"Asia/Seoul",dateRule:"kst-calendar",
     current,previous,
     status:(current||previous)?"ok":(result&&result.error?"error":"collecting"),
     error:result&&result.error||null
@@ -391,30 +423,32 @@ export async function onRequestGet({request,env}){
     const hit=await edgeGet(request);
     if(hit)return hit;
   }
-  const kst=tzParts("Asia/Seoul"),ny=tzParts("America/New_York");
-  const [opening,daytrading,crypto,soxl,krDay]=await Promise.all([
+  const kst=tzParts("Asia/Seoul"),prevKst=shiftIso(kst.date,-1);
+  const [opening,daytrading,crypto,soxl,krToday,krPrevious]=await Promise.all([
     safeSessions(()=>openingSessions()),
     safeSessions(()=>daytradingSessions(env)),
     safeSessions(()=>liveFirstSessions(env,"crypto","crypto-research/baseline-decisions.csv","crypto-research")),
     safeSessions(()=>liveFirstSessions(env,"soxl","soxl-research/baseline-decisions.csv","soxl-research")),
-    krMarketDayStatus(request,kst.date)
+    krMarketDayStatus(request,kst.date),
+    krMarketDayStatus(request,prevKst)
   ]);
-  const usDay={date:ny.date,open:isNyseSessionDate(ny.date),source:"NYSE-calendar+live-session-gate"};
+  const krStatuses=[krToday,krPrevious];
   const response=new Response(JSON.stringify({
     ok:true,
     generatedAt:new Date().toISOString(),
-    kstDate:isoKstDate(),
+    kstDate:kst.date,
+    dateRule:"All displayed previous/current result dates use the Asia/Seoul calendar. SOXL U.S. market dates are shifted to the Korean calendar date containing the regular-session close.",
     returnRule:"Opening uses the equal-weight average of executed baseline trades; Daytrading uses the sum of trade net PnL divided by 3 fixed capital slots; BTC/SOXL use one slot. No-trade session = 0%.",
     sourceRule:"BTC/SOXL use the completed live paper ledger first; immutable research CSV is fallback. One strategy source failure does not hide the other strategies.",
     strategies:[
-      pair("opening","시초가","KST",opening,krDay),
-      pair("daytrading","데이트레이딩","KST",daytrading,krDay),
-      pair("crypto","비트코인","KST",crypto),
-      pair("soxl","SOXL","ET",soxl,usDay)
+      pairKst("opening","시초가",opening,kst.date,krStatuses),
+      pairKst("daytrading","데이트레이딩",daytrading,kst.date,krStatuses),
+      pairKst("crypto","비트코인",crypto,kst.date),
+      pairKst("soxl","SOXL",soxl,kst.date)
     ]
   }),{headers:force?JH:FAST_H});
   if(!force)await edgePut(request,response);
   return response;
 }
 
-export {liveLedgerSummary,mergeSessions,mergeDaytradingSessions,completedGlobalCandidates};
+export {liveLedgerSummary,mergeSessions,mergeDaytradingSessions,completedGlobalCandidates,kstSessionDate,pairKst};
