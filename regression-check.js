@@ -11314,7 +11314,7 @@ console.log('[GAPDOWN D-1 / DIP24 D-3] 연구용 모의체결 경로 안전장�
   }
   { const lp=fs.readFileSync(__d+'/scripts/claude_lab.py','utf8');
     ok('전략 경쟁: 그림자 10~12개 유지 · 손실 기준 미달/7일 하위 3위 퇴출 · 신규 투입 · 7일 1위 자동 승격(다음 날부터) · 이번 주 결과 카드(전체 탭)',
-       /POOL_TARGET, POOL_MIN, PROMOTE_DAYS, BOTTOM_N, GEN_ATTEMPTS = 12, 10, 7, 3, 40/.test(lp)&&/report\["arena"\], astate = arena\(ctx\)/.test(lp)
+       /POOL_TARGET, POOL_MIN, PROMOTE_DAYS, BOTTOM_N, EVAL_BUDGET = 12, 10, 7, 3, 48/.test(lp)&&/report\["arena"\], astate = arena\(ctx\)/.test(lp)
        &&/attach_promotions\(report\)/.test(lp)&&/report\["week"\] = week_summary\(/.test(lp)
        &&!/CRYPTO\[[^\]]+\] = |US\[[^\]]+\] = /.test(lp.slice(lp.indexOf('def arena('),lp.indexOf('def week_summary(')))
        &&/function promoBadge\(pr\)/.test(scl2)&&/function weekCard\(\)/.test(scl2)&&(scl2.match(/weekCard\(\)/g)||[]).length===2);
@@ -11958,6 +11958,21 @@ console.log('\n[CLAUDE ARENA] 메인 기록 하나 · 자동 퇴출·신규·7�
   try{const a=JSON.parse(py.stdout),b=JSON.parse(js.stdout);same=['opening','daytrading','crypto','soxl'].every(t=>JSON.stringify(Object.keys(a[t]).sort().map(k=>[k,a[t][k]]))===JSON.stringify(Object.keys(b[t]).sort().map(k=>[k,b[t][k]])));why=JSON.stringify([a,b]).slice(0,300);}
   catch(e){why=(py.stderr||'')+(js.stderr||'')+e.message;}
   ok('기본 메인 변수: 밤 계산(Python) = 실시간·주문(JS) — 한쪽만 바뀌면 빨간불',same,why);
+  // 새 구조 변수(③ hiN · ④ ibsMax/downDays/RSI 끄기) 범위 검사: 밤 계산(Python _valid_params) = 실시간·승격 기록(JS validateParams)
+  { const cases=[['crypto',{hiN:10}],['crypto',{hiN:21}],['crypto',{hiN:0}],['soxl',{rsiMax:100,ibsMax:0.3}],['soxl',{rsiMax:100}],['soxl',{ibsMax:0.01}],
+      ['soxl',{downDays:5}],['soxl',{downDays:6}],['soxl',{rsiMax:100,downDays:2}],['soxl',{rsiMax:50.5}]];
+    const pyV=cp.spawnSync('python3',['-c','import sys,json;sys.path.insert(0,"scripts");import claude_lab as L\nout=[]\nfor t,p in json.loads(sys.argv[1]):\n  try: out.append(L._valid_params(t,dict(L.MAIN_DEFAULT[t]["params"],**p)))\n  except Exception: out.append(None)\nprint(json.dumps(out))',JSON.stringify(cases)],{cwd:__d,encoding:'utf8'});
+    const jsV=cp.spawnSync(process.execPath,['--input-type=module','-e','import {MAIN_DEFAULT as M,validateParams as V} from "'+require('url').pathToFileURL(__d+'/functions/api/_claude_main.js').href+'";const c='+JSON.stringify(cases)+';console.log(JSON.stringify(c.map(([t,p])=>{try{return V(t,{...M[t].params,...p})}catch(e){return null}})))'],{encoding:'utf8'});
+    let same=false,why='';
+    try{const a=JSON.parse(pyV.stdout),b=JSON.parse(jsV.stdout),norm=o=>o&&JSON.stringify(Object.keys(o).sort().map(k=>[k,o[k]]));
+      same=a.length===cases.length&&a.every((x,i)=>norm(x)===norm(b[i]))&&a.map(x=>!!x).join()==='true,false,false,true,false,false,true,false,true,true';why=JSON.stringify([a,b]).slice(0,400);}
+    catch(e){why=(pyV.stderr||'')+(jsV.stderr||'')+e.message;}
+    ok('새 구조 변수 범위: 밤 계산(Python) = 실시간·승격(JS) — ③ 최근 N일 고가 1~20 · ④ RSI 끄기(100) · IBS 0.05~1 · 연속 하락 0~5 · 조건 없으면 둘 다 거절',same,why);
+  }
+  ok('신규 전략 생성: 안정 점수(구간 당김 · 이웃 중앙값) · 기준(매매일 60 · 해마다 60%) · 복제(상관 0.97) 퇴출 · 다섯 방법 후보 48개 · 방법별 성공률 · 자리 교체 최대 3 · 메인 보호',
+     /SHRINK_K, MIN_TRADE_DAYS, YEAR_POS_MIN, DUP_CORR = 40, 60, 0\.6, 0\.97/.test(lp)&&/MAIN_MARGIN, REPLACE_MARGIN, MAX_REPLACE = 0\.02, 0\.02, 3/.test(lp)
+     &&/OPS = \("neighbor", "jump2", "cross", "struct", "explore"\)/.test(lp)&&/out\["score"\] = m\["adj"\] if pl is None or m\.get\("adj"\) is None else min\(m\["adj"\], pl\)/.test(lp)
+     &&/def gate_reason\(m\):/.test(lp)&&/mark\(b, f"복제 — /.test(lp)&&/function arenaGen\(z\)/.test(ch)&&/안정 점수<div class='sub'>/.test(ch));
   ok('전략 경쟁 화면: 탭 ⑥ 순위표(점수·최근 1년·90일·MDD) + 개선 내역·사유 · 오늘 탭 자동 개선 현황 · 승격된 메인 안내 · 수동 승격 버튼 없음',
      /function shadowCard\(tab\)\{\n\s*var z=arenaOf\(tab\);/.test(ch)&&/\+arenaOverview\(lab\);/.test(ch)&&/mainBanner\(tab\)\+"<div class='rule'>"/.test(ch)
      &&/var ARENA_KIND=\{new:\["🆕","신규 투입"/.test(ch)&&!/claude-promote|승격 버튼/.test(ch)

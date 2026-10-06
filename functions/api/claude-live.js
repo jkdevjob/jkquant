@@ -95,21 +95,23 @@ export function etfRows(todaySt,prevSt,prevDate,nowPrice){
 }
 // ③ 코인 하루 단타: 어제 확정 종가 > 20일 평균(어제 포함)인 날, 오늘 60분봉 고가가 어제 고가를 넘는 첫 봉에서 매수 → 다음 날 09:00 매도.
 // 추세 판단 = 어제까지 확정된 20개 종가의 평균 < 어제 종가. candles: 업비트 일봉 최신순(0 = 진행 중인 오늘). claude_lab.coin_breakout 과 같은 규칙.
-// p: 그날 ③ 메인 변수(ma · level prevhigh=어제 고가 / vb=오늘 시가+k×어제 폭). 두 번째 인자가 숫자면 옛 호출(ma 만).
+// p: 그날 ③ 메인 변수(ma · level prevhigh=최근 hiN일 고가(1=어제 고가) / vb=오늘 시가+k×어제 폭). 두 번째 인자가 숫자면 옛 호출(ma 만).
 export function coinHoldToday(candles,p=MAIN_DEFAULT.crypto.params){
   if(typeof p==="number")p={...MAIN_DEFAULT.crypto.params,ma:p};
   const ma=p.ma,c=Array.isArray(candles)?candles:[];
   const done=c.slice(1,1+ma).map(x=>+x.trade_price);
   if(done.length<ma||done.some(x=>!(x>0)))return null;
-  const avg=done.reduce((a,b)=>a+b,0)/ma,y=c[1];
-  const level=p.level==="vb"?+c[0].opening_price+p.k*(+y.high_price-+y.low_price):+y.high_price;
-  return {hold:done[0]>avg,prevClose:done[0],ma:avg,maDays:ma,level,levelKind:p.level,basedOn:String(y.candle_date_time_kst||"").slice(0,10)};
+  const avg=done.reduce((a,b)=>a+b,0)/ma,y=c[1],hn=p.level==="vb"?1:Math.max(1,+p.hiN||1);
+  const highs=c.slice(1,1+hn).map(x=>+x.high_price);
+  if(highs.length<hn||highs.some(x=>!(x>0)))return null;
+  const level=p.level==="vb"?+c[0].opening_price+p.k*(+y.high_price-+y.low_price):Math.max(...highs);
+  return {hold:done[0]>avg,prevClose:done[0],ma:avg,maDays:ma,level,levelKind:p.level,hiN:hn,basedOn:String(y.candle_date_time_kst||"").slice(0,10)};
 }
 // day: 그날(09:00 시작) 판단 + 그날 60분봉(오래된 순) → 매수 시각·가격·손절·손익. last: 지금 가격(진행 중) 또는 그날 마지막 봉 종가(확정).
 // 밤 계산 coin_breakout 과 같은 규칙: 업비트 하루(09:00~)의 봉을 순서대로 보며, lastEntryHour 시(밤) 이후 봉에 오면 그날은 더 사지 않는다.
 export function coinBreakoutDay(h,bars,last,p=MAIN_DEFAULT.crypto.params){
   if(!h)return null;
-  const lv=h.levelKind==="vb"?"기준선(시가+"+p.k+"×어제 폭)":"어제 고가",stopPct=+p.stopPct;
+  const lv=h.levelKind==="vb"?"기준선(시가+"+p.k+"×어제 폭)":(h.hiN>1?"최근 "+h.hiN+"일 고가":"어제 고가"),stopPct=+p.stopPct;
   if(!h.hold)return {hold:false,action:"쉼",status:"쉼 — 어제 종가가 "+(h.maDays||p.ma)+"일 평균 아래",pnlPct:0,level:h.level};
   const hourOf=b=>+String(b.candle_date_time_kst||"").slice(11,13);
   let i=-1;
@@ -209,7 +211,7 @@ export function soxlLive(nx,q,last){
   }else{
     row.hold=false;
     const rn=nx.rsiN||2,rmax=nx.rsiMax??20,md=nx.maDays??200,above=!md||nx.close>nx.ma;
-    Object.assign(row,{status:"쉼 — "+(above?"과매도 아님 (RSI("+rn+") "+(+nx.rsi2).toFixed(0)+" ≥ "+rmax+")":md+"일 평균 아래"),pnlPct:0});
+    Object.assign(row,{status:"쉼 — "+(nx.why?nx.why:above?"과매도 아님 (RSI("+rn+") "+(+nx.rsi2).toFixed(0)+" ≥ "+rmax+")":md+"일 평균 아래"),pnlPct:0});   // 밤 계산이 안 맞은 조건을 적어 준다(옛 형식이면 RSI 문구)
   }
   return row;
 }
@@ -257,7 +259,7 @@ export async function onRequestGet({request,env}){
     }));
     const basket=coins.reduce((s,c)=>s+(c.pnlPct||0),0)/P3.markets.length;
     out.tabs.crypto={rows:coins,basketPct:basket,tabPct:basket*P3.tabSize,main:m3,
-      note:"업비트 하루는 09:00 시작. 어제 종가가 "+P3.ma+"일 평균 위인 날만, "+(P3.level==="vb"?"오늘 시가+"+P3.k+"×어제 폭":"어제 고가")+"를 넘는 순간 매수"+
+      note:"업비트 하루는 09:00 시작. 어제 종가가 "+P3.ma+"일 평균 위인 날만, "+(P3.level==="vb"?"오늘 시가+"+P3.k+"×어제 폭":(P3.hiN>1?"최근 "+P3.hiN+"일 고가":"어제 고가"))+"를 넘는 순간 매수"+
         (P3.lastEntryHour!=null?"("+P3.lastEntryHour+"시 전까지)":"")+" → 다음 날 09:00 매도(24시간 미만). 매수가 대비 −"+P3.stopPct+"% 손절. "+
         (P3.markets.length>1?"두 코인 반반":P3.markets[0].replace("KRW-","")+" 하나")+", 탭 표시 자금 "+Math.round(P3.tabSize*100)+"%."};
     // ④ SOXL 단기 과매도 반등 — 밤 계산(미국장 마감 확정 종가)의 다음 할 일 + 지금 시세
@@ -266,7 +268,7 @@ export async function onRequestGet({request,env}){
     const sx=await csvLast("claude-lab/soxl-mr-decisions.csv",1);
     const P4=(nx&&nx.rsiMax!=null)?{rsiMax:nx.rsiMax,rsiN:nx.rsiN||2,ma:nx.maDays??200,maxHoldDays:nx.maxHoldDays||5}:MAIN_DEFAULT.soxl.params;
     out.tabs.soxl={rows:[soxlLive(nx,us,sx[0]||null)],main:mainOf("soxl",now.date),
-      note:"미국장 마감 확정 종가로 RSI("+P4.rsiN+")<"+P4.rsiMax+(P4.ma?" · "+P4.ma+"일 평균 위":"")+"면 다음 미국장 시가 매수 → 오른 날 다음 시가 매도(최대 "+P4.maxHoldDays+"일). 결과는 한국시각 다음 날 아침에 확정."};
+      note:"미국장 마감 확정 종가로 "+(nx&&nx.entryRule?nx.entryRule:"RSI("+P4.rsiN+")<"+P4.rsiMax+(P4.ma?" · "+P4.ma+"일 평균 위":""))+"면 다음 미국장 시가 매수 → 오른 날 다음 시가 매도(최대 "+P4.maxHoldDays+"일). 결과는 한국시각 다음 날 아침에 확정."};
     // 하루 마감 장부(텔레그램 결과와 같은 원본, Worker Durable Object) — ①② 오늘 · ③ 마지막 한국 00:00 마감 · ④ 마지막 미국장 마감
     const closedOf=async(k,days)=>{for(const i of days){const d=kstToday(Date.now()-i*864e5).date;const l=await ledger(env,d,"/claude");
       const e=((l&&l.events)||[]).find(x=>x&&x.id==="close:"+k);if(e)return e.payload;}return null;};

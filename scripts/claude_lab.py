@@ -116,7 +116,7 @@ def fetch_btc_daily(market="KRW-BTC"):
     return [(d, *v) for d, v in rows if d < today]          # 진행 중인 오늘 봉은 쓰지 않는다
 
 
-COIN_BO = dict(version="coin_breakout_v1", markets=["KRW-BTC", "KRW-ETH"], ma=20, stopPct=5.0, level="prevhigh", k=0.5,
+COIN_BO = dict(version="coin_breakout_v1", markets=["KRW-BTC", "KRW-ETH"], ma=20, stopPct=5.0, level="prevhigh", k=0.5, hiN=1,
                size=1.0, tabSize=0.8, costRoundTripPct=0.14, entrySlipPct=0.05, stopSlipPct=0.1,
                note="업비트 BTC·ETH 각각(하루 = 09:00~다음날 09:00): 어제 종가 > 20일 평균인 날만, 오늘 가격이 어제 고가를 넘는 순간 매수 → "
                     "다음 날 09:00 에 무조건 매도(보유 24시간 미만). 매수가 대비 −5% 닿으면 손절. 두 코인 반반, 탭 표시 자금 80%.")
@@ -161,8 +161,20 @@ def fetch_hourly(market, start="2018-01-01"):
     return H
 
 
+_DAYS_MEMO = []                    # [(H, 봉 수, 결과)] — H 자체를 붙잡아 두어 같은 객체일 때만 다시 쓴다(id 재사용으로 남의 결과를 쓰지 않게)
+
+
 def upbit_days(H):
-    """60분봉 → 업비트 하루(09:00~다음날 09:00) 봉. 24개가 다 있는 날만."""
+    """60분봉 → 업비트 하루(09:00~다음날 09:00) 봉. 24개가 다 있는 날만. 같은 자료(H)면 한 번만 만든다(경쟁 계산이 수백 번 부른다)."""
+    for h, n, out in _DAYS_MEMO:
+        if h is H and n == len(H):
+            return out
+    out = _upbit_days(H)
+    _DAYS_MEMO[:] = ([(H, len(H), out)] + [x for x in _DAYS_MEMO if x[0] is not H])[:4]
+    return out
+
+
+def _upbit_days(H):
     out = {}
     starts = sorted({(datetime.fromisoformat(k) - timedelta(hours=9)).date() for k in H})
     for d in starts:
@@ -175,20 +187,21 @@ def upbit_days(H):
 
 
 def coin_breakout(H, p):
-    """하루 단타: 어제 확정 종가 > n일 평균(어제까지)인 날, 오늘 60분봉 고가가 기준선(어제 고가 또는 시가+k×어제 폭)을 넘는
+    """하루 단타: 어제 확정 종가 > n일 평균(어제까지)인 날, 오늘 60분봉 고가가 기준선(최근 hiN일 고가 — 1이면 어제 고가 — 또는 시가+k×어제 폭)을 넘는
     첫 봉에서 max(봉 시가, 기준선)+미끄러짐에 매수 → 다음 날 09:00(오늘 마지막 봉 종가)에 매도. 손절: 매수 봉부터 저가가
     매수가 × (1−stop) 이하면 손절(같은 봉 안 순서는 모르니 보수적으로 손절로 본다). 보유는 24시간을 넘지 않는다."""
     Dd = upbit_days(H)
     days = sorted(Dd)
     C = [Dd[d][3] for d in days]
     n, half, sz = p["ma"], p["costRoundTripPct"] / 2, p["size"]
+    hn = int(p.get("hiN") or 1) if p["level"] == "prevhigh" else 1
     dv, decisions = {}, []
-    for i in range(n, len(days)):
+    for i in range(max(n, hn), len(days)):
         d, pd = days[i], days[i - 1]
         ma = sum(C[i - n:i]) / n
         trend = C[i - 1] > ma
         o = Dd[d][0]
-        level = Dd[pd][1] if p["level"] == "prevhigh" else o + p["k"] * (Dd[pd][1] - Dd[pd][2])
+        level = max(Dd[days[i - j]][1] for j in range(1, hn + 1)) if p["level"] == "prevhigh" else o + p["k"] * (Dd[pd][1] - Dd[pd][2])
         rec = dict(date=d, strategyVersion=p["version"], trend=int(trend), prevClose=C[i - 1], ma=ma, level=level,
                    action="flat" if not trend else "no_break", entryHour="", entryPrice=None, exitPrice=None, pnlPct=None)
         if trend:
@@ -214,8 +227,8 @@ def coin_breakout(H, p):
     if len(days) > n:
         ma = sum(C[-n:]) / n
         last = days[-1]
-        nxt = dict(basedOn=last, prevClose=C[-1], ma=ma, trendNext=C[-1] > ma, levelNext=Dd[last][1] if p["level"] == "prevhigh" else None,
-                   holdNext=C[-1] > ma)
+        nxt = dict(basedOn=last, prevClose=C[-1], ma=ma, trendNext=C[-1] > ma, hiN=hn,
+                   levelNext=max(Dd[x][1] for x in days[-hn:]) if p["level"] == "prevhigh" else None, holdNext=C[-1] > ma)
     return dv, decisions, nxt, days
 
 
@@ -259,7 +272,7 @@ def trend_daily(rows, p, signal_close=None):
     return dv, decisions, nxt
 
 
-SOXL_MR = dict(version="soxl_rsi2_meanrev_v1", trade="SOXL", rsiMax=20.0, ma=200, maxHoldDays=5, size=1.0, tabSize=0.5,
+SOXL_MR = dict(version="soxl_rsi2_meanrev_v1", trade="SOXL", rsiMax=20.0, ibsMax=1.0, downDays=0, ma=200, maxHoldDays=5, size=1.0, tabSize=0.5,
                costRoundTripPct=0.20,
                note="SOXL 단기 과매도 반등(최대 5거래일). 장 마감 확정 종가로 RSI(2)<20 이고 종가 > 200일 평균이면 다음 날 시가 매수 → "
                     "종가가 전날보다 오른 날이 나오면 그다음 날 시가 매도, 늦어도 5거래일째 종가 뒤 다음 시가 매도. 탭 표시 자금 50%.")
@@ -277,10 +290,13 @@ def rsi2_at(C, i, n=2):
 def soxl_meanrev(rows, p, entry_from=None, no_entry_from=None):
     """rows: (date, open, high, low, close). 판단은 i 일 확정 종가 → 실행은 i+1 일 시가(룩어헤드 없음).
     보유 중 일 손익: 매수일 = 종가/시가, 이후 = 종가/전일 종가, 매도일 = 시가/전일 종가. 비용은 매수·매도 때 반씩.
-    p: rsiMax · rsiN(기본 2) · ma(0 이면 평균 조건 없음) · maxHoldDays. 메인 교체 구간: entry_from 전 / no_entry_from 부터는
+    p: rsiMax(100 이면 RSI 조건 없음) · rsiN(기본 2) · ibsMax(종가 위치 (종가−저가)/(고가−저가) 상한, 1 이면 조건 없음) ·
+    downDays(그날까지 연속 하락 종가 일수 하한, 0 이면 조건 없음) · ma(0 이면 평균 조건 없음) · maxHoldDays.
+    진입 = 켜진 조건이 모두 맞을 때(전부 그날 확정 종가로 판단). 메인 교체 구간: entry_from 전 / no_entry_from 부터는
     새로 사지 않는다(시가 매수 날짜 기준). 이미 든 포지션은 자기 규칙대로 판다."""
     D = [r[0] for r in rows]
-    O, C = [r[1] for r in rows], [r[4] for r in rows]
+    O, Hh, Lw, C = [r[1] for r in rows], [r[2] for r in rows], [r[3] for r in rows], [r[4] for r in rows]
+    ibs_max, dn_min = float(p.get("ibsMax", 1.0)), int(p.get("downDays") or 0)
     n, half, sz, rn = p["ma"], p["costRoundTripPct"] / 2, p["size"], int(p.get("rsiN") or 2)
     dv, decisions = {}, []
     pos = None                                     # dict(entry=i, days=n) — 보유 중이면
@@ -290,7 +306,7 @@ def soxl_meanrev(rows, p, entry_from=None, no_entry_from=None):
         return D[i + 1] if i + 1 < len(D) else (date.fromisoformat(D[i]) + timedelta(days=1)).isoformat()
     for i in range(max(n, rn + 1), len(rows)):
         rec = dict(date=D[i], strategyVersion=p["version"], action="flat", pnlPct=None, heldDays=None, entryPrice=None, exitPrice=None,
-                   close=None, rsi2=None, ma=None, next="")
+                   close=None, rsi2=None, ibs=None, downRun=None, ma=None, next="")
         if pending == "sell" and pos:
             v = ((O[i] / C[i - 1] - 1) * 100 - half) * sz
             dv[D[i]] = v
@@ -309,12 +325,17 @@ def soxl_meanrev(rows, p, entry_from=None, no_entry_from=None):
         pending = None
         ma = sum(C[i - n + 1:i + 1]) / n if n else None
         r2 = rsi2_at(C, i, rn)
-        rec.update(rsi2=r2, ma=ma, close=C[i])
+        ibs = (C[i] - Lw[i]) / (Hh[i] - Lw[i]) if Hh[i] > Lw[i] else 0.5
+        down = 0
+        while down < i and C[i - down] < C[i - down - 1]:          # 그날까지 연속 하락 종가 일수
+            down += 1
+        rec.update(rsi2=r2, ibs=ibs, downRun=down, ma=ma, close=C[i])
+        sig = soxl_signal(p, r2, ibs, down)
         if pos:
             if C[i] > C[i - 1] or pos["days"] >= p["maxHoldDays"]:
                 pending = "sell"
                 rec["next"] = "sell_open" + ("_maxhold" if not C[i] > C[i - 1] else "")
-        elif r2 < p["rsiMax"] and (ma is None or C[i] > ma):
+        elif sig and (ma is None or C[i] > ma):
             ed = exec_date(i)
             if (entry_from and ed < entry_from) or (no_entry_from and ed >= no_entry_from):
                 rec["next"] = "blocked_main_switch"          # 메인 교체 구간 — 이 규칙으로는 새로 사지 않는다
@@ -322,11 +343,47 @@ def soxl_meanrev(rows, p, entry_from=None, no_entry_from=None):
                 pending = "buy"
                 rec["next"] = "buy_open"
         decisions.append(rec)
-    nxt = dict(basedOn=D[-1], rsi2=decisions[-1]["rsi2"] if decisions else None, ma=decisions[-1]["ma"] if decisions else None,
+    last = decisions[-1] if decisions else {}
+    nxt = dict(basedOn=D[-1], rsi2=last.get("rsi2"), ma=last.get("ma"), ibs=last.get("ibs"), downRun=last.get("downRun"),
                close=C[-1], holding=bool(pos), heldDays=pos["days"] if pos else 0, action=pending or "none",
                holdNext=pending == "buy" or (bool(pos) and pending != "sell"),
-               rsiMax=p["rsiMax"], rsiN=rn, maDays=n, maxHoldDays=p["maxHoldDays"], version=p.get("version")) if rows else None
+               rsiMax=p["rsiMax"], rsiN=rn, ibsMax=ibs_max, downDays=dn_min, maDays=n, maxHoldDays=p["maxHoldDays"], version=p.get("version"),
+               entryRule=soxl_entry_text(p), why=soxl_why(p, last) if last and not pos and pending is None else "") if rows else None
     return dv, decisions, nxt
+
+
+def soxl_signal(p, r2, ibs, down):
+    """④ 진입 신호(평균 조건 제외) — 켜진 조건이 모두 맞아야 한다. 하나도 안 켜진 변수는 검사(_valid_params)에서 막는다."""
+    return ((p["rsiMax"] >= 100 or r2 < p["rsiMax"]) and ibs <= float(p.get("ibsMax", 1.0))
+            and down >= int(p.get("downDays") or 0))
+
+
+def soxl_entry_text(p):
+    """④ 진입 조건 한 줄(화면 · 텔레그램이 그대로 쓴다)."""
+    parts = []
+    if p["rsiMax"] < 100:
+        parts.append(f"RSI({int(p.get('rsiN') or 2)}) < {p['rsiMax']:g}")
+    if float(p.get("ibsMax", 1.0)) < 1:
+        parts.append(f"종가 위치(IBS) ≤ {float(p['ibsMax']):g}")
+    if int(p.get("downDays") or 0):
+        parts.append(f"{int(p['downDays'])}일 연속 하락")
+    if p.get("ma"):
+        parts.append(f"{p['ma']}일 평균 위")
+    return " · ".join(parts)
+
+
+def soxl_why(p, rec):
+    """쉬는 이유 — 안 맞은 조건만(그날 확정 종가 기준 값과 함께)."""
+    out = []
+    if rec.get("rsi2") is not None and p["rsiMax"] < 100 and not rec["rsi2"] < p["rsiMax"]:      # 꺼진 조건은 적지 않는다
+        out.append(f"RSI({int(p.get('rsiN') or 2)}) {rec['rsi2']:.0f} ≥ {p['rsiMax']:g}")
+    if rec.get("ibs") is not None and float(p.get("ibsMax", 1.0)) < 1 and not rec["ibs"] <= float(p["ibsMax"]):
+        out.append(f"IBS {rec['ibs']:.2f} > {float(p['ibsMax']):g}")
+    if rec.get("downRun") is not None and rec["downRun"] < int(p.get("downDays") or 0):
+        out.append(f"연속 하락 {rec['downRun']}일 < {int(p['downDays'])}일")
+    if p.get("ma") and rec.get("ma") is not None and not rec["close"] > rec["ma"]:
+        out.append(f"{p['ma']}일 평균 아래")
+    return " · ".join(out)
 
 
 def drop_open_session(bars, now_utc=None):
@@ -338,10 +395,21 @@ def drop_open_session(bars, now_utc=None):
     return {d: v for d, v in bars.items() if d < today or (d == today and closed)}
 
 
+def us_rows(items):
+    """(날짜, 시가, 고가, 저가, 종가) → 네 값이 모두 양수인 봉만. 2026-10-06: 장 끝난 직후 자료원이 종가를 비워(NaN) 준 날이 있었다 —
+    빈 종가로 RSI·손익을 계산하지 않게 그 봉은 버린다(다음 계산에서 확정 값으로 다시 들어온다)."""
+    out = {}
+    for d, o, h, l, c in items:
+        v = (float(o), float(h), float(l), float(c))
+        if all(math.isfinite(x) and x > 0 for x in v):
+            out[str(d)[:10]] = v
+    return out
+
+
 def fetch_us(ticker):
     import FinanceDataReader as fdr
     d = fdr.DataReader(ticker, "2010-01-01")
-    return drop_open_session({str(i)[:10]: (float(r["Open"]), float(r["High"]), float(r["Low"]), float(r["Close"])) for i, r in d.iterrows() if float(r["Open"]) > 0})
+    return drop_open_session(us_rows((i, r["Open"], r["High"], r["Low"], r["Close"]) for i, r in d.iterrows()))
 
 
 def d1_daily():
@@ -462,6 +530,17 @@ def daily_board(report, d1, krx_cal, crypto_full, cal_c):
     add("전체", "claude", "🏦 전체 계좌 (국내 30% · 코인 30% · 미국 40%)", "account", acct, ap, al)
     return dict(generatedAt=datetime.now(KST).isoformat(), today=today, finalKrDaily=final_kr, rows=rows,
                 note="시장마다 자기 거래일 기준. ① 은 확정 일봉으로만 계산해 하루 늦게 채워질 수 있음(pending). 숫자는 순손익 %.")
+
+
+def finite(o):
+    """화면이 읽는 JSON 에 NaN · ∞ 가 들어가면 브라우저가 파일 전체를 못 읽는다 — 그런 값은 빈 값(null)으로."""
+    if isinstance(o, float):
+        return o if math.isfinite(o) else None
+    if isinstance(o, dict):
+        return {k: finite(v) for k, v in o.items()}
+    if isinstance(o, (list, tuple)):
+        return [finite(v) for v in o]
+    return o
 
 
 def read_json(path):
@@ -676,13 +755,30 @@ def kr_calendar(now=None, fetch=None):
     return [d for d in days if d < today or (d == today and now.hour >= 16)]
 
 
+ETF_BARS = {}
+
+
+def etf_bars(code):
+    """일봉(날짜, 시가, 종가) — 한 번 받으면 이 계산 안에서 다시 받지 않는다(경쟁 계산이 기준값마다 부른다 · 받기 실패는 세 번까지 다시)."""
+    if code not in ETF_BARS:
+        import FinanceDataReader as fdr
+        now = datetime.now(KST)
+        today, closed = now.strftime("%Y-%m-%d"), now.hour >= 16       # 연구(backtest_etf_overnight)와 같게: 오늘 봉은 장 끝난 16:00 뒤에만
+        for a in range(3):
+            try:
+                d = fdr.DataReader(code, "2016-01-01")
+                break
+            except Exception:  # noqa: BLE001
+                if a == 2:
+                    raise
+                time.sleep(2 + 2 * a)
+        ETF_BARS[code] = [(str(i)[:10], float(r["Open"]), float(r["Close"])) for i, r in d.iterrows()
+                          if float(r["Open"]) > 0 and float(r["Close"]) > 0 and (str(i)[:10] < today or (str(i)[:10] == today and closed))]
+    return ETF_BARS[code]
+
+
 def etf_variant(code, th):
-    import FinanceDataReader as fdr
-    now = datetime.now(KST)
-    today, closed = now.strftime("%Y-%m-%d"), now.hour >= 16           # 연구(backtest_etf_overnight)와 같게: 오늘 봉은 장 끝난 16:00 뒤에만
-    d = fdr.DataReader(code, "2016-01-01")
-    b = [(str(i)[:10], float(r["Open"]), float(r["Close"])) for i, r in d.iterrows()
-         if float(r["Open"]) > 0 and float(r["Close"]) > 0 and (str(i)[:10] < today or (str(i)[:10] == today and closed))]
+    b = etf_bars(code)
     out = {}
     for i in range(1, len(b) - 1):
         chg = (b[i][2] / b[i - 1][2] - 1) * 100
@@ -699,8 +795,8 @@ def etf_variant(code, th):
 TABS4 = ("opening", "daytrading", "crypto", "soxl")
 D1_DEFAULT = dict(minQ=5, topK=3, gapMax=None)
 ETF_DEFAULT = dict(code="233740", th=-3.0)
-COIN_KEYS = ("ma", "stopPct", "level", "k", "lastEntryHour", "tabSize", "markets")
-SOXL_KEYS = ("rsiMax", "rsiN", "ma", "maxHoldDays", "tabSize")
+COIN_KEYS = ("ma", "stopPct", "level", "k", "hiN", "lastEntryHour", "tabSize", "markets")
+SOXL_KEYS = ("rsiMax", "rsiN", "ibsMax", "downDays", "ma", "maxHoldDays", "tabSize")
 MAIN_DEFAULT = {
     "opening": dict(version="opening_gapdown_v1+v2filter", name="① D-1 갭하락 과매도 v2", params=dict(D1_DEFAULT),
                     rule="전일 RSI<30 + 시가 갭 −2~−29% 종목이 5개 이상인 날, 가장 깊은 3종목 시가 매수 → 종가 매도"),
@@ -797,10 +893,14 @@ def _valid_params(tab, p):
         if not mk or any(m not in ("KRW-BTC", "KRW-ETH") for m in mk) or len(set(mk)) != len(mk) or p.get("level") not in ("prevhigh", "vb"):
             raise ValueError("코인 변수 오류")
         return dict(ma=num(p["ma"], 2, 200, True), stopPct=num(p["stopPct"], 0.5, 99), level=p["level"], k=num(p["k"], 0, 2),
-                    lastEntryHour=None if p.get("lastEntryHour") is None else num(p["lastEntryHour"], 10, 23, True), tabSize=num(p["tabSize"], 0.1, 1), markets=mk)
+                    hiN=num(p.get("hiN", 1), 1, 20, True), lastEntryHour=None if p.get("lastEntryHour") is None else num(p["lastEntryHour"], 10, 23, True), tabSize=num(p["tabSize"], 0.1, 1), markets=mk)
     if tab == "soxl":
-        return dict(rsiMax=num(p["rsiMax"], 1, 50), rsiN=num(p["rsiN"], 2, 5, True), ma=num(p["ma"], 0, 250, True),
-                    maxHoldDays=num(p["maxHoldDays"], 1, 5, True), tabSize=num(p["tabSize"], 0.1, 1))
+        out = dict(rsiMax=num(p["rsiMax"], 1, 100), rsiN=num(p["rsiN"], 2, 5, True), ibsMax=num(p.get("ibsMax", 1.0), 0.05, 1),
+                   downDays=num(p.get("downDays", 0), 0, 5, True), ma=num(p["ma"], 0, 250, True),
+                   maxHoldDays=num(p["maxHoldDays"], 1, 5, True), tabSize=num(p["tabSize"], 0.1, 1))
+        if out["rsiMax"] >= 100 and out["ibsMax"] >= 1 and not out["downDays"]:
+            raise ValueError("④ 진입 조건 없음")
+        return out
     raise ValueError("탭 오류")
 
 
@@ -939,32 +1039,64 @@ def soxl_piecewise(srows):
 
 
 # ── 전략 경쟁(아레나) — 자동 퇴출 · 신규 투입 · 7일 1위 자동 승격 ──────────────────────────
-# 밤 계산마다: 탭별 경쟁군(메인 + 그림자 10개 이상)을 같은 함수·같은 비용으로 계산 → 점수 순위 → 날짜별 1위 기록.
-#  · 퇴출: 손실 기준(MDD ≥ −25% · 최악일 ≥ −15% · 기대값 > 0) 미달, 또는 7일 연속 하위 3위. 경쟁군은 10개 밑으로 줄이지 않는다.
-#  · 신규 투입: 상위 3개 전략의 변수를 한 칸씩 바꾼 이웃(없으면 정해 둔 변수 격자 순서)에서, 아직 안 써 본 것만. 손실 기준 통과해야 들어온다.
+# 밤 계산마다: 탭별 경쟁군(메인 + 그림자 10~12개)을 같은 함수·같은 비용으로 계산 → 안정 점수 순위 → 날짜별 1위 기록.
+#  · 안정 점수: 주 평균 수익(복리)을 전체 · 최근 1년 · 최근 90일로 내되, 매매가 적은 구간은 전체 성적 쪽으로 당기고(운으로 튄 최근 성적 거름),
+#    변수를 한 칸씩 바꾼 이웃들의 중앙값보다 높게 쳐 주지 않는다(한 점에서만 좋은 '뾰족한' 과최적화 거름).
+#  · 기준(투입·유지): MDD ≥ −25% · 최악일 ≥ −15% · 기대값 > 0 · 매매일 60일 이상 · 매매한 해의 60% 이상 플러스.
+#  · 퇴출: 기준 미달 · 7일 연속 하위 3위 · 다른 전략과 사실상 같은 매매(일 손익 상관 ≥ 0.97 — 낮은 쪽) · 더 나은 신규에 자리 교체.
+#  · 신규: 밤마다 탭별 후보 48개를 다섯 방법(이웃 · 두 칸 · 교배 · 새 구조 · 격자 탐색)으로 만들어 모두 계산 → 기준 통과 · 복제 아님 ·
+#    안정 점수 높은 순으로 빈자리를 채우고, 기존 최하위보다 확실히(+0.02) 나으면 하룻밤 3개까지 교체. 방법별 성공률을 기억해 잘 되는 방법에 후보를 더 준다.
 #  · 자동 승격: 같은 그림자가 7일(달력) 동안 매일 1위면 Worker 메인 기록에 쌓는다 → 다음 날부터 메인(주문·장부·텔레그램 모두).
-#  모든 변수는 주문 경로가 그대로 실행할 수 있는 범위(_valid_params)만 쓴다. 상태·이력은 data/claude-lab/arena.json(밤 계산이 커밋).
+#    메인은 +0.02 보호(사실상 같은 성적이면 바꾸지 않는다).
+#  모든 변수는 주문·장부 경로가 그대로 실행할 수 있는 범위(_valid_params = _claude_main.js validateParams)만 쓴다.
+#  상태·이력은 data/claude-lab/arena.json(밤 계산이 커밋).
 ARENA_PATH = OUT / "arena.json"
-POOL_TARGET, POOL_MIN, PROMOTE_DAYS, BOTTOM_N, GEN_ATTEMPTS = 12, 10, 7, 3, 40
-ARENA_RULE = ("점수 = 주 평균 수익(복리)을 전체 기간 · 최근 1년 · 최근 90일 세 구간에서 낸 평균(최근 흐름이 반영된다). "
-              "손실 기준(전체 기간 MDD ≥ −25% · 최악일 ≥ −15% · 기대값 > 0)을 못 지키면 순위 맨 뒤 · 그림자는 퇴출. "
-              "7일 연속 하위 3위도 퇴출. 빈자리는 상위 전략의 변수를 한 칸씩 바꾼 새 전략으로 채워 그림자 10~12개를 유지. "
-              "같은 그림자가 7일 동안 매일 1위면 다음 날부터 메인으로 자동 승격(주문·장부·텔레그램이 모두 따라간다).")
+ARENA_SCHEMA = 2
+POOL_TARGET, POOL_MIN, PROMOTE_DAYS, BOTTOM_N, EVAL_BUDGET = 12, 10, 7, 3, 48
+SHRINK_K, MIN_TRADE_DAYS, YEAR_POS_MIN, DUP_CORR = 40, 60, 0.6, 0.97
+MAIN_MARGIN, REPLACE_MARGIN, MAX_REPLACE = 0.02, 0.02, 3
+ARENA_RULE = ("순위 = 안정 점수: 주 평균 수익(복리)을 전체 · 최근 1년 · 최근 90일에서 내되 매매가 적은 구간은 전체 성적 쪽으로 당기고, "
+              "변수를 한 칸씩 바꾼 이웃 전략들의 중앙값보다 높게 쳐 주지 않는다(한 점에서만 좋은 과최적화를 거른다). "
+              "기준(MDD ≥ −25% · 최악일 ≥ −15% · 기대값 > 0 · 매매일 60일↑ · 매매한 해의 60%↑ 플러스)을 못 지키면 맨 뒤 · 그림자는 퇴출. "
+              "7일 연속 하위 3위, 다른 전략과 사실상 같은 매매(상관 0.97↑)도 퇴출. 밤마다 후보 48개를 이웃 · 두 칸 · 교배 · 새 구조 · 격자 탐색으로 만들어 "
+              "모두 계산하고 좋은 순으로 빈자리를 채우거나 최하위를 교체(그림자 10~12개 유지). "
+              "같은 그림자가 7일 동안 매일 1위면 다음 날부터 메인으로 자동 승격(메인은 +0.02 보호 — 사실상 같으면 안 바꾼다).")
 GRID = {
     "opening": dict(minQ=list(range(1, 13)), topK=[1, 2, 3], gapMax=[None, -3.0, -4.0, -5.0, -6.0]),
     "daytrading": dict(th=[round(-1.0 - 0.25 * i, 2) for i in range(29)]),
     "crypto": dict(ma=[5, 10, 15, 20, 25, 30, 40, 50, 60, 80, 100], stopPct=[2.0, 3.0, 4.0, 5.0, 6.0, 8.0, 10.0, 99.0], level=["prevhigh", "vb"],
-                   k=[0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 1.0], lastEntryHour=[None, 12, 15, 18, 21],
+                   k=[0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 1.0], hiN=[1, 2, 3, 4, 5, 7, 10, 15, 20], lastEntryHour=[None, 12, 15, 18, 21],
                    markets=[["KRW-BTC", "KRW-ETH"], ["KRW-BTC"], ["KRW-ETH"]]),
-    "soxl": dict(rsiMax=[5.0, 10.0, 15.0, 20.0, 25.0, 30.0, 35.0, 40.0], rsiN=[2, 3, 4], ma=[0, 50, 100, 150, 200], maxHoldDays=[1, 2, 3, 4, 5]),
+    "soxl": dict(rsiMax=[5.0, 10.0, 15.0, 20.0, 25.0, 30.0, 35.0, 40.0, 100.0], rsiN=[2, 3, 4], ibsMax=[0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 1.0],
+                 downDays=[0, 1, 2, 3], ma=[0, 50, 100, 150, 200], maxHoldDays=[1, 2, 3, 4, 5]),
 }
+# 이웃 중앙값(안정 점수)에 쓰는 숫자 변수 — 종목 묶음 · 기준선 방식처럼 성격이 다른 변수는 '이웃'이 아니다
+PLATEAU_KEYS = {"opening": ("minQ", "topK", "gapMax"), "daytrading": ("th",), "crypto": ("ma", "stopPct", "k", "hiN", "lastEntryHour"),
+                "soxl": ("rsiMax", "rsiN", "ibsMax", "downDays", "ma", "maxHoldDays")}
+# 새 구조 — 상위 전략에 지금까지 없던 조건(데이터로 확인한 것만)을 켠다. 10/5 확인: ③ 최근 N일 고가 돌파는 MDD −23.6% → −12~17%,
+# ④ 종가 위치(IBS)·연속 하락 조건은 매매일당 성적↑. ①(RSI 깊이 · 시장)과 ②(IBS · 이틀 낙폭 · 평균 위/아래)는 전체 기간 성적이 나빠져 넣지 않았다.
+STRUCT = {
+    "crypto": [dict(level="prevhigh", hiN=v) for v in (2, 3, 5, 7, 10)],
+    "soxl": [dict(ibsMax=v) for v in (0.3, 0.5, 0.7)] + [dict(downDays=v) for v in (1, 2)]
+            + [dict(rsiMax=100.0, ibsMax=v) for v in (0.2, 0.3, 0.5)] + [dict(rsiMax=100.0, ibsMax=0.5, downDays=1)],
+}
+OPS = ("neighbor", "jump2", "cross", "struct", "explore")
+OP_NAME = {"neighbor": "이웃(한 칸)", "jump2": "두 칸 동시", "cross": "교배", "struct": "새 구조", "explore": "격자 탐색", "seed": "기본 목록", "main": "메인"}
+PARAM_LABEL = dict(minQ="통과 수", topK="종목 수", gapMax="갭 상한", th="하락 기준", ma="평균", stopPct="손절", level="기준선", k="k", hiN="고가 일수",
+                   lastEntryHour="마지막 매수 시", markets="코인", rsiMax="RSI 상한", rsiN="RSI 기간", ibsMax="IBS 상한", downDays="연속 하락",
+                   maxHoldDays="최대 보유")
 
 
 def _canon(tab, p):
-    """같은 변수면 같은 전략 — 버전 이름을 변수로 만든다(이름이 같으면 다시 만들지 않는다)."""
+    """같은 변수면 같은 전략 — 쓰지 않는 변수는 기본값으로 맞춘다(이름이 같으면 다시 만들지 않는다)."""
     p = _valid_params(tab, dict(MAIN_DEFAULT[tab]["params"], **p))
-    if tab == "crypto" and p["level"] == "prevhigh":
-        p["k"] = 0.5                                             # 어제 고가 기준이면 k 는 쓰지 않는다
+    if tab == "crypto":
+        if p["level"] == "prevhigh":
+            p["k"] = 0.5                                         # 고가 기준이면 k 는 쓰지 않는다
+        else:
+            p["hiN"] = 1                                         # 변동성 돌파면 고가 일수는 쓰지 않는다
+    if tab == "soxl" and p["rsiMax"] >= 100:
+        p["rsiN"] = 2                                            # RSI 조건이 꺼져 있으면 기간은 쓰지 않는다
     return p
 
 
@@ -975,9 +1107,11 @@ def gen_version(tab, p):
         return f"g_etf_th{abs(p['th']):g}"
     if tab == "crypto":
         mk = "both" if len(p["markets"]) == 2 else p["markets"][0].split("-")[1].lower()
-        return (f"g_coin_ma{p['ma']}_s{p['stopPct']:g}_" + ("hi" if p["level"] == "prevhigh" else f"vb{p['k']:g}")
-                + (f"_h{p['lastEntryHour']}" if p.get("lastEntryHour") is not None else "") + f"_{mk}")
-    return f"g_soxl_r{p['rsiN']}lt{p['rsiMax']:g}_ma{p['ma']}_d{p['maxHoldDays']}"
+        lv = ("hi" + (str(p["hiN"]) if (p.get("hiN") or 1) > 1 else "")) if p["level"] == "prevhigh" else f"vb{p['k']:g}"
+        return (f"g_coin_ma{p['ma']}_s{p['stopPct']:g}_{lv}" + (f"_h{p['lastEntryHour']}" if p.get("lastEntryHour") is not None else "") + f"_{mk}")
+    head = f"g_soxl_r{p['rsiN']}lt{p['rsiMax']:g}" if p["rsiMax"] < 100 else "g_soxl_norsi"
+    extra = (f"_ibs{p['ibsMax']:g}" if p.get("ibsMax", 1.0) < 1 else "") + (f"_dn{p['downDays']}" if p.get("downDays") else "")
+    return f"{head}{extra}_ma{p['ma']}_d{p['maxHoldDays']}"
 
 
 def describe(tab, p):
@@ -990,37 +1124,70 @@ def describe(tab, p):
         return (f"{p['th']:g}% 이하 마감".replace("-", "−"),
                 f"KODEX 코스닥150레버리지가 {p['th']:g}% 이하로 마감한 날 종가 매수 → 다음 날 시가 매도".replace("-", "−"))
     if tab == "crypto":
-        lv = "어제 고가" if p["level"] == "prevhigh" else f"시가+{p['k']:g}×어제 폭"
+        hn = p.get("hiN") or 1
+        lv = ("어제 고가" if hn == 1 else f"최근 {hn}일 고가") if p["level"] == "prevhigh" else f"시가+{p['k']:g}×어제 폭"
         mk = "BTC·ETH 반반" if len(p["markets"]) == 2 else p["markets"][0].split("-")[1] + " 만"
         h = f" · {p['lastEntryHour']}시 전 돌파만" if p.get("lastEntryHour") is not None else ""
         st = "손절 없음" if p["stopPct"] >= 99 else f"손절 −{p['stopPct']:g}%"
         return (f"평균 {p['ma']}일 · {lv} 돌파 · {st}{h} · {mk}",
                 f"어제 종가 > {p['ma']}일 평균인 날, {lv}를 넘는 순간 매수 → 다음 날 09:00 매도 · {st}{h} · {mk} · 탭 자금 {p['tabSize'] * 100:.0f}%")
-    ma = f" · {p['ma']}일 평균 위" if p["ma"] else ""
-    return (f"RSI({p['rsiN']}) < {p['rsiMax']:g}{ma} · 최대 {p['maxHoldDays']}일",
-            f"확정 종가 RSI({p['rsiN']}) < {p['rsiMax']:g}{ma}면 다음 시가 매수 → 오른 날 다음 시가 매도, 최대 {p['maxHoldDays']}거래일 · 탭 자금 {p['tabSize'] * 100:.0f}%")
+    cond = soxl_entry_text(p)
+    return (f"{cond} · 최대 {p['maxHoldDays']}일",
+            f"확정 종가 {cond}면 다음 시가 매수 → 오른 날 다음 시가 매도, 최대 {p['maxHoldDays']}거래일 · 탭 자금 {p['tabSize'] * 100:.0f}%")
+
+
+def year_stats(dv, cal):
+    """해마다(그 해 매매일 5일 이상) 복리 수익 — 몇 해가 플러스였는지 · 가장 나쁜 해."""
+    by = {}
+    for d in cal:
+        by.setdefault(d[:4], []).append(d)
+    ys = []
+    for y, ds in sorted(by.items()):
+        if sum(1 for d in ds if d in dv) >= 5:
+            eq = 1.0
+            for d in ds:
+                eq *= 1 + dv.get(d, 0.0) / 100
+            ys.append((eq - 1) * 100)
+    return dict(n=len(ys), pos=sum(1 for v in ys if v > 0), worstPct=min(ys) if ys else None)
 
 
 def score_metrics(dv, cal, per):
-    """전체 · 최근 1년 · 최근 90일(마지막 날 기준) 목표 지표와 점수(세 구간 주 평균의 평균)."""
+    """전체 · 최근 1년 · 최근 90일(마지막 날 기준) 목표 지표와 점수.
+    raw = 세 구간 주 평균의 평균(옛 점수). adj = 1년·90일 값을 매매일 수만큼만 믿고 나머지는 전체 값으로 당긴 평균
+    ((n×구간 + 40×전체)/(n+40) — 매매 15일짜리 90일 성적이 순위를 뒤집지 못하게). score = adj (이웃 중앙값은 경쟁 계산이 덧씌운다)."""
     cal = sorted(set(cal))
     if not cal:
-        return dict(full={}, year={}, d90={}, oos={}, score=None)
+        return dict(full={}, year={}, d90={}, oos={}, years={}, raw=None, adj=None, score=None)
     end = date.fromisoformat(cal[-1])
     win = lambda days: [d for d in cal if d > (end - timedelta(days=days)).isoformat()]
     sub = lambda c: goal_metrics({d: v for d, v in dv.items() if d in set(c)}, c, per)
     full, year, d90 = goal_metrics(dv, cal, per), sub(win(365)), sub(win(90))
     oos = sub([d for d in cal if d > DESIGN_END])
-    ws = [m.get("weeklyAvgPct") for m in (full, year, d90)]
-    return dict(full=full, year=year, d90=d90, oos=oos, score=statistics.fmean(w or 0.0 for w in ws))
+    wf = full.get("weeklyAvgPct") or 0.0
+    shr = lambda m: ((m.get("tradeDays") or 0) * (m.get("weeklyAvgPct") or 0.0) + SHRINK_K * wf) / ((m.get("tradeDays") or 0) + SHRINK_K)
+    raw = statistics.fmean(m.get("weeklyAvgPct") or 0.0 for m in (full, year, d90))
+    adj = statistics.fmean([wf, shr(year), shr(d90)])
+    return dict(full=full, year=year, d90=d90, oos=oos, years=year_stats(dv, cal), raw=raw, adj=adj, score=adj)
+
+
+def gate_reason(m):
+    """기준 미달 사유(통과면 빈 문자열). 손실 기준 + 표본(매매일) + 해마다 일관성."""
+    f, y = m.get("full") or {}, m.get("years") or {}
+    if not f.get("gate"):
+        return f"손실 기준 미달 — MDD {f.get('mddPct') or 0:.1f}% · 최악일 {f.get('worstDayPct') or 0:.1f}% · 거래당 {f.get('expectancyPct') or 0:+.2f}%"
+    if (f.get("tradeDays") or 0) < MIN_TRADE_DAYS:
+        return f"매매일 부족 — {f.get('tradeDays') or 0}일 < {MIN_TRADE_DAYS}일(운과 실력을 못 가림)"
+    if y.get("n") and y["pos"] / y["n"] < YEAR_POS_MIN:
+        return f"해마다 일관성 부족 — 플러스 {y['pos']}/{y['n']}해(60% 미만)"
+    return ""
 
 
 def gate_ok(m):
-    return bool((m.get("full") or {}).get("gate"))
+    return not gate_reason(m)
 
 
 def arena_eval(tab, entry, ctx):
-    """한 전략 계산(같은 함수·같은 비용) — ctx: 시장 자료."""
+    """한 전략 계산(같은 함수·같은 비용) — ctx: 시장 자료. '_dv' 는 복제 판정용 일 손익(화면에는 안 나간다)."""
     p = dict(entry["params"], version=entry["version"])
     if tab == "opening":
         dv, cal = d1_series(p)
@@ -1032,13 +1199,15 @@ def arena_eval(tab, entry, ctx):
         dv, cal, per = r[0], r[4], 365
     else:
         dv, cal, per = soxl_series(p, ctx["soxl"])[0], [x[0] for x in ctx["soxl"]], 252
-    return score_metrics(dv, cal, per)
+    return dict(score_metrics(dv, cal, per), _dv=dv, _cal=cal)
 
 
-def neighbors(tab, parent):
+def neighbors(tab, parent, keys=None):
     """부모 변수를 한 칸씩 바꾼 이웃(변수 순서 · +/− 순서 고정)."""
     out = []
     for key, vals in GRID[tab].items():
+        if keys is not None and key not in keys:
+            continue
         cur = parent.get(key)
         if cur not in vals:
             continue
@@ -1049,8 +1218,80 @@ def neighbors(tab, parent):
     return out
 
 
+def corr(a, b, cal):
+    """두 전략 일 손익(매매 없는 날 0)의 상관 — 0.97 이상이면 사실상 같은 매매."""
+    x = [a.get(d, 0.0) for d in cal]
+    y = [b.get(d, 0.0) for d in cal]
+    n = len(x)
+    if n < 3:
+        return 0.0
+    mx, my = sum(x) / n, sum(y) / n
+    sxy = sum((u - mx) * (v - my) for u, v in zip(x, y))
+    sxx = sum((u - mx) ** 2 for u in x)
+    syy = sum((v - my) ** 2 for v in y)
+    return sxy / math.sqrt(sxx * syy) if sxx > 0 and syy > 0 else 0.0
+
+
+def _fmt(v):
+    if isinstance(v, list):
+        return "·".join(m.split("-")[1] for m in v)
+    if v is None:
+        return "없음"
+    return f"{v:g}" if isinstance(v, (int, float)) else str(v)
+
+
+def param_diff(tab, a, b):
+    """부모 a → 자식 b 에서 바뀐 변수(사람이 읽게). 옛 기록처럼 빠진 변수는 기본값으로 맞춰 비교한다."""
+    try:
+        a, b = _canon(tab, a), _canon(tab, b)
+    except (ValueError, KeyError, TypeError):
+        pass
+    return ", ".join(f"{PARAM_LABEL.get(k, k)} {_fmt(a.get(k))}→{_fmt(b.get(k))}" for k in GRID[tab] if a.get(k) != b.get(k)) or "같음"
+
+
+def propose(tab, op, parents, rng):
+    """방법 하나로 후보 변수 하나 → (변수, 부모 버전들, 설명). 만들 수 없으면 None."""
+    keys = list(GRID[tab])
+    if op == "neighbor" and parents:
+        par = parents[rng.randrange(min(3, len(parents)))]
+        nb = neighbors(tab, par["params"])
+        if nb:
+            c = rng.choice(nb)
+            return c, [par["version"]], par["params"]
+    if op == "jump2" and parents and len(keys) >= 2:
+        par = parents[rng.randrange(min(5, len(parents)))]
+        c = dict(par["params"])
+        for k in rng.sample(keys, 2):
+            vals = GRID[tab][k]
+            i = vals.index(c[k]) if c.get(k) in vals else rng.randrange(len(vals))
+            c[k] = vals[max(0, min(len(vals) - 1, i + rng.choice((-1, 1))))]
+        return c, [par["version"]], par["params"]
+    if op == "cross" and len(parents) >= 2:
+        a, b = rng.sample(parents[:5], 2)
+        c = {k: (a["params"] if rng.random() < 0.5 else b["params"]).get(k) for k in keys}
+        return dict(a["params"], **c), [a["version"], b["version"]], a["params"]
+    if op == "struct" and parents and STRUCT.get(tab):
+        par = parents[rng.randrange(min(3, len(parents)))]
+        return dict(par["params"], **rng.choice(STRUCT[tab])), [par["version"]], par["params"]
+    if op == "explore":
+        return {k: rng.choice(v) for k, v in GRID[tab].items()}, [], None
+    return None
+
+
+def op_weights(tab, ops_state, n_parents):
+    """방법별 몫 = (투입+1)/(시도+2) — 잘 살아남는 방법에 후보를 더 준다. 어떤 방법도 5% 밑으로 줄지 않는다(계속 탐색)."""
+    w = {}
+    for op in OPS:
+        if (op == "struct" and not STRUCT.get(tab)) or (op == "cross" and n_parents < 2) or (op in ("neighbor", "jump2", "struct") and not n_parents):
+            continue
+        s = ops_state.get(op) or {}
+        w[op] = (s.get("accepted", 0) + 1) / (s.get("tried", 0) + 2)
+    tot = sum(w.values()) or 1.0
+    return {k: max(0.05, v / tot) for k, v in w.items()}
+
+
 def grid_order(tab):
-    """격자 전체를 정해진 순서로(결과를 보기 전에 정한 순서 — 탭 이름으로 고정한 섞기)."""
+    """격자 전체를 정해진 순서로(옛 방식 — 시험 · 비교용)."""
     import itertools
     import random
     keys = list(GRID[tab])
@@ -1086,7 +1327,7 @@ def auto_promote(tab, row, main_row, today, state):
     ev = dict(tab=tab, version=row["version"], name=row["name"], rule=row["rule"], params=row["params"], effectiveFrom=eff,
               promotedAt=datetime.now(timezone.utc).isoformat(), prevVersion=main_row["version"], by="auto:arena-7d-top1",
               basis=dict(labGeneratedAt=datetime.now(KST).isoformat(), rank=1,
-                         promotion=f"7일 연속 1위 · 점수 {row['score']:+.3f} vs 메인 {main_row['score'] or 0:+.3f}"))
+                         promotion=f"7일 연속 1위 · 안정 점수 {row['score']:+.3f} vs 메인 {main_row['score'] or 0:+.3f}"))
     key = os.environ.get("JKQ_MONITOR_KEY", "").strip()
     if not key:
         return dict(ok=False, due=True, event=ev, error="감시키 없음(로컬 계산) — 기록하지 않음")
@@ -1106,17 +1347,76 @@ def auto_promote(tab, row, main_row, today, state):
     return dict(ok=True, event=ev)
 
 
+class _Evaluator:
+    """한 탭의 계산 묶음 — 같은 변수는 한 번만 계산(경쟁군 · 이웃 · 후보가 서로 겹친다). 일 손익은 복제 판정용으로 따로 둔다."""
+
+    def __init__(self, tab, ctx):
+        self.tab, self.ctx, self.cache, self.dv, self.days, self._cal = tab, ctx, {}, {}, set(), None
+
+    def metrics(self, params, version=None):
+        try:
+            p = _canon(self.tab, params)
+        except (ValueError, KeyError, TypeError):
+            return None
+        key = gen_version(self.tab, p)
+        if key not in self.cache:
+            try:
+                m = arena_eval(self.tab, dict(version=version or key, params=p), self.ctx)
+            except Exception as e:  # noqa: BLE001
+                self.cache[key] = dict(error=str(e))
+                return self.cache[key]
+            self.dv[key] = m.pop("_dv", None)
+            self.days |= set(m.pop("_cal", None) or [])
+            self._cal = None
+            self.cache[key] = m
+        return self.cache[key]
+
+    def series(self, params):
+        try:
+            return self.dv.get(gen_version(self.tab, _canon(self.tab, params)))
+        except (ValueError, KeyError, TypeError):
+            return None
+
+    def corr(self, a, b):
+        """두 전략(변수)의 일 손익 상관 — 계산한 적 없는 쪽이 있으면 None."""
+        da, db = self.series(a), self.series(b)
+        if da is None or db is None:
+            return None
+        if self._cal is None:
+            self._cal = sorted(self.days)
+        return corr(da, db, self._cal)
+
+    def plateau(self, params):
+        """이웃(숫자 변수 한 칸) 안정 점수 전 값(adj)의 중앙값 — 이웃이 없으면 None."""
+        vals = []
+        for nb in neighbors(self.tab, params, PLATEAU_KEYS[self.tab]):
+            m = self.metrics(nb)
+            if m and m.get("adj") is not None:
+                vals.append(m["adj"])
+        return statistics.median(vals) if vals else None
+
+    def robust(self, params, m):
+        """안정 점수 = min(adj, 이웃 중앙값). 결과 dict 를 새로 만든다(캐시를 건드리지 않는다)."""
+        out = dict(m)
+        pl = self.plateau(params)
+        out["plateau"] = pl
+        out["score"] = m["adj"] if pl is None or m.get("adj") is None else min(m["adj"], pl)
+        return out
+
+
 def arena(ctx, today=None, state=None, tabs=TABS4):
-    """경쟁군 갱신 → 순위 → 1위 기록 → 퇴출·신규 투입 → 7일 1위 자동 승격. 결과(화면용)와 새 상태를 돌려준다."""
+    """경쟁군 갱신 → 순위 → 1위 기록 → 7일 1위 자동 승격 → 퇴출 · 신규 투입(후보 생성 · 평가 · 선발). 결과(화면용)와 새 상태."""
+    import random
     today = today or datetime.now(KST).strftime("%Y-%m-%d")
     state = state if state is not None else (read_json(ARENA_PATH) or {})
-    state.setdefault("schema", 1)
     tabs_state, log = state.setdefault("tabs", {}), state.setdefault("log", [])
     now = datetime.now(KST).isoformat(timespec="minutes")
+    upgraded = state.get("schema", 1) < ARENA_SCHEMA
+    state["schema"] = ARENA_SCHEMA
     out = {}
 
-    def note(tab, kind, row, reason):
-        log.append(dict(date=today, at=now, tab=tab, kind=kind, version=row["version"], name=row.get("name"), reason=reason))
+    def note(tab, kind, row, reason, **kw):
+        log.append(dict(date=today, at=now, tab=tab, kind=kind, version=row["version"], name=row.get("name"), reason=reason, **kw))
 
     for tab in tabs:
         st = tabs_state.setdefault(tab, {})
@@ -1128,21 +1428,36 @@ def arena(ctx, today=None, state=None, tabs=TABS4):
             for c in catalog(tab):
                 if not c["promotable"]:
                     st["retired"].append(dict(version=c["version"], name=c["name"], retiredAt=today, reason="주문 경로 없음(다른 종목) — 자동 승격 불가라 경쟁군에서 뺌"))
+        if upgraded and st.get("snapshots"):                      # 순위 방식이 바뀌면 1위 · 하위 연속 기록은 새로 센다
+            st["snapshots"] = []
+            log.append(dict(date=today, at=now, tab=tab, kind="note", version="", name="",
+                            reason="순위 기준을 안정 점수(구간 당김 · 이웃 중앙값)로 바꿈 — 1위 · 하위 연속 일수를 오늘부터 새로 셈"))
+        ops_state = st.setdefault("ops", {})
         pool = st["pool"]
         if cur["version"] not in {x["version"] for x in pool}:   # 지금 메인은 늘 경쟁군에 있다
             pool.insert(0, dict(version=cur["version"], name=cur["name"], rule=cur["rule"], params=cur["params"], source="main", addedAt=today))
-        seen = {x["version"] for x in pool} | {x["version"] for x in st["retired"]} | set(st["tried"])
+        E = _Evaluator(tab, ctx)
+
+        def canon_key(params):
+            try:
+                return gen_version(tab, _canon(tab, params))
+            except (ValueError, KeyError, TypeError):
+                return None
+        seen = ({x["version"] for x in pool} | {x["version"] for x in st["retired"]} | set(st["tried"])
+                | {canon_key(x["params"]) for x in pool} | {canon_key(x["params"]) for x in st["retired"] if x.get("params")})
         rows, errors = [], []
         for x in pool:
-            try:
-                rows.append(dict(x, **arena_eval(tab, x, ctx)))
-            except Exception as e:  # noqa: BLE001
-                errors.append(dict(version=x["version"], error=str(e)))
+            m = E.metrics(x["params"], x["version"])
+            if not m or m.get("error"):
+                errors.append(dict(version=x["version"], error=(m or {}).get("error", "변수 오류")))
+                continue
+            rows.append(dict(x, **E.robust(x["params"], m)))
         main_row = next((r for r in rows if r["version"] == cur["version"]), None)
         snaps = st["snapshots"]
 
         def ranked(rs):
-            return sorted(rs, key=lambda r: (not gate_ok(r), -(r["score"] if r["score"] is not None else -1e9)))
+            return sorted(rs, key=lambda r: (not gate_ok(r), -((r["score"] if r["score"] is not None else -1e9)
+                                                              + (MAIN_MARGIN if r["version"] == cur["version"] else 0.0))))
         # 1) 오늘 순위 · 1위 기록 — 어제까지 경쟁군으로(오늘 새로 들어오는 전략은 내일부터 순위 기록에 들어간다)
         rows = ranked(rows)
         top = rows[0] if rows else None
@@ -1171,75 +1486,143 @@ def arena(ctx, today=None, state=None, tabs=TABS4):
         elif top:
             promo = dict(code="main_top", text="지금 메인이 1위 — 바꿀 전략 없음")
         promoted_v = promo.get("event", {}).get("version") if promo["code"] == "promoted" else None
-        # 3) 퇴출 후보: 손실 기준 미달 · 7일 연속 하위 3위 (메인 · 방금 승격한 전략은 제외)
-        bad = []
+        keep = {cur["version"], promoted_v}
+        # 3) 퇴출 후보: 기준 미달 · 7일 연속 하위 3위 · 복제(사실상 같은 매매 — 순위 낮은 쪽) (메인 · 방금 승격한 전략은 제외)
+        bad, bad_v = [], set()
+
+        def mark(r, why):
+            if r["version"] not in keep and r["version"] not in bad_v:
+                bad.append((r, why))
+                bad_v.add(r["version"])
         for r in rows:
-            if r["version"] in (cur["version"], promoted_v):
-                continue
-            f = r.get("full") or {}
-            if not gate_ok(r):
-                bad.append((r, f"손실 기준 미달 — MDD {f.get('mddPct') or 0:.1f}% · 최악일 {f.get('worstDayPct') or 0:.1f}% · 거래당 {f.get('expectancyPct') or 0:+.2f}%"))
+            why = gate_reason(r)
+            if why:
+                mark(r, why)
                 continue
             s0, s1, n = streak(snaps, r["version"], lambda sn: r["version"] in (sn.get("bottom") or []))
             if n and _span_days(s0, today) >= PROMOTE_DAYS - 1:
-                bad.append((r, f"{_span_days(s0, today) + 1}일 연속 하위 {BOTTOM_N}위 (점수 {r['score']:+.3f})"))
-        nonmain = [r for r in rows if r["version"] != cur["version"]]
-        # 4) 신규 투입 — 빈자리 + 퇴출될 자리만큼(상위 이웃 → 격자 순서). 손실 기준 통과해야 들어온다.
-        need = POOL_TARGET - (len(nonmain) - len(bad))
-        added, rejected, attempts = [], 0, 0
-        if need > 0:
-            parents = [r for r in rows if gate_ok(r)][:3]
-            cands = [c for par in parents for c in neighbors(tab, par["params"])] + grid_order(tab)
-            for c in cands:
-                if len(added) >= need or attempts >= GEN_ATTEMPTS:
+                mark(r, f"{_span_days(s0, today) + 1}일 연속 하위 {BOTTOM_N}위 (안정 점수 {r['score']:+.3f})")
+        for i, a in enumerate(rows):                              # 순위 높은 쪽을 남긴다
+            if a["version"] in bad_v:
+                continue
+            for b in rows[i + 1:]:
+                if b["version"] in bad_v or b["version"] in keep:
+                    continue
+                c = E.corr(a["params"], b["params"])
+                if c is not None and c >= DUP_CORR:
+                    mark(b, f"복제 — {a['name']} 와 사실상 같은 매매(일 손익 상관 {c:.3f}) · 순위 낮은 쪽을 뺌")
+        # 4) 신규 — 후보 48개를 다섯 방법으로 만들어 모두 계산 → 기준 통과 · 복제 아님 · 안정 점수 순으로 빈자리 채움 / 최하위 교체
+        rng = random.Random(f"arena:{tab}:{today}")
+        parents = [r for r in rows if gate_ok(r)]
+        weights = op_weights(tab, ops_state, len(parents))
+        cands, loops = [], 0
+        while len(cands) < EVAL_BUDGET and loops < EVAL_BUDGET * 30 and weights:
+            loops += 1
+            op = rng.choices(list(weights), weights=list(weights.values()))[0]
+            pr = propose(tab, op, parents, rng)
+            if not pr:
+                continue
+            c, pv, base = pr
+            k = canon_key(c)
+            if not k or k in seen:
+                continue
+            seen.add(k)
+            cands.append(dict(op=op, params=_canon(tab, c), version=k, parents=pv, base=base))
+        reasons = {}
+        passed = []
+        for c in cands:
+            s = ops_state.setdefault(c["op"], dict(tried=0, accepted=0))
+            s["tried"] += 1
+            m = E.metrics(c["params"])
+            why = (m or {}).get("error") or gate_reason(m or {}) if m else "변수 오류"
+            if why:
+                st["tried"].append(c["version"])
+                kind = why.split(" —")[0]
+                reasons[kind] = reasons.get(kind, 0) + 1
+                continue
+            passed.append((c, m))
+        passed.sort(key=lambda cm: -(cm[1]["adj"] or -1e9))
+        live = [r for r in rows if r["version"] not in bad_v]
+        need = POOL_TARGET - len([r for r in live if r["version"] != cur["version"]])
+        added, replaced, filled = [], 0, 0
+        for c, m in passed[:max(0, need) + MAX_REPLACE + 6]:      # 위쪽만 이웃까지 계산(시간)
+            rm = E.robust(c["params"], m)
+            twin = None
+            for r in live:
+                cc = E.corr(c["params"], r["params"])
+                if cc is not None and cc >= DUP_CORR:
+                    twin = r
                     break
-                try:
-                    p = _canon(tab, c)
-                except (ValueError, KeyError, TypeError):
+            nonmain = sorted([r for r in live if r["version"] not in keep], key=lambda r: r["score"] if r["score"] is not None else -1e9)
+            if twin is not None:
+                if twin["version"] in keep or replaced >= MAX_REPLACE or rm["score"] <= (twin["score"] or -1e9) + REPLACE_MARGIN:
+                    st["tried"].append(c["version"])
+                    reasons["복제"] = reasons.get("복제", 0) + 1
                     continue
-                ver = gen_version(tab, p)
-                if ver in seen:
-                    continue
-                seen.add(ver)
-                attempts += 1
-                name, rule = describe(tab, p)
-                e = dict(version=ver, name=name, rule=rule, params=p, source="generated", addedAt=today)
-                try:
-                    m = arena_eval(tab, e, ctx)
-                except Exception:  # noqa: BLE001
-                    st["tried"].append(ver)
-                    continue
-                if not gate_ok(m):
-                    st["tried"].append(ver)
-                    rejected += 1
-                    continue
-                pool.append(e)
-                rows.append(dict(e, **m))
-                parent = parents[0]["version"] if parents else "격자"
-                note(tab, "new", e, f"신규 투입 — 점수 {m['score']:+.3f} · 최근 1년 {(m['year'] or {}).get('totalPct') or 0:+.1f}% (상위 {parent} 주변/격자에서)")
-                added.append(ver)
-            if rejected:
-                log.append(dict(date=today, at=now, tab=tab, kind="reject", version="", name="",
-                                reason=f"새 후보 {rejected}개는 손실 기준 미달로 투입 전 탈락"))
-        # 5) 퇴출 — 그림자를 10개 밑으로 줄이지 않는다(나쁜 것부터)
-        nonmain = [r for r in rows if r["version"] != cur["version"]]
-        room = len(nonmain) - POOL_MIN
-        for r, why in sorted(bad, key=lambda b: (gate_ok(b[0]), b[0]["score"] if b[0]["score"] is not None else -1e9))[:max(0, room)]:
+                out_r, why_out = twin, f"자리 교체 — 같은 매매의 더 나은 신규 {c['version']} (안정 점수 {rm['score']:+.3f} > {twin['score']:+.3f})"
+                replaced += 1
+            elif need > filled:
+                out_r, why_out = None, ""
+                filled += 1
+            elif replaced < MAX_REPLACE and nonmain and rm["score"] > (nonmain[0]["score"] or -1e9) + REPLACE_MARGIN:
+                out_r = nonmain[0]
+                why_out = f"자리 교체 — 신규 {c['version']} 가 안정 점수 {rm['score']:+.3f} 로 {out_r['score']:+.3f} 보다 확실히 나음"
+                replaced += 1
+            else:
+                st["tried"].append(c["version"])
+                reasons["점수 부족"] = reasons.get("점수 부족", 0) + 1
+                continue
+            name, rule = describe(tab, c["params"])
+            e = dict(version=c["version"], name=name, rule=rule, params=c["params"], source="generated", addedAt=today,
+                     op=c["op"], parents=c["parents"])
+            pool.append(e)
+            row = dict(e, **rm)
+            rows.append(row)
+            live.append(row)
+            if out_r is not None:
+                live = [r for r in live if r["version"] != out_r["version"]]
+                mark(out_r, why_out)
+            ops_state[c["op"]]["accepted"] += 1
+            how = OP_NAME[c["op"]] + (f" — {' × '.join(c['parents'])}" if c["op"] == "cross" else
+                                      f" — {c['parents'][0]} 에서 {param_diff(tab, c['base'], c['params'])}" if c["parents"] else "")
+            y = rm.get("years") or {}
+            f = rm.get("full") or {}
+            note(tab, "new", e, f"{how} · 안정 점수 {rm['score']:+.3f} (그대로 {rm['raw']:+.3f} · 이웃 중앙 "
+                                + (f"{rm['plateau']:+.3f}" if rm.get("plateau") is not None else "—")
+                                + f") · 매매일 {f.get('tradeDays') or 0} · MDD {f.get('mddPct') or 0:.1f}% · 플러스 {y.get('pos', 0)}/{y.get('n', 0)}해",
+                 op=c["op"])
+            added.append(c["version"])
+        if cands:
+            rj = " · ".join(f"{k} {v}" for k, v in sorted(reasons.items(), key=lambda kv: -kv[1]))
+            log.append(dict(date=today, at=now, tab=tab, kind="reject", version="", name="",
+                            reason=f"후보 {len(cands)}개 계산 → 기준 통과 {len(passed)} · 투입 {len(added)}(교체 {replaced})" + (f" · 탈락: {rj}" if rj else "")))
+        # 5) 퇴출 — 그림자를 10개 밑으로 줄이지 않는다(교체 · 복제 · 기준 미달 → 점수 낮은 순)
+        nonmain_n = len([r for r in rows if r["version"] != cur["version"]])
+        room = nonmain_n - POOL_MIN
+        order = lambda b: (0 if b[1].startswith("자리 교체") else 1 if b[1].startswith("복제") else 2 if not gate_ok(b[0]) else 3,
+                           b[0]["score"] if b[0]["score"] is not None else -1e9)
+        for r, why in sorted(bad, key=order)[:max(0, room)]:
             pool[:] = [x for x in pool if x["version"] != r["version"]]
             rows = [x for x in rows if x["version"] != r["version"]]
             st["retired"].append(dict(version=r["version"], name=r["name"], params=r["params"], retiredAt=today, reason=why))
             note(tab, "retire", r, why)
         st["retired"] = st["retired"][-200:]
-        st["tried"] = st["tried"][-2000:]
+        st["tried"] = st["tried"][-3000:]
         rows = ranked(rows)                                       # 화면용 최종 순위(새로 들어온 전략 포함 — '신규' 표시)
         for i, r in enumerate(rows, 1):
             r["rank"], r["isMain"], r["isNew"] = i, r["version"] == cur["version"], r["version"] in added
+            r.setdefault("op", "main" if r["isMain"] else r.get("source") or "seed")
         for r in rows:
             r["promotion"] = (dict(promo, code="candidate") if (top and r["version"] == top["version"] and not r["isMain"] and promo["code"] in ("streak", "due", "failed"))
                               else dict(code="main", text="지금 메인") if r["isMain"] else dict(code="keep", text=""))
+        if rows and rows[0]["isNew"]:                               # 오늘 들어온 전략이 맨 위 — 1위 일수는 내일부터 센다
+            promo = dict(promo, newTop=rows[0]["name"], newTopVersion=rows[0]["version"])
+        gen = dict(evaluated=len(cands), passed=len(passed), added=len(added), replaced=replaced, reasons=reasons,
+                   ops=[dict(op=o, name=OP_NAME[o], tried=(ops_state.get(o) or {}).get("tried", 0), accepted=(ops_state.get(o) or {}).get("accepted", 0),
+                             share=round(weights.get(o, 0.0), 3)) for o in OPS if o in weights or o in ops_state])
         out[tab] = dict(main=cur["version"], mainName=cur["name"], effectiveFrom=cur.get("effectiveFrom"), rows=rows, errors=errors,
                         top=top["version"] if top else None, status=promo, added=added, retiredToday=[x for x in st["retired"] if x.get("retiredAt") == today],
-                        poolSize=len([r for r in rows if not r["isMain"]]), triedCount=len(st["tried"]), rule=ARENA_RULE,
+                        poolSize=len([r for r in rows if not r["isMain"]]), triedCount=len(st["tried"]), rule=ARENA_RULE, gen=gen,
                         log=[x for x in log if x["tab"] == tab][-30:])
     state["log"] = log[-600:]
     state["updatedAt"] = now
@@ -1737,7 +2120,7 @@ def main():
         ctx = dict(coin={m: ROWS[m] for m in ROWS if str(m).startswith("KRW-")}, soxl=ROWS.get("SOXL") or [],
                    kr_cal=[d for d in krx_cal if d >= "2018-04-01"])
         report["arena"], astate = arena(ctx)
-        ARENA_PATH.write_text(json.dumps(astate, ensure_ascii=False, indent=1, default=str), encoding="utf-8")
+        ARENA_PATH.write_text(json.dumps(finite(astate), ensure_ascii=False, indent=1, default=str, allow_nan=False), encoding="utf-8")
         report["ranking"] = report["arena"]
         report["shadows"] = shadows_from(report["arena"])
         report["main"] = {t: dict(current=main_for(t), today=main_for(t, today), history=[e for e in MAIN_EVENTS if e["tab"] == t]) for t in TABS4}
@@ -1769,7 +2152,7 @@ def main():
         report["review"] = write_review(report)
     except Exception as e:  # noqa: BLE001
         report["review"] = dict(error=str(e))
-    (OUT / "latest.json").write_text(json.dumps(report, ensure_ascii=False, indent=2, default=str), encoding="utf-8")
+    (OUT / "latest.json").write_text(json.dumps(finite(report), ensure_ascii=False, indent=2, default=str, allow_nan=False), encoding="utf-8")
     print(json.dumps({k: (v.get("compare") if isinstance(v, dict) else v) for k, v in report["tabs"].items()}, ensure_ascii=False, default=str)[:3000])
     return 0
 
