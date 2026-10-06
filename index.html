@@ -548,7 +548,7 @@ document.documentElement.classList.add('had-user');</script>
 </div>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.110.7</span></h1></div>
+    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.110.8</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -1660,7 +1660,7 @@ if(/^\/paper\/?$/.test(location.pathname)){
   <footer>
     <strong>JK 퀀트</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.110.7</b> · 2026-10-06</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.110.8</b> · 2026-10-06</div>
   </footer>
 </div>
 
@@ -3403,7 +3403,7 @@ function quoteToDaily(SYM, j){
           intraday:j.intraday||null,currency:j.currency||'USD',src:(j.src||'api')};
 }
 
-const QUOTE_TRY_MS=[12000,20000];   // 자체 시세 함수: 첫 시도 12초 · 다시 한 번 20초
+const QUOTE_TRY_MS=[7000,10000];    // 자체 시세 함수: 첫 시도 7초 · 재시도 10초 — 운영 화면을 오래 묶지 않는다
 async function _fetchDailyRaw(symbol){
   const SYM=symbol.toUpperCase();
   // 1) 자체 함수 (동일 출처) — 시간 제한을 두고 한 번 더 묻는다.
@@ -3425,7 +3425,15 @@ async function _fetchDailyRaw(symbol){
     }
   }catch(e){/* 시간 초과·일시 오류 → 한 번 더, 그래도 안 되면 폴백 */}
 
-  // 2) 브라우저에서 Yahoo 직접 (프록시 경유) — 실시간가 + 인트라데이까지
+  /* 운영 Pages 에서는 /api/quote 자체가 같은 배포의 정식 시세 경로다.
+     여기까지 왔다는 건 정식 경로가 2번 실패한 상태다. 이때 공개 CORS 프록시를
+     6개×Yahoo + 6개×Stooq 순서로 기다리면 종목 하나가 1분 넘게 화면을 묶는다.
+     공개 프록시는 로컬/다른 정적 호스팅의 비상용으로만 남기고 운영은 빠르게 실패시켜
+     다음 새로고침에서 다시 정식 API를 시도하게 한다. */
+  const _prodPages=(typeof location!=='undefined' && /\.pages\.dev$/i.test(String(location.hostname||'')));
+  if(_prodPages) return null;
+
+  // 2) 브라우저에서 Yahoo 직접 (프록시 경유) — 비운영 환경 비상 폴백
   const yUrl=`https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(SYM)}?interval=1d&range=max&includePrePost=false`;
   for(const px of PUBLIC_PROXIES){
     try{
