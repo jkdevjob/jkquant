@@ -8,13 +8,14 @@ export const MAIN_DEFAULT = {
   opening: { version: "opening_gapdown_v1+v2filter", name: "① D-1 갭하락 과매도 v2", params: { minQ: 5, topK: 3, gapMax: null } },
   daytrading: { version: "etf_dip_overnight_v1", name: "② 코스닥150 레버리지 하락일 야간", params: { code: "233740", th: -3.0 } },
   crypto: { version: "coin_breakout_v1", name: "③ BTC·ETH 어제 고가 돌파 하루 단타",
-    params: { ma: 20, stopPct: 5.0, level: "prevhigh", k: 0.5, lastEntryHour: null, tabSize: 0.8, markets: ["KRW-BTC", "KRW-ETH"] } },
-  soxl: { version: "soxl_rsi2_meanrev_v1", name: "④ SOXL 단기 과매도 반등 (최대 5일)", params: { rsiMax: 20.0, rsiN: 2, ma: 200, maxHoldDays: 5, tabSize: 0.5 } },
+    params: { ma: 20, stopPct: 5.0, level: "prevhigh", k: 0.5, hiN: 1, lastEntryHour: null, tabSize: 0.8, markets: ["KRW-BTC", "KRW-ETH"] } },
+  soxl: { version: "soxl_rsi2_meanrev_v1", name: "④ SOXL 단기 과매도 반등 (최대 5일)", params: { rsiMax: 20.0, rsiN: 2, ibsMax: 1.0, downDays: 0, ma: 200, maxHoldDays: 5, tabSize: 0.5 } },
 };
 
 const num = (v, lo, hi) => { const x = Number(v); if (!Number.isFinite(x) || x < lo || x > hi) throw new Error("범위 밖 값 " + v + " (" + lo + "~" + hi + ")"); return x; };
 const int = (v, lo, hi) => { const x = num(v, lo, hi); if (!Number.isInteger(x)) throw new Error("정수가 아님 " + v); return x; };
 // 승격으로 들어올 수 있는 변수와 범위 — 주문 경로가 그대로 실행할 수 있는 것만. 보유 최대 5일(사용자 규칙) · ② 는 233740 만(주문 경로 전용).
+// ③ hiN: 최근 N일 고가 돌파(1 = 어제 고가). ④ rsiMax 100 = RSI 조건 없음 · ibsMax 1 = 종가 위치 조건 없음 · downDays 0 = 연속 하락 조건 없음(셋 다 꺼지면 거절).
 export function validateParams(tab, p) {
   p = p || {};
   if (tab === "opening") return { minQ: int(p.minQ, 1, 30), topK: int(p.topK, 1, 3), gapMax: p.gapMax == null ? null : num(p.gapMax, -29, -2) };
@@ -26,10 +27,15 @@ export function validateParams(tab, p) {
     const mk = Array.isArray(p.markets) ? p.markets.map(String) : [];
     if (!mk.length || mk.some(m => m !== "KRW-BTC" && m !== "KRW-ETH") || new Set(mk).size !== mk.length) throw new Error("코인 목록 오류");
     if (p.level !== "prevhigh" && p.level !== "vb") throw new Error("기준선 방식 오류");
-    return { ma: int(p.ma, 2, 200), stopPct: num(p.stopPct, 0.5, 99), level: p.level, k: num(p.k, 0, 2),
+    return { ma: int(p.ma, 2, 200), stopPct: num(p.stopPct, 0.5, 99), level: p.level, k: num(p.k, 0, 2), hiN: int(p.hiN ?? 1, 1, 20),
       lastEntryHour: p.lastEntryHour == null ? null : int(p.lastEntryHour, 10, 23), tabSize: num(p.tabSize, 0.1, 1), markets: mk };
   }
-  if (tab === "soxl") return { rsiMax: num(p.rsiMax, 1, 50), rsiN: int(p.rsiN, 2, 5), ma: int(p.ma, 0, 250), maxHoldDays: int(p.maxHoldDays, 1, 5), tabSize: num(p.tabSize, 0.1, 1) };
+  if (tab === "soxl") {
+    const o = { rsiMax: num(p.rsiMax, 1, 100), rsiN: int(p.rsiN, 2, 5), ibsMax: num(p.ibsMax ?? 1, 0.05, 1), downDays: int(p.downDays ?? 0, 0, 5),
+      ma: int(p.ma, 0, 250), maxHoldDays: int(p.maxHoldDays, 1, 5), tabSize: num(p.tabSize, 0.1, 1) };
+    if (o.rsiMax >= 100 && o.ibsMax >= 1 && !o.downDays) throw new Error("④ 진입 조건 없음");
+    return o;
+  }
   throw new Error("탭 오류");
 }
 

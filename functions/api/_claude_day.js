@@ -160,7 +160,8 @@ export function soxlDay(nyDate, nx, q, entry) {
   r.realizedBase = cap;
   return Object.assign(finish(r), { status: "closed",
     strategyVersion: nx.version || MAIN_DEFAULT.soxl.version,
-    note: nx.action === "buy" ? "전날 확정 종가 RSI(" + (nx.rsiN || 2) + ") " + (+nx.rsi2).toFixed(0) + " < " + (nx.rsiMax ?? 20) + ((nx.maDays ?? 200) ? " · " + (nx.maDays ?? 200) + "일 평균 위" : "") + " → 시가 매수" : nx.action === "sell" ? "시가 매도" : nx.holding ? "보유 유지" : "과매도 신호 없음 — 쉼",
+    note: nx.action === "buy" ? "전날 확정 종가 " + (nx.entryRule || "RSI(" + (nx.rsiN || 2) + ") " + (+nx.rsi2).toFixed(0) + " < " + (nx.rsiMax ?? 20) + ((nx.maDays ?? 200) ? " · " + (nx.maDays ?? 200) + "일 평균 위" : "")) + " → 시가 매수"
+      : nx.action === "sell" ? "시가 매도" : nx.holding ? "보유 유지" : (nx.why ? "신호 없음(" + nx.why + ") — 쉼" : "과매도 신호 없음 — 쉼"),
     capitalNote: "모의 자금 $" + cap.toLocaleString("en-US") });
 }
 

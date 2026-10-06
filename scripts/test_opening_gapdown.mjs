@@ -86,6 +86,7 @@ t("① 메인 변수: 매매일 기준(minQ) · 장부 종목(깊은 topK) — �
 t("③ 메인 변수: 변동성 돌파 기준선 · 밤(21시~) 돌파 안 삼 · 손절폭 · 메인에 없는 코인은 마감 장부에서 뺀다", () => {
   const c = [{ trade_price: 1, opening_price: 121 }, { trade_price: 120, high_price: 125, low_price: 115, candle_date_time_kst: "2026-10-01T09:00:00" }, ...Array.from({ length: 19 }, () => ({ trade_price: 100 }))];
   const vb = LV.coinHoldToday(c, { ...MAIN.MAIN_DEFAULT.crypto.params, level: "vb", k: 0.5 });
+  assert.ok(vb, "판단 없음");
   near(vb.level, 121 + 0.5 * 10);
   const P = { ...MAIN.MAIN_DEFAULT.crypto.params, lastEntryHour: 21, stopPct: 3 };
   const h = LV.coinHoldToday(c, P);
@@ -317,6 +318,32 @@ t("today summary: tab return vs per-trade sum, account share, no-trade reason", 
   LV.applyKrSplit(T2); near(T2.opening.today.accountPct, 0.3); near(T2.daytrading.today.accountPct, 0.15);
   const T3 = { opening: { today: { tabPct: 2, noTrade: false, weight: 0.3, accountPct: 0.6 } }, daytrading: { today: { tabPct: 0, noTrade: true, weight: 0.3, accountPct: 0 } } };
   LV.applyKrSplit(T3); near(T3.opening.today.accountPct, 0.6);
+});
+t("새 구조 변수: ③ 최근 N일 고가(hiN) · ④ IBS · 연속 하락 · RSI 끄기 — 범위 검사 · 기준선 · 쉬는 이유 · 마감 장부 문구", () => {
+  const S = MAIN.MAIN_DEFAULT.soxl.params, C = MAIN.MAIN_DEFAULT.crypto.params;
+  assert.deepEqual(MAIN.validateParams("soxl", { ...S, rsiMax: 100, ibsMax: 0.3 }), { ...S, rsiMax: 100, ibsMax: 0.3 });
+  assert.throws(() => MAIN.validateParams("soxl", { ...S, rsiMax: 100 }), /진입 조건 없음/);       // 조건이 하나도 없으면 거절(Python 과 같게)
+  assert.throws(() => MAIN.validateParams("soxl", { ...S, ibsMax: 0.01 }));
+  assert.throws(() => MAIN.validateParams("soxl", { ...S, downDays: 6 }));
+  assert.equal(MAIN.validateParams("crypto", { ...C, hiN: 10 }).hiN, 10);
+  assert.throws(() => MAIN.validateParams("crypto", { ...C, hiN: 21 }));
+  assert.equal(MAIN.validateParams("crypto", { ...C, hiN: undefined }).hiN, 1);                // 옛 승격 기록(hiN 없음)은 어제 고가
+  const D = (d, close, high) => ({ candle_date_time_kst: d + "T09:00:00", trade_price: close, high_price: high, low_price: close - 1, opening_price: close });
+  const c = [D("2026-10-06", 1, 999), D("2026-10-05", 120, 121), D("2026-10-04", 118, 140), D("2026-10-03", 117, 125), ...Array.from({ length: 20 }, () => D("2026-09-20", 100, 101))];
+  assert.equal(LV.coinHoldToday(c, C).level, 121);
+  const h3 = LV.coinHoldToday(c, { ...C, hiN: 3 });
+  assert.equal(h3.level, 140); assert.equal(h3.hiN, 3);
+  assert.equal(LV.coinHoldToday(c, { ...C, level: "vb", hiN: 3 }).hiN, 1);                   // 변동성 돌파는 고가 일수를 쓰지 않는다
+  assert.equal(LV.coinHoldToday(c.slice(0, 3), { ...C, ma: 2, hiN: 3 }), null);               // 고가 일수만큼 확정 봉이 없으면 판단 안 함
+  const wait = LV.coinBreakoutDay(h3, [], null, { ...C, hiN: 3 });
+  assert.ok(wait.status.includes("최근 3일 고가"));
+  const q = { price: 100, ohlc: [{ date: "2026-10-01", open: 100, close: 100 }, { date: "2026-10-02", open: 99, close: 100 }], intraday: { regular: { c: 100 }, date: "2026-10-02" } };
+  const flat = LV.soxlLive({ basedOn: "2026-10-01", action: "none", holding: false, heldDays: 0, close: 100, ma: 0, maDays: 0, rsi2: 55, why: "IBS 0.62 > 0.3" }, q, null);
+  assert.equal(flat.status, "쉼 — IBS 0.62 > 0.3");
+  const day = DAY.soxlDay("2026-10-02", { basedOn: "2026-10-01", action: "buy", holding: false, heldDays: 0, close: 100, ma: 0, maDays: 0, rsi2: 55, entryRule: "종가 위치(IBS) ≤ 0.3 · 2일 연속 하락" }, q, null);
+  assert.equal(day.note, "전날 확정 종가 종가 위치(IBS) ≤ 0.3 · 2일 연속 하락 → 시가 매수");
+  const none = DAY.soxlDay("2026-10-02", { basedOn: "2026-10-01", action: "none", holding: false, heldDays: 0, close: 100, why: "연속 하락 1일 < 2일" }, q, null);
+  assert.equal(none.note, "신호 없음(연속 하락 1일 < 2일) — 쉼");
 });
 t("soxl live: planned open buy/sell executes only in the session after the decision", () => {
   const q = (date, open, c, prev) => ({ price: c, ohlc: [{ date: "2026-10-01", open: prev, close: prev }, { date, open, close: c }], intraday: { regular: { c }, date } });

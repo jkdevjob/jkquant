@@ -575,7 +575,8 @@ class CoinParityTest(unittest.TestCase):
             px = c
         Dd = lab.upbit_days(H)
         days = sorted(Dd)
-        variants = [dict(), dict(ma=10, stopPct=3.0), dict(level="vb", k=0.5), dict(lastEntryHour=15, stopPct=2.0), dict(ma=5, level="vb", k=0.3, lastEntryHour=21)]
+        variants = [dict(), dict(ma=10, stopPct=3.0), dict(level="vb", k=0.5), dict(lastEntryHour=15, stopPct=2.0), dict(ma=5, level="vb", k=0.3, lastEntryHour=21),
+                    dict(hiN=3), dict(hiN=5, stopPct=99.0, ma=10), dict(hiN=2, lastEntryHour=18)]
         cases, py = [], []
         for v in variants:
             P = dict(lab.MAIN_DEFAULT["crypto"]["params"], **v)
@@ -589,13 +590,13 @@ class CoinParityTest(unittest.TestCase):
                              high_price=H[(s0 + lab.timedelta(hours=k)).isoformat()][1], low_price=H[(s0 + lab.timedelta(hours=k)).isoformat()][2],
                              trade_price=H[(s0 + lab.timedelta(hours=k)).isoformat()][3]) for k in range(24)]
                 cases.append(dict(P=P, daily=daily, bars=bars))
-                py.append(dict(action=r["action"], entry=r["entryPrice"], pnl=r["pnlPct"]))
+                py.append(dict(action=r["action"], entry=r["entryPrice"], pnl=r["pnlPct"], level=r["level"]))
         api_dir = os.environ.get("JKQ_API_DIR") or os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "functions", "api")
         api = os.path.join(api_dir, "claude-live.js")
         js = ("import * as LV from " + json.dumps("file://" + os.path.abspath(api)) + ";"
               "let s='';process.stdin.on('data',d=>s+=d).on('end',()=>{const out=JSON.parse(s).map(c=>{const h=LV.coinHoldToday(c.daily,c.P);"
               "const r=LV.coinBreakoutDay(h,c.bars,c.bars[23].trade_price,c.P);"
-              "return {action:!h.hold?'flat':!r.hold?'no_break':r.stopped?'stop':'trade',entry:r.hold?r.buyPrice:null,pnl:r.hold?r.pnlPct:null};});"
+              "return {action:!h.hold?'flat':!r.hold?'no_break':r.stopped?'stop':'trade',entry:r.hold?r.buyPrice:null,pnl:r.hold?r.pnlPct:null,level:h.level};});"
               "process.stdout.write(JSON.stringify(out));});")
         res = subprocess.run(["node", "--input-type=module", "-e", js], input=json.dumps(cases), capture_output=True, text=True)
         self.assertEqual(res.returncode, 0, res.stderr[-500:])
@@ -604,6 +605,7 @@ class CoinParityTest(unittest.TestCase):
         acts = set()
         for a, b in zip(py, out):
             self.assertEqual(a["action"], b["action"])
+            self.assertAlmostEqual(a["level"], b["level"], places=6)              # 기준선(최근 N일 고가 · 변동성 돌파)도 같아야
             acts.add(a["action"])
             if a["entry"] is not None:
                 self.assertAlmostEqual(a["entry"], b["entry"], places=6)
@@ -659,19 +661,28 @@ class SoxlParamsTest(unittest.TestCase):
             lab.MAIN_EVENTS[:] = old
 
 
+def fake_metrics(sc, gate=True, trade_days=100, years=(9, 9), dv=None, cal=None):
+    """경쟁 시험용 가짜 성적 — arena_eval 과 같은 모양(점수 = adj = raw)."""
+    return dict(full=dict(gate=gate, mddPct=-10.0 if gate else -40.0, worstDayPct=-5.0, expectancyPct=0.5 if gate else -0.1,
+                          tradeDays=trade_days, weeklyAvgPct=sc),
+                year=dict(totalPct=sc * 100), d90={}, oos={}, years=dict(n=years[1], pos=years[0], worstPct=1.0),
+                raw=sc, adj=sc, score=sc, _dv=dv, _cal=cal or [])
+
+
 class ArenaTest(unittest.TestCase):
-    """전략 경쟁: 신규 투입으로 그림자 10~12개 유지 · 손실 기준 미달/7일 하위 3위 퇴출 · 7일 연속 1위 자동 승격(다음 날부터)."""
+    """전략 경쟁: 안정 점수 순위 · 7일 연속 1위 자동 승격(다음 날부터) · 기준 미달/7일 하위 3위/복제 퇴출 · 후보 생성과 자리 교체 · 메인 보호."""
 
     def setUp(self):
-        self.old = (lab.arena_eval, lab.post_json, list(lab.MAIN_EVENTS), os.environ.get("JKQ_MONITOR_KEY"))
+        self.old = (lab.arena_eval, lab.post_json, list(lab.MAIN_EVENTS), os.environ.get("JKQ_MONITOR_KEY"), lab.EVAL_BUDGET)
         lab.MAIN_EVENTS[:] = []
-        # 가짜 성적: ① 통과 개수(minQ)가 클수록 점수↑, minQ<3 은 손실 기준 미달. 깊은 종목 수가 적을수록 조금 낮게.
+        self.formula = lambda p: (p["minQ"] * 0.01 + p["topK"] * 0.001, p["minQ"] >= 3)
+        self.series = {}
+
         def ev(tab, e, ctx):
             p = e["params"]
-            sc = p["minQ"] * 0.01 - (3 - p["topK"]) * 0.001 - (0.0005 if p.get("gapMax") is not None else 0)
-            gate = p["minQ"] >= 3 and p.get("gapMax") is None            # 갭 거르기 안은 손실 기준 미달(새 후보면 투입 전 탈락해야 함)
-            return dict(full=dict(gate=gate, mddPct=-10.0 if gate else -40.0, worstDayPct=-5.0, expectancyPct=0.5),
-                        year=dict(totalPct=sc * 100), d90={}, oos={}, score=sc)
+            sc, gate = self.formula(p)
+            dv = self.series.get(lab.gen_version(tab, lab._canon(tab, p)))
+            return fake_metrics(sc, gate=gate, dv=dv, cal=sorted(dv) if dv else None)
         lab.arena_eval = ev
         self.posts = []
         lab.post_json = lambda url, body, key, timeout=30: (self.posts.append((url, body)) or {"ok": True})
@@ -679,66 +690,267 @@ class ArenaTest(unittest.TestCase):
     def tearDown(self):
         lab.arena_eval, lab.post_json = self.old[0], self.old[1]
         lab.MAIN_EVENTS[:] = self.old[2]
+        lab.EVAL_BUDGET = self.old[4]
         if self.old[3] is None:
             os.environ.pop("JKQ_MONITOR_KEY", None)
         else:
             os.environ["JKQ_MONITOR_KEY"] = self.old[3]
 
-    def run_days(self, days, key=None):
+    def pool_state(self, params_list):
+        pool = []
+        for p in params_list:
+            p = lab._canon("opening", p)
+            v = lab.gen_version("opening", p)
+            pool.append(dict(version=v, name=v, rule="", params=p, source="seed", addedAt="2026-10-01"))
+        return {"schema": lab.ARENA_SCHEMA, "tabs": {"opening": dict(pool=pool, retired=[], tried=[], snapshots=[])}, "log": []}
+
+    def run_days(self, days, key=None, state=None):
         if key:
             os.environ["JKQ_MONITOR_KEY"] = key
         else:
             os.environ.pop("JKQ_MONITOR_KEY", None)
-        state, outs = {}, []
+        state, outs = (state if state is not None else {}), []
         for d in days:
             out, state = lab.arena({}, today=d, state=state, tabs=("opening",))
             outs.append(out["opening"])
         return outs, state
 
-    def test_pool_kept_and_bad_retired(self):
+    def fixed(self, n=12, budget=0):
+        lab.EVAL_BUDGET = budget                                                 # 후보 생성 없이 정해 둔 경쟁군만
+        return self.pool_state([dict(minQ=q, topK=3) for q in range(13 - n, 13) if q != 5][:n])
+
+    def test_first_run_fills_pool_and_retires_bad(self):
         outs, state = self.run_days(["2026-10-05"])
         z = outs[0]
         self.assertEqual(z["poolSize"], lab.POOL_TARGET)                       # 12개로 채운다
-        self.assertTrue(all(r["full"]["gate"] for r in z["rows"] if not r["isMain"]))   # 그림자는 손실 기준 통과만
+        self.assertTrue(all(lab.gate_ok(r) for r in z["rows"] if not r["isMain"]))   # 그림자는 기준 통과만
         ret = state["tabs"]["opening"]["retired"]
         self.assertTrue(any(x["version"] == "opening_d1_min1" and "손실 기준 미달" in x["reason"] for x in ret))
-        self.assertTrue(any(x["kind"] == "new" for x in state["log"]) and any(x["kind"] == "retire" for x in state["log"]))
-        self.assertTrue(any(x["kind"] == "reject" for x in state["log"]))      # 기준 미달 후보는 투입 전 탈락 기록
+        kinds = {x["kind"] for x in state["log"]}
+        self.assertTrue({"new", "retire", "reject"} <= kinds, kinds)
+        news = [x for x in state["log"] if x["kind"] == "new"]
+        self.assertTrue(all(x.get("op") in lab.OPS and lab.OP_NAME[x["op"]] in x["reason"] and "안정 점수" in x["reason"] for x in news))
+        ops = state["tabs"]["opening"]["ops"]
+        self.assertEqual(sum(s["accepted"] for s in ops.values()), len(z["added"]))   # 방법별 성적 = 실제 투입 수
+        self.assertEqual(sum(s["tried"] for s in ops.values()), z["gen"]["evaluated"])
+        self.assertEqual(z["gen"]["evaluated"], lab.EVAL_BUDGET)
         self.assertTrue(state["tabs"]["opening"]["tried"])
-        self.assertGreaterEqual(z["poolSize"], lab.POOL_MIN)
+        # 이미 본 변수(기본 목록 · 경쟁군)는 다시 후보로 만들지 않는다 — 같은 날 한 번 더 돌려도 같은 후보가 없다
+        _, state2 = self.run_days(["2026-10-05"], state=state)
+        firsts = [x["version"] for x in state["log"] if x["kind"] == "new"]
+        self.assertEqual(len(firsts), len(set(firsts)))
 
     def test_seven_days_top_promotes_next_day(self):
-        # 10/5 첫날은 기존 목록 1위(min8) → 10/6 부터 새로 들어온 q9 가 1위 → 10/12 에 7일(달력) → 10/13 부터 메인
-        days = ["2026-10-05", "2026-10-06", "2026-10-07", "2026-10-08", "2026-10-09", "2026-10-12"]
-        outs, _ = self.run_days(days, key="k")
+        days = ["2026-10-05", "2026-10-06", "2026-10-07", "2026-10-08", "2026-10-09", "2026-10-11"]
+        outs, _ = self.run_days(days, key="k", state=self.fixed())
         z = outs[-1]
-        self.assertEqual(outs[0]["top"], "opening_d1_min8")
+        self.assertEqual(outs[0]["top"], "g_open_q12_k3")
         self.assertEqual(z["status"]["code"], "promoted")
         ev = z["status"]["event"]
-        self.assertEqual(ev["effectiveFrom"], "2026-10-13")                     # 다음 날부터
-        self.assertEqual(ev["version"], "g_open_q9_k3")
-        self.assertEqual(ev["params"], dict(minQ=9, topK=3, gapMax=None))
+        self.assertEqual(ev["effectiveFrom"], "2026-10-12")                     # 다음 날부터
+        self.assertEqual(ev["version"], "g_open_q12_k3")
+        self.assertEqual(ev["params"], dict(minQ=12, topK=3, gapMax=None))
         self.assertTrue(self.posts and self.posts[0][0].endswith("/claude-config"))
-        self.assertEqual(lab.main_for("opening")["version"], "g_open_q9_k3")     # 같은 계산 안에서도 다음 메인으로 보인다
-        self.assertEqual(lab.main_for("opening", "2026-10-12")["version"], lab.MAIN_DEFAULT["opening"]["version"])
+        self.assertEqual(lab.main_for("opening")["version"], "g_open_q12_k3")    # 같은 계산 안에서도 다음 메인으로 보인다
+        self.assertEqual(lab.main_for("opening", "2026-10-11")["version"], lab.MAIN_DEFAULT["opening"]["version"])
 
     def test_six_days_not_enough_and_no_key_only_due(self):
-        outs, _ = self.run_days(["2026-10-05", "2026-10-06", "2026-10-07", "2026-10-08", "2026-10-09", "2026-10-11"], key="k")
+        outs, _ = self.run_days(["2026-10-05", "2026-10-06", "2026-10-07", "2026-10-08", "2026-10-10"], key="k", state=self.fixed())
         self.assertEqual(outs[-1]["status"]["code"], "streak")
-        self.assertEqual(outs[-1]["status"]["days"], 6)                       # 10/6~10/11
+        self.assertEqual(outs[-1]["status"]["days"], 6)                       # 10/5~10/10
         self.assertEqual(self.posts, [])
-        outs, _ = self.run_days(["2026-10-05", "2026-10-06", "2026-10-13"])    # 감시키 없으면 기록하지 않는다
+        outs, _ = self.run_days(["2026-10-05", "2026-10-11"], state=self.fixed())   # 감시키 없으면 기록하지 않는다
         self.assertEqual(outs[-1]["status"]["code"], "due")
         self.assertEqual(self.posts, [])
 
+    def test_main_margin_keeps_near_tie(self):
+        # 메인(q5 k3 = 0.053) 대비 +0.015 는 1위가 못 되고(사실상 같음), +0.03 이면 1위
+        # 이웃도 같은 값이 되게(안정 점수 = 그 값): minQ 6 이상은 0.053+차이, 그 밑은 0.053
+        lab.EVAL_BUDGET = 0
+        self.formula = lambda p: (0.053 + (0.015 if p["minQ"] >= 6 else 0.0), True)
+        outs, _ = self.run_days(["2026-10-05"], state=self.pool_state([dict(minQ=6, topK=3), dict(minQ=7, topK=3)]))
+        self.assertEqual(outs[0]["top"], lab.MAIN_DEFAULT["opening"]["version"])
+        self.assertEqual(outs[0]["status"]["code"], "main_top")
+        self.formula = lambda p: (0.053 + (0.03 if p["minQ"] >= 6 else 0.0), True)
+        outs, _ = self.run_days(["2026-10-05"], state=self.pool_state([dict(minQ=6, topK=3), dict(minQ=7, topK=3)]))
+        self.assertEqual(outs[0]["top"], "g_open_q6_k3")
+
     def test_bottom_three_for_seven_days_retired(self):
-        # 첫날은 기존 목록만으로 순위 → 하위 3위 연속은 10/6 부터 → 10/12 에 7일
-        outs, state = self.run_days(["2026-10-05", "2026-10-06", "2026-10-07", "2026-10-08", "2026-10-09", "2026-10-10", "2026-10-11"])
+        st = self.pool_state([dict(minQ=q, topK=3) for q in (3, 4, 6, 7, 8, 9, 10, 11, 12)] + [dict(minQ=q, topK=2) for q in (9, 10, 11, 12)])
+        lab.EVAL_BUDGET = 0
+        outs, state = self.run_days(["2026-10-05", "2026-10-06", "2026-10-07", "2026-10-08", "2026-10-09", "2026-10-10"], state=json.loads(json.dumps(st)))
         self.assertFalse([x for x in state["tabs"]["opening"]["retired"] if "하위" in x["reason"]])
-        outs, state = self.run_days(["2026-10-05", "2026-10-06", "2026-10-07", "2026-10-08", "2026-10-09", "2026-10-10", "2026-10-11", "2026-10-12"])
-        rs = [x for x in state["tabs"]["opening"]["retired"] if "하위" in x["reason"]]
-        self.assertTrue(rs, "7일 연속 하위 3위 퇴출이 없음")
-        self.assertGreaterEqual(outs[-1]["poolSize"], lab.POOL_MIN)
+        outs, state = self.run_days(["2026-10-05", "2026-10-06", "2026-10-07", "2026-10-08", "2026-10-09", "2026-10-10", "2026-10-11"], state=st)
+        rs = [x["version"] for x in state["tabs"]["opening"]["retired"] if "하위" in x["reason"]]
+        self.assertEqual(sorted(rs), ["g_open_q3_k3", "g_open_q4_k3", "g_open_q6_k3"], rs)
+        self.assertEqual(outs[-1]["poolSize"], lab.POOL_MIN)                   # 10개 밑으로는 줄이지 않는다
+
+    def test_duplicates_retired_lower_kept_higher(self):
+        import random
+        rnd = random.Random(3)
+        cal = [f"2026-0{m}-{d:02d}" for m in (1, 2, 3) for d in range(1, 29)]
+        for q in range(1, 13):
+            for k in (1, 2, 3):
+                self.series[lab.gen_version("opening", lab._canon("opening", dict(minQ=q, topK=k)))] = {d: rnd.gauss(0, 1) for d in cal}
+        twin = self.series["g_open_q12_k3"]
+        self.series["g_open_q11_k3"] = {d: v * 1.01 for d, v in twin.items()}     # 같은 매매(상관 1.0)
+        lab.EVAL_BUDGET = 0
+        st = self.pool_state([dict(minQ=q, topK=3) for q in (3, 4, 6, 7, 8, 9, 10, 11, 12)] + [dict(minQ=q, topK=2) for q in (10, 11, 12)])
+        outs, state = self.run_days(["2026-10-05"], state=st)
+        ret = state["tabs"]["opening"]["retired"]
+        self.assertEqual([x["version"] for x in ret], ["g_open_q11_k3"])           # 순위 낮은 쌍둥이만
+        self.assertIn("복제", ret[0]["reason"])
+        self.assertIn("g_open_q12_k3", [r["version"] for r in outs[0]["rows"]])
+
+    def test_spike_scored_by_neighbors(self):
+        # q9 k2 만 혼자 튀는 값(이웃은 평범) → 안정 점수는 이웃 중앙값으로 깎여 1위가 못 된다
+        self.formula = lambda p: (0.5 if (p["minQ"], p["topK"], p.get("gapMax")) == (9, 2, None) else p["minQ"] * 0.01 + p["topK"] * 0.001, True)
+        lab.EVAL_BUDGET = 0
+        outs, _ = self.run_days(["2026-10-05"], state=self.pool_state([dict(minQ=9, topK=2), dict(minQ=12, topK=3)]))
+        spike = next(r for r in outs[0]["rows"] if r["version"] == "g_open_q9_k2")
+        self.assertAlmostEqual(spike["raw"], 0.5)
+        self.assertLess(spike["plateau"], 0.2)
+        self.assertEqual(spike["score"], spike["plateau"])
+        self.assertEqual(outs[0]["top"], "g_open_q12_k3")
+
+    def test_better_candidates_replace_worst(self):
+        # 경쟁군은 깊은 1종목 안(약함) 12개 — 깊은 3종목 후보가 훨씬 좋으면 하룻밤 최대 3개 자리 교체
+        self.formula = lambda p: (0.01 + p["topK"] * 0.05 + p["minQ"] * 0.001, p["minQ"] >= 3)
+        st = self.pool_state([dict(minQ=q, topK=1) for q in range(3, 13) if q != 5] + [dict(minQ=3, topK=2), dict(minQ=4, topK=2), dict(minQ=6, topK=2)])
+        outs, state = self.run_days(["2026-10-05"], state=st)
+        z = outs[0]
+        rep = [x for x in state["tabs"]["opening"]["retired"] if x["reason"].startswith("자리 교체")]
+        self.assertEqual(len(rep), lab.MAX_REPLACE)
+        self.assertEqual(z["gen"]["replaced"], lab.MAX_REPLACE)
+        self.assertEqual(z["poolSize"], lab.POOL_TARGET)
+        self.assertTrue(all("_k1" in x["version"] for x in rep))                 # 약한 쪽이 나간다
+        self.assertTrue(all(lab._canon("opening", r["params"])["topK"] >= 2 for r in z["rows"] if r["isNew"]))
+        self.assertIsNone(z["status"].get("newTopVersion"))                         # 메인(0.165+보호)이 표 1위 — 새 1위 표시 없음
+        # 깊은 3종목 · 통과 수 많을수록 훨씬 좋게 → 오늘 들어온 전략이 표 1위. 1위 기록(승격 일수)은 어제까지 경쟁군 기준
+        self.formula = lambda p: (0.01 + p["topK"] * 0.05 + p["minQ"] * 0.01, p["minQ"] >= 3)
+        st = self.pool_state([dict(minQ=q, topK=1) for q in range(3, 13) if q != 5] + [dict(minQ=3, topK=2), dict(minQ=4, topK=2), dict(minQ=6, topK=2)])
+        z = self.run_days(["2026-10-05"], state=st)[0][0]
+        self.assertTrue(z["rows"][0]["isNew"])
+        self.assertEqual(z["status"].get("newTopVersion"), z["rows"][0]["version"])
+        self.assertNotEqual(z["top"], z["rows"][0]["version"])
+
+
+class ArenaScoreTest(unittest.TestCase):
+    """안정 점수 · 기준(표본 · 해마다 일관성) 값 시험."""
+
+    def test_shrinks_thin_recent_window(self):
+        cal = [(lab.date(2024, 1, 1) + lab.timedelta(days=i)).isoformat() for i in range(800)]
+        dv = {d: 0.2 for d in cal[:700:3]}                                         # 꾸준한 작은 이익
+        dv.update({cal[-10]: 6.0, cal[-5]: 6.0})                                   # 최근 90일엔 딱 2번, 크게
+        m = lab.score_metrics(dv, cal, 365)
+        wf, n90 = m["full"]["weeklyAvgPct"], m["d90"]["tradeDays"]
+        self.assertEqual(n90, 2)
+        shr = lambda x: (x["tradeDays"] * x["weeklyAvgPct"] + lab.SHRINK_K * wf) / (x["tradeDays"] + lab.SHRINK_K)
+        self.assertAlmostEqual(m["adj"], (wf + shr(m["year"]) + shr(m["d90"])) / 3, places=9)
+        self.assertLess(m["adj"] - wf, (m["raw"] - wf) / 2)                        # 표본 2개짜리 90일 성적이 점수를 끌어올리지 못한다(차이의 절반 이상을 당김)
+        self.assertGreater(m["raw"] - m["adj"], 0.05)
+        self.assertEqual(m["score"], m["adj"])
+
+    def test_gate_reasons(self):
+        ok = fake_metrics(0.3)
+        self.assertEqual(lab.gate_reason(ok), "")
+        self.assertIn("매매일 부족", lab.gate_reason(fake_metrics(0.3, trade_days=lab.MIN_TRADE_DAYS - 1)))
+        self.assertEqual(lab.gate_reason(fake_metrics(0.3, trade_days=lab.MIN_TRADE_DAYS)), "")
+        self.assertIn("일관성", lab.gate_reason(fake_metrics(0.3, years=(5, 9))))
+        self.assertEqual(lab.gate_reason(fake_metrics(0.3, years=(6, 9))), "")
+        self.assertIn("손실 기준 미달", lab.gate_reason(fake_metrics(0.3, gate=False)))
+
+    def test_year_stats(self):
+        cal = ["2024-01-02", "2024-06-03", "2025-01-02", "2025-02-03"] + [f"2026-01-{d:02d}" for d in range(1, 8)]
+        dv = {d: 1.0 for d in cal[4:]}
+        dv.update({"2024-01-02": 1.0, "2025-01-02": -2.0})
+        y = lab.year_stats(dv, cal)
+        self.assertEqual((y["n"], y["pos"]), (1, 1))                             # 매매 5일 미만인 해는 세지 않는다
+        self.assertAlmostEqual(y["worstPct"], (1.01 ** 7 - 1) * 100)
+
+    def test_corr_and_canon(self):
+        cal = ["a", "b", "c", "d"]
+        self.assertAlmostEqual(lab.corr({"a": 1, "b": 2}, {"a": 2, "b": 4}, cal), 1.0)
+        self.assertLess(lab.corr({"a": 1, "b": -1}, {"a": -1, "b": 1}, cal), 0)
+        # 쓰지 않는 변수는 같은 값으로 — 변동성 돌파의 고가 일수 · 고가 기준의 k · RSI 꺼짐의 기간
+        c1 = lab._canon("crypto", dict(level="vb", k=0.6, hiN=5))
+        self.assertEqual(c1["hiN"], 1)
+        self.assertEqual(lab._canon("crypto", dict(hiN=5, k=0.9))["k"], 0.5)
+        self.assertEqual(lab.gen_version("crypto", lab._canon("crypto", dict(hiN=5))), "g_coin_ma20_s5_hi5_both")
+        self.assertEqual(lab.gen_version("soxl", lab._canon("soxl", dict(rsiMax=100.0, rsiN=3, ibsMax=0.3))), "g_soxl_norsi_ibs0.3_ma200_d5")
+        self.assertEqual(lab.gen_version("soxl", lab._canon("soxl", {})), "g_soxl_r2lt20_ma200_d5")   # 옛 이름 그대로
+
+    def test_proposals_valid_and_ops_weighted(self):
+        import random
+        rng = random.Random(1)
+        parents = [dict(version=f"p{i}", params=lab._canon("soxl", dict(rsiMax=r))) for i, r in enumerate((10.0, 20.0, 30.0))]
+        for op in lab.OPS:
+            for _ in range(20):
+                c = lab.propose("soxl", op, parents, rng)
+                self.assertIsNotNone(c, op)
+                lab._canon("soxl", {k: v for k, v in c[0].items() if k in lab.GRID["soxl"] or k == "tabSize"}) if (c[0].get("rsiMax", 0) < 100 or c[0].get("ibsMax", 1) < 1 or c[0].get("downDays")) else None
+        self.assertIsNone(lab.propose("opening", "struct", parents, rng))           # ① 은 새 구조 없음(데이터로 효과 없음 확인)
+        w = lab.op_weights("soxl", {"struct": dict(tried=10, accepted=8), "explore": dict(tried=10, accepted=0)}, 3)
+        self.assertGreater(w["struct"], w["explore"])
+        self.assertGreaterEqual(min(w.values()), 0.05)                              # 어떤 방법도 끊지 않는다
+        self.assertNotIn("struct", lab.op_weights("opening", {}, 3))
+        self.assertEqual(set(lab.op_weights("soxl", {}, 0)), {"explore"})            # 기준 통과 전략이 없으면 탐색만
+
+
+class UsRowsTest(unittest.TestCase):
+    def test_blank_close_dropped(self):
+        nan = float("nan")
+        rows = lab.us_rows([("2026-10-02 00:00:00", 165.4, 169.8, 162.4, 163.7), ("2026-10-05", 161.7, 164.4, 158.1, nan), ("2026-10-06", 0, 1, 1, 1)])
+        self.assertEqual(rows, {"2026-10-02": (165.4, 169.8, 162.4, 163.7)})      # 종가가 빈 봉 · 0 인 봉은 버린다
+
+
+class FiniteJsonTest(unittest.TestCase):
+    def test_nan_becomes_null(self):
+        o = lab.finite(dict(a=float("nan"), b=[1.5, float("inf"), dict(c=-float("inf"))], d="x", e=(2, 3.0)))
+        self.assertEqual(json.dumps(o, allow_nan=False), '{"a": null, "b": [1.5, null, {"c": null}], "d": "x", "e": [2, 3.0]}')
+
+
+class NewRuleComponentsTest(unittest.TestCase):
+    """새 구조: ③ 최근 N일 고가 돌파 · ④ 종가 위치(IBS) · 연속 하락 · RSI 끄기 — 값으로 확인."""
+
+    def test_soxl_ibs_and_down_days(self):
+        d0 = lab.date(2026, 1, 1)
+        # (시가, 고가, 저가, 종가): 사흘 연속 하락, 마지막 날은 저가 근처 마감(IBS 0.1)
+        bars = [(100, 101, 99, 100)] * 6 + [(100, 100, 94, 99), (99, 99, 89, 95), (95, 95, 80, 81.5), (81, 90, 80, 88), (88, 92, 87, 91)]
+        rows = [((d0 + lab.timedelta(days=i)).isoformat(), *b) for i, b in enumerate(bars)]
+        base = dict(lab.SOXL_MR, ma=0, rsiN=2, maxHoldDays=5, size=1.0, version="t")
+        enter = lambda p: [x["date"] for x in lab.soxl_meanrev(rows, dict(base, **p))[1] if x["action"] == "enter"]
+        e_day = rows[9][0]                                                          # 8번째(인덱스 8) 종가 판단 → 다음 시가
+        self.assertEqual(enter(dict(rsiMax=100.0, ibsMax=0.2)), [e_day])             # IBS 0.1 ≤ 0.2
+        self.assertEqual(enter(dict(rsiMax=100.0, ibsMax=0.05)), [])                 # 0.1 > 0.05 → 안 산다
+        self.assertEqual(enter(dict(rsiMax=100.0, ibsMax=1.0, downDays=3)), [e_day])  # 사흘 연속 하락
+        self.assertEqual(enter(dict(rsiMax=100.0, ibsMax=1.0, downDays=4)), [])
+        dec = lab.soxl_meanrev(rows, dict(base, rsiMax=100.0, ibsMax=0.2))[1]
+        d8 = next(x for x in dec if x["date"] == rows[8][0])
+        self.assertAlmostEqual(d8["ibs"], 0.1)
+        self.assertEqual(d8["downRun"], 3)
+        nx = lab.soxl_meanrev(rows[:8], dict(base, rsiMax=100.0, ibsMax=0.2, downDays=3))[2]
+        self.assertIn("IBS 0.60 > 0.2", nx["why"])
+        self.assertIn("연속 하락 2일 < 3일", nx["why"])
+        self.assertEqual(nx["entryRule"], "종가 위치(IBS) ≤ 0.2 · 3일 연속 하락")
+        with self.assertRaises(ValueError):
+            lab._valid_params("soxl", dict(lab.MAIN_DEFAULT["soxl"]["params"], rsiMax=100.0))   # 조건이 하나도 없으면 거절
+
+    def test_coin_n_day_high_level(self):
+        H, t0 = {}, lab.datetime(2026, 8, 1, 9)
+        highs = [110, 130, 120, 105, 100, 100]
+        for di, hi in enumerate(highs):
+            for k in range(24):
+                ts = t0 + lab.timedelta(days=di, hours=k)
+                H[ts.isoformat()] = (100.0, hi if k == 3 else 100.5, 99.0, 100.2)
+        p = dict(lab.COIN_BO, ma=2, version="t")
+        dec1 = lab.coin_breakout(H, dict(p, hiN=1))[1]
+        dec3 = lab.coin_breakout(H, dict(p, hiN=3))[1]
+        lv = lambda dec, d: next(x["level"] for x in dec if x["date"] == d)
+        self.assertEqual(lv(dec1, "2026-08-05"), 105)                              # 어제 고가
+        self.assertEqual(lv(dec3, "2026-08-05"), 130)                              # 최근 3일 중 가장 높은 고가
+        self.assertEqual(lab.coin_breakout(H, dict(p, hiN=3))[2]["levelNext"], 105)  # 다음 날 기준선도 같은 식(마지막 3일 고가 105·100·100)
+        self.assertEqual(lab.coin_breakout(H, dict(p, hiN=1))[2]["levelNext"], 100.5)
 
 
 if __name__ == "__main__":
