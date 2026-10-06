@@ -317,7 +317,7 @@ canvas{display:block;width:100%;height:auto}
   <div id="strategy_daily" class="strategy-pane on">
     <div class="strategy-head">모든 기준전략의 오늘 상태와 최근 확정 세션 결과를 한 화면에서 비교</div>
     <div class="card">
-      <h3><span class="dot"></span>📅 오늘 기준전략 결과 <span class="sub">최근 확정 세션 · 순수익</span></h3>
+      <h3><span class="dot"></span>📅 오늘 기준전략 결과 <span class="sub">KST 전일·당일 · 순수익</span></h3>
       <p class="lead">시초가·데이트레이딩·비트코인·SOXL을 <b>한국시간(KST) 달력 날짜의 전일·당일</b>로 맞춰 한 번에 보여줍니다.
         SOXL의 미국 거래일도 <b>정규장 종료가 속한 KST 날짜</b>로 변환하며, 아직 끝나지 않은 당일 세션은 결과를 억지로 당겨 쓰지 않고 <b>확정 대기</b>로 표시합니다.
         BTC·SOXL은 <b>서버 실시간 모의장부를 우선</b> 사용하고, 없을 때만 연구 확정 이력으로 보완합니다.
@@ -2272,7 +2272,7 @@ function renderScalpingDuel(D){
     '<li><b>하루 손익:</b> 그날 청산된 실현 매매만, 칸 자금 100% 기준. 여러 종목은 균등 평균, 클로드 코인은 BTC·ETH 각각 0.5. 매매가 없으면 0%입니다.</li>'+
     '<li><b>합계:</b> 시초가·데이트레이딩·비트코인·SOXL 네 탭에 원금을 각각 25%씩 배분합니다.</li>'+
     '<li><b>하루 승패:</b> 상대보다 0.01%p를 초과해 앞설 때만 승, 그 이하는 무승부입니다.</li>'+
-    '<li><b>날짜:</b> 화면 표시는 모두 한국시간(KST) 달력 날짜를 사용합니다. SOXL 미국 거래일은 정규장 종료가 속한 KST 날짜로 변환하고, 비트코인은 KST 00:00~24:00 기준입니다.</li>'+
+    '<li><b>날짜:</b> 대결 원본은 국내와 SOXL의 각 시장 거래일(SOXL은 미국 날짜), 비트코인은 한국시각 00:00~24:00 기준입니다. 오늘 요약 카드의 표시 날짜만 KST 달력 날짜로 통일합니다.</li>'+
     '</ol></div>';
   box.innerHTML=html;
 }
