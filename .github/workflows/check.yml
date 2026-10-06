@@ -436,7 +436,7 @@ jobs:
           if(!py.includes('CRYPTO=Path("data/crypto-research/latest.json")')||!py.includes('"crypto":c')){
             console.error('✗ 야간 통합연구에 비트코인 축이 없음'); fail++;
           }
-          if(w.includes('/api/nightly-research-summary')){
+          if(w.includes('$BASE/api/nightly-research-summary')||w.includes('jkquant.pages.dev/api/nightly-research-summary')){
             console.error('✗ GitHub 야간연구가 사용자 Telegram을 직접 전송함'); fail++;
           }
           if(/\/api\/kis\?op=order|priceType.*market/.test(py+w+api)){
