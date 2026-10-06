@@ -151,7 +151,7 @@ await t('Q4 시세 서버는 Yahoo query1→query2까지만 시도하고 같은 
   assert(!/query1-fc/.test(quoteJs));
 });
 await t('Q5 환율 실패도 Pages 운영에서 공개 프록시 연쇄대기로 넘어가지 않는다',async()=>{
-  const fx=fn('async function loadFX()');
+  const fx=fn('async function _loadFXNet()');
   assert(/fetchT\('\/api\/fx'.*5000/.test(fx));
   assert(/\.pages\\\.dev/.test(fx)||/pages\\\.dev/.test(fx));
   assert(/if\(_prodPages\) return;/.test(fx));
@@ -225,6 +225,105 @@ await t('P2 MDD 는 탭에 담긴 시세가 그 세션 종목일 때만 잰다',
   const run=(have)=>new Function('PAPER_DAYS','PAPER_CACHESYM','paperRaw','ivsQuote1','console',md+'\nreturn paperMdd;')(
     {vr:()=>days},{vr:()=>have},()=>({inflow:100,qty:1,k:0,price:0}),undefined,{error(){}})('vr',{settings:{ticker:'SOXL'},hist:[{date:'2026-01-01'}]},{qty1:0},[{date:'2026-01-01'}]);
   assert.equal(run('TQQQ'),null,'남의 종목'); assert(run('SOXL')&&run('SOXL').nDay>=3,'제 종목');
+});
+
+/* ── 속도: 같은 요청 반복 · 모의 갱신 중 다시 그리기 폭주 · MDD 의 전 구간 재계산 (2026-10-06 2차 점검) ──
+   실측(휴대폰 근사 CPU 4배): 모의 갱신 한 번에 /api 49건(SOXL 전체 이력 12번 · 환율 28번) · 12.96초.
+   고친 뒤 9건 · 4.70초, 결과는 전 자릿수 같음. */
+await t('Q6 평소 화면: 같은 종목 시세가 아직 오는 중이면 그 요청을 같이 쓴다 · 끝난 결과는 기억하지 않는다 · 실패는 기억하지 않는다',async()=>{
+  const ctx={_fillQuoteCache:null,Map,Promise}; vm.createContext(ctx);
+  vm.runInContext(fn('const _quoteInflight=new Map();').replace(/^[\s\S]*?(const _quoteInflight)/,'$1')+'\n',ctx);
+  let calls=0, fail=false; ctx.raw=async(S)=>{ calls++; await tick(15); if(fail) throw Error('x'); return {symbol:S,n:calls}; };
+  vm.runInContext(fn('function _quoteShare(fn, SYM)')+'\nconst _memoQuote='+fnOf(html,'(fn)=>async function(symbol){').replace(/;\s*$/,'')+';\nvar fd=_memoQuote(raw);',ctx);
+  const [a,b]=await Promise.all([ctx.fd('soxl'),ctx.fd('SOXL')]);
+  assert.equal(calls,1,'동시 두 번 → 한 번'); assert.equal(a,b);
+  const c=await ctx.fd('SOXL'); assert.equal(calls,2,'끝난 뒤엔 새로 받는다'); assert.equal(c.n,2);
+  fail=true; await ctx.fd('SOXL').catch(()=>{}); fail=false; const d=await ctx.fd('SOXL'); assert.equal(calls,4,'실패는 기억 안 함'); assert.equal(d.n,4);
+});
+await t('Q7 환율: 오는 중이면 같이 기다리고, 5분 안에 받은 게 있으면 다시 안 받는다 · 5분이 지나면 다시 받는다',async()=>{
+  let now=1e12; const ctx={Date:{now:()=>now},Promise,liveFX:null,_fxAt:0,_fxInflight:null,FX_FRESH_MS:null,net:0}; vm.createContext(ctx);
+  vm.runInContext('FX_FRESH_MS=5*60*1000;\n'+fn('function loadFX(){')+'\nasync function _loadFXNet(){ net++; await new Promise(r=>setTimeout(r,10)); liveFX=1343.5; _fxAt=Date.now(); }',
+    Object.assign(ctx,{setTimeout}));
+  await Promise.all([ctx.loadFX(),ctx.loadFX(),ctx.loadFX()]); assert.equal(ctx.net,1,'동시 세 번 → 한 번');
+  now+=60*1000; await ctx.loadFX(); assert.equal(ctx.net,1,'1분 뒤 → 안 받음');
+  now+=5*60*1000; await ctx.loadFX(); assert.equal(ctx.net,2,'5분 넘으면 → 다시');
+  assert(/const FX_FRESH_MS=5\*60\*1000;/.test(html));
+});
+await t('P5 모의 일괄 재생 중에는 시세 도착 후처리(모의 굴리기·전체 다시 그리기)를 하지 않는다 · 평소엔 한다',async()=>{
+  const run=(filling)=>{ const log=[]; const timers=[];
+    new Function('_paperFilling','paperAuto','renderStatusline','refreshAll','setTimeout','console',fn('function _afterQuote(){')+'\n_afterQuote();')(
+      filling,()=>log.push('auto'),()=>log.push('status'),()=>log.push('refresh'),(f)=>timers.push(f),{error(){}});
+    timers.forEach(f=>f()); return log.join(','); };
+  assert.equal(run(true),''); assert.equal(run(false),'auto,status,refresh');
+});
+await t('P6 모의 일괄 재생이 끝나면 탭별 시세 칸(무매 캐시·이평·섀넌·짝·적립·ASAP)을 재생 전으로 되돌린다 — 운영 화면이 남의 종목으로 다시 받지 않게',async()=>{
+  const orig={inf:{symbol:'SOXL'},ma:{symbol:'SOXL'},ivs:{symbol:'TQQQ'},ivs1:{symbol:'QQQ'},dca:{symbol:'USD'},asap:{symbol:'SOXL'}};
+  const S={activeTab:'inf',inf:{active:'op',sessions:[{id:'op'},{id:'p1',paper:true,settings:{ticker:'TQQQ'},hist:[]}]},
+           ma:{active:'m0',sessions:[{id:'p2',paper:true,settings:{ticker:'TQQQ'},hist:[]}]}};
+  const ctx={S,_paperFilling:false,_fillQuoteCache:null,infChartData:[],vrChartData:[],lastQuote:{inf:null,ma:null},
+    infQuoteCache:orig.inf,maQuoteData:orig.ma,ivsQuoteData:orig.ivs,ivsQuote1:orig.ivs1,dcaQuoteData:orig.dca,asapQuoteData:orig.asap,
+    PAPER_TABS:[['inf','무매'],['ma','이평']],paperPrefetchQuotes:async()=>{},
+    PAPER_CACHESYM:{inf:()=>ctx.infQuoteCache&&ctx.infQuoteCache.symbol,ma:()=>ctx.maQuoteData&&ctx.maQuoteData.symbol},
+    PAPER_LOADERS:{inf:async()=>{ ctx.infQuoteCache={symbol:'TQQQ'}; ctx.ivsQuoteData={symbol:'X'}; },ma:async()=>{ ctx.maQuoteData={symbol:'TQQQ'}; ctx.dcaQuoteData={symbol:'Y'}; ctx.asapQuoteData={symbol:'Z'}; ctx.ivsQuote1={symbol:'W'}; }},
+    divCashOn:()=>false,warmDiv:async()=>{},ivsX1Of:x=>x,paperAuto:()=>{},vrSimForward:()=>{},infSimForward:()=>{},paperStart:()=>'2025-01-02',
+    paperStat:(tab,x)=>({tab,id:x.id}),console:{error(){}},Map,Promise};
+  vm.createContext(ctx); vm.runInContext(fn('async function paperFillAll()'),ctx);
+  const rows=await ctx.paperFillAll(); assert.equal(rows.length,2);
+  for(const [k,v] of [['inf','infQuoteCache'],['ma','maQuoteData'],['ivs','ivsQuoteData'],['ivs1','ivsQuote1'],['dca','dcaQuoteData'],['asap','asapQuoteData']])
+    assert.equal(ctx[v],orig[k],v+' 되돌림');
+  assert.equal(ctx._paperFilling,false); assert.equal(ctx._fillQuoteCache,null);
+  // 선취(prefetch)가 던져도 재생 상태가 풀린다(예전엔 try 밖이라 _paperFilling 이 영영 true)
+  ctx.paperPrefetchQuotes=async()=>{ throw Error('net'); }; await ctx.paperFillAll().catch(()=>{});
+  assert.equal(ctx._paperFilling,false,'선취 실패 뒤에도 풀린다');
+});
+await t('P7 MDD 속도: 기록과 무관한 가격 계산은 시세 배열마다 한 번 — 같은 배열이면 같은 결과를 다시 쓰고, 새 배열·길이 변화·확정 상한 변화면 다시 센다(값은 새로 센 것과 같다)',async()=>{
+  const days=[]; let px=40; for(let i=0;i<700;i++){ px*=1+Math.sin(i*0.37)*0.03; const d=new Date(Date.UTC(2023,0,2)+i*864e5).toISOString().slice(0,10); days.push({date:d,close:+px.toFixed(4)}); }
+  const D=new Function('DCA_N',fn('function _dcaPriceView(days){')+'\nreturn _dcaPriceView;')(200);
+  const a=D(days), b=D(days), c=D(days.map(x=>({...x})));
+  assert.equal(a,b,'같은 배열 → 같은 계산 결과 재사용'); assert.notEqual(a,c);
+  assert.deepEqual({sma:a.sma,flips:a.flips,closes:a.closes,dates:a.dates},{sma:c.sma,flips:c.flips,closes:c.closes,dates:c.dates},'값은 새로 센 것과 같다');
+  // 기준: 예전 식(배열 shift) 그대로 센 200일선과 같다
+  const ref=[]; { let s2=0; const buf=[]; for(const x of days){ buf.push(x.close); s2+=x.close; if(buf.length>200)s2-=buf.shift(); ref.push(buf.length===200?s2/200:null); } }
+  assert.deepEqual(a.sma,ref,'200일선 = 예전 식');
+  days.push({date:'2099-01-01',close:50}); const e=D(days); assert.notEqual(e,a,'길이가 바뀌면 다시 센다'); assert.equal(e.dates[e.n-1],'2099-01-01');
+  const A=new Function('_asapMA','_asapRSI',fn('function _asapPriceView(days){')+'\nreturn _asapPriceView;')(
+    new Function(fn('function _asapMA(a,k){')+'\nreturn _asapMA;')(), new Function(fn('function _asapRSI(a){')+'\nreturn _asapRSI;')());
+  const d2=days.slice(0,650), x1=A(d2), x2=A(d2), x3=A(d2.map(x=>({...x})));
+  assert.equal(x1,x2); assert.deepEqual(JSON.parse(JSON.stringify(x1)),JSON.parse(JSON.stringify(x3)),'ASAP 지표·국면 = 새로 센 값');
+  let cut='2023-06-30';
+  const SB=new Function('simCutoff',fn('function settledBars(rows,cur){')+'\nreturn settledBars;')(()=>cut);
+  const r1=SB(days,'usd'), r2=SB(days,'usd'); assert.equal(r1,r2,'같은 배열·같은 상한 → 같은 결과'); assert(r1.every(x=>x.date<=cut));
+  cut='2023-12-29'; const r3=SB(days,'usd'); assert.notEqual(r3,r1,'상한이 바뀌면 다시'); assert(r3.length>r1.length);
+  days.push({date:'2099-02-01',close:51}); cut='2099-12-31'; const r4=SB(days,'usd'), r5=SB(days,'usd'); assert.equal(r4,r5); days.push({date:'2099-03-01',close:52}); assert.notEqual(SB(days,'usd'),r4,'길이 변화 → 다시');
+  assert.deepEqual(SB(null,'usd'),[]);
+});
+await t('P7 거래소 현지 시각: 포맷터는 시간대마다 한 번만 만든다 · 값은 그 시각 그대로',async()=>{
+  let made=0; const RealDTF=Intl.DateTimeFormat;
+  const FakeIntl={DateTimeFormat:function(...a){ made++; return new RealDTF(...a); }};
+  /* 시계를 호출마다 1.5초씩 민다 — 초 단위 기억에 기대지 않고 포맷터 재사용 자체를 본다 */
+  let tick=Date.UTC(2026,9,6,14,0,0); class FD extends Date{ constructor(...a){ if(a.length) super(...a); else { super(tick); tick+=1500; } } }
+  const ex=new Function('Intl','Date',fn('function _exchNow(cur){')+'\nreturn _exchNow;')(FakeIntl,FD);
+  for(let i=0;i<200;i++){ ex('usd'); ex('krw'); }
+  assert.equal(made,2,'포맷터 생성 '+made+'번');
+  const ny=ex('usd'); assert(/^\d{4}-\d{2}-\d{2}$/.test(ny.date));
+  const at=tick, v=ex('krw'), want=new RealDTF('en-CA',{timeZone:'Asia/Seoul',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date(at));
+  assert.equal(v.date,want); assert(v.min>=0&&v.min<1440);
+});
+
+await t('D1 원장 문서 크기: 80% 넘으면 미리 알림 · 저장 실패면 크기 때문인지 적는다 · 크기는 UTF-8 바이트로 잰다',async()=>{
+  const src=(html.match(/const DB_DOC_LIMIT=1048576, DB_DOC_WARN=[^\n]*/)||[''])[0]+'\n'+fn('function dbStateBytes(json)')+'\n'+fn('function dbSizeMsg(bytes, err)');
+  const F=new Function('TextEncoder',src+'\nreturn {dbSizeMsg,dbStateBytes,DB_DOC_LIMIT,DB_DOC_WARN};')(TextEncoder);
+  assert.equal(F.DB_DOC_LIMIT,1048576); assert.equal(F.DB_DOC_WARN,Math.round(1048576*0.8));
+  assert.equal(F.dbSizeMsg(500*1024,null),null,'500KB 는 조용');
+  const w=F.dbSizeMsg(900*1024,null); assert.equal(w.level,'warn'); assert(/900KB/.test(w.text)&&/88%/.test(w.text),w.text);
+  const e1=F.dbSizeMsg(1100*1024,new Error('internal')); assert.equal(e1.level,'err'); assert(/한도\(1024KB\)를 넘어/.test(e1.text));
+  const e2=F.dbSizeMsg(300*1024,{code:'invalid-argument',message:'Document exceeds the maximum allowed size'}); assert(/한도\(1024KB\)를 넘어/.test(e2.text));
+  const e3=F.dbSizeMsg(300*1024,{code:'permission-denied',message:'Missing or insufficient permissions.'}); assert.equal(e3.level,'err'); assert(/permissions/.test(e3.text)&&/300KB/.test(e3.text)&&!/넘어/.test(e3.text));
+  assert.equal(F.dbStateBytes('가나다'),9,'한글은 3바이트'); assert.equal(F.dbStateBytes('abc'),3);
+  const cm=fn('async function _commitStateRemote(where)');
+  assert(/dbSizeReport\(dbStateBytes\(lastPushedJSON\),null\)/.test(cm),'저장 성공 때 잰다');
+  assert(/console\.error\(where,e\);setSync\('err'\);\s*\n\s*dbSizeReport\(_subBytes,e\);/.test(cm),'저장 실패 때 이유를 적는다');
+  assert(/기록크기/.test(fn('function authDiag()')),'진단 정보에 크기');
 });
 
 clearTimeout(ALL_GUARD);

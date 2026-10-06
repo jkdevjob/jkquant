@@ -550,7 +550,7 @@ document.documentElement.classList.add('had-user');</script>
 </div>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.110.10</span></h1></div>
+    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.110.11</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -1662,7 +1662,7 @@ if(/^\/paper\/?$/.test(location.pathname)){
   <footer>
     <strong>JK 퀀트</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.110.10</b> · 2026-10-06</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.110.11</b> · 2026-10-06</div>
   </footer>
 </div>
 
@@ -3376,9 +3376,21 @@ async function proxyText(px, target){
    약속(promise)을 담아 두므로 동시에 같은 종목을 불러도 한 번만 나간다.
    목록을 다 돌면 비운다 — 평소 화면은 예전처럼 매번 새로 받는다. */
 let _fillQuoteCache=null;
+/* 평소 화면: 같은 종목 요청이 '아직 오는 중'이면 그 약속을 같이 쓴다 — 끝난 결과는 기억하지 않는다(평소엔 매번 새로).
+   실측: 탭을 누를 때마다 같은 종목 전체 이력(약 350KB)을 동시에 두 번 받았다(눌림 처리 + 다시 그리기). */
+const _quoteInflight=new Map();
+function _quoteShare(fn, SYM){
+  const k=fn, m=_quoteInflight.get(k)||new Map(); _quoteInflight.set(k,m);
+  if(m.has(SYM)) return m.get(SYM);
+  const p=Promise.resolve().then(()=>fn(SYM));
+  m.set(SYM,p);
+  const done=()=>{ if(m.get(SYM)===p) m.delete(SYM); };
+  p.then(done,done);
+  return p;
+}
 const _memoQuote=(fn)=>async function(symbol){
   const SYM=String(symbol||'').toUpperCase();
-  if(!_fillQuoteCache) return fn(SYM);
+  if(!_fillQuoteCache) return _quoteShare(fn, SYM);
   if(!_fillQuoteCache.has(fn)) _fillQuoteCache.set(fn,new Map());
   const m=_fillQuoteCache.get(fn);
   if(!m.has(SYM)) m.set(SYM, fn(SYM));
@@ -4010,12 +4022,21 @@ const MKT_CLOSE_MIN={usd:16*60, krw:15*60+30};      // 정규장 마감 (거래�
    실제로 16:14 ET에 SOXL 일봉이 105.75(마지막 분봉)였고 확정 종가는 105.91이었다.
    그래서 마감 후 이 시간이 지나야 오늘 봉을 '확정'으로 인정한다. */
 const SETTLE_LAG_MIN=20;
+/* 포맷터 생성이 비싸다 — 모의 MDD 는 하루마다 전략을 다시 세면서 이걸 수천 번 불렀다(실측 1.3초, CPU 4배 기준).
+   포맷터는 시간대별로 한 번만 만들고, 같은 초 안의 호출은 같은 값을 돌려준다(분 단위만 쓰므로 결과는 같다).
+   저장 칸은 함수 자신에 둔다 — 시험에서 이 함수만 떼어 돌려도 그대로 동작한다. */
 function _exchNow(cur){
   const tz=(cur==='krw')?'Asia/Seoul':'America/New_York';
-  const P=new Intl.DateTimeFormat('en-CA',{timeZone:tz,year:'numeric',month:'2-digit',day:'2-digit',
-            hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).formatToParts(new Date());
+  const F=_exchNow._fmt||(_exchNow._fmt={}), M=_exchNow._memo||(_exchNow._memo={});
+  const now=new Date(), sec=Math.floor(now.getTime()/1000), m=M[tz];
+  if(m && m.sec===sec) return {date:m.date, min:m.min};
+  const f=F[tz]||(F[tz]=new Intl.DateTimeFormat('en-CA',{timeZone:tz,year:'numeric',month:'2-digit',day:'2-digit',
+            hour:'2-digit',minute:'2-digit',hourCycle:'h23'}));
+  const P=f.formatToParts(now);
   const g=k=>(P.find(x=>x.type===k)||{}).value;
-  return {date:`${g('year')}-${g('month')}-${g('day')}`, min:(+g('hour'))*60+(+g('minute'))};
+  const v={date:`${g('year')}-${g('month')}-${g('day')}`, min:(+g('hour'))*60+(+g('minute'))};
+  M[tz]={sec, date:v.date, min:v.min};
+  return v;
 }
 /* 모의가 써도 되는 마지막 날짜. 장중이면 '어제'까지. */
 function simCutoff(cur){
@@ -4024,7 +4045,9 @@ function simCutoff(cur){
   const y=new Date(n.date+'T00:00:00Z'); y.setUTCDate(y.getUTCDate()-1);
   return y.toISOString().slice(0,10);
 }
-function settledBars(rows,cur){ const cut=simCutoff(cur); return (rows||[]).filter(r=>r.date<=cut); }
+/* 확정 봉 — 같은 시세 배열·같은 확정 상한·같은 길이면 같은 결과를 다시 쓴다(모의 MDD 가 하루마다 전 구간을 다시 걸러 냈다).
+   시세를 새로 받으면 배열 자체가 바뀐다. 부르는 쪽은 전부 읽기만 한다. 저장 칸은 함수 자신에 둔다(한 줄 — 시험이 첫 줄로 떼어 쓴다). */
+function settledBars(rows,cur){ const cut=simCutoff(cur); if(!rows||typeof rows!=='object') return []; const M=settledBars._m||(settledBars._m=new WeakMap()), m=M.get(rows); if(m&&m.cut===cut&&m.len===rows.length) return m.out; const out=rows.filter(r=>r.date<=cut); M.set(rows,{cut,len:rows.length,out}); return out; }
 /* 종가가 확정된 마지막 봉 {date,close}. LOC 체결가·주문표는 전부 이걸 쓴다.
    실시간가는 장중엔 현재가, 마감 직후엔 아직 안 굳은 값이라 종가 자리에 오면 안 된다. */
 function settledLast(rows,cur){ const r=settledBars(rows,cur); return r.length?r[r.length-1]:null; }
@@ -5372,6 +5395,29 @@ function refreshMa(){
 let dcaQuoteData=null;   // {symbol, days:[{date,close}], last, price, currency, src}
 const DCA_N=200;
 
+/* 적립: 기록과 무관한 가격 계산 — 시세 배열(확정 봉)마다 한 번만 한다.
+   예전엔 computeDca 를 부를 때마다 200일선(배열 shift 로 O(일수×200))·전환 이력·분배금용 지도(약 5천 칸)를
+   새로 만들었다. 모의 MDD 는 매일 적립하는 세션에서 이걸 하루마다 다시 불러 갱신이 수 초~수십 초 걸렸다.
+   계산 식은 그대로 옮겼다 — 결과 배열은 부르는 쪽이 읽기만 한다. */
+function _dcaRawMap(raw){
+  if(!raw||typeof raw!=='object') return {};
+  const M=_dcaRawMap._m||(_dcaRawMap._m=new WeakMap()), m=M.get(raw); if(m && m.len===raw.length) return m.map;
+  const map={}; raw.forEach(r=>map[r.date]=r.close);
+  M.set(raw,{len:raw.length,map}); return map;
+}
+function _dcaPriceView(days){
+  const M=_dcaPriceView._m||(_dcaPriceView._m=new WeakMap()), m=M.get(days); if(m && m.len===days.length) return m;
+  const closes=days.map(d=>d.close), dates=days.map(d=>d.date), n=closes.length;
+  const sma=new Array(n); { let s=0; const buf=[];
+    for(let i=0;i<n;i++){ buf.push(closes[i]); s+=closes[i]; if(buf.length>DCA_N)s-=buf.shift();
+      sma[i]= buf.length===DCA_N ? s/DCA_N : null; } }
+  // 배수 전환 이력 (종가 기준)
+  const flips=[]; let prev=null;
+  for(let i=0;i<n;i++){ if(sma[i]==null)continue; const b=closes[i]<=sma[i];
+    if(prev!==null && b!==prev) flips.push({date:dates[i], to:b?'dip':'base', gap:(closes[i]/sma[i]-1)*100}); prev=b; }
+  const v={len:days.length, closes, dates, n, sma, flips};
+  M.set(days,v); return v;
+}
 function computeDca(){
   const st=curStrat().settings, hist=curStrat().hist||[];
   const sym=String(st.ticker||'USD').toUpperCase();
@@ -5390,7 +5436,7 @@ function computeDca(){
      거기에 분배금을 또 더하면 이중계상이 된다.
      재투자(reinv)면 그날 종가로 되사서 주식수를 늘리고, 아니면 현금으로 쌓는다. */
   const divs=(dcaQuoteData && String(dcaQuoteData.symbol||'').toUpperCase()===sym && dcaQuoteData.dividends) ? dcaQuoteData.dividends : [];
-  const rawMap={}; if(dcaQuoteData && dcaQuoteData.raw) dcaQuoteData.raw.forEach(r=>rawMap[r.date]=r.close);
+  const rawMap=_dcaRawMap(dcaQuoteData && dcaQuoteData.raw);
   const reinv=(st.reinv===true);
   let divCash=0, divShares=0, nDiv=0;
   /* 현금 수령이면 그 돈은 계좌 밖으로 나간 것이다 — 무매 단리의 인출과 같다.
@@ -5418,10 +5464,7 @@ function computeDca(){
   const days=_dAll ? settledBars(_dAll, curOf(st)) : null;
   if(!days || days.length<2) return {st,sym,lump,mul,amt,pos,ready:false};
   const _rawLast=(dcaQuoteData.raw&&dcaQuoteData.raw.length)?dcaQuoteData.raw[dcaQuoteData.raw.length-1].close:0;
-  const closes=days.map(d=>d.close), dates=days.map(d=>d.date), n=closes.length;
-  const sma=new Array(n); { let s=0; const buf=[];
-    for(let i=0;i<n;i++){ buf.push(closes[i]); s+=closes[i]; if(buf.length>DCA_N)s-=buf.shift();
-      sma[i]= buf.length===DCA_N ? s/DCA_N : null; } }
+  const {closes, dates, n, sma, flips}=_dcaPriceView(days);
   const last=n-1, smaNow=sma[last], lastClose=closes[last];
   const price=(dcaQuoteData.price>0?dcaQuoteData.price:lastClose);
   const warming = smaNow==null;
@@ -5429,10 +5472,6 @@ function computeDca(){
   const below = warming ? false : (lastClose<=smaNow);
   const todayMul = (warming||mul<=1) ? 1 : (below?mul:1);
   const gapPct = smaNow ? (lastClose/smaNow-1)*100 : null;
-  // 배수 전환 이력 (종가 기준)
-  const flips=[]; let prev=null;
-  for(let i=0;i<n;i++){ if(sma[i]==null)continue; const b=closes[i]<=sma[i];
-    if(prev!==null && b!==prev) flips.push({date:dates[i], to:b?'dip':'base', gap:(closes[i]/sma[i]-1)*100}); prev=b; }
   /* 주식 평가 = (기록 보유 + 재투자로 늘어난 주식) × 현재가
      총자산 = 주식 평가 + (재투자 안 했으면) 받은 분배금 현금 */
   const shAll=pos.shares+pos.divShares;
@@ -6338,6 +6377,16 @@ function computeAsap(){
      장중에 열면 마지막 확정 봉이 어제다. 현재가(price)는 평가·수량 계산에만 쓴다. */
   const days=_dAll ? settledBars(_dAll, curOf(st)) : null;
   if(!days || days.length<2) return {st,sym,pos,ready:false};
+  const V=_asapPriceView(days);
+  return {st,sym,pos,ready:true,warming:V.warming,cl:V.cl,dates:V.dates,ma5:V.ma5,ma20:V.ma20,ma50:V.ma50,ma200:V.ma200,rsi:V.rsi,
+    lastClose:V.lastClose,lastDate:V.lastDate,m200Now:V.m200Now,ma5Now:V.ma5Now,ma20Now:V.ma20Now,ma50Now:V.ma50Now,rsiNow:V.rsiNow,
+    phase:V.phase,stage:V.stage,gapPct:V.gapPct,ev:V.ev,dip:V.dip,regimeDays:V.regimeDays, price:(asapQuoteData.price>0?asapQuoteData.price:V.lastClose)};
+}
+/* ASAP: 이평·RSI·단계 재생·국면은 기록과 무관하다 — 시세 배열(확정 봉)마다 한 번만 센다.
+   예전엔 computeAsap 를 부를 때마다 전 구간(수천 일)을 다시 셌고, 모의 MDD 가 그걸 하루마다 불렀다.
+   계산 식은 그대로 옮겼다 — ev 는 부르는 쪽이 읽기만 한다. */
+function _asapPriceView(days){
+  const M=_asapPriceView._m||(_asapPriceView._m=new WeakMap()), m=M.get(days); if(m && m.len===days.length) return m;
   const cl=days.map(d=>d.close), dates=days.map(d=>d.date), n=cl.length;
   const ma5=_asapMA(cl,5),ma20=_asapMA(cl,20),ma50=_asapMA(cl,50),ma200=_asapMA(cl,200),rsi=_asapRSI(cl);
   const warming = ma200[n-1]==null;
@@ -6365,9 +6414,10 @@ function computeAsap(){
   let dip=null;
   if(phase==='down'&&!warming){ if(rsiNow<=30&&c<=m200*0.85)dip='deep'; else if(rsiNow<=35&&c<=m200*0.90)dip='mid'; }
   let regimeDays=1; for(let i=last-1;i>=0;i--){ if(ma200[i]==null){regimeDays++;continue;} const dn=cl[i]<ma200[i]; if((dn?'down':'up')!==phase)break; regimeDays++; }
-  return {st,sym,pos,ready:true,warming,cl,dates,ma5,ma20,ma50,ma200,rsi,
+  const v={len:days.length,warming,cl,dates,ma5,ma20,ma50,ma200,rsi,
     lastClose:c,lastDate:dates[last],m200Now:m200,ma5Now:ma5[last],ma20Now:ma20[last],ma50Now:ma50[last],rsiNow,
-    phase,stage,gapPct,ev,dip,regimeDays, price:(asapQuoteData.price>0?asapQuoteData.price:c)};
+    phase,stage,gapPct,ev,dip,regimeDays};
+  M.set(days,v); return v;
 }
 function fetchAsapQuote(){ loadAsapData(true); }
 async function loadAsapData(force){
@@ -6813,11 +6863,21 @@ function renderInfFx(){
   el.innerHTML=`USD/KRW <b>${rate.toLocaleString('en-US',{maximumFractionDigits:2})}₩</b>${dateStr?` <span style="opacity:.7">(${dateStr})</span>`:''}`;
 }
 let liveFX=null, liveFXDate=null;
-async function loadFX(){
+let _fxInflight=null, _fxAt=0;
+const FX_FRESH_MS=5*60*1000;
+/* 운영 무매 탭은 다시 그릴 때마다(refreshAll) 환율을 불렀다 — 모의 갱신 한 번에 23번.
+   오는 중이면 같이 기다리고, 5분 안에 받은 게 있으면 그대로 쓴다. */
+function loadFX(){
+  if(liveFX && Date.now()-_fxAt<FX_FRESH_MS) return Promise.resolve();
+  if(_fxInflight) return _fxInflight;
+  _fxInflight=_loadFXNet().finally(()=>{ _fxInflight=null; });
+  return _fxInflight;
+}
+async function _loadFXNet(){
   // 1) 운영 자체 함수 — 응답이 끊겨도 모의성과 전체 갱신을 오래 붙잡지 않는다.
   try{
     const r=await fetchT('/api/fx',{headers:{'Accept':'application/json'}},5000);
-    if(r.ok){const j=await r.json(); if(j&&j.rate){liveFX=+j.rate;liveFXDate=j.date||'';renderInfFx();return;}}
+    if(r.ok){const j=await r.json(); if(j&&j.rate){liveFX=+j.rate;liveFXDate=j.date||'';_fxAt=Date.now();renderInfFx();return;}}
   }catch(e){}
   // Pages 운영에서는 자체 함수가 정식 경로다. 실패 뒤 공개 프록시 6곳을 순회하면 수십 초 느려진다.
   const _prodPages=(typeof location!=='undefined' && /\.pages\.dev$/i.test(String(location.hostname||'')));
@@ -6827,7 +6887,7 @@ async function loadFX(){
     try{
       const txt=await proxyText(px,'https://api.exchangerate.host/latest?base=USD&symbols=KRW');
       const j=JSON.parse(txt);
-      if(j&&j.rates&&j.rates.KRW){liveFX=+(+j.rates.KRW).toFixed(2);liveFXDate=j.date||'';renderInfFx();return;}
+      if(j&&j.rates&&j.rates.KRW){liveFX=+(+j.rates.KRW).toFixed(2);liveFXDate=j.date||'';_fxAt=Date.now();renderInfFx();return;}
     }catch(e){}
   }
 }
@@ -7843,11 +7903,15 @@ async function paperFillAll(){
      그 상태로 openPaper 가 refreshAll 을 부르면 보고 있던 세션을 남의 종가로 그린다 —
      SOXL 102주를 KORU 값(18.58$)으로 세서 수익률이 +1.5% → -26.6% 로 뒤집혔다. */
   _fillQuoteCache=new Map();                   // 이 목록을 도는 동안 종목당 한 번만 받는다
-  await paperPrefetchQuotes();                  // 종목별 네트워크는 병렬, 전략 재생만 순차
   const prevQuote={}, prevChart={inf:(typeof infChartData!=='undefined'?infChartData:undefined),
                                  vr:(typeof vrChartData!=='undefined'?vrChartData:undefined)};
   PAPER_TABS.forEach(([t])=>{ prevQuote[t]=lastQuote[t]; });
+  /* 탭별 시세 칸(무매 캐시·이평·섀넌·적립·ASAP)도 재생 전 것을 기억해 두었다가 되돌린다.
+     예전엔 lastQuote 만 되돌려, 재생이 끝나면 이 칸들에 마지막 모의 세션 종목이 남았다 —
+     그러면 운영 화면이 다시 그릴 때마다 '종목이 다르다'며 전체 이력을 또 받았다. */
+  const prevCache={inf:infQuoteCache, ma:maQuoteData, ivs:ivsQuoteData, ivs1:ivsQuote1, dca:dcaQuoteData, asap:asapQuoteData};
   try{
+    await paperPrefetchQuotes();                // 종목별 네트워크는 병렬, 전략 재생만 순차 (실패해도 아래 finally 로 정리된다)
     for(const [tab,label] of PAPER_TABS){
       const box=S[tab]; if(!box||!box.sessions) continue;
       const targets=box.sessions.filter(x=>x.paper);
@@ -7881,6 +7945,8 @@ async function paperFillAll(){
   } finally {
     S.activeTab=prevTab;
     PAPER_TABS.forEach(([t])=>{ lastQuote[t]=prevQuote[t]; });
+    infQuoteCache=prevCache.inf; maQuoteData=prevCache.ma; ivsQuoteData=prevCache.ivs; ivsQuote1=prevCache.ivs1;
+    dcaQuoteData=prevCache.dca; asapQuoteData=prevCache.asap;
     if(prevChart.inf!==undefined) infChartData=prevChart.inf;
     if(prevChart.vr!==undefined) vrChartData=prevChart.vr;
     _fillQuoteCache=null;
@@ -8608,6 +8674,10 @@ function gotoSess(tab, id){
 /* 시세가 도착한 자리에서 부른다 — 모의 생성은 시세가 있어야 되고,
    신호 배지도 시세가 있어야 나온다. 새로 만든 게 있으면 화면 전체를 한 번 갱신한다. */
 function _afterQuote(){
+  /* 모의 성과 일괄 재생 중 — 재생기가 세션마다 paperAuto 를 직접 부르고 끝에 한 번 다시 그린다.
+     여기서 또 굴리고 refreshAll 을 걸면, 탭·세션을 잠시 바꿔 둔 상태로 운영 화면을 다시 그리면서
+     세션마다 전체 이력을 다시 받았다(실측: 모의 갱신 한 번에 SOXL 전체 이력 11번 · 환율 23번). */
+  if(typeof _paperFilling!=='undefined' && _paperFilling) return;
   let r=null; try{ r=paperAuto(); }catch(e){ console.error('afterQuote',e); }
   try{ renderStatusline(); }catch(e){}
   /* 시세가 새로 왔으면 평가금이 달라진다 — 모의 기록이 늘지 않았어도 다시 그려야 한다.
@@ -10432,7 +10502,7 @@ async function _commitStateRemote(where){
   const ref=window.fb.doc(window.fb.db,'users',curUid);
   let candidate=JSON.parse(JSON.stringify(S)),writeUpdated=Date.now(),mergedRemote=false;
   candidate._updated=Math.max(+candidate._updated||0,writeUpdated);
-  const submitted=JSON.parse(JSON.stringify(candidate));
+  const _subJSON=JSON.stringify(candidate), submitted=JSON.parse(_subJSON), _subBytes=dbStateBytes(_subJSON);
   try{
     const nextRev=await window.fb.runTransaction(window.fb.db,async tx=>{
       // Firestore may retry: never merge a previous attempt into the next one.
@@ -10461,11 +10531,52 @@ async function _commitStateRemote(where){
       S=next;ensureBoxes();try{refreshAll();}catch(e){console.warn('db rebase refresh',e);}
     }
     stateCloudRev=+nextRev||stateCloudRev;stateCloudHistorySig=_historySignature(candidate);stateDbBase=JSON.parse(JSON.stringify(candidate));
-    stateCloudPending=false;lastPushedJSON=JSON.stringify(candidate);setSync('ok');return true;
+    stateCloudPending=false;lastPushedJSON=JSON.stringify(candidate);setSync('ok');
+    dbSizeReport(dbStateBytes(lastPushedJSON),null);
+    return true;
   }catch(e){
     console.error(where,e);setSync('err');
+    dbSizeReport(_subBytes,e);
     return false;
   }
+}
+/* ── 원장 문서 크기 ──────────────────────────────────────────────────
+   모든 기록이 users/{uid} 문서 하나에 들어간다. Firestore 는 문서 하나를 1MiB 까지만 받는다 —
+   넘으면 저장이 통째로 거절되고, 예전엔 사용자 이름 옆 점 하나만 빨개졌다(이유는 안 보였다).
+   모의 세션 장부는 거래일마다 늘어난다(실측: 모의 12세션 · 21개월 = 494KiB, 한 VR 세션만 122KiB).
+   80% 를 넘으면 미리 알리고, 저장이 실패하면 크기 때문인지 아닌지를 적는다. */
+const DB_DOC_LIMIT=1048576, DB_DOC_WARN=Math.round(DB_DOC_LIMIT*0.8);
+function dbStateBytes(json){
+  try{ return (typeof TextEncoder!=='undefined')?new TextEncoder().encode(String(json||'')).length:String(json||'').length; }
+  catch(e){ return String(json||'').length; }
+}
+let dbBytesNow=0, _dbWarnShown='';
+function dbSizeMsg(bytes, err){
+  const kb=Math.round(bytes/1024), pct=Math.round(bytes/DB_DOC_LIMIT*100);
+  const tooBig=bytes>DB_DOC_LIMIT || /maximum|exceed|too large|size/i.test(String(err&&(err.message||err.code)||''));
+  if(err && tooBig) return {level:'err', text:`⚠ 기록이 ${kb}KB 로 Firebase 저장 한도(1024KB)를 넘어 클라우드에 저장되지 않았습니다. 이 화면에서 바꾼 것은 새로고침하면 사라집니다 — 안 쓰는 모의 세션을 지우거나 모의 시작일을 늦춰 크기를 줄여 주세요.`};
+  if(err) return {level:'err', text:`⚠ 클라우드 저장에 실패했습니다 — ${String(err&&(err.message||err.code)||err).slice(0,120)} (기록 크기 ${kb}KB · 한도의 ${pct}%)`};
+  if(bytes>DB_DOC_WARN) return {level:'warn', text:`⚠ 기록이 ${kb}KB 로 Firebase 저장 한도(1024KB)의 ${pct}%입니다. 모의 세션 장부는 거래일마다 늘어납니다 — 안 쓰는 모의 세션을 지우거나 모의 시작일을 늦춰 두세요.`};
+  return null;
+}
+function dbSizeReport(bytes, err){
+  dbBytesNow=+bytes||0;
+  const d=$('syncdot'); if(d) d.title=`클라우드 기록 ${Math.round(dbBytesNow/1024)}KB / 1024KB`;
+  const m=dbSizeMsg(dbBytesNow, err);
+  if(!m){ const b=document.getElementById('dbwarn'); if(b) b.remove(); _dbWarnShown=''; return; }
+  if(_dbWarnShown===m.text) return;
+  _dbWarnShown=m.text;
+  let b=document.getElementById('dbwarn');
+  if(!b){ b=document.createElement('div'); b.id='dbwarn';
+    b.style.cssText='position:fixed;left:12px;right:12px;bottom:calc(84px + env(safe-area-inset-bottom));z-index:95;padding:11px 36px 11px 13px;border-radius:12px;font-size:12.5px;line-height:1.6;box-shadow:0 8px 24px rgba(0,0,0,.35)';
+    document.body.appendChild(b); }
+  b.style.background=m.level==='err'?'rgba(248,123,140,.16)':'rgba(245,196,81,.14)';
+  b.style.border='1px solid '+(m.level==='err'?'rgba(248,123,140,.5)':'rgba(245,196,81,.45)');
+  b.style.color=m.level==='err'?'#ffc7cf':'#f6dfa6';
+  b.textContent=m.text;
+  const x=document.createElement('button'); x.textContent='✕'; x.setAttribute('aria-label','닫기');
+  x.style.cssText='position:absolute;top:6px;right:8px;background:none;border:0;color:inherit;font-size:14px;cursor:pointer';
+  x.onclick=()=>b.remove(); b.appendChild(x);
 }
 async function pushRemote(){return await pushRemoteNow();}
 async function pushRemoteNow(){
@@ -10791,6 +10902,7 @@ function authDiag(){
   L.push('DB전송    '+String(window.__jkFirestoreTransport||'미확인'));
   L.push('앱시작    '+(appStarted?'됨':'안 됨 · 멈춘 자리 '+authStep));
   L.push('데이터저장 '+storageOK());
+  L.push('기록크기  '+(dbBytesNow?(Math.round(dbBytesNow/1024)+'KB / 1024KB ('+Math.round(dbBytesNow/DB_DOC_LIMIT*100)+'%)'):'아직 저장 전'));
   L.push('브라우저  '+(inAppName()||'기본 브라우저'));
   if(authLastErr) L.push('마지막오류 '+authLastErr);
   L.push(String(navigator.userAgent||'').slice(0,120));
