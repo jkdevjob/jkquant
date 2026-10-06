@@ -8622,17 +8622,15 @@ console.log('\n[118] 제8차 감사 대응 — SOURCE GOLDEN / ENGINE PARITY');
       const b=mk(pl,['function planQuoteOf(sym,j,cur)'],'return (j)=>planQuoteOf("TQQQ",j).settled;')(J);
       P8('플랜 가격 — 16:15 ET(마감 15분 뒤)에도 앱·플랜 둘 다 06-23 을 확정 종가로 본다 (예전 플랜 16:10 이면 06-24)',
          a.date==='2026-06-23' && b.date==='2026-06-23', `앱 ${a.date} · 플랜 ${b.date}`); }
-    // 실제 로더 — fetchPlanQuote 가 div=1 로 받고 정규화를 거치는가. 회귀는 동기로 돌므로
-    // 실코드에서 async/await 만 걷어 내고 fetch 를 동기 가짜로 바꿔 그대로 돌린다
-    { const urls=[];
-      const loader=extractFn(pl,'async function fetchPlanQuote(symbol)').replace(/^async function/,'function').replace(/await /g,'');
-      const fq=new Function('fetch', fnOf(pl,['function quoteToDaily(SYM, j)','function simCutoff(cur)','function settledBars(rows,cur)','function planQuoteOf(sym,j,cur)'])+'\n'+loader+'\n'
-        +(pl.match(/const MKT_CLOSE_MIN=[^\n]*/)||[''])[0]+'\n'+(pl.match(/const SETTLE_LAG_MIN=[^\n]*/)||[''])[0]+'\n'+CLOCK+'\nlet liveQuotes={};\nreturn fetchPlanQuote;')(
-        (u)=>{ urls.push(u); return {ok:true, json:()=>J}; });
-      const q=fq('TQQQ');
-      P8('플랜 가격 — 실제 로더 fetchPlanQuote: div=1 로 받고 확정 종가 74.44 (06-23)',
-         urls.length===1 && /[?&]div=1(&|$)/.test(urls[0]) && q.settled.date==='2026-06-23' && q.settled.close===PG.close0623 && q.priceBasis==='trade',
-         `${urls[0]} · ${q.settled.date} ${q.settled.close} · ${q.priceBasis}`); }
+    // 실제 로더 — 비동기 타임아웃/재시도는 scripts/check-login-quote-paper.cjs 에서 값으로 검증한다.
+    // 여기서는 가격 엔진 회귀가 동기 하네스라 전송계층을 억지로 동기화하지 않고 배선 계약만 본다.
+    { const loader=extractFn(pl,'async function fetchPlanQuote(symbol)');
+      P8('플랜 가격 — 실제 로더 fetchPlanQuote: div=1 · 시간상한 · planQuoteOf 정규화 배선',
+         /&range=max&div=1&_ts='\+Date\.now\(\)/.test(loader)
+         && /for\(const ms of \[7000,10000\]\)/.test(loader)
+         && /Promise\.race\(\[p,lim\]\)/.test(loader)
+         && /return liveQuotes\[sym\]=planQuoteOf\(sym,j\);/.test(loader),
+         loader.slice(0,220)); }
     ok('제8차 8-⑤ 시세 정규화가 index·plan 에 글자 그대로 같다 (quoteToDaily · _exchNow · simCutoff · settledBars · 상수)',
        ['function quoteToDaily(SYM, j)','function _exchNow(cur)','function simCutoff(cur)','function settledBars(rows,cur)'].every(sig=>same3(sig,idx,pl))
        && (idx.match(/const MKT_CLOSE_MIN=[^\n]*/)||[1])[0]===(pl.match(/const MKT_CLOSE_MIN=[^\n]*/)||[2])[0]
