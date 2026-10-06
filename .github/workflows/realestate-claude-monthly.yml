@@ -1,0 +1,55 @@
+name: 부동산(클로드) 월간 자료·모의장부
+
+# 한국부동산원 월간 지수는 다음 달 중순(대략 15~20일)에 공표된다.
+# 20일·27일 두 번 돌려 늦은 공표도 잡는다. 새 달이 없으면 커밋하지 않는다.
+# 장부는 덧붙이기만 한다(paper.mjs 가 지난 기록이 바뀌면 저장을 거부한다).
+on:
+  schedule:
+    - cron: "17 1 20 * *"   # 매달 20일 10:17 KST
+    - cron: "17 1 27 * *"   # 매달 27일 10:17 KST
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: realestate-claude-monthly
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.12' }
+      - uses: actions/setup-node@v4
+        with: { node-version: '22' }
+
+      - name: 원자료 수집(증분 — 최근 12개월 대조, 소급 수정이면 그 시계열만 전체 재수집)
+        env:
+          RONE_KEY: ${{ secrets.RONE_KEY }}
+          ECOS_KEY: ${{ secrets.ECOS_KEY }}
+        run: python scripts/realestate_claude/collect.py
+
+      - name: 모의장부 덧붙이기
+        run: node scripts/realestate_claude/paper.mjs
+
+      - name: 엔진 값 시험(실제 자료 포함) — 실패하면 커밋하지 않는다
+        run: node scripts/test_realestate_claude.cjs
+
+      - name: 커밋
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git diff --quiet -- data/realestate/claude; then
+            echo "새 자료 없음"
+            exit 0
+          fi
+          git config user.name "jkquant-realestate-bot"
+          git config user.email "jkquant-realestate-bot@users.noreply.github.com"
+          git add data/realestate/claude
+          git commit -m "data: 부동산(클로드) 월간 자료·모의장부 갱신"
+          git pull --rebase origin main
+          git push origin HEAD:main
