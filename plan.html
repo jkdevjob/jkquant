@@ -239,8 +239,11 @@ html.had-user #authgate .bootwait{display:block}
 </head>
 <body>
 <script>
-/* 첫 페인트 전에 정해야 번쩍이지 않으므로 여기서 본다 (운영 화면과 같은 표시를 같이 쓴다). */
-try{ if(브라우저영구저장소.getItem('qcockpit_hadUser')==='1') document.documentElement.classList.add('had-user'); }catch(e){}
+/* 첫 페인트 전에 정해야 번쩍이지 않으므로 여기서 정한다 (운영 화면과 같은 규약).
+   로그인 여부는 Firebase 가 답하기 전에는 모른다 — 그동안은 '로그인 확인 중'을 보이고 로그인 상자는 감춘다.
+   로그아웃으로 판정되면 planGate(false) 가 had-user 를 지워 로그인 상자를 연다. 브라우저 저장소는 쓰지 않는다.
+   (예전 줄은 저장소 이름이 없는 식별자로 바뀌어 늘 실패했다 — 그래서 매번 로그인 상자가 먼저 번쩍였다.) */
+document.documentElement.classList.add('had-user');
 </script>
 <div id="authgate" role="dialog" aria-modal="true" aria-label="로그인">
   <div class="bootwait"><div class="bw-logo">JK 퀀트 · 자산플랜</div><span class="bw-dot"></span>로그인 확인 중…</div>
@@ -261,11 +264,12 @@ function planLogin(){ if(typeof window.planLoginImpl==='function') return window
   var e=document.getElementById('gerr'); if(e) e.textContent='로그인 모듈을 불러오지 못했습니다 — 새로고침해 주세요.'; }
 setTimeout(function(){ var h=document.documentElement; if(h.classList.contains('authed')) return;
   h.classList.remove('had-user'); var e=document.getElementById('gerr');
-  if(e&&!e.textContent) e.textContent='로그인 확인이 늦어지고 있습니다 — 다시 로그인하거나 새로고침해 주세요.'; }, 8000);
+  /* Firebase 가 이미 '로그아웃'이라고 답했으면 늦어진 게 아니다 — 로그인 상자만 두고 겁주는 문구는 달지 않는다 */
+  if(e&&!e.textContent&&!window.__planAuthResolved) e.textContent='로그인 확인이 늦어지고 있습니다 — 다시 로그인하거나 새로고침해 주세요.'; }, 8000);
 </script>
 <div class="wrap">
   <div class="top">
-    <div class="brand"><div class="logo">Asset Plan</div><h1>자산플랜 <span class="ver">v1.43.7</span></h1></div>
+    <div class="brand"><div class="logo">Asset Plan</div><h1>자산플랜 <span class="ver">v1.43.8</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
       <div class="jkmenu" id="jkmenuWrap">
@@ -3080,6 +3084,7 @@ window.planRetryDbImpl=async()=>{
   catch(e){console.error('plan db retry',e);showPlanDbRetry(e);}
 };
 onAuthStateChanged(auth,async user=>{
+  window.__planAuthResolved=true;   // Firebase 가 답했다 — 8초 타이머가 '늦어지고 있습니다'를 달지 않게
   /* 로그인 전에는 아무것도 열지 않는다 — 본문을 숨기고, 클라우드 장부·시세 로딩도 시작하지 않는다. */
   if(!user){ planGate(false); userBadge(null); JKAccess.hide(); JKAccess.setAdmin(false); JKAccess.cacheSet(null); return; }
   /* 승인된 계정만 연다. 승인 대기·거절·확인 실패면 본문을 열지 않고 그 화면으로 덮는다(열린 뒤 취소돼도 덮는다). */

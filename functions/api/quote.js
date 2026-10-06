@@ -161,13 +161,18 @@ export async function onRequestOptions() {
   }});
 }
 
+/* period1/period2가 있으면 우선 사용, 없으면 range 사용 (max는 period 방식으로 우회).
+   max 의 끝(period2)을 초 단위 '지금'으로 두면 요청 주소가 매초 달라져 엣지 캐시(cacheTtl 60)가 한 번도 안 맞는다 —
+   앱이 부르는 시세는 전부 range=max 라 매번 야후를 새로 때렸다(야후 차단·지연의 원인이 된다).
+   끝은 '다음 정시 + 하루'로 둔다 — 한 시간 안에는 같은 주소라 캐시가 맞고, 오늘 봉은 늘 범위 안이다. */
+function yahooRangeParam(range, period1, period2, nowMs) {
+  if (period1 && period2) return `period1=${period1}&period2=${period2}`;
+  if (range === "max") return `period1=0&period2=${(Math.floor(nowMs / 3600000) + 1) * 3600 + 86400}`;
+  return `range=${encodeURIComponent(range)}`;
+}
+
 async function yahooDaily(host, symbol, range, dbg, period1=null, period2=null, wantDiv=false) {
-  // period1/period2가 있으면 우선 사용, 없으면 range 사용 (max는 period 방식으로 우회)
-  const rangeParam = (period1 && period2)
-    ? `period1=${period1}&period2=${period2}`
-    : range === "max"
-      ? `period1=0&period2=${Math.floor(Date.now()/1000)+86400}`
-      : `range=${encodeURIComponent(range)}`;
+  const rangeParam = yahooRangeParam(range, period1, period2, Date.now());
   // 배당/분할은 events로 따로 받는다. series의 close는 adjclose(배당 재투자 반영)라
   // 분배금을 따로 보여주려면 raw close가 같이 필요하다 — 안 그러면 이중계상된다.
   const evParam = wantDiv ? "&events=div%7Csplit" : "";

@@ -523,7 +523,11 @@ html.had-user #authgate .bootwait{display:block}
 </script>
 </head>
 <body>
-<script>/* 앱 상태는 Firebase DB에서만 복원한다. */</script>
+<script>/* 앱 상태는 Firebase DB에서만 복원한다.
+   로그인 여부는 Firebase 가 답하기 전에는 모른다 — 그동안은 '여는 중'을 보이고 로그인 상자는 감춘다.
+   로그인된 사람에게 로그인 단추가 먼저 보이면, 세션을 되살리는 사이에 다시 눌러 상태가 꼬인다.
+   로그아웃 상태로 판정되면 initAuth 가 had-user 를 지워 로그인 상자를 연다(브라우저 저장소는 쓰지 않는다). */
+document.documentElement.classList.add('had-user');</script>
 <div id="authgate">
   <div class="bootwait"><div class="bw-logo">JK 퀀트</div><span class="bw-dot"></span>여는 중…
     <div class="bw-help">오래 멈추면 자동으로 복구 화면으로 전환됩니다.</div>
@@ -544,7 +548,7 @@ html.had-user #authgate .bootwait{display:block}
 </div>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.110.5</span></h1></div>
+    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.110.6</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -1655,7 +1659,7 @@ if(/^\/paper\/?$/.test(location.pathname)){
   <footer>
     <strong>JK 퀀트</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.110.5</b> · 2026-10-05</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.110.6</b> · 2026-10-06</div>
   </footer>
 </div>
 
@@ -3337,10 +3341,20 @@ const PUBLIC_PROXIES=[
   u=>`https://api.allorigins.win/get?url=${encodeURIComponent(u)}`, // {contents:...} 래핑
   u=>u // 마지막엔 직접 (동일 출처/CORS 허용 시)
 ];
+/* 시간 제한이 있는 fetch — 모바일에서 응답 없는 요청 하나가 화면을 '불러오는 중…'에 묶어 두던 것을 끊는다.
+   fetch 는 '느린 것'과 '안 오는 것'을 구분하지 않아 브라우저 기본값(수십 초~수 분)까지 기다린다. */
+async function fetchT(url, opt, ms){
+  const ac=(typeof AbortController!=='undefined')?new AbortController():null;
+  let t=null;
+  const req=fetch(url, Object.assign({}, opt||{}, ac?{signal:ac.signal}:{}));
+  const lim=new Promise((_,rej)=>{ t=setTimeout(()=>{ try{ if(ac) ac.abort(); }catch(e){} rej(new Error('응답 없음 '+Math.round(ms/1000)+'초')); }, ms); });
+  try{ return await Promise.race([req, lim]); }
+  finally{ clearTimeout(t); }
+}
 /* 프록시 응답에서 텍스트 추출 (allorigins get 은 JSON 래핑) */
 async function proxyText(px, target){
   const purl=px(target);
-  const r=await fetch(purl,{headers:{'Accept':'text/csv,text/plain,application/json,*/*'}});
+  const r=await fetchT(purl,{headers:{'Accept':'text/csv,text/plain,application/json,*/*'}},8000);
   if(!r.ok) throw new Error('http '+r.status);
   const raw=await r.text();
   // allorigins /get 은 {contents:"..."} 로 감쌈 → 풀어줌
@@ -3388,10 +3402,12 @@ function quoteToDaily(SYM, j){
           intraday:j.intraday||null,currency:j.currency||'USD',src:(j.src||'api')};
 }
 
+const QUOTE_TRY_MS=[12000,20000];   // 자체 시세 함수: 첫 시도 12초 · 다시 한 번 20초
 async function _fetchDailyRaw(symbol){
   const SYM=symbol.toUpperCase();
-  // 1) 자체 함수 (동일 출처)
-  try{
+  // 1) 자체 함수 (동일 출처) — 시간 제한을 두고 한 번 더 묻는다.
+  //    한 번 삐끗했다고 곧장 느린 공개 프록시(대부분 막혔거나 느리다)로 빠지면 몇 분씩 걸렸다.
+  for(const ms of QUOTE_TRY_MS) try{
     /* div=1 로 받는다 — 백테와 같은 가격 역할 분리를 쓰기 위해서다 (자체 점검 N1).
          ohlc      조정 기준(배당이 가격에 녹아 있음) — 총수익 분석용
          ohlcTrade 실제 체결가(분할만 소급) — 거래 판정·주수·평단은 이걸로 해야 한다
@@ -3399,14 +3415,14 @@ async function _fetchDailyRaw(symbol){
        조정가를 체결가로 쓰면 '배당까지 얹힌 가격에 그 주수를 샀다' 가 된다.
        국내 종목은 div=1 이면 이력을 야후(.KS/.KQ)에서 받지만 현재가는 네이버 것을 그대로 쓴다
        (quote.js 가 그렇게 돌려준다). 야후가 안 되면 네이버 일봉을 체결가로 쓴다. */
-    const r=await fetch(`/api/quote?symbol=${encodeURIComponent(SYM)}&range=max&div=1`,{headers:{'Accept':'application/json'}});
+    const r=await fetchT(`/api/quote?symbol=${encodeURIComponent(SYM)}&range=max&div=1`,{headers:{'Accept':'application/json'}},ms);
     if(r.ok){
       const j=await r.json();
       if(j && j.series && j.series.length){
         return quoteToDaily(SYM, j);
       }
     }
-  }catch(e){/* 함수 없음 → 폴백 */}
+  }catch(e){/* 시간 초과·일시 오류 → 한 번 더, 그래도 안 되면 폴백 */}
 
   // 2) 브라우저에서 Yahoo 직접 (프록시 경유) — 실시간가 + 인트라데이까지
   const yUrl=`https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(SYM)}?interval=1d&range=max&includePrePost=false`;
@@ -5948,7 +5964,7 @@ function saveIvsSeed(){
 async function _fetchDailyDivRaw(symbol){
   const SYM=String(symbol||'').toUpperCase();
   try{
-    const r=await fetch(`/api/quote?symbol=${encodeURIComponent(SYM)}&range=max&div=1&intraday=0`,{headers:{'Accept':'application/json'}});
+    const r=await fetchT(`/api/quote?symbol=${encodeURIComponent(SYM)}&range=max&div=1&intraday=0`,{headers:{'Accept':'application/json'}},QUOTE_TRY_MS[0]);
     if(r.ok){
       const j=await r.json();
       if(j && j.series && j.series.length){
@@ -7557,6 +7573,10 @@ const PAPER_DAYS={
 function paperMdd(tab, sess, R, hist){
   try{
     const getD=PAPER_DAYS[tab]; if(!getD) return null;
+    /* 탭마다 시세 칸은 하나뿐이다 — 지금 담긴 게 이 세션 종목이 아니면 남의 종가로 낙폭을 잰다. 못 재면 비운다 */
+    const want=String(((sess&&sess.settings)||{}).ticker||'').toUpperCase();
+    const have=String((typeof PAPER_CACHESYM!=='undefined'&&PAPER_CACHESYM[tab]&&PAPER_CACHESYM[tab]())||'').toUpperCase();
+    if(want && have!==want) return null;
     const days=getD(); if(!days||days.length<3) return null;
     const h=(hist||[]).filter(x=>x&&x.date);
     // 잴 수 있는지는 아래 걷기에서 판가름난다 (투입>0 인 날이 세 날은 있어야 한다).
@@ -7621,7 +7641,9 @@ function paperRaw(tab, sess){
       total=price*c.qty + c.bal + (c.outside||0) + _dv.divCash;   // 출금·단리 적립분·분배금도 자산
       _out={saved:(c.saved||0)+_dv.divCash, withdrawn:c.withdrawn||0, simple:!!c.simple};
     }else if(tab==='vr'){
-      const c=computeVr(); price=vrLastPrice(c)||0;
+      /* 그 세션 종목의 시세만 쓴다. vrLastPrice 는 시세가 없으면 평단으로 대신하는데(운영 화면용),
+         모의 성과에서 그러면 평가손익이 0 인 가짜 수익률이 나온다 — 없으면 0(시세 대기)으로 둔다. */
+      const c=computeVr(), _Qv=quoteOf('vr'); price=(_Qv&&+_Qv.last>0)?+_Qv.last:0;
       /* 분모는 인출 빼기 전 총투입, 분자엔 나간 돈을 도로 더한다 — 무매와 같은 규약.
          예전엔 inflow 에서 인출을 빼고 total 에도 안 넣어, 인출이 양쪽에서 통째로 사라졌다.
          (인출식 세션의 인출 칸이 늘 비어 있던 이유다.) */
@@ -7753,7 +7775,7 @@ function paperSummary(){
   const out=[];
   PAPER_TABS.forEach(([tab,label])=>{ const box=S[tab]; if(!box||!box.sessions) return;
     box.sessions.forEach(sess=>{ if(!sess.paper) return;
-      const r=paperStat(tab,sess); if(r){ r.label=label; out.push(r); } }); });
+      const r=paperStat(tab,sess); if(r){ r.label=label; if(!(r.price>0)) r.pending=true; out.push(r); } }); });
   return out;
 }
 /* 모의 성과를 열 때, 아직 안 채워진 전략까지 채운다.
@@ -7852,7 +7874,14 @@ function paperInflowText(r){
 }
 function paperWonRate(r){
   if(!r||r.cur==='krw') return 1;
-  return (typeof liveFX!=='undefined'&&liveFX)?liveFX:FX;
+  return (typeof liveFX!=='undefined'&&liveFX)?liveFX:paperFxFallback();
+}
+/* 환율이 아직 안 왔을 때 — 하드코딩 상수(FX)보다 '마지막으로 받은 실제 환율'이 훨씬 가깝다.
+   실측(2026-10-05): 상수 1,520.21 vs 실제 1,343.5 — 표를 여는 순간 환율이 늦으면 원화 금액이 13% 부풀어
+   새로 열 때마다 평가금이 오락가락했다(수익률은 그대로인데 원화만 바뀜). 계산 결과와 함께 그때 환율을 남긴다. */
+function paperFxFallback(){
+  const c=(typeof S!=='undefined'&&S)?S.paperViewCache:null;
+  return (c&&+c.fx>0)?+c.fx:FX;
 }
 /* 모의 성과 빠른 보기 캐시
    - 거래 장부/설정은 Firebase stateV2가 정본이고, 이 캐시는 그 정본에서 계산한 '표 결과'만 저장한다.
@@ -7876,12 +7905,27 @@ function paperViewCacheRead(){
 }
 function paperViewCacheWrite(rows){
   if(!S)return null;
-  const x={ver:PAPER_VIEW_CACHE_VER,day:paperKstDate(),at:Date.now(),sig:paperViewSig(),rows:JSON.parse(JSON.stringify(rows||[]))};
+  const x={ver:PAPER_VIEW_CACHE_VER,day:paperKstDate(),at:Date.now(),sig:paperViewSig(),rows:JSON.parse(JSON.stringify(rows||[])),
+           fx:(typeof liveFX!=='undefined'&&+liveFX>0)?+liveFX:((S.paperViewCache&&+S.paperViewCache.fx>0)?+S.paperViewCache.fx:null)};
   S.paperViewCache=x; return x;
 }
-function paperViewCacheFresh(x){ return !!x&&x.day===paperKstDate(); }
+/* 시세를 못 받은 줄(price 0)이 섞인 결과는 '오늘 것'으로 굳히지 않는다. 예전엔 아침 한 번 실패하면
+   그 '시세 대기' 줄이 하루 종일 캐시에서 나왔다 — 화면은 '새로고침하면 재시도합니다'라고 했지만 재시도하지 않았다. */
+function paperViewCacheFresh(x){ return !!x&&x.day===paperKstDate()&&!(x.rows||[]).some(r=>!(+r.price>0)); }
+/* 서명이 안 맞아도(원장이 그 뒤 바뀌었어도) 마지막 계산 결과 — 다시 계산하는 동안 첫 화면에만 쓴다 */
+function paperViewCacheLast(){
+  const x=S&&S.paperViewCache;
+  return (x&&+x.ver===PAPER_VIEW_CACHE_VER&&Array.isArray(x.rows)&&x.rows.length)?x:null;
+}
 async function refreshPaperView(force=false){
-  if(_paperViewRefreshPromise)return _paperViewRefreshPromise;
+  /* 이미 도는 갱신이 있으면: 평소 열기는 그 결과를 같이 쓰면 되지만, 강제(전체 적용·오늘 갱신)는 안 된다 —
+     그 갱신은 바뀌기 전 원장으로 계산한 것이다. 끝나기를 기다렸다가 지금 원장으로 다시 계산한다.
+     (실측: 하루 첫 진입의 백그라운드 갱신 중에 전체 적용을 누르면 무매·VR 몇 줄이 옛 시작일 결과로 남았다) */
+  if(_paperViewRefreshPromise){
+    if(!force) return _paperViewRefreshPromise;
+    try{ await _paperViewRefreshPromise; }catch(e){}
+    return refreshPaperView(true);
+  }
   // '오늘 갱신'을 직접 눌러도 오래된 세션 시작일이 공통 시작일을 이기지 못하게 먼저 정합화한다.
   const repaired=await paperRepairCommonStarts();
   if(repaired>0) force=true;
@@ -7937,8 +7981,10 @@ function paperSortTable(key,th){
     h.textContent=base+(h===th?(paperSortDir>0?' ▲':' ▼'):'');
   });
 }
+let paperStaleNote=false;
 async function openPaper(){
   const forceRecalc=arguments[0]===true,skipAutoRefresh=arguments[1]===true;
+  paperStaleNote=false;
   const body=$('paper_body');
   if(body){ body.innerHTML=forceRecalc
     ? '<p class="lead">전체 적용 결과를 다시 계산하는 중… <span style="color:var(--faint)">이때만 전 전략 시세·재생을 다시 확인합니다.</span></p>'
@@ -7957,7 +8003,12 @@ async function openPaper(){
   }else{
     /* 평소 열기: DB에 이미 계산된 장부를 다시 전 구간 재생하지 않는다.
        캐시가 있으면 그대로, 없으면 현재 장부만 로컬 계산해서 먼저 그린다. */
-    rows=cache&&cache.rows ? JSON.parse(JSON.stringify(cache.rows)) : paperSummary();
+    /* 원장이 그 뒤 바뀌어 저장 결과의 서명이 안 맞으면, 지난 결과를 '갱신 중'으로 먼저 보이고 뒤에서 다시 계산한다.
+       예전엔 여기서 paperSummary() 로 그 자리 시세를 썼는데, 시세를 아직 안 받은 탭은 전부 '시세를 못 받았습니다',
+       VR 은 남의 종목/평단으로 센 엉뚱한 수익률(+18.8% ↔ 실제 +102.4%)이 30초쯤 보였다. */
+    const last=cache?null:paperViewCacheLast();
+    if(last){ rows=JSON.parse(JSON.stringify(last.rows)); paperStaleNote=true; }
+    else rows=cache&&cache.rows ? JSON.parse(JSON.stringify(cache.rows)) : paperSummary();
     if(!skipAutoRefresh&&!paperViewCacheFresh(cache)){
       /* 하루가 바뀐 첫 진입만 백그라운드 증분 갱신. 화면 표시를 막지 않는다. */
       setTimeout(()=>{ void refreshPaperView(false).then(r=>{ if(r&&$('paperModal').classList.contains('on'))openPaper(false,true); }); },0);
@@ -7966,6 +8017,9 @@ async function openPaper(){
     if(typeof loadFX==='function')setTimeout(()=>{void loadFX();},0);
   }
   rows=rows||[];
+  /* 원화 금액은 현재 환율로 그린다 — 아직 안 왔으면 잠깐(최대 4초) 기다린다. 그래도 없으면 마지막 실제 환율로 */
+  if(!(typeof liveFX!=='undefined'&&liveFX) && rows.some(r=>r&&r.cur!=='krw') && typeof loadFX==='function')
+    await Promise.race([loadFX().catch(()=>{}), new Promise(r=>setTimeout(r,4000))]);
   rows.forEach(r=>{ r.wonRate=paperWonRate(r); });
   if(!body) return;
   if(!rows.length){
@@ -8045,11 +8099,14 @@ async function openPaper(){
              + `<td style="color:${outAmt>0?(r.retNow>=0?'var(--buy)':'var(--sell)'):'var(--faint)'}">${r.retNow>=0?'+':''}${r.retNow.toFixed(1)}%</td>`
              + `<td style="color:${outAmt>0?'var(--gold)':'var(--faint)'}">${outAmt>0?'+'+r.retOut.toFixed(1)+'%':'—'}</td>`
              + `<td style="color:${long?(up?'var(--buy)':'var(--sell)'):'var(--faint)'}">${cagr}</td>`
-          : `<td colspan="7" style="color:var(--gold)">시세 대기 — ${r.sym} 시세를 못 받았습니다. 새로고침하면 재시도합니다</td>`)
+          : (r.pending
+            ? `<td colspan="7" style="color:var(--faint)">계산 중 — ${r.sym} 시세를 받는 대로 채웁니다</td>`
+            : `<td colspan="7" style="color:var(--gold)">시세 대기 — ${r.sym} 시세를 못 받았습니다. 새로고침하면 재시도합니다</td>`))
         // 투입은 맨 오른쪽 — 눈이 먼저 가야 하는 건 성과(평가·수익·연)다
         + `<td style="color:var(--dim)">${paperInflowText(r)}</td></tr>`; });
     h+=`</tbody></table></div>`;
-    if(!cur) h+=`<p class="note" style="margin-top:8px;color:var(--gold)">⚠ 시세를 못 받은 세션이 있습니다. 그 줄은 수익률을 비워 뒀습니다 — 해당 탭을 한 번 열면 채워집니다.</p>`;
+    if(paperStaleNote) h=`<p class="note" id="paper_stale_note" style="color:var(--vio)">🔄 지난번 계산 결과입니다 — 오늘 기준으로 다시 계산하는 중… (끝나면 자동으로 바뀝니다)</p>`+h;
+    if(!cur && rows.some(r=>!(r.price>0)&&!r.pending)) h+=`<p class="note" style="margin-top:8px;color:var(--gold)">⚠ 시세를 못 받은 세션이 있습니다. 그 줄은 수익률을 비워 뒀습니다 — 새로고침하면 다시 받습니다.</p>`;
     h+=`<p class="note" style="margin-top:8px"><b style="color:var(--vio)">전략 이름</b>을 누르면 그 세션의 분석으로 갑니다. · <b>금액은 모두 원화 표시</b> · 평가·인출 = 현재 USD/KRW · 투입 = 입력한 원화(시작일 환율로 전략 계산) · 평가 = 보유 평가금 + 현금 + 계좌 밖으로 뺀 돈(출금·단리 인출) · 투입 = 밖에서 넣은 돈(원금·적립·입금) · <b>MDD</b> = 하루하루 <b>총자산 ÷ 그때까지 넣은 돈</b>의 고점 대비 최대 낙폭(적립금이 상승으로 잡히지 않게 투입으로 나눠 잽니다). · <b>MAR</b> = CAGR ÷ |MDD| (45일 이상, MDD&gt;0일 때 표시). <b>무한매수법은 LOC 추가 줄 수까지 세션 설정으로 구분 표시</b>합니다. 수수료는 전략별 재생 규약을 따르고 <b>양도세는 넣지 않았습니다</b>. 분배금은 <b>현금 수령·적립은 세전</b>, 장부에 적는 배당(재투자)은 세후로 셉니다.</p>`;
     if(paperNote) h+=`<p class="note" style="color:var(--vio)">${paperNote}</p>`;
     body.innerHTML=h;
@@ -8379,6 +8436,9 @@ async function applyAllSimStart(){
   }
   msg+='\n\n실계좌 세션은 그대로입니다. 계속할까요?';
   if(!confirm(msg)) return;
+  /* 하루 첫 진입의 백그라운드 갱신이 아직 돌고 있으면 끝나기를 기다린다 — 그 갱신이 세션을 하나씩 굴리는 도중에
+     여기서 기록을 비우면, 이미 지나간 세션은 빈 장부로 남고 표에는 옛 시작일 결과가 섞여 저장됐다. */
+  if(_paperViewRefreshPromise){ try{ await _paperViewRefreshPromise; }catch(e){} }
   S.paperCommon.simStart=ns;
   if(cap!=null) S.paperCommon.capitalWon=cap;
   if(add!=null) S.paperCommon.addWon=add;
@@ -10599,6 +10659,7 @@ function initAuth(){
     if(p&&p.catch)p.catch(()=>{});
   }catch(e){/* storage-partitioned 등으로 던지는 경우 무시 */}
   window.fb.onAuthStateChanged(window.fb.auth, async (user)=>{
+    authResolved=true;
     if(!user){
       curUid=null; curEmail=null;
       applyAdminMode();
@@ -10666,6 +10727,8 @@ function initAuth(){
 let authLastErr='';
 /* 어디까지 갔는지 남긴다 — 멈춘 자리가 곧 원인이다. */
 let authStep='시작 전';
+/* Firebase 가 로그인 상태를 한 번이라도 답했는가 — 답했는데 로그아웃이면 '늦어지는' 게 아니다 */
+let authResolved=false;
 /* Firestore 호출은 실패하는 게 아니라 '영영 안 끝나는' 경우가 있다.
    (웨일 iOS에서 실제로 그랬다 — 구글 인증은 됐는데 앱이 안 열렸다.)
    try/catch 는 던져야 잡는다. 안 끝나는 건 못 잡으므로 시간을 재서 끊는다.
@@ -10718,7 +10781,18 @@ function authWarn(msg){
 const INAPP_UA=[[/NAVER/i,'네이버 앱'],[/KAKAOTALK/i,'카카오톡'],[/Instagram/i,'인스타그램'],
   [/FBAN|FBAV|FB_IAB/i,'페이스북'],[/\bLine\//i,'라인'],[/DaumApps/i,'다음 앱'],
   [/\bBand\//i,'밴드'],[/everytimeApp/i,'에브리타임'],[/Snapchat/i,'스냅챗'],[/TwitterAndroid|Twitter for/i,'X(트위터)']];
-function inAppName(){ const ua=navigator.userAgent||''; for(const [re,nm] of INAPP_UA) if(re.test(ua)) return nm; return null; }
+function inAppName(ua){
+  ua=(ua==null?(navigator.userAgent||''):String(ua));
+  for(const [re,nm] of INAPP_UA) if(re.test(ua)) return nm;
+  /* 이름을 모르는 앱 내장 브라우저 — 구글은 앱 내장 화면(WebView)에서 로그인을 막는다.
+     iOS 의 진짜 브라우저(사파리·크롬·파이어폭스·엣지·웨일)는 UA 끝에 Safari/ 가 붙는데 내장 화면은 안 붙는다.
+     홈 화면에 추가한 앱(standalone)도 안 붙으므로 그건 뺀다. 안드로이드 내장 화면은 '; wv)' 가 붙는다. */
+  let standalone=false;
+  try{ standalone=(navigator.standalone===true)||(window.matchMedia&&window.matchMedia('(display-mode: standalone)').matches); }catch(e){}
+  if(/iPhone|iPad|iPod/i.test(ua) && /AppleWebKit/i.test(ua) && !/Safari\//i.test(ua) && !standalone) return '앱 내장 브라우저';
+  if(/Android/i.test(ua) && /; wv\)/i.test(ua)) return '앱 내장 브라우저';
+  return null;
+}
 function copyAppUrl(){
   const u=location.origin+location.pathname;
   const done=()=>{ const e=document.getElementById('iw_copied'); if(e){e.textContent='✓ 복사됨 — 브라우저 주소창에 붙여넣으세요';} };
@@ -10792,7 +10866,9 @@ try{ renderInAppWarn(); }catch(e){}
         if(bw)bw.style.display='none';if(gb)gb.style.display='block';
         const b=document.getElementById('gbtn');
         if(b){b.disabled=false;b.textContent='Google로 시작하기';b.onclick=googleLogin;}
-        if(err){
+        /* Firebase 가 이미 '로그아웃 상태'라고 답했으면 늦어진 게 아니다 — 로그인 상자만 두고 겁주는 문구는 달지 않는다.
+           (실측: 로그아웃 상태로 22초 머물면 이 문구가 떠서 로그인이 고장 난 것처럼 보였다) */
+        if(err && !authResolved){
           err.style.display='block';
           err.textContent=window.fb
             ? '로그인 상태 확인이 오래 걸리고 있습니다. Google 로그인을 다시 시도해 주세요.'
