@@ -1409,7 +1409,10 @@ console.log('[23] 관리자 모드 — 접속 계정·사용자 관리');
      merge 없이 덮어써서 백테의 커스텀 종목이 서버에서 사라지고 있었다. */
   ok('운영 저장은 다른 사용자 필드를 지우지 않고 DB snapshot 기준 3-way rebase한다',
      /runTransaction/.test(idx)
-     && /tx\.set\(ref,\{stateV2:candidate,stateV2Updated:writeUpdated,stateV2Rev:nr\},\{merge:true\}\)/.test(idx)
+     /* 저장 칸을 fields 로 묶었다(v3.110.13) — 옛 형식 사본을 옮길 때만 그 칸 지우기(deleteField)가 붙는다. 다른 칸은 merge 로 그대로 */
+     && /const nr=rev\+1, fields=\{stateV2:candidate,stateV2Updated:writeUpdated,stateV2Rev:nr\};/.test(idx)
+     && /tx\.set\(ref,fields,\{merge:true\}\)/.test(idx)
+     && /for\(const k of Object\.keys\(plan\.archive\)\) fields\[k\]=window\.fb\.deleteField\(\);/.test(idx)
      && /candidate=_rebaseStateOnRemote\(stateDbBase,candidate,remote\)/.test(idx)
      && !/다른 기기\/탭의 최신 거래이력이 감지되어/.test(idx));
 }

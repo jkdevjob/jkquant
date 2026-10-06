@@ -14,7 +14,10 @@ async function saves(destination){
  const c=vm.createContext({S:clone(base),curUid:'u',stateCloudHydrated:true,stateCloudRev:1,stateCloudHistorySig:'',stateDbBase:clone(base),stateCloudPending:false,lastPushedJSON:'',saveTimer:null,stateSaveQueue:Promise.resolve(),_paperFilling:false,console,setSync(){},_staleStateGuard(){},validState:()=>true,_historySignature:x=>JSON.stringify(x),ensureBoxes(){},refreshAll(){renders.push(clone(c.S));},sortHist:a=>a,window:{fb:{db:{},doc(){},async runTransaction(db,callback){active++;max=Math.max(max,active);const gate=deferred();gates.push(gate);await gate.promise;const tx={get:async()=>({exists:()=>true,data:()=>({stateV2:clone(remote),stateV2Rev:rev})}),set(ref,data){remote=clone(data.stateV2);rev=data.stateV2Rev;writes.push(clone(remote));}};try{return await callback(tx);}finally{active--;}}}}});
  const names=['_histKeyPart','_histStableJson','_histSemanticKey','_histGroupKey','_histEntries','_rebaseRecordArray','_statePlainObject','_stateValEq','_rebaseObjectFields','_rebaseStateOnRemote'];
  c.dbSizeReport=()=>{}; // 기록 크기 표시는 화면 일 — 저장 경쟁 시험과 무관
- vm.runInContext(names.map(n=>fn('function '+n+'(')).join('\n')+fn('function dbStateBytes(json)')+fn('async function _commitStateRemote(where)')+fn('async function pushRemoteNow()'),c);
+ Object.assign(c,{_dbPlan:null,_dbForceArchive:false,_dbArchiveBlocked:false,_dbArchivedNote:''});
+ const dbConsts=(html.match(/const DB_DOC_LIMIT=1048576, DB_DOC_WARN=[^\n]*/)||[''])[0]+'\n'+(html.match(/const DB_LEGACY_KEYS=[^\n]*/)||[''])[0]+'\n';
+ const dbHelpers=['function utf8Len(s)','function fsValueBytes(v)','function fsDocParts(d)','function fsDocBytes(path, parts)','function dbPlanWrite(path, d, fields, force, canArchive)','function dbErrKind(err)','function dbErrBytes(err)'].map(fn).join('\n');
+ vm.runInContext(names.map(n=>fn('function '+n+'(')).join('\n')+dbConsts+dbHelpers+'\n'+fn('async function _commitStateRemote(where)')+fn('async function pushRemoteNow()'),c);
  const runTransaction=c.window.fb.runTransaction;
  c.window.fb.runTransaction=(db,callback)=>runTransaction(db,async tx=>{
    // An aborted Firestore attempt must not leak its remote-only fields into retry.
