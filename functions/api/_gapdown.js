@@ -3,6 +3,8 @@
 // 여기서는 그 명단 안에서 예상 갭만 본다. 기준값(gapMax·gapFloor·picks)은 watchlist.rule 을 그대로 쓴다 —
 // 같은 숫자를 두 군데 적지 않는다.
 
+import { krxDay } from "./_krx_calendar.js";
+
 export const GAPDOWN_VERSION="opening_gapdown_v1";
 
 // 기준가(stck_sdpr)는 권리락 등이 반영된 조정 전일종가라 연구의 Close-Changes 와 같은 기준이다.
@@ -23,18 +25,19 @@ export function gapdownPicks(rows,rule){
     .slice(0,n);
 }
 
-export function prevWeekday(today){
+// 직전 거래일 — 주말과 KRX 휴장일(_krx_calendar)을 건너뛴다. 목록이 없는 해는 평일을 거래일로 본다.
+export function prevKrxDay(today){
   const t=new Date(Date.parse(today+"T00:00:00Z"));
-  do{t.setUTCDate(t.getUTCDate()-1);}while(t.getUTCDay()===0||t.getUTCDay()===6);
+  do{t.setUTCDate(t.getUTCDate()-1);}while(krxDay(t.toISOString().slice(0,10)).closed);
   return t.toISOString().slice(0,10);
 }
-// 전날 밤 명단이 오늘 아침에 쓸 수 있는 것인지. 규칙이 '전일 RSI' 라서 직전 평일 종가 기준이어야 한다.
-// 공휴일 다음 날은 직전 평일이 휴장이라 명단이 하루 늦어 보이므로 쓰지 않는다(그날은 기록만 남고 주문 없음).
+// 전날 밤 명단이 오늘 아침에 쓸 수 있는 것인지. 규칙이 '전일 RSI' 라서 직전 거래일 종가 기준이어야 한다.
+// 2026-10-06: 직전 '평일'로 보던 때는 휴장일(10/5) 다음 날 10/2 명단을 오래됐다고 버려 ① 이 판단 없이 지나갔다 → 직전 '거래일'로.
 export function watchlistUsable(wl,today){
   if(!wl||wl.strategyVersion!==GAPDOWN_VERSION||!Array.isArray(wl.names))return {ok:false,reason:"watchlist_invalid"};
   const based=String(wl.basedOn||"");
   if(!/^\d{4}-\d{2}-\d{2}$/.test(based)||based>=today)return {ok:false,reason:"watchlist_not_before_today"};
-  if(based<prevWeekday(today))return {ok:false,reason:"watchlist_stale"};
+  if(based<prevKrxDay(today))return {ok:false,reason:"watchlist_stale"};
   const r=wl.rule||{};
   if(!Number.isFinite(+r.gapMax)||!Number.isFinite(+r.gapFloor)||!(+r.picks>0))return {ok:false,reason:"watchlist_rule_missing"};
   return {ok:true,reason:""};
