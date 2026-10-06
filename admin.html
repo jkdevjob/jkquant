@@ -163,7 +163,7 @@ pre.rules{background:var(--bg);border:1px solid var(--line);border-radius:10px;p
 
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Admin Console</div><h1>JK <span class="v">퀀트</span> 관리자 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="adVer">v0.12.2</span></h1></div>
+    <div><div class="kicker">Admin Console</div><h1>JK <span class="v">퀀트</span> 관리자 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="adVer">v0.12.3</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -176,6 +176,7 @@ pre.rules{background:var(--bg);border:1px solid var(--line);border-radius:10px;p
         <a href="/claude"><span class="mi">🤖</span>단타(클로드)</a>
         <a href="/paper"><span class="mi">🧪</span>모의</a>
         <a href="/ipo"><span class="mi">🎯</span>공모주</a>
+        <a href="/realestate"><span class="mi">🏢</span>부동산</a>
         <a href="/job"><span class="mi">💼</span>JOB</a>
         <a href="/admin" class="cur"><span class="mi">👤</span>관리자</a>
       </div>
@@ -601,7 +602,7 @@ async function applyDefaultsExistingSessions(){
 }
 
 // ── 3. 메뉴 관리 ─────────────────────────────────────────────────────
-const MENU_ICONS={'/':'🏠','/plan':'🧭','/backtest':'📊','/scalping':'⚡','/claude':'🤖','/paper':'🧪','/ipo':'🎯','/job':'💼','/admin':'👤'};
+const MENU_ICONS={'/':'🏠','/plan':'🧭','/backtest':'📊','/scalping':'⚡','/claude':'🤖','/paper':'🧪','/ipo':'🎯','/realestate':'🏢','/job':'💼','/admin':'👤'};
 const MENU_HARD_ADMIN=new Set(['/scalping','/claude','/admin']);
 let menuDraft=[];
 function menuBase(){
@@ -609,7 +610,7 @@ function menuBase(){
     {path:'/',label:'운영',mode:'public',order:10},{path:'/plan',label:'자산플랜',mode:'public',order:20},
     {path:'/backtest',label:'백테',mode:'public',order:30},{path:'/scalping',label:'단타(지피티)',mode:'admin',order:40},
     {path:'/claude',label:'단타(클로드)',mode:'admin',order:50},{path:'/paper',label:'모의',mode:'public',order:60},
-    {path:'/ipo',label:'공모주',mode:'public',order:70},{path:'/job',label:'JOB',mode:'public',order:80},
+    {path:'/ipo',label:'공모주',mode:'public',order:70},{path:'/realestate',label:'부동산',mode:'public',order:75},{path:'/job',label:'JOB',mode:'public',order:80},
     {path:'/admin',label:'관리자',mode:'admin',order:90}
   ];
   return src.map(x=>({path:x.path,label:x.label,mode:x.mode,order:x.order}));

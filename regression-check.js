@@ -58,7 +58,7 @@ console.log('[0] 파일 문법');
 /* ── 공통 로그인·시세 부팅 경로 ── */
 console.log('[0-A] 공통 로그인·실시간 시세 의존성');
 {
-  const authPages=['index.html','plan.html','backtest.html','ipo.html','job.html','admin.html','scalping.html','claude.html'];
+  const authPages=['index.html','plan.html','backtest.html','ipo.html','realestate.html','job.html','admin.html','scalping.html','claude.html'];
   for(const p of authPages){
     const s=fs.readFileSync(path.join(__d,p),'utf8');
     ok(p+' Firebase SDK 12.19.0 통일',
@@ -4758,7 +4758,7 @@ console.log('\n[76] 버전 형식 (x.y.z)');
 {
   const SEMVER=/^v\d+\.\d+\.\d+$/;
   const pages=[['index.html',idx],['backtest.html',bt]];
-  for(const f of ['admin.html','scalping.html','ipo.html']){
+  for(const f of ['admin.html','scalping.html','ipo.html','realestate.html']){
     const fp=__d+'/'+f;
     if(fs.existsSync(fp)) pages.push([f, fs.readFileSync(fp,'utf8')]);
   }
@@ -12006,6 +12006,23 @@ console.log('\n[DANTA LOGIN] 소유자 확인 빠르게 · 토큰/서버 따로 
      co.indexOf('user.getIdToken()')<co.indexOf('new AbortController()')&&/for\(var a=0;a<2;a\+\+\)/.test(co)
      &&/rb\.textContent="다시 시도";rb\.onclick=function\(\)\{[^}]*onUser\(window\.fb\.auth\.currentUser\)/.test(ch)&&/function boot\(\)\{window\.fb\.onAuthStateChanged\(window\.fb\.auth,onUser\)\}/.test(ch)
      &&!/await JKAccess\.applyMenuConfig/.test(ch));
+}
+
+/* ════ 부동산 메뉴 (공모주 아래 · 클로드/지피티 탭) ════ */
+console.log('\n[REAL ESTATE] 부동산 메뉴 · 클로드/지피티 탭');
+{
+  const re=fs.readFileSync(__d+'/realestate.html','utf8'),acc=fs.readFileSync(__d+'/jk-access.js','utf8'),ad=fs.readFileSync(__d+'/admin.html','utf8');
+  const pages=['index.html','plan.html','backtest.html','scalping.html','claude.html','ipo.html','realestate.html','job.html','admin.html'];
+  ok('모든 페이지 메뉴에서 부동산이 공모주 바로 아래',
+     pages.every(f=>/<a href="\/ipo"[^>]*><span class="mi">🎯<\/span>공모주<\/a>\s*\n\s*<a href="\/realestate"[^>]*><span class="mi">🏢<\/span>부동산<\/a>/.test(fs.readFileSync(__d+'/'+f,'utf8'))));
+  ok('공용 메뉴 정책·관리자 메뉴 관리에 부동산(공모주 70 < 부동산 75 < JOB 80)',
+     /\{path:'\/ipo',label:'공모주',mode:'public',order:70\},\n\s*\{path:'\/realestate',label:'부동산',mode:'public',order:75\},\n\s*\{path:'\/job'/.test(acc)
+     &&/'\/realestate\.html':'\/realestate'/.test(acc)&&/'\/realestate':'🏢'/.test(ad)&&/\{path:'\/realestate',label:'부동산',mode:'public',order:75\}/.test(ad));
+  ok('부동산 화면: 승인 가드 · iOS long polling · 버전 x.y.z · 클로드/지피티 탭 2개',
+     /<script src="\/jk-access\.js" data-guard="1"><\/script>/.test(re)&&/JKAccess\.guard\(\{auth/.test(re)
+     &&/initializeFirestore\(app,\{experimentalForceLongPolling:true\}\)/.test(re)&&/id="reVer">v\d+\.\d+\.\d+<\/span>/.test(re)
+     &&/data-tab="claude">[^<]*클로드</.test(re)&&/data-tab="gpt">[^<]*지피티</.test(re)
+     &&re.indexOf('data-tab="claude"')<re.indexOf('data-tab="gpt"')&&/id="pane-claude"/.test(re)&&/id="pane-gpt"/.test(re));
 }
 
 Promise.all(PENDING).then(()=>{
