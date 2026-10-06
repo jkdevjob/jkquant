@@ -14,6 +14,10 @@ const BTC_STRATEGY_VERSION="btc_midnight_orb_v2";
 const SOXL_STRATEGY_VERSION="soxl_orb_v1";
 const SOXL_LAST_SIGNAL_HM=1130;
 const SOXL_PAPER_TRACK_END_HM=1605;
+const RESEARCH_RAW={
+  crypto:"https://raw.githubusercontent.com/jkdevjob/jkquant/scalping-data/data/crypto-research/latest.json",
+  soxl:"https://raw.githubusercontent.com/jkdevjob/jkquant/scalping-data/data/soxl-research/latest.json"
+};
 const BTC_VARIANTS=Object.freeze({
   baseline:{rangeBars:1,volumeMult:1.2,useVwap:true,entryCutoffHm:2155,stopPct:.5,takeProfitPct:1.0,maxHoldBars:12},
   no_vwap:{rangeBars:1,volumeMult:1.2,useVwap:false,entryCutoffHm:2155,stopPct:.5,takeProfitPct:1.0,maxHoldBars:12},
@@ -559,6 +563,25 @@ async function runSoxl(env,now){
   }
 }
 function previousDate(date){const d=new Date(date+"T00:00:00Z");d.setUTCDate(d.getUTCDate()-1);return d.toISOString().slice(0,10);}
+function researchPct(v){
+  const n=Number(v);return Number.isFinite(n)?((n>=0?"+":"")+n.toFixed(2)+"%"):"—";
+}
+async function researchValidationLines(strategy){
+  const url=RESEARCH_RAW[strategy];if(!url)return [];
+  try{
+    const r=await fetch(url,{headers:{"accept":"application/json","user-agent":"jkquant-global-intraday/1.2"},cf:{cacheEverything:true,cacheTtl:300}});
+    if(!r.ok)throw new Error("HTTP "+r.status);
+    const j=await r.json(),b=(j.variants||[]).find(x=>x&&x.params&&x.params.name==="baseline")||null;
+    const s=b&&b.summary||{},h=b&&b.validation&&b.validation.holdout||{};
+    return [
+      "⑥ 검증·분석 기록 · 연구자료 기준 "+String(j.to||"—"),
+      "누적 "+Number(j.validDays||0)+"일 · 거래 "+Number(s.trades||0)+"건 · 승률 "+(Number.isFinite(Number(s.winRate))?Number(s.winRate).toFixed(1):"—")+"% · 평균 "+researchPct(s.avgPnl),
+      "복리 "+researchPct(s.compoundReturnPct)+" · MDD "+researchPct(s.maxDrawdownPct)+" · 홀드아웃 "+Number(h.trades||0)+"건 / 평균 "+researchPct(h.avgPnl)
+    ];
+  }catch(e){
+    return ["⑥ 검증·분석 기록 · 최신 연구자료 조회 실패 ("+String(e.message||e)+")"];
+  }
+}
 async function sendCloseSummary(env,strategy,date,timeLabel){
   const ledger=await readPaper(env,strategy,date);
   const a=ledger&&Array.isArray(ledger.trades)?ledger.trades:[];
@@ -567,13 +590,16 @@ async function sendCloseSummary(env,strategy,date,timeLabel){
   const avg=pn.length?pn.reduce((s,x)=>s+x,0)/pn.length:0;
   const friction=Number(ledger&&ledger.frictionPct||0);
   const lines=[
+    "⑤ 오늘 매매이력",
     "후보/진입 "+a.length+"건 · 청산 "+closed.length+"건 · 미청산 "+open.length+"건 · 대기 "+pending.length+"건",
     "승 "+wins+" · 패 "+losses+" · 승률 "+(pn.length?(wins/pn.length*100).toFixed(1):"0.0")+"%",
     "실현 평균 순수익률 "+signed(avg)+" · 왕복 마찰비용 "+friction.toFixed(2)+"% 반영"
   ];
   for(const x of closed)lines.push((strategy==="crypto"?"KRW-BTC":"SOXL")+" · "+String(x.entryTime||"—")+"→"+String(x.exitTime||"—")+" · "+signed(x.pnlPct)+" · "+reasonKo(x.reason));
   if(!a.length)lines.push("오늘 조건 충족 모의거래 없음");
-  return alert(env,{strategy,stage:"summary",eventId:strategy+":"+date+":close-summary",date,time:timeLabel,lines});
+  lines.push("");
+  lines.push(...await researchValidationLines(strategy));
+  return alert(env,{strategy,stage:"summary",eventId:strategy+":"+date+":close-summary-v2",date,time:timeLabel,lines});
 }
 async function runCloseSummaries(env,now){
   const k=parts(now,"Asia/Seoul");
@@ -602,7 +628,7 @@ export default {
   async scheduled(controller,env,ctx){ctx.waitUntil(run(env));},
   async fetch(request,env){
     const u=new URL(request.url);
-    if(u.pathname==="/health")return json({ok:true,service:"jkquant-global-intraday-scheduler",schedule:"every minute",strategies:["crypto","soxl"],paperStore:"Durable Object SQLite + per-strategy date index",crypto:{strategyVersion:BTC_STRATEGY_VERSION,openingRange:"00:00~00:05 KST",newEntryThrough:"22:00 KST",exitTrackingThrough:"23:05 KST"},soxl:{symbol:"SOXL",strategyVersion:SOXL_STRATEGY_VERSION,openingRange:"09:30~09:45 ET",newEntryThrough:"11:30 ET",paperTrackingThrough:"16:05 ET",overnight:false},mode:"research-paper-alert-no-order",manualPromotion:"owner button -> next session lock"});
+    if(u.pathname==="/health")return json({ok:true,service:"jkquant-global-intraday-scheduler",schedule:"every minute · BTC 00:05 KST close ⑤⑥ · SOXL 16:05 ET close ⑤⑥",strategies:["crypto","soxl"],paperStore:"Durable Object SQLite + per-strategy date index",crypto:{strategyVersion:BTC_STRATEGY_VERSION,openingRange:"00:00~00:05 KST",newEntryThrough:"22:00 KST",exitTrackingThrough:"23:05 KST"},soxl:{symbol:"SOXL",strategyVersion:SOXL_STRATEGY_VERSION,openingRange:"09:30~09:45 ET",newEntryThrough:"11:30 ET",paperTrackingThrough:"16:05 ET",overnight:false},mode:"research-paper-alert-no-order",manualPromotion:"owner button -> next session lock"});
     if(u.pathname==="/bars"){
       if(!authorized(request,env))return json({ok:false,error:"unauthorized"},401);
       const strategy=String(u.searchParams.get("strategy")||"").toLowerCase();
