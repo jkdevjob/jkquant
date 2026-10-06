@@ -1885,8 +1885,8 @@ console.log('[35] 로그인 — 조용히 갇히지 않는다');
      && ia.indexOf('touchProfile(user)')>ia.indexOf('startApp()'));
   ok('Firebase DB 원장 읽기에 제한시간',
      /withTimeout\(pullRemote\(\), 20000, 'Firebase DB 원장'\)/.test(ia));
-  ok('iOS 계열에서도 Firestore가 멈추지 않도록 운영 DB는 long polling 사용',
-     /initializeFirestore\(app,\{experimentalForceLongPolling:true\}\)/.test(idx)
+  ok('Firestore 연결: 운영 DB는 long polling 자동 감지(강제 아님 — scripts/check-login-quote-paper.cjs 와 같은 규칙)',
+     /initializeFirestore\(app,\{experimentalAutoDetectLongPolling:true\}\)/.test(idx)&&!/experimentalForceLongPolling/.test(idx)
      && !/const db = getFirestore\(app\)/.test(idx));
   {
     const pl=fs.readFileSync(__d+'/plan.html','utf8');
@@ -1896,8 +1896,8 @@ console.log('[35] 로그인 — 조용히 갇히지 않는다');
       ['운영',idx],['자산플랜',pl],['백테',bt],['단타',scl],['공모주',ipo],['JOB',job],['관리자',adm]
     ];
     for(const [name,src] of pages){
-      ok(name+' Firebase는 iOS long polling 사용',
-         /initializeFirestore\([^;]+experimentalForceLongPolling:true/.test(src)
+      ok(name+' Firebase는 long polling 자동 감지(강제 아님)',
+         /initializeFirestore\([^;]+experimentalAutoDetectLongPolling:true/.test(src)&&!/experimentalForceLongPolling/.test(src)
          && !/\bgetFirestore\s*\(/.test(src));
     }
     ok('JOB 화면도 배포 버전 x.y.z 표시', /id="jobVer">v\d+\.\d+\.\d+<\/span>/.test(job));
@@ -8275,8 +8275,8 @@ console.log('\n[117] 자산플랜 v1.28.0 — 기간마다 완전히 다른 매�
   ok('장부 복구 보호모드 없이 현재 Firebase 원장을 직접 사용',
      /apply\(cloneObj\(v\)\)/.test(extractFn(pl,'async function cloudLoad(user)'))
      && !/planManualBackup|planManualBackupMemory|planRecovery|복구 보호모드/.test(pl));
-  ok('자산플랜도 iOS Firestore long polling + 12초 재연결 경로 사용',
-     /initializeFirestore\(app,\{experimentalForceLongPolling:true\}\)/.test(pl)
+  ok('자산플랜도 Firestore long polling 자동 감지 + 12초 재연결 경로 사용',
+     /initializeFirestore\(app,\{experimentalAutoDetectLongPolling:true\}\)/.test(pl)
      && /function planWithTimeout\(p,ms,label\)/.test(pl)
      && /Firebase DB 다시 연결/.test(pl)
      && /window\.planRetryDbImpl=async/.test(pl));
@@ -8626,7 +8626,7 @@ console.log('\n[118] 제8차 감사 대응 — SOURCE GOLDEN / ENGINE PARITY');
     // 여기서는 가격 엔진 회귀가 동기 하네스라 전송계층을 억지로 동기화하지 않고 배선 계약만 본다.
     { const loader=extractFn(pl,'async function fetchPlanQuote(symbol)');
       P8('플랜 가격 — 실제 로더 fetchPlanQuote: div=1 · 시간상한 · planQuoteOf 정규화 배선',
-         /&range=max&div=1&_ts='\+Date\.now\(\)/.test(loader)
+         /&range=max&div=1&intraday=0'/.test(loader)&&!/_ts=/.test(loader)
          && /for\(const ms of \[7000,10000\]\)/.test(loader)
          && /Promise\.race\(\[p,lim\]\)/.test(loader)
          && /return liveQuotes\[sym\]=planQuoteOf\(sym,j\);/.test(loader),
@@ -8636,7 +8636,7 @@ console.log('\n[118] 제8차 감사 대응 — SOURCE GOLDEN / ENGINE PARITY');
        && (idx.match(/const MKT_CLOSE_MIN=[^\n]*/)||[1])[0]===(pl.match(/const MKT_CLOSE_MIN=[^\n]*/)||[2])[0]
        && (idx.match(/const SETTLE_LAG_MIN=[^\n]*/)||[1])[0]===(pl.match(/const SETTLE_LAG_MIN=[^\n]*/)||[2])[0]);
     ok('제8차 8-⑤ 플랜이 div=1 로 받아 정규화 함수를 거친다',
-       /&range=max&div=1&_ts='\+Date\.now\(\)/.test(extractFn(pl,'async function fetchPlanQuote(symbol)'))
+       /&range=max&div=1&intraday=0'/.test(extractFn(pl,'async function fetchPlanQuote(symbol)'))
        && /return liveQuotes\[sym\]=planQuoteOf\(sym,j\);/.test(pl) && !/j\.series\.map\(x=>\(\{date:x\.date,close:\+x\.close\}\)\)/.test(pl)); }
 
   /* ───────── 5. 표시 — 공식/변형 · CUSTOM · 자동주문 한계 (8-① · 8-⑥ · 8-⑧ · P2-11) ───────── */
@@ -9992,7 +9992,8 @@ console.log('\n[129] 자산플랜 현재가 — 캐시 우회 · 현재계좌 �
   const pl=fs.readFileSync(__d+'/plan.html','utf8');
   const fq=extractFn(pl,'async function fetchPlanQuote(symbol)');
   const pt=extractFn(pl,'function alphaPlanTotal()');
-  ok('현재가 — quote 요청은 매 새로고침마다 _ts + no-store/no-cache로 브라우저·CDN 캐시를 우회', /_ts='\+Date\.now\(\)/.test(fq) && /cache:'no-store'/.test(fq) && /'Cache-Control':'no-cache'/.test(fq));
+  ok('현재가 — 1분봉 없이(intraday=0) Pages 60초 캐시 재사용(캐시 우회·no-store 없음) · 요청마다 7·10초 상한 — check-login-quote-paper.cjs 와 같은 규칙',
+     /intraday=0'/.test(fq) && !/_ts=/.test(fq) && !/cache:'no-store'/.test(fq) && /for\(const ms of \[7000,10000\]\)/.test(fq) && /Promise\.race\(\[p,lim\]\)/.test(fq));
   ok('현재계좌 총자산 — liveQuotes.price 우선, 없을 때만 확정종가 fallback', /\+q\.price>0\?\+q\.price/.test(pt) && /q\.settled\?\+q\.settled\.close:0/.test(pt));
   ok('자산플랜 버전 — 개선 70/30 이후 버전 표기 (숫자는 올라가므로 x.y.z 형식만 본다)', /자산플랜 <span class="ver">v1\.(3[2-9]|[4-9]\d)\.\d+<\/span>/.test(pl));
 }
@@ -11688,7 +11689,7 @@ console.log('\n[ACCESS] 이용 승인제 — 판정 한 곳 · 모든 페이지 
      [bt, ipo, job].every(h=>h.includes(jkTag) && h.indexOf(jkTag)<h.indexOf('<body') && /JKAccess\.guard\(\{auth/.test(h)
        && !/\n\s*onAuthStateChanged\(auth,/.test(h)));
   ok('JOB 도 같은 Firebase 프로젝트로 로그인한다', /projectId:"jk-invest"/.test(job) && /getAuth\(app\)/.test(job)
-     && /initializeFirestore\(app,\{experimentalForceLongPolling:true\}\)/.test(job));
+     && /initializeFirestore\(app,\{experimentalAutoDetectLongPolling:true\}\)/.test(job));
   ok('운영·자산플랜·관리자는 jk-access.js 를 불러 같은 판정을 쓴다 (운영·플랜은 admit · 관리자는 decide)',
      idx.includes('<script src="/jk-access.js"></script>') && pl.includes('<script src="/jk-access.js"></script>') && adm.includes('<script src="/jk-access.js"></script>')
      && /JKAccess\.admit\(user, accFb/.test(idx) && /JKAccess\.admit\(user,planFb/.test(pl) && /JKAccess\.decide\(\{email:r\.email\}, r\)/.test(adm));
@@ -12016,9 +12017,9 @@ console.log('\n[REAL ESTATE] 부동산 메뉴 · 클로드/지피티 탭');
   ok('공용 메뉴 정책·관리자 메뉴 관리에 부동산(공모주 70 < 부동산 75 < JOB 80)',
      /\{path:'\/ipo',label:'공모주',mode:'public',order:70\},\n\s*\{path:'\/realestate',label:'부동산',mode:'public',order:75\},\n\s*\{path:'\/job'/.test(acc)
      &&/'\/realestate\.html':'\/realestate'/.test(acc)&&/'\/realestate':'🏢'/.test(ad)&&/\{path:'\/realestate',label:'부동산',mode:'public',order:75\}/.test(ad));
-  ok('부동산 화면: 승인 가드 · iOS long polling · 버전 x.y.z · 클로드/지피티 탭 2개',
+  ok('부동산 화면: 승인 가드 · long polling 자동 감지 · 버전 x.y.z · 클로드/지피티 탭 2개',
      /<script src="\/jk-access\.js" data-guard="1"><\/script>/.test(re)&&/JKAccess\.guard\(\{auth/.test(re)
-     &&/initializeFirestore\(app,\{experimentalForceLongPolling:true\}\)/.test(re)&&/id="reVer">v\d+\.\d+\.\d+<\/span>/.test(re)
+     &&/initializeFirestore\(app,\{experimentalAutoDetectLongPolling:true\}\)/.test(re)&&/id="reVer">v\d+\.\d+\.\d+<\/span>/.test(re)
      &&/data-tab="claude">[^<]*클로드</.test(re)&&/data-tab="gpt">[^<]*지피티</.test(re)
      &&re.indexOf('data-tab="claude"')<re.indexOf('data-tab="gpt"')&&/id="pane-claude"/.test(re)&&/id="pane-gpt"/.test(re));
 }
