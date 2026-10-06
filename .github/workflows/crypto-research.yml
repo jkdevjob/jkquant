@@ -7,8 +7,7 @@ name: 비트코인 단타 연구 데이터
 
 on:
   schedule:
-    - cron: "20 0 * * *"   # 09:20 KST, 전일 확정 리포트
-    - cron: "20 * * * *"   # 매시 20분: 당일 BTC 장중 상태/모의매매 갱신
+    - cron: "20 0 * * *"   # 09:20 KST, 전일 확정 연구 1회 (장중 모의매매는 Worker 담당)
   workflow_dispatch:
   push:
     branches: [main]
@@ -59,42 +58,8 @@ jobs:
           python .app/scripts/backtest_crypto_orb.py
           python .app/scripts/build_scalping_trend.py
 
-      - name: ⑤ 매매이력 + ⑥ 검증분석 Telegram
-        env:
-          KEY: ${{ secrets.AUTOTRADE_KEY }}
-          BASE: https://jkquant.pages.dev
-        shell: bash
-        run: |
-          set -e
-          if [ "$GITHUB_EVENT_NAME" = "push" ]; then
-            echo "코드 push 실행 — Pages 배포와 경합하지 않도록 Telegram 발송은 다음 정기/수동 실행에서 수행"
-            exit 0
-          fi
-          REPORT="data/crypto-research/latest.json"
-          [ -f "$REPORT" ] || { echo "BTC 연구 리포트 없음"; exit 0; }
-          DATE=$(jq -r '.to // empty' "$REPORT")
-          [ -n "$DATE" ] || { echo "BTC 리포트 기준일 없음"; exit 0; }
-          MARK="data/crypto-research/$DATE-summary-sent.json"
-          if [ -f "$MARK" ]; then
-            echo "$DATE BTC Telegram 이미 전송됨"
-            exit 0
-          fi
-          [ -n "$KEY" ] || { echo "AUTOTRADE_KEY GitHub Secret 없음"; exit 1; }
-          SENT=0
-          for attempt in $(seq 1 6); do
-            STATUS=$(curl -sS --max-time 30 -o crypto-summary-response.json -w '%{http_code}' \
-              -X POST -H "x-monitor-key: $KEY" -H "content-type: application/json" \
-              --data-binary @"$REPORT" "$BASE/api/scalping-daily-summary?strategy=crypto" || true)
-            echo "BTC Telegram attempt $attempt HTTP $STATUS: $(cat crypto-summary-response.json 2>/dev/null || true)"
-            if [ "$STATUS" = "200" ] && jq -e '.ok == true' crypto-summary-response.json >/dev/null 2>&1; then
-              jq -n --arg date "$DATE" --arg sentAt "$(TZ=Asia/Seoul date --iso-8601=seconds)" \
-                '{date:$date,sentAt:$sentAt,strategy:"crypto",sections:[5,6]}' > "$MARK"
-              SENT=1
-              break
-            fi
-            sleep 10
-          done
-          [ "$SENT" = "1" ] || { echo "BTC Telegram 전송 실패"; exit 1; }
+      # 사용자 Telegram은 GitHub schedule에서 보내지 않는다.
+      # BTC 장중 신호와 00:05 KST 마감 ⑤⑥은 global-intraday Worker가 담당한다.
 
       - name: 데이터와 연구결과 저장
         run: |
