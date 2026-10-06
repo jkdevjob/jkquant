@@ -70,10 +70,10 @@ ok(globalW.includes('"⑤ 오늘 매매이력"')
 const forbidden=[
   ['crypto-research',crypto,'scalping-daily-summary'],
   ['soxl-research',soxl,'scalping-daily-summary'],
-  ['daytrading-research',day,'daytrading-summary'],
-  ['nightly-scalping-research',nightly,'nightly-research-summary'],
+  ['daytrading-research',day,'$BASE/api/daytrading-summary'],
+  ['nightly-scalping-research',nightly,'$BASE/api/nightly-research-summary'],
   ['opening-gapdown-research',gap,'claude-telegram'],
-  ['vts-reconcile',vts,'vts-summary']
+  ['vts-reconcile',vts,'$BASE/api/vts-summary']
 ];
 for(const [name,txt,needle] of forbidden)ok(!txt.includes(needle),name+' has no scheduled user Telegram endpoint');
 
