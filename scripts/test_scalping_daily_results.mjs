@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import {liveLedgerSummary,mergeSessions,mergeDaytradingSessions,completedGlobalCandidates} from "../functions/api/scalping-daily-results.js";
+import {liveLedgerSummary,mergeSessions,mergeDaytradingSessions,completedGlobalCandidates,kstSessionDate,pairKst} from "../functions/api/scalping-daily-results.js";
 import {dailyRisk as historyDailyRisk} from "../functions/api/scalping-history.js";
 
 console.log("[scalping today] live ledger 우선/무매매/날짜 경계 값 시험");
@@ -57,6 +57,22 @@ const soxl=completedGlobalCandidates("soxl",now);
 assert.equal(crypto[0],"2026-10-02"); // 한국 00:00~24:00 기준, 끝난 날
 assert.equal(soxl[0],"2026-10-02");   // 미국 16:05 이후 끝난 거래일
 assert.ok(!soxl.some(d=>["0","6"].includes(String(new Date(d+"T12:00:00Z").getUTCDay()))));
+
+assert.equal(kstSessionDate("soxl","2026-10-02"),"2026-10-03");
+assert.equal(kstSessionDate("crypto","2026-10-02"),"2026-10-02");
+const alignedSoxl=pairKst("soxl","SOXL",{sessions:[
+  {date:"2026-10-02",returnPct:0.7,trades:1,wins:1,losses:0,noTrade:false,finalized:true}
+]},"2026-10-03");
+assert.equal(alignedSoxl.marketTime,"KST");
+assert.equal(alignedSoxl.current.date,"2026-10-03");
+assert.equal(alignedSoxl.current.marketDate,"2026-10-02");
+assert.equal(alignedSoxl.current.returnPct,0.7);
+const alignedCrypto=pairKst("crypto","비트코인",{sessions:[
+  {date:"2026-10-02",returnPct:0,trades:0,wins:0,losses:0,noTrade:true,finalized:true}
+]},"2026-10-03");
+assert.equal(alignedCrypto.current.date,"2026-10-03");
+assert.equal(alignedCrypto.current.pending,true);
+assert.equal(alignedCrypto.previous.date,"2026-10-02");
 
 const dayHistory=historyDailyRisk([
   {date:"2026-10-01",pnl:3.0},
