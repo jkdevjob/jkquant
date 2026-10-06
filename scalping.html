@@ -190,7 +190,7 @@ canvas{display:block;width:100%;height:auto}
 #gbtn svg{width:20px;height:20px}
 #gate .gnote{color:var(--faint);font-size:11.5px;margin-top:18px;line-height:1.6}
 
-/* unified strategy flow v1.26.2 */
+/* unified strategy flow v1.26.3 */
 .strategy-flow{display:flex;flex-direction:column;gap:18px;margin-top:12px}
 .flow-section{border-top:1px solid var(--line);padding-top:12px}
 .flow-section:first-child{border-top:0;padding-top:0}
@@ -249,7 +249,8 @@ canvas{display:block;width:100%;height:auto}
     appId: "1:1024066323251:web:23d557527866205f01f446"
   };
   const app = initializeApp(firebaseConfig);
-  window.fb = { auth:getAuth(app), db:initializeFirestore(app,{experimentalForceLongPolling:true}), provider:new GoogleAuthProvider(),
+  const JK_FORCE_FIRESTORE_LONG_POLLING=/iPhone|iPad|iPod|NAVER|KAKAOTALK|Instagram|FBAN|FBAV|; wv\)/i.test(navigator.userAgent||"");
+  window.fb = { auth:getAuth(app), db:initializeFirestore(app,JK_FORCE_FIRESTORE_LONG_POLLING?{experimentalForceLongPolling:true}:{experimentalAutoDetectLongPolling:true}), provider:new GoogleAuthProvider(),
                 signInWithPopup, onAuthStateChanged, signOut, doc, getDoc, setDoc, runTransaction, collection, getDocs, deleteDoc };
   window.dispatchEvent(new Event('fb-ready'));
 </script>
@@ -271,7 +272,7 @@ canvas{display:block;width:100%;height:auto}
 
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Morning Scalping</div><h1>JK <span class="v">퀀트</span> 단타 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="scVer">v1.42.2</span></h1></div>
+    <div><div class="kicker">Morning Scalping</div><h1>JK <span class="v">퀀트</span> 단타 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="scVer">v1.42.5</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -284,6 +285,7 @@ canvas{display:block;width:100%;height:auto}
         <a href="/claude"><span class="mi">🤖</span>단타(클로드)</a>
         <a href="/paper"><span class="mi">🧪</span>모의</a>
         <a href="/ipo"><span class="mi">🎯</span>공모주</a>
+        <a href="/realestate"><span class="mi">🏢</span>부동산</a>
         <a href="/job"><span class="mi">💼</span>JOB</a>
         <a href="/admin"><span class="mi">👤</span>관리자</a>
       </div>

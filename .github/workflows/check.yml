@@ -86,6 +86,9 @@ jobs:
       - name: 단타 탭 단독사용 UI·위험지표 검사
         run: node scripts/test_scalping_self_contained_ui.mjs
 
+      - name: 단타 전체 스케줄 정책 검사
+        run: node scripts/test_scalping_schedule_policy.mjs
+
       - name: 비트코인 제외 단타 개장일 선행가드 검사
         run: node scripts/test_scalping_market_day_gate.mjs
 
@@ -120,6 +123,12 @@ jobs:
 
       - name: 폐기 참고전략 B-6 변이 시험
         run: node scripts/mutation_test_scalping_b6.js
+
+      - name: 부동산(클로드) 엔진·수집기 값 시험 + 변이 시험
+        run: |
+          node scripts/test_realestate_claude.cjs
+          python scripts/realestate_claude/test_collect.py
+          node scripts/realestate_claude/mutation_test.cjs
 
       - name: D-1 갭하락 · D-3 BTC 급락 값 시험 + 변이 시험
         run: |
@@ -268,8 +277,11 @@ jobs:
           let fail=0;
           // 무료 요금제 계정당 cron 5개 한도 — 이 Worker 는 한 줄만 쓰고 시각은 scheduleRoute 가 한국시각으로 고른다.
           // 15·20·21시(UTC) = 단타(클로드) 하루 마감 알림(코인 00:05 KST · SOXL 뉴욕 16:05) — 시초가 경로 수는 회귀가 한 주 재생으로 센다
-          if(!w.triggers||!Array.isArray(w.triggers.crons)||w.triggers.crons.length!==1||w.triggers.crons[0]!=='5-31,40,56 0,6,15,20,21,23 * * *'){
-            console.error('✗ opening scheduler cron 은 "5-31,40,56 0,6,15,20,21,23 * * *" 한 줄이어야 합니다.'); fail++;
+          if(!w.triggers||!Array.isArray(w.triggers.crons)||w.triggers.crons.length!==1||w.triggers.crons[0]!=='5-31,40,56 0,6,9,15,20,21,23 * * *'){
+            console.error('✗ opening scheduler cron 은 정시 알림/대결 슬롯을 포함한 한 줄이어야 합니다.'); fail++;
+          }
+          if(!c.includes('if(hm===1810)return "duel"')||!c.includes('/api/scalping-duel')){
+            console.error('✗ GPT·클로드 대결 18:10 KST Worker 경로 없음'); fail++;
           }
           if(!/if\(hm>=905&&hm<=931\)return "opening";/.test(c)||!/if\(route==="opening"\)ctx\.waitUntil\(runMinute/.test(c)){
             console.error('✗ 09:05~09:31 KST 평일만 시초가 스캔으로 보내는 경로가 없습니다.'); fail++;
@@ -424,8 +436,8 @@ jobs:
           if(!py.includes('CRYPTO=Path("data/crypto-research/latest.json")')||!py.includes('"crypto":c')){
             console.error('✗ 야간 통합연구에 비트코인 축이 없음'); fail++;
           }
-          if(!w.includes('seq 1 12')||!w.includes('20:10 backup')){
-            console.error('✗ Pages 배포 지연 시 Telegram 재시도/fallback 없음'); fail++;
+          if(w.includes('$BASE/api/nightly-research-summary')||w.includes('jkquant.pages.dev/api/nightly-research-summary')){
+            console.error('✗ GitHub 야간연구가 사용자 Telegram을 직접 전송함'); fail++;
           }
           if(/\/api\/kis\?op=order|priceType.*market/.test(py+w+api)){
             console.error('✗ 야간 연구/자동승격 경로에서 브로커 주문 호출 발견'); fail++;

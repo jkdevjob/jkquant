@@ -515,7 +515,9 @@ html.had-user #authgate .bootwait{display:block}
   };
   const app = initializeApp(firebaseConfig);
   const auth = getAuth(app);
-  const db = initializeFirestore(app,{experimentalForceLongPolling:true});
+  const JK_FORCE_FIRESTORE_LONG_POLLING=/iPhone|iPad|iPod|NAVER|KAKAOTALK|Instagram|FBAN|FBAV|; wv\)/i.test(navigator.userAgent||"");
+  window.__jkFirestoreTransport=JK_FORCE_FIRESTORE_LONG_POLLING?"force-long-polling":"auto-detect";
+  const db = initializeFirestore(app,JK_FORCE_FIRESTORE_LONG_POLLING?{experimentalForceLongPolling:true}:{experimentalAutoDetectLongPolling:true});
   const provider = new GoogleAuthProvider();
   // 전역 노출 (일반 스크립트에서 사용)
   window.fb = { auth, db, provider, signInWithPopup, getRedirectResult, onAuthStateChanged, signOut, doc, getDoc, setDoc, runTransaction };
@@ -548,7 +550,7 @@ document.documentElement.classList.add('had-user');</script>
 </div>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.110.6</span></h1></div>
+    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.110.10</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -561,6 +563,7 @@ document.documentElement.classList.add('had-user');</script>
         <a href="/claude"><span class="mi">🤖</span>단타(클로드)</a>
         <a href="/paper" id="jkPaper"><span class="mi">🧪</span>모의</a>
         <a href="/ipo"><span class="mi">🎯</span>공모주</a>
+        <a href="/realestate"><span class="mi">🏢</span>부동산</a>
         <a href="/job"><span class="mi">💼</span>JOB</a>
         <a id="adminbtn" href="/admin" class="admin-only"><span class="mi">👤</span>관리자</a>
       </div>
@@ -1659,7 +1662,7 @@ if(/^\/paper\/?$/.test(location.pathname)){
   <footer>
     <strong>JK 퀀트</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.110.6</b> · 2026-10-06</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.110.10</b> · 2026-10-06</div>
   </footer>
 </div>
 
@@ -3402,7 +3405,7 @@ function quoteToDaily(SYM, j){
           intraday:j.intraday||null,currency:j.currency||'USD',src:(j.src||'api')};
 }
 
-const QUOTE_TRY_MS=[12000,20000];   // 자체 시세 함수: 첫 시도 12초 · 다시 한 번 20초
+const QUOTE_TRY_MS=[7000,10000];    // 자체 시세 함수: 첫 시도 7초 · 재시도 10초 — 운영 화면을 오래 묶지 않는다
 async function _fetchDailyRaw(symbol){
   const SYM=symbol.toUpperCase();
   // 1) 자체 함수 (동일 출처) — 시간 제한을 두고 한 번 더 묻는다.
@@ -3415,7 +3418,8 @@ async function _fetchDailyRaw(symbol){
        조정가를 체결가로 쓰면 '배당까지 얹힌 가격에 그 주수를 샀다' 가 된다.
        국내 종목은 div=1 이면 이력을 야후(.KS/.KQ)에서 받지만 현재가는 네이버 것을 그대로 쓴다
        (quote.js 가 그렇게 돌려준다). 야후가 안 되면 네이버 일봉을 체결가로 쓴다. */
-    const r=await fetchT(`/api/quote?symbol=${encodeURIComponent(SYM)}&range=max&div=1`,{headers:{'Accept':'application/json'}},ms);
+    const noIntraday=(typeof _paperFilling!=='undefined'&&_paperFilling);
+    const r=await fetchT(`/api/quote?symbol=${encodeURIComponent(SYM)}&range=max&div=1&intraday=${noIntraday?'0':'1'}`,{headers:{'Accept':'application/json'}},ms);
     if(r.ok){
       const j=await r.json();
       if(j && j.series && j.series.length){
@@ -3424,7 +3428,15 @@ async function _fetchDailyRaw(symbol){
     }
   }catch(e){/* 시간 초과·일시 오류 → 한 번 더, 그래도 안 되면 폴백 */}
 
-  // 2) 브라우저에서 Yahoo 직접 (프록시 경유) — 실시간가 + 인트라데이까지
+  /* 운영 Pages 에서는 /api/quote 자체가 같은 배포의 정식 시세 경로다.
+     여기까지 왔다는 건 정식 경로가 2번 실패한 상태다. 이때 공개 CORS 프록시를
+     6개×Yahoo + 6개×Stooq 순서로 기다리면 종목 하나가 1분 넘게 화면을 묶는다.
+     공개 프록시는 로컬/다른 정적 호스팅의 비상용으로만 남기고 운영은 빠르게 실패시켜
+     다음 새로고침에서 다시 정식 API를 시도하게 한다. */
+  const _prodPages=(typeof location!=='undefined' && /\.pages\.dev$/i.test(String(location.hostname||'')));
+  if(_prodPages) return null;
+
+  // 2) 브라우저에서 Yahoo 직접 (프록시 경유) — 비운영 환경 비상 폴백
   const yUrl=`https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(SYM)}?interval=1d&range=max&includePrePost=false`;
   for(const px of PUBLIC_PROXIES){
     try{
@@ -6802,12 +6814,15 @@ function renderInfFx(){
 }
 let liveFX=null, liveFXDate=null;
 async function loadFX(){
-  // 1) 자체 함수
+  // 1) 운영 자체 함수 — 응답이 끊겨도 모의성과 전체 갱신을 오래 붙잡지 않는다.
   try{
-    const r=await fetch('/api/fx',{headers:{'Accept':'application/json'}});
+    const r=await fetchT('/api/fx',{headers:{'Accept':'application/json'}},5000);
     if(r.ok){const j=await r.json(); if(j&&j.rate){liveFX=+j.rate;liveFXDate=j.date||'';renderInfFx();return;}}
   }catch(e){}
-  // 2) 프록시로 exchangerate.host
+  // Pages 운영에서는 자체 함수가 정식 경로다. 실패 뒤 공개 프록시 6곳을 순회하면 수십 초 느려진다.
+  const _prodPages=(typeof location!=='undefined' && /\.pages\.dev$/i.test(String(location.hostname||'')));
+  if(_prodPages) return;
+  // 2) 로컬/다른 정적 호스팅 비상용 프록시
   for(const px of PUBLIC_PROXIES){
     try{
       const txt=await proxyText(px,'https://api.exchangerate.host/latest?base=USD&symbols=KRW');
@@ -7254,7 +7269,11 @@ const PAPER_TABS=[['inf','무한매수법'],['vr','밸류리밸런싱'],['ivs','
 const PLAN_PAPER_QUOTES={},PLAN_PAPER_CACHE={};
 async function loadPlanPaperData(force){
   if(force)Object.keys(PLAN_PAPER_QUOTES).forEach(k=>delete PLAN_PAPER_QUOTES[k]);
-  for(const sym of ['TECL','TQQQ','SGOV'])if(!PLAN_PAPER_QUOTES[sym])PLAN_PAPER_QUOTES[sym]=await fetchDaily(sym);
+  const miss=['TECL','TQQQ','SGOV'].filter(sym=>!PLAN_PAPER_QUOTES[sym]);
+  if(miss.length){
+    const got=await Promise.all(miss.map(sym=>fetchDaily(sym).catch(()=>null)));
+    miss.forEach((sym,i)=>{ PLAN_PAPER_QUOTES[sym]=got[i]; });
+  }
   return PLAN_PAPER_QUOTES;
 }
 function replayPlanPaper(sess){
@@ -7790,6 +7809,29 @@ const PAPER_CACHESYM={inf:()=>lastQuote.inf&&lastQuote.inf.symbol, vr:()=>lastQu
   ivs:()=>ivsQuoteData&&ivsQuoteData.symbol, ma:()=>maQuoteData&&maQuoteData.symbol,
   dca:()=>dcaQuoteData&&dcaQuoteData.symbol, asap:()=>asapQuoteData&&asapQuoteData.symbol};
 let _paperFilling=false;
+/* 모의성과는 세션을 순차 재생해야 하지만 시세 네트워크까지 순차로 기다릴 이유는 없다.
+   필요한 종목을 먼저 병렬로 받아 _memoQuote 캐시에 채우면 10개 세션이어도 네트워크 대기는
+   '종목 수의 합'이 아니라 '가장 늦은 한 종목' 수준으로 줄어든다. */
+async function paperPrefetchQuotes(){
+  const px=new Set(), dv=new Set();
+  for(const [tab] of PAPER_TABS){
+    const box=S&&S[tab], ss=(box&&box.sessions)||[];
+    for(const sess of ss){
+      if(!sess||!sess.paper)continue;
+      if(tab==='plan'){ ['TECL','TQQQ','SGOV'].forEach(x=>px.add(x)); continue; }
+      const st=sess.settings||{}, sym=String(st.ticker||'').toUpperCase();
+      if(sym)px.add(sym);
+      if(sym && (tab==='dca'||divCashOn(st)))dv.add(sym);
+      if(tab==='ivs' && (st.park||'bill')==='x1'){
+        const x1=String(ivsX1Of(sym)||'').toUpperCase();
+        if(x1)px.add(x1);
+        if(x1&&divCashOn(st))dv.add(x1);
+      }
+    }
+  }
+  await Promise.all([...px].map(sym=>fetchDaily(sym).catch(()=>null)));
+  await Promise.all([...dv].map(sym=>fetchDailyDiv(sym).catch(()=>null)));
+}
 /* 세션마다 시세를 맞춘 뒤 그 자리에서 성과까지 계산해 돌려준다.
    나중에 한꺼번에 계산하면 캐시에 마지막 세션 시세만 남아 앞 세션이 전부 '시세 대기'가 된다. */
 async function paperFillAll(){
@@ -7801,6 +7843,7 @@ async function paperFillAll(){
      그 상태로 openPaper 가 refreshAll 을 부르면 보고 있던 세션을 남의 종가로 그린다 —
      SOXL 102주를 KORU 값(18.58$)으로 세서 수익률이 +1.5% → -26.6% 로 뒤집혔다. */
   _fillQuoteCache=new Map();                   // 이 목록을 도는 동안 종목당 한 번만 받는다
+  await paperPrefetchQuotes();                  // 종목별 네트워크는 병렬, 전략 재생만 순차
   const prevQuote={}, prevChart={inf:(typeof infChartData!=='undefined'?infChartData:undefined),
                                  vr:(typeof vrChartData!=='undefined'?vrChartData:undefined)};
   PAPER_TABS.forEach(([t])=>{ prevQuote[t]=lastQuote[t]; });
@@ -10745,6 +10788,7 @@ function authDiag(){
   L.push('인증대기  '+(typeof authWired!=='undefined'&&authWired?'연결됨':'미연결 ← 여기서 막힘'));
   L.push('로그인상태 '+(window.fb&&window.fb.auth&&window.fb.auth.currentUser
           ? ('됨 '+(window.fb.auth.currentUser.email||'')) : '안 됨'));
+  L.push('DB전송    '+String(window.__jkFirestoreTransport||'미확인'));
   L.push('앱시작    '+(appStarted?'됨':'안 됨 · 멈춘 자리 '+authStep));
   L.push('데이터저장 '+storageOK());
   L.push('브라우저  '+(inAppName()||'기본 브라우저'));

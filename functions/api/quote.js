@@ -9,6 +9,15 @@ const JH = {
 };
 const UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36";
 
+/* 외부 시세 소스가 응답을 끝내지 않으면 Pages Function 자체가 붙잡혀
+   브라우저 재시도까지 연쇄 지연된다. 엣지에서 먼저 끊어 다음 소스로 넘긴다. */
+async function fetchBound(url, opt, ms=4500) {
+  const ac = new AbortController();
+  const timer = setTimeout(() => ac.abort("upstream timeout"), ms);
+  try { return await fetch(url, { ...(opt || {}), signal: ac.signal }); }
+  finally { clearTimeout(timer); }
+}
+
 // ───────────────────────────────────────────────────────────
 // [선택] 실시간 시세를 100% 보장하려면 Finnhub 무료 키를 넣으세요.
 //   1. https://finnhub.io 가입 (이메일만, 무료) → API key 복사
@@ -96,7 +105,7 @@ export async function onRequestGet({ request, env }) {
   // 0) Finnhub 실시간가 (키 있을 때) — 가장 정확한 현재가
   if (FINNHUB_KEY) {
     try {
-      const fr = await fetch(`https://finnhub.io/api/v1/quote?symbol=${encodeURIComponent(symbol)}&token=${FINNHUB_KEY}`, { cf: { cacheTtl: 15 } });
+      const fr = await fetchBound(`https://finnhub.io/api/v1/quote?symbol=${encodeURIComponent(symbol)}&token=${FINNHUB_KEY}`, { cf: { cacheTtl: 15 } }, 3500);
       dbg.push(`finnhub quote: HTTP ${fr.status}`);
       if (fr.ok) { const fj = await fr.json(); if (fj && fj.c) { price = +fj.c; src = "finnhub"; } }
     } catch (e) { dbg.push(`finnhub: ${e.message}`); }
@@ -104,8 +113,8 @@ export async function onRequestGet({ request, env }) {
 
   // 1) Yahoo chart API. range=max는 yahooDaily가 period1=0으로 우회한다.
   //    (예전엔 V7 download를 먼저 탔는데 야후가 폐기해 매 호출마다 401 두 번을 낭비했다.)
-  if (!series.length) for (const host of ["query1", "query2", "query1-fc"]) {
-    const realHost = host === "query1-fc" ? "query1" : host;
+  if (!series.length) for (const host of ["query1", "query2"]) {
+    const realHost = host;
     try {
       const y = await yahooDaily(realHost, symbol, range, dbg, period1, period2, wantDiv);
       if (y && y.series.length) {
@@ -177,7 +186,7 @@ async function yahooDaily(host, symbol, range, dbg, period1=null, period2=null, 
   // 분배금을 따로 보여주려면 raw close가 같이 필요하다 — 안 그러면 이중계상된다.
   const evParam = wantDiv ? "&events=div%7Csplit" : "";
   const u = `https://${host}.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?interval=1d&${rangeParam}&includePrePost=false${evParam}`;
-  const r = await fetch(u, { headers: { "User-Agent": UA, "Accept": "application/json", "Referer": "https://finance.yahoo.com/", "Origin": "https://finance.yahoo.com" }, cf: { cacheTtl: 60 } });
+  const r = await fetchBound(u, { headers: { "User-Agent": UA, "Accept": "application/json", "Referer": "https://finance.yahoo.com/", "Origin": "https://finance.yahoo.com" }, cf: { cacheTtl: 60 } }, 4500);
   dbg && dbg.push(`yahooDaily ${host}: HTTP ${r.status}`);
   if (!r.ok) throw new Error("HTTP " + r.status);
   const j = await r.json();
@@ -240,7 +249,7 @@ async function yahooIntraday(symbol, dbg) {
   for (const host of ["query1", "query2"]) {
     try {
       const u = `https://${host}.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?interval=1m&range=1d&includePrePost=true`;
-      const r = await fetch(u, { headers: { "User-Agent": UA, "Accept": "application/json", "Referer": "https://finance.yahoo.com/" }, cf: { cacheTtl: 60 } });
+      const r = await fetchBound(u, { headers: { "User-Agent": UA, "Accept": "application/json", "Referer": "https://finance.yahoo.com/" }, cf: { cacheTtl: 60 } }, 4000);
       dbg && dbg.push(`intraday ${host}: HTTP ${r.status}`);
       if (!r.ok) throw new Error("HTTP " + r.status);
       const j = await r.json();
@@ -277,7 +286,7 @@ async function yahooQuote(symbol, dbg) {
   for (const host of ["query1", "query2"]) {
     try {
       const u = `https://${host}.finance.yahoo.com/v7/finance/quote?symbols=${encodeURIComponent(symbol)}`;
-      const r = await fetch(u, { headers: { "User-Agent": UA, "Accept": "application/json", "Referer": "https://finance.yahoo.com/" }, cf: { cacheTtl: 30 } });
+      const r = await fetchBound(u, { headers: { "User-Agent": UA, "Accept": "application/json", "Referer": "https://finance.yahoo.com/" }, cf: { cacheTtl: 30 } }, 3500);
       dbg && dbg.push(`yahooQuote ${host}: HTTP ${r.status}`);
       if (!r.ok) throw new Error("HTTP " + r.status);
       const j = await r.json();
@@ -297,7 +306,7 @@ async function stooqDaily(symbol, dbg) {
   for (const host of ["stooq.com", "stooq.pl"]) {
     try {
       const u = `https://${host}/q/d/l/?s=${symbol.toLowerCase()}.us&i=d`;
-      const r = await fetch(u, { headers: { "User-Agent": UA }, cf: { cacheTtl: 3600 } });
+      const r = await fetchBound(u, { headers: { "User-Agent": UA }, cf: { cacheTtl: 3600 } }, 4500);
       dbg && dbg.push(`stooq ${host}: HTTP ${r.status}`);
       if (!r.ok) continue;
       const txt = await r.text();
@@ -330,7 +339,7 @@ async function stooqDaily(symbol, dbg) {
    장중이면 마지막 봉이 '지금 이 분'이라, 다음 분이 되기 전까지는 값이 계속 바뀐다. */
 async function naverMinute(code, dbg) {
   const u = `https://fchart.stock.naver.com/siseJson.nhn?symbol=${code}&requestType=0&count=2400&timeframe=minute`;
-  const r = await fetch(u, { headers: { "User-Agent": UA, "Referer": "https://finance.naver.com/" }, cf: { cacheTtl: 30 } });
+  const r = await fetchBound(u, { headers: { "User-Agent": UA, "Referer": "https://finance.naver.com/" }, cf: { cacheTtl: 30 } }, 3500);
   dbg && dbg.push(`naverMinute ${code}: HTTP ${r.status}`);
   if (!r.ok) throw new Error("HTTP " + r.status);
   const txt = await r.text();
@@ -356,7 +365,7 @@ async function naverDaily(code, range, dbg, period1 = null, period2 = null) {
   const start = period1 ? new Date(+period1 * 1000) : new Date(end.getTime() - days * 86400000);
   const fmt = (d) => d.toISOString().slice(0, 10).replace(/-/g, "");
   const u = `https://fchart.stock.naver.com/siseJson.nhn?symbol=${code}&requestType=1&startTime=${fmt(start)}&endTime=${fmt(end)}&timeframe=day`;
-  const r = await fetch(u, { headers: { "User-Agent": UA, "Referer": "https://finance.naver.com/" }, cf: { cacheTtl: 60 } });
+  const r = await fetchBound(u, { headers: { "User-Agent": UA, "Referer": "https://finance.naver.com/" }, cf: { cacheTtl: 60 } }, 4500);
   dbg && dbg.push(`naver ${code}: HTTP ${r.status}`);
   if (!r.ok) throw new Error("HTTP " + r.status);
   let txt = await r.text();

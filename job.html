@@ -34,7 +34,8 @@ import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signO
 import { initializeFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
 const app=initializeApp({apiKey:"AIzaSyBzBe9pAttnbDgTlNThWZzNqtAAKxX7Ksw",authDomain:"jk-invest.firebaseapp.com",projectId:"jk-invest",
   storageBucket:"jk-invest.firebasestorage.app",messagingSenderId:"1024066323251",appId:"1:1024066323251:web:23d557527866205f01f446"});
-const auth=getAuth(app),db=initializeFirestore(app,{experimentalForceLongPolling:true});
+const JK_FORCE_FIRESTORE_LONG_POLLING=/iPhone|iPad|iPod|NAVER|KAKAOTALK|Instagram|FBAN|FBAV|; wv\)/i.test(navigator.userAgent||"");
+const auth=getAuth(app),db=initializeFirestore(app,JK_FORCE_FIRESTORE_LONG_POLLING?{experimentalForceLongPolling:true}:{experimentalAutoDetectLongPolling:true});
 window.jobFb={auth,db,doc,getDoc,setDoc,uid:null};
 JKAccess.guard({auth,db,doc,getDoc,setDoc,onAuthStateChanged,signInWithPopup,GoogleAuthProvider,signOut},{
   onUser:user=>{window.jobFb.uid=user?user.uid:null;},
@@ -44,7 +45,7 @@ JKAccess.guard({auth,db,doc,getDoc,setDoc,onAuthStateChanged,signInWithPopup,Goo
 </head>
 <body>
 <header><div class="wrap"><div class="htop">
-  <div class="brand"><div class="kicker">JK QUANT</div><h1>💼 JOB <span class="v">대전·세종</span> <span style="font-size:12px;font-weight:400;color:var(--faint)" id="jobVer">v1.1.2</span></h1></div>
+  <div class="brand"><div class="kicker">JK QUANT</div><h1>💼 JOB <span class="v">대전·세종</span> <span style="font-size:12px;font-weight:400;color:var(--faint)" id="jobVer">v1.1.5</span></h1></div>
   <div class="jkmenu" id="jkmenuWrap">
     <button class="jkmenu-btn" aria-label="메뉴" onclick="jkMenuToggle(event)">三</button>
     <div class="jkmenu-pop" id="jkmenuPop" hidden>
@@ -55,6 +56,7 @@ JKAccess.guard({auth,db,doc,getDoc,setDoc,onAuthStateChanged,signInWithPopup,Goo
       <a href="/claude"><span class="mi">🤖</span>단타(클로드)</a>
       <a href="/paper"><span class="mi">🧪</span>모의</a>
       <a href="/ipo"><span class="mi">🎯</span>공모주</a>
+      <a href="/realestate"><span class="mi">🏢</span>부동산</a>
       <a href="/job" class="cur"><span class="mi">💼</span>JOB</a>
       <a href="/admin"><span class="mi">👤</span>관리자</a>
     </div>

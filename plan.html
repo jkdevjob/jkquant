@@ -269,7 +269,7 @@ setTimeout(function(){ var h=document.documentElement; if(h.classList.contains('
 </script>
 <div class="wrap">
   <div class="top">
-    <div class="brand"><div class="logo">Asset Plan</div><h1>자산플랜 <span class="ver">v1.43.8</span></h1></div>
+    <div class="brand"><div class="logo">Asset Plan</div><h1>자산플랜 <span class="ver">v1.43.13</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
       <div class="jkmenu" id="jkmenuWrap">
@@ -282,6 +282,7 @@ setTimeout(function(){ var h=document.documentElement; if(h.classList.contains('
           <a href="/claude"><span class="mi">🤖</span>단타(클로드)</a>
           <a href="/paper"><span class="mi">🧪</span>모의</a>
           <a href="/ipo"><span class="mi">🎯</span>공모주</a>
+          <a href="/realestate"><span class="mi">🏢</span>부동산</a>
         <a href="/job"><span class="mi">💼</span>JOB</a>
           <a href="/admin"><span class="mi">👤</span>관리자</a>
         </div>
@@ -801,7 +802,8 @@ const firebaseConfig={
   messagingSenderId:"1024066323251",
   appId:"1:1024066323251:web:23d557527866205f01f446"
 };
-const app=initializeApp(firebaseConfig),auth=getAuth(app),db=initializeFirestore(app,{experimentalForceLongPolling:true});
+const JK_FORCE_FIRESTORE_LONG_POLLING=/iPhone|iPad|iPod|NAVER|KAKAOTALK|Instagram|FBAN|FBAV|; wv\)/i.test(navigator.userAgent||"");
+const app=initializeApp(firebaseConfig),auth=getAuth(app),db=initializeFirestore(app,JK_FORCE_FIRESTORE_LONG_POLLING?{experimentalForceLongPolling:true}:{experimentalAutoDetectLongPolling:true});
 const KEY="jkq_5y_plan_v1";
 const $=id=>document.getElementById(id);
 const num=(id,fallback=0)=>{const v=Number($(id).value);return Number.isFinite(v)?v:fallback};
@@ -2036,11 +2038,24 @@ function settledBars(rows,cur){ const cut=simCutoff(cur); return (rows||[]).filt
 async function fetchPlanQuote(symbol){
   const sym=String(symbol||'').toUpperCase();if(liveQuotes[sym])return liveQuotes[sym];
   // 페이지/수동 새로고침 때 브라우저·CDN 캐시를 우회해 그 시점의 현재가를 다시 요청한다.
-  const u='/api/quote?symbol='+encodeURIComponent(sym)+'&range=max&div=1&_ts='+Date.now();
-  const r=await fetch(u,{cache:'no-store',headers:{Accept:'application/json','Cache-Control':'no-cache'}});
-  if(!r.ok)throw new Error(sym+' 시세 HTTP '+r.status);
-  const j=await r.json();if(!(j&&j.series&&j.series.length))throw new Error(sym+' 시세 없음');
-  return liveQuotes[sym]=planQuoteOf(sym,j);
+  // 응답 하나가 멈추면 Promise.all 전체가 영구 대기하던 문제를 막기 위해 요청마다 상한을 둔다.
+  let lastErr=null;
+  for(const ms of [7000,10000]){
+    const ac=(typeof AbortController!=='undefined')?new AbortController():null;
+    // 확정 일봉/현재가 계산에는 1분봉이 필요 없다. URL cache-bust도 빼서 Pages 60초 캐시를 재사용한다.
+    const u='/api/quote?symbol='+encodeURIComponent(sym)+'&range=max&div=1&intraday=0';
+    let timer=null;
+    try{
+      const p=fetch(u,{headers:{Accept:'application/json'},...(ac?{signal:ac.signal}:{})});
+      const lim=new Promise((_,rej)=>{timer=setTimeout(()=>{try{if(ac)ac.abort();}catch(e){} rej(new Error(sym+' 시세 응답 없음 '+Math.round(ms/1000)+'초'));},ms);});
+      const r=await Promise.race([p,lim]);
+      if(!r.ok)throw new Error(sym+' 시세 HTTP '+r.status);
+      const j=await r.json();if(!(j&&j.series&&j.series.length))throw new Error(sym+' 시세 없음');
+      return liveQuotes[sym]=planQuoteOf(sym,j);
+    }catch(e){lastErr=e;}
+    finally{if(timer)clearTimeout(timer);}
+  }
+  throw lastErr||new Error(sym+' 시세 실패');
 }
 /* 응답 한 건 → 플랜이 쓰는 모양. 순수 함수라 앱 lastQuote 와 값으로 맞대 볼 수 있다. */
 function planQuoteOf(sym,j,cur){

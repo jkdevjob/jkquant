@@ -58,7 +58,7 @@ console.log('[0] 파일 문법');
 /* ── 공통 로그인·시세 부팅 경로 ── */
 console.log('[0-A] 공통 로그인·실시간 시세 의존성');
 {
-  const authPages=['index.html','plan.html','backtest.html','ipo.html','job.html','admin.html','scalping.html','claude.html'];
+  const authPages=['index.html','plan.html','backtest.html','ipo.html','realestate.html','job.html','admin.html','scalping.html','claude.html'];
   for(const p of authPages){
     const s=fs.readFileSync(path.join(__d,p),'utf8');
     ok(p+' Firebase SDK 12.19.0 통일',
@@ -1885,8 +1885,10 @@ console.log('[35] 로그인 — 조용히 갇히지 않는다');
      && ia.indexOf('touchProfile(user)')>ia.indexOf('startApp()'));
   ok('Firebase DB 원장 읽기에 제한시간',
      /withTimeout\(pullRemote\(\), 20000, 'Firebase DB 원장'\)/.test(ia));
-  ok('iOS 계열에서도 Firestore가 멈추지 않도록 운영 DB는 long polling 사용',
-     /initializeFirestore\(app,\{experimentalForceLongPolling:true\}\)/.test(idx)
+  ok('Firestore 연결: 운영 DB는 iOS·앱내장 강제 long polling / 일반 자동 감지',
+     /JK_FORCE_FIRESTORE_LONG_POLLING/.test(idx)
+     && /experimentalForceLongPolling:true/.test(idx)
+     && /experimentalAutoDetectLongPolling:true/.test(idx)
      && !/const db = getFirestore\(app\)/.test(idx));
   {
     const pl=fs.readFileSync(__d+'/plan.html','utf8');
@@ -1896,8 +1898,10 @@ console.log('[35] 로그인 — 조용히 갇히지 않는다');
       ['운영',idx],['자산플랜',pl],['백테',bt],['단타',scl],['공모주',ipo],['JOB',job],['관리자',adm]
     ];
     for(const [name,src] of pages){
-      ok(name+' Firebase는 iOS long polling 사용',
-         /initializeFirestore\([^;]+experimentalForceLongPolling:true/.test(src)
+      ok(name+' Firebase는 iOS·앱내장 강제 long polling / 일반 자동 감지',
+         /JK_FORCE_FIRESTORE_LONG_POLLING/.test(src)
+         && /experimentalForceLongPolling:true/.test(src)
+         && /experimentalAutoDetectLongPolling:true/.test(src)
          && !/\bgetFirestore\s*\(/.test(src));
     }
     ok('JOB 화면도 배포 버전 x.y.z 표시', /id="jobVer">v\d+\.\d+\.\d+<\/span>/.test(job));
@@ -4758,7 +4762,7 @@ console.log('\n[76] 버전 형식 (x.y.z)');
 {
   const SEMVER=/^v\d+\.\d+\.\d+$/;
   const pages=[['index.html',idx],['backtest.html',bt]];
-  for(const f of ['admin.html','scalping.html','ipo.html']){
+  for(const f of ['admin.html','scalping.html','ipo.html','realestate.html']){
     const fp=__d+'/'+f;
     if(fs.existsSync(fp)) pages.push([f, fs.readFileSync(fp,'utf8')]);
   }
@@ -8275,8 +8279,10 @@ console.log('\n[117] 자산플랜 v1.28.0 — 기간마다 완전히 다른 매�
   ok('장부 복구 보호모드 없이 현재 Firebase 원장을 직접 사용',
      /apply\(cloneObj\(v\)\)/.test(extractFn(pl,'async function cloudLoad(user)'))
      && !/planManualBackup|planManualBackupMemory|planRecovery|복구 보호모드/.test(pl));
-  ok('자산플랜도 iOS Firestore long polling + 12초 재연결 경로 사용',
-     /initializeFirestore\(app,\{experimentalForceLongPolling:true\}\)/.test(pl)
+  ok('자산플랜도 iOS 강제 long polling + 12초 재연결 경로 사용',
+     /JK_FORCE_FIRESTORE_LONG_POLLING/.test(pl)
+     && /experimentalForceLongPolling:true/.test(pl)
+     && /experimentalAutoDetectLongPolling:true/.test(pl)
      && /function planWithTimeout\(p,ms,label\)/.test(pl)
      && /Firebase DB 다시 연결/.test(pl)
      && /window\.planRetryDbImpl=async/.test(pl));
@@ -8622,23 +8628,21 @@ console.log('\n[118] 제8차 감사 대응 — SOURCE GOLDEN / ENGINE PARITY');
       const b=mk(pl,['function planQuoteOf(sym,j,cur)'],'return (j)=>planQuoteOf("TQQQ",j).settled;')(J);
       P8('플랜 가격 — 16:15 ET(마감 15분 뒤)에도 앱·플랜 둘 다 06-23 을 확정 종가로 본다 (예전 플랜 16:10 이면 06-24)',
          a.date==='2026-06-23' && b.date==='2026-06-23', `앱 ${a.date} · 플랜 ${b.date}`); }
-    // 실제 로더 — fetchPlanQuote 가 div=1 로 받고 정규화를 거치는가. 회귀는 동기로 돌므로
-    // 실코드에서 async/await 만 걷어 내고 fetch 를 동기 가짜로 바꿔 그대로 돌린다
-    { const urls=[];
-      const loader=extractFn(pl,'async function fetchPlanQuote(symbol)').replace(/^async function/,'function').replace(/await /g,'');
-      const fq=new Function('fetch', fnOf(pl,['function quoteToDaily(SYM, j)','function simCutoff(cur)','function settledBars(rows,cur)','function planQuoteOf(sym,j,cur)'])+'\n'+loader+'\n'
-        +(pl.match(/const MKT_CLOSE_MIN=[^\n]*/)||[''])[0]+'\n'+(pl.match(/const SETTLE_LAG_MIN=[^\n]*/)||[''])[0]+'\n'+CLOCK+'\nlet liveQuotes={};\nreturn fetchPlanQuote;')(
-        (u)=>{ urls.push(u); return {ok:true, json:()=>J}; });
-      const q=fq('TQQQ');
-      P8('플랜 가격 — 실제 로더 fetchPlanQuote: div=1 로 받고 확정 종가 74.44 (06-23)',
-         urls.length===1 && /[?&]div=1(&|$)/.test(urls[0]) && q.settled.date==='2026-06-23' && q.settled.close===PG.close0623 && q.priceBasis==='trade',
-         `${urls[0]} · ${q.settled.date} ${q.settled.close} · ${q.priceBasis}`); }
+    // 실제 로더 — 비동기 타임아웃/재시도는 scripts/check-login-quote-paper.cjs 에서 값으로 검증한다.
+    // 여기서는 가격 엔진 회귀가 동기 하네스라 전송계층을 억지로 동기화하지 않고 배선 계약만 본다.
+    { const loader=extractFn(pl,'async function fetchPlanQuote(symbol)');
+      P8('플랜 가격 — 실제 로더 fetchPlanQuote: div=1 · 시간상한 · planQuoteOf 정규화 배선',
+         /&range=max&div=1&intraday=0'/.test(loader)&&!/_ts=/.test(loader)
+         && /for\(const ms of \[7000,10000\]\)/.test(loader)
+         && /Promise\.race\(\[p,lim\]\)/.test(loader)
+         && /return liveQuotes\[sym\]=planQuoteOf\(sym,j\);/.test(loader),
+         loader.slice(0,220)); }
     ok('제8차 8-⑤ 시세 정규화가 index·plan 에 글자 그대로 같다 (quoteToDaily · _exchNow · simCutoff · settledBars · 상수)',
        ['function quoteToDaily(SYM, j)','function _exchNow(cur)','function simCutoff(cur)','function settledBars(rows,cur)'].every(sig=>same3(sig,idx,pl))
        && (idx.match(/const MKT_CLOSE_MIN=[^\n]*/)||[1])[0]===(pl.match(/const MKT_CLOSE_MIN=[^\n]*/)||[2])[0]
        && (idx.match(/const SETTLE_LAG_MIN=[^\n]*/)||[1])[0]===(pl.match(/const SETTLE_LAG_MIN=[^\n]*/)||[2])[0]);
     ok('제8차 8-⑤ 플랜이 div=1 로 받아 정규화 함수를 거친다',
-       /&range=max&div=1&_ts='\+Date\.now\(\)/.test(extractFn(pl,'async function fetchPlanQuote(symbol)'))
+       /&range=max&div=1&intraday=0'/.test(extractFn(pl,'async function fetchPlanQuote(symbol)'))
        && /return liveQuotes\[sym\]=planQuoteOf\(sym,j\);/.test(pl) && !/j\.series\.map\(x=>\(\{date:x\.date,close:\+x\.close\}\)\)/.test(pl)); }
 
   /* ───────── 5. 표시 — 공식/변형 · CUSTOM · 자동주문 한계 (8-① · 8-⑥ · 8-⑧ · P2-11) ───────── */
@@ -9994,7 +9998,8 @@ console.log('\n[129] 자산플랜 현재가 — 캐시 우회 · 현재계좌 �
   const pl=fs.readFileSync(__d+'/plan.html','utf8');
   const fq=extractFn(pl,'async function fetchPlanQuote(symbol)');
   const pt=extractFn(pl,'function alphaPlanTotal()');
-  ok('현재가 — quote 요청은 매 새로고침마다 _ts + no-store/no-cache로 브라우저·CDN 캐시를 우회', /_ts='\+Date\.now\(\)/.test(fq) && /cache:'no-store'/.test(fq) && /'Cache-Control':'no-cache'/.test(fq));
+  ok('현재가 — 1분봉 없이(intraday=0) Pages 60초 캐시 재사용(캐시 우회·no-store 없음) · 요청마다 7·10초 상한 — check-login-quote-paper.cjs 와 같은 규칙',
+     /intraday=0'/.test(fq) && !/_ts=/.test(fq) && !/cache:'no-store'/.test(fq) && /for\(const ms of \[7000,10000\]\)/.test(fq) && /Promise\.race\(\[p,lim\]\)/.test(fq));
   ok('현재계좌 총자산 — liveQuotes.price 우선, 없을 때만 확정종가 fallback', /\+q\.price>0\?\+q\.price/.test(pt) && /q\.settled\?\+q\.settled\.close:0/.test(pt));
   ok('자산플랜 버전 — 개선 70/30 이후 버전 표기 (숫자는 올라가므로 x.y.z 형식만 본다)', /자산플랜 <span class="ver">v1\.(3[2-9]|[4-9]\d)\.\d+<\/span>/.test(pl));
 }
@@ -11118,10 +11123,15 @@ console.log('[SCALPING TELEGRAM] 실시간 신호 · 일일 매매/연구 요약
      !/\/api\/kis\?op=order|opening-execute|method:"POST"[\s\S]{0,100}order/.test(globalWorker));
   ok('BTC·SOXL Worker 배포는 MONITOR_KEY Secret만 전달',
      /secret put MONITOR_KEY/.test(globalDeploy) && !/TELEGRAM_BOT_TOKEN|TELEGRAM_CHAT_ID/.test(globalDeploy));
-  ok('BTC ⑤⑥ 일일 Telegram 연결',
-     /scalping-daily-summary\?strategy=crypto/.test(cryptoYml) && /sections:\[5,6\]/.test(cryptoYml));
-  ok('SOXL ⑤⑥ 일일 Telegram 연결',
-     /scalping-daily-summary\?strategy=soxl/.test(soxlYml) && /sections:\[5,6\]/.test(soxlYml));
+  ok('BTC ⑤⑥ 일일 Telegram은 00:05 KST Worker 마감으로 연결',
+     /if\(k\.hm===5\)await sendCloseSummary\(env,"crypto"/.test(globalWorker)
+     && /"⑤ 오늘 매매이력"/.test(globalWorker)
+     && /"⑥ 검증·분석 기록 · 연구자료 기준 "/.test(globalWorker)
+     && !/scalping-daily-summary\?strategy=crypto/.test(cryptoYml));
+  ok('SOXL ⑤⑥ 일일 Telegram은 16:05 ET Worker 마감으로 연결',
+     /if\(n\.hm===1605&&isNyseSessionDate\(n\.date\)\)/.test(globalWorker)
+     && /sendCloseSummary\(env,"soxl"/.test(globalWorker)
+     && !/scalping-daily-summary\?strategy=soxl/.test(soxlYml));
   const soxlPy=fs.readFileSync(__d+'/scripts/backtest_soxl_intraday.py','utf8');
   const soxlCollector=fs.readFileSync(__d+'/scripts/collect_soxl_data.py','utf8');
   const soxlDoc=fs.readFileSync(__d+'/SOXL_SCALPING.md','utf8');
@@ -11236,10 +11246,10 @@ console.log('[GAPDOWN D-1 / DIP24 D-3] 연구용 모의체결 경로 안전장�
       const ms=Date.parse('2026-10-04T00:00:00Z')+d*864e5+(hh*60+mm)*6e4;       // 2026-10-04 = 일요일(UTC)
       const r=route(ms);if(r)count[r]=(count[r]||0)+1;}}
     const r0=route(Date.parse('2026-10-04T23:56:00Z')),r1=route(Date.parse('2026-10-03T23:56:00Z'));  // 월 08:56 KST / 일 08:56 KST
-    ok('Worker cron 한 줄 + 라우팅: 시초가 스캔 27분×5일·08:56·15:21·15:40 각 5번(주말 0) · 클로드 마감: 국내 15:56 재시도 5 · 코인 매일 00:05~00:31 · SOXL 뉴욕 16:05~16:31 평일(서머타임 자동)',
+    ok('Worker cron 한 줄 + 라우팅: 시초가 스캔 27분×5일·08:56·15:21·15:40 각 5번(주말 0) · 국내 15:56 · 대결 18:10 · 코인 00:05~00:31 · SOXL 뉴욕 16:05~16:31',
        crons.length===1&&count.opening===135&&count.gapdown_preopen===5&&count.gapdown_close===5&&count.gapdown_reconcile===5
-       &&count.claude_kr===5&&count.claude_crypto===27*7&&count.claude_soxl===27*5
-       &&Object.keys(count).length===7&&r0==='gapdown_preopen'&&r1===null
+       &&count.claude_kr===5&&count.duel===5&&count.claude_crypto===27*7&&count.claude_soxl===27*5
+       &&Object.keys(count).length===8&&r0==='gapdown_preopen'&&r1===null
        &&route(Date.parse('2026-10-05T20:05:00Z'))==='claude_soxl'&&route(Date.parse('2026-10-05T21:05:00Z'))===null      // 여름(EDT) 05:05 KST
        &&route(Date.parse('2026-12-07T21:05:00Z'))==='claude_soxl'&&route(Date.parse('2026-12-07T20:05:00Z'))===null      // 겨울(EST) 06:05 KST
        &&route(Date.parse('2026-10-09T20:05:00Z'))==='claude_soxl'&&route(Date.parse('2026-10-10T20:05:00Z'))===null      // 금요일 마감(한국 토요일) · 토요일 없음
@@ -11339,10 +11349,11 @@ console.log('[GAPDOWN D-1 / DIP24 D-3] 연구용 모의체결 경로 안전장�
        &&/return drop_open_session\(/.test(fs.readFileSync(__d+'/scripts/claude_lab.py','utf8')));
   }
   { const lp=fs.readFileSync(__d+'/scripts/claude_lab.py','utf8');
-    ok('🆚 GPT 대결 탭: 실시간 기록끼리(Worker 마감 장부 사본 data/claude-live) · 같은 시작일·비용표 · 두 쪽 다 있는 날만 · 합계 4탭 균등 · 매일 18:40 뒤 알림',
+    ok('🆚 GPT 대결 탭: 실시간 기록끼리 · 같은 시작일·비용표 · 두 쪽 다 있는 날만 · 합계 4탭 균등 · 국내 개장일 18:10 Worker 정시 알림',
        /DUEL_START = "2026-10-05"/.test(lp)&&/    days = sorted\(mine & theirs\)/.test(lp)&&/report\["duel"\] = duel\(\)/.test(lp)
        &&/data-tab="duel"/.test(scl2)&&/function duelPage\(\)/.test(scl2)&&/\$OPENING_WORKER\/claude\?date=\$DATE/.test(wf)
-       &&/\[ "\$HM" -ge 1840 \]/.test(wf)&&/MARK="data\/claude-lab\/duel-sent\/\$D"/.test(wf)&&/claude_lab\.py --duel-payload > duel\.json/.test(wf));
+       &&/if\(hm===1810\)return "duel"/.test(ow)&&/\/api\/scalping-duel/.test(ow)&&/route==="duel"/.test(ow)
+       &&!/duel-sent/.test(wf)&&!/claude_lab\.py --duel-payload > duel\.json/.test(wf));
   }
   { const lv3=fs.readFileSync(__d+'/functions/api/claude-live.js','utf8'),lb3=fs.readFileSync(__d+'/functions/api/claude-lab.js','utf8'),tg3=fs.readFileSync(__d+'/functions/api/claude-telegram.js','utf8');
     ok('단타(클로드) 소유자만: Google 로그인 + /api/owner 판정 화면 · 자료 API 는 소유자 토큰/서버키 없으면 401 · 서버끼리 호출은 감시키',
@@ -11689,8 +11700,10 @@ console.log('\n[ACCESS] 이용 승인제 — 판정 한 곳 · 모든 페이지 
   ok('백테·공모주·JOB 은 data-guard 로 불러 guard() 하나로 맡긴다 (본문보다 먼저 · 따로 onAuthStateChanged 안 씀)',
      [bt, ipo, job].every(h=>h.includes(jkTag) && h.indexOf(jkTag)<h.indexOf('<body') && /JKAccess\.guard\(\{auth/.test(h)
        && !/\n\s*onAuthStateChanged\(auth,/.test(h)));
-  ok('JOB 도 같은 Firebase 프로젝트로 로그인한다', /projectId:"jk-invest"/.test(job) && /getAuth\(app\)/.test(job)
-     && /initializeFirestore\(app,\{experimentalForceLongPolling:true\}\)/.test(job));
+  ok('JOB 도 같은 Firebase 프로젝트 + iOS 안전 전송으로 로그인한다', /projectId:"jk-invest"/.test(job) && /getAuth\(app\)/.test(job)
+     && /JK_FORCE_FIRESTORE_LONG_POLLING/.test(job)
+     && /experimentalForceLongPolling:true/.test(job)
+     && /experimentalAutoDetectLongPolling:true/.test(job));
   ok('운영·자산플랜·관리자는 jk-access.js 를 불러 같은 판정을 쓴다 (운영·플랜은 admit · 관리자는 decide)',
      idx.includes('<script src="/jk-access.js"></script>') && pl.includes('<script src="/jk-access.js"></script>') && adm.includes('<script src="/jk-access.js"></script>')
      && /JKAccess\.admit\(user, accFb/.test(idx) && /JKAccess\.admit\(user,planFb/.test(pl) && /JKAccess\.decide\(\{email:r\.email\}, r\)/.test(adm));
@@ -12009,6 +12022,60 @@ console.log('\n[DANTA LOGIN] 소유자 확인 빠르게 · 토큰/서버 따로 
      co.indexOf('user.getIdToken()')<co.indexOf('new AbortController()')&&/for\(var a=0;a<2;a\+\+\)/.test(co)
      &&/rb\.textContent="다시 시도";rb\.onclick=function\(\)\{[^}]*onUser\(window\.fb\.auth\.currentUser\)/.test(ch)&&/function boot\(\)\{window\.fb\.onAuthStateChanged\(window\.fb\.auth,onUser\)\}/.test(ch)
      &&!/await JKAccess\.applyMenuConfig/.test(ch));
+}
+
+/* ════ 부동산 메뉴 (공모주 아래 · 클로드/지피티 탭) ════ */
+console.log('\n[REAL ESTATE] 부동산 메뉴 · 클로드/지피티 탭');
+{
+  const re=fs.readFileSync(__d+'/realestate.html','utf8'),acc=fs.readFileSync(__d+'/jk-access.js','utf8'),ad=fs.readFileSync(__d+'/admin.html','utf8');
+  const pages=['index.html','plan.html','backtest.html','scalping.html','claude.html','ipo.html','realestate.html','job.html','admin.html'];
+  ok('모든 페이지 메뉴에서 부동산이 공모주 바로 아래',
+     pages.every(f=>/<a href="\/ipo"[^>]*><span class="mi">🎯<\/span>공모주<\/a>\s*\n\s*<a href="\/realestate"[^>]*><span class="mi">🏢<\/span>부동산<\/a>/.test(fs.readFileSync(__d+'/'+f,'utf8'))));
+  ok('공용 메뉴 정책·관리자 메뉴 관리에 부동산(공모주 70 < 부동산 75 < JOB 80)',
+     /\{path:'\/ipo',label:'공모주',mode:'public',order:70\},\n\s*\{path:'\/realestate',label:'부동산',mode:'public',order:75\},\n\s*\{path:'\/job'/.test(acc)
+     &&/'\/realestate\.html':'\/realestate'/.test(acc)&&/'\/realestate':'🏢'/.test(ad)&&/\{path:'\/realestate',label:'부동산',mode:'public',order:75\}/.test(ad));
+  ok('부동산 화면: 승인 가드 · iOS 안전 Firestore 전송 · 버전 x.y.z · 클로드/지피티 탭 2개',
+     /<script src="\/jk-access\.js" data-guard="1"><\/script>/.test(re)&&/JKAccess\.guard\(\{auth/.test(re)
+     &&/JK_FORCE_FIRESTORE_LONG_POLLING/.test(re)&&/experimentalForceLongPolling:true/.test(re)&&/experimentalAutoDetectLongPolling:true/.test(re)&&/id="reVer">v\d+\.\d+\.\d+<\/span>/.test(re)
+     &&/data-tab="claude">[^<]*클로드</.test(re)&&/data-tab="gpt">[^<]*지피티</.test(re)
+     &&re.indexOf('data-tab="claude"')<re.indexOf('data-tab="gpt"')&&/id="pane-claude"/.test(re)&&/id="pane-gpt"/.test(re));
+}
+
+/* ════ 부동산 🤖 클로드 탭 — 계산은 엔진 한 곳 · 룩어헤드 금지 · 장부는 덧붙이기만 ════ */
+console.log('\n[REAL ESTATE · CLAUDE] 엔진 값 시험 · 화면 연결 · 월간 자동 갱신');
+{
+  const re=fs.readFileSync(__d+'/realestate.html','utf8'),ui=fs.readFileSync(__d+'/realestate-claude.js','utf8'),eng=fs.readFileSync(__d+'/realestate-claude-engine.js','utf8');
+  const wfl=fs.readFileSync(__d+'/.github/workflows/realestate-claude-monthly.yml','utf8');
+  const t=require('child_process').spawnSync(process.execPath,[__d+'/scripts/test_realestate_claude.cjs'],{encoding:'utf8'});
+  ok('부동산(클로드) 엔진 값 시험 전부 통과 — 합성 + 실제 자료(룩어헤드 · 장부 == 백테)', t.status===0,
+     (t.stdout||'').split('\n').filter(l=>/✗|결과/.test(l)).join(' / ')+(t.stderr||'').slice(0,300));
+  const tc=require('child_process').spawnSync('python3',['-I',__d+'/scripts/realestate_claude/test_collect.py'],{encoding:'utf8'});
+  ok('부동산(클로드) 수집기 값 시험 — 5행씩 이어 받기 · 지역 이름 불일치 멈춤 · 분기 · 증분/소급 수정', tc.status===0,
+     (tc.stdout||'').split('\n').filter(l=>/✗|결과/.test(l)).join(' / ')+(tc.stderr||'').slice(0,300));
+  const iC=re.indexOf('id="pane-claude"'),iG=re.indexOf('id="pane-gpt"');
+  const iE=re.indexOf('<script src="/realestate-claude-engine.js" defer></script>'),iU=re.indexOf('<script src="/realestate-claude.js" defer></script>');
+  ok('클로드 칸: 엔진 → 화면 순서로, 클로드 칸 뒤 · 지피티 칸 앞에서 불러온다', iC>0&&iC<iE&&iE<iU&&iU<iG&&/id="rec-root"/.test(re.slice(iC,iE)));
+  ok('클로드 화면·엔진은 지피티 칸을 건드리지 않는다', !/pane-gpt/.test(ui)&&!/pane-gpt/.test(eng));
+  ok('화면은 장부·전략을 계산하지 않는다 — 엔진 함수만 부른다(같은 걸 두 군데서 세지 않는다)',
+     !/function\s+(simulate|markMonth|planNext|walkForward|monthYield|desire)\b/.test(ui)&&/E\.walkForward\(/.test(ui)&&/E\.snapshot\(/.test(ui));
+  const st=['run: python scripts/realestate_claude/collect.py','run: node scripts/realestate_claude/paper.mjs','node scripts/test_realestate_claude.cjs','git commit -m'].map(x=>wfl.indexOf(x));
+  ok('월간 자동 갱신: 수집 → 장부 덧붙이기 → 값 시험 → 커밋 순서(시험 실패면 커밋 안 함)', st.every((x,i)=>x>0&&(i===0||x>st[i-1]))&&/cron:/.test(wfl));
+  const E2=require(__d+'/realestate-claude-engine.js');
+  const ledgers=[['paper.json','rec-wf-1'],['paper-rec-wf-2.json','rec-wf-2']].map(([f,sv])=>[f,sv,JSON.parse(fs.readFileSync(__d+'/data/realestate/claude/'+f,'utf8'))]);
+  ok('모의장부 2개(rec-wf-1 첫 장부 · rec-wf-2 새 장부): 파일마다 제 전략 버전 · 당시 가정 · 결정마다 버전/판단 자료 달 · 그 버전 후보만',
+     E2.STRATEGIES.join()==='rec-wf-1,rec-wf-2'&&ledgers.every(([f,sv,P])=>{ const ids=E2.candidates(sv).map(c=>c.id);
+       return P.strategyVersion===sv&&P.params&&P.params.lag===E2.DEFAULTS.lag&&P.decisions.length>0
+         &&P.decisions.every(d=>d.sv===sv&&d.ev&&/^\d{4}-\d{2}$/.test(d.data)&&E2.ymk(d.m)-E2.ymk(d.data)===P.params.lag&&(d.cand===null||ids.indexOf(d.cand)>=0)); }));
+  const pm=fs.readFileSync(__d+'/scripts/realestate_claude/paper.mjs','utf8');
+  ok('장부 갱신은 두 장부 모두 · 파일과 전략 버전이 어긋나거나 지난 기록이 바뀌면 저장 거부',
+     /\{ file: 'paper\.json', sv: 'rec-wf-1' \}/.test(pm)&&/\{ file: 'paper-rec-wf-2\.json', sv: 'rec-wf-2' \}/.test(pm)
+     &&/old\.strategyVersion !== sv/.test(pm)&&/지난 장부 기록이 바뀌었습니다/.test(pm));
+  const S=JSON.parse(fs.readFileSync(__d+'/data/realestate/claude/series.json','utf8')).series;
+  ok('원자료(KB·ECOS): 대전 아파트 1986~ · 입주물량(예정 포함) · 매수우위 · 미분양 · 인허가',
+     S.kbSale&&S.kbSale.daejeon&&S.kbSale.daejeon.start==='1986-01'&&S.movein&&S.movein.daejeon&&E2.ymk(S.movein.daejeon.start)+S.movein.daejeon.v.length-1>E2.ymk(S.sale.daejeon.start)+S.sale.daejeon.v.length-1
+     &&S.kbMarket&&S.kbMarket.daejeon&&S.unsold&&S.unsold.daejeon&&S.permits&&S.permits.daejeon);
+  ok('원자료: 대전 5구·세종 매매·전세지수 · 전세가율 · 거래량 · 지가 · 금리 · 물가',
+     E2.UNIVERSE.every(r=>S.sale[r]&&S.jeonse[r]&&S.jratio[r]&&S.volume[r])&&S.land&&S.land.daejeon&&['baseRate','depositRate','cpi'].every(k=>S.macro[k]));
 }
 
 Promise.all(PENDING).then(()=>{

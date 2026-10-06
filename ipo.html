@@ -525,7 +525,7 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
 <body>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Public Offering</div><h1>JK <span class="v">공모주</span> <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v1.3.4</span></h1></div>
+    <div><div class="kicker">Public Offering</div><h1>JK <span class="v">공모주</span> <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v1.3.7</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
       <div class="jkmenu" id="jkmenuWrap">
@@ -538,6 +538,7 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
           <a href="/claude"><span class="mi">🤖</span>단타(클로드)</a>
           <a href="/paper"><span class="mi">🧪</span>모의</a>
           <a href="/ipo" class="cur"><span class="mi">🎯</span>공모주</a>
+          <a href="/realestate"><span class="mi">🏢</span>부동산</a>
         <a href="/job"><span class="mi">💼</span>JOB</a>
           <a href="/admin"><span class="mi">👤</span>관리자</a>
         </div>
@@ -708,7 +709,8 @@ document.addEventListener("click",function(e){ var m=document.getElementById("jk
     appId: "1:1024066323251:web:23d557527866205f01f446"
   };
   const app = initializeApp(firebaseConfig);
-  const auth = getAuth(app); const db = initializeFirestore(app,{experimentalForceLongPolling:true}); const provider = new GoogleAuthProvider();
+  const JK_FORCE_FIRESTORE_LONG_POLLING=/iPhone|iPad|iPod|NAVER|KAKAOTALK|Instagram|FBAN|FBAV|; wv\)/i.test(navigator.userAgent||"");
+  const auth = getAuth(app); const db = initializeFirestore(app,JK_FORCE_FIRESTORE_LONG_POLLING?{experimentalForceLongPolling:true}:{experimentalAutoDetectLongPolling:true}); const provider = new GoogleAuthProvider();
   window.ipoFb = { db, doc, setDoc, runTransaction };
 
 /* 상단 사용자 배지 — 모든 페이지가 같은 모양이다.

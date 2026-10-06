@@ -23,7 +23,8 @@ const firebaseConfig = {
 };
 const fbApp = initializeApp(firebaseConfig);
 const auth = getAuth(fbApp);
-const db = initializeFirestore(fbApp,{experimentalForceLongPolling:true});
+const JK_FORCE_FIRESTORE_LONG_POLLING=/iPhone|iPad|iPod|NAVER|KAKAOTALK|Instagram|FBAN|FBAV|; wv\)/i.test(navigator.userAgent||"");
+const db = initializeFirestore(fbApp,JK_FORCE_FIRESTORE_LONG_POLLING?{experimentalForceLongPolling:true}:{experimentalAutoDetectLongPolling:true});
 const DEFAULT_TICKERS = ['SOXL','TQQQ','TECL','KORU','QLD','USD','SSO','UPRO','SPYU','QQQ','QYLD','JEPQ','QQQI','GPIQ'];
 
 function getCustomList(){
@@ -312,7 +313,7 @@ td:first-child{text-align:left;}
   <div class="brand">
     <div>
       <div class="logo">Backtest</div>
-      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v2.17.4</span></h1>
+      <h1>JK 퀀트 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v2.17.7</span></h1>
     </div>
   </div>
   <div class="hright">
@@ -327,6 +328,7 @@ td:first-child{text-align:left;}
         <a href="/claude"><span class="mi">🤖</span>단타(클로드)</a>
         <a href="/paper"><span class="mi">🧪</span>모의</a>
         <a href="/ipo"><span class="mi">🎯</span>공모주</a>
+        <a href="/realestate"><span class="mi">🏢</span>부동산</a>
         <a href="/job"><span class="mi">💼</span>JOB</a>
         <a href="/admin"><span class="mi">👤</span>관리자</a>
       </div>

@@ -392,6 +392,7 @@ export function scheduleRoute(ms){
   if(hm===1521)return "gapdown_close";
   if(hm===1540)return "gapdown_reconcile";
   if(hm===1556)return "claude_kr";                 // 15:40 마감 알림이 실패했을 때 한 번 더
+  if(hm===1810)return "duel";                      // GPT·클로드 일일 대결은 Worker가 정시에 전송
   return null;
 }
 const GAPDOWN_PARTS=2;
@@ -428,6 +429,22 @@ export function etfBuyDateFromLedgers(ledgers){
   return null;
 }
 // 단타(클로드) Telegram — 기록을 저장한 뒤에 부른다. 실패해도 주문·기록에는 영향이 없다.
+async function sendDuelSummary(env,date){
+  try{
+    const r=await fetch(baseUrl(env)+"/api/scalping-duel",{
+      method:"POST",
+      headers:{"content-type":"application/json","x-monitor-key":env.MONITOR_KEY},
+      body:JSON.stringify({date})
+    });
+    const j=await r.json().catch(()=>({}));
+    console.log(JSON.stringify({type:"scalping_duel_summary",date,ok:!!j.ok,pending:!!j.pending,duplicate:!!j.duplicate,error:j.error||null}));
+    if(!r.ok||!j.ok)throw new Error(j.error||("HTTP "+r.status));
+    return j;
+  }catch(e){
+    console.error(JSON.stringify({type:"scalping_duel_summary_failed",date,error:String(e.message||e)}));
+    return null;
+  }
+}
 async function claudeTelegram(env,date,kind){
   try{
     const r=await fetch(baseUrl(env)+"/api/claude-telegram",{method:"POST",
@@ -590,7 +607,7 @@ export default {
     // 09:05 KST 매일(주말 포함 — 코인은 쉬지 않는다): 코인 하루 마감·미국 지난 세션 결과 알림
     if(claudeWeeklyDue(at))ctx.waitUntil(claudeTelegram(env,kstParts(at).date,"weekly"));
 
-    const krRoute=route==="opening"||route==="claude_kr"||(route&&route.startsWith("gapdown_"));
+    const krRoute=route==="opening"||route==="claude_kr"||route==="duel"||(route&&route.startsWith("gapdown_"));
     if(krRoute){
       const date=kstParts(at).date;
       try{
@@ -614,6 +631,7 @@ export default {
     if(route==="claude_crypto")ctx.waitUntil(claudeDayClose(env,"crypto",kstParts(at-864e5).date,at));   // 어제 00:00~24:00
     else if(route==="claude_soxl")ctx.waitUntil(claudeDayClose(env,"soxl",nyDate(at),at));
     else if(route==="claude_kr"){if(krHolidayAction("close",kstParts(at).date)==="run")ctx.waitUntil(claudeKrClose(env,kstParts(at).date,at));}
+    else if(route==="duel")ctx.waitUntil(sendDuelSummary(env,kstParts(at).date));
     else if(route==="opening")ctx.waitUntil(runMinute(controller,env));
     else if(route&&route.startsWith("gapdown_"))ctx.waitUntil(runGapdown(route.slice(8),controller,env));
   },
@@ -667,7 +685,7 @@ export default {
     return json({
       ok:true,
       service:"jkquant-opening-scheduler",
-      schedule:"09:05-09:31 KST weekdays · gap-down research 08:56/15:21/15:40",
+      schedule:"opening 09:05-09:31 · gapdown 08:56/15:21/15:40 · duel 18:10 KST · crypto close 00:05 · SOXL close 16:05 ET",
       mode:"Cloudflare Cron -> Pages opening-monitor -> immutable signal ledger -> KIS VTS",
       signalLedger:"Durable Object /events (authorized)"
     });
