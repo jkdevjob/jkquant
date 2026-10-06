@@ -12024,6 +12024,34 @@ console.log('\n[REAL ESTATE] 부동산 메뉴 · 클로드/지피티 탭');
      &&re.indexOf('data-tab="claude"')<re.indexOf('data-tab="gpt"')&&/id="pane-claude"/.test(re)&&/id="pane-gpt"/.test(re));
 }
 
+/* ════ 부동산 🤖 클로드 탭 — 계산은 엔진 한 곳 · 룩어헤드 금지 · 장부는 덧붙이기만 ════ */
+console.log('\n[REAL ESTATE · CLAUDE] 엔진 값 시험 · 화면 연결 · 월간 자동 갱신');
+{
+  const re=fs.readFileSync(__d+'/realestate.html','utf8'),ui=fs.readFileSync(__d+'/realestate-claude.js','utf8'),eng=fs.readFileSync(__d+'/realestate-claude-engine.js','utf8');
+  const wfl=fs.readFileSync(__d+'/.github/workflows/realestate-claude-monthly.yml','utf8');
+  const t=require('child_process').spawnSync(process.execPath,[__d+'/scripts/test_realestate_claude.cjs'],{encoding:'utf8'});
+  ok('부동산(클로드) 엔진 값 시험 전부 통과 — 합성 + 실제 자료(룩어헤드 · 장부 == 백테)', t.status===0,
+     (t.stdout||'').split('\n').filter(l=>/✗|결과/.test(l)).join(' / ')+(t.stderr||'').slice(0,300));
+  const tc=require('child_process').spawnSync('python3',['-I',__d+'/scripts/realestate_claude/test_collect.py'],{encoding:'utf8'});
+  ok('부동산(클로드) 수집기 값 시험 — 5행씩 이어 받기 · 지역 이름 불일치 멈춤 · 분기 · 증분/소급 수정', tc.status===0,
+     (tc.stdout||'').split('\n').filter(l=>/✗|결과/.test(l)).join(' / ')+(tc.stderr||'').slice(0,300));
+  const iC=re.indexOf('id="pane-claude"'),iG=re.indexOf('id="pane-gpt"');
+  const iE=re.indexOf('<script src="/realestate-claude-engine.js" defer></script>'),iU=re.indexOf('<script src="/realestate-claude.js" defer></script>');
+  ok('클로드 칸: 엔진 → 화면 순서로, 클로드 칸 뒤 · 지피티 칸 앞에서 불러온다', iC>0&&iC<iE&&iE<iU&&iU<iG&&/id="rec-root"/.test(re.slice(iC,iE)));
+  ok('클로드 화면·엔진은 지피티 칸을 건드리지 않는다', !/pane-gpt/.test(ui)&&!/pane-gpt/.test(eng));
+  ok('화면은 장부·전략을 계산하지 않는다 — 엔진 함수만 부른다(같은 걸 두 군데서 세지 않는다)',
+     !/function\s+(simulate|markMonth|planNext|walkForward|monthYield|desire)\b/.test(ui)&&/E\.walkForward\(/.test(ui)&&/E\.snapshot\(/.test(ui));
+  const st=['run: python scripts/realestate_claude/collect.py','run: node scripts/realestate_claude/paper.mjs','node scripts/test_realestate_claude.cjs','git commit -m'].map(x=>wfl.indexOf(x));
+  ok('월간 자동 갱신: 수집 → 장부 덧붙이기 → 값 시험 → 커밋 순서(시험 실패면 커밋 안 함)', st.every((x,i)=>x>0&&(i===0||x>st[i-1]))&&/cron:/.test(wfl));
+  const P=JSON.parse(fs.readFileSync(__d+'/data/realestate/claude/paper.json','utf8')),E2=require(__d+'/realestate-claude-engine.js');
+  ok('모의장부: 전략 버전 · 당시 가정 · 결정마다 전략/엔진 버전과 판단 자료 달',
+     P.strategyVersion===E2.STRATEGY_VERSION&&P.params&&P.params.lag===E2.DEFAULTS.lag&&P.decisions.length>0
+     &&P.decisions.every(d=>d.sv&&d.ev&&/^\d{4}-\d{2}$/.test(d.data)&&E2.ymk(d.m)-E2.ymk(d.data)===P.params.lag));
+  const S=JSON.parse(fs.readFileSync(__d+'/data/realestate/claude/series.json','utf8')).series;
+  ok('원자료: 대전 5구·세종 매매·전세지수 · 전세가율 · 거래량 · 지가 · 금리 · 물가',
+     E2.UNIVERSE.every(r=>S.sale[r]&&S.jeonse[r]&&S.jratio[r]&&S.volume[r])&&S.land&&S.land.daejeon&&['baseRate','depositRate','cpi'].every(k=>S.macro[k]));
+}
+
 Promise.all(PENDING).then(()=>{
   const nav=require('child_process').spawnSync(process.execPath,[require('path').join(__dirname,'scripts/check-navigation-races.cjs'),process.argv[2]||'index.html'],{encoding:'utf8'});
   ok('운영 탭: 늦은 DB 저장과 이전 세션 시세가 현재 선택을 덮어쓰지 않음',nav.status===0,(nav.stdout||'')+(nav.stderr||''));
