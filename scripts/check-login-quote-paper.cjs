@@ -74,6 +74,15 @@ await t('L3 앱 내장 브라우저 감지 — 이름을 아는 앱 + 이름 모
   assert.equal(fs_(iOS+' Mobile/15E148'),null,'홈 화면 앱(standalone)은 내장 화면이 아니다');
 });
 
+await t('L4 Firestore 네트워크는 강제 long-polling이 아니라 자동감지 — 모바일 정상망 성능저하를 피한다',async()=>{
+  const pages=['index.html','plan.html','backtest.html','scalping.html','claude.html','ipo.html','job.html','realestate.html','admin.html'];
+  for(const p of pages){
+    const s=fs.readFileSync(path.join(ROOT,p),'utf8');
+    assert(!/experimentalForceLongPolling\s*:\s*true/.test(s),p+' forced long polling');
+    assert(/experimentalAutoDetectLongPolling\s*:\s*true/.test(s),p+' auto detect missing');
+  }
+});
+
 /* ── 시세 요청 ──────────────────────────────────────────────────────── */
 await t('Q1 fetchT: 응답 없는 요청을 시간으로 끊는다',async()=>{
   const fetchT=new Function('fetch','AbortController','setTimeout','clearTimeout',fn('async function fetchT(url, opt, ms)')+'\nreturn fetchT;')(
@@ -128,7 +137,37 @@ await t('Q2 서버: range=max 의 야후 주소가 한 시간 안에는 같다(�
   assert(/const rangeParam = yahooRangeParam\(range, period1, period2, Date\.now\(\)\);/.test(quoteJs));
 });
 
+await t('Q3 운영/자산플랜 시세는 모의·플랜에서 불필요한 1분봉을 건너뛰고 캐시버스터를 쓰지 않는다',async()=>{
+  const raw=fn('async function _fetchDailyRaw(symbol)');
+  assert(/intraday=\$\{noIntraday\?'0':'1'\}/.test(raw),'운영 paper intraday switch');
+  assert(/typeof _paperFilling/.test(raw),'paper filling guard');
+  const pf=fnOf(plan,'async function fetchPlanQuote(symbol)');
+  assert(/intraday=0/.test(pf),'plan minute bars disabled');
+  assert(!/_ts=/.test(pf),'plan cache bust remains');
+  assert(!/cache:'no-store'/.test(pf),'plan no-store remains');
+});
+await t('Q4 시세 서버는 Yahoo query1→query2까지만 시도하고 같은 query1을 세 번째로 중복 호출하지 않는다',async()=>{
+  assert(/for \(const host of \["query1", "query2"\]\)/.test(quoteJs));
+  assert(!/query1-fc/.test(quoteJs));
+});
+await t('Q5 환율 실패도 Pages 운영에서 공개 프록시 연쇄대기로 넘어가지 않는다',async()=>{
+  const fx=fn('async function loadFX()');
+  assert(/fetchT\('\/api\/fx'.*5000/.test(fx));
+  assert(/\.pages\\\.dev/.test(fx)||/pages\\\.dev/.test(fx));
+  assert(/if\(_prodPages\) return;/.test(fx));
+});
+
 /* ── 모의 성과 표 ───────────────────────────────────────────────────── */
+await t('P0 모의성과 시세는 종목별 병렬 선취 후 전략 재생만 순차로 한다',async()=>{
+  const fill=fn('async function paperFillAll()');
+  const pre=fn('async function paperPrefetchQuotes()');
+  assert(/await paperPrefetchQuotes\(\)/.test(fill));
+  assert(/Promise\.all\(\[\.\.\.px\]/.test(pre),'price prefetch parallel');
+  assert(/Promise\.all\(\[\.\.\.dv\]/.test(pre),'dividend prefetch parallel');
+  const pp=fn('async function loadPlanPaperData(force)');
+  assert(/Promise\.all\(miss\.map/.test(pp),'plan paper quotes parallel');
+});
+
 await t('P1 원화 환율: 실시간 환율이 아직 없으면 하드코딩 상수(FX) 대신 마지막으로 받은 실제 환율 · 결과와 함께 그 환율을 남긴다',async()=>{
   const mk=(liveFX,S)=>new Function('liveFX','FX','S',fn('function paperWonRate(r)')+'\n'+fn('function paperFxFallback()')+'\nreturn paperWonRate;')(liveFX,1520.21,S);
   assert.equal(mk(null,{paperViewCache:{fx:1343.5}})({cur:'usd'}),1343.5);
