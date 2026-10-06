@@ -38,19 +38,19 @@ ok(soxl.includes('cron: "15 21 * * 1-5"')
 ok((day.match(/cron:/g)||[]).length===2
   &&day.includes('cron: "30 1 * * 1-5"')
   &&day.includes('cron: "0 8 * * 1-5"')
-  &&!day.includes('/api/daytrading-summary'),
+  &&!day.includes('$BASE/api/daytrading-summary') && !day.includes('jkquant.pages.dev/api/daytrading-summary'),
   'daytrading GitHub research is 10:30/17:00 KST only and cannot send Telegram');
 
 ok((vts.match(/cron:/g)||[]).length===2
   &&vts.includes('cron: "45 0 * * 1-5"')
   &&vts.includes('cron: "30 8 * * 1-5"')
-  &&!vts.includes('/api/vts-summary'),
+  &&!vts.includes('$BASE/api/vts-summary') && !vts.includes('jkquant.pages.dev/api/vts-summary'),
   'VTS reconcile is 09:45/17:30 KST only and cannot send Telegram');
 
 ok(nightly.includes('cron: "10 10 * * *"')
   &&nightly.includes('cron: "10 11 * * *"')
   &&nightly.includes('/api/scalping-auto-promotion')
-  &&!nightly.includes('/api/nightly-research-summary'),
+  &&!nightly.includes('$BASE/api/nightly-research-summary') && !nightly.includes('jkquant.pages.dev/api/nightly-research-summary'),
   'nightly research keeps data/auto-promotion backups but cannot send Telegram');
 
 ok(!gap.includes('클로드 vs GPT 매일 대결 요약 텔레그램')
