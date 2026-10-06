@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<link rel="stylesheet" href="/jk-mobile.css?v=1.0.0">
 <meta name="theme-color" content="#0f1320">
 <meta name="robots" content="noindex,nofollow">
 <title>JK 퀀트 — 단타(지피티)</title>
@@ -152,6 +153,15 @@ input:focus,select:focus{outline:none;border-color:var(--vio)}
 .daily-result-goal{display:inline-block;margin-top:5px;padding:2px 6px;border-radius:6px;font-size:10px;font-weight:800;background:var(--bg);color:var(--dim)}
 .daily-result-goal.hit{background:var(--buy-bg);color:var(--buy)}
 @media(max-width:620px){.daily-result-list{grid-template-columns:1fr}}
+.auto-improve-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.auto-improve-card{background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:12px;min-width:0}
+.auto-improve-top{display:flex;justify-content:space-between;gap:8px;align-items:flex-start;margin-bottom:8px}
+.auto-improve-name{font-weight:900}
+.auto-improve-state{font-size:10px;font-weight:900;padding:3px 7px;border-radius:7px;background:rgba(139,140,240,.15);color:var(--vio);white-space:nowrap}
+.auto-improve-state.ready{background:rgba(54,211,153,.14);color:var(--buy)}
+.auto-improve-kv{display:grid;grid-template-columns:88px 1fr;gap:5px 8px;font-size:11px;line-height:1.45}
+.auto-improve-kv .k{color:var(--faint);font-weight:700}.auto-improve-kv .v{color:var(--ink);font-weight:700;min-width:0;overflow-wrap:anywhere}
+@media(max-width:620px){.auto-improve-list{grid-template-columns:1fr}}
 
 .strategy-head{margin:4px 0 10px;color:var(--dim);font-size:12px}
 
@@ -272,7 +282,7 @@ canvas{display:block;width:100%;height:auto}
 
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Morning Scalping</div><h1>JK <span class="v">퀀트</span> 단타 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="scVer">v1.42.5</span></h1></div>
+    <div><div class="kicker">Morning Scalping</div><h1>JK <span class="v">퀀트</span> 단타 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="scVer">v1.43.0</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -308,16 +318,25 @@ canvas{display:block;width:100%;height:auto}
     <div class="strategy-head">모든 기준전략의 오늘 상태와 최근 확정 세션 결과를 한 화면에서 비교</div>
     <div class="card">
       <h3><span class="dot"></span>📅 오늘 기준전략 결과 <span class="sub">최근 확정 세션 · 순수익</span></h3>
-      <p class="lead">시초가·데이트레이딩·비트코인·SOXL의 <b>최근 두 확정 세션</b>을 한 번에 보여줍니다.
+      <p class="lead">시초가·데이트레이딩·비트코인·SOXL을 <b>한국시간(KST) 달력 날짜의 전일·당일</b>로 맞춰 한 번에 보여줍니다.
+        SOXL의 미국 거래일도 <b>정규장 종료가 속한 KST 날짜</b>로 변환하며, 아직 끝나지 않은 당일 세션은 결과를 억지로 당겨 쓰지 않고 <b>확정 대기</b>로 표시합니다.
         BTC·SOXL은 <b>서버 실시간 모의장부를 우선</b> 사용하고, 없을 때만 연구 확정 이력으로 보완합니다.
-        한 전략에서 같은 날 여러 종목을 거래하면 <b>동일비중 평균 순손익</b>을 일일 결과로 사용하고, 거래가 없으면 0%입니다.
-        전략별 장 마감 시각이 달라 날짜를 반드시 함께 표시합니다.</p>
+        한 전략에서 같은 날 여러 종목을 거래하면 <b>동일비중 평균 순손익</b>을 일일 결과로 사용하고, 거래가 없으면 0%입니다.</p>
       <div class="row" style="margin-bottom:10px">
         <button class="ghostbtn" onclick="refreshDailyDashboard()">🔄 결과 새로고침</button>
         <span class="sub" id="daily_results_meta">불러오는 중…</span>
       </div>
       <div id="daily_results_body"><p class="sub">전략별 오늘 결과를 불러오는 중…</p></div>
       <p class="note">목표 표시는 각 전략 단독 기준 <b>일 +1%</b> 달성 여부입니다. 서로 다른 전략의 수익률은 자금배분이 정해지기 전에는 단순 합산하지 않습니다.<br><b>보유 원칙:</b> 현재 4개 기준전략은 모두 당일청산·오버나이트 금지입니다. 향후 예외 후보도 별도 검증을 거쳐 최대 5거래일까지만 허용하며 6거래일 이상은 단타 전략에서 제외합니다.</p>
+    </div>
+    <div id="daily_auto_improve" class="card">
+      <h3><span class="dot"></span>🧬 전략분석 자동개선 현황 <span class="sub">그림자 전략 · 자동생성 · 자동승격</span></h3>
+      <p class="lead">매일 누적 데이터를 다시 분석해 각 기준전략과 그림자 후보를 비교하고, 부진 후보는 퇴출·보충하며 새 후보를 자동 생성합니다. <b>활성 후보 1위가 7개 서로 다른 연구세션 연속 1위</b>이고 표본·검증·위험·실시간 호환 조건을 모두 통과한 경우에만 다음 새 세션부터 자동으로 메인전략에 반영합니다.</p>
+      <div class="row" style="margin-bottom:9px">
+        <button class="ghostbtn" onclick="refreshDailyAutoImprove()">🔄 개선현황 갱신</button>
+        <span class="sub" id="daily_auto_improve_meta">자동 연구 현황 불러오는 중…</span>
+      </div>
+      <div id="daily_auto_improve_body"><p class="sub">시초가·데이트레이딩·비트코인·SOXL의 자동개선 상태를 불러오는 중…</p></div>
     </div>
     <div id="daily_trend_card" class="card">
       <div id="daily_cumulative_chart"><p class="sub">전략별 누적 수익률 추이를 불러오는 중…</p></div>
@@ -1562,6 +1581,7 @@ function dailyResultPct(v){
 function dailyResultCell(x,label){
   if(!x)return '<div class="daily-result-box"><div class="daily-result-label">'+label+'</div><div class="daily-result-ret">—</div><div class="daily-result-meta">확정 결과 대기</div></div>';
   const date=String(x.date||'—');
+  if(x.pending)return '<div class="daily-result-box"><div class="daily-result-label">'+label+' · '+esc(date)+'</div><div class="daily-result-ret">대기</div><div class="daily-result-meta">'+esc(x.pendingReason||'KST 당일 세션 확정 대기')+'</div><span class="daily-result-goal">확정 후 수익률 반영</span></div>';
   if(x.marketClosed)return '<div class="daily-result-box"><div class="daily-result-label">'+label+' · '+esc(date)+'</div><div class="daily-result-ret">휴장</div><div class="daily-result-meta">해당 시장 비개장일 · 전략 미실행</div><span class="daily-result-goal">수익률 계산 제외</span></div>';
   if(x.marketDayUnknown)return '<div class="daily-result-box"><div class="daily-result-label">'+label+' · '+esc(date)+'</div><div class="daily-result-ret">확인필요</div><div class="daily-result-meta">'+esc(x.marketDayError||'개장일 확인 실패')+'</div><span class="daily-result-goal">전략 실행 보류</span></div>';
   const r=Number(x.returnPct),ok=Number.isFinite(r),hit=ok&&r>=1;
@@ -1648,6 +1668,7 @@ async function renderDailyCumulativeChart(force=false){
 function refreshDailyDashboard(){
   loadDailyStrategyResults(true);
   renderDailyCumulativeChart(true);
+  loadShadowRankings(true);
 }
 const DAILY_RESULTS_TTL_MS=60000;
 let DAILY_RESULTS_PAYLOAD=null,DAILY_RESULTS_AT=0,DAILY_RESULTS_PROMISE=null;
@@ -2251,7 +2272,7 @@ function renderScalpingDuel(D){
     '<li><b>하루 손익:</b> 그날 청산된 실현 매매만, 칸 자금 100% 기준. 여러 종목은 균등 평균, 클로드 코인은 BTC·ETH 각각 0.5. 매매가 없으면 0%입니다.</li>'+
     '<li><b>합계:</b> 시초가·데이트레이딩·비트코인·SOXL 네 탭에 원금을 각각 25%씩 배분합니다.</li>'+
     '<li><b>하루 승패:</b> 상대보다 0.01%p를 초과해 앞설 때만 승, 그 이하는 무승부입니다.</li>'+
-    '<li><b>날짜:</b> 국내와 SOXL은 각 시장 거래일(SOXL은 미국 날짜), 비트코인은 한국시각 00:00~24:00 기준입니다.</li>'+
+    '<li><b>날짜:</b> 화면 표시는 모두 한국시간(KST) 달력 날짜를 사용합니다. SOXL 미국 거래일은 정규장 종료가 속한 KST 날짜로 변환하고, 비트코인은 KST 00:00~24:00 기준입니다.</li>'+
     '</ol></div>';
   box.innerHTML=html;
 }
@@ -2281,6 +2302,53 @@ function selectedMainVariant(kind){
 function pendingMainVariant(kind){
   const cfg=(((PROMOTION_STATE||{}).configs||{})[kind]||{});
   return cfg.pendingVariant?String(cfg.pendingVariant):null;
+}
+function shadowLabel(kind,name){
+  if(!name||name==='baseline')return '원래 기준전략';
+  return ((SHADOW_RANK_LABELS[kind]||{})[name]||name);
+}
+function renderDailyAutoImprove(){
+  const el=$('daily_auto_improve_body'),meta=$('daily_auto_improve_meta');if(!el)return;
+  const rankings=((SHADOW_RANK_CACHE||{}).rankings||{});
+  const kinds=['opening','daytrading','crypto','soxl'];
+  const labels={opening:'⚡ 시초가',daytrading:'📈 데이트레이딩',crypto:'₿ 비트코인',soxl:'⚡ SOXL'};
+  const cards=kinds.map(kind=>{
+    const data=rankings[kind];
+    if(!data)return '<div class="auto-improve-card"><div class="auto-improve-top"><div class="auto-improve-name">'+labels[kind]+'</div><span class="auto-improve-state">불러오는 중</span></div><div class="sub">야간 연구·그림자 순위를 불러오는 중입니다.</div></div>';
+    const rows=data.rows||[],life=data.lifecycle||{},leader=life.leader||{},top=rows[0]||{};
+    const current=selectedMainVariant(kind),pending=pendingMainVariant(kind);
+    const streak=Number(leader.consecutiveResearchSessions||0),need=Number(leader.requiredResearchSessions||((data.promotionRule||{}).leaderResearchSessions)||7);
+    const ready=life.autoPromotionReady===true;
+    const state=pending?'승격 예약':ready?'승격 준비':streak>0?'자동 분석 중':'표본 수집';
+    const last=(life.recentChanges||[]).slice(-1)[0];
+    const generated=(life.generatedCandidates||[]).length;
+    const retired=(life.retired||[]).length;
+    const active=Number(data.shadowCount||rows.length),total=Number(data.totalCandidatePool||active);
+    const leaderName=String(leader.name||top.name||'');
+    const leaderScore=top&&top.name===leaderName?Number(top.researchScore||0):Number(((rows.find(x=>x.name===leaderName)||{}).researchScore)||0);
+    const reason=String(life.autoPromotionReason||'7연속 1위 + 승격 안전조건 확인 중');
+    return '<div class="auto-improve-card">'+
+      '<div class="auto-improve-top"><div><div class="auto-improve-name">'+labels[kind]+'</div><div class="sub">'+esc(data.from||'—')+' ~ '+esc(data.to||'—')+'</div></div><span class="auto-improve-state '+(ready||pending?'ready':'')+'">'+state+'</span></div>'+
+      '<div class="auto-improve-kv">'+
+        '<div class="k">운영 메인</div><div class="v">'+esc(shadowLabel(kind,current))+(pending?' → '+esc(shadowLabel(kind,pending)):'')+'</div>'+
+        '<div class="k">현재 1위</div><div class="v">'+esc(shadowLabel(kind,leaderName))+(leaderName?' · '+leaderScore.toFixed(1)+'점':'')+'</div>'+
+        '<div class="k">연속 1위</div><div class="v">'+streak+' / '+need+' 연구세션</div>'+
+        '<div class="k">후보 풀</div><div class="v">활성 '+active+' · 전체 '+total+' · 자동생성 '+generated+' · 퇴출 '+retired+'</div>'+
+        '<div class="k">자동개선</div><div class="v">'+esc(reason)+'</div>'+
+        '<div class="k">최근 변경</div><div class="v">'+(last?(esc(last.date||'')+' · '+esc(last.type==='retired'?'퇴출':'신규투입')+' '+esc(shadowLabel(kind,last.name||''))):'변경 이력 없음')+'</div>'+
+      '</div>'+
+      '<div style="margin-top:9px"><button class="ghostbtn sm" onclick="showStrategy(\''+kind+'\')">상세 분석 →</button></div>'+
+    '</div>';
+  }).join('');
+  el.innerHTML='<div class="auto-improve-list">'+cards+'</div>';
+  const stamp=String((SHADOW_RANK_CACHE||{}).generatedAt||'').replace('T',' ').slice(0,16);
+  if(meta)meta.textContent='자동 연구 '+(stamp||'갱신 대기')+' · 운영 메인 상태 '+(PROMOTION_STATE?'확인':'조회 중');
+}
+async function refreshDailyAutoImprove(){
+  const meta=$('daily_auto_improve_meta');if(meta)meta.textContent='자동개선 현황 새로고침 중…';
+  SHADOW_RANK_AT=0;PROMOTION_STATE_AT=0;
+  await loadShadowRankings(true);
+  renderDailyAutoImprove();
 }
 function renderMainStrategyState(kind){
   const el=$('main_strategy_state_'+kind);if(!el)return;
@@ -2376,6 +2444,7 @@ async function loadPromotionState(force=false){
     PROMOTION_STATE=j;PROMOTION_STATE_AT=now;
     ['opening','daytrading','crypto','soxl'].forEach(renderMainStrategyState);
     if(SHADOW_RANK_CACHE)Object.entries(SHADOW_RANK_CACHE.rankings||{}).forEach(([k,v])=>renderShadowRanking(k,v));
+    renderDailyAutoImprove();
     return j;
   }catch(e){
     console.warn('promotion state',e);
@@ -2404,7 +2473,8 @@ async function loadShadowRankings(force=false){
   const now=Date.now();
   if(!force&&SHADOW_RANK_CACHE&&now-SHADOW_RANK_AT<300000){
     await loadPromotionState(false);
-    Object.entries(SHADOW_RANK_CACHE.rankings||{}).forEach(([k,v])=>renderShadowRanking(k,v));return;
+    Object.entries(SHADOW_RANK_CACHE.rankings||{}).forEach(([k,v])=>renderShadowRanking(k,v));
+    renderDailyAutoImprove();return;
   }
   try{
     const [rr]=await Promise.all([
@@ -2414,8 +2484,12 @@ async function loadShadowRankings(force=false){
     const j=await rr.json().catch(()=>({}));if(!rr.ok||!j.ok)throw new Error(j.error||('HTTP '+rr.status));
     SHADOW_RANK_CACHE=j;SHADOW_RANK_AT=now;
     Object.entries(j.rankings||{}).forEach(([k,v])=>renderShadowRanking(k,v));
+    renderDailyAutoImprove();
   }catch(e){
     ['opening','daytrading','crypto','soxl'].forEach(k=>{const el=$('shadow_rank_'+k);if(el)el.innerHTML='<div class="warn">그림자 순위 조회 실패 · '+esc(e.message||e)+'</div>';});
+    const de=$('daily_auto_improve_body'),dm=$('daily_auto_improve_meta');
+    if(de)de.innerHTML='<div class="warn">자동개선 현황 조회 실패 · '+esc(e.message||e)+'</div>';
+    if(dm)dm.textContent='자동 연구 조회 실패';
   }
 }
 
@@ -2434,7 +2508,8 @@ function showStrategy(name){
     Promise.resolve(loadDailyStrategyResults(false)).finally(()=>{
       setTimeout(()=>renderDailyCumulativeChart(),0);
       setTimeout(()=>loadDaily1Shadow(false),80);
-      setTimeout(()=>active.forEach(x=>loadStrategyScorecard(x)),180);
+      setTimeout(()=>loadShadowRankings(false),120);
+      setTimeout(()=>active.forEach(x=>loadStrategyScorecard(x)),220);
     });
   }
   if(active.includes(name)){ loadScalpingHistory(name,1); loadStrategyScorecard(name); loadDaily1Shadow(false); loadScalpingReview(name,false); loadShadowRankings(false); renderStrategyStatus(name); renderPlan(name); }
