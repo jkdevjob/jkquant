@@ -27,6 +27,44 @@ UTC = timezone.utc
 UA = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/124 Safari/537.36"
 
 
+def request_kis_chart():
+    base=(os.environ.get("BASE") or os.environ.get("JKQ_PAGES_URL") or "").strip().rstrip("/")
+    key=(os.environ.get("JKQ_MONITOR_KEY") or os.environ.get("KEY") or "").strip()
+    if not base or not key:
+        raise RuntimeError("KIS SOXL minute source not configured")
+    url=base+"/api/kis?"+urllib.parse.urlencode({
+        "op":"usmin","env":"vts","market":"us","code":SYMBOL,"excd":"AMS"
+    })
+    req=urllib.request.Request(url,headers={
+        "User-Agent":UA,"Accept":"application/json","x-monitor-key":key
+    })
+    with urllib.request.urlopen(req,timeout=35) as r:
+        j=json.loads(r.read().decode("utf-8"))
+    bars=j.get("bars") or []
+    if not bars:
+        raise RuntimeError(str(j.get("error") or "KIS SOXL 5m bars empty"))
+    ts,O,H,L,C,V=[],[],[],[],[],[]
+    for b in bars:
+        ds=str(b.get("date") or "")
+        tm=str(b.get("time") or "")
+        try:
+            dt=datetime.strptime(ds+" "+tm,"%Y-%m-%d %H:%M").replace(tzinfo=NY)
+        except Exception:
+            continue
+        cc=float(b.get("c") or 0)
+        if cc<=0:
+            continue
+        ts.append(int(dt.timestamp()))
+        O.append(float(b.get("o") or cc));H.append(float(b.get("h") or cc))
+        L.append(float(b.get("l") or cc));C.append(cc);V.append(float(b.get("v") or 0))
+    if not ts:
+        raise RuntimeError("KIS SOXL 5m rows invalid")
+    return {
+        "timestamp":ts,
+        "indicators":{"quote":[{"open":O,"high":H,"low":L,"close":C,"volume":V}]},
+    },"kis-hhdfs76950200","2d-kis"
+
+
 def request_worker_chart():
     base = os.environ.get("JKQ_SOXL_WORKER_URL", "").strip().rstrip("/")
     key = os.environ.get("JKQ_MONITOR_KEY", "").strip()
@@ -66,12 +104,19 @@ def request_worker_chart():
 
 def request_chart():
     last = None
-    # GitHub Actions에서는 Cloudflare Worker 경로를 우선 사용한다.
-    # GitHub egress가 Yahoo 429를 받아도 Worker의 시장데이터 경로로 동일 SOXL 5분봉을 확보한다.
+    # 1순위: 한국투자 공식 해외주식 5분봉. 주문/계좌와 무관한 읽기전용 시세다.
+    if (os.environ.get("BASE") or os.environ.get("JKQ_PAGES_URL")) and (os.environ.get("JKQ_MONITOR_KEY") or os.environ.get("KEY")):
+        try:
+            return request_kis_chart()
+        except Exception as e:
+            print(f"KIS SOXL 5m source failed: {e}", flush=True)
+            last=e
+    # 2순위: Cloudflare Worker의 Yahoo 경로.
     if os.environ.get("JKQ_SOXL_WORKER_URL") and os.environ.get("JKQ_MONITOR_KEY"):
         try:
             return request_worker_chart()
         except Exception as e:
+            print(f"Cloudflare Yahoo SOXL source failed: {e}", flush=True)
             last = e
     # Worker가 없거나 실패하면 Yahoo 60d → 5d 직접 경로를 순서대로 시도한다.
     for range_value in ("60d", "5d"):
