@@ -26,6 +26,9 @@ jobs:
       - uses: actions/setup-python@v5
         with: { python-version: '3.12' }
 
+      - name: 전 페이지 모바일 기본 레이아웃 검사
+        run: node scripts/check-mobile-pages.cjs
+
       - name: 연구 Python 문법 검사
         run: |
           python -m py_compile scripts/backtest_opening_rebreak.py
