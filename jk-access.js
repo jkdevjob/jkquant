@@ -5,7 +5,7 @@
    - 그 밖은 '승인 대기'(신청 접수) 또는 '사용 불가'(거절·차단)다.
    진짜로 막는 건 Firestore 규칙이다(firestore.rules — 승인 안 된 계정은 자기 데이터도 못 연다).
    이 파일은 화면을 가리고, 신청 기록을 남기고, 단타·관리자 메뉴를 소유자에게만 보인다.
-   단순 페이지(백테·공모주·JOB)는 data-guard="1" 로 불러 guard() 하나로 끝낸다.
+   단순 페이지(백테·공모주·부동산·JOB)는 data-guard="1" 로 불러 guard() 하나로 끝낸다.
    운영·자산플랜은 자기 로그인 막을 쓰고, 승인 판정(check)과 대기 화면(show)만 여기서 가져간다. */
 (function(){
   var ADMIN_EMAILS=['jk82investing@gmail.com'];
@@ -21,6 +21,7 @@
     {path:'/claude',label:'단타(클로드)',mode:'admin',order:50},
     {path:'/paper',label:'모의',mode:'public',order:60},
     {path:'/ipo',label:'공모주',mode:'public',order:70},
+    {path:'/realestate',label:'부동산',mode:'public',order:75},
     {path:'/job',label:'JOB',mode:'public',order:80},
     {path:'/admin',label:'관리자',mode:'admin',order:90}
   ];
@@ -30,7 +31,7 @@
     try{ p=new URL(p, location.origin).pathname; }catch(e){}
     p=p.replace(/\/+$/,'')||'/';
     var map={'/index.html':'/','/plan.html':'/plan','/backtest.html':'/backtest','/scalping.html':'/scalping',
-             '/claude.html':'/claude','/ipo.html':'/ipo','/job.html':'/job','/admin.html':'/admin'};
+             '/claude.html':'/claude','/ipo.html':'/ipo','/realestate.html':'/realestate','/job.html':'/job','/admin.html':'/admin'};
     return map[p]||p;
   }
   function menuDefaults(){

@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>JK 퀀트 — 부동산</title>
+<style>
+:root{--bg:#0f1320;--surf:#171c2e;--surf2:#1e2540;--border:#2a3354;--border2:#34406a;--text:#e8ecf7;--dim:#9aa6c9;--faint:#6f7ba0;--accent:#8b8cf0;--green:#36d399;--red:#f87b8c;--gold:#f5c451}
+*{box-sizing:border-box}html,body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Pretendard","Segoe UI",sans-serif}body{font-size:14px;line-height:1.55}a{color:inherit}button,input,select{font:inherit}
+.wrap{max-width:1180px;margin:0 auto;padding:0 16px}header{border-bottom:1px solid var(--border);background:rgba(15,19,32,.96);position:sticky;top:0;z-index:50;backdrop-filter:blur(10px)}
+.htop{height:64px;display:flex;align-items:center;justify-content:space-between}.brand .kicker{font-size:10px;letter-spacing:.12em;color:var(--accent);font-weight:900}.brand h1{font-size:19px;margin:1px 0 0}.brand .v{color:var(--gold)}
+.jkmenu{position:relative}.jkmenu-btn{height:38px;width:44px;background:var(--surf2);border:1px solid var(--border);color:var(--text);border-radius:8px;font-size:18px;font-weight:700}
+.jkmenu-pop{position:absolute;right:0;top:45px;z-index:100;background:var(--surf);border:1px solid var(--border);border-radius:10px;padding:6px;min-width:166px;box-shadow:0 14px 34px rgba(0,0,0,.45);display:flex;flex-direction:column;gap:2px}
+.jkmenu-pop[hidden]{display:none}.jkmenu-pop a{display:flex;align-items:center;gap:9px;padding:10px 12px;border-radius:8px;color:var(--dim);text-decoration:none;font-weight:700}.jkmenu-pop a:hover,.jkmenu-pop a.cur{background:var(--surf2);color:var(--text)}.jkmenu-pop a.cur{color:var(--gold)}.mi{width:18px;text-align:center}
+main{padding:22px 0 70px}.hero{margin-bottom:14px}.hero h2{font-size:23px;margin:0 0 3px}.sub{color:var(--dim);font-size:12px}
+.tabs{display:flex;gap:7px;overflow-x:auto;padding-bottom:8px;margin-bottom:10px}.tab{flex:0 0 auto;border:1px solid var(--border);background:var(--surf);color:var(--dim);border-radius:999px;padding:8px 14px;font-weight:800;font-size:12px;cursor:pointer}.tab.on{background:var(--accent);border-color:var(--accent);color:white}
+.pane{background:var(--surf);border:1px solid var(--border);border-radius:12px;padding:40px 18px;text-align:center;color:var(--dim)}.pane[hidden]{display:none}.pane h3{margin:0 0 6px;color:var(--text);font-size:16px}
+@media(max-width:560px){.wrap{padding:0 11px}.hero h2{font-size:20px}}
+</style>
+<script src="/jk-access.js" data-guard="1"></script>
+<script type="module">
+/* 로그인 · 이용 승인 — 승인된 계정만 본문이 열린다 (판정은 jk-access.js 한 곳 · 공모주·JOB 과 같은 글자) */
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
+import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js";
+import { initializeFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
+const app=initializeApp({apiKey:"AIzaSyBzBe9pAttnbDgTlNThWZzNqtAAKxX7Ksw",authDomain:"jk-invest.firebaseapp.com",projectId:"jk-invest",
+  storageBucket:"jk-invest.firebasestorage.app",messagingSenderId:"1024066323251",appId:"1:1024066323251:web:23d557527866205f01f446"});
+const auth=getAuth(app),db=initializeFirestore(app,{experimentalForceLongPolling:true});
+JKAccess.guard({auth,db,doc,getDoc,setDoc,onAuthStateChanged,signInWithPopup,GoogleAuthProvider,signOut},{});
+</script>
+</head>
+<body>
+<header><div class="wrap"><div class="htop">
+  <div class="brand"><div class="kicker">REAL ESTATE</div><h1>JK <span class="v">부동산</span> <span style="font-size:12px;font-weight:400;color:var(--faint)" id="reVer">v1.0.0</span></h1></div>
+  <div class="jkmenu" id="jkmenuWrap">
+    <button class="jkmenu-btn" aria-label="메뉴" onclick="jkMenuToggle(event)">三</button>
+    <div class="jkmenu-pop" id="jkmenuPop" hidden>
+      <a href="/"><span class="mi">🏠</span>운영</a>
+      <a href="/plan"><span class="mi">🧭</span>자산플랜</a>
+      <a href="/backtest"><span class="mi">📊</span>백테</a>
+      <a href="/scalping"><span class="mi">⚡</span>단타(지피티)</a>
+      <a href="/claude"><span class="mi">🤖</span>단타(클로드)</a>
+      <a href="/paper"><span class="mi">🧪</span>모의</a>
+      <a href="/ipo"><span class="mi">🎯</span>공모주</a>
+      <a href="/realestate" class="cur"><span class="mi">🏢</span>부동산</a>
+      <a href="/job"><span class="mi">💼</span>JOB</a>
+      <a href="/admin"><span class="mi">👤</span>관리자</a>
+    </div>
+  </div>
+</div></div></header>
+
+<main><div class="wrap">
+  <div class="hero"><h2>부동산</h2><div class="sub">클로드 · 지피티 분석을 탭으로 나눠 봅니다.</div></div>
+  <div class="tabs" id="tabs">
+    <button class="tab on" data-tab="claude">🤖 클로드</button>
+    <button class="tab" data-tab="gpt">⚡ 지피티</button>
+  </div>
+  <section class="pane" id="pane-claude"><h3>🤖 클로드</h3>준비 중입니다.</section>
+  <section class="pane" id="pane-gpt" hidden><h3>⚡ 지피티</h3>준비 중입니다.</section>
+</div></main>
+
+<script>
+function jkMenuToggle(e){if(e)e.stopPropagation();var p=document.getElementById("jkmenuPop");if(p)p.hidden=!p.hidden}
+function jkMenuClose(){var p=document.getElementById("jkmenuPop");if(p)p.hidden=true}
+document.addEventListener("click",function(e){var m=document.getElementById("jkmenuWrap");if(m&&!m.contains(e.target))jkMenuClose()});
+function reTab(t){
+  document.querySelectorAll("#tabs .tab").forEach(function(b){b.classList.toggle("on",b.getAttribute("data-tab")===t)});
+  document.querySelectorAll(".pane").forEach(function(p){p.hidden=p.id!=="pane-"+t});
+}
+document.getElementById("tabs").addEventListener("click",function(e){var b=e.target.closest(".tab");if(b)reTab(b.getAttribute("data-tab"))});
+</script>
+</body>
+</html>
