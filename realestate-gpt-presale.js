@@ -139,6 +139,64 @@ function typeRows(p){
 function compRows(p){
   return (p.recentComparables||[]).map(c=>'<tr><td>'+esc(c.name)+'</td><td>'+Number(c.area).toFixed(1)+'㎡</td><td>'+esc(c.date)+'</td><td>'+esc(c.floor)+'층</td><td>'+won(c.price)+'</td></tr>').join("");
 }
+function ymShift(back){
+  const d=new Date(); const k=new Date(Date.UTC(d.getUTCFullYear(),d.getUTCMonth()-back,1));
+  return String(k.getUTCFullYear())+String(k.getUTCMonth()+1).padStart(2,"0");
+}
+function xmlText(node,tag){const x=node.querySelector(tag);return x&&x.textContent?x.textContent.trim():""}
+function parseRtms(xml,kind){
+  const doc=new DOMParser().parseFromString(xml,"application/xml");
+  return [...doc.querySelectorAll("item")].map(it=>{
+    const apt=xmlText(it,"aptNm")||xmlText(it,"apartment")||xmlText(it,"aptName");
+    const area=Number(xmlText(it,"excluUseAr")||xmlText(it,"exclusiveArea"));
+    const year=xmlText(it,"dealYear"),month=xmlText(it,"dealMonth"),day=xmlText(it,"dealDay");
+    const date=year&&month?year+"-"+month.padStart(2,"0")+"-"+(day||"1").padStart(2,"0"):"";
+    if(kind==="rent"){
+      const dep=Number((xmlText(it,"deposit")||"").replace(/,/g,""))*10000;
+      const monthly=Number((xmlText(it,"monthlyRent")||"0").replace(/,/g,""));
+      return {apt,area,date,deposit:Number.isFinite(dep)?dep:null,monthly};
+    }
+    const price=Number((xmlText(it,"dealAmount")||"").replace(/,/g,""))*10000;
+    return {apt,area,date,price:Number.isFinite(price)?price:null,floor:xmlText(it,"floor")};
+  }).filter(x=>x.apt&&Number.isFinite(x.area));
+}
+function median(a){const b=a.filter(Number.isFinite).sort((x,y)=>x-y);if(!b.length)return null;const m=Math.floor(b.length/2);return b.length%2?b[m]:(b[m-1]+b[m])/2}
+function nameHit(name,list){const n=normName(name);return (list||[]).some(x=>{const q=normName(x);return n.includes(q)||q.includes(n)})}
+async function loadMarket(){
+  if(!LIVE.configured||!DATA)return;
+  const configs=[...new Map(DATA.projects.filter(p=>p.liveMarket).map(p=>[p.liveMarket.lawd,p.liveMarket])).values()];
+  const cache={};
+  for(const c of configs){
+    const trades=[],rents=[];
+    for(let m=0;m<3;m++){
+      const ymd=ymShift(m);
+      try{
+        const [t,r]=await Promise.all([
+          liveJson({kind:"trade",lawd:c.lawd,ymd}),
+          liveJson({kind:"rent",lawd:c.lawd,ymd})
+        ]);
+        trades.push(...parseRtms(t.payload,"trade"));rents.push(...parseRtms(r.payload,"rent"));
+      }catch(e){}
+    }
+    cache[c.lawd]={trades,rents};
+  }
+  for(const p of DATA.projects){
+    const c=p.liveMarket,x=c&&cache[c.lawd]; if(!c||!x)continue;
+    const lo=(c.targetArea||84)-5,hi=(c.targetArea||84)+5;
+    const sales=x.trades.filter(v=>v.area>=lo&&v.area<=hi&&nameHit(v.apt,c.saleApts)&&Number.isFinite(v.price));
+    const rents=x.rents.filter(v=>v.area>=lo&&v.area<=hi&&nameHit(v.apt,c.rentApts)&&Number.isFinite(v.deposit)&&(!v.monthly||v.monthly===0));
+    const sm=median(sales.map(v=>v.price)),rm=median(rents.map(v=>v.deposit));
+    p.liveStats={saleCount:sales.length,rentCount:rents.length,saleMedian:sm,rentMedian:rm,months:3};
+    if(sales.length>=3&&Number.isFinite(sm)){
+      p.benchmarks.conservative={label:"국토부 실거래 자동중앙값",price:sm,date:dateKst(0),method:"최근 3개월 지정 비교단지 80~89㎡ "+sales.length+"건 중앙값"};
+      p.recentComparables=sales.sort((a,b)=>String(b.date).localeCompare(String(a.date))).slice(0,6).map(v=>({name:v.apt,area:v.area,date:v.date,floor:v.floor||"-",price:v.price}));
+    }
+    if(rents.length>=2&&Number.isFinite(rm)){
+      p.benchmarks.jeonse={label:"국토부 전세 자동중앙값",price:rm,date:dateKst(0),method:"최근 3개월 지정 비교단지 순수전세 "+rents.length+"건 중앙값"};
+    }
+  }
+  render();
+}
 function officialFeedHtml(){
   const state=LIVE.configured?'<span class="ps-badge open">공식 API 자동수집 ON</span>':'<span class="ps-badge closed">공식 API 키 필요</span>';
   if(!LIVE.configured)return '<div class="gpt-panel"><h4>공식 자동수집</h4><div class="ps-mini">'+state+' '+esc(LIVE.note||"")+'<br>Cloudflare Pages 환경변수 <b>DATA_GO_KR_API_KEY</b>에 공공데이터포털 키를 넣으면 청약홈 공고가 자동으로 붙습니다. 키 값은 화면/응답에 노출하지 않습니다.</div></div>';
@@ -168,6 +226,8 @@ function projectHtml(p){
   const expKnown=Number.isFinite(p.featured.expansion);
   const rules=(p.rules||[]).map(v=>'<span class="ps-badge">'+esc(v)+'</span>').join(" ");
   const notes=(p.notes||[]).map(v=>"• "+esc(v)).join("<br>");
+  const catalysts=(p.catalysts||[]).map(v=>'<div style="margin:3px 0"><span class="ps-badge">'+esc(v.stage)+'</span> <b>'+esc(v.title)+'</b> · '+esc(v.detail)+' <a href="'+esc(v.url)+'" target="_blank" rel="noopener" style="color:var(--accent)">근거</a></div>').join("");
+  const live=p.liveStats?('<br><b>공식 자동검증</b> 매매 '+p.liveStats.saleCount+'건 · 전세 '+p.liveStats.rentCount+'건'+(p.liveStats.saleMedian?' · 매매중앙 '+won(p.liveStats.saleMedian):'')+(p.liveStats.rentMedian?' · 전세중앙 '+won(p.liveStats.rentMedian):'')):"";
   const src=(p.sources||[]).map(s=>'<a target="_blank" rel="noopener" href="'+esc(s.url)+'">'+esc(s.label)+'</a>').join("");
   return '<div class="ps-project">'+
     '<div class="ps-project-top"><div><div><span class="ps-badge '+(isOpen?'open':'closed')+'">'+esc(o.status)+'</span><span class="ps-badge">'+esc(o.category)+'</span></div>'+
@@ -182,7 +242,8 @@ function projectHtml(p){
     '<div class="ps-detail"><div class="ps-box"><h5>분양가 · 옵션</h5><div class="gpt-table-wrap"><table class="gpt-table"><thead><tr><th>타입</th><th>전용</th><th>세대</th><th>분양가</th><th>확장비</th><th>실질비교가*</th></tr></thead><tbody>'+typeRows(p)+'</tbody></table></div><div class="ps-mini">* 실질비교가 = 분양가 + 확인된 발코니 확장비. 취득세·인지세·유상옵션·중도금 이자는 아직 제외.</div></div>'+
     '<div class="ps-box"><h5>현금흐름 · 수요</h5><div class="ps-mini"><b>전세 기준</b> '+won(j.price)+' → 전세가율 약 <b>'+pct(x.jr)+'</b><br><b>예상 묶이는 돈</b> '+won(x.gap)+' (현재 전세 대표값 단순 차감)<br><b>청약 수요</b> '+esc(p.competitionLabel)+'<br><b>가격판정</b> '+verdict(x)+'</div></div></div>'+
     '<div class="ps-box"><h5>주변 최근 실거래</h5><div class="gpt-table-wrap"><table class="gpt-table"><thead><tr><th>단지</th><th>전용</th><th>계약일</th><th>층</th><th>거래가</th></tr></thead><tbody>'+compRows(p)+'</tbody></table></div></div>'+
-    '<div class="ps-box"><h5>조건 · 주의</h5><div class="ps-mini">'+rules+'<br><br>'+notes+'</div></div>'+
+    '<div class="ps-box"><h5>조건 · 주의</h5><div class="ps-mini">'+rules+'<br><br>'+notes+live+'</div></div>'+
+    (catalysts?'<div class="ps-box"><h5>개발·교통 진행단계</h5><div class="ps-mini">'+catalysts+'</div></div>':'')+
     '<div class="ps-box ps-src"><h5>근거 링크</h5><div class="ps-mini">'+src+'</div></div>'+
   '</div>';
 }
