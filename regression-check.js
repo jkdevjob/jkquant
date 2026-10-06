@@ -11430,11 +11430,12 @@ console.log('\n[PERF FAST PATH] 모의 성과 · 단타 오늘 탭');
   const dapi=fs.readFileSync(__d+'/functions/api/scalping-daily-results.js','utf8');
   const ss=extractFn(scl,'function showStrategy(name)');
   const ld=extractFn(scl,'async function loadDailyStrategyResults(force)');
-  ok('단타 오늘은 핵심 결과를 먼저 받고 누적그래프·그림자·4개 연구를 뒤로 미룬다',
+  ok('단타 오늘은 핵심 결과를 먼저 받고 누적그래프·그림자·자동개선·4개 연구를 뒤로 미룬다',
      /Promise\.resolve\(loadDailyStrategyResults\(false\)\)\.finally/.test(ss)
      && /setTimeout\(\(\)=>renderDailyCumulativeChart\(\),0\)/.test(ss)
      && /setTimeout\(\(\)=>loadDaily1Shadow\(false\),80\)/.test(ss)
-     && /setTimeout\(\(\)=>active\.forEach\(x=>loadStrategyScorecard\(x\)\),180\)/.test(ss));
+     && /setTimeout\(\(\)=>loadShadowRankings\(false\),120\)/.test(ss)
+     && /setTimeout\(\(\)=>active\.forEach\(x=>loadStrategyScorecard\(x\)\),220\)/.test(ss));
   ok('단타 오늘 결과는 클라이언트 60초 캐시와 중복요청 합치기를 쓴다',
      /const DAILY_RESULTS_TTL_MS=60000;/.test(scl)
      && /DAILY_RESULTS_PROMISE/.test(ld)
@@ -12082,6 +12083,39 @@ console.log('\n[REAL ESTATE · CLAUDE] 엔진 값 시험 · 화면 연결 · 월
      &&S.kbMarket&&S.kbMarket.daejeon&&S.unsold&&S.unsold.daejeon&&S.permits&&S.permits.daejeon);
   ok('원자료: 대전 5구·세종 매매·전세지수 · 전세가율 · 거래량 · 지가 · 금리 · 물가',
      E2.UNIVERSE.every(r=>S.sale[r]&&S.jeonse[r]&&S.jratio[r]&&S.volume[r])&&S.land&&S.land.daejeon&&['baseRate','depositRate','cpi'].every(k=>S.macro[k]));
+}
+
+/* ════ 단타 오늘 KST 날짜 통일 + 자동개선 현황 ════ */
+console.log('\n[SCALPING TODAY KST/AUTO] KST 전일·당일 · 전략분석 자동개선 현황');
+{
+  const sc=fs.readFileSync(__d+'/scalping.html','utf8'),api=fs.readFileSync(__d+'/functions/api/scalping-daily-results.js','utf8');
+  ok('단타 오늘 탭에 4전략 전략분석 자동개선 현황과 수동 갱신·상세이동이 있다',
+     /id="daily_auto_improve"/.test(sc)&&/function renderDailyAutoImprove\(\)/.test(sc)
+     &&/function refreshDailyAutoImprove\(\)/.test(sc)&&/loadShadowRankings\(false\)/.test(sc)
+     &&/활성 후보 1위가 7개 서로 다른 연구세션 연속 1위/.test(sc)
+     &&/후보 풀/.test(sc)&&/최근 변경/.test(sc));
+  ok('오늘 결과는 네 전략 모두 KST 전일·당일 달력 날짜로 정렬하고 SOXL 미국 거래일은 +1일 변환',
+     /function kstSessionDate\(strategy,date\)/.test(api)
+     &&/strategy==="soxl"&&d\?shiftIso\(d,1\):d/.test(api)
+     &&/function pairKst\(name,label,result,kstDate,krStatuses=null\)/.test(api)
+     &&/marketTime:"KST"/.test(api)&&/dateRule:"kst-calendar"/.test(api)
+     &&/pairKst\("opening","시초가"/.test(api)&&/pairKst\("daytrading","데이트레이딩"/.test(api)
+     &&/pairKst\("crypto","비트코인"/.test(api)&&/pairKst\("soxl","SOXL"/.test(api)
+     &&!/pair\("soxl","SOXL","ET"/.test(api));
+  const cp=require('child_process'),u=require('url').pathToFileURL(__d+'/functions/api/scalping-daily-results.js').href;
+  const vt=cp.spawnSync(process.execPath,['--input-type=module','-e',
+    'import {kstSessionDate,pairKst} from '+JSON.stringify(u)+';'+
+    'const so=pairKst("soxl","SOXL",{sessions:[{date:"2026-10-06",returnPct:1,trades:1,wins:1,losses:0,noTrade:false,finalized:true}]},"2026-10-07");'+
+    'const cr=pairKst("crypto","비트코인",{sessions:[{date:"2026-10-06",returnPct:0,trades:0,noTrade:true,finalized:true}]},"2026-10-07");'+
+    'console.log(JSON.stringify({s:kstSessionDate("soxl","2026-10-06"),k:kstSessionDate("crypto","2026-10-06"),so,cr}))'
+  ],{encoding:'utf8'});
+  let v=null;try{v=JSON.parse((vt.stdout||'').trim());}catch(e){}
+  ok('KST 날짜 값 시험 — SOXL 2026-10-06 미국 세션→2026-10-07 KST, BTC는 그대로, 미확정 당일은 대기',
+     vt.status===0&&v&&v.s==='2026-10-07'&&v.k==='2026-10-06'
+     &&v.so.current&&v.so.current.date==='2026-10-07'&&v.so.current.marketDate==='2026-10-06'
+     &&v.cr.current&&v.cr.current.date==='2026-10-07'&&v.cr.current.pending===true
+     &&v.cr.previous&&v.cr.previous.date==='2026-10-06',
+     (vt.stderr||'')+(vt.stdout||''));
 }
 
 Promise.all(PENDING).then(()=>{
