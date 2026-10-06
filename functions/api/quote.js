@@ -113,8 +113,8 @@ export async function onRequestGet({ request, env }) {
 
   // 1) Yahoo chart API. range=max는 yahooDaily가 period1=0으로 우회한다.
   //    (예전엔 V7 download를 먼저 탔는데 야후가 폐기해 매 호출마다 401 두 번을 낭비했다.)
-  if (!series.length) for (const host of ["query1", "query2", "query1-fc"]) {
-    const realHost = host === "query1-fc" ? "query1" : host;
+  if (!series.length) for (const host of ["query1", "query2"]) {
+    const realHost = host;
     try {
       const y = await yahooDaily(realHost, symbol, range, dbg, period1, period2, wantDiv);
       if (y && y.series.length) {
