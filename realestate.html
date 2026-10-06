@@ -25,7 +25,7 @@ import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signO
 import { initializeFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
 const app=initializeApp({apiKey:"AIzaSyBzBe9pAttnbDgTlNThWZzNqtAAKxX7Ksw",authDomain:"jk-invest.firebaseapp.com",projectId:"jk-invest",
   storageBucket:"jk-invest.firebasestorage.app",messagingSenderId:"1024066323251",appId:"1:1024066323251:web:23d557527866205f01f446"});
-const auth=getAuth(app),db=initializeFirestore(app,{experimentalForceLongPolling:true});
+const auth=getAuth(app),db=initializeFirestore(app,{experimentalAutoDetectLongPolling:true});
 JKAccess.guard({auth,db,doc,getDoc,setDoc,onAuthStateChanged,signInWithPopup,GoogleAuthProvider,signOut},{});
 </script>
 </head>

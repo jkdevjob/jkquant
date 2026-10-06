@@ -42,7 +42,7 @@ table.doc td{padding:6px 6px}
   import { initializeFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
   const app = initializeApp({ apiKey: "AIzaSyBzBe9pAttnbDgTlNThWZzNqtAAKxX7Ksw", authDomain: "jk-invest.firebaseapp.com", projectId: "jk-invest",
     storageBucket: "jk-invest.firebasestorage.app", messagingSenderId: "1024066323251", appId: "1:1024066323251:web:23d557527866205f01f446" });
-  window.fb = { auth:getAuth(app), db:initializeFirestore(app,{experimentalForceLongPolling:true}), provider:new GoogleAuthProvider(), signInWithPopup, onAuthStateChanged, signOut, doc, getDoc, setDoc };
+  window.fb = { auth:getAuth(app), db:initializeFirestore(app,{experimentalAutoDetectLongPolling:true}), provider:new GoogleAuthProvider(), signInWithPopup, onAuthStateChanged, signOut, doc, getDoc, setDoc };
   window.dispatchEvent(new Event('fb-ready'));
 </script>
 </head>
@@ -55,7 +55,7 @@ table.doc td{padding:6px 6px}
   <div class="gnote"><a href="/" style="color:var(--faint)">← 운영 화면으로</a></div>
 </div></div>
 <header><div class="wrap"><div class="htop">
-  <div><div class="kicker">Claude Scalping</div><h1>JK <span class="v">퀀트</span> 단타 <span class="ver" id="clVer">v2.12.1</span></h1></div>
+  <div><div class="kicker">Claude Scalping</div><h1>JK <span class="v">퀀트</span> 단타 <span class="ver" id="clVer">v2.12.2</span></h1></div>
   <div class="hright">
     <div class="userbadge" id="userbadge"></div>
   <div class="jkmenu" id="jkmenuWrap">
