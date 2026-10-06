@@ -2080,12 +2080,12 @@ console.log('[40] 모의 일괄 적용 — 원금과 1회 적립액을 따로');
   ok('비우면 그대로 둔다', /if\(!raw\) return null;/.test(rd));
 
   const opFast=extractFn(idx,'async function openPaper()');
-  const rvFast=extractFn(idx,'async function refreshPaperView(force=false)');
+  const rvFast=extractFn(idx,'async function refreshPaperView(force=false, onRows=null)');
   ok('모의 성과 평소 열기는 전 전략 재계산을 기다리지 않고 저장 캐시/장부를 먼저 표시한다',
      /paperViewCacheRead\(\)/.test(opFast)
      && /cache&&cache\.rows/.test(opFast)
      && /paperSummary\(\)/.test(opFast)
-     && /setTimeout\(\(\)=>\{ void refreshPaperView\(false\)/.test(opFast));
+     && /setTimeout\(\(\)=>\{ refreshPaperView\(false,redraw\)/.test(opFast));
   ok('모의 성과 전 전략 재계산은 전체 적용·오늘 갱신·시작일 자동복구에서만 강제한다',
      /if\(forceRecalc\|\|repairedStarts>0\)\{[\s\S]*rows=await refreshPaperView\(true\)/.test(opFast)
      && /await openPaper\(true\)/.test(ap)
@@ -3360,7 +3360,7 @@ console.log('\n[61] 모의 성과 — 원화로 받아 세션 통화로 환산')
      && !/max-width:160px/.test(idx));
   {
     const op=extractFn(idx,'async function openPaper()');
-    const rv=extractFn(idx,'async function refreshPaperView(force=false)');
+    const rv=extractFn(idx,'async function refreshPaperView(force=false, onRows=null)');
     const pr=extractFn(idx,'function paperWonRate(r)');
     ok('모의 성과 목록은 현재 환율로 평가·인출을 표시하고 투입은 입력 원화를 유지한다',
        /await loadFX\(\)/.test(rv) && /liveFX/.test(pr) && !/fxAt\(/.test(pr)
@@ -10440,7 +10440,7 @@ console.log('\n[134] 모의 시작일 — 설정 변경으로 오늘 리셋 금�
      && /x\.simStart=common/.test(repair));
 
   const op=extractFn(idx,'async function openPaper()');
-  const rv=extractFn(idx,'async function refreshPaperView(force=false)');
+  const rv=extractFn(idx,'async function refreshPaperView(force=false, onRows=null)');
   ok('G 성과창은 표 계산 전에 구버전/공통 시작일 복구를 끝내고 불일치가 있으면 즉시 재계산한다',
      op.indexOf('await paperRepairLegacyStarts()')>=0
      && op.indexOf('await paperRepairCommonStarts()')>op.indexOf('await paperRepairLegacyStarts()')

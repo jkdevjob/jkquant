@@ -190,7 +190,7 @@ await t('P3 강제 갱신(전체 적용·오늘 갱신)은 이미 도는 갱신 
   let fills=0; const ctx={_paperViewRefreshPromise:null,$:()=>null,
     paperRepairCommonStarts:async()=>0,paperViewCacheRead:()=>null,paperViewCacheFresh:()=>false,loadFX:async()=>{},
     paperFillAll:async()=>{ const n=++fills; await tick(30); return [{n}]; },paperViewCacheWrite:()=>{},pushRemoteNow:async()=>true,refreshAll:()=>{}};
-  vm.createContext(ctx); vm.runInContext(fn('async function refreshPaperView(force=false)'),ctx);
+  vm.createContext(ctx); vm.runInContext(fn('async function refreshPaperView(force=false, onRows=null)'),ctx);
   const p1=ctx.refreshPaperView(false); await tick(5); const p2=ctx.refreshPaperView(true);
   const [r1,r2]=await Promise.all([p1,p2]);
   assert.equal(fills,2,'채우기 횟수'); assert.equal(r1[0].n,1); assert.equal(r2[0].n,2,'강제 갱신은 새로 계산한 결과');
@@ -326,6 +326,55 @@ await t('D1 원장 문서 크기: 80% 넘으면 미리 알림 · 저장 실패�
   assert(/기록크기/.test(fn('function authDiag()')),'진단 정보에 크기');
 });
 
+await t('P8 모의 표는 계산이 끝나면 바로 다시 그린다 — 클라우드 저장이 안 끝나도 · 재계산이 실패하면 "다시 계산하는 중"을 실패 안내로 바꾼다',async()=>{
+  // 저장이 끝나지 않는(느린 iOS long-polling 흉내) 상황에서도 onRows 는 계산 결과로 바로 불린다
+  let saveDone=false, got=null, order=[];
+  const ctx={_paperViewRefreshPromise:null,$:()=>null,paperRepairCommonStarts:async()=>0,paperViewCacheRead:()=>null,paperViewCacheFresh:()=>false,
+    loadFX:async()=>{},paperFillAll:async()=>[{id:'a'}],paperViewCacheWrite:()=>order.push('cache'),
+    pushRemoteNow:()=>new Promise(r=>setTimeout(()=>{ saveDone=true; order.push('saved'); r(true); },400)),refreshAll:()=>{}};
+  vm.createContext(ctx); vm.runInContext(fn('async function refreshPaperView(force=false, onRows=null)'),ctx);
+  const p=ctx.refreshPaperView(false, rows=>{ got=rows; order.push('draw'); });
+  await tick(30);
+  assert.deepEqual(got,[{id:'a'}],'계산 결과로 바로 그린다'); assert.equal(saveDone,false,'저장은 아직');
+  await p; assert.deepEqual(order,['cache','draw','saved'],'캐시 → 그리기 → 저장 순서');
+  // openPaper 배선: 계산 직후 그리기(onRows) · 같이 기다린 경우 끝날 때 한 번 · 두 번 그리지 않음 · 실패면 안내
+  const op=fn('async function openPaper()');
+  assert(/const redraw=r=>\{ if\(drawn\|\|!r\)return; drawn=true;/.test(op) && /refreshPaperView\(false,redraw\)\.then\(redraw,e=>\{ console\.error\('paper refresh',e\); paperStaleFail\(\); \}\)/.test(op),'openPaper 배선');
+  const note={style:{},textContent:'🔄 지난번 계산 결과입니다 — 오늘 기준으로 다시 계산하는 중…'};
+  const fail=new Function('$',fn('function paperStaleFail()')+'\nreturn paperStaleFail;')(id=>id==='paper_stale_note'?note:null);
+  assert.equal(fail(),true); assert(/재계산에 실패했습니다/.test(note.textContent) && !/다시 계산하는 중/.test(note.textContent),note.textContent);
+  assert.equal(new Function('$',fn('function paperStaleFail()')+'\nreturn paperStaleFail;')(()=>null)(),false,'안내가 없으면 할 일 없음');
+});
+await t('P9 원화 평가와 달러 수익률이 어긋나 보이던 것 — 줄마다 원화 수익률(평가÷투입) · 표 위에 시작일 환율 → 지금 환율',async()=>{
+  const K=new Function(fn('function paperKrwRet(r)')+'\nreturn paperKrwRet;')();
+  const L=new Function(fn('function paperFxLine(rows)')+'\nreturn paperFxLine;')();
+  // 사용자 화면(2026-10-06): 원금 1억원 · 시작일 환율 1,508.45 → 달러 원금 66,293.03$ · 지금 1,338.47원
+  const inflow=1e8/1508.45, fxNow=1338.47;
+  const row=(won,extra)=>Object.assign({cur:'usd',price:164.27,inflow,inflowWon:1e8,wonRate:fxNow,total:won/fxNow},extra||{});
+  const a=row(110743733), b=row(95592291), c=row(106888195);
+  assert.equal(K(a).toFixed(1),'10.7'); assert.equal(K(b).toFixed(1),'-4.4'); assert.equal(K(c).toFixed(1),'6.9');
+  // 달러 기준 최종은 같은 줄에서 +24.8% · +7.7% — 차이는 정확히 환율 변화(×0.8873)
+  assert.equal(((a.total/inflow-1)*100).toFixed(1),'24.8'); assert.equal(((b.total/inflow-1)*100).toFixed(1),'7.7');
+  assert(Math.abs((1+K(a)/100)/(a.total/inflow)-fxNow/1508.45)<1e-12,'원화÷달러 = 환율 변화');
+  assert.equal(K({cur:'krw',price:1,inflow:1e8,inflowWon:1e8,wonRate:1,total:1.2e8}),null,'원화 종목은 최종과 같아 안 적는다');
+  assert.equal(K(row(1e8,{price:0})),null,'시세 없는 줄은 비운다'); assert.equal(K(row(1e8,{inflowWon:null})),null);
+  const line=L([a,b,c,{cur:'krw',price:1,inflow:1,inflowWon:1,wonRate:1}]);
+  assert(/시작일 환율 1,508원 → 지금 1,338원 \(−11\.3%\)/.test(line),line);
+  assert(/평가\(원\)<\/b>는 지금 환율로 바꾼 값, <b>최종·현재·연\(%\)<\/b>은 달러 기준/.test(line));
+  assert(/시작일 환율 1,450~1,508원\(세션마다 다름\) → 지금 1,338원/.test(L([a,Object.assign(row(1e8),{inflow:1e8/1450})])),'시작일이 다르면 범위');
+  assert.equal(L([{cur:'krw',price:1,inflow:1,inflowWon:1,wonRate:1}]),'','원화 종목뿐이면 안 적는다');
+  const op=fn('async function openPaper()');
+  assert(op.indexOf('h=paperFxLine(rows)+h;')>0 && op.indexOf('h=paperFxLine(rows)+h;')<op.indexOf('if(paperStaleNote) h=')
+     && /원화 \$\{paperKrwRet\(r\)>=0\?'\+':''\}\$\{paperKrwRet\(r\)\.toFixed\(1\)\}%/.test(op),'표 배선');
+});
+await t('P10 폰 폭: 첫 칸 윗줄(줄바꿈 없음)은 설정 2개까지 — 3개면 375px 폰에서 최종 칸이 잘렸다',async()=>{
+  const op=fn('async function openPaper()');
+  const m=op.match(/const _paperSplitAt=_paperCompact\?1:(\d+);/); assert(m,'split');
+  assert.equal(+m[1],2);
+  // 실제 무매 설정으로 윗줄 글자 수 — 'SOXL · 20분할 · 익절 자동' 까지만
+  const opts=['20분할','익절 자동','LOC 3줄','단리'], top=' · '+opts.slice(0,+m[1]).join(' · ');
+  assert.equal('SOXL'+top,'SOXL · 20분할 · 익절 자동');
+});
 clearTimeout(ALL_GUARD);
 console.log(results.join('\n'));
 console.log(failed?`\n${failed} FAIL`:'\nALL PASS');

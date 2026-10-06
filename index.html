@@ -550,7 +550,7 @@ document.documentElement.classList.add('had-user');</script>
 </div>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.110.11</span></h1></div>
+    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.110.12</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -1662,7 +1662,7 @@ if(/^\/paper\/?$/.test(location.pathname)){
   <footer>
     <strong>JK 퀀트</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.110.11</b> · 2026-10-06</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.110.12</b> · 2026-10-06</div>
   </footer>
 </div>
 
@@ -7981,6 +7981,27 @@ function paperInflowText(r){
     ? Math.round(+r.inflowWon||0).toLocaleString('ko-KR')+'원'
     : paperWon(r&&r.inflow,r&&r.wonRate);
 }
+/* 원화로 본 수익률 = 평가(원) ÷ 투입(원). 미국 종목은 평가가 지금 환율, 투입이 입력한 원화(시작일 환율로 환산해
+   전략에 넣은 돈)라 환율 변화가 들어간다. 최종·현재·연(%)은 전략 통화(달러) 기준이라 환율이 빠져 있다 —
+   같은 줄에서 '평가 9,559만원 < 투입 1억원' 인데 최종 +7.7% 로 보여 어긋나 보였다(실측 2026-10-06 · 환율 −11.3%).
+   원화 종목은 최종과 같은 값이라 null. */
+function paperKrwRet(r){
+  if(!r||r.cur==='krw'||!(+r.price>0)) return null;
+  const w=+r.wonRate, iw=+r.inflowWon, t=+r.total;
+  if(!(w>0&&iw>0&&Number.isFinite(t))) return null;
+  return (t*w/iw-1)*100;
+}
+/* 표 위 한 줄 — 시작일 환율(투입 원화 ÷ 투입 달러)과 지금 환율. 세션마다 시작일이 다르면 범위로 적는다. */
+function paperFxLine(rows){
+  const us=(rows||[]).filter(r=>r&&r.cur!=='krw'&&+r.price>0&&+r.inflow>0&&+r.inflowWon>0&&+r.wonRate>0);
+  if(!us.length) return '';
+  const f0=us.map(r=>(+r.inflowWon)/(+r.inflow)), lo=Math.min(...f0), hi=Math.max(...f0), now=+us[0].wonRate;
+  const won=v=>Math.round(v).toLocaleString('ko-KR');
+  const same=(hi/lo-1)<0.005, base=(lo+hi)/2, chg=(now/base-1)*100;
+  const head=same ? `시작일 환율 ${won(base)}원 → 지금 ${won(now)}원 (${chg>=0?'+':'−'}${Math.abs(chg).toFixed(1)}%)`
+                  : `시작일 환율 ${won(lo)}~${won(hi)}원(세션마다 다름) → 지금 ${won(now)}원`;
+  return `<p class="note" id="paper_fx_line" style="margin:2px 0 6px">💱 ${head} · <b>평가(원)</b>는 지금 환율로 바꾼 값, <b>최종·현재·연(%)</b>은 달러 기준입니다. 평가 밑 작은 글씨가 <b>원화로 본 수익률</b>(평가 ÷ 투입)입니다.</p>`;
+}
 function paperWonRate(r){
   if(!r||r.cur==='krw') return 1;
   return (typeof liveFX!=='undefined'&&liveFX)?liveFX:paperFxFallback();
@@ -8026,7 +8047,7 @@ function paperViewCacheLast(){
   const x=S&&S.paperViewCache;
   return (x&&+x.ver===PAPER_VIEW_CACHE_VER&&Array.isArray(x.rows)&&x.rows.length)?x:null;
 }
-async function refreshPaperView(force=false){
+async function refreshPaperView(force=false, onRows=null){
   /* 이미 도는 갱신이 있으면: 평소 열기는 그 결과를 같이 쓰면 되지만, 강제(전체 적용·오늘 갱신)는 안 된다 —
      그 갱신은 바뀌기 전 원장으로 계산한 것이다. 끝나기를 기다렸다가 지금 원장으로 다시 계산한다.
      (실측: 하루 첫 진입의 백그라운드 갱신 중에 전체 적용을 누르면 무매·VR 몇 줄이 옛 시작일 결과로 남았다) */
@@ -8048,6 +8069,10 @@ async function refreshPaperView(force=false){
       const rows=await paperFillAll();
       if(rows){
         paperViewCacheWrite(rows);
+        /* 표는 계산이 끝나면 바로 그린다. 클라우드 저장은 원장 문서 전체를 읽고 다시 쓰는 일이라
+           느린 폰·망(iOS 는 long-polling)에선 수 초가 더 걸린다 — 예전엔 그걸 다 기다린 뒤에야
+           '지난번 계산 결과 · 다시 계산하는 중' 을 걷었다. 저장은 아래에서 그대로 기다린다. */
+        if(onRows){ try{ onRows(rows); }catch(e){ console.error('paper onRows',e); } }
         await pushRemoteNow();
         try{refreshAll();}catch(e){}
       }
@@ -8091,6 +8116,13 @@ function paperSortTable(key,th){
   });
 }
 let paperStaleNote=false;
+/* 백그라운드 재계산이 실패했을 때 — '다시 계산하는 중' 이 영영 남지 않게 실패라고 바꿔 적는다 */
+function paperStaleFail(){
+  const n=$('paper_stale_note'); if(!n) return false;
+  n.style.color='var(--gold)';
+  n.textContent='⚠ 지난번 계산 결과입니다 — 오늘 기준 재계산에 실패했습니다. 새로고침하면 다시 시도합니다.';
+  return true;
+}
 async function openPaper(){
   const forceRecalc=arguments[0]===true,skipAutoRefresh=arguments[1]===true;
   paperStaleNote=false;
@@ -8119,8 +8151,12 @@ async function openPaper(){
     if(last){ rows=JSON.parse(JSON.stringify(last.rows)); paperStaleNote=true; }
     else rows=cache&&cache.rows ? JSON.parse(JSON.stringify(cache.rows)) : paperSummary();
     if(!skipAutoRefresh&&!paperViewCacheFresh(cache)){
-      /* 하루가 바뀐 첫 진입만 백그라운드 증분 갱신. 화면 표시를 막지 않는다. */
-      setTimeout(()=>{ void refreshPaperView(false).then(r=>{ if(r&&$('paperModal').classList.contains('on'))openPaper(false,true); }); },0);
+      /* 하루가 바뀐 첫 진입만 백그라운드 증분 갱신. 화면 표시를 막지 않는다.
+         계산이 끝나는 즉시(onRows) 다시 그린다 — 이미 돌던 갱신을 같이 기다리는 경우엔 onRows 가 안 불리므로
+         끝날 때 한 번 더 본다(두 번 그리지는 않는다). 실패하면 '다시 계산하는 중' 을 그대로 두지 않고 실패라고 적는다. */
+      let drawn=false;
+      const redraw=r=>{ if(drawn||!r)return; drawn=true; if($('paperModal').classList.contains('on'))openPaper(false,true); };
+      setTimeout(()=>{ refreshPaperView(false,redraw).then(redraw,e=>{ console.error('paper refresh',e); paperStaleFail(); }); },0);
     }
     /* 환율은 표 렌더를 막지 않고 뒤에서 갱신한다. */
     if(typeof loadFX==='function')setTimeout(()=>{void loadFX();},0);
@@ -8190,7 +8226,9 @@ async function openPaper(){
          ASAP부터는 캡처처럼 긴 설명 때문에 첫 칸이 넓어지므로 2줄로 강제 분리하고 행 패딩도 줄인다. */
       const _paperOpts=(r.opts||[]).map(x=>String(x));
       const _paperCompact=(r.tab==='asap'||r.tab==='plan');
-      const _paperSplitAt=_paperCompact?1:3;
+      /* 윗줄(줄바꿈 없음)은 설정 2개까지. 3개('SOXL · 20분할 · 익절 자동 · LOC 3줄')면 첫 칸이 174px 이 되어
+         폭 375px 폰에서 '최종' 칸이 19px 잘렸다(사용자 화면 · 2026-10-06). 나머지는 아랫줄로 간다. */
+      const _paperSplitAt=_paperCompact?1:2;
       const _paperOptsTop=_paperOpts.slice(0,_paperSplitAt);
       const _paperOptsRest=_paperOpts.slice(_paperSplitAt);
       const _paperOptTopText=_paperOptsTop.length?' · '+_paperOptsTop.join(' · '):'';
@@ -8198,7 +8236,7 @@ async function openPaper(){
       h+=`<tr class="${_paperCompact?'paper-row-compact':''}" data-name="${_sortName}" data-days="${days}" data-total="${_sortTotal}" data-ret="${_sortRet}" data-mdd="${_sortMdd}" data-mar="${_sortMar}" data-now="${_sortNow}" data-out="${_sortOut}" data-cagr="${_sortCagr}" data-inflow="${_sortInflow}"><td><b class="slink" onclick="gotoSess('${r.tab}','${r.id}')" title="${r.label} 분석으로 이동 — ${_nm}">${r.label}</b><span class="cw">${r.sym}${_paperOptTopText}</span>${_paperOptRestText}${outTag}</td>
         <td>${per}<span class="cw">${r.nTrade}거래</span></td>`
         + (ok
-          ? `<td>${paperWon(r.total,r.wonRate)}</td>
+          ? `<td>${paperWon(r.total,r.wonRate)}${Number.isFinite(paperKrwRet(r))?`<span class="cw" title="평가(원) ÷ 투입(원) — 지금 환율 기준">원화 ${paperKrwRet(r)>=0?'+':''}${paperKrwRet(r).toFixed(1)}%</span>`:''}</td>
              <td style="color:${up?'var(--buy)':'var(--sell)'};font-weight:700">${up?'+':''}${r.ret.toFixed(1)}%</td>`
              /* MDD는 종가 이력이 있어야 잰다 — 못 재면 0%처럼 보이지 않게 비운다 */
              + `<td style="color:${r.mdd?'var(--sell)':'var(--faint)'}" title="${r.mdd?r.mdd.nDay+'거래일을 하루하루 재봤습니다':'종가 이력이 모자라 못 쟀습니다'}">${r.mdd?'−'+r.mdd.pct.toFixed(1)+'%':'—'}</td>`
@@ -8214,6 +8252,7 @@ async function openPaper(){
         // 투입은 맨 오른쪽 — 눈이 먼저 가야 하는 건 성과(평가·수익·연)다
         + `<td style="color:var(--dim)">${paperInflowText(r)}</td></tr>`; });
     h+=`</tbody></table></div>`;
+    h=paperFxLine(rows)+h;
     if(paperStaleNote) h=`<p class="note" id="paper_stale_note" style="color:var(--vio)">🔄 지난번 계산 결과입니다 — 오늘 기준으로 다시 계산하는 중… (끝나면 자동으로 바뀝니다)</p>`+h;
     if(!cur && rows.some(r=>!(r.price>0)&&!r.pending)) h+=`<p class="note" style="margin-top:8px;color:var(--gold)">⚠ 시세를 못 받은 세션이 있습니다. 그 줄은 수익률을 비워 뒀습니다 — 새로고침하면 다시 받습니다.</p>`;
     h+=`<p class="note" style="margin-top:8px"><b style="color:var(--vio)">전략 이름</b>을 누르면 그 세션의 분석으로 갑니다. · <b>금액은 모두 원화 표시</b> · 평가·인출 = 현재 USD/KRW · 투입 = 입력한 원화(시작일 환율로 전략 계산) · 평가 = 보유 평가금 + 현금 + 계좌 밖으로 뺀 돈(출금·단리 인출) · 투입 = 밖에서 넣은 돈(원금·적립·입금) · <b>MDD</b> = 하루하루 <b>총자산 ÷ 그때까지 넣은 돈</b>의 고점 대비 최대 낙폭(적립금이 상승으로 잡히지 않게 투입으로 나눠 잽니다). · <b>MAR</b> = CAGR ÷ |MDD| (45일 이상, MDD&gt;0일 때 표시). <b>무한매수법은 LOC 추가 줄 수까지 세션 설정으로 구분 표시</b>합니다. 수수료는 전략별 재생 규약을 따르고 <b>양도세는 넣지 않았습니다</b>. 분배금은 <b>현금 수령·적립은 세전</b>, 장부에 적는 배당(재투자)은 세후로 셉니다.</p>`;
