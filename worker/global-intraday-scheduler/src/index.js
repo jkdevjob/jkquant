@@ -619,8 +619,11 @@ async function runCloseSummaries(env,now){
 async function run(env){
   if(!env.MONITOR_KEY)throw new Error("MONITOR_KEY secret missing");
   const now=Date.now();
-  const out=await Promise.allSettled([runBtc(env,now),runSoxl(env,now),runCloseSummaries(env,now)]);
-  out.forEach((x,i)=>{if(x.status==="rejected")console.error(JSON.stringify({type:"global_intraday_error",strategy:i===0?"crypto":i===1?"soxl":"close-summary",error:String(x.reason&&x.reason.message||x.reason)}));});
+  // 같은 분의 장부 갱신이 끝난 뒤 마감요약을 읽는다. 16:05 SOXL 요약이 16:04 장부를 읽는 경합을 막는다.
+  const live=await Promise.allSettled([runBtc(env,now),runSoxl(env,now)]);
+  live.forEach((x,i)=>{if(x.status==="rejected")console.error(JSON.stringify({type:"global_intraday_error",strategy:i===0?"crypto":"soxl",error:String(x.reason&&x.reason.message||x.reason)}));});
+  try{await runCloseSummaries(env,now);}
+  catch(e){console.error(JSON.stringify({type:"global_intraday_error",strategy:"close-summary",error:String(e.message||e)}));}
 }
 export {btcTrade,btcNoTradeDecision,soxlTrade,paperLedger,variantParams,isNyseSessionDate,hasSoxlSessionOpenBar,BTC_VARIANTS,SOXL_VARIANTS,BTC_OPEN_HM,BTC_LAST_SIGNAL_HM,BTC_LAST_ENTRY_HM,BTC_EXIT_TRACK_END_HM,BTC_STRATEGY_VERSION,SOXL_STRATEGY_VERSION,SOXL_LAST_SIGNAL_HM,SOXL_PAPER_TRACK_END_HM};
 
