@@ -8626,7 +8626,7 @@ console.log('\n[118] 제8차 감사 대응 — SOURCE GOLDEN / ENGINE PARITY');
     // 여기서는 가격 엔진 회귀가 동기 하네스라 전송계층을 억지로 동기화하지 않고 배선 계약만 본다.
     { const loader=extractFn(pl,'async function fetchPlanQuote(symbol)');
       P8('플랜 가격 — 실제 로더 fetchPlanQuote: div=1 · 시간상한 · planQuoteOf 정규화 배선',
-         /&range=max&div=1&_ts='\+Date\.now\(\)/.test(loader)
+         /&range=max&div=1&intraday=0'/.test(loader)&&!/_ts=/.test(loader)
          && /for\(const ms of \[7000,10000\]\)/.test(loader)
          && /Promise\.race\(\[p,lim\]\)/.test(loader)
          && /return liveQuotes\[sym\]=planQuoteOf\(sym,j\);/.test(loader),
@@ -8636,7 +8636,7 @@ console.log('\n[118] 제8차 감사 대응 — SOURCE GOLDEN / ENGINE PARITY');
        && (idx.match(/const MKT_CLOSE_MIN=[^\n]*/)||[1])[0]===(pl.match(/const MKT_CLOSE_MIN=[^\n]*/)||[2])[0]
        && (idx.match(/const SETTLE_LAG_MIN=[^\n]*/)||[1])[0]===(pl.match(/const SETTLE_LAG_MIN=[^\n]*/)||[2])[0]);
     ok('제8차 8-⑤ 플랜이 div=1 로 받아 정규화 함수를 거친다',
-       /&range=max&div=1&_ts='\+Date\.now\(\)/.test(extractFn(pl,'async function fetchPlanQuote(symbol)'))
+       /&range=max&div=1&intraday=0'/.test(extractFn(pl,'async function fetchPlanQuote(symbol)'))
        && /return liveQuotes\[sym\]=planQuoteOf\(sym,j\);/.test(pl) && !/j\.series\.map\(x=>\(\{date:x\.date,close:\+x\.close\}\)\)/.test(pl)); }
 
   /* ───────── 5. 표시 — 공식/변형 · CUSTOM · 자동주문 한계 (8-① · 8-⑥ · 8-⑧ · P2-11) ───────── */
@@ -9992,7 +9992,8 @@ console.log('\n[129] 자산플랜 현재가 — 캐시 우회 · 현재계좌 �
   const pl=fs.readFileSync(__d+'/plan.html','utf8');
   const fq=extractFn(pl,'async function fetchPlanQuote(symbol)');
   const pt=extractFn(pl,'function alphaPlanTotal()');
-  ok('현재가 — quote 요청은 매 새로고침마다 _ts + no-store/no-cache로 브라우저·CDN 캐시를 우회', /_ts='\+Date\.now\(\)/.test(fq) && /cache:'no-store'/.test(fq) && /'Cache-Control':'no-cache'/.test(fq));
+  ok('현재가 — 1분봉 없이(intraday=0) Pages 60초 캐시 재사용(캐시 우회·no-store 없음) · 요청마다 7·10초 상한 — check-login-quote-paper.cjs 와 같은 규칙',
+     /intraday=0'/.test(fq) && !/_ts=/.test(fq) && !/cache:'no-store'/.test(fq) && /for\(const ms of \[7000,10000\]\)/.test(fq) && /Promise\.race\(\[p,lim\]\)/.test(fq));
   ok('현재계좌 총자산 — liveQuotes.price 우선, 없을 때만 확정종가 fallback', /\+q\.price>0\?\+q\.price/.test(pt) && /q\.settled\?\+q\.settled\.close:0/.test(pt));
   ok('자산플랜 버전 — 개선 70/30 이후 버전 표기 (숫자는 올라가므로 x.y.z 형식만 본다)', /자산플랜 <span class="ver">v1\.(3[2-9]|[4-9]\d)\.\d+<\/span>/.test(pl));
 }
