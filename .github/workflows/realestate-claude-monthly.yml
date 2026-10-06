@@ -36,8 +36,10 @@ jobs:
       - name: 모의장부 덧붙이기
         run: node scripts/realestate_claude/paper.mjs
 
-      - name: 엔진 값 시험(실제 자료 포함) — 실패하면 커밋하지 않는다
-        run: node scripts/test_realestate_claude.cjs
+      - name: 엔진·수집기 값 시험(실제 자료 포함) — 실패하면 커밋하지 않는다
+        run: |
+          node scripts/test_realestate_claude.cjs
+          python scripts/realestate_claude/test_collect.py
 
       - name: 커밋
         shell: bash

@@ -72,6 +72,10 @@ RONE_TABLES = {
     "buyOutOther": {"id": "A_2024_00609", "name": "(월) 매입자거주지별 아파트매매거래현황 — 관할시도외(기타)", "unit": "호",
                     "codes": "deal", "param": "GRP_ID", "filter": {"CLS_ID": 500005, "ITM_ID": 100001}, "from": "200601", "regions": DJ_SJ},
     "land": {"id": "A_2024_00901", "name": "(월) 지역별 지가지수", "unit": "지수", "codes": "land", "from": "198701"},
+    # 월간 지가지수는 2005년부터라, 그 전(1994년 4분기~2004년)은 분기 자료를 분기말 달에 놓는다. 지난 자료라 한 번만 받는다.
+    "landQ": {"id": "A_2024_00901", "name": "(분기) 지역별 지가지수 — 2004년까지", "unit": "지수", "codes": "land",
+              "cycle": "QY", "from": "198701", "to": "200404", "static": True,
+              "regions": ["national", "daejeon", "dj_dong", "dj_jung", "dj_seo", "dj_yuseong", "dj_daedeok"]},
 }
 
 # ECOS — (통계표, 항목, 이름, 단위)
@@ -109,12 +113,23 @@ def get_json(url, tries=5):
     raise RuntimeError("요청 실패: %s (%s)" % (url[:120], last))
 
 
-def rone_call(stat, where, s, e, out, expect=None):
+def q_add(q, n):
+    """분기 시점 'YYYY0Q' 더하기."""
+    y, k = int(q[:4]), int(q[4:]) - 1 + n
+    return "%04d%02d" % (y + k // 4, k % 4 + 1)
+
+
+def q_to_month(q):
+    """'YYYY0Q' → 분기말 달 'YYYYMM'."""
+    return "%s%02d" % (q[:4], int(q[4:]) * 3)
+
+
+def rone_call(stat, where, s, e, out, expect=None, cycle="MM"):
     """[s, e] 구간 한 번 호출 → out 에 채우고 (받은 행 수, 구간 전체 행 수).
     where: 지역·항목 필터(dict) — 한 달에 한 행만 오도록 좁혀야 한다.
     expect: 받은 행의 지역 이름(거래표는 GRP_FULLNM, 그 밖은 CLS_FULLNM)이 이것과 같아야 한다.
             표마다 분류 번호가 달라 같은 번호가 다른 지역일 수 있다(전세가율 표는 대전 구가 한 칸씩 밀려 있다)."""
-    q = {"Type": "json", "STATBL_ID": stat, "DTACYCLE_CD": "MM",
+    q = {"Type": "json", "STATBL_ID": stat, "DTACYCLE_CD": cycle,
          "START_WRTTIME": s, "END_WRTTIME": e, "pIndex": 1, "pSize": 1000}
     q.update(where)
     if RONE_KEY:
@@ -129,6 +144,8 @@ def rone_call(stat, where, s, e, out, expect=None):
             if expect is not None and got != expect:
                 raise RuntimeError("R-ONE 지역 이름 불일치 %s %s: %r ≠ 기대 %r" % (stat, where, got, expect))
             m = r["WRTTIME_IDTFR_ID"]
+            if cycle == "QY":
+                m = q_to_month(m)
             if m in out and r.get("DTA_VAL") is not None:
                 raise RuntimeError("R-ONE 한 달에 두 행: %s %s %s — 필터를 좁혀야 한다" % (stat, where, m))
             if r.get("DTA_VAL") is not None:
@@ -152,6 +169,21 @@ def rone_rows(stat, where, start, end, expect=None):
         e = min(ym_add(s, 4), end)
         rone_call(stat, where, s, e, out, expect)
         s = ym_add(e, 1)
+    return out
+
+
+def rone_rows_q(stat, where, start, end, expect=None):
+    """분기 자료 [start, end] (시점 'YYYY0Q'). 첫 호출 뒤 5분기씩 이어 받는다. 결과 키는 분기말 달."""
+    out = {}
+    got, total = rone_call(stat, where, start, end, out, expect, "QY")
+    if not out or got >= total:
+        return out
+    last = max(out)
+    s = q_add("%s%02d" % (last[:4], int(last[4:]) // 3), 1)
+    while s <= end:
+        e = min(q_add(s, 4), end)
+        rone_call(stat, where, s, e, out, expect, "QY")
+        s = q_add(e, 1)
     return out
 
 
@@ -255,7 +287,13 @@ def main():
             where = dict(tinfo.get("filter") or {})
             where[tinfo.get("param", "CLS_ID")] = code
             want = REGIONS[rkey][3]
-            tasks.append((name, bucket, rkey, (lambda s, e, _id=tinfo["id"], _w=where, _f=tinfo["from"], _x=want: rone_rows(_id, _w, s or _f, e, _x))))
+            if tinfo.get("static") and bucket.get(rkey) and not a.full:
+                continue  # 지난 자료 — 한 번 받았으면 다시 받지 않는다
+            if tinfo.get("cycle") == "QY":
+                fr = (lambda s, e, _id=tinfo["id"], _w=where, _f=tinfo["from"], _t=tinfo["to"], _x=want: rone_rows_q(_id, _w, _f, _t, _x))
+            else:
+                fr = (lambda s, e, _id=tinfo["id"], _w=where, _f=tinfo["from"], _x=want: rone_rows(_id, _w, s or _f, e, _x))
+            tasks.append((name, bucket, rkey, fr))
     macro = series.setdefault("macro", {})
     for mkey, (stat, item, _, _) in ECOS_SERIES.items():
         name = "macro:" + mkey

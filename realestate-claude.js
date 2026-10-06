@@ -22,7 +22,8 @@ const CSS=`
 .rec .card h4{margin:12px 0 6px;font-size:12.5px;color:var(--dim)}
 .rec .big{font-size:22px;font-weight:900;line-height:1.25}
 .rec .kv{display:flex;justify-content:space-between;gap:10px;font-size:12px;padding:3px 0;border-bottom:1px dashed rgba(255,255,255,.05)}
-.rec .kv b{font-variant-numeric:tabular-nums}
+.rec .kv span{flex:0 0 auto;white-space:nowrap;color:var(--dim)}
+.rec .kv b{font-variant-numeric:tabular-nums;min-width:0}
 .rec .note{font-size:11.5px;color:var(--faint);line-height:1.6}
 .rec .lead{font-size:12.5px;color:var(--dim);line-height:1.65;margin:0 0 8px}
 .rec .up{color:var(--green)} .rec .dn{color:var(--red)} .rec .gd{color:var(--gold)}
@@ -67,9 +68,10 @@ function chart(id,labels,datasets,o){
       elements:{point:{radius:0,hitRadius:6},line:{borderWidth:1.6}},
       plugins:{legend:{labels:{color:'#9aa6c9',boxWidth:10,font:{size:10.5}}},
         tooltip:{backgroundColor:'#1c2238',borderColor:'#2e3754',borderWidth:1,titleColor:'#9aa6c9',bodyColor:'#e8ecf7',
-          callbacks:{label:c=>' '+c.dataset.label+': '+(c.parsed.y==null?'–':fy(c.parsed.y))}}},
+          callbacks:{label:c=>' '+c.dataset.label+': '+(c.parsed.y==null?'–':(c.dataset.yAxisID==='y2'&&o.y2?o.y2(c.parsed.y):fy(c.parsed.y)))}}},
       scales:{x:{ticks:{color:'#6f7ba0',maxTicksLimit:9,font:{size:10}},grid:{color:'#1e2540'}},
-        y:{type:o.log?'logarithmic':'linear',ticks:{color:'#6f7ba0',font:{size:10},callback:v=>fy(v)},grid:{color:'#1e2540'}}}}});
+        y:{type:o.log?'logarithmic':'linear',ticks:{color:'#6f7ba0',font:{size:10},callback:v=>fy(v)},grid:{color:'#1e2540'}},
+        ...(o.y2?{y2:{position:'right',ticks:{color:'#c9a24a',font:{size:10},callback:v=>o.y2(v)},grid:{drawOnChartArea:false}}}:{})}}});
 }
 function months(k0,k1){ const a=[]; for(let k=k0;k<=k1;k++) a.push(E.kym(k)); return a; }
 function lineOf(s,k0,k1,f){ const a=[]; for(let k=k0;k<=k1;k++){ const v=E.at(s,k); a.push(v==null?null:(f?f(v,k):v)); } return a; }
@@ -100,16 +102,28 @@ function findings(){
     if(!f.buckets.length) continue; const lo=f.buckets[0],hi=f.buckets[2];
     if(lo.avg==null||hi.avg==null) continue;
     const diff=hi.avg-lo.avg; if(Math.abs(diff)<0.015) continue;
-    out.push({w:Math.abs(diff),html:'<b>'+esc(f.label)+'</b>이(가) 높을 때 이후 12개월 평균 <b class="'+cls(hi.avg)+'">'+pct(hi.avg)+'</b>, 낮을 때 <b class="'+cls(lo.avg)+'">'+pct(lo.avg)+'</b> (오른 비율 '+pct0(hi.hit,0)+' vs '+pct0(lo.hit,0)+' · '+f.from+'~'+f.to+')'});
+    out.push({w:Math.abs(diff),html:'<b>'+esc(f.label)+'</b> — '+esc(f.hi)+'(상위 1/3)일 때 이후 12개월 평균 <b class="'+cls(hi.avg)+'">'+pct(hi.avg)+'</b>(오른 비율 '+pct0(hi.hit,0)+'), '
+      +esc(f.lo)+'(하위 1/3)일 때 <b class="'+cls(lo.avg)+'">'+pct(lo.avg)+'</b>('+pct0(lo.hit,0)+') · '+f.from+'~'+f.to});
   }
   out.sort((a,b)=>b.w-a.w);
+  const weak=fs.filter(f=>f.buckets.length&&f.rho!=null&&Math.abs(f.rho)<0.1).map(f=>f.label);
+  if(weak.length) out.push({w:0,html:'뚜렷한 관계가 <b>없던</b> 지표: '+weak.map(esc).join(' · ')+' (순위상관 0.1 미만)'});
   const ll=E.leadLag(D,'sejong','daejeon',12);
   if(ll&&ll.best&&ll.best.r>-2){
     const b=ll.best,z=ll.lags.find(x=>x.lag===0);
     out.push({w:0,html:b.lag>0?'<b>세종이 대전보다 약 '+b.lag+'개월 앞서</b> 움직였다(월간 변동 상관 '+num(b.r,2)+', 같은 달 '+num(z&&z.r,2)+' · '+ll.from+'~'+ll.to+').'
-      :b.lag<0?'<b>대전이 세종보다 약 '+(-b.lag)+'개월 앞서</b> 움직였다(상관 '+num(b.r,2)+').':'세종과 대전은 <b>같은 달</b>에 가장 비슷하게 움직였다(상관 '+num(b.r,2)+').'});
+      :b.lag<0?'<b>대전이 세종보다 약 '+(-b.lag)+'개월 앞서</b> 움직였다(상관 '+num(b.r,2)+').':'세종과 대전은 <b>같은 달</b>에 가장 비슷하게 움직였다(상관 '+num(b.r,2)+') — 세종이 대전을 앞서지는 않았다.'});
   }
-  return out.slice(0,7).map(x=>x.html);
+  return out.slice(0,8).map(x=>x.html);
+}
+function pickWhy(p){
+  if(!p) return '';
+  if(p.stay) return '보유 중인 곳이 조건을 계속 만족해서 유지';
+  if(p.target) return '조건을 만족하는 지역 중 1위';
+  if(p.rule==='momRate'&&p.rate12!=null&&p.rate12>0) return '기준금리가 1년 전보다 '+p.rate12.toFixed(2)+'%p 올라 쉬는 구간(금리 필터)';
+  if(p.rule==='mom'||p.rule==='momRate') return '어느 지역도 '+p.k+'개월 상승률이 '+pct0(p.th,1)+'를 넘지 않음';
+  if(p.rule==='cash') return '학습 기간에 예금이 집보다 나았음';
+  return '조건을 만족하는 지역이 없음';
 }
 function cyclesSummary(r){
   const cs=E.cycles(D,r,st.opts).filter(c=>!c.open);
@@ -129,7 +143,7 @@ function renderSum(el){
     h+='<div class="big '+(p.target?'gd':'')+'">'+esc(L(p.target))+'</div>'
       +'<div class="note">'+esc(p.forMonth)+' 보유 구간부터 · '+esc(p.dataMonth)+' 지수까지 보고 결정</div>'
       +'<div class="kv"><span>적용 전략</span><b style="white-space:normal;text-align:right">'+esc(p.label)+'</b></div>'
-      +(p.stay?'<div class="kv"><span>사유</span><b>보유 중인 곳이 조건을 계속 만족</b></div>':'')
+      +'<div class="kv"><span>사유</span><b style="white-space:normal;text-align:right">'+esc(pickWhy(p))+'</b></div>'
       +topScores(p.scores,p.cand);
   } else h+='<div class="note">판단할 자료가 부족합니다.</div>';
   h+='</div>';
@@ -155,6 +169,12 @@ function renderSum(el){
       +'<div class="note">해마다 그해 1월에 볼 수 있던 자료로만 전략을 골라 다음 1년에 적용했습니다(미래 자료 미사용).</div>';
   }
   h+='</div></div>';
+  const ol=E.outlook(D);
+  h+='<div class="card"><h3>🗺️ 지역별 참고 전망 — 지금 지표가 과거에 어땠나 (실험적)</h3><p class="lead">'+esc(ol.dataMonth)+' 지표가 과거 어느 구간(하위·중위·상위 1/3)에 해당하는지 보고, 그 구간에서 <b>이후 12개월 평균</b>이 얼마였는지 지표별로 모아 단순 평균했습니다. 전략 판단과 별개의 참고값입니다.</p>'
+    +'<div class="tw"><table><tr><th>지역</th><th>참고 평균</th>'+ol.factors.map(f=>'<th class="l">'+esc(f.label)+'</th>').join('')+'</tr>'
+    +ol.rows.map(r=>'<tr><td>'+esc(r.label)+'</td><td class="'+cls(r.avg)+'"><b>'+pct(r.avg)+'</b></td>'+ol.factors.map(f=>{ const x=r.parts.find(q=>q.id===f.id);
+        return '<td class="l">'+(x?esc(fmtF(x.fmt,x.v))+' <span class="note">'+esc(x.word)+' → </span><span class="'+cls(x.avg)+'">'+pct(x.avg)+'</span>':'<span class="note">–</span>')+'</td>'; }).join('')+'</tr>').join('')
+    +'</table></div><div class="note">순위상관 0.2 이상인 지표만 썼습니다('+ol.factors.map(f=>esc(f.label)+' '+num(f.rho,2)).join(' · ')+'). 지표끼리 겹치는 정보가 있어 단순 평균은 과장될 수 있습니다. 매매수급지수는 대전 전체·세종만 있습니다.</div></div>';
   h+='<div class="card"><h3>🔎 30년 자료에서 찾은 패턴</h3><ul class="f">'+findings().map(x=>'<li>'+x+'</li>').join('')
     +'<li>대전 아파트는 상승기 '+csD.up+'번(평균 '+num(csD.upM,0)+'개월 · '+pct(csD.upC)+'), 하락기 '+csD.dn+'번(평균 '+num(csD.dnM,0)+'개월 · '+pct(csD.dnC)+')을 거쳤다(고점·저점에서 '+Math.round(E.DEFAULTS.zigzag*100)+'% 되돌림 기준).</li>'
     +'<li>세종은 상승기 '+csS.up+'번(평균 '+pct(csS.upC)+'), 하락기 '+csS.dn+'번(평균 '+pct(csS.dnC)+') — 대전보다 오르내림이 크다.</li>'
@@ -173,7 +193,7 @@ function renderHist(el){
   let h='<div class="card"><h3>📈 아파트 매매가격지수 (2026년 1월 = 100)</h3>'
     +'<div class="row"><button class="btn'+(st.real?'':' on')+'" data-real="0">명목</button><button class="btn'+(st.real?' on':'')+'" data-real="1">실질(물가 차감)</button></div>'
     +'<div class="cv"><canvas id="rc-sale"></canvas></div><div class="note">한국부동산원 월간 아파트 매매가격지수. 대전·5개 구는 2003년 11월, 세종은 2012년 11월부터. 실질은 소비자물가로 나눠 지금 물가 기준으로 바꾼 값.</div></div>';
-  h+='<div class="card"><h3>🗺️ 30년 지가지수 (1987~)</h3><div class="cv"><canvas id="rc-land"></canvas></div><div class="note">아파트 지수가 없는 2003년 이전 흐름은 땅값(한국부동산원 지역별 지가지수)으로 봅니다. 세종은 출범(2012) 이후.</div></div>';
+  h+='<div class="card"><h3>🗺️ 30년 땅값 — 지역별 지가지수 (1994년 말~)</h3><div class="cv"><canvas id="rc-land"></canvas></div><div class="note">아파트 지수가 없는 2003년 이전 흐름은 땅값(한국부동산원 지역별 지가지수)으로 봅니다. 2004년까지는 분기, 2005년부터 월간. 세종은 출범(2012) 이후.</div></div>';
   h+='<div class="card"><h3>🏦 금리와 대전 아파트 1년 상승률</h3><div class="cv"><canvas id="rc-rate"></canvas></div></div>';
   h+='<div class="card"><h3>🔁 전세가율 (매매가 대비 전세가)</h3><div class="cv"><canvas id="rc-jr"></canvas></div><div class="note">2012년부터 공표치, 그 전(점선)은 전세·매매 지수 비로 거꾸로 이은 추정.</div></div>';
   h+='<div class="card"><h3>📌 주요 사건과 그 뒤 12개월</h3><div class="tw"><table><tr><th>달</th><th class="l">사건</th><th>대전</th><th>세종</th></tr>'
@@ -186,9 +206,9 @@ function renderHist(el){
   const k0=E.ymk('2003-11'),lab=months(k0,t);
   chart('rc-sale',lab,regs.filter(r=>D.sale[r]).map(r=>{ const s=st.real?E.realSeries(D.sale[r],D.macro.cpi):D.sale[r];
     return ds(L(r),lineOf(s,k0,t),COLORS[r],{borderWidth:r==='daejeon'||r==='sejong'?2.4:1.3,borderDash:r==='national'||r==='seoul'?[4,3]:undefined}); }),{fmt:v=>num(v,0)});
-  const lk1=Math.max.apply(null,Object.values(D.land).map(s=>E.lastK(s))),lk0=E.ymk('1987-01'),llab=months(lk0,lk1);
-  chart('rc-land',llab,['daejeon','dj_dong','dj_jung','dj_seo','dj_yuseong','dj_daedeok','sejong','national'].filter(r=>D.land[r])
-    .map(r=>ds(L(r),lineOf(D.land[r],lk0,lk1),COLORS[r],{borderWidth:r==='daejeon'||r==='sejong'?2.4:1.2})),{fmt:v=>num(v,0),log:true});
+  const LR=['daejeon','dj_dong','dj_jung','dj_seo','dj_yuseong','dj_daedeok','sejong','national'].map(r=>[r,E.landLong(D,r)]).filter(x=>x[1]);
+  const lk1=Math.max.apply(null,LR.map(x=>E.lastK(x[1]))),lk0=E.firstK(E.landLong(D,'daejeon')),llab=months(lk0,lk1);
+  chart('rc-land',llab,LR.map(([r,s])=>ds(L(r),lineOf(s,lk0,lk1),COLORS[r],{borderWidth:r==='daejeon'||r==='sejong'?2.4:1.2})),{fmt:v=>num(v,0)});
   const rk0=E.ymk('2004-11'),rlab=months(rk0,t);
   chart('rc-rate',rlab,[
     ds('기준금리',lineOf(D.macro.baseRate,rk0,t),'#f5c451'),
@@ -227,7 +247,7 @@ function renderWhy(el){
   const vs=D.volume[r];
   if(vs){ const k0=E.firstK(vs)+5,k1=E.lastK(vs),lab=months(k0,k1);
     chart('rc-vol',lab,[ds('거래량(6개월 합)',lab.map((_,i)=>{ let t=0; for(let j=0;j<6;j++){ const x=E.at(vs,k0+i-j); if(x==null) return null; t+=x; } return t; }),COLORS[r]||'#8b8cf0'),
-      ds('외지인 비중 ×1만',lab.map((_,i)=>{ const x=E.outShare(D,r,k0+i); return x==null?null:x*10000; }),'#f5c451',{borderDash:[4,3]})],{fmt:v=>Math.round(v).toLocaleString('ko-KR')}); }
+      ds('외지인 매입 비중(오른쪽 축)',lab.map((_,i)=>{ const x=E.outShare(D,r,k0+i); return x==null?null:x*100; }),'#f5c451',{borderDash:[4,3],yAxisID:'y2'})],{fmt:v=>Math.round(v).toLocaleString('ko-KR'),y2:v=>num(v,0)+'%'}); }
 }
 
 function renderStrat(el){
@@ -238,11 +258,17 @@ function renderStrat(el){
     +'<span class="note">임대·거주가치</span><button class="btn'+(o.rent==='jeonse'?' on':'')+'" data-o="rent" data-v="jeonse">전세 환산 포함</button><button class="btn'+(o.rent==='none'?' on':'')+'" data-o="rent" data-v="none">가격만</button>'
     +'<span class="note" style="margin-left:6px">최소 보유</span>'+[12,24,36].map(v=>'<button class="btn'+(o.minHold===v?' on':'')+'" data-o="minHold" data-v="'+v+'">'+v+'개월</button>').join('')
     +'<span class="note" style="margin-left:6px">공표 시차</span>'+[1,2,3].map(v=>'<button class="btn'+(o.lag===v?' on':'')+'" data-o="lag" data-v="'+v+'">'+v+'개월</button>').join('')
+    +'<span class="note" style="margin-left:6px">낙폭 벌점</span>'+[0,.1,.25].map(v=>'<button class="btn'+(o.penalty===v?' on':'')+'" data-o="penalty" data-v="'+v+'">'+v+'</button>').join('')
     +'</div><div class="note">여기서 바꾼 값은 이 화면 계산에만 쓰입니다. 모의투자 장부는 기본값(전세 환산 포함 · 최소 보유 24개월 · 시차 2개월)으로 고정.</div></div>';
   h+='<div class="card"><h3>🧪 같은 기간 성과 ('+esc(WF.oosFrom)+' ~ '+esc(WF.lastRet)+')</h3><div class="tw"><table><tr><th>전략</th><th>기간</th><th>누적</th><th>연복리</th><th>최대낙폭</th><th>보유 비율</th><th>매매</th><th>수수료 합(3억 기준)</th><th>최종</th></tr>'
     +rows.map(x=>{ const s=x[1],r=x[2]==='meta'?m:WF.bench[x[2]];
       return '<tr><td>'+esc(x[0])+'</td><td>'+esc(r.rows[0].m)+'~</td><td class="'+cls(s.total)+'">'+pct(s.total)+'</td><td class="'+cls(s.cagr)+'"><b>'+pct(s.cagr)+'</b></td><td>'+pct0(s.mdd)+'</td><td>'+pct0(s.inMarket,0)+'</td><td>'+s.trades+'</td><td>'+wonM(s.fees)+'</td><td>'+won(s.end)+'</td></tr>'; }).join('')
     +'</table></div><div class="note">세종 보유는 세종 지수가 있는 달부터라 기간이 짧습니다. 마지막 보유분은 매도 비용 없이 평가.</div><div class="cv" style="margin-top:8px"><canvas id="rc-eq"></canvas></div></div>';
+  const sens=[0,.1,.25].map(pen=>{ const w=pen===o.penalty?WF:E.walkForward(D,Object.assign({},st.opts,{penalty:pen})); return [pen,w&&w.meta.stats]; });
+  h+='<div class="card"><h3>🎚️ 고르는 기준을 바꾸면 (민감도)</h3><p class="lead">해마다 전략을 고르는 점수 = 연복리 − <b>낙폭 벌점</b> × 최대낙폭. 기본 0.25는 결과를 보기 전에 정한 값입니다. 기준에 따라 결과가 크게 달라지면 규칙 선택이 아직 불안정하다는 뜻입니다.</p>'
+    +'<div class="tw"><table><tr><th>낙폭 벌점</th><th>연복리</th><th>최대낙폭</th><th>보유 비율</th><th>매매</th><th>3억 →</th></tr>'
+    +sens.map(([pen,s2])=>'<tr><td>'+pen+(pen===E.DEFAULTS.penalty?' (기본)':'')+'</td><td class="'+cls(s2&&s2.cagr)+'">'+pct(s2&&s2.cagr)+'</td><td>'+pct0(s2&&s2.mdd)+'</td><td>'+pct0(s2&&s2.inMarket,0)+'</td><td>'+(s2?s2.trades:'–')+'</td><td>'+won(s2&&s2.end)+'</td></tr>').join('')
+    +'</table></div></div>';
   h+='<div class="card"><h3>📅 해마다 고른 전략 (그해 1월에 볼 수 있던 자료로만)</h3><div class="tw"><table><tr><th>적용 연도</th><th>학습 기간</th><th class="l">고른 전략</th><th>학습 연복리</th><th>학습 최대낙폭</th></tr>'
     +WF.years.map(y=>{ const s=WF.sel[y],b=s.table.find(t=>t.id===s.id);
       return '<tr><td>'+y+'</td><td>'+s.trainFrom+'~'+s.trainTo+'</td><td class="l">'+esc(s.label)+'</td><td class="'+cls(b.cagr)+'">'+pct(b.cagr)+'</td><td>'+pct0(b.mdd)+'</td></tr>'; }).join('')
@@ -296,7 +322,7 @@ function renderData(el){
     +'<li><b>최소 보유 '+o.minHold+'개월</b>: 1주택 양도세 비과세 보유요건(2년)을 단순화. 그 전에는 팔지 않는다.</li>'
     +'<li><b>현금</b>: 예금은행 정기예금 금리(신규취급액)에서 이자소득세 '+pct0(o.depositTax)+'를 뺀 값.</li>'
     +'<li><b>임대·거주가치</b>: 집을 가지면 전세보증금만큼을 예금에 넣은 효과(전세가율 × 세후 예금금리)를 얻는다고 본다. 집 없이 현금을 들면 그만큼 주거비를 낸다 — 양쪽 주거비 차이를 같게 맞추는 방법.</li>'
-    +'<li><b>전략 고르기</b>: 해마다 1월, 그때까지 공표된 자료만으로 후보 '+E.candidates().length+'개를 처음부터 다시 돌려 ‘연복리 − '+o.penalty+'×최대낙폭’ 1위를 그해에 쓴다.</li>'
+    +'<li><b>전략 고르기</b>: 해마다 1월, 그때까지 공표된 자료만으로 후보 '+E.candidates().length+'개(현금 유지 · 대전 보유 포함)를 처음부터 다시 돌려 ‘연복리 − '+o.penalty+'×최대낙폭’ 1위를 그해에 쓴다. 학습 기간 보유 비율이 '+pct0(o.minInMarket,0)+' 미만인 규칙은 사실상 현금이라 뺀다.</li>'
     +'<li><b>투자 단위</b>: 지역 지수를 그대로 따라가는 집 한 채(대출 없음). 실제 단지 수익은 지수와 다를 수 있다.</li></ul></div>';
   h+='<div class="card"><h3>🚧 아직 못 넣은 것 · 다음 단계</h3><ul class="f">'
     +'<li>아파트 가격지수는 한국부동산원 기준 2003년 11월부터라, 그 전 15년은 지가지수로만 봅니다. KB 시계열(1986~)을 받으면 아파트로 30년을 채울 수 있습니다.</li>'

@@ -74,7 +74,7 @@ function sumWin(s,k,n){ let t=0; for(let j=k-n+1;j<=k;j++){ const x=at(s,j); if(
 function prepare(doc){
   const S=(doc&&doc.series)||{};
   const D={doc:doc||{},regions:(doc&&doc.regions)||{},macro:{}};
-  for(const t of ['sale','jeonse','jratio','avgPrice','demand','volume','buyOutSeoul','buyOutOther','land']){
+  for(const t of ['sale','jeonse','jratio','avgPrice','demand','volume','buyOutSeoul','buyOutOther','land','landQ']){
     D[t]={}; for(const r in (S[t]||{})){ const x=ser(S[t][r]); if(x) D[t][r]=x; }
   }
   for(const m in (S.macro||{})){ const x=ser(S.macro[m]); if(x) D.macro[m]=x; }
@@ -109,6 +109,14 @@ function features(D,r,t){
     jmom12:chg(D.jeonse[r],t,12),jgap12:jgap(D,r,t,12),jr:jr?jr.v:null,jrEst:jr?jr.est:null,
     dd:drawdown(D,r,t),rate12:rateChange(D,t,12),volG:volGrowth(D,r,t),out:outShare(D,r,t),
     demand:at(D.demand[r],t)};
+}
+
+/* 지가 긴 시계열: 2005년 전은 분기말 달의 분기 지수, 그 뒤는 월간 지수(같은 기준이라 그대로 잇는다) */
+function landLong(D,r){
+  const m=D.land[r],q=D.landQ[r]; if(!m&&!q) return null; if(!q) return m; if(!m) return q;
+  const k0=Math.min(q.k0,m.k0),k1=Math.max(lastK(q),lastK(m)),v=[];
+  for(let k=k0;k<=k1;k++){ const a=at(m,k); v.push(a!=null?a:at(q,k)); }
+  return {k0,v};
 }
 
 /* ── 실질(물가 차감) 지수 ── */
@@ -165,15 +173,15 @@ function ranks(a){ const idx=a.map((v,i)=>[v,i]).sort((p,q)=>p[0]-q[0]),r=new Ar
   for(let i=0;i<idx.length;){ let j=i; while(j+1<idx.length&&idx[j+1][0]===idx[i][0]) j++; const rk=(i+j)/2+1; for(let t=i;t<=j;t++) r[idx[t][1]]=rk; i=j+1; } return r; }
 function quantile(sorted,q){ if(!sorted.length) return null; const p=(sorted.length-1)*q,lo=Math.floor(p),hi=Math.ceil(p); return sorted[lo]+(sorted[hi]-sorted[lo])*(p-lo); }
 const FACTORS=[
-  {id:'mom12',label:'최근 12개월 상승률',fmt:'pct'},
-  {id:'mom3',label:'최근 3개월 상승률',fmt:'pct'},
-  {id:'jgap12',label:'전세 상승률 − 매매 상승률(12개월)',fmt:'pp'},
-  {id:'jr',label:'전세가율',fmt:'num'},
-  {id:'rate12',label:'기준금리 1년 변화',fmt:'pp1'},
-  {id:'dd',label:'고점 대비 하락폭',fmt:'pct'},
-  {id:'volG',label:'거래량 증가율(최근 6개월 vs 1년 전)',fmt:'pct'},
-  {id:'out',label:'외지인 매입 비중(최근 6개월)',fmt:'pct'},
-  {id:'demand',label:'매매수급지수(100=균형)',fmt:'num'}
+  {id:'mom12',label:'최근 12개월 상승률',fmt:'pct',hi:'많이 오름',lo:'내림'},
+  {id:'mom3',label:'최근 3개월 상승률',fmt:'pct',hi:'오르는 중',lo:'내리는 중'},
+  {id:'jgap12',label:'전세 상승률 − 매매 상승률(12개월)',fmt:'pp',hi:'전세가 더 오름',lo:'매매가 더 오름'},
+  {id:'jr',label:'전세가율',fmt:'num',hi:'전세가율 높음',lo:'전세가율 낮음'},
+  {id:'rate12',label:'기준금리 1년 변화',fmt:'pp1',hi:'금리 오름',lo:'금리 내림'},
+  {id:'dd',label:'고점 대비 위치(0=고점)',fmt:'pct',hi:'고점 근처',lo:'고점보다 많이 빠짐'},
+  {id:'volG',label:'거래량 증가율(최근 6개월 vs 1년 전)',fmt:'pct',hi:'거래 늘어남',lo:'거래 줄어듦'},
+  {id:'out',label:'외지인 매입 비중(최근 6개월)',fmt:'pct',hi:'외지인 많음',lo:'외지인 적음'},
+  {id:'demand',label:'매매수급지수(100=균형)',fmt:'num',hi:'매수 우위',lo:'매도 우위'}
 ];
 function factorStudy(D,o){
   o=Object.assign({h:12,regions:UNIVERSE.concat(['daejeon'])},o||{});
@@ -181,13 +189,13 @@ function factorStudy(D,o){
     const obs=[];
     for(const r of o.regions){ const s=D.sale[r]; if(!s) continue; const k0=firstK(s),kN=lastK(s);
       for(let t=k0;t+o.h<=kN;t++){ const f=features(D,r,t)[F.id],y=chg(s,t+o.h,o.h); if(f!=null&&y!=null) obs.push({r,t,f,y}); } }
-    if(obs.length<30) return {id:F.id,label:F.label,fmt:F.fmt,n:obs.length,buckets:[],rho:null};
+    if(obs.length<30) return {id:F.id,label:F.label,fmt:F.fmt,hi:F.hi,lo:F.lo,n:obs.length,buckets:[],rho:null};
     const fs=obs.map(x=>x.f).sort((a,b)=>a-b),q1=quantile(fs,1/3),q2=quantile(fs,2/3);
     const B=[{name:'낮음',cond:x=>x.f<=q1},{name:'중간',cond:x=>x.f>q1&&x.f<=q2},{name:'높음',cond:x=>x.f>q2}].map(b=>{
       const ys=obs.filter(b.cond).map(x=>x.y); return {name:b.name,n:ys.length,avg:mean(ys),hit:ys.length?ys.filter(y=>y>0).length/ys.length:null}; });
     const rho=corr(ranks(obs.map(x=>x.f)),ranks(obs.map(x=>x.y)));
     const span=[Math.min.apply(null,obs.map(x=>x.t)),Math.max.apply(null,obs.map(x=>x.t))];
-    return {id:F.id,label:F.label,fmt:F.fmt,n:obs.length,q1,q2,buckets:B,rho,from:kym(span[0]),to:kym(span[1])};
+    return {id:F.id,label:F.label,fmt:F.fmt,hi:F.hi,lo:F.lo,n:obs.length,q1,q2,buckets:B,rho,from:kym(span[0]),to:kym(span[1])};
   });
 }
 /* 선후행: corr(a의 k월 수익, b의 k+lag월 수익). lag>0 이면 a 가 앞선다. */
@@ -308,6 +316,13 @@ function dataStart(D,o){
   for(let t=k0;t<=D.lastK;t++){ if(DJ.filter(r=>chg(D.sale[r],t,12)!=null).length>=3) return t; }
   return null;
 }
+/* 학습 표에서 1위 고르기. 학습 기간에 거의 사지 않은 규칙은 '현금' 후보와 같은 것이라 뺀다
+   (낙폭이 0 에 가까워 점수가 부풀려진다). 동점이면 앞 후보(현금이 맨 앞). */
+function pickBest(table,o){
+  o=Object.assign({},DEFAULTS,o||{});
+  const elig=table.filter(t=>t.id==='cash'||t.inMarket>=o.minInMarket);
+  return elig.reduce((a,b)=>(b.score>a.score+1e-12?b:a));
+}
 function walkForward(D,o){
   o=Object.assign({},DEFAULTS,o||{});
   const C=candidates(),byId={},d0=dataStart(D,o); C.forEach(c=>byId[c.id]=c);
@@ -318,9 +333,7 @@ function walkForward(D,o){
     if(trainTo-firstRet+1<o.minTrain) continue;
     const table=C.map(c=>{ const s=simulate(D,Object.assign({},o,{from:firstRet,to:trainTo}),(d,pos)=>desire(D,c,d,pos)).stats;
       return {id:c.id,score:s.cagr-o.penalty*s.mdd,cagr:s.cagr,mdd:s.mdd,trades:s.trades,inMarket:s.inMarket,eligible:c.rule==='cash'||s.inMarket>=o.minInMarket}; });
-    /* 학습 기간에 거의 사지 않은 규칙은 '현금' 후보와 같은 것이라 뺀다(낙폭 0 이라 점수가 부풀려진다) */
-    const elig=table.filter(t=>t.id==='cash'||t.inMarket>=o.minInMarket);
-    const best=elig.reduce((a,b)=>(b.score>a.score+1e-12?b:a));
+    const best=pickBest(table,o);
     years.push(y); sel[y]={id:best.id,label:candLabel(byId[best.id]),trainFrom:kym(firstRet),trainTo:kym(trainTo),table};
   }
   if(!years.length) return null;
@@ -347,7 +360,7 @@ function paperUpdate(ledger,D,o,nowIso){
   const wf=walkForward(D,o); if(!wf) throw new Error('워크포워드 계산 불가');
   const L=ledger&&ledger.decisions?JSON.parse(JSON.stringify(ledger)):{
     schema:1,strategyVersion:STRATEGY_VERSION,engineVersion:VERSION,startedData:kym(D.lastK),
-    capital:o.capital,params:pick(o,['lag','minHold','buyCost','sellCost','holdCostYr','depositTax','rent','penalty','minTrain']),
+    capital:o.capital,params:pick(o,['lag','minHold','buyCost','sellCost','holdCostYr','depositTax','rent','penalty','minTrain','minInMarket']),
     plan:{pos:null,held:0},acct:{nav:o.capital,pos:null,fees:0},decisions:[],marks:[]};
   const added={decisions:0,marks:0};
   const lastDec=L.decisions.length?ymk(L.decisions[L.decisions.length-1].data):ymk(L.startedData)-1;
@@ -369,6 +382,26 @@ function paperUpdate(ledger,D,o,nowIso){
 function pick(o,keys){ const x={}; keys.forEach(k=>x[k]=o[k]); return x; }
 function roundObj(s){ const x={}; for(const k in (s||{})) x[k]=Math.round(s[k]*1e6)/1e6; return x; }
 
+/* ── 지역별 참고 전망(실험적) — 지금 지표가 과거 어느 구간(하위·중위·상위 1/3)에 해당하는지 보고
+   그 구간의 '이후 12개월 평균'을 지표별로 늘어놓는다. 순위상관 |ρ|≥minRho 인 지표만, 같은 무게로 평균한다.
+   전략 판단(워크포워드)과 별개의 참고값이다. ── */
+function outlook(D,o){
+  o=Object.assign({h:12,minRho:.2},o||{});
+  const fs=factorStudy(D,{h:o.h}).filter(f=>f.buckets.length&&f.rho!=null&&Math.abs(f.rho)>=o.minRho);
+  const t=D.lastK,rows=[];
+  for(const r of UNIVERSE.concat(['daejeon'])){
+    if(!D.sale[r]||at(D.sale[r],t)==null) continue;
+    const F=features(D,r,t),parts=[];
+    for(const f of fs){ const v=F[f.id]; if(v==null) continue;
+      const bi=v<=f.q1?0:v<=f.q2?1:2,b=f.buckets[bi];
+      parts.push({id:f.id,label:f.label,fmt:f.fmt,v,bucket:['낮음','중간','높음'][bi],word:bi===2?f.hi:bi===0?f.lo:'보통',avg:b.avg,hit:b.hit,rho:f.rho}); }
+    const avg=parts.length?parts.reduce((a,x)=>a+x.avg,0)/parts.length:null;
+    rows.push({r,label:label(D,r),avg,parts});
+  }
+  rows.sort((a,b)=>(b.avg==null?-9:b.avg)-(a.avg==null?-9:a.avg));
+  return {dataMonth:kym(t),h:o.h,factors:fs.map(f=>({id:f.id,label:f.label,rho:f.rho})),rows};
+}
+
 /* ── 지금: 지역별 지표와 현재 적용 전략의 선택 ── */
 function snapshot(D,o){
   o=Object.assign({},DEFAULTS,o||{});
@@ -379,13 +412,13 @@ function snapshot(D,o){
   }
   let pick=null;
   if(wf){ const pos=wf.meta.rows.length?wf.meta.rows[wf.meta.rows.length-1].pos:null,c=wf.activeFor(t+o.lag);
-    if(c){ const ch=desire(D,c,t,pos); pick={cand:c.id,label:candLabel(c),target:ch.target,stay:!!ch.stay,scores:ch.scores,heldNow:pos,forMonth:kym(t+o.lag),dataMonth:kym(t)}; } }
+    if(c){ const ch=desire(D,c,t,pos); pick={cand:c.id,rule:c.rule,k:c.k,th:c.th,label:candLabel(c),target:ch.target,stay:!!ch.stay,scores:ch.scores,heldNow:pos,forMonth:kym(t+o.lag),dataMonth:kym(t),rate12:rateChange(D,t,12)}; } }
   return {dataMonth:kym(t),rows,pick,wf};
 }
 
 const API={VERSION,STRATEGY_VERSION,DEFAULTS,UNIVERSE,DJ,EVENTS,FACTORS,ymk,kym,ser,at,firstK,lastK,upTo,chg,ret,prepare,label,
-  drawdown,jgap,rateChange,volGrowth,outShare,jeonseRatio,features,realSeries,zigzag,cycles,factorStudy,leadLag,corr,
-  candidates,candLabel,qualifies,desire,planNext,monthYield,markMonth,stats,simulate,dataStart,walkForward,paperUpdate,snapshot};
+  drawdown,jgap,rateChange,volGrowth,outShare,jeonseRatio,features,landLong,realSeries,zigzag,cycles,factorStudy,leadLag,corr,outlook,
+  candidates,candLabel,qualifies,desire,planNext,monthYield,markMonth,stats,simulate,dataStart,pickBest,walkForward,paperUpdate,snapshot};
 g.JKRealEstateClaude=API;
 if(typeof module!=='undefined'&&module.exports) module.exports=API;
 })(typeof window!=='undefined'?window:globalThis);

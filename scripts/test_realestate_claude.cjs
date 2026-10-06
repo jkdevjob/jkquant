@@ -2,7 +2,7 @@
    합성 자료로 계산을 값으로 확인하고, 실제 자료가 있으면 룩어헤드·장부 일치를 실제 자료로도 본다. */
 'use strict';
 const fs=require('fs'),path=require('path');
-const E=require(path.join(__dirname,'..','realestate-claude-engine.js'));
+const E=require(process.env.REC_ENGINE||path.join(__dirname,'..','realestate-claude-engine.js'));  // 변이 시험은 REC_ENGINE 으로 바꾼 엔진을 넣는다
 let pass=0,fail=0;
 function ok(name,cond,detail){ if(cond){pass++;console.log('  ✓ '+name);} else {fail++;console.log('  ✗ '+name+(detail?' — '+detail:''));} }
 const near=(a,b,eps)=>Math.abs(a-b)<=(eps||1e-9)*Math.max(1,Math.abs(a),Math.abs(b));
@@ -66,6 +66,11 @@ ok('달 변환 왕복', E.kym(E.ymk('2003-11'))==='2003-11' && E.ymk('2004-01')-
 
 console.log('[부동산 클로드 엔진] 결정 사슬 · 정산');
 {
+  const T=[{id:'cash',score:.02,inMarket:0},{id:'rebound_0.1',score:.03,inMarket:.05},{id:'mom_3_0',score:.025,inMarket:.6}];
+  ok('전략 고르기: 학습 기간 보유 5% 규칙은 점수 1위여도 빼고, 다음 1위(보유 60%)를 고른다', E.pickBest(T).id==='mom_3_0');
+  ok('전략 고르기: 동점이면 앞 후보(현금)', E.pickBest([{id:'cash',score:.02,inMarket:0},{id:'mom_3_0',score:.02,inMarket:.5}]).id==='cash');
+}
+{
   const o=Object.assign({},E.DEFAULTS,{minHold:3}),plan={pos:null,held:0},seq=['a','b','b','c','c','c','c',null,null];
   const got=seq.map(t=>E.planNext(plan,{target:t},o).target);
   ok('최소 보유 3개월: a 를 3개월 지킨 뒤에야 갈아탄다', JSON.stringify(got)===JSON.stringify(['a','a','a','c','c','c','c',null,null]),JSON.stringify(got));
@@ -98,6 +103,7 @@ function lookaheadCheck(doc,cut,tag){
   const sameNav=n1.length===n2.length&&n1.every((x,i)=>near(x.nav,n2[i].nav,1e-12));
   ok(tag+': '+cut+' 뒤 자료를 바꿔도 그때까지의 전략 선택·결정·장부가 같다', sameSel&&sameDec&&sameNav,
      'sel '+sameSel+' dec '+sameDec+'('+d1.length+') nav '+sameNav);
+  ok(tag+': 학습 기간 보유 비율이 기준 미만인 규칙은 고르지 않는다', w1.years.every(y=>{ const s=w1.sel[y],t=s.table.find(x=>x.id===s.id); return s.id==='cash'||t.inMarket>=E.DEFAULTS.minInMarket; }));
   return {w1,w2};
 }
 {
@@ -120,6 +126,19 @@ function lookaheadCheck(doc,cut,tag){
   }
   const st=w.meta.stats,rows=w.meta.rows;
   ok('통계: 수수료 합 = 정산 행 수수료 합', near(st.fees,rows.reduce((a,x)=>a+x.fee,0),1e-9));
+}
+
+console.log('[부동산 클로드 엔진] 참고 전망 · 지가 잇기');
+{
+  const D=E.prepare(synth()),o=E.outlook(D),fs=E.factorStudy(D,{h:12});
+  const good=o.rows.length>0&&o.rows.every(r=>r.parts.every(x=>{ const f=fs.find(q=>q.id===x.id),bi=x.v<=f.q1?0:x.v<=f.q2?1:2;
+      return Math.abs(f.rho)>=0.2&&x.bucket===['낮음','중간','높음'][bi]&&near(x.avg,f.buckets[bi].avg,1e-12); })
+    &&near(r.avg,r.parts.reduce((a,x)=>a+x.avg,0)/r.parts.length,1e-12));
+  ok('참고 전망: 지금 값이 속한 구간(하위·중위·상위 1/3)의 이후 12개월 평균을 지표별로 단순 평균(|ρ|≥0.2 지표만)', good);
+  ok('참고 전망: 평균 높은 순', o.rows.every((r,i)=>i===0||o.rows[i-1].avg>=r.avg));
+  const D2=E.prepare({series:{land:{x:{start:'2005-01',v:[60.4,60.5,60.9]}},landQ:{x:{start:'2004-12',v:[60.3,null,null,99]}}}});
+  const L=E.landLong(D2,'x');
+  ok('지가 잇기: 2005년 전은 분기 값, 겹치는 달은 월간 값', E.kym(L.k0)==='2004-12'&&JSON.stringify(L.v)===JSON.stringify([60.3,60.4,60.5,60.9]),JSON.stringify(L.v));
 }
 
 console.log('[부동산 클로드 엔진] 모의장부 — 덧붙이기만 · 백테와 같은 값');
