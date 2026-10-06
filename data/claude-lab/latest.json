@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "generatedAt": "2026-10-06T11:23:12.440333+09:00",
+  "generatedAt": "2026-10-06T16:32:15.459004+09:00",
   "designEnd": "2026-09-30",
   "gate": {
     "mdd": -25.0,
@@ -123,9 +123,9 @@
         "strategyVersions": [
           "opening_rebreak_v1"
         ],
-        "trades": 20,
+        "trades": 27,
         "from_": "2026-09-22",
-        "to": "2026-10-02"
+        "to": "2026-10-06"
       },
       "compare": {
         "window": [
@@ -300,9 +300,9 @@
         "strategyVersions": [
           "daytrading_vwap_breakout_v1"
         ],
-        "trades": 12,
+        "trades": 15,
         "from_": "2026-09-29",
-        "to": "2026-10-02"
+        "to": "2026-10-06"
       },
       "compare": {
         "window": [
@@ -476,9 +476,9 @@
         "strategyVersions": [
           "btc_midnight_orb_v2"
         ],
-        "trades": 186,
+        "trades": 187,
         "from_": "2025-10-01",
-        "to": "2026-10-04"
+        "to": "2026-10-05"
       },
       "compare": {
         "window": [
@@ -510,24 +510,24 @@
         },
         "gpt": {
           "days": 366,
-          "tradeDays": 186,
-          "tradeDaysPerYear": 185.4918032786885,
+          "tradeDays": 187,
+          "tradeDaysPerYear": 186.48907103825135,
           "plus1RateOfTradeDays": 0.0,
-          "lossDaysPerYear": 131.63934426229508,
-          "tStat": -5.589011728864574,
+          "lossDaysPerYear": 132.6366120218579,
+          "tStat": -5.648738174539181,
           "plus1Days": 0,
           "plus1DaysPerYear": 0.0,
           "plus5Weeks": 0,
           "plus5WeeksPerYear": 0.0,
-          "weeklyAvgPct": -0.561172577373259,
-          "totalPct": -26.20554965621188,
-          "lossDays": 132,
-          "lossDayAvgPct": -0.3597133439324385,
+          "weeklyAvgPct": -0.5674201309100346,
+          "totalPct": -26.455497021460705,
+          "lossDays": 133,
+          "lossDayAvgPct": -0.3595554055349261,
           "worstDayPct": -0.6400000000000005,
-          "mddPct": -27.126264586309524,
-          "cagrPct": -26.144253314646082,
-          "expectancyPct": -0.16246512461866164,
-          "profitFactor": 0.3635817686333173,
+          "mddPct": -27.373093420695238,
+          "cagrPct": -26.393725967321878,
+          "expectancyPct": -0.16340759741248312,
+          "profitFactor": 0.3610065773389194,
           "gate": false
         }
       },
@@ -1052,7 +1052,7 @@
     ]
   },
   "daily": {
-    "generatedAt": "2026-10-06T11:23:18.453412+09:00",
+    "generatedAt": "2026-10-06T16:32:21.660608+09:00",
     "today": "2026-10-06",
     "finalKrDaily": "2026-10-02",
     "rows": [
@@ -1061,8 +1061,8 @@
         "side": "claude",
         "name": "① D-1 갭하락 과매도 v2",
         "version": "opening_gapdown_v1+v2filter",
-        "prevDate": "2026-10-01",
-        "lastDate": "2026-10-02",
+        "prevDate": "2026-10-02",
+        "lastDate": "2026-10-06",
         "prev": "no_trade",
         "last": "no_trade",
         "plan": "명단 9종목 · 08:56 예상갭 확인 (통과 5종목 이상일 때 매매)"
@@ -1072,10 +1072,10 @@
         "side": "gpt",
         "name": "시초가 돌파",
         "version": "opening_rebreak_v1",
-        "prevDate": "2026-10-01",
-        "lastDate": "2026-10-02",
-        "prev": "no_trade",
-        "last": -1.2669821043386493,
+        "prevDate": "2026-10-02",
+        "lastDate": "2026-10-06",
+        "prev": -1.2669821043386493,
+        "last": -0.26802531163796095,
         "plan": null
       },
       {
@@ -1083,8 +1083,8 @@
         "side": "claude",
         "name": "② 코스닥150 레버리지 하락일 야간",
         "version": "etf_dip_overnight_v1",
-        "prevDate": "2026-10-01",
-        "lastDate": "2026-10-02",
+        "prevDate": "2026-10-02",
+        "lastDate": "2026-10-06",
         "prev": "no_trade",
         "last": "no_trade",
         "plan": "15:21 예상 종가 −3% 이하면 종가 매수 → 다음 날 시가 매도"
@@ -1094,9 +1094,9 @@
         "side": "gpt",
         "name": "데이트레이딩",
         "version": "daytrading_vwap_breakout_v1",
-        "prevDate": "2026-10-01",
-        "lastDate": "2026-10-02",
-        "prev": 0.7500000000000046,
+        "prevDate": "2026-10-02",
+        "lastDate": "2026-10-06",
+        "prev": -0.25,
         "last": -0.25,
         "plan": null
       },
@@ -1119,7 +1119,7 @@
         "prevDate": "2026-10-04",
         "lastDate": "2026-10-05",
         "prev": -0.21715380480953772,
-        "last": "no_trade",
+        "last": -0.3387075370632807,
         "plan": null
       },
       {
@@ -1468,6 +1468,10 @@
         },
         {
           "date": "2026-10-02",
+          "cumPct": -12.996087069915529
+        },
+        {
+          "date": "2026-10-06",
           "cumPct": -12.996087069915529
         }
       ],
@@ -2132,7 +2136,7 @@
   },
   "paper": {
     "start": "2026-10-01",
-    "newFiles": 0,
+    "newFiles": 5,
     "summary": {
       "opening_d1v2": {
         "rows": [
@@ -2149,14 +2153,21 @@
             "pnlPct": 0.0,
             "cumPct": 0.0,
             "note": "rsi14_prev<30+expected_gap<=-2%+deepest3"
+          },
+          {
+            "date": "2026-10-06",
+            "action": "no_trade",
+            "pnlPct": 0.0,
+            "cumPct": 0.0,
+            "note": "watchlist_stale"
           }
         ],
         "currentDrawdownPct": 0.0,
         "lossStreak": 0,
         "start": "2026-10-01",
-        "days": 2,
+        "days": 3,
         "first": "2026-10-01",
-        "last": "2026-10-02",
+        "last": "2026-10-06",
         "tradeDays": 0,
         "plus1Days": 0,
         "winDays": 0,
@@ -2190,14 +2201,21 @@
             "pnlPct": 0.0,
             "cumPct": 0.0,
             "note": ""
+          },
+          {
+            "date": "2026-10-06",
+            "action": "no_trade",
+            "pnlPct": 0.0,
+            "cumPct": 0.0,
+            "note": ""
           }
         ],
         "currentDrawdownPct": 0.0,
         "lossStreak": 0,
         "start": "2026-10-01",
-        "days": 2,
+        "days": 3,
         "first": "2026-10-01",
-        "last": "2026-10-02",
+        "last": "2026-10-06",
         "tradeDays": 0,
         "plus1Days": 0,
         "winDays": 0,
@@ -2375,22 +2393,43 @@
             "pnlPct": -0.4016693956743397,
             "cumPct": -0.40166939567434223,
             "note": ""
+          },
+          {
+            "date": "2026-10-03",
+            "action": "no_trade",
+            "pnlPct": 0.0,
+            "cumPct": -0.40166939567434223,
+            "note": ""
+          },
+          {
+            "date": "2026-10-04",
+            "action": "trade",
+            "pnlPct": 0.21776495996120285,
+            "cumPct": -0.1847791309118163,
+            "note": ""
+          },
+          {
+            "date": "2026-10-05",
+            "action": "trade",
+            "pnlPct": -0.17719281516633278,
+            "cumPct": -0.36164453073425085,
+            "note": ""
           }
         ],
-        "currentDrawdownPct": -0.40166939567434223,
+        "currentDrawdownPct": -0.36164453073425085,
         "lossStreak": 1,
         "start": "2026-10-02",
-        "days": 1,
+        "days": 4,
         "first": "2026-10-02",
-        "last": "2026-10-02",
-        "tradeDays": 1,
+        "last": "2026-10-05",
+        "tradeDays": 3,
         "plus1Days": 0,
-        "winDays": 0,
-        "profitFactor": 0.0,
-        "totalPct": -0.40166939567434223,
+        "winDays": 1,
+        "profitFactor": 0.3761948109290918,
+        "totalPct": -0.36164453073425085,
         "mddPct": -0.40166939567434223,
         "worstDayPct": -0.4016693956743397,
-        "avgTradePct": -0.4016693956743397,
+        "avgTradePct": -0.12036575029315655,
         "expected": {
           "expectancyPct": 0.17046104410037907,
           "plus1DaysPerYear": 33.3190203562341,
@@ -2398,7 +2437,7 @@
         },
         "status": {
           "code": "collecting",
-          "text": "매매일 1/20 — 판단 전"
+          "text": "매매일 3/20 — 판단 전"
         }
       }
     },
@@ -3582,7 +3621,7 @@
           "plateau": 0.4004536049581251,
           "rank": 10,
           "isMain": false,
-          "isNew": true,
+          "isNew": false,
           "promotion": {
             "code": "keep",
             "text": ""
@@ -3714,9 +3753,7 @@
         "days": 1,
         "since": "2026-10-06"
       },
-      "added": [
-        "g_open_q9_k2_gap3"
-      ],
+      "added": [],
       "retiredToday": [
         {
           "version": "g_open_q6_k2",
@@ -3786,16 +3823,16 @@
         }
       ],
       "poolSize": 10,
-      "triedCount": 93,
+      "triedCount": 107,
       "rule": "순위 = 안정 점수: 주 평균 수익(복리)을 전체 · 최근 1년 · 최근 90일에서 내되 매매가 적은 구간은 전체 성적 쪽으로 당기고, 변수를 한 칸씩 바꾼 이웃 전략들의 중앙값보다 높게 쳐 주지 않는다(한 점에서만 좋은 과최적화를 거른다). 기준(MDD ≥ −25% · 최악일 ≥ −15% · 기대값 > 0 · 매매일 60일↑ · 매매한 해의 60%↑ 플러스)을 못 지키면 맨 뒤 · 그림자는 퇴출. 7일 연속 하위 3위, 다른 전략과 사실상 같은 매매(상관 0.97↑)도 퇴출. 밤마다 후보 48개를 이웃 · 두 칸 · 교배 · 새 구조 · 격자 탐색으로 만들어 모두 계산하고 좋은 순으로 빈자리를 채우거나 최하위를 교체(그림자 10~12개 유지). 같은 그림자가 7일 동안 매일 1위면 다음 날부터 메인으로 자동 승격(메인은 +0.02 보호 — 사실상 같으면 안 바꾼다).",
       "gen": {
-        "evaluated": 48,
-        "passed": 5,
-        "added": 1,
+        "evaluated": 14,
+        "passed": 2,
+        "added": 0,
         "replaced": 0,
         "reasons": {
-          "손실 기준 미달": 43,
-          "복제": 4
+          "손실 기준 미달": 12,
+          "복제": 2
         },
         "ops": [
           {
@@ -3803,41 +3840,32 @@
             "name": "이웃(한 칸)",
             "tried": 2,
             "accepted": 0,
-            "share": 0.261
+            "share": 0.26
           },
           {
             "op": "jump2",
             "name": "두 칸 동시",
             "tried": 10,
             "accepted": 1,
-            "share": 0.116
+            "share": 0.173
           },
           {
             "op": "cross",
             "name": "교배",
             "tried": 0,
             "accepted": 0,
-            "share": 0.522
+            "share": 0.519
           },
           {
             "op": "explore",
             "name": "격자 탐색",
-            "tried": 84,
+            "tried": 98,
             "accepted": 3,
-            "share": 0.102
+            "share": 0.05
           }
         ]
       },
       "log": [
-        {
-          "date": "2026-10-05",
-          "at": "2026-10-05T21:11+09:00",
-          "tab": "opening",
-          "kind": "new",
-          "version": "g_open_q6_k3",
-          "name": "통과 6개↑ · 깊은 3종목",
-          "reason": "신규 투입 — 점수 +0.378 · 최근 1년 +33.0% (상위 opening_d1_min7 주변/격자에서)"
-        },
         {
           "date": "2026-10-05",
           "at": "2026-10-05T21:11+09:00",
@@ -4102,6 +4130,15 @@
           "version": "opening_d1_min7",
           "name": "통과 7개 이상",
           "reason": "복제 — 통과 7개↑ · 깊은 3종목 · 갭 -3% 이하만 와 사실상 같은 매매(일 손익 상관 0.991) · 순위 낮은 쪽을 뺌"
+        },
+        {
+          "date": "2026-10-06",
+          "at": "2026-10-06T16:32+09:00",
+          "tab": "opening",
+          "kind": "reject",
+          "version": "",
+          "name": "",
+          "reason": "후보 14개 계산 → 기준 통과 2 · 투입 0(교체 0) · 탈락: 손실 기준 미달 12 · 복제 2"
         }
       ]
     },
@@ -6084,6 +6121,134 @@
           }
         },
         {
+          "version": "g_coin_ma15_s99_hi3_both",
+          "name": "평균 15일 · 최근 3일 고가 돌파 · 손절 없음 · BTC·ETH 반반",
+          "rule": "어제 종가 > 15일 평균인 날, 최근 3일 고가를 넘는 순간 매수 → 다음 날 09:00 매도 · 손절 없음 · BTC·ETH 반반 · 탭 자금 80%",
+          "params": {
+            "ma": 15,
+            "stopPct": 99.0,
+            "level": "prevhigh",
+            "k": 0.5,
+            "hiN": 3,
+            "lastEntryHour": null,
+            "tabSize": 0.8,
+            "markets": [
+              "KRW-BTC",
+              "KRW-ETH"
+            ]
+          },
+          "source": "generated",
+          "addedAt": "2026-10-06",
+          "op": "jump2",
+          "parents": [
+            "g_coin_ma20_s99_hi2_both"
+          ],
+          "full": {
+            "days": 3149,
+            "tradeDays": 912,
+            "tradeDaysPerYear": 105.70974912670688,
+            "plus1RateOfTradeDays": 23.574561403508774,
+            "lossDaysPerYear": 56.67989838043823,
+            "tStat": 4.1179797229012145,
+            "plus1Days": 215,
+            "plus1DaysPerYear": 24.920609717370592,
+            "plus5Weeks": 25,
+            "plus5WeeksPerYear": 2.897745315973325,
+            "weeklyAvgPct": 0.4526934656865933,
+            "totalPct": 695.0016295644988,
+            "lossDays": 489,
+            "lossDayAvgPct": -0.8800569981886839,
+            "worstDayPct": -8.641533727747296,
+            "mddPct": -12.963663417256011,
+            "cagrPct": 27.16321176560774,
+            "expectancyPct": 0.24321268597203854,
+            "profitFactor": 1.5154201611751061,
+            "gate": true
+          },
+          "year": {
+            "days": 361,
+            "tradeDays": 76,
+            "tradeDaysPerYear": 76.84210526315789,
+            "plus1RateOfTradeDays": 15.789473684210526,
+            "lossDaysPerYear": 45.498614958448755,
+            "tStat": 0.7726158732979066,
+            "plus1Days": 12,
+            "plus1DaysPerYear": 12.132963988919666,
+            "plus5Weeks": 1,
+            "plus5WeeksPerYear": 1.0110803324099722,
+            "weeklyAvgPct": 0.17264684985465184,
+            "totalPct": 9.573342419514596,
+            "lossDays": 45,
+            "lossDayAvgPct": -0.6839886023608152,
+            "worstDayPct": -1.835927813869062,
+            "mddPct": -5.61707244230546,
+            "cagrPct": 9.68439728464292,
+            "expectancyPct": 0.13087596015149114,
+            "profitFactor": 1.3231559037089318,
+            "gate": true
+          },
+          "d90": {
+            "days": 90,
+            "tradeDays": 24,
+            "tradeDaysPerYear": 97.33333333333334,
+            "plus1RateOfTradeDays": 16.666666666666664,
+            "lossDaysPerYear": 68.94444444444444,
+            "tStat": 0.7504684741168417,
+            "plus1Days": 4,
+            "plus1DaysPerYear": 16.22222222222222,
+            "plus5Weeks": 1,
+            "plus5WeeksPerYear": 4.055555555555555,
+            "weeklyAvgPct": 0.5231204457450067,
+            "totalPct": 7.577998868283986,
+            "lossDays": 17,
+            "lossDayAvgPct": -0.6407352242058891,
+            "worstDayPct": -1.4399448580918657,
+            "mddPct": -3.810844826243076,
+            "cagrPct": null,
+            "expectancyPct": 0.3258067278757203,
+            "profitFactor": 1.7178666350426166,
+            "gate": true
+          },
+          "oos": {
+            "days": 5,
+            "tradeDays": 1,
+            "tradeDaysPerYear": 73.0,
+            "plus1RateOfTradeDays": 0.0,
+            "lossDaysPerYear": 73.0,
+            "tStat": null,
+            "plus1Days": 0,
+            "plus1DaysPerYear": 0.0,
+            "plus5Weeks": 0,
+            "plus5WeeksPerYear": 0.0,
+            "weeklyAvgPct": -0.6883030479154839,
+            "totalPct": -1.371868484973271,
+            "lossDays": 1,
+            "lossDayAvgPct": -1.3718684849732723,
+            "worstDayPct": -1.3718684849732723,
+            "mddPct": -1.371868484973271,
+            "cagrPct": null,
+            "expectancyPct": -1.3718684849732723,
+            "profitFactor": 0.0,
+            "gate": false
+          },
+          "years": {
+            "n": 9,
+            "pos": 8,
+            "worstPct": -1.6933219359975271
+          },
+          "raw": 0.38282025376208395,
+          "adj": 0.4003372324374939,
+          "score": 0.4003372324374939,
+          "plateau": 0.4003372324374939,
+          "rank": 4,
+          "isMain": false,
+          "isNew": true,
+          "promotion": {
+            "code": "keep",
+            "text": ""
+          }
+        },
+        {
           "version": "g_coin_ma20_s99_hi2_both",
           "name": "평균 20일 · 최근 2일 고가 돌파 · 손절 없음 · BTC·ETH 반반",
           "rule": "어제 종가 > 20일 평균인 날, 최근 2일 고가를 넘는 순간 매수 → 다음 날 09:00 매도 · 손절 없음 · BTC·ETH 반반 · 탭 자금 80%",
@@ -6203,7 +6368,7 @@
           "adj": 0.4008935878520754,
           "score": 0.3968851224046307,
           "plateau": 0.3968851224046307,
-          "rank": 4,
+          "rank": 5,
           "isMain": false,
           "isNew": false,
           "promotion": {
@@ -6331,7 +6496,7 @@
           "adj": 0.3970645543971465,
           "score": 0.39048611601237787,
           "plateau": 0.39048611601237787,
-          "rank": 5,
+          "rank": 6,
           "isMain": false,
           "isNew": false,
           "promotion": {
@@ -6454,7 +6619,7 @@
           "adj": 0.38060897982820946,
           "score": 0.3602879748155632,
           "plateau": 0.3602879748155632,
-          "rank": 6,
+          "rank": 7,
           "isMain": true,
           "isNew": false,
           "op": "main",
@@ -6578,7 +6743,7 @@
           "adj": 0.37530956447913927,
           "score": 0.3711366470947466,
           "plateau": 0.3711366470947466,
-          "rank": 7,
+          "rank": 8,
           "isMain": false,
           "isNew": false,
           "op": "generated",
@@ -6702,7 +6867,7 @@
           "adj": 0.3348641054064799,
           "score": 0.3317182489674024,
           "plateau": 0.3317182489674024,
-          "rank": 8,
+          "rank": 9,
           "isMain": false,
           "isNew": false,
           "op": "seed",
@@ -6826,7 +6991,7 @@
           "adj": 0.3019374908252539,
           "score": 0.3019374908252539,
           "plateau": 0.3019374908252539,
-          "rank": 9,
+          "rank": 10,
           "isMain": false,
           "isNew": false,
           "op": "seed",
@@ -6950,7 +7115,7 @@
           "adj": 0.3053767464955585,
           "score": 0.3012428361076965,
           "plateau": 0.3012428361076965,
-          "rank": 10,
+          "rank": 11,
           "isMain": false,
           "isNew": false,
           "op": "generated",
@@ -7074,7 +7239,7 @@
           "adj": 0.29766907365904566,
           "score": 0.29766907365904566,
           "plateau": 0.29766907365904566,
-          "rank": 11,
+          "rank": 12,
           "isMain": false,
           "isNew": false,
           "op": "seed",
@@ -7197,130 +7362,6 @@
           "adj": 0.2948819833381467,
           "score": 0.28964367606874825,
           "plateau": 0.28964367606874825,
-          "rank": 12,
-          "isMain": false,
-          "isNew": false,
-          "op": "seed",
-          "promotion": {
-            "code": "keep",
-            "text": ""
-          }
-        },
-        {
-          "version": "coin_bo_before21",
-          "name": "21시 전 돌파만",
-          "rule": "밤 9시 이후 돌파는 사지 않음",
-          "params": {
-            "ma": 20,
-            "stopPct": 5.0,
-            "level": "prevhigh",
-            "k": 0.5,
-            "lastEntryHour": 21,
-            "tabSize": 0.8,
-            "markets": [
-              "KRW-BTC",
-              "KRW-ETH"
-            ]
-          },
-          "source": "seed",
-          "addedAt": "2026-10-05",
-          "full": {
-            "days": 3149,
-            "tradeDays": 855,
-            "tradeDaysPerYear": 99.1028898062877,
-            "plus1RateOfTradeDays": 24.561403508771928,
-            "lossDaysPerYear": 53.086694188631306,
-            "tStat": 3.520764033913883,
-            "plus1Days": 210,
-            "plus1DaysPerYear": 24.341060654175926,
-            "plus5Weeks": 26,
-            "plus5WeeksPerYear": 3.0136551286122577,
-            "weeklyAvgPct": 0.3971411749051468,
-            "totalPct": 516.7341367430043,
-            "lossDays": 458,
-            "lossDayAvgPct": -1.018170901000286,
-            "worstDayPct": -4.191999999999999,
-            "mddPct": -12.3170560713606,
-            "cagrPct": 23.475305601684894,
-            "expectancyPct": 0.2310560516087657,
-            "profitFactor": 1.4236403356833103,
-            "gate": true
-          },
-          "year": {
-            "days": 361,
-            "tradeDays": 68,
-            "tradeDaysPerYear": 68.75346260387812,
-            "plus1RateOfTradeDays": 19.11764705882353,
-            "lossDaysPerYear": 42.46537396121884,
-            "tStat": 0.02995496226900215,
-            "plus1Days": 13,
-            "plus1DaysPerYear": 13.14404432132964,
-            "plus5Weeks": 1,
-            "plus5WeeksPerYear": 1.0110803324099722,
-            "weeklyAvgPct": -0.005210416021095288,
-            "totalPct": -0.27577827483784567,
-            "lossDays": 42,
-            "lossDayAvgPct": -0.7965765029787423,
-            "worstDayPct": -2.8952590443400474,
-            "mddPct": -7.012392587667559,
-            "cagrPct": -0.27882972573037845,
-            "expectancyPct": 0.004935228491800934,
-            "profitFactor": 1.0100308883192348,
-            "gate": true
-          },
-          "d90": {
-            "days": 90,
-            "tradeDays": 28,
-            "tradeDaysPerYear": 113.55555555555556,
-            "plus1RateOfTradeDays": 21.428571428571427,
-            "lossDaysPerYear": 73.0,
-            "tStat": 0.1857348906265455,
-            "plus1Days": 6,
-            "plus1DaysPerYear": 24.333333333333336,
-            "plus5Weeks": 1,
-            "plus5WeeksPerYear": 4.055555555555555,
-            "weeklyAvgPct": 0.08836425092422218,
-            "totalPct": 1.244230188126938,
-            "lossDays": 18,
-            "lossDayAvgPct": -0.8315315724127013,
-            "worstDayPct": -2.8952590443400474,
-            "mddPct": -4.011790598142584,
-            "cagrPct": null,
-            "expectancyPct": 0.05651148766326492,
-            "profitFactor": 1.1057166817277162,
-            "gate": true
-          },
-          "oos": {
-            "days": 5,
-            "tradeDays": 3,
-            "tradeDaysPerYear": 219.0,
-            "plus1RateOfTradeDays": 0.0,
-            "lossDaysPerYear": 146.0,
-            "tStat": -0.6647886894573322,
-            "plus1Days": 0,
-            "plus1DaysPerYear": 0.0,
-            "plus5Weeks": 0,
-            "plus5WeeksPerYear": 0.0,
-            "weeklyAvgPct": -0.4845737591659405,
-            "totalPct": -0.966799401051166,
-            "lossDays": 2,
-            "lossDayAvgPct": -0.7718162811208966,
-            "worstDayPct": -1.0711183884649058,
-            "mddPct": -1.071118388464909,
-            "cagrPct": null,
-            "expectancyPct": -0.3209753341150841,
-            "profitFactor": 0.3761948109290918,
-            "gate": false
-          },
-          "years": {
-            "n": 9,
-            "pos": 8,
-            "worstPct": -1.83382522666512
-          },
-          "raw": 0.16009833660275788,
-          "adj": 0.2703158674177984,
-          "score": 0.2703158674177984,
-          "plateau": 0.2703158674177984,
           "rank": 13,
           "isMain": false,
           "isNew": false,
@@ -7339,7 +7380,9 @@
         "days": 1,
         "since": "2026-10-06"
       },
-      "added": [],
+      "added": [
+        "g_coin_ma15_s99_hi3_both"
+      ],
       "retiredToday": [
         {
           "version": "coin_vb_k05_before21",
@@ -7412,55 +7455,73 @@
           },
           "retiredAt": "2026-10-06",
           "reason": "복제 — 손절 없음 와 사실상 같은 매매(일 손익 상관 0.993) · 순위 낮은 쪽을 뺌"
+        },
+        {
+          "version": "coin_bo_before21",
+          "name": "21시 전 돌파만",
+          "params": {
+            "ma": 20,
+            "stopPct": 5.0,
+            "level": "prevhigh",
+            "k": 0.5,
+            "lastEntryHour": 21,
+            "tabSize": 0.8,
+            "markets": [
+              "KRW-BTC",
+              "KRW-ETH"
+            ]
+          },
+          "retiredAt": "2026-10-06",
+          "reason": "자리 교체 — 신규 g_coin_ma15_s99_hi3_both 가 안정 점수 +0.400 로 +0.270 보다 확실히 나음"
         }
       ],
       "poolSize": 12,
-      "triedCount": 30,
+      "triedCount": 43,
       "rule": "순위 = 안정 점수: 주 평균 수익(복리)을 전체 · 최근 1년 · 최근 90일에서 내되 매매가 적은 구간은 전체 성적 쪽으로 당기고, 변수를 한 칸씩 바꾼 이웃 전략들의 중앙값보다 높게 쳐 주지 않는다(한 점에서만 좋은 과최적화를 거른다). 기준(MDD ≥ −25% · 최악일 ≥ −15% · 기대값 > 0 · 매매일 60일↑ · 매매한 해의 60%↑ 플러스)을 못 지키면 맨 뒤 · 그림자는 퇴출. 7일 연속 하위 3위, 다른 전략과 사실상 같은 매매(상관 0.97↑)도 퇴출. 밤마다 후보 48개를 이웃 · 두 칸 · 교배 · 새 구조 · 격자 탐색으로 만들어 모두 계산하고 좋은 순으로 빈자리를 채우거나 최하위를 교체(그림자 10~12개 유지). 같은 그림자가 7일 동안 매일 1위면 다음 날부터 메인으로 자동 승격(메인은 +0.02 보호 — 사실상 같으면 안 바꾼다).",
       "gen": {
         "evaluated": 48,
         "passed": 43,
-        "added": 0,
-        "replaced": 0,
+        "added": 1,
+        "replaced": 1,
         "reasons": {
           "손실 기준 미달": 5,
-          "복제": 9
+          "복제": 8
         },
         "ops": [
           {
             "op": "neighbor",
             "name": "이웃(한 칸)",
-            "tried": 18,
+            "tried": 28,
             "accepted": 0,
-            "share": 0.072
+            "share": 0.07
           },
           {
             "op": "jump2",
             "name": "두 칸 동시",
-            "tried": 31,
-            "accepted": 0,
-            "share": 0.054
+            "tried": 45,
+            "accepted": 1,
+            "share": 0.05
           },
           {
             "op": "cross",
             "name": "교배",
-            "tried": 2,
+            "tried": 4,
             "accepted": 0,
-            "share": 0.431
+            "share": 0.349
           },
           {
             "op": "struct",
             "name": "새 구조",
-            "tried": 12,
+            "tried": 13,
             "accepted": 4,
-            "share": 0.392
+            "share": 0.499
           },
           {
             "op": "explore",
             "name": "격자 탐색",
-            "tried": 33,
+            "tried": 54,
             "accepted": 0,
-            "share": 0.051
+            "share": 0.05
           }
         ]
       },
@@ -7603,6 +7664,34 @@
           "version": "",
           "name": "",
           "reason": "후보 48개 계산 → 기준 통과 43 · 투입 0(교체 0) · 탈락: 복제 9 · 손실 기준 미달 5"
+        },
+        {
+          "date": "2026-10-06",
+          "at": "2026-10-06T16:32+09:00",
+          "tab": "crypto",
+          "kind": "new",
+          "version": "g_coin_ma15_s99_hi3_both",
+          "name": "평균 15일 · 최근 3일 고가 돌파 · 손절 없음 · BTC·ETH 반반",
+          "reason": "두 칸 동시 — g_coin_ma20_s99_hi2_both 에서 평균 20→15, 고가 일수 2→3 · 안정 점수 +0.400 (그대로 +0.383 · 이웃 중앙 +0.400) · 매매일 912 · MDD -13.0% · 플러스 8/9해",
+          "op": "jump2"
+        },
+        {
+          "date": "2026-10-06",
+          "at": "2026-10-06T16:32+09:00",
+          "tab": "crypto",
+          "kind": "reject",
+          "version": "",
+          "name": "",
+          "reason": "후보 48개 계산 → 기준 통과 43 · 투입 1(교체 1) · 탈락: 복제 8 · 손실 기준 미달 5"
+        },
+        {
+          "date": "2026-10-06",
+          "at": "2026-10-06T16:32+09:00",
+          "tab": "crypto",
+          "kind": "retire",
+          "version": "coin_bo_before21",
+          "name": "21시 전 돌파만",
+          "reason": "자리 교체 — 신규 g_coin_ma15_s99_hi3_both 가 안정 점수 +0.400 로 +0.270 보다 확실히 나음"
         }
       ]
     },
@@ -7729,6 +7818,132 @@
           "plateau": 0.42387872360903306,
           "rank": 1,
           "isMain": false,
+          "isNew": false,
+          "promotion": {
+            "code": "candidate",
+            "text": "1위 1일째 (첫 1위 2026-10-06) — 7일이면 다음 날부터 자동 승격",
+            "days": 1,
+            "since": "2026-10-06"
+          }
+        },
+        {
+          "version": "g_soxl_r4lt25_ibs0.7_ma200_d4",
+          "name": "RSI(4) < 25 · 종가 위치(IBS) ≤ 0.7 · 200일 평균 위 · 최대 4일",
+          "rule": "확정 종가 RSI(4) < 25 · 종가 위치(IBS) ≤ 0.7 · 200일 평균 위면 다음 시가 매수 → 오른 날 다음 시가 매도, 최대 4거래일 · 탭 자금 50%",
+          "params": {
+            "rsiMax": 25.0,
+            "rsiN": 4,
+            "ibsMax": 0.7,
+            "downDays": 0,
+            "ma": 200,
+            "maxHoldDays": 4,
+            "tabSize": 0.5
+          },
+          "source": "generated",
+          "addedAt": "2026-10-06",
+          "op": "neighbor",
+          "parents": [
+            "g_soxl_r4lt20_ibs0.7_ma200_d4"
+          ],
+          "full": {
+            "days": 4168,
+            "tradeDays": 510,
+            "tradeDaysPerYear": 30.83493282149712,
+            "plus1RateOfTradeDays": 31.372549019607842,
+            "lossDaysPerYear": 13.785028790786948,
+            "tStat": 2.243144315325141,
+            "plus1Days": 160,
+            "plus1DaysPerYear": 9.67370441458733,
+            "plus5Weeks": 14,
+            "plus5WeeksPerYear": 0.8464491362763915,
+            "weeklyAvgPct": 0.11979069415339882,
+            "totalPct": 182.0083685849661,
+            "lossDays": 228,
+            "lossDayAvgPct": -1.5742299056305564,
+            "worstDayPct": -8.010773646647879,
+            "mddPct": -23.835861301244886,
+            "cagrPct": 6.468989975497541,
+            "expectancyPct": 0.23010547220014982,
+            "profitFactor": 1.326959618177619,
+            "gate": true
+          },
+          "year": {
+            "days": 251,
+            "tradeDays": 45,
+            "tradeDaysPerYear": 45.179282868525895,
+            "plus1RateOfTradeDays": 46.666666666666664,
+            "lossDaysPerYear": 19.07569721115538,
+            "tStat": 1.9480241604407595,
+            "plus1Days": 21,
+            "plus1DaysPerYear": 21.083665338645417,
+            "plus5Weeks": 6,
+            "plus5WeeksPerYear": 6.0239043824701195,
+            "weeklyAvgPct": 0.9377173717461273,
+            "totalPct": 63.99643283592993,
+            "lossDays": 19,
+            "lossDayAvgPct": -2.2985843806183217,
+            "worstDayPct": -8.010773646647879,
+            "mddPct": -9.52420599205215,
+            "cagrPct": 64.31995811657072,
+            "expectancyPct": 1.1847684699533507,
+            "profitFactor": 2.220764662977826,
+            "gate": true
+          },
+          "d90": {
+            "days": 63,
+            "tradeDays": 15,
+            "tradeDaysPerYear": 60.0,
+            "plus1RateOfTradeDays": 46.666666666666664,
+            "lossDaysPerYear": 24.0,
+            "tStat": 1.3102161484833732,
+            "plus1Days": 7,
+            "plus1DaysPerYear": 28.0,
+            "plus5Weeks": 3,
+            "plus5WeeksPerYear": 12.0,
+            "weeklyAvgPct": 1.7227798136635553,
+            "totalPct": 27.015018832471107,
+            "lossDays": 6,
+            "lossDayAvgPct": -2.8383050183672207,
+            "worstDayPct": -8.010773646647879,
+            "mddPct": -9.524205992052137,
+            "cagrPct": null,
+            "expectancyPct": 1.7257141654318118,
+            "profitFactor": 2.52002176850654,
+            "gate": true
+          },
+          "oos": {
+            "days": 3,
+            "tradeDays": 0,
+            "tradeDaysPerYear": 0.0,
+            "plus1RateOfTradeDays": null,
+            "lossDaysPerYear": 0.0,
+            "tStat": null,
+            "plus1Days": 0,
+            "plus1DaysPerYear": 0.0,
+            "plus5Weeks": 0,
+            "plus5WeeksPerYear": 0.0,
+            "weeklyAvgPct": 0.0,
+            "totalPct": 0.0,
+            "lossDays": 0,
+            "lossDayAvgPct": 0.0,
+            "worstDayPct": 0.0,
+            "mddPct": 0.0,
+            "cagrPct": null,
+            "expectancyPct": null,
+            "profitFactor": null,
+            "gate": false
+          },
+          "years": {
+            "n": 16,
+            "pos": 11,
+            "worstPct": -11.948330066399038
+          },
+          "raw": 0.9267626265210271,
+          "adj": 0.40985697967335977,
+          "score": 0.3963151564162606,
+          "plateau": 0.3963151564162606,
+          "rank": 2,
+          "isMain": false,
           "isNew": true,
           "promotion": {
             "code": "keep",
@@ -7851,9 +8066,9 @@
           "adj": 0.4278882653622469,
           "score": 0.39087395502129313,
           "plateau": 0.39087395502129313,
-          "rank": 2,
+          "rank": 3,
           "isMain": false,
-          "isNew": true,
+          "isNew": false,
           "promotion": {
             "code": "keep",
             "text": ""
@@ -7975,9 +8190,9 @@
           "adj": 0.3840908154405181,
           "score": 0.3839676778222602,
           "plateau": 0.3839676778222602,
-          "rank": 3,
+          "rank": 4,
           "isMain": false,
-          "isNew": true,
+          "isNew": false,
           "promotion": {
             "code": "keep",
             "text": ""
@@ -8099,14 +8314,12 @@
           "adj": 0.4040951898728306,
           "score": 0.37680238956686063,
           "plateau": 0.37680238956686063,
-          "rank": 4,
+          "rank": 5,
           "isMain": false,
           "isNew": false,
           "promotion": {
-            "code": "candidate",
-            "text": "1위 1일째 (첫 1위 2026-10-06) — 7일이면 다음 날부터 자동 승격",
-            "days": 1,
-            "since": "2026-10-06"
+            "code": "keep",
+            "text": ""
           }
         },
         {
@@ -8225,7 +8438,7 @@
           "adj": 0.3844138500970637,
           "score": 0.37279694291477417,
           "plateau": 0.37279694291477417,
-          "rank": 5,
+          "rank": 6,
           "isMain": false,
           "isNew": false,
           "promotion": {
@@ -8343,7 +8556,7 @@
           "adj": 0.3501021784340345,
           "score": 0.34976195824313433,
           "plateau": 0.34976195824313433,
-          "rank": 6,
+          "rank": 7,
           "isMain": true,
           "isNew": false,
           "op": "main",
@@ -8468,7 +8681,7 @@
           "adj": 0.35644087883717296,
           "score": 0.35644087883717296,
           "plateau": 0.35644087883717296,
-          "rank": 7,
+          "rank": 8,
           "isMain": false,
           "isNew": false,
           "promotion": {
@@ -8592,7 +8805,7 @@
           "adj": 0.3864502160091654,
           "score": 0.3444293618592262,
           "plateau": 0.3444293618592262,
-          "rank": 8,
+          "rank": 9,
           "isMain": false,
           "isNew": false,
           "promotion": {
@@ -8710,7 +8923,7 @@
           "adj": 0.3810976593632458,
           "score": 0.3394230412844245,
           "plateau": 0.3394230412844245,
-          "rank": 9,
+          "rank": 10,
           "isMain": false,
           "isNew": false,
           "op": "generated",
@@ -8829,7 +9042,7 @@
           "adj": 0.3379108387438557,
           "score": 0.3379108387438557,
           "plateau": 0.3390559695697766,
-          "rank": 10,
+          "rank": 11,
           "isMain": false,
           "isNew": false,
           "op": "seed",
@@ -8948,7 +9161,7 @@
           "adj": 0.34540317839273776,
           "score": 0.33736764270447356,
           "plateau": 0.33736764270447356,
-          "rank": 11,
+          "rank": 12,
           "isMain": false,
           "isNew": false,
           "op": "generated",
@@ -9067,7 +9280,7 @@
           "adj": 0.36772726891066165,
           "score": 0.33736764270447356,
           "plateau": 0.33736764270447356,
-          "rank": 12,
+          "rank": 13,
           "isMain": false,
           "isNew": false,
           "op": "generated",
@@ -9075,146 +9288,18 @@
             "code": "keep",
             "text": ""
           }
-        },
-        {
-          "version": "g_soxl_r2lt15_dn1_ma200_d5",
-          "name": "RSI(2) < 15 · 1일 연속 하락 · 200일 평균 위 · 최대 5일",
-          "rule": "확정 종가 RSI(2) < 15 · 1일 연속 하락 · 200일 평균 위면 다음 시가 매수 → 오른 날 다음 시가 매도, 최대 5거래일 · 탭 자금 50%",
-          "params": {
-            "rsiMax": 15.0,
-            "rsiN": 2,
-            "ibsMax": 1.0,
-            "downDays": 1,
-            "ma": 200,
-            "maxHoldDays": 5,
-            "tabSize": 0.5
-          },
-          "source": "generated",
-          "addedAt": "2026-10-06",
-          "op": "jump2",
-          "parents": [
-            "g_soxl_r2lt15_ma200_d5"
-          ],
-          "full": {
-            "days": 4168,
-            "tradeDays": 877,
-            "tradeDaysPerYear": 53.023992322456806,
-            "plus1RateOfTradeDays": 31.014823261117446,
-            "lossDaysPerYear": 23.821497120921304,
-            "tStat": 2.72662417333769,
-            "plus1Days": 272,
-            "plus1DaysPerYear": 16.445297504798464,
-            "plus5Weeks": 21,
-            "plus5WeeksPerYear": 1.2696737044145872,
-            "weeklyAvgPct": 0.1777942193679216,
-            "totalPct": 365.68106919921615,
-            "lossDays": 394,
-            "lossDayAvgPct": -1.4933832039817474,
-            "worstDayPct": -8.010773646647879,
-            "mddPct": -24.14789560122468,
-            "cagrPct": 9.747104710927124,
-            "expectancyPct": 0.1988451520026054,
-            "profitFactor": 1.2963787868512986,
-            "gate": true
-          },
-          "year": {
-            "days": 251,
-            "tradeDays": 66,
-            "tradeDaysPerYear": 66.26294820717132,
-            "plus1RateOfTradeDays": 50.0,
-            "lossDaysPerYear": 29.115537848605577,
-            "tStat": 1.3599098743541485,
-            "plus1Days": 33,
-            "plus1DaysPerYear": 33.13147410358566,
-            "plus5Weeks": 7,
-            "plus5WeeksPerYear": 7.027888446215139,
-            "weeklyAvgPct": 0.7756264318357742,
-            "totalPct": 50.605850169535316,
-            "lossDays": 29,
-            "lossDayAvgPct": -2.9723309364754162,
-            "worstDayPct": -8.010773646647879,
-            "mddPct": -24.147895601224644,
-            "cagrPct": 50.85175783794489,
-            "expectancyPct": 0.710743657741496,
-            "profitFactor": 1.544204049273791,
-            "gate": true
-          },
-          "d90": {
-            "days": 63,
-            "tradeDays": 14,
-            "tradeDaysPerYear": 56.0,
-            "plus1RateOfTradeDays": 42.857142857142854,
-            "lossDaysPerYear": 24.0,
-            "tStat": 0.5326968330112599,
-            "plus1Days": 6,
-            "plus1DaysPerYear": 24.0,
-            "plus5Weeks": 1,
-            "plus5WeeksPerYear": 4.0,
-            "weeklyAvgPct": 0.6535820339621079,
-            "totalPct": 9.549220291977022,
-            "lossDays": 6,
-            "lossDayAvgPct": -3.999551304838093,
-            "worstDayPct": -8.010773646647879,
-            "mddPct": -18.52366058953748,
-            "cagrPct": null,
-            "expectancyPct": 0.7969707051294487,
-            "profitFactor": 1.4649517333905018,
-            "gate": true
-          },
-          "oos": {
-            "days": 3,
-            "tradeDays": 0,
-            "tradeDaysPerYear": 0.0,
-            "plus1RateOfTradeDays": null,
-            "lossDaysPerYear": 0.0,
-            "tStat": null,
-            "plus1Days": 0,
-            "plus1DaysPerYear": 0.0,
-            "plus5Weeks": 0,
-            "plus5WeeksPerYear": 0.0,
-            "weeklyAvgPct": 0.0,
-            "totalPct": 0.0,
-            "lossDays": 0,
-            "lossDayAvgPct": 0.0,
-            "worstDayPct": 0.0,
-            "mddPct": 0.0,
-            "cagrPct": null,
-            "expectancyPct": null,
-            "profitFactor": null,
-            "gate": false
-          },
-          "years": {
-            "n": 16,
-            "pos": 12,
-            "worstPct": -7.453614308287538
-          },
-          "raw": 0.5356675617219345,
-          "adj": 0.3429900685464215,
-          "score": 0.3346763356408763,
-          "plateau": 0.3346763356408763,
-          "rank": 13,
-          "isMain": false,
-          "isNew": false,
-          "promotion": {
-            "code": "keep",
-            "text": ""
-          }
         }
       ],
       "errors": [],
-      "top": "g_soxl_r2lt20_ibs0.5_ma200_d5",
+      "top": "g_soxl_r4lt20_ibs0.7_ma200_d4",
       "status": {
         "code": "streak",
         "text": "1위 1일째 (첫 1위 2026-10-06) — 7일이면 다음 날부터 자동 승격",
         "days": 1,
-        "since": "2026-10-06",
-        "newTop": "RSI(4) < 20 · 종가 위치(IBS) ≤ 0.7 · 200일 평균 위 · 최대 4일",
-        "newTopVersion": "g_soxl_r4lt20_ibs0.7_ma200_d4"
+        "since": "2026-10-06"
       },
       "added": [
-        "g_soxl_r4lt20_ibs0.7_ma200_d4",
-        "g_soxl_r2lt15_ibs0.5_ma200_d5",
-        "g_soxl_r2lt20_ibs0.5_dn2_ma200_d5"
+        "g_soxl_r4lt25_ibs0.7_ma200_d4"
       ],
       "retiredToday": [
         {
@@ -9350,87 +9435,76 @@
           },
           "retiredAt": "2026-10-06",
           "reason": "자리 교체 — 신규 g_soxl_r2lt20_ibs0.5_dn2_ma200_d5 가 안정 점수 +0.384 로 +0.281 보다 확실히 나음"
+        },
+        {
+          "version": "g_soxl_r2lt15_dn1_ma200_d5",
+          "name": "RSI(2) < 15 · 1일 연속 하락 · 200일 평균 위 · 최대 5일",
+          "params": {
+            "rsiMax": 15.0,
+            "rsiN": 2,
+            "ibsMax": 1.0,
+            "downDays": 1,
+            "ma": 200,
+            "maxHoldDays": 5,
+            "tabSize": 0.5
+          },
+          "retiredAt": "2026-10-06",
+          "reason": "자리 교체 — 신규 g_soxl_r4lt25_ibs0.7_ma200_d4 가 안정 점수 +0.396 로 +0.335 보다 확실히 나음"
         }
       ],
       "poolSize": 12,
-      "triedCount": 36,
+      "triedCount": 53,
       "rule": "순위 = 안정 점수: 주 평균 수익(복리)을 전체 · 최근 1년 · 최근 90일에서 내되 매매가 적은 구간은 전체 성적 쪽으로 당기고, 변수를 한 칸씩 바꾼 이웃 전략들의 중앙값보다 높게 쳐 주지 않는다(한 점에서만 좋은 과최적화를 거른다). 기준(MDD ≥ −25% · 최악일 ≥ −15% · 기대값 > 0 · 매매일 60일↑ · 매매한 해의 60%↑ 플러스)을 못 지키면 맨 뒤 · 그림자는 퇴출. 7일 연속 하위 3위, 다른 전략과 사실상 같은 매매(상관 0.97↑)도 퇴출. 밤마다 후보 48개를 이웃 · 두 칸 · 교배 · 새 구조 · 격자 탐색으로 만들어 모두 계산하고 좋은 순으로 빈자리를 채우거나 최하위를 교체(그림자 10~12개 유지). 같은 그림자가 7일 동안 매일 1위면 다음 날부터 메인으로 자동 승격(메인은 +0.02 보호 — 사실상 같으면 안 바꾼다).",
       "gen": {
         "evaluated": 48,
-        "passed": 40,
-        "added": 3,
-        "replaced": 3,
+        "passed": 39,
+        "added": 1,
+        "replaced": 1,
         "reasons": {
-          "손실 기준 미달": 7,
+          "손실 기준 미달": 8,
           "해마다 일관성 부족": 1,
-          "복제": 6
+          "복제": 7,
+          "점수 부족": 1
         },
         "ops": [
           {
             "op": "neighbor",
             "name": "이웃(한 칸)",
-            "tried": 8,
-            "accepted": 1,
-            "share": 0.231
+            "tried": 22,
+            "accepted": 2,
+            "share": 0.228
           },
           {
             "op": "jump2",
             "name": "두 칸 동시",
-            "tried": 33,
+            "tried": 45,
             "accepted": 3,
             "share": 0.13
           },
           {
             "op": "cross",
             "name": "교배",
-            "tried": 3,
+            "tried": 4,
             "accepted": 0,
-            "share": 0.346
+            "share": 0.228
           },
           {
             "op": "struct",
             "name": "새 구조",
-            "tried": 19,
+            "tried": 33,
             "accepted": 6,
-            "share": 0.26
+            "share": 0.38
           },
           {
             "op": "explore",
             "name": "격자 탐색",
-            "tried": 33,
+            "tried": 40,
             "accepted": 0,
             "share": 0.05
           }
         ]
       },
       "log": [
-        {
-          "date": "2026-10-05",
-          "at": "2026-10-05T21:11+09:00",
-          "tab": "soxl",
-          "kind": "reject",
-          "version": "",
-          "name": "",
-          "reason": "새 후보 2개는 손실 기준 미달로 투입 전 탈락"
-        },
-        {
-          "date": "2026-10-05",
-          "at": "2026-10-05T21:11+09:00",
-          "tab": "soxl",
-          "kind": "retire",
-          "version": "soxl_rsi2_th25_max3",
-          "name": "RSI(2) < 25 · 최대 3일",
-          "reason": "손실 기준 미달 — MDD -30.6% · 최악일 -8.4% · 거래당 +0.17%"
-        },
-        {
-          "date": "2026-10-05",
-          "at": "2026-10-05T21:11+09:00",
-          "tab": "soxl",
-          "kind": "retire",
-          "version": "soxl_rsi2_1d",
-          "name": "하루 한정",
-          "reason": "손실 기준 미달 — MDD -38.5% · 최악일 -7.6% · 거래당 +0.07%"
-        },
         {
           "date": "2026-10-05",
           "at": "2026-10-05T21:11+09:00",
@@ -9683,6 +9757,34 @@
           "version": "g_soxl_r3lt15_ma200_d5",
           "name": "RSI(3) < 15 · 200일 평균 위 · 최대 5일",
           "reason": "자리 교체 — 신규 g_soxl_r2lt20_ibs0.5_dn2_ma200_d5 가 안정 점수 +0.384 로 +0.281 보다 확실히 나음"
+        },
+        {
+          "date": "2026-10-06",
+          "at": "2026-10-06T16:32+09:00",
+          "tab": "soxl",
+          "kind": "new",
+          "version": "g_soxl_r4lt25_ibs0.7_ma200_d4",
+          "name": "RSI(4) < 25 · 종가 위치(IBS) ≤ 0.7 · 200일 평균 위 · 최대 4일",
+          "reason": "이웃(한 칸) — g_soxl_r4lt20_ibs0.7_ma200_d4 에서 RSI 상한 20→25 · 안정 점수 +0.396 (그대로 +0.927 · 이웃 중앙 +0.396) · 매매일 510 · MDD -23.8% · 플러스 11/16해",
+          "op": "neighbor"
+        },
+        {
+          "date": "2026-10-06",
+          "at": "2026-10-06T16:32+09:00",
+          "tab": "soxl",
+          "kind": "reject",
+          "version": "",
+          "name": "",
+          "reason": "후보 48개 계산 → 기준 통과 39 · 투입 1(교체 1) · 탈락: 손실 기준 미달 8 · 복제 7 · 해마다 일관성 부족 1 · 점수 부족 1"
+        },
+        {
+          "date": "2026-10-06",
+          "at": "2026-10-06T16:32+09:00",
+          "tab": "soxl",
+          "kind": "retire",
+          "version": "g_soxl_r2lt15_dn1_ma200_d5",
+          "name": "RSI(2) < 15 · 1일 연속 하락 · 200일 평균 위 · 최대 5일",
+          "reason": "자리 교체 — 신규 g_soxl_r4lt25_ibs0.7_ma200_d4 가 안정 점수 +0.396 로 +0.335 보다 확실히 나음"
         }
       ]
     }
@@ -10865,7 +10967,7 @@
           "plateau": 0.4004536049581251,
           "rank": 10,
           "isMain": false,
-          "isNew": true,
+          "isNew": false,
           "promotion": {
             "code": "keep",
             "text": ""
@@ -10997,9 +11099,7 @@
         "days": 1,
         "since": "2026-10-06"
       },
-      "added": [
-        "g_open_q9_k2_gap3"
-      ],
+      "added": [],
       "retiredToday": [
         {
           "version": "g_open_q6_k2",
@@ -11069,16 +11169,16 @@
         }
       ],
       "poolSize": 10,
-      "triedCount": 93,
+      "triedCount": 107,
       "rule": "순위 = 안정 점수: 주 평균 수익(복리)을 전체 · 최근 1년 · 최근 90일에서 내되 매매가 적은 구간은 전체 성적 쪽으로 당기고, 변수를 한 칸씩 바꾼 이웃 전략들의 중앙값보다 높게 쳐 주지 않는다(한 점에서만 좋은 과최적화를 거른다). 기준(MDD ≥ −25% · 최악일 ≥ −15% · 기대값 > 0 · 매매일 60일↑ · 매매한 해의 60%↑ 플러스)을 못 지키면 맨 뒤 · 그림자는 퇴출. 7일 연속 하위 3위, 다른 전략과 사실상 같은 매매(상관 0.97↑)도 퇴출. 밤마다 후보 48개를 이웃 · 두 칸 · 교배 · 새 구조 · 격자 탐색으로 만들어 모두 계산하고 좋은 순으로 빈자리를 채우거나 최하위를 교체(그림자 10~12개 유지). 같은 그림자가 7일 동안 매일 1위면 다음 날부터 메인으로 자동 승격(메인은 +0.02 보호 — 사실상 같으면 안 바꾼다).",
       "gen": {
-        "evaluated": 48,
-        "passed": 5,
-        "added": 1,
+        "evaluated": 14,
+        "passed": 2,
+        "added": 0,
         "replaced": 0,
         "reasons": {
-          "손실 기준 미달": 43,
-          "복제": 4
+          "손실 기준 미달": 12,
+          "복제": 2
         },
         "ops": [
           {
@@ -11086,41 +11186,32 @@
             "name": "이웃(한 칸)",
             "tried": 2,
             "accepted": 0,
-            "share": 0.261
+            "share": 0.26
           },
           {
             "op": "jump2",
             "name": "두 칸 동시",
             "tried": 10,
             "accepted": 1,
-            "share": 0.116
+            "share": 0.173
           },
           {
             "op": "cross",
             "name": "교배",
             "tried": 0,
             "accepted": 0,
-            "share": 0.522
+            "share": 0.519
           },
           {
             "op": "explore",
             "name": "격자 탐색",
-            "tried": 84,
+            "tried": 98,
             "accepted": 3,
-            "share": 0.102
+            "share": 0.05
           }
         ]
       },
       "log": [
-        {
-          "date": "2026-10-05",
-          "at": "2026-10-05T21:11+09:00",
-          "tab": "opening",
-          "kind": "new",
-          "version": "g_open_q6_k3",
-          "name": "통과 6개↑ · 깊은 3종목",
-          "reason": "신규 투입 — 점수 +0.378 · 최근 1년 +33.0% (상위 opening_d1_min7 주변/격자에서)"
-        },
         {
           "date": "2026-10-05",
           "at": "2026-10-05T21:11+09:00",
@@ -11385,6 +11476,15 @@
           "version": "opening_d1_min7",
           "name": "통과 7개 이상",
           "reason": "복제 — 통과 7개↑ · 깊은 3종목 · 갭 -3% 이하만 와 사실상 같은 매매(일 손익 상관 0.991) · 순위 낮은 쪽을 뺌"
+        },
+        {
+          "date": "2026-10-06",
+          "at": "2026-10-06T16:32+09:00",
+          "tab": "opening",
+          "kind": "reject",
+          "version": "",
+          "name": "",
+          "reason": "후보 14개 계산 → 기준 통과 2 · 투입 0(교체 0) · 탈락: 손실 기준 미달 12 · 복제 2"
         }
       ]
     },
@@ -13367,6 +13467,134 @@
           }
         },
         {
+          "version": "g_coin_ma15_s99_hi3_both",
+          "name": "평균 15일 · 최근 3일 고가 돌파 · 손절 없음 · BTC·ETH 반반",
+          "rule": "어제 종가 > 15일 평균인 날, 최근 3일 고가를 넘는 순간 매수 → 다음 날 09:00 매도 · 손절 없음 · BTC·ETH 반반 · 탭 자금 80%",
+          "params": {
+            "ma": 15,
+            "stopPct": 99.0,
+            "level": "prevhigh",
+            "k": 0.5,
+            "hiN": 3,
+            "lastEntryHour": null,
+            "tabSize": 0.8,
+            "markets": [
+              "KRW-BTC",
+              "KRW-ETH"
+            ]
+          },
+          "source": "generated",
+          "addedAt": "2026-10-06",
+          "op": "jump2",
+          "parents": [
+            "g_coin_ma20_s99_hi2_both"
+          ],
+          "full": {
+            "days": 3149,
+            "tradeDays": 912,
+            "tradeDaysPerYear": 105.70974912670688,
+            "plus1RateOfTradeDays": 23.574561403508774,
+            "lossDaysPerYear": 56.67989838043823,
+            "tStat": 4.1179797229012145,
+            "plus1Days": 215,
+            "plus1DaysPerYear": 24.920609717370592,
+            "plus5Weeks": 25,
+            "plus5WeeksPerYear": 2.897745315973325,
+            "weeklyAvgPct": 0.4526934656865933,
+            "totalPct": 695.0016295644988,
+            "lossDays": 489,
+            "lossDayAvgPct": -0.8800569981886839,
+            "worstDayPct": -8.641533727747296,
+            "mddPct": -12.963663417256011,
+            "cagrPct": 27.16321176560774,
+            "expectancyPct": 0.24321268597203854,
+            "profitFactor": 1.5154201611751061,
+            "gate": true
+          },
+          "year": {
+            "days": 361,
+            "tradeDays": 76,
+            "tradeDaysPerYear": 76.84210526315789,
+            "plus1RateOfTradeDays": 15.789473684210526,
+            "lossDaysPerYear": 45.498614958448755,
+            "tStat": 0.7726158732979066,
+            "plus1Days": 12,
+            "plus1DaysPerYear": 12.132963988919666,
+            "plus5Weeks": 1,
+            "plus5WeeksPerYear": 1.0110803324099722,
+            "weeklyAvgPct": 0.17264684985465184,
+            "totalPct": 9.573342419514596,
+            "lossDays": 45,
+            "lossDayAvgPct": -0.6839886023608152,
+            "worstDayPct": -1.835927813869062,
+            "mddPct": -5.61707244230546,
+            "cagrPct": 9.68439728464292,
+            "expectancyPct": 0.13087596015149114,
+            "profitFactor": 1.3231559037089318,
+            "gate": true
+          },
+          "d90": {
+            "days": 90,
+            "tradeDays": 24,
+            "tradeDaysPerYear": 97.33333333333334,
+            "plus1RateOfTradeDays": 16.666666666666664,
+            "lossDaysPerYear": 68.94444444444444,
+            "tStat": 0.7504684741168417,
+            "plus1Days": 4,
+            "plus1DaysPerYear": 16.22222222222222,
+            "plus5Weeks": 1,
+            "plus5WeeksPerYear": 4.055555555555555,
+            "weeklyAvgPct": 0.5231204457450067,
+            "totalPct": 7.577998868283986,
+            "lossDays": 17,
+            "lossDayAvgPct": -0.6407352242058891,
+            "worstDayPct": -1.4399448580918657,
+            "mddPct": -3.810844826243076,
+            "cagrPct": null,
+            "expectancyPct": 0.3258067278757203,
+            "profitFactor": 1.7178666350426166,
+            "gate": true
+          },
+          "oos": {
+            "days": 5,
+            "tradeDays": 1,
+            "tradeDaysPerYear": 73.0,
+            "plus1RateOfTradeDays": 0.0,
+            "lossDaysPerYear": 73.0,
+            "tStat": null,
+            "plus1Days": 0,
+            "plus1DaysPerYear": 0.0,
+            "plus5Weeks": 0,
+            "plus5WeeksPerYear": 0.0,
+            "weeklyAvgPct": -0.6883030479154839,
+            "totalPct": -1.371868484973271,
+            "lossDays": 1,
+            "lossDayAvgPct": -1.3718684849732723,
+            "worstDayPct": -1.3718684849732723,
+            "mddPct": -1.371868484973271,
+            "cagrPct": null,
+            "expectancyPct": -1.3718684849732723,
+            "profitFactor": 0.0,
+            "gate": false
+          },
+          "years": {
+            "n": 9,
+            "pos": 8,
+            "worstPct": -1.6933219359975271
+          },
+          "raw": 0.38282025376208395,
+          "adj": 0.4003372324374939,
+          "score": 0.4003372324374939,
+          "plateau": 0.4003372324374939,
+          "rank": 4,
+          "isMain": false,
+          "isNew": true,
+          "promotion": {
+            "code": "keep",
+            "text": ""
+          }
+        },
+        {
           "version": "g_coin_ma20_s99_hi2_both",
           "name": "평균 20일 · 최근 2일 고가 돌파 · 손절 없음 · BTC·ETH 반반",
           "rule": "어제 종가 > 20일 평균인 날, 최근 2일 고가를 넘는 순간 매수 → 다음 날 09:00 매도 · 손절 없음 · BTC·ETH 반반 · 탭 자금 80%",
@@ -13486,7 +13714,7 @@
           "adj": 0.4008935878520754,
           "score": 0.3968851224046307,
           "plateau": 0.3968851224046307,
-          "rank": 4,
+          "rank": 5,
           "isMain": false,
           "isNew": false,
           "promotion": {
@@ -13614,7 +13842,7 @@
           "adj": 0.3970645543971465,
           "score": 0.39048611601237787,
           "plateau": 0.39048611601237787,
-          "rank": 5,
+          "rank": 6,
           "isMain": false,
           "isNew": false,
           "promotion": {
@@ -13737,7 +13965,7 @@
           "adj": 0.38060897982820946,
           "score": 0.3602879748155632,
           "plateau": 0.3602879748155632,
-          "rank": 6,
+          "rank": 7,
           "isMain": true,
           "isNew": false,
           "op": "main",
@@ -13861,7 +14089,7 @@
           "adj": 0.37530956447913927,
           "score": 0.3711366470947466,
           "plateau": 0.3711366470947466,
-          "rank": 7,
+          "rank": 8,
           "isMain": false,
           "isNew": false,
           "op": "generated",
@@ -13985,7 +14213,7 @@
           "adj": 0.3348641054064799,
           "score": 0.3317182489674024,
           "plateau": 0.3317182489674024,
-          "rank": 8,
+          "rank": 9,
           "isMain": false,
           "isNew": false,
           "op": "seed",
@@ -14109,7 +14337,7 @@
           "adj": 0.3019374908252539,
           "score": 0.3019374908252539,
           "plateau": 0.3019374908252539,
-          "rank": 9,
+          "rank": 10,
           "isMain": false,
           "isNew": false,
           "op": "seed",
@@ -14233,7 +14461,7 @@
           "adj": 0.3053767464955585,
           "score": 0.3012428361076965,
           "plateau": 0.3012428361076965,
-          "rank": 10,
+          "rank": 11,
           "isMain": false,
           "isNew": false,
           "op": "generated",
@@ -14357,7 +14585,7 @@
           "adj": 0.29766907365904566,
           "score": 0.29766907365904566,
           "plateau": 0.29766907365904566,
-          "rank": 11,
+          "rank": 12,
           "isMain": false,
           "isNew": false,
           "op": "seed",
@@ -14480,130 +14708,6 @@
           "adj": 0.2948819833381467,
           "score": 0.28964367606874825,
           "plateau": 0.28964367606874825,
-          "rank": 12,
-          "isMain": false,
-          "isNew": false,
-          "op": "seed",
-          "promotion": {
-            "code": "keep",
-            "text": ""
-          }
-        },
-        {
-          "version": "coin_bo_before21",
-          "name": "21시 전 돌파만",
-          "rule": "밤 9시 이후 돌파는 사지 않음",
-          "params": {
-            "ma": 20,
-            "stopPct": 5.0,
-            "level": "prevhigh",
-            "k": 0.5,
-            "lastEntryHour": 21,
-            "tabSize": 0.8,
-            "markets": [
-              "KRW-BTC",
-              "KRW-ETH"
-            ]
-          },
-          "source": "seed",
-          "addedAt": "2026-10-05",
-          "full": {
-            "days": 3149,
-            "tradeDays": 855,
-            "tradeDaysPerYear": 99.1028898062877,
-            "plus1RateOfTradeDays": 24.561403508771928,
-            "lossDaysPerYear": 53.086694188631306,
-            "tStat": 3.520764033913883,
-            "plus1Days": 210,
-            "plus1DaysPerYear": 24.341060654175926,
-            "plus5Weeks": 26,
-            "plus5WeeksPerYear": 3.0136551286122577,
-            "weeklyAvgPct": 0.3971411749051468,
-            "totalPct": 516.7341367430043,
-            "lossDays": 458,
-            "lossDayAvgPct": -1.018170901000286,
-            "worstDayPct": -4.191999999999999,
-            "mddPct": -12.3170560713606,
-            "cagrPct": 23.475305601684894,
-            "expectancyPct": 0.2310560516087657,
-            "profitFactor": 1.4236403356833103,
-            "gate": true
-          },
-          "year": {
-            "days": 361,
-            "tradeDays": 68,
-            "tradeDaysPerYear": 68.75346260387812,
-            "plus1RateOfTradeDays": 19.11764705882353,
-            "lossDaysPerYear": 42.46537396121884,
-            "tStat": 0.02995496226900215,
-            "plus1Days": 13,
-            "plus1DaysPerYear": 13.14404432132964,
-            "plus5Weeks": 1,
-            "plus5WeeksPerYear": 1.0110803324099722,
-            "weeklyAvgPct": -0.005210416021095288,
-            "totalPct": -0.27577827483784567,
-            "lossDays": 42,
-            "lossDayAvgPct": -0.7965765029787423,
-            "worstDayPct": -2.8952590443400474,
-            "mddPct": -7.012392587667559,
-            "cagrPct": -0.27882972573037845,
-            "expectancyPct": 0.004935228491800934,
-            "profitFactor": 1.0100308883192348,
-            "gate": true
-          },
-          "d90": {
-            "days": 90,
-            "tradeDays": 28,
-            "tradeDaysPerYear": 113.55555555555556,
-            "plus1RateOfTradeDays": 21.428571428571427,
-            "lossDaysPerYear": 73.0,
-            "tStat": 0.1857348906265455,
-            "plus1Days": 6,
-            "plus1DaysPerYear": 24.333333333333336,
-            "plus5Weeks": 1,
-            "plus5WeeksPerYear": 4.055555555555555,
-            "weeklyAvgPct": 0.08836425092422218,
-            "totalPct": 1.244230188126938,
-            "lossDays": 18,
-            "lossDayAvgPct": -0.8315315724127013,
-            "worstDayPct": -2.8952590443400474,
-            "mddPct": -4.011790598142584,
-            "cagrPct": null,
-            "expectancyPct": 0.05651148766326492,
-            "profitFactor": 1.1057166817277162,
-            "gate": true
-          },
-          "oos": {
-            "days": 5,
-            "tradeDays": 3,
-            "tradeDaysPerYear": 219.0,
-            "plus1RateOfTradeDays": 0.0,
-            "lossDaysPerYear": 146.0,
-            "tStat": -0.6647886894573322,
-            "plus1Days": 0,
-            "plus1DaysPerYear": 0.0,
-            "plus5Weeks": 0,
-            "plus5WeeksPerYear": 0.0,
-            "weeklyAvgPct": -0.4845737591659405,
-            "totalPct": -0.966799401051166,
-            "lossDays": 2,
-            "lossDayAvgPct": -0.7718162811208966,
-            "worstDayPct": -1.0711183884649058,
-            "mddPct": -1.071118388464909,
-            "cagrPct": null,
-            "expectancyPct": -0.3209753341150841,
-            "profitFactor": 0.3761948109290918,
-            "gate": false
-          },
-          "years": {
-            "n": 9,
-            "pos": 8,
-            "worstPct": -1.83382522666512
-          },
-          "raw": 0.16009833660275788,
-          "adj": 0.2703158674177984,
-          "score": 0.2703158674177984,
-          "plateau": 0.2703158674177984,
           "rank": 13,
           "isMain": false,
           "isNew": false,
@@ -14622,7 +14726,9 @@
         "days": 1,
         "since": "2026-10-06"
       },
-      "added": [],
+      "added": [
+        "g_coin_ma15_s99_hi3_both"
+      ],
       "retiredToday": [
         {
           "version": "coin_vb_k05_before21",
@@ -14695,55 +14801,73 @@
           },
           "retiredAt": "2026-10-06",
           "reason": "복제 — 손절 없음 와 사실상 같은 매매(일 손익 상관 0.993) · 순위 낮은 쪽을 뺌"
+        },
+        {
+          "version": "coin_bo_before21",
+          "name": "21시 전 돌파만",
+          "params": {
+            "ma": 20,
+            "stopPct": 5.0,
+            "level": "prevhigh",
+            "k": 0.5,
+            "lastEntryHour": 21,
+            "tabSize": 0.8,
+            "markets": [
+              "KRW-BTC",
+              "KRW-ETH"
+            ]
+          },
+          "retiredAt": "2026-10-06",
+          "reason": "자리 교체 — 신규 g_coin_ma15_s99_hi3_both 가 안정 점수 +0.400 로 +0.270 보다 확실히 나음"
         }
       ],
       "poolSize": 12,
-      "triedCount": 30,
+      "triedCount": 43,
       "rule": "순위 = 안정 점수: 주 평균 수익(복리)을 전체 · 최근 1년 · 최근 90일에서 내되 매매가 적은 구간은 전체 성적 쪽으로 당기고, 변수를 한 칸씩 바꾼 이웃 전략들의 중앙값보다 높게 쳐 주지 않는다(한 점에서만 좋은 과최적화를 거른다). 기준(MDD ≥ −25% · 최악일 ≥ −15% · 기대값 > 0 · 매매일 60일↑ · 매매한 해의 60%↑ 플러스)을 못 지키면 맨 뒤 · 그림자는 퇴출. 7일 연속 하위 3위, 다른 전략과 사실상 같은 매매(상관 0.97↑)도 퇴출. 밤마다 후보 48개를 이웃 · 두 칸 · 교배 · 새 구조 · 격자 탐색으로 만들어 모두 계산하고 좋은 순으로 빈자리를 채우거나 최하위를 교체(그림자 10~12개 유지). 같은 그림자가 7일 동안 매일 1위면 다음 날부터 메인으로 자동 승격(메인은 +0.02 보호 — 사실상 같으면 안 바꾼다).",
       "gen": {
         "evaluated": 48,
         "passed": 43,
-        "added": 0,
-        "replaced": 0,
+        "added": 1,
+        "replaced": 1,
         "reasons": {
           "손실 기준 미달": 5,
-          "복제": 9
+          "복제": 8
         },
         "ops": [
           {
             "op": "neighbor",
             "name": "이웃(한 칸)",
-            "tried": 18,
+            "tried": 28,
             "accepted": 0,
-            "share": 0.072
+            "share": 0.07
           },
           {
             "op": "jump2",
             "name": "두 칸 동시",
-            "tried": 31,
-            "accepted": 0,
-            "share": 0.054
+            "tried": 45,
+            "accepted": 1,
+            "share": 0.05
           },
           {
             "op": "cross",
             "name": "교배",
-            "tried": 2,
+            "tried": 4,
             "accepted": 0,
-            "share": 0.431
+            "share": 0.349
           },
           {
             "op": "struct",
             "name": "새 구조",
-            "tried": 12,
+            "tried": 13,
             "accepted": 4,
-            "share": 0.392
+            "share": 0.499
           },
           {
             "op": "explore",
             "name": "격자 탐색",
-            "tried": 33,
+            "tried": 54,
             "accepted": 0,
-            "share": 0.051
+            "share": 0.05
           }
         ]
       },
@@ -14886,6 +15010,34 @@
           "version": "",
           "name": "",
           "reason": "후보 48개 계산 → 기준 통과 43 · 투입 0(교체 0) · 탈락: 복제 9 · 손실 기준 미달 5"
+        },
+        {
+          "date": "2026-10-06",
+          "at": "2026-10-06T16:32+09:00",
+          "tab": "crypto",
+          "kind": "new",
+          "version": "g_coin_ma15_s99_hi3_both",
+          "name": "평균 15일 · 최근 3일 고가 돌파 · 손절 없음 · BTC·ETH 반반",
+          "reason": "두 칸 동시 — g_coin_ma20_s99_hi2_both 에서 평균 20→15, 고가 일수 2→3 · 안정 점수 +0.400 (그대로 +0.383 · 이웃 중앙 +0.400) · 매매일 912 · MDD -13.0% · 플러스 8/9해",
+          "op": "jump2"
+        },
+        {
+          "date": "2026-10-06",
+          "at": "2026-10-06T16:32+09:00",
+          "tab": "crypto",
+          "kind": "reject",
+          "version": "",
+          "name": "",
+          "reason": "후보 48개 계산 → 기준 통과 43 · 투입 1(교체 1) · 탈락: 복제 8 · 손실 기준 미달 5"
+        },
+        {
+          "date": "2026-10-06",
+          "at": "2026-10-06T16:32+09:00",
+          "tab": "crypto",
+          "kind": "retire",
+          "version": "coin_bo_before21",
+          "name": "21시 전 돌파만",
+          "reason": "자리 교체 — 신규 g_coin_ma15_s99_hi3_both 가 안정 점수 +0.400 로 +0.270 보다 확실히 나음"
         }
       ]
     },
@@ -15012,6 +15164,132 @@
           "plateau": 0.42387872360903306,
           "rank": 1,
           "isMain": false,
+          "isNew": false,
+          "promotion": {
+            "code": "candidate",
+            "text": "1위 1일째 (첫 1위 2026-10-06) — 7일이면 다음 날부터 자동 승격",
+            "days": 1,
+            "since": "2026-10-06"
+          }
+        },
+        {
+          "version": "g_soxl_r4lt25_ibs0.7_ma200_d4",
+          "name": "RSI(4) < 25 · 종가 위치(IBS) ≤ 0.7 · 200일 평균 위 · 최대 4일",
+          "rule": "확정 종가 RSI(4) < 25 · 종가 위치(IBS) ≤ 0.7 · 200일 평균 위면 다음 시가 매수 → 오른 날 다음 시가 매도, 최대 4거래일 · 탭 자금 50%",
+          "params": {
+            "rsiMax": 25.0,
+            "rsiN": 4,
+            "ibsMax": 0.7,
+            "downDays": 0,
+            "ma": 200,
+            "maxHoldDays": 4,
+            "tabSize": 0.5
+          },
+          "source": "generated",
+          "addedAt": "2026-10-06",
+          "op": "neighbor",
+          "parents": [
+            "g_soxl_r4lt20_ibs0.7_ma200_d4"
+          ],
+          "full": {
+            "days": 4168,
+            "tradeDays": 510,
+            "tradeDaysPerYear": 30.83493282149712,
+            "plus1RateOfTradeDays": 31.372549019607842,
+            "lossDaysPerYear": 13.785028790786948,
+            "tStat": 2.243144315325141,
+            "plus1Days": 160,
+            "plus1DaysPerYear": 9.67370441458733,
+            "plus5Weeks": 14,
+            "plus5WeeksPerYear": 0.8464491362763915,
+            "weeklyAvgPct": 0.11979069415339882,
+            "totalPct": 182.0083685849661,
+            "lossDays": 228,
+            "lossDayAvgPct": -1.5742299056305564,
+            "worstDayPct": -8.010773646647879,
+            "mddPct": -23.835861301244886,
+            "cagrPct": 6.468989975497541,
+            "expectancyPct": 0.23010547220014982,
+            "profitFactor": 1.326959618177619,
+            "gate": true
+          },
+          "year": {
+            "days": 251,
+            "tradeDays": 45,
+            "tradeDaysPerYear": 45.179282868525895,
+            "plus1RateOfTradeDays": 46.666666666666664,
+            "lossDaysPerYear": 19.07569721115538,
+            "tStat": 1.9480241604407595,
+            "plus1Days": 21,
+            "plus1DaysPerYear": 21.083665338645417,
+            "plus5Weeks": 6,
+            "plus5WeeksPerYear": 6.0239043824701195,
+            "weeklyAvgPct": 0.9377173717461273,
+            "totalPct": 63.99643283592993,
+            "lossDays": 19,
+            "lossDayAvgPct": -2.2985843806183217,
+            "worstDayPct": -8.010773646647879,
+            "mddPct": -9.52420599205215,
+            "cagrPct": 64.31995811657072,
+            "expectancyPct": 1.1847684699533507,
+            "profitFactor": 2.220764662977826,
+            "gate": true
+          },
+          "d90": {
+            "days": 63,
+            "tradeDays": 15,
+            "tradeDaysPerYear": 60.0,
+            "plus1RateOfTradeDays": 46.666666666666664,
+            "lossDaysPerYear": 24.0,
+            "tStat": 1.3102161484833732,
+            "plus1Days": 7,
+            "plus1DaysPerYear": 28.0,
+            "plus5Weeks": 3,
+            "plus5WeeksPerYear": 12.0,
+            "weeklyAvgPct": 1.7227798136635553,
+            "totalPct": 27.015018832471107,
+            "lossDays": 6,
+            "lossDayAvgPct": -2.8383050183672207,
+            "worstDayPct": -8.010773646647879,
+            "mddPct": -9.524205992052137,
+            "cagrPct": null,
+            "expectancyPct": 1.7257141654318118,
+            "profitFactor": 2.52002176850654,
+            "gate": true
+          },
+          "oos": {
+            "days": 3,
+            "tradeDays": 0,
+            "tradeDaysPerYear": 0.0,
+            "plus1RateOfTradeDays": null,
+            "lossDaysPerYear": 0.0,
+            "tStat": null,
+            "plus1Days": 0,
+            "plus1DaysPerYear": 0.0,
+            "plus5Weeks": 0,
+            "plus5WeeksPerYear": 0.0,
+            "weeklyAvgPct": 0.0,
+            "totalPct": 0.0,
+            "lossDays": 0,
+            "lossDayAvgPct": 0.0,
+            "worstDayPct": 0.0,
+            "mddPct": 0.0,
+            "cagrPct": null,
+            "expectancyPct": null,
+            "profitFactor": null,
+            "gate": false
+          },
+          "years": {
+            "n": 16,
+            "pos": 11,
+            "worstPct": -11.948330066399038
+          },
+          "raw": 0.9267626265210271,
+          "adj": 0.40985697967335977,
+          "score": 0.3963151564162606,
+          "plateau": 0.3963151564162606,
+          "rank": 2,
+          "isMain": false,
           "isNew": true,
           "promotion": {
             "code": "keep",
@@ -15134,9 +15412,9 @@
           "adj": 0.4278882653622469,
           "score": 0.39087395502129313,
           "plateau": 0.39087395502129313,
-          "rank": 2,
+          "rank": 3,
           "isMain": false,
-          "isNew": true,
+          "isNew": false,
           "promotion": {
             "code": "keep",
             "text": ""
@@ -15258,9 +15536,9 @@
           "adj": 0.3840908154405181,
           "score": 0.3839676778222602,
           "plateau": 0.3839676778222602,
-          "rank": 3,
+          "rank": 4,
           "isMain": false,
-          "isNew": true,
+          "isNew": false,
           "promotion": {
             "code": "keep",
             "text": ""
@@ -15382,14 +15660,12 @@
           "adj": 0.4040951898728306,
           "score": 0.37680238956686063,
           "plateau": 0.37680238956686063,
-          "rank": 4,
+          "rank": 5,
           "isMain": false,
           "isNew": false,
           "promotion": {
-            "code": "candidate",
-            "text": "1위 1일째 (첫 1위 2026-10-06) — 7일이면 다음 날부터 자동 승격",
-            "days": 1,
-            "since": "2026-10-06"
+            "code": "keep",
+            "text": ""
           }
         },
         {
@@ -15508,7 +15784,7 @@
           "adj": 0.3844138500970637,
           "score": 0.37279694291477417,
           "plateau": 0.37279694291477417,
-          "rank": 5,
+          "rank": 6,
           "isMain": false,
           "isNew": false,
           "promotion": {
@@ -15626,7 +15902,7 @@
           "adj": 0.3501021784340345,
           "score": 0.34976195824313433,
           "plateau": 0.34976195824313433,
-          "rank": 6,
+          "rank": 7,
           "isMain": true,
           "isNew": false,
           "op": "main",
@@ -15751,7 +16027,7 @@
           "adj": 0.35644087883717296,
           "score": 0.35644087883717296,
           "plateau": 0.35644087883717296,
-          "rank": 7,
+          "rank": 8,
           "isMain": false,
           "isNew": false,
           "promotion": {
@@ -15875,7 +16151,7 @@
           "adj": 0.3864502160091654,
           "score": 0.3444293618592262,
           "plateau": 0.3444293618592262,
-          "rank": 8,
+          "rank": 9,
           "isMain": false,
           "isNew": false,
           "promotion": {
@@ -15993,7 +16269,7 @@
           "adj": 0.3810976593632458,
           "score": 0.3394230412844245,
           "plateau": 0.3394230412844245,
-          "rank": 9,
+          "rank": 10,
           "isMain": false,
           "isNew": false,
           "op": "generated",
@@ -16112,7 +16388,7 @@
           "adj": 0.3379108387438557,
           "score": 0.3379108387438557,
           "plateau": 0.3390559695697766,
-          "rank": 10,
+          "rank": 11,
           "isMain": false,
           "isNew": false,
           "op": "seed",
@@ -16231,7 +16507,7 @@
           "adj": 0.34540317839273776,
           "score": 0.33736764270447356,
           "plateau": 0.33736764270447356,
-          "rank": 11,
+          "rank": 12,
           "isMain": false,
           "isNew": false,
           "op": "generated",
@@ -16350,7 +16626,7 @@
           "adj": 0.36772726891066165,
           "score": 0.33736764270447356,
           "plateau": 0.33736764270447356,
-          "rank": 12,
+          "rank": 13,
           "isMain": false,
           "isNew": false,
           "op": "generated",
@@ -16358,146 +16634,18 @@
             "code": "keep",
             "text": ""
           }
-        },
-        {
-          "version": "g_soxl_r2lt15_dn1_ma200_d5",
-          "name": "RSI(2) < 15 · 1일 연속 하락 · 200일 평균 위 · 최대 5일",
-          "rule": "확정 종가 RSI(2) < 15 · 1일 연속 하락 · 200일 평균 위면 다음 시가 매수 → 오른 날 다음 시가 매도, 최대 5거래일 · 탭 자금 50%",
-          "params": {
-            "rsiMax": 15.0,
-            "rsiN": 2,
-            "ibsMax": 1.0,
-            "downDays": 1,
-            "ma": 200,
-            "maxHoldDays": 5,
-            "tabSize": 0.5
-          },
-          "source": "generated",
-          "addedAt": "2026-10-06",
-          "op": "jump2",
-          "parents": [
-            "g_soxl_r2lt15_ma200_d5"
-          ],
-          "full": {
-            "days": 4168,
-            "tradeDays": 877,
-            "tradeDaysPerYear": 53.023992322456806,
-            "plus1RateOfTradeDays": 31.014823261117446,
-            "lossDaysPerYear": 23.821497120921304,
-            "tStat": 2.72662417333769,
-            "plus1Days": 272,
-            "plus1DaysPerYear": 16.445297504798464,
-            "plus5Weeks": 21,
-            "plus5WeeksPerYear": 1.2696737044145872,
-            "weeklyAvgPct": 0.1777942193679216,
-            "totalPct": 365.68106919921615,
-            "lossDays": 394,
-            "lossDayAvgPct": -1.4933832039817474,
-            "worstDayPct": -8.010773646647879,
-            "mddPct": -24.14789560122468,
-            "cagrPct": 9.747104710927124,
-            "expectancyPct": 0.1988451520026054,
-            "profitFactor": 1.2963787868512986,
-            "gate": true
-          },
-          "year": {
-            "days": 251,
-            "tradeDays": 66,
-            "tradeDaysPerYear": 66.26294820717132,
-            "plus1RateOfTradeDays": 50.0,
-            "lossDaysPerYear": 29.115537848605577,
-            "tStat": 1.3599098743541485,
-            "plus1Days": 33,
-            "plus1DaysPerYear": 33.13147410358566,
-            "plus5Weeks": 7,
-            "plus5WeeksPerYear": 7.027888446215139,
-            "weeklyAvgPct": 0.7756264318357742,
-            "totalPct": 50.605850169535316,
-            "lossDays": 29,
-            "lossDayAvgPct": -2.9723309364754162,
-            "worstDayPct": -8.010773646647879,
-            "mddPct": -24.147895601224644,
-            "cagrPct": 50.85175783794489,
-            "expectancyPct": 0.710743657741496,
-            "profitFactor": 1.544204049273791,
-            "gate": true
-          },
-          "d90": {
-            "days": 63,
-            "tradeDays": 14,
-            "tradeDaysPerYear": 56.0,
-            "plus1RateOfTradeDays": 42.857142857142854,
-            "lossDaysPerYear": 24.0,
-            "tStat": 0.5326968330112599,
-            "plus1Days": 6,
-            "plus1DaysPerYear": 24.0,
-            "plus5Weeks": 1,
-            "plus5WeeksPerYear": 4.0,
-            "weeklyAvgPct": 0.6535820339621079,
-            "totalPct": 9.549220291977022,
-            "lossDays": 6,
-            "lossDayAvgPct": -3.999551304838093,
-            "worstDayPct": -8.010773646647879,
-            "mddPct": -18.52366058953748,
-            "cagrPct": null,
-            "expectancyPct": 0.7969707051294487,
-            "profitFactor": 1.4649517333905018,
-            "gate": true
-          },
-          "oos": {
-            "days": 3,
-            "tradeDays": 0,
-            "tradeDaysPerYear": 0.0,
-            "plus1RateOfTradeDays": null,
-            "lossDaysPerYear": 0.0,
-            "tStat": null,
-            "plus1Days": 0,
-            "plus1DaysPerYear": 0.0,
-            "plus5Weeks": 0,
-            "plus5WeeksPerYear": 0.0,
-            "weeklyAvgPct": 0.0,
-            "totalPct": 0.0,
-            "lossDays": 0,
-            "lossDayAvgPct": 0.0,
-            "worstDayPct": 0.0,
-            "mddPct": 0.0,
-            "cagrPct": null,
-            "expectancyPct": null,
-            "profitFactor": null,
-            "gate": false
-          },
-          "years": {
-            "n": 16,
-            "pos": 12,
-            "worstPct": -7.453614308287538
-          },
-          "raw": 0.5356675617219345,
-          "adj": 0.3429900685464215,
-          "score": 0.3346763356408763,
-          "plateau": 0.3346763356408763,
-          "rank": 13,
-          "isMain": false,
-          "isNew": false,
-          "promotion": {
-            "code": "keep",
-            "text": ""
-          }
         }
       ],
       "errors": [],
-      "top": "g_soxl_r2lt20_ibs0.5_ma200_d5",
+      "top": "g_soxl_r4lt20_ibs0.7_ma200_d4",
       "status": {
         "code": "streak",
         "text": "1위 1일째 (첫 1위 2026-10-06) — 7일이면 다음 날부터 자동 승격",
         "days": 1,
-        "since": "2026-10-06",
-        "newTop": "RSI(4) < 20 · 종가 위치(IBS) ≤ 0.7 · 200일 평균 위 · 최대 4일",
-        "newTopVersion": "g_soxl_r4lt20_ibs0.7_ma200_d4"
+        "since": "2026-10-06"
       },
       "added": [
-        "g_soxl_r4lt20_ibs0.7_ma200_d4",
-        "g_soxl_r2lt15_ibs0.5_ma200_d5",
-        "g_soxl_r2lt20_ibs0.5_dn2_ma200_d5"
+        "g_soxl_r4lt25_ibs0.7_ma200_d4"
       ],
       "retiredToday": [
         {
@@ -16633,87 +16781,76 @@
           },
           "retiredAt": "2026-10-06",
           "reason": "자리 교체 — 신규 g_soxl_r2lt20_ibs0.5_dn2_ma200_d5 가 안정 점수 +0.384 로 +0.281 보다 확실히 나음"
+        },
+        {
+          "version": "g_soxl_r2lt15_dn1_ma200_d5",
+          "name": "RSI(2) < 15 · 1일 연속 하락 · 200일 평균 위 · 최대 5일",
+          "params": {
+            "rsiMax": 15.0,
+            "rsiN": 2,
+            "ibsMax": 1.0,
+            "downDays": 1,
+            "ma": 200,
+            "maxHoldDays": 5,
+            "tabSize": 0.5
+          },
+          "retiredAt": "2026-10-06",
+          "reason": "자리 교체 — 신규 g_soxl_r4lt25_ibs0.7_ma200_d4 가 안정 점수 +0.396 로 +0.335 보다 확실히 나음"
         }
       ],
       "poolSize": 12,
-      "triedCount": 36,
+      "triedCount": 53,
       "rule": "순위 = 안정 점수: 주 평균 수익(복리)을 전체 · 최근 1년 · 최근 90일에서 내되 매매가 적은 구간은 전체 성적 쪽으로 당기고, 변수를 한 칸씩 바꾼 이웃 전략들의 중앙값보다 높게 쳐 주지 않는다(한 점에서만 좋은 과최적화를 거른다). 기준(MDD ≥ −25% · 최악일 ≥ −15% · 기대값 > 0 · 매매일 60일↑ · 매매한 해의 60%↑ 플러스)을 못 지키면 맨 뒤 · 그림자는 퇴출. 7일 연속 하위 3위, 다른 전략과 사실상 같은 매매(상관 0.97↑)도 퇴출. 밤마다 후보 48개를 이웃 · 두 칸 · 교배 · 새 구조 · 격자 탐색으로 만들어 모두 계산하고 좋은 순으로 빈자리를 채우거나 최하위를 교체(그림자 10~12개 유지). 같은 그림자가 7일 동안 매일 1위면 다음 날부터 메인으로 자동 승격(메인은 +0.02 보호 — 사실상 같으면 안 바꾼다).",
       "gen": {
         "evaluated": 48,
-        "passed": 40,
-        "added": 3,
-        "replaced": 3,
+        "passed": 39,
+        "added": 1,
+        "replaced": 1,
         "reasons": {
-          "손실 기준 미달": 7,
+          "손실 기준 미달": 8,
           "해마다 일관성 부족": 1,
-          "복제": 6
+          "복제": 7,
+          "점수 부족": 1
         },
         "ops": [
           {
             "op": "neighbor",
             "name": "이웃(한 칸)",
-            "tried": 8,
-            "accepted": 1,
-            "share": 0.231
+            "tried": 22,
+            "accepted": 2,
+            "share": 0.228
           },
           {
             "op": "jump2",
             "name": "두 칸 동시",
-            "tried": 33,
+            "tried": 45,
             "accepted": 3,
             "share": 0.13
           },
           {
             "op": "cross",
             "name": "교배",
-            "tried": 3,
+            "tried": 4,
             "accepted": 0,
-            "share": 0.346
+            "share": 0.228
           },
           {
             "op": "struct",
             "name": "새 구조",
-            "tried": 19,
+            "tried": 33,
             "accepted": 6,
-            "share": 0.26
+            "share": 0.38
           },
           {
             "op": "explore",
             "name": "격자 탐색",
-            "tried": 33,
+            "tried": 40,
             "accepted": 0,
             "share": 0.05
           }
         ]
       },
       "log": [
-        {
-          "date": "2026-10-05",
-          "at": "2026-10-05T21:11+09:00",
-          "tab": "soxl",
-          "kind": "reject",
-          "version": "",
-          "name": "",
-          "reason": "새 후보 2개는 손실 기준 미달로 투입 전 탈락"
-        },
-        {
-          "date": "2026-10-05",
-          "at": "2026-10-05T21:11+09:00",
-          "tab": "soxl",
-          "kind": "retire",
-          "version": "soxl_rsi2_th25_max3",
-          "name": "RSI(2) < 25 · 최대 3일",
-          "reason": "손실 기준 미달 — MDD -30.6% · 최악일 -8.4% · 거래당 +0.17%"
-        },
-        {
-          "date": "2026-10-05",
-          "at": "2026-10-05T21:11+09:00",
-          "tab": "soxl",
-          "kind": "retire",
-          "version": "soxl_rsi2_1d",
-          "name": "하루 한정",
-          "reason": "손실 기준 미달 — MDD -38.5% · 최악일 -7.6% · 거래당 +0.07%"
-        },
         {
           "date": "2026-10-05",
           "at": "2026-10-05T21:11+09:00",
@@ -16966,6 +17103,34 @@
           "version": "g_soxl_r3lt15_ma200_d5",
           "name": "RSI(3) < 15 · 200일 평균 위 · 최대 5일",
           "reason": "자리 교체 — 신규 g_soxl_r2lt20_ibs0.5_dn2_ma200_d5 가 안정 점수 +0.384 로 +0.281 보다 확실히 나음"
+        },
+        {
+          "date": "2026-10-06",
+          "at": "2026-10-06T16:32+09:00",
+          "tab": "soxl",
+          "kind": "new",
+          "version": "g_soxl_r4lt25_ibs0.7_ma200_d4",
+          "name": "RSI(4) < 25 · 종가 위치(IBS) ≤ 0.7 · 200일 평균 위 · 최대 4일",
+          "reason": "이웃(한 칸) — g_soxl_r4lt20_ibs0.7_ma200_d4 에서 RSI 상한 20→25 · 안정 점수 +0.396 (그대로 +0.927 · 이웃 중앙 +0.396) · 매매일 510 · MDD -23.8% · 플러스 11/16해",
+          "op": "neighbor"
+        },
+        {
+          "date": "2026-10-06",
+          "at": "2026-10-06T16:32+09:00",
+          "tab": "soxl",
+          "kind": "reject",
+          "version": "",
+          "name": "",
+          "reason": "후보 48개 계산 → 기준 통과 39 · 투입 1(교체 1) · 탈락: 손실 기준 미달 8 · 복제 7 · 해마다 일관성 부족 1 · 점수 부족 1"
+        },
+        {
+          "date": "2026-10-06",
+          "at": "2026-10-06T16:32+09:00",
+          "tab": "soxl",
+          "kind": "retire",
+          "version": "g_soxl_r2lt15_dn1_ma200_d5",
+          "name": "RSI(2) < 15 · 1일 연속 하락 · 200일 평균 위 · 최대 5일",
+          "reason": "자리 교체 — 신규 g_soxl_r4lt25_ibs0.7_ma200_d4 가 안정 점수 +0.396 로 +0.335 보다 확실히 나음"
         }
       ]
     }
@@ -18144,7 +18309,7 @@
         "plateau": 0.4004536049581251,
         "rank": 10,
         "isMain": false,
-        "isNew": true,
+        "isNew": false,
         "promotion": {
           "code": "keep",
           "text": ""
@@ -19701,6 +19866,134 @@
         }
       },
       {
+        "version": "g_coin_ma15_s99_hi3_both",
+        "name": "평균 15일 · 최근 3일 고가 돌파 · 손절 없음 · BTC·ETH 반반",
+        "rule": "어제 종가 > 15일 평균인 날, 최근 3일 고가를 넘는 순간 매수 → 다음 날 09:00 매도 · 손절 없음 · BTC·ETH 반반 · 탭 자금 80%",
+        "params": {
+          "ma": 15,
+          "stopPct": 99.0,
+          "level": "prevhigh",
+          "k": 0.5,
+          "hiN": 3,
+          "lastEntryHour": null,
+          "tabSize": 0.8,
+          "markets": [
+            "KRW-BTC",
+            "KRW-ETH"
+          ]
+        },
+        "source": "generated",
+        "addedAt": "2026-10-06",
+        "op": "jump2",
+        "parents": [
+          "g_coin_ma20_s99_hi2_both"
+        ],
+        "full": {
+          "days": 3149,
+          "tradeDays": 912,
+          "tradeDaysPerYear": 105.70974912670688,
+          "plus1RateOfTradeDays": 23.574561403508774,
+          "lossDaysPerYear": 56.67989838043823,
+          "tStat": 4.1179797229012145,
+          "plus1Days": 215,
+          "plus1DaysPerYear": 24.920609717370592,
+          "plus5Weeks": 25,
+          "plus5WeeksPerYear": 2.897745315973325,
+          "weeklyAvgPct": 0.4526934656865933,
+          "totalPct": 695.0016295644988,
+          "lossDays": 489,
+          "lossDayAvgPct": -0.8800569981886839,
+          "worstDayPct": -8.641533727747296,
+          "mddPct": -12.963663417256011,
+          "cagrPct": 27.16321176560774,
+          "expectancyPct": 0.24321268597203854,
+          "profitFactor": 1.5154201611751061,
+          "gate": true
+        },
+        "year": {
+          "days": 361,
+          "tradeDays": 76,
+          "tradeDaysPerYear": 76.84210526315789,
+          "plus1RateOfTradeDays": 15.789473684210526,
+          "lossDaysPerYear": 45.498614958448755,
+          "tStat": 0.7726158732979066,
+          "plus1Days": 12,
+          "plus1DaysPerYear": 12.132963988919666,
+          "plus5Weeks": 1,
+          "plus5WeeksPerYear": 1.0110803324099722,
+          "weeklyAvgPct": 0.17264684985465184,
+          "totalPct": 9.573342419514596,
+          "lossDays": 45,
+          "lossDayAvgPct": -0.6839886023608152,
+          "worstDayPct": -1.835927813869062,
+          "mddPct": -5.61707244230546,
+          "cagrPct": 9.68439728464292,
+          "expectancyPct": 0.13087596015149114,
+          "profitFactor": 1.3231559037089318,
+          "gate": true
+        },
+        "d90": {
+          "days": 90,
+          "tradeDays": 24,
+          "tradeDaysPerYear": 97.33333333333334,
+          "plus1RateOfTradeDays": 16.666666666666664,
+          "lossDaysPerYear": 68.94444444444444,
+          "tStat": 0.7504684741168417,
+          "plus1Days": 4,
+          "plus1DaysPerYear": 16.22222222222222,
+          "plus5Weeks": 1,
+          "plus5WeeksPerYear": 4.055555555555555,
+          "weeklyAvgPct": 0.5231204457450067,
+          "totalPct": 7.577998868283986,
+          "lossDays": 17,
+          "lossDayAvgPct": -0.6407352242058891,
+          "worstDayPct": -1.4399448580918657,
+          "mddPct": -3.810844826243076,
+          "cagrPct": null,
+          "expectancyPct": 0.3258067278757203,
+          "profitFactor": 1.7178666350426166,
+          "gate": true
+        },
+        "oos": {
+          "days": 5,
+          "tradeDays": 1,
+          "tradeDaysPerYear": 73.0,
+          "plus1RateOfTradeDays": 0.0,
+          "lossDaysPerYear": 73.0,
+          "tStat": null,
+          "plus1Days": 0,
+          "plus1DaysPerYear": 0.0,
+          "plus5Weeks": 0,
+          "plus5WeeksPerYear": 0.0,
+          "weeklyAvgPct": -0.6883030479154839,
+          "totalPct": -1.371868484973271,
+          "lossDays": 1,
+          "lossDayAvgPct": -1.3718684849732723,
+          "worstDayPct": -1.3718684849732723,
+          "mddPct": -1.371868484973271,
+          "cagrPct": null,
+          "expectancyPct": -1.3718684849732723,
+          "profitFactor": 0.0,
+          "gate": false
+        },
+        "years": {
+          "n": 9,
+          "pos": 8,
+          "worstPct": -1.6933219359975271
+        },
+        "raw": 0.38282025376208395,
+        "adj": 0.4003372324374939,
+        "score": 0.4003372324374939,
+        "plateau": 0.4003372324374939,
+        "rank": 4,
+        "isMain": false,
+        "isNew": true,
+        "promotion": {
+          "code": "keep",
+          "text": ""
+        }
+      },
+      {
         "version": "g_coin_ma20_s99_hi2_both",
         "name": "평균 20일 · 최근 2일 고가 돌파 · 손절 없음 · BTC·ETH 반반",
         "rule": "어제 종가 > 20일 평균인 날, 최근 2일 고가를 넘는 순간 매수 → 다음 날 09:00 매도 · 손절 없음 · BTC·ETH 반반 · 탭 자금 80%",
@@ -19820,7 +20113,7 @@
         "adj": 0.4008935878520754,
         "score": 0.3968851224046307,
         "plateau": 0.3968851224046307,
-        "rank": 4,
+        "rank": 5,
         "isMain": false,
         "isNew": false,
         "promotion": {
@@ -19948,7 +20241,7 @@
         "adj": 0.3970645543971465,
         "score": 0.39048611601237787,
         "plateau": 0.39048611601237787,
-        "rank": 5,
+        "rank": 6,
         "isMain": false,
         "isNew": false,
         "promotion": {
@@ -20071,7 +20364,7 @@
         "adj": 0.37530956447913927,
         "score": 0.3711366470947466,
         "plateau": 0.3711366470947466,
-        "rank": 7,
+        "rank": 8,
         "isMain": false,
         "isNew": false,
         "op": "generated",
@@ -20195,7 +20488,7 @@
         "adj": 0.3348641054064799,
         "score": 0.3317182489674024,
         "plateau": 0.3317182489674024,
-        "rank": 8,
+        "rank": 9,
         "isMain": false,
         "isNew": false,
         "op": "seed",
@@ -20319,7 +20612,7 @@
         "adj": 0.3019374908252539,
         "score": 0.3019374908252539,
         "plateau": 0.3019374908252539,
-        "rank": 9,
+        "rank": 10,
         "isMain": false,
         "isNew": false,
         "op": "seed",
@@ -20443,7 +20736,7 @@
         "adj": 0.3053767464955585,
         "score": 0.3012428361076965,
         "plateau": 0.3012428361076965,
-        "rank": 10,
+        "rank": 11,
         "isMain": false,
         "isNew": false,
         "op": "generated",
@@ -20567,7 +20860,7 @@
         "adj": 0.29766907365904566,
         "score": 0.29766907365904566,
         "plateau": 0.29766907365904566,
-        "rank": 11,
+        "rank": 12,
         "isMain": false,
         "isNew": false,
         "op": "seed",
@@ -20690,130 +20983,6 @@
         "adj": 0.2948819833381467,
         "score": 0.28964367606874825,
         "plateau": 0.28964367606874825,
-        "rank": 12,
-        "isMain": false,
-        "isNew": false,
-        "op": "seed",
-        "promotion": {
-          "code": "keep",
-          "text": ""
-        }
-      },
-      {
-        "version": "coin_bo_before21",
-        "name": "21시 전 돌파만",
-        "rule": "밤 9시 이후 돌파는 사지 않음",
-        "params": {
-          "ma": 20,
-          "stopPct": 5.0,
-          "level": "prevhigh",
-          "k": 0.5,
-          "lastEntryHour": 21,
-          "tabSize": 0.8,
-          "markets": [
-            "KRW-BTC",
-            "KRW-ETH"
-          ]
-        },
-        "source": "seed",
-        "addedAt": "2026-10-05",
-        "full": {
-          "days": 3149,
-          "tradeDays": 855,
-          "tradeDaysPerYear": 99.1028898062877,
-          "plus1RateOfTradeDays": 24.561403508771928,
-          "lossDaysPerYear": 53.086694188631306,
-          "tStat": 3.520764033913883,
-          "plus1Days": 210,
-          "plus1DaysPerYear": 24.341060654175926,
-          "plus5Weeks": 26,
-          "plus5WeeksPerYear": 3.0136551286122577,
-          "weeklyAvgPct": 0.3971411749051468,
-          "totalPct": 516.7341367430043,
-          "lossDays": 458,
-          "lossDayAvgPct": -1.018170901000286,
-          "worstDayPct": -4.191999999999999,
-          "mddPct": -12.3170560713606,
-          "cagrPct": 23.475305601684894,
-          "expectancyPct": 0.2310560516087657,
-          "profitFactor": 1.4236403356833103,
-          "gate": true
-        },
-        "year": {
-          "days": 361,
-          "tradeDays": 68,
-          "tradeDaysPerYear": 68.75346260387812,
-          "plus1RateOfTradeDays": 19.11764705882353,
-          "lossDaysPerYear": 42.46537396121884,
-          "tStat": 0.02995496226900215,
-          "plus1Days": 13,
-          "plus1DaysPerYear": 13.14404432132964,
-          "plus5Weeks": 1,
-          "plus5WeeksPerYear": 1.0110803324099722,
-          "weeklyAvgPct": -0.005210416021095288,
-          "totalPct": -0.27577827483784567,
-          "lossDays": 42,
-          "lossDayAvgPct": -0.7965765029787423,
-          "worstDayPct": -2.8952590443400474,
-          "mddPct": -7.012392587667559,
-          "cagrPct": -0.27882972573037845,
-          "expectancyPct": 0.004935228491800934,
-          "profitFactor": 1.0100308883192348,
-          "gate": true
-        },
-        "d90": {
-          "days": 90,
-          "tradeDays": 28,
-          "tradeDaysPerYear": 113.55555555555556,
-          "plus1RateOfTradeDays": 21.428571428571427,
-          "lossDaysPerYear": 73.0,
-          "tStat": 0.1857348906265455,
-          "plus1Days": 6,
-          "plus1DaysPerYear": 24.333333333333336,
-          "plus5Weeks": 1,
-          "plus5WeeksPerYear": 4.055555555555555,
-          "weeklyAvgPct": 0.08836425092422218,
-          "totalPct": 1.244230188126938,
-          "lossDays": 18,
-          "lossDayAvgPct": -0.8315315724127013,
-          "worstDayPct": -2.8952590443400474,
-          "mddPct": -4.011790598142584,
-          "cagrPct": null,
-          "expectancyPct": 0.05651148766326492,
-          "profitFactor": 1.1057166817277162,
-          "gate": true
-        },
-        "oos": {
-          "days": 5,
-          "tradeDays": 3,
-          "tradeDaysPerYear": 219.0,
-          "plus1RateOfTradeDays": 0.0,
-          "lossDaysPerYear": 146.0,
-          "tStat": -0.6647886894573322,
-          "plus1Days": 0,
-          "plus1DaysPerYear": 0.0,
-          "plus5Weeks": 0,
-          "plus5WeeksPerYear": 0.0,
-          "weeklyAvgPct": -0.4845737591659405,
-          "totalPct": -0.966799401051166,
-          "lossDays": 2,
-          "lossDayAvgPct": -0.7718162811208966,
-          "worstDayPct": -1.0711183884649058,
-          "mddPct": -1.071118388464909,
-          "cagrPct": null,
-          "expectancyPct": -0.3209753341150841,
-          "profitFactor": 0.3761948109290918,
-          "gate": false
-        },
-        "years": {
-          "n": 9,
-          "pos": 8,
-          "worstPct": -1.83382522666512
-        },
-        "raw": 0.16009833660275788,
-        "adj": 0.2703158674177984,
-        "score": 0.2703158674177984,
-        "plateau": 0.2703158674177984,
         "rank": 13,
         "isMain": false,
         "isNew": false,
@@ -20943,6 +21112,132 @@
         "plateau": 0.42387872360903306,
         "rank": 1,
         "isMain": false,
+        "isNew": false,
+        "promotion": {
+          "code": "candidate",
+          "text": "1위 1일째 (첫 1위 2026-10-06) — 7일이면 다음 날부터 자동 승격",
+          "days": 1,
+          "since": "2026-10-06"
+        }
+      },
+      {
+        "version": "g_soxl_r4lt25_ibs0.7_ma200_d4",
+        "name": "RSI(4) < 25 · 종가 위치(IBS) ≤ 0.7 · 200일 평균 위 · 최대 4일",
+        "rule": "확정 종가 RSI(4) < 25 · 종가 위치(IBS) ≤ 0.7 · 200일 평균 위면 다음 시가 매수 → 오른 날 다음 시가 매도, 최대 4거래일 · 탭 자금 50%",
+        "params": {
+          "rsiMax": 25.0,
+          "rsiN": 4,
+          "ibsMax": 0.7,
+          "downDays": 0,
+          "ma": 200,
+          "maxHoldDays": 4,
+          "tabSize": 0.5
+        },
+        "source": "generated",
+        "addedAt": "2026-10-06",
+        "op": "neighbor",
+        "parents": [
+          "g_soxl_r4lt20_ibs0.7_ma200_d4"
+        ],
+        "full": {
+          "days": 4168,
+          "tradeDays": 510,
+          "tradeDaysPerYear": 30.83493282149712,
+          "plus1RateOfTradeDays": 31.372549019607842,
+          "lossDaysPerYear": 13.785028790786948,
+          "tStat": 2.243144315325141,
+          "plus1Days": 160,
+          "plus1DaysPerYear": 9.67370441458733,
+          "plus5Weeks": 14,
+          "plus5WeeksPerYear": 0.8464491362763915,
+          "weeklyAvgPct": 0.11979069415339882,
+          "totalPct": 182.0083685849661,
+          "lossDays": 228,
+          "lossDayAvgPct": -1.5742299056305564,
+          "worstDayPct": -8.010773646647879,
+          "mddPct": -23.835861301244886,
+          "cagrPct": 6.468989975497541,
+          "expectancyPct": 0.23010547220014982,
+          "profitFactor": 1.326959618177619,
+          "gate": true
+        },
+        "year": {
+          "days": 251,
+          "tradeDays": 45,
+          "tradeDaysPerYear": 45.179282868525895,
+          "plus1RateOfTradeDays": 46.666666666666664,
+          "lossDaysPerYear": 19.07569721115538,
+          "tStat": 1.9480241604407595,
+          "plus1Days": 21,
+          "plus1DaysPerYear": 21.083665338645417,
+          "plus5Weeks": 6,
+          "plus5WeeksPerYear": 6.0239043824701195,
+          "weeklyAvgPct": 0.9377173717461273,
+          "totalPct": 63.99643283592993,
+          "lossDays": 19,
+          "lossDayAvgPct": -2.2985843806183217,
+          "worstDayPct": -8.010773646647879,
+          "mddPct": -9.52420599205215,
+          "cagrPct": 64.31995811657072,
+          "expectancyPct": 1.1847684699533507,
+          "profitFactor": 2.220764662977826,
+          "gate": true
+        },
+        "d90": {
+          "days": 63,
+          "tradeDays": 15,
+          "tradeDaysPerYear": 60.0,
+          "plus1RateOfTradeDays": 46.666666666666664,
+          "lossDaysPerYear": 24.0,
+          "tStat": 1.3102161484833732,
+          "plus1Days": 7,
+          "plus1DaysPerYear": 28.0,
+          "plus5Weeks": 3,
+          "plus5WeeksPerYear": 12.0,
+          "weeklyAvgPct": 1.7227798136635553,
+          "totalPct": 27.015018832471107,
+          "lossDays": 6,
+          "lossDayAvgPct": -2.8383050183672207,
+          "worstDayPct": -8.010773646647879,
+          "mddPct": -9.524205992052137,
+          "cagrPct": null,
+          "expectancyPct": 1.7257141654318118,
+          "profitFactor": 2.52002176850654,
+          "gate": true
+        },
+        "oos": {
+          "days": 3,
+          "tradeDays": 0,
+          "tradeDaysPerYear": 0.0,
+          "plus1RateOfTradeDays": null,
+          "lossDaysPerYear": 0.0,
+          "tStat": null,
+          "plus1Days": 0,
+          "plus1DaysPerYear": 0.0,
+          "plus5Weeks": 0,
+          "plus5WeeksPerYear": 0.0,
+          "weeklyAvgPct": 0.0,
+          "totalPct": 0.0,
+          "lossDays": 0,
+          "lossDayAvgPct": 0.0,
+          "worstDayPct": 0.0,
+          "mddPct": 0.0,
+          "cagrPct": null,
+          "expectancyPct": null,
+          "profitFactor": null,
+          "gate": false
+        },
+        "years": {
+          "n": 16,
+          "pos": 11,
+          "worstPct": -11.948330066399038
+        },
+        "raw": 0.9267626265210271,
+        "adj": 0.40985697967335977,
+        "score": 0.3963151564162606,
+        "plateau": 0.3963151564162606,
+        "rank": 2,
+        "isMain": false,
         "isNew": true,
         "promotion": {
           "code": "keep",
@@ -21065,9 +21360,9 @@
         "adj": 0.4278882653622469,
         "score": 0.39087395502129313,
         "plateau": 0.39087395502129313,
-        "rank": 2,
+        "rank": 3,
         "isMain": false,
-        "isNew": true,
+        "isNew": false,
         "promotion": {
           "code": "keep",
           "text": ""
@@ -21189,9 +21484,9 @@
         "adj": 0.3840908154405181,
         "score": 0.3839676778222602,
         "plateau": 0.3839676778222602,
-        "rank": 3,
+        "rank": 4,
         "isMain": false,
-        "isNew": true,
+        "isNew": false,
         "promotion": {
           "code": "keep",
           "text": ""
@@ -21313,14 +21608,12 @@
         "adj": 0.4040951898728306,
         "score": 0.37680238956686063,
         "plateau": 0.37680238956686063,
-        "rank": 4,
+        "rank": 5,
         "isMain": false,
         "isNew": false,
         "promotion": {
-          "code": "candidate",
-          "text": "1위 1일째 (첫 1위 2026-10-06) — 7일이면 다음 날부터 자동 승격",
-          "days": 1,
-          "since": "2026-10-06"
+          "code": "keep",
+          "text": ""
         }
       },
       {
@@ -21439,7 +21732,7 @@
         "adj": 0.3844138500970637,
         "score": 0.37279694291477417,
         "plateau": 0.37279694291477417,
-        "rank": 5,
+        "rank": 6,
         "isMain": false,
         "isNew": false,
         "promotion": {
@@ -21563,7 +21856,7 @@
         "adj": 0.35644087883717296,
         "score": 0.35644087883717296,
         "plateau": 0.35644087883717296,
-        "rank": 7,
+        "rank": 8,
         "isMain": false,
         "isNew": false,
         "promotion": {
@@ -21687,7 +21980,7 @@
         "adj": 0.3864502160091654,
         "score": 0.3444293618592262,
         "plateau": 0.3444293618592262,
-        "rank": 8,
+        "rank": 9,
         "isMain": false,
         "isNew": false,
         "promotion": {
@@ -21805,7 +22098,7 @@
         "adj": 0.3810976593632458,
         "score": 0.3394230412844245,
         "plateau": 0.3394230412844245,
-        "rank": 9,
+        "rank": 10,
         "isMain": false,
         "isNew": false,
         "op": "generated",
@@ -21924,7 +22217,7 @@
         "adj": 0.3379108387438557,
         "score": 0.3379108387438557,
         "plateau": 0.3390559695697766,
-        "rank": 10,
+        "rank": 11,
         "isMain": false,
         "isNew": false,
         "op": "seed",
@@ -22043,7 +22336,7 @@
         "adj": 0.34540317839273776,
         "score": 0.33736764270447356,
         "plateau": 0.33736764270447356,
-        "rank": 11,
+        "rank": 12,
         "isMain": false,
         "isNew": false,
         "op": "generated",
@@ -22162,134 +22455,10 @@
         "adj": 0.36772726891066165,
         "score": 0.33736764270447356,
         "plateau": 0.33736764270447356,
-        "rank": 12,
-        "isMain": false,
-        "isNew": false,
-        "op": "generated",
-        "promotion": {
-          "code": "keep",
-          "text": ""
-        }
-      },
-      {
-        "version": "g_soxl_r2lt15_dn1_ma200_d5",
-        "name": "RSI(2) < 15 · 1일 연속 하락 · 200일 평균 위 · 최대 5일",
-        "rule": "확정 종가 RSI(2) < 15 · 1일 연속 하락 · 200일 평균 위면 다음 시가 매수 → 오른 날 다음 시가 매도, 최대 5거래일 · 탭 자금 50%",
-        "params": {
-          "rsiMax": 15.0,
-          "rsiN": 2,
-          "ibsMax": 1.0,
-          "downDays": 1,
-          "ma": 200,
-          "maxHoldDays": 5,
-          "tabSize": 0.5
-        },
-        "source": "generated",
-        "addedAt": "2026-10-06",
-        "op": "jump2",
-        "parents": [
-          "g_soxl_r2lt15_ma200_d5"
-        ],
-        "full": {
-          "days": 4168,
-          "tradeDays": 877,
-          "tradeDaysPerYear": 53.023992322456806,
-          "plus1RateOfTradeDays": 31.014823261117446,
-          "lossDaysPerYear": 23.821497120921304,
-          "tStat": 2.72662417333769,
-          "plus1Days": 272,
-          "plus1DaysPerYear": 16.445297504798464,
-          "plus5Weeks": 21,
-          "plus5WeeksPerYear": 1.2696737044145872,
-          "weeklyAvgPct": 0.1777942193679216,
-          "totalPct": 365.68106919921615,
-          "lossDays": 394,
-          "lossDayAvgPct": -1.4933832039817474,
-          "worstDayPct": -8.010773646647879,
-          "mddPct": -24.14789560122468,
-          "cagrPct": 9.747104710927124,
-          "expectancyPct": 0.1988451520026054,
-          "profitFactor": 1.2963787868512986,
-          "gate": true
-        },
-        "year": {
-          "days": 251,
-          "tradeDays": 66,
-          "tradeDaysPerYear": 66.26294820717132,
-          "plus1RateOfTradeDays": 50.0,
-          "lossDaysPerYear": 29.115537848605577,
-          "tStat": 1.3599098743541485,
-          "plus1Days": 33,
-          "plus1DaysPerYear": 33.13147410358566,
-          "plus5Weeks": 7,
-          "plus5WeeksPerYear": 7.027888446215139,
-          "weeklyAvgPct": 0.7756264318357742,
-          "totalPct": 50.605850169535316,
-          "lossDays": 29,
-          "lossDayAvgPct": -2.9723309364754162,
-          "worstDayPct": -8.010773646647879,
-          "mddPct": -24.147895601224644,
-          "cagrPct": 50.85175783794489,
-          "expectancyPct": 0.710743657741496,
-          "profitFactor": 1.544204049273791,
-          "gate": true
-        },
-        "d90": {
-          "days": 63,
-          "tradeDays": 14,
-          "tradeDaysPerYear": 56.0,
-          "plus1RateOfTradeDays": 42.857142857142854,
-          "lossDaysPerYear": 24.0,
-          "tStat": 0.5326968330112599,
-          "plus1Days": 6,
-          "plus1DaysPerYear": 24.0,
-          "plus5Weeks": 1,
-          "plus5WeeksPerYear": 4.0,
-          "weeklyAvgPct": 0.6535820339621079,
-          "totalPct": 9.549220291977022,
-          "lossDays": 6,
-          "lossDayAvgPct": -3.999551304838093,
-          "worstDayPct": -8.010773646647879,
-          "mddPct": -18.52366058953748,
-          "cagrPct": null,
-          "expectancyPct": 0.7969707051294487,
-          "profitFactor": 1.4649517333905018,
-          "gate": true
-        },
-        "oos": {
-          "days": 3,
-          "tradeDays": 0,
-          "tradeDaysPerYear": 0.0,
-          "plus1RateOfTradeDays": null,
-          "lossDaysPerYear": 0.0,
-          "tStat": null,
-          "plus1Days": 0,
-          "plus1DaysPerYear": 0.0,
-          "plus5Weeks": 0,
-          "plus5WeeksPerYear": 0.0,
-          "weeklyAvgPct": 0.0,
-          "totalPct": 0.0,
-          "lossDays": 0,
-          "lossDayAvgPct": 0.0,
-          "worstDayPct": 0.0,
-          "mddPct": 0.0,
-          "cagrPct": null,
-          "expectancyPct": null,
-          "profitFactor": null,
-          "gate": false
-        },
-        "years": {
-          "n": 16,
-          "pos": 12,
-          "worstPct": -7.453614308287538
-        },
-        "raw": 0.5356675617219345,
-        "adj": 0.3429900685464215,
-        "score": 0.3346763356408763,
-        "plateau": 0.3346763356408763,
         "rank": 13,
         "isMain": false,
         "isNew": false,
+        "op": "generated",
         "promotion": {
           "code": "keep",
           "text": ""
@@ -22302,29 +22471,34 @@
     "weekEnd": "2026-10-11",
     "asOf": "2026-10-06",
     "account": {
-      "days": 0,
+      "days": 1,
       "plus1Days": 0,
-      "weekPct": 0.0,
-      "through": null,
-      "daily": [],
+      "weekPct": -0.17719281516633822,
+      "through": "2026-10-05",
+      "daily": [
+        {
+          "date": "2026-10-05",
+          "pnlPct": -0.17719281516633278
+        }
+      ],
       "hit5": false
     },
     "parts": {
       "opening_d1v2": {
-        "days": 0,
+        "days": 1,
         "tradeDays": 0,
         "plus1Days": 0,
         "weekPct": 0.0,
-        "contribPct": 0,
-        "through": null
+        "contribPct": 0.0,
+        "through": "2026-10-06"
       },
       "daytrading_etf": {
-        "days": 0,
+        "days": 1,
         "tradeDays": 0,
         "plus1Days": 0,
         "weekPct": 0.0,
-        "contribPct": 0,
-        "through": null
+        "contribPct": 0.0,
+        "through": "2026-10-06"
       },
       "coin_bo_btc": {
         "days": 1,
@@ -22358,29 +22532,34 @@
     "weekEnd": "2026-10-11",
     "asOf": "2026-10-06",
     "account": {
-      "days": 0,
+      "days": 1,
       "plus1Days": 0,
-      "weekPct": 0.0,
-      "through": null,
-      "daily": [],
+      "weekPct": -0.17719281516633822,
+      "through": "2026-10-05",
+      "daily": [
+        {
+          "date": "2026-10-05",
+          "pnlPct": -0.17719281516633278
+        }
+      ],
       "hit5": false
     },
     "parts": {
       "opening_d1v2": {
-        "days": 0,
+        "days": 1,
         "tradeDays": 0,
         "plus1Days": 0,
         "weekPct": 0.0,
-        "contribPct": 0,
-        "through": null
+        "contribPct": 0.0,
+        "through": "2026-10-06"
       },
       "daytrading_etf": {
-        "days": 0,
+        "days": 1,
         "tradeDays": 0,
         "plus1Days": 0,
         "weekPct": 0.0,
-        "contribPct": 0,
-        "through": null
+        "contribPct": 0.0,
+        "through": "2026-10-06"
       },
       "coin_bo_btc": {
         "days": 1,
@@ -22415,7 +22594,7 @@
       "available": true,
       "window": [
         "2026-09-22",
-        "2026-10-02"
+        "2026-10-06"
       ],
       "costPct": {
         "claude": 0.25,
@@ -22439,19 +22618,91 @@
         "avgDayPct": null
       },
       "gpt": {
-        "tradeDays": 5,
-        "trades": 20,
-        "wins": 5,
-        "losses": 15,
-        "winRate": 25.0,
-        "avgTradePct": -0.4372051717097506,
-        "totalPct": -1.9777170076265893,
+        "tradeDays": 6,
+        "trades": 27,
+        "wins": 9,
+        "losses": 18,
+        "winRate": 33.33333333333333,
+        "avgTradePct": -0.2502820438467353,
+        "totalPct": -1.6995454170048996,
         "plus1Days": 0,
         "worstDayPct": -0.7632057658653377,
         "mddPct": -1.9777170076265893,
-        "avgDayPct": -0.39792955640515226
+        "avgDayPct": -0.2843106243773136
       },
       "days": [
+        {
+          "date": "2026-10-06",
+          "claude": {
+            "cands": null,
+            "entries": 0,
+            "pnlPct": 0.0,
+            "trades": []
+          },
+          "gpt": {
+            "cands": null,
+            "entries": 7,
+            "pnlPct": 0.2837840357618798,
+            "trades": [
+              {
+                "name": "삼성전기",
+                "entry": 1649000.0,
+                "exit": 1675000.0,
+                "reason": "익절",
+                "gross": 1.5767131594905948,
+                "net": 1.3267131594905948
+              },
+              {
+                "name": "주성엔지니어링",
+                "entry": 251500.0,
+                "exit": 256000.0,
+                "reason": "익절",
+                "gross": 1.7892644135188762,
+                "net": 1.5392644135188762
+              },
+              {
+                "name": "HLB",
+                "entry": 49350.0,
+                "exit": 48800.0,
+                "reason": "손절",
+                "gross": -1.1144883485309065,
+                "net": -1.3644883485309065
+              },
+              {
+                "name": "KODEX 코스닥150레버리지",
+                "entry": 8510.0,
+                "exit": 8620.0,
+                "reason": "09:30 청산",
+                "gross": 1.292596944770863,
+                "net": 1.042596944770863
+              },
+              {
+                "name": "이수페타시스",
+                "entry": 133600.0,
+                "exit": 133200.0,
+                "reason": "09:30 청산",
+                "gross": -0.29940119760478723,
+                "net": -0.5494011976047872
+              },
+              {
+                "name": "LG이노텍",
+                "entry": 610000.0,
+                "exit": 613000.0,
+                "reason": "09:30 청산",
+                "gross": 0.4918032786885185,
+                "net": 0.24180327868851847
+              },
+              {
+                "name": "엘앤에프",
+                "entry": 119800.0,
+                "exit": 119800.0,
+                "reason": "09:30 청산",
+                "gross": 0.0,
+                "net": -0.25
+              }
+            ]
+          }
+        },
         {
           "date": "2026-10-02",
           "claude": {
@@ -22749,7 +23000,7 @@
       "available": true,
       "window": [
         "2026-09-29",
-        "2026-10-02"
+        "2026-10-06"
       ],
       "costPct": {
         "claude": 0.15,
@@ -22773,19 +23024,59 @@
         "avgDayPct": null
       },
       "gpt": {
-        "tradeDays": 4,
-        "trades": 12,
-        "wins": 3,
-        "losses": 9,
-        "winRate": 25.0,
-        "avgTradePct": -0.4999999999999993,
-        "totalPct": -1.9986252929687254,
+        "tradeDays": 5,
+        "trades": 15,
+        "wins": 4,
+        "losses": 11,
+        "winRate": 26.666666666666668,
+        "avgTradePct": -0.4499999999999994,
+        "totalPct": -2.2436287297363022,
         "plus1Days": 0,
         "worstDayPct": -1.2500000000000009,
         "mddPct": -2.4843749999999942,
-        "avgDayPct": -0.49999999999999933
+        "avgDayPct": -0.44999999999999946
       },
       "days": [
+        {
+          "date": "2026-10-06",
+          "claude": {
+            "cands": null,
+            "entries": 0,
+            "pnlPct": 0.0,
+            "trades": []
+          },
+          "gpt": {
+            "cands": null,
+            "entries": 3,
+            "pnlPct": -0.25,
+            "trades": [
+              {
+                "name": "주성엔지니어링",
+                "entry": 263500.0,
+                "exit": 268770.0,
+                "reason": "익절",
+                "gross": 2.0000000000000018,
+                "net": 1.7500000000000018
+              },
+              {
+                "name": "SK이노베이션",
+                "entry": 153100.0,
+                "exit": 151569.0,
+                "reason": "손절",
+                "gross": -1.0000000000000009,
+                "net": -1.2500000000000009
+              },
+              {
+                "name": "HPSP",
+                "entry": 69700.0,
+                "exit": 69003.0,
+                "reason": "손절",
+                "gross": -1.0000000000000009,
+                "net": -1.2500000000000009
+              }
+            ]
+          }
+        },
         {
           "date": "2026-10-02",
           "claude": {
@@ -22952,7 +23243,7 @@
       "available": true,
       "window": [
         "2025-10-01",
-        "2026-10-04"
+        "2026-10-05"
       ],
       "costPct": {
         "claude": 0.14,
@@ -22963,32 +23254,81 @@
       ],
       "note": "두 전략 모두 매매마다 (청산가 ÷ 진입가 − 1) 총수익에서 같은 시장 같은 비용(왕복)을 뺀다. 하루 손익은 그날 청산한 매매의 자금 배분대로(여러 종목이면 균등, 코인은 클로드 두 코인 반반 · GPT 한 종목 전액), 칸 자금 100% 기준. 매매 없는 날 0%.",
       "claude": {
-        "tradeDays": 102,
-        "trades": 157,
-        "wins": 76,
+        "tradeDays": 103,
+        "trades": 159,
+        "wins": 78,
         "losses": 81,
-        "winRate": 48.40764331210191,
-        "avgTradePct": 0.19342807859624886,
-        "totalPct": 14.583981719915396,
+        "winRate": 49.056603773584904,
+        "avgTradePct": 0.2001256272915247,
+        "totalPct": 15.415727592963147,
         "plus1Days": 18,
         "worstDayPct": -3.6190738054250593,
         "mddPct": -10.292414386213544,
-        "avgDayPct": 0.1488637663706425
+        "avgDayPct": 0.15446589679297293
       },
       "gpt": {
-        "tradeDays": 186,
-        "trades": 186,
+        "tradeDays": 187,
+        "trades": 187,
         "wins": 54,
-        "losses": 132,
-        "winRate": 29.03225806451613,
-        "avgTradePct": -0.16246512461866164,
-        "totalPct": -26.20554965621188,
+        "losses": 133,
+        "winRate": 28.87700534759358,
+        "avgTradePct": -0.16340759741248312,
+        "totalPct": -26.455497021460705,
         "plus1Days": 0,
         "worstDayPct": -0.6400000000000005,
-        "mddPct": -27.126264586309524,
-        "avgDayPct": -0.16246512461866164
+        "mddPct": -27.373093420695238,
+        "avgDayPct": -0.16340759741248312
       },
       "days": [
+        {
+          "date": "2026-10-05",
+          "claude": {
+            "cands": [
+              2,
+              2
+            ],
+            "entries": 2,
+            "pnlPct": 0.7258831998706762,
+            "trades": [
+              {
+                "name": "BTC",
+                "entry": 115597770.0,
+                "exit": 116868000.0,
+                "reason": "다음 09시 청산",
+                "gross": 1.0988360761630567,
+                "slot": 0.5,
+                "net": 0.9588360761630567
+              },
+              {
+                "name": "ETH",
+                "entry": 3660829.5,
+                "exit": 3684000.0,
+                "reason": "다음 09시 청산",
+                "gross": 0.6329303235782957,
+                "slot": 0.5,
+                "net": 0.4929303235782957
+              }
+            ]
+          },
+          "gpt": {
+            "cands": [
+              1,
+              1
+            ],
+            "entries": 1,
+            "pnlPct": -0.3387075370632807,
+            "trades": [
+              {
+                "name": "BTC",
+                "entry": 115748000.0,
+                "exit": 115518000.0,
+                "reason": "시간 청산",
+                "gross": -0.1987075370632807,
+                "net": -0.3387075370632807
+              }
+            ]
+          }
+        },
         {
           "date": "2026-10-04",
           "claude": {
@@ -23574,36 +23914,6 @@
               }
             ]
           }
-        },
-        {
-          "date": "2026-09-15",
-          "claude": {
-            "cands": [
-              2,
-              1
-            ],
-            "entries": 0,
-            "pnlPct": 0.0,
-            "trades": []
-          },
-          "gpt": {
-            "cands": [
-              1,
-              1
-            ],
-            "entries": 1,
-            "pnlPct": -0.16997714242889417,
-            "trades": [
-              {
-                "name": "BTC",
-                "entry": 106748000.0,
-                "exit": 106716000.0,
-                "reason": "시간 청산",
-                "gross": -0.029977142428894155,
-                "net": -0.16997714242889417
-              }
-            ]
-          }
         }
       ]
     },
@@ -23690,7 +24000,81 @@
     },
     "tabs": {
       "opening": {
-        "days": [],
+        "days": [
+          {
+            "date": "2026-10-06",
+            "winner": "gpt",
+            "cumClaudePct": 0.0,
+            "cumGptPct": 0.2837840357618804,
+            "claude": {
+              "pnlPct": 0.0,
+              "entries": 0,
+              "trades": []
+            },
+            "gpt": {
+              "pnlPct": 0.2837840357618798,
+              "entries": 7,
+              "trades": [
+                {
+                  "name": "삼성전기",
+                  "entry": 1649000.0,
+                  "exit": 1675000.0,
+                  "reason": "익절",
+                  "gross": 1.5767131594905948,
+                  "net": 1.3267131594905948
+                },
+                {
+                  "name": "주성엔지니어링",
+                  "entry": 251500.0,
+                  "exit": 256000.0,
+                  "reason": "익절",
+                  "gross": 1.7892644135188762,
+                  "net": 1.5392644135188762
+                },
+                {
+                  "name": "HLB",
+                  "entry": 49350.0,
+                  "exit": 48800.0,
+                  "reason": "손절",
+                  "gross": -1.1144883485309065,
+                  "net": -1.3644883485309065
+                },
+                {
+                  "name": "KODEX 코스닥150레버리지",
+                  "entry": 8510.0,
+                  "exit": 8620.0,
+                  "reason": "09:30 청산",
+                  "gross": 1.292596944770863,
+                  "net": 1.042596944770863
+                },
+                {
+                  "name": "이수페타시스",
+                  "entry": 133600.0,
+                  "exit": 133200.0,
+                  "reason": "09:30 청산",
+                  "gross": -0.29940119760478723,
+                  "net": -0.5494011976047872
+                },
+                {
+                  "name": "LG이노텍",
+                  "entry": 610000.0,
+                  "exit": 613000.0,
+                  "reason": "09:30 청산",
+                  "gross": 0.4918032786885185,
+                  "net": 0.24180327868851847
+                },
+                {
+                  "name": "엘앤에프",
+                  "entry": 119800.0,
+                  "exit": 119800.0,
+                  "reason": "09:30 청산",
+                  "gross": 0.0,
+                  "net": -0.25
+                }
+              ]
+            }
+          }
+        ],
         "claude": {
           "tradeDays": 0,
           "trades": 0,
@@ -23698,28 +24082,28 @@
           "losses": 0,
           "winRate": null,
           "avgTradePct": null,
-          "totalPct": null,
-          "plus1Days": null,
+          "totalPct": 0.0,
+          "plus1Days": 0,
           "worstDayPct": null,
-          "mddPct": null,
+          "mddPct": 0.0,
           "avgDayPct": null
         },
         "gpt": {
-          "tradeDays": 0,
-          "trades": 0,
-          "wins": 0,
-          "losses": 0,
-          "winRate": null,
-          "avgTradePct": null,
-          "totalPct": null,
-          "plus1Days": null,
-          "worstDayPct": null,
-          "mddPct": null,
-          "avgDayPct": null
+          "tradeDays": 1,
+          "trades": 7,
+          "wins": 4,
+          "losses": 3,
+          "winRate": 57.14285714285714,
+          "avgTradePct": 0.2837840357618798,
+          "totalPct": 0.2837840357618804,
+          "plus1Days": 0,
+          "worstDayPct": 0.2837840357618798,
+          "mddPct": 0.0,
+          "avgDayPct": 0.2837840357618798
         },
         "record": {
           "claude": 0,
-          "gpt": 0,
+          "gpt": 1,
           "draw": 0
         },
         "costPct": {
@@ -23737,7 +24121,49 @@
         ]
       },
       "daytrading": {
-        "days": [],
+        "days": [
+          {
+            "date": "2026-10-06",
+            "winner": "claude",
+            "cumClaudePct": 0.0,
+            "cumGptPct": -0.24999999999999467,
+            "claude": {
+              "pnlPct": 0.0,
+              "entries": 0,
+              "trades": []
+            },
+            "gpt": {
+              "pnlPct": -0.25,
+              "entries": 3,
+              "trades": [
+                {
+                  "name": "주성엔지니어링",
+                  "entry": 263500.0,
+                  "exit": 268770.0,
+                  "reason": "익절",
+                  "gross": 2.0000000000000018,
+                  "net": 1.7500000000000018
+                },
+                {
+                  "name": "SK이노베이션",
+                  "entry": 153100.0,
+                  "exit": 151569.0,
+                  "reason": "손절",
+                  "gross": -1.0000000000000009,
+                  "net": -1.2500000000000009
+                },
+                {
+                  "name": "HPSP",
+                  "entry": 69700.0,
+                  "exit": 69003.0,
+                  "reason": "손절",
+                  "gross": -1.0000000000000009,
+                  "net": -1.2500000000000009
+                }
+              ]
+            }
+          }
+        ],
         "claude": {
           "tradeDays": 0,
           "trades": 0,
@@ -23745,27 +24171,27 @@
           "losses": 0,
           "winRate": null,
           "avgTradePct": null,
-          "totalPct": null,
-          "plus1Days": null,
+          "totalPct": 0.0,
+          "plus1Days": 0,
           "worstDayPct": null,
-          "mddPct": null,
+          "mddPct": 0.0,
           "avgDayPct": null
         },
         "gpt": {
-          "tradeDays": 0,
-          "trades": 0,
-          "wins": 0,
-          "losses": 0,
-          "winRate": null,
-          "avgTradePct": null,
-          "totalPct": null,
-          "plus1Days": null,
-          "worstDayPct": null,
-          "mddPct": null,
-          "avgDayPct": null
+          "tradeDays": 1,
+          "trades": 3,
+          "wins": 1,
+          "losses": 2,
+          "winRate": 33.33333333333333,
+          "avgTradePct": -0.25,
+          "totalPct": -0.24999999999999467,
+          "plus1Days": 0,
+          "worstDayPct": -0.25,
+          "mddPct": -0.24999999999999467,
+          "avgDayPct": -0.25
         },
         "record": {
-          "claude": 0,
+          "claude": 1,
           "gpt": 0,
           "draw": 0
         },
@@ -23779,35 +24205,80 @@
         "pending": []
       },
       "crypto": {
-        "days": [],
+        "days": [
+          {
+            "date": "2026-10-05",
+            "winner": "claude",
+            "cumClaudePct": 0.7258831998706805,
+            "cumGptPct": -0.3387075370632764,
+            "claude": {
+              "pnlPct": 0.7258831998706762,
+              "entries": 2,
+              "trades": [
+                {
+                  "name": "BTC",
+                  "entry": 115597770,
+                  "exit": 116868000,
+                  "reason": "다음 날 09:00 청산",
+                  "gross": 1.0988360761630567,
+                  "slot": 0.5,
+                  "net": 0.9588360761630567
+                },
+                {
+                  "name": "ETH",
+                  "entry": 3660829.5,
+                  "exit": 3684000,
+                  "reason": "다음 날 09:00 청산",
+                  "gross": 0.6329303235782957,
+                  "slot": 0.5,
+                  "net": 0.4929303235782957
+                }
+              ]
+            },
+            "gpt": {
+              "pnlPct": -0.3387075370632807,
+              "entries": 1,
+              "trades": [
+                {
+                  "name": "BTC",
+                  "entry": 115748000.0,
+                  "exit": 115518000.0,
+                  "reason": "시간 청산",
+                  "gross": -0.1987075370632807,
+                  "net": -0.3387075370632807
+                }
+              ]
+            }
+          }
+        ],
         "claude": {
-          "tradeDays": 0,
-          "trades": 0,
-          "wins": 0,
+          "tradeDays": 1,
+          "trades": 2,
+          "wins": 2,
           "losses": 0,
-          "winRate": null,
-          "avgTradePct": null,
-          "totalPct": null,
-          "plus1Days": null,
-          "worstDayPct": null,
-          "mddPct": null,
-          "avgDayPct": null
+          "winRate": 100.0,
+          "avgTradePct": 0.7258831998706762,
+          "totalPct": 0.7258831998706805,
+          "plus1Days": 0,
+          "worstDayPct": 0.7258831998706762,
+          "mddPct": 0.0,
+          "avgDayPct": 0.7258831998706762
         },
         "gpt": {
-          "tradeDays": 0,
-          "trades": 0,
+          "tradeDays": 1,
+          "trades": 1,
           "wins": 0,
-          "losses": 0,
-          "winRate": null,
-          "avgTradePct": null,
-          "totalPct": null,
-          "plus1Days": null,
-          "worstDayPct": null,
-          "mddPct": null,
-          "avgDayPct": null
+          "losses": 1,
+          "winRate": 0.0,
+          "avgTradePct": -0.3387075370632807,
+          "totalPct": -0.3387075370632764,
+          "plus1Days": 0,
+          "worstDayPct": -0.3387075370632807,
+          "mddPct": -0.3387075370632764,
+          "avgDayPct": -0.3387075370632807
         },
         "record": {
-          "claude": 0,
+          "claude": 1,
           "gpt": 0,
           "draw": 0
         },
@@ -23818,12 +24289,7 @@
         "gptVersions": [
           "btc_midnight_orb_v2"
         ],
-        "pending": [
-          {
-            "date": "2026-10-05",
-            "missing": "GPT"
-          }
-        ]
+        "pending": []
       },
       "soxl": {
         "days": [
@@ -23889,21 +24355,29 @@
       "days": [
         {
           "date": "2026-10-05",
+          "claudePct": 0.18147079996766904,
+          "gptPct": -0.08467688426582018,
+          "winner": "claude",
+          "cumClaudePct": 0.18147079996766458,
+          "cumGptPct": -0.08467688426582187
+        },
+        {
+          "date": "2026-10-06",
           "claudePct": 0.0,
-          "gptPct": 0.0,
+          "gptPct": 0.008446008940469957,
           "winner": "draw",
-          "cumClaudePct": 0.0,
-          "cumGptPct": 0.0
+          "cumClaudePct": 0.18147079996766458,
+          "cumGptPct": -0.07623802714256112
         }
       ],
       "record": {
-        "claude": 0,
+        "claude": 1,
         "gpt": 0,
         "draw": 1
       },
       "claude": {
-        "days": 1,
-        "tradeDays": 1,
+        "days": 2,
+        "tradeDays": 2,
         "tradeDaysPerYear": 365.0,
         "plus1RateOfTradeDays": 0.0,
         "lossDaysPerYear": 0.0,
@@ -23912,41 +24386,41 @@
         "plus1DaysPerYear": 0.0,
         "plus5Weeks": 0,
         "plus5WeeksPerYear": 0.0,
-        "weeklyAvgPct": 0.0,
-        "totalPct": 0.0,
+        "weeklyAvgPct": 0.18147079996766458,
+        "totalPct": 0.18147079996766458,
         "lossDays": 0,
         "lossDayAvgPct": 0.0,
         "worstDayPct": 0.0,
         "mddPct": 0.0,
         "cagrPct": null,
-        "expectancyPct": 0.0,
+        "expectancyPct": 0.09073539998383452,
         "profitFactor": null,
-        "gate": false
+        "gate": true
       },
       "gpt": {
-        "days": 1,
-        "tradeDays": 1,
+        "days": 2,
+        "tradeDays": 2,
         "tradeDaysPerYear": 365.0,
         "plus1RateOfTradeDays": 0.0,
-        "lossDaysPerYear": 0.0,
+        "lossDaysPerYear": 182.5,
         "tStat": null,
         "plus1Days": 0,
         "plus1DaysPerYear": 0.0,
         "plus5Weeks": 0,
         "plus5WeeksPerYear": 0.0,
-        "weeklyAvgPct": 0.0,
-        "totalPct": 0.0,
-        "lossDays": 0,
-        "lossDayAvgPct": 0.0,
-        "worstDayPct": 0.0,
-        "mddPct": 0.0,
+        "weeklyAvgPct": -0.07623802714256112,
+        "totalPct": -0.07623802714256112,
+        "lossDays": 1,
+        "lossDayAvgPct": -0.08467688426582018,
+        "worstDayPct": -0.08467688426582018,
+        "mddPct": -0.08467688426582187,
         "cagrPct": null,
-        "expectancyPct": 0.0,
-        "profitFactor": null,
+        "expectancyPct": -0.03811543766267511,
+        "profitFactor": 0.0997439739747154,
         "gate": false
       }
     },
-    "latest": "2026-10-05"
+    "latest": "2026-10-06"
   },
   "changelog": [
     {
@@ -24007,17 +24481,17 @@
   "review": {
     "today": {
       "date": "2026-10-06",
-      "writtenAt": "2026-10-06T11:23:40.701669+09:00",
+      "writtenAt": "2026-10-06T16:32:53.969051+09:00",
       "tabs": {
         "시초가": {
           "name": "① D-1 갭하락 과매도 v2",
-          "date": "2026-10-02",
+          "date": "2026-10-06",
           "result": "no_trade",
           "plan": "명단 9종목 · 08:56 예상갭 확인 (통과 5종목 이상일 때 매매)"
         },
         "데이트레이딩": {
           "name": "② 코스닥150 레버리지 하락일 야간",
-          "date": "2026-10-02",
+          "date": "2026-10-06",
           "result": "no_trade",
           "plan": "15:21 예상 종가 −3% 이하면 종가 매수 → 다음 날 시가 매도"
         },
@@ -24041,13 +24515,13 @@
         }
       },
       "opening": {
-        "reason": null,
+        "reason": "watchlist_stale",
         "picks": [],
         "breadth": null
       },
       "etf": {
-        "buy": null,
-        "drop": null
+        "buy": "no_signal_drop_above_-3%",
+        "drop": 8.214063472308641
       },
       "paper": {
         "opening_d1v2": {
@@ -24076,17 +24550,94 @@
           "status": "매매일 0/20 — 판단 전"
         },
         "account": {
-          "tradeDays": 1,
-          "totalPct": -0.40166939567434223,
-          "status": "매매일 1/20 — 판단 전"
+          "tradeDays": 3,
+          "totalPct": -0.36164453073425085,
+          "status": "매매일 3/20 — 판단 전"
         }
       },
-      "issues": [
-        "오늘 ①② 원본 기록 없음 — 개장일인데 08:56 기록이 없음(점검)"
-      ],
-      "verdict": "점검 필요 1건"
+      "issues": [],
+      "verdict": "문제 없음"
     },
     "history": [
+      {
+        "date": "2026-10-06",
+        "writtenAt": "2026-10-06T16:32:53.969051+09:00",
+        "tabs": {
+          "시초가": {
+            "name": "① D-1 갭하락 과매도 v2",
+            "date": "2026-10-06",
+            "result": "no_trade",
+            "plan": "명단 9종목 · 08:56 예상갭 확인 (통과 5종목 이상일 때 매매)"
+          },
+          "데이트레이딩": {
+            "name": "② 코스닥150 레버리지 하락일 야간",
+            "date": "2026-10-06",
+            "result": "no_trade",
+            "plan": "15:21 예상 종가 −3% 이하면 종가 매수 → 다음 날 시가 매도"
+          },
+          "비트코인": {
+            "name": "③ BTC·ETH 어제 고가 돌파 하루 단타",
+            "date": "2026-10-05",
+            "result": -0.4725141737768874,
+            "plan": "BTC 돌파 감시 · ETH 돌파 감시"
+          },
+          "SOXL": {
+            "name": "④ SOXL 단기 과매도 반등 (최대 5일)",
+            "date": "2026-10-05",
+            "result": "no_trade",
+            "plan": "쉼 (과매도 신호 없음) · 자금 50%"
+          },
+          "전체": {
+            "name": "🏦 전체 계좌 (국내 30% · 코인 30% · 미국 40%)",
+            "date": "2026-10-05",
+            "result": -0.17719281516633278,
+            "plan": null
+          }
+        },
+        "opening": {
+          "reason": "watchlist_stale",
+          "picks": [],
+          "breadth": null
+        },
+        "etf": {
+          "buy": "no_signal_drop_above_-3%",
+          "drop": 8.214063472308641
+        },
+        "paper": {
+          "opening_d1v2": {
+            "tradeDays": 0,
+            "totalPct": 0.0,
+            "status": "매매일 0/20 — 판단 전"
+          },
+          "daytrading_etf": {
+            "tradeDays": 0,
+            "totalPct": 0.0,
+            "status": "매매일 0/20 — 판단 전"
+          },
+          "coin_bo_btc": {
+            "tradeDays": 3,
+            "totalPct": -1.0691382309467867,
+            "status": "매매일 3/20 — 판단 전"
+          },
+          "coin_bo_eth": {
+            "tradeDays": 2,
+            "totalPct": -1.35661817914019,
+            "status": "매매일 2/20 — 판단 전"
+          },
+          "us_soxl": {
+            "tradeDays": 0,
+            "totalPct": 0.0,
+            "status": "매매일 0/20 — 판단 전"
+          },
+          "account": {
+            "tradeDays": 3,
+            "totalPct": -0.36164453073425085,
+            "status": "매매일 3/20 — 판단 전"
+          }
+        },
+        "issues": [],
+        "verdict": "문제 없음"
+      },
       {
         "date": "2026-10-05",
         "writtenAt": "2026-10-05T20:23:14.233553+09:00",

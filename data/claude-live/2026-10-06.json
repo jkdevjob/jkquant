@@ -1,0 +1,177 @@
+{
+  "ok": true,
+  "date": "2026-10-06",
+  "ledger": {
+    "schema": 1,
+    "date": "2026-10-06",
+    "mainVariant": "baseline",
+    "createdAt": "2026-10-06T06:40:22.943Z",
+    "updatedAt": "2026-10-06T06:40:28.467Z",
+    "scans": [
+      {
+        "id": "close:daytrading",
+        "scheduledTime": 1791268819000,
+        "capturedAt": "2026-10-06T06:40:25.223Z",
+        "targetHm": 1540,
+        "lagMs": 0,
+        "partial": false,
+        "okShards": 1,
+        "failed": [],
+        "quoteErrors": 0,
+        "eventCount": 1
+      },
+      {
+        "id": "close:opening",
+        "scheduledTime": 1791268819000,
+        "capturedAt": "2026-10-06T06:40:22.797Z",
+        "targetHm": 1540,
+        "lagMs": 0,
+        "partial": false,
+        "okShards": 1,
+        "failed": [],
+        "quoteErrors": 0,
+        "eventCount": 1
+      },
+      {
+        "id": "tg:daytrading:sent",
+        "scheduledTime": 1791268819000,
+        "capturedAt": "2026-10-06T06:40:26.253Z",
+        "targetHm": 1540,
+        "lagMs": 0,
+        "partial": false,
+        "okShards": 1,
+        "failed": [],
+        "quoteErrors": 0,
+        "eventCount": 1
+      },
+      {
+        "id": "tg:opening:sent",
+        "scheduledTime": 1791268819000,
+        "capturedAt": "2026-10-06T06:40:23.850Z",
+        "targetHm": 1540,
+        "lagMs": 0,
+        "partial": false,
+        "okShards": 1,
+        "failed": [],
+        "quoteErrors": 0,
+        "eventCount": 1
+      },
+      {
+        "id": "tg:overview:sent",
+        "scheduledTime": 1791268819000,
+        "capturedAt": "2026-10-06T06:40:28.306Z",
+        "targetHm": 1540,
+        "lagMs": 0,
+        "partial": false,
+        "okShards": 1,
+        "failed": [],
+        "quoteErrors": 0,
+        "eventCount": 1
+      }
+    ],
+    "events": [
+      {
+        "id": "close:daytrading",
+        "date": "2026-10-06",
+        "capturedAt": "2026-10-06T06:40:25.223Z",
+        "targetHm": 1540,
+        "strategy": "claude_day",
+        "stage": "close",
+        "payload": {
+          "strategy": "daytrading",
+          "name": "② 데이트레이딩 · 코스닥150 레버리지 하락일 야간",
+          "date": "2026-10-06",
+          "currency": "KRW",
+          "trades": [],
+          "open": [],
+          "watched": 1,
+          "exits": 0,
+          "wins": 0,
+          "losses": 0,
+          "winRate": null,
+          "realizedAmount": 0,
+          "realizedPct": 0,
+          "status": "closed",
+          "candidates": 0,
+          "entries": 0,
+          "strategyVersion": "etf_dip_overnight_v1",
+          "note": "15:21 예상 하락 8.21% (기준 −3% 이하 아님) → 매수 없음"
+        }
+      },
+      {
+        "id": "close:opening",
+        "date": "2026-10-06",
+        "capturedAt": "2026-10-06T06:40:22.797Z",
+        "targetHm": 1540,
+        "strategy": "claude_day",
+        "stage": "close",
+        "payload": {
+          "strategy": "opening",
+          "name": "① 시초가 · D-1 갭하락 과매도",
+          "date": "2026-10-06",
+          "currency": "KRW",
+          "trades": [],
+          "open": [],
+          "measure": [],
+          "exits": 0,
+          "wins": 0,
+          "losses": 0,
+          "winRate": null,
+          "realizedAmount": 0,
+          "realizedPct": 0,
+          "status": "closed",
+          "watched": 9,
+          "candidates": 0,
+          "entries": 0,
+          "strategyVersion": "opening_gapdown_v1+v2filter",
+          "params": {
+            "minQ": 5,
+            "topK": 3,
+            "gapMax": null
+          },
+          "note": "매매 없음 — watchlist_stale"
+        }
+      },
+      {
+        "id": "tg:daytrading:sent",
+        "date": "2026-10-06",
+        "capturedAt": "2026-10-06T06:40:26.253Z",
+        "targetHm": 1540,
+        "strategy": "claude_day",
+        "stage": "telegram",
+        "payload": {
+          "ok": true,
+          "messageId": 313,
+          "error": null
+        }
+      },
+      {
+        "id": "tg:opening:sent",
+        "date": "2026-10-06",
+        "capturedAt": "2026-10-06T06:40:23.850Z",
+        "targetHm": 1540,
+        "strategy": "claude_day",
+        "stage": "telegram",
+        "payload": {
+          "ok": true,
+          "messageId": 312,
+          "error": null
+        }
+      },
+      {
+        "id": "tg:overview:sent",
+        "date": "2026-10-06",
+        "capturedAt": "2026-10-06T06:40:28.306Z",
+        "targetHm": 1540,
+        "strategy": "claude_day",
+        "stage": "telegram",
+        "payload": {
+          "ok": true,
+          "messageId": 314,
+          "error": null
+        }
+      }
+    ]
+  },
+  "source": "cloudflare-opening-scheduler-claude-ledger"
+}

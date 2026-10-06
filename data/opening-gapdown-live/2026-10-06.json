@@ -1,0 +1,206 @@
+{
+  "ok": true,
+  "date": "2026-10-06",
+  "ledger": {
+    "schema": 1,
+    "date": "2026-10-06",
+    "mainVariant": "baseline",
+    "createdAt": "2026-10-05T23:56:27.395Z",
+    "updatedAt": "2026-10-06T06:40:20.712Z",
+    "scans": [
+      {
+        "id": "2026-10-06:preopen:2026-10-06:opening_gapdown:preopen:all",
+        "scheduledTime": 1791244579000,
+        "capturedAt": "2026-10-05T23:56:27.514Z",
+        "targetHm": 856,
+        "lagMs": 0,
+        "partial": false,
+        "okShards": 1,
+        "failed": [],
+        "quoteErrors": 0,
+        "eventCount": 1
+      },
+      {
+        "id": "2026-10-06:quote:2026-10-06:opening_gapdown:quote:part0",
+        "scheduledTime": 1791244579000,
+        "capturedAt": "2026-10-05T23:56:26.604Z",
+        "targetHm": 856,
+        "lagMs": 0,
+        "partial": false,
+        "okShards": 1,
+        "failed": [],
+        "quoteErrors": 0,
+        "eventCount": 1
+      },
+      {
+        "id": "2026-10-06:etf_buy:2026-10-06:opening_gapdown:etf_buy:all",
+        "scheduledTime": 1791267679000,
+        "capturedAt": "2026-10-06T06:21:24.526Z",
+        "targetHm": 1521,
+        "lagMs": 0,
+        "partial": false,
+        "okShards": 1,
+        "failed": [],
+        "quoteErrors": 0,
+        "eventCount": 1
+      },
+      {
+        "id": "2026-10-06:etf_reconcile:2026-10-06:opening_gapdown:etf_reconcile:all",
+        "scheduledTime": 1791268819000,
+        "capturedAt": "2026-10-06T06:40:20.593Z",
+        "targetHm": 1540,
+        "lagMs": 0,
+        "partial": false,
+        "okShards": 1,
+        "failed": [],
+        "quoteErrors": 0,
+        "eventCount": 1
+      }
+    ],
+    "events": [
+      {
+        "id": "2026-10-06:opening_gapdown:preopen:all",
+        "date": "2026-10-06",
+        "capturedAt": "2026-10-05T23:56:27.514Z",
+        "targetHm": 856,
+        "strategy": "opening_gapdown",
+        "strategyVersion": "opening_gapdown_v1",
+        "stage": "preopen",
+        "payload": {
+          "httpStatus": 200,
+          "ok": true,
+          "stage": "preopen",
+          "strategyVersion": "opening_gapdown_v1",
+          "date": "2026-10-06",
+          "startedAt": "2026-10-05T23:56:27.508Z",
+          "watchlist": {
+            "basedOn": "2026-10-02",
+            "generatedAt": "2026-10-06T06:39:10.154658+09:00",
+            "size": 9,
+            "rule": {
+              "rsiMax": 30,
+              "gapMax": -2,
+              "gapFloor": -29,
+              "picks": 3
+            },
+            "quotedLimit": 80,
+            "truncated": false
+          },
+          "candidates": 0,
+          "picks": [],
+          "orders": [],
+          "decisionReason": "watchlist_stale",
+          "finishedAt": "2026-10-05T23:56:27.512Z"
+        }
+      },
+      {
+        "id": "2026-10-06:opening_gapdown:quote:part0",
+        "date": "2026-10-06",
+        "capturedAt": "2026-10-05T23:56:26.604Z",
+        "targetHm": 856,
+        "strategy": "opening_gapdown",
+        "strategyVersion": "opening_gapdown_v1",
+        "stage": "quote",
+        "payload": {
+          "httpStatus": 200,
+          "ok": true,
+          "stage": "quote",
+          "strategyVersion": "opening_gapdown_v1",
+          "date": "2026-10-06",
+          "part": 0,
+          "startedAt": "2026-10-05T23:56:26.303Z",
+          "watchlist": {
+            "basedOn": "2026-10-02",
+            "generatedAt": "2026-10-06T06:39:10.154658+09:00",
+            "size": 9,
+            "rule": {
+              "rsiMax": 30,
+              "gapMax": -2,
+              "gapFloor": -29,
+              "picks": 3
+            },
+            "quotedLimit": 80,
+            "truncated": false
+          },
+          "candidates": [],
+          "decisionReason": "watchlist_stale",
+          "finishedAt": "2026-10-05T23:56:26.599Z"
+        }
+      },
+      {
+        "id": "2026-10-06:opening_gapdown:etf_buy:all",
+        "date": "2026-10-06",
+        "capturedAt": "2026-10-06T06:21:24.526Z",
+        "targetHm": 1521,
+        "strategy": "opening_gapdown",
+        "strategyVersion": "opening_gapdown_v1",
+        "stage": "etf_buy",
+        "payload": {
+          "httpStatus": 200,
+          "ok": true,
+          "stage": "etf_buy",
+          "strategy": "etf_dip_overnight",
+          "strategyVersion": "etf_dip_overnight_v1",
+          "date": "2026-10-06",
+          "code": "233740",
+          "rule": {
+            "code": "233740",
+            "name": "KODEX 코스닥150레버리지",
+            "dropMaxPct": -3,
+            "version": "etf_dip_overnight_v1",
+            "budgetMultiple": 3
+          },
+          "ruleSource": "main-config",
+          "startedAt": "2026-10-06T06:21:19.997Z",
+          "quote": {
+            "expectedPrice": 8695,
+            "basePrice": 8035,
+            "expectedChgPct": 8.21,
+            "phase": "121",
+            "time": "152124"
+          },
+          "dropPct": 8.214063472308641,
+          "signal": false,
+          "order": null,
+          "decisionReason": "no_signal_drop_above_-3%",
+          "finishedAt": "2026-10-06T06:21:24.524Z"
+        }
+      },
+      {
+        "id": "2026-10-06:opening_gapdown:etf_reconcile:all",
+        "date": "2026-10-06",
+        "capturedAt": "2026-10-06T06:40:20.593Z",
+        "targetHm": 1540,
+        "strategy": "opening_gapdown",
+        "strategyVersion": "opening_gapdown_v1",
+        "stage": "etf_reconcile",
+        "payload": {
+          "httpStatus": 200,
+          "ok": true,
+          "stage": "etf_reconcile",
+          "strategy": "etf_dip_overnight",
+          "strategyVersion": "etf_dip_overnight_v1",
+          "date": "2026-10-06",
+          "code": "233740",
+          "fills": {
+            "closeBuy": {
+              "qty": 0,
+              "avgPrice": null,
+              "orderNos": [],
+              "orderTimes": []
+            },
+            "openSell": {
+              "qty": 0,
+              "avgPrice": null,
+              "orderNos": [],
+              "orderTimes": []
+            }
+          },
+          "finishedAt": "2026-10-06T06:40:20.588Z"
+        }
+      }
+    ]
+  },
+  "archivedAt": "2026-10-06T16:30:57+09:00",
+  "source": "cloudflare-opening-scheduler-durable-ledger"
+}
