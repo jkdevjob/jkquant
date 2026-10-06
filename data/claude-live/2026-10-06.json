@@ -6,7 +6,7 @@
     "date": "2026-10-06",
     "mainVariant": "baseline",
     "createdAt": "2026-10-06T06:40:22.943Z",
-    "updatedAt": "2026-10-06T15:05:18.083Z",
+    "updatedAt": "2026-10-06T20:05:17.002Z",
     "scans": [
       {
         "id": "close:crypto",
@@ -25,6 +25,30 @@
         "scheduledTime": 1791299113000,
         "capturedAt": "2026-10-06T15:05:18.010Z",
         "targetHm": 5,
+        "lagMs": 0,
+        "partial": false,
+        "okShards": 1,
+        "failed": [],
+        "quoteErrors": 0,
+        "eventCount": 1
+      },
+      {
+        "id": "close:soxl",
+        "scheduledTime": 1791317113000,
+        "capturedAt": "2026-10-06T20:05:15.571Z",
+        "targetHm": 505,
+        "lagMs": 0,
+        "partial": false,
+        "okShards": 1,
+        "failed": [],
+        "quoteErrors": 0,
+        "eventCount": 1
+      },
+      {
+        "id": "tg:soxl:sent",
+        "scheduledTime": 1791317113000,
+        "capturedAt": "2026-10-06T20:05:16.924Z",
+        "targetHm": 505,
         "lagMs": 0,
         "partial": false,
         "okShards": 1,
@@ -144,6 +168,48 @@
         "payload": {
           "ok": true,
           "messageId": 317,
+          "error": null
+        }
+      },
+      {
+        "id": "close:soxl",
+        "date": "2026-10-06",
+        "capturedAt": "2026-10-06T20:05:15.571Z",
+        "targetHm": 505,
+        "strategy": "claude_day",
+        "stage": "close",
+        "payload": {
+          "strategy": "soxl",
+          "name": "④ SOXL · 단기 과매도 반등(최대 5일)",
+          "date": "2026-10-06",
+          "currency": "USD",
+          "trades": [],
+          "open": [],
+          "watched": 1,
+          "candidates": 0,
+          "entries": 0,
+          "exits": 0,
+          "wins": 0,
+          "losses": 0,
+          "winRate": null,
+          "realizedAmount": 0,
+          "realizedPct": 0,
+          "status": "closed",
+          "strategyVersion": "soxl_rsi2_meanrev_v1",
+          "note": "신호 없음(RSI(2) 100 ≥ 20) — 쉼",
+          "capitalNote": "모의 자금 $10,000"
+        }
+      },
+      {
+        "id": "tg:soxl:sent",
+        "date": "2026-10-06",
+        "capturedAt": "2026-10-06T20:05:16.924Z",
+        "targetHm": 505,
+        "strategy": "claude_day",
+        "stage": "telegram",
+        "payload": {
+          "ok": true,
+          "messageId": 320,
           "error": null
         }
       },
