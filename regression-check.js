@@ -12043,10 +12043,16 @@ console.log('\n[REAL ESTATE · CLAUDE] 엔진 값 시험 · 화면 연결 · 월
      !/function\s+(simulate|markMonth|planNext|walkForward|monthYield|desire)\b/.test(ui)&&/E\.walkForward\(/.test(ui)&&/E\.snapshot\(/.test(ui));
   const st=['run: python scripts/realestate_claude/collect.py','run: node scripts/realestate_claude/paper.mjs','node scripts/test_realestate_claude.cjs','git commit -m'].map(x=>wfl.indexOf(x));
   ok('월간 자동 갱신: 수집 → 장부 덧붙이기 → 값 시험 → 커밋 순서(시험 실패면 커밋 안 함)', st.every((x,i)=>x>0&&(i===0||x>st[i-1]))&&/cron:/.test(wfl));
-  const P=JSON.parse(fs.readFileSync(__d+'/data/realestate/claude/paper.json','utf8')),E2=require(__d+'/realestate-claude-engine.js');
-  ok('모의장부: 전략 버전 · 당시 가정 · 결정마다 전략/엔진 버전과 판단 자료 달',
-     P.strategyVersion===E2.STRATEGY_VERSION&&P.params&&P.params.lag===E2.DEFAULTS.lag&&P.decisions.length>0
-     &&P.decisions.every(d=>d.sv&&d.ev&&/^\d{4}-\d{2}$/.test(d.data)&&E2.ymk(d.m)-E2.ymk(d.data)===P.params.lag));
+  const E2=require(__d+'/realestate-claude-engine.js');
+  const ledgers=[['paper.json','rec-wf-1'],['paper-rec-wf-2.json','rec-wf-2']].map(([f,sv])=>[f,sv,JSON.parse(fs.readFileSync(__d+'/data/realestate/claude/'+f,'utf8'))]);
+  ok('모의장부 2개(rec-wf-1 첫 장부 · rec-wf-2 새 장부): 파일마다 제 전략 버전 · 당시 가정 · 결정마다 버전/판단 자료 달 · 그 버전 후보만',
+     E2.STRATEGIES.join()==='rec-wf-1,rec-wf-2'&&ledgers.every(([f,sv,P])=>{ const ids=E2.candidates(sv).map(c=>c.id);
+       return P.strategyVersion===sv&&P.params&&P.params.lag===E2.DEFAULTS.lag&&P.decisions.length>0
+         &&P.decisions.every(d=>d.sv===sv&&d.ev&&/^\d{4}-\d{2}$/.test(d.data)&&E2.ymk(d.m)-E2.ymk(d.data)===P.params.lag&&(d.cand===null||ids.indexOf(d.cand)>=0)); }));
+  const pm=fs.readFileSync(__d+'/scripts/realestate_claude/paper.mjs','utf8');
+  ok('장부 갱신은 두 장부 모두 · 파일과 전략 버전이 어긋나거나 지난 기록이 바뀌면 저장 거부',
+     /\{ file: 'paper\.json', sv: 'rec-wf-1' \}/.test(pm)&&/\{ file: 'paper-rec-wf-2\.json', sv: 'rec-wf-2' \}/.test(pm)
+     &&/old\.strategyVersion !== sv/.test(pm)&&/지난 장부 기록이 바뀌었습니다/.test(pm));
   const S=JSON.parse(fs.readFileSync(__d+'/data/realestate/claude/series.json','utf8')).series;
   ok('원자료(KB·ECOS): 대전 아파트 1986~ · 입주물량(예정 포함) · 매수우위 · 미분양 · 인허가',
      S.kbSale&&S.kbSale.daejeon&&S.kbSale.daejeon.start==='1986-01'&&S.movein&&S.movein.daejeon&&E2.ymk(S.movein.daejeon.start)+S.movein.daejeon.v.length-1>E2.ymk(S.sale.daejeon.start)+S.sale.daejeon.v.length-1

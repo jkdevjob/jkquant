@@ -6,8 +6,10 @@ const E=window.JKRealEstateClaude;
 const ROOT_ID='rec-root',DATA='/data/realestate/claude/';
 const COLORS={daejeon:'#8b8cf0',dj_dong:'#f87b8c',dj_jung:'#f5c451',dj_seo:'#36d399',dj_yuseong:'#5ec8f2',dj_daedeok:'#c29cf5',
   sejong:'#ff9f43',national:'#9aa6c9',seoul:'#59627f',metro5:'#7d86a8',cheongju:'#88a',cheonan:'#a88',gongju:'#8a8',gyeryong:'#aa8'};
-const st={tab:'sum',region:'daejeon',real:false,opts:{},charts:{}};
-let DOC=null,PAPER=null,D=null,WF=null,SNAP=null,WFL=null;
+const SVN={'rec-wf-2':'v2 — 입주·매수우위 포함','rec-wf-1':'v1 — 첫 전략'};
+const PAPER_FILES={'rec-wf-1':'paper.json','rec-wf-2':'paper-rec-wf-2.json'};
+const st={tab:'sum',region:'daejeon',real:false,opts:{},charts:{},sv:E.STRATEGY_VERSION};
+let DOC=null,PAPERS={},D=null,WF=null,SNAP=null,SNAP1=null,WFL=null;
 
 /* ── 꾸밈(클로드 칸 안에서만) ── */
 const CSS=`
@@ -80,9 +82,11 @@ function ds(label,data,color,extra){ return Object.assign({label,data,borderColo
 /* ── 계산 묶음 ── */
 function compute(){
   D=E.prepare(DOC);
-  WF=E.walkForward(D,st.opts);
-  WFL=E.walkForwardLong(D,st.opts);
-  SNAP=E.snapshot(D,st.opts);
+  const o=Object.assign({},st.opts,{strategy:st.sv}),main=E.STRATEGY_VERSION;
+  WF=E.walkForward(D,o);
+  WFL=E.walkForwardLong(D,o);
+  SNAP=E.snapshot(D,Object.assign({},st.opts,{strategy:main,wf:st.sv===main?WF:undefined}));
+  SNAP1=E.snapshot(D,Object.assign({},st.opts,{strategy:'rec-wf-1',wf:st.sv==='rec-wf-1'?WF:undefined}));
 }
 
 /* ── 칸들 ── */
@@ -124,6 +128,9 @@ function pickWhy(p){
   if(p.rule==='momRate'&&p.rate12!=null&&p.rate12>0) return '기준금리가 1년 전보다 '+p.rate12.toFixed(2)+'%p 올라 쉬는 구간(금리 필터)';
   if(p.rule==='mom'||p.rule==='momRate') return '어느 지역도 '+p.k+'개월 상승률이 '+pct0(p.th,1)+'를 넘지 않음';
   if(p.rule==='cash') return '학습 기간에 예금이 집보다 나았음';
+  if(p.rule==='mktHold'){ const v=p.scores&&p.scores.daejeon; return '대전 KB 매수우위지수 '+num(v,1)+' — 문턱 '+p.th+' 미만이라 쉬는 구간'; }
+  if(p.rule==='mkt') return 'KB 매수우위 '+p.th+' 이상이면서 '+p.k+'개월 오르는 지역이 없음';
+  if(p.rule==='sup') return '지난 1년 입주가 10년 평균의 '+p.cap+'배 이하이면서 '+p.k+'개월 오르는 지역이 없음';
   return '조건을 만족하는 지역이 없음';
 }
 function cyclesSummary(r){
@@ -135,33 +142,30 @@ function cyclesSummary(r){
 
 function renderSum(el){
   const p=SNAP.pick,m=WF&&WF.meta.stats,b=WF&&WF.bench.daejeon&&WF.bench.daejeon.stats,c=WF&&WF.bench.cash&&WF.bench.cash.stats;
-  const led=PAPER&&PAPER.marks?PAPER:null,lastDec=PAPER&&PAPER.decisions&&PAPER.decisions.length?PAPER.decisions[PAPER.decisions.length-1]:null;
   const csD=cyclesSummary('daejeon'),csS=cyclesSummary('sejong');
   let h='<div class="warn">과거 통계로 만든 연구용 모의투자입니다. 투자 권유가 아니며, 지수는 지역 평균이라 개별 단지와 다를 수 있습니다.</div>';
   h+='<div class="grid">';
-  h+='<div class="card"><h3>🧭 지금 판단</h3>';
+  h+='<div class="card"><h3>🧭 지금 판단 <span class="tag hot">'+esc(SVN[E.STRATEGY_VERSION])+'</span></h3>';
   if(p){
     h+='<div class="big '+(p.target?'gd':'')+'">'+esc(L(p.target))+'</div>'
       +'<div class="note">'+esc(p.forMonth)+' 보유 구간부터 · '+esc(p.dataMonth)+' 지수까지 보고 결정</div>'
       +'<div class="kv"><span>적용 전략</span><b style="white-space:normal;text-align:right">'+esc(p.label)+'</b></div>'
       +'<div class="kv"><span>사유</span><b style="white-space:normal;text-align:right">'+esc(pickWhy(p))+'</b></div>'
-      +topScores(p.scores,p.cand);
+      +topScores(p.scores,p.cand)
+      +(SNAP1&&SNAP1.pick?'<h4>비교 — '+esc(SVN['rec-wf-1'])+'</h4><div class="kv"><span>판단</span><b>'+esc(L(SNAP1.pick.target))+'</b></div><div class="kv"><span>사유</span><b style="white-space:normal;text-align:right">'+esc(pickWhy(SNAP1.pick))+'</b></div>':'');
   } else h+='<div class="note">판단할 자료가 부족합니다.</div>';
   h+='</div>';
-  h+='<div class="card"><h3>📒 모의투자 장부</h3>';
-  if(led){
-    const nav=led.acct.nav,ret=nav/led.capital-1;
-    h+='<div class="big">'+won(nav)+' <span class="'+cls(ret)+'" style="font-size:14px">'+pct(ret)+'</span></div>'
-      +'<div class="kv"><span>시작</span><b>'+esc(led.startedData)+' 자료부터 · 원금 '+won(led.capital)+'</b></div>'
-      +'<div class="kv"><span>지금 보유</span><b>'+esc(L(led.acct.pos))+'</b></div>'
-      +'<div class="kv"><span>정산된 달</span><b>'+led.marks.length+'개월</b></div>'
-      +(lastDec?'<div class="kv"><span>다음 보유</span><b>'+esc(lastDec.m)+' · '+esc(L(lastDec.target))+'</b></div>':'')
-      +(led.marks.length?'':'<div class="note">첫 정산은 '+esc(led.decisions[0]&&led.decisions[0].m)+' 지수가 공표되는 다음 달 중순입니다.</div>');
-  } else h+='<div class="note">장부를 불러오지 못했습니다.</div>';
-  h+='</div>';
+  h+='<div class="card"><h3>📒 모의투자 장부 — 전략 버전별</h3>';
+  for(const sv of [E.STRATEGY_VERSION,'rec-wf-1']){ const led=PAPERS[sv];
+    if(!led||!led.marks){ h+='<div class="note">'+esc(sv)+' 장부를 불러오지 못했습니다.</div>'; continue; }
+    const nav=led.acct.nav,ret=nav/led.capital-1,ld=led.decisions.length?led.decisions[led.decisions.length-1]:null;
+    h+='<h4>'+esc(SVN[sv]||sv)+'</h4><div class="kv"><span>평가액</span><b>'+won(nav)+' <span class="'+cls(ret)+'">'+pct(ret)+'</span></b></div>'
+      +'<div class="kv"><span>시작 · 정산</span><b>'+esc(led.startedData)+' 자료부터 · '+led.marks.length+'개월</b></div>'
+      +(ld?'<div class="kv"><span>다음 보유</span><b>'+esc(ld.m)+' · '+esc(L(ld.target))+'</b></div>':''); }
+  h+='<div class="note">두 장부를 같은 원금(3억)으로 같이 쌓아 비교합니다. 첫 정산은 첫 보유 달 지수가 공표되는 다음 달 중순.</div></div>';
   h+='<div class="card"><h3>🧪 과거 검증 (워크포워드)</h3>';
   if(m){
-    h+='<div class="kv"><span>검증 기간</span><b>'+esc(WF.oosFrom)+' ~ '+esc(WF.lastRet)+'</b></div>'
+    h+='<div class="kv"><span>전략 · 검증 기간</span><b>'+esc(SVN[WF.strategy]||WF.strategy)+' · '+esc(WF.oosFrom)+' ~ '+esc(WF.lastRet)+'</b></div>'
       +'<div class="kv"><span>클로드 전략 연복리</span><b class="'+cls(m.cagr)+'">'+pct(m.cagr)+'</b></div>'
       +'<div class="kv"><span>대전 전체 보유</span><b class="'+cls(b&&b.cagr)+'">'+pct(b&&b.cagr)+'</b></div>'
       +'<div class="kv"><span>현금(예금)</span><b>'+pct(c&&c.cagr)+'</b></div>'
@@ -193,8 +197,9 @@ function renderSum(el){
 function topScores(scores,cand){
   const ks=Object.keys(scores||{}); if(!ks.length) return '';
   const rule=(cand||'').split('_')[0],desc=rule==='rebound'?(a,b)=>scores[a]-scores[b]:(a,b)=>scores[b]-scores[a];
-  const name=rule==='jeonse'?'전세−매매 12개월':rule==='rebound'?'고점 대비':rule==='volume'?'거래량 증가':'상승률';
-  return '<h4>지역별 '+name+'</h4>'+ks.sort(desc).slice(0,6).map(k=>'<div class="kv"><span>'+esc(L(k))+'</span><b class="'+cls(scores[k])+'">'+pct(scores[k])+'</b></div>').join('');
+  const name=rule==='jeonse'?'전세−매매 12개월':rule==='rebound'?'고점 대비':rule==='volume'?'거래량 증가':rule==='mktHold'?'KB 매수우위지수':'상승률';
+  const f=rule==='mktHold'?(x=>num(x,1)):pct,c=rule==='mktHold'?(()=>''):cls;
+  return '<h4>지역별 '+name+'</h4>'+ks.sort(desc).slice(0,6).map(k=>'<div class="kv"><span>'+esc(L(k))+'</span><b class="'+c(scores[k])+'">'+f(scores[k])+'</b></div>').join('');
 }
 
 function renderHist(el){
@@ -316,8 +321,10 @@ function renderSup(el){
 function renderStrat(el){
   if(!WF){ el.innerHTML='<div class="warn">검증할 자료가 부족합니다.</div>'; return; }
   const o=WF.opts,m=WF.meta;
+  let hv='<div class="card"><h3>🧬 전략 버전</h3><div class="row">'+E.STRATEGIES.slice().reverse().map(sv=>'<button class="btn'+(st.sv===sv?' on':'')+'" data-sv="'+sv+'">'+esc(SVN[sv]||sv)+'</button>').join('')+'</div>'
+    +'<div class="note">v1(첫 장부)은 후보 '+E.candidates('rec-wf-1').length+'개, v2 는 입주(지난 1년 실적)·KB 매수우위 후보를 더해 '+E.candidates('rec-wf-2').length+'개. 두 장부는 각자 자기 규칙으로만 쌓입니다.</div></div>';
   const rows=[['🤖 클로드 전략(워크포워드)',m.stats,'meta']].concat(Object.keys(WF.bench).map(k=>[k==='cash'?'현금(정기예금 세후)':L(k)+' 계속 보유',WF.bench[k].stats,k]));
-  let h='<div class="card"><h3>⚙️ 가정 바꿔 보기</h3><div class="row">'
+  let h=hv+'<div class="card"><h3>⚙️ 가정 바꿔 보기</h3><div class="row">'
     +'<span class="note">임대·거주가치</span><button class="btn'+(o.rent==='jeonse'?' on':'')+'" data-o="rent" data-v="jeonse">전세 환산 포함</button><button class="btn'+(o.rent==='none'?' on':'')+'" data-o="rent" data-v="none">가격만</button>'
     +'<span class="note" style="margin-left:6px">최소 보유</span>'+[12,24,36].map(v=>'<button class="btn'+(o.minHold===v?' on':'')+'" data-o="minHold" data-v="'+v+'">'+v+'개월</button>').join('')
     +'<span class="note" style="margin-left:6px">공표 시차</span>'+[1,2,3].map(v=>'<button class="btn'+(o.lag===v?' on':'')+'" data-o="lag" data-v="'+v+'">'+v+'개월</button>').join('')
@@ -333,7 +340,7 @@ function renderStrat(el){
       +'<div class="tw"><table><tr><th>전략</th><th>누적</th><th>연복리</th><th>최대낙폭</th><th>보유 비율</th><th>매매</th><th>3억 →</th></tr>'
       +[['🤖 클로드 전략(워크포워드)',lm],['대전 전체 계속 보유',lb],['현금(정기예금 세후)',lcash]].map(x=>'<tr><td>'+esc(x[0])+'</td><td class="'+cls(x[1]&&x[1].total)+'">'+pct(x[1]&&x[1].total)+'</td><td class="'+cls(x[1]&&x[1].cagr)+'"><b>'+pct(x[1]&&x[1].cagr)+'</b></td><td>'+pct0(x[1]&&x[1].mdd)+'</td><td>'+pct0(x[1]&&x[1].inMarket,0)+'</td><td>'+(x[1]?x[1].trades:'–')+'</td><td>'+won(x[1]&&x[1].end)+'</td></tr>').join('')
       +'</table></div><div class="note">해마다 고른 전략: '+Object.keys(cnt).map(id=>esc(id)+' '+cnt[id]+'년').join(' · ')+'</div><div class="cv" style="margin-top:8px"><canvas id="rc-eql"></canvas></div></div>'; }
-  const sens=[0,.1,.25].map(pen=>{ const w=pen===o.penalty?WF:E.walkForward(D,Object.assign({},st.opts,{penalty:pen})); return [pen,w&&w.meta.stats]; });
+  const sens=[0,.1,.25].map(pen=>{ const w=pen===o.penalty?WF:E.walkForward(D,Object.assign({},st.opts,{penalty:pen,strategy:st.sv})); return [pen,w&&w.meta.stats]; });
   h+='<div class="card"><h3>🎚️ 고르는 기준을 바꾸면 (민감도)</h3><p class="lead">해마다 전략을 고르는 점수 = 연복리 − <b>낙폭 벌점</b> × 최대낙폭. 기본 0.25는 결과를 보기 전에 정한 값입니다. 기준에 따라 결과가 크게 달라지면 규칙 선택이 아직 불안정하다는 뜻입니다.</p>'
     +'<div class="tw"><table><tr><th>낙폭 벌점</th><th>연복리</th><th>최대낙폭</th><th>보유 비율</th><th>매매</th><th>3억 →</th></tr>'
     +sens.map(([pen,s2])=>'<tr><td>'+pen+(pen===E.DEFAULTS.penalty?' (기본)':'')+'</td><td class="'+cls(s2&&s2.cagr)+'">'+pct(s2&&s2.cagr)+'</td><td>'+pct0(s2&&s2.mdd)+'</td><td>'+pct0(s2&&s2.inMarket,0)+'</td><td>'+(s2?s2.trades:'–')+'</td><td>'+won(s2&&s2.end)+'</td></tr>').join('')
@@ -351,6 +358,7 @@ function renderStrat(el){
     +WF.fullTable.map(t=>'<tr><td class="l">'+esc(t.label)+'</td><td class="'+cls(t.cagr)+'">'+pct(t.cagr)+'</td><td>'+pct0(t.mdd)+'</td><td>'+pct0(t.inMarket,0)+'</td><td>'+t.trades+'</td><td>'+num(t.score*100,2)+'</td></tr>').join('')
     +'</table></div><div class="note">점수 = 연복리 − '+o.penalty+' × 최대낙폭. 해마다 학습 기간에서 이 점수 1위를 골랐습니다.</div></div>';
   el.innerHTML=h;
+  el.querySelectorAll('[data-sv]').forEach(b=>b.onclick=()=>{ st.sv=b.getAttribute('data-sv'); compute(); render(); });
   el.querySelectorAll('[data-o]').forEach(b=>b.onclick=()=>{ const k=b.getAttribute('data-o'),v=b.getAttribute('data-v');
     st.opts[k]=k==='rent'?v:+v; compute(); render(); });
   const k0=E.ymk(WF.oosFrom),k1=E.ymk(WF.lastRet),lab=months(k0,k1);
@@ -361,22 +369,26 @@ function renderStrat(el){
     WF.bench.sejong?ds('세종 보유',navLine(WF.bench.sejong.rows),COLORS.sejong):null,ds('현금',navLine(WF.bench.cash.rows),'#9aa6c9',{borderDash:[4,3]})].filter(Boolean),{fmt:v=>won(v)});
 }
 
-function renderPaper(el){
-  if(!PAPER||!PAPER.decisions){ el.innerHTML='<div class="warn">모의투자 장부(paper.json)를 불러오지 못했습니다.</div>'; return; }
-  const P=PAPER,nav=P.acct.nav;
-  let h='<div class="card"><h3>📒 모의투자 장부 — 지금부터 매달 쌓는 기록</h3><p class="lead">과거 검증에서 고른 규칙을 <b>'+esc(P.startedData)+'</b> 지수 공표 이후부터 실제로 따라갑니다. 지난 기록은 고치지 않고 새 달만 덧붙입니다(전략 버전·당시 가정 함께 저장).</p>'
+function ledgerHtml(P,sv){
+  if(!P||!P.decisions) return '<div class="warn">'+esc(sv)+' 장부('+esc(PAPER_FILES[sv]||'')+')를 불러오지 못했습니다.</div>';
+  const nav=P.acct.nav;
+  let h='<div class="card"><h3>📒 '+esc(SVN[sv]||sv)+' — 지금부터 매달 쌓는 기록</h3><p class="lead">과거 검증에서 고른 규칙을 <b>'+esc(P.startedData)+'</b> 지수 공표 이후부터 실제로 따라갑니다. 지난 기록은 고치지 않고 새 달만 덧붙입니다(전략 버전·당시 가정 함께 저장).</p>'
     +'<div class="grid"><div><div class="kv"><span>원금</span><b>'+won(P.capital)+'</b></div><div class="kv"><span>평가액</span><b class="'+cls(nav/P.capital-1)+'">'+won(nav)+' ('+pct(nav/P.capital-1)+')</b></div>'
     +'<div class="kv"><span>수수료 누계</span><b>'+wonM(P.acct.fees)+'</b></div><div class="kv"><span>지금 보유</span><b>'+esc(L(P.acct.pos))+'</b></div></div>'
     +'<div><div class="kv"><span>전략 버전</span><b>'+esc(P.strategyVersion)+' · 엔진 '+esc(P.engineVersion)+'</b></div>'
     +'<div class="kv"><span>가정</span><b>매수 '+pct0(P.params.buyCost)+' · 매도 '+pct0(P.params.sellCost)+' · 최소 '+P.params.minHold+'개월</b></div>'
-    +'<div class="kv"><span>공표 시차</span><b>'+P.params.lag+'개월 · 임대가치 '+(P.params.rent==='jeonse'?'전세 환산':'제외')+'</b></div></div></div></div>';
-  h+='<div class="card"><h3>🗳️ 결정 기록</h3><div class="tw"><table><tr><th>보유 달</th><th>판단 자료</th><th class="l">전략</th><th>선택</th><th>메모</th><th>기록 시각</th></tr>'
+    +'<div class="kv"><span>공표 시차</span><b>'+P.params.lag+'개월 · 임대가치 '+(P.params.rent==='jeonse'?'전세 환산':'제외')+'</b></div></div></div>';
+  h+='<h4>🗳️ 결정 기록</h4><div class="tw"><table><tr><th>보유 달</th><th>판단 자료</th><th class="l">전략</th><th>선택</th><th>메모</th><th>기록 시각</th></tr>'
     +P.decisions.slice().reverse().map(d=>'<tr><td>'+d.m+'</td><td>'+d.data+'</td><td class="l">'+esc(d.candLabel||d.cand||'–')+'</td><td><b>'+esc(L(d.target))+'</b></td><td>'+(d.locked?'최소 보유로 유지':d.stay?'조건 유지':'')+'</td><td>'+esc((d.at||'').slice(0,16).replace('T',' '))+'</td></tr>').join('')
-    +'</table></div></div>';
-  h+='<div class="card"><h3>💰 정산 기록</h3>'+(P.marks.length?'<div class="tw"><table><tr><th>달</th><th>보유</th><th>가격</th><th>임대가치</th><th>보유세</th><th>현금이자</th><th>수수료</th><th>평가액</th></tr>'
+    +'</table></div>';
+  h+='<h4>💰 정산 기록</h4>'+(P.marks.length?'<div class="tw"><table><tr><th>달</th><th>보유</th><th>가격</th><th>임대가치</th><th>보유세</th><th>현금이자</th><th>수수료</th><th>평가액</th></tr>'
     +P.marks.slice().reverse().map(x=>'<tr><td>'+x.m+'</td><td>'+esc(L(x.pos))+'</td><td class="'+cls(x.price)+'">'+pct(x.price,2)+'</td><td>'+pct(x.rent,3)+'</td><td>'+pct(x.hold,3)+'</td><td>'+pct(x.cash,3)+'</td><td>'+wonM(x.fee)+'</td><td>'+won(x.nav)+'</td></tr>').join('')
     +'</table></div>':'<div class="note">아직 정산된 달이 없습니다. 첫 보유 달('+esc(P.decisions[0]&&P.decisions[0].m)+') 지수가 공표되면(다음 달 중순) 매달 자동으로 채워집니다.</div>')+'</div>';
-  el.innerHTML=h;
+  return h;
+}
+function renderPaper(el){
+  el.innerHTML='<div class="note" style="margin-bottom:8px">두 전략을 같은 원금으로 따로 쌓아 비교합니다. v1 은 첫 장부 그대로 이어지고, v2 는 입주·매수우위 후보를 더한 새 장부입니다.</div>'
+    +[E.STRATEGY_VERSION,'rec-wf-1'].map(sv=>ledgerHtml(PAPERS[sv],sv)).join('');
 }
 
 function renderData(el){
@@ -397,11 +409,12 @@ function renderData(el){
     +'<li><b>현금</b>: 예금은행 정기예금 금리(신규취급액)에서 이자소득세 '+pct0(o.depositTax)+'를 뺀 값.</li>'
     +'<li><b>임대·거주가치</b>: 집을 가지면 전세보증금만큼을 예금에 넣은 효과(전세가율 × 세후 예금금리)를 얻는다고 본다. 집 없이 현금을 들면 그만큼 주거비를 낸다 — 양쪽 주거비 차이를 같게 맞추는 방법.</li>'
     +'<li><b>전략 고르기</b>: 해마다 1월, 그때까지 공표된 자료만으로 후보 '+E.candidates().length+'개(현금 유지 · 대전 보유 포함)를 처음부터 다시 돌려 ‘연복리 − '+o.penalty+'×최대낙폭’ 1위를 그해에 쓴다. 학습 기간 보유 비율이 '+pct0(o.minInMarket,0)+' 미만인 규칙은 사실상 현금이라 뺀다.</li>'
+    +'<li><b>전략 버전</b>: v1(rec-wf-1, 후보 '+E.candidates('rec-wf-1').length+'개)은 첫 장부 그대로. v2(rec-wf-2, '+E.candidates('rec-wf-2').length+'개)는 KB 매수우위(문턱 40·60)와 지난 1년 입주 실적(10년 평균의 1·1.5배 이하) 후보를 더했다. 앞으로 입주 ‘예정’은 과거 시점 값을 알 수 없어 규칙에 쓰지 않는다.</li>'
     +'<li><b>투자 단위</b>: 지역 지수를 그대로 따라가는 집 한 채(대출 없음). 실제 단지 수익은 지수와 다를 수 있다.</li></ul></div>';
   h+='<div class="card"><h3>🚧 아직 못 넣은 것 · 다음 단계</h3><ul class="f">'
     +'<li>대전 아파트 40년은 KB 지수(1986~), 구별 비교·전략은 한국부동산원 지수(2003~)를 씁니다. 두 지수는 조사 표본이 달라 값이 조금 다릅니다.</li>'
     +'<li>국토부 실거래가(단지·동 단위)는 정부 서버가 해외 IP 연결을 끊어 아직 못 넣었습니다. 인구 이동(통계청)은 인증키가 있으면 넣을 수 있습니다.</li>'
-    +'<li>입주·미분양·매수우위는 분석·참고 전망에만 쓰고 모의장부 전략(rec-wf-1)에는 아직 넣지 않았습니다 — 넣으면 전략 버전이 바뀌어 새 장부로 시작해야 합니다.</li>'
+    +'<li>입주 ‘예정’(앞으로 12·24개월)은 지금 시점 참고 전망에만 씁니다. 과거 시점의 예정 자료가 없어 실제 입주로 대신하면 미래 정보가 섞이므로, v2 전략은 이미 끝난 지난 1년 입주 실적만 씁니다.</li>'
     +'<li>대출(LTV)·전세 끼고 사기(갭투자) 변형은 아직 넣지 않았습니다. 기본은 대출 없는 1주택입니다.</li></ul></div>';
   el.innerHTML=h;
 }
@@ -411,9 +424,11 @@ async function boot(){
   const root=document.getElementById(ROOT_ID); if(!root) return;
   if(!document.getElementById('rec-css')){ const s=document.createElement('style'); s.id='rec-css'; s.textContent=CSS; document.head.appendChild(s); }
   try{
-    const [a,b]=await Promise.all([fetch(DATA+'series.json',{cache:'no-cache'}),fetch(DATA+'paper.json',{cache:'no-cache'})]);
+    const svs=Object.keys(PAPER_FILES),res=await Promise.all([fetch(DATA+'series.json',{cache:'no-cache'})].concat(svs.map(sv=>fetch(DATA+PAPER_FILES[sv],{cache:'no-cache'}))));
+    const a=res[0];
     if(!a.ok) throw new Error('series.json '+a.status);
-    DOC=await a.json(); PAPER=b.ok?await b.json():null;
+    DOC=await a.json();
+    for(let i=0;i<svs.length;i++){ const r=res[i+1]; PAPERS[svs[i]]=r.ok?await r.json():null; }
     compute(); render();
   }catch(e){ root.innerHTML='<div class="warn">자료를 불러오지 못했습니다: '+esc(e.message||e)+'</div>'; console.error(e); }
 }

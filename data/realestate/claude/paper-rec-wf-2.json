@@ -1,0 +1,46 @@
+{
+ "schema": 1,
+ "strategyVersion": "rec-wf-2",
+ "engineVersion": "1.2.0",
+ "startedData": "2026-08",
+ "capital": 300000000,
+ "params": {
+  "lag": 2,
+  "minHold": 24,
+  "buyCost": 0.016,
+  "sellCost": 0.005,
+  "holdCostYr": 0.0015,
+  "depositTax": 0.154,
+  "rent": "jeonse",
+  "penalty": 0.25,
+  "minTrain": 48,
+  "minInMarket": 0.1
+ },
+ "plan": {
+  "pos": null,
+  "held": 0
+ },
+ "acct": {
+  "nav": 300000000,
+  "pos": null,
+  "fees": 0
+ },
+ "decisions": [
+  {
+   "m": "2026-10",
+   "data": "2026-08",
+   "cand": "mktHold_60",
+   "candLabel": "매수우위 타이밍: 대전 매수우위지수 60 이상일 때만 대전 전체 보유",
+   "target": null,
+   "locked": false,
+   "stay": false,
+   "scores": {
+    "daejeon": 38.491
+   },
+   "sv": "rec-wf-2",
+   "ev": "1.2.0",
+   "at": "2026-10-06T06:47:52Z"
+  }
+ ],
+ "marks": []
+}

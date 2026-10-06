@@ -64,6 +64,36 @@ ok('달 변환 왕복', E.kym(E.ymk('2003-11'))==='2003-11' && E.ymk('2004-01')-
      JSON.stringify(pv)===JSON.stringify(['start:0:100','peak:3:112','trough:6:95','peak:9:108','now:10:104']),JSON.stringify(pv));
 }
 
+console.log('[부동산 클로드 엔진] 전략 버전');
+{
+  const V1=['cash','hold_daejeon','mom_3_0','mom_3_0.01','mom_3_0.02','mom_6_0','mom_6_0.01','mom_6_0.02','mom_12_0','mom_12_0.01','mom_12_0.02',
+    'momRate_6_0','momRate_6_0.01','momRate_12_0','momRate_12_0.01','jeonse_3','jeonse_6','rebound_0.1','rebound_0.15','rebound_0.2','volume_6','rot_6','rot_12'];
+  const c1=E.candidates('rec-wf-1').map(c=>c.id),c2=E.candidates('rec-wf-2').map(c=>c.id);
+  ok('rec-wf-1 후보 23개는 순서까지 그대로(첫 장부가 계속 같은 규칙으로 쌓인다)', JSON.stringify(c1)===JSON.stringify(V1),c1.join(','));
+  ok('rec-wf-2 = rec-wf-1 23개 + 입주·매수우위 8개(뒤에 붙임)', JSON.stringify(c2.slice(0,23))===JSON.stringify(V1)
+     &&JSON.stringify(c2.slice(23))===JSON.stringify(['mkt_3_40','mkt_3_60','mkt_6_40','mkt_6_60','sup_6_1','sup_6_1.5','mktHold_40','mktHold_60']));
+  let threw=false; try{ E.candidates('rec-wf-9'); }catch(e){ threw=true; }
+  ok('모르는 전략 버전은 거부', threw);
+  // 새 규칙 값: 대전 매수우위 30, 세종 70 → 매수우위 40 이상인 곳은 세종뿐
+  const mk=(st,v)=>({start:st,v});
+  const S={sale:{dj_seo:mk('2019-01',[100,101,102,103,104,105,110]),sejong:mk('2019-01',[100,100,100,100,100,101,102])},
+    kbMarket:{daejeon:mk('2019-01',[30,30,30,30,30,30,45]),sejong:mk('2019-01',[70,70,70,70,70,70,70])}};
+  const D=E.prepare({series:S}),t=E.ymk('2019-07'),C=E.candidates('rec-wf-2'),by=id=>C.find(c=>c.id===id),U=['dj_seo','sejong'];
+  ok('추세+매수우위: 문턱 60 이면 상승률 1위 서구(대전 45)를 빼고 세종(70)을 고른다 · 문턱 40 이면 서구',
+     E.desire(D,by('mkt_3_60'),t,null,U).target==='sejong'&&E.desire(D,by('mkt_3_40'),t,null,U).target==='dj_seo'
+     &&E.desire(D,by('mkt_3_40'),E.ymk('2019-06'),null,U).target==='sejong');
+  ok('매수우위 타이밍: 대전 45 → 문턱 40 은 대전 보유, 60 은 현금', E.desire(D,by('mktHold_40'),t,null,U).target==='daejeon'&&E.desire(D,by('mktHold_60'),t,null,U).target===null);
+  // 지난 1년 입주: 10년 동안 달마다 100, 마지막 12개월은 달마다 250 → 2.5배
+  const v=[]; for(let i=0;i<108;i++) v.push(100); for(let i=0;i<12;i++) v.push(250);
+  const D2=E.prepare({series:{movein:{dj_seo:mk('2010-01',v)}}});
+  ok('지난 1년 입주 ÷ 10년 연평균(이미 끝난 실적만)', near(E.supplyPast(D2,'dj_seo',E.ymk('2019-12')),3000/((10800+3000)/10),1e-12));
+  const S3={sale:{dj_seo:mk('2018-01',Array.from({length:24},(_,i)=>100+i)),dj_jung:mk('2018-01',Array.from({length:24},(_,i)=>100+i*0.5))},
+    movein:{dj_seo:mk('2010-01',v.concat(Array(12).fill(250))),dj_jung:mk('2010-01',Array(144).fill(100))}};
+  const D3=E.prepare({series:S3});
+  ok('추세+공급 회피: 입주가 몰린 서구(상승률 1위)는 빼고 중구를 고른다', E.desire(D3,by('sup_6_1.5'),E.ymk('2019-12'),null,['dj_seo','dj_jung']).target==='dj_jung'
+     &&E.desire(D3,by('mom_6_0'),E.ymk('2019-12'),null,['dj_seo','dj_jung']).target==='dj_seo');
+}
+
 console.log('[부동산 클로드 엔진] 결정 사슬 · 정산');
 {
   const T=[{id:'cash',score:.02,inMarket:0},{id:'rebound_0.1',score:.03,inMarket:.05},{id:'mom_3_0',score:.025,inMarket:.6}];
@@ -165,24 +195,27 @@ console.log('[부동산 클로드 엔진] 공급 · 인허가 · 미분양');
 }
 
 console.log('[부동산 클로드 엔진] 모의장부 — 덧붙이기만 · 백테와 같은 값');
-function ledgerCheck(doc,t0,t1,t2,tag){
-  const a=E.paperUpdate(null,E.prepare(truncateAfter(doc,t0)),{},'t0').ledger;
+function ledgerCheck(doc,t0,t1,t2,tag,sv){
+  sv=sv||E.STRATEGY_VERSION;
+  const a=E.paperUpdate(null,E.prepare(truncateAfter(doc,t0)),{strategy:sv},'t0').ledger;
   const b=E.paperUpdate(a,E.prepare(truncateAfter(doc,t1)),{},'t1').ledger;
   const c=E.paperUpdate(b,E.prepare(truncateAfter(doc,t2)),{},'t2').ledger;
   const prefix=(x,y)=>x.decisions.every((d,i)=>JSON.stringify(d)===JSON.stringify(y.decisions[i]))&&x.marks.every((m,i)=>JSON.stringify(m)===JSON.stringify(y.marks[i]));
   ok(tag+': 지난 기록은 그대로 두고 새 달만 덧붙인다', prefix(a,b)&&prefix(b,c)&&c.decisions.length>b.decisions.length);
   ok(tag+': 시작 전 달(시작 자료 달+1)은 결정하지 않는다', c.decisions[0].m===E.kym(E.ymk(t0)+E.DEFAULTS.lag)&&c.decisions[0].data===t0);
   /* 같은 기간을 백테(simulate)로 돌린 값과 같아야 한다 */
-  const D=E.prepare(truncateAfter(doc,t2)),w=E.walkForward(D);
+  const D=E.prepare(truncateAfter(doc,t2)),w=E.walkForward(D,{strategy:sv});
   const sim=E.simulate(D,{from:E.ymk(t0)+E.DEFAULTS.lag,to:E.ymk(t2)},w.choose);
   const same=c.marks.length===sim.rows.length&&c.marks.every((m,i)=>m.m===sim.rows[i].m&&m.to===sim.rows[i].to&&near(m.nav,sim.rows[i].nav,1e-12));
   ok(tag+': 장부 NAV = 같은 기간 백테 NAV (저장 전 장부 == 저장 후 장부)', same, c.marks.length+' vs '+sim.rows.length);
   const recomputed=c.marks.reduce((nav,m)=>{ let x=nav; if(m.sellFee) x-=m.sellFee; if(m.buyFee) x-=m.buyFee; return x*(1+m.r); },c.capital);
   ok(tag+': 장부만으로 다시 계산한 NAV = 기록된 NAV', near(recomputed,c.acct.nav,1e-9));
-  ok(tag+': 기록마다 전략 버전·엔진 버전', c.decisions.every(d=>d.sv===E.STRATEGY_VERSION&&d.ev===E.VERSION));
+  const ids=E.candidates(sv).map(x=>x.id);
+  ok(tag+': 기록마다 그 장부의 전략 버전('+sv+')·엔진 버전 · 그 버전 후보만', c.strategyVersion===sv&&c.decisions.every(d=>d.sv===sv&&d.ev===E.VERSION&&(d.cand===null||ids.indexOf(d.cand)>=0)));
   return c;
 }
-ledgerCheck(synth(),'2020-08','2021-03','2022-11','합성');
+ledgerCheck(synth(),'2020-08','2021-03','2022-11','합성','rec-wf-2');
+ledgerCheck(synth(),'2020-08','2021-03','2022-11','합성 v1','rec-wf-1');
 
 /* ── 실제 자료 ── */
 const real=process.argv[2]||path.join(__dirname,'..','data','realestate','claude','series.json');
@@ -192,7 +225,9 @@ if(fs.existsSync(real)){
   ok('실제 자료: 대전 5구 · 세종 매매지수 있음', E.UNIVERSE.every(r=>D.sale[r]) && D.lastK!=null);
   lookaheadCheck(doc,'2016-06','실제');
   lookaheadCheck(doc,E.kym(D.lastK-14),'실제');
-  ledgerCheck(doc,E.kym(D.lastK-30),E.kym(D.lastK-17),E.kym(D.lastK),'실제');
+  ledgerCheck(doc,E.kym(D.lastK-30),E.kym(D.lastK-17),E.kym(D.lastK),'실제','rec-wf-2');
+  ledgerCheck(doc,E.kym(D.lastK-30),E.kym(D.lastK-17),E.kym(D.lastK),'실제 v1','rec-wf-1');
+  lookaheadCheck(doc,'2016-06','실제 v1',D0=>E.walkForward(D0,{strategy:'rec-wf-1'}));
   if(D.kbSale&&D.kbSale.daejeon){
     lookaheadCheck(doc,'2008-06','장기(KB 대전)',E.walkForwardLong);
     lookaheadCheck(doc,'2019-03','장기(KB 대전)',E.walkForwardLong);
