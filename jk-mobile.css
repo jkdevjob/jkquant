@@ -1,0 +1,60 @@
+/* JKQuant shared mobile-first layout helpers.
+   Desktop layouts remain available, but phone-width rendering is the default priority. */
+html{max-width:100%;overflow-x:hidden;-webkit-text-size-adjust:100%}
+body{max-width:100%;overflow-x:hidden}
+img,video,canvas,svg{max-width:100%}
+input,select,textarea,button{font:inherit}
+.htop>*,.top>*,.row>*,.card>*,.hero>*,.brand{min-width:0}
+.htable-wrap,.table-wrap,.tbl-wrap,.cmp-wrap,.duel-table-wrap,.strategy-overview-wrap{
+  max-width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch
+}
+@media(max-width:720px){
+  .wrap{
+    width:100%!important;max-width:none!important;
+    padding-left:max(11px,env(safe-area-inset-left))!important;
+    padding-right:max(11px,env(safe-area-inset-right))!important
+  }
+  header{padding-top:max(12px,env(safe-area-inset-top))!important}
+  .htop,.top{gap:8px!important;align-items:flex-start!important}
+  h1{font-size:20px!important;line-height:1.25!important;letter-spacing:-.02em}
+  .kicker,.logo{max-width:72vw;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .userbadge{max-width:34vw;overflow:hidden}
+  .jkmenu-btn{width:44px!important;height:44px!important;min-width:44px;min-height:44px}
+  .jkmenu-pop{max-width:calc(100vw - 22px)!important;right:0!important}
+  .jkmenu-pop a{min-height:44px;align-items:center}
+  .card{padding:13px!important;margin:12px 0!important;border-radius:12px!important}
+  .card h3{line-height:1.35}
+  button,.ghostbtn,.prim,.fetchbtn,.seg button,.strategy-tab,.tab{
+    min-height:44px;touch-action:manipulation
+  }
+  input,select,textarea{font-size:16px!important;min-height:44px;max-width:100%}
+  .strategy-tabs,.tabs,.stabs{
+    display:flex!important;grid-template-columns:none!important;flex-wrap:nowrap!important;
+    overflow-x:auto!important;-webkit-overflow-scrolling:touch;overscroll-behavior-x:contain;
+    scrollbar-width:none;gap:6px!important
+  }
+  .strategy-tabs::-webkit-scrollbar,.tabs::-webkit-scrollbar,.stabs::-webkit-scrollbar{display:none}
+  .strategy-tab,.tab,.stabs>button{flex:0 0 auto!important;white-space:nowrap}
+  .row{gap:7px!important}
+  .daily-result-list,.duel-summary,.detail,.alpha-charts,.path-split{grid-template-columns:1fr!important}
+  .grid4,.grid3,.grid2,.fivegrid,.statgrid,.cards,.kpis,.guidegrid,.steps,.livegrid,
+  .cashgrid,.scenarios,.ledger-summary,.path-holdings,.alpha-account-grid,.alpha-base-edit-grid,
+  .alpha-account-total,.alpha-evidence-grid,.calcgrid,.strategy-cockpit{
+    grid-template-columns:repeat(2,minmax(0,1fr))!important
+  }
+  .htable,.duel-table,.strategy-overview-table{font-size:11px}
+  pre,code{white-space:pre-wrap;overflow-wrap:anywhere}
+}
+@media(max-width:480px){
+  .wrap{padding-left:max(9px,env(safe-area-inset-left))!important;padding-right:max(9px,env(safe-area-inset-right))!important}
+  h1{font-size:18px!important}
+  .card{padding:12px 10px!important;margin:10px 0!important}
+  .grid4,.grid3,.grid2,.fivegrid,.statgrid,.cards,.kpis,.guidegrid,.steps,.livegrid,
+  .cashgrid,.scenarios,.ledger-summary,.path-holdings,.alpha-account-grid,.alpha-base-edit-grid,
+  .alpha-account-total,.alpha-evidence-grid,.calcgrid,.strategy-cockpit,.daily-result-cols{
+    grid-template-columns:1fr!important
+  }
+  .cockpit-box.wide{grid-column:auto!important}
+  .row.stack-mobile{flex-direction:column;align-items:stretch!important}
+  .row.stack-mobile>*{width:100%}
+}
