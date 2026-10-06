@@ -507,6 +507,21 @@ class ClaudeLabTrend(unittest.TestCase):
         self.assertEqual(lab.cell({}, "c", final_through="b", live=lambda d: "no_trade"), "no_trade")
         self.assertEqual(lab.last_two(["d1", "d2", "d3"]), ["d2", "d3"])
 
+    def test_daily_board_same_kst_dates(self):
+        # 오늘 탭: 모든 전략이 같은 한국 날짜(어제 10/5 · 오늘 10/6). 10/5 는 개천절 대체휴일, 미국 10/4(일)은 휴장.
+        today, hm = "2026-10-06", 1930
+        self.assertEqual(lab.kr_cell({}, "2026-10-05", today, hm), "holiday")
+        self.assertEqual(lab.kr_cell({"2026-10-06": 0.4}, "2026-10-06", today, hm, wait_close=True), 0.4)
+        self.assertEqual(lab.kr_cell({}, "2026-10-06", today, 1000, wait_close=True), "pending")     # 장 마감 확정 전
+        self.assertEqual(lab.kr_cell({}, "2026-10-06", today, hm), "no_trade")
+        cal = ["2026-10-04", "2026-10-05"]                                                           # 업비트 하루(09시 시작)
+        self.assertEqual(lab.coin_cell({"2026-10-05": -0.5}, "2026-10-05", cal), -0.5)
+        self.assertEqual(lab.coin_cell({}, "2026-10-06", cal), "pending")                          # 10/6 09시~10/7 09시 진행 중
+        ucal = ["2026-10-01", "2026-10-02", "2026-10-05"]                                            # 뉴욕 거래일
+        self.assertEqual(lab.us_cell({"2026-10-05": 1.2}, "2026-10-06", ucal), 1.2)                 # 한국 10/6 = 뉴욕 10/5 밤
+        self.assertEqual(lab.us_cell({}, "2026-10-05", ucal), "holiday")                            # 뉴욕 10/4(일)
+        self.assertEqual(lab.us_cell({}, "2026-10-07", ucal), "pending")
+
     def test_gpt_compare_uses_gpt_window_only(self):
         old = lab.gpt_daily
         lab.gpt_daily = lambda tab: ({"2026-01-07": -1.0}, ["gpt_v1"], 1)
