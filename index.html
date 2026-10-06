@@ -515,7 +515,9 @@ html.had-user #authgate .bootwait{display:block}
   };
   const app = initializeApp(firebaseConfig);
   const auth = getAuth(app);
-  const db = initializeFirestore(app,{experimentalAutoDetectLongPolling:true});
+  const JK_FORCE_FIRESTORE_LONG_POLLING=/iPhone|iPad|iPod|NAVER|KAKAOTALK|Instagram|FBAN|FBAV|; wv\)/i.test(navigator.userAgent||"");
+  window.__jkFirestoreTransport=JK_FORCE_FIRESTORE_LONG_POLLING?"force-long-polling":"auto-detect";
+  const db = initializeFirestore(app,JK_FORCE_FIRESTORE_LONG_POLLING?{experimentalForceLongPolling:true}:{experimentalAutoDetectLongPolling:true});
   const provider = new GoogleAuthProvider();
   // 전역 노출 (일반 스크립트에서 사용)
   window.fb = { auth, db, provider, signInWithPopup, getRedirectResult, onAuthStateChanged, signOut, doc, getDoc, setDoc, runTransaction };
@@ -548,7 +550,7 @@ document.documentElement.classList.add('had-user');</script>
 </div>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.110.9</span></h1></div>
+    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">퀀트</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.110.10</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -1660,7 +1662,7 @@ if(/^\/paper\/?$/.test(location.pathname)){
   <footer>
     <strong>JK 퀀트</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.110.9</b> · 2026-10-06</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.110.10</b> · 2026-10-06</div>
   </footer>
 </div>
 
@@ -10786,6 +10788,7 @@ function authDiag(){
   L.push('인증대기  '+(typeof authWired!=='undefined'&&authWired?'연결됨':'미연결 ← 여기서 막힘'));
   L.push('로그인상태 '+(window.fb&&window.fb.auth&&window.fb.auth.currentUser
           ? ('됨 '+(window.fb.auth.currentUser.email||'')) : '안 됨'));
+  L.push('DB전송    '+String(window.__jkFirestoreTransport||'미확인'));
   L.push('앱시작    '+(appStarted?'됨':'안 됨 · 멈춘 자리 '+authStep));
   L.push('데이터저장 '+storageOK());
   L.push('브라우저  '+(inAppName()||'기본 브라우저'));
