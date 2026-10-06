@@ -67,6 +67,10 @@ ok(globalW.includes('"⑤ 오늘 매매이력"')
   &&globalW.includes('if(n.hm===1605&&isNyseSessionDate(n.date))'),
   'BTC/SOXL ⑤⑥ are emitted by Worker at market close times');
 
+ok(globalW.indexOf('const live=await Promise.allSettled([runBtc(env,now),runSoxl(env,now)])')
+  < globalW.indexOf('await runCloseSummaries(env,now)'),
+  'global close summary waits for the same-minute BTC/SOXL ledger update');
+
 const forbidden=[
   ['crypto-research',crypto,'scalping-daily-summary'],
   ['soxl-research',soxl,'scalping-daily-summary'],
