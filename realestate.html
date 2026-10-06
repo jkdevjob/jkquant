@@ -33,7 +33,7 @@ JKAccess.guard({auth,db,doc,getDoc,setDoc,onAuthStateChanged,signInWithPopup,Goo
 </head>
 <body>
 <header><div class="wrap"><div class="htop">
-  <div class="brand"><div class="kicker">REAL ESTATE</div><h1>JK <span class="v">부동산</span> <span style="font-size:12px;font-weight:400;color:var(--faint)" id="reVer">v1.5.1</span></h1></div>
+  <div class="brand"><div class="kicker">REAL ESTATE</div><h1>JK <span class="v">부동산</span> <span style="font-size:12px;font-weight:400;color:var(--faint)" id="reVer">v1.6.0</span></h1></div>
   <div class="jkmenu" id="jkmenuWrap">
     <button class="jkmenu-btn" aria-label="메뉴" onclick="jkMenuToggle(event)">三</button>
     <div class="jkmenu-pop" id="jkmenuPop" hidden>
@@ -63,6 +63,7 @@ JKAccess.guard({auth,db,doc,getDoc,setDoc,onAuthStateChanged,signInWithPopup,Goo
   <script src="/realestate-claude-engine.js" defer></script>
   <script src="/realestate-claude.js" defer></script>
   <section class="pane" id="pane-gpt" hidden><div id="gpt-re-root">GPT 부동산 분석을 불러오는 중…</div></section>\n  <!-- ⚡ GPT 탭 전용 — 클로드 엔진/자료와 분리 -->\n  <script src="/realestate-gpt-engine.js" defer></script>\n  <script src="/realestate-gpt.js" defer></script>\n  <script src="/realestate-gpt-presale.js" defer></script>
+  <script src="/realestate-gpt-strategy.js" defer></script>
 </div></main>
 
 <script>
