@@ -33,12 +33,12 @@ async function currentSub(){
   return sub;
 }
 function statusText(){
-  if(!supported())return "이 브라우저는 웹 푸시를 지원하지 않습니다.";
   if(isIOS()&&!standalone())return "iPhone은 Safari에서 JK투자를 홈 화면에 추가한 뒤, 홈화면 아이콘으로 실행해야 백그라운드 웹알림을 켤 수 있습니다.";
+  if(!supported())return "이 브라우저는 웹 푸시를 지원하지 않습니다.";
   if(Notification.permission==="denied")return "알림 권한이 차단돼 있습니다. iPhone 설정의 알림에서 JK 투자를 허용한 뒤 다시 시도하세요.";
   if(sub)return "웹알림 켜짐 · 대전·세종 신규분양 공고를 약 30분 간격으로 자동 확인합니다.";
   if(cfg&&cfg.workerUrl)return "웹알림 꺼짐 · 한 번만 켜면 새 분양공고가 생길 때 푸시로 알려줍니다.";
-  return "푸시 서버 연결 확인 중…";
+  return "푸시 서버 배포 또는 연결 설정을 확인하는 중…";
 }
 function panel(){
   const host=qs("#gptPresale");if(!host)return;
