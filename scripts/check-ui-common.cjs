@@ -260,7 +260,7 @@ t('U10 /paper 페이지 상자 — 휴대폰에서 높이 제한 없이 표 전�
   assert(html.indexOf('<link rel="stylesheet" href="/jk-mobile.css')>html.indexOf('<style>'),'공용 CSS 가 페이지 CSS 뒤에 온다(같은 무게면 공용이 이긴다)');
   const rules=[...cssRules(styles,'index'),...cssRules(mob,'jk-mobile')];
   const E=(tag,id,cls)=>({tag,id:id||'',cls:cls||[]});
-  const chain=[E('html'),E('body','',['paperpage']),E('div','',['wrap']),E('div','paperPage'),E('div','paperModal',['modal','on']),E('div','',['box'])];
+  const chain=[E('html'),E('body','',['paperpage']),E('div','paperModal',['modal','on']),E('div','',['box'])];   // #446: 상자를 옮기지 않고 body 바로 아래 그대로 페이지로 쓴다
   const v=(prop,W)=>{ const b=computed(rules,chain,prop,W); return b&&b.v; };
   for(const W of [340,375,414,768]){
     assert.equal(v('max-height',W),'none',`${W}px max-height — 796px 같은 화면 높이로 묶이면 표가 상자 밖으로 흘러 하단 안내문을 덮는다`);
