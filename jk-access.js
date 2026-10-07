@@ -26,21 +26,7 @@
     {path:'/settings',label:'설정',mode:'public',order:85},
     {path:'/admin',label:'관리자',mode:'admin',order:90}
   ];
-  var menuCache=null, menuSeq=0, menuUid='';
-  /* 권한이나 금융 원장은 저장하지 않는다. 서버가 확인해 준 메뉴 표시 순서만 탭 동안 재사용한다. */
-  var MENU_STORE='jk_menu_visual_v1', MENU_TTL=10*60*1000;
-  function menuStored(user){
-    if(!user||!user.uid)return null;
-    try{
-      var x=JSON.parse(sessionStorage.getItem(MENU_STORE)||'null');
-      return x&&x.uid===user.uid&&Date.now()-x.at>=0&&Date.now()-x.at<MENU_TTL
-        ?normalizeMenuConfig(x.config):null;
-    }catch(e){return null;}
-  }
-  function saveMenu(user,cfg){
-    if(!user||!user.uid)return;
-    try{sessionStorage.setItem(MENU_STORE,JSON.stringify({uid:user.uid,at:Date.now(),config:cfg}));}catch(e){}
-  }
+  var menuCache=null, menuSeq=0;
   function menuPath(v){
     var p=String(v||'/').split(/[?#]/)[0]||'/';
     try{ p=new URL(p, location.origin).pathname; }catch(e){}
@@ -70,35 +56,19 @@
   }
   async function loadMenuConfig(user,fb,opt){
     opt=opt||{};
-    var uid=user&&user.uid||'';
-    if(uid!==menuUid){menuUid=uid;menuCache=null;++menuSeq;}
     if(menuCache&&!opt.force)return menuCache;
-    var saved=(!opt.force&&user)?menuStored(user):null;
-    var seq=++menuSeq;
-    if(saved){
-      menuCache=saved;
-      applyMenuDom(user,saved);
-      if(fb&&fb.db&&fb.doc&&fb.getDoc){
-        readMenuConfig(fb).then(function(c){
-          if(seq!==menuSeq)return;
-          menuCache=c;saveMenu(user,c);applyMenuDom(user,c);
-        },function(e){console.warn('menu config refresh',e);});
-      }
-      return saved;
-    }
-    var cfg=menuDefaults();
+    var cfg=menuDefaults(), seq=++menuSeq;
     if(user&&fb&&fb.db&&fb.doc&&fb.getDoc){
       var read=readMenuConfig(fb);
-      try{ cfg=await timeout(read,opt.timeoutMs||5000); saveMenu(user,cfg); }
+      try{ cfg=await timeout(read,opt.timeoutMs||5000); }
       catch(e){
         console.warn('menu config',e);
         read.catch(function(){ return new Promise(function(r){ setTimeout(r,opt.retryMs||3000); }).then(function(){ return readMenuConfig(fb); }); })
-            .then(function(c){ if(seq!==menuSeq)return; menuCache=c; saveMenu(user,c);applyMenuDom(user,c); },
+            .then(function(c){ if(seq!==menuSeq)return; menuCache=c; applyMenuDom(user,c); },
                   function(e2){ console.warn('menu config retry',e2); });
       }
     }
-    if(seq===menuSeq)menuCache=cfg;
-    return cfg;
+    menuCache=cfg; return cfg;
   }
   function menuMode(cfg,path){
     path=menuPath(path); var d=MENU_ITEMS.find(function(x){return x.path===path;});
@@ -121,7 +91,22 @@
         a.classList.toggle('jk-menu-hidden',!visible);
         if(p==='/admin')a.classList.toggle('admin-on',admin);
       });
-      if(links.some(function(a,i){return a!==oldOrder[i];}))links.forEach(function(a){pop.appendChild(a);});
+      if(links.some(function(a,i){return a!==oldOrder[i];})){
+        if(pop.hidden)links.forEach(function(a){pop.appendChild(a);});
+        else{
+          /* 메뉴를 이미 펼쳐 둔 동안 DB 설정이 와도 목록이 눈앞에서 움직이지 않게
+             닫힌 직후 순서를 바꾼다. 권한상 숨겨야 할 링크는 위에서 즉시 숨긴다. */
+          pop.__jkPendingMenuLinks=links;
+          if(!pop.__jkMenuOrderObserver&&typeof MutationObserver==='function'){
+            pop.__jkMenuOrderObserver=new MutationObserver(function(){
+              if(!pop.hidden||!pop.__jkPendingMenuLinks)return;
+              var next=pop.__jkPendingMenuLinks;pop.__jkPendingMenuLinks=null;
+              next.forEach(function(a){pop.appendChild(a);});
+            });
+            pop.__jkMenuOrderObserver.observe(pop,{attributes:true,attributeFilter:['hidden']});
+          }
+        }
+      }
     });
   }
   async function applyMenuConfig(user,fb,opt){
