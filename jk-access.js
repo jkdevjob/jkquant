@@ -23,6 +23,7 @@
     {path:'/ipo',label:'공모주',mode:'public',order:70},
     {path:'/realestate',label:'부동산',mode:'public',order:75},
     {path:'/job',label:'JOB',mode:'public',order:80},
+    {path:'/settings',label:'설정',mode:'public',order:85},
     {path:'/admin',label:'관리자',mode:'admin',order:90}
   ];
   var menuCache=null, menuSeq=0;
@@ -31,7 +32,7 @@
     try{ p=new URL(p, location.origin).pathname; }catch(e){}
     p=p.replace(/\/+$/,'')||'/';
     var map={'/index.html':'/','/plan.html':'/plan','/backtest.html':'/backtest','/scalping.html':'/scalping',
-             '/claude.html':'/claude','/ipo.html':'/ipo','/realestate.html':'/realestate','/job.html':'/job','/admin.html':'/admin'};
+             '/claude.html':'/claude','/ipo.html':'/ipo','/realestate.html':'/realestate','/job.html':'/job','/settings.html':'/settings','/admin.html':'/admin'};
     return map[p]||p;
   }
   function menuDefaults(){
@@ -54,16 +55,14 @@
     });
   }
   async function loadMenuConfig(user,fb,opt){
-    opt=opt||{}; if(menuCache&&!opt.force)return menuCache;
+    opt=opt||{};
+    if(menuCache&&!opt.force)return menuCache;
     var cfg=menuDefaults(), seq=++menuSeq;
     if(user&&fb&&fb.db&&fb.doc&&fb.getDoc){
       var read=readMenuConfig(fb);
       try{ cfg=await timeout(read,opt.timeoutMs||5000); }
       catch(e){
         console.warn('menu config',e);
-        /* 첫 읽기가 늦거나(5초 넘김 — 아이폰 첫 DB 연결) 끊겨도 그 화면 내내 기본 순서로 굳지 않게,
-           늦게 온 답을 — 실패였으면 한 번 더 읽은 답을 — 받는 즉시 메뉴에 적용한다. 그 사이 새로 읽었으면 그쪽이 이긴다.
-           (2026-10-07 '관리자에서 메뉴 순서를 바꿨는데 전체메뉴는 옛 순서') */
         read.catch(function(){ return new Promise(function(r){ setTimeout(r,opt.retryMs||3000); }).then(function(){ return readMenuConfig(fb); }); })
             .then(function(c){ if(seq!==menuSeq)return; menuCache=c; applyMenuDom(user,c); },
                   function(e2){ console.warn('menu config retry',e2); });
@@ -79,6 +78,7 @@
     var admin=isAdminEmail(user&&user.email),pops=document.querySelectorAll('.jkmenu-pop');
     Array.prototype.forEach.call(pops,function(pop){
       var links=Array.prototype.slice.call(pop.querySelectorAll('a[href]'));
+      var oldOrder=links.slice();
       links.sort(function(a,b){
         var ap=menuPath(a.getAttribute('href')),bp=menuPath(b.getAttribute('href'));
         var av=cfg&&cfg.items&&cfg.items[ap],bv=cfg&&cfg.items&&cfg.items[bp];
@@ -90,8 +90,23 @@
         if(mode==='hidden')visible=false;
         a.classList.toggle('jk-menu-hidden',!visible);
         if(p==='/admin')a.classList.toggle('admin-on',admin);
-        pop.appendChild(a);
       });
+      if(links.some(function(a,i){return a!==oldOrder[i];})){
+        if(pop.hidden!==false)links.forEach(function(a){pop.appendChild(a);});
+        else{
+          /* 메뉴를 이미 펼쳐 둔 동안 DB 설정이 와도 목록이 눈앞에서 움직이지 않게
+             닫힌 직후 순서를 바꾼다. 권한상 숨겨야 할 링크는 위에서 즉시 숨긴다. */
+          pop.__jkPendingMenuLinks=links;
+          if(!pop.__jkMenuOrderObserver&&typeof MutationObserver==='function'){
+            pop.__jkMenuOrderObserver=new MutationObserver(function(){
+              if(!pop.hidden||!pop.__jkPendingMenuLinks)return;
+              var next=pop.__jkPendingMenuLinks;pop.__jkPendingMenuLinks=null;
+              next.forEach(function(a){pop.appendChild(a);});
+            });
+            pop.__jkMenuOrderObserver.observe(pop,{attributes:true,attributeFilter:['hidden']});
+          }
+        }
+      }
     });
   }
   async function applyMenuConfig(user,fb,opt){
@@ -241,7 +256,8 @@
     var lock=function(r){ try{ if(o.lock) o.lock(r); }catch(e){ console.error(e); } };
     var stale=function(){ var cu=fb.auth && fb.auth.currentUser; return !!(fb.auth && (!cu || cu.uid!==user.uid)); };
     async function menuOk(){
-      var cfg=await applyMenuConfig(user,fb);
+      /* 권한 판정은 탭 캐시가 아닌 서버 최신 설정을 사용한다. */
+      var cfg=await applyMenuConfig(user,fb,{force:true});
       var ma=menuAccess(user,cfg,location.pathname);
       if(!ma.allowed){ lock({state:'menu',menuMode:ma.mode}); return false; }
       return true;

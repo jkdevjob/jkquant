@@ -227,6 +227,28 @@
       '@media(max-width:600px){.jkmenu-pop{position:fixed!important;right:12px!important;top:68px!important;width:min(260px,calc(100vw - 24px))!important;max-height:calc(100dvh - 84px)!important}.jkmenu-pop a{min-height:42px!important;font-size:14px!important}#authgate .gbox,#gate .gbox,#jkgate .jb{width:calc(100% - 28px)!important;padding:24px 18px!important}}';
     (document.head||document.documentElement).appendChild(s);
   }
+  /* 다음 HTML을 메뉴를 펼친 동안만 미리 요청한다. 거래 원장·인증 정보는 캐시하지 않는다.
+     느린 통신/데이터 절약 모드에서는 선행 요청을 하지 않는다. */
+  var warmPages=Object.create(null),warmCount=0;
+  function warmPage(href){
+    try{
+      var conn=navigator.connection||navigator.mozConnection||navigator.webkitConnection;
+      if(conn&&(conn.saveData||/^(?:slow-2g|2g)$/.test(conn.effectiveType||'')))return;
+      if(warmCount>=2)return;
+      var u=new URL(href,location.href);
+      if(u.origin!==location.origin||u.pathname===location.pathname||warmPages[u.pathname])return;
+      if(!/^\/(?:plan|paper|backtest|settings|job|realestate|ipo|scalping|claude|admin)?(?:\.html)?$/.test(u.pathname))return;
+      warmPages[u.pathname]=true;warmCount++;
+      var link=document.createElement('link');
+      link.rel='prefetch';link.as='document';link.href=u.pathname;
+      (document.head||document.documentElement).appendChild(link);
+    }catch(e){}
+  }
+  function menuWarm(pop){
+    var current=(location.pathname||'/').replace(/\.html$/,'');
+    var target=current==='/plan'?'/':current==='/'?'/plan':'/';
+    if(pop.querySelector('a[href="'+target+'"]'))warmPage(target);
+  }
   function mountMenus(){
     if(!document.querySelectorAll)return;
     document.querySelectorAll('.jkmenu').forEach(function(wrap){
@@ -249,7 +271,18 @@
       });
       btn.textContent='☰';btn.setAttribute('aria-label','전체메뉴');btn.setAttribute('title','전체메뉴');btn.removeAttribute('onclick');
       if(btn.dataset.jkUnified)return;btn.dataset.jkUnified='1';
-      btn.addEventListener('click',function(e){e.stopPropagation();pop.hidden=!pop.hidden;});
+      btn.addEventListener('click',function(e){
+        e.stopPropagation();pop.hidden=!pop.hidden;
+        if(!pop.hidden)menuWarm(pop);
+      });
+      pop.addEventListener('pointerover',function(e){
+        var a=e.target&&e.target.closest&&e.target.closest('a[href]');
+        if(a)warmPage(a.getAttribute('href'));
+      },{passive:true});
+      pop.addEventListener('focusin',function(e){
+        var a=e.target&&e.target.closest&&e.target.closest('a[href]');
+        if(a)warmPage(a.getAttribute('href'));
+      });
       pop.addEventListener('click',function(e){if(e.target&&e.target.closest&&e.target.closest('a'))pop.hidden=true;});
     });
   }

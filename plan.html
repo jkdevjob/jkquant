@@ -220,6 +220,19 @@ body.asset-paper-mode .ledger-del{display:none!important}
    '확인 중'을 띄워, 메뉴로 넘어올 때마다 로그인 화면이 번쩍이지 않게 한다. */
 #authgate{position:fixed;inset:0;background:linear-gradient(160deg,#0f1320,#171c2e);z-index:1000;display:flex;align-items:center;justify-content:center;padding:24px}
 html.authed #authgate{display:none}
+/* 로그인·이용 승인이 끝났다면 다시 로그인하는 화면을 보여 주지 않는다.
+   원장 확인 중에는 메뉴와 제목만 먼저 보여 주고 잔고·주문 화면은 가린다. */
+html.plan-hydrating #authgate{display:none}
+html.plan-hydrating body>.wrap{visibility:visible!important;pointer-events:none}
+html.plan-hydrating body>.wrap>:not(.top){visibility:hidden!important}
+html.plan-hydrating body::after{
+  content:'로그인 유지 중 · 자산플랜 원장을 동기화하고 있습니다…';
+  position:fixed;z-index:1500;top:38%;left:50%;transform:translateX(-50%);
+  width:min(350px,calc(100vw - 40px));padding:20px 16px;text-align:center;
+  font-size:13px;font-weight:700;line-height:1.6;color:var(--dim);
+  background:var(--surf);border:1px solid var(--border);border-radius:14px;
+  box-shadow:0 14px 32px rgba(0,0,0,.35);
+}
 html:not(.authed) body{overflow:hidden}
 html:not(.authed) body>*:not(#authgate){visibility:hidden}
 html.had-user #authgate .gbox{display:none}
@@ -286,7 +299,7 @@ setTimeout(function(){ var h=document.documentElement; if(h.classList.contains('
 </script>
 <div class="wrap">
   <div class="top">
-    <div class="brand"><div class="logo">Asset Plan</div><h1>JK <span class="v">투자</span> 자산플랜 <span class="ver">v1.43.24</span></h1></div>
+    <div class="brand"><div class="logo">Asset Plan</div><h1>JK <span class="v">투자</span> 자산플랜 <span class="ver">v1.43.25</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
       <div class="jkmenu" id="jkmenuWrap">
@@ -3096,6 +3109,7 @@ renderHorizonCopy();
    이용 승인(관리자 승인 · 차단)은 jk-access.js 한 곳이 판정한다 — 운영·백테·공모주·JOB 과 같은 글자. */
 function planGate(on){
   const h=document.documentElement;
+  h.classList.remove('plan-hydrating');
   if(on){h.classList.add('authed');h.classList.remove('had-user');return;}
   h.classList.remove('authed');h.classList.remove('had-user');
 }
@@ -3165,6 +3179,7 @@ onAuthStateChanged(auth,async user=>{
       retry:()=>location.reload(),saveNote:n=>JKAccess.saveNote(user,planFb,n)}); };
   if(!await JKAccess.admit(user,planFb,{lock:planLock})) return;
   userBadge(user);
+  document.documentElement.classList.add('plan-hydrating');
   try{await finishPlanOpen(user);}
   catch(e){console.error('plan cloud open',e);showPlanDbRetry(e);}
 });
