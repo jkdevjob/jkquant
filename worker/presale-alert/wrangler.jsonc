@@ -1,0 +1,30 @@
+{
+  "$schema": "https://raw.githubusercontent.com/cloudflare/workers-sdk/main/packages/wrangler/config-schema.json",
+  "name": "jkquant-presale-alert",
+  "main": "src/index.js",
+  "compatibility_date": "2026-10-07",
+  "workers_dev": true,
+  "vars": {
+    "BASE_URL": "https://jkquant.pages.dev"
+  },
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "ALERT_STORE",
+        "class_name": "PresaleAlertStore"
+      }
+    ]
+  },
+  "migrations": [
+    {
+      "tag": "v1",
+      "new_sqlite_classes": ["PresaleAlertStore"]
+    }
+  ],
+  "triggers": {
+    "crons": ["7,37 * * * *"]
+  },
+  "observability": {
+    "enabled": true
+  }
+}
