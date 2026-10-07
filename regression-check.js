@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /* ════════════════════════════════════════════════════════════════════
-   JK 퀀트 회귀 테스트 — 검증 1~6차의 핵심 체크를 한 번에 재실행
+   JK 투자 회귀 테스트 — 검증 1~6차의 핵심 체크를 한 번에 재실행
    사용법: node regression-check.js [index.html경로] [backtest.html경로] [CSV디렉토리]
    기본값: 이 스크립트와 같은 폴더 · 시세는 testdata/ 고정본
    원칙: 재구현 금지 — 실제 HTML에서 함수 원문을 추출해 그대로 실행.
@@ -1278,7 +1278,7 @@ console.log('[23] 관리자 모드 — 접속 계정·사용자 관리');
      && /async function touchProfile\(user\)/.test(idx));
   ok('첫 접속·방문 수가 쌓인다', /firstSeen:\(prev&&\+prev\.firstSeen\)\|\|now/.test(idx)
      && /visits:\(\(prev&&\+prev\.visits\)\|\|0\)\+1/.test(idx));
-  ok('관리자 화면은 별도 페이지', !!adm && /<title>JK 퀀트 — 관리자<\/title>/.test(adm), adm?'':'admin.html 없음');
+  ok('관리자 화면은 별도 페이지', !!adm && /<title>JK 투자 — 관리자<\/title>/.test(adm), adm?'':'admin.html 없음');
   ok('운영에서 관리자 페이지로 간다', /id="adminbtn" href="\/admin"/.test(idx));
   // 관리자 UI가 운영에 남아 있으면 같은 걸 두 곳에서 고쳐야 한다
   ok('관리자 UI는 운영에 남기지 않는다',
@@ -8223,7 +8223,7 @@ console.log('\n[117] 자산플랜 v1.28.0 — 기간마다 완전히 다른 매�
   const pl=fs.readFileSync(__d+'/plan.html','utf8');
   ok('5년 플랜 시작금 기본값은 $20,000', /startCapital:20000/.test(pl) && /aCash:20000/.test(pl));
   ok('화면 이름은 5년 자산플랜이 아니라 자산플랜',
-     /<title>JK 퀀트 — 자산플랜<\/title>/.test(pl)
+     /<title>JK 투자 — 자산플랜<\/title>/.test(pl)
      && /<div class="logo">Asset Plan<\/div><h1>자산플랜 <span class="ver">v\d+\.\d+\.\d+<\/span>/.test(pl)   // 버전은 배포마다 오른다 — 이름만 본다
      && /<a href="\/plan" class="cur"><span class="mi">🧭<\/span>자산플랜<\/a>/.test(pl));
   ok('PATH A 균형성장 — 개선 70/30 · TECL 70% N20 s0 55 밴드10 + TQQQ 30% SMA225 ±1.0',
@@ -8926,7 +8926,7 @@ console.log('\n[119] 제10차 — 라오어 V4.0 원문 직접 대조 (SOURCE GO
        && /큰수 9%\(원문 10~15% 밖\)/.test(V({...base,big:9}).join()) && /큰수 20%\(원문 10~15% 밖\)/.test(V({...base,big:20}).join()));
     ok('제10차 P1-5 · 앱·백테 판정이 같은 글자', extractFn(idx,'function imVariantOf(cfg)')===extractFn(bt,'function imVariantOf(cfg)')); }
   ok('운영 기본값 · 큰수 20 / 리버스 gap 0 / 아래로 LOC 3줄을 사용한다',
-     /const IM_BIG_DEFAULT=20;/.test(idx) && /const REV_GAP_DEF=0;/.test(idx) && /const IM_ROWS_DEFAULT=3;/.test(idx) && /줄 수 3은 JKQuant 기본값\(원문에 개수 없음\)/.test(idx) && /줄 수 \$\{n\}줄은 <b>JKQuant 구현값<\/b>/.test(idx)
+     /const IM_BIG_DEFAULT=20;/.test(idx) && /const REV_GAP_DEF=0;/.test(idx) && /const IM_ROWS_DEFAULT=3;/.test(idx) && /줄 수 3은 JK 투자 기본값\(원문에 개수 없음\)/.test(idx) && /줄 수 \$\{n\}줄은 <b>JKQuant 구현값<\/b>/.test(idx)
      && /const INF_DEFAULTS_POLICY_VER=2;/.test(idx)
      && /function migrateInfOperatingDefaults\(\)/.test(idx)
      && /st\.big=IM_BIG_DEFAULT;/.test(idx) && /st\.revGap=REV_GAP_DEF;/.test(idx) && /st\.rows=IM_ROWS_DEFAULT;/.test(idx)
@@ -9259,7 +9259,7 @@ console.log('\n[123] 모의 성과 — 단독 페이지(/paper)');
     return {page:cls.has('paperpage'), title:doc.title, homeCur:a.home.has('cur'), paperCur:a.paper.has('cur'), calls}; };
   const e1=runEarly('/paper',''), e2=runEarly('/','?paper=1'), e3=runEarly('/',''), e4=runEarly('/','?x=1&paper=10');
   ok('/paper 로 열면 페이지 모드 · 제목 · 메뉴 현재 표시가 모의로',
-     !!early && e1.page && e1.title==='JK 퀀트 — 모의투자' && !e1.homeCur && e1.paperCur, JSON.stringify(e1));
+     !!early && e1.page && e1.title==='JK 투자 — 모의투자' && !e1.homeCur && e1.paperCur, JSON.stringify(e1));
   ok('예전 주소 /?paper=1 은 /paper 로 바꿔 페이지로 연다 · 그냥 / 는 운영 화면 그대로 · paper=10 같은 다른 값은 건드리지 않는다',
      e2.page && e2.calls.join()==='/paper' && !e3.page && e3.homeCur && !e3.calls.length && !e4.page && !e4.calls.length,
      JSON.stringify([e2,e3,e4]));
@@ -9275,15 +9275,15 @@ console.log('\n[123] 모의 성과 — 단독 페이지(/paper)');
     const hist=[];
     const F=new Function('$','document','history','APP_TITLE',
       [extractFn(idx,'function closePaper()'), extractFn(idx,'function isPaperPage()'), extractFn(idx,'function paperPageMode(on)')].join('\n')
-      +'\nreturn {closePaper, isPaperPage, paperPageMode};')(id=>E[id]||null, docF, {pushState:(a,b,u)=>hist.push(u)}, 'JK 퀀트 — 운영');
+      +'\nreturn {closePaper, isPaperPage, paperPageMode};')(id=>E[id]||null, docF, {pushState:(a,b,u)=>hist.push(u)}, 'JK 투자 — 운영');
     F.paperPageMode(true);
     const on1={page:body._cls.has('paperpage'), inPage:modal.parentNode===page, homeCur:home._cls.has('cur'), paperCur:jk._cls.has('cur'), title:docF.title, wait:/기록을 맞추는 중/.test(pbody.innerHTML)};
     F.closePaper();   // 전략 이름을 누르면 gotoSess 가 부른다 — 페이지에서 나가 운영 화면으로
     const off1={page:body._cls.has('paperpage'), inBody:modal.parentNode===body, open:modal._cls.has('on'), homeCur:home._cls.has('cur'), paperCur:jk._cls.has('cur'), title:docF.title, hist:hist.join()};
     ok('페이지 모드 — 상자를 본문 자리로 옮기고 메뉴·제목·대기 문구를 맞춘다',
-       on1.page && on1.inPage && !on1.homeCur && on1.paperCur && on1.title==='JK 퀀트 — 모의투자' && on1.wait, JSON.stringify(on1));
+       on1.page && on1.inPage && !on1.homeCur && on1.paperCur && on1.title==='JK 투자 — 모의투자' && on1.wait, JSON.stringify(on1));
     ok('페이지에서 전략 이름을 누르면 운영 화면으로 나간다 — 주소 / · 상자는 모달 자리로 · 모달로 뜨지 않는다 · 메뉴·제목 되돌림',
-       !off1.page && off1.inBody && !off1.open && off1.homeCur && !off1.paperCur && off1.title==='JK 퀀트 — 운영' && off1.hist==='/', JSON.stringify(off1)); }
+       !off1.page && off1.inBody && !off1.open && off1.homeCur && !off1.paperCur && off1.title==='JK 투자 — 운영' && off1.hist==='/', JSON.stringify(off1)); }
   // 채우기는 클라우드 기록을 맞춘 뒤 한 번 — 로컬로 먼저 연 갈래(openedLocal)에서는 부르지 않는다
   { const ia=extractFn(idx,'function initAuth()');
     const iPull=ia.indexOf('pullRemote()'), iAuto=ia.indexOf('paperPageAuto()'), local=(ia.match(/if\(openedLocal\)\{[\s\S]*?\n    \}/)||[''])[0];
@@ -11458,10 +11458,10 @@ console.log('\n[CLAUDE HEADER] 머리말 통일');
 {
   const ch=fs.readFileSync(__d+'/claude.html','utf8'), sh=fs.readFileSync(__d+'/scalping.html','utf8');
   const hd=(ch.match(/<header>[\s\S]*?<\/header>/)||[''])[0];
-  ok('클로드 머리말이 지피티와 같은 구조(영문 머리 · JK 퀀트 단타 · 사용자 배지 → 메뉴)',
-     /<div class="kicker">Claude Scalping<\/div><h1>JK <span class="v">퀀트<\/span> 단타/.test(hd)
+  ok('클로드 머리말이 지피티와 같은 구조(영문 머리 · JK 투자 단타 · 사용자 배지 → 메뉴)',
+     /<div class="kicker">Claude Scalping<\/div><h1>JK <span class="v">투자<\/span> 단타/.test(hd)
      &&/<div class="hright">\s*<div class="userbadge" id="userbadge"><\/div>\s*<div class="jkmenu"/.test(hd)
-     &&/<div class="kicker">Morning Scalping<\/div><h1>JK <span class="v">퀀트<\/span> 단타/.test(sh));
+     &&/<div class="kicker">Morning Scalping<\/div><h1>JK <span class="v">투자<\/span> 단타/.test(sh));
   ok('클로드 사용자 배지 = 사진 · 이름 · 로그아웃(lo), 옛 이메일 글자 배지 없음',
      /document\.getElementById\("userbadge"\)/.test(ch)
      &&/user\.photoURL\?"<img src=/.test(ch)&&/esc\(user\.displayName\|\|user\.email\|\|""\)/.test(ch)
