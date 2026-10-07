@@ -18,7 +18,6 @@ st.textContent='.st-hero{border:1px solid rgba(245,196,81,.35);background:rgba(2
 root.appendChild(st);
 
 let CFG=null,EVENTS=[],STATUS=null,LAST=null,running=false;
-const CACHE="jk_re_strategy_result_v2";
 function esc(s){return String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]))}
 function won(v){if(!Number.isFinite(v))return "-";const e=v/1e8;return e>=1?(Math.round(e*100)/100).toFixed(e<10?2:1).replace(/0+$/,"").replace(/\.$/,"")+"억":Math.round(v/1e4).toLocaleString("ko-KR")+"만"}
 function pct(v){return Number.isFinite(v)?((v>=0?"+":"")+(v*100).toFixed(1)+"%"):"-"}
@@ -95,7 +94,6 @@ async function runNow(){
     if(msg)msg.textContent="실거래 "+trades.length.toLocaleString()+"건으로 미래값 없는 거래전략 계산 중…";
     const result=RESTRAT.run(trades,market,EVENTS,{startYear:start,endYear:end,minHold:hold,buyCost:bc,sellCost:sc});
     LAST={ranAt:new Date().toISOString(),start,end,result};
-    try{localStorage.setItem(CACHE,JSON.stringify(LAST))}catch(e){}
   }catch(e){
     alert("실거래 백테스트 실패: "+String(e&&e.message||e));
   }finally{running=false;render()}
@@ -108,7 +106,6 @@ async function boot(){
       RESTRAT.status()
     ]);
     CFG=c;EVENTS=e.events||[];STATUS=s;
-    try{const x=JSON.parse(localStorage.getItem(CACHE)||"null");if(x&&x.result)LAST=x}catch(e){}
   }catch(e){STATUS={configured:false,note:String(e&&e.message||e)}}
   render();
 }
