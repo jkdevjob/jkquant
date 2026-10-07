@@ -5,7 +5,24 @@ const HEADERS={
 };
 const TRADE_URL="https://apis.data.go.kr/1613000/RTMSDataSvcAptTrade/getRTMSDataSvcAptTrade";
 function json(data,status=200){return new Response(JSON.stringify(data),{status,headers:HEADERS})}
-function keyOf(env){return env.DATA_GO_KR_API_KEY||env.DATA_GO_KR_SERVICE_KEY||""}
+function keyOf(env){
+  let k=String(env.DATA_GO_KR_API_KEY||env.DATA_GO_KR_SERVICE_KEY||"").trim();
+  if((k.startsWith('"')&&k.endsWith('"'))||(k.startsWith("'")&&k.endsWith("'")))k=k.slice(1,-1).trim();
+  try{
+    if(/%[0-9A-Fa-f]{2}/.test(k))k=decodeURIComponent(k);
+  }catch(e){}
+  return k;
+}
+function upstreamError(status,text){
+  const t=String(text||"").slice(0,500);
+  if(status===403){
+    if(/SERVICE_ACCESS_DENIED|PERMISSION_DENIED/i.test(t))return "공공데이터포털 활용신청 권한이 없습니다. '국토교통부_아파트 매매 실거래가 자료' 활용신청/승인 상태를 확인하세요.";
+    if(/SERVICE_KEY_IS_NOT_REGISTERED|NOT_REGISTERED/i.test(t))return "공공데이터포털 서비스키가 등록되지 않았거나 이 API에 연결되지 않았습니다. 활용신청에 사용한 서비스키인지 확인하세요.";
+    if(/LIMITED_NUMBER|REQUESTS_EXCEEDS/i.test(t))return "공공데이터포털 호출 한도를 초과했습니다. 잠시 후 다시 시도하거나 트래픽 한도를 확인하세요.";
+    return "공공데이터포털 인증이 거부됐습니다(HTTP 403). 서비스키 인코딩은 자동 보정했습니다. 해당 API 활용신청/승인 상태를 확인하세요.";
+  }
+  return "국토부 실거래 API HTTP "+status+" "+t.replace(/\s+/g," ").slice(0,180);
+}
 function decode(s){return String(s||"").replace(/&lt;/g,"<").replace(/&gt;/g,">").replace(/&amp;/g,"&").replace(/&quot;/g,'"').replace(/&#39;/g,"'").trim()}
 function tag(block,names){
   for(const name of names){
@@ -58,7 +75,7 @@ async function getMonth(key,lawd,ymd){
     cf:{cacheTtl:86400,cacheEverything:true}
   });
   const text=await r.text();
-  if(!r.ok)throw new Error(lawd+" "+ymd+" HTTP "+r.status);
+  if(!r.ok)throw new Error(lawd+" "+ymd+" · "+upstreamError(r.status,text));
   const rc=tag(text,["resultCode"]);
   if(rc&&rc!=="000"&&rc!=="00")throw new Error(lawd+" "+ymd+" API "+rc+" "+tag(text,["resultMsg"]));
   return parseItems(text,lawd,ymd);
@@ -83,7 +100,7 @@ export async function onRequestGet(context){
     minYear:2006,
     maxYear:new Date().getFullYear(),
     maxLawdsPerRequest:3,
-    note:key?"실거래 백테스트 데이터 사용 가능":"DATA_GO_KR_API_KEY 미설정"
+    note:key?"실거래 백테스트 데이터 사용 가능 · Encoding/Decoding 키 자동정규화":"DATA_GO_KR_API_KEY 미설정"
   });
   if(!key)return json({ok:false,configured:false,error:"DATA_GO_KR_API_KEY not configured"},503);
   if(kind!=="year")return json({ok:false,error:"unsupported kind"},400);
