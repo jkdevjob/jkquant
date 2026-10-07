@@ -302,6 +302,13 @@ async function readGlobalPaperHistory(env,strategy,limit=8){
   if(!r.ok||!j.ok)throw new Error(j.error||("global history HTTP "+r.status));
   return Array.isArray(j.ledgers)?j.ledgers:[];
 }
+function soxlSessionCompletedAt(date,now=Date.now()){
+  const ny=tzParts("America/New_York",now);
+  return isNyseSessionDate(date) && (date<ny.date || (date===ny.date&&ny.hm>=1605));
+}
+function marketLedgerDateMatches(ledger,requestedDate){
+  return !!ledger && String(ledger.date||"")===String(requestedDate);
+}
 function completedGlobalCandidates(strategy,now=Date.now()){
   if(strategy==="crypto"){
     const k=tzParts("Asia/Seoul",now),out=[];
@@ -313,7 +320,7 @@ function completedGlobalCandidates(strategy,now=Date.now()){
   let d=(!["Sat","Sun"].includes(n.weekday)&&n.hm>=1605)?n.date:shiftIso(n.date,-1);
   for(let i=0;i<10&&out.length<4;i++){
     const wd=weekdayUtc(d);
-    if(wd!==0&&wd!==6)out.push(d);
+    if(isNyseSessionDate(d))out.push(d);
     d=shiftIso(d,-1);
   }
   return out;
@@ -323,7 +330,7 @@ async function globalPaperSessions(env,strategy){
   const got=await Promise.all(candidates.map(async date=>{
     try{
       const ledger=await readGlobalPaper(env,strategy,date);
-      return ledger?liveLedgerSummary(ledger,date,"global-paper-live"):null;
+      return marketLedgerDateMatches(ledger,date)?liveLedgerSummary(ledger,date,"global-paper-live"):null;
     }catch(e){return null;}
   }));
   return got.filter(Boolean).sort((a,b)=>String(b.date).localeCompare(String(a.date))).slice(0,2);
@@ -347,9 +354,11 @@ function kstSessionDate(strategy,date){
   // next Korean calendar day, so every displayed SOXL result is shifted +1 day.
   return strategy==="soxl"&&d?shiftIso(d,1):d;
 }
-function normalizeKstSessions(strategy,result){
+function normalizeKstSessions(strategy,result,now=Date.now()){
   const a=Array.isArray(result&&result.sessions)?result.sessions:[];
-  return a.map(x=>{
+  // SOXL 수익률은 NYSE 정규장 종료(16:05 ET) 전에는 확정 결과로 표시할 수 없다.
+  // 연구 CSV 또는 외부 Worker가 미래 날짜/진행 중 세션을 반환해도 차단한다.
+  return a.filter(x=>strategy!=="soxl"||soxlSessionCompletedAt(String(x&&x.date||""),now)).map(x=>{
     const marketDate=String(x&&x.date||"");
     const date=kstSessionDate(strategy,marketDate);
     return {...x,date,marketDate:strategy==="soxl"?marketDate:null,timeZone:"Asia/Seoul"};
@@ -430,4 +439,4 @@ export async function onRequestGet({request,env}){
   return response;
 }
 
-export {liveLedgerSummary,mergeSessions,mergeDaytradingSessions,completedGlobalCandidates,kstSessionDate,pairKst};
+export {liveLedgerSummary,mergeSessions,mergeDaytradingSessions,completedGlobalCandidates,soxlSessionCompletedAt,marketLedgerDateMatches,normalizeKstSessions,kstSessionDate,pairKst};
