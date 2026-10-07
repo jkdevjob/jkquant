@@ -1,3 +1,5 @@
+self.addEventListener("install",()=>self.skipWaiting());
+self.addEventListener("activate",event=>event.waitUntil(self.clients.claim()));
 const CONFIG="/data/realestate/gpt/push-config.json";
 async function getConfig(){
   const r=await fetch(CONFIG+"?ts="+Date.now(),{cache:"no-store"});
