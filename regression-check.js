@@ -12202,6 +12202,55 @@ console.log('\n[SCALPING TODAY KST/AUTO] KST 전일·당일 · 전략분석 자�
 }
 
 
+/* ════ 단타(지피티) 매수·매도 웹 알림 + 오늘 탭 순서 ════ */
+console.log('\n[SCALPING GPT PUSH] 지피티 매수·매도 타이밍 웹 알림 · 설정 · 오늘 탭 순서');
+{
+  const sc=fs.readFileSync(__d+'/scalping.html','utf8');
+  const settings=fs.readFileSync(__d+'/settings.html','utf8');
+  const client=fs.readFileSync(__d+'/scalping-push-client.js','utf8');
+  const sw=fs.readFileSync(__d+'/scalping-sw.js','utf8');
+  const live=fs.readFileSync(__d+'/functions/api/scalping-live.js','utf8');
+  const pushApi=fs.readFileSync(__d+'/functions/api/scalping-push.js','utf8');
+  const worker=fs.readFileSync(__d+'/worker/opening-scheduler/src/index.js','utf8');
+  ok('오늘 탭 전략분석 자동개선 카드는 마지막 위치를 런타임에도 고정',
+     /function keepDailyAutoImproveLast\(\)/.test(sc)
+     &&/pane\.lastElementChild!==card/.test(sc)
+     &&/keepDailyAutoImproveLast\(\); \/\/ 오늘 탭에서 전략분석 자동개선은 항상 맨 아래/.test(sc)
+     &&/id="scVer">v1\.44\.0</.test(sc));
+  ok('설정 > 알림에 단타(지피티)와 단타(클로드)를 별도 ON\/OFF로 둔다',
+     /v1\.2\.0/.test(settings)&&/id="scalpingPushSettings"/.test(settings)&&/id="claudePushSettings"/.test(settings)
+     &&/scalping-push-client\.js/.test(settings)&&/settings-scalping-push\.js/.test(settings));
+  ok('지피티 푸시는 /scalping 전용 서비스워커·구독 API를 사용하고 클로드 구독과 분리',
+     /scope:"\/scalping"/.test(client)&&/\/api\/scalping-push/.test(client)&&/window\.ScalpingPush/.test(client)
+     &&/data:\{url:d\.url\|\|"\/scalping"\}/.test(sw)
+     &&/gpt-push-/.test(pushApi)&&/idFromName\("gptpush"\)/.test(worker)
+     &&/idFromName\("claudepush"\)/.test(worker));
+  ok('지피티 푸시 감시는 서버 모의장부를 읽기만 하고 약 1분 주기로 중복 제거',
+     /단타\(지피티\) 웹 알림용 읽기 전용 현재 장부/.test(live)
+     &&/nextGptPushAt=ms=>\(Math\.floor\(ms\/6e4\)\+1\)\*6e4/.test(worker)
+     &&/mode==="gpt"&&!subs\.length/.test(worker)&&/deleteAlarm\(\)/.test(worker)
+     &&/scalpingPushEvents\(live\)/.test(worker)&&/call\("claim",\{events:evs\}\)/.test(worker)
+     &&/\/api\/scalping-live/.test(worker));
+  const cp=require('child_process'),u=require('url').pathToFileURL(__d+'/functions/api/_scalping_push.js').href;
+  const vt=cp.spawnSync(process.execPath,['--input-type=module','-e',
+    'import {scalpingPushEvents} from '+JSON.stringify(u)+';'+
+    'const x=scalpingPushEvents({tabs:{opening:{date:"2026-10-08",events:[{id:"o1",stage:"buy",name:"A",signal:{entryTime:905,entryPrice:1000}}]},'+
+    'daytrading:{date:"2026-10-08",trades:[{id:"d1",name:"B",entryTime:1011,entryPrice:2000,status:"closed",exitTime:1100,exitPrice:2100,pnl:4.5},{id:"pending",name:"P",status:"pending",entryPrice:null}]},'+
+    'crypto:{date:"2026-10-08",trades:[{id:"c1",name:"BTC",entryTime:"10:00",entryPrice:50000000,status:"open"}]},'+
+    'soxl:{date:"2026-10-07",trades:[{id:"s1",name:"SOXL",entryTime:"09:45",entryPrice:50,status:"closed",exitTime:"10:15",exitPrice:51,pnlPct:1.8}]}}});'+
+    'console.log(JSON.stringify(x))'
+  ],{encoding:'utf8'});
+  let v=[];try{v=JSON.parse((vt.stdout||'').trim());}catch(e){}
+  ok('웹 알림 값 시험 — 진입가가 생긴 때만 매수, closed+청산가일 때만 매도, pending은 알리지 않음',
+     vt.status===0&&Array.isArray(v)&&v.length===6
+     &&v.filter(x=>/매수 타이밍/.test(x.title)).length===4
+     &&v.filter(x=>/매도 타이밍/.test(x.title)).length===2
+     &&!v.some(x=>String(x.id).includes('pending'))
+     &&new Set(v.map(x=>x.id)).size===v.length
+     &&v.every(x=>x.url==='/scalping'),
+     (vt.stderr||'')+(vt.stdout||''));
+}
+
 /* ════ 공용 로그인 · 상단 전체메뉴 통일 ════ */
 console.log('\n[UNIFIED CHROME] JK 투자 로그인 · 9개 페이지 전체메뉴');
 {
