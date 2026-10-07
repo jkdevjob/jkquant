@@ -12007,9 +12007,10 @@ console.log('\n[CLAUDE ARENA] 메인 기록 하나 · 자동 퇴출·신규·7�
      /SHRINK_K, MIN_TRADE_DAYS, YEAR_POS_MIN, DUP_CORR = 40, 60, 0\.6, 0\.97/.test(lp)&&/MAIN_MARGIN, REPLACE_MARGIN, MAX_REPLACE = 0\.02, 0\.02, 3/.test(lp)
      &&/OPS = \("neighbor", "jump2", "cross", "struct", "explore"\)/.test(lp)&&/out\["score"\] = m\["adj"\] if pl is None or m\.get\("adj"\) is None else min\(m\["adj"\], pl\)/.test(lp)
      &&/def gate_reason\(m\):/.test(lp)&&/mark\(b, f"복제 — /.test(lp)&&/function arenaGen\(z\)/.test(ch)&&/안정 점수<div class='sub'>/.test(ch));
-  ok('단타(클로드) 휴대폰 기본: 화면보다 넓은 표는 줄마다 세로로 펼침(그린 직후 · 화면 크기 바뀔 때) · 개선 내역에 전략 표기 · 전략 코드는 이름으로',
-     /\n  body\.innerHTML=statusBar\(\)\+html;\n  stackTables\(body\);/.test(ch)&&/function stackTables\(root\)\{/.test(ch)&&/if\(!box\|\|t\.scrollWidth<=box\.clientWidth\+2\)return;/.test(ch)
-     &&/@media\(max-width:760px\)\{table\.stack\{min-width:0!important\}table\.stack thead\{display:none\}/.test(ch)&&/window\.addEventListener\("resize"/.test(ch)
+  ok('단타(클로드) 휴대폰 기본: 비교 표는 표 그대로(넘치는 표만 촘촘하게 · 첫 칸 고정, 경쟁표는 순위·이름 고정) · 개선 내역에 전략 표기 · 전략 코드는 이름으로',
+     /\n  body\.innerHTML=statusBar\(\)\+html;\n  stackTables\(body\);/.test(ch)&&/function stackTables\(root\)\{/.test(ch)&&/if\(!box\|\|t\.scrollWidth<=box\.clientWidth\+2\)return;\n\s*t\.classList\.add\("fit"\);/.test(ch)
+     &&/@media\(max-width:760px\)\{table\.fit\{min-width:0!important;font-size:11px\}/.test(ch)&&/table\.fit td:first-child,table\.fit th:first-child\{position:sticky;left:0;/.test(ch)
+     &&/table\.fit\.arena td\.nm,table\.fit\.arena th:nth-child\(2\)\{position:sticky;left:20px;/.test(ch)&&!/table\.stack thead\{display:none\}/.test(ch)&&/window\.addEventListener\("resize"/.test(ch)
      &&/<span class='tag' style='margin:0 6px 0 0'>"\+esc\(ARENA_TAB\[x\.tab\]/.test(ch)&&/"<span class='sub'>"\+arenaReason\(x\.reason,names\)\+"<\/span>/.test(ch));
   ok('전략 경쟁 화면: 탭 ⑥ 순위표(점수·최근 1년·90일·MDD) + 개선 내역·사유 · 오늘 탭 자동 개선 현황 · 승격된 메인 안내 · 수동 승격 버튼 없음',
      /function shadowCard\(tab\)\{\n\s*var z=arenaOf\(tab\);/.test(ch)&&/\+arenaOverview\(lab\);/.test(ch)&&/mainBanner\(tab\)\+"<div class='rule'>"/.test(ch)
