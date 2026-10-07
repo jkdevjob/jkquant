@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /* ════════════════════════════════════════════════════════════════════
-   JK 퀀트 회귀 테스트 — 검증 1~6차의 핵심 체크를 한 번에 재실행
+   JK 투자 회귀 테스트 — 검증 1~6차의 핵심 체크를 한 번에 재실행
    사용법: node regression-check.js [index.html경로] [backtest.html경로] [CSV디렉토리]
    기본값: 이 스크립트와 같은 폴더 · 시세는 testdata/ 고정본
    원칙: 재구현 금지 — 실제 HTML에서 함수 원문을 추출해 그대로 실행.
@@ -1278,7 +1278,7 @@ console.log('[23] 관리자 모드 — 접속 계정·사용자 관리');
      && /async function touchProfile\(user\)/.test(idx));
   ok('첫 접속·방문 수가 쌓인다', /firstSeen:\(prev&&\+prev\.firstSeen\)\|\|now/.test(idx)
      && /visits:\(\(prev&&\+prev\.visits\)\|\|0\)\+1/.test(idx));
-  ok('관리자 화면은 별도 페이지', !!adm && /<title>JK 퀀트 — 관리자<\/title>/.test(adm), adm?'':'admin.html 없음');
+  ok('관리자 화면은 별도 페이지', !!adm && /<title>JK 투자 — 관리자<\/title>/.test(adm), adm?'':'admin.html 없음');
   ok('운영에서 관리자 페이지로 간다', /id="adminbtn" href="\/admin"/.test(idx));
   // 관리자 UI가 운영에 남아 있으면 같은 걸 두 곳에서 고쳐야 한다
   ok('관리자 UI는 운영에 남기지 않는다',
@@ -1305,10 +1305,13 @@ console.log('[23] 관리자 모드 — 접속 계정·사용자 관리');
      && /\{id:'users'/.test(adm) && /\{id:'menus'/.test(adm) && /\{id:'defaults'/.test(adm)
      && /\{id:'diag'/.test(adm) && /\{id:'rules'/.test(adm));
   ok('관리자 메뉴 관리가 공개·관리자·숨김 세 상태를 저장한다',
-     /function renderMenus\(el\)/.test(adm) && /function saveMenus\(\)/.test(adm)
+     /function renderMenus\(el\)/.test(adm) && /function saveMenus\(auto=false,queuedSeq=0\)/.test(adm)
      && /settings','siteMenu/.test(adm) && /\['public','admin','hidden'\]/.test(adm));
-  ok('관리자 메뉴 순서 변경이 실제 order를 다시 매긴다',
-     /function moveMenu\(path,dir\)/.test(adm) && /menuDraft\.forEach\(\(x,k\)=>x\.order=\(k\+1\)\*10\)/.test(adm));
+  ok('관리자 메뉴 순서 변경이 실제 order를 다시 매기고 즉시 자동저장한다',
+     /function moveMenu\(path,dir\)/.test(adm) && /menuDraft\.forEach\(\(x,k\)=>x\.order=\(k\+1\)\*10\)/.test(adm)
+     && /function queueMenuSave\(\)/.test(adm) && /moveMenu[\s\S]{0,500}queueMenuSave\(\)/.test(adm)
+     && /menuModeChange[\s\S]{0,350}queueMenuSave\(\)/.test(adm)
+     && /setTimeout\(\(\)=>saveMenus\(true,seq\),450\)/.test(adm));
   ok('소유자 전용 메뉴는 전체공개로 낮출 수 없다',
      /const MENU_HARD_ADMIN=new Set\(\['\/scalping','\/claude','\/admin'\]\)/.test(adm)
      && /if\(hard&&mode==='public'\)mode='admin'/.test(adm));
@@ -8223,8 +8226,8 @@ console.log('\n[117] 자산플랜 v1.28.0 — 기간마다 완전히 다른 매�
   const pl=fs.readFileSync(__d+'/plan.html','utf8');
   ok('5년 플랜 시작금 기본값은 $20,000', /startCapital:20000/.test(pl) && /aCash:20000/.test(pl));
   ok('화면 이름은 5년 자산플랜이 아니라 자산플랜',
-     /<title>JK 퀀트 — 자산플랜<\/title>/.test(pl)
-     && /<div class="logo">Asset Plan<\/div><h1>자산플랜 <span class="ver">v\d+\.\d+\.\d+<\/span>/.test(pl)   // 버전은 배포마다 오른다 — 이름만 본다
+     /<title>JK 투자 — 자산플랜<\/title>/.test(pl)
+     && /<div class="logo">Asset Plan<\/div><h1>JK <span class="v">투자<\/span> 자산플랜 <span class="ver">v\d+\.\d+\.\d+<\/span>/.test(pl)   // 버전은 배포마다 오른다 — 이름만 본다
      && /<a href="\/plan" class="cur"><span class="mi">🧭<\/span>자산플랜<\/a>/.test(pl));
   ok('PATH A 균형성장 — 개선 70/30 · TECL 70% N20 s0 55 밴드10 + TQQQ 30% SMA225 ±1.0',
      /alpha:\{teclWeight:\.70,guardWeight:\.30,ivsLook:20,ivsS0:\.55,ivsBand:\.10,guardMA:225,guardBand:\.01\}/.test(pl));
@@ -8926,7 +8929,7 @@ console.log('\n[119] 제10차 — 라오어 V4.0 원문 직접 대조 (SOURCE GO
        && /큰수 9%\(원문 10~15% 밖\)/.test(V({...base,big:9}).join()) && /큰수 20%\(원문 10~15% 밖\)/.test(V({...base,big:20}).join()));
     ok('제10차 P1-5 · 앱·백테 판정이 같은 글자', extractFn(idx,'function imVariantOf(cfg)')===extractFn(bt,'function imVariantOf(cfg)')); }
   ok('운영 기본값 · 큰수 20 / 리버스 gap 0 / 아래로 LOC 3줄을 사용한다',
-     /const IM_BIG_DEFAULT=20;/.test(idx) && /const REV_GAP_DEF=0;/.test(idx) && /const IM_ROWS_DEFAULT=3;/.test(idx) && /줄 수 3은 JKQuant 기본값\(원문에 개수 없음\)/.test(idx) && /줄 수 \$\{n\}줄은 <b>JKQuant 구현값<\/b>/.test(idx)
+     /const IM_BIG_DEFAULT=20;/.test(idx) && /const REV_GAP_DEF=0;/.test(idx) && /const IM_ROWS_DEFAULT=3;/.test(idx) && /줄 수 3은 JK 투자 기본값\(원문에 개수 없음\)/.test(idx) && /줄 수 \$\{n\}줄은 <b>JK 투자 구현값<\/b>/.test(idx)
      && /const INF_DEFAULTS_POLICY_VER=2;/.test(idx)
      && /function migrateInfOperatingDefaults\(\)/.test(idx)
      && /st\.big=IM_BIG_DEFAULT;/.test(idx) && /st\.revGap=REV_GAP_DEF;/.test(idx) && /st\.rows=IM_ROWS_DEFAULT;/.test(idx)
@@ -9259,7 +9262,7 @@ console.log('\n[123] 모의 성과 — 단독 페이지(/paper)');
     return {page:cls.has('paperpage'), title:doc.title, homeCur:a.home.has('cur'), paperCur:a.paper.has('cur'), calls}; };
   const e1=runEarly('/paper',''), e2=runEarly('/','?paper=1'), e3=runEarly('/',''), e4=runEarly('/','?x=1&paper=10');
   ok('/paper 로 열면 페이지 모드 · 제목 · 메뉴 현재 표시가 모의로',
-     !!early && e1.page && e1.title==='JK 퀀트 — 모의투자' && !e1.homeCur && e1.paperCur, JSON.stringify(e1));
+     !!early && e1.page && e1.title==='JK 투자 — 모의투자' && !e1.homeCur && e1.paperCur, JSON.stringify(e1));
   ok('예전 주소 /?paper=1 은 /paper 로 바꿔 페이지로 연다 · 그냥 / 는 운영 화면 그대로 · paper=10 같은 다른 값은 건드리지 않는다',
      e2.page && e2.calls.join()==='/paper' && !e3.page && e3.homeCur && !e3.calls.length && !e4.page && !e4.calls.length,
      JSON.stringify([e2,e3,e4]));
@@ -9275,15 +9278,15 @@ console.log('\n[123] 모의 성과 — 단독 페이지(/paper)');
     const hist=[];
     const F=new Function('$','document','history','APP_TITLE',
       [extractFn(idx,'function closePaper()'), extractFn(idx,'function isPaperPage()'), extractFn(idx,'function paperPageMode(on)')].join('\n')
-      +'\nreturn {closePaper, isPaperPage, paperPageMode};')(id=>E[id]||null, docF, {pushState:(a,b,u)=>hist.push(u)}, 'JK 퀀트 — 운영');
+      +'\nreturn {closePaper, isPaperPage, paperPageMode};')(id=>E[id]||null, docF, {pushState:(a,b,u)=>hist.push(u)}, 'JK 투자 — 운영');
     F.paperPageMode(true);
     const on1={page:body._cls.has('paperpage'), inPage:modal.parentNode===page, homeCur:home._cls.has('cur'), paperCur:jk._cls.has('cur'), title:docF.title, wait:/기록을 맞추는 중/.test(pbody.innerHTML)};
     F.closePaper();   // 전략 이름을 누르면 gotoSess 가 부른다 — 페이지에서 나가 운영 화면으로
     const off1={page:body._cls.has('paperpage'), inBody:modal.parentNode===body, open:modal._cls.has('on'), homeCur:home._cls.has('cur'), paperCur:jk._cls.has('cur'), title:docF.title, hist:hist.join()};
     ok('페이지 모드 — 상자를 본문 자리로 옮기고 메뉴·제목·대기 문구를 맞춘다',
-       on1.page && on1.inPage && !on1.homeCur && on1.paperCur && on1.title==='JK 퀀트 — 모의투자' && on1.wait, JSON.stringify(on1));
+       on1.page && on1.inPage && !on1.homeCur && on1.paperCur && on1.title==='JK 투자 — 모의투자' && on1.wait, JSON.stringify(on1));
     ok('페이지에서 전략 이름을 누르면 운영 화면으로 나간다 — 주소 / · 상자는 모달 자리로 · 모달로 뜨지 않는다 · 메뉴·제목 되돌림',
-       !off1.page && off1.inBody && !off1.open && off1.homeCur && !off1.paperCur && off1.title==='JK 퀀트 — 운영' && off1.hist==='/', JSON.stringify(off1)); }
+       !off1.page && off1.inBody && !off1.open && off1.homeCur && !off1.paperCur && off1.title==='JK 투자 — 운영' && off1.hist==='/', JSON.stringify(off1)); }
   // 채우기는 클라우드 기록을 맞춘 뒤 한 번 — 로컬로 먼저 연 갈래(openedLocal)에서는 부르지 않는다
   { const ia=extractFn(idx,'function initAuth()');
     const iPull=ia.indexOf('pullRemote()'), iAuto=ia.indexOf('paperPageAuto()'), local=(ia.match(/if\(openedLocal\)\{[\s\S]*?\n    \}/)||[''])[0];
@@ -11451,6 +11454,15 @@ console.log('\n[PERF FAST PATH] 모의 성과 · 단타 오늘 탭');
      /const got=await Promise\.all\(dates\.map/.test(dapi)
      && /Promise\.allSettled\(\[daytradingLiveSessions\(env\),daytradingResearchSessions\(\)\]\)/.test(dapi)
      && /Promise\.allSettled\(\[globalPaperSessions\(env,strategy\),decisionSessions\(path,source\)\]\)/.test(dapi));
+  ok('단타 오늘 빠른 경로는 외부 원천 1.8초 제한 + 필요한 완료일 2개만 조회 + KRX 로컬 휴장일을 쓴다',
+     /const SOURCE_TIMEOUT_MS=1800;/.test(dapi)
+     && /async function fastFetch\(url,init=\{\},timeoutMs=SOURCE_TIMEOUT_MS\)/.test(dapi)
+     && /const dates=completedKrCandidates\(\)\.slice\(0,2\);/.test(dapi)
+     && /const candidates=completedKrCandidates\(\)\.slice\(0,2\);/.test(dapi)
+     && /const candidates=completedGlobalCandidates\(strategy\)\.slice\(0,2\);/.test(dapi)
+     && /const d=krxDay\(date\);/.test(dapi)
+     && !/await readDaytradingPaperHistory\(env,12\)/.test(dapi)
+     && !/await readGlobalPaperHistory\(env,strategy,12\)/.test(dapi));
 }
 
 /* ════ 단타(클로드) 머리말 — 지피티 단타와 같은 모양 ════ */
@@ -11458,10 +11470,10 @@ console.log('\n[CLAUDE HEADER] 머리말 통일');
 {
   const ch=fs.readFileSync(__d+'/claude.html','utf8'), sh=fs.readFileSync(__d+'/scalping.html','utf8');
   const hd=(ch.match(/<header>[\s\S]*?<\/header>/)||[''])[0];
-  ok('클로드 머리말이 지피티와 같은 구조(영문 머리 · JK 퀀트 단타 · 사용자 배지 → 메뉴)',
-     /<div class="kicker">Claude Scalping<\/div><h1>JK <span class="v">퀀트<\/span> 단타/.test(hd)
+  ok('클로드 머리말이 지피티와 같은 구조(영문 머리 · JK 투자 단타 · 사용자 배지 → 메뉴)',
+     /<div class="kicker">Claude Scalping<\/div><h1>JK <span class="v">투자<\/span> 단타/.test(hd)
      &&/<div class="hright">\s*<div class="userbadge" id="userbadge"><\/div>\s*<div class="jkmenu"/.test(hd)
-     &&/<div class="kicker">Morning Scalping<\/div><h1>JK <span class="v">퀀트<\/span> 단타/.test(sh));
+     &&/<div class="kicker">Morning Scalping<\/div><h1>JK <span class="v">투자<\/span> 단타/.test(sh));
   ok('클로드 사용자 배지 = 사진 · 이름 · 로그아웃(lo), 옛 이메일 글자 배지 없음',
      /document\.getElementById\("userbadge"\)/.test(ch)
      &&/user\.photoURL\?"<img src=/.test(ch)&&/esc\(user\.displayName\|\|user\.email\|\|""\)/.test(ch)
@@ -11475,7 +11487,7 @@ console.log('\n[CLAUDE TODAY] 오늘 탭 통일');
 {
   const ch=fs.readFileSync(__d+'/claude.html','utf8');
   ok('오늘 탭 = 지피티와 같은 두 카드(📅 오늘 기준전략 결과: 전략별 전일·당일 + 누적 추이 / 📊 4전략 누적 상태: 표본·승률·거래당·필요승률·엣지·검증상태)',
-     /html\+=todayPage\(lab\);/.test(ch)&&/📅 오늘 기준전략 결과 <span class='sub'>최근 확정 세션 · 순수익<\/span>/.test(ch)
+     /html\+=todayPage\(lab\);/.test(ch)&&/📅 오늘 기준전략 결과 <span class='sub'>한국시간 어제 · 오늘 · 순수익<\/span>/.test(ch)
      &&/resultCell\(r\.prev,r\.prevDate,"전일",cl\)\+resultCell\(r\.last,r\.lastDate,"당일",cl\)/.test(ch)
      &&/📊 4전략 누적 상태/.test(ch)&&/<th>표본<\/th><th>승률<\/th><th>거래당<\/th><th>필요승률<\/th><th>엣지<\/th><th>검증상태<\/th>/.test(ch)
      &&/class="daily-result-list"|'daily-result-list'/.test(ch)&&!/<div class="hero">/.test(ch));
@@ -11743,6 +11755,9 @@ console.log('\n[ACCESS] 이용 승인제 — 판정 한 곳 · 모든 페이지 
        && !/restored|cacheOk|startApp\(\)/.test(wd));
   }
 
+  ok('자산플랜 상단도 JK 투자 공통 브랜드와 x.y.z 버전을 쓴다',
+     /<div class="brand"><div class="logo">Asset Plan<\/div><h1>JK <span class="v">투자<\/span> 자산플랜 <span class="ver">v\d+\.\d+\.\d+<\/span><\/h1><\/div>/.test(pl));
+
   ok('자산플랜: 본문은 로그인(html.authed) 전에는 숨기고, 막은 로그인 뒤에만 숨긴다',
      pl.includes('html:not(.authed) body>*:not(#authgate){visibility:hidden}') && pl.includes('html.authed #authgate{display:none}'));
   ok('자산플랜: 로그인 막이 본문보다 먼저 있다 (body 바로 아래 · 본문 .wrap 앞)',
@@ -11942,6 +11957,17 @@ console.log('\n[LOGIN·QUOTE·PAPER] 로그인 화면 · 시세 요청 · 모의
   ok('로그인·시세·모의 값 시험 전체', r.status===0 && lines.length>=15, (r.stdout||'').slice(-400)+(r.stderr||''));
 }
 
+/* ════ 공용 화면 도구 · 모의 표 첫 칸 (2026-10-07 사용자 요청) ════
+   '맨 위로' 버튼(오른쪽 가운데 · 모든 페이지 · jk-ui.js 한 곳) · 모의 성과 첫 칸 줄바꿈(최종 칸이 폰에서 스크롤 없이).
+   값 시험은 scripts/check-ui-common.cjs 에 있다(가짜 DOM 에서 실제 파일을 돌린다). */
+console.log('\n[UI COMMON] 맨 위로 버튼 · 모의 표 첫 칸');
+{
+  const r=require('child_process').spawnSync(process.execPath,[require('path').join(__dirname,'scripts/check-ui-common.cjs'),process.argv[2]||'index.html'],{encoding:'utf8',timeout:60000});
+  const lines=(r.stdout||'').split('\n').filter(l=>/^(PASS|FAIL) /.test(l));
+  lines.forEach(l=>ok(l.replace(/^(PASS|FAIL) /,''), l.startsWith('PASS')));
+  ok('공용 화면 도구 값 시험 전체', r.status===0 && lines.length>=5, (r.stdout||'').slice(-400)+(r.stderr||''));
+}
+
 /* ════ 단타(클로드) 장 여는 날 먼저 · 밤 계산 중단 수정 (2026-10-05) ════ */
 console.log('\n[CLAUDE KRX DAY] 휴장일 먼저 확인 · 밤 계산 빈 값');
 {
@@ -11996,6 +12022,11 @@ console.log('\n[CLAUDE ARENA] 메인 기록 하나 · 자동 퇴출·신규·7�
      /SHRINK_K, MIN_TRADE_DAYS, YEAR_POS_MIN, DUP_CORR = 40, 60, 0\.6, 0\.97/.test(lp)&&/MAIN_MARGIN, REPLACE_MARGIN, MAX_REPLACE = 0\.02, 0\.02, 3/.test(lp)
      &&/OPS = \("neighbor", "jump2", "cross", "struct", "explore"\)/.test(lp)&&/out\["score"\] = m\["adj"\] if pl is None or m\.get\("adj"\) is None else min\(m\["adj"\], pl\)/.test(lp)
      &&/def gate_reason\(m\):/.test(lp)&&/mark\(b, f"복제 — /.test(lp)&&/function arenaGen\(z\)/.test(ch)&&/안정 점수<div class='sub'>/.test(ch));
+  ok('단타(클로드) 휴대폰 기본: 비교 표는 표 그대로(넘치는 표만 촘촘하게 · 첫 칸 고정, 경쟁표는 순위·이름 고정) · 개선 내역에 전략 표기 · 전략 코드는 이름으로',
+     /\n  body\.innerHTML=statusBar\(\)\+html;\n  stackTables\(body\);/.test(ch)&&/function stackTables\(root\)\{/.test(ch)&&/if\(!box\|\|t\.scrollWidth<=box\.clientWidth\+2\)return;\n\s*t\.classList\.add\("fit"\);/.test(ch)
+     &&/@media\(max-width:760px\)\{table\.fit\{min-width:0!important;font-size:11px\}/.test(ch)&&/table\.fit td:first-child,table\.fit th:first-child\{position:sticky;left:0;/.test(ch)
+     &&/table\.fit\.arena td\.nm,table\.fit\.arena th:nth-child\(2\)\{position:sticky;left:20px;/.test(ch)&&!/table\.stack thead\{display:none\}/.test(ch)&&/window\.addEventListener\("resize"/.test(ch)
+     &&/<span class='tag' style='margin:0 6px 0 0'>"\+esc\(ARENA_TAB\[x\.tab\]/.test(ch)&&/"<span class='sub'>"\+arenaReason\(x\.reason,names\)\+"<\/span>/.test(ch));
   ok('전략 경쟁 화면: 탭 ⑥ 순위표(점수·최근 1년·90일·MDD) + 개선 내역·사유 · 오늘 탭 자동 개선 현황 · 승격된 메인 안내 · 수동 승격 버튼 없음',
      /function shadowCard\(tab\)\{\n\s*var z=arenaOf\(tab\);/.test(ch)&&/\+arenaOverview\(lab\);/.test(ch)&&/mainBanner\(tab\)\+"<div class='rule'>"/.test(ch)
      &&/var ARENA_KIND=\{new:\["🆕","신규 투입"/.test(ch)&&!/claude-promote|승격 버튼/.test(ch)
@@ -12137,6 +12168,28 @@ console.log('\n[SCALPING TODAY KST/AUTO] KST 전일·당일 · 전략분석 자�
      &&v.cr.current&&v.cr.current.date==='2026-10-07'&&v.cr.current.pending===true
      &&v.cr.previous&&v.cr.previous.date==='2026-10-06',
      (vt.stderr||'')+(vt.stdout||''));
+}
+
+
+/* ════ 공용 로그인 · 상단 전체메뉴 통일 ════ */
+console.log('\n[UNIFIED CHROME] JK 투자 로그인 · 9개 페이지 전체메뉴');
+{
+  const ui=fs.readFileSync(__d+'/jk-ui.js','utf8'),acc=fs.readFileSync(__d+'/jk-access.js','utf8');
+  const pages=['index.html','plan.html','backtest.html','scalping.html','claude.html','ipo.html','realestate.html','job.html','admin.html'];
+  ok('공용 승인 로그인 브랜드는 JK 투자 — 퀀트 잔존 없음',
+     /var head='<div class="jl">JK <b>투자<\/b><\/div>'/.test(acc)
+     &&!/JK <b>퀀트<\/b>/.test(acc)&&!/\/\* JK 퀀트 — 이용 승인/.test(acc));
+  ok('공용 UI가 로그인 카드·Google 버튼·브랜드를 한 모양으로 정규화',
+     /JK 투자 공용 로그인·전체메뉴 UI/.test(ui)&&/function normalizeLogin\(\)/.test(ui)
+     &&/#authgate \.gbox,#gate \.gbox,#jkgate \.jb/.test(ui)
+     &&/Google로 로그인/.test(ui));
+  ok('공용 UI가 상단 메뉴 제목·햄버거·모바일 폭·열고닫기를 한 곳에서 관리',
+     /function mountMenus\(\)/.test(ui)&&/전체메뉴/.test(ui)&&/btn\.textContent='☰'/.test(ui)
+     &&/\.jkmenu-pop\{position:absolute!important/.test(ui)
+     &&/@media\(max-width:600px\)\{\.jkmenu-pop/.test(ui));
+  ok('9개 페이지 모두 jk-ui 공용 UI와 같은 10개 메뉴 링크를 사용',
+     pages.every(f=>{const s=fs.readFileSync(__d+'/'+f,'utf8');return /<script src="\/jk-ui\.js" defer><\/script>/.test(s)
+       &&['/','/plan','/backtest','/scalping','/claude','/paper','/ipo','/realestate','/job','/admin'].every(p=>s.includes('href="'+p+'"'));}));
 }
 
 Promise.all(PENDING).then(()=>{

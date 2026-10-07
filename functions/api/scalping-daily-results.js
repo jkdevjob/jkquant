@@ -1,3 +1,5 @@
+import { krxDay } from "./_krx_calendar.js";
+
 // Cloudflare Pages Function — GET /api/scalping-daily-results
 // One-screen previous/latest completed-session results for the four active scalping strategies.
 // Read-only: live paper ledgers are preferred for BTC/SOXL; immutable research/history is fallback.
@@ -19,9 +21,15 @@ async function edgePut(request,response){
 const RAW="https://raw.githubusercontent.com/jkdevjob/jkquant/scalping-data/data/";
 const GLOBAL_WORKER_FALLBACK="https://jkquant-global-intraday-scheduler.mumae4.workers.dev";
 const DAYTRADING_WORKER_FALLBACK="https://jkquant-daytrading-scheduler.mumae4.workers.dev";
+const SOURCE_TIMEOUT_MS=1800;
+async function fastFetch(url,init={},timeoutMs=SOURCE_TIMEOUT_MS){
+  const ac=new AbortController(),id=setTimeout(()=>ac.abort(),timeoutMs);
+  try{return await fetch(url,{...init,signal:ac.signal});}
+  finally{clearTimeout(id);}
+}
 
 async function readText(path){
-  const r=await fetch(RAW+path,{headers:{"Accept":"text/plain,application/json,text/csv","User-Agent":"jkquant-scalping-daily-results/1.1"}});
+  const r=await fastFetch(RAW+path,{headers:{"Accept":"text/plain,application/json,text/csv","User-Agent":"jkquant-scalping-daily-results/1.2"}});
   if(r.status===404)return null;
   if(!r.ok)throw new Error("GitHub raw "+path+" HTTP "+r.status);
   return r.text();
@@ -99,15 +107,9 @@ function isNyseSessionDate(date){
   const d=new Date(date+"T12:00:00Z"),wd=d.getUTCDay(),y=d.getUTCFullYear();
   return wd!==0&&wd!==6&&!nyseHolidaySet(y).has(date);
 }
-async function krMarketDayStatus(request,date){
-  const u=new URL("/api/kis",request.url);
-  u.searchParams.set("op","holiday");u.searchParams.set("market","kr");u.searchParams.set("date",String(date).replace(/\D/g,""));
-  try{
-    const r=await fetch(u.toString(),{headers:{"accept":"application/json"}});
-    const j=await r.json().catch(()=>({}));
-    if(!r.ok||j.ok!==true||typeof j.open!=="boolean")return {date,open:null,error:j.error||("HTTP "+r.status),source:"KIS/CTCA0903R"};
-    return {date,open:j.open,source:j.source||"KIS/CTCA0903R"};
-  }catch(e){return {date,open:null,error:String(e.message||e),source:"KIS/CTCA0903R"};}
+async function krMarketDayStatus(_request,date){
+  const d=krxDay(date);
+  return {date,open:!d.closed,source:"KRX-local-calendar",known:d.known,reason:d.reason||""};
 }
 function tradeSummary(date,trades){
   const a=(Array.isArray(trades)?trades:[]).filter(x=>Number.isFinite(Number(x.pnl)));
@@ -151,10 +153,10 @@ function mergeSessions(primary,fallback){
   return [...m.values()].sort((a,b)=>String(b.date).localeCompare(String(a.date))).slice(0,2);
 }
 async function openingSessions(){
-  const today=isoKstDate(),out=[];
-  /* 예전에는 최근 JSON을 찾을 때 15일을 하나씩 await 해서 휴일/주말일수록 느렸다.
-     서로 독립인 날짜 파일은 한 번에 읽고 최신 2개만 고른다. */
-  const dates=Array.from({length:15},(_,back)=>shiftIso(today,-back));
+  const out=[];
+  /* 오늘 카드에는 KST 당일/전일만 필요하다. 장 마감 전이면 직전 완료 거래일부터,
+     장 마감 후면 오늘부터 최근 완료 거래일 2개만 읽는다. 예전 15개 파일 동시조회는 제거. */
+  const dates=completedKrCandidates().slice(0,2);
   const got=await Promise.all(dates.map(async date=>{
     try{return [date,await readJson("opening-history/"+date+".json")];}
     catch(e){return [date,null];}
@@ -193,7 +195,7 @@ function completedKrCandidates(now=Date.now()){
 async function readDaytradingPaper(env,date){
   const key=globalKey(env);if(!key)throw new Error("daytrading monitor key missing");
   const worker=String(env.DAYTRADING_WORKER_URL||DAYTRADING_WORKER_FALLBACK).replace(/\/$/,"");
-  const r=await fetch(worker+"/paper?date="+encodeURIComponent(date),{headers:{"Accept":"application/json","x-monitor-key":key}});
+  const r=await fastFetch(worker+"/paper?date="+encodeURIComponent(date),{headers:{"Accept":"application/json","x-monitor-key":key}});
   const j=await r.json().catch(()=>({}));
   if(!r.ok||!j.ok)throw new Error(j.error||("daytrading worker HTTP "+r.status));
   return j.ledger||null;
@@ -201,7 +203,7 @@ async function readDaytradingPaper(env,date){
 async function readDaytradingPaperHistory(env,limit=8){
   const key=globalKey(env);if(!key)throw new Error("daytrading monitor key missing");
   const worker=String(env.DAYTRADING_WORKER_URL||DAYTRADING_WORKER_FALLBACK).replace(/\/$/,"");
-  const r=await fetch(worker+"/paper-history?limit="+Math.max(1,Math.min(120,Number(limit)||8)),{headers:{"Accept":"application/json","x-monitor-key":key}});
+  const r=await fastFetch(worker+"/paper-history?limit="+Math.max(1,Math.min(120,Number(limit)||8)),{headers:{"Accept":"application/json","x-monitor-key":key}});
   const j=await r.json().catch(()=>({}));
   if(!r.ok||!j.ok)throw new Error(j.error||("daytrading history HTTP "+r.status));
   return Array.isArray(j.ledgers)?j.ledgers:[];
@@ -219,26 +221,14 @@ function daytradingLedgerSummary(ledger,date){
   };
 }
 async function daytradingLiveSessions(env){
-  const out=[],candidates=completedKrCandidates(),completed=new Set(candidates);
-  try{
-    const indexed=await readDaytradingPaperHistory(env,12);
-    for(const ledger of indexed){
-      const date=String(ledger&&ledger.date||"");
-      if(date&&completed.has(date))out.push(daytradingLedgerSummary(ledger,date));
-      if(out.length>=2)break;
-    }
-  }catch(e){}
-  if(out.length>=2)return out;
-  const seen=new Set(out.map(x=>x.date));
-  const missing=candidates.filter(date=>!seen.has(date));
-  const extra=await Promise.all(missing.map(async date=>{
+  const candidates=completedKrCandidates().slice(0,2);
+  const got=await Promise.all(candidates.map(async date=>{
     try{
       const ledger=await readDaytradingPaper(env,date);
       return ledger?daytradingLedgerSummary(ledger,date):null;
     }catch(e){return null;}
   }));
-  for(const x of extra){if(x&&!seen.has(x.date)){out.push(x);seen.add(x.date);}}
-  return out.sort((a,b)=>String(b.date).localeCompare(String(a.date))).slice(0,2);
+  return got.filter(Boolean).sort((a,b)=>String(b.date).localeCompare(String(a.date))).slice(0,2);
 }
 function mergeDaytradingSessions(live,fallback){
   const primary=Array.isArray(live)?live:[];
@@ -297,7 +287,7 @@ async function readGlobalPaper(env,strategy,date){
   if(!key)throw new Error("global intraday monitor key missing");
   const worker=String(env.GLOBAL_INTRADAY_WORKER_URL||GLOBAL_WORKER_FALLBACK).replace(/\/$/,"");
   const q=new URLSearchParams({strategy,date});
-  const r=await fetch(worker+"/paper?"+q.toString(),{headers:{"Accept":"application/json","x-monitor-key":key}});
+  const r=await fastFetch(worker+"/paper?"+q.toString(),{headers:{"Accept":"application/json","x-monitor-key":key}});
   const j=await r.json().catch(()=>({}));
   if(!r.ok||!j.ok)throw new Error(j.error||("global worker HTTP "+r.status));
   return j.ledger||null;
@@ -307,7 +297,7 @@ async function readGlobalPaperHistory(env,strategy,limit=8){
   if(!key)throw new Error("global intraday monitor key missing");
   const worker=String(env.GLOBAL_INTRADAY_WORKER_URL||GLOBAL_WORKER_FALLBACK).replace(/\/$/,"");
   const q=new URLSearchParams({strategy,limit:String(Math.max(1,Math.min(120,Number(limit)||8)))});
-  const r=await fetch(worker+"/paper-history?"+q.toString(),{headers:{"Accept":"application/json","x-monitor-key":key}});
+  const r=await fastFetch(worker+"/paper-history?"+q.toString(),{headers:{"Accept":"application/json","x-monitor-key":key}});
   const j=await r.json().catch(()=>({}));
   if(!r.ok||!j.ok)throw new Error(j.error||("global history HTTP "+r.status));
   return Array.isArray(j.ledgers)?j.ledgers:[];
@@ -329,25 +319,14 @@ function completedGlobalCandidates(strategy,now=Date.now()){
   return out;
 }
 async function globalPaperSessions(env,strategy){
-  const out=[],candidates=completedGlobalCandidates(strategy),completed=new Set(candidates);
-  try{
-    const indexed=await readGlobalPaperHistory(env,strategy,12);
-    for(const ledger of indexed){
-      const date=String(ledger&&ledger.date||"");
-      if(date&&completed.has(date))out.push(liveLedgerSummary(ledger,date,"global-paper-db"));
-      if(out.length>=2)break;
-    }
-  }catch(e){}
-  if(out.length>=2)return out;
-  const seen=new Set(out.map(x=>x.date)),missing=candidates.filter(date=>!seen.has(date));
-  const extra=await Promise.all(missing.map(async date=>{
+  const candidates=completedGlobalCandidates(strategy).slice(0,2);
+  const got=await Promise.all(candidates.map(async date=>{
     try{
       const ledger=await readGlobalPaper(env,strategy,date);
       return ledger?liveLedgerSummary(ledger,date,"global-paper-live"):null;
     }catch(e){return null;}
   }));
-  for(const x of extra){if(x&&!seen.has(x.date)){out.push(x);seen.add(x.date);}}
-  return out.sort((a,b)=>String(b.date).localeCompare(String(a.date))).slice(0,2);
+  return got.filter(Boolean).sort((a,b)=>String(b.date).localeCompare(String(a.date))).slice(0,2);
 }
 async function liveFirstSessions(env,strategy,path,source){
   const [lr,fr]=await Promise.allSettled([globalPaperSessions(env,strategy),decisionSessions(path,source)]);

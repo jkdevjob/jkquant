@@ -18,7 +18,7 @@ st.textContent='.st-hero{border:1px solid rgba(245,196,81,.35);background:rgba(2
 root.appendChild(st);
 
 let CFG=null,EVENTS=[],STATUS=null,LAST=null,running=false;
-const CACHE="jk_re_strategy_result_v2";
+let PARAM={start:2016,hold:12,buyCost:1.5,sellCost:1.0};
 function esc(s){return String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]))}
 function won(v){if(!Number.isFinite(v))return "-";const e=v/1e8;return e>=1?(Math.round(e*100)/100).toFixed(e<10?2:1).replace(/0+$/,"").replace(/\.$/,"")+"억":Math.round(v/1e4).toLocaleString("ko-KR")+"만"}
 function pct(v){return Number.isFinite(v)?((v>=0?"+":"")+(v*100).toFixed(1)+"%"):"-"}
@@ -51,10 +51,10 @@ function summaryHtml(r){
 function controls(){
   const cy=new Date().getFullYear();
   return '<div class="gpt-panel"><h4>실제 아파트 실거래 백테스트</h4><div class="st-tools">'+
-  '<label>시작연도<select id="stStart"><option value="2016">2016 (빠른검증)</option><option value="2010">2010</option><option value="2006">2006 전체</option></select></label>'+
-  '<label>최소보유<input id="stHold" type="number" min="6" max="60" step="6" value="12">개월</label>'+
-  '<label>매수비용 가정<input id="stBuyCost" type="number" min="0" max="10" step=".1" value="1.5">%</label>'+
-  '<label>매도비용 가정<input id="stSellCost" type="number" min="0" max="10" step=".1" value="1.0">%</label>'+
+  '<label>시작연도<select id="stStart"><option value="2016" '+(PARAM.start===2016?'selected':'')+'>2016 (빠른검증)</option><option value="2010" '+(PARAM.start===2010?'selected':'')+'>2010</option><option value="2006" '+(PARAM.start===2006?'selected':'')+'>2006 전체</option></select></label>'+
+  '<label>최소보유<input id="stHold" type="number" min="6" max="60" step="6" value="'+PARAM.hold+'">개월</label>'+
+  '<label>매수비용 가정<input id="stBuyCost" type="number" min="0" max="10" step=".1" value="'+PARAM.buyCost+'">%</label>'+
+  '<label>매도비용 가정<input id="stSellCost" type="number" min="0" max="10" step=".1" value="'+PARAM.sellCost+'">%</label>'+
   '<button class="primary" id="stRun">▶ '+cy+'년까지 실거래 백테스트 실행</button></div>'+
   '<div class="st-progress"><i id="stBar"></i></div><div class="note" id="stMsg">'+
   (STATUS&&STATUS.configured?'공식 실거래 API 연결됨 · 실행 전':'공공데이터포털 인증키가 없어 실행할 수 없습니다.')+'</div>'+
@@ -69,6 +69,7 @@ function render(){
     (result&&result.closed&&result.closed.length?result.closed.map(tradeCard).join(""):'<div class="st-empty"><b>아직 실행된 실거래 백테스트 결과가 없습니다.</b><br>위 버튼을 누르면 국토부 실거래를 연도별로 읽고, 대전·세종 시장신호가 발생한 시점에 실제 단지를 선택해 매수→매도 거래를 만듭니다.</div>')+
   '</div>'+
   (result?openCard(result.open):'')+
+  (result&&result.collectionWarnings&&result.collectionWarnings.length?'<div class="gpt-warn"><b>부분 수집 경고 '+result.collectionWarnings.length+'건</b><br>일부 월/구 데이터는 타임아웃 또는 일시 오류로 누락됐습니다. 나머지 데이터로 계산한 결과이므로 전체 검증 전에는 최종 전략으로 확정하지 않습니다.</div>':'')+
   '<div class="gpt-warn"><b>현재 전략 v1</b><br>시장 진입조건은 과거 도시지수 실험에서 쓰던 3개월·12개월 상승 + 36개월 고점 대비 -20~0%를 그대로 사용합니다. 그 시점에 거래가 충분한 실제 아파트 중 최근 거래량·6/12개월 흐름·고점대비 위치로 한 채를 선택합니다. 최소보유 뒤 시장 3M·12M이 모두 음수이거나 해당 단지 6M 흐름이 -8% 아래면 매도신호를 냅니다. <b>이 규칙 자체를 앞으로 워크포워드 검증하며 개선</b>합니다.</div>';
   bind();
 }
@@ -78,24 +79,27 @@ function bind(){
   btn.addEventListener("click",runNow);
 }
 async function runNow(){
-  if(running)return;running=true;render();
-  const start=Number(mount.querySelector("#stStart")&&mount.querySelector("#stStart").value)||2016;
-  const hold=Number(mount.querySelector("#stHold")&&mount.querySelector("#stHold").value)||12;
-  const bc=(Number(mount.querySelector("#stBuyCost")&&mount.querySelector("#stBuyCost").value)||0)/100;
-  const sc=(Number(mount.querySelector("#stSellCost")&&mount.querySelector("#stSellCost").value)||0)/100;
+  if(running)return;
+  PARAM.start=Number(mount.querySelector("#stStart")&&mount.querySelector("#stStart").value)||2016;
+  PARAM.hold=Number(mount.querySelector("#stHold")&&mount.querySelector("#stHold").value)||12;
+  PARAM.buyCost=Number(mount.querySelector("#stBuyCost")&&mount.querySelector("#stBuyCost").value)||0;
+  PARAM.sellCost=Number(mount.querySelector("#stSellCost")&&mount.querySelector("#stSellCost").value)||0;
+  const start=PARAM.start,hold=PARAM.hold,bc=PARAM.buyCost/100,sc=PARAM.sellCost/100;
   const end=new Date().getFullYear();
+  running=true;render();
   const bar=mount.querySelector("#stBar"),msg=mount.querySelector("#stMsg");
   try{
     if(msg)msg.textContent="시장지수와 실거래를 준비하는 중…";
     const market=await waitMarket();
     const trades=await RESTRAT.loadHistory(start,end,p=>{
       const q=Math.round(p.done/p.total*100);if(bar)bar.style.width=q+"%";
-      if(msg)msg.textContent=p.year+"년 실거래 수집 "+p.done+"/"+p.total+" · "+p.count.toLocaleString()+"건";
+      if(msg)msg.textContent=p.year+"년 "+(p.region||p.lawd)+" 수집 "+p.done+"/"+p.total+" · "+p.count.toLocaleString()+"건"+(p.warnings?" · 누락/재시도 "+p.warnings+"건":"");
     });
     if(msg)msg.textContent="실거래 "+trades.length.toLocaleString()+"건으로 미래값 없는 거래전략 계산 중…";
     const result=RESTRAT.run(trades,market,EVENTS,{startYear:start,endYear:end,minHold:hold,buyCost:bc,sellCost:sc});
+    result.collectionWarnings=Array.isArray(trades.collectionWarnings)?trades.collectionWarnings:[];
     LAST={ranAt:new Date().toISOString(),start,end,result};
-    try{localStorage.setItem(CACHE,JSON.stringify(LAST))}catch(e){}
+    try{localStorage.setItem("jk_re_strategy_result_v3",JSON.stringify(LAST))}catch(e){}
   }catch(e){
     alert("실거래 백테스트 실패: "+String(e&&e.message||e));
   }finally{running=false;render()}
@@ -108,7 +112,10 @@ async function boot(){
       RESTRAT.status()
     ]);
     CFG=c;EVENTS=e.events||[];STATUS=s;
-    try{const x=JSON.parse(localStorage.getItem(CACHE)||"null");if(x&&x.result)LAST=x}catch(e){}
+    try{
+      const saved=JSON.parse(localStorage.getItem("jk_re_strategy_result_v3")||"null");
+      if(saved&&saved.result)LAST=saved;
+    }catch(e){}
   }catch(e){STATUS={configured:false,note:String(e&&e.message||e)}}
   render();
 }
