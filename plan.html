@@ -286,7 +286,7 @@ setTimeout(function(){ var h=document.documentElement; if(h.classList.contains('
 </script>
 <div class="wrap">
   <div class="top">
-    <div class="brand"><div class="logo">Asset Plan</div><h1>JK <span class="v">투자</span> 자산플랜 <span class="ver">v1.43.23</span></h1></div>
+    <div class="brand"><div class="logo">Asset Plan</div><h1>JK <span class="v">투자</span> 자산플랜 <span class="ver">v1.43.24</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
       <div class="jkmenu" id="jkmenuWrap">
@@ -814,7 +814,7 @@ const firebaseConfig={
   messagingSenderId:"1024066323251",
   appId:"1:1024066323251:web:23d557527866205f01f446"
 };
-const JK_FORCE_FIRESTORE_LONG_POLLING=/iPhone|iPad|iPod|NAVER|KAKAOTALK|Instagram|FBAN|FBAV|; wv\)/i.test(navigator.userAgent||"");
+const JK_FORCE_FIRESTORE_LONG_POLLING=/iPhone|iPad|iPod|NAVER|KAKAOTALK|Instagram|FBAN|FBAV|; wv\)/i.test(navigator.userAgent||"")||(/Macintosh/i.test(navigator.userAgent||"")&&(navigator.maxTouchPoints||0)>1);   // 아이폰·아이패드가 '데스크탑 웹사이트 요청'으로 맥처럼 보여도 터치면 iOS(2026-10-07 진단: Macintosh UA → auto-detect → DB 원장 멈춤)
 const app=initializeApp(firebaseConfig),auth=getAuth(app),db=initializeFirestore(app,JK_FORCE_FIRESTORE_LONG_POLLING?{experimentalForceLongPolling:true}:{experimentalAutoDetectLongPolling:true});
 const KEY="jkq_5y_plan_v1";
 const $=id=>document.getElementById(id);

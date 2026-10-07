@@ -26,7 +26,7 @@ import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signO
 import { initializeFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
 const app=initializeApp({apiKey:"AIzaSyBzBe9pAttnbDgTlNThWZzNqtAAKxX7Ksw",authDomain:"jk-invest.firebaseapp.com",projectId:"jk-invest",
   storageBucket:"jk-invest.firebasestorage.app",messagingSenderId:"1024066323251",appId:"1:1024066323251:web:23d557527866205f01f446"});
-const JK_FORCE_FIRESTORE_LONG_POLLING=/iPhone|iPad|iPod|NAVER|KAKAOTALK|Instagram|FBAN|FBAV|; wv\)/i.test(navigator.userAgent||"");
+const JK_FORCE_FIRESTORE_LONG_POLLING=/iPhone|iPad|iPod|NAVER|KAKAOTALK|Instagram|FBAN|FBAV|; wv\)/i.test(navigator.userAgent||"")||(/Macintosh/i.test(navigator.userAgent||"")&&(navigator.maxTouchPoints||0)>1);   // 아이폰·아이패드가 '데스크탑 웹사이트 요청'으로 맥처럼 보여도 터치면 iOS(2026-10-07 진단: Macintosh UA → auto-detect → DB 원장 멈춤)
 const auth=getAuth(app),db=initializeFirestore(app,JK_FORCE_FIRESTORE_LONG_POLLING?{experimentalForceLongPolling:true}:{experimentalAutoDetectLongPolling:true});
 JKAccess.guard({auth,db,doc,getDoc,setDoc,onAuthStateChanged,signInWithPopup,GoogleAuthProvider,signOut},{});
 </script>
@@ -41,7 +41,7 @@ JKAccess.guard({auth,db,doc,getDoc,setDoc,onAuthStateChanged,signInWithPopup,Goo
 </head>
 <body>
 <header><div class="wrap"><div class="htop">
-  <div class="brand"><div class="kicker">REAL ESTATE</div><h1>JK <span class="v">부동산</span> <span style="font-size:12px;font-weight:400;color:var(--faint)" id="reVer">v1.8.3</span></h1></div>
+  <div class="brand"><div class="kicker">REAL ESTATE</div><h1>JK <span class="v">부동산</span> <span style="font-size:12px;font-weight:400;color:var(--faint)" id="reVer">v1.8.4</span></h1></div>
   <div class="jkmenu" id="jkmenuWrap">
     <button class="jkmenu-btn" aria-label="메뉴" onclick="jkMenuToggle(event)">三</button>
     <div class="jkmenu-pop" id="jkmenuPop" hidden>

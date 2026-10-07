@@ -74,13 +74,23 @@ await t('L3 앱 내장 브라우저 감지 — 이름을 아는 앱 + 이름 모
   assert.equal(fs_(iOS+' Mobile/15E148'),null,'홈 화면 앱(standalone)은 내장 화면이 아니다');
 });
 
-await t('L4 Firestore 전송은 iOS·앱내장 브라우저만 강제 long-polling, 일반 브라우저는 자동감지',async()=>{
+await t('L4 Firestore 전송은 iOS(데스크탑 웹사이트 요청으로 맥처럼 보이는 아이폰·아이패드 포함)·앱내장 브라우저만 강제 long-polling, 일반 브라우저는 자동감지 — 9개 페이지가 같은 판정',async()=>{
   const pages=['index.html','plan.html','backtest.html','scalping.html','claude.html','ipo.html','job.html','realestate.html','admin.html'];
-  for(const p of pages){
-    const s=fs.readFileSync(path.join(ROOT,p),'utf8');
-    assert(/const JK_FORCE_FIRESTORE_LONG_POLLING=\/iPhone\|iPad\|iPod\|NAVER\|KAKAOTALK\|Instagram\|FBAN\|FBAV\|; wv\\\)\/i\.test\(navigator\.userAgent\|\|""\);/.test(s),p+' mobile/webview detector missing');
+  const lines=pages.map(p=>{ const s=fs.readFileSync(path.join(ROOT,p),'utf8');
     assert(/JK_FORCE_FIRESTORE_LONG_POLLING\?\{experimentalForceLongPolling:true\}:\{experimentalAutoDetectLongPolling:true\}/.test(s),p+' conditional firestore transport missing');
-  }
+    const m=s.match(/const JK_FORCE_FIRESTORE_LONG_POLLING=(.+?);\s+\/\/ 아이폰/); assert(m,p+' 판정 줄'); return m[1]; });
+  assert.equal(new Set(lines).size,1,'9개 페이지 판정이 글자까지 같다(갈라지면 한 페이지만 아이폰을 못 알아본다)');
+  const force=(ua,touch)=>new Function('navigator','return '+lines[0]+';')({userAgent:ua,maxTouchPoints:touch});
+  const IOS='Mozilla/5.0 (iPhone; CPU iPhone OS 26_6_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.6.1 Mobile/15E148 Safari/604.1';
+  const DESK='Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.6.1 Safari/605.1.15';   // 사용자 진단 화면 그대로
+  assert.equal(force(IOS,5),true,'아이폰');
+  assert.equal(force(DESK,5),true,'데스크탑 웹사이트 요청 아이폰·아이패드(맥 UA + 터치) — 예전엔 false 라 auto-detect 로 DB 가 멈췄다');
+  assert.equal(force(DESK,0),false,'진짜 맥 Safari 는 자동감지');
+  assert.equal(force('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0 Safari/537.36',0),false,'윈도 크롬');
+  assert.equal(force('Mozilla/5.0 (Linux; Android 15; SM-S928N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0 Mobile Safari/537.36',5),false,'안드로이드 크롬');
+  assert.equal(force('Mozilla/5.0 (Linux; Android 15; SM-S928N; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/141.0 Mobile Safari/537.36',5),true,'안드로이드 앱 내장');
+  assert.equal(force(IOS.replace('Safari/604.1','KAKAOTALK 10.8.0'),5),true,'카카오톡');
+  assert.equal(force(DESK,undefined),false,'터치 정보가 없으면 맥으로 본다');
 });
 
 /* ── 시세 요청 ──────────────────────────────────────────────────────── */
@@ -553,6 +563,47 @@ await t('P16 자산플랜 시세 미리 받기 — 6종목을 한 번 받아 두
   vm.createContext(D); vm.runInContext(decl+'\n'+fq+'\nthis.start=startPlanQuotePrefetch;this.get=fetchPlanQuote;',D);
   D.start(); await tick(5); D.liveQuotes={}; const s=await D.get('SGOV');
   assert.equal(s.symbol,'SGOV','실패한 미리 받기는 그 자리에서 다시 받아 채운다'); assert.equal(calls.length,calls0+6+1+1,'6종목 + SGOV 두 번째 시도 + 다시 받기');
+});
+/* ── 운영 화면 원장 열기 (2026-10-07 사용자 화면: 5G 아이폰에서 'Firebase DB 원장 응답 없음(20초)' 다시 연결 화면 반복) ── */
+await t('D5 운영 원장 읽기 — 읽자마자 true(화면 열기) · 고칠 게 있어 하는 저장은 기다리지 않고 뒤에서 · 읽은 시간·크기를 남긴다 · 오류는 false+이유',async()=>{
+  const src=fn('async function pullRemote(){');
+  let pushResolve=null, pushes=0;
+  const mk=(data,fail)=>{ const C={console:{error(){},warn(){}},curUid:'u1',
+      window:{fb:{db:{},doc:(db,c,id)=>c+'/'+id,getDoc:async()=>{ if(fail) throw Object.assign(new Error('Missing or insufficient permissions.'),{code:'permission-denied'}); return {exists:()=>true,data:()=>JSON.parse(JSON.stringify(data))}; }}},
+      stateCloudHydrated:false,cacheStrategyDefaults(){},KR_NAME_MEMO:{},validState:x=>!!(x&&x.inf&&x.vr),_historySignature:()=>'sig',S:null,stateDbBase:null,ensureBoxes(){},
+      _repairLegacyMergeDupes:()=>0,stateCloudPending:false,migrateInfOperatingDefaults:()=>true,lastPushedJSON:'',freshState:()=>({inf:{},vr:{}}),
+      pushRemoteNow:()=>{ pushes++; return new Promise(r=>{ pushResolve=r; }); },setSync(){},stateCloudRev:0,stateCloudHistorySig:'',
+      dbReadStart:0,dbReadMs:0,dbReadKB:0,dbReadTop:'',pullLastErr:'',
+      fsDocBytes:(p,parts)=>parts.reduce((a,x)=>a+x.bytes,0),fsDocParts:d=>Object.keys(d).map(k=>({k,bytes:JSON.stringify(d[k]).length})),dbPartsText:()=>'운영 원장 5KB'};
+    vm.createContext(C); vm.runInContext(src+'\nthis.pull=pullRemote;',C); return C; };
+  const D={stateV2:{inf:{sessions:[]},vr:{sessions:[]},big:'x'.repeat(5000)},stateV2Rev:4};
+  const C=mk(D);
+  const r=await Promise.race([C.pull(), tick(300).then(()=>'저장을 기다리며 멈춤')]);
+  assert.equal(r,true,'저장(push)을 기다리지 않고 바로 연다');
+  assert.equal(pushes,1,'저장은 뒤에서 시작했다'); pushResolve(true);
+  assert.equal(C.stateCloudHydrated,true); assert.equal(C.stateCloudRev,4); assert.equal(C.stateCloudPending,true,'저장 끝날 때까지 미저장 표시 유지');
+  assert(C.dbReadKB>=4,'읽은 원장 크기 KB: '+C.dbReadKB); assert(C.dbReadStart>0 && C.dbReadMs>=0); assert.equal(C.dbReadTop,'운영 원장 5KB');
+  const E=mk(D,true); assert.equal(await E.pull(),false); assert.equal(E.pullLastErr,'permission-denied','이유를 남긴다');
+  const ia=fn('function initAuth(){');
+  assert(/const ok=await dbWait\(pullRemote\(\), 'Firebase DB 원장'\);\n\s*if\(!ok\)throw new Error\(pullLastErr\|\|/.test(ia),'로그인 흐름 배선');
+  assert(/const ok=await dbWait\(pullRemote\(\),'Firebase DB 원장 재연결'\);/.test(fn('async function retryDbLoad(){')),'다시 연결도 같은 길');
+});
+await t('D6 dbWait — 원장이 20초 넘게 걸려도 끊지 않는다: 늦으면 안내만 적고 끝까지 기다려 그 결과를 돌려준다 · 빠르면 안내 없음',async()=>{
+  const src=fn('async function dbWait(p,label){');
+  const mk=()=>{ const warns=[]; const f=new Function('authWarn','DB_SLOW_NOTE_MS','setTimeout','clearTimeout',src+'\nreturn dbWait;')(m=>warns.push(m),20,setTimeout,clearTimeout); return {f,warns}; };
+  const A=mk(); const r=await A.f(new Promise(res=>setTimeout(()=>res(true),80)),'Firebase DB 원장');
+  assert.equal(r,true,'늦어도 결과를 돌려준다(예전: 20초에 실패)'); assert.equal(A.warns.length,1); assert(/늦어지고 있습니다\(\d+초\) — 끊지 않고 계속 기다리는 중/.test(A.warns[0]),A.warns[0]);
+  const B=mk(); assert.equal(await B.f(new Promise(res=>setTimeout(()=>res(true),2)),'x'),true); await tick(40); assert.equal(B.warns.length,0,'빨리 오면 안내 없음(타이머도 지운다)');
+  const C=mk(); assert.equal(await C.f(Promise.resolve(false),'x'),false,'진짜 오류(false)는 그대로 넘겨 다시 연결 화면으로');
+  assert(/const DB_SLOW_NOTE_MS=20000;/.test(html));
+});
+await t('D7 진단 정보 — DB 읽기 시간·원장 크기·큰 칸 · 읽는 중이면 몇 초째인지',async()=>{
+  const src=fn('function authDiag(){');
+  const run=o=>new Function('$','window','authWired','appStarted','authStep','storageOK','dbBytesNow','DB_DOC_LIMIT','dbPartsText','dbPartsNow','inAppName','authLastErr','navigator','dbReadMs','dbReadKB','dbReadTop','dbReadStart','Date',src+'\nreturn authDiag();')(
+     ()=>({textContent:'v3'}),{fb:null},true,false,'DB 원장 읽기',()=>'ok',0,1048576,()=>'',[],()=>null,'',{userAgent:'UA'},o.ms,o.kb,o.top,o.start,{now:()=>o.now});
+  const a=run({ms:23456,kb:910,top:'운영 원장 880KB',start:1,now:2}); assert(/DB읽기\s+23\.5초 · 원장 910KB \/ 1024KB · 큰 칸 운영 원장 880KB/.test(a),a);
+  const b=run({ms:0,kb:0,top:'',start:1000,now:31000}); assert(/DB읽기\s+읽는 중 30초째/.test(b),b);
+  const c=run({ms:0,kb:0,top:'',start:0,now:5}); assert(/DB읽기\s+아직/.test(c),c);
 });
 clearTimeout(ALL_GUARD);
 console.log(results.join('\n'));

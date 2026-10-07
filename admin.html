@@ -142,7 +142,7 @@ pre.rules{background:var(--bg);border:1px solid var(--line);border-radius:10px;p
     appId: "1:1024066323251:web:23d557527866205f01f446"
   };
   const app = initializeApp(firebaseConfig);
-  const JK_FORCE_FIRESTORE_LONG_POLLING=/iPhone|iPad|iPod|NAVER|KAKAOTALK|Instagram|FBAN|FBAV|; wv\)/i.test(navigator.userAgent||"");
+  const JK_FORCE_FIRESTORE_LONG_POLLING=/iPhone|iPad|iPod|NAVER|KAKAOTALK|Instagram|FBAN|FBAV|; wv\)/i.test(navigator.userAgent||"")||(/Macintosh/i.test(navigator.userAgent||"")&&(navigator.maxTouchPoints||0)>1);   // 아이폰·아이패드가 '데스크탑 웹사이트 요청'으로 맥처럼 보여도 터치면 iOS(2026-10-07 진단: Macintosh UA → auto-detect → DB 원장 멈춤)
   window.fb = { auth:getAuth(app), db:initializeFirestore(app,JK_FORCE_FIRESTORE_LONG_POLLING?{experimentalForceLongPolling:true}:{experimentalAutoDetectLongPolling:true}), provider:new GoogleAuthProvider(),
                 signInWithPopup, onAuthStateChanged, signOut, doc, getDoc, setDoc, collection, getDocs, runTransaction };
   window.dispatchEvent(new Event('fb-ready'));
@@ -173,7 +173,7 @@ pre.rules{background:var(--bg);border:1px solid var(--line);border-radius:10px;p
 
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Admin Console</div><h1>JK <span class="v">투자</span> 관리자 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="adVer">v0.12.12</span></h1></div>
+    <div><div class="kicker">Admin Console</div><h1>JK <span class="v">투자</span> 관리자 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="adVer">v0.12.13</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
