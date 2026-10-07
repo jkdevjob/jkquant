@@ -8288,11 +8288,11 @@ console.log('\n[117] 자산플랜 v1.28.0 — 기간마다 완전히 다른 매�
   ok('장부 복구 보호모드 없이 현재 Firebase 원장을 직접 사용',
      /apply\(cloneObj\(v\)\)/.test(extractFn(pl,'async function cloudLoad(user)'))
      && !/planManualBackup|planManualBackupMemory|planRecovery|복구 보호모드/.test(pl));
-  ok('자산플랜도 iOS 강제 long polling + 12초 재연결 경로 사용',
+  ok('자산플랜도 iOS 강제 long polling · 원장이 12초 넘으면 안내하며 계속 기다림(실패로 돌리지 않음) · 진짜 오류만 재연결 경로',
      /JK_FORCE_FIRESTORE_LONG_POLLING/.test(pl)
      && /experimentalForceLongPolling:true/.test(pl)
      && /experimentalAutoDetectLongPolling:true/.test(pl)
-     && /function planWithTimeout\(p,ms,label\)/.test(pl)
+     && /const PLAN_DB_SLOW_MS=12000;/.test(pl) && !/planWithTimeout/.test(pl)
      && /Firebase DB 다시 연결/.test(pl)
      && /window\.planRetryDbImpl=async/.test(pl));
   ok('자산플랜 주문에 종목별 목표금액·오늘 매수금액·수수료포함 필요현금 표시',

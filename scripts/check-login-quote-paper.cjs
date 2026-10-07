@@ -461,6 +461,99 @@ await t('P10 폰 폭: 첫 칸 윗줄(줄바꿈 없음)은 설정 2개까지 — 
   const opts=['20분할','익절 자동','LOC 3줄','단리'], top=' · '+opts.slice(0,+m[1]).join(' · ');
   assert.equal('SOXL'+top,'SOXL · 20분할 · 익절 자동');
 });
+/* ── 자산플랜 열기 (2026-10-07 사용자 화면: "자산플랜만 로그인 페이지가 다르고 오류가 나고 시세도 느리다") ── */
+await t('P11 자산플랜 8초: 로그인됐고 원장을 읽는 중이면 로그인 상자 대신 "원장 불러오는 중" · 로그인 안 된 채 무응답이면 예전처럼 로그인 상자',async()=>{
+  const tm=(plan.match(/setTimeout\(function\(\)\{ var h=document\.documentElement;[\s\S]*?\}, 8000\);/)||[''])[0]; assert(tm,'plan 8s timer');
+  const run=win=>{ const cls=new Set(['had-user']), e={textContent:''}, notes=[]; let f=null;
+    new Function('document','window','setTimeout','planBootNote',tm)({documentElement:{classList:{contains:c=>cls.has(c),remove:c=>cls.delete(c)}},getElementById:()=>e},win,fn=>{f=fn;},(x,n)=>notes.push(x)); f();
+    return {had:cls.has('had-user'),msg:e.textContent,notes}; };
+  const a=run({__planAuthResolved:true,__planAuthUser:true});
+  assert.equal(a.had,true,'로그인된 사람에게 로그인 상자를 띄우지 않는다'); assert.equal(a.msg,''); assert.deepEqual(a.notes,['로그인됨 · Firebase DB 원장을 불러오는 중…']);
+  const b=run({__planAuthResolved:false}); assert.equal(b.had,false); assert(/늦어지고 있습니다/.test(b.msg),'무응답은 로그인 상자 + 안내');
+  const c=run({__planAuthResolved:true,__planAuthUser:false}); assert.equal(c.had,false); assert.equal(c.msg,'','로그아웃 판정이면 겁주는 문구 없이 로그인 상자');
+  assert(/window\.__planAuthResolved=true;[^\n]*\n\s*window\.__planAuthUser=!!user;/.test(plan),'onAuthStateChanged 맨 앞에서 세운다');
+});
+await t('P12 대기 문구(planBootNote) — 로그인 상자가 아니라 "확인 중" 화면(had-user)에 적는다 · 이미 열렸으면 손대지 않는다',async()=>{
+  const src=fnOf(plan,'function planBootNote(text, note){');
+  const mk=open=>{ const cls=new Set(open?['authed']:[]), E={bwText:{textContent:'로그인 확인 중…'},bwNote:{textContent:''}};
+    const f=new Function('document',src+'\nreturn planBootNote;')({documentElement:{classList:{contains:c=>cls.has(c),add:c=>cls.add(c)}},getElementById:id=>E[id]||null});
+    return {f,cls,E}; };
+  const a=mk(false); a.f('로그인됨 · Firebase DB 원장을 불러오는 중…','늦어집니다');
+  assert.deepEqual([a.cls.has('had-user'),a.E.bwText.textContent,a.E.bwNote.textContent],[true,'로그인됨 · Firebase DB 원장을 불러오는 중…','늦어집니다']);
+  a.f(null); assert.equal(a.E.bwText.textContent,'로그인됨 · Firebase DB 원장을 불러오는 중…','글자 없이 부르면 그대로'); assert.equal(a.E.bwNote.textContent,'');
+  const b=mk(true); b.f('x'); assert.deepEqual([b.cls.has('had-user'),b.E.bwText.textContent],[false,'로그인 확인 중…'],'열린 뒤엔 그대로');
+  assert(/<span id="bwText">로그인 확인 중…<\/span><div class="bw-note" id="bwNote"><\/div>/.test(plan),'화면 칸');
+});
+await t('P13 원장이 12초 넘게 걸려도 실패로 돌리지 않는다 — "늦어지고 있습니다"를 적고 계속 기다렸다 열고, 진짜 오류만 다시 연결로 · 시세는 원장 읽기 전에 미리 받기 시작',async()=>{
+  const src=fnOf(plan,'async function finishPlanOpen(user){');
+  assert(!/planWithTimeout\(cloudLoad/.test(src),'12초에 끊던 옛 방식 없음');
+  const mk=loadMs=>{ const log=[]; let rej=null;
+    const f=new Function('startPlanQuotePrefetch','planBootNote','cloudLoad','PLAN_DB_SLOW_MS','planGate','refreshLive','requestedAssetSessionId','renderAssetSessions','loadActiveAssetSessionView','setTimeout','clearTimeout','planBootHydrating',src+'\nreturn finishPlanOpen;')(
+      ()=>log.push('prefetch'),(x,n)=>log.push('note:'+(n||x)),()=>{ log.push('cloudLoad'); return new Promise((res,rj)=>{ rej=rj; setTimeout(()=>{ log.push('loaded'); res(); },loadMs); }); },
+      20,on=>log.push('gate:'+on),async()=>log.push('refreshLive'),null,()=>log.push('sessions'),async()=>log.push('view'),setTimeout,clearTimeout,true);
+    return {f,log,fail:e=>rej(e)}; };
+  const A=mk(60); await A.f({uid:'u'});
+  assert.deepEqual(A.log.filter(x=>!/^note:/.test(x)),['prefetch','cloudLoad','loaded','gate:true','refreshLive','sessions','view'],'미리 받기 → 원장 → 열기 → 시세');
+  assert(A.log.some(x=>/^note:DB 응답이 늦어지고 있습니다/.test(x)),'늦으면 안내(로그인 상자 아님)');
+  assert(A.log.indexOf('gate:true')>A.log.findIndex(x=>/늦어지고/.test(x)),'안내 뒤에도 끝까지 기다려 연다');
+  const B=mk(5); await B.f({uid:'u'}); assert(!B.log.some(x=>/늦어지고/.test(x)),'빨리 오면 안내 없음');
+  const C=mk(1e6); const p=C.f({uid:'u'}); C.fail(new Error('permission-denied'));
+  await assert.rejects(p,/permission-denied/,'진짜 오류는 그대로 올려 다시 연결 화면으로'); assert(!C.log.includes('gate:true'));
+  assert(/catch\(e\)\{console\.error\('plan cloud open',e\);showPlanDbRetry\(e\);\}/.test(plan),'오류만 다시 연결');
+});
+await t('P14 같은 원장을 두 번 읽지 않는다 — 방금(20초 안) 쓰기 없이 읽은 문서는 첫 loadOperatingState 가 한 번 그대로 쓰고, 그 뒤·쓰기 뒤·20초 뒤엔 다시 읽는다',async()=>{
+  const decl=(plan.match(/let planSnapCache=null;[\s\S]*?\nfunction takePlanSnap\(uid\)\{[\s\S]*?\n\}/)||[''])[0]; assert(decl,'캐시 선언');
+  const cl=fnOf(plan,'async function cloudLoad(user){'), lo=fnOf(plan,'async function loadOperatingState(user){');
+  const mk=data=>{ let now=1e12, reads=0, saves=0;
+    const C={console:{error(){}},Date:{now:()=>now},getDoc:async()=>{ reads++; return {exists:()=>true,data:()=>JSON.parse(JSON.stringify(data))}; },doc:(db,c,id)=>c+'/'+id,db:{},
+      restoreMorningPlanFromLegacy:async()=>false,PLAN_LEGACY_RESTORE_MARK:'mark',planHistorySig:()=>'',planOpHistorySig:()=>'',cloneObj:x=>JSON.parse(JSON.stringify(x)),
+      apply(){},renderSessionSelectors(){},renderLedger(){},renderAlphaLedger(){},render(){},renderAssetSessions(){},$:()=>null,defaults:()=>({}),
+      cloudSave:async()=>{ saves++; },saveOperatingState:async()=>{ saves++; },ensureLiveBoxes(){},migrateLiveInfOperatingDefaults:()=>false,opLocalState:()=>null,
+      planStateConflict:false,liveState:null,planStateDbBase:null,liveStateSource:'',planStateCloudRev:0,planStateHistorySig:'',planStateCloudHydrated:false,planCloudHydrated:false,planCloudRev:0,planCloudHistorySig:'',planDbState:null};
+    vm.createContext(C); vm.runInContext(decl+'\n'+cl+'\n'+lo+'\nthis.cloudLoad=cloudLoad;this.loadOperatingState=loadOperatingState;',C);
+    return {C,reads:()=>reads,saves:()=>saves,later:ms=>{ now+=ms; }}; };
+  const D={fiveYearPlanV2:{alphaLedger:{}},stateV2:{inf:{sessions:[]},vr:{sessions:[]},mark:7},stateV2Rev:3};
+  const A=mk(D), U={uid:'u1'};
+  await A.C.cloudLoad(U); assert.equal(A.reads(),1);
+  await A.C.loadOperatingState(U); assert.equal(A.reads(),1,'열 때 두 번째 읽기 없음');
+  assert.equal(A.C.liveState.mark,7); assert.equal(A.C.planStateCloudRev,3); assert.equal(A.C.liveStateSource,'Firebase 운영 원장');
+  await A.C.loadOperatingState(U); assert.equal(A.reads(),2,'다음 새로고침은 DB 를 다시 읽는다');
+  const B=mk(D); await B.C.cloudLoad(U); B.later(20001); await B.C.loadOperatingState(U); assert.equal(B.reads(),2,'20초 지나면 다시 읽는다');
+  const W=mk({fiveYearPlan:{alphaLedger:{}},stateV2:{inf:{},vr:{}},stateV2Rev:1}); await W.C.cloudLoad(U); assert.equal(W.saves(),1,'옛 칸 → 새 칸 저장');
+  await W.C.loadOperatingState(U); assert.equal(W.reads(),2,'쓰기를 했으면 바뀐 문서를 다시 읽는다');
+  const O=mk(D); await O.C.cloudLoad(U); await O.C.loadOperatingState({uid:'other'}); assert.equal(O.reads(),2,'다른 계정이면 다시 읽는다');
+});
+await t('P15 자산플랜 시세 — 원장 읽기와 같이 받기 시작 · TECL·TQQQ·SGOV 가 오면 "오늘 주문"을 먼저 그린다(SOXL·QQQ·QLD 를 안 기다린다)',async()=>{
+  const rl=fnOf(plan,'async function refreshLive(){'), cutAt='const [qs,qv,qt,qqq,qld,sgov]=await Promise.all([pS,pV,pT,pQ,pL,pG]);', cut=rl.indexOf(cutAt); assert(cut>0,'시세 묶음');
+  const head=rl.slice(0,cut)+cutAt+'\n    return {qs,qv,qt,qqq,qld,sgov};\n  }finally{liveBusy=false;}\n}';
+  const log=[], gate={}, Q={}; for(const s of ['SOXL','TECL','TQQQ','QQQ','QLD','SGOV']) Q[s]=new Promise(r=>gate[s]=()=>r({symbol:s}));
+  let opDone; const op=new Promise(r=>opDone=r);
+  const C={$:()=>({disabled:false,textContent:''}),liveBusy:false,liveQuotes:{},fetchPlanQuote:s=>{ log.push('q:'+s); return Q[s]; },
+    loadOperatingState:()=>{ log.push('op'); return op; },auth:{currentUser:{uid:'u'}},renderSessionSelectors(){},linkedOpSession:()=>null,liveState:null,planLinks:{},
+    renderAlphaPlan:(a,b,c)=>log.push('alpha:'+[a,b,c].map(x=>x.symbol).join(',')),renderAlphaLedger:()=>log.push('ledger')};
+  vm.createContext(C); vm.runInContext(head+'\nthis.run=refreshLive;',C);
+  const p=C.run();
+  assert.deepEqual(log.slice(0,7),['q:SOXL','q:TECL','q:TQQQ','q:QQQ','q:QLD','q:SGOV','op'],'시세 6개를 먼저 부르고 원장을 읽는다');
+  gate.TECL(); gate.TQQQ(); gate.SGOV(); await tick(5);
+  assert(log.includes('alpha:TECL,TQQQ,SGOV') && log.includes('ledger'),'세 종목만 와도 오늘 주문을 그린다: '+log.join(' '));
+  gate.SOXL(); gate.QQQ(); gate.QLD(); opDone(); const r=await p; assert.equal(r.qs.symbol,'SOXL'); assert.equal(C.liveBusy,false);
+});
+await t('P16 자산플랜 시세 미리 받기 — 6종목을 한 번 받아 두고 첫 새로고침이 그대로 쓴다 · 그다음은 새로 받는다 · 미리 받기가 실패했으면 그 자리에서 다시 받는다',async()=>{
+  const decl=(plan.match(/const PLAN_QUOTE_SYMS=\[[^\]]*\];\nlet planQuotePrefetch=null;\nfunction startPlanQuotePrefetch\(\)\{[\s\S]*?\n\}/)||[''])[0]; assert(decl,'미리 받기 선언');
+  const fq=fnOf(plan,'async function fetchPlanQuote(symbol){');
+  const calls=[], failLeft={};
+  const C={fetch:async u=>{ const s=/symbol=(\w+)/.exec(u)[1]; calls.push(s); if(failLeft[s]>0){ failLeft[s]--; throw new Error('끊김'); } return {ok:true,json:async()=>({series:[1]})}; },
+    AbortController,setTimeout,clearTimeout,planQuoteOf:(s,j)=>({symbol:s,n:calls.length}),liveQuotes:{}};
+  vm.createContext(C); vm.runInContext(decl+'\n'+fq+'\nthis.start=startPlanQuotePrefetch;this.get=fetchPlanQuote;this.box=()=>planQuotePrefetch;',C);
+  C.start(); C.start(); assert.deepEqual(calls,['SOXL','TECL','TQQQ','QQQ','QLD','SGOV'],'한 번만 · 6종목');
+  await tick(5); C.liveQuotes={};                                      // refreshLive 가 처음에 비운다
+  const a=await C.get('TECL'); assert.equal(calls.length,6,'첫 새로고침은 미리 받은 걸 쓴다'); assert.equal(a.symbol,'TECL'); assert.equal(C.liveQuotes.TECL,a);
+  C.liveQuotes={}; await C.get('TECL'); assert.equal(calls.length,7,'그다음 새로고침은 새로 받는다');
+  const D={fetch:C.fetch,AbortController,setTimeout,clearTimeout,planQuoteOf:C.planQuoteOf,liveQuotes:{}}; const calls0=calls.length; failLeft.SGOV=2;   // 미리 받기의 두 번 시도가 다 끊긴다
+  vm.createContext(D); vm.runInContext(decl+'\n'+fq+'\nthis.start=startPlanQuotePrefetch;this.get=fetchPlanQuote;',D);
+  D.start(); await tick(5); D.liveQuotes={}; const s=await D.get('SGOV');
+  assert.equal(s.symbol,'SGOV','실패한 미리 받기는 그 자리에서 다시 받아 채운다'); assert.equal(calls.length,calls0+6+1+1,'6종목 + SGOV 두 번째 시도 + 다시 받기');
+});
 clearTimeout(ALL_GUARD);
 console.log(results.join('\n'));
 console.log(failed?`\n${failed} FAIL`:'\nALL PASS');
