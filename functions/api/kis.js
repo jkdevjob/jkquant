@@ -280,6 +280,22 @@ async function usBuyable(env, code, price, excd) {
     maxQty: +o.max_ord_psbl_qty || +o.ovrs_max_ord_psbl_qty || 0, exrt: +o.exrt || 0 };
 }
 
+/* 국내 매수가능조회(모의 VTTC8908R · 실전 TTTC8908R) — 시장가(01)로 이 종목을 몇 주까지 살 수 있는지.
+   시장가 매수는 상한가 기준으로 증거금을 잡으므로 KIS 가 계산한 미수없는매수수량(nrcvb_buy_qty)을 그대로 쓴다. 읽기만 한다. */
+async function krBuyable(env, code) {
+  const a = acct(env); if (!a) return { error: "KIS_ACCOUNT 형식 오류(예: 12345678-01)" };
+  const token = await getToken(env);
+  const qs = new URLSearchParams({ CANO: a.cano, ACNT_PRDT_CD: a.prod, PDNO: code, ORD_UNPR: "0", ORD_DVSN: "01",
+    CMA_EVLU_AMT_ICLD_YN: "N", OVRS_ICLD_YN: "N" });
+  const j = await readJson(base(env) + "/uapi/domestic-stock/v1/trading/inquire-psbl-order?" + qs, {
+    headers: { authorization: "Bearer " + token, appkey: env.KIS_APPKEY, appsecret: env.KIS_APPSECRET,
+      tr_id: isReal(env) ? "TTTC8908R" : "VTTC8908R", custtype: "P" },
+  });
+  if (String(j.rt_cd) !== "0") return { error: RATE_LIMITED(j) ? "초당 요청 제한 — 잠시 후 다시" : (j.msg1 || "매수가능조회 실패") };
+  const o = j.output || {};
+  return { code, cash: +o.ord_psbl_cash || 0, qty: +o.nrcvb_buy_qty || 0, amt: +o.nrcvb_buy_amt || 0, maxQty: +o.max_buy_qty || 0 };
+}
+
 function parseEmails(raw) {
   return String(raw || "").split(",").map(s => s.trim().toLowerCase()).filter(Boolean);
 }
@@ -636,6 +652,16 @@ export async function onRequestGet({ request, env }) {
         expectedChg: pick("antc_cntg_vrss"), expectedVolume: pick("antc_vol", "antc_cnqn"),
         basePrice: pick("stck_sdpr"), price: pick("stck_prpr"), open: pick("stck_oprc"),
         phase: String(o2.antc_mkop_cls_code || o1.antc_mkop_cls_code || ""), time: String(o1.aspr_acpt_hour || "") });
+    }
+    if (op === "buyable") {
+      // 단타(클로드) ①② 매수 직전 수량 맞추기 — 자동 주문 키 또는 소유자 · 모의투자만 · 읽기만
+      const g = await verifyOwner(request, env);
+      if (!g.ok) return json({ error: g.msg }, 401);
+      if (isReal(env)) return json({ error: "buyable 은 KIS 모의투자(vts)만 허용합니다." }, 400);
+      const code = String(url.searchParams.get("code") || "");
+      if (!/^\d{6}$/.test(code)) return json({ error: "국내 종목코드 6자리" }, 400);
+      const r = await krBuyable(env, code);
+      return json(r, r.error ? 502 : 200);
     }
     if (op === "balance") {
       const g = await verifyOwner(request, env);

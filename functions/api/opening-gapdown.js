@@ -93,6 +93,37 @@ async function vtsOrder(origin,env,date,side,x,qty,meta={}){
   }
   return rec;
 }
+// 매수 직전 계좌 현금 확인 — 같은 모의계좌를 다른 전략도 쓰므로(2026-10-07 ② 주문 '주문가능금액 부족' 거절) 살 수 있는 만큼만 산다.
+// 조회가 실패하거나 늦으면(2.5초) 계획 수량 그대로 낸다(주문을 막지 않는다). 주문 재시도는 여전히 없다.
+async function buyable(origin,env,code,timeoutMs=2500){
+  const ac=new AbortController(),t=setTimeout(()=>ac.abort(),timeoutMs);
+  try{
+    const r=await fetch(origin+"/api/kis?op=buyable&env=vts&market=kr&code="+encodeURIComponent(code),{headers:{"x-autotrade-key":env.AUTOTRADE_KEY,"Accept":"application/json"},signal:ac.signal});
+    const j=await r.json().catch(()=>({}));
+    return r.ok&&!j.error?j:{error:j.error||("HTTP "+r.status)};
+  }catch(e){return {error:String(e.message||e)};}
+  finally{clearTimeout(t);}
+}
+export function sizeToBuyable(planned,b){
+  planned=Math.max(0,Math.floor(+planned||0));
+  if(!b||b.error||!Number.isFinite(+b.qty))return {qty:planned,planned,capped:false,note:"매수가능 조회 실패 — 계획 수량 그대로("+((b&&b.error)||"응답 없음")+")"};
+  const q=Math.max(0,Math.floor(+b.qty));
+  return q<planned?{qty:q,planned,capped:true,cash:+b.cash||0,note:"계좌 현금에 맞춰 "+planned+"→"+q+"주"}:{qty:planned,planned,capped:false,cash:+b.cash||0,note:""};
+}
+// 계획 수량 → 현금 확인 → 0 주면 주문하지 않고 기록만(사유 남김) · 아니면 그 수량으로 주문
+export async function sizedBuy(origin,env,date,x,planned,meta={}){
+  const s=sizeToBuyable(planned,await buyable(origin,env,x.code));
+  if(!(s.qty>0)){
+    return {signalId:meta.id||signalId(date,x.code,"buy"),strategy:meta.strategy||"opening_gapdown",strategyVersion:meta.version||GAPDOWN_VERSION,date,side:"buy",code:x.code,name:x.name||x.code,qty:0,
+      sizing:s,vts:{ok:false,env:"vts",priceType:"market",orderNo:"",msg:"매수 생략 — 매수가능 0주(계좌 현금 부족) · 계획 "+s.planned+"주"}};
+  }
+  await sleep(600);                                                    // 조회 직후 주문이 초당 한도에 몰리지 않게
+  if(meta.deadline&&kstNow().hms>=meta.deadline)                       // 조회하는 사이 마감이 지났으면 내지 않는다(① 08:59:40)
+    return {signalId:meta.id||signalId(date,x.code,"buy"),code:x.code,side:"buy",qty:0,sizing:s,vts:{ok:false,env:"vts",msg:"08:59:40 이후 — 동시호가 마감 전 접수 보장이 안 돼 주문 생략"}};
+  const rec=await vtsOrder(origin,env,date,"buy",x,s.qty,meta);
+  rec.sizing=s;
+  return rec;
+}
 async function quote(origin,code){
   const r=await fetch(origin+"/api/kis?op=expected&env=vts&code="+encodeURIComponent(code),{headers:{"Accept":"application/json"}});
   const j=await r.json().catch(()=>({}));
@@ -199,7 +230,7 @@ async function preopen(origin,env,date,rows){
       out.orders.push({signalId:signalId(date,x.code,"buy"),code:x.code,side:"buy",qty:0,vts:{ok:false,env:"vts",msg:"08:59:40 이후 — 동시호가 마감 전 접수 보장이 안 돼 주문 생략"}});
       continue;
     }
-    out.orders.push(await vtsOrder(origin,env,date,"buy",x,Math.floor(amount/Math.max(1,+x.expectedPrice||0))));
+    out.orders.push(await sizedBuy(origin,env,date,x,Math.floor(amount/Math.max(1,+x.expectedPrice||0)),{deadline:ORDER_DEADLINE}));
   }
   return out;
 }
@@ -273,7 +304,7 @@ async function etfBuy(origin,env,date){
   if(String(env.SCALPING_VTS_AUTO||"1")==="0"){out.ordersSkipped="SCALPING_VTS_AUTO=0";return out;}
   if(!env.AUTOTRADE_KEY){out.ordersSkipped="AUTOTRADE_KEY 없음";return out;}
   const qty=Math.floor(budget(env)*ETF_RULE.budgetMultiple/Math.max(1,+q.expectedPrice||0));
-  out.order=await vtsOrder(origin,env,date,"buy",{code:ETF_RULE.code,name:ETF_RULE.name},qty,
+  out.order=await sizedBuy(origin,env,date,{code:ETF_RULE.code,name:ETF_RULE.name},qty,
     {id:etfSignalId(date,"buy"),strategy:"etf_dip_overnight",version:R.rule.version});
   return out;
 }

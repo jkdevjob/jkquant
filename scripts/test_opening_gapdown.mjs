@@ -461,6 +461,31 @@ t("worker 웹 알림: 5분 감시가 새 매수·매도만 한 번 보냄 · 사
   assert.equal(W.nextPushAt(Date.UTC(2026, 9, 7, 0, 3, 10)), Date.UTC(2026, 9, 7, 0, 5));
   assert.equal(W.nextPushAt(Date.UTC(2026, 9, 7, 0, 5)), Date.UTC(2026, 9, 7, 0, 10));
 });
+t("①② 매수 직전 현금 확인: 살 수 있는 만큼만 · 0주면 주문 안 함(사유 기록) · 조회 실패면 계획대로 · 재시도 없음", async () => {
+  assert.deepEqual(F.sizeToBuyable(738, { qty: 210, cash: 2000000 }), { qty: 210, planned: 738, capped: true, cash: 2000000, note: "계좌 현금에 맞춰 738→210주" });
+  assert.equal(F.sizeToBuyable(10, { qty: 50, cash: 9e6 }).qty, 10);
+  assert.equal(F.sizeToBuyable(10, { error: "초당 요청 제한" }).qty, 10);                         // 조회 실패 → 계획대로(주문을 막지 않음)
+  assert.equal(F.sizeToBuyable(10, { qty: 0, cash: 1000 }).qty, 0);
+  const calls = [], old = globalThis.fetch;
+  let can = 0;
+  globalThis.fetch = async (u, init = {}) => {
+    u = String(u); calls.push(u);
+    assert.equal(init.headers["x-autotrade-key"], "ak");
+    if (u.includes("op=buyable")) { assert.ok(u.includes("env=vts")); return new Response(JSON.stringify({ code: "233740", cash: 1, qty: can })); }
+    if (u.includes("op=order")) { const b = JSON.parse(init.body); return new Response(JSON.stringify({ ok: true, orderNo: "1", qty: b.qty })); }
+    throw new Error("unexpected " + u);
+  };
+  try {
+    const x = { code: "233740", name: "KODEX" };
+    const r0 = await F.sizedBuy("https://o", { AUTOTRADE_KEY: "ak" }, "2026-10-07", x, 738, { id: "t0" });
+    assert.equal(r0.qty, 0); assert.equal(r0.vts.ok, false); assert.ok(r0.vts.msg.includes("매수가능 0주"));
+    assert.ok(!calls.some(u => u.includes("op=order")));                                         // 0주면 주문을 내지 않는다
+    can = 210; calls.length = 0;
+    const r1 = await F.sizedBuy("https://o", { AUTOTRADE_KEY: "ak" }, "2026-10-07", x, 738, { id: "t1" });
+    assert.equal(r1.qty, 210); assert.equal(r1.vts.ok, true); assert.equal(r1.sizing.capped, true);
+    assert.equal(calls.filter(u => u.includes("op=order")).length, 1);
+  } finally { globalThis.fetch = old; }
+});
 t("soxl live: planned open buy/sell executes only in the session after the decision", () => {
   const q = (date, open, c, prev) => ({ price: c, ohlc: [{ date: "2026-10-01", open: prev, close: prev }, { date, open, close: c }], intraday: { regular: { c }, date } });
   const nxB = { basedOn: "2026-10-01", action: "buy", holding: false, heldDays: 0, close: 100, ma: 90, rsi2: 8 };
