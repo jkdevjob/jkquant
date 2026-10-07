@@ -35,25 +35,55 @@ function cleanTrade(t){
   if(!t||!t.apt||!area||!price||!t.date)return null;
   return {...t,area,price,city:cityOfLawd(String(t.lawd||t.sggCd||"")),areaBand:areaBand(area),ym:ymFromDate(t.date)}
 }
-async function jfetch(url){
-  const r=await fetch(url,{cache:"no-store"}),j=await r.json();
-  if(!r.ok||!j.ok)throw new Error(j.error||("HTTP "+r.status));return j
+async function jfetch(url,timeoutMs=45000){
+  const ac=new AbortController(),timer=setTimeout(()=>ac.abort("timeout"),timeoutMs);
+  try{
+    const r=await fetch(url,{cache:"no-store",signal:ac.signal}),j=await r.json();
+    if(!r.ok||!j.ok)throw new Error(j.error||("HTTP "+r.status));return j
+  }catch(e){
+    if(e&&e.name==="AbortError")throw new Error("수집 요청 45초 초과");
+    throw e
+  }finally{clearTimeout(timer)}
+}
+async function mapLimitLocal(items,limit,fn){
+  const out=new Array(items.length);let next=0;
+  async function worker(){
+    for(;;){const i=next++;if(i>=items.length)return;out[i]=await fn(items[i],i)}
+  }
+  await Promise.all(Array.from({length:Math.min(limit,items.length)},worker));
+  return out
 }
 async function status(){return jfetch(API+"?kind=status")}
 async function loadHistory(startYear,endYear,onProgress){
   startYear=Math.max(2006,Number(startYear)||2016);
   endYear=Math.min(new Date().getFullYear(),Number(endYear)||new Date().getFullYear());
-  const groups=[["30110","30140","30170"],["30200","30230","36110"]];
-  const total=(endYear-startYear+1)*groups.length;let done=0,trades=[];
-  for(let y=startYear;y<=endYear;y++){
-    for(const lawds of groups){
-      const q=new URLSearchParams({kind:"year",year:String(y),lawds:lawds.join(",")});
-      const j=await jfetch(API+"?"+q.toString());
-      trades.push(...(j.trades||[]).map(cleanTrade).filter(Boolean));
-      done++;if(onProgress)onProgress({done,total,year:y,lawds,count:trades.length});
+  const lawds=[...LAWDS.daejeon,...LAWDS.sejong],tasks=[];
+  for(let y=startYear;y<=endYear;y++)for(const lawd of lawds)tasks.push({year:y,lawd});
+  const total=tasks.length;let done=0,trades=[],warnings=[];
+  await mapLimitLocal(tasks,2,async task=>{
+    let last=null,j=null;
+    for(let attempt=1;attempt<=2;attempt++){
+      try{
+        const q=new URLSearchParams({kind:"year",year:String(task.year),lawds:task.lawd});
+        j=await jfetch(API+"?"+q.toString(),45000);break;
+      }catch(e){last=e}
     }
-  }
+    if(j){
+      const rows=(j.trades||[]).map(cleanTrade).filter(Boolean);
+      trades.push(...rows);
+      if(j.partial&&Array.isArray(j.failures))warnings.push(...j.failures.map(x=>({year:task.year,lawd:task.lawd,...x})));
+    }else{
+      warnings.push({year:task.year,lawd:task.lawd,error:String(last&&last.message||last||"수집 실패")});
+    }
+    done++;
+    if(onProgress)onProgress({
+      done,total,year:task.year,lawd:task.lawd,region:LAWD_NAME[task.lawd]||task.lawd,
+      count:trades.length,warnings:warnings.length
+    });
+  });
   trades.sort((a,b)=>a.date.localeCompare(b.date)||a.apt.localeCompare(b.apt));
+  if(!trades.length)throw new Error("실거래를 한 건도 수집하지 못했습니다.");
+  trades.collectionWarnings=warnings;
   return trades
 }
 function groupTrades(trades){
