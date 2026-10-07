@@ -6,6 +6,9 @@ const ROOT=path.resolve(__dirname,'..','..');
 const ENG=fs.readFileSync(path.join(ROOT,'realestate-claude-engine.js'),'utf8');
 const COL=fs.readFileSync(path.join(__dirname,'collect.py'),'utf8');
 const TCOL=fs.readFileSync(path.join(__dirname,'test_collect.py'),'utf8');
+const APT=fs.readFileSync(path.join(ROOT,'realestate-claude-apt.js'),'utf8');
+const CAPT=fs.readFileSync(path.join(__dirname,'collect_apt.py'),'utf8'),TCAPT=fs.readFileSync(path.join(__dirname,'test_collect_apt.py'),'utf8');
+const CPRE=fs.readFileSync(path.join(__dirname,'collect_presale.py'),'utf8'),TCPRE=fs.readFileSync(path.join(__dirname,'test_collect_presale.py'),'utf8');
 const tmp=fs.mkdtempSync(path.join(os.tmpdir(),'rec-mut-'));
 const ENGINE_MUTS=[
   ['결정에 한 달 뒤 자료(룩어헤드)','    const d=k-o.lag,ch=choose(d,plan.pos)','    const d=k-o.lag+1,ch=choose(d,plan.pos)'],
@@ -43,6 +46,39 @@ const COL_MUTS=[
   ['ECOS 항목 이름 검사 없음','            if expect is not None and r.get("ITEM_NAME1") != expect:','            if False:'],
   ['이어 받기 시작 달 건너뜀','    s = ym_add(max(out), 1)\n    while s <= end:\n        e = min(ym_add(s, 4), end)\n        rone_call(stat, where, s, e, out, expect)','    s = ym_add(max(out), 2)\n    while s <= end:\n        e = min(ym_add(s, 4), end)\n        rone_call(stat, where, s, e, out, expect)']
 ];
+const APT_MUTS=[
+  ['후보 상승률에 이번 달 시세(룩어헤드)','function momOf(A,id,k,o){ const a=price(A,id,k-1),b=price(A,id,k-1-o.mom);','function momOf(A,id,k,o){ const a=price(A,id,k),b=price(A,id,k-o.mom);'],
+  ['매수 금리 필터 없음','if(best&&m.rateUp!=null&&m.rateUp<=0&&best.mom>=o.buyMin){','if(best&&best.mom>=o.buyMin){'],
+  ['매수 문턱(+3%) 무시','if(best&&m.rateUp!=null&&m.rateUp<=0&&best.mom>=o.buyMin){','if(best&&m.rateUp!=null&&m.rateUp<=0&&best.mom>0){'],
+  ['2년 보유 전 매도','    if(held>=o.minHold){ if(mc!=null&&mc<0)','    if(true){ if(mc!=null&&mc<0)'],
+  ['금리 급등 매도 없음',"if(m.rateUp!=null&&m.rateUp>=o.rateUpSell) why.push('rate'); }\n    const px","}\n    const px"],
+  ['취득세를 매수 총액에서 뺌','total:px+acq+broker,','total:px+broker,'],
+  ['보유세를 안 쌓음','      if(px!=null){ p.hold+=px*o.holdCostYr/12;','      if(px!=null){'],
+  ['그때 뉴스에 결정 달 사건 포함','e.k>=k-n&&e.k<=k-1&&regionHit(e,city)','e.k>=k-n&&e.k<=k&&regionHit(e,city)'],
+  ['다른 지역 뉴스도 붙임',"function regionHit(e,city){ return e.region==='전국'||e.region==='대전·세종'||e.region===city; }","function regionHit(e,city){ return true; }"],
+  ['작은 단지도 후보',"    if(o.minUnits&&(+u.units||0)<o.minUnits) continue;\n    const m=momOf","    const m=momOf"],
+  ['갈아타기 없음','  if(!st.pos){\n    const C=candidatesAt(A,k,o)','  if(!st.pos&&!out.closed){\n    const C=candidatesAt(A,k,o)'],
+  ['장부를 처음부터 다시 씀',"  const done=L.months.length?ymk(L.months[L.months.length-1].m):ymk(L.startedData);","  const done=ymk(L.startedData); L.months=[];"],
+  ['사건 기준 달을 사건 달로',"const a=price(A,u.id,e.k-1),b=price(A,u.id,e.k-1+h);","const a=price(A,u.id,e.k),b=price(A,u.id,e.k+h);"],
+  ['예금 이자소득세 무시',"return (d==null?0:d/100)*(1-o.depositTax)/12;","return (d==null?0:d/100)/12;"],
+  ['비과세 기준 12억 안 올림',"k<ymk('2021-12')?90000:120000;","90000;"],
+  ['장기보유특별공제 없음',"  if(held>=36) taxable*=1-Math.min(0.8,0.08*Math.floor(held/12));","  if(false) taxable*=1;"],
+  ['체결을 전달 시세로',"      const px=price(A,best.id,k),q=quote(A,best.id,k)","      const px=price(A,best.id,k-1),q=quote(A,best.id,k)"]
+];
+const CAPT_MUTS=[
+  ['84㎡ 대표 타입을 세대수 대신 첫 타입',"    t84.sort(key=lambda t: (-(t.get(\"세대수\") or 0), t.get(\"면적일련번호\") or 0))","    pass"],
+  ['시세 같은 달 두 번 검사 없음','        if m in rows:\n            raise RuntimeError("시세 같은 달 두 번: %s" % m)','        if False:\n            raise RuntimeError("x")'],
+  ['단지 이름 검사 없음','    if norm(m.get("단지명")) != norm(c["name"]):','    if False:'],
+  ['모든 오류를 자료 없음으로',"        if soft and head.get(\"resultCode\") == \"10500\":","        if True:"],
+  ['대단지 문턱 무시','    big = [c for c in allc if c["kind"] in ("아파트", "주상복합") and (c.get("units") or 0) >= MIN_UNITS]','    big = [c for c in allc if c["kind"] in ("아파트", "주상복합")]'],
+  ['짝수 건 중앙값을 위쪽 값으로','        med = v[n // 2] if n % 2 else (v[n // 2 - 1] + v[n // 2]) / 2','        med = v[n // 2]']
+];
+const CPRE_MUTS=[
+  ['청약홈 목록 지역 검사 없음','        if c[0] != area:','        if False:'],
+  ['미달을 첫 순위 기준으로','        last[ty] = c[5]','        last.setdefault(ty, c[5])'],
+  ['공공분양(결과 없음)을 0:1 로','    if all("접수중" in c[6] for c in rows):','    if False:'],
+  ['다른 구 단지도 위치로','        if c.get("gu") != gu:','        if False:']
+];
 let killed=0,total=0,bad=[];
 for(const [name,a,b] of ENGINE_MUTS){
   total++;
@@ -57,6 +93,25 @@ for(const [name,a,b] of COL_MUTS){
   const d=fs.mkdtempSync(path.join(tmp,'col-')); fs.writeFileSync(path.join(d,'collect.py'),COL.replace(a,b)); fs.writeFileSync(path.join(d,'test_collect.py'),TCOL);
   const r=cp.spawnSync('python3',['-I',path.join(d,'test_collect.py')],{encoding:'utf8'});
   if(r.status!==0){ killed++; console.log('  ✓ 잡힘: '+name); } else { bad.push(name); console.log('  ✗ 살아남음: '+name); }
+}
+for(const [name,a,b] of APT_MUTS){
+  total++;
+  const aa=a.replace(/\\n/g,'\n'),bb=b.replace(/\\n/g,'\n');
+  if(APT.split(aa).length!==2){ bad.push(name+' (원문 못 찾음)'); console.log('  ✗ 원문 못 찾음: '+name); continue; }
+  const f=path.join(tmp,'apt.js'); fs.writeFileSync(f,APT.replace(aa,bb).replace("require('./realestate-claude-engine.js')","require("+JSON.stringify(path.join(ROOT,'realestate-claude-engine.js'))+")"));
+  const r=cp.spawnSync(process.execPath,[path.join(ROOT,'scripts','test_realestate_claude_apt.cjs')],{encoding:'utf8',env:Object.assign({},process.env,{REC_APT:f})});
+  if(r.status!==0){ killed++; console.log('  ✓ 잡힘: '+name); } else { bad.push(name); console.log('  ✗ 살아남음: '+name); }
+}
+for(const [muts,src,test,file,tfile] of [[CAPT_MUTS,CAPT,TCAPT,'collect_apt.py','test_collect_apt.py'],[CPRE_MUTS,CPRE,TCPRE,'collect_presale.py','test_collect_presale.py']]){
+  for(const [name,a,b] of muts){
+    total++;
+    const aa=a.replace(/\\n/g,'\n'),bb=b.replace(/\\n/g,'\n');
+    if(src.split(aa).length!==2){ bad.push(name+' (원문 못 찾음)'); console.log('  ✗ 원문 못 찾음: '+name); continue; }
+    const d=fs.mkdtempSync(path.join(tmp,'c-')); fs.writeFileSync(path.join(d,file),src.replace(aa,bb)); fs.writeFileSync(path.join(d,tfile),test);
+    fs.copyFileSync(path.join(__dirname,'collect.py'),path.join(d,'collect.py'));
+    const r=cp.spawnSync('python3',['-I',path.join(d,tfile)],{encoding:'utf8'});
+    if(r.status!==0){ killed++; console.log('  ✓ 잡힘: '+name); } else { bad.push(name); console.log('  ✗ 살아남음: '+name); }
+  }
 }
 console.log(`\n변이 ${killed}/${total} 잡힘`+(bad.length?' — 살아남음: '+bad.join(', '):''));
 process.exit(bad.length?1:0);

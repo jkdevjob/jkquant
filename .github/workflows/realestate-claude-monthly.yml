@@ -1,6 +1,6 @@
 name: 부동산(클로드) 월간 자료·모의장부
 
-# 한국부동산원 월간 지수는 다음 달 중순(대략 15~20일)에 공표된다.
+# 한국부동산원 월간 지수는 다음 달 중순(대략 15~20일)에 공표된다. KB 단지 시세는 매달 말 기준으로 바로 나온다.
 # 20일·27일 두 번 돌려 늦은 공표도 잡는다. 새 달이 없으면 커밋하지 않는다.
 # 장부는 덧붙이기만 한다(paper.mjs 가 지난 기록이 바뀌면 저장을 거부한다).
 on:
@@ -33,6 +33,13 @@ jobs:
           ECOS_KEY: ${{ secrets.ECOS_KEY }}
         run: python scripts/realestate_claude/collect.py
 
+      - name: 아파트 단지 시세·실거래(KB) 수집 — 대단지 84㎡
+        run: python scripts/realestate_claude/collect_apt.py
+
+      - name: 신규 분양(청약홈) 수집 — 실패해도 지수·단지 갱신은 계속
+        continue-on-error: true
+        run: python scripts/realestate_claude/collect_presale.py
+
       - name: 모의장부 덧붙이기
         run: node scripts/realestate_claude/paper.mjs
 
@@ -40,6 +47,8 @@ jobs:
         run: |
           node scripts/test_realestate_claude.cjs
           python scripts/realestate_claude/test_collect.py
+          python scripts/realestate_claude/test_collect_apt.py
+          python scripts/realestate_claude/test_collect_presale.py
 
       - name: 커밋
         shell: bash
