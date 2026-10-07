@@ -8926,7 +8926,7 @@ console.log('\n[119] 제10차 — 라오어 V4.0 원문 직접 대조 (SOURCE GO
        && /큰수 9%\(원문 10~15% 밖\)/.test(V({...base,big:9}).join()) && /큰수 20%\(원문 10~15% 밖\)/.test(V({...base,big:20}).join()));
     ok('제10차 P1-5 · 앱·백테 판정이 같은 글자', extractFn(idx,'function imVariantOf(cfg)')===extractFn(bt,'function imVariantOf(cfg)')); }
   ok('운영 기본값 · 큰수 20 / 리버스 gap 0 / 아래로 LOC 3줄을 사용한다',
-     /const IM_BIG_DEFAULT=20;/.test(idx) && /const REV_GAP_DEF=0;/.test(idx) && /const IM_ROWS_DEFAULT=3;/.test(idx) && /줄 수 3은 JK 투자 기본값\(원문에 개수 없음\)/.test(idx) && /줄 수 \$\{n\}줄은 <b>JKQuant 구현값<\/b>/.test(idx)
+     /const IM_BIG_DEFAULT=20;/.test(idx) && /const REV_GAP_DEF=0;/.test(idx) && /const IM_ROWS_DEFAULT=3;/.test(idx) && /줄 수 3은 JK 투자 기본값\(원문에 개수 없음\)/.test(idx) && /줄 수 \$\{n\}줄은 <b>JK 투자 구현값<\/b>/.test(idx)
      && /const INF_DEFAULTS_POLICY_VER=2;/.test(idx)
      && /function migrateInfOperatingDefaults\(\)/.test(idx)
      && /st\.big=IM_BIG_DEFAULT;/.test(idx) && /st\.revGap=REV_GAP_DEF;/.test(idx) && /st\.rows=IM_ROWS_DEFAULT;/.test(idx)
