@@ -290,7 +290,7 @@ canvas{display:block;width:100%;height:auto}
 
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Morning Scalping</div><h1>JK <span class="v">투자</span> 단타 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="scVer">v1.43.7</span></h1></div>
+    <div><div class="kicker">Morning Scalping</div><h1>JK <span class="v">투자</span> 단타 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="scVer">v1.44.0</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -2315,6 +2315,10 @@ function shadowLabel(kind,name){
   if(!name||name==='baseline')return '원래 기준전략';
   return ((SHADOW_RANK_LABELS[kind]||{})[name]||name);
 }
+function keepDailyAutoImproveLast(){
+  const pane=$('strategy_daily'),card=$('daily_auto_improve');
+  if(pane&&card&&pane.lastElementChild!==card)pane.appendChild(card);
+}
 function renderDailyAutoImprove(){
   const el=$('daily_auto_improve_body'),meta=$('daily_auto_improve_meta');if(!el)return;
   const rankings=((SHADOW_RANK_CACHE||{}).rankings||{});
@@ -4100,6 +4104,7 @@ function boot(){
     Promise.all(['opening','daytrading','crypto','soxl'].map(loadStrategyScorecard)).catch(()=>{});
     loadDaily1Shadow(false);
     restoreStrategy();
+    keepDailyAutoImproveLast(); // 오늘 탭에서 전략분석 자동개선은 항상 맨 아래
   });
 }
 if(window.fb) boot(); else window.addEventListener('fb-ready', boot);
