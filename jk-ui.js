@@ -116,6 +116,18 @@
       if(!pop.querySelector('.jkmenu-title')){
         var t=document.createElement('div');t.className='jkmenu-title';t.innerHTML='<b>JK 투자</b><span>전체메뉴</span>';pop.insertBefore(t,pop.firstChild);
       }
+      if(!pop.querySelector('a[href="/settings"],a[href="/settings.html"]')){
+        var settings=document.createElement('a');
+        settings.href='/settings';
+        settings.innerHTML='<span class="mi">⚙️</span>설정';
+        var admin=pop.querySelector('a[href="/admin"],a[href="/admin.html"]');
+        if(admin)pop.insertBefore(settings,admin); else pop.appendChild(settings);
+      }
+      var path=(location.pathname||'').replace(/\.html$/,'').replace(/\/$/,'')||'/';
+      pop.querySelectorAll('a').forEach(function(a){
+        var ap=(a.getAttribute('href')||'').replace(/\.html$/,'').replace(/\/$/,'')||'/';
+        if(ap==='/settings')a.classList.toggle('cur',path==='/settings');
+      });
       btn.textContent='☰';btn.setAttribute('aria-label','전체메뉴');btn.setAttribute('title','전체메뉴');btn.removeAttribute('onclick');
       if(btn.dataset.jkUnified)return;btn.dataset.jkUnified='1';
       btn.addEventListener('click',function(e){e.stopPropagation();pop.hidden=!pop.hidden;});
