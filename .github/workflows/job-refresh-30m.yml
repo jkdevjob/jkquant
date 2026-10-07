@@ -4,6 +4,11 @@ on:
   schedule:
     - cron: "*/30 * * * *"
   workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "scripts/job_alert.py"
+      - ".github/workflows/job-refresh-30m.yml"
 
 permissions:
   contents: write
