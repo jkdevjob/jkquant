@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "generatedAt": "2026-10-07T21:43:45.479741+09:00",
+  "generatedAt": "2026-10-08T00:43:22.167014+09:00",
   "mode": "prospective-shadow-paper",
   "paperStart": "2026-10-01",
   "designEnd": "2026-09-30",
@@ -11,7 +11,7 @@
   "executionRule": "completed-bar signal -> next-bar-open fill; same-bar stop/target -> stop first; explicit friction; no broker orders",
   "promotionRule": "No automatic promotion. New version only after prospective review; never rewrite historical rules.",
   "latestSourceDates": {
-    "opening": "2026-10-06",
+    "opening": "2026-10-07",
     "daytrading": "2026-10-07",
     "crypto": "2026-10-06",
     "soxl": "2026-10-06"
@@ -82,21 +82,21 @@
         "plus5WeeksPerYear": 0.0
       },
       "outOfSample": {
-        "days": 3,
-        "trades": 1,
-        "tradeDays": 1,
+        "days": 4,
+        "trades": 2,
+        "tradeDays": 2,
         "winRatePct": 0.0,
-        "avgTradePnlPct": -1.9407468123861464,
-        "avgDailyReturnPct": -0.32345780206435776,
+        "avgTradePnlPct": -1.9570715194006207,
+        "avgDailyReturnPct": -0.4892678798501552,
         "plus1Days": 0,
         "plus1DayRatePct": 0.0,
         "plus5Weeks": 0,
-        "weeklyAvgPct": -0.4863694794492335,
-        "lossDayAvgPct": -0.9703734061930732,
-        "worstDayPct": -0.9703734061930732,
+        "weeklyAvgPct": -0.9785360961123035,
+        "lossDayAvgPct": -0.9785357597003104,
+        "worstDayPct": -0.9866981132075475,
         "profitFactor": 0.0,
-        "compoundReturnPct": -0.9703734061930702,
-        "maxDrawdownPct": -0.9703734061930702,
+        "compoundReturnPct": -1.9474968633106493,
+        "maxDrawdownPct": -1.9474968633106493,
         "daily": [
           {
             "date": "2026-10-01",
@@ -112,6 +112,11 @@
             "date": "2026-10-06",
             "returnPct": 0.0,
             "trades": 0
+          },
+          {
+            "date": "2026-10-07",
+            "returnPct": -0.9866981132075475,
+            "trades": 1
           }
         ],
         "plus1DaysPerYear": 0.0,
@@ -233,6 +238,29 @@
           "grossPnlPct": -0.7999999999999896,
           "frictionPct": 1.1407468123861568,
           "pnlPct": -1.9407468123861464,
+          "reason": "stop"
+        },
+        {
+          "date": "2026-10-07",
+          "strategy": "opening",
+          "strategyVersion": "opening_gapdown_reclaim_v1",
+          "code": "347700",
+          "name": "스피어",
+          "rank": 76,
+          "signalTime": 934,
+          "entryTime": 935,
+          "entryPrice": 26500.0,
+          "gapPct": -2.5878003696857665,
+          "flushPct": -1.5180265654648917,
+          "signalVwap": 26397.357011026605,
+          "volumeRatio": 1.3704548181927276,
+          "decisionReason": "gapdown+first5_flush+open_vwap_reclaim+prior3_break+volume",
+          "sample": "outOfSample",
+          "exitTime": 946,
+          "exitPrice": 26288.0,
+          "grossPnlPct": -0.8000000000000007,
+          "frictionPct": 1.1733962264150943,
+          "pnlPct": -1.973396226415095,
           "reason": "stop"
         }
       ]
@@ -3129,17 +3157,17 @@
     "trades": 7,
     "tradeDays": 4,
     "winRatePct": 14.285714285714285,
-    "avgTradePnlPct": -0.032637773247240834,
-    "avgDailyReturnPct": -0.032637773247240834,
+    "avgTradePnlPct": -0.06787699157608182,
+    "avgDailyReturnPct": -0.06787699157608182,
     "plus1Days": 0,
     "plus1DayRatePct": 0.0,
     "plus5Weeks": 0,
-    "weeklyAvgPct": -0.11466186566799763,
-    "lossDayAvgPct": -0.1770088258400906,
-    "worstDayPct": -0.26249999999999835,
-    "profitFactor": 0.5697683215391756,
-    "compoundReturnPct": -0.22919225790160036,
-    "maxDrawdownPct": -0.2683547201706493,
+    "weeklyAvgPct": -0.2382584174480895,
+    "lossDayAvgPct": -0.2592336686073862,
+    "worstDayPct": -0.5091745283018853,
+    "profitFactor": 0.3890467705769877,
+    "compoundReturnPct": -0.4759491641613378,
+    "maxDrawdownPct": -0.5091745283018811,
     "daily": [
       {
         "date": "2026-10-01",
@@ -3173,7 +3201,7 @@
       },
       {
         "date": "2026-10-07",
-        "returnPct": -0.26249999999999835,
+        "returnPct": -0.5091745283018853,
         "trades": 1
       }
     ],
