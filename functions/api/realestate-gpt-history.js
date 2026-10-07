@@ -63,6 +63,11 @@ function parseItems(xml,lawd,ymd){
   return out;
 }
 function validLawd(v){return /^\d{5}$/.test(v)}
+async function fetchTimed(url,options={},timeoutMs=15000){
+  const ac=new AbortController(),timer=setTimeout(()=>ac.abort("timeout"),timeoutMs);
+  try{return await fetch(url,{...options,signal:ac.signal})}
+  finally{clearTimeout(timer)}
+}
 async function getMonth(key,lawd,ymd){
   const u=new URL(TRADE_URL);
   u.searchParams.set("serviceKey",key);
@@ -70,15 +75,24 @@ async function getMonth(key,lawd,ymd){
   u.searchParams.set("DEAL_YMD",ymd);
   u.searchParams.set("numOfRows","9999");
   u.searchParams.set("pageNo","1");
-  const r=await fetch(u.toString(),{
-    headers:{"accept":"application/xml,text/xml,*/*","user-agent":"JKQuant-RealEstate-Backtest/1.0"},
-    cf:{cacheTtl:86400,cacheEverything:true}
-  });
-  const text=await r.text();
-  if(!r.ok)throw new Error(lawd+" "+ymd+" · "+upstreamError(r.status,text));
-  const rc=tag(text,["resultCode"]);
-  if(rc&&rc!=="000"&&rc!=="00")throw new Error(lawd+" "+ymd+" API "+rc+" "+tag(text,["resultMsg"]));
-  return parseItems(text,lawd,ymd);
+  let last=null;
+  for(let attempt=1;attempt<=2;attempt++){
+    try{
+      const r=await fetchTimed(u.toString(),{
+        headers:{"accept":"application/xml,text/xml,*/*","user-agent":"JKQuant-RealEstate-Backtest/1.1"},
+        cf:{cacheTtl:86400,cacheEverything:true}
+      },15000);
+      const text=await r.text();
+      if(!r.ok)throw new Error(lawd+" "+ymd+" · "+upstreamError(r.status,text));
+      const rc=tag(text,["resultCode"]);
+      if(rc&&rc!=="000"&&rc!=="00")throw new Error(lawd+" "+ymd+" API "+rc+" "+tag(text,["resultMsg"]));
+      return parseItems(text,lawd,ymd);
+    }catch(e){
+      last=e;
+      if(attempt<2)await new Promise(r=>setTimeout(r,250));
+    }
+  }
+  throw last||new Error(lawd+" "+ymd+" unknown error");
 }
 async function mapLimit(items,limit,fn){
   const out=new Array(items.length);let next=0;
@@ -99,7 +113,7 @@ export async function onRequestGet(context){
     coverage:"국토교통부 아파트 매매 실거래 API",
     minYear:2006,
     maxYear:new Date().getFullYear(),
-    maxLawdsPerRequest:3,
+    maxLawdsPerRequest:1,
     note:key?"실거래 백테스트 데이터 사용 가능 · Encoding/Decoding 키 자동정규화":"DATA_GO_KR_API_KEY 미설정"
   });
   if(!key)return json({ok:false,configured:false,error:"DATA_GO_KR_API_KEY not configured"},503);
@@ -108,14 +122,22 @@ export async function onRequestGet(context){
   const maxYear=new Date().getFullYear();
   if(!Number.isInteger(year)||year<2006||year>maxYear)return json({ok:false,error:"year must be 2006.."+maxYear},400);
   const lawds=String(req.searchParams.get("lawds")||"").split(",").map(x=>x.trim()).filter(Boolean);
-  if(!lawds.length||lawds.length>3||lawds.some(x=>!validLawd(x)))return json({ok:false,error:"lawds: 1..3 five-digit codes"},400);
+  if(lawds.length!==1||!validLawd(lawds[0]))return json({ok:false,error:"lawds: exactly one five-digit code required"},400);
+  const lawd=lawds[0],now=new Date();
+  const lastMonth=year===now.getUTCFullYear()?now.getUTCMonth()+1:12;
   const jobs=[];
-  for(const lawd of lawds)for(let m=1;m<=12;m++)jobs.push({lawd,ymd:String(year)+String(m).padStart(2,"0")});
-  try{
-    const chunks=await mapLimit(jobs,6,j=>getMonth(key,j.lawd,j.ymd));
-    const trades=chunks.flat().sort((a,b)=>a.date.localeCompare(b.date)||a.apt.localeCompare(b.apt));
-    return json({ok:true,source:"molit",year,lawds,count:trades.length,fetchedAt:new Date().toISOString(),trades});
-  }catch(e){
-    return json({ok:false,error:String(e&&e.message||e)},502);
+  for(let m=1;m<=lastMonth;m++)jobs.push({lawd,ymd:String(year)+String(m).padStart(2,"0")});
+  const results=await mapLimit(jobs,3,async j=>{
+    try{return {ok:true,trades:await getMonth(key,j.lawd,j.ymd),ymd:j.ymd}}
+    catch(e){return {ok:false,trades:[],ymd:j.ymd,error:String(e&&e.message||e)}}
+  });
+  const failures=results.filter(x=>!x.ok).map(x=>({ymd:x.ymd,error:x.error}));
+  const trades=results.flatMap(x=>x.trades).sort((a,b)=>a.date.localeCompare(b.date)||a.apt.localeCompare(b.apt));
+  if(!trades.length&&failures.length===jobs.length){
+    return json({ok:false,error:"해당 연도·구의 월별 실거래 조회가 모두 실패했습니다.",year,lawd,failures},502);
   }
+  return json({
+    ok:true,source:"molit",year,lawds:[lawd],lawd,count:trades.length,
+    partial:failures.length>0,failures,fetchedAt:new Date().toISOString(),trades
+  });
 }
