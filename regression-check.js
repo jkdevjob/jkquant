@@ -9301,7 +9301,7 @@ console.log('\n[123] 모의 성과 — 단독 페이지(/paper)');
      /body\.paperpage>div\.wrap\{display:none!important\}/.test(idx)
      && /body\.paperpage #fab\{display:none!important\}/.test(idx)
      && /body\.paperpage #paperModal\{position:static;inset:auto;display:block!important;/.test(idx)
-     && /body\.paperpage #paperModal \.box\{max-width:none;max-height:none;overflow:visible;/.test(idx)
+     && /body\.paperpage #paperModal \.box\{max-width:none!important;max-height:none!important;overflow:visible;/.test(idx)
      && /body\.paperpage #paperModal \.mx,body\.paperpage #paperModal \.mbtns\{display:none\}/.test(idx));
   ok('뒤로 가기로 /paper 에 돌아오면 다시 페이지로 · 문구도 창이 아니라 페이지',
      /window\.addEventListener\('popstate', \(\)=>\{ const on=\/\^\\\/paper\\\/\?\$\/\.test\(location\.pathname\);/.test(idx)

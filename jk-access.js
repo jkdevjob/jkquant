@@ -25,7 +25,7 @@
     {path:'/job',label:'JOB',mode:'public',order:80},
     {path:'/admin',label:'관리자',mode:'admin',order:90}
   ];
-  var menuCache=null;
+  var menuCache=null, menuSeq=0;
   function menuPath(v){
     var p=String(v||'/').split(/[?#]/)[0]||'/';
     try{ p=new URL(p, location.origin).pathname; }catch(e){}
@@ -48,14 +48,26 @@
     d.updatedAt=+(data&&data.updatedAt)||0; d.updatedBy=String(data&&data.updatedBy||'');
     return d;
   }
+  function readMenuConfig(fb){
+    return fb.getDoc(fb.doc(fb.db,'settings','siteMenu')).then(function(snap){
+      return (snap&&snap.exists&&snap.exists())?normalizeMenuConfig(snap.data()||{}):menuDefaults();
+    });
+  }
   async function loadMenuConfig(user,fb,opt){
     opt=opt||{}; if(menuCache&&!opt.force)return menuCache;
-    var cfg=menuDefaults();
+    var cfg=menuDefaults(), seq=++menuSeq;
     if(user&&fb&&fb.db&&fb.doc&&fb.getDoc){
-      try{
-        var snap=await timeout(fb.getDoc(fb.doc(fb.db,'settings','siteMenu')),opt.timeoutMs||5000);
-        if(snap&&snap.exists&&snap.exists())cfg=normalizeMenuConfig(snap.data()||{});
-      }catch(e){ console.warn('menu config',e); }
+      var read=readMenuConfig(fb);
+      try{ cfg=await timeout(read,opt.timeoutMs||5000); }
+      catch(e){
+        console.warn('menu config',e);
+        /* 첫 읽기가 늦거나(5초 넘김 — 아이폰 첫 DB 연결) 끊겨도 그 화면 내내 기본 순서로 굳지 않게,
+           늦게 온 답을 — 실패였으면 한 번 더 읽은 답을 — 받는 즉시 메뉴에 적용한다. 그 사이 새로 읽었으면 그쪽이 이긴다.
+           (2026-10-07 '관리자에서 메뉴 순서를 바꿨는데 전체메뉴는 옛 순서') */
+        read.catch(function(){ return new Promise(function(r){ setTimeout(r,opt.retryMs||3000); }).then(function(){ return readMenuConfig(fb); }); })
+            .then(function(c){ if(seq!==menuSeq)return; menuCache=c; applyMenuDom(user,c); },
+                  function(e2){ console.warn('menu config retry',e2); });
+      }
     }
     menuCache=cfg; return cfg;
   }
