@@ -11475,7 +11475,7 @@ console.log('\n[CLAUDE TODAY] 오늘 탭 통일');
 {
   const ch=fs.readFileSync(__d+'/claude.html','utf8');
   ok('오늘 탭 = 지피티와 같은 두 카드(📅 오늘 기준전략 결과: 전략별 전일·당일 + 누적 추이 / 📊 4전략 누적 상태: 표본·승률·거래당·필요승률·엣지·검증상태)',
-     /html\+=todayPage\(lab\);/.test(ch)&&/📅 오늘 기준전략 결과 <span class='sub'>최근 확정 세션 · 순수익<\/span>/.test(ch)
+     /html\+=todayPage\(lab\);/.test(ch)&&/📅 오늘 기준전략 결과 <span class='sub'>한국시간 어제 · 오늘 · 순수익<\/span>/.test(ch)
      &&/resultCell\(r\.prev,r\.prevDate,"전일",cl\)\+resultCell\(r\.last,r\.lastDate,"당일",cl\)/.test(ch)
      &&/📊 4전략 누적 상태/.test(ch)&&/<th>표본<\/th><th>승률<\/th><th>거래당<\/th><th>필요승률<\/th><th>엣지<\/th><th>검증상태<\/th>/.test(ch)
      &&/class="daily-result-list"|'daily-result-list'/.test(ch)&&!/<div class="hero">/.test(ch));
@@ -11996,6 +11996,10 @@ console.log('\n[CLAUDE ARENA] 메인 기록 하나 · 자동 퇴출·신규·7�
      /SHRINK_K, MIN_TRADE_DAYS, YEAR_POS_MIN, DUP_CORR = 40, 60, 0\.6, 0\.97/.test(lp)&&/MAIN_MARGIN, REPLACE_MARGIN, MAX_REPLACE = 0\.02, 0\.02, 3/.test(lp)
      &&/OPS = \("neighbor", "jump2", "cross", "struct", "explore"\)/.test(lp)&&/out\["score"\] = m\["adj"\] if pl is None or m\.get\("adj"\) is None else min\(m\["adj"\], pl\)/.test(lp)
      &&/def gate_reason\(m\):/.test(lp)&&/mark\(b, f"복제 — /.test(lp)&&/function arenaGen\(z\)/.test(ch)&&/안정 점수<div class='sub'>/.test(ch));
+  ok('단타(클로드) 휴대폰 기본: 화면보다 넓은 표는 줄마다 세로로 펼침(그린 직후 · 화면 크기 바뀔 때) · 개선 내역에 전략 표기 · 전략 코드는 이름으로',
+     /\n  body\.innerHTML=statusBar\(\)\+html;\n  stackTables\(body\);/.test(ch)&&/function stackTables\(root\)\{/.test(ch)&&/if\(!box\|\|t\.scrollWidth<=box\.clientWidth\+2\)return;/.test(ch)
+     &&/@media\(max-width:760px\)\{table\.stack\{min-width:0!important\}table\.stack thead\{display:none\}/.test(ch)&&/window\.addEventListener\("resize"/.test(ch)
+     &&/<span class='tag' style='margin:0 6px 0 0'>"\+esc\(ARENA_TAB\[x\.tab\]/.test(ch)&&/"<span class='sub'>"\+arenaReason\(x\.reason,names\)\+"<\/span>/.test(ch));
   ok('전략 경쟁 화면: 탭 ⑥ 순위표(점수·최근 1년·90일·MDD) + 개선 내역·사유 · 오늘 탭 자동 개선 현황 · 승격된 메인 안내 · 수동 승격 버튼 없음',
      /function shadowCard\(tab\)\{\n\s*var z=arenaOf\(tab\);/.test(ch)&&/\+arenaOverview\(lab\);/.test(ch)&&/mainBanner\(tab\)\+"<div class='rule'>"/.test(ch)
      &&/var ARENA_KIND=\{new:\["🆕","신규 투입"/.test(ch)&&!/claude-promote|승격 버튼/.test(ch)

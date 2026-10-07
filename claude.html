@@ -29,6 +29,16 @@ table.board{min-width:0}table.board td.nm{white-space:normal;min-width:150px}tab
 table.doc td{padding:6px 6px}
 .loading{padding:40px;text-align:center;color:var(--dim)}.warn{padding:9px 11px;border-radius:9px;background:rgba(248,123,140,.08);border:1px solid rgba(248,123,140,.25);color:#ffb3be;font-size:12px}
 @media(max-width:560px){.wrap{padding:0 11px}.hero h2{font-size:20px}.kpi .v{font-size:17px}}
+/* 휴대폰 기본: 화면보다 넓은 표는 줄마다 카드처럼 세로로 편다(옆으로 밀지 않게) — stackTables() 가 넘치는 표에만 붙인다 */
+@media(max-width:760px){table.stack{min-width:0!important}table.stack thead{display:none}table.stack tbody,table.stack tr{display:block}
+table.stack tr{border-bottom:1px solid var(--border);padding:8px 2px}table.stack td{display:flex;justify-content:space-between;align-items:baseline;gap:12px;border:0;padding:3px 0;white-space:normal;text-align:right;min-width:0!important}
+table.stack td::before{content:attr(data-label);color:var(--dim);font-weight:700;font-size:11.5px;text-align:left;flex:0 0 auto;max-width:46%}
+table.stack td{flex-wrap:wrap}table.stack td>div{flex-basis:100%;text-align:right}
+table.stack td.nm,table.stack td.blk{display:block;text-align:left}table.stack td.nm::before,table.stack td.blk::before{display:block;max-width:none;margin-bottom:2px}table.stack td.nm>div,table.stack td.blk>div{text-align:left}
+table.stack td:first-child{display:block;text-align:left;font-size:13.5px;font-weight:800;padding-bottom:4px}table.stack td:first-child::before,table.stack td[data-label=""]::before{display:none}
+table.stack td.rk:first-child::before{display:inline;content:attr(data-label) " ";font-size:13.5px}
+.daily-result-label,.daily-result-goal,.tag{font-size:11px}.daily-result-list{grid-template-columns:1fr}
+table.alog{min-width:0}table.alog tbody,table.alog tr{display:block}table.alog tr{padding:8px 0;border-bottom:1px solid var(--border)}table.alog td{display:inline;border:0;padding:0 8px 0 0}table.alog td:last-child{display:block;padding:3px 0 0}}
 #gate{position:fixed;inset:0;background:linear-gradient(160deg,#0f1320,#171c2e);z-index:200;display:flex;align-items:center;justify-content:center;padding:24px;text-align:center}
 #gate .gbox{max-width:380px;width:100%}#gate .glogo{font-size:26px;font-weight:800;margin-bottom:6px}#gate .gsub{color:var(--dim);font-size:13px;margin-bottom:24px;line-height:1.6}
 #gbtn{display:inline-flex;align-items:center;gap:10px;background:#fff;color:#1f1f1f;border:none;border-radius:12px;padding:13px 20px;font-size:15px;font-weight:700;cursor:pointer;width:100%;justify-content:center}
@@ -64,7 +74,7 @@ table.doc td{padding:6px 6px}
   <div class="gnote"><a href="/" style="color:var(--faint)">← 운영 화면으로</a></div>
 </div></div>
 <header><div class="wrap"><div class="htop">
-  <div><div class="kicker">Claude Scalping</div><h1>JK <span class="v">투자</span> 단타 <span class="ver" id="clVer">v2.12.8</span></h1></div>
+  <div><div class="kicker">Claude Scalping</div><h1>JK <span class="v">투자</span> 단타 <span class="ver" id="clVer">v2.12.9</span></h1></div>
   <div class="hright">
     <div class="userbadge" id="userbadge"></div>
   <div class="jkmenu" id="jkmenuWrap">
@@ -334,10 +344,20 @@ function arenaStatus(z){
   return (st.newTop?"🆕 오늘 들어온 "+esc(st.newTop)+" 가 표 1위 (1위 일수는 내일부터) · ":"")+(st.code==="main_top"?"🥇 지금 메인이 1위":st.code==="promoted"?"🏆 "+esc(st.text):
     "🥇 1위 "+esc(top.name||z.top||"")+" · "+(st.days||0)+"/7일"+(st.code==="streak"?" (7일이면 다음 날부터 자동 메인)":st.code==="due"?" · 승격 조건 충족":st.code==="failed"?" · ⚠ "+esc(st.text):""));
 }
+var ARENA_TAB={opening:"① 시초가",daytrading:"② 데이트레이딩",crypto:"③ 비트코인",soxl:"④ SOXL"};
+// 사유 안의 전략 코드(g_soxl_… 등)를 사람이 읽는 전략 이름으로 — 경쟁군 · 퇴출 · 기록에 나온 이름 사전
+function arenaNames(){var m={},A=((J&&J.lab)||{}).arena||{};
+  Object.keys(A).forEach(function(t){var z=A[t]||{};(z.rows||[]).concat(z.retiredToday||[]).forEach(function(r){if(r&&r.version&&r.name)m[r.version]=r.name});(z.log||[]).forEach(function(x){if(x.version&&x.name)m[x.version]=x.name})});
+  return m}
+function arenaReason(txt,names){
+  return esc(txt||"").replace(/\b(g_[a-z0-9_.]+|[a-z]+(?:_[a-z0-9.+]+)+)\b/gi,function(v){return names[v]?"‘"+esc(names[v])+"’":v});
+}
 function arenaLog(list,withTab){
+  var names=arenaNames();(list||[]).forEach(function(x){if(x.version&&x.name)names[x.version]=x.name});
   return (list||[]).slice().reverse().map(function(x){var k=ARENA_KIND[x.kind]||["·",x.kind,"sub"];
-    return "<tr><td>"+esc(String(x.date||"").slice(5))+"</td>"+(withTab?"<td>"+esc(({opening:"①",daytrading:"②",crypto:"③",soxl:"④"})[x.tab]||"")+"</td>":"")+
-      "<td class='"+k[2]+"' style='white-space:nowrap'>"+k[0]+" "+k[1]+"</td><td style='white-space:normal;text-align:left'>"+(x.name?"<b>"+esc(x.name)+"</b> ":"")+"<span class='sub'>"+esc(x.reason||"")+"</span></td></tr>"}).join("");
+    return "<tr><td>"+esc(String(x.date||"").slice(5))+"</td>"+
+      "<td class='"+k[2]+"' style='white-space:nowrap'>"+k[0]+" "+k[1]+"</td><td style='white-space:normal;text-align:left'><span class='tag' style='margin:0 6px 0 0'>"+esc(ARENA_TAB[x.tab]||x.tab||"")+"</span>"+
+      (x.name?"<b>"+esc(x.name)+"</b> ":"")+"<span class='sub'>"+arenaReason(x.reason,names)+"</span></td></tr>"}).join("");
 }
 function shadowCard(tab){
   var z=arenaOf(tab);
@@ -356,7 +376,7 @@ function shadowCard(tab){
     "<div class='sub'>메인: <b>"+esc(z.mainName||z.main)+"</b>"+(z.effectiveFrom?" ("+esc(z.effectiveFrom)+" 부터)":" (처음 채택)")+" · 오늘 신규 "+(z.added||[]).length+" · 퇴출 "+(z.retiredToday||[]).length+" · 지금까지 시험한 후보 "+((z.triedCount||0)+(z.rows||[]).length)+"개 · 계산 "+esc(String((J.lab||{}).generatedAt||"").slice(5,16).replace("T"," "))+"</div>"+
     "<div class='tw'><table class='board'><thead><tr><th>순위</th><th style='text-align:left'>전략 · 규칙</th><th>안정 점수<div class='sub'>주 평균 %</div></th><th>최근 1년</th><th>최근 90일</th><th>MDD</th><th>매매일/년</th><th>+1%일/년</th><th>10/1~ 구간</th></tr></thead><tbody>"+rows+"</tbody></table></div>"+
     "<div style='margin-top:10px'><b>📝 최근 개선 내역 · 사유</b></div>"+
-    (lg?"<div class='tw'><table class='board'><tbody>"+lg+"</tbody></table></div>":"<p class='note'>아직 기록이 없습니다.</p>")+
+    (lg?"<div class='tw'><table class='board alog'><tbody>"+lg+"</tbody></table></div>":"<p class='note'>아직 기록이 없습니다.</p>")+
     "<p class='note'>"+esc(z.rule||"")+" 모든 수치는 같은 함수 · 같은 비용(순수익)으로 계산합니다. 과거로 고른 결과라 과최적화 위험이 있어, 10/1~ 구간(규칙 채택 뒤 새 자료) 열로 계속 확인합니다.</p>",true);
 }
 // 장부가 빈 이유와 언제 채워지는지
@@ -490,7 +510,7 @@ function todayPage(lab){
     return "<tr><td><b>"+z[2]+"</b></td><td>"+s.n+"</td><td>"+s.wr.toFixed(1)+"%</td><td class='"+(s.avg>=0?"win":"loss")+"'>"+sp(s.avg)+"</td><td>"+(s.req==null?"—":s.req.toFixed(1)+"%")+"</td>"+
       "<td class='"+((s.edge||0)>=0?"win":"loss")+"'>"+sp(s.edge)+"</td><td title='"+esc(st)+"'>"+prog+"</td></tr>"}).join("");
   return "<div class='strategy-head'>모든 기준전략의 오늘 상태와 최근 확정 세션 결과를 한 화면에서 비교</div>"+
-    "<div class='card'><h3><span class='dot'></span>📅 오늘 기준전략 결과 <span class='sub'>최근 확정 세션 · 순수익</span></h3>"+
+    "<div class='card'><h3><span class='dot'></span>📅 오늘 기준전략 결과 <span class='sub'>한국시간 어제 · 오늘 · 순수익</span></h3>"+
     "<p class='lead'>시초가·데이트레이딩·비트코인·SOXL의 <b>한국시간 어제 · 오늘</b> 결과를 한 번에 보여줍니다. 수수료·세금·슬리피지를 뺀 순수익이고, 거래가 없으면 <b>매매없음</b>(0%)입니다. 날짜는 모든 전략이 같은 <b>한국시간 어제 · 오늘</b>이고, 시장마다 그 날짜에 해당하는 결과를 넣습니다(아래 '시간 기준').</p>"+
     "<div class='row' style='margin-bottom:10px'><button class='ghostbtn' onclick='refreshToday()'>🔄 결과 새로고침</button><span class='sub' id='daily_results_meta'>기준일 "+esc(dl.today||"")+" · 갱신 "+esc(stamp)+"</span></div>"+
     "<div class='daily-result-list'>"+cards+"</div>"+
@@ -510,10 +530,29 @@ function arenaOverview(lab){                                  // 📅 오늘 탭
   return "<div class='card'><h3><span class='dot'></span>🔁 전략 분석 · 자동 개선 현황 <span class='sub'>밤 계산마다 순위 · 퇴출 · 신규 투입 · 7일 1위 자동 승격</span></h3>"+
     "<div class='sub'>마지막 분석 "+esc(String(lab.generatedAt||"").slice(0,16).replace("T"," "))+" · 하루 세 번(18:40 · 23:40 · 07:30, GitHub 대기로 늦어질 수 있음)</div>"+
     "<div class='tw'><table class='board'><thead><tr><th>전략</th><th style='text-align:left'>지금 메인</th><th style='text-align:left'>분석 상태</th><th>그림자</th></tr></thead><tbody>"+rows+"</tbody></table></div>"+
-    "<div style='margin-top:10px'><b>📝 최근 개선 내역 · 사유</b></div>"+(lg?"<div class='tw'><table class='board'><tbody>"+lg+"</tbody></table></div>":"<p class='note'>아직 기록이 없습니다.</p>")+
+    "<div style='margin-top:10px'><b>📝 최근 개선 내역 · 사유</b></div>"+(lg?"<div class='tw'><table class='board alog'><tbody>"+lg+"</tbody></table></div>":"<p class='note'>아직 기록이 없습니다.</p>")+
     "<p class='note'>순위 = 안정 점수(매매가 적은 최근 구간은 전체 성적 쪽으로 당기고, 변수를 한 칸씩 바꾼 이웃의 중앙값보다 높게 쳐 주지 않음) · 퇴출 = 기준 미달(손실 · 매매일 60일 · 해마다 60% 플러스) · 7일 연속 하위 3위 · 다른 전략과 같은 매매(복제) · 더 나은 신규에 자리 교체 · 신규 = 밤마다 후보 48개를 이웃 · 두 칸 · 교배 · 새 구조(③ 최근 N일 고가 · ④ 종가 위치/연속 하락) · 격자 탐색으로 만들어 모두 계산한 뒤 좋은 순 · 승격 = 같은 그림자가 7일 동안 매일 1위면 다음 날부터 메인. 자세히는 각 탭 ⑥.</p></div>";
 }
 function refreshToday(){var m=document.getElementById("daily_results_meta");if(m)m.textContent="새로고침 중…";load();loadLive()}
+// 휴대폰에서 화면보다 넓은 표 → 줄마다 '머리글: 값' 카드로(넘치는 표에만). 칸 이름은 머리글에서 가져온다.
+function stackTables(root){
+  if(!root)return;
+  (root.querySelectorAll?root.querySelectorAll("table"):[]).forEach(function(t){
+    var hr=t.tHead&&t.tHead.rows[0];if(!hr)return;
+    t.classList.remove("stack");
+    if(window.innerWidth>760)return;
+    var box=t.parentElement;if(!box||t.scrollWidth<=box.clientWidth+2)return;
+    var labels=[];[].forEach.call(hr.cells,function(th){var txt=[].map.call(th.childNodes,function(n){return (n.textContent||"").trim()}).filter(Boolean).join(" ");
+      for(var k=0;k<(th.colSpan||1);k++)labels.push(txt)});
+    [].forEach.call(t.tBodies,function(tb){[].forEach.call(tb.rows,function(tr){var i=0;[].forEach.call(tr.cells,function(td){
+      td.setAttribute("data-label",(td.colSpan||1)>1?"":(labels[i]||""));
+      if(i===0)td.classList.toggle("rk",td.textContent.trim().length<=3);                 // 순위 번호처럼 짧은 첫 칸은 '순위 1' 로
+      else if(td.querySelector("div,br")&&td.textContent.trim().length>24)td.classList.add("blk");   // 설명이 긴 칸은 이름 아래로
+      i+=td.colSpan||1})})});
+    t.classList.add("stack");
+  });
+}
+var __stackT=null;window.addEventListener("resize",function(){clearTimeout(__stackT);__stackT=setTimeout(function(){stackTables(document.getElementById("body"))},200)});
 function render(){
   var body=document.getElementById("body");if(!J)return;
   var gd=J.gapdown||{},et=J.etf||{},wl=J.watchlist||{},lab=J.lab||{tabs:{}},T=lab.tabs||{},html="";
@@ -543,6 +582,7 @@ function render(){
     }
   }
   body.innerHTML=statusBar()+html;
+  stackTables(body);
 }
 var LIVE=null;
 async function loadLive(){
