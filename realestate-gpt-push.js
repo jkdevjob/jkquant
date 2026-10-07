@@ -1,7 +1,7 @@
 (function(){
 "use strict";
 const CONFIG="/data/realestate/gpt/push-config.json";
-let cfg=null,reg=null,sub=null,busy=false,health=null;
+let cfg=null,reg=null,sub=null,busy=false,health=null,topics=new Set();
 
 function qs(s,r=document){return r.querySelector(s)}
 function esc(s){return String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]))}
@@ -27,16 +27,22 @@ async function server(path,opt){
 }
 async function currentSub(){
   if(!supported())return null;
-  reg=await navigator.serviceWorker.register("/jk-sw.js?v=1.0.0",{scope:"/"});
+  reg=await navigator.serviceWorker.register("/jk-sw.js?v=2.0.0",{scope:"/"});
   await navigator.serviceWorker.ready;
   sub=await reg.pushManager.getSubscription();
+  if(sub&&cfg){
+    try{
+      const j=await server("/subscription?endpoint="+encodeURIComponent(sub.endpoint));
+      topics=new Set(j.topics||[]);
+    }catch(e){}
+  }
   return sub;
 }
 function statusText(){
   if(isIOS()&&!standalone())return "iPhone은 Safari에서 JK투자를 홈 화면에 추가한 뒤, 홈화면 아이콘으로 실행해야 백그라운드 웹알림을 켤 수 있습니다.";
   if(!supported())return "이 브라우저는 웹 푸시를 지원하지 않습니다.";
   if(Notification.permission==="denied")return "알림 권한이 차단돼 있습니다. iPhone 설정의 알림에서 JK 투자를 허용한 뒤 다시 시도하세요.";
-  if(sub)return "웹알림 켜짐 · 대전·세종 신규분양 공고를 약 30분 간격으로 자동 확인합니다.";
+  if(topics.has("presale"))return "웹알림 켜짐 · 대전·세종 신규분양 공고를 약 30분 간격으로 자동 확인합니다.";
   if(cfg&&cfg.workerUrl)return "웹알림 꺼짐 · 한 번만 켜면 새 분양공고가 생길 때 푸시로 알려줍니다.";
   return "푸시 서버 배포 또는 연결 설정을 확인하는 중…";
 }
@@ -47,7 +53,7 @@ function panel(){
     box=document.createElement("div");box.id="gptPresalePush";box.className="gpt-panel ps-push";
     host.prepend(box);
   }
-  const on=!!sub,iosNeed=isIOS()&&!standalone(),blocked=typeof Notification!=="undefined"&&Notification.permission==="denied";
+  const on=topics.has("presale"),iosNeed=isIOS()&&!standalone(),blocked=typeof Notification!=="undefined"&&Notification.permission==="denied";
   box.innerHTML=
     '<div class="ps-push-head"><div><h4>🔔 신규분양 웹알림</h4><div class="ps-mini">'+esc(statusText())+'</div></div>'+
     '<span class="ps-badge '+(on?'open':'closed')+'">'+(on?'알림 ON':'알림 OFF')+'</span></div>'+
@@ -72,15 +78,25 @@ async function enable(){
     const perm=Notification.permission==="granted"?"granted":await Notification.requestPermission();
     if(perm!=="granted")throw new Error("알림 권한이 허용되지 않았습니다.");
     cfg=await getConfig();
-    reg=await navigator.serviceWorker.register("/jk-sw.js?v=1.0.0",{scope:"/"});
+    reg=await navigator.serviceWorker.register("/jk-sw.js?v=2.0.0",{scope:"/"});
     await navigator.serviceWorker.ready;
     const v=await server("/vapid");
     sub=await reg.pushManager.getSubscription();
     if(!sub)sub=await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:b64ToU8(v.publicKey)});
+    try{
+      const current=await server("/subscription?endpoint="+encodeURIComponent(sub.endpoint));
+      topics=new Set(current.topics||[]);
+    }catch(e){}
+    topics.add("presale");
     await server("/subscribe",{
       method:"POST",headers:{"content-type":"application/json"},
-      body:JSON.stringify({subscription:sub.toJSON(),userAgent:navigator.userAgent})
+      body:JSON.stringify({subscription:sub.toJSON(),userAgent:navigator.userAgent,topics:[...topics]})
     });
+    try{
+      const msg={type:"JK_PUSH_TOPICS",topics:[...topics]};
+      if(navigator.serviceWorker.controller)navigator.serviceWorker.controller.postMessage(msg);
+      if(reg.active)reg.active.postMessage(msg);
+    }catch(e){}
     try{health=await server("/health")}catch(e){}
     panel();
     alert("신규분양 웹알림을 켰습니다. 테스트 알림으로 수신 여부를 확인할 수 있습니다.");
@@ -91,11 +107,25 @@ async function disable(){
   if(busy||!sub)return;busy=true;panel();
   try{
     cfg=cfg||await getConfig();
-    await server("/subscribe",{
-      method:"DELETE",headers:{"content-type":"application/json"},
-      body:JSON.stringify({endpoint:sub.endpoint})
-    }).catch(()=>{});
-    await sub.unsubscribe();sub=null;panel();
+    topics.delete("presale");
+    if(topics.size){
+      await server("/subscribe",{
+        method:"POST",headers:{"content-type":"application/json"},
+        body:JSON.stringify({subscription:sub.toJSON(),userAgent:navigator.userAgent,topics:[...topics]})
+      });
+    }else{
+      await server("/subscribe",{
+        method:"DELETE",headers:{"content-type":"application/json"},
+        body:JSON.stringify({endpoint:sub.endpoint,topic:"presale"})
+      }).catch(()=>{});
+      await sub.unsubscribe();sub=null;
+    }
+    try{
+      const msg={type:"JK_PUSH_TOPICS",topics:[...topics]};
+      if(navigator.serviceWorker.controller)navigator.serviceWorker.controller.postMessage(msg);
+      if(reg&&reg.active)reg.active.postMessage(msg);
+    }catch(e){}
+    panel();
   }catch(e){alert("알림 해제 실패: "+String(e&&e.message||e))}
   finally{busy=false;panel()}
 }
