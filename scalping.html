@@ -6,7 +6,7 @@
 <link rel="stylesheet" href="/jk-mobile.css?v=1.0.0">
 <meta name="theme-color" content="#0f1320">
 <meta name="robots" content="noindex,nofollow">
-<title>JK투자 — 단타(지피티)</title>
+<title>JK 투자 — 단타(지피티)</title>
 <style>
 :root{
   --bg:#0f1320;--panel:#171c2e;--panel2:#1e2540;--line:#2a3354;
@@ -270,13 +270,13 @@ canvas{display:block;width:100%;height:auto}
 <link rel="icon" type="image/png" sizes="192x192" href="/icons/jk-invest-192.png?v=1.0.0">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
-<meta name="apple-mobile-web-app-title" content="JK투자">
+<meta name="apple-mobile-web-app-title" content="JK 투자">
 </head>
 <body>
 
 <div id="gate">
   <div class="gbox">
-    <div class="glogo">JK<span class="v">투자</span> 단타</div>
+    <div class="glogo">JK <span class="v">투자</span> 단타</div>
     <div class="gsub" id="gate_sub">이 화면은 <b>소유자 계정</b>만 볼 수 있습니다.</div>
     <button id="gbtn" onclick="googleLogin()">
       <svg viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
@@ -289,7 +289,7 @@ canvas{display:block;width:100%;height:auto}
 
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Morning Scalping</div><h1>JK<span class="v">투자</span> 단타 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="scVer">v1.43.1</span></h1></div>
+    <div><div class="kicker">Morning Scalping</div><h1>JK <span class="v">투자</span> 단타 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="scVer">v1.43.2</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -649,7 +649,7 @@ canvas{display:block;width:100%;height:auto}
 
     <div class="card">
       <h3><span class="dot"></span>📒 오늘 장중 모의 매매이력 <span class="sub" style="font-weight:600">서버 지속 · 1분 자동갱신 · 주문 없음</span></h3>
-      <p class="lead">Cloudflare 서버가 미국 정규장 기준전략의 <b>OR 돌파 → 다음 5분봉 시가 진입 → 손절/익절/시간청산</b>을 계속 재구성해 저장합니다. 한국투자 VTS 주문과는 별개의 JK투자 연구용 모의장부입니다.</p>
+      <p class="lead">Cloudflare 서버가 미국 정규장 기준전략의 <b>OR 돌파 → 다음 5분봉 시가 진입 → 손절/익절/시간청산</b>을 계속 재구성해 저장합니다. 한국투자 VTS 주문과는 별개의 JK 투자 연구용 모의장부입니다.</p>
       <div class="row" style="margin-bottom:8px"><button class="ghostbtn" onclick="loadGlobalPaper('soxl')">🔄 장중 이력 새로고침</button><span class="sub" id="soxl_live_paper_msg">오늘 서버 장부 불러오는 중…</span></div>
       <div id="soxl_live_paper_body"><p class="sub">SOXL 탭을 열면 자동으로 갱신됩니다.</p></div>
       <p class="note">1슬롯 전략이므로 매매 순손익과 계좌수익률이 같습니다. VTS 체결이력은 별도 대조용이며 이 장부는 주문을 생성하지 않습니다.</p>
@@ -1404,7 +1404,7 @@ async function loadCryptoResearch(){
         '</tbody></table></div><p class="note">원본 5분봉·전략버전·판단근거를 함께 보관합니다.</p>';
     }else recentHtml='<div class="warn">최근 확정 매매가 없습니다. NO TRADE도 연구 데이터로 유지합니다.</div>';
     if(ch)ch.innerHTML=currentHtml+recentHtml;
-    if(cp)cp.innerHTML=currentHtml+recentHtml+'<p class="note">한국투자 계좌와 분리된 JK투자 BTC 모의체결입니다. 실거래소 주문은 전송하지 않습니다.</p>';
+    if(cp)cp.innerHTML=currentHtml+recentHtml+'<p class="note">한국투자 계좌와 분리된 JK 투자 BTC 모의체결입니다. 실거래소 주문은 전송하지 않습니다.</p>';
     const last=recent[0];
     if(last){
       setTimingBoard('crypto','buy','최근 확정 신호',esc(last.date||'')+' '+esc(last.signalTimeKst||'')+' · '+Number(last.entryPrice||0).toLocaleString('ko-KR')+'원',
@@ -1881,7 +1881,7 @@ async function loadStrategyScorecard(name,force=false){
 const STRATEGY_UI_META={
   opening:{version:'opening_rebreak_v1',market:'KOSPI/KOSDAQ Top100',selection:'09:00~09:30 · 갭 + 첫3분 고점 + 눌림 + 재돌파 + 수급',execution:'내부 모의 + KIS VTS 모의 병행',risk:'당일청산 · −1.0% / +1.5% / 09:30 시간청산'},
   daytrading:{version:'daytrading_vwap_breakout_v1',market:'10시 전후 거래대금 Top100',selection:'10:00~14:30 · VWAP 추세 + 20분 고점돌파 + 거래량',execution:'서버 내부 모의만 · 주문 없음',risk:'당일청산 · −1.0% / +2.0% / 15:10 시간청산 · 최대3건'},
-  crypto:{version:'btc_midnight_orb_v2',market:'Upbit KRW-BTC',selection:'00:00 ORB · 첫 고점 재돌파 + 거래량 + VWAP · 22:00까지',execution:'JK투자 독립 모의만 · 주문 없음',risk:'당일청산 · −0.5% / +1.0% / 최대60분 · 1슬롯'},
+  crypto:{version:'btc_midnight_orb_v2',market:'Upbit KRW-BTC',selection:'00:00 ORB · 첫 고점 재돌파 + 거래량 + VWAP · 22:00까지',execution:'JK 투자 독립 모의만 · 주문 없음',risk:'당일청산 · −0.5% / +1.0% / 최대60분 · 1슬롯'},
   soxl:{version:'soxl_orb_v1',market:'SOXL only · 미국 정규장',selection:'09:30~09:45 ET OR · 11:30 이전 첫 돌파 + VWAP + 거래량',execution:'SOXL만 내부 모의 · QQQ/TQQQ 매매대체 금지 · VTS는 별도 대조',risk:'당일청산 · −1.2% / +2.4% / 최대90분 · 1슬롯'}
 };
 const DAILY_RESULT_CACHE={};
@@ -2038,7 +2038,7 @@ function setupUnifiedStrategyFlow(){
     bodies.history.appendChild(cumulativeHistoryCard(name));
     if(name==='crypto'){
       bodies.paper.appendChild(flowCard('₿ BTC 독립 모의투자 매매이력',
-        '<p class="lead">한국투자증권과 섞지 않는 <b>JK투자 BTC 독립 모의체결 장부</b>입니다. 실거래소 주문은 보내지 않습니다.</p><div id="crypto_paper_body"><p class="sub">최근 기준전략 모의체결을 불러오는 중…</p></div>'));
+        '<p class="lead">한국투자증권과 섞지 않는 <b>JK 투자 BTC 독립 모의체결 장부</b>입니다. 실거래소 주문은 보내지 않습니다.</p><div id="crypto_paper_body"><p class="sub">최근 기준전략 모의체결을 불러오는 중…</p></div>'));
     }
     if(name==='soxl'){
       bodies.paper.appendChild(flowCard('🏦 한국투자증권 해외 VTS · SOXL 체결이력',
@@ -2854,7 +2854,7 @@ async function telegramOpeningEvent(title,body){
   }catch(e){console.warn('Telegram 알림 실패:',e);return false;}
 }
 async function testTelegramOpening(){
-  const ok=await telegramOpeningEvent('JK투자 연결 테스트','Telegram 시초가 알림 연결이 정상입니다.');
+  const ok=await telegramOpeningEvent('JK 투자 연결 테스트','Telegram 시초가 알림 연결이 정상입니다.');
   alert(ok?'Telegram 테스트 메시지를 보냈습니다.':'Telegram 전송 실패 — Cloudflare의 TELEGRAM_BOT_TOKEN / TELEGRAM_CHAT_ID를 확인하세요.');
 }
 let OPENING_PAPER_TIMER=null;

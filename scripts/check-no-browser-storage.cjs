@@ -71,20 +71,20 @@ for(const file of FILES){
 }
 
 const exactTitles={
-  'index.html':'JK 퀀트 — 운영',
-  'plan.html':'JK 퀀트 — 자산플랜',
-  'backtest.html':'JK 퀀트 — 백테스트',
-  'scalping.html':'JK 퀀트 — 단타(지피티)',
-  'claude.html':'JK 퀀트 — 단타(클로드)',
-  'ipo.html':'JK 퀀트 — 공모주',
-  'job.html':'JK 퀀트 — JOB',
-  'admin.html':'JK 퀀트 — 관리자'
+  'index.html':'JK 투자 — 운영',
+  'plan.html':'JK 투자 — 자산플랜',
+  'backtest.html':'JK 투자 — 백테스트',
+  'scalping.html':'JK 투자 — 단타(지피티)',
+  'claude.html':'JK 투자 — 단타(클로드)',
+  'ipo.html':'JK 투자 — 공모주',
+  'job.html':'JK 투자 — JOB',
+  'admin.html':'JK 투자 — 관리자'
 };
 for(const abs of htmlAbs){
   const file=rel(abs),src=fs.readFileSync(abs,'utf8');
   const m=src.match(/<title>([^<]+)<\/title>/i);
-  if(!m||!m[1].startsWith('JK 퀀트 — ')){
-    console.error('✗ '+file+' — title이 "JK 퀀트 — 메뉴명" 형식이 아님: '+(m?m[1]:'없음'));fail++;
+  if(!m||!m[1].startsWith('JK 투자 — ')){
+    console.error('✗ '+file+' — title이 "JK 투자 — 메뉴명" 형식이 아님: '+(m?m[1]:'없음'));fail++;
   }
   if(exactTitles[file]&&m&&m[1]!==exactTitles[file]){
     console.error('✗ '+file+' — title 기대 "'+exactTitles[file]+'" / 실제 "'+m[1]+'"');fail++;
@@ -99,8 +99,8 @@ function collectStringConsts(src){
 function titleAtomOk(expr,consts){
   expr=String(expr||'').trim();
   let m=expr.match(/^(?:'([^'\n]*)'|"([^"\n]*)"|`([^`\n]*)`)$/);
-  if(m)return (m[1]??m[2]??m[3]??'').startsWith('JK 퀀트 — ');
-  if(/^[A-Za-z_$][\w$]*$/.test(expr))return String(consts.get(expr)||'').startsWith('JK 퀀트 — ');
+  if(m)return (m[1]??m[2]??m[3]??'').startsWith('JK 투자 — ');
+  if(/^[A-Za-z_$][\w$]*$/.test(expr))return String(consts.get(expr)||'').startsWith('JK 투자 — ');
   return false;
 }
 function titleExprOk(expr,consts){
@@ -113,7 +113,7 @@ function titleExprOk(expr,consts){
 for(const file of FILES){
   const src=fs.readFileSync(path.join(ROOT,file),'utf8'),consts=collectStringConsts(src);
   const staticTitle=(src.match(/<title>([^<]+)<\/title>/i)||[])[1]||'';
-  if(staticTitle.startsWith('JK 퀀트 — ')){
+  if(staticTitle.startsWith('JK 투자 — ')){
     const inherited=/\b(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*=\s*document\.title\b/g;
     let im;while((im=inherited.exec(src)))consts.set(im[1],staticTitle);
   }
@@ -121,7 +121,7 @@ for(const file of FILES){
   let m;
   while((m=re.exec(src))){
     if(!titleExprOk(m[1],consts)){
-      console.error('✗ '+file+' — 동적 document.title 결과가 모두 "JK 퀀트 — 메뉴명" 형식이어야 함: '+m[1].trim());fail++;
+      console.error('✗ '+file+' — 동적 document.title 결과가 모두 "JK 투자 — 메뉴명" 형식이어야 함: '+m[1].trim());fail++;
     }
   }
 }
@@ -129,4 +129,4 @@ for(const file of FILES){
 if(fail)process.exit(1);
 console.log('✓ JKQuant 앱 직접 브라우저 영구저장 쓰기 0건 · plan 1회 legacy 읽기/삭제만 예외');
 console.log('✓ 전체 앱 HTML + 참조 로컬 JS 자동 탐색: '+FILES.length+'개 파일');
-console.log('✓ 모든 브라우저 탭 제목 JK 퀀트 — 메뉴명 형식');
+console.log('✓ 모든 브라우저 탭 제목 JK 투자 — 메뉴명 형식');

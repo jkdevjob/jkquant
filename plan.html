@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="theme-color" content="#0f1320">
-<title>JK투자 — 자산플랜</title>
+<title>JK 투자 — 자산플랜</title>
 <script src="/plan-session-engine.js"></script>
 <script src="/plan-session-settings.js"></script>
 <script src="/jk-access.js"></script>
@@ -243,7 +243,7 @@ html.had-user #authgate .bootwait{display:block}
 <link rel="icon" type="image/png" sizes="192x192" href="/icons/jk-invest-192.png?v=1.0.0">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
-<meta name="apple-mobile-web-app-title" content="JK투자">
+<meta name="apple-mobile-web-app-title" content="JK 투자">
 </head>
 <body>
 <script>
@@ -254,9 +254,9 @@ html.had-user #authgate .bootwait{display:block}
 document.documentElement.classList.add('had-user');
 </script>
 <div id="authgate" role="dialog" aria-modal="true" aria-label="로그인">
-  <div class="bootwait"><div class="bw-logo">JK투자 · 자산플랜</div><span class="bw-dot"></span>로그인 확인 중…</div>
+  <div class="bootwait"><div class="bw-logo">JK 투자 · 자산플랜</div><span class="bw-dot"></span>로그인 확인 중…</div>
   <div class="gbox">
-    <div class="glogo">JK<span class="v">투자</span></div>
+    <div class="glogo">JK <span class="v">투자</span></div>
     <div class="gsub">자산플랜은 로그인해야 볼 수 있습니다.<br>처음이면 로그인할 때 이용 신청이 접수되고, 관리자가 승인하면 열립니다.</div>
     <button id="gbtn" type="button" onclick="planLogin()">
       <svg viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
@@ -277,7 +277,7 @@ setTimeout(function(){ var h=document.documentElement; if(h.classList.contains('
 </script>
 <div class="wrap">
   <div class="top">
-    <div class="brand"><div class="logo">Asset Plan</div><h1>자산플랜 <span class="ver">v1.43.16</span></h1></div>
+    <div class="brand"><div class="logo">Asset Plan</div><h1>자산플랜 <span class="ver">v1.43.17</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
       <div class="jkmenu" id="jkmenuWrap">
@@ -1957,7 +1957,7 @@ function imBuyPx(star){ return star>0 ? +(star-0.01).toFixed(4) : 0; }
    추가 줄은 같은 회차의 일부다 — T 는 본 주문만 센다 (dT 0).
    증권사는 주문가×수량을 매수가능금액에서 예약하고 넘으면 거부한다 — 잔금 안에서만 낸다 (7차 점검 ④).
    주문가가 전일 종가 +큰수% 를 넘으면 그 값(호가 내림)으로 낮춰 낸다 — 원문 '큰수 매수'(증권사 가격 제한 대응).
-   줄 수(rows)는 원문에 없다('…' 로 이어질 뿐) — JK투자 구현값 기본 3 (imRowsOf). 호가·수수료 포함 수량도 구현 세부다.
+   줄 수(rows)는 원문에 없다('…' 로 이어질 뿐) — JK 투자 구현값 기본 3 (imRowsOf). 호가·수수료 포함 수량도 구현 세부다.
      o: {first, half, buy1, bal, firstPrice, starPrice, avg, cap, rows, fee, cur}
      반환: [{kind:'1회매수'|'절반매수'|'하방', name, price, q, dT, ladder, capped, orig}] */
 function imBuyOrders(o){
