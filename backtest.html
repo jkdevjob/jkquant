@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="theme-color" content="#0f1320">
-<title>JK투자 — 백테스트</title>
+<title>JK 투자 — 백테스트</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="/jk-access.js" data-guard="1"></script>
@@ -312,7 +312,7 @@ td:first-child{text-align:left;}
 <link rel="icon" type="image/png" sizes="192x192" href="/icons/jk-invest-192.png?v=1.0.0">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
-<meta name="apple-mobile-web-app-title" content="JK투자">
+<meta name="apple-mobile-web-app-title" content="JK 투자">
 </head>
 <body>
 <div class="wrap">
@@ -321,7 +321,7 @@ td:first-child{text-align:left;}
   <div class="brand">
     <div>
       <div class="logo">Backtest</div>
-      <h1>JK투자 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v2.17.9</span></h1>
+      <h1>JK 투자 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v2.17.10</span></h1>
     </div>
   </div>
   <div class="hright">
@@ -802,7 +802,7 @@ document.addEventListener('click',function(e){ var m=document.getElementById('jk
   ※ <b>익절 지정가</b> — 익절 지정가 체결은 정규장 OHLC 고가 기반 근사이며, 원문의 프리장~애프터 체결과 차이가 있을 수 있음. 원문의 익절 지정가는 프리장·본장·애프터까지 유효하지만 과거 자료는 정규장 일봉뿐이라 재현할 수 없는 부분입니다 — 엔진 오류가 아니라 데이터 한계입니다.<br>
   ※ <b>무매 사이클 종료</b> — 하루 주문을 모두 처리한 뒤 <b>최종 보유가 0주</b>일 때만 사이클이 끝납니다. 익절로 전량 팔린 날 주가가 떨어져 아침에 건 LOC 매수까지 체결되면 원문대로 같은 사이클을 이어 갑니다(T = T×0.25 + 1 · 절반매수면 + 0.5 · 단리 인출 없음).<br>
   ※ <b>같은 날 양방향 체결</b> — 일봉만으로는 고가와 저가 중 어느 쪽이 먼저였는지 알 수 없습니다. 같은 날 VR 매도표와 매수표가 둘 다 닿으면 <b>매도 → 매수 순서</b>로 가정합니다(판 돈이 그날 매수 재원이 됩니다). 순서를 뒤집으면 결과가 달라질 수 있는 <b>모델 가정</b>입니다.<br>
-  <b>JK투자</b> · 학습용 도구
+  <b>JK 투자</b> · 학습용 도구
 </div>
 
 </div>
@@ -1286,7 +1286,7 @@ function downloadXLSX(){
     sheetCount++;
   });
   if(sheetCount===0){ alert('선택한 기간에 데이터가 없습니다.'); return; }
-  XLSX.writeFile(wb, `JK투자_시세_${today}.xlsx`);
+  XLSX.writeFile(wb, `JK 투자_시세_${today}.xlsx`);
 }
 
 // 공용 다중 종목 피커를 쓰는 탭들 — 목록과 선택세트.
@@ -2614,7 +2614,7 @@ function imBuyPx(star){ return star>0 ? +(star-0.01).toFixed(4) : 0; }
    추가 줄은 같은 회차의 일부다 — T 는 본 주문만 센다 (dT 0).
    증권사는 주문가×수량을 매수가능금액에서 예약하고 넘으면 거부한다 — 잔금 안에서만 낸다 (7차 점검 ④).
    주문가가 전일 종가 +큰수% 를 넘으면 그 값(호가 내림)으로 낮춰 낸다 — 원문 '큰수 매수'(증권사 가격 제한 대응).
-   줄 수(rows)는 원문에 없다('…' 로 이어질 뿐) — JK투자 구현값 기본 3 (imRowsOf). 호가·수수료 포함 수량도 구현 세부다.
+   줄 수(rows)는 원문에 없다('…' 로 이어질 뿐) — JK 투자 구현값 기본 3 (imRowsOf). 호가·수수료 포함 수량도 구현 세부다.
      o: {first, half, buy1, bal, firstPrice, starPrice, avg, cap, rows, fee, cur}
      반환: [{kind:'1회매수'|'절반매수'|'하방', name, price, q, dT, ladder, capped, orig}] */
 function imBuyOrders(o){
@@ -2670,7 +2670,7 @@ function runIM(days,tkr,cap,divs,targetPct,compound=true,bigOverride){
   let starBase=targetPct, curTP=targetPct;   // 익절 자동(실험)이면 사이클마다 바뀐다 — 셋이 함께 움직인다 (통합 규약)
   let starSlope=starBase*0.1*20/divs;
   let exitMul=1-starBase/100;
-  const bigPct=imBigPct({big:bigOverride});   // 큰수 — 처음매수 LOC 가격 (JK투자 기본 20)
+  const bigPct=imBigPct({big:bigOverride});   // 큰수 — 처음매수 LOC 가격 (JK 투자 기본 20)
   const MOM = ((typeof imTgtDyn!=='undefined')&&imTgtDyn) ? _imMom(tkr,IM_MOM_LEN) : null;   // 익절 동적 조절 (OFF면 null → 기존과 완전 동일)
   /* 익절 자동(실험 · imAutoTP) — 끄면 null 이라 기존과 완전 동일. 판정 봉은 워밍업 창까지 포함한 전체 종가(선택 기간 첫날 전 120거래일도 본다). */
   const _AD=(typeof srcOf==='function')?srcOf(tkr):M[tkr];
@@ -3042,7 +3042,7 @@ function runIM50(days,tkr,cap,divs,targetPct,compound=true,bigOverride){
   const starBase=targetPct;
   const starSlope=starBase*0.1*20/divs;
   const exitMul=1-starBase/100;
-  const bigPct=imBigPct({big:bigOverride});   // 큰수 — 처음매수 LOC 가격 (JK투자 기본 20)
+  const bigPct=imBigPct({big:bigOverride});   // 큰수 — 처음매수 LOC 가격 (JK 투자 기본 20)
   const GM=buildGateIM(tkr);
   /* 단리 판정은 '사이클 종료 잔액이 최초 원금을 넘는가'다. 넘으면 넘은 만큼만 인출하고
      원금으로 다시 시작, 못 넘으면 인출도 보충도 없이 그 잔액 그대로 다음 사이클로 간다.
@@ -4075,7 +4075,7 @@ function _stratNum(id,def){ if(typeof document==='undefined')return def; const e
    빈 목록이면 공식, 아니면 변형이다. 백테에서 더 좋았다는 이유로 고른 값도 변형이다 —
    예: 리버스 OFF(문서의 V4.0 일반모드는 '소진 → 리버스'), 아래로 LOC 추가를 끈 것(0줄).
      cfg: {tickers, div, reverse, revGap, target, tgtDyn, autoTp, engine, big, rows}
-     target 0·없음 = 종목별 문서값(TQQQ 15 · SOXL 20). big 없음 = JK투자 기본 20.
+     target 0·없음 = 종목별 문서값(TQQQ 15 · SOXL 20). big 없음 = JK 투자 기본 20.
      autoTp — 사이클 익절 자동 10/20(imAutoTP · 실험). 켜면 설정 익절%는 자료가 모자랄 때만 쓰이므로 '고정' 으로 적지 않는다. */
 function autoTpLabel(mode){return 'MA150+초강세·고변동+−10%→10%';}
 function imVariantOf(cfg){
@@ -4553,7 +4553,7 @@ async function run(){
     imUse.forEach(t=>{
       const tgt = imTgtFor(t);
       if(imEngine==='ab'){
-        /* 큰수 상한은 백테에 입력칸이 없다 — JK투자 기본(IM_BIG_DEFAULT=20)으로 돈다.
+        /* 큰수 상한은 백테에 입력칸이 없다 — JK 투자 기본(IM_BIG_DEFAULT=20)으로 돈다.
        엔진은 파라미터를 받으므로 나중에 칸이 생기면 그 값만 넘기면 된다. */
     results[t]={res:runIM(commonD,t,cap,imDiv,tgt,compound), res50:runIM50(commonD,t,cap,imDiv,tgt,compound), tgt, days:commonD};
       }else{
