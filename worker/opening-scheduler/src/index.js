@@ -1,6 +1,7 @@
 import { DurableObject } from "cloudflare:workers";
 import { krxDay } from "../../../functions/api/_krx_calendar.js";   // KRX 휴장일 — 주문 경로(Pages)와 같은 목록
 import { pushEvents, sendPush, vapidPublic } from "../../../functions/api/_claude_push.js";   // 단타(클로드) 매수·매도 웹 알림
+import { scalpingPushEvents } from "../../../functions/api/_scalping_push.js";                 // 단타(지피티) 매수·매도 타이밍 웹 알림
 
 // Cloudflare Worker — jkquant opening scheduler
 // Primary realtime trigger for the opening strategy.
@@ -96,18 +97,28 @@ export class OpeningSignalStore extends DurableObject {
     const r=await this.pushOp(op,b);
     return json(r,r.status||200);
   }
-  // 5분 알림 감시 — cron 을 늘리지 않고(계정 한도 · 스케줄 정책) 이 저장소의 알람으로 돈다. 실패해도 다음 알람은 꼭 건다.
+  // 웹 알림 저장소 인스턴스별 감시: claudepush=5분, gptpush=1분. 전략/주문 엔진과 독립적으로 읽기만 한다.
   async alarm(){
-    try{await claudePushWatch(this.env,Date.now(),(op,b)=>this.pushOp(op,b||{}));}
-    catch(e){console.error(JSON.stringify({type:"claude_push_error",error:String(e.message||e)}));}
-    finally{await this.ctx.storage.setAlarm(nextPushAt(Date.now()));}
+    const mode=(await this.ctx.storage.get("pushMode"))||"claude";
+    if(mode==="gpt"){
+      const subs=(await this.ctx.storage.get("pushSubs"))||[];
+      if(!subs.length){await this.ctx.storage.deleteAlarm();return;}
+    }
+    try{
+      if(mode==="gpt")await gptPushWatch(this.env,Date.now(),(op,b)=>this.pushOp(op,{...(b||{}),mode:"gpt"}));
+      else await claudePushWatch(this.env,Date.now(),(op,b)=>this.pushOp(op,b||{}));
+    }
+    catch(e){console.error(JSON.stringify({type:mode+"_push_error",error:String(e.message||e)}));}
+    finally{await this.ctx.storage.setAlarm(mode==="gpt"?nextGptPushAt(Date.now()):nextPushAt(Date.now()));}
   }
   async pushOp(op,b){
     const st=this.ctx.storage,json=o=>o;
-    if(op==="ensure"){                                  // 알람이 없으면 다음 5분 정각에 건다(구독할 때 · 장 일정 cron 때마다 확인)
+    if(b&&b.mode==="gpt")await st.put("pushMode","gpt");
+    const mode=(await st.get("pushMode"))||"claude";
+    if(op==="ensure"){
       let a=await st.getAlarm();
-      if(!a){a=nextPushAt(Date.now());await st.setAlarm(a);}
-      return {ok:true,alarm:a};
+      if(!a){a=mode==="gpt"?nextGptPushAt(Date.now()):nextPushAt(Date.now());await st.setAlarm(a);}
+      return {ok:true,alarm:a,mode};
     }
     if(op==="vapid"){
       let v=await st.get("pushVapid");
@@ -134,6 +145,7 @@ export class OpeningSignalStore extends DurableObject {
       const gone=new Set(op==="unsub"?[String(b.endpoint||"")]:(b.endpoints||[]).map(String));
       const next=subs.filter(s=>!gone.has(s.endpoint));
       await st.put("pushSubs",next);
+      if(mode==="gpt"&&!next.length)await st.deleteAlarm();
       return json({ok:true,count:next.length});
     }
     if(op==="sent")return json({ok:true,sent:(await st.get("pushSent"))||{}});
@@ -690,6 +702,31 @@ export async function claudePushWatch(env,nowMs=Date.now(),call=(op,b)=>pushStor
   return {events:evs.length,fresh:msgs.length,...out};
 }
 
+export const nextGptPushAt=ms=>(Math.floor(ms/6e4)+1)*6e4;      // 지피티 단타는 약 1분 단위
+async function gptPushStore(env,op,body){
+  const stub=env.SIGNAL_STORE.get(env.SIGNAL_STORE.idFromName("gptpush"));
+  const payload={...(body||{}),mode:"gpt"};
+  const r=await stub.fetch("https://store/push/"+op,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(payload)});
+  return r.json();
+}
+async function gptPushBroadcast(env,msgs,call=(op,b)=>gptPushStore(env,op,b)){
+  return pushBroadcast(env,msgs,call);
+}
+export async function gptPushWatch(env,nowMs=Date.now(),call=(op,b)=>gptPushStore(env,op,b)){
+  const r=await fetch(baseUrl(env)+"/api/scalping-live",{headers:{"x-monitor-key":env.MONITOR_KEY,Accept:"application/json"}});
+  const live=await r.json().catch(()=>null);
+  if(!r.ok||!live||!live.ok)throw new Error("scalping-live "+r.status);
+  const {sent}=await call("sent");
+  const evs=scalpingPushEvents(live);
+  if(!evs.length)return {events:0};
+  const {fresh}=await call("claim",{events:evs});
+  const msgs=evs.filter(e=>fresh.includes(e.id));
+  if(!msgs.length)return {events:evs.length,fresh:0};
+  const out=await gptPushBroadcast(env,msgs,call);
+  console.log(JSON.stringify({type:"gpt_scalping_push",fresh:msgs.map(m=>m.id),...out}));
+  return {events:evs.length,fresh:msgs.length,...out};
+}
+
 export default {
   async scheduled(controller,env,ctx){
     const at=Number(controller.scheduledTime)||Date.now();
@@ -754,6 +791,20 @@ export default {
         }
         const l=await readLedger(env,CLAUDE_CONFIG_KEY,"claudecfg");
         return json({ok:true,events:((l&&l.events)||[]).map(x=>x.payload)});
+      }catch(e){return json({ok:false,error:String(e.message||e)},500);}
+    }
+    // 단타(지피티) 웹 알림 — 클로드 알림과 구독/중복기록을 완전히 분리한다.
+    if(u.pathname.startsWith("/gpt-push-")){
+      if(!authorized(request,env))return json({ok:false,error:"unauthorized"},401);
+      try{
+        const op=u.pathname.slice(10);
+        if(op==="key"){const {jwk}=await gptPushStore(env,"vapid",{});const {subs}=await gptPushStore(env,"subs",{});return json({ok:true,publicKey:vapidPublic(jwk),subscribers:subs.length});}
+        if(op==="subscribe")return json(await gptPushStore(env,"sub",await request.json().catch(()=>({}))));
+        if(op==="alarm")return json(await gptPushStore(env,"ensure",{}));
+        if(op==="unsubscribe")return json(await gptPushStore(env,"unsub",await request.json().catch(()=>({}))));
+        if(op==="test")return json({ok:true,...await gptPushBroadcast(env,[{id:"test",title:"🔔 단타(지피티) 알림 켜짐",body:"매수·매도 타이밍이 서버 모의장부에 기록되면 알려 드립니다.",tag:"gpt-test",url:"/scalping"}])});
+        if(op==="watch")return json({ok:true,...await gptPushWatch(env)});
+        return json({ok:false,error:"not found"},404);
       }catch(e){return json({ok:false,error:String(e.message||e)},500);}
     }
     // 단타(클로드) 웹 알림 — Pages /api/claude-push(소유자 확인)가 감시키로 부른다
