@@ -1305,10 +1305,13 @@ console.log('[23] 관리자 모드 — 접속 계정·사용자 관리');
      && /\{id:'users'/.test(adm) && /\{id:'menus'/.test(adm) && /\{id:'defaults'/.test(adm)
      && /\{id:'diag'/.test(adm) && /\{id:'rules'/.test(adm));
   ok('관리자 메뉴 관리가 공개·관리자·숨김 세 상태를 저장한다',
-     /function renderMenus\(el\)/.test(adm) && /function saveMenus\(\)/.test(adm)
+     /function renderMenus\(el\)/.test(adm) && /function saveMenus\(auto=false,queuedSeq=0\)/.test(adm)
      && /settings','siteMenu/.test(adm) && /\['public','admin','hidden'\]/.test(adm));
-  ok('관리자 메뉴 순서 변경이 실제 order를 다시 매긴다',
-     /function moveMenu\(path,dir\)/.test(adm) && /menuDraft\.forEach\(\(x,k\)=>x\.order=\(k\+1\)\*10\)/.test(adm));
+  ok('관리자 메뉴 순서 변경이 실제 order를 다시 매기고 즉시 자동저장한다',
+     /function moveMenu\(path,dir\)/.test(adm) && /menuDraft\.forEach\(\(x,k\)=>x\.order=\(k\+1\)\*10\)/.test(adm)
+     && /function queueMenuSave\(\)/.test(adm) && /moveMenu[\s\S]{0,500}queueMenuSave\(\)/.test(adm)
+     && /menuModeChange[\s\S]{0,350}queueMenuSave\(\)/.test(adm)
+     && /setTimeout\(\(\)=>saveMenus\(true,seq\),450\)/.test(adm));
   ok('소유자 전용 메뉴는 전체공개로 낮출 수 없다',
      /const MENU_HARD_ADMIN=new Set\(\['\/scalping','\/claude','\/admin'\]\)/.test(adm)
      && /if\(hard&&mode==='public'\)mode='admin'/.test(adm));
@@ -11742,6 +11745,9 @@ console.log('\n[ACCESS] 이용 승인제 — 판정 한 곳 · 모든 페이지 
        && /22000/.test(wd)
        && !/restored|cacheOk|startApp\(\)/.test(wd));
   }
+
+  ok('자산플랜 상단도 JK 투자 공통 브랜드와 x.y.z 버전을 쓴다',
+     /<div class="brand"><div class="logo">Asset Plan<\/div><h1>JK <span class="v">투자<\/span> 자산플랜 <span class="ver">v\d+\.\d+\.\d+<\/span><\/h1><\/div>/.test(pl));
 
   ok('자산플랜: 본문은 로그인(html.authed) 전에는 숨기고, 막은 로그인 뒤에만 숨긴다',
      pl.includes('html:not(.authed) body>*:not(#authgate){visibility:hidden}') && pl.includes('html.authed #authgate{display:none}'));
