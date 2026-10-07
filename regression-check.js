@@ -11454,6 +11454,15 @@ console.log('\n[PERF FAST PATH] 모의 성과 · 단타 오늘 탭');
      /const got=await Promise\.all\(dates\.map/.test(dapi)
      && /Promise\.allSettled\(\[daytradingLiveSessions\(env\),daytradingResearchSessions\(\)\]\)/.test(dapi)
      && /Promise\.allSettled\(\[globalPaperSessions\(env,strategy\),decisionSessions\(path,source\)\]\)/.test(dapi));
+  ok('단타 오늘 빠른 경로는 외부 원천 1.8초 제한 + 필요한 완료일 2개만 조회 + KRX 로컬 휴장일을 쓴다',
+     /const SOURCE_TIMEOUT_MS=1800;/.test(dapi)
+     && /async function fastFetch\(url,init=\{\},timeoutMs=SOURCE_TIMEOUT_MS\)/.test(dapi)
+     && /const dates=completedKrCandidates\(\)\.slice\(0,2\);/.test(dapi)
+     && /const candidates=completedKrCandidates\(\)\.slice\(0,2\);/.test(dapi)
+     && /const candidates=completedGlobalCandidates\(strategy\)\.slice\(0,2\);/.test(dapi)
+     && /const d=krxDay\(date\);/.test(dapi)
+     && !/await readDaytradingPaperHistory\(env,12\)/.test(dapi)
+     && !/await readGlobalPaperHistory\(env,strategy,12\)/.test(dapi));
 }
 
 /* ════ 단타(클로드) 머리말 — 지피티 단타와 같은 모양 ════ */
