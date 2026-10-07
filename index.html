@@ -238,14 +238,18 @@ table.cmp td:first-child,table.cmp th:first-child{text-align:left}
 .modal ol{padding-left:20px;font-size:12.5px;line-height:1.8;margin-bottom:14px}
 .modal code{background:var(--bg);padding:1px 5px;border-radius:4px;font-size:11px;color:var(--gold);word-break:break-all}
 .modal .mbtns{display:flex;gap:8px;margin-top:8px}
-/* ── 모의 성과 페이지(/paper) — 전략 화면은 숨기고 모의 성과 상자를 본문 폭 그대로 둔다 (모달은 폭 460px 로 좁았다) ── */
+/* ── 모의 성과 페이지(/paper)
+   iPhone Safari에서 #paperModal 을 footer 앞 #paperPage 로 JS 재배치하면
+   재배치가 늦거나 실패할 때 footer가 표 중간에 끼어 보였다.
+   페이지 모드에서는 운영 본문(.wrap) 자체를 숨기고, body 직속 #paperModal을 그대로 페이지 본문으로 쓴다. ── */
 #paperPage{display:none}
-body.paperpage #paperPage{display:block;margin-top:14px}
-body.paperpage .wrap>.tabs,body.paperpage #sessbar,body.paperpage #statusline,body.paperpage .wrap>section,body.paperpage #fab{display:none!important}
-body.paperpage #paperModal{position:static;display:block!important;background:none;padding:0;z-index:auto}
+body.paperpage>div.wrap{display:none!important}
+body.paperpage #fab{display:none!important}
+body.paperpage #paperModal{position:static;inset:auto;display:block!important;background:none;z-index:auto;
+  box-sizing:border-box;max-width:1100px;width:100%;margin:14px auto 0;padding:0 16px 70px}
 body.paperpage #paperModal .box{max-width:none;max-height:none;overflow:visible;border-color:var(--line);padding:16px 14px}
 body.paperpage #paperModal .mx,body.paperpage #paperModal .mbtns{display:none}
-@media(max-width:460px){body.paperpage #paperModal .box{padding:12px 8px;border-radius:12px}}
+@media(max-width:460px){body.paperpage #paperModal{padding:0 10px 55px}body.paperpage #paperModal .box{padding:12px 8px;border-radius:12px}}
 .modal .mbtns button{flex:1;padding:12px;border-radius:10px;border:none;font-weight:700;font-size:13px;cursor:pointer}
 .modal .save{background:var(--vio2);color:#fff}.modal .close{background:var(--panel2);color:var(--dim);border:1px solid var(--line)}
 .seclabel{font-size:11px;color:var(--faint);font-weight:700;letter-spacing:.05em;margin:16px 0 8px;text-transform:uppercase}
@@ -565,7 +569,7 @@ document.documentElement.classList.add('had-user');</script>
 </div>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">투자</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.110.19</span></h1></div>
+    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">투자</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.110.20</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -1677,7 +1681,7 @@ if(/^\/paper\/?$/.test(location.pathname)){
   <footer>
     <strong>JK 투자</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.110.19</b> · 2026-10-07</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.110.20</b> · 2026-10-07</div>
   </footer>
 </div>
 
@@ -8669,14 +8673,12 @@ function closePaper(){
   if(isPaperPage()){ history.pushState(null,'','/'); paperPageMode(false); return; }   // 페이지에서 나가 운영 화면으로 (뒤로 가기로 돌아온다)
   $('paperModal').classList.remove('on'); }
 function isPaperPage(){ return document.body.classList.contains('paperpage'); }
-/* 페이지 모드 켜기/끄기 — 모의 성과 상자(#paperModal)를 본문 자리(#paperPage)로 옮기고, 전략 화면은 CSS 가 숨긴다 */
+/* 페이지 모드 켜기/끄기 — DOM 재배치 없이 body 직속 모달을 페이지 본문으로 쓴다.
+   iPhone Safari에서 appendChild 재배치가 늦으면 footer가 표 가운데 끼는 레이아웃이 생겼다. */
 function paperPageMode(on){
-  const m=$('paperModal'), page=$('paperPage');
+  const m=$('paperModal');
   document.body.classList.toggle('paperpage', !!on);
-  if(m && page){
-    if(on){ if(m.parentNode!==page) page.appendChild(m); }
-    else if(m.parentNode===page){ m.classList.remove('on'); document.body.appendChild(m); }
-  }
+  if(m && !on) m.classList.remove('on');
   const home=document.querySelector('#jkmenuPop a[href="/"]'), pp=$('jkPaper');
   if(home) home.classList.toggle('cur', !on); if(pp) pp.classList.toggle('cur', !!on);
   document.title = on ? 'JK 투자 — 모의투자' : APP_TITLE;
