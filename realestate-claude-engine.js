@@ -38,31 +38,7 @@ const DEFAULTS={
 };
 
 /* 참고 사건 — 설명용 표시(월 단위). 전략 계산에는 쓰지 않는다. */
-const EVENTS=[
-  {m:'1989-04',g:'공급',t:'1기 신도시(분당·일산 등) 건설 계획 발표'},
-  {m:'1991-09',g:'공급',t:'1기 신도시 첫 입주(분당 시범단지)'},
-  {m:'1993-08',g:'대전',t:'대전 엑스포 개막(1993.8~11)'},
-  {m:'1997-11',g:'경제',t:'외환위기 — IMF 구제금융 신청'},
-  {m:'2002-09',g:'세종',t:'대선 후보 신행정수도 건설 공약 발표'},
-  {m:'2003-12',g:'세종',t:'신행정수도 특별법 국회 통과'},
-  {m:'2004-10',g:'세종',t:'헌법재판소 신행정수도 특별법 위헌 결정'},
-  {m:'2005-03',g:'세종',t:'행정중심복합도시 특별법 국회 통과'},
-  {m:'2008-09',g:'경제',t:'글로벌 금융위기(리먼 브러더스 파산)'},
-  {m:'2010-06',g:'세종',t:'세종시 수정안 국회 부결 — 원안 추진'},
-  {m:'2011-05',g:'대전',t:'국제과학비즈니스벨트 거점지구 대전(신동·둔곡) 선정'},
-  {m:'2012-07',g:'세종',t:'세종특별자치시 출범'},
-  {m:'2012-12',g:'세종',t:'정부세종청사 1단계 부처 이전'},
-  {m:'2017-08',g:'규제',t:'8·2 대책 — 세종 투기과열지구 지정'},
-  {m:'2020-03',g:'금리',t:'코로나19 대응 기준금리 0.75% 인하(5월 0.50%)'},
-  {m:'2020-06',g:'규제',t:'6·17 대책 — 대전 조정대상지역·투기과열지구 지정'},
-  {m:'2020-07',g:'세종',t:'여당 원내대표 행정수도 이전 제안'},
-  {m:'2021-08',g:'금리',t:'기준금리 인상 시작(0.50→0.75%)'},
-  {m:'2021-09',g:'세종',t:'국회세종의사당 설치 국회법 개정안 통과'},
-  {m:'2022-07',g:'금리',t:'기준금리 0.50%p 인상(빅스텝)'},
-  {m:'2022-09',g:'규제',t:'대전 투기과열지구 해제'},
-  {m:'2022-11',g:'규제',t:'대전 조정대상지역 해제'},
-  {m:'2023-01',g:'규제',t:'세종 투기과열지구·조정대상지역 해제'}
-];
+/* 사건 연표는 data/realestate/claude/events.json 한 곳에 둔다(날짜·출처 확인). 화면이 그 파일을 읽는다. */
 
 /* ── 달 ── */
 function ymk(s){ const m=/^(\d{4})-(\d{2})$/.exec(String(s)); if(!m) throw new Error('달 형식 오류: '+s); return (+m[1])*12+(+m[2]-1); }
@@ -484,7 +460,7 @@ function snapshot(D,o){
   return {dataMonth:kym(t),rows,pick,wf};
 }
 
-const API={VERSION,STRATEGY_VERSION,STRATEGIES,supplyPast,marketOf,DEFAULTS,UNIVERSE,DJ,EVENTS,FACTORS,ymk,kym,ser,at,firstK,lastK,upTo,chg,ret,prepare,label,
+const API={VERSION,STRATEGY_VERSION,STRATEGIES,supplyPast,marketOf,DEFAULTS,UNIVERSE,DJ,FACTORS,ymk,kym,ser,at,firstK,lastK,upTo,chg,ret,prepare,label,
   drawdown,jgap,rateChange,volGrowth,outShare,jeonseRatio,features,landLong,realSeries,cityOf,moveinRange,moveinAt,moveinSum,supplyRatio,permitsMonthly,permitsRatio,unsoldChange,longD,walkForwardLong,zigzag,cycles,factorStudy,leadLag,corr,outlook,
   candidates,candLabel,qualifies,desire,planNext,monthYield,markMonth,stats,simulate,dataStart,pickBest,walkForward,paperUpdate,snapshot};
 g.JKRealEstateClaude=API;
