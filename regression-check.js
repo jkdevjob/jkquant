@@ -75,9 +75,9 @@ console.log('[0-A] 공통 로그인·실시간 시세 의존성');
 
   const authFlow=extractFn(idx,'function initAuth(){');
   const paperAuto=extractFn(idx,'function paperPageAuto()');
-  ok('로그인 핵심 경로는 프로필 기록을 기다리지 않고 DB 원장을 먼저 읽는다',
+  ok('로그인 핵심 경로는 프로필 기록을 기다리지 않고 DB 원장을 먼저 읽는다 · 원장이 느려도 20초에 끊지 않고 안내하며 기다린다',
      authFlow.indexOf("authStep='DB 원장 읽기'")>=0
-     && authFlow.indexOf('withTimeout(pullRemote(), 20000')>=0
+     && authFlow.indexOf("dbWait(pullRemote(), 'Firebase DB 원장')")>=0 && !/withTimeout\(pullRemote/.test(idx)
      && authFlow.indexOf('void withTimeout(touchProfile(user), 8000')>authFlow.indexOf('startApp()'));
   ok('모의성과는 Firebase 원장 hydrate 전 임시 상태로 계산하지 않는다',
      /!stateCloudHydrated/.test(paperAuto)
@@ -1295,7 +1295,7 @@ console.log('[23] 관리자 모드 — 접속 계정·사용자 관리');
     ok('승인 확인이 Firebase DB 원장 읽기보다 먼저 (운영)',
        /if\(!await JKAccess\.admit\(user, accFb, \{lock:r=>accessLock\(user, r, accFb\)\}\)\) return;/.test(authFlow)
        && authFlow.indexOf('JKAccess.admit(user, accFb')>0
-       && authFlow.indexOf('JKAccess.admit(user, accFb') < authFlow.indexOf("withTimeout(pullRemote()"));
+       && authFlow.indexOf('JKAccess.admit(user, accFb') < authFlow.indexOf("dbWait(pullRemote()"));
   }
   ok('관리자 페이지도 컬렉션 통째 읽기를 쓴다', /doc, getDoc, setDoc, collection, getDocs/.test(adm)
      && /getDocs\(window\.fb\.collection\(window\.fb\.db,'profiles'\)\)/.test(adm));
@@ -1380,9 +1380,9 @@ console.log('[23] 관리자 모드 — 접속 계정·사용자 관리');
   // 승인 안 된 계정이 데이터를 열고 나서 쫓겨나면 막은 의미가 없다
   { const authFlow=extractFn(idx,'function initAuth(){');
     ok('승인 확인이 데이터 로딩보다 먼저 · 열린 뒤 취소되면 클라우드 기록을 더 열지 않는다',
-       authFlow.indexOf('JKAccess.admit(user, accFb') < authFlow.indexOf("withTimeout(pullRemote()")
+       authFlow.indexOf('JKAccess.admit(user, accFb') < authFlow.indexOf("dbWait(pullRemote()")
        && /if\(accessLocked\) return;/.test(authFlow)
-       && authFlow.indexOf('if(accessLocked) return;') < authFlow.indexOf("withTimeout(pullRemote()"));
+       && authFlow.indexOf('if(accessLocked) return;') < authFlow.indexOf("dbWait(pullRemote()"));
   }
   // 판정을 두 곳에서 세면 갈라진다 — 운영에 따로 차단 판정이 남아 있으면 안 된다
   ok('운영에 따로 차단 판정이 없다 (jk-access.js 한 곳)', !/function isBlocked\(/.test(idx) && !/isBlocked\(prof\)/.test(idx));
@@ -1889,8 +1889,9 @@ console.log('[35] 로그인 — 조용히 갇히지 않는다');
   ok('프로필 기록은 앱 시작 뒤 비동기·제한시간으로 처리',
      /void withTimeout\(touchProfile\(user\), 8000, '프로필 기록'\)/.test(ia)
      && ia.indexOf('touchProfile(user)')>ia.indexOf('startApp()'));
-  ok('Firebase DB 원장 읽기에 제한시간',
-     /withTimeout\(pullRemote\(\), 20000, 'Firebase DB 원장'\)/.test(ia));
+  ok('Firebase DB 원장 읽기 — 20초 넘으면 안내하며 끝까지 기다림(끊지 않음 · 2026-10-07 아이폰 다시 연결 화면 반복) · 진짜 오류만 다시 연결',
+     /const ok=await dbWait\(pullRemote\(\), 'Firebase DB 원장'\);/.test(ia) && /const DB_SLOW_NOTE_MS=20000;/.test(idx)
+     && /if\(!ok\)throw new Error\(pullLastErr\|\|'Firebase DB 원장을 읽지 못했습니다'\);/.test(ia));
   ok('Firestore 연결: 운영 DB는 iOS·앱내장 강제 long polling / 일반 자동 감지',
      /JK_FORCE_FIRESTORE_LONG_POLLING/.test(idx)
      && /experimentalForceLongPolling:true/.test(idx)

@@ -577,7 +577,7 @@ document.documentElement.classList.add('had-user');</script>
 </div>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">투자</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.110.22</span></h1></div>
+    <div><div class="kicker">Leveraged ETF Quant</div><h1 id="appTitle" onclick="adminTap()">JK <span class="v">투자</span> <span id="appVerTop" style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v3.110.23</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -1689,7 +1689,7 @@ if(/^\/paper\/?$/.test(location.pathname)){
   <footer>
     <strong>JK 투자</strong> — 라오어 무한매수법 V4.0 · 밸류리밸런싱 VR 5.0 기준
     <div class="disc">개인 학습·기록용 계산기입니다. 투자 권유가 아니며 레버리지 ETF는 원금 손실 위험이 매우 큽니다. 모든 판단과 책임은 본인에게 있습니다.</div>
-    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.110.22</b> · 2026-10-08</div>
+    <div style="margin-top:10px;color:var(--faint);font-size:11px;font-variant-numeric:tabular-nums">버전 <b id="appVer">v3.110.23</b> · 2026-10-08</div>
   </footer>
 </div>
 
@@ -10739,12 +10739,25 @@ async function pushRemoteNow(){
   stateSaveQueue=pending.catch(()=>false);
   return await pending;
 }
+/* 원장 읽기는 느려도 실패로 돌리지 않는다 — 20초가 넘으면 '늦어지고 있습니다'만 적고 끝까지 기다린다.
+   (2026-10-07 사용자 화면: 5G 아이폰에서도 '응답 없음(20초)' 뒤 다시 연결 화면이 반복됐다 — 원장이 1MB 가까이 크면
+    아이폰의 long polling 으로는 첫 읽기가 20초를 넘을 수 있다. 끊고 다시 읽으면 처음부터 다시 받아 더 오래 걸린다.)
+   진짜 오류(거절·오프라인)는 pullRemote 가 false 를 돌려 다시 연결 화면으로 간다. */
+const DB_SLOW_NOTE_MS=20000;
+let dbReadStart=0, dbReadMs=0, dbReadKB=0, dbReadTop='', pullLastErr='';
+async function dbWait(p,label){
+  const tm=setTimeout(()=>authWarn((label||'Firebase DB 원장')+' 응답이 늦어지고 있습니다('+Math.round(DB_SLOW_NOTE_MS/1000)+'초) — 끊지 않고 계속 기다리는 중입니다. 원장이 커서 아이폰에서는 오래 걸릴 수 있습니다.'),DB_SLOW_NOTE_MS);
+  try{ return await p; }finally{ clearTimeout(tm); }
+}
 async function pullRemote(){
   if(!curUid||!window.fb)return false;
   stateCloudHydrated=false;
   try{
+    dbReadStart=Date.now(); dbReadMs=0;
     const ref=window.fb.doc(window.fb.db,'users',curUid),snap=await window.fb.getDoc(ref);
     const d=snap.exists()?(snap.data()||{}):{};
+    dbReadMs=Date.now()-dbReadStart;
+    try{ dbReadKB=Math.round(fsDocBytes('users/'+curUid, fsDocParts(d))/1024); dbReadTop=dbPartsText(fsDocParts(d),4); }catch(e){}
     if(d&&d.strategyDefaultOverrides&&typeof d.strategyDefaultOverrides==='object')cacheStrategyDefaults(d.strategyDefaultOverrides);
     KR_NAME_MEMO=(d&&d.tickerNameMemo&&typeof d.tickerNameMemo==='object')?JSON.parse(JSON.stringify(d.tickerNameMemo)):{};
     const hasV2=d&&validState(d.stateV2),legacy=d&&validState(d.state)?d.state:null;
@@ -10766,10 +10779,14 @@ async function pullRemote(){
       S=freshState();ensureBoxes();stateDbBase=null;stateCloudPending=true;
     }
     stateCloudHydrated=true;
-    if(stateCloudPending||lastPushedJSON==='')await pushRemoteNow();
+    /* 읽은 뒤 고칠 게 있어 저장하는 일(옛 칸 정리·기본값 채우기)은 화면을 연 뒤 뒤에서 한다 — 예전엔 이 저장(원장 전체를
+       트랜잭션으로 다시 읽고 쓰기)까지 끝나야 화면이 열려, 원장이 큰 아이폰에서 '응답 없음(20초)'의 한 원인이 됐다.
+       저장 실패는 평소 저장처럼 저장 표시(setSync)로 알리고, 다음 저장 때 다시 시도한다(stateCloudPending). */
+    if(stateCloudPending||lastPushedJSON==='') void pushRemoteNow().catch(e=>console.warn('push after pull',e));
     return true;
   }catch(e){
     console.error('pull',e);stateCloudHydrated=false;stateCloudPending=true;setSync('err');
+    pullLastErr=String(e&&(e.code||e.message)||e).slice(0,120);
     return false;
   }
 }
@@ -10842,8 +10859,8 @@ async function retryDbLoad(){
   authStep='DB 원장 재연결';
   authWarn('로그인은 완료됐습니다. Firebase DB 원장을 다시 연결하고 있습니다…');
   try{
-    const ok=await withTimeout(pullRemote(),20000,'Firebase DB 원장 재연결');
-    if(!ok)throw new Error('Firebase DB 원장을 읽지 못했습니다');
+    const ok=await dbWait(pullRemote(),'Firebase DB 원장 재연결');
+    if(!ok)throw new Error(pullLastErr||'Firebase DB 원장을 읽지 못했습니다');
     $('authgate').style.display='none';
     startApp();
     applyAdminMode();
@@ -10993,8 +11010,8 @@ function initAuth(){
     const loginBtn=$('gbtn');
     if(loginBtn){ loginBtn.disabled=true; loginBtn.textContent='Firebase DB 원장 불러오는 중…'; }
     try{
-      const ok=await withTimeout(pullRemote(), 20000, 'Firebase DB 원장');
-      if(!ok)throw new Error('Firebase DB 원장을 읽지 못했습니다');
+      const ok=await dbWait(pullRemote(), 'Firebase DB 원장');
+      if(!ok)throw new Error(pullLastErr||'Firebase DB 원장을 읽지 못했습니다');
     }catch(e){
       console.error('db load',e);
       authWarn('로그인은 완료됐지만 Firebase DB 원장을 불러오지 못했습니다. 오래된 브라우저 기록으로 열지 않습니다 — '+(e&&e.message||e));
@@ -11046,6 +11063,7 @@ function authDiag(){
   L.push('DB전송    '+String(window.__jkFirestoreTransport||'미확인'));
   L.push('앱시작    '+(appStarted?'됨':'안 됨 · 멈춘 자리 '+authStep));
   L.push('데이터저장 '+storageOK());
+  L.push('DB읽기    '+(dbReadMs?((dbReadMs/1000).toFixed(1)+'초 · 원장 '+dbReadKB+'KB / 1024KB · 큰 칸 '+dbReadTop):(dbReadStart?('읽는 중 '+Math.round((Date.now()-dbReadStart)/1000)+'초째'):'아직')));
   L.push('기록크기  '+(dbBytesNow?(Math.round(dbBytesNow/1024)+'KB / 1024KB ('+Math.round(dbBytesNow/DB_DOC_LIMIT*100)+'%) · '+dbPartsText(dbPartsNow,6)):'아직 저장 전'));
   L.push('브라우저  '+(inAppName()||'기본 브라우저'));
   if(authLastErr) L.push('마지막오류 '+authLastErr);
