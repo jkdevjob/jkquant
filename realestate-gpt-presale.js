@@ -314,5 +314,13 @@ mount.addEventListener("input",e=>{
   else return;
   render();
 });
+function openPresaleDeepLink(){
+  const q=new URLSearchParams(location.search);
+  if(q.get("gpt")!=="presale")return;
+  try{if(typeof window.reTab==="function")window.reTab("gpt")}catch(e){}
+  const b=document.querySelector('#gptReNav button[data-v="presale"]');
+  if(b)b.click();
+}
 load();
+openPresaleDeepLink();
 })();
