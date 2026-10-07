@@ -6,7 +6,7 @@
 //  마감 장부는 Worker 가 Durable Object 에 한 번만 저장하고, 보냄·모름을 기록해 중복 발송을 막는다(재시도는 텔레그램이 거절한 경우만).
 import { ledger, quote } from "./claude-live.js";
 import { openingDay, etfDay, coinDay, soxlDay, composeDay, composeOverview } from "./_claude_day.js";
-import { MAIN_DEFAULT, loadMainEvents, mainFor, openingCounts } from "./_claude_main.js";
+import { MAIN_DEFAULT, coinDaysNeeded, loadMainEvents, mainFor, openingCounts } from "./_claude_main.js";
 
 const JH={"Content-Type":"application/json; charset=utf-8","Cache-Control":"no-store"};
 const RAW="https://raw.githubusercontent.com/jkdevjob/jkquant/scalping-data/data/";
@@ -137,7 +137,7 @@ async function closeDay0(origin,env,strategy,date,events){
   if(strategy==="crypto"){
     const end=Date.parse(date+"T00:00:00+09:00")+864e5,to=new Date(end).toISOString().replace(".000Z","Z");   // 마감(00:00) 전 자료만
     const coins=[],mainOn=ud=>mainFor(events,"crypto",ud);
-    const maxMa=Math.max(mainOn(date).params.ma,mainOn(new Date(Date.parse(date+"T12:00:00Z")-864e5).toISOString().slice(0,10)).params.ma);
+    const maxMa=Math.max(coinDaysNeeded(mainOn(date).params),coinDaysNeeded(mainOn(new Date(Date.parse(date+"T12:00:00Z")-864e5).toISOString().slice(0,10)).params));
     for(const m of ["KRW-BTC","KRW-ETH"]){
       const [daily,hourly]=await Promise.all(["days?market="+m+"&count="+Math.min(200,maxMa+5)+"&to="+to,"minutes/60?market="+m+"&count=60&to="+to].map(q=>
         fetch("https://api.upbit.com/v1/candles/"+q,{headers:{Accept:"application/json"}}).then(r=>r.json())));

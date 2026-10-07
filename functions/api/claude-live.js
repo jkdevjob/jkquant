@@ -6,7 +6,7 @@
 // 확정 결과는 밤 workflow 의 모의투자 장부(claude-paper)가 따로 남긴다. 이 응답은 화면 표시용이다.
 
 import { claudeAuthorized } from "./_claude_auth.js";
-import { MAIN_DEFAULT, loadMainEvents, mainFor, openingCounts, openingPick } from "./_claude_main.js";
+import { MAIN_DEFAULT, coinDaysNeeded, loadMainEvents, mainFor, openingCounts, openingPick } from "./_claude_main.js";
 const JH={"Content-Type":"application/json; charset=utf-8","Cache-Control":"no-store"};
 const WORKER="https://jkquant-opening-scheduler.mumae4.workers.dev";
 const RAW="https://raw.githubusercontent.com/jkdevjob/jkquant/scalping-data/data/";
@@ -247,7 +247,7 @@ export async function onRequestGet({request,env}){
     const coins=await Promise.all(P3.markets.map(async m=>{
       const name=m.replace("KRW-","");
       try{
-        const [dc,hc]=await Promise.all(["days?market="+m+"&count="+Math.min(200,P3.ma+2),"minutes/60?market="+m+"&count=30"].map(q=>
+        const [dc,hc]=await Promise.all(["days?market="+m+"&count="+Math.min(200,coinDaysNeeded(P3)+2),"minutes/60?market="+m+"&count=30"].map(q=>
           fetch("https://api.upbit.com/v1/candles/"+q,{headers:{Accept:"application/json"}}).then(r=>r.json())));
         const h=coinHoldToday(dc,P3);
         const day=String((dc[0]||{}).candle_date_time_kst||"").slice(0,10);

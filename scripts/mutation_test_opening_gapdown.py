@@ -149,6 +149,13 @@ JS = [
     ("auth any verified email", "_claude_auth.js", "      if (v.ok) return v.email;", '      if (v.ok) return "jk82investing@gmail.com";'),
     ("krx holiday list ignored", "_krx_calendar.js", '  if (SET.has(d)) return { closed: true, reason: "krx_holiday", known: true };\n', ""),
     ("krx holiday telegram says order", "claude-telegram.js", 'L.push(dec.reason==="krx_holiday"?', 'L.push(false?'),
+    ("push failed order counted", "_claude_push.js", 'const ob = o.filter(r => r.status && r.status !== "주문 실패");', "const ob = o.filter(r => r.status);"),
+    ("push stopped coin sold again", "_claude_push.js", ' || sent["coin:" + pud + ":" + mm[2] + ":stop"]', ""),
+    ("push coin sell wrong day", "_claude_push.js", "if (!mm || mm[1] !== pud ||", "if (!mm ||"),
+    ("push nonce label", "_claude_push.js", 'te.encode("Content-Encoding: nonce\\0")', 'te.encode("Content-Encoding: nonce")'),
+    ("push record delimiter", "_claude_push.js", "cat(te.encode(payload), new Uint8Array([2]))", "cat(te.encode(payload), new Uint8Array([1]))"),
+    ("push vapid audience", "_claude_push.js", "const aud = new URL(endpoint).origin;", "const aud = endpoint;"),
+    ("coin candles ignore hiN", "_claude_main.js", 'return Math.max(+p.ma || 1, p.level === "vb" ? 1 : (+p.hiN || 1));', "return +p.ma || 1;"),
     ("krx holiday etf note", "claude-live.js", '}else if(buy.decisionReason==="krx_holiday")', '}else if(false)'),
 ]
 
@@ -179,7 +186,7 @@ for label, filename, before, after in PY:
 for label, filename, before, after in JS:
     with tempfile.TemporaryDirectory() as tmp:
         folder = Path(tmp)
-        for name in ("_gapdown.js", "opening-gapdown.js", "claude-live.js", "claude-telegram.js", "_claude_day.js", "_claude_auth.js", "claude-lab.js", "_krx_calendar.js", "_claude_main.js", "_firebase_token.js"):
+        for name in ("_gapdown.js", "opening-gapdown.js", "claude-live.js", "claude-telegram.js", "_claude_day.js", "_claude_auth.js", "claude-lab.js", "_krx_calendar.js", "_claude_main.js", "_firebase_token.js", "_claude_push.js"):
             shutil.copy(API / name, folder / name)
         path = folder / filename
         src = path.read_text(encoding="utf-8")

@@ -39,6 +39,9 @@ export function validateParams(tab, p) {
   throw new Error("탭 오류");
 }
 
+// ③ 판단에 필요한 확정 일봉 수 — 평균 일수와 최근 N일 고가(변동성 돌파면 1) 중 긴 쪽. 실시간 · 마감 장부가 같이 쓴다.
+export function coinDaysNeeded(p) { return Math.max(+p.ma || 1, p.level === "vb" ? 1 : (+p.hiN || 1)); }
+
 // Worker 기록(쌓인 순서 그대로) → 쓸 수 있는 승격 기록만, 효력일 순. 변수는 기본값 위에 덮고 검사를 통과해야 한다.
 export function cleanEvents(raw) {
   const out = [];
