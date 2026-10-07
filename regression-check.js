@@ -11257,7 +11257,7 @@ console.log('[GAPDOWN D-1 / DIP24 D-3] 연구용 모의체결 경로 안전장�
       const ms=Date.parse('2026-10-04T00:00:00Z')+d*864e5+(hh*60+mm)*6e4;       // 2026-10-04 = 일요일(UTC)
       const r=route(ms);if(r)count[r]=(count[r]||0)+1;}}
     const r0=route(Date.parse('2026-10-04T23:56:00Z')),r1=route(Date.parse('2026-10-03T23:56:00Z'));  // 월 08:56 KST / 일 08:56 KST
-    ok('Worker cron 한 줄(매분 — 할 일은 시각으로 고름) + 라우팅: 시초가 스캔 27분×5일·08:56·15:21·15:40 각 5번(주말 0) · 국내 15:56 · 대결 18:10 · 코인 00:05~00:31 · SOXL 뉴욕 16:05~16:31',
+    ok('Worker cron 한 줄 + 라우팅: 시초가 스캔 27분×5일·08:56·15:21·15:40 각 5번(주말 0) · 국내 15:56 · 대결 18:10 · 코인 00:05~00:31 · SOXL 뉴욕 16:05~16:31',
        crons.length===1&&count.opening===135&&count.gapdown_preopen===5&&count.gapdown_close===5&&count.gapdown_reconcile===5
        &&count.claude_kr===5&&count.duel===5&&count.claude_crypto===27*7&&count.claude_soxl===27*5
        &&Object.keys(count).length===8&&r0==='gapdown_preopen'&&r1===null
@@ -12035,8 +12035,8 @@ console.log('\n[CLAUDE ARENA] 메인 기록 하나 · 자동 퇴출·신규·7�
      &&/<span class='tag' style='margin:0 6px 0 0'>"\+esc\(ARENA_TAB\[x\.tab\]/.test(ch)&&/"<span class='sub'>"\+arenaReason\(x\.reason,names\)\+"<\/span>/.test(ch));
   { const wk=fs.readFileSync(__d+'/worker/opening-scheduler/src/index.js','utf8'),wr=fs.readFileSync(__d+'/worker/opening-scheduler/wrangler.jsonc','utf8'),
       sw=fs.readFileSync(__d+'/claude-sw.js','utf8'),pu=fs.readFileSync(__d+'/functions/api/_claude_push.js','utf8'),pa=fs.readFileSync(__d+'/functions/api/claude-push.js','utf8');
-    ok('단타(클로드) 매수·매도 웹 알림: 5분 감시(실시간 자료 하나로 판단 · 같은 알림 한 번) · 장 일정과 분리 · 소유자만 켬 · 서비스워커는 /claude 범위에서 받기만',
-       JSON.parse(wr).triggers.crons.join()==="* * * * *"&&/if\(pushDue\(at\)\)/.test(wk)&&/const \{fresh\}=await pushStore\(env,"claim",\{events:evs\}\);/.test(wk)
+    ok('단타(클로드) 매수·매도 웹 알림: 5분 감시(저장소 알람 · cron 그대로 · 실시간 자료 하나로 판단 · 같은 알림 한 번) · 장 일정과 분리 · 소유자만 켬 · 서비스워커는 /claude 범위에서 받기만',
+       JSON.parse(wr).triggers.crons.join()==="5-31,40,56 0,6,9,15,20,21,23 * * *"&&/async alarm\(\)\{\n\s*try\{await claudePushWatch\(this\.env/.test(wk)&&/finally\{await this\.ctx\.storage\.setAlarm\(nextPushAt\(Date\.now\(\)\)\);\}/.test(wk)&&/const \{fresh\}=await call\("claim",\{events:evs\}\);/.test(wk)
        &&/fetch\(baseUrl\(env\)\+"\/api\/claude-live"/.test(wk)&&/if\(u\.pathname\.startsWith\("\/push-"\)\)\{\n\s*if\(!authorized\(request,env\)\)/.test(wk)
        &&/if \(!\(await claudeAuthorized\(request, env\)\)\) return json\(\{ ok: false, error: "unauthorized" \}, 401\);/.test(pa)
        &&!/addEventListener\("fetch"/.test(sw)&&/addEventListener\("push"/.test(sw)&&/register\("\/claude-sw\.js",\{scope:"\/claude"\}\)/.test(ch)

@@ -421,8 +421,10 @@ t("worker 웹 알림: 5분 감시가 새 매수·매도만 한 번 보냄 · 사
     .replace(/"\.\.\/\.\.\/\.\.\/functions\/api\/([^"]+)"/g, (_, f) => JSON.stringify(pathToFileURL(path.join(dir, f)).href));
   const tmp = path.join(fs.mkdtempSync(path.join(os.tmpdir(), "wk-")), "worker.mjs"); fs.writeFileSync(tmp, src);
   const W = await import(pathToFileURL(tmp).href);
-  const mem = new Map(), store = new W.OpeningSignalStore({ storage: { get: async k => mem.get(k), put: async (k, v) => { mem.set(k, v); } } }, {});
+  const mem = new Map(); let alarmAt = null;
   const env = { MONITOR_KEY: "mk", BASE_URL: "https://pages.test", SIGNAL_STORE: { idFromName: n => n, get: n => ({ fetch: (u, i) => { assert.equal(n, "claudepush"); return store.fetch(new Request(u, i)); } }) } };
+  const store = new W.OpeningSignalStore({ storage: { get: async k => mem.get(k), put: async (k, v) => { mem.set(k, v); },
+    getAlarm: async () => alarmAt, setAlarm: async t => { alarmAt = t; } } }, env);
   const ua = nodeCrypto.createECDH("prime256v1"); ua.generateKeys();
   const sub = { endpoint: "https://push.test/s1", keys: { p256dh: PU.b64u(ua.getPublicKey()), auth: PU.b64u(nodeCrypto.randomBytes(16)) } };
   let live = { ok: true, today: "2026-10-07", tabs: { opening: { rows: [{ name: "가", status: "보유중" }] }, daytrading: { rows: [] }, crypto: { rows: [] }, soxl: { rows: [] } } };
@@ -439,6 +441,7 @@ t("worker 웹 알림: 5분 감시가 새 매수·매도만 한 번 보냄 · 사
     const k1 = await call("/push-key"), k2 = await call("/push-key");
     assert.ok(k1.ok && k1.publicKey.length > 80); assert.equal(k1.publicKey, k2.publicKey);          // 서명키는 처음 한 번만 만든다
     assert.equal((await call("/push-subscribe", { subscription: sub })).count, 1);
+    assert.ok(alarmAt > Date.now() && alarmAt % 3e5 === 0);                                            // 구독하면 5분 감시 알람이 걸린다
     assert.equal((await call("/push-subscribe", { subscription: { ...sub, endpoint: "https://push.test/gone" } })).count, 2);
     const now = Date.parse("2026-10-07T09:00:00+09:00");
     const r1 = await W.claudePushWatch(env, now);
@@ -447,12 +450,16 @@ t("worker 웹 알림: 5분 감시가 새 매수·매도만 한 번 보냄 · 사
     posts.length = 0;
     assert.equal((await W.claudePushWatch(env, now + 3e5)).fresh || 0, 0); assert.deepEqual(posts, []);   // 같은 매수는 다시 안 보냄
     live.tabs.opening.rows[0] = { name: "가", status: "청산", realized: true, pnlPct: 1.2 };
-    const r3 = await W.claudePushWatch(env, now + 6 * 36e5);
-    assert.equal(r3.fresh, 1); assert.deepEqual(posts, ["https://push.test/s1"]);                  // 매수는 이미 보냄 — 새로 생긴 매도 한 건만
+    alarmAt = null;
+    await store.alarm();                                                                              // 저장소 알람이 감시를 돌리고 다음 5분 알람을 다시 건다
+    assert.deepEqual(posts, ["https://push.test/s1"]);                                                // 매수는 이미 보냄 — 새로 생긴 매도 한 건만
+    assert.ok(alarmAt > Date.now() && alarmAt % 3e5 === 0);
+    live = null; posts.length = 0; alarmAt = null;
+    await store.alarm();                                                                              // 감시가 실패해도(자료 없음) 다음 알람은 꼭 건다
+    assert.ok(alarmAt > Date.now()); assert.deepEqual(posts, []);
   } finally { globalThis.fetch = oldFetch; }
-  // 알림 감시는 5분마다(매분 cron 중) — 실패해도 장 일정 처리로 그대로 넘어간다
-  assert.deepEqual([0, 1, 4, 5, 55].map(m => W.pushDue(Date.UTC(2026, 9, 7, 0, m))), [true, false, false, true, true]);
-  assert.ok(/if\(pushDue\(at\)\)[^\n]*\n\s*ctx\.waitUntil\(claudePushWatch\(env,at\)\.catch\(/.test(src));
+  assert.equal(W.nextPushAt(Date.UTC(2026, 9, 7, 0, 3, 10)), Date.UTC(2026, 9, 7, 0, 5));
+  assert.equal(W.nextPushAt(Date.UTC(2026, 9, 7, 0, 5)), Date.UTC(2026, 9, 7, 0, 10));
 });
 t("soxl live: planned open buy/sell executes only in the session after the decision", () => {
   const q = (date, open, c, prev) => ({ price: c, ohlc: [{ date: "2026-10-01", open: prev, close: prev }, { date, open, close: c }], intraday: { regular: { c }, date } });

@@ -92,7 +92,23 @@ function isNyseSessionDate(date){
 export class OpeningSignalStore extends DurableObject {
   // 단타(클로드) 웹 알림 저장소(이름 "claudepush" 인스턴스만 쓴다): 서명키(VAPID, 처음 한 번 만들고 밖으로 안 나감) · 구독 · 보낸 알림 기록
   async push(op,request){
-    const st=this.ctx.storage,b=request.method==="POST"?await request.json().catch(()=>({})):{};
+    const b=request.method==="POST"?await request.json().catch(()=>({})):{};
+    const r=await this.pushOp(op,b);
+    return json(r,r.status||200);
+  }
+  // 5분 알림 감시 — cron 을 늘리지 않고(계정 한도 · 스케줄 정책) 이 저장소의 알람으로 돈다. 실패해도 다음 알람은 꼭 건다.
+  async alarm(){
+    try{await claudePushWatch(this.env,Date.now(),(op,b)=>this.pushOp(op,b||{}));}
+    catch(e){console.error(JSON.stringify({type:"claude_push_error",error:String(e.message||e)}));}
+    finally{await this.ctx.storage.setAlarm(nextPushAt(Date.now()));}
+  }
+  async pushOp(op,b){
+    const st=this.ctx.storage,json=o=>o;
+    if(op==="ensure"){                                  // 알람이 없으면 다음 5분 정각에 건다(구독할 때 · 장 일정 cron 때마다 확인)
+      let a=await st.getAlarm();
+      if(!a){a=nextPushAt(Date.now());await st.setAlarm(a);}
+      return {ok:true,alarm:a};
+    }
     if(op==="vapid"){
       let v=await st.get("pushVapid");
       if(!v){
@@ -107,10 +123,11 @@ export class OpeningSignalStore extends DurableObject {
     if(op==="subs")return json({ok:true,subs});
     if(op==="sub"){
       const x=b.subscription||{};
-      if(!/^https:\/\//.test(String(x.endpoint||""))||!x.keys||!x.keys.p256dh||!x.keys.auth)return json({ok:false,error:"구독 정보 오류"},400);
+      if(!/^https:\/\//.test(String(x.endpoint||""))||!x.keys||!x.keys.p256dh||!x.keys.auth)return {ok:false,error:"구독 정보 오류",status:400};
       const next=[{endpoint:String(x.endpoint),keys:{p256dh:String(x.keys.p256dh),auth:String(x.keys.auth)},at:new Date().toISOString(),ua:String(b.ua||"").slice(0,120)},
         ...subs.filter(s=>s.endpoint!==x.endpoint)].slice(0,10);
       await st.put("pushSubs",next);
+      if(!(await st.getAlarm()))await st.setAlarm(nextPushAt(Date.now()));
       return json({ok:true,count:next.length});
     }
     if(op==="unsub"||op==="drop"){
@@ -127,7 +144,7 @@ export class OpeningSignalStore extends DurableObject {
       await st.put("pushSent",sent);
       return json({ok:true,fresh});
     }
-    return json({ok:false,error:"push op"},404);
+    return {ok:false,error:"push op",status:404};
   }
   async fetch(request){
     const u=new URL(request.url);
@@ -642,33 +659,33 @@ export function claudeConfigEvent(b){
 }
 
 // ── 단타(클로드) 매수·매도 웹 알림 — 5분마다 실시간 화면 자료(/api/claude-live)로 새 매수·매도를 찾아 보낸다 ──
-export const pushDue=ms=>new Date(ms).getUTCMinutes()%5===0;   // cron 은 한 줄(매분) — 장 일정은 scheduleRoute 가 시각으로 고르고, 알림 감시는 5분마다
+export const nextPushAt=ms=>(Math.floor(ms/3e5)+1)*3e5;          // 다음 5분 정각(알람)
 async function pushStore(env,op,body){
   const stub=env.SIGNAL_STORE.get(env.SIGNAL_STORE.idFromName("claudepush"));
   const r=await stub.fetch("https://store/push/"+op,body?{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(body)}:{});
   return r.json();
 }
-async function pushBroadcast(env,msgs){
-  const [{jwk},{subs}]=await Promise.all([pushStore(env,"vapid",{}),pushStore(env,"subs")]);
+async function pushBroadcast(env,msgs,call=(op,b)=>pushStore(env,op,b)){
+  const [{jwk},{subs}]=await Promise.all([call("vapid",{}),call("subs")]);
   const res=[],gone=[];
   for(const m of msgs)for(const s of subs){
     try{const r=await sendPush(s,{title:m.title,body:m.body,tag:m.tag,url:m.url},jwk);res.push({id:m.id,status:r.status});if(r.gone)gone.push(s.endpoint);}
     catch(e){res.push({id:m.id,error:String(e.message||e)});}
   }
-  if(gone.length)await pushStore(env,"drop",{endpoints:gone});
+  if(gone.length)await call("drop",{endpoints:gone});
   return {subs:subs.length,sent:res,dropped:gone.length};
 }
-export async function claudePushWatch(env,nowMs=Date.now()){
+export async function claudePushWatch(env,nowMs=Date.now(),call=(op,b)=>pushStore(env,op,b)){
   const r=await fetch(baseUrl(env)+"/api/claude-live",{headers:{"x-monitor-key":env.MONITOR_KEY,Accept:"application/json"}});
   const live=await r.json().catch(()=>null);
   if(!r.ok||!live||!live.ok)throw new Error("claude-live "+r.status);
-  const {sent}=await pushStore(env,"sent");
+  const {sent}=await call("sent");
   const evs=pushEvents(live,nowMs,sent);
   if(!evs.length)return {events:0};
-  const {fresh}=await pushStore(env,"claim",{events:evs});           // 먼저 기록 — 보내다 실패해도 같은 알림을 되풀이하지 않는다
+  const {fresh}=await call("claim",{events:evs});           // 먼저 기록 — 보내다 실패해도 같은 알림을 되풀이하지 않는다
   const msgs=evs.filter(e=>fresh.includes(e.id));
   if(!msgs.length)return {events:evs.length,fresh:0};
-  const out=await pushBroadcast(env,msgs);
+  const out=await pushBroadcast(env,msgs,call);
   console.log(JSON.stringify({type:"claude_push",fresh:msgs.map(m=>m.id),...out}));
   return {events:evs.length,fresh:msgs.length,...out};
 }
@@ -676,8 +693,7 @@ export async function claudePushWatch(env,nowMs=Date.now()){
 export default {
   async scheduled(controller,env,ctx){
     const at=Number(controller.scheduledTime)||Date.now();
-    if(pushDue(at))                                       // 알림 감시 — 따로 돈다(실패해도 아래 장 일정 · 주문에 영향 없음)
-      ctx.waitUntil(claudePushWatch(env,at).catch(e=>console.error(JSON.stringify({type:"claude_push_error",error:String(e.message||e)}))));
+    ctx.waitUntil(pushStore(env,"ensure",{}).catch(()=>null));   // 알림 감시 알람이 살아 있는지만 확인(감시는 저장소 알람이 5분마다 — 장 일정과 따로)
     const route=scheduleRoute(at);
     // 09:05 KST 매일(주말 포함 — 코인은 쉬지 않는다): 코인 하루 마감·미국 지난 세션 결과 알림
     if(claudeWeeklyDue(at))ctx.waitUntil(claudeTelegram(env,kstParts(at).date,"weekly"));
@@ -747,6 +763,7 @@ export default {
         const op=u.pathname.slice(6);
         if(op==="key"){const {jwk}=await pushStore(env,"vapid",{});const {subs}=await pushStore(env,"subs");return json({ok:true,publicKey:vapidPublic(jwk),subscribers:subs.length});}
         if(op==="subscribe")return json(await pushStore(env,"sub",await request.json().catch(()=>({}))));
+        if(op==="alarm")return json(await pushStore(env,"ensure",{}));
         if(op==="unsubscribe")return json(await pushStore(env,"unsub",await request.json().catch(()=>({}))));
         if(op==="test")return json({ok:true,...await pushBroadcast(env,[{id:"test",title:"🔔 단타(클로드) 알림 켜짐",body:"매수 · 매도 때마다 이렇게 알려 드립니다.",tag:"test",url:"/claude"}])});
         if(op==="watch")return json({ok:true,...await claudePushWatch(env)});
