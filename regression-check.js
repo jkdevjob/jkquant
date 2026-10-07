@@ -12039,7 +12039,8 @@ console.log('\n[CLAUDE ARENA] 메인 기록 하나 · 자동 퇴출·신규·7�
        JSON.parse(wr).triggers.crons.join()==="5-31,40,56 0,6,9,15,20,21,23 * * *"&&/async alarm\(\)\{\n\s*try\{await claudePushWatch\(this\.env/.test(wk)&&/finally\{await this\.ctx\.storage\.setAlarm\(nextPushAt\(Date\.now\(\)\)\);\}/.test(wk)&&/const \{fresh\}=await call\("claim",\{events:evs\}\);/.test(wk)
        &&/fetch\(baseUrl\(env\)\+"\/api\/claude-live"/.test(wk)&&/if\(u\.pathname\.startsWith\("\/push-"\)\)\{\n\s*if\(!authorized\(request,env\)\)/.test(wk)
        &&/if \(!\(await claudeAuthorized\(request, env\)\)\) return json\(\{ ok: false, error: "unauthorized" \}, 401\);/.test(pa)
-       &&!/addEventListener\("fetch"/.test(sw)&&/addEventListener\("push"/.test(sw)&&/register\("\/claude-sw\.js",\{scope:"\/claude"\}\)/.test(ch)
+       &&!/addEventListener\("fetch"/.test(sw)&&/addEventListener\("push"/.test(sw)&&/register\("\/claude-sw\.js",\{scope:"\/claude"\}\)/.test(fs.readFileSync(__d+'/claude-push-client.js','utf8'))
+       &&/<script src="\/claude-push-client\.js\?v=[\d.]+" defer><\/script>/.test(ch)&&/ClaudePush\.enable\(tok\)/.test(ch)
        &&/Content-Encoding: aes128gcm/.test(pu)&&/onclick='pushToggle\(\)'/.test(ch)&&!/localStorage|sessionStorage/.test(sw+pu));
   }
   { const og2=fs.readFileSync(__d+'/functions/api/opening-gapdown.js','utf8'),ks=fs.readFileSync(__d+'/functions/api/kis.js','utf8');
@@ -12049,6 +12050,12 @@ console.log('\n[CLAUDE ARENA] 메인 기록 하나 · 자동 퇴출·신규·7�
        &&/tr_id: isReal\(env\) \? "TTTC8908R" : "VTTC8908R"/.test(ks)&&!/order-cash|hashkey/.test(ks.slice(ks.indexOf('async function krBuyable('),ks.indexOf('function parseEmails(')))
        &&(og2.match(/await sizedBuy\(origin,env,date,/g)||[]).length===2&&!/await vtsOrder\(origin,env,date,"buy"/.test(og2.replace('const rec=await vtsOrder(origin,env,date,"buy",x,s.qty,meta);',''))
        &&/op=buyable&env=vts&market=kr/.test(og2));
+  }
+  { const st=fs.readFileSync(__d+'/settings.html','utf8'),sc=fs.readFileSync(__d+'/settings-claude-push.js','utf8');
+    ok('설정 → 알림: 단타(클로드) 매수·매도 항목(켜기 · 끄기 · 테스트) — 단타 화면과 같은 ClaudePush 로 · 소유자 토큰 · 기존 JOB/신규분양 항목 그대로',
+       /<div id="claudePushSettings"><\/div>\s*<div id="notificationSettings">/.test(st)&&/<script src="\/claude-push-client\.js\?v=[\d.]+" defer><\/script>\s*<script src="\/settings-claude-push\.js\?v=[\d.]+" defer><\/script>/.test(st)
+       &&/window\.jkAuth=auth;/.test(st)&&/<script src="\/settings-notifications\.js" defer><\/script>/.test(st)
+       &&/P\.enable\(token\)/.test(sc)&&/P\.disable\(token\)/.test(sc)&&/P\.test\(token\)/.test(sc)&&!/localStorage|sessionStorage/.test(sc));
   }
   ok('전략 경쟁 화면: 탭 ⑥ 순위표(점수·최근 1년·90일·MDD) + 개선 내역·사유 · 오늘 탭 자동 개선 현황 · 승격된 메인 안내 · 수동 승격 버튼 없음',
      /function shadowCard\(tab\)\{\n\s*var z=arenaOf\(tab\);/.test(ch)&&/\+arenaOverview\(lab\);/.test(ch)&&/mainBanner\(tab\)\+"<div class='rule'>"/.test(ch)
