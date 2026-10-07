@@ -12037,7 +12037,11 @@ console.log('\n[CLAUDE ARENA] 메인 기록 하나 · 자동 퇴출·신규·7�
   { const wk=fs.readFileSync(__d+'/worker/opening-scheduler/src/index.js','utf8'),wr=fs.readFileSync(__d+'/worker/opening-scheduler/wrangler.jsonc','utf8'),
       sw=fs.readFileSync(__d+'/claude-sw.js','utf8'),pu=fs.readFileSync(__d+'/functions/api/_claude_push.js','utf8'),pa=fs.readFileSync(__d+'/functions/api/claude-push.js','utf8');
     ok('단타(클로드) 매수·매도 웹 알림: 5분 감시(저장소 알람 · cron 그대로 · 실시간 자료 하나로 판단 · 같은 알림 한 번) · 장 일정과 분리 · 소유자만 켬 · 서비스워커는 /claude 범위에서 받기만',
-       JSON.parse(wr).triggers.crons.join()==="5-31,40,56 0,6,9,15,20,21,23 * * *"&&/async alarm\(\)\{\n\s*try\{await claudePushWatch\(this\.env/.test(wk)&&/finally\{await this\.ctx\.storage\.setAlarm\(nextPushAt\(Date\.now\(\)\)\);\}/.test(wk)&&/const \{fresh\}=await call\("claim",\{events:evs\}\);/.test(wk)
+       JSON.parse(wr).triggers.crons.join()==="5-31,40,56 0,6,9,15,20,21,23 * * *"
+       &&/const mode=\(await this\.ctx\.storage\.get\("pushMode"\)\)\|\|"claude";/.test(wk)
+       &&/if\(mode==="gpt"\)await gptPushWatch\([\s\S]{0,180}else await claudePushWatch\(this\.env/.test(wk)
+       &&/mode==="gpt"\?nextGptPushAt\(Date\.now\(\)\):nextPushAt\(Date\.now\(\)\)/.test(wk)
+       &&/const \{fresh\}=await call\("claim",\{events:evs\}\);/.test(wk)
        &&/fetch\(baseUrl\(env\)\+"\/api\/claude-live"/.test(wk)&&/if\(u\.pathname\.startsWith\("\/push-"\)\)\{\n\s*if\(!authorized\(request,env\)\)/.test(wk)
        &&/if \(!\(await claudeAuthorized\(request, env\)\)\) return json\(\{ ok: false, error: "unauthorized" \}, 401\);/.test(pa)
        &&!/addEventListener\("fetch"/.test(sw)&&/addEventListener\("push"/.test(sw)&&/register\("\/claude-sw\.js",\{scope:"\/claude"\}\)/.test(fs.readFileSync(__d+'/claude-push-client.js','utf8'))
@@ -12228,7 +12232,8 @@ console.log('\n[SCALPING GPT PUSH] 지피티 매수·매도 타이밍 웹 알림
   ok('지피티 푸시 감시는 서버 모의장부를 읽기만 하고 약 1분 주기로 중복 제거',
      /단타\(지피티\) 웹 알림용 읽기 전용 현재 장부/.test(live)
      &&/nextGptPushAt=ms=>\(Math\.floor\(ms\/6e4\)\+1\)\*6e4/.test(worker)
-     &&/mode==="gpt"&&!subs\.length/.test(worker)&&/deleteAlarm\(\)/.test(worker)
+     &&/if\(mode==="gpt"\)\{[\s\S]{0,180}if\(!subs\.length\)\{await this\.ctx\.storage\.deleteAlarm\(\);return;\}/.test(worker)
+     &&/setAlarm\(mode==="gpt"\?nextGptPushAt\(Date\.now\(\)\):nextPushAt\(Date\.now\(\)\)\)/.test(worker)
      &&/scalpingPushEvents\(live\)/.test(worker)&&/call\("claim",\{events:evs\}\)/.test(worker)
      &&/\/api\/scalping-live/.test(worker));
   const cp=require('child_process'),u=require('url').pathToFileURL(__d+'/functions/api/_scalping_push.js').href;
