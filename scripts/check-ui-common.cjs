@@ -138,26 +138,29 @@ ta('U8 첫 읽기가 실패(끊김)하면 한 번 더 읽어 그 순서를 붙�
 /* 넓은 표 — 휴대폰에서도 표 그대로(사용자: 비교는 표가 편함). 넘치는 표만 촘촘하게 + 첫 칸 고정 · 페이지는 안 밀린다 */
 const fitSrc=(()=>{ const a=ui.indexOf('/* 넓은 표 —'), b=ui.indexOf('window.JKFit = {'); assert(a>=0&&b>a,'jk-ui.js 넓은 표 블록'); return ui.slice(a, ui.indexOf('})();',b)+5); })();
 function fitDom(o={}){
-  const L={doc:[],win:[]}; let mo=null;
+  const L={doc:[],win:[]}; let mo=null; const log=[];
   const body={nodeType:1,tagName:'BODY',_bg:'rgb(15, 19, 32)',_ox:'hidden',parentElement:null};
   const card={nodeType:1,tagName:'DIV',_bg:'rgb(23, 28, 46)',_ox:'visible',parentElement:body,clientWidth:360};
   const wrap={nodeType:1,tagName:'DIV',_bg:'rgba(0, 0, 0, 0)',_ox:'auto',parentElement:card,clientWidth:351};   // 표 상자(옆으로 미는 칸)
-  const tables=[];
-  const T0='rgba(0, 0, 0, 0)';
-  const mkTable=(w,vis=true,rows=[{}])=>{ const cls=new Set(); const t={nodeType:1,tagName:'TABLE',_bg:T0,parentElement:wrap,scrollWidth:w,offsetWidth:w,
-    classList:{contains:c=>cls.has(c),add:c=>cls.add(c),remove:c=>cls.delete(c)},getClientRects:()=>vis?[1]:[]};
-    const head={nodeType:1,tagName:'THEAD',_bg:T0,parentElement:t}, body={nodeType:1,tagName:'TBODY',_bg:T0,parentElement:t};
-    t.rows=rows.map(r=>{ const tr={nodeType:1,tagName:'TR',_bg:r.tr||T0,parentElement:r.head?head:body}, st={};
-      tr.cells=[{nodeType:1,tagName:r.head?'TH':'TD',_bg:r.cell||T0,parentElement:tr,_st:st,style:{setProperty:(k,v)=>{st[k]=v;},getPropertyValue:k=>st[k]||''}}]; return tr; });
+  const tables=[], T0='rgba(0, 0, 0, 0)';
+  const mkStyle=st=>({setProperty:(k,v)=>{ log.push('w'); st[k]=v; },getPropertyValue:k=>st[k]||'',removeProperty:k=>{ log.push('w'); delete st[k]; }});
+  const mkTable=(w,vis=true,rows=[{}])=>{ const cls=new Set(), tst={}; let W=w; const t={nodeType:1,tagName:'TABLE',_bg:T0,parentElement:wrap,_tst:tst,reads:0,
+    classList:{contains:c=>cls.has(c),add:c=>cls.add(c),remove:c=>cls.delete(c)},style:mkStyle(tst),getClientRects:()=>vis?[1]:[],
+    setW(x){ W=x; }, show(v){ vis=v; }};
+    Object.defineProperty(t,'scrollWidth',{get(){ t.reads++; return W; }}); Object.defineProperty(t,'offsetWidth',{get(){ return W; }});
+    const head={nodeType:1,tagName:'THEAD',_bg:T0,parentElement:t}, bodyS={nodeType:1,tagName:'TBODY',_bg:T0,parentElement:t};
+    t.rows=rows.map(r=>{ const tr={nodeType:1,tagName:'TR',_bg:r.tr||T0,parentElement:r.head?head:bodyS}, st={};
+      tr.cells=[{nodeType:1,tagName:r.head?'TH':'TD',_bg:r.cell||T0,parentElement:tr,_st:st,style:mkStyle(st)}]; return tr; });
     t.bgOf=i=>t.rows[i].cells[0]._st['--jk-fit-bg']; tables.push(t); return t; };
+  const scans={n:0};
   const document={readyState:'complete',body,head:{appendChild(){}},documentElement:{},getElementById:()=>null,createElement:()=>({}),
-    querySelectorAll:q=>q==='table'?tables.slice():[],addEventListener:(ev,f,op)=>L.doc.push({ev,f,capture:op===true||!!(op&&op.capture)})};
+    querySelectorAll:q=>{ if(q!=='table') return []; scans.n++; return tables.slice(); },addEventListener:(ev,f,op)=>L.doc.push({ev,f,capture:op===true||!!(op&&op.capture)})};
   const win={innerWidth:o.w||375,addEventListener:(ev,f)=>L.win.push({ev,f})};
   class MO{ constructor(cb){ mo=this; this.cb=cb; } observe(target,opt){ this.target=target; this.opt=opt; } }
-  const ctx={window:win,document,location:{pathname:o.path||'/'},getComputedStyle:el=>({overflowX:el._ox||'visible',backgroundColor:el._bg||'rgba(0, 0, 0, 0)'}),
+  const ctx={window:win,document,location:{pathname:o.path||'/'},getComputedStyle:el=>{ log.push('r'); return {overflowX:el._ox||'visible',backgroundColor:el._bg||T0}; },
     MutationObserver:MO,setTimeout,clearTimeout,console};
   win.window=win; vm.createContext(ctx);
-  return {ctx,win,L,tables,mkTable,wrap,mo:()=>mo,run(){ vm.runInContext(fitSrc,ctx); return win.JKFit; }};
+  return {ctx,win,L,log,tables,scans,mkTable,wrap,mo:()=>mo,run(){ vm.runInContext(fitSrc,ctx); return win.JKFit; }};
 }
 const on=t=>t.classList.contains('jk-fit');
 t('U9 넓은 표 — 폭 760px 이하에서 표 상자보다 넓은 표만 jk-fit(글자·간격 줄임 + 첫 칸 고정) · 들어맞는 표 · 숨은 표는 그대로',()=>{
@@ -165,38 +168,54 @@ t('U9 넓은 표 — 폭 760px 이하에서 표 상자보다 넓은 표만 jk-fi
   const wide=D.mkTable(600,true,[{head:true,cell:'rgb(30, 37, 64)'},{},{tr:'rgba(255, 255, 255, 0.05)'}]), fits=D.mkTable(340), edge=D.mkTable(353), hid=D.mkTable(900,false);
   const F=D.run();
   assert.deepEqual([on(wide),on(fits),on(edge),on(hid)],[true,false,false,false],'600px 표만(351px 상자 · 2px 여유)');
+  assert.equal(wide._tst['--jk-fit-bg'],'rgb(23, 28, 46)','표에 단 색 = 표가 놓인 카드 색(투명한 표·표 상자는 건너뛴다) — 보통 줄 첫 칸은 이걸 물려받는다');
   assert.equal(wide.bgOf(0),'rgb(30, 37, 64)','머리글 첫 칸은 머리글 칸 색 그대로');
-  assert.equal(wide.bgOf(1),'rgb(23, 28, 46)','보통 줄은 표가 놓인 카드 색(투명한 줄·표·표 상자는 건너뛴다)');
-  assert.equal(wide.bgOf(2),'linear-gradient(rgba(255, 255, 255, 0.05),rgba(255, 255, 255, 0.05)),rgb(23, 28, 46)','반투명 강조 줄은 강조색을 카드 색 위에 겹친다(비치지 않게)');
-  assert.equal(fits.bgOf(0),undefined,'안 줄인 표는 손대지 않는다');
-  wide.scrollWidth=wide.offsetWidth=330; F.scan(); assert.equal(on(wide),false,'자료가 줄어 들어맞으면 원래 표로');
-  wide.scrollWidth=wide.offsetWidth=700; hid.getClientRects=()=>[1]; F.scan(); assert.deepEqual([on(wide),on(hid)],[true,true],'다시 넓어지면 · 탭이 열려 보이면');
+  assert.equal(wide.bgOf(1),undefined,'보통 줄은 칸마다 달지 않는다(286줄이면 286번 쓰기)');
+  assert.equal(wide.bgOf(2),'rgb(35, 39, 56)','반투명 강조 줄(흰 5%)은 카드 색 위에 합성한 불투명 색 — 255×.05+23×.95=34.6 · 39.4 · 56.5');
+  assert.equal(fits._tst['--jk-fit-bg'],undefined,'안 줄인 표는 손대지 않는다');
+  wide.setW(330); wide.__jkFitDirty=true; F.scan(); assert.equal(on(wide),false,'자료가 줄어 들어맞으면 원래 표로');
+  wide.setW(700); wide.__jkFitDirty=true; hid.show(true); F.scan(); assert.deepEqual([on(wide),on(hid)],[true,true],'다시 넓어지면 · 숨었던 표가 보이면');
   D.win.innerWidth=1024; F.scan(); assert.deepEqual(D.tables.map(on),[false,false,false,false],'넓은 화면에선 전부 원래 표');
   assert.equal(F.AT,760);
+});
+t('U9 빠르기 — 줄마다 읽고 쓰기를 번갈아 하지 않는다(읽기 다 하고 쓰기) · 같은 폭에서 안 바뀐 표는 다시 안 잰다 · 줄여도 넘치는 표는 벗겨 다시 재지 않는다',()=>{
+  const D=fitDom({w:375}); const rows=[{head:true,cell:'rgb(30, 37, 64)'}]; for(let i=0;i<40;i++) rows.push(i%10===3?{tr:'rgba(255, 255, 255, 0.05)'}:{});
+  const big=D.mkTable(900,true,rows); const F=D.run();
+  assert.equal(on(big),true);
+  const seq=D.log.join(''), firstW=seq.indexOf('w');
+  assert(firstW>0 && seq.indexOf('r',firstW)<0,'첫 쓰기 뒤에 읽기가 없다: '+seq.replace(/(.)\1+/g,(m,c)=>c+m.length));
+  const reads=big.reads; F.scan(); F.scan(); assert.equal(big.reads,reads,'안 바뀐 표는 폭을 다시 안 읽는다(누를 때마다 0.9초 멈칫하던 원인)');
+  let removed=0; const rm=big.classList.remove; big.classList.remove=c=>{ if(c==='jk-fit') removed++; return rm(c); };
+  D.log.length=0; big.__jkFitDirty=true; F.scan(); assert.equal(on(big),true,'내용이 바뀌면 다시 잰다');
+  assert.equal(removed,0,'줄인 채 여전히 넘치면 벗기지 않는다 — 반을 껐다 켜면 큰 표는 0.2~0.5초(색도 벗기지 않고 읽는다)');
+  assert.equal(D.log.filter(x=>x==='w').length,0,'색이 그대로면 쓰지 않는다');
 });
 t('U9 jk-fit 모양 — 760px 이하에서만 · 글자 11px · 간격 5px 3px · 머리글 접힘 · 첫 칸 sticky(바탕 칠함) · 단타(클로드)는 자기 fit 이 있어 건너뛴다',()=>{
   assert(/'@media \(max-width:' \+ AT \+ 'px\)\{'/.test(fitSrc),'760px 이하에서만');
   assert(/table\.jk-fit th,table\.jk-fit td\{font-size:11px!important;padding:5px 3px!important;word-break:keep-all;overflow-wrap:normal\}/.test(fitSrc),
     '낱말 가운데서 안 끊는다 — 카드의 overflow-wrap:anywhere 를 물려받으면 표 폭 제한(max-width:100%)에 머리글이 한 글자씩 세로로 쪼개졌다(부동산 10칸 표)');
   assert(/table\.jk-fit th\{white-space:normal!important;/.test(fitSrc),'머리글은 띄어쓰기에서 접힘');
-  assert(/table\.jk-fit tr>:first-child\{position:sticky;left:0;z-index:1;background:var\(--jk-fit-bg,#171c2e\)\}/.test(fitSrc),'첫 칸 고정');
+  assert(/table\.jk-fit tr>:first-child\{position:sticky;left:0;z-index:1;box-shadow:inset 0 0 0 100vmax var\(--jk-fit-bg,#171c2e\)\}/.test(fitSrc),'첫 칸 고정 · 칠하기는 안쪽 그림자(바탕색은 그대로 읽히게)');
   const D=fitDom({w:375,path:'/claude'}); const w=D.mkTable(900); D.run(); assert.equal(on(w),false,'/claude 건너뜀');
   const E=fitDom({w:375,path:'/claude.html'}); const w2=E.mkTable(900); E.run(); assert.equal(on(w2),false,'/claude.html 건너뜀');
 });
-ta('U9 다시 재는 때 — 표 안을 다시 그림 · 표가 새로 들어옴 · 탭(누름) · 폭 바뀜. 표와 상관없는 글자 바뀜엔 안 잰다',async()=>{
-  const D=fitDom({w:375}); const t1=D.mkTable(300); const F=D.run(); let n=0; const orig=F.scan;
+ta('U9 다시 재는 때 — 표 안을 다시 그림 · 표가 새로 들어옴 · 탭(누름)으로 숨었던 표가 보임 · 폭 바뀜 · 다 읽힌 뒤(load). 표와 상관없는 글자 바뀜엔 안 잰다',async()=>{
+  const D=fitDom({w:375}); const t1=D.mkTable(300); const F=D.run();
   assert.equal(on(t1),false); const mo=D.mo(); assert(mo&&mo.opt&&mo.opt.childList&&mo.opt.subtree&&!mo.opt.attributes,'자식 변화만 본다(반 바꾸기로 스스로 다시 부르지 않게)');
-  t1.scrollWidth=t1.offsetWidth=800;
-  mo.cb([{target:{closest:()=>null},addedNodes:[{nodeType:3}]}]); await sleep(200); assert.equal(on(t1),false,'시계 같은 글자 바뀜엔 안 잰다');
-  mo.cb([{target:{closest:q=>q==='table'?t1:null},addedNodes:[]}]); await sleep(200); assert.equal(on(t1),true,'표 안을 다시 그리면 잰다');
-  t1.scrollWidth=t1.offsetWidth=200;
-  mo.cb([{target:{closest:()=>null},addedNodes:[{nodeType:1,tagName:'DIV',querySelector:q=>q==='table'?{}:null}]}]); await sleep(200); assert.equal(on(t1),false,'표가 든 덩어리가 들어오면 잰다');
-  t1.scrollWidth=t1.offsetWidth=800;
+  t1.setW(800);
+  const s0=D.scans.n; mo.cb([{target:{closest:()=>null},addedNodes:[{nodeType:3}]}]); await sleep(200);
+  assert.equal(on(t1),false,'시계 같은 글자 바뀜엔 안 잰다'); assert.equal(D.scans.n,s0,'표를 훑지도 않는다');
+  mo.cb([{target:{closest:q=>q==='table'?t1:null},addedNodes:[]}]); await sleep(200); assert.equal(on(t1),true,'표 안을 다시 그리면 그 표를 잰다');
+  const t2=D.mkTable(900), r1=t1.reads;
+  mo.cb([{target:{closest:()=>null},addedNodes:[{nodeType:1,tagName:'DIV',querySelector:q=>q==='table'?t2:null}]}]); await sleep(200);
+  assert.equal(on(t2),true,'표가 든 덩어리가 들어오면 새 표를 잰다'); assert.equal(t1.reads,r1,'그대로인 표는 안 잰다');
+  const t3=D.mkTable(900,false); F.scan(); assert.equal(on(t3),false,'숨은 표는 안 잰다'); t3.show(true);
   const click=D.L.doc.find(l=>l.ev==='click'); assert(click&&click.capture,'누름은 붙잡기 단계(탭 함수가 전파를 막아도)');
-  click.f({}); await sleep(200); assert.equal(on(t1),true,'탭을 누르면 잰다');
-  t1.scrollWidth=t1.offsetWidth=200; const rs=D.L.win.find(l=>l.ev==='resize');
-  rs.f(); await sleep(260); assert.equal(on(t1),true,'폭이 그대로면(주소창 접힘) 안 잰다');
-  D.win.innerWidth=360; rs.f(); await sleep(260); assert.equal(on(t1),false,'폭이 바뀌면 잰다');
+  click.f({}); await sleep(200); assert.equal(on(t3),true,'탭을 눌러 보이게 된 표를 잰다');
+  t1.setW(200); const rs=D.L.win.find(l=>l.ev==='resize');
+  const s1=D.scans.n; rs.f(); await sleep(260); assert.equal(on(t1),true,'폭이 그대로면(주소창 접힘) 안 잰다'); assert.equal(D.scans.n,s1,'훑지도 않는다(폰은 스크롤만 해도 resize 가 온다)');
+  D.win.innerWidth=360; rs.f(); await sleep(260); assert.equal(on(t1),false,'폭이 바뀌면 다시 잰다');
+  t2.setW(300); const ld=D.L.win.find(l=>l.ev==='load'); ld.f(); await sleep(60); assert.equal(on(t2),false,'다 읽힌 뒤(글꼴·그림) 전부 다시 잰다');
 });
 /* 작은 CSS 우선순위 계산기 — 브라우저 없이(CI 는 node 뿐) '이 요소의 이 속성이 실제로 어떤 값이 되나'를 본다.
    중요도(!important) → 구체성(id·class·tag) → 나중 규칙 순. @media 는 max/min-width 만(그 밖 조건은 안 맞음으로 본다). */

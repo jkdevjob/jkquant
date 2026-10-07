@@ -92,7 +92,7 @@
     s.textContent = '@media (max-width:' + AT + 'px){' +
       'table.jk-fit th,table.jk-fit td{font-size:11px!important;padding:5px 3px!important;word-break:keep-all;overflow-wrap:normal}' +
       'table.jk-fit th{white-space:normal!important;line-height:1.25;vertical-align:bottom}' +
-      'table.jk-fit tr>:first-child{position:sticky;left:0;z-index:1;background:var(--jk-fit-bg,#171c2e)}' +
+      'table.jk-fit tr>:first-child{position:sticky;left:0;z-index:1;box-shadow:inset 0 0 0 100vmax var(--jk-fit-bg,#171c2e)}' +
       '}';
     (document.head || document.documentElement).appendChild(s);
   }
@@ -104,9 +104,12 @@
     return t.parentElement;
   }
   /* 고정한 첫 칸 바탕 — 옆 칸 글자가 비치지 않게, 칸 → 줄 → 머리/몸통 → 표 → 카드로 올라가며 실제 칠해진 색을
-     불투명한 색이 나올 때까지 겹친다(머리글 줄 색 · 반투명 줄 강조가 그대로 보이게). 표 쪽 겹은 표마다 한 번만 잰다. */
+     불투명한 색이 나올 때까지 모아 한 가지 불투명 색으로 합성한다(머리글 줄 색 · 반투명 줄 강조가 그대로 보이게).
+     칠하기는 background 가 아니라 안쪽 그림자 — 그래야 줄인 채로도 칸의 원래 바탕색을 그대로 읽는다(반을 벗겼다 씌우면
+     큰 표는 스타일 재계산·배치가 한 번에 0.2~0.5초 · 운영 무매 거래 이력 286줄 · 폰 속도). */
   function painted(c){ return !!c && c !== 'transparent' && !/^rgba\(.*,\s*0\)$/.test(c); }
-  function solid(c){ var m = /^rgba\(.*,\s*([\d.]+)\)$/.exec(c); return !m || +m[1] >= 1; }
+  function rgbaOf(c){ var m = /^rgba?\(([^)]+)\)$/.exec(c || ''); if (!m) return null; var p = m[1].split(',').map(parseFloat); return [p[0], p[1], p[2], p.length > 3 ? p[3] : 1]; }
+  function solid(c){ var x = rgbaOf(c); return !x || x[3] >= 1; }
   function stack(from, stop){
     var out = [];
     for (var p = from; p && p.nodeType === 1 && p !== stop; p = p.parentElement){
@@ -115,33 +118,51 @@
     }
     return {list:out, done:false};
   }
-  function layers(list, done){
-    if (!done) list = list.concat(['#171c2e']);
-    var last = list[list.length - 1];
-    return list.slice(0, -1).map(function(c){ return 'linear-gradient(' + c + ',' + c + ')'; }).concat([last]).join(',');
+  function layers(list, done){                           // 위 → 아래로 겹친 색 → 불투명 한 색
+    var all = done ? list : list.concat(['rgb(23, 28, 46)']), o = rgbaOf(all[all.length - 1]) || [23, 28, 46, 1];
+    for (var i = all.length - 2; i >= 0; i--){ var c = rgbaOf(all[i]); if (!c) continue; var a = c[3]; o = [c[0]*a + o[0]*(1-a), c[1]*a + o[1]*(1-a), c[2]*a + o[2]*(1-a), 1]; }
+    return 'rgb(' + Math.round(o[0]) + ', ' + Math.round(o[1]) + ', ' + Math.round(o[2]) + ')';
   }
+  /* 읽기를 먼저 다 하고 쓰기는 나중에 한꺼번에 — 줄마다 읽고 쓰기를 번갈아 하면 줄 수만큼 스타일을 다시 계산한다.
+     보통 줄은 표에 단 색을 물려받고, 색이 다른 칸(머리글·강조 줄)만 따로 단다. 색이 그대로면 안 쓴다. */
   function paint(t){
-    var base = stack(t, null);
-    Array.prototype.forEach.call(t.rows || [], function(r){
-      var c = r.cells && r.cells[0]; if (!c) return;
-      var own = stack(c, t), v = own.done ? layers(own.list, true) : layers(own.list.concat(base.list), base.done);
-      if (c.style.getPropertyValue('--jk-fit-bg') !== v) c.style.setProperty('--jk-fit-bg', v);
-    });
+    var base = stack(t, null), baseV = layers(base.list, base.done), rows = t.rows || [], todo = [], i, c, own;
+    for (i = 0; i < rows.length; i++){
+      c = rows[i].cells && rows[i].cells[0]; if (!c) continue;
+      own = stack(c, t);
+      todo.push([c, own.list.length ? (own.done ? layers(own.list, true) : layers(own.list.concat(base.list), base.done)) : '']);
+    }
+    if (t.style.getPropertyValue('--jk-fit-bg') !== baseV) t.style.setProperty('--jk-fit-bg', baseV);
+    for (i = 0; i < todo.length; i++){
+      c = todo[i][0];
+      if (todo[i][1]){ if (c.style.getPropertyValue('--jk-fit-bg') !== todo[i][1]) c.style.setProperty('--jk-fit-bg', todo[i][1]); }
+      else if (c.style.getPropertyValue('--jk-fit-bg')) c.style.removeProperty('--jk-fit-bg');
+    }
   }
+  function wide(t, cw){ return Math.max(t.scrollWidth, t.offsetWidth) > cw; }
   function fit(t){
-    if (t.classList.contains('jk-fit')) t.classList.remove('jk-fit');   // 줄이기 전 폭·색으로 다시 잰다(자료가 줄면 원래 표로)
-    if (window.innerWidth > AT || !t.getClientRects().length) return false;
-    var b = box(t);
-    if (!b || Math.max(t.scrollWidth, t.offsetWidth) <= b.clientWidth + 2) return false;
-    paint(t);
-    t.classList.add('jk-fit');
+    if (window.innerWidth > AT){ if (t.classList.contains('jk-fit')) t.classList.remove('jk-fit'); return false; }
+    var b = box(t); if (!b) return false;
+    var cw = b.clientWidth + 2;
+    if (t.classList.contains('jk-fit')){
+      if (wide(t, cw)){ paint(t); return true; }                 // 줄여도 넘친다 → 그대로(벗겨서 다시 잴 필요 없음)
+      t.classList.remove('jk-fit');                               // 줄인 채 들어맞는다 → 원래 표로도 들어맞는지 본다(자료가 줄었을 때)
+    }
+    if (!wide(t, cw)) return false;
+    paint(t); t.classList.add('jk-fit');
     return true;
   }
+  /* 같은 폭에서 이미 잰 표는 다시 안 잰다 — 표 안이 바뀌면(관찰자가 표시) · 폭이 바뀌면 · 숨어 있다 처음 보이면만 잰다 */
   function scan(){
     timer = 0;
     if (SKIP.test(location.pathname) || !document.querySelectorAll) return 0;
-    var n = 0;
-    Array.prototype.forEach.call(document.querySelectorAll('table'), function(t){ if (fit(t)) n++; });
+    var W = window.innerWidth, n = 0;
+    Array.prototype.forEach.call(document.querySelectorAll('table'), function(t){
+      if (t.__jkFitW === W && !t.__jkFitDirty){ if (t.classList.contains('jk-fit')) n++; return; }
+      if (W <= AT && !t.getClientRects().length) return;          // 숨은 표는 보일 때 잰다
+      if (fit(t)) n++;
+      t.__jkFitW = W; t.__jkFitDirty = false;
+    });
     return n;
   }
   function later(ms){ if (timer) clearTimeout(timer); timer = setTimeout(scan, ms == null ? 150 : ms); }
@@ -151,10 +172,14 @@
   }
   // 표 안을 다시 그렸거나 표가 새로 들어온 변화만 본다 — 시계·시세 글자 바뀜엔 안 잰다. 반 바꾸기(속성)는 안 봐서 스스로 다시 부르지 않는다
   var obs = (typeof MutationObserver === 'function') ? new MutationObserver(function(list){
+    var hit = false;
     for (var i = 0; i < list.length; i++){
       var m = list[i], t = m.target;
-      if ((t && t.closest && t.closest('table')) || hasTable(m.addedNodes || [])){ later(); return; }
+      var tb = t && t.closest && t.closest('table');
+      if (tb){ tb.__jkFitDirty = true; hit = true; }
+      else if (hasTable(m.addedNodes || [])) hit = true;            // 새로 들어온 표는 잰 적이 없어 저절로 잰다
     }
+    if (hit) later();
   }) : null;
   function start(){
     style(); lastW = window.innerWidth; scan();
@@ -162,10 +187,12 @@
   }
   document.addEventListener('click', function(){ if (window.innerWidth <= AT) later(120); }, true);   // 탭을 눌러 숨은 표가 보일 때
   window.addEventListener('resize', function(){ var w = window.innerWidth; if (w !== lastW){ lastW = w; later(200); } }, {passive:true});
-  window.addEventListener('load', function(){ later(0); });
+  function invalidate(){ if (document.querySelectorAll) Array.prototype.forEach.call(document.querySelectorAll('table'), function(t){ t.__jkFitDirty = true; }); later(0); }
+  window.addEventListener('load', invalidate);                                                        // 그림·글꼴이 늦게 들어와 폭이 바뀌었을 수 있다
+  if (document.fonts && document.fonts.ready && document.fonts.ready.then) document.fonts.ready.then(invalidate);
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start);
   else start();
-  window.JKFit = { scan: scan, fit: fit, AT: AT };
+  window.JKFit = { scan: scan, fit: fit, invalidate: invalidate, AT: AT };
 })();
 
 
