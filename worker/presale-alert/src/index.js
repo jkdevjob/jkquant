@@ -106,6 +106,7 @@ async function officialFeed(baseUrl){
             announce:clean(row.RCRIT_PBLANC_DE,20),start:clean(row.RCEPT_BGNDE,20),
             end:clean(row.RCEPT_ENDDE,20),winner:clean(row.PRZWNER_PRESNATN_DE,20),
             units:Number(row.TOT_SUPLY_HSHLDCO||0)||null,address:clean(row.HSSPLY_ADRES,180),
+            moveIn:clean(row.MVN_PREARNGE_YM,20),announceUrl:clean(row.PBLANC_URL,1500),
             houseManageNo:clean(row.HOUSE_MANAGE_NO,50),pblancNo:clean(row.PBLANC_NO,50)
           });
         }
@@ -242,6 +243,12 @@ export class PresaleAlertStore{
     if(!Array.isArray(recent))recent=[];
     recent=[alert,...recent.filter(x=>x&&x.id!==alert.id)].slice(0,30);
     await this.state.storage.put("recentAlerts",recent);
+    if(topic==="presale"&&alert&&alert.project){
+      let a=await this.state.storage.get("recentPresaleAlerts");
+      if(!Array.isArray(a))a=[];
+      a=[alert,...a.filter(x=>x&&x.id!==alert.id)].slice(0,60);
+      await this.state.storage.put("recentPresaleAlerts",a);
+    }
   }
   async test(request){
     const body=await request.json().catch(()=>null),endpoint=clean(body&&body.endpoint,2000);
@@ -351,6 +358,16 @@ export class PresaleAlertStore{
       const alert=topic?await this.state.storage.get("latest:"+topic):await this.state.storage.get("latest");
       const alerts=await this.state.storage.get("recentAlerts");
       return json(request,{ok:true,alert:alert||null,alerts:Array.isArray(alerts)?alerts:[]});
+    }
+    if(path==="/presale-item"&&request.method==="GET"){
+      const key=clean(u.searchParams.get("key"),250);
+      if(!key)return json(request,{ok:false,error:"key required"},400);
+      const recent=await this.state.storage.get("recentPresaleAlerts");
+      for(const alert of (Array.isArray(recent)?recent:[])){
+        const selected=(alert.newItems||[]).find(x=>x&&x.key===key);
+        if(selected)return json(request,{ok:true,item:selected,alertCreatedAt:alert.createdAt});
+      }
+      return json(request,{ok:false,error:"최근 알림 상세 보관기간이 지났습니다."},404);
     }
     if(path==="/subscription"&&request.method==="GET")return this.subscription(request);
     if(path==="/subscribe"&&request.method==="POST")return this.subscribe(request);
