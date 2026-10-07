@@ -27,6 +27,7 @@ main{padding:22px 0 70px}.hero{display:flex;gap:12px;justify-content:space-betwe
 @media(max-width:560px){.wrap{padding:0 11px}.filters{grid-template-columns:1fr}.filters .search{grid-column:auto}.cardtop{display:block}.card-actions{margin-top:7px;justify-content:space-between}.date{margin-top:0}.hero h2{font-size:20px}}
 </style>
 <script src="/jk-access.js" data-guard="1"></script>
+<script src="/jk-ui.js" defer></script>
 <script type="module">
 /* 로그인 · 이용 승인 — 승인된 계정만 본문이 열린다 (판정은 jk-access.js 한 곳 · 운영·플랜·백테·공모주와 같은 글자) */
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
@@ -53,7 +54,7 @@ JKAccess.guard({auth,db,doc,getDoc,setDoc,onAuthStateChanged,signInWithPopup,Goo
 </head>
 <body>
 <header><div class="wrap"><div class="htop">
-  <div class="brand"><div class="kicker">JK 투자</div><h1>💼 JOB <span class="v">대전·세종</span> <span style="font-size:12px;font-weight:400;color:var(--faint)" id="jobVer">v1.1.8</span></h1></div>
+  <div class="brand"><div class="kicker">JK 투자</div><h1>💼 JOB <span class="v">대전·세종</span> <span style="font-size:12px;font-weight:400;color:var(--faint)" id="jobVer">v1.1.9</span></h1></div>
   <div class="jkmenu" id="jkmenuWrap">
     <button class="jkmenu-btn" aria-label="메뉴" onclick="jkMenuToggle(event)">三</button>
     <div class="jkmenu-pop" id="jkmenuPop" hidden>

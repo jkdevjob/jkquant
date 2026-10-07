@@ -18,6 +18,7 @@ main{padding:22px 0 70px}.hero{margin-bottom:14px}.hero h2{font-size:23px;margin
 @media(max-width:560px){.wrap{padding:0 10px}.hero h2{font-size:20px}.pane{padding:18px 10px;overflow:hidden}.tabs{margin-left:-2px;margin-right:-2px}}
 </style>
 <script src="/jk-access.js" data-guard="1"></script>
+<script src="/jk-ui.js" defer></script>
 <script type="module">
 /* 로그인 · 이용 승인 — 승인된 계정만 본문이 열린다 (판정은 jk-access.js 한 곳 · 공모주·JOB 과 같은 글자) */
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
@@ -40,7 +41,7 @@ JKAccess.guard({auth,db,doc,getDoc,setDoc,onAuthStateChanged,signInWithPopup,Goo
 </head>
 <body>
 <header><div class="wrap"><div class="htop">
-  <div class="brand"><div class="kicker">REAL ESTATE</div><h1>JK <span class="v">부동산</span> <span style="font-size:12px;font-weight:400;color:var(--faint)" id="reVer">v1.7.3</span></h1></div>
+  <div class="brand"><div class="kicker">REAL ESTATE</div><h1>JK <span class="v">부동산</span> <span style="font-size:12px;font-weight:400;color:var(--faint)" id="reVer">v1.7.4</span></h1></div>
   <div class="jkmenu" id="jkmenuWrap">
     <button class="jkmenu-btn" aria-label="메뉴" onclick="jkMenuToggle(event)">三</button>
     <div class="jkmenu-pop" id="jkmenuPop" hidden>

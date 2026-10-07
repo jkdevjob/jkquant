@@ -11942,6 +11942,17 @@ console.log('\n[LOGIN·QUOTE·PAPER] 로그인 화면 · 시세 요청 · 모의
   ok('로그인·시세·모의 값 시험 전체', r.status===0 && lines.length>=15, (r.stdout||'').slice(-400)+(r.stderr||''));
 }
 
+/* ════ 공용 화면 도구 · 모의 표 첫 칸 (2026-10-07 사용자 요청) ════
+   '맨 위로' 버튼(오른쪽 가운데 · 모든 페이지 · jk-ui.js 한 곳) · 모의 성과 첫 칸 줄바꿈(최종 칸이 폰에서 스크롤 없이).
+   값 시험은 scripts/check-ui-common.cjs 에 있다(가짜 DOM 에서 실제 파일을 돌린다). */
+console.log('\n[UI COMMON] 맨 위로 버튼 · 모의 표 첫 칸');
+{
+  const r=require('child_process').spawnSync(process.execPath,[require('path').join(__dirname,'scripts/check-ui-common.cjs'),process.argv[2]||'index.html'],{encoding:'utf8',timeout:60000});
+  const lines=(r.stdout||'').split('\n').filter(l=>/^(PASS|FAIL) /.test(l));
+  lines.forEach(l=>ok(l.replace(/^(PASS|FAIL) /,''), l.startsWith('PASS')));
+  ok('공용 화면 도구 값 시험 전체', r.status===0 && lines.length>=5, (r.stdout||'').slice(-400)+(r.stderr||''));
+}
+
 /* ════ 단타(클로드) 장 여는 날 먼저 · 밤 계산 중단 수정 (2026-10-05) ════ */
 console.log('\n[CLAUDE KRX DAY] 휴장일 먼저 확인 · 밤 계산 빈 값');
 {
