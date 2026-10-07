@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>JK 퀀트 — 부동산</title>
+<title>JK투자 — 부동산</title>
 <style>
 :root{--bg:#0f1320;--surf:#171c2e;--surf2:#1e2540;--border:#2a3354;--border2:#34406a;--text:#e8ecf7;--dim:#9aa6c9;--faint:#6f7ba0;--accent:#8b8cf0;--green:#36d399;--red:#f87b8c;--gold:#f5c451}
 *{box-sizing:border-box}html,body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Pretendard","Segoe UI",sans-serif}body{font-size:14px;line-height:1.55}a{color:inherit}button,input,select{font:inherit}
@@ -30,10 +30,17 @@ const auth=getAuth(app),db=initializeFirestore(app,JK_FORCE_FIRESTORE_LONG_POLLI
 JKAccess.guard({auth,db,doc,getDoc,setDoc,onAuthStateChanged,signInWithPopup,GoogleAuthProvider,signOut},{});
 </script>
 <link rel="stylesheet" href="/jk-mobile.css?v=1.0.0">
+
+<link rel="manifest" href="/manifest.webmanifest?v=1.0.0">
+<link rel="apple-touch-icon" sizes="180x180" href="/icons/jk-invest-180.png?v=1.0.0">
+<link rel="icon" type="image/png" sizes="192x192" href="/icons/jk-invest-192.png?v=1.0.0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<meta name="apple-mobile-web-app-title" content="JK투자">
 </head>
 <body>
 <header><div class="wrap"><div class="htop">
-  <div class="brand"><div class="kicker">REAL ESTATE</div><h1>JK <span class="v">부동산</span> <span style="font-size:12px;font-weight:400;color:var(--faint)" id="reVer">v1.7.0</span></h1></div>
+  <div class="brand"><div class="kicker">REAL ESTATE</div><h1>JK <span class="v">부동산</span> <span style="font-size:12px;font-weight:400;color:var(--faint)" id="reVer">v1.7.1</span></h1></div>
   <div class="jkmenu" id="jkmenuWrap">
     <button class="jkmenu-btn" aria-label="메뉴" onclick="jkMenuToggle(event)">三</button>
     <div class="jkmenu-pop" id="jkmenuPop" hidden>
