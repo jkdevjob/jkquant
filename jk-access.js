@@ -92,7 +92,7 @@
         if(p==='/admin')a.classList.toggle('admin-on',admin);
       });
       if(links.some(function(a,i){return a!==oldOrder[i];})){
-        if(pop.hidden)links.forEach(function(a){pop.appendChild(a);});
+        if(pop.hidden!==false)links.forEach(function(a){pop.appendChild(a);});
         else{
           /* 메뉴를 이미 펼쳐 둔 동안 DB 설정이 와도 목록이 눈앞에서 움직이지 않게
              닫힌 직후 순서를 바꾼다. 권한상 숨겨야 할 링크는 위에서 즉시 숨긴다. */
