@@ -1,3 +1,4 @@
+import { evaluatePresale, describeEvaluation, won, SCORING_VERSION } from "./presale-score.mjs";
 const enc=new TextEncoder();
 const BASE_APP="https://jkquant.pages.dev";
 const PRESALE_APP=BASE_APP+"/realestate";
@@ -114,6 +115,34 @@ async function officialFeed(baseUrl){
   const m=new Map();for(const x of out)m.set(x.key,x);
   return [...m.values()].sort((a,b)=>String(b.announce||b.start).localeCompare(String(a.announce||a.start)));
 }
+async function evaluateFreshPresales(base,items){
+  const cache=new Map();
+  const api=async q=>{
+    const params=new URLSearchParams(q),url=base+"/api/realestate-gpt-live?"+params.toString();
+    const key=params.toString();
+    if(!cache.has(key))cache.set(key,(async()=>{
+      const controller=new AbortController();
+      const timer=setTimeout(()=>controller.abort(),12000);
+      try{
+        const r=await fetch(url,{headers:{"accept":"application/json","user-agent":"JKQuant-Presale-Score/1.0"},signal:controller.signal});
+        const j=await r.json();
+        if(!r.ok||!j.ok)throw new Error(j.error||("HTTP "+r.status));
+        return j;
+      }finally{clearTimeout(timer)}
+    })());
+    return cache.get(key);
+  };
+  const now=new Date(),out=new Array(items.length);let next=0;
+  await Promise.all(Array.from({length:Math.min(items.length,2)},async()=>{
+    while(next<items.length){
+      const idx=next++,a=items[idx];
+      a.evaluation=await evaluatePresale(a,api,now);
+      out[idx]=a;
+    }
+  }));
+  return out;
+}
+
 async function jobFeed(baseUrl){
   const urls=[
     "https://raw.githubusercontent.com/jkdevjob/jkquant/main/data/job_archive.json?ts="+Date.now(),
@@ -246,18 +275,37 @@ export class PresaleAlertStore{
       return json(request,{ok:true,baseline:true,items:items.length,newCount:0});
     }
     const seen=new Set(seenArr),fresh=items.filter(x=>!seen.has(x.key));
-    await this.state.storage.put("seen",[...new Set([...keys,...seenArr])].slice(0,1600));
-    await this.state.storage.put("lastCheck",new Date().toISOString());
-    if(!fresh.length)return json(request,{ok:true,items:items.length,newCount:0});
-    const top=fresh[0],more=fresh.length-1,alert={
+    if(!fresh.length){
+      await this.state.storage.put("lastCheck",new Date().toISOString());
+      return json(request,{ok:true,items:items.length,newCount:0});
+    }
+    // 평가 실패나 API 누락이 있더라도 새 공고 자체는 누락하지 않는다.
+    const evaluated=await evaluateFreshPresales(base,fresh);
+    evaluated.sort((a,b)=>{
+      const va=a.evaluation&&a.evaluation.status==="scored"?1:0;
+      const vb=b.evaluation&&b.evaluation.status==="scored"?1:0;
+      return vb-va||(vb&&va?(b.evaluation.score-a.evaluation.score):0)||
+        String(b.announce||b.start).localeCompare(String(a.announce||a.start));
+    });
+    const top=evaluated[0],more=evaluated.length-1,ev=top.evaluation;
+    const scored=ev&&ev.status==="scored";
+    const headline=scored?ev.grade+" "+ev.score+"점/100":"평가 보류";
+    const message=describeEvaluation(top)+(more>0?" · 신규 "+more+"건 추가":"");
+    const url=PRESALE_APP+"?gpt=presale&notice="+encodeURIComponent(top.key);
+    const alert={
       id:"presale:"+top.key,type:"presale",
-      title:"🏢 신규분양 · "+top.region+" · "+top.categoryName,
-      body:top.name+(top.start?(" · 접수 "+top.start+(top.end&&top.end!==top.start?"~"+top.end:"")):"")+(more>0?(" 외 "+more+"건"):""),
-      url:PRESALE_APP+"?gpt=presale",project:top,newItems:fresh.slice(0,10),createdAt:new Date().toISOString()
+      title:"🏢 "+top.region+" 신규분양 · "+headline,
+      body:message.slice(0,250),url,project:top,
+      newItems:evaluated.slice(0,25),
+      scoringVersion:SCORING_VERSION,createdAt:new Date().toISOString()
     };
     await this.recordAlert(alert);
+    // 알림 평가정보가 저장된 다음 seen을 갱신한다.
+    await this.state.storage.put("seen",[...new Set([...items.map(x=>x.key),...seenArr])].slice(0,1600));
+    await this.state.storage.put("lastCheck",new Date().toISOString());
     const delivery=await this.notifyAll("presale");
     return json(request,{ok:true,items:items.length,newCount:fresh.length,alert,delivery});
+
   }
   async checkJobs(request){
     const base=this.env.BASE_URL||BASE_APP,items=await jobFeed(base);
