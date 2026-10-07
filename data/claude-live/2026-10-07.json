@@ -6,8 +6,56 @@
     "date": "2026-10-07",
     "mainVariant": "baseline",
     "createdAt": "2026-10-07T06:40:18.147Z",
-    "updatedAt": "2026-10-07T06:40:21.886Z",
+    "updatedAt": "2026-10-07T20:05:31.583Z",
     "scans": [
+      {
+        "id": "close:crypto",
+        "scheduledTime": 1791385524000,
+        "capturedAt": "2026-10-07T15:05:50.268Z",
+        "targetHm": 5,
+        "lagMs": 0,
+        "partial": false,
+        "okShards": 1,
+        "failed": [],
+        "quoteErrors": 0,
+        "eventCount": 1
+      },
+      {
+        "id": "tg:crypto:sent",
+        "scheduledTime": 1791385524000,
+        "capturedAt": "2026-10-07T15:05:51.271Z",
+        "targetHm": 5,
+        "lagMs": 0,
+        "partial": false,
+        "okShards": 1,
+        "failed": [],
+        "quoteErrors": 0,
+        "eventCount": 1
+      },
+      {
+        "id": "close:soxl",
+        "scheduledTime": 1791403524000,
+        "capturedAt": "2026-10-07T20:05:29.907Z",
+        "targetHm": 505,
+        "lagMs": 0,
+        "partial": false,
+        "okShards": 1,
+        "failed": [],
+        "quoteErrors": 0,
+        "eventCount": 1
+      },
+      {
+        "id": "tg:soxl:sent",
+        "scheduledTime": 1791403524000,
+        "capturedAt": "2026-10-07T20:05:31.430Z",
+        "targetHm": 505,
+        "lagMs": 0,
+        "partial": false,
+        "okShards": 1,
+        "failed": [],
+        "quoteErrors": 0,
+        "eventCount": 1
+      },
       {
         "id": "close:daytrading",
         "scheduledTime": 1791355213000,
@@ -70,6 +118,89 @@
       }
     ],
     "events": [
+      {
+        "id": "close:crypto",
+        "date": "2026-10-07",
+        "capturedAt": "2026-10-07T15:05:50.268Z",
+        "targetHm": 5,
+        "strategy": "claude_day",
+        "stage": "close",
+        "payload": {
+          "strategy": "crypto",
+          "name": "③ 비트코인 · BTC·ETH 어제 고가 돌파 하루 단타",
+          "date": "2026-10-07",
+          "currency": "KRW",
+          "trades": [],
+          "open": [],
+          "watched": 2,
+          "candidates": 2,
+          "entries": 0,
+          "exits": 0,
+          "wins": 0,
+          "losses": 0,
+          "winRate": null,
+          "realizedAmount": 0,
+          "realizedPct": 0,
+          "status": "closed",
+          "note": "한국시각 00:00 마감 · 매매 규칙은 업비트 하루(09:00~다음 09:00) 그대로",
+          "capitalNote": "코인 칸 모의 자금 10,000,000원(두 코인 반반)"
+        }
+      },
+      {
+        "id": "tg:crypto:sent",
+        "date": "2026-10-07",
+        "capturedAt": "2026-10-07T15:05:51.271Z",
+        "targetHm": 5,
+        "strategy": "claude_day",
+        "stage": "telegram",
+        "payload": {
+          "ok": true,
+          "messageId": 339,
+          "error": null
+        }
+      },
+      {
+        "id": "close:soxl",
+        "date": "2026-10-07",
+        "capturedAt": "2026-10-07T20:05:29.907Z",
+        "targetHm": 505,
+        "strategy": "claude_day",
+        "stage": "close",
+        "payload": {
+          "strategy": "soxl",
+          "name": "④ SOXL · 단기 과매도 반등(최대 5일)",
+          "date": "2026-10-07",
+          "currency": "USD",
+          "trades": [],
+          "open": [],
+          "watched": 1,
+          "candidates": 0,
+          "entries": 0,
+          "exits": 0,
+          "wins": 0,
+          "losses": 0,
+          "winRate": null,
+          "realizedAmount": 0,
+          "realizedPct": 0,
+          "status": "closed",
+          "strategyVersion": "soxl_rsi2_meanrev_v1",
+          "note": "신호 없음(RSI(2) 98 ≥ 20) — 쉼",
+          "capitalNote": "모의 자금 $10,000"
+        }
+      },
+      {
+        "id": "tg:soxl:sent",
+        "date": "2026-10-07",
+        "capturedAt": "2026-10-07T20:05:31.430Z",
+        "targetHm": 505,
+        "strategy": "claude_day",
+        "stage": "telegram",
+        "payload": {
+          "ok": true,
+          "messageId": 343,
+          "error": null
+        }
+      },
       {
         "id": "close:daytrading",
         "date": "2026-10-07",

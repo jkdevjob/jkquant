@@ -428,7 +428,19 @@
     "g_open_q11_k1_gap5",
     "g_open_q6_k1_gap3",
     "g_open_q2_k2_gap3",
-    "g_open_q2_k2_gap5"
+    "g_open_q2_k2_gap5",
+    "g_open_q10_k3_gap4",
+    "g_open_q1_k3_gap4",
+    "g_open_q9_k3_gap5",
+    "g_open_q6_k1_gap6",
+    "g_open_q1_k2_gap5",
+    "g_open_q1_k2_gap4",
+    "g_open_q3_k3_gap3",
+    "g_open_q2_k3_gap3",
+    "g_open_q5_k2_gap4",
+    "g_open_q1_k1_gap3",
+    "g_open_q10_k2_gap3",
+    "g_open_q11_k2_gap3"
    ],
    "snapshots": [
     {
@@ -476,11 +488,34 @@
       "g_open_q9_k2_gap3",
       "opening_gapdown_v1+v2filter"
      ]
+    },
+    {
+     "date": "2026-10-08",
+     "top": "g_open_q7_k3_gap3",
+     "main": "opening_gapdown_v1+v2filter",
+     "bottom": [
+      "g_open_q9_k3",
+      "g_open_q12_k3",
+      "g_open_q9_k2_gap3"
+     ],
+     "ranks": [
+      "g_open_q7_k3_gap3",
+      "g_open_q7_k2",
+      "g_open_q8_k2",
+      "g_open_q7_k3",
+      "opening_d1_min6",
+      "g_open_q12_k2",
+      "g_open_q5_k2_gap3",
+      "g_open_q9_k3",
+      "g_open_q12_k3",
+      "g_open_q9_k2_gap3",
+      "opening_gapdown_v1+v2filter"
+     ]
     }
    ],
    "ops": {
     "explore": {
-     "tried": 117,
+     "tried": 129,
      "accepted": 3
     },
     "jump2": {
@@ -784,6 +819,29 @@
       "g_etf_th6.5",
       "g_etf_th7.5"
      ]
+    },
+    {
+     "date": "2026-10-08",
+     "top": "etf_dip_overnight_v1",
+     "main": "etf_dip_overnight_v1",
+     "bottom": [
+      "g_etf_th6",
+      "g_etf_th6.5",
+      "g_etf_th7.5"
+     ],
+     "ranks": [
+      "etf_dip_overnight_v1",
+      "g_etf_th3.25",
+      "g_etf_th4.25",
+      "etf_dip_overnight_th4",
+      "etf_dip_th35",
+      "g_etf_th4.75",
+      "etf_dip_th25",
+      "g_etf_th5.5",
+      "g_etf_th6",
+      "g_etf_th6.5",
+      "g_etf_th7.5"
+     ]
     }
    ],
    "ops": {
@@ -802,25 +860,6 @@
      "params": {
       "ma": 20,
       "stopPct": 5.0,
-      "level": "prevhigh",
-      "k": 0.5,
-      "lastEntryHour": null,
-      "tabSize": 0.8,
-      "markets": [
-       "KRW-BTC",
-       "KRW-ETH"
-      ]
-     },
-     "source": "seed",
-     "addedAt": "2026-10-05"
-    },
-    {
-     "version": "coin_bo_nostop",
-     "name": "손절 없음",
-     "rule": "손절 없이 다음 날 09:00 매도",
-     "params": {
-      "ma": 20,
-      "stopPct": 99.0,
       "level": "prevhigh",
       "k": 0.5,
       "lastEntryHour": null,
@@ -1088,6 +1127,27 @@
      "parents": [
       "g_coin_ma15_s99_hi7_eth"
      ]
+    },
+    {
+     "version": "g_coin_ma20_s10_hi3_eth",
+     "name": "평균 20일 · 최근 3일 고가 돌파 · 손절 −10% · ETH 만",
+     "rule": "어제 종가 > 20일 평균인 날, 최근 3일 고가를 넘는 순간 매수 → 다음 날 09:00 매도 · 손절 −10% · ETH 만 · 탭 자금 80%",
+     "params": {
+      "ma": 20,
+      "stopPct": 10.0,
+      "level": "prevhigh",
+      "k": 0.5,
+      "hiN": 3,
+      "lastEntryHour": null,
+      "tabSize": 0.8,
+      "markets": [
+       "KRW-ETH"
+      ]
+     },
+     "source": "generated",
+     "addedAt": "2026-10-08",
+     "op": "explore",
+     "parents": []
     }
    ],
    "retired": [
@@ -1434,6 +1494,24 @@
      },
      "retiredAt": "2026-10-07",
      "reason": "자리 교체 — 신규 g_coin_ma15_s99_hi3_eth 가 안정 점수 +0.444 로 +0.396 보다 확실히 나음"
+    },
+    {
+     "version": "coin_bo_nostop",
+     "name": "손절 없음",
+     "params": {
+      "ma": 20,
+      "stopPct": 99.0,
+      "level": "prevhigh",
+      "k": 0.5,
+      "lastEntryHour": null,
+      "tabSize": 0.8,
+      "markets": [
+       "KRW-BTC",
+       "KRW-ETH"
+      ]
+     },
+     "retiredAt": "2026-10-08",
+     "reason": "자리 교체 — 신규 g_coin_ma20_s10_hi3_eth 가 안정 점수 +0.435 로 +0.403 보다 확실히 나음"
     }
    ],
    "tried": [
@@ -1555,7 +1633,26 @@
     "g_coin_ma20_s99_vb0.7_both",
     "g_coin_ma25_s99_hi7_both",
     "g_coin_ma25_s99_hi10_both",
-    "g_coin_ma20_s99_hi2_btc"
+    "g_coin_ma20_s99_hi2_btc",
+    "g_coin_ma80_s5_vb0.8_btc",
+    "g_coin_ma80_s3_vb0.4_h15_eth",
+    "g_coin_ma15_s2_hi_btc",
+    "g_coin_ma15_s2_hi15_h18_btc",
+    "g_coin_ma5_s2_hi15_h18_eth",
+    "g_coin_ma80_s2_vb0.5_h12_both",
+    "g_coin_ma20_s2_vb0.7_h21_eth",
+    "g_coin_ma40_s3_hi3_eth",
+    "g_coin_ma60_s3_vb0.5_h18_btc",
+    "g_coin_ma15_s2_vb1_h21_both",
+    "g_coin_ma5_s10_hi4_h12_eth",
+    "g_coin_ma15_s99_vb0.6_eth",
+    "g_coin_ma50_s5_hi_h21_btc",
+    "g_coin_ma25_s99_hi10_eth",
+    "g_coin_ma15_s99_hi7_btc",
+    "g_coin_ma15_s99_hi10_btc",
+    "g_coin_ma20_s8_hi_h15_both",
+    "g_coin_ma80_s5_hi10_both",
+    "g_coin_ma30_s99_hi7_h21_eth"
    ],
    "snapshots": [
     {
@@ -1607,19 +1704,44 @@
       "coin_bo_nostop",
       "coin_breakout_v1"
      ]
+    },
+    {
+     "date": "2026-10-08",
+     "top": "g_coin_ma15_s99_hi7_eth",
+     "main": "coin_breakout_v1",
+     "bottom": [
+      "g_coin_ma20_s99_vb0.6_eth",
+      "g_coin_ma20_s6_vb0.7_eth",
+      "coin_bo_nostop"
+     ],
+     "ranks": [
+      "g_coin_ma15_s99_hi7_eth",
+      "g_coin_ma20_s99_hi7_eth",
+      "g_coin_ma20_s99_vb0.7_eth",
+      "g_coin_ma20_s99_hi2_eth",
+      "g_coin_ma20_s99_hi10_both",
+      "g_coin_ma15_s99_hi5_both",
+      "g_coin_ma15_s99_hi3_eth",
+      "g_coin_ma20_s8_hi5_both",
+      "g_coin_ma20_s99_vb0.8_eth",
+      "g_coin_ma20_s99_vb0.6_eth",
+      "g_coin_ma20_s6_vb0.7_eth",
+      "coin_bo_nostop",
+      "coin_breakout_v1"
+     ]
     }
    ],
    "ops": {
     "neighbor": {
-     "tried": 56,
+     "tried": 60,
      "accepted": 0
     },
     "explore": {
-     "tried": 158,
-     "accepted": 1
+     "tried": 193,
+     "accepted": 2
     },
     "jump2": {
-     "tried": 116,
+     "tried": 125,
      "accepted": 3
     },
     "struct": {
@@ -2316,7 +2438,30 @@
     "g_soxl_r2lt5_ibs0.7_dn1_ma100_d4",
     "g_soxl_r3lt20_ibs0.7_ma150_d4",
     "g_soxl_r2lt20_ibs0.4_dn2_ma200_d5",
-    "g_soxl_r2lt15_ibs0.4_dn2_ma200_d5"
+    "g_soxl_r2lt15_ibs0.4_dn2_ma200_d5",
+    "g_soxl_r4lt35_ibs0.1_ma200_d1",
+    "g_soxl_r2lt35_dn3_ma100_d2",
+    "g_soxl_r2lt15_ibs0.1_dn2_ma100_d2",
+    "g_soxl_r4lt25_ibs0.5_ma150_d4",
+    "g_soxl_norsi_ibs0.5_ma50_d2",
+    "g_soxl_r4lt5_ibs0.2_dn3_ma100_d3",
+    "g_soxl_r4lt35_ma0_d2",
+    "g_soxl_r3lt15_ibs0.4_ma0_d3",
+    "g_soxl_r4lt15_ibs0.2_dn2_ma100_d5",
+    "g_soxl_r2lt5_ibs0.4_ma100_d1",
+    "g_soxl_r2lt20_ibs0.2_dn1_ma200_d1",
+    "g_soxl_r2lt20_ibs0.3_ma0_d5",
+    "g_soxl_r4lt35_ibs0.6_dn3_ma200_d1",
+    "g_soxl_r3lt40_ibs0.1_ma0_d3",
+    "g_soxl_r2lt20_ibs0.6_dn1_ma200_d5",
+    "g_soxl_r2lt20_ibs0.6_ma150_d5",
+    "g_soxl_r2lt15_ibs0.4_ma200_d4",
+    "g_soxl_r2lt15_ibs0.3_ma200_d5",
+    "g_soxl_r2lt10_ibs0.4_ma200_d5",
+    "g_soxl_r2lt25_ibs0.7_dn1_ma200_d5",
+    "g_soxl_norsi_ibs0.3_dn2_ma200_d5",
+    "g_soxl_r2lt20_ibs0.3_dn2_ma200_d5",
+    "g_soxl_r4lt20_ibs0.7_dn2_ma200_d4"
    ],
    "snapshots": [
     {
@@ -2368,27 +2513,52 @@
       "g_soxl_r3lt20_ibs0.7_ma200_d5",
       "g_soxl_r3lt20_dn1_ma200_d5"
      ]
+    },
+    {
+     "date": "2026-10-08",
+     "top": "g_soxl_r4lt20_ibs0.7_ma200_d4",
+     "main": "soxl_rsi2_meanrev_v1",
+     "bottom": [
+      "g_soxl_r2lt20_ibs0.7_dn2_ma150_d5",
+      "g_soxl_r3lt20_ibs0.7_ma200_d5",
+      "g_soxl_r3lt20_dn1_ma200_d5"
+     ],
+     "ranks": [
+      "g_soxl_r4lt20_ibs0.7_ma200_d4",
+      "g_soxl_r2lt15_ibs0.5_ma200_d5",
+      "g_soxl_r2lt20_ibs0.5_dn2_ma200_d5",
+      "g_soxl_r2lt20_ibs0.7_dn2_ma200_d5",
+      "g_soxl_r2lt20_ibs0.5_ma200_d5",
+      "g_soxl_r2lt20_ibs0.7_ma200_d5",
+      "soxl_rsi2_meanrev_v1",
+      "g_soxl_r2lt20_ibs0.7_ma150_d5",
+      "g_soxl_r4lt25_ibs0.7_ma200_d4",
+      "g_soxl_r4lt20_ibs0.7_ma150_d4",
+      "g_soxl_r2lt20_ibs0.7_dn2_ma150_d5",
+      "g_soxl_r3lt20_ibs0.7_ma200_d5",
+      "g_soxl_r3lt20_dn1_ma200_d5"
+     ]
     }
    ],
    "ops": {
     "struct": {
-     "tried": 65,
+     "tried": 71,
      "accepted": 6
     },
     "explore": {
-     "tried": 91,
+     "tried": 114,
      "accepted": 0
     },
     "jump2": {
-     "tried": 144,
+     "tried": 157,
      "accepted": 4
     },
     "neighbor": {
-     "tried": 50,
+     "tried": 53,
      "accepted": 4
     },
     "cross": {
-     "tried": 34,
+     "tried": 37,
      "accepted": 2
     }
    }
@@ -3839,7 +4009,53 @@
    "version": "",
    "name": "",
    "reason": "후보 48개 계산 → 기준 통과 47 · 투입 0(교체 0) · 탈락: 점수 부족 6 · 복제 3 · 손실 기준 미달 1"
+  },
+  {
+   "date": "2026-10-08",
+   "at": "2026-10-08T05:09+09:00",
+   "tab": "opening",
+   "kind": "reject",
+   "version": "",
+   "name": "",
+   "reason": "후보 12개 계산 → 기준 통과 2 · 투입 0(교체 0) · 탈락: 손실 기준 미달 10 · 복제 2"
+  },
+  {
+   "date": "2026-10-08",
+   "at": "2026-10-08T05:09+09:00",
+   "tab": "crypto",
+   "kind": "new",
+   "version": "g_coin_ma20_s10_hi3_eth",
+   "name": "평균 20일 · 최근 3일 고가 돌파 · 손절 −10% · ETH 만",
+   "reason": "격자 탐색 · 안정 점수 +0.435 (그대로 +0.362 · 이웃 중앙 +0.435) · 매매일 611 · MDD -18.4% · 플러스 8/9해",
+   "op": "explore"
+  },
+  {
+   "date": "2026-10-08",
+   "at": "2026-10-08T05:09+09:00",
+   "tab": "crypto",
+   "kind": "reject",
+   "version": "",
+   "name": "",
+   "reason": "후보 48개 계산 → 기준 통과 37 · 투입 1(교체 1) · 탈락: 손실 기준 미달 9 · 점수 부족 8 · 해마다 일관성 부족 2"
+  },
+  {
+   "date": "2026-10-08",
+   "at": "2026-10-08T05:09+09:00",
+   "tab": "crypto",
+   "kind": "retire",
+   "version": "coin_bo_nostop",
+   "name": "손절 없음",
+   "reason": "자리 교체 — 신규 g_coin_ma20_s10_hi3_eth 가 안정 점수 +0.435 로 +0.403 보다 확실히 나음"
+  },
+  {
+   "date": "2026-10-08",
+   "at": "2026-10-08T05:09+09:00",
+   "tab": "soxl",
+   "kind": "reject",
+   "version": "",
+   "name": "",
+   "reason": "후보 48개 계산 → 기준 통과 34 · 투입 0(교체 0) · 탈락: 손실 기준 미달 12 · 점수 부족 7 · 복제 2 · 매매일 부족 1 · 해마다 일관성 부족 1"
   }
  ],
- "updatedAt": "2026-10-07T21:01+09:00"
+ "updatedAt": "2026-10-08T05:09+09:00"
 }
