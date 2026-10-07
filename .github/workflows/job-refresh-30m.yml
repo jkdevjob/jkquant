@@ -1,0 +1,75 @@
+name: JOB 30분 갱신
+
+on:
+  schedule:
+    - cron: "*/30 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: job-data-refresh
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install "ddgs>=9,<10" "requests>=2.32,<3" "beautifulsoup4>=4.12,<5"
+
+      - name: Validate JOB collector syntax
+        run: python -m py_compile scripts/job_alert.py scripts/test_job_alert_logic.py
+
+      - name: Refresh JOB data
+        env:
+          JOB_ALERT_ARCHIVE_ONLY: "1"
+          JKQUANT_BASE: https://jkquant.pages.dev
+        run: python scripts/job_alert.py
+
+      - name: Publish JOB archive and history
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f data/job_archive.json || exit 1
+          test -f data/job_history.json || exit 1
+          if git diff --quiet -- data/job_archive.json data/job_history.json; then
+            echo "JOB data unchanged"
+            exit 0
+          fi
+          git config user.name "jkquant-job-refresh"
+          git config user.email "jkquant-job-refresh@users.noreply.github.com"
+          git add data/job_archive.json data/job_history.json
+          git commit -m "data: refresh JOB listings [skip ci]"
+          git pull --rebase origin main
+          git push origin HEAD:main
+
+      - name: Trigger JOB web push check
+        shell: bash
+        run: |
+          set -euo pipefail
+          URL="$(python - <<'PY'
+          import json
+          with open("data/realestate/gpt/push-config.json",encoding="utf-8") as f:
+              print(json.load(f).get("workerUrl",""))
+          PY
+          )"
+          if [ -z "$URL" ]; then
+            echo "push worker URL 없음"
+            exit 0
+          fi
+          curl -fsS -X POST "$URL/check-jobs" || true
