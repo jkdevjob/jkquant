@@ -41,7 +41,7 @@ export function referenceModel(rows){
   const models=modelPrices(rows);if(!models.length)return null;
   const areaGroups=new Map();
   for(const m of models){
-    const band=Math.round(m.area);
+    const band=[59,74,84,99,101,114].reduce((best,n)=>Math.abs(m.area-n)<Math.abs(m.area-best)?n:best,59);
     let arr=areaGroups.get(band);if(!arr){arr=[];areaGroups.set(band,arr)}arr.push(m);
   }
   const candidates=[...areaGroups.entries()].map(([area,arr])=>({
@@ -145,7 +145,7 @@ export async function evaluatePresale(item,api,now=new Date()){
     let failed=0;
     for(const r of responses){
       if(r.error){failed++;continue}
-      rows[r.kind].push(...parseRtms(r.payload,r.kind));
+      rows[r.kind].push(...parseRtms(r.payload,r.kind).filter(x=>x.date.replace(/-/g,"").slice(0,6)===r.ymd));
     }
     result.market=comparablePrices(rows.trade,place,result.model,item.name,now,"trade");
     result.rent=comparablePrices(rows.rent,place,result.model,item.name,now,"rent");
