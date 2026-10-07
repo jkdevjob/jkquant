@@ -124,7 +124,7 @@ async function jobFeed(baseUrl){
   const out=[];
   for(const row of (Array.isArray(j.jobs)?j.jobs:[])){
     if(String(row.status||"")!=="active")continue;
-    const key=clean(row.id||row.url,2000);if(!key)continue;
+    const key=clean(row.url||row.id,2000);if(!key)continue;
     const title=clean(row.title,180);if(!title||title==="제목 없음")continue;
     const deadline=clean(row.deadline,20);
     if(deadline&&deadline<kstDate(0))continue;
