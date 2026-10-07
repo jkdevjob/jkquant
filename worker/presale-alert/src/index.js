@@ -115,12 +115,23 @@ async function officialFeed(baseUrl){
   return [...m.values()].sort((a,b)=>String(b.announce||b.start).localeCompare(String(a.announce||a.start)));
 }
 async function jobFeed(baseUrl){
-  const r=await fetch(baseUrl+"/data/job_archive.json?ts="+Date.now(),{
-    headers:{"accept":"application/json","user-agent":"JKQuant-Job-Push/2.0"},
-    cf:{cacheTtl:0,cacheEverything:false}
-  });
-  if(!r.ok)throw new Error("job archive HTTP "+r.status);
-  const j=await r.json();
+  const urls=[
+    "https://raw.githubusercontent.com/jkdevjob/jkquant/main/data/job_archive.json?ts="+Date.now(),
+    baseUrl+"/data/job_archive.json?ts="+Date.now()
+  ];
+  let j=null,lastError="";
+  for(const url of urls){
+    try{
+      const r=await fetch(url,{
+        headers:{"accept":"application/json","user-agent":"JKQuant-Job-Push/2.0"},
+        cf:{cacheTtl:0,cacheEverything:false}
+      });
+      if(!r.ok){lastError="HTTP "+r.status;continue}
+      j=await r.json();
+      if(j&&Array.isArray(j.jobs))break;
+    }catch(e){lastError=String(e&&e.message||e)}
+  }
+  if(!j||!Array.isArray(j.jobs))throw new Error("job archive fetch failed "+lastError);
   const out=[];
   for(const row of (Array.isArray(j.jobs)?j.jobs:[])){
     if(String(row.status||"")!=="active")continue;
