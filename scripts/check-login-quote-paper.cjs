@@ -74,13 +74,23 @@ await t('L3 앱 내장 브라우저 감지 — 이름을 아는 앱 + 이름 모
   assert.equal(fs_(iOS+' Mobile/15E148'),null,'홈 화면 앱(standalone)은 내장 화면이 아니다');
 });
 
-await t('L4 Firestore 전송은 iOS·앱내장 브라우저만 강제 long-polling, 일반 브라우저는 자동감지',async()=>{
+await t('L4 Firestore 전송은 iOS(데스크탑 웹사이트 요청으로 맥처럼 보이는 아이폰·아이패드 포함)·앱내장 브라우저만 강제 long-polling, 일반 브라우저는 자동감지 — 9개 페이지가 같은 판정',async()=>{
   const pages=['index.html','plan.html','backtest.html','scalping.html','claude.html','ipo.html','job.html','realestate.html','admin.html'];
-  for(const p of pages){
-    const s=fs.readFileSync(path.join(ROOT,p),'utf8');
-    assert(/const JK_FORCE_FIRESTORE_LONG_POLLING=\/iPhone\|iPad\|iPod\|NAVER\|KAKAOTALK\|Instagram\|FBAN\|FBAV\|; wv\\\)\/i\.test\(navigator\.userAgent\|\|""\);/.test(s),p+' mobile/webview detector missing');
+  const lines=pages.map(p=>{ const s=fs.readFileSync(path.join(ROOT,p),'utf8');
     assert(/JK_FORCE_FIRESTORE_LONG_POLLING\?\{experimentalForceLongPolling:true\}:\{experimentalAutoDetectLongPolling:true\}/.test(s),p+' conditional firestore transport missing');
-  }
+    const m=s.match(/const JK_FORCE_FIRESTORE_LONG_POLLING=(.+?);\s+\/\/ 아이폰/); assert(m,p+' 판정 줄'); return m[1]; });
+  assert.equal(new Set(lines).size,1,'9개 페이지 판정이 글자까지 같다(갈라지면 한 페이지만 아이폰을 못 알아본다)');
+  const force=(ua,touch)=>new Function('navigator','return '+lines[0]+';')({userAgent:ua,maxTouchPoints:touch});
+  const IOS='Mozilla/5.0 (iPhone; CPU iPhone OS 26_6_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.6.1 Mobile/15E148 Safari/604.1';
+  const DESK='Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.6.1 Safari/605.1.15';   // 사용자 진단 화면 그대로
+  assert.equal(force(IOS,5),true,'아이폰');
+  assert.equal(force(DESK,5),true,'데스크탑 웹사이트 요청 아이폰·아이패드(맥 UA + 터치) — 예전엔 false 라 auto-detect 로 DB 가 멈췄다');
+  assert.equal(force(DESK,0),false,'진짜 맥 Safari 는 자동감지');
+  assert.equal(force('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0 Safari/537.36',0),false,'윈도 크롬');
+  assert.equal(force('Mozilla/5.0 (Linux; Android 15; SM-S928N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0 Mobile Safari/537.36',5),false,'안드로이드 크롬');
+  assert.equal(force('Mozilla/5.0 (Linux; Android 15; SM-S928N; wv) AppleWebKit/537.36 (KHTML, like Gecko) Version/4.0 Chrome/141.0 Mobile Safari/537.36',5),true,'안드로이드 앱 내장');
+  assert.equal(force(IOS.replace('Safari/604.1','KAKAOTALK 10.8.0'),5),true,'카카오톡');
+  assert.equal(force(DESK,undefined),false,'터치 정보가 없으면 맥으로 본다');
 });
 
 /* ── 시세 요청 ──────────────────────────────────────────────────────── */

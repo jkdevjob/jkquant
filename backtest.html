@@ -24,7 +24,7 @@ const firebaseConfig = {
 };
 const fbApp = initializeApp(firebaseConfig);
 const auth = getAuth(fbApp);
-const JK_FORCE_FIRESTORE_LONG_POLLING=/iPhone|iPad|iPod|NAVER|KAKAOTALK|Instagram|FBAN|FBAV|; wv\)/i.test(navigator.userAgent||"");
+const JK_FORCE_FIRESTORE_LONG_POLLING=/iPhone|iPad|iPod|NAVER|KAKAOTALK|Instagram|FBAN|FBAV|; wv\)/i.test(navigator.userAgent||"")||(/Macintosh/i.test(navigator.userAgent||"")&&(navigator.maxTouchPoints||0)>1);   // 아이폰·아이패드가 '데스크탑 웹사이트 요청'으로 맥처럼 보여도 터치면 iOS(2026-10-07 진단: Macintosh UA → auto-detect → DB 원장 멈춤)
 const db = initializeFirestore(fbApp,JK_FORCE_FIRESTORE_LONG_POLLING?{experimentalForceLongPolling:true}:{experimentalAutoDetectLongPolling:true});
 const DEFAULT_TICKERS = ['SOXL','TQQQ','TECL','KORU','QLD','USD','SSO','UPRO','SPYU','QQQ','QYLD','JEPQ','QQQI','GPIQ'];
 
@@ -322,7 +322,7 @@ td:first-child{text-align:left;}
   <div class="brand">
     <div>
       <div class="logo">Backtest</div>
-      <h1>JK 투자 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v2.17.13</span></h1>
+      <h1>JK 투자 백테스트 <span id="btVer" style="font-size:12px;font-weight:400;color:var(--dim);font-family:'IBM Plex Mono',monospace">v2.17.14</span></h1>
     </div>
   </div>
   <div class="hright">

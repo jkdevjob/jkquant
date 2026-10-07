@@ -534,7 +534,7 @@ footer{border-top:1px solid var(--line);padding:20px 0 40px;color:var(--faint);f
 <body>
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Public Offering</div><h1>JK <span class="v">공모주</span> <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v1.3.13</span></h1></div>
+    <div><div class="kicker">Public Offering</div><h1>JK <span class="v">공모주</span> <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle">v1.3.14</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
       <div class="jkmenu" id="jkmenuWrap">
@@ -718,7 +718,7 @@ document.addEventListener("click",function(e){ var m=document.getElementById("jk
     appId: "1:1024066323251:web:23d557527866205f01f446"
   };
   const app = initializeApp(firebaseConfig);
-  const JK_FORCE_FIRESTORE_LONG_POLLING=/iPhone|iPad|iPod|NAVER|KAKAOTALK|Instagram|FBAN|FBAV|; wv\)/i.test(navigator.userAgent||"");
+  const JK_FORCE_FIRESTORE_LONG_POLLING=/iPhone|iPad|iPod|NAVER|KAKAOTALK|Instagram|FBAN|FBAV|; wv\)/i.test(navigator.userAgent||"")||(/Macintosh/i.test(navigator.userAgent||"")&&(navigator.maxTouchPoints||0)>1);   // 아이폰·아이패드가 '데스크탑 웹사이트 요청'으로 맥처럼 보여도 터치면 iOS(2026-10-07 진단: Macintosh UA → auto-detect → DB 원장 멈춤)
   const auth = getAuth(app); const db = initializeFirestore(app,JK_FORCE_FIRESTORE_LONG_POLLING?{experimentalForceLongPolling:true}:{experimentalAutoDetectLongPolling:true}); const provider = new GoogleAuthProvider();
   window.ipoFb = { db, doc, setDoc, runTransaction };
 

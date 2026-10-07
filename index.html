@@ -534,7 +534,7 @@ html.had-user #authgate .bootwait{display:block}
   };
   const app = initializeApp(firebaseConfig);
   const auth = getAuth(app);
-  const JK_FORCE_FIRESTORE_LONG_POLLING=/iPhone|iPad|iPod|NAVER|KAKAOTALK|Instagram|FBAN|FBAV|; wv\)/i.test(navigator.userAgent||"");
+  const JK_FORCE_FIRESTORE_LONG_POLLING=/iPhone|iPad|iPod|NAVER|KAKAOTALK|Instagram|FBAN|FBAV|; wv\)/i.test(navigator.userAgent||"")||(/Macintosh/i.test(navigator.userAgent||"")&&(navigator.maxTouchPoints||0)>1);   // 아이폰·아이패드가 '데스크탑 웹사이트 요청'으로 맥처럼 보여도 터치면 iOS(2026-10-07 진단: Macintosh UA → auto-detect → DB 원장 멈춤)
   window.__jkFirestoreTransport=JK_FORCE_FIRESTORE_LONG_POLLING?"force-long-polling":"auto-detect";
   const db = initializeFirestore(app,JK_FORCE_FIRESTORE_LONG_POLLING?{experimentalForceLongPolling:true}:{experimentalAutoDetectLongPolling:true});
   const provider = new GoogleAuthProvider();
