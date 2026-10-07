@@ -1,6 +1,9 @@
 const enc=new TextEncoder();
-const APP_URL="https://jkquant.pages.dev/realestate";
-const ALLOW_ORIGINS=new Set(["https://jkquant.pages.dev","http://localhost:8788","http://127.0.0.1:8788"]);
+const BASE_APP="https://jkquant.pages.dev";
+const PRESALE_APP=BASE_APP+"/realestate";
+const JOB_APP=BASE_APP+"/job";
+const ALLOW_ORIGINS=new Set([BASE_APP,"http://localhost:8788","http://127.0.0.1:8788"]);
+const VALID_TOPICS=new Set(["presale","job"]);
 
 function b64u(bytes){
   let s="";for(const b of bytes)s+=String.fromCharCode(b);
@@ -32,6 +35,10 @@ function kstDate(offsetDays=0){
   return d.getUTCFullYear()+"-"+String(d.getUTCMonth()+1).padStart(2,"0")+"-"+String(d.getUTCDate()).padStart(2,"0");
 }
 function clean(v,max=500){return String(v==null?"":v).replace(/[<>\r\n]/g," ").trim().slice(0,max)}
+function normalizeTopics(v,fallback){
+  const a=Array.isArray(v)?v:(fallback||[]);
+  return [...new Set(a.map(x=>String(x||"").trim()).filter(x=>VALID_TOPICS.has(x)))];
+}
 async function hashText(s){
   const d=new Uint8Array(await crypto.subtle.digest("SHA-256",enc.encode(String(s))));
   return b64u(d).slice(0,32);
@@ -52,26 +59,27 @@ async function signJwt(vapid,endpoint){
   const payload=b64uText(JSON.stringify({
     aud:origin,
     exp:Math.floor(Date.now()/1000)+12*3600,
-    sub:"https://jkquant.pages.dev/"
+    sub:BASE_APP+"/"
   }));
   const input=header+"."+payload;
   const key=await crypto.subtle.importKey("jwk",vapid.privateJwk,{name:"ECDSA",namedCurve:"P-256"},false,["sign"]);
   const sig=new Uint8Array(await crypto.subtle.sign({name:"ECDSA",hash:"SHA-256"},key,enc.encode(input)));
   return input+"."+b64u(sig);
 }
-async function sendEmptyPush(vapid,endpoint){
+async function sendEmptyPush(vapid,endpoint,topic){
   const jwt=await signJwt(vapid,endpoint);
   const r=await fetch(endpoint,{
     method:"POST",
     headers:{
       "TTL":"86400",
       "Urgency":"high",
-      "Topic":"jk-presale",
+      "Topic":"jk-"+clean(topic||"notice",20),
       "Authorization":"vapid t="+jwt+", k="+vapid.publicKey
     }
   });
   return {ok:r.ok,status:r.status,text:(await r.text()).slice(0,200)};
 }
+
 function itemKey(category,row){
   return [category,row.HOUSE_MANAGE_NO||"",row.PBLANC_NO||"",row.HOUSE_NM||""].join("|");
 }
@@ -81,12 +89,10 @@ async function officialFeed(baseUrl){
   const cats=["apt","remndr","opt"],regions=["대전","세종"],out=[];
   for(const category of cats){
     for(const region of regions){
-      const q=new URLSearchParams({
-        kind:"applyhome",category,mode:"detail",region,from,to,perPage:"200"
-      });
+      const q=new URLSearchParams({kind:"applyhome",category,mode:"detail",region,from,to,perPage:"200"});
       try{
         const r=await fetch(baseUrl+"/api/realestate-gpt-live?"+q.toString(),{
-          headers:{"accept":"application/json","user-agent":"JKQuant-Presale-Push/1.0"},
+          headers:{"accept":"application/json","user-agent":"JKQuant-Push/2.0"},
           cf:{cacheTtl:300,cacheEverything:true}
         });
         const j=await r.json();
@@ -94,27 +100,46 @@ async function officialFeed(baseUrl){
         for(const row of (j.payload&&j.payload.data)||[]){
           const name=clean(row.HOUSE_NM,140);if(!name)continue;
           out.push({
-            key:itemKey(category,row),
-            category,
-            categoryName:categoryName(category),
-            region:clean(row.SUBSCRPT_AREA_CODE_NM||region,30),
-            name,
-            announce:clean(row.RCRIT_PBLANC_DE,20),
-            start:clean(row.RCEPT_BGNDE,20),
-            end:clean(row.RCEPT_ENDDE,20),
-            winner:clean(row.PRZWNER_PRESNATN_DE,20),
-            units:Number(row.TOT_SUPLY_HSHLDCO||0)||null,
-            address:clean(row.HSSPLY_ADRES,180),
-            houseManageNo:clean(row.HOUSE_MANAGE_NO,50),
-            pblancNo:clean(row.PBLANC_NO,50)
+            key:itemKey(category,row),category,categoryName:categoryName(category),
+            region:clean(row.SUBSCRPT_AREA_CODE_NM||region,30),name,
+            announce:clean(row.RCRIT_PBLANC_DE,20),start:clean(row.RCEPT_BGNDE,20),
+            end:clean(row.RCEPT_ENDDE,20),winner:clean(row.PRZWNER_PRESNATN_DE,20),
+            units:Number(row.TOT_SUPLY_HSHLDCO||0)||null,address:clean(row.HSSPLY_ADRES,180),
+            houseManageNo:clean(row.HOUSE_MANAGE_NO,50),pblancNo:clean(row.PBLANC_NO,50)
           });
         }
       }catch(e){}
     }
   }
-  const m=new Map();
-  for(const x of out)m.set(x.key,x);
+  const m=new Map();for(const x of out)m.set(x.key,x);
   return [...m.values()].sort((a,b)=>String(b.announce||b.start).localeCompare(String(a.announce||a.start)));
+}
+async function jobFeed(baseUrl){
+  const r=await fetch(baseUrl+"/data/job_archive.json?ts="+Date.now(),{
+    headers:{"accept":"application/json","user-agent":"JKQuant-Job-Push/2.0"},
+    cf:{cacheTtl:0,cacheEverything:false}
+  });
+  if(!r.ok)throw new Error("job archive HTTP "+r.status);
+  const j=await r.json();
+  const out=[];
+  for(const row of (Array.isArray(j.jobs)?j.jobs:[])){
+    if(String(row.status||"")!=="active")continue;
+    const key=clean(row.id||row.url,2000);if(!key)continue;
+    const title=clean(row.title,180);if(!title||title==="제목 없음")continue;
+    const deadline=clean(row.deadline,20);
+    if(deadline&&deadline<kstDate(0))continue;
+    out.push({
+      key,title,company:clean(row.company,80),source:clean(row.source,40),
+      firstSeen:clean(row.firstSeen,20),postedDate:clean(row.postedDate,20),
+      deadline,externalUrl:clean(row.url,2000),
+      appUrl:JOB_APP+"?focus="+encodeURIComponent(key)
+    });
+  }
+  const m=new Map();for(const x of out)m.set(x.key,x);
+  return [...m.values()].sort((a,b)=>{
+    const ad=String(a.firstSeen||a.postedDate||""),bd=String(b.firstSeen||b.postedDate||"");
+    return bd.localeCompare(ad)||String(a.title).localeCompare(String(b.title),"ko");
+  });
 }
 
 export class PresaleAlertStore{
@@ -125,79 +150,126 @@ export class PresaleAlertStore{
     return v;
   }
   async subscriptions(){return this.state.storage.list({prefix:"sub:"})}
+  topicsOf(s){return normalizeTopics(s&&s.topics,s&&s.topics?[]:["presale"])}
   async subscribe(request){
     const body=await request.json().catch(()=>null),s=body&&body.subscription;
     const endpoint=clean(s&&s.endpoint,2000);
     if(!endpoint||!/^https:\/\//.test(endpoint))return json(request,{ok:false,error:"invalid subscription"},400);
-    const id=await hashText(endpoint);
-    await this.state.storage.put("sub:"+id,{endpoint,createdAt:new Date().toISOString(),ua:clean(body.userAgent,220)});
-    return json(request,{ok:true,subscribed:true});
+    const id=await hashText(endpoint),old=await this.state.storage.get("sub:"+id);
+    const topics=normalizeTopics(body&&body.topics,old?this.topicsOf(old):["presale"]);
+    await this.state.storage.put("sub:"+id,{
+      endpoint,topics,createdAt:(old&&old.createdAt)||new Date().toISOString(),
+      updatedAt:new Date().toISOString(),ua:clean(body&&body.userAgent,220)
+    });
+    return json(request,{ok:true,subscribed:true,topics});
+  }
+  async subscription(request){
+    const u=new URL(request.url),endpoint=clean(u.searchParams.get("endpoint"),2000);
+    if(!endpoint)return json(request,{ok:false,error:"endpoint required"},400);
+    const id=await hashText(endpoint),s=await this.state.storage.get("sub:"+id);
+    return json(request,{ok:true,registered:!!s,topics:s?this.topicsOf(s):[]});
   }
   async unsubscribe(request){
     const body=await request.json().catch(()=>null),endpoint=clean(body&&body.endpoint,2000);
     if(!endpoint)return json(request,{ok:false,error:"endpoint required"},400);
     const id=await hashText(endpoint);await this.state.storage.delete("sub:"+id);
-    return json(request,{ok:true,subscribed:false});
+    return json(request,{ok:true,subscribed:false,topics:[]});
   }
-  async pushOne(endpoint){
-    const v=await this.vapid(),r=await sendEmptyPush(v,endpoint);
+  async pushOne(endpoint,topic){
+    const v=await this.vapid(),r=await sendEmptyPush(v,endpoint,topic);
     if(r.status===404||r.status===410){
       const id=await hashText(endpoint);await this.state.storage.delete("sub:"+id);
     }
     return r;
   }
-  async notifyAll(){
-    const subs=await this.subscriptions();let sent=0,failed=0,removed=0;
+  async notifyAll(topic){
+    const subs=await this.subscriptions();let sent=0,failed=0,removed=0,eligible=0;
     for(const [key,s] of subs){
+      if(!this.topicsOf(s).includes(topic))continue;
+      eligible++;
       try{
-        const r=await this.pushOne(s.endpoint);
+        const r=await this.pushOne(s.endpoint,topic);
         if(r.ok)sent++;else{failed++;if(r.status===404||r.status===410)removed++}
       }catch(e){failed++}
     }
-    return {sent,failed,removed,total:subs.size};
+    return {sent,failed,removed,total:subs.size,eligible};
+  }
+  async recordAlert(alert){
+    const topic=clean(alert&&alert.type,20)||"notice";
+    await this.state.storage.put("latest",alert);
+    await this.state.storage.put("latest:"+topic,alert);
+    let recent=await this.state.storage.get("recentAlerts");
+    if(!Array.isArray(recent))recent=[];
+    recent=[alert,...recent.filter(x=>x&&x.id!==alert.id)].slice(0,30);
+    await this.state.storage.put("recentAlerts",recent);
   }
   async test(request){
     const body=await request.json().catch(()=>null),endpoint=clean(body&&body.endpoint,2000);
+    const topic=VALID_TOPICS.has(String(body&&body.topic||""))?String(body.topic):"presale";
     if(!endpoint)return json(request,{ok:false,error:"endpoint required"},400);
     const id=await hashText(endpoint),sub=await this.state.storage.get("sub:"+id);
     if(!sub)return json(request,{ok:false,error:"subscription not registered"},404);
     const last=Number(await this.state.storage.get("test:"+id)||0);
     if(Date.now()-last<30000)return json(request,{ok:false,error:"테스트는 30초에 한 번 가능합니다."},429);
-    await this.state.storage.put("latest",{
-      id:"test-"+Date.now(),type:"test",title:"JK 부동산 웹알림 테스트",
+    const alert=topic==="job"?{
+      id:"test-job-"+Date.now(),type:"job",title:"💼 JOB 웹알림 테스트",
+      body:"대전·세종 신규 채용공고 알림이 정상 연결되었습니다.",
+      url:JOB_APP,createdAt:new Date().toISOString()
+    }:{
+      id:"test-presale-"+Date.now(),type:"presale",title:"🏢 신규분양 웹알림 테스트",
       body:"대전·세종 신규분양 알림이 정상 연결되었습니다.",
-      url:APP_URL+"?gpt=presale",createdAt:new Date().toISOString()
-    });
+      url:PRESALE_APP+"?gpt=presale",createdAt:new Date().toISOString()
+    };
+    await this.recordAlert(alert);
     await this.state.storage.put("test:"+id,Date.now());
-    const r=await this.pushOne(endpoint);
+    const r=await this.pushOne(endpoint,topic);
     return json(request,{ok:r.ok,status:r.status,error:r.ok?null:r.text},r.ok?200:502);
   }
-  async check(request){
-    const base=this.env.BASE_URL||"https://jkquant.pages.dev";
-    const items=await officialFeed(base);
+  async checkPresale(request){
+    const base=this.env.BASE_URL||BASE_APP,items=await officialFeed(base);
     if(!items.length)return json(request,{ok:false,error:"official feed empty"},502);
-    const seenArr=await this.state.storage.get("seen");
-    const keys=items.map(x=>x.key);
+    const seenArr=await this.state.storage.get("seen"),keys=items.map(x=>x.key);
     if(!Array.isArray(seenArr)){
       await this.state.storage.put("seen",keys.slice(0,1200));
       await this.state.storage.put("lastCheck",new Date().toISOString());
       return json(request,{ok:true,baseline:true,items:items.length,newCount:0});
     }
     const seen=new Set(seenArr),fresh=items.filter(x=>!seen.has(x.key));
-    const merged=[...new Set([...keys,...seenArr])].slice(0,1600);
-    await this.state.storage.put("seen",merged);
+    await this.state.storage.put("seen",[...new Set([...keys,...seenArr])].slice(0,1600));
     await this.state.storage.put("lastCheck",new Date().toISOString());
     if(!fresh.length)return json(request,{ok:true,items:items.length,newCount:0});
-    const top=fresh[0],more=fresh.length-1;
-    const alert={
-      id:top.key,type:"presale",
+    const top=fresh[0],more=fresh.length-1,alert={
+      id:"presale:"+top.key,type:"presale",
       title:"🏢 신규분양 · "+top.region+" · "+top.categoryName,
       body:top.name+(top.start?(" · 접수 "+top.start+(top.end&&top.end!==top.start?"~"+top.end:"")):"")+(more>0?(" 외 "+more+"건"):""),
-      url:APP_URL+"?gpt=presale",
-      project:top,newItems:fresh.slice(0,10),createdAt:new Date().toISOString()
+      url:PRESALE_APP+"?gpt=presale",project:top,newItems:fresh.slice(0,10),createdAt:new Date().toISOString()
     };
-    await this.state.storage.put("latest",alert);
-    const delivery=await this.notifyAll();
+    await this.recordAlert(alert);
+    const delivery=await this.notifyAll("presale");
+    return json(request,{ok:true,items:items.length,newCount:fresh.length,alert,delivery});
+  }
+  async checkJobs(request){
+    const base=this.env.BASE_URL||BASE_APP,items=await jobFeed(base);
+    if(!items.length)return json(request,{ok:false,error:"job feed empty"},502);
+    const storageKey="seen:job",seenArr=await this.state.storage.get(storageKey),keys=items.map(x=>x.key);
+    if(!Array.isArray(seenArr)){
+      await this.state.storage.put(storageKey,keys.slice(0,5000));
+      await this.state.storage.put("lastCheck:job",new Date().toISOString());
+      return json(request,{ok:true,baseline:true,items:items.length,newCount:0});
+    }
+    const seen=new Set(seenArr),fresh=items.filter(x=>!seen.has(x.key));
+    await this.state.storage.put(storageKey,[...new Set([...keys,...seenArr])].slice(0,7000));
+    await this.state.storage.put("lastCheck:job",new Date().toISOString());
+    if(!fresh.length)return json(request,{ok:true,items:items.length,newCount:0});
+    const top=fresh[0],more=fresh.length-1;
+    const body=(top.company?top.company+" · ":"")+top.title+
+      (top.deadline?" · 마감 "+top.deadline:"")+(more>0?" 외 "+more+"건":"");
+    const alert={
+      id:"job:"+top.key,type:"job",title:"💼 대전·세종 신규 JOB "+fresh.length+"건",
+      body,url:top.appUrl,job:top,newItems:fresh.slice(0,10),createdAt:new Date().toISOString()
+    };
+    await this.recordAlert(alert);
+    const delivery=await this.notifyAll("job");
     return json(request,{ok:true,items:items.length,newCount:fresh.length,alert,delivery});
   }
   async fetch(request){
@@ -205,19 +277,28 @@ export class PresaleAlertStore{
     const u=new URL(request.url),path=u.pathname;
     if(path==="/health"){
       const subs=await this.subscriptions(),lastCheck=await this.state.storage.get("lastCheck");
-      return json(request,{ok:true,service:"jkquant-presale-alert",version:"1.0.0",subscriptions:subs.size,lastCheck:lastCheck||null});
+      const jobLastCheck=await this.state.storage.get("lastCheck:job");
+      let presale=0,job=0;
+      for(const [,s] of subs){const t=this.topicsOf(s);if(t.includes("presale"))presale++;if(t.includes("job"))job++}
+      return json(request,{
+        ok:true,service:"jkquant-push-alert",version:"2.0.0",subscriptions:subs.size,
+        topicSubscriptions:{presale,job},lastCheck:lastCheck||null,
+        lastChecks:{presale:lastCheck||null,job:jobLastCheck||null}
+      });
     }
-    if(path==="/vapid"){
-      const v=await this.vapid();return json(request,{ok:true,publicKey:v.publicKey});
-    }
+    if(path==="/vapid"){const v=await this.vapid();return json(request,{ok:true,publicKey:v.publicKey})}
     if(path==="/latest"){
-      const alert=await this.state.storage.get("latest");
-      return json(request,{ok:true,alert:alert||null});
+      const topic=String(u.searchParams.get("topic")||"");
+      const alert=topic?await this.state.storage.get("latest:"+topic):await this.state.storage.get("latest");
+      const alerts=await this.state.storage.get("recentAlerts");
+      return json(request,{ok:true,alert:alert||null,alerts:Array.isArray(alerts)?alerts:[]});
     }
+    if(path==="/subscription"&&request.method==="GET")return this.subscription(request);
     if(path==="/subscribe"&&request.method==="POST")return this.subscribe(request);
     if(path==="/subscribe"&&request.method==="DELETE")return this.unsubscribe(request);
     if(path==="/test"&&request.method==="POST")return this.test(request);
-    if(path==="/check"&&request.method==="POST")return this.check(request);
+    if(path==="/check"&&request.method==="POST")return this.checkPresale(request);
+    if(path==="/check-jobs"&&request.method==="POST")return this.checkJobs(request);
     return json(request,{ok:false,error:"not found"},404);
   }
 }
@@ -229,7 +310,10 @@ export default{
     return env.ALERT_STORE.get(id).fetch(request);
   },
   async scheduled(controller,env,ctx){
-    const id=env.ALERT_STORE.idFromName("global");
-    ctx.waitUntil(env.ALERT_STORE.get(id).fetch(new Request("https://internal/check",{method:"POST"})));
+    const id=env.ALERT_STORE.idFromName("global"),stub=env.ALERT_STORE.get(id);
+    ctx.waitUntil(Promise.allSettled([
+      stub.fetch(new Request("https://internal/check",{method:"POST"})),
+      stub.fetch(new Request("https://internal/check-jobs",{method:"POST"}))
+    ]));
   }
 };
