@@ -116,7 +116,7 @@ async function disable(){
     }else{
       await server("/subscribe",{
         method:"DELETE",headers:{"content-type":"application/json"},
-        body:JSON.stringify({endpoint:sub.endpoint,topic:"presale"})
+        body:JSON.stringify({endpoint:sub.endpoint})
       }).catch(()=>{});
       await sub.unsubscribe();sub=null;
     }
@@ -134,7 +134,7 @@ async function sendTest(){
   try{
     const j=await server("/test",{
       method:"POST",headers:{"content-type":"application/json"},
-      body:JSON.stringify({endpoint:sub.endpoint})
+      body:JSON.stringify({endpoint:sub.endpoint,topic:"presale"})
     });
     if(j.ok)alert("테스트 푸시를 보냈습니다. 잠시 후 알림이 도착해야 합니다.");
   }catch(e){alert("테스트 알림 실패: "+String(e&&e.message||e))}
