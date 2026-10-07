@@ -138,7 +138,7 @@ export class OpeningSignalStore extends DurableObject {
       const next=[{endpoint:String(x.endpoint),keys:{p256dh:String(x.keys.p256dh),auth:String(x.keys.auth)},at:new Date().toISOString(),ua:String(b.ua||"").slice(0,120)},
         ...subs.filter(s=>s.endpoint!==x.endpoint)].slice(0,10);
       await st.put("pushSubs",next);
-      if(!(await st.getAlarm()))await st.setAlarm(nextPushAt(Date.now()));
+      if(!(await st.getAlarm()))await st.setAlarm(mode==="gpt"?nextGptPushAt(Date.now()):nextPushAt(Date.now()));
       return json({ok:true,count:next.length});
     }
     if(op==="unsub"||op==="drop"){
