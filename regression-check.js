@@ -12133,6 +12133,28 @@ console.log('\n[SCALPING TODAY KST/AUTO] KST 전일·당일 · 전략분석 자�
      (vt.stderr||'')+(vt.stdout||''));
 }
 
+
+/* ════ 공용 로그인 · 상단 전체메뉴 통일 ════ */
+console.log('\n[UNIFIED CHROME] JK 투자 로그인 · 9개 페이지 전체메뉴');
+{
+  const ui=fs.readFileSync(__d+'/jk-ui.js','utf8'),acc=fs.readFileSync(__d+'/jk-access.js','utf8');
+  const pages=['index.html','plan.html','backtest.html','scalping.html','claude.html','ipo.html','realestate.html','job.html','admin.html'];
+  ok('공용 승인 로그인 브랜드는 JK 투자 — 퀀트 잔존 없음',
+     /var head='<div class="jl">JK <b>투자<\/b><\/div>'/.test(acc)
+     &&!/JK <b>퀀트<\/b>/.test(acc)&&!/\/\* JK 퀀트 — 이용 승인/.test(acc));
+  ok('공용 UI가 로그인 카드·Google 버튼·브랜드를 한 모양으로 정규화',
+     /JK 투자 공용 로그인·전체메뉴 UI/.test(ui)&&/function normalizeLogin\(\)/.test(ui)
+     &&/#authgate \.gbox,#gate \.gbox,#jkgate \.jb/.test(ui)
+     &&/Google로 로그인/.test(ui));
+  ok('공용 UI가 상단 메뉴 제목·햄버거·모바일 폭·열고닫기를 한 곳에서 관리',
+     /function mountMenus\(\)/.test(ui)&&/전체메뉴/.test(ui)&&/btn\.textContent='☰'/.test(ui)
+     &&/\.jkmenu-pop\{position:absolute!important/.test(ui)
+     &&/@media\(max-width:600px\)\{\.jkmenu-pop/.test(ui));
+  ok('9개 페이지 모두 jk-ui 공용 UI와 같은 10개 메뉴 링크를 사용',
+     pages.every(f=>{const s=fs.readFileSync(__d+'/'+f,'utf8');return /<script src="\/jk-ui\.js" defer><\/script>/.test(s)
+       &&['/','/plan','/backtest','/scalping','/claude','/paper','/ipo','/realestate','/job','/admin'].every(p=>s.includes('href="'+p+'"'));}));
+}
+
 Promise.all(PENDING).then(()=>{
   const nav=require('child_process').spawnSync(process.execPath,[require('path').join(__dirname,'scripts/check-navigation-races.cjs'),process.argv[2]||'index.html'],{encoding:'utf8'});
   ok('운영 탭: 늦은 DB 저장과 이전 세션 시세가 현재 선택을 덮어쓰지 않음',nav.status===0,(nav.stdout||'')+(nav.stderr||''));

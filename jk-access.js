@@ -1,4 +1,4 @@
-/* JK 퀀트 — 이용 승인 (모든 페이지 공용 · 판정은 이 파일 한 곳에서만 한다)
+/* JK 투자 — 이용 승인 (모든 페이지 공용 · 판정은 이 파일 한 곳에서만 한다)
    로그인 → 이용 신청(로그인하면 자동 접수) → 관리자 승인 → 사용.
    - 관리자(소유자)는 언제나 통과한다.
    - profiles/{uid}.approved === true 이고 차단(blocked)이 아니면 통과한다.
@@ -146,7 +146,7 @@
    +'#jkgate{position:fixed;inset:0;z-index:2147483000;display:none;align-items:center;justify-content:center;padding:24px;'
    +'background:linear-gradient(160deg,#0f1320,#171c2e);color:#e8ecf7;font-family:-apple-system,BlinkMacSystemFont,"Pretendard","Segoe UI",sans-serif;text-align:center}'
    /* visibility 까지 직접 켠다 — 자산플랜은 로그인 전 body 아래를 통째로(#authgate 말고) 숨기는데 이 막도 거기 걸린다 */
-   +'#jkgate.on{display:flex;visibility:visible!important}#jkgate .jb{max-width:380px;width:100%}'
+   +'#jkgate.on{display:flex;visibility:visible!important}#jkgate .jb{box-sizing:border-box;max-width:360px;width:calc(100% - 32px);padding:26px 20px;border:1px solid #2a3354;border-radius:18px;background:#171c2e;box-shadow:0 18px 50px rgba(0,0,0,.42)}'
    +'#jkgate .jl{font-size:28px;font-weight:800;letter-spacing:-.02em;margin-bottom:8px}#jkgate .jl b{color:#f5c451}'
    +'#jkgate .js{color:#9aa6c9;font-size:13px;line-height:1.7;margin-bottom:22px}#jkgate .js b{color:#e8ecf7}'
    +'#jkgate .jbtn{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;border:0;border-radius:12px;padding:13px 18px;font-size:15px;font-weight:700;cursor:pointer;margin-top:9px}'
@@ -173,7 +173,7 @@
     o=o||{}; H=o;
     var g=el(); if(!g){ document.addEventListener('DOMContentLoaded', function(){ show(state, o); }, {once:true}); return; }
     var who=o.user ? '<b>'+esc(o.user.email||o.user.displayName||'')+'</b>' : '';
-    var head='<div class="jl">JK <b>퀀트</b></div>', body='';
+    var head='<div class="jl">JK <b>투자</b></div>', body='';
     if(state==='checking'){
       body='<div class="js"><span class="jspin"></span>로그인 확인 중…</div>';
     }else if(state==='signedout'){
