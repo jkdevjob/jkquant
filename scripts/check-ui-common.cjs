@@ -77,6 +77,15 @@ t('U4 모의 성과 첫 칸 — 폭을 정해 두고 줄바꿈 · 폰 폭 340~41
   for(const vw of [340,360,375,390,414,430]) assert(first(vw)+170<=vw-50,`폭 ${vw}px: ${first(vw)}+170 > ${vw-50}`);
 });
 
+t('U5 자산플랜 맨 위 "다음 단계 조건" 카드를 뺐다 — 화면·글자·갱신 코드 모두 · 단계 카드가 전체 폭',()=>{
+  const pl=fs.readFileSync(path.join(ROOT,'plan.html'),'utf8');
+  assert(!/>다음 단계 조건</.test(pl) && !/id="nextRule"|id="nextNote"/.test(pl),'카드 없음');
+  assert(!/\$\("nextRule"\)|\$\("nextNote"\)/.test(pl),'없는 칸을 채우는 코드도 없음(있으면 화면 갱신이 멈춘다)');
+  assert(!/페이지 열기 → 오늘 주문 확인 → 체결 반영/.test(pl),'A탭 문구 없음');
+  const hero=(pl.match(/<div class="hero">([\s\S]*?)\n  <\/div>\n/)||['',''])[1];
+  assert.equal((hero.match(/<section class="card">/g)||[]).length,1,'hero 카드 하나');
+  assert(/\.hero\{display:grid;grid-template-columns:1fr;/.test(pl),'한 칸 전체 폭');
+});
 console.log(results.join('\n'));
 console.log(failed?`\n${failed} FAIL`:'\nALL PASS');
 process.exitCode=failed?1:0;

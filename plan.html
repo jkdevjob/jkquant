@@ -36,7 +36,7 @@ button{cursor:pointer}
 .jkmenu-pop a:hover,.jkmenu-pop a.cur{background:var(--surf2);color:var(--text)}
 .jkmenu-pop a.cur{color:var(--gold)}
 .mi{width:18px;text-align:center}
-.hero{display:grid;grid-template-columns:1.45fr .75fr;gap:12px;margin-bottom:12px}
+.hero{display:grid;grid-template-columns:1fr;gap:12px;margin-bottom:12px}   /* 다음 단계 안내 카드는 뺐다(2026-10-07 사용자 요청) — 단계 카드 하나가 전체 폭 */
 .plan-tabs{position:sticky;top:0;z-index:50;background:rgba(15,19,32,.96);backdrop-filter:blur(10px);display:flex;gap:7px;overflow-x:auto;padding:9px 0 10px;margin:-2px 0 12px;-webkit-overflow-scrolling:touch}
 .plan-tab,.horizon-tab{flex:0 0 auto;border:1px solid var(--border);background:var(--surf);color:var(--dim);border-radius:999px;padding:9px 13px;font-weight:800;font-size:12px}
 .plan-tab.on,.horizon-tab.on{background:var(--accent);border-color:var(--accent);color:white}
@@ -70,7 +70,6 @@ button{cursor:pointer}
 .bar{height:8px;background:var(--surf2);border-radius:999px;overflow:hidden;margin-top:14px}
 .bar>span{display:block;height:100%;background:var(--accent);transition:width .2s}
 .bar-meta{display:flex;justify-content:space-between;gap:8px;margin-top:6px;color:var(--dim);font-size:11px}
-.next-title{font-size:18px;font-weight:800;margin-top:5px}
 .grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
 .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
 .field label{display:block;color:var(--dim);font-size:11px;margin-bottom:5px}
@@ -307,11 +306,6 @@ setTimeout(function(){ var h=document.documentElement; if(h.classList.contains('
       </div>
       <div class="bar"><span id="goalBar" style="width:0"></span></div>
       <div class="bar-meta"><span id="goalPct">목표 0%</span><span id="timeText">남은 기간 계산 중</span></div>
-    </section>
-    <section class="card">
-      <div class="sub">다음 단계 조건</div>
-      <div class="next-title" id="nextRule">성장 진행 70% 또는 3년 경과</div>
-      <div class="sub" id="nextNote">둘 중 하나라도 먼저 오면 보호를 시작합니다.</div>
     </section>
   </div>
 
@@ -2816,11 +2810,6 @@ function render(){
   if($("startCapitalSrc")) $("startCapitalSrc").textContent=pg.ready
     ? "시작 "+usd(pg.base)+" → 현재 "+usd(total)+" → 목표 "+usd(pg.target)
     : "현재 플랜자산을 확인한 뒤 아래 버튼으로 시작점을 확정하세요.";
-  const next={1:["성장 진행 70% 또는 3년 경과","둘 중 하나라도 먼저 오면 수익 보호 시작"],2:["성장 진행 85% 또는 12개월 전","둘 중 하나라도 먼저 오면 전환 준비"],3:["성장 진행 100% 또는 목표일","달성 즉시 현금흐름 구조로 전환"],4:["월 현금흐름·원금 유지 관리","분배율보다 총수익과 인출 지속성을 함께 점검"]}[stage];
-  if(activePlanTab==='alpha'){
-    $("nextRule").textContent="페이지 열기 → 오늘 주문 확인 → 체결 반영";
-    $("nextNote").textContent="A탭을 열 때 시세와 주문이 자동 갱신되고, 체결가만 기록하면 잔고·이력이 자동으로 이어집니다.";
-  }else{$("nextRule").textContent=next[0];$("nextNote").textContent=next[1];}
 
   if($("soxlTargetPct"))$("soxlTargetPct").textContent=(stage<4?STAGES[stage].main[0]:10)+"%";
   if($("tqqqTargetPct"))$("tqqqTargetPct").textContent=(stage<4?STAGES[stage].main[1]:0)+"%";
