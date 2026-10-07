@@ -29,14 +29,13 @@ table.board{min-width:0}table.board td.nm{white-space:normal;min-width:150px}tab
 table.doc td{padding:6px 6px}
 .loading{padding:40px;text-align:center;color:var(--dim)}.warn{padding:9px 11px;border-radius:9px;background:rgba(248,123,140,.08);border:1px solid rgba(248,123,140,.25);color:#ffb3be;font-size:12px}
 @media(max-width:560px){.wrap{padding:0 11px}.hero h2{font-size:20px}.kpi .v{font-size:17px}}
-/* 휴대폰 기본: 화면보다 넓은 표는 줄마다 카드처럼 세로로 편다(옆으로 밀지 않게) — stackTables() 가 넘치는 표에만 붙인다 */
-@media(max-width:760px){table.stack{min-width:0!important}table.stack thead{display:none}table.stack tbody,table.stack tr{display:block}
-table.stack tr{border-bottom:1px solid var(--border);padding:8px 2px}table.stack td{display:flex;justify-content:space-between;align-items:baseline;gap:12px;border:0;padding:3px 0;white-space:normal;text-align:right;min-width:0!important}
-table.stack td::before{content:attr(data-label);color:var(--dim);font-weight:700;font-size:11.5px;text-align:left;flex:0 0 auto;max-width:46%}
-table.stack td{flex-wrap:wrap}table.stack td>div{flex-basis:100%;text-align:right}
-table.stack td.nm,table.stack td.blk{display:block;text-align:left}table.stack td.nm::before,table.stack td.blk::before{display:block;max-width:none;margin-bottom:2px}table.stack td.nm>div,table.stack td.blk>div{text-align:left}
-table.stack td:first-child{display:block;text-align:left;font-size:13.5px;font-weight:800;padding-bottom:4px}table.stack td:first-child::before,table.stack td[data-label=""]::before{display:none}
-table.stack td.rk:first-child::before{display:inline;content:attr(data-label) " ";font-size:13.5px}
+/* 휴대폰 기본: 비교 표는 표 그대로 — 넘치는 표만 글자·간격을 줄이고 머리글을 접는다. 그래도 넓으면 첫 칸(전략)을 고정하고 옆으로 */
+@media(max-width:760px){table.fit{min-width:0!important;font-size:11px}table.fit td,table.fit th{padding:5px 3px}
+table.fit th{white-space:normal;line-height:1.25;vertical-align:bottom;font-size:11px;word-break:keep-all}table.fit th .sub,table.fit td>.sub,table.fit td>div.sub{display:none}
+table.fit td.nm{min-width:0!important;max-width:150px;white-space:normal;line-height:1.3;word-break:keep-all}table.fit th{min-width:2.9em}table.fit th:first-child{min-width:0}
+table.fit.arena td:first-child,table.fit.arena th:first-child{width:20px;min-width:20px;max-width:20px;padding-right:2px}
+table.fit.arena td.nm,table.fit.arena th:nth-child(2){position:sticky;left:20px;z-index:1;background:var(--surf);min-width:138px!important;max-width:138px}
+table.fit td:first-child,table.fit th:first-child{position:sticky;left:0;z-index:1;background:var(--surf)}
 .daily-result-label,.daily-result-goal,.tag{font-size:11px}.daily-result-list{grid-template-columns:1fr}
 table.alog{min-width:0}table.alog tbody,table.alog tr{display:block}table.alog tr{padding:8px 0;border-bottom:1px solid var(--border)}table.alog td{display:inline;border:0;padding:0 8px 0 0}table.alog td:last-child{display:block;padding:3px 0 0}}
 #gate{position:fixed;inset:0;background:linear-gradient(160deg,#0f1320,#171c2e);z-index:200;display:flex;align-items:center;justify-content:center;padding:24px;text-align:center}
@@ -375,7 +374,7 @@ function shadowCard(tab){
   return sec("⑥ 전략 경쟁 · 자동 개선 (메인 + 그림자 "+(z.poolSize||0)+"개)",
     "<div class='why'>"+arenaStatus(z)+"</div>"+arenaGen(z)+
     "<div class='sub'>메인: <b>"+esc(z.mainName||z.main)+"</b>"+(z.effectiveFrom?" ("+esc(z.effectiveFrom)+" 부터)":" (처음 채택)")+" · 오늘 신규 "+(z.added||[]).length+" · 퇴출 "+(z.retiredToday||[]).length+" · 지금까지 시험한 후보 "+((z.triedCount||0)+(z.rows||[]).length)+"개 · 계산 "+esc(String((J.lab||{}).generatedAt||"").slice(5,16).replace("T"," "))+"</div>"+
-    "<div class='tw'><table class='board'><thead><tr><th>순위</th><th style='text-align:left'>전략 · 규칙</th><th>안정 점수<div class='sub'>주 평균 %</div></th><th>최근 1년</th><th>최근 90일</th><th>MDD</th><th>매매일/년</th><th>+1%일/년</th><th>10/1~ 구간</th></tr></thead><tbody>"+rows+"</tbody></table></div>"+
+    "<div class='tw'><table class='board arena'><thead><tr><th>순위</th><th style='text-align:left'>전략 · 규칙</th><th>안정 점수<div class='sub'>주 평균 %</div></th><th>최근 1년</th><th>최근 90일</th><th>MDD</th><th>매매일/년</th><th>+1%일/년</th><th>10/1~ 구간</th></tr></thead><tbody>"+rows+"</tbody></table></div>"+
     "<div style='margin-top:10px'><b>📝 최근 개선 내역 · 사유</b></div>"+
     (lg?"<div class='tw'><table class='board alog'><tbody>"+lg+"</tbody></table></div>":"<p class='note'>아직 기록이 없습니다.</p>")+
     "<p class='note'>"+esc(z.rule||"")+" 모든 수치는 같은 함수 · 같은 비용(순수익)으로 계산합니다. 과거로 고른 결과라 과최적화 위험이 있어, 10/1~ 구간(규칙 채택 뒤 새 자료) 열로 계속 확인합니다.</p>",true);
@@ -535,22 +534,15 @@ function arenaOverview(lab){                                  // 📅 오늘 탭
     "<p class='note'>순위 = 안정 점수(매매가 적은 최근 구간은 전체 성적 쪽으로 당기고, 변수를 한 칸씩 바꾼 이웃의 중앙값보다 높게 쳐 주지 않음) · 퇴출 = 기준 미달(손실 · 매매일 60일 · 해마다 60% 플러스) · 7일 연속 하위 3위 · 다른 전략과 같은 매매(복제) · 더 나은 신규에 자리 교체 · 신규 = 밤마다 후보 48개를 이웃 · 두 칸 · 교배 · 새 구조(③ 최근 N일 고가 · ④ 종가 위치/연속 하락) · 격자 탐색으로 만들어 모두 계산한 뒤 좋은 순 · 승격 = 같은 그림자가 7일 동안 매일 1위면 다음 날부터 메인. 자세히는 각 탭 ⑥.</p></div>";
 }
 function refreshToday(){var m=document.getElementById("daily_results_meta");if(m)m.textContent="새로고침 중…";load();loadLive()}
-// 휴대폰에서 화면보다 넓은 표 → 줄마다 '머리글: 값' 카드로(넘치는 표에만). 칸 이름은 머리글에서 가져온다.
+// 휴대폰에서 화면보다 넓은 비교 표 → 표는 그대로 두고 촘촘하게(fit). 넘치는 표에만 붙인다.
 function stackTables(root){
   if(!root)return;
   (root.querySelectorAll?root.querySelectorAll("table"):[]).forEach(function(t){
-    var hr=t.tHead&&t.tHead.rows[0];if(!hr)return;
-    t.classList.remove("stack");
+    if(!t.tHead||t.classList.contains("alog"))return;
+    t.classList.remove("fit");
     if(window.innerWidth>760)return;
     var box=t.parentElement;if(!box||t.scrollWidth<=box.clientWidth+2)return;
-    var labels=[];[].forEach.call(hr.cells,function(th){var txt=[].map.call(th.childNodes,function(n){return (n.textContent||"").trim()}).filter(Boolean).join(" ");
-      for(var k=0;k<(th.colSpan||1);k++)labels.push(txt)});
-    [].forEach.call(t.tBodies,function(tb){[].forEach.call(tb.rows,function(tr){var i=0;[].forEach.call(tr.cells,function(td){
-      td.setAttribute("data-label",(td.colSpan||1)>1?"":(labels[i]||""));
-      if(i===0)td.classList.toggle("rk",td.textContent.trim().length<=3);                 // 순위 번호처럼 짧은 첫 칸은 '순위 1' 로
-      else if(td.querySelector("div,br")&&td.textContent.trim().length>24)td.classList.add("blk");   // 설명이 긴 칸은 이름 아래로
-      i+=td.colSpan||1})})});
-    t.classList.add("stack");
+    t.classList.add("fit");
   });
 }
 var __stackT=null;window.addEventListener("resize",function(){clearTimeout(__stackT);__stackT=setTimeout(function(){stackTables(document.getElementById("body"))},200)});
