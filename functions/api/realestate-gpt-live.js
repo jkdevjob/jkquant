@@ -18,7 +18,24 @@ const RTMS_ENDPOINTS={
 
 function json(data,status=200){return new Response(JSON.stringify(data),{status,headers:JSON_HEADERS})}
 function clean(v,max=80){return String(v||"").replace(/[<>\r\n]/g,"").slice(0,max)}
-function keyOf(env){return env.DATA_GO_KR_API_KEY||env.DATA_GO_KR_SERVICE_KEY||""}
+function keyOf(env){
+  let k=String(env.DATA_GO_KR_API_KEY||env.DATA_GO_KR_SERVICE_KEY||"").trim();
+  if((k.startsWith('"')&&k.endsWith('"'))||(k.startsWith("'")&&k.endsWith("'")))k=k.slice(1,-1).trim();
+  try{
+    if(/%[0-9A-Fa-f]{2}/.test(k))k=decodeURIComponent(k);
+  }catch(e){}
+  return k;
+}
+function upstreamError(status,text){
+  const t=String(text||"").slice(0,500);
+  if(status===403){
+    if(/SERVICE_ACCESS_DENIED|PERMISSION_DENIED/i.test(t))return "공공데이터포털 활용신청 권한 없음";
+    if(/SERVICE_KEY_IS_NOT_REGISTERED|NOT_REGISTERED/i.test(t))return "공공데이터포털 서비스키 미등록 또는 해당 API 미연결";
+    if(/LIMITED_NUMBER|REQUESTS_EXCEEDS/i.test(t))return "공공데이터포털 호출 한도 초과";
+    return "공공데이터포털 인증 거부(HTTP 403) · 해당 API 활용신청 상태 확인 필요";
+  }
+  return "upstream HTTP "+status+" "+t.replace(/\s+/g," ").slice(0,180);
+}
 function validDate(v){return /^\d{4}-\d{2}-\d{2}$/.test(v)}
 function validYm(v){return /^\d{6}$/.test(v)}
 function validLawd(v){return /^\d{5}$/.test(v)}
@@ -29,7 +46,7 @@ async function getText(url){
     cf:{cacheTtl:900,cacheEverything:true}
   });
   const text=await r.text();
-  if(!r.ok)throw new Error("upstream HTTP "+r.status+" "+text.slice(0,180));
+  if(!r.ok)throw new Error(upstreamError(r.status,text));
   return {text,contentType:r.headers.get("content-type")||""};
 }
 
@@ -83,7 +100,7 @@ export async function onRequestGet(context){
     ok:true,configured:!!key,
     features:{applyhome:true,trade:true,rent:true,presaleRight:true},
     envName:"DATA_GO_KR_API_KEY",
-    note:key?"공공데이터포털 공식 API 자동수집 사용 가능":"공공데이터포털 인증키 미설정 — 검증 스냅샷으로 동작"
+    note:key?"공공데이터포털 공식 API 자동수집 사용 가능 · Encoding/Decoding 키 자동정규화":"공공데이터포털 인증키 미설정 — 검증 스냅샷으로 동작"
   });
   if(!key)return json({ok:false,error:"DATA_GO_KR_API_KEY not configured",configured:false},503);
   try{
