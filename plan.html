@@ -278,7 +278,7 @@ setTimeout(function(){ var h=document.documentElement; if(h.classList.contains('
 </script>
 <div class="wrap">
   <div class="top">
-    <div class="brand"><div class="logo">Asset Plan</div><h1>JK <span class="v">투자</span> 자산플랜 <span class="ver">v1.43.20</span></h1></div>
+    <div class="brand"><div class="logo">Asset Plan</div><h1>JK <span class="v">투자</span> 자산플랜 <span class="ver">v1.43.21</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
       <div class="jkmenu" id="jkmenuWrap">
@@ -3053,8 +3053,8 @@ document.querySelectorAll('.horizon-tab').forEach(b=>b.addEventListener('click',
 setPlanTab('alpha',false);
 if($('targetDate'))$('targetDate').value=plusYears($('startDate').value||todayISO(),activeHorizon);
 renderHorizonCopy();
-$("jkmenuBtn").addEventListener("click",e=>{e.stopPropagation();$("jkmenuPop").hidden=!$("jkmenuPop").hidden});
-document.addEventListener("click",e=>{if(!$("jkmenuWrap").contains(e.target))$("jkmenuPop").hidden=true});
+/* 상단 전체메뉴 열기/닫기는 jk-ui.js 공용 핸들러 하나만 사용한다.
+   페이지별 핸들러를 또 달면 한 번 탭에 두 번 토글되어 iPhone에서 메뉴가 안 열린다. */
 /* ── 로그인 게이트 (본문 위 #authgate) ──
    planGate(true) 는 본문을 열고, planGate(false) 는 본문을 숨기고 로그인 상자를 띄운다.
    이용 승인(관리자 승인 · 차단)은 jk-access.js 한 곳이 판정한다 — 운영·백테·공모주·JOB 과 같은 글자. */

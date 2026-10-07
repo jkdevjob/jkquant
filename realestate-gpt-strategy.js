@@ -99,7 +99,6 @@ async function runNow(){
     const result=RESTRAT.run(trades,market,EVENTS,{startYear:start,endYear:end,minHold:hold,buyCost:bc,sellCost:sc});
     result.collectionWarnings=Array.isArray(trades.collectionWarnings)?trades.collectionWarnings:[];
     LAST={ranAt:new Date().toISOString(),start,end,result};
-    try{localStorage.setItem("jk_re_strategy_result_v3",JSON.stringify(LAST))}catch(e){}
   }catch(e){
     alert("실거래 백테스트 실패: "+String(e&&e.message||e));
   }finally{running=false;render()}
@@ -112,10 +111,6 @@ async function boot(){
       RESTRAT.status()
     ]);
     CFG=c;EVENTS=e.events||[];STATUS=s;
-    try{
-      const saved=JSON.parse(localStorage.getItem("jk_re_strategy_result_v3")||"null");
-      if(saved&&saved.result)LAST=saved;
-    }catch(e){}
   }catch(e){STATUS={configured:false,note:String(e&&e.message||e)}}
   render();
 }

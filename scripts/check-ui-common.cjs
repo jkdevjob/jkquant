@@ -5,7 +5,7 @@ const fs=require('fs'),vm=require('vm'),assert=require('assert/strict'),path=req
 const ROOT=path.join(__dirname,'..');
 const ui=fs.readFileSync(path.join(ROOT,'jk-ui.js'),'utf8');
 const html=fs.readFileSync(process.argv[2]||path.join(ROOT,'index.html'),'utf8');
-const PAGES=['index.html','backtest.html','plan.html','admin.html','scalping.html','claude.html','ipo.html','job.html','realestate.html'];
+const PAGES=['index.html','backtest.html','plan.html','admin.html','scalping.html','claude.html','ipo.html','job.html','realestate.html','settings.html'];
 const results=[];let failed=0;
 function t(name,body){ try{ body(); results.push('PASS '+name); }catch(e){ failed++; results.push('FAIL '+name+' — '+(e&&e.message||e)); } }
 function fnOf(src,marker){const start=src.indexOf(marker);assert(start>=0,marker);let i=src.indexOf('{',start),d=0;for(;i<src.length;i++){if(src[i]==='{')d++;if(src[i]==='}'&&!--d)return src.slice(start,i+1);}throw Error('unclosed '+marker);}
@@ -57,7 +57,7 @@ t('U2 자리 — 오른쪽 가장자리 · 화면 세로 가운데 · 모달(z-i
   assert(/#jkToTop\.on\{opacity:\.8;visibility:visible\}/.test(ui) && /opacity:0;visibility:hidden/.test(ui),'평소 숨김 · on 이면 보임');
   assert(/@media print\{#jkToTop\{display:none\}\}/.test(ui));
 });
-t('U3 모든 페이지(9개)가 같은 파일을 한 번씩 읽는다 — 공용 jk-access.js 바로 다음',()=>{
+t('U3 모든 페이지(10개)가 같은 파일을 한 번씩 읽는다 — 공용 jk-access.js 바로 다음',()=>{
   for(const f of PAGES){
     const s=fs.readFileSync(path.join(ROOT,f),'utf8');
     assert.equal((s.match(/<script src="\/jk-ui\.js" defer><\/script>/g)||[]).length,1,f+' 한 번');

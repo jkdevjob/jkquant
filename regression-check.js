@@ -9266,7 +9266,7 @@ console.log('\n[123] 모의 성과 — 단독 페이지(/paper)');
   ok('예전 주소 /?paper=1 은 /paper 로 바꿔 페이지로 연다 · 그냥 / 는 운영 화면 그대로 · paper=10 같은 다른 값은 건드리지 않는다',
      e2.page && e2.calls.join()==='/paper' && !e3.page && e3.homeCur && !e3.calls.length && !e4.page && !e4.calls.length,
      JSON.stringify([e2,e3,e4]));
-  // 페이지 모드 켜기/끄기 — 상자를 본문 자리로 옮겼다가 돌려놓는다 (가짜 DOM)
+  // 페이지 모드 켜기/끄기 — iPhone Safari 재배치 버그를 피하려 DOM은 옮기지 않는다 (가짜 DOM)
   { // 가짜 요소 — 같은 id 는 언제나 같은 객체 (동일성 비교가 코드와 같게 된다)
     const mk=id=>{ const cls=new Set(); const el={id, parentNode:null, innerHTML:'', _cls:cls,
       classList:{add:c=>cls.add(c), remove:c=>cls.delete(c), toggle:(c,on)=>{ if(on) cls.add(c); else cls.delete(c); }, contains:c=>cls.has(c)},
@@ -9280,12 +9280,13 @@ console.log('\n[123] 모의 성과 — 단독 페이지(/paper)');
       [extractFn(idx,'function closePaper()'), extractFn(idx,'function isPaperPage()'), extractFn(idx,'function paperPageMode(on)')].join('\n')
       +'\nreturn {closePaper, isPaperPage, paperPageMode};')(id=>E[id]||null, docF, {pushState:(a,b,u)=>hist.push(u)}, 'JK 투자 — 운영');
     F.paperPageMode(true);
-    const on1={page:body._cls.has('paperpage'), inPage:modal.parentNode===page, homeCur:home._cls.has('cur'), paperCur:jk._cls.has('cur'), title:docF.title, wait:/기록을 맞추는 중/.test(pbody.innerHTML)};
+    const on1={page:body._cls.has('paperpage'), inBody:modal.parentNode===body, homeCur:home._cls.has('cur'), paperCur:jk._cls.has('cur'), title:docF.title, wait:/기록을 맞추는 중/.test(pbody.innerHTML)};
     F.closePaper();   // 전략 이름을 누르면 gotoSess 가 부른다 — 페이지에서 나가 운영 화면으로
     const off1={page:body._cls.has('paperpage'), inBody:modal.parentNode===body, open:modal._cls.has('on'), homeCur:home._cls.has('cur'), paperCur:jk._cls.has('cur'), title:docF.title, hist:hist.join()};
-    ok('페이지 모드 — 상자를 본문 자리로 옮기고 메뉴·제목·대기 문구를 맞춘다',
-       on1.page && on1.inPage && !on1.homeCur && on1.paperCur && on1.title==='JK 투자 — 모의투자' && on1.wait, JSON.stringify(on1));
-    ok('페이지에서 전략 이름을 누르면 운영 화면으로 나간다 — 주소 / · 상자는 모달 자리로 · 모달로 뜨지 않는다 · 메뉴·제목 되돌림',
+    ok('페이지 모드 — 모달 DOM을 옮기지 않고 메뉴·제목·대기 문구를 맞춘다',
+       on1.page && on1.inBody && !on1.homeCur && on1.paperCur && on1.title==='JK 투자 — 모의투자' && on1.wait
+       && !extractFn(idx,'function paperPageMode(on)').includes('appendChild('), JSON.stringify(on1));
+    ok('페이지에서 전략 이름을 누르면 운영 화면으로 나간다 — 주소 / · 모달은 body 자리에 그대로 · 메뉴·제목 되돌림',
        !off1.page && off1.inBody && !off1.open && off1.homeCur && !off1.paperCur && off1.title==='JK 투자 — 운영' && off1.hist==='/', JSON.stringify(off1)); }
   // 채우기는 클라우드 기록을 맞춘 뒤 한 번 — 로컬로 먼저 연 갈래(openedLocal)에서는 부르지 않는다
   { const ia=extractFn(idx,'function initAuth()');
@@ -9296,11 +9297,12 @@ console.log('\n[123] 모의 성과 — 단독 페이지(/paper)');
     ok('페이지 채우기는 한 번만 · 페이지가 아닐 때는 안 한다', /if\(!isPaperPage\(\) \|\| window\._paperAutoOpened\) return;/.test(pa) && /window\._paperAutoOpened=true;/.test(pa));
     ok('예전 자동 열기(/?paper=1 · 모의 세션이 있으면 곧바로)는 없앴다 — 로컬 기록으로 먼저 채우던 길',
        !/hasPaper && \/\[\?&\]paper=1\//.test(idx) && !/const hasPaper = PAPER_TABS\.some/.test(idx)); }
-  ok('페이지에서는 전략 탭·세션바·상태줄·전략 화면·기록 버튼을 숨기고, 모의 상자는 본문 폭 그대로 · 닫기 버튼 없음',
-     /body\.paperpage \.wrap>\.tabs,body\.paperpage #sessbar,body\.paperpage #statusline,body\.paperpage \.wrap>section,body\.paperpage #fab\{display:none!important\}/.test(idx)
-     && /body\.paperpage #paperModal\{position:static;display:block!important;/.test(idx) && /body\.paperpage #paperModal \.box\{max-width:none;/.test(idx)
-     && /body\.paperpage #paperModal \.mx,body\.paperpage #paperModal \.mbtns\{display:none\}/.test(idx)
-     && idx.indexOf('<div id="paperPage"></div>')>idx.indexOf('id="statusline"') && idx.indexOf('<div id="paperPage"></div>')<idx.indexOf('<section id="inf"'));
+  ok('페이지에서는 운영 본문·푸터를 통째로 숨기고 body 직속 모의 상자만 본문 폭으로 표시 · 닫기 버튼 없음',
+     /body\.paperpage>div\.wrap\{display:none!important\}/.test(idx)
+     && /body\.paperpage #fab\{display:none!important\}/.test(idx)
+     && /body\.paperpage #paperModal\{position:static;inset:auto;display:block!important;/.test(idx)
+     && /body\.paperpage #paperModal \.box\{max-width:none;max-height:none;overflow:visible;/.test(idx)
+     && /body\.paperpage #paperModal \.mx,body\.paperpage #paperModal \.mbtns\{display:none\}/.test(idx));
   ok('뒤로 가기로 /paper 에 돌아오면 다시 페이지로 · 문구도 창이 아니라 페이지',
      /window\.addEventListener\('popstate', \(\)=>\{ const on=\/\^\\\/paper\\\/\?\$\/\.test\(location\.pathname\);/.test(idx)
      && /이 페이지를 새로고침하면/.test(idx) && /새로고침하면 재시도합니다/.test(idx) && !/창을 다시 열면 재시도/.test(idx) && !/이 창을 닫았다 다시 열면/.test(idx));
@@ -11769,6 +11771,10 @@ console.log('\n[ACCESS] 이용 승인제 — 판정 한 곳 · 모든 페이지 
        && /classList\.remove\('authed'\)/.test(gateFn)
        && !/localStorage|sessionStorage|indexedDB/.test(gateFn));
   }
+  ok('자산플랜 햄버거는 jk-ui 공용 클릭 핸들러 하나만 쓴다 — 두 번 토글 금지',
+     !/\$\("jkmenuBtn"\)\.addEventListener\("click"/.test(pl)
+     && /<script src="\/jk-ui\.js" defer><\/script>/.test(pl));
+
   ok('자산플랜: 따로 차단 판정이 없다 (jk-access.js 한 곳)', !/async function planBlocked\(/.test(pl) && !/PLAN_ADMIN_EMAILS/.test(pl));
   {
     const hs=extractFn(pl,'onAuthStateChanged(auth,async user=>{');
