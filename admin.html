@@ -639,7 +639,8 @@ function queueMenuSave(){
   previewMenuDraft();
   const st=$('menuStatus');if(st){st.className='cfgstatus';st.textContent='변경사항 자동 저장 대기…';}
   clearTimeout(menuSaveTimer);
-  menuSaveTimer=setTimeout(()=>saveMenus(true),450);
+  const seq=++menuSaveSeq;
+  menuSaveTimer=setTimeout(()=>saveMenus(true,seq),450);
 }
 function menuBase(){
   const src=(window.JKAccess&&JKAccess.MENU_ITEMS)||[
@@ -713,10 +714,10 @@ function resetMenus(){
   menuDraft=menuBase().map(x=>({...x}));paintMenus();
   queueMenuSave();
 }
-async function saveMenus(auto=false){
+async function saveMenus(auto=false,queuedSeq=0){
   if(!isAdmin())return;
   clearTimeout(menuSaveTimer);
-  const seq=++menuSaveSeq,st=$('menuStatus');
+  const seq=queuedSeq||++menuSaveSeq,st=$('menuStatus');
   if(st){st.className='cfgstatus';st.textContent=auto?'변경사항 자동 저장 중…':'저장 중…';}
   const data=menuDraftConfig();
   previewMenuDraft();
