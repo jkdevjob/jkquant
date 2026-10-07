@@ -173,7 +173,7 @@ pre.rules{background:var(--bg);border:1px solid var(--line);border-radius:10px;p
 
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Admin Console</div><h1>JK <span class="v">투자</span> 관리자 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="adVer">v0.12.10</span></h1></div>
+    <div><div class="kicker">Admin Console</div><h1>JK <span class="v">투자</span> 관리자 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="adVer">v0.12.11</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -615,6 +615,32 @@ async function applyDefaultsExistingSessions(){
 const MENU_ICONS={'/':'🏠','/plan':'🧭','/backtest':'📊','/scalping':'⚡','/claude':'🤖','/paper':'🧪','/ipo':'🎯','/realestate':'🏢','/job':'💼','/admin':'👤'};
 const MENU_HARD_ADMIN=new Set(['/scalping','/claude','/admin']);
 let menuDraft=[];
+let menuSaveTimer=0,menuSaveSeq=0;
+
+function menuDraftConfig(){
+  menuDraft.sort((a,b)=>a.order-b.order);
+  menuDraft.forEach((x,i)=>x.order=(i+1)*10);
+  const items={};menuDraft.forEach(x=>items[x.path]={mode:x.mode,order:x.order});
+  return {items,updatedAt:Date.now(),updatedBy:normEmail(me&&me.email)};
+}
+function previewMenuDraft(){
+  const pos={};menuDraft.forEach((x,i)=>pos[x.path]=i);
+  document.querySelectorAll('.jkmenu-pop').forEach(pop=>{
+    const links=[...pop.querySelectorAll('a[href]')];
+    links.sort((a,b)=>{
+      const ap=window.JKAccess?JKAccess.menuPath(a.getAttribute('href')):a.getAttribute('href');
+      const bp=window.JKAccess?JKAccess.menuPath(b.getAttribute('href')):b.getAttribute('href');
+      return (pos[ap]??9999)-(pos[bp]??9999);
+    });
+    links.forEach(a=>pop.appendChild(a));
+  });
+}
+function queueMenuSave(){
+  previewMenuDraft();
+  const st=$('menuStatus');if(st){st.className='cfgstatus';st.textContent='변경사항 자동 저장 대기…';}
+  clearTimeout(menuSaveTimer);
+  menuSaveTimer=setTimeout(()=>saveMenus(true),450);
+}
 function menuBase(){
   const src=(window.JKAccess&&JKAccess.MENU_ITEMS)||[
     {path:'/',label:'운영',mode:'public',order:10},{path:'/plan',label:'자산플랜',mode:'public',order:20},
@@ -674,30 +700,34 @@ function menuModeChange(path,mode){
   const r=menuDraft.find(x=>x.path===path);if(!r)return;
   if(MENU_HARD_ADMIN.has(path)&&mode==='public')mode='admin';
   r.mode=['public','admin','hidden'].includes(mode)?mode:r.mode;
+  queueMenuSave();
 }
 function moveMenu(path,dir){
   menuDraft.sort((a,b)=>a.order-b.order);
   const i=menuDraft.findIndex(x=>x.path===path),j=i+dir;if(i<0||j<0||j>=menuDraft.length)return;
   [menuDraft[i],menuDraft[j]]=[menuDraft[j],menuDraft[i]];
   menuDraft.forEach((x,k)=>x.order=(k+1)*10);paintMenus();
+  queueMenuSave();
 }
 function resetMenus(){
   menuDraft=menuBase().map(x=>({...x}));paintMenus();
-  const st=$('menuStatus');if(st){st.className='cfgstatus';st.textContent='기본값을 화면에 불러왔습니다. 실제 반영하려면 저장을 누르세요.';}
+  queueMenuSave();
 }
-async function saveMenus(){
+async function saveMenus(auto=false){
   if(!isAdmin())return;
-  const st=$('menuStatus');if(st){st.className='cfgstatus';st.textContent='저장 중…';}
-  menuDraft.sort((a,b)=>a.order-b.order);menuDraft.forEach((x,i)=>x.order=(i+1)*10);
-  const items={};menuDraft.forEach(x=>items[x.path]={mode:x.mode,order:x.order});
+  clearTimeout(menuSaveTimer);
+  const seq=++menuSaveSeq,st=$('menuStatus');
+  if(st){st.className='cfgstatus';st.textContent=auto?'변경사항 자동 저장 중…':'저장 중…';}
+  const data=menuDraftConfig();
+  previewMenuDraft();
   try{
-    await window.fb.setDoc(window.fb.doc(window.fb.db,'settings','siteMenu'),{
-      items,updatedAt:Date.now(),updatedBy:normEmail(me&&me.email)
-    });
+    await window.fb.setDoc(window.fb.doc(window.fb.db,'settings','siteMenu'),data);
+    if(seq!==menuSaveSeq)return;
     if(window.JKAccess)await JKAccess.applyMenuConfig(me,window.fb,{force:true});
-    if(st){st.className='cfgstatus ok';st.textContent='✓ 저장 완료 — 메뉴 공개범위와 순서가 즉시 적용됐습니다.';}
+    if(st){st.className='cfgstatus ok';st.textContent=auto?'✓ 자동 저장 완료 — 전체메뉴 순서가 즉시 반영됐습니다.':'✓ 저장 완료 — 메뉴 공개범위와 순서가 즉시 적용됐습니다.';}
     paintMenus();
   }catch(e){
+    if(seq!==menuSaveSeq)return;
     if(st){st.className='cfgstatus err';st.textContent='저장 실패 — Firestore 보안 규칙에서 settings/siteMenu 관리자 쓰기를 허용했는지 확인하세요. ('+(e.code||e.message||e)+')';}
   }
 }
