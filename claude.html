@@ -74,7 +74,7 @@ table.alog{min-width:0}table.alog tbody,table.alog tr{display:block}table.alog t
   <div class="gnote"><a href="/" style="color:var(--faint)">← 운영 화면으로</a></div>
 </div></div>
 <header><div class="wrap"><div class="htop">
-  <div><div class="kicker">Claude Scalping</div><h1>JK <span class="v">투자</span> 단타 <span class="ver" id="clVer">v2.12.11</span></h1></div>
+  <div><div class="kicker">Claude Scalping</div><h1>JK <span class="v">투자</span> 단타 <span class="ver" id="clVer">v2.13.0</span></h1></div>
   <div class="hright">
     <div class="userbadge" id="userbadge"></div>
   <div class="jkmenu" id="jkmenuWrap">
@@ -439,9 +439,43 @@ function statusBar(){
   var nx=ev.filter(function(e){return e[0]>hm})[0];var nextTxt=nx?nx[1]:"내일 08:56 ① 판단";
   if(dow===0||dow===6)nextTxt="(주말) 09:05 코인 결과 · 월요일 08:56";
   var iss=(((J.lab||{}).review||{}).today||{}).issues||[];
-  return "<div class='status'><span>📊 기록 "+esc(String((J.lab||{}).generatedAt||"").slice(5,16).replace("T"," "))+"</span><span>⏱ 장중 "+(LIVE&&LIVE.asOf?kstTime(LIVE.asOf):"—")+"</span><span>▶ 다음: "+esc(nextTxt)+"</span>"+(iss.length?"<span class='loss'>⚠ 점검 "+iss.length+"건</span>":"<span class='win'>✔ 점검 이상 없음</span>")+"</div>";
+  return "<div class='status'><span>📊 기록 "+esc(String((J.lab||{}).generatedAt||"").slice(5,16).replace("T"," "))+"</span><span>⏱ 장중 "+(LIVE&&LIVE.asOf?kstTime(LIVE.asOf):"—")+"</span><span>▶ 다음: "+esc(nextTxt)+"</span>"+(iss.length?"<span class='loss'>⚠ 점검 "+iss.length+"건</span>":"<span class='win'>✔ 점검 이상 없음</span>")+
+    "<button class='ghostbtn' style='padding:3px 9px;font-size:11.5px' onclick='pushToggle()'>"+(PUSH.state==="on"?"🔔 매매 알림 켜짐":PUSH.state==="busy"?"🔔 설정 중…":"🔕 매매 알림 켜기")+"</button></div>";
 }
 var J=null,TAB="today";
+// 🔔 매수·매도 웹 알림 — 서비스워커(/claude-sw.js)로 받는다. 보내는 쪽은 Worker 가 5분마다 실시간 자료로 새 매수·매도를 찾아 보낸다.
+var PUSH={state:"off"};
+function pushSupported(){return "serviceWorker" in navigator&&"PushManager" in window&&"Notification" in window}
+function pushIosHint(){var ios=/iPhone|iPad|iPod/.test(navigator.userAgent||"");return ios&&!navigator.standalone}
+function pushKey(s){s=String(s).replace(/-/g,"+").replace(/_/g,"/");while(s.length%4)s+="=";var b=atob(s),u=new Uint8Array(b.length);for(var i=0;i<b.length;i++)u[i]=b.charCodeAt(i);return u}
+async function pushInit(){
+  if(!pushSupported()){PUSH.state="off";return}
+  try{var reg=await navigator.serviceWorker.getRegistration("/claude"),sub=reg&&await reg.pushManager.getSubscription();
+    PUSH.state=sub&&Notification.permission==="granted"?"on":"off";}catch(e){PUSH.state="off"}
+}
+async function pushToggle(){
+  if(!pushSupported()||pushIosHint()){alert(pushIosHint()?"아이폰은 Safari 에서 공유 → '홈 화면에 추가' 한 뒤, 홈 화면의 JK 투자 아이콘으로 열어 단타(클로드)에서 알림을 켜야 합니다(iOS 16.4 이상).":"이 브라우저는 웹 알림을 지원하지 않습니다.");return}
+  try{
+    if(PUSH.state==="on"){
+      var reg0=await navigator.serviceWorker.getRegistration("/claude"),s0=reg0&&await reg0.pushManager.getSubscription();
+      if(s0){await fetch("/api/claude-push",{method:"POST",headers:Object.assign({"content-type":"application/json"},await authHeaders()),body:JSON.stringify({action:"unsubscribe",endpoint:s0.endpoint})});await s0.unsubscribe()}
+      PUSH.state="off";render();return;
+    }
+    var perm=await Notification.requestPermission();                    // 버튼을 누른 바로 그때 권한을 묻는다(아이폰 규칙)
+    if(perm!=="granted"){alert("알림 권한이 꺼져 있습니다 — 설정에서 이 사이트(또는 홈 화면 앱)의 알림을 허용해 주세요.");return}
+    PUSH.state="busy";render();
+    var reg=await navigator.serviceWorker.register("/claude-sw.js",{scope:"/claude"});
+    if(!reg.active)await new Promise(function(ok){var w=reg.installing||reg.waiting;if(!w)return ok();w.addEventListener("statechange",function(){if(w.state==="activated")ok()});setTimeout(ok,5000)});
+    var k=await (await fetch("/api/claude-push",{headers:await authHeaders()})).json();
+    if(!k.ok||!k.publicKey)throw new Error(k.error||"알림 키를 못 받음");
+    var sub=await reg.pushManager.getSubscription()||await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:pushKey(k.publicKey)});
+    var H=Object.assign({"content-type":"application/json"},await authHeaders());
+    var r=await (await fetch("/api/claude-push",{method:"POST",headers:H,body:JSON.stringify({action:"subscribe",subscription:sub.toJSON()})})).json();
+    if(!r.ok)throw new Error(r.error||"구독 저장 실패");
+    await fetch("/api/claude-push",{method:"POST",headers:H,body:JSON.stringify({action:"test"})});   // 켜졌는지 바로 확인 알림
+    PUSH.state="on";render();
+  }catch(e){PUSH.state="off";render();alert("알림 켜기 실패: "+(e.message||e))}
+}
 function showTab(t){TAB=t;document.querySelectorAll(".tab").forEach(function(b){b.classList.toggle("on",b.getAttribute("data-tab")===t)});render()}
 // 클로드 vs GPT — 같은 날짜 구간·같은 달력
 function vsRow(label,z){
@@ -666,6 +700,7 @@ async function onUser(user){{
     document.getElementById("gate").style.display="none";
     if(ub)ub.innerHTML=(user.photoURL?"<img src=\""+esc(user.photoURL)+"\" alt=\"\">":"")+"<span>"+esc(user.displayName||user.email||"")+"</span> · <button class=\"lo\" onclick=\"doLogout()\">로그아웃</button>";
     load();
+    pushInit().then(function(){if(J)render()});
   }
 }
 if(window.fb)boot();else window.addEventListener("fb-ready",boot);
