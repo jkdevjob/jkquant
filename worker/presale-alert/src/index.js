@@ -12,6 +12,26 @@ const VALID_TOPICS=new Set(["presale","job","ipo",...TRADE_TOPICS]);
 const APPROVAL_ADMIN="jk82investing@gmail.com";
 const FIRESTORE_PROFILE="https://firestore.googleapis.com/v1/projects/jk-invest/databases/(default)/documents/profiles/";
 
+// Apps Script (계정 소유자가 최초 1회 권한 부여)로 개인 Gmail에서 발송한다.
+// Worker -> Script로만 비밀키를 전송하며, 브라우저/공개 설정에 저장하지 않는다.
+export async function sendGmailApproval(env,to,key){
+  const endpoint=String(env.GMAIL_SCRIPT_URL||"").trim();
+  const secret=String(env.GMAIL_SCRIPT_SECRET||"");
+  if(!/^https:\/\/script\.google\.com\/macros\/s\/[a-zA-Z0-9_-]+\/exec$/.test(endpoint)
+      ||secret.length<32)throw new Error("Gmail 발신 연결 설정을 확인하세요.");
+  const controller=new AbortController(),timeout=setTimeout(()=>controller.abort(),20000);
+  try{
+    const r=await fetch(endpoint,{
+      method:"POST",redirect:"follow",signal:controller.signal,
+      headers:{"content-type":"text/plain; charset=utf-8"},
+      body:JSON.stringify({secret,to,id:await hashText(key)})
+    });
+    const j=await r.json().catch(()=>({}));
+    if(!r.ok||j.ok!==true)throw new Error(clean(j.error||("Gmail API HTTP "+r.status),120));
+    return {ok:true,provider:"gmail",alreadySent:!!j.alreadySent};
+  }finally{clearTimeout(timeout);}
+}
+
 export function approvalRecipient(fields){
   const valid=fields&&fields.approved&&fields.approved.booleanValue===true
     &&!(fields.blocked&&fields.blocked.booleanValue===true);
@@ -302,25 +322,38 @@ export class PresaleAlertStore{
     const past=await this.state.storage.get(key)||{};
     const result={email:past.email||"pending",push:past.push||"pending",delivered:past.delivered||0};
     if(result.email!=="sent"&&!(past.lockEmail&&Date.now()-past.lockEmail<60000)){
-      if(!this.env.RESEND_API_KEY||!this.env.APPROVAL_FROM_EMAIL){
+      const gmailConfigured=!!(this.env.GMAIL_SCRIPT_URL&&this.env.GMAIL_SCRIPT_SECRET);
+      const resendConfigured=!!(this.env.RESEND_API_KEY&&this.env.APPROVAL_FROM_EMAIL);
+      if(!gmailConfigured&&!resendConfigured){
         result.email="not_configured";
       }else{
         const lock={...past,lockEmail:Date.now()};
         await this.state.storage.put(key,lock);
         try{
-          const msg=approvalEmailData(recipient.email);
-          msg.from=this.env.APPROVAL_FROM_EMAIL;
-          const response=await fetch("https://api.resend.com/emails",{
-            method:"POST",headers:{
-              "authorization":"Bearer "+this.env.RESEND_API_KEY,
-              "content-type":"application/json",
-              "idempotency-key":"jk-approval-"+(await hashText(key))
-            },body:JSON.stringify(msg)
-          });
-          const payload=await response.json().catch(()=>({}));
-          result.email=response.ok?"sent":"failed";
-          if(!response.ok)result.emailError=clean(payload.message||"HTTP "+response.status,160);
-        }catch(e){result.email="failed";result.emailError=clean(String(e.message||e),160);}
+          if(gmailConfigured){
+            const sent=await sendGmailApproval(this.env,recipient.email,key);
+            result.email=sent.ok?"sent":"failed";
+            result.emailProvider="gmail";
+          }else{
+            const msg=approvalEmailData(recipient.email);
+            msg.from=this.env.APPROVAL_FROM_EMAIL;
+            const response=await fetch("https://api.resend.com/emails",{
+              method:"POST",headers:{
+                "authorization":"Bearer "+this.env.RESEND_API_KEY,
+                "content-type":"application/json",
+                "idempotency-key":"jk-approval-"+(await hashText(key))
+              },body:JSON.stringify(msg)
+            });
+            const payload=await response.json().catch(()=>({}));
+            result.email=response.ok?"sent":"failed";
+            result.emailProvider="resend";
+            if(!response.ok)result.emailError=clean(payload.message||"HTTP "+response.status,160);
+          }
+        }catch(e){
+          result.email="failed";
+          result.emailProvider=gmailConfigured?"gmail":"resend";
+          result.emailError=clean(String(e.message||e),160);
+        }
       }
     }else if(past.lockEmail&&Date.now()-past.lockEmail<60000&&result.email!=="sent"){
       result.email="sending";

@@ -54,6 +54,12 @@ function intercept(state){
       state.profileRead++;
       return new Response(JSON.stringify({fields:state.profile}),{status:200,headers:{"content-type":"application/json"}});
     }
+    if(url.startsWith("https://script.google.com/macros/s/")){
+      state.gmails=state.gmails||[];
+      state.gmails.push(JSON.parse(init.body));
+      if(state.gmailShouldFail)return new Response(JSON.stringify({ok:false,error:"mail quota exhausted"}),{status:200});
+      return new Response(JSON.stringify({ok:true,sent:true}),{status:200,headers:{"content-type":"application/json"}});
+    }
     if(url==="https://api.resend.com/emails"){
       state.emails.push(JSON.parse(init.body));
       return new Response(JSON.stringify({id:"test-mail"}),{status:200,headers:{"content-type":"application/json"}});
@@ -130,5 +136,46 @@ test("email missing server secrets is explicit and does not falsely report sent"
     const r=await app.approvalNotify(req("/approval/notify",{uid:userUid},admin));
     assert.equal((await r.json()).email,"not_configured");
     assert.equal(state.emails.length,0);
+  }finally{undo();}
+});
+
+
+test("Gmail Apps Script sends only approved recipient, uses server secret, prefers Gmail and deduplicates",async()=>{
+  const appEnv={
+    ...sender,
+    GMAIL_SCRIPT_URL:"https://script.google.com/macros/s/AKfycbTestApproval/exec",
+    GMAIL_SCRIPT_SECRET:"test-key-long-enough-for-gmail-approval-0123456789"
+  };
+  const {app}=store(appEnv),state={emails:[],gmails:[],pushes:[],profile:fields({at:1730000000201}),profileRead:0};
+  const undo=intercept(state);
+  try{
+    const admin=await jwt("admin-uid",adminEmail);
+    const first=await app.approvalNotify(req("/approval/notify",{uid:userUid},admin));
+    const sent=await first.json();
+    assert.equal(sent.email,"sent");
+    assert.equal(sent.emailProvider,"gmail");
+    assert.equal(state.gmails.length,1);
+    assert.equal(state.gmails[0].to,userEmail);
+    assert.equal(state.gmails[0].secret,appEnv.GMAIL_SCRIPT_SECRET);
+    assert.match(state.gmails[0].id,/^[a-zA-Z0-9_-]{16,80}$/);
+    assert.equal(state.emails.length,0,"Gmail enabled must not fall back to Resend");
+    await app.approvalNotify(req("/approval/notify",{uid:userUid},admin));
+    assert.equal(state.gmails.length,1,"same approval id must never call Gmail twice after success");
+  }finally{undo();}
+});
+test("Gmail mailer reports provider rejection rather than false sent",async()=>{
+  const {app}=store({
+    GMAIL_SCRIPT_URL:"https://script.google.com/macros/s/AKfycbTestApproval/exec",
+    GMAIL_SCRIPT_SECRET:"test-key-long-enough-for-gmail-approval-0123456789"
+  });
+  const state={emails:[],gmails:[],pushes:[],profile:fields({at:1730000000202}),profileRead:0,gmailShouldFail:true};
+  const undo=intercept(state);
+  try{
+    const admin=await jwt("admin-uid",adminEmail);
+    const res=await app.approvalNotify(req("/approval/notify",{uid:userUid},admin));
+    const j=await res.json();
+    assert.equal(j.email,"failed");
+    assert.equal(j.emailProvider,"gmail");
+    assert.match(j.emailError,/quota/);
   }finally{undo();}
 });
