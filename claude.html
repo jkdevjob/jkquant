@@ -44,7 +44,7 @@ table.alog{min-width:0}table.alog tbody,table.alog tr{display:block}table.alog t
 #gate .gnote{color:var(--faint);font-size:11.5px;margin-top:18px}
 </style>
 <script src="/jk-access.js"></script>
-<script src="/jk-ui.js" defer></script>
+<script src="/jk-ui.js?v=1.0.1" defer></script>
 <script type="module">
   // 소유자만 보는 화면 — 단타(GPT)와 같은 Google 로그인 · /api/owner 판정. 자료 API 도 로그인 토큰 없이는 401.
   import { initializeApp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
@@ -56,7 +56,7 @@ table.alog{min-width:0}table.alog tbody,table.alog tr{display:block}table.alog t
   window.fb = { auth:getAuth(app), db:initializeFirestore(app,JK_FORCE_FIRESTORE_LONG_POLLING?{experimentalForceLongPolling:true}:{experimentalAutoDetectLongPolling:true}), provider:new GoogleAuthProvider(), signInWithPopup, onAuthStateChanged, signOut, doc, getDoc, setDoc };
   window.dispatchEvent(new Event('fb-ready'));
 </script>
-<link rel="stylesheet" href="/jk-mobile.css?v=1.0.0">
+<link rel="stylesheet" href="/jk-mobile.css?v=1.0.1">
 
 <script src="/claude-push-client.js?v=1.0.0" defer></script>
 <link rel="manifest" href="/manifest.webmanifest?v=1.0.0">
@@ -75,7 +75,7 @@ table.alog{min-width:0}table.alog tbody,table.alog tr{display:block}table.alog t
   <div class="gnote"><a href="/" style="color:var(--faint)">← 운영 화면으로</a></div>
 </div></div>
 <header><div class="wrap"><div class="htop">
-  <div><div class="kicker">Claude Scalping</div><h1>JK <span class="v">투자</span> 단타 <span class="ver" id="clVer">v2.14.1</span></h1></div>
+  <div><div class="kicker">Claude Scalping</div><h1>JK <span class="v">투자</span> 단타 <span class="ver" id="clVer">v2.14.2</span></h1></div>
   <div class="hright">
     <div class="userbadge" id="userbadge"></div>
   <div class="jkmenu" id="jkmenuWrap">
@@ -688,3 +688,4 @@ if(window.fb)boot();else window.addEventListener("fb-ready",boot);
 </script>
 </body>
 </html>
+

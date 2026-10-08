@@ -196,6 +196,50 @@
 })();
 
 
+/* 상단 메뉴·탭 고정 — 메뉴가 들어 있는 header 또는 .top을 찾고 탭은 바로 그 아래에 붙인다.
+   높이를 숫자로 고정하지 않는다: 휴대폰 줄바꿈, 로그인 배지, 탭/세션 변경을 ResizeObserver로 잰다.
+   운영의 세션·상태·서브탭은 기존 --h1/2/3에 헤더 높이를 더해 겹치지 않게 한다. */
+(function(){
+  'use strict';
+  if(window.JKSticky)return;
+  var header=null,tabs=null,observer=null,raf=0;
+  function height(el){return el?Math.ceil(el.getBoundingClientRect().height):0;}
+  function update(){
+    if(!header)return;
+    var st=document.documentElement.style;
+    st.setProperty('--jk-header-height',height(header)+'px');
+    if(document.getElementById('sessbar')){
+      var h1=height(tabs),h2=h1+height(document.getElementById('sessbar'));
+      st.setProperty('--h1',h1+'px');
+      st.setProperty('--h2',h2+'px');
+      st.setProperty('--h3',(h2+height(document.getElementById('statusline')))+'px');
+    }
+    raf=0;
+  }
+  function schedule(){if(!raf)raf=window.requestAnimationFrame(update);}
+  function mount(){
+    if(header||!document.querySelector)return;
+    var menu=document.querySelector('.jkmenu');
+    if(!menu)return;
+    header=menu.closest('header')||menu.closest('.top');
+    if(!header)return;
+    header.classList.add('jk-sticky-header');
+    tabs=document.querySelector('.stabs-sticky,.strategy-tabs,.plan-tabs,.tabs,#ipoWrap>.subnav,#nav');
+    if(tabs&&!header.contains(tabs))tabs.classList.add(tabs.id==='nav'?'jk-sticky-side':'jk-sticky-tabs');
+    if(document.getElementById('sessbar'))document.body.classList.add('jk-sticky-stack');
+    update();
+    if(window.ResizeObserver){
+      observer=new window.ResizeObserver(schedule);
+      [header,tabs,document.getElementById('sessbar'),document.getElementById('statusline')].forEach(function(el){if(el)observer.observe(el);});
+    }
+    window.addEventListener('resize',schedule,{passive:true});
+    window.addEventListener('load',schedule);
+    if(document.fonts&&document.fonts.ready)document.fonts.ready.then(schedule);
+  }
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',mount);else mount();
+  window.JKSticky={mount:mount,update:update};
+})();
+
 /* JK 투자 공용 로그인·전체메뉴 UI — 9개 페이지가 같은 모양과 동작을 쓴다.
    페이지별 기존 메뉴 링크/권한 로직은 유지하고, 공용 파일이 시각·열고닫기만 통일한다. */
 (function(){
@@ -303,3 +347,4 @@
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',mount);else mount();
   window.JKUnifiedUI={mount:mount,mountMenus:mountMenus,normalizeLogin:normalizeLogin};
 })();
+

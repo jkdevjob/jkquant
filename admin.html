@@ -128,7 +128,7 @@ pre.rules{background:var(--bg);border:1px solid var(--line);border-radius:10px;p
 #gate .gnote{color:var(--faint);font-size:11.5px;margin-top:18px;line-height:1.6}
 </style>
 <script src="/jk-access.js"></script>
-<script src="/jk-ui.js" defer></script>
+<script src="/jk-ui.js?v=1.0.1" defer></script>
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
   import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js";
@@ -147,7 +147,7 @@ pre.rules{background:var(--bg);border:1px solid var(--line);border-radius:10px;p
                 signInWithPopup, onAuthStateChanged, signOut, doc, getDoc, setDoc, collection, getDocs, runTransaction };
   window.dispatchEvent(new Event('fb-ready'));
 </script>
-<link rel="stylesheet" href="/jk-mobile.css?v=1.0.0">
+<link rel="stylesheet" href="/jk-mobile.css?v=1.0.1">
 
 <link rel="manifest" href="/manifest.webmanifest?v=1.0.0">
 <link rel="apple-touch-icon" sizes="180x180" href="/icons/jk-invest-180.png?v=1.0.0">
@@ -173,7 +173,7 @@ pre.rules{background:var(--bg);border:1px solid var(--line);border-radius:10px;p
 
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Admin Console</div><h1>JK <span class="v">투자</span> 관리자 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="adVer">v0.12.14</span></h1></div>
+    <div><div class="kicker">Admin Console</div><h1>JK <span class="v">투자</span> 관리자 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="adVer">v0.12.15</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -1020,3 +1020,4 @@ if(window.fb) boot(); else window.addEventListener('fb-ready', boot);
 </script>
 </body>
 </html>
+

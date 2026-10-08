@@ -1,0 +1,58 @@
+<!doctype html><html lang="ko"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>JK 투자 — 상단 고정 검사</title>
+<style>body{font:14px system-ui;background:#0f1320;color:#e8ecf7;margin:16px}button{padding:10px 16px}pre{white-space:pre-wrap}iframe{height:620px;border:1px solid #677399;display:block;margin-top:12px}</style>
+<h1>상단 고정 브라우저 검사</h1>
+<p>공개 HTML·CSS·공용 UI 코드만 복사한 격리 화면입니다. 로그인·DB·시세·주문 코드는 실행하지 않습니다.</p>
+<button id="run">11개 경로 × 4개 화면 폭 검사</button><pre id="result">대기</pre><div id="frames"></div>
+<script>
+const routes=[['index.html','/'],['index.html','/paper'],['plan.html','/plan'],['backtest.html','/backtest'],['scalping.html','/scalping'],['claude.html','/claude'],['ipo.html','/ipo'],['realestate.html','/realestate'],['job.html','/job'],['settings.html','/settings'],['admin.html','/admin']];
+const result=document.getElementById('result'),box=document.getElementById('frames');
+const tick=w=>new Promise(resolve=>w.requestAnimationFrame(()=>w.requestAnimationFrame(resolve)));
+function check(value,message){if(!value)throw Error(message);}
+document.getElementById('run').onclick=async function(){
+  this.disabled=true;result.textContent='실행 중…\n';let passed=0;
+  try{
+    const [css,ui]=await Promise.all(['/jk-mobile.css?v=1.0.1','/jk-ui.js?v=1.0.1'].map(u=>fetch(u).then(r=>{check(r.ok,u);return r.text();})));
+    for(const [file,route] of routes){
+      const response=await fetch('/'+file);check(response.ok,file);
+      const source=await response.text();
+      for(const width of [340,390,768,1280]){
+        const doc=new DOMParser().parseFromString(source,'text/html');
+        doc.querySelectorAll('script,link,iframe,#authgate,#gate,#jkgate,.modal-bg,.modal,#chartOverlay').forEach(e=>e.remove());
+        doc.documentElement.className='jk-ok authed';
+        if(route==='/paper')doc.body.classList.add('paperpage');
+        const app=doc.getElementById('app');if(app)app.style.display='block';
+        const marker=doc.querySelector('.stabs-sticky,.strategy-tabs,.plan-tabs,.tabs,#ipoWrap>.subnav,#nav');
+        check(marker,'탭 없음: '+file);
+        const content=marker.id==='nav'?doc.getElementById('body'):marker.parentElement;
+        const spacer=doc.createElement('div');spacer.style.height='2800px';spacer.textContent='스크롤 확인 영역';content.appendChild(spacer);
+        const common=doc.createElement('style');common.textContent=css;doc.head.appendChild(common);
+        // inline app scripts는 전부 제거한 뒤 실제 공용 UI 파일만 넣는다.
+        const script=doc.createElement('script');script.textContent=ui;doc.body.appendChild(script);
+        const frame=document.createElement('iframe');frame.style.width=width+'px';frame.title=route+' '+width+'px';
+        const ready=new Promise(resolve=>frame.onload=resolve);frame.srcdoc='<!doctype html>'+doc.documentElement.outerHTML;
+        box.replaceChildren(frame);await ready;const w=frame.contentWindow,d=w.document;await tick(w);
+        const header=d.querySelector('.jk-sticky-header'),tabs=d.querySelector('.jk-sticky-tabs,.jk-sticky-side');
+        check(header,'헤더 고정 없음: '+route);check(tabs||route==='/paper','탭 고정 없음: '+route);
+        w.scrollTo(0,850);await tick(w);
+        const head=header.getBoundingClientRect();check(Math.abs(head.top)<1.1,'헤더가 스크롤됨: '+route+' '+width+' top='+head.top);
+        if(route!=='/paper'){
+          const tab=tabs.getBoundingClientRect(),offset=tabs.id==='nav'&&width>700?16:0;
+          check(Math.abs(tab.top-head.bottom-offset)<2,'탭 겹침/스크롤: '+route+' '+width+' '+JSON.stringify({head:head.bottom,tab:tab.top}));
+          check(tab.width<=width+2,'탭이 페이지 폭을 넘음: '+route+' '+width+' width='+tab.width);
+        }
+        // 헤더 높이가 늘어나도 ResizeObserver가 새 높이를 읽어 탭 아래 위치를 맞춘다.
+        const extra=d.createElement('div');extra.textContent='로그인 배지/제목 줄바꿈 높이 변경 검사';extra.style.height='27px';header.appendChild(extra);await tick(w);await tick(w);
+        const changed=header.getBoundingClientRect();
+        check(Math.abs(Number.parseFloat(d.documentElement.style.getPropertyValue('--jk-header-height'))-changed.height)<1.1,'헤더 높이 재측정 실패');
+        if(route!=='/paper'){
+          const top=tabs.getBoundingClientRect().top,offset=tabs.id==='nav'&&width>700?16:0;
+          check(Math.abs(top-changed.bottom-offset)<2,'높이 변경 후 탭 겹침: '+route+' '+width);
+        }
+        passed++;result.textContent+='PASS '+route+' '+width+'px\n';
+      }
+    }
+    result.textContent+='ALL PASS '+passed+' browser layout cases';
+  }catch(e){result.textContent+='FAIL '+e.message;}finally{this.disabled=false;}
+};
+</script></html>

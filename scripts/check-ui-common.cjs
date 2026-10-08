@@ -60,8 +60,8 @@ t('U2 자리 — 오른쪽 가장자리 · 화면 세로 가운데 · 모달(z-i
 t('U3 모든 페이지(10개)가 같은 파일을 한 번씩 읽는다 — 공용 jk-access.js 바로 다음',()=>{
   for(const f of PAGES){
     const s=fs.readFileSync(path.join(ROOT,f),'utf8');
-    assert.equal((s.match(/<script src="\/jk-ui\.js" defer><\/script>/g)||[]).length,1,f+' 한 번');
-    assert(/<script src="\/jk-access\.js"[^>]*><\/script>\n<script src="\/jk-ui\.js" defer><\/script>/.test(s),f+' jk-access 다음');
+    assert.equal((s.match(/<script src="\/jk-ui\.js\?v=1\.0\.1" defer><\/script>/g)||[]).length,1,f+' 한 번');
+    assert(/<script src="\/jk-access\.js"[^>]*><\/script>\n<script src="\/jk-ui\.js\?v=1\.0\.1" defer><\/script>/.test(s),f+' jk-access 다음');
   }
   const htmls=fs.readdirSync(ROOT).filter(f=>/\.html$/.test(f)).sort();
   assert.deepEqual(htmls,[...PAGES].sort(),'페이지가 늘면 여기에도 넣는다: '+htmls.join(','));
@@ -291,3 +291,4 @@ Promise.all(PENDING).then(()=>{
   console.log(failed?`\n${failed} FAIL`:'\nALL PASS');
   process.exitCode=failed?1:0;
 });
+
