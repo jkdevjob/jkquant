@@ -155,8 +155,11 @@ async function ipoFeed(base){
       signal:controller.signal,
       cf:{cacheTtl:0,cacheEverything:false}
     });
-    if(!r.ok)throw new Error("IPO feed HTTP "+r.status);
     const j=await r.json();
+    // The existing IPO endpoint uses HTTP 502 + "no data" when both sources
+    // responded successfully but the calendar contained no IPO events.
+    if(!r.ok&&!(r.status===502&&j.error==="no data"&&Array.isArray(j.items)&&!j.items.length))
+      throw new Error("IPO feed HTTP "+r.status+" "+String(j.error||""));
     if(!Array.isArray(j.items))throw new Error("IPO feed missing items");
     return j.items;
   }finally{clearTimeout(timer)}
