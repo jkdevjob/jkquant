@@ -1652,7 +1652,21 @@
     "g_coin_ma15_s99_hi10_btc",
     "g_coin_ma20_s8_hi_h15_both",
     "g_coin_ma80_s5_hi10_both",
-    "g_coin_ma30_s99_hi7_h21_eth"
+    "g_coin_ma30_s99_hi7_h21_eth",
+    "g_coin_ma20_s10_hi_eth",
+    "g_coin_ma10_s99_hi3_eth",
+    "g_coin_ma25_s3_hi15_h18_eth",
+    "g_coin_ma50_s5_hi7_h18_eth",
+    "g_coin_ma25_s2_hi4_h21_eth",
+    "g_coin_ma15_s99_hi5_btc",
+    "g_coin_ma25_s99_hi5_eth",
+    "g_coin_ma15_s99_hi3_btc",
+    "g_coin_ma5_s5_hi_h21_btc",
+    "g_coin_ma10_s99_hi2_h21_both",
+    "g_coin_ma40_s4_hi4_h18_btc",
+    "g_coin_ma10_s8_hi2_h15_both",
+    "g_coin_ma25_s99_hi2_eth",
+    "g_coin_ma20_s99_hi2_h12_btc"
    ],
    "snapshots": [
     {
@@ -1710,38 +1724,38 @@
      "top": "g_coin_ma15_s99_hi7_eth",
      "main": "coin_breakout_v1",
      "bottom": [
+      "g_coin_ma20_s99_vb0.8_eth",
       "g_coin_ma20_s99_vb0.6_eth",
-      "g_coin_ma20_s6_vb0.7_eth",
-      "coin_bo_nostop"
+      "g_coin_ma20_s6_vb0.7_eth"
      ],
      "ranks": [
       "g_coin_ma15_s99_hi7_eth",
       "g_coin_ma20_s99_hi7_eth",
-      "g_coin_ma20_s99_vb0.7_eth",
       "g_coin_ma20_s99_hi2_eth",
-      "g_coin_ma20_s99_hi10_both",
-      "g_coin_ma15_s99_hi5_both",
       "g_coin_ma15_s99_hi3_eth",
+      "g_coin_ma20_s99_vb0.7_eth",
+      "g_coin_ma15_s99_hi5_both",
+      "g_coin_ma20_s99_hi10_both",
+      "g_coin_ma20_s10_hi3_eth",
       "g_coin_ma20_s8_hi5_both",
       "g_coin_ma20_s99_vb0.8_eth",
       "g_coin_ma20_s99_vb0.6_eth",
       "g_coin_ma20_s6_vb0.7_eth",
-      "coin_bo_nostop",
       "coin_breakout_v1"
      ]
     }
    ],
    "ops": {
     "neighbor": {
-     "tried": 60,
+     "tried": 63,
      "accepted": 0
     },
     "explore": {
-     "tried": 193,
+     "tried": 227,
      "accepted": 2
     },
     "jump2": {
-     "tried": 125,
+     "tried": 136,
      "accepted": 3
     },
     "struct": {
@@ -2461,7 +2475,24 @@
     "g_soxl_r2lt25_ibs0.7_dn1_ma200_d5",
     "g_soxl_norsi_ibs0.3_dn2_ma200_d5",
     "g_soxl_r2lt20_ibs0.3_dn2_ma200_d5",
-    "g_soxl_r4lt20_ibs0.7_dn2_ma200_d4"
+    "g_soxl_r4lt20_ibs0.7_dn2_ma200_d4",
+    "g_soxl_r4lt20_dn3_ma100_d1",
+    "g_soxl_r3lt40_ibs0.7_dn1_ma200_d1",
+    "g_soxl_r2lt10_ibs0.3_dn2_ma200_d1",
+    "g_soxl_norsi_ibs0.7_dn1_ma100_d3",
+    "g_soxl_r2lt25_ibs0.2_dn3_ma50_d3",
+    "g_soxl_r2lt15_ibs0.3_dn1_ma100_d5",
+    "g_soxl_r4lt20_ibs0.7_dn1_ma100_d2",
+    "g_soxl_r3lt30_ibs0.2_dn2_ma0_d3",
+    "g_soxl_r2lt25_ibs0.5_dn2_ma200_d4",
+    "g_soxl_r2lt25_ibs0.7_dn2_ma150_d5",
+    "g_soxl_r3lt20_ibs0.7_dn1_ma200_d4",
+    "g_soxl_r2lt20_ibs0.4_ma200_d4",
+    "g_soxl_r2lt25_ibs0.5_ma200_d4",
+    "g_soxl_r4lt20_ibs0.7_dn2_ma200_d5",
+    "g_soxl_r4lt35_ibs0.5_dn2_ma150_d2",
+    "g_soxl_r4lt15_ibs0.7_ma200_d3",
+    "g_soxl_r4lt15_ibs0.7_ma200_d4"
    ],
    "snapshots": [
     {
@@ -2542,23 +2573,23 @@
    ],
    "ops": {
     "struct": {
-     "tried": 71,
+     "tried": 73,
      "accepted": 6
     },
     "explore": {
-     "tried": 114,
+     "tried": 136,
      "accepted": 0
     },
     "jump2": {
-     "tried": 157,
+     "tried": 174,
      "accepted": 4
     },
     "neighbor": {
-     "tried": 53,
+     "tried": 56,
      "accepted": 4
     },
     "cross": {
-     "tried": 37,
+     "tried": 41,
      "accepted": 2
     }
    }
@@ -4055,7 +4086,25 @@
    "version": "",
    "name": "",
    "reason": "후보 48개 계산 → 기준 통과 34 · 투입 0(교체 0) · 탈락: 손실 기준 미달 12 · 점수 부족 7 · 복제 2 · 매매일 부족 1 · 해마다 일관성 부족 1"
+  },
+  {
+   "date": "2026-10-08",
+   "at": "2026-10-08T10:30+09:00",
+   "tab": "crypto",
+   "kind": "reject",
+   "version": "",
+   "name": "",
+   "reason": "후보 48개 계산 → 기준 통과 43 · 투입 0(교체 0) · 탈락: 점수 부족 9 · 손실 기준 미달 5"
+  },
+  {
+   "date": "2026-10-08",
+   "at": "2026-10-08T10:30+09:00",
+   "tab": "soxl",
+   "kind": "reject",
+   "version": "",
+   "name": "",
+   "reason": "후보 48개 계산 → 기준 통과 40 · 투입 0(교체 0) · 탈락: 점수 부족 6 · 손실 기준 미달 5 · 해마다 일관성 부족 3 · 복제 3"
   }
  ],
- "updatedAt": "2026-10-08T05:09+09:00"
+ "updatedAt": "2026-10-08T10:30+09:00"
 }
