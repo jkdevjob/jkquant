@@ -19,6 +19,20 @@ async function getLatest(){
   if(!r.ok)throw new Error("latest "+r.status);
   return r.json();
 }
+async function approvalAlert(){
+  // 푸시는 가입자 한 기기에만 전송된다. 기기 endpoint 로 그 가입자 승인 이벤트만 읽는다.
+  const sub=await self.registration.pushManager.getSubscription();
+  if(!sub)return null;
+  const cfg=await getConfig();
+  if(!cfg.workerUrl)return null;
+  const r=await fetch(cfg.workerUrl+"/approval/event",{
+    method:"POST",headers:{"content-type":"application/json"},
+    body:JSON.stringify({endpoint:sub.endpoint}),cache:"no-store"
+  });
+  if(!r.ok)return null;
+  const j=await r.json();
+  return j&&j.alert||null;
+}
 async function readMeta(key,fallback){
   try{
     const cache=await caches.open(META_CACHE),r=await cache.match(key);
@@ -72,8 +86,13 @@ self.addEventListener("message",event=>{
 self.addEventListener("push",event=>{
   event.waitUntil((async()=>{
     try{
-      const [j,allowed,shown]=await Promise.all([getLatest(),topics(),shownIds()]);
-      const alerts=pickAlerts(j,allowed,shown);
+      const [approval,shown]=await Promise.all([approvalAlert().catch(()=>null),shownIds()]);
+      let alerts=[];
+      if(approval&&shown.indexOf(approval.id)<0)alerts=[approval];
+      else{
+        const [j,allowed]=await Promise.all([getLatest(),topics()]);
+        alerts=pickAlerts(j,allowed,shown);
+      }
       for(const a of alerts){
         await self.registration.showNotification(a.title||"JK 알림",{
           body:a.body||"새로운 정보가 업데이트되었습니다.",
