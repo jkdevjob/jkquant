@@ -26,6 +26,16 @@
 ## 배포 전 필수
 
 ```
+node scripts/check-before-push.cjs
+```
+
+`check.yml`의 모든 검사와 Worker dry-run을 로컬에서도 같은 순서로 실행한다.
+부분 검사만 통과하고 Ready for review로 바꾸지 않는다. `--offline`은 개발 중에만 쓰며,
+생략한 외부 빌드는 GitHub 검증 성공을 확인한 뒤 병합한다.
+
+엔진 전체 회귀만 별도로 실행하려면:
+
+```
 node regression-check.js index.html backtest.html testdata
 ```
 
@@ -89,4 +99,5 @@ main 에 바로 올리는 커밋도 마찬가지다 — main 에 올라가는 �
 - 전략을 바꿔도 과거 기록의 strategyVersion과 당시 파라미터를 덮어쓰지 않는다.
 - 실시간 원본 이벤트와 장마감 재구성 자료는 출처를 구분한다. 재구성 결과로 실시간 원본을 대체하지 않는다.
 - 누적 결과는 조건별 신호 수, 승률, 평균이익, 평균손실, 기대값, MFE/MAE와 시간순 검증으로 비교한다.
+
 

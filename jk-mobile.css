@@ -1,6 +1,15 @@
-/* JKQuant common mobile layout v1.0.0 */
-html{max-width:100%;overflow-x:hidden;-webkit-text-size-adjust:100%;text-size-adjust:100%}
-body{max-width:100%;min-width:0;overflow-x:hidden}
+/* JKQuant common mobile layout v1.0.1 */
+/* hidden은 overflow-y:auto도 만들어 sticky가 창 대신 스크롤하지 않는 body/main을 붙잡는다.
+   clip은 가로 넘침만 자르고 새 스크롤 영역을 만들지 않는다. 표의 가로 스크롤은 아래 상자가 맡는다. */
+html{max-width:100%;overflow-x:clip;-webkit-text-size-adjust:100%;text-size-adjust:100%}
+body{max-width:100%;min-width:0;overflow-x:clip}
+.jk-sticky-header{position:sticky!important;top:0!important;z-index:60!important;background:var(--bg,#0f1320)}
+.jk-sticky-tabs{position:sticky!important;top:var(--jk-header-height,0px)!important;z-index:55!important;background:var(--bg,#0f1320)}
+.jk-sticky-side{position:sticky!important;top:calc(var(--jk-header-height,0px) + 16px)!important}
+.jk-sticky-stack .sessbar{top:calc(var(--jk-header-height,0px) + var(--h1,54px))!important}
+.jk-sticky-stack .statusline{top:calc(var(--jk-header-height,0px) + var(--h2,100px))!important}
+.jk-sticky-stack .subnav{top:calc(var(--jk-header-height,0px) + var(--h3,140px))!important}
+@media(max-width:700px){.jk-sticky-side{top:var(--jk-header-height,0px)!important;z-index:55!important;background:var(--bg,#0f1320)}}
 img,video,svg,canvas{max-width:100%;height:auto}
 button,input,select,textarea{max-width:100%;touch-action:manipulation}
 pre,code{max-width:100%}
@@ -16,7 +25,7 @@ body{font-size:14px}
 input,select,textarea{font-size:16px!important}
 button{min-height:38px}.jkmenu-btn,.gear{min-width:42px;min-height:42px}
 .jkmenu-pop{max-width:calc(100vw - 24px)!important;max-height:calc(100dvh - 72px);overflow-y:auto}
-main{max-width:100%;overflow-x:hidden}
+main{max-width:100%;overflow-x:clip}
 .hero,.detail,.grid3,.livegrid,.scenarios,.path-split,.alpha-charts,.plan-grid{grid-template-columns:minmax(0,1fr)!important}
 .grid4,.guidegrid,.kpis,.cashgrid,.ledger-summary,.path-holdings,.alpha-account-grid,.alpha-base-edit-grid,.alpha-account-total,.alpha-evidence-grid,.steps,.calcgrid,.daily-result-cols,.duel-summary{grid-template-columns:repeat(2,minmax(0,1fr))!important}
 .ledger-form{grid-template-columns:repeat(2,minmax(0,1fr))!important}
@@ -48,3 +57,4 @@ header{max-width:100vw}.htop h1,.brand h1{font-size:18px!important}
 @media (max-width:380px){
 .grid4,.guidegrid,.kpis,.cashgrid,.ledger-summary,.path-holdings,.alpha-account-grid,.alpha-base-edit-grid,.alpha-account-total,.alpha-evidence-grid,.steps,.calcgrid,.daily-result-cols,.duel-summary,.fivegrid,.statgrid,.sheetbtns{grid-template-columns:minmax(0,1fr)!important}
 }
+
