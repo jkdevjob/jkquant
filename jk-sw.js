@@ -5,7 +5,7 @@ const CONFIG="/data/realestate/gpt/push-config.json";
 const META_CACHE="jk-push-meta-v2";
 const TOPICS_KEY="/__jk_push_topics";
 const SHOWN_KEY="/__jk_push_shown";
-const VALID_TOPICS=new Set(["presale","job","opening","daytrading","crypto","soxl"]);
+const VALID_TOPICS=new Set(["presale","job","ipo","opening","daytrading","crypto","soxl"]);
 
 async function getConfig(){
   const r=await fetch(CONFIG+"?ts="+Date.now(),{cache:"no-store"});

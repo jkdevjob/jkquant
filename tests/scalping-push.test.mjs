@@ -66,7 +66,7 @@ test("기존 JOB/분양 수신 보존 · 전략별 설정 · 앱 이동 확인",
   const sw=readFileSync(new URL("../jk-sw.js",import.meta.url),"utf8");
   const ui=readFileSync(new URL("../scalping.html",import.meta.url),"utf8");
   for(const topic of ["opening","daytrading","crypto","soxl"]){
-    assert.ok(settings.includes('item("'+topic+'"'),topic+" setting");
+    assert.ok(settings.includes('topic:"'+topic+'"'),topic+" setting");
     assert.ok(sw.includes('"'+topic+'"'),topic+" service worker");
   }
   assert.match(sw,/if\(!allowed.length\)return \[\]/);

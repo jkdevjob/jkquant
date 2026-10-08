@@ -1,11 +1,13 @@
+import { buildDailyDigest, IPO_SCORE_VERSION } from "./ipo-score.mjs";
 import { evaluatePresale, describeEvaluation, won, SCORING_VERSION } from "./presale-score.mjs";
 const enc=new TextEncoder();
 const BASE_APP="https://jkquant.pages.dev";
 const PRESALE_APP=BASE_APP+"/realestate";
 const JOB_APP=BASE_APP+"/job";
+const IPO_APP=BASE_APP+"/ipo";
 const ALLOW_ORIGINS=new Set([BASE_APP,"http://localhost:8788","http://127.0.0.1:8788"]);
 const TRADE_TOPICS=new Set(["opening","daytrading","crypto","soxl"]);
-const VALID_TOPICS=new Set(["presale","job",...TRADE_TOPICS]);
+const VALID_TOPICS=new Set(["presale","job","ipo",...TRADE_TOPICS]);
 
 function b64u(bytes){
   let s="";for(const b of bytes)s+=String.fromCharCode(b);
@@ -75,7 +77,7 @@ async function sendEmptyPush(vapid,endpoint,topic){
     headers:{
       "TTL":"86400",
       "Urgency":"high",
-      // 서로 다른 매수/매도 이벤트가 푸시 큐에서 덮어쓰이지 않게 거래 신호에는 Topic 헤더를 생략한다.
+      // 거래 매수·매도는 서로 다른 이벤트가 큐에서 덮이지 않도록 Topic 없이 전송한다.
       ...(TRADE_TOPICS.has(topic)?{}:{"Topic":"jk-"+clean(topic||"notice",20)}),
       "Authorization":"vapid t="+jwt+", k="+vapid.publicKey
     }
@@ -144,6 +146,25 @@ async function evaluateFreshPresales(base,items){
     }
   }));
   return out;
+}
+
+async function ipoFeed(base){
+  const controller=new AbortController();
+  const timer=setTimeout(()=>controller.abort(),23000);
+  try{
+    const r=await fetch(base+"/api/ipo",{
+      headers:{"accept":"application/json","user-agent":"JKQuant-IPO-Digest/1.0"},
+      signal:controller.signal,
+      cf:{cacheTtl:0,cacheEverything:false}
+    });
+    const j=await r.json();
+    // The existing IPO endpoint uses HTTP 502 + "no data" when both sources
+    // responded successfully but the calendar contained no IPO events.
+    if(!r.ok&&!(r.status===502&&j.error==="no data"&&Array.isArray(j.items)&&!j.items.length))
+      throw new Error("IPO feed HTTP "+r.status+" "+String(j.error||""));
+    if(!Array.isArray(j.items))throw new Error("IPO feed missing items");
+    return j.items;
+  }finally{clearTimeout(timer)}
 }
 
 async function jobFeed(baseUrl){
@@ -264,6 +285,10 @@ export class PresaleAlertStore{
       id:"test-"+topic+"-"+Date.now(),type:topic,title:"🔔 "+({opening:"시초가",daytrading:"데이트레이딩",crypto:"비트코인",soxl:"SOXL"}[topic])+" 매매알림 테스트",
       body:"매수·매도 알림 수신이 정상 연결되었습니다. 실제 주문이 아닌 모의매매 신호입니다.",
       url:BASE_APP+"/scalping?strategy="+topic,createdAt:new Date().toISOString()
+    }:topic==="ipo"?{
+      id:"test-ipo-"+Date.now(),type:"ipo",title:"📈 공모주 웹알림 테스트",
+      body:"IPO 일정 및 평가점수 웹알림이 정상 연결되었습니다.",
+      url:IPO_APP,createdAt:new Date().toISOString()
     }:topic==="job"?{
       id:"test-job-"+Date.now(),type:"job",title:"💼 JOB 웹알림 테스트",
       body:"대전·세종 신규 채용공고 알림이 정상 연결되었습니다.",
@@ -369,6 +394,33 @@ export class PresaleAlertStore{
     const delivery=await this.notifyAll("job");
     return json(request,{ok:true,items:items.length,newCount:fresh.length,alert,delivery});
   }
+  async checkIPO(request){
+    const today=kstDate(0),stored=await this.state.storage.get("lastSent:ipo");
+    if(stored===today)return json(request,{ok:true,skipped:true,reason:"이미 오늘 IPO 브리핑 발송",date:today});
+    const rows=await ipoFeed(this.env.BASE_URL||BASE_APP);
+    // Empty, valid items[] may be genuine lack of IPO. Error response is never treated as 'none'.
+    const digest=buildDailyDigest(rows);
+    if(digest.date!==today)return json(request,{ok:false,error:"date mismatch, retry"},503);
+    const alert={
+      id:"ipo-daily:"+digest.date,type:"ipo",
+      title:digest.title,body:digest.body,
+      url:IPO_APP+"?brief="+digest.date,
+      digest,scoringVersion:IPO_SCORE_VERSION,
+      createdAt:new Date().toISOString()
+    };
+    await this.recordAlert(alert);
+    await this.state.storage.put("digest:ipo:"+today,digest);
+    await this.state.storage.put("lastCheck:ipo",new Date().toISOString());
+    const delivery=await this.notifyAll("ipo");
+    await this.state.storage.put("lastSent:ipo",today);
+    return json(request,{ok:true,date:today,sent:delivery.sent,digest,delivery});
+  }
+  async ipoDaily(request){
+    const day=clean(new URL(request.url).searchParams.get("date"),10)||kstDate(0);
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(day))return json(request,{ok:false,error:"invalid date"},400);
+    const digest=await this.state.storage.get("digest:ipo:"+day);
+    return json(request,{ok:true,date:day,digest:digest||null});
+  }
   async fetch(request){
     if(request.method==="OPTIONS")return new Response(null,{status:204,headers:cors(request)});
     const u=new URL(request.url),path=u.pathname;
@@ -377,7 +429,7 @@ export class PresaleAlertStore{
       const jobLastCheck=await this.state.storage.get("lastCheck:job");
       const counts=Object.fromEntries([...VALID_TOPICS].map(t=>[t,0]));
       for(const [,s] of subs)for(const t of this.topicsOf(s))counts[t]++;
-      const lastChecks={presale:lastCheck||null,job:jobLastCheck||null};
+      const lastChecks={presale:lastCheck||null,job:jobLastCheck||null,ipo:await this.state.storage.get("lastCheck:ipo")||null};
       for(const t of TRADE_TOPICS)lastChecks[t]=await this.state.storage.get("lastCheck:"+t)||null;
       return json(request,{ok:true,service:"jkquant-push-alert",version:"2.1.0",subscriptions:subs.size,
         topicSubscriptions:counts,lastCheck:lastCheck||null,lastChecks});
@@ -406,6 +458,8 @@ export class PresaleAlertStore{
     if(path==="/signal"&&request.method==="POST")return this.recordTradingSignal(request);
     if(path==="/check"&&request.method==="POST")return this.checkPresale(request);
     if(path==="/check-jobs"&&request.method==="POST")return this.checkJobs(request);
+    if(path==="/check-ipo"&&request.method==="POST")return this.checkIPO(request);
+    if(path==="/ipo-daily"&&request.method==="GET")return this.ipoDaily(request);
     return json(request,{ok:false,error:"not found"},404);
   }
 }
@@ -418,6 +472,10 @@ export default{
   },
   async scheduled(controller,env,ctx){
     const id=env.ALERT_STORE.idFromName("global"),stub=env.ALERT_STORE.get(id);
+    if(controller&&controller.cron==="10 23 * * *"){
+      ctx.waitUntil(stub.fetch(new Request("https://internal/check-ipo",{method:"POST"})));
+      return;
+    }
     ctx.waitUntil(Promise.allSettled([
       stub.fetch(new Request("https://internal/check",{method:"POST"})),
       stub.fetch(new Request("https://internal/check-jobs",{method:"POST"}))
