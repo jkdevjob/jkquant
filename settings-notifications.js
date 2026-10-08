@@ -82,13 +82,22 @@ function item(topic,icon,name,desc){
     '<div class="server">'+(health?('등록기기 '+topicCount(topic)+'대 · 최근 확인 '+esc(fmtServerTime(lastCheck(topic)))):(cfg?'푸시 서버 연결 확인 중':'푸시 서버 연결 안 됨'))+'</div>'+
   '</div>';
 }
+const NOTIFY_DEFS=[
+  {topic:"ipo",href:"/ipo",icon:"📈",name:"공모주·청약 일정",
+   desc:"매일 오전 8:10경 청약 중·7일 내 청약 예정·당일 상장 종목과 공모가/경쟁률 기반 투자 조사 점수를 보내드립니다."},
+  {topic:"presale",href:"/realestate",icon:"🏢",name:"대전·세종 신규분양",
+   desc:"대전·세종 일반·무순위/잔여·임의공급 신규공고를 30분 간격으로 확인하고 분양가·주변 실거래 기반 점수로 안내합니다."},
+  {topic:"job",href:"/job",icon:"💼",name:"대전·세종 JOB 신규공고",
+   desc:"30분마다 채용공고를 확인하고 새 공고가 있을 때만 알려줍니다."}
+];
+function notificationMenuOrder(){
+  const menu=[...document.querySelectorAll(".jkmenu-pop a[href]")].map(a=>(a.getAttribute("href")||"").replace(/\.html$/,""));
+  const idx=href=>{const i=menu.indexOf(href);return i<0?999:i};
+  return NOTIFY_DEFS.slice().sort((a,b)=>idx(a.href)-idx(b.href));
+}
 function render(){
-  host.innerHTML='<div class="alert-list">'+
-    item("job","💼","대전·세종 JOB 신규공고",
-      "30분마다 채용사이트를 다시 수집하고, 새 공고가 있을 때만 알려줍니다. 알림을 누르면 해당 JOB 공고로 이동합니다.")+
-    item("presale","🏢","대전·세종 신규분양",
-      "대전·세종의 새 일반분양·무순위/잔여·임의공급 공고를 약 30분 간격으로 확인해 알려줍니다.")+
-  '</div>';
+  host.innerHTML='<div class="alert-list">'+notificationMenuOrder()
+    .map(x=>item(x.topic,x.icon,x.name,x.desc)).join("")+'</div>';
   host.querySelectorAll("button[data-action]").forEach(btn=>{
     btn.addEventListener("click",()=>{
       const a=btn.dataset.action,t=btn.dataset.topic;
@@ -124,7 +133,7 @@ async function enable(topic){
     topics.add(topic);
     await saveTopics();
     try{health=await server("/health")}catch(e){}
-    alert(topic==="job"?"JOB 신규공고 알림을 켰습니다.":"신규분양 알림을 켰습니다.");
+    alert(topic==="ipo"?"공모주·청약 매일 알림을 켰습니다.":topic==="job"?"JOB 신규공고 알림을 켰습니다.":"신규분양 알림을 켰습니다.");
   }catch(e){alert("알림 설정 실패: "+String(e&&e.message||e))}
   finally{busy=false;render()}
 }
