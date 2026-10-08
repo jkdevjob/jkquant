@@ -419,6 +419,7 @@ async function runMinute(controller,env){
   }
   // Preserve previous safety behavior: if the user alert failed, retain the signal but do not place a VTS order.
   if((buyEvents.length||sellEvents.length)&&deliveryFailures){
+    result.webPush=await notifyOpeningWebPush(env,kst.date,buyEvents,sellEvents,mainVariant);
     result.vts={ok:false,skipped:"alert_delivery_failed"};
     console.error(JSON.stringify(result));
     return;
@@ -430,6 +431,7 @@ async function runMinute(controller,env){
       result.vts={ok:true,eventCount:Array.isArray(exec.events)?exec.events.length:0};
     }catch(e){
       result.vts={ok:false,error:String(e.message||e)};
+      result.webPush=await notifyOpeningWebPush(env,kst.date,buyEvents,sellEvents,mainVariant);
       console.error(JSON.stringify(result));
       throw e;
     }
