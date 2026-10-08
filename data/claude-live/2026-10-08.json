@@ -6,7 +6,7 @@
     "date": "2026-10-08",
     "mainVariant": "baseline",
     "createdAt": "2026-10-08T06:41:01.505Z",
-    "updatedAt": "2026-10-08T15:05:54.893Z",
+    "updatedAt": "2026-10-08T20:05:47.907Z",
     "scans": [
       {
         "id": "close:crypto",
@@ -25,6 +25,30 @@
         "scheduledTime": 1791471945000,
         "capturedAt": "2026-10-08T15:05:54.797Z",
         "targetHm": 5,
+        "lagMs": 0,
+        "partial": false,
+        "okShards": 1,
+        "failed": [],
+        "quoteErrors": 0,
+        "eventCount": 1
+      },
+      {
+        "id": "close:soxl",
+        "scheduledTime": 1791489945000,
+        "capturedAt": "2026-10-08T20:05:47.078Z",
+        "targetHm": 505,
+        "lagMs": 0,
+        "partial": false,
+        "okShards": 1,
+        "failed": [],
+        "quoteErrors": 0,
+        "eventCount": 1
+      },
+      {
+        "id": "tg:soxl:sent",
+        "scheduledTime": 1791489945000,
+        "capturedAt": "2026-10-08T20:05:47.826Z",
+        "targetHm": 505,
         "lagMs": 0,
         "partial": false,
         "okShards": 1,
@@ -132,6 +156,57 @@
         "payload": {
           "ok": true,
           "messageId": 374,
+          "error": null
+        }
+      },
+      {
+        "id": "close:soxl",
+        "date": "2026-10-08",
+        "capturedAt": "2026-10-08T20:05:47.078Z",
+        "targetHm": 505,
+        "strategy": "claude_day",
+        "stage": "close",
+        "payload": {
+          "strategy": "soxl",
+          "name": "④ SOXL · 단기 과매도 반등(최대 5일)",
+          "date": "2026-10-08",
+          "currency": "USD",
+          "trades": [],
+          "open": [
+            {
+              "name": "SOXL",
+              "entryTime": "2026-10-08 09:30 시가",
+              "entryPrice": 150.48,
+              "markPrice": 142.495,
+              "pnlPct": -5.40635300372142,
+              "reason": "오른 날 다음 시가 매도(최대 5일)"
+            }
+          ],
+          "watched": 1,
+          "candidates": 1,
+          "entries": 1,
+          "exits": 0,
+          "wins": 0,
+          "losses": 0,
+          "winRate": null,
+          "realizedAmount": 0,
+          "realizedPct": 0,
+          "status": "closed",
+          "strategyVersion": "soxl_rsi2_meanrev_v1",
+          "note": "전날 확정 종가 RSI(2) < 20 · 200일 평균 위 → 시가 매수",
+          "capitalNote": "모의 자금 $10,000"
+        }
+      },
+      {
+        "id": "tg:soxl:sent",
+        "date": "2026-10-08",
+        "capturedAt": "2026-10-08T20:05:47.826Z",
+        "targetHm": 505,
+        "strategy": "claude_day",
+        "stage": "telegram",
+        "payload": {
+          "ok": true,
+          "messageId": 375,
           "error": null
         }
       },
