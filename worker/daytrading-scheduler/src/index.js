@@ -458,6 +458,33 @@ async function notifyPaperTransitions(env,oldLedger,newLedger){
     }
   }
 }
+// 장부 기록 후 첫 웹알림이 실패해도 최근 이벤트를 재시도한다(동일 eventId는 푸시 Worker가 영속 중복 제거).
+export function recentPaperPushEvents(ledger,windowMin=8){
+  const rows=[],now=hmToMin(ledger&&ledger.targetHm);
+  for(const x of (ledger&&ledger.trades||[])){
+    if(!x||!x.id)continue;
+    const events=[{stage:"buy",when:+x.signalTime||0,eventId:"daytrading:"+ledger.date+":"+x.id+":buy",
+      lines:[(x.name||x.code)+" ("+x.code+")","신호 "+hmLabel(x.signalTime)+" · 모의진입 "+hmLabel(x.entryTime),
+        "신호가 "+Math.round(x.signalPrice||0).toLocaleString("ko-KR")+"원"]}];
+    if(x.status==="closed"&&x.exitTime)events.push({stage:"sell",when:+x.exitTime,
+      eventId:"daytrading:"+ledger.date+":"+x.id+":sell:"+String(x.exitTime),
+      lines:[(x.name||x.code)+" ("+x.code+") · "+exitLabel(x.reason),
+        "모의매도 "+hmLabel(x.exitTime)+" · "+Math.round(x.exitPrice||0).toLocaleString("ko-KR")+"원",
+        "모의 순손익 "+signedPct(x.pnl)]});
+    for(const e of events){const age=now-hmToMin(e.when);
+      if(age>=0&&age<=windowMin)rows.push({strategy:"daytrading",stage:e.stage,
+        webOnly:true,eventId:e.eventId,date:ledger.date,time:hmLabel(e.when)+" KST",lines:e.lines});
+    }
+  }
+  return rows;
+}
+async function retryPaperWebPush(env,ledger){
+  for(const b of recentPaperPushEvents(ledger)){
+    const result=await sendScalpingAlert(env,b);
+    if(!result||!result.webPush?.ok)console.warn(JSON.stringify({
+      type:"day_webpush_retry_failed",eventId:b.eventId,reason:result?.webPush?.error||"relay_error"}));
+  }
+}
 async function reconcilePaper(env,date,target,candidates,mainVariant="baseline"){
   const old=await readPaper(env,date);
   const params=dayExitParams(mainVariant);
@@ -477,6 +504,7 @@ async function reconcilePaper(env,date,target,candidates,mainVariant="baseline")
   ledger.summary=ledgerSummary(ledger);
   const saved=await writePaper(env,ledger);
   await notifyPaperTransitions(env,old,saved);
+  await retryPaperWebPush(env,saved);
   return saved;
 }
 async function advanceExistingPaper(env,date,target){
@@ -494,6 +522,7 @@ async function advanceExistingPaper(env,date,target){
   ledger.summary=ledgerSummary(ledger);
   const saved=await writePaper(env,ledger);
   await notifyPaperTransitions(env,old,saved);
+  await retryPaperWebPush(env,saved);
   return saved;
 }
 
@@ -569,6 +598,10 @@ async function runScheduled(controller,env){
     const mainVariant=String(snapshot.mainVariant||"baseline"),params=dayExitParams(mainVariant);
     const candidates=pickCandidates(ok,params.maxTrades);
     ledger=await reconcilePaper(env,sched.date,target,candidates,mainVariant);
+  }else{
+    // 일부 샤드 실패 시 새 진입은 만들지 않지만 과거 확정 신호 웹푸시는 계속 복구한다.
+    const existing=await readPaper(env,sched.date).catch(()=>null);
+    if(existing)await retryPaperWebPush(env,{...existing,targetHm:target});
   }
   console.log(JSON.stringify({
     type:"day_scan",date:sched.date,targetHm:target,lagMs:lag,snapshotHm:snapshot.snapshotHm,

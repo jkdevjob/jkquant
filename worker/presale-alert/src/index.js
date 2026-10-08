@@ -454,18 +454,28 @@ export class PresaleAlertStore{
     const marketDate=topic==="soxl"?new Intl.DateTimeFormat("en-CA",{timeZone:"America/New_York",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date()):kstDate();
     if(date!==marketDate)return json(request,{ok:false,error:"stale or future market date"},409);
     const id="trade:"+topic+":"+eventId,claimKey="signal:"+await hashText(id);
-    if(await this.state.storage.get(claimKey))return json(request,{ok:true,duplicate:true,id,delivery:{sent:0}});
+    const prev=await this.state.storage.get(claimKey);
+    if(prev)return json(request,{ok:true,duplicate:true,id,delivery:prev.delivery||{sent:0},status:prev.status||"recorded"});
     const lines=Array.isArray(b.lines)?b.lines.map(x=>clean(x,200)).filter(Boolean).slice(0,5):[];
     const name={opening:"시초가",daytrading:"데이트레이딩",crypto:"비트코인",soxl:"SOXL"}[topic];
     const trade={id,type:topic,stage,createdAt:new Date().toISOString(),
       title:(stage==="buy"?"🟢 ":"🔴 ")+name+" 모의 "+(stage==="buy"?"매수":"매도")+" 타이밍",
       body:[date,time,...lines].filter(Boolean).join(" · ").slice(0,245),url:BASE_APP+"/scalping?strategy="+topic};
-    // Durable Object에 먼저 기록해 Cron 중복/재시도로 두 번 보내지 않는다.
-    await this.state.storage.put(claimKey,trade.createdAt);
+    // 송신 중인 같은 eventId 중복 요청 차단. 성공 응답 전 실패 건은 재시도 가능하도록 해제한다.
+    await this.state.storage.put(claimKey,{status:"sending",at:trade.createdAt});
     await this.recordAlert(trade);
     const delivery=await this.notifyAll(topic);
+    const status=delivery.sent>0?"sent":delivery.eligible>0?"delivery_failed":"no_subscribers";
+    const audit={id,stage,at:trade.createdAt,status,eligible:delivery.eligible,sent:delivery.sent,failed:delivery.failed};
     await this.state.storage.put("lastCheck:"+topic,trade.createdAt);
-    return json(request,{ok:true,duplicate:false,id,delivery});
+    await this.state.storage.put("lastDelivery:"+topic,audit);
+    if(status==="delivery_failed"){
+      // 모두 실패한 경우만 중복 잠금을 해제해 다음 1분 스캔에서 재시도한다.
+      await this.state.storage.delete(claimKey);
+      return json(request,{ok:false,retryable:true,id,status,delivery,error:"web push service rejected all deliveries"},502);
+    }
+    await this.state.storage.put(claimKey,{status,delivery,at:trade.createdAt});
+    return json(request,{ok:true,duplicate:false,id,status,delivery});
   }
   async checkPresale(request){
     const base=this.env.BASE_URL||BASE_APP,items=await officialFeed(base);
@@ -569,9 +579,13 @@ export class PresaleAlertStore{
       const counts=Object.fromEntries([...VALID_TOPICS].map(t=>[t,0]));
       for(const [,s] of subs)for(const t of this.topicsOf(s))counts[t]++;
       const lastChecks={presale:lastCheck||null,job:jobLastCheck||null,ipo:await this.state.storage.get("lastCheck:ipo")||null};
-      for(const t of TRADE_TOPICS)lastChecks[t]=await this.state.storage.get("lastCheck:"+t)||null;
-      return json(request,{ok:true,service:"jkquant-push-alert",version:"2.2.0",subscriptions:subs.size,
-        topicSubscriptions:counts,lastCheck:lastCheck||null,lastChecks});
+      const lastDeliveries={};
+      for(const t of TRADE_TOPICS){
+        lastChecks[t]=await this.state.storage.get("lastCheck:"+t)||null;
+        lastDeliveries[t]=await this.state.storage.get("lastDelivery:"+t)||null;
+      }
+      return json(request,{ok:true,service:"jkquant-push-alert",version:"2.2.1",subscriptions:subs.size,
+        topicSubscriptions:counts,lastCheck:lastCheck||null,lastChecks,lastDeliveries});
     }
     if(path==="/vapid"){const v=await this.vapid();return json(request,{ok:true,publicKey:v.publicKey})}
     if(path==="/latest"){
