@@ -11793,6 +11793,13 @@ console.log('\n[ACCESS] 이용 승인제 — 판정 한 곳 · 모든 페이지 
        && /Firebase DB 원장을 불러오지 못했습니다/.test(fail));
   }
 
+  ok('관리자 승인목록: 모바일 가로 스크롤에서도 계정·접속·방문·버튼 열의 행 하단선이 끊기지 않는다',
+     /#u_body \.htable\{border-collapse:separate;border-spacing:0\}/.test(adm)
+     && /#u_body \.htable tbody td\{[\s\S]*?border-bottom:0;[\s\S]*?box-shadow:inset 0 -1px 0 var\(--line\);[\s\S]*?vertical-align:middle;[\s\S]*?\}/.test(adm)
+     && /#u_body \.htable tbody tr:last-child td\{[\s\S]*?box-shadow:inset 0 -1px 0 var\(--line\);/.test(adm)
+     && /#u_body \.htable-wrap \+ \.note\{/.test(adm)
+     && !/\.htable\{border-collapse:separate/.test(adm.slice(0,adm.indexOf('#u_body .htable'))));
+
   // ── 관리자 — 승인 화면 (목록 순서·상태·단추·쓰기) ──
   { const uSrc=adm.slice(adm.indexOf('const ACC_LABEL='), adm.indexOf('// ── 2. 전략 기본값'));
     const helpers=["const ADMIN_EMAILS=['jk82investing@gmail.com'];", (adm.match(/const normEmail=.*\n/)||[''])[0],
