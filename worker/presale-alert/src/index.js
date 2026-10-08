@@ -472,10 +472,15 @@ export default{
   },
   async scheduled(controller,env,ctx){
     const id=env.ALERT_STORE.idFromName("global"),stub=env.ALERT_STORE.get(id);
-    if(controller&&controller.cron==="10 23 * * *"){
-      ctx.waitUntil(stub.fetch(new Request("https://internal/check-ipo",{method:"POST"})));
+    // 무료 Workers 계정의 Cron 5개 제한: 하나의 "7,10,37 * * * *"로 합치고
+    // 23:10 UTC(08:10 KST)만 공모주, 매시간 :07/:37은 JOB·분양에 사용한다.
+    const stamp=new Date(Number(controller&&controller.scheduledTime)||Date.now());
+    const minute=stamp.getUTCMinutes(),hour=stamp.getUTCHours();
+    if(minute===10){
+      if(hour===23)ctx.waitUntil(stub.fetch(new Request("https://internal/check-ipo",{method:"POST"})));
       return;
     }
+    if(minute!==7&&minute!==37)return;
     ctx.waitUntil(Promise.allSettled([
       stub.fetch(new Request("https://internal/check",{method:"POST"})),
       stub.fetch(new Request("https://internal/check-jobs",{method:"POST"}))
