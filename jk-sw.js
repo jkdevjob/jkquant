@@ -61,7 +61,7 @@ function pickAlert(payload,allowed,shown){
 self.addEventListener("message",event=>{
   const d=event.data||{};
   if(d.type==="JK_PUSH_TOPICS"){
-    const a=Array.isArray(d.topics)?d.topics.filter(x=>x==="presale"||x==="job"):[];
+    const a=Array.isArray(d.topics)?d.topics.filter(x=>x==="presale"||x==="job"||x==="ipo"):[];
     event.waitUntil(writeMeta(TOPICS_KEY,[...new Set(a)]));
   }
 });
