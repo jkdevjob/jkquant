@@ -349,6 +349,21 @@ export class PresaleAlertStore{
       updatedAt:new Date().toISOString()});
     return json(request,{ok:true,...result});
   }
+  async approvalStatus(request){
+    const user=await authUser(request,true);
+    if(!user.ok)return json(request,{ok:false,error:user.reason},user.reason==="관리자 전용"?403:401);
+    const body=await request.json().catch(()=>null);
+    const items=Array.isArray(body&&body.items)?body.items.slice(0,100):[];
+    const states={};
+    for(const item of items){
+      const uid=String(item&&item.uid||""),at=Number(item&&item.approvedAt||0);
+      if(!/^[a-zA-Z0-9_-]{1,128}$/.test(uid)||!Number.isSafeInteger(at)||at<=0)continue;
+      const state=await this.state.storage.get("approval:send:"+uid+":"+at);
+      if(state)states[uid]={email:state.email||"pending",push:state.push||"pending",
+        delivered:Number(state.delivered||0),updatedAt:state.updatedAt||null};
+    }
+    return json(request,{ok:true,states});
+  }
   async subscription(request){
     const u=new URL(request.url),endpoint=clean(u.searchParams.get("endpoint"),2000);
     if(!endpoint)return json(request,{ok:false,error:"endpoint required"},400);
@@ -548,6 +563,7 @@ export class PresaleAlertStore{
     if(path==="/approval/subscribe"&&request.method==="POST")return this.approvalSubscribe(request);
     if(path==="/approval/event"&&request.method==="POST")return this.approvalEvent(request);
     if(path==="/approval/notify"&&request.method==="POST")return this.approvalNotify(request);
+    if(path==="/approval/status"&&request.method==="POST")return this.approvalStatus(request);
     if(path==="/subscription"&&request.method==="GET")return this.subscription(request);
     if(path==="/subscribe"&&request.method==="POST")return this.subscribe(request);
     if(path==="/subscribe"&&request.method==="DELETE")return this.unsubscribe(request);
