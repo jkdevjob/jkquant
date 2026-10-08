@@ -51,7 +51,7 @@ jobs:
           print("PUSH_HEALTH",json.dumps({
               "subscribers_daytrading":((health or {}).get("topicSubscriptions") or {}).get("daytrading"),
               "lastSignalAt":((health or {}).get("lastChecks") or {}).get("daytrading"),
-              "lastDelivery":((health or {}).get("lastDeliveries") or {}).get("daytrading")},ensure_ascii=False))
+              "lastDelivery":{k:v for k,v in (((health or {}).get("lastDeliveries") or {}).get("daytrading") or {}).items() if k in ("stage","at","status","eligible","sent","failed")}},ensure_ascii=False))
           latest=fetch(base+"/latest?topic=daytrading")
           last=(latest or {}).get("alert") or {}
           print("LATEST_DAYTRADING_ALERT",json.dumps({"type":last.get("type"),"stage":last.get("stage"),
