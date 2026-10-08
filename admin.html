@@ -105,6 +105,25 @@ input[type=text]{background:var(--panel2);border:1px solid var(--line);color:var
 .htable td{padding:3px 4px;line-height:1.25;text-align:right;border-bottom:1px solid var(--line);font-variant-numeric:tabular-nums;white-space:nowrap}
 .htable th:first-child,.htable td:first-child{text-align:left;white-space:normal}
 .htable tr.off{opacity:.5}
+/* 관리자 > 이용 승인: 모바일에서 계정 열과 나머지 열의 선을 끊김 없이 연결한다.
+   collapsed border는 iOS 가로 스크롤 테이블에서 셀별로 어긋나 보일 수 있다. */
+#u_body .htable{border-collapse:separate;border-spacing:0}
+#u_body .htable tbody td{
+  border-bottom:0;
+  box-shadow:inset 0 -1px 0 var(--line);
+  padding-top:10px;padding-bottom:10px;
+  vertical-align:middle;
+}
+#u_body .htable tbody td:first-child{
+  box-shadow:inset 0 -1px 0 var(--line);
+}
+#u_body .htable tbody tr:last-child td{
+  box-shadow:inset 0 -1px 0 var(--line);
+}
+#u_body .htable-wrap + .note{
+  margin-top:12px;
+  padding-top:8px;
+}
 .tag{font-size:10.5px;font-weight:800;padding:1px 6px;border-radius:6px;margin-left:5px;white-space:nowrap}
 .tag.admin{background:rgba(139,140,240,.18);color:var(--vio)}
 .tag.blocked{background:rgba(248,123,140,.15);color:var(--sell)}
@@ -173,7 +192,7 @@ pre.rules{background:var(--bg);border:1px solid var(--line);border-radius:10px;p
 
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Admin Console</div><h1>JK <span class="v">투자</span> 관리자 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="adVer">v0.12.15</span></h1></div>
+    <div><div class="kicker">Admin Console</div><h1>JK <span class="v">투자</span> 관리자 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="adVer">v0.12.16</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
