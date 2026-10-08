@@ -1,0 +1,281 @@
+{
+  "ok": true,
+  "date": "2026-10-08",
+  "ledger": {
+    "schema": 1,
+    "date": "2026-10-08",
+    "mainVariant": "baseline",
+    "createdAt": "2026-10-08T06:41:01.505Z",
+    "updatedAt": "2026-10-08T15:05:54.893Z",
+    "scans": [
+      {
+        "id": "close:crypto",
+        "scheduledTime": 1791471945000,
+        "capturedAt": "2026-10-08T15:05:53.882Z",
+        "targetHm": 5,
+        "lagMs": 0,
+        "partial": false,
+        "okShards": 1,
+        "failed": [],
+        "quoteErrors": 0,
+        "eventCount": 1
+      },
+      {
+        "id": "tg:crypto:sent",
+        "scheduledTime": 1791471945000,
+        "capturedAt": "2026-10-08T15:05:54.797Z",
+        "targetHm": 5,
+        "lagMs": 0,
+        "partial": false,
+        "okShards": 1,
+        "failed": [],
+        "quoteErrors": 0,
+        "eventCount": 1
+      },
+      {
+        "id": "close:daytrading",
+        "scheduledTime": 1791441645000,
+        "capturedAt": "2026-10-08T06:41:02.946Z",
+        "targetHm": 1540,
+        "lagMs": 0,
+        "partial": false,
+        "okShards": 1,
+        "failed": [],
+        "quoteErrors": 0,
+        "eventCount": 1
+      },
+      {
+        "id": "close:opening",
+        "scheduledTime": 1791441645000,
+        "capturedAt": "2026-10-08T06:41:01.412Z",
+        "targetHm": 1540,
+        "lagMs": 0,
+        "partial": false,
+        "okShards": 1,
+        "failed": [],
+        "quoteErrors": 0,
+        "eventCount": 1
+      },
+      {
+        "id": "tg:daytrading:sent",
+        "scheduledTime": 1791441645000,
+        "capturedAt": "2026-10-08T06:41:03.555Z",
+        "targetHm": 1540,
+        "lagMs": 0,
+        "partial": false,
+        "okShards": 1,
+        "failed": [],
+        "quoteErrors": 0,
+        "eventCount": 1
+      },
+      {
+        "id": "tg:opening:sent",
+        "scheduledTime": 1791441645000,
+        "capturedAt": "2026-10-08T06:41:02.063Z",
+        "targetHm": 1540,
+        "lagMs": 0,
+        "partial": false,
+        "okShards": 1,
+        "failed": [],
+        "quoteErrors": 0,
+        "eventCount": 1
+      },
+      {
+        "id": "tg:overview:sent",
+        "scheduledTime": 1791441645000,
+        "capturedAt": "2026-10-08T06:41:04.699Z",
+        "targetHm": 1540,
+        "lagMs": 0,
+        "partial": false,
+        "okShards": 1,
+        "failed": [],
+        "quoteErrors": 0,
+        "eventCount": 1
+      }
+    ],
+    "events": [
+      {
+        "id": "close:crypto",
+        "date": "2026-10-08",
+        "capturedAt": "2026-10-08T15:05:53.882Z",
+        "targetHm": 5,
+        "strategy": "claude_day",
+        "stage": "close",
+        "payload": {
+          "strategy": "crypto",
+          "name": "③ 비트코인 · BTC·ETH 어제 고가 돌파 하루 단타",
+          "date": "2026-10-08",
+          "currency": "KRW",
+          "trades": [],
+          "open": [],
+          "watched": 2,
+          "candidates": 0,
+          "entries": 0,
+          "exits": 0,
+          "wins": 0,
+          "losses": 0,
+          "winRate": null,
+          "realizedAmount": 0,
+          "realizedPct": 0,
+          "status": "closed",
+          "note": "한국시각 00:00 마감 · 매매 규칙은 업비트 하루(09:00~다음 09:00) 그대로",
+          "capitalNote": "코인 칸 모의 자금 10,000,000원(두 코인 반반)"
+        }
+      },
+      {
+        "id": "tg:crypto:sent",
+        "date": "2026-10-08",
+        "capturedAt": "2026-10-08T15:05:54.797Z",
+        "targetHm": 5,
+        "strategy": "claude_day",
+        "stage": "telegram",
+        "payload": {
+          "ok": true,
+          "messageId": 374,
+          "error": null
+        }
+      },
+      {
+        "id": "close:daytrading",
+        "date": "2026-10-08",
+        "capturedAt": "2026-10-08T06:41:02.946Z",
+        "targetHm": 1540,
+        "strategy": "claude_day",
+        "stage": "close",
+        "payload": {
+          "strategy": "daytrading",
+          "name": "② 데이트레이딩 · 코스닥150 레버리지 하락일 야간",
+          "date": "2026-10-08",
+          "currency": "KRW",
+          "trades": [],
+          "open": [],
+          "watched": 1,
+          "exits": 0,
+          "wins": 0,
+          "losses": 0,
+          "winRate": null,
+          "realizedAmount": 0,
+          "realizedPct": 0,
+          "status": "closed",
+          "candidates": 0,
+          "entries": 0,
+          "strategyVersion": "etf_dip_overnight_v1",
+          "note": "15:21 예상 하락 -1.83% (기준 −3% 이하 아님) → 매수 없음"
+        }
+      },
+      {
+        "id": "close:opening",
+        "date": "2026-10-08",
+        "capturedAt": "2026-10-08T06:41:01.412Z",
+        "targetHm": 1540,
+        "strategy": "claude_day",
+        "stage": "close",
+        "payload": {
+          "strategy": "opening",
+          "name": "① 시초가 · D-1 갭하락 과매도",
+          "date": "2026-10-08",
+          "currency": "KRW",
+          "trades": [],
+          "open": [],
+          "measure": [
+            {
+              "name": "펩트론",
+              "code": "087010",
+              "entryTime": "09:00 시가(동시호가)",
+              "entryPrice": 98300,
+              "qty": 20,
+              "notional": 1966000,
+              "open": true,
+              "markPrice": 91500,
+              "pnlPct": -7.147599186164802,
+              "reason": "매도 미체결"
+            },
+            {
+              "name": "신세계",
+              "code": "004170",
+              "entryTime": "09:00 시가(동시호가)",
+              "entryPrice": 317000,
+              "qty": 6,
+              "notional": 1902000,
+              "exitTime": "15:30 종가(동시호가)",
+              "exitPrice": 305500,
+              "pnlPct": -3.8577602523659302,
+              "pnlAmount": -73374.59999999999,
+              "reason": "종가 청산"
+            },
+            {
+              "name": "오름테라퓨틱",
+              "code": "475830",
+              "entryTime": "09:00 시가(동시호가)",
+              "entryPrice": 20000,
+              "qty": 9,
+              "notional": 180000,
+              "exitTime": "15:30 종가(동시호가)",
+              "exitPrice": 19270,
+              "pnlPct": -3.8799999999999977,
+              "pnlAmount": -6983.999999999995,
+              "reason": "종가 청산"
+            }
+          ],
+          "exits": 0,
+          "wins": 0,
+          "losses": 0,
+          "winRate": null,
+          "realizedAmount": 0,
+          "realizedPct": 0,
+          "status": "closed",
+          "watched": 10,
+          "candidates": 3,
+          "entries": 0,
+          "strategyVersion": "opening_gapdown_v1+v2filter",
+          "params": {
+            "minQ": 5,
+            "topK": 3,
+            "gapMax": null
+          },
+          "note": "v2 매매일 아님(통과 3<5) — 측정용 모의매매는 전략 손익에 안 셈"
+        }
+      },
+      {
+        "id": "tg:daytrading:sent",
+        "date": "2026-10-08",
+        "capturedAt": "2026-10-08T06:41:03.555Z",
+        "targetHm": 1540,
+        "strategy": "claude_day",
+        "stage": "telegram",
+        "payload": {
+          "ok": true,
+          "messageId": 372,
+          "error": null
+        }
+      },
+      {
+        "id": "tg:opening:sent",
+        "date": "2026-10-08",
+        "capturedAt": "2026-10-08T06:41:02.063Z",
+        "targetHm": 1540,
+        "strategy": "claude_day",
+        "stage": "telegram",
+        "payload": {
+          "ok": true,
+          "messageId": 371,
+          "error": null
+        }
+      },
+      {
+        "id": "tg:overview:sent",
+        "date": "2026-10-08",
+        "capturedAt": "2026-10-08T06:41:04.699Z",
+        "targetHm": 1540,
+        "strategy": "claude_day",
+        "stage": "telegram",
+        "payload": {
+          "ok": true,
+          "messageId": 373,
+          "error": null
+        }
+      }
+    ]
+  },
+  "source": "cloudflare-opening-scheduler-claude-ledger"
+}

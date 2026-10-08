@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "generatedAt": "2026-10-08T11:08:21.411219+09:00",
+  "generatedAt": "2026-10-09T01:55:58.883494+09:00",
   "strategyVersion": "etf_dip_overnight_v1",
   "rule": {
     "code": "233740",
@@ -17,7 +17,7 @@
     "worstDay": -15.0
   },
   "from": "2018-04-02",
-  "to": "2026-10-07",
+  "to": "2026-10-08",
   "evaluationOrder": [
     "plus1DaysPerYear",
     "plus5WeeksPerYear",
@@ -50,25 +50,25 @@
       "gate": true
     },
     "outOfSample": {
-      "days": 4,
-      "tradeDays": 0,
-      "tradeDaysPerYear": 0.0,
-      "plus1RateOfTradeDays": null,
-      "lossDaysPerYear": 0.0,
+      "days": 5,
+      "tradeDays": 1,
+      "tradeDaysPerYear": 50.0,
+      "plus1RateOfTradeDays": 0.0,
+      "lossDaysPerYear": 50.0,
       "tStat": null,
       "plus1Days": 0,
       "plus1DaysPerYear": 0.0,
       "plus5Weeks": 0,
       "plus5WeeksPerYear": 0.0,
-      "weeklyAvgPct": 0.0,
-      "totalPct": 0.0,
-      "lossDays": 0,
-      "lossDayAvgPct": 0.0,
-      "worstDayPct": 0.0,
-      "mddPct": 0.0,
+      "weeklyAvgPct": -0.5052740644130638,
+      "totalPct": -1.007995110024451,
+      "lossDays": 1,
+      "lossDayAvgPct": -1.007995110024451,
+      "worstDayPct": -1.007995110024451,
+      "mddPct": -1.007995110024451,
       "cagrPct": null,
-      "expectancyPct": null,
-      "profitFactor": null,
+      "expectancyPct": -1.007995110024451,
+      "profitFactor": 0.0,
       "gate": false
     }
   },
@@ -96,7 +96,7 @@
       "gate": false
     },
     "outOfSample": {
-      "days": 4,
+      "days": 5,
       "tradeDays": 0,
       "tradeDaysPerYear": 0.0,
       "plus1RateOfTradeDays": null,
@@ -142,42 +142,29 @@
       "gate": true
     },
     "outOfSample": {
-      "days": 4,
-      "tradeDays": 0,
-      "tradeDaysPerYear": 0.0,
-      "plus1RateOfTradeDays": null,
-      "lossDaysPerYear": 0.0,
+      "days": 5,
+      "tradeDays": 1,
+      "tradeDaysPerYear": 50.0,
+      "plus1RateOfTradeDays": 0.0,
+      "lossDaysPerYear": 50.0,
       "tStat": null,
       "plus1Days": 0,
       "plus1DaysPerYear": 0.0,
       "plus5Weeks": 0,
       "plus5WeeksPerYear": 0.0,
-      "weeklyAvgPct": 0.0,
-      "totalPct": 0.0,
-      "lossDays": 0,
-      "lossDayAvgPct": 0.0,
-      "worstDayPct": 0.0,
-      "mddPct": 0.0,
+      "weeklyAvgPct": -0.5052740644130638,
+      "totalPct": -1.007995110024451,
+      "lossDays": 1,
+      "lossDayAvgPct": -1.007995110024451,
+      "worstDayPct": -1.007995110024451,
+      "mddPct": -1.007995110024451,
       "cagrPct": null,
-      "expectancyPct": null,
-      "profitFactor": null,
+      "expectancyPct": -1.007995110024451,
+      "profitFactor": 0.0,
       "gate": false
     }
   },
   "latestSignals": [
-    {
-      "signalDate": "2026-07-29",
-      "exitDate": "2026-07-30",
-      "strategyVersion": "etf_dip_overnight_v1",
-      "code": "233740",
-      "dayChangePct": -12.20209723546235,
-      "entryPrice": 4605.0,
-      "exitPrice": 4400.0,
-      "grossPnl": -4.45168295331162,
-      "frictionPct": 0.24715526601520088,
-      "pnl": -4.698838219326821,
-      "sample": "design"
-    },
     {
       "signalDate": "2026-07-30",
       "exitDate": "2026-07-31",
@@ -294,6 +281,19 @@
       "frictionPct": 0.18503875968992248,
       "pnl": -0.9602325581395362,
       "sample": "design"
+    },
+    {
+      "signalDate": "2026-10-07",
+      "exitDate": "2026-10-08",
+      "strategyVersion": "etf_dip_overnight_v1",
+      "code": "233740",
+      "dayChangePct": -6.084959816303104,
+      "entryPrice": 8180.0,
+      "exitPrice": 8110.0,
+      "grossPnl": -0.8557457212713948,
+      "frictionPct": 0.15224938875305621,
+      "pnl": -1.007995110024451,
+      "sample": "outOfSample"
     }
   ],
   "live": {
@@ -312,10 +312,10 @@
         "buySlipPct": null,
         "sellQty": null,
         "sellFill": null,
-        "actualNextOpen": null,
+        "actualNextOpen": 8110.0,
         "sellSlipPct": null,
         "realizedNetPct": null,
-        "modelNetPct": null
+        "modelNetPct": -1.007995110024451
       }
     ]
   }
