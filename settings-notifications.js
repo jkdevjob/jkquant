@@ -6,6 +6,7 @@ if(!host)return;
 
 let cfg=null,reg=null,sub=null,health=null,busy=false;
 let topics=new Set();
+let approvalLinked=false;
 
 function esc(s){return String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]))}
 function isIOS(){return /iPad|iPhone|iPod/.test(navigator.userAgent||"")}
@@ -41,6 +42,7 @@ async function loadTopics(){
   try{
     const j=await server("/subscription?endpoint="+encodeURIComponent(sub.endpoint));
     (j.topics||[]).forEach(x=>topics.add(x));
+    approvalLinked=!!j.approvalLinked;
   }catch(e){}
 }
 async function syncWorkerTopics(){
@@ -149,7 +151,7 @@ async function disable(topic){
   if(busy||!sub)return;busy=true;render();
   try{
     topics.delete(topic);
-    if(topics.size){
+    if(topics.size||approvalLinked){
       await saveTopics();
     }else{
       await server("/subscribe",{
