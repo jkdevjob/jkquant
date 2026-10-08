@@ -192,7 +192,7 @@ pre.rules{background:var(--bg);border:1px solid var(--line);border-radius:10px;p
 
 <header><div class="wrap">
   <div class="htop">
-    <div><div class="kicker">Admin Console</div><h1>JK <span class="v">투자</span> 관리자 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="adVer">v0.12.16</span></h1></div>
+    <div><div class="kicker">Admin Console</div><h1>JK <span class="v">투자</span> 관리자 <span style="font-size:12px;font-weight:400;color:var(--faint);vertical-align:middle" id="adVer">v0.12.17</span></h1></div>
     <div class="hright">
       <div class="userbadge" id="userbadge"></div>
     <div class="jkmenu" id="jkmenuWrap">
@@ -411,7 +411,10 @@ async function loadApprovalDelivery(rows){
         .find(x=>x.getAttribute('data-appr-status')===r.uid);
       if(!el)continue;
       const st=j.states&&j.states[r.uid];
-      el.textContent=st?'이메일 '+approvalStatusText(st.email)+' · 웹알림 '+approvalStatusText(st.push)+
+      el.textContent=st?'이메일 '+approvalStatusText(st.email)+
+        (st.emailProvider?' ['+(st.emailProvider==='gmail'?'Gmail':'외부 메일')+']':'')+
+        (st.email==='failed'&&st.emailError?' · 오류: '+String(st.emailError).slice(0,120):'')+
+        ' · 웹알림 '+approvalStatusText(st.push)+
         (st.delivered?' ('+st.delivered+'대)':''):'승인 알림 발송 이력 없음';
     }
   }catch(e){
@@ -423,7 +426,7 @@ async function loadApprovalDelivery(rows){
 const STRATEGY_DEFAULT_CACHE='jkq_strategy_default_overrides_v2';
 const STRATEGY_DEFAULT_LEGACY_CACHE='jkq_strategy_defaults_v1';
 const STRATEGY_DEFAULT_BUILTIN={
-  inf:{ticker:'SOXL',div:20,target:20,big:15,rows:3,revGap:0,principal:10000,divmode:'reinv',engine:'v40',shortMA:30,loPct:6,tgtDyn:false,autoTp:false,reverse:false,compound:true,rowqty:1},
+  inf:{ticker:'SOXL',div:20,target:20,big:20,rows:3,revGap:0,principal:10000,divmode:'reinv',engine:'v40',shortMA:30,loPct:6,tgtDyn:false,autoTp:false,reverse:false,compound:true,rowqty:1},
   vr:{ticker:'TQQQ',mode:0.75,formula:'basic',g:10,initAmt:10000,add:100,band:15,startv:0,startpool:0,autoCyc:false,vrModel:'ladder',divmode:'reinv'},
   ma:{ticker:'SOXL',buy:'ma',sell:'ma',park:'cash',principal:10000,divmode:'reinv'},
   ivs:{ticker:'TQQQ',mode:'iv',s0:55,look:40,band:15,principal:10000,park:'bill',monthly:0,divmode:'reinv'},
