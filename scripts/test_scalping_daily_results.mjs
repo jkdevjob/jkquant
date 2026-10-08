@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
-import {liveLedgerSummary,mergeSessions,mergeDaytradingSessions,completedGlobalCandidates,kstSessionDate,pairKst} from "../functions/api/scalping-daily-results.js";
+import {readFileSync} from "node:fs";
+import {liveLedgerSummary,mergeSessions,mergeDaytradingSessions,completedGlobalCandidates,soxlSessionCompletedAt,marketLedgerDateMatches,normalizeKstSessions,kstSessionDate,pairKst} from "../functions/api/scalping-daily-results.js";
 import {dailyRisk as historyDailyRisk} from "../functions/api/scalping-history.js";
 
 console.log("[scalping today] live ledger 우선/무매매/날짜 경계 값 시험");
@@ -95,5 +96,35 @@ const openingHistory=historyDailyRisk([
   {date:"2026-10-01",pnl:-1.0}
 ],"opening");
 assert.equal(openingHistory.daily[0].returnPct,1.0); // existing equal-weight opening rule remains unchanged
+
+
+// SOXL은 ET 16:05 이후에만 확정: 10/08 한국 오전은 미국 10/07 장이 맞다.
+const beforeClose=Date.parse("2026-10-07T20:04:00Z"); // ET 16:04, KST 10/08 05:04
+const afterClose=Date.parse("2026-10-07T20:05:00Z");  // ET 16:05, KST 10/08 05:05
+assert.equal(soxlSessionCompletedAt("2026-10-07",beforeClose),false);
+assert.equal(soxlSessionCompletedAt("2026-10-07",afterClose),true);
+assert.equal(soxlSessionCompletedAt("2026-10-08",afterClose),false);
+assert.equal(soxlSessionCompletedAt("2026-10-03",afterClose),false); // 토요일 휴장
+assert.equal(marketLedgerDateMatches({date:"2026-10-06"},"2026-10-07"),false);
+assert.equal(marketLedgerDateMatches({date:"2026-10-07"},"2026-10-07"),true);
+const candidate={sessions:[{date:"2026-10-07",returnPct:-1.4,trades:1}]};
+assert.equal(normalizeKstSessions("soxl",candidate,beforeClose).length,0);
+const after=normalizeKstSessions("soxl",candidate,afterClose);
+assert.equal(after.length,1);
+assert.equal(after[0].date,"2026-10-08");
+assert.equal(after[0].marketDate,"2026-10-07");
+// 사용자 화면: KST 10/08에 미국 10/08 거래가 있었다는 오독을 방지한다.
+const ui=readFileSync(new URL("../scalping.html",import.meta.url),"utf8");
+const cellFn=ui.slice(ui.indexOf("function dailyResultCell("),ui.indexOf("const DAILY_CHART_COLORS="));
+assert.ok(cellFn.startsWith("function dailyResultCell("));
+const renderCell=new Function("esc","dailyResultPct",cellFn+"; return dailyResultCell;")(
+  s=>String(s).replaceAll("&","&amp;").replaceAll("<","&lt;"),n=>(n>=0?"+":"")+Number(n).toFixed(2)+"%");
+const rendered=renderCell({...after[0],wins:0,losses:1,noTrade:false},"최근","soxl");
+assert.match(rendered,/최근 · 미국 10-07장/);
+assert.match(rendered,/한국 2026-10-08 새벽 마감 기준/);
+assert.match(rendered,/-1\.40%/);
+assert.ok(!rendered.includes("미국 10-08장"));
+const wait=renderCell({date:"2026-10-09",marketDate:"2026-10-08",pending:true,pendingReason:"미국 정규장 종료 대기"},"최근","soxl");
+assert.match(wait,/미국 10-08장/);assert.match(wait,/>대기</);
 
 console.log("ALL PASS — scalping today live results");
