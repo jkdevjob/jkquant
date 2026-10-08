@@ -196,6 +196,40 @@
     return g;
   }
   var H={};   // 지금 화면의 단추 동작
+  var approvalPendingUser=null;
+  function b64Key(s){
+    s=String(s||'').replace(/-/g,'+').replace(/_/g,'/');
+    while(s.length%4)s+='=';
+    var bytes=atob(s),out=new Uint8Array(bytes.length);
+    for(var i=0;i<bytes.length;i++)out[i]=bytes.charCodeAt(i);
+    return out;
+  }
+  async function enableApprovalPush(){
+    var u=approvalPendingUser;
+    if(!u||!u.getIdToken)throw new Error('로그인 상태를 다시 확인해 주세요.');
+    if(!('serviceWorker' in navigator)||!('PushManager' in window)||!('Notification' in window))
+      throw new Error('이 브라우저에서는 웹알림을 지원하지 않습니다. 승인 이메일은 별도로 전송됩니다.');
+    var ios=/iPad|iPhone|iPod/i.test(navigator.userAgent||'');
+    var installed=(window.matchMedia&&matchMedia('(display-mode: standalone)').matches)||navigator.standalone===true;
+    if(ios&&!installed)throw new Error('iPhone은 Safari 공유 → 홈 화면에 추가 후 홈 화면 앱에서 알림을 켜세요.');
+    var perm=Notification.permission==='granted'?'granted':await Notification.requestPermission();
+    if(perm!=='granted')throw new Error('알림 권한을 허용해야 승인 알림을 받을 수 있습니다.');
+    var c=await fetch('/data/realestate/gpt/push-config.json',{cache:'no-store'}),cfg=await c.json();
+    if(!c.ok||!cfg.workerUrl||!/^https:\/\//.test(cfg.workerUrl))throw new Error('알림 서버 연결 설정이 없습니다.');
+    var reg=await navigator.serviceWorker.register('/jk-sw.js?v=2.1.0',{scope:'/'});
+    var vk=await fetch(cfg.workerUrl+'/vapid'),v=await vk.json();
+    if(!vk.ok||!v.publicKey)throw new Error('알림 서버 공개키를 가져오지 못했습니다.');
+    var sub=await reg.pushManager.getSubscription();
+    if(!sub)sub=await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:b64Key(v.publicKey)});
+    if(!approvalPendingUser||approvalPendingUser.uid!==u.uid)throw new Error('로그인 사용자가 변경됐습니다.');
+    var resp=await fetch(cfg.workerUrl+'/approval/subscribe',{
+      method:'POST',headers:{'content-type':'application/json','authorization':'Bearer '+await u.getIdToken()},
+      body:JSON.stringify({subscription:sub.toJSON(),userAgent:navigator.userAgent})
+    });
+    var result=await resp.json().catch(function(){return {}});
+    if(!resp.ok||result.ok===false)throw new Error(result.error||'승인 알림 등록에 실패했습니다.');
+    return true;
+  }
   function show(state, o){
     o=o||{}; H=o;
     var g=el(); if(!g){ document.addEventListener('DOMContentLoaded', function(){ show(state, o); }, {once:true}); return; }
@@ -211,6 +245,8 @@
       body='<div class="js">이용 신청이 접수되었습니다 — '+who+'<br>관리자가 승인하면 바로 사용할 수 있습니다.</div>'
           +'<textarea id="jknote" maxlength="200" placeholder="관리자에게 남길 말 (이름·관계 등)">'+esc(note)+'</textarea>'
           +'<button class="jbtn j2" data-jk="note">메모 남기기</button>'
+          +'<button class="jbtn j2" data-jk="approval-push">🔔 승인 완료 웹알림 켜기</button>'
+          +'<div class="js" style="font-size:11px;margin:8px 0 0">이메일은 신청한 구글 주소로 자동 안내됩니다. 웹알림은 이 기기에서 직접 허용해야 합니다.</div>'
           +'<button class="jbtn j2" data-jk="retry">승인됐는지 다시 확인</button>'
           +'<button class="jbtn j2" data-jk="logout">로그아웃</button>';
     }else if(state==='menu'){
@@ -242,6 +278,14 @@
     if(a==='login' && H.login) H.login();
     else if(a==='logout' && H.logout) H.logout();
     else if(a==='retry'){ if(H.retry) H.retry(); else location.reload(); }
+    else if(a==='approval-push'){
+      if(b.disabled)return;
+      b.disabled=true;msg('알림 권한과 기기를 등록하는 중…');
+      Promise.resolve().then(enableApprovalPush).then(function(){
+        msg('이 기기로 승인 완료 알림을 받을 수 있습니다.',true);
+      },function(e){msg('웹알림 설정 실패: '+String(e&&e.message||e));})
+        .finally(function(){b.disabled=false;});
+    }
     else if(a==='note' && H.saveNote){ var t=(document.getElementById('jknote')||{}).value||''; msg('저장 중…');
       Promise.resolve(H.saveNote(t)).then(function(ok){ msg(ok?'메모를 남겼습니다.':'메모를 저장하지 못했습니다.', ok); }); }
   });
@@ -279,7 +323,11 @@
     show('checking', {user:user});
     var r; try{ r=await check(user, fb); }catch(e){ r={state:'error', error:String(e&&e.message||e)}; }
     if(stale()) return false;
-    if(!isOk(r.state)){ lock(r); return false; }
+    if(!isOk(r.state)){
+      approvalPendingUser=r.state==='pending'?user:null;
+      lock(r);return false;
+    }
+    approvalPendingUser=null;
     if(!await menuOk())return false;
     hide();
     return true;
