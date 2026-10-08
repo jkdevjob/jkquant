@@ -16,7 +16,6 @@ on:
       - "scripts/backtest_soxl_intraday.py"
       - "scripts/build_scalping_trend.py"
       - "functions/api/soxl-research.js"
-      - "scalping.html"
 
 permissions:
   contents: write
@@ -99,5 +98,5 @@ jobs:
           fi
           DATE=$(TZ=America/New_York date +%F)
           git commit -m "data: SOXL intraday research $DATE [skip ci]"
-          git pull --rebase origin scalping-data
-          git push origin scalping-data
+          bash .app/scripts/push-scalping-data.sh
+

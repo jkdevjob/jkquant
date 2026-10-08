@@ -75,5 +75,5 @@ jobs:
             exit 0
           fi
           git commit -m "data: nightly scalping research $DATE [skip ci]"
-          git pull --rebase origin scalping-data
-          git push origin scalping-data
+          bash .app/scripts/push-scalping-data.sh
+

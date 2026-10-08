@@ -16,7 +16,6 @@ on:
       - ".github/workflows/daily1-shadow-research.yml"
       - "scripts/daily1_shadow_lab.py"
       - "functions/api/daily1-shadow.js"
-      - "scalping.html"
 
 permissions:
   contents: write
@@ -62,5 +61,5 @@ jobs:
             exit 0
           fi
           git commit -m "data: daily1 shadow paper $(TZ=Asia/Seoul date +%F) [skip ci]"
-          git pull --rebase origin scalping-data
-          git push origin scalping-data
+          bash .app/scripts/push-scalping-data.sh
+

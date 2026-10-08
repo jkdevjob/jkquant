@@ -48,9 +48,9 @@ jobs:
           git add -- data/scalping-backfill data/opening-research-year ':!data/scalping-backfill/sources'
           if ! git diff --cached --quiet; then
             git commit -m 'data: historical Top100 backfill checkpoint [skip ci]'
-            git pull --rebase origin scalping-data
-            git push origin scalping-data
+            bash .app/scripts/push-scalping-data.sh
           fi
       - name: 미완료 상태 표시
         if: steps.collect.outcome == 'failure'
         run: echo 'Incomplete batch is checkpointed; next scheduled run resumes missing dates.'
+
