@@ -1,0 +1,59 @@
+name: 데이트레이딩 웹알림 전송 진단
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/diagnose-daytrading-push.yml
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+      - name: 장중 모의장부와 푸시 수신 현황 비교 (민감정보 출력 제외)
+        env:
+          MONITOR_KEY: ${{ secrets.AUTOTRADE_KEY }}
+        run: |
+          python - <<'PY'
+          import os,json,urllib.request,urllib.error
+          from datetime import datetime
+          from zoneinfo import ZoneInfo
+          date=datetime.now(ZoneInfo("Asia/Seoul")).date().isoformat()
+          def fetch(url,headers=None):
+              try:
+                  req=urllib.request.Request(url,headers=headers or {"accept":"application/json"})
+                  with urllib.request.urlopen(req,timeout=18) as res:return json.load(res)
+              except urllib.error.HTTPError as e:
+                  print("HTTP",url.split("?")[0].split("/")[-1],e.code)
+              except Exception as e:
+                  print("ERROR",url.split("?")[0].split("/")[-1],type(e).__name__,str(e)[:90])
+              return None
+          config=json.load(open("data/realestate/gpt/push-config.json"))
+          base=config["workerUrl"].rstrip("/")
+          header={"x-monitor-key":os.environ["MONITOR_KEY"],"accept":"application/json"}
+          paper=fetch("https://jkquant-daytrading-scheduler.mumae4.workers.dev/paper?date="+date,header)
+          ledger=paper.get("ledger") if isinstance(paper,dict) else None
+          trades=ledger.get("trades",[]) if isinstance(ledger,dict) else []
+          print("DATE_KST",date)
+          print("PAPER",json.dumps({"ok":paper.get("ok") if isinstance(paper,dict) else None,
+              "date":ledger.get("date") if ledger else None,
+              "updatedAt":ledger.get("updatedAt") if ledger else None,
+              "targetHm":ledger.get("targetHm") if ledger else None,
+              "trades":len(trades),
+              "signals":[{"signalTime":x.get("signalTime"),"entryTime":x.get("entryTime"),
+                "exitTime":x.get("exitTime"),"status":x.get("status")} for x in trades]},ensure_ascii=False))
+          health=fetch(base+"/health")
+          print("PUSH_HEALTH",json.dumps({
+              "subscribers_daytrading":((health or {}).get("topicSubscriptions") or {}).get("daytrading"),
+              "lastSignalAt":((health or {}).get("lastChecks") or {}).get("daytrading"),
+              "lastDelivery":((health or {}).get("lastDeliveries") or {}).get("daytrading")},ensure_ascii=False))
+          latest=fetch(base+"/latest?topic=daytrading")
+          last=(latest or {}).get("alert") or {}
+          print("LATEST_DAYTRADING_ALERT",json.dumps({"type":last.get("type"),"stage":last.get("stage"),
+              "createdAt":last.get("createdAt")},ensure_ascii=False))
+          PY
