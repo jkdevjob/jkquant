@@ -330,6 +330,22 @@ async function persistScan(env,{scheduled,lag,target,kst,parts,failed,partial,ma
   return {events:events.length,added:stored.added,total:stored.total,scans:stored.scans};
 }
 
+async function notifyOpeningWebPush(env,date,buys,sells,mainVariant){
+  const out=[];
+  for(const [stage,items] of [["buy",buys],["sell",sells]])for(const x of items){
+    const hm=String((stage==="buy"?x.entryTime:x.exitTime)||"").padStart(4,"0");
+    const code=String(x.code||""),price=Number(stage==="buy"?x.entryPrice:x.exitPrice);
+    const lines=[String(x.name||code).slice(0,50)+" ("+code+")",Number.isFinite(price)?Math.round(price).toLocaleString("ko-KR")+"원":"가격 확인 중",
+      stage==="sell"&&Number.isFinite(Number(x.pnl))?"모의손익 "+Number(x.pnl).toFixed(2)+"%":"기준전략 "+mainVariant];
+    const eventId=["opening",date,mainVariant,code,stage,hm].join(":");
+    try{
+      const r=await fetch(baseUrl(env)+"/api/scalping-alert",{method:"POST",headers:{"content-type":"application/json","x-monitor-key":env.MONITOR_KEY},
+        body:JSON.stringify({strategy:"opening",stage,webOnly:true,eventId,date,time:hm.slice(0,2)+":"+hm.slice(2)+" KST",lines})});
+      const j=await r.json().catch(()=>({}));out.push({eventId,ok:r.ok&&!!j.ok,error:j.error||j.webPush?.error||null});
+    }catch(e){out.push({eventId,ok:false,error:String(e.message||e)});}
+  }
+  return out;
+}
 async function sendOpeningCloseSummary(env,date){
   const mainVariant=await mainVariantForDate(env,date);
   const parts=[];
@@ -421,6 +437,10 @@ async function runMinute(controller,env){
     result.vts={ok:false,skipped:"stale_signal",maxExecLagMs:MAX_EXEC_LAG_MS};
   }
 
+  if(buyEvents.length||sellEvents.length){
+    // VTS 처리가 끝난 뒤 웹푸시: 알림 실패는 모의주문 경로에 간섭하지 않는다.
+    result.webPush=await notifyOpeningWebPush(env,kst.date,buyEvents,sellEvents,mainVariant);
+  }
   console.log(JSON.stringify(result));
   if(kst.hh===9&&kst.mm===31){ try{await sendOpeningCloseSummary(env,kst.date);}catch(e){console.error(JSON.stringify({type:"opening_close_summary_failed",date:kst.date,error:String(e.message||e)}));} }
 }

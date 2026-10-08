@@ -4,7 +4,8 @@ const BASE_APP="https://jkquant.pages.dev";
 const PRESALE_APP=BASE_APP+"/realestate";
 const JOB_APP=BASE_APP+"/job";
 const ALLOW_ORIGINS=new Set([BASE_APP,"http://localhost:8788","http://127.0.0.1:8788"]);
-const VALID_TOPICS=new Set(["presale","job"]);
+const TRADE_TOPICS=new Set(["opening","daytrading","crypto","soxl"]);
+const VALID_TOPICS=new Set(["presale","job",...TRADE_TOPICS]);
 
 function b64u(bytes){
   let s="";for(const b of bytes)s+=String.fromCharCode(b);
@@ -74,7 +75,8 @@ async function sendEmptyPush(vapid,endpoint,topic){
     headers:{
       "TTL":"86400",
       "Urgency":"high",
-      "Topic":"jk-"+clean(topic||"notice",20),
+      // 서로 다른 매수/매도 이벤트가 푸시 큐에서 덮어쓰이지 않게 거래 신호에는 Topic 헤더를 생략한다.
+      ...(TRADE_TOPICS.has(topic)?{}:{"Topic":"jk-"+clean(topic||"notice",20)}),
       "Authorization":"vapid t="+jwt+", k="+vapid.publicKey
     }
   });
@@ -241,7 +243,7 @@ export class PresaleAlertStore{
     await this.state.storage.put("latest:"+topic,alert);
     let recent=await this.state.storage.get("recentAlerts");
     if(!Array.isArray(recent))recent=[];
-    recent=[alert,...recent.filter(x=>x&&x.id!==alert.id)].slice(0,30);
+    recent=[alert,...recent.filter(x=>x&&x.id!==alert.id)].slice(0,100);
     await this.state.storage.put("recentAlerts",recent);
     if(topic==="presale"&&alert&&alert.project){
       let a=await this.state.storage.get("recentPresaleAlerts");
@@ -258,7 +260,11 @@ export class PresaleAlertStore{
     if(!sub)return json(request,{ok:false,error:"subscription not registered"},404);
     const last=Number(await this.state.storage.get("test:"+id)||0);
     if(Date.now()-last<30000)return json(request,{ok:false,error:"테스트는 30초에 한 번 가능합니다."},429);
-    const alert=topic==="job"?{
+    const alert=TRADE_TOPICS.has(topic)?{
+      id:"test-"+topic+"-"+Date.now(),type:topic,title:"🔔 "+({opening:"시초가",daytrading:"데이트레이딩",crypto:"비트코인",soxl:"SOXL"}[topic])+" 매매알림 테스트",
+      body:"매수·매도 알림 수신이 정상 연결되었습니다. 실제 주문이 아닌 모의매매 신호입니다.",
+      url:BASE_APP+"/scalping?strategy="+topic,createdAt:new Date().toISOString()
+    }:topic==="job"?{
       id:"test-job-"+Date.now(),type:"job",title:"💼 JOB 웹알림 테스트",
       body:"대전·세종 신규 채용공고 알림이 정상 연결되었습니다.",
       url:JOB_APP,createdAt:new Date().toISOString()
@@ -271,6 +277,31 @@ export class PresaleAlertStore{
     await this.state.storage.put("test:"+id,Date.now());
     const r=await this.pushOne(endpoint,topic);
     return json(request,{ok:r.ok,status:r.status,error:r.ok?null:r.text},r.ok?200:502);
+  }
+  async recordTradingSignal(request){
+    // 서버 감시키를 아는 호출만 실제 푸시를 게시할 수 있다.
+    if(!this.env.MONITOR_KEY||request.headers.get("x-monitor-key")!==this.env.MONITOR_KEY)
+      return json(request,{ok:false,error:"unauthorized"},401);
+    const b=await request.json().catch(()=>null);
+    const topic=String(b&&b.strategy||"").toLowerCase(),stage=String(b&&b.stage||"").toLowerCase();
+    if(!TRADE_TOPICS.has(topic)||!["buy","sell"].includes(stage))return json(request,{ok:false,error:"unsupported trading signal"},400);
+    const eventId=clean(b.eventId,220),date=clean(b.date,20),time=clean(b.time,30);
+    if(!eventId||!/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/.test(date))return json(request,{ok:false,error:"invalid signal identity"},400);
+    const marketDate=topic==="soxl"?new Intl.DateTimeFormat("en-CA",{timeZone:"America/New_York",year:"numeric",month:"2-digit",day:"2-digit"}).format(new Date()):kstDate();
+    if(date!==marketDate)return json(request,{ok:false,error:"stale or future market date"},409);
+    const id="trade:"+topic+":"+eventId,claimKey="signal:"+await hashText(id);
+    if(await this.state.storage.get(claimKey))return json(request,{ok:true,duplicate:true,id,delivery:{sent:0}});
+    const lines=Array.isArray(b.lines)?b.lines.map(x=>clean(x,200)).filter(Boolean).slice(0,5):[];
+    const name={opening:"시초가",daytrading:"데이트레이딩",crypto:"비트코인",soxl:"SOXL"}[topic];
+    const trade={id,type:topic,stage,createdAt:new Date().toISOString(),
+      title:(stage==="buy"?"🟢 ":"🔴 ")+name+" 모의 "+(stage==="buy"?"매수":"매도")+" 타이밍",
+      body:[date,time,...lines].filter(Boolean).join(" · ").slice(0,245),url:BASE_APP+"/scalping?strategy="+topic};
+    // Durable Object에 먼저 기록해 Cron 중복/재시도로 두 번 보내지 않는다.
+    await this.state.storage.put(claimKey,trade.createdAt);
+    await this.recordAlert(trade);
+    const delivery=await this.notifyAll(topic);
+    await this.state.storage.put("lastCheck:"+topic,trade.createdAt);
+    return json(request,{ok:true,duplicate:false,id,delivery});
   }
   async checkPresale(request){
     const base=this.env.BASE_URL||BASE_APP,items=await officialFeed(base);
@@ -344,13 +375,12 @@ export class PresaleAlertStore{
     if(path==="/health"){
       const subs=await this.subscriptions(),lastCheck=await this.state.storage.get("lastCheck");
       const jobLastCheck=await this.state.storage.get("lastCheck:job");
-      let presale=0,job=0;
-      for(const [,s] of subs){const t=this.topicsOf(s);if(t.includes("presale"))presale++;if(t.includes("job"))job++}
-      return json(request,{
-        ok:true,service:"jkquant-push-alert",version:"2.0.0",subscriptions:subs.size,
-        topicSubscriptions:{presale,job},lastCheck:lastCheck||null,
-        lastChecks:{presale:lastCheck||null,job:jobLastCheck||null}
-      });
+      const counts=Object.fromEntries([...VALID_TOPICS].map(t=>[t,0]));
+      for(const [,s] of subs)for(const t of this.topicsOf(s))counts[t]++;
+      const lastChecks={presale:lastCheck||null,job:jobLastCheck||null};
+      for(const t of TRADE_TOPICS)lastChecks[t]=await this.state.storage.get("lastCheck:"+t)||null;
+      return json(request,{ok:true,service:"jkquant-push-alert",version:"2.1.0",subscriptions:subs.size,
+        topicSubscriptions:counts,lastCheck:lastCheck||null,lastChecks});
     }
     if(path==="/vapid"){const v=await this.vapid();return json(request,{ok:true,publicKey:v.publicKey})}
     if(path==="/latest"){
@@ -373,6 +403,7 @@ export class PresaleAlertStore{
     if(path==="/subscribe"&&request.method==="POST")return this.subscribe(request);
     if(path==="/subscribe"&&request.method==="DELETE")return this.unsubscribe(request);
     if(path==="/test"&&request.method==="POST")return this.test(request);
+    if(path==="/signal"&&request.method==="POST")return this.recordTradingSignal(request);
     if(path==="/check"&&request.method==="POST")return this.checkPresale(request);
     if(path==="/check-jobs"&&request.method==="POST")return this.checkJobs(request);
     return json(request,{ok:false,error:"not found"},404);
