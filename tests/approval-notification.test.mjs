@@ -182,8 +182,8 @@ test("Gmail mailer reports provider rejection rather than false sent",async()=>{
 
 test("owner-only approval status exposes safe failed-mail diagnostics but never reveals provider secrets",async()=>{
   const {app,values}=store({});
-  const approvalAt=1730000000300;
-  values.set("approval:send:"+userUid+":"+approvalAt,{
+  const approvedAt=1730000000300;
+  values.set("approval:send:"+userUid+":"+approvedAt,{
     email:"failed",emailProvider:"gmail",
     emailError:"send failed: quota exceeded",push:"not_subscribed",delivered:0,
     updatedAt:"2026-10-08T04:00:00Z"
@@ -202,8 +202,8 @@ test("owner-only approval status exposes safe failed-mail diagnostics but never 
   assert.equal(result.delivered,0);
   assert.equal(result.emailRecipient,undefined);
   assert.equal(result.secret,undefined);
-  values.set("approval:send:"+userUid+":"+approvalAt,{
-    ...values.get("approval:send:"+userUid+":"+approvalAt),
+  values.set("approval:send:"+userUid+":"+approvedAt,{
+    ...values.get("approval:send:"+userUid+":"+approvedAt),
     email:"sent",emailError:"old stale error"
   });
   const accepted=await app.approvalStatus(req("/approval/status",{items:[{uid:userUid,approvedAt}]},admin));
