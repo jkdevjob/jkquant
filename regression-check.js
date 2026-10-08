@@ -11818,8 +11818,8 @@ console.log('\n[ACCESS] 이용 승인제 — 판정 한 곳 · 모든 페이지 
       const acts=em=>[...rowOf(em).matchAll(/data-uact="(\w+)" data-on="(\d)"/g)].map(m=>m[1]+m[2]).join(',');
       ok('관리자: 승인 대기가 맨 위(그 안은 최근 접속순) → 관리자 → 승인 → 차단',
          JSON.stringify(order)===JSON.stringify(['new@e.com',"x'),alert(1),('@e.com",'jk82investing@gmail.com','ok@e.com','bad@e.com']), JSON.stringify(order));
-      ok('관리자: 단추 — 대기는 승인·거절 · 승인은 승인 취소·차단 · 차단은 차단 해제 · 관리자 행은 없음',
-         acts('new@e.com')==='approve1,block1' && acts('ok@e.com')==='approve0,block1' && acts('bad@e.com')==='block0' && acts('jk82investing@gmail.com')==='',
+      ok('관리자: 단추 — 대기는 승인·거절 · 승인은 승인 취소·차단·알림재시도 · 차단은 차단 해제 · 관리자 행은 없음',
+         acts('new@e.com')==='approve1,block1' && acts('ok@e.com')==='approve0,block1,notify1' && acts('bad@e.com')==='block0' && acts('jk82investing@gmail.com')==='',
          JSON.stringify([acts('new@e.com'),acts('ok@e.com'),acts('bad@e.com')]));
       ok('관리자: 상태 꼬리표와 개수 (대기 2 · 승인 1 · 차단 1)', /승인 대기 2/.test(sum) && /승인 1/.test(sum) && /차단 1/.test(sum)
          && /tag pending">승인 대기/.test(rowOf('new@e.com')) && /tag blocked">차단됨/.test(rowOf('bad@e.com')) && /tag admin">관리자/.test(rowOf('jk82investing@gmail.com')), sum);
